@@ -35,9 +35,9 @@ const ModeTrait& ModeTrait::from_mode(Mode mode) {
 
     auto make_check_dtype_func = [](DType expected) {
         auto func = [expected](DType dtype) {
-            megdnn_assert(expected.enumv() == dtype.enumv(),
-                          "expected %s, but got %s", expected.name(),
-                          dtype.name());
+            megdnn_assert(
+                    expected.enumv() == dtype.enumv(), "expected %s, but got %s",
+                    expected.name(), dtype.name());
         };
         return func;
     };
@@ -52,9 +52,9 @@ const ModeTrait& ModeTrait::from_mode(Mode mode) {
     auto make_out_dtype_func = [](DType expected) {
         auto func = [expected](DType& dtype, bool check) {
             if (check) {
-                megdnn_assert(expected.enumv() == dtype.enumv(),
-                              "expected %s, but got %s", expected.name(),
-                              dtype.name());
+                megdnn_assert(
+                        expected.enumv() == dtype.enumv(), "expected %s, but got %s",
+                        expected.name(), dtype.name());
             } else {
                 dtype = expected;
             }
@@ -230,8 +230,7 @@ const ModeTrait& ModeTrait::from_mode(Mode mode) {
     return traits.at(static_cast<int>(mode));
 }
 
-void ElemwiseMultiType::deduce_layout(const TensorLayoutArray& src,
-                                      TensorLayout& dst) {
+void ElemwiseMultiType::deduce_layout(const TensorLayoutArray& src, TensorLayout& dst) {
     auto trait = mode_trait();
     megdnn_assert(src.size() == trait.arity);
     for (size_t i = 0; i < trait.arity; ++i) {

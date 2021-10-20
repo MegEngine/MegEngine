@@ -1,7 +1,3 @@
-if(NOT "$ENV{LIBRARY_PATH}" STREQUAL "")
-    string(REPLACE ":" ";" SYSTEM_LIBRARY_PATHS $ENV{LIBRARY_PATH})
-endif()
-
 if("${TRT_ROOT_DIR}" STREQUAL "" AND NOT "$ENV{TRT_ROOT_DIR}"  STREQUAL "")
     set(TRT_ROOT_DIR $ENV{TRT_ROOT_DIR})
 endif()
@@ -9,21 +5,21 @@ endif()
 if(MGE_CUDA_USE_STATIC)
     find_library(TRT_LIBRARY 
         NAMES libnvinfer_static.a nvinfer.lib
-        PATHS $ENV{LD_LIBRARY_PATH} ${TRT_ROOT_DIR} ${CMAKE_INSTALL_PREFIX}
-        HINTS ${SYSTEM_LIBRARY_PATHS}
+        PATHS ${ALTER_LD_LIBRARY_PATHS} ${TRT_ROOT_DIR} ${CMAKE_INSTALL_PREFIX}
+        HINTS ${ALTER_LIBRARY_PATHS}
         PATH_SUFFIXES lib lib64
         DOC "TRT library." )
 else()
     find_library(TRT_LIBRARY 
         NAMES libnvinfer.so libnvinfer.dylib nvinfer.dll
-        PATHS $ENV{LD_LIBRARY_PATH} ${TRT_ROOT_DIR} ${CMAKE_INSTALL_PREFIX}
-        HINTS ${SYSTEM_LIBRARY_PATHS}
+        PATHS ${ALTER_LD_LIBRARY_PATHS} ${TRT_ROOT_DIR} ${CMAKE_INSTALL_PREFIX}
+        HINTS ${ALTER_LIBRARY_PATHS}
         PATH_SUFFIXES lib lib64
         DOC "TRT library." )
 endif()
 
 if(TRT_LIBRARY STREQUAL "TRT_LIBRARY-NOTFOUND")
-    message(FATAL_ERROR "Can not find TensorRT Library")
+    message(FATAL_ERROR "Can not find TensorRT Library, please refer to scripts/cmake-build/BUILD_README.md to init TRT env")
 endif()
 
 get_filename_component(__found_trt_root ${TRT_LIBRARY}/../.. REALPATH)
@@ -34,7 +30,7 @@ find_path(TRT_INCLUDE_DIR
     DOC "Path to TRT include directory." )
 
 if(TRT_INCLUDE_DIR STREQUAL "TRT_INCLUDE_DIR-NOTFOUND")
-    message(FATAL_ERROR "Can not find TensorRT Library")
+    message(FATAL_ERROR "Can not find TensorRT INCLUDE, please refer to scripts/cmake-build/BUILD_README.md to init TRT env")
 endif()
 
 file(STRINGS "${TRT_INCLUDE_DIR}/NvInfer.h" TensorRT_MAJOR REGEX "^#define NV_TENSORRT_MAJOR [0-9]+.*$")

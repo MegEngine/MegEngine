@@ -1,25 +1,26 @@
 /***************************************************************************************************
  * Copyright (c) 2017-2019, NVIDIA CORPORATION.  All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without modification, are permitted
- * provided that the following conditions are met:
- *     * Redistributions of source code must retain the above copyright notice, this list of
- *       conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above copyright notice, this list of
- *       conditions and the following disclaimer in the documentation and/or other materials
- *       provided with the distribution.
- *     * Neither the name of the NVIDIA CORPORATION nor the names of its contributors may be used
- *       to endorse or promote products derived from this software without specific prior written
- *       permission.
+ * Redistribution and use in source and binary forms, with or without modification, are
+ *permitted provided that the following conditions are met:
+ *     * Redistributions of source code must retain the above copyright notice, this
+ *list of conditions and the following disclaimer.
+ *     * Redistributions in binary form must reproduce the above copyright notice, this
+ *list of conditions and the following disclaimer in the documentation and/or other
+ *materials provided with the distribution.
+ *     * Neither the name of the NVIDIA CORPORATION nor the names of its contributors
+ *may be used to endorse or promote products derived from this software without specific
+ *prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND
- * FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL NVIDIA CORPORATION BE LIABLE
- * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
- * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
- * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
- * STRICT LIABILITY, OR TOR (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY
+ *EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+ *OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT
+ *SHALL NVIDIA CORPORATION BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ *EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ *SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ *HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ *OR TOR (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ *SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  **************************************************************************************************/
 /**
@@ -45,9 +46,8 @@ namespace convolution {
 template <typename ConvTrait, typename BiasVisitor, typename Epilogue>
 __global__ void convolution_kernel(
         const typename ConvTrait::src_dtype* __restrict__ src,
-        const typename ConvTrait::filter_dtype* __restrict__ filter,
-        BiasVisitor bias, Epilogue epilogue, typename ConvTrait::Param param,
-        float alpha, float beta) {
+        const typename ConvTrait::filter_dtype* __restrict__ filter, BiasVisitor bias,
+        Epilogue epilogue, typename ConvTrait::Param param, float alpha, float beta) {
     static bool constexpr check_bounds = ConvTrait::check_bounds;
     using BlockTileIterator = typename ConvTrait::BlockTileIterator;
     BlockTileIterator block_iterator;
@@ -58,8 +58,7 @@ __global__ void convolution_kernel(
     using DataTileCount = typename ConvTrait::DataTileCount;
     using FilterTileCount = typename ConvTrait::FilterTileCount;
 
-    using DataGlobal2ShareMemVisitor =
-            typename ConvTrait::DataGlobal2ShareMemVisitor;
+    using DataGlobal2ShareMemVisitor = typename ConvTrait::DataGlobal2ShareMemVisitor;
     using FilterGlobal2ShareMemVisitor =
             typename ConvTrait::FilterGlobal2ShareMemVisitor;
 
@@ -72,16 +71,15 @@ __global__ void convolution_kernel(
     DataGlobal2ShareMemVisitor src_gl2sh_visitor{smem_src};
     FilterGlobal2ShareMemVisitor filter_gl2sh_visitor{smem_filter};
     if (check_bounds) {
-        block_iterator.set_remain(src_gl2sh_visitor,
-                                           filter_gl2sh_visitor);
+        block_iterator.set_remain(src_gl2sh_visitor, filter_gl2sh_visitor);
     }
 
     using BlockConsumer = typename ConvTrait::BlockConsumer;
     BlockConsumer block_consumer;
     block_consumer.init_accumulator();
 
-    block_iterator.template iterate_with_param<typename ConvTrait::InputLayout,
-                                               typename ConvTrait::KernLayout>(
+    block_iterator.template iterate_with_param<
+            typename ConvTrait::InputLayout, typename ConvTrait::KernLayout>(
             src, filter, param, src_gl2sh_visitor, filter_gl2sh_visitor,
             block_consumer);
 
@@ -91,13 +89,13 @@ __global__ void convolution_kernel(
     if (check_bounds) {
         block_iterator.set_remain(global_memory_writer);
     }
-    bias.move(block_iterator.block_batch, block_iterator.block_out_channel,
-              block_iterator.block_out_height, block_iterator.block_out_width);
-    epilogue.move(block_iterator.block_batch, block_iterator.block_out_channel,
-                  block_iterator.block_out_height,
-                  block_iterator.block_out_width);
-    global_memory_writer.template write<check_bounds>(bias, epilogue,
-                                                      block_consumer);
+    bias.move(
+            block_iterator.block_batch, block_iterator.block_out_channel,
+            block_iterator.block_out_height, block_iterator.block_out_width);
+    epilogue.move(
+            block_iterator.block_batch, block_iterator.block_out_channel,
+            block_iterator.block_out_height, block_iterator.block_out_width);
+    global_memory_writer.template write<check_bounds>(bias, epilogue, block_consumer);
 }
 
 template <typename ConvTrait, typename BiasVisitor, typename Epilogue>
@@ -116,8 +114,7 @@ __global__ void convolution_kernel_precomp_offset(
     using DataTileCount = typename ConvTrait::DataTileCount;
     using FilterTileCount = typename ConvTrait::FilterTileCount;
 
-    using DataGlobal2ShareMemVisitor =
-            typename ConvTrait::DataGlobal2ShareMemVisitor;
+    using DataGlobal2ShareMemVisitor = typename ConvTrait::DataGlobal2ShareMemVisitor;
     using FilterGlobal2ShareMemVisitor =
             typename ConvTrait::FilterGlobal2ShareMemVisitor;
 
@@ -130,16 +127,15 @@ __global__ void convolution_kernel_precomp_offset(
     DataGlobal2ShareMemVisitor src_gl2sh_visitor{smem_src, offset};
     FilterGlobal2ShareMemVisitor filter_gl2sh_visitor{smem_filter};
     if (check_bounds) {
-        block_iterator.set_remain(src_gl2sh_visitor,
-                                           filter_gl2sh_visitor);
+        block_iterator.set_remain(src_gl2sh_visitor, filter_gl2sh_visitor);
     }
 
     using BlockConsumer = typename ConvTrait::BlockConsumer;
     BlockConsumer block_consumer;
     block_consumer.init_accumulator();
 
-    block_iterator.template iterate_with_param<typename ConvTrait::InputLayout,
-                                               typename ConvTrait::KernLayout>(
+    block_iterator.template iterate_with_param<
+            typename ConvTrait::InputLayout, typename ConvTrait::KernLayout>(
             src, filter, param, src_gl2sh_visitor, filter_gl2sh_visitor,
             block_consumer);
 
@@ -149,13 +145,13 @@ __global__ void convolution_kernel_precomp_offset(
     if (check_bounds) {
         block_iterator.set_remain(global_memory_writer);
     }
-    bias.move(block_iterator.block_batch, block_iterator.block_out_channel,
-              block_iterator.block_out_height, block_iterator.block_out_width);
-    epilogue.move(block_iterator.block_batch, block_iterator.block_out_channel,
-                  block_iterator.block_out_height,
-                  block_iterator.block_out_width);
-    global_memory_writer.template write<check_bounds>(bias, epilogue,
-                                                      block_consumer);
+    bias.move(
+            block_iterator.block_batch, block_iterator.block_out_channel,
+            block_iterator.block_out_height, block_iterator.block_out_width);
+    epilogue.move(
+            block_iterator.block_batch, block_iterator.block_out_channel,
+            block_iterator.block_out_height, block_iterator.block_out_width);
+    global_memory_writer.template write<check_bounds>(bias, epilogue, block_consumer);
 }
 
 }  // namespace convolution

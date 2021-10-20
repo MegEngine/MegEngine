@@ -93,9 +93,9 @@ public:
     }
 
     //! load the model and get the m_load_result
-    void load_model(std::shared_ptr<void> model_mem, size_t size,
-                    std::unordered_map<std::string, LiteAny>
-                            separate_config_map = {}) override;
+    void load_model(
+            std::shared_ptr<void> model_mem, size_t size,
+            std::unordered_map<std::string, LiteAny> separate_config_map = {}) override;
 
     //! forward the network with filled input data and fill the output data
     //! to the output tensor
@@ -122,9 +122,7 @@ public:
     void set_device_id(int device_id) override;
     int get_device_id() const override { return m_compnode_locator.device; };
 
-    LiteBackend get_backend_type() const override {
-        return LiteBackend::LITE_DEFAULT;
-    }
+    LiteBackend get_backend_type() const override { return LiteBackend::LITE_DEFAULT; }
     //! set stream id, default stream id = 0
     void set_stream_id(int stream_id) override;
     int get_stream_id() const override { return m_compnode_locator.stream; };
@@ -133,8 +131,7 @@ public:
     void use_tensorrt();
 
     //! enable profile the network, a JSON format file will be generated
-    void enable_profile_performance(
-            std::string profile_json_file_path) override;
+    void enable_profile_performance(std::string profile_json_file_path) override;
 
     /********************** mge special function ************************/
     //! load a new network which will share weights with src network
@@ -150,9 +147,9 @@ public:
     void set_memory_allocator(std::shared_ptr<Allocator> user_allocator);
 
     //! set opr algorithm selection strategy in the network
-    void set_network_algo_policy(LiteAlgoSelectStrategy strategy,
-                                 uint32_t shared_batch_size,
-                                 bool binary_equal_between_batch);
+    void set_network_algo_policy(
+            LiteAlgoSelectStrategy strategy, uint32_t shared_batch_size,
+            bool binary_equal_between_batch);
 
     //! set workspace_limit for oprs with multiple algorithms, set
     //! workspace limitation can save memory but may influence the performance

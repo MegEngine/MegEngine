@@ -29,13 +29,13 @@ from ..core._imperative_rt.core2 import (
 from ..core._imperative_rt.ops import (
     AssertEqual,
     CollectiveComm,
+    ExternOpr,
     RemoteRecv,
     RemoteSend,
 )
 from ..core._trace_option import set_symbolic_shape
 from ..core._wrap import as_device
 from ..core.ops.builtin import BatchNorm, OpDef
-from ..core.ops.special import Const
 from ..core.tensor import megbrain_graph as G
 from ..core.tensor.utils import setscalar
 from ..utils.naming import AutoNaming
@@ -120,21 +120,22 @@ _io_op_types = {AssertEqual, CollectiveComm, RemoteSend, RemoteRecv}
 
 
 class trace:
-    """
-    Wraps a callable and provide:
+    """Wraps a callable and provide:
 
     * tracing via :meth:`.trace` and :meth:`.dump`
     * accelerated evalutaion via :meth:`.__call__`
 
-    :param function: the function will be traced.
-    :param symbolic: whether to apply symbolic execution for tracing. Default: False
-    :param capture_as_const: capture global vars or closures as const value. Default: False
-    :param sublinear_memory_config: configuration for sublinear memory optimization.
-        If not None, it enables sublinear memory optimization with given setting.
-    :param profiling: whether to profile compiled trace. Default: False
-    :param opt_level: optimization level for compiling trace. Default: 2
-    :param graph_opt_config: configuration for graph optimization. Default: None
-    :param symbolic_shape: whether to use symbolic shape for tracing. Default: True
+    Args:
+        function: the function will be traced.
+        symbolic: whether to apply symbolic execution for tracing. Default: False
+        capture_as_const: capture global vars or closures as const value. Default: False
+        record_only: if True, won't run even if call the function. Default: False
+        sublinear_memory_config: configuration for sublinear memory optimization.
+            If not None, it enables sublinear memory optimization with given setting.
+        profiling: whether to profile compiled trace. Default: False
+        opt_level: optimization level for compiling trace. Default: 2
+        graph_opt_config: configuration for graph optimization. Default: None
+        symbolic_shape: whether to use symbolic shape for tracing. Default: True
     """
 
     def __new__(cls, *args, **kwargs):
@@ -147,6 +148,7 @@ class trace:
         function,
         symbolic=False,
         capture_as_const=False,
+        record_only=False,
         sublinear_memory_config: SublinearMemoryConfig = None,
         dtr_config: DTRConfig = None,
         profiling: bool = False,
@@ -155,8 +157,9 @@ class trace:
         symbolic_shape: bool = True,
     ):
         self.__wrapped__ = function
-        self._symbolic = symbolic
-        self._capture_as_const = capture_as_const
+        self._symbolic = symbolic or record_only
+        self._capture_as_const = capture_as_const or record_only
+        self._record_only = record_only
         self._sublinear_memory_config = sublinear_memory_config
         self._dtr_config = dtr_config
         self._profiling = profiling
@@ -418,35 +421,40 @@ class trace:
         def do_finalize():
             escaped_tensors = self._take_escaped_tensors()
             if self._untraced:
-                for x in escaped_tensors:
-                    if x():
-                        info = self._tinfo[x()._mixin_handle]
-                        info.data_read = True
-                        x()._mixin_handle = -1
-                        x()._recording = False
-                if self._inputs_to_restore:
-                    for x in self._inputs_to_restore:
-                        x._mixin_handle = -1
-                        x._recording = False
-                if self._symbolic and (
-                    self._lazy_eval_tensors or self._lazy_eval_links
-                ):
-                    # eval lazy eval tensors
-                    self._lazy_eval(
-                        self._lazy_eval_graph,
-                        self._lazy_eval_tensors,
-                        self._lazy_eval_links,
-                    )
+                if self._record_only:
                     self._lazy_eval_graph = None
                     self._lazy_eval_tensors = None
                     self._lazy_eval_links = None
-                self._untraced = False
+                else:
+                    for x in escaped_tensors:
+                        if x():
+                            info = self._tinfo[x()._mixin_handle]
+                            info.data_read = True
+                            x()._mixin_handle = -1
+                            x()._recording = False
+                    if self._inputs_to_restore:
+                        for x in self._inputs_to_restore:
+                            x._mixin_handle = -1
+                            x._recording = False
+                    if self._symbolic and (
+                        self._lazy_eval_tensors or self._lazy_eval_links
+                    ):
+                        # eval lazy eval tensors
+                        self._lazy_eval(
+                            self._lazy_eval_graph,
+                            self._lazy_eval_tensors,
+                            self._lazy_eval_links,
+                        )
+                        self._lazy_eval_graph = None
+                        self._lazy_eval_tensors = None
+                        self._lazy_eval_links = None
+                    self._untraced = False
             else:
                 # compiled_tensor leaks
                 if self._pc == len(self._seq):
                     for x in escaped_tensors:
                         try:
-                            assign_raw_tensor(x(), RawTensor(x()._dev_tensor()))
+                            x().__init__(RawTensor(x()._dev_tensor()))
                         except RuntimeError:
                             # TraceMismatchError thrown in do_exit
                             pass
@@ -519,6 +527,12 @@ class trace:
             )
             graph.options.dtr_config.evictee_minimum_size = (
                 self._dtr_config.evictee_minimum_size
+            )
+            graph.options.dtr_config.recomp_memory_factor = (
+                self._dtr_config.recomp_memory_factor
+            )
+            graph.options.dtr_config.recomp_time_factor = (
+                self._dtr_config.recomp_time_factor
             )
         # graph optimization
         if self._graph_opt_config is not None:
@@ -696,82 +710,81 @@ class trace:
         enable_metadata: bool = True,
         **kwargs
     ):
-        r"""
-        Serializes trace to file system.
+        r"""Serializes trace to file system.
 
-        :param file: output file, could be file object or filename.
-        :param arg_names: names of the input tensors in the traced function.
-        :param output_names: names of the output tensors in the traced function,
-            use the default name if not specified.
-        :param append: whether output is appended to ``file``.
-            Only works when ``file`` is str.
-        :param keep_var_name: level for keeping variable names:
+        Args:
+            file: output file, could be file object or filename.
+            arg_names: names of the input tensors in the traced function.
+            output_names: names of the output tensors in the traced function,
+                use the default name if not specified.
+            append: whether output is appended to ``file``.
+                Only works when ``file`` is str.
+            keep_var_name: level for keeping variable names:
 
-            * 0: none of the names are kept
-            * 1: (default)keep names of output vars
-            * 2: keep names of all (output and internal) vars
-        :param keep_opr_name: whether to keep operator names.
-        :param keep_param_name: whether to keep param names, so param values can be
-            easily manipulated after loading model
-        :param keep_opr_priority: whether to keep priority setting for operators
-        :param strip_info_file: a string for path or a file handler. if is not None,
-            then the dump information for code strip would be written to ``strip_info_file``
-        :param append_json: will be check when `strip_info_file` is not None. if set
-            true, the information for code strip will be append to strip_info_file.
-            if set false, will rewrite strip_info_file
-        :param optimize_for_inference: enbale optmizations,
-            will skip all optimize options if this is False. Default: True
-        :param user_info: any type object, which will be pickled to bytes.
-        :param enable_metadata: whether to save metadata into output file.
+                * 0: none of the names are kept
+                * 1: (default)keep names of output vars
+                * 2: keep names of all (output and internal) vars
 
-        :Keyword Arguments:
+            keep_opr_name: whether to keep operator names.
+            keep_param_name: whether to keep param names, so param values can be
+                easily manipulated after loading model
+            keep_opr_priority: whether to keep priority setting for operators
+            strip_info_file: a string for path or a file handler. if is not None,
+                then the dump information for code strip would be written to ``strip_info_file``
+            append_json: will be check when `strip_info_file` is not None. if set
+                true, the information for code strip will be append to strip_info_file.
+                if set false, will rewrite strip_info_file
+            optimize_for_inference: enbale optmizations,
+                will skip all optimize options if this is False. Default: True
+            user_info: any type object, which will be pickled to bytes.
+            enable_metadata: whether to save metadata into output file.
 
-            * enable_io16xc32 --
-                whether to use float16 for I/O between oprs and use
-                float32 as internal computation precision. Note the output var would be
-                changed to float16.
-            * enable_ioc16 --
-                whether to use float16 for both I/O and computation
-                precision.
+        Keyword Arguments:
 
-            * enable_hwcd4 --
-                whether to use NHWCD4 data layout. This is faster on some
-                OpenCL backend.
-            * enable_nchw88 --
-                whether to use NCHW88 data layout, currently
-                used in X86 AVX backend.
-            * enable_nchw44 --
-                whether to use NCHW44 data layout, currently
-                used in arm backend.
-            * enable_nchw44_dot --
-                whether to use NCHW44_dot data layout, currently
-                used in armv8.2+dotprod backend.
-            * enable_nchw4 --
-                whether to use NCHW4 data layout, currently
-                used in nvidia backend(based on cudnn).
-            * enable_nchw32 --
-                whether to use NCHW32 data layout, currently
-                used in nvidia backend with tensorcore(based on cudnn).
-            * enable_chwn4 --
-                whether to use CHWN4 data layout, currently
-                used in nvidia backend with tensorcore.
-            * enable_nchw64 --
-                whether to use NCHW64 data layout, used for fast int4
-                support on Nvidia GPU.
-
-            * enable_fuse_conv_bias_nonlinearity: whether to fuse conv+bias+nonlinearty
-                into one opr.
-            * enable_fuse_conv_bias_with_z: whether to fuse conv_bias with z
-                input for inference on nvidia backend(this optimization pass will
-                result in mismatch of the precision of output of training and
-                inference)
+        * enable_io16xc32 --
+          whether to use float16 for I/O between oprs and use
+          float32 as internal computation precision. Note the output var would be
+          changed to float16.
+        * enable_ioc16 --
+          whether to use float16 for both I/O and computation
+          precision.
+        * enable_hwcd4 --
+          whether to use NHWCD4 data layout. This is faster on some
+          OpenCL backend.
+        * enable_nchw88 --
+          whether to use NCHW88 data layout, currently
+          used in X86 AVX backend.
+        * enable_nchw44 --
+          whether to use NCHW44 data layout, currently
+          used in arm backend.
+        * enable_nchw44_dot --
+          whether to use NCHW44_dot data layout, currently
+          used in armv8.2+dotprod backend.
+        * enable_nchw4 --
+          whether to use NCHW4 data layout, currently
+          used in nvidia backend(based on cudnn).
+        * enable_nchw32 --
+          whether to use NCHW32 data layout, currently
+          used in nvidia backend with tensorcore(based on cudnn).
+        * enable_chwn4 --
+          whether to use CHWN4 data layout, currently
+          used in nvidia backend with tensorcore.
+        * enable_nchw64 --
+          whether to use NCHW64 data layout, used for fast int4
+          support on Nvidia GPU.
+        * enable_fuse_conv_bias_nonlinearity: whether to fuse conv+bias+nonlinearty
+          into one opr.
+        * enable_fuse_conv_bias_with_z: whether to fuse conv_bias with z
+          input for inference on nvidia backend(this optimization pass will
+          result in mismatch of the precision of output of training and
+          inference)
         """
         if not self._capture_as_const:
             raise ValueError(
                 "you must specify capture_as_const=True at __init__ to use dump"
             )
-        if self._untraced:
-            raise RuntimeError("should run at least once before calling dump")
+        if self._untraced and len(self._seq) == 0:
+            raise RuntimeError("should do record first before dump")
         if self._output_names and output_names:
             raise TypeError(
                 "cannot specify output_names when output is already in dict format"
@@ -1033,26 +1046,18 @@ class trace:
                     )
 
     def get_profile(self):
-        """
-        Get profiling result for compiled trace.
+        r"""Get profiling result for compiled trace.
 
-        :return: a json compatible object.
+        Return:
+            a json compatible object.
         """
         if not self._profiler:
             raise RuntimeError("trace is not set with profiling=True")
         return json.loads(self._profiler.get())
 
-    def trace(self, *args, **kwargs):
-        raise NotImplementedError(
-            "trace is deemed unbeneficial with the new "
-            "tracing mechanism. You should alwasy use __call__."
-        )
-
 
 class CompiledTensorProxy:
-    """
-    Duck-typed RawTensor
-    """
+    r"""Duck-typed RawTensor"""
 
     def __init__(self, handle):
         self.__handle = handle
@@ -1111,10 +1116,6 @@ class CompiledTensorProxy:
             self.__info.value_reader.drop_value()
         if self.__info.data_read and self.__data is not None:
             self.__info.data_reader.drop_value()
-
-
-def assign_raw_tensor(lhs, rhs):
-    lhs.__init__(rhs)
 
 
 def apply_symbolic_mode(op: OpDef, *args: RawTensor):

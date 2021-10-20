@@ -9,8 +9,8 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
  * implied.
  */
-#include "src/common/utils.h"
 #include "src/cuda/matrix_mul/cublasLt_wrapper.h"
+#include "src/common/utils.h"
 #include "src/cuda/utils.h"
 #if CUDA_VERSION >= 10010
 
@@ -140,9 +140,8 @@ void CUBLASLTMatmulDesc::set(const SizeArgs& args, bool batched) {
         stride_a_trans = round_up<int32_t>(k, 32) / 32 * ldatransform;
         stride_c_trans = round_up<int32_t>(m, 32) / 32 * ldctransform;
         trans_b = CUBLAS_OP_T;
-        cublas_check(cublasLtMatmulDescSetAttribute(matmul_desc,
-                                                    CUBLASLT_MATMUL_DESC_TRANSB,
-                                                    &trans_b, sizeof(trans_b)));
+        cublas_check(cublasLtMatmulDescSetAttribute(
+                matmul_desc, CUBLASLT_MATMUL_DESC_TRANSB, &trans_b, sizeof(trans_b)));
         // origin layout
         cublas_check(cublasLtMatrixLayoutCreate(
                 &layout_b, dt_b, n, k, args.layout_b.stride[batched ? 1 : 0]));
@@ -151,18 +150,18 @@ void CUBLASLTMatmulDesc::set(const SizeArgs& args, bool batched) {
         cublas_check(cublasLtMatrixLayoutCreate(
                 &layout_c, dt_c, n, m, args.layout_c.stride[batched ? 1 : 0]));
         // transformed layout
-        cublas_check(cublasLtMatrixLayoutCreate(&layout_trans_b, dt_b, n, k,
-                                                ldbtransform));
-        cublas_check(cublasLtMatrixLayoutCreate(&layout_trans_a, dt_a, m, k,
-                                                ldatransform));
-        cublas_check(cublasLtMatrixLayoutCreate(&layout_trans_c, dt_c, n, m,
-                                                ldctransform));
+        cublas_check(
+                cublasLtMatrixLayoutCreate(&layout_trans_b, dt_b, n, k, ldbtransform));
+        cublas_check(
+                cublasLtMatrixLayoutCreate(&layout_trans_a, dt_a, m, k, ldatransform));
+        cublas_check(
+                cublasLtMatrixLayoutCreate(&layout_trans_c, dt_c, n, m, ldctransform));
         cublas_check(cublasLtMatrixLayoutSetAttribute(
                 layout_trans_b, CUBLASLT_MATRIX_LAYOUT_ORDER, &order_COL32,
                 sizeof(order_COL32)));
         cublas_check(cublasLtMatrixLayoutSetAttribute(
-                layout_trans_a, CUBLASLT_MATRIX_LAYOUT_ORDER,
-                &order_COL4_4R2_8C, sizeof(order_COL4_4R2_8C)));
+                layout_trans_a, CUBLASLT_MATRIX_LAYOUT_ORDER, &order_COL4_4R2_8C,
+                sizeof(order_COL4_4R2_8C)));
         cublas_check(cublasLtMatrixLayoutSetAttribute(
                 layout_trans_c, CUBLASLT_MATRIX_LAYOUT_ORDER, &order_COL32,
                 sizeof(order_COL32)));
@@ -192,20 +191,16 @@ void CUBLASLTMatmulDesc::set(const SizeArgs& args, bool batched) {
     } else {
         trans_b = args.transposeB ? CUBLAS_OP_T : CUBLAS_OP_N;
         trans_a = args.transposeA ? CUBLAS_OP_T : CUBLAS_OP_N;
-        cublas_check(cublasLtMatmulDescSetAttribute(matmul_desc,
-                                                    CUBLASLT_MATMUL_DESC_TRANSA,
-                                                    &trans_b, sizeof(trans_b)));
-        cublas_check(cublasLtMatmulDescSetAttribute(matmul_desc,
-                                                    CUBLASLT_MATMUL_DESC_TRANSB,
-                                                    &trans_a, sizeof(trans_a)));
+        cublas_check(cublasLtMatmulDescSetAttribute(
+                matmul_desc, CUBLASLT_MATMUL_DESC_TRANSA, &trans_b, sizeof(trans_b)));
+        cublas_check(cublasLtMatmulDescSetAttribute(
+                matmul_desc, CUBLASLT_MATMUL_DESC_TRANSB, &trans_a, sizeof(trans_a)));
         cublas_check(cublasLtMatrixLayoutCreate(
                 &layout_b, dt_b, trans_b == CUBLAS_OP_N ? n : k,
-                trans_b == CUBLAS_OP_N ? k : n,
-                args.layout_b.stride[batched ? 1 : 0]));
+                trans_b == CUBLAS_OP_N ? k : n, args.layout_b.stride[batched ? 1 : 0]));
         cublas_check(cublasLtMatrixLayoutCreate(
                 &layout_a, dt_a, trans_a == CUBLAS_OP_N ? k : m,
-                trans_a == CUBLAS_OP_N ? m : k,
-                args.layout_a.stride[batched ? 1 : 0]));
+                trans_a == CUBLAS_OP_N ? m : k, args.layout_a.stride[batched ? 1 : 0]));
         cublas_check(cublasLtMatrixLayoutCreate(
                 &layout_c, dt_c, n, m, args.layout_c.stride[batched ? 1 : 0]));
     }
@@ -213,14 +208,11 @@ void CUBLASLTMatmulDesc::set(const SizeArgs& args, bool batched) {
     size_t stride_a = args.layout_a.stride[0];
     size_t stride_c = args.layout_c.stride[0];
     cublas_check(cublasLtMatrixLayoutSetAttribute(
-            layout_b, CUBLASLT_MATRIX_LAYOUT_BATCH_COUNT, &batch,
-            sizeof(batch)));
+            layout_b, CUBLASLT_MATRIX_LAYOUT_BATCH_COUNT, &batch, sizeof(batch)));
     cublas_check(cublasLtMatrixLayoutSetAttribute(
-            layout_a, CUBLASLT_MATRIX_LAYOUT_BATCH_COUNT, &batch,
-            sizeof(batch)));
+            layout_a, CUBLASLT_MATRIX_LAYOUT_BATCH_COUNT, &batch, sizeof(batch)));
     cublas_check(cublasLtMatrixLayoutSetAttribute(
-            layout_c, CUBLASLT_MATRIX_LAYOUT_BATCH_COUNT, &batch,
-            sizeof(batch)));
+            layout_c, CUBLASLT_MATRIX_LAYOUT_BATCH_COUNT, &batch, sizeof(batch)));
     cublas_check(cublasLtMatrixLayoutSetAttribute(
             layout_b, CUBLASLT_MATRIX_LAYOUT_STRIDED_BATCH_OFFSET, &stride_b,
             sizeof(stride_b)));
@@ -239,8 +231,7 @@ bool CUBLASLTMatmulDesc::is_available(const SizeArgs& args, size_t ws_limit) {
             support = (dt_a == CUDA_R_16F);
             break;
         case CUDA_R_32I: {
-            support = (dt_a == CUDA_R_8I) &&
-                      (!args.transposeA && !args.transposeB);
+            support = (dt_a == CUDA_R_8I) && (!args.transposeA && !args.transposeB);
             break;
         }
         case CUDA_R_32F:
@@ -274,13 +265,12 @@ WorkspaceBundle CUBLASLTMatmulDesc::get_workspace_bundle(
     algo_workspace_size = result.workspaceSize;
     return {nullptr,
             (dt_c == CUDA_R_32I)
-                    ? SmallVector<size_t>{algo_workspace_size, workspace_b,
-                                          workspace_a, workspace_c}
+                    ? SmallVector<
+                              size_t>{algo_workspace_size, workspace_b, workspace_a, workspace_c}
                     : SmallVector<size_t>{algo_workspace_size}};
 }
-bool CUBLASLTMatmulDesc::get_algorithm_heuristic(const SizeArgs& args,
-                                                 size_t ws_limit,
-                                                 cublasLtMatmulAlgo_t& algo) {
+bool CUBLASLTMatmulDesc::get_algorithm_heuristic(
+        const SizeArgs& args, size_t ws_limit, cublasLtMatmulAlgo_t& algo) {
     bool result;
     int return_algo_count;
     size_t algo_ws_limit;
@@ -313,13 +303,26 @@ bool CUBLASLTMatmulDesc::get_algorithm_heuristic(const SizeArgs& args,
     cublas_check(cublasLtMatmulPreferenceSetAttribute(
             algo_pref, CUBLASLT_MATMUL_PREF_MAX_WORKSPACE_BYTES, &algo_ws_limit,
             sizeof(algo_ws_limit)));
+#if CUDA_VERSION < 11000
+    bool is_f32_config = args.layout_a.dtype == dtype::Float32() &&
+                         args.layout_b.dtype == dtype::Float32() &&
+                         args.layout_c.dtype == dtype::Float32();
+    if (is_f32_config) {
+        // disable HMMA tensor op matmul when inputs and output are all f32
+        // tensors, to avoid the potential accuracy loss
+        uint32_t math_mode = CUBLAS_DEFAULT_MATH;
+        cublas_check(cublasLtMatmulPreferenceSetAttribute(
+                algo_pref, CUBLASLT_MATMUL_PREF_MATH_MODE_MASK, &math_mode,
+                sizeof(math_mode)));
+    }
+#endif
     status = cublasLtMatmulAlgoGetHeuristic(
             cublasLt_handle, matmul_desc,
             dt_c == CUDA_R_32I ? layout_trans_b : layout_b,
             dt_c == CUDA_R_32I ? layout_trans_a : layout_a,
             dt_c == CUDA_R_32I ? layout_trans_c : layout_c,
-            dt_c == CUDA_R_32I ? layout_trans_c : layout_c, algo_pref, 1,
-            &algo_result, &return_algo_count);
+            dt_c == CUDA_R_32I ? layout_trans_c : layout_c, algo_pref, 1, &algo_result,
+            &return_algo_count);
     if (status == CUBLAS_STATUS_SUCCESS && return_algo_count > 0 &&
         // perform cublasLtAlgoCheck() to make sure the algo is correct
         get_workspace_bundle(args, algo_result.algo).nr_workspace() > 0) {

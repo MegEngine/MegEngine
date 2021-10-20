@@ -102,24 +102,18 @@ class GitSSHFetcher(RepoFetcherBase):
         commit: str = None,
         silent: bool = True,
     ) -> str:
-        """
-        Fetches git repo by SSH protocol
+        """Fetches git repo by SSH protocol
 
-        :param git_host:
-            host address of git repo.
-            Example: github.com
-        :param repo_info:
-            a string with format ``"repo_owner/repo_name[:tag_name/:branch_name]"`` with an optional
-            tag/branch. The default branch is ``master`` if not specified.
-            Example: ``"brain_sdk/MegBrain[:hub]"``
-        :param use_cache:
-            whether to use locally fetched code or completely re-fetch.
-        :param commit:
-            commit id on github or gitlab.
-        :param silent:
-            whether to accept the stdout and stderr of the subprocess with PIPE, instead of
-            displaying on the screen.
-        :return:
+        Args:
+            git_host: host address of git repo. Eg: github.com
+            repo_info: a string with format ``"repo_owner/repo_name[:tag_name/:branch_name]"`` with an optional
+                tag/branch. The default branch is ``master`` if not specified. Eg: ``"brain_sdk/MegBrain[:hub]"``
+            use_cache: whether to use locally fetched code or completely re-fetch.
+            commit: commit id on github or gitlab.
+            silent: whether to accept the stdout and stderr of the subprocess with PIPE, instead of
+                displaying on the screen.
+
+        Returns:
             directory where the repo code is stored.
         """
         if not cls._check_git_host(git_host):
@@ -217,24 +211,19 @@ class GitHTTPSFetcher(RepoFetcherBase):
         commit: str = None,
         silent: bool = True,
     ) -> str:
-        """
-        Fetches git repo by HTTPS protocol.
+        """Fetches git repo by HTTPS protocol.
 
-        :param git_host:
-            host address of git repo.
-            Example: github.com
-        :param repo_info:
-            a string with format ``"repo_owner/repo_name[:tag_name/:branch_name]"`` with an optional
-            tag/branch. The default branch is ``master`` if not specified.
-            Example: ``"brain_sdk/MegBrain[:hub]"``
-        :param use_cache:
-            whether to use locally cached code or completely re-fetch.
-        :param commit:
-            commit id on github or gitlab.
-        :param silent:
-            whether to accept the stdout and stderr of the subprocess with PIPE, instead of
-            displaying on the screen.
-        :return:
+        Args:
+            git_host: host address of git repo. Eg: github.com
+            repo_info: a string with format ``"repo_owner/repo_name[:tag_name/:branch_name]"`` with an optional
+                tag/branch. The default branch is ``master`` if not specified. Eg: ``"brain_sdk/MegBrain[:hub]"``
+            use_cache: whether to use locally cached code or completely re-fetch.
+            commit: commit id on github or gitlab.
+            silent: whether to accept the stdout and stderr of the subprocess with PIPE, instead of
+                displaying on the screen.
+ 
+
+        Returns:
             directory where the repo code is stored.
         """
         if not cls._check_git_host(git_host):

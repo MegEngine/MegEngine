@@ -72,8 +72,8 @@ public:
         hipError_t hip_error = hipFree(ptr);
         if (hip_error == hipSuccess)
             return;
-        auto msg = ssprintf("hipFree failed for %p: %s", ptr,
-                            hipGetErrorString(hip_error));
+        auto msg = ssprintf(
+                "hipFree failed for %p: %s", ptr, hipGetErrorString(hip_error));
         msg.append(ROCmError::get_rocm_extra_info());
         mgb_throw_raw(MemAllocError{msg});
     }
@@ -82,8 +82,7 @@ public:
         hipError_t hip_error = hipMemGetInfo(&free, &tot);
         if (hip_error == hipSuccess)
             return;
-        auto msg = ssprintf("hipMemGetInfo failed %s",
-                            hipGetErrorString(hip_error));
+        auto msg = ssprintf("hipMemGetInfo failed %s", hipGetErrorString(hip_error));
         msg.append(ROCmError::get_rocm_extra_info());
         mgb_throw_raw(MegBrainError{msg});
     }
@@ -91,12 +90,8 @@ public:
 
 class ROCmDeviceRuntimePolicy : public DeviceRuntimePolicy {
 public:
-    CompNode::DeviceType device_type() override {
-        return CompNode::DeviceType::ROCM;
-    }
-    void set_device(int device) override {
-        MGB_ROCM_CHECK(hipSetDevice(device));
-    }
+    CompNode::DeviceType device_type() override { return CompNode::DeviceType::ROCM; }
+    void set_device(int device) override { MGB_ROCM_CHECK(hipSetDevice(device)); }
     void device_synchronize(int device) override {
         MGB_ROCM_CHECK(hipSetDevice(device));
         MGB_ROCM_CHECK(hipDeviceSynchronize());
@@ -105,8 +100,7 @@ public:
 
 /* ===================== DevMemAlloc  ===================== */
 std::unique_ptr<DevMemAlloc> DevMemAlloc::make_rocm_alloc() {
-    return std::make_unique<FwdDevMemAlloc>(
-            std::make_shared<ROCmRawAllocator>());
+    return std::make_unique<FwdDevMemAlloc>(std::make_shared<ROCmRawAllocator>());
 }
 }  // namespace mem_alloc
 }  // namespace mgb
@@ -153,7 +147,7 @@ class ROCmCompNode::CompNodeImpl final : public CompNode::Impl {
     }
 
 public:
-    CompNodeImpl() : Impl(static_free_device, static_free_host) { }
+    CompNodeImpl() : Impl(static_free_device, static_free_host) {}
 
     void* alloc_device(size_t size) override {
         activate();
@@ -178,26 +172,22 @@ public:
         MGB_ROCM_CHECK(hipHostFree(ptr));
     }
 
-    void copy_to_host(void* host_ptr, const void* device_ptr,
-                      size_t size) override {
-        MGB_ROCM_CHECK(hipMemcpyAsync(host_ptr, device_ptr, size,
-                                      hipMemcpyDeviceToHost,
-                                      m_env.rocm_env().stream));
+    void copy_to_host(void* host_ptr, const void* device_ptr, size_t size) override {
+        MGB_ROCM_CHECK(hipMemcpyAsync(
+                host_ptr, device_ptr, size, hipMemcpyDeviceToHost,
+                m_env.rocm_env().stream));
     }
 
-    void copy_to_device(void* device_ptr, const void* host_ptr,
-                        size_t size) override {
-        MGB_ROCM_CHECK(hipMemcpyAsync(device_ptr, host_ptr, size,
-                                      hipMemcpyHostToDevice,
-                                      m_env.rocm_env().stream));
+    void copy_to_device(void* device_ptr, const void* host_ptr, size_t size) override {
+        MGB_ROCM_CHECK(hipMemcpyAsync(
+                device_ptr, host_ptr, size, hipMemcpyHostToDevice,
+                m_env.rocm_env().stream));
     }
 
-    void peer_copy_to(Impl* dest_impl, void* dest, const void* src,
-                      size_t size) override;
+    void peer_copy_to(
+            Impl* dest_impl, void* dest, const void* src, size_t size) override;
 
-    size_t get_mem_addr_alignment() override {
-        return m_env.property().mem_alignment;
-    }
+    size_t get_mem_addr_alignment() override { return m_env.property().mem_alignment; }
 
     std::unique_ptr<Event> create_event(size_t flags) override;
 
@@ -277,21 +267,20 @@ struct ROCmCompNodeImpl::StaticData {
 ROCmCompNodeImpl::StaticData* ROCmCompNodeImpl::sd = nullptr;
 Spinlock ROCmCompNodeImpl::sd_mtx;
 
-void ROCmCompNodeImpl::init(const Locator& locator,
-                            const Locator& locator_logical) {
+void ROCmCompNodeImpl::init(const Locator& locator, const Locator& locator_logical) {
     m_locator = locator;
     m_locator_logical = locator_logical;
     m_initialized = true;
 
 #if defined(__linux__) || defined(TARGET_OS_MAC)
-    FILE *fp;
+    FILE* fp;
     fp = fopen("/dev/urandom", "r");
     mgb_assert(fread(&m_uid, sizeof(m_uid), 1, fp) == 1);
     fclose(fp);
 #else
     m_uid = std::chrono::duration_cast<std::chrono::nanoseconds>(
-        std::chrono::system_clock::now().time_since_epoch()
-    ).count();
+                    std::chrono::system_clock::now().time_since_epoch())
+                    .count();
 #endif
 
     auto on_succ = [this](hipStream_t stream) {
@@ -322,8 +311,8 @@ void ROCmCompNodeImpl::init(const Locator& locator,
         m_initialized = false;
     };
 
-    m_env.init_rocm_async(locator.device, make_comp_node_from_impl(this),
-                          {on_succ, on_error});
+    m_env.init_rocm_async(
+            locator.device, make_comp_node_from_impl(this), {on_succ, on_error});
 }
 
 void ROCmCompNodeImpl::fini() {
@@ -345,11 +334,10 @@ void ROCmCompNodeImpl::free_device(void* ptr) {
     m_mem_alloc->free(ptr);
 }
 
-void ROCmCompNodeImpl::peer_copy_to(Impl* dest_impl, void* dest,
-                                    const void* src, size_t size) {
+void ROCmCompNodeImpl::peer_copy_to(
+        Impl* dest_impl, void* dest, const void* src, size_t size) {
     if (dest_impl->same_type<ROCmCompNodeImpl>()) {
-        auto&& dst_env =
-                static_cast<ROCmCompNodeImpl*>(dest_impl)->m_env.rocm_env();
+        auto&& dst_env = static_cast<ROCmCompNodeImpl*>(dest_impl)->m_env.rocm_env();
         auto&& src_env = m_env.rocm_env();
         if (dst_env.device == src_env.device) {
             MGB_ROCM_CHECK(hipMemcpyAsync(
@@ -357,18 +345,17 @@ void ROCmCompNodeImpl::peer_copy_to(Impl* dest_impl, void* dest,
         } else {
             enable_peer_access(src_env.device, dst_env.device);
             enable_peer_access(dst_env.device, src_env.device);
-            MGB_ROCM_CHECK(hipMemcpyPeerAsync(dest, dst_env.device, src,
-                                              src_env.device, size,
-                                              dst_env.stream));
+            MGB_ROCM_CHECK(hipMemcpyPeerAsync(
+                    dest, dst_env.device, src, src_env.device, size, dst_env.stream));
         }
         return;
     }
-    mgb_assert(dest_impl->env().property().type == DeviceType::CPU,
-               "rocm peer_copy_to only implemented for CPU");
+    mgb_assert(
+            dest_impl->env().property().type == DeviceType::CPU,
+            "rocm peer_copy_to only implemented for CPU");
     auto copy = [this, dest, src, size]() {
         auto stream = m_env.rocm_env().stream;
-        MGB_ROCM_CHECK(
-                hipMemcpyAsync(dest, src, size, hipMemcpyDeviceToHost, stream));
+        MGB_ROCM_CHECK(hipMemcpyAsync(dest, src, size, hipMemcpyDeviceToHost, stream));
         MGB_ROCM_CHECK(hipStreamSynchronize(stream));
     };
     dest_impl->env().cpu_env().dispatch(copy);
@@ -402,8 +389,7 @@ void ROCmCompNodeImpl::sync() {
 }
 
 void ROCmCompNodeImpl::enable_peer_access(int dev0, int dev1) {
-    static bool already_enabled[StaticData::MAX_NR_DEVICE]
-                               [StaticData::MAX_NR_DEVICE];
+    static bool already_enabled[StaticData::MAX_NR_DEVICE][StaticData::MAX_NR_DEVICE];
     if (already_enabled[dev0][dev1])
         return;
 
@@ -419,9 +405,9 @@ void ROCmCompNodeImpl::enable_peer_access(int dev0, int dev1) {
         MGB_ROCM_CHECK(hipSetDevice(dev0));
         auto err = hipDeviceEnablePeerAccess(dev1, 0);
         if (err != hipSuccess) {
-            mgb_log_error("failed to enable peer access from %d to %d: %s(%d)",
-                          dev0, dev1, hipGetErrorString(err),
-                          static_cast<int>(err));
+            mgb_log_error(
+                    "failed to enable peer access from %d to %d: %s(%d)", dev0, dev1,
+                    hipGetErrorString(err), static_cast<int>(err));
             hipGetLastError();
         }
     }
@@ -440,10 +426,11 @@ void ROCmCompNodeImpl::enable_peer_access(int dev0, int dev1) {
     int get = 0;
     MGB_ROCM_CHECK(hipMemcpy(&get, dp1, sizeof(int), hipMemcpyDeviceToHost));
 
-    mgb_throw_if(get != 1, ROCmError,
-                 "P2P copy (%d => %d) check failed; consider disabling "
-                 "Access Control Services(ACS) for the PCI device",
-                 dev0, dev1);
+    mgb_throw_if(
+            get != 1, ROCmError,
+            "P2P copy (%d => %d) check failed; consider disabling "
+            "Access Control Services(ACS) for the PCI device",
+            dev0, dev1);
 
     already_enabled[dev0][dev1] = true;
 }
@@ -464,15 +451,13 @@ void ROCmCompNodeImpl::DeviceInfo::init(const CompNodeEnv& env) {
     dev_num = rocm_env.device;
     auto reserve_size = StaticData::get_mem_reserve_size();
     mem_alloc = mem_alloc::DevMemAlloc::make(
-            dev_num, reserve_size,
-            std::make_shared<mem_alloc::ROCmRawAllocator>(),
+            dev_num, reserve_size, std::make_shared<mem_alloc::ROCmRawAllocator>(),
             std::make_shared<mem_alloc::ROCmDeviceRuntimePolicy>());
     mem_alloc->prealloc_config(sd->prealloc_config);
     auto align = env.property().mem_alignment;
     mem_alloc->alignment(align);
-    mgb_log("rocm: gpu%d: name=`%s' dyn_mem_reserve=%.2fMiB alignment=0x%zx",
-            dev_num, rocm_env.device_prop.name, reserve_size / 1024.0 / 1024,
-            align);
+    mgb_log("rocm: gpu%d: name=`%s' dyn_mem_reserve=%.2fMiB alignment=0x%zx", dev_num,
+            rocm_env.device_prop.name, reserve_size / 1024.0 / 1024, align);
 #endif
 }
 
@@ -507,13 +492,12 @@ class ROCmCompNode::EventImpl final : public EventImplHelper {
             return true;
         if (err == hipErrorNotReady)
             return false;
-        mgb_throw(ROCmError, "failed to query event: %d: %s", int(err),
-                  hipGetErrorString(err));
+        mgb_throw(
+                ROCmError, "failed to query event: %d: %s", int(err),
+                hipGetErrorString(err));
     }
 
-    void host_wait_cv() override {
-        MGB_ROCM_CHECK(hipEventSynchronize(m_hip_event));
-    }
+    void host_wait_cv() override { MGB_ROCM_CHECK(hipEventSynchronize(m_hip_event)); }
 
     double do_elapsed_time_until(EventImplHelper& end) override {
         m_comp_node_impl->activate();
@@ -560,9 +544,7 @@ void ROCmCompNode::EventImpl::do_device_wait_by(Impl* cn_impl) {
         return;
     }
     if (cn_impl->env().property().type == DeviceType::CPU) {
-        auto waiter = [this]() {
-            MGB_ROCM_CHECK(hipEventSynchronize(m_hip_event));
-        };
+        auto waiter = [this]() { MGB_ROCM_CHECK(hipEventSynchronize(m_hip_event)); };
         cn_impl->add_callback(std::move(waiter));
         return;
     }
@@ -580,8 +562,9 @@ bool ROCmCompNode::available() {
         auto err = hipGetDeviceCount(&ndev);
         result = err == hipSuccess && ndev > 0;
         if (!result) {
-            mgb_log_warn("rocm unavailable: %s(%d) ndev=%d",
-                         hipGetErrorString(err), static_cast<int>(err), ndev);
+            mgb_log_warn(
+                    "rocm unavailable: %s(%d) ndev=%d", hipGetErrorString(err),
+                    static_cast<int>(err), ndev);
         }
     }
     return result;
@@ -597,12 +580,12 @@ void ROCmCompNode::finalize() {
     }
 }
 
-CompNode::Impl* ROCmCompNode::load_rocm(const Locator& locator,
-                                        const Locator& locator_logical) {
+CompNode::Impl* ROCmCompNode::load_rocm(
+        const Locator& locator, const Locator& locator_logical) {
     int nr_gpu = get_device_count();
-    mgb_assert(locator.device >= 0 && locator.device < nr_gpu,
-               "request gpu%d out of valid range [0, %d)", locator.device,
-               nr_gpu);
+    mgb_assert(
+            locator.device >= 0 && locator.device < nr_gpu,
+            "request gpu%d out of valid range [0, %d)", locator.device, nr_gpu);
 
     auto&& sdptr = ROCmCompNodeImpl::sd;
     {
@@ -631,10 +614,8 @@ CompNode::Impl* ROCmCompNode::load_rocm(const Locator& locator,
     }
 
     if (!available_node) {
-        mgb_assert(sd.nr_node < sd.MAX_NR_COMP_NODE,
-                   "too many CompNode allocated");
-        mgb_assert(locator.device < sd.MAX_NR_COMP_NODE,
-                   "device number too large");
+        mgb_assert(sd.nr_node < sd.MAX_NR_COMP_NODE, "too many CompNode allocated");
+        mgb_assert(locator.device < sd.MAX_NR_COMP_NODE, "device number too large");
         available_node = &sd.node[sd.nr_node++];
     }
 
@@ -652,12 +633,10 @@ void ROCmCompNode::try_coalesce_all_free_memory() {
 
     size_t size = 0;
     for (int i = 0; i < sd->nr_dev_used; ++i) {
-        size += sd->dev_info[i]
-                        .mem_alloc->gather_stream_free_blk_and_release_full();
+        size += sd->dev_info[i].mem_alloc->gather_stream_free_blk_and_release_full();
     }
     if (size) {
-        mgb_log_debug("%zu bytes freed by try_coalesce_all_free_memory()",
-                      size);
+        mgb_log_debug("%zu bytes freed by try_coalesce_all_free_memory()", size);
     }
 }
 
@@ -710,8 +689,9 @@ size_t ROCmCompNode::get_device_count() {
     if (cnt == -1) {
         auto err = hipGetDeviceCount(&cnt);
         if (err != hipSuccess) {
-            mgb_log_error("hipGetDeviceCount failed: %s (err %d)",
-                          hipGetErrorString(err), int(err));
+            mgb_log_error(
+                    "hipGetDeviceCount failed: %s (err %d)", hipGetErrorString(err),
+                    int(err));
             cnt = 0;
         }
         mgb_assert(cnt >= 0);
@@ -737,6 +717,6 @@ void ROCmCompNode::sync_all() {}
 
 #undef err
 
-#endif // MGB_ROCM
+#endif  // MGB_ROCM
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

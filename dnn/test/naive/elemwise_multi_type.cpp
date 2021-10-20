@@ -87,27 +87,13 @@ TEST_F(NAIVE, ELEMWISE_QUANTIZED_MODE_UNARY) {
     checker.set_dtype(0, dtype::QuantizedS8(0.1f));
 
     for (auto mode :
-         {Param::Mode::QRELU,
-          Param::Mode::QABS,
-          Param::Mode::QACOS,
-          Param::Mode::QASIN,
-          Param::Mode::QCEIL,
-          Param::Mode::QCOS,
-          Param::Mode::QEXP,
-          Param::Mode::QEXPM1,
-          Param::Mode::QFLOOR,
-          Param::Mode::QLOG,
-          Param::Mode::QLOG1P,
-          Param::Mode::QNEGATE,
-          Param::Mode::QSIGMOID,
-          Param::Mode::QSIN,
-          Param::Mode::QTANH,
-          Param::Mode::QFAST_TANH,
-          Param::Mode::QROUND,
-          Param::Mode::QERF,
-          Param::Mode::QERFINV,
-          Param::Mode::QERFC, 
-          Param::Mode::QERFCINV,
+         {Param::Mode::QRELU,      Param::Mode::QABS,   Param::Mode::QACOS,
+          Param::Mode::QASIN,      Param::Mode::QCEIL,  Param::Mode::QCOS,
+          Param::Mode::QEXP,       Param::Mode::QEXPM1, Param::Mode::QFLOOR,
+          Param::Mode::QLOG,       Param::Mode::QLOG1P, Param::Mode::QNEGATE,
+          Param::Mode::QSIGMOID,   Param::Mode::QSIN,   Param::Mode::QTANH,
+          Param::Mode::QFAST_TANH, Param::Mode::QROUND, Param::Mode::QERF,
+          Param::Mode::QERFINV,    Param::Mode::QERFC,  Param::Mode::QERFCINV,
           Param::Mode::QH_SWISH}) {
         Param param{mode};
         checker.set_param(param);
@@ -115,10 +101,10 @@ TEST_F(NAIVE, ELEMWISE_QUANTIZED_MODE_UNARY) {
         auto extra_impl = [&](const TensorNDArray& tensors) {
             TensorNDArray float_tensors;
             for (size_t i = 0; i < tensors.size(); ++i) {
-                TensorLayout layout(static_cast<TensorShape>(tensors[i].layout),
-                                    dtype::Float32());
-                float_tensors.emplace_back(malloc(layout.span().dist_byte()),
-                                           std::move(layout));
+                TensorLayout layout(
+                        static_cast<TensorShape>(tensors[i].layout), dtype::Float32());
+                float_tensors.emplace_back(
+                        malloc(layout.span().dist_byte()), std::move(layout));
             }
             auto typecvt = handle()->create_operator<TypeCvt>();
             typecvt->exec(tensors[0], float_tensors[0]);
@@ -172,8 +158,8 @@ TEST_F(NAIVE, ELEMWISE_QUANTIZED_MODE_BINARY) {
     checker.set_dtype(0, dtype::QuantizedS8(0.1f))
             .set_dtype(1, dtype::QuantizedS8(0.2f));
 
-    for (auto mode : {
-          Param::Mode::QABS_GRAD,
+    for (auto mode :
+         {Param::Mode::QABS_GRAD,
           Param::Mode::QADD,
           Param::Mode::QFLOOR_DIV,
           Param::Mode::QMAX,
@@ -199,17 +185,16 @@ TEST_F(NAIVE, ELEMWISE_QUANTIZED_MODE_BINARY) {
           Param::Mode::QATAN2,
           Param::Mode::QH_SWISH_GRAD,
           Param::Mode::QFUSE_ADD_H_SWISH}) {
-
         Param param{mode};
         checker.set_param(param);
 
         auto extra_impl = [&](const TensorNDArray& tensors) {
             TensorNDArray float_tensors;
             for (size_t i = 0; i < tensors.size(); ++i) {
-                TensorLayout layout(static_cast<TensorShape>(tensors[i].layout),
-                                    dtype::Float32());
-                float_tensors.emplace_back(malloc(layout.span().dist_byte()),
-                                           std::move(layout));
+                TensorLayout layout(
+                        static_cast<TensorShape>(tensors[i].layout), dtype::Float32());
+                float_tensors.emplace_back(
+                        malloc(layout.span().dist_byte()), std::move(layout));
             }
             auto typecvt = handle()->create_operator<TypeCvt>();
             for (size_t i = 0; i < 2; ++i) {
@@ -246,7 +231,6 @@ TEST_F(NAIVE, ELEMWISE_QUANTIZED_MODE_BINARY) {
         checker.execs({{10, 4, 5, 6}, {10, 4, 5, 6}, {}});
         checker.execs({{1, 4, 5, 6}, {20, 4, 5, 6}, {}});
         checker.execs({{1, 4, 5, 1}, {2, 1, 1, 2}, {}});
-
     }
 }
 
@@ -258,18 +242,17 @@ TEST_F(NAIVE, ELEMWISE_QUANTIZED_MODE_TERNARY) {
             .set_dtype(1, dtype::QuantizedS8(0.2f))
             .set_dtype(2, dtype::QuantizedS8(0.3f));
 
-    for (auto mode : {Param::Mode::QFUSE_MUL_ADD3,
-                      Param::Mode::QCOND_LEQ_MOV}) {
+    for (auto mode : {Param::Mode::QFUSE_MUL_ADD3, Param::Mode::QCOND_LEQ_MOV}) {
         Param param{mode};
         checker.set_param(param);
 
         auto extra_impl = [&](const TensorNDArray& tensors) {
             TensorNDArray float_tensors;
             for (size_t i = 0; i < tensors.size(); ++i) {
-                TensorLayout layout(static_cast<TensorShape>(tensors[i].layout),
-                                    dtype::Float32());
-                float_tensors.emplace_back(malloc(layout.span().dist_byte()),
-                                           std::move(layout));
+                TensorLayout layout(
+                        static_cast<TensorShape>(tensors[i].layout), dtype::Float32());
+                float_tensors.emplace_back(
+                        malloc(layout.span().dist_byte()), std::move(layout));
             }
             auto typecvt = handle()->create_operator<TypeCvt>();
             for (size_t i = 0; i < 3; ++i) {
@@ -278,8 +261,9 @@ TEST_F(NAIVE, ELEMWISE_QUANTIZED_MODE_TERNARY) {
 
             auto opr = handle()->create_operator<Elemwise>();
             opr->param().mode = get_elem_mode(mode);
-            opr->exec({float_tensors[0], float_tensors[1], float_tensors[2]},
-                      float_tensors[3]);
+            opr->exec(
+                    {float_tensors[0], float_tensors[1], float_tensors[2]},
+                    float_tensors[3]);
 
             typecvt->exec(float_tensors[3], tensors[3]);
 

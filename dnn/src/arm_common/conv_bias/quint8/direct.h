@@ -22,8 +22,7 @@ namespace conv_bias {
             const uint8_t* src, const uint8_t* filter, const int32_t* bias, \
             int32_t* temp, uint8_t* dst, const size_t IH, const size_t IW,  \
             const size_t OH, const size_t OW, const int8_t src_zp,          \
-            const int8_t filter_zp, const int32_t src_filter_zp,            \
-            const Op& op);
+            const int8_t filter_zp, const int32_t src_filter_zp, const Op& op);
 
 KERN(stride1, 2)
 KERN(stride1, 3)
@@ -37,7 +36,7 @@ KERN(stride2, 7)
 
 #undef KERN
 
-}  // namesapce conv_bias
+}  // namespace conv_bias
 }  // namespace arm_common
 }  // namespace megdnn
 

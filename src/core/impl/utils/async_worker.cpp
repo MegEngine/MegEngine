@@ -15,10 +15,9 @@
 using namespace mgb;
 
 #if MGB_HAVE_THREAD
-#include "megbrain/utils/metahelper.h"
 #include "megbrain/exception.h"
 #include "megbrain/system.h"
-
+#include "megbrain/utils/metahelper.h"
 
 void AsyncWorkerSet::issue_stop_workers() {
     MGB_LOCK_GUARD(m_mtx);
@@ -28,17 +27,17 @@ void AsyncWorkerSet::issue_stop_workers() {
 
 AsyncWorkerSet::~AsyncWorkerSet() {
     issue_stop_workers();
-    for (auto &&i: m_worker_threads)
+    for (auto&& i : m_worker_threads)
         i.join();
 }
 
-void AsyncWorkerSet::add_worker(const std::string &name, const Task &task) {
+void AsyncWorkerSet::add_worker(const std::string& name, const Task& task) {
     check_exception();
 
     m_worker_init_finished.store(false);
-    m_worker_threads.emplace_back(&AsyncWorkerSet::worker_impl_wrapper,
-            this, &name, &task);
-    while(!m_worker_init_finished.load())
+    m_worker_threads.emplace_back(
+            &AsyncWorkerSet::worker_impl_wrapper, this, &name, &task);
+    while (!m_worker_init_finished.load())
         std::this_thread::yield();
 }
 
@@ -46,13 +45,13 @@ void AsyncWorkerSet::start() {
     check_exception();
 
     MGB_LOCK_GUARD(m_mtx);
-    m_nr_start_call ++;
+    m_nr_start_call++;
     m_nr_worker_to_wait = m_worker_threads.size();
     m_cv_start.notify_all();
 }
 
 void AsyncWorkerSet::wait_all() {
-    for (; ; ) {
+    for (;;) {
         std::unique_lock<std::mutex> lk(m_mtx);
         check_exception();
         if (!m_nr_worker_to_wait) {
@@ -62,20 +61,16 @@ void AsyncWorkerSet::wait_all() {
     }
 }
 
-void AsyncWorkerSet::worker_impl_wrapper(
-        const std::string *name, const Task *taskptr) {
-
+void AsyncWorkerSet::worker_impl_wrapper(const std::string* name, const Task* taskptr) {
     std::string name_copy(*name);
     sys::set_thread_name(name_copy);
     Task task = *taskptr;
 
     MGB_IF_EXCEPTION(std::exception_ptr exc = nullptr);
 
-    MGB_TRY {
-        worker_impl(task);
-    } MGB_CATCH_ALL_EXCEPTION(
-            ssprintf("async worker `%s'", name_copy.c_str()).c_str(),
-            exc);
+    MGB_TRY { worker_impl(task); }
+    MGB_CATCH_ALL_EXCEPTION(
+            ssprintf("async worker `%s'", name_copy.c_str()).c_str(), exc);
 
 #if MGB_ENABLE_EXCEPTION
     if (exc) {
@@ -92,11 +87,11 @@ void AsyncWorkerSet::worker_impl_wrapper(
 #endif
 }
 
-void AsyncWorkerSet::worker_impl(const Task &task) {
+void AsyncWorkerSet::worker_impl(const Task& task) {
     size_t cur_finished_call = m_nr_start_call;
     m_worker_init_finished.store(true);
 
-    for (; ; ) {
+    for (;;) {
         std::unique_lock<std::mutex> lk(m_mtx);
         if (m_should_stop)
             return;
@@ -109,7 +104,7 @@ void AsyncWorkerSet::worker_impl(const Task &task) {
                 if (m_should_stop)
                     return;
                 task();
-                cur_finished_call ++;
+                cur_finished_call++;
             }
 
             lk.lock();
@@ -120,7 +115,7 @@ void AsyncWorkerSet::worker_impl(const Task &task) {
 
             if (cur_finished_call == m_nr_start_call) {
                 mgb_assert(m_nr_worker_to_wait);
-                m_nr_worker_to_wait --;
+                m_nr_worker_to_wait--;
                 m_cv_finish.notify_one();
                 lk.unlock();
             }
@@ -138,9 +133,9 @@ void AsyncWorkerSet::check_exception() {
 #endif
 }
 
-#else   // MGB_HAVE_THREAD
+#else  // MGB_HAVE_THREAD
 
-void AsyncWorkerSet::add_worker(const std::string &name, const Task &task) {
+void AsyncWorkerSet::add_worker(const std::string& name, const Task& task) {
     mgb_assert(!m_task, "only one worker is allowed in single-thread mode");
     m_task = task;
 }
@@ -150,10 +145,8 @@ void AsyncWorkerSet::start() {
     m_task();
 }
 
-void AsyncWorkerSet::wait_all() {
-}
+void AsyncWorkerSet::wait_all() {}
 
 #endif  // MGB_HAVE_THREAD
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
-

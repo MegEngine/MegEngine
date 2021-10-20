@@ -40,7 +40,6 @@ typedef enum {
     megcoreErrorInternalError = 5,
 } megcoreStatus_t;
 
-
 /**
  * \brief Memcpy kind
  */
@@ -70,6 +69,6 @@ struct AsyncErrorInfo {
     char msg[228];
     int msg_args[4];
 };
-} // namespace megcore
+}  // namespace megcore
 
 // vim: syntax=cpp.doxygen

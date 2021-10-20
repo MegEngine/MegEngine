@@ -25,38 +25,34 @@
  *
  * --------------------------------------------------------------------------
  * * This file has been modified by Megvii ("Megvii Modifications").
- * * All Megvii Modifications are Copyright (C) 2014-2021 Megvii Inc. All rights reserved.
+ * * All Megvii Modifications are Copyright (C) 2014-2021 Megvii Inc. All rights
+ * reserved.
  * --------------------------------------------------------------------------
  */
-#include "../nvmatrix.cuh"
 #include "../cudaconv2.cuh"
+#include "../nvmatrix.cuh"
 #include "src/cuda/utils.cuh"
 
 namespace megdnn {
 namespace cuda {
 
-__device__ inline void
-    filterActs_YxX_sparse2_preload_ty_4_tx_32_f_16_c_4_setPixelCoords
-        (int filterSize, int imgSizeX,
-         int imgLoadModPosY, int imgLoadModPosX,
-         int imgY, int imgX, int& fPidx, int& iPidx) {
+__device__ inline void filterActs_YxX_sparse2_preload_ty_4_tx_32_f_16_c_4_setPixelCoords(
+        int filterSize, int imgSizeX, int imgLoadModPosY, int imgLoadModPosX, int imgY,
+        int imgX, int& fPidx, int& iPidx) {
     int filterPxY = imgY - imgLoadModPosY;
     int filterPxX = imgX - imgLoadModPosX;
     fPidx = filterPxY * filterSize + filterPxX;
-    iPidx = imgY * imgSizeX + imgX; // Pixel index in img
+    iPidx = imgY * imgSizeX + imgX;  // Pixel index in img
 }
 
-#define FILTER_ACTS_PARAMS  cudaTextureObject_t images,                         \
-                            cudaTextureObject_t filters, float* targets,        \
-                            const int numImages, const int numFilters,          \
-                            const int imgSizeY, const int imgSizeX,             \
-                            const int filterSize, const int paddingStart,       \
-                            const int moduleStride,                             \
-                            const int numModulesY, const int numModulesX,       \
-                            const int imgStride, const int numImgColors,        \
-                            const int numGroups,                                \
-                            const float scaleTargets, const float scaleOutputs, \
-                            const bool conv/*, const bool noloads*/
+#define FILTER_ACTS_PARAMS                                                        \
+    cudaTextureObject_t images, cudaTextureObject_t filters, float *targets,      \
+            const int numImages, const int numFilters, const int imgSizeY,        \
+            const int imgSizeX, const int filterSize, const int paddingStart,     \
+            const int moduleStride, const int numModulesY, const int numModulesX, \
+            const int imgStride, const int numImgColors, const int numGroups,     \
+            const float scaleTargets, const float scaleOutputs,                   \
+            const bool conv /*, const bool noloads*/
 /*
  * images:      (numImgColors, imgSizeY, imgSizeX, numImages) with stride given
  * filters:     (numFilterColors, filterPixels, numFilters) if conv
@@ -65,25 +61,21 @@ __device__ inline void
  * targets:     (numFilters, numModulesY, numModulesX, numImages)
  *
  */
-template <int B_Y, int B_X, int imgsPerThread, int filtersPerThread, int colorCache,
-          bool scale, bool checkImgBounds>
-__global__ void filterActs_YxX_sparse2_preload_ty_4_tx_32_i_4_f_16_c_4_tex (FILTER_ACTS_PARAMS);
+template <
+        int B_Y, int B_X, int imgsPerThread, int filtersPerThread, int colorCache,
+        bool scale, bool checkImgBounds>
+__global__ void filterActs_YxX_sparse2_preload_ty_4_tx_32_i_4_f_16_c_4_tex(
+        FILTER_ACTS_PARAMS);
 
-
-
-#define FILTER_COLOR_PARAMS float* images, float* filters, float* targets,      \
-                            const int numImages, const int numFilters,          \
-                            const int imgSizeY, const int imgSizeX,             \
-                            const int filterSize, const int paddingStart,       \
-                            const int moduleStride,                             \
-                            const int numModulesY, const int numModulesX,       \
-                            const int imgStride,                                \
-                            const float scaleTargets, const float scaleOutputs, \
-                            const bool conv
+#define FILTER_COLOR_PARAMS                                                       \
+    float *images, float *filters, float *targets, const int numImages,           \
+            const int numFilters, const int imgSizeY, const int imgSizeX,         \
+            const int filterSize, const int paddingStart, const int moduleStride, \
+            const int numModulesY, const int numModulesX, const int imgStride,    \
+            const float scaleTargets, const float scaleOutputs, const bool conv
 /*
- * Block size B_YxB_X. Each block applies B_Y * filtersPerThread filters to B_X * imgsPerThread images.
- * threadIdx.x determines image
- * threadIdx.y determines filter
+ * Block size B_YxB_X. Each block applies B_Y * filtersPerThread filters to B_X *
+ * imgsPerThread images. threadIdx.x determines image threadIdx.y determines filter
  *
  * blockIdx.x determines image batch of B_X * imgsPerThread
  * blockIdx.y determines filter batch of module and B_Y * filtersPerThread
@@ -101,26 +93,21 @@ __global__ void filterActs_YxX_sparse2_preload_ty_4_tx_32_i_4_f_16_c_4_tex (FILT
  * The imgSize here is the size of the actual image without the padding.
  *
  */
- template <int B_Y, int B_X, int imgsPerThread, int filtersPerThread, int numColors, int pixelCache, bool scale, bool checkImgBounds>
+template <
+        int B_Y, int B_X, int imgsPerThread, int filtersPerThread, int numColors,
+        int pixelCache, bool scale, bool checkImgBounds>
 __global__ void filterActs_YxX_color(FILTER_COLOR_PARAMS);
 
-
-
-
-#define FILTER_SPARSE2_PARAMS float* images, float* filters, float* targets,        \
-                              const int numImages, const int numFilters,            \
-                              const int imgSizeY, const int imgSizeX,               \
-                              const int filterSize, const int paddingStart,         \
-                              const int moduleStride,                               \
-                              const int numModulesY, const int numModulesX,         \
-                              const int imgStride, const int numImgColors,          \
-                              const int numGroups,                                  \
-                              const float scaleTargets, const float scaleOutputs,   \
-                              const bool conv
+#define FILTER_SPARSE2_PARAMS                                                      \
+    float *images, float *filters, float *targets, const int numImages,            \
+            const int numFilters, const int imgSizeY, const int imgSizeX,          \
+            const int filterSize, const int paddingStart, const int moduleStride,  \
+            const int numModulesY, const int numModulesX, const int imgStride,     \
+            const int numImgColors, const int numGroups, const float scaleTargets, \
+            const float scaleOutputs, const bool conv
 /*
- * Block size B_YxB_X. Each block applies B_Y * filtersPerThread filters to B_X * imgsPerThread images.
- * threadIdx.x determines image
- * threadIdx.y determines filter
+ * Block size B_YxB_X. Each block applies B_Y * filtersPerThread filters to B_X *
+ * imgsPerThread images. threadIdx.x determines image threadIdx.y determines filter
  *
  * blockIdx.x determines image batch of B_X * imgsPerThread
  * blockIdx.y determines filter batch of B_Y * filtersPerThread
@@ -144,12 +131,14 @@ __global__ void filterActs_YxX_color(FILTER_COLOR_PARAMS);
  * numFilters must be divisible by numGroups.
  * no restrictions on pixelCache
  * The imgSize here is the size of the actual image without the padding.
- * As always, try to make B_X * imgsPerThread == B_Y * filtersPerThread for maximum efficiency.
+ * As always, try to make B_X * imgsPerThread == B_Y * filtersPerThread for maximum
+ * efficiency.
  *
  */
-template <int B_Y, int B_X, int imgsPerThread, int filtersPerThread, int colorCache,
-          bool scale, bool checkImgBounds>
+template <
+        int B_Y, int B_X, int imgsPerThread, int filtersPerThread, int colorCache,
+        bool scale, bool checkImgBounds>
 __global__ void filterActs_YxX_sparse2(FILTER_SPARSE2_PARAMS);
 
-} // namespace megdnn
-} // namespace cuda
+}  // namespace cuda
+}  // namespace megdnn

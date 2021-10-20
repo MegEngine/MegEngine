@@ -46,9 +46,7 @@ def has_valid_annotation(anno, order):
 
 
 class COCO(VisionDataset):
-    r"""
-    `MS COCO <http://cocodataset.org/#home>`_ Dataset.
-    """
+    r"""`MS COCO <http://cocodataset.org/#home>`_ Dataset."""
 
     supported_order = (
         "image",

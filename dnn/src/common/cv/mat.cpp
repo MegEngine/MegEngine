@@ -24,17 +24,12 @@ namespace megcv {
 
 template <typename T>
 Mat<T>::Mat(size_t rows, size_t cols, size_t channels, size_t step)
-        : m_rows(rows),
-          m_cols(cols),
-          m_channels(channels),
-          m_step(step),
-          m_offset(0) {
+        : m_rows(rows), m_cols(cols), m_channels(channels), m_step(step), m_offset(0) {
     megdnn_assert(step >= cols * channels);
     megdnn_assert(1 <= channels && channels <= 4);
     T* raw_data;
     cuda_check(cudaMalloc((void**)&raw_data, sizeof(T) * rows * step));
-    m_data =
-            std::shared_ptr<T>(raw_data, [](T* d) { cuda_check(cudaFree(d)); });
+    m_data = std::shared_ptr<T>(raw_data, [](T* d) { cuda_check(cudaFree(d)); });
     cudaMemset(m_data.get(), 0, sizeof(T) * rows * step);
 }
 
@@ -61,15 +56,15 @@ Mat<T>::Mat(const Mat<T>& rhs)
           m_offset(0) {}
 
 template <typename T>
-Mat<T>::Mat(const Mat<T>& rhs, size_t row_offset, size_t row_count,
-            size_t col_offset, size_t col_count)
+Mat<T>::Mat(
+        const Mat<T>& rhs, size_t row_offset, size_t row_count, size_t col_offset,
+        size_t col_count)
         : m_rows(row_count),
           m_cols(col_count),
           m_channels(rhs.m_channels),
           m_step(rhs.m_step),
           m_data(rhs.m_data),
-          m_offset(rhs.m_offset + row_offset * m_step +
-                   col_offset * m_channels) {}
+          m_offset(rhs.m_offset + row_offset * m_step + col_offset * m_channels) {}
 
 template <typename T>
 Mat<T>& Mat<T>::operator=(const Mat<T>& rhs) {
@@ -102,9 +97,9 @@ template <typename T>
 Mat<T> Mat<T>::clone() const {
     Mat<T> res(m_rows, m_cols, m_channels);
     for (size_t r = 0; r < m_rows; ++r) {
-        cuda_check(cudaMemcpy(res.ptr(r), this->ptr(r),
-                              sizeof(T) * m_cols * m_channels,
-                              cudaMemcpyDeviceToDevice));
+        cuda_check(cudaMemcpy(
+                res.ptr(r), this->ptr(r), sizeof(T) * m_cols * m_channels,
+                cudaMemcpyDeviceToDevice));
     }
     return res;
 }
@@ -122,11 +117,12 @@ bool Mat<T>::equals(const Mat<T>& rhs) const {
     megdnn_assert(row1);
     megdnn_assert(row2);
     for (size_t r = 0; r < m_rows; ++r) {
-        cuda_check(cudaMemcpy(row1.get(), this->ptr(r),
-                              sizeof(T) * m_cols * m_channels,
-                              cudaMemcpyDeviceToHost));
-        cuda_check(cudaMemcpy(row2.get(), rhs.ptr(r), sizeof(T) * m_cols * m_channels,
-                              cudaMemcpyDeviceToHost));
+        cuda_check(cudaMemcpy(
+                row1.get(), this->ptr(r), sizeof(T) * m_cols * m_channels,
+                cudaMemcpyDeviceToHost));
+        cuda_check(cudaMemcpy(
+                row2.get(), rhs.ptr(r), sizeof(T) * m_cols * m_channels,
+                cudaMemcpyDeviceToHost));
         for (size_t i = 0; i < m_cols * m_channels; ++i) {
             if (row1[i] != row2[i])
                 return false;
@@ -143,15 +139,17 @@ bool Mat<T>::is_continuous() const {
 template <typename T>
 void Mat<T>::read(const T* src) {
     megdnn_assert(is_continuous());
-    cuda_check(cudaMemcpy(m_data.get(), src, sizeof(T) * this->total_nr_elem(),
-                          cudaMemcpyHostToDevice));
+    cuda_check(cudaMemcpy(
+            m_data.get(), src, sizeof(T) * this->total_nr_elem(),
+            cudaMemcpyHostToDevice));
 }
 
 template <typename T>
 void Mat<T>::write(T* dst) const {
     megdnn_assert(is_continuous());
-    cuda_check(cudaMemcpy(dst, m_data.get(), sizeof(T) * this->total_nr_elem(),
-                          cudaMemcpyDeviceToHost));
+    cuda_check(cudaMemcpy(
+            dst, m_data.get(), sizeof(T) * this->total_nr_elem(),
+            cudaMemcpyDeviceToHost));
 }
 
 template class Mat<uchar>;
@@ -267,15 +265,15 @@ Mat<T>::Mat(const Mat<T>& rhs)
           m_offset(0) {}
 
 template <typename T>
-Mat<T>::Mat(const Mat<T>& rhs, size_t row_offset, size_t row_count,
-            size_t col_offset, size_t col_count)
+Mat<T>::Mat(
+        const Mat<T>& rhs, size_t row_offset, size_t row_count, size_t col_offset,
+        size_t col_count)
         : m_rows(row_count),
           m_cols(col_count),
           m_channels(rhs.m_channels),
           m_step(rhs.m_step),
           m_data(rhs.m_data),
-          m_offset(rhs.m_offset + row_offset * m_step +
-                   col_offset * m_channels) {}
+          m_offset(rhs.m_offset + row_offset * m_step + col_offset * m_channels) {}
 
 template <typename T>
 Mat<T>& Mat<T>::operator=(const Mat<T>& rhs) {
@@ -322,8 +320,7 @@ bool Mat<T>::equals(const Mat<T>& rhs) const {
     if (this->m_channels != rhs.m_channels)
         return false;
     for (size_t r = 0; r < m_rows; ++r) {
-        if (0 !=
-            memcmp(this->ptr(r), rhs.ptr(r), sizeof(T) * m_cols * m_channels))
+        if (0 != memcmp(this->ptr(r), rhs.ptr(r), sizeof(T) * m_cols * m_channels))
             return false;
     }
     return true;

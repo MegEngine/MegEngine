@@ -30,8 +30,8 @@ BatchConvBiasForwardImpl::AlgoPack BatchConvBiasForwardImpl::sm_algo_pack;
 
 BatchConvBiasForwardImpl::AlgoBase::SizeArgs::SizeArgs(
         BatchConvBiasForwardImpl* o, const TensorLayout& src,
-        const TensorLayout& filter, const TensorLayout& bias,
-        const TensorLayout& z, const TensorLayout& dst)
+        const TensorLayout& filter, const TensorLayout& bias, const TensorLayout& z,
+        const TensorLayout& dst)
         : opr{o},
           src_layout{src},
           filter_layout{filter},
@@ -40,11 +40,10 @@ BatchConvBiasForwardImpl::AlgoBase::SizeArgs::SizeArgs(
           dst_layout{dst} {}
 
 BatchConvBiasForwardImpl::AlgoBase::ExecArgs::ExecArgs(
-        BatchConvBiasForwardImpl* opr, _megdnn_tensor_in src,
-        _megdnn_tensor_in filter, _megdnn_tensor_in bias, _megdnn_tensor_in z,
-        _megdnn_tensor_out dst, _megdnn_workspace workspace)
-        : SizeArgs(opr, src.layout, filter.layout, bias.layout, z.layout,
-                   dst.layout),
+        BatchConvBiasForwardImpl* opr, _megdnn_tensor_in src, _megdnn_tensor_in filter,
+        _megdnn_tensor_in bias, _megdnn_tensor_in z, _megdnn_tensor_out dst,
+        _megdnn_workspace workspace)
+        : SizeArgs(opr, src.layout, filter.layout, bias.layout, z.layout, dst.layout),
           src_tensor{&src},
           filter_tensor{&filter},
           bias_tensor{&bias},
@@ -61,11 +60,11 @@ std::string BatchConvBiasForwardImpl::AlgoBase::SizeArgs::to_string() const {
             "dtype=(%s(src),%s(flt),%s(bias),%s(z))->(%s(dst))",
             src_layout.to_string().c_str(), filter_layout.to_string().c_str(),
             bias_layout.to_string().c_str(), z_layout.to_string().c_str(),
-            dst_layout.to_string().c_str(), param.pad_h, param.pad_w,
-            param.stride_h, param.stride_w, param.dilate_h, param.dilate_w,
+            dst_layout.to_string().c_str(), param.pad_h, param.pad_w, param.stride_h,
+            param.stride_w, param.dilate_h, param.dilate_w,
             static_cast<int>(param.mode), src_layout.dtype.name(),
-            filter_layout.dtype.name(), bias_layout.dtype.name(),
-            z_layout.dtype.name(), dst_layout.dtype.name());
+            filter_layout.dtype.name(), bias_layout.dtype.name(), z_layout.dtype.name(),
+            dst_layout.dtype.name());
 }
 
 // vim: syntax=cpp.doxygen

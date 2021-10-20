@@ -9,71 +9,60 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 #pragma once
+#include "src/cuda/utils.cuh"
 
 namespace megdnn {
 namespace cuda {
 namespace warp_perspective {
 
-__device__ inline float sqr(float x)
-{
+__device__ inline float sqr(float x) {
     return x * x;
 }
 
-__device__ inline int mod(int i, int n)
-{
+__device__ inline int mod(int i, int n) {
     i %= n;
     i += (i < 0) * n;
     return i;
 }
 
 class ReplicateGetter {
-    public:
-        __device__ int operator()(int i, int n)
-        {
-            return min(max(i, 0), n-1);
-        }
+public:
+    __device__ int operator()(int i, int n) { return min(max(i, 0), n - 1); }
 };
 
 class ReflectGetter {
-    public:
-        __device__ int operator()(int i, int n)
-        {
-            n <<= 1;
-            i = mod(i, n);
-            return min(i, n-1-i);
-        }
+public:
+    __device__ int operator()(int i, int n) {
+        n <<= 1;
+        i = mod(i, n);
+        return min(i, n - 1 - i);
+    }
 };
 
 class Reflect101Getter {
-    public:
-        __device__ int operator()(int i, int n)
-        {
-            n = (n-1)<<1;
-            i = mod(i, n);
-            return min(i, n-i);
-        }
+public:
+    __device__ int operator()(int i, int n) {
+        n = (n - 1) << 1;
+        i = mod(i, n);
+        return min(i, n - i);
+    }
 };
 
 class WrapGetter {
-    public:
-        __device__ int operator()(int i, int n)
-        {
-            i = mod(i, n);
-            return i;
-        }
+public:
+    __device__ int operator()(int i, int n) {
+        i = mod(i, n);
+        return i;
+    }
 };
 
 class ConstGetter {
-    public:
-        __device__ int operator()(int i, int n)
-        {
-            return i;
-        }
+public:
+    __device__ int operator()(int i, int n) { return i; }
 };
 
-} // namespace warp_perspective
-} // namespace cuda
-} // namespace megdnn
+}  // namespace warp_perspective
+}  // namespace cuda
+}  // namespace megdnn
 
 // vim: syntax=cpp.doxygen
-

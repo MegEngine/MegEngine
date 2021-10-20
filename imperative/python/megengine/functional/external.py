@@ -7,10 +7,29 @@
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # pylint: disable=redefined-builtin
-from typing import Sequence
+from typing import Iterable, List, Sequence
 
 from ..core._imperative_rt.core2 import apply
 from ..core.ops import builtin
+
+
+def extern_opr_subgraph(
+    inputs, output_shapes: List[tuple], dump_name: str, dump_data: bytes, output_dtypes
+):
+    r"""Load a serialized extern opr subgraph and fake execute the operator.
+
+    Args:
+        inputs: list of input tensors.
+        output_shapes: The output shapes.
+        dump_name: The serialized subgraph name.
+        dump_data: The serialized subgraph.
+    """
+    if not isinstance(inputs, Iterable):
+        inputs = (inputs,)
+    op = builtin.ExternOpr(
+        output_shapes, dump_name, dump_data, len(dump_data), output_dtypes
+    )
+    return apply(op, *inputs)
 
 
 def tensorrt_runtime_opr(inputs, *, data: bytes = None):
@@ -23,14 +42,14 @@ def tensorrt_runtime_opr(inputs, *, data: bytes = None):
 
 
 def cambricon_runtime_opr(inputs, data, symbol, tensor_dim_mutable):
-    r"""
-    Load a serialized Cambricon model as a runtime operator in MegEngine.
+    r"""Load a serialized Cambricon model as a runtime operator in MegEngine.
 
-    :param inputs: list of input tensors.
-    :param data: the serialized Cambricon model.
-    :param symbol: name of the function in Cambricon model.
-    :param tensor_dim_mutable: whether the input tensors' shapes are mutable
-        in ``cnrtModel_t``.
+    Args:
+        inputs: list of input tensors.
+        data: the serialized Cambricon model.
+        symbol: name of the function in Cambricon model.
+        tensor_dim_mutable: whether the input tensors' shapes are mutable
+            in ``cnrtModel_t``.
     """
 
     op = builtin.CambriconRuntime(data, len(data), symbol, tensor_dim_mutable)
@@ -38,11 +57,11 @@ def cambricon_runtime_opr(inputs, data, symbol, tensor_dim_mutable):
 
 
 def atlas_runtime_opr(inputs, data):
-    r"""
-    Load a serialized Atlas model as a runtime operator in MegEngine.
+    r"""Load a serialized Atlas model as a runtime operator in MegEngine.
 
-    :param inputs: list of input tensors.
-    :param data: the serialized Atlas model.
+    Args:
+        inputs: list of input tensors.
+        data: the serialized Atlas model.
     """
 
     op = builtin.AtlasRuntime(data, len(data))

@@ -31,14 +31,15 @@ namespace {
     MEGDNN_MARK_USED_VAR(OW);           \
     MEGDNN_MARK_USED_VAR(pack_oc_size)
 
-template <typename ctype, typename dtype = ctype,
-          megdnn::PostprocessMode postprocess_mode =
-                  megdnn::PostprocessMode::FLOAT>
+template <
+        typename ctype, typename dtype = ctype,
+        megdnn::PostprocessMode postprocess_mode = megdnn::PostprocessMode::FLOAT>
 struct PostProcess {
-    static void run(void* conv_dst_ptr, const void* bias_ptr, void* dst_ptr,
-                    megdnn::BiasMode bias_mode, megdnn::NonlineMode nonlineMode,
-                    megdnn::DType bias_type, megdnn::DType dst_type, size_t N,
-                    size_t OC, size_t OH, size_t OW, size_t pack_oc_size = 1) {
+    static void run(
+            void* conv_dst_ptr, const void* bias_ptr, void* dst_ptr,
+            megdnn::BiasMode bias_mode, megdnn::NonlineMode nonlineMode,
+            megdnn::DType bias_type, megdnn::DType dst_type, size_t N, size_t OC,
+            size_t OH, size_t OW, size_t pack_oc_size = 1) {
         POST_PROCESS_UNUSED_VAR();
         megdnn_throw("not impl PostProcess");
     }
@@ -46,10 +47,11 @@ struct PostProcess {
 
 template <typename ctype, typename dtype>
 struct PostProcess<ctype, dtype, megdnn::PostprocessMode::NO_PROCESS> {
-    static void run(void* conv_dst_ptr, void* bias_ptr, void* dst_ptr,
-                    megdnn::BiasMode bias_mode, megdnn::NonlineMode nonlineMode,
-                    megdnn::DType bias_type, megdnn::DType dst_type, size_t N,
-                    size_t OC, size_t OH, size_t OW, size_t pack_oc_size = 1) {
+    static void run(
+            void* conv_dst_ptr, void* bias_ptr, void* dst_ptr,
+            megdnn::BiasMode bias_mode, megdnn::NonlineMode nonlineMode,
+            megdnn::DType bias_type, megdnn::DType dst_type, size_t N, size_t OC,
+            size_t OH, size_t OW, size_t pack_oc_size = 1) {
         POST_PROCESS_UNUSED_VAR();
         megdnn_throw("not impl PostProcess");
     }
@@ -57,10 +59,11 @@ struct PostProcess<ctype, dtype, megdnn::PostprocessMode::NO_PROCESS> {
 
 template <typename opctype, typename opdtype>
 struct PostProcess<opctype, opdtype, megdnn::PostprocessMode::QUANTIZED> {
-    static void run(void* conv_dst_ptr, const void* bias_ptr, void* dst_ptr,
-                    megdnn::BiasMode bias_mode, megdnn::NonlineMode nonlineMode,
-                    megdnn::DType bias_type, megdnn::DType dst_type, size_t N,
-                    size_t OC, size_t OH, size_t OW, size_t pack_oc_size = 1) {
+    static void run(
+            void* conv_dst_ptr, const void* bias_ptr, void* dst_ptr,
+            megdnn::BiasMode bias_mode, megdnn::NonlineMode nonlineMode,
+            megdnn::DType bias_type, megdnn::DType dst_type, size_t N, size_t OC,
+            size_t OH, size_t OW, size_t pack_oc_size = 1) {
         POST_PROCESS_UNUSED_VAR();
         megdnn_throw("not impl PostProcess");
     }
@@ -68,10 +71,11 @@ struct PostProcess<opctype, opdtype, megdnn::PostprocessMode::QUANTIZED> {
 
 template <typename ctype, typename dtype>
 struct PostProcess<ctype, dtype, megdnn::PostprocessMode::ADD_BIAS> {
-    static void run(void* conv_dst_ptr, void* bias_ptr, void* dst_ptr,
-                    megdnn::BiasMode bias_mode, megdnn::NonlineMode nonlineMode,
-                    megdnn::DType bias_type, megdnn::DType dst_type, size_t N,
-                    size_t OC, size_t OH, size_t OW, size_t pack_oc_size = 1) {
+    static void run(
+            void* conv_dst_ptr, void* bias_ptr, void* dst_ptr,
+            megdnn::BiasMode bias_mode, megdnn::NonlineMode nonlineMode,
+            megdnn::DType bias_type, megdnn::DType dst_type, size_t N, size_t OC,
+            size_t OH, size_t OW, size_t pack_oc_size = 1) {
         POST_PROCESS_UNUSED_VAR();
         megdnn_throw("not impl PostProcess");
     }

@@ -280,6 +280,9 @@ class LayoutType(enum.Enum):
   TensorC32RSK32 = enum_auto()
   TensorC64RSK64 = enum_auto()
   TensorK4RSC4 = enum_auto()
+  TensorCK4RS4 = enum_auto()
+  TensorCK8RS8 = enum_auto()
+  TensorCK16RS16 = enum_auto()
 
 #
 LayoutTag = {
@@ -303,7 +306,10 @@ LayoutTag = {
   LayoutType.TensorC32RSK32: 'cutlass::layout::TensorCxRSKx<32>',
   LayoutType.TensorNC64HW64: 'cutlass::layout::TensorNCxHWx<64>',
   LayoutType.TensorC64RSK64: 'cutlass::layout::TensorCxRSKx<64>',
-  LayoutType.TensorK4RSC4: 'cutlass::layout::TensorKxRSCx<4>', 
+  LayoutType.TensorK4RSC4: 'cutlass::layout::TensorKxRSCx<4>',
+  LayoutType.TensorCK4RS4: 'cutlass::layout::TensorCKxRSx<4>',
+  LayoutType.TensorCK8RS8: 'cutlass::layout::TensorCKxRSx<8>',
+  LayoutType.TensorCK16RS16: 'cutlass::layout::TensorCKxRSx<16>', 
 }
 
 #
@@ -342,6 +348,9 @@ ShortLayoutTypeNames = {
   LayoutType.TensorC32RSK32: 'c32rsk32',
   LayoutType.TensorC64RSK64: 'c64rsk64', 
   LayoutType.TensorK4RSC4: 'k4rsc4', 
+  LayoutType.TensorCK4RS4: 'ck4rs4',
+  LayoutType.TensorCK8RS8: 'ck8rs8',
+  LayoutType.TensorCK16RS16: 'ck16rs16', 
 }
 
 #
@@ -484,6 +493,7 @@ class SwizzlingFunctor(enum.Enum):
   ConvFpropNCxHWx = enum_auto()
   ConvFpropTrans = enum_auto()
   ConvDgradNCxHWx = enum_auto()
+  ConvDgradTrans = enum_auto()
 
 #
 SwizzlingFunctorTag = {
@@ -494,6 +504,7 @@ SwizzlingFunctorTag = {
   SwizzlingFunctor.ConvFpropNCxHWx: 'cutlass::conv::threadblock::ConvolutionFpropNCxHWxThreadblockSwizzle',  
   SwizzlingFunctor.ConvFpropTrans: 'cutlass::conv::threadblock::ConvolutionFpropTransThreadblockSwizzle',  
   SwizzlingFunctor.ConvDgradNCxHWx: 'cutlass::conv::threadblock::ConvolutionDgradNCxHWxThreadblockSwizzle', 
+  SwizzlingFunctor.ConvDgradTrans: 'cutlass::conv::threadblock::ConvolutionDgradTransThreadblockSwizzle', 
 }
 
 ###################################################################################################
@@ -561,6 +572,24 @@ StrideSupportNames = {
   StrideSupport.Strided: '',
   StrideSupport.Unity: 'unity_stride',
 }
+
+class SpecialOptimizeDesc(enum.Enum):
+  NoneSpecialOpt = enum_auto()
+  ConvFilterUnity = enum_auto()
+  DeconvDoubleUpsampling = enum_auto()
+
+SpecialOptimizeDescNames = {
+  SpecialOptimizeDesc.NoneSpecialOpt: 'none',
+  SpecialOptimizeDesc.ConvFilterUnity: 'conv_filter_unity',
+  SpecialOptimizeDesc.DeconvDoubleUpsampling: 'deconv_double_upsampling',
+}
+
+SpecialOptimizeDescTag = {
+  SpecialOptimizeDesc.NoneSpecialOpt: 'cutlass::conv::SpecialOptimizeDesc::NONE',
+  SpecialOptimizeDesc.ConvFilterUnity: 'cutlass::conv::SpecialOptimizeDesc::CONV_FILTER_UNITY',
+  SpecialOptimizeDesc.DeconvDoubleUpsampling: 'cutlass::conv::SpecialOptimizeDesc::DECONV_DOUBLE_UPSAMPLING',
+}
+
 
 class ImplicitGemmMode(enum.Enum):
   GemmNT = enum_auto()

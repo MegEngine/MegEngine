@@ -12,8 +12,8 @@
 #include <memory>
 #include "./algo.h"
 #include "megdnn/opr_param_defs.h"
-#include "src/common/algo_chooser.h"
 #include "src/common/algo_base.h"
+#include "src/common/algo_chooser.h"
 #include "src/cuda/handle.h"
 #include "src/cuda/utils.h"
 
@@ -37,8 +37,8 @@ std::pair<TensorLayoutArray, std::unique_ptr<MatrixMulForward>> prepare_sub_opr(
     set_execution_policy<BatchedMatrixMulForward, MatrixMulForward*>(
             args.opr, matmul_opr.get());
 
-    auto&& config = sub_opr_config(args.layout_a, args.layout_b, args.layout_c,
-                                   args.opr);
+    auto&& config =
+            sub_opr_config(args.layout_a, args.layout_b, args.layout_c, args.opr);
     matmul_opr->param() = config.second;
 
     return {config.first, std::move(matmul_opr)};
@@ -46,9 +46,9 @@ std::pair<TensorLayoutArray, std::unique_ptr<MatrixMulForward>> prepare_sub_opr(
 
 }  // namespace
 
-std::vector<Algorithm::SearchItem>
-BatchedMatrixMulForwardImpl::AlgoBruteForce::get_subopr_list(
-        const TensorLayoutArray& layouts, const OperatorBase* opr) const {
+std::vector<Algorithm::SearchItem> BatchedMatrixMulForwardImpl::AlgoBruteForce::
+        get_subopr_list(
+                const TensorLayoutArray& layouts, const OperatorBase* opr) const {
     const BatchedMatrixMulForwardImpl* bmm_opr =
             static_cast<const BatchedMatrixMulForwardImpl*>(opr);
     auto&& config = sub_opr_config(layouts[0], layouts[1], layouts[2], bmm_opr);
@@ -63,8 +63,8 @@ bool BatchedMatrixMulForwardImpl::AlgoBruteForce::is_available(
     auto config = prepare_sub_opr(args);
 
     return get_algorithm(
-            static_cast<MatrixMulForwardImpl*>(config.second.get()),
-            config.first[0], config.first[1], config.first[2]);
+            static_cast<MatrixMulForwardImpl*>(config.second.get()), config.first[0],
+            config.first[1], config.first[2]);
 }
 size_t BatchedMatrixMulForwardImpl::AlgoBruteForce::get_workspace_in_bytes(
         const SizeArgs& args) const {
@@ -73,17 +73,16 @@ size_t BatchedMatrixMulForwardImpl::AlgoBruteForce::get_workspace_in_bytes(
     return config.second->get_workspace_in_bytes(
             config.first[0], config.first[1], config.first[2]);
 }
-void BatchedMatrixMulForwardImpl::AlgoBruteForce::exec(
-        const ExecArgs& args) const {
+void BatchedMatrixMulForwardImpl::AlgoBruteForce::exec(const ExecArgs& args) const {
     auto N = args.layout_a.shape[0];
     auto config = prepare_sub_opr(args);
 
     rep(n, N) {
         TensorND A_, B_, C_;
         auto tensor_n_from_batch = [n](const TensorND& in, TensorND& out) {
-            out.raw_ptr = static_cast<void*>(static_cast<dt_byte*>(in.raw_ptr) +
-                                             n * in.layout.stride[0] *
-                                                     in.layout.dtype.size());
+            out.raw_ptr = static_cast<void*>(
+                    static_cast<dt_byte*>(in.raw_ptr) +
+                    n * in.layout.stride[0] * in.layout.dtype.size());
             out.layout = in.layout.remove_axis(0);
         };
         tensor_n_from_batch(args.tensor_a, A_);

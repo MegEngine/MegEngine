@@ -22,7 +22,6 @@
 #include "malloc.h"
 #endif
 
-
 #if defined(__ANDROID__) || defined(ANDROID)
 #include "malloc.h"
 #define HAS_MEMALIGN
@@ -98,14 +97,14 @@ public:
 };
 
 template <typename _T1, typename _T2, size_t _A1, size_t _A2>
-inline bool operator==(const aligned_allocator<_T1, _A1>&,
-                       const aligned_allocator<_T2, _A2>&) {
+inline bool operator==(
+        const aligned_allocator<_T1, _A1>&, const aligned_allocator<_T2, _A2>&) {
     return true;
 }
 
 template <typename _T1, typename _T2, size_t _A1, size_t _A2>
-inline bool operator!=(const aligned_allocator<_T1, _A1>&,
-                       const aligned_allocator<_T2, _A2>&) {
+inline bool operator!=(
+        const aligned_allocator<_T1, _A1>&, const aligned_allocator<_T2, _A2>&) {
     return false;
 }
 

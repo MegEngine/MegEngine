@@ -31,11 +31,11 @@ int sys::get_cpu_count() {
 #if defined(WIN32)
 
 #include <windows.h>
-void sys::set_cpu_affinity(const std::vector<int> &cpuset) {
+void sys::set_cpu_affinity(const std::vector<int>& cpuset) {
     mgb_log_warn("Set_cpu_affinity will not support later");
     auto nr = get_cpu_count();
     DWORD mask = 0;
-    for (auto i: cpuset) {
+    for (auto i : cpuset) {
         mgb_assert(i >= 0 && i < 64 && i < nr);
         mask |= 1 << i;
     }
@@ -56,40 +56,38 @@ std::pair<size_t, size_t> sys::get_ram_status_bytes() {
     return ret;
 }
 
-
-#else // not WIN32
+#else  // not WIN32
 
 #ifdef __APPLE__
 #include <mach/mach.h>
 #include <mach/mach_host.h>
 #else
-#include <sys/sysinfo.h>
 #include <sched.h>
+#include <sys/sysinfo.h>
 #endif
 
-void sys::set_cpu_affinity(const std::vector<int> &cpuset) {
+void sys::set_cpu_affinity(const std::vector<int>& cpuset) {
 #if defined(__APPLE__) || !MGB_HAVE_THREAD
 #pragma message("set_cpu_affinity not enabled on apple platform")
 #else
     cpu_set_t mask;
     CPU_ZERO(&mask);
     auto nr = get_cpu_count();
-    for (auto i: cpuset) {
-        mgb_assert(i >= 0 && i < nr, "invalid CPU ID: nr_cpu=%d id=%d",
-                nr, i);
+    for (auto i : cpuset) {
+        mgb_assert(i >= 0 && i < nr, "invalid CPU ID: nr_cpu=%d id=%d", nr, i);
         CPU_SET(i, &mask);
     }
     auto err = sched_setaffinity(0, sizeof(mask), &mask);
     if (err) {
-        mgb_log_error("failed to sched_setaffinity: %s (error ignored)",
-                strerror(errno));
+        mgb_log_error(
+                "failed to sched_setaffinity: %s (error ignored)", strerror(errno));
     }
 #endif
 }
 
 #ifdef MGB_EXTERN_API_MEMSTAT
 extern "C" {
-    void mgb_extern_api_memstat(size_t *tot, size_t *free);
+void mgb_extern_api_memstat(size_t* tot, size_t* free);
 }
 #endif
 
@@ -117,14 +115,14 @@ std::pair<size_t, size_t> sys::get_ram_status_bytes() {
 
     vm_statistics_data_t vm_stat;
 
-    auto err = host_statistics(host_port, HOST_VM_INFO, (host_info_t)&vm_stat,
-            &host_size);
+    auto err =
+            host_statistics(host_port, HOST_VM_INFO, (host_info_t)&vm_stat, &host_size);
     mgb_assert(err == KERN_SUCCESS);
 
     /* Stats in bytes */
-    size_t mem_used = (vm_stat.active_count +
-                       vm_stat.inactive_count +
-                       vm_stat.wire_count) * pagesize;
+    size_t mem_used =
+            (vm_stat.active_count + vm_stat.inactive_count + vm_stat.wire_count) *
+            pagesize;
     size_t mem_free = vm_stat.free_count * pagesize;
     return {mem_used + mem_free, mem_free};
 #else
@@ -137,7 +135,7 @@ std::pair<size_t, size_t> sys::get_ram_status_bytes() {
     return ret;
 #endif
 }
-#endif // WIN32
+#endif  // WIN32
 
 #if !MGB_BUILD_SLIM_SERVING && defined(__linux)
 #include <unistd.h>
@@ -151,13 +149,12 @@ bool sys::stderr_ansi_color() {
 }
 #endif
 
-#if MGB_BUILD_SLIM_SERVING || defined(ANDROID) || defined(WIN32) || \
-        defined(IOS) || defined(__APPLE__)
+#if MGB_BUILD_SLIM_SERVING || defined(ANDROID) || defined(WIN32) || defined(IOS) || \
+        defined(__APPLE__)
 
 #pragma message("sys functions disabled on unsupported platforms")
 
-void sys::set_thread_name(const std::string &) {
-}
+void sys::set_thread_name(const std::string&) {}
 
 #if !__DEPLOY_ON_XP_SP2__
 std::string sys::get_thread_name(Maybe<std::thread::id>) {
@@ -166,32 +163,31 @@ std::string sys::get_thread_name(Maybe<std::thread::id>) {
 #endif
 
 namespace {
-    class FakeTimedFuncInvoker final: public TimedFuncInvoker {
-        ThinHashMap<FuncId, Func> m_func_registry;
+class FakeTimedFuncInvoker final : public TimedFuncInvoker {
+    ThinHashMap<FuncId, Func> m_func_registry;
 
-        void set_fork_exec_impl(const ForkExecImpl &) override {
-        }
+    void set_fork_exec_impl(const ForkExecImpl&) override {}
 
-        void fork_exec_impl_mainloop(const char *) override {
-            mgb_throw(MegBrainError,
-                    "fork_exec_impl_mainloop should not be called in "
-                    "SLIM_SERVING build");
-        }
+    void fork_exec_impl_mainloop(const char*) override {
+        mgb_throw(
+                MegBrainError,
+                "fork_exec_impl_mainloop should not be called in "
+                "SLIM_SERVING build");
+    }
 
-        void register_func(FuncId id, const Func &func,
-                const FuncInit &func_init = {}) override {
-            auto ins = m_func_registry.emplace(id, func);
-            mgb_assert(ins.second, "duplicated id: %zu", id);
-        }
+    void register_func(
+            FuncId id, const Func& func, const FuncInit& func_init = {}) override {
+        auto ins = m_func_registry.emplace(id, func);
+        mgb_assert(ins.second, "duplicated id: %zu", id);
+    }
 
-        Maybe<Result> invoke(FuncId id, const Param &param, double) override {
-            return m_func_registry.at(id)(param);
-        }
+    Maybe<Result> invoke(FuncId id, const Param& param, double) override {
+        return m_func_registry.at(id)(param);
+    }
 
-        void kill_worker() override {
-        }
-    };
-}
+    void kill_worker() override {}
+};
+}  // namespace
 
 TimedFuncInvoker& TimedFuncInvoker::ins() {
     static FakeTimedFuncInvoker ins;
@@ -200,9 +196,9 @@ TimedFuncInvoker& TimedFuncInvoker::ins() {
 
 #else
 
+#include <chrono>
 #include <condition_variable>
 #include <future>
-#include <chrono>
 
 #if MGB_ENABLE_DEBUG_UTIL
 #include <sstream>
@@ -210,27 +206,28 @@ TimedFuncInvoker& TimedFuncInvoker::ins() {
 
 #include <cstring>
 
-#include <unistd.h>
 #include <pthread.h>
 #include <sched.h>
 #include <signal.h>
-#include <sys/socket.h>
-#include <sys/un.h>
 #include <sys/prctl.h>
+#include <sys/socket.h>
 #include <sys/types.h>
+#include <sys/un.h>
 #include <sys/wait.h>
+#include <unistd.h>
 
 #if MGB_CUDA
 #include <nvToolsExtCudaRt.h>
 #endif
 
-#define CHECK_SYS_ERR(_s) do { \
-    if ((_s) < 0) { \
-        auto _msg = ssprintf("%s failed: %s", #_s, strerror(errno)); \
-        mgb_log_error("%s", _msg.c_str()); \
-        mgb_throw_raw(SystemError{_msg}); \
-    } \
-} while(0)
+#define CHECK_SYS_ERR(_s)                                                \
+    do {                                                                 \
+        if ((_s) < 0) {                                                  \
+            auto _msg = ssprintf("%s failed: %s", #_s, strerror(errno)); \
+            mgb_log_error("%s", _msg.c_str());                           \
+            mgb_throw_raw(SystemError{_msg});                            \
+        }                                                                \
+    } while (0)
 
 namespace {
 #if MGB_ENABLE_DEBUG_UTIL
@@ -239,23 +236,24 @@ std::mutex thread_name_map_lock;
 #endif
 }  // anonymous namespace
 
-void sys::set_thread_name(const std::string &name) {
+void sys::set_thread_name(const std::string& name) {
 #if MGB_ENABLE_DEBUG_UTIL
     MGB_LOCK_GUARD(thread_name_map_lock);
     thread_name_map[std::this_thread::get_id()] = name;
 
 #if MGB_CUDA && MGB_ENABLE_DEBUG_UTIL
-     nvtxNameOsThread(pthread_self(), name.c_str());
+    nvtxNameOsThread(pthread_self(), name.c_str());
 #endif
 
     auto ptr = name.c_str();
-    for (; ; ) {
+    for (;;) {
         auto ret = pthread_setname_np(pthread_self(), ptr);
         if (ret == ERANGE) {
-            ++ ptr;
+            ++ptr;
             continue;
         }
-        mgb_assert(!ret, "failed to set thread name to %s: %s", name.c_str(),
+        mgb_assert(
+                !ret, "failed to set thread name to %s: %s", name.c_str(),
                 strerror(ret));
         break;
     }
@@ -304,7 +302,7 @@ class TimedFuncInvokerImpl final : public TimedFuncInvoker {
         Func func;
         FuncInit init;
 
-        Result direct_call(const Param &param) const {
+        Result direct_call(const Param& param) const {
             if (init)
                 init(param);
             return func(param);
@@ -328,31 +326,31 @@ class TimedFuncInvokerImpl final : public TimedFuncInvoker {
         m_sock_fd = m_peer_fd = 0;
     }
 
-    void set_fork_exec_impl(const ForkExecImpl &impl) override {
+    void set_fork_exec_impl(const ForkExecImpl& impl) override {
         mgb_assert(!m_fork_exec_impl);
         m_fork_exec_impl = impl;
     }
 
     //! create an abstract AF_UNIX socket and bind to it
-    void create_sock_and_bind(const char *name,
-            int(*do_bind)(int, const sockaddr*, socklen_t)) {
+    void create_sock_and_bind(
+            const char* name, int (*do_bind)(int, const sockaddr*, socklen_t)) {
         clear_sock_fd();
 
         m_sock_fd = socket(AF_UNIX, SOCK_STREAM, 0);
         CHECK_SYS_ERR(m_sock_fd);
 
-		struct sockaddr_un addr;
-		addr.sun_family = AF_UNIX;
+        struct sockaddr_un addr;
+        addr.sun_family = AF_UNIX;
         addr.sun_path[0] = 0;
         auto name_len = strlen(name);
         mgb_assert(name_len < sizeof(addr.sun_path) - 1);
         strcpy(addr.sun_path + 1, name);
         auto len = sizeof(addr.sun_family) + name_len;
-		CHECK_SYS_ERR(do_bind(m_sock_fd, (struct sockaddr *)&addr, len));
+        CHECK_SYS_ERR(do_bind(m_sock_fd, (struct sockaddr*)&addr, len));
     }
 
     //! read from m_peer_fd and return whether success
-    bool read(void *dest_, size_t size, bool throw_on_err = true) {
+    bool read(void* dest_, size_t size, bool throw_on_err = true) {
         auto dest = static_cast<uint8_t*>(dest_);
         while (size) {
             auto cur_recv = recv(m_peer_fd, dest, size, 0);
@@ -371,7 +369,7 @@ class TimedFuncInvokerImpl final : public TimedFuncInvoker {
         return true;
     }
 
-    void write(const void *src_, size_t size) {
+    void write(const void* src_, size_t size) {
         auto src = static_cast<const uint8_t*>(src_);
         while (size) {
             auto cur_send = send(m_peer_fd, src, size, 0);
@@ -382,7 +380,7 @@ class TimedFuncInvokerImpl final : public TimedFuncInvoker {
         }
     }
 
-    template<class T>
+    template <class T>
     T read_pod() {
         static_assert(std::is_pod<T>::value, "can only read POD");
         T ret;
@@ -390,13 +388,13 @@ class TimedFuncInvokerImpl final : public TimedFuncInvoker {
         return ret;
     }
 
-    template<class T>
+    template <class T>
     void write_pod(T val) {
         static_assert(std::is_pod<T>::value, "can only write POD");
         write(&val, sizeof(T));
     }
 
-	void fork_exec_impl_mainloop(const char *arg) override {
+    void fork_exec_impl_mainloop(const char* arg) override {
         CHECK_SYS_ERR(prctl(PR_SET_PDEATHSIG, SIGKILL));
 
         create_sock_and_bind(arg, ::connect);
@@ -407,7 +405,7 @@ class TimedFuncInvokerImpl final : public TimedFuncInvoker {
 
         std::vector<uint8_t> param_buf;
 
-        for (; ; ) {
+        for (;;) {
             auto func_id = read_pod<FuncId>();
             auto param_size = read_pod<size_t>();
             param_buf.resize(param_size);
@@ -417,7 +415,7 @@ class TimedFuncInvokerImpl final : public TimedFuncInvoker {
 
             bool err = false;
             Result res;
-            auto setup_err = [&](const char *msg) {
+            auto setup_err = [&](const char* msg) {
                 err = true;
                 res.size = strlen(msg);
                 res.data = std::make_unique<uint8_t[]>(res.size);
@@ -426,7 +424,7 @@ class TimedFuncInvokerImpl final : public TimedFuncInvoker {
             MGB_MARK_USED_VAR(setup_err);
             Param func_param{param_size, param_buf.data()};
             MGB_TRY {
-                auto &&entry = m_func_registry.at(func_id);
+                auto&& entry = m_func_registry.at(func_id);
                 if (entry.init) {
                     entry.init(func_param);
                 }
@@ -434,11 +432,9 @@ class TimedFuncInvokerImpl final : public TimedFuncInvoker {
                 init_done_written = true;
 
                 res = entry.func(func_param);
-            } MGB_CATCH(std::exception &exc, {
-                setup_err(exc.what());
-            }) MGB_CATCH(..., {
-                setup_err("unknown error");
-            });
+            }
+            MGB_CATCH(std::exception & exc, { setup_err(exc.what()); })
+            MGB_CATCH(..., { setup_err("unknown error"); });
             if (!init_done_written) {
                 write_pod(INIT_DONE_FLAG);
             }
@@ -446,10 +442,9 @@ class TimedFuncInvokerImpl final : public TimedFuncInvoker {
             write_pod(res.size);
             write(res.data.get(), res.size);
         }
-	}
+    }
 
-    void register_func(FuncId id,
-            const Func &func, const FuncInit &init) override {
+    void register_func(FuncId id, const Func& func, const FuncInit& init) override {
         mgb_assert(func);
         auto ins = m_func_registry.emplace(id, FuncRegistry{func, init});
         mgb_assert(ins.second, "duplicated id: %zu", id);
@@ -471,8 +466,8 @@ class TimedFuncInvokerImpl final : public TimedFuncInvoker {
         if (check_worker_alive())
             return;
 
-        auto name = ssprintf("megbrain/%d/TimedFuncInvoker/%d",
-                getpid(), m_sock_name_cnt ++);
+        auto name = ssprintf(
+                "megbrain/%d/TimedFuncInvoker/%d", getpid(), m_sock_name_cnt++);
         mgb_log_debug("start worker process on socket %s", name.c_str());
 
         create_sock_and_bind(name.c_str(), ::bind);
@@ -488,8 +483,7 @@ class TimedFuncInvokerImpl final : public TimedFuncInvoker {
         mgb_assert(read_pod<uint32_t>() == hello + 1);
     }
 
-    Maybe<Result> invoke(
-            FuncId id, const Param &param, double timeout) override {
+    Maybe<Result> invoke(FuncId id, const Param& param, double timeout) override {
         MGB_LOCK_GUARD(m_global_mtx);
         mgb_assert(timeout >= 0);
         auto iter = m_func_registry.find(id);
@@ -498,7 +492,8 @@ class TimedFuncInvokerImpl final : public TimedFuncInvoker {
             return iter->second.direct_call(param);
 
         if (!m_fork_exec_impl) {
-            mgb_log_warn("timeout is set, but no fork_exec_impl not given; "
+            mgb_log_warn(
+                    "timeout is set, but no fork_exec_impl not given; "
                     "timeout would be ignored");
             return iter->second.direct_call(param);
         }
@@ -506,15 +501,14 @@ class TimedFuncInvokerImpl final : public TimedFuncInvoker {
         // start worker and write init param; reading init_done sometimes fails
         // with connection reset, so we retry for some times
         constexpr int MAX_TRY = 5;
-        for (int cur_try = 0; cur_try < MAX_TRY; ++ cur_try)  {
+        for (int cur_try = 0; cur_try < MAX_TRY; ++cur_try) {
             ensure_worker_alive();
             write_pod(id);
             write_pod(param.size);
             write(param.data, param.size);
             std::remove_cv_t<decltype(INIT_DONE_FLAG)> init_done;
             if (!read(&init_done, sizeof(init_done), false)) {
-                mgb_assert(cur_try < MAX_TRY - 1,
-                        "can not read init_done flag");
+                mgb_assert(cur_try < MAX_TRY - 1, "can not read init_done flag");
                 kill_worker();
                 continue;
             }
@@ -525,8 +519,9 @@ class TimedFuncInvokerImpl final : public TimedFuncInvoker {
 
         std::future<bool> watcher;
         if (timeout) {
-            watcher = std::async(std::launch::async,
-                    &TimedFuncInvokerImpl::watcher_impl, this, timeout);
+            watcher = std::async(
+                    std::launch::async, &TimedFuncInvokerImpl::watcher_impl, this,
+                    timeout);
         }
 
         // stop watcher, return whether worker killed by watcher
@@ -542,7 +537,7 @@ class TimedFuncInvokerImpl final : public TimedFuncInvoker {
             return watcher.get();
         };
 
-        auto read_safe = [&](void *dest, size_t size) {
+        auto read_safe = [&](void* dest, size_t size) {
             if (!read(dest, size, false)) {
                 if (!stop_watcher())
                     kill_worker();
@@ -553,8 +548,7 @@ class TimedFuncInvokerImpl final : public TimedFuncInvoker {
 
         bool err;
         Result res;
-        if (!read_safe(&err, sizeof(bool)) ||
-                !read_safe(&res.size, sizeof(size_t)))
+        if (!read_safe(&err, sizeof(bool)) || !read_safe(&res.size, sizeof(size_t)))
             return None;
         res.data = std::make_unique<uint8_t[]>(res.size + 1);
         if (!read_safe(res.data.get(), res.size))
@@ -563,9 +557,8 @@ class TimedFuncInvokerImpl final : public TimedFuncInvoker {
             return None;
         res.data[res.size] = 0;
         if (err) {
-            mgb_throw_raw(RemoteError{ssprintf(
-                        "worker caught exception; what(): %s",
-                        res.data.get())});
+            mgb_throw_raw(RemoteError{
+                    ssprintf("worker caught exception; what(): %s", res.data.get())});
         }
         return {std::move(res)};
     }
@@ -574,9 +567,8 @@ class TimedFuncInvokerImpl final : public TimedFuncInvoker {
     bool watcher_impl(double timeout) {
         using namespace std::chrono;
         microseconds timeout_due{static_cast<uint64_t>(timeout * 1e6)};
-        auto start = high_resolution_clock::now(),
-             end = start + timeout_due;
-        for (; ; ) {
+        auto start = high_resolution_clock::now(), end = start + timeout_due;
+        for (;;) {
 #if !__DEPLOY_ON_XP_SP2__
             std::unique_lock<std::mutex> lk(m_watcher_stop_mtx);
             m_watcher_stop_cv.wait_until(lk, end);
@@ -603,18 +595,16 @@ class TimedFuncInvokerImpl final : public TimedFuncInvoker {
         }
     }
 
-    public:
-
-        ~TimedFuncInvokerImpl() {
-            std::exception_ptr pexc;
-            MGB_TRY {
-                MGB_TRY {
-                    kill_worker();
-                } MGB_CATCH_ALL_EXCEPTION("kill worker in ~TimedFuncInvokerImpl",
-                        pexc);
-            } MGB_CATCH(..., {});
-            clear_sock_fd();
+public:
+    ~TimedFuncInvokerImpl() {
+        std::exception_ptr pexc;
+        MGB_TRY {
+            MGB_TRY { kill_worker(); }
+            MGB_CATCH_ALL_EXCEPTION("kill worker in ~TimedFuncInvokerImpl", pexc);
         }
+        MGB_CATCH(..., {});
+        clear_sock_fd();
+    }
 };
 
 }  // anonymous namespace
@@ -624,13 +614,13 @@ TimedFuncInvoker& TimedFuncInvoker::ins() {
     return impl;
 }
 
-std::unique_ptr<TimedFuncInvoker, TimedFuncInvoker::Del>
-TimedFuncInvoker::make_test_ins() {
+std::unique_ptr<TimedFuncInvoker, TimedFuncInvoker::Del> TimedFuncInvoker::
+        make_test_ins() {
     return std::unique_ptr<TimedFuncInvoker, Del>{new TimedFuncInvokerImpl};
 }
 
 #undef CHECK_SYS_ERR
 
-#endif // MGB_BUILD_SLIM_SERVING || defined(ANDROID)
+#endif  // MGB_BUILD_SLIM_SERVING || defined(ANDROID)
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

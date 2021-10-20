@@ -17,12 +17,10 @@ using namespace megdnn;
 using namespace test;
 
 TEST_F(CAMBRICON, CHECKSUM_FORWARD) {
-    auto cambricon_opr =
-                 handle_cambricon()->create_operator<megdnn::Checksum>(),
+    auto cambricon_opr = handle_cambricon()->create_operator<megdnn::Checksum>(),
          naive_opr = handle_naive()->create_operator<megdnn::Checksum>();
     std::mt19937 rng(std::random_device{}());
-    for (size_t size :
-         {3, 8, 4 * 4 * 1024, 12345, 1024 * 1024, 1024 * 1024 * 10}) {
+    for (size_t size : {3, 8, 4 * 4 * 1024, 12345, 1024 * 1024, 1024 * 1024 * 10}) {
         auto aligned_size = size + ((512 - size % 512) % 512);
         auto run = [&](megdnn::Checksum* opr, void* ptr, bool log_size) {
             TensorND tensor;
@@ -30,8 +28,7 @@ TEST_F(CAMBRICON, CHECKSUM_FORWARD) {
             tensor.layout.init_contiguous_stride({size});
             tensor.layout.dtype = dtype::Byte();
             WorkspaceWrapper workspace(
-                    handle_cambricon(),
-                    opr->get_workspace_in_bytes(tensor.layout));
+                    handle_cambricon(), opr->get_workspace_in_bytes(tensor.layout));
             if (log_size) {
                 printf("checksum(%zu): workspace=%zu\n", size,
                        workspace.workspace().size);
@@ -42,8 +39,7 @@ TEST_F(CAMBRICON, CHECKSUM_FORWARD) {
         for (size_t i = 0; i < size; ++i)
             buf[i] = 1;
         auto run_offsset = [&](size_t offset) {
-            void* dev_ptr =
-                    megdnn_malloc(handle_cambricon(), buf.size() + offset);
+            void* dev_ptr = megdnn_malloc(handle_cambricon(), buf.size() + offset);
             void* dev_buf = static_cast<char*>(dev_ptr) + offset;
 
             Checksum::Result res_cambricon[2], res_naive[2];
@@ -52,18 +48,15 @@ TEST_F(CAMBRICON, CHECKSUM_FORWARD) {
                 if (change_last)
                     ++buf[size - 1];
 
-                megdnn_memcpy_H2D(handle_cambricon(), dev_buf, buf.data(),
-                                  size);
+                megdnn_memcpy_H2D(handle_cambricon(), dev_buf, buf.data(), size);
                 res_cambricon[change_last] =
                         run(cambricon_opr.get(), dev_buf, !change_last);
-                res_naive[change_last] =
-                        run(naive_opr.get(), buf.data(), false);
+                res_naive[change_last] = run(naive_opr.get(), buf.data(), false);
             }
 
             megdnn_free(handle_cambricon(), dev_ptr);
 
-            ASSERT_EQ(res_naive[0], res_cambricon[0])
-                    << "failed for size " << size;
+            ASSERT_EQ(res_naive[0], res_cambricon[0]) << "failed for size " << size;
             ASSERT_EQ(res_naive[1], res_cambricon[1]);
             ASSERT_NE(res_cambricon[0], res_cambricon[1]);
         };
@@ -75,4 +68,3 @@ TEST_F(CAMBRICON, CHECKSUM_FORWARD) {
 }
 
 // vim: syntax=cpp.doxygen
-

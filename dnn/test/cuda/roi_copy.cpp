@@ -13,9 +13,9 @@
 
 #include "megdnn.h"
 #include "megdnn/oprs.h"
-#include "test/common/tensor.h"
-#include "test/common/roi_copy.h"
 #include "test/common/checker.h"
+#include "test/common/roi_copy.h"
+#include "test/common/tensor.h"
 #include "test/cuda/fixture.h"
 
 namespace megdnn {
@@ -31,7 +31,6 @@ TEST_F(CUDA, ROICOPY) {
     for (auto&& arg : args) {
         checker.set_param(arg.param).execs({arg.src, {}});
     }
-
 }
 
 }  // namespace test

@@ -11,6 +11,9 @@ import re
 from typing import Optional
 
 from .core._imperative_rt.common import CompNode, DeviceType
+from .core._imperative_rt.common import (
+    get_cuda_compute_capability as _get_cuda_compute_capability,
+)
 from .core._imperative_rt.common import set_prealloc_config as _set_prealloc_config
 from .core._imperative_rt.common import what_is_xpu as _what_is_xpu
 
@@ -20,9 +23,23 @@ __all__ = [
     "get_default_device",
     "set_default_device",
     "get_mem_status_bytes",
+    "get_cuda_compute_capability",
     "set_prealloc_config",
     "DeviceType",
 ]
+
+
+class _stream_helper:
+    def __init__(self):
+        self.stream = 1
+
+    def get_next(self):
+        out = self.stream
+        self.stream = self.stream + 1
+        return out
+
+
+_sh = _stream_helper()
 
 
 def _valid_device(inp):
@@ -54,10 +71,10 @@ _device_type_set = {"cpu", "gpu", "xpu", "rocm"}
 
 
 def get_device_count(device_type: str) -> int:
-    """
-    Gets number of devices installed on this system.
+    r"""Gets number of devices installed on this system.
 
-    :param device_type: device type, one of 'gpu' or 'cpu'
+    Args:
+        device_type: device type, one of 'gpu' or 'cpu'
     """
     assert device_type in _device_type_set, "device must be one of {}".format(
         _device_type_set
@@ -67,77 +84,75 @@ def get_device_count(device_type: str) -> int:
 
 
 def is_cuda_available() -> bool:
-    """
-    Returns whether cuda device is available on this system.
-
-    """
+    r"""Returns whether cuda device is available on this system."""
     t = _str2device_type("gpu")
     return CompNode._get_device_count(t, False) > 0
 
 
 def is_cambricon_available() -> bool:
-    """
-    Returns whether cambricon device is available on this system.
-
-    """
+    r"""Returns whether cambricon device is available on this system."""
     t = _str2device_type("cambricon")
     return CompNode._get_device_count(t, False) > 0
 
 
 def is_atlas_available() -> bool:
-    """
-    Returns whether atlas device is available on this system.
-
-    """
+    r"""Returns whether atlas device is available on this system."""
     t = _str2device_type("atlas")
     return CompNode._get_device_count(t, False) > 0
 
 
 def is_rocm_available() -> bool:
-    """Returns whether rocm device is available on this system.
-
-    """
+    r"""Returns whether rocm device is available on this system."""
     t = _str2device_type("rocm")
     return CompNode._get_device_count(t, False) > 0
 
 
 def set_default_device(device: str = "xpux"):
-    r"""
-    Sets default computing node.
+    r"""Sets default computing node.
 
-    :param device: default device type. The type can be 'cpu0', 'cpu1', etc.,
-        or 'gpu0', 'gpu1', etc., to specify the particular cpu or gpu to use.
-        'cpux' and  'gpux' can also be used to specify any number of cpu or gpu devices.
+    Args:
+        device: default device type.
 
-        'multithread' device type is avaliable when inference, which implements
-        multi-threading parallelism at the operator level. For example,
-        'multithread4' will compute with 4 threads.
-
-        The default value is 'xpux' to specify any device available. The priority of using gpu is higher when both gpu and cpu are available.
-
-        It can also be set by environment variable `MGE_DEFAULT_DEVICE`.
+    Note:
+        * The type can be 'cpu0', 'cpu1', etc., or 'gpu0', 'gpu1', etc.,
+          to specify the particular CPU or GPU to use.
+        * 'cpux' and  'gpux' can also be used to specify any number of CPU or GPU devices.
+        * The default value is 'xpux' to specify any device available.
+        * The priority of using GPU is higher when both GPU and CPU are available.
+        * 'multithread' device type is avaliable when inference,
+          which implements multi-threading parallelism at the operator level.
+          For example, 'multithread4' will compute with 4 threads.
+        * It can also be set by environment variable ``MGE_DEFAULT_DEVICE``.
     """
     assert _valid_device(device), "Invalid device name {}".format(device)
     CompNode._set_default_device(device)
 
 
 def get_default_device() -> str:
-    r"""
-    Gets default computing node.
-
+    r"""Gets default computing node.
     It returns the value set by :func:`~.set_default_device`.
     """
     return CompNode._get_default_device()
 
 
 def get_mem_status_bytes(device: Optional[str] = None):
-    r"""
-    Get total and free memory on the computing device in bytes.
-    """
+    r"""Get total and free memory on the computing device in bytes."""
     if device is None:
         device = get_default_device()
     tot, free = CompNode(device).get_mem_status_bytes
     return tot, free
+
+
+def get_cuda_compute_capability(device: int, device_type=DeviceType.CUDA) -> int:
+    r"""Gets compute capability of the specified device.
+
+    Args:
+        device: device number.
+
+    Returns:
+        a version number, or `SM version`.
+    """
+    return _get_cuda_compute_capability(device, device_type)
 
 
 set_default_device(os.getenv("MGE_DEFAULT_DEVICE", "xpux"))
@@ -150,15 +165,17 @@ def set_prealloc_config(
     growth_factor=2.0,
     device_type=DeviceType.CUDA,
 ):
-    """
-    Specifies how to pre-allocate from raw device allocator.
+    r"""Specifies how to pre-allocate from raw device allocator.
 
-    :param alignment: specifies the alignment in bytes.
-    :param min_req: min request size in bytes.
-    :param max_overhead: max overhead above required size in bytes.
-    :param growth_factor: `request size / cur allocated`
-    :param device_type: the device type
-
+    Args:
+        alignment: specifies the alignment in bytes.
+        min_req: min request size in bytes.
+        max_overhead: max overhead above required size in bytes.
+        growth_factor: request size / cur allocated`
+        device_type: the device type
+        alignment: int:
+        min_req: int:
+        max_overhead: int:
     """
     assert alignment > 0
     assert min_req > 0

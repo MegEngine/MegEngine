@@ -16,34 +16,33 @@
 namespace mgb {
 namespace opr {
 
-MGB_DEFINE_OPR_CLASS(LSQForward,
-                     intl::MegDNNOprWrapperFwd<megdnn::LSQForward>)  // {
+MGB_DEFINE_OPR_CLASS(LSQForward, intl::MegDNNOprWrapperFwd<megdnn::LSQForward>) // {
 public:
-LSQForward(VarNode* src, VarNode* scale, VarNode* zero_point,
-           VarNode* grad_scale, const Param& param,
-           const OperatorNodeConfig& config);
+    LSQForward(
+            VarNode* src, VarNode* scale, VarNode* zero_point, VarNode* grad_scale,
+            const Param& param, const OperatorNodeConfig& config);
 
-static SymbolVar make(SymbolVar src, SymbolVar scale, SymbolVar zero_point,
-                      SymbolVar grad_scale, const Param& param = {},
-                      const OperatorNodeConfig& config = {});
+    static SymbolVar make(
+            SymbolVar src, SymbolVar scale, SymbolVar zero_point, SymbolVar grad_scale,
+            const Param& param = {}, const OperatorNodeConfig& config = {});
 };
 using LSQ = LSQForward;
 
-MGB_DEFINE_OPR_CLASS(LSQBackward,
-                     intl::MegDNNOprWrapperBwd<megdnn::LSQBackward>)  // {
+MGB_DEFINE_OPR_CLASS(
+        LSQBackward, intl::MegDNNOprWrapperBwd<megdnn::LSQBackward>) // {
 public:
-LSQBackward(VarNode* y_grad, VarNode* x, VarNode* scale, VarNode* zero_point,
-            VarNode* grad_scale, const Param& param,
-            const OperatorNodeConfig& config);
+    LSQBackward(
+            VarNode* y_grad, VarNode* x, VarNode* scale, VarNode* zero_point,
+            VarNode* grad_scale, const Param& param, const OperatorNodeConfig& config);
 
-static SymbolVarArray make(SymbolVar y_grad, SymbolVar x, SymbolVar scale,
-                           SymbolVar zero_point, SymbolVar grad_scale,
-                           const Param& param = {},
-                           const OperatorNodeConfig& config = {});
+    static SymbolVarArray make(
+            SymbolVar y_grad, SymbolVar x, SymbolVar scale, SymbolVar zero_point,
+            SymbolVar grad_scale, const Param& param = {},
+            const OperatorNodeConfig& config = {});
 
 private:
-void init_output_static_infer_desc() override;
-void init_output_dtype() override;
+    void init_output_static_infer_desc() override;
+    void init_output_dtype() override;
 };
 
 }  // namespace opr

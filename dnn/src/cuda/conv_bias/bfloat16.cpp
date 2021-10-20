@@ -10,11 +10,11 @@
  * implied.
  */
 
+#include "src/common/algo_base.h"
 #include "src/cuda/conv_bias/algo.h"
 #include "src/cuda/handle.h"
 #include "src/cuda/utils.cuh"
 #include "src/cuda/utils.h"
-#include "src/common/algo_base.h"
 
 using namespace megdnn;
 using namespace cuda;
@@ -46,8 +46,8 @@ std::pair<TensorLayoutArray, std::unique_ptr<ConvBiasForward>> prepare_sub_opr(
         const ConvBiasForwardImpl::AlgoBase::SizeArgs& args) {
     auto convbias_opr = args.handle->create_operator<ConvBias>();
     auto&& config = sub_opr_config(
-            {*args.src_layout, *args.filter_layout, *args.bias_layout,
-             *args.z_layout, *args.dst_layout},
+            {*args.src_layout, *args.filter_layout, *args.bias_layout, *args.z_layout,
+             *args.dst_layout},
             args.opr);
     convbias_opr->param() = config.second;
 
@@ -55,26 +55,25 @@ std::pair<TensorLayoutArray, std::unique_ptr<ConvBiasForward>> prepare_sub_opr(
 }
 }  // namespace
 
-std::vector<Algorithm::SearchItem>
-ConvBiasForwardImpl::AlgoBFloat16::get_subopr_list(
+std::vector<Algorithm::SearchItem> ConvBiasForwardImpl::AlgoBFloat16::get_subopr_list(
         const TensorLayoutArray& layouts, const OperatorBase* opr) const {
-    auto&& config = sub_opr_config(
-            layouts, static_cast<const ConvBiasForwardImpl*>(opr));
+    auto&& config =
+            sub_opr_config(layouts, static_cast<const ConvBiasForwardImpl*>(opr));
 
     std::string param_str;
     Algorithm::serialize_write_pod(config.second, param_str);
     return {{Algorithm::OprType::CONVBIAS_FORWARD, param_str, config.first}};
 }
 
-bool ConvBiasForwardImpl::AlgoBFloat16::is_available(
-        const SizeArgs& args) const {
+bool ConvBiasForwardImpl::AlgoBFloat16::is_available(const SizeArgs& args) const {
     auto config = prepare_sub_opr(args);
 
     return args.src_layout->dtype == args.filter_layout->dtype &&
            args.src_layout->dtype == dtype::BFloat16() &&
-           get_algorithm(static_cast<ConvBiasForwardImpl*>(config.second.get()),
-                         config.first[0], config.first[1], config.first[2],
-                         config.first[3], config.first[4]);
+           get_algorithm(
+                   static_cast<ConvBiasForwardImpl*>(config.second.get()),
+                   config.first[0], config.first[1], config.first[2], config.first[3],
+                   config.first[4]);
 }
 
 WorkspaceBundle ConvBiasForwardImpl::AlgoBFloat16::get_workspace_bundle(
@@ -82,8 +81,7 @@ WorkspaceBundle ConvBiasForwardImpl::AlgoBFloat16::get_workspace_bundle(
     auto config = prepare_sub_opr(args);
 
     SmallVector<size_t> sizes;
-    auto get_workspace = [&sizes](const TensorLayout& src,
-                                  const TensorLayout& dst) {
+    auto get_workspace = [&sizes](const TensorLayout& src, const TensorLayout& dst) {
         if (src.dtype != dst.dtype) {
             sizes.push_back(dst.span().dist_byte());
         }
@@ -123,8 +121,9 @@ void ConvBiasForwardImpl::AlgoBFloat16::exec(const ExecArgs& args) const {
     {
         auto config = prepare_sub_opr(args);
 
-        config.second->exec(fsrc_tensor, ffilter_tensor, fbias_tensor,
-                            fz_tensor, fdst_tensor, nullptr, cvter.workspace());
+        config.second->exec(
+                fsrc_tensor, ffilter_tensor, fbias_tensor, fz_tensor, fdst_tensor,
+                nullptr, cvter.workspace());
     }
     { cvter.comp_to_dst_type(fdst_tensor, *args.dst_tensor); }
 }

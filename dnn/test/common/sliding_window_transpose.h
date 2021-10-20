@@ -1,4 +1,4 @@
-  /**
+/**
  * \file dnn/test/common/sliding_window_transpose.h
  * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
  *
@@ -9,9 +9,9 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 #pragma once
-#include "megdnn/opr_param_defs.h"
-#include "megdnn/basic_types.h"
 #include <cstddef>
+#include "megdnn/basic_types.h"
+#include "megdnn/opr_param_defs.h"
 
 namespace megdnn {
 namespace test {
@@ -44,11 +44,13 @@ inline std::vector<TestArg> get_args() {
     }
     // clang-format on
     // large window case
-    args.emplace_back(param::SlidingWindowTranspose{96, 128, 0, 0, 1, 1, 1, 1, 32, 64},
-                      TensorShape{2, 3, 65, 65, 32, 64});
+    args.emplace_back(
+            param::SlidingWindowTranspose{96, 128, 0, 0, 1, 1, 1, 1, 32, 64},
+            TensorShape{2, 3, 65, 65, 32, 64});
     // // large size
-    args.emplace_back(param::SlidingWindowTranspose{28, 24, 0, 0, 1, 1, 1, 1, 1, 1},
-                      TensorShape{128, 128, 28, 24, 1, 1});
+    args.emplace_back(
+            param::SlidingWindowTranspose{28, 24, 0, 0, 1, 1, 1, 1, 1, 1},
+            TensorShape{128, 128, 28, 24, 1, 1});
 
     return args;
 }
@@ -73,8 +75,9 @@ inline std::vector<TestArg> get_benchmark_args() {
     }
     // clang-format on
     // large size
-    args.emplace_back(param::SlidingWindowTranspose{28, 24, 0, 0, 1, 1, 1, 1, 1, 1},
-                      TensorShape{1024, 128, 28, 24, 1, 1});
+    args.emplace_back(
+            param::SlidingWindowTranspose{28, 24, 0, 0, 1, 1, 1, 1, 1, 1},
+            TensorShape{1024, 128, 28, 24, 1, 1});
 
     return args;
 }

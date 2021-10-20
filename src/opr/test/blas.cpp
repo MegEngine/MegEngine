@@ -10,22 +10,23 @@
  */
 
 #include "megbrain/opr/blas.h"
-#include "megbrain/test/helper.h"
-#include "megbrain/test/autocheck.h"
-#include "megbrain/test/megdnn_helper.h"
-#include "megbrain/opr/io.h"
-#include "megbrain/opr/tensor_manip.h"
+#include <random>
 #include "megbrain/comp_node_env.h"
 #include "megbrain/opr/basic_arith_wrapper.h"
+#include "megbrain/opr/io.h"
 #include "megbrain/opr/tensor_gen.h"
-#include <random>
+#include "megbrain/opr/tensor_manip.h"
+#include "megbrain/test/autocheck.h"
+#include "megbrain/test/helper.h"
+#include "megbrain/test/megdnn_helper.h"
 
 using namespace mgb;
 
 namespace {
 template <typename dt_src, typename dt_dst>
-void brute_force_gemm(size_t M, size_t N, size_t K, bool transa, bool transb,
-                      const dt_src* x, const dt_src* y, dt_dst* z) {
+void brute_force_gemm(
+        size_t M, size_t N, size_t K, bool transa, bool transb, const dt_src* x,
+        const dt_src* y, dt_dst* z) {
     for (size_t m = 0; m < M; ++m)
         for (size_t n = 0; n < N; ++n) {
             dt_dst cur = dt_dst(0);
@@ -58,8 +59,7 @@ float brute_force_dot(const HostTensorND& a, const HostTensorND& b) {
 // (m,k) * (k,n) = (m,n)
 void run_sgemm_test(bool transa, bool transb) {
     using Checker = AutoOprChecker<2, 1>;
-    auto make_graph =
-            [&](const Checker::SymInpArray& inputs) -> Checker::SymOutArray {
+    auto make_graph = [&](const Checker::SymInpArray& inputs) -> Checker::SymOutArray {
         auto param = opr::MatrixMul::Param{transa, transb};
         return {opr::MatrixMul::make(inputs[0], inputs[1], param)};
     };
@@ -71,12 +71,10 @@ void run_sgemm_test(bool transa, bool transb) {
             std::swap(M, K);
         N = inp[1]->shape().shape[transb ? 0 : 1];
 
-        auto z = dest[0].comp_node(inp[0]->comp_node())
-                         .resize({M, N})
-                         .ptr<float>();
+        auto z = dest[0].comp_node(inp[0]->comp_node()).resize({M, N}).ptr<float>();
         // brute-force gemm
-        brute_force_gemm(M, N, K, transa, transb, inp[0]->ptr<float>(),
-                         inp[1]->ptr<float>(), z);
+        brute_force_gemm(
+                M, N, K, transa, transb, inp[0]->ptr<float>(), inp[1]->ptr<float>(), z);
     };
 
     auto mkshp = [](bool trans, size_t m, size_t k) {
@@ -94,36 +92,36 @@ void run_sgemm_test(bool transa, bool transb) {
     Checker(make_graph, fwd)
             .run({mkx(4, 6), mky(6, 2)}, opt)
             .run({mkx(2, 3), mky(3, 100)}, opt)
-            .run({mkx(20, 3), mky(3, 20)}, opt);
+            .run({mkx(20, 3), mky(3, 20)}, opt)
+            .run({mkx(10, 0), mky(0, 10)}, opt)
+            .run({mkx(0, 0), mky(0, 0)}, opt);
 }
 
-#define FWD_BATCH_GEMM(dt_src, dt_dst)                                       \
-    [transa, transb](Checker::NumOutArray& dest, Checker::NumInpArray inp) { \
-        bool ta(transa), tb(transb);                                         \
-        HostTensorND a, b;                                                   \
-        size_t B, M, N, K;                                                   \
-        a.copy_from(*(inp[0]));                                              \
-        b.copy_from(*(inp[1]));                                              \
-        B = a.shape().shape[0];                                              \
-        M = a.shape().shape[1];                                              \
-        K = a.shape().shape[2];                                              \
-        N = b.shape().shape[tb ? 1 : 2];                                     \
-        if (ta)                                                              \
-            std::swap(M, K);                                                 \
-        auto x = a.ptr<dt_src>(), y = b.ptr<dt_src>();                       \
-        auto z = dest[0].resize({B, M, N}).ptr<dt_dst>();                    \
-        for (size_t b = 0; b < B; ++b) {                                     \
-            brute_force_gemm(M, N, K, ta, tb, x + b * M * K, y + b * K * N,  \
-                             z + b * M * N);                                 \
-        }                                                                    \
+#define FWD_BATCH_GEMM(dt_src, dt_dst)                                             \
+    [transa, transb](Checker::NumOutArray& dest, Checker::NumInpArray inp) {       \
+        bool ta(transa), tb(transb);                                               \
+        HostTensorND a, b;                                                         \
+        size_t B, M, N, K;                                                         \
+        a.copy_from(*(inp[0]));                                                    \
+        b.copy_from(*(inp[1]));                                                    \
+        B = a.shape().shape[0];                                                    \
+        M = a.shape().shape[1];                                                    \
+        K = a.shape().shape[2];                                                    \
+        N = b.shape().shape[tb ? 1 : 2];                                           \
+        if (ta)                                                                    \
+            std::swap(M, K);                                                       \
+        auto x = a.ptr<dt_src>(), y = b.ptr<dt_src>();                             \
+        auto z = dest[0].resize({B, M, N}).ptr<dt_dst>();                          \
+        for (size_t b = 0; b < B; ++b) {                                           \
+            brute_force_gemm(                                                      \
+                    M, N, K, ta, tb, x + b * M * K, y + b * K * N, z + b * M * N); \
+        }                                                                          \
     }
 
 void run_batched_sgemm_test(bool transa, bool transb) {
     using Checker = AutoOprChecker<2, 1>;
-    auto make_graph =
-            [&](const Checker::SymInpArray& inputs) -> Checker::SymOutArray {
-        return {opr::BatchedMatrixMul::make(inputs[0], inputs[1],
-                                            {transa, transb})};
+    auto make_graph = [&](const Checker::SymInpArray& inputs) -> Checker::SymOutArray {
+        return {opr::BatchedMatrixMul::make(inputs[0], inputs[1], {transa, transb})};
     };
 
     auto fwd = FWD_BATCH_GEMM(float, float);
@@ -143,7 +141,9 @@ void run_batched_sgemm_test(bool transa, bool transb) {
     Checker(make_graph, fwd)
             .run({mkx(3, 5, 7), mky(3, 7, 2)}, opt)
             .run({mkx(64, 1, 2), mky(64, 2, 1)}, opt)
-            .run({mkx(1, 2, 3), mky(1, 3, 4)}, opt);
+            .run({mkx(1, 2, 3), mky(1, 3, 4)}, opt)
+            .run({mkx(3, 0, 2), mky(3, 2, 0)}, opt)
+            .run({mkx(64, 10, 0), mky(64, 0, 10)}, opt);
 }
 
 auto gen_fp16 = [](HostTensorND& dest) {
@@ -160,17 +160,15 @@ auto gen_fp16 = [](HostTensorND& dest) {
 };
 
 auto gen_int8 = [](HostTensorND& dest) {
-    HostTensorGenerator<dtype::Int8, RandomDistribution::UNIFORM>
-            int8_generator{-128, 127};
+    HostTensorGenerator<dtype::Int8, RandomDistribution::UNIFORM> int8_generator{
+            -128, 127};
     dest = *int8_generator(dest.shape(), dest.comp_node());
 };
 
 void run_batched_hgemm_test(bool transa, bool transb) {
     using Checker = AutoOprChecker<2, 1>;
-    auto make_graph =
-            [&](const Checker::SymInpArray& inputs) -> Checker::SymOutArray {
-        return {opr::BatchedMatrixMul::make(inputs[0], inputs[1],
-                                            {transa, transb})};
+    auto make_graph = [&](const Checker::SymInpArray& inputs) -> Checker::SymOutArray {
+        return {opr::BatchedMatrixMul::make(inputs[0], inputs[1], {transa, transb})};
     };
     auto fwd = FWD_BATCH_GEMM(dt_float16, dt_float16);
     auto mkshp = [](bool trans, size_t b, size_t m, size_t k) {
@@ -198,15 +196,14 @@ void run_batched_hgemm_test(bool transa, bool transb) {
 
     checker.run({mkx(3, 5, 7), mky(3, 7, 2)}, opt)
             .run({mkx(64, 1, 2), mky(64, 2, 1)}, opt)
+            .run({mkx(64, 10, 0), mky(64, 0, 10)}, opt)
             .run({mkx(1, 2, 3), mky(1, 3, 4)}, opt);
 }
 
 void run_batched_igemm_test(bool transa, bool transb) {
     using Checker = AutoOprChecker<2, 1>;
-    auto make_graph =
-            [&](const Checker::SymInpArray& inputs) -> Checker::SymOutArray {
-        return {opr::BatchedMatrixMul::make(inputs[0], inputs[1],
-                                            {transa, transb})};
+    auto make_graph = [&](const Checker::SymInpArray& inputs) -> Checker::SymOutArray {
+        return {opr::BatchedMatrixMul::make(inputs[0], inputs[1], {transa, transb})};
     };
 
     auto fwd = FWD_BATCH_GEMM(int8_t, int32_t);
@@ -236,6 +233,7 @@ void run_batched_igemm_test(bool transa, bool transb) {
 
     checker.run({mkx(3, 5, 7), mky(3, 7, 2)}, opt)
             .run({mkx(64, 1, 2), mky(64, 2, 1)}, opt)
+            .run({mkx(64, 10, 0), mky(64, 0, 10)}, opt)
             .run({mkx(1, 2, 3), mky(1, 3, 4)}, opt);
 }
 
@@ -254,9 +252,7 @@ void run_trans_inp_test_case(bool trans_a, bool trans_b) {
     HostTensorGenerator<typename DTypeTrait<dt_src>::dtype> gen;
     std::shared_ptr<HostTensorND> host_x = gen({1, 1}), host_y = gen({1, 1});
     auto graph = ComputingGraph::make();
-    auto do_trans = [](SymbolVar x) {
-        return opr::Dimshuffle::make(x, {1, 0});
-    };
+    auto do_trans = [](SymbolVar x) { return opr::Dimshuffle::make(x, {1, 0}); };
     auto x = opr::Host2DeviceCopy::make(*graph, host_x),
          y = opr::Host2DeviceCopy::make(*graph, host_y);
     if (trans_a) {
@@ -363,10 +359,10 @@ void run_bgemm_trans_inp_test_case(bool trans_a, bool trans_b) {
     HostTensorND host_z;
     auto func = graph->compile({make_callback_copy(z, host_z)});
     auto run = [&](size_t B, size_t M, size_t K, size_t N) {
-        *host_x = *(trans_a ? bgemm_gen<dt_src>({B, K, M})
-                            : bgemm_gen<dt_src>({B, M, K}));
-        *host_y = *(trans_b ? bgemm_gen<dt_src>({B, N, K})
-                            : bgemm_gen<dt_src>({B, K, N}));
+        *host_x = *(
+                trans_a ? bgemm_gen<dt_src>({B, K, M}) : bgemm_gen<dt_src>({B, M, K}));
+        *host_y = *(
+                trans_b ? bgemm_gen<dt_src>({B, N, K}) : bgemm_gen<dt_src>({B, K, N}));
         func->execute();
         ASSERT_EQ(TensorShape({B, M, N}), host_z.shape());
         ASSERT_EQ(!trans_a, x.node()->dev_tensor().layout().is_contiguous());
@@ -387,14 +383,12 @@ void run_bgemm_trans_inp_test_case(bool trans_a, bool trans_b) {
                 for (size_t j = 0; j < N; ++j) {
                     dt_dst sum = dt_dst(0);
                     for (size_t k = 0; k < K; ++k) {
-                        dt_src xv = px[b * strd_x[0] + i * strd_x[1] +
-                                       k * strd_x[2]],
-                               yv = py[b * strd_y[0] + k * strd_y[1] +
-                                       j * strd_y[2]];
+                        dt_src xv = px[b * strd_x[0] + i * strd_x[1] + k * strd_x[2]],
+                               yv = py[b * strd_y[0] + k * strd_y[1] + j * strd_y[2]];
                         mul_add(xv, yv, sum);
                     }
-                    MGB_ASSERT_FLOAT_NEAR(getter(sum),
-                                          getter(pz[(b * M + i) * N + j]), 5e-3)
+                    MGB_ASSERT_FLOAT_NEAR(
+                            getter(sum), getter(pz[(b * M + i) * N + j]), 5e-3)
                             << trans_a << ' ' << trans_b;
                 }
     };
@@ -429,19 +423,18 @@ TEST(TestOprDNN, MatrixMulExePolicy) {
     auto cn = CompNode::load("cpux");
 
 #if MGB_ENABLE_FASTRUN
-    for (auto strategy :
-         SmallVector<S>{S::PROFILE, S::HEURISTIC, S::PROFILE | S::REPRODUCIBLE,
-                        S::PROFILE | S::HEURISTIC}) {
+    for (auto strategy : SmallVector<S>{
+                 S::PROFILE, S::HEURISTIC, S::PROFILE | S::REPRODUCIBLE,
+                 S::PROFILE | S::HEURISTIC}) {
 #else
-    for (auto strategy: {S:HEURISTIC, S::PROFILE | S::HEURISTIC}) {
+    for (auto strategy : {S : HEURISTIC, S::PROFILE | S::HEURISTIC}) {
 #endif
 
         auto graph = ComputingGraph::make();
         HostTensorGenerator<> gen;
 
         auto mkvar = [&](const char* name, const TensorShape& shp) {
-            return opr::Host2DeviceCopy::make(*graph, gen(shp), cn)
-                    .rename(name);
+            return opr::Host2DeviceCopy::make(*graph, gen(shp), cn).rename(name);
         };
 
         auto A = mkvar("A", {32, 64});
@@ -456,7 +449,6 @@ TEST(TestOprDNN, MatrixMulExePolicy) {
         func->execute();
     }
 }
-
 
 TEST(TestOprBlas, BatchedMatrixMulFp32_NN) {
     run_batched_sgemm_test(false, false);
@@ -623,20 +615,17 @@ TEST(TestOprBlas, DotBasic) {
     auto host_x = gen({123}), host_y = gen({123});
     auto graph = ComputingGraph::make();
     auto x = opr::Host2DeviceCopy::make(*graph, host_x),
-         y = opr::Host2DeviceCopy::make(*graph, host_y),
-         z = opr::Dot::make(x, y);
+         y = opr::Host2DeviceCopy::make(*graph, host_y), z = opr::Dot::make(x, y);
     HostTensorND host_z;
     auto func = graph->compile({make_callback_copy(z, host_z)});
     func->execute();
-    MGB_ASSERT_FLOAT_EQ(brute_force_dot(*host_x, *host_y),
-                        *host_z.ptr<float>());
+    MGB_ASSERT_FLOAT_EQ(brute_force_dot(*host_x, *host_y), *host_z.ptr<float>());
 }
 
 TEST(TestOprBlas, Dot) {
     using Checker = AutoOprChecker<2, 1>;
 
-    auto make_graph =
-            [&](const Checker::SymInpArray& inputs) -> Checker::SymOutArray {
+    auto make_graph = [&](const Checker::SymInpArray& inputs) -> Checker::SymOutArray {
         return {opr::Dot::make(inputs[0], inputs[1])};
     };
 
@@ -650,7 +639,8 @@ TEST(TestOprBlas, Dot) {
             .run({TensorShape{15}, TensorShape{1}})
             .run({TensorShape{1}, TensorShape{16}})
             .run({TensorShape{23}, TensorShape{23}})
-            .run({TensorShape{1000}, TensorShape{1000}});
+            .run({TensorShape{1000}, TensorShape{1000}})
+            .run({TensorShape{0}, TensorShape{0}});
 }
 
 TEST(TestOprBlas, TransMatMul) {
@@ -675,9 +665,7 @@ TEST(TestOprBlas, TransMatMul8x8x32) {
 
 TEST(TestOprBlas, NonContigMatmul) {
     using Checker = AutoOprChecker<2, 1>;
-    auto make_graph =
-            [](const Checker::SymInpArray& inputs) -> Checker::SymOutArray {
-
+    auto make_graph = [](const Checker::SymInpArray& inputs) -> Checker::SymOutArray {
         using Ad = opr::Subtensor::AxisIndexer;
         auto x = inputs[0],
              xsub = opr::Subtensor::make(
@@ -694,8 +682,7 @@ TEST(TestOprBlas, NonContigMatmul) {
         auto dptr = dest[0].resize({m, n}).ptr<float>();
         memset(dptr, 0, sizeof(float) * m * n);
         for (size_t i = 0; i < m; ++i) {
-            auto ptr_a = inp[0]->ptr<float>({i * 2}),
-                 ptr_c = dest[0].ptr<float>({i});
+            auto ptr_a = inp[0]->ptr<float>({i * 2}), ptr_c = dest[0].ptr<float>({i});
             for (size_t kk = 0; kk < k; ++kk) {
                 auto va = ptr_a[kk];
                 auto ptr_b = inp[1]->ptr<float>({kk});
@@ -714,20 +701,17 @@ TEST(TestOprBlas, NonContigMatmul) {
 
 TEST(TestOprBlas, MatrixInverse) {
     using Checker = AutoOprChecker<1, 1>;
-    auto make_graph =
-            [=](const Checker::SymInpArray& inputs) -> Checker::SymOutArray {
+    auto make_graph = [=](const Checker::SymInpArray& inputs) -> Checker::SymOutArray {
         return {opr::MatrixInverse::make(inputs[0])};
     };
     auto fwd = [=](Checker::NumOutArray& dest, Checker::NumInpArray inp) {
-        auto opr =
-                megdnn_naive_handle()->create_operator<megdnn::MatrixInverse>();
+        auto opr = megdnn_naive_handle()->create_operator<megdnn::MatrixInverse>();
 
-        auto wk_size =
-                opr->get_workspace_in_bytes(inp[0]->layout(), inp[0]->layout());
+        auto wk_size = opr->get_workspace_in_bytes(inp[0]->layout(), inp[0]->layout());
         std::unique_ptr<dt_byte[]> wk{new dt_byte[wk_size]};
-        opr->exec(inp[0]->as_megdnn(),
-                  dest[0].resize(inp[0]->shape()).as_megdnn(),
-                  {wk.get(), wk_size});
+        opr->exec(
+                inp[0]->as_megdnn(), dest[0].resize(inp[0]->shape()).as_megdnn(),
+                {wk.get(), wk_size});
     };
     // ensure low condition number for generated matrices
     auto input_coord = [](const Checker::NumInpArray& inp) {
@@ -809,10 +793,9 @@ void run_svd_empty_grad_test() {
         opr->param().compute_uv = true;
         TensorLayout ul, sl, vtl;
         opr->deduce_layout(inp[0]->layout(), ul, sl, vtl);
-        HostTensorND tmp_u{dest[0].comp_node(), ul},
-                tmp_s{dest[0].comp_node(), sl}, tmp_v{dest[0].comp_node(), vtl};
-        auto wk_size =
-                opr->get_workspace_in_bytes(inp[0]->layout(), ul, sl, vtl);
+        HostTensorND tmp_u{dest[0].comp_node(), ul}, tmp_s{dest[0].comp_node(), sl},
+                tmp_v{dest[0].comp_node(), vtl};
+        auto wk_size = opr->get_workspace_in_bytes(inp[0]->layout(), ul, sl, vtl);
         auto wk = std::make_unique<dt_byte[]>(wk_size);
         auto out0 = tmp_u.as_megdnn(), out1 = tmp_s.as_megdnn(),
              out2 = tmp_v.as_megdnn();
@@ -847,8 +830,7 @@ void run_svd_empty_grad_test() {
 
 TEST(TestOprBlas, SingularValueDecomposition) {
     using Checker = AutoOprChecker<1, 3>;
-    auto make_graph =
-            [=](const Checker::SymInpArray& inputs) -> Checker::SymOutArray {
+    auto make_graph = [=](const Checker::SymInpArray& inputs) -> Checker::SymOutArray {
         auto out = opr::SVD::make(inputs[0], opr::SVD::Param{false, true});
         return {out[0], out[1], out[2]};
     };
@@ -857,12 +839,12 @@ TEST(TestOprBlas, SingularValueDecomposition) {
         opr->param().compute_uv = true;
         TensorLayout ul, sl, vtl;
         opr->deduce_layout(inp[0]->layout(), ul, sl, vtl);
-        auto wk_size =
-                opr->get_workspace_in_bytes(inp[0]->layout(), ul, sl, vtl);
+        auto wk_size = opr->get_workspace_in_bytes(inp[0]->layout(), ul, sl, vtl);
         auto wk = std::make_unique<dt_byte[]>(wk_size);
-        opr->exec(inp[0]->as_megdnn(), dest[0].resize(ul).as_megdnn(),
-                  dest[1].resize(sl).as_megdnn(),
-                  dest[2].resize(vtl).as_megdnn(), {wk.get(), wk_size});
+        opr->exec(
+                inp[0]->as_megdnn(), dest[0].resize(ul).as_megdnn(),
+                dest[1].resize(sl).as_megdnn(), dest[2].resize(vtl).as_megdnn(),
+                {wk.get(), wk_size});
     };
     Checker{make_graph, fwd}
             .set_input_generator(0, gen_svd_input)
@@ -897,8 +879,9 @@ TEST(TestOprBlas, MatrixMulExePolicy) {
     auto cn = CompNode::load("cpux");
 
     int nr_get = 0;
-    auto on_get = [&nr_get](const std::string&, const void*, size_t,
-                            const void*, size_t) { ++nr_get; };
+    auto on_get = [&nr_get](
+                          const std::string&, const void*, size_t, const void*,
+                          size_t) { ++nr_get; };
     PersistentCacheHook cache_hook{on_get};
 
     auto graph = ComputingGraph::make();

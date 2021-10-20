@@ -17,10 +17,11 @@
 
 using namespace megdnn;
 
-void TopK::deduce_layout(int k, const TensorLayout& data, TensorLayout& values,
-                         TensorLayout& indices) {
-    megdnn_assert(k && data.ndim == 2 && data.stride[1] == 1,
-                  "invalid k=%d data=%s", k, data.to_string().c_str());
+void TopK::deduce_layout(
+        int k, const TensorLayout& data, TensorLayout& values, TensorLayout& indices) {
+    megdnn_assert(
+            k && data.ndim == 2 && data.stride[1] == 1, "invalid k=%d data=%s", k,
+            data.to_string().c_str());
     values.dtype = data.dtype;
     indices.dtype = dtype::Int32{};
     switch (param().mode) {
@@ -39,8 +40,9 @@ void TopK::deduce_layout(int k, const TensorLayout& data, TensorLayout& values,
     }
 }
 
-void TopK::exec(int k, _megdnn_tensor_in data, _megdnn_tensor_out values,
-                _megdnn_tensor_out indices, _megdnn_workspace workspace) {
+void TopK::exec(
+        int k, _megdnn_tensor_in data, _megdnn_tensor_out values,
+        _megdnn_tensor_out indices, _megdnn_workspace workspace) {
     TensorLayout oval, oidx;
     deduce_layout(k, data.layout, oval, oidx);
     megdnn_assert_eq_layout(oval, values.layout);
@@ -51,9 +53,9 @@ void TopK::exec(int k, _megdnn_tensor_in data, _megdnn_tensor_out values,
         iptr = indices.ptr<int32_t>();
         megdnn_assert_eq_layout(oidx, indices.layout);
     }
-    megdnn_assert(workspace.size >= get_workspace_in_bytes(k, data.layout,
-                                                           values.layout,
-                                                           indices.layout));
+    megdnn_assert(
+            workspace.size >=
+            get_workspace_in_bytes(k, data.layout, values.layout, indices.layout));
     if (static_cast<size_t>(std::abs(k)) > data.layout[1]) {
         if (k > 0) {
             k = data.layout[1];
@@ -65,4 +67,3 @@ void TopK::exec(int k, _megdnn_tensor_in data, _megdnn_tensor_out values,
 }
 
 // vim: syntax=cpp.doxygen
-

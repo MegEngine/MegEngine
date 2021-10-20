@@ -20,9 +20,8 @@ namespace warp_affine {
 BorderMode get_bmode(param::WarpAffine::BorderMode bmode);
 InterpolationMode get_imode(param::WarpAffine::InterpolationMode imode);
 
-} // namespace warp_affine
-} // namespace cuda
-} // namespace megdnn
+}  // namespace warp_affine
+}  // namespace cuda
+}  // namespace megdnn
 
 // vim: syntax=cpp.doxygen
-

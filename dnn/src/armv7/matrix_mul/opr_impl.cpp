@@ -9,8 +9,8 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
  * implied.
  */
-#include "src/armv7/matrix_mul/algos.h"
 #include "src/armv7/matrix_mul/opr_impl.h"
+#include "src/armv7/matrix_mul/algos.h"
 #include "src/common/metahelper.h"
 #include "src/common/utils.h"
 #include "src/fallback/matrix_mul/gemm_impl.h"
@@ -90,11 +90,11 @@ const MatrixMulImpl::AlgoPack& MatrixMulImpl::algo_pack() {
     return algo_pack;
 }
 
-SmallVector<fallback::MatrixMulImpl::AlgoBase*>
-MatrixMulImpl::get_all_packed_algo() {
+SmallVector<fallback::MatrixMulImpl::AlgoBase*> MatrixMulImpl::get_all_packed_algo() {
     auto algos = arm_common::MatrixMulImpl::get_all_packed_algo();
-    algos.insert(algos.begin(), algo_pack().all_algos().begin(),
-                 algo_pack().all_algos().end());
+    algos.insert(
+            algos.begin(), algo_pack().all_algos().begin(),
+            algo_pack().all_algos().end());
     return algos;
 }
 

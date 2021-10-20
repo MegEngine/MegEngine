@@ -67,10 +67,8 @@ public:
            bool is_pinned_host = false);
     Tensor(int device_id, int stream_id, LiteDeviceType device_type,
            bool is_pinned_host = false);
-    Tensor(LiteBackend backend,
-           LiteDeviceType device_type = LiteDeviceType::LITE_CPU,
-           int device_id = 0, const Layout& layout = {},
-           bool is_pinned_host = false);
+    Tensor(LiteBackend backend, LiteDeviceType device_type = LiteDeviceType::LITE_CPU,
+           int device_id = 0, const Layout& layout = {}, bool is_pinned_host = false);
     ~Tensor();
 
     LiteDeviceType get_device_type() const { return m_device_type; };
@@ -107,9 +105,9 @@ public:
     void reshape(const std::vector<int>& shape);
 
     //! get a new tensor slice from the origin tensor
-    std::shared_ptr<Tensor> slice(const std::vector<size_t>& start,
-                                  const std::vector<size_t>& end,
-                                  const std::vector<size_t>& step = {});
+    std::shared_ptr<Tensor> slice(
+            const std::vector<size_t>& start, const std::vector<size_t>& end,
+            const std::vector<size_t>& step = {});
 
     //! set the tensor memory with zero
     void fill_zero();
@@ -175,12 +173,10 @@ public:
         virtual size_t type_length() const = 0;
     };
 
-    template<class T>
+    template <class T>
     class AnyHolder : public HolderBase {
     public:
-        AnyHolder(const T value) :
-            m_value(value) {
-        }
+        AnyHolder(const T value) : m_value(value) {}
         virtual std::shared_ptr<HolderBase> clone() override {
             return std::make_shared<AnyHolder>(m_value);
         }

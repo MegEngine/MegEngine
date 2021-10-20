@@ -19,9 +19,9 @@ namespace direct_conv_avx2_stride2 {
 
 //! layout:(N,IC,IH,IW)-->(N,IC/2,H,2*W_envnW_odd)
 MEGDNN_ATTRIBUTE_TARGET("sse4.1")
-void pack_src_conv_avx2_stride2(const WorkspaceBundle& bundle,
-                                const ConvBiasImpl::NCBKernParam& kern_param,
-                                const ConvBiasImpl::NCBKernIndex& ncb_index) {
+void pack_src_conv_avx2_stride2(
+        const WorkspaceBundle& bundle, const ConvBiasImpl::NCBKernParam& kern_param,
+        const ConvBiasImpl::NCBKernIndex& ncb_index) {
     int32_t ih = kern_param.isz[0];
     int32_t iw = kern_param.isz[1];
     int32_t ic = kern_param.filter_meta.icpg;
@@ -40,16 +40,14 @@ void pack_src_conv_avx2_stride2(const WorkspaceBundle& bundle,
     size_t group = kern_param.filter_meta.group;
     size_t packed_group_size = out_h * out_w * div_ceil(ic, ic_step);
 
-    size_t group_id = ncb_index.ndrange_id[0],
-           batch_id = ncb_index.ndrange_id[1],
+    size_t group_id = ncb_index.ndrange_id[0], batch_id = ncb_index.ndrange_id[1],
            channel_id = ncb_index.ndrange_id[2];
 
     const int8_t* src_ptr = kern_param.src<int8_t>(batch_id, group_id) +
                             ic_step * channel_id * c_stride;
     int8_t* packed_src = static_cast<int8_t*>(bundle.get(0)) +
                          batch_id * group * packed_group_size +
-                         group_id * packed_group_size +
-                         channel_id * out_w * out_h;
+                         group_id * packed_group_size + channel_id * out_w * out_h;
 
     auto ic_count = ic_step * static_cast<int>(channel_id);
     // default pad len for pad even and odd
@@ -64,17 +62,16 @@ void pack_src_conv_avx2_stride2(const WorkspaceBundle& bundle,
         packed_src += pad_h * out_w;
         for (int h_iter = 0; h_iter < ih; ++h_iter) {
             auto out_ptr_even = packed_src + h_iter * out_w;
-            auto out_ptr_odd =
-                    out_ptr_even + div_ceil(iw + 2 * pad_w, 2) * ic_step;
+            auto out_ptr_odd = out_ptr_even + div_ceil(iw + 2 * pad_w, 2) * ic_step;
             append_zero_and_inc(out_ptr_even, pad_even_head_len);
             append_zero_and_inc(out_ptr_odd, pad_odd_head_len);
             for (int w_iter = 0; w_iter < iw_end; w_iter += iw_step) {
                 if (pad_w % 2)
-                    transpose_2x16_int8_odd_even(src_ptr_ic0, src_ptr_ic1,
-                                                 out_ptr_odd, out_ptr_even);
+                    transpose_2x16_int8_odd_even(
+                            src_ptr_ic0, src_ptr_ic1, out_ptr_odd, out_ptr_even);
                 else
-                    transpose_2x16_int8_odd_even(src_ptr_ic0, src_ptr_ic1,
-                                                 out_ptr_even, out_ptr_odd);
+                    transpose_2x16_int8_odd_even(
+                            src_ptr_ic0, src_ptr_ic1, out_ptr_even, out_ptr_odd);
                 out_ptr_even += iw_step;
                 out_ptr_odd += iw_step;
                 src_ptr_ic0 += iw_step;
@@ -87,15 +84,15 @@ void pack_src_conv_avx2_stride2(const WorkspaceBundle& bundle,
                 }
                 auto tmp_e = round_up(iw_remain, ic_step);
                 if (pad_w % 2) {
-                    transpose_2xn_int8_odd_even(src_ptr_ic0, src_ptr_ic1,
-                                                out_ptr_odd, out_ptr_even,
-                                                iw_remain);
+                    transpose_2xn_int8_odd_even(
+                            src_ptr_ic0, src_ptr_ic1, out_ptr_odd, out_ptr_even,
+                            iw_remain);
                     out_ptr_even += iw_remain * ic_step - tmp_e;
                     out_ptr_odd += tmp_e;
                 } else {
-                    transpose_2xn_int8_odd_even(src_ptr_ic0, src_ptr_ic1,
-                                                out_ptr_even, out_ptr_odd,
-                                                iw_remain);
+                    transpose_2xn_int8_odd_even(
+                            src_ptr_ic0, src_ptr_ic1, out_ptr_even, out_ptr_odd,
+                            iw_remain);
                     out_ptr_odd += iw_remain * ic_step - tmp_e;
                     out_ptr_even += tmp_e;
                 }
@@ -114,17 +111,16 @@ void pack_src_conv_avx2_stride2(const WorkspaceBundle& bundle,
         packed_src += pad_h * out_w;
         for (int h_iter = 0; h_iter < ih; ++h_iter) {
             auto out_ptr_even = packed_src + h_iter * out_w;
-            auto out_ptr_odd =
-                    out_ptr_even + div_ceil(iw + 2 * pad_w, 2) * ic_step;
+            auto out_ptr_odd = out_ptr_even + div_ceil(iw + 2 * pad_w, 2) * ic_step;
             append_zero_and_inc(out_ptr_even, pad_even_head_len);
             append_zero_and_inc(out_ptr_odd, pad_odd_head_len);
             for (int w_iter = 0; w_iter < iw_end; w_iter += iw_step) {
                 if (pad_w % 2)
-                    transpose_2x16_int8_odd_even(src_ptr_ic0, src_ptr_ic1,
-                                                 out_ptr_odd, out_ptr_even);
+                    transpose_2x16_int8_odd_even(
+                            src_ptr_ic0, src_ptr_ic1, out_ptr_odd, out_ptr_even);
                 else
-                    transpose_2x16_int8_odd_even(src_ptr_ic0, src_ptr_ic1,
-                                                 out_ptr_even, out_ptr_odd);
+                    transpose_2x16_int8_odd_even(
+                            src_ptr_ic0, src_ptr_ic1, out_ptr_even, out_ptr_odd);
                 out_ptr_even += iw_step;
                 out_ptr_odd += iw_step;
                 src_ptr_ic0 += iw_step;
@@ -136,15 +132,15 @@ void pack_src_conv_avx2_stride2(const WorkspaceBundle& bundle,
                 }
                 auto tmp_e = round_up(iw_remain, ic_step);
                 if (pad_w % 2) {
-                    transpose_2xn_int8_odd_even(src_ptr_ic0, src_ptr_ic1,
-                                                out_ptr_odd, out_ptr_even,
-                                                iw_remain);
+                    transpose_2xn_int8_odd_even(
+                            src_ptr_ic0, src_ptr_ic1, out_ptr_odd, out_ptr_even,
+                            iw_remain);
                     out_ptr_even += iw_remain * ic_step - tmp_e;
                     out_ptr_odd += tmp_e;
                 } else {
-                    transpose_2xn_int8_odd_even(src_ptr_ic0, src_ptr_ic1,
-                                                out_ptr_even, out_ptr_odd,
-                                                iw_remain);
+                    transpose_2xn_int8_odd_even(
+                            src_ptr_ic0, src_ptr_ic1, out_ptr_even, out_ptr_odd,
+                            iw_remain);
                     out_ptr_odd += iw_remain * ic_step - tmp_e;
                     out_ptr_even += tmp_e;
                 }
@@ -182,8 +178,7 @@ static inline void pack_filter_conv_avx2_stride2(
     const int oc_out_stride = round_up(ic, ic_step) * kh * kw;
     const int8_t zero[k_step]{0};
 
-    size_t group_id = ncb_index.ndrange_id[0],
-           oc_index_id = ncb_index.ndrange_id[1];
+    size_t group_id = ncb_index.ndrange_id[0], oc_index_id = ncb_index.ndrange_id[1];
 
     const int8_t* pack_filter_ptr = kern_param.filter<int8_t>(group_id);
     int16_t* out_ptr = static_cast<int16_t*>(bundle.get(1)) +
@@ -205,9 +200,8 @@ static inline void pack_filter_conv_avx2_stride2(
             auto pack_filter_ptr_3_1 = pack_filter_ptr_3_0 + kernel_size;
             for (int k_iter = 0; k_iter < kernel_end; k_iter += k_step) {
                 transpose_4x2x8_int8_int16(
-                        pack_filter_ptr_0_0, pack_filter_ptr_0_1,
-                        pack_filter_ptr_1_0, pack_filter_ptr_1_1,
-                        pack_filter_ptr_2_0, pack_filter_ptr_2_1,
+                        pack_filter_ptr_0_0, pack_filter_ptr_0_1, pack_filter_ptr_1_0,
+                        pack_filter_ptr_1_1, pack_filter_ptr_2_0, pack_filter_ptr_2_1,
                         pack_filter_ptr_3_0, pack_filter_ptr_3_1, oc_out_ptr);
                 oc_out_ptr += k_step * oc_step * ic_step;
                 pack_filter_ptr_0_0 += k_step;
@@ -221,9 +215,8 @@ static inline void pack_filter_conv_avx2_stride2(
             }
             if (kernel_remain > 0) {
                 transpose_4x2xn_int8_int16(
-                        pack_filter_ptr_0_0, pack_filter_ptr_0_1,
-                        pack_filter_ptr_1_0, pack_filter_ptr_1_1,
-                        pack_filter_ptr_2_0, pack_filter_ptr_2_1,
+                        pack_filter_ptr_0_0, pack_filter_ptr_0_1, pack_filter_ptr_1_0,
+                        pack_filter_ptr_1_1, pack_filter_ptr_2_0, pack_filter_ptr_2_1,
                         pack_filter_ptr_3_0, pack_filter_ptr_3_1, oc_out_ptr,
                         kernel_remain);
                 oc_out_ptr += kernel_remain * oc_step * ic_step;
@@ -243,9 +236,8 @@ static inline void pack_filter_conv_avx2_stride2(
             auto pack_filter_ptr_3_1 = &zero[0];
             for (int k_iter = 0; k_iter < kernel_end; k_iter += k_step) {
                 transpose_4x2x8_int8_int16(
-                        pack_filter_ptr_0_0, pack_filter_ptr_0_1,
-                        pack_filter_ptr_1_0, pack_filter_ptr_1_1,
-                        pack_filter_ptr_2_0, pack_filter_ptr_2_1,
+                        pack_filter_ptr_0_0, pack_filter_ptr_0_1, pack_filter_ptr_1_0,
+                        pack_filter_ptr_1_1, pack_filter_ptr_2_0, pack_filter_ptr_2_1,
                         pack_filter_ptr_3_0, pack_filter_ptr_3_1, oc_out_ptr);
                 oc_out_ptr += oc_step * k_step * 2;
                 pack_filter_ptr_0_0 += k_step;
@@ -255,9 +247,8 @@ static inline void pack_filter_conv_avx2_stride2(
             }
             if (kernel_remain > 0) {
                 transpose_4x2xn_int8_int16(
-                        pack_filter_ptr_0_0, pack_filter_ptr_0_1,
-                        pack_filter_ptr_1_0, pack_filter_ptr_1_1,
-                        pack_filter_ptr_2_0, pack_filter_ptr_2_1,
+                        pack_filter_ptr_0_0, pack_filter_ptr_0_1, pack_filter_ptr_1_0,
+                        pack_filter_ptr_1_1, pack_filter_ptr_2_0, pack_filter_ptr_2_1,
                         pack_filter_ptr_3_0, pack_filter_ptr_3_1, oc_out_ptr,
                         kernel_remain);
                 oc_out_ptr += kernel_remain * 2;
@@ -267,8 +258,8 @@ static inline void pack_filter_conv_avx2_stride2(
     auto pack_oc_remain = [&]() {
         auto oc_out_ptr = out_ptr + oc_end * oc_out_stride;
         for (int ic_iter = 0; ic_iter < ic_end; ic_iter += ic_step) {
-            auto pack_filter_ptr_base = pack_filter_ptr + oc_end * oc_stride +
-                                        ic_iter * kernel_size;
+            auto pack_filter_ptr_base =
+                    pack_filter_ptr + oc_end * oc_stride + ic_iter * kernel_size;
             auto pack_filter_ptr_0_0 = pack_filter_ptr_base + 0 * oc_stride;
             auto pack_filter_ptr_0_1 = pack_filter_ptr_0_0 + kernel_size;
             auto pack_filter_ptr_1_0 = &zero[0];
@@ -287,9 +278,8 @@ static inline void pack_filter_conv_avx2_stride2(
             }
             for (int k_iter = 0; k_iter < kernel_end; k_iter += k_step) {
                 transpose_4x2x8_int8_int16(
-                        pack_filter_ptr_0_0, pack_filter_ptr_0_1,
-                        pack_filter_ptr_1_0, pack_filter_ptr_1_1,
-                        pack_filter_ptr_2_0, pack_filter_ptr_2_1,
+                        pack_filter_ptr_0_0, pack_filter_ptr_0_1, pack_filter_ptr_1_0,
+                        pack_filter_ptr_1_1, pack_filter_ptr_2_0, pack_filter_ptr_2_1,
                         pack_filter_ptr_3_0, pack_filter_ptr_3_1, oc_out_ptr);
                 oc_out_ptr += k_step * oc_step * ic_step;
                 pack_filter_ptr_0_0 += k_step;
@@ -305,9 +295,8 @@ static inline void pack_filter_conv_avx2_stride2(
             }
             if (kernel_remain > 0) {
                 transpose_4x2xn_int8_int16(
-                        pack_filter_ptr_0_0, pack_filter_ptr_0_1,
-                        pack_filter_ptr_1_0, pack_filter_ptr_1_1,
-                        pack_filter_ptr_2_0, pack_filter_ptr_2_1,
+                        pack_filter_ptr_0_0, pack_filter_ptr_0_1, pack_filter_ptr_1_0,
+                        pack_filter_ptr_1_1, pack_filter_ptr_2_0, pack_filter_ptr_2_1,
                         pack_filter_ptr_3_0, pack_filter_ptr_3_1, oc_out_ptr,
                         kernel_remain);
                 oc_out_ptr += kernel_remain * oc_step * ic_step;
@@ -332,9 +321,8 @@ static inline void pack_filter_conv_avx2_stride2(
             }
             for (int k_iter = 0; k_iter < kernel_end; k_iter += k_step) {
                 transpose_4x2x8_int8_int16(
-                        pack_filter_ptr_0_0, pack_filter_ptr_0_1,
-                        pack_filter_ptr_1_0, pack_filter_ptr_1_1,
-                        pack_filter_ptr_2_0, pack_filter_ptr_2_1,
+                        pack_filter_ptr_0_0, pack_filter_ptr_0_1, pack_filter_ptr_1_0,
+                        pack_filter_ptr_1_1, pack_filter_ptr_2_0, pack_filter_ptr_2_1,
                         pack_filter_ptr_3_0, pack_filter_ptr_3_1, oc_out_ptr);
                 oc_out_ptr += oc_step * k_step * 2;
                 pack_filter_ptr_0_0 += k_step;
@@ -347,9 +335,8 @@ static inline void pack_filter_conv_avx2_stride2(
             }
             if (kernel_remain > 0) {
                 transpose_4x2xn_int8_int16(
-                        pack_filter_ptr_0_0, pack_filter_ptr_0_1,
-                        pack_filter_ptr_1_0, pack_filter_ptr_1_1,
-                        pack_filter_ptr_2_0, pack_filter_ptr_2_1,
+                        pack_filter_ptr_0_0, pack_filter_ptr_0_1, pack_filter_ptr_1_0,
+                        pack_filter_ptr_1_1, pack_filter_ptr_2_0, pack_filter_ptr_2_1,
                         pack_filter_ptr_3_0, pack_filter_ptr_3_1, oc_out_ptr,
                         kernel_remain);
                 oc_out_ptr += kernel_remain * 2;
@@ -364,13 +351,14 @@ static inline void pack_filter_conv_avx2_stride2(
     }
 }
 
-template <uint32_t oh_remain, uint32_t oc_remain, uint32_t ow_remain,
-          uint32_t oc_step, uint32_t ic_step, uint32_t ow_step>
+template <
+        uint32_t oh_remain, uint32_t oc_remain, uint32_t ow_remain, uint32_t oc_step,
+        uint32_t ic_step, uint32_t ow_step>
 MEGDNN_ATTRIBUTE_TARGET("avx2")
 static inline void kern_conv_avx2_stride2_normal_conv(
-        const int16_t* pack_filter_ptr, const int8_t* pack_feat_ptr,
-        const int ld_src, int32_t* c_ptr, const uint32_t ldoc, const int ic,
-        const int ldic, const int ow, const uint32_t fw, const uint32_t fh) {
+        const int16_t* pack_filter_ptr, const int8_t* pack_feat_ptr, const int ld_src,
+        int32_t* c_ptr, const uint32_t ldoc, const int ic, const int ldic, const int ow,
+        const uint32_t fw, const uint32_t fh) {
     megdnn_assert(oc_step == 4 && ic_step == 2 && ow_step == 8);
     __m256i filter_vec[2];
     __m256i feat_vec[2];
@@ -395,36 +383,31 @@ static inline void kern_conv_avx2_stride2_normal_conv(
             for (uint32_t w_offset = 0; w_offset < fw; ++w_offset) {
                 auto feat_offset = feat_offset_even_base * (w_offset / 2) +
                                    feat_offset_odd_base * (w_offset % 2);
-                feat_vec[0] = _mm256_cvtepi8_epi16_from_ptr(pack_feat_ptr +
-                                                            feat_offset);
+                feat_vec[0] =
+                        _mm256_cvtepi8_epi16_from_ptr(pack_feat_ptr + feat_offset);
                 if (!oh_remain) {
                     feat_vec[1] = _mm256_cvtepi8_epi16_from_ptr(
                             pack_feat_ptr + ld_src * 2 + feat_offset);
                 }
                 filter_vec[0] = _mm256_set1_epi32(*(int32_t*)(pack_filter_ptr));
-                filter_vec[1] =
-                        _mm256_set1_epi32(*(int32_t*)(pack_filter_ptr + 2));
+                filter_vec[1] = _mm256_set1_epi32(*(int32_t*)(pack_filter_ptr + 2));
 
-#define CAL(o_i, f_i, s_i, interval)                                        \
-    c_temp[o_i] = _mm256_madd_epi16(filter_vec[f_i], feat_vec[s_i]);        \
-    c_vec[o_i + interval] =                                                 \
-            _mm256_add_epi32(c_vec[o_i + interval], c_temp[o_i]);           \
-    if ((0 == interval) || (0 == o_i) || (!oc_remain && (4 == interval))) { \
-        if (!oh_remain) {                                                   \
-            c_temp[o_i + 1] =                                               \
-                    _mm256_madd_epi16(filter_vec[f_i], feat_vec[s_i + 1]);  \
-            c_vec[o_i + 1 + interval] = _mm256_add_epi32(                   \
-                    c_vec[o_i + 1 + interval], c_temp[o_i + 1]);            \
-        }                                                                   \
+#define CAL(o_i, f_i, s_i, interval)                                                 \
+    c_temp[o_i] = _mm256_madd_epi16(filter_vec[f_i], feat_vec[s_i]);                 \
+    c_vec[o_i + interval] = _mm256_add_epi32(c_vec[o_i + interval], c_temp[o_i]);    \
+    if ((0 == interval) || (0 == o_i) || (!oc_remain && (4 == interval))) {          \
+        if (!oh_remain) {                                                            \
+            c_temp[o_i + 1] = _mm256_madd_epi16(filter_vec[f_i], feat_vec[s_i + 1]); \
+            c_vec[o_i + 1 + interval] =                                              \
+                    _mm256_add_epi32(c_vec[o_i + 1 + interval], c_temp[o_i + 1]);    \
+        }                                                                            \
     }
 
                 CAL(0, 0, 0, 0);
                 CAL(2, 1, 0, 0);
-                filter_vec[0] =
-                        _mm256_set1_epi32(*(int32_t*)(pack_filter_ptr + 4));
+                filter_vec[0] = _mm256_set1_epi32(*(int32_t*)(pack_filter_ptr + 4));
                 if (!oc_remain) {
-                    filter_vec[1] =
-                            _mm256_set1_epi32(*(int32_t*)(pack_filter_ptr + 6));
+                    filter_vec[1] = _mm256_set1_epi32(*(int32_t*)(pack_filter_ptr + 6));
                 }
                 CAL(0, 0, 0, 4);
                 CAL(2, 1, 0, 4);
@@ -436,15 +419,16 @@ static inline void kern_conv_avx2_stride2_normal_conv(
     }
     if (ow_remain) {
         __m256i mask = _m256_continue_mask(ow_remain);
-#define STORE(index)                                                        \
-    if ((1 == index) || (oc_remain >= index || oc_remain == 0) ||           \
-        (4 == index && !oc_remain)) {                                       \
-        _mm256_maskstore_epi32((c_ptr + (index - 1) * ldoc), mask,          \
-                               c_vec[(index - 1) * 2]);                     \
-        if (!oh_remain) {                                                   \
-            _mm256_maskstore_epi32((c_ptr + (index - 1) * ldoc + ow), mask, \
-                                   c_vec[(index - 1) * 2 + 1]);             \
-        }                                                                   \
+#define STORE(index)                                                         \
+    if ((1 == index) || (oc_remain >= index || oc_remain == 0) ||            \
+        (4 == index && !oc_remain)) {                                        \
+        _mm256_maskstore_epi32(                                              \
+                (c_ptr + (index - 1) * ldoc), mask, c_vec[(index - 1) * 2]); \
+        if (!oh_remain) {                                                    \
+            _mm256_maskstore_epi32(                                          \
+                    (c_ptr + (index - 1) * ldoc + ow), mask,                 \
+                    c_vec[(index - 1) * 2 + 1]);                             \
+        }                                                                    \
     }
         STORE(1);
         STORE(2);
@@ -452,15 +436,16 @@ static inline void kern_conv_avx2_stride2_normal_conv(
         STORE(4);
 #undef STORE
     } else {
-#define STORE(index)                                                         \
-    if ((1 == index) || (oc_remain >= index || oc_remain == 0) ||            \
-        (4 == index && !oc_remain)) {                                        \
-        _mm256_storeu_si256((__m256i*)(c_ptr + (index - 1) * ldoc),          \
-                            c_vec[(index - 1) * 2]);                         \
-        if (!oh_remain) {                                                    \
-            _mm256_storeu_si256((__m256i*)(c_ptr + (index - 1) * ldoc + ow), \
-                                c_vec[(index - 1) * 2 + 1]);                 \
-        }                                                                    \
+#define STORE(index)                                                             \
+    if ((1 == index) || (oc_remain >= index || oc_remain == 0) ||                \
+        (4 == index && !oc_remain)) {                                            \
+        _mm256_storeu_si256(                                                     \
+                (__m256i*)(c_ptr + (index - 1) * ldoc), c_vec[(index - 1) * 2]); \
+        if (!oh_remain) {                                                        \
+            _mm256_storeu_si256(                                                 \
+                    (__m256i*)(c_ptr + (index - 1) * ldoc + ow),                 \
+                    c_vec[(index - 1) * 2 + 1]);                                 \
+        }                                                                        \
     }
         STORE(1);
         STORE(2);
@@ -469,16 +454,14 @@ static inline void kern_conv_avx2_stride2_normal_conv(
 #undef STORE
     }
 }
-template <uint32_t oh_remain, uint32_t oc_remain, uint32_t ow_remain,
-          uint32_t oc_step, uint32_t ic_step, uint32_t oh_step,
-          uint32_t ow_step>
-inline void block_kernel_entry(const int16_t* filter, const int8_t* src,
-                               int32_t* dst, const uint32_t oc_end,
-                               const uint32_t oc_index, const uint32_t oh_end,
-                               const uint32_t ow_end,
-                               const uint32_t pack_ic_stride,
-                               const uint32_t pack_iw, const uint32_t oc_stride,
-                               const ConvBiasImpl::NCBKernParam& kern_param) {
+template <
+        uint32_t oh_remain, uint32_t oc_remain, uint32_t ow_remain, uint32_t oc_step,
+        uint32_t ic_step, uint32_t oh_step, uint32_t ow_step>
+inline void block_kernel_entry(
+        const int16_t* filter, const int8_t* src, int32_t* dst, const uint32_t oc_end,
+        const uint32_t oc_index, const uint32_t oh_end, const uint32_t ow_end,
+        const uint32_t pack_ic_stride, const uint32_t pack_iw, const uint32_t oc_stride,
+        const ConvBiasImpl::NCBKernParam& kern_param) {
     auto fm = kern_param.filter_meta;
     const uint32_t ic = fm.icpg;
     const uint32_t fh = fm.spatial[0];
@@ -494,19 +477,18 @@ inline void block_kernel_entry(const int16_t* filter, const int8_t* src,
                 auto iter_dst_ptr = iter_dst_c_ptr + oh_iter * ow + ow_iter;
                 auto iter_src_ptr =
                         src + oh_iter * stride_h * pack_iw + ow_iter * ic_step;
-                kern_conv_avx2_stride2_normal_conv<0, 0, 0, oc_step, ic_step,
-                                                   ow_step>(
-                        iter_filter_ptr, iter_src_ptr, pack_iw, iter_dst_ptr,
-                        oc_stride, ic, pack_ic_stride, ow, fw, fh);
+                kern_conv_avx2_stride2_normal_conv<0, 0, 0, oc_step, ic_step, ow_step>(
+                        iter_filter_ptr, iter_src_ptr, pack_iw, iter_dst_ptr, oc_stride,
+                        ic, pack_ic_stride, ow, fw, fh);
             }
             if (ow_remain > 0) {
                 auto iter_dst_ptr = iter_dst_c_ptr + oh_iter * ow + ow_end;
                 auto iter_src_ptr =
                         src + oh_iter * stride_h * pack_iw + ow_end * ic_step;
-                kern_conv_avx2_stride2_normal_conv<0, 0, ow_remain, oc_step,
-                                                   ic_step, ow_step>(
-                        iter_filter_ptr, iter_src_ptr, pack_iw, iter_dst_ptr,
-                        oc_stride, ic, pack_ic_stride, ow, fw, fh);
+                kern_conv_avx2_stride2_normal_conv<
+                        0, 0, ow_remain, oc_step, ic_step, ow_step>(
+                        iter_filter_ptr, iter_src_ptr, pack_iw, iter_dst_ptr, oc_stride,
+                        ic, pack_ic_stride, ow, fw, fh);
             }
         }
         if (oh_remain > 0) {
@@ -514,19 +496,19 @@ inline void block_kernel_entry(const int16_t* filter, const int8_t* src,
                 auto iter_dst_ptr = iter_dst_c_ptr + oh_end * ow + ow_iter;
                 auto iter_src_ptr =
                         src + oh_end * stride_h * pack_iw + ow_iter * ic_step;
-                kern_conv_avx2_stride2_normal_conv<oh_remain, 0, 0, oc_step,
-                                                   ic_step, ow_step>(
-                        iter_filter_ptr, iter_src_ptr, pack_iw, iter_dst_ptr,
-                        oc_stride, ic, pack_ic_stride, ow, fw, fh);
+                kern_conv_avx2_stride2_normal_conv<
+                        oh_remain, 0, 0, oc_step, ic_step, ow_step>(
+                        iter_filter_ptr, iter_src_ptr, pack_iw, iter_dst_ptr, oc_stride,
+                        ic, pack_ic_stride, ow, fw, fh);
             }
             if (ow_remain > 0) {
                 auto iter_dst_ptr = iter_dst_c_ptr + oh_end * ow + ow_end;
                 auto iter_src_ptr =
                         src + oh_end * stride_h * pack_iw + ow_end * ic_step;
-                kern_conv_avx2_stride2_normal_conv<oh_remain, 0, ow_remain,
-                                                   oc_step, ic_step, ow_step>(
-                        iter_filter_ptr, iter_src_ptr, pack_iw, iter_dst_ptr,
-                        oc_stride, ic, pack_ic_stride, ow, fw, fh);
+                kern_conv_avx2_stride2_normal_conv<
+                        oh_remain, 0, ow_remain, oc_step, ic_step, ow_step>(
+                        iter_filter_ptr, iter_src_ptr, pack_iw, iter_dst_ptr, oc_stride,
+                        ic, pack_ic_stride, ow, fw, fh);
             }
         }
     } else {
@@ -537,19 +519,19 @@ inline void block_kernel_entry(const int16_t* filter, const int8_t* src,
                 auto iter_dst_ptr = iter_dst_c_ptr + oh_iter * ow + ow_iter;
                 auto iter_src_ptr =
                         src + oh_iter * stride_h * pack_iw + ow_iter * ic_step;
-                kern_conv_avx2_stride2_normal_conv<0, oc_remain, 0, oc_step,
-                                                   ic_step, ow_step>(
-                        iter_filter_ptr, iter_src_ptr, pack_iw, iter_dst_ptr,
-                        oc_stride, ic, pack_ic_stride, ow, fw, fh);
+                kern_conv_avx2_stride2_normal_conv<
+                        0, oc_remain, 0, oc_step, ic_step, ow_step>(
+                        iter_filter_ptr, iter_src_ptr, pack_iw, iter_dst_ptr, oc_stride,
+                        ic, pack_ic_stride, ow, fw, fh);
             }
             if (ow_remain > 0) {
                 auto iter_dst_ptr = iter_dst_c_ptr + oh_iter * ow + ow_end;
                 auto iter_src_ptr =
                         src + oh_iter * stride_h * pack_iw + ow_end * ic_step;
-                kern_conv_avx2_stride2_normal_conv<0, oc_remain, ow_remain,
-                                                   oc_step, ic_step, ow_step>(
-                        iter_filter_ptr, iter_src_ptr, pack_iw, iter_dst_ptr,
-                        oc_stride, ic, pack_ic_stride, ow, fw, fh);
+                kern_conv_avx2_stride2_normal_conv<
+                        0, oc_remain, ow_remain, oc_step, ic_step, ow_step>(
+                        iter_filter_ptr, iter_src_ptr, pack_iw, iter_dst_ptr, oc_stride,
+                        ic, pack_ic_stride, ow, fw, fh);
             }
         }
         if (oh_remain > 0) {
@@ -557,38 +539,37 @@ inline void block_kernel_entry(const int16_t* filter, const int8_t* src,
                 auto iter_dst_ptr = iter_dst_c_ptr + oh_end * ow + ow_iter;
                 auto iter_src_ptr =
                         src + oh_end * stride_h * pack_iw + ow_iter * ic_step;
-                kern_conv_avx2_stride2_normal_conv<oh_remain, oc_remain, 0,
-                                                   oc_step, ic_step, ow_step>(
-                        iter_filter_ptr, iter_src_ptr, pack_iw, iter_dst_ptr,
-                        oc_stride, ic, pack_ic_stride, ow, fw, fh);
+                kern_conv_avx2_stride2_normal_conv<
+                        oh_remain, oc_remain, 0, oc_step, ic_step, ow_step>(
+                        iter_filter_ptr, iter_src_ptr, pack_iw, iter_dst_ptr, oc_stride,
+                        ic, pack_ic_stride, ow, fw, fh);
             }
             if (ow_remain > 0) {
                 auto iter_dst_ptr = iter_dst_c_ptr + oh_end * ow + ow_end;
                 auto iter_src_ptr =
                         src + oh_end * stride_h * pack_iw + ow_end * ic_step;
-                kern_conv_avx2_stride2_normal_conv<oh_remain, oc_remain,
-                                                   ow_remain, oc_step, ic_step,
-                                                   ow_step>(
-                        iter_filter_ptr, iter_src_ptr, pack_iw, iter_dst_ptr,
-                        oc_stride, ic, pack_ic_stride, ow, fw, fh);
+                kern_conv_avx2_stride2_normal_conv<
+                        oh_remain, oc_remain, ow_remain, oc_step, ic_step, ow_step>(
+                        iter_filter_ptr, iter_src_ptr, pack_iw, iter_dst_ptr, oc_stride,
+                        ic, pack_ic_stride, ow, fw, fh);
             }
         }
     }
 }
 
-template <uint32_t oh_remain, uint32_t oc_remain, uint32_t oc_step,
-          uint32_t ic_step, uint32_t oh_step, uint32_t ow_step>
+template <
+        uint32_t oh_remain, uint32_t oc_remain, uint32_t oc_step, uint32_t ic_step,
+        uint32_t oh_step, uint32_t ow_step>
 inline void kernel_handle_ow_remain(
         uint32_t ow_remain, const int16_t* filter_ptr, const int8_t* feat_ptr,
         int32_t* dst_ptr, const uint32_t oc_end, const uint32_t oc_index,
-        const uint32_t oh_end, const uint32_t ow_end,
-        const uint32_t pack_ic_stride, const uint32_t pack_iw,
-        const uint32_t oc_stride,
+        const uint32_t oh_end, const uint32_t ow_end, const uint32_t pack_ic_stride,
+        const uint32_t pack_iw, const uint32_t oc_stride,
         const ConvBiasImpl::NCBKernParam& kern_param) {
-#define cb(OW_REMAIN)                                                        \
-    block_kernel_entry<oh_remain, oc_remain, OW_REMAIN, oc_step, ic_step,    \
-                       oh_step, ow_step>(                                    \
-            filter_ptr, feat_ptr, dst_ptr, oc_end, oc_index, oh_end, ow_end, \
+#define cb(OW_REMAIN)                                                             \
+    block_kernel_entry<                                                           \
+            oh_remain, oc_remain, OW_REMAIN, oc_step, ic_step, oh_step, ow_step>( \
+            filter_ptr, feat_ptr, dst_ptr, oc_end, oc_index, oh_end, ow_end,      \
             pack_ic_stride, pack_iw, oc_stride, kern_param);
 
 #define cb_switch(_remain) \
@@ -612,20 +593,19 @@ inline void kernel_handle_ow_remain(
 #undef cb
 }
 
-template <uint32_t oh_remain, uint32_t oc_step, uint32_t ic_step,
-          uint32_t oh_step, uint32_t ow_step>
+template <
+        uint32_t oh_remain, uint32_t oc_step, uint32_t ic_step, uint32_t oh_step,
+        uint32_t ow_step>
 inline void kernel_handle_oc_remain(
         uint32_t oc_remain, uint32_t ow_remain, const int16_t* filter_ptr,
         const int8_t* feat_ptr, int32_t* dst_ptr, const uint32_t oc_end,
         const uint32_t oc_index, const uint32_t oh_end, const uint32_t ow_end,
-        const uint32_t pack_ic_stride, const uint32_t pack_iw,
-        const uint32_t oc_stride,
+        const uint32_t pack_ic_stride, const uint32_t pack_iw, const uint32_t oc_stride,
         const ConvBiasImpl::NCBKernParam& kern_param) {
-#define cb(OC_REMAIN)                                                        \
-    kernel_handle_ow_remain<oh_remain, OC_REMAIN, oc_step, ic_step, oh_step, \
-                            ow_step>(                                        \
-            ow_remain, filter_ptr, feat_ptr, dst_ptr, oc_end, oc_index,      \
-            oh_end, ow_end, pack_ic_stride, pack_iw, oc_stride, kern_param);
+#define cb(OC_REMAIN)                                                                  \
+    kernel_handle_ow_remain<oh_remain, OC_REMAIN, oc_step, ic_step, oh_step, ow_step>( \
+            ow_remain, filter_ptr, feat_ptr, dst_ptr, oc_end, oc_index, oh_end,        \
+            ow_end, pack_ic_stride, pack_iw, oc_stride, kern_param);
 
 #define cb_switch(_remain) \
     case _remain:          \
@@ -644,20 +624,17 @@ inline void kernel_handle_oc_remain(
 #undef cb
 }
 
-template <uint32_t oc_step, uint32_t ic_step, uint32_t oh_step,
-          uint32_t ow_step>
+template <uint32_t oc_step, uint32_t ic_step, uint32_t oh_step, uint32_t ow_step>
 inline void kernel_handle_oh_remain(
         uint32_t oh_remain, uint32_t oc_remain, uint32_t ow_remain,
         const int16_t* filter_ptr, const int8_t* feat_ptr, int32_t* dst_ptr,
         const uint32_t oc_end, const uint32_t oc_index, const uint32_t oh_end,
-        const uint32_t ow_end, const uint32_t pack_ic_stride,
-        const uint32_t pack_iw, const uint32_t oc_stride,
-        const ConvBiasImpl::NCBKernParam& kern_param) {
-#define cb(OH_REMAIN)                                                       \
-    kernel_handle_oc_remain<OH_REMAIN, oc_step, ic_step, oh_step, ow_step>( \
-            oc_remain, ow_remain, filter_ptr, feat_ptr, dst_ptr, oc_end,    \
-            oc_index, oh_end, ow_end, pack_ic_stride, pack_iw, oc_stride,   \
-            kern_param);
+        const uint32_t ow_end, const uint32_t pack_ic_stride, const uint32_t pack_iw,
+        const uint32_t oc_stride, const ConvBiasImpl::NCBKernParam& kern_param) {
+#define cb(OH_REMAIN)                                                              \
+    kernel_handle_oc_remain<OH_REMAIN, oc_step, ic_step, oh_step, ow_step>(        \
+            oc_remain, ow_remain, filter_ptr, feat_ptr, dst_ptr, oc_end, oc_index, \
+            oh_end, ow_end, pack_ic_stride, pack_iw, oc_stride, kern_param);
 
 #define cb_switch(_remain) \
     case _remain:          \
@@ -673,9 +650,9 @@ inline void kernel_handle_oh_remain(
 #undef cb_switch
 #undef cb
 }
-void kernel_imp(const WorkspaceBundle& bundle,
-                const ConvBiasImpl::NCBKernParam& kern_param,
-                const ConvBiasImpl::NCBKernIndex& ncb_index) {
+void kernel_imp(
+        const WorkspaceBundle& bundle, const ConvBiasImpl::NCBKernParam& kern_param,
+        const ConvBiasImpl::NCBKernIndex& ncb_index) {
     auto&& fm = kern_param.filter_meta;
     size_t group = fm.group;
     const uint32_t oc = fm.ocpg;
@@ -699,11 +676,9 @@ void kernel_imp(const WorkspaceBundle& bundle,
     const uint32_t pack_iw = (iw + 2 * pad_w) * ic_step;
     const uint32_t pack_ih = ih + 2 * pad_h;
     const uint32_t pack_ic_stride = pack_iw * pack_ih / ic_step;
-    const uint32_t packed_group_size =
-            div_ceil(ic, ic_step) * pack_ih * pack_iw;
+    const uint32_t packed_group_size = div_ceil(ic, ic_step) * pack_ih * pack_iw;
 
-    size_t group_id = ncb_index.ndrange_id[0],
-           batch_id = ncb_index.ndrange_id[1],
+    size_t group_id = ncb_index.ndrange_id[0], batch_id = ncb_index.ndrange_id[1],
            channel_id = ncb_index.ndrange_id[2];
 
     int8_t* src_ptr = static_cast<int8_t*>(bundle.get(0)) +
@@ -713,14 +688,13 @@ void kernel_imp(const WorkspaceBundle& bundle,
                           group_id * round_up(oc, oc_step) * filter_round_size +
                           oc_step * channel_id * filter_round_size;
 
-    bool need_post_process =
-            kern_param.dst_type.enumv() == DTypeEnum::QuantizedS8;
+    bool need_post_process = kern_param.dst_type.enumv() == DTypeEnum::QuantizedS8;
 
     int32_t* dst_tptr = nullptr;
     if (need_post_process) {
         dst_tptr = static_cast<int32_t*>(bundle.get(2)) +
-                   batch_id * group * oc * oc_stride +
-                   group_id * oc * oc_stride + oc_step * channel_id * oh * ow;
+                   batch_id * group * oc * oc_stride + group_id * oc * oc_stride +
+                   oc_step * channel_id * oh * ow;
     } else {
         dst_tptr = kern_param.dst<int32_t>(batch_id, group_id) +
                    oc_step * channel_id * oh * ow;
@@ -734,61 +708,54 @@ void kernel_imp(const WorkspaceBundle& bundle,
     const uint32_t oc_index = oc_step * channel_id;
 
     kernel_handle_oh_remain<oc_step, ic_step, oh_step, ow_step>(
-            oh_remain, oc_remain, ow_remain, filter_ptr, src_ptr, dst_tptr,
-            oc_end, oc_index, oh_end, ow_end, pack_ic_stride, pack_iw,
-            oc_stride, kern_param);
+            oh_remain, oc_remain, ow_remain, filter_ptr, src_ptr, dst_tptr, oc_end,
+            oc_index, oh_end, ow_end, pack_ic_stride, pack_iw, oc_stride, kern_param);
 }
 
-void do_post_process(const WorkspaceBundle& bundle,
-                     const ConvBiasImpl::NCBKernParam& kern_param,
-                     const ConvBiasImpl::NCBKernIndex& ncb_index) {
+void do_post_process(
+        const WorkspaceBundle& bundle, const ConvBiasImpl::NCBKernParam& kern_param,
+        const ConvBiasImpl::NCBKernIndex& ncb_index) {
     auto&& fm = kern_param.filter_meta;
     const uint32_t group = fm.group;
     const uint32_t oc = fm.ocpg;
     const uint32_t oh = kern_param.osz[0];
     const uint32_t ow = kern_param.osz[1];
 
-    size_t group_id = ncb_index.ndrange_id[0],
-           batch_id = ncb_index.ndrange_id[1];
+    size_t group_id = ncb_index.ndrange_id[0], batch_id = ncb_index.ndrange_id[1];
 
-    bool need_post_process =
-            kern_param.dst_type.enumv() == DTypeEnum::QuantizedS8;
+    bool need_post_process = kern_param.dst_type.enumv() == DTypeEnum::QuantizedS8;
     void* dst_tptr = nullptr;
     if (need_post_process) {
         dst_tptr = static_cast<int32_t*>(bundle.get(2)) +
-                   batch_id * group * oc * oh * ow +
-                   group_id * oc * oh * ow;
+                   batch_id * group * oc * oh * ow + group_id * oc * oh * ow;
     } else {
         dst_tptr = kern_param.dst<dt_int32>(batch_id, group_id);
     }
     void* dst_ptr = kern_param.dst<void>(batch_id, group_id);
 
-#define cb(_bias_ctype, _dst_ctype, _postprocess_mode)                       \
-    {                                                                        \
-        const dt_int32* bias_ptr =                                           \
-                kern_param.bias<dt_int32>(batch_id, group_id);               \
-        PostProcess<DTypeTrait<_bias_ctype>::ctype,                          \
-                    DTypeTrait<_dst_ctype>::ctype,                           \
-                    _postprocess_mode>::run(dst_tptr,                        \
-                                            const_cast<dt_int32*>(bias_ptr), \
-                                            dst_ptr, kern_param.bias_mode,   \
-                                            kern_param.nonlineMode,          \
-                                            kern_param.bias_type,            \
-                                            kern_param.dst_type, 1, oc, oh,  \
-                                            ow);                             \
+#define cb(_bias_ctype, _dst_ctype, _postprocess_mode)                            \
+    {                                                                             \
+        const dt_int32* bias_ptr = kern_param.bias<dt_int32>(batch_id, group_id); \
+        PostProcess<                                                              \
+                DTypeTrait<_bias_ctype>::ctype, DTypeTrait<_dst_ctype>::ctype,    \
+                _postprocess_mode>::                                              \
+                run(dst_tptr, const_cast<dt_int32*>(bias_ptr), dst_ptr,           \
+                    kern_param.bias_mode, kern_param.nonlineMode,                 \
+                    kern_param.bias_type, kern_param.dst_type, 1, oc, oh, ow);    \
     }
     if (kern_param.src_type.enumv() == DTypeEnum::Int8 &&
         kern_param.filter_type.enumv() == DTypeEnum::Int8 &&
         kern_param.dst_type.enumv() == DTypeEnum::Int32) {
         cb(dt_int32, dt_int32, PostprocessMode::NO_PROCESS);
-    } else if (kern_param.src_type.enumv() == DTypeEnum::QuantizedS8 &&
-               kern_param.filter_type.enumv() == DTypeEnum::QuantizedS8 &&
-               kern_param.dst_type.enumv() == DTypeEnum::QuantizedS32) {
-        cb(dtype::QuantizedS32, dtype::QuantizedS32,
-           PostprocessMode::NO_PROCESS);
-    } else if (kern_param.src_type.enumv() == DTypeEnum::QuantizedS8 &&
-               kern_param.filter_type.enumv() == DTypeEnum::QuantizedS8 &&
-               kern_param.dst_type.enumv() == DTypeEnum::QuantizedS8) {
+    } else if (
+            kern_param.src_type.enumv() == DTypeEnum::QuantizedS8 &&
+            kern_param.filter_type.enumv() == DTypeEnum::QuantizedS8 &&
+            kern_param.dst_type.enumv() == DTypeEnum::QuantizedS32) {
+        cb(dtype::QuantizedS32, dtype::QuantizedS32, PostprocessMode::NO_PROCESS);
+    } else if (
+            kern_param.src_type.enumv() == DTypeEnum::QuantizedS8 &&
+            kern_param.filter_type.enumv() == DTypeEnum::QuantizedS8 &&
+            kern_param.dst_type.enumv() == DTypeEnum::QuantizedS8) {
         cb(dtype::QuantizedS32, dtype::QuantizedS8, PostprocessMode::QUANTIZED);
     } else {
         megdnn_throw("unsupported data type on x86 avx2 direct conv algo");
@@ -796,8 +763,8 @@ void do_post_process(const WorkspaceBundle& bundle,
 #undef cb
 }
 
-SmallVector<NCBKern> get_kimpls(const NCBKernSizeParam& kern_param,
-                                const WorkspaceBundle& bundle) {
+SmallVector<NCBKern> get_kimpls(
+        const NCBKernSizeParam& kern_param, const WorkspaceBundle& bundle) {
     SmallVector<NCBKern> ncb_kerns;
     auto fm = kern_param.filter_meta;
     size_t N = kern_param.n;
@@ -809,10 +776,11 @@ SmallVector<NCBKern> get_kimpls(const NCBKernSizeParam& kern_param,
                         const ConvBiasImpl::NCBKernParam& kern_param,          \
                         const ConvBiasImpl::NCBKernIndex& ncb_index) mutable { \
         bundle.set(kern_param.workspace_ptr);                                  \
-        tmp_func(bundle, kern_param,                                           \
-                 {ncb_index.thread_id,                                         \
-                  {ncb_index.ndrange_id[0], ncb_index.ndrange_id[1],           \
-                   ncb_index.ndrange_id[2]}});                                 \
+        tmp_func(                                                              \
+                bundle, kern_param,                                            \
+                {ncb_index.thread_id,                                          \
+                 {ncb_index.ndrange_id[0], ncb_index.ndrange_id[1],            \
+                  ncb_index.ndrange_id[2]}});                                  \
     };
     auto tmp_func = pack_src_conv_avx2_stride2;
     cb(pack_src_task);

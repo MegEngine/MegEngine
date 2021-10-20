@@ -14,7 +14,7 @@ import pytest
 
 import megengine as mge
 import megengine.distributed as dist
-from megengine import Tensor
+from megengine import Tensor, jit
 from megengine.autodiff.grad_manager import GradManager
 from megengine.core._trace_option import use_symbolic_shape
 from megengine.module import BatchNorm1d, BatchNorm2d, SyncBatchNorm
@@ -368,3 +368,29 @@ def test_syncbn2d_grad():
 
         _assert_allclose(oup.numpy(), oup_expect.numpy())
         _assert_allclose(grad.numpy(), grad_expect.numpy())
+
+
+@pytest.mark.parametrize("dim", [1, 2])
+@pytest.mark.parametrize("is_symbolic", [None, False, True])
+def test_batchnorm_empty_tensor(dim, is_symbolic):
+    if dim == 1:
+        m = BatchNorm1d(4, affine=True)
+        inp = mge.tensor(np.random.randn(0, 4, 0).astype("float32"))
+    elif dim == 2:
+        m = BatchNorm2d(4, affine=True)
+        inp = mge.tensor(np.random.randn(0, 4, 0, 0).astype("float32"))
+    else:
+        raise NotImplementedError
+
+    m.train()
+
+    def fn(inp):
+        return m(inp)
+
+    if is_symbolic is not None:
+        fn = jit.trace(symbolic=is_symbolic)(fn)
+    for _ in range(3):
+        out = fn(inp)
+        np.testing.assert_equal(out.numpy(), inp)
+        if is_symbolic is None:
+            break

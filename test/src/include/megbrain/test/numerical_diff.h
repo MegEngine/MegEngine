@@ -13,22 +13,20 @@
 
 #include "megbrain/tensor.h"
 
-namespace mgb  {
+namespace mgb {
 
-    /*!
-     * \brief estimate function differentiation by values evaluated at 2 points,
-     *      using the symmetric difference quotient
-     * \param input pointers to input tensors which should be read by the cost
-     *      functor. Nullptrs are silently ignored.
-     * \param eps value of epsilon; if empty, choose automatically and
-     *      uniformly for each input
-     */
-    std::vector<HostTensorND> numerical_diff_pt2(
-            const std::vector<HostTensorND*> &input,
-            std::function<float()> cost,
-            const std::vector<Maybe<float>> &eps = {});
+/*!
+ * \brief estimate function differentiation by values evaluated at 2 points,
+ *      using the symmetric difference quotient
+ * \param input pointers to input tensors which should be read by the cost
+ *      functor. Nullptrs are silently ignored.
+ * \param eps value of epsilon; if empty, choose automatically and
+ *      uniformly for each input
+ */
+std::vector<HostTensorND> numerical_diff_pt2(
+        const std::vector<HostTensorND*>& input, std::function<float()> cost,
+        const std::vector<Maybe<float>>& eps = {});
 
-}
+}  // namespace mgb
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
-

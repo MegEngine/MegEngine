@@ -19,13 +19,18 @@ class MatrixMulForwardImpl : public MatrixMulForward {
 public:
     using MatrixMulForward::MatrixMulForward;
 
-    void exec(_megdnn_tensor_in A, _megdnn_tensor_in B, _megdnn_tensor_out C,
-              _megdnn_workspace workspace) override;
+    void exec(
+            _megdnn_tensor_in A, _megdnn_tensor_in B, _megdnn_tensor_out C,
+            _megdnn_workspace workspace) override;
 
-    size_t get_workspace_in_bytes(const TensorLayout&, const TensorLayout&,
-                                  const TensorLayout&) override;
+    size_t get_workspace_in_bytes(
+            const TensorLayout&, const TensorLayout&, const TensorLayout&) override;
 
     std::vector<Algorithm*> get_all_algorithms(
+            const TensorLayout& /*A*/, const TensorLayout& /*B*/,
+            const TensorLayout& /*C*/) override;
+
+    std::vector<Algorithm*> get_all_algorithms_safe(
             const TensorLayout& /*A*/, const TensorLayout& /*B*/,
             const TensorLayout& /*C*/) override;
 
@@ -40,9 +45,9 @@ public:
     const char* get_algorithm_set_name() const override { return "DEFAULT"; }
 
 private:
-    static void exec_internal(_megdnn_tensor_in A, _megdnn_tensor_in B,
-                              _megdnn_tensor_out C, _megdnn_workspace workspace,
-                              const Param& param);
+    static void exec_internal(
+            _megdnn_tensor_in A, _megdnn_tensor_in B, _megdnn_tensor_out C,
+            _megdnn_workspace workspace, const Param& param);
 };
 
 }  // namespace naive

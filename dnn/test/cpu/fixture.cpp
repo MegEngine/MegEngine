@@ -10,21 +10,19 @@
  */
 #include "test/cpu/fixture.h"
 
-#include "test/common/utils.h"
 #include "test/common/memory_manager.h"
 #include "test/common/random_state.h"
+#include "test/common/utils.h"
 
 namespace megdnn {
 namespace test {
 
-void CPU::SetUp()
-{
+void CPU::SetUp() {
     RandomState::reset();
     m_handle = create_cpu_handle(0);
 }
 
-void CPU::TearDown()
-{
+void CPU::TearDown() {
     m_handle.reset();
     MemoryManagerHolder::instance()->clear();
 }
@@ -46,6 +44,6 @@ void CPU_MULTI_THREADS::TearDown() {
     MemoryManagerHolder::instance()->clear();
 }
 
-} // namespace test
-} // namespace megdnn
+}  // namespace test
+}  // namespace megdnn
 // vim: syntax=cpp.doxygen

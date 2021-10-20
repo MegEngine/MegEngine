@@ -14,9 +14,9 @@ namespace megdnn {
 namespace cuda {
 namespace resize {
 
-__device__ inline void get_origin_coord(float scale, int size, int idx,
-                                        float& alpha, int& origin_idx,
-                                        bool cubic = false) {
+__device__ inline void get_origin_coord(
+        float scale, int size, int idx, float& alpha, int& origin_idx,
+        bool cubic = false) {
     alpha = (idx + 0.5f) / scale - 0.5f;
     origin_idx = static_cast<int>(floor(alpha));
     alpha -= origin_idx;

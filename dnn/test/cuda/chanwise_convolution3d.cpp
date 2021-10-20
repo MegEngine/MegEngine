@@ -44,16 +44,15 @@ class BenchmarkEnv {
     Handle *handle, *handle_cpu;
     std::unique_ptr<GaussianRNG> rng;
     TensorLayout lsrc, lflt0, lflt1, ldst;
-    std::unique_ptr<Tensor<>> src0, src1, flt0, flt0_cpu, flt1, flt1_cpu, dst0,
-            dst1;
+    std::unique_ptr<Tensor<>> src0, src1, flt0, flt0_cpu, flt1, flt1_cpu, dst0, dst1;
     cudaEvent_t cuda_ev[3];
     cudaStream_t cuda_stream;
     size_t pad_d, pad_h, pad_w;
 
     template <typename T>
     static std::tuple<T, T, T> shuffle(std::tuple<T, T, T> data) {
-        return std::make_tuple(std::get<P0>(data), std::get<P1>(data),
-                               std::get<P2>(data));
+        return std::make_tuple(
+                std::get<P0>(data), std::get<P1>(data), std::get<P2>(data));
     }
 
 public:
@@ -74,9 +73,9 @@ public:
             cudaEventDestroy(cuda_ev[i]);
     }
 
-    void alloc(size_t N, size_t IC, size_t ID, size_t IH, size_t IW,
-               size_t CHL_MUL, size_t FD, size_t FH, size_t FW, size_t PD,
-               size_t PH, size_t PW) {
+    void alloc(
+            size_t N, size_t IC, size_t ID, size_t IH, size_t IW, size_t CHL_MUL,
+            size_t FD, size_t FH, size_t FW, size_t PD, size_t PH, size_t PW) {
         pad_d = PD;
         pad_h = PH;
         pad_w = PW;
@@ -86,8 +85,9 @@ public:
         lsrc = mkly({N, IC, ID, IH, IW});
         lflt0 = mkly({CHL_MUL * IC, IC, FD, FH, FW});
         lflt1 = mkly({IC, CHL_MUL, 1, FD, FH, FW});
-        ldst = mkly({N, IC * CHL_MUL, ID - FD + 1 + PD * 2,
-                     IH - FH + 1 + PH * 2, IW - FW + 1 + PW * 2});
+        ldst =
+                mkly({N, IC * CHL_MUL, ID - FD + 1 + PD * 2, IH - FH + 1 + PH * 2,
+                      IW - FW + 1 + PW * 2});
         src0.reset(new Tensor<>(handle, lsrc));
         src1.reset(new Tensor<>(handle, lsrc));
         flt0.reset(new Tensor<>(handle, lflt0));
@@ -100,14 +100,13 @@ public:
 
     void fill_src() {
         rng->exec(src0->tensornd(), {});
-        megdnn_memcpy_D2D(handle, src1->ptr(), src0->ptr(),
-                          lsrc.span().dist_byte());
+        megdnn_memcpy_D2D(handle, src1->ptr(), src0->ptr(), lsrc.span().dist_byte());
     }
 
     void fill_flt() {
         rng->exec(flt1->tensornd(), {});
-        megdnn_memcpy_D2H(handle, flt1_cpu->ptr(), flt1->ptr(),
-                          lflt1.span().dist_byte());
+        megdnn_memcpy_D2H(
+                handle, flt1_cpu->ptr(), flt1->ptr(), lflt1.span().dist_byte());
 
         const size_t IC = lflt1[0], CHL_MUL = lflt1[1],
                      FSIZE = lflt1[3] * lflt1[4] * lflt1[5];
@@ -127,8 +126,7 @@ public:
 
     void fill_dst() {
         rng->exec(dst0->tensornd(), {});
-        megdnn_memcpy_D2D(handle, dst1->ptr(), dst0->ptr(),
-                          ldst.span().dist_byte());
+        megdnn_memcpy_D2D(handle, dst1->ptr(), dst0->ptr(), ldst.span().dist_byte());
     }
 
     template <class Opr>
@@ -140,15 +138,15 @@ public:
         opr1->param().sparse = param::Convolution3D::Sparse::GROUP;
 
         TensorND a0, b0, c0, a1, b1, c1;
-        std::tie(a0, b0, c0) = shuffle(std::make_tuple(
-                src0->tensornd(), flt0->tensornd(), dst0->tensornd()));
-        std::tie(a1, b1, c1) = shuffle(std::make_tuple(
-                src1->tensornd(), flt1->tensornd(), dst1->tensornd()));
-        WorkspaceWrapper wk(handle,
-                            std::max(opr0->get_workspace_in_bytes(
-                                             a0.layout, b0.layout, c0.layout),
-                                     opr1->get_workspace_in_bytes(
-                                             a1.layout, b1.layout, c1.layout)));
+        std::tie(a0, b0, c0) = shuffle(
+                std::make_tuple(src0->tensornd(), flt0->tensornd(), dst0->tensornd()));
+        std::tie(a1, b1, c1) = shuffle(
+                std::make_tuple(src1->tensornd(), flt1->tensornd(), dst1->tensornd()));
+        WorkspaceWrapper wk(
+                handle,
+                std::max(
+                        opr0->get_workspace_in_bytes(a0.layout, b0.layout, c0.layout),
+                        opr1->get_workspace_in_bytes(a1.layout, b1.layout, c1.layout)));
         cudaProfilerStart();
         cudaEventRecord(cuda_ev[0], cuda_stream);
         opr0->exec(a0, b0, c0, wk.workspace());
@@ -172,19 +170,15 @@ public:
 
     void cmp_dst() {
         Tensor<> dst0_cpu(handle_cpu, ldst), dst1_cpu(handle_cpu, ldst);
-        megdnn_memcpy_D2H(handle, dst0_cpu.ptr(), dst0->ptr(),
-                          ldst.span().dist_byte());
-        megdnn_memcpy_D2H(handle, dst1_cpu.ptr(), dst1->ptr(),
-                          ldst.span().dist_byte());
+        megdnn_memcpy_D2H(handle, dst0_cpu.ptr(), dst0->ptr(), ldst.span().dist_byte());
+        megdnn_memcpy_D2H(handle, dst1_cpu.ptr(), dst1->ptr(), ldst.span().dist_byte());
         dst0_cpu.check_with(dst1_cpu);
     }
 
     void cmp_src() {
         Tensor<> src0_cpu(handle_cpu, lsrc), src1_cpu(handle_cpu, lsrc);
-        megdnn_memcpy_D2H(handle, src0_cpu.ptr(), src0->ptr(),
-                          lsrc.span().dist_byte());
-        megdnn_memcpy_D2H(handle, src1_cpu.ptr(), src1->ptr(),
-                          lsrc.span().dist_byte());
+        megdnn_memcpy_D2H(handle, src0_cpu.ptr(), src0->ptr(), lsrc.span().dist_byte());
+        megdnn_memcpy_D2H(handle, src1_cpu.ptr(), src1->ptr(), lsrc.span().dist_byte());
         src0_cpu.check_with(src1_cpu);
     }
 
@@ -207,9 +201,8 @@ public:
                     auto err = std::abs(diff(t0[k], t1[k]));
                     tot_err += err;
                     tot_err_num += 1;
-                    ASSERT_LT(err, 1e-2)
-                            << "failed at " << i << " " << j << " " << k
-                            << " vals=" << t0[k] << "," << t1[k];
+                    ASSERT_LT(err, 1e-2) << "failed at " << i << " " << j << " " << k
+                                         << " vals=" << t0[k] << "," << t1[k];
                 }
             }
         }
@@ -227,8 +220,7 @@ TEST_F(CUDA, CHANWISE_CONVOLUTION3D_FORWARD) {
     Checker<Convolution3D> checker(handle_cuda());
     bool require_algo = false;
     checker.set_before_exec_callback(
-            AlgoChecker<Convolution3DForward>(
-                    "CHANNEL_WISE", &require_algo));
+            AlgoChecker<Convolution3DForward>("CHANNEL_WISE", &require_algo));
     checker.set_param(gconv_param({M, 0, 0, 0, 1, 1, 1}))
             .execs({{1, 1, 2, 2, 2}, {1, 1, 1, 2, 2, 2}, {}})
             .execs({{1, 1, 5, 5, 5}, {1, 1, 1, 2, 2, 2}, {}});
@@ -259,12 +251,10 @@ TEST_F(CUDA, CHANWISE_CONVOLUTION3D_FORWARD) {
                                         for (uint32_t dd : {1}) {
                                             checker
                                                     .set_param(gconv_param(
-                                                            {M, pd, pd, pd, sd,
-                                                             sd, sd, dd, dd,
-                                                             dd}))
+                                                            {M, pd, pd, pd, sd, sd, sd,
+                                                             dd, dd, dd}))
                                                     .execs({{n, ic, id, ih, iw},
-                                                            {ic, oc, 1, fd, fd,
-                                                             fd},
+                                                            {ic, oc, 1, fd, fd, fd},
                                                             {}});
                                         }
 }
@@ -273,8 +263,7 @@ TEST_F(CUDA, CHANWISE_CONVOLUTION3D_BACKWARD_DATA) {
     Checker<Convolution3DBackwardData> checker(handle_cuda());
     bool require_algo = false;
     checker.set_before_exec_callback(
-            AlgoChecker<Convolution3DBackwardData>(
-                    "CHANNEL_WISE", &require_algo));
+            AlgoChecker<Convolution3DBackwardData>("CHANNEL_WISE", &require_algo));
 
     checker.set_param(gconv_param({M, 0, 0, 0, 1, 1, 1}))
             .execs({{1, 1, 1, 2, 2, 2}, {1, 1, 1, 1, 1}, {1, 1, 2, 2, 2}})
@@ -289,23 +278,18 @@ TEST_F(CUDA, CHANWISE_CONVOLUTION3D_BACKWARD_DATA) {
             .execs({{2, 1, 1, 2, 2, 2}, {2, 2, 5, 5, 5}, {2, 2, 4, 4, 4}});
 
     checker.set_param(gconv_param({M, 2, 3, 3, 2, 1, 1}))
-            .execs({{12, 2, 1, 4, 5, 5},
-                    {32, 24, 20, 10, 10},
-                    {32, 12, 39, 8, 8}});
+            .execs({{12, 2, 1, 4, 5, 5}, {32, 24, 20, 10, 10}, {32, 12, 39, 8, 8}});
 
     // padding larger than kern
     checker.set_param(gconv_param({M, 20, 30, 20, 4, 5, 4}))
-            .execs({{6, 2, 1, 4, 5, 4},
-                    {32, 12, 10, 12, 10},
-                    {32, 6, 2, 3, 2}});
+            .execs({{6, 2, 1, 4, 5, 4}, {32, 12, 10, 12, 10}, {32, 6, 2, 3, 2}});
 }
 
 TEST_F(CUDA, CHANWISE_CONVOLUTION3D_BACKWARD_FILTER) {
     Checker<Convolution3DBackwardFilter> checker(handle_cuda());
     bool require_algo = false;
     checker.set_before_exec_callback(
-            AlgoChecker<Convolution3DBackwardFilter>(
-                    "CHANNEL_WISE", &require_algo));
+            AlgoChecker<Convolution3DBackwardFilter>("CHANNEL_WISE", &require_algo));
 
     checker.set_param(gconv_param({M, 0, 0, 0, 1, 1, 1}))
             .execs({{1, 1, 2, 2, 2}, {1, 1, 1, 1, 1}, {1, 1, 1, 2, 2, 2}})
@@ -321,21 +305,15 @@ TEST_F(CUDA, CHANWISE_CONVOLUTION3D_BACKWARD_FILTER) {
 
     require_algo = false;
     checker.set_param(gconv_param({M, 0, 0, 0, 1, 1, 1}))
-            .execs({{40960, 1, 1, 1, 1},
-                    {40960, 1, 1, 1, 1},
-                    {1, 1, 1, 1, 1, 1}});
+            .execs({{40960, 1, 1, 1, 1}, {40960, 1, 1, 1, 1}, {1, 1, 1, 1, 1, 1}});
     require_algo = true;
 
     checker.set_param(gconv_param({M, 2, 3, 2, 2, 1, 2}))
-            .execs({{32, 12, 39, 8, 20},
-                    {32, 36, 20, 10, 10},
-                    {12, 3, 1, 4, 5, 6}});
+            .execs({{32, 12, 39, 8, 20}, {32, 36, 20, 10, 10}, {12, 3, 1, 4, 5, 6}});
 
     // padding larger than kern
     checker.set_param(gconv_param({M, 20, 30, 30, 4, 5, 5}))
-            .execs({{32, 6, 2, 3, 3},
-                    {32, 12, 10, 12, 12},
-                    {6, 2, 1, 4, 5, 5}});
+            .execs({{32, 6, 2, 3, 3}, {32, 12, 10, 12, 12}, {6, 2, 1, 4, 5, 5}});
 
     // unused filter items
     checker.set_param(gconv_param({M, 2, 3, 3, 2, 3, 3}))
@@ -350,9 +328,8 @@ TEST_F(CUDA, CHANWISE_CONVOLUTION3D_FORWARD_BENCH_CHECK) {
     auto conv1 = handle->create_operator<Convolution3DForward>();
     BenchmarkEnv<0, 1, 2> benv(handle, handle_cpu);
 
-    auto run = [&](size_t N, size_t IC, size_t ID, size_t IH, size_t IW,
-                   size_t CHL_MUL, size_t FD, size_t FH, size_t FW, size_t PD,
-                   size_t PH, size_t PW) {
+    auto run = [&](size_t N, size_t IC, size_t ID, size_t IH, size_t IW, size_t CHL_MUL,
+                   size_t FD, size_t FH, size_t FW, size_t PD, size_t PH, size_t PW) {
         benv.alloc(N, IC, ID, IH, IW, CHL_MUL, FD, FH, FW, PD, PH, PW);
         benv.fill_src();
         benv.fill_flt();
@@ -375,9 +352,8 @@ TEST_F(CUDA, CHANWISE_CONVOLUTION3D_BWD_DATA_BENCH_CHECK) {
     auto conv1 = handle->create_operator<Convolution3DBackwardData>();
     BenchmarkEnv<1, 2, 0> benv(handle, handle_cpu);
 
-    auto run = [&](size_t N, size_t IC, size_t ID, size_t IH, size_t IW,
-                   size_t CHL_MUL, size_t FD, size_t FH, size_t FW, size_t PD,
-                   size_t PH, size_t PW) {
+    auto run = [&](size_t N, size_t IC, size_t ID, size_t IH, size_t IW, size_t CHL_MUL,
+                   size_t FD, size_t FH, size_t FW, size_t PD, size_t PH, size_t PW) {
         benv.alloc(N, ID, IC, IH, IW, CHL_MUL, FD, FH, FW, PD, PH, PW);
         benv.fill_dst();
         benv.fill_flt();
@@ -400,9 +376,8 @@ TEST_F(CUDA, CHANWISE_CONVOLUTION3D_BWD_FILTER_BENCH_CHECK) {
     auto conv1 = handle->create_operator<Convolution3DBackwardFilter>();
     BenchmarkEnv<0, 2, 1> benv(handle, handle_cpu);
 
-    auto run = [&](size_t N, size_t IC, size_t ID, size_t IH, size_t IW,
-                   size_t CHL_MUL, size_t FD, size_t FH, size_t FW, size_t PD,
-                   size_t PH, size_t PW) {
+    auto run = [&](size_t N, size_t IC, size_t ID, size_t IH, size_t IW, size_t CHL_MUL,
+                   size_t FD, size_t FH, size_t FW, size_t PD, size_t PH, size_t PW) {
         benv.alloc(N, IC, ID, IH, IW, CHL_MUL, FD, FH, FW, PD, PH, PW);
         benv.fill_src();
         benv.fill_dst();

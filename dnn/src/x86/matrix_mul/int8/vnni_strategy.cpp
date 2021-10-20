@@ -22,9 +22,9 @@ MEGDNN_REG_GEMM_STRATEGY_IMPL(gemm_int8_vnni_12x32x4);
 
 // ===========================gemm_s8_4x2======================================
 
-void gemm_int8_vnni_12x32x4::pack_A(dt_uint8* out, const dt_int8* in, int ldin,
-                                    int y0, int ymax, int k0, int kmax,
-                                    bool transpose) const {
+void gemm_int8_vnni_12x32x4::pack_A(
+        dt_uint8* out, const dt_int8* in, int ldin, int y0, int ymax, int k0, int kmax,
+        bool transpose) const {
     if (transpose) {
         matmul_vnni_12x32x4::gemm_pack_A_t(out, in, ldin, y0, ymax, k0, kmax);
     } else {
@@ -32,9 +32,9 @@ void gemm_int8_vnni_12x32x4::pack_A(dt_uint8* out, const dt_int8* in, int ldin,
     }
 }
 
-void gemm_int8_vnni_12x32x4::pack_B(dt_int8* out, const dt_int8* in, int ldin,
-                                    int x0, int xmax, int k0, int kmax,
-                                    bool transpose) const {
+void gemm_int8_vnni_12x32x4::pack_B(
+        dt_int8* out, const dt_int8* in, int ldin, int x0, int xmax, int k0, int kmax,
+        bool transpose) const {
     if (transpose) {
         matmul_vnni_12x32x4::gemm_pack_B_t(out, in, ldin, x0, xmax, k0, kmax);
     } else {
@@ -42,17 +42,16 @@ void gemm_int8_vnni_12x32x4::pack_B(dt_int8* out, const dt_int8* in, int ldin,
     }
 }
 
-void gemm_int8_vnni_12x32x4::kern(const dt_uint8* packA, const dt_int8* packB,
-                                  size_t M, size_t N, size_t K, dt_int32* C,
-                                  size_t LDC, bool is_first_k, const dt_int32*,
-                                  dt_int32*) const {
-    megdnn_assert(A_dtype.enumv() == B_dtype.enumv() &&
-                          ((A_dtype.enumv() == DTypeEnum::Int8 &&
-                            C_dtype.enumv() == DTypeEnum::Int32) ||
-                           (A_dtype.enumv() == DTypeEnum::QuantizedS8 &&
-                            C_dtype.enumv() == DTypeEnum::QuantizedS32)),
-                  "A: %s B: %s C: %s", A_dtype.name(), B_dtype.name(),
-                  C_dtype.name());
+void gemm_int8_vnni_12x32x4::kern(
+        const dt_uint8* packA, const dt_int8* packB, size_t M, size_t N, size_t K,
+        dt_int32* C, size_t LDC, bool is_first_k, const dt_int32*, dt_int32*) const {
+    megdnn_assert(
+            A_dtype.enumv() == B_dtype.enumv() &&
+                    ((A_dtype.enumv() == DTypeEnum::Int8 &&
+                      C_dtype.enumv() == DTypeEnum::Int32) ||
+                     (A_dtype.enumv() == DTypeEnum::QuantizedS8 &&
+                      C_dtype.enumv() == DTypeEnum::QuantizedS32)),
+            "A: %s B: %s C: %s", A_dtype.name(), B_dtype.name(), C_dtype.name());
 
     MEGDNN_MARK_USED_VAR(A_dtype);
     MEGDNN_MARK_USED_VAR(B_dtype);
@@ -74,16 +73,16 @@ void gemm_int8_vnni_12x32x4::kern(const dt_uint8* packA, const dt_int8* packB,
         size_t n = 0;
         const dt_int8* cur_packB = packB;
         for (; n + B_INTERLEAVE - 1 < N; n += B_INTERLEAVE) {
-            matmul_vnni_12x32x4::kern_12x32x4(packA, cur_packB, K, output, LDC,
-                                              is_first_k);
+            matmul_vnni_12x32x4::kern_12x32x4(
+                    packA, cur_packB, K, output, LDC, is_first_k);
             output += B_INTERLEAVE;
             cur_packB += K32;
         }
 
         for (; n < N; n += 16) {
-            matmul_vnni_12x32x4::kern_12x16x4(packA, cur_packB, K, output, LDC,
-                                              is_first_k,
-                                              std::min<size_t>(N - n, 16));
+            matmul_vnni_12x32x4::kern_12x16x4(
+                    packA, cur_packB, K, output, LDC, is_first_k,
+                    std::min<size_t>(N - n, 16));
             output += std::min<size_t>(N - n, 16);
             cur_packB += K16;
         }
@@ -97,9 +96,9 @@ void gemm_int8_vnni_12x32x4::kern(const dt_uint8* packA, const dt_int8* packB,
         size_t n = 0;
         const dt_int8* cur_packB = packB;
         for (; n + B_INTERLEAVE - 1 < N; n += B_INTERLEAVE) {
-            matmul_vnni_12x32x4::kern_4x32x4(packA, cur_packB, K, output, LDC,
-                                             is_first_k,
-                                             std::min<size_t>(M - m, 4));
+            matmul_vnni_12x32x4::kern_4x32x4(
+                    packA, cur_packB, K, output, LDC, is_first_k,
+                    std::min<size_t>(M - m, 4));
             output += B_INTERLEAVE;
             cur_packB += K32;
         }

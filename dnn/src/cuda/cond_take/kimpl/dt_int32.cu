@@ -8,10 +8,10 @@ namespace cond_take {
 inst_genidx(::megdnn::dtype::Int32)
 #undef inst_genidx
 
-inst_copy(::megdnn::dtype::Int32)
+        inst_copy(::megdnn::dtype::Int32)
 #undef inst_copy
 #undef inst_copy_
 
-}  // cond_take
-}  // cuda
-}  // megdnn
+}  // namespace cond_take
+}  // namespace cuda
+}  // namespace megdnn

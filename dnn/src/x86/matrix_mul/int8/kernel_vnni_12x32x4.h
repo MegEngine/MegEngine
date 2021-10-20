@@ -22,8 +22,9 @@ namespace x86 {
 namespace matmul_vnni_12x32x4 {
 
 MEGDNN_ATTRIBUTE_TARGET("avx512vl,avx512vnni")
-static void kern_12x32x4(const uint8_t* packA, const int8_t* packB, int K,
-                         int32_t* output, int LDC, bool is_first_k) {
+static void kern_12x32x4(
+        const uint8_t* packA, const int8_t* packB, int K, int32_t* output, int LDC,
+        bool is_first_k) {
     constexpr size_t unroll_k = 4;
     __m512i v[24];
     __m512i sub_t0 = _mm512_setzero_epi32();
@@ -168,11 +169,12 @@ static void kern_12x32x4(const uint8_t* packA, const int8_t* packB, int K,
 }
 
 MEGDNN_ATTRIBUTE_TARGET("avx512vl,avx512vnni")
-static void kern_12x16x4(const uint8_t* packA, const int8_t* packB, int K,
-                         int32_t* output, int LDC, bool is_first_k,
-                         size_t n_remain = 16) {
-    megdnn_assert(n_remain <= 16,
-                  "kernel vnni kern_12x32x4 n_remain is not allow big than 16");
+static void kern_12x16x4(
+        const uint8_t* packA, const int8_t* packB, int K, int32_t* output, int LDC,
+        bool is_first_k, size_t n_remain = 16) {
+    megdnn_assert(
+            n_remain <= 16,
+            "kernel vnni kern_12x32x4 n_remain is not allow big than 16");
     constexpr size_t unroll_k = 4;
     __m512i v[12];
     __m512i sub_t0 = _mm512_setzero_epi32();
@@ -278,11 +280,11 @@ static void kern_12x16x4(const uint8_t* packA, const int8_t* packB, int K,
 }
 
 MEGDNN_ATTRIBUTE_TARGET("avx512vl,avx512vnni")
-static void kern_4x32x4(const uint8_t* packA, const int8_t* packB, int K,
-                        int32_t* output, int LDC, bool is_first_k,
-                        size_t m_remain = 4) {
-    megdnn_assert(m_remain <= 4,
-                  "kernel vnni kern_4x32x4 m_remain is not allow big than 4");
+static void kern_4x32x4(
+        const uint8_t* packA, const int8_t* packB, int K, int32_t* output, int LDC,
+        bool is_first_k, size_t m_remain = 4) {
+    megdnn_assert(
+            m_remain <= 4, "kernel vnni kern_4x32x4 m_remain is not allow big than 4");
     constexpr size_t unroll_k = 4;
     __m512i v[8];
     __m512i sub_t0 = _mm512_setzero_epi32();
@@ -337,13 +339,14 @@ static void kern_4x32x4(const uint8_t* packA, const int8_t* packB, int K,
 }
 
 MEGDNN_ATTRIBUTE_TARGET("avx512vl,avx512vnni")
-static void kern_4x16x4(const uint8_t* packA, const int8_t* packB, int K,
-                        int32_t* output, int LDC, bool is_first_k,
-                        size_t m_remain = 4, size_t n_remain = 16) {
-    megdnn_assert(m_remain <= 4,
-                  "kernel vnni kern_4x32x4 m_remain is not allow big than 4");
-    megdnn_assert(n_remain <= 16,
-                  "kernel vnni kern_4x32x4 n_remain is not allow big than 16");
+static void kern_4x16x4(
+        const uint8_t* packA, const int8_t* packB, int K, int32_t* output, int LDC,
+        bool is_first_k, size_t m_remain = 4, size_t n_remain = 16) {
+    megdnn_assert(
+            m_remain <= 4, "kernel vnni kern_4x32x4 m_remain is not allow big than 4");
+    megdnn_assert(
+            n_remain <= 16,
+            "kernel vnni kern_4x32x4 n_remain is not allow big than 16");
 
     constexpr size_t unroll_k = 4;
     __m512i v[4];
@@ -394,8 +397,9 @@ static void kern_4x16x4(const uint8_t* packA, const int8_t* packB, int K,
         }
     }
 }
-static void gemm_pack_A_n(dt_uint8* outptr, const dt_int8* inptr, int ldin,
-                          int y0, int ymax, int k0, int kmax) {
+static void gemm_pack_A_n(
+        dt_uint8* outptr, const dt_int8* inptr, int ldin, int y0, int ymax, int k0,
+        int kmax) {
     int8_t zerobuff[16];
     std::memset(zerobuff, 0, sizeof(int8_t) * 16);
 
@@ -448,8 +452,7 @@ static void gemm_pack_A_n(dt_uint8* outptr, const dt_int8* inptr, int ldin,
                         megdnn_assert(0);
                 }
             }
-            interleave_4x4_4_b_add_128(input[0], input[1], input[2], input[3],
-                                       outptr);
+            interleave_4x4_4_b_add_128(input[0], input[1], input[2], input[3], outptr);
         }
         if (K > 0) {
             if (y + 3 >= ymax) {
@@ -470,14 +473,14 @@ static void gemm_pack_A_n(dt_uint8* outptr, const dt_int8* inptr, int ldin,
                         megdnn_assert(0);
                 }
             }
-            interleave_4_add_128(input[0], input[1], input[2], input[3], outptr,
-                                 4, K);
+            interleave_4_add_128(input[0], input[1], input[2], input[3], outptr, 4, K);
         }
     }
 }
 
-static void gemm_pack_A_t(dt_uint8* out, const dt_int8* in, int ldin, int x0,
-                          int xmax, int k0, int kmax) {
+static void gemm_pack_A_t(
+        dt_uint8* out, const dt_int8* in, int ldin, int x0, int xmax, int k0,
+        int kmax) {
     int8_t zerobuff[12];
     std::memset(zerobuff, 0, sizeof(int8_t) * 12);
     const int ksize = kmax - k0;
@@ -538,8 +541,9 @@ static void gemm_pack_A_t(dt_uint8* out, const dt_int8* in, int ldin, int x0,
                         megdnn_assert(0);
                 }
             }
-            transpose_4_add_128(inptr0, inptr1, inptr2, inptr3, outptr, 4,
-                                std::min<size_t>(4, (xmax - x)));
+            transpose_4_add_128(
+                    inptr0, inptr1, inptr2, inptr3, outptr, 4,
+                    std::min<size_t>(4, (xmax - x)));
             outptr += ksize4;
         }
         outptr_base += 12 * 4;
@@ -547,8 +551,8 @@ static void gemm_pack_A_t(dt_uint8* out, const dt_int8* in, int ldin, int x0,
     }
 }
 
-static void gemm_pack_B_n(dt_int8* out, const dt_int8* in, int ldin, int x0,
-                          int xmax, int k0, int kmax) {
+static void gemm_pack_B_n(
+        dt_int8* out, const dt_int8* in, int ldin, int x0, int xmax, int k0, int kmax) {
     int8_t zerobuff[32];
     std::memset(zerobuff, 0, sizeof(int8_t) * 32);
     const int ksize = kmax - k0;
@@ -642,8 +646,9 @@ static void gemm_pack_B_n(dt_int8* out, const dt_int8* in, int ldin, int x0,
     }
 }
 
-static void gemm_pack_B_t(dt_int8* outptr, const dt_int8* inptr, int ldin,
-                          int y0, int ymax, int k0, int kmax) {
+static void gemm_pack_B_t(
+        dt_int8* outptr, const dt_int8* inptr, int ldin, int y0, int ymax, int k0,
+        int kmax) {
     int8_t zerobuff[16];
     std::memset(zerobuff, 0, sizeof(int8_t) * 16);
 

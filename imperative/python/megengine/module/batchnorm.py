@@ -27,6 +27,7 @@ class _BatchNorm(Module):
         track_running_stats=True,
         freeze=False,
         compute_mode="default",
+        param_dim="dim_1c11",
         **kwargs
     ):
         super(_BatchNorm, self).__init__(**kwargs)
@@ -38,6 +39,7 @@ class _BatchNorm(Module):
         self._track_running_stats_saved = track_running_stats
         self.freeze = freeze
         self.compute_mode = compute_mode
+        self.param_dim = param_dim
         if self.freeze:
             assert (
                 self._track_running_stats_saved
@@ -125,6 +127,7 @@ class _BatchNorm(Module):
             momentum=exponential_average_factor,
             eps=self.eps,
             compute_mode=self.compute_mode,
+            param_dim=self.param_dim,
         )
 
         if _ndims != 4:
@@ -141,37 +144,29 @@ class _BatchNorm(Module):
 
 
 class SyncBatchNorm(_BatchNorm):
-    r"""
-    Applies Synchronized Batch Normalization for distributed training.
+    r"""Applies Synchronized Batch Normalization for distributed training.
 
-    :type num_features: int
-    :param num_features: usually :math:`C` from an input of shape
-        :math:`(N, C, H, W)` or the highest ranked dimension of an input
-        less than 4D.
-    :type eps: float
-    :param eps: a value added to the denominator for numerical stability.
-        Default: 1e-5
-    :type momentum: float
-    :param momentum: the value used for the ``running_mean`` and ``running_var`` computation.
-        Default: 0.9
-    :type affine: bool
-    :param affine: a boolean value that when set to True, this module has
-        learnable affine parameters. Default: True
-    :type track_running_stats: bool
-    :param track_running_stats: when set to True, this module tracks the
-        running mean and variance. When set to False, this module does not
-        track such statistics and always uses batch statistics in both training
-        and eval modes. Default: True
-    :type freeze: bool
-    :param freeze: when set to True, this module does not update the
-        running mean and variance, and uses the running mean and variance instead of
-        the batch mean and batch variance to normalize the input. The parameter takes effect
-        only when the module is initilized with track_running_stats as True.
-        Default: False
-    :type group: :class:`~megengine.distributed.Group`
-    :param group: communication group, caculate mean and variance between this group.
-        Default: :obj:`~megengine.distributed.WORLD`
-    :return: output tensor.
+    Args:
+        num_features: usually :math:`C` from an input of shape
+            :math:`(N, C, H, W)` or the highest ranked dimension of an input
+            less than 4D.
+        eps: a value added to the denominator for numerical stability.
+            Default: 1e-5
+        momentum: the value used for the ``running_mean`` and ``running_var`` computation.
+            Default: 0.9
+        affine: a boolean value that when set to True, this module has
+            learnable affine parameters. Default: True
+        track_running_stats: when set to True, this module tracks the
+            running mean and variance. When set to False, this module does not
+            track such statistics and always uses batch statistics in both training
+            and eval modes. Default: True
+        freeze: when set to True, this module does not update the
+            running mean and variance, and uses the running mean and variance instead of
+            the batch mean and batch variance to normalize the input. The parameter takes effect
+            only when the module is initilized with track_running_stats as True.
+            Default: False
+        group: communication group, caculate mean and variance between this group.
+            Default: :obj:`~.distributed.WORLD`
     """
 
     def __init__(
@@ -249,8 +244,7 @@ class SyncBatchNorm(_BatchNorm):
 
 
 class BatchNorm1d(_BatchNorm):
-    r"""
-    Applies Batch Normalization over a 2D/3D tensor.
+    r"""Applies Batch Normalization over a 2D/3D tensor.
 
     Refer to :class:`~.BatchNorm2d` for more information.
     """
@@ -263,8 +257,7 @@ class BatchNorm1d(_BatchNorm):
 
 
 class BatchNorm2d(_BatchNorm):
-    r"""
-    Applies Batch Normalization over a 4D tensor.
+    r"""Applies Batch Normalization over a 4D tensor.
 
     .. math::
 
@@ -287,56 +280,50 @@ class BatchNorm2d(_BatchNorm):
     statistics on `(N, H, W)` slices, it's common terminology to call this
     Spatial Batch Normalization.
 
-    :type num_features: int
-    :param num_features: usually :math:`C` from an input of shape
-        :math:`(N, C, H, W)` or the highest ranked dimension of an input
-        less than 4D.
-    :type eps: float
-    :param eps: a value added to the denominator for numerical stability.
-        Default: 1e-5
-    :type momentum: float
-    :param momentum: the value used for the ``running_mean`` and ``running_var`` computation.
-        Default: 0.9
-    :type affine: bool
-    :param affine: a boolean value that when set to True, this module has
-        learnable affine parameters. Default: True
-    :type track_running_stats: bool
-    :param track_running_stats: when set to True, this module tracks the
-        running mean and variance. When set to False, this module does not
-        track such statistics and always uses batch statistics in both training
-        and eval modes. Default: True
-
-    :type freeze: bool
-    :param freeze: when set to True, this module does not update the
-        running mean and variance, and uses the running mean and variance instead of
-        the batch mean and batch variance to normalize the input. The parameter takes effect
-        only when the module is initilized with track_running_stats as True.
-        Default: False
+    Args:
+        num_features: usually :math:`C` from an input of shape
+            :math:`(N, C, H, W)` or the highest ranked dimension of an input
+            less than 4D.
+        eps: a value added to the denominator for numerical stability.
+            Default: 1e-5
+        momentum: the value used for the ``running_mean`` and ``running_var`` computation.
+            Default: 0.9
+        affine: a boolean value that when set to True, this module has
+            learnable affine parameters. Default: True
+        track_running_stats: when set to True, this module tracks the
+            running mean and variance. When set to False, this module does not
+            track such statistics and always uses batch statistics in both training
+            and eval modes. Default: True
+        freeze: when set to True, this module does not update the
+            running mean and variance, and uses the running mean and variance instead of
+            the batch mean and batch variance to normalize the input. The parameter takes effect
+            only when the module is initilized with track_running_stats as True.
+            Default: False
 
     Examples:
 
-    .. testcode::
+        .. testcode::
 
-        import numpy as np
-        import megengine as mge
-        import megengine.module as M
+            import numpy as np
+            import megengine as mge
+            import megengine.module as M
 
-        # With Learnable Parameters
-        m = M.BatchNorm2d(4)
-        inp = mge.tensor(np.random.rand(1, 4, 3, 3).astype("float32"))
-        oup = m(inp)
-        print(m.weight.numpy().flatten(), m.bias.numpy().flatten())
-        # Without L`e`arnable Parameters
-        m = M.BatchNorm2d(4, affine=False)
-        oup = m(inp)
-        print(m.weight, m.bias)
+            # With Learnable Parameters
+            m = M.BatchNorm2d(4)
+            inp = mge.tensor(np.random.rand(1, 4, 3, 3).astype("float32"))
+            oup = m(inp)
+            print(m.weight.numpy().flatten(), m.bias.numpy().flatten())
+            # Without L`e`arnable Parameters
+            m = M.BatchNorm2d(4, affine=False)
+            oup = m(inp)
+            print(m.weight, m.bias)
 
-    Outputs:
+        Outputs:
 
-    .. testoutput::
+        .. testoutput::
 
-        [1. 1. 1. 1.] [0. 0. 0. 0.]
-        None None
+            [1. 1. 1. 1.] [0. 0. 0. 0.]
+            None None
     """
 
     def _check_input_ndim(self, inp):

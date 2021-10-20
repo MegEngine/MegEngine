@@ -28,11 +28,10 @@ ConvBiasDesc::~ConvBiasDesc() {
     cudnn_check(cudnnDestroyActivationDescriptor(act_desc));
 }
 
-void ConvBiasDesc::set_conv_bias(DType data_type, const param::ConvBias& param,
-                                 size_t nr_group) {
+void ConvBiasDesc::set_conv_bias(
+        DType data_type, const param::ConvBias& param, size_t nr_group) {
 #if CUDNN_VERSION < 7100
-    megdnn_throw(
-            "ConvBias(CUDNN_ACTIVATION_IDENTITY) require cudnn 7.1 or higher");
+    megdnn_throw("ConvBias(CUDNN_ACTIVATION_IDENTITY) require cudnn 7.1 or higher");
 #else
     cudnnConvolutionMode_t mode;
     using Param = param::ConvBias;
@@ -72,13 +71,11 @@ void ConvBiasDesc::set_conv_bias(DType data_type, const param::ConvBias& param,
         case Param::NonlineMode::SIGMOID:
         case Param::NonlineMode::H_SWISH:
             cudnn_check(cudnnSetActivationDescriptor(
-                    act_desc, CUDNN_ACTIVATION_IDENTITY,
-                    CUDNN_NOT_PROPAGATE_NAN, 0));
+                    act_desc, CUDNN_ACTIVATION_IDENTITY, CUDNN_NOT_PROPAGATE_NAN, 0));
             break;
         case Param::NonlineMode::RELU:
             cudnn_check(cudnnSetActivationDescriptor(
-                    act_desc, CUDNN_ACTIVATION_RELU, CUDNN_NOT_PROPAGATE_NAN,
-                    0));
+                    act_desc, CUDNN_ACTIVATION_RELU, CUDNN_NOT_PROPAGATE_NAN, 0));
             break;
         default:
             megdnn_throw("unsupported non linear mode");
@@ -86,8 +83,8 @@ void ConvBiasDesc::set_conv_bias(DType data_type, const param::ConvBias& param,
 #endif
 }
 
-void ConvBiasDesc::set_conv(DType data_type, const param::ConvBias& param,
-                            const size_t nr_group) {
+void ConvBiasDesc::set_conv(
+        DType data_type, const param::ConvBias& param, const size_t nr_group) {
     using Param = param::ConvBias;
     cudnnConvolutionMode_t mode;
     switch (param.mode) {
@@ -109,8 +106,9 @@ void ConvBiasDesc::set_conv(DType data_type, const param::ConvBias& param,
         auto comp_mode = param.compute_mode;
         compute_type = get_compute_type_fp16(comp_mode);
 #if CUDNN_MAJOR >= 7
-    } else if (data_type.category() == DTypeCategory::INT ||
-               data_type.category() == DTypeCategory::QUANTIZED) {
+    } else if (
+            data_type.category() == DTypeCategory::INT ||
+            data_type.category() == DTypeCategory::QUANTIZED) {
         compute_type = CUDNN_DATA_INT32;
 #endif
     } else {
@@ -157,8 +155,9 @@ bool is_cudnn_supported(const BiasForwardSizeArgs& args) {
             args.dst_layout->dtype.enumv() != DTypeEnum::QuantizedS8) {
             return false;
         }
-    } else if (args.filter_meta.format != param::Convolution::Format::NCHW &&
-               args.filter_meta.format != param::Convolution::Format::NHWC) {
+    } else if (
+            args.filter_meta.format != param::Convolution::Format::NCHW &&
+            args.filter_meta.format != param::Convolution::Format::NHWC) {
         return false;
     }
     auto& fm = args.filter_meta;
@@ -173,24 +172,24 @@ bool is_cudnn_supported(const BiasForwardSizeArgs& args) {
     return supported;
 }
 
-SmallVector<size_t> matmul_get_workspace_bundle(
-        const BiasForwardSizeArgs& args) {
+SmallVector<size_t> matmul_get_workspace_bundle(const BiasForwardSizeArgs& args) {
     auto dtype = args.src_layout->dtype;
     auto&& fm = args.filter_meta;
     megdnn_assert(fm.group == 1);
     auto N = args.src_layout->shape[0];
     auto OC = fm.ocpg, IC = fm.icpg, FH = fm.spatial[0], FW = fm.spatial[1];
     auto OH = args.dst_layout->shape[2], OW = args.dst_layout->shape[3];
-    SmallVector<size_t> sizes{dtype.size() * args.dst_layout->total_nr_elems(),
-                              dtype.size() * IC * FH * FW * OH * OW * N};
+    SmallVector<size_t> sizes{
+            dtype.size() * args.dst_layout->total_nr_elems(),
+            dtype.size() * IC * FH * FW * OH * OW * N};
     if (args.filter_meta.should_flip) {
         sizes.push_back(dtype.size() * OC * IC * FH * FW);
     }
     return sizes;
 }
 
-void flip_filter(const BiasForwardSizeArgs& args, const Workspace& workspace,
-                 void*& raw_ptr) {
+void flip_filter(
+        const BiasForwardSizeArgs& args, const Workspace& workspace, void*& raw_ptr) {
     auto&& fm = args.filter_meta;
     megdnn_assert(fm.group == 1 && fm.spatial_ndim == 2);
     auto OC = fm.ocpg, IC = fm.icpg, FH = fm.spatial[0], FW = fm.spatial[1];
@@ -205,9 +204,9 @@ void flip_filter(const BiasForwardSizeArgs& args, const Workspace& workspace,
     raw_ptr = workspace.raw_ptr;
 }
 
-} // conv_bias
+}  // namespace conv_bias
 
-} // cuda
-} // megdnn
+}  // namespace cuda
+}  // namespace megdnn
 
 // vim: syntax=cpp.doxygen

@@ -9,9 +9,9 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-#include "src/armv7/matrix_mul/fp32/strategy.h"
-#include "src/armv7/matrix_mul/asm/common.h"
 #include "src/arm_common/simd_macro/marm_neon.h"
+#include "src/armv7/matrix_mul/asm/common.h"
+#include "src/armv7/matrix_mul/fp32/strategy.h"
 #include "src/common/utils.h"
 
 using namespace megdnn;
@@ -65,11 +65,10 @@ void kern_4x1(const float* A, const float* B, size_t LDB, size_t K, float* C) {
 
             "vst1.32 {d16, d17}, [%[C]]!\n"
 
-            : [ A ] "+r"(A), [ B ] "+r"(B), [ K ] "+r"(K), [ C ] "+r"(C)
-            : [ LDB ] "r"(LDB)
-            : "d0", "d1", "d8", "d9", "d10", "d11", "d12", "d13", "d14", "d15",
-              "d16", "d17", "d18", "d19", "d20", "d21", "d22", "d23", "cc",
-              "memory");
+            : [A] "+r"(A), [B] "+r"(B), [K] "+r"(K), [C] "+r"(C)
+            : [LDB] "r"(LDB)
+            : "d0", "d1", "d8", "d9", "d10", "d11", "d12", "d13", "d14", "d15", "d16",
+              "d17", "d18", "d19", "d20", "d21", "d22", "d23", "cc", "memory");
 }
 
 // Overview of register layout:
@@ -171,9 +170,9 @@ void kern_4x4(const float* A, const float* B, size_t LDB, size_t K, float* C) {
 
             : [A] "+r"(A), [B] "+r"(B), [K] "+r"(K), [C] "+r"(C)
             : [LDB] "r"(LDB)
-            : "d0", "d1", "d2", "d3", "d4", "d5", "d6", "d7", "d8", "d9", "d10",
-              "d11", "d12", "d13", "d14", "d15", "d16", "d17", "d18", "d19",
-              "d20", "d21", "d22", "d23", "cc", "memory");
+            : "d0", "d1", "d2", "d3", "d4", "d5", "d6", "d7", "d8", "d9", "d10", "d11",
+              "d12", "d13", "d14", "d15", "d16", "d17", "d18", "d19", "d20", "d21",
+              "d22", "d23", "cc", "memory");
 }
 
 // Overview of register layout:
@@ -303,20 +302,19 @@ void kern_4x8(const float* A, const float* B, size_t LDB, size_t K, float* C) {
             "vst1.32 {d28, d29, d30, d31}, [%[C]]!\n"
             : [A] "+r"(A), [B] "+r"(B), [K] "+r"(K), [C] "+r"(C)
             : [LDB] "r"(LDB)
-            : "d0", "d1", "d2", "d3", "d4", "d5", "d6", "d7", "d8", "d9", "d10",
-              "d11", "d12", "d13", "d14", "d15", "d16", "d17", "d18", "d19",
-              "d20", "d21", "d22", "d23", "d24", "d25", "d26", "d27", "d28",
-              "d29", "d30", "d31", "cc", "memory");
+            : "d0", "d1", "d2", "d3", "d4", "d5", "d6", "d7", "d8", "d9", "d10", "d11",
+              "d12", "d13", "d14", "d15", "d16", "d17", "d18", "d19", "d20", "d21",
+              "d22", "d23", "d24", "d25", "d26", "d27", "d28", "d29", "d30", "d31",
+              "cc", "memory");
 }
 
 }  // namespace
 
 MEGDNN_REG_GEMM_STRATEGY_IMPL_NOPACK(sgemm_nopack_4x8);
 
-void sgemm_nopack_4x8::kern(const float* A, size_t LDA, const float* B,
-                            size_t LDB, float* C, size_t LDC, size_t M,
-                            size_t K, size_t N, const float*, void*, bool trA,
-                            bool trB) const {
+void sgemm_nopack_4x8::kern(
+        const float* A, size_t LDA, const float* B, size_t LDB, float* C, size_t LDC,
+        size_t M, size_t K, size_t N, const float*, void*, bool trA, bool trB) const {
     constexpr size_t MB = 4;
     constexpr size_t KB = 4;
     constexpr size_t NB = 8;

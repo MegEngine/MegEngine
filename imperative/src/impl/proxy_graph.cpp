@@ -9,15 +9,15 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-#include "./blob_manager_impl.h"
 #include "./proxy_graph.h"
-#include "megbrain/graph/static_infer.h"
+#include "./blob_manager_impl.h"
 #include "megbrain/graph/operator_node.h"
+#include "megbrain/graph/static_infer.h"
+#include "megbrain/imperative/ops/backward_graph.h"
+#include "megbrain/imperative/ops/opr_attr.h"
 #include "megbrain/opr/io.h"
 #include "megbrain/opr/tensor_manip.h"
 #include "megbrain/opr/utility.h"
-#include "megbrain/imperative/ops/opr_attr.h"
-#include "megbrain/imperative/ops/backward_graph.h"
 
 #if __cplusplus >= 201703L
 #include <optional>
@@ -28,7 +28,7 @@ namespace imperative {
 
 using cg::OperatorNodeBase;
 
-template<bool p, typename T, typename F>
+template <bool p, typename T, typename F>
 constexpr auto&& select(T&& t, F&& f) {
     if constexpr (p) {
         return std::forward<T>(t);
@@ -37,49 +37,40 @@ constexpr auto&& select(T&& t, F&& f) {
     }
 }
 
-MGB_DEFINE_OPR_CLASS(
-        ProxyGraph::InputPlaceholder,
-        cg::OperatorNodeBase) // {
-
-    void on_output_comp_node_stream_changed() override {
-        mgb_assert(0);
-    }
+MGB_DEFINE_OPR_CLASS(ProxyGraph::InputPlaceholder, cg::OperatorNodeBase) // {
+    void on_output_comp_node_stream_changed() override { mgb_assert(0); }
     // TODO: consider implement following initialization method,
     // so InputPlaceholder can be initialized correctly during
     // operator insertion
-    void init_output_comp_node() override {
-    }
-    void init_output_format() override {
-    }
-    void init_output_dtype() override {
-    }
-    void init_output_static_infer_desc() override {
-    }
+    void init_output_comp_node() override {}
+    void init_output_format() override {}
+    void init_output_dtype() override {}
+    void init_output_static_infer_desc() override {}
     void init_output_mem_plan(bool dynamic) override {
         MGB_MARK_USED_VAR(dynamic);
         mgb_assert(0);
     }
-    void do_execute(ExecEnv &env) override {
-        mgb_assert(0);
-    }
+    void do_execute(ExecEnv& env) override { mgb_assert(0); }
 
 public:
     Tensor* m_tensor;
 
-    InputPlaceholder(ComputingGraph& graph, Tensor* tensor = nullptr,
-                     const DeviceTensorND& static_infer_value = {})
-            : Super(&graph, {}, "device_value", {}), m_tensor(tensor),
+    InputPlaceholder(
+            ComputingGraph& graph, Tensor* tensor = nullptr,
+            const DeviceTensorND& static_infer_value = {})
+            : Super(&graph, {}, "device_value", {}),
+              m_tensor(tensor),
               m_static_infer_value(static_infer_value) {
-        mgb_assert(m_static_infer_value.empty() ||
-                   m_static_infer_value.comp_node() == CompNode::default_cpu());
+        mgb_assert(
+                m_static_infer_value.empty() ||
+                m_static_infer_value.comp_node() == CompNode::default_cpu());
         add_output(None)->add_flag(VarNode::Flag::NO_SYS_MEM_ALLOC);
         // never dedup
         add_equivalence_component<ScalarHash<void*>>(this);
     }
 
     static SymbolVar make(ComputingGraph& graph, Tensor& tensor) {
-        auto opr = graph.insert_opr(
-            std::make_unique<InputPlaceholder>(graph, &tensor));
+        auto opr = graph.insert_opr(std::make_unique<InputPlaceholder>(graph, &tensor));
         auto var = opr->output(0);
         auto&& dev_tensor = tensor.dev_tensor();
         var->m_comp_node = dev_tensor.comp_node();
@@ -90,14 +81,15 @@ public:
             dev_tensor.reset(dev_tensor.storage(), layout);
         }
         var->m_dev_tensor = dev_tensor;
-        var->m_mem_plan.reset_from_owner_var().chunk()
+        var->m_mem_plan.reset_from_owner_var()
+                .chunk()
                 .mem_alloc_status.set_from_owner_var();
         return var;
     }
 
     static SymbolVar make(ComputingGraph& graph, const LogicalTensorDesc& desc) {
         auto opr = graph.insert_opr(
-            std::make_unique<InputPlaceholder>(graph, nullptr, desc.value));
+                std::make_unique<InputPlaceholder>(graph, nullptr, desc.value));
         auto var = opr->output(0);
         var->m_comp_node = desc.comp_node;
         var->m_shape = desc.layout;
@@ -126,20 +118,16 @@ public:
 private:
     DeviceTensorND m_static_infer_value;
 };
-MGB_DYN_TYPE_OBJ_FINAL_IMPL(
-        ProxyGraph::InputPlaceholder);
+MGB_DYN_TYPE_OBJ_FINAL_IMPL(ProxyGraph::InputPlaceholder);
 
 class ProxyGraph::ExecEnv final : public cg::GraphExecutable::ExecEnv {
-
 public:
-    void dispatch_on_comp_node(CompNode, Task&& task) override {
-        task();
-    }
+    void dispatch_on_comp_node(CompNode, Task&& task) override { task(); }
 
-    void dispatch_on_comp_node_with_mask(CompNode, Task&& task,
-                                         cg::ExecutionMask* mask) override {
-        mgb_throw_if(mask, GraphError,
-                     "ExecutionMask not supported in imperative mode");
+    void dispatch_on_comp_node_with_mask(
+            CompNode, Task&& task, cg::ExecutionMask* mask) override {
+        mgb_throw_if(
+                mask, GraphError, "ExecutionMask not supported in imperative mode");
         task();
     }
 
@@ -181,13 +169,13 @@ public:
         return it - output_vars.begin();
     }
 
-    void register_shape_infer(Tag dest, const ShapeInferDesc &desc) override {
+    void register_shape_infer(Tag dest, const ShapeInferDesc& desc) override {
         auto i = locate_output(dest);
         mgb_assert(!shape_descs[i]);
         shape_descs[i].emplace(desc);
     }
 
-    void register_value_infer(Tag dest, const ValueInferDesc &desc) override {
+    void register_value_infer(Tag dest, const ValueInferDesc& desc) override {
         auto i = locate_output(dest);
         mgb_assert(!value_descs[i]);
         value_descs[i].emplace(desc);
@@ -207,7 +195,8 @@ public:
             auto&& outputs = cur_opr->output();
             auto&& it = std::find(outputs.begin(), outputs.end(), var);
             if (it != outputs.end()) {
-                return {infer_shape_fallible(var) ? InferType::CONST : InferType::MISSING_INP,
+                return {infer_shape_fallible(var) ? InferType::CONST
+                                                  : InferType::MISSING_INP,
                         // value inference could be expensive
                         InferType::MISSING_INP};
             }
@@ -236,7 +225,7 @@ public:
         inferred_outputs.clear();
     }
 
-    template<bool is_shape>
+    template <bool is_shape>
     auto do_infer(Tag dest, bool may_sync)
             -> const std::conditional_t<is_shape, TensorShape, DeviceTensorND>* {
         // Some infer_func does not use InpVal passed to them, but
@@ -287,7 +276,8 @@ public:
         };
 
         for (auto&& dep : desc->deps) {
-            if (auto opr = dep.dest->owner_opr()->template try_cast_final<InputPlaceholder>()) {
+            if (auto opr = dep.dest->owner_opr()
+                                   ->template try_cast_final<InputPlaceholder>()) {
                 if (dep.type == DepType::SHAPE) {
                     if (dep.dest->shape().ndim) {
                         push_shape(&dep.dest->shape());
@@ -323,15 +313,17 @@ public:
         // call infer_func
         if constexpr (is_shape) {
             if (!desc->infer_func(result.shape, args)) {
-                mgb_log_warn("something is missing for shape inference of %s",
-                             cur_opr->dyn_typeinfo()->name);
+                mgb_log_warn(
+                        "something is missing for shape inference of %s",
+                        cur_opr->dyn_typeinfo()->name);
                 return nullptr;
             }
             return &result.shape;
         } else {
             if (!desc->infer_func(result.value, args)) {
-                mgb_log_warn("something is missing for value inference of %s",
-                             cur_opr->dyn_typeinfo()->name);
+                mgb_log_warn(
+                        "something is missing for value inference of %s",
+                        cur_opr->dyn_typeinfo()->name);
                 return nullptr;
             }
             return &result.value;
@@ -355,13 +347,13 @@ public:
         return do_infer<false>(var, false);
     }
 
-    DepVal get_rt_static_source_deps(const DepElement&) override {mgb_assert(0);}
+    DepVal get_rt_static_source_deps(const DepElement&) override { mgb_assert(0); }
 };
 
 class ProxyGraph::SeqCompNodeOptimizer : public cg::SeqCompNodeOptimizer {
     void register_stream_var(VarNode*, StreamPropType) override {}
     void register_propagate_function(VarNode*, PropFunction) override {}
-    StreamPropType stream_prop_type(VarNode*) override {mgb_assert(0);}
+    StreamPropType stream_prop_type(VarNode*) override { mgb_assert(0); }
 };
 
 class ProxyGraph::ProxyGraphImpl : public cg::ComputingGraph {
@@ -372,12 +364,17 @@ class ProxyGraph::ProxyGraphImpl : public cg::ComputingGraph {
     std::mutex m_opr_refkeeper_mtx;
     CompNode::UnorderedSet m_used_comp_node;
     VarReceiverInfo m_var_receiver_info;
+
 public:
     ~ProxyGraphImpl() {
         mgb_assert(!m_owner->m_cur_opr);
-        if (is_finalized()) return;
+        if (is_finalized())
+            return;
         for (auto&& i : m_used_comp_node) {
-            if (i.device_type() == CompNode::DeviceType::CUDA) continue;
+            if (i.device_type() == CompNode::DeviceType::CUDA)
+                continue;
+            if (i.device_type() == CompNode::DeviceType::ROCM)
+                continue;
             i.sync();
         }
     }
@@ -394,25 +391,17 @@ public:
         return std::make_unique<ProxyGraphImpl>(owner);
     }
 
-    void add_used_comp_node(CompNode cn) {
-        m_used_comp_node.insert(cn);
-    }
+    void add_used_comp_node(CompNode cn) { m_used_comp_node.insert(cn); }
 
     bool invalid() const {
         return is_finalized() || nr_oprs_in_graph() > m_owner->m_max_op_cnt;
     }
 
-    size_t next_node_id() override {
-        return m_node_id.fetch_add(1);
-    }
+    size_t next_node_id() override { return m_node_id.fetch_add(1); }
 
-    void* alloc_varnode_storage() override {
-        return m_var_node_pool.alloc_raw();
-    }
+    void* alloc_varnode_storage() override { return m_var_node_pool.alloc_raw(); }
 
-    void free_varnode_storage(void* ptr) override {
-        m_var_node_pool.free_raw(ptr);
-    }
+    void free_varnode_storage(void* ptr) override { m_var_node_pool.free_raw(ptr); }
 
     OperatorNodeBase* insert_opr(std::unique_ptr<OperatorNodeBase> opr_uniqp) override {
         mgb_assert(!is_finalized());
@@ -445,11 +434,11 @@ public:
     }
 
     const VarReceiverInfo& var_receiver_in_current_comp_seq(
-            const VarNode *var) const override {
+            const VarNode* var) const override {
         return m_var_receiver_info;
     }
 
-    size_t nr_oprs_in_graph() const override {return m_opr_refkeeper.size();}
+    size_t nr_oprs_in_graph() const override { return m_opr_refkeeper.size(); }
 
     void record_async_error(std::unique_ptr<MegBrainError> async_exc) override {
         if (!ProxyGraph::tm_async_error) {
@@ -457,28 +446,33 @@ public:
         }
     }
 
-    std::unique_ptr<cg::AsyncExecutable> compile(const OutputSpec &out_spec) override {mgb_assert(0);}
+    std::unique_ptr<cg::AsyncExecutable> compile(const OutputSpec& out_spec) override {
+        mgb_assert(0);
+    }
     SmallVector<std::unique_ptr<cg::AsyncExecutable>> compile_multi_part(
-            const SmallVector<OutputSpec>& out_specs) override {mgb_assert(0);}
-    cg::AsyncExecutable* current_comp_seq() override {mgb_assert(0);}
-    std::string get_mem_allocation_info() const override {mgb_assert(0);}
-    VarNode* find_var_by_id(size_t id) const override {mgb_assert(0);}
-    void share_device_memory_with(ComputingGraph &other) override {mgb_assert(0);}
+            const SmallVector<OutputSpec>& out_specs) override {
+        mgb_assert(0);
+    }
+    cg::AsyncExecutable* current_comp_seq() override { mgb_assert(0); }
+    std::string get_mem_allocation_info() const override { mgb_assert(0); }
+    VarNode* find_var_by_id(size_t id) const override { mgb_assert(0); }
+    void share_device_memory_with(ComputingGraph& other) override { mgb_assert(0); }
     void set_device_memory_allocator(
-            std::shared_ptr<cg::DeviceMemoryAllocator> allocator) override {mgb_assert(0);}
-    size_t get_device_memory_size(CompNode cn) override {mgb_assert(0);}
-    size_t clear_device_memory() override {mgb_assert(0);}
-    void set_as_subgraph(ComputingGraph &par_graph) override {mgb_assert(0);}
+            std::shared_ptr<cg::DeviceMemoryAllocator> allocator) override {
+        mgb_assert(0);
+    }
+    size_t get_device_memory_size(CompNode cn) override { mgb_assert(0); }
+    size_t clear_device_memory() override { mgb_assert(0); }
+    void set_as_subgraph(ComputingGraph& par_graph) override { mgb_assert(0); }
 };
 
 std::atomic<size_t> ProxyGraph::ProxyGraphImpl::m_node_id = 0;
 
-ProxyGraph::ProxyGraph() :
-        m_graph(ProxyGraphImpl::make(this)),
-        m_env{new ExecEnv},
-        m_static_infer_manager(new StaticInferManager(this)),
-        m_seq_comp_node_optimizer(new SeqCompNodeOptimizer()) {
-}
+ProxyGraph::ProxyGraph()
+        : m_graph(ProxyGraphImpl::make(this)),
+          m_env{new ExecEnv},
+          m_static_infer_manager(new StaticInferManager(this)),
+          m_seq_comp_node_optimizer(new SeqCompNodeOptimizer()) {}
 
 void ProxyGraph::reset() {
     mgb_assert(!m_cur_opr);
@@ -500,24 +494,23 @@ public:
         owner->m_cur_opr = opr;
     }
     CurOprGuard(const CurOprGuard&) = delete;
-    ~CurOprGuard() {
-        m_owner->cleanup();
-    }
+    ~CurOprGuard() { m_owner->cleanup(); }
+
 private:
     ProxyGraph* m_owner;
 };
 
-#define CUR_OPR_GUARD(opr) CurOprGuard MGB_TOKENPASTE2(__cur_opr_guard_, __LINE__)(this, opr)
+#define CUR_OPR_GUARD(opr) \
+    CurOprGuard MGB_TOKENPASTE2(__cur_opr_guard_, __LINE__)(this, opr)
 
 /*********************** Physical Tensor Impl ***********************/
 
 SmallVector<LogicalTensorDesc> ProxyGraph::infer_output_attrs(
-        const OpDef& opdef,
-        const SmallVector<Tensor*>& inputs) {
+        const OpDef& opdef, const SmallVector<Tensor*>& inputs) {
     SmallVector<LogicalTensorDesc> ret;
     CUR_OPR_GUARD(get_proxy_opr(opdef, inputs));
     do_shape_infer(true);
-    for (auto&& i: m_cur_opr->usable_output()) {
+    for (auto&& i : m_cur_opr->usable_output()) {
         mgb_assert(i->dtype().valid() && i->comp_node().valid());
         mgb_assert(i->shape().ndim || i->contain_flag(VarNode::Flag::NO_SYS_MEM_ALLOC));
         ret.push_back({{i->shape(), i->dtype()}, i->comp_node()});
@@ -525,10 +518,9 @@ SmallVector<LogicalTensorDesc> ProxyGraph::infer_output_attrs(
     return ret;
 }
 
-void ProxyGraph::invoke_op(const OpDef& opdef,
-        const SmallVector<Tensor*>& inputs,
-        const SmallVector<Tensor*>& outputs,
-        const SmallVector<Tensor*>& workspaces) {
+void ProxyGraph::invoke_op(
+        const OpDef& opdef, const SmallVector<Tensor*>& inputs,
+        const SmallVector<Tensor*>& outputs, const SmallVector<Tensor*>& workspaces) {
     CUR_OPR_GUARD(get_proxy_opr(opdef, inputs));
     init_output_tensor(outputs, workspaces);
     for (auto oup : m_cur_opr->output()) {
@@ -550,7 +542,8 @@ void ProxyGraph::cleanup() {
     m_cur_opr = nullptr;
 }
 
-void ProxyGraph::init_output_tensor(const SmallVector<Tensor*>& outputs, const SmallVector<Tensor*>& workspaces) {
+void ProxyGraph::init_output_tensor(
+        const SmallVector<Tensor*>& outputs, const SmallVector<Tensor*>& workspaces) {
     // get proxy opr
     auto proxy = m_cur_opr;
 
@@ -559,30 +552,31 @@ void ProxyGraph::init_output_tensor(const SmallVector<Tensor*>& outputs, const S
     size_t j = 0;
     size_t k = 0;
     for (auto&& var : proxy->output()) {
-        auto &&chk = var->m_mem_plan.reset_from_owner_var().chunk();
+        auto&& chk = var->m_mem_plan.reset_from_owner_var().chunk();
         if (var->contain_flag(VarNode::Flag::VOLATILE_CONTENT)) {
             // workspace
             if (workspaces.size()) {
                 mgb_assert(k < workspaces.size());
-                auto && layout = workspaces[k]->layout();
-                mgb_assert(var->comp_node() == workspaces[k]->comp_node() &&
-                            var->shape().eq_shape(layout) &&
-                            var->dtype() == layout.dtype);
+                auto&& layout = workspaces[k]->layout();
+                mgb_assert(
+                        var->comp_node() == workspaces[k]->comp_node() &&
+                        var->shape().eq_shape(layout) && var->dtype() == layout.dtype);
                 var->m_dev_tensor = workspaces[k]->dev_tensor();
-                ++ k;
+                ++k;
             } else {
                 TensorLayout layout{var->shape(), var->dtype(), var->format()};
-                var->m_dev_tensor = BlobManager::inst()->alloc_workspace_with_defrag(var->comp_node(), layout);
+                var->m_dev_tensor = BlobManager::inst()->alloc_workspace_with_defrag(
+                        var->comp_node(), layout);
             }
         } else {
             mgb_assert(j < outputs.size());
-            auto &&tensor = outputs[j];
-            auto &&layout = tensor->layout();
-            mgb_assert(var->comp_node() == tensor->comp_node() &&
-                        var->shape().eq_shape(layout) &&
-                        var->dtype() == layout.dtype);
+            auto&& tensor = outputs[j];
+            auto&& layout = tensor->layout();
+            mgb_assert(
+                    var->comp_node() == tensor->comp_node() &&
+                    var->shape().eq_shape(layout) && var->dtype() == layout.dtype);
             var->assign_dev_tensor_from_tensor(tensor->dev_tensor());
-            ++ j;
+            ++j;
         }
         chk.mem_alloc_status.set_from_owner_var();
     }
@@ -606,15 +600,14 @@ void ProxyGraph::init_output_tensor(const SmallVector<Tensor*>& outputs, const S
 }
 
 cg::OperatorNodeBase* ProxyGraph::get_proxy_opr(
-        const OpDef& opdef,
-        const SmallVector<Tensor*>& inputs) {
+        const OpDef& opdef, const SmallVector<Tensor*>& inputs) {
     VarNodeArray vinputs(inputs.size());
-    for (size_t i = 0; i < inputs.size(); ++ i) {
+    for (size_t i = 0; i < inputs.size(); ++i) {
         vinputs[i] = InputPlaceholder::make(*m_graph, *inputs[i]).node();
     }
     auto opr = OpDef::apply_on_var_node(opdef, vinputs)[0]->owner_opr();
     mgb_assert(!opr->same_type<InputPlaceholder>());
-    for (auto &&i : opr->input()) {
+    for (auto&& i : opr->input()) {
         mgb_assert(i->owner_opr()->same_type<InputPlaceholder>());
     }
     return opr;
@@ -622,14 +615,14 @@ cg::OperatorNodeBase* ProxyGraph::get_proxy_opr(
 
 /*********************** Logical Tensor Impl ***********************/
 
-size_t ProxyGraph::get_opr_output_size(const OpDef& opdef,
-        const SmallVector<LogicalTensorDesc>& inputs) {
+size_t ProxyGraph::get_opr_output_size(
+        const OpDef& opdef, const SmallVector<LogicalTensorDesc>& inputs) {
     return get_proxy_opr(opdef, inputs)->usable_output().size();
 }
 
-std::tuple<SmallVector<LogicalTensorDesc>, bool> ProxyGraph::infer_output_attrs_fallible(
-        const OpDef& opdef,
-        const SmallVector<LogicalTensorDesc>& inputs) {
+std::tuple<SmallVector<LogicalTensorDesc>, bool> ProxyGraph::
+        infer_output_attrs_fallible(
+                const OpDef& opdef, const SmallVector<LogicalTensorDesc>& inputs) {
     auto opr = get_proxy_opr(opdef, inputs);
     CUR_OPR_GUARD(opr);
     SmallVector<LogicalTensorDesc> outputs;
@@ -641,10 +634,10 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> ProxyGraph::infer_output_attrs_
     return {outputs, validated && !need_check};
 }
 
-std::tuple<SmallVector<MemoryDesc>, SmallVector<MemoryDesc>> ProxyGraph::infer_output_mem_desc(
-        const OpDef& def,
-        const SmallVector<Tensor*>& inputs_tensors,
-        const SmallVector<MemoryDesc>& inputs_mems) {
+std::tuple<SmallVector<MemoryDesc>, SmallVector<MemoryDesc>> ProxyGraph::
+        infer_output_mem_desc(
+                const OpDef& def, const SmallVector<Tensor*>& inputs_tensors,
+                const SmallVector<MemoryDesc>& inputs_mems) {
     auto opr = get_proxy_opr(def, inputs_tensors);
     CUR_OPR_GUARD(opr);
     do_shape_infer(true);
@@ -653,9 +646,17 @@ std::tuple<SmallVector<MemoryDesc>, SmallVector<MemoryDesc>> ProxyGraph::infer_o
     size_t cur_id = 0;
     for (auto&& i : opr->output()) {
         if (i->contain_flag(VarNode::Flag::VOLATILE_CONTENT)) {
-            workspaces.push_back({{i->shape(), i->dtype(), i->format()}, 0, i->comp_node(), StorageIdentifier::make(++ cur_id)});
+            workspaces.push_back(
+                    {{i->shape(), i->dtype(), i->format()},
+                     0,
+                     i->comp_node(),
+                     StorageIdentifier::make(++cur_id)});
         } else {
-            outputs.push_back({{i->shape(), i->dtype()}, 0, i->comp_node(), StorageIdentifier::make(++ cur_id)});
+            outputs.push_back(
+                    {{i->shape(), i->dtype()},
+                     0,
+                     i->comp_node(),
+                     StorageIdentifier::make(++cur_id)});
         }
     }
     return {outputs, workspaces};
@@ -668,15 +669,14 @@ struct ProxyGraph::GradGraph {
     cg::VarNode* grad;
 };
 
-EncodedSubraph
-ProxyGraph::make_backward_graph(
-        const OpDef& opdef,
-        const SmallVector<LogicalTensorDesc>& input_descs,
+EncodedSubgraph ProxyGraph::make_backward_graph(
+        const OpDef& opdef, const SmallVector<LogicalTensorDesc>& input_descs,
         const SmallVector<bool>& input_requires_grad,
         const SmallVector<bool>& output_has_grad) {
     ThinHashMap<VarNode*, size_t> var2idx;
-    auto push = [&var2idx, cnt=1](VarNode* var) mutable { //cnt is always greater non zero
-        auto&& ret = var2idx.emplace(var, cnt ++);
+    auto push = [&var2idx,
+                 cnt = 1](VarNode* var) mutable {  // cnt is always greater non zero
+        auto&& ret = var2idx.emplace(var, cnt++);
         mgb_assert(ret.second, "var %s has been already inserted", var->cname());
         return ret.first->second;
     };
@@ -688,9 +688,11 @@ ProxyGraph::make_backward_graph(
         output_descs.push_back({TensorLayout{i->dtype()}, i->comp_node()});
     }
     auto output_grads = make_input_place_holders(output_descs);
-    mgb_assert(output_grads.size() == output_has_grad.size());
+    mgb_assert(
+            output_grads.size() == output_has_grad.size(), "%d vs %d",
+            output_grads.size(), output_has_grad.size());
     bool any_input_has_grad = false;
-    for (size_t i = 0; i < output_grads.size(); ++ i) {
+    for (size_t i = 0; i < output_grads.size(); ++i) {
         if (!output_has_grad[i]) {
             output_grads[i] = nullptr;
         } else {
@@ -702,30 +704,30 @@ ProxyGraph::make_backward_graph(
     }
     auto* gfunc = cg::lookup_grad_func(fwd->dyn_typeinfo());
 
-    EncodedSubraph result;
+    EncodedSubgraph result;
     auto&& igraph = result.graph;
 
     size_t nr_backward_graph_inputs = 0;
     auto gen_expr = [this, &var2idx, &igraph, &push, &fwd,
-            &nr_backward_graph_inputs](cg::OperatorNodeBase* op) {
+                     &nr_backward_graph_inputs](cg::OperatorNodeBase* op) {
         if (auto t = as_tensor(op)) {
             mgb_assert(op->output().size() == 1);
             igraph.constants.emplace_back(push(op->output(0)), std::move(t));
         } else if (op->same_type<InputPlaceholder>()) {
-            ++ nr_backward_graph_inputs;
+            ++nr_backward_graph_inputs;
             push(op->output(0));
         } else {
             SmallVector<size_t> inputs, outputs;
-            for (auto &&i : op->input()) {
+            for (auto&& i : op->input()) {
                 if (i->owner_opr() == fwd) {
                     if (var2idx.find(i) == var2idx.end()) {
-                        ++ nr_backward_graph_inputs;
+                        ++nr_backward_graph_inputs;
                         push(i);
                     }
                 }
                 inputs.push_back(var2idx.at(i));
             }
-            for (auto &&i : op->usable_output()) {
+            for (auto&& i : op->usable_output()) {
                 outputs.push_back(push(i));
             }
             igraph.exprs.push_back({OpDef::make_from_op_node(op), inputs, outputs});
@@ -748,14 +750,14 @@ ProxyGraph::make_backward_graph(
                 output_grads_with_unused_var.push_back(nullptr);
             } else {
                 output_grads_with_unused_var.push_back(*iter);
-                ++ iter;
+                ++iter;
             }
         }
         mgb_assert(iter == output_grads.end());
     }
 
     Maybe<VarNodeArray> grad_results;
-    for (size_t i = 0; i < inputs.size(); ++ i) {
+    for (size_t i = 0; i < inputs.size(); ++i) {
         VarNode* grad;
         if (grad_results.valid()) {
             grad = grad_results.val()[i];
@@ -769,12 +771,13 @@ ProxyGraph::make_backward_graph(
                 grad = grad_results.val()[i];
             }
         }
-        if (grad && !grad->owner_opr()->same_type<opr::InvalidGrad>()
-            && input_requires_grad[i]) {
-            mgb_assert(!grad->owner_opr()->same_type<opr::InvalidGrad>(),
-                       "gradient of operator %s w.r.t. input #%lu is "
-                       "either not well defined or not implemented",
-                       fwd->dyn_typeinfo()->name, i);
+        if (grad && !grad->owner_opr()->same_type<opr::InvalidGrad>() &&
+            input_requires_grad[i]) {
+            mgb_assert(
+                    !grad->owner_opr()->same_type<opr::InvalidGrad>(),
+                    "gradient of operator %s w.r.t. input #%lu is "
+                    "either not well defined or not implemented",
+                    fwd->dyn_typeinfo()->name, i);
             iter.add(grad);
             igraph.outputs.push_back(var2idx.at(grad));
             result.output_mask[i] = true;
@@ -790,7 +793,7 @@ ProxyGraph::make_backward_graph(
     igraph.inputs.reserve(nr_backward_graph_inputs);
     result.input_mask.reserve(nr_backward_graph_inputs);
     auto write_inputs = [&igraph, &var2idx, &result](const VarNodeArray& vars) {
-        for (auto&& i: vars) {
+        for (auto&& i : vars) {
             auto&& iter = var2idx.find(i);
             if (iter != var2idx.end()) {
                 igraph.inputs.push_back(iter->second);
@@ -807,16 +810,17 @@ ProxyGraph::make_backward_graph(
     return result;
 }
 
-cg::OperatorNodeBase* ProxyGraph::get_proxy_opr(const OpDef& opdef,
-        const SmallVector<LogicalTensorDesc>& inputs) {
+cg::OperatorNodeBase* ProxyGraph::get_proxy_opr(
+        const OpDef& opdef, const SmallVector<LogicalTensorDesc>& inputs) {
     mgb_assert(!m_cur_opr);
     auto vinputs = make_input_place_holders(inputs);
     return OpDef::apply_on_var_node(opdef, vinputs)[0]->owner_opr();
 }
 
-VarNodeArray ProxyGraph::make_input_place_holders(const SmallVector<LogicalTensorDesc>& inputs) {
+VarNodeArray ProxyGraph::make_input_place_holders(
+        const SmallVector<LogicalTensorDesc>& inputs) {
     VarNodeArray vinputs(inputs.size());
-    for (size_t i = 0; i < inputs.size(); ++ i) {
+    for (size_t i = 0; i < inputs.size(); ++i) {
         vinputs[i] = InputPlaceholder::make(*m_graph, inputs[i]).node();
     }
     return vinputs;
@@ -832,7 +836,7 @@ bool ProxyGraph::do_shape_infer(bool sync_value) {
         if (sync_value) {
             var->shape(m_static_infer_manager->infer_shape(var));
         } else if (auto* shape = m_static_infer_manager->infer_shape_fallible(var)) {
-                var->shape(*shape);
+            var->shape(*shape);
         } else {
             validated = false;
         }
@@ -854,7 +858,8 @@ TensorPtr ProxyGraph::as_tensor(cg::OperatorNodeBase* opr, bool share) {
             m_static_infer_manager->update();
             cpu_value = m_static_infer_manager->infer_value_fallible(opr->output(0));
         } else {
-            cpu_value = opr->owner_graph()->static_infer_manager().infer_value_fallible(opr->output(0));
+            cpu_value = opr->owner_graph()->static_infer_manager().infer_value_fallible(
+                    opr->output(0));
         }
         mgb_assert(cpu_value);
         mgb_assert(cpu_value->comp_node() == CompNode::default_cpu());
@@ -862,7 +867,8 @@ TensorPtr ProxyGraph::as_tensor(cg::OperatorNodeBase* opr, bool share) {
         hv.proxy_to_default_cpu().copy_from_fixlayout(*cpu_value);
         return Tensor::make(dv, hv);
     } else if (opr->same_type<opr::SharedDeviceTensor>()) {
-        return Tensor::make(opr->cast_final_safe<opr::SharedDeviceTensor>().get_dev_tensor());
+        return Tensor::make(
+                opr->cast_final_safe<opr::SharedDeviceTensor>().get_dev_tensor());
     } else {
         return {};
     }
@@ -870,7 +876,7 @@ TensorPtr ProxyGraph::as_tensor(cg::OperatorNodeBase* opr, bool share) {
 
 thread_local std::unique_ptr<MegBrainError> ProxyGraph::tm_async_error;
 
-} // namespace imperative
-} // namespace mgb
+}  // namespace imperative
+}  // namespace mgb
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

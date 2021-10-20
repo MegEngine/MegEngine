@@ -23,9 +23,9 @@
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #pragma GCC diagnostic ignored "-Wsign-compare"
-#include <hip/hip_runtime_api.h>
-#include <hip/hip_runtime.h>
 #include <hip/hip_fp16.h>
+#include <hip/hip_runtime.h>
+#include <hip/hip_runtime_api.h>
 #pragma GCC diagnostic pop
 
 #if !defined(__HIP_PLATFORM_HCC__)

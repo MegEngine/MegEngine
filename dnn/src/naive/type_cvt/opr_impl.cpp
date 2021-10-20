@@ -9,8 +9,8 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 #include "./opr_impl.h"
-#include "src/common/utils.h"
 #include "megdnn/tensor_iter.h"
+#include "src/common/utils.h"
 #include "src/naive/handle.h"
 #include "src/naive/lowbit_utils.h"
 
@@ -23,13 +23,13 @@ using namespace naive;
 namespace {
 
 template <typename T>
-using QuantizedCType =
-        std::enable_if_t<DTypeTrait<T>::category == DTypeCategory::QUANTIZED,
-                         typename DTypeTrait<T>::ctype>;
+using QuantizedCType = std::enable_if_t<
+        DTypeTrait<T>::category == DTypeCategory::QUANTIZED,
+        typename DTypeTrait<T>::ctype>;
 template <typename T>
-using NormalCType =
-        std::enable_if_t<DTypeTrait<T>::category != DTypeCategory::QUANTIZED,
-                         typename DTypeTrait<T>::ctype>;
+using NormalCType = std::enable_if_t<
+        DTypeTrait<T>::category != DTypeCategory::QUANTIZED,
+        typename DTypeTrait<T>::ctype>;
 
 template <typename T>
 inline float from(QuantizedCType<T> in, DType dtype) {
@@ -53,43 +53,38 @@ inline NormalCType<T> to(P in, DType) {
 
 template <typename type_dest, typename type_src>
 void do_cvt(const TensorND& dst, const TensorND& src) {
-    auto dptr = tensor_iter_valonly<typename DTypeTrait<type_dest>::ctype>(dst)
-                        .begin();
-    auto iter = tensor_iter_valonly<typename DTypeTrait<type_src>::ctype>(src)
-                        .begin();
+    auto dptr = tensor_iter_valonly<typename DTypeTrait<type_dest>::ctype>(dst).begin();
+    auto iter = tensor_iter_valonly<typename DTypeTrait<type_src>::ctype>(src).begin();
     size_t nr_elems = src.layout.total_nr_elems();
     while (iter.logical_offset() < nr_elems) {
-        *dptr = to<type_dest>(from<type_src>(*iter, src.layout.dtype),
-                              dst.layout.dtype);
+        *dptr = to<type_dest>(
+                from<type_src>(*iter, src.layout.dtype), dst.layout.dtype);
         ++dptr;
         ++iter;
     }
 }
 
 template <typename type_dest>
-void on_dest_ctype(HandleImpl* handle, const TensorND& dest,
-                   const TensorND& src) {
+void on_dest_ctype(HandleImpl* handle, const TensorND& dest, const TensorND& src) {
     switch (src.layout.dtype.enumv()) {
-#define cb(_dt)                                                            \
-    case DTypeTrait<_dt>::enumv: {                                         \
-        MIDOUT_BEGIN(megdnn_naive_typecvt, type_dest, _dt) {               \
-            MEGDNN_DISPATCH_CPU_KERN(handle,                               \
-                                     (do_cvt<type_dest, _dt>(dest, src))); \
-        }                                                                  \
-        MIDOUT_END();                                                      \
-        return;                                                            \
+#define cb(_dt)                                                                    \
+    case DTypeTrait<_dt>::enumv: {                                                 \
+        MIDOUT_BEGIN(megdnn_naive_typecvt, type_dest, _dt) {                       \
+            MEGDNN_DISPATCH_CPU_KERN(handle, (do_cvt<type_dest, _dt>(dest, src))); \
+        }                                                                          \
+        MIDOUT_END();                                                              \
+        return;                                                                    \
     }
         MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
         MEGDNN_FOREACH_QUANTIZED_DTYPE(cb)
         MEGDNN_FOREACH_QUANTIZED_LOWBIT_DTYPE(cb)
         cb(::megdnn::dtype::Bool)
 #undef cb
-        default:
-            megdnn_throw("bad dtype");
+                default : megdnn_throw("bad dtype");
     }
 }
 
-} // anonymous namespace
+}  // anonymous namespace
 
 void TypeCvtImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
     check_exec(src.layout, dst.layout);
@@ -106,8 +101,7 @@ void TypeCvtImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
         MEGDNN_FOREACH_QUANTIZED_LOWBIT_DTYPE(cb)
         cb(::megdnn::dtype::Bool)
 #undef cb
-        default:
-            megdnn_throw("bad dtype");
+                default : megdnn_throw("bad dtype");
     }
 }
 

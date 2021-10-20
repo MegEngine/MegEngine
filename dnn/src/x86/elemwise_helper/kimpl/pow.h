@@ -16,13 +16,12 @@ namespace megdnn {
 namespace x86 {
 
 /////////////////////// POW float only ////////////////////////////
-template <SIMDType simd_type, typename src_ctype,
-          typename dst_ctype = src_ctype>
+template <SIMDType simd_type, typename src_ctype, typename dst_ctype = src_ctype>
 struct PowOp : BinaryOpBase<src_ctype, dst_ctype> {
     using BinaryOpBase<src_ctype, dst_ctype>::BinaryOpBase;
     constexpr static size_t SIMD_WIDTH = 1;
-    void operator()(const src_ctype& src0, const src_ctype& src1,
-                    dst_ctype* dst) const {
+    void operator()(
+            const src_ctype& src0, const src_ctype& src1, dst_ctype* dst) const {
         *dst = operator()(src0, src1);
     }
     dst_ctype operator()(const src_ctype& src0, const src_ctype& src1) const {

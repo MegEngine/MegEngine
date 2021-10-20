@@ -23,5 +23,3 @@ void checksum_kernel_union4(uint32_t* dst, const uint32_t* src, int num_elems);
 #endif
 
 // vim: ft=cpp syntax=cpp.doxygen
-
-

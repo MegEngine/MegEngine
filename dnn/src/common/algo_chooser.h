@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 
 #pragma once
@@ -17,9 +18,25 @@
 #include <vector>
 
 #include "megdnn/common.h"
+#include "megdnn/heuristic_cache.h"
 #include "utils.h"
 
 namespace megdnn {
+
+template <class Opr, typename... Args>
+size_t get_dnn_workspace(Opr* opr, Args&&... args) {
+    TensorLayoutArray layouts{{args...}};
+    HeuristicCache::Key key{opr->handle(),  opr->get_opr_type(), layouts.data(),
+                            layouts.size(), &opr->param(),       sizeof(opr->param())};
+    auto rst = HeuristicCache::instance().get(key);
+    if (rst.policy.algo.valid()) {
+        return rst.workspace;
+    }
+
+    typename Opr::AlgoBase::SizeArgs size_args(opr, std::forward<Args>(args)...);
+    return get_algorithm(opr, std::forward<Args>(args)...)
+            ->get_workspace_in_bytes(size_args);
+}
 
 /*!
  * \brief get user-configured algorithm, or heuristic algorithm
@@ -31,12 +48,22 @@ typename Opr::AlgoBase* get_algorithm(Opr* opr, Args&&... args) {
     if (set.valid()) {
         ret = set;
     } else {
-        ret = opr->get_algorithm_info_heuristic(
-                std::forward<Args>(args)..., std::numeric_limits<size_t>::max(),
-                AlgoAttribute::DEFAULT, AlgoAttribute::DEFAULT).desc;
+        TensorLayoutArray layouts{{args...}};
+        HeuristicCache::Key key{opr->handle(),  opr->get_opr_type(),
+                                layouts.data(), layouts.size(),
+                                &opr->param(),  sizeof(opr->param())};
+        auto rst = HeuristicCache::instance().get(key);
+        if (rst.policy.algo.valid()) {
+            ret = rst.policy.algo;
+        } else {
+            ret = opr->get_algorithm_info_heuristic(
+                             std::forward<Args>(args)...,
+                             std::numeric_limits<size_t>::max(), AlgoAttribute::DEFAULT,
+                             AlgoAttribute::DEFAULT)
+                          .desc;
+        }
     }
-    return static_cast<typename Opr::AlgoBase*>(
-            opr->get_algorithm_from_desc(ret));
+    return static_cast<typename Opr::AlgoBase*>(opr->get_algorithm_from_desc(ret));
 }
 
 /*!
@@ -49,11 +76,9 @@ typename Opr::AlgoBase* get_algorithm_or_construct(Opr* opr, Args&&... args) {
     if (set.valid()) {
         return opr->algo_pack().construct_and_get_algo(set);
     } else {
-        return static_cast<typename Opr::AlgoBase*>(
-                opr->get_algorithm_heuristic(std::forward<Args>(args)...,
-                                             std::numeric_limits<size_t>::max(),
-                                             AlgoAttribute::DEFAULT,
-                                             AlgoAttribute::DEFAULT));
+        return static_cast<typename Opr::AlgoBase*>(opr->get_algorithm_heuristic(
+                std::forward<Args>(args)..., std::numeric_limits<size_t>::max(),
+                AlgoAttribute::DEFAULT, AlgoAttribute::DEFAULT));
     }
 }
 
@@ -70,9 +95,14 @@ std::vector<typename Opr::Algorithm*> get_all_algorithms(
             ret.push_back(i);
         }
     }
-    megdnn_assert(!ret.empty(), "no algorithm for %s",
-                  args.to_string().c_str());
     return ret;
+}
+template <class Opr>
+std::vector<typename Opr::Algorithm*> get_all_algorithms_safe(
+        const typename Opr::AlgoBase::SizeArgs& args) {
+    auto ret_safe = get_all_algorithms<Opr>(args);
+    megdnn_assert(!ret_safe.empty(), "no algorithm for %s", args.to_string().c_str());
+    return ret_safe;
 }
 
 /*!
@@ -94,24 +124,23 @@ typename Opr::Algorithm* get_algo_match_attribute(
 template <typename Opr>
 typename Opr::Algorithm* get_algo_match_attribute(
         const std::vector<typename Opr::AlgoBase*>& algos,
-        const typename Opr::AlgoBase::SizeArgs& args,
-        size_t workspace_limit_in_bytes, const char* name,
+        const typename Opr::AlgoBase::SizeArgs& args, size_t workspace_limit_in_bytes,
+        const char* name,
         const AlgoAttribute& positive_attr = AlgoAttribute::REPRODUCIBLE,
         const AlgoAttribute& negative_attr = AlgoAttribute::DEFAULT) {
     size_t min_workspace_limit_in_bytes = std::numeric_limits<size_t>::max();
     bool available_but_limited_by_workspace = false;
     bool available_but_attribute_mismatch = false;
     for (auto i : algos) {
-        if (i->is_available_attribute(args, positive_attr, negative_attr,
-                                         workspace_limit_in_bytes)) {
+        if (i->is_available_attribute(
+                    args, positive_attr, negative_attr, workspace_limit_in_bytes)) {
             return i;
         }
         if (i->is_available_attribute(args, positive_attr, negative_attr)) {
             if (i->get_workspace_in_bytes(args) > workspace_limit_in_bytes) {
                 available_but_limited_by_workspace = true;
-                min_workspace_limit_in_bytes =
-                        std::min(min_workspace_limit_in_bytes,
-                                 i->get_workspace_in_bytes(args));
+                min_workspace_limit_in_bytes = std::min(
+                        min_workspace_limit_in_bytes, i->get_workspace_in_bytes(args));
             }
         }
         if (i->is_available(args)) {
@@ -123,14 +152,14 @@ typename Opr::Algorithm* get_algo_match_attribute(
 
     MEGDNN_MARK_USED_VAR(name);
     if (available_but_limited_by_workspace) {
-        megdnn_throw(
-                ssprintf("no %s algorithm without attribute(%s) with "
-                         "attribute(%s) : %s workspace limit %zu is "
-                         "less than mini workspace limit %zu",
-                         name, Algorithm::attribute_str(negative_attr).c_str(),
-                         Algorithm::attribute_str(positive_attr).c_str(),
-                         args.to_string().c_str(), workspace_limit_in_bytes,
-                         min_workspace_limit_in_bytes));
+        megdnn_throw(ssprintf(
+                "no %s algorithm without attribute(%s) with "
+                "attribute(%s) : %s workspace limit %zu is "
+                "less than mini workspace limit %zu",
+                name, Algorithm::attribute_str(negative_attr).c_str(),
+                Algorithm::attribute_str(positive_attr).c_str(),
+                args.to_string().c_str(), workspace_limit_in_bytes,
+                min_workspace_limit_in_bytes));
     } else if (available_but_attribute_mismatch) {
         megdnn_throw(ssprintf(
                 "no %s algorithm without attribute(%s) with attribute(%s)", name,

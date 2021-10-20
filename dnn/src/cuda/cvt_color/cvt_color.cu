@@ -77,13 +77,12 @@ using namespace megcv;
 #define THREADS_X 256
 #define THREADS_Y 1
 
-#define U8_PROCESS_PER_THREADS_X 4
+#define U8_PROCESS_PER_THREADS_X  4
 #define F32_PROCESS_PER_THREADS_X 1
 
-__global__ void cvt_rgb2gray_8u_kernel(const uchar* src, uchar* dst,
-                                       const size_t rows, const size_t cols,
-                                       const size_t src_step,
-                                       const size_t dst_step) {
+__global__ void cvt_rgb2gray_8u_kernel(
+        const uchar* src, uchar* dst, const size_t rows, const size_t cols,
+        const size_t src_step, const size_t dst_step) {
     size_t t = blockIdx.x * blockDim.x + threadIdx.x;
 
     if (t < (rows * cols) / U8_PROCESS_PER_THREADS_X) {
@@ -95,17 +94,17 @@ __global__ void cvt_rgb2gray_8u_kernel(const uchar* src, uchar* dst,
         uchar temp_src[12];
         *((uint3*)temp_src) = *((uint3*)src);
 
-        temp_des[0] = (temp_src[0] * 4899 + temp_src[1] * 9617 +
-                       temp_src[2] * 1868 + (1 << 13)) >>
+        temp_des[0] = (temp_src[0] * 4899 + temp_src[1] * 9617 + temp_src[2] * 1868 +
+                       (1 << 13)) >>
                       14;
-        temp_des[1] = (temp_src[3] * 4899 + temp_src[4] * 9617 +
-                       temp_src[5] * 1868 + (1 << 13)) >>
+        temp_des[1] = (temp_src[3] * 4899 + temp_src[4] * 9617 + temp_src[5] * 1868 +
+                       (1 << 13)) >>
                       14;
-        temp_des[2] = (temp_src[6] * 4899 + temp_src[7] * 9617 +
-                       temp_src[8] * 1868 + (1 << 13)) >>
+        temp_des[2] = (temp_src[6] * 4899 + temp_src[7] * 9617 + temp_src[8] * 1868 +
+                       (1 << 13)) >>
                       14;
-        temp_des[3] = (temp_src[9] * 4899 + temp_src[10] * 9617 +
-                       temp_src[11] * 1868 + (1 << 13)) >>
+        temp_des[3] = (temp_src[9] * 4899 + temp_src[10] * 9617 + temp_src[11] * 1868 +
+                       (1 << 13)) >>
                       14;
 
         *((uint32_t*)dst) = *((uint32_t*)temp_des);
@@ -117,17 +116,15 @@ __global__ void cvt_rgb2gray_8u_kernel(const uchar* src, uchar* dst,
             dst += 1 * offset;
 
             for (int i = 0; i < rest; i++, src += 3, dst += 1)
-                dst[0] = (src[0] * 4899 + src[1] * 9617 + src[2] * 1868 +
-                          (1 << 13)) >>
+                dst[0] = (src[0] * 4899 + src[1] * 9617 + src[2] * 1868 + (1 << 13)) >>
                          14;
         }
     }
 }
 
-__global__ void cvt_rgb2gray_32f_kernel(const float* src, float* dst,
-                                        const size_t rows, const size_t cols,
-                                        const size_t src_step,
-                                        const size_t dst_step) {
+__global__ void cvt_rgb2gray_32f_kernel(
+        const float* src, float* dst, const size_t rows, const size_t cols,
+        const size_t src_step, const size_t dst_step) {
     size_t t = blockIdx.x * blockDim.x + threadIdx.x;
 
     if (t < rows * cols) {
@@ -138,17 +135,76 @@ __global__ void cvt_rgb2gray_32f_kernel(const float* src, float* dst,
         float temp_src[3], temp_dst;
         *((float3*)temp_src) = *((float3*)src);
 
-        temp_dst = temp_src[0] * 0.299f + temp_src[1] * 0.587f +
-                   temp_src[2] * 0.114f;
+        temp_dst = temp_src[0] * 0.299f + temp_src[1] * 0.587f + temp_src[2] * 0.114f;
 
         dst[0] = temp_dst;
     }
 }
 
-__global__ void cvt_gray2rgb_8u_kernel(const uchar* src, uchar* dst,
-                                       const size_t rows, const size_t cols,
-                                       const size_t src_step,
-                                       const size_t dst_step) {
+__global__ void cvt_bgr2gray_8u_kernel(
+        const uchar* src, uchar* dst, const size_t rows, const size_t cols,
+        const size_t src_step, const size_t dst_step) {
+    size_t t = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if (t < (rows * cols) / U8_PROCESS_PER_THREADS_X) {
+        size_t offset = t * U8_PROCESS_PER_THREADS_X;
+        src += 3 * offset;
+        dst += 1 * offset;
+
+        uchar temp_des[4];
+        uchar temp_src[12];
+        *((uint3*)temp_src) = *((uint3*)src);
+
+        temp_des[0] = (temp_src[0] * 1868 + temp_src[1] * 9617 + temp_src[2] * 4899 +
+                       (1 << 13)) >>
+                      14;
+        temp_des[1] = (temp_src[3] * 1868 + temp_src[4] * 9617 + temp_src[5] * 4899 +
+                       (1 << 13)) >>
+                      14;
+        temp_des[2] = (temp_src[6] * 1868 + temp_src[7] * 9617 + temp_src[8] * 4899 +
+                       (1 << 13)) >>
+                      14;
+        temp_des[3] = (temp_src[9] * 1868 + temp_src[10] * 9617 + temp_src[11] * 4899 +
+                       (1 << 13)) >>
+                      14;
+
+        *((uint32_t*)dst) = *((uint32_t*)temp_des);
+    } else if (t == (rows * cols) / U8_PROCESS_PER_THREADS_X) {
+        size_t rest = (rows * cols) % U8_PROCESS_PER_THREADS_X;
+        if (rest != 0) {
+            size_t offset = t * U8_PROCESS_PER_THREADS_X;
+            src += 3 * offset;
+            dst += 1 * offset;
+
+            for (int i = 0; i < rest; i++, src += 3, dst += 1)
+                dst[0] = (src[0] * 1868 + src[1] * 9617 + src[2] * 4899 + (1 << 13)) >>
+                         14;
+        }
+    }
+}
+
+__global__ void cvt_bgr2gray_32f_kernel(
+        const float* src, float* dst, const size_t rows, const size_t cols,
+        const size_t src_step, const size_t dst_step) {
+    size_t t = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if (t < rows * cols) {
+        size_t offset = t;
+        src += offset * 3;
+        dst += offset * 1;
+
+        float temp_src[3], temp_dst;
+        *((float3*)temp_src) = *((float3*)src);
+
+        temp_dst = temp_src[0] * 0.114f + temp_src[1] * 0.587f + temp_src[2] * 0.299f;
+
+        dst[0] = temp_dst;
+    }
+}
+
+__global__ void cvt_gray2rgb_8u_kernel(
+        const uchar* src, uchar* dst, const size_t rows, const size_t cols,
+        const size_t src_step, const size_t dst_step) {
     size_t t = blockIdx.x * blockDim.x + threadIdx.x;
 
     if (t < (rows * cols) / U8_PROCESS_PER_THREADS_X) {
@@ -191,10 +247,9 @@ __global__ void cvt_gray2rgb_8u_kernel(const uchar* src, uchar* dst,
     }
 }
 
-__global__ void cvt_gray2rgb_32f_kernel(const float* src, float* dst,
-                                        const size_t rows, const size_t cols,
-                                        const size_t src_step,
-                                        const size_t dst_step) {
+__global__ void cvt_gray2rgb_32f_kernel(
+        const float* src, float* dst, const size_t rows, const size_t cols,
+        const size_t src_step, const size_t dst_step) {
     size_t t = blockIdx.x * blockDim.x + threadIdx.x;
 
     if (t < rows * cols) {
@@ -214,10 +269,9 @@ __global__ void cvt_gray2rgb_32f_kernel(const float* src, float* dst,
 
 #define descale(x, n) (((x) + (1 << ((n)-1))) >> (n))
 
-__global__ void cvt_rgb2yuv_8u_kernel(const uchar* src, uchar* dst,
-                                      const size_t rows, const size_t cols,
-                                      const size_t src_step,
-                                      const size_t dst_step) {
+__global__ void cvt_rgb2yuv_8u_kernel(
+        const uchar* src, uchar* dst, const size_t rows, const size_t cols,
+        const size_t src_step, const size_t dst_step) {
     size_t t = blockIdx.x * blockDim.x + threadIdx.x;
 
     const int yuv_shift = 14;
@@ -233,7 +287,8 @@ __global__ void cvt_rgb2yuv_8u_kernel(const uchar* src, uchar* dst,
         *((uint3*)temp_src) = *((uint3*)src);
 
         int p = 0;
-        int y = descale(temp_src[0 + p] * coef[0] + temp_src[1 + p] * coef[1] +
+        int y =
+                descale(temp_src[0 + p] * coef[0] + temp_src[1 + p] * coef[1] +
                                 temp_src[2 + p] * coef[2],
                         yuv_shift);
         int cr = descale((temp_src[0 + p] - y) * coef[3] + delta, yuv_shift);
@@ -243,9 +298,10 @@ __global__ void cvt_rgb2yuv_8u_kernel(const uchar* src, uchar* dst,
         temp_dst[2 + p] = saturate(cb, 0, 255);
 
         p += 3;
-        y = descale(temp_src[0 + p] * coef[0] + temp_src[1 + p] * coef[1] +
-                            temp_src[2 + p] * coef[2],
-                    yuv_shift);
+        y =
+                descale(temp_src[0 + p] * coef[0] + temp_src[1 + p] * coef[1] +
+                                temp_src[2 + p] * coef[2],
+                        yuv_shift);
         cr = descale((temp_src[0 + p] - y) * coef[3] + delta, yuv_shift);
         cb = descale((temp_src[2 + p] - y) * coef[4] + delta, yuv_shift);
         temp_dst[0 + p] = saturate(y, 0, 255);
@@ -253,9 +309,10 @@ __global__ void cvt_rgb2yuv_8u_kernel(const uchar* src, uchar* dst,
         temp_dst[2 + p] = saturate(cb, 0, 255);
 
         p += 3;
-        y = descale(temp_src[0 + p] * coef[0] + temp_src[1 + p] * coef[1] +
-                            temp_src[2 + p] * coef[2],
-                    yuv_shift);
+        y =
+                descale(temp_src[0 + p] * coef[0] + temp_src[1 + p] * coef[1] +
+                                temp_src[2 + p] * coef[2],
+                        yuv_shift);
         cr = descale((temp_src[0 + p] - y) * coef[3] + delta, yuv_shift);
         cb = descale((temp_src[2 + p] - y) * coef[4] + delta, yuv_shift);
         temp_dst[0 + p] = saturate(y, 0, 255);
@@ -263,9 +320,10 @@ __global__ void cvt_rgb2yuv_8u_kernel(const uchar* src, uchar* dst,
         temp_dst[2 + p] = saturate(cb, 0, 255);
 
         p += 3;
-        y = descale(temp_src[0 + p] * coef[0] + temp_src[1 + p] * coef[1] +
-                            temp_src[2 + p] * coef[2],
-                    yuv_shift);
+        y =
+                descale(temp_src[0 + p] * coef[0] + temp_src[1 + p] * coef[1] +
+                                temp_src[2 + p] * coef[2],
+                        yuv_shift);
         cr = descale((temp_src[0 + p] - y) * coef[3] + delta, yuv_shift);
         cb = descale((temp_src[2 + p] - y) * coef[4] + delta, yuv_shift);
         temp_dst[0 + p] = saturate(y, 0, 255);
@@ -284,13 +342,12 @@ __global__ void cvt_rgb2yuv_8u_kernel(const uchar* src, uchar* dst,
                 uchar temp_src[3], temp_dst[3];
                 *((uchar3*)temp_src) = *((uchar3*)src);
 
-                int Y = descale(temp_src[0] * coef[0] + temp_src[1] * coef[1] +
+                int Y =
+                        descale(temp_src[0] * coef[0] + temp_src[1] * coef[1] +
                                         temp_src[2] * coef[2],
                                 yuv_shift);
-                int Cr =
-                        descale((temp_src[0] - Y) * coef[3] + delta, yuv_shift);
-                int Cb =
-                        descale((temp_src[2] - Y) * coef[4] + delta, yuv_shift);
+                int Cr = descale((temp_src[0] - Y) * coef[3] + delta, yuv_shift);
+                int Cb = descale((temp_src[2] - Y) * coef[4] + delta, yuv_shift);
 
                 temp_dst[0] = saturate(Y, 0, 255);
                 temp_dst[1] = saturate(Cr, 0, 255);
@@ -302,10 +359,9 @@ __global__ void cvt_rgb2yuv_8u_kernel(const uchar* src, uchar* dst,
     }
 }
 
-__global__ void cvt_rgb2yuv_32f_kernel(const float* src, float* dst,
-                                       const size_t rows, const size_t cols,
-                                       const size_t src_step,
-                                       const size_t dst_step) {
+__global__ void cvt_rgb2yuv_32f_kernel(
+        const float* src, float* dst, const size_t rows, const size_t cols,
+        const size_t src_step, const size_t dst_step) {
     size_t t = blockIdx.x * blockDim.x + threadIdx.x;
 
     const float coef[] = {0.114f, 0.587f, 0.299f, 0.492f, 0.877f};
@@ -319,8 +375,7 @@ __global__ void cvt_rgb2yuv_32f_kernel(const float* src, float* dst,
         float temp_src[3], temp_dst[3];
         *((float3*)temp_src) = *((float3*)src);
 
-        float Y = temp_src[0] * coef[0] + temp_src[1] * coef[1] +
-                  temp_src[2] * coef[2];
+        float Y = temp_src[0] * coef[0] + temp_src[1] * coef[1] + temp_src[2] * coef[2];
         temp_dst[0] = Y;
         temp_dst[1] = (temp_src[0] - Y) * coef[3] + delta;
         temp_dst[2] = (temp_src[2] - Y) * coef[4] + delta;
@@ -329,10 +384,9 @@ __global__ void cvt_rgb2yuv_32f_kernel(const float* src, float* dst,
     }
 }
 
-__global__ void cvt_yuv2rgb_8u_kernel(const uchar* src, uchar* dst,
-                                      const size_t rows, const size_t cols,
-                                      const size_t src_step,
-                                      const size_t dst_step) {
+__global__ void cvt_yuv2rgb_8u_kernel(
+        const uchar* src, uchar* dst, const size_t rows, const size_t cols,
+        const size_t src_step, const size_t dst_step) {
     size_t t = blockIdx.x * blockDim.x + threadIdx.x;
 
     const int yuv_shift = 14;
@@ -350,10 +404,9 @@ __global__ void cvt_yuv2rgb_8u_kernel(const uchar* src, uchar* dst,
         int p = 0;
         int R = temp_src[0 + p] +
                 descale((temp_src[1 + p] - delta) * coef[0], yuv_shift);
-        int G = temp_src[0 + p] +
-                descale((temp_src[2 + p] - delta) * coef[2] +
-                                (temp_src[1 + p] - delta) * coef[1],
-                        yuv_shift);
+        int G = temp_src[0 + p] + descale((temp_src[2 + p] - delta) * coef[2] +
+                                                  (temp_src[1 + p] - delta) * coef[1],
+                                          yuv_shift);
         int B = temp_src[0 + p] +
                 descale((temp_src[2 + p] - delta) * coef[3], yuv_shift);
 
@@ -362,42 +415,33 @@ __global__ void cvt_yuv2rgb_8u_kernel(const uchar* src, uchar* dst,
         temp_dst[2 + p] = saturate(B, 0, 255);
 
         p += 3;
-        R = temp_src[0 + p] +
-            descale((temp_src[1 + p] - delta) * coef[0], yuv_shift);
-        G = temp_src[0 + p] +
-            descale((temp_src[2 + p] - delta) * coef[2] +
-                            (temp_src[1 + p] - delta) * coef[1],
-                    yuv_shift);
-        B = temp_src[0 + p] +
-            descale((temp_src[2 + p] - delta) * coef[3], yuv_shift);
+        R = temp_src[0 + p] + descale((temp_src[1 + p] - delta) * coef[0], yuv_shift);
+        G = temp_src[0 + p] + descale((temp_src[2 + p] - delta) * coef[2] +
+                                              (temp_src[1 + p] - delta) * coef[1],
+                                      yuv_shift);
+        B = temp_src[0 + p] + descale((temp_src[2 + p] - delta) * coef[3], yuv_shift);
 
         temp_dst[0 + p] = saturate(R, 0, 255);
         temp_dst[1 + p] = saturate(G, 0, 255);
         temp_dst[2 + p] = saturate(B, 0, 255);
 
         p += 3;
-        R = temp_src[0 + p] +
-            descale((temp_src[1 + p] - delta) * coef[0], yuv_shift);
-        G = temp_src[0 + p] +
-            descale((temp_src[2 + p] - delta) * coef[2] +
-                            (temp_src[1 + p] - delta) * coef[1],
-                    yuv_shift);
-        B = temp_src[0 + p] +
-            descale((temp_src[2 + p] - delta) * coef[3], yuv_shift);
+        R = temp_src[0 + p] + descale((temp_src[1 + p] - delta) * coef[0], yuv_shift);
+        G = temp_src[0 + p] + descale((temp_src[2 + p] - delta) * coef[2] +
+                                              (temp_src[1 + p] - delta) * coef[1],
+                                      yuv_shift);
+        B = temp_src[0 + p] + descale((temp_src[2 + p] - delta) * coef[3], yuv_shift);
 
         temp_dst[0 + p] = saturate(R, 0, 255);
         temp_dst[1 + p] = saturate(G, 0, 255);
         temp_dst[2 + p] = saturate(B, 0, 255);
 
         p += 3;
-        R = temp_src[0 + p] +
-            descale((temp_src[1 + p] - delta) * coef[0], yuv_shift);
-        G = temp_src[0 + p] +
-            descale((temp_src[2 + p] - delta) * coef[2] +
-                            (temp_src[1 + p] - delta) * coef[1],
-                    yuv_shift);
-        B = temp_src[0 + p] +
-            descale((temp_src[2 + p] - delta) * coef[3], yuv_shift);
+        R = temp_src[0 + p] + descale((temp_src[1 + p] - delta) * coef[0], yuv_shift);
+        G = temp_src[0 + p] + descale((temp_src[2 + p] - delta) * coef[2] +
+                                              (temp_src[1 + p] - delta) * coef[1],
+                                      yuv_shift);
+        B = temp_src[0 + p] + descale((temp_src[2 + p] - delta) * coef[3], yuv_shift);
 
         temp_dst[0 + p] = saturate(R, 0, 255);
         temp_dst[1 + p] = saturate(G, 0, 255);
@@ -415,9 +459,8 @@ __global__ void cvt_yuv2rgb_8u_kernel(const uchar* src, uchar* dst,
                 uchar Y = src[0], Cr = src[1], Cb = src[2];
 
                 int R = Y + descale((Cr - delta) * coef[0], yuv_shift);
-                int G = Y +
-                        descale((Cb - delta) * coef[2] + (Cr - delta) * coef[1],
-                                yuv_shift);
+                int G = Y + descale((Cb - delta) * coef[2] + (Cr - delta) * coef[1],
+                                    yuv_shift);
                 int B = Y + descale((Cb - delta) * coef[3], yuv_shift);
 
                 dst[0] = saturate(R, 0, 255);
@@ -428,10 +471,9 @@ __global__ void cvt_yuv2rgb_8u_kernel(const uchar* src, uchar* dst,
     }
 }
 
-__global__ void cvt_yuv2rgb_32f_kernel(const float* src, float* dst,
-                                       const size_t rows, const size_t cols,
-                                       const size_t src_step,
-                                       const size_t dst_step) {
+__global__ void cvt_yuv2rgb_32f_kernel(
+        const float* src, float* dst, const size_t rows, const size_t cols,
+        const size_t src_step, const size_t dst_step) {
     size_t t = blockIdx.x * blockDim.x + threadIdx.x;
 
     const float coef[] = {2.032f, -0.395f, -0.581f, 1.140f};
@@ -457,11 +499,9 @@ __global__ void cvt_yuv2rgb_32f_kernel(const float* src, float* dst,
 }
 
 // convert planar or semi-planar YUV to gray. data type: uint8
-__global__ void cvt_yuv2gray_psp_8u_kernel(const uchar* src, uchar* dst,
-                                           const size_t dst_rows,
-                                           const size_t dst_cols,
-                                           const size_t src_step,
-                                           const size_t dst_step) {
+__global__ void cvt_yuv2gray_psp_8u_kernel(
+        const uchar* src, uchar* dst, const size_t dst_rows, const size_t dst_cols,
+        const size_t src_step, const size_t dst_step) {
     int c = (blockIdx.x * blockDim.x + threadIdx.x) * U8_PROCESS_PER_THREADS_X;
     int r = blockIdx.y * blockDim.y + threadIdx.y;
     src += r * src_step + c;
@@ -477,11 +517,9 @@ __global__ void cvt_yuv2gray_psp_8u_kernel(const uchar* src, uchar* dst,
 // is_rgb: convert to RGB if true, otherwise convert to BGR
 // is_nv12: decode src as YUV_NV12 if true, YUV_NV21 otherwise
 template <bool is_rgb, bool is_nv12>
-__global__ void cvt_yuv2rgbbgr_sp_8u_kernel(const uchar* src, uchar* dst,
-                                            const size_t dst_rows,
-                                            const size_t dst_cols,
-                                            const size_t src_step,
-                                            const size_t dst_step) {
+__global__ void cvt_yuv2rgbbgr_sp_8u_kernel(
+        const uchar* src, uchar* dst, const size_t dst_rows, const size_t dst_cols,
+        const size_t src_step, const size_t dst_step) {
     int c = (blockIdx.x * blockDim.x + threadIdx.x) * 2;
     int r = (blockIdx.y * blockDim.y + threadIdx.y) * 2;
     if (c >= dst_cols || r >= dst_rows)
@@ -550,11 +588,9 @@ __global__ void cvt_yuv2rgbbgr_sp_8u_kernel(const uchar* src, uchar* dst,
 // is_rgb: convert to RGB if true, otherwise convert to BGR
 // is_nv12: decode src as YUV_NV12 if true, YUV_NV21 otherwise
 template <bool is_rgb, bool is_yu12>
-__global__ void cvt_yuv2rgbbgr_p_8u_kernel(const uchar* src, uchar* dst,
-                                           const size_t dst_rows,
-                                           const size_t dst_cols,
-                                           const size_t src_step,
-                                           const size_t dst_step) {
+__global__ void cvt_yuv2rgbbgr_p_8u_kernel(
+        const uchar* src, uchar* dst, const size_t dst_rows, const size_t dst_cols,
+        const size_t src_step, const size_t dst_step) {
     int c = (blockIdx.x * blockDim.x + threadIdx.x) * 2;
     int r = (blockIdx.y * blockDim.y + threadIdx.y) * 2;
     if (c >= dst_cols || r >= dst_rows)
@@ -619,13 +655,12 @@ __global__ void cvt_yuv2rgbbgr_p_8u_kernel(const uchar* src, uchar* dst,
 #undef SET_COLOR
 }
 
-#define CALL_CVT_OPR_8U_KERNEL(_func)                              \
-    {                                                              \
-        dim3 THREADS(THREADS_X);                                   \
-        dim3 BLOCKS(DIVUP(src_cols* src_rows,                      \
-                          THREADS_X* U8_PROCESS_PER_THREADS_X));   \
-        cvt_##_func##_8u_kernel<<<BLOCKS, THREADS, 0, stream>>>(   \
-                src, dst, src_rows, src_cols, src_step, dst_step); \
+#define CALL_CVT_OPR_8U_KERNEL(_func)                                                \
+    {                                                                                \
+        dim3 THREADS(THREADS_X);                                                     \
+        dim3 BLOCKS(DIVUP(src_cols* src_rows, THREADS_X* U8_PROCESS_PER_THREADS_X)); \
+        cvt_##_func##_8u_kernel<<<BLOCKS, THREADS, 0, stream>>>(                     \
+                src, dst, src_rows, src_cols, src_step, dst_step);                   \
     }
 
 #define CALL_CVT_OPR_32F_KERNEL(_func)                             \
@@ -637,51 +672,48 @@ __global__ void cvt_yuv2rgbbgr_p_8u_kernel(const uchar* src, uchar* dst,
     }
 
 // convert planar or semi-planar YUV to gray, data tyoe: uint8
-#define CALL_CVT_YUV2GRAY_PSP_OPR_8U_KERNEL                               \
-    {                                                                     \
-        dim3 THREADS(THREADS_X, 1);                                       \
-        dim3 BLOCKS(DIVUP(dst_cols, THREADS_X* U8_PROCESS_PER_THREADS_X), \
-                    dst_rows);                                            \
-        cvt_yuv2gray_psp_8u_kernel<<<BLOCKS, THREADS, 0, stream>>>(       \
-                src, dst, dst_rows, dst_cols, src_step, dst_step);        \
+#define CALL_CVT_YUV2GRAY_PSP_OPR_8U_KERNEL                                          \
+    {                                                                                \
+        dim3 THREADS(THREADS_X, 1);                                                  \
+        dim3 BLOCKS(DIVUP(dst_cols, THREADS_X* U8_PROCESS_PER_THREADS_X), dst_rows); \
+        cvt_yuv2gray_psp_8u_kernel<<<BLOCKS, THREADS, 0, stream>>>(                  \
+                src, dst, dst_rows, dst_cols, src_step, dst_step);                   \
     }
 
 // convert semi-planar YUV to RGB or BGR. data type: uint8
 // is_rgb: convert to RGB if true, otherwise convert to BGR
 // is_nv12: decode src as YUV_NV12 if true, YUV_NV21 otherwise
-#define CALL_CVT_YUV2RGBBGR_SP_OPR_8U_KERNEL(is_rgb, is_nv12)                  \
-    {                                                                          \
-        dim3 THREADS(THREADS_X, THREADS_Y);                                    \
-        dim3 BLOCKS(DIVUP(dst_cols / 2, THREADS_X),                            \
-                    DIVUP(dst_rows / 2, THREADS_Y));                           \
-        cvt_yuv2rgbbgr_sp_8u_kernel<is_rgb, is_nv12>                           \
-                <<<BLOCKS, THREADS, 0, stream>>>(src, dst, dst_rows, dst_cols, \
-                                                 src_step, dst_step);          \
+#define CALL_CVT_YUV2RGBBGR_SP_OPR_8U_KERNEL(is_rgb, is_nv12)                         \
+    {                                                                                 \
+        dim3 THREADS(THREADS_X, THREADS_Y);                                           \
+        dim3 BLOCKS(DIVUP(dst_cols / 2, THREADS_X), DIVUP(dst_rows / 2, THREADS_Y));  \
+        cvt_yuv2rgbbgr_sp_8u_kernel<is_rgb, is_nv12><<<BLOCKS, THREADS, 0, stream>>>( \
+                src, dst, dst_rows, dst_cols, src_step, dst_step);                    \
     }
 
 // convert planar YUV to RGB or BGR. data type: uint8
 // is_rgb: convert to RGB if true, otherwise convert to BGR
 // is_yu12: decode src as YUV_YU12 if true, YUV_YV12 otherwise
-#define CALL_CVT_YUV2RGBBGR_P_OPR_8U_KERNEL(is_rgb, is_yu12)                   \
-    {                                                                          \
-        dim3 THREADS(THREADS_X, THREADS_Y);                                    \
-        dim3 BLOCKS(DIVUP(dst_cols / 2, THREADS_X),                            \
-                    DIVUP(dst_rows / 2, THREADS_Y));                           \
-        cvt_yuv2rgbbgr_p_8u_kernel<is_rgb, is_yu12>                            \
-                <<<BLOCKS, THREADS, 0, stream>>>(src, dst, dst_rows, dst_cols, \
-                                                 src_step, dst_step);          \
+#define CALL_CVT_YUV2RGBBGR_P_OPR_8U_KERNEL(is_rgb, is_yu12)                         \
+    {                                                                                \
+        dim3 THREADS(THREADS_X, THREADS_Y);                                          \
+        dim3 BLOCKS(DIVUP(dst_cols / 2, THREADS_X), DIVUP(dst_rows / 2, THREADS_Y)); \
+        cvt_yuv2rgbbgr_p_8u_kernel<is_rgb, is_yu12><<<BLOCKS, THREADS, 0, stream>>>( \
+                src, dst, dst_rows, dst_cols, src_step, dst_step);                   \
     }
 
 using namespace param_enumv;
 
-void cvt_color_8u_proxy(const uchar* src, uchar* dst, const size_t src_rows,
-                        const size_t src_cols, const size_t src_step,
-                        const size_t dst_rows, const size_t dst_cols,
-                        const size_t dst_step, const uint32_t mode,
-                        cudaStream_t stream) {
+void cvt_color_8u_proxy(
+        const uchar* src, uchar* dst, const size_t src_rows, const size_t src_cols,
+        const size_t src_step, const size_t dst_rows, const size_t dst_cols,
+        const size_t dst_step, const uint32_t mode, cudaStream_t stream) {
     switch (mode) {
         case CvtColor::Mode::RGB2GRAY:
             CALL_CVT_OPR_8U_KERNEL(rgb2gray)
+            break;
+        case CvtColor::Mode::BGR2GRAY:
+            CALL_CVT_OPR_8U_KERNEL(bgr2gray)
             break;
         case CvtColor::Mode::RGB2YUV:
             CALL_CVT_OPR_8U_KERNEL(rgb2yuv)
@@ -728,16 +760,18 @@ void cvt_color_8u_proxy(const uchar* src, uchar* dst, const size_t src_rows,
     }
 }
 
-void cvt_color_32f_proxy(const float* src, float* dst, const size_t src_rows,
-                         const size_t src_cols, const size_t src_step,
-                         const size_t dst_rows, const size_t dst_cols,
-                         const size_t dst_step, const uint32_t mode,
-                         cudaStream_t stream) {
+void cvt_color_32f_proxy(
+        const float* src, float* dst, const size_t src_rows, const size_t src_cols,
+        const size_t src_step, const size_t dst_rows, const size_t dst_cols,
+        const size_t dst_step, const uint32_t mode, cudaStream_t stream) {
     MEGDNN_MARK_USED_VAR(dst_rows);
     MEGDNN_MARK_USED_VAR(dst_cols);
     switch (mode) {
         case CvtColor::Mode::RGB2GRAY:
             CALL_CVT_OPR_32F_KERNEL(rgb2gray)
+            break;
+        case CvtColor::Mode::BGR2GRAY:
+            CALL_CVT_OPR_32F_KERNEL(bgr2gray)
             break;
         case CvtColor::Mode::RGB2YUV:
             CALL_CVT_OPR_32F_KERNEL(rgb2yuv)

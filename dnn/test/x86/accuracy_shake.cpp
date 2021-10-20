@@ -36,22 +36,15 @@ TEST_F(X86, SHAKE_CONV_BIAS_FORWARD) {
     // convbias without z
     checker.exec({{6, 16, 32, 32}, {64, 16, 3, 3}, {1, 64, 1, 1}, {}, {}});
     // convbias with z
-    checker.exec({{6, 16, 32, 32},
-                  {64, 16, 3, 3},
-                  {1, 64, 1, 1},
-                  {6, 64, 30, 30},
-                  {}});
+    checker.exec({{6, 16, 32, 32}, {64, 16, 3, 3}, {1, 64, 1, 1}, {6, 64, 30, 30}, {}});
     // group
     ConvBias::Param param;
     param.sparse = ConvBias::Param::Sparse::GROUP;
     checker.set_param(param);
     checker.exec({{6, 16, 32, 32}, {2, 32, 8, 3, 3}, {}, {}, {}});
     checker.exec({{6, 16, 32, 32}, {2, 32, 8, 3, 3}, {1, 64, 1, 1}, {}, {}});
-    checker.exec({{6, 16, 32, 32},
-                  {2, 32, 8, 3, 3},
-                  {1, 64, 1, 1},
-                  {6, 64, 30, 30},
-                  {}});
+    checker.exec(
+            {{6, 16, 32, 32}, {2, 32, 8, 3, 3}, {1, 64, 1, 1}, {6, 64, 30, 30}, {}});
 }
 
 TEST_F(X86, SHAKE_CONV_BIAS_FORWARD_INT8) {
@@ -71,22 +64,15 @@ TEST_F(X86, SHAKE_CONV_BIAS_FORWARD_INT8) {
     // convbias without z
     checker.exec({{6, 16, 32, 32}, {64, 16, 3, 3}, {1, 64, 1, 1}, {}, {}});
     // convbias with z
-    checker.exec({{6, 16, 32, 32},
-                  {64, 16, 3, 3},
-                  {1, 64, 1, 1},
-                  {6, 64, 30, 30},
-                  {}});
+    checker.exec({{6, 16, 32, 32}, {64, 16, 3, 3}, {1, 64, 1, 1}, {6, 64, 30, 30}, {}});
     // group
     ConvBias::Param param;
     param.sparse = ConvBias::Param::Sparse::GROUP;
     checker.set_param(param);
     checker.exec({{6, 16, 32, 32}, {2, 32, 8, 3, 3}, {}, {}, {}});
     checker.exec({{6, 16, 32, 32}, {2, 32, 8, 3, 3}, {1, 64, 1, 1}, {}, {}});
-    checker.exec({{6, 16, 32, 32},
-                  {2, 32, 8, 3, 3},
-                  {1, 64, 1, 1},
-                  {6, 64, 30, 30},
-                  {}});
+    checker.exec(
+            {{6, 16, 32, 32}, {2, 32, 8, 3, 3}, {1, 64, 1, 1}, {6, 64, 30, 30}, {}});
 }
 
 TEST_F(X86, SHAKE_MATRIX_MUL_FORWARD) {

@@ -45,8 +45,9 @@ namespace matmul_12x4x1 {
  *
  *                     Accumulator
  */
-static void kern_12x4(const int16_t* packA, const int16_t* packB, int K,
-                      int32_t* output, int LDC, bool is_first_k) {
+static void kern_12x4(
+        const int16_t* packA, const int16_t* packB, int K, int32_t* output, int LDC,
+        bool is_first_k) {
     const int16_t* a_ptr = packA;
     const int16_t* b_ptr = packB;
 
@@ -184,14 +185,14 @@ static void kern_12x4(const int16_t* packA, const int16_t* packB, int K,
               [outptr_row4] "+r"(outptr_row4), [outptr_row6] "+r"(outptr_row6),
               [outptr_row8] "+r"(outptr_row8), [outptr_row10] "+r"(outptr_row10)
             :
-            : "d0", "d1", "d2", "d3", "d4", "d5", "d8", "d9", "d10", "d11",
-              "d12", "d13", "d14", "d15", "d16", "d18", "d20", "d21", "d22",
-              "d24", "d26", "d28", "d30", "cc", "memory");
+            : "d0", "d1", "d2", "d3", "d4", "d5", "d8", "d9", "d10", "d11", "d12",
+              "d13", "d14", "d15", "d16", "d18", "d20", "d21", "d22", "d24", "d26",
+              "d28", "d30", "cc", "memory");
 }
 
-static void kern_12x123(const int16_t* packA, const int16_t* packB, int K,
-                        int32_t* output, int LDC, bool is_first_k,
-                        size_t n_remain) {
+static void kern_12x123(
+        const int16_t* packA, const int16_t* packB, int K, int32_t* output, int LDC,
+        bool is_first_k, size_t n_remain) {
     const int16_t* a_ptr = packA;
     const int16_t* b_ptr = packB;
     int asmLDC = LDC * sizeof(int32_t);
@@ -525,14 +526,15 @@ static void kern_12x123(const int16_t* packA, const int16_t* packB, int K,
               [outptr_row6] "+r"(outptr_row6), [outptr_row8] "+r"(outptr_row8),
               [outptr_row10] "+r"(outptr_row10)
             :
-            : "d0", "d1", "d2", "d3", "d4", "d5", "d8", "d9", "d10", "d11",
-              "d12", "d13", "d14", "d15", "d16", "d17", "d18", "d19", "d20",
-              "d21", "d22", "d23", "d24", "d25", "d26", "d27", "d28", "d29",
-              "d30", "d31", "cc", "memory");
+            : "d0", "d1", "d2", "d3", "d4", "d5", "d8", "d9", "d10", "d11", "d12",
+              "d13", "d14", "d15", "d16", "d17", "d18", "d19", "d20", "d21", "d22",
+              "d23", "d24", "d25", "d26", "d27", "d28", "d29", "d30", "d31", "cc",
+              "memory");
 }
 
-static void kern_4x4(const int16_t* packA, const int16_t* packB, int K,
-                     int32_t* output, int LDC, bool is_first_k) {
+static void kern_4x4(
+        const int16_t* packA, const int16_t* packB, int K, int32_t* output, int LDC,
+        bool is_first_k) {
     const int16_t* a_ptr = packA;
     const int16_t* b_ptr = packB;
 
@@ -574,14 +576,14 @@ static void kern_4x4(const int16_t* packA, const int16_t* packB, int K,
               [outptr_row1] "+r"(outptr_row1), [outptr_row2] "+r"(outptr_row2),
               [outptr_row3] "+r"(outptr_row3)
             :
-            : "d0", "d1", "d2", "d3", "d4", "d5", "d8", "d9", "d10", "d11",
-              "d12", "d13", "d14", "d15", "d16", "d18", "d20", "d21", "d22",
-              "d24", "d26", "d28", "d30", "cc", "memory");
+            : "d0", "d1", "d2", "d3", "d4", "d5", "d8", "d9", "d10", "d11", "d12",
+              "d13", "d14", "d15", "d16", "d18", "d20", "d21", "d22", "d24", "d26",
+              "d28", "d30", "cc", "memory");
 }
 
-static void kern_4x123(const int16_t* packA, const int16_t* packB, int K,
-                       int32_t* output, int LDC, bool is_first_k,
-                       int n_remain) {
+static void kern_4x123(
+        const int16_t* packA, const int16_t* packB, int K, int32_t* output, int LDC,
+        bool is_first_k, int n_remain) {
     const int16_t* a_ptr = packA;
     const int16_t* b_ptr = packB;
 
@@ -674,13 +676,14 @@ static void kern_4x123(const int16_t* packA, const int16_t* packB, int K,
               [outptr_row0] "+r"(outptr_row0), [outptr_row1] "+r"(outptr_row1),
               [outptr_row2] "+r"(outptr_row2), [outptr_row3] "+r"(outptr_row3)
             :
-            : "d0", "d1", "d2", "d3", "d4", "d5", "d8", "d9", "d10", "d11",
-              "d12", "d13", "d14", "d15", "d16", "d18", "d20", "d21", "d22",
-              "d24", "d26", "d28", "d30", "cc", "memory");
+            : "d0", "d1", "d2", "d3", "d4", "d5", "d8", "d9", "d10", "d11", "d12",
+              "d13", "d14", "d15", "d16", "d18", "d20", "d21", "d22", "d24", "d26",
+              "d28", "d30", "cc", "memory");
 }
 
-static void kern_1x4(const int16_t* packA, const int16_t* packB, int K,
-                     int32_t* output, int LDC, bool is_first_k) {
+static void kern_1x4(
+        const int16_t* packA, const int16_t* packB, int K, int32_t* output, int LDC,
+        bool is_first_k) {
     MEGDNN_MARK_USED_VAR(LDC);
     const int16_t* a_ptr = packA;
     const int16_t* b_ptr = packB;
@@ -713,9 +716,9 @@ static void kern_1x4(const int16_t* packA, const int16_t* packB, int K,
  *this kern can hanle 1xk mul kx1 kx2 kx3  get 1x1 1x2 1x3
  *123 stands for n remain 1 2 3
  ************************************************/
-static void kern_1x123(const int16_t* packA, const int16_t* packB, int K,
-                       int32_t* output, int LDC, bool is_first_k,
-                       int n_remain) {
+static void kern_1x123(
+        const int16_t* packA, const int16_t* packB, int K, int32_t* output, int LDC,
+        bool is_first_k, int n_remain) {
     MEGDNN_MARK_USED_VAR(LDC);
     const int16_t* a_ptr = packA;
     const int16_t* b_ptr = packB;
@@ -771,9 +774,9 @@ static void kern_1x123(const int16_t* packA, const int16_t* packB, int K,
             : "d0", "d3", "d8", "d9", "cc", "memory");
 }
 
-static void gemm_s16x16x32_12x4_pack_A_n(dt_int16* outptr,
-                                         const dt_int16* inptr, int ldin,
-                                         int y0, int ymax, int k0, int kmax) {
+static void gemm_s16x16x32_12x4_pack_A_n(
+        dt_int16* outptr, const dt_int16* inptr, int ldin, int y0, int ymax, int k0,
+        int kmax) {
     int y = y0;
     int K = kmax - k0;
     for (; y + 11 < ymax; y += 12) {
@@ -792,15 +795,15 @@ static void gemm_s16x16x32_12x4_pack_A_n(dt_int16* outptr,
 
         int k = k0;
         for (; k + 3 < kmax; k += 4) {
-            transpose_12x4_1_h(inptr0, inptr1, inptr2, inptr3, inptr4, inptr5,
-                               inptr6, inptr7, inptr8, inptr9, inptr10, inptr11,
-                               ldin, outptr);
+            transpose_12x4_1_h(
+                    inptr0, inptr1, inptr2, inptr3, inptr4, inptr5, inptr6, inptr7,
+                    inptr8, inptr9, inptr10, inptr11, ldin, outptr);
         }
 
         for (; k < kmax; k++) {
-            transpose_12x1(inptr0, inptr1, inptr2, inptr3, inptr4, inptr5,
-                           inptr6, inptr7, inptr8, inptr9, inptr10, inptr11,
-                           outptr);
+            transpose_12x1(
+                    inptr0, inptr1, inptr2, inptr3, inptr4, inptr5, inptr6, inptr7,
+                    inptr8, inptr9, inptr10, inptr11, outptr);
         }
     }
 
@@ -825,10 +828,9 @@ static void gemm_s16x16x32_12x4_pack_A_n(dt_int16* outptr,
     }
 }
 
-static void gemm_s16x16x32_12x4_transpose_pack_A_n(dt_int16* out,
-                                                   const dt_int16* in, int ldin,
-                                                   int x0, int xmax, int k0,
-                                                   int kmax) {
+static void gemm_s16x16x32_12x4_transpose_pack_A_n(
+        dt_int16* out, const dt_int16* in, int ldin, int x0, int xmax, int k0,
+        int kmax) {
     const int ksize = kmax - k0;
     const int ksize12 = ksize * 12;
     const int ksize4 = ksize * 4;
@@ -836,8 +838,7 @@ static void gemm_s16x16x32_12x4_transpose_pack_A_n(dt_int16* out,
     int16_t* outptr_interleave = out;
     int16_t* outptr_base = out;
     int16_t* outptr_times4_base = out + (xmax - x0) / 12 * ksize12;
-    int16_t* outptr_times1_base =
-            outptr_times4_base + ((xmax - x0) % 12) / 4 * ksize4;
+    int16_t* outptr_times1_base = outptr_times4_base + ((xmax - x0) % 12) / 4 * ksize4;
     int k = k0;
     for (; k + 3 < kmax; k += 4) {
         const int16_t* inptr0 = in + k * ldin + x0;
@@ -851,15 +852,13 @@ static void gemm_s16x16x32_12x4_transpose_pack_A_n(dt_int16* out,
         for (; x + 11 < xmax; x += 12) {
             outptr_interleave = outptr;
 
-            interleave_4x12_1_h(inptr0, inptr1, inptr2, inptr3,
-                                outptr_interleave);
+            interleave_4x12_1_h(inptr0, inptr1, inptr2, inptr3, outptr_interleave);
             outptr += ksize12;
         }
         outptr = outptr_times4_base;
         for (; x + 3 < xmax; x += 4) {
             outptr_interleave = outptr;
-            interleave_4x4_1_h(inptr0, inptr1, inptr2, inptr3,
-                               outptr_interleave);
+            interleave_4x4_1_h(inptr0, inptr1, inptr2, inptr3, outptr_interleave);
             outptr += ksize4;
         }
 
@@ -904,9 +903,9 @@ static void gemm_s16x16x32_12x4_transpose_pack_A_n(dt_int16* out,
     }
 }
 
-static void gemm_s16x16x32_12x4_pack_B_n(dt_int16* out, const dt_int16* in,
-                                         int ldin, int x0, int xmax, int k0,
-                                         int kmax) {
+static void gemm_s16x16x32_12x4_pack_B_n(
+        dt_int16* out, const dt_int16* in, int ldin, int x0, int xmax, int k0,
+        int kmax) {
     const int ksize = kmax - k0;
     const int ksize4 = ksize * 4;
     int16_t* outptr = out;
@@ -923,14 +922,13 @@ static void gemm_s16x16x32_12x4_pack_B_n(dt_int16* out, const dt_int16* in,
         outptr = outptr_base;
         for (; x + 3 < xmax; x += 4) {
             outptr_interleave = outptr;
-            interleave_4x4_1_h(inptr0, inptr1, inptr2, inptr3,
-                               outptr_interleave);
+            interleave_4x4_1_h(inptr0, inptr1, inptr2, inptr3, outptr_interleave);
             outptr += ksize4;
         }
         if (x < xmax) {
             outptr_interleave = outptr;
-            interleave_4(inptr0, inptr1, inptr2, inptr3, outptr_interleave, 4,
-                         xmax - x);
+            interleave_4(
+                    inptr0, inptr1, inptr2, inptr3, outptr_interleave, 4, xmax - x);
             outptr += ksize4;
         }
         outptr_base += 4 * 4;
@@ -958,10 +956,9 @@ static void gemm_s16x16x32_12x4_pack_B_n(dt_int16* out, const dt_int16* in,
     }
 }
 
-static void gemm_s16x16x32_12x4_transpose_pack_B_n(dt_int16* outptr,
-                                                   const dt_int16* inptr,
-                                                   int ldin, int y0, int ymax,
-                                                   int k0, int kmax) {
+static void gemm_s16x16x32_12x4_transpose_pack_B_n(
+        dt_int16* outptr, const dt_int16* inptr, int ldin, int y0, int ymax, int k0,
+        int kmax) {
     int K = kmax - k0;
     int y = y0;
     int16_t* out = outptr;

@@ -47,20 +47,19 @@ void check_mkl_error(const char* func) {
                 name = "UNKNOWN";
         }
         MEGDNN_MARK_USED_VAR(name);
-        megdnn_throw(
-                ssprintf("MKL func %s reported error: code=%d(%s);possibly due "
-                         "to input data corruption.",
-                         func, err, name));
+        megdnn_throw(ssprintf(
+                "MKL func %s reported error: code=%d(%s);possibly due "
+                "to input data corruption.",
+                func, err, name));
     }
 }
 #endif
 }  // namespace
 
 #if MEGDNN_X86_WITH_MKL
-#define DISPATCH_MKL(_mode, _func)                             \
-    case Mode::_mode:                                          \
-        MEGDNN_DISPATCH_CPU_KERN_OPR(_func(n, sptr, dptr);     \
-                                     check_mkl_error(#_func)); \
+#define DISPATCH_MKL(_mode, _func)                                                   \
+    case Mode::_mode:                                                                \
+        MEGDNN_DISPATCH_CPU_KERN_OPR(_func(n, sptr, dptr); check_mkl_error(#_func)); \
         return true
 #endif
 
@@ -85,15 +84,15 @@ void check_mkl_error(const char* func) {
     } while (0)
 
 bool ElemwiseImpl::exec_unary() {
-#define DISPATCH_UNARY(_mode, _type, _simd_type, _op)                          \
-    case Mode::_mode: {                                                        \
-        thin_function<void(const _type*, _type*, DType, DType, size_t)> run =  \
-                OpCallerUnary<_op<_simd_type, _type, _type>, _simd_type>::run; \
-        MEGDNN_DISPATCH_CPU_KERN_OPR(                                          \
-                run(static_cast<const _type*>(src0.raw_ptr),                   \
-                    static_cast<_type*>(dst_tensor.raw_ptr),                   \
-                    src0.layout.dtype, dst_tensor.layout.dtype, nr_elems));    \
-        return true;                                                           \
+#define DISPATCH_UNARY(_mode, _type, _simd_type, _op)                           \
+    case Mode::_mode: {                                                         \
+        thin_function<void(const _type*, _type*, DType, DType, size_t)> run =   \
+                OpCallerUnary<_op<_simd_type, _type, _type>, _simd_type>::run;  \
+        MEGDNN_DISPATCH_CPU_KERN_OPR(                                           \
+                run(static_cast<const _type*>(src0.raw_ptr),                    \
+                    static_cast<_type*>(dst_tensor.raw_ptr), src0.layout.dtype, \
+                    dst_tensor.layout.dtype, nr_elems));                        \
+        return true;                                                            \
     }
 
     if (m_src->size() != 1)
@@ -143,8 +142,7 @@ bool ElemwiseImpl::exec_unary() {
 #if MEGDNN_X86_WITH_MKL
     if (m_dst->layout.dtype == dtype::Float32()) {
         auto n = elparam[0].layout.shape[0];
-        auto sptr = elparam[0].ptr<dt_float32>(),
-             dptr = m_dst->ptr<dt_float32>();
+        auto sptr = elparam[0].ptr<dt_float32>(), dptr = m_dst->ptr<dt_float32>();
 
         auto mkl_dispatch = [&]() {
             switch (param().mode) {
@@ -171,8 +169,7 @@ bool ElemwiseImpl::exec_unary() {
 }
 
 bool ElemwiseImpl::exec_binary() {
-    if (m_src->size() != 2 ||
-        m_src->front().layout.dtype != m_dst->layout.dtype ||
+    if (m_src->size() != 2 || m_src->front().layout.dtype != m_dst->layout.dtype ||
         m_src->back().layout.dtype != m_dst->layout.dtype) {
         return false;
     }
@@ -210,19 +207,18 @@ bool ElemwiseImpl::exec_binary() {
     // Case 1: size of src0 and src1 are exactly match
     if (is_vector(src0.layout) && is_vector(src1.layout)) {
         megdnn_assert(n == m_dst->layout.total_nr_elems());
-#define DISPATCH_BINARY(_mode, _type, _simd_type, _op)                       \
-    case Mode::_mode: {                                                      \
-        thin_function<void(const _type*, const _type*, _type*, DType, DType, \
-                           DType, size_t)>                                   \
-                run = OpCallerBinary<_op<_simd_type, _type, _type>,          \
-                                     _simd_type, VEC_VEC>::run;              \
-        MEGDNN_DISPATCH_CPU_KERN_OPR(                                        \
-                run(static_cast<const _type*>(src0.raw_ptr),                 \
-                    static_cast<const _type*>(src1.raw_ptr),                 \
-                    static_cast<_type*>(dst.raw_ptr), src0.layout.dtype,     \
-                    src1.layout.dtype, dst.layout.dtype,                     \
-                    src0.layout.total_nr_elems()));                          \
-        return true;                                                         \
+#define DISPATCH_BINARY(_mode, _type, _simd_type, _op)                               \
+    case Mode::_mode: {                                                              \
+        thin_function<void(                                                          \
+                const _type*, const _type*, _type*, DType, DType, DType, size_t)>    \
+                run = OpCallerBinary<                                                \
+                        _op<_simd_type, _type, _type>, _simd_type, VEC_VEC>::run;    \
+        MEGDNN_DISPATCH_CPU_KERN_OPR(run(                                            \
+                static_cast<const _type*>(src0.raw_ptr),                             \
+                static_cast<const _type*>(src1.raw_ptr),                             \
+                static_cast<_type*>(dst.raw_ptr), src0.layout.dtype,                 \
+                src1.layout.dtype, dst.layout.dtype, src0.layout.total_nr_elems())); \
+        return true;                                                                 \
     }
         auto&& dst = *m_dst;
         DISPATCH_SIMD_TYPE;
@@ -231,28 +227,25 @@ bool ElemwiseImpl::exec_binary() {
 
     // Case 2: vector + scalar
     {
-#define DISPATCH_BINARY(_mode, _type, _simd_type, _op)                      \
-    case Mode::_mode: {                                                     \
-        thin_function<void(const _type*, const _type, _type*, DType, DType, \
-                           DType, size_t)>                                  \
-                run = OpCallerBinary<_op<_simd_type, _type, _type>,         \
-                                     _simd_type, VEC_SCALAR>::run;          \
-        MEGDNN_DISPATCH_CPU_KERN_OPR(                                       \
-                run(static_cast<const _type*>(src0.raw_ptr),                \
-                    static_cast<const _type*>(src1.raw_ptr)[0],             \
-                    static_cast<_type*>(dst.raw_ptr), src0.layout.dtype,    \
-                    src1.layout.dtype, dst.layout.dtype,                    \
-                    src0.layout.total_nr_elems()));                         \
-        return true;                                                        \
+#define DISPATCH_BINARY(_mode, _type, _simd_type, _op)                               \
+    case Mode::_mode: {                                                              \
+        thin_function<void(                                                          \
+                const _type*, const _type, _type*, DType, DType, DType, size_t)>     \
+                run = OpCallerBinary<                                                \
+                        _op<_simd_type, _type, _type>, _simd_type, VEC_SCALAR>::run; \
+        MEGDNN_DISPATCH_CPU_KERN_OPR(run(                                            \
+                static_cast<const _type*>(src0.raw_ptr),                             \
+                static_cast<const _type*>(src1.raw_ptr)[0],                          \
+                static_cast<_type*>(dst.raw_ptr), src0.layout.dtype,                 \
+                src1.layout.dtype, dst.layout.dtype, src0.layout.total_nr_elems())); \
+        return true;                                                                 \
     }
 
-        bool normal_case =
-                is_vector(src0.layout) && is_broadcasted_scalar(src1.layout);
+        bool normal_case = is_vector(src0.layout) && is_broadcasted_scalar(src1.layout);
         bool swap_case = false;
         bool commutable = mode_trait().commutable;
         if (!normal_case && commutable) {
-            swap_case = is_vector(src1.layout) &&
-                        is_broadcasted_scalar(src0.layout);
+            swap_case = is_vector(src1.layout) && is_broadcasted_scalar(src0.layout);
         }
         if (normal_case || swap_case) {
             auto &lhs = src0, &rhs = src1;
@@ -264,19 +257,18 @@ bool ElemwiseImpl::exec_binary() {
 #undef DISPATCH_BINARY
 
         // scalar + vector : only for nonswap op
-#define DISPATCH_BINARY(_mode, _type, _simd_type, _op)                      \
-    case Mode::_mode: {                                                     \
-        thin_function<void(const _type, const _type*, _type*, DType, DType, \
-                           DType, size_t)>                                  \
-                run = OpCallerBinary<_op<_simd_type, _type, _type>,         \
-                                     _simd_type, SCALAR_VEC>::run;          \
-        MEGDNN_DISPATCH_CPU_KERN_OPR(                                       \
-                run(static_cast<const _type*>(src0.raw_ptr)[0],             \
-                    static_cast<const _type*>(src1.raw_ptr),                \
-                    static_cast<_type*>(dst.raw_ptr), src0.layout.dtype,    \
-                    src1.layout.dtype, dst.layout.dtype,                    \
-                    src1.layout.total_nr_elems()));                         \
-        return true;                                                        \
+#define DISPATCH_BINARY(_mode, _type, _simd_type, _op)                               \
+    case Mode::_mode: {                                                              \
+        thin_function<void(                                                          \
+                const _type, const _type*, _type*, DType, DType, DType, size_t)>     \
+                run = OpCallerBinary<                                                \
+                        _op<_simd_type, _type, _type>, _simd_type, SCALAR_VEC>::run; \
+        MEGDNN_DISPATCH_CPU_KERN_OPR(run(                                            \
+                static_cast<const _type*>(src0.raw_ptr)[0],                          \
+                static_cast<const _type*>(src1.raw_ptr),                             \
+                static_cast<_type*>(dst.raw_ptr), src0.layout.dtype,                 \
+                src1.layout.dtype, dst.layout.dtype, src1.layout.total_nr_elems())); \
+        return true;                                                                 \
     }
 
         if (!commutable && is_vector(src1.layout) &&
@@ -289,19 +281,19 @@ bool ElemwiseImpl::exec_binary() {
 
     // Case 3: NCHW + 1C11
     {
-#define DISPATCH_BINARY(_mode, _type, _simd_type, _op)                       \
-    case Mode::_mode: {                                                      \
-        thin_function<void(const _type*, const _type*, _type*, DType, DType, \
-                           DType, size_t, size_t, size_t)>                   \
-                run = OpCallerBinary<_op<_simd_type, _type, _type>,          \
-                                     _simd_type, VEC_BCAST101>::run;         \
-        MEGDNN_DISPATCH_CPU_KERN_OPR(                                        \
-                run(static_cast<const _type*>(src0.raw_ptr),                 \
-                    static_cast<const _type*>(src1.raw_ptr),                 \
-                    static_cast<_type*>(dst.raw_ptr), src0.layout.dtype,     \
-                    src1.layout.dtype, dst.layout.dtype, binfo.x, binfo.y,   \
-                    binfo.z));                                               \
-        return true;                                                         \
+#define DISPATCH_BINARY(_mode, _type, _simd_type, _op)                                 \
+    case Mode::_mode: {                                                                \
+        thin_function<void(                                                            \
+                const _type*, const _type*, _type*, DType, DType, DType, size_t,       \
+                size_t, size_t)>                                                       \
+                run = OpCallerBinary<                                                  \
+                        _op<_simd_type, _type, _type>, _simd_type, VEC_BCAST101>::run; \
+        MEGDNN_DISPATCH_CPU_KERN_OPR(                                                  \
+                run(static_cast<const _type*>(src0.raw_ptr),                           \
+                    static_cast<const _type*>(src1.raw_ptr),                           \
+                    static_cast<_type*>(dst.raw_ptr), src0.layout.dtype,               \
+                    src1.layout.dtype, dst.layout.dtype, binfo.x, binfo.y, binfo.z));  \
+        return true;                                                                   \
     }
 
         BroadcastChannelInfo binfo;
@@ -323,19 +315,19 @@ bool ElemwiseImpl::exec_binary() {
         }
 #undef DISPATCH_BINARY
 
-#define DISPATCH_BINARY(_mode, _type, _simd_type, _op)                       \
-    case Mode::_mode: {                                                      \
-        thin_function<void(const _type*, const _type*, _type*, DType, DType, \
-                           DType, size_t, size_t, size_t)>                   \
-                run = OpCallerBinary<_op<_simd_type, _type, _type>,          \
-                                     _simd_type, BCAST101_VEC>::run;         \
-        MEGDNN_DISPATCH_CPU_KERN_OPR(                                        \
-                run(static_cast<const _type*>(src0.raw_ptr),                 \
-                    static_cast<const _type*>(src1.raw_ptr),                 \
-                    static_cast<_type*>(dst.raw_ptr), src0.layout.dtype,     \
-                    src1.layout.dtype, dst.layout.dtype, binfo.x, binfo.y,   \
-                    binfo.z));                                               \
-        return true;                                                         \
+#define DISPATCH_BINARY(_mode, _type, _simd_type, _op)                                 \
+    case Mode::_mode: {                                                                \
+        thin_function<void(                                                            \
+                const _type*, const _type*, _type*, DType, DType, DType, size_t,       \
+                size_t, size_t)>                                                       \
+                run = OpCallerBinary<                                                  \
+                        _op<_simd_type, _type, _type>, _simd_type, BCAST101_VEC>::run; \
+        MEGDNN_DISPATCH_CPU_KERN_OPR(                                                  \
+                run(static_cast<const _type*>(src0.raw_ptr),                           \
+                    static_cast<const _type*>(src1.raw_ptr),                           \
+                    static_cast<_type*>(dst.raw_ptr), src0.layout.dtype,               \
+                    src1.layout.dtype, dst.layout.dtype, binfo.x, binfo.y, binfo.z));  \
+        return true;                                                                   \
     }
         // BCAST_101 + VEC : only for nonswap op
         if (!commutable && is_vector(src1.layout) &&
@@ -346,24 +338,25 @@ bool ElemwiseImpl::exec_binary() {
 
 #undef DISPATCH_BINARY
 
-#define DISPATCH_BINARY(_mode, _type, _simd_type, _op)                        \
-    case Mode::_mode: {                                                       \
-        thin_function<void(const _type*, const _type*, _type*, DType, DType,  \
-                           DType, size_t, size_t, size_t, size_t)>            \
-                run = OpCallerBinary<_op<_simd_type, _type, _type>,           \
-                                     _simd_type, BCAST101x_VEC>::run;         \
-        MEGDNN_DISPATCH_CPU_KERN_OPR(                                         \
-                run(static_cast<const _type*>(src0.raw_ptr),                  \
-                    static_cast<const _type*>(src1.raw_ptr),                  \
-                    static_cast<_type*>(dst.raw_ptr), src0.layout.dtype,      \
-                    src1.layout.dtype, dst.layout.dtype, batch_size, binfo.x, \
-                    binfo.y, binfo.z));                                       \
-        return true;                                                          \
+#define DISPATCH_BINARY(_mode, _type, _simd_type, _op)                                 \
+    case Mode::_mode: {                                                                \
+        thin_function<void(                                                            \
+                const _type*, const _type*, _type*, DType, DType, DType, size_t,       \
+                size_t, size_t, size_t)>                                               \
+                run = OpCallerBinary<                                                  \
+                        _op<_simd_type, _type, _type>, _simd_type,                     \
+                        BCAST101x_VEC>::run;                                           \
+        MEGDNN_DISPATCH_CPU_KERN_OPR(                                                  \
+                run(static_cast<const _type*>(src0.raw_ptr),                           \
+                    static_cast<const _type*>(src1.raw_ptr),                           \
+                    static_cast<_type*>(dst.raw_ptr), src0.layout.dtype,               \
+                    src1.layout.dtype, dst.layout.dtype, batch_size, binfo.x, binfo.y, \
+                    binfo.z));                                                         \
+        return true;                                                                   \
     }
         {
-            bool normal_case =
-                    is_vector(src1.layout) &&
-                    is_broadcastedx_channel_like<8>(src0.layout, binfo);
+            bool normal_case = is_vector(src1.layout) &&
+                               is_broadcastedx_channel_like<8>(src0.layout, binfo);
             bool swap_case = false;
             bool commutable = mode_trait().commutable;
             if (!normal_case && commutable) {
@@ -371,8 +364,8 @@ bool ElemwiseImpl::exec_binary() {
                             is_broadcastedx_channel_like<8>(src1.layout, binfo);
             }
 
-            if ((swap_case || normal_case) &&
-                src0.layout.dtype == dtype::Float32() && binfo.z == 8) {
+            if ((swap_case || normal_case) && src0.layout.dtype == dtype::Float32() &&
+                binfo.z == 8) {
                 auto &lhs = src0, &rhs = src1;
                 if (swap_case) {
                     std::swap(lhs, rhs);
@@ -386,8 +379,9 @@ bool ElemwiseImpl::exec_binary() {
                 } else {
                     switch (param().mode) {
                         DISPATCH_BINARY(ADD, dt_float32, SIMDType::NONE, AddOp);
-                        DISPATCH_BINARY(FUSE_ADD_RELU, dt_float32,
-                                        SIMDType::NONE, FuseAddReluOp);
+                        DISPATCH_BINARY(
+                                FUSE_ADD_RELU, dt_float32, SIMDType::NONE,
+                                FuseAddReluOp);
                         default:
                             break;
                     }
@@ -425,22 +419,22 @@ bool ElemwiseImpl::exec_ternary_fma3() {
     auto &src0 = elparam[0], &src1 = elparam[1], &src2 = elparam[2];
 
     // Case 1: shape of (src0, src2) and src1 are exactly match
-    if (is_vector(src0.layout) && is_vector(src1.layout) &&
-        is_vector(src2.layout)) {
-#define DISPATCH_TERNARY(_mode, _type, _simd_type, _op)                      \
-    case Mode::_mode: {                                                      \
-        thin_function<void(const _type*, const _type*, const _type*, _type*, \
-                           DType, DType, DType, DType, size_t)>              \
-                run = OpCallerTernary<_op<_simd_type, _type, _type>,         \
-                                      _simd_type, VEC_VEC_VEC>::run;         \
-        MEGDNN_DISPATCH_CPU_KERN_OPR(                                        \
-                run(static_cast<const _type*>(src0.raw_ptr),                 \
-                    static_cast<const _type*>(src1.raw_ptr),                 \
-                    static_cast<const _type*>(src2.raw_ptr),                 \
-                    static_cast<_type*>(dst.raw_ptr), src0.layout.dtype,     \
-                    src1.layout.dtype, src2.layout.dtype, dst.layout.dtype,  \
-                    src0.layout.total_nr_elems()));                          \
-        return true;                                                         \
+    if (is_vector(src0.layout) && is_vector(src1.layout) && is_vector(src2.layout)) {
+#define DISPATCH_TERNARY(_mode, _type, _simd_type, _op)                                \
+    case Mode::_mode: {                                                                \
+        thin_function<void(                                                            \
+                const _type*, const _type*, const _type*, _type*, DType, DType, DType, \
+                DType, size_t)>                                                        \
+                run = OpCallerTernary<                                                 \
+                        _op<_simd_type, _type, _type>, _simd_type, VEC_VEC_VEC>::run;  \
+        MEGDNN_DISPATCH_CPU_KERN_OPR(                                                  \
+                run(static_cast<const _type*>(src0.raw_ptr),                           \
+                    static_cast<const _type*>(src1.raw_ptr),                           \
+                    static_cast<const _type*>(src2.raw_ptr),                           \
+                    static_cast<_type*>(dst.raw_ptr), src0.layout.dtype,               \
+                    src1.layout.dtype, src2.layout.dtype, dst.layout.dtype,            \
+                    src0.layout.total_nr_elems()));                                    \
+        return true;                                                                   \
     }
 
         auto&& dst = *m_dst;
@@ -454,20 +448,22 @@ bool ElemwiseImpl::exec_ternary_fma3() {
         bool normal_case =
                 is_vector(src0.layout) && is_vector(src1.layout) && c_is_scalar;
         if (normal_case) {
-#define DISPATCH_TERNARY(_mode, _type, _simd_type, _op)                     \
-    case Mode::_mode: {                                                     \
-        thin_function<void(const _type*, const _type*, const _type, _type*, \
-                           DType, DType, DType, DType, size_t)>             \
-                run = OpCallerTernary<_op<_simd_type, _type, _type>,        \
-                                      _simd_type, VEC_VEC_SCALAR>::run;     \
-        MEGDNN_DISPATCH_CPU_KERN_OPR(                                       \
-                run(static_cast<const _type*>(src0.raw_ptr),                \
-                    static_cast<const _type*>(src1.raw_ptr),                \
-                    static_cast<const _type*>(src2.raw_ptr)[0],             \
-                    static_cast<_type*>(dst.raw_ptr), src0.layout.dtype,    \
-                    src1.layout.dtype, src2.layout.dtype, dst.layout.dtype, \
-                    src0.layout.total_nr_elems()));                         \
-        return true;                                                        \
+#define DISPATCH_TERNARY(_mode, _type, _simd_type, _op)                               \
+    case Mode::_mode: {                                                               \
+        thin_function<void(                                                           \
+                const _type*, const _type*, const _type, _type*, DType, DType, DType, \
+                DType, size_t)>                                                       \
+                run = OpCallerTernary<                                                \
+                        _op<_simd_type, _type, _type>, _simd_type,                    \
+                        VEC_VEC_SCALAR>::run;                                         \
+        MEGDNN_DISPATCH_CPU_KERN_OPR(                                                 \
+                run(static_cast<const _type*>(src0.raw_ptr),                          \
+                    static_cast<const _type*>(src1.raw_ptr),                          \
+                    static_cast<const _type*>(src2.raw_ptr)[0],                       \
+                    static_cast<_type*>(dst.raw_ptr), src0.layout.dtype,              \
+                    src1.layout.dtype, src2.layout.dtype, dst.layout.dtype,           \
+                    src0.layout.total_nr_elems()));                                   \
+        return true;                                                                  \
     }
 
             auto&& dst = *m_dst;
@@ -483,21 +479,22 @@ bool ElemwiseImpl::exec_ternary_fma3() {
                            is_broadcasted_channel_like(src0.layout, binfo) &&
                            src0.layout.eq_layout(src2.layout);
         if (normal_case) {
-#define DISPATCH_TERNARY(_mode, _type, _simd_type, _op)                        \
-    case Mode::_mode: {                                                        \
-        thin_function<void(const _type*, const _type*, const _type*, _type*,   \
-                           DType, DType, DType, DType, size_t, size_t,         \
-                           size_t)>                                            \
-                run = OpCallerTernary<_op<_simd_type, _type, _type>,           \
-                                      _simd_type, BCAST101_VEC_BCAST101>::run; \
-        MEGDNN_DISPATCH_CPU_KERN_OPR(                                          \
-                run(static_cast<const _type*>(src0.raw_ptr),                   \
-                    static_cast<const _type*>(src1.raw_ptr),                   \
-                    static_cast<const _type*>(src2.raw_ptr),                   \
-                    static_cast<_type*>(dst.raw_ptr), src0.layout.dtype,       \
-                    src1.layout.dtype, src2.layout.dtype, dst.layout.dtype,    \
-                    binfo.x, binfo.y, binfo.z));                               \
-        return true;                                                           \
+#define DISPATCH_TERNARY(_mode, _type, _simd_type, _op)                                \
+    case Mode::_mode: {                                                                \
+        thin_function<void(                                                            \
+                const _type*, const _type*, const _type*, _type*, DType, DType, DType, \
+                DType, size_t, size_t, size_t)>                                        \
+                run = OpCallerTernary<                                                 \
+                        _op<_simd_type, _type, _type>, _simd_type,                     \
+                        BCAST101_VEC_BCAST101>::run;                                   \
+        MEGDNN_DISPATCH_CPU_KERN_OPR(                                                  \
+                run(static_cast<const _type*>(src0.raw_ptr),                           \
+                    static_cast<const _type*>(src1.raw_ptr),                           \
+                    static_cast<const _type*>(src2.raw_ptr),                           \
+                    static_cast<_type*>(dst.raw_ptr), src0.layout.dtype,               \
+                    src1.layout.dtype, src2.layout.dtype, dst.layout.dtype, binfo.x,   \
+                    binfo.y, binfo.z));                                                \
+        return true;                                                                   \
     }
 
             auto&& dst = *m_dst;
@@ -513,21 +510,22 @@ bool ElemwiseImpl::exec_ternary_fma3() {
                            src0.layout.eq_layout(src2.layout) &&
                            is_broadcasted_channel_like(src1.layout, binfo);
         if (normal_case) {
-#define DISPATCH_TERNARY(_mode, _type, _simd_type, _op)                      \
-    case Mode::_mode: {                                                      \
-        thin_function<void(const _type*, const _type*, const _type*, _type*, \
-                           DType, DType, DType, DType, size_t, size_t,       \
-                           size_t)>                                          \
-                run = OpCallerTernary<_op<_simd_type, _type, _type>,         \
-                                      _simd_type, VEC_BCAST101_VEC>::run;    \
-        MEGDNN_DISPATCH_CPU_KERN_OPR(                                        \
-                run(static_cast<const _type*>(src0.raw_ptr),                 \
-                    static_cast<const _type*>(src1.raw_ptr),                 \
-                    static_cast<const _type*>(src2.raw_ptr),                 \
-                    static_cast<_type*>(dst.raw_ptr), src0.layout.dtype,     \
-                    src1.layout.dtype, src2.layout.dtype, dst.layout.dtype,  \
-                    binfo.x, binfo.y, binfo.z));                             \
-        return true;                                                         \
+#define DISPATCH_TERNARY(_mode, _type, _simd_type, _op)                                \
+    case Mode::_mode: {                                                                \
+        thin_function<void(                                                            \
+                const _type*, const _type*, const _type*, _type*, DType, DType, DType, \
+                DType, size_t, size_t, size_t)>                                        \
+                run = OpCallerTernary<                                                 \
+                        _op<_simd_type, _type, _type>, _simd_type,                     \
+                        VEC_BCAST101_VEC>::run;                                        \
+        MEGDNN_DISPATCH_CPU_KERN_OPR(                                                  \
+                run(static_cast<const _type*>(src0.raw_ptr),                           \
+                    static_cast<const _type*>(src1.raw_ptr),                           \
+                    static_cast<const _type*>(src2.raw_ptr),                           \
+                    static_cast<_type*>(dst.raw_ptr), src0.layout.dtype,               \
+                    src1.layout.dtype, src2.layout.dtype, dst.layout.dtype, binfo.x,   \
+                    binfo.y, binfo.z));                                                \
+        return true;                                                                   \
     }
 
             auto&& dst = *m_dst;
@@ -541,20 +539,22 @@ bool ElemwiseImpl::exec_ternary_fma3() {
         bool normal_case = is_vector(src0.layout) && is_vector(src2.layout) &&
                            is_broadcasted_scalar(src1.layout);
         if (normal_case) {
-#define DISPATCH_TERNARY(_mode, _type, _simd_type, _op)                     \
-    case Mode::_mode: {                                                     \
-        thin_function<void(const _type*, const _type, const _type*, _type*, \
-                           DType, DType, DType, DType, size_t)>             \
-                run = OpCallerTernary<_op<_simd_type, _type, _type>,        \
-                                      _simd_type, VEC_SCALAR_VEC>::run;     \
-        MEGDNN_DISPATCH_CPU_KERN_OPR(                                       \
-                run(static_cast<const _type*>(src0.raw_ptr),                \
-                    static_cast<const _type*>(src1.raw_ptr)[0],             \
-                    static_cast<const _type*>(src2.raw_ptr),                \
-                    static_cast<_type*>(dst.raw_ptr), src0.layout.dtype,    \
-                    src1.layout.dtype, src2.layout.dtype, dst.layout.dtype, \
-                    src0.layout.total_nr_elems()));                         \
-        return true;                                                        \
+#define DISPATCH_TERNARY(_mode, _type, _simd_type, _op)                               \
+    case Mode::_mode: {                                                               \
+        thin_function<void(                                                           \
+                const _type*, const _type, const _type*, _type*, DType, DType, DType, \
+                DType, size_t)>                                                       \
+                run = OpCallerTernary<                                                \
+                        _op<_simd_type, _type, _type>, _simd_type,                    \
+                        VEC_SCALAR_VEC>::run;                                         \
+        MEGDNN_DISPATCH_CPU_KERN_OPR(                                                 \
+                run(static_cast<const _type*>(src0.raw_ptr),                          \
+                    static_cast<const _type*>(src1.raw_ptr)[0],                       \
+                    static_cast<const _type*>(src2.raw_ptr),                          \
+                    static_cast<_type*>(dst.raw_ptr), src0.layout.dtype,              \
+                    src1.layout.dtype, src2.layout.dtype, dst.layout.dtype,           \
+                    src0.layout.total_nr_elems()));                                   \
+        return true;                                                                  \
     }
 
             auto&& dst = *m_dst;
@@ -568,20 +568,22 @@ bool ElemwiseImpl::exec_ternary_fma3() {
                            is_broadcasted_scalar(src1.layout) &&
                            is_broadcasted_scalar(src2.layout);
         if (normal_case) {
-#define DISPATCH_TERNARY(_mode, _type, _simd_type, _op)                     \
-    case Mode::_mode: {                                                     \
-        thin_function<void(const _type*, const _type, const _type, _type*,  \
-                           DType, DType, DType, DType, size_t)>             \
-                run = OpCallerTernary<_op<_simd_type, _type, _type>,        \
-                                      _simd_type, VEC_SCALAR_SCALAR>::run;  \
-        MEGDNN_DISPATCH_CPU_KERN_OPR(                                       \
-                run(static_cast<const _type*>(src0.raw_ptr),                \
-                    static_cast<const _type*>(src1.raw_ptr)[0],             \
-                    static_cast<const _type*>(src2.raw_ptr)[0],             \
-                    static_cast<_type*>(dst.raw_ptr), src0.layout.dtype,    \
-                    src1.layout.dtype, src2.layout.dtype, dst.layout.dtype, \
-                    src0.layout.total_nr_elems()));                         \
-        return true;                                                        \
+#define DISPATCH_TERNARY(_mode, _type, _simd_type, _op)                              \
+    case Mode::_mode: {                                                              \
+        thin_function<void(                                                          \
+                const _type*, const _type, const _type, _type*, DType, DType, DType, \
+                DType, size_t)>                                                      \
+                run = OpCallerTernary<                                               \
+                        _op<_simd_type, _type, _type>, _simd_type,                   \
+                        VEC_SCALAR_SCALAR>::run;                                     \
+        MEGDNN_DISPATCH_CPU_KERN_OPR(                                                \
+                run(static_cast<const _type*>(src0.raw_ptr),                         \
+                    static_cast<const _type*>(src1.raw_ptr)[0],                      \
+                    static_cast<const _type*>(src2.raw_ptr)[0],                      \
+                    static_cast<_type*>(dst.raw_ptr), src0.layout.dtype,             \
+                    src1.layout.dtype, src2.layout.dtype, dst.layout.dtype,          \
+                    src0.layout.total_nr_elems()));                                  \
+        return true;                                                                 \
     }
             auto&& dst = *m_dst;
             DISPATCH_SIMD_TYPE;

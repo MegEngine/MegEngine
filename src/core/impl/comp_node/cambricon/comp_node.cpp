@@ -68,8 +68,7 @@ public:
         cnrtRet_t ret = cnrtFree(ptr);
         if (ret == CNRT_RET_SUCCESS)
             return;
-        auto msg = ssprintf("cnrtFree failed for %p: %s", ptr,
-                            cnrtGetErrorStr(ret));
+        auto msg = ssprintf("cnrtFree failed for %p: %s", ptr, cnrtGetErrorStr(ret));
         msg.append(CnrtError::get_cnrt_extra_info());
         mgb_throw_raw(MemAllocError{msg});
     }
@@ -97,8 +96,7 @@ public:
 
 /* ====================== DevMemAlloc ================================*/
 std::unique_ptr<DevMemAlloc> DevMemAlloc::make_cambricon_alloc() {
-    return std::make_unique<FwdDevMemAlloc>(
-            std::make_shared<CambriconRawAlloctor>());
+    return std::make_unique<FwdDevMemAlloc>(std::make_shared<CambriconRawAlloctor>());
 }
 }  // namespace mem_alloc
 }  // namespace mgb
@@ -167,28 +165,24 @@ public:
         MGB_CNRT_CHECK(cnrtFreeHost(ptr));
     }
 
-    void copy_to_host(void* host_ptr, const void* device_ptr,
-                      size_t size) override {
+    void copy_to_host(void* host_ptr, const void* device_ptr, size_t size) override {
         activate();
-        MGB_CNRT_CHECK(cnrtMemcpyAsync(host_ptr, const_cast<void*>(device_ptr),
-                                       size, m_env.cnrt_env().queue,
-                                       CNRT_MEM_TRANS_DIR_DEV2HOST));
+        MGB_CNRT_CHECK(cnrtMemcpyAsync(
+                host_ptr, const_cast<void*>(device_ptr), size, m_env.cnrt_env().queue,
+                CNRT_MEM_TRANS_DIR_DEV2HOST));
     }
 
-    void copy_to_device(void* device_ptr, const void* host_ptr,
-                        size_t size) override {
+    void copy_to_device(void* device_ptr, const void* host_ptr, size_t size) override {
         activate();
-        MGB_CNRT_CHECK(cnrtMemcpyAsync(device_ptr, const_cast<void*>(host_ptr),
-                                       size, m_env.cnrt_env().queue,
-                                       CNRT_MEM_TRANS_DIR_HOST2DEV));
+        MGB_CNRT_CHECK(cnrtMemcpyAsync(
+                device_ptr, const_cast<void*>(host_ptr), size, m_env.cnrt_env().queue,
+                CNRT_MEM_TRANS_DIR_HOST2DEV));
     }
 
-    void peer_copy_to(Impl* dest_impl, void* dest, const void* src,
-                      size_t size) override;
+    void peer_copy_to(
+            Impl* dest_impl, void* dest, const void* src, size_t size) override;
 
-    size_t get_mem_addr_alignment() override {
-        return m_env.property().mem_alignment;
-    }
+    size_t get_mem_addr_alignment() override { return m_env.property().mem_alignment; }
 
     std::unique_ptr<Event> create_event(size_t flags) override;
 
@@ -199,8 +193,7 @@ public:
     std::pair<size_t, size_t> get_mem_status_bytes() override {
         m_env.cnrt_env().activate();
         cndevMemoryInfo_t mem_info;
-        MGB_CNDEV_CHECK(
-                cndevGetMemoryUsage(&mem_info, m_env.cnrt_env().device));
+        MGB_CNDEV_CHECK(cndevGetMemoryUsage(&mem_info, m_env.cnrt_env().device));
         size_t tot, used, free;
         constexpr size_t mb2size = 1024 * 1024;
         tot = static_cast<size_t>(mem_info.PhysicalMemoryTotal) * mb2size;
@@ -259,8 +252,8 @@ struct CambriconCompNodeImpl::StaticData {
 CambriconCompNodeImpl::StaticData* CambriconCompNodeImpl::sd = nullptr;
 Spinlock CambriconCompNodeImpl::sd_mtx;
 
-void CambriconCompNodeImpl::init(const Locator& locator,
-                                 const Locator& locator_logical) {
+void CambriconCompNodeImpl::init(
+        const Locator& locator, const Locator& locator_logical) {
     m_locator = locator;
     m_locator_logical = locator_logical;
     m_initialized = true;
@@ -284,8 +277,7 @@ void CambriconCompNodeImpl::init(const Locator& locator,
             ++sd->nr_dev_used;
         }
         m_device_info = dev_info;
-        m_mem_alloc =
-                dev_info->mem_alloc->add_stream(static_cast<void*>(queue));
+        m_mem_alloc = dev_info->mem_alloc->add_stream(static_cast<void*>(queue));
         m_dev = m_device_info->dev;
     };
 
@@ -294,8 +286,8 @@ void CambriconCompNodeImpl::init(const Locator& locator,
         m_initialized = false;
     };
 
-    m_env.init_cnrt(locator.device, make_comp_node_from_impl(this),
-                    {on_succ, on_error});
+    m_env.init_cnrt(
+            locator.device, make_comp_node_from_impl(this), {on_succ, on_error});
 }
 
 void CambriconCompNodeImpl::fini() {
@@ -316,11 +308,11 @@ void CambriconCompNodeImpl::free_device(void* ptr) {
     m_mem_alloc->free(ptr);
 }
 
-void CambriconCompNodeImpl::peer_copy_to(Impl* dest_impl, void* dest,
-                                         const void* src, size_t size) {
+void CambriconCompNodeImpl::peer_copy_to(
+        Impl* dest_impl, void* dest, const void* src, size_t size) {
     if (dest_impl->same_type<CambriconCompNodeImpl>()) {
-        auto&& dst_env = static_cast<CambriconCompNodeImpl*>(dest_impl)
-                                 ->m_env.cnrt_env();
+        auto&& dst_env =
+                static_cast<CambriconCompNodeImpl*>(dest_impl)->m_env.cnrt_env();
         auto&& src_env = m_env.cnrt_env();
         activate();
         if (dst_env.device == src_env.device) {
@@ -328,8 +320,8 @@ void CambriconCompNodeImpl::peer_copy_to(Impl* dest_impl, void* dest,
             // support async
             sync();
             dest_impl->sync();
-            MGB_CNRT_CHECK(cnrtMemcpy(dest, const_cast<void*>(src), size,
-                                      CNRT_MEM_TRANS_DIR_DEV2DEV));
+            MGB_CNRT_CHECK(cnrtMemcpy(
+                    dest, const_cast<void*>(src), size, CNRT_MEM_TRANS_DIR_DEV2DEV));
         } else {
             mgb_throw_if(
                     !enable_peer_access(src_env.device, dst_env.device) ||
@@ -340,19 +332,21 @@ void CambriconCompNodeImpl::peer_copy_to(Impl* dest_impl, void* dest,
                     src_env.device, dst_env.device);
             sync();
             dest_impl->sync();
-            MGB_CNRT_CHECK(cnrtMemcpyPeer(dest, dst_env.device,
-                                          const_cast<void*>(src),
-                                          src_env.device, size));
+            MGB_CNRT_CHECK(cnrtMemcpyPeer(
+                    dest, dst_env.device, const_cast<void*>(src), src_env.device,
+                    size));
         }
         return;
     }
-    mgb_assert(dest_impl->env().property().type == DeviceType::CPU,
-               "cnrt peer_copy_to only implemented for CPU");
+    mgb_assert(
+            dest_impl->env().property().type == DeviceType::CPU,
+            "cnrt peer_copy_to only implemented for CPU");
     auto copy = [this, dest, src, size]() {
         m_env.cnrt_env().activate();
         auto queue = m_env.cnrt_env().queue;
-        MGB_CNRT_CHECK(cnrtMemcpyAsync(dest, const_cast<void*>(src), size,
-                                       queue, CNRT_MEM_TRANS_DIR_DEV2HOST));
+        MGB_CNRT_CHECK(cnrtMemcpyAsync(
+                dest, const_cast<void*>(src), size, queue,
+                CNRT_MEM_TRANS_DIR_DEV2HOST));
         MGB_CNRT_CHECK(cnrtSyncQueue(queue));
     };
     dest_impl->env().cpu_env().dispatch(copy);
@@ -371,8 +365,7 @@ void CambriconCompNodeImpl::sync() {
 }
 
 bool CambriconCompNodeImpl::enable_peer_access(int dev0, int dev1) {
-    static bool queried_enabled[StaticData::MAX_NR_DEVICE]
-                               [StaticData::MAX_NR_DEVICE];
+    static bool queried_enabled[StaticData::MAX_NR_DEVICE][StaticData::MAX_NR_DEVICE];
     if (queried_enabled[dev0][dev1])
         return queried_enabled[dev0][dev1];
 
@@ -381,8 +374,7 @@ bool CambriconCompNodeImpl::enable_peer_access(int dev0, int dev1) {
     unsigned int can = 0;
     MGB_CNRT_CHECK(cnrtGetPeerAccessibility(&can, dev0, dev1));
     if (can)
-        mgb_log("device(%d) can directly access memories on device(%d)", dev0,
-                dev1);
+        mgb_log("device(%d) can directly access memories on device(%d)", dev0, dev1);
     queried_enabled[dev0][dev1] = can;
     return can;
 }
@@ -405,8 +397,7 @@ void CambriconCompNodeImpl::DeviceInfo::init(const CompNodeEnv& env) {
 #else
     auto reserve_size = get_mem_reserve_size();
     mem_alloc = mem_alloc::DevMemAlloc::make(
-            dev_num, reserve_size,
-            std::make_shared<mem_alloc::CambriconRawAlloctor>(),
+            dev_num, reserve_size, std::make_shared<mem_alloc::CambriconRawAlloctor>(),
             std::make_shared<mem_alloc::CambriconDeviceRuntimePolicy>());
     mem_alloc->prealloc_config(sd->prealloc_config);
     auto align = env.property().mem_alignment;
@@ -415,8 +406,7 @@ void CambriconCompNodeImpl::DeviceInfo::init(const CompNodeEnv& env) {
     MGB_CNRT_CHECK(cnrtGetDeviceInfo(&device_info, dev_num));
     mgb_log("cambricon: card%d: name=`%s' dyn_mem_reserve=%.2fMiB "
             "alignment=0x%zx",
-            dev_num, device_info.device_name, reserve_size / 1024.0 / 1024,
-            align);
+            dev_num, device_info.device_name, reserve_size / 1024.0 / 1024, align);
 #endif
 }
 
@@ -430,8 +420,7 @@ size_t CambriconCompNodeImpl::DeviceInfo::get_mem_reserve_size() {
         MGB_CNDEV_CHECK(cndevGetMemoryUsage(&mem_info, dev_num));
         constexpr size_t mb2size = 1024 * 1024;
         tot = static_cast<size_t>(mem_info.PhysicalMemoryTotal) * mb2size;
-        size_t used =
-                static_cast<size_t>(mem_info.PhysicalMemoryUsed) * mb2size;
+        size_t used = static_cast<size_t>(mem_info.PhysicalMemoryUsed) * mb2size;
         free = tot - used;
         return free - get_min_system_memory(free);
     } else {
@@ -443,8 +432,7 @@ bool CambriconCompNodeImpl::check_global_finalized() {
     if (!sd) {
         static std::atomic_flag warn_printed = ATOMIC_FLAG_INIT;
         if (!warn_printed.test_and_set()) {
-            mgb_log_warn(
-                    "cambricon comp node method called after global finalize");
+            mgb_log_warn("cambricon comp node method called after global finalize");
         }
         return true;
     }
@@ -501,8 +489,7 @@ class CambriconCompNode::EventImpl final : public EventImplHelper {
         MGB_CNRT_CHECK(cnrtSyncQueue(env.queue));
         float ret = 0.f;
         MGB_CNRT_CHECK(cnrtNotifierDuration(
-                m_cnrt_notifier, static_cast<EventImpl&>(end).m_cnrt_notifier,
-                &ret));
+                m_cnrt_notifier, static_cast<EventImpl&>(end).m_cnrt_notifier, &ret));
         return static_cast<double>(ret) * 1e-3;
     }
 
@@ -520,15 +507,13 @@ public:
         if (m_init_finished) {
             MGB_TRY { MGB_CNRT_CHECK(cnrtDestroyNotifier(&m_cnrt_notifier)); }
             MGB_CATCH(MegBrainError & exc, {
-                mgb_log_error("failed to destroy cnrt notifier: %s",
-                              exc.what());
+                mgb_log_error("failed to destroy cnrt notifier: %s", exc.what());
             })
         }
     }
 };
 
-std::unique_ptr<CompNode::Event> CambriconCompNodeImpl::create_event(
-        size_t flags) {
+std::unique_ptr<CompNode::Event> CambriconCompNodeImpl::create_event(size_t flags) {
     return std::make_unique<EventImpl>(this, flags);
 }
 
@@ -564,8 +549,9 @@ bool CambriconCompNode::available() {
         auto err = cnrtGetDeviceCount(&dev_num);
         result = err == CNRT_RET_SUCCESS && dev_num >= 1;
         if (!result) {
-            mgb_log_warn("cambricon unavailable: %d(%s) dev_num=%u",
-                         static_cast<int>(err), cnrtGetErrorStr(err), dev_num);
+            mgb_log_warn(
+                    "cambricon unavailable: %d(%s) dev_num=%u", static_cast<int>(err),
+                    cnrtGetErrorStr(err), dev_num);
         }
     }
     return result;
@@ -584,9 +570,9 @@ void CambriconCompNode::finalize() {
 CompNode::Impl* CambriconCompNode::load_cambricon(
         const Locator& locator, const Locator& locator_logical) {
     int nr_devs = get_device_count();
-    mgb_assert(locator.device >= 0 && locator.device < nr_devs,
-               "request device%d out of range [0, %d)", locator.device,
-               nr_devs);
+    mgb_assert(
+            locator.device >= 0 && locator.device < nr_devs,
+            "request device%d out of range [0, %d)", locator.device, nr_devs);
 
     auto&& sdptr = CambriconCompNodeImpl::sd;
     {
@@ -594,7 +580,7 @@ CompNode::Impl* CambriconCompNode::load_cambricon(
         if (!sdptr) {
             using T = CambriconCompNodeImpl::StaticData;
             static std::aligned_storage_t<sizeof(T), alignof(T)> storage;
-            sdptr = new(&storage)T;
+            sdptr = new (&storage) T;
         }
     }
     auto&& sd = *sdptr;
@@ -613,10 +599,8 @@ CompNode::Impl* CambriconCompNode::load_cambricon(
     }
 
     if (!available_node) {
-        mgb_assert(sd.nr_node < sd.MAX_NR_COMP_NODE,
-                   "too many CompNode allocated");
-        mgb_assert(locator.device < sd.MAX_NR_COMP_NODE,
-                   "device number too large");
+        mgb_assert(sd.nr_node < sd.MAX_NR_COMP_NODE, "too many CompNode allocated");
+        mgb_assert(locator.device < sd.MAX_NR_COMP_NODE, "device number too large");
         available_node = &sd.node[sd.nr_node++];
     }
 
@@ -633,12 +617,10 @@ void CambriconCompNode::try_coalesce_all_free_memory() {
 
     size_t size = 0;
     for (int i = 0; i < sd->nr_dev_used; ++i) {
-        size += sd->dev_info[i]
-                        .mem_alloc->gather_stream_free_blk_and_release_full();
+        size += sd->dev_info[i].mem_alloc->gather_stream_free_blk_and_release_full();
     }
     if (size) {
-        mgb_log_debug("%zu bytes freed by try_coalesce_all_free_memory()",
-                      size);
+        mgb_log_debug("%zu bytes freed by try_coalesce_all_free_memory()", size);
     }
 }
 
@@ -693,8 +675,9 @@ size_t CambriconCompNode::get_device_count() {
         unsigned int dev_cnt = 0;
         auto ret = cnrtGetDeviceCount(&dev_cnt);
         if (ret != CNRT_RET_SUCCESS) {
-            mgb_log_error("cnrtGetDeviceCount faild: %s (err %d)",
-                          cnrtGetErrorStr(ret), int(ret));
+            mgb_log_error(
+                    "cnrtGetDeviceCount faild: %s (err %d)", cnrtGetErrorStr(ret),
+                    int(ret));
             cnt = 0;
         }
         cnt = dev_cnt;
@@ -703,8 +686,7 @@ size_t CambriconCompNode::get_device_count() {
     return cnt;
 }
 
-void mgb::mem_alloc::CambriconRawAlloctor::get_mem_info(size_t& free,
-                                                        size_t& tot) {
+void mgb::mem_alloc::CambriconRawAlloctor::get_mem_info(size_t& free, size_t& tot) {
     auto sd = CambriconCompNodeImpl::sd;
     int device = -1;
     {
@@ -717,20 +699,17 @@ void mgb::mem_alloc::CambriconRawAlloctor::get_mem_info(size_t& free,
             }
         }
     }
-    mgb_assert(device >= 0,
-               "current device has not been initialized in static data");
+    mgb_assert(device >= 0, "current device has not been initialized in static data");
     cndevMemoryInfo_t mem_info;
     auto ret = cndevGetMemoryUsage(&mem_info, device);
     if (ret == CNDEV_SUCCESS) {
         constexpr size_t mb2size = 1024 * 1024;
         tot = static_cast<size_t>(mem_info.PhysicalMemoryTotal) * mb2size;
-        size_t used =
-                static_cast<size_t>(mem_info.PhysicalMemoryUsed) * mb2size;
+        size_t used = static_cast<size_t>(mem_info.PhysicalMemoryUsed) * mb2size;
         free = tot - used;
         return;
     }
-    auto msg =
-            ssprintf("cndevGetMemoryUsage faild %s", cndevGetErrorString(ret));
+    auto msg = ssprintf("cndevGetMemoryUsage faild %s", cndevGetErrorString(ret));
     mgb_throw_raw(MemAllocError{msg});
 }
 
@@ -745,8 +724,8 @@ void CambriconCompNode::finalize() {}
 size_t CambriconCompNode::get_device_count() {
     return 0;
 }
-CambriconCompNode::Impl* CambriconCompNode::load_cambricon(const Locator&,
-                                                           const Locator&) {
+CambriconCompNode::Impl* CambriconCompNode::load_cambricon(
+        const Locator&, const Locator&) {
     mgb_throw(MegBrainError, "cambricon disabled at compile time");
 }
 void CambriconCompNode::sync_all() {}
@@ -756,4 +735,3 @@ void CambriconCompNode::sync_all() {}
 #endif  // MGB_CAMBRICON
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
-

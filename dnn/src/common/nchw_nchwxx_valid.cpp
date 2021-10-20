@@ -9,8 +9,8 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
  * implied.
  */
-#include "megdnn/oprs/nn.h"
 #include "src/common/nchw_nchwxx_valid.h"
+#include "megdnn/oprs/nn.h"
 using namespace megdnn;
 namespace {
 using NchwNchwxxFuncInterface = std::function<bool(
@@ -34,8 +34,7 @@ bool ConvBiasForward::is_nchw_nchwxx_optimized(
         const ConvBiasForward::BiasMode bias_mode,
         const param::ConvBias::NonlineMode nonline_mode) {
     for (auto& func : g_func_vec) {
-        if (func(src_dtype, filter_dtype, dst_dtype, fm, bias_mode,
-                 nonline_mode)) {
+        if (func(src_dtype, filter_dtype, dst_dtype, fm, bias_mode, nonline_mode)) {
             return true;
         }
     }

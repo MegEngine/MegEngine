@@ -55,9 +55,7 @@ struct DeviceScanPackedItem;
 
 template <typename T>
 struct DeviceScanPackedItem<1, T> {
-    __device__ __forceinline__ T load(T* data, uint32_t tid) {
-        return data[tid];
-    }
+    __device__ __forceinline__ T load(T* data, uint32_t tid) { return data[tid]; }
 
     __device__ __forceinline__ void store(T* data, uint32_t tid, uint32_t s) {
         data[tid] = s;
@@ -76,8 +74,7 @@ struct DeviceScanPackedItem<4, uint8_t> {
         return d0 + d1 + d2 + d3;
     }
 
-    __device__ __forceinline__ void store(uint8_t* data, uint32_t tid,
-                                          uint32_t s) {
+    __device__ __forceinline__ void store(uint8_t* data, uint32_t tid, uint32_t s) {
         uint8_t o3 = s, o2 = o3 - d3, o1 = o2 - d2, o0 = o1 - d1;
         reinterpret_cast<uint32_t*>(data)[tid] =
                 (o3 << 24) | (o2 << 16) | (o1 << 8) | o0;
@@ -86,15 +83,14 @@ struct DeviceScanPackedItem<4, uint8_t> {
 
 //! inclusive scan within a warp using register shuffle
 template <uint32_t SIZE>
-__device__ __forceinline__ uint32_t device_scan_shfl_core(uint32_t s,
-                                                          uint32_t tid) {
+__device__ __forceinline__ uint32_t device_scan_shfl_core(uint32_t s, uint32_t tid) {
     static const uint32_t SIZE_LOG2 = static_log2<SIZE>::val;
 
     uint32_t self_lane = tid % SIZE;
 #pragma unroll
     for (uint32_t step_log2 = 1; step_log2 <= SIZE_LOG2; ++step_log2) {
-        uint32_t from_lane = (self_lane & ~((1u << step_log2) - 1)) +
-                             ((1 << (step_log2 - 1)) - 1);
+        uint32_t from_lane =
+                (self_lane & ~((1u << step_log2) - 1)) + ((1 << (step_log2 - 1)) - 1);
         uint32_t valid_mask = (from_lane >= self_lane) - 1;
         uint32_t s_below = __shfl_up(s, self_lane - from_lane, SIZE);
         s += s_below & valid_mask;
@@ -108,12 +104,11 @@ __device__ __forceinline__ uint32_t device_scan_shfl_core(uint32_t s,
  * Note: no synchronization at the end
  */
 template <uint32_t SIZE, uint32_t NR_SHARD>
-__device__ __forceinline__ void device_scan(uint32_t* data, uint32_t tid,
-                                            uint32_t shard) {
+__device__ __forceinline__ void device_scan(
+        uint32_t* data, uint32_t tid, uint32_t shard) {
     const uint32_t NR_WARP = SIZE / NR_SHARD / WARP_SIZE;
 #if __cplusplus > 199711L
-    static_assert(NR_WARP <= WARP_SIZE || (NR_WARP & (NR_WARP - 1)),
-                  "bad params");
+    static_assert(NR_WARP <= WARP_SIZE || (NR_WARP & (NR_WARP - 1)), "bad params");
 #endif
 
     __syncthreads();
@@ -139,8 +134,7 @@ __device__ __forceinline__ void device_scan(uint32_t* data, uint32_t tid,
 }
 
 template <uint32_t PACK_SIZE, typename T>
-__device__ __forceinline__ void device_scan_packed_accu32(T* data,
-                                                          uint32_t tid) {
+__device__ __forceinline__ void device_scan_packed_accu32(T* data, uint32_t tid) {
     DeviceScanPackedItem<PACK_SIZE, T> scan_pack;
     __syncwarp();
     uint32_t sum = scan_pack.load(data, tid);
@@ -151,8 +145,8 @@ __device__ __forceinline__ void device_scan_packed_accu32(T* data,
 
 namespace kth {
 
-const uint32_t BUCKET_BITS = 8, NR_BUCKET = 1 << BUCKET_BITS,
-               LOCAL_CNT_SHARD = 16, BLOCK_DIM = NR_BUCKET * 4;
+const uint32_t BUCKET_BITS = 8, NR_BUCKET = 1 << BUCKET_BITS, LOCAL_CNT_SHARD = 16,
+               BLOCK_DIM = NR_BUCKET * 4;
 
 template <uint32_t v>
 struct enforce_const_u32 {
@@ -170,9 +164,9 @@ struct enforce_const_u32 {
  * \param[out] buckets [batch, X, NR_BUCKET]
  */
 template <typename ctype, bool prefix_valid, uint32_t shift>
-static __global__ void compute_histogram(const ctype* input,
-                                         uint32_t* bucket_cnt, uint32_t length,
-                                         int32_t lda, uint32_t* prefix_ptr) {
+static __global__ void compute_histogram(
+        const ctype* input, uint32_t* bucket_cnt, uint32_t length, int32_t lda,
+        uint32_t* prefix_ptr) {
     // note that this layout eliminates bank conflict
     __shared__ uint32_t local_cnt[NR_BUCKET][LOCAL_CNT_SHARD];
     int32_t batch = blockIdx.y;
@@ -230,11 +224,9 @@ static __global__ void compute_histogram(const ctype* input,
  * launch config: grid(batch), thread(NR_BUCKET)
  */
 template <bool first, bool last, uint32_t shift, typename ctype>
-static __global__ void update_prefix_and_k(const uint32_t* bucket_cnt,
-                                           uint32_t* prefix, uint32_t* k,
-                                           uint32_t k_init,
-                                           uint32_t bucket_sharding_size,
-                                           ctype* result) {
+static __global__ void update_prefix_and_k(
+        const uint32_t* bucket_cnt, uint32_t* prefix, uint32_t* k, uint32_t k_init,
+        uint32_t bucket_sharding_size, ctype* result) {
     __shared__ uint32_t cumsum_bucket_cnt[NR_BUCKET + 1];
     uint32_t batch = blockIdx.x;
     bucket_cnt += batch * bucket_sharding_size * NR_BUCKET;
@@ -258,8 +250,7 @@ static __global__ void update_prefix_and_k(const uint32_t* bucket_cnt,
         if (first) {
             prefix[batch] = b;
         } else if (last) {
-            result[batch] =
-                    RadixConverter<ctype>::from_radix(prefix[batch] | b);
+            result[batch] = RadixConverter<ctype>::from_radix(prefix[batch] | b);
         } else {
             prefix[batch] |= b;
         }
@@ -301,8 +292,7 @@ struct GreaterPred {
     }
 };
 
-const uint32_t REDUCE_WARP_SIZE = 16, REDUCE_SIZE = WARP_SIZE * 4,
-               REDUCE_SHARD = 64;
+const uint32_t REDUCE_WARP_SIZE = 16, REDUCE_SIZE = WARP_SIZE * 4, REDUCE_SHARD = 64;
 /*!
  * \brief reduce number of elements satisfying Pred in (N, M) mat to
  *      (N, ceil(M / REDUCE_SIZE))
@@ -313,18 +303,13 @@ const uint32_t REDUCE_WARP_SIZE = 16, REDUCE_SIZE = WARP_SIZE * 4,
  * Each block computes REDUCE_SHARD outputs
  */
 template <typename ctype, class Pred>
-static __global__ void kern_reduce_block_cnt(const ctype* input_data,
-                                             const ctype* input_thresh,
-                                             uint32_t length, int32_t lda,
-                                             uint64_t* output,
-                                             uint32_t output_width) {
-    static const uint32_t BLOCK_DIM_X = REDUCE_WARP_SIZE,
-                          BLOCK_DIM_Y = REDUCE_SHARD;
-    uint32_t batch = blockIdx.y,
-             out_col = blockIdx.x * BLOCK_DIM_Y + threadIdx.y,
+static __global__ void kern_reduce_block_cnt(
+        const ctype* input_data, const ctype* input_thresh, uint32_t length,
+        int32_t lda, uint64_t* output, uint32_t output_width) {
+    static const uint32_t BLOCK_DIM_X = REDUCE_WARP_SIZE, BLOCK_DIM_Y = REDUCE_SHARD;
+    uint32_t batch = blockIdx.y, out_col = blockIdx.x * BLOCK_DIM_Y + threadIdx.y,
              col_begin = out_col * REDUCE_SIZE,
-             col_end = min(col_begin + REDUCE_SIZE, length),
-             tid_local = threadIdx.x;
+             col_end = min(col_begin + REDUCE_SIZE, length), tid_local = threadIdx.x;
 
     if (out_col >= output_width) {
         return;
@@ -352,11 +337,11 @@ static __global__ void kern_reduce_block_cnt(const ctype* input_data,
     }
 }
 
-static MEGDNN_NOINLINE cudaError_t
-invoke_cub_scan(const uint64_t* input, uint64_t* output, void* workspace,
-                size_t& workspace_size, uint32_t size, cudaStream_t stream) {
-    return cub::DeviceScan::InclusiveSum(workspace, workspace_size,
-                                                 input, output, size, stream);
+static MEGDNN_NOINLINE cudaError_t invoke_cub_scan(
+        const uint64_t* input, uint64_t* output, void* workspace,
+        size_t& workspace_size, uint32_t size, cudaStream_t stream) {
+    return cub::DeviceScan::InclusiveSum(
+            workspace, workspace_size, input, output, size, stream);
 }
 
 static __global__ void kern_init_zero(uint64_t* dst) {
@@ -370,11 +355,10 @@ static __global__ void kern_init_zero(uint64_t* dst) {
  *                thread(WARP_SIZE, COPY_SHARD)
  */
 template <typename ctype, class Pred, int COPY_SHARD>
-static __global__ void kern_copy(const ctype* input_data,
-                                 const ctype* input_thresh,
-                                 const uint64_t* scan, uint32_t scan_width,
-                                 ctype* output_value, int32_t* output_idx,
-                                 uint32_t length, uint32_t k, int32_t lda) {
+static __global__ void kern_copy(
+        const ctype* input_data, const ctype* input_thresh, const uint64_t* scan,
+        uint32_t scan_width, ctype* output_value, int32_t* output_idx, uint32_t length,
+        uint32_t k, int32_t lda) {
 #if __cplusplus > 199711L
     static_assert(REDUCE_SIZE < 256, "local_sum_storage can not be uint8_t");
 #endif
@@ -386,14 +370,11 @@ static __global__ void kern_copy(const ctype* input_data,
         return;
     }
 
-    uint32_t batch = blockIdx.y,
-             inp_col_begin = min(scan_col * REDUCE_SIZE, length),
-             inp_col_length =
-                     min(inp_col_begin + REDUCE_SIZE, length) - inp_col_begin,
+    uint32_t batch = blockIdx.y, inp_col_begin = min(scan_col * REDUCE_SIZE, length),
+             inp_col_length = min(inp_col_begin + REDUCE_SIZE, length) - inp_col_begin,
              tid_local = threadIdx.x;
     uint32_t thresh = RadixConverter<ctype>::to_radix(input_thresh[batch]);
-    input_data +=
-            static_cast<int32_t>(batch) * lda + static_cast<int>(inp_col_begin);
+    input_data += static_cast<int32_t>(batch) * lda + static_cast<int>(inp_col_begin);
     __shared__ uint8_t local_sum_storage[BLOCK_DIM_Y][2][REDUCE_SIZE + 4];
     uint8_t *local_sum_eq = local_sum_storage[threadIdx.y][0],
             *local_sum_lt = local_sum_storage[threadIdx.y][1];
@@ -458,8 +439,8 @@ static size_t get_scan_workspace(uint32_t size) {
     size_t wk = 0;
     cudaError_t err = invoke_cub_scan(NULL, NULL, NULL, wk, size, NULL);
     if (err != cudaSuccess) {
-        fprintf(stderr, "topk: cub scan failed: %s (%d)\n",
-                cudaGetErrorString(err), static_cast<int>(err));
+        fprintf(stderr, "topk: cub scan failed: %s (%d)\n", cudaGetErrorString(err),
+                static_cast<int>(err));
         megdnn_trap();
     }
     return ((wk - 1) / sizeof(uint64_t) + 1) * sizeof(uint64_t);
@@ -468,20 +449,18 @@ static size_t get_scan_workspace(uint32_t size) {
 }  // namespace select
 }  // namespace cuda_topk_impl
 
-uint32_t topk::find_kth_radix_workspace(uint32_t batch, uint32_t length,
-                                        uint32_t grid_dim_y_limit) {
+uint32_t topk::find_kth_radix_workspace(
+        uint32_t batch, uint32_t length, uint32_t grid_dim_y_limit) {
     using namespace cuda_topk_impl::kth;
     uint32_t limit = batch > grid_dim_y_limit ? grid_dim_y_limit : batch;
-    return (limit * get_grid_dim_x(length) * NR_BUCKET + limit * 2) *
-           sizeof(uint32_t);
+    return (limit * get_grid_dim_x(length) * NR_BUCKET + limit * 2) * sizeof(uint32_t);
 }
 
 template <typename ctype>
-cudaError_t topk::find_kth_radix(const ctype* input, ctype* output,
-                                 void* workspace, uint32_t batch,
-                                 uint32_t length, int32_t lda, int32_t k,
-                                 uint32_t grid_dim_y_limit,
-                                 cudaStream_t stream) {
+cudaError_t topk::find_kth_radix(
+        const ctype* input, ctype* output, void* workspace, uint32_t batch,
+        uint32_t length, int32_t lda, int32_t k, uint32_t grid_dim_y_limit,
+        cudaStream_t stream) {
     using namespace cuda_topk_impl::kth;
     if (!k) {
         return cudaErrorUnknown;
@@ -537,9 +516,9 @@ cudaError_t topk::find_kth_radix(const ctype* input, ctype* output,
                 input + batch_idx * lda, bucket_cnt, length, lda, dev_prefix);
 
         update_prefix_and_k<false, true, 0, ctype>
-                <<<grid_dim_y, NR_BUCKET, 0, stream>>>(bucket_cnt, dev_prefix,
-                                                       dev_k, k, grid_dim_x,
-                                                       output + batch_idx);
+                <<<grid_dim_y, NR_BUCKET, 0, stream>>>(
+                        bucket_cnt, dev_prefix, dev_k, k, grid_dim_x,
+                        output + batch_idx);
 
         batch_idx += grid_dim_y;
     }
@@ -547,20 +526,20 @@ cudaError_t topk::find_kth_radix(const ctype* input, ctype* output,
 }
 
 template <typename ctype>
-cudaError_t topk::topk_select(const ctype* input, const ctype* thresh,
-                              ctype* output_value, int32_t* output_idx,
-                              void* workspace, uint32_t batch, uint32_t length,
-                              int32_t lda, int32_t k,
-                              uint32_t batch_upper_limit, cudaStream_t stream) {
+cudaError_t topk::topk_select(
+        const ctype* input, const ctype* thresh, ctype* output_value,
+        int32_t* output_idx, void* workspace, uint32_t batch, uint32_t length,
+        int32_t lda, int32_t k, uint32_t batch_upper_limit, cudaStream_t stream) {
     using namespace cuda_topk_impl;
     using namespace cuda_topk_impl::select;
 
     uint32_t length_split = DIVUP(length, REDUCE_SIZE);
 
-    void (*kptr_reduce_block_cnt)(const ctype*, const ctype*, uint32_t, int32_t,
-                                  uint64_t*, uint32_t);
-    void (*kptr_copy)(const ctype*, const ctype*, const uint64_t*, uint32_t,
-                      ctype*, int32_t*, uint32_t, uint32_t, int32_t);
+    void (*kptr_reduce_block_cnt)(
+            const ctype*, const ctype*, uint32_t, int32_t, uint64_t*, uint32_t);
+    void (*kptr_copy)(
+            const ctype*, const ctype*, const uint64_t*, uint32_t, ctype*, int32_t*,
+            uint32_t, uint32_t, int32_t);
 
     int kern_copy_shard;
     {
@@ -581,16 +560,15 @@ cudaError_t topk::topk_select(const ctype* input, const ctype* thresh,
     case n:                                    \
         kptr_copy = kern_copy<ctype, pred, n>; \
         break
-#define CASE_SHARD(pred)                                          \
-    switch (kern_copy_shard) {                                    \
-        CASE_SHARD_ON(pred, 8);                                   \
-        CASE_SHARD_ON(pred, 16);                                  \
-        CASE_SHARD_ON(pred, 24);                                  \
-        CASE_SHARD_ON(pred, 32);                                  \
-        default:                                                  \
-            fprintf(stderr, "topk: failed to launch: shard=%d\n", \
-                    kern_copy_shard);                             \
-            return cudaErrorLaunchOutOfResources;                 \
+#define CASE_SHARD(pred)                                                            \
+    switch (kern_copy_shard) {                                                      \
+        CASE_SHARD_ON(pred, 8);                                                     \
+        CASE_SHARD_ON(pred, 16);                                                    \
+        CASE_SHARD_ON(pred, 24);                                                    \
+        CASE_SHARD_ON(pred, 32);                                                    \
+        default:                                                                    \
+            fprintf(stderr, "topk: failed to launch: shard=%d\n", kern_copy_shard); \
+            return cudaErrorLaunchOutOfResources;                                   \
     }
 
     if (k < 0) {
@@ -617,31 +595,32 @@ cudaError_t topk::topk_select(const ctype* input, const ctype* thresh,
 
         size_t scan_size = batch_real * length_split;
         size_t scan_wk = get_scan_workspace(scan_size);
-        uint64_t *scan_inp = static_cast<uint64_t*>(workspace) +
-                             scan_wk / sizeof(uint64_t),
+        uint64_t *scan_inp =
+                         static_cast<uint64_t*>(workspace) + scan_wk / sizeof(uint64_t),
                  *scan_out = scan_inp + scan_size;
 
         // reduce to scan_inp
         kptr_reduce_block_cnt<<<
                 dim3(DIVUP(length_split, REDUCE_SHARD), batch_real),
                 dim3(REDUCE_WARP_SIZE, REDUCE_SHARD), 0, stream>>>(
-                input + batch_idx * lda, thresh + batch_idx, length, lda,
-                scan_inp, length_split);
+                input + batch_idx * lda, thresh + batch_idx, length, lda, scan_inp,
+                length_split);
 
         // scan to scan_out
         scan_out += 1;  // set scan[-1] to 0
-        cudaError_t err = invoke_cub_scan(scan_inp, scan_out, workspace,
-                                          scan_wk, scan_size, stream);
+        cudaError_t err = invoke_cub_scan(
+                scan_inp, scan_out, workspace, scan_wk, scan_size, stream);
         if (err != cudaSuccess) {
             return err;
         }
         kern_init_zero<<<1, 1, 0, stream>>>(scan_out - 1);
 
         // copy result
-        kptr_copy<<<dim3(DIVUP(length_split, kern_copy_shard), batch_real),
-                    dim3(WARP_SIZE, kern_copy_shard), 0, stream>>>(
-                input + batch_idx * lda, thresh + batch_idx, scan_out,
-                length_split, output_value + std::abs(k) * batch_idx,
+        kptr_copy<<<
+                dim3(DIVUP(length_split, kern_copy_shard), batch_real),
+                dim3(WARP_SIZE, kern_copy_shard), 0, stream>>>(
+                input + batch_idx * lda, thresh + batch_idx, scan_out, length_split,
+                output_value + std::abs(k) * batch_idx,
                 output_idx + std::abs(k) * batch_idx, length, k, lda);
 
         batch_idx += batch_real;
@@ -652,20 +631,19 @@ cudaError_t topk::topk_select(const ctype* input, const ctype* thresh,
 uint32_t topk::topk_select_workspace(uint32_t batch, uint32_t length) {
     using namespace cuda_topk_impl::select;
     size_t scan_size = batch * DIVUP(length, REDUCE_SIZE);
-    return get_scan_workspace(scan_size) +
-           sizeof(uint64_t) * (scan_size * 2 + 1);
+    return get_scan_workspace(scan_size) + sizeof(uint64_t) * (scan_size * 2 + 1);
 }
 
 namespace megdnn {
 namespace cuda {
 namespace topk {
-#define INST(t)                                                             \
-    template cudaError_t find_kth_radix<t>(const t*, t*, void*, uint32_t,   \
-                                           uint32_t, int32_t, int32_t,      \
-                                           uint32_t, cudaStream_t);         \
-    template cudaError_t topk_select<t>(const t*, const t*, t*, int32_t*,   \
-                                        void*, uint32_t, uint32_t, int32_t, \
-                                        int32_t, uint32_t, cudaStream_t)
+#define INST(t)                                                                   \
+    template cudaError_t find_kth_radix<t>(                                       \
+            const t*, t*, void*, uint32_t, uint32_t, int32_t, int32_t, uint32_t,  \
+            cudaStream_t);                                                        \
+    template cudaError_t topk_select<t>(                                          \
+            const t*, const t*, t*, int32_t*, void*, uint32_t, uint32_t, int32_t, \
+            int32_t, uint32_t, cudaStream_t)
 INST(float);
 INST(int32_t);
 DNN_INC_FLOAT16(INST(dt_float16));
@@ -676,4 +654,3 @@ DNN_INC_FLOAT16(INST(dt_float16));
 }  // namespace megdnn
 
 // vim: ft=cuda syntax=cuda.doxygen
-

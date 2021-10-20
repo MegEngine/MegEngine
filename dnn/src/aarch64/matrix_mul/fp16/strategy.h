@@ -16,11 +16,11 @@ namespace megdnn {
 namespace aarch64 {
 namespace matmul {
 
-MEGDNN_REG_GEMM_STRATEGY(dt_float16, dt_float16, dt_float16, 8, 24, 1, false,
-                         true, hgemm_8x24);
+MEGDNN_REG_GEMM_STRATEGY(
+        dt_float16, dt_float16, dt_float16, 8, 24, 1, false, true, hgemm_8x24);
 
-MEGDNN_REG_GEMM_STRATEGY_NOPACK(dt_float16, dt_float16, dt_float16, 8, 8, 1,
-                                false, true, gemm_nopack_f16_8x8);
+MEGDNN_REG_GEMM_STRATEGY_NOPACK(
+        dt_float16, dt_float16, dt_float16, 8, 8, 1, false, true, gemm_nopack_f16_8x8);
 
 }  // namespace matmul
 }  // namespace aarch64

@@ -13,16 +13,15 @@
 #error "on_arity_dispatched_cb_dtype and IMPL_MODE_DISPATCHER must be defined"
 #endif
 
-template<int arity>
+template <int arity>
 void ElemwiseForwardImpl::on_arity_dispatched() {
     auto src = make_elemwise_op_param<arity>();
     MEGDNN_FOREACH_COMPUTING_DTYPE_FLOAT(on_arity_dispatched_cb_dtype)
     MEGDNN_FOREACH_COMPUTING_DTYPE_INT(on_arity_dispatched_cb_dtype)
-    on_arity_dispatched_cb_dtype(::megdnn::dtype::Bool)
-    megdnn_throw("bad dtype");
+    on_arity_dispatched_cb_dtype(::megdnn::dtype::Bool) megdnn_throw("bad dtype");
 }
 
-template<int arity>
+template <int arity>
 void ElemwiseForwardImpl::on_arity_dispatched_no_bool() {
     auto src = make_elemwise_op_param<arity>();
     MEGDNN_FOREACH_COMPUTING_DTYPE_FLOAT(on_arity_dispatched_cb_dtype)
@@ -62,60 +61,60 @@ IMPL_MODE_DISPATCHER(1, DTypeCategory::BOOL);
 IMPL_MODE_DISPATCHER(2, DTypeCategory::BOOL);
 #undef FOREACH
 
-void ElemwiseForwardImpl::exec(
-        const TensorNDArray &src,
-        _megdnn_tensor_out dst) {
+void ElemwiseForwardImpl::exec(const TensorNDArray& src, _megdnn_tensor_out dst) {
     m_src = &src;
     m_dst = &dst;
 
 #define CB_CHK_MODE_ENABLE(_) 1
     if (m_param.mode == Mode::FUSE_MUL_ADD3) {
-#if MEGDNN_ELEMWISE_MODE_ENABLE(FUSE_MUL_ADD3, CB_CHK_MODE_ENABLE) +0
+#if MEGDNN_ELEMWISE_MODE_ENABLE(FUSE_MUL_ADD3, CB_CHK_MODE_ENABLE) + 0
         ElemwiseOpParamN<3> param;
         bool c_is_scalar;
         prepare_fma3(param, c_is_scalar);
-        switch(m_dst->layout.dtype.enumv()) {
-#define cb(_dt) \
-            case DTypeTrait<_dt>::enumv: \
-            { \
-                using ctype = DTypeTrait<_dt>::ctype; \
-                if (c_is_scalar) { \
-                    return impl_fuse_mul_add3<ctype, true>(param); \
-                } else { \
-                    return impl_fuse_mul_add3<ctype, false>(param); \
-                } \
-            }
+        switch (m_dst->layout.dtype.enumv()) {
+#define cb(_dt)                                             \
+    case DTypeTrait<_dt>::enumv: {                          \
+        using ctype = DTypeTrait<_dt>::ctype;               \
+        if (c_is_scalar) {                                  \
+            return impl_fuse_mul_add3<ctype, true>(param);  \
+        } else {                                            \
+            return impl_fuse_mul_add3<ctype, false>(param); \
+        }                                                   \
+    }
             MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
 #undef cb
             default:
                 megdnn_throw("bad dtype");
         }
-#endif	// enable FUSE_MUL_ADD3
+#endif  // enable FUSE_MUL_ADD3
     } else if (m_param.mode == Mode::FUSE_MUL_ADD4) {
-#if MEGDNN_ELEMWISE_MODE_ENABLE(FUSE_MUL_ADD4, CB_CHK_MODE_ENABLE) +0
+#if MEGDNN_ELEMWISE_MODE_ENABLE(FUSE_MUL_ADD4, CB_CHK_MODE_ENABLE) + 0
         ElemwiseOpParamN<4> param;
         prepare_fma4(param);
 
-        switch(m_dst->layout.dtype.enumv()) {
-#define cb(_dt) \
-            case DTypeTrait<_dt>::enumv: \
-                return impl_fuse_mul_add4<DTypeTrait<_dt>::ctype>(param);
+        switch (m_dst->layout.dtype.enumv()) {
+#define cb(_dt)                  \
+    case DTypeTrait<_dt>::enumv: \
+        return impl_fuse_mul_add4<DTypeTrait<_dt>::ctype>(param);
             MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
 #undef cb
             default:
                 megdnn_throw("bad dtype");
         }
-#endif	// enable FUSE_MUL_ADD4
+#endif  // enable FUSE_MUL_ADD4
     }
 
 #undef CB_CHK_MODE_ENABLE
 
-    switch(src.size()) {
-#define D(_n) case _n: return on_arity_dispatched<_n>()
+    switch (src.size()) {
+#define D(_n) \
+    case _n:  \
+        return on_arity_dispatched<_n>()
         D(1);
         D(2);
 #undef D
-        case 3: return on_arity_dispatched_no_bool<3>();
+        case 3:
+            return on_arity_dispatched_no_bool<3>();
         default:
             megdnn_throw("bad size of input tensors");
     }

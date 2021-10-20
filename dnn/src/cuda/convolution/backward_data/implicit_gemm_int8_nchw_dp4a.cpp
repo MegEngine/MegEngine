@@ -19,31 +19,66 @@
 using namespace megdnn;
 using namespace cuda;
 
+const void* ConvolutionBackwardDataImpl::AlgoInt8NCHWDotProdImplicitGemm::
+        get_available_op(const SizeArgs& args) const {
+    using namespace cutlass::library;
+    auto&& fm = args.filter_meta;
+    size_t sh = fm.stride[0], sw = fm.stride[1];
+    cutlass::conv::SpecialOptimizeDesc special_optimization =
+            (sh == 2 && sw == 2)
+                    ? cutlass::conv::SpecialOptimizeDesc::DECONV_DOUBLE_UPSAMPLING
+                    : cutlass::conv::SpecialOptimizeDesc::NONE;
+    // only use 16x64x8_16x64x8_2stages impl
+    ConvolutionKey key{
+            cutlass::conv::Operator::kDgrad,
+            NumericTypeID::kS8,
+            LayoutTypeID::kTensorNC4HW4,
+            NumericTypeID::kS8,
+            LayoutTypeID::kTensorK4RSC4,
+            NumericTypeID::kS8,
+            LayoutTypeID::kTensorNC4HW4,
+            NumericTypeID::kS32,
+            LayoutTypeID::kTensorNC4HW4,
+            cutlass::conv::ConvType::kConvolution,
+            16,
+            64,
+            8,
+            16,
+            64,
+            8,
+            1,
+            1,
+            4,
+            cutlass::epilogue::EpilogueType::kBiasAddLinearCombinationClamp,
+            2,
+            special_optimization,
+            false};
+    return (void*)Singleton::get().operation_table.find_op(key);
+}
+
 bool ConvolutionBackwardDataImpl::AlgoInt8NCHWDotProdImplicitGemm::is_available(
         const SizeArgs& args) const {
     auto&& fm = args.filter_meta;
     if (fm.format != Param::Format::NCHW)
         return false;
 
-    if (!args.grad_layout->is_contiguous() ||
-        !args.diff_layout->is_contiguous()) {
+    if (!args.grad_layout->is_contiguous() || !args.diff_layout->is_contiguous()) {
         return false;
     }
 
     bool available = true;
 
-    auto src_dtype = args.diff_layout->dtype,
-         filter_dtype = args.filter_layout->dtype,
+    auto src_dtype = args.diff_layout->dtype, filter_dtype = args.filter_layout->dtype,
          dst_dtype = args.grad_layout->dtype;
 
-    available &= (src_dtype.enumv() == DTypeEnum::QuantizedS8 &&
-                  filter_dtype.enumv() == DTypeEnum::QuantizedS8 &&
-                  dst_dtype.enumv() == DTypeEnum::QuantizedS8);
+    available &=
+            (src_dtype.enumv() == DTypeEnum::QuantizedS8 &&
+             filter_dtype.enumv() == DTypeEnum::QuantizedS8 &&
+             dst_dtype.enumv() == DTypeEnum::QuantizedS8);
     // TODO support group deconv int8
     available &= (fm.group == 1);
     // ic and oc must be multiples of 4
-    available &=
-            ((fm.group * fm.icpg) % 4 == 0 && (fm.group * fm.ocpg) % 4 == 0);
+    available &= ((fm.group * fm.icpg) % 4 == 0 && (fm.group * fm.ocpg) % 4 == 0);
     // mode must be cross correlation
     available &= !fm.should_flip;
     // mode must be 2D
@@ -52,6 +87,9 @@ bool ConvolutionBackwardDataImpl::AlgoInt8NCHWDotProdImplicitGemm::is_available(
     available &= (fm.dilation[0] == 1 && fm.dilation[1] == 1);
     // FIXME: too large filter size is not supported now
     available &= fm.spatial[0] * fm.spatial[1] <= (848 / (2 * 8 / 4) - 2);
+
+    available &= (get_available_op(args) != nullptr);
+
     // only support sm_61 or later, platform should have fast native int8
     // support
     available &= is_compute_capability_required(6, 1);
@@ -76,12 +114,9 @@ void ConvolutionBackwardDataImpl::AlgoInt8NCHWDotProdImplicitGemm::exec(
         const ExecArgs& args) const {
     auto&& param = args.opr->param();
     auto&& fm = args.filter_meta;
-    size_t n = args.diff_layout->operator[](0),
-           co = args.diff_layout->operator[](1),
-           ho = args.diff_layout->operator[](2),
-           wo = args.diff_layout->operator[](3);
-    size_t ci = args.grad_layout->operator[](1),
-           hi = args.grad_layout->operator[](2),
+    size_t n = args.diff_layout->operator[](0), co = args.diff_layout->operator[](1),
+           ho = args.diff_layout->operator[](2), wo = args.diff_layout->operator[](3);
+    size_t ci = args.grad_layout->operator[](1), hi = args.grad_layout->operator[](2),
            wi = args.grad_layout->operator[](3);
     size_t fh = fm.spatial[0], fw = fm.spatial[1];
     size_t sh = fm.stride[0], sw = fm.stride[1];
@@ -103,10 +138,9 @@ void ConvolutionBackwardDataImpl::AlgoInt8NCHWDotProdImplicitGemm::exec(
 
         exec_src = exec_src.dimshuffle({0, 3, 4, 2, 1});
 
-        auto&& relayout =
-                args.opr->handle()->create_operator<RelayoutForward>();
-        relayout->exec({args.filter_tensor->raw_ptr, exec_src},
-                       {inner_filter_ptr, exec_dst});
+        auto&& relayout = args.opr->handle()->create_operator<RelayoutForward>();
+        relayout->exec(
+                {args.filter_tensor->raw_ptr, exec_src}, {inner_filter_ptr, exec_dst});
     }
     {
         inner_diff_ptr = reinterpret_cast<int8_t*>(bundle.get(1));
@@ -116,55 +150,25 @@ void ConvolutionBackwardDataImpl::AlgoInt8NCHWDotProdImplicitGemm::exec(
 
         exec_src = exec_src.dimshuffle({0, 1, 3, 4, 2});
 
-        auto&& relayout =
-                args.opr->handle()->create_operator<RelayoutForward>();
-        relayout->exec({args.diff_tensor->raw_ptr, exec_src},
-                       {inner_diff_ptr, exec_dst});
+        auto&& relayout = args.opr->handle()->create_operator<RelayoutForward>();
+        relayout->exec(
+                {args.diff_tensor->raw_ptr, exec_src}, {inner_diff_ptr, exec_dst});
     }
     int8_t* inner_grad_ptr = reinterpret_cast<int8_t*>(bundle.get(2));
 
-    float diff_scale =
-                  args.diff_layout->dtype.param<dtype::QuantizedS8>().scale,
-          filter_scale =
-                  args.filter_layout->dtype.param<dtype::QuantizedS8>().scale,
-          grad_scale =
-                  args.grad_layout->dtype.param<dtype::QuantizedS8>().scale;
+    float diff_scale = args.diff_layout->dtype.param<dtype::QuantizedS8>().scale,
+          filter_scale = args.filter_layout->dtype.param<dtype::QuantizedS8>().scale,
+          grad_scale = args.grad_layout->dtype.param<dtype::QuantizedS8>().scale;
 
     // \note these constants of cutlass epilogue will be passed to struct
     // `ConvolutionArguments` by pointer and interpreted as ElementCompute*, a
     // different dtype here results in undefined epilogue behaviors
-    float alpha = diff_scale * filter_scale / grad_scale, beta = 0.f,
-          gamma = 0.f, delta = 0.f;
+    float alpha = diff_scale * filter_scale / grad_scale, beta = 0.f, gamma = 0.f,
+          delta = 0.f;
 
     using namespace cutlass::library;
 
-    // only use 16x64x8_16x64x8_2stages impl
-    ConvolutionKey key{
-            cutlass::conv::Operator::kDgrad,
-            NumericTypeID::kS8,
-            LayoutTypeID::kTensorNC4HW4,
-            NumericTypeID::kS8,
-            LayoutTypeID::kTensorK4RSC4,
-            NumericTypeID::kS8,
-            LayoutTypeID::kTensorNC4HW4,
-            NumericTypeID::kS32,
-            LayoutTypeID::kTensorNC4HW4,
-            cutlass::conv::ConvType::kConvolution,
-            16,
-            64,
-            8,
-            16,
-            64,
-            8,
-            1,
-            1,
-            4,
-            cutlass::epilogue::EpilogueType::kBiasAddLinearCombinationClamp,
-            2,
-            true,
-            false};
-
-    const Operation* op = Singleton::get().operation_table.find_op(key);
+    const Operation* op = (const Operation*)get_available_op(args);
 
     // gcc prints warnings when size_t values are implicitly narrowed to int
     cutlass::conv::Conv2dProblemSize problem_size{
@@ -190,10 +194,9 @@ void ConvolutionBackwardDataImpl::AlgoInt8NCHWDotProdImplicitGemm::exec(
 
         exec_src = exec_src.dimshuffle({0, 1, 4, 2, 3});
 
-        auto&& relayout =
-                args.opr->handle()->create_operator<RelayoutForward>();
-        relayout->exec({inner_grad_ptr, exec_src},
-                       {args.grad_tensor->raw_ptr, exec_dst});
+        auto&& relayout = args.opr->handle()->create_operator<RelayoutForward>();
+        relayout->exec(
+                {inner_grad_ptr, exec_src}, {args.grad_tensor->raw_ptr, exec_dst});
     }
 }
 // vim: syntax=cpp.doxygen

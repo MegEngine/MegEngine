@@ -272,7 +272,7 @@ def test_none_in_out_grad():
     )
 
 
-def test_zero_grad():
+def test_clear_grad():
     class StopGradient(Function):
         def forward(self, a):
             return a

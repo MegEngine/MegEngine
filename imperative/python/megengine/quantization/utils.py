@@ -25,8 +25,7 @@ from ..tensor import Tensor
 
 
 class Round(Function):
-    """
-    The functional round have no grad and can not use for quantization-aware-training.
+    r"""The functional round have no grad and can not use for quantization-aware-training.
     We use Function and STE(Straight-Through Estimator) to implement backward propagation.
     """
 
@@ -68,17 +67,14 @@ def register_method_to_class(cls):
 
 
 class QuantMode(Enum):
-    """
-    Quantization mode enumerate class.
-    """
+    r"""Quantization mode enumerate class."""
 
     SYMMERTIC = 1
     ASYMMERTIC = 2
 
 
 class QParams:
-    """
-    To standardize FakeQuant, Observer and Tensor's qparams format. If custom
+    r"""To standardize FakeQuant, Observer and Tensor's qparams format. If custom
     qparams is needed, inherit this class and add custom ``__slots__``.
     """
 
@@ -116,8 +112,7 @@ class QParams:
 
 
 class LSQParams:
-    """
-    To standardize LSQ's qparams format. If custom
+    r"""To standardize LSQ's qparams format. If custom
     qparams is needed, inherit this class and add custom ``__slots__``.
     """
 
@@ -183,8 +178,14 @@ def create_qparams(
     scale: Tensor = None,
     zero_point: Tensor = None,
 ):
-    """
-    Return :class:`~.QParams` according to the mode.
+    r"""
+
+    Args:
+        mode: QuantMode:
+        dtype_meta: Union[str:
+        QuantDtypeMeta]:
+        scale: Tensor:
+        zero_point: Tensor:
     """
     if isinstance(dtype_meta, str):
         dtype_meta = _builtin_quant_dtypes[dtype_meta]
@@ -197,12 +198,11 @@ def create_qparams(
 
 
 def fake_quant_tensor(inp: Tensor, qparams: QParams) -> Tensor:
-    """
-    Apply fake quantization to the inp tensor.
+    """Apply fake quantization to the inp tensor.
 
-    :param inp: the input tensor which need to be faked.
-    :param qparams: to get mode, qmin, qmax, scale and zero_point from.
-
+    Args:
+        inp: the input tensor which need to be faked.
+        qparams: to get mode, qmin, qmax, scale and zero_point from.
     """
     scale = qparams.scale
     if qparams.mode == QuantMode.ASYMMERTIC:
@@ -217,17 +217,16 @@ def fake_quant_tensor(inp: Tensor, qparams: QParams) -> Tensor:
 
 
 def fake_quant_bias(bias: Tensor, inp: Tensor, w_qat: Tensor) -> Tensor:
-    """
-    Apply fake quantization to bias, with the special scale from input tensor
+    """Apply fake quantization to bias, with the special scale from input tensor
     and weight tensor, the quantized type set to qint32 also.
 
-    :param bias: the bias tensor which need to be faked.
-    :param inp:  the input tensor which contain the quantization parameters.
-    :param w_qat: the weight tensor which contain the quantization parameters.
+    Args:
+        bias: the bias tensor which need to be faked.
+        inp: the input tensor which contain the quantization parameters.
+        w_qat: the weight tensor which contain the quantization parameters.
 
-    .. warning::
+    Warning:
         Only work for symmetric quantization method now.
-
     """
     b_qat = bias
     if (

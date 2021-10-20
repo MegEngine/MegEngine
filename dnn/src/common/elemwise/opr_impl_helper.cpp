@@ -18,8 +18,8 @@ using namespace megdnn;
 template <int arity>
 ElemwiseOpParamN<arity> ElemwiseLayoutHelper::make_elemwise_op_param(
         void* opr,
-        void (*check_layout_and_broadcast)(void*, const TensorLayoutPtrArray&,
-                                           const TensorLayout&),
+        void (*check_layout_and_broadcast)(
+                void*, const TensorLayoutPtrArray&, const TensorLayout&),
         const TensorNDArray& src, const TensorND& dst) {
     megdnn_assert(src.size() == static_cast<size_t>(arity));
     ElemwiseOpParamN<arity> ret;
@@ -34,11 +34,9 @@ ElemwiseOpParamN<arity> ElemwiseLayoutHelper::make_elemwise_op_param(
 }
 
 // explicit instantiation so subclasses can call this method
-#define INST(n)                                                                \
-    template ElemwiseOpParamN<n>                                               \
-    ElemwiseLayoutHelper::make_elemwise_op_param<n>(                           \
-            void*,                                                             \
-            void (*)(void*, const TensorLayoutPtrArray&, const TensorLayout&), \
+#define INST(n)                                                                       \
+    template ElemwiseOpParamN<n> ElemwiseLayoutHelper::make_elemwise_op_param<n>(     \
+            void*, void (*)(void*, const TensorLayoutPtrArray&, const TensorLayout&), \
             const TensorNDArray&, const TensorND&)
 INST(1);
 INST(2);
@@ -48,8 +46,8 @@ INST(5);
 INST(6);
 #undef INST
 
-void ElemwiseForwardImplHelper::prepare_fma3(ElemwiseOpParamN<3>& param,
-                                             bool& c_is_scalar) {
+void ElemwiseForwardImplHelper::prepare_fma3(
+        ElemwiseOpParamN<3>& param, bool& c_is_scalar) {
     c_is_scalar = is_broadcasted_scalar(m_src->at(2).layout);
     param = make_elemwise_op_param<3>();
 
@@ -83,17 +81,17 @@ bool ElemwiseLayoutHelper::is_broadcasted_scalar(const TensorLayout& layout) {
 template <size_t slice_size>
 bool ElemwiseLayoutHelper::is_broadcastedx_channel_like(
         const TensorLayout& layout, BroadcastChannelInfo& info) {
-    if (layout.format.type() == TensorFormat::Type::DEFAULT &&
-        layout.ndim == 3 && layout.stride[0] == slice_size &&
-        layout.stride[1] == 0 && layout.stride[2] == 1) {
+    if (layout.format.type() == TensorFormat::Type::DEFAULT && layout.ndim == 3 &&
+        layout.stride[0] == slice_size && layout.stride[1] == 0 &&
+        layout.stride[2] == 1) {
         info.x = layout.shape[0];
         info.y = layout.shape[1];
         info.z = layout.shape[2];
         return true;
-    } else if (layout.format.type() == TensorFormat::Type::DEFAULT &&
-               layout.ndim == 4 && layout.stride[0] == 0 &&
-               layout.stride[1] == slice_size && layout.stride[2] == 0 &&
-               layout.stride[3] == 1) {
+    } else if (
+            layout.format.type() == TensorFormat::Type::DEFAULT && layout.ndim == 4 &&
+            layout.stride[0] == 0 && layout.stride[1] == slice_size &&
+            layout.stride[2] == 0 && layout.stride[3] == 1) {
         info.x = layout.shape[1];
         info.y = layout.shape[2];
         info.z = layout.shape[3];
@@ -111,14 +109,13 @@ INST(8);
 bool ElemwiseLayoutHelper::is_broadcasted_channel_like(
         const TensorLayout& layout, BroadcastChannelInfo& info) {
     if (layout.format.type() == TensorFormat::Type::DEFAULT) {
-        if (layout.ndim == 3 && layout.stride[0] == 0 &&
-            layout.stride[2] == 0 && layout.stride[1] == 1) {
+        if (layout.ndim == 3 && layout.stride[0] == 0 && layout.stride[2] == 0 &&
+            layout.stride[1] == 1) {
             info.x = layout.shape[0];
             info.y = layout.shape[1];
             info.z = layout.shape[2];
             return true;
-        } else if (layout.ndim == 2 && layout.stride[1] == 0 &&
-                   layout.stride[0] == 1) {
+        } else if (layout.ndim == 2 && layout.stride[1] == 0 && layout.stride[0] == 1) {
             info.x = 1;
             info.y = layout.shape[0];
             info.z = layout.shape[1];
@@ -126,8 +123,8 @@ bool ElemwiseLayoutHelper::is_broadcasted_channel_like(
         }
     } else {
         if (Image2DPack4TensorFormat::is_valid_image(layout)) {
-            auto align_axis = layout.format.as_impl<Image2DPack4TensorFormat>()
-                                      .align_axis();
+            auto align_axis =
+                    layout.format.as_impl<Image2DPack4TensorFormat>().align_axis();
             if (layout.ndim == 4 && align_axis == 1 &&
                 (layout.stride[0] == 0 || layout.shape[0] == 1) &&
                 layout.stride[1] == 4 && layout.stride[2] == 0 &&
@@ -136,10 +133,11 @@ bool ElemwiseLayoutHelper::is_broadcasted_channel_like(
                 info.y = 1;
                 info.z = layout.shape[2];
                 return true;
-            } else if (layout.ndim == 3 && align_axis == 1 &&
-                       (layout.stride[0] == 0 || layout.shape[0] == 1) &&
-                       layout.stride[1] == 0 && layout.shape[2] == 4 &&
-                       layout.stride[2] == 1) {
+            } else if (
+                    layout.ndim == 3 && align_axis == 1 &&
+                    (layout.stride[0] == 0 || layout.shape[0] == 1) &&
+                    layout.stride[1] == 0 && layout.shape[2] == 4 &&
+                    layout.stride[2] == 1) {
                 //! [1, 1, 1, 1, 4] + [N, H, 1, W, 4]
                 info.x = 1;
                 info.y = 1;
@@ -152,8 +150,8 @@ bool ElemwiseLayoutHelper::is_broadcasted_channel_like(
     return false;
 }
 
-bool ElemwiseLayoutHelper::is_broadcasted_1x(const TensorLayout& layout,
-                                             Broadcast1xInfo& binfo) {
+bool ElemwiseLayoutHelper::is_broadcasted_1x(
+        const TensorLayout& layout, Broadcast1xInfo& binfo) {
     if (layout.ndim == 2 && layout.stride[0] == 0 && layout.stride[1] == 1) {
         binfo.x = layout[0];
         binfo.y = layout[1];

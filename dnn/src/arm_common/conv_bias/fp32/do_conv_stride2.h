@@ -16,14 +16,18 @@ namespace megdnn {
 namespace arm_common {
 namespace fp32 {
 namespace conv_stride2 {
-void do_conv_2x2_stride2(const float* src, const float* filter, float* dst,
-                         size_t IH, size_t IW, size_t OH, size_t OW, size_t IC);
-void do_conv_3x3_stride2(const float* src, const float* filter, float* dst,
-                         size_t IH, size_t IW, size_t OH, size_t OW, size_t IC);
-void do_conv_5x5_stride2(const float* src, const float* filter, float* dst,
-                         size_t IH, size_t IW, size_t OH, size_t OW, size_t IC);
-void do_conv_7x7_stride2(const float* src, const float* filter, float* dst,
-                         size_t IH, size_t IW, size_t OH, size_t OW, size_t IC);
+void do_conv_2x2_stride2(
+        const float* src, const float* filter, float* dst, size_t IH, size_t IW,
+        size_t OH, size_t OW, size_t IC);
+void do_conv_3x3_stride2(
+        const float* src, const float* filter, float* dst, size_t IH, size_t IW,
+        size_t OH, size_t OW, size_t IC);
+void do_conv_5x5_stride2(
+        const float* src, const float* filter, float* dst, size_t IH, size_t IW,
+        size_t OH, size_t OW, size_t IC);
+void do_conv_7x7_stride2(
+        const float* src, const float* filter, float* dst, size_t IH, size_t IW,
+        size_t OH, size_t OW, size_t IC);
 }  // namespace conv_stride2
 }  // namespace fp32
 }  // namespace arm_common

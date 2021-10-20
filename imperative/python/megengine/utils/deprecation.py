@@ -12,11 +12,13 @@ from deprecated.sphinx import deprecated
 
 
 def deprecated_func(version, origin, name, tbd):
-    """
-    :param version: version to deprecate this function
-    :param origin: origin module path
-    :param name: function name
-    :param tbd: to be discussed, if true, ignore warnings
+    r"""
+
+    Args:
+        version: version to deprecate this function
+        origin: origin module path
+        name: function name
+        tbd: to be discussed, if true, ignore warnings
     """
     should_warning = not tbd
 

@@ -18,8 +18,7 @@
 using namespace megdnn;
 using namespace rocm;
 
-void AddUpdateForwardImpl::exec(_megdnn_tensor_inout dest,
-                                _megdnn_tensor_in delta) {
+void AddUpdateForwardImpl::exec(_megdnn_tensor_inout dest, _megdnn_tensor_in delta) {
     check_exec(dest.layout, delta.layout);
     if (!dest.layout.is_contiguous()) {
         return exec_noncontig(dest, delta);
@@ -44,8 +43,8 @@ void AddUpdateForwardImpl::exec(_megdnn_tensor_inout dest,
     }
 }
 
-void AddUpdateForwardImpl::exec_noncontig(_megdnn_tensor_inout dest,
-                                          _megdnn_tensor_in delta) {
+void AddUpdateForwardImpl::exec_noncontig(
+        _megdnn_tensor_inout dest, _megdnn_tensor_in delta) {
     ElemwiseOpParamN<2> param = make_param(dest, delta);
     auto stream = hip_stream(handle());
     switch (dest.layout.dtype.enumv()) {
@@ -64,4 +63,3 @@ void AddUpdateForwardImpl::exec_noncontig(_megdnn_tensor_inout dest,
 }
 
 // vim: syntax=cpp.doxygen
-

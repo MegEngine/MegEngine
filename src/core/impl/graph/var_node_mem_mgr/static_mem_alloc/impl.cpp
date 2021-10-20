@@ -10,17 +10,17 @@
  */
 
 #include "./impl.h"
-#include "./interval_move.h"
 #include "./best_fit.h"
+#include "./interval_move.h"
 #include "./pushdown.h"
 
 #include <map>
 
 #if MGB_ENABLE_DEBUG_UTIL
-#include "megbrain/graph/var_node.h"
-#include "megbrain/graph/operator_node.h"
 #include <cstdio>
 #include <fstream>
+#include "megbrain/graph/operator_node.h"
+#include "megbrain/graph/var_node.h"
 #endif
 
 using namespace mgb;
@@ -28,9 +28,9 @@ using namespace cg;
 
 constexpr size_t StaticMemAllocImplHelper::INVALID;
 
-StaticMemAllocImplHelper::Interval*
-StaticMemAllocImplHelper::Interval::overwrite_dest_root_path_compression() {
-    auto &&ptr = m_overwrite_dest_root;
+StaticMemAllocImplHelper::Interval* StaticMemAllocImplHelper::Interval::
+        overwrite_dest_root_path_compression() {
+    auto&& ptr = m_overwrite_dest_root;
     if (!ptr)
         return this;
     auto root = ptr->overwrite_dest_root_path_compression();
@@ -42,7 +42,7 @@ StaticMemAllocImplHelper::Interval::overwrite_dest_root_path_compression() {
 }
 
 void StaticMemAllocImplHelper::init_overwrite_dest() {
-    for (auto &&spec: m_overwrite_spec) {
+    for (auto&& spec : m_overwrite_spec) {
         auto src = m_interval_storage.data() + std::get<0>(spec),
              dest = m_interval_storage.data() + std::get<1>(spec);
         // src overwrites a part in dest
@@ -54,7 +54,7 @@ void StaticMemAllocImplHelper::init_overwrite_dest() {
         // each interval could only be overwritten by one interval, and we
         // prefer the interval with largest size to be overwritter
         if (src->time_begin == dest->time_end - 1 && !src->m_overwrite_dest &&
-                (!orig_src || src->size > orig_src->size)) {
+            (!orig_src || src->size > orig_src->size)) {
             if (orig_src) {
                 orig_src->m_overwrite_dest = nullptr;
                 orig_src->m_offset_in_overwrite_dest = 0;
@@ -65,7 +65,7 @@ void StaticMemAllocImplHelper::init_overwrite_dest() {
         }
     }
 
-    for (auto &&i: m_interval_storage) {
+    for (auto&& i : m_interval_storage) {
         if (i.m_overwrite_dest) {
             i.m_overwrite_dest_root = i.m_overwrite_dest;
             i.m_offset_in_overwrite_dest_root = i.m_offset_in_overwrite_dest;
@@ -75,13 +75,12 @@ void StaticMemAllocImplHelper::init_overwrite_dest() {
             mgb_assert(i.m_overwrite_src->m_overwrite_dest == &i);
     }
 
-    for (auto &&i: m_interval_storage)
+    for (auto&& i : m_interval_storage)
         i.overwrite_dest_root_path_compression();
 }
 
-size_t StaticMemAllocImplHelper::add(size_t begin, size_t end, size_t size,
-        UserKeyType key) {
-
+size_t StaticMemAllocImplHelper::add(
+        size_t begin, size_t end, size_t size, UserKeyType key) {
     mgb_assert(begin < end);
     auto id = m_interval_storage.size();
     m_interval_storage.push_back({begin, end, size + m_padding, key, id});
@@ -108,7 +107,7 @@ StaticMemAlloc& StaticMemAllocImplHelper::solve() {
     m_interval.clear();
     m_interval.reserve(m_interval_storage.size());
     m_userkey2itrv.clear();
-    for (auto &&i: m_interval_storage) {
+    for (auto&& i : m_interval_storage) {
         m_interval.push_back(&i);
         auto ist = m_userkey2itrv.insert({i.key, &i});
         mgb_assert(ist.second, "duplicated user key");
@@ -130,9 +129,8 @@ StaticMemAlloc& StaticMemAllocImplHelper::solve() {
             }
 
             StaticMemRecorder::Instance().regist_memory_chunk(
-                    {i->id, i->size_orig, i->time_begin, i->time_end,
-                     i->addr_begin, i->addr_end(), overwrite_dest_id,
-                     is_overwrite, ""});
+                    {i->id, i->size_orig, i->time_begin, i->time_end, i->addr_begin,
+                     i->addr_end(), overwrite_dest_id, is_overwrite, ""});
         }
     }
 #endif
@@ -141,24 +139,23 @@ StaticMemAlloc& StaticMemAllocImplHelper::solve() {
 
 void StaticMemAllocImplHelper::dbg_dump_interval_list() {
 #if MGB_ENABLE_DEBUG_UTIL
-    const char *fdir = MGB_GETENV("MGB_DUMP_INTERVAL_LIST_DIR");
+    const char* fdir = MGB_GETENV("MGB_DUMP_INTERVAL_LIST_DIR");
     if (!fdir)
         return;
     static int run_id = 0;
-    auto fpath = ssprintf("%s/mgb-interval-%d.txt", fdir, run_id ++);
+    auto fpath = ssprintf("%s/mgb-interval-%d.txt", fdir, run_id++);
     mgb_log_warn("dump static mem alloc interval list to %s", fpath.c_str());
-    FILE *fout = fopen(fpath.c_str(), "w");
+    FILE* fout = fopen(fpath.c_str(), "w");
     mgb_assert(fout, "failed to open %s", fpath.c_str());
 
     fprintf(fout, "%zu\n"_fmt, m_interval_storage.size());
-    for (auto &&i: m_interval_storage)
-        fprintf(fout, "%zu %zu %zu\n", i.time_begin_orig, i.time_end_orig,
-                i.size_orig);
+    for (auto&& i : m_interval_storage)
+        fprintf(fout, "%zu %zu %zu\n", i.time_begin_orig, i.time_end_orig, i.size_orig);
 
     fprintf(fout, "%zu\n"_fmt, m_overwrite_spec.size());
-    for (auto &&i: m_overwrite_spec)
-        fprintf(fout, "%zu %zu %zu\n"_fmt, std::get<0>(i),
-                std::get<1>(i), std::get<2>(i));
+    for (auto&& i : m_overwrite_spec)
+        fprintf(fout, "%zu %zu %zu\n"_fmt, std::get<0>(i), std::get<1>(i),
+                std::get<2>(i));
 
     fclose(fout);
 #endif
@@ -166,7 +163,7 @@ void StaticMemAllocImplHelper::dbg_dump_interval_list() {
 
 void StaticMemAllocImplHelper::dbg_load_interval_list() {
 #if MGB_ENABLE_DEBUG_UTIL
-    const char *fpath = MGB_GETENV("MGB_LOAD_INTERVAL");
+    const char* fpath = MGB_GETENV("MGB_LOAD_INTERVAL");
     if (!fpath)
         return;
     unsetenv("MGB_DUMP_INTERVAL_LIST_DIR");
@@ -179,7 +176,7 @@ void StaticMemAllocImplHelper::dbg_load_interval_list() {
     m_overwrite_spec.clear();
     size_t nr_interval;
     fin >> nr_interval;
-    for (size_t i = 0; i < nr_interval; ++ i) {
+    for (size_t i = 0; i < nr_interval; ++i) {
         size_t begin, end, size;
         fin >> begin >> end >> size;
         add(begin, end, size, reinterpret_cast<UserKeyType>(i));
@@ -187,7 +184,7 @@ void StaticMemAllocImplHelper::dbg_load_interval_list() {
 
     size_t nr_overwrite;
     fin >> nr_overwrite;
-    for (size_t i = 0; i < nr_overwrite; ++ i) {
+    for (size_t i = 0; i < nr_overwrite; ++i) {
         size_t s, d, o;
         fin >> s >> d >> o;
         add_overwrite_spec(s, d, o);
@@ -195,13 +192,12 @@ void StaticMemAllocImplHelper::dbg_load_interval_list() {
 
     solve();
 
-    printf("allocation result tot_alloc=%zu(%.2fMiB):\n",
-            tot_alloc(), tot_alloc() / 1024.0 / 1024.0);
-    for (auto &&i: m_interval_storage) {
-        printf("id=%zu size=%zu(%.2fMiB) time=[%zu, %zu) addr=[%zu, %zu)\n",
-                i.id, i.size_orig, i.size_orig / 1024.0 / 1024,
-                i.time_begin_orig, i.time_end_orig,
-                i.addr_begin, i.addr_end());
+    printf("allocation result tot_alloc=%zu(%.2fMiB):\n", tot_alloc(),
+           tot_alloc() / 1024.0 / 1024.0);
+    for (auto&& i : m_interval_storage) {
+        printf("id=%zu size=%zu(%.2fMiB) time=[%zu, %zu) addr=[%zu, %zu)\n", i.id,
+               i.size_orig, i.size_orig / 1024.0 / 1024, i.time_begin_orig,
+               i.time_end_orig, i.addr_begin, i.addr_end());
     }
     fflush(stdout);
 
@@ -216,7 +212,7 @@ void StaticMemAllocImplHelper::check_result_and_calc_lower_bound() {
     using TimeEvent = std::pair<IntervalPtrArray, IntervalPtrArray>;
     std::map<size_t, TimeEvent> time2event;
 
-    for (auto &&i: m_interval_storage) {
+    for (auto&& i : m_interval_storage) {
         mgb_assert(i.addr_begin != INVALID);
         time2event[i.time_begin_orig].first.push_back(&i);
         time2event[i.time_end_orig].second.push_back(&i);
@@ -227,8 +223,8 @@ void StaticMemAllocImplHelper::check_result_and_calc_lower_bound() {
             mgb_assert(i.addr_begin == align(i.addr_begin));
         } else {
             auto offset = i.offset_in_overwrite_dest_root();
-            i.size = align(offset + i.size_orig) - (
-                    offset - (offset & (m_alignment - 1)));
+            i.size = align(offset + i.size_orig) -
+                     (offset - (offset & (m_alignment - 1)));
         }
     }
     mgb_assert(peak <= tot_alloc() && align(peak) == align(tot_alloc()));
@@ -237,12 +233,12 @@ void StaticMemAllocImplHelper::check_result_and_calc_lower_bound() {
     {
         m_peak_lower_bound = 0;
         size_t usage = 0;
-        for (auto &&tpair: time2event) {
-            for (auto i: tpair.second.first) {
+        for (auto&& tpair : time2event) {
+            for (auto i : tpair.second.first) {
                 if (i->is_overwrite_root())
                     usage += i->size;
             }
-            for (auto &&i: tpair.second.second) {
+            for (auto&& i : tpair.second.second) {
                 usage -= i->size;
                 if (i->m_overwrite_src) {
                     // this interval is overwritten by another one, so count its
@@ -258,21 +254,22 @@ void StaticMemAllocImplHelper::check_result_and_calc_lower_bound() {
     print_bottleneck_oprs(time2event);
 
     // restore time and size; check overwrite addr
-    for (auto &&i: m_interval_storage) {
+    for (auto&& i : m_interval_storage) {
         i.time_begin = i.time_begin_orig;
         i.time_end = i.time_end_orig;
         i.size = i.size_orig;
 
         if (!i.is_overwrite_root()) {
-            mgb_assert(i.overwrite_dest()->addr_begin +
-                    i.offset_in_overwrite_dest() == i.addr_begin);
+            mgb_assert(
+                    i.overwrite_dest()->addr_begin + i.offset_in_overwrite_dest() ==
+                    i.addr_begin);
         }
     }
 
     std::map<size_t, Interval*> cur_allocated;
     IntervalPtrArray id_overwriter;
 
-    auto remove_alloc = [&](Interval *i) {
+    auto remove_alloc = [&](Interval* i) {
         auto iter = cur_allocated.find(i->addr_begin);
         mgb_assert(iter != cur_allocated.end() && iter->second == i);
         cur_allocated.erase(iter);
@@ -284,14 +281,13 @@ void StaticMemAllocImplHelper::check_result_and_calc_lower_bound() {
     };
 
     // check for conflicts
-    for (auto &&tpair: time2event) {
-
+    for (auto&& tpair : time2event) {
         // free and set overwriter addr
         id_overwriter.clear();
-        for (auto i: tpair.second.second) {
+        for (auto i : tpair.second.second) {
             if (!i->is_overwrite_root() &&
-                    i->time_end_orig == i->overwrite_dest()->time_end_orig &&
-                    !i->offset_in_overwrite_dest()) {
+                i->time_end_orig == i->overwrite_dest()->time_end_orig &&
+                !i->offset_in_overwrite_dest()) {
                 // a overwrites b, a and b share same time end, zero offset
                 mgb_assert(i->addr_begin == i->overwrite_dest()->addr_begin);
                 id_overwriter.push_back(i);
@@ -299,11 +295,11 @@ void StaticMemAllocImplHelper::check_result_and_calc_lower_bound() {
             }
             remove_alloc(i);
         }
-        for (auto i: id_overwriter)
+        for (auto i : id_overwriter)
             remove_alloc(i);
 
         // alloc
-        for (auto i: tpair.second.first) {
+        for (auto i : tpair.second.first) {
             auto iter = cur_allocated.lower_bound(i->addr_begin);
 
             if (i->is_overwrite_root()) {
@@ -311,7 +307,7 @@ void StaticMemAllocImplHelper::check_result_and_calc_lower_bound() {
                     mgb_assert(i->addr_end() <= iter->first);
                 }
                 if (!cur_allocated.empty() && iter != cur_allocated.begin()) {
-                    -- iter;
+                    --iter;
                     mgb_assert(iter->second->addr_end() <= i->addr_begin);
                 }
                 cur_allocated[i->addr_begin] = i;
@@ -322,7 +318,7 @@ void StaticMemAllocImplHelper::check_result_and_calc_lower_bound() {
     mgb_assert(cur_allocated.empty());
 }
 
-template<typename T>
+template <typename T>
 void StaticMemAllocImplHelper::print_bottleneck_oprs(const T& time2event) {
 #if MGB_ENABLE_DEBUG_UTIL
     if (!MGB_GETENV("MGB_PRINT_STATIC_ALLOC_BOTTLENECK"))
@@ -332,21 +328,21 @@ void StaticMemAllocImplHelper::print_bottleneck_oprs(const T& time2event) {
     size_t peak = 0, usage = 0;
     std::unordered_set<UserKeyType> alive, peak_alive;
 
-    for (auto &&tpair: time2event) {
-        for (Interval* i: tpair.second.first) {
+    for (auto&& tpair : time2event) {
+        for (Interval* i : tpair.second.first) {
             if (i->is_overwrite_root()) {
                 usage += i->size;
                 alive.insert(i->key);
             }
         }
-        for (Interval *i: tpair.second.second) {
+        for (Interval* i : tpair.second.second) {
             usage -= i->size;
             if (i->m_overwrite_src) {
                 usage += i->m_overwrite_src->size;
                 alive.insert(i->m_overwrite_src->key);
             }
         }
-        for (Interval *i: tpair.second.second) {
+        for (Interval* i : tpair.second.second) {
             alive.erase(i->key);
         }
         if (usage > peak) {
@@ -356,27 +352,25 @@ void StaticMemAllocImplHelper::print_bottleneck_oprs(const T& time2event) {
     }
     mgb_assert(!usage && alive.empty());
 
-    printf("mgb static alloc bottleneck: size=%.3fMiB {\n",
-            peak / 1024.0 / 1024);
+    printf("mgb static alloc bottleneck: size=%.3fMiB {\n", peak / 1024.0 / 1024);
     using SizeVar = std::tuple<size_t, size_t, VarNode*>;
     std::vector<SizeVar> vars;
-    for (auto i: peak_alive) {
+    for (auto i : peak_alive) {
         auto var = dbg_key2varnode(i);
         vars.emplace_back(var->mem_plan().chunk().size(), var->id(), var);
     }
-    auto cmp = [](const SizeVar &a, const SizeVar &b) {
+    auto cmp = [](const SizeVar& a, const SizeVar& b) {
         auto sza = std::get<0>(a), szb = std::get<0>(b);
         return sza > szb || (sza == szb && std::get<1>(a) < std::get<1>(b));
     };
     std::sort(vars.begin(), vars.end(), cmp);
-    for (auto &&i: vars) {
+    for (auto&& i : vars) {
         auto size = std::get<0>(i);
         VarNode* v = std::get<2>(i);
         OperatorNodeBase* o = v->owner_opr();
-        printf("  var%zu %s owner=%s{%s} shape=%s alloc_size=%zu\n",
-                v->id(), v->cname(), o->cname(), o->dyn_typeinfo()->name,
-                v->shape().to_string().c_str(),
-                size);
+        printf("  var%zu %s owner=%s{%s} shape=%s alloc_size=%zu\n", v->id(),
+               v->cname(), o->cname(), o->dyn_typeinfo()->name,
+               v->shape().to_string().c_str(), size);
     }
     printf("}\n");
 #endif
@@ -400,4 +394,3 @@ std::unique_ptr<StaticMemAlloc> StaticMemAlloc::make(AllocatorAlgo algo) {
 }
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
-

@@ -33,25 +33,23 @@ uint32_t get_workspace_elems_for_cub_1d_with_dtype_reverse(uint32_t nr_item) {
     ScanOp<T, Op> scan_op;
 
     size_t wk_size0 = 0, wk_size1 = 0;
-    cuda_check(cub::DeviceScan::ExclusiveScan(NULL, wk_size0, inp_iter,
-                                              out_iter, scan_op, 0, nr_item));
-    cuda_check(cub::DeviceScan::InclusiveScan(NULL, wk_size1, inp_iter,
-                                              out_iter, scan_op, nr_item));
+    cuda_check(cub::DeviceScan::ExclusiveScan(
+            NULL, wk_size0, inp_iter, out_iter, scan_op, 0, nr_item));
+    cuda_check(cub::DeviceScan::InclusiveScan(
+            NULL, wk_size1, inp_iter, out_iter, scan_op, nr_item));
     return std::max(wk_size0, wk_size1);
 }
 
 template <typename T>
 uint32_t get_workspace_elems_for_cub_1d_with_dtype(uint32_t nr_item) {
-    return std::max(get_workspace_elems_for_cub_1d_with_dtype_reverse<false, T>(
-                            nr_item),
-                    get_workspace_elems_for_cub_1d_with_dtype_reverse<true, T>(
-                            nr_item));
+    return std::max(
+            get_workspace_elems_for_cub_1d_with_dtype_reverse<false, T>(nr_item),
+            get_workspace_elems_for_cub_1d_with_dtype_reverse<true, T>(nr_item));
 }
 
 }  // namespace
 
-uint32_t cumsum::get_workspace_bytes_for_cub_1d(uint32_t nr_item,
-                                                uint32_t item_size) {
+uint32_t cumsum::get_workspace_bytes_for_cub_1d(uint32_t nr_item, uint32_t item_size) {
     switch (item_size) {
 #define CASE(size, type) \
     case size:           \
@@ -66,8 +64,8 @@ uint32_t cumsum::get_workspace_bytes_for_cub_1d(uint32_t nr_item,
     }
 }
 
-uint32_t cumsum::get_workspace_in_bytes(uint32_t A, uint32_t B, uint32_t C,
-                                        uint32_t item_size) {
+uint32_t cumsum::get_workspace_in_bytes(
+        uint32_t A, uint32_t B, uint32_t C, uint32_t item_size) {
     if (A == 1 && C == 1) {
         return get_workspace_bytes_for_cub_1d(B, item_size);
     }
@@ -82,8 +80,8 @@ uint32_t cumsum::get_workspace_in_bytes(uint32_t A, uint32_t B, uint32_t C,
     return res * item_size;
 }
 
-void cumsum::get_BX_BY(uint32_t /* A */, uint32_t /* B */, uint32_t C,
-                       uint32_t& BX, uint32_t& BY) {
+void cumsum::get_BX_BY(
+        uint32_t /* A */, uint32_t /* B */, uint32_t C, uint32_t& BX, uint32_t& BY) {
     BX = 1;
     while (BX < C && BX * 2 <= 32)
         BX *= 2;

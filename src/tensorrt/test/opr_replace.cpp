@@ -10,13 +10,13 @@
  */
 
 #include "megbrain/comp_node_env.h"
+#include "megbrain/opr/basic_arith_wrapper.h"
 #include "megbrain/opr/blas.h"
 #include "megbrain/opr/dnn/convolution.h"
 #include "megbrain/opr/dnn/pooling.h"
 #include "megbrain/opr/io.h"
-#include "megbrain/opr/tensor_manip.h"
-#include "megbrain/opr/basic_arith_wrapper.h"
 #include "megbrain/opr/nn_int.h"
+#include "megbrain/opr/tensor_manip.h"
 #include "megbrain/test/autocheck.h"
 #include "megbrain/test/helper.h"
 #include "megbrain/test/megdnn_helper.h"
@@ -24,13 +24,13 @@
 #if MGB_ENABLE_TENSOR_RT
 
 #include <random>
+#include "./helper.h"
 #include "megbrain/gopt/basic_arith.h"
 #include "megbrain/gopt/gtrans.h"
 #include "megbrain/gopt/inference.h"
 #include "megbrain/tensorrt/opr_replace.h"
-#include "megbrain/tensorrt/tensorrt_opr.h"
 #include "megbrain/tensorrt/tensorrt_engine_cache.h"
-#include "./helper.h"
+#include "megbrain/tensorrt/tensorrt_opr.h"
 
 #define NV_TENSOR_RT_VERSION                                  \
     ((NV_TENSORRT_MAJOR * 1000) + (NV_TENSORRT_MINOR * 100) + \
@@ -76,17 +76,18 @@ TEST(TestTensorRTReplace, Basic) {
     auto out = y_full1 + o;
 
     SymbolVar out_trt;
-    unpack_vector(gopt::GraphOptimizer{}
-                          .add_pass<gopt::TensorRTReplacePass>()
-                          .apply({{out}})
-                          .endpoint_vars(),
-                  out_trt);
+    unpack_vector(
+            gopt::GraphOptimizer{}
+                    .add_pass<gopt::TensorRTReplacePass>()
+                    .apply({{out}})
+                    .endpoint_vars(),
+            out_trt);
     HostTensorND host_z1;
     HostTensorND host_z2;
 
     ASSERT_NE(out_trt.node(), out.node());
-    auto func = graph->compile({make_callback_copy(out, host_z1),
-                                make_callback_copy(out_trt, host_z2)});
+    auto func = graph->compile(
+            {make_callback_copy(out, host_z1), make_callback_copy(out_trt, host_z2)});
     func->execute();
 
     MGB_ASSERT_TENSOR_NEAR(host_z1, host_z2, 1e-3);
@@ -107,17 +108,18 @@ TEST(TensorRTReplacePass, MatrixMul) {
     auto t = opr::MatrixMul::make(a, b);
     auto y = opr::MatrixMul::make(t, c) + x0;
     SymbolVar y_trt;
-    unpack_vector(gopt::GraphOptimizer{}
-                          .add_pass<gopt::TensorRTReplacePass>()
-                          .apply({{y}})
-                          .endpoint_vars(),
-                  y_trt);
+    unpack_vector(
+            gopt::GraphOptimizer{}
+                    .add_pass<gopt::TensorRTReplacePass>()
+                    .apply({{y}})
+                    .endpoint_vars(),
+            y_trt);
     HostTensorND host_z1;
     HostTensorND host_z2;
 
     ASSERT_NE(y_trt.node(), y.node());
-    auto func = graph->compile({make_callback_copy(y, host_z1),
-                                make_callback_copy(y_trt, host_z2)});
+    auto func = graph->compile(
+            {make_callback_copy(y, host_z1), make_callback_copy(y_trt, host_z2)});
     func->execute();
     MGB_ASSERT_TENSOR_NEAR(host_z1, host_z2, 1e-3);
 }
@@ -134,17 +136,18 @@ TEST(TensorRTReplacePass, Elemwise) {
     auto c = Host2DeviceCopy::make(*graph, host_c);
     auto y = a + b + c;
     SymbolVar y_trt;
-    unpack_vector(gopt::GraphOptimizer{}
-                          .add_pass<gopt::TensorRTReplacePass>()
-                          .apply({{y}})
-                          .endpoint_vars(),
-                  y_trt);
+    unpack_vector(
+            gopt::GraphOptimizer{}
+                    .add_pass<gopt::TensorRTReplacePass>()
+                    .apply({{y}})
+                    .endpoint_vars(),
+            y_trt);
     HostTensorND host_z1;
     HostTensorND host_z2;
 
     ASSERT_NE(y_trt.node(), y.node());
-    auto func = graph->compile({make_callback_copy(y, host_z1),
-                                make_callback_copy(y_trt, host_z2)});
+    auto func = graph->compile(
+            {make_callback_copy(y, host_z1), make_callback_copy(y_trt, host_z2)});
     func->execute();
     MGB_ASSERT_TENSOR_NEAR(host_z1, host_z2, 1e-3);
 }
@@ -168,19 +171,19 @@ TEST(TestTensorRTReplace, ConcatBasic) {
          x1 = Host2DeviceCopy::make(*graph, host_x1),
          x2 = Host2DeviceCopy::make(*graph, host_x2),
          x = opr::Concat::make({x0, x1, x2}, 1),
-         b = SharedDeviceTensor::make(*graph, *host_b),
-         y = x + b;
+         b = SharedDeviceTensor::make(*graph, *host_b), y = x + b;
 
     SymbolVar y_trt;
-    unpack_vector(gopt::GraphOptimizer{}
-                          .add_pass<gopt::TensorRTReplacePass>()
-                          .apply({{y}})
-                          .endpoint_vars(),
-                  y_trt);
+    unpack_vector(
+            gopt::GraphOptimizer{}
+                    .add_pass<gopt::TensorRTReplacePass>()
+                    .apply({{y}})
+                    .endpoint_vars(),
+            y_trt);
     HostTensorND host_z1;
     HostTensorND host_z2;
-    auto func = graph->compile({make_callback_copy(y, host_z1),
-                                make_callback_copy(y_trt, host_z2)});
+    auto func = graph->compile(
+            {make_callback_copy(y, host_z1), make_callback_copy(y_trt, host_z2)});
     func->execute();
 
     MGB_ASSERT_TENSOR_NEAR(host_z1, host_z2, 1e-4);
@@ -204,25 +207,25 @@ TEST(TestTensorRTReplace, ElemAddFusion) {
          w = SharedDeviceTensor::make(*graph, *host_w),
          y1 = opr::Convolution::make(x0, w), y2 = opr::Convolution::make(x1, w),
 
-         b = SharedDeviceTensor::make(*graph, *host_b), y3 = y1 + y2,
-         y = y3 + b;
+         b = SharedDeviceTensor::make(*graph, *host_b), y3 = y1 + y2, y = y3 + b;
 
     SymbolVar y_trt;
-    unpack_vector(gopt::GraphOptimizer{}
-                          .add_pass<gopt::TensorRTReplacePass>()
-                          .apply({{y}})
-                          .endpoint_vars(),
-                  y_trt);
+    unpack_vector(
+            gopt::GraphOptimizer{}
+                    .add_pass<gopt::TensorRTReplacePass>()
+                    .apply({{y}})
+                    .endpoint_vars(),
+            y_trt);
     HostTensorND host_z1;
     HostTensorND host_z2;
-    auto func = graph->compile({make_callback_copy(y, host_z1),
-                                make_callback_copy(y_trt, host_z2)});
+    auto func = graph->compile(
+            {make_callback_copy(y, host_z1), make_callback_copy(y_trt, host_z2)});
     func->execute();
 
     cg::OperatorNodeBase* trt_opr = y_trt.node()->owner_opr();
-    ASSERT_EQ(3u, trt_opr->cast_final_safe<opr::TensorRTOpr>()
-                          .trt_manager()
-                          .iobuf_size());
+    ASSERT_EQ(
+            3u,
+            trt_opr->cast_final_safe<opr::TensorRTOpr>().trt_manager().iobuf_size());
     MGB_ASSERT_TENSOR_NEAR(host_z1, host_z2, 5e-4);
 }
 
@@ -245,15 +248,16 @@ TEST(TestTensorRTReplace, BatchedMatrixMulBasic) {
          y0 = opr::BatchedMatrixMul::make(x0, x1, param), y = y0;
 
     SymbolVar y_trt;
-    unpack_vector(gopt::GraphOptimizer{}
-                          .add_pass<gopt::TensorRTReplacePass>()
-                          .apply({{y}})
-                          .endpoint_vars(),
-                  y_trt);
+    unpack_vector(
+            gopt::GraphOptimizer{}
+                    .add_pass<gopt::TensorRTReplacePass>()
+                    .apply({{y}})
+                    .endpoint_vars(),
+            y_trt);
     HostTensorND host_z1;
     HostTensorND host_z2;
-    auto func = graph->compile({make_callback_copy(y, host_z1),
-                                make_callback_copy(y_trt, host_z2)});
+    auto func = graph->compile(
+            {make_callback_copy(y, host_z1), make_callback_copy(y_trt, host_z2)});
     func->execute();
 
     MGB_ASSERT_TENSOR_NEAR(host_z1, host_z2, 1e-4);
@@ -306,29 +310,30 @@ TEST(TestTensorRTReplace, Detection) {
     auto w33 = SharedDeviceTensor::make(*graph, *host_w3),
          y33 = opr::Convolution::make(x3, w33, conv_param);
 
-    SymbolVar sym_y11, sym_y12, sym_y13, sym_y21, sym_y22, sym_y23, sym_y31,
-            sym_y32, sym_y33;
+    SymbolVar sym_y11, sym_y12, sym_y13, sym_y21, sym_y22, sym_y23, sym_y31, sym_y32,
+            sym_y33;
     unpack_vector(
             gopt::GraphOptimizer{}
                     .add_pass<gopt::TensorRTReplacePass>()
                     .apply({{y11, y12, y13, y21, y22, y23, y31, y32, y33}})
                     .endpoint_vars(),
-            sym_y11, sym_y12, sym_y13, sym_y21, sym_y22, sym_y23, sym_y31,
-            sym_y32, sym_y33);
+            sym_y11, sym_y12, sym_y13, sym_y21, sym_y22, sym_y23, sym_y31, sym_y32,
+            sym_y33);
 
-    HostTensorND host_y11, host_y12, host_y13, host_y21, host_y22, host_y23,
-            host_y31, host_y32, host_y33;
+    HostTensorND host_y11, host_y12, host_y13, host_y21, host_y22, host_y23, host_y31,
+            host_y32, host_y33;
 
     graph->options().graph_opt.tensorrt = false;
-    auto func = graph->compile({make_callback_copy(sym_y11, host_y11),
-                                make_callback_copy(sym_y21, host_y21),
-                                make_callback_copy(sym_y31, host_y31),
-                                make_callback_copy(sym_y12, host_y12),
-                                make_callback_copy(sym_y22, host_y22),
-                                make_callback_copy(sym_y32, host_y32),
-                                make_callback_copy(sym_y13, host_y13),
-                                make_callback_copy(sym_y23, host_y23),
-                                make_callback_copy(sym_y33, host_y33)});
+    auto func = graph->compile(
+            {make_callback_copy(sym_y11, host_y11),
+             make_callback_copy(sym_y21, host_y21),
+             make_callback_copy(sym_y31, host_y31),
+             make_callback_copy(sym_y12, host_y12),
+             make_callback_copy(sym_y22, host_y22),
+             make_callback_copy(sym_y32, host_y32),
+             make_callback_copy(sym_y13, host_y13),
+             make_callback_copy(sym_y23, host_y23),
+             make_callback_copy(sym_y33, host_y33)});
     func->execute();
 }
 
@@ -345,8 +350,9 @@ TEST(TestTensorRTReplace, AllOpr) {
     };
     static auto itrans_clip1 = [](SymbolVar* data, size_t size) {
         for (size_t i = 0; i < size; ++i) {
-            data[i] = opr::max(opr::min(data[i], data[i].make_scalar_dt(0.9f)),
-                               data[i].make_scalar_dt(-0.9f));
+            data[i] = opr::max(
+                    opr::min(data[i], data[i].make_scalar_dt(0.9f)),
+                    data[i].make_scalar_dt(-0.9f));
         }
     };
     static auto itrans_gt0 = [](SymbolVar* data, size_t size) {
@@ -363,27 +369,25 @@ TEST(TestTensorRTReplace, AllOpr) {
     MGB_MARK_USED_VAR(itrans_ne0);
     MGB_MARK_USED_VAR(itrans_clip1);
 
-#define DO_CHK_ELEM(_mode, _arity, _itrans, _shps...)                         \
-    tasks.emplace_back(#_mode, [cn]() {                                       \
-        TrtReplaceChecker chk{_arity,                                         \
-                              [](SymbolVarArray inps) -> SymbolVar {          \
-                                  itrans_##_itrans(inps.data(), inps.size()); \
-                                  return opr::Elemwise::make(                 \
-                                          inps, opr::Elemwise::Mode::_mode);  \
-                              },                                              \
-                              cn};                                            \
-        for (int i = 0; i < _arity; ++i) {                                    \
-            chk.set_dtype(i, dtype::Float32());                               \
-        }                                                                     \
-        chk.run({_shps});                                                     \
+#define DO_CHK_ELEM(_mode, _arity, _itrans, _shps...)                             \
+    tasks.emplace_back(#_mode, [cn]() {                                           \
+        TrtReplaceChecker chk{                                                    \
+                _arity,                                                           \
+                [](SymbolVarArray inps) -> SymbolVar {                            \
+                    itrans_##_itrans(inps.data(), inps.size());                   \
+                    return opr::Elemwise::make(inps, opr::Elemwise::Mode::_mode); \
+                },                                                                \
+                cn};                                                              \
+        for (int i = 0; i < _arity; ++i) {                                        \
+            chk.set_dtype(i, dtype::Float32());                                   \
+        }                                                                         \
+        chk.run({_shps});                                                         \
     })
 #define CHECK_ELEM1(_mode, _itrans) \
     DO_CHK_ELEM(_mode, 1, _itrans, TensorShape{9, 12, 7})
-#define CHECK_ELEM2(_mode, _itrans)                       \
-    DO_CHK_ELEM(_mode, 2, _itrans, TensorShape{9, 12, 7}, \
-                TensorShape{9, 1, 7});                    \
-    DO_CHK_ELEM(_mode, 2, _itrans, TensorShape{9, 12, 7}, \
-                TensorShape{9, 12, 7});                   \
+#define CHECK_ELEM2(_mode, _itrans)                                               \
+    DO_CHK_ELEM(_mode, 2, _itrans, TensorShape{9, 12, 7}, TensorShape{9, 1, 7});  \
+    DO_CHK_ELEM(_mode, 2, _itrans, TensorShape{9, 12, 7}, TensorShape{9, 12, 7}); \
     DO_CHK_ELEM(_mode, 2, _itrans, TensorShape{9, 12, 7}, TensorShape{9, 1, 1});
     CHECK_ELEM1(RELU, none);
     CHECK_ELEM1(TANH, none);
@@ -430,7 +434,6 @@ TEST(TestTensorRTReplace, AllOpr) {
                     cn};
             checker.set_const_var(1);
             checker.run({TensorShape{16, 3, 28, 28}, TensorShape{16, 3, 3, 3}});
-
         });
     };
     auto grouped_conv_test = [&]() {
@@ -447,9 +450,7 @@ TEST(TestTensorRTReplace, AllOpr) {
                     },
                     cn};
             checker.set_const_var(1);
-            checker.run(
-                    {TensorShape{16, 8, 28, 28}, TensorShape{4, 4, 2, 3, 3}});
-
+            checker.run({TensorShape{16, 8, 28, 28}, TensorShape{4, 4, 2, 3, 3}});
         });
     };
     conv_test();
@@ -492,8 +493,9 @@ TEST(TestTensorRTReplace, AllOpr) {
     };
     pooling_test("pooling_avg", PoolingMode::AVERAGE);
     pooling_test("pooling_max", PoolingMode::MAX);
-    pooling_test("pooling_avg_count_exclude_padding",
-                 PoolingMode::AVERAGE_COUNT_EXCLUDE_PADDING);
+    pooling_test(
+            "pooling_avg_count_exclude_padding",
+            PoolingMode::AVERAGE_COUNT_EXCLUDE_PADDING);
 
     auto deconv_test = [&](const char* name) {
         tasks.emplace_back("deconv", [cn]() {
@@ -509,9 +511,7 @@ TEST(TestTensorRTReplace, AllOpr) {
                     },
                     cn};
             checker.set_const_var(1);
-            checker.run(
-                    {TensorShape{16, 16, 14, 14}, TensorShape{16, 3, 3, 3}});
-
+            checker.run({TensorShape{16, 16, 14, 14}, TensorShape{16, 3, 3, 3}});
         });
     };
     deconv_test("deconv");
@@ -548,13 +548,11 @@ TEST(TestTensorRTReplace, AllOpr) {
                     [](const SymbolVarArray& inps) -> SymbolVar {
                         using Param = opr::MatrixMul::Param;
                         Param param{false, false};
-                        return opr::BatchedMatrixMul::make(inps[0], inps[1],
-                                                           param);
+                        return opr::BatchedMatrixMul::make(inps[0], inps[1], param);
                     },
                     cn};
             checker.run({TensorShape{3, 12, 24}, TensorShape{3, 24, 35}});
         });
-
     };
     batched_matmul();
 
@@ -566,8 +564,9 @@ TEST(TestTensorRTReplace, AllOpr) {
                         return opr::Concat::make(inps, 1);
                     },
                     cn};
-            checker.run({TensorShape{5, 3, 20, 28}, TensorShape{5, 4, 20, 28},
-                         TensorShape{5, 5, 20, 28}});
+            checker.run(
+                    {TensorShape{5, 3, 20, 28}, TensorShape{5, 4, 20, 28},
+                     TensorShape{5, 5, 20, 28}});
         });
     };
     concat();
@@ -581,17 +580,16 @@ TEST(TestTensorRTReplace, AllOpr) {
                         Param param;
                         param.pad_h = param.pad_w = 1;
                         param.stride_h = param.stride_w = 2;
-                        param.nonlineMode =
-                                opr::ConvBias::Param::NonlineMode::RELU;
-                        return opr::ConvBias::make(inp[0], inp[1], inp[2],
-                                                   inp[3], param);
+                        param.nonlineMode = opr::ConvBias::Param::NonlineMode::RELU;
+                        return opr::ConvBias::make(
+                                inp[0], inp[1], inp[2], inp[3], param);
                     },
                     cn};
             checker.set_const_var(1);
             checker.set_const_var(2);
-            checker.run({TensorShape{16, 4, 28, 28}, TensorShape{16, 4, 3, 3},
-                         TensorShape{1, 16, 1, 1},
-                         TensorShape{16, 16, 14, 14}});
+            checker.run(
+                    {TensorShape{16, 4, 28, 28}, TensorShape{16, 4, 3, 3},
+                     TensorShape{1, 16, 1, 1}, TensorShape{16, 16, 14, 14}});
         });
         tasks.emplace_back("grouped_conv_bias", [cn]() {
             TrtReplaceChecker checker{
@@ -601,18 +599,17 @@ TEST(TestTensorRTReplace, AllOpr) {
                         Param param;
                         param.pad_h = param.pad_w = 1;
                         param.stride_h = param.stride_w = 2;
-                        param.nonlineMode =
-                                opr::ConvBias::Param::NonlineMode::RELU;
+                        param.nonlineMode = opr::ConvBias::Param::NonlineMode::RELU;
                         param.sparse = opr::ConvBias::Param::Sparse::GROUP;
-                        return opr::ConvBias::make(inp[0], inp[1], inp[2],
-                                                   inp[3], param);
+                        return opr::ConvBias::make(
+                                inp[0], inp[1], inp[2], inp[3], param);
                     },
                     cn};
             checker.set_const_var(1);
             checker.set_const_var(2);
-            checker.run({TensorShape{16, 16, 28, 28},
-                         TensorShape{4, 4, 4, 3, 3}, TensorShape{1, 16, 1, 1},
-                         TensorShape{16, 16, 14, 14}});
+            checker.run(
+                    {TensorShape{16, 16, 28, 28}, TensorShape{4, 4, 4, 3, 3},
+                     TensorShape{1, 16, 1, 1}, TensorShape{16, 16, 14, 14}});
         });
         tasks.emplace_back("dilation_conv_bias", [cn]() {
             TrtReplaceChecker checker{
@@ -623,16 +620,15 @@ TEST(TestTensorRTReplace, AllOpr) {
                         param.pad_h = param.pad_w = 1;
                         param.stride_h = param.stride_w = 2;
                         param.dilate_h = param.dilate_w = 2;
-                        param.nonlineMode =
-                                opr::ConvBias::Param::NonlineMode::RELU;
-                        return opr::ConvBias::make(inp[0], inp[1], inp[2],
-                                                   param);
+                        param.nonlineMode = opr::ConvBias::Param::NonlineMode::RELU;
+                        return opr::ConvBias::make(inp[0], inp[1], inp[2], param);
                     },
                     cn};
             checker.set_const_var(1);
             checker.set_const_var(2);
-            checker.run({TensorShape{16, 4, 28, 28}, TensorShape{16, 4, 3, 3},
-                         TensorShape{1, 16, 1, 1}});
+            checker.run(
+                    {TensorShape{16, 4, 28, 28}, TensorShape{16, 4, 3, 3},
+                     TensorShape{1, 16, 1, 1}});
         });
     };
     conv_bias_test();
@@ -645,14 +641,15 @@ TEST(TestTensorRTReplace, AllOpr) {
 TEST(TestTensorRTReplace, PowC) {
     REQUIRE_GPU(1);
     auto cn = CompNode::load("gpu0");
-    TrtReplaceChecker checker{1,
-                              [](const SymbolVarArray& inp) -> SymbolVar {
-                                  using Param = opr::PowC::Param;
-                                  Param param;
-                                  param.exp = 2.0;
-                                  return opr::PowC::make(inp[0], param);
-                              },
-                              cn};
+    TrtReplaceChecker checker{
+            1,
+            [](const SymbolVarArray& inp) -> SymbolVar {
+                using Param = opr::PowC::Param;
+                Param param;
+                param.exp = 2.0;
+                return opr::PowC::make(inp[0], param);
+            },
+            cn};
     checker.run({TensorShape{32, 3, 28, 28}});
 }
 
@@ -699,11 +696,13 @@ TEST(TestTensorRTReplace, AllOprQuantized) {
         }                                                              \
         chk.run({_shps});                                              \
     })
-#define CHECK_ELEM(_mode)                                                     \
-    DO_CHK_ELEM(_mode, 2, dtype::QuantizedS8{1.2f}, dtype::QuantizedS8{1.3f}, \
-                TensorShape{9, 12, 5, 7}, TensorShape{9, 1, 5, 7});           \
-    DO_CHK_ELEM(_mode, 2, dtype::QuantizedS8{1.2f}, dtype::QuantizedS8{1.3f}, \
-                TensorShape{9, 12, 5, 7}, TensorShape{1, 12, 1, 1});
+#define CHECK_ELEM(_mode)                                                 \
+    DO_CHK_ELEM(                                                          \
+            _mode, 2, dtype::QuantizedS8{1.2f}, dtype::QuantizedS8{1.3f}, \
+            TensorShape{9, 12, 5, 7}, TensorShape{9, 1, 5, 7});           \
+    DO_CHK_ELEM(                                                          \
+            _mode, 2, dtype::QuantizedS8{1.2f}, dtype::QuantizedS8{1.3f}, \
+            TensorShape{9, 12, 5, 7}, TensorShape{1, 12, 1, 1});
     CHECK_ELEM(QADD);
     CHECK_ELEM(QFUSE_ADD_RELU);
 
@@ -717,8 +716,7 @@ TEST(TestTensorRTReplace, AllOprQuantized) {
                         param.pad_h = param.pad_w = 1;
                         param.stride_h = param.stride_w = 2;
                         param.format = opr::ConvBias::Param::Format::NCHW4;
-                        param.nonlineMode =
-                                opr::ConvBias::Param::NonlineMode::RELU;
+                        param.nonlineMode = opr::ConvBias::Param::NonlineMode::RELU;
                         auto y = opr::ConvBias::make(
                                 inp[0], inp[1], inp[2], inp[3], param, {},
                                 OperatorNodeConfig{dtype::QuantizedS8{1.3f}});
@@ -734,10 +732,9 @@ TEST(TestTensorRTReplace, AllOprQuantized) {
             for (int i = 0; i < 4; ++i) {
                 checker.set_rng_gen(i, &rng);
             }
-            checker.run({TensorShape{16, 1, 28, 28, 4},
-                         TensorShape{16, 1, 3, 3, 4},
-                         TensorShape{1, 4, 1, 1, 4},
-                         TensorShape{16, 4, 14, 14, 4}});
+            checker.run(
+                    {TensorShape{16, 1, 28, 28, 4}, TensorShape{16, 1, 3, 3, 4},
+                     TensorShape{1, 4, 1, 1, 4}, TensorShape{16, 4, 14, 14, 4}});
         });
         tasks.emplace_back("grouped_conv", [cn, &rng]() {
             TrtReplaceChecker checker{
@@ -748,8 +745,7 @@ TEST(TestTensorRTReplace, AllOprQuantized) {
                         param.pad_h = param.pad_w = 1;
                         param.stride_h = param.stride_w = 2;
                         param.format = opr::ConvBias::Param::Format::NCHW4;
-                        param.nonlineMode =
-                                opr::ConvBias::Param::NonlineMode::RELU;
+                        param.nonlineMode = opr::ConvBias::Param::NonlineMode::RELU;
                         param.sparse = opr::ConvBias::Param::Sparse::GROUP;
                         auto y = opr::ConvBias::make(
                                 inp[0], inp[1], inp[2], inp[3], param, {},
@@ -766,10 +762,9 @@ TEST(TestTensorRTReplace, AllOprQuantized) {
             for (int i = 0; i < 4; ++i) {
                 checker.set_rng_gen(i, &rng);
             }
-            checker.run({TensorShape{16, 4, 28, 28, 4},
-                         TensorShape{4, 4, 1, 3, 3, 4},
-                         TensorShape{1, 4, 1, 1, 4},
-                         TensorShape{16, 4, 14, 14, 4}});
+            checker.run(
+                    {TensorShape{16, 4, 28, 28, 4}, TensorShape{4, 4, 1, 3, 3, 4},
+                     TensorShape{1, 4, 1, 1, 4}, TensorShape{16, 4, 14, 14, 4}});
         });
         // quantized conv bias does not support dilation conv in megdnn
 #if 0
@@ -837,8 +832,9 @@ TEST(TestTensorRTReplace, AllOprQuantized) {
     };
     pooling_test("pooling_avg", PoolingMode::AVERAGE);
     pooling_test("pooling_max", PoolingMode::MAX);
-    pooling_test("pooling_avg_count_exclude_padding",
-                 PoolingMode::AVERAGE_COUNT_EXCLUDE_PADDING);
+    pooling_test(
+            "pooling_avg_count_exclude_padding",
+            PoolingMode::AVERAGE_COUNT_EXCLUDE_PADDING);
 
     for (auto&& task : tasks) {
         task.second();
@@ -862,17 +858,13 @@ TEST(TestTensorRTReplace, FloatInt8MixPrecision) {
 
     auto graph = ComputingGraph::make();
     graph->options().graph_opt_level = 0;
-    auto mkvar = [&](const char* name, const TensorShape& shp,
-                     const DType& dtype) {
+    auto mkvar = [&](const char* name, const TensorShape& shp, const DType& dtype) {
         return opr::TypeCvt::make(
-                opr::Host2DeviceCopy::make(*graph, gen(shp, cn)).rename(name),
-                dtype);
+                opr::Host2DeviceCopy::make(*graph, gen(shp, cn)).rename(name), dtype);
     };
-    auto mkcvar = [&](const char* name, const TensorShape& shp,
-                      const DType& dtype) {
+    auto mkcvar = [&](const char* name, const TensorShape& shp, const DType& dtype) {
         return opr::TypeCvt::make(
-                opr::SharedDeviceTensor::make(*graph, *gen(shp, cn))
-                        .rename(name),
+                opr::SharedDeviceTensor::make(*graph, *gen(shp, cn)).rename(name),
                 dtype);
     };
 
@@ -884,8 +876,8 @@ TEST(TestTensorRTReplace, FloatInt8MixPrecision) {
     conv_param.format = opr::ConvBias::Param::Format::NCHW4;
     conv_param.stride_h = conv_param.stride_w = 1;
     conv_param.pad_h = conv_param.pad_w = 1;
-    auto y = opr::ConvBias::make(x, w, b, z, conv_param, {},
-                                 OperatorNodeConfig{dtype::QuantizedS8{2.5f}});
+    auto y = opr::ConvBias::make(
+            x, w, b, z, conv_param, {}, OperatorNodeConfig{dtype::QuantizedS8{2.5f}});
     opr::Pooling::Param pool_param;
     pool_param.format = opr::Pooling::Param::Format::NCHW4;
     pool_param.stride_h = pool_param.stride_w = 2;
@@ -898,15 +890,15 @@ TEST(TestTensorRTReplace, FloatInt8MixPrecision) {
          b1 = mkcvar("b1", {1, 8, 1, 1, 4}, dtype::QuantizedS32{6.25f});
     conv_param.stride_h = conv_param.stride_w = 2;
     conv_param.pad_h = conv_param.pad_w = 1;
-    auto y2 = opr::ConvBias::make(y1, w1, b1, conv_param, {},
-                                  OperatorNodeConfig{dtype::QuantizedS8{2.5f}});
+    auto y2 = opr::ConvBias::make(
+            y1, w1, b1, conv_param, {}, OperatorNodeConfig{dtype::QuantizedS8{2.5f}});
 
     auto w2 = mkcvar("w2", {32, 8, 1, 1, 4}, dtype::QuantizedS8{2.5f}),
          b2 = mkcvar("b2", {1, 8, 1, 1, 4}, dtype::QuantizedS32{6.25f});
     conv_param.stride_h = conv_param.stride_w = 1;
     conv_param.pad_h = conv_param.pad_w = 0;
-    auto y3 = opr::ConvBias::make(y2, w2, b2, conv_param, {},
-                                  OperatorNodeConfig{dtype::QuantizedS8{2.5f}});
+    auto y3 = opr::ConvBias::make(
+            y2, w2, b2, conv_param, {}, OperatorNodeConfig{dtype::QuantizedS8{2.5f}});
 
     auto y4 = opr::ElemwiseMultiType::make(
             {y2, y3}, {opr::ElemwiseMultiType::Param::Mode::QFUSE_ADD_RELU},
@@ -927,20 +919,22 @@ TEST(TestTensorRTReplace, FloatInt8MixPrecision) {
 
     ComputingGraph::Options opt;
     opt.graph_opt_level = 0;
-    unpack_vector(gopt::GraphOptimizer{}
-                          .add_pass<gopt::ExpandFusedArithPass>()
-                          .add_pass<gopt::TensorRTReplacePass>()
-                          .add_pass<gopt::ArithFusePass>()
-                          .apply({{o, o1}})
-                          .endpoint_vars(),
-                  trt_o, trt_o1);
+    unpack_vector(
+            gopt::GraphOptimizer{}
+                    .add_pass<gopt::ExpandFusedArithPass>()
+                    .add_pass<gopt::TensorRTReplacePass>()
+                    .add_pass<gopt::ArithFusePass>()
+                    .apply({{o, o1}})
+                    .endpoint_vars(),
+            trt_o, trt_o1);
 
     opt.graph_opt_level = 0;
-    unpack_vector(gopt::GraphOptimizer{}
-                          .add_preset_passes(true, nullptr, &opt)
-                          .apply({{o, o1}})
-                          .endpoint_vars(),
-                  mgb_o, mgb_o1);
+    unpack_vector(
+            gopt::GraphOptimizer{}
+                    .add_preset_passes(true, nullptr, &opt)
+                    .apply({{o, o1}})
+                    .endpoint_vars(),
+            mgb_o, mgb_o1);
 
     size_t nr_trt_opr = 0;
     cg::DepOprIter iter{[&nr_trt_opr](cg::OperatorNodeBase* opr) {
@@ -983,17 +977,13 @@ TEST(TestTensorRTReplace, Int8Inference) {
 
     auto graph = ComputingGraph::make();
     graph->options().graph_opt_level = 0;
-    auto mkvar = [&](const char* name, const TensorShape& shp,
-                     const DType& dtype) {
+    auto mkvar = [&](const char* name, const TensorShape& shp, const DType& dtype) {
         return opr::TypeCvt::make(
-                opr::Host2DeviceCopy::make(*graph, gen(shp, cn)).rename(name),
-                dtype);
+                opr::Host2DeviceCopy::make(*graph, gen(shp, cn)).rename(name), dtype);
     };
-    auto mkcvar = [&](const char* name, const TensorShape& shp,
-                      const DType& dtype) {
+    auto mkcvar = [&](const char* name, const TensorShape& shp, const DType& dtype) {
         return opr::TypeCvt::make(
-                opr::SharedDeviceTensor::make(*graph, *gen(shp, cn))
-                        .rename(name),
+                opr::SharedDeviceTensor::make(*graph, *gen(shp, cn)).rename(name),
                 dtype);
     };
 
@@ -1005,8 +995,8 @@ TEST(TestTensorRTReplace, Int8Inference) {
     conv_param.format = opr::ConvBias::Param::Format::NCHW4;
     conv_param.stride_h = conv_param.stride_w = 1;
     conv_param.pad_h = conv_param.pad_w = 1;
-    auto y = opr::ConvBias::make(x, w, b, z, conv_param, {},
-                                 OperatorNodeConfig{dtype::QuantizedS8{2.5f}});
+    auto y = opr::ConvBias::make(
+            x, w, b, z, conv_param, {}, OperatorNodeConfig{dtype::QuantizedS8{2.5f}});
     opr::Pooling::Param pool_param;
     pool_param.format = opr::Pooling::Param::Format::NCHW4;
     pool_param.stride_h = pool_param.stride_w = 2;
@@ -1019,15 +1009,15 @@ TEST(TestTensorRTReplace, Int8Inference) {
          b1 = mkcvar("b1", {1, 8, 1, 1, 4}, dtype::QuantizedS32{6.25f});
     conv_param.stride_h = conv_param.stride_w = 2;
     conv_param.pad_h = conv_param.pad_w = 1;
-    auto y2 = opr::ConvBias::make(y1, w1, b1, conv_param, {},
-                                  OperatorNodeConfig{dtype::QuantizedS8{2.5f}});
+    auto y2 = opr::ConvBias::make(
+            y1, w1, b1, conv_param, {}, OperatorNodeConfig{dtype::QuantizedS8{2.5f}});
 
     auto w2 = mkcvar("w2", {32, 8, 1, 1, 4}, dtype::QuantizedS8{2.5f}),
          b2 = mkcvar("b2", {1, 8, 1, 1, 4}, dtype::QuantizedS32{6.25f});
     conv_param.stride_h = conv_param.stride_w = 1;
     conv_param.pad_h = conv_param.pad_w = 0;
-    auto y3 = opr::ConvBias::make(y2, w2, b2, conv_param, {},
-                                  OperatorNodeConfig{dtype::QuantizedS8{2.5f}});
+    auto y3 = opr::ConvBias::make(
+            y2, w2, b2, conv_param, {}, OperatorNodeConfig{dtype::QuantizedS8{2.5f}});
 
     auto y4 = opr::ElemwiseMultiType::make(
             {y2, y3}, {opr::ElemwiseMultiType::Param::Mode::QFUSE_ADD_RELU},
@@ -1050,17 +1040,18 @@ TEST(TestTensorRTReplace, Int8Inference) {
 
     ComputingGraph::Options opt;
     opt.graph_opt_level = 0;
-    unpack_vector(gopt::GraphOptimizer{}
-                          .add_pass<gopt::ExpandFusedArithPass>()
-                          .add_pass<gopt::TensorRTReplacePass>()
-                          .add_pass<gopt::ArithFusePass>()
-                          .apply({{o, o1}})
-                          .endpoint_vars(),
-                  trt_o, trt_o1);
+    unpack_vector(
+            gopt::GraphOptimizer{}
+                    .add_pass<gopt::ExpandFusedArithPass>()
+                    .add_pass<gopt::TensorRTReplacePass>()
+                    .add_pass<gopt::ArithFusePass>()
+                    .apply({{o, o1}})
+                    .endpoint_vars(),
+            trt_o, trt_o1);
 
     opt.graph_opt_level = 0;
-    unpack_vector(gopt::GraphOptimizer{}.apply({{o, o1}}).endpoint_vars(),
-                  mgb_o, mgb_o1);
+    unpack_vector(
+            gopt::GraphOptimizer{}.apply({{o, o1}}).endpoint_vars(), mgb_o, mgb_o1);
 
     size_t nr_trt_opr = 0;
     {
@@ -1105,8 +1096,7 @@ TEST(TestTensorRTReplace, Int8Inference) {
 // copied from jit test case, to check visit complexity
 TEST(TestTensorRTReplace, CheckComplexity) {
     REQUIRE_GPU(1);
-    HostTensorGenerator<dtype::Float32, RandomDistribution::UNIFORM> gen{0.01f,
-                                                                         0.02f};
+    HostTensorGenerator<dtype::Float32, RandomDistribution::UNIFORM> gen{0.01f, 0.02f};
     auto cn = CompNode::load("gpu0");
 
     auto host_x = gen({2, 2, 2, 2}, cn);
@@ -1182,12 +1172,10 @@ TEST(TestTensorRTReplace, BroadcastScalar) {
     auto host_scalar1 = gen({1}, cn), host_scalar2 = gen({1}, cn),
          host_x = gen({32, 4, 28, 28, 4}, cn);
     auto make_dst = [&](ComputingGraph& graph) {
-        auto mkvar = [&](const char* name,
-                         const std::shared_ptr<HostTensorND>& host_ts,
+        auto mkvar = [&](const char* name, const std::shared_ptr<HostTensorND>& host_ts,
                          const DType& dtype) {
             return opr::TypeCvt::make(
-                    opr::Host2DeviceCopy::make(graph, host_ts).rename(name),
-                    dtype);
+                    opr::Host2DeviceCopy::make(graph, host_ts).rename(name), dtype);
         };
         auto scalar1 = mkvar("scalar1", host_scalar1, dtype::QuantizedS8{2.5f}),
              scalar2 = mkvar("scalar2", host_scalar2, dtype::QuantizedS8{2.6f}),
@@ -1196,8 +1184,7 @@ TEST(TestTensorRTReplace, BroadcastScalar) {
                      {scalar1, scalar2}, {opr::ElemwiseMultiType::Mode::QADD},
                      OperatorNodeConfig{dtype::QuantizedS8{2.5f}}),
              y = opr::ElemwiseMultiType::make(
-                     {x, scalar},
-                     {opr::ElemwiseMultiType::Mode::QFUSE_ADD_RELU},
+                     {x, scalar}, {opr::ElemwiseMultiType::Mode::QFUSE_ADD_RELU},
                      OperatorNodeConfig{dtype::QuantizedS8{2.7f}});
 
         y = opr::TypeCvt::make(y, dtype::Float32());
@@ -1268,17 +1255,13 @@ TEST(TestTensorRTReplace, MixedTensorFormat) {
 
     auto graph = ComputingGraph::make();
     graph->options().graph_opt_level = 0;
-    auto mkvar = [&](const char* name, const TensorShape& shp,
-                     const DType& dtype) {
+    auto mkvar = [&](const char* name, const TensorShape& shp, const DType& dtype) {
         return opr::TypeCvt::make(
-                opr::Host2DeviceCopy::make(*graph, gen(shp, cn)).rename(name),
-                dtype);
+                opr::Host2DeviceCopy::make(*graph, gen(shp, cn)).rename(name), dtype);
     };
-    auto mkcvar = [&](const char* name, const TensorShape& shp,
-                      const DType& dtype) {
+    auto mkcvar = [&](const char* name, const TensorShape& shp, const DType& dtype) {
         return opr::TypeCvt::make(
-                opr::SharedDeviceTensor::make(*graph, *gen(shp, cn))
-                        .rename(name),
+                opr::SharedDeviceTensor::make(*graph, *gen(shp, cn)).rename(name),
                 dtype);
     };
 
@@ -1290,8 +1273,8 @@ TEST(TestTensorRTReplace, MixedTensorFormat) {
     conv_param.format = opr::ConvBias::Param::Format::NCHW4;
     conv_param.stride_h = conv_param.stride_w = 1;
     conv_param.pad_h = conv_param.pad_w = 1;
-    auto y = opr::ConvBias::make(x, w, b, z, conv_param, {},
-                                 OperatorNodeConfig{dtype::QuantizedS8{2.5f}});
+    auto y = opr::ConvBias::make(
+            x, w, b, z, conv_param, {}, OperatorNodeConfig{dtype::QuantizedS8{2.5f}});
     auto o = opr::TypeCvt::make(y, dtype::Float32());
 
     auto f = mkvar("f", {32, 1, 28, 28, 4}, dtype::QuantizedS8{2.5f});
@@ -1310,20 +1293,19 @@ TEST(TestTensorRTReplace, MixedTensorFormat) {
     ComputingGraph::Options opt;
     opt.graph_opt_level = 0;
     opt.graph_opt.tensorrt = true;
-    unpack_vector(gopt::GraphOptimizer{}
-                          .add_pass<gopt::ExpandFusedArithPass>()
-                          .add_pass<gopt::TensorRTReplacePass>()
-                          .add_pass<gopt::ArithFusePass>()
-                          .apply({{o, o1}})
-                          .endpoint_vars(),
-                  trt_o, trt_o1);
+    unpack_vector(
+            gopt::GraphOptimizer{}
+                    .add_pass<gopt::ExpandFusedArithPass>()
+                    .add_pass<gopt::TensorRTReplacePass>()
+                    .add_pass<gopt::ArithFusePass>()
+                    .apply({{o, o1}})
+                    .endpoint_vars(),
+            trt_o, trt_o1);
 
     opt.graph_opt_level = 0;
     opt.graph_opt.tensorrt = false;
-    unpack_vector(gopt::GraphOptimizer{}
-                          .apply({{o, o1}})
-                          .endpoint_vars(),
-                  mgb_o, mgb_o1);
+    unpack_vector(
+            gopt::GraphOptimizer{}.apply({{o, o1}}).endpoint_vars(), mgb_o, mgb_o1);
 
     size_t nr_trt_opr = 0;
     cg::DepOprIter iter{[&nr_trt_opr](cg::OperatorNodeBase* opr) {
@@ -1378,24 +1360,20 @@ TEST(TensorRTReplacePass, WideNetwork) {
 
     auto graph = ComputingGraph::make();
     graph->options().graph_opt_level = 0;
-    auto mkvar = [&](const char* name, const TensorShape& shp,
-                     const DType& dtype) {
+    auto mkvar = [&](const char* name, const TensorShape& shp, const DType& dtype) {
         return opr::TypeCvt::make(
-                opr::Host2DeviceCopy::make(*graph, gen(shp, cn)).rename(name),
-                dtype);
+                opr::Host2DeviceCopy::make(*graph, gen(shp, cn)).rename(name), dtype);
     };
-    auto mkcvar = [&](const char* name, const TensorShape& shp,
-                      const DType& dtype) {
+    auto mkcvar = [&](const char* name, const TensorShape& shp, const DType& dtype) {
         return opr::TypeCvt::make(
-                opr::SharedDeviceTensor::make(*graph, *gen(shp, cn))
-                        .rename(name),
+                opr::SharedDeviceTensor::make(*graph, *gen(shp, cn)).rename(name),
                 dtype);
     };
 
     auto add = [&](SymbolVar a, SymbolVar b) {
-        return opr::ElemwiseMultiType::make({a, b},
-            {opr::ElemwiseMultiType::Mode::QADD},
-            OperatorNodeConfig{dtype::QuantizedS8{2.5f}});
+        return opr::ElemwiseMultiType::make(
+                {a, b}, {opr::ElemwiseMultiType::Mode::QADD},
+                OperatorNodeConfig{dtype::QuantizedS8{2.5f}});
     };
 
     auto x = mkvar("x", {32, 1, 28, 28, 4}, dtype::QuantizedS8(2.5f)),
@@ -1406,8 +1384,8 @@ TEST(TensorRTReplacePass, WideNetwork) {
     conv_param.format = opr::ConvBias::Param::Format::NCHW4;
     conv_param.stride_h = conv_param.stride_w = 1;
     conv_param.pad_h = conv_param.pad_w = 1;
-    auto y = opr::ConvBias::make(x, w, b, z, conv_param, {},
-                                 OperatorNodeConfig{dtype::QuantizedS8{2.5f}});
+    auto y = opr::ConvBias::make(
+            x, w, b, z, conv_param, {}, OperatorNodeConfig{dtype::QuantizedS8{2.5f}});
     auto x0 = mkvar("x0", {32, 4, 28, 28, 4}, dtype::QuantizedS8{2.5f}),
          x1 = mkvar("x1", {32, 4, 28, 28, 4}, dtype::QuantizedS8{2.5f}),
          x2 = mkvar("x2", {32, 4, 28, 28, 4}, dtype::QuantizedS8{2.5f}),
@@ -1421,27 +1399,27 @@ TEST(TensorRTReplacePass, WideNetwork) {
     opt.graph_opt_level = 0;
     opt.graph_opt.tensorrt = true;
     auto trt_o = gopt::GraphOptimizer{}
-            .add_preset_passes(true, nullptr, &opt)
-            .apply({{o0, o1, o2, o3}})
-            .endpoint_vars();
+                         .add_preset_passes(true, nullptr, &opt)
+                         .apply({{o0, o1, o2, o3}})
+                         .endpoint_vars();
 
     opt.graph_opt_level = 0;
     opt.graph_opt.tensorrt = false;
     auto mgb_o = gopt::GraphOptimizer{}
-            .add_preset_passes(true, nullptr, &opt)
-            .apply({{o0, o1, o2, o3}})
-            .endpoint_vars();
+                         .add_preset_passes(true, nullptr, &opt)
+                         .apply({{o0, o1, o2, o3}})
+                         .endpoint_vars();
 
     ComputingGraph::OutputSpec outspec(8);
     SmallVector<HostTensorND> outputs(8);
-    for (size_t i = 0; i < 4; ++ i) {
+    for (size_t i = 0; i < 4; ++i) {
         outspec[i] = make_callback_copy(trt_o[i], outputs[i], false);
         outspec[i + 4] = make_callback_copy(mgb_o[i], outputs[i + 4], false);
     }
     auto func = graph->compile(outspec);
     func->execute();
 
-    for (size_t i = 0; i < 4; ++ i) {
+    for (size_t i = 0; i < 4; ++i) {
         MGB_ASSERT_TENSOR_NEAR(outputs[i], outputs[i + 4], 1e-4);
     }
 }
@@ -1464,17 +1442,13 @@ TEST(TensorRTReplacePass, ShuffleRemove) {
 
     auto graph = ComputingGraph::make();
     graph->options().graph_opt_level = 0;
-    auto mkvar = [&](const char* name, const TensorShape& shp,
-                     const DType& dtype) {
+    auto mkvar = [&](const char* name, const TensorShape& shp, const DType& dtype) {
         return opr::TypeCvt::make(
-                opr::Host2DeviceCopy::make(*graph, gen(shp, cn)).rename(name),
-                dtype);
+                opr::Host2DeviceCopy::make(*graph, gen(shp, cn)).rename(name), dtype);
     };
-    auto mkcvar = [&](const char* name, const TensorShape& shp,
-                      const DType& dtype) {
+    auto mkcvar = [&](const char* name, const TensorShape& shp, const DType& dtype) {
         return opr::TypeCvt::make(
-                opr::SharedDeviceTensor::make(*graph, *gen(shp, cn))
-                        .rename(name),
+                opr::SharedDeviceTensor::make(*graph, *gen(shp, cn)).rename(name),
                 dtype);
     };
 
@@ -1485,8 +1459,7 @@ TEST(TensorRTReplacePass, ShuffleRemove) {
         auto sub = [&xshp, &cv](int idx) {
             return opr::IndexAt::make(xshp, {{0, cv(idx)}});
         };
-        auto tshp = opr::Concat::make(
-                {sub(0), sub(1) / 4, cv(4), sub(2), sub(3)}, 0);
+        auto tshp = opr::Concat::make({sub(0), sub(1) / 4, cv(4), sub(2), sub(3)}, 0);
         auto y0 = opr::Reshape::make(x, tshp);
         auto y1 = opr::Dimshuffle::make(y0, {0, 1, 3, 4, 2});
         return y1;
@@ -1515,8 +1488,8 @@ TEST(TensorRTReplacePass, ShuffleRemove) {
     conv_param.format = opr::ConvBias::Param::Format::NCHW4;
     conv_param.stride_h = conv_param.stride_w = 1;
     conv_param.pad_h = conv_param.pad_w = 1;
-    auto y = opr::ConvBias::make(x, w, b, z, conv_param, {},
-                                 OperatorNodeConfig{dtype::QuantizedS8{2.5f}});
+    auto y = opr::ConvBias::make(
+            x, w, b, z, conv_param, {}, OperatorNodeConfig{dtype::QuantizedS8{2.5f}});
     opr::Pooling::Param pool_param;
     pool_param.format = opr::Pooling::Param::Format::NCHW4;
     pool_param.stride_h = pool_param.stride_w = 2;
@@ -1538,24 +1511,23 @@ TEST(TensorRTReplacePass, ShuffleRemove) {
 
     ComputingGraph::Options opt;
     opt.graph_opt_level = 0;
-    unpack_vector(gopt::GraphOptimizer{}
-                          .add_pass<gopt::ExpandFusedArithPass>()
-                          .add_pass<gopt::TensorRTReplacePass>()
-                          .add_pass<gopt::ArithFusePass>()
-                          .add_pass<gopt::ShuffleShuffleRemovePass>()
-                          .apply({{y1, y3}})
-                          .endpoint_vars(),
-                  trt_y1, trt_y3);
+    unpack_vector(
+            gopt::GraphOptimizer{}
+                    .add_pass<gopt::ExpandFusedArithPass>()
+                    .add_pass<gopt::TensorRTReplacePass>()
+                    .add_pass<gopt::ArithFusePass>()
+                    .add_pass<gopt::ShuffleShuffleRemovePass>()
+                    .apply({{y1, y3}})
+                    .endpoint_vars(),
+            trt_y1, trt_y3);
     trt_y1 = opr::TypeCvt::make(trt_y1, dtype::QuantizedS8{2.5f}),
     trt_y1 = opr::TypeCvt::make(trt_y1, dtype::Float32());
     trt_y3 = opr::TypeCvt::make(trt_y3, dtype::QuantizedS8{2.5f}),
     trt_y3 = opr::TypeCvt::make(trt_y3, dtype::Float32());
 
     opt.graph_opt_level = 0;
-    unpack_vector(gopt::GraphOptimizer{}
-                          .apply({{y1, y3}})
-                          .endpoint_vars(),
-                  mgb_y1, mgb_y3);
+    unpack_vector(
+            gopt::GraphOptimizer{}.apply({{y1, y3}}).endpoint_vars(), mgb_y1, mgb_y3);
 
     size_t nr_trt_opr = 0;
     cg::DepOprIter iter{[&nr_trt_opr](cg::OperatorNodeBase* opr) {
@@ -1601,11 +1573,9 @@ TEST(TestShuffleShuffleRemove, NCHW2NCHW42NCHW) {
 
     auto graph = ComputingGraph::make();
     graph->options().graph_opt_level = 0;
-    auto mkvar = [&](const char* name, const TensorShape& shp,
-                     const DType& dtype) {
+    auto mkvar = [&](const char* name, const TensorShape& shp, const DType& dtype) {
         return opr::TypeCvt::make(
-                opr::Host2DeviceCopy::make(*graph, gen(shp, cn)).rename(name),
-                dtype);
+                opr::Host2DeviceCopy::make(*graph, gen(shp, cn)).rename(name), dtype);
     };
 
     auto nchw2nchw4 = [](SymbolVar x) {
@@ -1615,8 +1585,7 @@ TEST(TestShuffleShuffleRemove, NCHW2NCHW42NCHW) {
         auto sub = [&xshp, &cv](int idx) {
             return opr::IndexAt::make(xshp, {{0, cv(idx)}});
         };
-        auto tshp = opr::Concat::make(
-                {sub(0), sub(1) / 4, cv(4), sub(2), sub(3)}, 0);
+        auto tshp = opr::Concat::make({sub(0), sub(1) / 4, cv(4), sub(2), sub(3)}, 0);
         auto y0 = opr::Reshape::make(x, tshp);
         auto y1 = opr::Dimshuffle::make(y0, {0, 1, 3, 4, 2});
         return y1;
@@ -1642,11 +1611,12 @@ TEST(TestShuffleShuffleRemove, NCHW2NCHW42NCHW) {
 
     ComputingGraph::Options opt;
     opt.graph_opt_level = 0;
-    unpack_vector(gopt::GraphOptimizer{}
-                          .add_pass<gopt::ShuffleShuffleRemovePass>()
-                          .apply({{x}})
-                          .endpoint_vars(),
-                  o_remove);
+    unpack_vector(
+            gopt::GraphOptimizer{}
+                    .add_pass<gopt::ShuffleShuffleRemovePass>()
+                    .apply({{x}})
+                    .endpoint_vars(),
+            o_remove);
 
     {
         size_t nr_shuffle_opr = 0;
@@ -1670,15 +1640,13 @@ TEST(TestShuffleShuffleRemove, NCHW2NCHW42NCHW) {
     }
 
     opt.graph_opt_level = 0;
-    unpack_vector(gopt::GraphOptimizer{}
-                          .apply({{x}})
-                          .endpoint_vars(),
-                  o);
+    unpack_vector(gopt::GraphOptimizer{}.apply({{x}}).endpoint_vars(), o);
 
     HostTensorND h_o, h_o_remove;
     graph->options().graph_opt.tensorrt = false;
-    auto func = graph->compile({make_callback_copy(o, h_o, false),
-                                make_callback_copy(o_remove, h_o_remove)});
+    auto func = graph->compile(
+            {make_callback_copy(o, h_o, false),
+             make_callback_copy(o_remove, h_o_remove)});
     func->execute();
     MGB_ASSERT_TENSOR_NEAR(h_o, h_o_remove, 1e-4);
 }
@@ -1692,11 +1660,9 @@ TEST(TestShuffleShuffleRemove, NCHW2NCHW42NCHW32) {
 
     auto graph = ComputingGraph::make();
     graph->options().graph_opt_level = 0;
-    auto mkvar = [&](const char* name, const TensorShape& shp,
-                     const DType& dtype) {
+    auto mkvar = [&](const char* name, const TensorShape& shp, const DType& dtype) {
         return opr::TypeCvt::make(
-                opr::Host2DeviceCopy::make(*graph, gen(shp, cn)).rename(name),
-                dtype);
+                opr::Host2DeviceCopy::make(*graph, gen(shp, cn)).rename(name), dtype);
     };
 
     auto nchw2nchw4 = [](SymbolVar x) {
@@ -1706,8 +1672,7 @@ TEST(TestShuffleShuffleRemove, NCHW2NCHW42NCHW32) {
         auto sub = [&xshp, &cv](int idx) {
             return opr::IndexAt::make(xshp, {{0, cv(idx)}});
         };
-        auto tshp = opr::Concat::make(
-                {sub(0), sub(1) / 4, cv(4), sub(2), sub(3)}, 0);
+        auto tshp = opr::Concat::make({sub(0), sub(1) / 4, cv(4), sub(2), sub(3)}, 0);
         auto y0 = opr::Reshape::make(x, tshp);
         auto y1 = opr::Dimshuffle::make(y0, {0, 1, 3, 4, 2});
         return y1;
@@ -1756,11 +1721,12 @@ TEST(TestShuffleShuffleRemove, NCHW2NCHW42NCHW32) {
 
     ComputingGraph::Options opt;
     opt.graph_opt_level = 0;
-    unpack_vector(gopt::GraphOptimizer{}
-                          .add_pass<gopt::ShuffleShuffleRemovePass>()
-                          .apply({{x}})
-                          .endpoint_vars(),
-                  o_remove);
+    unpack_vector(
+            gopt::GraphOptimizer{}
+                    .add_pass<gopt::ShuffleShuffleRemovePass>()
+                    .apply({{x}})
+                    .endpoint_vars(),
+            o_remove);
 
     {
         size_t nr_shuffle_opr = 0;
@@ -1784,15 +1750,13 @@ TEST(TestShuffleShuffleRemove, NCHW2NCHW42NCHW32) {
     }
 
     opt.graph_opt_level = 0;
-    unpack_vector(gopt::GraphOptimizer{}
-                          .apply({{x}})
-                          .endpoint_vars(),
-                  o);
+    unpack_vector(gopt::GraphOptimizer{}.apply({{x}}).endpoint_vars(), o);
 
     HostTensorND h_o, h_o_remove;
     graph->options().graph_opt.tensorrt = false;
-    auto func = graph->compile({make_callback_copy(o, h_o, false),
-                                make_callback_copy(o_remove, h_o_remove)});
+    auto func = graph->compile(
+            {make_callback_copy(o, h_o, false),
+             make_callback_copy(o_remove, h_o_remove)});
     func->execute();
     MGB_ASSERT_TENSOR_NEAR(h_o, h_o_remove, 1e-4);
 }
@@ -1815,17 +1779,13 @@ TEST(TensorRTReplacePass, EngineCache) {
     TensorRTEngineCache::enable_engine_cache(true);
     auto graph = ComputingGraph::make();
     graph->options().graph_opt_level = 0;
-    auto mkvar = [&](const char* name, const TensorShape& shp,
-                     const DType& dtype) {
+    auto mkvar = [&](const char* name, const TensorShape& shp, const DType& dtype) {
         return opr::TypeCvt::make(
-                opr::Host2DeviceCopy::make(*graph, gen(shp, cn)).rename(name),
-                dtype);
+                opr::Host2DeviceCopy::make(*graph, gen(shp, cn)).rename(name), dtype);
     };
-    auto mkcvar = [&](const char* name, const TensorShape& shp,
-                      const DType& dtype) {
+    auto mkcvar = [&](const char* name, const TensorShape& shp, const DType& dtype) {
         return opr::TypeCvt::make(
-                opr::SharedDeviceTensor::make(*graph, *gen(shp, cn))
-                        .rename(name),
+                opr::SharedDeviceTensor::make(*graph, *gen(shp, cn)).rename(name),
                 dtype);
     };
 
@@ -1836,8 +1796,7 @@ TEST(TensorRTReplacePass, EngineCache) {
         auto sub = [&xshp, &cv](int idx) {
             return opr::IndexAt::make(xshp, {{0, cv(idx)}});
         };
-        auto tshp = opr::Concat::make(
-                {sub(0), sub(1) / 4, cv(4), sub(2), sub(3)}, 0);
+        auto tshp = opr::Concat::make({sub(0), sub(1) / 4, cv(4), sub(2), sub(3)}, 0);
         auto y0 = opr::Reshape::make(x, tshp);
         auto y1 = opr::Dimshuffle::make(y0, {0, 1, 3, 4, 2});
         return y1;
@@ -1866,8 +1825,8 @@ TEST(TensorRTReplacePass, EngineCache) {
     conv_param.format = opr::ConvBias::Param::Format::NCHW4;
     conv_param.stride_h = conv_param.stride_w = 1;
     conv_param.pad_h = conv_param.pad_w = 1;
-    auto y = opr::ConvBias::make(x, w, b, z, conv_param, {},
-                                 OperatorNodeConfig{dtype::QuantizedS8{2.5f}});
+    auto y = opr::ConvBias::make(
+            x, w, b, z, conv_param, {}, OperatorNodeConfig{dtype::QuantizedS8{2.5f}});
     y = nchw42nchw(y);
     y = opr::TypeCvt::make(y, dtype::Float32());
 
@@ -1876,14 +1835,15 @@ TEST(TensorRTReplacePass, EngineCache) {
 
     ComputingGraph::Options opt;
     opt.graph_opt_level = 0;
-    unpack_vector(gopt::GraphOptimizer{}
-                          .add_pass<gopt::ExpandFusedArithPass>()
-                          .add_pass<gopt::TensorRTReplacePass>()
-                          .add_pass<gopt::ArithFusePass>()
-                          .add_pass<gopt::ShuffleShuffleRemovePass>()
-                          .apply({{y}})
-                          .endpoint_vars(),
-                  trt_y);
+    unpack_vector(
+            gopt::GraphOptimizer{}
+                    .add_pass<gopt::ExpandFusedArithPass>()
+                    .add_pass<gopt::TensorRTReplacePass>()
+                    .add_pass<gopt::ArithFusePass>()
+                    .add_pass<gopt::ShuffleShuffleRemovePass>()
+                    .apply({{y}})
+                    .endpoint_vars(),
+            trt_y);
     trt_y = opr::TypeCvt::make(trt_y, dtype::QuantizedS8{2.5f}),
     trt_y = opr::TypeCvt::make(trt_y, dtype::Float32());
 
@@ -1904,22 +1864,16 @@ TEST(TensorRTReplacePass, EngineCache) {
 
 TEST(TestTensorRTReplace, FuseConvAdd) {
     REQUIRE_GPU(1);
-    HostTensorGenerator<dtype::Float32, RandomDistribution::UNIFORM> gen{-3.f,
-                                                                         3.f};
+    HostTensorGenerator<dtype::Float32, RandomDistribution::UNIFORM> gen{-3.f, 3.f};
     auto graph = ComputingGraph::make();
     graph->options().graph_opt_level = 0;
-    auto mkvar = [&](const char* name, const TensorShape& shp,
-                     const DType& dtype) {
+    auto mkvar = [&](const char* name, const TensorShape& shp, const DType& dtype) {
         return opr::TypeCvt::make(
-                opr::Host2DeviceCopy::make(*graph, gen(shp)).rename(name),
-                dtype);
+                opr::Host2DeviceCopy::make(*graph, gen(shp)).rename(name), dtype);
     };
-    auto mkcvar = [&](const char* name, const TensorShape& shp,
-                      const DType& dtype) {
+    auto mkcvar = [&](const char* name, const TensorShape& shp, const DType& dtype) {
         return opr::TypeCvt::make(
-                opr::SharedDeviceTensor::make(*graph, *gen(shp))
-                        .rename(name),
-                dtype);
+                opr::SharedDeviceTensor::make(*graph, *gen(shp)).rename(name), dtype);
     };
 
     auto x = mkvar("x", {32, 4, 28, 28}, dtype::Float32()),
@@ -1938,8 +1892,7 @@ TEST(TestTensorRTReplace, FuseConvAdd) {
         auto sub = [&xshp, &cv](int idx) {
             return opr::IndexAt::make(xshp, {{0, cv(idx)}});
         };
-        auto tshp = opr::Concat::make(
-                {sub(0), sub(1) / 4, cv(4), sub(2), sub(3)}, 0);
+        auto tshp = opr::Concat::make({sub(0), sub(1) / 4, cv(4), sub(2), sub(3)}, 0);
         auto y0 = opr::Reshape::make(x, tshp);
         auto y1 = opr::Dimshuffle::make(y0, {0, 1, 3, 4, 2});
         return y1;
@@ -1952,17 +1905,18 @@ TEST(TestTensorRTReplace, FuseConvAdd) {
 
     ComputingGraph::Options opt;
     opt.graph_opt_level = 0;
-    unpack_vector(gopt::GraphOptimizer{}
-                          .add_pass<gopt::ExpandFusedArithPass>()
-                          .add_pass<gopt::TensorRTReplacePass>()
-                          .add_pass<gopt::ArithFusePass>()
-                          .apply({{y, y1}})
-                          .endpoint_vars(),
-                  trt_y, trt_y1);
+    unpack_vector(
+            gopt::GraphOptimizer{}
+                    .add_pass<gopt::ExpandFusedArithPass>()
+                    .add_pass<gopt::TensorRTReplacePass>()
+                    .add_pass<gopt::ArithFusePass>()
+                    .apply({{y, y1}})
+                    .endpoint_vars(),
+            trt_y, trt_y1);
 
     opt.graph_opt_level = 0;
-    unpack_vector(gopt::GraphOptimizer{}.apply({{y, y1}}).endpoint_vars(),
-                  mgb_y, mgb_y1);
+    unpack_vector(
+            gopt::GraphOptimizer{}.apply({{y, y1}}).endpoint_vars(), mgb_y, mgb_y1);
 
     ComputingGraph::OutputSpec outspec(4);
     SmallVector<HostTensorND> outputs(4);
@@ -1988,18 +1942,13 @@ TEST(TestTensorRTReplace, FuseConvAddNchw2nchw4) {
             1.2f, 127 * 127};
     auto graph = ComputingGraph::make();
     graph->options().graph_opt_level = 0;
-    auto mkvar = [&](const char* name, const TensorShape& shp,
-                     const DType& dtype) {
+    auto mkvar = [&](const char* name, const TensorShape& shp, const DType& dtype) {
         return opr::TypeCvt::make(
-                opr::Host2DeviceCopy::make(*graph, gen(shp)).rename(name),
-                dtype);
+                opr::Host2DeviceCopy::make(*graph, gen(shp)).rename(name), dtype);
     };
-    auto mkcvar = [&](const char* name, const TensorShape& shp,
-                      const DType& dtype) {
+    auto mkcvar = [&](const char* name, const TensorShape& shp, const DType& dtype) {
         return opr::TypeCvt::make(
-                opr::SharedDeviceTensor::make(*graph, *gen(shp))
-                        .rename(name),
-                dtype);
+                opr::SharedDeviceTensor::make(*graph, *gen(shp)).rename(name), dtype);
     };
 
     auto x = mkvar("x", {32, 4, 28, 28}, dtype::QuantizedS8(2.5f)),
@@ -2009,8 +1958,8 @@ TEST(TestTensorRTReplace, FuseConvAddNchw2nchw4) {
     param.format = opr::ConvBias::Param::Format::NCHW;
     param.stride_h = param.stride_w = 1;
     param.pad_h = param.pad_w = 1;
-    auto y = opr::ConvBias::make(x, w, b, param, {},
-                                 OperatorNodeConfig{dtype::QuantizedS8{2.5f}});
+    auto y = opr::ConvBias::make(
+            x, w, b, param, {}, OperatorNodeConfig{dtype::QuantizedS8{2.5f}});
     auto z = opr::TypeCvt::make(y, dtype::Float32());
 
     SymbolVar trt_z;
@@ -2030,8 +1979,7 @@ TEST(TestTensorRTReplace, FuseConvAddNchw2nchw4) {
             trt_z);
 
     opt.graph_opt_level = 0;
-    unpack_vector(gopt::GraphOptimizer{}.apply({{z}}).endpoint_vars(),
-                  mgb_z);
+    unpack_vector(gopt::GraphOptimizer{}.apply({{z}}).endpoint_vars(), mgb_z);
 
     ComputingGraph::OutputSpec outspec(2);
     SmallVector<HostTensorND> outputs(2);
@@ -2043,7 +1991,6 @@ TEST(TestTensorRTReplace, FuseConvAddNchw2nchw4) {
 
     MGB_ASSERT_TENSOR_NEAR(outputs[0], outputs[1], 1e-3);
 }
-
 
 #endif  // MGB_ENABLE_TENSOR_RT
 

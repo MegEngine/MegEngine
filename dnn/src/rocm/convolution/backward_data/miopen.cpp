@@ -12,22 +12,21 @@
 
 #include "./algo.h"
 
-#include "src/rocm/utils.h"
-#include "src/rocm/miopen_wrapper.h"
 #include "src/rocm/convolution/helper.h"
+#include "src/rocm/miopen_wrapper.h"
+#include "src/rocm/utils.h"
 
 using namespace megdnn;
 using namespace rocm;
 using namespace convolution;
 
-MIOpenCache<ConvolutionBackwardDataImpl::AlgoBase::SizeArgs,
-            miopenConvBwdDataAlgorithm_t>
+MIOpenCache<
+        ConvolutionBackwardDataImpl::AlgoBase::SizeArgs, miopenConvBwdDataAlgorithm_t>
         ConvolutionBackwardDataImpl::AlgoMIOpen::sm_miopen_algo_cache;
 MIOpenCache<ConvolutionBackwardDataImpl::AlgoBase::SizeArgs, size_t>
         ConvolutionBackwardDataImpl::AlgoMIOpen::sm_miopen_ws_cache;
 
-bool ConvolutionBackwardDataImpl::AlgoMIOpen::is_available(
-        const SizeArgs& args) const {
+bool ConvolutionBackwardDataImpl::AlgoMIOpen::is_available(const SizeArgs& args) const {
     MIOpenBwdDataDescs D;
     if (!is_miopen_supported(args.as_fwd_args()))
         return false;
@@ -57,15 +56,16 @@ size_t ConvolutionBackwardDataImpl::AlgoMIOpen::get_workspace_in_bytes(
     auto status = miopenConvolutionBackwardDataGetWorkSpaceSize(
             args.handle->miopen_handle(), D.diff_desc.desc, D.filter_desc.desc,
             D.conv_desc.desc, D.grad_desc.desc, &workspace_size);
-    megdnn_assert(status == miopenStatusSuccess,
-                  "conv bwd_data get workspace failed: %s; info: %s",
-                  miopenGetErrorString(status), args.to_string().c_str());
+    megdnn_assert(
+            status == miopenStatusSuccess,
+            "conv bwd_data get workspace failed: %s; info: %s",
+            miopenGetErrorString(status), args.to_string().c_str());
     sm_miopen_ws_cache.set(args, workspace_size);
     return workspace_size;
 }
 
-miopenConvBwdDataAlgorithm_t
-ConvolutionBackwardDataImpl::AlgoMIOpen::find_best_algo(const ExecArgs& args) {
+miopenConvBwdDataAlgorithm_t ConvolutionBackwardDataImpl::AlgoMIOpen::find_best_algo(
+        const ExecArgs& args) {
     auto find_algo = sm_miopen_algo_cache.get(args);
     if (find_algo.first)
         return find_algo.second;
@@ -76,11 +76,10 @@ ConvolutionBackwardDataImpl::AlgoMIOpen::find_best_algo(const ExecArgs& args) {
     int ret_algo_count;
     miopenConvAlgoPerf_t algo_perf;
     miopen_check(miopenFindConvolutionBackwardDataAlgorithm(
-            args.handle->miopen_handle(), D.diff_desc.desc,
-            args.diff_tensor->raw_ptr, D.filter_desc.desc,
-            args.filter_tensor->raw_ptr, D.conv_desc.desc, D.grad_desc.desc,
-            args.grad_tensor->raw_ptr, req_algo_count, &ret_algo_count,
-            &algo_perf, args.workspace.raw_ptr, args.workspace.size,
+            args.handle->miopen_handle(), D.diff_desc.desc, args.diff_tensor->raw_ptr,
+            D.filter_desc.desc, args.filter_tensor->raw_ptr, D.conv_desc.desc,
+            D.grad_desc.desc, args.grad_tensor->raw_ptr, req_algo_count,
+            &ret_algo_count, &algo_perf, args.workspace.raw_ptr, args.workspace.size,
             exhaustive_search));
     sm_miopen_algo_cache.set(args, algo_perf.bwd_data_algo);
     return algo_perf.bwd_data_algo;
@@ -89,18 +88,18 @@ ConvolutionBackwardDataImpl::AlgoMIOpen::find_best_algo(const ExecArgs& args) {
 void ConvolutionBackwardDataImpl::AlgoMIOpen::exec(const ExecArgs& args) const {
     MIOpenBwdDataDescs D;
     args.init_desc(D);
-    auto algo = const_cast<ConvolutionBackwardDataImpl::AlgoMIOpen*>(this)
-                        ->find_best_algo(args);
+    auto algo =
+            const_cast<ConvolutionBackwardDataImpl::AlgoMIOpen*>(this)->find_best_algo(
+                    args);
     float alpha = 1.0f, beta = 0.0f;
     auto status = miopenConvolutionBackwardData(
             args.handle->miopen_handle(), &alpha, D.diff_desc.desc,
-            args.diff_tensor->raw_ptr, D.filter_desc.desc,
-            args.filter_tensor->raw_ptr, D.conv_desc.desc, algo, &beta,
-            D.grad_desc.desc, args.grad_tensor->raw_ptr, args.workspace.raw_ptr,
-            args.workspace.size);
-    megdnn_assert(status == miopenStatusSuccess,
-                  "conv bwd_data failed: %s; info: %s",
-                  miopenGetErrorString(status), args.to_string().c_str());
+            args.diff_tensor->raw_ptr, D.filter_desc.desc, args.filter_tensor->raw_ptr,
+            D.conv_desc.desc, algo, &beta, D.grad_desc.desc, args.grad_tensor->raw_ptr,
+            args.workspace.raw_ptr, args.workspace.size);
+    megdnn_assert(
+            status == miopenStatusSuccess, "conv bwd_data failed: %s; info: %s",
+            miopenGetErrorString(status), args.to_string().c_str());
 }
 
 void ConvolutionBackwardDataImpl::AlgoPack::fill_miopen_algos() {}

@@ -77,8 +77,9 @@ TEST_F(ARM_COMMON, WARP_PERSPECTIVE_CV) {
     param.format = param::WarpPerspective::Format::NHWC;
     // add for nearest test
     param.imode = param::WarpPerspective::InterpolationMode::NEAREST;
-    for (auto mode : {BMode::REFLECT_101, BMode::REPLICATE, BMode::REFLECT,
-                      BMode::WRAP, BMode::CONSTANT}) {
+    for (auto mode :
+         {BMode::REFLECT_101, BMode::REPLICATE, BMode::REFLECT, BMode::WRAP,
+          BMode::CONSTANT}) {
         param.bmode = mode;
         param.border_val = 1.737;
         checker.set_param(param);
@@ -97,14 +98,14 @@ TEST_F(ARM_COMMON, WARP_PERSPECTIVE_CV) {
         UniformIntRNG rng(0, 999);
         checker.set_rng(2, &rng);
         checker.set_dtype(2, dtype::Int32());
-        checker.exec(
-                {{1000, 2, 10, 3}, {1000, 3, 3}, {1000}, {1000, 2, 12, 3}});
+        checker.exec({{1000, 2, 10, 3}, {1000, 3, 3}, {1000}, {1000, 2, 12, 3}});
     }
 
     // add linear test
     param.imode = param::WarpPerspective::InterpolationMode::INTER_LINEAR;
-    for (auto mode : {BMode::REFLECT_101, BMode::REPLICATE, BMode::REFLECT,
-                      BMode::WRAP, BMode::CONSTANT}) {
+    for (auto mode :
+         {BMode::REFLECT_101, BMode::REPLICATE, BMode::REFLECT, BMode::WRAP,
+          BMode::CONSTANT}) {
         param.bmode = mode;
         param.border_val = 1.737;
         checker.set_param(param);
@@ -122,8 +123,7 @@ TEST_F(ARM_COMMON, WARP_PERSPECTIVE_CV) {
         UniformIntRNG rng(0, 999);
         checker.set_rng(2, &rng);
         checker.set_dtype(2, dtype::Int32());
-        checker.exec(
-                {{1000, 2, 10, 3}, {2000, 3, 3}, {2000}, {2000, 2, 12, 3}});
+        checker.exec({{1000, 2, 10, 3}, {2000, 3, 3}, {2000}, {2000, 2, 12, 3}});
     }
 
     auto args = warp_perspective::get_cv_args();
@@ -204,8 +204,9 @@ TEST_F(ARM_COMMON_MULTI_THREADS, WARP_PERSPECTIVE_CV) {
     param.format = param::WarpPerspective::Format::NHWC;
     // add for nearest test
     param.imode = param::WarpPerspective::InterpolationMode::NEAREST;
-    for (auto mode : {BMode::REFLECT_101, BMode::REPLICATE, BMode::REFLECT,
-                      BMode::WRAP, BMode::CONSTANT}) {
+    for (auto mode :
+         {BMode::REFLECT_101, BMode::REPLICATE, BMode::REFLECT, BMode::WRAP,
+          BMode::CONSTANT}) {
         param.bmode = mode;
         param.border_val = 1.737;
         checker.set_param(param);
@@ -224,14 +225,14 @@ TEST_F(ARM_COMMON_MULTI_THREADS, WARP_PERSPECTIVE_CV) {
         UniformIntRNG rng(0, 999);
         checker.set_rng(2, &rng);
         checker.set_dtype(2, dtype::Int32());
-        checker.exec(
-                {{1000, 2, 10, 3}, {2000, 3, 3}, {2000}, {2000, 2, 12, 3}});
+        checker.exec({{1000, 2, 10, 3}, {2000, 3, 3}, {2000}, {2000, 2, 12, 3}});
     }
 
     // add linear test
     param.imode = param::WarpPerspective::InterpolationMode::INTER_LINEAR;
-    for (auto mode : {BMode::REFLECT_101, BMode::REPLICATE, BMode::REFLECT,
-                      BMode::WRAP, BMode::CONSTANT}) {
+    for (auto mode :
+         {BMode::REFLECT_101, BMode::REPLICATE, BMode::REFLECT, BMode::WRAP,
+          BMode::CONSTANT}) {
         param.bmode = mode;
         param.border_val = 1.737;
         checker.set_param(param);
@@ -249,15 +250,14 @@ TEST_F(ARM_COMMON_MULTI_THREADS, WARP_PERSPECTIVE_CV) {
         UniformIntRNG rng(0, 999);
         checker.set_rng(2, &rng);
         checker.set_dtype(2, dtype::Int32());
-        checker.exec(
-                {{1000, 2, 10, 3}, {1000, 3, 3}, {1000}, {1000, 2, 12, 3}});
+        checker.exec({{1000, 2, 10, 3}, {1000, 3, 3}, {1000}, {1000, 2, 12, 3}});
     }
 
     auto args = warp_perspective::get_cv_args();
     for (auto&& arg : args) {
         ConstValue rng(0.f);
         checker.set_param(arg.param)
-			    .set_rng(2, &rng)
+                .set_rng(2, &rng)
                 .set_dtype(0, dtype::Uint8())
                 .set_dtype(1, dtype::Float32())
                 .set_dtype(2, dtype::Int32())
@@ -268,7 +268,7 @@ TEST_F(ARM_COMMON_MULTI_THREADS, WARP_PERSPECTIVE_CV) {
     for (auto&& arg : args) {
         ConstValue rng(0.f);
         checker.set_param(arg.param)
-			    .set_rng(2, &rng)
+                .set_rng(2, &rng)
                 .set_dtype(0, dtype::Float32())
                 .set_dtype(1, dtype::Float32())
                 .set_dtype(2, dtype::Int32())
@@ -291,16 +291,14 @@ TEST_F(ARM_COMMON, BENCHMARK_WARP_PERSPECTIVE_FORWARD) {
     param.border_val = 0.3f;
     param.format = param::WarpPerspective::Format::NHWC;
 
-    auto run = [&](size_t N, size_t C, size_t IH, size_t IW, size_t OH,
-                   size_t OW, size_t scale) {
-        printf("src={%zu, %zu, %zu, %zu}, dst={%zu, %zu, %zu, %zu}\n", N, IH,
-               IW, C, N, OH, OW, C);
+    auto run = [&](size_t N, size_t C, size_t IH, size_t IW, size_t OH, size_t OW,
+                   size_t scale) {
+        printf("src={%zu, %zu, %zu, %zu}, dst={%zu, %zu, %zu, %zu}\n", N, IH, IW, C, N,
+               OH, OW, C);
         auto time_ms =
-                benchmarker.exec({{N, IH, IW, C}, {N, 3, 3}, {N, OH, OW, C}}) /
-                NR_RUN;
+                benchmarker.exec({{N, IH, IW, C}, {N, 3, 3}, {N, OH, OW, C}}) / NR_RUN;
         auto time_naive_ms =
-                benchmarker_naive.exec(
-                        {{N, IH, IW, C}, {N, 3, 3}, {N, OH, OW, C}}) /
+                benchmarker_naive.exec({{N, IH, IW, C}, {N, 3, 3}, {N, OH, OW, C}}) /
                 NR_RUN;
         auto bandwidth = N * C * (scale * OH * OW) * dtype::Float32().size();
         printf("aarch64: %.3f, perf: %.3f GBPS naive: %.3f, perf %.3f GBPS "
@@ -316,27 +314,27 @@ TEST_F(ARM_COMMON, BENCHMARK_WARP_PERSPECTIVE_FORWARD) {
     size_t scales[2] = {2, 5};
 
     for (auto imode : {IMode::NEAREST, IMode::INTER_LINEAR}) {
-        for (auto bmode : {BMode::REFLECT_101, BMode::REPLICATE, BMode::REFLECT,
-                           BMode::WRAP, BMode::CONSTANT}) {
+        for (auto bmode :
+             {BMode::REFLECT_101, BMode::REPLICATE, BMode::REFLECT, BMode::WRAP,
+              BMode::CONSTANT}) {
             param.imode = imode;
             param.bmode = bmode;
             benchmarker.set_param(param).set_display(false).set_times(NR_RUN);
-            benchmarker_naive.set_param(param).set_display(false).set_times(
-                    NR_RUN);
+            benchmarker_naive.set_param(param).set_display(false).set_times(NR_RUN);
             size_t scale = scales[(int)imode];
             printf("\n\n\n warpperspective InterpolationMode::%s "
                    "BorderMode::%s start\n",
                    imodestringmap[(int)imode].c_str(),
                    bmodestringmap[(int)bmode].c_str());
-            for (auto&& shape :
-                 std::vector<std::pair<size_t, size_t>>{{700, 490},
-                                                        {500, 334},
-                                                        {472, 342},
-                                                        {448, 306},
-                                                        {626, 412},
-                                                        {140, 144},
-                                                        {120, 128},
-                                                        {180, 176}}) {
+            for (auto&& shape : std::vector<std::pair<size_t, size_t>>{
+                         {700, 490},
+                         {500, 334},
+                         {472, 342},
+                         {448, 306},
+                         {626, 412},
+                         {140, 144},
+                         {120, 128},
+                         {180, 176}}) {
                 for (size_t ch : {1, 2, 3}) {
                     run(1, ch, shape.first, shape.second, 256, 256, scale);
                 }
@@ -346,26 +344,23 @@ TEST_F(ARM_COMMON, BENCHMARK_WARP_PERSPECTIVE_FORWARD) {
 }
 
 namespace {
-void benchmark_impl(const typename WarpPerspective::Param& param,
-                    std::vector<SmallVector<TensorShape>> shapes, size_t RUNS,
-                    TaskExecutorConfig&& multi_thread_config,
-                    TaskExecutorConfig&& single_thread_config) {
+void benchmark_impl(
+        const typename WarpPerspective::Param& param,
+        std::vector<SmallVector<TensorShape>> shapes, size_t RUNS,
+        TaskExecutorConfig&& multi_thread_config,
+        TaskExecutorConfig&& single_thread_config) {
     std::vector<float> multi_thread_times, single_thread_times;
     {
-        auto multi_thread_hanle =
-                create_cpu_handle(0, true, &multi_thread_config);
-        auto benchmarker =
-                Benchmarker<WarpPerspective>(multi_thread_hanle.get());
+        auto multi_thread_hanle = create_cpu_handle(0, true, &multi_thread_config);
+        auto benchmarker = Benchmarker<WarpPerspective>(multi_thread_hanle.get());
         benchmarker.set_times(RUNS).set_display(false).set_param(param);
         for (auto shape : shapes) {
             multi_thread_times.push_back(benchmarker.exec(shape) / RUNS);
         }
     }
     {
-        auto single_thread_handle =
-                create_cpu_handle(0, true, &single_thread_config);
-        auto benchmarker =
-                Benchmarker<WarpPerspective>(single_thread_handle.get());
+        auto single_thread_handle = create_cpu_handle(0, true, &single_thread_config);
+        auto benchmarker = Benchmarker<WarpPerspective>(single_thread_handle.get());
         benchmarker.set_times(RUNS).set_display(false).set_param(param);
         for (auto shape : shapes) {
             single_thread_times.push_back(benchmarker.exec(shape) / RUNS);
@@ -376,8 +371,7 @@ void benchmark_impl(const typename WarpPerspective::Param& param,
     for (size_t i = 0; i < multi_thread_config.affinity_core_set.size(); i++) {
         printf("%zu ", multi_thread_config.affinity_core_set[i]);
     }
-    printf(", Single thread core_id %zu\n",
-           single_thread_config.affinity_core_set[0]);
+    printf(", Single thread core_id %zu\n", single_thread_config.affinity_core_set[0]);
     for (size_t i = 0; i < shapes.size(); i++) {
         auto shape = shapes[i];
         printf("Case: ");
@@ -386,8 +380,7 @@ void benchmark_impl(const typename WarpPerspective::Param& param,
         printf("%zu threads time: %f,\n single thread time: "
                "%f. spead up = %f, speedup/cores=%f\n",
                multi_thread_config.nr_thread, multi_thread_times[i],
-               single_thread_times[i],
-               single_thread_times[i] / multi_thread_times[i],
+               single_thread_times[i], single_thread_times[i] / multi_thread_times[i],
                single_thread_times[i] / multi_thread_times[i] /
                        multi_thread_config.nr_thread);
     }
@@ -407,8 +400,7 @@ TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS, BENCHMARK_WARP_PERSPECTIVE) {
 
     std::vector<SmallVector<TensorShape>> shapes;
     auto bench_case = [&](size_t N, size_t H, size_t W, size_t C) {
-        SmallVector<TensorShape> shape{
-                {N, H, W, C}, {N, 3, 3}, {N, 224, 224, C}};
+        SmallVector<TensorShape> shape{{N, H, W, C}, {N, 3, 3}, {N, 224, 224, C}};
         shapes.push_back(shape);
     };
     bench_case(1, 700, 490, 1);

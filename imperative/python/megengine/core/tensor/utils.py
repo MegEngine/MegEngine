@@ -24,12 +24,12 @@ _enable_convert_inputs = True
 
 
 def get_convert_inputs():
-    """ get the curerent state of `_enable_convert_inputs` """
+    r"""get the curerent state of `_enable_convert_inputs`"""
     return _enable_convert_inputs
 
 
 def set_convert_inputs(flag):
-    """ This function is a temporary workaround for reducing the overhead of operator
+    r"""This function is a temporary workaround for reducing the overhead of operator
     invocations. The function `convert_inputs` is disabled if the global state
     `_enable_convert_inputs` is set to `False`, otherwise enabled. This function is for
     internal use only, and should be removed when the tensor-like system is refactored.
@@ -137,11 +137,11 @@ def setscalar(x):
 
 
 def astensor1d(x, *reference, dtype=None, device=None):
-    """
-    Convert something to 1D tensor. Support following types
-    * sequence of scalar literal / tensor
-    * numpy array
-    * tensor (returned as is, regardless of dtype and device)
+    """Convert something to 1D tensor. Support following types
+
+      * sequence of scalar literal / tensor
+      * numpy array
+      * tensor (returned as is, regardless of dtype and device)
     """
     try:
         ndim = x.ndim

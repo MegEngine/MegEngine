@@ -29,28 +29,29 @@ _living_profilers = WeakSet()
 
 
 class Profiler(ContextDecorator):
-    r"""
-    Profile graph execution in imperative mode.
+    r"""Profile graph execution in imperative mode.
 
-    :type path: Optional[str]
-    :param path: default path prefix for profiler to dump.
-
+    Args:
+        path: default path prefix for profiler to dump.
+    
     Examples:
+    
+        .. code-block::
 
-    .. code-block::
+           import megengine as mge
+           import megengine.module as M
+           from megengine.utils.profiler import Profiler
 
-        import megengine as mge
-        import megengine.module as M
-        from megengine.utils.profiler import Profiler
+           # With Learnable Parameters
+           profiler = Profiler()
 
-        # With Learnable Parameters
-        profiler = Profiler()
-        for iter in range(0, 10):
-            # Only profile record of last iter would be saved
-            with profiler:
-                # your code here
+           for iter in range(0, 10):
+           # Only profile record of last iter would be saved
 
-        # Then open the profile file in chrome timeline window
+              with profiler:
+                 # your code here
+    
+           # Then open the profile file in chrome timeline window
     """
 
     CHROME_TIMELINE = "chrome_timeline.json"

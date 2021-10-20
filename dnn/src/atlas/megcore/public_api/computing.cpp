@@ -35,24 +35,24 @@ megcoreStatus_t megcore::createComputingHandleWithAtlasContext(
         unsigned int flags, const AtlasContext& ctx) {
     MEGDNN_MARK_USED_VAR(flags);
     megdnn_assert(flags == 0);
-    auto content = megdnn::make_unique<atlas::AtlasComputingContext>(
-            devHandle, flags, ctx);
+    auto content =
+            megdnn::make_unique<atlas::AtlasComputingContext>(devHandle, flags, ctx);
     auto& H = *compHandle;
     H = new megcoreComputingContext;
     H->content = std::move(content);
     return megcoreSuccess;
 }
 
-megcoreStatus_t megcore::getAtlasContext(megcoreComputingHandle_t handle,
-                                         AtlasContext* ctx) {
+megcoreStatus_t megcore::getAtlasContext(
+        megcoreComputingHandle_t handle, AtlasContext* ctx) {
     auto&& H = handle;
     megdnn_assert(H);
     megcoreDeviceHandle_t dev_handle = H->content->dev_handle();
     megcorePlatform_t platform;
     megcoreGetPlatform(dev_handle, &platform);
     megdnn_assert(platform == megcorePlatformAtlas);
-    auto context = static_cast<megcore::atlas::AtlasComputingContext*>(
-            H->content.get());
+    auto context =
+            static_cast<megcore::atlas::AtlasComputingContext*>(H->content.get());
     *ctx = context->context();
     return megcoreSuccess;
 }

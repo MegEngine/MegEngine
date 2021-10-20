@@ -11,13 +11,14 @@
 
 #include "megdnn/basic_types.h"
 #include "src/cuda/elemwise_helper.cuh"
-#include "src/cuda/utils.cuh"
 #include "src/cuda/relayout/kern.cuh"
+#include "src/cuda/utils.cuh"
 
 namespace megdnn {
 namespace cuda {
 
-void copy_noncontig_general(const TensorND &dst, const TensorND &src, cudaStream_t stream) {
+void copy_noncontig_general(
+        const TensorND& dst, const TensorND& src, cudaStream_t stream) {
     ElemwiseOpParamN<2> param;
     param[0] = dst;
     param[1] = src;
@@ -35,14 +36,14 @@ void copy_noncontig_general(const TensorND &dst, const TensorND &src, cudaStream
     if (!dst.layout.dtype.is_low_bit()) {
         switch (dst.layout.dtype.size()) {
             case 1:
-                RUN(Byte, param[0].layout.dtype = param[1].layout.dtype =
-                                  dtype::Byte());
+                RUN(Byte,
+                    param[0].layout.dtype = param[1].layout.dtype = dtype::Byte());
             case 2:
-                RUN(Float16, param[0].layout.dtype = param[1].layout.dtype =
-                                     dtype::Float16());
+                RUN(Float16,
+                    param[0].layout.dtype = param[1].layout.dtype = dtype::Float16());
             case 4:
-                RUN(Int32, param[0].layout.dtype = param[1].layout.dtype =
-                                   dtype::Int32());
+                RUN(Int32,
+                    param[0].layout.dtype = param[1].layout.dtype = dtype::Int32());
         }
     } else {
         RUN(Quantized4Asymm, );
@@ -50,7 +51,7 @@ void copy_noncontig_general(const TensorND &dst, const TensorND &src, cudaStream
     megdnn_assert(0, "bad dtype size");
 }
 
-} // namespace cuda
-} // namespace megdnn
+}  // namespace cuda
+}  // namespace megdnn
 
 // vim: ft=cpp syntax=cpp.doxygen

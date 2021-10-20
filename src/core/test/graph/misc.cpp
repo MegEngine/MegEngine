@@ -9,31 +9,31 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-#include "megbrain/opr/io.h"
-#include "megbrain/opr/basic_arith.h"
-#include "megbrain/opr/basic_arith_wrapper.h"
-#include "megbrain/opr/dnn/convolution.h"
-#include "megbrain/opr/utility.h"
-#include "megbrain/opr/blas.h"
-#include "megbrain/opr/tensor_manip.h"
 #include "megbrain/opr/misc.h"
-#include "megbrain/opr/indexing.h"
-#include "megbrain/opr/tensor_manip.h"
-#include "megbrain/graph/helper.h"
-#include "megbrain/graph/grad_impl.h"
-#include "megbrain/graph/event.h"
-#include "megbrain/graph/execution_mask.h"
-#include "megbrain/utils/timer.h"
 #include "megbrain/comp_node_env.h"
 #include "megbrain/gopt/inference.h"
+#include "megbrain/graph/event.h"
+#include "megbrain/graph/execution_mask.h"
+#include "megbrain/graph/grad_impl.h"
+#include "megbrain/graph/helper.h"
+#include "megbrain/opr/basic_arith.h"
+#include "megbrain/opr/basic_arith_wrapper.h"
+#include "megbrain/opr/blas.h"
+#include "megbrain/opr/dnn/convolution.h"
+#include "megbrain/opr/indexing.h"
+#include "megbrain/opr/io.h"
+#include "megbrain/opr/tensor_manip.h"
+#include "megbrain/opr/utility.h"
 #include "megbrain/plugin/profiler.h"
+#include "megbrain/utils/timer.h"
 
 #include "megbrain/test/helper.h"
+#include "megdnn/heuristic_cache.h"
 #include "megdnn/oprs/base.h"
 
+#include <array>
 #include <atomic>
 #include <chrono>
-#include <array>
 #include <memory>
 
 using namespace mgb;
@@ -47,8 +47,9 @@ public:
 };
 class SeqCompNodeOptimizerImpl : public SeqCompNodeOptimizer {
     ~SeqCompNodeOptimizerImpl() = default;
+
 public:
-    void optimize_comp_nodes(const VarNodeArray &endpoints);
+    void optimize_comp_nodes(const VarNodeArray& endpoints);
 };
 }  // namespace cg
 }  // namespace mgb
@@ -56,54 +57,48 @@ public:
 namespace {
 
 MGB_DEFINE_OPR_CLASS(PODDedupTestOpr, cg::SingleCNOperatorNodeBase) // {
-    public:
-        struct Param {
-            int v0;
-            char v1;
-        } MGB_PACKED;
+public:
+    struct Param {
+        int v0;
+        char v1;
+    } MGB_PACKED;
 
-        PODDedupTestOpr(ComputingGraph *owner, const Param &param):
-            Super{owner, OperatorNodeConfig{}, "node", {}},
-            m_param(param)
-        {
-            add_equivalence_component<PODHash<Param>>(&m_param);
-            add_output(None)->dtype(dtype::Byte());
-        }
+    PODDedupTestOpr(ComputingGraph* owner, const Param& param)
+            : Super{owner, OperatorNodeConfig{}, "node", {}}, m_param(param) {
+        add_equivalence_component<PODHash<Param>>(&m_param);
+        add_output(None)->dtype(dtype::Byte());
+    }
 
-        static SymbolVar make(ComputingGraph &owner, const Param &param) {
-            return owner.insert_opr(std::make_unique<PODDedupTestOpr>(
-                        &owner, param))->output(0);
-        }
-    private:
-        Param m_param;
+    static SymbolVar make(ComputingGraph& owner, const Param& param) {
+        return owner.insert_opr(std::make_unique<PODDedupTestOpr>(&owner, param))
+                ->output(0);
+    }
 
-        void scn_do_execute() override {
-        }
+private:
+    Param m_param;
 
-        void init_output_comp_node() override {
-            output(0)->comp_node(CompNode::load("xpu0"));
-        }
+    void scn_do_execute() override {}
 
-        void init_output_static_infer_desc() override {
-            using namespace mgb::cg::static_infer;
-            owner_graph()->static_infer_manager().register_shape_infer(
-                    output(0), {
-                    SourceType::CONSTANT,
-                    {},
-                    [](TensorShape &dest, const InpVal &) {
-                        dest = {1};
-                        return true;
-                    }
-                    });
-        }
+    void init_output_comp_node() override {
+        output(0)->comp_node(CompNode::load("xpu0"));
+    }
+
+    void init_output_static_infer_desc() override {
+        using namespace mgb::cg::static_infer;
+        owner_graph()->static_infer_manager().register_shape_infer(
+                output(0),
+                {SourceType::CONSTANT, {}, [](TensorShape& dest, const InpVal&) {
+                     dest = {1};
+                     return true;
+                 }});
+    }
 };
 
-MGB_DEFINE_OPR_CLASS(WorkspaceAllocTestOpr,
-        cg::SingleCNOutshapePureByInshapeOprBase) // {
-
+MGB_DEFINE_OPR_CLASS(
+        WorkspaceAllocTestOpr, cg::SingleCNOutshapePureByInshapeOprBase) // {
     void get_output_var_shape(
-            const TensorShapeArray &inp_shape,
-            TensorShapeArray &out_shape) const override {
+            const TensorShapeArray& inp_shape,
+            TensorShapeArray& out_shape) const override {
         MGB_MARK_USED_VAR(inp_shape);
         out_shape.at(0) = {2};
         out_shape.at(1) = {3};
@@ -115,45 +110,40 @@ MGB_DEFINE_OPR_CLASS(WorkspaceAllocTestOpr,
         executed = true;
     }
 
-    public:
-        bool executed = false;
+public:
+    bool executed = false;
 
-        WorkspaceAllocTestOpr(VarNode *inp):
-            Super(inp->owner_graph(), {}, "test", {inp})
-        {
-            add_input({inp});
-            add_output("out")->dtype(dtype::Float32());
-            cg::add_workspace_output(this);
-        }
+    WorkspaceAllocTestOpr(VarNode* inp) : Super(inp->owner_graph(), {}, "test", {inp}) {
+        add_input({inp});
+        add_output("out")->dtype(dtype::Float32());
+        cg::add_workspace_output(this);
+    }
 };
 
-MGB_DEFINE_OPR_CLASS(AllInputGradOpr,
-        cg::SingleCNOutshapePureByInshapeOprBase) // {
-
+MGB_DEFINE_OPR_CLASS(AllInputGradOpr, cg::SingleCNOutshapePureByInshapeOprBase) // {
     void get_output_var_shape(
-            const TensorShapeArray &inp_shape,
-            TensorShapeArray &out_shape) const override {
+            const TensorShapeArray& inp_shape,
+            TensorShapeArray& out_shape) const override {
         out_shape.at(0) = {2};
     }
 
-    void scn_do_execute() override { }
+    void scn_do_execute() override {}
 
-    public:
-        size_t nr_grad_call = 0;
-        VarNode* prev_out_grad = nullptr;
+public:
+    size_t nr_grad_call = 0;
+    VarNode* prev_out_grad = nullptr;
 
-        AllInputGradOpr(VarNode *a, VarNode *b):
-            Super(a->owner_graph(), {}, "all_inp_grad", {a, b})
-        {
-            add_input({a, b});
-            add_output(None);
-        }
+    AllInputGradOpr(VarNode* a, VarNode* b)
+            : Super(a->owner_graph(), {}, "all_inp_grad", {a, b}) {
+        add_input({a, b});
+        add_output(None);
+    }
 };
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(AllInputGradOpr);
 MGB_IMPL_OPR_GRAD(AllInputGradOpr) {
-    auto &&ncopr = const_cast<AllInputGradOpr&>(opr);
+    auto&& ncopr = const_cast<AllInputGradOpr&>(opr);
     ncopr.prev_out_grad = out_grad[0];
-    ++ ncopr.nr_grad_call;
+    ++ncopr.nr_grad_call;
     SymbolVar x = opr.input(0), y = opr.input(1);
     if (ncopr.nr_grad_call & 1) {
         return VarNodeArray{(x + y).node(), nullptr};
@@ -162,7 +152,7 @@ MGB_IMPL_OPR_GRAD(AllInputGradOpr) {
     }
 }
 
-template<bool dynamic, typename dtype>
+template <bool dynamic, typename dtype>
 void test_aplusb() {
     using Gen = HostTensorGenerator<dtype>;
     using ctype = typename Gen::ctype;
@@ -170,9 +160,8 @@ void test_aplusb() {
     constexpr size_t SIZE = 1234;
     auto host_x = gen({SIZE}), host_y = gen({SIZE});
     auto graph = ComputingGraph::make();
-    SymbolVar
-        x = opr::Host2DeviceCopy::make(*graph, host_x).rename("x"),
-        y = opr::Host2DeviceCopy::make(*graph, host_y).rename("y");
+    SymbolVar x = opr::Host2DeviceCopy::make(*graph, host_x).rename("x"),
+              y = opr::Host2DeviceCopy::make(*graph, host_y).rename("y");
     if (dynamic) {
         x = opr::MarkDynamicVar::make(x).rename("xd");
         y = opr::MarkDynamicVar::make(y).rename("yd");
@@ -181,16 +170,15 @@ void test_aplusb() {
     HostTensorND host_z;
     auto func = graph->compile({make_callback_copy(z, host_z)});
 
-    for (ctype delta = 0; delta < 2; ++ delta) {
+    for (ctype delta = 0; delta < 2; ++delta) {
         auto px = host_x->template ptr<ctype>();
-        px[0] += delta; // test change input data
+        px[0] += delta;  // test change input data
         func->execute();
-        auto py = host_y->template ptr<ctype>(),
-             pz = host_z. template ptr<ctype>();
+        auto py = host_y->template ptr<ctype>(), pz = host_z.template ptr<ctype>();
         ASSERT_EQ(host_x->shape(), host_z.shape());
-        for (size_t i = 0; i < SIZE; ++ i) {
-            MGB_ASSERT_FLOAT_EQ(px[i] + py[i], pz[i]) <<
-                ssprintf("failed at %zu: %g+%g", i, float(px[i]), float(py[i]));
+        for (size_t i = 0; i < SIZE; ++i) {
+            MGB_ASSERT_FLOAT_EQ(px[i] + py[i], pz[i])
+                    << ssprintf("failed at %zu: %g+%g", i, float(px[i]), float(py[i]));
         }
     }
 }
@@ -201,8 +189,8 @@ class TrackableStaticMemAlloc final : public cg::DeviceMemoryAllocator {
 public:
     size_t version_num = 0, size_expect = 0;
 
-    void alloc_static(ComputingGraph*, DeviceTensorStorage& dest,
-                      size_t size) override {
+    void alloc_static(
+            ComputingGraph*, DeviceTensorStorage& dest, size_t size) override {
         dest.ensure_size(size);
         m_refhold.emplace_back(dest);
         if (size_expect) {
@@ -212,9 +200,7 @@ public:
 
     size_t nr_call() const { return m_refhold.size(); }
 
-    size_t static_alloc_version(ComputingGraph*) const override {
-        return version_num;
-    }
+    size_t static_alloc_version(ComputingGraph*) const override { return version_num; }
 };
 
 class TrackableDynamicMemAlloc final : public cg::DeviceMemoryAllocator {
@@ -222,14 +208,13 @@ class TrackableDynamicMemAlloc final : public cg::DeviceMemoryAllocator {
     std::mutex m_mtx;
 
 public:
-    void alloc_dynamic(VarNode* var, DeviceTensorStorage& dest,
-                       size_t size) override {
+    void alloc_dynamic(VarNode* var, DeviceTensorStorage& dest, size_t size) override {
         ASSERT_LT(dest.size(), size);
         MGB_LOCK_GUARD(m_mtx);
         auto ptr = dest.comp_node().alloc_device(size);
         auto ins = m_alive_vars.insert(var);
         ASSERT_TRUE(ins.second);
-        auto del = [ this, var, cn = dest.comp_node() ](void* ptr) {
+        auto del = [this, var, cn = dest.comp_node()](void* ptr) {
             cn.free_device(ptr);
             MGB_LOCK_GUARD(m_mtx);
             auto nr = m_alive_vars.erase(var);
@@ -243,7 +228,7 @@ public:
     ~TrackableDynamicMemAlloc() { EXPECT_TRUE(m_alive_vars.empty()); }
 };
 
-} // anonymous namespace
+}  // anonymous namespace
 
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(PODDedupTestOpr);
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(WorkspaceAllocTestOpr);
@@ -269,37 +254,36 @@ TEST(TestGraph, APlusBOnCPU) {
     constexpr size_t SIZE = 1234;
     auto host_x = gen({SIZE}, "cpu0"), host_y = gen({SIZE}, "cpu0");
     auto graph = ComputingGraph::make();
-    SymbolVar
-        x = opr::Host2DeviceCopy::make(*graph, host_x).rename("x"),
-        y = opr::Host2DeviceCopy::make(*graph, host_y).rename("y");
+    SymbolVar x = opr::Host2DeviceCopy::make(*graph, host_x).rename("x"),
+              y = opr::Host2DeviceCopy::make(*graph, host_y).rename("y");
     auto z = (x + y).rename("z");
     HostTensorND host_z;
     auto func = graph->compile({make_callback_copy(z, host_z)});
     func->execute();
 
     ASSERT_EQ(host_x->shape(), host_z.shape());
-    auto px = host_x->ptr<float>(), py = host_y->ptr<float>(),
-         pz = host_z.ptr<float>();
-    for (size_t i = 0; i < SIZE; ++ i)
+    auto px = host_x->ptr<float>(), py = host_y->ptr<float>(), pz = host_z.ptr<float>();
+    for (size_t i = 0; i < SIZE; ++i)
         MGB_ASSERT_FLOAT_EQ(px[i] + py[i], pz[i]);
 }
 
 TEST(TestGraph, DeDup) {
     auto t0 = std::make_shared<DeviceTensorND>(
-            CompNode::load("xpu0"), TensorShape{2, 2}),
+                 CompNode::load("xpu0"), TensorShape{2, 2}),
          t1 = std::make_shared<DeviceTensorND>(
-            CompNode::load("xpu0"), TensorShape{2, 2}),
+                 CompNode::load("xpu0"), TensorShape{2, 2}),
          t2 = std::make_shared<DeviceTensorND>(
-            CompNode::load("xpu0"), TensorShape{2, 2});
+                 CompNode::load("xpu0"), TensorShape{2, 2});
     auto graph = ComputingGraph::make();
     auto st0 = opr::SharedDeviceTensor::make(*graph, t0),
          st1 = opr::SharedDeviceTensor::make(*graph, t1);
-    SymbolVar
-        x = opr::add(st0, st1),
-        y = opr::add(opr::SharedDeviceTensor::make(*graph, t1),
-                opr::SharedDeviceTensor::make(*graph, t0)),
-        z = opr::add(opr::SharedDeviceTensor::make(*graph, t0),
-                opr::SharedDeviceTensor::make(*graph, t2));
+    SymbolVar x = opr::add(st0, st1),
+              y = opr::add(
+                      opr::SharedDeviceTensor::make(*graph, t1),
+                      opr::SharedDeviceTensor::make(*graph, t0)),
+              z = opr::add(
+                      opr::SharedDeviceTensor::make(*graph, t0),
+                      opr::SharedDeviceTensor::make(*graph, t2));
     EXPECT_EQ(x.node(), y.node());
     EXPECT_NE(x.node(), z.node());
 }
@@ -324,23 +308,21 @@ TEST(TestGraph, MultiCard) {
     auto host_opr0 = gen({SIZE}, cns[0]), host_opr1 = gen({SIZE}, cns[1]);
     auto graph = ComputingGraph::make();
     graph->options().var_sanity_check_first_run = false;
-    SymbolVar
-        opr0 = opr::Host2DeviceCopy::make(*graph, host_opr0, {"opr0"}),
-        opr1 = opr::Host2DeviceCopy::make(*graph, host_opr1, {"opr1"}),
-        opr0_delay = opr::Sleep::make(opr0, SLEEP_TIME),
-        opr1_delay = opr::Sleep::make(opr1, SLEEP_TIME),
-        opr1_card0 = opr::Copy::make(opr1_delay,
-                OperatorNodeConfig{"opr1_card0"}.comp_node(
-                    cns[0].change_stream(1))),
-        opr0_double = opr::add(opr0_delay, opr0_delay, {"opr0_double"}),
-        sum = opr::add(opr0_double, opr1_card0,
-                OperatorNodeConfig{"sum"}.comp_node(cns[0].change_stream(2))),
-        sum_delay = opr::Sleep::make(sum, SLEEP_TIME);
+    SymbolVar opr0 = opr::Host2DeviceCopy::make(*graph, host_opr0, {"opr0"}),
+              opr1 = opr::Host2DeviceCopy::make(*graph, host_opr1, {"opr1"}),
+              opr0_delay = opr::Sleep::make(opr0, SLEEP_TIME),
+              opr1_delay = opr::Sleep::make(opr1, SLEEP_TIME),
+              opr1_card0 = opr::Copy::make(
+                      opr1_delay, OperatorNodeConfig{"opr1_card0"}.comp_node(
+                                          cns[0].change_stream(1))),
+              opr0_double = opr::add(opr0_delay, opr0_delay, {"opr0_double"}),
+              sum = opr::add(
+                      opr0_double, opr1_card0,
+                      OperatorNodeConfig{"sum"}.comp_node(cns[0].change_stream(2))),
+              sum_delay = opr::Sleep::make(sum, SLEEP_TIME);
     HostTensorND host_sum;
-    auto func = graph->compile({{
-        sum_delay, [&](DeviceTensorND &s){
-            host_sum.copy_from(s);
-    }}});
+    auto func = graph->compile(
+            {{sum_delay, [&](DeviceTensorND& s) { host_sum.copy_from(s); }}});
 
     RealTimer timer;
     func->execute();
@@ -349,8 +331,7 @@ TEST(TestGraph, MultiCard) {
     // XPU-226
     auto use_time = timer.get_secs();
     if (use_time >= MAX_EXE_TIME) {
-        mgb_log_warn("expect time [%f < %f], got %f", use_time, MAX_EXE_TIME,
-                     use_time);
+        mgb_log_warn("expect time [%f < %f], got %f", use_time, MAX_EXE_TIME, use_time);
     }
 
     ASSERT_EQ(host_sum.layout(), host_opr0->layout());
@@ -362,13 +343,13 @@ TEST(TestGraph, MultiCard) {
     // XPU-226
     use_time = timer.get_secs();
     if (use_time <= SLEEP_TIME * 2) {
-        mgb_log_warn("expect time [%f > %f], got %f", use_time, SLEEP_TIME * 2,
-                     use_time);
+        mgb_log_warn(
+                "expect time [%f > %f], got %f", use_time, SLEEP_TIME * 2, use_time);
     }
     use_time = timer.get_secs();
     if (use_time >= SLEEP_TIME * 3) {
-        mgb_log_warn("expect time [%f < %f], got %f", use_time, SLEEP_TIME * 3,
-                     use_time);
+        mgb_log_warn(
+                "expect time [%f < %f], got %f", use_time, SLEEP_TIME * 3, use_time);
     }
     for (size_t i = 0; i < SIZE; i++)
         ASSERT_FLOAT_EQ(p0[i] * 2 + p1[i], ps[i]);
@@ -380,10 +361,9 @@ TEST(TestGraph, AsyncExec) {
     auto graph = ComputingGraph::make();
     graph->options().var_sanity_check_first_run = false;
     auto host_x = gen({1});
-    SymbolVar
-        x0 = opr::Host2DeviceCopy::make(*graph, host_x),
-        xs = opr::Sleep::make(x0, SLEEP_TIME);
-    auto func = graph->compile({{xs, [](DeviceTensorND&){}}});
+    SymbolVar x0 = opr::Host2DeviceCopy::make(*graph, host_x),
+              xs = opr::Sleep::make(x0, SLEEP_TIME);
+    auto func = graph->compile({{xs, [](DeviceTensorND&) {}}});
 
     RealTimer timer;
     double t0, t1, t2, t3, t4, t5;
@@ -404,8 +384,7 @@ TEST(TestGraph, AsyncExec) {
     // XPU-226
     if ((t1 - t0) >= SLEEP_TIME / 2 || (t2 - t0) <= SLEEP_TIME ||
         (t3 - t2) >= SLEEP_TIME / 2 || (t4 - t2) <= SLEEP_TIME ||
-        (t5 - t4) <= SLEEP_TIME / 2 ||
-        func->get_prev_exec_time() <= SLEEP_TIME ||
+        (t5 - t4) <= SLEEP_TIME / 2 || func->get_prev_exec_time() <= SLEEP_TIME ||
         func->get_prev_exec_time() >= SLEEP_TIME * 1.5) {
         mgb_log_warn(
                 "time issue, pls check detail: [t0: %f, t1:%f, t2:%f, t3: %f, "
@@ -420,13 +399,11 @@ TEST(TestGraph, VSizeTensor) {
 
     auto graph = ComputingGraph::make();
     auto dev_x = opr::Host2DeviceCopy::make(*graph, host_x),
-         dev_y = opr::Host2DeviceCopy::make(*graph, host_y),
-         dev_z = dev_x + dev_y;
+         dev_y = opr::Host2DeviceCopy::make(*graph, host_y), dev_z = dev_x + dev_y;
 
     HostTensorND host_z;
-    auto func = graph->compile({{dev_z, [&](DeviceTensorND &z){
-            host_z.copy_from(z).sync();
-    }}});
+    auto func = graph->compile(
+            {{dev_z, [&](DeviceTensorND& z) { host_z.copy_from(z).sync(); }}});
 
     auto check = [&](size_t inp_sz) {
         *host_x = *gen({inp_sz});
@@ -435,7 +412,7 @@ TEST(TestGraph, VSizeTensor) {
         ASSERT_EQ(host_z.shape(), TensorShape({inp_sz}));
         auto px = host_x->ptr<float>(), py = host_y->ptr<float>(),
              pz = host_z.ptr<float>();
-        for (size_t i = 0; i < inp_sz; i ++)
+        for (size_t i = 0; i < inp_sz; i++)
             ASSERT_EQ(px[i] + py[i], pz[i]);
     };
 
@@ -450,11 +427,8 @@ TEST(TestGraph, CompileTwice) {
     auto host_x = gen({1});
 
     auto graph = ComputingGraph::make();
-    auto x = opr::Host2DeviceCopy::make(*graph, host_x),
-         y1 = x + 1,
-         y2 = x + 2,
-         z1 = opr::Copy::make(y1),
-         z2 = opr::Copy::make(y2);
+    auto x = opr::Host2DeviceCopy::make(*graph, host_x), y1 = x + 1, y2 = x + 2,
+         z1 = opr::Copy::make(y1), z2 = opr::Copy::make(y2);
     EXPECT_TRUE(graph->var_receiver_in_current_comp_seq(y1.node()).empty());
     EXPECT_TRUE(graph->var_receiver_in_current_comp_seq(y2.node()).empty());
 
@@ -465,7 +439,7 @@ TEST(TestGraph, CompileTwice) {
     func->execute();
     EXPECT_EQ(host_x->ptr<float>()[0] + 1, host_z1.ptr<float>()[0]);
     EXPECT_FALSE(host_z2.storage().comp_node_valid());
-    host_z1.ptr<float>()[0] ++;
+    host_z1.ptr<float>()[0]++;
 
     func = graph->compile({make_callback_copy(z2, host_z2)});
     EXPECT_TRUE(graph->var_receiver_in_current_comp_seq(y1.node()).empty());
@@ -485,15 +459,14 @@ TEST(TestGraph, MultiCNDynamicInputs) {
          y = opr::Host2DeviceCopy::make(*graph, host_y),
          xd = opr::Sleep::make(opr::MarkDynamicVar::make(x), 0.1),
          yd = opr::Sleep::make(opr::MarkDynamicVar::make(y), 0.2),
-         z = opr::Concat::make({xd, yd}, 1,
-                 OperatorNodeConfig().comp_node(cns[2]));
+         z = opr::Concat::make({xd, yd}, 1, OperatorNodeConfig().comp_node(cns[2]));
 
     HostTensorND host_z;
     auto func = graph->compile({make_callback_copy(z, host_z)});
     func->execute();
     ASSERT_EQ(host_z.shape(), TensorShape({5, 5}));
-    for (size_t i = 0; i < 5; ++ i)
-        for (size_t j = 0; j < 5; ++ j) {
+    for (size_t i = 0; i < 5; ++i)
+        for (size_t j = 0; j < 5; ++j) {
             float expect;
             if (j < 2)
                 expect = *host_x->ptr<float>({i, j});
@@ -528,8 +501,7 @@ TEST(TestGraph, DoubleThrowOnInit) {
 
     auto x = opr::Host2DeviceCopy::make(*graph, host_x);
     using Ad = opr::SetSubtensor::AxisIndexer;
-    std::vector<Ad> axis_desc{
-        Ad::make_index(0, x.make_scalar(0.f))};
+    std::vector<Ad> axis_desc{Ad::make_index(0, x.make_scalar(0.f))};
 
     ASSERT_THROW(opr::SetSubtensor::make(x, x, axis_desc), MegBrainError);
     ASSERT_THROW(opr::SetSubtensor::make(x, x, axis_desc), MegBrainError);
@@ -542,9 +514,7 @@ TEST(TestGraph, ShapeOnlyDep) {
 
     using Ad = opr::AxisAddRemove::AxisDesc;
     bool shp_dep_exec = false;
-    auto cb_set_shp_dep_exec = [&](DeviceTensorND &) {
-        shp_dep_exec = true;
-    };
+    auto cb_set_shp_dep_exec = [&](DeviceTensorND&) { shp_dep_exec = true; };
     auto add_chk = [&](SymbolVar var) {
         return opr::CallbackInjector::make(var, cb_set_shp_dep_exec);
     };
@@ -573,38 +543,34 @@ TEST(TestGraph, MemAllocForAsyncRead) {
     std::atomic_bool copy_issued = ATOMIC_VAR_INIT(false);
 
     RealTimer timer;
-    auto cb_wait_copy_issue = [&](DeviceTensorND &) {
-        while(!copy_issued.load());
+    auto cb_wait_copy_issue = [&](DeviceTensorND&) {
+        while (!copy_issued.load())
+            ;
         auto t = timer.get_secs();
         mgb_assert(t <= 0.1, "copy issue time too long: %.2f", t);
     };
 
-    auto cb_set_copy_issue = [&](DeviceTensorND &) {
-        copy_issued.store(true);
-    };
+    auto cb_set_copy_issue = [&](DeviceTensorND&) { copy_issued.store(true); };
 
-    auto make_cb_async = [](SymbolVar dev, HostTensorND &host) {
-        return std::make_pair(dev, [&](DeviceTensorND &d){host.copy_from(d);});
+    auto make_cb_async = [](SymbolVar dev, HostTensorND& host) {
+        return std::make_pair(dev, [&](DeviceTensorND& d) { host.copy_from(d); });
     };
 
     auto graph = ComputingGraph::make();
     // disable var check to avoid stram sync
     graph->options().var_sanity_check_first_run = false;
     graph->options().seq_opt.enable_seq_comp_node_opt = false;
-    auto x = opr::Host2DeviceCopy::make(*graph, host_x),
-         xrshp = x.reshape({6, 2}),
+    auto x = opr::Host2DeviceCopy::make(*graph, host_x), xrshp = x.reshape({6, 2}),
          xv0_static = xrshp + 3 - 2,
-         xv0_after_copy = opr::CallbackInjector::make(
-                 xv0_static, cb_wait_copy_issue),
-         xdyn = opr::MarkDynamicVar::make(xv0_after_copy),
-         y0 = xdyn + 1,
+         xv0_after_copy = opr::CallbackInjector::make(xv0_static, cb_wait_copy_issue),
+         xdyn = opr::MarkDynamicVar::make(xv0_after_copy), y0 = xdyn + 1,
          xcp_cn1 = opr::CallbackInjector::make(
                  opr::Copy::make(x, {cn1}), cb_set_copy_issue),
          y1 = xcp_cn1 + 3;
 
     HostTensorND host_y0, host_y1;
-    auto func = graph->compile({make_cb_async(y0, host_y0),
-            make_cb_async(y1, host_y1)});
+    auto func =
+            graph->compile({make_cb_async(y0, host_y0), make_cb_async(y1, host_y1)});
 
     timer.reset();
     opr::Sleep::sleep(cn1, 0.2);
@@ -613,7 +579,7 @@ TEST(TestGraph, MemAllocForAsyncRead) {
     ASSERT_NE(x.node()->prev_dev_ptr(), xdyn.node()->prev_dev_ptr());
     ASSERT_EQ(TensorShape({6, 2}), host_y0.shape());
     ASSERT_EQ(TensorShape({4, 3}), host_y1.shape());
-    for (size_t i = 0; i < 12; ++ i) {
+    for (size_t i = 0; i < 12; ++i) {
         auto xv = host_x->ptr<float>()[i];
         MGB_ASSERT_FLOAT_EQ(xv + 2, host_y0.ptr<float>()[i]);
         MGB_ASSERT_FLOAT_EQ(xv + 3, host_y1.ptr<float>()[i]);
@@ -627,8 +593,7 @@ TEST(TestGraph, EmptyStaticAlloc) {
         auto host_x = gen({2, 3});
         auto dev_x = std::make_shared<DeviceTensorND>();
         dev_x->copy_from(*host_x);
-        auto x = opr::SharedDeviceTensor::make(*graph, dev_x),
-             y = x.reshape({6});
+        auto x = opr::SharedDeviceTensor::make(*graph, dev_x), y = x.reshape({6});
         auto func = graph->compile({{y, {}}});
         func->execute();
         ASSERT_EQ(dev_x->raw_ptr(), prev_dev_ptr(y));
@@ -652,19 +617,17 @@ TEST(TestGraph, MultiOutRelease) {
 
     std::atomic_bool cn0_finished{false};
 
-    float *splt2_dev_ptr_produced = nullptr;
+    float* splt2_dev_ptr_produced = nullptr;
     DeviceTensorStorage splt2_alloc;
-    splt2_alloc.comp_node(cn2.change_stream(CompNode::Stream::COPY)).
-        ensure_size(6);
+    splt2_alloc.comp_node(cn2.change_stream(CompNode::Stream::COPY)).ensure_size(6);
 
-    VarNode *split_out0 = nullptr;
+    VarNode* split_out0 = nullptr;
 
-    auto cb_set_cn0_finish = [&](DeviceTensorND &) {
-        mgb_assert(split_out0->contain_flag(
-                    VarNode::Flag::RT_FORCE_DYNAMIC_MEM_ALLOC));
+    auto cb_set_cn0_finish = [&](DeviceTensorND&) {
+        mgb_assert(split_out0->contain_flag(VarNode::Flag::RT_FORCE_DYNAMIC_MEM_ALLOC));
         // wait for async releaser
         while (split_out0->mem_plan().valid()) {
-            asm volatile ("": : : "memory");
+            asm volatile("" : : : "memory");
         }
         mgb_assert(!split_out0->dev_tensor_valid());
 
@@ -672,30 +635,30 @@ TEST(TestGraph, MultiOutRelease) {
         cn0_finished.store(true);
     };
 
-    auto cb_wait_cn0_finish = [&](DeviceTensorND &) {
-        while(!cn0_finished.load());
+    auto cb_wait_cn0_finish = [&](DeviceTensorND&) {
+        while (!cn0_finished.load())
+            ;
     };
 
-    auto cb_record_ptr = [&](DeviceTensorND &dv) {
+    auto cb_record_ptr = [&](DeviceTensorND& dv) {
         splt2_dev_ptr_produced = dv.ptr<float>();
     };
 
     auto x = opr::Host2DeviceCopy::make(*graph, host_x),
          tmp = opr::CallbackInjector::make(
-                 SymbolVar::make_scalar(2.3f, *graph,
-                     cn1.change_stream(CompNode::Stream::COPY)),
+                 SymbolVar::make_scalar(
+                         2.3f, *graph, cn1.change_stream(CompNode::Stream::COPY)),
                  cb_wait_cn0_finish),
          one0 = opr::Host2DeviceCopy::make(*graph, host_one, {cn0}),
          one1 = opr::Host2DeviceCopy::make(*graph, host_one, {cn1}),
          one2 = opr::Host2DeviceCopy::make(*graph, host_one, {cn2});
     set_priority(tmp, -100);
     // use Host2DeviceCopy to make constant values for multistream add
-    auto splt = opr::Split::make(x,
-            opr::Split::Options::make_average(0, 3),
-            OperatorNodeConfig{}.comp_node_arr({
-                cn0.change_stream(23),
-                cn1.change_stream(23),
-                cn2.change_stream(23)}));
+    auto splt = opr::Split::make(
+            x, opr::Split::Options::make_average(0, 3),
+            OperatorNodeConfig{}.comp_node_arr(
+                    {cn0.change_stream(23), cn1.change_stream(23),
+                     cn2.change_stream(23)}));
     HostTensorND host_y1;
     split_out0 = splt[0].node();
 
@@ -703,16 +666,15 @@ TEST(TestGraph, MultiOutRelease) {
             {opr::add(splt[0], one0, cn0), cb_set_cn0_finish},
             {tmp, {}},
             make_callback_copy(opr::add(splt[1], one1, cn1), host_y1),
-            {opr::add(splt[2], one2, cn2), {}}, // mark dynamic
+            {opr::add(splt[2], one2, cn2), {}},  // mark dynamic
             {splt[2], cb_record_ptr},
-            });
+    });
 
     func->execute();
-    func->to_json()->writeto_fpath(
-            output_file("TestGraph.MultiOutRelease.json"));
+    func->to_json()->writeto_fpath(output_file("TestGraph.MultiOutRelease.json"));
     ASSERT_EQ(TensorShape({2, 3}), host_y1.shape());
     auto py1 = host_y1.ptr<float>(), px = host_x->ptr<float>({2});
-    for (size_t i = 0; i < 6; ++ i)
+    for (size_t i = 0; i < 6; ++i)
         MGB_ASSERT_FLOAT_EQ(px[i] + 1, py1[i]);
 
     ASSERT_EQ(splt2_dev_ptr_produced, splt[2].node()->prev_dev_ptr());
@@ -721,21 +683,20 @@ TEST(TestGraph, MultiOutRelease) {
 TEST(TestGraph, MemAllocForRemoteReadVars) {
     auto cn1 = CompNode::load("xpu0:1");
     HostTensorGenerator<> gen;
-    auto host_x = gen({5, 6}),
-         host_y = gen({5, 6});
+    auto host_x = gen({5, 6}), host_y = gen({5, 6});
 
     auto graph = ComputingGraph::make();
     auto x = opr::Host2DeviceCopy::make_no_fwd(*graph, host_x).rename("x"),
          y = opr::Host2DeviceCopy::make_no_fwd(*graph, host_y).rename("y"),
-         sum0 = (opr::Sleep::make(x, 0.2) * x + opr::Sleep::make(y, 0.2) * y).
-             rename("sum0"),
+         sum0 = (opr::Sleep::make(x, 0.2) * x + opr::Sleep::make(y, 0.2) * y)
+                        .rename("sum0"),
          sum1 = opr::add(x, y, {cn1}).rename("sum1");
     HostTensorND host_sum0, host_sum1;
-    auto func = graph->compile({make_callback_copy(sum0, host_sum0),
-            make_callback_copy(sum1, host_sum1)});
+    auto func = graph->compile(
+            {make_callback_copy(sum0, host_sum0), make_callback_copy(sum1, host_sum1)});
     func->execute();
     func->wait();
-    for (bool sleep_cn1: {false, true}) {
+    for (bool sleep_cn1 : {false, true}) {
         host_sum0 = {};
         host_sum1 = {};
         if (sleep_cn1)
@@ -745,7 +706,7 @@ TEST(TestGraph, MemAllocForRemoteReadVars) {
 
         auto px = host_x->ptr<float>(), py = host_y->ptr<float>(),
              ps0 = host_sum0.ptr<float>(), ps1 = host_sum1.ptr<float>();
-        for (int i = 0; i < 30; ++ i) {
+        for (int i = 0; i < 30; ++i) {
             auto x = px[i], y = py[i];
             ASSERT_FLOAT_EQ(x * x + y * y, ps0[i]);
             ASSERT_FLOAT_EQ(x + y, ps1[i]);
@@ -760,11 +721,10 @@ TEST(TestGraph, ShapeOnlyInput) {
     HostTensorGenerator<> gen;
     auto host_x = gen({1});
     auto graph = ComputingGraph::make();
-    auto x = opr::Host2DeviceCopy::make(*graph, host_x),
-         y = opr::GetVarShape::make(x);
+    auto x = opr::Host2DeviceCopy::make(*graph, host_x), y = opr::GetVarShape::make(x);
     HostTensorND host_y;
     auto func = graph->compile({make_callback_copy(y, host_y)});
-    for (size_t sz: {1, 3, 5}) {
+    for (size_t sz : {1, 3, 5}) {
         *host_x = *gen({sz});
         func->execute();
         ASSERT_EQ(sz, size_t(host_y.ptr<dt_int32>()[0]));
@@ -775,15 +735,14 @@ TEST(TestGraph, HostAndDevValueDep) {
     HostTensorGenerator<dtype::Int32> gen;
     auto host_idx = gen({1}), host_x = gen({3});
     host_idx->ptr<dt_int32>()[0] = 0;
-    for (int i = 0; i < 3; ++ i)
+    for (int i = 0; i < 3; ++i)
         host_x->ptr<dt_int32>()[i] = i + 1;
 
     auto graph = ComputingGraph::make();
     auto x = opr::Host2DeviceCopy::make(*graph, host_x).rename("x"),
          idx = opr::Host2DeviceCopy::make(*graph, host_idx).rename("idx"),
          xsub = opr::IndexAt::make(x, {{0, idx}}).rename("xsub"),
-         idx2 = (idx * idx).rename("idx2"),
-         y = (xsub + idx2).rename("y");
+         idx2 = (idx * idx).rename("idx2"), y = (xsub + idx2).rename("y");
 
     set_priority(xsub, -10);
     set_priority(idx2, 10);
@@ -792,7 +751,7 @@ TEST(TestGraph, HostAndDevValueDep) {
     auto func = graph->compile({make_callback_copy(y, host_y)});
 
     bool found = false;
-    for (auto &&i: func->get_rt_static_source_deps()) {
+    for (auto&& i : func->get_rt_static_source_deps()) {
         constexpr auto V = cg::static_infer::DepType::VALUE;
         if (i.dest == idx.node() && i.type == V) {
             found = true;
@@ -801,7 +760,7 @@ TEST(TestGraph, HostAndDevValueDep) {
     }
     ASSERT_TRUE(found);
 
-    for (int i = 0; i < 3; ++ i) {
+    for (int i = 0; i < 3; ++i) {
         host_idx->ptr<dt_int32>()[0] = i;
         func->execute();
         ASSERT_EQ(i + 1 + i * i, host_y.ptr<dt_int32>()[0]) << "fail at " << i;
@@ -816,10 +775,10 @@ TEST(TestGraph, ExtraVarDeps) {
 
     float cbv0 = -1, cbv1 = -1;
 
-    auto cb0 = [&](DeviceTensorND &v) {
+    auto cb0 = [&](DeviceTensorND& v) {
         cbv0 = HostTensorND().copy_from(v).sync().ptr<float>()[0];
     };
-    auto cb1 = [&](DeviceTensorND &v) {
+    auto cb1 = [&](DeviceTensorND& v) {
         cbv1 = HostTensorND().copy_from(v).sync().ptr<float>()[0];
     };
 
@@ -831,7 +790,7 @@ TEST(TestGraph, ExtraVarDeps) {
     graph->options().extra_vardeps[xu.node()].push_back(y0.node());
     graph->options().extra_vardeps[xu.node()].push_back(y1.node());
     auto func = graph->compile({{xu, {}}});
-    for (int i = 0; i < 3; ++ i) {
+    for (int i = 0; i < 3; ++i) {
         func->execute();
         MGB_ASSERT_FLOAT_EQ(i, cbv0);
         MGB_ASSERT_FLOAT_EQ(i + 1, cbv1);
@@ -841,8 +800,7 @@ TEST(TestGraph, ExtraVarDeps) {
 TEST(TestGraph, WorkspaceAlloc) {
     auto graph = ComputingGraph::make();
     auto x = SymbolVar::make_scalar(0, *graph, CompNode::load("xpu0"));
-    auto opr = graph->insert_opr(
-            std::make_unique<WorkspaceAllocTestOpr>(x.node()));
+    auto opr = graph->insert_opr(std::make_unique<WorkspaceAllocTestOpr>(x.node()));
     ASSERT_EQ(2u, opr->output().size());
     ASSERT_EQ(TensorShape{2}, opr->output(0)->shape());
     ASSERT_EQ(TensorShape{}, opr->output(1)->shape());
@@ -854,23 +812,20 @@ TEST(TestGraph, WorkspaceAlloc) {
 TEST(TestGraph, ConstFolding) {
     auto graph = ComputingGraph::make();
     auto a = SymbolVar::make_scalar(3, *graph, CompNode::load("xpu0")),
-         b = SymbolVar::make_scalar(3, *graph, CompNode::load("xpu0")),
-         c = a + b,
+         b = SymbolVar::make_scalar(3, *graph, CompNode::load("xpu0")), c = a + b,
          d = a + b;
     ASSERT_EQ(a.node(), b.node());
     ASSERT_EQ(c.node(), d.node());
     ASSERT_NE(a.node(), c.node());
-    ASSERT_EQ(d.node()->owner_opr()->dyn_typeinfo(),
-            opr::ImmutableTensor::typeinfo());
+    ASSERT_EQ(d.node()->owner_opr()->dyn_typeinfo(), opr::ImmutableTensor::typeinfo());
 }
 
 TEST(TestGraph, MergeBroadcast) {
     HostTensorGenerator<> gen;
     auto host_x = gen({1});
     auto graph = ComputingGraph::make();
-    auto a = opr::Host2DeviceCopy::make(*graph, host_x),
-         b = a.broadcast({1,2}),
-         c = b.broadcast({3,4});
+    auto a = opr::Host2DeviceCopy::make(*graph, host_x), b = a.broadcast({1, 2}),
+         c = b.broadcast({3, 4});
     ASSERT_EQ(b.node(), b.node());
     ASSERT_EQ(c.node()->shape(), TensorShape({3, 4}));
 }
@@ -879,10 +834,9 @@ TEST(TestGraph, SwapTypeCvtAndBcast) {
     HostTensorGenerator<> gen;
     auto host_x = gen({1});
     auto graph = ComputingGraph::make();
-    auto a = opr::Host2DeviceCopy::make(*graph, host_x),
-         b = a.broadcast({1, 2}), c = opr::TypeCvt::make(b, dtype::Int32());
-    ASSERT_EQ(b.node()->owner_opr()->dyn_typeinfo(),
-              opr::Broadcast::typeinfo());
+    auto a = opr::Host2DeviceCopy::make(*graph, host_x), b = a.broadcast({1, 2}),
+         c = opr::TypeCvt::make(b, dtype::Int32());
+    ASSERT_EQ(b.node()->owner_opr()->dyn_typeinfo(), opr::Broadcast::typeinfo());
     ASSERT_EQ(c.node()->dtype(), dtype::Int32());
 }
 
@@ -890,13 +844,12 @@ TEST(TestGraph, SingleGraphMultipleCompile) {
     HostTensorGenerator<> gen;
     auto host_x = gen({2, 3});
     auto graph = ComputingGraph::make();
-    auto x = opr::MarkDynamicVar::make(
-            opr::Host2DeviceCopy::make(*graph, host_x)),
+    auto x = opr::MarkDynamicVar::make(opr::Host2DeviceCopy::make(*graph, host_x)),
          y = x + 1;
     HostTensorND host_y0, host_y1, host_y_expect;
     host_y_expect.copy_from(*host_x);
-    for (size_t i = 0, it = host_x->shape().total_nr_elems(); i < it; ++ i)
-        host_y_expect.ptr<float>()[i] ++;
+    for (size_t i = 0, it = host_x->shape().total_nr_elems(); i < it; ++i)
+        host_y_expect.ptr<float>()[i]++;
 
     auto func0 = graph->compile({make_callback_copy(y, host_y0)});
     func0->execute();
@@ -920,79 +873,74 @@ TEST(TestGraph, VarVirtualReceiverGrad) {
     // test for var multiple receivers and same input var of virtual opr
 
     auto graph = ComputingGraph::make();
-    auto bind_vo = [&](
-            const std::array<SymbolVar, 3> &inp,
-            const std::array<SymbolVar, 3> &out) {
+    auto bind_vo = [&](const std::array<SymbolVar, 3>& inp,
+                       const std::array<SymbolVar, 3>& out) {
         HostTensorND iv[3];
         ComputingGraph::OutputSpec outspec;
-        for (int i = 0; i < 3; ++ i) {
+        for (int i = 0; i < 3; ++i) {
             outspec.push_back(make_callback_copy(inp[i], iv[i]));
             inp[i].rename(ssprintf("vinp%d", i));
             out[i].rename(ssprintf("vout%d", i));
         }
         graph->compile(outspec)->execute();
 
-        auto grad = [](const VarNodeArray &inp, const VarNodeArray&,
-                size_t idx, const VarNodeArray &out_grad) {
-            SymbolVar
-                x = inp[idx],
-                 exp = x.make_scalar(float(idx + 2)),
-                 gx = exp * opr::pow(x + float(idx), exp - 1.f) * out_grad[idx];
+        auto grad = [](const VarNodeArray& inp, const VarNodeArray&, size_t idx,
+                       const VarNodeArray& out_grad) {
+            SymbolVar x = inp[idx], exp = x.make_scalar(float(idx + 2)),
+                      gx = exp * opr::pow(x + float(idx), exp - 1.f) * out_grad[idx];
             return gx.node();
         };
 
         VarNodeArray vinp(3), vout(3);
-        for (int i = 0; i < 3; ++ i) {
+        for (int i = 0; i < 3; ++i) {
             vinp[i] = inp[i].node();
             vout[i] = out[i].node();
         }
         cg::add_var_virtual_receiver(vinp, vout, grad);
 
         float *iptr[3], *optr[3];
-        for (int i = 0; i < 3; ++ i) {
+        for (int i = 0; i < 3; ++i) {
             iptr[i] = iv[i].ptr<float>();
-            optr[i] = out[i].node()->owner_opr()->
-                cast_final_safe<opr::Host2DeviceCopy>().host_data()->
-                ptr<float>();
+            optr[i] = out[i].node()
+                              ->owner_opr()
+                              ->cast_final_safe<opr::Host2DeviceCopy>()
+                              .host_data()
+                              ->ptr<float>();
         }
-        for (size_t i = 0; i < SIZE; ++ i)  {
-            for (int j = 0; j < 3; ++ j)
+        for (size_t i = 0; i < SIZE; ++i) {
+            for (int j = 0; j < 3; ++j)
                 optr[j][i] = std::pow(iptr[j][i] + j, 2.0 + j);
         }
     };
-    std::shared_ptr<HostTensorND>
-        host_x = gen({SIZE}),
-        host_vo[3], host_loss_p[5];
-    for (int i = 0; i < 5; ++ i) {
+    std::shared_ptr<HostTensorND> host_x = gen({SIZE}), host_vo[3], host_loss_p[5];
+    for (int i = 0; i < 5; ++i) {
         if (i < 3)
             host_vo[i] = gen({SIZE});
         host_loss_p[i] = gen({SIZE});
     }
 
     auto mkl = [&](SymbolVar x, size_t idx) {
-        return opr::Dot::make(x,
-                opr::Host2DeviceCopy::make(*graph, host_loss_p[idx]));
+        return opr::Dot::make(x, opr::Host2DeviceCopy::make(*graph, host_loss_p[idx]));
     };
 
-    auto
-        x = opr::Host2DeviceCopy::make(*graph, host_x).rename("x"),
-        loss = mkl(x, 3) + mkl(opr::pow(x, x.make_scalar(-1.f)), 4);
+    auto x = opr::Host2DeviceCopy::make(*graph, host_x).rename("x"),
+         loss = mkl(x, 3) + mkl(opr::pow(x, x.make_scalar(-1.f)), 4);
     std::array<SymbolVar, 3> vout;
-    for (int i = 0; i < 3; ++ i) {
+    for (int i = 0; i < 3; ++i) {
         vout[i] = opr::Host2DeviceCopy::make(*graph, host_vo[i]);
         loss = loss + mkl(vout[i], i);
     }
     bind_vo({x, x * .9f, x}, vout);
 
     HostTensorND gx, host_loss;
-    auto func = graph->compile({
-            make_callback_copy(cg::grad(loss, x), gx),
-            make_callback_copy(loss, host_loss)});
+    auto func = graph->compile(
+            {make_callback_copy(cg::grad(loss, x), gx),
+             make_callback_copy(loss, host_loss)});
     func->execute();
 
     auto px = host_x->ptr<float>(), pgx = gx.ptr<float>();
     float *plp[5], *pvo[3], scale[5], bias[5], exp[5];
-    for (int i = 0; i < 5; ++ i) {
+    for (int i = 0; i < 5; ++i) {
         plp[i] = host_loss_p[i]->ptr<float>();
         scale[i] = 1;
         bias[i] = 0;
@@ -1001,13 +949,16 @@ TEST(TestGraph, VarVirtualReceiverGrad) {
             pvo[i] = host_vo[i]->ptr<float>();
     }
     exp[0] = 2;
-    scale[1] = 0.9; bias[1] = 1; exp[1] = 3;
-    bias[2] = 2; exp[2] = 4;
+    scale[1] = 0.9;
+    bias[1] = 1;
+    exp[1] = 3;
+    bias[2] = 2;
+    exp[2] = 4;
     exp[4] = -1;
     float loss_expect = 0;
-    for (size_t i = 0; i < SIZE; ++ i) {
+    for (size_t i = 0; i < SIZE; ++i) {
         float gx = 0, x = px[i];
-        for (int j = 0; j < 5; ++ j) {
+        for (int j = 0; j < 5; ++j) {
             auto a = scale[j], b = bias[j], c = exp[j];
             // (ax + b)**c
             auto base = a * x + b;
@@ -1027,10 +978,9 @@ TEST(TestGraph, ClearDeviceMemory) {
     HostTensorGenerator<> gen;
     auto host_x = gen({2, 3});
     auto graph = ComputingGraph::make();
-    auto x = opr::Host2DeviceCopy::make(*graph, host_x),
-         y = x + 1;
+    auto x = opr::Host2DeviceCopy::make(*graph, host_x), y = x + 1;
     auto func = graph->compile({{y, {}}});
-    for (int i = 0; i < 2; ++ i) {
+    for (int i = 0; i < 2; ++i) {
         ASSERT_EQ(0u, graph->clear_device_memory());
         func->execute();
         ASSERT_EQ(1u, graph->clear_device_memory());
@@ -1042,12 +992,9 @@ TEST(TestGraph, CopyStream) {
     REQUIRE_GPU(2);
 
     HostTensorGenerator<> gen;
-    auto cn0 = CompNode::load("gpu0"),
-         cn1 = CompNode::load("gpu1");
+    auto cn0 = CompNode::load("gpu0"), cn1 = CompNode::load("gpu1");
     auto host_x = gen({23}, cn0);
-    auto sum_sqr = [](SymbolVar x) {
-        return opr::reduce_sum_sqr(x, x.make_scalar(1));
-    };
+    auto sum_sqr = [](SymbolVar x) { return opr::reduce_sum_sqr(x, x.make_scalar(1)); };
     auto graph = ComputingGraph::make();
     graph->options().log_level = 3;
     auto x = opr::Host2DeviceCopy::make(*graph, host_x),
@@ -1060,12 +1007,11 @@ TEST(TestGraph, CopyStream) {
     func->execute();
     ASSERT_EQ(host_gx.shape(), host_x->shape());
     auto px = host_x->ptr<float>(), pgx = host_gx.ptr<float>();
-    for (size_t i = 0; i < 23; ++ i) {
+    for (size_t i = 0; i < 23; ++i) {
         MGB_ASSERT_FLOAT_EQ(px[i] * 4 + 1, pgx[i]);
     }
 
-    ASSERT_EQ(int(CompNode::Stream::COPY),
-            host_gx.comp_node().locator().stream);
+    ASSERT_EQ(int(CompNode::Stream::COPY), host_gx.comp_node().locator().stream);
 }
 
 TEST(TestGraph, DynShapeDepCrossCN) {
@@ -1074,16 +1020,16 @@ TEST(TestGraph, DynShapeDepCrossCN) {
     auto host_x = gen({23}, cns[0]);
     auto graph = ComputingGraph::make();
     auto x = opr::Host2DeviceCopy::make(*graph, host_x),
-         y = opr::Sleep::make(x, 0.1, {true, true}),
-         a = opr::MarkDynamicVar::make(y),
+         y = opr::Sleep::make(x, 0.1, {true, true}), a = opr::MarkDynamicVar::make(y),
          ao = opr::Copy::make(a, cns[1].change_stream(1)),
          b = opr::GetVarShape::make(ao, {}, cns[1]) + 1;
     graph->options().var_sanity_check_first_run = false;
     graph->options().async_exec_level |= 0b10;
     set_priority(b, -100);
     HostTensorND host_a, host_b;
-    auto func = graph->compile({make_callback_copy(a, host_a, false),
-            make_callback_copy(b, host_b, false)});
+    auto func = graph->compile(
+            {make_callback_copy(a, host_a, false),
+             make_callback_copy(b, host_b, false)});
     func->execute().wait();
     MGB_ASSERT_TENSOR_EQ(*host_x, host_a);
     ASSERT_EQ(TensorShape{1}, host_b.shape());
@@ -1108,22 +1054,18 @@ MGB_DEFINE_OPR_CLASS(CustomCopy, cg::SingleCNOperatorNodeBase) // {
 
 public:
     CustomCopy(VarNode* x, std::shared_ptr<DeviceTensorND> dv)
-            : Super{x->owner_graph(), {dv->comp_node()}, "d2h", {x}},
-                m_data(dv) {
+            : Super{x->owner_graph(), {dv->comp_node()}, "d2h", {x}}, m_data(dv) {
         add_input({x});
         using F = VarNode::Flag;
-        add_output(None)
-                ->add_flag(F::ALLOW_EMPTY_SHAPE)
-                .add_flag(F::VOLATILE_CONTENT);
+        add_output(None)->add_flag(F::ALLOW_EMPTY_SHAPE).add_flag(F::VOLATILE_CONTENT);
     }
 };
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(CustomCopy);
-}
+}  // namespace
 
 TEST(TestGraph, DependentOnVolatileContent) {
     HostTensorGenerator<> gen;
-    auto cn0 = CompNode::load("xpu0"),
-         cn1 = cn0.change_stream(1);
+    auto cn0 = CompNode::load("xpu0"), cn1 = cn0.change_stream(1);
     auto host_x = gen({233}, cn0);
     auto dev_y = std::make_shared<DeviceTensorND>(cn1);
 
@@ -1142,18 +1084,17 @@ TEST(TestGraph, DependentOnVolatileContent) {
 namespace {
 void check_wait(SymbolVar dest, SymbolVar dep) {
     if (!dep.node()) {
-        ASSERT_EQ(0u,
-                dest.node()->owner_opr()->input_waiting_spec().size());
+        ASSERT_EQ(0u, dest.node()->owner_opr()->input_waiting_spec().size());
         return;
     }
     cg::OperatorNodeBase::InputWaitingSpecElem ws;
     unpack_vector(dest.node()->owner_opr()->input_waiting_spec(), ws);
     ASSERT_EQ(ws.comp_node, dest.node()->comp_node());
-    VarNode *get;
+    VarNode* get;
     unpack_vector(ws.dev_ready, get);
     ASSERT_EQ(dep, get);
 };
-}
+}  // namespace
 
 TEST(TestGraph, InputWaitingSpec) {
     auto cns = load_multiple_xpus(2);
@@ -1161,27 +1102,24 @@ TEST(TestGraph, InputWaitingSpec) {
     HostTensorGenerator<> gen;
     auto host_x = gen({SIZE}, cns[0]);
     auto graph = ComputingGraph::make();
-    graph->options().seq_opt.enable_seq_comp_node_opt = false; // no copy stream
+    graph->options().seq_opt.enable_seq_comp_node_opt = false;  // no copy stream
     auto cn0 = cns[0], cn1 = cns[1];
     auto x = opr::Host2DeviceCopy::make_no_fwd(*graph, host_x),
-         y0 = opr::Copy::make(x, cn1),
-         y1 = opr::Copy::make(x + 1, cn1),
-         z1 = opr::Copy::make(y1 + 1, cn0),
-         z0 = opr::Copy::make(y0 + 1, cn0);
+         y0 = opr::Copy::make(x, cn1), y1 = opr::Copy::make(x + 1, cn1),
+         z1 = opr::Copy::make(y1 + 1, cn0), z0 = opr::Copy::make(y0 + 1, cn0);
     set_priority(y0, 5);
     set_priority(y1, 10);
     set_priority(z1, 15);
     set_priority(z0, 20);
 
     HostTensorND host_z0, host_z1;
-    auto func = graph->compile({
-            make_callback_copy(z0, host_z0),
-            make_callback_copy(z1, host_z1)});
+    auto func = graph->compile(
+            {make_callback_copy(z0, host_z0), make_callback_copy(z1, host_z1)});
     func->execute();
 
-    auto px = host_x->ptr<float>(),
-         pz0 = host_z0.ptr<float>(), pz1 = host_z1.ptr<float>();
-    for (size_t i = 0; i < SIZE; ++ i) {
+    auto px = host_x->ptr<float>(), pz0 = host_z0.ptr<float>(),
+         pz1 = host_z1.ptr<float>();
+    for (size_t i = 0; i < SIZE; ++i) {
         MGB_ASSERT_FLOAT_EQ(px[i] + 1, pz0[i]);
         MGB_ASSERT_FLOAT_EQ(px[i] + 2, pz1[i]);
     }
@@ -1204,7 +1142,7 @@ TEST(TestGraph, InputWaitingSpecMultiOut) {
     auto x = opr::Host2DeviceCopy::make(*graph, hv);
     auto outs = opr::Split::make(x, opr::Split::Options::make_average(0, nr_out));
     cg::ComputingGraph::OutputSpec output_spec;
-    for (size_t i = 0; i < nr_out; ++ i) {
+    for (size_t i = 0; i < nr_out; ++i) {
         auto y = opr::Copy::make(outs[i], cn1);
         y.node()->owner_opr()->node_prop().attribute().priority = i ? nr_out - i : 0;
         output_spec.push_back({y, {}});
@@ -1214,19 +1152,18 @@ TEST(TestGraph, InputWaitingSpecMultiOut) {
 
     check_wait(output_spec[0].first, outs[0]);
     check_wait(output_spec[nr_out - 1].first, outs[nr_out - 1]);
-    for (size_t i = 1; i < nr_out - 1; ++ i) {
+    for (size_t i = 1; i < nr_out - 1; ++i) {
         check_wait(output_spec[i].first, {});
     }
 }
 
 TEST(TestGraph, GradStaticShape) {
-    for (bool enable: {false, true}) {
+    for (bool enable : {false, true}) {
         auto graph = ComputingGraph::make();
         graph->options().enable_grad_var_static_reshape = enable;
         HostTensorGenerator<> gen;
         auto host_x = gen({234});
-        auto x = opr::Host2DeviceCopy::make(*graph, host_x),
-             x1 = x + 1.f,
+        auto x = opr::Host2DeviceCopy::make(*graph, host_x), x1 = x + 1.f,
              y = opr::MarkDynamicVar::make(x1) * x1,
              gx = cg::grad(opr::reduce_sum(y, y.make_scalar(1)), x);
         ASSERT_FALSE(cg::is_static_var_shape(y.node()));
@@ -1236,7 +1173,7 @@ TEST(TestGraph, GradStaticShape) {
         auto func = graph->compile({make_callback_copy(gx, host_gx)});
         func->execute();
         auto px = host_x->ptr<float>(), pgx = host_gx.ptr<float>();
-        for (size_t i = 0; i < 234; ++ i) {
+        for (size_t i = 0; i < 234; ++i) {
             MGB_ASSERT_FLOAT_EQ(2 * (px[i] + 1), pgx[i]);
         }
     }
@@ -1253,9 +1190,7 @@ TEST(TestGraph, AllInputGrad) {
          loss1 = opr::reduce_sum_sqr(z * 2, z.make_scalar(1));
 
     auto&& op = z.node()->owner_opr()->cast_final_safe<AllInputGradOpr>();
-    auto grad = [](SymbolVar x, SymbolVar y) {
-        return cg::grad(x, y, true, false);
-    };
+    auto grad = [](SymbolVar x, SymbolVar y) { return cg::grad(x, y, true, false); };
     auto gx0 = grad(loss0, x), gy0 = grad(loss0, y);
     ASSERT_EQ(1u, op.nr_grad_call);
     ASSERT_EQ(x + y, gx0);
@@ -1268,19 +1203,17 @@ TEST(TestGraph, AllInputGrad) {
 }
 
 TEST(TestGraph, CPPMemLeak) {
-    auto run = [](){
+    auto run = []() {
         auto graph = ComputingGraph::make();
         HostTensorGenerator<> gen;
         auto host_x = gen({23}, "cpux");
-        auto x = opr::Host2DeviceCopy::make(*graph, host_x),
-             y0 = x + 1.f,
-             y1 = x + 1.f;
-        ASSERT_EQ(y0, y1); // opr dedup calls clear() in static inference
+        auto x = opr::Host2DeviceCopy::make(*graph, host_x), y0 = x + 1.f, y1 = x + 1.f;
+        ASSERT_EQ(y0, y1);  // opr dedup calls clear() in static inference
         HostTensorND host_y;
         auto func = graph->compile({make_callback_copy(y0, host_y)});
         func->execute();
         auto px = host_x->ptr<float>(), py = host_y.ptr<float>();
-        for (size_t i = 0; i < 23; ++ i) {
+        for (size_t i = 0; i < 23; ++i) {
             MGB_ASSERT_FLOAT_EQ(px[i] + 1, py[i]);
         }
     };
@@ -1293,9 +1226,7 @@ TEST(TestGraph, CPPMemLeak) {
 TEST(TestGraph, ReplaceVarHelper) {
     auto graph = ComputingGraph::make();
     HostTensorGenerator<> gen;
-    auto x = opr::Host2DeviceCopy::make(*graph, gen({2})),
-         y = x + 1.f,
-         z = y + 1.f;
+    auto x = opr::Host2DeviceCopy::make(*graph, gen({2})), y = x + 1.f, z = y + 1.f;
     auto x1 = opr::Host2DeviceCopy::make(*graph, gen({3}));
     SymbolVar y1, z1;
     unpack_vector(cg::replace_vars({y, z}, {{x, x1}}), y1, z1);
@@ -1339,9 +1270,9 @@ TEST(TestGraph, ReplaceVarWithDeps) {
 
     graph->options().extra_vardeps[b.node()].push_back(a.node());
 
-    auto y = cg::replace_vars({c},
-            {{iter0.second.node(), iter2.second.node()},
-                {iter1.second.node(), iter3.second.node()}});
+    auto y = cg::replace_vars(
+            {c}, {{iter0.second.node(), iter2.second.node()},
+                  {iter1.second.node(), iter3.second.node()}});
 
     ASSERT_EQ(y.size(), 1u);
 
@@ -1377,8 +1308,8 @@ TEST(TestGraph, EmptyShapeCheck) {
                     func->execute();
                 } catch (const MegBrainError& exc) {
                     std::string msg{exc.what()};
-                    ASSERT_TRUE(msg.find("empty input is not allowed") !=
-                                std::string::npos)
+                    ASSERT_TRUE(
+                            msg.find("empty input is not allowed") != std::string::npos)
                             << "bad message " << msg;
                     throw;
                 }
@@ -1410,12 +1341,10 @@ TEST(TestGraph, RefCntManage) {
 
     for (auto i : {x, y, x_cn1, z}) {
         ASSERT_EQ(0u, i.node()->refcnt()) << i.node()->name();
-        if (i.node() == x.node() ||
-            (cross_cn_mem_share && i.node() == x_cn1.node())) {
+        if (i.node() == x.node() || (cross_cn_mem_share && i.node() == x_cn1.node())) {
             chk_dyn(i);
         } else {
-            ASSERT_TRUE(cg::is_static_var_storage(i.node()))
-                    << i.node()->name();
+            ASSERT_TRUE(cg::is_static_var_storage(i.node())) << i.node()->name();
             ASSERT_TRUE(i.node()->dev_tensor_valid()) << i.node()->name();
         }
     }
@@ -1503,21 +1432,23 @@ TEST(TestGraph, SignalCompSeqExecFinishedAsyncError) {
     using AIdx = opr::indexing::AxisIndexer;
     auto out1 = opr::IndexingMultiAxisVec::make({x}, {AIdx::make_index(0, y)});
     size_t exec_cnt = 0;
-    auto cb = [&exec_cnt](const cg::event::CompSeqExecFinished &ev) {
+    auto cb = [&exec_cnt](const cg::event::CompSeqExecFinished& ev) {
         MGB_MARK_USED_VAR(ev);
-        exec_cnt ++;
+        exec_cnt++;
     };
     auto handle = graph->event().register_receiver<cg::event::CompSeqExecFinished>(cb);
     auto func = graph->compile({{out1, {}}});
-    for(size_t i = 0; i < 3; ++ i) {
-        ASSERT_THROW({
-            try {
-              func->execute().wait();
-            } catch(const MegBrainError&) {
-                ASSERT_EQ(exec_cnt, i + 1);
-                throw;
-            }
-        }, MegBrainError);
+    for (size_t i = 0; i < 3; ++i) {
+        ASSERT_THROW(
+                {
+                    try {
+                        func->execute().wait();
+                    } catch (const MegBrainError&) {
+                        ASSERT_EQ(exec_cnt, i + 1);
+                        throw;
+                    }
+                },
+                MegBrainError);
     }
 }
 
@@ -1538,15 +1469,17 @@ TEST(TestGraph, RecoverFromAsyncError) {
 
     func->execute().wait();
 
-    ASSERT_THROW({
-        try{
-            host_y->ptr<int>()[0] = 20;
-            func->execute().wait();
-        } catch(const MegBrainError&) {
-            host_y->ptr<int>()[0] = 5;
-            throw;
-        }
-    }, MegBrainError);
+    ASSERT_THROW(
+            {
+                try {
+                    host_y->ptr<int>()[0] = 20;
+                    func->execute().wait();
+                } catch (const MegBrainError&) {
+                    host_y->ptr<int>()[0] = 5;
+                    throw;
+                }
+            },
+            MegBrainError);
 
     func->execute().wait();
 }
@@ -1563,23 +1496,24 @@ TEST(TestGraph, AsyncErrorMultiCompGraph) {
         auto y = opr::Host2DeviceCopy::make(*graph, host_y);
         y = opr::MarkDynamicVar::make(y);
         using AIdx = opr::indexing::AxisIndexer;
-        auto out1 =
-                opr::IndexingMultiAxisVec::make({x}, {AIdx::make_index(0, y)});
+        auto out1 = opr::IndexingMultiAxisVec::make({x}, {AIdx::make_index(0, y)});
         return graph->compile({{out1, {}}});
     };
 
     auto func0 = gen_func(host_y0);
     auto func1 = gen_func(host_y1);
 
-    ASSERT_THROW({
-        host_y0->ptr<int>()[0] = 20;
-        host_y1->ptr<int>()[0] = 5;
-        ASSERT_NO_THROW({
-            func0->execute();
-            func1->execute().wait();
-        });
-        func0->wait();
-    }, MegBrainError);
+    ASSERT_THROW(
+            {
+                host_y0->ptr<int>()[0] = 20;
+                host_y1->ptr<int>()[0] = 5;
+                ASSERT_NO_THROW({
+                    func0->execute();
+                    func1->execute().wait();
+                });
+                func0->wait();
+            },
+            MegBrainError);
 
     ASSERT_NO_THROW({
         host_y0->ptr<int>()[0] = 5;
@@ -1598,18 +1532,15 @@ TEST(TestGraph, WaitAfterException) {
     size_t flag;
     auto x = opr::Host2DeviceCopy::make(*graph, host_x);
     auto y = opr::Host2DeviceCopy::make(*graph, host_y);
-    auto z = opr::CallbackInjector::make(
-        x + y,
-        [&](DeviceTensorND &) {
-            mgb_throw_if(flag, MegBrainError,
-                "throw exception after a + b.");
-        }
-    );
-    auto cb = [&](const cg::event::CompSeqExecFinished &ev) {
+    auto z = opr::CallbackInjector::make(x + y, [&](DeviceTensorND&) {
+        mgb_throw_if(flag, MegBrainError, "throw exception after a + b.");
+    });
+    auto cb = [&](const cg::event::CompSeqExecFinished& ev) {
         MGB_MARK_USED_VAR(ev);
-        mgb_throw_if(flag, MegBrainError,
-            "It should not signal CompSeqExecFinished "
-            "if any exception is thrown during execution.");
+        mgb_throw_if(
+                flag, MegBrainError,
+                "It should not signal CompSeqExecFinished "
+                "if any exception is thrown during execution.");
     };
     auto handle = graph->event().register_receiver<cg::event::CompSeqExecFinished>(cb);
     auto func = graph->compile({{z, {}}});
@@ -1640,8 +1571,8 @@ TEST(TestGraph, PauseExecEnv) {
          z = opr::CallbackInjector::make(y, cb1);
     auto func = graph->compile({{z, {}}});
 
-    auto exec_env = static_cast<cg::ComputingGraphImpl*>(graph.get())
-                            ->current_exec_env();
+    auto exec_env =
+            static_cast<cg::ComputingGraphImpl*>(graph.get())->current_exec_env();
     auto worker = [&flag0, &flag1, exec_env]() {
         while (!flag0.load()) {
             std::this_thread::yield();
@@ -1696,8 +1627,8 @@ TEST(TestGraph, CustomStaticDeviceMemoryAllocator) {
     check();
 
     *host_x = *gen({1, 2047});
-    allocator->size_expect = func->update_static_alloc_plan_and_get_size().at(
-            host_x->comp_node());
+    allocator->size_expect =
+            func->update_static_alloc_plan_and_get_size().at(host_x->comp_node());
     ASSERT_EQ(expected_nr_call, allocator->nr_call());
     ++expected_nr_call;
     check();
@@ -1784,8 +1715,8 @@ TEST(TestGraph, AsyncRelease) {
 
     auto graph = ComputingGraph::make();
     auto x = opr::SharedDeviceTensor::make(*graph, dev_x),
-         tshp = opr::Host2DeviceCopy::make(*graph, host_tshp),
-         x_fwd = x.reshape(tshp), y = opr::Sleep::make(x_fwd, 0.05, {}, cn1);
+         tshp = opr::Host2DeviceCopy::make(*graph, host_tshp), x_fwd = x.reshape(tshp),
+         y = opr::Sleep::make(x_fwd, 0.05, {}, cn1);
     auto func = graph->compile({{y, {}}});
 
     ASSERT_TRUE(cg::is_static_var_storage(x.node()));
@@ -1827,60 +1758,61 @@ TEST(TestGraph, CPUGPUHybrid) {
         auto host_x = gen({length});
         graph->options().var_sanity_check_first_run = false;
         auto x = opr::Host2DeviceCopy::make(*graph, host_x, {cn_cpu}),
-            y = opr::Sleep::make(x, 0.5) * 2,
-            z_gpu = opr::Copy::make(y, cn_gpu) + 1,
-            z = opr::Copy::make(z_gpu, cn_cpu) * 2;
+             y = opr::Sleep::make(x, 0.5) * 2, z_gpu = opr::Copy::make(y, cn_gpu) + 1,
+             z = opr::Copy::make(z_gpu, cn_cpu) * 2;
         HostTensorND host_z;
         auto func = graph->compile({make_callback_copy(z, host_z)});
         func->execute();
-        for (size_t i = 0; i < length; ++ i) {
-            MGB_ASSERT_FLOAT_EQ((host_x->ptr<float>()[i] * 2 + 1) * 2,
-                                host_z.ptr<float>()[i]);
+        for (size_t i = 0; i < length; ++i) {
+            MGB_ASSERT_FLOAT_EQ(
+                    (host_x->ptr<float>()[i] * 2 + 1) * 2, host_z.ptr<float>()[i]);
         }
     }
 }
 
 TEST(TestGraph, In2OutOpStreamPropagate) {
-    REQUIRE_GPU(1); // seq_comp_node_opt works on comp_node with HAS_COPY_STREAM
+    REQUIRE_GPU(1);  // seq_comp_node_opt works on comp_node with HAS_COPY_STREAM
     HostTensorGenerator<> gen;
     SmallVector<std::shared_ptr<HostTensorND>> host_v = {gen({233}), gen({23})};
     using PropType = cg::SeqCompNodeOptimizer::StreamPropType;
     for (auto type : {PropType::STRONG, PropType::WEAK})
-    for (size_t idx : {0, 1}) {
-        auto graph = ComputingGraph::make();
-        SymbolVarArray inp(2);
-        for (size_t i = 0 ; i < 2; ++ i) {
-            inp[i] = opr::Host2DeviceCopy::make(*graph, host_v[i]);
+        for (size_t idx : {0, 1}) {
+            auto graph = ComputingGraph::make();
+            SymbolVarArray inp(2);
+            for (size_t i = 0; i < 2; ++i) {
+                inp[i] = opr::Host2DeviceCopy::make(*graph, host_v[i]);
+            }
+            auto out = opr::VirtualDep::make(inp);
+            auto&& mgr = static_cast<cg::SeqCompNodeOptimizerImpl&>(
+                    graph->seq_comp_node_optimizer());
+            mgr.register_stream_var(
+                    inp[idx].node(), PropType{CompNode::Stream::COPY, type});
+            mgr.optimize_comp_nodes({out.node()});
+            ASSERT_EQ(inp[0].node()->comp_node(), out.node()->comp_node());
+            auto o_stream = out.node()->comp_node().locator().stream;
+            int expect = idx ? 0 : int(CompNode::Stream::COPY);
+            ASSERT_EQ(o_stream, expect);
         }
-        auto out = opr::VirtualDep::make(inp);
-        auto &&mgr = static_cast<cg::SeqCompNodeOptimizerImpl&>(graph->seq_comp_node_optimizer());
-        mgr.register_stream_var(inp[idx].node(), PropType{CompNode::Stream::COPY, type});
-        mgr.optimize_comp_nodes({out.node()});
-        ASSERT_EQ(inp[0].node()->comp_node(), out.node()->comp_node());
-        auto o_stream = out.node()->comp_node().locator().stream;
-        int expect = idx ? 0 : int(CompNode::Stream::COPY);
-        ASSERT_EQ(o_stream, expect);
-    }
 }
 
 TEST(TestGraph, OperatorNodeConfigInstanceID) {
     OperatorNodeConfig config0, config1;
     void *p0 = &config0, *p1 = &config1;
-    { // set and reset
+    {  // set and reset
         ASSERT_EQ(config0.instance_id(), config1.instance_id());
         config0.update_instance_id(p0);
         ASSERT_NE(config0.instance_id(), config1.instance_id());
         config0.reset_instance_id();
         ASSERT_EQ(config0.instance_id(), config1.instance_id());
     }
-    { // set to the same pointer
+    {  // set to the same pointer
         config0.reset_instance_id();
         config0.update_instance_id(p1);
         config1.reset_instance_id();
         config1.update_instance_id(p1);
         ASSERT_EQ(config0.instance_id(), config1.instance_id());
     }
-    { // check update semantics
+    {  // check update semantics
         config0.reset_instance_id();
         config0.update_instance_id(p0);
         config1.reset_instance_id();
@@ -1889,7 +1821,7 @@ TEST(TestGraph, OperatorNodeConfigInstanceID) {
         config0.update_instance_id(p1);
         ASSERT_NE(config0.instance_id(), config1.instance_id());
     }
-    { // set in different order
+    {  // set in different order
         config0.reset_instance_id();
         config0.update_instance_id(p1);
         config0.update_instance_id(p0);
@@ -1907,8 +1839,7 @@ TEST(TestGraph, NaiveRecord2NCHW44) {
     param.sparse = ConvParam::Sparse::DENSE;
     param.format = ConvParam::Format::NCHW44;
     HostTensorGenerator<> gen;
-    auto host_x = gen({1, 2, 12, 12, 4}, cn),
-         host_w = gen({2, 2, 3, 3, 4, 4}, cn),
+    auto host_x = gen({1, 2, 12, 12, 4}, cn), host_w = gen({2, 2, 3, 3, 4, 4}, cn),
          host_b = gen({1, 2, 1, 1, 4}, cn);
 
     HostTensorND host_z;
@@ -1928,8 +1859,7 @@ TEST(TestGraph, NaiveRecord2NCHW44) {
 namespace {
 template <typename DnnOp, typename... Args>
 typename megdnn::ExecutionPolicy try_find_any_weight_preprocess_algo(
-        DnnOp* dnn_op, const char* mgb_info, Maybe<bool>& found,
-        Args&& ...args) {
+        DnnOp* dnn_op, const char* mgb_info, Maybe<bool>& found, Args&&... args) {
     if (found.valid()) {
         if (found.val()) {
             return dnn_op->execution_policy();
@@ -1937,14 +1867,15 @@ typename megdnn::ExecutionPolicy try_find_any_weight_preprocess_algo(
             return {};
         }
     }
-    for (auto&& algo : dnn_op->get_all_algorithms_info(
-            std::forward<Args>(args)...)) {
+    for (auto&& algo :
+         dnn_op->get_all_algorithms_info_safe(std::forward<Args>(args)...)) {
         dnn_op->execution_policy().algo = algo.desc;
-        auto layouts = dnn_op->deduce_preprocessed_filter_layout(
-                std::forward<Args>(args)...);
-        if (layouts.empty()) continue;
+        auto layouts =
+                dnn_op->deduce_preprocessed_filter_layout(std::forward<Args>(args)...);
+        if (layouts.empty())
+            continue;
         bool valid = false;
-        for (auto&& l: layouts) {
+        for (auto&& l : layouts) {
             if (!l.is_empty()) {
                 valid = true;
                 break;
@@ -1962,8 +1893,7 @@ typename megdnn::ExecutionPolicy try_find_any_weight_preprocess_algo(
 
 template <typename DnnOp, typename... Args>
 typename megdnn::ExecutionPolicy try_find_any_bias_preprocess_algo(
-        DnnOp* dnn_op, const char* mgb_info, Maybe<bool>& found,
-        Args&& ...args) {
+        DnnOp* dnn_op, const char* mgb_info, Maybe<bool>& found, Args&&... args) {
     if (found.valid()) {
         if (found.val()) {
             return dnn_op->execution_policy();
@@ -1971,11 +1901,11 @@ typename megdnn::ExecutionPolicy try_find_any_bias_preprocess_algo(
             return {};
         }
     }
-    for (auto&& algo : dnn_op->get_all_algorithms_info(
-            std::forward<Args>(args)...)) {
+    for (auto&& algo :
+         dnn_op->get_all_algorithms_info_safe(std::forward<Args>(args)...)) {
         dnn_op->execution_policy().algo = algo.desc;
-        auto layouts = dnn_op->deduce_preprocessed_filter_layout(
-                std::forward<Args>(args)...);
+        auto layouts =
+                dnn_op->deduce_preprocessed_filter_layout(std::forward<Args>(args)...);
         if (layouts.size() <= 1)
             continue;
         bool valid = false;
@@ -1997,7 +1927,7 @@ void test_free_memory_in_weight_preprocess(int record_level, CompNode cn) {
     auto graph = ComputingGraph::make();
 #if MGB_ENABLE_JSON
     std::unique_ptr<GraphProfiler> profiler;
-    if(!record_level){
+    if (!record_level) {
         profiler = std::make_unique<GraphProfiler>(graph.get());
     }
 #endif
@@ -2007,8 +1937,7 @@ void test_free_memory_in_weight_preprocess(int record_level, CompNode cn) {
         return opr::Host2DeviceCopy::make(*graph, gen(shp, cn)).rename(name);
     };
     auto mkcvar = [&](const char* name, const TensorShape& shp) {
-        return opr::SharedDeviceTensor::make_const(*graph, *gen(shp, cn))
-                .rename(name);
+        return opr::SharedDeviceTensor::make_const(*graph, *gen(shp, cn)).rename(name);
     };
     auto x = mkvar("x", {1, 32, 16, 16});
     // ConvBias test dense
@@ -2018,43 +1947,41 @@ void test_free_memory_in_weight_preprocess(int record_level, CompNode cn) {
     auto w1 = mkcvar("w1", {32, 32, 1, 1}), b1 = mkcvar("b1", {1, 32, 1, 1});
     auto conv1 = opr::ConvBias::make(x, w1, b1, param_conv_bias);
     Maybe<bool> wp1, wp2;
-    conv1.node()->owner_opr()->cast_final_safe<opr::ConvBias>()
-        .setup_algo_chooser([&](const cg::OperatorNodeBase* opr) {
-            return try_find_any_weight_preprocess_algo(
-                opr->cast_final_safe<opr::ConvBias>().megdnn_opr(),
-                opr->cname(), wp1,
-                opr->input(0)->layout(), opr->input(1)->layout(),
-                opr->input(2)->layout(), TensorLayout{},
-                opr->output(0)->layout());
-    });
+    conv1.node()->owner_opr()->cast_final_safe<opr::ConvBias>().setup_algo_chooser(
+            [&](const cg::OperatorNodeBase* opr) {
+                return try_find_any_weight_preprocess_algo(
+                        opr->cast_final_safe<opr::ConvBias>().megdnn_opr(),
+                        opr->cname(), wp1, opr->input(0)->layout(),
+                        opr->input(1)->layout(), opr->input(2)->layout(),
+                        TensorLayout{}, opr->output(0)->layout());
+            });
     // Convolution
     opr::Convolution::Param param_conv;
     param_conv.pad_h = param_conv.pad_w = 0;
     param_conv.sparse = opr::Convolution::Param::Sparse::DENSE;
     auto w2 = mkcvar("w2", {32, 32, 1, 1});
     auto y = opr::Convolution::make(conv1, w2, param_conv);
-    y.node()->owner_opr()->cast_final_safe<opr::Convolution>()
-        .setup_algo_chooser([&](const cg::OperatorNodeBase* opr) {
-            return try_find_any_weight_preprocess_algo(
-                opr->cast_final_safe<opr::Convolution>().megdnn_opr(),
-                opr->cname(), wp2,
-                opr->input(0)->layout(), opr->input(1)->layout(),
-                opr->output(0)->layout());
-    });
+    y.node()->owner_opr()->cast_final_safe<opr::Convolution>().setup_algo_chooser(
+            [&](const cg::OperatorNodeBase* opr) {
+                return try_find_any_weight_preprocess_algo(
+                        opr->cast_final_safe<opr::Convolution>().megdnn_opr(),
+                        opr->cname(), wp2, opr->input(0)->layout(),
+                        opr->input(1)->layout(), opr->output(0)->layout());
+            });
 
     HostTensorND host_y;
-    auto func =graph->compile({make_callback_copy(y, host_y)});
-    //!flag the no need memory of var
+    auto func = graph->compile({make_callback_copy(y, host_y)});
+    //! flag the no need memory of var
     func->execute();
-    //!free the no need memory of var
+    //! free the no need memory of var
     func->execute();
     auto check = [&](SymbolVar v) {
         ASSERT_TRUE(v.node()->contain_flag(VarNode::Flag::MEMORY_NO_NEED));
         ASSERT_TRUE(v.node()->dev_tensor().empty());
         ASSERT_TRUE(v.node()->owner_opr()
-                ->cast_final_safe<opr::SharedDeviceTensor>()
-                .get_dev_tensor()
-                .empty());
+                            ->cast_final_safe<opr::SharedDeviceTensor>()
+                            .get_dev_tensor()
+                            .empty());
     };
     ASSERT_TRUE(wp1.valid() && wp2.valid());
     if (wp1.val()) {
@@ -2071,14 +1998,16 @@ void test_free_memory_in_weight_preprocess(int record_level, CompNode cn) {
     }
 #endif
 }
-} // anonymous namespace
+}  // anonymous namespace
 
 TEST(TestGraph, FreeMemoryInWeightPreprocess) {
     test_free_memory_in_weight_preprocess(0, CompNode::load("xpu0"));
+    megdnn::HeuristicCache::instance().clear();
 }
 
 TEST(TestGraph, RecordFreeMemoryInWeightPreprocess) {
     test_free_memory_in_weight_preprocess(1, CompNode::load("cpu0"));
+    megdnn::HeuristicCache::instance().clear();
 }
 
 namespace {
@@ -2095,28 +2024,27 @@ MGB_DEFINE_OPR_CLASS(HostValueReader, cg::SingleCNOutshapePureByInshapeOprBase) 
     }
 
     void get_output_var_shape(
-            const TensorShapeArray &,
-            TensorShapeArray &out_shape) const override {
+            const TensorShapeArray&, TensorShapeArray& out_shape) const override {
         out_shape.at(0) = {};
     }
 
-    public:
-        HostValueReader(VarNode* inp)
+public:
+    HostValueReader(VarNode* inp)
             : Super{inp->owner_graph(), {}, "host_value_reader", {inp}} {
-            add_input({inp});
-            using F = VarNode::Flag;
-            add_output(None)
-                    ->add_flag(F::ALLOW_EMPTY_SHAPE)
-                    .add_flag(F::VOLATILE_CONTENT);
-        }
+        add_input({inp});
+        using F = VarNode::Flag;
+        add_output(None)->add_flag(F::ALLOW_EMPTY_SHAPE).add_flag(F::VOLATILE_CONTENT);
+    }
 
-        static SymbolVar make(SymbolVar inp) {
-            return inp.node()->owner_graph()->insert_opr(
-                std::make_unique<HostValueReader>(inp.node()))->output(0);
-        }
+    static SymbolVar make(SymbolVar inp) {
+        return inp.node()
+                ->owner_graph()
+                ->insert_opr(std::make_unique<HostValueReader>(inp.node()))
+                ->output(0);
+    }
 };
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(HostValueReader);
-}
+}  // namespace
 
 TEST(TestGraph, FreeMemoryInWeightPreprocessWithValueInfer) {
     HostTensorGenerator<> gen;
@@ -2128,21 +2056,19 @@ TEST(TestGraph, FreeMemoryInWeightPreprocessWithValueInfer) {
         return opr::Host2DeviceCopy::make(*graph, gen(shp, cn)).rename(name);
     };
     auto mkcvar = [&](const char* name, const TensorShape& shp) {
-        return opr::SharedDeviceTensor::make_const(*graph, *gen(shp, cn))
-                .rename(name);
+        return opr::SharedDeviceTensor::make_const(*graph, *gen(shp, cn)).rename(name);
     };
     auto x = mkvar("x", {1, 32, 16, 16});
     auto w = mkcvar("w", {32, 32, 1, 1});
     auto y = opr::Convolution::make(x, w);
     Maybe<bool> found;
-    y.node()->owner_opr()->cast_final_safe<opr::Convolution>()
-        .setup_algo_chooser([&](const cg::OperatorNodeBase* opr) {
-            return try_find_any_weight_preprocess_algo(
-                opr->cast_final_safe<opr::Convolution>().megdnn_opr(),
-                opr->cname(), found,
-                opr->input(0)->layout(), opr->input(1)->layout(),
-                opr->output(0)->layout());
-    });
+    y.node()->owner_opr()->cast_final_safe<opr::Convolution>().setup_algo_chooser(
+            [&](const cg::OperatorNodeBase* opr) {
+                return try_find_any_weight_preprocess_algo(
+                        opr->cast_final_safe<opr::Convolution>().megdnn_opr(),
+                        opr->cname(), found, opr->input(0)->layout(),
+                        opr->input(1)->layout(), opr->output(0)->layout());
+            });
     auto reader = HostValueReader::make(w);
 
     HostTensorND host_y;
@@ -2157,6 +2083,7 @@ TEST(TestGraph, FreeMemoryInWeightPreprocessWithValueInfer) {
                          ->cast_final_safe<opr::SharedDeviceTensor>()
                          .get_dev_tensor()
                          .empty());
+    megdnn::HeuristicCache::instance().clear();
 }
 
 TEST(TestGraph, FreeMemoryInWeightPreprocessWithMultiReader) {
@@ -2170,26 +2097,24 @@ TEST(TestGraph, FreeMemoryInWeightPreprocessWithMultiReader) {
         return opr::Host2DeviceCopy::make(*graph, gen(shp, cn)).rename(name);
     };
     auto mkcvar = [&](const char* name, const TensorShape& shp) {
-        return opr::SharedDeviceTensor::make_const(*graph, *gen(shp, cn))
-                .rename(name);
+        return opr::SharedDeviceTensor::make_const(*graph, *gen(shp, cn)).rename(name);
     };
     auto x = mkvar("x", {1, 32, 16, 16});
     auto w = mkcvar("w", {32, 32, 1, 1});
     auto y = opr::Convolution::make(x, w);
     Maybe<bool> found;
-    y.node()->owner_opr()->cast_final_safe<opr::Convolution>()
-        .setup_algo_chooser([&](const cg::OperatorNodeBase* opr) {
-            return try_find_any_weight_preprocess_algo(
-                opr->cast_final_safe<opr::Convolution>().megdnn_opr(),
-                opr->cname(), found,
-                opr->input(0)->layout(), opr->input(1)->layout(),
-                opr->output(0)->layout());
-    });
+    y.node()->owner_opr()->cast_final_safe<opr::Convolution>().setup_algo_chooser(
+            [&](const cg::OperatorNodeBase* opr) {
+                return try_find_any_weight_preprocess_algo(
+                        opr->cast_final_safe<opr::Convolution>().megdnn_opr(),
+                        opr->cname(), found, opr->input(0)->layout(),
+                        opr->input(1)->layout(), opr->output(0)->layout());
+            });
     auto y1 = w * 2 + 1;
 
     HostTensorND host_y, host_y1;
-    auto func = graph->compile({
-        make_callback_copy(y, host_y), make_callback_copy(y1, host_y1)});
+    auto func = graph->compile(
+            {make_callback_copy(y, host_y), make_callback_copy(y1, host_y1)});
     func->execute();
     // FIXME: failed on second execution due to calculate expression
     // (w * 2 + 1) with empty tensor
@@ -2197,9 +2122,10 @@ TEST(TestGraph, FreeMemoryInWeightPreprocessWithMultiReader) {
     ASSERT_FALSE(w.node()->contain_flag(VarNode::Flag::MEMORY_NO_NEED));
     ASSERT_FALSE(w.node()->dev_tensor().empty());
     ASSERT_FALSE(w.node()->owner_opr()
-                        ->cast_final_safe<opr::SharedDeviceTensor>()
-                        .get_dev_tensor()
-                        .empty());
+                         ->cast_final_safe<opr::SharedDeviceTensor>()
+                         .get_dev_tensor()
+                         .empty());
+    megdnn::HeuristicCache::instance().clear();
 }
 
 TEST(TestGraph, FreeBias) {
@@ -2211,8 +2137,7 @@ TEST(TestGraph, FreeBias) {
         return opr::Host2DeviceCopy::make(*graph, gen(shp, cn)).rename(name);
     };
     auto mkcvar = [&](const char* name, const TensorShape& shp) {
-        return opr::SharedDeviceTensor::make_const(*graph, *gen(shp, cn))
-                .rename(name);
+        return opr::SharedDeviceTensor::make_const(*graph, *gen(shp, cn)).rename(name);
     };
     auto x = mkvar("x", {1, 32, 16, 16});
     // ConvBias test dense
@@ -2224,21 +2149,20 @@ TEST(TestGraph, FreeBias) {
     auto w2 = mkcvar("w2", {32, 32, 1, 1});
     auto conv2 = opr::ConvBias::make(conv1, w2, param_conv_bias);
     Maybe<bool> wp1;
-    conv1.node()->owner_opr()->cast_final_safe<opr::ConvBias>()
-        .setup_algo_chooser([&](const cg::OperatorNodeBase* opr) {
-            return try_find_any_bias_preprocess_algo(
-                opr->cast_final_safe<opr::ConvBias>().megdnn_opr(),
-                opr->cname(), wp1,
-                opr->input(0)->layout(), opr->input(1)->layout(),
-                opr->input(2)->layout(), TensorLayout{},
-                opr->output(0)->layout());
-    });
+    conv1.node()->owner_opr()->cast_final_safe<opr::ConvBias>().setup_algo_chooser(
+            [&](const cg::OperatorNodeBase* opr) {
+                return try_find_any_bias_preprocess_algo(
+                        opr->cast_final_safe<opr::ConvBias>().megdnn_opr(),
+                        opr->cname(), wp1, opr->input(0)->layout(),
+                        opr->input(1)->layout(), opr->input(2)->layout(),
+                        TensorLayout{}, opr->output(0)->layout());
+            });
 
     HostTensorND host_y;
-    auto func =graph->compile({make_callback_copy(conv2, host_y)});
-    //!flag the no need memory of var
+    auto func = graph->compile({make_callback_copy(conv2, host_y)});
+    //! flag the no need memory of var
     func->execute();
-    //!free the no need memory of var
+    //! free the no need memory of var
     func->execute();
     auto check = [&](SymbolVar v) {
         ASSERT_TRUE(v.node()->contain_flag(VarNode::Flag::MEMORY_NO_NEED));
@@ -2273,28 +2197,26 @@ TEST(TestGraph, CallbackCaller) {
             OperatorNodeConfig("split1"));
 
     HostTensorND host_spl00, host_spl01, host_spl10, host_spl11;
-    auto func = graph->compile({make_callback_copy(spl0[0], host_spl00),
-                                make_callback_copy(spl0[1], host_spl01),
-                                make_callback_copy(spl1[0], host_spl10),
-                                make_callback_copy(spl1[1], host_spl11)});
+    auto func = graph->compile(
+            {make_callback_copy(spl0[0], host_spl00),
+             make_callback_copy(spl0[1], host_spl01),
+             make_callback_copy(spl1[0], host_spl10),
+             make_callback_copy(spl1[1], host_spl11)});
     func->execute();
-    auto o00 = host_spl00.ptr<float>(),
-         o01 = host_spl01.ptr<float>(),
-         o10 = host_spl10.ptr<float>(),
-         o11 = host_spl11.ptr<float>(), c = host_opr0->ptr<float>();
+    auto o00 = host_spl00.ptr<float>(), o01 = host_spl01.ptr<float>(),
+         o10 = host_spl10.ptr<float>(), o11 = host_spl11.ptr<float>(),
+         c = host_opr0->ptr<float>();
     for (size_t i = 0, it = host_opr0->layout().total_nr_elems(); i < it; i++) {
         auto ch = i % C;
         auto n = i / C;
         if (ch < C1) {
-            MGB_ASSERT_FLOAT_EQ(o00[n * C1 + ch], c[i])
-                    << ssprintf("failed at %zd", i);
+            MGB_ASSERT_FLOAT_EQ(o00[n * C1 + ch], c[i]) << ssprintf("failed at %zd", i);
         } else {
             MGB_ASSERT_FLOAT_EQ(o01[n * C2 + ch - C1], c[i])
                     << ssprintf("failed at %zd", i);
         }
         if (ch < C3) {
-            MGB_ASSERT_FLOAT_EQ(o10[n * C3 + ch], c[i])
-                    << ssprintf("failed at %zd", i);
+            MGB_ASSERT_FLOAT_EQ(o10[n * C3 + ch], c[i]) << ssprintf("failed at %zd", i);
         } else {
             MGB_ASSERT_FLOAT_EQ(o11[n * C4 + ch - C3], c[i])
                     << ssprintf("failed at %zd", i);
@@ -2314,15 +2236,16 @@ TEST(TestGraph, DynamicOutput) {
     graph->options().force_output_dynamic_alloc = true;
     SymbolVar opr0 = opr::Host2DeviceCopy::make(*graph, host_opr0);
 
-    auto spl_0 = opr::Split::make(
-            opr0, Split::Options::make_partition(opr0, 0, {C1, C2}));
+    auto spl_0 =
+            opr::Split::make(opr0, Split::Options::make_partition(opr0, 0, {C1, C2}));
 
     auto sum = opr::add(spl_0[1], spl_0[1]);
 
     HostTensorND expect_sum, expect_spl_0_0, result_sum, result_spl_0_0;
 
-    auto func1 = graph->compile({make_callback_copy(sum, expect_sum),
-                                 make_callback_copy(spl_0[0], expect_spl_0_0)});
+    auto func1 = graph->compile(
+            {make_callback_copy(sum, expect_sum),
+             make_callback_copy(spl_0[0], expect_spl_0_0)});
 
     func1->execute().wait();
 
@@ -2339,7 +2262,7 @@ TEST(TestGraph, DynamicOutput) {
 
 namespace {
 // used for test reset_dev_tensor_from_tensor
-MGB_DEFINE_OPR_CLASS(MaybeEmptyTensorOpr, cg::SingleCNOperatorNodeBase)// {
+MGB_DEFINE_OPR_CLASS(MaybeEmptyTensorOpr, cg::SingleCNOperatorNodeBase) // {
     DeviceTensorND m_dv;
 
     void init_output_comp_node() override {
@@ -2347,35 +2270,35 @@ MGB_DEFINE_OPR_CLASS(MaybeEmptyTensorOpr, cg::SingleCNOperatorNodeBase)// {
         comp_node(m_dv.comp_node());
     }
 
-    void scn_do_execute() override {
-        output(0)->reset_dev_tensor_from_tensor(m_dv);
-    }
+    void scn_do_execute() override { output(0)->reset_dev_tensor_from_tensor(m_dv); }
 
     void init_output_static_infer_desc() override {
         using namespace cg::static_infer;
-        auto &&mgr = owner_graph()->static_infer_manager();
-        mgr.register_shape_infer(output(0),
-                ShapeInferDesc::make_const(m_dv.shape()));
+        auto&& mgr = owner_graph()->static_infer_manager();
+        mgr.register_shape_infer(output(0), ShapeInferDesc::make_const(m_dv.shape()));
     }
 
-    public:
-        MaybeEmptyTensorOpr(ComputingGraph &graph,
-                const DeviceTensorND &dv, const OperatorNodeConfig &config):
-            Super(&graph, config, "", {}), m_dv{dv} {
-            add_output(None)
+public:
+    MaybeEmptyTensorOpr(
+            ComputingGraph& graph, const DeviceTensorND& dv,
+            const OperatorNodeConfig& config)
+            : Super(&graph, config, "", {}), m_dv{dv} {
+        add_output(None)
                 ->add_flag(cg::VarNode::Flag::NO_SYS_MEM_ALLOC)
                 .add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE)
                 .dtype(dv.dtype());
-        }
+    }
 
-        static SymbolVar make(ComputingGraph &graph, const DeviceTensorND &dv,
-                const OperatorNodeConfig &config = {}) {
-            return graph.insert_opr(std::make_unique<MaybeEmptyTensorOpr>(
-                        graph, dv, config))->output(0);
-        }
+    static SymbolVar make(
+            ComputingGraph& graph, const DeviceTensorND& dv,
+            const OperatorNodeConfig& config = {}) {
+        return graph
+                .insert_opr(std::make_unique<MaybeEmptyTensorOpr>(graph, dv, config))
+                ->output(0);
+    }
 };
 
-} // anonymous namespace
+}  // anonymous namespace
 
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(MaybeEmptyTensorOpr);
 
@@ -2384,16 +2307,15 @@ TEST(TestMemReuse, ResetEmptyDevTensor) {
     auto allow_empty = [](const TensorShape& inp_shp) {
         HostTensorGenerator<> gen;
         auto g = ComputingGraph::make();
-        auto host_x1 = gen(inp_shp),
-             host_x2 = gen(inp_shp);
+        auto host_x1 = gen(inp_shp), host_x2 = gen(inp_shp);
         DeviceTensorND dev_x1, dev_x2;
         dev_x1.copy_from(*host_x1), dev_x2.copy_from(*host_x2);
         auto x1 = MaybeEmptyTensorOpr::make(*g, dev_x1, {"x1"}),
-             x2 = MaybeEmptyTensorOpr::make(*g, dev_x2, {"x2"}),
-             y = x1 + x2;
+             x2 = MaybeEmptyTensorOpr::make(*g, dev_x2, {"x2"}), y = x1 + x2;
         HostTensorND host_y;
         auto func = g->compile({make_callback_copy(y, host_y)});
-        auto &&recv = x1.node()->owner_graph()->var_receiver_in_current_comp_seq(x1.node());
+        auto&& recv =
+                x1.node()->owner_graph()->var_receiver_in_current_comp_seq(x1.node());
         ASSERT_TRUE(recv.is_empty_allowed());
         ASSERT_NO_THROW(func->execute().wait());
         if (inp_shp.is_empty()) {

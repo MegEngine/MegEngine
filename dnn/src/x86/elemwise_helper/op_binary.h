@@ -22,22 +22,22 @@
 //////////////////// quantization //////////////////////////////
 namespace megdnn {
 namespace x86 {
-#define cb(op, simd_type)                                            \
-    template <>                                                      \
-    struct op<simd_type, dt_qint8, dt_qint8>                         \
-            : BinaryQuantizationOp<simd_type, dt_qint8, dt_qint8,    \
-                                   op<simd_type, float, float> > {   \
-        using BinaryQuantizationOp<                                  \
-                simd_type, dt_qint8, dt_qint8,                       \
-                op<simd_type, float, float> >::BinaryQuantizationOp; \
-    };                                                               \
-    template <>                                                      \
-    struct op<simd_type, dt_quint8, dt_quint8>                       \
-            : BinaryQuantizationOp<simd_type, dt_quint8, dt_quint8,  \
-                                   op<simd_type, float, float> > {   \
-        using BinaryQuantizationOp<                                  \
-                simd_type, dt_quint8, dt_quint8,                     \
-                op<simd_type, float, float> >::BinaryQuantizationOp; \
+#define cb(op, simd_type)                                                             \
+    template <>                                                                       \
+    struct op<simd_type, dt_qint8, dt_qint8>                                          \
+            : BinaryQuantizationOp<                                                   \
+                      simd_type, dt_qint8, dt_qint8, op<simd_type, float, float>> {   \
+        using BinaryQuantizationOp<                                                   \
+                simd_type, dt_qint8, dt_qint8,                                        \
+                op<simd_type, float, float>>::BinaryQuantizationOp;                   \
+    };                                                                                \
+    template <>                                                                       \
+    struct op<simd_type, dt_quint8, dt_quint8>                                        \
+            : BinaryQuantizationOp<                                                   \
+                      simd_type, dt_quint8, dt_quint8, op<simd_type, float, float>> { \
+        using BinaryQuantizationOp<                                                   \
+                simd_type, dt_quint8, dt_quint8,                                      \
+                op<simd_type, float, float>>::BinaryQuantizationOp;                   \
     };
 
 cb(AddOp, SIMDType::SSE4_2);
@@ -49,7 +49,6 @@ cb(FuseAddReluOp, SIMDType::SSE4_2);
 cb(FuseAddSigmoidOp, SIMDType::SSE4_2);
 cb(FuseAddHSwishOp, SIMDType::SSE4_2);
 
-
 cb(AddOp, SIMDType::AVX2);
 cb(MaxOp, SIMDType::AVX2);
 cb(MinOp, SIMDType::AVX2);
@@ -59,22 +58,22 @@ cb(FuseAddReluOp, SIMDType::AVX2);
 cb(FuseAddSigmoidOp, SIMDType::AVX2);
 cb(FuseAddHSwishOp, SIMDType::AVX2);
 #undef cb
-#define cb(op, simd_type)                                            \
-    template <>                                                      \
-    struct op<simd_type, dt_qint32, dt_qint8>                        \
-            : BinaryQuantizationOp<simd_type, dt_qint32, dt_qint8,   \
-                                   op<simd_type, float, float> > {   \
-        using BinaryQuantizationOp<                                  \
-                simd_type, dt_qint32, dt_qint8,                      \
-                op<simd_type, float, float> >::BinaryQuantizationOp; \
-    };                                                               \
-    template <>                                                      \
-    struct op<simd_type, dt_qint32, dt_quint8>                       \
-            : BinaryQuantizationOp<simd_type, dt_qint32, dt_quint8,  \
-                                   op<simd_type, float, float> > {   \
-        using BinaryQuantizationOp<                                  \
-                simd_type, dt_qint32, dt_quint8,                     \
-                op<simd_type, float, float> >::BinaryQuantizationOp; \
+#define cb(op, simd_type)                                                             \
+    template <>                                                                       \
+    struct op<simd_type, dt_qint32, dt_qint8>                                         \
+            : BinaryQuantizationOp<                                                   \
+                      simd_type, dt_qint32, dt_qint8, op<simd_type, float, float>> {  \
+        using BinaryQuantizationOp<                                                   \
+                simd_type, dt_qint32, dt_qint8,                                       \
+                op<simd_type, float, float>>::BinaryQuantizationOp;                   \
+    };                                                                                \
+    template <>                                                                       \
+    struct op<simd_type, dt_qint32, dt_quint8>                                        \
+            : BinaryQuantizationOp<                                                   \
+                      simd_type, dt_qint32, dt_quint8, op<simd_type, float, float>> { \
+        using BinaryQuantizationOp<                                                   \
+                simd_type, dt_qint32, dt_quint8,                                      \
+                op<simd_type, float, float>>::BinaryQuantizationOp;                   \
     };
 
 cb(AddOp, SIMDType::SSE4_2);

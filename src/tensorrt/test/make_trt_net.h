@@ -30,9 +30,9 @@ using namespace nvinfer1;
 template <typename T>
 using TensorRTUniquePtr = intl::TensorRTUniquePtr<T>;
 
-namespace mgb{
-namespace opr{
-namespace intl{
+namespace mgb {
+namespace opr {
+namespace intl {
 
 struct SimpleTensorRTNetwork {
     HostTensorGenerator<> gen;
@@ -44,8 +44,8 @@ struct SimpleTensorRTNetwork {
 
     SimpleTensorRTNetwork();
 
-    std::pair<nvinfer1::IBuilder*, INetworkDefinition*>
-    create_trt_network(bool has_batch_dim);
+    std::pair<nvinfer1::IBuilder*, INetworkDefinition*> create_trt_network(
+            bool has_batch_dim);
 };
 
 struct BatchedTensorRTNetwork {
@@ -58,15 +58,15 @@ struct BatchedTensorRTNetwork {
 
     BatchedTensorRTNetwork();
 
-    std::pair<nvinfer1::IBuilder*, INetworkDefinition*>
-    create_trt_network(bool has_batch_dim);
+    std::pair<nvinfer1::IBuilder*, INetworkDefinition*> create_trt_network(
+            bool has_batch_dim);
 };
 
 struct SimpleQuantizedTensorRTNetwork {
     HostTensorGenerator<dtype::Float32, RandomDistribution::UNIFORM> weight_gen{
-            1*1.1f, 127*1.1f};
+            1 * 1.1f, 127 * 1.1f};
     HostTensorGenerator<dtype::Float32, RandomDistribution::UNIFORM> range_gen{
-            1*1.2f, 127*1.2f};
+            1 * 1.2f, 127 * 1.2f};
     std::shared_ptr<HostTensorND> host_x, host_w, host_b;
     std::shared_ptr<ComputingGraph> graph;
     SymbolVar x, y;
@@ -74,8 +74,8 @@ struct SimpleQuantizedTensorRTNetwork {
 
     SimpleQuantizedTensorRTNetwork();
 
-    std::pair<nvinfer1::IBuilder*, INetworkDefinition*>
-    create_trt_network(bool has_batch_dim);
+    std::pair<nvinfer1::IBuilder*, INetworkDefinition*> create_trt_network(
+            bool has_batch_dim);
 };
 
 struct ConcatConvTensorRTNetwork {
@@ -88,14 +88,13 @@ struct ConcatConvTensorRTNetwork {
 
     ConcatConvTensorRTNetwork();
 
-    std::pair<nvinfer1::IBuilder*, INetworkDefinition*>
-    create_trt_network(bool has_batch_dim);
+    std::pair<nvinfer1::IBuilder*, INetworkDefinition*> create_trt_network(
+            bool has_batch_dim);
 };
 
 }  // namespace intl
 }  // namespace opr
 }  // namespace mgb
-
 
 #endif  // MGB_ENABLE_TENSOR_RT
 

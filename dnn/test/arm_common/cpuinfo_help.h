@@ -23,15 +23,14 @@ public:
         m_cpuinfo_lock.lock();
         for (uint32_t i = 0; i < cpuinfo_get_cores_count(); ++i) {
             m_arch_bak_vec.push_back(cpuinfo_linux_cpu_to_core_map[i]->uarch);
-            ((struct cpuinfo_core**)cpuinfo_linux_cpu_to_core_map)[i]->uarch =
-                    arch;
+            ((struct cpuinfo_core**)cpuinfo_linux_cpu_to_core_map)[i]->uarch = arch;
         }
     }
     ~CpuInfoTmpReplace() {
         if (m_arch_bak_vec.size() > 0) {
             for (uint32_t i = 0; i < cpuinfo_get_cores_count(); ++i) {
-                ((struct cpuinfo_core**)cpuinfo_linux_cpu_to_core_map)[i]
-                        ->uarch = m_arch_bak_vec[i];
+                ((struct cpuinfo_core**)cpuinfo_linux_cpu_to_core_map)[i]->uarch =
+                        m_arch_bak_vec[i];
             }
         }
 

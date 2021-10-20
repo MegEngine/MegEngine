@@ -25,8 +25,7 @@ namespace {
 class CheckAllocator : public lite::Allocator {
 public:
     //! allocate memory of size in the given device with the given align
-    void* allocate(LiteDeviceType device, int, size_t size,
-                   size_t align) override {
+    void* allocate(LiteDeviceType device, int, size_t size, size_t align) override {
         LITE_ASSERT(device == LiteDeviceType::LITE_CPU);
         m_nr_left++;
         m_nr_allocated++;
@@ -37,8 +36,7 @@ public:
 #else
         void* ptr = nullptr;
         auto err = posix_memalign(&ptr, align, size);
-        mgb_assert(!err, "failed to malloc %zubytes with align %zu", size,
-                   align);
+        mgb_assert(!err, "failed to malloc %zubytes with align %zu", size, align);
         return ptr;
 #endif
     };
@@ -95,8 +93,7 @@ TEST(TestNetWork, GetAllName) {
     ASSERT_EQ(input_names.size(), 1);
     ASSERT_EQ(output_names.size(), 1);
     ASSERT_TRUE(input_names[0] == "data");
-    ASSERT_TRUE(output_names[0] ==
-                "TRUE_DIV(EXP[12065],reduce0[12067])[12077]");
+    ASSERT_TRUE(output_names[0] == "TRUE_DIV(EXP[12065],reduce0[12067])[12077]");
 }
 
 TEST(TestNetWork, BasicInplaceAndSingleThreadAffinity) {
@@ -165,8 +162,7 @@ TEST(TestNetWork, NetworkShareWeights) {
     std::shared_ptr<Tensor> output_tensor = network->get_output_tensor(0);
     std::shared_ptr<Tensor> output_tensor2 = network2->get_output_tensor(0);
 
-    ASSERT_NE(output_tensor->get_memory_ptr(),
-              output_tensor2->get_memory_ptr());
+    ASSERT_NE(output_tensor->get_memory_ptr(), output_tensor2->get_memory_ptr());
     compare_lite_tensor<float>(output_tensor, result_mgb);
     compare_lite_tensor<float>(output_tensor2, result_mgb);
 }
@@ -250,13 +246,11 @@ TEST(TestNetWork, ThreadAffinity) {
     std::shared_ptr<Network> network = std::make_shared<Network>(config);
     Runtime::set_cpu_threads_number(network, nr_threads);
 
-    ASSERT_THROW(Runtime::set_runtime_thread_affinity(network, [](int) {}),
-                 std::exception);
+    ASSERT_THROW(
+            Runtime::set_runtime_thread_affinity(network, [](int) {}), std::exception);
     network->load_model(model_path);
     std::vector<std::thread::id> thread_ids(nr_threads);
-    auto affinity = [&](int id) {
-        thread_ids[id] = std::this_thread::get_id();
-    };
+    auto affinity = [&](int id) { thread_ids[id] = std::this_thread::get_id(); };
     Runtime::set_runtime_thread_affinity(network, affinity);
 
     std::shared_ptr<Tensor> input_tensor = network->get_input_tensor(0);
@@ -284,8 +278,7 @@ TEST(TestNetWork, BasicCryptAes) {
     std::string model_crypt_path = "./shufflenet_crypt_aes.mge";
     auto result_mgb = mgb_lar(model_path, config, "data", lite_tensor);
     config.bare_model_cryption_name = "AES_default";
-    auto result_lite =
-            mgelite_lar(model_crypt_path, config, "data", lite_tensor);
+    auto result_lite = mgelite_lar(model_crypt_path, config, "data", lite_tensor);
     compare_lite_tensor<float>(result_lite, result_mgb);
 }
 
@@ -296,8 +289,7 @@ TEST(TestNetWork, BasicCryptRc4) {
     std::string model_crypt_path = "./shufflenet_crypt_rc4.mge";
     auto result_mgb = mgb_lar(model_path, config, "data", lite_tensor);
     config.bare_model_cryption_name = "RC4_default";
-    auto result_lite =
-            mgelite_lar(model_crypt_path, config, "data", lite_tensor);
+    auto result_lite = mgelite_lar(model_crypt_path, config, "data", lite_tensor);
     compare_lite_tensor<float>(result_lite, result_mgb);
 }
 
@@ -307,8 +299,7 @@ TEST(TestNetWork, PackedCryptRc4) {
     std::string model_path = "./shufflenet.mge";
     std::string model_crypt_path = "./test_packed_model_rc4.lite";
     auto result_mgb = mgb_lar(model_path, config, "data", lite_tensor);
-    auto result_lite =
-            mgelite_lar(model_crypt_path, config, "data", lite_tensor);
+    auto result_lite = mgelite_lar(model_crypt_path, config, "data", lite_tensor);
     compare_lite_tensor<float>(result_lite, result_mgb);
 }
 
@@ -319,8 +310,7 @@ TEST(TestNetWork, BasicCryptSfRc4) {
     std::string model_crypt_path = "./shufflenet_crypt_sfrc4.mge";
     auto result_mgb = mgb_lar(model_path, config, "data", lite_tensor);
     config.bare_model_cryption_name = "SIMPLE_FAST_RC4_default";
-    auto result_lite =
-            mgelite_lar(model_crypt_path, config, "data", lite_tensor);
+    auto result_lite = mgelite_lar(model_crypt_path, config, "data", lite_tensor);
     compare_lite_tensor<float>(result_lite, result_mgb);
 }
 
@@ -391,8 +381,7 @@ TEST(TestNetWork, ResetOutput) {
 
     std::shared_ptr<Tensor> output_tensor = network->get_output_tensor(0);
     auto result_tensor = std::make_shared<Tensor>(
-            LiteDeviceType::LITE_CPU,
-            Layout{{1, 1000}, 2, LiteDataType::LITE_FLOAT});
+            LiteDeviceType::LITE_CPU, Layout{{1, 1000}, 2, LiteDataType::LITE_FLOAT});
 
     void* out_data = result_tensor->get_memory_ptr();
     output_tensor->reset(out_data, result_tensor->get_layout());
@@ -423,8 +412,7 @@ TEST(TestNetWork, AsyncExec) {
 
     std::shared_ptr<Tensor> output_tensor = network->get_output_tensor(0);
     auto result_tensor = std::make_shared<Tensor>(
-            LiteDeviceType::LITE_CPU,
-            Layout{{1, 1000}, 2, LiteDataType::LITE_FLOAT});
+            LiteDeviceType::LITE_CPU, Layout{{1, 1000}, 2, LiteDataType::LITE_FLOAT});
 
     void* out_data = result_tensor->get_memory_ptr();
     output_tensor->reset(out_data, result_tensor->get_layout());
@@ -585,8 +573,7 @@ TEST(TestNetWork, OutputShapeOnly) {
 
     network->forward();
     network->wait();
-    ASSERT_EQ(output_tensor->get_tensor_total_size_in_byte() / sizeof(float),
-              1000);
+    ASSERT_EQ(output_tensor->get_tensor_total_size_in_byte() / sizeof(float), 1000);
 }
 
 TEST(TestNetWork, ProfileIOdump) {
@@ -741,8 +728,7 @@ TEST(TestNetWork, DeviceOutput) {
     network->load_model(model_path);
 
     std::shared_ptr<Tensor> input_tensor = network->get_io_tensor(input_name);
-    std::shared_ptr<Tensor> output_tensor_cuda =
-            network->get_io_tensor(output_name);
+    std::shared_ptr<Tensor> output_tensor_cuda = network->get_io_tensor(output_name);
 
     auto src_ptr = tensor->get_memory_ptr();
     auto src_layout = tensor->get_layout();
@@ -763,8 +749,7 @@ TEST(TestNetWork, WrongIONameDevice) {
     std::string input_name = "data";
     std::string input_name_wrong = "data0";
     std::string output_name = "TRUE_DIV(EXP[12065],reduce0[12067])[12077]";
-    std::string output_name_wrong =
-            "w_TRUE_DIV(EXP[12065],reduce0[12067])[12077]";
+    std::string output_name_wrong = "w_TRUE_DIV(EXP[12065],reduce0[12067])[12077]";
     auto result_mgb = mgb_lar(model_path, {}, input_name, tensor);
 
     NetworkIO IO;
@@ -785,8 +770,7 @@ TEST(TestNetWork, WrongIONameDevice) {
     auto src_layout = tensor_cuda.get_layout();
     input_tensor->reset(src_ptr, src_layout);
 
-    std::shared_ptr<Tensor> output_tensor_cuda =
-            network->get_io_tensor(output_name);
+    std::shared_ptr<Tensor> output_tensor_cuda = network->get_io_tensor(output_name);
 
     network->forward();
     network->wait();
@@ -819,7 +803,7 @@ TEST(TestNetWork, ConfigIONameDevice) {
 
 TEST(TestNetWork, SetDeviceIdDeviceTest) {
 #if LITE_WITH_CUDA
-    if(get_device_count(LITE_CUDA) <= 1)
+    if (get_device_count(LITE_CUDA) <= 1)
         return;
 #endif
     std::string model_path = "./model.mgb";
@@ -844,8 +828,7 @@ TEST(TestNetWork, SetDeviceIdDeviceTest) {
             }
         }
         if (name == "landmark") {
-            float* landmakrk_ptr =
-                    static_cast<float*>(tensor->get_memory_ptr());
+            float* landmakrk_ptr = static_cast<float*>(tensor->get_memory_ptr());
             for (int i = 0; i < 23 * 18 * 2; i++) {
                 landmakrk_ptr[i] = 0.1f;
             }
@@ -882,8 +865,7 @@ TEST(TestNetWork, SetStreamIdDeviceTest) {
             }
         }
         if (name == "landmark") {
-            float* landmakrk_ptr =
-                    static_cast<float*>(tensor->get_memory_ptr());
+            float* landmakrk_ptr = static_cast<float*>(tensor->get_memory_ptr());
             for (int i = 0; i < 23 * 18 * 2; i++) {
                 landmakrk_ptr[i] = 0.1f;
             }
@@ -915,8 +897,7 @@ TEST(TestNetWork, DeviceAsyncExec) {
 
     std::shared_ptr<Tensor> output_tensor = network->get_output_tensor(0);
     auto result_tensor = std::make_shared<Tensor>(
-            LiteDeviceType::LITE_CPU,
-            Layout{{1, 1000}, 2, LiteDataType::LITE_FLOAT});
+            LiteDeviceType::LITE_CPU, Layout{{1, 1000}, 2, LiteDataType::LITE_FLOAT});
 
     void* out_data = result_tensor->get_memory_ptr();
     output_tensor->reset(out_data, result_tensor->get_layout());

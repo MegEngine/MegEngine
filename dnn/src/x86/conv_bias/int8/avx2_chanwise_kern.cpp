@@ -22,22 +22,14 @@
 namespace megdnn {
 namespace x86 {
 #define load_filter(i) __m128i k_##i = _mm_set1_epi8(*(filter + i));
-#define load_src0(i) \
-    __m256i cvt16_src##i##0 = _mm256_cvtepi8_epi16_from_ptr(r##i);
-#define load_src1(i) \
-    __m256i cvt16_src##i##1 = _mm256_cvtepi8_epi16_from_ptr(r##i + 1);
-#define load_src2(i) \
-    __m256i cvt16_src##i##2 = _mm256_cvtepi8_epi16_from_ptr(r##i + 2);
-#define load_src3(i) \
-    __m256i cvt16_src##i##3 = _mm256_cvtepi8_epi16_from_ptr(r##i + 3);
-#define load_src4(i) \
-    __m256i cvt16_src##i##4 = _mm256_cvtepi8_epi16_from_ptr(r##i + 4);
-#define load_src5(i) \
-    __m256i cvt16_src##i##5 = _mm256_cvtepi8_epi16_from_ptr(r##i + 5);
-#define load_src6(i) \
-    __m256i cvt16_src##i##6 = _mm256_cvtepi8_epi16_from_ptr(r##i + 6);
-#define load_src7(i) \
-    __m256i cvt16_src##i##7 = _mm256_cvtepi8_epi16_from_ptr(r##i + 7);
+#define load_src0(i)   __m256i cvt16_src##i##0 = _mm256_cvtepi8_epi16_from_ptr(r##i);
+#define load_src1(i)   __m256i cvt16_src##i##1 = _mm256_cvtepi8_epi16_from_ptr(r##i + 1);
+#define load_src2(i)   __m256i cvt16_src##i##2 = _mm256_cvtepi8_epi16_from_ptr(r##i + 2);
+#define load_src3(i)   __m256i cvt16_src##i##3 = _mm256_cvtepi8_epi16_from_ptr(r##i + 3);
+#define load_src4(i)   __m256i cvt16_src##i##4 = _mm256_cvtepi8_epi16_from_ptr(r##i + 4);
+#define load_src5(i)   __m256i cvt16_src##i##5 = _mm256_cvtepi8_epi16_from_ptr(r##i + 5);
+#define load_src6(i)   __m256i cvt16_src##i##6 = _mm256_cvtepi8_epi16_from_ptr(r##i + 6);
+#define load_src7(i)   __m256i cvt16_src##i##7 = _mm256_cvtepi8_epi16_from_ptr(r##i + 7);
 #define load_src16(i) \
     __m256i cvt16_src##i##16 = _mm256_cvtepi8_epi16_from_ptr(r##i + 16);
 #define load_src18(i) \
@@ -49,12 +41,10 @@ namespace x86 {
 namespace avx2_chanwise_stride1 {
 
 template <BiasMode bias_mode, bool is_quantized, typename Op>
-void avx2_chanwise_direct_stride1_2x2_int8(const int8_t* src,
-                                           const int8_t* filter,
-                                           const int32_t* bias, int32_t* temp,
-                                           int8_t* dst, const size_t IH,
-                                           const size_t IW, const size_t OH,
-                                           const size_t OW, const Op& op) {
+void avx2_chanwise_direct_stride1_2x2_int8(
+        const int8_t* src, const int8_t* filter, const int32_t* bias, int32_t* temp,
+        int8_t* dst, const size_t IH, const size_t IW, const size_t OH, const size_t OW,
+        const Op& op) {
     size_t tail_step = IW - OW;
     int8_t* dst0 = dst;
     int8_t* dst1 = dst + OW;
@@ -89,8 +79,8 @@ void avx2_chanwise_direct_stride1_2x2_int8(const int8_t* src,
             UNROLL_CALL0(3, load_src1)
 
             __m256i sum0_odd, sum0_even, sum1_odd, sum1_even;
-            __m256i tmp0_odd, tmp0_even, tmp1_odd, tmp1_even, tmp2_odd,
-                    tmp2_even, tmp3_odd, tmp3_even;
+            __m256i tmp0_odd, tmp0_even, tmp1_odd, tmp1_even, tmp2_odd, tmp2_even,
+                    tmp3_odd, tmp3_even;
 
             tmp0_odd = _mm256_madd_epi16(cvt16_src00, filter_01);
             tmp0_even = _mm256_madd_epi16(cvt16_src01, filter_01);
@@ -113,8 +103,7 @@ void avx2_chanwise_direct_stride1_2x2_int8(const int8_t* src,
             //! switch_mask_low   = {00100000} = 32
             //! switch_mask_high  = {00110001} = 49
             __m256i sum_left = _mm256_permute2f128_si256(sum_odd, sum_even, 32);
-            __m256i sum_right =
-                    _mm256_permute2f128_si256(sum_odd, sum_even, 49);
+            __m256i sum_right = _mm256_permute2f128_si256(sum_odd, sum_even, 49);
 
             sum_left = _mm256_add_epi32(sum_left, bias_val);
             sum_right = _mm256_add_epi32(sum_right, bias_val);
@@ -133,17 +122,14 @@ void avx2_chanwise_direct_stride1_2x2_int8(const int8_t* src,
             __m256i sum_1_odd = _mm256_unpacklo_epi32(sum1_odd, sum1_even);
             __m256i sum_1_even = _mm256_unpackhi_epi32(sum1_odd, sum1_even);
 
-            __m256i sum_1_left =
-                    _mm256_permute2f128_si256(sum_1_odd, sum_1_even, 32);
-            __m256i sum_1_right =
-                    _mm256_permute2f128_si256(sum_1_odd, sum_1_even, 49);
+            __m256i sum_1_left = _mm256_permute2f128_si256(sum_1_odd, sum_1_even, 32);
+            __m256i sum_1_right = _mm256_permute2f128_si256(sum_1_odd, sum_1_even, 49);
 
             sum_1_left = _mm256_add_epi32(sum_1_left, bias_val);
             sum_1_right = _mm256_add_epi32(sum_1_right, bias_val);
 
             if (is_quantized) {
-                op({{sum_1_left, sum_1_right}},
-                   reinterpret_cast<dt_qint8*>(dst1));
+                op({{sum_1_left, sum_1_right}}, reinterpret_cast<dt_qint8*>(dst1));
             } else {
                 _mm256_storeu_si256((__m256i*)(out_ptr1), sum_1_left);
                 _mm256_storeu_si256((__m256i*)(out_ptr1 + 8), sum_1_right);
@@ -188,8 +174,7 @@ void avx2_chanwise_direct_stride1_2x2_int8(const int8_t* src,
             __m256i sum_even = _mm256_unpackhi_epi32(sum0_odd, sum0_even);
 
             __m256i sum_left = _mm256_permute2f128_si256(sum_odd, sum_even, 32);
-            __m256i sum_right =
-                    _mm256_permute2f128_si256(sum_odd, sum_even, 49);
+            __m256i sum_right = _mm256_permute2f128_si256(sum_odd, sum_even, 49);
 
             sum_left = _mm256_add_epi32(sum_left, bias_val);
             sum_right = _mm256_add_epi32(sum_right, bias_val);
@@ -215,12 +200,10 @@ void avx2_chanwise_direct_stride1_2x2_int8(const int8_t* src,
 }
 
 template <BiasMode bias_mode, bool is_quantized, typename Op>
-void avx2_chanwise_direct_stride1_3x3_int8(const int8_t* src,
-                                           const int8_t* filter,
-                                           const int32_t* bias, int32_t* temp,
-                                           int8_t* dst, const size_t IH,
-                                           const size_t IW, const size_t OH,
-                                           const size_t OW, const Op& op) {
+void avx2_chanwise_direct_stride1_3x3_int8(
+        const int8_t* src, const int8_t* filter, const int32_t* bias, int32_t* temp,
+        int8_t* dst, const size_t IH, const size_t IW, const size_t OH, const size_t OW,
+        const Op& op) {
     MEGDNN_MARK_USED_VAR(IH);
     size_t tail_step = IW - OW;
     int32_t* out_ptr0 = temp;
@@ -271,10 +254,9 @@ void avx2_chanwise_direct_stride1_3x3_int8(const int8_t* src,
             UNROLL_CALL0(4, load_src2)
             UNROLL_CALL0(4, load_src3)
 
-            __m256i sum00_odd, sum00_even, sum11_odd, sum11_even, sum22_odd,
-                    sum22_even;
-            __m256i sum11_odd_01, sum11_even_01, sum22_odd_01, sum22_even_01,
-                    sum33_odd, sum33_even;
+            __m256i sum00_odd, sum00_even, sum11_odd, sum11_even, sum22_odd, sum22_even;
+            __m256i sum11_odd_01, sum11_even_01, sum22_odd_01, sum22_even_01, sum33_odd,
+                    sum33_even;
             __m256i temp0, temp1;
 
             temp0 = _mm256_madd_epi16(cvt16_src00, filter_01);
@@ -335,8 +317,7 @@ void avx2_chanwise_direct_stride1_3x3_int8(const int8_t* src,
             __m256i sum_even = _mm256_unpackhi_epi32(sum00_odd, sum00_even);
 
             __m256i sum_left = _mm256_permute2f128_si256(sum_odd, sum_even, 32);
-            __m256i sum_right =
-                    _mm256_permute2f128_si256(sum_odd, sum_even, 49);
+            __m256i sum_right = _mm256_permute2f128_si256(sum_odd, sum_even, 49);
 
             sum_left = _mm256_add_epi32(sum_left, bias_val);
             sum_right = _mm256_add_epi32(sum_right, bias_val);
@@ -354,10 +335,8 @@ void avx2_chanwise_direct_stride1_3x3_int8(const int8_t* src,
             sum11_even_01 = _mm256_add_epi32(sum11_even_01, sum22_even_01);
             sum11_even_01 = _mm256_add_epi32(sum11_even_01, sum33_even);
 
-            __m256i sum_oh1_odd =
-                    _mm256_unpacklo_epi32(sum11_odd_01, sum11_even_01);
-            __m256i sum_oh1_even =
-                    _mm256_unpackhi_epi32(sum11_odd_01, sum11_even_01);
+            __m256i sum_oh1_odd = _mm256_unpacklo_epi32(sum11_odd_01, sum11_even_01);
+            __m256i sum_oh1_even = _mm256_unpackhi_epi32(sum11_odd_01, sum11_even_01);
 
             __m256i sum1_left =
                     _mm256_permute2f128_si256(sum_oh1_odd, sum_oh1_even, 32);
@@ -368,8 +347,7 @@ void avx2_chanwise_direct_stride1_3x3_int8(const int8_t* src,
             sum1_right = _mm256_add_epi32(sum1_right, bias_val);
 
             if (is_quantized) {
-                op({{sum1_left, sum1_right}},
-                   reinterpret_cast<dt_qint8*>(dst1));
+                op({{sum1_left, sum1_right}}, reinterpret_cast<dt_qint8*>(dst1));
             } else {
                 _mm256_storeu_si256((__m256i*)(out_ptr1), sum1_left);
                 _mm256_storeu_si256((__m256i*)(out_ptr1 + 8), sum1_right);
@@ -403,8 +381,7 @@ void avx2_chanwise_direct_stride1_3x3_int8(const int8_t* src,
             UNROLL_CALL0(3, load_src2)
             UNROLL_CALL0(3, load_src3)
 
-            __m256i sum00_odd, sum00_even, sum11_odd, sum11_even, sum22_odd,
-                    sum22_even;
+            __m256i sum00_odd, sum00_even, sum11_odd, sum11_even, sum22_odd, sum22_even;
             __m256i temp0, temp1;
 
             temp0 = _mm256_madd_epi16(cvt16_src00, filter_01);
@@ -441,8 +418,7 @@ void avx2_chanwise_direct_stride1_3x3_int8(const int8_t* src,
             __m256i sum_even = _mm256_unpackhi_epi32(sum00_odd, sum00_even);
 
             __m256i sum_left = _mm256_permute2f128_si256(sum_odd, sum_even, 32);
-            __m256i sum_right =
-                    _mm256_permute2f128_si256(sum_odd, sum_even, 49);
+            __m256i sum_right = _mm256_permute2f128_si256(sum_odd, sum_even, 49);
 
             sum_left = _mm256_add_epi32(sum_left, bias_val);
             sum_right = _mm256_add_epi32(sum_right, bias_val);
@@ -467,12 +443,10 @@ void avx2_chanwise_direct_stride1_3x3_int8(const int8_t* src,
 }
 
 template <BiasMode bias_mode, bool is_quantized, typename Op>
-void avx2_chanwise_direct_stride1_5x5_int8(const int8_t* src,
-                                           const int8_t* filter,
-                                           const int32_t* bias, int32_t* temp,
-                                           int8_t* dst, const size_t IH,
-                                           const size_t IW, const size_t OH,
-                                           const size_t OW, const Op& op) {
+void avx2_chanwise_direct_stride1_5x5_int8(
+        const int8_t* src, const int8_t* filter, const int32_t* bias, int32_t* temp,
+        int8_t* dst, const size_t IH, const size_t IW, const size_t OH, const size_t OW,
+        const Op& op) {
     MEGDNN_MARK_USED_VAR(IH);
     size_t tail_step = IW - OW;
     int8_t* dst0 = dst;
@@ -552,11 +526,11 @@ void avx2_chanwise_direct_stride1_5x5_int8(const int8_t* src,
             UNROLL_CALL0(6, load_src4)
             UNROLL_CALL0(6, load_src5)
 
-            __m256i sum0_odd, sum0_even, sum1_odd, sum1_even, sum2_odd,
-                    sum2_even, sum3_odd, sum3_even, sum4_odd, sum4_even;
+            __m256i sum0_odd, sum0_even, sum1_odd, sum1_even, sum2_odd, sum2_even,
+                    sum3_odd, sum3_even, sum4_odd, sum4_even;
 
-            __m256i sum10_odd, sum10_even, sum20_odd, sum20_even, sum30_odd,
-                    sum30_even, sum40_odd, sum40_even, sum5_odd, sum5_even;
+            __m256i sum10_odd, sum10_even, sum20_odd, sum20_even, sum30_odd, sum30_even,
+                    sum40_odd, sum40_even, sum5_odd, sum5_even;
 
             //! cal src0
             __m256i dot1, dot2, dot3;
@@ -700,10 +674,8 @@ void avx2_chanwise_direct_stride1_5x5_int8(const int8_t* src,
             __m256i sum_odd_0 = _mm256_unpacklo_epi32(sum_odd, sum_even);
             __m256i sum_even_0 = _mm256_unpackhi_epi32(sum_odd, sum_even);
 
-            __m256i sum_left =
-                    _mm256_permute2f128_si256(sum_odd_0, sum_even_0, 32);
-            __m256i sum_right =
-                    _mm256_permute2f128_si256(sum_odd_0, sum_even_0, 49);
+            __m256i sum_left = _mm256_permute2f128_si256(sum_odd_0, sum_even_0, 32);
+            __m256i sum_right = _mm256_permute2f128_si256(sum_odd_0, sum_even_0, 49);
 
             sum_left = _mm256_add_epi32(sum_left, bias_val);
             sum_right = _mm256_add_epi32(sum_right, bias_val);
@@ -727,10 +699,8 @@ void avx2_chanwise_direct_stride1_5x5_int8(const int8_t* src,
             sum_even_oh1 = _mm256_add_epi32(sum_even_oh1, sum40_even);
             sum_even_oh1 = _mm256_add_epi32(sum_even_oh1, sum5_even);
 
-            __m256i sum_odd_1 =
-                    _mm256_unpacklo_epi32(sum_odd_oh1, sum_even_oh1);
-            __m256i sum_even_1 =
-                    _mm256_unpackhi_epi32(sum_odd_oh1, sum_even_oh1);
+            __m256i sum_odd_1 = _mm256_unpacklo_epi32(sum_odd_oh1, sum_even_oh1);
+            __m256i sum_even_1 = _mm256_unpackhi_epi32(sum_odd_oh1, sum_even_oh1);
 
             sum_left = _mm256_permute2f128_si256(sum_odd_1, sum_even_1, 32);
             sum_right = _mm256_permute2f128_si256(sum_odd_1, sum_even_1, 49);
@@ -779,8 +749,8 @@ void avx2_chanwise_direct_stride1_5x5_int8(const int8_t* src,
             UNROLL_CALL0(5, load_src4)
             UNROLL_CALL0(5, load_src5)
 
-            __m256i sum0_odd, sum0_even, sum1_odd, sum1_even, sum2_odd,
-                    sum2_even, sum3_odd, sum3_even, sum4_odd, sum4_even;
+            __m256i sum0_odd, sum0_even, sum1_odd, sum1_even, sum2_odd, sum2_even,
+                    sum3_odd, sum3_even, sum4_odd, sum4_even;
 
             //! cal src0
             __m256i dot1, dot2, dot3;
@@ -863,10 +833,8 @@ void avx2_chanwise_direct_stride1_5x5_int8(const int8_t* src,
             __m256i sum_odd_0 = _mm256_unpacklo_epi32(sum_odd, sum_even);
             __m256i sum_even_0 = _mm256_unpackhi_epi32(sum_odd, sum_even);
 
-            __m256i sum_left =
-                    _mm256_permute2f128_si256(sum_odd_0, sum_even_0, 32);
-            __m256i sum_right =
-                    _mm256_permute2f128_si256(sum_odd_0, sum_even_0, 49);
+            __m256i sum_left = _mm256_permute2f128_si256(sum_odd_0, sum_even_0, 32);
+            __m256i sum_right = _mm256_permute2f128_si256(sum_odd_0, sum_even_0, 49);
 
             sum_left = _mm256_add_epi32(sum_left, bias_val);
             sum_right = _mm256_add_epi32(sum_right, bias_val);
@@ -895,12 +863,10 @@ void avx2_chanwise_direct_stride1_5x5_int8(const int8_t* src,
 }
 
 template <BiasMode bias_mode, bool is_quantized, typename Op>
-void avx2_chanwise_direct_stride1_7x7_int8(const int8_t* src,
-                                           const int8_t* filter,
-                                           const int32_t* bias, int32_t* temp,
-                                           int8_t* dst, const size_t IH,
-                                           const size_t IW, const size_t OH,
-                                           const size_t OW, const Op& op) {
+void avx2_chanwise_direct_stride1_7x7_int8(
+        const int8_t* src, const int8_t* filter, const int32_t* bias, int32_t* temp,
+        int8_t* dst, const size_t IH, const size_t IW, const size_t OH, const size_t OW,
+        const Op& op) {
     MEGDNN_MARK_USED_VAR(IH);
     size_t tail_step = IW - OW;
     int8_t* dst0 = dst;
@@ -1014,13 +980,13 @@ void avx2_chanwise_direct_stride1_7x7_int8(const int8_t* src,
             UNROLL_CALL0(8, load_src6)
             UNROLL_CALL0(8, load_src7)
 
-            __m256i sum0_odd, sum0_even, sum1_odd, sum1_even, sum2_odd,
-                    sum2_even, sum3_odd, sum3_even, sum4_odd, sum4_even,
-                    sum5_odd, sum5_even, sum6_odd, sum6_even;
+            __m256i sum0_odd, sum0_even, sum1_odd, sum1_even, sum2_odd, sum2_even,
+                    sum3_odd, sum3_even, sum4_odd, sum4_even, sum5_odd, sum5_even,
+                    sum6_odd, sum6_even;
 
-            __m256i sum10_odd, sum10_even, sum20_odd, sum20_even, sum30_odd,
-                    sum30_even, sum40_odd, sum40_even, sum50_odd, sum50_even,
-                    sum60_odd, sum60_even, sum7_odd, sum7_even;
+            __m256i sum10_odd, sum10_even, sum20_odd, sum20_even, sum30_odd, sum30_even,
+                    sum40_odd, sum40_even, sum50_odd, sum50_even, sum60_odd, sum60_even,
+                    sum7_odd, sum7_even;
 
             //! cal src0
             __m256i dot1, dot2, dot3, dot4;
@@ -1274,10 +1240,8 @@ void avx2_chanwise_direct_stride1_7x7_int8(const int8_t* src,
             __m256i sum_odd_0 = _mm256_unpacklo_epi32(sum_odd, sum_even);
             __m256i sum_even_0 = _mm256_unpackhi_epi32(sum_odd, sum_even);
 
-            __m256i sum_left =
-                    _mm256_permute2f128_si256(sum_odd_0, sum_even_0, 32);
-            __m256i sum_right =
-                    _mm256_permute2f128_si256(sum_odd_0, sum_even_0, 49);
+            __m256i sum_left = _mm256_permute2f128_si256(sum_odd_0, sum_even_0, 32);
+            __m256i sum_right = _mm256_permute2f128_si256(sum_odd_0, sum_even_0, 49);
 
             sum_left = _mm256_add_epi32(sum_left, bias_val);
             sum_right = _mm256_add_epi32(sum_right, bias_val);
@@ -1306,10 +1270,8 @@ void avx2_chanwise_direct_stride1_7x7_int8(const int8_t* src,
             sum_even_oh1 = _mm256_add_epi32(sum_even_oh1, sum60_even);
             sum_even_oh1 = _mm256_add_epi32(sum_even_oh1, sum7_even);
 
-            __m256i sum_odd_1 =
-                    _mm256_unpacklo_epi32(sum_odd_oh1, sum_even_oh1);
-            __m256i sum_even_1 =
-                    _mm256_unpackhi_epi32(sum_odd_oh1, sum_even_oh1);
+            __m256i sum_odd_1 = _mm256_unpacklo_epi32(sum_odd_oh1, sum_even_oh1);
+            __m256i sum_even_1 = _mm256_unpackhi_epi32(sum_odd_oh1, sum_even_oh1);
 
             sum_left = _mm256_permute2f128_si256(sum_odd_1, sum_even_1, 32);
             sum_right = _mm256_permute2f128_si256(sum_odd_1, sum_even_1, 49);
@@ -1363,9 +1325,9 @@ void avx2_chanwise_direct_stride1_7x7_int8(const int8_t* src,
             UNROLL_CALL0(7, load_src5)
             UNROLL_CALL0(7, load_src6)
             UNROLL_CALL0(7, load_src7)
-            __m256i sum0_odd, sum0_even, sum1_odd, sum1_even, sum2_odd,
-                    sum2_even, sum3_odd, sum3_even, sum4_odd, sum4_even,
-                    sum5_odd, sum5_even, sum6_odd, sum6_even;
+            __m256i sum0_odd, sum0_even, sum1_odd, sum1_even, sum2_odd, sum2_even,
+                    sum3_odd, sum3_even, sum4_odd, sum4_even, sum5_odd, sum5_even,
+                    sum6_odd, sum6_even;
 
             //! cal src0
             __m256i dot1, dot2, dot3, dot4;
@@ -1507,10 +1469,8 @@ void avx2_chanwise_direct_stride1_7x7_int8(const int8_t* src,
             __m256i sum_odd_0 = _mm256_unpacklo_epi32(sum_odd, sum_even);
             __m256i sum_even_0 = _mm256_unpackhi_epi32(sum_odd, sum_even);
 
-            __m256i sum_left =
-                    _mm256_permute2f128_si256(sum_odd_0, sum_even_0, 32);
-            __m256i sum_right =
-                    _mm256_permute2f128_si256(sum_odd_0, sum_even_0, 49);
+            __m256i sum_left = _mm256_permute2f128_si256(sum_odd_0, sum_even_0, 32);
+            __m256i sum_right = _mm256_permute2f128_si256(sum_odd_0, sum_even_0, 49);
 
             sum_left = _mm256_add_epi32(sum_left, bias_val);
             sum_right = _mm256_add_epi32(sum_right, bias_val);
@@ -1541,23 +1501,23 @@ void avx2_chanwise_direct_stride1_7x7_int8(const int8_t* src,
         r6 += tail_step;
     }
 }
-#define INSTANTIATION(stride, i, bias, is_quantized, Op)                      \
-    template void avx2_chanwise_direct_##stride##_##i##x##i##_int8<           \
-            bias, is_quantized, Op>(const int8_t*, const int8_t*,             \
-                                    const int32_t*, int32_t*, int8_t*,        \
-                                    const size_t, const size_t, const size_t, \
-                                    const size_t, const Op&);
+#define INSTANTIATION(stride, i, bias, is_quantized, Op)                              \
+    template void                                                                     \
+            avx2_chanwise_direct_##stride##_##i##x##i##_int8<bias, is_quantized, Op>( \
+                    const int8_t*, const int8_t*, const int32_t*, int32_t*, int8_t*,  \
+                    const size_t, const size_t, const size_t, const size_t,           \
+                    const Op&);
 
-#define FOR_OP(stride, i, is_quantized, bias)                                  \
-    INSTANTIATION(stride, i, bias, is_quantized,                               \
-                  TypeCvtOp<SIMDType::AVX2 MEGDNN_COMMA dt_qint32 MEGDNN_COMMA \
-                                    dt_qint8>)                                 \
-    INSTANTIATION(stride, i, bias, is_quantized,                               \
-                  ReluOp<SIMDType::AVX2 MEGDNN_COMMA dt_qint32 MEGDNN_COMMA    \
-                                 dt_qint8>)                                    \
-    INSTANTIATION(stride, i, bias, is_quantized,                               \
-                  HSwishOp<SIMDType::AVX2 MEGDNN_COMMA dt_qint32 MEGDNN_COMMA  \
-                                   dt_qint8>)
+#define FOR_OP(stride, i, is_quantized, bias)                                       \
+    INSTANTIATION(                                                                  \
+            stride, i, bias, is_quantized,                                          \
+            TypeCvtOp<SIMDType::AVX2 MEGDNN_COMMA dt_qint32 MEGDNN_COMMA dt_qint8>) \
+    INSTANTIATION(                                                                  \
+            stride, i, bias, is_quantized,                                          \
+            ReluOp<SIMDType::AVX2 MEGDNN_COMMA dt_qint32 MEGDNN_COMMA dt_qint8>)    \
+    INSTANTIATION(                                                                  \
+            stride, i, bias, is_quantized,                                          \
+            HSwishOp<SIMDType::AVX2 MEGDNN_COMMA dt_qint32 MEGDNN_COMMA dt_qint8>)
 
 #define FOR_BIAS(stride, i, is_quantized)              \
     FOR_OP(stride, i, is_quantized, BiasMode::NO_BIAS) \
@@ -1588,12 +1548,10 @@ FOR_STRIDE
 namespace avx2_chanwise_stride2 {
 
 template <BiasMode bias_mode, bool is_quantized, typename Op>
-void avx2_chanwise_direct_stride2_2x2_int8(const int8_t* src,
-                                           const int8_t* filter,
-                                           const int32_t* bias, int32_t* temp,
-                                           int8_t* dst, const size_t IH,
-                                           const size_t IW, const size_t OH,
-                                           const size_t OW, const Op& op) {
+void avx2_chanwise_direct_stride2_2x2_int8(
+        const int8_t* src, const int8_t* filter, const int32_t* bias, int32_t* temp,
+        int8_t* dst, const size_t IH, const size_t IW, const size_t OH, const size_t OW,
+        const Op& op) {
     size_t tail_step = IW - OW * 2;
     int8_t* dst0 = dst;
     int32_t* out_ptr0 = temp;
@@ -1659,12 +1617,10 @@ void avx2_chanwise_direct_stride2_2x2_int8(const int8_t* src,
 }
 
 template <BiasMode bias_mode, bool is_quantized, typename Op>
-void avx2_chanwise_direct_stride2_3x3_int8(const int8_t* src,
-                                           const int8_t* filter,
-                                           const int32_t* bias, int32_t* temp,
-                                           int8_t* dst, const size_t IH,
-                                           const size_t IW, const size_t OH,
-                                           const size_t OW, const Op& op) {
+void avx2_chanwise_direct_stride2_3x3_int8(
+        const int8_t* src, const int8_t* filter, const int32_t* bias, int32_t* temp,
+        int8_t* dst, const size_t IH, const size_t IW, const size_t OH, const size_t OW,
+        const Op& op) {
     MEGDNN_MARK_USED_VAR(IH);
     size_t tail_step = IW - OW * 2;
     int32_t* out_ptr0 = temp;
@@ -1710,8 +1666,8 @@ void avx2_chanwise_direct_stride2_3x3_int8(const int8_t* src,
             UNROLL_CALL0(3, load_src16)
             UNROLL_CALL0(3, load_src18)
 
-            __m256i temp, t0_left, t0_right, t1_left, t1_right, t2_left,
-                    t2_right, sum_left, sum_right;
+            __m256i temp, t0_left, t0_right, t1_left, t1_right, t2_left, t2_right,
+                    sum_left, sum_right;
 
             t0_left = _mm256_madd_epi16(cvt16_src00, filter_01);
             temp = _mm256_madd_epi16(cvt16_src02, filter_20);
@@ -1766,12 +1722,10 @@ void avx2_chanwise_direct_stride2_3x3_int8(const int8_t* src,
 }
 
 template <BiasMode bias_mode, bool is_quantized, typename Op>
-void avx2_chanwise_direct_stride2_5x5_int8(const int8_t* src,
-                                           const int8_t* filter,
-                                           const int32_t* bias, int32_t* temp,
-                                           int8_t* dst, const size_t IH,
-                                           const size_t IW, const size_t OH,
-                                           const size_t OW, const Op& op) {
+void avx2_chanwise_direct_stride2_5x5_int8(
+        const int8_t* src, const int8_t* filter, const int32_t* bias, int32_t* temp,
+        int8_t* dst, const size_t IH, const size_t IW, const size_t OH, const size_t OW,
+        const Op& op) {
     MEGDNN_MARK_USED_VAR(IH);
     size_t tail_step = IW - OW * 2;
     int8_t* dst0 = dst;
@@ -1846,9 +1800,8 @@ void avx2_chanwise_direct_stride2_5x5_int8(const int8_t* src,
             UNROLL_CALL0(5, load_src18)
             UNROLL_CALL0(5, load_src20)
 
-            __m256i temp, t0_left, t0_right, t1_left, t1_right, t2_left,
-                    t2_right, t3_left, t3_right, t4_left, t4_right, sum_left,
-                    sum_right;
+            __m256i temp, t0_left, t0_right, t1_left, t1_right, t2_left, t2_right,
+                    t3_left, t3_right, t4_left, t4_right, sum_left, sum_right;
 
             t0_left = _mm256_madd_epi16(cvt16_src00, filter_01);
             temp = _mm256_madd_epi16(cvt16_src02, filter_23);
@@ -1947,12 +1900,10 @@ void avx2_chanwise_direct_stride2_5x5_int8(const int8_t* src,
 }
 
 template <BiasMode bias_mode, bool is_quantized, typename Op>
-void avx2_chanwise_direct_stride2_7x7_int8(const int8_t* src,
-                                           const int8_t* filter,
-                                           const int32_t* bias, int32_t* temp,
-                                           int8_t* dst, const size_t IH,
-                                           const size_t IW, const size_t OH,
-                                           const size_t OW, const Op& op) {
+void avx2_chanwise_direct_stride2_7x7_int8(
+        const int8_t* src, const int8_t* filter, const int32_t* bias, int32_t* temp,
+        int8_t* dst, const size_t IH, const size_t IW, const size_t OH, const size_t OW,
+        const Op& op) {
     MEGDNN_MARK_USED_VAR(IH);
     size_t tail_step = IW - OW * 2;
     int8_t* dst0 = dst;
@@ -2061,9 +2012,9 @@ void avx2_chanwise_direct_stride2_7x7_int8(const int8_t* src,
             UNROLL_CALL0(7, load_src20)
             UNROLL_CALL0(7, load_src22)
 
-            __m256i temp, t0_left, t0_right, t1_left, t1_right, t2_left,
-                    t2_right, t3_left, t3_right, t4_left, t4_right, sum_left,
-                    t5_left, t5_right, t6_left, t6_right, sum_right;
+            __m256i temp, t0_left, t0_right, t1_left, t1_right, t2_left, t2_right,
+                    t3_left, t3_right, t4_left, t4_right, sum_left, t5_left, t5_right,
+                    t6_left, t6_right, sum_right;
 
             t0_left = _mm256_madd_epi16(cvt16_src00, filter_01);
             temp = _mm256_madd_epi16(cvt16_src02, filter_23);
@@ -2220,23 +2171,23 @@ void avx2_chanwise_direct_stride2_7x7_int8(const int8_t* src,
         r6 += tail_step + IW;
     }
 }
-#define INSTANTIATION(stride, i, bias, is_quantized, Op)                      \
-    template void avx2_chanwise_direct_##stride##_##i##x##i##_int8<           \
-            bias, is_quantized, Op>(const int8_t*, const int8_t*,             \
-                                    const int32_t*, int32_t*, int8_t*,        \
-                                    const size_t, const size_t, const size_t, \
-                                    const size_t, const Op&);
+#define INSTANTIATION(stride, i, bias, is_quantized, Op)                              \
+    template void                                                                     \
+            avx2_chanwise_direct_##stride##_##i##x##i##_int8<bias, is_quantized, Op>( \
+                    const int8_t*, const int8_t*, const int32_t*, int32_t*, int8_t*,  \
+                    const size_t, const size_t, const size_t, const size_t,           \
+                    const Op&);
 
-#define FOR_OP(stride, i, is_quantized, bias)                                  \
-    INSTANTIATION(stride, i, bias, is_quantized,                               \
-                  TypeCvtOp<SIMDType::AVX2 MEGDNN_COMMA dt_qint32 MEGDNN_COMMA \
-                                    dt_qint8>)                                 \
-    INSTANTIATION(stride, i, bias, is_quantized,                               \
-                  ReluOp<SIMDType::AVX2 MEGDNN_COMMA dt_qint32 MEGDNN_COMMA    \
-                                 dt_qint8>)                                    \
-    INSTANTIATION(stride, i, bias, is_quantized,                               \
-                  HSwishOp<SIMDType::AVX2 MEGDNN_COMMA dt_qint32 MEGDNN_COMMA  \
-                                   dt_qint8>)
+#define FOR_OP(stride, i, is_quantized, bias)                                       \
+    INSTANTIATION(                                                                  \
+            stride, i, bias, is_quantized,                                          \
+            TypeCvtOp<SIMDType::AVX2 MEGDNN_COMMA dt_qint32 MEGDNN_COMMA dt_qint8>) \
+    INSTANTIATION(                                                                  \
+            stride, i, bias, is_quantized,                                          \
+            ReluOp<SIMDType::AVX2 MEGDNN_COMMA dt_qint32 MEGDNN_COMMA dt_qint8>)    \
+    INSTANTIATION(                                                                  \
+            stride, i, bias, is_quantized,                                          \
+            HSwishOp<SIMDType::AVX2 MEGDNN_COMMA dt_qint32 MEGDNN_COMMA dt_qint8>)
 
 #define FOR_BIAS(stride, i, is_quantized)              \
     FOR_OP(stride, i, is_quantized, BiasMode::NO_BIAS) \

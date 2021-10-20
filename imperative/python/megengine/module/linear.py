@@ -14,8 +14,7 @@ from .module import Module
 
 
 class Linear(Module):
-    r"""
-    Applies a linear transformation to the input. For instance, if input
+    r"""Applies a linear transformation to the input. For instance, if input
     is x, then output y is:
 
     .. math::
@@ -24,30 +23,31 @@ class Linear(Module):
 
     where :math:`y_i= \sum_j W_{ij} x_j + b_i`
 
-    :param in_features: size of each input sample.
-    :param out_features: size of each output sample.
-    :param bias: if it's ``False``, the layer will not learn an additional ``bias``.
-        Default: ``True``
+    Args:
+        in_features: size of each input sample.
+        out_features: size of each output sample.
+        bias: if it's ``False``, the layer will not learn an additional ``bias``.
+            Default: ``True``
+
 
     Examples:
 
-    .. testcode::
+        .. testcode::
 
-        import numpy as np
-        import megengine as mge
-        import megengine.module as M
+            import numpy as np
+            import megengine as mge
+            import megengine.module as M
 
-        m = M.Linear(in_features=3, out_features=1)
-        inp = mge.tensor(np.arange(0, 6).astype("float32").reshape(2, 3))
-        oup = m(inp)
-        print(oup.numpy().shape)
+            m = M.Linear(in_features=3, out_features=1)
+            inp = mge.tensor(np.arange(0, 6).astype("float32").reshape(2, 3))
+            oup = m(inp)
+            print(oup.numpy().shape)
 
-    Outputs:
+        Outputs:
 
-    .. testoutput::
+        .. testoutput::
 
-        (2, 1)
-
+            (2, 1)
     """
 
     def __init__(

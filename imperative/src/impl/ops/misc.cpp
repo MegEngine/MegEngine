@@ -16,17 +16,17 @@
 namespace mgb {
 namespace imperative {
 
-namespace check_has_inf {
+namespace check_non_finite {
 auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
-    auto&& op = def.cast_final_safe<CheckHasInf>();
+    auto&& op = def.cast_final_safe<CheckNonFinite>();
     mgb_assert(inputs.size() == 1);
     OperatorNodeConfig config{op.make_name()};
-    return opr::CheckHasInf::make(inputs[0], {}, config);
+    return opr::CheckNonFinite::make(inputs[0], {}, config);
 }
-OP_TRAIT_REG(CheckHasInf, CheckHasInf)
+OP_TRAIT_REG(CheckNonFinite, CheckNonFinite)
         .apply_on_var_node(apply_on_var_node)
         .fallback();
-}  // namespace check_has_inf
+}  // namespace check_non_finite
 
 }  // namespace imperative
 }  // namespace mgb

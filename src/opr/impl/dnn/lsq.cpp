@@ -26,15 +26,14 @@ MEGDNN_OPR_INIT4(LSQForward, "lsq_fwd");
 
 #ifdef MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(LSQForward) {
-    SymbolVarArray grad =
-            LSQBackward::make(out_grad[0], opr.input(0), opr.input(1),
-                              opr.input(2), opr.input(3), opr.param());
+    SymbolVarArray grad = LSQBackward::make(
+            out_grad[0], opr.input(0), opr.input(1), opr.input(2), opr.input(3),
+            opr.param());
 
     if (wrt_idx == 0) {
         return grad[0].node();
     } else if (wrt_idx == 1) {
-        return reduce_sum(grad[1], GetVarShape::make(opr.input(wrt_idx)))
-                .node();
+        return reduce_sum(grad[1], GetVarShape::make(opr.input(wrt_idx))).node();
     } else {
         return nullptr;
     }
@@ -43,9 +42,9 @@ MGB_IMPL_OPR_GRAD(LSQForward) {
 
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(LSQBackward);
 
-LSQBackward::LSQBackward(VarNode* y_grad, VarNode* x, VarNode* scale,
-                         VarNode* zero_point, VarNode* grad_scale,
-                         const Param& param, const OperatorNodeConfig& config)
+LSQBackward::LSQBackward(
+        VarNode* y_grad, VarNode* x, VarNode* scale, VarNode* zero_point,
+        VarNode* grad_scale, const Param& param, const OperatorNodeConfig& config)
         : Super({x->owner_graph(),
                  config,
                  "lsq_bwd",
@@ -55,15 +54,13 @@ LSQBackward::LSQBackward(VarNode* y_grad, VarNode* x, VarNode* scale,
     add_input({y_grad, x, scale, zero_point, grad_scale});
 }
 
-SymbolVarArray LSQBackward::make(SymbolVar y_grad, SymbolVar x, SymbolVar scale,
-                                 SymbolVar zero_point, SymbolVar grad_scale,
-                                 const Param& param,
-                                 const OperatorNodeConfig& config) {
+SymbolVarArray LSQBackward::make(
+        SymbolVar y_grad, SymbolVar x, SymbolVar scale, SymbolVar zero_point,
+        SymbolVar grad_scale, const Param& param, const OperatorNodeConfig& config) {
     auto&& out = x.node()->owner_graph()
                          ->insert_opr(std::make_unique<LSQBackward>(
                                  y_grad.node(), x.node(), scale.node(),
-                                 zero_point.node(), grad_scale.node(), param,
-                                 config))
+                                 zero_point.node(), grad_scale.node(), param, config))
                          ->output();
     SymbolVarArray ret(out.size());
     for (size_t i = 0; i < ret.size(); ++i) {
@@ -76,10 +73,8 @@ void LSQBackward::init_output_static_infer_desc() {
     using namespace cg::static_infer;
     auto&& mgr = owner_graph()->static_infer_manager();
 
-    mgr.register_shape_infer(output(0),
-                             ShapeInferDesc::make_identity(input(1)));
-    mgr.register_shape_infer(output(1),
-                             ShapeInferDesc::make_identity(input(1)));
+    mgr.register_shape_infer(output(0), ShapeInferDesc::make_identity(input(1)));
+    mgr.register_shape_infer(output(1), ShapeInferDesc::make_identity(input(1)));
     this->init_output_static_infer_desc_workspace(
             intl::AutoAddWorkspaceNeedLimitGetter<megdnn::LSQBackward>::val);
 }

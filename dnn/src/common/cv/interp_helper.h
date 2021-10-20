@@ -62,7 +62,9 @@
 #pragma once
 
 #include "src/common/cv/aligned_allocator.h"
+#include "src/common/utils.h"
 
+#include "./helper.h"
 #include "megdnn/opr_param_defs.h"
 
 #include <cstdint>
@@ -79,8 +81,7 @@ using BorderMode = megdnn::param::WarpPerspective::BorderMode;
  * \brief helper for generating interpolation tables for different interpolation
  *        modes
  */
-template <int INTER_BITS_ = 5, int INTER_MAX_ = 7,
-          int INTER_REMAP_COEF_BITS_ = 15>
+template <int INTER_BITS_ = 5, int INTER_MAX_ = 7, int INTER_REMAP_COEF_BITS_ = 15>
 class InterpolationTable {
 public:
     using IMode = InterpolationMode;
@@ -123,8 +124,7 @@ private:
         alignas(128) int16_t bilineartab_ic4_buf[INTER_TAB_SIZE2 * 2 * 8];
 
         static void* operator new(std::size_t sz) {
-            return ah::aligned_allocator<Table, 128>().allocate(sz /
-                                                                sizeof(Table));
+            return ah::aligned_allocator<Table, 128>().allocate(sz / sizeof(Table));
         }
         void operator delete(void* ptr) noexcept {
             ah::aligned_allocator<Table, 128>().deallocate(
@@ -159,8 +159,7 @@ private:
         }
     };
 
-    static void init_inter_tab_1d(InterpolationMode imode, float* tab,
-                                  int tabsz);
+    static void init_inter_tab_1d(InterpolationMode imode, float* tab, int tabsz);
 
     static inline void interpolate_linear(float x, float* coeffs);
     static inline void interpolate_cubic(float x, float* coeffs);

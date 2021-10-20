@@ -79,3 +79,128 @@ def test_cross_entropy_reduction():
 
     with pytest.raises(ValueError):
         F.nn.cross_entropy(logits, label, reduction="max")
+
+
+def ctc_nll_naive_npy(
+    pred,
+    pred_lengths,
+    label,
+    label_lengths,
+    blank=0,
+    reduction="mean",
+    time_major=False,
+):
+    """naive :func:`ctc_nll` using numpy arrays. Used for testing and helping
+    our user to understand how CTC works. Only ``LABEL_COMPACT`` mode is
+    supported."""
+
+    pred = np.asarray(pred, dtype=np.float32)
+    pred_lengths = np.asarray(pred_lengths, dtype=np.int8)
+    label = np.asarray(label, dtype=np.int32)
+    label_lengths = np.asarray(label_lengths, dtype=np.int32)
+
+    if time_major:
+        pred = np.transpose(pred, (1, 0, 2))
+    # pred in (N, T, P) format
+
+    batch_size, time_len, nr_class = pred.shape
+    assert pred_lengths.shape == (batch_size,) and pred_lengths.max() <= pred.shape[1]
+    assert label_lengths.shape == (batch_size,)
+    assert label.shape == (label_lengths.sum(),) and label.max() < nr_class
+
+    ret = np.empty((batch_size,), dtype=np.float32)
+    label_start = 0
+    for i in range(batch_size):
+        label_end = label_start + label_lengths[i]
+        ret[i] = _ctc_npy_single_seq(
+            pred[i][: pred_lengths[i]], label[label_start:label_end], blank
+        )
+        label_start = label_end
+
+    if reduction == "mean":
+        return (ret / label_lengths).mean()
+    elif reduction == "sum":
+        return ret.sum()
+    elif reduction == "none":
+        return ret
+    else:
+        raise ValueError("{} is not a valid value for reduction".format(reduction))
+
+
+def _ctc_npy_single_seq(pred, label, blank):
+    def safelog(x):
+        eps = np.finfo(x.dtype).tiny
+        return np.log(np.maximum(x, eps))
+
+    def log_sum_exp(x, y):
+        x, y = np.maximum(x, y), np.minimum(x, y)
+        return x + np.log1p(np.exp(y - x))
+
+    assert np.abs(pred.sum(axis=1) - 1).max() <= 1e-3
+    len_pred, alphabet_size = pred.shape
+    (len_label,) = label.shape
+
+    len_ex_label = len_label * 2 + 1
+    ex_label = (np.zeros(len_ex_label)).astype(np.int32) + blank
+    ex_label[1::2] = label
+
+    prob = np.zeros(len_ex_label, dtype=np.float32)
+    prob[0] = pred[0][ex_label[0]]
+    prob[1] = pred[0][ex_label[1]]
+    prob = safelog(prob)  # compute on log scale
+
+    ex_label_pmask = ex_label[2:] != ex_label[:-2]
+    for t in range(1, len_pred):
+        # enter loop: prob[i] = log(p(pred[:t+1], label[:i+1]))
+        new_prob = prob.copy()
+        new_prob[1:] = log_sum_exp(new_prob[1:], prob[:-1])
+        new_prob[2:] = (
+            new_prob[2:] * (1 - ex_label_pmask)
+            + log_sum_exp(new_prob[2:], prob[:-2]) * ex_label_pmask
+        )
+        new_prob += safelog(pred[t, ex_label])
+        prob = new_prob
+
+    return -log_sum_exp(prob[-1], prob[-2])
+
+
+def test_ctc_loss():
+    def test_func(T, C, N):
+        input = np.random.randn(T, N, C)
+        input = F.softmax(tensor(input), axis=-1).numpy()
+        input_lengths = np.ones(N, dtype=np.int32) * T
+        target_lengths = np.random.randint(low=1, high=T + 1, size=(N,), dtype=np.int32)
+        target = np.random.randint(
+            low=1, high=C, size=(sum(target_lengths)), dtype=np.int32
+        )
+
+        input_mge = tensor(input)
+        input_lengths_mge = tensor(input_lengths)
+
+        target_mge = tensor(target)
+        target_lengths_mge = tensor(target_lengths)
+
+        blank = np.random.randint(C)
+        for method in ["mean", "sum", "none"]:
+            np_out = ctc_nll_naive_npy(
+                input,
+                input_lengths,
+                target,
+                target_lengths,
+                blank=blank,
+                reduction=method,
+                time_major=True,
+            )
+            mge_out = F.nn.ctc_loss(
+                input_mge,
+                input_lengths_mge,
+                target_mge,
+                target_lengths_mge,
+                blank=blank,
+                reduction=method,
+            )
+            np.testing.assert_allclose(mge_out.numpy(), np_out, rtol=2e-6)
+
+    cases = [[1, 2, 1], [100, 50, 200], [100, 5, 1]]
+    for case in cases:
+        test_func(*case)

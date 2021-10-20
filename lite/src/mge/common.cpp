@@ -74,8 +74,7 @@ void lite::decompressed_tensor_value_loader(
 LTensorLayout lite::to_impl_layout(const Layout& layout) {
     mgb::TensorLayout mge_layout;
     mge_layout.ndim = layout.ndim;
-    LITE_ASSERT(layout.ndim < TensorShape::MAX_NDIM,
-                "lite layout ndim is to large");
+    LITE_ASSERT(layout.ndim < TensorShape::MAX_NDIM, "lite layout ndim is to large");
     for (size_t i = 0; i < layout.ndim; i++) {
         mge_layout.shape[i] = layout.shapes[i];
     }
@@ -84,9 +83,11 @@ LTensorLayout lite::to_impl_layout(const Layout& layout) {
         case LiteDataType::LITE_FLOAT:
             mge_layout.dtype = mgb::dtype::Float32();
             break;
+#if !MEGDNN_DISABLE_FLOAT16
         case LiteDataType::LITE_HALF:
             mge_layout.dtype = mgb::dtype::Float16();
             break;
+#endif
         case LiteDataType::LITE_INT:
             mge_layout.dtype = mgb::dtype::Int32();
             break;
@@ -100,8 +101,9 @@ LTensorLayout lite::to_impl_layout(const Layout& layout) {
             mge_layout.dtype = mgb::dtype::Int16();
             break;
         default:
-            LITE_THROW(mgb::ssprintf("unsupport dtype in lite enum id is %d.",
-                                     static_cast<int>(layout.data_type)));
+            LITE_THROW(mgb::ssprintf(
+                    "unsupport dtype in lite enum id is %d.",
+                    static_cast<int>(layout.data_type)));
     }
     return mge_layout;
 }
@@ -120,9 +122,11 @@ Layout lite::to_lite_layout(const LTensorLayout& mge_layout) {
         case mgb::DTypeEnum::Float32:
             layout.data_type = LiteDataType::LITE_FLOAT;
             break;
+#if !MEGDNN_DISABLE_FLOAT16
         case mgb::DTypeEnum::Float16:
             layout.data_type = LiteDataType::LITE_HALF;
             break;
+#endif
         case mgb::DTypeEnum::Int32:
             layout.data_type = LiteDataType::LITE_INT;
             break;
@@ -136,8 +140,8 @@ Layout lite::to_lite_layout(const LTensorLayout& mge_layout) {
             layout.data_type = LiteDataType::LITE_UINT8;
             break;
         default:
-            LITE_THROW(mgb::ssprintf("unsupport dtype in lite : %s.",
-                                     mge_layout.to_string().c_str()));
+            LITE_THROW(mgb::ssprintf(
+                    "unsupport dtype in lite : %s.", mge_layout.to_string().c_str()));
     }
     return layout;
 }
@@ -158,15 +162,13 @@ mgb::CompNode::Locator lite::to_compnode_locator(const LiteDeviceType& device) {
             loc.type = mgb::CompNode::DeviceType::UNSPEC;
             break;
         default:
-            LITE_THROW(
-                    ssprintf("lite unsupported compnode type: enum value: %d.",
-                             (int)(device)));
+            LITE_THROW(ssprintf(
+                    "lite unsupported compnode type: enum value: %d.", (int)(device)));
     }
     return loc;
 }
 
-LiteDeviceType lite::get_device_from_locator(
-        const mgb::CompNode::Locator& locator) {
+LiteDeviceType lite::get_device_from_locator(const mgb::CompNode::Locator& locator) {
     switch (locator.type) {
         case mgb::CompNode::DeviceType::CPU:
         case mgb::CompNode::DeviceType::MULTITHREAD:
@@ -178,9 +180,9 @@ LiteDeviceType lite::get_device_from_locator(
         case mgb::CompNode::DeviceType::UNSPEC:
             return LiteDeviceType::LITE_DEVICE_DEFAULT;
         default:
-            LITE_THROW(
-                    ssprintf("lite unsupported compnode type: enum value: %d.",
-                             (int)(locator.type)));
+            LITE_THROW(ssprintf(
+                    "lite unsupported compnode type: enum value: %d.",
+                    (int)(locator.type)));
     }
 }
 #endif

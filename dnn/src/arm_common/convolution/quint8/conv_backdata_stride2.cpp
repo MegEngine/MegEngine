@@ -11,8 +11,8 @@
 
 #include "src/arm_common/convolution/quint8/conv_backdata_stride2.h"
 #if MGB_ENABLE_DOT
-#include "src/common/utils.h"
 #include "src/arm_common/simd_macro/marm_neon.h"
+#include "src/common/utils.h"
 
 using namespace megdnn;
 using namespace arm_common;
@@ -21,7 +21,7 @@ using namespace deconv;
 namespace {
 
 #define SHIFT_BITS 30
-#define SHIFT (1 << SHIFT_BITS)
+#define SHIFT      (1 << SHIFT_BITS)
 
 bool need_dst_copy(const NCBKernSizeParam& param) {
     if (param.osz[1] % 4 != 0) {
@@ -31,9 +31,9 @@ bool need_dst_copy(const NCBKernSizeParam& param) {
     return false;
 }
 
-void get_rectified_size(size_t IH, size_t IW, size_t OH, size_t OW, size_t FH,
-                        size_t FW, size_t PH, size_t PW, size_t& IH2,
-                        size_t& IW2, size_t& OW2) {
+void get_rectified_size(
+        size_t IH, size_t IW, size_t OH, size_t OW, size_t FH, size_t FW, size_t PH,
+        size_t PW, size_t& IH2, size_t& IW2, size_t& OW2) {
     MEGDNN_MARK_USED_VAR(OH);
     MEGDNN_MARK_USED_VAR(IW);
     //! OW should be a multiple of 4
@@ -69,8 +69,7 @@ inline uint8x16_t vqtbl1q_u8_common(uint8x16_t a, uint8x16_t index) {
     return r;
 }
 
-inline uint8x16_t vqtbx1q_u8_common(uint8x16_t a, uint8x16_t t,
-                                    uint8x16_t idx) {
+inline uint8x16_t vqtbx1q_u8_common(uint8x16_t a, uint8x16_t t, uint8x16_t idx) {
     uint8x8x2_t _temp;
     _temp.val[0] = vget_low_u8(t);
     _temp.val[1] = vget_high_u8(t);
@@ -80,9 +79,8 @@ inline uint8x16_t vqtbx1q_u8_common(uint8x16_t a, uint8x16_t t,
     return r;
 }
 
-#define CALC_DST(_sum)            \
-    _sum = vreinterpretq_u32_s32( \
-            vaddq_s32(vreinterpretq_s32_u32(_sum), _shift_zp));
+#define CALC_DST(_sum) \
+    _sum = vreinterpretq_u32_s32(vaddq_s32(vreinterpretq_s32_u32(_sum), _shift_zp));
 
 #define CALC_0(_k_idx, _c_idx)                                                 \
     _elem = vqtbl1q_u8_common(_tmp, _idx##_c_idx);                             \
@@ -96,23 +94,21 @@ inline uint8x16_t vqtbx1q_u8_common(uint8x16_t a, uint8x16_t t,
     _sum1##_c_idx = vsubq_u32(_sum1##_c_idx, vdotq2_u32(_src_zp, _k##_k_idx)); \
     _sum1##_c_idx = vsubq_u32(_sum1##_c_idx, vdotq2_u32(_filter_zp, _elem));
 
-#define CALC_2(_k1_idx, _k2_idx, _c_idx)                                     \
-    _elem = vqtbl1q_u8_common(_tmp, _idx##_c_idx);                           \
-    _sum0##_c_idx = vdotq_u32(_sum0##_c_idx, _k##_k1_idx, _elem);            \
-    _sum0##_c_idx =                                                          \
-            vsubq_u32(_sum0##_c_idx, vdotq2_u32(_src_zp, _k##_k1_idx));      \
-    _sum0##_c_idx = vsubq_u32(_sum0##_c_idx, vdotq2_u32(_filter_zp, _elem)); \
-    _sum1##_c_idx = vdotq_u32(_sum1##_c_idx, _k##_k2_idx, _elem);            \
-    _sum1##_c_idx =                                                          \
-            vsubq_u32(_sum1##_c_idx, vdotq2_u32(_src_zp, _k##_k2_idx));      \
+#define CALC_2(_k1_idx, _k2_idx, _c_idx)                                        \
+    _elem = vqtbl1q_u8_common(_tmp, _idx##_c_idx);                              \
+    _sum0##_c_idx = vdotq_u32(_sum0##_c_idx, _k##_k1_idx, _elem);               \
+    _sum0##_c_idx = vsubq_u32(_sum0##_c_idx, vdotq2_u32(_src_zp, _k##_k1_idx)); \
+    _sum0##_c_idx = vsubq_u32(_sum0##_c_idx, vdotq2_u32(_filter_zp, _elem));    \
+    _sum1##_c_idx = vdotq_u32(_sum1##_c_idx, _k##_k2_idx, _elem);               \
+    _sum1##_c_idx = vsubq_u32(_sum1##_c_idx, vdotq2_u32(_src_zp, _k##_k2_idx)); \
     _sum1##_c_idx = vsubq_u32(_sum1##_c_idx, vdotq2_u32(_filter_zp, _elem));
 
 template <bool even, bool last_oc = false>
 MEGDNN_ATTRIBUTE_TARGET("dotprod")
-void deconv_direct_2x2(const uint8_t* src, const uint8_t* filter, int32_t* dst,
-                       size_t IH, size_t IW, size_t OH, size_t OW, size_t IC,
-                       uint8_t src_zp, uint8_t filter_zp,
-                       int32_t src_filter_zp) {
+void deconv_direct_2x2(
+        const uint8_t* src, const uint8_t* filter, int32_t* dst, size_t IH, size_t IW,
+        size_t OH, size_t OW, size_t IC, uint8_t src_zp, uint8_t filter_zp,
+        int32_t src_filter_zp) {
     MEGDNN_MARK_USED_VAR(IH);
     MEGDNN_MARK_USED_VAR(IC);
     const size_t tail_step = IW - OW / 2;
@@ -121,10 +117,8 @@ void deconv_direct_2x2(const uint8_t* src, const uint8_t* filter, int32_t* dst,
     uint8x16_t _filter_zp = vdupq_n_u8(filter_zp);
     int32x4_t _shift_zp = vdupq_n_s32(src_filter_zp - SHIFT);
 
-    const uint8x16_t _idx0 = {0, 1, 16, 16, 1, 2, 16, 16,
-                              2, 3, 16, 16, 3, 4, 16, 16};
-    const uint8x16_t _idx1 = {4, 5, 16, 16, 5, 6, 16, 16,
-                              6, 7, 16, 16, 7, 8, 16, 16};
+    const uint8x16_t _idx0 = {0, 1, 16, 16, 1, 2, 16, 16, 2, 3, 16, 16, 3, 4, 16, 16};
+    const uint8x16_t _idx1 = {4, 5, 16, 16, 5, 6, 16, 16, 6, 7, 16, 16, 7, 8, 16, 16};
     uint8x16_t _idx_r_0, _idx_r_1;
     if (even) {
         _idx_r_0 = {0, 16, 1, 16, 2, 16, 3, 16, 4, 16, 5, 16, 6, 16, 7, 16};
@@ -144,8 +138,8 @@ void deconv_direct_2x2(const uint8_t* src, const uint8_t* filter, int32_t* dst,
 
     const uint8_t* k0 = filter;
 
-    uint8x16_t _k0 = vreinterpretq_u8_u32(
-            vdupq_n_u32(*reinterpret_cast<const int32_t*>(k0)));
+    uint8x16_t _k0 =
+            vreinterpretq_u8_u32(vdupq_n_u32(*reinterpret_cast<const int32_t*>(k0)));
     uint8x16_t _idx_k = {3, 2, 1, 0, 3, 2, 1, 0, 3, 2, 1, 0, 3, 2, 1, 0};
     uint8x16_t _k = vqtbl1q_u8_common(_k0, _idx_k);
     uint8x16_t _idx = {0, 1, 16, 16, 0, 1, 16, 16, 0, 1, 16, 16, 0, 1, 16, 16};
@@ -180,13 +174,13 @@ void deconv_direct_2x2(const uint8_t* src, const uint8_t* filter, int32_t* dst,
             uint8x16_t _r20 = vqtbx1q_u8_common(_src_zp, _r2_ori, _idx_r_0);
             uint8x16_t _r21 = vqtbx1q_u8_common(_src_zp, _r2_ori, _idx_r_1);
 
-            int16x8x2_t r_0 = vzipq_s16(vreinterpretq_s16_u8(_r00),
-                                        vreinterpretq_s16_u8(_r10));
+            int16x8x2_t r_0 =
+                    vzipq_s16(vreinterpretq_s16_u8(_r00), vreinterpretq_s16_u8(_r10));
             uint8x16_t _r0 = vreinterpretq_u8_s8(r_0.val[0]);
             uint8x16_t _r2 = vreinterpretq_u8_s8(r_0.val[1]);
 
-            int16x8x2_t r_1 = vzipq_s16(vreinterpretq_s16_u8(_r01),
-                                        vreinterpretq_s16_u8(_r11));
+            int16x8x2_t r_1 =
+                    vzipq_s16(vreinterpretq_s16_u8(_r01), vreinterpretq_s16_u8(_r11));
             uint8x16_t _r1 = vreinterpretq_u8_s8(r_1.val[0]);
             uint8x16_t _r3 = vreinterpretq_u8_s8(r_1.val[1]);
 
@@ -195,13 +189,11 @@ void deconv_direct_2x2(const uint8_t* src, const uint8_t* filter, int32_t* dst,
             SUB_ZP(_sum01.val[0], _r2);
             SUB_ZP(_sum01.val[1], _r3);
 
-            r_0 = vzipq_s16(vreinterpretq_s16_u8(_r10),
-                            vreinterpretq_s16_u8(_r20));
+            r_0 = vzipq_s16(vreinterpretq_s16_u8(_r10), vreinterpretq_s16_u8(_r20));
             _r0 = vreinterpretq_u8_s8(r_0.val[0]);
             _r2 = vreinterpretq_u8_s8(r_0.val[1]);
 
-            r_1 = vzipq_s16(vreinterpretq_s16_u8(_r11),
-                            vreinterpretq_s16_u8(_r21));
+            r_1 = vzipq_s16(vreinterpretq_s16_u8(_r11), vreinterpretq_s16_u8(_r21));
             _r1 = vreinterpretq_u8_s8(r_1.val[0]);
             _r3 = vreinterpretq_u8_s8(r_1.val[1]);
 
@@ -320,13 +312,13 @@ void deconv_direct_2x2(const uint8_t* src, const uint8_t* filter, int32_t* dst,
             uint8x16_t _r10 = vqtbx1q_u8_common(_src_zp, _r1_ori, _idx_r_0);
             uint8x16_t _r11 = vqtbx1q_u8_common(_src_zp, _r1_ori, _idx_r_1);
 
-            int16x8x2_t r_0 = vzipq_s16(vreinterpretq_s16_u8(_r00),
-                                        vreinterpretq_s16_u8(_r10));
+            int16x8x2_t r_0 =
+                    vzipq_s16(vreinterpretq_s16_u8(_r00), vreinterpretq_s16_u8(_r10));
             uint8x16_t _r0 = vreinterpretq_u8_s8(r_0.val[0]);
             uint8x16_t _r2 = vreinterpretq_u8_s8(r_0.val[1]);
 
-            int16x8x2_t r_1 = vzipq_s16(vreinterpretq_s16_u8(_r01),
-                                        vreinterpretq_s16_u8(_r11));
+            int16x8x2_t r_1 =
+                    vzipq_s16(vreinterpretq_s16_u8(_r01), vreinterpretq_s16_u8(_r11));
             uint8x16_t _r1 = vreinterpretq_u8_s8(r_1.val[0]);
             uint8x16_t _r3 = vreinterpretq_u8_s8(r_1.val[1]);
 
@@ -402,10 +394,10 @@ void deconv_direct_2x2(const uint8_t* src, const uint8_t* filter, int32_t* dst,
 
 template <bool even, bool last_oc = false>
 MEGDNN_ATTRIBUTE_TARGET("dotprod")
-void deconv_direct_3x3(const uint8_t* src, const uint8_t* filter, int32_t* dst,
-                       size_t IH, size_t IW, size_t OH, size_t OW, size_t IC,
-                       uint8_t src_zp, uint8_t filter_zp,
-                       int32_t src_filter_zp) {
+void deconv_direct_3x3(
+        const uint8_t* src, const uint8_t* filter, int32_t* dst, size_t IH, size_t IW,
+        size_t OH, size_t OW, size_t IC, uint8_t src_zp, uint8_t filter_zp,
+        int32_t src_filter_zp) {
     MEGDNN_MARK_USED_VAR(IH);
     MEGDNN_MARK_USED_VAR(IC);
     const size_t tail_step = IW - OW / 2;
@@ -414,10 +406,8 @@ void deconv_direct_3x3(const uint8_t* src, const uint8_t* filter, int32_t* dst,
     uint8x16_t _filter_zp = vdupq_n_u8(filter_zp);
     int32x4_t _shift_zp = vdupq_n_s32(src_filter_zp - SHIFT);
 
-    const uint8x16_t _idx0 = {0, 1, 2, 16, 1, 2, 3, 16,
-                              2, 3, 4, 16, 3, 4, 5, 16};
-    const uint8x16_t _idx1 = {4, 5, 6, 16, 5, 6, 7, 16,
-                              6, 7, 8, 16, 7, 8, 9, 16};
+    const uint8x16_t _idx0 = {0, 1, 2, 16, 1, 2, 3, 16, 2, 3, 4, 16, 3, 4, 5, 16};
+    const uint8x16_t _idx1 = {4, 5, 6, 16, 5, 6, 7, 16, 6, 7, 8, 16, 7, 8, 9, 16};
     const uint8x16_t _idx2 = {8,  9,  10, 16, 9,  10, 11, 16,
                               10, 11, 12, 16, 11, 12, 13, 16};
     uint8x16_t _idx_r_0;
@@ -626,58 +616,50 @@ void deconv_direct_3x3(const uint8_t* src, const uint8_t* filter, int32_t* dst,
 #undef CALC_1
 #undef CALC_2
 
-#define CALC_0(_k00_idx, _k01_idx, _c_idx)                                   \
-    _elem = vqtbl1q_u8_common(_tmp, _idx##_c_idx##0);                        \
-    _sum0##_c_idx = vdotq_u32(_sum0##_c_idx, _k##_k00_idx, _elem);           \
-    _sum0##_c_idx =                                                          \
-            vsubq_u32(_sum0##_c_idx, vdotq2_u32(_src_zp, _k##_k00_idx));     \
-    _sum0##_c_idx = vsubq_u32(_sum0##_c_idx, vdotq2_u32(_filter_zp, _elem)); \
-    _elem = vqtbl1q_u8_common(_tmp, _idx##_c_idx##1);                        \
-    _sum0##_c_idx = vdotq_u32(_sum0##_c_idx, _k##_k01_idx, _elem);           \
-    _sum0##_c_idx =                                                          \
-            vsubq_u32(_sum0##_c_idx, vdotq2_u32(_src_zp, _k##_k01_idx));     \
+#define CALC_0(_k00_idx, _k01_idx, _c_idx)                                       \
+    _elem = vqtbl1q_u8_common(_tmp, _idx##_c_idx##0);                            \
+    _sum0##_c_idx = vdotq_u32(_sum0##_c_idx, _k##_k00_idx, _elem);               \
+    _sum0##_c_idx = vsubq_u32(_sum0##_c_idx, vdotq2_u32(_src_zp, _k##_k00_idx)); \
+    _sum0##_c_idx = vsubq_u32(_sum0##_c_idx, vdotq2_u32(_filter_zp, _elem));     \
+    _elem = vqtbl1q_u8_common(_tmp, _idx##_c_idx##1);                            \
+    _sum0##_c_idx = vdotq_u32(_sum0##_c_idx, _k##_k01_idx, _elem);               \
+    _sum0##_c_idx = vsubq_u32(_sum0##_c_idx, vdotq2_u32(_src_zp, _k##_k01_idx)); \
     _sum0##_c_idx = vsubq_u32(_sum0##_c_idx, vdotq2_u32(_filter_zp, _elem));
 
-#define CALC_1(_k00_idx, _k01_idx, _c_idx)                                   \
-    _elem = vqtbl1q_u8_common(_tmp, _idx##_c_idx##0);                        \
-    _sum1##_c_idx = vdotq_u32(_sum1##_c_idx, _k##_k00_idx, _elem);           \
-    _sum1##_c_idx =                                                          \
-            vsubq_u32(_sum1##_c_idx, vdotq2_u32(_src_zp, _k##_k00_idx));     \
-    _sum1##_c_idx = vsubq_u32(_sum1##_c_idx, vdotq2_u32(_filter_zp, _elem)); \
-    _elem = vqtbl1q_u8_common(_tmp, _idx##_c_idx##1);                        \
-    _sum1##_c_idx = vdotq_u32(_sum1##_c_idx, _k##_k01_idx, _elem);           \
-    _sum1##_c_idx =                                                          \
-            vsubq_u32(_sum1##_c_idx, vdotq2_u32(_src_zp, _k##_k01_idx));     \
+#define CALC_1(_k00_idx, _k01_idx, _c_idx)                                       \
+    _elem = vqtbl1q_u8_common(_tmp, _idx##_c_idx##0);                            \
+    _sum1##_c_idx = vdotq_u32(_sum1##_c_idx, _k##_k00_idx, _elem);               \
+    _sum1##_c_idx = vsubq_u32(_sum1##_c_idx, vdotq2_u32(_src_zp, _k##_k00_idx)); \
+    _sum1##_c_idx = vsubq_u32(_sum1##_c_idx, vdotq2_u32(_filter_zp, _elem));     \
+    _elem = vqtbl1q_u8_common(_tmp, _idx##_c_idx##1);                            \
+    _sum1##_c_idx = vdotq_u32(_sum1##_c_idx, _k##_k01_idx, _elem);               \
+    _sum1##_c_idx = vsubq_u32(_sum1##_c_idx, vdotq2_u32(_src_zp, _k##_k01_idx)); \
     _sum1##_c_idx = vsubq_u32(_sum1##_c_idx, vdotq2_u32(_filter_zp, _elem));
 
-#define CALC_2(_k00_idx, _k01_idx, _k10_idx, _k11_idx, _c_idx)           \
-    _elem = vqtbl1q_u8_common(_tmp, _idx##_c_idx##0);                    \
-    _sum0##_c_idx = vdotq_u32(_sum0##_c_idx, _k##_k00_idx, _elem);       \
-    _sum0##_c_idx =                                                      \
-            vsubq_u32(_sum0##_c_idx, vdotq2_u32(_src_zp, _k##_k00_idx)); \
-    _elem2 = vdotq2_u32(_filter_zp, _elem);                              \
-    _sum0##_c_idx = vsubq_u32(_sum0##_c_idx, _elem2);                    \
-    _sum1##_c_idx = vdotq_u32(_sum1##_c_idx, _k##_k10_idx, _elem);       \
-    _sum1##_c_idx =                                                      \
-            vsubq_u32(_sum1##_c_idx, vdotq2_u32(_src_zp, _k##_k10_idx)); \
-    _sum1##_c_idx = vsubq_u32(_sum1##_c_idx, _elem2);                    \
-    _elem = vqtbl1q_u8_common(_tmp, _idx##_c_idx##1);                    \
-    _sum0##_c_idx = vdotq_u32(_sum0##_c_idx, _k##_k01_idx, _elem);       \
-    _sum0##_c_idx =                                                      \
-            vsubq_u32(_sum0##_c_idx, vdotq2_u32(_src_zp, _k##_k01_idx)); \
-    _elem2 = vdotq2_u32(_filter_zp, _elem);                              \
-    _sum0##_c_idx = vsubq_u32(_sum0##_c_idx, _elem2);                    \
-    _sum1##_c_idx = vdotq_u32(_sum1##_c_idx, _k##_k11_idx, _elem);       \
-    _sum1##_c_idx =                                                      \
-            vsubq_u32(_sum1##_c_idx, vdotq2_u32(_src_zp, _k##_k11_idx)); \
+#define CALC_2(_k00_idx, _k01_idx, _k10_idx, _k11_idx, _c_idx)                   \
+    _elem = vqtbl1q_u8_common(_tmp, _idx##_c_idx##0);                            \
+    _sum0##_c_idx = vdotq_u32(_sum0##_c_idx, _k##_k00_idx, _elem);               \
+    _sum0##_c_idx = vsubq_u32(_sum0##_c_idx, vdotq2_u32(_src_zp, _k##_k00_idx)); \
+    _elem2 = vdotq2_u32(_filter_zp, _elem);                                      \
+    _sum0##_c_idx = vsubq_u32(_sum0##_c_idx, _elem2);                            \
+    _sum1##_c_idx = vdotq_u32(_sum1##_c_idx, _k##_k10_idx, _elem);               \
+    _sum1##_c_idx = vsubq_u32(_sum1##_c_idx, vdotq2_u32(_src_zp, _k##_k10_idx)); \
+    _sum1##_c_idx = vsubq_u32(_sum1##_c_idx, _elem2);                            \
+    _elem = vqtbl1q_u8_common(_tmp, _idx##_c_idx##1);                            \
+    _sum0##_c_idx = vdotq_u32(_sum0##_c_idx, _k##_k01_idx, _elem);               \
+    _sum0##_c_idx = vsubq_u32(_sum0##_c_idx, vdotq2_u32(_src_zp, _k##_k01_idx)); \
+    _elem2 = vdotq2_u32(_filter_zp, _elem);                                      \
+    _sum0##_c_idx = vsubq_u32(_sum0##_c_idx, _elem2);                            \
+    _sum1##_c_idx = vdotq_u32(_sum1##_c_idx, _k##_k11_idx, _elem);               \
+    _sum1##_c_idx = vsubq_u32(_sum1##_c_idx, vdotq2_u32(_src_zp, _k##_k11_idx)); \
     _sum1##_c_idx = vsubq_u32(_sum1##_c_idx, _elem2);
 
 template <bool even, bool last_oc = false>
 MEGDNN_ATTRIBUTE_TARGET("dotprod")
-void deconv_direct_5x5(const uint8_t* src, const uint8_t* filter, int32_t* dst,
-                       size_t IH, size_t IW, size_t OH, size_t OW, size_t IC,
-                       uint8_t src_zp, uint8_t filter_zp,
-                       int32_t src_filter_zp) {
+void deconv_direct_5x5(
+        const uint8_t* src, const uint8_t* filter, int32_t* dst, size_t IH, size_t IW,
+        size_t OH, size_t OW, size_t IC, uint8_t src_zp, uint8_t filter_zp,
+        int32_t src_filter_zp) {
     MEGDNN_MARK_USED_VAR(IH);
     MEGDNN_MARK_USED_VAR(IC);
     const size_t tail_step = IW - OW / 2;
@@ -719,8 +701,7 @@ void deconv_direct_5x5(const uint8_t* src, const uint8_t* filter, int32_t* dst,
 
     uint8x16_t _k = vld1q_u8(k0 + 9);
     //! filter row 1
-    uint8x16_t _idx = {15, 14, 13, 12, 15, 14, 13, 12,
-                       15, 14, 13, 12, 15, 14, 13, 12};
+    uint8x16_t _idx = {15, 14, 13, 12, 15, 14, 13, 12, 15, 14, 13, 12, 15, 14, 13, 12};
     uint8x16_t _k123 = vqtbl1q_u8_common(_k, _idx);
     _idx = {11, 16, 16, 16, 11, 16, 16, 16, 11, 16, 16, 16, 11, 16, 16, 16};
     uint8x16_t _k4 = vqtbl1q_u8_common(_k, _idx);
@@ -974,10 +955,10 @@ void deconv_direct_5x5(const uint8_t* src, const uint8_t* filter, int32_t* dst,
 
 template <bool even, bool last_oc = false>
 MEGDNN_ATTRIBUTE_TARGET("dotprod")
-void deconv_direct_7x7(const uint8_t* src, const uint8_t* filter, int32_t* dst,
-                       size_t IH, size_t IW, size_t OH, size_t OW, size_t IC,
-                       uint8_t src_zp, uint8_t filter_zp,
-                       int32_t src_filter_zp) {
+void deconv_direct_7x7(
+        const uint8_t* src, const uint8_t* filter, int32_t* dst, size_t IH, size_t IW,
+        size_t OH, size_t OW, size_t IC, uint8_t src_zp, uint8_t filter_zp,
+        int32_t src_filter_zp) {
     MEGDNN_MARK_USED_VAR(IH);
     MEGDNN_MARK_USED_VAR(IC);
     const size_t tail_step = IW - OW / 2;
@@ -987,8 +968,7 @@ void deconv_direct_7x7(const uint8_t* src, const uint8_t* filter, int32_t* dst,
     int32x4_t _shift_zp = vdupq_n_s32(src_filter_zp - SHIFT);
 
     const uint8x16_t _idx00 = {0, 1, 2, 3, 1, 2, 3, 4, 2, 3, 4, 5, 3, 4, 5, 6};
-    const uint8x16_t _idx01 = {4, 5, 6, 16, 5, 6, 7, 16,
-                               6, 7, 8, 16, 7, 8, 9, 16};
+    const uint8x16_t _idx01 = {4, 5, 6, 16, 5, 6, 7, 16, 6, 7, 8, 16, 7, 8, 9, 16};
     const uint8x16_t _idx10 = {4, 5, 6, 7, 5, 6, 7, 8, 6, 7, 8, 9, 7, 8, 9, 10};
     const uint8x16_t _idx11 = {8,  9,  10, 16, 9,  10, 11, 16,
                                10, 11, 12, 16, 11, 12, 13, 16};
@@ -1018,8 +998,7 @@ void deconv_direct_7x7(const uint8_t* src, const uint8_t* filter, int32_t* dst,
 
     uint8x16_t _k = vld1q_u8(k0 + 33);
     //! filter row 1
-    uint8x16_t _idx = {15, 14, 13, 12, 15, 14, 13, 12,
-                       15, 14, 13, 12, 15, 14, 13, 12};
+    uint8x16_t _idx = {15, 14, 13, 12, 15, 14, 13, 12, 15, 14, 13, 12, 15, 14, 13, 12};
     uint8x16_t _k123 = vqtbl1q_u8_common(_k, _idx);
     _idx = {11, 10, 9, 16, 11, 10, 9, 16, 11, 10, 9, 16, 11, 10, 9, 16};
     uint8x16_t _k456 = vqtbl1q_u8_common(_k, _idx);
@@ -1330,17 +1309,17 @@ size_t deconv::get_workspace_in_bytes_stride2_quint8_dot(
 
 bool deconv::can_stride2_quint8_dot(const NCBKernSizeParam& param) {
     auto&& fm = param.filter_meta;
-    auto FH = fm.spatial[0], FW = fm.spatial[1], OC = fm.ocpg,
-         PH = fm.padding[0], PW = fm.padding[1];
-    bool avaiable = fm.format == param::Convolution::Format::NCHW &&
-                    !fm.should_flip && fm.spatial_ndim == 2 &&
-                    fm.dilation[0] == 1 && fm.dilation[1] == 1 &&
-                    fm.stride[0] == 2 && fm.stride[1] == 2 && FH == FW &&
-                    (FH == 2 || FH == 3 || FH == 5 || FH == 7) &&
+    auto FH = fm.spatial[0], FW = fm.spatial[1], OC = fm.ocpg, PH = fm.padding[0],
+         PW = fm.padding[1];
+    bool avaiable = fm.format == param::Convolution::Format::NCHW && !fm.should_flip &&
+                    fm.spatial_ndim == 2 && fm.dilation[0] == 1 &&
+                    fm.dilation[1] == 1 && fm.stride[0] == 2 && fm.stride[1] == 2 &&
+                    FH == FW && (FH == 2 || FH == 3 || FH == 5 || FH == 7) &&
                     FH >= PH + 1 && FW >= PW + 1;
 
-    avaiable &= (param.filter_type.enumv() == DTypeEnum::Quantized8Asymm ||
-                 param.grad_type.enumv() == DTypeEnum::Int32);
+    avaiable &=
+            (param.filter_type.enumv() == DTypeEnum::Quantized8Asymm ||
+             param.grad_type.enumv() == DTypeEnum::Int32);
 
     /**
      * \note In the kernel, we use uint32_t to calc the value, in order
@@ -1352,8 +1331,8 @@ bool deconv::can_stride2_quint8_dot(const NCBKernSizeParam& param) {
      * be possible(7*7*OC*2^8*2^8 > SHIFT => OC > 334).
      */
     avaiable &= (7 * 7 * OC < (1 << (SHIFT_BITS - 8 - 8)));
-    return avaiable && ((FH == 2 && OC <= 4) ||
-                        ((FH == 3 || FH == 5 || FH == 7) && OC <= 8));
+    return avaiable &&
+           ((FH == 2 && OC <= 4) || ((FH == 3 || FH == 5 || FH == 7) && OC <= 8));
 }
 
 void deconv::stride2_quint8_dot(const NCBKernParam& param) {
@@ -1366,15 +1345,14 @@ void deconv::stride2_quint8_dot(const NCBKernParam& param) {
     int padding_h = FH - PH - 1, padding_w = FW - PW - 1;
     get_rectified_size(IH, IW, OH, OW, FH, FW, PH, PW, IH2, IW2, OW2);
 
-    uint8_t filter_zp =
-            param.filter_type.param<dtype::Quantized8Asymm>().zero_point;
+    uint8_t filter_zp = param.filter_type.param<dtype::Quantized8Asymm>().zero_point;
     uint8_t src_zp = param.diff_type.param<dtype::Quantized8Asymm>().zero_point;
     int32_t src_filter_zp = static_cast<int32_t>(filter_zp) *
                             static_cast<int32_t>(src_zp) * OC * FH * FH;
 
-    using Func = std::function<void(const uint8_t*, const uint8_t*, int32_t*,
-                                    size_t, size_t, size_t, size_t, size_t,
-                                    uint8_t, uint8_t, int32_t)>;
+    using Func = std::function<void(
+            const uint8_t*, const uint8_t*, int32_t*, size_t, size_t, size_t, size_t,
+            size_t, uint8_t, uint8_t, int32_t)>;
     Func deconv = nullptr, deconv_last_oc = nullptr;
 
     switch (FH) {
@@ -1400,11 +1378,10 @@ void deconv::stride2_quint8_dot(const NCBKernParam& param) {
     }
 
     bool need_dst_copy_var = need_dst_copy(param);
-    uint8_t* base_src_ptr = reinterpret_cast<uint8_t*>(
-            const_cast<dt_quint8*>(param.diff<dt_quint8>()));
+    uint8_t* base_src_ptr =
+            reinterpret_cast<uint8_t*>(const_cast<dt_quint8*>(param.diff<dt_quint8>()));
     int32_t* base_dst_ptr = reinterpret_cast<int32_t*>(param.grad<dt_qint32>());
-    const uint8_t* fptr =
-            reinterpret_cast<const uint8_t*>(param.filter<dt_quint8>());
+    const uint8_t* fptr = reinterpret_cast<const uint8_t*>(param.filter<dt_quint8>());
 
     for (size_t n = 0; n < N; ++n) {
         int32_t* dptr_copied = static_cast<int32_t*>(bundle.get(1));
@@ -1426,21 +1403,22 @@ void deconv::stride2_quint8_dot(const NCBKernParam& param) {
         rep(oc, OC) {
             // copy sptr_ori to sptr_copied
             std::memset(sptr_copied, src_zp, sizeof(uint8_t) * IH2 * IW2);
-            copy_plane_in_bytes(sptr_copied + padding_h * IW2 + padding_w / 2,
-                                sptr_ori + oc * IH * IW, IH,
-                                IW * sizeof(uint8_t), 2 * IW2 * sizeof(uint8_t),
-                                IW * sizeof(uint8_t));
+            copy_plane_in_bytes(
+                    sptr_copied + padding_h * IW2 + padding_w / 2,
+                    sptr_ori + oc * IH * IW, IH, IW * sizeof(uint8_t),
+                    2 * IW2 * sizeof(uint8_t), IW * sizeof(uint8_t));
             sptr = sptr_copied;
 
             int32_t* dst_ptr = dptr;
             const uint8_t* filter = fptr + oc * IC * FH * FW;
             for (size_t ic = 0; ic < IC; ic++) {
                 if (oc != OC - 1) {
-                    deconv(sptr, filter, dst_ptr, IH2, IW2, OH, OW_real, IC,
-                           src_zp, filter_zp, src_filter_zp);
+                    deconv(sptr, filter, dst_ptr, IH2, IW2, OH, OW_real, IC, src_zp,
+                           filter_zp, src_filter_zp);
                 } else {
-                    deconv_last_oc(sptr, filter, dst_ptr, IH2, IW2, OH, OW_real,
-                                   IC, src_zp, filter_zp, src_filter_zp);
+                    deconv_last_oc(
+                            sptr, filter, dst_ptr, IH2, IW2, OH, OW_real, IC, src_zp,
+                            filter_zp, src_filter_zp);
                 }
                 dst_ptr += OH * OW_real;
                 filter += FH * FH;
@@ -1448,10 +1426,10 @@ void deconv::stride2_quint8_dot(const NCBKernParam& param) {
         }
         if (need_dst_copy_var) {
             for (size_t ic = 0; ic < IC; ++ic) {
-                copy_plane_in_bytes(dptr_ori + ic * OH * OW,
-                                    dptr + ic * OH * OW2, OH,
-                                    OW * sizeof(int32_t), OW * sizeof(int32_t),
-                                    OW2 * sizeof(int32_t));
+                copy_plane_in_bytes(
+                        dptr_ori + ic * OH * OW, dptr + ic * OH * OW2, OH,
+                        OW * sizeof(int32_t), OW * sizeof(int32_t),
+                        OW2 * sizeof(int32_t));
             }
         }
     }

@@ -60,10 +60,10 @@
  */
 
 #pragma once
-#include "src/common/cv/filter.h"
-#include "src/arm_common/simd_macro/marm_neon.h"
 #include <cfloat>
 #include <cmath>
+#include "src/arm_common/simd_macro/marm_neon.h"
+#include "src/common/cv/filter.h"
 
 namespace megdnn {
 namespace megcv {
@@ -198,8 +198,7 @@ struct SymmColumnVec_32s8u {
 
     ~SymmColumnVec_32s8u() { free(kernel); }
 
-    int operator()(const uchar** _src, uchar* dst, int& count,
-                   int width) const {
+    int operator()(const uchar** _src, uchar* dst, int& count, int width) const {
         MEGDNN_MARK_USED_VAR(count);
         int _ksize = ksize;
         int ksize2 = _ksize / 2;
@@ -378,10 +377,9 @@ struct SymmRowSmallVec_32f {
                     x0 = vmlaq_f32(x0, x1, k0);
                     y0 = vmlaq_f32(y0, y1, k0);
 
-                    x2 = vaddq_f32(vld1q_f32(src + cn * 2),
-                                   vld1q_f32(src - cn * 2));
-                    y2 = vaddq_f32(vld1q_f32(src + cn * 2 + 4),
-                                   vld1q_f32(src - cn * 2 + 4));
+                    x2 = vaddq_f32(vld1q_f32(src + cn * 2), vld1q_f32(src - cn * 2));
+                    y2 = vaddq_f32(
+                            vld1q_f32(src + cn * 2 + 4), vld1q_f32(src - cn * 2 + 4));
                     x0 = vmlaq_f32(x0, x2, k2);
                     y0 = vmlaq_f32(y0, y2, k2);
 
@@ -551,8 +549,7 @@ struct SymmColumnSmallVec_32f {
         kernel = (float*)_kernel;
     }
 
-    int operator()(const uchar** _src, uchar* _dst, int& count,
-                   int width) const {
+    int operator()(const uchar** _src, uchar* _dst, int& count, int width) const {
         MEGDNN_MARK_USED_VAR(count);
         int ksize2 = (ksize) / 2;
         const float* ky = (float*)kernel + ksize2;
@@ -597,13 +594,13 @@ static BaseColumnFilter* getLinearColumnFilter(Mat<FT>& kernel, int bits) {
     uchar* kernel_str = static_cast<uchar*>(kernel.raw_ptr());
     if (SYMM && ksize == 3) {
         if (std::is_same<DT, uchar>::value && std::is_same<FT, int>::value)
-            return new SymmColumnSmallFilter<FixedPtCastEx<FT, DT>,
-                                             SymmColumnVec_32s8u>(
+            return new SymmColumnSmallFilter<
+                    FixedPtCastEx<FT, DT>, SymmColumnVec_32s8u>(
                     kernel, anchor, FixedPtCastEx<FT, DT>(bits),
                     SymmColumnVec_32s8u(kernel_str, ksize, bits));
         if (std::is_same<DT, float>::value && std::is_same<FT, float>::value)
-            return new SymmColumnSmallFilter<FixedPtCastEx<FT, DT>,
-                                             SymmColumnSmallVec_32f>(
+            return new SymmColumnSmallFilter<
+                    FixedPtCastEx<FT, DT>, SymmColumnSmallVec_32f>(
                     kernel, anchor, FixedPtCastEx<FT, DT>(0),
                     SymmColumnSmallVec_32f(kernel_str, ksize, 0));
     }
@@ -618,8 +615,7 @@ static BaseColumnFilter* getLinearColumnFilter(Mat<FT>& kernel, int bits) {
                 kernel, anchor, FixedPtCastEx<FT, DT>(),
                 ColumnVec_32f(kernel_str, ksize, 0));
 
-    MegCVException(
-            "Unsupported combination of source format and buffer format\n");
+    MegCVException("Unsupported combination of source format and buffer format\n");
 }
 
 /*!
@@ -644,19 +640,18 @@ static BaseRowFilter* getLinearRowFilter(Mat<FT>& kernel) {
     }
 
     if (std::is_same<ST, uchar>::value && std::is_same<FT, int>::value)
-        return new RowFilter<ST, FT, RowNoVec>(kernel, anchor,
-                                               RowNoVec(kernel_str, ksize));
+        return new RowFilter<ST, FT, RowNoVec>(
+                kernel, anchor, RowNoVec(kernel_str, ksize));
 
     if (std::is_same<ST, float>::value && std::is_same<FT, float>::value)
-        return new RowFilter<ST, FT, RowVec_32f>(kernel, anchor,
-                                                 RowVec_32f(kernel_str, ksize));
+        return new RowFilter<ST, FT, RowVec_32f>(
+                kernel, anchor, RowVec_32f(kernel_str, ksize));
 
-    MegCVException(
-            "Unsupported combination of source format and buffer format\n");
+    MegCVException("Unsupported combination of source format and buffer format\n");
 }
 
 }  // namespace sep_filter
-}  // namespace x86
+}  // namespace megcv
 }  // namespace megdnn
 
 // vim: syntax=cpp.doxygen

@@ -19,9 +19,7 @@ namespace arm_common {
 
 class MatrixMulImpl::AlgoInt8x8x16 final : public AlgoBase {
 public:
-    AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE;
-    }
+    AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }
     const char* name() const override { return "ARM_COMMON_INT8X8X16"; }
     bool usable(const KernSizeParam&) const override;
     size_t get_workspace(const KernSizeParam&) const override;
@@ -34,8 +32,7 @@ public:
 class MatrixMulImpl::AlgoInt8x8x32Gemv : public AlgoBase {
 public:
     AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE |
-               AlgoAttribute::USABLE_DEPEND_ON_SHAPE;
+        return AlgoAttribute::REPRODUCIBLE | AlgoAttribute::USABLE_DEPEND_ON_SHAPE;
     }
     const char* name() const override { return "ARM_COMMON_INT8X8X32_GEMV"; }
     bool usable(const KernSizeParam&) const override;
@@ -51,8 +48,7 @@ public:
 class MatrixMulImpl::AlgoInt8x8x32GemvMK4 : public AlgoBase {
 public:
     AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE |
-               AlgoAttribute::USABLE_DEPEND_ON_SHAPE;
+        return AlgoAttribute::REPRODUCIBLE | AlgoAttribute::USABLE_DEPEND_ON_SHAPE;
     }
     const char* name() const override { return "ARM_COMMON_INT8X8X32_GEMV_MK4"; }
     bool usable(const KernSizeParam&) const override;
@@ -69,8 +65,7 @@ public:
 class MatrixMulImpl::AlgoInt8x8x32GemvMK4Dot : public AlgoBase {
 public:
     AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE |
-               AlgoAttribute::USABLE_DEPEND_ON_SHAPE;
+        return AlgoAttribute::REPRODUCIBLE | AlgoAttribute::USABLE_DEPEND_ON_SHAPE;
     }
     const char* name() const override { return "ARM_COMMON_INT8X8X32_GEMV_MK4_DOT"; }
     bool usable(const KernSizeParam&) const override;
@@ -89,9 +84,7 @@ protected:
     ~AlgoF32Gemv() = default;
 
 public:
-    AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE;
-    }
+    AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }
     const char* name() const override { return "ARM_COMMON_F32_GEMV"; }
     bool usable(const KernSizeParam&) const override;
     bool preferred(const KernSizeParam&) const override;
@@ -105,8 +98,7 @@ public:
 class MatrixMulImpl::AlgoF32GemvMK4 : public AlgoBase {
 public:
     AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE |
-               AlgoAttribute::USABLE_DEPEND_ON_SHAPE;
+        return AlgoAttribute::REPRODUCIBLE | AlgoAttribute::USABLE_DEPEND_ON_SHAPE;
     }
     const char* name() const override { return "ARM_COMMON_F32_GEMV_MK4"; }
     bool usable(const KernSizeParam&) const override;
@@ -122,9 +114,7 @@ public:
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
 class MatrixMulImpl::AlgoF16Gemv : public AlgoBase {
 public:
-    AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE;
-    }
+    AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }
     const char* name() const override { return "ARM_COMMON_F16_GEMV"; }
     bool usable(const KernSizeParam&) const override;
     bool preferred(const KernSizeParam&) const override;
@@ -139,9 +129,7 @@ public:
 
 class MatrixMulImpl::AlgoGevm : public AlgoBase {
 public:
-    AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE;
-    }
+    AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }
     const char* name() const override { return "ARM_COMMON_GEVM"; }
     bool usable(const KernSizeParam&) const override;
     bool preferred(const KernSizeParam&) const override;

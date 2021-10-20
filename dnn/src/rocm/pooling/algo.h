@@ -15,9 +15,9 @@
 #include <unordered_map>
 #include "src/common/algo_base.h"
 #include "src/common/metahelper.h"
+#include "src/rocm/handle.h"
 #include "src/rocm/miopen_wrapper.h"
 #include "src/rocm/pooling/opr_impl.h"
-#include "src/rocm/handle.h"
 
 namespace megdnn {
 namespace rocm {
@@ -39,15 +39,17 @@ public:
             dst_desc.set(*layout_dst, opr->param().format);
         }
 
-        SizeArgs(PoolingForwardImpl* opr, const TensorLayout& src,
-                 const TensorLayout& dst);
+        SizeArgs(
+                PoolingForwardImpl* opr, const TensorLayout& src,
+                const TensorLayout& dst);
     };
     struct ExecArgs : public SizeArgs {
         const TensorND *src_tensor, *dst_tensor;
         Workspace workspace;
 
-        ExecArgs(PoolingForwardImpl* opr, _megdnn_tensor_in src,
-                 _megdnn_tensor_out dst, _megdnn_workspace workspace);
+        ExecArgs(
+                PoolingForwardImpl* opr, _megdnn_tensor_in src, _megdnn_tensor_out dst,
+                _megdnn_workspace workspace);
     };
 
     virtual bool is_available(const SizeArgs& args) const = 0;
@@ -116,24 +118,27 @@ public:
         const TensorLayout *layout_src, *layout_dst, *layout_diff, *layout_grad;
 
         std::string to_string() const;
-        void init_desc(TensorDesc& src_desc, TensorDesc& dst_desc,
-                       TensorDesc& diff_desc, TensorDesc& grad_desc) const {
+        void init_desc(
+                TensorDesc& src_desc, TensorDesc& dst_desc, TensorDesc& diff_desc,
+                TensorDesc& grad_desc) const {
             src_desc.set(*layout_src);
             dst_desc.set(*layout_dst);
             diff_desc.set(*layout_diff);
             grad_desc.set(*layout_grad);
         }
-        SizeArgs(PoolingBackwardImpl* opr, const TensorLayout& src,
-                 const TensorLayout& dst, const TensorLayout& diff,
-                 const TensorLayout& grad);
+        SizeArgs(
+                PoolingBackwardImpl* opr, const TensorLayout& src,
+                const TensorLayout& dst, const TensorLayout& diff,
+                const TensorLayout& grad);
     };
     struct ExecArgs : public SizeArgs {
         const TensorND *src_tensor, *dst_tensor, *diff_tensor, *grad_tensor;
         Workspace workspace;
 
-        ExecArgs(PoolingBackwardImpl* opr, _megdnn_tensor_in src,
-                 _megdnn_tensor_in dst, _megdnn_tensor_in diff,
-                 _megdnn_tensor_out grad, _megdnn_workspace workspace);
+        ExecArgs(
+                PoolingBackwardImpl* opr, _megdnn_tensor_in src, _megdnn_tensor_in dst,
+                _megdnn_tensor_in diff, _megdnn_tensor_out grad,
+                _megdnn_workspace workspace);
     };
 
     virtual bool is_available(const SizeArgs& args) const = 0;
@@ -166,9 +171,7 @@ public:
     void exec(const ExecArgs& args) const override;
 
     const char* name() const override { return m_algo_name.c_str(); }
-    AlgoAttribute attribute() const override {
-        return m_algo_attribute;
-    }
+    AlgoAttribute attribute() const override { return m_algo_attribute; }
 
     MEGDNN_DECL_ALGO_TYPE(ROCM_MIOPEN)
 

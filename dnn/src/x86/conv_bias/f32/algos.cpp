@@ -42,9 +42,9 @@ bool need_src_copy(const fallback::ConvBiasImpl::NCBKernSizeParam& param) {
     return need_dst_copy(param);
 }
 
-void get_rectified_size(size_t IH, size_t IW, size_t OH, size_t OW, size_t FH,
-                        size_t FW, size_t PH, size_t PW, size_t& IH2,
-                        size_t& IW2, size_t& OH2, size_t& OW2) {
+void get_rectified_size(
+        size_t IH, size_t IW, size_t OH, size_t OW, size_t FH, size_t FW, size_t PH,
+        size_t PW, size_t& IH2, size_t& IW2, size_t& OH2, size_t& OW2) {
     MEGDNN_MARK_USED_VAR(PH);
     MEGDNN_MARK_USED_VAR(PW);
     OH2 = (OH + 7) & ~7;
@@ -58,61 +58,62 @@ void get_rectified_size(size_t IH, size_t IW, size_t OH, size_t OW, size_t FH,
 }
 }  // namespace
 
-#define GET_KERN                                                               \
-    auto fm = param.filter_meta;                                               \
-    size_t N = param.n;                                                        \
-    size_t IC = param.filter_meta.icpg;                                        \
-    size_t OC = param.filter_meta.ocpg;                                        \
-    size_t group = fm.group;                                                   \
-    bool large_group = group >= param.nr_threads;                              \
-    WorkspaceBundle bundle = get_bundle(param);                                \
-    SmallVector<NCBKern> ret_kerns;                                            \
-    if (large_group) {                                                         \
-        auto exec_one_group = [bundle](                                        \
-                                      const NCBKernParam& kern_param,          \
-                                      const NCBKernIndex& ncb_index) mutable { \
-            bundle.set(kern_param.workspace_ptr);                              \
-            auto fm = kern_param.filter_meta;                                  \
-            size_t IC = fm.icpg;                                               \
-            size_t OC = fm.ocpg;                                               \
-            for (size_t ic = 0; ic < IC; ic++) {                               \
-                copy_padding_kern(bundle, kern_param, ncb_index,               \
-                                  {ncb_index.thread_id, 0, ic});               \
-            }                                                                  \
-            for (size_t oc = 0; oc < OC; oc++) {                               \
-                do_conv_kern(bundle, kern_param, ncb_index,                    \
-                             {ncb_index.thread_id, 0, oc});                    \
-            }                                                                  \
-        };                                                                     \
-        ret_kerns.push_back({exec_one_group, {group, N, 1_z}});                \
-    } else {                                                                   \
-        auto copy_padding = [bundle](const NCBKernParam& kern_param,           \
-                                     const NCBKernIndex& ncb_index) mutable {  \
-            bundle.set(kern_param.workspace_ptr);                              \
-            copy_padding_kern(bundle, kern_param, ncb_index,                   \
-                              ncb_index.ndrange_id);                           \
-        };                                                                     \
-        ret_kerns.push_back({copy_padding, {group, N, IC}});                   \
-        auto do_conv = [bundle](const NCBKernParam& kern_param,                \
-                                const NCBKernIndex& ncb_index) mutable {       \
-            bundle.set(kern_param.workspace_ptr);                              \
-            do_conv_kern(bundle, kern_param, ncb_index, ncb_index.ndrange_id); \
-        };                                                                     \
-        ret_kerns.push_back({do_conv, {group, N, OC}});                        \
-    }                                                                          \
+#define GET_KERN                                                                      \
+    auto fm = param.filter_meta;                                                      \
+    size_t N = param.n;                                                               \
+    size_t IC = param.filter_meta.icpg;                                               \
+    size_t OC = param.filter_meta.ocpg;                                               \
+    size_t group = fm.group;                                                          \
+    bool large_group = group >= param.nr_threads;                                     \
+    WorkspaceBundle bundle = get_bundle(param);                                       \
+    SmallVector<NCBKern> ret_kerns;                                                   \
+    if (large_group) {                                                                \
+        auto exec_one_group = [bundle](                                               \
+                                      const NCBKernParam& kern_param,                 \
+                                      const NCBKernIndex& ncb_index) mutable {        \
+            bundle.set(kern_param.workspace_ptr);                                     \
+            auto fm = kern_param.filter_meta;                                         \
+            size_t IC = fm.icpg;                                                      \
+            size_t OC = fm.ocpg;                                                      \
+            for (size_t ic = 0; ic < IC; ic++) {                                      \
+                copy_padding_kern(                                                    \
+                        bundle, kern_param, ncb_index, {ncb_index.thread_id, 0, ic}); \
+            }                                                                         \
+            for (size_t oc = 0; oc < OC; oc++) {                                      \
+                do_conv_kern(                                                         \
+                        bundle, kern_param, ncb_index, {ncb_index.thread_id, 0, oc}); \
+            }                                                                         \
+        };                                                                            \
+        ret_kerns.push_back({exec_one_group, {group, N, 1_z}});                       \
+    } else {                                                                          \
+        auto copy_padding = [bundle](                                                 \
+                                    const NCBKernParam& kern_param,                   \
+                                    const NCBKernIndex& ncb_index) mutable {          \
+            bundle.set(kern_param.workspace_ptr);                                     \
+            copy_padding_kern(bundle, kern_param, ncb_index, ncb_index.ndrange_id);   \
+        };                                                                            \
+        ret_kerns.push_back({copy_padding, {group, N, IC}});                          \
+        auto do_conv = [bundle](                                                      \
+                               const NCBKernParam& kern_param,                        \
+                               const NCBKernIndex& ncb_index) mutable {               \
+            bundle.set(kern_param.workspace_ptr);                                     \
+            do_conv_kern(bundle, kern_param, ncb_index, ncb_index.ndrange_id);        \
+        };                                                                            \
+        ret_kerns.push_back({do_conv, {group, N, OC}});                               \
+    }                                                                                 \
     return ret_kerns;
 
 /* ===================== direct algo ===================== */
 
-bool ConvBiasImpl::AlgoDirect::usable(const NCBKernSizeParam& param,
-                                      AlgoSelectionStrategy) const {
+bool ConvBiasImpl::AlgoDirect::usable(
+        const NCBKernSizeParam& param, AlgoSelectionStrategy) const {
     auto&& fm = param.filter_meta;
     return fm.format == Param::Format::NCHW && fm.spatial_ndim == 2 &&
            param.src_type.enumv() == DTypeEnum::Float32 &&
            param.filter_type.enumv() == DTypeEnum::Float32 &&
-           param.dst_type.enumv() == DTypeEnum::Float32 &&
-           fm.dilation[0] == 1 && fm.dilation[1] == 1 && fm.spatial[0] <= 7 &&
-           fm.stride[0] == 1 && fm.stride[1] == 1;
+           param.dst_type.enumv() == DTypeEnum::Float32 && fm.dilation[0] == 1 &&
+           fm.dilation[1] == 1 && fm.spatial[0] <= 7 && fm.stride[0] == 1 &&
+           fm.stride[1] == 1;
 }
 WorkspaceBundle ConvBiasImpl::AlgoDirect::get_bundle(
         const NCBKernSizeParam& param) const {
@@ -123,8 +124,8 @@ WorkspaceBundle ConvBiasImpl::AlgoDirect::get_bundle(
     auto FH = fm.spatial[0], FW = fm.spatial[1];
     auto OH = param.osz[0], OW = param.osz[1];
     size_t OH2, OW2, IH2, IW2;
-    get_rectified_img_size(IH, IW, FH, FW, OH, OW, fm.padding[0], fm.padding[1],
-                           IH2, IW2, OH2, OW2);
+    get_rectified_img_size(
+            IH, IW, FH, FW, OH, OW, fm.padding[0], fm.padding[1], IH2, IW2, OH2, OW2);
     size_t part0 = 0u, part1 = 0u;
     bool large_group = group >= param.nr_threads;
     if (IH != IH2 || IW != IW2) {
@@ -136,17 +137,14 @@ WorkspaceBundle ConvBiasImpl::AlgoDirect::get_bundle(
     }
     return {nullptr, {part0, part1}};
 }
-size_t ConvBiasImpl::AlgoDirect::get_workspace(
-        const NCBKernSizeParam& param) const {
+size_t ConvBiasImpl::AlgoDirect::get_workspace(const NCBKernSizeParam& param) const {
     return get_bundle(param).total_size_in_bytes();
 }
 
 //! Process one input channel copy padding
 void ConvBiasImpl::AlgoDirect::copy_padding_kern(
-        const WorkspaceBundle& bundle,
-        const ConvBiasImpl::NCBKernParam& kern_param,
-        const ConvBiasImpl::NCBKernIndex& ncb_index,
-        const CpuNDRange& workspace_ids) {
+        const WorkspaceBundle& bundle, const ConvBiasImpl::NCBKernParam& kern_param,
+        const ConvBiasImpl::NCBKernIndex& ncb_index, const CpuNDRange& workspace_ids) {
     size_t IH = kern_param.isz[0];
     size_t IW = kern_param.isz[1];
     size_t IC = kern_param.filter_meta.icpg;
@@ -164,13 +162,12 @@ void ConvBiasImpl::AlgoDirect::copy_padding_kern(
     size_t batch_id = ncb_index.ndrange_id[1];
     size_t group_id = ncb_index.ndrange_id[0];
     size_t channel_id = workspace_ids[2];
-    const float* sptr = static_cast<const float*>(
-                                kern_param.src<float>(batch_id, group_id)) +
-                        channel_id * IH * IW;
+    const float* sptr =
+            static_cast<const float*>(kern_param.src<float>(batch_id, group_id)) +
+            channel_id * IH * IW;
 
     //! Used for get the workspace offset
-    size_t workspace_group_id = workspace_ids[0],
-           workspace_batch_id = workspace_ids[1],
+    size_t workspace_group_id = workspace_ids[0], workspace_batch_id = workspace_ids[1],
            workspace_channel_id = workspace_ids[2];
     //! If large group, each thread has its own worspace, set group_id with
     //! thread_id
@@ -182,8 +179,9 @@ void ConvBiasImpl::AlgoDirect::copy_padding_kern(
                            workspace_channel_id * IH2 * IW2;
         std::memset(sptr_base, 0, sizeof(float) * IH2 * IW2);
         rep(ih, IH) {
-            std::memcpy(sptr_base + (ih + PH) * IW2 + PW, sptr + ih * IW,
-                        sizeof(float) * IW);
+            std::memcpy(
+                    sptr_base + (ih + PH) * IW2 + PW, sptr + ih * IW,
+                    sizeof(float) * IW);
         }
     }
 };
@@ -236,10 +234,9 @@ void ConvBiasImpl::AlgoDirect::copy_padding_kern(
     func = detail::convolution_##mode##_fh##fsize##_##simd;
 
 //! compute one output channel
-void ConvBiasImpl::AlgoDirect::do_conv_kern(const WorkspaceBundle& bundle,
-                                            const NCBKernParam& kern_param,
-                                            const NCBKernIndex& ncb_index,
-                                            const CpuNDRange& workspace_ids) {
+void ConvBiasImpl::AlgoDirect::do_conv_kern(
+        const WorkspaceBundle& bundle, const NCBKernParam& kern_param,
+        const NCBKernIndex& ncb_index, const CpuNDRange& workspace_ids) {
     size_t OH = kern_param.osz[0];
     size_t OW = kern_param.osz[1];
     size_t IH = kern_param.isz[0];
@@ -257,26 +254,24 @@ void ConvBiasImpl::AlgoDirect::do_conv_kern(const WorkspaceBundle& bundle,
     bool rectify_dst = (OH != OH2 || OW != OW2);
     size_t padding_group_size = IH2 * IW2 * IC;
     //! Choose the compute kernel
-    std::function<void(const float*, const float*, float*, size_t, size_t,
-                       size_t, size_t, size_t)>
+    std::function<void(
+            const float*, const float*, float*, size_t, size_t, size_t, size_t, size_t)>
             func = nullptr;
     DISPATCH;
 
     size_t bias_offset = 0;
     if (kern_param.bias_mode == megdnn::BiasMode::BIAS) {
         bias_offset = OH * OW;
-    } else if (kern_param.bias_mode ==
-               megdnn::BiasMode::BROADCAST_CHANNEL_BIAS) {
+    } else if (kern_param.bias_mode == megdnn::BiasMode::BROADCAST_CHANNEL_BIAS) {
         bias_offset = 1_z;
     }
     size_t group_id = ncb_index.ndrange_id[0];
     size_t batch_id = ncb_index.ndrange_id[1];
     //! Used for get the workspace offset
-    size_t workspace_group_id = workspace_ids[0],
-           workspace_batch_id = workspace_ids[1], oc = workspace_ids[2];
+    size_t workspace_group_id = workspace_ids[0], workspace_batch_id = workspace_ids[1],
+           oc = workspace_ids[2];
     const float* sptr = kern_param.src<float>(batch_id, group_id);
-    const float* filter =
-            kern_param.filter<float>(group_id) + oc * FH * FW * IC;
+    const float* filter = kern_param.filter<float>(group_id) + oc * FH * FW * IC;
     const float* bias_ptr =
             kern_param.bias<float>(batch_id, group_id) + oc * bias_offset;
     float* dst = kern_param.dst<float>(batch_id, group_id) + oc * OH * OW;
@@ -287,25 +282,22 @@ void ConvBiasImpl::AlgoDirect::do_conv_kern(const WorkspaceBundle& bundle,
     }
     float* dptr = nullptr;
     if (rectify_dst) {
-        dptr = static_cast<float*>(bundle.get(1)) +
-               ncb_index.thread_id * OH2 * OW2;
+        dptr = static_cast<float*>(bundle.get(1)) + ncb_index.thread_id * OH2 * OW2;
     } else {
         dptr = dst;
     }
     std::memset(dptr, 0, sizeof(float) * OH2 * OW2);
     rep(ic, IC) {
-        func(sptr + ic * IH2 * IW2, filter + ic * FH * FW, dptr, IH2, IW2, OH2,
-             OW2, FW);
+        func(sptr + ic * IH2 * IW2, filter + ic * FH * FW, dptr, IH2, IW2, OH2, OW2,
+             FW);
     }
     if (rectify_dst) {
-        rep(oh, OH) {
-            std::memcpy(dst + oh * OW, dptr + oh * OW2, sizeof(float) * OW);
-        }
+        rep(oh, OH) { std::memcpy(dst + oh * OW, dptr + oh * OW2, sizeof(float) * OW); }
     }
-    PostProcess<dt_float32>::run(dst, const_cast<float*>(bias_ptr), dst,
-                                 kern_param.bias_mode, kern_param.nonlineMode,
-                                 kern_param.bias_type, kern_param.dst_type, 1_z,
-                                 1_z, OH, OW);
+    PostProcess<dt_float32>::run(
+            dst, const_cast<float*>(bias_ptr), dst, kern_param.bias_mode,
+            kern_param.nonlineMode, kern_param.bias_type, kern_param.dst_type, 1_z, 1_z,
+            OH, OW);
 }
 
 SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoDirect::get_kimpls(
@@ -313,8 +305,8 @@ SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoDirect::get_kimpls(
     GET_KERN;
 }
 /* ===================== direct-stride2 algo ===================== */
-bool ConvBiasImpl::AlgoDirectStride2::usable(const NCBKernSizeParam& param,
-                                             AlgoSelectionStrategy) const {
+bool ConvBiasImpl::AlgoDirectStride2::usable(
+        const NCBKernSizeParam& param, AlgoSelectionStrategy) const {
     auto&& fm = param.filter_meta;
     auto FH = fm.spatial[0];
     return param.filter_meta.format == param::ConvBias::Format::NCHW &&
@@ -339,7 +331,7 @@ WorkspaceBundle ConvBiasImpl::AlgoDirectStride2::get_bundle(
     size_t src_size = 0, dst_size = 0;
     size_t IH2, IW2, OH2, OW2;
     get_rectified_size(IH, IW, OH, OW, FH, FW, PH, PW, IH2, IW2, OH2, OW2);
-    bool large_group = group >= param.nr_threads;                              \
+    bool large_group = group >= param.nr_threads;
     if (need_src_copy(param)) {
         src_size = large_group ? IC * IH2 * IW2 * sizeof(float) * nr_threads
                                : IC * IH2 * IW2 * sizeof(float) * group * batch;
@@ -357,10 +349,8 @@ size_t ConvBiasImpl::AlgoDirectStride2::get_workspace(
 }
 //! Process one input channel copy padding
 void ConvBiasImpl::AlgoDirectStride2::copy_padding_kern(
-        const WorkspaceBundle& bundle,
-        const ConvBiasImpl::NCBKernParam& kern_param,
-        const ConvBiasImpl::NCBKernIndex& ncb_index,
-        const CpuNDRange& workspace_ids) {
+        const WorkspaceBundle& bundle, const ConvBiasImpl::NCBKernParam& kern_param,
+        const ConvBiasImpl::NCBKernIndex& ncb_index, const CpuNDRange& workspace_ids) {
     size_t IH = kern_param.isz[0];
     size_t IW = kern_param.isz[1];
     size_t IC = kern_param.filter_meta.icpg;
@@ -378,12 +368,11 @@ void ConvBiasImpl::AlgoDirectStride2::copy_padding_kern(
     size_t group_id = ncb_index.ndrange_id[0];
     size_t batch_id = ncb_index.ndrange_id[1];
     size_t channel_id = workspace_ids[2];
-    const float* sptr = static_cast<const float*>(
-                                kern_param.src<float>(batch_id, group_id)) +
-                        channel_id * IH * IW;
+    const float* sptr =
+            static_cast<const float*>(kern_param.src<float>(batch_id, group_id)) +
+            channel_id * IH * IW;
     //! Used for get the workspace offset
-    size_t workspace_group_id = workspace_ids[0],
-           workspace_batch_id = workspace_ids[1],
+    size_t workspace_group_id = workspace_ids[0], workspace_batch_id = workspace_ids[1],
            workspace_channel_id = workspace_ids[2];
     if (rectify_src) {
         //! copy to sptr_base to eliminate padding effect
@@ -393,8 +382,9 @@ void ConvBiasImpl::AlgoDirectStride2::copy_padding_kern(
                            workspace_channel_id * IH2 * IW2;
         std::memset(sptr_base, 0, sizeof(float) * IH2 * IW2);
         rep(ih, IH) {
-            std::memcpy(sptr_base + (ih + PH) * IW2 + PW, sptr + ih * IW,
-                        sizeof(float) * IW);
+            std::memcpy(
+                    sptr_base + (ih + PH) * IW2 + PW, sptr + ih * IW,
+                    sizeof(float) * IW);
         }
     }
 };
@@ -419,8 +409,9 @@ void ConvBiasImpl::AlgoDirectStride2::do_conv_kern(
     bool rectify_dst = need_dst_copy(kern_param);
     size_t padding_group_size = IH2 * IW2 * IC;
     //! Choose the compute kernel
-    using Func = std::function<void(const float*, const float*, float*, size_t,
-                                    size_t, size_t, size_t, size_t, size_t)>;
+    using Func = std::function<void(
+            const float*, const float*, float*, size_t, size_t, size_t, size_t, size_t,
+            size_t)>;
     Func func_no_add_dst = nullptr, func_add_dst = nullptr;
     if (FH == 2) {
         func_no_add_dst = conv_general_simd::do_conv_2x2_stride2<false>;
@@ -439,18 +430,16 @@ void ConvBiasImpl::AlgoDirectStride2::do_conv_kern(
     size_t bias_offset = 0;
     if (kern_param.bias_mode == megdnn::BiasMode::BIAS) {
         bias_offset = OH * OW;
-    } else if (kern_param.bias_mode ==
-               megdnn::BiasMode::BROADCAST_CHANNEL_BIAS) {
+    } else if (kern_param.bias_mode == megdnn::BiasMode::BROADCAST_CHANNEL_BIAS) {
         bias_offset = 1_z;
     }
     size_t group_id = ncb_index.ndrange_id[0];
     size_t batch_id = ncb_index.ndrange_id[1];
     //! Used for get the workspace offset
-    size_t workspace_group_id = workspace_ids[0],
-           workspace_batch_id = workspace_ids[1], oc = workspace_ids[2];
+    size_t workspace_group_id = workspace_ids[0], workspace_batch_id = workspace_ids[1],
+           oc = workspace_ids[2];
     const float* sptr = kern_param.src<float>(batch_id, group_id);
-    const float* filter =
-            kern_param.filter<float>(group_id) + oc * FH * FW * IC;
+    const float* filter = kern_param.filter<float>(group_id) + oc * FH * FW * IC;
     const float* bias_ptr =
             kern_param.bias<float>(batch_id, group_id) + oc * bias_offset;
     float* dst = kern_param.dst<float>(batch_id, group_id) + oc * OH * OW;
@@ -461,25 +450,23 @@ void ConvBiasImpl::AlgoDirectStride2::do_conv_kern(
     }
     float* dptr = nullptr;
     if (rectify_dst) {
-        dptr = static_cast<float*>(bundle.get(1)) +
-               ncb_index.thread_id * OH2 * OW2;
+        dptr = static_cast<float*>(bundle.get(1)) + ncb_index.thread_id * OH2 * OW2;
     } else {
         dptr = dst;
     }
     func_no_add_dst(sptr, filter, dptr, IH2, IW2, OH2, OW2, 0, 0);
     for (size_t ic = 1; ic < IC; ++ic) {
-        func_add_dst(sptr + ic * IH2 * IW2, filter + ic * FH * FW, dptr, IH2,
-                     IW2, OH2, OW2, 0, 0);
+        func_add_dst(
+                sptr + ic * IH2 * IW2, filter + ic * FH * FW, dptr, IH2, IW2, OH2, OW2,
+                0, 0);
     }
     if (rectify_dst) {
-        rep(oh, OH) {
-            std::memcpy(dst + oh * OW, dptr + oh * OW2, sizeof(float) * OW);
-        }
+        rep(oh, OH) { std::memcpy(dst + oh * OW, dptr + oh * OW2, sizeof(float) * OW); }
     }
-    PostProcess<dt_float32>::run(dst, const_cast<float*>(bias_ptr), dst,
-                                 kern_param.bias_mode, kern_param.nonlineMode,
-                                 kern_param.bias_type, kern_param.dst_type, 1_z,
-                                 1_z, OH, OW);
+    PostProcess<dt_float32>::run(
+            dst, const_cast<float*>(bias_ptr), dst, kern_param.bias_mode,
+            kern_param.nonlineMode, kern_param.bias_type, kern_param.dst_type, 1_z, 1_z,
+            OH, OW);
 }
 
 SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoDirectStride2::get_kimpls(
@@ -490,12 +477,11 @@ SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoDirectStride2::get_kimpls(
 #if MEGDNN_X86_WITH_MKL_DNN
 static inline void mkldnn_fp32_conv_instance(
         const ConvBiasImpl::NCBKernParam& param, const uint32_t ocpg,
-        const uint32_t icpg, const uint32_t group, const uint32_t in,
-        const uint32_t ic, const uint32_t oc, const uint32_t ih,
-        const uint32_t iw, const uint32_t kh, const uint32_t kw,
-        const uint32_t pad_h, const uint32_t pad_w, const uint32_t stride_h,
-        const uint32_t stride_w, const uint32_t oh, const uint32_t ow,
-        std::vector<dnnl::primitive>& net,
+        const uint32_t icpg, const uint32_t group, const uint32_t in, const uint32_t ic,
+        const uint32_t oc, const uint32_t ih, const uint32_t iw, const uint32_t kh,
+        const uint32_t kw, const uint32_t pad_h, const uint32_t pad_w,
+        const uint32_t stride_h, const uint32_t stride_w, const uint32_t oh,
+        const uint32_t ow, std::vector<dnnl::primitive>& net,
         std::vector<std::unordered_map<int, dnnl::memory>>& net_args,
         dnnl::engine& eng_mkldnn) {
     dnnl::memory::dims src_shape = {in, ic, ih, iw};
@@ -505,16 +491,16 @@ static inline void mkldnn_fp32_conv_instance(
     dnnl::memory::dims strides_shape = {stride_h, stride_w};
     dnnl::memory::dims padding_shape = {pad_h, pad_w};
 
-    auto user_src_desc =
-            dnnl::memory::desc({src_shape}, dnnl::memory::data_type::f32,
-                               dnnl::memory::format_tag::nChw8c);
+    auto user_src_desc = dnnl::memory::desc(
+            {src_shape}, dnnl::memory::data_type::f32,
+            dnnl::memory::format_tag::nChw8c);
     if (group == 1 && ic < 8) {
-        user_src_desc =
-                dnnl::memory::desc({src_shape}, dnnl::memory::data_type::f32,
-                                   dnnl::memory::format_tag::nchw);
+        user_src_desc = dnnl::memory::desc(
+                {src_shape}, dnnl::memory::data_type::f32,
+                dnnl::memory::format_tag::nchw);
     }
-    auto user_src_mem = dnnl::memory(user_src_desc, eng_mkldnn,
-                                     const_cast<void*>(param.src_ptr));
+    auto user_src_mem =
+            dnnl::memory(user_src_desc, eng_mkldnn, const_cast<void*>(param.src_ptr));
 
     auto weight_tag = dnnl::memory::format_tag::OIhw8i8o;
     if (group > 1) {
@@ -531,27 +517,26 @@ static inline void mkldnn_fp32_conv_instance(
     auto user_weights_desc = dnnl::memory::desc(
             {weight_shape}, dnnl::memory::data_type::f32, weight_tag);
 
-    auto user_weights_mem = dnnl::memory(user_weights_desc, eng_mkldnn,
-                                         const_cast<void*>(param.filter_ptr));
+    auto user_weights_mem = dnnl::memory(
+            user_weights_desc, eng_mkldnn, const_cast<void*>(param.filter_ptr));
     auto user_bias_desc = dnnl::memory::desc();
     if (param.bias_mode == megdnn::BiasMode::BROADCAST_CHANNEL_BIAS) {
-        user_bias_desc =
-                dnnl::memory::desc({bias_shape}, dnnl::memory::data_type::f32,
-                                   dnnl::memory::format_tag::x);
+        user_bias_desc = dnnl::memory::desc(
+                {bias_shape}, dnnl::memory::data_type::f32,
+                dnnl::memory::format_tag::x);
     }
-    auto user_bias_mem = dnnl::memory(user_bias_desc, eng_mkldnn,
-                                      const_cast<void*>(param.bias_ptr));
-    auto user_dst_desc =
-            dnnl::memory::desc({dst_shape}, dnnl::memory::data_type::f32,
-                               dnnl::memory::format_tag::nChw8c);
-    auto user_dst_mem = dnnl::memory(user_dst_desc, eng_mkldnn,
-                                     const_cast<void*>(param.dst_ptr));
+    auto user_bias_mem =
+            dnnl::memory(user_bias_desc, eng_mkldnn, const_cast<void*>(param.bias_ptr));
+    auto user_dst_desc = dnnl::memory::desc(
+            {dst_shape}, dnnl::memory::data_type::f32,
+            dnnl::memory::format_tag::nChw8c);
+    auto user_dst_mem =
+            dnnl::memory(user_dst_desc, eng_mkldnn, const_cast<void*>(param.dst_ptr));
     auto conv_desc = dnnl::convolution_forward::desc(
-            dnnl::prop_kind::forward_inference,
-            dnnl::algorithm::convolution_auto, user_src_mem.get_desc(),
-            user_weights_mem.get_desc(), user_bias_mem.get_desc(),
-            user_dst_mem.get_desc(), strides_shape, padding_shape,
-            padding_shape);
+            dnnl::prop_kind::forward_inference, dnnl::algorithm::convolution_auto,
+            user_src_mem.get_desc(), user_weights_mem.get_desc(),
+            user_bias_mem.get_desc(), user_dst_mem.get_desc(), strides_shape,
+            padding_shape, padding_shape);
 
     dnnl::primitive_attr attr;
     if ((param.nonlineMode == NonlineMode::RELU ||
@@ -567,28 +552,31 @@ static inline void mkldnn_fp32_conv_instance(
                 post_tag = dnnl::algorithm::eltwise_logistic;
                 break;
             default:
-                megdnn_assert(0, "not supported nonline mode %d\n",
-                              static_cast<int>(param.nonlineMode));
+                megdnn_assert(
+                        0, "not supported nonline mode %d\n",
+                        static_cast<int>(param.nonlineMode));
         }
         dnnl::post_ops ops;
         ops.append_eltwise(1.f, post_tag, 0.f, 0.f);
         attr.set_post_ops(ops);
     }
 
-    auto conv_prim_desc = dnnl::convolution_forward::primitive_desc(
-            conv_desc, attr, eng_mkldnn);
+    auto conv_prim_desc =
+            dnnl::convolution_forward::primitive_desc(conv_desc, attr, eng_mkldnn);
 
     net.push_back(dnnl::convolution_forward(conv_prim_desc));
-    net_args.push_back({{DNNL_ARG_SRC, user_src_mem},
-                        {DNNL_ARG_WEIGHTS, user_weights_mem},
-                        {DNNL_ARG_BIAS, user_bias_mem},
-                        {DNNL_ARG_DST, user_dst_mem}});
+    net_args.push_back(
+            {{DNNL_ARG_SRC, user_src_mem},
+             {DNNL_ARG_WEIGHTS, user_weights_mem},
+             {DNNL_ARG_BIAS, user_bias_mem},
+             {DNNL_ARG_DST, user_dst_mem}});
 }
 
 namespace {
 struct NCBKernParamEqual {
-    bool operator()(const fallback::ConvBiasImpl::NCBKernParam& x,
-                    const fallback::ConvBiasImpl::NCBKernParam& y) const {
+    bool operator()(
+            const fallback::ConvBiasImpl::NCBKernParam& x,
+            const fallback::ConvBiasImpl::NCBKernParam& y) const {
         bool flag = true;
         flag = flag && (x.src_ptr == y.src_ptr);
         flag = flag && (x.dst_ptr == y.dst_ptr);
@@ -610,8 +598,7 @@ struct NCBKernParamEqual {
 };
 
 struct NCBKernParamHash {
-    std::size_t operator()(
-            const fallback::ConvBiasImpl::NCBKernParam& param) const {
+    std::size_t operator()(const fallback::ConvBiasImpl::NCBKernParam& param) const {
         std::size_t result = reinterpret_cast<std::size_t>(param.filter_ptr);
         result = result ^ (reinterpret_cast<std::size_t>(param.src_ptr) << 3);
         result = result ^ (reinterpret_cast<std::size_t>(param.dst_ptr) << 7);
@@ -622,11 +609,12 @@ struct NCBKernParamHash {
 
 }  // namespace
 
-void ConvBiasImpl::AlgoMkldnnConv::kern_mkldnn_fp32(const NCBKernParam& param,
-                                                    const NCBKernIndex&) {
+void ConvBiasImpl::AlgoMkldnnConv::kern_mkldnn_fp32(
+        const NCBKernParam& param, const NCBKernIndex&) {
     const NCBKernParam& key = param;
-    static std::unordered_map<NCBKernParam, std::vector<dnnl::primitive>,
-                              NCBKernParamHash, NCBKernParamEqual>
+    static std::unordered_map<
+            NCBKernParam, std::vector<dnnl::primitive>, NCBKernParamHash,
+            NCBKernParamEqual>
             kern_net_map;
     static std::unordered_map<
             NCBKernParam, std::vector<std::unordered_map<int, dnnl::memory>>,
@@ -656,9 +644,9 @@ void ConvBiasImpl::AlgoMkldnnConv::kern_mkldnn_fp32(const NCBKernParam& param,
     if (kern_net_map.find(key) == kern_net_map.end()) {
         std::vector<dnnl::primitive> net;
         std::vector<std::unordered_map<int, dnnl::memory>> net_args;
-        mkldnn_fp32_conv_instance(param, fm.ocpg, fm.icpg, group, in, ic, oc,
-                                  ih, iw, kh, kw, pad_h, pad_w, stride_h,
-                                  stride_w, oh, ow, net, net_args, eng_mkldnn);
+        mkldnn_fp32_conv_instance(
+                param, fm.ocpg, fm.icpg, group, in, ic, oc, ih, iw, kh, kw, pad_h,
+                pad_w, stride_h, stride_w, oh, ow, net, net_args, eng_mkldnn);
         kern_net_map[key] = net;
         kern_net_arg_map[key] = net_args;
     }
@@ -687,8 +675,8 @@ void ConvBiasImpl::AlgoMkldnnConv::kern_mkldnn_fp32(const NCBKernParam& param,
     } else if (param.bias_mode == megdnn::BiasMode::BIAS) {
         PostProcess<float>::run(
                 param.dst_ptr, const_cast<void*>(param.bias_ptr), param.dst_ptr,
-                param.bias_mode, param.nonlineMode, param.bias_type,
-                param.dst_type, in, oc, oh, ow);
+                param.bias_mode, param.nonlineMode, param.bias_type, param.dst_type, in,
+                oc, oh, ow);
     }
 }
 #endif

@@ -10,15 +10,14 @@
  */
 
 #include "./algo.h"
-#include "src/rocm/utils.h"
 #include "src/rocm/convolution/chanwise/kern.h.hip"
+#include "src/rocm/utils.h"
 
 using namespace megdnn;
 using namespace rocm;
 using namespace convolution;
 
-bool ConvolutionForwardImpl::AlgoChanwise::is_available(
-        const SizeArgs& args) const {
+bool ConvolutionForwardImpl::AlgoChanwise::is_available(const SizeArgs& args) const {
     auto&& fm = args.filter_meta;
     return args.filter_meta.format == Param::Format::NCHW &&
            args.src_layout->dtype.category() == DTypeCategory::FLOAT &&

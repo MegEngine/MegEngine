@@ -47,20 +47,28 @@ def visualize(
     logging_to_stdout: bool = True,
     bar_length_max: int = 20,
 ):
-    r"""
-    Load megengine dumped model and visualize graph structure with tensorboard log files.
+    r"""Load megengine dumped model and visualize graph structure with tensorboard log files.
     Can also record and print model's statistics like :func:`~.module_stats`
 
-    :param model_path: dir path for megengine dumped model.
-    :param log_path: dir path for tensorboard graph log.
-    :param input: user defined input data for running model and calculating stats, alternative with inp_dict, used when the model has only one input.
-    :param inp_dict: input dict for running model and calculating stats, alternative with input, used when the model has more than one input. When both input and inp_dict are None, a random input will be used.
-    :param cal_params: whether calculate and record params size.
-    :param cal_flops: whether calculate and record op flops.
-    :param cal_activations: whether calculate and record op activations.
-    :param logging_to_stdout: whether print all calculated statistic details.
-    :param bar_length_max: size of bar indicating max flops or parameter size in net stats.
-
+    Args:
+      model_path: dir path for megengine dumped model.
+      log_path: dir path for tensorboard graph log.
+      input: user defined input data for running model and calculating stats, alternative with inp_dict, used when the model has only one input.
+      inp_dict: input dict for running model and calculating stats, alternative with input, used when the model has more than one input. When both input and inp_dict are None, a random input will be used.
+      cal_params: whether calculate and record params size.
+      cal_flops: whether calculate and record op flops.
+      cal_activations: whether calculate and record op activations.
+      logging_to_stdout: whether print all calculated statistic details.
+      bar_length_max: size of bar indicating max flops or parameter size in net stats.
+      model_path: str:
+      log_path: str:
+      input: np.ndarray:
+      inp_dict: dict:
+      cal_params: bool:
+      cal_flops: bool:
+      cal_activations: bool:
+      logging_to_stdout: bool:
+      bar_length_max: int:
     """
     if log_path:
         try:

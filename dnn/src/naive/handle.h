@@ -14,9 +14,9 @@
 #include "megdnn/oprs/base.h"
 #include "src/common/handle_impl.h"
 #include "src/naive/convolution/algorithms.h"
-#include "src/naive/matrix_mul/algorithms.h"
-#include "src/naive/local_share/algorithms.h"
 #include "src/naive/convolution3d/algorithms.h"
+#include "src/naive/local_share/algorithms.h"
+#include "src/naive/matrix_mul/algorithms.h"
 
 #include <functional>
 #include <mutex>
@@ -32,19 +32,14 @@ class HandleImpl : public HandleImplHelper {
 
     static DefaultConvolutionForwardAlgorithm m_default_conv_fwd_algo;
     static DefaultConvolutionBackwardDataAlgorithm m_default_conv_bwd_data_algo;
-    static DefaultConvolutionBackwardFilterAlgorithm
-            m_default_conv_bwd_filter_algo;
+    static DefaultConvolutionBackwardFilterAlgorithm m_default_conv_bwd_filter_algo;
     static DefaultConvBiasForwardAlgorithm m_default_conv_bias_fwd_algo;
     static DefaultConvolution3DForwardAlgorithm m_default_conv3d_fwd_algo;
-    static DefaultConvolution3DBackwardDataAlgorithm
-            m_default_conv3d_bwd_data_algo;
-    static DefaultConvolution3DBackwardFilterAlgorithm
-            m_default_conv3d_bwd_filter_algo;
-    static DefaultBatchConvBiasForwardAlgorithm
-            m_default_batch_conv_bias_fwd_algo;
+    static DefaultConvolution3DBackwardDataAlgorithm m_default_conv3d_bwd_data_algo;
+    static DefaultConvolution3DBackwardFilterAlgorithm m_default_conv3d_bwd_filter_algo;
+    static DefaultBatchConvBiasForwardAlgorithm m_default_batch_conv_bias_fwd_algo;
     static DefaultLocalShareForwardAlgorithm m_default_local_share_fwd_algo;
-    static DefaultLocalShareBackwardDataAlgorithm
-            m_default_local_share_bwd_data_algo;
+    static DefaultLocalShareBackwardDataAlgorithm m_default_local_share_bwd_data_algo;
     static DefaultLocalShareBackwardFilterAlgorithm
             m_default_local_share_bwd_filter_algo;
 
@@ -68,8 +63,9 @@ class HandleImpl : public HandleImplHelper {
     }
 
 public:
-    HandleImpl(megcoreComputingHandle_t computing_handle,
-               HandleType type = HandleType::NAIVE);
+    HandleImpl(
+            megcoreComputingHandle_t computing_handle,
+            HandleType type = HandleType::NAIVE);
 
     template <typename Opr>
     std::unique_ptr<Opr> create_operator();
@@ -133,9 +129,7 @@ public:
         return &m_default_pooling_bwd_algo;
     }
 
-    Relayout* relayout_opr() override {
-        return get_helper_opr<Relayout, 2>(this);
-    }
+    Relayout* relayout_opr() override { return get_helper_opr<Relayout, 2>(this); }
     /*!
      * \brief pass a kernel to the dispatcher associated with the megcore
      *      computing handle
@@ -159,11 +153,11 @@ public:
         // this impl mainly serves to reduce binary size: we only need to
         // call ctor here, and dtor can be called from the cpp so its code
         // only needs to be generated once
-        std::aligned_storage<sizeof(MultiThreadingKernFunc),
-                             alignof(MultiThreadingKernFunc)>::type s;
+        std::aligned_storage<
+                sizeof(MultiThreadingKernFunc), alignof(MultiThreadingKernFunc)>::type
+                s;
         move_kern_func_to_new_kern_and_dispatch(
-                *new (&s) MultiThreadingKernFunc(std::forward<T>(kern)),
-                parallelism);
+                *new (&s) MultiThreadingKernFunc(std::forward<T>(kern)), parallelism);
     }
 
     MegcoreCPUDispatcher* megcore_dispatcher() const { return m_dispatcher; }
@@ -200,8 +194,7 @@ public:
 
 //! disptch kern on current opr
 #define MEGDNN_DISPATCH_CPU_KERN_OPR(_stmt) \
-    MEGDNN_DISPATCH_CPU_KERN(               \
-            static_cast<::megdnn::naive::HandleImpl*>(handle()), _stmt)
+    MEGDNN_DISPATCH_CPU_KERN(static_cast<::megdnn::naive::HandleImpl*>(handle()), _stmt)
 
 /*!
  * \brief operator impls should utilize this method to
@@ -215,9 +208,8 @@ public:
     } while (0)
 
 //! disptch kern on current opr
-#define MEGDNN_DISPATCH_MULTI_THREAD_CPU_KERN_OPR(_stmt, _parallelism)         \
-    MEGDNN_DISPATCH_MULTI_THREAD_CPU_KERN(                                     \
-            static_cast<::megdnn::naive::HandleImpl*>(handle()), _parallelism, \
-            _stmt)
+#define MEGDNN_DISPATCH_MULTI_THREAD_CPU_KERN_OPR(_stmt, _parallelism) \
+    MEGDNN_DISPATCH_MULTI_THREAD_CPU_KERN(                             \
+            static_cast<::megdnn::naive::HandleImpl*>(handle()), _parallelism, _stmt)
 
 // vim: syntax=cpp.doxygen

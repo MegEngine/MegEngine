@@ -9,7 +9,6 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-
 #include "src/cuda/int_fastdiv.cuh"
 #include <cstring>
 
@@ -20,7 +19,7 @@ Uint32Fastdiv::Uint32Fastdiv() {
     memset(this, 0, sizeof(Uint32Fastdiv));
 }
 
-Uint32Fastdiv& Uint32Fastdiv::operator = (uint32_t d) {
+Uint32Fastdiv& Uint32Fastdiv::operator=(uint32_t d) {
     megdnn_assert(d);
     m_divisor = d;
     MEGDNN_CONSTEXPR uint32_t MAX_U32 = ~0u;
@@ -31,7 +30,7 @@ Uint32Fastdiv& Uint32Fastdiv::operator = (uint32_t d) {
         m_mul = 1u << 31;
         int p = 0;
         while ((1u << p) < d)
-            ++ p;
+            ++p;
         megdnn_assert((1u << p) == d);
         m_shift = p ? p - 1 : 0;
         if (d == 1)
@@ -41,13 +40,13 @@ Uint32Fastdiv& Uint32Fastdiv::operator = (uint32_t d) {
     auto n_bound = uint64_t(d / 2 + 1) * MAX_U32;
     uint32_t shift = 32;
     while ((1ull << shift) < n_bound)
-        ++ shift;
+        ++shift;
     uint64_t mdst = 1ull << shift;
     int64_t delta = d - mdst % d;
     m_mul = mdst / d + 1;
     if ((uint64_t)delta > d / 2) {
         delta -= d;
-        -- m_mul;
+        --m_mul;
         m_inc_dividend = 1;
     }
     megdnn_assert((uint64_t)m_mul * d == mdst + delta);

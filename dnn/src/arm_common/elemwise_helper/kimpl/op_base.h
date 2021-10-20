@@ -36,39 +36,47 @@ struct UnaryOpBase : OpBase<src_ctype, dst_ctype> {
     UnaryOpBase(DType /*src_dtype*/, DType /*dst_dtype*/) {}
 };
 
-#define OPERATOR_UNARY_QINT8                                              \
-    int16x8_t vsrct = vmovl_low_s8(vsrc.val[0]);                          \
-    vst1_s8(reinterpret_cast<int8_t*>(dst),                               \
-            operator()({{vmovl_low_s16(vsrct), vmovl_high_s16(vsrct)}})); \
-                                                                          \
-    vsrct = vmovl_high_s8(vsrc.val[0]);                                   \
-    vst1_s8(reinterpret_cast<int8_t*>(dst + 8),                           \
-            operator()({{vmovl_low_s16(vsrct), vmovl_high_s16(vsrct)}})); \
-                                                                          \
-    vsrct = vmovl_low_s8(vsrc.val[1]);                                    \
-    vst1_s8(reinterpret_cast<int8_t*>(dst + 16),                          \
-            operator()({{vmovl_low_s16(vsrct), vmovl_high_s16(vsrct)}})); \
-                                                                          \
-    vsrct = vmovl_high_s8(vsrc.val[1]);                                   \
-    vst1_s8(reinterpret_cast<int8_t*>(dst + 24),                          \
-            operator()({{vmovl_low_s16(vsrct), vmovl_high_s16(vsrct)}}));
+#define OPERATOR_UNARY_QINT8                                                          \
+    int16x8_t vsrct = vmovl_low_s8(vsrc.val[0]);                                      \
+    vst1_s8(reinterpret_cast<int8_t*>(dst), operator()(                               \
+                                                    {{vmovl_low_s16(vsrct),           \
+                                                      vmovl_high_s16(vsrct)}}));      \
+                                                                                      \
+    vsrct = vmovl_high_s8(vsrc.val[0]);                                               \
+    vst1_s8(reinterpret_cast<int8_t*>(dst + 8), operator()(                           \
+                                                        {{vmovl_low_s16(vsrct),       \
+                                                          vmovl_high_s16(vsrct)}}));  \
+                                                                                      \
+    vsrct = vmovl_low_s8(vsrc.val[1]);                                                \
+    vst1_s8(reinterpret_cast<int8_t*>(dst + 16), operator()(                          \
+                                                         {{vmovl_low_s16(vsrct),      \
+                                                           vmovl_high_s16(vsrct)}})); \
+                                                                                      \
+    vsrct = vmovl_high_s8(vsrc.val[1]);                                               \
+    vst1_s8(reinterpret_cast<int8_t*>(dst + 24), operator()(                          \
+                                                         {{vmovl_low_s16(vsrct),      \
+                                                           vmovl_high_s16(vsrct)}}));
 
-#define OPERATOR_UNARY_QUINT8                                             \
-    uint16x8_t vsrct = vmovl_low_u8(vsrc.val[0]);                         \
-    vst1_u8(reinterpret_cast<uint8_t*>(dst),                              \
-            operator()({{vmovl_low_u16(vsrct), vmovl_high_u16(vsrct)}})); \
-                                                                          \
-    vsrct = vmovl_high_u8(vsrc.val[0]);                                   \
-    vst1_u8(reinterpret_cast<uint8_t*>(dst + 8),                          \
-            operator()({{vmovl_low_u16(vsrct), vmovl_high_u16(vsrct)}})); \
-                                                                          \
-    vsrct = vmovl_low_u8(vsrc.val[1]);                                    \
-    vst1_u8(reinterpret_cast<uint8_t*>(dst + 16),                         \
-            operator()({{vmovl_low_u16(vsrct), vmovl_high_u16(vsrct)}})); \
-                                                                          \
-    vsrct = vmovl_high_u8(vsrc.val[1]);                                   \
-    vst1_u8(reinterpret_cast<uint8_t*>(dst + 24),                         \
-            operator()({{vmovl_low_u16(vsrct), vmovl_high_u16(vsrct)}}));
+#define OPERATOR_UNARY_QUINT8                                                          \
+    uint16x8_t vsrct = vmovl_low_u8(vsrc.val[0]);                                      \
+    vst1_u8(reinterpret_cast<uint8_t*>(dst), operator()(                               \
+                                                     {{vmovl_low_u16(vsrct),           \
+                                                       vmovl_high_u16(vsrct)}}));      \
+                                                                                       \
+    vsrct = vmovl_high_u8(vsrc.val[0]);                                                \
+    vst1_u8(reinterpret_cast<uint8_t*>(dst + 8), operator()(                           \
+                                                         {{vmovl_low_u16(vsrct),       \
+                                                           vmovl_high_u16(vsrct)}}));  \
+                                                                                       \
+    vsrct = vmovl_low_u8(vsrc.val[1]);                                                 \
+    vst1_u8(reinterpret_cast<uint8_t*>(dst + 16), operator()(                          \
+                                                          {{vmovl_low_u16(vsrct),      \
+                                                            vmovl_high_u16(vsrct)}})); \
+                                                                                       \
+    vsrct = vmovl_high_u8(vsrc.val[1]);                                                \
+    vst1_u8(reinterpret_cast<uint8_t*>(dst + 24), operator()(                          \
+                                                          {{vmovl_low_u16(vsrct),      \
+                                                            vmovl_high_u16(vsrct)}}));
 
 //! scale_src = src.scale; scale_dst = 1.f / dst.scale (div -> mul)
 //! scale = src.scale / dst.scale
@@ -94,11 +102,8 @@ struct UnaryOpBase<dt_qint8, dt_qint8> : OpBase<dt_qint8, dt_qint8> {
         float dst_scale = dst_dtype.param<dtype::QuantizedS8>().scale;
         init(src_scale, dst_scale);
     }
-    UnaryOpBase(float src_scale, float dst_scale) {
-        init(src_scale, dst_scale);
-    }
+    UnaryOpBase(float src_scale, float dst_scale) { init(src_scale, dst_scale); }
 };
-
 
 //! scale_src = src.scale; scale_dst = 1.f / dst.scale
 //! scale_zp = src.zp * src.scale; dzp = dst.zp
@@ -115,8 +120,7 @@ struct UnaryOpBase<dt_quint8, dt_quint8> : OpBase<dt_quint8, dt_quint8> {
     float scale, szp;
     float32x4_t vscale, vszp;
 
-    void init(float src_scale, float dst_scale, uint8_t src_zp,
-              uint8_t dst_zp) {
+    void init(float src_scale, float dst_scale, uint8_t src_zp, uint8_t dst_zp) {
         scale_src = src_scale;
         scale_dst = 1.f / dst_scale;
         vscale_src = vdupq_n_f32(scale_src);
@@ -137,8 +141,7 @@ struct UnaryOpBase<dt_quint8, dt_quint8> : OpBase<dt_quint8, dt_quint8> {
         uint8_t dst_zp = dst_dtype.param<dtype::Quantized8Asymm>().zero_point;
         init(src_scale, dst_scale, src_zp, dst_zp);
     }
-    UnaryOpBase(float src_scale, float dst_scale, uint8_t src_zp,
-                uint8_t dst_zp) {
+    UnaryOpBase(float src_scale, float dst_scale, uint8_t src_zp, uint8_t dst_zp) {
         init(src_scale, dst_scale, src_zp, dst_zp);
     }
     float32x4x2_t cvt_to_float(const uint32x4x2_t& vsrc) {
@@ -192,9 +195,7 @@ struct UnaryOpBase<dt_qint32, dt_qint8> : OpBase<dt_qint32, dt_qint8> {
         init(src_scale, dst_scale);
     }
 
-    UnaryOpBase(float src_scale, float dst_scale) {
-        init(src_scale, dst_scale);
-    }
+    UnaryOpBase(float src_scale, float dst_scale) { init(src_scale, dst_scale); }
 };
 
 template <>
@@ -237,59 +238,73 @@ template <typename src_ctype, typename dst_ctype = src_ctype>
 struct BinaryOpBase : OpBase<src_ctype, dst_ctype> {
     using OpBase<src_ctype, dst_ctype>::OpBase;
     BinaryOpBase() = default;
-    BinaryOpBase(DType /*src0_dtype*/, DType /*src1_dtype*/,
-                 DType /*dst_dtype*/) {}
+    BinaryOpBase(DType /*src0_dtype*/, DType /*src1_dtype*/, DType /*dst_dtype*/) {}
 };
 
-#define OPERATOR_BINARY_QINT8                                               \
-    int16x8_t vsrct0 = vmovl_low_s8(vsrc0.val[0]);                          \
-    int16x8_t vsrct1 = vmovl_low_s8(vsrc1.val[0]);                          \
-    vst1_s8(reinterpret_cast<int8_t*>(dst),                                 \
-            operator()({{vmovl_low_s16(vsrct0), vmovl_high_s16(vsrct0)}},   \
-                       {{vmovl_low_s16(vsrct1), vmovl_high_s16(vsrct1)}})); \
-                                                                            \
-    vsrct0 = vmovl_high_s8(vsrc0.val[0]);                                   \
-    vsrct1 = vmovl_high_s8(vsrc1.val[0]);                                   \
-    vst1_s8(reinterpret_cast<int8_t*>(dst + 8),                             \
-            operator()({{vmovl_low_s16(vsrct0), vmovl_high_s16(vsrct0)}},   \
-                       {{vmovl_low_s16(vsrct1), vmovl_high_s16(vsrct1)}})); \
-                                                                            \
-    vsrct0 = vmovl_low_s8(vsrc0.val[1]);                                    \
-    vsrct1 = vmovl_low_s8(vsrc1.val[1]);                                    \
-    vst1_s8(reinterpret_cast<int8_t*>(dst + 16),                            \
-            operator()({{vmovl_low_s16(vsrct0), vmovl_high_s16(vsrct0)}},   \
-                       {{vmovl_low_s16(vsrct1), vmovl_high_s16(vsrct1)}})); \
-                                                                            \
-    vsrct0 = vmovl_high_s8(vsrc0.val[1]);                                   \
-    vsrct1 = vmovl_high_s8(vsrc1.val[1]);                                   \
-    vst1_s8(reinterpret_cast<int8_t*>(dst + 24),                            \
-            operator()({{vmovl_low_s16(vsrct0), vmovl_high_s16(vsrct0)}},   \
-                       {{vmovl_low_s16(vsrct1), vmovl_high_s16(vsrct1)}}))
+#define OPERATOR_BINARY_QINT8                                                          \
+    int16x8_t vsrct0 = vmovl_low_s8(vsrc0.val[0]);                                     \
+    int16x8_t vsrct1 = vmovl_low_s8(vsrc1.val[0]);                                     \
+    vst1_s8(reinterpret_cast<int8_t*>(dst), operator()(                                \
+                                                    {{vmovl_low_s16(vsrct0),           \
+                                                      vmovl_high_s16(vsrct0)}},        \
+                                                    {{vmovl_low_s16(vsrct1),           \
+                                                      vmovl_high_s16(vsrct1)}}));      \
+                                                                                       \
+    vsrct0 = vmovl_high_s8(vsrc0.val[0]);                                              \
+    vsrct1 = vmovl_high_s8(vsrc1.val[0]);                                              \
+    vst1_s8(reinterpret_cast<int8_t*>(dst + 8), operator()(                            \
+                                                        {{vmovl_low_s16(vsrct0),       \
+                                                          vmovl_high_s16(vsrct0)}},    \
+                                                        {{vmovl_low_s16(vsrct1),       \
+                                                          vmovl_high_s16(vsrct1)}}));  \
+                                                                                       \
+    vsrct0 = vmovl_low_s8(vsrc0.val[1]);                                               \
+    vsrct1 = vmovl_low_s8(vsrc1.val[1]);                                               \
+    vst1_s8(reinterpret_cast<int8_t*>(dst + 16), operator()(                           \
+                                                         {{vmovl_low_s16(vsrct0),      \
+                                                           vmovl_high_s16(vsrct0)}},   \
+                                                         {{vmovl_low_s16(vsrct1),      \
+                                                           vmovl_high_s16(vsrct1)}})); \
+                                                                                       \
+    vsrct0 = vmovl_high_s8(vsrc0.val[1]);                                              \
+    vsrct1 = vmovl_high_s8(vsrc1.val[1]);                                              \
+    vst1_s8(reinterpret_cast<int8_t*>(dst + 24), operator()(                           \
+                                                         {{vmovl_low_s16(vsrct0),      \
+                                                           vmovl_high_s16(vsrct0)}},   \
+                                                         {{vmovl_low_s16(vsrct1),      \
+                                                           vmovl_high_s16(vsrct1)}}))
 
-#define OPERATOR_BINARY_QUINT8                                              \
-    uint16x8_t vsrct0 = vmovl_low_u8(vsrc0.val[0]);                         \
-    uint16x8_t vsrct1 = vmovl_low_u8(vsrc1.val[0]);                         \
-    vst1_u8(reinterpret_cast<uint8_t*>(dst),                                \
-            operator()({{vmovl_low_u16(vsrct0), vmovl_high_u16(vsrct0)}},   \
-                       {{vmovl_low_u16(vsrct1), vmovl_high_u16(vsrct1)}})); \
-                                                                            \
-    vsrct0 = vmovl_high_u8(vsrc0.val[0]);                                   \
-    vsrct1 = vmovl_high_u8(vsrc1.val[0]);                                   \
-    vst1_u8(reinterpret_cast<uint8_t*>(dst + 8),                            \
-            operator()({{vmovl_low_u16(vsrct0), vmovl_high_u16(vsrct0)}},   \
-                       {{vmovl_low_u16(vsrct1), vmovl_high_u16(vsrct1)}})); \
-                                                                            \
-    vsrct0 = vmovl_low_u8(vsrc0.val[1]);                                    \
-    vsrct1 = vmovl_low_u8(vsrc1.val[1]);                                    \
-    vst1_u8(reinterpret_cast<uint8_t*>(dst + 16),                           \
-            operator()({{vmovl_low_u16(vsrct0), vmovl_high_u16(vsrct0)}},   \
-                       {{vmovl_low_u16(vsrct1), vmovl_high_u16(vsrct1)}})); \
-                                                                            \
-    vsrct0 = vmovl_high_u8(vsrc0.val[1]);                                   \
-    vsrct1 = vmovl_high_u8(vsrc1.val[1]);                                   \
-    vst1_u8(reinterpret_cast<uint8_t*>(dst + 24),                           \
-            operator()({{vmovl_low_u16(vsrct0), vmovl_high_u16(vsrct0)}},   \
-                       {{vmovl_low_u16(vsrct1), vmovl_high_u16(vsrct1)}}))
+#define OPERATOR_BINARY_QUINT8                                                         \
+    uint16x8_t vsrct0 = vmovl_low_u8(vsrc0.val[0]);                                    \
+    uint16x8_t vsrct1 = vmovl_low_u8(vsrc1.val[0]);                                    \
+    vst1_u8(reinterpret_cast<uint8_t*>(dst), operator()(                               \
+                                                     {{vmovl_low_u16(vsrct0),          \
+                                                       vmovl_high_u16(vsrct0)}},       \
+                                                     {{vmovl_low_u16(vsrct1),          \
+                                                       vmovl_high_u16(vsrct1)}}));     \
+                                                                                       \
+    vsrct0 = vmovl_high_u8(vsrc0.val[0]);                                              \
+    vsrct1 = vmovl_high_u8(vsrc1.val[0]);                                              \
+    vst1_u8(reinterpret_cast<uint8_t*>(dst + 8), operator()(                           \
+                                                         {{vmovl_low_u16(vsrct0),      \
+                                                           vmovl_high_u16(vsrct0)}},   \
+                                                         {{vmovl_low_u16(vsrct1),      \
+                                                           vmovl_high_u16(vsrct1)}})); \
+                                                                                       \
+    vsrct0 = vmovl_low_u8(vsrc0.val[1]);                                               \
+    vsrct1 = vmovl_low_u8(vsrc1.val[1]);                                               \
+    vst1_u8(reinterpret_cast<uint8_t*>(dst + 16),                                      \
+            operator()(                                                                \
+                    {{vmovl_low_u16(vsrct0), vmovl_high_u16(vsrct0)}},                 \
+                    {{vmovl_low_u16(vsrct1), vmovl_high_u16(vsrct1)}}));               \
+                                                                                       \
+    vsrct0 = vmovl_high_u8(vsrc0.val[1]);                                              \
+    vsrct1 = vmovl_high_u8(vsrc1.val[1]);                                              \
+    vst1_u8(reinterpret_cast<uint8_t*>(dst + 24), operator()(                          \
+                                                          {{vmovl_low_u16(vsrct0),     \
+                                                            vmovl_high_u16(vsrct0)}},  \
+                                                          {{vmovl_low_u16(vsrct1),     \
+                                                            vmovl_high_u16(vsrct1)}}))
 
 /* ================= binary op for quantized types ================== */
 
@@ -349,8 +364,9 @@ struct BinaryOpBase<dt_quint8, dt_quint8> : OpBase<dt_quint8, dt_quint8> {
     uint8_t dzp;
     int32x4_t vdzp;
 
-    void init(float src0_scale, float src1_scale, float dst_scale,
-              uint8_t src0_zp, uint8_t src1_zp, uint8_t dst_zp) {
+    void init(
+            float src0_scale, float src1_scale, float dst_scale, uint8_t src0_zp,
+            uint8_t src1_zp, uint8_t dst_zp) {
         scale_src0 = src0_scale;
         vscale_src0 = vdupq_n_f32(scale_src0);
         scale_src1 = src1_scale;
@@ -383,8 +399,9 @@ struct BinaryOpBase<dt_quint8, dt_quint8> : OpBase<dt_quint8, dt_quint8> {
         init(src0_scale, src1_scale, dst_scale, src0_zp, src1_zp, dst_zp);
     }
 
-    BinaryOpBase(float src0_scale, float src1_scale, float dst_scale,
-                 uint8_t src0_zp, uint8_t src1_zp, uint8_t dst_zp) {
+    BinaryOpBase(
+            float src0_scale, float src1_scale, float dst_scale, uint8_t src0_zp,
+            uint8_t src1_zp, uint8_t dst_zp) {
         init(src0_scale, src1_scale, dst_scale, src0_zp, src1_zp, dst_zp);
     }
 };
@@ -436,8 +453,7 @@ struct BinaryOpBase<dt_qint32, dt_quint8> : OpBase<dt_qint32, dt_quint8> {
     float scale_src0, scale_src1, scale_dst;
     float32x4_t vscale_src0, vscale_src1, vscale_dst;
 
-    void init(float src0_scale, float src1_scale, float dst_scale,
-              uint8_t zero_point) {
+    void init(float src0_scale, float src1_scale, float dst_scale, uint8_t zero_point) {
         scale_src0 = src0_scale;
         vscale_src0 = vdupq_n_f32(src0_scale);
         scale_src1 = src1_scale;
@@ -460,8 +476,8 @@ struct BinaryOpBase<dt_qint32, dt_quint8> : OpBase<dt_qint32, dt_quint8> {
         init(src0_scale, src1_scale, dst_scale, zp);
     }
 
-    BinaryOpBase(float src0_scale, float src1_scale, float dst_scale,
-                 uint8_t zero_point) {
+    BinaryOpBase(
+            float src0_scale, float src1_scale, float dst_scale, uint8_t zero_point) {
         init(src0_scale, src1_scale, dst_scale, zero_point);
     }
 };
@@ -471,75 +487,84 @@ template <typename src_ctype, typename dst_ctype = src_ctype>
 struct TernaryOpBase : OpBase<src_ctype, dst_ctype> {
     using OpBase<src_ctype, dst_ctype>::OpBase;
     TernaryOpBase() = default;
-    TernaryOpBase(DType /*src0_dtype*/, DType /*src1_dtype*/,
-                  DType /*src2_dtype*/, DType /*dst_dtype*/) {}
+    TernaryOpBase(
+            DType /*src0_dtype*/, DType /*src1_dtype*/, DType /*src2_dtype*/,
+            DType /*dst_dtype*/) {}
 };
 
-#define OPERATOR_TERNARY_QINT8                                              \
-    int16x8_t vsrct0 = vmovl_low_s8(vsrc0.val[0]);                          \
-    int16x8_t vsrct1 = vmovl_low_s8(vsrc1.val[0]);                          \
-    int16x8_t vsrct2 = vmovl_low_s8(vsrc2.val[0]);                          \
-    vst1_s8(reinterpret_cast<int8_t*>(dst),                                 \
-            operator()({{vmovl_low_s16(vsrct0), vmovl_high_s16(vsrct0)}},   \
-                       {{vmovl_low_s16(vsrct1), vmovl_high_s16(vsrct1)}},   \
-                       {{vmovl_low_s16(vsrct2), vmovl_high_s16(vsrct2)}})); \
-                                                                            \
-    vsrct0 = vmovl_high_s8(vsrc0.val[0]);                                   \
-    vsrct1 = vmovl_high_s8(vsrc1.val[0]);                                   \
-    vsrct2 = vmovl_high_s8(vsrc2.val[0]);                                   \
-    vst1_s8(reinterpret_cast<int8_t*>(dst + 8),                             \
-            operator()({{vmovl_low_s16(vsrct0), vmovl_high_s16(vsrct0)}},   \
-                       {{vmovl_low_s16(vsrct1), vmovl_high_s16(vsrct1)}},   \
-                       {{vmovl_low_s16(vsrct2), vmovl_high_s16(vsrct2)}})); \
-                                                                            \
-    vsrct0 = vmovl_low_s8(vsrc0.val[1]);                                    \
-    vsrct1 = vmovl_low_s8(vsrc1.val[1]);                                    \
-    vsrct2 = vmovl_low_s8(vsrc2.val[1]);                                    \
-    vst1_s8(reinterpret_cast<int8_t*>(dst + 16),                            \
-            operator()({{vmovl_low_s16(vsrct0), vmovl_high_s16(vsrct0)}},   \
-                       {{vmovl_low_s16(vsrct1), vmovl_high_s16(vsrct1)}},   \
-                       {{vmovl_low_s16(vsrct2), vmovl_high_s16(vsrct2)}})); \
-                                                                            \
-    vsrct0 = vmovl_high_s8(vsrc0.val[1]);                                   \
-    vsrct1 = vmovl_high_s8(vsrc1.val[1]);                                   \
-    vsrct2 = vmovl_high_s8(vsrc2.val[1]);                                   \
-    vst1_s8(reinterpret_cast<int8_t*>(dst + 24),                            \
-            operator()({{vmovl_low_s16(vsrct0), vmovl_high_s16(vsrct0)}},   \
-                       {{vmovl_low_s16(vsrct1), vmovl_high_s16(vsrct1)}},   \
-                       {{vmovl_low_s16(vsrct2), vmovl_high_s16(vsrct2)}}))
+#define OPERATOR_TERNARY_QINT8                                           \
+    int16x8_t vsrct0 = vmovl_low_s8(vsrc0.val[0]);                       \
+    int16x8_t vsrct1 = vmovl_low_s8(vsrc1.val[0]);                       \
+    int16x8_t vsrct2 = vmovl_low_s8(vsrc2.val[0]);                       \
+    vst1_s8(reinterpret_cast<int8_t*>(dst),                              \
+            operator()(                                                  \
+                    {{vmovl_low_s16(vsrct0), vmovl_high_s16(vsrct0)}},   \
+                    {{vmovl_low_s16(vsrct1), vmovl_high_s16(vsrct1)}},   \
+                    {{vmovl_low_s16(vsrct2), vmovl_high_s16(vsrct2)}})); \
+                                                                         \
+    vsrct0 = vmovl_high_s8(vsrc0.val[0]);                                \
+    vsrct1 = vmovl_high_s8(vsrc1.val[0]);                                \
+    vsrct2 = vmovl_high_s8(vsrc2.val[0]);                                \
+    vst1_s8(reinterpret_cast<int8_t*>(dst + 8),                          \
+            operator()(                                                  \
+                    {{vmovl_low_s16(vsrct0), vmovl_high_s16(vsrct0)}},   \
+                    {{vmovl_low_s16(vsrct1), vmovl_high_s16(vsrct1)}},   \
+                    {{vmovl_low_s16(vsrct2), vmovl_high_s16(vsrct2)}})); \
+                                                                         \
+    vsrct0 = vmovl_low_s8(vsrc0.val[1]);                                 \
+    vsrct1 = vmovl_low_s8(vsrc1.val[1]);                                 \
+    vsrct2 = vmovl_low_s8(vsrc2.val[1]);                                 \
+    vst1_s8(reinterpret_cast<int8_t*>(dst + 16),                         \
+            operator()(                                                  \
+                    {{vmovl_low_s16(vsrct0), vmovl_high_s16(vsrct0)}},   \
+                    {{vmovl_low_s16(vsrct1), vmovl_high_s16(vsrct1)}},   \
+                    {{vmovl_low_s16(vsrct2), vmovl_high_s16(vsrct2)}})); \
+                                                                         \
+    vsrct0 = vmovl_high_s8(vsrc0.val[1]);                                \
+    vsrct1 = vmovl_high_s8(vsrc1.val[1]);                                \
+    vsrct2 = vmovl_high_s8(vsrc2.val[1]);                                \
+    vst1_s8(reinterpret_cast<int8_t*>(dst + 24),                         \
+            operator()(                                                  \
+                    {{vmovl_low_s16(vsrct0), vmovl_high_s16(vsrct0)}},   \
+                    {{vmovl_low_s16(vsrct1), vmovl_high_s16(vsrct1)}},   \
+                    {{vmovl_low_s16(vsrct2), vmovl_high_s16(vsrct2)}}))
 
-#define OPERATOR_TERNARY_QUINT8                                             \
-    uint16x8_t vsrct0 = vmovl_low_u8(vsrc0.val[0]);                         \
-    uint16x8_t vsrct1 = vmovl_low_u8(vsrc1.val[0]);                         \
-    uint16x8_t vsrct2 = vmovl_low_u8(vsrc2.val[0]);                         \
-    vst1_u8(reinterpret_cast<uint8_t*>(dst),                                \
-            operator()({{vmovl_low_u16(vsrct0), vmovl_high_u16(vsrct0)}},   \
-                       {{vmovl_low_u16(vsrct1), vmovl_high_u16(vsrct1)}},   \
-                       {{vmovl_low_u16(vsrct2), vmovl_high_u16(vsrct2)}})); \
-                                                                            \
-    vsrct0 = vmovl_high_u8(vsrc0.val[0]);                                   \
-    vsrct1 = vmovl_high_u8(vsrc1.val[0]);                                   \
-    vsrct2 = vmovl_high_u8(vsrc2.val[0]);                                   \
-    vst1_u8(reinterpret_cast<uint8_t*>(dst + 8),                            \
-            operator()({{vmovl_low_u16(vsrct0), vmovl_high_u16(vsrct0)}},   \
-                       {{vmovl_low_u16(vsrct1), vmovl_high_u16(vsrct1)}},   \
-                       {{vmovl_low_u16(vsrct2), vmovl_high_u16(vsrct2)}})); \
-                                                                            \
-    vsrct0 = vmovl_low_u8(vsrc0.val[1]);                                    \
-    vsrct1 = vmovl_low_u8(vsrc1.val[1]);                                    \
-    vsrct2 = vmovl_low_u8(vsrc2.val[1]);                                    \
-    vst1_u8(reinterpret_cast<uint8_t*>(dst + 16),                           \
-            operator()({{vmovl_low_u16(vsrct0), vmovl_high_u16(vsrct0)}},   \
-                       {{vmovl_low_u16(vsrct1), vmovl_high_u16(vsrct1)}},   \
-                       {{vmovl_low_u16(vsrct2), vmovl_high_u16(vsrct2)}})); \
-                                                                            \
-    vsrct0 = vmovl_high_u8(vsrc0.val[1]);                                   \
-    vsrct1 = vmovl_high_u8(vsrc1.val[1]);                                   \
-    vsrct2 = vmovl_high_u8(vsrc2.val[1]);                                   \
-    vst1_u8(reinterpret_cast<uint8_t*>(dst + 24),                           \
-            operator()({{vmovl_low_u16(vsrct0), vmovl_high_u16(vsrct0)}},   \
-                       {{vmovl_low_u16(vsrct1), vmovl_high_u16(vsrct1)}},   \
-                       {{vmovl_low_u16(vsrct2), vmovl_high_u16(vsrct2)}}))
+#define OPERATOR_TERNARY_QUINT8                                          \
+    uint16x8_t vsrct0 = vmovl_low_u8(vsrc0.val[0]);                      \
+    uint16x8_t vsrct1 = vmovl_low_u8(vsrc1.val[0]);                      \
+    uint16x8_t vsrct2 = vmovl_low_u8(vsrc2.val[0]);                      \
+    vst1_u8(reinterpret_cast<uint8_t*>(dst),                             \
+            operator()(                                                  \
+                    {{vmovl_low_u16(vsrct0), vmovl_high_u16(vsrct0)}},   \
+                    {{vmovl_low_u16(vsrct1), vmovl_high_u16(vsrct1)}},   \
+                    {{vmovl_low_u16(vsrct2), vmovl_high_u16(vsrct2)}})); \
+                                                                         \
+    vsrct0 = vmovl_high_u8(vsrc0.val[0]);                                \
+    vsrct1 = vmovl_high_u8(vsrc1.val[0]);                                \
+    vsrct2 = vmovl_high_u8(vsrc2.val[0]);                                \
+    vst1_u8(reinterpret_cast<uint8_t*>(dst + 8),                         \
+            operator()(                                                  \
+                    {{vmovl_low_u16(vsrct0), vmovl_high_u16(vsrct0)}},   \
+                    {{vmovl_low_u16(vsrct1), vmovl_high_u16(vsrct1)}},   \
+                    {{vmovl_low_u16(vsrct2), vmovl_high_u16(vsrct2)}})); \
+                                                                         \
+    vsrct0 = vmovl_low_u8(vsrc0.val[1]);                                 \
+    vsrct1 = vmovl_low_u8(vsrc1.val[1]);                                 \
+    vsrct2 = vmovl_low_u8(vsrc2.val[1]);                                 \
+    vst1_u8(reinterpret_cast<uint8_t*>(dst + 16),                        \
+            operator()(                                                  \
+                    {{vmovl_low_u16(vsrct0), vmovl_high_u16(vsrct0)}},   \
+                    {{vmovl_low_u16(vsrct1), vmovl_high_u16(vsrct1)}},   \
+                    {{vmovl_low_u16(vsrct2), vmovl_high_u16(vsrct2)}})); \
+                                                                         \
+    vsrct0 = vmovl_high_u8(vsrc0.val[1]);                                \
+    vsrct1 = vmovl_high_u8(vsrc1.val[1]);                                \
+    vsrct2 = vmovl_high_u8(vsrc2.val[1]);                                \
+    vst1_u8(reinterpret_cast<uint8_t*>(dst + 24),                        \
+            operator()(                                                  \
+                    {{vmovl_low_u16(vsrct0), vmovl_high_u16(vsrct0)}},   \
+                    {{vmovl_low_u16(vsrct1), vmovl_high_u16(vsrct1)}},   \
+                    {{vmovl_low_u16(vsrct2), vmovl_high_u16(vsrct2)}}))
 
 /*========================= ternaty op for quanzited ====================*/
 template <>
@@ -551,8 +576,7 @@ struct TernaryOpBase<dt_qint8, dt_qint8> : OpBase<dt_qint8, dt_qint8> {
     float32x4_t vscale_src0, vscale_src1, vscale_src2, vscale_dst;
     float scale0, scale1, scale2;
     float32x4_t vscale0, vscale1, vscale2;
-    void init(float src0_scale, float src1_scale, float src2_scale,
-              float dst_scale) {
+    void init(float src0_scale, float src1_scale, float src2_scale, float dst_scale) {
         scale_src0 = src0_scale;
         scale_src1 = src1_scale;
         scale_src2 = src2_scale;
@@ -568,16 +592,16 @@ struct TernaryOpBase<dt_qint8, dt_qint8> : OpBase<dt_qint8, dt_qint8> {
         vscale1 = vdupq_n_f32(scale1);
         vscale2 = vdupq_n_f32(scale2);
     }
-    TernaryOpBase(DType src0_dtype, DType src1_dtype, DType src2_dtype,
-                  DType dst_dtype) {
+    TernaryOpBase(
+            DType src0_dtype, DType src1_dtype, DType src2_dtype, DType dst_dtype) {
         float src0_scale = src0_dtype.param<dtype::QuantizedS8>().scale;
         float src1_scale = src1_dtype.param<dtype::QuantizedS8>().scale;
         float src2_scale = src2_dtype.param<dtype::QuantizedS8>().scale;
         float dst_scale = dst_dtype.param<dtype::QuantizedS8>().scale;
         init(src0_scale, src1_scale, src2_scale, dst_scale);
     }
-    TernaryOpBase(float src0_scale, float src1_scale, float src2_scale,
-                  float dst_scale) {
+    TernaryOpBase(
+            float src0_scale, float src1_scale, float src2_scale, float dst_scale) {
         init(src0_scale, src1_scale, src2_scale, dst_scale);
     }
 };
@@ -595,9 +619,9 @@ struct TernaryOpBase<dt_quint8, dt_quint8> : OpBase<dt_quint8, dt_quint8> {
     float32x4_t vscale0, vscale1, vscale2;
     uint8_t dzp;
     int32x4_t vdzp;
-    void init(float src0_scale, float src1_scale, float src2_scale,
-              float dst_scale, uint8_t src0_zp, uint8_t src1_zp,
-              uint8_t src2_zp, uint8_t dst_zp) {
+    void init(
+            float src0_scale, float src1_scale, float src2_scale, float dst_scale,
+            uint8_t src0_zp, uint8_t src1_zp, uint8_t src2_zp, uint8_t dst_zp) {
         scale_src0 = src0_scale;
         scale_src1 = src1_scale;
         scale_src2 = src2_scale;
@@ -621,8 +645,8 @@ struct TernaryOpBase<dt_quint8, dt_quint8> : OpBase<dt_quint8, dt_quint8> {
         dzp = dst_zp;
         vdzp = vdupq_n_s32(static_cast<int32_t>(dzp));
     }
-    TernaryOpBase(DType src0_dtype, DType src1_dtype, DType src2_dtype,
-                  DType dst_dtype) {
+    TernaryOpBase(
+            DType src0_dtype, DType src1_dtype, DType src2_dtype, DType dst_dtype) {
         float src0_scale = src0_dtype.param<dtype::Quantized8Asymm>().scale;
         float src1_scale = src1_dtype.param<dtype::Quantized8Asymm>().scale;
         float src2_scale = src2_dtype.param<dtype::Quantized8Asymm>().scale;
@@ -631,14 +655,14 @@ struct TernaryOpBase<dt_quint8, dt_quint8> : OpBase<dt_quint8, dt_quint8> {
         uint8_t src1_zp = src1_dtype.param<dtype::Quantized8Asymm>().zero_point;
         uint8_t src2_zp = src2_dtype.param<dtype::Quantized8Asymm>().zero_point;
         uint8_t dst_zp = dst_dtype.param<dtype::Quantized8Asymm>().zero_point;
-        init(src0_scale, src1_scale, src2_scale, dst_scale, src0_zp, src1_zp,
-             src2_zp, dst_zp);
+        init(src0_scale, src1_scale, src2_scale, dst_scale, src0_zp, src1_zp, src2_zp,
+             dst_zp);
     }
-    TernaryOpBase(float src0_scale, float src1_scale, float src2_scale,
-                  float dst_scale, uint8_t src0_zp, uint8_t src1_zp,
-                  uint8_t src2_zp, uint8_t dst_zp) {
-        init(src0_scale, src1_scale, src2_scale, dst_scale, src0_zp, src1_zp,
-             src2_zp, dst_zp);
+    TernaryOpBase(
+            float src0_scale, float src1_scale, float src2_scale, float dst_scale,
+            uint8_t src0_zp, uint8_t src1_zp, uint8_t src2_zp, uint8_t dst_zp) {
+        init(src0_scale, src1_scale, src2_scale, dst_scale, src0_zp, src1_zp, src2_zp,
+             dst_zp);
     }
 };
 
@@ -654,8 +678,8 @@ struct FixupBase {
         int shift = static_cast<int>(::ceilf(::log2f(0.5 / scale)));
         scale *= ::powf(2, shift);
         //! Using double can get full precision here, but it can be ignored.
-        vmultiplier = vdupq_n_s32(
-                std::round(static_cast<double>(scale) * ((2LL) << 30)));
+        vmultiplier =
+                vdupq_n_s32(std::round(static_cast<double>(scale) * ((2LL) << 30)));
         vshift = vdupq_n_s32(-shift);
     }
 };
@@ -665,8 +689,7 @@ template <typename src_type, typename dst_type, typename Op>
 struct UnaryQuantizationOp;
 
 template <typename Op>
-struct UnaryQuantizationOp<dt_qint8, dt_qint8, Op>
-        : UnaryOpBase<dt_qint8, dt_qint8> {
+struct UnaryQuantizationOp<dt_qint8, dt_qint8, Op> : UnaryOpBase<dt_qint8, dt_qint8> {
     using UnaryOpBase<dt_qint8, dt_qint8>::UnaryOpBase;
     constexpr static size_t SIMD_WIDTH = 16;
     Op op;
@@ -735,14 +758,12 @@ template <typename src_type, typename dst_type, typename Op>
 struct BinaryQuantizationOp;
 
 template <typename Op>
-struct BinaryQuantizationOp<dt_qint8, dt_qint8, Op>
-        : BinaryOpBase<dt_qint8, dt_qint8> {
+struct BinaryQuantizationOp<dt_qint8, dt_qint8, Op> : BinaryOpBase<dt_qint8, dt_qint8> {
     using BinaryOpBase<dt_qint8, dt_qint8>::BinaryOpBase;
     constexpr static size_t SIMD_WIDTH = 16;
     Op op;
 
-    void operator()(const dt_qint8& src0, const dt_qint8& src1,
-                    dt_qint8* dst) const {
+    void operator()(const dt_qint8& src0, const dt_qint8& src1, dt_qint8* dst) const {
         *dst = operator()(src0, src1);
     }
 
@@ -754,13 +775,12 @@ struct BinaryQuantizationOp<dt_qint8, dt_qint8, Op>
         return QConverter::convert<dt_qint8, float>(fdst);
     }
 
-    void operator()(const int8x16x2_t& vsrc0, const int8x16x2_t& vsrc1,
-                    dt_qint8* dst) const {
+    void operator()(
+            const int8x16x2_t& vsrc0, const int8x16x2_t& vsrc1, dt_qint8* dst) const {
         OPERATOR_BINARY_QINT8;
     }
 
-    int8x8_t operator()(const int32x4x2_t& vsrc0,
-                        const int32x4x2_t& vsrc1) const {
+    int8x8_t operator()(const int32x4x2_t& vsrc0, const int32x4x2_t& vsrc1) const {
         auto val0 = vmulq_f32(vcvtq_f32_s32(vsrc0.val[0]), this->vscale_src0);
         auto val1 = vmulq_f32(vcvtq_f32_s32(vsrc0.val[1]), this->vscale_src0);
         auto val2 = vmulq_f32(vcvtq_f32_s32(vsrc1.val[0]), this->vscale_src1);
@@ -779,8 +799,8 @@ struct BinaryQuantizationOp<dt_quint8, dt_quint8, Op>
     constexpr static size_t SIMD_WIDTH = 16;
     Op op;
 
-    void operator()(const dt_quint8& src0, const dt_quint8& src1,
-                    dt_quint8* dst) const {
+    void operator()(
+            const dt_quint8& src0, const dt_quint8& src1, dt_quint8* dst) const {
         *dst = operator()(src0, src1);
     }
 
@@ -792,13 +812,13 @@ struct BinaryQuantizationOp<dt_quint8, dt_quint8, Op>
         return QConverter::convert<dt_quint8, float, uint8_t>(fdst, this->dzp);
     }
 
-    void operator()(const uint8x16x2_t& vsrc0, const uint8x16x2_t& vsrc1,
-                    dt_quint8* dst) const {
+    void operator()(
+            const uint8x16x2_t& vsrc0, const uint8x16x2_t& vsrc1,
+            dt_quint8* dst) const {
         OPERATOR_BINARY_QUINT8;
     }
 
-    uint8x8_t operator()(const uint32x4x2_t& vsrc0,
-                         const uint32x4x2_t& vsrc1) const {
+    uint8x8_t operator()(const uint32x4x2_t& vsrc0, const uint32x4x2_t& vsrc1) const {
         auto val0 = vmulq_f32(vcvtq_f32_u32(vsrc0.val[0]), this->vscale_src0);
         val0 = vsubq_f32(val0, this->vscale_zp0);
         auto val1 = vmulq_f32(vcvtq_f32_u32(vsrc0.val[1]), this->vscale_src0);
@@ -825,13 +845,14 @@ struct TernaryQuantizationOp<dt_qint8, dt_qint8, Op>
     constexpr static size_t SIMD_WIDTH = 16;
     Op op;
 
-    void operator()(const dt_qint8& src0, const dt_qint8& src1,
-                    const dt_qint8& src2, dt_qint8* dst) const {
+    void operator()(
+            const dt_qint8& src0, const dt_qint8& src1, const dt_qint8& src2,
+            dt_qint8* dst) const {
         *dst = operator()(src0, src1, src2);
     }
 
-    dt_qint8 operator()(const dt_qint8& src0, const dt_qint8& src1,
-                        const dt_qint8& src2) const {
+    dt_qint8 operator()(
+            const dt_qint8& src0, const dt_qint8& src1, const dt_qint8& src2) const {
         float fsrc0 = src0.as_int8() * this->scale_src0;
         float fsrc1 = src1.as_int8() * this->scale_src1;
         float fsrc2 = src2.as_int8() * this->scale_src2;
@@ -840,14 +861,15 @@ struct TernaryQuantizationOp<dt_qint8, dt_qint8, Op>
         return QConverter::convert<dt_qint8, float>(fdst);
     }
 
-    void operator()(const int8x16x2_t& vsrc0, const int8x16x2_t& vsrc1,
-                    const int8x16x2_t& vsrc2, dt_qint8* dst) const {
+    void operator()(
+            const int8x16x2_t& vsrc0, const int8x16x2_t& vsrc1,
+            const int8x16x2_t& vsrc2, dt_qint8* dst) const {
         OPERATOR_TERNARY_QINT8;
     }
 
-    int8x8_t operator()(const int32x4x2_t& vsrc0,
-                        const int32x4x2_t& vsrc1,
-                        const int32x4x2_t& vsrc2) const {
+    int8x8_t operator()(
+            const int32x4x2_t& vsrc0, const int32x4x2_t& vsrc1,
+            const int32x4x2_t& vsrc2) const {
         auto val0 = vmulq_f32(vcvtq_f32_s32(vsrc0.val[0]), this->vscale_src0);
         auto val1 = vmulq_f32(vcvtq_f32_s32(vsrc0.val[1]), this->vscale_src0);
         auto val2 = vmulq_f32(vcvtq_f32_s32(vsrc1.val[0]), this->vscale_src1);
@@ -868,13 +890,14 @@ struct TernaryQuantizationOp<dt_quint8, dt_quint8, Op>
     constexpr static size_t SIMD_WIDTH = 16;
     Op op;
 
-    void operator()(const dt_quint8& src0, const dt_quint8& src1,
-                    const dt_quint8& src2, dt_quint8* dst) const {
+    void operator()(
+            const dt_quint8& src0, const dt_quint8& src1, const dt_quint8& src2,
+            dt_quint8* dst) const {
         *dst = operator()(src0, src1, src2);
     }
 
-    dt_quint8 operator()(const dt_quint8& src0, const dt_quint8& src1,
-                         const dt_quint8& src2) const {
+    dt_quint8 operator()(
+            const dt_quint8& src0, const dt_quint8& src1, const dt_quint8& src2) const {
         float fsrc0 = src0.as_uint8() * this->scale_src0 - this->scale_zp0;
         float fsrc1 = src1.as_uint8() * this->scale_src1 - this->scale_zp1;
         float fsrc2 = src2.as_uint8() * this->scale_src2 - this->scale_zp2;
@@ -883,13 +906,15 @@ struct TernaryQuantizationOp<dt_quint8, dt_quint8, Op>
         return QConverter::convert<dt_quint8, float, uint8_t>(fdst, this->dzp);
     }
 
-    void operator()(const uint8x16x2_t& vsrc0, const uint8x16x2_t& vsrc1,
-                    const uint8x16x2_t& vsrc2, dt_quint8* dst) const {
+    void operator()(
+            const uint8x16x2_t& vsrc0, const uint8x16x2_t& vsrc1,
+            const uint8x16x2_t& vsrc2, dt_quint8* dst) const {
         OPERATOR_TERNARY_QUINT8;
     }
 
-    uint8x8_t operator()(const uint32x4x2_t& vsrc0, const uint32x4x2_t& vsrc1,
-                         const uint32x4x2_t& vsrc2) const {
+    uint8x8_t operator()(
+            const uint32x4x2_t& vsrc0, const uint32x4x2_t& vsrc1,
+            const uint32x4x2_t& vsrc2) const {
         auto val0 = vmulq_f32(vcvtq_f32_u32(vsrc0.val[0]), this->vscale_src0);
         val0 = vsubq_f32(val0, this->vscale_zp0);
         auto val1 = vmulq_f32(vcvtq_f32_u32(vsrc0.val[1]), this->vscale_src0);

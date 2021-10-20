@@ -15,6 +15,7 @@ from utils import make_tensor
 import megengine
 import megengine.core.tensor.megbrain_graph as G
 import megengine.functional as F
+import megengine.jit as jit
 from megengine.core._imperative_rt.core2 import apply
 from megengine.core._trace_option import use_symbolic_shape
 from megengine.core.ops import builtin
@@ -555,18 +556,16 @@ def test_advance_indexing_with_bool(test_varnode):
     aa[bb] = False
     np.testing.assert_equal(a, aa.numpy())
 
-    # XXX: trace does not expect empty condtake tensor
-    if not use_symbolic_shape():
-        a = np.ones((2, 2), dtype=np.int32)
-        b = np.array([[False, False], [False, False]])
-        aa = Tensor(a)
-        bb = Tensor(b)
-        np.testing.assert_equal(a[b], aa[b].numpy())
-        np.testing.assert_equal(a[b], aa[bb].numpy())
+    a = np.ones((2, 2), dtype=np.int32)
+    b = np.array([[False, False], [False, False]])
+    aa = Tensor(a)
+    bb = Tensor(b)
+    np.testing.assert_equal(a[b], aa[b].numpy())
+    np.testing.assert_equal(a[b], aa[bb].numpy())
 
-        b = np.array([False, False])
-        bb = Tensor(b)
-        np.testing.assert_equal(a[b], aa[bb].numpy().reshape(a[b].shape))  # FIXME
+    b = np.array([False, False])
+    bb = Tensor(b)
+    np.testing.assert_equal(a[b], aa[bb].numpy().reshape(a[b].shape))
 
     a = np.arange(576).reshape(2, 3, 4, 3, 4, 2).astype("int32")
     aa = Tensor(a)
@@ -584,3 +583,128 @@ def test_advance_indexing_with_bool(test_varnode):
     np.testing.assert_equal(
         a[:, b, 0:2, [True, False]], aa[:, bb, 0:2, [True, False]].numpy()
     )
+
+
+@pytest.mark.parametrize("symbolic", [True, False, None])
+def test_subtensor_on_empty_tensor(symbolic):
+    np_x = np.array([], dtype=np.float32).reshape(10, 0, 10)
+    mge_x = megengine.tensor(np_x)
+
+    def run_test(fn):
+        out_ref = fn(np_x)
+        if symbolic is not None:
+            fn = jit.trace(symbolic=symbolic)(fn)
+        for i in range(3):
+            out = fn(mge_x)
+            np.testing.assert_equal(out.numpy(), out_ref)
+
+    run_test(lambda x: x[0:1, :, :])
+    run_test(lambda x: x[1:100:2, :, :])
+    run_test(lambda x: x[-10:5:2, :, :])
+    run_test(lambda x: x[5:1:-1, :, :])
+    run_test(lambda x: x[3, 10:1:1, 5])
+    run_test(lambda x: x[3, 10:1:1, 5:-1])
+    run_test(lambda x: x[:100, :100, :100])
+    run_test(lambda x: x[100:200, 300:400, 500:600])
+
+
+@pytest.mark.parametrize("symbolic", [True, False, None])
+def test_indexingMultiAxisVec_on_empty_tensor(symbolic):
+    np_x = np.array([], dtype=np.float32).reshape(10, 10, 0)
+    mge_x = megengine.tensor(np_x)
+
+    def run_test(fn):
+        out_ref = fn(np_x)
+        if symbolic is not None:
+            fn = jit.trace(symbolic=symbolic)(fn)
+        for i in range(3):
+            out = fn(mge_x)
+            np.testing.assert_equal(out.numpy(), out_ref)
+
+    run_test(lambda x: x[[1, 2, 3]])
+    run_test(lambda x: x[[1, 2, 3], [4, 5, 6]])
+    run_test(lambda x: x[[]])
+    run_test(lambda x: x[[], [], []])
+
+
+@pytest.mark.parametrize("symbolic", [True, False, None])
+def test_setsubtensor_on_empty_tensor(symbolic):
+    def run_test(inp_shp, fn):
+        np_x = np.random.randn(*inp_shp).astype(np.float32)
+        mge_x = megengine.tensor(np_x)
+        out_ref = fn(np_x)
+        if symbolic is not None:
+            fn = jit.trace(symbolic=symbolic)(fn)
+        for i in range(3):
+            out = fn(mge_x)
+            np.testing.assert_equal(out.numpy(), out_ref)
+
+    def test1(x):
+        x[1:100:2, :, :] = x[1:100:2, :, :]
+        return x
+
+    def test2(x):
+        x[-10:5:2, :, :] = x[-10:5:2, :, :]
+        return x
+
+    def test3(x):
+        x[5:1:-1, :, :] = x[5:1:-1, :, :]
+        return x
+
+    def test4(x):
+        x[3, 10:1:1, 5:-1] = x[3, 10:1:1, 5:-1]
+        return x
+
+    def test5(x):
+        x[:100, :100, :100] = x[:100, :100, :100]
+        return x
+
+    def test6(x):
+        x[100:200, 300:400, 500:600] = x[100:200, 300:400, 500:600]
+        return x
+
+    run_test((10, 0, 10), test1)
+    run_test((10, 0, 10), test2)
+    run_test((10, 0, 10), test3)
+    run_test((10, 0, 10), test4)
+    run_test((10, 0, 10), test5)
+    run_test((10, 0, 10), test6)
+    run_test((10, 10, 10), test4)
+    run_test((10, 10, 10), test5)
+    run_test((10, 10, 10), test6)
+
+
+@pytest.mark.parametrize("symbolic", [True, False, None])
+def test_indexingSetMultiAxisVec_on_empty_tensor(symbolic):
+    def run_test(inp_shp, fn):
+        np_x = np.random.randn(*inp_shp).astype(np.float32)
+        mge_x = megengine.tensor(np_x)
+        out_ref = fn(np_x)
+        if symbolic is not None:
+            fn = jit.trace(symbolic=symbolic)(fn)
+        for i in range(3):
+            out = fn(mge_x)
+            np.testing.assert_equal(out.numpy(), out_ref)
+
+    def test1(x):
+        x[[1, 2, 3]] = x[[1, 2, 3]]
+        return x
+
+    def test2(x):
+        x[[1, 2, 3], [1, 2, 3]] = x[[1, 2, 3], [1, 2, 3]]
+        return x
+
+    def test3(x):
+        x[[]] = x[[]]
+        return x
+
+    def test4(x):
+        x[[], [], []] = x[[], [], []]
+        return x
+
+    run_test((10, 10, 0), test1)
+    run_test((10, 10, 0), test2)
+    run_test((10, 10, 0), test3)
+    run_test((10, 10, 0), test4)
+    run_test((10, 10, 10), test3)
+    run_test((10, 10, 10), test4)

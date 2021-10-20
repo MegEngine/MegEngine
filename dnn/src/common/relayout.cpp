@@ -44,9 +44,7 @@ bool is_transpose_single(const TensorLayout& layout, TransposeParam& p) {
      *  shape: n, m
      *  stride: 1, n
      */
-    auto strd = [&](size_t idx, ptrdiff_t v) {
-        return layout.stride[idx] == v;
-    };
+    auto strd = [&](size_t idx, ptrdiff_t v) { return layout.stride[idx] == v; };
     if (layout.ndim == 4) {
         p.batch = layout[0];
         p.n = layout[1];
@@ -89,19 +87,18 @@ bool is_transpose_single(const TensorLayout& layout, TransposeParam& p) {
 
 }  // anonymous namespace
 
-void RelayoutForward::check_layout_and_canonize(TensorLayout& src,
-                                                TensorLayout& dst) {
+void RelayoutForward::check_layout_and_canonize(TensorLayout& src, TensorLayout& dst) {
     megdnn_assert(dst.is_non_overlapping_strong());
     src = src.collapse_contiguous();
     dst = dst.collapse_contiguous();
-    megdnn_assert(src.dtype == dst.dtype &&
-                          src.total_nr_elems() == dst.total_nr_elems(),
-                  "check %s == %s and %zu == %zu", src.dtype.name(),
-                  dst.dtype.name(), src.total_nr_elems(), dst.total_nr_elems());
+    megdnn_assert(
+            src.dtype == dst.dtype && src.total_nr_elems() == dst.total_nr_elems(),
+            "check %s == %s and %zu == %zu", src.dtype.name(), dst.dtype.name(),
+            src.total_nr_elems(), dst.total_nr_elems());
 }
 
-bool relayout::is_transpose(const TensorLayout& src, const TensorLayout& dst,
-                            TransposeParam& p) {
+bool relayout::is_transpose(
+        const TensorLayout& src, const TensorLayout& dst, TransposeParam& p) {
     if (is_contig(dst) && is_transpose_single(src, p)) {
         // if the original intention is to transpose (m, n) to (n, m),
         // then we should use (n, m) as the contig dst and use a corrsponding

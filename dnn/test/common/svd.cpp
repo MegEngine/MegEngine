@@ -51,15 +51,15 @@ void fill_diag(const TensorND& v, TensorND& diag) {
     }
 }
 
-std::shared_ptr<Tensor<>> matmul(Handle* handle, const TensorND& A,
-                                 const TensorND& B) {
+std::shared_ptr<Tensor<>> matmul(Handle* handle, const TensorND& A, const TensorND& B) {
     auto matmul_opr = handle->create_operator<BatchedMatrixMul>();
 
     TensorLayout result_layout;
     matmul_opr->deduce_layout(A.layout, B.layout, result_layout);
     std::shared_ptr<Tensor<>> result(new Tensor<>(handle, result_layout));
-    WorkspaceWrapper ws(handle, matmul_opr->get_workspace_in_bytes(
-                                        A.layout, B.layout, result->layout()));
+    WorkspaceWrapper ws(
+            handle,
+            matmul_opr->get_workspace_in_bytes(A.layout, B.layout, result->layout()));
     matmul_opr->exec(A, B, result->tensornd(), ws.workspace());
     return result;
 }
@@ -117,15 +117,15 @@ SVDTestcase::Result SVDTestcase::run(SVDForward* opr) {
 
     // Alloc tensor on device
     Tensor<> u{handle, u_layout}, s{handle, s_layout}, vt{handle, vt_layout};
-    WorkspaceWrapper ws(handle,
-                        opr->get_workspace_in_bytes(m_mat.layout, u_layout,
-                                                    s_layout, vt_layout));
+    WorkspaceWrapper ws(
+            handle,
+            opr->get_workspace_in_bytes(m_mat.layout, u_layout, s_layout, vt_layout));
 
     opr->exec(*src, u.tensornd(), s.tensornd(), vt.tensornd(), ws.workspace());
 
     auto u_host = make_tensor_d2h(handle, u.tensornd());
-    // Defined in wsdk8/Include/shared/inaddr.h Surprise! It's Windows.
-    #undef s_host
+// Defined in wsdk8/Include/shared/inaddr.h Surprise! It's Windows.
+#undef s_host
     auto s_host = make_tensor_d2h(handle, s.tensornd());
     auto vt_host = make_tensor_d2h(handle, vt.tensornd());
     if (m_param.compute_uv) {
@@ -138,8 +138,9 @@ SVDTestcase::Result SVDTestcase::run(SVDForward* opr) {
             for (int i = 0; i < (int)diag_layout.ndim - 2; i++) {
                 shape.push_back(diag_layout[i]);
             }
-            size_t x = std::min(diag_layout[diag_layout.ndim - 1],
-                                diag_layout[diag_layout.ndim - 2]);
+            size_t x = std::min(
+                    diag_layout[diag_layout.ndim - 1],
+                    diag_layout[diag_layout.ndim - 2]);
             shape.push_back(x);
             shape.push_back(x);
             diag_layout = {shape, diag_layout.dtype};

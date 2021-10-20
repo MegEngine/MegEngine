@@ -20,8 +20,7 @@ using namespace convolution;
 
 bool ConvolutionBackwardDataImpl::AlgoChanwise::is_available(
         const SizeArgs& args) const {
-    if (!args.grad_layout->is_contiguous() ||
-        !args.diff_layout->is_contiguous()) {
+    if (!args.grad_layout->is_contiguous() || !args.diff_layout->is_contiguous()) {
         return false;
     }
     if ((args.diff_layout->dtype == args.filter_layout->dtype &&
@@ -42,16 +41,14 @@ size_t ConvolutionBackwardDataImpl::AlgoChanwise::get_workspace_in_bytes(
     return 0;
 }
 
-void ConvolutionBackwardDataImpl::AlgoChanwise::exec(
-        const ExecArgs& args) const {
+void ConvolutionBackwardDataImpl::AlgoChanwise::exec(const ExecArgs& args) const {
     auto kparam = chanwise::Param::from_fwd_args(args.as_fwd_args());
     auto stream = cuda_stream(args.handle);
     switch (args.diff_layout->dtype.enumv()) {
         case DTypeEnum::Float32:
-            return chanwise::run_bwd_data(args.grad_tensor->ptr<float>(),
-                                          args.diff_tensor->ptr<float>(),
-                                          args.filter_tensor->ptr<float>(),
-                                          kparam, stream);
+            return chanwise::run_bwd_data(
+                    args.grad_tensor->ptr<float>(), args.diff_tensor->ptr<float>(),
+                    args.filter_tensor->ptr<float>(), kparam, stream);
 
         case DTypeEnum::Float16:
 #if CUDA_VERSION >= 9000
@@ -59,8 +56,8 @@ void ConvolutionBackwardDataImpl::AlgoChanwise::exec(
                 return chanwise::run_bwd_data(
                         static_cast<__half*>(args.grad_tensor->raw_ptr),
                         static_cast<__half*>(args.diff_tensor->raw_ptr),
-                        static_cast<__half*>(args.filter_tensor->raw_ptr),
-                        kparam, stream);
+                        static_cast<__half*>(args.filter_tensor->raw_ptr), kparam,
+                        stream);
             } else {
                 return chanwise::run_bwd_data(
                         args.grad_tensor->ptr<dt_float16>(),
@@ -68,10 +65,10 @@ void ConvolutionBackwardDataImpl::AlgoChanwise::exec(
                         args.filter_tensor->ptr<dt_float16>(), kparam, stream);
             }
 #else
-            return chanwise::run_bwd_data(args.grad_tensor->ptr<dt_float16>(),
-                                          args.diff_tensor->ptr<dt_float16>(),
-                                          args.filter_tensor->ptr<dt_float16>(),
-                                          kparam, stream);
+            return chanwise::run_bwd_data(
+                    args.grad_tensor->ptr<dt_float16>(),
+                    args.diff_tensor->ptr<dt_float16>(),
+                    args.filter_tensor->ptr<dt_float16>(), kparam, stream);
 #endif
 
         default:

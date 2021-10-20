@@ -27,17 +27,15 @@ constexpr ptrdiff_t rowoff(ptrdiff_t i, ptrdiff_t lda) {
 }  // namespace
 
 template <typename ctype>
-void TopKImpl::dispatch_with_ctype(int k, size_t m, size_t n, ptrdiff_t lda,
-                                   const ctype* data, ctype* values,
-                                   int* indices, void* workspace) {
+void TopKImpl::dispatch_with_ctype(
+        int k, size_t m, size_t n, ptrdiff_t lda, const ctype* data, ctype* values,
+        int* indices, void* workspace) {
     using CmpGt = std::greater<std::pair<ctype, uint32_t>>;
     thin_function<void()> compute;
     switch (param().mode) {
         case Param::Mode::KTH_ONLY:
-            compute = [
-                k0 = k, m, n, lda, data, values,
-                wk = static_cast<ctype*>(workspace)
-            ]() {
+            compute = [k0 = k, m, n, lda, data, values,
+                       wk = static_cast<ctype*>(workspace)]() {
                 int k = k0 < 0 ? n + k0 : k0 - 1;
                 for (size_t i = 0; i < m; ++i) {
                     memcpy(wk, data + rowoff(i, lda), sizeof(ctype) * n);
@@ -48,10 +46,8 @@ void TopKImpl::dispatch_with_ctype(int k, size_t m, size_t n, ptrdiff_t lda,
             break;
         case Param::Mode::VALUE_IDX_NOSORT:
             megdnn_assert(n <= std::numeric_limits<uint32_t>::max());
-            compute = [
-                k, m, n, lda, data, values, indices,
-                wk = static_cast<std::pair<ctype, uint32_t>*>(workspace)
-            ]() {
+            compute = [k, m, n, lda, data, values, indices,
+                       wk = static_cast<std::pair<ctype, uint32_t>*>(workspace)]() {
                 int ow = std::abs(k);
                 for (size_t i = 0; i < m; ++i) {
                     for (size_t j = 0; j < n; ++j) {
@@ -72,10 +68,8 @@ void TopKImpl::dispatch_with_ctype(int k, size_t m, size_t n, ptrdiff_t lda,
             break;
         case Param::Mode::VALUE_IDX_SORTED:
             megdnn_assert(n <= std::numeric_limits<uint32_t>::max());
-            compute = [
-                k, m, n, lda, data, values, indices,
-                wk = static_cast<std::pair<ctype, uint32_t>*>(workspace)
-            ]() {
+            compute = [k, m, n, lda, data, values, indices,
+                       wk = static_cast<std::pair<ctype, uint32_t>*>(workspace)]() {
                 for (size_t i = 0; i < m; ++i) {
                     for (size_t j = 0; j < n; ++j) {
                         wk[j].first = data[rowoff(i, lda) + j];
@@ -100,19 +94,20 @@ void TopKImpl::dispatch_with_ctype(int k, size_t m, size_t n, ptrdiff_t lda,
     static_cast<HandleImpl*>(handle())->dispatch_kern(std::move(compute));
 }
 
-void TopKImpl::do_exec(int k, _megdnn_tensor_in data, _megdnn_tensor_out values,
-                       int32_t* indices, _megdnn_workspace workspace) {
+void TopKImpl::do_exec(
+        int k, _megdnn_tensor_in data, _megdnn_tensor_out values, int32_t* indices,
+        _megdnn_workspace workspace) {
     size_t m = data.layout[0], n = data.layout[1];
     ptrdiff_t lda = data.layout.stride[0];
     switch (data.layout.dtype.enumv()) {
-#define cb(t)                                                     \
-    case DTypeTrait<t>::enumv:                                    \
-        do {                                                      \
-            using ct = DTypeTrait<t>::ctype;                      \
-            dispatch_with_ctype<ct>(k, m, n, lda, data.ptr<ct>(), \
-                                    values.ptr<ct>(), indices,    \
-                                    workspace.raw_ptr);           \
-            return;                                               \
+#define cb(t)                                                                \
+    case DTypeTrait<t>::enumv:                                               \
+        do {                                                                 \
+            using ct = DTypeTrait<t>::ctype;                                 \
+            dispatch_with_ctype<ct>(                                         \
+                    k, m, n, lda, data.ptr<ct>(), values.ptr<ct>(), indices, \
+                    workspace.raw_ptr);                                      \
+            return;                                                          \
         } while (0);
         MEGDNN_FOREACH_COMPUTING_DTYPE(cb);
         default:
@@ -120,9 +115,9 @@ void TopKImpl::do_exec(int k, _megdnn_tensor_in data, _megdnn_tensor_out values,
     }
 }
 
-size_t TopKImpl::get_workspace_in_bytes(int k, const TensorLayout& data,
-                                        const TensorLayout& values,
-                                        const TensorLayout& indices) {
+size_t TopKImpl::get_workspace_in_bytes(
+        int k, const TensorLayout& data, const TensorLayout& values,
+        const TensorLayout& indices) {
     MEGDNN_MARK_USED_VAR(k);
     MEGDNN_MARK_USED_VAR(values);
     MEGDNN_MARK_USED_VAR(indices);

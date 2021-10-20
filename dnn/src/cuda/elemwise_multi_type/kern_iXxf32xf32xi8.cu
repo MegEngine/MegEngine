@@ -24,8 +24,8 @@ struct __builtin_align__(sizeof(T) * 4) Packed4 {
 };
 
 template <typename stype, typename dtype>
-__global__ void kern_1d(const stype* x, const float* k, const float* b,
-                        dtype* y, uint32_t n) {
+__global__ void kern_1d(
+        const stype* x, const float* k, const float* b, dtype* y, uint32_t n) {
     elemwise_multi_type::Fma3iXxf32xf32xiYOp<stype, dtype> op;
     uint32_t i = threadIdx.x + blockIdx.x * blockDim.x;
     if (i < n) {
@@ -34,8 +34,9 @@ __global__ void kern_1d(const stype* x, const float* k, const float* b,
 }
 
 template <typename stype, typename dtype>
-void invoke_kern_1d(const stype* x, const float* k, const float* b, dtype* y,
-                    uint32_t n, cudaStream_t stream) {
+void invoke_kern_1d(
+        const stype* x, const float* k, const float* b, dtype* y, uint32_t n,
+        cudaStream_t stream) {
     dim3 threads = NR_THREADS;
     dim3 blocks = DIVUP(n, NR_THREADS);
     kern_1d<stype, dtype><<<blocks, threads, 0, stream>>>(x, k, b, y, n);
@@ -43,8 +44,9 @@ void invoke_kern_1d(const stype* x, const float* k, const float* b, dtype* y,
 }
 
 template <typename stype, typename dtype>
-__global__ void kern_2d_fallback(const stype* x, const float* k, const float* b,
-                                 dtype* y, uint32_t m, uint32_t n) {
+__global__ void kern_2d_fallback(
+        const stype* x, const float* k, const float* b, dtype* y, uint32_t m,
+        uint32_t n) {
     uint32_t i = threadIdx.y + blockIdx.y * blockDim.y;
     uint32_t j = threadIdx.x + blockIdx.x * blockDim.x;
     elemwise_multi_type::Fma3iXxf32xf32xiYOp<stype, dtype> op;
@@ -54,10 +56,9 @@ __global__ void kern_2d_fallback(const stype* x, const float* k, const float* b,
 }
 
 template <typename stype, typename dtype>
-__global__ void kern_2d_mul4(const stype* __restrict x,
-                             const float* __restrict k,
-                             const float* __restrict b, dtype* y_, uint32_t m,
-                             uint32_t n) {
+__global__ void kern_2d_mul4(
+        const stype* __restrict x, const float* __restrict k, const float* __restrict b,
+        dtype* y_, uint32_t m, uint32_t n) {
     uint32_t i = threadIdx.y + blockIdx.y * blockDim.y;
     uint32_t j = threadIdx.x + blockIdx.x * blockDim.x;
     elemwise_multi_type::Fma3iXxf32xf32xiYOp<stype, dtype> op;
@@ -85,8 +86,9 @@ __global__ void kern_2d_mul4(const stype* __restrict x,
 }
 
 template <typename stype, typename dtype>
-void invoke_kern_2d(const stype* x, const float* k, const float* b, dtype* y,
-                    uint32_t m, uint32_t n, cudaStream_t stream) {
+void invoke_kern_2d(
+        const stype* x, const float* k, const float* b, dtype* y, uint32_t m,
+        uint32_t n, cudaStream_t stream) {
     if (n % 4 == 0 && is_same<dtype, int8_t>::value) {
         dim3 threads(NR_THREADS_X, NR_THREADS_Y);
         dim3 blocks(DIVUP(n / 4, NR_THREADS_X), DIVUP(m, NR_THREADS_Y));
@@ -118,11 +120,10 @@ void cuda::elemwise_multi_type::fma3_iXxf32xf32xi8_bcast_1x(
     }
 }
 
-#define INST(stype)                                                       \
-    template void                                                         \
-    cuda::elemwise_multi_type::fma3_iXxf32xf32xi8_bcast_1x<stype>(        \
-            const stype*, const float*, const float*, dt_int8*, uint32_t, \
-            uint32_t, cudaStream_t)
+#define INST(stype)                                                                 \
+    template void cuda::elemwise_multi_type::fma3_iXxf32xf32xi8_bcast_1x<stype>(    \
+            const stype*, const float*, const float*, dt_int8*, uint32_t, uint32_t, \
+            cudaStream_t)
 #define cb(t) INST(DTypeTrait<t>::ctype);
 MEGDNN_FOREACH_COMPUTING_DTYPE_INT(cb)
 #undef cb

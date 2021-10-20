@@ -39,21 +39,22 @@ namespace {
  * @tparam T3
  * @tparam T4
  */
-template <int src_idx, int weight_idx, int c_dim, int ow_block, bool half_adv,
-          int stride, typename T, typename T2, typename T3, typename T4>
+template <
+        int src_idx, int weight_idx, int c_dim, int ow_block, bool half_adv, int stride,
+        typename T, typename T2, typename T3, typename T4>
 struct ShiftCalHelper {
     static MEGDNN_ALWAYS_INLINE void impl(T& c, T2& src, T3& weight);
 };
 
-template <int src_idx, int weight_idx, typename T, typename T2, typename T3,
-          typename T4>
+template <
+        int src_idx, int weight_idx, typename T, typename T2, typename T3, typename T4>
 struct ShiftCalHelper<src_idx, weight_idx, 1, 8, false, 2, T, T2, T3, T4> {
     static MEGDNN_ALWAYS_INLINE void impl(T& c, T2& src, T3& weight) {
-#define cb(step)                                                          \
-    c[0][step] = vmlal_s8(c[0][step], vget_low_s8(weight[0][weight_idx]), \
-                          vget_low_s8(src[step + src_idx]));              \
-    c[0][step] = vmlal_high_s8(c[0][step], weight[0][weight_idx],         \
-                               src[step + src_idx]);
+#define cb(step)                                            \
+    c[0][step] = vmlal_s8(                                  \
+            c[0][step], vget_low_s8(weight[0][weight_idx]), \
+            vget_low_s8(src[step + src_idx]));              \
+    c[0][step] = vmlal_high_s8(c[0][step], weight[0][weight_idx], src[step + src_idx]);
 
         UNROLL_CALL_RAW(8, cb);
 
@@ -61,13 +62,14 @@ struct ShiftCalHelper<src_idx, weight_idx, 1, 8, false, 2, T, T2, T3, T4> {
     }
 };
 
-template <int src_idx, int weight_idx, typename T, typename T2, typename T3,
-          typename T4>
+template <
+        int src_idx, int weight_idx, typename T, typename T2, typename T3, typename T4>
 struct ShiftCalHelper<src_idx, weight_idx, 1, 8, true, 2, T, T2, T3, T4> {
     static MEGDNN_ALWAYS_INLINE void impl(T& c, T2& src, T3& weight) {
-#define cb(step)                                                          \
-    c[0][step] = vmlal_s8(c[0][step], vget_low_s8(weight[0][weight_idx]), \
-                          vget_low_s8(src[step + src_idx]));
+#define cb(step)                                            \
+    c[0][step] = vmlal_s8(                                  \
+            c[0][step], vget_low_s8(weight[0][weight_idx]), \
+            vget_low_s8(src[step + src_idx]));
 
         UNROLL_CALL_RAW(8, cb);
 
@@ -75,30 +77,28 @@ struct ShiftCalHelper<src_idx, weight_idx, 1, 8, true, 2, T, T2, T3, T4> {
     }
 };
 
-template <int src_idx, int weight_idx, typename T, typename T2, typename T3,
-          typename T4>
+template <
+        int src_idx, int weight_idx, typename T, typename T2, typename T3, typename T4>
 struct ShiftCalHelper<src_idx, weight_idx, 1, 8, false, 1, T, T2, T3, T4> {
     static MEGDNN_ALWAYS_INLINE void impl(T& c, T2& src, T3& weight) {
         //! for compatible with stride2 kernel, step, weight_idx, src_idx should
         //! mul 2
-#define cb(step)                                                             \
-    c[0][2 * step] =                                                         \
-            vmlal_s8(c[0][2 * step], vget_low_s8(weight[0][2 * weight_idx]), \
-                     vget_low_s8(src[step + src_idx]));                      \
-    c[0][2 * step + 1] =                                                     \
-            vmlal_high_s8(c[0][2 * step + 1], weight[0][2 * weight_idx],     \
-                          src[step + src_idx]);
+#define cb(step)                                                    \
+    c[0][2 * step] = vmlal_s8(                                      \
+            c[0][2 * step], vget_low_s8(weight[0][2 * weight_idx]), \
+            vget_low_s8(src[step + src_idx]));                      \
+    c[0][2 * step + 1] = vmlal_high_s8(                             \
+            c[0][2 * step + 1], weight[0][2 * weight_idx], src[step + src_idx]);
 
         UNROLL_CALL_RAW(4, cb);
 
 #undef cb
-#define cb(step)                                                              \
-    c[0][2 * step] =                                                          \
-            vmlal_high_s8(c[0][2 * step], weight[0][2 * weight_idx + 1],      \
-                          src[step + src_idx]);                               \
-    c[0][2 * step + 1] = vmlal_s8(c[0][2 * step + 1],                         \
-                                  vget_low_s8(weight[0][2 * weight_idx + 1]), \
-                                  vget_low_s8(src[step + 1 + src_idx]));
+#define cb(step)                                                                 \
+    c[0][2 * step] = vmlal_high_s8(                                              \
+            c[0][2 * step], weight[0][2 * weight_idx + 1], src[step + src_idx]); \
+    c[0][2 * step + 1] = vmlal_s8(                                               \
+            c[0][2 * step + 1], vget_low_s8(weight[0][2 * weight_idx + 1]),      \
+            vget_low_s8(src[step + 1 + src_idx]));
 
         UNROLL_CALL_RAW(4, cb);
 
@@ -106,17 +106,16 @@ struct ShiftCalHelper<src_idx, weight_idx, 1, 8, false, 1, T, T2, T3, T4> {
     }
 };
 
-template <int src_idx, int weight_idx, typename T, typename T2, typename T3,
-          typename T4>
+template <
+        int src_idx, int weight_idx, typename T, typename T2, typename T3, typename T4>
 struct ShiftCalHelper<src_idx, weight_idx, 1, 8, true, 1, T, T2, T3, T4> {
     static MEGDNN_ALWAYS_INLINE void impl(T& c, T2& src, T3& weight) {
-#define cb(step)                                                             \
-    c[0][2 * step] =                                                         \
-            vmlal_s8(c[0][2 * step], vget_low_s8(weight[0][2 * weight_idx]), \
-                     vget_low_s8(src[step + src_idx]));                      \
-    c[0][2 * step + 1] =                                                     \
-            vmlal_high_s8(c[0][2 * step + 1], weight[0][2 * weight_idx],     \
-                          src[step + src_idx]);
+#define cb(step)                                                    \
+    c[0][2 * step] = vmlal_s8(                                      \
+            c[0][2 * step], vget_low_s8(weight[0][2 * weight_idx]), \
+            vget_low_s8(src[step + src_idx]));                      \
+    c[0][2 * step + 1] = vmlal_high_s8(                             \
+            c[0][2 * step + 1], weight[0][2 * weight_idx], src[step + src_idx]);
 
         UNROLL_CALL_RAW(4, cb);
 
@@ -140,26 +139,29 @@ public:
     static const int val = 2;
 };
 
-template <int src_idx, int weight_idx, int c_dim, int ow_block, bool half_adv,
-          int stride, typename T, typename T2, typename T3>
+template <
+        int src_idx, int weight_idx, int c_dim, int ow_block, bool half_adv, int stride,
+        typename T, typename T2, typename T3>
 MEGDNN_ALWAYS_INLINE void cal_helper(T& c, T2& src, T3& weight) {
-    ShiftCalHelper<src_idx, weight_idx, c_dim, ow_block, half_adv, stride, T,
-                   T2, T3, int>::impl(c, src, weight);
+    ShiftCalHelper<
+            src_idx, weight_idx, c_dim, ow_block, half_adv, stride, T, T2, T3,
+            int>::impl(c, src, weight);
 };
-template <BiasMode bias_mode, typename Op, int filter_size, int oc_block,
-          int stride, int ow_block>
+template <
+        BiasMode bias_mode, typename Op, int filter_size, int oc_block, int stride,
+        int ow_block>
 struct KerNeonXXs2NchwNchw44I8I8I16 {
-    static void impl(const int8_t* src_ptr_origin, const int8_t* weight_ptr,
-                     const int16_t* bias_ptr, int16_t* dst_ptr, int ic, int ih,
-                     int iw, int ld_dst_oc, const Op&, const int remain_ow);
+    static void impl(
+            const int8_t* src_ptr_origin, const int8_t* weight_ptr,
+            const int16_t* bias_ptr, int16_t* dst_ptr, int ic, int ih, int iw,
+            int ld_dst_oc, const Op&, const int remain_ow);
 };
-template <BiasMode bias_mode, typename Op, int oc_block, int stride,
-          int ow_block>
-struct KerNeonXXs2NchwNchw44I8I8I16<bias_mode, Op, 2, oc_block, stride,
-                                    ow_block> {
-    static void impl(const int8_t* src_ptr_origin, const int8_t* weight_ptr,
-                     const int16_t* bias_ptr, int16_t* dst_ptr, int ic, int ih,
-                     int iw, int ld_dst_oc, const Op&, const int remain_ow) {
+template <BiasMode bias_mode, typename Op, int oc_block, int stride, int ow_block>
+struct KerNeonXXs2NchwNchw44I8I8I16<bias_mode, Op, 2, oc_block, stride, ow_block> {
+    static void impl(
+            const int8_t* src_ptr_origin, const int8_t* weight_ptr,
+            const int16_t* bias_ptr, int16_t* dst_ptr, int ic, int ih, int iw,
+            int ld_dst_oc, const Op&, const int remain_ow) {
         constexpr int loop_ic_step = 1;
         constexpr int filter_size = 2;
         constexpr int iw_expand = 8;
@@ -173,8 +175,7 @@ struct KerNeonXXs2NchwNchw44I8I8I16<bias_mode, Op, 2, oc_block, stride,
         constexpr int c_dim = 1;
         constexpr int reg_pair = stride;
         constexpr int div_pad = stride - 1;
-        constexpr int iw_reg =
-                ow_block + (filter_size - stride + div_pad) / reg_pair;
+        constexpr int iw_reg = ow_block + (filter_size - stride + div_pad) / reg_pair;
         constexpr int filter_reg = (filter_size + div_pad) / reg_pair;
         int16x8_t c[c_dim][ow_block];
         init_ocx_ow8<c_dim, bias_mode, ow_block>(c, bias_ptr, 0);
@@ -183,11 +184,10 @@ struct KerNeonXXs2NchwNchw44I8I8I16<bias_mode, Op, 2, oc_block, stride,
 
             int8x16_t src[iw_reg];
             int8x16_t weight[1][filter_reg];
-#define cb(step)                                                          \
-    load_helper<iw_reg, 0, simd_len, 0, Vld1q_s8>(                        \
-            src, src_ptr + step * ld_src_iw, 0);                          \
-    load_helper<filter_reg, 0, simd_len, c_dim, Vld1q_s8>(                \
-            weight, weight_ptr + step * filter_size * filter_pack_oc, 0); \
+#define cb(step)                                                                       \
+    load_helper<iw_reg, 0, simd_len, 0, Vld1q_s8>(src, src_ptr + step * ld_src_iw, 0); \
+    load_helper<filter_reg, 0, simd_len, c_dim, Vld1q_s8>(                             \
+            weight, weight_ptr + step * filter_size * filter_pack_oc, 0);              \
     cal_helper<0, 0, c_dim, ow_block, false, stride>(c, src, weight);
             UNROLL_CALL_RAW(2, cb)
 #undef cb
@@ -201,13 +201,12 @@ struct KerNeonXXs2NchwNchw44I8I8I16<bias_mode, Op, 2, oc_block, stride,
     };
 };
 
-template <BiasMode bias_mode, typename Op, int oc_block, int stride,
-          int ow_block>
-struct KerNeonXXs2NchwNchw44I8I8I16<bias_mode, Op, 3, oc_block, stride,
-                                    ow_block> {
-    static void impl(const int8_t* src_ptr_origin, const int8_t* weight_ptr,
-                     const int16_t* bias_ptr, int16_t* dst_ptr, int ic, int ih,
-                     int iw, int ld_dst_oc, const Op&, const int remain_ow) {
+template <BiasMode bias_mode, typename Op, int oc_block, int stride, int ow_block>
+struct KerNeonXXs2NchwNchw44I8I8I16<bias_mode, Op, 3, oc_block, stride, ow_block> {
+    static void impl(
+            const int8_t* src_ptr_origin, const int8_t* weight_ptr,
+            const int16_t* bias_ptr, int16_t* dst_ptr, int ic, int ih, int iw,
+            int ld_dst_oc, const Op&, const int remain_ow) {
         constexpr int loop_ic_step = 1;
         constexpr int filter_size = 3;
         constexpr int iw_expand = 8;
@@ -221,8 +220,7 @@ struct KerNeonXXs2NchwNchw44I8I8I16<bias_mode, Op, 3, oc_block, stride,
         constexpr int ld_weight_ic = filter_pack_oc * filter_size * filter_size;
         constexpr int reg_pair = stride;
         constexpr int div_pad = stride - 1;
-        constexpr int iw_reg =
-                ow_block + (filter_size - stride + div_pad) / reg_pair;
+        constexpr int iw_reg = ow_block + (filter_size - stride + div_pad) / reg_pair;
         constexpr int filter_reg = (filter_size + div_pad) / reg_pair;
         int16x8_t c[c_dim][ow_block];
         init_ocx_ow8<c_dim, bias_mode, ow_block>(c, bias_ptr, 0);
@@ -231,12 +229,11 @@ struct KerNeonXXs2NchwNchw44I8I8I16<bias_mode, Op, 3, oc_block, stride,
 
             int8x16_t src[iw_reg];
             int8x16_t weight[1][filter_reg];
-#define cb(step)                                                          \
-    load_helper<iw_reg, 0, simd_len, 0, Vld1q_s8>(                        \
-            src, src_ptr + step * ld_src_iw, 0);                          \
-    load_helper<filter_reg, 0, simd_len, c_dim, Vld1q_s8>(                \
-            weight, weight_ptr + step * filter_size * filter_pack_oc, 0); \
-    cal_helper<0, 0, c_dim, ow_block, false, stride>(c, src, weight);     \
+#define cb(step)                                                                       \
+    load_helper<iw_reg, 0, simd_len, 0, Vld1q_s8>(src, src_ptr + step * ld_src_iw, 0); \
+    load_helper<filter_reg, 0, simd_len, c_dim, Vld1q_s8>(                             \
+            weight, weight_ptr + step * filter_size * filter_pack_oc, 0);              \
+    cal_helper<0, 0, c_dim, ow_block, false, stride>(c, src, weight);                  \
     cal_helper<1, 1, c_dim, ow_block, true, stride>(c, src, weight);
             UNROLL_CALL_RAW(3, cb)
 #undef cb
@@ -250,13 +247,12 @@ struct KerNeonXXs2NchwNchw44I8I8I16<bias_mode, Op, 3, oc_block, stride,
     };
 };
 
-template <BiasMode bias_mode, typename Op, int oc_block, int stride,
-          int ow_block>
-struct KerNeonXXs2NchwNchw44I8I8I16<bias_mode, Op, 5, oc_block, stride,
-                                    ow_block> {
-    static void impl(const int8_t* src_ptr_origin, const int8_t* weight_ptr,
-                     const int16_t* bias_ptr, int16_t* dst_ptr, int ic, int ih,
-                     int iw, int ld_dst_oc, const Op&, const int remain_ow) {
+template <BiasMode bias_mode, typename Op, int oc_block, int stride, int ow_block>
+struct KerNeonXXs2NchwNchw44I8I8I16<bias_mode, Op, 5, oc_block, stride, ow_block> {
+    static void impl(
+            const int8_t* src_ptr_origin, const int8_t* weight_ptr,
+            const int16_t* bias_ptr, int16_t* dst_ptr, int ic, int ih, int iw,
+            int ld_dst_oc, const Op&, const int remain_ow) {
         constexpr int loop_ic_step = 1;
         constexpr int filter_size = 5;
         constexpr int iw_expand = 8;
@@ -270,8 +266,7 @@ struct KerNeonXXs2NchwNchw44I8I8I16<bias_mode, Op, 5, oc_block, stride,
         constexpr int ld_weight_ic = filter_pack_oc * filter_size * filter_size;
         constexpr int reg_pair = stride;
         constexpr int div_pad = stride - 1;
-        constexpr int iw_reg =
-                ow_block + (filter_size - stride + div_pad) / reg_pair;
+        constexpr int iw_reg = ow_block + (filter_size - stride + div_pad) / reg_pair;
         constexpr int filter_reg = (filter_size + div_pad) / reg_pair;
         int16x8_t c[c_dim][ow_block];
         init_ocx_ow8<c_dim, bias_mode, ow_block>(c, bias_ptr, 0);
@@ -280,13 +275,12 @@ struct KerNeonXXs2NchwNchw44I8I8I16<bias_mode, Op, 5, oc_block, stride,
 
             int8x16_t src[iw_reg];
             int8x16_t weight[1][filter_reg];
-#define cb(step)                                                          \
-    load_helper<iw_reg, 0, simd_len, 0, Vld1q_s8>(                        \
-            src, src_ptr + step * ld_src_iw, 0);                          \
-    load_helper<filter_reg, 0, simd_len, c_dim, Vld1q_s8>(                \
-            weight, weight_ptr + step * filter_size * filter_pack_oc, 0); \
-    cal_helper<0, 0, c_dim, ow_block, false, stride>(c, src, weight);     \
-    cal_helper<1, 1, c_dim, ow_block, false, stride>(c, src, weight);     \
+#define cb(step)                                                                       \
+    load_helper<iw_reg, 0, simd_len, 0, Vld1q_s8>(src, src_ptr + step * ld_src_iw, 0); \
+    load_helper<filter_reg, 0, simd_len, c_dim, Vld1q_s8>(                             \
+            weight, weight_ptr + step * filter_size * filter_pack_oc, 0);              \
+    cal_helper<0, 0, c_dim, ow_block, false, stride>(c, src, weight);                  \
+    cal_helper<1, 1, c_dim, ow_block, false, stride>(c, src, weight);                  \
     cal_helper<2, 2, c_dim, ow_block, true, stride>(c, src, weight);
             UNROLL_CALL_RAW(5, cb)
 #undef cb
@@ -300,13 +294,12 @@ struct KerNeonXXs2NchwNchw44I8I8I16<bias_mode, Op, 5, oc_block, stride,
     };
 };
 
-template <BiasMode bias_mode, typename Op, int oc_block, int stride,
-          int ow_block>
-struct KerNeonXXs2NchwNchw44I8I8I16<bias_mode, Op, 7, oc_block, stride,
-                                    ow_block> {
-    static void impl(const int8_t* src_ptr_origin, const int8_t* weight_ptr,
-                     const int16_t* bias_ptr, int16_t* dst_ptr, int ic, int ih,
-                     int iw, int ld_dst_oc, const Op&, const int remain_ow) {
+template <BiasMode bias_mode, typename Op, int oc_block, int stride, int ow_block>
+struct KerNeonXXs2NchwNchw44I8I8I16<bias_mode, Op, 7, oc_block, stride, ow_block> {
+    static void impl(
+            const int8_t* src_ptr_origin, const int8_t* weight_ptr,
+            const int16_t* bias_ptr, int16_t* dst_ptr, int ic, int ih, int iw,
+            int ld_dst_oc, const Op&, const int remain_ow) {
         constexpr int loop_ic_step = 1;
         constexpr int filter_size = 7;
         constexpr int iw_expand = 8;
@@ -320,8 +313,7 @@ struct KerNeonXXs2NchwNchw44I8I8I16<bias_mode, Op, 7, oc_block, stride,
         constexpr int ld_weight_ic = filter_pack_oc * filter_size * filter_size;
         constexpr int reg_pair = stride;
         constexpr int div_pad = stride - 1;
-        constexpr int iw_reg =
-                ow_block + (filter_size - stride + div_pad) / reg_pair;
+        constexpr int iw_reg = ow_block + (filter_size - stride + div_pad) / reg_pair;
         constexpr int filter_reg = (filter_size + div_pad) / reg_pair;
         int16x8_t c[c_dim][ow_block];
         init_ocx_ow8<c_dim, bias_mode, ow_block>(c, bias_ptr, 0);
@@ -330,14 +322,13 @@ struct KerNeonXXs2NchwNchw44I8I8I16<bias_mode, Op, 7, oc_block, stride,
 
             int8x16_t src[iw_reg];
             int8x16_t weight[1][filter_reg];
-#define cb(step)                                                          \
-    load_helper<iw_reg, 0, simd_len, 0, Vld1q_s8>(                        \
-            src, src_ptr + step * ld_src_iw, 0);                          \
-    load_helper<filter_reg, 0, simd_len, c_dim, Vld1q_s8>(                \
-            weight, weight_ptr + step * filter_size * filter_pack_oc, 0); \
-    cal_helper<0, 0, c_dim, ow_block, false, stride>(c, src, weight);     \
-    cal_helper<1, 1, c_dim, ow_block, false, stride>(c, src, weight);     \
-    cal_helper<2, 2, c_dim, ow_block, false, stride>(c, src, weight);     \
+#define cb(step)                                                                       \
+    load_helper<iw_reg, 0, simd_len, 0, Vld1q_s8>(src, src_ptr + step * ld_src_iw, 0); \
+    load_helper<filter_reg, 0, simd_len, c_dim, Vld1q_s8>(                             \
+            weight, weight_ptr + step * filter_size * filter_pack_oc, 0);              \
+    cal_helper<0, 0, c_dim, ow_block, false, stride>(c, src, weight);                  \
+    cal_helper<1, 1, c_dim, ow_block, false, stride>(c, src, weight);                  \
+    cal_helper<2, 2, c_dim, ow_block, false, stride>(c, src, weight);                  \
     cal_helper<3, 3, c_dim, ow_block, true, stride>(c, src, weight);
             UNROLL_CALL_RAW(7, cb)
 #undef cb
@@ -389,10 +380,9 @@ void i8i8i16_direct_nchw_nchw44::conv_direct_i8i8i16_nchw_nchw44(
                 const int dst_offset =
                         oc_idx * img_stride + (oh_idx * ow + ow_idx) * oc_step;
                 KerNeonXXs2NchwNchw44I8I8I16<
-                        bias_mode, Op, filter_size, big_oc_step, stride,
-                        ow_step>::impl(src + src_offset, filter + weight_offset,
-                                       bias + oc_idx, dst + dst_offset, ic, ih,
-                                       iw, ld_dst_oc, op, ow_step);
+                        bias_mode, Op, filter_size, big_oc_step, stride, ow_step>::
+                        impl(src + src_offset, filter + weight_offset, bias + oc_idx,
+                             dst + dst_offset, ic, ih, iw, ld_dst_oc, op, ow_step);
             }
             if (ow_remain > 0) {
                 const int src_offset =
@@ -401,10 +391,9 @@ void i8i8i16_direct_nchw_nchw44::conv_direct_i8i8i16_nchw_nchw44(
                 const int dst_offset =
                         oc_idx * img_stride + (oh_idx * ow + ow_end) * oc_step;
                 KerNeonXXs2NchwNchw44I8I8I16<
-                        bias_mode, Op, filter_size, big_oc_step, stride,
-                        ow_step>::impl(src + src_offset, filter + weight_offset,
-                                       bias + oc_idx, dst + dst_offset, ic, ih,
-                                       iw, ld_dst_oc, op, ow_remain);
+                        bias_mode, Op, filter_size, big_oc_step, stride, ow_step>::
+                        impl(src + src_offset, filter + weight_offset, bias + oc_idx,
+                             dst + dst_offset, ic, ih, iw, ld_dst_oc, op, ow_remain);
             }
         }
     }
@@ -419,10 +408,9 @@ void i8i8i16_direct_nchw_nchw44::conv_direct_i8i8i16_nchw_nchw44(
                 const int dst_offset =
                         oc_idx * img_stride + (oh_idx * ow + ow_idx) * oc_step;
                 KerNeonXXs2NchwNchw44I8I8I16<
-                        bias_mode, Op, filter_size, oc_step, stride,
-                        ow_step>::impl(src + src_offset, filter + weight_offset,
-                                       bias + oc_idx, dst + dst_offset, ic, ih,
-                                       iw, ld_dst_oc, op, ow_step);
+                        bias_mode, Op, filter_size, oc_step, stride, ow_step>::
+                        impl(src + src_offset, filter + weight_offset, bias + oc_idx,
+                             dst + dst_offset, ic, ih, iw, ld_dst_oc, op, ow_step);
             }
             if (ow_remain > 0) {
                 const int src_offset =
@@ -431,22 +419,21 @@ void i8i8i16_direct_nchw_nchw44::conv_direct_i8i8i16_nchw_nchw44(
                 const int dst_offset =
                         oc_idx * img_stride + (oh_idx * ow + ow_end) * oc_step;
                 KerNeonXXs2NchwNchw44I8I8I16<
-                        bias_mode, Op, filter_size, oc_step, stride,
-                        ow_step>::impl(src + src_offset, filter + weight_offset,
-                                       bias + oc_idx, dst + dst_offset, ic, ih,
-                                       iw, ld_dst_oc, op, ow_remain);
+                        bias_mode, Op, filter_size, oc_step, stride, ow_step>::
+                        impl(src + src_offset, filter + weight_offset, bias + oc_idx,
+                             dst + dst_offset, ic, ih, iw, ld_dst_oc, op, ow_remain);
             }
         }
     }
 }
 
-#define INSTANTIATION(stride, filter_size, bias_mode, Op)                      \
-    template void i8i8i16_direct_nchw_nchw44::conv_direct_i8i8i16_nchw_nchw44< \
-            bias_mode, Op, filter_size, stride>(                               \
-            const int8_t* src, const int8_t* filter, const int16_t* bias,      \
-            int8_t*, int16_t* dst, const int oc, const int ic, const int ih,   \
-            const int iw, const int oh, const int oh_block, const int ow,      \
-            const Op& op, const int, const int);
+#define INSTANTIATION(stride, filter_size, bias_mode, Op)                            \
+    template void i8i8i16_direct_nchw_nchw44::conv_direct_i8i8i16_nchw_nchw44<       \
+            bias_mode, Op, filter_size, stride>(                                     \
+            const int8_t* src, const int8_t* filter, const int16_t* bias, int8_t*,   \
+            int16_t* dst, const int oc, const int ic, const int ih, const int iw,    \
+            const int oh, const int oh_block, const int ow, const Op& op, const int, \
+            const int);
 
 #define FOR_OP(stride, filter, bias) \
     INSTANTIATION(stride, filter, bias, NoneOp<dt_int16>)

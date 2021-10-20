@@ -12,8 +12,8 @@
 #include "megdnn/handle.h"
 
 namespace mgb {
-    //! get a naive megdnn handle on CPU, used for checking opr correctness
-    megdnn::Handle* megdnn_naive_handle();
-}
+//! get a naive megdnn handle on CPU, used for checking opr correctness
+megdnn::Handle* megdnn_naive_handle();
+}  // namespace mgb
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

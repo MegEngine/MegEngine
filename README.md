@@ -25,48 +25,8 @@ python3 -m pip install megengine -f https://megengine.org.cn/whl/mge.html
 
 ## Building from Source
 
-### Prerequisites
-
-Most of the dependencies of MegEngine are located in [third_party](third_party) directory, which can be prepared by executing:
-
-```bash
-./third_party/prepare.sh
-./third_party/install-mkl.sh
-```
-
-But some dependencies need to be installed manually:
-
-* [CUDA](https://developer.nvidia.com/cuda-toolkit-archive)(>=10.1), [cuDNN](https://developer.nvidia.com/cudnn)(>=7.6) are required when building MegEngine with CUDA support.
-* [TensorRT](https://docs.nvidia.com/deeplearning/sdk/tensorrt-archived/index.html)(>=5.1.5) is required when building with TensorRT support.
-* LLVM/Clang(>=6.0) is required when building with Halide JIT support.
-* Python(>=3.5) and numpy are required to build Python modules.
-
-### Build
-
-MegEngine uses CMake as the build tool.
-We provide the following scripts to facilitate building.
-
-* [host_build.sh](scripts/cmake-build/host_build.sh) builds MegEngine that runs on the same host machine (i.e., no cross compiling).
-  The following command displays the usage:
-  ```
-  scripts/cmake-build/host_build.sh -h
-  ```
-* [cross_build_android_arm_inference.sh](scripts/cmake-build/cross_build_android_arm_inference.sh) builds MegEngine for DNN inference on Android-ARM platforms.
-  The following command displays the usage:
-  ```
-  scripts/cmake-build/cross_build_android_arm_inference.sh -h
-  ```
-* [cross_build_linux_arm_inference.sh](scripts/cmake-build/cross_build_linux_arm_inference.sh) builds MegEngine for DNN inference on Linux-ARM platforms.
-  The following command displays the usage:
-  ```
-  scripts/cmake-build/cross_build_linux_arm_inference.sh -h
-  ```
-* [cross_build_ios_arm_inference.sh](scripts/cmake-build/cross_build_ios_arm_inference.sh) builds MegEngine for DNN inference on iOS (iPhone/iPad) platforms.
-  The following command displays the usage:
-  ```
-  scripts/cmake-build/cross_build_ios_arm_inference.sh
-  ```
-Please refer to [BUILD_README.md](scripts/cmake-build/BUILD_README.md) for more details.
+* CMake build details. please refer to [BUILD_README.md](scripts/cmake-build/BUILD_README.md)
+* Python binding build details, Please refer to [BUILD_PYTHON_WHL_README.md](scripts/whl/BUILD_PYTHON_WHL_README.md)
 
 ## How to Contribute
 

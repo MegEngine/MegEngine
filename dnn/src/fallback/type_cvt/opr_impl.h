@@ -14,16 +14,14 @@
 namespace megdnn {
 namespace fallback {
 
-class TypeCvtImpl: public naive::TypeCvtImpl {
-    public:
-        using naive::TypeCvtImpl::TypeCvtImpl;
-        void exec(_megdnn_tensor_in src, _megdnn_tensor_out dst) override;
-        bool is_thread_safe() const override { return true; }
+class TypeCvtImpl : public naive::TypeCvtImpl {
+public:
+    using naive::TypeCvtImpl::TypeCvtImpl;
+    void exec(_megdnn_tensor_in src, _megdnn_tensor_out dst) override;
+    bool is_thread_safe() const override { return true; }
 };
 
-} // namespace naive
-} // namespace megdnn
+}  // namespace fallback
+}  // namespace megdnn
 
 // vim: syntax=cpp.doxygen
-
-

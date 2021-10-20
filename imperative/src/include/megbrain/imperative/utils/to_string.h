@@ -11,13 +11,13 @@
 
 #pragma once
 
-#include <string>
-#include <type_traits>
 #include <memory>
+#include <string>
 #include <tuple>
+#include <type_traits>
 
-#include "megbrain/utils/small_vector.h"
 #include "megbrain/tensor.h"
+#include "megbrain/utils/small_vector.h"
 
 namespace mgb::imperative {
 
@@ -34,21 +34,17 @@ std::string to_string(const T& value) {
 }
 
 template <typename T>
-struct ToStringTrait{
-    std::string operator()(const T& value) const {
-        return std::to_string(value);
-    }
+struct ToStringTrait {
+    std::string operator()(const T& value) const { return std::to_string(value); }
 };
 
 template <>
-struct ToStringTrait<std::string>{
-    std::string operator()(const std::string& value) const {
-        return value;
-    }
+struct ToStringTrait<std::string> {
+    std::string operator()(const std::string& value) const { return value; }
 };
 
 template <typename T, unsigned N>
-struct ToStringTrait<SmallVector<T, N>>{
+struct ToStringTrait<SmallVector<T, N>> {
     std::string operator()(const SmallVector<T, N>& sv) const {
         if (sv.empty()) {
             return "[]";
@@ -64,36 +60,34 @@ struct ToStringTrait<SmallVector<T, N>>{
 };
 
 template <typename T>
-struct ToStringTrait<std::shared_ptr<T>>{
+struct ToStringTrait<std::shared_ptr<T>> {
     std::string operator()(const std::shared_ptr<T>& sp) const {
         return to_string(sp.get());
     }
 };
 
 template <typename TKey, typename TValue>
-struct ToStringTrait<std::pair<TKey, TValue>>{
+struct ToStringTrait<std::pair<TKey, TValue>> {
     std::string operator()(const std::pair<TKey, TValue>& pr) const {
         return "(" + to_string(pr.first) + ", " + to_string(pr.second) + ")";
     }
 };
 
 template <typename TItem, typename... TItems>
-struct ToStringTrait<std::tuple<TItem, TItems...>>{
+struct ToStringTrait<std::tuple<TItem, TItems...>> {
     std::string operator()(const std::tuple<TItem, TItems...>& tp) const {
-        auto folder = [&](auto... item){ return ( ...+ ("," + to_string(item))); };
+        auto folder = [&](auto... item) { return (... + ("," + to_string(item))); };
         return "(" + std::apply(folder, tp) + ")";
     }
 };
 
 template <typename T>
-struct ToStringTrait<T*>{
-    std::string operator()(T* p) const {
-        return ssprintf("%p", p);
-    }
+struct ToStringTrait<T*> {
+    std::string operator()(T* p) const { return ssprintf("%p", p); }
 };
 
 template <>
-struct ToStringTrait<TensorShape>{
+struct ToStringTrait<TensorShape> {
     std::string operator()(TensorShape shape) const {
         if (shape.ndim > TensorShape::MAX_NDIM) {
             return "[]";
@@ -112,17 +106,13 @@ struct ToStringTrait<TensorShape>{
 };
 
 template <>
-struct ToStringTrait<DType>{
-    std::string operator()(DType dtype) const {
-        return dtype.name();
-    }
+struct ToStringTrait<DType> {
+    std::string operator()(DType dtype) const { return dtype.name(); }
 };
 
 template <>
-struct ToStringTrait<CompNode>{
-    std::string operator()(CompNode device) const {
-        return device.to_string();
-    }
+struct ToStringTrait<CompNode> {
+    std::string operator()(CompNode device) const { return device.to_string(); }
 };
 
-}
+}  // namespace mgb::imperative

@@ -10,29 +10,29 @@
  */
 
 #include "src/cuda/elemwise_helper.cuh"
-#include "src/cuda/utils.cuh"
 #include "src/cuda/query_blocksize.cuh"
 #include "src/cuda/relayout/kern_contiguous.cuh"
+#include "src/cuda/utils.cuh"
 
 namespace megdnn {
 namespace cuda {
 
 // dst is contiguous
-void copy_last_contiguous(const TensorND &dst, const TensorND &src,
-                          size_t contiguous_size, cudaStream_t stream) {
+void copy_last_contiguous(
+        const TensorND& dst, const TensorND& src, size_t contiguous_size,
+        cudaStream_t stream) {
     ElemwiseOpParamN<2> param;
     param[0] = dst;
     param[1] = src;
 
-#define RUN(_dt)                                                      \
-    do {                                                              \
-        typedef DTypeTrait<dtype::_dt>::ctype ctype;                  \
-        param[0].layout.dtype = param[1].layout.dtype = dtype::_dt(); \
-        param.init_from_given_tensor();                               \
-        param.assert_initialized();                                   \
-        contiguous_intl::UserOpInvoker<ctype, 2>(param, stream,       \
-                contiguous_size);                                     \
-        return;                                                       \
+#define RUN(_dt)                                                                  \
+    do {                                                                          \
+        typedef DTypeTrait<dtype::_dt>::ctype ctype;                              \
+        param[0].layout.dtype = param[1].layout.dtype = dtype::_dt();             \
+        param.init_from_given_tensor();                                           \
+        param.assert_initialized();                                               \
+        contiguous_intl::UserOpInvoker<ctype, 2>(param, stream, contiguous_size); \
+        return;                                                                   \
     } while (0)
 
     switch (dst.layout.dtype.size()) {
@@ -46,7 +46,7 @@ void copy_last_contiguous(const TensorND &dst, const TensorND &src,
     megdnn_assert(0, "bad dtype size");
 }
 
-}  // namespace megdnn
 }  // namespace cuda
+}  // namespace megdnn
 
 // vim: syntax=cpp.doxygen

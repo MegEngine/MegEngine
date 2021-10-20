@@ -10,7 +10,7 @@ import numpy as np
 import pytest
 
 import megengine.functional as F
-from megengine import Tensor
+from megengine import Tensor, jit, random
 from megengine.core._imperative_rt import CompNode
 from megengine.core._imperative_rt.core2 import apply
 from megengine.core._imperative_rt.ops import (
@@ -18,6 +18,7 @@ from megengine.core._imperative_rt.ops import (
     get_global_rng_seed,
     new_rng_handle,
 )
+from megengine.core.autodiff.grad import Grad
 from megengine.core.ops.builtin import (
     BetaRNG,
     GammaRNG,
@@ -27,13 +28,17 @@ from megengine.core.ops.builtin import (
     UniformRNG,
 )
 from megengine.device import get_device_count
-from megengine.random import RNG, seed, uniform
+from megengine.jit import trace
+from megengine.random import RNG
+from megengine.random import seed as set_global_seed
+from megengine.random import uniform
 
 
 @pytest.mark.skipif(
     get_device_count("xpu") <= 2, reason="xpu counts need > 2",
 )
 def test_gaussian_op():
+    set_global_seed(1024)
     shape = (
         8,
         9,
@@ -64,6 +69,7 @@ def test_gaussian_op():
     get_device_count("xpu") <= 2, reason="xpu counts need > 2",
 )
 def test_uniform_op():
+    set_global_seed(1024)
     shape = (
         8,
         9,
@@ -92,6 +98,7 @@ def test_uniform_op():
     get_device_count("xpu") <= 2, reason="xpu counts need > 2",
 )
 def test_gamma_op():
+    set_global_seed(1024)
     _shape, _scale = 2, 0.8
     _expected_mean, _expected_std = _shape * _scale, np.sqrt(_shape) * _scale
 
@@ -120,6 +127,7 @@ def test_gamma_op():
     get_device_count("xpu") <= 2, reason="xpu counts need > 2",
 )
 def test_beta_op():
+    set_global_seed(1024)
     _alpha, _beta = 2, 0.8
     _expected_mean = _alpha / (_alpha + _beta)
     _expected_std = np.sqrt(
@@ -151,6 +159,7 @@ def test_beta_op():
     get_device_count("xpu") <= 2, reason="xpu counts need > 2",
 )
 def test_poisson_op():
+    set_global_seed(1024)
     lam = F.full([8, 9, 11, 12], value=2, dtype="float32")
     op = PoissonRNG(seed=get_global_rng_seed())
     (output,) = apply(op, lam)
@@ -174,6 +183,7 @@ def test_poisson_op():
     get_device_count("xpu") <= 2, reason="xpu counts need > 2",
 )
 def test_permutation_op():
+    set_global_seed(1024)
     n = 1000
 
     def test_permutation_op_dtype(dtype):
@@ -361,21 +371,22 @@ def test_PoissonRNG():
 @pytest.mark.skipif(
     get_device_count("xpu") <= 1, reason="xpu counts need > 1",
 )
-def test_PermutationRNG():
+@pytest.mark.parametrize("symbolic", [True, False])
+def test_PermutationRNG(symbolic):
     m1 = RNG(seed=111, device="xpu0")
     m2 = RNG(seed=111, device="xpu1")
     m3 = RNG(seed=222, device="xpu0")
-    out1 = m1.permutation(n=1000)
+    out1 = m1.permutation(1000)
     out1_ = m1.uniform(size=(1000,))
-    out2 = m2.permutation(n=1000)
-    out3 = m3.permutation(n=1000)
+    out2 = m2.permutation(1000)
+    out3 = m3.permutation(1000)
 
     np.testing.assert_equal(out1.numpy(), out2.numpy())
     assert out1.device == "xpu0" and out2.device == "xpu1"
     assert not (out1.numpy() == out3.numpy()).all()
     assert not (out1.numpy() == out1_.numpy()).all()
 
-    out = m1.permutation(n=1000)
+    out = m1.permutation(1000)
     out_shp = out.shape
     if isinstance(out_shp, tuple):
         assert out_shp == (1000,)
@@ -388,17 +399,116 @@ def test_PermutationRNG():
     assert sum_result(out, lambda x: x) < 500
     assert sum_result(out, np.sort) == 1000
 
+    def func():
+        out = m1.permutation(Tensor(7))
+        out_shp = out.shape
+        if isinstance(out_shp, tuple):
+            assert out_shp == (1,)
+        else:
+            assert all(out.shape.numpy() == np.array([1]))
+        n, m = 6, 3
+        out = m1.permutation(Tensor(np.arange(n * m), dtype="float32").reshape(n, m))
+        out_shp = out.shape
+        if isinstance(out_shp, tuple):
+            assert out_shp == (n, m)
+        else:
+            assert all(out.shape.numpy() == np.array([n, m]))
+
+    func = trace(symbolic=symbolic)(func)
+    func()
+
+
+@pytest.mark.skipif(
+    get_device_count("xpu") <= 1, reason="xpu counts need > 1",
+)
+def test_ShuffleRNG():
+    g = []
+
+    def cb(grad):
+        g.append(grad)
+
+    n, m = 6, 3
+    arr = np.arange(n * m)
+    out0 = Tensor(arr, dtype="float32")
+    grad = Grad().wrt(out0, callback=cb)
+    random.shuffle(out0)
+    grad(out0, F.ones_like(out0))
+    m1 = RNG(seed=111, device="xpu0")
+    m2 = RNG(seed=111, device="xpu1")
+    m3 = RNG(seed=222, device="xpu0")
+    out1 = Tensor(arr, dtype="float32", device="xpu0")
+    out2 = Tensor(arr, dtype="float32", device="xpu1")
+    out3 = Tensor(arr, dtype="float32", device="xpu0")
+    m1.shuffle(out1)
+    m2.shuffle(out2)
+    m3.shuffle(out3)
+
+    np.testing.assert_equal(out1.numpy(), out2.numpy())
+    assert out1.device == "xpu0" and out2.device == "xpu1"
+    assert not (out1.numpy() == out3.numpy()).all()
+
+    out = Tensor(arr, dtype="float32").reshape(n, m)
+    m1.shuffle(out)
+
+    out_shp = out.shape
+    if isinstance(out_shp, tuple):
+        assert out_shp == (n, m)
+    else:
+        assert all(out.shape.numpy() == np.array([n, m]))
+
 
 def test_seed():
-    seed(10)
+    set_global_seed(10)
     out1 = uniform(size=[10, 10])
     out2 = uniform(size=[10, 10])
     assert not (out1.numpy() == out2.numpy()).all()
 
-    seed(10)
+    set_global_seed(10)
     out3 = uniform(size=[10, 10])
     np.testing.assert_equal(out1.numpy(), out3.numpy())
 
-    seed(11)
+    set_global_seed(11)
     out4 = uniform(size=[10, 10])
     assert not (out1.numpy() == out4.numpy()).all()
+
+
+@pytest.mark.parametrize("is_symbolic", [None, False, True])
+def test_rng_empty_tensor(is_symbolic):
+    set_global_seed(1024)
+    shapes = [
+        (0,),
+        (0, 0, 0),
+        (10, 0, 10),
+    ]
+
+    def fn(shape):
+        o1 = random.uniform(0, 1, shape)
+        o2 = random.normal(0, 1, shape)
+        o3 = random.gamma(2, 1, shape)
+        o4 = random.beta(2, 1, shape)
+        o5 = random.poisson(2, shape)
+        return o1, o2, o3, o4, o5
+
+    for shape in shapes:
+        if is_symbolic is not None:
+            fn_ = jit.trace(symbolic=is_symbolic)(fn)
+        else:
+            fn_ = fn
+        for _ in range(3):
+            outs = fn_(shape)
+            for out in outs:
+                np.testing.assert_equal(out.numpy().shape, shape)
+            if is_symbolic is None:
+                break
+
+    def fn2(n):
+        return random.permutation(n=n)
+
+    if is_symbolic is not None:
+        fn2 = jit.trace(symbolic=is_symbolic)(fn2)
+
+    for _ in range(3):
+        out = fn2(0)
+        np.testing.assert_equal(out.numpy().shape, (0,))
+        if is_symbolic is None:
+            break

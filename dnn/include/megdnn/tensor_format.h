@@ -18,9 +18,9 @@
 namespace megdnn {
 
 enum class TensorFormat::Type {
-    DEFAULT = 0,        //!< see DefaultTensorFormat
-    IMAGE2D_PACK4 = 1,  //!< see Image2DPack4TensorFormat
-    LOWBITS_ALIGNED_TO_BYTE = 2, //!< 
+    DEFAULT = 0,                  //!< see DefaultTensorFormat
+    IMAGE2D_PACK4 = 1,            //!< see Image2DPack4TensorFormat
+    LOWBITS_ALIGNED_TO_BYTE = 2,  //!<
 };
 
 class TensorFormat::ImplBase {
@@ -33,8 +33,7 @@ public:
 
     virtual bool is_contiguous_spec(const TensorLayout& layout) const = 0;
 
-    virtual TensorLayout collapse_contiguous_spec(
-            const TensorLayout& layout) const = 0;
+    virtual TensorLayout collapse_contiguous_spec(const TensorLayout& layout) const = 0;
 
     virtual TensorLayout::Span span_spec(const TensorLayout& layout) const = 0;
 
@@ -79,8 +78,7 @@ public:
      */
     bool is_contiguous_spec(const TensorLayout& layout) const override;
 
-    TensorLayout collapse_contiguous_spec(
-            const TensorLayout& layout) const override;
+    TensorLayout collapse_contiguous_spec(const TensorLayout& layout) const override;
 
     TensorLayout::Span span_spec(const TensorLayout& layout) const override;
 
@@ -88,8 +86,7 @@ public:
     void serialize_append(std::string& result) const override;
 
     static TensorFormat make();
-    static TensorFormat deserialize(const Handle* handle, const void* buf,
-                                    size_t size);
+    static TensorFormat deserialize(const Handle* handle, const void* buf, size_t size);
 };
 
 namespace detail {
@@ -112,8 +109,8 @@ class Image2DTensorFormatBase : public TensorFormat::ImplBase {
     size_t m_align_axis, m_align_size_in_elements_log2;
 
 protected:
-    Image2DTensorFormatBase(Type type, size_t align_axis,
-                            size_t align_size_in_elements);
+    Image2DTensorFormatBase(
+            Type type, size_t align_axis, size_t align_size_in_elements);
     virtual ~Image2DTensorFormatBase() = default;
 
 public:
@@ -129,9 +126,7 @@ public:
 
     size_t align_axis() const { return m_align_axis; }
 
-    size_t align_size_in_elements_log2() const {
-        return m_align_size_in_elements_log2;
-    }
+    size_t align_size_in_elements_log2() const { return m_align_size_in_elements_log2; }
 
     std::string to_string() const override;
 
@@ -145,6 +140,7 @@ public:
     size_t image_height(const TensorLayout& layout) const;
 
     void serialize_append(std::string& result) const override;
+
 protected:
     struct SerializePack {
         uint8_t align_axis;
@@ -160,15 +156,14 @@ class Image2DPackedTensorFormatBase : public Image2DTensorFormatBase {
      * align COUNT, but mdl needs align size in byte, which equal to
      * (image_width algin count) * sizeof(data_type) * pixel_size
      */
-    size_t image_pitch_alignment_in_bytes(size_t align_size_in_elements,
-                                          const TensorLayout& layout) const;
+    size_t image_pitch_alignment_in_bytes(
+            size_t align_size_in_elements, const TensorLayout& layout) const;
 
 protected:
-    Image2DPackedTensorFormatBase(Type type, size_t align_axis,
-                                  size_t align_size_in_elements,
-                                  Handle::HandleVendorType vendor_type)
-            : detail::Image2DTensorFormatBase(type, align_axis,
-                                              align_size_in_elements),
+    Image2DPackedTensorFormatBase(
+            Type type, size_t align_axis, size_t align_size_in_elements,
+            Handle::HandleVendorType vendor_type)
+            : detail::Image2DTensorFormatBase(type, align_axis, align_size_in_elements),
               m_vendor_type(vendor_type) {}
 
     virtual ~Image2DPackedTensorFormatBase() = default;
@@ -197,13 +192,12 @@ public:
 
     bool is_contiguous_spec(const TensorLayout& layout) const override;
 
-    TensorLayout collapse_contiguous_spec(
-            const TensorLayout& layout) const override;
+    TensorLayout collapse_contiguous_spec(const TensorLayout& layout) const override;
 };
 using Image2DPack4TensorFormatBase = Image2DPackedTensorFormatBase<4>;
 
 /*!
- * \brief used for tensors storing lowbit data 
+ * \brief used for tensors storing lowbit data
  *
  * \param m_size_nbits size in bits of elements in the tensor
  * \param m_align_size_in_bits aligned size in bits
@@ -213,14 +207,14 @@ class LowbitsAlignedTensorFormatBase : public TensorFormat::ImplBase {
     size_t m_size_nbits, m_align_size_in_bits, m_align_size_in_elements;
 
 protected:  //?
-    LowbitsAlignedTensorFormatBase(Type type, size_t size_nbits,
-                                   size_t align_size_in_bits);
+    LowbitsAlignedTensorFormatBase(
+            Type type, size_t size_nbits, size_t align_size_in_bits);
 
     virtual ~LowbitsAlignedTensorFormatBase() = default;
 
 public:
     size_t align_size_in_bits() const { return m_align_size_in_bits; }
-    
+
     size_t size_nbits() const { return m_size_nbits; }
 
     std::string to_string() const override;
@@ -238,8 +232,8 @@ public:
 
     bool is_contiguous_spec(const TensorLayout& layout) const override;
 
-    TensorLayout collapse_contiguous_spec(
-            const TensorLayout& layout) const override;
+    TensorLayout collapse_contiguous_spec(const TensorLayout& layout) const override;
+
 protected:
     struct SerializePack {
         uint8_t size_nbits;
@@ -254,16 +248,14 @@ protected:
  *
  * This is used for OpenCL.
  */
-class Image2DPack4TensorFormat final
-        : public detail::Image2DPack4TensorFormatBase {
+class Image2DPack4TensorFormat final : public detail::Image2DPack4TensorFormatBase {
 public:
     static constexpr Type TYPE = Type::IMAGE2D_PACK4;
 
     //! for internal usage or test purposes
-    static TensorFormat make_raw(size_t align_axis,
-                                 size_t align_size_in_elements,
-                                 Handle::HandleVendorType vendor_type =
-                                         Handle::HandleVendorType::NOT_SPEC);
+    static TensorFormat make_raw(
+            size_t align_axis, size_t align_size_in_elements,
+            Handle::HandleVendorType vendor_type = Handle::HandleVendorType::NOT_SPEC);
 
     static TensorFormat make(size_t align_axis, const Handle* handle);
 
@@ -273,13 +265,11 @@ public:
      * Note that the alignment may be different if deserialized on another
      * handle
      */
-    static TensorFormat deserialize(const Handle* handle, const void* buf,
-                                    size_t size);
+    static TensorFormat deserialize(const Handle* handle, const void* buf, size_t size);
 
     static bool is_valid_image(const TensorLayout& layout) {
         if (layout.format.type() == TYPE) {
-            layout.format.as_impl<Image2DPack4TensorFormat>().assert_valid(
-                    layout);
+            layout.format.as_impl<Image2DPack4TensorFormat>().assert_valid(layout);
             return true;
         }
         return false;
@@ -288,8 +278,9 @@ public:
     TensorFormat change_axis(size_t axis) const override;
 
 private:
-    Image2DPack4TensorFormat(size_t align_axis, size_t align_size_in_elements,
-                             Handle::HandleVendorType vendor_type)
+    Image2DPack4TensorFormat(
+            size_t align_axis, size_t align_size_in_elements,
+            Handle::HandleVendorType vendor_type)
             : detail::Image2DPack4TensorFormatBase(
                       TYPE, align_axis, align_size_in_elements, vendor_type) {}
 };
@@ -306,13 +297,12 @@ public:
 
     static TensorFormat make(size_t size_nbits);
 
-    static TensorFormat deserialize(const Handle* handle, const void* buf,
-                                    size_t size);
+    static TensorFormat deserialize(const Handle* handle, const void* buf, size_t size);
 
     static bool is_valid_layout(const TensorLayout& layout) {
         if (layout.format.type() == TYPE) {
-            layout.format.as_impl<LowbitsAlignedToBytesTensorFormat>()
-                    .assert_valid(layout);
+            layout.format.as_impl<LowbitsAlignedToBytesTensorFormat>().assert_valid(
+                    layout);
             return true;
         }
         return false;
@@ -320,8 +310,7 @@ public:
 
 private:
     LowbitsAlignedToBytesTensorFormat(size_t size_nbits)
-            : detail::LowbitsAlignedTensorFormatBase(TYPE, size_nbits,
-                                                     BYTE_IN_BITS) {}
+            : detail::LowbitsAlignedTensorFormatBase(TYPE, size_nbits, BYTE_IN_BITS) {}
 };
 }  // namespace megdnn
 

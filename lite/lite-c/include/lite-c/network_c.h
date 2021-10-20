@@ -170,8 +170,8 @@ LITE_API LiteNetworkIO* default_network_io();
  * \brief A user-implemented allocator function
  */
 //! allocate memory of size in the given device with the given align
-typedef void* (*LiteAllocate)(LiteDeviceType device_type, int device_id,
-                              size_t size, size_t align);
+typedef void* (*LiteAllocate)(
+        LiteDeviceType device_type, int device_id, size_t size, size_t align);
 //! free the memory pointed by ptr in the given device
 typedef void (*LiteFree)(LiteDeviceType device_type, int device_id, void* ptr);
 
@@ -190,12 +190,11 @@ typedef int (*LiteAsyncCallback)();
  * corresponding IO of user config and the realy input or output tensor.
  */
 
-typedef int (*LiteStartCallback)(const LiteIO* inputs,
-                                 const LiteTensor* input_tensors, size_t size);
+typedef int (*LiteStartCallback)(
+        const LiteIO* inputs, const LiteTensor* input_tensors, size_t size);
 
-typedef int (*LiteFinishCallback)(const LiteIO* outputs,
-                                  const LiteTensor* output_tensors,
-                                  size_t size);
+typedef int (*LiteFinishCallback)(
+        const LiteIO* outputs, const LiteTensor* output_tensors, size_t size);
 
 /*!
  * \brief The network is construct form a model, implement model load, init,
@@ -217,8 +216,8 @@ LITE_API int LITE_make_default_network(LiteNetwork* network);
  * \param[in] network_io The configration io to create the network
  * \param[out] network The network pointer
  */
-LITE_API int LITE_make_network(LiteNetwork* network, const LiteConfig config,
-                               const LiteNetworkIO network_io);
+LITE_API int LITE_make_network(
+        LiteNetwork* network, const LiteConfig config, const LiteNetworkIO network_io);
 
 /**
  * \brief Create a lite Network object from the given config and networkIO.
@@ -227,31 +226,29 @@ LITE_API int LITE_make_network(LiteNetwork* network, const LiteConfig config,
  */
 LITE_API int LITE_make_network_config(LiteNetwork* network, const LiteConfig config);
 
-
 /**
  * \brief load the model to network form memory
  * \param[in] model_mem The model in memory
  * \param[in] size The size of the model memory
  * \param[out] network The network to be load model in
  */
-LITE_API int LITE_load_model_from_mem(LiteNetwork network, void* model_mem,
-                                      size_t size);
+LITE_API int LITE_load_model_from_mem(
+        LiteNetwork network, void* model_mem, size_t size);
 
 /**
  * \brief load the model to network form given path
  * \param[in] model_path The model path
  * \param[out] network The network to be load model in
  */
-LITE_API int LITE_load_model_from_path(LiteNetwork network,
-                                       const char* model_path);
+LITE_API int LITE_load_model_from_path(LiteNetwork network, const char* model_path);
 
 /**
  * \brief load a new network which will share weights with src network
  * \param[in] origin_network The origin network pointer
  * \param[out] network The network pointer
  */
-LITE_API int LITE_shared_weight_with_network(LiteNetwork dst_network,
-                                             const LiteNetwork src_network);
+LITE_API int LITE_shared_weight_with_network(
+        LiteNetwork dst_network, const LiteNetwork src_network);
 
 /**
  * \brief Destroy a lite network object.
@@ -282,8 +279,9 @@ LITE_API int LITE_wait(const LiteNetwork network);
  * \param[in] phase The tensor phase
  * \param[out] tensor The IO tensor get from the network
  */
-LITE_API int LITE_get_io_tensor(LiteNetwork network, const char* io_name,
-                                LiteTensorPhase phase, LiteTensor* tensor);
+LITE_API int LITE_get_io_tensor(
+        LiteNetwork network, const char* io_name, LiteTensorPhase phase,
+        LiteTensor* tensor);
 
 /**
  * \brief get the input tensor name in the order in loaded model
@@ -291,8 +289,8 @@ LITE_API int LITE_get_io_tensor(LiteNetwork network, const char* io_name,
  * \param[in] index The index of input tensor
  * \param[out] name The input tensor name
  */
-LITE_API int LITE_get_input_name(const LiteNetwork network, size_t index,
-                                 const char** name);
+LITE_API int LITE_get_input_name(
+        const LiteNetwork network, size_t index, const char** name);
 
 /**
  * \brief get the output tensor name in the order in loaded model
@@ -300,8 +298,8 @@ LITE_API int LITE_get_input_name(const LiteNetwork network, size_t index,
  * \param[in] index The index of output tensor
  * \param[out] name The output tensor name
  */
-LITE_API int LITE_get_output_name(const LiteNetwork network, size_t index,
-                                  const char** name);
+LITE_API int LITE_get_output_name(
+        const LiteNetwork network, size_t index, const char** name);
 
 /**
  * \brief get all the input tensor name in the order in loaded model
@@ -309,8 +307,8 @@ LITE_API int LITE_get_output_name(const LiteNetwork network, size_t index,
  * \param[in] size The number of the input tensor
  * \param[out] name The input tensor names
  */
-LITE_API int LITE_get_all_input_name(const LiteNetwork network, size_t* size,
-                                     const char** name);
+LITE_API int LITE_get_all_input_name(
+        const LiteNetwork network, size_t* size, const char** name);
 
 /**
  * \brief get all the output tensor name in the order in loaded model
@@ -318,24 +316,23 @@ LITE_API int LITE_get_all_input_name(const LiteNetwork network, size_t* size,
  * \param[in] size The number of output tensor
  * \param[out] name The output tensor name
  */
-LITE_API int LITE_get_all_output_name(const LiteNetwork network, size_t* size,
-                                      const char** name);
+LITE_API int LITE_get_all_output_name(
+        const LiteNetwork network, size_t* size, const char** name);
 
 /**
  * \brief get whether the model is running in cpu inplace mode
  * \param[in] network The loaded model
  * \param[out] is_cpu_inplace_mode whether is in cpu inplace mode
  */
-LITE_API int LITE_is_cpu_inplace_mode(const LiteNetwork network,
-                                      int* is_cpu_inplace_mode);
+LITE_API int LITE_is_cpu_inplace_mode(
+        const LiteNetwork network, int* is_cpu_inplace_mode);
 
 /**
  * \brief get the number of thread the network will run with
  * \param[in] network The loaded model
  * \param[out] nr_threads the thread number when the network running
  */
-LITE_API int LITE_get_cpu_threads_number(const LiteNetwork network,
-                                         size_t* nr_threads);
+LITE_API int LITE_get_cpu_threads_number(const LiteNetwork network, size_t* nr_threads);
 
 /**
  * \brief get the device id the network will run with
@@ -356,8 +353,8 @@ LITE_API int LITE_get_stream_id(const LiteNetwork network, int* stream_id);
  * \param[in] network The loaded model
  * \param[out] device_type the device type of the network will run
  */
-LITE_API int LITE_get_device_type(const LiteNetwork network,
-                                  LiteDeviceType* device_type);
+LITE_API int LITE_get_device_type(
+        const LiteNetwork network, LiteDeviceType* device_type);
 
 /**
  * \brief get the device type the network will run with
@@ -365,8 +362,8 @@ LITE_API int LITE_get_device_type(const LiteNetwork network,
  * \param[out] info  : the json format memory
  * \param[out] info_size: the json format memory size
  */
-LITE_API int LITE_get_model_extra_info(const LiteNetwork network,
-                                       const char** info, int* info_size);
+LITE_API int LITE_get_model_extra_info(
+        const LiteNetwork network, const char** info, int* info_size);
 
 /**
  * \brief Set cpu default mode when device is CPU, in some low computation
@@ -381,8 +378,7 @@ LITE_API int LITE_set_cpu_inplace_mode(LiteNetwork network);
  * \param[in] network The loaded model
  * \param[in] nr_threads The threads number
  */
-LITE_API int LITE_set_cpu_threads_number(LiteNetwork network,
-                                         size_t nr_threads);
+LITE_API int LITE_set_cpu_threads_number(LiteNetwork network, size_t nr_threads);
 
 /**
  * \brief set device id, default device id = 0
@@ -409,8 +405,8 @@ LITE_API int LITE_use_tensorrt(LiteNetwork network);
  * \param[in] network The loaded model
  * \param[in] select_strategy The operator algorithm selection strategy
  */
-LITE_API int LITE_set_network_algo_policy(LiteNetwork network,
-                                          LiteAlgoSelectStrategy strategy);
+LITE_API int LITE_set_network_algo_policy(
+        LiteNetwork network, LiteAlgoSelectStrategy strategy);
 
 /**
  * \brief set opr algorithm selection strategy in the network
@@ -433,8 +429,8 @@ LITE_API int LITE_set_network_algo_fastrun_config(
  * \param[in] network The loaded model
  * \param[in] workspace_limit The operator algorithm workspace limit
  */
-LITE_API int LITE_set_network_algo_workspace_limit(LiteNetwork network,
-                                                   size_t workspace_limit);
+LITE_API int LITE_set_network_algo_workspace_limit(
+        LiteNetwork network, size_t workspace_limit);
 
 /**
  * \brief set the network forward in async mode and set the async callback
@@ -443,8 +439,8 @@ LITE_API int LITE_set_network_algo_workspace_limit(LiteNetwork network,
  * \param[in] async_callback when network finish forwarding, the callbak
  * will be called
  */
-LITE_API int LITE_set_async_callback(LiteNetwork network,
-                                     const LiteAsyncCallback async_callback);
+LITE_API int LITE_set_async_callback(
+        LiteNetwork network, const LiteAsyncCallback async_callback);
 
 /**
  * \brief set the start forward callback function, which will be execute beform
@@ -454,8 +450,8 @@ LITE_API int LITE_set_async_callback(LiteNetwork network,
  * \param[in] start_callback when network start forwarding, the callbak
  * will be called
  */
-LITE_API int LITE_set_start_callback(LiteNetwork network,
-                                     const LiteStartCallback start_callback);
+LITE_API int LITE_set_start_callback(
+        LiteNetwork network, const LiteStartCallback start_callback);
 
 /**
  * \brief set the finish forward callback function, which will be execute after
@@ -464,8 +460,8 @@ LITE_API int LITE_set_start_callback(LiteNetwork network,
  * \param[in] finish_callback when network finish forwarding, the callbak
  * will be called
  */
-LITE_API int LITE_set_finish_callback(LiteNetwork network,
-                                      const LiteFinishCallback finish_callback);
+LITE_API int LITE_set_finish_callback(
+        LiteNetwork network, const LiteFinishCallback finish_callback);
 
 /**
  * \brief set threads affinity callback
@@ -473,8 +469,7 @@ LITE_API int LITE_set_finish_callback(LiteNetwork network,
  * \param[in] thread_affinity_callback
  */
 LITE_API int LITE_set_runtime_thread_affinity(
-        LiteNetwork network,
-        const LiteThreadAffinityCallback thread_affinity_callback);
+        LiteNetwork network, const LiteThreadAffinityCallback thread_affinity_callback);
 
 /**
  * \brief set the network memroy allocator, the allocator is defined by user
@@ -482,17 +477,16 @@ LITE_API int LITE_set_runtime_thread_affinity(
  * \param[in] allocate_fun The allocate function of the user defined allocator
  * \param[in] free_fun The free function of the user defined allocator
  */
-LITE_API int LITE_set_memory_allocator(LiteNetwork network,
-                                       const LiteAllocate allocate_fun,
-                                       const LiteFree free_fun);
+LITE_API int LITE_set_memory_allocator(
+        LiteNetwork network, const LiteAllocate allocate_fun, const LiteFree free_fun);
 
 /**
  * \brief the dst_network share the runtime memory with src_network
  * \param[in] src_network The source network
  * \param[in] dst_network The dst network to shared memory with src_network
  */
-LITE_API int LITE_share_runtime_memroy(LiteNetwork src_network,
-                                       LiteNetwork dst_network);
+LITE_API int LITE_share_runtime_memroy(
+        LiteNetwork src_network, LiteNetwork dst_network);
 
 /**
  * \brief enable profile the network, a JSON format file will be generated
@@ -508,8 +502,7 @@ LITE_API int LITE_enable_profile_performance(
  * \param[in] network The loaded model
  * \param[in] io_txt_out_file The dumped txt file name
  */
-LITE_API int LITE_enable_io_txt_dump(LiteNetwork network,
-                                     const char* io_txt_out_file);
+LITE_API int LITE_enable_io_txt_dump(LiteNetwork network, const char* io_txt_out_file);
 
 /**
  * \brief Dump input/output values of all internal variables to output
@@ -517,8 +510,7 @@ LITE_API int LITE_enable_io_txt_dump(LiteNetwork network,
  * \param[in] network The loaded model
  * \param[in] io_bin_out_dir The dumped bin file directory
  */
-LITE_API int LITE_enable_io_bin_dump(LiteNetwork network,
-                                     const char* io_bin_out_dir);
+LITE_API int LITE_enable_io_bin_dump(LiteNetwork network, const char* io_bin_out_dir);
 
 #ifdef __cplusplus
 }

@@ -65,8 +65,7 @@ public:
      * \param nr_waiter number of waiter records to be added; it is the
      *      number of corresponding busy_wait_set_ready() calls
      */
-    CompNodeSyncManager& add_waiter_record(bool need_ready_event,
-                                           size_t nr_waiter = 1);
+    CompNodeSyncManager& add_waiter_record(bool need_ready_event, size_t nr_waiter = 1);
 
     /*!
      * \brief clear waiter status
@@ -104,4 +103,3 @@ public:
 }  // namespace mgb
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
-

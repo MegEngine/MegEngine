@@ -23,8 +23,7 @@ if os.getenv("MEGENGINE_CONV_EXECUTION_STRATEGY") != None:
 
 
 def get_execution_strategy() -> Strategy:
-    """
-    Returns the execution strategy of :class:`~module..Conv2d` and :func:`~.matmul`
+    r"""Returns the execution strategy of :class:`~module..Conv2d` and :func:`~.matmul`
 
     See :func:`~.set_execution_strategy` for possible return values
     """
@@ -32,31 +31,32 @@ def get_execution_strategy() -> Strategy:
 
 
 def set_execution_strategy(option):
-    """
-    Sets the execution strategy of :class:`~module.Conv2d` and :func:`~.matmul`
+    r"""Sets the execution strategy of :class:`~module.Conv2d` and :func:`~.matmul`
 
-    :param option: Decides how :class:`~module.Conv2d`and :func:`~.matmul` algorithms are chosen.
-        Available value Strategy
-        * HEURISTIC uses heuristic to choose the fastest algorithm.
-        * PROFILE runs possible algorithms on real device to find the best one.
-        * REPRODUCIBLE uses the algorithms that is reproducible.
-        * OPTIMIZED uses the algorithms that is optimized.
+    Args:
+        option: Decides how :class:`~.module.Conv2d`and :func:`~.matmul` algorithms are chosen.
+            Available value Strategy
 
-        The default strategy is HEURISTIC, this options can be combined to
-        form a combination option, e.g. PROFILE | REPRODUCIBLE
-        can combined a option that uses the fastest of profiling result that is also reproducible.
+                * HEURISTIC uses heuristic to choose the fastest algorithm.
+                * PROFILE runs possible algorithms on real device to find the best one.
+                * REPRODUCIBLE uses the algorithms that is reproducible.
+                * OPTIMIZED uses the algorithms that is optimized.
 
-        Available values string:
+    The default strategy is HEURISTIC, this options can be combined to
+    form a combination option, e.g. PROFILE | REPRODUCIBLE
+    can combined a option that uses the fastest of profiling result that is also reproducible.
 
-        * 'HEURISTIC' uses heuristic to choose the fastest algorithm.
-        * 'PROFILE' runs possible algorithms on real device to find the best one.
-        * 'PROFILE_HEURISTIC' uses profiling result and heuristic to choose the fastest algorithm.
-        * 'PROFILE_REPRODUCIBLE' uses the fastest of profiling result that is also reproducible.
-        * 'HEURISTIC_REPRODUCIBLE' uses heuristic to choose the fastest algorithm that is also reproducible.
+    Available values string:
 
-        The default strategy is 'HEURISTIC'.
+    * 'HEURISTIC' uses heuristic to choose the fastest algorithm.
+    * 'PROFILE' runs possible algorithms on real device to find the best one.
+    * 'PROFILE_HEURISTIC' uses profiling result and heuristic to choose the fastest algorithm.
+    * 'PROFILE_REPRODUCIBLE' uses the fastest of profiling result that is also reproducible.
+    * 'HEURISTIC_REPRODUCIBLE' uses heuristic to choose the fastest algorithm that is also reproducible.
 
-        It can also be set through the environment variable 'MEGENGINE_EXECUTION_STRATEGY'.
+    The default strategy is 'HEURISTIC'.
+
+    It can also be set through the environment variable 'MEGENGINE_EXECUTION_STRATEGY'.
     """
     valid_string_option = {
         "REPRODUCIBLE": Strategy.REPRODUCIBLE,

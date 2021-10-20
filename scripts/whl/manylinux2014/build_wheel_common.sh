@@ -166,7 +166,13 @@ if [ ${BUILD_WHL_CPU_ONLY} = "OFF" ]; then
     fi
     if [[ -z ${TENSORRT_ROOT_DIR} ]]; then
         echo "Environment variable TENSORRT_ROOT_DIR not set."
-        exit -1
+        if [[ -z ${TRT_ROOT_DIR} ]]; then
+            echo "Environment variable TRT_ROOT_DIR not set."
+            exit -1
+        else
+            echo "put ${TRT_ROOT_DIR} to TENSORRT_ROOT_DIR env"
+            TENSORRT_ROOT_DIR=${TRT_ROOT_DIR}
+        fi
     fi
 
     ## YOU SHOULD MODIFY CUDA VERSION AS BELOW WHEN UPGRADE

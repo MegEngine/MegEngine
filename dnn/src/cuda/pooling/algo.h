@@ -23,7 +23,7 @@ namespace cuda {
 
 namespace {
 #define V1(v) #v
-#define V(v) V1(v)
+#define V(v)  V1(v)
 #define DEF_NAME(NAME) \
 #NAME "v" V(CUDNN_MAJOR) "." V(CUDNN_MINOR) "." V(CUDNN_PATCHLEVEL)
 }  // namespace
@@ -50,15 +50,17 @@ public:
         const TensorLayout *layout_src, *layout_dst;
 
         std::string to_string() const;
-        SizeArgs(PoolingForwardImpl* opr, const TensorLayout& src,
-                 const TensorLayout& dst);
+        SizeArgs(
+                PoolingForwardImpl* opr, const TensorLayout& src,
+                const TensorLayout& dst);
     };
     struct ExecArgs : public SizeArgs {
         const TensorND *src_tensor, *dst_tensor;
         Workspace workspace;
 
-        ExecArgs(PoolingForwardImpl* opr, _megdnn_tensor_in src,
-                 _megdnn_tensor_out dst, _megdnn_workspace workspace);
+        ExecArgs(
+                PoolingForwardImpl* opr, _megdnn_tensor_in src, _megdnn_tensor_out dst,
+                _megdnn_workspace workspace);
     };
 
     virtual bool is_available(const SizeArgs& args) const = 0;
@@ -75,8 +77,7 @@ public:
 
 protected:
     ~AlgoBase() = default;
-    virtual WorkspaceBundle get_workspace_bundle(void* ptr,
-                                                 const SizeArgs& args) const;
+    virtual WorkspaceBundle get_workspace_bundle(void* ptr, const SizeArgs& args) const;
 };
 
 class PoolingForwardImpl::AlgoCUDNN final : public AlgoBase {
@@ -90,9 +91,7 @@ public:
     void exec(const ExecArgs& args) const override;
 
     const char* name() const override { return m_algo_name.c_str(); }
-    AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE;
-    }
+    AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }
 
     MEGDNN_DECL_ALGO_TYPE(CUDA_CUDNN)
 
@@ -111,9 +110,7 @@ public:
     void exec(const ExecArgs& args) const override;
 
     const char* name() const override { return m_algo_name.c_str(); }
-    AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE;
-    }
+    AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }
 
     MEGDNN_DECL_ALGO_TYPE(CUDA_CUDNN_MAXDETERMINISTIC)
 
@@ -121,42 +118,46 @@ public:
 };
 #endif
 
-#define ALGO_LAYOUT_POOLING_IMPL(_layout)                                 \
-    class PoolingForwardImpl::Algo##_layout final : public AlgoBase {     \
-        std::string m_algo_name;                                          \
-                                                                          \
-    public:                                                               \
-        Algo##_layout(                                                    \
-                std::string name = std::string("CUDA_").append(#_layout)) \
-                : m_algo_name(name) {}                                    \
-        bool is_available(const SizeArgs& args) const override;           \
-        void exec(const ExecArgs& args) const override;                   \
-        const char* name() const override { return m_algo_name.c_str(); } \
-        AlgoAttribute attribute() const override {                        \
-            return AlgoAttribute::REPRODUCIBLE;                           \
-        }                                                                 \
+#define ALGO_LAYOUT_POOLING_IMPL(_layout)                                       \
+    class PoolingForwardImpl::Algo##_layout final : public AlgoBase {           \
+        std::string m_algo_name;                                                \
+                                                                                \
+    public:                                                                     \
+        Algo##_layout(std::string name = std::string("CUDA_").append(#_layout)) \
+                : m_algo_name(name) {}                                          \
+        bool is_available(const SizeArgs& args) const override;                 \
+        void exec(const ExecArgs& args) const override;                         \
+        const char* name() const override { return m_algo_name.c_str(); }       \
+        AlgoAttribute attribute() const override {                              \
+            return AlgoAttribute::REPRODUCIBLE;                                 \
+        }                                                                       \
         MEGDNN_DECL_ALGO_TYPE(CUDA_##_layout)
 
-ALGO_LAYOUT_POOLING_IMPL(CHWN4)};
-ALGO_LAYOUT_POOLING_IMPL(NCHW4)};
-ALGO_LAYOUT_POOLING_IMPL(NCHW32)};
-ALGO_LAYOUT_POOLING_IMPL(NHWC)};
-ALGO_LAYOUT_POOLING_IMPL(NCHW64) //{
+ALGO_LAYOUT_POOLING_IMPL(CHWN4)
+};
+ALGO_LAYOUT_POOLING_IMPL(NCHW4)
+};
+ALGO_LAYOUT_POOLING_IMPL(NCHW32)
+}
+;
+ALGO_LAYOUT_POOLING_IMPL(NHWC)
+}
+;
+ALGO_LAYOUT_POOLING_IMPL(NCHW64)  //{
 protected:
-    WorkspaceBundle get_workspace_bundle(void* ptr, const SizeArgs& args)
-            const override;
+WorkspaceBundle get_workspace_bundle(void* ptr, const SizeArgs& args) const override;
 
 private:
-    inline void deduce_reformat_layout(
-            std::unique_ptr<RelayoutFormat> & relayout,
-            const TensorLayout& src_layout, TensorLayout& dst_layout,
-            RelayoutFormat::Param::Mode mode, const int oc, const int group)
-            const;
-    void get_inner_layout(const TensorLayout& src, const TensorLayout& dst,
-                          TensorLayout& inner_src, TensorLayout& inner_dst,
-                          Handle* handle,
-                          PoolingForwardImpl::Param::Format format) const;
-};
+inline void deduce_reformat_layout(
+        std::unique_ptr<RelayoutFormat>& relayout, const TensorLayout& src_layout,
+        TensorLayout& dst_layout, RelayoutFormat::Param::Mode mode, const int oc,
+        const int group) const;
+void get_inner_layout(
+        const TensorLayout& src, const TensorLayout& dst, TensorLayout& inner_src,
+        TensorLayout& inner_dst, Handle* handle,
+        PoolingForwardImpl::Param::Format format) const;
+}
+;
 
 #undef ALGO_LAYOUT_POOLING_IMPL
 
@@ -194,17 +195,19 @@ public:
         const TensorLayout *layout_src, *layout_dst, *layout_diff, *layout_grad;
 
         std::string to_string() const;
-        SizeArgs(PoolingBackwardImpl* opr, const TensorLayout& src,
-                 const TensorLayout& dst, const TensorLayout& diff,
-                 const TensorLayout& grad);
+        SizeArgs(
+                PoolingBackwardImpl* opr, const TensorLayout& src,
+                const TensorLayout& dst, const TensorLayout& diff,
+                const TensorLayout& grad);
     };
     struct ExecArgs : public SizeArgs {
         const TensorND *src_tensor, *dst_tensor, *diff_tensor, *grad_tensor;
         Workspace workspace;
 
-        ExecArgs(PoolingBackwardImpl* opr, _megdnn_tensor_in src,
-                 _megdnn_tensor_in dst, _megdnn_tensor_in diff,
-                 _megdnn_tensor_out grad, _megdnn_workspace workspace);
+        ExecArgs(
+                PoolingBackwardImpl* opr, _megdnn_tensor_in src, _megdnn_tensor_in dst,
+                _megdnn_tensor_in diff, _megdnn_tensor_out grad,
+                _megdnn_workspace workspace);
     };
 
     virtual bool is_available(const SizeArgs& args) const = 0;
@@ -221,8 +224,7 @@ public:
 
 protected:
     ~AlgoBase() = default;
-    virtual WorkspaceBundle get_workspace_bundle(void* ptr,
-                                                 const SizeArgs& args) const;
+    virtual WorkspaceBundle get_workspace_bundle(void* ptr, const SizeArgs& args) const;
 };
 
 class PoolingBackwardImpl::AlgoCUDNN final : public AlgoBase {

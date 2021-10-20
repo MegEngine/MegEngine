@@ -69,116 +69,111 @@ namespace x86 {
     __m256i val2_3 = _mm256_cvtep##_type##_epi32(_mm_bsrli_si128(tmp2_1, 8));
 
 ////////////////////////// ternary //////////////////////////
-template <SIMDType simd_type, typename src_ctype,
-          typename dst_ctype = src_ctype>
+template <SIMDType simd_type, typename src_ctype, typename dst_ctype = src_ctype>
 struct TernaryOpBase : OpBase<src_ctype, dst_ctype> {
     using OpBase<src_ctype, dst_ctype>::OpBase;
     TernaryOpBase() = default;
-    TernaryOpBase(DType /*src0_dtype*/, DType /*src1_dtype*/,
-                  DType /*src2_dtype*/, DType /*dst_dtype*/) {}
+    TernaryOpBase(
+            DType /*src0_dtype*/, DType /*src1_dtype*/, DType /*src2_dtype*/,
+            DType /*dst_dtype*/) {}
 };
 
 //////////////////////// quantization common ////////////////////
 
-#define OP_BASE(_simd_type, _simd_target, _simd_data_type, _func_prefix)     \
-    template <>                                                              \
-    struct TernaryOpBase<_simd_type, dt_qint8, dt_qint8>                     \
-            : OpBase<dt_qint8, dt_qint8> {                                   \
-        using OpBase::OpBase;                                                \
-        using src_ctype = dt_qint8;                                          \
-        using dst_ctype = dt_qint8;                                          \
-        float m_scale_src0, m_scale_src1, m_scale_src2, m_scale_dst;         \
-        _simd_data_type m_vscale_src0, m_vscale_src1, m_vscale_src2,         \
-                m_vscale_dst;                                                \
-        MEGDNN_ATTRIBUTE_TARGET(_simd_target)                                \
-        void init(float src0_scale, float src1_scale, float src2_scale,      \
-                  float dst_scale) {                                         \
-            m_scale_src0 = src0_scale;                                       \
-            m_vscale_src0 = _##_func_prefix##_set1_ps(m_scale_src0);         \
-            m_scale_src1 = src1_scale;                                       \
-            m_vscale_src1 = _##_func_prefix##_set1_ps(m_scale_src1);         \
-            m_scale_src2 = src2_scale;                                       \
-            m_vscale_src2 = _##_func_prefix##_set1_ps(m_scale_src2);         \
-            m_scale_dst = 1.f / dst_scale;                                   \
-            m_vscale_dst = _##_func_prefix##_set1_ps(m_scale_dst);           \
-        }                                                                    \
-        TernaryOpBase(DType src0_dtype, DType src1_dtype, DType src2_dtype,  \
-                      DType dst_dtype) {                                     \
-            float src0_scale = src0_dtype.param<dtype::QuantizedS8>().scale; \
-            float src1_scale = src1_dtype.param<dtype::QuantizedS8>().scale; \
-            float src2_scale = src2_dtype.param<dtype::QuantizedS8>().scale; \
-            float dst_scale = dst_dtype.param<dtype::QuantizedS8>().scale;   \
-            init(src0_scale, src1_scale, src2_scale, dst_scale);             \
-        }                                                                    \
-        TernaryOpBase(float src0_scale, float src1_scale, float src2_scale,  \
-                      float dst_scale) {                                     \
-            init(src0_scale, src1_scale, src2_scale, dst_scale);             \
-        }                                                                    \
+#define OP_BASE(_simd_type, _simd_target, _simd_data_type, _func_prefix)           \
+    template <>                                                                    \
+    struct TernaryOpBase<_simd_type, dt_qint8, dt_qint8>                           \
+            : OpBase<dt_qint8, dt_qint8> {                                         \
+        using OpBase::OpBase;                                                      \
+        using src_ctype = dt_qint8;                                                \
+        using dst_ctype = dt_qint8;                                                \
+        float m_scale_src0, m_scale_src1, m_scale_src2, m_scale_dst;               \
+        _simd_data_type m_vscale_src0, m_vscale_src1, m_vscale_src2, m_vscale_dst; \
+        MEGDNN_ATTRIBUTE_TARGET(_simd_target)                                      \
+        void init(                                                                 \
+                float src0_scale, float src1_scale, float src2_scale,              \
+                float dst_scale) {                                                 \
+            m_scale_src0 = src0_scale;                                             \
+            m_vscale_src0 = _##_func_prefix##_set1_ps(m_scale_src0);               \
+            m_scale_src1 = src1_scale;                                             \
+            m_vscale_src1 = _##_func_prefix##_set1_ps(m_scale_src1);               \
+            m_scale_src2 = src2_scale;                                             \
+            m_vscale_src2 = _##_func_prefix##_set1_ps(m_scale_src2);               \
+            m_scale_dst = 1.f / dst_scale;                                         \
+            m_vscale_dst = _##_func_prefix##_set1_ps(m_scale_dst);                 \
+        }                                                                          \
+        TernaryOpBase(                                                             \
+                DType src0_dtype, DType src1_dtype, DType src2_dtype,              \
+                DType dst_dtype) {                                                 \
+            float src0_scale = src0_dtype.param<dtype::QuantizedS8>().scale;       \
+            float src1_scale = src1_dtype.param<dtype::QuantizedS8>().scale;       \
+            float src2_scale = src2_dtype.param<dtype::QuantizedS8>().scale;       \
+            float dst_scale = dst_dtype.param<dtype::QuantizedS8>().scale;         \
+            init(src0_scale, src1_scale, src2_scale, dst_scale);                   \
+        }                                                                          \
+        TernaryOpBase(                                                             \
+                float src0_scale, float src1_scale, float src2_scale,              \
+                float dst_scale) {                                                 \
+            init(src0_scale, src1_scale, src2_scale, dst_scale);                   \
+        }                                                                          \
     };
 
 OP_BASE(SIMDType::SSE4_2, "sse4.2", __m128, mm)
 OP_BASE(SIMDType::AVX2, "avx2", __m256, mm256)
 #undef OP_BASE
 
-#define OP_BASE(_simd_type, _simd_target, _simd_data_type, _func_prefix)       \
-    template <>                                                                \
-    struct TernaryOpBase<_simd_type, dt_quint8, dt_quint8>                     \
-            : OpBase<dt_quint8, dt_quint8> {                                   \
-        using OpBase::OpBase;                                                  \
-        using src_ctype = dt_quint8;                                           \
-        using dst_ctype = dt_quint8;                                           \
-        float m_scale_src0, m_scale_src1, m_scale_src2, m_scale_dst;           \
-        _simd_data_type m_vscale_src0, m_vscale_src1, m_vscale_src2,           \
-                m_vscale_dst;                                                  \
-        uint8_t m_zp_src0, m_zp_src1, m_zp_src2, m_zp_dst;                     \
-        _simd_data_type##i m_vzp_src0, m_vzp_src1, m_vzp_src2, m_vzp_dst;      \
-        MEGDNN_ATTRIBUTE_TARGET(_simd_target)                                  \
-        void init(float src0_scale, float src1_scale, float src2_scale,        \
-                  float dst_scale, uint8_t src0_zp, uint8_t src1_zp,           \
-                  uint8_t src2_zp, uint8_t dst_zp) {                           \
-            m_scale_src0 = src0_scale;                                         \
-            m_vscale_src0 = _##_func_prefix##_set1_ps(m_scale_src0);           \
-            m_scale_src1 = src1_scale;                                         \
-            m_vscale_src1 = _##_func_prefix##_set1_ps(m_scale_src1);           \
-            m_scale_src2 = src2_scale;                                         \
-            m_vscale_src2 = _##_func_prefix##_set1_ps(m_scale_src2);           \
-            m_scale_dst = 1.f / dst_scale;                                     \
-            m_vscale_dst = _##_func_prefix##_set1_ps(m_scale_dst);             \
-            m_zp_src0 = src0_zp;                                               \
-            m_zp_src1 = src1_zp;                                               \
-            m_zp_src2 = src2_zp;                                               \
-            m_zp_dst = dst_zp;                                                 \
-            m_vzp_src0 = _##_func_prefix##_set1_epi32(m_zp_src0);              \
-            m_vzp_src1 = _##_func_prefix##_set1_epi32(m_zp_src1);              \
-            m_vzp_src2 = _##_func_prefix##_set1_epi32(m_zp_src2);              \
-            m_vzp_dst = _##_func_prefix##_set1_epi32(m_zp_dst);                \
-        }                                                                      \
-        TernaryOpBase(DType src0_dtype, DType src1_dtype, DType src2_dtype,    \
-                      DType dst_dtype) {                                       \
-            float src0_scale =                                                 \
-                    src0_dtype.param<dtype::Quantized8Asymm>().scale;          \
-            float src1_scale =                                                 \
-                    src1_dtype.param<dtype::Quantized8Asymm>().scale;          \
-            float src2_scale =                                                 \
-                    src2_dtype.param<dtype::Quantized8Asymm>().scale;          \
-            float dst_scale = dst_dtype.param<dtype::Quantized8Asymm>().scale; \
-            uint8_t src0_zp =                                                  \
-                    src0_dtype.param<dtype::Quantized8Asymm>().zero_point;     \
-            uint8_t src1_zp =                                                  \
-                    src1_dtype.param<dtype::Quantized8Asymm>().zero_point;     \
-            uint8_t src2_zp =                                                  \
-                    src2_dtype.param<dtype::Quantized8Asymm>().zero_point;     \
-            uint8_t dst_zp =                                                   \
-                    dst_dtype.param<dtype::Quantized8Asymm>().zero_point;      \
-            init(src0_scale, src1_scale, src2_scale, dst_scale, src0_zp,       \
-                 src1_zp, src2_zp, dst_zp);                                    \
-        }                                                                      \
-        TernaryOpBase(float src0_scale, float src1_scale, float src2_scale,    \
-                      float dst_scale, uint8_t src0_zp, uint8_t src1_zp,       \
-                      uint8_t src2_zp, uint8_t dst_zp) {                       \
-            init(src0_scale, src1_scale, src2_scale, dst_scale, src0_zp,       \
-                 src1_zp, src2_zp, dst_zp);                                    \
-        }                                                                      \
+#define OP_BASE(_simd_type, _simd_target, _simd_data_type, _func_prefix)               \
+    template <>                                                                        \
+    struct TernaryOpBase<_simd_type, dt_quint8, dt_quint8>                             \
+            : OpBase<dt_quint8, dt_quint8> {                                           \
+        using OpBase::OpBase;                                                          \
+        using src_ctype = dt_quint8;                                                   \
+        using dst_ctype = dt_quint8;                                                   \
+        float m_scale_src0, m_scale_src1, m_scale_src2, m_scale_dst;                   \
+        _simd_data_type m_vscale_src0, m_vscale_src1, m_vscale_src2, m_vscale_dst;     \
+        uint8_t m_zp_src0, m_zp_src1, m_zp_src2, m_zp_dst;                             \
+        _simd_data_type##i m_vzp_src0, m_vzp_src1, m_vzp_src2, m_vzp_dst;              \
+        MEGDNN_ATTRIBUTE_TARGET(_simd_target)                                          \
+        void init(                                                                     \
+                float src0_scale, float src1_scale, float src2_scale, float dst_scale, \
+                uint8_t src0_zp, uint8_t src1_zp, uint8_t src2_zp, uint8_t dst_zp) {   \
+            m_scale_src0 = src0_scale;                                                 \
+            m_vscale_src0 = _##_func_prefix##_set1_ps(m_scale_src0);                   \
+            m_scale_src1 = src1_scale;                                                 \
+            m_vscale_src1 = _##_func_prefix##_set1_ps(m_scale_src1);                   \
+            m_scale_src2 = src2_scale;                                                 \
+            m_vscale_src2 = _##_func_prefix##_set1_ps(m_scale_src2);                   \
+            m_scale_dst = 1.f / dst_scale;                                             \
+            m_vscale_dst = _##_func_prefix##_set1_ps(m_scale_dst);                     \
+            m_zp_src0 = src0_zp;                                                       \
+            m_zp_src1 = src1_zp;                                                       \
+            m_zp_src2 = src2_zp;                                                       \
+            m_zp_dst = dst_zp;                                                         \
+            m_vzp_src0 = _##_func_prefix##_set1_epi32(m_zp_src0);                      \
+            m_vzp_src1 = _##_func_prefix##_set1_epi32(m_zp_src1);                      \
+            m_vzp_src2 = _##_func_prefix##_set1_epi32(m_zp_src2);                      \
+            m_vzp_dst = _##_func_prefix##_set1_epi32(m_zp_dst);                        \
+        }                                                                              \
+        TernaryOpBase(                                                                 \
+                DType src0_dtype, DType src1_dtype, DType src2_dtype,                  \
+                DType dst_dtype) {                                                     \
+            float src0_scale = src0_dtype.param<dtype::Quantized8Asymm>().scale;       \
+            float src1_scale = src1_dtype.param<dtype::Quantized8Asymm>().scale;       \
+            float src2_scale = src2_dtype.param<dtype::Quantized8Asymm>().scale;       \
+            float dst_scale = dst_dtype.param<dtype::Quantized8Asymm>().scale;         \
+            uint8_t src0_zp = src0_dtype.param<dtype::Quantized8Asymm>().zero_point;   \
+            uint8_t src1_zp = src1_dtype.param<dtype::Quantized8Asymm>().zero_point;   \
+            uint8_t src2_zp = src2_dtype.param<dtype::Quantized8Asymm>().zero_point;   \
+            uint8_t dst_zp = dst_dtype.param<dtype::Quantized8Asymm>().zero_point;     \
+            init(src0_scale, src1_scale, src2_scale, dst_scale, src0_zp, src1_zp,      \
+                 src2_zp, dst_zp);                                                     \
+        }                                                                              \
+        TernaryOpBase(                                                                 \
+                float src0_scale, float src1_scale, float src2_scale, float dst_scale, \
+                uint8_t src0_zp, uint8_t src1_zp, uint8_t src2_zp, uint8_t dst_zp) {   \
+            init(src0_scale, src1_scale, src2_scale, dst_scale, src0_zp, src1_zp,      \
+                 src2_zp, dst_zp);                                                     \
+        }                                                                              \
     };
 
 OP_BASE(SIMDType::SSE4_2, "sse4.2", __m128, mm)
@@ -192,10 +187,10 @@ struct TernaryQuantizationOp;
 //! error! just like this: internal compiler error: in convert_move, at
 //! expr.c:315
 
-#define SUB_MUL_TO_F32(_func_prefix, val, zp, scale)                        \
-    _##_func_prefix##_mul_ps(_##_func_prefix##_cvtepi32_ps(                 \
-                                     _##_func_prefix##_sub_epi32(val, zp)), \
-                             scale);
+#define SUB_MUL_TO_F32(_func_prefix, val, zp, scale)                             \
+    _##_func_prefix##_mul_ps(                                                    \
+            _##_func_prefix##_cvtepi32_ps(_##_func_prefix##_sub_epi32(val, zp)), \
+            scale);
 
 #define OPERATE(_func_prefix, scale_dst)                  \
     auto vitem0 = op(vitem0_0, vitem1_0, vitem2_0);       \
@@ -268,12 +263,13 @@ struct TernaryQuantizationOp<SIMDType::SSE4_2, dt_qint8, dt_qint8, Op>
     using TernaryOpBase<SIMDType::SSE4_2, dt_qint8, dt_qint8>::TernaryOpBase;
     constexpr static size_t SIMD_WIDTH = 16;
     Op op;
-    void operator()(const dt_qint8& src0, const dt_qint8& src1,
-                    const dt_qint8& src2, dt_qint8* dst) const {
+    void operator()(
+            const dt_qint8& src0, const dt_qint8& src1, const dt_qint8& src2,
+            dt_qint8* dst) const {
         *dst = operator()(src0, src1, src2);
     }
-    dt_qint8 operator()(const dt_qint8& src0, const dt_qint8& src1,
-                        const dt_qint8& src2) const {
+    dt_qint8 operator()(
+            const dt_qint8& src0, const dt_qint8& src1, const dt_qint8& src2) const {
         float fsrc0 = src0.as_int8() * m_scale_src0;
         float fsrc1 = src1.as_int8() * m_scale_src1;
         float fsrc2 = src2.as_int8() * m_scale_src2;
@@ -282,25 +278,27 @@ struct TernaryQuantizationOp<SIMDType::SSE4_2, dt_qint8, dt_qint8, Op>
         return QConverter::convert<dt_qint8, float>(fsrc);
     }
     MEGDNN_ATTRIBUTE_TARGET("sse4.2")
-    void operator()(const __m128ix2& vsrc0, const __m128ix2& vsrc1,
-                    const __m128ix2& vsrc2, dt_qint8* dst) const {
+    void operator()(
+            const __m128ix2& vsrc0, const __m128ix2& vsrc1, const __m128ix2& vsrc2,
+            dt_qint8* dst) const {
         _mm_storeu_si128(
-                reinterpret_cast<__m128i*>(dst), operator()(vsrc0.val[0],
-                                                            vsrc1.val[0],
-                                                            vsrc2.val[0]));
-        _mm_storeu_si128(reinterpret_cast<__m128i*>(dst + SIMD_WIDTH),
-                         operator()(vsrc0.val[1], vsrc1.val[1], vsrc2.val[1]));
+                reinterpret_cast<__m128i*>(dst), operator()(
+                                                         vsrc0.val[0], vsrc1.val[0],
+                                                         vsrc2.val[0]));
+        _mm_storeu_si128(
+                reinterpret_cast<__m128i*>(dst + SIMD_WIDTH), operator()(
+                                                                      vsrc0.val[1],
+                                                                      vsrc1.val[1],
+                                                                      vsrc2.val[1]));
     }
     MEGDNN_ATTRIBUTE_TARGET("sse4.2")
-    __m128i operator()(const __m128i& vsrc0, const __m128i& vsrc1,
-                       const __m128i& vsrc2) const {
+    __m128i operator()(
+            const __m128i& vsrc0, const __m128i& vsrc1, const __m128i& vsrc2) const {
         CONVERT_8_INT32_SSE(i8)
         CONVERT_INT32_F32(mm)
         OPERATOR_TERNARY_QINT8_SSE()
-        auto result0 =
-                QConverter::convert<int64_t, __m128x2>({{vitem0, vitem1}});
-        auto result1 =
-                QConverter::convert<int64_t, __m128x2>({{vitem2, vitem3}});
+        auto result0 = QConverter::convert<int64_t, __m128x2>({{vitem0, vitem1}});
+        auto result1 = QConverter::convert<int64_t, __m128x2>({{vitem2, vitem3}});
         return _mm_set_epi64x(result1, result0);
     }
 };
@@ -311,12 +309,13 @@ struct TernaryQuantizationOp<SIMDType::AVX2, dt_qint8, dt_qint8, Op>
     using TernaryOpBase<SIMDType::AVX2, dt_qint8, dt_qint8>::TernaryOpBase;
     constexpr static size_t SIMD_WIDTH = 32;
     Op op;
-    void operator()(const dt_qint8& src0, const dt_qint8& src1,
-                    const dt_qint8& src2, dt_qint8* dst) const {
+    void operator()(
+            const dt_qint8& src0, const dt_qint8& src1, const dt_qint8& src2,
+            dt_qint8* dst) const {
         *dst = operator()(src0, src1, src2);
     }
-    dt_qint8 operator()(const dt_qint8& src0, const dt_qint8& src1,
-                        const dt_qint8& src2) const {
+    dt_qint8 operator()(
+            const dt_qint8& src0, const dt_qint8& src1, const dt_qint8& src2) const {
         float fsrc0 = src0.as_int8() * m_scale_src0;
         float fsrc1 = src1.as_int8() * m_scale_src1;
         float fsrc2 = src2.as_int8() * m_scale_src2;
@@ -325,26 +324,27 @@ struct TernaryQuantizationOp<SIMDType::AVX2, dt_qint8, dt_qint8, Op>
         return QConverter::convert<dt_qint8, float>(fsrc);
     }
     MEGDNN_ATTRIBUTE_TARGET("avx2")
-    void operator()(const __m256ix2& vsrc0, const __m256ix2& vsrc1,
-                    const __m256ix2& vsrc2, dt_qint8* dst) const {
+    void operator()(
+            const __m256ix2& vsrc0, const __m256ix2& vsrc1, const __m256ix2& vsrc2,
+            dt_qint8* dst) const {
         _mm256_storeu_si256(
-                reinterpret_cast<__m256i*>(dst), operator()(vsrc0.val[0],
-                                                            vsrc1.val[0],
-                                                            vsrc2.val[0]));
+                reinterpret_cast<__m256i*>(dst), operator()(
+                                                         vsrc0.val[0], vsrc1.val[0],
+                                                         vsrc2.val[0]));
         _mm256_storeu_si256(
-                reinterpret_cast<__m256i*>(dst + SIMD_WIDTH),
-                operator()(vsrc0.val[1], vsrc1.val[1], vsrc2.val[1]));
+                reinterpret_cast<__m256i*>(dst + SIMD_WIDTH), operator()(
+                                                                      vsrc0.val[1],
+                                                                      vsrc1.val[1],
+                                                                      vsrc2.val[1]));
     }
     MEGDNN_ATTRIBUTE_TARGET("avx2")
-    __m256i operator()(const __m256i& vsrc0, const __m256i& vsrc1,
-                       const __m256i& vsrc2) const {
+    __m256i operator()(
+            const __m256i& vsrc0, const __m256i& vsrc1, const __m256i& vsrc2) const {
         CONVERT_8_INT32_AVX(i8)
         CONVERT_INT32_F32(mm256)
         OPERATOR_TERNARY_QINT8_AVX()
-        auto result0 =
-                QConverter::convert<__m128i, __m256x2>({{vitem0, vitem1}});
-        auto result1 =
-                QConverter::convert<__m128i, __m256x2>({{vitem2, vitem3}});
+        auto result0 = QConverter::convert<__m128i, __m256x2>({{vitem0, vitem1}});
+        auto result1 = QConverter::convert<__m128i, __m256x2>({{vitem2, vitem3}});
         return _mm256_set_m128i(result1, result0);
     }
 };
@@ -355,12 +355,13 @@ struct TernaryQuantizationOp<SIMDType::SSE4_2, dt_quint8, dt_quint8, Op>
     constexpr static size_t SIMD_WIDTH = 16;
     Op op;
 
-    void operator()(const dt_quint8& src0, const dt_quint8& src1,
-                    const dt_quint8& src2, dt_quint8* dst) const {
+    void operator()(
+            const dt_quint8& src0, const dt_quint8& src1, const dt_quint8& src2,
+            dt_quint8* dst) const {
         *dst = operator()(src0, src1, src2);
     }
-    dt_quint8 operator()(const dt_quint8& src0, const dt_quint8& src1,
-                         const dt_quint8& src2) const {
+    dt_quint8 operator()(
+            const dt_quint8& src0, const dt_quint8& src1, const dt_quint8& src2) const {
         float fsrc0 = (src0.as_uint8() - m_zp_src0) * m_scale_src0;
         float fsrc1 = (src1.as_uint8() - m_zp_src1) * m_scale_src1;
         float fsrc2 = (src2.as_uint8() - m_zp_src2) * m_scale_src2;
@@ -369,18 +370,22 @@ struct TernaryQuantizationOp<SIMDType::SSE4_2, dt_quint8, dt_quint8, Op>
         return QConverter::convert<dt_quint8, float, uint8_t>(fsrc, m_zp_dst);
     }
     MEGDNN_ATTRIBUTE_TARGET("sse4.2")
-    void operator()(const __m128ix2& vsrc0, const __m128ix2& vsrc1,
-                    const __m128ix2& vsrc2, dt_quint8* dst) const {
+    void operator()(
+            const __m128ix2& vsrc0, const __m128ix2& vsrc1, const __m128ix2& vsrc2,
+            dt_quint8* dst) const {
         _mm_storeu_si128(
-                reinterpret_cast<__m128i*>(dst), operator()(vsrc0.val[0],
-                                                            vsrc1.val[0],
-                                                            vsrc2.val[0]));
-        _mm_storeu_si128(reinterpret_cast<__m128i*>(dst + SIMD_WIDTH),
-                         operator()(vsrc0.val[1], vsrc1.val[1], vsrc2.val[1]));
+                reinterpret_cast<__m128i*>(dst), operator()(
+                                                         vsrc0.val[0], vsrc1.val[0],
+                                                         vsrc2.val[0]));
+        _mm_storeu_si128(
+                reinterpret_cast<__m128i*>(dst + SIMD_WIDTH), operator()(
+                                                                      vsrc0.val[1],
+                                                                      vsrc1.val[1],
+                                                                      vsrc2.val[1]));
     }
     MEGDNN_ATTRIBUTE_TARGET("sse4.2")
-    __m128i operator()(const __m128i& vsrc0, const __m128i& vsrc1,
-                       const __m128i& vsrc2) const {
+    __m128i operator()(
+            const __m128i& vsrc0, const __m128i& vsrc1, const __m128i& vsrc2) const {
         CONVERT_8_INT32_SSE(u8)
         OPERATOR_TERNARY_QUINT8_SSE()
         auto result0 = QConverter::convert<int64_t, __m128x2, __m128i>(
@@ -397,12 +402,13 @@ struct TernaryQuantizationOp<SIMDType::AVX2, dt_quint8, dt_quint8, Op>
     using TernaryOpBase<SIMDType::AVX2, dt_quint8, dt_quint8>::TernaryOpBase;
     constexpr static size_t SIMD_WIDTH = 32;
     Op op;
-    void operator()(const dt_quint8& src0, const dt_quint8& src1,
-                    const dt_quint8& src2, dt_quint8* dst) const {
+    void operator()(
+            const dt_quint8& src0, const dt_quint8& src1, const dt_quint8& src2,
+            dt_quint8* dst) const {
         *dst = operator()(src0, src1, src2);
     }
-    dt_quint8 operator()(const dt_quint8& src0, const dt_quint8& src1,
-                         const dt_quint8& src2) const {
+    dt_quint8 operator()(
+            const dt_quint8& src0, const dt_quint8& src1, const dt_quint8& src2) const {
         float fsrc0 = (src0.as_uint8() - m_zp_src0) * m_scale_src0;
         float fsrc1 = (src1.as_uint8() - m_zp_src1) * m_scale_src1;
         float fsrc2 = (src2.as_uint8() - m_zp_src2) * m_scale_src2;
@@ -411,19 +417,22 @@ struct TernaryQuantizationOp<SIMDType::AVX2, dt_quint8, dt_quint8, Op>
         return QConverter::convert<dt_quint8, float, uint8_t>(fsrc, m_zp_dst);
     }
     MEGDNN_ATTRIBUTE_TARGET("avx2")
-    void operator()(const __m256ix2& vsrc0, const __m256ix2& vsrc1,
-                    const __m256ix2& vsrc2, dt_quint8* dst) const {
+    void operator()(
+            const __m256ix2& vsrc0, const __m256ix2& vsrc1, const __m256ix2& vsrc2,
+            dt_quint8* dst) const {
         _mm256_storeu_si256(
-                reinterpret_cast<__m256i*>(dst), operator()(vsrc0.val[0],
-                                                            vsrc1.val[0],
-                                                            vsrc2.val[0]));
+                reinterpret_cast<__m256i*>(dst), operator()(
+                                                         vsrc0.val[0], vsrc1.val[0],
+                                                         vsrc2.val[0]));
         _mm256_storeu_si256(
-                reinterpret_cast<__m256i*>(dst + SIMD_WIDTH),
-                operator()(vsrc0.val[1], vsrc1.val[1], vsrc2.val[1]));
+                reinterpret_cast<__m256i*>(dst + SIMD_WIDTH), operator()(
+                                                                      vsrc0.val[1],
+                                                                      vsrc1.val[1],
+                                                                      vsrc2.val[1]));
     }
     MEGDNN_ATTRIBUTE_TARGET("avx2")
-    __m256i operator()(const __m256i& vsrc0, const __m256i& vsrc1,
-                       const __m256i& vsrc2) const {
+    __m256i operator()(
+            const __m256i& vsrc0, const __m256i& vsrc1, const __m256i& vsrc2) const {
         CONVERT_8_INT32_AVX(u8)
         OPERATOR_TERNARY_QUINT8_AVX()
         auto v_dzp = _mm256_set1_epi32(m_zp_dst);

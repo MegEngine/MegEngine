@@ -51,8 +51,8 @@ MIDOUT_DECL(HandleOpr);
 Handle::Handle(megcoreComputingHandle_t computing_handle, HandleType type)
         : m_computing_handle(computing_handle), m_handle_type(type) {}
 
-std::unique_ptr<Handle> Handle::make(megcoreComputingHandle_t computing_handle,
-                                     int debug_level) {
+std::unique_ptr<Handle> Handle::make(
+        megcoreComputingHandle_t computing_handle, int debug_level) {
     (void)debug_level;
     megcoreDeviceHandle_t device_handle;
     megcorePlatform_t platform;
@@ -114,8 +114,9 @@ std::unique_ptr<Handle> Handle::make(megcoreComputingHandle_t computing_handle,
     }
     else {
         // CUDA
-        megdnn_throw_if(platform != megcorePlatformCUDA, megdnn_error,
-                        "platform should be CUDA Platform");
+        megdnn_throw_if(
+                platform != megcorePlatformCUDA, megdnn_error,
+                "platform should be CUDA Platform");
 #if MEGDNN_WITH_CUDA
         return make_unique<cuda::HandleImpl>(computing_handle);
 #else

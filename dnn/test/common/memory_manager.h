@@ -11,9 +11,9 @@
 #pragma once
 #include <cstddef>
 
-#include "megdnn/handle.h"
-#include <unordered_map>
 #include <mutex>
+#include <unordered_map>
+#include "megdnn/handle.h"
 
 namespace megdnn {
 namespace test {

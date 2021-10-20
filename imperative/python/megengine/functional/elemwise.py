@@ -48,6 +48,7 @@ __all__ = [
     "logical_not",
     "logical_or",
     "logical_xor",
+    "logaddexp",
     "maximum",
     "minimum",
     "mod",
@@ -78,182 +79,185 @@ def _elemwise_multi_type(*args, mode, **kwargs):
 
 
 def add(x, y):
-    """
-    Element-wise `addition`.
-    At least one operand should be tensor.
-
-    Same for sub/mul/div/floor_div/pow/mod/atan2/equal/not_equal/less/less_equal/greater/greater_equal/maximum/minmium.
-
-    :param x: input tensor.
-    :return: computed tensor.
+    r"""Element-wise `addition`.
 
     Examples:
 
-    .. testcode::
+        .. testcode::
 
-        import numpy as np
-        from megengine import tensor
-        import megengine.functional as F
+            import numpy as np
+            from megengine import tensor
+            import megengine.functional as F
 
-        x = tensor(np.arange(0, 6, dtype=np.float32).reshape(2, 3))
-        y = tensor(np.arange(0, 6, dtype=np.float32).reshape(2, 3))
-        out = F.add(x, y)
-        print(out.numpy())
+            x = tensor(np.arange(0, 6, dtype=np.float32).reshape(2, 3))
+            y = tensor(np.arange(0, 6, dtype=np.float32).reshape(2, 3))
+            out = F.add(x, y)
+            print(out.numpy())
 
-    Outputs:
+        Outputs:
 
-    .. testoutput::
+        .. testoutput::
 
-        [[ 0.  2.  4.]
-         [ 6.  8. 10.]]
-
+            [[ 0.  2.  4.]
+             [ 6.  8. 10.]]
     """
     return _elwise(x, y, mode=Elemwise.Mode.ADD)
 
 
 def sub(x, y):
-    """Element-wise `subtraction`."""
+    r"""Element-wise `sub`.
+
+    Examples:
+
+        .. testcode::
+
+            import numpy as np
+            from megengine import tensor
+            import megengine.functional as F
+
+            x = tensor(np.arange(1, 7, dtype=np.float32).reshape(2, 3))
+            y = tensor(np.arange(0, 6, dtype=np.float32).reshape(2, 3))
+            out = F.sub(x, y)
+            print(out.numpy())
+
+        Outputs:
+
+        .. testoutput::
+
+            [[1. 1. 1.]
+             [1. 1. 1.]]
+
+    """
     return _elwise(x, y, mode=Elemwise.Mode.SUB)
 
 
 def mul(x, y):
-    """Element-wise `multiplication`."""
+    r"""Element-wise `multiplication`."""
     return _elwise(x, y, mode=Elemwise.Mode.MUL)
 
 
 def div(x, y):
-    """Element-wise `(x / y)`."""
+    r"""Element-wise `(x / y)`."""
     return _elwise(x, y, mode=Elemwise.Mode.TRUE_DIV)
 
 
 def floor_div(x, y):
-    """Element-wise `floor(x / y)`."""
+    r"""Element-wise `floor(x / y)`."""
     return _elwise(x, y, mode=Elemwise.Mode.FLOOR_DIV)
 
 
 def neg(x):
-    """Element-wise `negation`."""
+    r"""Element-wise `negation`."""
     return _elwise(x, mode=Elemwise.Mode.NEGATE)
 
 
 def pow(x, y):
-    """Element-wise `power`."""
+    r"""Element-wise `power`."""
     return _elwise(x, y, mode=Elemwise.Mode.POW)
 
 
 def mod(x, y):
-    """Element-wise `remainder of division`."""
+    r"""Element-wise `remainder of division`."""
     return _elwise(x, y, mode=Elemwise.Mode.MOD)
 
 
 def abs(x):
-    """Element-wise `absolute value`."""
+    r"""Element-wise `absolute value`."""
     return _elwise(x, mode=Elemwise.Mode.ABS)
 
 
 def exp(x):
-    """Element-wise `exponential`."""
+    r"""Element-wise `exponential`."""
     return _elwise(x, mode=Elemwise.Mode.EXP)
 
 
 def expm1(x):
-    """Element-wise `exp(x)-1`."""
+    r"""Element-wise `exp(x)-1`."""
     return _elwise(x, mode=Elemwise.Mode.EXPM1)
 
 
 def log(x):
-    """Element-wise `logarithm (base e)`."""
+    r"""Element-wise `logarithm (base e)`."""
     return _elwise(x, mode=Elemwise.Mode.LOG)
 
 
 def log1p(x):
-    """Element-wise `log(x+1) (base e)`."""
+    r"""Element-wise `log(x+1) (base e)`."""
     return _elwise(x, mode=Elemwise.Mode.LOG1P)
 
 
 def sqrt(x: Tensor) -> Tensor:
-    """
-    Element-wise `sqrt`.
-    Returns ``NaN`` for negative input value.
-
-    :param x: input tensor.
-    :return: computed tensor.
+    r"""Element-wise `sqrt`.
 
     Examples:
 
-    .. testcode::
+        .. testcode::
 
-        import numpy as np
-        from megengine import tensor
-        import megengine.functional as F
+            import numpy as np
+            from megengine import tensor
+            import megengine.functional as F
 
-        x = tensor(np.arange(0, 6, dtype=np.float32).reshape(2, 3))
-        out = F.sqrt(x)
-        print(out.numpy().round(decimals=4))
+            x = tensor(np.arange(0, 6, dtype=np.float32).reshape(2, 3))
+            out = F.sqrt(x)
+            print(out.numpy().round(decimals=4))
 
-    Outputs:
+        Outputs:
 
-    .. testoutput::
+        .. testoutput::
 
-        [[0.     1.     1.4142]
-         [1.7321 2.     2.2361]]
-
+            [[0.     1.     1.4142]
+             [1.7321 2.     2.2361]]
     """
     return x ** 0.5
 
 
 def square(x: Tensor) -> Tensor:
-    """
-    Returns a new tensor with the square of the elements of input tensor.
-
-    :param inp: input tensor.
-    :return: computed tensor.
+    r"""Element-wise `square`.
 
     Examples:
 
-    .. testcode::
+        .. testcode::
 
-        import numpy as np
-        import megengine as mge
-        import megengine.functional as F
+            import numpy as np
+            import megengine as mge
+            import megengine.functional as F
 
-        data = mge.tensor(np.arange(0, 6, dtype=np.float32).reshape(2, 3))
-        out = F.square(data)
-        print(out.numpy().round(decimals=4))
+            data = mge.tensor(np.arange(0, 6, dtype=np.float32).reshape(2, 3))
+            out = F.square(data)
+            print(out.numpy().round(decimals=4))
 
-    Outputs:
+        Outputs:
 
-    .. testoutput::
+        .. testoutput::
 
-        [[ 0.  1.  4.]
-         [ 9. 16. 25.]]
-
+            [[ 0.  1.  4.]
+             [ 9. 16. 25.]]
     """
     return x ** 2
 
 
 def round(x):
-    """Element-wise `rounding to int`."""
+    r"""Element-wise `rounding to int`."""
     return _elwise(x, mode=Elemwise.Mode.ROUND)
 
 
 def ceil(x):
-    """Element-wise `ceiling`."""
+    r"""Element-wise `ceiling`."""
     return _elwise(x, mode=Elemwise.Mode.CEIL)
 
 
 def floor(x):
-    """Element-wise `floor`."""
+    r"""Element-wise `floor`."""
     return _elwise(x, mode=Elemwise.Mode.FLOOR)
 
 
 def maximum(x, y):
-    """Element-wise `maximum of array elements`."""
+    r"""Element-wise `maximum of array elements`."""
     return _elwise(x, y, mode=Elemwise.Mode.MAX)
 
 
 def minimum(x, y):
-    """Element-wise `minimum of array elements`."""
+    r"""Element-wise `minimum of array elements`."""
     return _elwise(x, y, mode=Elemwise.Mode.MIN)
 
 
@@ -261,62 +265,57 @@ def minimum(x, y):
 
 
 def cos(x):
-    """
-    Element-wise `cosine`.
-
-    :param x: input tensor.
-    :return: computed tensor.
+    r"""Element-wise `cosine`.
 
     Examples:
 
-    .. testcode::
+        .. testcode::
 
-        import numpy as np
-        from megengine import tensor
-        import megengine.functional as F
+            import numpy as np
+            from megengine import tensor
+            import megengine.functional as F
 
-        x = tensor(np.arange(0, 6, dtype=np.float32).reshape(2, 3))
-        out = F.cos(x)
-        print(out.numpy().round(decimals=4))
+            x = tensor(np.arange(0, 6, dtype=np.float32).reshape(2, 3))
+            out = F.cos(x)
+            print(out.numpy().round(decimals=4))
 
-    Outputs:
+        Outputs:
 
-    .. testoutput::
+        .. testoutput::
 
-        [[ 1.      0.5403 -0.4161]
-         [-0.99   -0.6536  0.2837]]
-
+            [[ 1.      0.5403 -0.4161]
+             [-0.99   -0.6536  0.2837]]
     """
     return _elwise(x, mode=Elemwise.Mode.COS)
 
 
 def sin(x):
-    """Element-wise `sine`."""
+    r"""Element-wise `sine`."""
     return _elwise(x, mode=Elemwise.Mode.SIN)
 
 
 def tan(x):
-    """Element-wise `tangent`."""
+    r"""Element-wise `tangent`."""
     return sin(x) / cos(x)
 
 
 def acos(x):
-    """Element-wise `inverse cosine`."""
+    r"""Element-wise `inverse cosine`."""
     return _elwise(x, mode=Elemwise.Mode.ACOS)
 
 
 def asin(x):
-    """Element-wise `inverse sine`."""
+    r"""Element-wise `inverse sine`."""
     return _elwise(x, mode=Elemwise.Mode.ASIN)
 
 
 def atan(x):
-    """Element-wise `inverse tangent`."""
+    r"""Element-wise `inverse tangent`."""
     return _elwise(x, 1, mode=Elemwise.Mode.ATAN2)
 
 
 def atan2(y, x):
-    """Element-wise `2-argument arctangent`."""
+    r"""Element-wise `2-argument arctangent`."""
     return _elwise(y, x, mode=Elemwise.Mode.ATAN2)
 
 
@@ -355,38 +354,33 @@ def atanh(x):
 
 
 def left_shift(x, y):
-    """
-    Element-wise `bitwise binary: x << y`.
+    r"""Element-wise `bitwise binary: x << y`.
 
-    :param x: input tensor, should be int.
-    :param y: how many bits to be left-shifted.
-    :return: computed tensor.
+        Examples:
 
-    Examples:
+        .. testcode::
 
-    .. testcode::
+            import numpy as np
+            from megengine import tensor
+            import megengine.functional as F
 
-        import numpy as np
-        from megengine import tensor
-        import megengine.functional as F
+            x = tensor(np.arange(0, 6, dtype=np.int32).reshape(2, 3))
+            out = F.left_shift(x, 2)
+            print(out.numpy())
 
-        x = tensor(np.arange(0, 6, dtype=np.int32).reshape(2, 3))
-        out = F.left_shift(x, 2)
-        print(out.numpy())
+        Outputs:
 
-    Outputs:
+        .. testoutput::
 
-    .. testoutput::
-
-        [[ 0  4  8]
-         [12 16 20]]
+            [[ 0  4  8]
+             [12 16 20]]
 
     """
     return _elwise(x, y, mode=Elemwise.Mode.SHL)
 
 
 def right_shift(x, y):
-    """Element-wise `bitwise binary: x >> y`."""
+    r"""Element-wise `bitwise binary: x >> y`."""
     return _elwise(x, y, mode=Elemwise.Mode.SHR)
 
 
@@ -394,82 +388,82 @@ def right_shift(x, y):
 
 
 def logical_and(x, y):
-    """Element-wise `logical and: x && y`."""
+    r"""Element-wise `logical and: x && y`."""
     return _elwise(x, y, mode=Elemwise.Mode.AND)
 
 
 def logical_not(x):
-    """Element-wise `logical not: ~x`."""
+    r"""Element-wise `logical not: ~x`."""
     return _elwise(x, mode=Elemwise.Mode.NOT)
 
 
 def logical_or(x, y):
-    """Element-wise `logical or: x || y`."""
+    r"""Element-wise `logical or: x || y`."""
     return _elwise(x, y, mode=Elemwise.Mode.OR)
 
 
 def logical_xor(x, y):
-    """Element-wise `logical xor: x ^ y`."""
+    r"""Element-wise `logical xor: x ^ y`."""
     return _elwise(x, y, mode=Elemwise.Mode.XOR)
+
+
+def logaddexp(x: Tensor, y: Tensor) -> Tensor:
+    r"""Element-wise `numerically stable log(exp(x) + exp(y)`
+    """
+    return _elwise(x, y, mode=Elemwise.Mode.LOG_SUM_EXP)
 
 
 # comparison functions
 
 
 def equal(x, y):
-    """
-    Element-wise `(x == y)`.
-
-    :param x: input tensor 1.
-    :param y: input tensor 2.
-    :return: computed tensor.
+    r"""Element-wise `(x == y)`.
 
     Examples:
 
-    .. testcode::
+        .. testcode::
 
-        import numpy as np
-        from megengine import tensor
-        import megengine.functional as F
+            import numpy as np
+            from megengine import tensor
+            import megengine.functional as F
 
-        x = tensor(np.arange(0, 6, dtype=np.float32).reshape(2, 3))
-        y = tensor(np.arange(0, 6, dtype=np.float32).reshape(2, 3))
-        out = F.equal(x, y)
-        print(out.numpy())
+            x = tensor(np.arange(0, 6, dtype=np.float32).reshape(2, 3))
+            y = tensor(np.arange(0, 6, dtype=np.float32).reshape(2, 3))
+            out = F.equal(x, y)
+            print(out.numpy())
 
-    Outputs:
+        Outputs:
 
-    .. testoutput::
+        .. testoutput::
 
-        [[1. 1. 1.]
-         [1. 1. 1.]]
-
+            [[1. 1. 1.]
+             [1. 1. 1.]]
     """
     return _elwise(x, y, mode=Elemwise.Mode.EQ)
 
 
 def not_equal(x, y):
-    """Element-wise `(x != y)`."""
+    r"""Element-wise `(x != y)`."""
     return x != y
 
 
 def less(x, y):
-    """Element-wise `(x < y)`."""
+    r"""Element-wise `(x < y)`."""
     return _elwise(x, y, mode=Elemwise.Mode.LT)
 
 
 def less_equal(x, y):
-    """Element-wise `(x <= y)`."""
+    r"""Element-wise `(x <= y)`."""
     return _elwise(x, y, mode=Elemwise.Mode.LEQ)
 
 
 def greater(x, y):
-    """Element-wise `(x > y)`."""
+    r"""Element-wise `(x > y)`."""
     return _elwise(y, x, mode=Elemwise.Mode.LT)
 
 
 def greater_equal(x, y):
-    """Element-wise `(x >= y)`."""
+    r"""Element-wise `(x >= y)`."""
     return _elwise(y, x, mode=Elemwise.Mode.LEQ)
 
 
@@ -477,51 +471,51 @@ def greater_equal(x, y):
 
 
 def clip(x: Tensor, lower=None, upper=None) -> Tensor:
-    r"""
-    Clamps all elements in input tensor into the range `[` :attr:`lower`, :attr:`upper` `]` and returns
+    r"""Clamps all elements in input tensor into the range ``[ lower, upper ]`` and returns
     a resulting tensor:
 
     .. math::
+
         y_i = \begin{cases}
             \text{lower} & \text{if } x_i < \text{lower} \\
             x_i & \text{if } \text{lower} \leq x_i \leq \text{upper} \\
             \text{upper} & \text{if } x_i > \text{upper}
         \end{cases}
 
-    :param x: input tensor.
-    :param lower: lower-bound of the range to be clamped to.
-    :param upper: upper-bound of the range to be clamped to.
-    :return: output clamped tensor.
+    Args:
+        x: input tensor.
+        lower: lower-bound of the range to be clamped to.
+        upper: upper-bound of the range to be clamped to.
+
+    Returns:
+        output clamped tensor.
 
     Examples:
 
-    .. testcode::
+        .. testcode::
 
-        import numpy as np
-        from megengine import tensor
-        import megengine.functional as F
+            import numpy as np
+            from megengine import tensor
+            import megengine.functional as F
 
-        a = tensor(np.arange(5).astype(np.int32))
-        print(F.clip(a, 2, 4).numpy())
-        print(F.clip(a, lower=3).numpy())
-        print(F.clip(a, upper=3).numpy())
+            a = tensor(np.arange(5).astype(np.int32))
+            print(F.clip(a, 2, 4).numpy())
+            print(F.clip(a, lower=3).numpy())
+            print(F.clip(a, upper=3).numpy())
 
-    Outputs:
+        Outputs:
 
-    .. testoutput::
+        .. testoutput::
 
-        [2 2 2 3 4]
-        [3 3 3 3 4]
-        [0 1 2 3 3]
-
+            [2 2 2 3 4]
+            [3 3 3 3 4]
+            [0 1 2 3 3]
     """
     assert (
         lower is not None or upper is not None
     ), "At least one of 'lower' or 'upper' must not be None"
     if lower is not None:
         if upper is not None:
-            # FIXME: following assertion won't work during trace if upper and lower are Tensors
-            # assert lower <= upper, "clip lower bound is bigger that upper bound"
             return minimum(maximum(x, lower), upper)
         else:
             return maximum(x, lower)

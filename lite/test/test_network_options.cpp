@@ -13,8 +13,8 @@
 
 #if LITE_BUILD_WITH_MGE
 #include "../src/common.h"
-#include "../src/misc.h"
 #include "../src/mge/network_impl.h"
+#include "../src/misc.h"
 #include "lite/global.h"
 
 #include "megbrain/tensor.h"
@@ -46,8 +46,7 @@ TEST(TestNetWorkOptions, no_var_sanity_check_and_record) {
     input_tensor->reset(src_ptr, src_layout);
     std::shared_ptr<Tensor> output_tensor = network->get_output_tensor(0);
     auto result_tensor = std::make_shared<Tensor>(
-            LiteDeviceType::LITE_CPU,
-            Layout{{1, 1000}, 2, LiteDataType::LITE_FLOAT});
+            LiteDeviceType::LITE_CPU, Layout{{1, 1000}, 2, LiteDataType::LITE_FLOAT});
 
     void* out_data = result_tensor->get_memory_ptr();
     output_tensor->reset(out_data, result_tensor->get_layout());
@@ -79,8 +78,7 @@ TEST(TestNetWorkOptions, const_shape) {
 
     std::shared_ptr<Tensor> output_tensor = network->get_output_tensor(0);
     auto result_tensor = std::make_shared<Tensor>(
-            LiteDeviceType::LITE_CPU,
-            Layout{{1, 1000}, 2, LiteDataType::LITE_FLOAT});
+            LiteDeviceType::LITE_CPU, Layout{{1, 1000}, 2, LiteDataType::LITE_FLOAT});
 
     void* out_data = result_tensor->get_memory_ptr();
     output_tensor->reset(out_data, result_tensor->get_layout());
@@ -116,8 +114,7 @@ TEST(TestNetWorkOptions, NCHW44) {
 
     std::shared_ptr<Tensor> output_tensor = network->get_output_tensor(0);
     auto result_tensor = std::make_shared<Tensor>(
-            LiteDeviceType::LITE_CPU,
-            Layout{{1, 1000}, 2, LiteDataType::LITE_FLOAT});
+            LiteDeviceType::LITE_CPU, Layout{{1, 1000}, 2, LiteDataType::LITE_FLOAT});
 
     void* out_data = result_tensor->get_memory_ptr();
     output_tensor->reset(out_data, result_tensor->get_layout());
@@ -151,8 +148,7 @@ TEST(TestNetWorkOptions, test_cache) {
 
     std::shared_ptr<Tensor> output_tensor = network->get_output_tensor(0);
     auto result_tensor = std::make_shared<Tensor>(
-            LiteDeviceType::LITE_CPU,
-            Layout{{1, 1000}, 2, LiteDataType::LITE_FLOAT});
+            LiteDeviceType::LITE_CPU, Layout{{1, 1000}, 2, LiteDataType::LITE_FLOAT});
 
     void* out_data = result_tensor->get_memory_ptr();
     output_tensor->reset(out_data, result_tensor->get_layout());
@@ -196,8 +192,7 @@ TEST(TestNetWorkOptions, FastRunIgnorBatch) {
 
     std::shared_ptr<Tensor> output_tensor = network->get_output_tensor(0);
     auto result_tensor = std::make_shared<Tensor>(
-            LiteDeviceType::LITE_CPU,
-            Layout{{1, 1000}, 2, LiteDataType::LITE_FLOAT});
+            LiteDeviceType::LITE_CPU, Layout{{1, 1000}, 2, LiteDataType::LITE_FLOAT});
 
     void* out_data = result_tensor->get_memory_ptr();
     output_tensor->reset(out_data, result_tensor->get_layout());
@@ -233,8 +228,7 @@ TEST(TestNetWorkOptions, NCHW4) {
 
     std::shared_ptr<Tensor> output_tensor = network->get_output_tensor(0);
     auto result_tensor = std::make_shared<Tensor>(
-            LiteDeviceType::LITE_CPU,
-            Layout{{1, 1000}, 2, LiteDataType::LITE_FLOAT});
+            LiteDeviceType::LITE_CPU, Layout{{1, 1000}, 2, LiteDataType::LITE_FLOAT});
 
     void* out_data = result_tensor->get_memory_ptr();
     output_tensor->reset(out_data, result_tensor->get_layout());
@@ -268,8 +262,7 @@ TEST(TestNetWorkOptions, NCHW32) {
 
     std::shared_ptr<Tensor> output_tensor = network->get_output_tensor(0);
     auto result_tensor = std::make_shared<Tensor>(
-            LiteDeviceType::LITE_CPU,
-            Layout{{1, 1000}, 2, LiteDataType::LITE_FLOAT});
+            LiteDeviceType::LITE_CPU, Layout{{1, 1000}, 2, LiteDataType::LITE_FLOAT});
 
     void* out_data = result_tensor->get_memory_ptr();
     output_tensor->reset(out_data, result_tensor->get_layout());
@@ -300,8 +293,7 @@ TEST(TestNetWorkOptions, jit_level) {
 
     std::shared_ptr<Tensor> output_tensor = network->get_output_tensor(0);
     auto result_tensor = std::make_shared<Tensor>(
-            LiteDeviceType::LITE_CPU,
-            Layout{{1, 1000}, 2, LiteDataType::LITE_FLOAT});
+            LiteDeviceType::LITE_CPU, Layout{{1, 1000}, 2, LiteDataType::LITE_FLOAT});
 
     void* out_data = result_tensor->get_memory_ptr();
     output_tensor->reset(out_data, result_tensor->get_layout());
@@ -336,8 +328,7 @@ TEST(TestNetWorkOptions, TensorRT) {
 
     std::shared_ptr<Tensor> output_tensor = network->get_output_tensor(0);
     auto result_tensor = std::make_shared<Tensor>(
-            LiteDeviceType::LITE_CPU,
-            Layout{{1, 1000}, 2, LiteDataType::LITE_FLOAT});
+            LiteDeviceType::LITE_CPU, Layout{{1, 1000}, 2, LiteDataType::LITE_FLOAT});
 
     void* out_data = result_tensor->get_memory_ptr();
     output_tensor->reset(out_data, result_tensor->get_layout());

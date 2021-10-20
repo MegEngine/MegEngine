@@ -17,7 +17,7 @@ using namespace mgb;
 using namespace opr;
 
 MegRay::DType mgb::opr::get_megray_dtype(megdnn::DType dtype) {
-    switch(dtype.enumv()) {
+    switch (dtype.enumv()) {
         case DTypeEnum::Int8:
             return MegRay::DType::MEGRAY_INT8;
         case DTypeEnum::Uint8:
@@ -49,17 +49,20 @@ MegRay::Backend mgb::opr::get_megray_backend(const std::string& backend) {
     }
 }
 
-std::shared_ptr<MegRay::Context> mgb::opr::get_megray_context(CompNode comp_node){
+std::shared_ptr<MegRay::Context> mgb::opr::get_megray_context(CompNode comp_node) {
 #if MGB_CUDA
-    return MegRay::CudaContext::make(CompNodeEnv::from_comp_node(comp_node).cuda_env().stream);
+    return MegRay::CudaContext::make(
+            CompNodeEnv::from_comp_node(comp_node).cuda_env().stream);
 #elif MGB_ROCM
-    return MegRay::HipContext::make(CompNodeEnv::from_comp_node(comp_node).rocm_env().stream);
+    return MegRay::HipContext::make(
+            CompNodeEnv::from_comp_node(comp_node).rocm_env().stream);
 #else
 #error "neither CUDA nor ROCm is enabled"
 #endif
 }
 
-bool MegRayCommBuilder::find(uint64_t hash, std::shared_ptr<MegRay::Communicator>& comm) {
+bool MegRayCommBuilder::find(
+        uint64_t hash, std::shared_ptr<MegRay::Communicator>& comm) {
     std::unique_lock<std::mutex> lk(m_map_mtx);
     auto it = m_megray_comms.find(hash);
     if (it != m_megray_comms.end()) {
@@ -69,16 +72,15 @@ bool MegRayCommBuilder::find(uint64_t hash, std::shared_ptr<MegRay::Communicator
     return false;
 }
 
-void MegRayCommBuilder::emplace(uint64_t hash,
-        std::shared_ptr<MegRay::Communicator> comm) {
+void MegRayCommBuilder::emplace(
+        uint64_t hash, std::shared_ptr<MegRay::Communicator> comm) {
     std::unique_lock<std::mutex> lk(m_map_mtx);
     m_megray_comms.emplace(hash, comm);
 }
 
 std::shared_ptr<MegRay::Communicator> MegRayCommBuilder::get_megray_comm(
         uint64_t hash, std::string key, uint32_t size, uint32_t rank,
-        MegRay::Backend backend,
-        std::shared_ptr<mgb::opr::GroupClient> group_client) {
+        MegRay::Backend backend, std::shared_ptr<mgb::opr::GroupClient> group_client) {
     {
         // singleton pattern
         std::unique_lock<std::mutex> lk(sm_instance_mtx);
@@ -95,7 +97,7 @@ std::shared_ptr<MegRay::Communicator> MegRayCommBuilder::get_megray_comm(
         if (rank == root) {
             char* c = MegRay::get_host_ip();
             master_ip = std::string(c);
-            delete [] c;
+            delete[] c;
             port = MegRay::get_free_port();
             auto ret = MegRay::create_server(size, port);
             mgb_assert(ret == MegRay::Status::MEGRAY_OK);

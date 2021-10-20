@@ -10,10 +10,11 @@
  */
 
 #include "megbrain/system.h"
-#include "megbrain/utils/timer.h"
 #include "megbrain/test/helper.h"
+#include "megbrain/utils/timer.h"
 
-#if MGB_BUILD_SLIM_SERVING || defined(ANDROID) || defined(WIN32) || defined(IOS) || defined(__APPLE__)
+#if MGB_BUILD_SLIM_SERVING || defined(ANDROID) || defined(WIN32) || defined(IOS) || \
+        defined(__APPLE__)
 #pragma message "sys test disabled on unsupported platforms"
 
 #else
@@ -26,59 +27,59 @@ using namespace sys;
 using Result = TimedFuncInvoker::Result;
 using Param = TimedFuncInvoker::Param;
 namespace {
-    struct SleepParam {
-        double init_time = 0;
-        double sleep_time = 0;
-    };
+struct SleepParam {
+    double init_time = 0;
+    double sleep_time = 0;
+};
 
-    //! double sleep(double secs); return secs * 2 for check
-    Result func_sleep(const Param &param) {
-        auto sp = param.as_single_pod<SleepParam>();
-        mgb_assert(sp.sleep_time >= 0);
-        usleep(sp.sleep_time * 1e6);
-        return Result::from_pod(sp.sleep_time * 2);
-    }
-
-    void func_sleep_init(const Param &param) {
-        auto sp = param.as_single_pod<SleepParam>();
-        mgb_assert(sp.init_time >= 0);
-        if (sp.init_time > 0) {
-            usleep(sp.init_time * 1e6);
-        }
-    }
-
+//! double sleep(double secs); return secs * 2 for check
+Result func_sleep(const Param& param) {
+    auto sp = param.as_single_pod<SleepParam>();
+    mgb_assert(sp.sleep_time >= 0);
+    usleep(sp.sleep_time * 1e6);
+    return Result::from_pod(sp.sleep_time * 2);
 }
+
+void func_sleep_init(const Param& param) {
+    auto sp = param.as_single_pod<SleepParam>();
+    mgb_assert(sp.init_time >= 0);
+    if (sp.init_time > 0) {
+        usleep(sp.init_time * 1e6);
+    }
+}
+
+}  // namespace
 
 namespace mgb {
 namespace sys {
-    class TimedFuncInvokerTest {
-        static auto do_make(bool has_init) {
-            auto ins = TimedFuncInvoker::make_test_ins();
-            if (has_init) {
-                ins->register_func(0, func_sleep, func_sleep_init);
-            } else {
-                ins->register_func(0, func_sleep);
-            }
-            return ins;
+class TimedFuncInvokerTest {
+    static auto do_make(bool has_init) {
+        auto ins = TimedFuncInvoker::make_test_ins();
+        if (has_init) {
+            ins->register_func(0, func_sleep, func_sleep_init);
+        } else {
+            ins->register_func(0, func_sleep);
         }
+        return ins;
+    }
 
-        public:
-            static auto make_ins(bool has_init = false) {
-                auto ins = do_make(has_init);
-                auto do_fork = [has_init](const std::string &arg) {
-                    auto pid = fork();
-                    if (pid)
-                        return pid;
-                    auto ins = do_make(has_init);
-                    ins->fork_exec_impl_mainloop(arg.c_str());
-                    mgb_assert(0);
-                };
-                ins->set_fork_exec_impl(do_fork);
-                return ins;
-            }
-    };
-}
-}
+public:
+    static auto make_ins(bool has_init = false) {
+        auto ins = do_make(has_init);
+        auto do_fork = [has_init](const std::string& arg) {
+            auto pid = fork();
+            if (pid)
+                return pid;
+            auto ins = do_make(has_init);
+            ins->fork_exec_impl_mainloop(arg.c_str());
+            mgb_assert(0);
+        };
+        ins->set_fork_exec_impl(do_fork);
+        return ins;
+    }
+};
+}  // namespace sys
+}  // namespace mgb
 
 TEST(TestSystem, TimedFuncInvokerBasic) {
     auto ins = TimedFuncInvokerTest::make_ins();
@@ -114,12 +115,12 @@ TEST(TestSystem, TimedFuncInvokerThreadSafety) {
 
     std::atomic_size_t nr_ready{0};
 
-    auto worker = [&](double *ret, double sleep_time, double timeout) {
-        ++ nr_ready;
+    auto worker = [&](double* ret, double sleep_time, double timeout) {
+        ++nr_ready;
         while (nr_ready.load() != 2)
             std::this_thread::yield();
         SleepParam sleep_param{0., sleep_time};
-        for (int i = 0; i < 5; ++ i) {
+        for (int i = 0; i < 5; ++i) {
             auto result = ins->invoke(0, Param::from_pod(sleep_param), timeout);
             if (!result.valid())
                 *ret = -1;
@@ -128,9 +129,7 @@ TEST(TestSystem, TimedFuncInvokerThreadSafety) {
         }
     };
     double ret0, ret1;
-    std::thread
-        th0{worker, &ret0, 0.1, 0.15},
-        th1{worker, &ret1, 0.2, 0.15};
+    std::thread th0{worker, &ret0, 0.1, 0.15}, th1{worker, &ret1, 0.2, 0.15};
     th0.join();
     th1.join();
 
@@ -142,7 +141,8 @@ TEST(TestSystem, TimedFuncInvokerException) {
     auto ins = TimedFuncInvokerTest::make_ins();
     double time = -1;
     SleepParam sleep_param{0., time};
-    ASSERT_THROW(ins->invoke(0, Param::from_pod(sleep_param), 0.1),
+    ASSERT_THROW(
+            ins->invoke(0, Param::from_pod(sleep_param), 0.1),
             TimedFuncInvoker::RemoteError);
 }
 
@@ -160,7 +160,6 @@ TEST(TestSystem, TimedFuncInvokerInitFunc) {
     ASSERT_FALSE(ret.valid());
 }
 
-#endif // disable tests on some platforms
+#endif  // disable tests on some platforms
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
-

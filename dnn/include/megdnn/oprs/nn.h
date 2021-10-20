@@ -22,32 +22,34 @@ public:
     using Mode = Param::Mode;
 
 protected:
-    void deduce_layout_fwd(const TensorLayout& src,
-                           const TensorLayout& filter_x,
-                           const TensorLayout& filter_y, TensorLayout& dst);
-    void check_layout_fwd(const TensorLayout& src, const TensorLayout& filter_x,
-                          const TensorLayout& filter_y,
-                          const TensorLayout& dst);
+    void deduce_layout_fwd(
+            const TensorLayout& src, const TensorLayout& filter_x,
+            const TensorLayout& filter_y, TensorLayout& dst);
+    void check_layout_fwd(
+            const TensorLayout& src, const TensorLayout& filter_x,
+            const TensorLayout& filter_y, const TensorLayout& dst);
 };
 
 class SeparableConvForward : public SeparableConvBase {
     DEF_OPR_IMPL(SeparableConvForward, SeparableConvBase, 3, 1);
 
 public:
-    virtual void exec(_megdnn_tensor_in src, _megdnn_tensor_in filter_x,
-                      _megdnn_tensor_in filter_y, _megdnn_tensor_out dst,
-                      _megdnn_workspace workspace) = 0;
-    void deduce_layout(const TensorLayout& src, const TensorLayout& filter_x,
-                       const TensorLayout& filter_y, TensorLayout& dst);
-    virtual size_t get_workspace_in_bytes(const TensorLayout& src,
-                                          const TensorLayout& filter_x,
-                                          const TensorLayout& filter_y,
-                                          const TensorLayout& dst) = 0;
+    virtual void exec(
+            _megdnn_tensor_in src, _megdnn_tensor_in filter_x,
+            _megdnn_tensor_in filter_y, _megdnn_tensor_out dst,
+            _megdnn_workspace workspace) = 0;
+    void deduce_layout(
+            const TensorLayout& src, const TensorLayout& filter_x,
+            const TensorLayout& filter_y, TensorLayout& dst);
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& src, const TensorLayout& filter_x,
+            const TensorLayout& filter_y, const TensorLayout& dst) = 0;
 
 protected:
-    void check_exec(const TensorLayout& src, const TensorLayout& filter_x,
-                    const TensorLayout& filter_y, const TensorLayout& dst,
-                    size_t workspace_in_bytes);
+    void check_exec(
+            const TensorLayout& src, const TensorLayout& filter_x,
+            const TensorLayout& filter_y, const TensorLayout& dst,
+            size_t workspace_in_bytes);
 };
 using SeparableConv = SeparableConvForward;
 
@@ -147,12 +149,12 @@ public:
 protected:
     // Check or deduce output DType
     void check_or_deduce_dtype_fwd(DType src, DType filter, DType& dst) const;
-    CanonizedFilterMeta deduce_layout_fwd(const TensorLayout& src,
-                                          const TensorLayout& filter,
-                                          TensorLayout& dst) const;
-    CanonizedFilterMeta check_layout_fwd(const TensorLayout& src,
-                                         const TensorLayout& filter,
-                                         const TensorLayout& dst) const;
+    CanonizedFilterMeta deduce_layout_fwd(
+            const TensorLayout& src, const TensorLayout& filter,
+            TensorLayout& dst) const;
+    CanonizedFilterMeta check_layout_fwd(
+            const TensorLayout& src, const TensorLayout& filter,
+            const TensorLayout& dst) const;
 
     CanonizedFilterMeta make_canonized_filter_meta(
             size_t src_ndim, const TensorLayout& filter) const;
@@ -163,10 +165,11 @@ class MaskPropagate : public OperatorBase {
     DEF_OPR_PARAM(MaskPropagate);
 
 public:
-    virtual void exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
-                      _megdnn_workspace workspace) = 0;
-    virtual size_t get_workspace_in_bytes(const TensorLayout& src,
-                                          const TensorLayout& dst) = 0;
+    virtual void exec(
+            _megdnn_tensor_in src, _megdnn_tensor_out dst,
+            _megdnn_workspace workspace) = 0;
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& src, const TensorLayout& dst) = 0;
 
     void deduce_layout(const TensorLayout& src, TensorLayout& dst);
 };
@@ -178,24 +181,23 @@ class MaskConvForward : public ConvolutionBase<param::Convolution> {
     DEF_OPR_IMPL(MaskConvForward, ConvolutionBase, 3, 1);
 
 public:
-    virtual void exec(_megdnn_tensor_in src, _megdnn_tensor_in filter,
-                      _megdnn_tensor_in mask, _megdnn_tensor_out dst,
-                      _megdnn_workspace worksapce) = 0;
-    virtual size_t get_workspace_in_bytes(const TensorLayout& src,
-                                          const TensorLayout& filter,
-                                          const TensorLayout& mask,
-                                          const TensorLayout& dst) = 0;
+    virtual void exec(
+            _megdnn_tensor_in src, _megdnn_tensor_in filter, _megdnn_tensor_in mask,
+            _megdnn_tensor_out dst, _megdnn_workspace worksapce) = 0;
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& src, const TensorLayout& filter,
+            const TensorLayout& mask, const TensorLayout& dst) = 0;
 
     void deduce_dtype(DType src, DType filter, DType mask, DType& dst);
-    void deduce_layout(const TensorLayout& src, const TensorLayout& filter,
-                       const TensorLayout& mask, TensorLayout& dst);
+    void deduce_layout(
+            const TensorLayout& src, const TensorLayout& filter,
+            const TensorLayout& mask, TensorLayout& dst);
 
 protected:
-    CanonizedFilterMeta check_exec(const TensorLayout& src,
-                                   const TensorLayout& filter,
-                                   const TensorLayout& mask,
-                                   const TensorLayout& dst,
-                                   size_t workspace_in_bytes);
+    CanonizedFilterMeta check_exec(
+            const TensorLayout& src, const TensorLayout& filter,
+            const TensorLayout& mask, const TensorLayout& dst,
+            size_t workspace_in_bytes);
 };
 using MaskConvolution = MaskConvForward;
 
@@ -219,25 +221,24 @@ public:
      * satisfies the situation that weights is preprocessed
      * \param[out] dst (n, oc, oh, ow)
      */
-    virtual void exec(_megdnn_tensor_in src, _megdnn_tensor_in filter,
-                      _megdnn_tensor_out dst,
-                      const PreprocessedFilter* preprocessed_filter,
-                      _megdnn_workspace workspace) = 0;
+    virtual void exec(
+            _megdnn_tensor_in src, _megdnn_tensor_in filter, _megdnn_tensor_out dst,
+            const PreprocessedFilter* preprocessed_filter,
+            _megdnn_workspace workspace) = 0;
     /**
      * \brief execute weight preprocessing, read weights form filter and write
      * to preprocessed_filter after preprocessed.
      *
      * \praram[in] workspace the needed tmp workspace when exec_preprocess
      */
-    virtual void exec_preprocess(const TensorLayout& src_layout,
-                                 _megdnn_tensor_in filter,
-                                 const TensorLayout& dst_layout,
-                                 PreprocessedFilter* preprocessed_filter,
-                                 _megdnn_workspace workspace) = 0;
+    virtual void exec_preprocess(
+            const TensorLayout& src_layout, _megdnn_tensor_in filter,
+            const TensorLayout& dst_layout, PreprocessedFilter* preprocessed_filter,
+            _megdnn_workspace workspace) = 0;
     void deduce_dtype(DType src, DType filter, DType& dst);
 
-    void deduce_layout(const TensorLayout& src, const TensorLayout& filter,
-                       TensorLayout& dst);
+    void deduce_layout(
+            const TensorLayout& src, const TensorLayout& filter, TensorLayout& dst);
 
     /**
      * \brief query the workspace needed when executing the opr, if the weights
@@ -249,8 +250,7 @@ public:
      */
     virtual size_t get_workspace_in_bytes(
             const TensorLayout& src, const TensorLayout& filter,
-            const TensorLayout& dst,
-            const PreprocessedFilter* preprocessed_filter) = 0;
+            const TensorLayout& dst, const PreprocessedFilter* preprocessed_filter) = 0;
 
     /**
      * \brief deduce the preprocessed filter layouts according to the src,
@@ -274,6 +274,10 @@ public:
     virtual size_t get_preprocess_workspace_in_bytes(
             const TensorLayout& src, const TensorLayout& filter,
             const TensorLayout& dst) = 0;
+
+    static Algorithm::OprType get_opr_type() {
+        return Algorithm::OprType::CONVOLUTION_FORWARD;
+    }
 
 protected:
     CanonizedFilterMeta check_exec(
@@ -299,21 +303,25 @@ public:
      * \param[in] diff (n, oc, oh, ow)
      * \param[out] grad (n, ic, ih, iw)
      */
-    virtual void exec(_megdnn_tensor_in filter, _megdnn_tensor_in diff,
-                      _megdnn_tensor_out grad, _megdnn_workspace workspace) = 0;
-    virtual size_t get_workspace_in_bytes(const TensorLayout& filter,
-                                          const TensorLayout& diff,
-                                          const TensorLayout& grad) = 0;
+    virtual void exec(
+            _megdnn_tensor_in filter, _megdnn_tensor_in diff, _megdnn_tensor_out grad,
+            _megdnn_workspace workspace) = 0;
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& filter, const TensorLayout& diff,
+            const TensorLayout& grad) = 0;
 
     void deduce_dtype(DType filter, DType diff, DType& grad);
-    void deduce_layout(const TensorLayout& filter, const TensorLayout& diff,
-                       TensorLayout& grad);
+    void deduce_layout(
+            const TensorLayout& filter, const TensorLayout& diff, TensorLayout& grad);
+
+    static Algorithm::OprType get_opr_type() {
+        return Algorithm::OprType::CONVOLUTION_BACKWARD_DATA;
+    }
 
 protected:
-    CanonizedFilterMeta check_exec(const TensorLayout& filter,
-                                   const TensorLayout& diff,
-                                   const TensorLayout& grad,
-                                   size_t workspace_in_bytes);
+    CanonizedFilterMeta check_exec(
+            const TensorLayout& filter, const TensorLayout& diff,
+            const TensorLayout& grad, size_t workspace_in_bytes);
 };
 
 /**
@@ -332,17 +340,21 @@ public:
      * \param[in] diff (n, oc, oh, ow)
      * \param[out] grad (oc, ic, fh, fw)
      */
-    virtual void exec(_megdnn_tensor_in src, _megdnn_tensor_in diff,
-                      _megdnn_tensor_out grad, _megdnn_workspace workspace) = 0;
-    virtual size_t get_workspace_in_bytes(const TensorLayout& src,
-                                          const TensorLayout& diff,
-                                          const TensorLayout& grad) = 0;
+    virtual void exec(
+            _megdnn_tensor_in src, _megdnn_tensor_in diff, _megdnn_tensor_out grad,
+            _megdnn_workspace workspace) = 0;
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& src, const TensorLayout& diff,
+            const TensorLayout& grad) = 0;
+
+    static Algorithm::OprType get_opr_type() {
+        return Algorithm::OprType::CONVOLUTION_BACKWARD_FILTER;
+    }
 
 protected:
-    CanonizedFilterMeta check_exec(const TensorLayout& src,
-                                   const TensorLayout& diff,
-                                   const TensorLayout& grad,
-                                   size_t workspace_in_bytes);
+    CanonizedFilterMeta check_exec(
+            const TensorLayout& src, const TensorLayout& diff, const TensorLayout& grad,
+            size_t workspace_in_bytes);
 };
 
 /**
@@ -371,11 +383,11 @@ public:
      * \note if the format is NCHW_WINOGRAD, the filter layout is (alphah,
      * alphaw, oc, ic)
      */
-    virtual void exec(_megdnn_tensor_in src, _megdnn_tensor_in filter,
-                      _megdnn_tensor_in bias, _megdnn_tensor_in z,
-                      _megdnn_tensor_out dst,
-                      const PreprocessedFilter* preprocessed_filter,
-                      _megdnn_workspace workspace) = 0;
+    virtual void exec(
+            _megdnn_tensor_in src, _megdnn_tensor_in filter, _megdnn_tensor_in bias,
+            _megdnn_tensor_in z, _megdnn_tensor_out dst,
+            const PreprocessedFilter* preprocessed_filter,
+            _megdnn_workspace workspace) = 0;
 
     /**
      * \brief execute weight preprocessing, read weights form filter and bias,
@@ -384,17 +396,15 @@ public:
      * \praram[in] workspace the needed tmp workspace when exec_preprocess
      * running, the size is got by get_preprocess_workspace_in_bytes
      */
-    virtual void exec_preprocess(const TensorLayout& src_layout,
-                                 _megdnn_tensor_in filter,
-                                 _megdnn_tensor_in bias,
-                                 const TensorLayout& z_layout,
-                                 const TensorLayout& dst_layout,
-                                 PreprocessedFilter* preprocessed_filter,
-                                 _megdnn_workspace workspace) = 0;
+    virtual void exec_preprocess(
+            const TensorLayout& src_layout, _megdnn_tensor_in filter,
+            _megdnn_tensor_in bias, const TensorLayout& z_layout,
+            const TensorLayout& dst_layout, PreprocessedFilter* preprocessed_filter,
+            _megdnn_workspace workspace) = 0;
     void deduce_dtype(DType src, DType filter, DType bias, DType z, DType& dst);
-    void deduce_layout(const TensorLayout& src, const TensorLayout& filter,
-                       const TensorLayout& bias, const TensorLayout& z,
-                       TensorLayout& dst);
+    void deduce_layout(
+            const TensorLayout& src, const TensorLayout& filter,
+            const TensorLayout& bias, const TensorLayout& z, TensorLayout& dst);
 
     /**
      * \brief query the workspace needed when executing the opr, if the weights
@@ -406,8 +416,7 @@ public:
      */
     virtual size_t get_workspace_in_bytes(
             const TensorLayout& src, const TensorLayout& filter,
-            const TensorLayout& bias, const TensorLayout& z,
-            const TensorLayout& dst,
+            const TensorLayout& bias, const TensorLayout& z, const TensorLayout& dst,
             const PreprocessedFilter* preprocessed_filter) = 0;
 
     /**
@@ -505,18 +514,20 @@ public:
             const ConvBiasForward::BiasMode bias_mode,
             const param::ConvBias::NonlineMode nonline_mode);
 
+    static Algorithm::OprType get_opr_type() {
+        return Algorithm::OprType::CONVBIAS_FORWARD;
+    }
+
 protected:
     CanonizedFilterMeta check_exec(
             const TensorLayout& src, const TensorLayout& filter,
-            const TensorLayout& bias, const TensorLayout& z,
-            const TensorLayout& dst, size_t workspace_in_bytes,
-            const PreprocessedFilter* preprocessed_filter);
+            const TensorLayout& bias, const TensorLayout& z, const TensorLayout& dst,
+            size_t workspace_in_bytes, const PreprocessedFilter* preprocessed_filter);
 
     CanonizedFilterMeta check_exec_allow_noncontiguous(
             const TensorLayout& src, const TensorLayout& filter,
-            const TensorLayout& bias, const TensorLayout& z,
-            const TensorLayout& dst, size_t workspace_in_bytes,
-            const PreprocessedFilter* preprocessed_filter);
+            const TensorLayout& bias, const TensorLayout& z, const TensorLayout& dst,
+            size_t workspace_in_bytes, const PreprocessedFilter* preprocessed_filter);
 };
 using ConvBias = ConvBiasForward;
 
@@ -539,13 +550,13 @@ class ConvPoolingBase : public OperatorBase {
     DEF_OPR_PARAM(ConvPooling);
 
 protected:
-    virtual void deduce_layout(const TensorLayout& src,
-                               const TensorLayout& filter,
-                               const TensorLayout& bias, TensorLayout& dst) = 0;
-    virtual void check_layout(const TensorLayout& src,
-                              const TensorLayout& filter,
-                              const TensorLayout& bias, TensorLayout& dst,
-                              size_t workspace_limit_in_bytes) = 0;
+    virtual void deduce_layout(
+            const TensorLayout& src, const TensorLayout& filter,
+            const TensorLayout& bias, TensorLayout& dst) = 0;
+    virtual void check_layout(
+            const TensorLayout& src, const TensorLayout& filter,
+            const TensorLayout& bias, TensorLayout& dst,
+            size_t workspace_limit_in_bytes) = 0;
 };
 
 class ConvPoolingForward : public ConvPoolingBase {
@@ -556,23 +567,22 @@ public:
      * \param[in] src input tensor
      * \param[out] dst output tensor
      */
-    virtual void exec(const _megdnn_in TensorND src,
-                      const _megdnn_in TensorND filter,
-                      const _megdnn_in TensorND bias, _megdnn_out TensorND dst,
-                      _megdnn_out Workspace workspace) = 0;
-    virtual void deduce_layout(const TensorLayout& src,
-                               const TensorLayout& filter,
-                               const TensorLayout& bias, TensorLayout& dst) = 0;
-    virtual size_t get_workspace_in_bytes(const TensorLayout& src,
-                                          const TensorLayout& filter,
-                                          const TensorLayout& bias,
-                                          const TensorLayout& dst) = 0;
+    virtual void exec(
+            const _megdnn_in TensorND src, const _megdnn_in TensorND filter,
+            const _megdnn_in TensorND bias, _megdnn_out TensorND dst,
+            _megdnn_out Workspace workspace) = 0;
+    virtual void deduce_layout(
+            const TensorLayout& src, const TensorLayout& filter,
+            const TensorLayout& bias, TensorLayout& dst) = 0;
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& src, const TensorLayout& filter,
+            const TensorLayout& bias, const TensorLayout& dst) = 0;
 
 protected:
-    virtual void check_layout(const TensorLayout& src,
-                              const TensorLayout& filter,
-                              const TensorLayout& bias, TensorLayout& dst,
-                              size_t workspace_limit_in_bytes) = 0;
+    virtual void check_layout(
+            const TensorLayout& src, const TensorLayout& filter,
+            const TensorLayout& bias, TensorLayout& dst,
+            size_t workspace_limit_in_bytes) = 0;
 };
 using ConvPooling = ConvPoolingForward;
 
@@ -584,10 +594,11 @@ public:
     using Mode = Param::Mode;
 
 protected:
-    void deduce_layout_fwd(const TensorLayout& src, const TensorLayout& filter,
-                           TensorLayout& dst);
-    void check_layout_fwd(const TensorLayout& src, const TensorLayout& filter,
-                          const TensorLayout& dst);
+    void deduce_layout_fwd(
+            const TensorLayout& src, const TensorLayout& filter, TensorLayout& dst);
+    void check_layout_fwd(
+            const TensorLayout& src, const TensorLayout& filter,
+            const TensorLayout& dst);
 };
 
 class GroupLocalForward : public GroupLocalBase {
@@ -599,19 +610,21 @@ public:
      * \param[in] filter (G, OH, OW, IC/G, FH, FW, OC/G)
      * \param[out] dst (N, OC, OH, OW)
      **/
-    virtual void exec(_megdnn_tensor_in src, _megdnn_tensor_in filter,
-                      _megdnn_tensor_out dst, _megdnn_workspace workspace) = 0;
-    void deduce_layout(const TensorLayout& src, const TensorLayout& filter,
-                       TensorLayout& dst) {
+    virtual void exec(
+            _megdnn_tensor_in src, _megdnn_tensor_in filter, _megdnn_tensor_out dst,
+            _megdnn_workspace workspace) = 0;
+    void deduce_layout(
+            const TensorLayout& src, const TensorLayout& filter, TensorLayout& dst) {
         deduce_layout_fwd(src, filter, dst);
     }
-    virtual size_t get_workspace_in_bytes(const TensorLayout& src,
-                                          const TensorLayout& filter,
-                                          const TensorLayout& dst) = 0;
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& src, const TensorLayout& filter,
+            const TensorLayout& dst) = 0;
 
 protected:
-    void check_exec(const TensorLayout& src, const TensorLayout& filter,
-                    const TensorLayout& dst, size_t workspace_in_bytes);
+    void check_exec(
+            const TensorLayout& src, const TensorLayout& filter,
+            const TensorLayout& dst, size_t workspace_in_bytes);
 };
 using GroupLocal = GroupLocalForward;
 
@@ -619,30 +632,34 @@ class GroupLocalBackwardData : public GroupLocalBase {
     DEF_OPR_IMPL(GroupLocalBackwardData, GroupLocalBase, 2, 1);
 
 public:
-    virtual void exec(_megdnn_tensor_in filter, _megdnn_tensor_in diff,
-                      _megdnn_tensor_out grad, _megdnn_workspace workspace) = 0;
-    virtual size_t get_workspace_in_bytes(const TensorLayout& filter,
-                                          const TensorLayout& diff,
-                                          const TensorLayout& grad) = 0;
+    virtual void exec(
+            _megdnn_tensor_in filter, _megdnn_tensor_in diff, _megdnn_tensor_out grad,
+            _megdnn_workspace workspace) = 0;
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& filter, const TensorLayout& diff,
+            const TensorLayout& grad) = 0;
 
 protected:
-    void check_exec(const TensorLayout& filter, const TensorLayout& diff,
-                    const TensorLayout& grad, size_t workspace_in_bytes);
+    void check_exec(
+            const TensorLayout& filter, const TensorLayout& diff,
+            const TensorLayout& grad, size_t workspace_in_bytes);
 };
 
 class GroupLocalBackwardFilter : public GroupLocalBase {
     DEF_OPR_IMPL(GroupLocalBackwardFilter, GroupLocalBase, 2, 1);
 
 public:
-    virtual void exec(_megdnn_tensor_in src, _megdnn_tensor_in diff,
-                      _megdnn_tensor_out grad, _megdnn_workspace workspace) = 0;
-    virtual size_t get_workspace_in_bytes(const TensorLayout& src,
-                                          const TensorLayout& diff,
-                                          const TensorLayout& grad) = 0;
+    virtual void exec(
+            _megdnn_tensor_in src, _megdnn_tensor_in diff, _megdnn_tensor_out grad,
+            _megdnn_workspace workspace) = 0;
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& src, const TensorLayout& diff,
+            const TensorLayout& grad) = 0;
 
 protected:
-    void check_exec(const TensorLayout& filter, const TensorLayout& diff,
-                    const TensorLayout& grad, size_t workspace_in_bytes);
+    void check_exec(
+            const TensorLayout& filter, const TensorLayout& diff,
+            const TensorLayout& grad, size_t workspace_in_bytes);
 };
 
 class Images2NeibsBase : public OperatorBase {
@@ -666,17 +683,20 @@ public:
      * http://deeplearning.net/software/theano/library/tensor/nnet/neighbours.html
      *
      * \f$ dst_{n, c, oh, ow, wh, ww} = src_{n, c, ih+wh, iw+fw}\f$,
-     * where \f$ ih=-pad_h+oh*stride_h+(wh-1)*(dilation_h-1), iw=-pad_w+ow*stride_w+(ww-1)*(dilation_w-1)\f$.
+     * where \f$ ih=-pad_h+oh*stride_h+(wh-1)*(dilation_h-1),
+     * iw=-pad_w+ow*stride_w+(ww-1)*(dilation_w-1)\f$.
      */
-    virtual void exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
-                      _megdnn_workspace workspace) = 0;
-    virtual size_t get_workspace_in_bytes(const TensorLayout& src,
-                                          const TensorLayout& dst) = 0;
+    virtual void exec(
+            _megdnn_tensor_in src, _megdnn_tensor_out dst,
+            _megdnn_workspace workspace) = 0;
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& src, const TensorLayout& dst) = 0;
     void deduce_layout(const TensorLayout& src, TensorLayout& dst);
 
 protected:
-    void check_exec(const TensorLayout& src, const TensorLayout& dst,
-                    size_t workspace_in_bytes);
+    void check_exec(
+            const TensorLayout& src, const TensorLayout& dst,
+            size_t workspace_in_bytes);
 };
 using Images2Neibs = Images2NeibsForward;
 
@@ -688,14 +708,16 @@ public:
      * \param[in] diff the backpropagated gradient wrt. dst
      * \param[out] grad the backpropagated gradient wrt. src
      */
-    virtual void exec(_megdnn_tensor_in diff, _megdnn_tensor_out grad,
-                      _megdnn_workspace workspace) = 0;
-    virtual size_t get_workspace_in_bytes(const TensorLayout& diff,
-                                          const TensorLayout& grad) = 0;
+    virtual void exec(
+            _megdnn_tensor_in diff, _megdnn_tensor_out grad,
+            _megdnn_workspace workspace) = 0;
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& diff, const TensorLayout& grad) = 0;
 
 protected:
-    void check_exec(const TensorLayout& diff, const TensorLayout& grad,
-                    size_t workspace_in_bytes);
+    void check_exec(
+            const TensorLayout& diff, const TensorLayout& grad,
+            size_t workspace_in_bytes);
 };
 
 class SlidingWindowTransposeBase : public OperatorBase {
@@ -715,15 +737,17 @@ public:
      * \param[in] src (N, C, IH, IW, window_h, window_w)
      * \param[out] dst (N, C, OH, OW)
      */
-    virtual void exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
-                      _megdnn_workspace workspace) = 0;
-    virtual size_t get_workspace_in_bytes(const TensorLayout& src,
-                                          const TensorLayout& dst) = 0;
+    virtual void exec(
+            _megdnn_tensor_in src, _megdnn_tensor_out dst,
+            _megdnn_workspace workspace) = 0;
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& src, const TensorLayout& dst) = 0;
     void deduce_layout(const TensorLayout& src, TensorLayout& dst);
 
 protected:
-    void check_exec(const TensorLayout& src, const TensorLayout& dst,
-                    size_t workspace_in_bytes);
+    void check_exec(
+            const TensorLayout& src, const TensorLayout& dst,
+            size_t workspace_in_bytes);
 };
 using SlidingWindowTranspose = SlidingWindowTransposeForward;
 
@@ -735,14 +759,16 @@ public:
      * \param[in] diff the backpropagated gradient wrt. dst
      * \param[out] grad the backpropagated gradient wrt. src
      */
-    virtual void exec(_megdnn_tensor_in diff, _megdnn_tensor_out grad,
-                      _megdnn_workspace workspace) = 0;
-    virtual size_t get_workspace_in_bytes(const TensorLayout& diff,
-                                          const TensorLayout& grad) = 0;
+    virtual void exec(
+            _megdnn_tensor_in diff, _megdnn_tensor_out grad,
+            _megdnn_workspace workspace) = 0;
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& diff, const TensorLayout& grad) = 0;
 
 protected:
-    void check_exec(const TensorLayout& diff, const TensorLayout& grad,
-                    size_t workspace_in_bytes);
+    void check_exec(
+            const TensorLayout& diff, const TensorLayout& grad,
+            size_t workspace_in_bytes);
 };
 
 /**
@@ -769,15 +795,21 @@ public:
      * \param[in] src input tensor
      * \param[out] dst output tensor
      */
-    virtual void exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
-                      _megdnn_workspace workspace) = 0;
+    virtual void exec(
+            _megdnn_tensor_in src, _megdnn_tensor_out dst,
+            _megdnn_workspace workspace) = 0;
     void deduce_layout(const TensorLayout& src, TensorLayout& dst);
-    virtual size_t get_workspace_in_bytes(const TensorLayout& src,
-                                          const TensorLayout& dst) = 0;
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& src, const TensorLayout& dst) = 0;
+
+    static Algorithm::OprType get_opr_type() {
+        return Algorithm::OprType::POOLING_FORWARD;
+    }
 
 protected:
-    void check_exec(const TensorLayout& src, const TensorLayout& dst,
-                    size_t workspace_in_bytes);
+    void check_exec(
+            const TensorLayout& src, const TensorLayout& dst,
+            size_t workspace_in_bytes);
 };
 
 using Pooling = PoolingForward;
@@ -793,18 +825,21 @@ public:
      * \param[in] diff the backpropagated gradient wrt. dst
      * \param[out] grad the backpropagated gradient wrt. src
      */
-    virtual void exec(_megdnn_tensor_in src, _megdnn_tensor_in dst,
-                      _megdnn_tensor_in diff, _megdnn_tensor_out grad,
-                      _megdnn_workspace workspace) = 0;
-    virtual size_t get_workspace_in_bytes(const TensorLayout& src,
-                                          const TensorLayout& dst,
-                                          const TensorLayout& diff,
-                                          const TensorLayout& grad) = 0;
+    virtual void exec(
+            _megdnn_tensor_in src, _megdnn_tensor_in dst, _megdnn_tensor_in diff,
+            _megdnn_tensor_out grad, _megdnn_workspace workspace) = 0;
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& src, const TensorLayout& dst, const TensorLayout& diff,
+            const TensorLayout& grad) = 0;
+
+    static Algorithm::OprType get_opr_type() {
+        return Algorithm::OprType::POOLING_BACKWARD;
+    }
 
 protected:
-    void check_exec(const TensorLayout& src, const TensorLayout& dst,
-                    const TensorLayout& diff, const TensorLayout& grad,
-                    size_t workspace_in_bytes);
+    void check_exec(
+            const TensorLayout& src, const TensorLayout& dst, const TensorLayout& diff,
+            const TensorLayout& grad, size_t workspace_in_bytes);
 };
 
 /**
@@ -815,8 +850,8 @@ class AdaptivePoolingBase : public OperatorBase {
     DEF_OPR_PARAM(AdaptivePooling);
 
 protected:
-    param::Pooling deduce_pooling_param(const TensorLayout& src,
-                                        const TensorLayout& dst);
+    param::Pooling deduce_pooling_param(
+            const TensorLayout& src, const TensorLayout& dst);
 };
 
 class AdaptivePoolingForward : public AdaptivePoolingBase {
@@ -827,10 +862,11 @@ public:
      * \param[in] src input tensor
      * \param[out] dst output tensor
      */
-    virtual void exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
-                      _megdnn_workspace workspace) = 0;
-    virtual size_t get_workspace_in_bytes(const TensorLayout& src,
-                                          const TensorLayout& dst) = 0;
+    virtual void exec(
+            _megdnn_tensor_in src, _megdnn_tensor_out dst,
+            _megdnn_workspace workspace) = 0;
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& src, const TensorLayout& dst) = 0;
 };
 
 using AdaptivePooling = AdaptivePoolingForward;
@@ -845,13 +881,12 @@ public:
      * \param[in] diff the backpropagated gradient wrt. dst
      * \param[out] grad the backpropagated gradient wrt. src
      */
-    virtual void exec(_megdnn_tensor_in src, _megdnn_tensor_in dst,
-                      _megdnn_tensor_in diff, _megdnn_tensor_out grad,
-                      _megdnn_workspace workspace) = 0;
-    virtual size_t get_workspace_in_bytes(const TensorLayout& src,
-                                          const TensorLayout& dst,
-                                          const TensorLayout& diff,
-                                          const TensorLayout& grad) = 0;
+    virtual void exec(
+            _megdnn_tensor_in src, _megdnn_tensor_in dst, _megdnn_tensor_in diff,
+            _megdnn_tensor_out grad, _megdnn_workspace workspace) = 0;
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& src, const TensorLayout& dst, const TensorLayout& diff,
+            const TensorLayout& grad) = 0;
 };
 
 /**
@@ -865,10 +900,11 @@ public:
     using Mode = Param::Mode;
 
 protected:
-    void deduce_layout_fwd(const TensorLayout& src, const TensorLayout& filter,
-                           TensorLayout& dst);
-    void check_layout_fwd(const TensorLayout& src, const TensorLayout& filter,
-                          const TensorLayout& dst);
+    void deduce_layout_fwd(
+            const TensorLayout& src, const TensorLayout& filter, TensorLayout& dst);
+    void check_layout_fwd(
+            const TensorLayout& src, const TensorLayout& filter,
+            const TensorLayout& dst);
 };
 
 class LocalForward : public LocalBase {
@@ -880,23 +916,25 @@ public:
      * \param[in] filter (oh, ow, ic, fh, fw, oc)
      * \param[out] dst (n, oc, oh, ow)
      */
-    virtual void exec(_megdnn_tensor_in src, _megdnn_tensor_in filter,
-                      _megdnn_tensor_out dst, _megdnn_workspace workspace) = 0;
+    virtual void exec(
+            _megdnn_tensor_in src, _megdnn_tensor_in filter, _megdnn_tensor_out dst,
+            _megdnn_workspace workspace) = 0;
     /**
      * \brief Deducing output tensor layouts from input tensor layouts.
      *
      * Be aware that the first and second dimension of `filter' are ignored
      * when deducing `dst' layout.
      */
-    void deduce_layout(const TensorLayout& src, const TensorLayout& filter,
-                       TensorLayout& dst);
-    virtual size_t get_workspace_in_bytes(const TensorLayout& src,
-                                          const TensorLayout& filter,
-                                          const TensorLayout& dst) = 0;
+    void deduce_layout(
+            const TensorLayout& src, const TensorLayout& filter, TensorLayout& dst);
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& src, const TensorLayout& filter,
+            const TensorLayout& dst) = 0;
 
 protected:
-    void check_exec(const TensorLayout& src, const TensorLayout& filter,
-                    const TensorLayout& dst, size_t workspace_in_bytes);
+    void check_exec(
+            const TensorLayout& src, const TensorLayout& filter,
+            const TensorLayout& dst, size_t workspace_in_bytes);
 };
 using Local = LocalForward;
 
@@ -909,16 +947,18 @@ public:
      * \param[in] diff (n, oc, oh, ow)
      * \param[out] grad (n, ic, ih, iw)
      */
-    virtual void exec(_megdnn_tensor_in filter, _megdnn_tensor_in diff,
-                      _megdnn_tensor_out grad, _megdnn_workspace workspace) = 0;
+    virtual void exec(
+            _megdnn_tensor_in filter, _megdnn_tensor_in diff, _megdnn_tensor_out grad,
+            _megdnn_workspace workspace) = 0;
 
-    virtual size_t get_workspace_in_bytes(const TensorLayout& filter,
-                                          const TensorLayout& diff,
-                                          const TensorLayout& grad) = 0;
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& filter, const TensorLayout& diff,
+            const TensorLayout& grad) = 0;
 
 protected:
-    void check_exec(const TensorLayout& filter, const TensorLayout& diff,
-                    const TensorLayout& grad, size_t workspace_in_bytes);
+    void check_exec(
+            const TensorLayout& filter, const TensorLayout& diff,
+            const TensorLayout& grad, size_t workspace_in_bytes);
 };
 
 class LocalBackwardFilter : public LocalBase {
@@ -930,16 +970,18 @@ public:
      * \param[in] diff (n, oc, oh, ow)
      * \param[out] grad (oh, ow, ic, fh, fw, oc)
      */
-    virtual void exec(_megdnn_tensor_in src, _megdnn_tensor_in diff,
-                      _megdnn_tensor_out grad, _megdnn_workspace workspace) = 0;
+    virtual void exec(
+            _megdnn_tensor_in src, _megdnn_tensor_in diff, _megdnn_tensor_out grad,
+            _megdnn_workspace workspace) = 0;
 
-    virtual size_t get_workspace_in_bytes(const TensorLayout& src,
-                                          const TensorLayout& diff,
-                                          const TensorLayout& grad) = 0;
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& src, const TensorLayout& diff,
+            const TensorLayout& grad) = 0;
 
 protected:
-    void check_exec(const TensorLayout& src, const TensorLayout& diff,
-                    const TensorLayout& grad, size_t workspace_in_bytes);
+    void check_exec(
+            const TensorLayout& src, const TensorLayout& diff, const TensorLayout& grad,
+            size_t workspace_in_bytes);
 };
 
 class BNBase : public OperatorBase {
@@ -951,7 +993,7 @@ protected:
 };
 
 class BNForward : public BNBase {
-    DEF_OPR_IMPL(BNForward, BNBase, 6, 5);
+    DEF_OPR_IMPL(BNForward, BNBase, 6, 6);
 
 public:
     /**
@@ -962,42 +1004,45 @@ public:
      * \param[out] dst (n, c, h, w)
      * \param[out] mean (see m_param.ParamDim) Global mean.
      * \param[out] variance (see m_param.ParamDim) Global variance.
-     * \Param[out] batch_mean (see m_param.ParamDim)
+     * \param[out] batch_mean (see m_param.ParamDim)
      *   Optionally cached intermediate mean from forward pass
-     * \Param[out] batch_inv_variance (see m_param.ParamDim)
+     * \param[out] batch_inv_variance (see m_param.ParamDim)
      *   Optionally cached intermediate variance from forward pass
+     * \param[out] reserve (see cudnnBatchNormalizationForwardTrainingEx)
      * src and dst must have the same shape.
      * src and dst must be contiguous.
      */
-    virtual void exec(_megdnn_tensor_in src, _megdnn_tensor_in bn_scale,
-                      _megdnn_tensor_in bn_bias, _megdnn_tensor_inout mean,
-                      _megdnn_tensor_inout variance,
-                      _megdnn_tensor_out batch_mean,
-                      _megdnn_tensor_out batch_inv_variance,
-                      _megdnn_tensor_out dst, _megdnn_workspace workspace) = 0;
-    void deduce_layout(const TensorLayout& src, TensorLayout& bn_scale,
-                       TensorLayout& bn_bias, TensorLayout& mean,
-                       TensorLayout& variance, TensorLayout& batch_mean,
-                       TensorLayout& batch_inv_variance, TensorLayout& dst);
+    virtual void exec(
+            _megdnn_tensor_in src, _megdnn_tensor_in bn_scale,
+            _megdnn_tensor_in bn_bias, _megdnn_tensor_inout mean,
+            _megdnn_tensor_inout variance, _megdnn_tensor_out batch_mean,
+            _megdnn_tensor_out batch_inv_variance, _megdnn_tensor_out reserve,
+            _megdnn_tensor_out dst, _megdnn_workspace workspace) = 0;
+    void deduce_layout(
+            const TensorLayout& src, const TensorLayout& bn_scale,
+            const TensorLayout& bn_bias, TensorLayout& mean, TensorLayout& variance,
+            TensorLayout& batch_mean, TensorLayout& batch_inv_variance,
+            TensorLayout& reserve, TensorLayout& dst);
     virtual size_t get_workspace_in_bytes(
             const TensorLayout& src, const TensorLayout& bn_scale,
             const TensorLayout& bn_bias, const TensorLayout& mean,
             const TensorLayout& variance, const TensorLayout& batch_mean,
-            const TensorLayout& batch_inv_variance,
+            const TensorLayout& batch_inv_variance, const TensorLayout& reserve,
             const TensorLayout& dst) = 0;
+    virtual size_t get_reserve_in_bytes(const TensorLayout& src) = 0;
 
 protected:
-    void check_exec(const TensorLayout& src, const TensorLayout& bn_scale,
-                    const TensorLayout& bn_bias, const TensorLayout& mean,
-                    const TensorLayout& variance,
-                    const TensorLayout& batch_mean,
-                    const TensorLayout& batch_inv_variance,
-                    const TensorLayout& dst, size_t workspace_in_bytes);
+    void check_exec(
+            const TensorLayout& src, const TensorLayout& bn_scale,
+            const TensorLayout& bn_bias, const TensorLayout& mean,
+            const TensorLayout& variance, const TensorLayout& batch_mean,
+            const TensorLayout& batch_inv_variance, const TensorLayout& dst,
+            size_t workspace_in_bytes, size_t reserve_in_bytes = 0);
 };
 using BN = BNForward;
 
 class BNBackward : public BNBase {
-    DEF_OPR_IMPL(BNBackward, BNBase, 5, 3);
+    DEF_OPR_IMPL(BNBackward, BNBase, 6, 3);
 
 public:
     /**
@@ -1011,28 +1056,30 @@ public:
         Calculated in the forwardpropagation.
      * \param[in] saved_batch_variance of the input batch.
         Calculated in the forwardpropagation.
+     * \param[in] reserve (see cudnnBatchNormalizationBackwardEx)
      */
-    virtual void exec(_megdnn_tensor_in x, _megdnn_tensor_in dy,
-                      _megdnn_tensor_in saved_batch_mean,
-                      _megdnn_tensor_in saved_batch_variance,
-                      _megdnn_tensor_in bn_scale, _megdnn_tensor_out d_bn_scale,
-                      _megdnn_tensor_out d_bn_bias, _megdnn_tensor_out dx,
-                      _megdnn_workspace workspace) = 0;
+    virtual void exec(
+            _megdnn_tensor_in x, _megdnn_tensor_in dy,
+            _megdnn_tensor_in saved_batch_mean, _megdnn_tensor_in saved_batch_variance,
+            _megdnn_tensor_in bn_scale, _megdnn_tensor_in reserve,
+            _megdnn_tensor_out d_bn_scale, _megdnn_tensor_out d_bn_bias,
+            _megdnn_tensor_out dx, _megdnn_workspace workspace) = 0;
     virtual size_t get_workspace_in_bytes(
             const TensorLayout& x, const TensorLayout& dy,
             const TensorLayout& saved_batch_mean,
-            const TensorLayout& saved_batch_variance,
-            const TensorLayout& bn_scale, const TensorLayout& d_bn_scale,
+            const TensorLayout& saved_batch_variance, const TensorLayout& bn_scale,
+            const TensorLayout& reserve, const TensorLayout& d_bn_scale,
             const TensorLayout& d_bn_bias, const TensorLayout& dx) = 0;
+    virtual size_t get_reserve_in_bytes(const TensorLayout& src) = 0;
 
 protected:
-    void check_exec(const TensorLayout& x, const TensorLayout& dy,
-                    const TensorLayout& saved_batch_mean,
-                    const TensorLayout& saved_batch_variance,
-                    const TensorLayout& bn_scale,
-                    const TensorLayout& d_bn_scale,
-                    const TensorLayout& d_bn_bias, const TensorLayout& dx,
-                    size_t workspace_in_bytes);
+    void check_exec(
+            const TensorLayout& x, const TensorLayout& dy,
+            const TensorLayout& saved_batch_mean,
+            const TensorLayout& saved_batch_variance, const TensorLayout& bn_scale,
+            const TensorLayout& d_bn_scale, const TensorLayout& d_bn_bias,
+            const TensorLayout& dx, size_t workspace_in_bytes,
+            size_t reserve_in_bytes = 0);
 };
 
 class LRNBase : public OperatorBase {
@@ -1055,15 +1102,17 @@ public:
      * src and dst must have the same shape.
      * src and dst must be contiguous.
      */
-    virtual void exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
-                      _megdnn_workspace workspace) = 0;
+    virtual void exec(
+            _megdnn_tensor_in src, _megdnn_tensor_out dst,
+            _megdnn_workspace workspace) = 0;
     void deduce_layout(const TensorLayout& src, TensorLayout& dst);
-    virtual size_t get_workspace_in_bytes(const TensorLayout& src,
-                                          const TensorLayout& dst) = 0;
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& src, const TensorLayout& dst) = 0;
 
 protected:
-    void check_exec(const TensorLayout& src, const TensorLayout& dst,
-                    size_t workspace_in_bytes);
+    void check_exec(
+            const TensorLayout& src, const TensorLayout& dst,
+            size_t workspace_in_bytes);
 };
 using LRN = LRNForward;
 
@@ -1079,18 +1128,17 @@ public:
      *
      * All tensors should be contiguous and of the same shape.
      */
-    virtual void exec(_megdnn_tensor_in src, _megdnn_tensor_in dst,
-                      _megdnn_tensor_in diff, _megdnn_tensor_out grad,
-                      _megdnn_workspace workspace) = 0;
-    virtual size_t get_workspace_in_bytes(const TensorLayout& src,
-                                          const TensorLayout& dst,
-                                          const TensorLayout& diff,
-                                          const TensorLayout& grad) = 0;
+    virtual void exec(
+            _megdnn_tensor_in src, _megdnn_tensor_in dst, _megdnn_tensor_in diff,
+            _megdnn_tensor_out grad, _megdnn_workspace workspace) = 0;
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& src, const TensorLayout& dst, const TensorLayout& diff,
+            const TensorLayout& grad) = 0;
 
 protected:
-    void check_exec(const TensorLayout& src, const TensorLayout& dst,
-                    const TensorLayout& diff, const TensorLayout& grad,
-                    size_t workspace_in_bytes);
+    void check_exec(
+            const TensorLayout& src, const TensorLayout& dst, const TensorLayout& diff,
+            const TensorLayout& grad, size_t workspace_in_bytes);
 };
 
 class ROIPoolingBase : public OperatorBase {
@@ -1098,8 +1146,9 @@ class ROIPoolingBase : public OperatorBase {
     DEF_OPR_PARAM(ROIPooling);
 
 protected:
-    void check_layout_fwd(const TensorLayout& src, const TensorLayout& rois,
-                          const TensorLayout& dst, const TensorLayout& index);
+    void check_layout_fwd(
+            const TensorLayout& src, const TensorLayout& rois, const TensorLayout& dst,
+            const TensorLayout& index);
 };
 
 class ROIPoolingForward : public ROIPoolingBase {
@@ -1121,18 +1170,17 @@ public:
      * It is used to store argmax indicex in MAX mode, and it is not used
      * in AVERAGE mode.
      */
-    virtual void exec(_megdnn_tensor_in src, _megdnn_tensor_in rois,
-                      _megdnn_tensor_out dst, _megdnn_tensor_out index,
-                      _megdnn_workspace workspace) = 0;
-    virtual size_t get_workspace_in_bytes(const TensorLayout& src,
-                                          const TensorLayout& rois,
-                                          const TensorLayout& dst,
-                                          const TensorLayout& index) = 0;
+    virtual void exec(
+            _megdnn_tensor_in src, _megdnn_tensor_in rois, _megdnn_tensor_out dst,
+            _megdnn_tensor_out index, _megdnn_workspace workspace) = 0;
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& src, const TensorLayout& rois, const TensorLayout& dst,
+            const TensorLayout& index) = 0;
 
 protected:
-    void check_exec(const TensorLayout& src, const TensorLayout& rois,
-                    const TensorLayout& dst, const TensorLayout& index,
-                    size_t workspace_in_bytes);
+    void check_exec(
+            const TensorLayout& src, const TensorLayout& rois, const TensorLayout& dst,
+            const TensorLayout& index, size_t workspace_in_bytes);
 };
 using ROIPooling = ROIPoolingForward;
 
@@ -1147,19 +1195,19 @@ public:
      * \param[in] index the `index' parameter in ROIPoolingForward::exec
      * \param[out] grad the backpropagated gradient wrt. src
      */
-    virtual void exec(_megdnn_tensor_in diff, _megdnn_tensor_in src,
-                      _megdnn_tensor_in rois, _megdnn_tensor_in index,
-                      _megdnn_tensor_out grad, _megdnn_workspace workspace) = 0;
-    virtual size_t get_workspace_in_bytes(const TensorLayout& diff,
-                                          const TensorLayout& src,
-                                          const TensorLayout& rois,
-                                          const TensorLayout& index,
-                                          const TensorLayout& grad) = 0;
+    virtual void exec(
+            _megdnn_tensor_in diff, _megdnn_tensor_in src, _megdnn_tensor_in rois,
+            _megdnn_tensor_in index, _megdnn_tensor_out grad,
+            _megdnn_workspace workspace) = 0;
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& diff, const TensorLayout& src, const TensorLayout& rois,
+            const TensorLayout& index, const TensorLayout& grad) = 0;
 
 protected:
-    void check_exec(const TensorLayout& diff, const TensorLayout& src,
-                    const TensorLayout& rois, const TensorLayout& index,
-                    const TensorLayout& grad, size_t workspace_in_bytes);
+    void check_exec(
+            const TensorLayout& diff, const TensorLayout& src, const TensorLayout& rois,
+            const TensorLayout& index, const TensorLayout& grad,
+            size_t workspace_in_bytes);
 };
 
 class Convolution3DBase : public OperatorBase {
@@ -1186,20 +1234,19 @@ public:
     } MEGDNN_PACKED;
 
 protected:
-    CanonizedFilterMeta deduce_layout_fwd(const TensorLayout& src,
-                                          const TensorLayout& filter,
-                                          TensorLayout& dst) const;
-    CanonizedFilterMeta check_layout_fwd(const TensorLayout& src,
-                                         const TensorLayout& filter,
-                                         const TensorLayout& dst) const;
+    CanonizedFilterMeta deduce_layout_fwd(
+            const TensorLayout& src, const TensorLayout& filter,
+            TensorLayout& dst) const;
+    CanonizedFilterMeta check_layout_fwd(
+            const TensorLayout& src, const TensorLayout& filter,
+            const TensorLayout& dst) const;
 
     CanonizedFilterMeta make_canonized_filter_meta(
             size_t src_ndim, const TensorLayout& filter) const;
 };
 
-class Convolution3DForward
-        : public Convolution3DBase,
-          public detail::MultiAlgoOpr<Convolution3DForward, 3> {
+class Convolution3DForward : public Convolution3DBase,
+                             public detail::MultiAlgoOpr<Convolution3DForward, 3> {
     DEF_OPR_IMPL(Convolution3DForward, Convolution3DBase, 2, 1);
 
 public:
@@ -1208,19 +1255,23 @@ public:
      * \param[in] filter (oc, ic, fd, fh, fw)
      * \param[out] dst (n, oc, od, oh, ow)
      */
-    virtual void exec(_megdnn_tensor_in src, _megdnn_tensor_in filter,
-                      _megdnn_tensor_out dst, _megdnn_workspace workspace) = 0;
-    void deduce_layout(const TensorLayout& src, const TensorLayout& filter,
-                       TensorLayout& dst);
-    virtual size_t get_workspace_in_bytes(const TensorLayout& src,
-                                          const TensorLayout& filter,
-                                          const TensorLayout& dst) = 0;
+    virtual void exec(
+            _megdnn_tensor_in src, _megdnn_tensor_in filter, _megdnn_tensor_out dst,
+            _megdnn_workspace workspace) = 0;
+    void deduce_layout(
+            const TensorLayout& src, const TensorLayout& filter, TensorLayout& dst);
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& src, const TensorLayout& filter,
+            const TensorLayout& dst) = 0;
+
+    static Algorithm::OprType get_opr_type() {
+        return Algorithm::OprType::CONVOLUTION3D_FORWARD;
+    }
 
 protected:
-    CanonizedFilterMeta check_exec(const TensorLayout& src,
-                                   const TensorLayout& filter,
-                                   const TensorLayout& dst,
-                                   size_t workspace_in_bytes);
+    CanonizedFilterMeta check_exec(
+            const TensorLayout& src, const TensorLayout& filter,
+            const TensorLayout& dst, size_t workspace_in_bytes);
 };
 using Convolution3D = Convolution3DForward;
 
@@ -1235,20 +1286,24 @@ public:
      * \param[in] diff (n, oc, od, oh, ow)
      * \param[out] grad (n, ic, id, ih, iw)
      */
-    virtual void exec(_megdnn_tensor_in filter, _megdnn_tensor_in diff,
-                      _megdnn_tensor_out grad, _megdnn_workspace workspace) = 0;
-    virtual size_t get_workspace_in_bytes(const TensorLayout& filter,
-                                          const TensorLayout& diff,
-                                          const TensorLayout& grad) = 0;
+    virtual void exec(
+            _megdnn_tensor_in filter, _megdnn_tensor_in diff, _megdnn_tensor_out grad,
+            _megdnn_workspace workspace) = 0;
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& filter, const TensorLayout& diff,
+            const TensorLayout& grad) = 0;
 
-    void deduce_layout(const TensorLayout& filter, const TensorLayout& diff,
-                       TensorLayout& grad);
+    void deduce_layout(
+            const TensorLayout& filter, const TensorLayout& diff, TensorLayout& grad);
+
+    static Algorithm::OprType get_opr_type() {
+        return Algorithm::OprType::CONVOLUTION3D_BACKWARD_DATA;
+    }
 
 protected:
-    CanonizedFilterMeta check_exec(const TensorLayout& filter,
-                                   const TensorLayout& diff,
-                                   const TensorLayout& grad,
-                                   size_t workspace_in_bytes);
+    CanonizedFilterMeta check_exec(
+            const TensorLayout& filter, const TensorLayout& diff,
+            const TensorLayout& grad, size_t workspace_in_bytes);
 };
 
 class Convolution3DBackwardFilter
@@ -1262,17 +1317,21 @@ public:
      * \param[in] diff (n, oc, od, oh, ow)
      * \param[out] grad (oc, ic, fd, fh, fw)
      */
-    virtual void exec(_megdnn_tensor_in src, _megdnn_tensor_in diff,
-                      _megdnn_tensor_out grad, _megdnn_workspace workspace) = 0;
-    virtual size_t get_workspace_in_bytes(const TensorLayout& src,
-                                          const TensorLayout& diff,
-                                          const TensorLayout& grad) = 0;
+    virtual void exec(
+            _megdnn_tensor_in src, _megdnn_tensor_in diff, _megdnn_tensor_out grad,
+            _megdnn_workspace workspace) = 0;
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& src, const TensorLayout& diff,
+            const TensorLayout& grad) = 0;
+
+    static Algorithm::OprType get_opr_type() {
+        return Algorithm::OprType::CONVOLUTION3D_BACKWARD_FILTER;
+    }
 
 protected:
-    CanonizedFilterMeta check_exec(const TensorLayout& src,
-                                   const TensorLayout& diff,
-                                   const TensorLayout& grad,
-                                   size_t workspace_in_bytes);
+    CanonizedFilterMeta check_exec(
+            const TensorLayout& src, const TensorLayout& diff, const TensorLayout& grad,
+            size_t workspace_in_bytes);
 };
 
 class LocalShareBase : public OperatorBase {
@@ -1280,10 +1339,11 @@ class LocalShareBase : public OperatorBase {
     DEF_OPR_PARAM(LocalShare);
 
 protected:
-    void deduce_layout_fwd(const TensorLayout& src, const TensorLayout& filter,
-                           TensorLayout& dst);
-    void check_layout_fwd(const TensorLayout& src, const TensorLayout& filter,
-                          const TensorLayout& dst);
+    void deduce_layout_fwd(
+            const TensorLayout& src, const TensorLayout& filter, TensorLayout& dst);
+    void check_layout_fwd(
+            const TensorLayout& src, const TensorLayout& filter,
+            const TensorLayout& dst);
 };
 
 class LocalShareForward : public LocalShareBase,
@@ -1297,26 +1357,31 @@ public:
      * FH, FW, OC / G)
      * \param[out] dst (N, OC, OH, OW)
      */
-    virtual void exec(_megdnn_tensor_in src, _megdnn_tensor_in filter,
-                      _megdnn_tensor_out dst, _megdnn_workspace workspace) = 0;
+    virtual void exec(
+            _megdnn_tensor_in src, _megdnn_tensor_in filter, _megdnn_tensor_out dst,
+            _megdnn_workspace workspace) = 0;
     /**
      * \brief deduce layout of the ouput tensor
      */
-    void deduce_layout(const TensorLayout& src, const TensorLayout& filter,
-                       TensorLayout& dst);
-    virtual size_t get_workspace_in_bytes(const TensorLayout& src,
-                                          const TensorLayout& filter,
-                                          const TensorLayout& dst) = 0;
+    void deduce_layout(
+            const TensorLayout& src, const TensorLayout& filter, TensorLayout& dst);
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& src, const TensorLayout& filter,
+            const TensorLayout& dst) = 0;
+
+    static Algorithm::OprType get_opr_type() {
+        return Algorithm::OprType::LOCAL_SHARE_FORWARD;
+    }
 
 protected:
-    void check_exec(const TensorLayout& src, const TensorLayout& filter,
-                    const TensorLayout& dst, size_t workspace_in_bytes);
+    void check_exec(
+            const TensorLayout& src, const TensorLayout& filter,
+            const TensorLayout& dst, size_t workspace_in_bytes);
 };
 using LocalShare = LocalShareForward;
 
-class LocalShareBackwardData
-        : public LocalShareBase,
-          public detail::MultiAlgoOpr<LocalShareBackwardData, 3> {
+class LocalShareBackwardData : public LocalShareBase,
+                               public detail::MultiAlgoOpr<LocalShareBackwardData, 3> {
     DEF_OPR_IMPL(LocalShareBackwardData, LocalShareBase, 2, 1);
 
 public:
@@ -1326,17 +1391,23 @@ public:
      * \param[in] diff (N, OC, OH, OW)
      * \param[out] grad (N, IC, IH, IW)
      */
-    virtual void exec(_megdnn_tensor_in filter, _megdnn_tensor_in diff,
-                      _megdnn_tensor_out grad, _megdnn_workspace workspace) = 0;
-    virtual size_t get_workspace_in_bytes(const TensorLayout& filter,
-                                          const TensorLayout& diff,
-                                          const TensorLayout& grad) = 0;
-    void deduce_layout(const TensorLayout& filter, const TensorLayout& diff,
-                       TensorLayout& grad);
+    virtual void exec(
+            _megdnn_tensor_in filter, _megdnn_tensor_in diff, _megdnn_tensor_out grad,
+            _megdnn_workspace workspace) = 0;
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& filter, const TensorLayout& diff,
+            const TensorLayout& grad) = 0;
+    void deduce_layout(
+            const TensorLayout& filter, const TensorLayout& diff, TensorLayout& grad);
+
+    static Algorithm::OprType get_opr_type() {
+        return Algorithm::OprType::LOCAL_SHARE_BACKWARD_DATA;
+    }
 
 protected:
-    void check_exec(const TensorLayout& filter, const TensorLayout& diff,
-                    const TensorLayout& grad, size_t workspace_in_bytes);
+    void check_exec(
+            const TensorLayout& filter, const TensorLayout& diff,
+            const TensorLayout& grad, size_t workspace_in_bytes);
 };
 
 class LocalShareBackwardFilter
@@ -1351,16 +1422,22 @@ public:
      * \param[out] grad (G, spatial_groups_h, spatial_groups_w, IC / G,
      * FH, FW, OC / G)
      */
-    virtual void exec(_megdnn_tensor_in src, _megdnn_tensor_in diff,
-                      _megdnn_tensor_out grad, _megdnn_workspace workspace) = 0;
+    virtual void exec(
+            _megdnn_tensor_in src, _megdnn_tensor_in diff, _megdnn_tensor_out grad,
+            _megdnn_workspace workspace) = 0;
 
-    virtual size_t get_workspace_in_bytes(const TensorLayout& src,
-                                          const TensorLayout& diff,
-                                          const TensorLayout& grad) = 0;
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& src, const TensorLayout& diff,
+            const TensorLayout& grad) = 0;
+
+    static Algorithm::OprType get_opr_type() {
+        return Algorithm::OprType::LOCAL_SHARE_BACKWARD_FILTER;
+    }
 
 protected:
-    void check_exec(const TensorLayout& src, const TensorLayout& diff,
-                    const TensorLayout& grad, size_t workspace_in_bytes);
+    void check_exec(
+            const TensorLayout& src, const TensorLayout& diff, const TensorLayout& grad,
+            size_t workspace_in_bytes);
 };
 
 class ROIAlignBase : public OperatorBase {
@@ -1368,10 +1445,12 @@ class ROIAlignBase : public OperatorBase {
     DEF_OPR_PARAM(ROIAlign);
 
 protected:
-    void deduce_layout_fwd(const TensorLayout& src, const TensorLayout& rois,
-                           TensorLayout& dst, TensorLayout& index);
-    void check_layout_fwd(const TensorLayout& src, const TensorLayout& rois,
-                          const TensorLayout& dst, const TensorLayout& index);
+    void deduce_layout_fwd(
+            const TensorLayout& src, const TensorLayout& rois, TensorLayout& dst,
+            TensorLayout& index);
+    void check_layout_fwd(
+            const TensorLayout& src, const TensorLayout& rois, const TensorLayout& dst,
+            const TensorLayout& index);
 };
 
 class ROIAlignForward : public ROIAlignBase {
@@ -1391,20 +1470,20 @@ public:
      * It is used to store argmax indicex in MAX mode, and it is not used
      * in AVERAGE mode.
      */
-    virtual void exec(_megdnn_tensor_in src, _megdnn_tensor_in rois,
-                      _megdnn_tensor_out dst, _megdnn_tensor_out index,
-                      _megdnn_workspace workspace) = 0;
-    void deduce_layout(const TensorLayout& src, const TensorLayout& rois,
-                       TensorLayout& dst, TensorLayout& index);
-    virtual size_t get_workspace_in_bytes(const TensorLayout& src,
-                                          const TensorLayout& rois,
-                                          const TensorLayout& dst,
-                                          const TensorLayout& index) = 0;
+    virtual void exec(
+            _megdnn_tensor_in src, _megdnn_tensor_in rois, _megdnn_tensor_out dst,
+            _megdnn_tensor_out index, _megdnn_workspace workspace) = 0;
+    void deduce_layout(
+            const TensorLayout& src, const TensorLayout& rois, TensorLayout& dst,
+            TensorLayout& index);
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& src, const TensorLayout& rois, const TensorLayout& dst,
+            const TensorLayout& index) = 0;
 
 protected:
-    void check_exec(const TensorLayout& src, const TensorLayout& rois,
-                    const TensorLayout& dst, const TensorLayout& index,
-                    size_t workspace_in_bytes);
+    void check_exec(
+            const TensorLayout& src, const TensorLayout& rois, const TensorLayout& dst,
+            const TensorLayout& index, size_t workspace_in_bytes);
 };
 using ROIAlign = ROIAlignForward;
 
@@ -1418,18 +1497,18 @@ public:
      * \param[in] index the `index' parameter in ROIAlignForward::exec
      * \param[out] grad the backpropagated gradient wrt. src
      */
-    virtual void exec(_megdnn_tensor_in diff, _megdnn_tensor_in rois,
-                      _megdnn_tensor_in index, _megdnn_tensor_out grad,
-                      _megdnn_workspace workspace) = 0;
-    virtual size_t get_workspace_in_bytes(const TensorLayout& diff,
-                                          const TensorLayout& rois,
-                                          const TensorLayout& index,
-                                          const TensorLayout& grad) = 0;
+    virtual void exec(
+            _megdnn_tensor_in diff, _megdnn_tensor_in rois, _megdnn_tensor_in index,
+            _megdnn_tensor_out grad, _megdnn_workspace workspace) = 0;
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& diff, const TensorLayout& rois,
+            const TensorLayout& index, const TensorLayout& grad) = 0;
 
 protected:
-    void check_exec(const TensorLayout& diff, const TensorLayout& rois,
-                    const TensorLayout& index, const TensorLayout& grad,
-                    size_t workspace_in_bytes);
+    void check_exec(
+            const TensorLayout& diff, const TensorLayout& rois,
+            const TensorLayout& index, const TensorLayout& grad,
+            size_t workspace_in_bytes);
 };
 
 class DeformableConvBase : public OperatorBase {
@@ -1446,17 +1525,17 @@ protected:
     CanonizedFilterMeta make_canonized_filter_meta(
             size_t src_ndim, const TensorLayout& filter,
             const TensorLayout& offset) const;
-    void deduce_layout_fwd(const TensorLayout& im, const TensorLayout& filter,
-                           const TensorLayout& mask, const TensorLayout& offset,
-                           TensorLayout& dst);
-    void check_layout_fwd(const TensorLayout& src, const TensorLayout& filter,
-                          const TensorLayout& mask, const TensorLayout& offset,
-                          const TensorLayout& dst);
+    void deduce_layout_fwd(
+            const TensorLayout& im, const TensorLayout& filter,
+            const TensorLayout& mask, const TensorLayout& offset, TensorLayout& dst);
+    void check_layout_fwd(
+            const TensorLayout& src, const TensorLayout& filter,
+            const TensorLayout& mask, const TensorLayout& offset,
+            const TensorLayout& dst);
 };
 
-class DeformableConvForward
-        : public DeformableConvBase,
-          public detail::MultiAlgoOpr<DeformableConvForward, 5> {
+class DeformableConvForward : public DeformableConvBase,
+                              public detail::MultiAlgoOpr<DeformableConvForward, 5> {
     DEF_OPR_IMPL(DeformableConvForward, DeformableConvBase, 4, 1);
 
 public:
@@ -1467,25 +1546,27 @@ public:
      * \param[in] mask (dg, fh, fw, oh, ow)
      * \param[out] dst (n, oc, oh, ow)
      */
-    virtual void exec(_megdnn_tensor_in im, _megdnn_tensor_in filter,
-                      _megdnn_tensor_in offset, _megdnn_tensor_in mask,
-                      _megdnn_tensor_out dst, _megdnn_workspace workspace) = 0;
-    void deduce_layout(const TensorLayout& im, const TensorLayout& filter,
-                       const TensorLayout& offset, const TensorLayout& mask,
-                       TensorLayout& dst);
-    virtual size_t get_workspace_in_bytes(const TensorLayout& im,
-                                          const TensorLayout& filter,
-                                          const TensorLayout& offset,
-                                          const TensorLayout& mask,
-                                          const TensorLayout& dst) = 0;
+    virtual void exec(
+            _megdnn_tensor_in im, _megdnn_tensor_in filter, _megdnn_tensor_in offset,
+            _megdnn_tensor_in mask, _megdnn_tensor_out dst,
+            _megdnn_workspace workspace) = 0;
+    void deduce_layout(
+            const TensorLayout& im, const TensorLayout& filter,
+            const TensorLayout& offset, const TensorLayout& mask, TensorLayout& dst);
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& im, const TensorLayout& filter,
+            const TensorLayout& offset, const TensorLayout& mask,
+            const TensorLayout& dst) = 0;
+
+    static Algorithm::OprType get_opr_type() {
+        return Algorithm::OprType::DEFORMABLE_CONV_FORWARD;
+    }
 
 protected:
-    CanonizedFilterMeta check_exec(const TensorLayout& im,
-                                   const TensorLayout& filter,
-                                   const TensorLayout& offset,
-                                   const TensorLayout& mask,
-                                   const TensorLayout& dst,
-                                   size_t workspace_in_bytes);
+    CanonizedFilterMeta check_exec(
+            const TensorLayout& im, const TensorLayout& filter,
+            const TensorLayout& offset, const TensorLayout& mask,
+            const TensorLayout& dst, size_t workspace_in_bytes);
 };
 using DeformableConv = DeformableConvForward;
 
@@ -1507,26 +1588,28 @@ public:
      * \param[in] out_grad (n, oc, oh, ow)
      * \param[out] filter_grad (oc, ic, ih, iw)
      */
-    virtual void exec(_megdnn_tensor_in im, _megdnn_tensor_in offset,
-                      _megdnn_tensor_in mask, _megdnn_tensor_in out_grad,
-                      _megdnn_tensor_out filter_grad,
-                      _megdnn_workspace workspace) = 0;
-    virtual size_t get_workspace_in_bytes(const TensorLayout& im,
-                                          const TensorLayout& offset,
-                                          const TensorLayout& mask,
-                                          const TensorLayout& out_grad,
-                                          const TensorLayout& filter_grad) = 0;
-    void deduce_layout(const TensorLayout& im, const TensorLayout& offset,
-                       const TensorLayout& mask, const TensorLayout& out_grad,
-                       TensorLayout& filter_grad);
+    virtual void exec(
+            _megdnn_tensor_in im, _megdnn_tensor_in offset, _megdnn_tensor_in mask,
+            _megdnn_tensor_in out_grad, _megdnn_tensor_out filter_grad,
+            _megdnn_workspace workspace) = 0;
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& im, const TensorLayout& offset,
+            const TensorLayout& mask, const TensorLayout& out_grad,
+            const TensorLayout& filter_grad) = 0;
+    void deduce_layout(
+            const TensorLayout& im, const TensorLayout& offset,
+            const TensorLayout& mask, const TensorLayout& out_grad,
+            TensorLayout& filter_grad);
+
+    static Algorithm::OprType get_opr_type() {
+        return Algorithm::OprType::DEFORMABLE_CONV_BACKWARD_FILTER;
+    }
 
 protected:
-    CanonizedFilterMeta check_exec(const TensorLayout& im,
-                                   const TensorLayout& offset,
-                                   const TensorLayout& mask,
-                                   const TensorLayout& out_grad,
-                                   const TensorLayout& filter_grad,
-                                   size_t workspace_in_bytes);
+    CanonizedFilterMeta check_exec(
+            const TensorLayout& im, const TensorLayout& offset,
+            const TensorLayout& mask, const TensorLayout& out_grad,
+            const TensorLayout& filter_grad, size_t workspace_in_bytes);
 };
 
 /**
@@ -1550,21 +1633,25 @@ public:
      * \param[out] offset_grad (dg, 2, fh, fw, oh, ow)
      * \param[out] mask_grad (dg, fh, fw, oh, ow)
      */
-    virtual void exec(_megdnn_tensor_in im, _megdnn_tensor_in filter,
-                      _megdnn_tensor_in offset, _megdnn_tensor_in mask,
-                      _megdnn_tensor_in out_grad, _megdnn_tensor_out im_grad,
-                      _megdnn_tensor_out offset_grad,
-                      _megdnn_tensor_out mask_grad,
-                      _megdnn_workspace workspace) = 0;
+    virtual void exec(
+            _megdnn_tensor_in im, _megdnn_tensor_in filter, _megdnn_tensor_in offset,
+            _megdnn_tensor_in mask, _megdnn_tensor_in out_grad,
+            _megdnn_tensor_out im_grad, _megdnn_tensor_out offset_grad,
+            _megdnn_tensor_out mask_grad, _megdnn_workspace workspace) = 0;
     virtual size_t get_workspace_in_bytes(
             const TensorLayout& im, const TensorLayout& filter,
             const TensorLayout& offset, const TensorLayout& mask,
             const TensorLayout& out_grad, const TensorLayout& im_grad,
             const TensorLayout& offset_grad, const TensorLayout& mask_grad) = 0;
-    void deduce_layout(const TensorLayout& im, const TensorLayout& filter,
-                       const TensorLayout& offset, const TensorLayout& mask,
-                       const TensorLayout& out_grad, TensorLayout& im_grad,
-                       TensorLayout& offset_grad, TensorLayout& mask_grad);
+    void deduce_layout(
+            const TensorLayout& im, const TensorLayout& filter,
+            const TensorLayout& offset, const TensorLayout& mask,
+            const TensorLayout& out_grad, TensorLayout& im_grad,
+            TensorLayout& offset_grad, TensorLayout& mask_grad);
+
+    static Algorithm::OprType get_opr_type() {
+        return Algorithm::OprType::DEFORMABLE_CONV_BACKWARD_DATA;
+    }
 
 protected:
     CanonizedFilterMeta check_exec(
@@ -1580,20 +1667,18 @@ class DeformablePSROIPoolingBase : public OperatorBase {
     DEF_OPR_PARAM(DeformablePSROIPooling);
 
 protected:
-    void deduce_layout_fwd(const TensorLayout& data, const TensorLayout& trans,
-                           const TensorLayout& rois, TensorLayout& out_data,
-                           TensorLayout& out_count);
+    void deduce_layout_fwd(
+            const TensorLayout& data, const TensorLayout& trans,
+            const TensorLayout& rois, TensorLayout& out_data, TensorLayout& out_count);
 
-    void check_layout_fwd(const TensorLayout& data, const TensorLayout& trans,
-                          const TensorLayout& rois,
-                          const TensorLayout& out_data,
-                          const TensorLayout& out_count,
-                          size_t workspace_in_bytes);
+    void check_layout_fwd(
+            const TensorLayout& data, const TensorLayout& trans,
+            const TensorLayout& rois, const TensorLayout& out_data,
+            const TensorLayout& out_count, size_t workspace_in_bytes);
 };
 
 class DeformablePSROIPoolingForward : public DeformablePSROIPoolingBase {
-    DEF_OPR_IMPL(DeformablePSROIPoolingForward, DeformablePSROIPoolingBase, 3,
-                 2);
+    DEF_OPR_IMPL(DeformablePSROIPoolingForward, DeformablePSROIPoolingBase, 3, 2);
 
 public:
     /**
@@ -1603,28 +1688,27 @@ public:
      * \param[out] out_data   ( n, ic, ih, iw)
      * \param[out] out_count  ( n, ic, ih, iw)
      */
-    virtual size_t get_workspace_in_bytes(const TensorLayout& data,
-                                          const TensorLayout& rois,
-                                          const TensorLayout& trans,
-                                          const TensorLayout& out_data,
-                                          const TensorLayout& out_count) = 0;
-    virtual void exec(_megdnn_tensor_in data, _megdnn_tensor_in rois,
-                      _megdnn_tensor_in trans, _megdnn_tensor_out out_data,
-                      _megdnn_tensor_out out_count,
-                      _megdnn_workspace workspace) = 0;
-    void deduce_layout(const TensorLayout& data, const TensorLayout& rois,
-                       const TensorLayout& trans, TensorLayout& out_data,
-                       TensorLayout& out_count);
-    void check_exec(const TensorLayout& data, const TensorLayout& rois,
-                    const TensorLayout& trans, const TensorLayout& out_data,
-                    const TensorLayout& out_count, size_t workspace_in_bytes);
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& data, const TensorLayout& rois,
+            const TensorLayout& trans, const TensorLayout& out_data,
+            const TensorLayout& out_count) = 0;
+    virtual void exec(
+            _megdnn_tensor_in data, _megdnn_tensor_in rois, _megdnn_tensor_in trans,
+            _megdnn_tensor_out out_data, _megdnn_tensor_out out_count,
+            _megdnn_workspace workspace) = 0;
+    void deduce_layout(
+            const TensorLayout& data, const TensorLayout& rois,
+            const TensorLayout& trans, TensorLayout& out_data, TensorLayout& out_count);
+    void check_exec(
+            const TensorLayout& data, const TensorLayout& rois,
+            const TensorLayout& trans, const TensorLayout& out_data,
+            const TensorLayout& out_count, size_t workspace_in_bytes);
 };
 
 using DeformablePSROIPooling = DeformablePSROIPoolingForward;
 
 class DeformablePSROIPoolingBackward : public DeformablePSROIPoolingBase {
-    DEF_OPR_IMPL(DeformablePSROIPoolingBackward, DeformablePSROIPoolingBase, 5,
-                 2);
+    DEF_OPR_IMPL(DeformablePSROIPoolingBackward, DeformablePSROIPoolingBase, 5, 2);
 
 public:
     /**
@@ -1636,54 +1720,53 @@ public:
      * \param[out] data_diff   ( n, ic, ih, iw)
      * \param[out] trans_diff  ( n, ic, ih, iw)
      */
-    virtual void exec(_megdnn_tensor_in data, _megdnn_tensor_in rois,
-                      _megdnn_tensor_in trans, _megdnn_tensor_in out_diff,
-                      _megdnn_tensor_in out_count, _megdnn_tensor_out data_diff,
-                      _megdnn_tensor_out trans_diff,
-                      _megdnn_workspace workspace) = 0;
-    virtual size_t get_workspace_in_bytes(const TensorLayout& data,
-                                          const TensorLayout& rois,
-                                          const TensorLayout& trans,
-                                          const TensorLayout& out_diff,
-                                          const TensorLayout& out_count,
-                                          const TensorLayout& data_diff,
-                                          const TensorLayout& trans_diff) = 0;
+    virtual void exec(
+            _megdnn_tensor_in data, _megdnn_tensor_in rois, _megdnn_tensor_in trans,
+            _megdnn_tensor_in out_diff, _megdnn_tensor_in out_count,
+            _megdnn_tensor_out data_diff, _megdnn_tensor_out trans_diff,
+            _megdnn_workspace workspace) = 0;
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& data, const TensorLayout& rois,
+            const TensorLayout& trans, const TensorLayout& out_diff,
+            const TensorLayout& out_count, const TensorLayout& data_diff,
+            const TensorLayout& trans_diff) = 0;
 
-    void check_exec(const TensorLayout& data, const TensorLayout& rois,
-                    const TensorLayout& trans, const TensorLayout& out_diff,
-                    const TensorLayout& out_count,
-                    const TensorLayout& data_diff,
-                    const TensorLayout& trans_diff, size_t workspace_in_bytes);
+    void check_exec(
+            const TensorLayout& data, const TensorLayout& rois,
+            const TensorLayout& trans, const TensorLayout& out_diff,
+            const TensorLayout& out_count, const TensorLayout& data_diff,
+            const TensorLayout& trans_diff, size_t workspace_in_bytes);
 };
 
-class BatchConvBiasForward
-        : public ConvolutionBase<param::BatchConvBias>,
-          public detail::MultiAlgoOpr<BatchConvBiasForward, 5> {
+class BatchConvBiasForward : public ConvolutionBase<param::BatchConvBias>,
+                             public detail::MultiAlgoOpr<BatchConvBiasForward, 5> {
     DEF_OPR_IMPL(BatchConvBiasForward, ConvolutionBase, 4, 1);
 
 public:
-    virtual void exec(_megdnn_tensor_in src, _megdnn_tensor_in filter,
-                      _megdnn_tensor_in bias, _megdnn_tensor_in z,
-                      _megdnn_tensor_out dst, _megdnn_workspace workspace) = 0;
+    virtual void exec(
+            _megdnn_tensor_in src, _megdnn_tensor_in filter, _megdnn_tensor_in bias,
+            _megdnn_tensor_in z, _megdnn_tensor_out dst,
+            _megdnn_workspace workspace) = 0;
 
     void deduce_dtype(DType src, DType filter, DType bias, DType z, DType& dst);
-    void deduce_layout(const TensorLayout& src, const TensorLayout& filter,
-                       const TensorLayout& bias, const TensorLayout& z,
-                       TensorLayout& dst);
+    void deduce_layout(
+            const TensorLayout& src, const TensorLayout& filter,
+            const TensorLayout& bias, const TensorLayout& z, TensorLayout& dst);
 
-    virtual size_t get_workspace_in_bytes(const TensorLayout& src,
-                                          const TensorLayout& filter,
-                                          const TensorLayout& bias,
-                                          const TensorLayout& z,
-                                          const TensorLayout& dst) = 0;
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& src, const TensorLayout& filter,
+            const TensorLayout& bias, const TensorLayout& z,
+            const TensorLayout& dst) = 0;
+
+    static Algorithm::OprType get_opr_type() {
+        return Algorithm::OprType::BATCH_CONV_FORWARD;
+    }
 
 protected:
-    CanonizedFilterMeta check_exec(const TensorLayout& src,
-                                   const TensorLayout& filter,
-                                   const TensorLayout& bias,
-                                   const TensorLayout& z,
-                                   const TensorLayout& dst,
-                                   size_t workspace_in_bytes);
+    CanonizedFilterMeta check_exec(
+            const TensorLayout& src, const TensorLayout& filter,
+            const TensorLayout& bias, const TensorLayout& z, const TensorLayout& dst,
+            size_t workspace_in_bytes);
 };
 using BatchConvBias = BatchConvBiasForward;
 
@@ -1693,29 +1776,31 @@ class FakeQuantBase : public OperatorBase {
 
 protected:
     void deduce_layout_fwd(const TensorLayout& input, TensorLayout& output);
-    void check_layout_fwd(const TensorLayout& input, const TensorLayout& scale,
-                          const TensorLayout& zero_point,
-                          const TensorLayout& output);
+    void check_layout_fwd(
+            const TensorLayout& input, const TensorLayout& scale,
+            const TensorLayout& zero_point, const TensorLayout& output);
 };
 
 class FakeQuantForward : public FakeQuantBase {
     DEF_OPR_IMPL(FakeQuantForward, FakeQuantBase, 3, 1);
 
 public:
-    virtual void exec(_megdnn_tensor_in input, _megdnn_tensor_in scale,
-                      _megdnn_tensor_in zero_point, _megdnn_tensor_out output,
-                      _megdnn_workspace workspace) = 0;
-    void deduce_layout(const TensorLayout& input, const TensorLayout& scale,
-                       const TensorLayout& zero_point, TensorLayout& output);
-    virtual size_t get_workspace_in_bytes(const TensorLayout& input,
-                                          const TensorLayout& scale,
-                                          const TensorLayout& zero_point,
-                                          const TensorLayout& output) = 0;
+    virtual void exec(
+            _megdnn_tensor_in input, _megdnn_tensor_in scale,
+            _megdnn_tensor_in zero_point, _megdnn_tensor_out output,
+            _megdnn_workspace workspace) = 0;
+    void deduce_layout(
+            const TensorLayout& input, const TensorLayout& scale,
+            const TensorLayout& zero_point, TensorLayout& output);
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& input, const TensorLayout& scale,
+            const TensorLayout& zero_point, const TensorLayout& output) = 0;
 
 protected:
-    void check_exec(const TensorLayout& input, const TensorLayout& scale,
-                    const TensorLayout& zero_point, const TensorLayout& output,
-                    size_t workspace_in_bytes);
+    void check_exec(
+            const TensorLayout& input, const TensorLayout& scale,
+            const TensorLayout& zero_point, const TensorLayout& output,
+            size_t workspace_in_bytes);
 };
 
 using FakeQuant = FakeQuantForward;
@@ -1724,19 +1809,20 @@ class FakeQuantBackward : public FakeQuantBase {
     DEF_OPR_IMPL(FakeQuantBackward, FakeQuantBase, 4, 1);
 
 public:
-    virtual void exec(_megdnn_tensor_in diff, _megdnn_tensor_in input,
-                      _megdnn_tensor_in scale, _megdnn_tensor_in zero_point,
-                      _megdnn_tensor_out grad, _megdnn_workspace workspace) = 0;
-    virtual size_t get_workspace_in_bytes(const TensorLayout& diff,
-                                          const TensorLayout& input,
-                                          const TensorLayout& scale,
-                                          const TensorLayout& zero_point,
-                                          const TensorLayout& grad) = 0;
+    virtual void exec(
+            _megdnn_tensor_in diff, _megdnn_tensor_in input, _megdnn_tensor_in scale,
+            _megdnn_tensor_in zero_point, _megdnn_tensor_out grad,
+            _megdnn_workspace workspace) = 0;
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& diff, const TensorLayout& input,
+            const TensorLayout& scale, const TensorLayout& zero_point,
+            const TensorLayout& grad) = 0;
 
 protected:
-    void check_exec(const TensorLayout& diff, const TensorLayout& input,
-                    const TensorLayout& scale, const TensorLayout& zero_point,
-                    const TensorLayout& grad, size_t workspace_in_bytes);
+    void check_exec(
+            const TensorLayout& diff, const TensorLayout& input,
+            const TensorLayout& scale, const TensorLayout& zero_point,
+            const TensorLayout& grad, size_t workspace_in_bytes);
 };
 
 class TQTBase : public OperatorBase {
@@ -1745,26 +1831,28 @@ class TQTBase : public OperatorBase {
 
 protected:
     void deduce_layout_fwd(const TensorLayout& input, TensorLayout& output);
-    void check_layout_fwd(const TensorLayout& input, const TensorLayout& scale,
-                          const TensorLayout& output);
+    void check_layout_fwd(
+            const TensorLayout& input, const TensorLayout& scale,
+            const TensorLayout& output);
 };
 
 class TQTForward : public TQTBase {
     DEF_OPR_IMPL(TQTForward, TQTBase, 2, 1);
 
 public:
-    virtual void exec(_megdnn_tensor_in input, _megdnn_tensor_in scale,
-                      _megdnn_tensor_out output,
-                      _megdnn_workspace workspace) = 0;
-    void deduce_layout(const TensorLayout& input, const TensorLayout& scale,
-                       TensorLayout& output);
-    virtual size_t get_workspace_in_bytes(const TensorLayout& input,
-                                          const TensorLayout& scale,
-                                          const TensorLayout& output) = 0;
+    virtual void exec(
+            _megdnn_tensor_in input, _megdnn_tensor_in scale, _megdnn_tensor_out output,
+            _megdnn_workspace workspace) = 0;
+    void deduce_layout(
+            const TensorLayout& input, const TensorLayout& scale, TensorLayout& output);
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& input, const TensorLayout& scale,
+            const TensorLayout& output) = 0;
 
 protected:
-    void check_exec(const TensorLayout& input, const TensorLayout& scale,
-                    const TensorLayout& output, size_t workspace_in_bytes);
+    void check_exec(
+            const TensorLayout& input, const TensorLayout& scale,
+            const TensorLayout& output, size_t workspace_in_bytes);
 };
 using TQT = TQTForward;
 
@@ -1772,20 +1860,20 @@ class TQTBackward : public TQTBase {
     DEF_OPR_IMPL(TQTBackward, TQTBase, 3, 2);
 
 public:
-    virtual void exec(_megdnn_tensor_in diff, _megdnn_tensor_in input,
-                      _megdnn_tensor_in scale, _megdnn_tensor_out grad_x,
-                      _megdnn_tensor_out grad_s,
-                      _megdnn_workspace workspace) = 0;
-    virtual size_t get_workspace_in_bytes(const TensorLayout& diff,
-                                          const TensorLayout& input,
-                                          const TensorLayout& scale,
-                                          const TensorLayout& grad_x,
-                                          const TensorLayout& grad_s) = 0;
+    virtual void exec(
+            _megdnn_tensor_in diff, _megdnn_tensor_in input, _megdnn_tensor_in scale,
+            _megdnn_tensor_out grad_x, _megdnn_tensor_out grad_s,
+            _megdnn_workspace workspace) = 0;
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& diff, const TensorLayout& input,
+            const TensorLayout& scale, const TensorLayout& grad_x,
+            const TensorLayout& grad_s) = 0;
 
 protected:
-    void check_exec(const TensorLayout& diff, const TensorLayout& input,
-                    const TensorLayout& scale, const TensorLayout& grad_x,
-                    const TensorLayout& grad_s, size_t workspace_in_bytes);
+    void check_exec(
+            const TensorLayout& diff, const TensorLayout& input,
+            const TensorLayout& scale, const TensorLayout& grad_x,
+            const TensorLayout& grad_s, size_t workspace_in_bytes);
 };
 
 class LSQBase : public OperatorBase {
@@ -1794,34 +1882,34 @@ class LSQBase : public OperatorBase {
 
 protected:
     void deduce_layout_fwd(const TensorLayout& input, TensorLayout& output);
-    void check_layout_fwd(const TensorLayout& input, const TensorLayout& scale,
-                          const TensorLayout& zero_point,
-                          const TensorLayout& grad_scale,
-                          const TensorLayout& output);
+    void check_layout_fwd(
+            const TensorLayout& input, const TensorLayout& scale,
+            const TensorLayout& zero_point, const TensorLayout& grad_scale,
+            const TensorLayout& output);
 };
 
 class LSQForward : public LSQBase {
     DEF_OPR_IMPL(LSQForward, LSQBase, 4, 1);
 
 public:
-    virtual void exec(_megdnn_tensor_in input, _megdnn_tensor_in scale,
-                      _megdnn_tensor_in zero_point,
-                      _megdnn_tensor_in grad_scale, _megdnn_tensor_out output,
-                      _megdnn_workspace workspace) = 0;
-    void deduce_layout(const TensorLayout& input, const TensorLayout& scale,
-                       const TensorLayout& zero_point,
-                       const TensorLayout& grad_scale, TensorLayout& output);
-    virtual size_t get_workspace_in_bytes(const TensorLayout& input,
-                                          const TensorLayout& scale,
-                                          const TensorLayout& zero_point,
-                                          const TensorLayout& grad_scale,
-                                          const TensorLayout& output) = 0;
+    virtual void exec(
+            _megdnn_tensor_in input, _megdnn_tensor_in scale,
+            _megdnn_tensor_in zero_point, _megdnn_tensor_in grad_scale,
+            _megdnn_tensor_out output, _megdnn_workspace workspace) = 0;
+    void deduce_layout(
+            const TensorLayout& input, const TensorLayout& scale,
+            const TensorLayout& zero_point, const TensorLayout& grad_scale,
+            TensorLayout& output);
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& input, const TensorLayout& scale,
+            const TensorLayout& zero_point, const TensorLayout& grad_scale,
+            const TensorLayout& output) = 0;
 
 protected:
-    void check_exec(const TensorLayout& input, const TensorLayout& scale,
-                    const TensorLayout& zero_point,
-                    const TensorLayout& grad_scale, const TensorLayout& output,
-                    size_t workspace_in_bytes);
+    void check_exec(
+            const TensorLayout& input, const TensorLayout& scale,
+            const TensorLayout& zero_point, const TensorLayout& grad_scale,
+            const TensorLayout& output, size_t workspace_in_bytes);
 };
 using LSQ = LSQForward;
 
@@ -1829,24 +1917,23 @@ class LSQBackward : public LSQBase {
     DEF_OPR_IMPL(LSQBackward, LSQBase, 5, 2);
 
 public:
-    virtual void exec(_megdnn_tensor_in diff, _megdnn_tensor_in input,
-                      _megdnn_tensor_in scale, _megdnn_tensor_in zero_point,
-                      _megdnn_tensor_in grad_scale, _megdnn_tensor_out grad_x,
-                      _megdnn_tensor_out grad_s,
-                      _megdnn_workspace workspace) = 0;
-    virtual size_t get_workspace_in_bytes(const TensorLayout& diff,
-                                          const TensorLayout& input,
-                                          const TensorLayout& scale,
-                                          const TensorLayout& zero_point,
-                                          const TensorLayout& grad_scale,
-                                          const TensorLayout& grad_x,
-                                          const TensorLayout& grad_s) = 0;
+    virtual void exec(
+            _megdnn_tensor_in diff, _megdnn_tensor_in input, _megdnn_tensor_in scale,
+            _megdnn_tensor_in zero_point, _megdnn_tensor_in grad_scale,
+            _megdnn_tensor_out grad_x, _megdnn_tensor_out grad_s,
+            _megdnn_workspace workspace) = 0;
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& diff, const TensorLayout& input,
+            const TensorLayout& scale, const TensorLayout& zero_point,
+            const TensorLayout& grad_scale, const TensorLayout& grad_x,
+            const TensorLayout& grad_s) = 0;
 
 protected:
-    void check_exec(const TensorLayout& diff, const TensorLayout& input,
-                    const TensorLayout& scale, const TensorLayout& zero_point,
-                    const TensorLayout& grad_scale, const TensorLayout& grad_x,
-                    const TensorLayout& grad_s, size_t workspace_in_bytes);
+    void check_exec(
+            const TensorLayout& diff, const TensorLayout& input,
+            const TensorLayout& scale, const TensorLayout& zero_point,
+            const TensorLayout& grad_scale, const TensorLayout& grad_x,
+            const TensorLayout& grad_s, size_t workspace_in_bytes);
 };
 
 }  // namespace megdnn

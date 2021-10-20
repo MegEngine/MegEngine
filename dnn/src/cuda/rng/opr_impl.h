@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 #pragma once
 
@@ -67,11 +68,12 @@ class GammaRNGImpl : public GammaRNG {
 public:
     GammaRNGImpl(Handle* handle);
 
-    void exec(_megdnn_tensor_in shape,_megdnn_tensor_in scale, 
-              _megdnn_tensor_out dst, _megdnn_workspace) override;
+    void exec(
+            _megdnn_tensor_in shape, _megdnn_tensor_in scale, _megdnn_tensor_out dst,
+            _megdnn_workspace) override;
 
-    size_t get_workspace_in_bytes(const TensorLayout&, const TensorLayout&,
-                                  const TensorLayout&) override {
+    size_t get_workspace_in_bytes(
+            const TensorLayout&, const TensorLayout&, const TensorLayout&) override {
         return 0;
     }
 
@@ -91,11 +93,12 @@ class BetaRNGImpl : public BetaRNG {
 public:
     BetaRNGImpl(Handle* handle);
 
-    void exec(_megdnn_tensor_in alpha,_megdnn_tensor_in beta, 
-              _megdnn_tensor_out dst, _megdnn_workspace) override;
+    void exec(
+            _megdnn_tensor_in alpha, _megdnn_tensor_in beta, _megdnn_tensor_out dst,
+            _megdnn_workspace) override;
 
-    size_t get_workspace_in_bytes(const TensorLayout&, const TensorLayout&,
-                                  const TensorLayout&) override {
+    size_t get_workspace_in_bytes(
+            const TensorLayout&, const TensorLayout&, const TensorLayout&) override {
         return 0;
     }
 
@@ -115,11 +118,10 @@ class PoissonRNGImpl : public PoissonRNG {
 public:
     PoissonRNGImpl(Handle* handle);
 
-    void exec(_megdnn_tensor_in lam, _megdnn_tensor_out dst,
-              _megdnn_workspace) override;
+    void exec(
+            _megdnn_tensor_in lam, _megdnn_tensor_out dst, _megdnn_workspace) override;
 
-    size_t get_workspace_in_bytes(const TensorLayout&,
-                                  const TensorLayout&) override {
+    size_t get_workspace_in_bytes(const TensorLayout&, const TensorLayout&) override {
         return 0;
     }
 
@@ -149,6 +151,46 @@ public:
         if (m_seed != seed) {
             this->seed(seed);
         }
+    }
+};
+
+class ShuffleRNGForwardImpl : public ShuffleRNGForward {
+    uint64_t m_seed, m_offset;
+    cudaStream_t m_stream;
+
+public:
+    using ShuffleRNGForward::ShuffleRNGForward;
+    ShuffleRNGForwardImpl(Handle* handle);
+
+    void exec(
+            _megdnn_tensor_in src, _megdnn_tensor_out dst, _megdnn_tensor_out indices,
+            _megdnn_workspace workspace) override;
+
+    size_t get_workspace_in_bytes(
+            const TensorLayout& src, const TensorLayout& dst,
+            const TensorLayout& indices) override;
+
+    void seed(uint64_t seed) { m_seed = seed; }
+
+    void ensure_seed(uint64_t seed) {
+        if (m_seed != seed) {
+            this->seed(seed);
+        }
+    }
+};
+
+class ShuffleRNGBackwardImpl : public ShuffleRNGBackward {
+    cudaStream_t m_stream;
+
+public:
+    using ShuffleRNGBackward::ShuffleRNGBackward;
+    ShuffleRNGBackwardImpl(Handle* handle);
+    void exec(
+            _megdnn_tensor_in diff, _megdnn_tensor_in indices, _megdnn_tensor_out grad,
+            _megdnn_workspace workspace) override;
+    size_t get_workspace_in_bytes(
+            const TensorLayout&, const TensorLayout&, const TensorLayout&) override {
+        return 0;
     }
 };
 

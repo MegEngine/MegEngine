@@ -78,15 +78,13 @@
 namespace mgb {
 namespace jit {
 
-mlir::Value lower_elemwise_to_std(mlir::Operation* op,
-                                  mlir::OpBuilder& builder,
-                                  mlir::Location loc,
-                                  mlir::ValueRange operands);
+mlir::Value lower_elemwise_to_std(
+        mlir::Operation* op, mlir::OpBuilder& builder, mlir::Location loc,
+        mlir::ValueRange operands);
 
-mlir::Value lower_typecvt_to_std(mlir::Operation* op,
-                                 mlir::OpBuilder& builder,
-                                 mlir::Location loc,
-                                 mlir::Value input);
+mlir::Value lower_typecvt_to_std(
+        mlir::Operation* op, mlir::OpBuilder& builder, mlir::Location loc,
+        mlir::Value input);
 
 }  // namespace jit
 }  // namespace mgb

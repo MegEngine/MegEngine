@@ -11,19 +11,19 @@
 #include "src/cuda/resize/common.cuh"
 #include "src/cuda/resize/common.h"
 
-#include "src/cuda/utils.cuh"
 #include "src/cuda/cv/kernel_common.cuh"
+#include "src/cuda/utils.cuh"
 
-using megdnn::resize::interpolate_cubic;
 using megdnn::megcv::saturate;
+using megdnn::resize::interpolate_cubic;
 
 namespace megdnn {
 namespace cuda {
 namespace resize {
 
-__global__ void resize_bwd_linear_kernel(const float* hidden, float* dst, int N,
-                                         int C, int IH, int IW, int OH, int OW,
-                                         float scale_h, float scale_w) {
+__global__ void resize_bwd_linear_kernel(
+        const float* hidden, float* dst, int N, int C, int IH, int IW, int OH, int OW,
+        float scale_h, float scale_w) {
     int n = blockIdx.z;
     int ow = blockIdx.x * blockDim.x + threadIdx.x;
     int oh = blockIdx.y * blockDim.y + threadIdx.y;
@@ -41,24 +41,19 @@ __global__ void resize_bwd_linear_kernel(const float* hidden, float* dst, int N,
         float nalphaw = 1.0f - alphaw;
         float nalphah = 1.0f - alphah;
         for (int c = 0; c < C; ++c) {
-            atomicAdd(dst + ih0 * IW + iw0,
-                      hidden[oh * OW + ow] * nalphaw * nalphah);
-            atomicAdd(dst + ih0 * IW + iw1,
-                      hidden[oh * OW + ow] * alphaw * nalphah);
-            atomicAdd(dst + ih1 * IW + iw0,
-                      hidden[oh * OW + ow] * nalphaw * alphah);
-            atomicAdd(dst + ih1 * IW + iw1,
-                      hidden[oh * OW + ow] * alphaw * alphah);
+            atomicAdd(dst + ih0 * IW + iw0, hidden[oh * OW + ow] * nalphaw * nalphah);
+            atomicAdd(dst + ih0 * IW + iw1, hidden[oh * OW + ow] * alphaw * nalphah);
+            atomicAdd(dst + ih1 * IW + iw0, hidden[oh * OW + ow] * nalphaw * alphah);
+            atomicAdd(dst + ih1 * IW + iw1, hidden[oh * OW + ow] * alphaw * alphah);
             hidden += OH * OW;
             dst += IH * IW;
         }
     }
 }
 
-__global__ void resize_bwd_nearest_kernel(const float* hidden, float* dst,
-                                          int N, int C, int IH, int IW, int OH,
-                                          int OW, float scale_h,
-                                          float scale_w) {
+__global__ void resize_bwd_nearest_kernel(
+        const float* hidden, float* dst, int N, int C, int IH, int IW, int OH, int OW,
+        float scale_h, float scale_w) {
     int n = blockIdx.z;
     int ow = blockIdx.x * blockDim.x + threadIdx.x;
     int oh = blockIdx.y * blockDim.y + threadIdx.y;
@@ -69,17 +64,16 @@ __global__ void resize_bwd_nearest_kernel(const float* hidden, float* dst,
         int iw = get_nearest_src(scale_w, IW, ow);
 
         for (int c = 0; c < C; ++c) {
-            atomicAdd(dst + ih * IW + iw,
-                      hidden[oh * OW + ow]);
+            atomicAdd(dst + ih * IW + iw, hidden[oh * OW + ow]);
             hidden += OH * OW;
             dst += IH * IW;
         }
     }
 }
 
-__global__ void resize_bwd_cubic_kernel(const float* hidden, float* dst, int N,
-                                        int C, int IH, int IW, int OH, int OW,
-                                        float scale_h, float scale_w) {
+__global__ void resize_bwd_cubic_kernel(
+        const float* hidden, float* dst, int N, int C, int IH, int IW, int OH, int OW,
+        float scale_h, float scale_w) {
     int n = blockIdx.z;
     int ow = blockIdx.x * blockDim.x + threadIdx.x;
     int oh = blockIdx.y * blockDim.y + threadIdx.y;
@@ -101,8 +95,9 @@ __global__ void resize_bwd_cubic_kernel(const float* hidden, float* dst, int N,
                 int ih = saturate(ih0 + kh, 0, IH - 1);
                 for (int kw = 0; kw < ksize; kw++) {
                     int iw = saturate(iw0 + kw, 0, IW - 1);
-                    atomicAdd(dst + ih * IW + iw,
-                              hidden[oh * OW + ow] * h_coeff[kh] * w_coeff[kw]);
+                    atomicAdd(
+                            dst + ih * IW + iw,
+                            hidden[oh * OW + ow] * h_coeff[kh] * w_coeff[kw]);
                 }
             }
 
@@ -112,15 +107,14 @@ __global__ void resize_bwd_cubic_kernel(const float* hidden, float* dst, int N,
     }
 }
 
-void backward_data_proxy(InterpolationMode imode, const float* diff,
-                         float* grad, int N, int C, int IH, int IW, int OH,
-                         int OW, cudaStream_t stream) {
+void backward_data_proxy(
+        InterpolationMode imode, const float* diff, float* grad, int N, int C, int IH,
+        int IW, int OH, int OW, cudaStream_t stream) {
     const int BY = 16, BX = 32;
     {
         dim3 threads(BX, BY);
         dim3 blocks((OW + BX - 1) / BX, (OH + BY - 1) / BY, N);
-        cuda_check(cudaMemsetAsync(grad, 0, sizeof(float) * N * C * IH * IW,
-                                   stream));
+        cuda_check(cudaMemsetAsync(grad, 0, sizeof(float) * N * C * IH * IW, stream));
         float scale_h = static_cast<float>(OH) / IH;
         float scale_w = static_cast<float>(OW) / IW;
         switch (imode) {

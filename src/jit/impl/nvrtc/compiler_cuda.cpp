@@ -29,32 +29,29 @@ using namespace mgb;
 using namespace jit;
 
 namespace {
-std::string NVRTCCompile(const std::string& code, int cap_major,
-                         int cap_minor) {
+std::string NVRTCCompile(const std::string& code, int cap_major, int cap_minor) {
     static std::vector<std::string> cuda_include_opts = get_cuda_include_opts();
 
-    auto arch_opt =
-            ssprintf("--gpu-architecture=compute_%d%d", cap_major, cap_minor);
+    auto arch_opt = ssprintf("--gpu-architecture=compute_%d%d", cap_major, cap_minor);
     std::vector<const char*> opts;
     opts.push_back(arch_opt.c_str());
     for (auto& inc_path : cuda_include_opts)
         opts.push_back(inc_path.c_str());
     nvrtcProgram prog;
-    MGB_NVRTC_CHECK(nvrtcCreateProgram(&prog, code.c_str(), nullptr, 0, nullptr,
-                                       nullptr));
+    MGB_NVRTC_CHECK(
+            nvrtcCreateProgram(&prog, code.c_str(), nullptr, 0, nullptr, nullptr));
     std::unique_ptr<nvrtcProgram, void (*)(nvrtcProgram*)> prog_release{
-            &prog,
-            [](nvrtcProgram* p) { MGB_NVRTC_CHECK(nvrtcDestroyProgram(p)); }};
-    nvrtcResult compile_res =
-            nvrtcCompileProgram(prog, opts.size(), opts.data());
+            &prog, [](nvrtcProgram* p) { MGB_NVRTC_CHECK(nvrtcDestroyProgram(p)); }};
+    nvrtcResult compile_res = nvrtcCompileProgram(prog, opts.size(), opts.data());
     size_t log_size;
     MGB_NVRTC_CHECK(nvrtcGetProgramLogSize(prog, &log_size));
     std::string log;
     log.resize(log_size);
     MGB_NVRTC_CHECK(nvrtcGetProgramLog(prog, &log[0]));
-    mgb_throw_if(compile_res != NVRTC_SUCCESS, SystemError,
-                 "nvrtc compile error: %s\n========= source code\n%s",
-                 log.c_str(), code.c_str());
+    mgb_throw_if(
+            compile_res != NVRTC_SUCCESS, SystemError,
+            "nvrtc compile error: %s\n========= source code\n%s", log.c_str(),
+            code.c_str());
     size_t ptx_size;
     MGB_NVRTC_CHECK(nvrtcGetPTXSize(prog, &ptx_size));
     std::string ptx;
@@ -102,8 +99,7 @@ void make_fastdiv(Uint32Fastdiv& fdiv, uint32_t d) {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Warray-bounds"
 template <int ndim>
-void host_init_pvisitor(ParamElemVisitor<ndim>& pvis,
-                        const TensorLayout& layout) {
+void host_init_pvisitor(ParamElemVisitor<ndim>& pvis, const TensorLayout& layout) {
     mgb_assert(layout.ndim && layout.ndim <= ndim);
     for (uint32_t i = 0; i < layout.ndim; ++i) {
         pvis.m_stride[i] = layout.stride[i];
@@ -121,8 +117,7 @@ void host_init_pvisitor(ParamElemVisitor<ndim>& pvis,
 #pragma GCC diagnostic pop
 
 template <size_t out_dim>
-void setup_and_launch(const JITExecutor* fusion_opr, CUfunction func,
-                      int block_size) {
+void setup_and_launch(const JITExecutor* fusion_opr, CUfunction func, int block_size) {
     auto&& args = fusion_opr->args();
 
     size_t nr_inps = args.inputs.size();
@@ -140,9 +135,10 @@ void setup_and_launch(const JITExecutor* fusion_opr, CUfunction func,
     datum[nr_inps] = reinterpret_cast<CUdeviceptr>(
             args.outputs[0].from->dev_tensor().as_megdnn().raw_ptr);
     size_t num_elements = args.outputs[0].layout.total_nr_elems();
-    mgb_assert(num_elements <= UINT32_MAX,
-               "Currently JIT only supports 32 bit of elememt size for better "
-               "performance");
+    mgb_assert(
+            num_elements <= UINT32_MAX,
+            "Currently JIT only supports 32 bit of elememt size for better "
+            "performance");
     int num_block = (num_elements - 1) / (block_size * 3) + 1;
 
     void* exec_args[3];
@@ -150,8 +146,7 @@ void setup_and_launch(const JITExecutor* fusion_opr, CUfunction func,
 
     void* datum_dev = nullptr;
     void* p_visitors_dev = nullptr;
-    const CompNodeEnv& env =
-            CompNodeEnv::from_comp_node(fusion_opr->comp_node());
+    const CompNodeEnv& env = CompNodeEnv::from_comp_node(fusion_opr->comp_node());
 
     if (!copy_param_to_dev) {
         exec_args[0] = datum.data();
@@ -162,23 +157,26 @@ void setup_and_launch(const JITExecutor* fusion_opr, CUfunction func,
                 datum_dev, datum.data(), (nr_inps + 1) * sizeof(CUdeviceptr),
                 cudaMemcpyHostToDevice, env.cuda_env().stream));
         p_visitors_dev = args.outputs[2].from->dev_tensor().as_megdnn().raw_ptr;
-        MGB_CUDA_CHECK(
-                cudaMemcpyAsync(p_visitors_dev, pvisitors.data(),
-                                nr_inps * sizeof(ParamElemVisitor<out_dim>),
-                                cudaMemcpyHostToDevice, env.cuda_env().stream));
+        MGB_CUDA_CHECK(cudaMemcpyAsync(
+                p_visitors_dev, pvisitors.data(),
+                nr_inps * sizeof(ParamElemVisitor<out_dim>), cudaMemcpyHostToDevice,
+                env.cuda_env().stream));
         exec_args[0] = &datum_dev;
         exec_args[2] = &p_visitors_dev;
     }
 
-    MGB_CUDA_CU_CHECK(cuLaunchKernel(func, num_block, 1, 1, block_size, 1, 1, 0,
-                                     env.cuda_env().stream, exec_args, 0));
+    MGB_CUDA_CU_CHECK(cuLaunchKernel(
+            func, num_block, 1, 1, block_size, 1, 1, 0, env.cuda_env().stream,
+            exec_args, 0));
 }
 }  // namespace
 
-void mgb::jit::_on_nvrtc_error(const char* expr, nvrtcResult nvrtc_res,
-                               const char* file, const char* func, int line) {
-    mgb_throw(CudaError, "nvrtc error %d: %s (%s at %s:%s:%d)", int(nvrtc_res),
-              nvrtcGetErrorString(nvrtc_res), expr, file, func, line);
+void mgb::jit::_on_nvrtc_error(
+        const char* expr, nvrtcResult nvrtc_res, const char* file, const char* func,
+        int line) {
+    mgb_throw(
+            CudaError, "nvrtc error %d: %s (%s at %s:%s:%d)", int(nvrtc_res),
+            nvrtcGetErrorString(nvrtc_res), expr, file, func, line);
 }
 
 /* =================== CudaExecutable ==================== */
@@ -198,21 +196,19 @@ void CudaExecutable::execute(JITExecutor* fusion_opr) {
         MGB_LOCK_GUARD(func->mtx);
         if (func->ptx.empty()) {
             func->compile(
-                    "jit:nvrtc:" +
-                            PersistentCache::make_category_from_comp_node(cn),
+                    "jit:nvrtc:" + PersistentCache::make_category_from_comp_node(cn),
                     prop.major, prop.minor, this);
         }
     }
     func->exec(fusion_opr, this);
 }
 
-void CudaExecutable::FuncCache::compile(const std::string& cache_category,
-                                        int major, int minor,
-                                        const CudaExecutable* cuda_exe) {
+void CudaExecutable::FuncCache::compile(
+        const std::string& cache_category, int major, int minor,
+        const CudaExecutable* cuda_exe) {
     RealTimer timer;
     auto&& cache = PersistentCache::inst();
-    PersistentCache::Blob key{cuda_exe->m_source.data(),
-                              cuda_exe->m_source.size()};
+    PersistentCache::Blob key{cuda_exe->m_source.data(), cuda_exe->m_source.size()};
     auto ptx_cache = cache.get(cache_category, key);
     if (ptx_cache.valid()) {
         ptx.assign(static_cast<const char*>(ptx_cache->ptr), ptx_cache->size);
@@ -227,8 +223,8 @@ void CudaExecutable::FuncCache::compile(const std::string& cache_category,
             timer.get_msecs());
 }
 
-void CudaExecutable::FuncCache::exec(const JITExecutor* fusion_opr,
-                                     const CudaExecutable* cuda_exe) {
+void CudaExecutable::FuncCache::exec(
+        const JITExecutor* fusion_opr, const CudaExecutable* cuda_exe) {
     Func* func;
     {
         MGB_LOCK_GUARD(mtx);
@@ -236,31 +232,28 @@ void CudaExecutable::FuncCache::exec(const JITExecutor* fusion_opr,
         func = &ins.first->second;
         if (ins.second) {
             MGB_CUDA_CU_CHECK(cuModuleLoadData(&func->module, ptx.data()));
-            MGB_CUDA_CU_CHECK(cuModuleGetFunction(&func->func, func->module,
-                                                  cuda_exe->m_name.c_str()));
+            MGB_CUDA_CU_CHECK(cuModuleGetFunction(
+                    &func->func, func->module, cuda_exe->m_name.c_str()));
             int min_grid_size = 0;
             MGB_CUDA_CU_CHECK(cuOccupancyMaxPotentialBlockSize(
-                    &min_grid_size, &func->block_size, func->func, nullptr, 0,
-                    0));
+                    &min_grid_size, &func->block_size, func->func, nullptr, 0, 0));
         }
     }
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-value"
     int out_dim = fusion_opr->args().outputs[0].layout.ndim;
-#define cb_outdim(EXPECTED_OUTDIM)                                \
-    if (EXPECTED_OUTDIM == out_dim) {                             \
-        setup_and_launch<EXPECTED_OUTDIM>(fusion_opr, func->func, \
-                                          func->block_size);      \
-        return;                                                   \
+#define cb_outdim(EXPECTED_OUTDIM)                                                   \
+    if (EXPECTED_OUTDIM == out_dim) {                                                \
+        setup_and_launch<EXPECTED_OUTDIM>(fusion_opr, func->func, func->block_size); \
+        return;                                                                      \
     }
 #pragma GCC diagnostic push
     cb_outdim(1);
     cb_outdim(2);
     cb_outdim(3);
     cb_outdim(4);
-    mgb_throw(InternalError, "unsupported out_dim=%zu",
-              static_cast<size_t>(out_dim));
+    mgb_throw(InternalError, "unsupported out_dim=%zu", static_cast<size_t>(out_dim));
 #undef cb_outdim
 }
 
@@ -288,10 +281,9 @@ std::unique_ptr<Executable> CudaCompiler::do_compile(
                 graph.placeholders().size(), MAX_CUDA_NR_INPUT);
     }
     std::string source, kernel_name;
-    std::tie(kernel_name, source) =
-            codegen_cuda(graph, args, copy_param_to_dev);
-    auto ret = std::make_unique<CudaExecutable>(std::move(source),
-                                                std::move(kernel_name));
+    std::tie(kernel_name, source) = codegen_cuda(graph, args, copy_param_to_dev);
+    auto ret =
+            std::make_unique<CudaExecutable>(std::move(source), std::move(kernel_name));
     return ret;
 }
 
@@ -308,12 +300,11 @@ void CudaCompiler::init_workspace_size_infer(JITExecutor* opr) {
         auto&& mgr = opr->owner_graph()->static_infer_manager();
         TensorShape output_shape1(
                 {(opr->input().size() + 1) * sizeof(unsigned long long)});
-        mgr.register_shape_infer(opr->output(1),
-                                 ShapeInferDesc::make_const(output_shape1));
-        TensorShape output_shape2(
-                {opr->input().size() * sizeof(ParamElemVisitor<4>)});
-        mgr.register_shape_infer(opr->output(2),
-                                 ShapeInferDesc::make_const(output_shape2));
+        mgr.register_shape_infer(
+                opr->output(1), ShapeInferDesc::make_const(output_shape1));
+        TensorShape output_shape2({opr->input().size() * sizeof(ParamElemVisitor<4>)});
+        mgr.register_shape_infer(
+                opr->output(2), ShapeInferDesc::make_const(output_shape2));
     }
 }
 

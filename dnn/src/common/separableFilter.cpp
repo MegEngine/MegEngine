@@ -14,15 +14,14 @@
 
 namespace megdnn {
 
-void SeparableFilterBase::deduce_layout_fwd(const TensorLayout& src,
-                                            const TensorLayout& filter_x,
-                                            const TensorLayout& filter_y,
-                                            TensorLayout& dst) {
+void SeparableFilterBase::deduce_layout_fwd(
+        const TensorLayout& src, const TensorLayout& filter_x,
+        const TensorLayout& filter_y, TensorLayout& dst) {
     auto errmsg = [&]() {
-        return megdnn_layout_msg(src) + ", " + megdnn_layout_msg(filter_x) +
-               ", " + megdnn_layout_msg(dst) + ", " +
-               "borderMode=" + std::to_string((int)(param().borderMode)) +
-               ", " + "ksize_h=" + std::to_string(param().ksize_h) + ", " +
+        return megdnn_layout_msg(src) + ", " + megdnn_layout_msg(filter_x) + ", " +
+               megdnn_layout_msg(dst) + ", " +
+               "borderMode=" + std::to_string((int)(param().borderMode)) + ", " +
+               "ksize_h=" + std::to_string(param().ksize_h) + ", " +
                "ksize_w=" + std::to_string(param().ksize_w) + ", " +
                "anchor_h=" + std::to_string(param().anchor_h) + ", " +
                "anchor_w=" + std::to_string(param().anchor_w);
@@ -32,8 +31,8 @@ void SeparableFilterBase::deduce_layout_fwd(const TensorLayout& src,
     megdnn_assert_contiguous(filter_x);
     megdnn_assert_contiguous(filter_y);
     megdnn_assert(src.ndim == 4_z, "%s", errmsg().c_str());
-    megdnn_assert(param().format == Param::Format::NHWC,
-                  "Only NHWC was supported by now");
+    megdnn_assert(
+            param().format == Param::Format::NHWC, "Only NHWC was supported by now");
     size_t n = src[0];
     size_t ih = src[1];
     size_t iw = src[2];
@@ -41,28 +40,25 @@ void SeparableFilterBase::deduce_layout_fwd(const TensorLayout& src,
     dst = TensorLayout(TensorShape({n, ih, iw, ic}), src.dtype);
 }
 
-void SeparableFilterBase::check_layout_fwd(const TensorLayout& src,
-                                           const TensorLayout& filter_x,
-                                           const TensorLayout& filter_y,
-                                           const TensorLayout& dst) {
+void SeparableFilterBase::check_layout_fwd(
+        const TensorLayout& src, const TensorLayout& filter_x,
+        const TensorLayout& filter_y, const TensorLayout& dst) {
     TensorLayout dst_expected;
     megdnn_assert_eq_layout(src, dst);
     deduce_layout_fwd(src, filter_x, filter_y, dst_expected);
     megdnn_assert_eq_layout(dst_expected, dst);
 }
 
-void SeparableFilterForward::deduce_layout(const TensorLayout& src,
-                                           const TensorLayout& filter_x,
-                                           const TensorLayout& filter_y,
-                                           TensorLayout& dst) {
+void SeparableFilterForward::deduce_layout(
+        const TensorLayout& src, const TensorLayout& filter_x,
+        const TensorLayout& filter_y, TensorLayout& dst) {
     deduce_layout_fwd(src, filter_x, filter_y, dst);
 }
 
-void SeparableFilterForward::check_exec(const TensorLayout& src,
-                                        const TensorLayout& filter_x,
-                                        const TensorLayout& filter_y,
-                                        const TensorLayout& dst,
-                                        size_t workspace_in_bytes) {
+void SeparableFilterForward::check_exec(
+        const TensorLayout& src, const TensorLayout& filter_x,
+        const TensorLayout& filter_y, const TensorLayout& dst,
+        size_t workspace_in_bytes) {
     megdnn_assert(param().ksize_h > 0 && (param().ksize_h & 1));
     megdnn_assert(param().ksize_w > 0 && (param().ksize_w & 1));
     check_layout_fwd(src, filter_x, filter_y, dst);
@@ -71,6 +67,6 @@ void SeparableFilterForward::check_exec(const TensorLayout& src,
     megdnn_assert(workspace_in_bytes >= required_workspace_in_bytes);
 }
 
-} // namespace megdnn
+}  // namespace megdnn
 
 // vim: syntax=cpp.doxygen

@@ -49,8 +49,7 @@ struct TopoSorter::NodeTrait {
     //! missing tag handler inputs that have been resolved by after
     //! executing operator (can either be resolved by previous opr or
     //! this opr)
-    SharedSet<static_infer::StaticInferManagerImpl::TagHandler*>
-            resolved_tag_handlers;
+    SharedSet<static_infer::StaticInferManagerImpl::TagHandler*> resolved_tag_handlers;
 };
 
 struct TopoSorter::State {
@@ -137,9 +136,7 @@ struct TopoSorter::DFSDepDiscover::StackFrame {
     void (DFSDepDiscover::*cont_addr)();
 
     StackFrame(OperatorNodeBase* opr, NodeTrait* trait)
-            : opr{opr},
-              trait{trait},
-              dep_map_end{opr->node_prop().dep_map().end()} {}
+            : opr{opr}, trait{trait}, dep_map_end{opr->node_prop().dep_map().end()} {}
 
     //! advance missing_inputs_iter to iterate in missing_inputs
     void advance_missing_inputs_iter() {
@@ -167,8 +164,7 @@ void TopoSorter::DFSDepDiscover::add_opr(OperatorNodeBase* endpoint) {
     }
 }
 
-void TopoSorter::DFSDepDiscover::push_stack(OperatorNodeBase* opr,
-                                            Proc resume) {
+void TopoSorter::DFSDepDiscover::push_stack(OperatorNodeBase* opr, Proc resume) {
     auto&& trait = m_topo_sorter->m_state->opr_trait[opr];
     mgb_assert(!trait.in_stack, "circular dep in graph");
 
@@ -232,8 +228,9 @@ void TopoSorter::DFSDepDiscover::proc_add_dep_comp_order0() {
         auto&& dep_entry = *frame->dep_map_iter;
         mgb_assert(dep_entry.first->owner_graph() == owner_graph);
         if (NP::is_device_comp_order_dep(dep_entry.second)) {
-            return push_stack(dep_entry.first->owner_opr(),
-                              &DFSDepDiscover::proc_add_dep_comp_order1);
+            return push_stack(
+                    dep_entry.first->owner_opr(),
+                    &DFSDepDiscover::proc_add_dep_comp_order1);
         } else {
             ++frame->dep_map_iter;
         }
@@ -246,8 +243,7 @@ void TopoSorter::DFSDepDiscover::proc_add_dep_comp_order1() {
     auto&& dep_entry = *frame->dep_map_iter;
     auto var = dep_entry.first;
     auto&& trait = *frame->trait;
-    trait.resolved_tag_handlers.merge_from(
-            m_prev_return_trait->resolved_tag_handlers);
+    trait.resolved_tag_handlers.merge_from(m_prev_return_trait->resolved_tag_handlers);
 
     if (NP::is_device_value_dep(dep_entry.second)) {
         ++m_topo_sorter->m_cur_extra_info->var2recvinfo[var].dev_value;
@@ -270,8 +266,8 @@ void TopoSorter::DFSDepDiscover::proc_find_missing_inp() {
         using DT = OperatorNodeBase::NodeProp::DepType;
 
         if (dep_entry.second & DT::VALUE_ALLOW_EMPTY) {
-            auto&& recv_info = m_topo_sorter->m_cur_extra_info
-                                       ->var2recvinfo[dep_entry.first];
+            auto&& recv_info =
+                    m_topo_sorter->m_cur_extra_info->var2recvinfo[dep_entry.first];
             mgb_assert(dep_entry.second & (DT::HOST_VALUE | DT::DEV_VALUE));
             ++recv_info.allow_empty_value;
         }
@@ -322,8 +318,7 @@ void TopoSorter::DFSDepDiscover::proc_dfs_missing_dep0() {
 
         VarNode* ivar = i->tag();
         frame->extra_comp_order_dep_to_add.push_back(ivar);
-        return push_stack(ivar->owner_opr(),
-                          &DFSDepDiscover::proc_dfs_missing_dep1);
+        return push_stack(ivar->owner_opr(), &DFSDepDiscover::proc_dfs_missing_dep1);
     }
 }
 
@@ -355,15 +350,14 @@ void TopoSorter::DFSDepDiscover::proc_post() {
         auto src = mgr.get_var_node_mem_trait(dest).force_update_src;
         if (!src)
             continue;
-        auto ins = m_topo_sorter->m_state->var_force_update_dest.emplace(src,
-                                                                         dest);
+        auto ins = m_topo_sorter->m_state->var_force_update_dest.emplace(src, dest);
         if (!ins.second) {
             auto opr0 = ins.first->second->owner_opr();
             MGB_MARK_USED_VAR(opr0);
-            mgb_throw(GraphError,
-                      "variable %s force updated by two oprs: %s{%s} %s{%s}",
-                      src->cname(), opr0->cname(), opr0->dyn_typeinfo()->name,
-                      opr->cname(), opr->dyn_typeinfo()->name);
+            mgb_throw(
+                    GraphError, "variable %s force updated by two oprs: %s{%s} %s{%s}",
+                    src->cname(), opr0->cname(), opr0->dyn_typeinfo()->name,
+                    opr->cname(), opr->dyn_typeinfo()->name);
         }
     }
 
@@ -378,8 +372,8 @@ void TopoSorter::DFSDepDiscover::proc_post() {
     return pop_stack();
 }
 
-const OprNodeArray* TopoSorter::get_comp_seq(CompSeqExtraInfo& extra_info,
-                                             const VarNodeArray& dest) {
+const OprNodeArray* TopoSorter::get_comp_seq(
+        CompSeqExtraInfo& extra_info, const VarNodeArray& dest) {
     // move to temporary var to be exception-safe
     PriorityRemapper priority_remapper;
     if (m_priority_remapper) {
@@ -406,8 +400,7 @@ const OprNodeArray* TopoSorter::get_comp_seq(CompSeqExtraInfo& extra_info,
         for (auto&& i : state->opr_trait) {
             if (auto mask = ExecutionMask::get_from_opr(i.first)) {
                 if (auto var = mask->owner()) {
-                    state->opr_trait.at(var->owner_opr())
-                        .receivers.push_back(i.first);
+                    state->opr_trait.at(var->owner_opr()).receivers.push_back(i.first);
                     ++i.second.unresolved_dep_cnt;
                     add_extra_comp_order_dep(i.first, var);
                 }
@@ -475,10 +468,8 @@ public:
             // dump extra json
             auto&& json_obj = *opr->to_json_extra_json;
             json_obj["priority"] = json::NumberInt::make(m_priority);
-            json_obj["input_update_time"] =
-                    json::NumberInt::make(m_input_update_time);
-            json_obj["dfs_step_num"] =
-                    json::NumberInt::make(iter->second.dfs_step_num);
+            json_obj["input_update_time"] = json::NumberInt::make(m_input_update_time);
+            json_obj["dfs_step_num"] = json::NumberInt::make(iter->second.dfs_step_num);
         }
 #endif
     }
@@ -491,15 +482,12 @@ public:
          *        executed together
          * key #2 is reversed ID, for stable sorting
          */
-        return std::forward_as_tuple(m_priority, rhs.m_input_update_time,
-                                     rhs.m_id) <
+        return std::forward_as_tuple(m_priority, rhs.m_input_update_time, rhs.m_id) <
                std::forward_as_tuple(rhs.m_priority, m_input_update_time, m_id);
     }
 
     //! used for std::priority_queue
-    bool operator<(const BFSQueueElem& rhs) const {
-        return rhs.order_before(*this);
-    }
+    bool operator<(const BFSQueueElem& rhs) const { return rhs.order_before(*this); }
 
     OprTraitIter trait_iter() const { return m_trait_iter; }
 };
@@ -548,9 +536,9 @@ void TopoSorter::bfs_make_seq() {
                 "its updated version. List of unresolved update var pairs:"};
         for (auto&& i : state->var_force_update_dest) {
             auto v0 = i.first, v1 = i.second;
-            if (std::max(state->opr_trait[v0->owner_opr()].pos,
-                         state->opr_trait[v1->owner_opr()].pos) ==
-                NodeTrait::NPOS) {
+            if (std::max(
+                        state->opr_trait[v0->owner_opr()].pos,
+                        state->opr_trait[v1->owner_opr()].pos) == NodeTrait::NPOS) {
                 msg.append(ssprintf("\n%s, %s", v0->cname(), v1->cname()));
             }
         }
@@ -566,8 +554,7 @@ void TopoSorter::add_extra_comp_order_dep(OperatorNodeBase* opr, VarNode* var) {
     auto&& dep_map = node_prop.dep_map();
     auto iter = dep_map.find(var);
     using DepType = OprNodeProp::DepType;
-    DepType orig_v =
-            iter == dep_map.end() ? OprNodeProp::DepType{} : iter->second;
+    DepType orig_v = iter == dep_map.end() ? OprNodeProp::DepType{} : iter->second;
     constexpr DepType dt_add = DepType::DEV_COMP_ORDER;
     if (!(orig_v & dt_add)) {
         node_prop.add_dep_type(var, dt_add);
@@ -584,8 +571,7 @@ void TopoSorter::restore_opr_prop() {
         OprNodeProp::DepType dep;
         std::tie(opr, var, dep) = i;
 
-        auto&& dep_map =
-                const_cast<OprNodeProp::DepMap&>(opr->node_prop().dep_map());
+        auto&& dep_map = const_cast<OprNodeProp::DepMap&>(opr->node_prop().dep_map());
 
         if (dep == OprNodeProp::DepType{})
             dep_map.erase(var);
@@ -596,4 +582,3 @@ void TopoSorter::restore_opr_prop() {
 }
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
-

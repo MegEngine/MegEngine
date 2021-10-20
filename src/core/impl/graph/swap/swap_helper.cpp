@@ -21,8 +21,7 @@ using namespace swap;
 
 SwapCopyThreadPool& SwapCopyThreadPool::inst(CompNode cn) {
     auto maker = [cn]() { return std::make_shared<SwapCopyThreadPool>(cn); };
-    return CompNodeEnv::from_comp_node(cn).get_user_data<SwapCopyThreadPool>(
-            maker);
+    return CompNodeEnv::from_comp_node(cn).get_user_data<SwapCopyThreadPool>(maker);
 }
 
 void SwapCopyThreadPool::start() {
@@ -40,8 +39,7 @@ void SwapCopyThreadPool::stop() {
 }
 
 template <typename Func, typename... Args>
-FutureThreadPool<void>::Future SwapCopyThreadPool::launch(Func&& func,
-                                                          Args&&... args) {
+FutureThreadPool<void>::Future SwapCopyThreadPool::launch(Func&& func, Args&&... args) {
     return m_pool.launch(std::forward<Func>(func), std::forward<Args>(args)...);
 }
 
@@ -53,12 +51,12 @@ void SwapVarRecorder::copy_host_to_bucket(size_t id, Bucket& dest) {
         auto p = dest.copy_task_running.exchange(true);
         mgb_assert(!p);
     }
-    mgb_assert(m_saved_buckets.find(id) != m_saved_buckets.end(),
-               " Opr %zu not executed", id);
+    mgb_assert(
+            m_saved_buckets.find(id) != m_saved_buckets.end(), " Opr %zu not executed",
+            id);
     dest.h2d_copy_refhold = (m_saved_buckets[id]);
     auto do_copy = [&dest]() {
-        dest.associate_tensor->copy_from_fixlayout(
-                *(dest.h2d_copy_refhold.get()));
+        dest.associate_tensor->copy_from_fixlayout(*(dest.h2d_copy_refhold.get()));
         auto p = dest.copy_task_running.exchange(false);
         mgb_assert(p);
         dest.associate_tensor = nullptr;
@@ -67,8 +65,7 @@ void SwapVarRecorder::copy_host_to_bucket(size_t id, Bucket& dest) {
     dest.copy_task_need_wait = true;
 }
 
-void SwapVarRecorder::copy_bucket_to_host(size_t id, Bucket& src,
-                                          CompNode comp_node) {
+void SwapVarRecorder::copy_bucket_to_host(size_t id, Bucket& src, CompNode comp_node) {
     mgb_assert(!src.copy_task_need_wait);
     {
         auto p = src.copy_task_running.exchange(true);
@@ -81,15 +78,13 @@ void SwapVarRecorder::copy_bucket_to_host(size_t id, Bucket& src,
         flag = true;
     }
     auto do_copy = [&src, this, id, flag]() {
-        src.buf_on_copy_stream.comp_node().device_wait_event(
-                src.ev_comp2copy());
+        src.buf_on_copy_stream.comp_node().device_wait_event(src.ev_comp2copy());
         src.ev_hd().record();
         src.ev_hd().host_wait();
         if (flag)
             (m_saved_buckets[id].get())->copy_from(src.buf_on_copy_stream);
         else {
-            (m_saved_buckets[id].get())
-                    ->copy_from_fixlayout(src.buf_on_copy_stream);
+            (m_saved_buckets[id].get())->copy_from_fixlayout(src.buf_on_copy_stream);
         }
         auto p = src.copy_task_running.exchange(false);
         mgb_assert(p);
@@ -99,8 +94,7 @@ void SwapVarRecorder::copy_bucket_to_host(size_t id, Bucket& src,
 }
 
 SwapVarRecorder::SwapVarRecorder(SwapVarInfo* swap_var_info, size_t ensure_size)
-        : m_copy_threadpool{SwapCopyThreadPool::inst(
-                  swap_var_info->var->comp_node())},
+        : m_copy_threadpool{SwapCopyThreadPool::inst(swap_var_info->var->comp_node())},
           m_swap_var_info{swap_var_info},
           m_ensure_size{ensure_size} {
     m_copy_threadpool.start();
@@ -118,8 +112,7 @@ SwapVarRecorder::~SwapVarRecorder() {
     m_copy_threadpool.stop();
 }
 
-void SwapVarRecorder::on_val_produced(size_t swap_out_id,
-                                      const DeviceTensorND& val) {
+void SwapVarRecorder::on_val_produced(size_t swap_out_id, const DeviceTensorND& val) {
     auto&& bucket = m_buckets_in[m_cur_bucket_in];
     m_cur_bucket_in ^= 1;
     bucket.wait_copy();
@@ -129,8 +122,7 @@ void SwapVarRecorder::on_val_produced(size_t swap_out_id,
     bucket.ev_comp2copy().record();
 }
 
-void SwapVarRecorder::wait_mission_finish(
-        const DeviceTensorND* waiting_dev_tensor) {
+void SwapVarRecorder::wait_mission_finish(const DeviceTensorND* waiting_dev_tensor) {
     for (size_t i = 0; i < Bucket::nr_buckets_out; ++i)
         if (m_buckets_out[i].associate_tensor != nullptr &&
             m_buckets_out[i].associate_tensor->raw_ptr() ==

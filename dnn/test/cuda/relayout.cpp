@@ -12,9 +12,9 @@
 #include "test/common/relayout.h"
 #include "megdnn/oprs.h"
 #include "test/common/checker.h"
+#include "test/common/rng.h"
 #include "test/cuda/benchmark.h"
 #include "test/cuda/fixture.h"
-#include "test/common/rng.h"
 
 using namespace megdnn;
 using namespace test;
@@ -62,10 +62,9 @@ TEST_F(CUDA, BENCHMARK_RELAYOUT_TRANSPOSE) {
         dst.stride[1] = c;
         dst.stride[2] = m * c;
         dst.stride[3] = 1;
-        auto time_ms =
-                benchmarker.execl({src, dst}) / RUNS;
-        printf("{%zux%zux%zux%zu}->{%zux%zux%zux%zu} bandwidth: %.2f gbps\n",
-               batch, m, n, c, batch, n, m, c,
+        auto time_ms = benchmarker.execl({src, dst}) / RUNS;
+        printf("{%zux%zux%zux%zu}->{%zux%zux%zux%zu} bandwidth: %.2f gbps\n", batch, m,
+               n, c, batch, n, m, c,
                2.f * batch * m * n * c * dtype.size() / (1e6 * time_ms));
     };
     run(16, 640, 480, 4, dtype::Int8());
@@ -89,24 +88,18 @@ TEST_F(CUDA, BENCHMARK_RELAYOUT) {
             std::swap(dst.shape[0], dst.shape[1]);
             dst.init_contiguous_stride();
             auto used = benchmarker.execl({src, dst});
-            printf("layout: %s bandwith: %f gbps/s\n",
-                   layout.to_string().c_str(),
-                   2 * layout.total_nr_elems() * layout.dtype.size() * RUNS /
-                           used * 1000 / (1024 * 1024 * 1024));
+            printf("layout: %s bandwith: %f gbps/s\n", layout.to_string().c_str(),
+                   2 * layout.total_nr_elems() * layout.dtype.size() * RUNS / used *
+                           1000 / (1024 * 1024 * 1024));
         }
     };
 
     TensorLayoutArray layouts = {
-            {{12, 23, 2}, dtype::Int32()},
-            {{12, 23, 8}, dtype::Int32()},
-            {{12, 23, 17}, dtype::Int32()},
-            {{12, 23, 64}, dtype::Int32()},
-            {{12, 23, 129}, dtype::Int32()},
-            {{12, 23, 256}, dtype::Int32()},
-            {{12, 23, 1029}, dtype::Int32()},
-            {{12, 23, 4096}, dtype::Int32()},
-            {{12, 23, 9143}, dtype::Int32()},
-            {{12, 23, 18284}, dtype::Int32()},
+            {{12, 23, 2}, dtype::Int32()},     {{12, 23, 8}, dtype::Int32()},
+            {{12, 23, 17}, dtype::Int32()},    {{12, 23, 64}, dtype::Int32()},
+            {{12, 23, 129}, dtype::Int32()},   {{12, 23, 256}, dtype::Int32()},
+            {{12, 23, 1029}, dtype::Int32()},  {{12, 23, 4096}, dtype::Int32()},
+            {{12, 23, 9143}, dtype::Int32()},  {{12, 23, 18284}, dtype::Int32()},
             {{2, 2, 1000000}, dtype::Int32()},
     };
     run(layouts);
@@ -122,10 +115,9 @@ TEST_F(CUDA, BENCHMARK_RELAYOUT) {
             dst.init_contiguous_stride();
             auto used = benchmarker.execl({src, dst});
 
-            printf("layout: %s bandwith: %f gbps/s\n",
-                   layout.to_string().c_str(),
-                   2 * layout.total_nr_elems() * layout.dtype.size() * RUNS /
-                           used * 1000 / (1024 * 1024 * 1024));
+            printf("layout: %s bandwith: %f gbps/s\n", layout.to_string().c_str(),
+                   2 * layout.total_nr_elems() * layout.dtype.size() * RUNS / used *
+                           1000 / (1024 * 1024 * 1024));
         }
     };
 
@@ -167,8 +159,8 @@ TEST_F(CUDA, BENCHMARK_RELAYOUT_LAST_NOT_CONTIG) {
         dst.init_contiguous_stride();
         auto used = benchmarker.execl({src, dst});
         printf("layout: %s bandwith: %f gbps/s\n", layout.to_string().c_str(),
-               2 * layout.total_nr_elems() * layout.dtype.size() * RUNS / used *
-                       1000 / (1024 * 1024 * 1024));
+               2 * layout.total_nr_elems() * layout.dtype.size() * RUNS / used * 1000 /
+                       (1024 * 1024 * 1024));
     };
 
     run({{16, 128, 128}, {49152, 384, 3}, dtype::Float32()},
@@ -192,10 +184,9 @@ TEST_F(CUDA, BENCHMARK_RELAYOUT_6) {
             auto used = benchmarker.execl({src, dst});
             Checker<Relayout> checker(handle_cuda());
             checker.exec(TensorLayoutArray{src, dst});
-            printf("layout: %s bandwith: %f gbps/s\n",
-                   layout.to_string().c_str(),
-                   2 * layout.total_nr_elems() * layout.dtype.size() * RUNS /
-                           used * 1000 / (1024 * 1024 * 1024));
+            printf("layout: %s bandwith: %f gbps/s\n", layout.to_string().c_str(),
+                   2 * layout.total_nr_elems() * layout.dtype.size() * RUNS / used *
+                           1000 / (1024 * 1024 * 1024));
             i++;
         }
     };
@@ -343,8 +334,8 @@ TEST_F(CUDA, BENCHMARK_RELAYOUT_7) {
         Checker<Relayout> checker(handle_cuda());
         checker.exec(TensorLayoutArray{src, dst});
         printf("layout: %s bandwith: %f gbps/s\n", layout.to_string().c_str(),
-               2 * layout.total_nr_elems() * layout.dtype.size() * RUNS / used *
-                       1000 / (1024 * 1024 * 1024));
+               2 * layout.total_nr_elems() * layout.dtype.size() * RUNS / used * 1000 /
+                       (1024 * 1024 * 1024));
     };
 
     std::vector<size_t> _dim = {5, 3, 2, 4, 35, 33, 37};
@@ -364,8 +355,7 @@ TEST_F(CUDA, BENCHMARK_RELAYOUT_7) {
         COMPAT_RANDOM(_dim.begin(), _dim.end());
         COMPAT_RANDOM(permutation.begin(), permutation.end());
         if (!isTrivial(permutation)) {
-            run({{_dim[0], _dim[1], _dim[2], _dim[3], _dim[4], _dim[5],
-                  _dim[6]},
+            run({{_dim[0], _dim[1], _dim[2], _dim[3], _dim[4], _dim[5], _dim[6]},
                  dtype::Int32()},
                 permutation);
         }
@@ -395,14 +385,14 @@ TEST_F(CUDA, BENCHMARK_RELAYOUT_5) {
         Checker<Relayout> checker(handle_cuda());
         checker.exec(TensorLayoutArray{src, dst});
         printf("layout: %s bandwith: %f gbps/s\n", layout.to_string().c_str(),
-               2 * layout.total_nr_elems() * layout.dtype.size() * RUNS / used *
-                       1000 / (1024 * 1024 * 1024));
+               2 * layout.total_nr_elems() * layout.dtype.size() * RUNS / used * 1000 /
+                       (1024 * 1024 * 1024));
     };
 
     size_t two = 2;
     int ratio = 5;
     int numElemAvg = 1000000 * 200;
-    UniformFloatRNG numElem_dist((double)numElemAvg, (double)numElemAvg*0.2);
+    UniformFloatRNG numElem_dist((double)numElemAvg, (double)numElemAvg * 0.2);
     for (int rank = 5; rank <= 5; rank++) {
         for (int iter = 0; iter < 20; iter++) {
             int numElem = (int)numElem_dist.gen_single_val();
@@ -479,10 +469,10 @@ TEST_F(CUDA, BENCHMARK_RELAYOUT_NCHW_NCHW4) {
         checker.exec(TensorLayoutArray{src, dst});
 
         printf("layout: %s bandwith: %f gbps/s\n", layout.to_string().c_str(),
-               2 * layout.total_nr_elems() * layout.dtype.size() * RUNS / used *
-                       1000 / (1024 * 1024 * 1024));
+               2 * layout.total_nr_elems() * layout.dtype.size() * RUNS / used * 1000 /
+                       (1024 * 1024 * 1024));
     };
-    UniformIntRNG u(2,100);
+    UniformIntRNG u(2, 100);
     printf("NCHW->NCHW4\n");
     for (int i = 0; i < 20; i++) {
         int d1 = u.gen_single_val();
@@ -530,10 +520,10 @@ TEST_F(CUDA, BENCHMARK_RELAYOUT_NCHW4_NCHW32) {
         checker.exec(TensorLayoutArray{src, dst});
 
         printf("layout: %s bandwith: %f gbps/s\n", layout.to_string().c_str(),
-               2 * layout.total_nr_elems() * layout.dtype.size() * RUNS / used *
-                       1000 / (1024 * 1024 * 1024));
+               2 * layout.total_nr_elems() * layout.dtype.size() * RUNS / used * 1000 /
+                       (1024 * 1024 * 1024));
     };
-    UniformIntRNG u(4,50);
+    UniformIntRNG u(4, 50);
     printf("NCHW4 to NCHW32\n");
     for (int i = 0; i < 20; i++) {
         int d1 = u.gen_single_val();
@@ -544,8 +534,8 @@ TEST_F(CUDA, BENCHMARK_RELAYOUT_NCHW4_NCHW32) {
         int d6 = 4;
         run({{(size_t)d1, (size_t)d2 / 8, (size_t)d3, (size_t)d4, (size_t)d5,
               (size_t)d6},
-             {d2 * d3 * d4 * d5 * d6 / 8, d3 * d4 * d5 * d6, d4 * d5 * d6,
-              d5 * d6, d6, 1},
+             {d2 * d3 * d4 * d5 * d6 / 8, d3 * d4 * d5 * d6, d4 * d5 * d6, d5 * d6, d6,
+              1},
              dtype::Int8()},
             {0, 1, 3, 4, 2, 5});
     }
@@ -559,8 +549,8 @@ TEST_F(CUDA, BENCHMARK_RELAYOUT_NCHW4_NCHW32) {
         int d6 = 4;
         run({{(size_t)d1, (size_t)d2 / 8, (size_t)d3, (size_t)d4, (size_t)d5,
               (size_t)d6},
-             {d2 * d3 * d4 * d5 * d6 / 8, d3 * d4 * d5 * d6, d4 * d5 * d6,
-              d5 * d6, d6, 1},
+             {d2 * d3 * d4 * d5 * d6 / 8, d3 * d4 * d5 * d6, d4 * d5 * d6, d5 * d6, d6,
+              1},
              dtype::Int8()},
             {0, 1, 4, 2, 3, 5});
     }
@@ -581,10 +571,10 @@ TEST_F(CUDA, BENCHMARK_LAST_CONTIG_ALIGN_TEST) {
         Checker<Relayout> checker(handle_cuda());
         checker.exec(TensorLayoutArray{src, dst});
         printf("layout: %s bandwith: %f gbps/s\n", layout.to_string().c_str(),
-               2 * layout.total_nr_elems() * layout.dtype.size() * RUNS / used *
-                       1000 / (1024 * 1024 * 1024));
+               2 * layout.total_nr_elems() * layout.dtype.size() * RUNS / used * 1000 /
+                       (1024 * 1024 * 1024));
     };
-    UniformIntRNG u(4,50);
+    UniformIntRNG u(4, 50);
     std::vector<size_t> _dim(6);
     std::vector<size_t> permutation(_dim.size());
     for (size_t r = 0; r < _dim.size(); r++) {
@@ -612,8 +602,7 @@ TEST_F(CUDA, BENCHMARK_LAST_CONTIG_ALIGN_TEST) {
         else
             _dim[5] = u.gen_single_val();
 
-        run({{_dim[0], _dim[1], _dim[2], _dim[3], _dim[4], _dim[5]},
-             dtype::Int8()},
+        run({{_dim[0], _dim[1], _dim[2], _dim[3], _dim[4], _dim[5]}, dtype::Int8()},
             permutation);
     }
 }
@@ -627,10 +616,12 @@ TEST_F(CUDA, RELAYOUT) {
     std::vector<Arg> args;
     {
         // contiguous stride
-        args.emplace_back(TensorLayout({4, 3, 2}, {2, 8, 1}, dtype::Float16()),
-                          TensorLayout({4, 3, 2}, {6, 2, 1}, dtype::Float16()));
-        args.emplace_back(TensorLayout({4, 3, 2}, {6, 2, 1}, dtype::Float16()),
-                          TensorLayout({4, 3, 2}, {2, 8, 1}, dtype::Float16()));
+        args.emplace_back(
+                TensorLayout({4, 3, 2}, {2, 8, 1}, dtype::Float16()),
+                TensorLayout({4, 3, 2}, {6, 2, 1}, dtype::Float16()));
+        args.emplace_back(
+                TensorLayout({4, 3, 2}, {6, 2, 1}, dtype::Float16()),
+                TensorLayout({4, 3, 2}, {2, 8, 1}, dtype::Float16()));
         args.emplace_back(
                 TensorLayout({2, 4, 3, 5}, {60, 5, 20, 1}, dtype::Float16()),
                 TensorLayout({2, 4, 3, 5}, {60, 15, 5, 1}, dtype::Float16()));
@@ -660,45 +651,56 @@ TEST_F(CUDA, RELAYOUT) {
     {
         // 1d
         size_t n = 10000;
-        args.emplace_back(TensorLayout({n}, {1}, dtype::Int32()),
-                          TensorLayout({n}, {1}, dtype::Int32()));
-        args.emplace_back(TensorLayout({n}, {1}, dtype::Int32()),
-                          TensorLayout({n}, {2}, dtype::Int32()));
-        args.emplace_back(TensorLayout({n}, {2}, dtype::Int32()),
-                          TensorLayout({n}, {1}, dtype::Int32()));
-        args.emplace_back(TensorLayout({n}, {2}, dtype::Int32()),
-                          TensorLayout({n}, {2}, dtype::Int32()));
+        args.emplace_back(
+                TensorLayout({n}, {1}, dtype::Int32()),
+                TensorLayout({n}, {1}, dtype::Int32()));
+        args.emplace_back(
+                TensorLayout({n}, {1}, dtype::Int32()),
+                TensorLayout({n}, {2}, dtype::Int32()));
+        args.emplace_back(
+                TensorLayout({n}, {2}, dtype::Int32()),
+                TensorLayout({n}, {1}, dtype::Int32()));
+        args.emplace_back(
+                TensorLayout({n}, {2}, dtype::Int32()),
+                TensorLayout({n}, {2}, dtype::Int32()));
     }
     {
         // 2d
         size_t m = 200, n = 300, k = 400;
         ptrdiff_t k2 = k * 2;
-        args.emplace_back(TensorLayout({m, n}, {k2, 2}, dtype::Int32()),
-                          TensorLayout({m, n}, {k2 + 1, 2}, dtype::Int32()));
-        args.emplace_back(TensorLayout({m, n}, {2, k2}, dtype::Int32()),
-                          TensorLayout({m, n}, {2, k2 + 1}, dtype::Int32()));
-        args.emplace_back(TensorLayout({m, n}, {2, k2}, dtype::Int32()),
-                          TensorLayout({m, n}, {k2 + 1, 2}, dtype::Int32()));
-        args.emplace_back(TensorLayout({m, n}, {k2, 2}, dtype::Int32()),
-                          TensorLayout({m, n}, {2, k2 + 1}, dtype::Int32()));
-        args.emplace_back(TensorLayout({m, n}, {k2, 1}, dtype::Int32()),
-                          TensorLayout({m, n}, {k2 + 1, 1}, dtype::Int32()));
-        args.emplace_back(TensorLayout({m, n}, {1, k2}, dtype::Int32()),
-                          TensorLayout({m, n}, {1, k2 + 1}, dtype::Int32()));
-        args.emplace_back(TensorLayout({m, n}, {1, k2}, dtype::Int32()),
-                          TensorLayout({m, n}, {k2 + 1, 1}, dtype::Int32()));
-        args.emplace_back(TensorLayout({m, n}, {k2, 1}, dtype::Int32()),
-                          TensorLayout({m, n}, {1, k2 + 1}, dtype::Int32()));
+        args.emplace_back(
+                TensorLayout({m, n}, {k2, 2}, dtype::Int32()),
+                TensorLayout({m, n}, {k2 + 1, 2}, dtype::Int32()));
+        args.emplace_back(
+                TensorLayout({m, n}, {2, k2}, dtype::Int32()),
+                TensorLayout({m, n}, {2, k2 + 1}, dtype::Int32()));
+        args.emplace_back(
+                TensorLayout({m, n}, {2, k2}, dtype::Int32()),
+                TensorLayout({m, n}, {k2 + 1, 2}, dtype::Int32()));
+        args.emplace_back(
+                TensorLayout({m, n}, {k2, 2}, dtype::Int32()),
+                TensorLayout({m, n}, {2, k2 + 1}, dtype::Int32()));
+        args.emplace_back(
+                TensorLayout({m, n}, {k2, 1}, dtype::Int32()),
+                TensorLayout({m, n}, {k2 + 1, 1}, dtype::Int32()));
+        args.emplace_back(
+                TensorLayout({m, n}, {1, k2}, dtype::Int32()),
+                TensorLayout({m, n}, {1, k2 + 1}, dtype::Int32()));
+        args.emplace_back(
+                TensorLayout({m, n}, {1, k2}, dtype::Int32()),
+                TensorLayout({m, n}, {k2 + 1, 1}, dtype::Int32()));
+        args.emplace_back(
+                TensorLayout({m, n}, {k2, 1}, dtype::Int32()),
+                TensorLayout({m, n}, {1, k2 + 1}, dtype::Int32()));
     }
     {
         // 3d
         size_t m = 20, n = 30, k = 40;
         ptrdiff_t k2 = k;
         args.emplace_back(
-                TensorLayout({m, n, k}, {k2 * k2 * 4, k2 * 3, 2},
-                             dtype::Int32()),
-                TensorLayout({m, n, k}, {2 * k2 * k2 * k2 * 4, k2 * 3, 2},
-                             dtype::Int32()));
+                TensorLayout({m, n, k}, {k2 * k2 * 4, k2 * 3, 2}, dtype::Int32()),
+                TensorLayout(
+                        {m, n, k}, {2 * k2 * k2 * k2 * 4, k2 * 3, 2}, dtype::Int32()));
     }
     {
         // simplify_layout
@@ -709,9 +711,9 @@ TEST_F(CUDA, RELAYOUT) {
                         {2, 3, 4, 5, 6},
                         {2 * 3 * 4 * 5 * 6, 2 * 4 * 5 * 6, 2 * 5 * 6, 6, 1},
                         dtype::Int32()),
-                TensorLayout({2, 3, 4, 5, 6},
-                             {4 * 3 * 4 * 5 * 6, 4 * 5 * 6, 5 * 6, 6, 1},
-                             dtype::Int32()));
+                TensorLayout(
+                        {2, 3, 4, 5, 6}, {4 * 3 * 4 * 5 * 6, 4 * 5 * 6, 5 * 6, 6, 1},
+                        dtype::Int32()));
     }
 
     Checker<Relayout> checker(handle_cuda());
@@ -752,10 +754,12 @@ TEST_F(CUDA, RELAYOUT_INT8) {
     std::vector<Arg> args;
     {
         // contiguous stride
-        args.emplace_back(TensorLayout({4, 3, 2}, {2, 8, 1}, dtype::Int8()),
-                          TensorLayout({4, 3, 2}, {6, 2, 1}, dtype::Int8()));
-        args.emplace_back(TensorLayout({4, 3, 2}, {6, 2, 1}, dtype::Int8()),
-                          TensorLayout({4, 3, 2}, {2, 8, 1}, dtype::Int8()));
+        args.emplace_back(
+                TensorLayout({4, 3, 2}, {2, 8, 1}, dtype::Int8()),
+                TensorLayout({4, 3, 2}, {6, 2, 1}, dtype::Int8()));
+        args.emplace_back(
+                TensorLayout({4, 3, 2}, {6, 2, 1}, dtype::Int8()),
+                TensorLayout({4, 3, 2}, {2, 8, 1}, dtype::Int8()));
         args.emplace_back(
                 TensorLayout({2, 4, 3, 5}, {60, 5, 20, 1}, dtype::Int8()),
                 TensorLayout({2, 4, 3, 5}, {60, 15, 5, 1}, dtype::Int8()));
@@ -785,45 +789,56 @@ TEST_F(CUDA, RELAYOUT_INT8) {
     {
         // 1d
         size_t n = 10000;
-        args.emplace_back(TensorLayout({n}, {1}, dtype::Int8()),
-                          TensorLayout({n}, {1}, dtype::Int8()));
-        args.emplace_back(TensorLayout({n}, {1}, dtype::Int8()),
-                          TensorLayout({n}, {2}, dtype::Int8()));
-        args.emplace_back(TensorLayout({n}, {2}, dtype::Int8()),
-                          TensorLayout({n}, {1}, dtype::Int8()));
-        args.emplace_back(TensorLayout({n}, {2}, dtype::Int8()),
-                          TensorLayout({n}, {2}, dtype::Int8()));
+        args.emplace_back(
+                TensorLayout({n}, {1}, dtype::Int8()),
+                TensorLayout({n}, {1}, dtype::Int8()));
+        args.emplace_back(
+                TensorLayout({n}, {1}, dtype::Int8()),
+                TensorLayout({n}, {2}, dtype::Int8()));
+        args.emplace_back(
+                TensorLayout({n}, {2}, dtype::Int8()),
+                TensorLayout({n}, {1}, dtype::Int8()));
+        args.emplace_back(
+                TensorLayout({n}, {2}, dtype::Int8()),
+                TensorLayout({n}, {2}, dtype::Int8()));
     }
     {
         // 2d
         size_t m = 200, n = 300, k = 400;
         ptrdiff_t k2 = k * 2;
-        args.emplace_back(TensorLayout({m, n}, {k2, 2}, dtype::Int8()),
-                          TensorLayout({m, n}, {k2 + 1, 2}, dtype::Int8()));
-        args.emplace_back(TensorLayout({m, n}, {2, k2}, dtype::Int8()),
-                          TensorLayout({m, n}, {2, k2 + 1}, dtype::Int8()));
-        args.emplace_back(TensorLayout({m, n}, {2, k2}, dtype::Int8()),
-                          TensorLayout({m, n}, {k2 + 1, 2}, dtype::Int8()));
-        args.emplace_back(TensorLayout({m, n}, {k2, 2}, dtype::Int8()),
-                          TensorLayout({m, n}, {2, k2 + 1}, dtype::Int8()));
-        args.emplace_back(TensorLayout({m, n}, {k2, 1}, dtype::Int8()),
-                          TensorLayout({m, n}, {k2 + 1, 1}, dtype::Int8()));
-        args.emplace_back(TensorLayout({m, n}, {1, k2}, dtype::Int8()),
-                          TensorLayout({m, n}, {1, k2 + 1}, dtype::Int8()));
-        args.emplace_back(TensorLayout({m, n}, {1, k2}, dtype::Int8()),
-                          TensorLayout({m, n}, {k2 + 1, 1}, dtype::Int8()));
-        args.emplace_back(TensorLayout({m, n}, {k2, 1}, dtype::Int8()),
-                          TensorLayout({m, n}, {1, k2 + 1}, dtype::Int8()));
+        args.emplace_back(
+                TensorLayout({m, n}, {k2, 2}, dtype::Int8()),
+                TensorLayout({m, n}, {k2 + 1, 2}, dtype::Int8()));
+        args.emplace_back(
+                TensorLayout({m, n}, {2, k2}, dtype::Int8()),
+                TensorLayout({m, n}, {2, k2 + 1}, dtype::Int8()));
+        args.emplace_back(
+                TensorLayout({m, n}, {2, k2}, dtype::Int8()),
+                TensorLayout({m, n}, {k2 + 1, 2}, dtype::Int8()));
+        args.emplace_back(
+                TensorLayout({m, n}, {k2, 2}, dtype::Int8()),
+                TensorLayout({m, n}, {2, k2 + 1}, dtype::Int8()));
+        args.emplace_back(
+                TensorLayout({m, n}, {k2, 1}, dtype::Int8()),
+                TensorLayout({m, n}, {k2 + 1, 1}, dtype::Int8()));
+        args.emplace_back(
+                TensorLayout({m, n}, {1, k2}, dtype::Int8()),
+                TensorLayout({m, n}, {1, k2 + 1}, dtype::Int8()));
+        args.emplace_back(
+                TensorLayout({m, n}, {1, k2}, dtype::Int8()),
+                TensorLayout({m, n}, {k2 + 1, 1}, dtype::Int8()));
+        args.emplace_back(
+                TensorLayout({m, n}, {k2, 1}, dtype::Int8()),
+                TensorLayout({m, n}, {1, k2 + 1}, dtype::Int8()));
     }
     {
         // 3d
         size_t m = 20, n = 30, k = 40;
         ptrdiff_t k2 = k;
         args.emplace_back(
-                TensorLayout({m, n, k}, {k2 * k2 * 4, k2 * 3, 2},
-                             dtype::Int8()),
-                TensorLayout({m, n, k}, {2 * k2 * k2 * k2 * 4, k2 * 3, 2},
-                             dtype::Int8()));
+                TensorLayout({m, n, k}, {k2 * k2 * 4, k2 * 3, 2}, dtype::Int8()),
+                TensorLayout(
+                        {m, n, k}, {2 * k2 * k2 * k2 * 4, k2 * 3, 2}, dtype::Int8()));
     }
     {
         // simplify_layout
@@ -834,18 +849,18 @@ TEST_F(CUDA, RELAYOUT_INT8) {
                         {2, 3, 4, 5, 6},
                         {2 * 3 * 4 * 5 * 6, 2 * 4 * 5 * 6, 2 * 5 * 6, 6, 1},
                         dtype::Int8()),
-                TensorLayout({2, 3, 4, 5, 6},
-                             {4 * 3 * 4 * 5 * 6, 4 * 5 * 6, 5 * 6, 6, 1},
-                             dtype::Int8()));
+                TensorLayout(
+                        {2, 3, 4, 5, 6}, {4 * 3 * 4 * 5 * 6, 4 * 5 * 6, 5 * 6, 6, 1},
+                        dtype::Int8()));
 
         args.emplace_back(
                 TensorLayout(
                         {2, 3, 4, 5, 6},
                         {4 * 3 * 4 * 5 * 6, 4 * 4 * 5 * 6, 2 * 5 * 6, 6, 1},
                         dtype::Int8()),
-                TensorLayout({2, 3, 4, 5, 6},
-                             {4 * 3 * 4 * 5 * 6, 4 * 5 * 6, 5 * 6, 6, 1},
-                             dtype::Int8()));
+                TensorLayout(
+                        {2, 3, 4, 5, 6}, {4 * 3 * 4 * 5 * 6, 4 * 5 * 6, 5 * 6, 6, 1},
+                        dtype::Int8()));
     }
 
     Checker<Relayout> checker(handle_cuda());
@@ -861,45 +876,61 @@ TEST_F(CUDA, RELAYOUT_TEST) {
     };
     std::vector<Arg> args;
     //! dst contig
-    args.emplace_back(TensorLayout({5, 32, 9}, {288, 1, 32}, dtype::Int8()),
-                      TensorLayout({5, 9, 32}, {288, 32, 1}, dtype::Int8()));
-    args.emplace_back(TensorLayout({5, 9, 32}, {288, 1, 9}, dtype::Int8()),
-                      TensorLayout({5, 32, 9}, {288, 9, 1}, dtype::Int8()));
+    args.emplace_back(
+            TensorLayout({5, 32, 9}, {288, 1, 32}, dtype::Int8()),
+            TensorLayout({5, 9, 32}, {288, 32, 1}, dtype::Int8()));
+    args.emplace_back(
+            TensorLayout({5, 9, 32}, {288, 1, 9}, dtype::Int8()),
+            TensorLayout({5, 32, 9}, {288, 9, 1}, dtype::Int8()));
 
-    args.emplace_back(TensorLayout({5, 4, 9}, {36, 1, 4}, dtype::Int8()),
-                      TensorLayout({5, 9, 4}, {36, 4, 1}, dtype::Int8()));
-    args.emplace_back(TensorLayout({5, 9, 4}, {36, 1, 9}, dtype::Int8()),
-                      TensorLayout({5, 4, 9}, {36, 9, 1}, dtype::Int8()));
+    args.emplace_back(
+            TensorLayout({5, 4, 9}, {36, 1, 4}, dtype::Int8()),
+            TensorLayout({5, 9, 4}, {36, 4, 1}, dtype::Int8()));
+    args.emplace_back(
+            TensorLayout({5, 9, 4}, {36, 1, 9}, dtype::Int8()),
+            TensorLayout({5, 4, 9}, {36, 9, 1}, dtype::Int8()));
 
-    args.emplace_back(TensorLayout({5, 32, 4}, {128, 1, 32}, dtype::Int8()),
-                      TensorLayout({5, 4, 32}, {128, 32, 1}, dtype::Int8()));
-    args.emplace_back(TensorLayout({5, 4, 32}, {128, 1, 4}, dtype::Int8()),
-                      TensorLayout({5, 32, 4}, {128, 4, 1}, dtype::Int8()));
+    args.emplace_back(
+            TensorLayout({5, 32, 4}, {128, 1, 32}, dtype::Int8()),
+            TensorLayout({5, 4, 32}, {128, 32, 1}, dtype::Int8()));
+    args.emplace_back(
+            TensorLayout({5, 4, 32}, {128, 1, 4}, dtype::Int8()),
+            TensorLayout({5, 32, 4}, {128, 4, 1}, dtype::Int8()));
 
-    args.emplace_back(TensorLayout({5, 7, 5}, {35, 1, 7}, dtype::Int8()),
-                      TensorLayout({5, 5, 7}, {35, 7, 1}, dtype::Int8()));
-    args.emplace_back(TensorLayout({5, 5, 7}, {35, 1, 5}, dtype::Int8()),
-                      TensorLayout({5, 7, 5}, {35, 5, 1}, dtype::Int8()));
+    args.emplace_back(
+            TensorLayout({5, 7, 5}, {35, 1, 7}, dtype::Int8()),
+            TensorLayout({5, 5, 7}, {35, 7, 1}, dtype::Int8()));
+    args.emplace_back(
+            TensorLayout({5, 5, 7}, {35, 1, 5}, dtype::Int8()),
+            TensorLayout({5, 7, 5}, {35, 5, 1}, dtype::Int8()));
     //! src contig
-    args.emplace_back(TensorLayout({5, 9, 32}, {288, 32, 1}, dtype::Int8()),
-                      TensorLayout({5, 32, 9}, {288, 1, 32}, dtype::Int8()));
-    args.emplace_back(TensorLayout({5, 32, 9}, {288, 9, 1}, dtype::Int8()),
-                      TensorLayout({5, 9, 32}, {288, 1, 9}, dtype::Int8()));
+    args.emplace_back(
+            TensorLayout({5, 9, 32}, {288, 32, 1}, dtype::Int8()),
+            TensorLayout({5, 32, 9}, {288, 1, 32}, dtype::Int8()));
+    args.emplace_back(
+            TensorLayout({5, 32, 9}, {288, 9, 1}, dtype::Int8()),
+            TensorLayout({5, 9, 32}, {288, 1, 9}, dtype::Int8()));
 
-    args.emplace_back(TensorLayout({5, 9, 4}, {36, 4, 1}, dtype::Int8()),
-                      TensorLayout({5, 4, 9}, {36, 1, 4}, dtype::Int8()));
-    args.emplace_back(TensorLayout({5, 4, 9}, {36, 9, 1}, dtype::Int8()),
-                      TensorLayout({5, 9, 4}, {36, 1, 9}, dtype::Int8()));
+    args.emplace_back(
+            TensorLayout({5, 9, 4}, {36, 4, 1}, dtype::Int8()),
+            TensorLayout({5, 4, 9}, {36, 1, 4}, dtype::Int8()));
+    args.emplace_back(
+            TensorLayout({5, 4, 9}, {36, 9, 1}, dtype::Int8()),
+            TensorLayout({5, 9, 4}, {36, 1, 9}, dtype::Int8()));
 
-    args.emplace_back(TensorLayout({5, 4, 32}, {128, 32, 1}, dtype::Int8()),
-                      TensorLayout({5, 32, 4}, {128, 1, 32}, dtype::Int8()));
-    args.emplace_back(TensorLayout({5, 32, 4}, {128, 4, 1}, dtype::Int8()),
-                      TensorLayout({5, 4, 32}, {128, 1, 4}, dtype::Int8()));
+    args.emplace_back(
+            TensorLayout({5, 4, 32}, {128, 32, 1}, dtype::Int8()),
+            TensorLayout({5, 32, 4}, {128, 1, 32}, dtype::Int8()));
+    args.emplace_back(
+            TensorLayout({5, 32, 4}, {128, 4, 1}, dtype::Int8()),
+            TensorLayout({5, 4, 32}, {128, 1, 4}, dtype::Int8()));
 
-    args.emplace_back(TensorLayout({5, 5, 7}, {35, 7, 1}, dtype::Int8()),
-                      TensorLayout({5, 7, 5}, {35, 1, 7}, dtype::Int8()));
-    args.emplace_back(TensorLayout({5, 7, 5}, {35, 5, 1}, dtype::Int8()),
-                      TensorLayout({5, 5, 7}, {35, 1, 5}, dtype::Int8()));
+    args.emplace_back(
+            TensorLayout({5, 5, 7}, {35, 7, 1}, dtype::Int8()),
+            TensorLayout({5, 7, 5}, {35, 1, 7}, dtype::Int8()));
+    args.emplace_back(
+            TensorLayout({5, 7, 5}, {35, 5, 1}, dtype::Int8()),
+            TensorLayout({5, 5, 7}, {35, 1, 5}, dtype::Int8()));
     //! cross
     args.emplace_back(
             TensorLayout({5, 9, 32}, {288 * 4, 32 * 3, 1}, dtype::Int8()),
@@ -925,6 +956,7 @@ TEST_F(CUDA, RELAYOUT_Q4) {
             .set_rng(1, &rng_int4)
             .set_dtype(0, dtype::QuantizedS4(1.f))
             .set_dtype(1, dtype::QuantizedS4(1.f))
+            .execs({{2, 2, 1, 1}, {1, 1, 2, 2}})
             .execs({{1, 64, 15, 15}, {1, 15, 15, 64}})
             .execs({{1, 5, 9, 32}, {1, 5, 32, 9}})
             .execl(TensorLayoutArray{
@@ -936,29 +968,23 @@ TEST_F(CUDA, RELAYOUT_Q4) {
             .execl(TensorLayoutArray{
                     {{20, 20, 3, 3}, {256, 12, 4, 1}, dtype::QuantizedS4{1.f}},
                     {{1200, 3}, {4, 1}, dtype::QuantizedS4{1.f}}})
-            .execl(TensorLayoutArray{{{5, 16, 7, 7, 4},
-                                      {3136, 196, 28, 4, 1},
-                                      dtype::QuantizedS4{1.f}},
-                                     {{5, 16, 7, 7, 4},
-                                      {3136, 4, 448, 64, 1},
-                                      dtype::QuantizedS4{1.f}}})
-            .execl(TensorLayoutArray{{{5, 7, 7, 16, 4},
-                                      {3136, 448, 64, 4, 1},
-                                      dtype::QuantizedS4{1.f}},
-                                     {{5, 7, 7, 16, 4},
-                                      {3136, 28, 4, 196, 1},
-                                      dtype::QuantizedS4{1.f}}})
-            .execl(TensorLayoutArray{{{5, 2, 7, 7, 32},
-                                      {3136, 1568, 224, 32, 1},
-                                      dtype::QuantizedS4{1.f}},
-                                     {{5, 2, 7, 7, 32},
-                                      {3136, 32, 448, 64, 1},
-                                      dtype::QuantizedS4{1.f}}})
-            .execl(TensorLayoutArray{{{5, 7, 7, 2, 32},
-                                      {3136, 448, 64, 32, 1},
-                                      dtype::QuantizedS4{1.f}},
-                                     {{5, 7, 7, 2, 32},
-                                      {3136, 224, 32, 1568, 1},
-                                      dtype::QuantizedS4{1.f}}});
+            .execl(TensorLayoutArray{
+                    {{5, 16, 7, 7, 4}, {3136, 196, 28, 4, 1}, dtype::QuantizedS4{1.f}},
+                    {{5, 16, 7, 7, 4}, {3136, 4, 448, 64, 1}, dtype::QuantizedS4{1.f}}})
+            .execl(TensorLayoutArray{
+                    {{5, 7, 7, 16, 4}, {3136, 448, 64, 4, 1}, dtype::QuantizedS4{1.f}},
+                    {{5, 7, 7, 16, 4}, {3136, 28, 4, 196, 1}, dtype::QuantizedS4{1.f}}})
+            .execl(TensorLayoutArray{
+                    {{5, 2, 7, 7, 32},
+                     {3136, 1568, 224, 32, 1},
+                     dtype::QuantizedS4{1.f}},
+                    {{5, 2, 7, 7, 32},
+                     {3136, 32, 448, 64, 1},
+                     dtype::QuantizedS4{1.f}}})
+            .execl(TensorLayoutArray{
+                    {{5, 7, 7, 2, 32}, {3136, 448, 64, 32, 1}, dtype::QuantizedS4{1.f}},
+                    {{5, 7, 7, 2, 32},
+                     {3136, 224, 32, 1568, 1},
+                     dtype::QuantizedS4{1.f}}});
 }
 // vim: syntax=cpp.doxygen

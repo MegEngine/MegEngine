@@ -25,7 +25,8 @@
  *
  * --------------------------------------------------------------------------
  * * This file has been modified by Megvii ("Megvii Modifications").
- * * All Megvii Modifications are Copyright (C) 2014-2021 Megvii Inc. All rights reserved.
+ * * All Megvii Modifications are Copyright (C) 2014-2021 Megvii Inc. All rights
+ * reserved.
  * --------------------------------------------------------------------------
  */
 #include "wet_act_templates.cuh"
@@ -33,35 +34,45 @@
 namespace megdnn {
 namespace cuda {
 /*
- * Each block computes weight gradients for 1 pixel, B_Y * colorsPerThread colors and B_X * filtersPerThread filters
+ * Each block computes weight gradients for 1 pixel, B_Y * colorsPerThread colors and
+ B_X * filtersPerThread filters
  * threadIdx.x determines filter
  * threadIdx.y determines color
  *
- * blockIdx.x determines filter batch of B_X * filtersPerThread, module batch of partialSum
+ * blockIdx.x determines filter batch of B_X * filtersPerThread, module batch of
+ partialSum
  * blockIdx.y determines color batch of B_Y * colorsPerThread
  * blockIdx.z determines pixel in filter
- *            NOTE: blockIdx.z is limited to values < 2^16. This means that this routine will
- *                  fail for filters >= 256*256. I'm assuming I won't ever use such large filters.
+ *            NOTE: blockIdx.z is limited to values < 2^16. This means that this routine
+ will
+ *                  fail for filters >= 256*256. I'm assuming I won't ever use such
+ large filters.
 
  * images:      (numImgColors, imgSizeY, imgSizeX, numImages), with stride given
  * hidActs:     (numFilters, numModulesY, numModulesX, numImages)
  *
- * targets:     (numModulesY*numModulesX/partialSum, numFilterColors, filterPixels, numFilters)
+ * targets:     (numModulesY*numModulesX/partialSum, numFilterColors, filterPixels,
+ numFilters)
 
  * B_X * B_Y must be divisible by preloadCases
  */
-template <int B_Y, int B_X, int filtersPerThread, int colorsPerThread, int preloadCases, bool scale>
-__global__ void conv_weight_acts_mc_mf_kepler(float* images, float* hidActs, float* targets,
-                                       const int numImages, const int numFilters,
-                                       const int numModulesY, const int numModulesX,
-                                       const int imgSizeY, const int imgSizeX, const int filterSize,
-                                       const int paddingStart, const int moduleStride, const int imgStride,
-                                       const int numImgColors, const int numGroups, const int partialSum,
-                                       const float scaleTargets, const float scaleOutputs) {
-    __shared__ float shImages[colorsPerThread * B_Y][preloadCases]; // preload preloadCases cases
-    __shared__ float shHidActs[filtersPerThread * B_X][preloadCases + 1]; // preload preloadCases cases of B_X hidacts
-    fill_shared_mem<float>((float *)shImages, sizeof(shImages)/sizeof(float), 0);
-    fill_shared_mem<float>((float *)shHidActs, sizeof(shHidActs)/sizeof(float), 0);
+template <
+        int B_Y, int B_X, int filtersPerThread, int colorsPerThread, int preloadCases,
+        bool scale>
+__global__ void conv_weight_acts_mc_mf_kepler(
+        float* images, float* hidActs, float* targets, const int numImages,
+        const int numFilters, const int numModulesY, const int numModulesX,
+        const int imgSizeY, const int imgSizeX, const int filterSize,
+        const int paddingStart, const int moduleStride, const int imgStride,
+        const int numImgColors, const int numGroups, const int partialSum,
+        const float scaleTargets, const float scaleOutputs) {
+    __shared__ float shImages[colorsPerThread * B_Y]
+                             [preloadCases];  // preload preloadCases cases
+    __shared__ float
+            shHidActs[filtersPerThread * B_X]
+                     [preloadCases + 1];  // preload preloadCases cases of B_X hidacts
+    fill_shared_mem<float>((float*)shImages, sizeof(shImages) / sizeof(float), 0);
+    fill_shared_mem<float>((float*)shHidActs, sizeof(shHidActs) / sizeof(float), 0);
     __syncthreads();
 
     const int tidx = B_X * threadIdx.y + threadIdx.x;
@@ -80,30 +91,27 @@ __global__ void conv_weight_acts_mc_mf_kepler(float* images, float* hidActs, flo
     const int blockGroupIdx = blockFilterIdx / numFiltersPerGroup;
     const int numFilterColors = numImgColors / numGroups;
 
-    const int blockPixelOffset = blockIdx.z; // pixel idx in filter
-    const int blockPixelY = blockPixelOffset / filterSize, blockPixelX = blockPixelOffset % filterSize;
-    const int blockFilterColorIdx = blockIdx.y  * B_Y * colorsPerThread;
+    const int blockPixelOffset = blockIdx.z;  // pixel idx in filter
+    const int blockPixelY = blockPixelOffset / filterSize,
+              blockPixelX = blockPixelOffset % filterSize;
+    const int blockFilterColorIdx = blockIdx.y * B_Y * colorsPerThread;
     const int imgColorIdx = blockFilterColorIdx + blockGroupIdx * numFilterColors;
 
     images += (imgColorIdx + loadY) * imgPixels * imgStride + loadX;
 
-    hidActs +=
-             blockFilterIdx * numImages * numModules
-            + loadY * numImages * numModules
-            + loadX;
+    hidActs += blockFilterIdx * numImages * numModules +
+               loadY * numImages * numModules + loadX;
 
-    targets += outputModuleIdx * numFilters * filterPixels * numFilterColors
-            + (blockFilterColorIdx + threadIdx.y) * filterPixels * numFilters
-            + blockPixelOffset * numFilters
-            + blockFilterIdx
-            + threadIdx.x;
-    //if (blockIdx.x != 0 || blockIdx.y != 0 || blockIdx.z != 0) return;
+    targets += outputModuleIdx * numFilters * filterPixels * numFilterColors +
+               (blockFilterColorIdx + threadIdx.y) * filterPixels * numFilters +
+               blockPixelOffset * numFilters + blockFilterIdx + threadIdx.x;
+    // if (blockIdx.x != 0 || blockIdx.y != 0 || blockIdx.z != 0) return;
     float* shHidActLoad = &shHidActs[loadY][loadX];
     float* shImgLoad = &shImages[loadY][loadX];
     float prod[colorsPerThread][filtersPerThread];
-    #pragma unroll
+#pragma unroll
     for (int c = 0; c < colorsPerThread; c++) {
-        #pragma unroll
+#pragma unroll
         for (int f = 0; f < filtersPerThread; f++) {
             prod[c][f] = 0;
         }
@@ -112,65 +120,87 @@ __global__ void conv_weight_acts_mc_mf_kepler(float* images, float* hidActs, flo
     for (int m = moduleIdx; m < moduleIdx + partialSum; m++) {
         const int imgLoadModPosY = paddingStart + (m / numModulesX) * moduleStride;
         const int imgLoadModPosX = paddingStart + (m % numModulesX) * moduleStride;
-        const int pxY = imgLoadModPosY + blockPixelY; // pixel x,y coords in image
+        const int pxY = imgLoadModPosY + blockPixelY;  // pixel x,y coords in image
         const int pxX = imgLoadModPosX + blockPixelX;
-        const int pixIdx = (pxY * imgSizeX + pxX) * imgStride; // pixel idx in image
+        const int pixIdx = (pxY * imgSizeX + pxX) * imgStride;  // pixel idx in image
         if (pxY >= 0 && pxY < imgSizeY && pxX >= 0 && pxX < imgSizeX) {
             for (int caseIdx = 0; caseIdx < numImages; caseIdx += preloadCases) {
                 // Checking this condition actually makes things faster ... :/
-                // So I've removed the !checkCaseBounds flag and just check it all the time.
+                // So I've removed the !checkCaseBounds flag and just check it all the
+                // time.
                 if (caseIdx + loadX < numImages) {
                     /*
-                     * As long as B_Y * B_X is divisible by preloadCases this will loop the right
-                     * number of times.
+                     * As long as B_Y * B_X is divisible by preloadCases this will loop
+                     * the right number of times.
                      *
-                     * This will load some images from filter pixels that don't exist (it'll set those to 0),
-                     * but the code does not produce any output for those pixels (see last lines).
+                     * This will load some images from filter pixels that don't exist
+                     * (it'll set those to 0), but the code does not produce any output
+                     * for those pixels (see last lines).
                      */
                     if (loadY < B_Y * colorsPerThread) {
-                        #pragma unroll
-                        for (int y = 0; y < B_Y * colorsPerThread; y += (B_X * B_Y) / preloadCases) {
-                            // Make sure number of rows in the array is divisible by number of rows filled per iteration
-                            if ((B_Y*colorsPerThread) % (B_X * B_Y / preloadCases) == 0 || y + loadY < B_Y*colorsPerThread) {
-                                shImgLoad[(y) * preloadCases] = images[caseIdx + y * imgPixels * imgStride + pixIdx];
+#pragma unroll
+                        for (int y = 0; y < B_Y * colorsPerThread;
+                             y += (B_X * B_Y) / preloadCases) {
+                            // Make sure number of rows in the array is divisible by
+                            // number of rows filled per iteration
+                            if ((B_Y * colorsPerThread) % (B_X * B_Y / preloadCases) ==
+                                        0 ||
+                                y + loadY < B_Y * colorsPerThread) {
+                                shImgLoad[(y)*preloadCases] =
+                                        images[caseIdx + y * imgPixels * imgStride +
+                                               pixIdx];
                             }
                         }
                     }
 
                     if (loadY < B_X * filtersPerThread) {
-                        #pragma unroll
-                        for (int y = 0; y < B_X * filtersPerThread; y += (B_X * B_Y) / preloadCases) {
-                            // Make sure number of rows in the array is divisible by number of rows filled per iteration
-                            if ((B_X * filtersPerThread) % (B_X * B_Y / preloadCases) == 0 || y + loadY < B_X * filtersPerThread) {
-                                shHidActLoad[y * (preloadCases + 1)] = hidActs[caseIdx + (y * numModules + m) * numImages];
+#pragma unroll
+                        for (int y = 0; y < B_X * filtersPerThread;
+                             y += (B_X * B_Y) / preloadCases) {
+                            // Make sure number of rows in the array is divisible by
+                            // number of rows filled per iteration
+                            if ((B_X * filtersPerThread) % (B_X * B_Y / preloadCases) ==
+                                        0 ||
+                                y + loadY < B_X * filtersPerThread) {
+                                shHidActLoad[y * (preloadCases + 1)] =
+                                        hidActs[caseIdx +
+                                                (y * numModules + m) * numImages];
                             }
                         }
                     }
                 } else {
-                    #pragma unroll
-                    for (int y = 0; y < B_Y * colorsPerThread; y += (B_X * B_Y) / preloadCases) {
-                        // Make sure number of rows in the array is divisible by number of rows filled per iteration
-                        if ((B_Y*colorsPerThread) % (B_X * B_Y / preloadCases) == 0 || y + loadY < B_Y*colorsPerThread) {
-                            shImgLoad[(y) * preloadCases] = 0;
+#pragma unroll
+                    for (int y = 0; y < B_Y * colorsPerThread;
+                         y += (B_X * B_Y) / preloadCases) {
+                        // Make sure number of rows in the array is divisible by number
+                        // of rows filled per iteration
+                        if ((B_Y * colorsPerThread) % (B_X * B_Y / preloadCases) == 0 ||
+                            y + loadY < B_Y * colorsPerThread) {
+                            shImgLoad[(y)*preloadCases] = 0;
                         }
                     }
-                    #pragma unroll
-                    for (int y = 0; y < B_X * filtersPerThread; y += (B_X * B_Y) / preloadCases) {
-                        // Make sure number of rows in the array is divisible by number of rows filled per iteration
-                        if ((B_X * filtersPerThread) % (B_X * B_Y / preloadCases) == 0 || y + loadY < B_X * filtersPerThread) {
+#pragma unroll
+                    for (int y = 0; y < B_X * filtersPerThread;
+                         y += (B_X * B_Y) / preloadCases) {
+                        // Make sure number of rows in the array is divisible by number
+                        // of rows filled per iteration
+                        if ((B_X * filtersPerThread) % (B_X * B_Y / preloadCases) ==
+                                    0 ||
+                            y + loadY < B_X * filtersPerThread) {
                             shHidActLoad[y * (preloadCases + 1)] = 0;
                         }
                     }
                 }
 
                 __syncthreads();
-                #pragma unroll
+#pragma unroll
                 for (int i = 0; i < preloadCases; i++) {
-                    #pragma unroll
+#pragma unroll
                     for (int f = 0; f < filtersPerThread; f++) {
-                        #pragma unroll
+#pragma unroll
                         for (int c = 0; c < colorsPerThread; c++) {
-                            prod[c][f] += shImages[threadIdx.y + c * B_Y][i] * shHidActs[threadIdx.x + f * B_X][i];
+                            prod[c][f] += shImages[threadIdx.y + c * B_Y][i] *
+                                          shHidActs[threadIdx.x + f * B_X][i];
                         }
                     }
                 }
@@ -179,23 +209,27 @@ __global__ void conv_weight_acts_mc_mf_kepler(float* images, float* hidActs, flo
         }
     }
     if (scale) {
-        #pragma unroll
+#pragma unroll
         for (int c = 0; c < colorsPerThread; c++) {
-            #pragma unroll
+#pragma unroll
             for (int f = 0; f < filtersPerThread; f++) {
-                targets[c * B_Y * filterPixels * numFilters + f * B_X] = scaleTargets * targets[c * B_Y * filterPixels * numFilters + f * B_X] + scaleOutputs * prod[c][f];
+                targets[c * B_Y * filterPixels * numFilters + f * B_X] =
+                        scaleTargets *
+                                targets[c * B_Y * filterPixels * numFilters + f * B_X] +
+                        scaleOutputs * prod[c][f];
             }
         }
     } else {
-        #pragma unroll
+#pragma unroll
         for (int c = 0; c < colorsPerThread; c++) {
-            #pragma unroll
+#pragma unroll
             for (int f = 0; f < filtersPerThread; f++) {
-                targets[c * B_Y * filterPixels * numFilters + f * B_X] = scaleOutputs * prod[c][f];
+                targets[c * B_Y * filterPixels * numFilters + f * B_X] =
+                        scaleOutputs * prod[c][f];
             }
         }
     }
 }
 
-} // namespace cuda
-} // namespace megdnn
+}  // namespace cuda
+}  // namespace megdnn

@@ -10,10 +10,10 @@
  */
 #include "src/cuda/warp_affine/common.h"
 
+#include <cstdio>
+#include "src/common/rounding_converter.cuh"
 #include "src/cuda/utils.cuh"
 #include "src/cuda/warp_affine/common.cuh"
-#include "src/common/rounding_converter.cuh"
-#include <cstdio>
 
 using namespace megdnn;
 using namespace cuda;
@@ -21,7 +21,7 @@ using namespace warp_affine;
 
 namespace {
 
-template<typename ctype>
+template <typename ctype>
 struct DirectSrcVisitor {
     const ctype* ptr;
 
@@ -29,12 +29,10 @@ struct DirectSrcVisitor {
         return ptr + batch * im_size;
     }
 
-    void move_batch(size_t batch, size_t im_size) {
-        ptr += batch * im_size;
-    }
+    void move_batch(size_t batch, size_t im_size) { ptr += batch * im_size; }
 };
 
-template<typename ctype>
+template <typename ctype>
 struct IndexedSrcVisitor {
     const ctype* ptr;
     const int* idx;
@@ -44,23 +42,21 @@ struct IndexedSrcVisitor {
         return ptr + batch * im_size;
     }
 
-    void move_batch(size_t batch, size_t) {
-        idx += batch;
-    }
+    void move_batch(size_t batch, size_t) { idx += batch; }
 };
 
-template <typename ctype, typename Getter, typename SrcVisitor,
-          typename OutputConverter>
-__global__ void kern_general(SrcVisitor src, const float* __restrict mat,
-                             ctype* __restrict dst, int C, int IH, int IW,
-                             int OH, int OW) {
+template <
+        typename ctype, typename Getter, typename SrcVisitor, typename OutputConverter>
+__global__ void kern_general(
+        SrcVisitor src, const float* __restrict mat, ctype* __restrict dst, int C,
+        int IH, int IW, int OH, int OW) {
     Getter getter;
     OutputConverter output_converter;
     int ow = blockIdx.x * blockDim.x + threadIdx.x;
     int oh = blockIdx.y * blockDim.y + threadIdx.y;
     const ctype* __restrict sptr = src.get(blockIdx.z, C * IH * IW);
-    dst += blockIdx.z * C*OH*OW;
-    mat += blockIdx.z * 2*3;
+    dst += blockIdx.z * C * OH * OW;
+    mat += blockIdx.z * 2 * 3;
     if (ow < OW && oh < OH) {
         float iw = mat[0] * ow + mat[1] * oh + mat[2];
         float ih = mat[3] * ow + mat[4] * oh + mat[5];
@@ -73,26 +69,27 @@ __global__ void kern_general(SrcVisitor src, const float* __restrict mat,
         float nalpha = 1.0f - palpha;
         float nbeta = 1.0f - pbeta;
         for (int c = 0; c < C; ++c) {
-            dst[oh*OW+ow] = output_converter(
-                sptr[ih0*IW+iw0]*nalpha*nbeta + sptr[ih0*IW+iw1]*nalpha*pbeta +
-                sptr[ih1*IW+iw0]*palpha*nbeta + sptr[ih1*IW+iw1]*palpha*pbeta);
-            sptr += IH*IW;
-            dst += OH*OW;
+            dst[oh * OW + ow] = output_converter(
+                    sptr[ih0 * IW + iw0] * nalpha * nbeta +
+                    sptr[ih0 * IW + iw1] * nalpha * pbeta +
+                    sptr[ih1 * IW + iw0] * palpha * nbeta +
+                    sptr[ih1 * IW + iw1] * palpha * pbeta);
+            sptr += IH * IW;
+            dst += OH * OW;
         }
     }
 }
 
-template<typename ctype, typename SrcVisitor, typename OutputConverter>
+template <typename ctype, typename SrcVisitor, typename OutputConverter>
 __global__ void kern_const_border(
-        SrcVisitor src, const float *__restrict mat, ctype *__restrict dst,
-        int C, int IH, int IW, int OH, int OW, ctype bval)
-{
+        SrcVisitor src, const float* __restrict mat, ctype* __restrict dst, int C,
+        int IH, int IW, int OH, int OW, ctype bval) {
     OutputConverter output_converter;
     int ow = blockIdx.x * blockDim.x + threadIdx.x;
     int oh = blockIdx.y * blockDim.y + threadIdx.y;
     const ctype* __restrict sptr = src.get(blockIdx.z, C * IH * IW);
-    dst += blockIdx.z * C*OH*OW;
-    mat += blockIdx.z * 2*3;
+    dst += blockIdx.z * C * OH * OW;
+    mat += blockIdx.z * 2 * 3;
     if (ow < OW && oh < OH) {
         float iw = mat[0] * ow + mat[1] * oh + mat[2];
         float ih = mat[3] * ow + mat[4] * oh + mat[5];
@@ -109,25 +106,25 @@ __global__ void kern_const_border(
         float nalpha = 1.0f - palpha;
         float nbeta = 1.0f - pbeta;
         for (int c = 0; c < C; ++c) {
-            ctype v00 = (okh0 && okw0 ? sptr[ih0*IW+iw0] : bval);
-            ctype v01 = (okh0 && okw1 ? sptr[ih0*IW+iw1] : bval);
-            ctype v10 = (okh1 && okw0 ? sptr[ih1*IW+iw0] : bval);
-            ctype v11 = (okh1 && okw1 ? sptr[ih1*IW+iw1] : bval);
+            ctype v00 = (okh0 && okw0 ? sptr[ih0 * IW + iw0] : bval);
+            ctype v01 = (okh0 && okw1 ? sptr[ih0 * IW + iw1] : bval);
+            ctype v10 = (okh1 && okw0 ? sptr[ih1 * IW + iw0] : bval);
+            ctype v11 = (okh1 && okw1 ? sptr[ih1 * IW + iw1] : bval);
             ctype val = output_converter(
-                v00*nalpha*nbeta + v01*nalpha*pbeta +
-                v10*palpha*nbeta + v11*palpha*pbeta);
-            dst[oh*OW+ow] = val;
-            sptr += IH*IW;
-            dst += OH*OW;
+                    v00 * nalpha * nbeta + v01 * nalpha * pbeta + v10 * palpha * nbeta +
+                    v11 * palpha * pbeta);
+            dst[oh * OW + ow] = val;
+            sptr += IH * IW;
+            dst += OH * OW;
         }
     }
 }
 
-template <typename ctype, typename Getter, typename SrcVisitor,
-          typename OutputConverter>
-__global__ void kern_general_nhwc(SrcVisitor src, const float* __restrict mat,
-                                  ctype* __restrict dst, int C, int IH, int IW,
-                                  int OH, int OW) {
+template <
+        typename ctype, typename Getter, typename SrcVisitor, typename OutputConverter>
+__global__ void kern_general_nhwc(
+        SrcVisitor src, const float* __restrict mat, ctype* __restrict dst, int C,
+        int IH, int IW, int OH, int OW) {
     Getter getter;
     OutputConverter output_converter;
     int ow = blockIdx.x * blockDim.x + threadIdx.x;
@@ -156,17 +153,16 @@ __global__ void kern_general_nhwc(SrcVisitor src, const float* __restrict mat,
     }
 }
 
-template<typename ctype, typename SrcVisitor, typename OutputConverter>
+template <typename ctype, typename SrcVisitor, typename OutputConverter>
 __global__ void kern_const_border_nhwc(
-        SrcVisitor src, const float *__restrict mat, ctype *__restrict dst,
-        int C, int IH, int IW, int OH, int OW, ctype bval)
-{
+        SrcVisitor src, const float* __restrict mat, ctype* __restrict dst, int C,
+        int IH, int IW, int OH, int OW, ctype bval) {
     OutputConverter output_converter;
     int ow = blockIdx.x * blockDim.x + threadIdx.x;
     int oh = blockIdx.y * blockDim.y + threadIdx.y;
     const ctype* __restrict sptr = src.get(blockIdx.z, C * IH * IW);
-    dst += blockIdx.z * C*OH*OW;
-    mat += blockIdx.z * 2*3;
+    dst += blockIdx.z * C * OH * OW;
+    mat += blockIdx.z * 2 * 3;
     if (ow < OW && oh < OH) {
         float iw = mat[0] * ow + mat[1] * oh + mat[2];
         float ih = mat[3] * ow + mat[4] * oh + mat[5];
@@ -183,37 +179,37 @@ __global__ void kern_const_border_nhwc(
         float nalpha = 1.0f - palpha;
         float nbeta = 1.0f - pbeta;
         for (int c = 0; c < C; ++c) {
-            ctype v00 = (okh0 && okw0 ? sptr[(ih0*IW+iw0)*C+c] : bval);
-            ctype v01 = (okh0 && okw1 ? sptr[(ih0*IW+iw1)*C+c] : bval);
-            ctype v10 = (okh1 && okw0 ? sptr[(ih1*IW+iw0)*C+c] : bval);
-            ctype v11 = (okh1 && okw1 ? sptr[(ih1*IW+iw1)*C+c] : bval);
+            ctype v00 = (okh0 && okw0 ? sptr[(ih0 * IW + iw0) * C + c] : bval);
+            ctype v01 = (okh0 && okw1 ? sptr[(ih0 * IW + iw1) * C + c] : bval);
+            ctype v10 = (okh1 && okw0 ? sptr[(ih1 * IW + iw0) * C + c] : bval);
+            ctype v11 = (okh1 && okw1 ? sptr[(ih1 * IW + iw1) * C + c] : bval);
             ctype val = output_converter(
-                v00*nalpha*nbeta + v01*nalpha*pbeta +
-                v10*palpha*nbeta + v11*palpha*pbeta);
-            dst[(oh*OW+ow)*C+c] = val;
+                    v00 * nalpha * nbeta + v01 * nalpha * pbeta + v10 * palpha * nbeta +
+                    v11 * palpha * pbeta);
+            dst[(oh * OW + ow) * C + c] = val;
         }
     }
 }
 
 template <typename ctype, typename SrcVisitor>
-void dispatch_with_visitor(bool is_nhwc, SrcVisitor src, const float* mat,
-                           ctype* dst, int N, int C, int IH, int IW, int OH,
-                           int OW, ctype bval, BorderMode bmode,
-                           cudaStream_t stream) {
+void dispatch_with_visitor(
+        bool is_nhwc, SrcVisitor src, const float* mat, ctype* dst, int N, int C,
+        int IH, int IW, int OH, int OW, ctype bval, BorderMode bmode,
+        cudaStream_t stream) {
     const int BY = 16, BX = 32;
-#define DISPATCH(Getter)                                                       \
-    do {                                                                       \
-        if (is_nhwc) {                                                         \
-            kern_general_nhwc<ctype, Getter, SrcVisitor,                       \
-                              rounding::RoundingConverter<ctype>>              \
-                    <<<blocks, threads, 0, stream>>>(src, mat, dst, C, IH, IW, \
-                                                     OH, OW);                  \
-        } else {                                                               \
-            kern_general<ctype, Getter, SrcVisitor,                            \
-                         rounding::RoundingConverter<ctype>>                   \
-                    <<<blocks, threads, 0, stream>>>(src, mat, dst, C, IH, IW, \
-                                                     OH, OW);                  \
-        }                                                                      \
+#define DISPATCH(Getter)                                                           \
+    do {                                                                           \
+        if (is_nhwc) {                                                             \
+            kern_general_nhwc<                                                     \
+                    ctype, Getter, SrcVisitor, rounding::RoundingConverter<ctype>> \
+                    <<<blocks, threads, 0, stream>>>(                              \
+                            src, mat, dst, C, IH, IW, OH, OW);                     \
+        } else {                                                                   \
+            kern_general<                                                          \
+                    ctype, Getter, SrcVisitor, rounding::RoundingConverter<ctype>> \
+                    <<<blocks, threads, 0, stream>>>(                              \
+                            src, mat, dst, C, IH, IW, OH, OW);                     \
+        }                                                                          \
     } while (0)
 
     const int max_batch_size = 65535;
@@ -237,13 +233,13 @@ void dispatch_with_visitor(bool is_nhwc, SrcVisitor src, const float* mat,
                 break;
             case BORDER_CONSTANT:
                 if (is_nhwc) {
-                    kern_const_border_nhwc<ctype, SrcVisitor,
-                                           rounding::RoundingConverter<ctype>>
+                    kern_const_border_nhwc<
+                            ctype, SrcVisitor, rounding::RoundingConverter<ctype>>
                             <<<blocks, threads, 0, stream>>>(
                                     src, mat, dst, C, IH, IW, OH, OW, bval);
                 } else {
-                    kern_const_border<ctype, SrcVisitor,
-                                      rounding::RoundingConverter<ctype>>
+                    kern_const_border<
+                            ctype, SrcVisitor, rounding::RoundingConverter<ctype>>
                             <<<blocks, threads, 0, stream>>>(
                                     src, mat, dst, C, IH, IW, OH, OW, bval);
                 }
@@ -268,20 +264,21 @@ namespace cuda {
 namespace warp_affine {
 
 template <typename ctype>
-void forward_proxy(bool is_nhwc, const ctype* src, const float* mat, ctype* dst,
-                   int N, int C, int IH, int IW, int OH, int OW, ctype bval,
-                   BorderMode bmode, cudaStream_t stream) {
+void forward_proxy(
+        bool is_nhwc, const ctype* src, const float* mat, ctype* dst, int N, int C,
+        int IH, int IW, int OH, int OW, ctype bval, BorderMode bmode,
+        cudaStream_t stream) {
     DirectSrcVisitor<ctype> visitor;
     visitor.ptr = src;
-    dispatch_with_visitor(is_nhwc, visitor, mat, dst, N, C, IH, IW, OH, OW,
-                          bval, bmode, stream);
+    dispatch_with_visitor(
+            is_nhwc, visitor, mat, dst, N, C, IH, IW, OH, OW, bval, bmode, stream);
     after_kernel_launch();
 }
 
-#define INST(ctype)                                                            \
-    template void forward_proxy(bool, const ctype*, const float*, ctype*, int, \
-                                int, int, int, int, int, ctype, BorderMode,    \
-                                cudaStream_t);
+#define INST(ctype)                                                                 \
+    template void forward_proxy(                                                    \
+            bool, const ctype*, const float*, ctype*, int, int, int, int, int, int, \
+            ctype, BorderMode, cudaStream_t);
 INST(float)
 INST(uint8_t)
 INST(int8_t)

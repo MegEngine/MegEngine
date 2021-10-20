@@ -15,20 +15,20 @@ from .optimizer import Optimizer
 
 
 class Adadelta(Optimizer):
-    r"""
-    Implements Adadelta algorithm.
-
+    r"""Implements Adadelta algorithm.
+    
     It has been proposed in `"ADADELTA: An Adaptive Learning Rate Method" <https://arxiv.org/abs/1212.5701>`_.
 
-    :param params: iterable of parameters to optimize or dicts defining
-        parameter groups.
-    :param lr: coefficient that scales delta before it is applied
-        to the parameters. Default: 1.0
-    :param rho: coefficient used for computing a running average
-        of squared gradients. Default: 0.9
-    :param eps: term added to the denominator to improve
-        numerical stability. Default: 1e-6
-    :param weight_decay: weight decay (L2 penalty). Default: 0
+    Args:
+        params: iterable of parameters to optimize or dicts defining
+            parameter groups.
+        lr: coefficient that scales delta before it is applied
+            to the parameters. Default: 1.0
+        rho: coefficient used for computing a running average
+            of squared gradients. Default: 0.9
+        eps: term added to the denominator to improve
+            numerical stability. Default: 1e-6
+        weight_decay: weight decay (L2 penalty). Default: 0
     """
 
     def __init__(

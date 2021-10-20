@@ -17,15 +17,16 @@
 using namespace megdnn;
 using namespace cuda;
 
-void RemapBackwardDataImpl::exec(_megdnn_tensor_in map_xy,
-                                 _megdnn_tensor_in diff,
-                                 _megdnn_tensor_out grad,
-                                 _megdnn_workspace workspace) {
+void RemapBackwardDataImpl::exec(
+        _megdnn_tensor_in map_xy, _megdnn_tensor_in diff, _megdnn_tensor_out grad,
+        _megdnn_workspace workspace) {
     check_exec(map_xy.layout, diff.layout, grad.layout, workspace.size);
-    megdnn_assert(param().imode == param::Remap::InterpolationMode::LINEAR,
-                  "only support LINEAR interpolationMode");
-    megdnn_assert(param().format == param::Remap::Format::NCHW,
-                  "only support NCHW format for remap backward");
+    megdnn_assert(
+            param().imode == param::Remap::InterpolationMode::LINEAR,
+            "only support LINEAR interpolationMode");
+    megdnn_assert(
+            param().format == param::Remap::Format::NCHW,
+            "only support NCHW format for remap backward");
     auto stream = cuda_stream(this->handle());
     int N, C, IH, IW, OH, OW;
     N = grad.layout.shape[0];
@@ -35,16 +36,16 @@ void RemapBackwardDataImpl::exec(_megdnn_tensor_in map_xy,
     OH = map_xy.layout.shape[1];
     OW = map_xy.layout.shape[2];
 
-#define cb(dt, _format, bmode)                                                \
-    if (param().format == param::Remap::Format::_format &&                    \
-        param().border_type == param::Remap::BorderMode::bmode) {             \
-        using ctype = DTypeTrait<dt>::ctype;                                  \
-        remap::backwarddata_proxy<ctype, param_enumv::Remap::Format::_format, \
-                                  ::BorderMode::BORDER_##bmode>(              \
-                grad.compatible_ptr<ctype>(),                                 \
-                map_xy.compatible_ptr<dt_float32>(),                          \
-                diff.compatible_ptr<ctype>(), N, C, IH, IW, OH, OW, stream);  \
-        break;                                                                \
+#define cb(dt, _format, bmode)                                                     \
+    if (param().format == param::Remap::Format::_format &&                         \
+        param().border_type == param::Remap::BorderMode::bmode) {                  \
+        using ctype = DTypeTrait<dt>::ctype;                                       \
+        remap::backwarddata_proxy<                                                 \
+                ctype, param_enumv::Remap::Format::_format,                        \
+                ::BorderMode::BORDER_##bmode>(                                     \
+                grad.compatible_ptr<ctype>(), map_xy.compatible_ptr<dt_float32>(), \
+                diff.compatible_ptr<ctype>(), N, C, IH, IW, OH, OW, stream);       \
+        break;                                                                     \
     }
 
 #define support_dtype(dt)                                      \

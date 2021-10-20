@@ -33,8 +33,7 @@ public:
     MLIRCompiler(CompNode::DeviceType device_type = CompNode::DeviceType::CPU);
     Property property() const override {
         using F = Property::Flag;
-        return Property{F::BIND_NDIM | F::BIND_SHAPE,
-                        JITFeatureBits::DIMSHUFFLE, 64};
+        return Property{F::BIND_NDIM | F::BIND_SHAPE, JITFeatureBits::DIMSHUFFLE, 64};
     }
 
     size_t get_nr_workspace_outputs(JITExecutor* opr) const override;

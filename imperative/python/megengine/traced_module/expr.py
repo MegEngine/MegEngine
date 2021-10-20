@@ -33,17 +33,22 @@ def rstrip(s: str, __chars: str):
 
 
 class Expr:
-    """
-    ``Expr`` represents the operations(i.e. CallMethod, CallFunction, Apply, GetAttr, Input, Constant) on ``Node``.
+    r"""``Expr`` represents the operations (i.e. ``CallMethod``, ``CallFunction``, ``Apply``, 
+    ``GetAttr``, ``Input``, ``Constant``) on ``Node``.
     """
 
-    __total_id = 0
     inputs = None  # type: List[Node]
+    r"""The input Nodes of this Expr."""
     outputs = None  # type: List[Node]
+    r"""The output Nodes of this Expr."""
     const_val = None  # type: List[Any]
+    r"""The non-tensor object in the input of the operation."""
     arg_def = None  # type: TreeDef
+    r"""The :class:`TreeDef` used to reconstruct the input of the operation."""
     out_def = None  # type: TreeDef
+    r"""The :class:`TreeDef` used to reconstruct the output of the operation."""
     _top_graph = None  # type: weakref.ReferenceType
+    __total_id = 0
 
     def __init__(self) -> None:
         self._id = Expr.__total_id
@@ -127,6 +132,11 @@ class Expr:
             return inputs, {}
 
     def replace_inputs(self, repl_dict: Dict[Node, Node]):
+        r"""Replace the input Nodes of this Expr.
+        
+        Args:
+            repl_dict: the map {old_Node: new_Node} that specifies how to replace the input Nodes.
+        """
         while repl_dict:
             node, repl_node = repl_dict.popitem()
             assert type(node) == type(repl_node)
@@ -149,16 +159,19 @@ class Expr:
 
     @property
     def kwargs(self):
+        r"""Get the the keyword arguments of the operation corresponding to this Expr."""
         _, kwargs = self.unflatten_args(self.inputs)
         return kwargs
 
     @property
     def args(self):
+        r"""Get the the positional arguments of the operation corresponding to this Expr."""
         args, _ = self.unflatten_args(self.inputs)
         return args
 
     @property
     def top_graph(self):
+        r"""Get the parent graph of this Expr."""
         if self._top_graph:
             return self._top_graph()
         return None
@@ -169,9 +182,19 @@ class Expr:
             state.pop("_top_graph")
         return state
 
+    @classmethod
+    def _get_next_id(cls):
+        return cls.__total_id
+
+    @classmethod
+    def _set_next_id(cls, id: int = 0):
+        assert isinstance(id, int)
+        cls.__total_id = id
+
 
 # expr: None (i.e. fake expression which is used to mark input)
 class Input(Expr):
+    r"""A fake Expr which is used to mark the input of graph."""
     name = None
 
     def __init__(self, name=None, type=None, orig_name=None):
@@ -197,12 +220,15 @@ class Input(Expr):
         return expr.outputs[0]
 
     def __repr__(self):
-        return "%{}:\t{} = Input({})".format(self._id, self.outputs[0], self.name)
+        return "%{}:\t{} = Input()".format(self._id, self.outputs[0])
 
 
 # expr: outputs = getattr(inputs[0], self.name)
 class GetAttr(Expr):
+    r"""``Getattr`` represents the fetch of an attribute from the ``Module`` hierarchy."""
+
     name = None
+    r"""name: the qualified name of the attribute to be retrieved."""
 
     def __init__(self, module, name, type=None, orig_name=None):
         super().__init__()
@@ -244,6 +270,14 @@ class GetAttr(Expr):
 
 # expr: outputs = inputs[0].__call__(*inputs[1:])
 class CallMethod(Expr):
+    r"""``CallMethod`` represents a call to the ``__call__`` method of ``Module`` or a method of ``Tensor``.
+
+    Args:
+        node: the Node to be called.
+        method: the method name.
+            Default: "__call__"
+    """
+
     def __init__(self, node, method="__call__"):
         super().__init__()
         if isinstance(node, type):
@@ -313,6 +347,11 @@ class CallMethod(Expr):
 
 # expr: outputs = apply(self.opdef, *inputs)
 class Apply(Expr):
+    r"""``Apply`` represents a call to :func:`apply`.
+
+    Args:
+        opdef: the applied :class:`OpDef`.
+    """
     opdef = None
 
     def __init__(self, opdef):
@@ -381,6 +420,12 @@ class Apply(Expr):
 
 
 class CallFunction(Expr):
+    r"""``CallFunction`` represents a call to a built-in function.
+    
+    Args:
+        func: a built-in function.
+    """
+
     def __init__(self, func):
         super().__init__()
         assert isinstance(func, Callable)
@@ -418,7 +463,14 @@ class CallFunction(Expr):
 
 # expr outputs = self.value
 class Constant(Expr):
+    r"""``Constant`` represents a ``Tensor`` or "Module" which is not the attribute of a Module.
+
+    Args:
+        c: a const Tensor or Module.
+        name: the name of output Node.
+    """
     value = None
+    r"""The const Tensor or Module"""
     # TODO: constant cache to reduce the size of dumped model
     _constant_cache = {}
 

@@ -32,7 +32,8 @@ class Compiler;
  * JITExecutor generates runtime Args for this specific inputs, and calls
  * methods in Compiler to get the Executable object for actual computing.
  */
-MGB_DEFINE_OPR_CLASS(JITExecutor, cg::SingleCNOperatorNodeBase,
+MGB_DEFINE_OPR_CLASS(
+        JITExecutor, cg::SingleCNOperatorNodeBase,
         opr::mixin::FwdIn2OutWritableHelper) // {
     using ModeTrait = megdnn::Elemwise::ModeTrait;
 
@@ -46,12 +47,13 @@ public:
 
     void init_output_static_infer_desc() override;
 
-    JITExecutor(const InternalGraphPtr& internal_graph,
-                const VarNodeArray& inputs, const OperatorNodeConfig& config);
+    JITExecutor(
+            const InternalGraphPtr& internal_graph, const VarNodeArray& inputs,
+            const OperatorNodeConfig& config);
 
-    static SymbolVar make(const InternalGraphPtr& internal_graph,
-                          const VarNodeArray& inputs,
-                          const OperatorNodeConfig& config = {});
+    static SymbolVar make(
+            const InternalGraphPtr& internal_graph, const VarNodeArray& inputs,
+            const OperatorNodeConfig& config = {});
 
     struct LoadDumpImpl;
 
@@ -63,9 +65,7 @@ public:
 
     const InternalGraph& internal_graph() const { return *m_internal_graph; }
 
-    const InternalGraphPtr internal_graph_ptr() const {
-        return m_internal_graph;
-    }
+    const InternalGraphPtr internal_graph_ptr() const { return m_internal_graph; }
 
     auto&& input_broadcastable() const { return m_input_broadcastable; }
 
@@ -117,8 +117,8 @@ public:
         return static_cast<bool>(m_feature_bits & JITFeatureBits::DIMSHUFFLE);
     }
 
-    const ThinHashMap<jit::JITPlaceholder*, DimshuffleParam>&
-    dimshuffle_params() const {
+    const ThinHashMap<jit::JITPlaceholder*, DimshuffleParam>& dimshuffle_params()
+            const {
         return m_jitph2dimshuffle;
     }
 

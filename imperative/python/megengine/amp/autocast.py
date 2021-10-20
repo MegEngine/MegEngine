@@ -11,38 +11,37 @@ from ..core.tensor import amp
 
 
 class autocast:
-    r"""
-    A class to control autocast mode for amp as a context manager or a decorator.
+    r"""A class to control autocast mode for amp as a context manager or a decorator.
 
-    :param enabled: Whether autocast mode is enabled.
-    :param low_prec_dtype: Set amp autocast mode's lower precision dtype. It will change
-        the target dtype in tensor casting for better speed and memory. Default: float16.
-    :param high_prec_dtype: Set amp autocast mode's higher precision dtype. It will
-        change the target dtype in tensor casting for better precision. Default: float32.
+    Args:
+        enabled: Whether autocast mode is enabled.
+        low_prec_dtype: Set amp autocast mode's lower precision dtype. It will change
+            the target dtype in tensor casting for better speed and memory. Default: float16.
+        high_prec_dtype: Set amp autocast mode's higher precision dtype. It will
+            change the target dtype in tensor casting for better precision. Default: float32.
 
     Examples:
+        .. code-block::
 
-    .. code-block::
+           # used as decorator
+           @autocast()
+           def train_step(image, label):
+               with gm:
+                   logits = model(image)
+                   loss = F.nn.cross_entropy(logits, label)
+                   gm.backward(loss)
+               opt.step().clear_grad()
+               return loss
 
-        # used as decorator
-        @autocast()
-        def train_step(image, label):
-            with gm:
-                logits = model(image)
-                loss = F.nn.cross_entropy(logits, label)
-                gm.backward(loss)
-            opt.step().clear_grad()
-            return loss
-
-        # used as context manager
-        def train_step(image, label):
-            with autocast():
-                with gm:
-                    logits = model(image)
-                    loss = F.nn.cross_entropy(logits, label)
-                    gm.backward(loss)
-            opt.step().clear_grad()
-            return loss
+           # used as context manager
+           def train_step(image, label):
+               with autocast():
+                   with gm:
+                       logits = model(image)
+                       loss = F.nn.cross_entropy(logits, label)
+                       gm.backward(loss)
+               opt.step().clear_grad()
+               return loss
     """
 
     def __init__(

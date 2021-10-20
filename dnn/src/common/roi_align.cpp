@@ -14,9 +14,9 @@
 
 namespace megdnn {
 
-void ROIAlignBase::deduce_layout_fwd(const TensorLayout& src,
-                                     const TensorLayout& rois,
-                                     TensorLayout& dst, TensorLayout& index) {
+void ROIAlignBase::deduce_layout_fwd(
+        const TensorLayout& src, const TensorLayout& rois, TensorLayout& dst,
+        TensorLayout& index) {
     megdnn_assert_contiguous(src);
     megdnn_assert_contiguous(rois);
     megdnn_assert_contiguous(dst);
@@ -29,8 +29,8 @@ void ROIAlignBase::deduce_layout_fwd(const TensorLayout& src,
     using Format = ROIAlignBase::Param::Format;
     megdnn_assert(param().format == Format::NCHW);
     auto src_dtype = src.dtype, rois_dtype = rois.dtype;
-    megdnn_assert(src_dtype == rois_dtype &&
-                  src_dtype.category() == DTypeCategory::FLOAT);
+    megdnn_assert(
+            src_dtype == rois_dtype && src_dtype.category() == DTypeCategory::FLOAT);
     megdnn_assert(src.ndim == 4_z, "%s", errmsg().c_str());
     size_t channels = src.shape[1];
     megdnn_assert(rois.ndim == 2_z, "%s", errmsg().c_str());
@@ -44,10 +44,9 @@ void ROIAlignBase::deduce_layout_fwd(const TensorLayout& src,
     index.dtype = dtype::Int32();
 }
 
-void ROIAlignBase::check_layout_fwd(const TensorLayout& src,
-                                    const TensorLayout& rois,
-                                    const TensorLayout& dst,
-                                    const TensorLayout& index) {
+void ROIAlignBase::check_layout_fwd(
+        const TensorLayout& src, const TensorLayout& rois, const TensorLayout& dst,
+        const TensorLayout& index) {
     TensorLayout dst_expected, index_expected;
     megdnn_assert_eq_dtype(src, dst);
     deduce_layout_fwd(src, rois, dst_expected, index_expected);
@@ -56,31 +55,25 @@ void ROIAlignBase::check_layout_fwd(const TensorLayout& src,
     megdnn_assert(index.dtype == dtype::Int32());
 }
 
-void ROIAlignForward::deduce_layout(const TensorLayout& src,
-                                    const TensorLayout& rois, TensorLayout& dst,
-                                    TensorLayout& index) {
+void ROIAlignForward::deduce_layout(
+        const TensorLayout& src, const TensorLayout& rois, TensorLayout& dst,
+        TensorLayout& index) {
     deduce_layout_fwd(src, rois, dst, index);
 }
 
-void ROIAlignForward::check_exec(const TensorLayout& src,
-                                 const TensorLayout& rois,
-                                 const TensorLayout& dst,
-                                 const TensorLayout& index,
-                                 size_t workspace_in_bytes) {
+void ROIAlignForward::check_exec(
+        const TensorLayout& src, const TensorLayout& rois, const TensorLayout& dst,
+        const TensorLayout& index, size_t workspace_in_bytes) {
     check_layout_fwd(src, rois, dst, index);
-    auto required_workspace_in_bytes =
-            get_workspace_in_bytes(src, rois, dst, index);
+    auto required_workspace_in_bytes = get_workspace_in_bytes(src, rois, dst, index);
     megdnn_assert(workspace_in_bytes >= required_workspace_in_bytes);
 }
 
-void ROIAlignBackward::check_exec(const TensorLayout& diff,
-                                  const TensorLayout& rois,
-                                  const TensorLayout& index,
-                                  const TensorLayout& grad,
-                                  size_t workspace_in_bytes) {
+void ROIAlignBackward::check_exec(
+        const TensorLayout& diff, const TensorLayout& rois, const TensorLayout& index,
+        const TensorLayout& grad, size_t workspace_in_bytes) {
     check_layout_fwd(grad, rois, diff, index);
-    auto required_workspace_in_bytes =
-            get_workspace_in_bytes(diff, rois, index, grad);
+    auto required_workspace_in_bytes = get_workspace_in_bytes(diff, rois, index, grad);
     megdnn_assert(workspace_in_bytes >= required_workspace_in_bytes);
 }
 

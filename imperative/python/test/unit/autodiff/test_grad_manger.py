@@ -178,6 +178,21 @@ def test_regression_1762():
         gm.backward(loss)
 
 
+def test_empty_grad_in_backward():
+    x = mge.Parameter(F.full(100, 0.5))
+    y = mge.Parameter(F.ones(100))
+
+    gm = GradManager()
+    gm.attach([x, y])
+
+    with gm:
+        z = F.where(x > 0.7, x, y)
+        loss = z.sum()
+        gm.backward(loss)
+        assert np.all(x.grad.numpy() == 0)
+        assert np.all(y.grad.numpy() == 1)
+
+
 @pytest.mark.require_ngpu(2)
 @pytest.mark.isolated_distributed
 @pytest.mark.parametrize(

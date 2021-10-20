@@ -13,8 +13,8 @@
 #include <memory>
 #include <unordered_map>
 #include "megdnn/oprs/base.h"
-#include "src/common/utils.h"
 #include "src/common/algo_base.h"
+#include "src/common/utils.h"
 #include "src/fallback/handle.h"
 #include "src/naive/convolution/opr_impl.h"
 
@@ -56,32 +56,34 @@ public:
     using AlgoDataType = detail::AlgoDataType;
 
     //! implemented by exec_with_ncb_kern()
-    void exec(_megdnn_tensor_in src, _megdnn_tensor_in filter,
-              _megdnn_tensor_out dst, const PreprocessedFilter*,
-              _megdnn_workspace workspace) override;
+    void exec(
+            _megdnn_tensor_in src, _megdnn_tensor_in filter, _megdnn_tensor_out dst,
+            const PreprocessedFilter*, _megdnn_workspace workspace) override;
 
-    void exec_preprocess(const TensorLayout& src_layout,
-                         _megdnn_tensor_in filter,
-                         const TensorLayout& dst_layout,
-                         PreprocessedFilter* preprocessed_filter,
-                         _megdnn_workspace workspace) override;
+    void exec_preprocess(
+            const TensorLayout& src_layout, _megdnn_tensor_in filter,
+            const TensorLayout& dst_layout, PreprocessedFilter* preprocessed_filter,
+            _megdnn_workspace workspace) override;
 
     //! implemented by get_workspace_with_ncb()
-    size_t get_workspace_in_bytes(const TensorLayout& src,
-                                  const TensorLayout& filter,
-                                  const TensorLayout& dst,
-                                  const PreprocessedFilter*) override;
+    size_t get_workspace_in_bytes(
+            const TensorLayout& src, const TensorLayout& filter,
+            const TensorLayout& dst, const PreprocessedFilter*) override;
 
     SmallVector<TensorLayout> deduce_preprocessed_filter_layout(
             const TensorLayout& src, const TensorLayout& filter,
             const TensorLayout& dst) override;
 
-    size_t get_preprocess_workspace_in_bytes(const TensorLayout& src,
-                                             const TensorLayout& filter,
-                                             const TensorLayout& dst) override;
+    size_t get_preprocess_workspace_in_bytes(
+            const TensorLayout& src, const TensorLayout& filter,
+            const TensorLayout& dst) override;
 
     //! implemented by get_all_algorithms_with_ncb()
     std::vector<Algorithm*> get_all_algorithms(
+            const TensorLayout& src, const TensorLayout& filter,
+            const TensorLayout& dst) override;
+
+    std::vector<Algorithm*> get_all_algorithms_safe(
             const TensorLayout& src, const TensorLayout& filter,
             const TensorLayout& dst) override;
 
@@ -147,33 +149,29 @@ public:
         //! together, like weight shape is {g/8, 1, 1, Fh, Fw, 8}
         template <typename T>
         T* dst(size_t batch_id, size_t group_pack_id,
-               size_t group_pack_size = 1_z) const{
+               size_t group_pack_size = 1_z) const {
             size_t batch_offset = batch_id * out_bs * dst_type.size();
-            size_t group_offset = group_pack_size * group_pack_id *
-                                  filter_meta.ocpg * osz[0] * osz[1] *
-                                  dst_type.size();
-            return reinterpret_cast<T*>(reinterpret_cast<ptrdiff_t>(dst_ptr) +
-                                        batch_offset + group_offset);
+            size_t group_offset = group_pack_size * group_pack_id * filter_meta.ocpg *
+                                  osz[0] * osz[1] * dst_type.size();
+            return reinterpret_cast<T*>(
+                    reinterpret_cast<ptrdiff_t>(dst_ptr) + batch_offset + group_offset);
         }
 
         template <typename T>
-        const T* src(size_t batch_id, size_t group_pack_id,
-                     size_t group_pack_size = 1_z) const {
+        const T* src(
+                size_t batch_id, size_t group_pack_id,
+                size_t group_pack_size = 1_z) const {
             size_t batch_offset = batch_id * inp_bs * src_type.size();
-            size_t group_offset = group_pack_size * group_pack_id *
-                                  filter_meta.icpg * isz[0] * isz[1] *
-                                  src_type.size();
-            return reinterpret_cast<T*>(reinterpret_cast<ptrdiff_t>(src_ptr) +
-                                        batch_offset + group_offset);
-
+            size_t group_offset = group_pack_size * group_pack_id * filter_meta.icpg *
+                                  isz[0] * isz[1] * src_type.size();
+            return reinterpret_cast<T*>(
+                    reinterpret_cast<ptrdiff_t>(src_ptr) + batch_offset + group_offset);
         }
 
         template <typename T>
-        const T* filter(size_t group_pack_id,
-                        size_t pack_group_size = 1_z) const {
-            size_t group_offset = pack_group_size * group_pack_id *
-                                  filter_meta.icpg * filter_meta.ocpg *
-                                  filter_meta.spatial[0] *
+        const T* filter(size_t group_pack_id, size_t pack_group_size = 1_z) const {
+            size_t group_offset = pack_group_size * group_pack_id * filter_meta.icpg *
+                                  filter_meta.ocpg * filter_meta.spatial[0] *
                                   filter_meta.spatial[1] * filter_type.size();
             return reinterpret_cast<T*>(
                     reinterpret_cast<ptrdiff_t>(filter_ptr) + group_offset);
@@ -189,8 +187,8 @@ public:
         CpuNDRange ndrange_id;
     };
 
-    using ncb_kern_t = thin_function<void(const NCBKernParam& param,
-                                          const NCBKernIndex& ncb_index)>;
+    using ncb_kern_t = thin_function<void(
+            const NCBKernParam& param, const NCBKernIndex& ncb_index)>;
     struct NCBKern {
         ncb_kern_t kern;  //!< conv kern parallel ptr
         CpuNDRange global_size;
@@ -198,9 +196,7 @@ public:
 
     class AlgoBase : public Algorithm {
     public:
-        AlgoBase() : Algorithm() {
-            m_handle_type = Handle::HandleType::FALLBACK;
-        }
+        AlgoBase() : Algorithm() { m_handle_type = Handle::HandleType::FALLBACK; }
 
         enum class AlgoType : uint32_t {
             //! fallback
@@ -210,8 +206,8 @@ public:
         };
 
         virtual ~AlgoBase() = default;
-        virtual bool usable(const NCBKernSizeParam& param,
-                            AlgoSelectionStrategy) const = 0;
+        virtual bool usable(
+                const NCBKernSizeParam& param, AlgoSelectionStrategy) const = 0;
         virtual size_t get_workspace(const NCBKernSizeParam& param) const = 0;
         virtual SmallVector<NCBKern> dispatch_kern(
                 const NCBKernSizeParam& param) const = 0;
@@ -234,16 +230,13 @@ public:
 
         //! Temporarily used to identify whether the matmul algorithm is
         //! is_preferred.
-        virtual bool is_preferred(const NCBKernSizeParam&) const {
-            return false;
-        }
+        virtual bool is_preferred(const NCBKernSizeParam&) const { return false; }
 
-        bool usable_attribute(const NCBKernSizeParam& param,
-                              AlgoSelectionStrategy algo_selection_strategy,
-                              const AlgoAttribute& positive_attr =
-                                      AlgoAttribute::REPRODUCIBLE,
-                              const AlgoAttribute& negative_attr =
-                                      AlgoAttribute::DEFAULT) const {
+        bool usable_attribute(
+                const NCBKernSizeParam& param,
+                AlgoSelectionStrategy algo_selection_strategy,
+                const AlgoAttribute& positive_attr = AlgoAttribute::REPRODUCIBLE,
+                const AlgoAttribute& negative_attr = AlgoAttribute::DEFAULT) const {
             return contain_attribute_all(positive_attr) &&
                    !contain_attribute_any(negative_attr) &&
                    usable(param, algo_selection_strategy);
@@ -267,16 +260,15 @@ public:
 protected:
     virtual void exec_with_ncb_kern(const NCBKernParam& param, Algorithm* algo);
 
-    virtual void exec_preprocess_with_ncb_kern(const NCBKernParam& param,
-                                               Algorithm* algo);
+    virtual void exec_preprocess_with_ncb_kern(
+            const NCBKernParam& param, Algorithm* algo);
 
     virtual std::vector<Algorithm*> get_all_algorithms_with_ncb(
             const NCBKernSizeParam& param);
 
     virtual Algorithm* get_algorithm_heuristic_with_ncb(
             const NCBKernSizeParam& param, size_t workspace_limit_in_bytes,
-            const AlgoAttribute& positive_attr,
-            const AlgoAttribute& negative_attr);
+            const AlgoAttribute& positive_attr, const AlgoAttribute& negative_attr);
 
     const char* get_algorithm_set_name() const override;
 
@@ -286,7 +278,6 @@ protected:
     class AlgoPack;
 
 private:
-
     NCBKernSizeParam m_prev_selected_algo_sizep;
     Algorithm* m_prev_selected_algo = nullptr;
 
@@ -298,14 +289,11 @@ private:
 
     NCBKernSizeParam make_ncb_kern_size_param(
             const TensorLayout& src, const TensorLayout& filter,
-            const TensorLayout& dst,
-            const PreprocessedFilter* preprocessed_filter);
+            const TensorLayout& dst, const PreprocessedFilter* preprocessed_filter);
 
     NCBKernParam make_ncb_kern_param(
-            _megdnn_tensor_in src, _megdnn_tensor_in filter,
-            _megdnn_tensor_out dst,
-            const PreprocessedFilter* preprocessed_filter,
-            _megdnn_workspace workspace);
+            _megdnn_tensor_in src, _megdnn_tensor_in filter, _megdnn_tensor_out dst,
+            const PreprocessedFilter* preprocessed_filter, _megdnn_workspace workspace);
 
     SmallVector<AlgoCategory> suggest_algo_category_order(
             const NCBKernSizeParam& param) const;
@@ -318,12 +306,16 @@ class ConvolutionBackwardDataImpl : public naive::ConvolutionBackwardDataImpl {
 public:
     using naive::ConvolutionBackwardDataImpl::ConvolutionBackwardDataImpl;
 
-    void exec(_megdnn_tensor_in filter, _megdnn_tensor_in diff,
-              _megdnn_tensor_out grad, _megdnn_workspace workspace) override;
-    size_t get_workspace_in_bytes(const TensorLayout& flter,
-                                  const TensorLayout& diff,
-                                  const TensorLayout& grad) override;
+    void exec(
+            _megdnn_tensor_in filter, _megdnn_tensor_in diff, _megdnn_tensor_out grad,
+            _megdnn_workspace workspace) override;
+    size_t get_workspace_in_bytes(
+            const TensorLayout& flter, const TensorLayout& diff,
+            const TensorLayout& grad) override;
     std::vector<Algorithm*> get_all_algorithms(
+            const TensorLayout& filter, const TensorLayout& diff,
+            const TensorLayout& grad) override;
+    std::vector<Algorithm*> get_all_algorithms_safe(
             const TensorLayout& filter, const TensorLayout& diff,
             const TensorLayout& grad) override;
     Algorithm* get_algorithm_heuristic(
@@ -401,9 +393,7 @@ protected:
         ~AlgoBase() = default;
 
     public:
-        AlgoBase() : Algorithm() {
-            m_handle_type = Handle::HandleType::FALLBACK;
-        }
+        AlgoBase() : Algorithm() { m_handle_type = Handle::HandleType::FALLBACK; }
         enum class AlgoType : uint32_t {
             //! fallback
             FB_NAIVE = 1 << 0,
@@ -418,32 +408,29 @@ protected:
 #endif
         };
 
-        virtual bool usable(ConvolutionBackwardDataImpl* opr,
-                            const NCBKernSizeParam& param) const = 0;
-        virtual size_t get_workspace(ConvolutionBackwardDataImpl* opr,
-                                     const NCBKernSizeParam& param) const = 0;
+        virtual bool usable(
+                ConvolutionBackwardDataImpl* opr,
+                const NCBKernSizeParam& param) const = 0;
+        virtual size_t get_workspace(
+                ConvolutionBackwardDataImpl* opr,
+                const NCBKernSizeParam& param) const = 0;
         virtual ncb_kern_t dispatch_kern(
                 ConvolutionBackwardDataImpl* opr,
                 const NCBKernSizeParam& param) const = 0;
-        bool usable_attribute(ConvolutionBackwardDataImpl* opr,
-                              const NCBKernSizeParam& param,
-                              const AlgoAttribute& positive_attr =
-                                      AlgoAttribute::REPRODUCIBLE,
-                              const AlgoAttribute& negative_attr =
-                                      AlgoAttribute::DEFAULT) const {
+        bool usable_attribute(
+                ConvolutionBackwardDataImpl* opr, const NCBKernSizeParam& param,
+                const AlgoAttribute& positive_attr = AlgoAttribute::REPRODUCIBLE,
+                const AlgoAttribute& negative_attr = AlgoAttribute::DEFAULT) const {
             return contain_attribute_all(positive_attr) &&
                    !contain_attribute_any(negative_attr) && usable(opr, param);
         }
-        virtual bool is_preferred(const NCBKernSizeParam&) const {
-            return false;
-        }
+        virtual bool is_preferred(const NCBKernSizeParam&) const { return false; }
         //! if the algo is naive, it will not split by group
         virtual bool is_naive() const { return false; }
         using Mapper = std::unordered_map<AlgorithmDesc, AlgoBase*>;
     };
 
 protected:
-
     //! default impl calls ncb_1g_dispatch_kern()
     virtual void exec_with_ncb_kern(const NCBKernParam& param);
 
@@ -457,15 +444,13 @@ protected:
     //! default impl calls ncb_1g_get_algorithm_heuristic()
     virtual Algorithm* get_algorithm_heuristic_with_ncb(
             const NCBKernSizeParam& param, size_t workspace_limit_in_bytes,
-            const AlgoAttribute& positive_attr,
-            const AlgoAttribute& negative_attr);
+            const AlgoAttribute& positive_attr, const AlgoAttribute& negative_attr);
 
     //! get kernel pointer for float32 non-contiguous batch 1-group kernel
-    virtual ncb_kern_t ncb_1g_dispatch_kern(Algorithm* algo,
-                                            const NCBKernSizeParam& param);
+    virtual ncb_kern_t ncb_1g_dispatch_kern(
+            Algorithm* algo, const NCBKernSizeParam& param);
 
-    virtual size_t ncb_1g_get_workspace(Algorithm* algo,
-                                        const NCBKernSizeParam& param);
+    virtual size_t ncb_1g_get_workspace(Algorithm* algo, const NCBKernSizeParam& param);
 
     virtual std::vector<Algorithm*> ncb_1g_get_all_algorithms(
             const NCBKernSizeParam& param);
@@ -476,8 +461,7 @@ protected:
      */
     virtual Algorithm* ncb_1g_get_algorithm_heuristic(
             const NCBKernSizeParam& param, size_t workspace_limit_in_bytes,
-            const AlgoAttribute& positive_attr,
-            const AlgoAttribute& negative_attr);
+            const AlgoAttribute& positive_attr, const AlgoAttribute& negative_attr);
 
     static bool is_matrix_mul_preferred(const NCBKernSizeParam& param);
     /**
@@ -492,14 +476,13 @@ private:
     //! get algorithm set by user or by heuristic
     Algorithm* get_algorithm(const NCBKernSizeParam& param);
 
-    NCBKernSizeParam make_ncb_kern_size_param(const TensorLayout& filter,
-                                              const TensorLayout& diff,
-                                              const TensorLayout& grad);
+    NCBKernSizeParam make_ncb_kern_size_param(
+            const TensorLayout& filter, const TensorLayout& diff,
+            const TensorLayout& grad);
 
-    NCBKernParam make_ncb_kern_param(_megdnn_tensor_in filter,
-                                     _megdnn_tensor_in diff,
-                                     _megdnn_tensor_out grad,
-                                     _megdnn_workspace workspace);
+    NCBKernParam make_ncb_kern_param(
+            _megdnn_tensor_in filter, _megdnn_tensor_in diff, _megdnn_tensor_out grad,
+            _megdnn_workspace workspace);
 
     class AlgoNaive;
     class AlgoDirect;

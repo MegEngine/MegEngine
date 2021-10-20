@@ -13,8 +13,8 @@
 
 #include "src/common/relayout_helper.h"
 #include "test/common/benchmarker.h"
-#include "test/common/relayout.h"
 #include "test/common/checker.h"
+#include "test/common/relayout.h"
 
 using namespace megdnn;
 using namespace test;
@@ -22,18 +22,18 @@ using namespace megdnn::relayout;
 using namespace test::relayout;
 
 namespace {
-TestArg generate_transpose_args(size_t batch, size_t m, size_t n,
-                                       size_t c, DType dtype) {
+TestArg generate_transpose_args(
+        size_t batch, size_t m, size_t n, size_t c, DType dtype) {
     TestArg arg;
     arg.src = TensorLayout(
-        TensorShape{batch, n, m, c},
-        {static_cast<std::ptrdiff_t>(n * m * c), static_cast<std::ptrdiff_t>(c),
-         static_cast<std::ptrdiff_t>(n * c), 1},
-        dtype);
+            TensorShape{batch, n, m, c},
+            {static_cast<std::ptrdiff_t>(n * m * c), static_cast<std::ptrdiff_t>(c),
+             static_cast<std::ptrdiff_t>(n * c), 1},
+            dtype);
     arg.dst = TensorLayout(TensorShape{batch, n, m, c}, dtype);
     return arg;
 }
-} // anonymous namespace
+}  // anonymous namespace
 
 namespace megdnn {
 namespace test {
@@ -44,14 +44,10 @@ void run_test_cv(Handle* handle, size_t CH) {
 
     for (size_t M = 124; M <= 130; ++M) {
         for (size_t N = 124; N <= 130; ++N) {
-            args.push_back(
-                    generate_transpose_args(1, M, N, CH, dtype::Uint8()));
-            args.push_back(
-                    generate_transpose_args(1, M, N, CH, dtype::Int32()));
-            args.push_back(
-                    generate_transpose_args(1, M, N, CH, dtype::Float32()));
-            args.push_back(
-                    generate_transpose_args(3, M, N, CH, dtype::Float32()));
+            args.push_back(generate_transpose_args(1, M, N, CH, dtype::Uint8()));
+            args.push_back(generate_transpose_args(1, M, N, CH, dtype::Int32()));
+            args.push_back(generate_transpose_args(1, M, N, CH, dtype::Float32()));
+            args.push_back(generate_transpose_args(3, M, N, CH, dtype::Float32()));
         }
     }
 
@@ -63,8 +59,8 @@ void run_test_cv(Handle* handle, size_t CH) {
 }
 
 #define DEF_TEST(name) \
-template<> \
-void run_test<name>(Handle *handle)
+    template <>        \
+    void run_test<name>(Handle * handle)
 
 DEF_TEST(cv) {
     run_test_cv(handle, 1);
@@ -80,26 +76,25 @@ DEF_TEST(cv_ch5) {
 
 DEF_TEST(broadcast) {
     std::vector<TestArg> args;
-    TensorLayout src{{2, 3, 4}, dtype::Float32()},
-                 dst{{2, 3, 4}, dtype::Float32()};
+    TensorLayout src{{2, 3, 4}, dtype::Float32()}, dst{{2, 3, 4}, dtype::Float32()};
 
     src.stride[0] = 4;
     src.stride[1] = 0;
     args.emplace_back(src, dst);
 
     // last stride contiguous
-    args.emplace_back(TensorLayout({3, 100, 2}, {2, 0, 1}, dtype::Float16()),
-                      TensorLayout({3, 100, 2}, {200, 2, 1}, dtype::Float16()));
+    args.emplace_back(
+            TensorLayout({3, 100, 2}, {2, 0, 1}, dtype::Float16()),
+            TensorLayout({3, 100, 2}, {200, 2, 1}, dtype::Float16()));
     Checker<Relayout> checker(handle);
 
-    for (auto &&arg : args) {
+    for (auto&& arg : args) {
         checker.execl({arg.src, arg.dst});
     }
 }
 
 DEF_TEST(negative) {
-    TensorLayout src{{7, 8, 10}, dtype::Float32()},
-                 dst{{7, 8, 10}, dtype::Float32()};
+    TensorLayout src{{7, 8, 10}, dtype::Float32()}, dst{{7, 8, 10}, dtype::Float32()};
 
     src.stride[0] *= -1;
 
@@ -116,8 +111,7 @@ DEF_TEST(transpose) {
         checker.execl({dl, sl});
     }
     {
-        TensorLayout sl({8, 10, 2}, dtype::Int32()),
-                     dl({2, 8, 10}, dtype::Int32());
+        TensorLayout sl({8, 10, 2}, dtype::Int32()), dl({2, 8, 10}, dtype::Int32());
         sl = sl.dimshuffle({2, 0, 1});
         checker.execl({sl, dl});
         checker.execl({dl, sl});
@@ -126,9 +120,9 @@ DEF_TEST(transpose) {
 
 #undef DEF_TEST
 
-} // namespace relayout
-} // namespace test
-} // namespace megdnn
+}  // namespace relayout
+}  // namespace test
+}  // namespace megdnn
 
 void test::relayout::run_cv_benchmark(Handle* handle) {
     auto handle_naive = create_cpu_handle(2);
@@ -156,14 +150,13 @@ void test::relayout::run_cv_benchmark(Handle* handle) {
         auto t0 = benchmarker.execl({arg.src, arg.dst});
         auto t1 = benchmarker_naive.execl({arg.src, arg.dst});
         double k = arg.dst.span().dist_byte() * 1e3 / (1024 * 1024 * 1024);
-        printf("cur=%7.3fms,%5.2fGiB/s naive=%7.3fms,%5.2fGiB/s %s %s\n", t0,
-               k / t0, t1, k / t1, arg.dst.TensorShape::to_string().c_str(),
+        printf("cur=%7.3fms,%5.2fGiB/s naive=%7.3fms,%5.2fGiB/s %s %s\n", t0, k / t0,
+               t1, k / t1, arg.dst.TensorShape::to_string().c_str(),
                arg.dst.dtype.name());
     }
 }
 TEST(RELAYOUT, TRANSPOSE_DET) {
-    auto run = [](const TensorShape& shape,
-                  const std::vector<size_t>& dimshuffle,
+    auto run = [](const TensorShape& shape, const std::vector<size_t>& dimshuffle,
                   bool expect_is_transpose, const TransposeParam& p = {}) {
         TensorLayout src{shape, dtype::Float32{}};
         src = src.dimshuffle(dimshuffle).collapse_contiguous();

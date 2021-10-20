@@ -176,6 +176,8 @@ def unpack_getitem(inp, tuple_val, *, allow_newaxis=True):
         def is_bool_list(x):
             if not isinstance(x, list):
                 return False
+            if len(x) == 0:
+                return False
             for i in x:
                 if not isinstance(i, bool):
                     return False
@@ -246,17 +248,6 @@ def getitem(tensor, index):
     if len(try_result) == 2:
         return try_result[0]
     tensor, tensors, items, use_subtensor, ret_scalar = unpack_getitem(tensor, index)
-    for v in tensors:
-        if v.shape is None:
-            break
-        if isinstance(v.shape, v.__class__):
-            break
-        if len(v.shape) > 0 and v.shape[0] == 0:
-            (empty_tensor,) = Const([], dtype=tensor.dtype, device=tensor.device)(
-                tensor
-            )
-            return empty_tensor
-
     if use_subtensor:
         op = builtin.Subtensor(items=items)
     else:

@@ -14,8 +14,7 @@
 #endif
 
 #ifndef LITE_ENABLE_EXCEPTION
-#if __cpp_exceptions || __EXCEPTIONS || \
-        (defined(_MSC_VER) && defined(_CPPUNWIND))
+#if __cpp_exceptions || __EXCEPTIONS || (defined(_MSC_VER) && defined(_CPPUNWIND))
 #define LITE_ENABLE_EXCEPTION 1
 #else
 #define LITE_ENABLE_EXCEPTION 0

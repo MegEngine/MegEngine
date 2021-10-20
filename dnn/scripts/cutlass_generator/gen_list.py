@@ -36,6 +36,7 @@ if __name__ == "__main__":
         write_op_list(f, "gemm", "tensorop884")
         write_op_list(f, "gemv", "simt")
         write_op_list(f, "deconv", "simt")
+        write_op_list(f, "deconv", "tensorop8816")
         write_op_list(f, "conv2d", "simt")
         write_op_list(f, "conv2d", "tensorop8816")
         write_op_list(f, "conv2d", "tensorop8832")

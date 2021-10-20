@@ -11,44 +11,41 @@
 #include "hcc_detail/hcc_defs_prologue.h"
 #include "megcore.h"
 
+#include "./computing_context.hpp"
 #include "src/common/utils.h"
 #include "src/rocm/utils.h"
-#include "./computing_context.hpp"
 
 #include "./rocm_computing_context.hpp"
 
 using namespace megcore;
 using namespace rocm;
 
-std::unique_ptr<ComputingContext> megcore::make_rocm_computing_context(megcoreDeviceHandle_t dev_handle, unsigned int flags) {
+std::unique_ptr<ComputingContext> megcore::make_rocm_computing_context(
+        megcoreDeviceHandle_t dev_handle, unsigned int flags) {
     return std::make_unique<ROCMComputingContext>(dev_handle, flags);
 }
 
-ROCMComputingContext::ROCMComputingContext(megcoreDeviceHandle_t dev_handle,
-        unsigned int flags, const ROCMContext& ctx):
-    ComputingContext(dev_handle, flags),
-    own_stream_{ctx.stream == nullptr},
-    context_{ctx}
-{
+ROCMComputingContext::ROCMComputingContext(
+        megcoreDeviceHandle_t dev_handle, unsigned int flags, const ROCMContext& ctx)
+        : ComputingContext(dev_handle, flags),
+          own_stream_{ctx.stream == nullptr},
+          context_{ctx} {
     megcorePlatform_t platform;
     megcoreGetPlatform(dev_handle, &platform);
     megdnn_assert(platform == megcorePlatformROCM);
     if (own_stream_) {
-        hip_check(hipStreamCreateWithFlags(&context_.stream,
-                    hipStreamNonBlocking));
+        hip_check(hipStreamCreateWithFlags(&context_.stream, hipStreamNonBlocking));
     }
 }
 
-ROCMComputingContext::~ROCMComputingContext()
-{
+ROCMComputingContext::~ROCMComputingContext() {
     if (own_stream_) {
         hip_check(hipStreamDestroy(context_.stream));
     }
 }
 
-void ROCMComputingContext::memcpy(void *dst, const void *src,
-        size_t size_in_bytes, megcoreMemcpyKind_t kind)
-{
+void ROCMComputingContext::memcpy(
+        void* dst, const void* src, size_t size_in_bytes, megcoreMemcpyKind_t kind) {
     hipMemcpyKind hip_kind;
     switch (kind) {
         case megcoreMemcpyDeviceToHost:
@@ -63,19 +60,15 @@ void ROCMComputingContext::memcpy(void *dst, const void *src,
         default:
             megdnn_throw("bad hip memcpy kind");
     }
-    hip_check(hipMemcpyAsync(dst, src, size_in_bytes, hip_kind,
-                context_.stream));
+    hip_check(hipMemcpyAsync(dst, src, size_in_bytes, hip_kind, context_.stream));
 }
 
-void ROCMComputingContext::memset(void *dst, int value, size_t size_in_bytes)
-{
+void ROCMComputingContext::memset(void* dst, int value, size_t size_in_bytes) {
     hip_check(hipMemsetAsync(dst, value, size_in_bytes, context_.stream));
 }
 
-void ROCMComputingContext::synchronize()
-{
+void ROCMComputingContext::synchronize() {
     hip_check(hipStreamSynchronize(context_.stream));
 }
-
 
 // vim: syntax=cpp.doxygen

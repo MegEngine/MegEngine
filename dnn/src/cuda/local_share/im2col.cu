@@ -16,9 +16,9 @@ using namespace local_share;
 
 namespace {
 template <typename T>
-__global__ void local_share_im2col(const T* __restrict__ img,
-                                   T* __restrict__ col, int fh, int fw, int sh,
-                                   int sw, int nr_groups, Param param) {
+__global__ void local_share_im2col(
+        const T* __restrict__ img, T* __restrict__ col, int fh, int fw, int sh, int sw,
+        int nr_groups, Param param) {
     const int in_ch_idx = threadIdx.x + blockIdx.y * blockDim.x;
     const int batch = threadIdx.y + blockIdx.z * blockDim.y;
     if (in_ch_idx >= param.ci || batch >= param.n)
@@ -36,16 +36,15 @@ __global__ void local_share_im2col(const T* __restrict__ img,
     const int ch_grp_idx = in_ch_idx / icpg;
     const int grp_ch_idx = in_ch_idx - icpg * ch_grp_idx;
 
-    const T* __restrict__ img_ptr = img +
-                                    batch * param.ci * param.hi * param.wi +
+    const T* __restrict__ img_ptr = img + batch * param.ci * param.hi * param.wi +
                                     in_ch_idx * param.hi * param.wi;
     const int ld = icpg * fh * fw;
     T* __restrict__ col_ptr =
             col +
             ch_grp_idx * (param.sgh * param.sgw) * param.n * grp_sizes *
                     ld  // channel group stride
-            + (sgh_idx * param.sgw + sgw_idx) * param.n * grp_sizes *
-                      ld            // batch stride
+            +
+            (sgh_idx * param.sgw + sgw_idx) * param.n * grp_sizes * ld  // batch stride
             + grp_ch_idx * fh * fw  // input channel stride
             + (batch * grp_sizes + (grp_oh_idx * param.grp_wo + grp_ow_idx)) *
                       ld;  // row stride
@@ -55,8 +54,7 @@ __global__ void local_share_im2col(const T* __restrict__ img,
             int ih_idx = oh_idx * sh - param.ph + kh;
             int iw_idx = ow_idx * sw - param.pw + kw;
             float val = 0.f;
-            if (ih_idx < param.hi && ih_idx >= 0 && iw_idx < param.wi &&
-                iw_idx >= 0) {
+            if (ih_idx < param.hi && ih_idx >= 0 && iw_idx < param.wi && iw_idx >= 0) {
                 val = img_ptr[ih_idx * param.wi + iw_idx];
             }
             *(col_ptr++) = val;
@@ -65,9 +63,9 @@ __global__ void local_share_im2col(const T* __restrict__ img,
 }
 
 template <typename T>
-__global__ void local_share_col2im(const T* __restrict__ col,
-                                   T* __restrict__ img, int fh, int fw, int sh,
-                                   int sw, int nr_groups, Param param) {
+__global__ void local_share_col2im(
+        const T* __restrict__ col, T* __restrict__ img, int fh, int fw, int sh, int sw,
+        int nr_groups, Param param) {
     const int batch = threadIdx.x + blockIdx.y * blockDim.x;
     const int in_ch_idx = threadIdx.y + blockIdx.z * blockDim.y;
     if (in_ch_idx >= param.ci || batch >= param.n)
@@ -87,10 +85,9 @@ __global__ void local_share_col2im(const T* __restrict__ col,
     const T* __restrict__ col_ptr =
             col +
             ch_grp_idx * param.sgh * param.sgw * ch_filter_sizes * grp_sizes *
-                    param.n  // channel group stride
-            + batch          // batch stride
-            +
-            grp_ch_idx * filter_sizes * grp_sizes * param.n;  // channel stride
+                    param.n                                     // channel group stride
+            + batch                                             // batch stride
+            + grp_ch_idx * filter_sizes * grp_sizes * param.n;  // channel stride
 
     T res(0);
     for (int kh = 0; kh < fh; ++kh) {
@@ -117,22 +114,22 @@ __global__ void local_share_col2im(const T* __restrict__ col,
             }
         }
     }
-    img[batch * param.ci * param.hi * param.wi +
-        in_ch_idx * param.hi * param.wi + ih_idx * param.wi + iw_idx] = res;
+    img[batch * param.ci * param.hi * param.wi + in_ch_idx * param.hi * param.wi +
+        ih_idx * param.wi + iw_idx] = res;
 }
 
 }  // namespace
 
 void megdnn::cuda::local_share::_do_local_share_im2col(
-        const float* d_im, float* d_col, int fh, int fw, int sh, int sw,
-        int nr_groups, const Param& param, cudaStream_t stream) {
-    void (*kern)(const float* __restrict__, float* __restrict__, int, int, int,
-                 int, int, Param);
+        const float* d_im, float* d_col, int fh, int fw, int sh, int sw, int nr_groups,
+        const Param& param, cudaStream_t stream) {
+    void (*kern)(
+            const float* __restrict__, float* __restrict__, int, int, int, int, int,
+            Param);
     kern = local_share_im2col<float>;
 
     constexpr int threads_x = 256;
-    uint32_t nr_threads =
-            _get_kern_block_size(reinterpret_cast<const void*>(kern));
+    uint32_t nr_threads = _get_kern_block_size(reinterpret_cast<const void*>(kern));
     uint32_t nr_threads_x = std::min(threads_x, param.ci);
     uint32_t nr_threads_y =
             std::min(static_cast<int>(nr_threads / nr_threads_x), param.n);
@@ -141,21 +138,20 @@ void megdnn::cuda::local_share::_do_local_share_im2col(
              nr_blocks_z = DIVUP(param.n, nr_threads_y);
     dim3 threads{nr_threads_x, nr_threads_y, 1};
     dim3 blocks{nr_blocks_x, nr_blocks_y, nr_blocks_z};
-    kern<<<blocks, threads, 0, stream>>>(d_im, d_col, fh, fw, sh, sw, nr_groups,
-                                         param);
+    kern<<<blocks, threads, 0, stream>>>(d_im, d_col, fh, fw, sh, sw, nr_groups, param);
     after_kernel_launch();
 }
 
 void megdnn::cuda::local_share::_do_local_share_col2im(
-        const float* d_col, float* d_im, int fh, int fw, int sh, int sw,
-        int nr_groups, const Param& param, cudaStream_t stream) {
-    void (*kern)(const float* __restrict__, float* __restrict__, int, int, int,
-                 int, int, Param);
+        const float* d_col, float* d_im, int fh, int fw, int sh, int sw, int nr_groups,
+        const Param& param, cudaStream_t stream) {
+    void (*kern)(
+            const float* __restrict__, float* __restrict__, int, int, int, int, int,
+            Param);
     kern = local_share_col2im<float>;
 
     constexpr int threads_x = 256;
-    uint32_t nr_threads =
-            _get_kern_block_size(reinterpret_cast<const void*>(kern));
+    uint32_t nr_threads = _get_kern_block_size(reinterpret_cast<const void*>(kern));
     uint32_t nr_threads_x = std::min(threads_x, param.n);
     uint32_t nr_threads_y =
             std::min(static_cast<int>(nr_threads / nr_threads_x), param.ci);
@@ -164,8 +160,7 @@ void megdnn::cuda::local_share::_do_local_share_col2im(
              nr_blocks_z = DIVUP(param.ci, nr_threads_y);
     dim3 threads{nr_threads_x, nr_threads_y, 1};
     dim3 blocks{nr_blocks_x, nr_blocks_y, nr_blocks_z};
-    kern<<<blocks, threads, 0, stream>>>(d_col, d_im, fh, fw, sh, sw, nr_groups,
-                                         param);
+    kern<<<blocks, threads, 0, stream>>>(d_col, d_im, fh, fw, sh, sw, nr_groups, param);
     after_kernel_launch();
 }
 

@@ -10,22 +10,21 @@
  */
 
 #include "megbrain/graph/helper.h"
+#include "./cg_impl.h"
 #include "megbrain/gopt/framework.h"
 #include "megbrain/opr/utility.h"
 #include "megbrain/serialization/opr_shallow_copy.h"
-#include "./cg_impl.h"
 
 using namespace mgb;
 using namespace cg;
 
 /* =================== global functions =================== */
 
-CompNode::UnorderedSet cg::get_opr_comp_node_set(OperatorNodeBase *opr) {
+CompNode::UnorderedSet cg::get_opr_comp_node_set(OperatorNodeBase* opr) {
     CompNode::UnorderedSet rst;
-    for (auto i: opr->output())
+    for (auto i : opr->output())
         rst.insert(i->comp_node());
-    if (opr->node_prop().contain(
-                OperatorNodeBase::NodeProp::Flag::SINGLE_COMP_NODE))
+    if (opr->node_prop().contain(OperatorNodeBase::NodeProp::Flag::SINGLE_COMP_NODE))
         mgb_assert(rst.size() == 1);
     return rst;
 }
@@ -54,44 +53,40 @@ SymbolVarArray cg::to_symbol_var_array(const VarNodeArray& var_node_array) {
     return symbol_var_array;
 }
 
-std::string cg::dump_var_info(const VarNodeArrayView &vars) {
+std::string cg::dump_var_info(const VarNodeArrayView& vars) {
     std::string rst;
     int idx = 0;
-    for (auto i: vars) {
+    for (auto i : vars) {
         if (!rst.empty())
             rst.append(" ");
         auto opr = i->owner_opr();
         if (vars.size() > 1)
-            rst.append(ssprintf("%d=", idx ++));
+            rst.append(ssprintf("%d=", idx++));
         bool valid = i->dev_tensor_valid();
         auto slot = find(opr->output(), i) - opr->output().begin();
-        auto &&it = i->owner_graph()->static_infer_manager().get_infer_type(i);
+        auto&& it = i->owner_graph()->static_infer_manager().get_infer_type(i);
         rst.append(ssprintf(
-                    "{id:%zu, %s:%s, %s, "
-                    "owner:%s{%s}, name:%s, slot:%td, %s, %c, %d, %d}",
-                    i->id(),
-                    valid ? "layout": "shape",
-                    valid ? i->layout().to_string().c_str() :
-                        i->shape().to_string().c_str(),
-                    i->dtype().name(),
-                    opr->cname(), opr->dyn_typeinfo()->name,
-                    i->cname(),
-                    slot,
-                    i->comp_node().to_string().c_str(),
-                    cg::is_static_var_storage(i) ? 's' : 'd',
-                    static_cast<int>(it.shape), static_cast<int>(it.value)
-                    ));
+                "{id:%zu, %s:%s, %s, "
+                "owner:%s{%s}, name:%s, slot:%td, %s, %c, %d, %d}",
+                i->id(), valid ? "layout" : "shape",
+                valid ? i->layout().to_string().c_str()
+                      : i->shape().to_string().c_str(),
+                i->dtype().name(), opr->cname(), opr->dyn_typeinfo()->name, i->cname(),
+                slot, i->comp_node().to_string().c_str(),
+                cg::is_static_var_storage(i) ? 's' : 'd', static_cast<int>(it.shape),
+                static_cast<int>(it.value)));
     }
     return rst;
 }
 
-SymbolVar cg::grad(SymbolVar target, SymbolVar wrt, bool warn_mid_wrt,
+SymbolVar cg::grad(
+        SymbolVar target, SymbolVar wrt, bool warn_mid_wrt,
         bool return_zero_for_nodep) {
-    return grad(target, SymbolVarArray{wrt},
-            warn_mid_wrt, return_zero_for_nodep)[0];
+    return grad(target, SymbolVarArray{wrt}, warn_mid_wrt, return_zero_for_nodep)[0];
 }
 
-SymbolVarArray cg::grad(SymbolVar target_, SymbolVarArray wrts_, bool warn_mid_wrt,
+SymbolVarArray cg::grad(
+        SymbolVar target_, SymbolVarArray wrts_, bool warn_mid_wrt,
         bool return_zero_for_nodep) {
 #if MGB_ENABLE_GRAD
     auto target = target_.node();
@@ -105,17 +100,21 @@ SymbolVarArray cg::grad(SymbolVar target_, SymbolVarArray wrts_, bool warn_mid_w
     for (auto&& wrt_ : wrts_) {
         auto wrt = wrt_.node();
         if (warn_mid_wrt && wrt->owner_opr()->input().size()) {
-            mgb_log_warn("taking gradient with respect to an intermediate node may "
+            mgb_log_warn(
+                    "taking gradient with respect to an intermediate node may "
                     "produce incorrect results (for example, when it is produced "
                     "by subtensor); node: %s",
                     cg::dump_var_info({wrt}).c_str());
         }
-        mgb_throw_if(graph != wrt->owner_graph(), GraphError,
+        mgb_throw_if(
+                graph != wrt->owner_graph(), GraphError,
                 "target and wrt must belong to the same graph");
         auto rst = grad_mgr.grad(target, wrt);
         if (!rst && return_zero_for_nodep) {
-            mgb_log_warn("target node (%s) does not depend on wrt node (%s), "
-                    "return zeros as grad", cg::dump_var_info({target}).c_str(),
+            mgb_log_warn(
+                    "target node (%s) does not depend on wrt node (%s), "
+                    "return zeros as grad",
+                    cg::dump_var_info({target}).c_str(),
                     cg::dump_var_info({wrt}).c_str());
             rst = (wrt_ * 0).node();
         }
@@ -137,11 +136,13 @@ SymbolVarArray cg::grad(SymbolVar target_, SymbolVarArray wrts_, bool warn_mid_w
 #endif
 }
 
-SymbolVar cg::current_grad_target(ComputingGraph &graph) {
+SymbolVar cg::current_grad_target(ComputingGraph& graph) {
 #if MGB_ENABLE_GRAD
-    auto var = ComputingGraphImpl::downcast(&graph)->grad_manager(
-            ).current_grad_target();
-    mgb_throw_if(!var, GraphError, "current_grad_target() called outside "
+    auto var =
+            ComputingGraphImpl::downcast(&graph)->grad_manager().current_grad_target();
+    mgb_throw_if(
+            !var, GraphError,
+            "current_grad_target() called outside "
             "grad computing environment");
     return var;
 #else
@@ -159,8 +160,7 @@ namespace {
 
 SymbolVarArray replace_vars_internal(
         const SymbolVarArray& dest,
-        thin_function<void(OperatorNodeBase*,
-                gopt::SubGraph::Rewriter&)> on_opr) {
+        thin_function<void(OperatorNodeBase*, gopt::SubGraph::Rewriter&)> on_opr) {
     if (dest.empty()) {
         return dest;
     }
@@ -177,7 +177,7 @@ SymbolVarArray replace_vars_internal(
     // do the replace
     gopt::SubGraph graph{dest_with_extra_deps};
     auto rewriter = graph.make_rewriter();
-    graph.iter([&](OperatorNodeBase* opr){ on_opr(opr, rewriter); });
+    graph.iter([&](OperatorNodeBase* opr) { on_opr(opr, rewriter); });
 
     auto new_og = rewriter.get_var(dest[0].node())->owner_graph();
     auto &&old_extra_vardeps = og->options().extra_vardeps,
@@ -192,12 +192,13 @@ SymbolVarArray replace_vars_internal(
             if (new_node == i) {
                 for (const auto& dep : iter->second) {
                     auto new_dep = rewriter.get_var(dep);
-                    mgb_assert(dep == new_dep,
-                               "var %s is not replaced, but its extra "
-                               "dependency %s is replaced by %s ",
-                               cg::dump_var_info({i}).c_str(),
-                               cg::dump_var_info({dep}).c_str(),
-                               cg::dump_var_info({new_dep}).c_str());
+                    mgb_assert(
+                            dep == new_dep,
+                            "var %s is not replaced, but its extra "
+                            "dependency %s is replaced by %s ",
+                            cg::dump_var_info({i}).c_str(),
+                            cg::dump_var_info({dep}).c_str(),
+                            cg::dump_var_info({new_dep}).c_str());
                 }
             } else {
                 auto& new_deps = new_extra_vardeps[new_node];
@@ -216,7 +217,7 @@ SymbolVarArray replace_vars_internal(
     ret.resize(dest.size());
     return ret;
 }
-} //namespace
+}  // namespace
 
 SymbolVarArray cg::replace_oprs(
         const SymbolVarArray& dest,
@@ -228,25 +229,27 @@ SymbolVarArray cg::replace_oprs(
     mgb_assert(dest[0].node());
     auto graph = dest[0].node()->owner_graph();
     for (auto i : dest) {
-        mgb_assert(i.node() && i.node()->owner_graph() == graph,
-                   "Dest should all be in same graph");
+        mgb_assert(
+                i.node() && i.node()->owner_graph() == graph,
+                "Dest should all be in same graph");
     }
     for (auto&& i : oprmap) {
-        mgb_assert(i.first->owner_graph() == graph &&
-                           i.second->owner_graph() == graph,
-                   "Original and dest operators in oprmap should all be in "
-                   "same graph");
+        mgb_assert(
+                i.first->owner_graph() == graph && i.second->owner_graph() == graph,
+                "Original and dest operators in oprmap should all be in "
+                "same graph");
     }
 
     ThinHashMap<SymbolVar, SymbolVar> varmap;
     for (auto&& p : oprmap) {
         const auto& outputs0 = p.first->usable_output();
         const auto& outputs1 = p.second->usable_output();
-        mgb_assert(outputs0.size() == outputs1.size(),
-                   "Number of outputs differ: old operator %s has %zu outputs, "
-                   "while new operator %s has %zu outputs.",
-                   p.first->name().c_str(), outputs0.size(),
-                   p.second->name().c_str(), outputs1.size());
+        mgb_assert(
+                outputs0.size() == outputs1.size(),
+                "Number of outputs differ: old operator %s has %zu outputs, "
+                "while new operator %s has %zu outputs.",
+                p.first->name().c_str(), outputs0.size(), p.second->name().c_str(),
+                outputs1.size());
         for (size_t i = 0; i < outputs0.size(); i++) {
             varmap[outputs0[i]] = outputs1[i];
         }
@@ -255,18 +258,17 @@ SymbolVarArray cg::replace_oprs(
 }
 
 SymbolVarArray cg::replace_vars(
-        const SymbolVarArray& dest,
-        const ThinHashMap<SymbolVar, SymbolVar>& varmap) {
+        const SymbolVarArray& dest, const ThinHashMap<SymbolVar, SymbolVar>& varmap) {
     if (varmap.empty())
         return dest;
     auto og = dest[0].node()->owner_graph();
     for (auto&& i : varmap) {
-        mgb_assert(i.first.node() && i.second.node() &&
-                   i.first.node()->owner_graph() == og &&
-                   i.second.node()->owner_graph() == og);
+        mgb_assert(
+                i.first.node() && i.second.node() &&
+                i.first.node()->owner_graph() == og &&
+                i.second.node()->owner_graph() == og);
     }
-    auto on_opr = [&](OperatorNodeBase* opr,
-            gopt::SubGraph::Rewriter& rewriter) {
+    auto on_opr = [&](OperatorNodeBase* opr, gopt::SubGraph::Rewriter& rewriter) {
         for (auto i : opr->output()) {
             auto viter = varmap.find(i);
             if (viter != varmap.end()) {
@@ -279,11 +281,10 @@ SymbolVarArray cg::replace_vars(
 }
 
 SymbolVarArray cg::replace_vars_comp_graph(
-    const SymbolVarArray &dest, ComputingGraph* new_graph) {
-    ComputingGraph *orig_graph = dest[0].node()->owner_graph();
+        const SymbolVarArray& dest, ComputingGraph* new_graph) {
+    ComputingGraph* orig_graph = dest[0].node()->owner_graph();
     mgb_assert(new_graph != orig_graph);
-    auto on_opr = [&](OperatorNodeBase* opr,
-            gopt::SubGraph::Rewriter& rewriter) {
+    auto on_opr = [&](OperatorNodeBase* opr, gopt::SubGraph::Rewriter& rewriter) {
         OperatorNodeBase* new_opr;
         if (opr->input().size()) {
             rewriter.auto_replace_outputs(opr);
@@ -293,7 +294,7 @@ SymbolVarArray cg::replace_vars_comp_graph(
                     *opr, {}, opr->config(), {new_graph});
             auto &&out0 = opr->output(), &&out1 = new_opr->output();
             mgb_assert(out0.size() == out1.size());
-            for (size_t i = 0; i < out0.size(); ++ i) {
+            for (size_t i = 0; i < out0.size(); ++i) {
                 rewriter.replace_var(out0[i], out1[i], "replace comp graph.");
             }
         }
@@ -320,13 +321,13 @@ SymbolVarArray cg::find_h2d(const SymbolVarArray& dest) {
     auto dest_with_extra_deps = get_dest_vars_with_extra_deps(dest);
 
     gopt::SubGraph graph{dest_with_extra_deps};
-    graph.iter([&](OperatorNodeBase* opr){ on_opr(opr); });
+    graph.iter([&](OperatorNodeBase* opr) { on_opr(opr); });
 
     return h2d;
 }
 
-OperatorNodeBase* cg::get_opr_root_source_opr(OperatorNodeBase *opr) {
-    auto &&attr = opr->node_prop().attribute();
+OperatorNodeBase* cg::get_opr_root_source_opr(OperatorNodeBase* opr) {
+    auto&& attr = opr->node_prop().attribute();
     if (!attr.src_opr)
         return opr;
     auto orig = attr.src_opr;
@@ -334,15 +335,15 @@ OperatorNodeBase* cg::get_opr_root_source_opr(OperatorNodeBase *opr) {
     return attr.src_opr = get_opr_root_source_opr(orig);
 }
 
-cg::MemPlanIntersectionType cg::get_mem_plan_intersection_type(
-        VarNode* a, VarNode *b) {
+cg::MemPlanIntersectionType cg::get_mem_plan_intersection_type(VarNode* a, VarNode* b) {
     auto &&m0 = a->mem_plan(), &&m1 = b->mem_plan();
     if (&m0.chunk() != &m1.chunk())
         return MemPlanIntersectionType::DISJOINT;
 
-    auto get_real_span = [](const MemAllocPlan &p) {
+    auto get_real_span = [](const MemAllocPlan& p) {
         auto span = p.layout().span();
-        return std::make_pair(span.low_byte + p.offset_in_chunk_byte(),
+        return std::make_pair(
+                span.low_byte + p.offset_in_chunk_byte(),
                 span.high_byte + p.offset_in_chunk_byte());
     };
     auto s0 = get_real_span(m0), s1 = get_real_span(m1);
@@ -354,7 +355,7 @@ cg::MemPlanIntersectionType cg::get_mem_plan_intersection_type(
 }
 
 void cg::request_fwd_in2out_writable_if_no_mem_ovelap(
-        OperatorNodeBase *opr, size_t inp, size_t out) {
+        OperatorNodeBase* opr, size_t inp, size_t out) {
     auto ivar = opr->input(inp), ovar = opr->output(out);
     if (is_static_var_storage(ivar) != is_static_var_storage(ovar)) {
         // If ovar is dynamic but there are other outputs of opr with static
@@ -364,7 +365,7 @@ void cg::request_fwd_in2out_writable_if_no_mem_ovelap(
         return;
     }
 
-    auto &&dep_map = opr->node_prop().dep_map();
+    auto&& dep_map = opr->node_prop().dep_map();
     using NP = OperatorNodeBase::NodeProp;
     mgb_assert(NP::is_device_value_dep(dep_map.at(ivar)));
 
@@ -372,45 +373,43 @@ void cg::request_fwd_in2out_writable_if_no_mem_ovelap(
         return;
 
     using IT = MemPlanIntersectionType;
-    for (size_t i = 0; i < opr->input().size(); ++ i) {
+    for (size_t i = 0; i < opr->input().size(); ++i) {
         auto iv = opr->input()[i];
         if (i != inp && NP::is_device_value_dep(dep_map.at(iv)) &&
-                get_mem_plan_intersection_type(iv, ivar) != IT::DISJOINT) {
+            get_mem_plan_intersection_type(iv, ivar) != IT::DISJOINT) {
             return;
         }
     }
     ovar->set_fwd_in2out_writable(ivar);
 }
 
-void cg::add_workspace_output(OperatorNodeBase *opr) {
+void cg::add_workspace_output(OperatorNodeBase* opr) {
     opr->add_output("workspace")
-        ->add_flag(VarNode::Flag::VOLATILE_CONTENT)
-        .add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE)
-        .dtype(dtype::Byte());
+            ->add_flag(VarNode::Flag::VOLATILE_CONTENT)
+            .add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE)
+            .dtype(dtype::Byte());
 }
 
-void cg::copy_shape_to_tensor_value(
-        DeviceTensorND &dest, const TensorShape &shp) {
-
-    dest.comp_node(CompNode::default_cpu()).
-        dtype(dtype::Int32()).
-        resize({std::max<size_t>(1, shp.ndim)});
+void cg::copy_shape_to_tensor_value(DeviceTensorND& dest, const TensorShape& shp) {
+    dest.comp_node(CompNode::default_cpu())
+            .dtype(dtype::Int32())
+            .resize({std::max<size_t>(1, shp.ndim)});
     auto ptr = dest.ptr<dt_int32>();
     if (!shp.ndim)
         ptr[0] = 0;
     else {
-        for (size_t i = 0; i < shp.ndim; i ++)
+        for (size_t i = 0; i < shp.ndim; i++)
             ptr[i] = shp.shape[i];
     }
 }
 
-void cg::copy_tensor_value_to_shape(
-        TensorShape &dest, const DeviceTensorND &val) {
+void cg::copy_tensor_value_to_shape(TensorShape& dest, const DeviceTensorND& val) {
     constexpr size_t MAX_DT_SIZE = 4;
     mgb_assert(val.dtype().size() <= MAX_DT_SIZE);
 
-    mgb_assert(val.shape().ndim == 1, "shape tensor must be 1-dim, got %s",
-               val.shape().to_string().c_str());
+    mgb_assert(
+            val.shape().ndim == 1, "shape tensor must be 1-dim, got %s",
+            val.shape().to_string().c_str());
     mgb_assert(val.comp_node().device_type() == CompNode::DeviceType::CPU);
     dest.ndim = val.shape(0);
     mgb_assert(dest.ndim <= TensorShape::MAX_NDIM);
@@ -421,7 +420,7 @@ void cg::copy_tensor_value_to_shape(
         auto dst_strd = val.dtype().size();
         auto src = val.raw_ptr();
         auto src_strd = val.layout().stride[0] * dst_strd;
-        for (size_t i = 0; i < dest.ndim; ++ i) {
+        for (size_t i = 0; i < dest.ndim; ++i) {
             memcpy(dst, src, dst_strd);
             dst += dst_strd;
             src += src_strd;
@@ -432,11 +431,11 @@ void cg::copy_tensor_value_to_shape(
 }
 
 SymbolVar cg::var_from_tensor_shape(
-        ComputingGraph &graph, const OperatorNodeConfig &config,
-        const char *opr_name, const TensorShape &shape) {
+        ComputingGraph& graph, const OperatorNodeConfig& config, const char* opr_name,
+        const TensorShape& shape) {
     auto cn = config.get_single_comp_node();
-    mgb_throw_if(!cn.valid(), GraphError,
-            "must specify comp node in %s config", opr_name);
+    mgb_throw_if(
+            !cn.valid(), GraphError, "must specify comp node in %s config", opr_name);
     DeviceTensorND dv;
     copy_shape_to_tensor_value(dv, shape);
     HostTensorND hv{cn};
@@ -450,8 +449,9 @@ void cg::DepOprIter::push_stack(OperatorNodeBase* opr) {
         if (m_extra_dep) {
             auto it = m_extra_dep->find(opr);
             if (it != m_extra_dep->end()) {
-                m_stack.push_back({opr, opr->input().data(), it->second.data(),
-                                   0, opr->input().size(), it->second.size()});
+                m_stack.push_back(
+                        {opr, opr->input().data(), it->second.data(), 0,
+                         opr->input().size(), it->second.size()});
                 return;
             }
         }
@@ -460,23 +460,24 @@ void cg::DepOprIter::push_stack(OperatorNodeBase* opr) {
     }
 }
 
-void cg::DepOprIter::add(OperatorNodeBase *dest) {
+void cg::DepOprIter::add(OperatorNodeBase* dest) {
     if (!m_owner_graph) {
         m_owner_graph = dest->owner_graph();
     } else {
-        mgb_assert(m_owner_graph == dest->owner_graph(),
+        mgb_assert(
+                m_owner_graph == dest->owner_graph(),
                 "dest oprs belong to different graphs");
     }
     push_stack(dest);
     while (!m_stack.empty()) {
-        auto &&frame = m_stack.back();
+        auto&& frame = m_stack.back();
         if (frame.inp_idx == frame.nr_input + frame.nr_extra_dep) {
             m_cb(frame.opr);
             m_stack.pop_back();
         } else {
             VarNode* inp = nullptr;
             if (frame.inp_idx < frame.nr_input) {
-                inp = frame.inputs[frame.inp_idx ++];
+                inp = frame.inputs[frame.inp_idx++];
             } else {
                 inp = frame.extra_deps[frame.inp_idx - frame.nr_input];
                 frame.inp_idx++;
@@ -486,47 +487,50 @@ void cg::DepOprIter::add(OperatorNodeBase *dest) {
     }
 }
 
-
 /* =================== InterGraphVarTransformer =================== */
 
 MGB_TYPEINFO_OBJ_IMPL(InterGraphVarTransformer);
 
-void InterGraphVarTransformer::register_to(ComputingGraph *dest,
-        const ComputingGraph *src, const TransFunc &trans) {
+void InterGraphVarTransformer::register_to(
+        ComputingGraph* dest, const ComputingGraph* src, const TransFunc& trans) {
     mgb_assert(dest && src && trans);
-    mgb_assert(dest->id() > src->id(),
+    mgb_assert(
+            dest->id() > src->id(),
             "inter-graph trans only allowed from old graph to new graph");
     auto mk = []() {
-        return std::shared_ptr<InterGraphVarTransformer>(
-                new InterGraphVarTransformer);
+        return std::shared_ptr<InterGraphVarTransformer>(new InterGraphVarTransformer);
     };
-    auto ptr = dest->options().user_data.
-        get_user_data_or_create<InterGraphVarTransformer>(mk);
-    mgb_assert(!ptr->m_trans_func, "InterGraphVarTransformer on graph #%zu{%p} "
-            "already registered", dest->id(), dest);
+    auto ptr =
+            dest->options().user_data.get_user_data_or_create<InterGraphVarTransformer>(
+                    mk);
+    mgb_assert(
+            !ptr->m_trans_func,
+            "InterGraphVarTransformer on graph #%zu{%p} "
+            "already registered",
+            dest->id(), dest);
     ptr->m_graph_dest = dest;
     ptr->m_graph_src = src;
     ptr->m_trans_func = trans;
 }
 
-const InterGraphVarTransformer*
-InterGraphVarTransformer::get(const ComputingGraph &graph) {
-    auto ret = graph.options().user_data.get_user_data<
-        InterGraphVarTransformer>();
+const InterGraphVarTransformer* InterGraphVarTransformer::get(
+        const ComputingGraph& graph) {
+    auto ret = graph.options().user_data.get_user_data<InterGraphVarTransformer>();
     if (!ret.second)
         return nullptr;
     mgb_assert(ret.second == 1);
     return ret.first[0];
 }
 
-VarNode* InterGraphVarTransformer::trans(VarNode *src) const {
+VarNode* InterGraphVarTransformer::trans(VarNode* src) const {
     if (src->owner_graph() != m_graph_src) {
         auto strans = get(*m_graph_src);
-        mgb_throw_if(!strans, GraphError,
+        mgb_throw_if(
+                !strans, GraphError,
                 "no InterGraphVarTransformer registered for var %s, "
                 "which belongs to graph #%zu{%p}",
-                dump_var_info({src}).c_str(),
-                src->owner_graph()->id(), src->owner_graph());
+                dump_var_info({src}).c_str(), src->owner_graph()->id(),
+                src->owner_graph());
         src = strans->trans(src);
     }
     auto ret = m_trans_func(src);
@@ -546,9 +550,10 @@ void ExtraDependencyMerger::on_opr(OperatorNodeBase* opr) {
     if (!m_owner_graph) {
         m_owner_graph = opr->owner_graph();
     }
-    mgb_assert(m_owner_graph == opr->owner_graph(),
-               "owner graph changes in ExtraDependencyMerger; opr: %s{%s}",
-               opr->cname(), opr->dyn_typeinfo()->name);
+    mgb_assert(
+            m_owner_graph == opr->owner_graph(),
+            "owner graph changes in ExtraDependencyMerger; opr: %s{%s}", opr->cname(),
+            opr->dyn_typeinfo()->name);
     auto&& extra_deps = m_owner_graph->options().extra_vardeps;
     auto sopr_stat = m_sopr_stat;
     MGB_MARK_USED_VAR(sopr_stat);
@@ -556,8 +561,7 @@ void ExtraDependencyMerger::on_opr(OperatorNodeBase* opr) {
     for (auto i : opr->output()) {
         auto&& iter = extra_deps.find(i);
         if (iter != extra_deps.end()) {
-            new_deps.insert(new_deps.end(), iter->second.begin(),
-                            iter->second.end());
+            new_deps.insert(new_deps.end(), iter->second.begin(), iter->second.end());
         }
 #if !MGB_BUILD_SLIM_SERVING && MGB_ENABLE_GRAD
         if (sopr_stat && opr->same_type<opr::VirtualGrad>()) {

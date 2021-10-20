@@ -36,11 +36,12 @@ struct LowBitType {
     static bool check_value_set_err(int val) {
         int t = val + max_value;
         if ((t & 1) || t < 0 || t > (max_value << 1)) {
-            PyErr_SetString(PyExc_ValueError,
-                            mgb::ssprintf("low bit dtype number error: "
-                                          "value=%d; allowed {-3, -1, 1, 3}",
-                                          val)
-                                    .c_str());
+            PyErr_SetString(
+                    PyExc_ValueError, mgb::ssprintf(
+                                              "low bit dtype number error: "
+                                              "value=%d; allowed {-3, -1, 1, 3}",
+                                              val)
+                                              .c_str());
             return false;
         }
 
@@ -59,8 +60,8 @@ int LowBitType<N>::npy_typenum;
 template <size_t N>
 template <typename S>
 struct LowBitType<N>::NpyCast<S, LowBitType<N>> {
-    static void apply(void* from_, void* to_, npy_intp n, void* /*fromarr*/,
-                      void* /*toarr*/) {
+    static void apply(
+            void* from_, void* to_, npy_intp n, void* /*fromarr*/, void* /*toarr*/) {
         auto from = static_cast<S*>(from_);
         auto to = static_cast<LowBitType<N>*>(to_);
         for (npy_intp i = 0; i < n; ++i) {
@@ -75,8 +76,8 @@ struct LowBitType<N>::NpyCast<S, LowBitType<N>> {
 template <size_t N>
 template <typename T>
 struct LowBitType<N>::NpyCast<LowBitType<N>, T> {
-    static void apply(void* from_, void* to_, npy_intp n, void* /*fromarr*/,
-                      void* /*toarr*/) {
+    static void apply(
+            void* from_, void* to_, npy_intp n, void* /*fromarr*/, void* /*toarr*/) {
         auto from = static_cast<LowBitType<N>*>(from_);
         auto to = static_cast<T*>(to_);
         for (npy_intp i = 0; i < n; ++i) {
@@ -106,8 +107,8 @@ template <size_t N>
 PyTypeObject LowBitType<N>::PyObj::py_type;
 
 template <size_t N>
-PyObject* LowBitType<N>::PyObj::py_new(PyTypeObject* type, PyObject* args,
-                                       PyObject* kwds) {
+PyObject* LowBitType<N>::PyObj::py_new(
+        PyTypeObject* type, PyObject* args, PyObject* kwds) {
     PyObj* self;
     Py_ssize_t size;
 
@@ -125,8 +126,7 @@ PyObject* LowBitType<N>::PyObj::py_new(PyTypeObject* type, PyObject* args,
     }
 
     if (!PyLong_Check(x)) {
-        PyErr_SetString(PyExc_TypeError,
-                        "LowBitType must be initialized wit int");
+        PyErr_SetString(PyExc_TypeError, "LowBitType must be initialized wit int");
         return NULL;
     }
 
@@ -143,8 +143,7 @@ PyObject* LowBitType<N>::PyObj::py_repr(PyObject* obj) {
 }
 
 template <size_t N>
-PyObject* LowBitType<N>::PyObj::py_richcompare(PyObject* a, PyObject* b,
-                                               int op) {
+PyObject* LowBitType<N>::PyObj::py_richcompare(PyObject* a, PyObject* b, int op) {
     mgb_assert(PyObject_IsInstance(a, (PyObject*)&py_type));
     auto bval = PyFloat_AsDouble(b);
     if (bval == -1 && PyErr_Occurred()) {
@@ -186,8 +185,7 @@ struct LowBitType<N>::NpyType {
         }
     }
     static PyObject* getitem(void* data, void* ap) {
-        return LowBitType<N>::PyObj::from_lowbit(
-                *static_cast<LowBitType<N>*>(data));
+        return LowBitType<N>::PyObj::from_lowbit(*static_cast<LowBitType<N>*>(data));
     }
     static int setitem(PyObject* op, void* ov, void* ap);
     static int fill(void* data_, npy_intp length, void* arr);
@@ -217,8 +215,7 @@ template <size_t N>
 int LowBitType<N>::NpyType::fill(void* data_, npy_intp length, void* arr) {
     auto data = static_cast<LowBitType<N>*>(data_);
     int8_t delta = data[1].value - data[0].value, r = data[1].value;
-    if (!check_value_set_err(data[0].value) ||
-        !check_value_set_err(data[1].value))
+    if (!check_value_set_err(data[0].value) || !check_value_set_err(data[1].value))
         return -1;
     for (npy_intp i = 2; i < length; i++) {
         r += delta;
@@ -233,18 +230,19 @@ int LowBitType<N>::NpyType::fill(void* data_, npy_intp length, void* arr) {
 
 template <size_t N>
 bool LowBitType<N>::NpyType::init() {
-    descr = {PyObject_HEAD_INIT(0) & LowBitType<N>::PyObj::py_type,
-             'V',  // kind
-             'r',  // type
-             '=',  // byteorder
-             NPY_NEEDS_PYAPI | NPY_USE_GETITEM | NPY_USE_SETITEM,
-             0,  // type num
-             sizeof(LowBitType<N>),
-             alignof(LowBitType<N>),
-             NULL,
-             NULL,
-             NULL,
-             &funcs};
+    descr = {
+            PyObject_HEAD_INIT(0) & LowBitType<N>::PyObj::py_type,
+            'V',  // kind
+            'r',  // type
+            '=',  // byteorder
+            NPY_NEEDS_PYAPI | NPY_USE_GETITEM | NPY_USE_SETITEM,
+            0,  // type num
+            sizeof(LowBitType<N>),
+            alignof(LowBitType<N>),
+            NULL,
+            NULL,
+            NULL,
+            &funcs};
     Py_TYPE(&descr) = &PyArrayDescr_Type;
     PyArray_InitArrFuncs(&funcs);
     funcs.copyswap = copyswap;
@@ -253,26 +251,26 @@ bool LowBitType<N>::NpyType::init() {
     funcs.fill = fill;
     npy_typenum = PyArray_RegisterDataType(&descr);
 
-#define REGISTER_CAST(From, To, From_descr, To_typenum, safe)         \
-    {                                                                 \
-        PyArray_Descr* from_descr = (From_descr);                     \
-        if (PyArray_RegisterCastFunc(from_descr, (To_typenum),        \
-                                     NpyCast<From, To>::apply) < 0) { \
-            return false;                                             \
-        }                                                             \
-        if (safe && PyArray_RegisterCanCast(from_descr, (To_typenum), \
-                                            NPY_NOSCALAR) < 0) {      \
-            return false;                                             \
-        }                                                             \
+#define REGISTER_CAST(From, To, From_descr, To_typenum, safe)                      \
+    {                                                                              \
+        PyArray_Descr* from_descr = (From_descr);                                  \
+        if (PyArray_RegisterCastFunc(                                              \
+                    from_descr, (To_typenum), NpyCast<From, To>::apply) < 0) {     \
+            return false;                                                          \
+        }                                                                          \
+        if (safe &&                                                                \
+            PyArray_RegisterCanCast(from_descr, (To_typenum), NPY_NOSCALAR) < 0) { \
+            return false;                                                          \
+        }                                                                          \
     }
-#define REGISTER_INT_CASTS(bits)                                          \
-    REGISTER_CAST(npy_int##bits, LowBitType<N>,                           \
-                  PyArray_DescrFromType(NPY_INT##bits),                   \
-                  LowBitType<N>::npy_typenum, 1)                          \
-    REGISTER_CAST(LowBitType<N>, npy_int##bits, &descr, NPY_INT##bits, 0) \
-    REGISTER_CAST(npy_uint##bits, LowBitType<N>,                          \
-                  PyArray_DescrFromType(NPY_UINT##bits),                  \
-                  LowBitType<N>::npy_typenum, 1)                          \
+#define REGISTER_INT_CASTS(bits)                                                  \
+    REGISTER_CAST(                                                                \
+            npy_int##bits, LowBitType<N>, PyArray_DescrFromType(NPY_INT##bits),   \
+            LowBitType<N>::npy_typenum, 1)                                        \
+    REGISTER_CAST(LowBitType<N>, npy_int##bits, &descr, NPY_INT##bits, 0)         \
+    REGISTER_CAST(                                                                \
+            npy_uint##bits, LowBitType<N>, PyArray_DescrFromType(NPY_UINT##bits), \
+            LowBitType<N>::npy_typenum, 1)                                        \
     REGISTER_CAST(LowBitType<N>, npy_uint##bits, &descr, NPY_UINT##bits, 0)
 
     REGISTER_INT_CASTS(8)
@@ -280,11 +278,13 @@ bool LowBitType<N>::NpyType::init() {
     REGISTER_INT_CASTS(32)
     REGISTER_INT_CASTS(64)
     REGISTER_CAST(LowBitType<N>, float, &descr, NPY_FLOAT, 0)
-    REGISTER_CAST(float, LowBitType<N>, PyArray_DescrFromType(NPY_FLOAT),
-                  LowBitType<N>::npy_typenum, 0)
+    REGISTER_CAST(
+            float, LowBitType<N>, PyArray_DescrFromType(NPY_FLOAT),
+            LowBitType<N>::npy_typenum, 0)
     REGISTER_CAST(LowBitType<N>, double, &descr, NPY_DOUBLE, 1)
-    REGISTER_CAST(double, LowBitType<N>, PyArray_DescrFromType(NPY_DOUBLE),
-                  LowBitType<N>::npy_typenum, 0)
+    REGISTER_CAST(
+            double, LowBitType<N>, PyArray_DescrFromType(NPY_DOUBLE),
+            LowBitType<N>::npy_typenum, 0)
     return true;
 }
 
@@ -321,13 +321,13 @@ FOREACH_MGB_LOW_BIT(DEFINE_NPY_INTBX)
 namespace py = pybind11;
 
 void mgb::init_npy_num_intbx(py::module m) {
-#define ADD_OBJ_INTBX(n)                                             \
-    mgb_assert(init_pytype_intb##n());                               \
-    mgb_assert(IntB##n::NpyType::init());                            \
-    m.add_object("pyintb" #n, reinterpret_cast<PyObject*>(           \
-        &IntB##n::PyObj::py_type));                                  \
-    m.add_object("intb" #n, reinterpret_cast<PyObject*>(             \
-        PyArray_DescrFromType(npy_num_intb##n())));
+#define ADD_OBJ_INTBX(n)                                                              \
+    mgb_assert(init_pytype_intb##n());                                                \
+    mgb_assert(IntB##n::NpyType::init());                                             \
+    m.add_object("pyintb" #n, reinterpret_cast<PyObject*>(&IntB##n::PyObj::py_type)); \
+    m.add_object(                                                                     \
+            "intb" #n,                                                                \
+            reinterpret_cast<PyObject*>(PyArray_DescrFromType(npy_num_intb##n())));
     FOREACH_MGB_LOW_BIT(ADD_OBJ_INTBX)
 }
 

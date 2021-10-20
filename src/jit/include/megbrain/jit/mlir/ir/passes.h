@@ -15,9 +15,9 @@
 #include "megbrain_build_config.h"
 #if MGB_JIT && MGB_JIT_MLIR
 
-#include <memory>
 #include <mlir/IR/Module.h>
 #include <mlir/Pass/Pass.h>
+#include <memory>
 
 namespace mgb {
 namespace jit {

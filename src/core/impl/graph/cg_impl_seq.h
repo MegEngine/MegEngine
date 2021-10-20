@@ -14,9 +14,9 @@
 #include "./cg_impl.h"
 #include "./normal_exec_env.h"
 #include "megbrain/comp_node_env.h"
+#include "megbrain/plugin/static_mem_record.h"
 #include "megbrain/plugin/var_sanity_check.h"
 #include "megbrain/utils/arith_helper.h"
-#include "megbrain/plugin/static_mem_record.h"
 
 namespace mgb {
 namespace cg {
@@ -104,8 +104,7 @@ public:
     ComputingSequence(const std::shared_ptr<ComputingGraph>& graph)
             : m_owner_graph_refkeep{graph},
               m_owner_graph{ComputingGraphImpl::downcast(graph.get())},
-              m_have_parent_graph{
-                      static_cast<bool>(m_owner_graph->m_parent_graph)} {}
+              m_have_parent_graph{static_cast<bool>(m_owner_graph->m_parent_graph)} {}
 
     GraphExecutable::ExecEnv& exec_env() { return m_exec_env; }
 
@@ -134,8 +133,7 @@ public:
 
     double get_prev_exec_time() const override;
 
-    AsyncExecutable& iter_opr_seq(
-            thin_function<bool(OperatorNodeBase*)> cb) override;
+    AsyncExecutable& iter_opr_seq(thin_function<bool(OperatorNodeBase*)> cb) override;
 
 #if MGB_ENABLE_JSON
     std::shared_ptr<json::Value> to_json() const override;
@@ -157,8 +155,8 @@ public:
     //! get the pointer to the run id, so it can be accessed anytime
     const size_t* get_run_id_ptr() const { return &m_run_id; }
 
-    virtual const CompNode::UnorderedMap<size_t>&
-    update_static_alloc_plan_and_get_size() override;
+    virtual const CompNode::UnorderedMap<size_t>& update_static_alloc_plan_and_get_size()
+            override;
 
     void clear_device_memory() override;
 
@@ -173,11 +171,12 @@ public:
 
     std::unique_ptr<RecordedComputingSequence> as_recorded_seq();
 #ifndef __IN_TEE_ENV__
+#if MGB_ENABLE_JSON
     void get_static_memory_alloc_info(
-            const std::string& svg_name =
-                    "static_mem_record.svg") const override;
+            const std::string& log_dir = "logs/test") const override;
 
     void do_regist() const;
+#endif
 #endif
 };
 
@@ -194,10 +193,8 @@ class ComputingGraphImpl::MegDNNDtorCheck : public NonCopyableObj {
     RecordedComputingSequence* m_comp_seq = nullptr;
 
 public:
-    explicit MegDNNDtorCheck(CompNode cn,
-                             RecordedComputingSequence* comp_seq = nullptr)
-            : m_handle{MegDNNHandle::get(CompNodeEnv::from_comp_node(cn))
-                               .handle()},
+    explicit MegDNNDtorCheck(CompNode cn, RecordedComputingSequence* comp_seq = nullptr)
+            : m_handle{MegDNNHandle::get(CompNodeEnv::from_comp_node(cn)).handle()},
               m_env{const_cast<CompNodeEnv*>(&CompNodeEnv::from_comp_node(cn))},
               m_comp_seq{comp_seq} {}
 
@@ -220,13 +217,10 @@ public:
      * So objects in this array can be safely destructed without triggering
      * error
      */
-    GraphExecutable::ExecDependencyArray& safe_dtor_objs() {
-        return m_safe_dtor_objs;
-    }
+    GraphExecutable::ExecDependencyArray& safe_dtor_objs() { return m_safe_dtor_objs; }
 };
 
-class ComputingGraphImpl::RecordedComputingSequence final
-        : public AsyncExecutable {
+class ComputingGraphImpl::RecordedComputingSequence final : public AsyncExecutable {
     friend class ComputingGraphImpl::ComputingSequence;
 
     bool m_wait_finished = true;
@@ -249,8 +243,7 @@ class ComputingGraphImpl::RecordedComputingSequence final
     }
 
     [[noreturn]] static void on_not_support(const char* name) {
-        mgb_throw(MegBrainError, "%s unsupported on RecordedComputingSequence",
-                  name);
+        mgb_throw(MegBrainError, "%s unsupported on RecordedComputingSequence", name);
     }
 
 public:
@@ -259,8 +252,7 @@ public:
 
     ~RecordedComputingSequence() {
         if (m_owner_graph) {
-            m_owner_graph->m_recorded_seq_level2_dtor_chk->on_comp_seq_destroy(
-                    this);
+            m_owner_graph->m_recorded_seq_level2_dtor_chk->on_comp_seq_destroy(this);
         }
     }
 
@@ -274,22 +266,18 @@ public:
      * \brief iterate over operator sequence
      * \param cb callback function, return false to stop iterating
      */
-    AsyncExecutable& iter_opr_seq(
-            thin_function<bool(OperatorNodeBase*)>) override {
+    AsyncExecutable& iter_opr_seq(thin_function<bool(OperatorNodeBase*)>) override {
         on_not_support(mgb_cstr_log("iter_opr_seq"));
     }
 
-    const SmallVector<static_infer::DepElement>& get_rt_static_source_deps()
-            override {
+    const SmallVector<static_infer::DepElement>& get_rt_static_source_deps() override {
         on_not_support(mgb_cstr_log("get_rt_static_source_deps"));
     }
 
-    size_t get_run_id() const override {
-        on_not_support(mgb_cstr_log("get_run_id"));
-    }
+    size_t get_run_id() const override { on_not_support(mgb_cstr_log("get_run_id")); }
 
-    virtual const CompNode::UnorderedMap<size_t>&
-    update_static_alloc_plan_and_get_size() override {
+    virtual const CompNode::UnorderedMap<size_t>& update_static_alloc_plan_and_get_size()
+            override {
         on_not_support(mgb_cstr_log("update_static_alloc_plan_and_get_size"));
     }
 

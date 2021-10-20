@@ -22,10 +22,9 @@ namespace megdnn {
 namespace arm_common {
 namespace fp32_direct_nchw_nchw44 {
 
-static inline void pack_weight_fp32_nchw_nchw44(const float32_t* in_ptr,
-                                                float32_t* dst_ptr,
-                                                const int oc, const int kh,
-                                                const int kw, const int ic) {
+static inline void pack_weight_fp32_nchw_nchw44(
+        const float32_t* in_ptr, float32_t* dst_ptr, const int oc, const int kh,
+        const int kw, const int ic) {
     constexpr int oc_step = 4;
     const int filter_oc_stride = kh * kw * ic;
     const int filter_ic_stride = kh * kw * oc_step;
@@ -45,12 +44,11 @@ static inline void pack_weight_fp32_nchw_nchw44(const float32_t* in_ptr,
     }
 }
 template <BiasMode bias_mode, typename Op, int filter_size, int stride>
-void conv_direct_fp32_nchw_nchw44(const float32_t* src, const float32_t* filter,
-                                  const float32_t* bias, float32_t*,
-                                  float32_t* dst, const int oc, const int ic,
-                                  const int ih, const int iw, const int oh,
-                                  const int oh_block, const int ow,
-                                  const Op& op, const int, const int);
+void conv_direct_fp32_nchw_nchw44(
+        const float32_t* src, const float32_t* filter, const float32_t* bias,
+        float32_t*, float32_t* dst, const int oc, const int ic, const int ih,
+        const int iw, const int oh, const int oh_block, const int ow, const Op& op,
+        const int, const int);
 }  // namespace fp32_direct_nchw_nchw44
 
 }  // namespace arm_common

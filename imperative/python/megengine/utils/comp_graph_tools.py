@@ -37,8 +37,7 @@ __all__ = [
 def get_dep_vars(
     var: Union[_VarNode, List[_VarNode]], var_type: Union[str, List[str]] = None
 ) -> List[_VarNode]:
-    """
-    Returns :class:`.tensor.core.megbrain_graph.VarNode` of type ``var_type`` that input ``var``
+    r"""Returns :class:`.tensor.core.megbrain_graph.VarNode` of type ``var_type`` that input ``var``
     depands on. If ``var_type`` is None, returns all types.
     """
     outputs = []
@@ -67,30 +66,23 @@ def get_dep_vars(
 
 
 def get_owner_opr_inputs(var: _VarNode) -> List[_VarNode]:
-    """
-    Gets the inputs of owner opr of a variable.
-    """
+    r"""Gets the inputs of owner opr of a variable. """
     return var.owner.inputs
 
 
 def get_owner_opr_type(var: _VarNode) -> str:
-    """
-    Gets the type of owner opr of a variable.
-
-    """
+    r"""Gets the type of owner opr of a variable."""
     return var.owner.type
 
 
 def get_opr_type(opr: _OpNode) -> str:
-    """
-    Gets the type of an opr.
-    """
+    r"""Gets the type of an opr."""
     assert isinstance(opr, _OpNode)
     return opr.type
 
 
 class _OprStableOrderHeapq:
-    """heap implementation for operator comparison in stable order"""
+    r"""heap implementation for operator comparison in stable order"""
 
     _list = None
     _extra_priority = None
@@ -125,18 +117,22 @@ class _OprStableOrderHeapq:
 
 
 def graph_traversal(outputs: _VarNode):
-    """
-    Helper function to traverse the computing graph and return enough useful information.
+    r"""Helper function to traverse the computing graph and return enough useful information.
 
-    :param outputs: model outputs.
-    :return:  tuple (map_oprs, map_vars, var2oprs, opr2receivers, indegree2opr, opr2indegree)
+    Args:
+        outputs: model outputs.
+
+    Returns:
+        tuple (map_oprs, map_vars, var2oprs, opr2receivers, indegree2opr, opr2indegree)
+
         WHERE
-        map_oprs is dict from opr_id to actual opr
-        map_vars is dict from var_id to actual var
-        var2oprs is dict from var to dest oprs along with index
-        opr2receivers is dict from current opr to next opr
-        indegree2opr is dict from in_degree to opr in computing graph
-        opr2indegree is dict from opr in computing graph to in_degree
+
+        * map_oprs is dict from opr_id to actual opr
+        * map_vars is dict from var_id to actual var
+        * var2oprs is dict from var to dest oprs along with index
+        * opr2receivers is dict from current opr to next opr
+        * indegree2opr is dict from in_degree to opr in computing graph
+        * opr2indegree is dict from opr in computing graph to in_degree
 
         (indegree2opr, opr2indegree) are only used in topological sort in get_oprs_seq function
     """
@@ -185,13 +181,15 @@ def graph_traversal(outputs: _VarNode):
 def get_oprs_seq(
     outputs: List[_VarNode], prune_reshape=False, prune_immtensor=True
 ) -> List[_OpNode]:
-    """
-    Gets oprs in some topological order for a dumped model.
+    r"""Gets oprs in some topological order for a dumped model.
 
-    :param outputs: model outputs.
-    :param prune_reshape: whether to prune the useless operators used by Reshape opr during inference.
-    :param prune_immtensor: whether to prune the ImmutableTensor opr.
-    :return: opr list with some correct execution order.
+    Args:
+        outputs: model outputs.
+        prune_reshape: whether to prune the useless operators used by Reshape opr during inference.
+        prune_immtensor: whether to prune the ImmutableTensor opr.
+
+    Returns:
+        opr list with some correct execution order.
     """
 
     def topological_sort(map_oprs, opr2receivers, indegree2opr, opr2indegree):
@@ -289,14 +287,14 @@ def get_oprs_seq(
 def replace_vars(
     dst: List[_VarNode], varmap: Dict[_VarNode, _VarNode]
 ) -> List[_VarNode]:
-    """
-    Replaces vars in the graph.
+    r"""Replaces vars in the graph.
 
-    :param dst: target vars representing the graph.
-    :param varmap: the map that specifies how to replace the vars.
+    Args:
+        dst: target vars representing the graph.
+        varmap: the map that specifies how to replace the vars.
 
-    :return: new vars that correspond to ``dst`` with all the dependencies
-        replaced.
+    Returns:
+        new vars that correspond to ``dst`` with all the dependencies replaced.
     """
     dst_vec = []
     repl_src_vec = []
@@ -315,14 +313,14 @@ def replace_vars(
 
 
 def replace_oprs(dst: List[_VarNode], oprmap: Dict[_OpNode, _OpNode]) -> List[_VarNode]:
-    """
-    Replaces operators in the graph.
+    """Replaces operators in the graph.
 
-    :param dst: target vars representing the graph.
-    :param oprmap: the map that specifies how to replace the operators.
+    Args:
+        dst: target vars representing the graph.
+        oprmap: the map that specifies how to replace the operators.
 
-    :return: new vars that correspond to ``dst`` with all the dependencies
-        replaced.
+    Returns:
+        new vars that correspond to ``dst`` with all the dependencies replaced.
     """
     dst_vec = []
     repl_src_vec = []
@@ -341,13 +339,14 @@ def replace_oprs(dst: List[_VarNode], oprmap: Dict[_OpNode, _OpNode]) -> List[_V
 
 
 def find_vars_by_name(dst: List[_VarNode], names: List[str]) -> List[_VarNode]:
-    """
-    Gets VarNode list by names in the graph.
+    r"""Gets VarNode list by names in the graph.
 
-    :param dst: target vars representing the graph.
-    :param names: name list for target VarNode.
+    Args:
+        dst: target vars representing the graph.
+        names: name list for target VarNode.
 
-    :return: results found by names.
+    Returns:
+        results found by names.
     """
     output_names = names.copy()
     all_vars = get_dep_vars(dst) + dst
@@ -366,16 +365,16 @@ def find_vars_by_name(dst: List[_VarNode], names: List[str]) -> List[_VarNode]:
 def convert_inputs(
     dst: List[_VarNode], inputs: List[_VarNode] = None
 ) -> Tuple[List[_VarNode], Dict[str, _VarNode]]:
-    """
-    Replaces ``Host2DeviceCopy`` with :class:`~.InputNode` in the graph
+    r"""Replaces ``Host2DeviceCopy`` with :class:`~.InputNode` in the graph
     to :meth:`~.InputNode.set_value` and run.
 
-    :param dst: target vars representing the graph.
-    :param inputs: indicates which inputs to be replaced. All
-        inputs(``Host2DeiceCopy``) will be replaced if not specified.
+    Args:
+        dst: target vars representing the graph.
+        inputs: indicates which inputs to be replaced. All
+            inputs(``Host2DeiceCopy``) will be replaced if not specified.
 
-    :return: new vars that correspond to ``dst`` with all inputs
-        replaced, and new inputs dict.
+    Returns:
+        new vars that correspond to ``dst`` with all inputs replaced, and new inputs dict.
     """
     if inputs is None:
         inputs = get_dep_vars(dst, "Host2DeviceCopy")
@@ -395,14 +394,14 @@ def convert_inputs(
 
 
 def convert_outputs(dst: List[_VarNode]) -> Tuple[List[_VarNode], Dict[str, _VarNode]]:
-    """
-    Wraps ``dst`` with :class:`~.OutputNode` in the graph to get outputs
+    r"""Wraps ``dst`` with :class:`~.OutputNode` in the graph to get outputs
     with :meth:`~.OutputNode.get_value`.
 
-    :param dst: target vars representing the graph.
+    Args:
+        dst: target vars representing the graph.
 
-    :return: new vars that correspond to ``dst`` with all inputs
-        replaced, and outputs dict.
+    Returns:
+        new vars that correspond to ``dst`` with all inputs replaced, and outputs dict.
     """
     output_dict = OrderedDict([(i.name, G.OutputNode(i)) for i in dst])
     new_output_nodes = [i.outputs[0] for i in output_dict.values()]
@@ -412,15 +411,16 @@ def convert_outputs(dst: List[_VarNode]) -> Tuple[List[_VarNode], Dict[str, _Var
 def embed_inputs(
     dst: List[_VarNode], data: List[np.ndarray], inputs: List[_VarNode] = None
 ) -> Tuple[List[_VarNode], Dict[str, _VarNode]]:
-    """
-    Embeds ``data`` to the graph's inputs of ``dst``.
+    r"""Embeds ``data`` to the graph's inputs of ``dst``.
 
-    :param dst: target vars representing the graph.
-    :param data: data to be embeded.
-    :param inputs: indicates which inputs to be replaced. All
-        inputs(``Host2DeiceCopy``) will be replaced if not specified.
-    :return: new vars that correspond to ``dst`` with all inputs
-        replaced, and new inputs dict.
+    Args:
+        dst: target vars representing the graph.
+        data: data to be embeded.
+        inputs: indicates which inputs to be replaced. All
+            inputs(``Host2DeiceCopy``) will be replaced if not specified.
+
+    Returns:
+      new vars that correspond to ``dst`` with all inputs replaced, and new inputs dict.
     """
     if inputs is None:
         inputs = get_dep_vars(dst, "Host2DeviceCopy")
@@ -439,12 +439,12 @@ def embed_inputs(
 
 
 class GraphInference:
-    """
-    Loads a serialized computing graph as a GraphInference object which can be used
+    r"""Loads a serialized computing graph as a GraphInference object which can be used
     to execute the computing graph.
 
-    :param file: could be file object or filename.
-    :param outputs: only compile the subgraph with outputs as its endpoints.
+    Args:
+        file: could be file object or filename.
+        outputs: only compile the subgraph with outputs as its endpoints.
     """
 
     def __init__(
@@ -472,10 +472,14 @@ class GraphInference:
     def run(
         self, *inp_args: np.ndarray, inp_dict: Dict[str, np.ndarray] = None
     ) -> Dict[str, np.ndarray]:
-        """
-        :param inp_args: list of input datas.
-        :param inp_dict: dict of named input datas.
-        :return: a dict {output_name: output_value}.
+        r"""
+
+        Args:
+            inp_args: list of input datas.
+            inp_dict: dict of named input datas.
+
+        Returns:
+            a dict {output_name: output_value}.
         """
         assert len(inp_args) <= len(
             self._inp_dict

@@ -30,6 +30,7 @@ public:
         C = 'C',  // input channel
         H = 'H',  // input height
         W = 'W',  // input width
+        G = 'G',  // group
         K = 'K',  // output channel
         R = 'R',  // filter height
         S = 'S',  // filter width

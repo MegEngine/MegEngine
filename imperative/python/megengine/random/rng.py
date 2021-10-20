@@ -27,6 +27,7 @@ from ..core.ops.builtin import (
     GaussianRNG,
     PermutationRNG,
     PoissonRNG,
+    ShuffleRNG,
     UniformRNG,
 )
 from ..core.tensor import utils
@@ -41,6 +42,7 @@ __all__ = [
     "beta",
     "poisson",
     "permutation",
+    "shuffle",
 ]
 
 _rng = None
@@ -209,7 +211,8 @@ def _poisson(
 
 
 def _permutation(n: int, seed: int, device: str, handle: int, dtype: str) -> Tensor:
-    assert isinstance(n, int) and n > 0, "Permutation is not defined when n <= 0"
+    assert isinstance(n, int)
+    assert n >= 0, "Permutation is not defined when n < 0"
     size = (n,)
     op = PermutationRNG(seed=seed, handle=handle, dtype=dtype)
     _ref = Tensor([], dtype="int32", device=device)
@@ -218,31 +221,38 @@ def _permutation(n: int, seed: int, device: str, handle: int, dtype: str) -> Ten
     return output
 
 
+def _shuffle(inp: Tensor, seed: int, handle: int) -> Tensor:
+    assert inp.size > 0, "size needs to be greater than 0"
+    op = ShuffleRNG(seed=seed, handle=handle)
+    output, _ = apply(op, inp)
+    return output
+
+
 class RNG:
 
-    r"""
-    :class:`RNG` exposes a number of methods for generating random numbers.
+    r""":class:`RNG` exposes a number of methods for generating random numbers.
 
-    :param seed: random seed used to initialize the pseudo-random number generator. 
-        Default: None
-    :param device: the device of generated tensor. Default: None
+    Args:
+        seed: random seed used to initialize the pseudo-random number generator. Default: None
+        device: the device of generated tensor. Default: None
+
 
     Examples:
 
-    .. testcode::
+        .. testcode::
 
-        import megengine.random as rand
-        rng = rand.RNG(seed=100)
-        x = rng.uniform(size=(2, 2))
-        print(x.numpy())
+            import megengine.random as rand
+            rng = rand.RNG(seed=100)
+            x = rng.uniform(size=(2, 2))
+            print(x.numpy())
 
-    Outputs:
+        Outputs:
 
-    .. testoutput::
-        :options: +SKIP
+        .. testoutput::
+            :options: +SKIP
 
-        [[0.84811664 0.6147553 ]
-         [0.59429836 0.64727545]]
+            [[0.84811664 0.6147553 ]
+             [0.59429836 0.64727545]]
 
     """
 
@@ -259,32 +269,33 @@ class RNG:
     def uniform(
         self, low: float = 0, high: float = 1, size: Optional[Iterable[int]] = None
     ):
-        r"""
-        Random variable with uniform distribution $U(0, 1)$.
+        r"""Random variable with uniform distribution $U(0, 1)$.
 
-        :param low: lower range. Default: 0
-        :param high: upper range. Default: 1
-        :param size: the size of output tensor. Default: None
-        :return: the output tensor.
+        Args:
+            low: lower range. Default: 0
+            high: upper range. Default: 1
+            size: the size of output tensor. Default: None
+
+        Returns:
+            the output tensor.
 
         Examples:
 
-        .. testcode::
+            .. testcode::
 
-            import megengine as mge
-            import megengine.random as rand
+                import megengine as mge
+                import megengine.random as rand
 
-            x = rand.uniform(size=(2, 2))
-            print(x.numpy())
-        
-        Outputs:
-        
-        .. testoutput::
-            :options: +SKIP
+                x = rand.uniform(size=(2, 2))
+                print(x.numpy())
 
-            [[0.91600335 0.6680226 ]
-             [0.2046729  0.2769141 ]]
+            Outputs:
 
+            .. testoutput::
+                :options: +SKIP
+
+                [[0.91600335 0.6680226 ]
+                 [0.2046729  0.2769141 ]]
         """
         _seed = self._seed() if callable(self._seed) else self._seed
         return _uniform(
@@ -299,33 +310,34 @@ class RNG:
     def normal(
         self, mean: float = 0, std: float = 1, size: Optional[Iterable[int]] = None
     ):
-        r"""
-        Random variable with Gaussian distribution :math:`N(\mu, \sigma)`.
+        r"""Random variable with Gaussian distribution :math:`N(\mu, \sigma)`.
 
-        :param mean: the mean or expectation of the distribution. Default: 0
-        :param std: the standard deviation of the distribution (variance = :math:`\sigma ^ 2`).
-            Default: 1
-        :param size: the size of output tensor. Default: None
-        :return: the output tensor.
+        Args:
+            mean: the mean or expectation of the distribution. Default: 0
+            std: the standard deviation of the distribution (variance = :math:`\sigma ^ 2`).
+                Default: 1
+            size: the size of output tensor. Default: None
+
+        Returns:
+            the output tensor.
 
         Examples:
 
-        .. testcode::
+            .. testcode::
 
-            import megengine as mge
-            import megengine.random as rand
+                import megengine as mge
+                import megengine.random as rand
 
-            x = rand.normal(mean=0, std=1, size=(2, 2))
-            print(x.numpy())
-        
-        Outputs:
-        
-        .. testoutput::
-            :options: +SKIP
+                x = rand.normal(mean=0, std=1, size=(2, 2))
+                print(x.numpy())
 
-            [[-1.4010863  -0.9874344 ]
-             [ 0.56373274  0.79656655]]
+            Outputs:
 
+            .. testoutput::
+                :options: +SKIP
+
+                [[-1.4010863  -0.9874344 ]
+                 [ 0.56373274  0.79656655]]
         """
         _seed = self._seed() if callable(self._seed) else self._seed
         return _normal(
@@ -343,12 +355,12 @@ class RNG:
         scale: Union[Tensor, float] = 1,
         size: Optional[Iterable[int]] = None,
     ):
-        r"""
-        Random variable with Gamma distribution :math:`\Gamma(k, \theta)`.
+        r"""Random variable with Gamma distribution :math:`\Gamma(k, \theta)`.
 
         The corresponding probability density function is
-        
+
         .. math::
+
             p(x)=x^{k-1} \frac{e^{-x / \theta}}{\theta^{k} \Gamma(k)}
             \quad \text { for } x>0 \quad k, \theta>0,
 
@@ -357,52 +369,54 @@ class RNG:
         .. math::
             \Gamma(k)=(k-1) !  \quad \text { for } \quad k>0.
 
-        :param shape: the shape parameter (sometimes designated "k") of the distribution. 
-            Must be non-negative.
-        :param scale: the scale parameter (sometimes designated "theta") of the distribution. 
-            Must be non-negative. Default: 1
-        :param size: the size of output tensor. If shape and scale are scalars and given size is, e.g.,
-            `(m, n)`, then the output shape is `(m, n)`. If shape or scale is a Tensor and given size 
-            is, e.g., `(m, n)`, then the output shape is `(m, n) + broadcast(shape, scale).shape`. 
-            The broadcast rules are consistent with `numpy.broadcast`. Default: None
-        :return: the output tensor.
+        Args:
+            shape: the shape parameter (sometimes designated "k") of the distribution.
+                Must be non-negative.
+            scale: the scale parameter (sometimes designated "theta") of the distribution.
+                Must be non-negative. Default: 1
+            size: the size of output tensor. If shape and scale are scalars and given size is, e.g.,
+                `(m, n)`, then the output shape is `(m, n)`. If shape or scale is a Tensor and given size
+                is, e.g., `(m, n)`, then the output shape is `(m, n) + broadcast(shape, scale).shape`.
+                The broadcast rules are consistent with `numpy.broadcast`. Default: None
+
+        Returns:
+            the output tensor.
 
         Examples:
 
-        .. testcode::
+            .. testcode::
 
-            import megengine as mge
-            import megengine.random as rand
+                import megengine as mge
+                import megengine.random as rand
 
-            x = rand.gamma(shape=2, scale=1, size=(2, 2))
-            print(x.numpy())
+                x = rand.gamma(shape=2, scale=1, size=(2, 2))
+                print(x.numpy())
 
-            shape = mge.Tensor([[ 1],
-                                [10]], dtype="float32")
-            scale = mge.Tensor([1,5], dtype="float32")
+                shape = mge.Tensor([[ 1],
+                                    [10]], dtype="float32")
+                scale = mge.Tensor([1,5], dtype="float32")
 
-            x = rand.gamma(shape=shape, scale=scale)
-            print(x.numpy())
+                x = rand.gamma(shape=shape, scale=scale)
+                print(x.numpy())
 
-            x = rand.gamma(shape=shape, scale=scale, size=2)
-            print(x.numpy())
-        
-        Outputs:
-        
-        .. testoutput::
-            :options: +SKIP
-            
-            [[1.5064533  4.0689363 ]
-             [0.71639484 1.4551026 ]]
+                x = rand.gamma(shape=shape, scale=scale, size=2)
+                print(x.numpy())
 
-            [[ 0.4352188 11.399335 ]
-             [ 9.1888    52.009277 ]]
+            Outputs:
 
-            [[[ 1.1726005   3.9654975 ]
-              [13.656933   36.559006  ]]
-             [[ 0.25848487  2.5540342 ]
-              [11.960409   21.031536  ]]]
+            .. testoutput::
+                :options: +SKIP
 
+                [[1.5064533  4.0689363 ]
+                 [0.71639484 1.4551026 ]]
+
+                [[ 0.4352188 11.399335 ]
+                 [ 9.1888    52.009277 ]]
+
+                [[[ 1.1726005   3.9654975 ]
+                  [13.656933   36.559006  ]]
+                 [[ 0.25848487  2.5540342 ]
+                  [11.960409   21.031536  ]]]
         """
         _seed = self._seed() if callable(self._seed) else self._seed
         return _gamma(
@@ -415,160 +429,222 @@ class RNG:
         beta: Union[Tensor, float],
         size: Optional[Iterable[int]] = None,
     ):
-        r"""
-        Random variable with Beta distribution :math:`\operatorname{Beta}(\alpha, \beta)`.
+        r"""Random variable with Beta distribution :math:`\operatorname{Beta}(\alpha, \beta)`.
 
         The corresponding probability density function is
-        
+
         .. math::
-            p(x)=\frac{1}{\mathrm{~B}(\alpha, \beta)} x^{\alpha-1}(1-x)^{\beta-1} 
+
+            p(x)=\frac{1}{\mathrm{~B}(\alpha, \beta)} x^{\alpha-1}(1-x)^{\beta-1}
             \quad \text { for } \alpha, \beta>0,
 
         where :math:`\mathrm{~B}(\alpha, \beta)` is the beta function,
 
         .. math::
+
             \mathrm{~B}(\alpha, \beta)=\int_{0}^{1} t^{\alpha-1}(1-t)^{\beta-1} d t.
 
-        :param alpha: the alpha parameter of the distribution. Must be non-negative.
-        :param beta: the beta parameter of the distribution. Must be non-negative.
-        :param size: the size of output tensor. If alpha and beta are scalars and given size is, e.g.,
-            `(m, n)`, then the output shape is `(m, n)`. If alpha or beta is a Tensor and given size 
-            is, e.g., `(m, n)`, then the output shape is `(m, n) + broadcast(alpha, beta).shape`. 
-            The broadcast rules are consistent with `numpy.broadcast`. Default: None
-        :return: the output tensor.
+        Args:
+            alpha: the alpha parameter of the distribution. Must be non-negative.
+            beta: the beta parameter of the distribution. Must be non-negative.
+            size: the size of output tensor. If alpha and beta are scalars and given size is, e.g.,
+                `(m, n)`, then the output shape is `(m, n)`. If alpha or beta is a Tensor and given size
+                is, e.g., `(m, n)`, then the output shape is `(m, n) + broadcast(alpha, beta).shape`.
+
+        Returns:
+            the output tensor.
 
         Examples:
 
-        .. testcode::
+            .. testcode::
 
-            import megengine as mge
-            import megengine.random as rand
+                import megengine as mge
+                import megengine.random as rand
 
-            x = rand.beta(alpha=2, beta=1, size=(2, 2))
-            print(x.numpy())
+                x = rand.beta(alpha=2, beta=1, size=(2, 2))
+                print(x.numpy())
 
-            alpha = mge.Tensor([[0.5],
-                                [  3]], dtype="float32")
-            beta = mge.Tensor([0.5,5], dtype="float32")
+                alpha = mge.Tensor([[0.5],
+                                    [  3]], dtype="float32")
+                beta = mge.Tensor([0.5,5], dtype="float32")
 
-            x = rand.beta(alpha=alpha, beta=beta)
-            print(x.numpy())
+                x = rand.beta(alpha=alpha, beta=beta)
+                print(x.numpy())
 
-            x = rand.beta(alpha=alpha, beta=beta, size=2)
-            print(x.numpy())
-        
-        Outputs:
-        
-        .. testoutput::
-            :options: +SKIP
-            
-            [[0.582565   0.91763186]
-             [0.86963767 0.6088103 ]]
-            
-            [[0.41503012 0.16438372]
-             [0.90159506 0.47588003]]
-            
-            [[[0.55195075 0.01111084]
-              [0.95298755 0.25048104]]
-             [[0.11680304 0.13859665]
-              [0.997879   0.43259275]]]
+                x = rand.beta(alpha=alpha, beta=beta, size=2)
+                print(x.numpy())
 
+            Outputs:
+
+            .. testoutput::
+                :options: +SKIP
+
+                [[0.582565   0.91763186]
+                 [0.86963767 0.6088103 ]]
+
+                [[0.41503012 0.16438372]
+                 [0.90159506 0.47588003]]
+
+                [[[0.55195075 0.01111084]
+                  [0.95298755 0.25048104]]
+                 [[0.11680304 0.13859665]
+                  [0.997879   0.43259275]]]
         """
         _seed = self._seed() if callable(self._seed) else self._seed
         return _beta(alpha=alpha, beta=beta, size=size, seed=_seed, handle=self._handle)
 
     def poisson(self, lam: Union[float, Tensor], size: Optional[Iterable[int]] = None):
-        r"""
-        Random variable with poisson distribution :math:`\operatorname{Poisson}(\lambda)`.
+        r"""Random variable with poisson distribution :math:`\operatorname{Poisson}(\lambda)`.
 
         The corresponding probability density function is
 
         .. math::
+
             f(k ; \lambda)=\frac{\lambda^{k} e^{-\lambda}}{k !},
-        
+
         where k is the number of occurrences :math:`({\displaystyle k=0,1,2...})`.
 
-        :param lam: the lambda parameter of the distribution. Must be non-negative.
-        :param size: the size of output tensor. If lam is a scalar and given size is, e.g., `(m, n)`, 
-            then the output shape is `(m, n)`. If lam is a Tensor with shape `(k, v)` and given 
-            size is, e.g., `(m, n)`, then the output shape is `(m, n, k, v)`. Default: None.
-        :return: the output tensor.
+        Args:
+            lam: the lambda parameter of the distribution. Must be non-negative.
+            size: the size of output tensor. If lam is a scalar and given size is, e.g., `(m, n)`,
+                then the output shape is `(m, n)`. If lam is a Tensor with shape `(k, v)` and given
+                size is, e.g., `(m, n)`, then the output shape is `(m, n, k, v)`. Default: None.
+
+        Returns:
+            the output tensor.
+
+
 
         Examples:
 
-        .. testcode::
+            .. testcode::
 
-            import megengine as mge
-            import megengine.random as rand
+                import megengine as mge
+                import megengine.random as rand
 
-            x = rand.poisson(lam=2., size=(1, 3))
-            print(x.numpy())
+                x = rand.poisson(lam=2., size=(1, 3))
+                print(x.numpy())
 
-            lam = mge.Tensor([[1.,1.],
-                            [10,10]], dtype="float32")
+                lam = mge.Tensor([[1.,1.],
+                                [10,10]], dtype="float32")
 
-            x = rand.poisson(lam=lam)
-            print(x.numpy())
+                x = rand.poisson(lam=lam)
+                print(x.numpy())
 
-            x = rand.poisson(lam=lam, size=(1,3))
-            print(x.numpy())
+                x = rand.poisson(lam=lam, size=(1,3))
+                print(x.numpy())
 
-        Outputs:
-        
-        .. testoutput::
-            :options: +SKIP
+            Outputs:
 
-            [[3. 1. 3.]]
+            .. testoutput::
+                :options: +SKIP
 
-            [[ 2.  2.]
-             [12. 11.]]
+                [[3. 1. 3.]]
 
-            [[[[ 1.  1.]
-               [11.  4.]]
-              [[ 0.  0.]
-               [ 9. 13.]]
-              [[ 0.  1.]
-               [ 7. 12.]]]]
+                [[ 2.  2.]
+                 [12. 11.]]
 
+                [[[[ 1.  1.]
+                   [11.  4.]]
+                  [[ 0.  0.]
+                   [ 9. 13.]]
+                  [[ 0.  1.]
+                   [ 7. 12.]]]]
         """
         _seed = self._seed() if callable(self._seed) else self._seed
         return _poisson(lam=lam, size=size, seed=_seed, handle=self._handle)
 
-    def permutation(self, n: int, *, dtype: str = "int32"):
-        r"""
-        Generates a random permutation of integers from :math:`0` to :math:`n - 1`.
+    def permutation(self, n: Union[int, Tensor], *, dtype: str = "int32"):
+        r"""Randomly permute a sequence, or return a permuted range.
+            If ``n`` is a multi-dimensional tensor, it is only shuffled along its first index.
 
-        :param n: the upper bound. Must be larger than 0.
-        :param dtype: the output data type. int32, int16 and float32 are 
-            supported. Default: int32
-        :return: the output tensor.
+        Args:
+            n: If ``n`` is an integer, random permutation of integers from :math:`0` to :math:`n - 1`. 
+                If ``n`` is an tensor, make a copy and shuffle the elements randomly.
+            dtype: the output data type when ``n`` is an integer.
+                int32, int16 and float32 are supported. Default: int32
+
+        Returns:
+            the output tensor.
 
         Examples:
 
-        .. testcode::
+            .. testcode::
 
-            import megengine as mge
-            import megengine.random as rand
+                import numpy as np
+                import megengine as mge
+                import megengine.random as rand
 
-            x = rand.permutation(n=10, dtype="int32")
-            print(x.numpy())
+                x = rand.permutation(10, dtype="int32")
+                print(x.numpy())
 
-            x = rand.permutation(n=10, dtype="float32")
-            print(x.numpy())
-        
-        Outputs:
-        
-        .. testoutput::
-            :options: +SKIP
+                x = rand.permutation(10, dtype="float32")
+                print(x.numpy())
 
-            [4 5 0 7 3 8 6 1 9 2]
-            [3. 4. 9. 0. 6. 8. 7. 1. 5. 2.]
+                x = mge.tensor(np.arange(18)).reshape(6,3)
+                x = rand.permutation(x)
+                print(x.numpy())
 
+            Outputs:
+
+            .. testoutput::
+                :options: +SKIP
+
+                [4 5 0 7 3 8 6 1 9 2]
+                [3. 4. 9. 0. 6. 8. 7. 1. 5. 2.]
+                [[12 13 14]
+                 [ 3  4  5]
+                 [15 16 17]
+                 [ 0  1  2]
+                 [ 9 10 11]
+                 [ 6  7  8]]
         """
         _seed = self._seed() if callable(self._seed) else self._seed
-        return _permutation(
-            n=n, seed=_seed, device=self._device, handle=self._handle, dtype=dtype
-        )
+        if isinstance(n, int):
+            return _permutation(
+                n=n, seed=_seed, device=self._device, handle=self._handle, dtype=dtype
+            )
+        assert isinstance(n, Tensor)
+        return _shuffle(inp=n, seed=_seed, handle=self._handle)
+
+    def shuffle(self, inp: Tensor):
+        r"""Modify a sequence in-place by shuffling its contents. 
+        This function only shuffles the Tensor along the first axis of a multi-dimensional Tensor.
+        The order of sub-Tensors is changed but their contents remains the same.
+
+        Args:
+            inp: input tensor.
+
+        Examples:
+
+            .. testcode::
+
+                import numpy as np
+                import megengine as mge
+                import megengine.random as rand
+
+                x = mge.tensor(np.arange(10))
+                rand.shuffle(x)
+                print(x.numpy())
+                y = mge.tensor(np.arange(18)).reshape(6,3)
+                rand.shuffle(y)
+                print(y.numpy())
+
+            Outputs:
+
+            .. testoutput::
+                :options: +SKIP
+
+                [7 9 3 0 8 2 4 5 6 1]
+                [[12. 13. 14.]
+                 [ 3.  4.  5.]
+                 [15. 16. 17.]
+                 [ 0.  1.  2.]
+                 [ 9. 10. 11.]
+                 [ 6.  7.  8.]]
+        """
+        _seed = self._seed() if callable(self._seed) else self._seed
+        inp._reset(_shuffle(inp=inp, seed=_seed, handle=self._handle))
 
     def __del__(self):
         if self._handle != 0:
@@ -588,6 +664,7 @@ gamma = _default_handle.gamma
 beta = _default_handle.beta
 poisson = _default_handle.poisson
 permutation = _default_handle.permutation
+shuffle = _default_handle.shuffle
 
 
 def _random_seed_generator():

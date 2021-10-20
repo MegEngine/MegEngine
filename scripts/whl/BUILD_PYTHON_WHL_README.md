@@ -6,8 +6,9 @@
 # Build env prepare
 ## Linux
 
+* refer to [BUILD_README.md](../cmake-build/BUILD_README.md) Linux host build(CUDA env) section to init CUDA environment
 ```bash
-1: please refer to: https://docs.docker.com/engine/security/rootless/ to enable rootless docker env
+1: please refer to https://docs.docker.com/engine/security/rootless/ to enable rootless docker env
 2: cd ./scripts/whl/manylinux2014
 3: ./build_image.sh
 4: as aarch64-linux python3.5 pip do not provide megengine depends prebuild binary package, which definition
@@ -23,24 +24,22 @@
 ```
 
 ## MacOS
+* refer to [BUILD_README.md](../cmake-build/BUILD_README.md) MacOS section to init base build environment
+* init other wheel build depends env by command:
 ```bash
 ./scripts/whl/macos/macos_whl_env_prepare.sh
 ```
 
 ## Windows
-```
-1: refer to scripts/cmake-build/BUILD_README.md Windows section
-```
+* refer to [BUILD_README.md](../cmake-build/BUILD_README.md) Windows section to init base build environment
 
 # How to build
 Note: Guarantee the git repo is mounted in docker container, do not use `git submodule update --init` in to init Project repo
 ## Build for linux
 * This Project delivers `wheel` package with `manylinux2014` tag defined in [PEP-571](https://www.python.org/dev/peps/pep-0571/).
+
 commands:
 ```bash
-export CUDA_ROOT_DIR=/path/to/cuda
-export CUDNN_ROOT_DIR=/path/to/cudnn
-export TENSORRT_ROOT_DIR=/path/to/tensorrt
 ./scripts/whl/manylinux2014/build_wheel_common.sh -sdk cu101
 ```
 

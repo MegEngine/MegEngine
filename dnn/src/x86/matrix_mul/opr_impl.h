@@ -42,8 +42,7 @@ public:
 
     bool is_thread_safe() const override { return true; }
 
-    SmallVector<fallback::MatrixMulImpl::AlgoBase*> get_all_packed_algo()
-            override;
+    SmallVector<fallback::MatrixMulImpl::AlgoBase*> get_all_packed_algo() override;
 
     static fallback::MatrixMulImpl::AlgoBase* get_algo_from_desc(
             const AlgorithmDesc& desc);

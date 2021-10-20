@@ -19,13 +19,14 @@
 #include <unordered_set>
 #include <variant>
 #include "megbrain/comp_node.h"
-#include "megbrain/utils/mempool.h"
 #include "megbrain/imperative/interpreter.h"
 #include "megbrain/imperative/profiler.h"
+#include "megbrain/utils/mempool.h"
 
 #include "./commands.h"
-#include "./tensor_info.h"
 #include "./option_manager.h"
+#include "./stack_manager.h"
+#include "./tensor_info.h"
 
 #include "../profiler/events.h"
 
@@ -50,8 +51,7 @@ struct ChannelImpl : Interpreter::Channel {
     void drop(Handle) override;
 
     SmallVector<Handle> apply_op(
-            std::shared_ptr<OpDef> op,
-            const SmallVector<Handle>& inputs) override;
+            std::shared_ptr<OpDef> op, const SmallVector<Handle>& inputs) override;
 
     HostTensorND get_value(Handle) override;
     TensorShape get_shape(Handle) override;
@@ -72,6 +72,7 @@ struct ChannelImpl : Interpreter::Channel {
 
     void push_scope(std::string) override;
     void pop_scope(std::string) override;
+
 private:
     struct WorkQueue;
     struct State;
@@ -89,12 +90,11 @@ private:
     void del_impl(Handle);
     void sync_impl();
     SmallVector<Handle> apply_op_impl(
-            std::shared_ptr<OpDef> op,
-            const SmallVector<Handle>& inputs);
+            std::shared_ptr<OpDef> op, const SmallVector<Handle>& inputs);
     TensorPtr wait_tensor(TensorInfo* info, profiler::TensorProp prop);
     void notify_tensor_unsafe(TensorInfo* info);
 
-    void process_one_task(IdentifiedCommand&);
+    void process_one_task(Command&);
 
     void check_worker_exc_unsafe();
 
@@ -103,24 +103,22 @@ private:
     void release_tensor(TensorInfo* dest);
 
     void regenerate(TensorInfo* dest);
-    void do_apply_op(const ApplyOp& cmd);
     void flush_apply_stack();
-    
-    std::tuple<SmallVector<MemoryDesc>, SmallVector<TensorPtr>, SmallVector<TensorPtr>> init_output_and_workspace(
-        const OpDef& def,
-        SmallVector<TensorPtr> inputs,
-        SmallVector<MemoryDesc> inputs_mem_desc);
+    void do_apply_op(const ApplyOp& cmd, std::string reason);
+
+    std::tuple<SmallVector<MemoryDesc>, SmallVector<TensorPtr>, SmallVector<TensorPtr>>
+    init_output_and_workspace(
+            const OpDef& def, SmallVector<TensorPtr> inputs,
+            SmallVector<MemoryDesc> inputs_mem_desc);
 
     void dispatch_default_cpu(
-        std::shared_ptr<OpDef> op,
-        const SmallVector<TensorInfo*>& input_infos,
-        const SmallVector<LogicalTensorDesc>& input_descs,
-        SmallVector<Handle>* outputs);
+            std::shared_ptr<OpDef> op, const SmallVector<TensorInfo*>& input_infos,
+            const SmallVector<LogicalTensorDesc>& input_descs,
+            SmallVector<Handle>* outputs);
     void dispatch_kernel(
-        std::shared_ptr<OpDef> op,
-        const SmallVector<TensorInfo*>& input_infos,
-        const SmallVector<LogicalTensorDesc>& input_descs,
-        SmallVector<Handle>* outputs);
+            std::shared_ptr<OpDef> op, const SmallVector<TensorInfo*>& input_infos,
+            const SmallVector<LogicalTensorDesc>& input_descs,
+            SmallVector<Handle>* outputs);
 
     void push_scope(std::string, State&);
     void pop_scope(std::string, State&);
@@ -129,10 +127,10 @@ private:
     void assert_in_worker();
     std::thread::id get_worker_tid();
 
-    template <typename TCommand>
-    void enqueue_command(TCommand&& cmd) {
-        m_buffer.enqueue(Command{std::forward<TCommand>(cmd)});
-    }
+    // template <typename TCommand>
+    // void enqueue_command(TCommand&& cmd) {
+    //     m_buffer.enqueue(Command{std::forward<TCommand>(cmd)});
+    // }
 
     void sample_on_device(CompNode device, bool force);
 
@@ -149,23 +147,34 @@ private:
     std::exception_ptr m_worker_exc;
     std::function<void(std::string, std::string)> m_profile_dump_callback;
     size_t m_storage_id = 0;
-    std::stack<std::tuple<ApplyOp, size_t, TensorInfo*>> m_apply_stack;
+    // TODO: use explicit struct
+    std::stack<std::tuple<ApplyOp, size_t, TensorInfo*, std::string>> m_apply_stack;
     bool m_applying = false;
     bool m_closed = false;
 
-    struct WorkQueue : AsyncQueueSC<IdentifiedCommand, WorkQueue> {
+    struct WorkQueue : AsyncQueueSC<Command, WorkQueue> {
         // set max_spin=0 to prevent Queue fetch task in busy wait manner.
         // this won't affect throughput when python interpreter is sending enough task,
-        // but will significantly save CPU time when waiting for task, e.g. wait for data input
-        // limit pending tasks to 1000000
+        // but will significantly save CPU time when waiting for task, e.g. wait for
+        // data input limit pending tasks to 10000
         WorkQueue(ChannelImpl* owner)
-                : AsyncQueueSC<IdentifiedCommand, WorkQueue>(0, 1000000), m_owner(owner) {
+                : AsyncQueueSC<Command, WorkQueue>(0, 10000), m_owner(owner) {
             sys::set_thread_name("interpreter");
+            if (const char* env_val = MGB_GETENV("MEGENGINE_ASYNC_QUEUE_SIZE")) {
+                int len = strlen(env_val);
+                for (int i = 0; i < len; i++) {
+                    mgb_assert(
+                            env_val[i] >= '0' && env_val[i] <= '9',
+                            "async queue size should be an integer");
+                }
+                size_t val;
+                sscanf(env_val, "%zu", &val);
+                update_max_items(val);
+            }
         }
-        void process_one_task(IdentifiedCommand& icmd) {
-            m_owner->process_one_task(icmd);
-        }
+        void process_one_task(Command& icmd) { m_owner->process_one_task(icmd); }
         void on_async_queue_worker_thread_start() override;
+
     private:
         ChannelImpl* m_owner;
     } m_worker;
@@ -180,15 +189,15 @@ private:
      *     ---------------------------------------------------------------------
      *     | ..., Apply{in: (i0, i1), out: (o0, o1), del: (i0, i1)}, ...       |
      *     ---------------------------------------------------------------------
-     *     Then the fused Apply may be invoked inplace. see: ChannelImpl::process_one_task
+     *     Then the fused Apply may be invoked inplace. see:
+     * ChannelImpl::process_one_task
      */
     struct CommandBuffer {
         CommandBuffer(ChannelImpl* owner) : m_owner(owner) {}
-        void enqueue(Command cmd);
-        bool empty() const {
-            return m_commands.empty();
-        }
+        void enqueue(CommandData cmd);
+        bool empty() const { return m_commands.empty(); }
         void flush();
+
     private:
         ChannelImpl* m_owner;
         std::deque<Command> m_commands;
@@ -203,7 +212,8 @@ private:
         Handle flush_pos_for(const Command& cmd);
         // Fuse del command into suitable ApplyOp
         bool fuse_del(const Del& cmd);
-        // Returns the last handle that dest is used within range. If dest is not used, returns range[1]
+        // Returns the last handle that dest is used within range. If dest is not used,
+        // returns range[1]
         Handle find_last_usage(TensorInfo* dest, Range range);
         // Returns the produce position of dest. If not found, returns range[1]
         Handle find_produce(TensorInfo* dest, Range range);
@@ -215,94 +225,16 @@ private:
     //! level 0: both sync.
     int m_async_level = 2;
 
-    struct Scope {
-        std::string name;
-        std::unordered_map<std::string, std::unique_ptr<Scope>> children;
-        size_t version = 0;
-        size_t parent_version = 0;
-        size_t tensor_count = 0;
-        Scope* active_child = nullptr;
-        Scope* parent = nullptr;
-
-        Scope* enter(std::string name) {
-            auto& child = children[name];
-            if (!child) {
-                child = std::make_unique<Scope>();
-                child->name = name;
-                child->parent = this;
-            }
-            if (version != child->parent_version) {
-                child->version = 0;
-                child->parent_version = version;
-            } else {
-                child->version++;
-            }
-            child->tensor_count = 0;
-            return active_child = child.get();
-        }
-
-        Scope* exit(std::string name) {
-            mgb_assert(this->name == name, "scope name mismatch");
-            parent->active_child = nullptr;
-            return parent;
-        }
-    };
-
-    class ScopeManager {
-    private:
-        Scope m_root;
-        Scope* m_current_scope = &m_root;
-    public:
-        class ScopeGuard{
-        private:
-            ScopeManager* m_manager;
-            std::string m_name;
-        public:
-            ScopeGuard(ScopeManager* manager, std::string name): m_manager{manager}, m_name{name} {
-                m_manager->push(m_name);
-            }
-            ~ScopeGuard() {
-                m_manager->pop(m_name);
-            }
-        };
-        void push(std::string name) {
-            m_current_scope = m_current_scope->enter(name);
-        }
-        void pop(std::string name) {
-            m_current_scope = m_current_scope->exit(name);
-        }
-        std::string next_tensor_name() {
-            std::string builder;
-            Scope* scope = &m_root;
-            while (true) {
-                builder.append(scope->name);
-                if (scope->version != 0) {
-                    builder.append(ssprintf("(%ld)", scope->version));
-                }
-                if (scope != &m_root) {
-                    builder.append(".");
-                }
-                if (scope->active_child == nullptr) {
-                    builder.append(ssprintf(":%%%ld", scope->tensor_count++));
-                    break;
-                } else {
-                    scope = scope->active_child;
-                }
-            }
-            return builder;
-        }
-    };
-
     struct State {
         std::thread::id tid;
         OptionManager options;
     };
 
-    struct ChannelState: State {
-        ScopeManager scopes;
+    struct ChannelState : State {
+        StackManager stack_manager;
     };
 
-    struct WorkerState: State {};
+    struct WorkerState : State {};
 
     ChannelState m_channel_state;
     WorkerState m_worker_state;
@@ -322,7 +254,7 @@ private:
          * (2) is in memory, (3) is not pinned. Evaluation function refers to:
          * @see: TensorInfo::eval_func.
          *
-         * \return the pointer of the best tensor; nullptr is returned if no 
+         * \return the pointer of the best tensor; nullptr is returned if no
          * available tensor is found
          */
         TensorInfo* find_best_tensor(bool);
@@ -344,13 +276,13 @@ private:
          * \brief merge the two specified sets (the set in which the element x
          * is located, and the set in which the element y is located)
          */
-        void merge(std::shared_ptr<DsuNode> &x, std::shared_ptr<DsuNode> &y);
+        void merge(std::shared_ptr<DsuNode>& x, std::shared_ptr<DsuNode>& y);
 
         /*!
          * \brief return the representative of the set that contains the
          * element x
          */
-        std::shared_ptr<DsuNode> find_father(std::shared_ptr<DsuNode> &x);
+        std::shared_ptr<DsuNode> find_father(std::shared_ptr<DsuNode>& x);
 
         /*!
          * \brief update DSU after recomputing tensor ptr
@@ -406,12 +338,14 @@ private:
         std::unordered_set<TensorInfo*> candidates;
 
         bool is_bad_op(std::string op_name) {
-            return std::find(op_blacklist.begin(), op_blacklist.end(), op_name) != op_blacklist.end();
+            return std::find(op_blacklist.begin(), op_blacklist.end(), op_name) !=
+                   op_blacklist.end();
         }
 
-        std::vector<std::string> op_blacklist = {"CollectiveComm", "InplaceAdd",
-                                "ParamPackSplit", "ParamPackConcat", "GaussianRNG", "UniformRNG",
-                                "GammaRNG", "PermutationRNG", "PoissonRNG", "BetaRNG"};
+        std::vector<std::string> op_blacklist = {
+                "CollectiveComm", "InplaceAdd", "ParamPackSplit", "ParamPackConcat",
+                "GaussianRNG",    "UniformRNG", "GammaRNG",       "PermutationRNG",
+                "PoissonRNG",     "BetaRNG"};
     } m_dtr;
 
     //! automatically evict an optimal tensor
@@ -424,4 +358,4 @@ private:
     WorkerState& get_worker_state();
 };
 
-} // namespace mgb::imperative::interpreter::intl
+}  // namespace mgb::imperative::interpreter::intl

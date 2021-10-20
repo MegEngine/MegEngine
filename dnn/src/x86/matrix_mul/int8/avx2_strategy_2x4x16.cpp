@@ -20,42 +20,41 @@ using namespace x86::matmul;
 
 MEGDNN_REG_GEMM_STRATEGY_IMPL(gemm_avx2_s8s8s32_2x4x16);
 
-void gemm_avx2_s8s8s32_2x4x16::pack_A(dt_int8* out, const dt_int8* in, int ldin,
-                                      int y0, int ymax, int k0, int kmax,
-                                      bool transpose) const {
+void gemm_avx2_s8s8s32_2x4x16::pack_A(
+        dt_int8* out, const dt_int8* in, int ldin, int y0, int ymax, int k0, int kmax,
+        bool transpose) const {
     if (transpose) {
-        matmul_avx2_2x4x16::gemm_avx2_s8s8s32_2x4x16_pack_at(out, in, ldin, y0,
-                                                             ymax, k0, kmax);
+        matmul_avx2_2x4x16::gemm_avx2_s8s8s32_2x4x16_pack_at(
+                out, in, ldin, y0, ymax, k0, kmax);
     } else {
-        matmul_avx2_2x4x16::gemm_avx2_s8s8s32_2x4x16_pack_an(out, in, ldin, y0,
-                                                             ymax, k0, kmax);
+        matmul_avx2_2x4x16::gemm_avx2_s8s8s32_2x4x16_pack_an(
+                out, in, ldin, y0, ymax, k0, kmax);
     }
 }
 
-void gemm_avx2_s8s8s32_2x4x16::pack_B(dt_int8* out, const dt_int8* in, int ldin,
-                                      int x0, int xmax, int k0, int kmax,
-                                      bool transpose) const {
+void gemm_avx2_s8s8s32_2x4x16::pack_B(
+        dt_int8* out, const dt_int8* in, int ldin, int x0, int xmax, int k0, int kmax,
+        bool transpose) const {
     if (transpose) {
-        matmul_avx2_2x4x16::gemm_avx2_s8s8s32_2x4x16_pack_bt(out, in, ldin, x0,
-                                                             xmax, k0, kmax);
+        matmul_avx2_2x4x16::gemm_avx2_s8s8s32_2x4x16_pack_bt(
+                out, in, ldin, x0, xmax, k0, kmax);
     } else {
-        matmul_avx2_2x4x16::gemm_avx2_s8s8s32_2x4x16_pack_bn(out, in, ldin, x0,
-                                                             xmax, k0, kmax);
+        matmul_avx2_2x4x16::gemm_avx2_s8s8s32_2x4x16_pack_bn(
+                out, in, ldin, x0, xmax, k0, kmax);
     }
 }
 
-void gemm_avx2_s8s8s32_2x4x16::kern(const dt_int8* pack_a_ptr,
-                                    const dt_int8* pack_b_ptr, size_t m,
-                                    size_t n, size_t k, dt_int32* c_ptr,
-                                    size_t ldc, bool is_first_k,
-                                    const dt_int32*, dt_int32*) const {
-    megdnn_assert(A_dtype.enumv() == B_dtype.enumv() &&
-                          ((A_dtype.enumv() == DTypeEnum::Int8 &&
-                            C_dtype.enumv() == DTypeEnum::Int32) ||
-                           (A_dtype.enumv() == DTypeEnum::QuantizedS8 &&
-                            C_dtype.enumv() == DTypeEnum::QuantizedS32)),
-                  "A: %s B: %s C: %s", A_dtype.name(), B_dtype.name(),
-                  C_dtype.name());
+void gemm_avx2_s8s8s32_2x4x16::kern(
+        const dt_int8* pack_a_ptr, const dt_int8* pack_b_ptr, size_t m, size_t n,
+        size_t k, dt_int32* c_ptr, size_t ldc, bool is_first_k, const dt_int32*,
+        dt_int32*) const {
+    megdnn_assert(
+            A_dtype.enumv() == B_dtype.enumv() &&
+                    ((A_dtype.enumv() == DTypeEnum::Int8 &&
+                      C_dtype.enumv() == DTypeEnum::Int32) ||
+                     (A_dtype.enumv() == DTypeEnum::QuantizedS8 &&
+                      C_dtype.enumv() == DTypeEnum::QuantizedS32)),
+            "A: %s B: %s C: %s", A_dtype.name(), B_dtype.name(), C_dtype.name());
 
     megdnn_assert(is_first_k == true);
     constexpr size_t m_tile = 2;
@@ -72,15 +71,14 @@ void gemm_avx2_s8s8s32_2x4x16::kern(const dt_int8* pack_a_ptr,
         for (size_t n_offset = 0; n_offset < n_end; n_offset += n_tile) {
             auto iter_b_ptr = pack_b_ptr + n_offset * roundup_k;
             auto iter_c_ptr = c_ptr + m_offset * ldc + n_offset;
-            matmul_avx2_2x4x16::kern_gemm_s8s8s32_2x4x16(iter_a_ptr, iter_b_ptr,
-                                                         iter_c_ptr, ldc, k);
+            matmul_avx2_2x4x16::kern_gemm_s8s8s32_2x4x16(
+                    iter_a_ptr, iter_b_ptr, iter_c_ptr, ldc, k);
         }
         if (n_end < n) {
             auto iter_b_ptr = pack_b_ptr + n_end * roundup_k;
             auto iter_c_ptr = c_ptr + m_offset * ldc + n_end;
             matmul_avx2_2x4x16::kern_gemm_s8s8s32_2x4x16_remain(
-                    iter_a_ptr, iter_b_ptr, iter_c_ptr, ldc, k, m_tile,
-                    n_remain);
+                    iter_a_ptr, iter_b_ptr, iter_c_ptr, ldc, k, m_tile, n_remain);
         }
     }
     if (m_end < m) {
@@ -89,15 +87,13 @@ void gemm_avx2_s8s8s32_2x4x16::kern(const dt_int8* pack_a_ptr,
             auto iter_b_ptr = pack_b_ptr + n_offset * roundup_k;
             auto iter_c_ptr = c_ptr + m_end * ldc + n_offset;
             matmul_avx2_2x4x16::kern_gemm_s8s8s32_2x4x16_remain(
-                    iter_a_ptr, iter_b_ptr, iter_c_ptr, ldc, k, m_remain,
-                    n_tile);
+                    iter_a_ptr, iter_b_ptr, iter_c_ptr, ldc, k, m_remain, n_tile);
         }
         if (n_end < n) {
             auto iter_b_ptr = pack_b_ptr + n_end * roundup_k;
             auto iter_c_ptr = c_ptr + m_end * ldc + n_end;
             matmul_avx2_2x4x16::kern_gemm_s8s8s32_2x4x16_remain(
-                    iter_a_ptr, iter_b_ptr, iter_c_ptr, ldc, k, m_remain,
-                    n_remain);
+                    iter_a_ptr, iter_b_ptr, iter_c_ptr, ldc, k, m_remain, n_remain);
         }
     }
 }

@@ -165,7 +165,6 @@ def test_dtype_int4_ffi_handle():
     device = "xpux"
     shape = (3, 3, 3)
     data = np.random.random(shape).astype(np.float32) * 5 - 1
-    print(data)
 
     def identity(x):
         return x

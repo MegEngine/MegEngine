@@ -161,8 +161,8 @@ std::string lexical_cast(int64_t int_value);
 
 /// Lexical cast a string to a byte array. Returns true if cast is successful or
 /// false if invalid.
-bool lexical_cast(std::vector<uint8_t>& bytes, NumericTypeID type,
-                  std::string const& str);
+bool lexical_cast(
+        std::vector<uint8_t>& bytes, NumericTypeID type, std::string const& str);
 
 /// Lexical cast TO a string FROM a byte array. Returns true if cast is
 /// successful or false if invalid.
@@ -170,18 +170,15 @@ std::string lexical_cast(std::vector<uint8_t>& bytes, NumericTypeID type);
 
 /// Casts from a signed int64 to the destination type. Returns true if
 /// successful.
-bool cast_from_int64(std::vector<uint8_t>& bytes, NumericTypeID type,
-                     int64_t src);
+bool cast_from_int64(std::vector<uint8_t>& bytes, NumericTypeID type, int64_t src);
 
 /// Casts from an unsigned int64 to the destination type. Returns true if
 /// successful.
-bool cast_from_uint64(std::vector<uint8_t>& bytes, NumericTypeID type,
-                      uint64_t src);
+bool cast_from_uint64(std::vector<uint8_t>& bytes, NumericTypeID type, uint64_t src);
 
 /// Casts from a real value represented as a double to the destination type.
 /// Returns true if successful.
-bool cast_from_double(std::vector<uint8_t>& bytes, NumericTypeID type,
-                      double src);
+bool cast_from_double(std::vector<uint8_t>& bytes, NumericTypeID type, double src);
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -198,14 +195,16 @@ char const* to_string(ArchTagID tag, bool pretty = false);
 char const* to_string(epilogue::EpilogueType type, bool pretty = false);
 
 /// Converts a ThreadblockSwizzleID enumerant to a string
-char const* to_string(ThreadblockSwizzleID threadblock_swizzle,
-                      bool pretty = false);
+char const* to_string(ThreadblockSwizzleID threadblock_swizzle, bool pretty = false);
 
 /// Converts a bool value to a string
 char const* to_string(bool val, bool pretty = false);
 
 /// Converts a MathOperationID enumerant to a string
 char const* to_string(MathOperationID math_op, bool pretty = false);
+
+/// Converts a SpecialOptimizeDesc enumerant to a string
+char const* to_string(conv::SpecialOptimizeDesc special_opt, bool pretty = false);
 
 /// Converts an ImplicitGemmMode enumerant to a string
 char const* to_string(conv::ImplicitGemmMode mode, bool pretty = false);

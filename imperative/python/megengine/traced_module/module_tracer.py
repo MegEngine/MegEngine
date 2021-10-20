@@ -185,7 +185,6 @@ class PatchedFn:
 
 class Patcher:
 
-    patched_fn_ids = set()
     _builtin_functions = []
     _builtin_modules = [
         F,
@@ -207,6 +206,7 @@ class Patcher:
     ]
 
     def __init__(self, wrap_fn):
+        self.patched_fn_ids = set()
         self.patched_fn = []
         self.visited_frames_ids = set()
         self.wrap_fn = wrap_fn

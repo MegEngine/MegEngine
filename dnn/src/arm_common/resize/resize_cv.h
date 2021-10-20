@@ -20,8 +20,9 @@ namespace arm_common {
  * \fn resize_cv_exec
  * \brief Used if the format is NHWC, transfer from megcv
  */
-void resize_cv_exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
-                    param::Resize::InterpolationMode imode);
+void resize_cv_exec(
+        _megdnn_tensor_in src, _megdnn_tensor_out dst,
+        param::Resize::InterpolationMode imode);
 
 }  // namespace arm_common
 }  // namespace megdnn

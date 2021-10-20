@@ -57,16 +57,14 @@ namespace {
         wd##7 = (d##7 - d##1) + (d##3 - d##5) * 5.25f;      \
     } while (0);
 
-#define GET_VECTOR_HIGH_ELEM(s, i, idx) \
-    vgetq_lane_f32(CONCAT(s, i).value.val[1], idx)
-#define GET_VECTOR_LOW_ELEM(s, i, idx) \
-    vgetq_lane_f32(CONCAT(s, i).value.val[0], idx)
+#define GET_VECTOR_HIGH_ELEM(s, i, idx) vgetq_lane_f32(CONCAT(s, i).value.val[1], idx)
+#define GET_VECTOR_LOW_ELEM(s, i, idx)  vgetq_lane_f32(CONCAT(s, i).value.val[0], idx)
 struct InputTransform6X3 {
     template <bool inner>
-    static void transform(const float* input, float* input_transform_buf,
-                          float* transform_mid_buf, int ih_start, int iw_start,
-                          size_t ic, size_t IH, size_t IW, size_t IC,
-                          size_t unit_idx, size_t nr_units_in_tile) {
+    static void transform(
+            const float* input, float* input_transform_buf, float* transform_mid_buf,
+            int ih_start, int iw_start, size_t ic, size_t IH, size_t IW, size_t IC,
+            size_t unit_idx, size_t nr_units_in_tile) {
         constexpr size_t alpha = 6 + 3 - 1;
         if (!inner) {
             memset(transform_mid_buf, 0, sizeof(float) * alpha * alpha);
@@ -77,8 +75,7 @@ struct InputTransform6X3 {
 #undef cb
 
         if (inner) {
-            const float* input_ptr =
-                    input + ic * IH * IW + ih_start * IW + iw_start;
+            const float* input_ptr = input + ic * IH * IW + ih_start * IW + iw_start;
 #define cb(i) d##i = Vector<float, 8>::load(input_ptr + IW * i);
             UNROLL_CALL_NOWRAPPER(8, cb);
 #undef cb
@@ -114,9 +111,9 @@ struct InputTransform6X3 {
 #undef cb
 
         rep(i, alpha) rep(j, alpha) {
-            input_transform_buf[(i * alpha + j) * nr_units_in_tile * IC +
-                                unit_idx * IC + ic] =
-                    transform_mid_buf[j * alpha + i];
+            input_transform_buf
+                    [(i * alpha + j) * nr_units_in_tile * IC + unit_idx * IC + ic] =
+                            transform_mid_buf[j * alpha + i];
         }
 #else
         //!     1     0     0     0     0    0    0     0
@@ -127,42 +124,38 @@ struct InputTransform6X3 {
         //!     0     1    -1     2    -2  0.5 -0.5 -5.25
         //!    -1     1     1     1     1    1    1     0
         //!     0     0     0     0     0    0    0     1
-#define cb(i)                                                   \
-    do {                                                        \
-        mid_buf1[0] = GET_VECTOR_LOW_ELEM(wd, i, 0) -           \
-                      GET_VECTOR_HIGH_ELEM(wd, i, 2) +          \
-                      5.25f * (GET_VECTOR_HIGH_ELEM(wd, i, 0) - \
-                               GET_VECTOR_LOW_ELEM(wd, i, 2));  \
-        mid_buf1[7] = GET_VECTOR_HIGH_ELEM(wd, i, 3) -          \
-                      GET_VECTOR_LOW_ELEM(wd, i, 1) +           \
-                      5.25f * (GET_VECTOR_LOW_ELEM(wd, i, 3) -  \
-                               GET_VECTOR_HIGH_ELEM(wd, i, 1)); \
-        auto tmp0 = GET_VECTOR_LOW_ELEM(wd, i, 2) +             \
-                    GET_VECTOR_HIGH_ELEM(wd, i, 2) -            \
-                    4.25f * GET_VECTOR_HIGH_ELEM(wd, i, 0);     \
-        auto tmp1 = GET_VECTOR_LOW_ELEM(wd, i, 1) +             \
-                    GET_VECTOR_HIGH_ELEM(wd, i, 1) -            \
-                    4.25f * GET_VECTOR_LOW_ELEM(wd, i, 3);      \
-        mid_buf1[1] = tmp0 + tmp1;                              \
-        mid_buf1[2] = tmp0 - tmp1;                              \
-        tmp0 = GET_VECTOR_HIGH_ELEM(wd, i, 2) +                 \
-               0.25f * GET_VECTOR_LOW_ELEM(wd, i, 2) -          \
-               GET_VECTOR_HIGH_ELEM(wd, i, 0) * 1.25f;          \
-        tmp1 = GET_VECTOR_LOW_ELEM(wd, i, 1) * 0.5f -           \
-               GET_VECTOR_LOW_ELEM(wd, i, 3) * 2.5f +           \
-               GET_VECTOR_HIGH_ELEM(wd, i, 1) * 2.f;            \
-        mid_buf1[3] = tmp0 + tmp1;                              \
-        mid_buf1[4] = tmp0 - tmp1;                              \
-        tmp0 = GET_VECTOR_HIGH_ELEM(wd, i, 2) +                 \
-               (GET_VECTOR_LOW_ELEM(wd, i, 2) -                 \
-                GET_VECTOR_HIGH_ELEM(wd, i, 0) * 1.25f) *       \
-                       4;                                       \
-        tmp1 = GET_VECTOR_LOW_ELEM(wd, i, 1) * 2.f -            \
-               GET_VECTOR_LOW_ELEM(wd, i, 3) * 2.5f +           \
-               GET_VECTOR_HIGH_ELEM(wd, i, 1) * 0.5f;           \
-        mid_buf1[5] = tmp0 + tmp1;                              \
-        mid_buf1[6] = tmp0 - tmp1;                              \
-        mid_buf1 += 8;                                          \
+#define cb(i)                                                                          \
+    do {                                                                               \
+        mid_buf1[0] = GET_VECTOR_LOW_ELEM(wd, i, 0) - GET_VECTOR_HIGH_ELEM(wd, i, 2) + \
+                      5.25f * (GET_VECTOR_HIGH_ELEM(wd, i, 0) -                        \
+                               GET_VECTOR_LOW_ELEM(wd, i, 2));                         \
+        mid_buf1[7] = GET_VECTOR_HIGH_ELEM(wd, i, 3) - GET_VECTOR_LOW_ELEM(wd, i, 1) + \
+                      5.25f * (GET_VECTOR_LOW_ELEM(wd, i, 3) -                         \
+                               GET_VECTOR_HIGH_ELEM(wd, i, 1));                        \
+        auto tmp0 = GET_VECTOR_LOW_ELEM(wd, i, 2) + GET_VECTOR_HIGH_ELEM(wd, i, 2) -   \
+                    4.25f * GET_VECTOR_HIGH_ELEM(wd, i, 0);                            \
+        auto tmp1 = GET_VECTOR_LOW_ELEM(wd, i, 1) + GET_VECTOR_HIGH_ELEM(wd, i, 1) -   \
+                    4.25f * GET_VECTOR_LOW_ELEM(wd, i, 3);                             \
+        mid_buf1[1] = tmp0 + tmp1;                                                     \
+        mid_buf1[2] = tmp0 - tmp1;                                                     \
+        tmp0 = GET_VECTOR_HIGH_ELEM(wd, i, 2) +                                        \
+               0.25f * GET_VECTOR_LOW_ELEM(wd, i, 2) -                                 \
+               GET_VECTOR_HIGH_ELEM(wd, i, 0) * 1.25f;                                 \
+        tmp1 = GET_VECTOR_LOW_ELEM(wd, i, 1) * 0.5f -                                  \
+               GET_VECTOR_LOW_ELEM(wd, i, 3) * 2.5f +                                  \
+               GET_VECTOR_HIGH_ELEM(wd, i, 1) * 2.f;                                   \
+        mid_buf1[3] = tmp0 + tmp1;                                                     \
+        mid_buf1[4] = tmp0 - tmp1;                                                     \
+        tmp0 = GET_VECTOR_HIGH_ELEM(wd, i, 2) +                                        \
+               (GET_VECTOR_LOW_ELEM(wd, i, 2) -                                        \
+                GET_VECTOR_HIGH_ELEM(wd, i, 0) * 1.25f) *                              \
+                       4;                                                              \
+        tmp1 = GET_VECTOR_LOW_ELEM(wd, i, 1) * 2.f -                                   \
+               GET_VECTOR_LOW_ELEM(wd, i, 3) * 2.5f +                                  \
+               GET_VECTOR_HIGH_ELEM(wd, i, 1) * 0.5f;                                  \
+        mid_buf1[5] = tmp0 + tmp1;                                                     \
+        mid_buf1[6] = tmp0 - tmp1;                                                     \
+        mid_buf1 += 8;                                                                 \
     } while (0);
 
         float* mid_buf1 = transform_mid_buf;
@@ -171,9 +164,9 @@ struct InputTransform6X3 {
 
 #undef cb
         rep(i, alpha) rep(j, alpha) {
-            input_transform_buf[(i * alpha + j) * nr_units_in_tile * IC +
-                                unit_idx * IC + ic] =
-                    transform_mid_buf[i * alpha + j];
+            input_transform_buf
+                    [(i * alpha + j) * nr_units_in_tile * IC + unit_idx * IC + ic] =
+                            transform_mid_buf[i * alpha + j];
         }
 #endif
     }
@@ -215,13 +208,11 @@ struct InputTransform6X3 {
 
 template <BiasMode bmode, typename Op>
 struct OutputTransform6X3 {
-    static void transform(const float* output_transform_buf, const float* bias,
-                          float* output, float* transform_mid_buf,
-                          size_t oh_start, size_t ow_start, size_t OH,
-                          size_t OW, size_t oc_start, size_t oc_end,
-                          size_t oc_index, size_t unit_idx,
-                          size_t nr_units_in_tile, const DType& src_dtype,
-                          const DType& dst_dtype) {
+    static void transform(
+            const float* output_transform_buf, const float* bias, float* output,
+            float* transform_mid_buf, size_t oh_start, size_t ow_start, size_t OH,
+            size_t OW, size_t oc_start, size_t oc_end, size_t oc_index, size_t unit_idx,
+            size_t nr_units_in_tile, const DType& src_dtype, const DType& dst_dtype) {
         constexpr size_t alpha = 6 + 3 - 1;
         Op op(src_dtype, dst_dtype);
         float* mid_buf1 = transform_mid_buf;
@@ -230,10 +221,9 @@ struct OutputTransform6X3 {
         size_t OC = oc_end - oc_start;
         size_t oc = oc_start + oc_index;
 
-#define cb(m, n)                                                           \
-    transform_mid_buf[m * alpha + n] =                                     \
-            output_transform_buf[(m * alpha + n) * nr_units_in_tile * OC + \
-                                 unit_idx * OC + oc_index];
+#define cb(m, n)                                            \
+    transform_mid_buf[m * alpha + n] = output_transform_buf \
+            [(m * alpha + n) * nr_units_in_tile * OC + unit_idx * OC + oc_index];
         UNROLL_CALL_NOWRAPPER_D2(8, 8, cb);
 #undef cb
 
@@ -257,29 +247,22 @@ struct OutputTransform6X3 {
          * 1 -0.5 0.25 -0.125  0.0625  -0.03125
          * 0  0.0    0      0       0         1
          */
-#define cb(i)                                                                  \
-    do {                                                                       \
-        auto m1addm2 =                                                         \
-                GET_VECTOR_LOW_ELEM(s, i, 1) + GET_VECTOR_LOW_ELEM(s, i, 2);   \
-        auto m1subm2 =                                                         \
-                GET_VECTOR_LOW_ELEM(s, i, 1) - GET_VECTOR_LOW_ELEM(s, i, 2);   \
-        auto m3addm4 =                                                         \
-                GET_VECTOR_LOW_ELEM(s, i, 3) + GET_VECTOR_HIGH_ELEM(s, i, 0);  \
-        auto m3subm4 =                                                         \
-                GET_VECTOR_LOW_ELEM(s, i, 3) - GET_VECTOR_HIGH_ELEM(s, i, 0);  \
-        auto m5addm6 =                                                         \
-                GET_VECTOR_HIGH_ELEM(s, i, 1) + GET_VECTOR_HIGH_ELEM(s, i, 2); \
-        auto m5subm6 =                                                         \
-                GET_VECTOR_HIGH_ELEM(s, i, 1) - GET_VECTOR_HIGH_ELEM(s, i, 2); \
-        mid_buf1[0] =                                                          \
-                GET_VECTOR_LOW_ELEM(s, i, 0) + m1addm2 + m3addm4 + m5addm6;    \
-        mid_buf1[1] = m1subm2 + 2.f * m3subm4 + 0.5f * m5subm6;                \
-        mid_buf1[2] = m1addm2 + 4.f * m3addm4 + 0.25f * m5addm6;               \
-        mid_buf1[3] = m1subm2 + 8.f * m3subm4 + 0.125f * m5subm6;              \
-        mid_buf1[4] = m1addm2 + 16.f * m3addm4 + 0.0625f * m5addm6;            \
-        mid_buf1[5] = m1subm2 + 32.f * m3subm4 + 0.03125f * m5subm6 +          \
-                      GET_VECTOR_HIGH_ELEM(s, i, 3);                           \
-        mid_buf1 += 6;                                                         \
+#define cb(i)                                                                         \
+    do {                                                                              \
+        auto m1addm2 = GET_VECTOR_LOW_ELEM(s, i, 1) + GET_VECTOR_LOW_ELEM(s, i, 2);   \
+        auto m1subm2 = GET_VECTOR_LOW_ELEM(s, i, 1) - GET_VECTOR_LOW_ELEM(s, i, 2);   \
+        auto m3addm4 = GET_VECTOR_LOW_ELEM(s, i, 3) + GET_VECTOR_HIGH_ELEM(s, i, 0);  \
+        auto m3subm4 = GET_VECTOR_LOW_ELEM(s, i, 3) - GET_VECTOR_HIGH_ELEM(s, i, 0);  \
+        auto m5addm6 = GET_VECTOR_HIGH_ELEM(s, i, 1) + GET_VECTOR_HIGH_ELEM(s, i, 2); \
+        auto m5subm6 = GET_VECTOR_HIGH_ELEM(s, i, 1) - GET_VECTOR_HIGH_ELEM(s, i, 2); \
+        mid_buf1[0] = GET_VECTOR_LOW_ELEM(s, i, 0) + m1addm2 + m3addm4 + m5addm6;     \
+        mid_buf1[1] = m1subm2 + 2.f * m3subm4 + 0.5f * m5subm6;                       \
+        mid_buf1[2] = m1addm2 + 4.f * m3addm4 + 0.25f * m5addm6;                      \
+        mid_buf1[3] = m1subm2 + 8.f * m3subm4 + 0.125f * m5subm6;                     \
+        mid_buf1[4] = m1addm2 + 16.f * m3addm4 + 0.0625f * m5addm6;                   \
+        mid_buf1[5] = m1subm2 + 32.f * m3subm4 + 0.03125f * m5subm6 +                 \
+                      GET_VECTOR_HIGH_ELEM(s, i, 3);                                  \
+        mid_buf1 += 6;                                                                \
     } while (0);
 
         mid_buf1 = transform_mid_buf;
@@ -304,8 +287,7 @@ struct OutputTransform6X3 {
                     item1 = vadd_f32(item1, bias1);
                 } else if (bmode == BiasMode::BIAS) {
                     bias0 = vld1q_f32(bias + oc * OH * OW + oh * OW + ow_start);
-                    bias1 = vld1_f32(bias + oc * OH * OW + oh * OW + ow_start +
-                                     4);
+                    bias1 = vld1_f32(bias + oc * OH * OW + oh * OW + ow_start + 4);
                     item0 = vaddq_f32(item0, bias0);
                     item1 = vadd_f32(item1, bias1);
                 }
@@ -348,19 +330,17 @@ namespace winograd {
 
 MEGDNN_REG_WINOGRAD_STRATEGY_IMPL(winograd_6x3_1x1_f)
 
-void winograd_6x3_1x1_f::filter(const float* filter,
-                                float* filter_transform_buf,
-                                float* transform_mid_buf, size_t OC, size_t IC,
-                                size_t oc_start, size_t oc_end) {
+void winograd_6x3_1x1_f::filter(
+        const float* filter, float* filter_transform_buf, float* transform_mid_buf,
+        size_t OC, size_t IC, size_t oc_start, size_t oc_end) {
     FilterTransform6X3<param::MatrixMul::Format::DEFAULT>::transform(
-            filter, filter_transform_buf, transform_mid_buf, OC, IC, oc_start,
-            oc_end);
+            filter, filter_transform_buf, transform_mid_buf, OC, IC, oc_start, oc_end);
 }
 
-void winograd_6x3_1x1_f::input(const float* input, float* input_transform_buf,
-                               float* transform_mid_buf, size_t IH, size_t IW,
-                               size_t IC, size_t PH, size_t PW,
-                               size_t unit_start_idx, size_t nr_units_in_tile) {
+void winograd_6x3_1x1_f::input(
+        const float* input, float* input_transform_buf, float* transform_mid_buf,
+        size_t IH, size_t IW, size_t IC, size_t PH, size_t PW, size_t unit_start_idx,
+        size_t nr_units_in_tile) {
     constexpr int alpha = 3 + 6 - 1;
 
     // OW = IW + 2 * PW - KERNEL_SIZE + 1
@@ -387,13 +367,11 @@ void winograd_6x3_1x1_f::input(const float* input, float* input_transform_buf,
     }
 }
 
-void winograd_6x3_1x1_f::output(const float* output_transform_buf,
-                                const float* bias, float* output,
-                                float* transform_mid_buf, BiasMode bmode,
-                                NonlineMode nonline_mode, size_t OH, size_t OW,
-                                size_t oc_start, size_t oc_end,
-                                size_t unit_start_idx,
-                                size_t nr_units_in_tile) {
+void winograd_6x3_1x1_f::output(
+        const float* output_transform_buf, const float* bias, float* output,
+        float* transform_mid_buf, BiasMode bmode, NonlineMode nonline_mode, size_t OH,
+        size_t OW, size_t oc_start, size_t oc_end, size_t unit_start_idx,
+        size_t nr_units_in_tile) {
 #define cb(_bmode, _nonline_op, ...) \
     OutputTransform6X3<_bmode MEGDNN_COMMA _nonline_op>::transform(__VA_ARGS__);
 

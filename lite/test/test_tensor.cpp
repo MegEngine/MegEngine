@@ -12,9 +12,9 @@
 #include "lite_build_config.h"
 
 #if LITE_BUILD_WITH_MGE
-#include "../src/misc.h"
 #include "../src/mge/common.h"
 #include "../src/mge/network_impl.h"
+#include "../src/misc.h"
 #include "lite/tensor.h"
 
 #include <gtest/gtest.h>
@@ -100,10 +100,10 @@ TEST(TestTensor, Reset) {
     //! make sure memory is allocted
     ASSERT_NO_THROW(memcpy(old_ptr2, old_ptr3, 3 * 20 * 2));
 
-    std::shared_ptr<float> new_ptr2(new float[3 * 20],
-                                    [](float* ptr) { delete[] ptr; });
-    std::shared_ptr<float> new_ptr3(new float[3 * 20],
-                                    [](float* ptr) { delete[] ptr; });
+    std::shared_ptr<float> new_ptr2(
+            new float[3 * 20], [](float* ptr) { delete[] ptr; });
+    std::shared_ptr<float> new_ptr3(
+            new float[3 * 20], [](float* ptr) { delete[] ptr; });
     tensor1.reset(new_ptr2.get(), layout);
     tensor2.reset(new_ptr2.get(), 3 * 20 * 4);
     tensor3.reset(new_ptr3.get(), 3 * 20 * 4);
@@ -117,10 +117,8 @@ TEST(TestTensor, Reset) {
     ASSERT_NO_THROW(memcpy(new_ptr2.get(), new_ptr3.get(), 3 * 20 * 2));
 
     Layout layout1{{6, 20}, 2, LiteDataType::LITE_FLOAT};
-    std::shared_ptr<float> ptr2(new float[6 * 20],
-                                [](float* ptr) { delete[] ptr; });
-    std::shared_ptr<float> ptr3(new float[6 * 20],
-                                [](float* ptr) { delete[] ptr; });
+    std::shared_ptr<float> ptr2(new float[6 * 20], [](float* ptr) { delete[] ptr; });
+    std::shared_ptr<float> ptr3(new float[6 * 20], [](float* ptr) { delete[] ptr; });
     tensor2.reset(ptr2.get(), layout1);
     tensor3.reset(ptr3.get(), layout1);
 
@@ -215,8 +213,7 @@ TEST(TestTensor, Slice) {
     }
     auto check = [&](size_t start, size_t end, size_t step) {
         Tensor tensor3;
-        tensor3.copy_from(
-                *tensor2.slice({start, start}, {end, end}, {step, step}));
+        tensor3.copy_from(*tensor2.slice({start, start}, {end, end}, {step, step}));
         float* new_ptr = static_cast<float*>(tensor3.get_memory_ptr());
         for (size_t i = start; i < end; i += step) {
             for (size_t j = start; j < end; j += step) {
@@ -439,7 +436,7 @@ TEST(TestTensor, PinnedHostMem) {
 }
 
 TEST(TestTensor, DeviceId) {
-    if(get_device_count(LITE_CUDA) <= 1)
+    if (get_device_count(LITE_CUDA) <= 1)
         return;
     Layout layout{{1, 3, 224, 224}, 4};
     Tensor tensor2(0, LiteDeviceType::LITE_CUDA, layout);

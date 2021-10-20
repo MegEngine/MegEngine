@@ -27,9 +27,7 @@ struct BufferFetcherTexture {
 struct BufferFetcherRaw {
     const float* ptr;
 
-    __device__ __forceinline__ float get(uint32_t offset) {
-        return ptr[offset];
-    }
+    __device__ __forceinline__ float get(uint32_t offset) { return ptr[offset]; }
 };
 
 struct BufferFetcherTextureHost {
@@ -61,8 +59,7 @@ BufferFetcherTextureHost::BufferFetcherTextureHost(float* p, const size_t n) {
             cudaCreateChannelDesc(32, 0, 0, 0, cudaChannelFormatKindFloat);
     cudaTextureDesc tex_desc;
     memset(&tex_desc, 0, sizeof(cudaTextureDesc));
-    if (cudaCreateTextureObject(&tex_obj, &res_desc, &tex_desc, NULL) ==
-        cudaSuccess) {
+    if (cudaCreateTextureObject(&tex_obj, &res_desc, &tex_desc, NULL) == cudaSuccess) {
         val.tex = tex_obj;
         init_succ = true;
     } else {
@@ -72,10 +69,10 @@ BufferFetcherTextureHost::BufferFetcherTextureHost(float* p, const size_t n) {
 
 template <class BufferFetcher>
 struct KernelPtr {
-    typedef void (*type)(BufferFetcher, BufferFetcher, float*, uint32_t,
-                         uint32_t, uint32_t, uint32_t, uint32_t, uint32_t,
-                         uint32_t, uint32_t, uint32_t, uint32_t, uint32_t,
-                         uint32_t, uint32_t, uint32_t);
+    typedef void (*type)(
+            BufferFetcher, BufferFetcher, float*, uint32_t, uint32_t, uint32_t,
+            uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t,
+            uint32_t, uint32_t, uint32_t, uint32_t);
 };
 
 //! 1 -> 0xffffffff, 0 -> 0x00000000
@@ -90,9 +87,8 @@ union FloatAndU32 {
 
 //! \p mask must be either all 1 or 0 bits
 template <class BufferFetcher>
-__device__ __forceinline__ float visit_with_mask(BufferFetcher buf,
-                                                 uint32_t offset,
-                                                 uint32_t mask) {
+__device__ __forceinline__ float visit_with_mask(
+        BufferFetcher buf, uint32_t offset, uint32_t mask) {
     FloatAndU32 f;
     f.f = buf.get(offset & mask);
     f.u &= mask;
@@ -100,14 +96,12 @@ __device__ __forceinline__ float visit_with_mask(BufferFetcher buf,
 }
 
 template <uint32_t BY, uint32_t BX, bool is_xcorr, class BufferFetcher>
-__global__ void conv_kernel(BufferFetcher src, BufferFetcher filter, float* dst,
-                            const uint32_t INP_BS, const uint32_t OUT_BS,
-                            const uint32_t IC, const uint32_t IH,
-                            const uint32_t IW, const uint32_t OC,
-                            const uint32_t OH, const uint32_t OW,
-                            const uint32_t FH, const uint32_t FW,
-                            const uint32_t SH, const uint32_t SW,
-                            const uint32_t PH, const uint32_t PW) {
+__global__ void conv_kernel(
+        BufferFetcher src, BufferFetcher filter, float* dst, const uint32_t INP_BS,
+        const uint32_t OUT_BS, const uint32_t IC, const uint32_t IH, const uint32_t IW,
+        const uint32_t OC, const uint32_t OH, const uint32_t OW, const uint32_t FH,
+        const uint32_t FW, const uint32_t SH, const uint32_t SW, const uint32_t PH,
+        const uint32_t PW) {
     const uint32_t BM = BY < BX ? BY : BX;
     // BY*BX == 256
     // (OC) * (IC*FH*FW) * (OH*OW)
@@ -185,14 +179,18 @@ __global__ void conv_kernel(BufferFetcher src, BufferFetcher filter, float* dst,
         if (tidy < BM) {
             uint32_t tmp = offsetB + (ic * IH + (fh2)) * IW + (fw2),
                      ok = bool_as_mask(tidy + i < heightB),
-                     p0 = bool_as_mask(fh2 + oh0 >= PH && fh2 + oh0 < IH + PH &&
-                                       fw2 + ow0 >= PW && fw2 + ow0 < IW + PW),
-                     p1 = bool_as_mask(fh2 + oh1 >= PH && fh2 + oh1 < IH + PH &&
-                                       fw2 + ow1 >= PW && fw2 + ow1 < IW + PW),
-                     p2 = bool_as_mask(fh2 + oh2 >= PH && fh2 + oh2 < IH + PH &&
-                                       fw2 + ow2 >= PW && fw2 + ow2 < IW + PW),
-                     p3 = bool_as_mask(fh2 + oh3 >= PH && fh2 + oh3 < IH + PH &&
-                                       fw2 + ow3 >= PW && fw2 + ow3 < IW + PW);
+                     p0 = bool_as_mask(
+                             fh2 + oh0 >= PH && fh2 + oh0 < IH + PH &&
+                             fw2 + ow0 >= PW && fw2 + ow0 < IW + PW),
+                     p1 = bool_as_mask(
+                             fh2 + oh1 >= PH && fh2 + oh1 < IH + PH &&
+                             fw2 + ow1 >= PW && fw2 + ow1 < IW + PW),
+                     p2 = bool_as_mask(
+                             fh2 + oh2 >= PH && fh2 + oh2 < IH + PH &&
+                             fw2 + ow2 >= PW && fw2 + ow2 < IW + PW),
+                     p3 = bool_as_mask(
+                             fh2 + oh3 >= PH && fh2 + oh3 < IH + PH &&
+                             fw2 + ow3 >= PW && fw2 + ow3 < IW + PW);
             localB[tidy][tidx].x = visit_with_mask(src, tmp + op0, ok & p0);
             localB[tidy][tidx].y = visit_with_mask(src, tmp + op1, ok & p1);
             localB[tidy][tidx].z = visit_with_mask(src, tmp + op2, ok & p2);
@@ -288,10 +286,10 @@ __global__ void conv_kernel(BufferFetcher src, BufferFetcher filter, float* dst,
 }  // anonymous namespace
 
 void conv_bias::exec_inplace_matmul_fwd(
-        const float* src, const float* filter, float* dst, size_t N,
-        size_t INP_BS, size_t OUT_BS, size_t IC, size_t IH, size_t IW,
-        size_t OC, size_t OH, size_t OW, size_t FH, size_t FW, size_t PH,
-        size_t PW, size_t SH, size_t SW, bool is_xcorr, cudaStream_t stream) {
+        const float* src, const float* filter, float* dst, size_t N, size_t INP_BS,
+        size_t OUT_BS, size_t IC, size_t IH, size_t IW, size_t OC, size_t OH, size_t OW,
+        size_t FH, size_t FW, size_t PH, size_t PW, size_t SH, size_t SW, bool is_xcorr,
+        cudaStream_t stream) {
     BufferFetcherTextureHost src_tex(const_cast<float*>(src), N * INP_BS),
             filter_tex(const_cast<float*>(filter), OC * IC * FH * FW);
 
@@ -317,32 +315,31 @@ void conv_bias::exec_inplace_matmul_fwd(
     } else {
         BX = BY = 16;
     }
-    dim3 blocks((OH * OW + BX * 4 - 1) / (BX * 4), (OC + BY * 4 - 1) / (BY * 4),
-                N);
+    dim3 blocks((OH * OW + BX * 4 - 1) / (BX * 4), (OC + BY * 4 - 1) / (BY * 4), N);
     dim3 threads(BX, BY);
-#define DISPATCH_BX_BY(BX, BY)                                                \
-    do {                                                                      \
-        if (src_tex.init_succ) {                                              \
-            KernelPtr<BufferFetcherTexture>::type kptr;                       \
-            if (is_xcorr) {                                                   \
-                kptr = conv_kernel<BY, BX, true, BufferFetcherTexture>;       \
-            } else {                                                          \
-                kptr = conv_kernel<BY, BX, false, BufferFetcherTexture>;      \
-            }                                                                 \
-            kptr<<<blocks, threads, 0, stream>>>(                             \
-                    src_tex.val, filter_tex.val, dst, INP_BS, OUT_BS, IC, IH, \
-                    IW, OC, OH, OW, FH, FW, SH, SW, PH, PW);                  \
-        } else {                                                              \
-            KernelPtr<BufferFetcherRaw>::type kptr;                           \
-            if (is_xcorr) {                                                   \
-                kptr = conv_kernel<BY, BX, true, BufferFetcherRaw>;           \
-            } else {                                                          \
-                kptr = conv_kernel<BY, BX, false, BufferFetcherRaw>;          \
-            }                                                                 \
-            kptr<<<blocks, threads, 0, stream>>>(                             \
-                    src_buf, filter_buf, dst, INP_BS, OUT_BS, IC, IH, IW, OC, \
-                    OH, OW, FH, FW, SH, SW, PH, PW);                          \
-        }                                                                     \
+#define DISPATCH_BX_BY(BX, BY)                                                        \
+    do {                                                                              \
+        if (src_tex.init_succ) {                                                      \
+            KernelPtr<BufferFetcherTexture>::type kptr;                               \
+            if (is_xcorr) {                                                           \
+                kptr = conv_kernel<BY, BX, true, BufferFetcherTexture>;               \
+            } else {                                                                  \
+                kptr = conv_kernel<BY, BX, false, BufferFetcherTexture>;              \
+            }                                                                         \
+            kptr<<<blocks, threads, 0, stream>>>(                                     \
+                    src_tex.val, filter_tex.val, dst, INP_BS, OUT_BS, IC, IH, IW, OC, \
+                    OH, OW, FH, FW, SH, SW, PH, PW);                                  \
+        } else {                                                                      \
+            KernelPtr<BufferFetcherRaw>::type kptr;                                   \
+            if (is_xcorr) {                                                           \
+                kptr = conv_kernel<BY, BX, true, BufferFetcherRaw>;                   \
+            } else {                                                                  \
+                kptr = conv_kernel<BY, BX, false, BufferFetcherRaw>;                  \
+            }                                                                         \
+            kptr<<<blocks, threads, 0, stream>>>(                                     \
+                    src_buf, filter_buf, dst, INP_BS, OUT_BS, IC, IH, IW, OC, OH, OW, \
+                    FH, FW, SH, SW, PH, PW);                                          \
+        }                                                                             \
     } while (0)
 #define DISPATCH_BX(BX)               \
     do {                              \

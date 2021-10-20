@@ -13,8 +13,7 @@ from .module import Module
 
 
 class Concat(Module):
-    r"""
-    A :class:`~.Module` to do functional :func:`~.concat`. Could be replaced with :class:`~.QATModule`
+    r"""A :class:`~.Module` to do functional :func:`~.concat`. Could be replaced with :class:`~.QATModule`
     version :class:`~.qat.Concat` using :func:`~.quantize.quantize_qat`.
     """
 

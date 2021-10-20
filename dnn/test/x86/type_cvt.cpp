@@ -69,13 +69,12 @@ TEST_F(X86, TYPE_CVT_2) {
     for (size_t size : {1, 7, 15, 33, 10000}) {
         checker.set_rng(0, &rng);
         checker.set_dtype(0, dtype::QuantizedS32(0.0000113264f))
-                .set_dtype(1, dtype::Quantized8Asymm(0.018909f,
-                                                     static_cast<uint8_t>(3)))
+                .set_dtype(
+                        1, dtype::Quantized8Asymm(0.018909f, static_cast<uint8_t>(3)))
                 .execs({{size}, {size}});
 
         checker.set_dtype(0, dtype::QuantizedS32(0.0003f))
-                .set_dtype(1, dtype::Quantized8Asymm(0.1f,
-                                                     static_cast<uint8_t>(3)))
+                .set_dtype(1, dtype::Quantized8Asymm(0.1f, static_cast<uint8_t>(3)))
                 .execs({{size}, {size}});
 
         checker.set_dtype(0, dtype::QuantizedS32(0.000815917f))
@@ -95,8 +94,7 @@ TEST_F(X86, TYPE_CVT_2) {
                 .execs({{size}, {size}});
 
         checker.set_dtype(0, dtype::Float32())
-                .set_dtype(1, dtype::Quantized8Asymm(2.f,
-                                                     static_cast<uint8_t>(128)))
+                .set_dtype(1, dtype::Quantized8Asymm(2.f, static_cast<uint8_t>(128)))
                 .execs({{size}, {size}});
 
         checker.set_dtype(0, dtype::QuantizedS32(0.0004f))
@@ -107,10 +105,8 @@ TEST_F(X86, TYPE_CVT_2) {
                 .set_dtype(1, dtype::QuantizedS8(0.2f))
                 .execs({{size}, {size}});
 
-        checker.set_dtype(0,
-                          dtype::Quantized8Asymm(0.3f, static_cast<uint8_t>(8)))
-                .set_dtype(1, dtype::Quantized8Asymm(0.1f,
-                                                     static_cast<uint8_t>(3)))
+        checker.set_dtype(0, dtype::Quantized8Asymm(0.3f, static_cast<uint8_t>(8)))
+                .set_dtype(1, dtype::Quantized8Asymm(0.1f, static_cast<uint8_t>(3)))
                 .execs({{size}, {size}});
 
         checker.set_dtype(0, dtype::QuantizedS8(0.245121f))
@@ -133,8 +129,7 @@ TEST_F(X86, TYPE_CVT_2) {
     UniformIntRNG narrow_rng{-40000, 40000};
     checker.set_rng(0, &narrow_rng);
     checker.set_dtype(0, dtype::QuantizedS32(0.000163794f))
-            .set_dtype(1, dtype::Quantized8Asymm(0.0479196f,
-                                                 static_cast<uint8_t>(144)))
+            .set_dtype(1, dtype::Quantized8Asymm(0.0479196f, static_cast<uint8_t>(144)))
             .execs({{1, 32, 24, 128}, {1, 32, 24, 128}});
 }
 #if MEGDNN_WITH_BENCHMARK
@@ -147,8 +142,8 @@ TEST_F(X86, BENCHMARK_TYPE_CVT) {
     constexpr size_t RUNS = 10;
     benchmarker_naive.set_times(RUNS);
     benchmarker.set_times(RUNS);
-    auto run = [&](const TensorShapeArray& shapes, DType src_type,
-                   DType dst_type, const char* msg) {
+    auto run = [&](const TensorShapeArray& shapes, DType src_type, DType dst_type,
+                   const char* msg) {
         benchmarker_naive.set_dtype(0, src_type).set_dtype(1, dst_type);
         benchmarker.set_dtype(0, src_type).set_dtype(1, dst_type);
         for (auto&& shape : shapes) {
@@ -158,8 +153,7 @@ TEST_F(X86, BENCHMARK_TYPE_CVT) {
             const float throughput = computation / cur;
             printf("run %s %s: naive=%fms cur=%fms "
                    "speedup=%f, throughput = %f Gops\n",
-                   shape.to_string().c_str(), msg, naive, cur, naive / cur,
-                   throughput);
+                   shape.to_string().c_str(), msg, naive, cur, naive / cur, throughput);
         }
     };
 

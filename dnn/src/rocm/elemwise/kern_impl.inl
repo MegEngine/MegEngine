@@ -20,17 +20,16 @@
 namespace megdnn {
 namespace rocm {
 
-#define cb(_mode)                                                             \
-    typedef ElemwiseKern<megcorePlatformROCM,                                 \
-                         param_enumv::Elemwise::Mode::_mode, KERN_IMPL_CTYPE> \
-            KernImpl##_mode;                                                  \
-    typedef ElemArithKernWrapper<KERN_IMPL_ARITY, KernImpl##_mode>            \
-            Wrapper##_mode;                                                   \
+#define cb(_mode)                                                                     \
+    typedef ElemwiseKern<                                                             \
+            megcorePlatformROCM, param_enumv::Elemwise::Mode::_mode, KERN_IMPL_CTYPE> \
+            KernImpl##_mode;                                                          \
+    typedef ElemArithKernWrapper<KERN_IMPL_ARITY, KernImpl##_mode> Wrapper##_mode;    \
     INST_RUN_ELEMWISE(Wrapper##_mode, KERN_IMPL_CTYPE, KERN_IMPL_ARITY);
 
 KERN_IMPL_MODE(cb)
 
-} // namespace rocm
-} // namespace megdnn
+}  // namespace rocm
+}  // namespace megdnn
 
 // vim: syntax=cpp.doxygen

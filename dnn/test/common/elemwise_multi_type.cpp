@@ -20,8 +20,7 @@ using namespace test;
 
 namespace {
 
-void fuse_add_rmulh_round_shr_saturate_extra_opr_impl(
-        const TensorNDArray& data) {
+void fuse_add_rmulh_round_shr_saturate_extra_opr_impl(const TensorNDArray& data) {
     megdnn_assert(data.size() == 7);
     auto handle = create_cpu_handle(2);
     auto elem_opr = handle->create_operator<Elemwise>();
@@ -30,8 +29,7 @@ void fuse_add_rmulh_round_shr_saturate_extra_opr_impl(
     size_t st_bytes = data[0].layout.span().dist_byte();
     size_t out_bytes = data[6].layout.span().dist_byte();
     std::vector<uint8_t> tmp_storage(st_bytes), tmq_storage(st_bytes),
-        outlike_storage(out_bytes),
-        outlike2_storage(out_bytes);
+            outlike_storage(out_bytes), outlike2_storage(out_bytes);
     TensorND tmp{tmp_storage.data(), data[0].layout},
             tmq{tmq_storage.data(), data[0].layout},
             outlike{outlike_storage.data(), data[6].layout},
@@ -46,10 +44,9 @@ void fuse_add_rmulh_round_shr_saturate_extra_opr_impl(
     elem_opr->param().mode = Elemwise::Mode::RMULH;
     elem_opr->exec({tmp, data[2]}, tmq);
 
-    elem_mt_opr->param().mode =
-            ElemwiseMultiType::Mode::ROUND_SHR_SATURATE_IXxI8xI8;
+    elem_mt_opr->param().mode = ElemwiseMultiType::Mode::ROUND_SHR_SATURATE_IXxI8xI8;
     elem_mt_opr->exec({tmq, data[3]}, outlike);
-    
+
     elem_opr->param().mode = Elemwise::Mode::MAX;
     elem_opr->exec({outlike, data[4]}, outlike2);
 
@@ -87,8 +84,7 @@ DEF_TEST(fuse_mul_add3_iXxf32xf32xi8) {
     checker.set_param({ElemwiseMultiType::Mode::FUSE_MUL_ADD3_IXxF32xF32xI8});
     checker.set_dtype(1, dtype::Float32());
     checker.set_dtype(2, dtype::Float32());
-    std::array<DType, 3> src_types{
-            {dtype::Int8{}, dtype::Int16{}, dtype::Int32{}}};
+    std::array<DType, 3> src_types{{dtype::Int8{}, dtype::Int16{}, dtype::Int32{}}};
     UniformIntRNG rng{-100, 100};
     checker.set_rng(0, &rng);
     for (DType stype : src_types) {
@@ -110,8 +106,7 @@ DEF_TEST(round_shr_saturate_iXxi8xi8) {
 
     typedef std::tuple<DType, int, int> TestDesciption;
     std::array<TestDesciption, 3> testcases{
-            {TestDesciption{dtype::Int8(), 1, 7},
-             TestDesciption{dtype::Int16(), 2, 14},
+            {TestDesciption{dtype::Int8(), 1, 7}, TestDesciption{dtype::Int16(), 2, 14},
              TestDesciption{dtype::Int32(), 7, 25}}};
     for (auto desc : testcases) {
         DType dtype;
@@ -154,10 +149,8 @@ DEF_TEST(fuse_add_rmulh_round_shr_saturate_int16) {
             .set_rng(3, &offset_rng)
             .set_rng(4, &minv_rng)
             .set_rng(5, &maxv_rng)
-            .set_extra_opr_impl(
-                    fuse_add_rmulh_round_shr_saturate_extra_opr_impl);
-    auto run_with_shape = [&](const TensorShape& shape0,
-                              const TensorShape& shape1) {
+            .set_extra_opr_impl(fuse_add_rmulh_round_shr_saturate_extra_opr_impl);
+    auto run_with_shape = [&](const TensorShape& shape0, const TensorShape& shape1) {
         checker.execs({shape0, shape1, {1}, {1}, {1}, {1}, {}});
     };
     run_with_shape({7, 9, 11, 13}, {1, 9, 1, 1});
@@ -186,10 +179,8 @@ DEF_TEST(fuse_add_rmulh_round_shr_saturate_int32) {
             .set_rng(3, &offset_rng)
             .set_rng(4, &minv_rng)
             .set_rng(5, &maxv_rng)
-            .set_extra_opr_impl(
-                    fuse_add_rmulh_round_shr_saturate_extra_opr_impl);
-    auto run_with_shape = [&](const TensorShape& shape0,
-                              const TensorShape& shape1) {
+            .set_extra_opr_impl(fuse_add_rmulh_round_shr_saturate_extra_opr_impl);
+    auto run_with_shape = [&](const TensorShape& shape0, const TensorShape& shape1) {
         checker.execs({shape0, shape1, {1}, {1}, {1}, {1}, {}});
     };
     run_with_shape({7, 9, 11, 13}, {1, 9, 1, 1});

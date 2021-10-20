@@ -15,71 +15,59 @@
 using namespace mgb;
 
 namespace {
-    //! for testing Maybe
-    class RefCnt : NonCopyableObj {
-    public:
-        static int cnt;
-        RefCnt() { ++cnt; };
-        ~RefCnt() { --cnt; }
-    };
-    int RefCnt::cnt = 0;
+//! for testing Maybe
+class RefCnt : NonCopyableObj {
+public:
+    static int cnt;
+    RefCnt() { ++cnt; };
+    ~RefCnt() { --cnt; }
+};
+int RefCnt::cnt = 0;
 
-    struct TestIncompleteStorage {
-        class T;
-        IncompleteObjStorage<T, 4, 4> m_t;
+struct TestIncompleteStorage {
+    class T;
+    IncompleteObjStorage<T, 4, 4> m_t;
 
-        T& t() {
-            return m_t.get();
-        }
-    };
+    T& t() { return m_t.get(); }
+};
 
-    class TestIncompleteStorage::T {
-        int m = 123;
+class TestIncompleteStorage::T {
+    int m = 123;
 
-        public:
-            static bool dtor;
+public:
+    static bool dtor;
 
-            int& get() {
-                return m;
-            }
+    int& get() { return m; }
 
-            ~T() {
-                dtor = true;
-            }
-    };
-    bool TestIncompleteStorage::T::dtor = false;
+    ~T() { dtor = true; }
+};
+bool TestIncompleteStorage::T::dtor = false;
 
-    class UserData: public UserDataContainer::UserData {
-        int *m_refcnt;
-        MGB_TYPEINFO_OBJ_DECL;
+class UserData : public UserDataContainer::UserData {
+    int* m_refcnt;
+    MGB_TYPEINFO_OBJ_DECL;
 
-        public:
-            UserData(int *refcnt):
-                m_refcnt{refcnt}
-            {
-                ++ *m_refcnt;
-            }
+public:
+    UserData(int* refcnt) : m_refcnt{refcnt} { ++*m_refcnt; }
 
-            ~UserData() {
-                -- *m_refcnt;
-            }
+    ~UserData() { --*m_refcnt; }
+};
 
-    };
+class UserData1 : public UserData {
+    MGB_TYPEINFO_OBJ_DECL;
 
-    class UserData1: public UserData {
-        MGB_TYPEINFO_OBJ_DECL;
-        public:
-            using UserData::UserData;
-    };
+public:
+    using UserData::UserData;
+};
 
-    MGB_TYPEINFO_OBJ_IMPL(UserData);
-    MGB_TYPEINFO_OBJ_IMPL(UserData1);
-}
+MGB_TYPEINFO_OBJ_IMPL(UserData);
+MGB_TYPEINFO_OBJ_IMPL(UserData1);
+}  // namespace
 
 TEST(TestMetahelper, SmallSort) {
     bool fail = false;
 
-    for (int N = 0; N <= 6; ++ N) {
+    for (int N = 0; N <= 6; ++N) {
         std::vector<int> arr(N);
         thin_function<void(int)> gen;
         gen = [&](int p) {
@@ -89,27 +77,26 @@ TEST(TestMetahelper, SmallSort) {
                 auto s0 = arr, s1 = arr;
                 std::sort(s0.begin(), s0.end());
                 small_sort(s1.begin(), s1.end());
-                for (int i = 0; i < N; ++ i) {
+                for (int i = 0; i < N; ++i) {
                     ASSERT_EQ(s0[i], s1[i]) << "fail at " << i;
                 }
                 fail = false;
                 return;
             }
-            for (int i = 0; i < N; ++ i) {
+            for (int i = 0; i < N; ++i) {
                 arr[p] = i;
                 gen(p + 1);
             }
         };
         gen(0);
     }
-
 }
 
 TEST(TestMetahelper, IncompleteStorage) {
     TestIncompleteStorage::T::dtor = false;
     {
         TestIncompleteStorage s;
-        auto &&t = s.t();
+        auto&& t = s.t();
         ASSERT_EQ(123, t.get());
         t.get() += 1;
         ASSERT_EQ(124, s.t().get());
@@ -124,8 +111,8 @@ TEST(TestMetahelper, UserDataContainer) {
     {
         UserDataContainer ct;
         ASSERT_EQ(nullptr, ct.get_user_data<UserData>().first);
-        auto ptr = ct.get_user_data_or_create<UserData>([&](){
-                return std::make_shared<UserData>(&refcnt); });
+        auto ptr = ct.get_user_data_or_create<UserData>(
+                [&]() { return std::make_shared<UserData>(&refcnt); });
         ASSERT_NE(nullptr, ptr);
         ASSERT_EQ(ptr, ct.get_user_data<UserData>().first[0]);
         ASSERT_EQ(1, refcnt);
@@ -135,8 +122,7 @@ TEST(TestMetahelper, UserDataContainer) {
         ASSERT_EQ(rm, 1);
         ASSERT_EQ(nullptr, ct.get_user_data<UserData>().first);
 
-        auto ptr1 = ct.add_user_data<UserData1>(
-                std::make_shared<UserData1>(&refcnt));
+        auto ptr1 = ct.add_user_data<UserData1>(std::make_shared<UserData1>(&refcnt));
         ASSERT_EQ(nullptr, ct.get_user_data<UserData>().first);
         ASSERT_EQ(ptr1, ct.get_user_data<UserData1>().first[0]);
 
@@ -253,4 +239,3 @@ TEST(TestMetahelper, MaybeExcept) {
 /* ======================= end Maybe ======================= */
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
-

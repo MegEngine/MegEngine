@@ -36,12 +36,12 @@
 
 #include <mkl.h>
 #define STR_HELPER(x) #x
-#define STR(x) STR_HELPER(x)
+#define STR(x)        STR_HELPER(x)
 
-#define MKL_VERSION_STR                   \
-    STR(__INTEL_MKL__)                    \
-    "." STR(__INTEL_MKL_MINOR__) "." STR( \
-            __INTEL_MKL_UPDATE__) " (build date " STR(__INTEL_MKL_BUILD_DATE) ")"
+#define MKL_VERSION_STR                                                             \
+    STR(__INTEL_MKL__)                                                              \
+    "." STR(__INTEL_MKL_MINOR__) "." STR(__INTEL_MKL_UPDATE__) " (build date " STR( \
+            __INTEL_MKL_BUILD_DATE) ")"
 #pragma message "compile with Intel MKL " MKL_VERSION_STR "."
 #endif
 
@@ -53,8 +53,7 @@ std::unique_ptr<Opr> HandleImpl::create_operator() {
     return fallback::HandleImpl::create_operator<Opr>();
 }
 
-HandleImpl::HandleImpl(megcoreComputingHandle_t computing_handle,
-                       HandleType type)
+HandleImpl::HandleImpl(megcoreComputingHandle_t computing_handle, HandleType type)
         : fallback::HandleImpl::HandleImpl(computing_handle, type) {
     disable_denorm();
 #if MEGDNN_X86_WITH_MKL
@@ -98,7 +97,6 @@ MEGDNN_FOREACH_OPR_CLASS(MEGDNN_INST_CREATE_OPERATOR)
 }  // namespace x86
 }  // namespace megdnn
 
-MEGDNN_VERSION_SYMBOL3(MKL, __INTEL_MKL__, __INTEL_MKL_MINOR__,
-                       __INTEL_MKL_UPDATE__);
+MEGDNN_VERSION_SYMBOL3(MKL, __INTEL_MKL__, __INTEL_MKL_MINOR__, __INTEL_MKL_UPDATE__);
 
 // vim: syntax=cpp.doxygen

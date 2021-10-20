@@ -30,8 +30,7 @@ namespace jit {
  */
 class MLIRCUDAExecutable final : public Executable {
 public:
-    MLIRCUDAExecutable(mlir::OwningModuleRef& module,
-                       const std::string& kernel_name);
+    MLIRCUDAExecutable(mlir::OwningModuleRef& module, const std::string& kernel_name);
     ~MLIRCUDAExecutable();
 
     /*!
@@ -41,6 +40,7 @@ public:
     void execute(JITExecutor* fusion_opr) override final;
 
     const static std::string sm_blob_annotation;
+
 private:
     //! cache for a func on a specific device
     struct FuncCache {
@@ -54,8 +54,7 @@ private:
         std::string kernel_data;
         CompNode::UnorderedMap<Func> cn2func;
 
-        void exec(const JITExecutor* fusion_opr,
-                  const MLIRCUDAExecutable* cuda_exe);
+        void exec(const JITExecutor* fusion_opr, const MLIRCUDAExecutable* cuda_exe);
     };
 
     std::string m_kernel_name;

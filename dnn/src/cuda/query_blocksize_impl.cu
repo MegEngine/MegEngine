@@ -52,4 +52,3 @@ LaunchConfig cuda::detail::query_launch_config_for_kernel_uncached(
 }
 
 // vim: ft=cpp syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
-

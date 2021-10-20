@@ -29,8 +29,7 @@ void ATLAS::SetUp() {
     RandomState::reset();
 
     // use card 0
-    megcore_check(
-            megcoreCreateDeviceHandle(&m_dev_handle, megcorePlatformAtlas, 0));
+    megcore_check(megcoreCreateDeviceHandle(&m_dev_handle, megcorePlatformAtlas, 0));
 
     megcoreActivate(m_dev_handle);
     megcoreComputingHandle_t comp_handle;

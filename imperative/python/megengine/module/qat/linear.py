@@ -10,15 +10,14 @@ from .module import QATModule
 
 
 class Linear(Float.Linear, QATModule):
-    r"""
-    A :class:`~.QATModule` version of :class:`~.module.Linear`.
+    r"""A :class:`~.QATModule` version of :class:`~.module.Linear`.
     Could be applied with :class:`~.Observer` and :class:`~.FakeQuantize`.
 
-    :param in_features: size of each input sample.
-    :param out_features: size of each output sample.
-    :param bias: If set to ``False``, the layer will not learn an additive bias.
-        Default: True
-
+    Args:
+        in_features: size of each input sample.
+        out_features: size of each output sample.
+        bias: If set to ``False``, the layer will not learn an additive bias.
+            Default: True
     """
 
     def forward(self, inp):

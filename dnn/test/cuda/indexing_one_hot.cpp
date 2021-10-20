@@ -9,8 +9,8 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-#include "test/common/benchmarker.h"
 #include "test/common/indexing_one_hot.h"
+#include "test/common/benchmarker.h"
 #include "test/cuda/fixture.h"
 
 #include "megcore_cuda.h"

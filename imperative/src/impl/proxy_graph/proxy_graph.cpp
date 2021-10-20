@@ -17,15 +17,16 @@
 #endif
 
 namespace mgb::imperative::proxy_graph {
-    MGB_DYN_TYPE_OBJ_FINAL_IMPL(ProxyGraph::InputPlaceholder);
+MGB_DYN_TYPE_OBJ_FINAL_IMPL(ProxyGraph::InputPlaceholder);
 
-    thread_local std::unique_ptr<ProxyGraphTypeI> ProxyGraphTypeI::sm_instance = {};
-} // namespace mgb::imperative::proxy_graph
+thread_local std::unique_ptr<ProxyGraphTypeI> ProxyGraphTypeI::sm_instance = {};
+}  // namespace mgb::imperative::proxy_graph
 
 namespace mgb::imperative::proxy_graph_detail {
-std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(const OpDef& def,
-        const SmallVector<LogicalTensorDesc>& inputs) {
-    auto ret = proxy_graph::ProxyGraphTypeI::inst().infer_output_attrs_fallible(def, inputs);
+std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
+        const OpDef& def, const SmallVector<LogicalTensorDesc>& inputs) {
+    auto ret = proxy_graph::ProxyGraphTypeI::inst().infer_output_attrs_fallible(
+            def, inputs);
 #if 0
     // delete me after the new implementation is stable
     auto ref = ProxyGraph::get_default_graph()->infer_output_attrs_fallible(def, inputs);
@@ -41,4 +42,4 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(con
     return ret;
 }
 
-} // namespace mgb::imperative::proxy_graph_detail
+}  // namespace mgb::imperative::proxy_graph_detail

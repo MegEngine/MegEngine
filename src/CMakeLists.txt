@@ -4,6 +4,7 @@ endif()
 
 file(GLOB_RECURSE SOURCES core/impl/*.cpp gopt/impl/*.cpp opr/impl/*.cpp opr/impl/nvof/*.cpp plugin/impl/*.cpp serialization/impl/*.cpp core/impl/*.inl gopt/impl/*.inl opr/impl/*.inl plugin/impl/*.inl serialization/impl/*.inl)
 
+
 if(MGE_WITH_JIT)
     file(GLOB_RECURSE SOURCES_ jit/impl/*.cpp jit/impl/*.inl)
     if(MGE_WITH_JIT_MLIR)
@@ -52,6 +53,12 @@ set(MGB_ATLAS ${MGE_WITH_ATLAS})
 
 if(MGE_WITH_CUDA)
     file(GLOB_RECURSE SOURCES_ opr/impl/standalone/*.cu)
+    list(APPEND SOURCES ${SOURCES_})
+endif()
+
+if(MGE_WITH_CUSTOM_OP)
+    list(APPEND MGB_INC ${CMAKE_CURRENT_LIST_DIR}/custom/include)
+    file(GLOB_RECURSE SOURCES_ custom/impl/*.cpp)
     list(APPEND SOURCES ${SOURCES_})
 endif()
 

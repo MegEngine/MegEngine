@@ -11,9 +11,9 @@
  */
 #include "megdnn/dtype.h"
 #include "megdnn/oprs.h"
-#include "test/cuda/benchmark.h"
 #include "test/common/checker.h"
 #include "test/common/rng.h"
+#include "test/cuda/benchmark.h"
 #include "test/cuda/fixture.h"
 
 using namespace megdnn;
@@ -265,13 +265,13 @@ TEST_F(CUDA, RELAYOUT_FORMAT_NCHW_NCHW64) {
                             .set_rng(0, &u4)
                             .set_param(param)
                             .execs({{n, c, h, w}, {}});
- 
+
                     checker.set_dtype(0, dtype::QuantizedS4{1.19990307f})
                             .set_dtype(1, dtype::QuantizedS4{1.f})
                             .set_rng(0, &s4)
                             .set_param(param)
                             .execs({{n, c, h, w}, {}});
-               
+
                     checker.set_dtype(0, dtype::Quantized4Asymm{1.19990307f, 8})
                             .set_dtype(1, dtype::Quantized4Asymm{1.f, 4})
                             .set_rng(0, &u4)
@@ -353,13 +353,13 @@ TEST_F(CUDA, RELAYOUT_FORMAT_NCHW_NHWC) {
                             .set_rng(0, &u4)
                             .set_param(param)
                             .execs({{n, c, h, w}, {}});
- 
+
                     checker.set_dtype(0, dtype::QuantizedS4{1.19990307f})
                             .set_dtype(1, dtype::QuantizedS4{1.f})
                             .set_rng(0, &s4)
                             .set_param(param)
                             .execs({{n, c, h, w}, {}});
-               
+
                     checker.set_dtype(0, dtype::Quantized4Asymm{1.19990307f, 8})
                             .set_dtype(1, dtype::Quantized4Asymm{1.f, 4})
                             .set_rng(0, &u4)
@@ -421,8 +421,7 @@ TEST_F(CUDA, RELAYOUT_FORMAT_NHWC_NCHW) {
 TEST_F(CUDA, BENCHMARK_RELAYOUT_FORMAT) {
     using Param = RelayoutFormat::Param;
 
-    auto run = [&](const TensorShapeArray& shapes, Param param,
-                   Param default_param) {
+    auto run = [&](const TensorShapeArray& shapes, Param param, Param default_param) {
         Benchmarker<RelayoutFormat> benchmarker(handle_cuda());
         benchmarker.set_param(param);
         benchmarker.set_dtype(0, dtype::QuantizedS8{1.f})
@@ -434,8 +433,8 @@ TEST_F(CUDA, BENCHMARK_RELAYOUT_FORMAT) {
                 .set_dtype(1, dtype::QuantizedS8{1.f});
         for (auto&& shape : shapes) {
             double memaccess = (double(shape.total_nr_elems()) +
-                                double(shape[0]) * ((shape[1] + 3) / 4 * 4) *
-                                        shape[2] * shape[3]) *
+                                double(shape[0]) * ((shape[1] + 3) / 4 * 4) * shape[2] *
+                                        shape[3]) *
                                1e-6;
             auto time_ms = benchmarker.execs({shape, {}});
             if (shape[1] <= 4) {
@@ -474,23 +473,21 @@ TEST_F(CUDA, BENCHMARK_RELAYOUT_FORMAT_QS4) {
                 .set_dtype(1, dtype::QuantizedS4{1.19990307f});
 
         for (auto&& shape : shapes) {
-            double memaccess =
-                    double(TensorLayout(shape, dtype::QuantizedS4{1.f})
-                                   .span()
-                                   .dist_byte()) *
-                    2e-6;
+            double memaccess = double(TensorLayout(shape, dtype::QuantizedS4{1.f})
+                                              .span()
+                                              .dist_byte()) *
+                               2e-6;
             auto time_ms = benchmarker.execs({shape, {}});
-            printf("execute %s, time %.4f ms, %.4f GB/s\n",
-                   shape.to_string().c_str(), time_ms, memaccess / time_ms);
+            printf("execute %s, time %.4f ms, %.4f GB/s\n", shape.to_string().c_str(),
+                   time_ms, memaccess / time_ms);
         }
     };
 
     printf("nchw -> nchw64\n");
     {
         TensorShapeArray shapes = {
-                {1, 64, 56, 56},   {16, 64, 56, 56}, {64, 64, 56, 56},
-                {1, 64, 56, 55},   {16, 64, 56, 55}, {64, 64, 56, 55},
-                {1, 256, 384, 640},
+                {1, 64, 56, 56},  {16, 64, 56, 56}, {64, 64, 56, 56},   {1, 64, 56, 55},
+                {16, 64, 56, 55}, {64, 64, 56, 55}, {1, 256, 384, 640},
         };
         Param param;
         param.mode = param::RelayoutFormat::Mode::NCHW_NCHW64;
@@ -499,9 +496,9 @@ TEST_F(CUDA, BENCHMARK_RELAYOUT_FORMAT_QS4) {
     printf("nchw -> nhwc\n");
     {
         TensorShapeArray shapes = {
-                {1, 64, 56, 56},   {16, 64, 56, 56}, {64, 64, 56, 56},
-                {1, 64, 56, 55},   {16, 64, 56, 55}, {64, 64, 56, 55},
-                {1, 256, 384, 640}, {16, 16, 384, 640}, 
+                {1, 64, 56, 56},    {16, 64, 56, 56},   {64, 64, 56, 56},
+                {1, 64, 56, 55},    {16, 64, 56, 55},   {64, 64, 56, 55},
+                {1, 256, 384, 640}, {16, 16, 384, 640},
         };
         Param param;
         param.mode = param::RelayoutFormat::Mode::NCHW_NHWC;
@@ -510,11 +507,8 @@ TEST_F(CUDA, BENCHMARK_RELAYOUT_FORMAT_QS4) {
     printf("nchw64 -> nchw\n");
     {
         TensorShapeArray shapes = {
-                {64, 1, 56, 56, 64},
-                {1, 32, 7, 7, 64},
-                {16, 32, 7, 7, 64},
-                {64, 32, 7, 7, 64}, 
-                {1, 4, 384, 640, 64}, 
+                {64, 1, 56, 56, 64}, {1, 32, 7, 7, 64},    {16, 32, 7, 7, 64},
+                {64, 32, 7, 7, 64},  {1, 4, 384, 640, 64},
         };
         Param param;
         param.mode = param::RelayoutFormat::Mode::NCHW64_NCHW;
@@ -523,11 +517,8 @@ TEST_F(CUDA, BENCHMARK_RELAYOUT_FORMAT_QS4) {
     printf("nhwc -> nchw\n");
     {
         TensorShapeArray shapes = {
-                {64, 56, 56, 64},
-                {1, 7, 7, 64*32},
-                {16, 7, 7, 64*32},
-                {64, 7, 7, 64*32}, 
-                {1, 384, 640, 64*4}, 
+                {64, 56, 56, 64},    {1, 7, 7, 64 * 32},    {16, 7, 7, 64 * 32},
+                {64, 7, 7, 64 * 32}, {1, 384, 640, 64 * 4},
         };
         Param param;
         param.mode = param::RelayoutFormat::Mode::NHWC_NCHW;
@@ -550,8 +541,7 @@ TEST_F(CUDA, RELAYOUT_FORMAT_NCHW4) {
         checker.set_param(param).execs({{2, 4, 35, 36}, {}});
         checker.set_param(param).execs({{2, 3, 35, 36}, {}});
         checker.set_param(param).execs({{2, 1, 35, 36}, {}});
-        param.mode = param::RelayoutFormat::Mode::
-                NCHW_NCHW4_IC_SMALL_CONV_DENSE_WEIGHT;
+        param.mode = param::RelayoutFormat::Mode::NCHW_NCHW4_IC_SMALL_CONV_DENSE_WEIGHT;
         checker.set_param(param).execs({{4, 3, 3, 3}, {}});
         checker.set_param(param).execs({{4, 4, 3, 3}, {}});
         checker.set_param(param).execs({{1, 4, 3, 3}, {}});

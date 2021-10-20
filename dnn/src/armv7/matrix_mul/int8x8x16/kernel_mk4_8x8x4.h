@@ -44,8 +44,9 @@ namespace matmul_mk4_8x8x4 {
  *
  *                            Accumulator
  */
-static void kern_8x8(const int16_t* packA, const int8_t* packB, int K,
-                     int16_t* output, int LDC, bool is_first_k, int remain_n) {
+static void kern_8x8(
+        const int16_t* packA, const int8_t* packB, int K, int16_t* output, int LDC,
+        bool is_first_k, int remain_n) {
     K /= 4;
     const int16_t* a_ptr = packA;
     const int8_t* b_ptr = packB;
@@ -171,14 +172,14 @@ static void kern_8x8(const int16_t* packA, const int8_t* packB, int K,
             "b 101f\n"
 
             "4:\n " STORE_C
-            : [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr), [K] "+r"(K),
-              [x0] "+r"(x0), [LDC] "+r"(LDC), [is_first_k] "+r"(is_first_k),
-              [outptr] "+r"(outptr), [remain_n] "+r"(remain_n)
+            : [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr), [K] "+r"(K), [x0] "+r"(x0),
+              [LDC] "+r"(LDC), [is_first_k] "+r"(is_first_k), [outptr] "+r"(outptr),
+              [remain_n] "+r"(remain_n)
             :
-            : "d0", "d1", "d2", "d3", "d4", "d5", "d6", "d7", "d8", "d9", "d10",
-              "d11", "d12", "d13", "d14", "d15", "d16", "d17", "d18", "d19",
-              "d20", "d21", "d22", "d23", "d24", "d25", "d26", "d27", "d28",
-              "d29", "d30", "d31", "r1", "r2", "r3", "cc", "memory");
+            : "d0", "d1", "d2", "d3", "d4", "d5", "d6", "d7", "d8", "d9", "d10", "d11",
+              "d12", "d13", "d14", "d15", "d16", "d17", "d18", "d19", "d20", "d21",
+              "d22", "d23", "d24", "d25", "d26", "d27", "d28", "d29", "d30", "d31",
+              "r1", "r2", "r3", "cc", "memory");
 #undef STORE_C
 #undef STORE_LINE
 }
@@ -204,8 +205,9 @@ static void kern_8x8(const int16_t* packA, const int8_t* packB, int K,
  *
  *                            Accumulator
  */
-static void kern_4x8(const int16_t* packA, const int8_t* packB, int K,
-                     int16_t* output, int LDC, bool is_first_k, int remain_n) {
+static void kern_4x8(
+        const int16_t* packA, const int8_t* packB, int K, int16_t* output, int LDC,
+        bool is_first_k, int remain_n) {
     K /= 4;
     const int16_t* a_ptr = packA;
     const int8_t* b_ptr = packB;
@@ -321,21 +323,21 @@ static void kern_4x8(const int16_t* packA, const int8_t* packB, int K,
 
             "4:\n " STORE_C
 
-            : [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr), [K] "+r"(K),
-              [x0] "+r"(x0), [LDC] "+r"(LDC), [is_first_k] "+r"(is_first_k),
-              [outptr] "+r"(outptr), [remain_n] "+r"(remain_n)
+            : [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr), [K] "+r"(K), [x0] "+r"(x0),
+              [LDC] "+r"(LDC), [is_first_k] "+r"(is_first_k), [outptr] "+r"(outptr),
+              [remain_n] "+r"(remain_n)
             :
-            : "d0", "d1", "d2", "d3", "d4", "d5", "d6", "d7", "d8", "d9", "d10",
-              "d11", "d12", "d13", "d14", "d15", "d16", "d17", "d18", "d19",
-              "d20", "d21", "d22", "d23", "d24", "d25", "d26", "d27", "d28",
-              "d29", "d30", "d31", "r1", "r2", "r3", "cc", "memory");
+            : "d0", "d1", "d2", "d3", "d4", "d5", "d6", "d7", "d8", "d9", "d10", "d11",
+              "d12", "d13", "d14", "d15", "d16", "d17", "d18", "d19", "d20", "d21",
+              "d22", "d23", "d24", "d25", "d26", "d27", "d28", "d29", "d30", "d31",
+              "r1", "r2", "r3", "cc", "memory");
 #undef STORE_C
 #undef STORE_LINE
 }
 
-static void gemm_s8x8x16_mk4_8x8_pack_A_n(dt_int16* outptr,
-                                          const dt_int8* inptr, int ldin,
-                                          int m0, int mmax, int k0, int kmax) {
+static void gemm_s8x8x16_mk4_8x8_pack_A_n(
+        dt_int16* outptr, const dt_int8* inptr, int ldin, int m0, int mmax, int k0,
+        int kmax) {
     megdnn_assert(m0 % 4 == 0 && mmax % 4 == 0, "M must be time of 4");
     megdnn_assert(k0 % 4 == 0 && kmax % 4 == 0, "K must be time of 4");
     constexpr int pack_m = 8;
@@ -365,9 +367,8 @@ static void gemm_s8x8x16_mk4_8x8_pack_A_n(dt_int16* outptr,
     }
 }
 
-static void gemm_s8x8x16_mk4_8x8_pack_B_n(dt_int8* out, const dt_int8* in,
-                                          int ldin, int n0, int nmax, int k0,
-                                          int kmax) {
+static void gemm_s8x8x16_mk4_8x8_pack_B_n(
+        dt_int8* out, const dt_int8* in, int ldin, int n0, int nmax, int k0, int kmax) {
     megdnn_assert(k0 % 4 == 0 && kmax % 4 == 0, "K must be time of 4");
     int8_t tmpbuff[32] = {0};
 

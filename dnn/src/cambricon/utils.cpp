@@ -33,8 +33,9 @@ DeviceInfoRecord device_info_rec[MAX_NR_DEVICE];
 }  // namespace
 
 void cambricon::__throw_cnrt_error__(cnrtRet_t err, const char* msg) {
-    auto s = ssprintf("cnrt return %s(%d) occurred; expr: %s",
-                      cnrtGetErrorStr(err), int(err), msg);
+    auto s = ssprintf(
+            "cnrt return %s(%d) occurred; expr: %s", cnrtGetErrorStr(err), int(err),
+            msg);
     megdnn_throw(s.c_str());
 }
 
@@ -72,4 +73,3 @@ cnrtDeviceInfo_t cambricon::current_device_info() {
 }
 
 // vim: syntax=cpp.doxygen
-

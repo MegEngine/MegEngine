@@ -26,52 +26,8 @@ python3 -m pip install megengine -f https://megengine.org.cn/whl/mge.html
 
 ## 通过源码编译安装
 
-### 环境依赖
-
-大多数编译 MegEngine 的依赖位于 [third_party](third_party) 目录，可以通过以下命令自动安装：
-
-```bash
-./third_party/prepare.sh
-./third_party/install-mkl.sh
-```
-
-但是有一些依赖需要手动安装：
-
-* [CUDA](https://developer.nvidia.com/cuda-toolkit-archive)(>=10.1), [cuDNN](https://developer.nvidia.com/cudnn)(>=7.6) ，如果需要编译支持 CUDA 的版本。
-* [TensorRT](https://docs.nvidia.com/deeplearning/sdk/tensorrt-archived/index.html)(>=5.1.5) ，如果需要编译支持 TensorRT 的版本。
-* LLVM/Clang(>=6.0) ，如果需要编译支持 Halide JIT 的版本（默认开启）。
-* Python(>=3.5), Numpy, SWIG(>=3.0) ，如果需要编译生成 Python 模块。
-
-### 开始编译
-
-MegEngine使用CMake作为构建工具。我们提供以下脚本来帮助编译:
-
-* [host_build.sh](scripts/cmake-build/host_build.sh) 用于本地编译。
-参数 -h 可用于查询脚本支持的参数:
-
-  ```
-  scripts/cmake-build/host_build.sh -h
-  ```
-* [cross_build_android_arm_inference.sh](scripts/cmake-build/cross_build_android_arm_inference.sh) 用于ARM-安卓交叉编译。
-参数 -h 可用于查询脚本支持的参数:
-
-  ```
-  scripts/cmake-build/cross_build_android_arm_inference.sh -h
-  ```
-* [cross_build_linux_arm_inference.sh](scripts/cmake-build/cross_build_linux_arm_inference.sh) 用于ARM-Linux交叉编译。
-参数 -h 可用于查询脚本支持的参数:
-
-  ```
-  scripts/cmake-build/cross_build_linux_arm_inference.sh -h
-  ```
-* [cross_build_ios_arm_inference.sh](scripts/cmake-build/cross_build_ios_arm_inference.sh) 用于iOS交叉编译。
-  参数 -h 可用于查询脚本支持的参数:
-
-  ```
-  scripts/cmake-build/cross_build_ios_arm_inference.sh
-  ```
-  更多细节请参考 [BUILD_README.md](scripts/cmake-build/BUILD_README.md)
-
+* CMake编译细节请参考 [BUILD_README.md](scripts/cmake-build/BUILD_README.md)
+* Python绑定编译细节请参考 [BUILD_PYTHON_WHL_README.md](scripts/whl/BUILD_PYTHON_WHL_README.md)
 
 ## 如何参与贡献
 

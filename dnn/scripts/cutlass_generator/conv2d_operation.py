@@ -19,8 +19,8 @@ class Conv2dOperation:
   #
   def __init__(self, conv_kind, conv_type, arch, tile_description, src, flt, bias, dst, element_epilogue, \
     epilogue_functor = EpilogueFunctor.LinearCombination, swizzling_functor = SwizzlingFunctor.Identity4, \
-    need_load_from_const = True, implicit_gemm_mode = ImplicitGemmMode.GemmNT, without_shared_load = False, \
-    required_cuda_ver_major = 9, required_cuda_ver_minor = 2):
+    special_optimization = SpecialOptimizeDesc.NoneSpecialOpt, implicit_gemm_mode = ImplicitGemmMode.GemmNT, \
+    without_shared_load = False, required_cuda_ver_major = 9, required_cuda_ver_minor = 2):
 
     self.operation_kind = OperationKind.Conv2d
     self.conv_kind = conv_kind
@@ -34,7 +34,7 @@ class Conv2dOperation:
     self.element_epilogue = element_epilogue
     self.epilogue_functor = epilogue_functor
     self.swizzling_functor = swizzling_functor
-    self.need_load_from_const = need_load_from_const  
+    self.special_optimization = special_optimization  
     self.implicit_gemm_mode = implicit_gemm_mode
     self.without_shared_load = without_shared_load
     self.required_cuda_ver_major = required_cuda_ver_major
@@ -60,16 +60,18 @@ class Conv2dOperation:
     else:
       inst_shape = ''
 
-    unity_kernel = ''
-    if not self.need_load_from_const:
-      unity_kernel = '_1x1'
+    special_opt = ''
+    if self.special_optimization == SpecialOptimizeDesc.ConvFilterUnity:
+      special_opt = '_1x1'
+    elif self.special_optimization == SpecialOptimizeDesc.DeconvDoubleUpsampling:
+       special_opt = '_s2'
 
     reorder_k = ''
     if self.without_shared_load:
       reorder_k = '_roc'
 
     return "%s%s%s%s%s%s_%s" % (ShortDataTypeNames[self.accumulator_type()], \
-      inst_shape, intermediate_type, ConvKindNames[self.conv_kind], unity_kernel, \
+      inst_shape, intermediate_type, ConvKindNames[self.conv_kind], special_opt, \
       reorder_k, ShortEpilogueNames[self.epilogue_functor])
 
   #
@@ -183,7 +185,7 @@ using Convolution =
     ${stages},
     ${alignment_src}, 
     ${alignment_filter}, 
-    ${nonuninity_kernel}, 
+    ${special_optimization}, 
     ${math_operator},
     ${implicit_gemm_mode}, 
     ${without_shared_load}>;
@@ -226,7 +228,7 @@ using Convolution =
       'stages': str(operation.tile_description.stages),
       'alignment_src': str(operation.src.alignment), 
       'alignment_filter': str(operation.flt.alignment), 
-      'nonuninity_kernel': str(operation.need_load_from_const).lower(),  
+      'special_optimization': SpecialOptimizeDescTag[operation.special_optimization],  
       'math_operator': MathOperationTag[operation.tile_description.math_instruction.math_operation],
       'implicit_gemm_mode': ImplicitGemmModeTag[operation.implicit_gemm_mode],
       'without_shared_load': str(operation.without_shared_load).lower()
@@ -266,7 +268,7 @@ using Deconvolution =
     ${stages},
     ${alignment_src}, 
     ${alignment_filter}, 
-    ${nonuninity_kernel}, 
+    ${special_optimization}, 
     ${math_operator},
     ${implicit_gemm_mode}>;
 """
@@ -308,7 +310,7 @@ using Deconvolution =
       'stages': str(operation.tile_description.stages),
       'alignment_src': str(operation.src.alignment), 
       'alignment_filter': str(operation.flt.alignment), 
-      'nonuninity_kernel': str(operation.need_load_from_const).lower(),
+      'special_optimization': SpecialOptimizeDescTag[operation.special_optimization],
       'math_operator': MathOperationTag[operation.tile_description.math_instruction.math_operation],
       'implicit_gemm_mode': ImplicitGemmModeTag[operation.implicit_gemm_mode]
     }
@@ -323,9 +325,9 @@ using Deconvolution =
 ###################################################################################################
 
 #
-def GenerateConv2d(conv_kind, tile_descriptions, src_layout, flt_layout, dst_layout, dst_type, min_cc, src_align = 32, flt_align = 32, dst_align = 128, \
-  skip_unity_kernel = False, implicit_gemm_mode = ImplicitGemmMode.GemmNT, without_shared_load = False, required_cuda_ver_major = 9, \
-  required_cuda_ver_minor = 2):
+def GenerateConv2d(conv_kind, tile_descriptions, src_layout, flt_layout, dst_layout, dst_type, min_cc, src_align = 32, flt_align = 32, dst_align = 32, \
+  use_special_optimization = SpecialOptimizeDesc.NoneSpecialOpt, implicit_gemm_mode = ImplicitGemmMode.GemmNT, without_shared_load = False, \
+  required_cuda_ver_major = 9, required_cuda_ver_minor = 2):
   operations = []
 
   element_epilogue = DataType.f32 
@@ -335,7 +337,10 @@ def GenerateConv2d(conv_kind, tile_descriptions, src_layout, flt_layout, dst_lay
     else:
       swizzling_functor = SwizzlingFunctor.ConvFpropNCxHWx
   else:
-    swizzling_functor = SwizzlingFunctor.ConvDgradNCxHWx
+    if implicit_gemm_mode == ImplicitGemmMode.GemmTN:
+      swizzling_functor = SwizzlingFunctor.ConvDgradTrans
+    else:
+      swizzling_functor = SwizzlingFunctor.ConvDgradNCxHWx
 
   # skip rule
   def filter_tile_with_layout(tile: TileDescription, layout: LayoutType) -> bool:
@@ -412,10 +417,10 @@ def GenerateConv2d(conv_kind, tile_descriptions, src_layout, flt_layout, dst_lay
       bias = TensorDescription(bias_type, dst_layout, max(1, int(32 / DataTypeSize[bias_type])))
       dst = TensorDescription(dst_type, dst_layout, int(dst_align / DataTypeSize[dst_type])) 
 
-      new_operation = Conv2dOperation(conv_kind, ConvType.Convolution, min_cc, tile, src, flt, bias, dst, element_epilogue, epilogue, swizzling_functor, True, implicit_gemm_mode, without_shared_load, required_cuda_ver_major, required_cuda_ver_minor)
+      new_operation = Conv2dOperation(conv_kind, ConvType.Convolution, min_cc, tile, src, flt, bias, dst, element_epilogue, epilogue, swizzling_functor, SpecialOptimizeDesc.NoneSpecialOpt, implicit_gemm_mode, without_shared_load, required_cuda_ver_major, required_cuda_ver_minor)
       operations.append(new_operation)
-      if not skip_unity_kernel:
-        new_operation = Conv2dOperation(conv_kind, ConvType.Convolution, min_cc, tile, src, flt, bias, dst, element_epilogue, epilogue, swizzling_functor, False, implicit_gemm_mode, without_shared_load, required_cuda_ver_major, required_cuda_ver_minor)
+      if use_special_optimization != SpecialOptimizeDesc.NoneSpecialOpt:
+        new_operation = Conv2dOperation(conv_kind, ConvType.Convolution, min_cc, tile, src, flt, bias, dst, element_epilogue, epilogue, swizzling_functor, use_special_optimization , implicit_gemm_mode, without_shared_load, required_cuda_ver_major, required_cuda_ver_minor)
         operations.append(new_operation)
   return operations
 

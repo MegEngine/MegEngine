@@ -33,7 +33,7 @@ def require_cuda(ngpu=1):
 
 
 class TestShuffleNetCuda(unittest.TestCase):
-    source_dir = os.getenv("LITE_TEST_RESOUCE")
+    source_dir = os.getenv("LITE_TEST_RESOURCE")
     input_data_path = os.path.join(source_dir, "input_data.npy")
     correct_data_path = os.path.join(source_dir, "output_data.npy")
     model_path = os.path.join(source_dir, "shufflenet.mge")

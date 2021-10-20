@@ -42,9 +42,9 @@ public:
     int m_st;
     std::vector<PPI> m_segments;
     std::vector<int> m_consume_opr;
-    SegmentRace(const size_t mem, const size_t id, const int st,
-                const std::vector<PPI>& segs,
-                const std::vector<int>& _consume_opr)
+    SegmentRace(
+            const size_t mem, const size_t id, const int st,
+            const std::vector<PPI>& segs, const std::vector<int>& _consume_opr)
             : m_mem(mem),
               m_id(id),
               m_st(st),
@@ -160,10 +160,9 @@ class MemorySwap {
     ThinHashMap<size_t, int> m_color;
     PSSSet m_swapped_pair;
 
-    void determine_swap_edge(PIPSet& edges, size_t loss_idx,
-                             const cg::OprNodeArray& opr_seq,
-                             std::vector<std::vector<size_t>>&,
-                             std::vector<std::vector<size_t>>&);
+    void determine_swap_edge(
+            PIPSet& edges, size_t loss_idx, const cg::OprNodeArray& opr_seq,
+            std::vector<std::vector<size_t>>&, std::vector<std::vector<size_t>>&);
 
     /*!
      * serial mode :
@@ -176,8 +175,7 @@ class MemorySwap {
      *
      *  currently vd1_dep and cpi_dep are not in use
      */
-    VarNode* apply(VarNode* lhs, VarNode* vd1_dep, VarNode* cpi_dep,
-                   VarNode* dep_node);
+    VarNode* apply(VarNode* lhs, VarNode* vd1_dep, VarNode* cpi_dep, VarNode* dep_node);
 
     /*!
      * use buckets to swap vars in another stream, refer to the implementations

@@ -10,18 +10,17 @@
  */
 #include "src/naive/tile/opr_impl.h"
 
+#include <cstring>
 #include "src/common/utils.h"
 #include "src/naive/handle.h"
-#include <cstring>
 
 namespace megdnn {
 namespace naive {
 
 template <typename T>
-void TileForwardImpl::exec_internal(_megdnn_tensor_in src,
-        _megdnn_tensor_out dst,
-        _megdnn_workspace /* workspace */)
-{
+void TileForwardImpl::exec_internal(
+        _megdnn_tensor_in src, _megdnn_tensor_out dst,
+        _megdnn_workspace /* workspace */) {
     auto ndim = src.layout.ndim;
     auto sptr = src.ptr<T>(), dptr = dst.ptr<T>();
     auto sshape = src.layout.shape, dshape = dst.layout.shape;
@@ -32,21 +31,18 @@ void TileForwardImpl::exec_internal(_megdnn_tensor_in src,
         rep(i, ndim) sidx[i] = didx[i] % sshape[i];
         auto si = get_linear_addr(sidx, sshape, ndim);
         auto di = get_linear_addr(didx, dshape, ndim);
-        std::memcpy(dptr + di, sptr + si, sizeof(T) * sshape[ndim-1]);
-    } while (get_next_addr(didx, dshape, ndim, sshape[ndim-1]));
+        std::memcpy(dptr + di, sptr + si, sizeof(T) * sshape[ndim - 1]);
+    } while (get_next_addr(didx, dshape, ndim, sshape[ndim - 1]));
 }
 
-void TileForwardImpl::exec(_megdnn_tensor_in src,
-        _megdnn_tensor_out dst,
-        _megdnn_workspace workspace)
-{
+void TileForwardImpl::exec(
+        _megdnn_tensor_in src, _megdnn_tensor_out dst, _megdnn_workspace workspace) {
     check_exec(src.layout, dst.layout, workspace.size);
-#define cb(DType) \
-    if (src.layout.dtype == DType()) { \
-        using ctype = typename DTypeTrait<DType>::ctype; \
-        MEGDNN_DISPATCH_CPU_KERN_OPR( \
-                exec_internal<ctype>(src, dst, workspace)); \
-        return; \
+#define cb(DType)                                                                \
+    if (src.layout.dtype == DType()) {                                           \
+        using ctype = typename DTypeTrait<DType>::ctype;                         \
+        MEGDNN_DISPATCH_CPU_KERN_OPR(exec_internal<ctype>(src, dst, workspace)); \
+        return;                                                                  \
     }
     MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
 #undef cb
@@ -54,10 +50,9 @@ void TileForwardImpl::exec(_megdnn_tensor_in src,
 }
 
 template <typename T>
-void TileBackwardImpl::exec_internal(_megdnn_tensor_in diff,
-        _megdnn_tensor_out grad,
-        _megdnn_workspace /* workspace */)
-{
+void TileBackwardImpl::exec_internal(
+        _megdnn_tensor_in diff, _megdnn_tensor_out grad,
+        _megdnn_workspace /* workspace */) {
     auto ndim = diff.layout.ndim;
     auto hptr = diff.ptr<T>(), gptr = grad.ptr<T>();
     auto dshape = diff.layout.shape, sshape = grad.layout.shape;
@@ -74,23 +69,20 @@ void TileBackwardImpl::exec_internal(_megdnn_tensor_in diff,
     } while (get_next_addr(didx, dshape, ndim));
 }
 
-void TileBackwardImpl::exec(_megdnn_tensor_in diff,
-        _megdnn_tensor_out grad,
-        _megdnn_workspace workspace)
-{
+void TileBackwardImpl::exec(
+        _megdnn_tensor_in diff, _megdnn_tensor_out grad, _megdnn_workspace workspace) {
     check_exec(diff.layout, grad.layout, workspace.size);
-#define cb(DType) \
-    if (diff.layout.dtype == DType()) { \
-        using ctype = typename DTypeTrait<DType>::ctype; \
-        MEGDNN_DISPATCH_CPU_KERN_OPR( \
-                exec_internal<ctype>(diff, grad, workspace)); \
-        return; \
+#define cb(DType)                                                                  \
+    if (diff.layout.dtype == DType()) {                                            \
+        using ctype = typename DTypeTrait<DType>::ctype;                           \
+        MEGDNN_DISPATCH_CPU_KERN_OPR(exec_internal<ctype>(diff, grad, workspace)); \
+        return;                                                                    \
     }
     MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
 #undef cb
     megdnn_assert_internal(0);
 }
 
-} // namespace naive
-} // namespace megdnn
+}  // namespace naive
+}  // namespace megdnn
 // vim: syntax=cpp.doxygen

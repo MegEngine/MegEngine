@@ -10,16 +10,15 @@
  */
 #include "test/arm_common/fixture.h"
 
-#include "test/common/pooling.h"
-#include "test/common/checker.h"
 #include "test/common/benchmarker.h"
+#include "test/common/checker.h"
+#include "test/common/pooling.h"
 #include "test/common/rng.h"
 
 namespace megdnn {
 namespace test {
 
-TEST_F(ARM_COMMON, POOLING)
-{
+TEST_F(ARM_COMMON, POOLING) {
     using Param = param::Pooling;
     // clang-format off
     for (size_t ih: {2, 3, 5, 7, 11, 13, 17, 19, 23, 24, 25, 26, 27, 28, 29, 30})
@@ -68,8 +67,7 @@ TEST_F(ARM_COMMON, POOLING)
     // clang-format on
 }
 
-TEST_F(ARM_COMMON, POOLING_INT8_W2x2_S2x2)
-{
+TEST_F(ARM_COMMON, POOLING_INT8_W2x2_S2x2) {
     // clang-format off
     for (size_t ih: {2, 3, 7, 13, 52, 53, 54, 55})
     for (size_t iw: {2, 3, 6, 14, 53, 54, 55, 56})
@@ -90,8 +88,7 @@ TEST_F(ARM_COMMON, POOLING_INT8_W2x2_S2x2)
     // clang-format on
 }
 
-TEST_F(ARM_COMMON, POOLING_INT8_W3x3_S2x2)
-{
+TEST_F(ARM_COMMON, POOLING_INT8_W3x3_S2x2) {
     // clang-format off
     for (size_t ih: {2, 3, 7, 13, 52, 53, 54, 55})
     for (size_t iw: {2, 3, 6, 14, 53, 54, 55, 56})
@@ -156,10 +153,8 @@ TEST_F(ARM_COMMON, POOLING_FP16) {
                     }
 
     //! test for SH == 2 && SW == 2 && FH = FW = 4 max pooling
-    for (size_t ih :
-         {2, 3, 5, 7, 11, 13, 17, 19, 23, 24, 25, 26, 27, 28, 29, 30})
-        for (size_t iw :
-             {2, 3, 5, 7, 11, 13, 17, 19, 23, 24, 25, 26, 27, 28, 29, 30})
+    for (size_t ih : {2, 3, 5, 7, 11, 13, 17, 19, 23, 24, 25, 26, 27, 28, 29, 30})
+        for (size_t iw : {2, 3, 5, 7, 11, 13, 17, 19, 23, 24, 25, 26, 27, 28, 29, 30})
             for (size_t p : {1, 2}) {
                 Param param;
                 param.mode = Param::Mode::MAX;
@@ -170,10 +165,8 @@ TEST_F(ARM_COMMON, POOLING_FP16) {
             }
 
     //! test for SH == 2 && SW == 2 && FH = FW = 5 max pooling
-    for (size_t ih :
-         {3, 5, 7, 11, 13, 17, 19, 23, 24, 25, 26, 27, 28, 29, 30})
-        for (size_t iw :
-             {3, 5, 7, 11, 13, 17, 19, 23, 24, 25, 26, 27, 28, 29, 30})
+    for (size_t ih : {3, 5, 7, 11, 13, 17, 19, 23, 24, 25, 26, 27, 28, 29, 30})
+        for (size_t iw : {3, 5, 7, 11, 13, 17, 19, 23, 24, 25, 26, 27, 28, 29, 30})
             for (size_t p : {1, 2}) {
                 Param param;
                 param.mode = Param::Mode::MAX;
@@ -238,8 +231,7 @@ TEST_F(ARM_COMMON, POOLING_QUANTIZED) {
                         }
 
         //! test for SH == 2 && SW == 2 && FH == FW == 4 max pooling
-        for (size_t ih :
-             {2, 3, 5, 7, 11, 13, 17, 19, 23, 24, 25, 26, 27, 28, 29, 30})
+        for (size_t ih : {2, 3, 5, 7, 11, 13, 17, 19, 23, 24, 25, 26, 27, 28, 29, 30})
             for (size_t iw :
                  {2, 3, 5, 7, 11, 13, 17, 19, 23, 24, 25, 26, 27, 28, 29, 30})
                 for (size_t p : {1, 2}) {
@@ -252,10 +244,8 @@ TEST_F(ARM_COMMON, POOLING_QUANTIZED) {
                 }
 
         //! test for SH == 2 && SW == 2 && FH == FW == 5 max pooling
-        for (size_t ih :
-             {3, 5, 7, 11, 13, 17, 19, 23, 24, 25, 26, 27, 28, 29, 30})
-            for (size_t iw :
-                 {3, 5, 7, 11, 13, 17, 19, 23, 24, 25, 26, 27, 28, 29, 30})
+        for (size_t ih : {3, 5, 7, 11, 13, 17, 19, 23, 24, 25, 26, 27, 28, 29, 30})
+            for (size_t iw : {3, 5, 7, 11, 13, 17, 19, 23, 24, 25, 26, 27, 28, 29, 30})
                 for (size_t p : {1, 2}) {
                     Param param;
                     param.mode = Param::Mode::MAX;
@@ -269,77 +259,77 @@ TEST_F(ARM_COMMON, POOLING_QUANTIZED) {
 
 #if MEGDNN_WITH_BENCHMARK
 
-void benchmark_nchw44_fp32(Handle *handle) {
-  using Param = param::Pooling;
-  auto run = [&](size_t n, size_t c, size_t h, size_t w, size_t filter,
-                 size_t stride, size_t pad, Param::Mode mode) {
-    Param param;
-    param.window_h = param.window_w = filter;
-    param.stride_h = param.stride_w = stride;
-    param.pad_h = param.pad_w = pad;
-    param.format = Param::Format::NCHW;
-    param.mode = mode;
-    TensorShape nchw_shape = {n, c, h, w};
-    TensorShape nchw44_shape = {n, c / 4, h, w, 4};
-    TensorLayout dst_layout;
-    auto opr = handle->create_operator<Pooling>();
-    opr->param() = param;
-    opr->deduce_layout({nchw_shape, dtype::Float32()}, dst_layout);
-    float calc_amount =
-        dst_layout.total_nr_elems() * param.window_h * param.window_w;
+void benchmark_nchw44_fp32(Handle* handle) {
+    using Param = param::Pooling;
+    auto run = [&](size_t n, size_t c, size_t h, size_t w, size_t filter, size_t stride,
+                   size_t pad, Param::Mode mode) {
+        Param param;
+        param.window_h = param.window_w = filter;
+        param.stride_h = param.stride_w = stride;
+        param.pad_h = param.pad_w = pad;
+        param.format = Param::Format::NCHW;
+        param.mode = mode;
+        TensorShape nchw_shape = {n, c, h, w};
+        TensorShape nchw44_shape = {n, c / 4, h, w, 4};
+        TensorLayout dst_layout;
+        auto opr = handle->create_operator<Pooling>();
+        opr->param() = param;
+        opr->deduce_layout({nchw_shape, dtype::Float32()}, dst_layout);
+        float calc_amount =
+                dst_layout.total_nr_elems() * param.window_h * param.window_w;
 
-    Benchmarker<Pooling> benchmarker_float_nchw(handle);
-    Benchmarker<Pooling> benchmarker_float_nchw44(handle);
-    Benchmarker<Pooling> benchmarker_int_nchw44(handle);
-    size_t RUN = 500;
-    auto t1 = benchmarker_float_nchw.set_display(false)
-                  .set_times(RUN)
-                  .set_param(param)
-                  .exec({nchw_shape, {}});
+        Benchmarker<Pooling> benchmarker_float_nchw(handle);
+        Benchmarker<Pooling> benchmarker_float_nchw44(handle);
+        Benchmarker<Pooling> benchmarker_int_nchw44(handle);
+        size_t RUN = 500;
+        auto t1 = benchmarker_float_nchw.set_display(false)
+                          .set_times(RUN)
+                          .set_param(param)
+                          .exec({nchw_shape, {}});
 
-    param.format = Param::Format::NCHW44;
-    auto t2 = benchmarker_int_nchw44.set_display(false)
-                  .set_times(RUN)
-                  .set_param(param)
-                  .execl({{nchw44_shape, dtype::QuantizedS8(1.0)},
-                          {{}, dtype::QuantizedS8(1.0)}});
-    auto t3 = benchmarker_float_nchw44.set_display(false)
-                  .set_times(RUN)
-                  .set_param(param)
-                  .exec({nchw44_shape, {}});
+        param.format = Param::Format::NCHW44;
+        auto t2 = benchmarker_int_nchw44.set_display(false)
+                          .set_times(RUN)
+                          .set_param(param)
+                          .execl({{nchw44_shape, dtype::QuantizedS8(1.0)},
+                                  {{}, dtype::QuantizedS8(1.0)}});
+        auto t3 = benchmarker_float_nchw44.set_display(false)
+                          .set_times(RUN)
+                          .set_param(param)
+                          .exec({nchw44_shape, {}});
 
-    printf("{%zu %zu %zu %zu} filter = %zu, stride = %zu pad = %zu\n"
-           "nchw_fp32={%.3f ms, %.3f Mflops},  "
-           "nchw44_int={%.3f ms, %.3f Mflops},  "
-           "nchw44_fp32={%.3f ms, %.3f Mflops, speed_up %f}\n\n",
-           n, c, h, w, filter, stride, pad, t1 / RUN,
-           calc_amount / (t1 / RUN * 1000), t2 / RUN,
-           calc_amount / (t2 / RUN * 1000), t3 / RUN,
-           calc_amount / (t3 / RUN * 1000), t1 / t3);
-  };
-  // Resnet50
-  run(1, 64, 112, 112, 3, 2, 1, param::Pooling::Mode::MAX);
-  run(1, 2048, 7, 7, 7, 1, 0, param::Pooling::Mode::AVERAGE);
+        printf("{%zu %zu %zu %zu} filter = %zu, stride = %zu pad = %zu\n"
+               "nchw_fp32={%.3f ms, %.3f Mflops},  "
+               "nchw44_int={%.3f ms, %.3f Mflops},  "
+               "nchw44_fp32={%.3f ms, %.3f Mflops, speed_up %f}\n\n",
+               n, c, h, w, filter, stride, pad, t1 / RUN,
+               calc_amount / (t1 / RUN * 1000), t2 / RUN,
+               calc_amount / (t2 / RUN * 1000), t3 / RUN,
+               calc_amount / (t3 / RUN * 1000), t1 / t3);
+    };
+    // Resnet50
+    run(1, 64, 112, 112, 3, 2, 1, param::Pooling::Mode::MAX);
+    run(1, 2048, 7, 7, 7, 1, 0, param::Pooling::Mode::AVERAGE);
 
-  // VGG16
-  run(1, 64, 224, 224, 2, 2, 0, param::Pooling::Mode::MAX);
-  run(1, 128, 112, 112, 2, 2, 0, param::Pooling::Mode::MAX);
-  run(1, 256, 56, 56, 2, 2, 0, param::Pooling::Mode::MAX);
-  run(1, 512, 28, 28, 2, 2, 0, param::Pooling::Mode::MAX);
-  run(1, 512, 14, 14, 2, 2, 0, param::Pooling::Mode::MAX);
+    // VGG16
+    run(1, 64, 224, 224, 2, 2, 0, param::Pooling::Mode::MAX);
+    run(1, 128, 112, 112, 2, 2, 0, param::Pooling::Mode::MAX);
+    run(1, 256, 56, 56, 2, 2, 0, param::Pooling::Mode::MAX);
+    run(1, 512, 28, 28, 2, 2, 0, param::Pooling::Mode::MAX);
+    run(1, 512, 14, 14, 2, 2, 0, param::Pooling::Mode::MAX);
 }
 
-TEST_F(ARM_COMMON, BENCHMARK_POOLING_NCHW44_FP32) { benchmark_nchw44_fp32(handle()); }
+TEST_F(ARM_COMMON, BENCHMARK_POOLING_NCHW44_FP32) {
+    benchmark_nchw44_fp32(handle());
+}
 
 TEST_F(ARM_COMMON_MULTI_THREADS, BENCHMARK_POOLING_NCHW44_FP32) {
-  benchmark_nchw44_fp32(handle());
+    benchmark_nchw44_fp32(handle());
 }
 
-TEST_F(ARM_COMMON, BENCHMARK_POOLING_INT8_W3x3_S2x2)
-{
+TEST_F(ARM_COMMON, BENCHMARK_POOLING_INT8_W3x3_S2x2) {
     using Param = param::Pooling;
-    auto run = [&](const TensorShapeArray &shapes,
-            Param param) {
+    auto run = [&](const TensorShapeArray& shapes, Param param) {
         auto handle_naive = create_cpu_handle(2);
         TensorLayoutArray layouts;
         layouts.emplace_back(shapes[0], dtype::Int8());
@@ -348,15 +338,20 @@ TEST_F(ARM_COMMON, BENCHMARK_POOLING_INT8_W3x3_S2x2)
         Benchmarker<Pooling> benchmarker_float(handle());
         Benchmarker<Pooling> benchmarker_int(handle());
         size_t RUN = 10;
-        auto t1 = benchmarker_naive.set_display(false).set_times(RUN).
-            set_param(param).exec(shapes);
-        auto t2 = benchmarker_float.set_display(false).set_times(RUN).
-            set_param(param).exec(shapes);
-        auto t3 = benchmarker_int.set_display(false).set_times(RUN).
-            set_param(param).execl(layouts);
-        printf("naive=%.3fms float=%.3fms, int=%.3fms\n",
-                t1 / RUN, t2 / RUN, t3 / RUN);
-        auto speedup = t2/t3;
+        auto t1 = benchmarker_naive.set_display(false)
+                          .set_times(RUN)
+                          .set_param(param)
+                          .exec(shapes);
+        auto t2 = benchmarker_float.set_display(false)
+                          .set_times(RUN)
+                          .set_param(param)
+                          .exec(shapes);
+        auto t3 = benchmarker_int.set_display(false)
+                          .set_times(RUN)
+                          .set_param(param)
+                          .execl(layouts);
+        printf("naive=%.3fms float=%.3fms, int=%.3fms\n", t1 / RUN, t2 / RUN, t3 / RUN);
+        auto speedup = t2 / t3;
         ASSERT_GE(speedup, 2.0);
     };
     Param param;
@@ -367,11 +362,9 @@ TEST_F(ARM_COMMON, BENCHMARK_POOLING_INT8_W3x3_S2x2)
     run({{1, 3, 640, 480}, {}}, param);
 }
 
-TEST_F(ARM_COMMON, BENCHMARK_POOLING_W4x4_S2x2)
-{
+TEST_F(ARM_COMMON, BENCHMARK_POOLING_W4x4_S2x2) {
     using Param = param::Pooling;
-    auto run = [&](const TensorShapeArray &shapes,
-            Param param) {
+    auto run = [&](const TensorShapeArray& shapes, Param param) {
         std::cout << "N:" << shapes[0][0] << " "
                   << "IC:" << shapes[0][1] << " "
                   << "IH:" << shapes[0][2] << " "
@@ -380,19 +373,23 @@ TEST_F(ARM_COMMON, BENCHMARK_POOLING_W4x4_S2x2)
         Benchmarker<Pooling> benchmarker_naive(handle_naive.get());
         Benchmarker<Pooling> benchmarker_float(handle());
         size_t RUN = 10;
-        auto t1 = benchmarker_naive.set_display(false).set_times(RUN).
-            set_param(param).exec(shapes);
-        auto t2 = benchmarker_float.set_display(false).set_times(RUN).
-            set_param(param).exec(shapes);
+        auto t1 = benchmarker_naive.set_display(false)
+                          .set_times(RUN)
+                          .set_param(param)
+                          .exec(shapes);
+        auto t2 = benchmarker_float.set_display(false)
+                          .set_times(RUN)
+                          .set_param(param)
+                          .exec(shapes);
         TensorLayout dst_layout;
         auto opr = handle()->create_operator<Pooling>();
         opr->param() = param;
         opr->deduce_layout({shapes[0], dtype::Float32()}, dst_layout);
-        float calc_amount = dst_layout.total_nr_elems() *
-                            param.window_h * param.window_w;
-        printf("naive={%.3fms, %.3fMflops}, neon={%.3fms, %.3fMflops}\n",
-               t1 / RUN, calc_amount / (t1 / RUN * 1000),
-               t2 / RUN, calc_amount / (t2 / RUN * 1000));
+        float calc_amount =
+                dst_layout.total_nr_elems() * param.window_h * param.window_w;
+        printf("naive={%.3fms, %.3fMflops}, neon={%.3fms, %.3fMflops}\n", t1 / RUN,
+               calc_amount / (t1 / RUN * 1000), t2 / RUN,
+               calc_amount / (t2 / RUN * 1000));
     };
     Param param;
     param.window_h = param.window_w = 4;
@@ -405,11 +402,9 @@ TEST_F(ARM_COMMON, BENCHMARK_POOLING_W4x4_S2x2)
     run({{1, 64, 60, 33}, {}}, param);
 }
 
-TEST_F(ARM_COMMON, BENCHMARK_POOLING_W5x5_S2x2)
-{
+TEST_F(ARM_COMMON, BENCHMARK_POOLING_W5x5_S2x2) {
     using Param = param::Pooling;
-    auto run = [&](const TensorShapeArray &shapes,
-            Param param) {
+    auto run = [&](const TensorShapeArray& shapes, Param param) {
         std::cout << "N:" << shapes[0][0] << " "
                   << "IC:" << shapes[0][1] << " "
                   << "IH:" << shapes[0][2] << " "
@@ -418,19 +413,23 @@ TEST_F(ARM_COMMON, BENCHMARK_POOLING_W5x5_S2x2)
         Benchmarker<Pooling> benchmarker_naive(handle_naive.get());
         Benchmarker<Pooling> benchmarker_float(handle());
         size_t RUN = 10;
-        auto t1 = benchmarker_naive.set_display(false).set_times(RUN).
-            set_param(param).exec(shapes);
-        auto t2 = benchmarker_float.set_display(false).set_times(RUN).
-            set_param(param).exec(shapes);
+        auto t1 = benchmarker_naive.set_display(false)
+                          .set_times(RUN)
+                          .set_param(param)
+                          .exec(shapes);
+        auto t2 = benchmarker_float.set_display(false)
+                          .set_times(RUN)
+                          .set_param(param)
+                          .exec(shapes);
         TensorLayout dst_layout;
         auto opr = handle()->create_operator<Pooling>();
         opr->param() = param;
         opr->deduce_layout({shapes[0], dtype::Float32()}, dst_layout);
-        float calc_amount = dst_layout.total_nr_elems() *
-                            param.window_h * param.window_w;
-        printf("naive={%.3fms, %.3fMflops}, neon={%.3fms, %.3fMflops}\n",
-               t1 / RUN, calc_amount / (t1 / RUN * 1000),
-               t2 / RUN, calc_amount / (t2 / RUN * 1000));
+        float calc_amount =
+                dst_layout.total_nr_elems() * param.window_h * param.window_w;
+        printf("naive={%.3fms, %.3fMflops}, neon={%.3fms, %.3fMflops}\n", t1 / RUN,
+               calc_amount / (t1 / RUN * 1000), t2 / RUN,
+               calc_amount / (t2 / RUN * 1000));
     };
     Param param;
     param.window_h = param.window_w = 5;
@@ -442,7 +441,6 @@ TEST_F(ARM_COMMON, BENCHMARK_POOLING_W5x5_S2x2)
     run({{1, 32, 120, 67}, {}}, param);
     run({{1, 64, 60, 33}, {}}, param);
 }
-
 
 TEST_F(ARM_COMMON, BENCHMARK_POOLING_FP16) {
     using Param = param::Pooling;
@@ -470,9 +468,8 @@ TEST_F(ARM_COMMON, BENCHMARK_POOLING_FP16) {
 
         float computations = dst_layout.total_nr_elems() * param.window_h *
                              param.window_w / (1024.f * 1024 * 1024);
-        printf("float=%.3fms %f gflops, float16=%.3fms %f gflops speedup: %f\n",
-               tf, computations / tf * 1e3, th, computations / th * 1e3,
-               tf / th);
+        printf("float=%.3fms %f gflops, float16=%.3fms %f gflops speedup: %f\n", tf,
+               computations / tf * 1e3, th, computations / th * 1e3, tf / th);
     };
     Param param;
     param.window_h = param.window_w = 2;
@@ -511,11 +508,10 @@ TEST_F(ARM_COMMON, BENCHMARK_POOLING_QUANTIZED) {
         Benchmarker<Pooling> benchmarker_int(handle());
         Benchmarker<Pooling> benchmarker_naive(handle_naive.get());
         size_t RUN = 10;
-        auto time_int = benchmarker_int.set_display(false)
-                                .set_times(RUN)
-                                .set_param(param)
-                                .exec(shapes) /
-                        RUN;
+        auto time_int =
+                benchmarker_int.set_display(false).set_times(RUN).set_param(param).exec(
+                        shapes) /
+                RUN;
         auto time_naive = benchmarker_naive.set_display(false)
                                   .set_times(RUN)
                                   .set_param(param)

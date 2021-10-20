@@ -10,8 +10,8 @@
  */
 #pragma once
 
-#include "megdnn/oprs.h"
 #include "./checker.h"
+#include "megdnn/oprs.h"
 
 namespace megdnn {
 namespace test {
@@ -20,14 +20,13 @@ class CondTakeTestcase {
     CondTake::Param m_param;
     TensorND m_data, m_mask;
 
-    CondTakeTestcase(CondTake::Param param, const TensorLayout& data,
-                     const TensorLayout& mask)
+    CondTakeTestcase(
+            CondTake::Param param, const TensorLayout& data, const TensorLayout& mask)
             : m_param{param}, m_data{nullptr, data}, m_mask{nullptr, mask} {}
 
 public:
     //! pair of (data, idx)
-    using Result =
-            std::pair<std::shared_ptr<TensorND>, std::shared_ptr<TensorND>>;
+    using Result = std::pair<std::shared_ptr<TensorND>, std::shared_ptr<TensorND>>;
     Result run(CondTake* opr);
     static std::vector<CondTakeTestcase> make();
 };

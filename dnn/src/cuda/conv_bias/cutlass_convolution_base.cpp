@@ -35,15 +35,16 @@ ConvBiasForwardImpl::AlgoCutlassConvolutionBase::AlgoParam::AlgoParam(
           stage(stage_),
           access_size(access_size_) {}
 
-std::string
-ConvBiasForwardImpl::AlgoCutlassConvolutionBase::AlgoParam::to_string() const {
+std::string ConvBiasForwardImpl::AlgoCutlassConvolutionBase::AlgoParam::to_string()
+        const {
     /// default algorithm
     if (threadblock_m == 128 && threadblock_n == 128 && threadblock_k == 32 &&
         warp_m == 32 && warp_n == 64 && warp_k == 32 && stage == 2) {
         return "";
     }
-    return ssprintf("_%dX%dX%d_%dX%dX%d_%dstage", threadblock_m, threadblock_n,
-                    threadblock_k, warp_m, warp_n, warp_k, stage);
+    return ssprintf(
+            "_%dX%dX%d_%dX%dX%d_%dstage", threadblock_m, threadblock_n, threadblock_k,
+            warp_m, warp_n, warp_k, stage);
 }
 
 namespace {
@@ -106,8 +107,7 @@ struct LayoutPack {
     LayoutTypeID bias;
 };
 
-LayoutPack get_layout_pack(const param::ConvBias::Format format,
-                           int access_type) {
+LayoutPack get_layout_pack(const param::ConvBias::Format format, int access_type) {
     using Format = param::ConvBias::Format;
 
     switch (format) {
@@ -122,39 +122,30 @@ LayoutPack get_layout_pack(const param::ConvBias::Format format,
                     LayoutTypeID::kTensorNHWC, LayoutTypeID::kTensorNHWC};
         case Format::NCHW4_NCHW32:
             return {LayoutTypeID::kTensorNC4HW4, LayoutTypeID::kTensorC4RSK4,
-                    LayoutTypeID::kTensorNC32HW32,
-                    LayoutTypeID::kTensorNC32HW32};
+                    LayoutTypeID::kTensorNC32HW32, LayoutTypeID::kTensorNC32HW32};
         case Format::NCHW32:
-            return {LayoutTypeID::kTensorNC32HW32,
-                    LayoutTypeID::kTensorC32RSK32,
-                    LayoutTypeID::kTensorNC32HW32,
-                    LayoutTypeID::kTensorNC32HW32};
+            return {LayoutTypeID::kTensorNC32HW32, LayoutTypeID::kTensorC32RSK32,
+                    LayoutTypeID::kTensorNC32HW32, LayoutTypeID::kTensorNC32HW32};
         case Format::NCHW32_NCHW4:
-            return {LayoutTypeID::kTensorNC32HW32,
-                    LayoutTypeID::kTensorC32RSK32, LayoutTypeID::kTensorNC4HW4,
-                    LayoutTypeID::kTensorNC4HW4};
+            return {LayoutTypeID::kTensorNC32HW32, LayoutTypeID::kTensorC32RSK32,
+                    LayoutTypeID::kTensorNC4HW4, LayoutTypeID::kTensorNC4HW4};
         case Format::NCHW64:
-            return {LayoutTypeID::kTensorNC64HW64,
-                    LayoutTypeID::kTensorC64RSK64,
-                    LayoutTypeID::kTensorNC64HW64,
-                    LayoutTypeID::kTensorNC64HW64};
+            return {LayoutTypeID::kTensorNC64HW64, LayoutTypeID::kTensorC64RSK64,
+                    LayoutTypeID::kTensorNC64HW64, LayoutTypeID::kTensorNC64HW64};
         case Format::NHWC:
             switch (access_type) {
+                case 4:
+                    return {LayoutTypeID::kTensorNHWC, LayoutTypeID::kTensorNC4HW4,
+                            LayoutTypeID::kTensorNHWC, LayoutTypeID::kTensorNHWC};
                 case 8:
-                    return {LayoutTypeID::kTensorNHWC,
-                            LayoutTypeID::kTensorNC8HW8,
-                            LayoutTypeID::kTensorNHWC,
-                            LayoutTypeID::kTensorNHWC};
+                    return {LayoutTypeID::kTensorNHWC, LayoutTypeID::kTensorNC8HW8,
+                            LayoutTypeID::kTensorNHWC, LayoutTypeID::kTensorNHWC};
                 case 16:
-                    return {LayoutTypeID::kTensorNHWC,
-                            LayoutTypeID::kTensorNC16HW16,
-                            LayoutTypeID::kTensorNHWC,
-                            LayoutTypeID::kTensorNHWC};
+                    return {LayoutTypeID::kTensorNHWC, LayoutTypeID::kTensorNC16HW16,
+                            LayoutTypeID::kTensorNHWC, LayoutTypeID::kTensorNHWC};
                 case 32:
-                    return {LayoutTypeID::kTensorNHWC,
-                            LayoutTypeID::kTensorNC32HW32,
-                            LayoutTypeID::kTensorNHWC,
-                            LayoutTypeID::kTensorNHWC};
+                    return {LayoutTypeID::kTensorNHWC, LayoutTypeID::kTensorNC32HW32,
+                            LayoutTypeID::kTensorNHWC, LayoutTypeID::kTensorNHWC};
                 default:
                     megdnn_assert(0, "invalid access_type");
             }
@@ -163,8 +154,7 @@ LayoutPack get_layout_pack(const param::ConvBias::Format format,
     }
 }
 
-EpilogueType get_epilogue_type(const param::ConvBias::NonlineMode mode,
-                               bool clamp) {
+EpilogueType get_epilogue_type(const param::ConvBias::NonlineMode mode, bool clamp) {
     using NonlineMode = param::ConvBias::NonlineMode;
 
     if (clamp) {
@@ -189,49 +179,53 @@ EpilogueType get_epilogue_type(const param::ConvBias::NonlineMode mode,
 
 }  // namespace
 
-const Operation*
-ConvBiasForwardImpl::AlgoCutlassConvolutionBase::get_cutlass_conv_op(
+const Operation* ConvBiasForwardImpl::AlgoCutlassConvolutionBase::get_cutlass_conv_op(
         const SizeArgs& args, ConvOperator conv_op, ConvType conv_type,
-        bool load_from_const, bool without_shared_load) const {
-    using Format = param::ConvBias::Format;
+        bool use_conv_filter_unity_opt, bool without_shared_load) const {
     auto&& param = args.opr->param();
     auto layouts = get_layout_pack(param.format, m_algo_param.access_size);
-    auto epilogue_type = get_epilogue_type(param.nonlineMode,
-                                           param.format != Format::NCHW4_NCHW);
-    ConvolutionKey key{convert_conv_op(conv_op),
-                       convert_dtype(args.src_layout->dtype.enumv()),
-                       layouts.src,
-                       convert_dtype(args.filter_layout->dtype.enumv()),
-                       layouts.filter,
-                       convert_dtype(args.dst_layout->dtype.enumv()),
-                       layouts.dst,
-                       convert_dtype(args.bias_layout->dtype.enumv()),
-                       layouts.bias,
-                       convert_conv_type(conv_type),
-                       m_algo_param.threadblock_m,
-                       m_algo_param.threadblock_n,
-                       m_algo_param.threadblock_k,
-                       m_algo_param.warp_m,
-                       m_algo_param.warp_n,
-                       m_algo_param.warp_k,
-                       m_algo_param.instruction_m,
-                       m_algo_param.instruction_n,
-                       m_algo_param.instruction_k,
-                       epilogue_type,
-                       m_algo_param.stage,
-                       load_from_const,
-                       without_shared_load};
+    auto epilogue_type = get_epilogue_type(
+            param.nonlineMode, args.dst_layout->dtype.enumv() != DTypeEnum::Float32);
+
+    cutlass::conv::SpecialOptimizeDesc special_optimization =
+            (use_conv_filter_unity_opt)
+                    ? cutlass::conv::SpecialOptimizeDesc::CONV_FILTER_UNITY
+                    : cutlass::conv::SpecialOptimizeDesc::NONE;
+
+    ConvolutionKey key{
+            convert_conv_op(conv_op),
+            convert_dtype(args.src_layout->dtype.enumv()),
+            layouts.src,
+            convert_dtype(args.filter_layout->dtype.enumv()),
+            layouts.filter,
+            convert_dtype(args.dst_layout->dtype.enumv()),
+            layouts.dst,
+            convert_dtype(args.bias_layout->dtype.enumv()),
+            layouts.bias,
+            convert_conv_type(conv_type),
+            m_algo_param.threadblock_m,
+            m_algo_param.threadblock_n,
+            m_algo_param.threadblock_k,
+            m_algo_param.warp_m,
+            m_algo_param.warp_n,
+            m_algo_param.warp_k,
+            m_algo_param.instruction_m,
+            m_algo_param.instruction_n,
+            m_algo_param.instruction_k,
+            epilogue_type,
+            m_algo_param.stage,
+            special_optimization,
+            without_shared_load};
 
     return Singleton::get().operation_table.find_op(key);
 }
 
 void ConvBiasForwardImpl::AlgoCutlassConvolutionBase::execute_cutlass_conv_op(
-        const Operation* op, const void* src, const void* filter,
-        const void* bias, const void* z, void* dst, void* workspace, size_t n,
-        size_t hi, size_t wi, size_t ci, size_t co, size_t fh, size_t fw,
-        size_t ho, size_t wo, size_t ph, size_t pw, size_t sh, size_t sw,
-        size_t dh, size_t dw, const void* alpha, const void* beta,
-        const void* gamma, const void* delta, const void* theta,
+        const Operation* op, const void* src, const void* filter, const void* bias,
+        const void* z, void* dst, void* workspace, size_t n, size_t hi, size_t wi,
+        size_t ci, size_t co, size_t fh, size_t fw, size_t ho, size_t wo, size_t ph,
+        size_t pw, size_t sh, size_t sw, size_t dh, size_t dw, const void* alpha,
+        const void* beta, const void* gamma, const void* delta, const void* theta,
         const void* threshold, const void* dst_scale, cudaStream_t stream,
         const void* extra_param) const {
     // gcc prints warnings when size_t values are implicitly narrowed to int
@@ -242,9 +236,8 @@ void ConvBiasForwardImpl::AlgoCutlassConvolutionBase::execute_cutlass_conv_op(
             int(sw), int(dh), int(dw), cutlass::conv::Mode::kCrossCorrelation};
 
     ConvolutionArguments conv_args{
-            problem_size, src,       filter,    bias,       z,
-            dst,          alpha,     beta,      gamma,      delta,
-            theta,        threshold, dst_scale, extra_param};
+            problem_size, src,   filter, bias,  z,         dst,       alpha,
+            beta,         gamma, delta,  theta, threshold, dst_scale, extra_param};
 
     cutlass_check(op->run(&conv_args, workspace, stream));
 }

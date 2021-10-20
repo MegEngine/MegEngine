@@ -17,10 +17,10 @@
 #include "megbrain/opr/utility.h"
 #include "megbrain/test/helper.h"
 
-#include <thread>
+#include <atomic>
 #include <map>
 #include <random>
-#include <atomic>
+#include <thread>
 
 using namespace mgb;
 using namespace mem_alloc;
@@ -33,92 +33,75 @@ public:
     explicit DummyRuntimePolicy(int device) : m_device{device} {}
     void set_device(int device) override { m_device = device; }
     void device_synchronize(int /* device */) override {}
-    CompNode::DeviceType device_type() override {
-        return CompNode::DeviceType::CPU;
-    }
+    CompNode::DeviceType device_type() override { return CompNode::DeviceType::CPU; }
 };
 
-class DummyAllocator final: public RawAllocator {
+class DummyAllocator final : public RawAllocator {
     const size_t m_tot_size;
     bool m_ever_failed = false;
-    size_t m_next_addr = 1, m_cur_usage = 0, m_peak_usage = 0,
-           m_nr_alloc = 0, m_nr_free = 0;
+    size_t m_next_addr = 1, m_cur_usage = 0, m_peak_usage = 0, m_nr_alloc = 0,
+           m_nr_free = 0;
     std::map<void*, size_t> m_addr2size;
     std::mutex m_mtx;
 
-    public:
-        explicit DummyAllocator(size_t tot_size):
-            m_tot_size(tot_size)
-        {}
+public:
+    explicit DummyAllocator(size_t tot_size) : m_tot_size(tot_size) {}
 
-        ~DummyAllocator()
-        {
-            auto run = [this]() {
-                ASSERT_EQ(0u, m_addr2size.size());
-            };
-            run();
+    ~DummyAllocator() {
+        auto run = [this]() { ASSERT_EQ(0u, m_addr2size.size()); };
+        run();
+    }
+
+    void* alloc(size_t size) override {
+        MGB_LOCK_GUARD(m_mtx);
+        if (mgb_unlikely(m_cur_usage + size > m_tot_size)) {
+            m_ever_failed = true;
+            return nullptr;
         }
+        ++m_nr_alloc;
+        auto addr = reinterpret_cast<void*>(m_next_addr);
+        m_next_addr += size;
+        m_cur_usage += size;
+        m_peak_usage = std::max(m_peak_usage, m_cur_usage);
+        m_addr2size[addr] = size;
+        return addr;
+    }
 
-        void* alloc(size_t size) override {
-            MGB_LOCK_GUARD(m_mtx);
-            if (mgb_unlikely(m_cur_usage + size > m_tot_size)) {
-                m_ever_failed = true;
-                return nullptr;
-            }
-            ++m_nr_alloc;
-            auto addr = reinterpret_cast<void*>(m_next_addr);
-            m_next_addr += size;
-            m_cur_usage += size;
-            m_peak_usage = std::max(m_peak_usage, m_cur_usage);
-            m_addr2size[addr] = size;
-            return addr;
-        }
+    void free(void* ptr) override {
+        MGB_LOCK_GUARD(m_mtx);
+        auto iter = m_addr2size.find(ptr);
+        mgb_assert(iter != m_addr2size.end());
+        ++m_nr_free;
+        m_cur_usage -= iter->second;
+        m_addr2size.erase(iter);
+    }
 
-        void free(void *ptr) override {
-            MGB_LOCK_GUARD(m_mtx);
-            auto iter = m_addr2size.find(ptr);
-            mgb_assert(iter != m_addr2size.end());
-            ++ m_nr_free;
-            m_cur_usage -= iter->second;
-            m_addr2size.erase(iter);
-        }
+    void get_mem_info(size_t& free, size_t& tot) override {
+        tot = m_tot_size;
+        free = free_size();
+    }
 
-        void get_mem_info(size_t& free, size_t& tot) override {
-            tot = m_tot_size;
-            free = free_size();
-        }
+    size_t free_size() const { return m_tot_size - m_cur_usage; }
 
-        size_t free_size() const {
-            return m_tot_size - m_cur_usage;
-        }
+    bool ever_failed() const { return m_ever_failed; }
 
-        bool ever_failed() const {
-            return m_ever_failed;
-        }
+    size_t peak_usage() const { return m_peak_usage; }
 
-        size_t peak_usage() const {
-            return m_peak_usage;
-        }
+    size_t nr_alloc() const { return m_nr_alloc; }
 
-        size_t nr_alloc() const {
-            return m_nr_alloc;
-        }
+    size_t nr_free() const { return m_nr_free; }
 
-        size_t nr_free() const {
-            return m_nr_free;
-        }
-
-        void* get_chunk_end(void *addr) {
-            MGB_LOCK_GUARD(m_mtx);
-            auto iter = m_addr2size.upper_bound(addr);
-            mgb_assert(iter != m_addr2size.begin() &&
-                    (iter == m_addr2size.end() || iter->first > addr));
-            -- iter;
-            void* end = (char*)iter->first + iter->second;
-            mgb_assert(iter->first <= addr && end > addr);
-            return end;
-        }
-
+    void* get_chunk_end(void* addr) {
+        MGB_LOCK_GUARD(m_mtx);
+        auto iter = m_addr2size.upper_bound(addr);
+        mgb_assert(
+                iter != m_addr2size.begin() &&
+                (iter == m_addr2size.end() || iter->first > addr));
+        --iter;
+        void* end = (char*)iter->first + iter->second;
+        mgb_assert(iter->first <= addr && end > addr);
+        return end;
+    }
 };
 
 class AllocChecker {
@@ -127,50 +110,45 @@ class AllocChecker {
     std::map<size_t, size_t> m_addr2size;
     std::mutex m_mtx;
 
-    public:
+public:
+    AllocChecker(std::shared_ptr<DummyAllocator> root_alloc)
+            : m_root_allocator(std::move(root_alloc)) {}
 
-        AllocChecker(std::shared_ptr<DummyAllocator> root_alloc):
-            m_root_allocator(std::move(root_alloc))
-        {}
-
-        void add(void *addr_, size_t size) {
-            ASSERT_NE(nullptr, addr_);
-            mgb_assert((char*)addr_ + size <=
-                    m_root_allocator->get_chunk_end(addr_));
-            auto addr = reinterpret_cast<size_t>(addr_);
-            MGB_LOCK_GUARD(m_mtx);
-            auto rst = m_addr2size.insert({addr, size});
-            mgb_assert(rst.second, "duplicated address: %p", addr_);
-            auto iter = rst.first;
-            if (mgb_likely(iter != m_addr2size.begin())) {
-                auto iprev = iter;
-                -- iprev;
-                mgb_assert(iprev->first + iprev->second <= addr);
-            }
-            auto inext = iter;
-            ++ inext;
-            if (mgb_likely(inext != m_addr2size.end())) {
-                mgb_assert(addr + size <= inext->first);
-            }
-
-            m_cur_usage += size;
-            m_peak_usage = std::max(m_peak_usage, m_cur_usage);
+    void add(void* addr_, size_t size) {
+        ASSERT_NE(nullptr, addr_);
+        mgb_assert((char*)addr_ + size <= m_root_allocator->get_chunk_end(addr_));
+        auto addr = reinterpret_cast<size_t>(addr_);
+        MGB_LOCK_GUARD(m_mtx);
+        auto rst = m_addr2size.insert({addr, size});
+        mgb_assert(rst.second, "duplicated address: %p", addr_);
+        auto iter = rst.first;
+        if (mgb_likely(iter != m_addr2size.begin())) {
+            auto iprev = iter;
+            --iprev;
+            mgb_assert(iprev->first + iprev->second <= addr);
+        }
+        auto inext = iter;
+        ++inext;
+        if (mgb_likely(inext != m_addr2size.end())) {
+            mgb_assert(addr + size <= inext->first);
         }
 
-        void remove(void *addr) {
-            MGB_LOCK_GUARD(m_mtx);
-            auto iter = m_addr2size.find(reinterpret_cast<size_t>(addr));
-            mgb_assert(iter != m_addr2size.end());
-            m_cur_usage -= iter->second;
-            m_addr2size.erase(iter);
-        }
+        m_cur_usage += size;
+        m_peak_usage = std::max(m_peak_usage, m_cur_usage);
+    }
 
-        size_t peak_usage() const {
-            return m_peak_usage;
-        }
+    void remove(void* addr) {
+        MGB_LOCK_GUARD(m_mtx);
+        auto iter = m_addr2size.find(reinterpret_cast<size_t>(addr));
+        mgb_assert(iter != m_addr2size.end());
+        m_cur_usage -= iter->second;
+        m_addr2size.erase(iter);
+    }
+
+    size_t peak_usage() const { return m_peak_usage; }
 };
 
-} // anonymous namespace
+}  // anonymous namespace
 
 TEST(TestMemAlloc, Reserve) {
     constexpr size_t TOT = 2048;
@@ -181,8 +159,7 @@ TEST(TestMemAlloc, Reserve) {
     auto dev_alloc = DevMemAlloc::make(0, TOT, raw_alloc, runtime_policy);
 
     StreamKey stream_key = nullptr;
-    auto strm_alloc =
-            dev_alloc->add_stream(static_cast<StreamKey>(&stream_key));
+    auto strm_alloc = dev_alloc->add_stream(static_cast<StreamKey>(&stream_key));
     EXPECT_EQ(0u, strm_alloc->get_free_memory().tot);
     EXPECT_EQ(2048u, dev_alloc->get_free_memory().tot);
 }
@@ -192,8 +169,8 @@ TEST(TestMemAlloc, ReserveOutOfMemory) {
 
     auto raw_alloc = std::make_shared<DummyAllocator>(TOT);
     auto runtime_policy = std::make_shared<DummyRuntimePolicy>(0);
-    EXPECT_THROW(DevMemAlloc::make(0, TOT + 1, raw_alloc, runtime_policy),
-                 MemAllocError);
+    EXPECT_THROW(
+            DevMemAlloc::make(0, TOT + 1, raw_alloc, runtime_policy), MemAllocError);
 }
 
 TEST(TestMemAlloc, Alloc) {
@@ -204,8 +181,7 @@ TEST(TestMemAlloc, Alloc) {
     auto dev_alloc = DevMemAlloc::make(0, TOT, raw_alloc, runtime_policy);
 
     StreamKey stream_key = nullptr;
-    auto strm_alloc =
-            dev_alloc->add_stream(static_cast<StreamKey>(&stream_key));
+    auto strm_alloc = dev_alloc->add_stream(static_cast<StreamKey>(&stream_key));
 
     auto ptr = strm_alloc->alloc_shared(REQ);
     EXPECT_EQ(REQ, strm_alloc->get_used_memory());
@@ -228,8 +204,7 @@ TEST(TestMemAlloc, MergeFreeBlock) {
     auto dev_alloc = DevMemAlloc::make(0, 7000, raw_alloc, runtime_policy);
 
     StreamKey stream_key = nullptr;
-    auto strm_alloc =
-            dev_alloc->add_stream(static_cast<StreamKey>(&stream_key));
+    auto strm_alloc = dev_alloc->add_stream(static_cast<StreamKey>(&stream_key));
 
     auto ptr = strm_alloc->alloc_shared(2000);
     auto addr = ptr.get();
@@ -247,10 +222,8 @@ TEST(TestMemAlloc, AllocTwoStream) {
     auto dev_alloc = DevMemAlloc::make(0, TOT, raw_alloc, runtime_policy);
 
     StreamKey stream_key0, stream_key1;
-    auto strm_alloc0 =
-            dev_alloc->add_stream(static_cast<StreamKey>(&stream_key0)),
-         strm_alloc1 =
-            dev_alloc->add_stream(static_cast<StreamKey>(&stream_key1));
+    auto strm_alloc0 = dev_alloc->add_stream(static_cast<StreamKey>(&stream_key0)),
+         strm_alloc1 = dev_alloc->add_stream(static_cast<StreamKey>(&stream_key1));
     ASSERT_NE(strm_alloc0, strm_alloc1);
 
     auto ptr0 = strm_alloc0->alloc_shared(REQ0);
@@ -285,8 +258,7 @@ TEST(TestMemAlloc, AllocMoreThanReserve) {
     auto dev_alloc = DevMemAlloc::make(0, RES, raw_alloc, runtime_policy);
 
     StreamKey stream_key = nullptr;
-    auto strm_alloc =
-            dev_alloc->add_stream(static_cast<StreamKey>(&stream_key));
+    auto strm_alloc = dev_alloc->add_stream(static_cast<StreamKey>(&stream_key));
 
     auto ptr = strm_alloc->alloc_shared(REQ);
     EXPECT_EQ(REQ, strm_alloc->get_used_memory());
@@ -311,8 +283,7 @@ TEST(TestMemAlloc, AllocZeroSize) {
     auto dev_alloc = DevMemAlloc::make(0, 1, raw_alloc, runtime_policy);
 
     StreamKey stream_key = nullptr;
-    auto strm_alloc =
-            dev_alloc->add_stream(static_cast<StreamKey>(&stream_key));
+    auto strm_alloc = dev_alloc->add_stream(static_cast<StreamKey>(&stream_key));
 
     EXPECT_ANY_THROW(strm_alloc->alloc(0));
 }
@@ -335,8 +306,8 @@ TEST(TestMemAlloc, NotCrossBoundary) {
     auto p2 = salloc->alloc(2);
 
     salloc->print_memory_state();
-    ASSERT_LE((void*)((char*)p2 + 2), raw_alloc->get_chunk_end(p2)) <<
-        p0 << " " << p1 << " " << p2;
+    ASSERT_LE((void*)((char*)p2 + 2), raw_alloc->get_chunk_end(p2))
+            << p0 << " " << p1 << " " << p2;
 }
 
 TEST(TestMemAlloc, GrowByGather) {
@@ -360,8 +331,7 @@ TEST(TestMemAlloc, RandomOprs) {
     const size_t DEALLOC_PROB = std::mt19937::max() * 0.4;
     constexpr size_t NR_THREAD = 4, NR_RUN = 2000, MIN_REQ = 1, MAX_REQ = 513,
 
-                     MAX_MEMORY = NR_THREAD *
-                                  (MIN_REQ + (MAX_REQ - MIN_REQ) * 0.5) *
+                     MAX_MEMORY = NR_THREAD * (MIN_REQ + (MAX_REQ - MIN_REQ) * 0.5) *
                                   NR_RUN * 0.3,
 
                      RESERVE_MEMORY = MAX_MEMORY / NR_THREAD * 0.7;
@@ -370,8 +340,7 @@ TEST(TestMemAlloc, RandomOprs) {
     auto runtime_policy = std::make_shared<DummyRuntimePolicy>(0);
 
     AllocChecker checker(dummy_alloc);
-    auto dev_alloc =
-            DevMemAlloc::make(0, RESERVE_MEMORY, dummy_alloc, runtime_policy);
+    auto dev_alloc = DevMemAlloc::make(0, RESERVE_MEMORY, dummy_alloc, runtime_policy);
     {
         DevMemAlloc::PreAllocConfig prconf;
         prconf.alignment = 512;
@@ -419,8 +388,7 @@ TEST(TestMemAlloc, RandomOprs) {
                 allocated_ptrs.pop_back();
             } else {
                 size_t size = (MAX_REQ - MIN_REQ) * rand_f + MIN_REQ;
-                std::shared_ptr<void> addr(stream_alloc->alloc(size),
-                                           stream_free);
+                std::shared_ptr<void> addr(stream_alloc->alloc(size), stream_free);
                 checker.add(addr.get(), size);
                 allocated_ptrs.emplace_back(std::move(addr));
             }
@@ -449,8 +417,9 @@ TEST(TestMemAlloc, RandomOprs) {
 
         dev_alloc->print_memory_state();
         // check for memory being moved between streams
-        auto size = std::max(stream_alloc->get_free_memory().max,
-                             dev_alloc->get_free_memory().max) +
+        auto size = std::max(
+                            stream_alloc->get_free_memory().max,
+                            dev_alloc->get_free_memory().max) +
                     10;
         auto addr = stream_alloc->alloc_shared(size);
         checker.add(addr.get(), size);
@@ -463,8 +432,7 @@ TEST(TestMemAlloc, RandomOprs) {
         MGB_TRY { worker_impl(thread_num); }
         MGB_CATCH(std::exception & exc, {
             MGB_LOCK_GUARD(mutex);
-            failed_msg =
-                    ssprintf("worker %zu failed: %s", thread_num, exc.what());
+            failed_msg = ssprintf("worker %zu failed: %s", thread_num, exc.what());
             mgb_log("%s", failed_msg.c_str());
         });
         worker_finished[thread_num].store(true);
@@ -556,9 +524,7 @@ public:
 #if MGB_CUDA
 class CudaDevicePolicy : public DevicePolicy {
 public:
-    void set_device(int device) override {
-        MGB_CUDA_CHECK(cudaSetDevice(device));
-    }
+    void set_device(int device) override { MGB_CUDA_CHECK(cudaSetDevice(device)); }
     void get_mem_info(size_t& free, size_t& tot) override {
         MGB_CUDA_CHECK(cudaMemGetInfo(&free, &tot));
     }
@@ -570,8 +536,9 @@ public:
 #endif
 
 using Callback = std::function<void()>;
-void test_free_mem(CompNode::Locator loc0, CompNode::Locator loc1, DevicePolicy* policy,
-                   const Callback& before_run, const Callback& after_run) {
+void test_free_mem(
+        CompNode::Locator loc0, CompNode::Locator loc1, DevicePolicy* policy,
+        const Callback& before_run, const Callback& after_run) {
     size_t tot, free;
     policy->set_device(0);
     policy->get_mem_info(free, tot);
@@ -580,18 +547,18 @@ void test_free_mem(CompNode::Locator loc0, CompNode::Locator loc1, DevicePolicy*
     auto do_run = [loc0, loc1, policy, free]() {
         void* tmp;
         policy->raw_dev_malloc(&tmp, free / 3);
-        auto dev_free = [&](void* ptr) {
-            policy->raw_dev_free(ptr);
-        };
+        auto dev_free = [&](void* ptr) { policy->raw_dev_free(ptr); };
         auto cn0 = CompNode::load(loc0), cn1 = CompNode::load(loc1);
         std::unique_ptr<void, decltype(dev_free)> tmp_owner{tmp, dev_free};
         auto check_free = [&](const char* msg, size_t expect) {
             auto get = cn0.get_mem_status_bytes().second;
-            ASSERT_LE(std::abs(static_cast<intptr_t>(get) -
-                               static_cast<intptr_t>(expect)),
-                      static_cast<intptr_t>(free) / 4)
-                    << ssprintf("%s: get=%.2fMiB expect=%.2fMiB", msg,
-                                get / 1024.0 / 1024, expect / 1024.0 / 1024);
+            ASSERT_LE(
+                    std::abs(
+                            static_cast<intptr_t>(get) - static_cast<intptr_t>(expect)),
+                    static_cast<intptr_t>(free) / 4)
+                    << ssprintf(
+                               "%s: get=%.2fMiB expect=%.2fMiB", msg,
+                               get / 1024.0 / 1024, expect / 1024.0 / 1024);
         };
 
         check_free("direct get", free * 2 / 3);
@@ -619,8 +586,7 @@ void test_gather_other(CompNode cn0, CompNode cn1) {
         std::swap(cn0, cn1);
     }
     size_t elems = cn0.get_mem_status_bytes().second * 2 / 5 / sizeof(dt_int32);
-    auto xv = std::make_shared<DeviceTensorND>(cn0, TensorShape{elems},
-                                               dtype::Int32());
+    auto xv = std::make_shared<DeviceTensorND>(cn0, TensorShape{elems}, dtype::Int32());
     auto graph = ComputingGraph::make();
     auto x = opr::SharedDeviceTensor::make(*graph, xv), x1 = x + 1,
          x2 = opr::MarkDynamicVar::make(x), y = opr::Copy::make(x1, {cn1});

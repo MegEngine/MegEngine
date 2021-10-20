@@ -36,8 +36,7 @@ struct TransposeParam {
  * Note that \p src and \p dst should have been processed by
  * RelayoutForward::check_layout_and_canonize
  */
-bool is_transpose(const TensorLayout& src, const TensorLayout& dst,
-                  TransposeParam& p);
+bool is_transpose(const TensorLayout& src, const TensorLayout& dst, TransposeParam& p);
 
 namespace transpose_fallback {
 
@@ -62,9 +61,9 @@ struct transpose_traits {
 };
 
 template <typename T>
-void transpose_block_fallback(const T* src, T* dst, const size_t src_stride,
-                              const size_t dst_stride, size_t block_h,
-                              size_t block_w) {
+void transpose_block_fallback(
+        const T* src, T* dst, const size_t src_stride, const size_t dst_stride,
+        size_t block_h, size_t block_w) {
     constexpr size_t block_size = transpose_traits<T>::block_size;
     T block[block_size][block_size];
 
@@ -83,10 +82,10 @@ void transpose_block_fallback(const T* src, T* dst, const size_t src_stride,
 }
 
 template <typename T>
-void transpose_block(const T* src, T* dst, const size_t src_stride,
-                     const size_t dst_stride, size_t block_h, size_t block_w) {
-    transpose_block_fallback(src, dst, src_stride, dst_stride, block_h,
-                             block_w);
+void transpose_block(
+        const T* src, T* dst, const size_t src_stride, const size_t dst_stride,
+        size_t block_h, size_t block_w) {
+    transpose_block_fallback(src, dst, src_stride, dst_stride, block_h, block_w);
 }
 
 /*!
@@ -96,11 +95,10 @@ void transpose_block(const T* src, T* dst, const size_t src_stride,
  * block transpose
  */
 template <typename T>
-void transpose_block(const T* src, T* dst, const size_t src_stride,
-                     const size_t dst_stride) {
+void transpose_block(
+        const T* src, T* dst, const size_t src_stride, const size_t dst_stride) {
     constexpr size_t block_size = transpose_traits<T>::block_size;
-    transpose_block_fallback(src, dst, src_stride, dst_stride, block_size,
-                             block_size);
+    transpose_block_fallback(src, dst, src_stride, dst_stride, block_size, block_size);
 }
 
 /*!

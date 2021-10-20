@@ -15,11 +15,11 @@
 #include <memory>
 #include "megbrain/graph/cg.h"
 #include "megbrain/graph/operator_node.h"
-#include "megbrain/opr/search_policy/algo_chooser_helper.h"
-#include "megbrain/opr/search_policy/profiler.h"
+#include "megbrain/opr/blas.h"
 #include "megbrain/opr/dnn/convolution.h"
 #include "megbrain/opr/dnn/pooling.h"
-#include "megbrain/opr/blas.h"
+#include "megbrain/opr/search_policy/algo_chooser_helper.h"
+#include "megbrain/opr/search_policy/profiler.h"
 #include "megdnn/oprs/base.h"
 
 template <class MegDNNOpr>
@@ -83,8 +83,8 @@ public:
     public:
         AlgoChooserHelper(
                 const FixedTensorLayouts& layouts, Opr* megdnn_opr,
-                const std::string& param_str,
-                const cg::OperatorNodeBase* mgb_opr, const CompNode& cn,
+                const std::string& param_str, const cg::OperatorNodeBase* mgb_opr,
+                const CompNode& cn,
                 const megdnn::param::ExecutionPolicy& execution_policy,
                 bool allow_weight_preprocess);
 
@@ -104,22 +104,16 @@ public:
         CompNode comp_node() const { return m_cn; }
         const std::string& param() const { return m_param; }
 
-        bool allow_weight_preprocess() const {
-            return m_allow_weight_preprocess;
-        }
+        bool allow_weight_preprocess() const { return m_allow_weight_preprocess; }
 
         megdnn::Algorithm* get_algorithm_from_desc(
                 const megdnn::Algorithm::Info::Desc& desc) const {
             return m_dnn_opr->get_algorithm_from_desc(desc);
         }
 
-        const FixedTensorLayouts& fastrun_layouts() const {
-            return m_fastrun_layouts;
-        }
+        const FixedTensorLayouts& fastrun_layouts() const { return m_fastrun_layouts; }
 
-        const FixedTensorLayouts& incache_layouts() const {
-            return m_incache_layouts;
-        }
+        const FixedTensorLayouts& incache_layouts() const { return m_incache_layouts; }
 
         //! construct algo chain by heuristic
         ImplExecutionPolicy choose_by_heuristic(
@@ -127,12 +121,11 @@ public:
 
         //! construct algo chain by profiling
         ImplExecutionPolicy choose_by_profile(
-                const ExecutionStrategy& selected_strategy,
-                bool enable_update) const;
+                const ExecutionStrategy& selected_strategy, bool enable_update) const;
 
         //! get all profile algorithm from cache, return invalid if not exists
-        ImplAlgoDesc get_profile_result_from_cache(
-                const ExecutionStrategy& selected_strategy) const;
+        std::pair<ImplAlgoDesc, Maybe<AlgoChooserProfileCache::Result>>
+        get_profile_result_from_cache(const ExecutionStrategy& selected_strategy) const;
 
         /**
          * \brief construct execution policy from cache or heuristic.
@@ -145,9 +138,8 @@ public:
          * otherwise.
          */
         void construct_execution_policy(
-                const ExecutionStrategy& selected_strategy,
-                ImplExecutionPolicy& policy, bool retrive_from_cache = true,
-                bool allow_log = true) const;
+                const ExecutionStrategy& selected_strategy, ImplExecutionPolicy& policy,
+                bool retrive_from_cache = true, bool allow_log = true) const;
 
         //! get workspace size required for specific execution policy
         size_t get_workspace_size_bytes(
@@ -199,9 +191,9 @@ public:
     /*!
      * \brief setup algorithm and return workspace size
      */
-    static size_t setup_algo(const FixedTensorLayouts& layouts, Opr* megdnn_opr,
-                             const MGBOpr* mgb_opr,
-                             bool allow_weight_preprocess = false);
+    static size_t setup_algo(
+            const FixedTensorLayouts& layouts, Opr* megdnn_opr, const MGBOpr* mgb_opr,
+            bool allow_weight_preprocess = false);
 };
 
 }  // namespace opr

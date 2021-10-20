@@ -44,9 +44,9 @@ namespace matmul_dot_6x8x4 {
 //                            Accumulator
 
 MEGDNN_ATTRIBUTE_TARGET("dotprod")
-static void kern_6x8(const int8_t* packA, const int8_t* packB, int K,
-                     int32_t* output, int LDC, bool is_first_k,
-                     size_t m_remain = 6) {
+static void kern_6x8(
+        const int8_t* packA, const int8_t* packB, int K, int32_t* output, int LDC,
+        bool is_first_k, size_t m_remain = 6) {
     K /= 4;
     const int8_t* a_ptr = packA;
     const int8_t* b_ptr = packB;
@@ -235,15 +235,13 @@ static void kern_6x8(const int8_t* packA, const int8_t* packB, int K,
             "vsdot.s8 q13, q3, d3[0]\n"
             "vsdot.s8 q15, q3, d3[1]\n" STORE_C
 
-            : [k] "+r"(k), [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr),
-              [oddk] "+r"(oddk), [is_first_k] "+r"(is_first_k),
-              [m_remain] "+r"(m_remain), [outptr0] "+r"(outptr0),
-              [outptr1] "+r"(outptr1), [outptr2] "+r"(outptr2),
-              [outptr3] "+r"(outptr3), [outptr4] "+r"(outptr4),
-              [outptr5] "+r"(outptr5)
+            : [k] "+r"(k), [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr), [oddk] "+r"(oddk),
+              [is_first_k] "+r"(is_first_k), [m_remain] "+r"(m_remain),
+              [outptr0] "+r"(outptr0), [outptr1] "+r"(outptr1), [outptr2] "+r"(outptr2),
+              [outptr3] "+r"(outptr3), [outptr4] "+r"(outptr4), [outptr5] "+r"(outptr5)
             :
-            : "q0", "q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8", "q9", "q10",
-              "q11", "q12", "q13", "q14", "q15", "r12", "cc", "memory");
+            : "q0", "q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8", "q9", "q10", "q11",
+              "q12", "q13", "q14", "q15", "r12", "cc", "memory");
 #undef LOAD_LINE
 #undef LOAD_C
 #undef STORE_LINE
@@ -276,9 +274,9 @@ static void kern_6x8(const int8_t* packA, const int8_t* packB, int K,
 //                            Accumulator
 
 MEGDNN_ATTRIBUTE_TARGET("dotprod")
-static void kern_6x4(const int8_t* packA, const int8_t* packB, int K,
-                     int32_t* output, int LDC, bool is_first_k,
-                     size_t n_remain = 8, size_t m_remain = 6) {
+static void kern_6x4(
+        const int8_t* packA, const int8_t* packB, int K, int32_t* output, int LDC,
+        bool is_first_k, size_t n_remain = 8, size_t m_remain = 6) {
     K /= 4;
     const int8_t* a_ptr = packA;
     const int8_t* b_ptr = packB;
@@ -466,13 +464,12 @@ static void kern_6x4(const int8_t* packA, const int8_t* packB, int K,
 
             : [k] "+r"(K), [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr),
               [is_first_k] "+r"(is_first_k), [outptr0] "+r"(outptr0),
-              [outptr1] "+r"(outptr1), [outptr2] "+r"(outptr2),
-              [outptr3] "+r"(outptr3), [outptr4] "+r"(outptr4),
-              [outptr5] "+r"(outptr5), [m_remain] "+r"(m_remain),
-              [n_remain] "+r"(n_remain)
+              [outptr1] "+r"(outptr1), [outptr2] "+r"(outptr2), [outptr3] "+r"(outptr3),
+              [outptr4] "+r"(outptr4), [outptr5] "+r"(outptr5),
+              [m_remain] "+r"(m_remain), [n_remain] "+r"(n_remain)
             :
-            : "q0", "q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8", "q9", "q10",
-              "q11", "q12", "q13", "q14", "q15", "cc", "r12", "memory");
+            : "q0", "q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8", "q9", "q10", "q11",
+              "q12", "q13", "q14", "q15", "cc", "r12", "memory");
 
 #undef LOAD_LINE
 #undef LOAD_C
@@ -480,8 +477,9 @@ static void kern_6x4(const int8_t* packA, const int8_t* packB, int K,
 #undef STORE_C
 }
 
-static void gemm_s8_6x8_pack_A_n(dt_int8* outptr, const dt_int8* inptr,
-                                 int ldin, int y0, int ymax, int k0, int kmax) {
+static void gemm_s8_6x8_pack_A_n(
+        dt_int8* outptr, const dt_int8* inptr, int ldin, int y0, int ymax, int k0,
+        int kmax) {
     int8_t zerobuff[16];
     std::memset(zerobuff, 0, sizeof(int8_t) * 16);
 
@@ -518,8 +516,7 @@ static void gemm_s8_6x8_pack_A_n(dt_int8* outptr, const dt_int8* inptr,
                         megdnn_assert(0);
                 }
             }
-            interleave_6x4_8_b(inptr0, inptr1, inptr2, inptr3, inptr4, inptr5,
-                               outptr);
+            interleave_6x4_8_b(inptr0, inptr1, inptr2, inptr3, inptr4, inptr5, outptr);
         }
         for (; K > 15; K -= 16) {
             if (y + 5 >= ymax) {
@@ -539,8 +536,7 @@ static void gemm_s8_6x8_pack_A_n(dt_int8* outptr, const dt_int8* inptr,
                         megdnn_assert(0);
                 }
             }
-            interleave_6x4_4_b(inptr0, inptr1, inptr2, inptr3, inptr4, inptr5,
-                               outptr);
+            interleave_6x4_4_b(inptr0, inptr1, inptr2, inptr3, inptr4, inptr5, outptr);
         }
         if (K > 0) {
             if (y + 5 >= ymax) {
@@ -560,14 +556,13 @@ static void gemm_s8_6x8_pack_A_n(dt_int8* outptr, const dt_int8* inptr,
                         megdnn_assert(0);
                 }
             }
-            interleave_6(inptr0, inptr1, inptr2, inptr3, inptr4, inptr5, outptr,
-                         4, K);
+            interleave_6(inptr0, inptr1, inptr2, inptr3, inptr4, inptr5, outptr, 4, K);
         }
     }
 }
 
-static void gemm_s8_6x8_pack_A_t(dt_int8* out, const dt_int8* in, int ldin,
-                                 int x0, int xmax, int k0, int kmax) {
+static void gemm_s8_6x8_pack_A_t(
+        dt_int8* out, const dt_int8* in, int ldin, int x0, int xmax, int k0, int kmax) {
     int8_t zerobuff[16];
     std::memset(zerobuff, 0, sizeof(int8_t) * 16);
     const int ksize = kmax - k0;
@@ -628,8 +623,8 @@ static void gemm_s8_6x8_pack_A_t(dt_int8* out, const dt_int8* in, int ldin,
     }
 }
 
-static void gemm_s8_6x8_pack_B_n(dt_int8* out, const dt_int8* in, int ldin,
-                                 int x0, int xmax, int k0, int kmax) {
+static void gemm_s8_6x8_pack_B_n(
+        dt_int8* out, const dt_int8* in, int ldin, int x0, int xmax, int k0, int kmax) {
     int8_t zerobuff[16];
     std::memset(zerobuff, 0, sizeof(int8_t) * 16);
     const int ksize = kmax - k0;
@@ -715,8 +710,9 @@ static void gemm_s8_6x8_pack_B_n(dt_int8* out, const dt_int8* in, int ldin,
     }
 }
 
-static void gemm_s8_6x8_pack_B_t(dt_int8* outptr, const dt_int8* inptr,
-                                 int ldin, int y0, int ymax, int k0, int kmax) {
+static void gemm_s8_6x8_pack_B_t(
+        dt_int8* outptr, const dt_int8* inptr, int ldin, int y0, int ymax, int k0,
+        int kmax) {
     int8_t zerobuff[16];
     std::memset(zerobuff, 0, sizeof(int8_t) * 16);
 
@@ -743,12 +739,14 @@ static void gemm_s8_6x8_pack_B_t(dt_int8* outptr, const dt_int8* inptr,
         int K = kmax - k0;
         //! read 12 * 4 in each row
         for (; K > 15; K -= 16) {
-            interleave_8x4_4_b(inptr0, inptr1, inptr2, inptr3, inptr4, inptr5,
-                               inptr6, inptr7, outptr);
+            interleave_8x4_4_b(
+                    inptr0, inptr1, inptr2, inptr3, inptr4, inptr5, inptr6, inptr7,
+                    outptr);
         }
         if (K > 0) {
-            interleave_8(inptr0, inptr1, inptr2, inptr3, inptr4, inptr5, inptr6,
-                         inptr7, outptr, 4, K);
+            interleave_8(
+                    inptr0, inptr1, inptr2, inptr3, inptr4, inptr5, inptr6, inptr7,
+                    outptr, 4, K);
         }
     }
     for (; y < ymax; y += 4) {

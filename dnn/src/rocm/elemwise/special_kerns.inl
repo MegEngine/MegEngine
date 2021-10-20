@@ -8,8 +8,8 @@
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-#include "hcc_detail/hcc_defs_prologue.h"
 #include "./special_kerns.h.hip"
+#include "hcc_detail/hcc_defs_prologue.h"
 
 namespace megdnn {
 namespace rocm {
@@ -20,8 +20,8 @@ struct FuseMulAdd3Op {
     typedef ctype* __restrict__ bufptr_t;
     bufptr_t m_dst, m_src2;
 
-    __device__ __forceinline__ void operator()(uint32_t idx, int off0, int off1,
-                                               bufptr_t src0, bufptr_t src1) {
+    __device__ __forceinline__ void operator()(
+            uint32_t idx, int off0, int off1, bufptr_t src0, bufptr_t src1) {
         m_dst[idx] = src0[off0] * src1[off1] + m_src2[c_is_scalar ? 0 : off0];
     }
 };
@@ -31,12 +31,11 @@ struct FuseMulAdd4Op {
     typedef ctype* __restrict__ bufptr_t;
     bufptr_t m_dst, m_src2, m_src3;
 
-    __device__ __forceinline__ void operator()(uint32_t idx, int off0, int off1,
-                                               bufptr_t src0, bufptr_t src1) {
-        m_dst[idx] = static_cast<ctype>(src0[off0]) *
-                             static_cast<ctype>(src1[off1]) +
-                     static_cast<ctype>(m_src2[off0]) *
-                             static_cast<ctype>(m_src3[off1]);
+    __device__ __forceinline__ void operator()(
+            uint32_t idx, int off0, int off1, bufptr_t src0, bufptr_t src1) {
+        m_dst[idx] =
+                static_cast<ctype>(src0[off0]) * static_cast<ctype>(src1[off1]) +
+                static_cast<ctype>(m_src2[off0]) * static_cast<ctype>(m_src3[off1]);
     }
 };
 
@@ -83,8 +82,7 @@ struct OpCallerUniform<FuseOpWrapper<Op>, 2, PVis> {
     }
 
     __device__ __forceinline__ void on(uint32_t idx) {
-        op(idx, par[0].offset(idx), par[1].offset(idx), par[0].ptr(),
-           par[1].ptr());
+        op(idx, par[0].offset(idx), par[1].offset(idx), par[0].ptr(), par[1].ptr());
     }
 
     __device__ __forceinline__ void next() {
@@ -97,19 +95,19 @@ struct OpCallerUniform<FuseOpWrapper<Op>, 2, PVis> {
 
 namespace {
 template <typename ctype, class Op, int arity>
-void run_fuse_elemwise(Op& op, const ElemwiseOpParamN<arity>& param,
-                       hipStream_t stream) {
+void run_fuse_elemwise(
+        Op& op, const ElemwiseOpParamN<arity>& param, hipStream_t stream) {
     param.assert_initialized();
-    ElemwiseOpParamN<2> p2 = *static_cast<const ElemwiseOpParamN<2>*>(
-            static_cast<const void*>(&param));
+    ElemwiseOpParamN<2> p2 =
+            *static_cast<const ElemwiseOpParamN<2>*>(static_cast<const void*>(&param));
     elemwise_intl::UserOpInvoker<elemwise_intl::FuseOpWrapper<Op>, ctype, 2>(
             p2, stream, op);
 }
 }  // anonymous namespace
 
 template <bool c_is_scalar, typename ctype>
-void kern_fuse_mul_add3(ctype* dest, const ElemwiseOpParamN<3>& param,
-                        hipStream_t stream) {
+void kern_fuse_mul_add3(
+        ctype* dest, const ElemwiseOpParamN<3>& param, hipStream_t stream) {
     elemwise_intl::FuseMulAdd3Op<ctype, c_is_scalar> op;
     op.m_dst = dest;
     op.m_src2 = param[2].ptr<ctype>();
@@ -117,8 +115,8 @@ void kern_fuse_mul_add3(ctype* dest, const ElemwiseOpParamN<3>& param,
 }
 
 template <typename ctype>
-void kern_fuse_mul_add4(ctype* dest, const ElemwiseOpParamN<4>& param,
-                        hipStream_t stream) {
+void kern_fuse_mul_add4(
+        ctype* dest, const ElemwiseOpParamN<4>& param, hipStream_t stream) {
     elemwise_intl::FuseMulAdd4Op<ctype> op;
     op.m_dst = dest;
     op.m_src2 = param[2].ptr<ctype>();
@@ -131,9 +129,7 @@ void kern_fuse_mul_add4(ctype* dest, const ElemwiseOpParamN<4>& param,
             DTypeTrait<_dt>::ctype*, const ElemwiseOpParamN<3>&, hipStream_t); \
     template void kern_fuse_mul_add3<false>(                                   \
             DTypeTrait<_dt>::ctype*, const ElemwiseOpParamN<3>&, hipStream_t); \
-    template void kern_fuse_mul_add4(DTypeTrait<_dt>::ctype*,                  \
-                                     const ElemwiseOpParamN<4>&, hipStream_t);
-
+    template void kern_fuse_mul_add4(                                          \
+            DTypeTrait<_dt>::ctype*, const ElemwiseOpParamN<4>&, hipStream_t);
 
 // vim: ft=cpp syntax=cpp.doxygen
-

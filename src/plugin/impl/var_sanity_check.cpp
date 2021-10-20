@@ -24,22 +24,20 @@ using namespace mgb;
 
 VarSanityCheck::VarSanityCheck(cg::ComputingGraph* graph) : PluginBase(graph) {
     auto on_exec_start = [this](const cg::event::OprExecKernelStart& event) {
-        setup_input_checker(true, event.opr, *event.env,
-                            &VarSanityCheck::on_var_received);
+        setup_input_checker(
+                true, event.opr, *event.env, &VarSanityCheck::on_var_received);
     };
 
     auto on_exec_finish = [this](const cg::event::OprExecKernelEnd& event) {
         for (VarNode* var : event.opr->output()) {
-            auto&& recv =
-                    var->owner_graph()->var_receiver_in_current_comp_seq(var);
-            auto check_var_basic = [ var, recv = &recv ]() {
+            auto&& recv = var->owner_graph()->var_receiver_in_current_comp_seq(var);
+            auto check_var_basic = [var, recv = &recv]() {
                 check_var_after_exec(var, *recv);
             };
             event.env->dispatch_on_comp_node(var->comp_node(), check_var_basic);
 
             // skip unused vars
-            if (!recv.dev_value ||
-                var->contain_flag(VarNode::Flag::VOLATILE_CONTENT))
+            if (!recv.dev_value || var->contain_flag(VarNode::Flag::VOLATILE_CONTENT))
                 continue;
 
             m_debug_log.add_producer(var);
@@ -47,21 +45,20 @@ VarSanityCheck::VarSanityCheck(cg::ComputingGraph* graph) : PluginBase(graph) {
             event.env->dispatch_on_comp_node(var->comp_node(), callback);
         }
 
-        setup_input_checker(false, event.opr, *event.env,
-                            &VarSanityCheck::check_input_unmodified);
+        setup_input_checker(
+                false, event.opr, *event.env, &VarSanityCheck::check_input_unmodified);
     };
 
-    add_event_handler(
-            graph->event().register_receiver<cg::event::OprExecKernelStart>(
-                    on_exec_start));
-    add_event_handler(
-            graph->event().register_receiver<cg::event::OprExecKernelEnd>(
-                    on_exec_finish));
+    add_event_handler(graph->event().register_receiver<cg::event::OprExecKernelStart>(
+            on_exec_start));
+    add_event_handler(graph->event().register_receiver<cg::event::OprExecKernelEnd>(
+            on_exec_finish));
 }
 
 std::string VarSanityCheck::str(const ChecksumResult& chk) {
-    return ssprintf("{checksum:0x%x, last_int:%d, last_float:%g}", chk.checksum,
-                    chk.last_val.iv, chk.last_val.fv);
+    return ssprintf(
+            "{checksum:0x%x, last_int:%d, last_float:%g}", chk.checksum,
+            chk.last_val.iv, chk.last_val.fv);
 }
 
 void VarSanityCheck::check_var_after_exec(
@@ -72,30 +69,29 @@ void VarSanityCheck::check_var_after_exec(
     if (is_empty) {
         auto allow = var->contain_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE),
              no_alloc = var->contain_flag(VarNode::Flag::NO_ALLOC_IF_UNUSED);
-        mgb_throw_if(!(allow || (no_alloc && recv.empty())) ||
-                             !recv.is_empty_allowed(),
-                     GraphError,
-                     "empty output var after node execution: %s "
-                     "(allow=%d receiver=%s)",
-                     cg::dump_var_info({var}).c_str(), allow,
-                     recv.to_string().c_str());
+        mgb_throw_if(
+                !(allow || (no_alloc && recv.empty())) || !recv.is_empty_allowed(),
+                GraphError,
+                "empty output var after node execution: %s "
+                "(allow=%d receiver=%s)",
+                cg::dump_var_info({var}).c_str(), allow, recv.to_string().c_str());
     }
 }
 
 /* =================  DebugLog =================  */
 #if MGB_ENABLE_GETENV && MGB_ENABLE_JSON
 
-VarSanityCheck::DebugLog::DebugLog(VarSanityCheck* checker)
-        : m_checker(checker) {
+VarSanityCheck::DebugLog::DebugLog(VarSanityCheck* checker) : m_checker(checker) {
     auto idstr = MGB_GETENV(LOG_DETAILS_ENV_VAR_NAME);
     if (!idstr)
         return;
     m_enable = true;
     sscanf(idstr, "%d", &m_var_id);
-    mgb_log_warn(LOG_DETAILS_ENV_VAR_NAME
-                 " is set to %d; "
-                 "details of var address and checksum would be logged",
-                 m_var_id);
+    mgb_log_warn(
+            LOG_DETAILS_ENV_VAR_NAME
+            " is set to %d; "
+            "details of var address and checksum would be logged",
+            m_var_id);
 }
 
 void VarSanityCheck::DebugLog::add_producer(VarNode* var) {
@@ -112,9 +108,8 @@ void VarSanityCheck::DebugLog::add_receiver(VarNode* var) {
     }
 }
 
-void VarSanityCheck::DebugLog::on_var_produced(VarSanityCheck* checker,
-                                               VarNode* var,
-                                               ChecksumResult checksum) {
+void VarSanityCheck::DebugLog::on_var_produced(
+        VarSanityCheck* checker, VarNode* var, ChecksumResult checksum) {
     if (!m_enable)
         return;
 
@@ -134,9 +129,10 @@ void VarSanityCheck::DebugLog::on_var_produced(VarSanityCheck* checker,
         if (checksum != checksum_expect) {
             var->owner_graph()->current_comp_seq()->to_json()->writeto_fpath(
                     "/tmp/mgb-graph-sanity-check-failed.json");
-            mgb_throw(cg::OperatorNodeExcExtraInfo::ExcMaker{m_var->owner_opr()}
-                              .make<VarSanityCheck::Error>,
-                      "error in recheck");
+            mgb_throw(
+                    cg::OperatorNodeExcExtraInfo::ExcMaker{m_var->owner_opr()}
+                            .make<VarSanityCheck::Error>,
+                    "error in recheck");
         }
     }
     if (var == m_var) {
@@ -154,15 +150,14 @@ void VarSanityCheck::DebugLog::on_var_received(VarNode* var) {
     }
 }
 #else
-VarSanityCheck::DebugLog::DebugLog(VarSanityCheck* checker)
-        : m_checker(checker) {}
+VarSanityCheck::DebugLog::DebugLog(VarSanityCheck* checker) : m_checker(checker) {}
 
 void VarSanityCheck::DebugLog::add_producer(VarNode*) {}
 
 void VarSanityCheck::DebugLog::add_receiver(VarNode*) {}
 
-void VarSanityCheck::DebugLog::on_var_produced(VarSanityCheck*, VarNode*,
-                                               ChecksumResult) {}
+void VarSanityCheck::DebugLog::on_var_produced(
+        VarSanityCheck*, VarNode*, ChecksumResult) {}
 
 void VarSanityCheck::DebugLog::on_var_received(VarNode*) {}
 #endif  // MGB_ENABLE_GETENV && MGB_ENABLE_JSON
@@ -190,8 +185,7 @@ VarSanityCheck::ChecksumResult VarSanityCheck::calc_checksum(VarNode* var) {
     DeviceTensorStorage* workspace;
     {
         MGB_LOCK_GUARD(m_workspace_mtx);
-        workspace = &m_workspace[std::this_thread::get_id()]
-                             .storage[var->comp_node()];
+        workspace = &m_workspace[std::this_thread::get_id()].storage[var->comp_node()];
     }
     auto comp_node = var->comp_node();
     comp_node.activate();
@@ -217,23 +211,20 @@ void VarSanityCheck::on_var_produced(VarNode* var) {
         auto rst = m_var2chksum.emplace(var, checksum);
         mgb_assert(
                 rst.second ||
-                        (var->contain_flag(
-                                 VarNode::Flag::PERSISTENT_DEVICE_VALUE) &&
-                         (m_modified_vars.count(var) ||
-                          rst.first->second == checksum)),
+                        (var->contain_flag(VarNode::Flag::PERSISTENT_DEVICE_VALUE) &&
+                         (m_modified_vars.count(var) || rst.first->second == checksum)),
                 "var recorded before produced: %s; checksum: record=%s calc=%s",
-                cg::dump_var_info({var}).c_str(),
-                str(rst.first->second).c_str(), str(checksum).c_str());
+                cg::dump_var_info({var}).c_str(), str(rst.first->second).c_str(),
+                str(checksum).c_str());
     }
 }
 
-void VarSanityCheck::on_var_received(cg::OperatorNodeBase* recv_opr,
-                                     VarNode* var) {
+void VarSanityCheck::on_var_received(cg::OperatorNodeBase* recv_opr, VarNode* var) {
     check_single_input(true, recv_opr, var);
 }
 
-void VarSanityCheck::check_input_unmodified(cg::OperatorNodeBase* recv_opr,
-                                            VarNode* var) {
+void VarSanityCheck::check_input_unmodified(
+        cg::OperatorNodeBase* recv_opr, VarNode* var) {
     auto ptr = var->dev_tensor().raw_ptr();
     for (auto i : recv_opr->output()) {
         if (i->dev_tensor_valid() && i->dev_tensor().raw_ptr() == ptr)
@@ -242,9 +233,8 @@ void VarSanityCheck::check_input_unmodified(cg::OperatorNodeBase* recv_opr,
     check_single_input(false, recv_opr, var);
 }
 
-void VarSanityCheck::check_single_input(bool add_debug_log,
-                                        cg::OperatorNodeBase* recv_opr,
-                                        VarNode* var) {
+void VarSanityCheck::check_single_input(
+        bool add_debug_log, cg::OperatorNodeBase* recv_opr, VarNode* var) {
     if (var->contain_flag(VarNode::Flag::DISALLOW_VAR_SANITY_CHECK))
         return;
 
@@ -254,8 +244,8 @@ void VarSanityCheck::check_single_input(bool add_debug_log,
     {
         MGB_LOCK_GUARD(m_id2chksum_mtx);
         auto&& node_prop = recv_opr->node_prop();
-        if (node_prop.contain(cg::OperatorNodeBase::NodeProp::Flag::
-                                      FORCE_UPDATE_INPUT_VAR)) {
+        if (node_prop.contain(
+                    cg::OperatorNodeBase::NodeProp::Flag::FORCE_UPDATE_INPUT_VAR)) {
             m_modified_vars.insert(var);
         }
         auto chk_iter = m_var2chksum.find(var);
@@ -281,34 +271,33 @@ void VarSanityCheck::check_single_input(bool add_debug_log,
 
     if (checksum != checksum_expect) {
 #if MGB_ENABLE_GETENV
-        mgb_throw(Error,
-                  "var sanity check failed: var: %s"
-                  " (checksum: expect=%s got=%s); receiver: %s{%s}(%zu);"
-                  " you can set " LOG_DETAILS_ENV_VAR_NAME
-                  "=%zu to get more details; pass=%d",
-                  cg::dump_var_info({var}).c_str(),
-                  str(checksum_expect).c_str(), str(checksum).c_str(),
-                  recv_opr->cname(), recv_opr->dyn_typeinfo()->name,
-                  recv_opr->id(), var->id(), !add_debug_log);
+        mgb_throw(
+                Error,
+                "var sanity check failed: var: %s"
+                " (checksum: expect=%s got=%s); receiver: %s{%s}(%zu);"
+                " you can set " LOG_DETAILS_ENV_VAR_NAME
+                "=%zu to get more details; pass=%d",
+                cg::dump_var_info({var}).c_str(), str(checksum_expect).c_str(),
+                str(checksum).c_str(), recv_opr->cname(),
+                recv_opr->dyn_typeinfo()->name, recv_opr->id(), var->id(),
+                !add_debug_log);
 #else
-        mgb_throw(Error,
-                  "var sanity check failed: var: %s"
-                  " (checksum: expect=%s got=%s); receiver: %s{%s}(%zu);",
-                  cg::dump_var_info({var}).c_str(),
-                  str(checksum_expect).c_str(), str(checksum).c_str(),
-                  recv_opr->cname(), recv_opr->dyn_typeinfo()->name,
-                  recv_opr->id());
+        mgb_throw(
+                Error,
+                "var sanity check failed: var: %s"
+                " (checksum: expect=%s got=%s); receiver: %s{%s}(%zu);",
+                cg::dump_var_info({var}).c_str(), str(checksum_expect).c_str(),
+                str(checksum).c_str(), recv_opr->cname(),
+                recv_opr->dyn_typeinfo()->name, recv_opr->id());
 #endif
     }
 }
 
-void VarSanityCheck::setup_input_checker(bool add_debug_log,
-                                         cg::OperatorNodeBase* opr,
-                                         cg::GraphExecutable::ExecEnv& env,
-                                         input_checker_fn checker) {
+void VarSanityCheck::setup_input_checker(
+        bool add_debug_log, cg::OperatorNodeBase* opr,
+        cg::GraphExecutable::ExecEnv& env, input_checker_fn checker) {
     for (auto&& dep_entry : opr->node_prop().dep_map()) {
-        if (!cg::OperatorNodeBase::NodeProp::is_device_value_dep(
-                    dep_entry.second)) {
+        if (!cg::OperatorNodeBase::NodeProp::is_device_value_dep(dep_entry.second)) {
             continue;
         }
 
@@ -352,9 +341,10 @@ void VarSanityCheck::setup_input_checker(bool add_debug_log,
 #if MGB_ENABLE_COND_EXEC
             if (auto mask = cg::ExecutionMask::get_from_opr(var->owner_opr())) {
                 if (!mask->enabled()) {
-                    mgb_assert(!m_var2chksum.count(var),
-                               "disabled opr has computed output: %s",
-                               cg::dump_var_info({var}).c_str());
+                    mgb_assert(
+                            !m_var2chksum.count(var),
+                            "disabled opr has computed output: %s",
+                            cg::dump_var_info({var}).c_str());
                     return;
                 }
             }

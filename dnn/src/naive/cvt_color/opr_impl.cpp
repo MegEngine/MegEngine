@@ -236,7 +236,7 @@ void cvt_BT601_yuv_transform(const Mat8u& src, Mat8u& dst) {
         out[index++] = R;     \
     }
 
-#define YG 18997  /* round(1.164 * 64 * 256 * 256 / 257) */
+#define YG  18997 /* round(1.164 * 64 * 256 * 256 / 257) */
 #define YGB -1160 /* 1.164 * 64 * -16 + 64 / 2 */
 
 // U and V contributions to R,G,B.
@@ -371,9 +371,8 @@ void cvt_rgb2gray<uchar>(const Mat8u& src, Mat8u& dst) {
         const uchar* pend = psrc + src.cols() * src.channels();
         uchar* pdst = dst.ptr(r);
         for (; psrc < pend; psrc += 3, pdst += 1) {
-            pdst[0] =
-                    (tab[psrc[0]] + tab[psrc[1] + 256] + tab[psrc[2] + 512]) >>
-                    yuv_shift;
+            pdst[0] = (tab[psrc[0]] + tab[psrc[1] + 256] + tab[psrc[2] + 512]) >>
+                      yuv_shift;
         }
     }
 }
@@ -446,8 +445,8 @@ void cvt_rgb2yuv<uchar>(const Mat8u& src, Mat8u& dst) {
     for (size_t r = 0; r < src.rows(); ++r) {
         for (size_t c = 0; c < src.cols(); ++c) {
             const uchar* v = &src.at(r, c, 0);
-            int Y = descale(v[0] * coef[0] + v[1] * coef[1] + v[2] * coef[2],
-                            yuv_shift);
+            int Y = descale(
+                    v[0] * coef[0] + v[1] * coef[1] + v[2] * coef[2], yuv_shift);
             int Cr = descale((v[0] - Y) * coef[3] + delta, yuv_shift);
             int Cb = descale((v[2] - Y) * coef[4] + delta, yuv_shift);
             uchar* target = &dst.at(r, c, 0);
@@ -527,8 +526,8 @@ void cvt_yuv2rgb<uchar>(const Mat8u& src, Mat8u& dst) {
             uchar Cb = v[2];
 
             int R = Y + descale((Cr - delta) * coef[0], yuv_shift);
-            int G = Y + descale((Cb - delta) * coef[2] + (Cr - delta) * coef[1],
-                                yuv_shift);
+            int G = Y +
+                    descale((Cb - delta) * coef[2] + (Cr - delta) * coef[1], yuv_shift);
             int B = Y + descale((Cb - delta) * coef[3], yuv_shift);
 
             uchar* target = &dst.at(r, c, 0);
@@ -614,9 +613,8 @@ void cvt_rgba2gray<uchar>(const Mat8u& src, Mat8u& dst) {
             uchar x0 = temp_src[0];
             uchar x1 = temp_src[1];
             uchar x2 = temp_src[2];
-            temp_dst[0] =
-                    (x0 * R2Y + x1 * G2Y + x2 * B2Y + (1 << (yuv_shift - 1))) >>
-                    yuv_shift;
+            temp_dst[0] = (x0 * R2Y + x1 * G2Y + x2 * B2Y + (1 << (yuv_shift - 1))) >>
+                          yuv_shift;
         }
     }
 }
@@ -678,8 +676,26 @@ void cvt_bgr2gray<uchar>(const Mat8u& src, Mat8u& dst) {
             uchar x0 = temp_src[0];
             uchar x1 = temp_src[1];
             uchar x2 = temp_src[2];
-            temp_dst[0] =
-                    (tab[x2] + tab[x1 + 256] + tab[x0 + 512]) >> yuv_shift;
+            temp_dst[0] = (tab[x2] + tab[x1 + 256] + tab[x0 + 512]) >> yuv_shift;
+        }
+    }
+}
+
+template <>
+void cvt_bgr2gray<float>(const Mat32f& src, Mat32f& dst) {
+    megdnn_assert(src.channels() == 3);
+    megdnn_assert(dst.channels() == 1);
+    megdnn_assert(src.rows() == dst.rows());
+    megdnn_assert(src.cols() == dst.cols());
+
+    const float coef_r = 0.299f, coef_g = 0.587f, coef_b = 0.114f;
+    for (size_t r = 0; r < src.rows(); ++r) {
+        for (size_t c = 0; c < src.cols(); ++c) {
+            float B = src.at(r, c, 0);
+            float G = src.at(r, c, 1);
+            float R = src.at(r, c, 2);
+            float& Y = dst.at(r, c, 0);
+            Y = R * coef_r + G * coef_g + B * coef_b;
         }
     }
 }
@@ -753,8 +769,8 @@ void cvt_yuv2bgr_yu12<uchar>(const Mat8u& src, Mat8u& dst) {
 }
 
 template <typename T>
-void cvt_bt601_yuv(const megcv::Mat<T>& src, megcv::Mat<T>& dst,
-                   param::CvtColor::Mode mode) {
+void cvt_bt601_yuv(
+        const megcv::Mat<T>& src, megcv::Mat<T>& dst, param::CvtColor::Mode mode) {
     MEGDNN_MARK_USED_VAR(src);
     MEGDNN_MARK_USED_VAR(dst);
     MEGDNN_MARK_USED_VAR(mode);
@@ -762,8 +778,9 @@ void cvt_bt601_yuv(const megcv::Mat<T>& src, megcv::Mat<T>& dst,
 }
 
 template <>
-void cvt_bt601_yuv<uchar>(const megcv::Mat<uchar>& src, megcv::Mat<uchar>& dst,
-                          param::CvtColor::Mode mode) {
+void cvt_bt601_yuv<uchar>(
+        const megcv::Mat<uchar>& src, megcv::Mat<uchar>& dst,
+        param::CvtColor::Mode mode) {
     using Mode = param::CvtColor::Mode;
     switch (mode) {
         case Mode::BT601_YUV2RGB_NV21:
@@ -812,8 +829,8 @@ void cvt_bt601_yuv<uchar>(const megcv::Mat<uchar>& src, megcv::Mat<uchar>& dst,
 }
 
 template <typename T>
-void CvtColorImpl::cvt_color_exec(_megdnn_tensor_in src_tensor,
-                                  _megdnn_tensor_in dst_tensor) {
+void CvtColorImpl::cvt_color_exec(
+        _megdnn_tensor_in src_tensor, _megdnn_tensor_in dst_tensor) {
     auto mode = param().mode;
     for (size_t i = 0; i < src_tensor.layout.shape[0]; ++i) {
         Mat<T> src = TensorND2Mat<T>(src_tensor, i);
@@ -897,15 +914,16 @@ void CvtColorImpl::cvt_color_exec(_megdnn_tensor_in src_tensor,
     }
 }
 
-void CvtColorImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in dst,
-                        _megdnn_workspace workspace) {
+void CvtColorImpl::exec(
+        _megdnn_tensor_in src, _megdnn_tensor_in dst, _megdnn_workspace workspace) {
     using namespace megcv;
     check_exec(src.layout, dst.layout, workspace.size);
-    MEGDNN_DISPATCH_CPU_KERN_OPR(if (dst.layout.dtype == dtype::Float32()) {
-        cvt_color_exec<float>(src, dst);
-    } else if (dst.layout.dtype == dtype::Uint8()) {
-        cvt_color_exec<uchar>(src, dst);
-    } else { megdnn_throw("Unsupported datatype of CvtColor optr."); });
+    MEGDNN_DISPATCH_CPU_KERN_OPR(
+            if (dst.layout.dtype == dtype::Float32()) {
+                cvt_color_exec<float>(src, dst);
+            } else if (dst.layout.dtype == dtype::Uint8()) {
+                cvt_color_exec<uchar>(src, dst);
+            } else { megdnn_throw("Unsupported datatype of CvtColor optr."); });
 }
 
 }  // namespace naive

@@ -26,8 +26,7 @@ using namespace cuda;
 
 namespace {
 
-std::unique_ptr<LocalForward> get_opr(Handle* handle,
-                                      param::Convolution param) {
+std::unique_ptr<LocalForward> get_opr(Handle* handle, param::Convolution param) {
     auto&& opr = handle->create_operator<LocalForward>();
     opr->param() = param;
     return std::move(opr);
@@ -56,18 +55,18 @@ TensorLayout prepare_filter(const TensorLayout& filter) {
 
 }  // namespace
 
-void GroupLocalForwardImpl::exec(_megdnn_tensor_in src,
-                                 _megdnn_tensor_in filter,
-                                 _megdnn_tensor_out dst,
-                                 _megdnn_workspace workspace) {
-    megdnn_assert(src.layout.dtype == dtype::Float32(),
-                  "cuda do not support fp16 group local operator");
+void GroupLocalForwardImpl::exec(
+        _megdnn_tensor_in src, _megdnn_tensor_in filter, _megdnn_tensor_out dst,
+        _megdnn_workspace workspace) {
+    megdnn_assert(
+            src.layout.dtype == dtype::Float32(),
+            "cuda do not support fp16 group local operator");
     check_exec(src.layout, filter.layout, dst.layout, workspace.size);
 
     auto handle = concrete_handle(this->handle());
     auto G = filter.layout[0];
-    auto IH = src.layout.shape[2], IW = src.layout.shape[3],
-         OH = dst.layout.shape[2], OW = dst.layout.shape[3];
+    auto IH = src.layout.shape[2], IW = src.layout.shape[3], OH = dst.layout.shape[2],
+         OW = dst.layout.shape[3];
     if (prefer_inference_kernel(src.layout, filter.layout, dst.layout)) {
         auto N = src.layout.shape[0], ICg = src.layout.shape[1] / G,
              OCg = dst.layout.shape[1] / G;
@@ -80,8 +79,9 @@ void GroupLocalForwardImpl::exec(_megdnn_tensor_in src,
         float* wptr = workspace.ptr<dt_float32>();
         auto stream = cuda_stream(this->handle());
 
-        group_local::exec(sptr, fptr, dptr, wptr, N, ICg, IH, IW, OCg, OH, OW,
-                          FH, FW, G, PH, PW, SH, SW, stream);
+        group_local::exec(
+                sptr, fptr, dptr, wptr, N, ICg, IH, IW, OCg, OH, OW, FH, FW, G, PH, PW,
+                SH, SW, stream);
     } else {
         auto&& opr = get_opr(handle, param());
         TensorND src_g = {src.raw_ptr, prepare_src_dst(src.layout, G)};
@@ -89,12 +89,12 @@ void GroupLocalForwardImpl::exec(_megdnn_tensor_in src,
         TensorND filter_g = {filter.raw_ptr, prepare_filter(filter.layout)};
         for (size_t g = 0; g < G; ++g) {
             opr->exec(src_g, filter_g, dst_g, workspace);
-            incr_ptr(src_g.raw_ptr, src_g.layout.stride[1] *
-                                            src_g.layout.shape[1] *
-                                            src_g.layout.dtype.size());
-            incr_ptr(dst_g.raw_ptr, dst_g.layout.stride[1] *
-                                            dst_g.layout.shape[1] *
-                                            dst_g.layout.dtype.size());
+            incr_ptr(
+                    src_g.raw_ptr, src_g.layout.stride[1] * src_g.layout.shape[1] *
+                                           src_g.layout.dtype.size());
+            incr_ptr(
+                    dst_g.raw_ptr, dst_g.layout.stride[1] * dst_g.layout.shape[1] *
+                                           dst_g.layout.dtype.size());
             incr_ptr(filter_g.raw_ptr, filter_g.layout.span().dist_byte());
         }
     }
@@ -103,9 +103,8 @@ void GroupLocalForwardImpl::exec(_megdnn_tensor_in src,
 GroupLocalForwardImpl::GroupLocalForwardImpl(Handle* handle)
         : GroupLocalForward(handle) {}
 
-size_t GroupLocalForwardImpl::get_workspace_in_bytes(const TensorLayout& src,
-                                                     const TensorLayout& filter,
-                                                     const TensorLayout& dst) {
+size_t GroupLocalForwardImpl::get_workspace_in_bytes(
+        const TensorLayout& src, const TensorLayout& filter, const TensorLayout& dst) {
     if (prefer_inference_kernel(src, filter, dst)) {
         return 0;
     } else {
@@ -118,9 +117,8 @@ size_t GroupLocalForwardImpl::get_workspace_in_bytes(const TensorLayout& src,
     }
 }
 
-bool GroupLocalForwardImpl::prefer_inference_kernel(const TensorLayout& src,
-                                                    const TensorLayout& filter,
-                                                    const TensorLayout& dst) {
+bool GroupLocalForwardImpl::prefer_inference_kernel(
+        const TensorLayout& src, const TensorLayout& filter, const TensorLayout& dst) {
     MEGDNN_MARK_USED_VAR(filter);
     MEGDNN_MARK_USED_VAR(dst);
     auto handle = concrete_handle(this->handle());

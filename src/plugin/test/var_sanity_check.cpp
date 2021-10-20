@@ -20,33 +20,33 @@ using namespace mgb;
 
 TEST(TestVarSanityCheck, Simple) {
     HostTensorGenerator<> gen;
-    auto host_x = gen({1024}),
-         host_y = gen({1024});
+    auto host_x = gen({1024}), host_y = gen({1024});
     auto graph = ComputingGraph::make();
-    SymbolVar
-        x = opr::Host2DeviceCopy::make(*graph, host_x),
-        y = opr::Host2DeviceCopy::make(*graph, host_y),
-        y1 = y.reshape({1024, 1}),
-        z = x + y1.reshape({1024});
+    SymbolVar x = opr::Host2DeviceCopy::make(*graph, host_x),
+              y = opr::Host2DeviceCopy::make(*graph, host_y), y1 = y.reshape({1024, 1}),
+              z = x + y1.reshape({1024});
 
     bool should_change = false;
     ComputingGraph::OutputSpec out_spec = {
-        {y1, [&](DeviceTensorND &v){
-            if (should_change) {
-                HostTensorND hv;
-                hv.copy_from(v).sync().ptr<float>()[123] ++;
-                v.copy_from(hv);
-            }
-        }},
-        {z, [&](DeviceTensorND &v){
-            HostTensorND hv;
-            hv.copy_from(v).sync();
-            for (int i = 0; i < 1024; i ++) {
-                ASSERT_EQ(host_x->ptr<float>()[i] + host_y->ptr<float>()[i],
-                        hv.ptr<float>()[i]) << "failed at " << i;;
-            }
-        }}
-    };
+            {y1,
+             [&](DeviceTensorND& v) {
+                 if (should_change) {
+                     HostTensorND hv;
+                     hv.copy_from(v).sync().ptr<float>()[123]++;
+                     v.copy_from(hv);
+                 }
+             }},
+            {z, [&](DeviceTensorND& v) {
+                 HostTensorND hv;
+                 hv.copy_from(v).sync();
+                 for (int i = 0; i < 1024; i++) {
+                     ASSERT_EQ(
+                             host_x->ptr<float>()[i] + host_y->ptr<float>()[i],
+                             hv.ptr<float>()[i])
+                             << "failed at " << i;
+                     ;
+                 }
+             }}};
     auto func = graph->compile(out_spec);
     func->execute().wait();
     func = graph->compile(out_spec);
@@ -54,8 +54,7 @@ TEST(TestVarSanityCheck, Simple) {
 
     should_change = true;
     func = graph->compile(out_spec);
-    ASSERT_THROW(func->execute().wait(),
-            VarSanityCheck::Error);
+    ASSERT_THROW(func->execute().wait(), VarSanityCheck::Error);
 }
 
 TEST(TestVarSanityCheck, InputModify) {
@@ -64,10 +63,10 @@ TEST(TestVarSanityCheck, InputModify) {
     auto graph = ComputingGraph::make();
     auto x = opr::Host2DeviceCopy::make(*graph, host_x);
     SymbolVar y;
-    auto cb = [&y](DeviceTensorND &) {
-        auto &&dv = y.node()->owner_opr()->input(0)->dev_tensor();
+    auto cb = [&y](DeviceTensorND&) {
+        auto&& dv = y.node()->owner_opr()->input(0)->dev_tensor();
         HostTensorND hv;
-        hv.copy_from(dv).sync().ptr<float>()[23] ++;
+        hv.copy_from(dv).sync().ptr<float>()[23]++;
         dv.copy_from_fixlayout(hv).sync();
     };
     y = opr::CallbackInjector::make(x, cb);
@@ -78,8 +77,7 @@ TEST(TestVarSanityCheck, InputModify) {
 
 TEST(TestVarSanityCheck, AddUpdateWithMultiCN) {
     HostTensorGenerator<> gen;
-    auto host_x = gen({123}),
-         host_delta = gen({123});
+    auto host_x = gen({123}), host_delta = gen({123});
     auto comp_node0 = CompNode::load("xpu0:0");
     auto comp_node1 = CompNode::load("xpu0:1");
     auto graph = ComputingGraph::make();
@@ -87,9 +85,9 @@ TEST(TestVarSanityCheck, AddUpdateWithMultiCN) {
     auto delta = opr::ImmutableTensor::make(*graph, *host_delta, {comp_node1});
     auto x_new = opr::AddUpdate::make(x, delta, {}, {comp_node1});
     auto on_exec_start = [&comp_node0](const cg::event::OprExecKernelStart& event) {
-        auto &&comp_node = event.opr->output(0)->comp_node();
+        auto&& comp_node = event.opr->output(0)->comp_node();
         if (comp_node == comp_node0) {
-            auto cb = []{
+            auto cb = [] {
                 using namespace std::literals;
                 std::this_thread::sleep_for(50ms);
             };
@@ -103,4 +101,3 @@ TEST(TestVarSanityCheck, AddUpdateWithMultiCN) {
 }
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
-

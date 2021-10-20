@@ -21,9 +21,7 @@ struct AbsOpBase : UnaryOpBase<src_ctype, dst_ctype> {
     void operator()(const src_ctype& src, dst_ctype* dst) const {
         *dst = operator()(src);
     }
-    dst_ctype operator()(const src_ctype& src) const {
-        return src > 0 ? src : (-src);
-    }
+    dst_ctype operator()(const src_ctype& src) const { return src > 0 ? src : (-src); }
 };
 
 template <typename src_ctype, typename dst_ctype = src_ctype>

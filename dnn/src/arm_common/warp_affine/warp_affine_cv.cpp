@@ -85,8 +85,9 @@ namespace {
 
 constexpr size_t BLOCK_SZ = 64_z;
 template <typename T, InterpolationMode imode, BorderMode bmode, size_t CH>
-void warp_affine_cv(const Mat<T>& src, Mat<T>& dst, const float* trans,
-                    const float border_value, size_t task_id) {
+void warp_affine_cv(
+        const Mat<T>& src, Mat<T>& dst, const float* trans, const float border_value,
+        size_t task_id) {
     // no extra padding
     double M[6];
     rep(i, 6) M[i] = trans[i];
@@ -123,10 +124,8 @@ void warp_affine_cv(const Mat<T>& src, Mat<T>& dst, const float* trans,
 
     for (y1 = 0; y1 < bh; ++y1) {
         short* xy = XY + y1 * bw * 2;
-        int X0 = saturate_cast<int>((M[1] * (y + y1) + M[2]) * AB_SCALE) +
-                 round_delta;
-        int Y0 = saturate_cast<int>((M[4] * (y + y1) + M[5]) * AB_SCALE) +
-                 round_delta;
+        int X0 = saturate_cast<int>((M[1] * (y + y1) + M[2]) * AB_SCALE) + round_delta;
+        int Y0 = saturate_cast<int>((M[4] * (y + y1) + M[5]) * AB_SCALE) + round_delta;
 
         if (imode == IMode::INTER_NEAREST) {
             x1 = 0;
@@ -136,15 +135,13 @@ void warp_affine_cv(const Mat<T>& src, Mat<T>& dst, const float* trans,
                 int16x8x2_t v_dst;
                 v_dst.val[0] = vcombine_s16(
                         vqmovn_s32(vshrq_n_s32(
-                                vaddq_s32(v_X0, vld1q_s32(adelta + x + x1)),
-                                AB_BITS)),
+                                vaddq_s32(v_X0, vld1q_s32(adelta + x + x1)), AB_BITS)),
                         vqmovn_s32(vshrq_n_s32(
                                 vaddq_s32(v_X0, vld1q_s32(adelta + x + x1 + 4)),
                                 AB_BITS)));
                 v_dst.val[1] = vcombine_s16(
                         vqmovn_s32(vshrq_n_s32(
-                                vaddq_s32(v_Y0, vld1q_s32(bdelta + x + x1)),
-                                AB_BITS)),
+                                vaddq_s32(v_Y0, vld1q_s32(bdelta + x + x1)), AB_BITS)),
                         vqmovn_s32(vshrq_n_s32(
                                 vaddq_s32(v_Y0, vld1q_s32(bdelta + x + x1 + 4)),
                                 AB_BITS)));
@@ -180,12 +177,12 @@ void warp_affine_cv(const Mat<T>& src, Mat<T>& dst, const float* trans,
                         AB_BITS - INTER_BITS);
 
                 int16x8x2_t v_xy;
-                v_xy.val[0] =
-                        vcombine_s16(vqmovn_s32(vshrq_n_s32(v_X0, INTER_BITS)),
-                                     vqmovn_s32(vshrq_n_s32(v_X1, INTER_BITS)));
-                v_xy.val[1] =
-                        vcombine_s16(vqmovn_s32(vshrq_n_s32(v_Y0, INTER_BITS)),
-                                     vqmovn_s32(vshrq_n_s32(v_Y1, INTER_BITS)));
+                v_xy.val[0] = vcombine_s16(
+                        vqmovn_s32(vshrq_n_s32(v_X0, INTER_BITS)),
+                        vqmovn_s32(vshrq_n_s32(v_X1, INTER_BITS)));
+                v_xy.val[1] = vcombine_s16(
+                        vqmovn_s32(vshrq_n_s32(v_Y0, INTER_BITS)),
+                        vqmovn_s32(vshrq_n_s32(v_Y1, INTER_BITS)));
 
                 vst2q_s16(xy + (x1 << 1), v_xy);
 
@@ -216,8 +213,7 @@ void warp_affine_cv(const Mat<T>& src, Mat<T>& dst, const float* trans,
 
 void megdnn::arm_common::warp_affine_cv_exec(
         _megdnn_tensor_in src, _megdnn_tensor_in trans, _megdnn_tensor_in dst,
-        float border_value, BorderMode bmode, InterpolationMode imode,
-        Handle* handle) {
+        float border_value, BorderMode bmode, InterpolationMode imode, Handle* handle) {
     size_t ch = dst.layout[3];
     size_t width = dst.layout[2];
     size_t height = dst.layout[1];
@@ -227,60 +223,60 @@ void megdnn::arm_common::warp_affine_cv_exec(
     size_t BLOCK_SZ_W = std::min(BLOCK_SZ * BLOCK_SZ / BLOCK_SZ_H, width);
     BLOCK_SZ_H = std::min(BLOCK_SZ * BLOCK_SZ / BLOCK_SZ_W, height);
 
-    size_t parallelism_batch = div_ceil<size_t>(height, BLOCK_SZ_H) *
-                               div_ceil<size_t>(width, BLOCK_SZ_W);
+    size_t parallelism_batch =
+            div_ceil<size_t>(height, BLOCK_SZ_H) * div_ceil<size_t>(width, BLOCK_SZ_W);
 
-    megdnn_assert(ch == 1 || ch == 3 || ch == 2,
-                  "unsupported src channel: %zu, avaiable channel size: 1/2/3",
-                  ch);
+    megdnn_assert(
+            ch == 1 || ch == 3 || ch == 2,
+            "unsupported src channel: %zu, avaiable channel size: 1/2/3", ch);
     const float* trans_ptr = trans.ptr<dt_float32>();
     if (dst.layout.dtype.enumv() == DTypeEnum::Float32) {
-#define cb(_imode, _bmode, _ch)                                             \
-    MIDOUT_BEGIN(megdnn_arm_common_warp_affine_cv, midout_iv(_imode),       \
-                 midout_iv(_bmode), midout_iv(_ch), float) {                \
-        auto task = [src, trans_ptr, dst, border_value, parallelism_batch]( \
-                            size_t index, size_t) {                         \
-            size_t batch_id = index / parallelism_batch;                    \
-            size_t task_id = index % parallelism_batch;                     \
-            Mat<float> src_mat = TensorND2Mat<float>(src, batch_id);        \
-            Mat<float> dst_mat = TensorND2Mat<float>(dst, batch_id);        \
-            const float* task_trans_ptr = trans_ptr + batch_id * 2 * 3;     \
-            warp_affine_cv<float MEGDNN_COMMA _imode MEGDNN_COMMA _bmode    \
-                                   MEGDNN_COMMA _ch>(                       \
-                    src_mat MEGDNN_COMMA const_cast<Mat<float>&>(dst_mat)   \
-                            MEGDNN_COMMA task_trans_ptr MEGDNN_COMMA        \
-                                    border_value,                           \
-                    task_id);                                               \
-        };                                                                  \
-        MEGDNN_DISPATCH_MULTI_THREAD_CPU_KERN(                              \
-                static_cast<naive::HandleImpl*>(handle),                    \
-                batch* parallelism_batch, task);                            \
-    }                                                                       \
+#define cb(_imode, _bmode, _ch)                                                      \
+    MIDOUT_BEGIN(                                                                    \
+            megdnn_arm_common_warp_affine_cv, midout_iv(_imode), midout_iv(_bmode),  \
+            midout_iv(_ch), float) {                                                 \
+        auto task = [src, trans_ptr, dst, border_value, parallelism_batch](          \
+                            size_t index, size_t) {                                  \
+            size_t batch_id = index / parallelism_batch;                             \
+            size_t task_id = index % parallelism_batch;                              \
+            Mat<float> src_mat = TensorND2Mat<float>(src, batch_id);                 \
+            Mat<float> dst_mat = TensorND2Mat<float>(dst, batch_id);                 \
+            const float* task_trans_ptr = trans_ptr + batch_id * 2 * 3;              \
+            warp_affine_cv<                                                          \
+                    float MEGDNN_COMMA _imode MEGDNN_COMMA _bmode MEGDNN_COMMA _ch>( \
+                    src_mat MEGDNN_COMMA const_cast<Mat<float>&>(dst_mat)            \
+                            MEGDNN_COMMA task_trans_ptr MEGDNN_COMMA border_value,   \
+                    task_id);                                                        \
+        };                                                                           \
+        MEGDNN_DISPATCH_MULTI_THREAD_CPU_KERN(                                       \
+                static_cast<naive::HandleImpl*>(handle), batch* parallelism_batch,   \
+                task);                                                               \
+    }                                                                                \
     MIDOUT_END();
         DISPATCH_IMODE(imode, bmode, ch, cb)
     } else if (dst.layout.dtype.enumv() == DTypeEnum::Uint8) {
 #undef cb
-#define cb(_imode, _bmode, _ch)                                             \
-    MIDOUT_BEGIN(megdnn_arm_common_warp_affine_cv, midout_iv(_imode),       \
-                 midout_iv(_bmode), midout_iv(_ch), uchar) {                \
-        auto task = [src, trans_ptr, dst, border_value, parallelism_batch]( \
-                            size_t index, size_t) {                         \
-            size_t batch_id = index / parallelism_batch;                    \
-            size_t task_id = index % parallelism_batch;                     \
-            Mat<uchar> src_mat = TensorND2Mat<uchar>(src, batch_id);        \
-            Mat<uchar> dst_mat = TensorND2Mat<uchar>(dst, batch_id);        \
-            const float* task_trans_ptr = trans_ptr + batch_id * 2 * 3;     \
-            warp_affine_cv<uchar MEGDNN_COMMA _imode MEGDNN_COMMA _bmode    \
-                                   MEGDNN_COMMA _ch>(                       \
-                    src_mat MEGDNN_COMMA const_cast<Mat<uchar>&>(dst_mat)   \
-                            MEGDNN_COMMA task_trans_ptr MEGDNN_COMMA        \
-                                    border_value,                           \
-                    task_id);                                               \
-        };                                                                  \
-        MEGDNN_DISPATCH_MULTI_THREAD_CPU_KERN(                              \
-                static_cast<naive::HandleImpl*>(handle),                    \
-                batch* parallelism_batch, task);                            \
-    }                                                                       \
+#define cb(_imode, _bmode, _ch)                                                      \
+    MIDOUT_BEGIN(                                                                    \
+            megdnn_arm_common_warp_affine_cv, midout_iv(_imode), midout_iv(_bmode),  \
+            midout_iv(_ch), uchar) {                                                 \
+        auto task = [src, trans_ptr, dst, border_value, parallelism_batch](          \
+                            size_t index, size_t) {                                  \
+            size_t batch_id = index / parallelism_batch;                             \
+            size_t task_id = index % parallelism_batch;                              \
+            Mat<uchar> src_mat = TensorND2Mat<uchar>(src, batch_id);                 \
+            Mat<uchar> dst_mat = TensorND2Mat<uchar>(dst, batch_id);                 \
+            const float* task_trans_ptr = trans_ptr + batch_id * 2 * 3;              \
+            warp_affine_cv<                                                          \
+                    uchar MEGDNN_COMMA _imode MEGDNN_COMMA _bmode MEGDNN_COMMA _ch>( \
+                    src_mat MEGDNN_COMMA const_cast<Mat<uchar>&>(dst_mat)            \
+                            MEGDNN_COMMA task_trans_ptr MEGDNN_COMMA border_value,   \
+                    task_id);                                                        \
+        };                                                                           \
+        MEGDNN_DISPATCH_MULTI_THREAD_CPU_KERN(                                       \
+                static_cast<naive::HandleImpl*>(handle), batch* parallelism_batch,   \
+                task);                                                               \
+    }                                                                                \
     MIDOUT_END();
         DISPATCH_IMODE(imode, bmode, ch, cb)
 #undef cb

@@ -16,6 +16,6 @@ namespace test {
 const int RandomState::m_seed;
 RandomState RandomState::m_instance = RandomState();
 
-} // namespace test
-} // namespace megdnn
+}  // namespace test
+}  // namespace megdnn
 // vim: syntax=cpp.doxygen

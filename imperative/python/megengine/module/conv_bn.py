@@ -50,8 +50,7 @@ class _ConvBnActivation2d(Module):
 
 
 class ConvBn2d(_ConvBnActivation2d):
-    r"""
-    A fused :class:`~.Module` including :class:`~.module.Conv2d` and :class:`~.module.BatchNorm2d`. 
+    r"""A fused :class:`~.Module` including :class:`~.module.Conv2d` and :class:`~.module.BatchNorm2d`.
     Could be replaced with :class:`~.QATModule` version :class:`~.qat.ConvBn2d` using
     :func:`~.quantize.quantize_qat`.
     """
@@ -61,8 +60,7 @@ class ConvBn2d(_ConvBnActivation2d):
 
 
 class ConvBnRelu2d(_ConvBnActivation2d):
-    r"""
-    A fused :class:`~.Module` including :class:`~.module.Conv2d`, :class:`~.module.BatchNorm2d` and :func:`~.relu`. 
+    r"""A fused :class:`~.Module` including :class:`~.module.Conv2d`, :class:`~.module.BatchNorm2d` and :func:`~.relu`.
     Could be replaced with :class:`~.QATModule` version :class:`~.qat.ConvBnRelu2d` using :func:`~.quantize.quantize_qat`.
     """
 

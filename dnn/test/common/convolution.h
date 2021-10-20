@@ -11,11 +11,11 @@
  */
 #pragma once
 
-#include "megdnn/opr_param_defs.h"
+#include <gtest/gtest.h>
 #include "megdnn/basic_types.h"
 #include "megdnn/handle.h"
+#include "megdnn/opr_param_defs.h"
 #include "test/common/checker.h"
-#include <gtest/gtest.h>
 
 namespace megdnn {
 namespace test {
@@ -40,6 +40,7 @@ std::vector<TestArg> get_args_x86_direct_case_2();
 std::vector<TestArg> get_args_fallback_templated_impl();
 std::vector<TestArg> get_args_fallback_non_templated_impl();
 std::vector<TestArg> get_args_cudnn_5_1_failures();
+std::vector<TestArg> get_args_cudnn_5_1_backward();
 std::vector<TestArg> get_args_x86_winograd_algorithm();
 std::vector<TestArg> get_args_BRAIN_481();
 std::vector<TestArg> get_args();
@@ -50,18 +51,18 @@ std::vector<TestArg> get_dilated_args();
 std::vector<TestArg> get_chanwise_args();
 std::vector<TestArg> get_args_int8_nchw4_conv_bwd_data();
 std::vector<TestArg> get_args_int8_nchw_conv_bwd_data();
+std::vector<TestArg> get_args_int8_nhwc_conv_bwd_data();
 
 //! \param stage 0 for fwd, 1 for bwd data, 2 for bwd filter
-using ConvEPSGetter =
-        std::function<float(bool f16, int stage, const char* algo_name)>;
+using ConvEPSGetter = std::function<float(bool f16, int stage, const char* algo_name)>;
 
 //! check for various conv configurations (dilation, group, stride, padding)
 //! and run all usable algorithms
 void test_conv_config_combinations(
-        int k_size, Handle* handle, bool test_int8, bool test_backward,
-        bool is_cuda,
-        ConvEPSGetter conv_eps_getter = [](bool f16, int, const char*)
-                -> float { return f16 ? 1e-1 : 1e-3; },
+        int k_size, Handle* handle, bool test_int8, bool test_backward, bool is_cuda,
+        ConvEPSGetter conv_eps_getter = [](bool f16, int, const char*) -> float {
+            return f16 ? 1e-1 : 1e-3;
+        },
         bool use_io16xc32 = false);
 
 }  // namespace convolution

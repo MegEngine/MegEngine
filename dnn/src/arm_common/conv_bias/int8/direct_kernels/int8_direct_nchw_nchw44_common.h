@@ -16,12 +16,13 @@ namespace megdnn {
 namespace arm_common {
 namespace {
 
-template <BiasMode bias_mode, typename Op, int remain_w, int filter_size,
-          int oc_block, int stride>
+template <
+        BiasMode bias_mode, typename Op, int remain_w, int filter_size, int oc_block,
+        int stride>
 struct KerNeonXXs2NchwNchw44 {
-    static void impl(const int8_t* src_ptr, const int8_t* weight_ptr,
-                     const int32_t* bias_ptr, int8_t* dst_ptr, int ic, int ih,
-                     int iw, int ld_dst_oc, const Op& op);
+    static void impl(
+            const int8_t* src_ptr, const int8_t* weight_ptr, const int32_t* bias_ptr,
+            int8_t* dst_ptr, int ic, int ih, int iw, int ld_dst_oc, const Op& op);
 };
 
 template <int oc>

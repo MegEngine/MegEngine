@@ -19,15 +19,12 @@ TypeRef<dt_quint4>::TypeRef(dt_quint4* _ptr, size_t _offset) {
     ptr = reinterpret_cast<uint8_t*>(_ptr);
     offset = _offset;
     uint8_t cur = ptr[offset >> 1];
-    val = convert<uint8_t, dt_quint4>(cur, dt_quint4(cur), offset & 0x1)
-                  .as_uint8();
-
+    val = convert<uint8_t, dt_quint4>(cur, dt_quint4(cur), offset & 0x1).as_uint8();
 }
 
 void TypeRef<dt_quint4>::operator=(const uint8_t _) {
     uint8_t cur = ptr[offset >> 1];
-    ptr[offset >> 1] =
-            convert<dt_quint4, uint8_t>(dt_quint4(_), cur, offset & 0x1);
+    ptr[offset >> 1] = convert<dt_quint4, uint8_t>(dt_quint4(_), cur, offset & 0x1);
 }
 
 TypeRef<dt_qint4>::TypeRef(dt_qint4* _ptr, size_t _offset) {
@@ -39,16 +36,14 @@ TypeRef<dt_qint4>::TypeRef(dt_qint4* _ptr, size_t _offset) {
 
 void TypeRef<dt_qint4>::operator=(const int8_t _) {
     int8_t cur = ptr[offset >> 1];
-    ptr[offset >> 1] =
-            convert<dt_qint4, int8_t>(dt_qint4(_), cur, offset & 0x1);
+    ptr[offset >> 1] = convert<dt_qint4, int8_t>(dt_qint4(_), cur, offset & 0x1);
 }
 
 ////////////////////// TensorIter /////////////////////
 
-template<typename ctype, bool valonly>
-typename TensorIter<ctype, valonly>::Iter
-TensorIter<ctype, valonly>::Iter::make(
-        ctype *ptr, const TensorLayout &layout, size_t offset) {
+template <typename ctype, bool valonly>
+typename TensorIter<ctype, valonly>::Iter TensorIter<ctype, valonly>::Iter::make(
+        ctype* ptr, const TensorLayout& layout, size_t offset) {
     megdnn_assert(layout.ndim);
     Iter rst;
     rst.m_ptr = ptr;
@@ -60,7 +55,7 @@ TensorIter<ctype, valonly>::Iter::make(
     rst.m_tot_nr_elems = rst.m_layout.total_nr_elems();
     rst.m_offset = 0;
     megdnn_assert(offset <= rst.m_tot_nr_elems);
-    for (int i = rst.m_layout.ndim - 1; i >= 0; i --) {
+    for (int i = rst.m_layout.ndim - 1; i >= 0; i--) {
         auto shp = rst.m_layout.shape[i];
         auto stride = rst.m_layout.stride[i];
         if (!shp) {
@@ -75,19 +70,19 @@ TensorIter<ctype, valonly>::Iter::make(
     return rst;
 }
 
-template<typename ctype, bool valonly>
+template <typename ctype, bool valonly>
 void TensorIter<ctype, valonly>::Iter::on_access_idx_valonly_true() const {
     megdnn_throw("can not access idx of TensorIter if valonly is true");
 }
 
 namespace megdnn {
-#define cb(_dt) \
+#define cb(_dt)                                                      \
     template class TensorIter<DTypeTrait<dtype::_dt>::ctype, false>; \
     template class TensorIter<DTypeTrait<dtype::_dt>::ctype, true>;
 
-    MEGDNN_FOREACH_DTYPE_NAME(cb)
-    MEGDNN_FOREACH_PARAMETERIZED_DTYPE(cb)
+MEGDNN_FOREACH_DTYPE_NAME(cb)
+MEGDNN_FOREACH_PARAMETERIZED_DTYPE(cb)
 #undef cb
-}
+}  // namespace megdnn
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

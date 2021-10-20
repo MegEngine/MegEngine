@@ -49,9 +49,9 @@ public:
     //! cast this to a final object with type check
     template <class T>
     T& cast_final_safe() {
-        LITE_ASSERT(T::typeinfo() == dyn_typeinfo(),
-                    "can not convert type %s to %s", dyn_typeinfo()->name,
-                    T::typeinfo()->name);
+        LITE_ASSERT(
+                T::typeinfo() == dyn_typeinfo(), "can not convert type %s to %s",
+                dyn_typeinfo()->name, T::typeinfo()->name);
         return *static_cast<T*>(this);
     }
 

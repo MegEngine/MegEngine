@@ -10,7 +10,7 @@ import argparse
 
 import numpy as np
 import yaml
-from megengine import jit
+from megengine import jit, tensor
 from megengine.module.external import ExternOprSubgraph
 
 
@@ -27,12 +27,12 @@ def main():
         description="load a .pb model and convert to corresponding "
         "load-and-run model"
     )
-    parser.add_argument("input", help="mace model file")
-    parser.add_argument("param", help="mace param file")
+    parser.add_argument("--input", help="mace model file")
+    parser.add_argument("--param", help="mace param file")
     parser.add_argument(
-        "output", help="converted model that can be fed to dump_with_testcase_mge.py"
+        "--output", help="converted model that can be fed to dump_with_testcase_mge.py"
     )
-    parser.add_argument("config", help="config file with yaml format")
+    parser.add_argument("--config", help="config file with yaml format")
     args = parser.parse_args()
 
     with open(args.config, "r") as f:
@@ -90,17 +90,17 @@ def main():
             + raw_param
         )
 
-        net = ExternOprSubgraph(wk_raw_content, "mace", osizes)
+        net = ExternOprSubgraph(osizes, "mace", wk_raw_content)
         net.eval()
 
-        @jit.trace(symbolic=True)
+        @jit.trace(record_only=True)
         def inference(inputs):
             return net(inputs)
 
         inputs = [
-            np.random.random(isizes[i]).astype(np.float32) for i in range(len(isizes))
+            tensor(np.random.random(isizes[i]).astype(np.float32)) for i in range(len(isizes))
         ]
-        inference.trace(*inputs)
+        inference(*inputs)
         inference.dump(args.output)
 
 

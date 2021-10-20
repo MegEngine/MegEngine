@@ -9,30 +9,26 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 #include "src/naive/batched_matrix_mul/opr_impl.h"
-#include "src/naive/matrix_mul/opr_impl.h"
-#include "src/naive/handle.h"
 #include "src/common/utils.h"
+#include "src/naive/handle.h"
+#include "src/naive/matrix_mul/opr_impl.h"
 
 namespace megdnn {
 namespace naive {
-BatchedMatrixMulForwardImpl::BatchedMatrixMulForwardImpl(Handle *handle):
-    BatchedMatrixMulForward(handle),
-    m_opr(this->handle()->create_operator<MatrixMulForward>())
-{
-}
+BatchedMatrixMulForwardImpl::BatchedMatrixMulForwardImpl(Handle* handle)
+        : BatchedMatrixMulForward(handle),
+          m_opr(this->handle()->create_operator<MatrixMulForward>()) {}
 
 size_t BatchedMatrixMulForwardImpl::get_workspace_in_bytes(
-        const TensorLayout &A, const TensorLayout &B,
-        const TensorLayout &C) {
+        const TensorLayout& A, const TensorLayout& B, const TensorLayout& C) {
     MEGDNN_MARK_USED_VAR(A);
     MEGDNN_MARK_USED_VAR(B);
     MEGDNN_MARK_USED_VAR(C);
     return 0;
 }
 
-void BatchedMatrixMulForwardImpl::exec(_megdnn_tensor_in A,
-        _megdnn_tensor_in B,
-        _megdnn_tensor_out C,
+void BatchedMatrixMulForwardImpl::exec(
+        _megdnn_tensor_in A, _megdnn_tensor_in B, _megdnn_tensor_out C,
         _megdnn_workspace workspace) {
     check_exec(A.layout, B.layout, C.layout, workspace.size);
 
@@ -50,9 +46,8 @@ void BatchedMatrixMulForwardImpl::exec(_megdnn_tensor_in A,
          Bstrd = B.layout.dtype.size() * B.layout.stride[0],
          Cstrd = C.layout.dtype.size() * C.layout.stride[0];
 
-    auto advance_ptr = [](TensorND &dest, ptrdiff_t d) {
-        dest.raw_ptr = static_cast<void*>(
-                static_cast<dt_byte*>(dest.raw_ptr) + d);
+    auto advance_ptr = [](TensorND& dest, ptrdiff_t d) {
+        dest.raw_ptr = static_cast<void*>(static_cast<dt_byte*>(dest.raw_ptr) + d);
     };
 
     rep(n, N) {
@@ -61,32 +56,33 @@ void BatchedMatrixMulForwardImpl::exec(_megdnn_tensor_in A,
         advance_ptr(B_, Bstrd);
         advance_ptr(C_, Cstrd);
     }
-
+}
+std::vector<BatchedMatrixMulForward::Algorithm*> BatchedMatrixMulForwardImpl::
+        get_all_algorithms(
+                const TensorLayout& /*A*/, const TensorLayout& /*B*/,
+                const TensorLayout& /*C*/) {
+    return {static_cast<HandleImpl*>(handle())->default_batched_matmul_fwd_algo()};
+}
+std::vector<BatchedMatrixMulForward::Algorithm*> BatchedMatrixMulForwardImpl::
+        get_all_algorithms_safe(
+                const TensorLayout& /*A*/, const TensorLayout& /*B*/,
+                const TensorLayout& /*C*/) {
+    return {static_cast<HandleImpl*>(handle())->default_batched_matmul_fwd_algo()};
 }
 
-std::vector<BatchedMatrixMulForward::Algorithm*>
-BatchedMatrixMulForwardImpl::get_all_algorithms(const TensorLayout& /*A*/,
-                                                const TensorLayout& /*B*/,
-                                                const TensorLayout& /*C*/) {
-    return {static_cast<HandleImpl*>(handle())
-                    ->default_batched_matmul_fwd_algo()};
+BatchedMatrixMulForward::Algorithm* BatchedMatrixMulForwardImpl::
+        get_algorithm_heuristic(
+                const TensorLayout& /*A*/, const TensorLayout& /*B*/,
+                const TensorLayout& /*C*/, size_t /*workspace_limit_in_bytes*/,
+                const AlgoAttribute& /*positive_attr*/,
+                const AlgoAttribute& /*negative_attr*/) {
+    return static_cast<HandleImpl*>(handle())->default_batched_matmul_fwd_algo();
 }
 
-BatchedMatrixMulForward::Algorithm*
-BatchedMatrixMulForwardImpl::get_algorithm_heuristic(
-        const TensorLayout& /*A*/, const TensorLayout& /*B*/,
-        const TensorLayout& /*C*/, size_t /*workspace_limit_in_bytes*/,
-        const AlgoAttribute& /*positive_attr*/,
-        const AlgoAttribute& /*negative_attr*/) {
-    return static_cast<HandleImpl*>(handle())
-            ->default_batched_matmul_fwd_algo();
-}
-
-BatchedMatrixMulForward::Algorithm*
-BatchedMatrixMulForwardImpl::get_algorithm_from_desc(
-        const AlgorithmDesc& desc) {
-    Algorithm* ret = static_cast<HandleImpl*>(handle())
-                             ->default_batched_matmul_fwd_algo();
+BatchedMatrixMulForward::Algorithm* BatchedMatrixMulForwardImpl::
+        get_algorithm_from_desc(const AlgorithmDesc& desc) {
+    Algorithm* ret =
+            static_cast<HandleImpl*>(handle())->default_batched_matmul_fwd_algo();
     megdnn_assert(desc == ret->info().desc);
     return ret;
 }

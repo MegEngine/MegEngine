@@ -19,8 +19,9 @@ class ReduceImpl : public fallback::ReduceImpl {
 public:
     using fallback::ReduceImpl::ReduceImpl;
 
-    void exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
-              _megdnn_workspace workspace) override;
+    void exec(
+            _megdnn_tensor_in src, _megdnn_tensor_out dst,
+            _megdnn_workspace workspace) override;
 };
 
 }  // namespace arm_common

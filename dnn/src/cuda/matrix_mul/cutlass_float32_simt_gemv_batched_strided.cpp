@@ -30,16 +30,14 @@ bool MatrixMulForwardImpl::AlgoFloat32SIMTGemvBatchedStrided::is_available(
            args.layout_c.dtype == dtype::Float32() && ((!ta) && (!tb));
 }
 
-size_t
-MatrixMulForwardImpl::AlgoFloat32SIMTGemvBatchedStrided::get_workspace_in_bytes(
+size_t MatrixMulForwardImpl::AlgoFloat32SIMTGemvBatchedStrided::get_workspace_in_bytes(
         const SizeArgs& /* args */) const {
     return 0;
 }
 
 void MatrixMulForwardImpl::AlgoFloat32SIMTGemvBatchedStrided::exec(
         const ExecArgs& args) const {
-    size_t lda = args.tensor_a.layout.stride[0],
-           ldb = args.tensor_b.layout.stride[0],
+    size_t lda = args.tensor_a.layout.stride[0], ldb = args.tensor_b.layout.stride[0],
            ldc = args.tensor_c.layout.stride[0];
     auto&& param = args.opr->param();
     int m = args.tensor_c.layout.shape[0], n = args.tensor_c.layout.shape[1],
@@ -48,9 +46,8 @@ void MatrixMulForwardImpl::AlgoFloat32SIMTGemvBatchedStrided::exec(
     BatchedGemmCoord problem_size{1, n, k, m};
     auto&& stream = cuda_stream(args.opr->handle());
     return cutlass_matrix_mul_float32_simt_gemv_batched_strided(
-            args.tensor_a.ptr<dt_float32>(), lda, lda,
-            args.tensor_b.ptr<dt_float32>(), ldb, 0,
-            args.tensor_c.ptr<dt_float32>(), ldc, ldc, problem_size,
+            args.tensor_a.ptr<dt_float32>(), lda, lda, args.tensor_b.ptr<dt_float32>(),
+            ldb, 0, args.tensor_c.ptr<dt_float32>(), ldc, ldc, problem_size,
             m_threadblock_n, stream);
 }
 #endif

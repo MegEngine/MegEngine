@@ -15,8 +15,8 @@
 #include "src/cambricon/handle.h"
 #include "src/cambricon/utils.h"
 
-#include "src/cambricon/checksum/opr_impl.h"
 #include <cnrt.h>
+#include "src/cambricon/checksum/opr_impl.h"
 
 namespace megdnn {
 namespace cambricon {
@@ -61,8 +61,7 @@ MEGDNN_FOREACH_OPR_CLASS(MEGDNN_INST_CREATE_OPERATOR)
 }  // namespace cambricon
 }  // namespace megdnn
 
-MEGDNN_VERSION_SYMBOL3(CNRT, CNRT_MAJOR_VERSION, CNRT_MINOR_VERSION,
-                       CNRT_PATCH_VERSION);
+MEGDNN_VERSION_SYMBOL3(
+        CNRT, CNRT_MAJOR_VERSION, CNRT_MINOR_VERSION, CNRT_PATCH_VERSION);
 
 // vim: syntax=cpp.doxygen
-

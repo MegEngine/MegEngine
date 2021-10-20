@@ -17,7 +17,6 @@ namespace mgb {
 
 namespace imperative {
 
-
 TensorChecksumCalc::ChecksumResult TensorChecksumCalc::calc(TensorPtr ptr) {
     auto&& dt = ptr->dev_tensor();
     if (!dt.layout().total_nr_elems()) {
@@ -34,8 +33,7 @@ TensorChecksumCalc::ChecksumResult TensorChecksumCalc::calc(TensorPtr ptr) {
     DeviceTensorStorage* workspace;
     {
         MGB_LOCK_GUARD(m_workspace_mtx);
-        workspace = &m_workspace[std::this_thread::get_id()]
-                             .storage[ptr->comp_node()];
+        workspace = &m_workspace[std::this_thread::get_id()].storage[ptr->comp_node()];
     }
     auto comp_node = ptr->comp_node();
     comp_node.activate();
@@ -50,17 +48,14 @@ TensorChecksumCalc::ChecksumResult TensorChecksumCalc::calc(TensorPtr ptr) {
     return opr->exec(tensor, mwk);
 }
 
-
 class TensorSanityCheckImpl {
 public:
-    std::vector<std::tuple<OpTrait*, std::unique_ptr<ApplyOnPhysicalTensor>>>
-            hook_list;
+    std::vector<std::tuple<OpTrait*, std::unique_ptr<ApplyOnPhysicalTensor>>> hook_list;
     std::unordered_map<TensorPtr, TensorChecksumCalc::ChecksumResult>
-            tensor2chksum; // TODO: may increase device memory overhead
-    TensorSanityCheckImpl() {
-        m_calc = std::make_unique<TensorChecksumCalc>();
-    }
+            tensor2chksum;  // TODO: may increase device memory overhead
+    TensorSanityCheckImpl() { m_calc = std::make_unique<TensorChecksumCalc>(); }
     bool check(TensorPtr p);
+
 private:
     std::unique_ptr<TensorChecksumCalc> m_calc;
 };
@@ -79,16 +74,16 @@ void TensorSanityCheck::enable() {
     CompNode::sync_all();
     OpTrait::for_each_trait([this](OpTrait& trait) {
         auto backup = std::make_unique<ApplyOnPhysicalTensor>(
-            std::move(trait.apply_on_physical_tensor));
+                std::move(trait.apply_on_physical_tensor));
         trait.apply_on_physical_tensor = ApplyOnPhysicalTensor(
                 [this, backup = backup.get()](
-                        const OpDef& def,
-                        const SmallVector<TensorPtr>& inputs) {
+                        const OpDef& def, const SmallVector<TensorPtr>& inputs) {
                     for (auto&& i : inputs) {
                         if (!m_checker->check(i)) {
-                            mgb_throw(TensorChecksumCalc::Error,
-                                      "tensor modified before exec %s",
-                                      print_op(def).c_str());
+                            mgb_throw(
+                                    TensorChecksumCalc::Error,
+                                    "tensor modified before exec %s",
+                                    print_op(def).c_str());
                         }
                     }
                     auto output = (*backup)(def, inputs);
@@ -97,9 +92,10 @@ void TensorSanityCheck::enable() {
                     }
                     for (auto&& i : inputs) {
                         if (!m_checker->check(i)) {
-                            mgb_throw(TensorChecksumCalc::Error,
-                                      "tensor modified after exec %s",
-                                      print_op(def).c_str());
+                            mgb_throw(
+                                    TensorChecksumCalc::Error,
+                                    "tensor modified after exec %s",
+                                    print_op(def).c_str());
                         }
                     }
                     return output;
@@ -110,8 +106,7 @@ void TensorSanityCheck::enable() {
 
 void TensorSanityCheck::disable() {
     for (auto&& hook : m_checker->hook_list) {
-        std::get<0>(hook)->apply_on_physical_tensor = 
-                std::move(*std::get<1>(hook));
+        std::get<0>(hook)->apply_on_physical_tensor = std::move(*std::get<1>(hook));
     }
     m_checker->tensor2chksum.clear();
     m_checker->hook_list.clear();
@@ -121,16 +116,15 @@ TensorSanityCheck::TensorSanityCheck() {
     m_checker = std::make_unique<TensorSanityCheckImpl>();
 }
 
-TensorSanityCheck::~TensorSanityCheck () {
-}
+TensorSanityCheck::~TensorSanityCheck() {}
 
-std::string TensorSanityCheck::print_op(const OpDef& def){
+std::string TensorSanityCheck::print_op(const OpDef& def) {
     auto* opr_attr = def.try_cast_final<const OprAttr>();
-    if(opr_attr){
+    if (opr_attr) {
         return std::string("OprAttr:") + opr_attr->type;
     }
     return def.dyn_typeinfo()->name;
 }
 
-} // namespace imperative
-} // namespace mgb
+}  // namespace imperative
+}  // namespace mgb

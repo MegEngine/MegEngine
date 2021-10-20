@@ -20,26 +20,26 @@
 #include "megdnn/handle.h"
 
 #if MGB_CUDA
-#include <cuda_runtime.h>
 #include <cuda.h>
+#include <cuda_runtime.h>
 
 #if MGB_ENABLE_LOGGING
-#define MGB_CUDA_CHECK(expr)                                          \
-    do {                                                              \
-        cudaError_t __cuda_check_code = (expr);                       \
-        if (!mgb_likely(__cuda_check_code == cudaSuccess)) {          \
-            ::mgb::_on_cuda_error(#expr, __cuda_check_code, __FILE__, \
-                                  __func__, __LINE__);                \
-        }                                                             \
+#define MGB_CUDA_CHECK(expr)                                                 \
+    do {                                                                     \
+        cudaError_t __cuda_check_code = (expr);                              \
+        if (!mgb_likely(__cuda_check_code == cudaSuccess)) {                 \
+            ::mgb::_on_cuda_error(                                           \
+                    #expr, __cuda_check_code, __FILE__, __func__, __LINE__); \
+        }                                                                    \
     } while (0)
 
-#define MGB_CUDA_CU_CHECK(expr)                                          \
-    do {                                                                 \
-        CUresult __cuda_check_code = (expr);                             \
-        if (!mgb_likely(__cuda_check_code == CUDA_SUCCESS)) {            \
-            ::mgb::_on_cuda_cu_error(#expr, __cuda_check_code, __FILE__, \
-                                     __func__, __LINE__);                \
-        }                                                                \
+#define MGB_CUDA_CU_CHECK(expr)                                              \
+    do {                                                                     \
+        CUresult __cuda_check_code = (expr);                                 \
+        if (!mgb_likely(__cuda_check_code == CUDA_SUCCESS)) {                \
+            ::mgb::_on_cuda_cu_error(                                        \
+                    #expr, __cuda_check_code, __FILE__, __func__, __LINE__); \
+        }                                                                    \
     } while (0)
 
 #else
@@ -59,21 +59,21 @@
         }                                                                  \
     } while (0)
 
-#endif //MGB_ENABLE_LOGGING
-#endif //MGB_CUDA
+#endif  // MGB_ENABLE_LOGGING
+#endif  // MGB_CUDA
 
 #if MGB_ATLAS
-#include "megcore_atlas.h"
 #include <atomic>
+#include "megcore_atlas.h"
 
 #if MGB_ENABLE_LOGGING
-#define MGB_ATLAS_CHECK(expr)                                         \
-    do {                                                              \
-        aclError __acl_check_code = (expr);                           \
-        if (!mgb_likely(__acl_check_code == ACL_ERROR_NONE)) {        \
-            ::mgb::_on_atlas_error(#expr, __acl_check_code, __FILE__, \
-                                  __func__, __LINE__);                \
-        }                                                             \
+#define MGB_ATLAS_CHECK(expr)                                               \
+    do {                                                                    \
+        aclError __acl_check_code = (expr);                                 \
+        if (!mgb_likely(__acl_check_code == ACL_ERROR_NONE)) {              \
+            ::mgb::_on_atlas_error(                                         \
+                    #expr, __acl_check_code, __FILE__, __func__, __LINE__); \
+        }                                                                   \
     } while (0)
 #else
 #define MGB_ATLAS_CHECK(expr)                                           \
@@ -84,22 +84,22 @@
         }                                                               \
     } while (0)
 
-#endif //MGB_ENABLE_LOGGING
+#endif  // MGB_ENABLE_LOGGING
 
-#endif // MGB_ATLAS
+#endif  // MGB_ATLAS
 
 #if MGB_ROCM
 #include "hcc_detail/hcc_defs_prologue.h"
 #include "megcore_rocm.h"
 
 #if MGB_ENABLE_LOGGING
-#define MGB_ROCM_CHECK(expr)                                                  \
-    do {                                                                      \
-        hipError_t __hip_check_code = (expr);                                 \
-        if (!mgb_likely(__hip_check_code == hipSuccess)) {                    \
-            ::mgb::_on_hip_error(#expr, __hip_check_code, __FILE__, __func__, \
-                                 __LINE__);                                   \
-        }                                                                     \
+#define MGB_ROCM_CHECK(expr)                                                \
+    do {                                                                    \
+        hipError_t __hip_check_code = (expr);                               \
+        if (!mgb_likely(__hip_check_code == hipSuccess)) {                  \
+            ::mgb::_on_hip_error(                                           \
+                    #expr, __hip_check_code, __FILE__, __func__, __LINE__); \
+        }                                                                   \
     } while (0)
 #else
 #define MGB_ROCM_CHECK(expr)                                          \
@@ -115,58 +115,56 @@
 #endif
 
 #if MGB_CAMBRICON
-#include <cnrt.h>
 #include <cndev.h>
 #include <cnml.h>
+#include <cnrt.h>
 
 #if MGB_ENABLE_LOGGING
-#define MGB_CNRT_CHECK(expr)                                          \
-    do {                                                              \
-        cnrtRet_t __cnrt_check_code = (expr);                         \
-        if (mgb_unlikely(__cnrt_check_code != CNRT_RET_SUCCESS)) {    \
-            ::mgb::_on_cnrt_error(#expr, __cnrt_check_code, __FILE__, \
-                                  __func__, __LINE__);                \
-        }                                                             \
+#define MGB_CNRT_CHECK(expr)                                                 \
+    do {                                                                     \
+        cnrtRet_t __cnrt_check_code = (expr);                                \
+        if (mgb_unlikely(__cnrt_check_code != CNRT_RET_SUCCESS)) {           \
+            ::mgb::_on_cnrt_error(                                           \
+                    #expr, __cnrt_check_code, __FILE__, __func__, __LINE__); \
+        }                                                                    \
     } while (0)
-#define MGB_CNDEV_CHECK(expr)                                           \
-    do {                                                                \
-        cndevRet_t __cndev_check_code = (expr);                         \
-        if (mgb_unlikely(__cndev_check_code != CNDEV_SUCCESS)) {        \
-            ::mgb::_on_cndev_error(#expr, __cndev_check_code, __FILE__, \
-                                   __func__, __LINE__);                 \
-        }                                                               \
+#define MGB_CNDEV_CHECK(expr)                                                 \
+    do {                                                                      \
+        cndevRet_t __cndev_check_code = (expr);                               \
+        if (mgb_unlikely(__cndev_check_code != CNDEV_SUCCESS)) {              \
+            ::mgb::_on_cndev_error(                                           \
+                    #expr, __cndev_check_code, __FILE__, __func__, __LINE__); \
+        }                                                                     \
     } while (0)
-#define MGB_CNML_CHECK(expr)                                          \
-    do {                                                              \
-        cnmlStatus_t __cnml_check_code = (expr);                      \
-        if (mgb_unlikely(__cnml_check_code != CNML_STATUS_SUCCESS)) { \
-            ::mgb::_on_cnml_error(#expr, __cnml_check_code, __FILE__, \
-                                  __func__, __LINE__);                \
-        }                                                             \
+#define MGB_CNML_CHECK(expr)                                                 \
+    do {                                                                     \
+        cnmlStatus_t __cnml_check_code = (expr);                             \
+        if (mgb_unlikely(__cnml_check_code != CNML_STATUS_SUCCESS)) {        \
+            ::mgb::_on_cnml_error(                                           \
+                    #expr, __cnml_check_code, __FILE__, __func__, __LINE__); \
+        }                                                                    \
     } while (0)
 #else
-#define MGB_CNRT_CHECK(expr)                                       \
+#define MGB_CNRT_CHECK(expr)                                            \
     do {                                                                \
         cnrtRet_t __cnrt_check_code = (expr);                           \
         if (mgb_unlikely(__cnrt_check_code != CNRT_RET_SUCCESS)) {      \
             ::mgb::_on_cnrt_error(#expr, __cnrt_check_code, "", "", 1); \
         }                                                               \
     } while (0)
-#define MGB_CNDEV_CHECK(expr)                                               \
-    do {                                                                    \
-        cndevRet_t __cndev_check_code = (expr);                             \
-        if (mgb_unlikely(__cndev_check_code != CNDEV_SUCCESS)) {            \
-            ::mgb::_on_cndev_error(#expr, __cndev_check_code, __FILE__, "", \
-                                   "", 1);                                  \
-        }                                                                   \
+#define MGB_CNDEV_CHECK(expr)                                                       \
+    do {                                                                            \
+        cndevRet_t __cndev_check_code = (expr);                                     \
+        if (mgb_unlikely(__cndev_check_code != CNDEV_SUCCESS)) {                    \
+            ::mgb::_on_cndev_error(#expr, __cndev_check_code, __FILE__, "", "", 1); \
+        }                                                                           \
     } while (0)
-#define MGB_CNML_CHECK(expr)                                                  \
-    do {                                                                      \
-        cnmlStatus_t __cnml_check_code = (expr);                              \
-        if (mgb_unlikely(__cnml_check_code != CNML_STATUS_SUCCESS)) {         \
-            ::mgb::_on_cnml_error(#expr, __cnml_check_code, __FILE__, "", "", \
-                                  1);                                         \
-        }                                                                     \
+#define MGB_CNML_CHECK(expr)                                                      \
+    do {                                                                          \
+        cnmlStatus_t __cnml_check_code = (expr);                                  \
+        if (mgb_unlikely(__cnml_check_code != CNML_STATUS_SUCCESS)) {             \
+            ::mgb::_on_cnml_error(#expr, __cnml_check_code, __FILE__, "", "", 1); \
+        }                                                                         \
     } while (0)
 #endif  // MGB_ENABLE_LOGGING
 #endif  // MGB_CAMBRICON
@@ -188,31 +186,32 @@
 
 namespace mgb {
 #if MGB_ATLAS
-[[noreturn]] void _on_atlas_error(const char* expr, aclError err,
-                                  const char* file, const char* func, int line);
+[[noreturn]] void _on_atlas_error(
+        const char* expr, aclError err, const char* file, const char* func, int line);
 #endif
 
 #if MGB_CUDA
-[[noreturn]] void _on_cuda_error(const char* expr, cudaError_t err,
-                                 const char* file, const char* func, int line);
-[[noreturn]] void _on_cuda_cu_error(const char* expr, CUresult err,
-                                    const char* file, const char* func,
-                                    int line);
+[[noreturn]] void _on_cuda_error(
+        const char* expr, cudaError_t err, const char* file, const char* func,
+        int line);
+[[noreturn]] void _on_cuda_cu_error(
+        const char* expr, CUresult err, const char* file, const char* func, int line);
 #endif
 
 #if MGB_ROCM
-[[noreturn]] void _on_hip_error(const char* expr, hipError_t err,
-                                const char* file, const char* func, int line);
+[[noreturn]] void _on_hip_error(
+        const char* expr, hipError_t err, const char* file, const char* func, int line);
 #endif
 
 #if MGB_CAMBRICON
 const char* cnml_get_error_string(cnmlStatus_t err);
-[[noreturn]] void _on_cnrt_error(const char* expr, cnrtRet_t err,
-                                 const char* file, const char* func, int line);
-[[noreturn]] void _on_cndev_error(const char* expr, cndevRet_t err,
-                                  const char* file, const char* func, int line);
-[[noreturn]] void _on_cnml_error(const char* expr, cnmlStatus_t err,
-                                 const char* file, const char* func, int line);
+[[noreturn]] void _on_cnrt_error(
+        const char* expr, cnrtRet_t err, const char* file, const char* func, int line);
+[[noreturn]] void _on_cndev_error(
+        const char* expr, cndevRet_t err, const char* file, const char* func, int line);
+[[noreturn]] void _on_cnml_error(
+        const char* expr, cnmlStatus_t err, const char* file, const char* func,
+        int line);
 #endif
 
 class CPUDispatcher : public MegcoreCPUDispatcher {
@@ -271,8 +270,7 @@ public:
     T& get_user_data() const {
         ensure_async_init_finished();
         MGB_LOCK_GUARD(m_user_data_container_mtx);
-        return *m_user_data_container->get_user_data_or_create<T>(
-                std::make_shared<T>);
+        return *m_user_data_container->get_user_data_or_create<T>(std::make_shared<T>);
     }
 
     //! check whether a user data object has been registered
@@ -320,7 +318,6 @@ public:
             m_atlas_env.activate();
         }
 #endif
-
     }
 
     /*!
@@ -339,7 +336,7 @@ public:
         }
     }
 
-        // following are impls for various envs
+    // following are impls for various envs
 
 #if MGB_CUDA
     struct CudaEnv {
@@ -358,8 +355,8 @@ public:
     }
 
     //! init this as a cuda env asynchronously
-    void init_cuda_async(int dev, CompNode comp_node,
-                         const ContinuationCtx<cudaStream_t>& cont);
+    void init_cuda_async(
+            int dev, CompNode comp_node, const ContinuationCtx<cudaStream_t>& cont);
 #endif
 
 #if MGB_ATLAS
@@ -374,13 +371,13 @@ public:
             void init() {
                 MGB_LOCK_GUARD(mtx);
                 if (!initialized) {
-                    const char* config_path =
-                            MGB_GETENV("MGB_ATLAS_PROFILE_JSON");
+                    const char* config_path = MGB_GETENV("MGB_ATLAS_PROFILE_JSON");
                     auto acl_err = aclInit(config_path);
                     initialized = acl_err == ACL_ERROR_NONE;
-                    mgb_throw_if(!initialized, AtlasError,
-                                 "acl initialize failed: (acl: %s)",
-                                 megcore::atlas::get_error_str(acl_err));
+                    mgb_throw_if(
+                            !initialized, AtlasError,
+                            "acl initialize failed: (acl: %s)",
+                            megcore::atlas::get_error_str(acl_err));
                 }
             }
             ~InitStatus() {
@@ -392,9 +389,7 @@ public:
         };
         static InitStatus init_status;
 
-        static void init() {
-            init_status.init();
-        }
+        static void init() { init_status.init(); }
 
         void activate() const {
             init();
@@ -404,9 +399,10 @@ public:
                 MGB_ATLAS_CHECK(aclrtSetDevice(device));
             } else {
                 MGB_ATLAS_CHECK(err);
-                mgb_assert(err == ACL_ERROR_NONE,
-                           "Failed to invoke aclrtGetDevice, get %s(%d)",
-                           megcore::atlas::get_error_str(err), err);
+                mgb_assert(
+                        err == ACL_ERROR_NONE,
+                        "Failed to invoke aclrtGetDevice, get %s(%d)",
+                        megcore::atlas::get_error_str(err), err);
             }
         }
     };
@@ -439,8 +435,8 @@ public:
     }
 
     //! init this as a rocm env asynchronously
-    void init_rocm_async(int dev, CompNode comp_node,
-                         const ContinuationCtx<hipStream_t>& cont);
+    void init_rocm_async(
+            int dev, CompNode comp_node, const ContinuationCtx<hipStream_t>& cont);
 
 #endif
 
@@ -462,12 +458,12 @@ public:
                     initialized &= cndev_err == CNDEV_SUCCESS;
                     auto cnml_err = cnmlInit(0);
                     initialized &= cnml_err == CNML_STATUS_SUCCESS;
-                    mgb_throw_if(!initialized, CnrtError,
-                                 "cnrt/cndev/cnml initialize failed: (cnrt:%d, "
-                                 "cndev:%d, cnml: %d)",
-                                 static_cast<int>(cnrt_err),
-                                 static_cast<int>(cndev_err),
-                                 static_cast<int>(cnml_err));
+                    mgb_throw_if(
+                            !initialized, CnrtError,
+                            "cnrt/cndev/cnml initialize failed: (cnrt:%d, "
+                            "cndev:%d, cnml: %d)",
+                            static_cast<int>(cnrt_err), static_cast<int>(cndev_err),
+                            static_cast<int>(cnml_err));
                 }
             }
             ~InitStatus() {
@@ -497,8 +493,8 @@ public:
         return m_cnrt_env;
     }
 
-    void init_cnrt(int dev, CompNode comp_node,
-                   const ContinuationCtx<cnrtQueue_t>& cont);
+    void init_cnrt(
+            int dev, CompNode comp_node, const ContinuationCtx<cnrtQueue_t>& cont);
 #endif
 
     struct CpuEnv {
@@ -508,9 +504,7 @@ public:
 
         std::shared_ptr<CPUDispatcher> dispatcher;
 
-        void dispatch(Task&& task) const {
-            dispatcher->dispatch(std::move(task));
-        }
+        void dispatch(Task&& task) const { dispatcher->dispatch(std::move(task)); }
 
         void dispatch(MultiThreadingTask&& task, size_t parallelism) const {
             dispatcher->dispatch(std::move(task), parallelism);

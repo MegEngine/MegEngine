@@ -215,6 +215,19 @@ def PermutationRNG: MgbHashableOp<"PermutationRNG", [PermutationRNGParam]> {
   let cmpFunction = [{return $0.handle == $1.handle && $0.dtype == $1.dtype;}];
 }
 
+def ShuffleRNG: MgbHashableOp<"ShuffleRNG", [ShuffleRNGParam]> {
+  let extraArguments = (ins
+    MgbSizeTAddr:$handle
+  );
+  let hashFunction = [{
+    return mgb::hash_pair_combine(
+      mgb::hash($_self.dyn_typeinfo()),
+      mgb::hash($_self.handle)
+      );
+  }];
+  let cmpFunction = [{return $0.handle == $1.handle;}];
+}
+
 def Linspace: MgbHashableOp<"Linspace", [LinspaceParam]> {
   let extraArguments = (ins
     MgbCompNodeAttr:$comp_node
@@ -377,10 +390,38 @@ def CambriconRuntime: MgbHashableOp<"CambriconRuntime"> {
 
 def CvtColor: MgbHashableOp<"CvtColor", [CvtColorParam]>;
 
-def CheckHasInf: MgbHashableOp<"CheckHasInf", [EmptyParam]>;
+def CheckNonFinite: MgbHashableOp<"CheckNonFinite", [EmptyParam]>;
 
 def FastpathCopy: MgbHashableOp<"FastpathCopy">;
 
+def ExternOpr: MgbHashableOp<"ExternOpr"> {
+  let extraArguments = (ins
+    MgbArrayAttr<MgbArrayAttr<MgbSizeTAddr>>:$output_shapes,
+    MgbStringAttr:$name,
+    MgbStringAttr:$data,
+    MgbSizeTAddr:$data_len,
+    MgbArrayAttr<MgbDTypeAttr>:$output_dtypes
+  );
+  let hashFunction = [{
+    return mgb::hash_pair_combine(
+      mgb::hash($_self.dyn_typeinfo()),
+      mgb::hash_pair_combine(
+        mgb::hash($_self.name),
+        mgb::hash($_self.data))
+      );
+  }];
+}
+
 def Cumsum: MgbHashableOp<"Cumsum", [CumsumParam]>;
+
+def Split: MgbHashableOp<"Split", [EmptyParam]> {
+  let extraArguments = (ins
+    MgbI32Attr:$axis
+  );
+}
+
+def Padding: MgbHashableOp<"Padding", [PaddingParam]>;
+
+def LRN: MgbHashableOp<"LRN", [LRNParam]>;
 
 #endif // MGB_OPS

@@ -26,10 +26,10 @@ template <>
 class Conv1x1Kerns<MatrixMulImpl::AlgoBase::PackMode::DEFAULT> {
 public:
     //! get_bundle
-    WorkspaceBundle get_bundle(const ConvBiasImpl::NCBKernSizeParam& param,
-                               const MatrixMulImpl::KernSizeParam& matmul_param,
-                               const MatrixMulImpl::AlgoBase* matmul_algo,
-                               size_t oc_tile_size) {
+    WorkspaceBundle get_bundle(
+            const ConvBiasImpl::NCBKernSizeParam& param,
+            const MatrixMulImpl::KernSizeParam& matmul_param,
+            const MatrixMulImpl::AlgoBase* matmul_algo, size_t oc_tile_size) {
         size_t GROUP = param.filter_meta.group;
         size_t OC = param.filter_meta.ocpg;
         size_t BATCH = param.n;
@@ -59,39 +59,34 @@ public:
     }
 
     SmallVector<ConvBiasImpl::NCBKern> get_kern(
-            const ConvBiasImpl::NCBKernSizeParam& param,
-            WorkspaceBundle& whole_bundle, WorkspaceBundle& matmul_bundle,
-            WorkspaceBundle& thread_bundle,
+            const ConvBiasImpl::NCBKernSizeParam& param, WorkspaceBundle& whole_bundle,
+            WorkspaceBundle& matmul_bundle, WorkspaceBundle& thread_bundle,
             Conv1x1StrategyBase* conv1x1_strategy,
             const MatrixMulImpl::AlgoBase* matmul_algo, size_t oc_block_size) {
-        auto kern_packA =
-                [whole_bundle, matmul_bundle, param, matmul_algo, oc_block_size,
-                 conv1x1_strategy](
-                        const ConvBiasImpl::NCBKernParam& ncb_param,
-                        const ConvBiasImpl::NCBKernIndex& ncb_index) mutable {
-                    conv1x1_strategy->packA(whole_bundle, matmul_bundle,
-                                            oc_block_size, matmul_algo, param,
-                                            ncb_param, std::move(ncb_index));
-                };
-        auto kern_packB =
-                [whole_bundle, matmul_bundle, param, matmul_algo,
-                 conv1x1_strategy](
-                        const ConvBiasImpl::NCBKernParam& ncb_param,
-                        const ConvBiasImpl::NCBKernIndex& ncb_index) mutable {
-                    conv1x1_strategy->packB(whole_bundle, matmul_bundle,
-                                            matmul_algo, param, ncb_param,
-                                            std::move(ncb_index));
-                };
-        auto kern_compt =
-                [whole_bundle, matmul_bundle, thread_bundle, matmul_algo, param,
-                 oc_block_size, conv1x1_strategy](
-                        const ConvBiasImpl::NCBKernParam& ncb_param,
-                        const ConvBiasImpl::NCBKernIndex& ncb_index) mutable {
-                    conv1x1_strategy->exec(whole_bundle, matmul_bundle,
-                                           thread_bundle, oc_block_size,
-                                           matmul_algo, param, ncb_param,
-                                           std::move(ncb_index));
-                };
+        auto kern_packA = [whole_bundle, matmul_bundle, param, matmul_algo,
+                           oc_block_size, conv1x1_strategy](
+                                  const ConvBiasImpl::NCBKernParam& ncb_param,
+                                  const ConvBiasImpl::NCBKernIndex& ncb_index) mutable {
+            conv1x1_strategy->packA(
+                    whole_bundle, matmul_bundle, oc_block_size, matmul_algo, param,
+                    ncb_param, std::move(ncb_index));
+        };
+        auto kern_packB = [whole_bundle, matmul_bundle, param, matmul_algo,
+                           conv1x1_strategy](
+                                  const ConvBiasImpl::NCBKernParam& ncb_param,
+                                  const ConvBiasImpl::NCBKernIndex& ncb_index) mutable {
+            conv1x1_strategy->packB(
+                    whole_bundle, matmul_bundle, matmul_algo, param, ncb_param,
+                    std::move(ncb_index));
+        };
+        auto kern_compt = [whole_bundle, matmul_bundle, thread_bundle, matmul_algo,
+                           param, oc_block_size, conv1x1_strategy](
+                                  const ConvBiasImpl::NCBKernParam& ncb_param,
+                                  const ConvBiasImpl::NCBKernIndex& ncb_index) mutable {
+            conv1x1_strategy->exec(
+                    whole_bundle, matmul_bundle, thread_bundle, oc_block_size,
+                    matmul_algo, param, ncb_param, std::move(ncb_index));
+        };
         size_t GROUP = param.filter_meta.group;
         size_t BATCH = param.n;
         size_t OC = param.filter_meta.ocpg;
@@ -105,19 +100,17 @@ public:
         return ret_kern;
     }
     SmallVector<ConvBiasImpl::NCBKern> get_kern_preprocess(
-            const ConvBiasImpl::NCBKernSizeParam& param,
-            WorkspaceBundle& whole_bundle, WorkspaceBundle& matmul_bundle,
-            Conv1x1StrategyBase* conv1x1_strategy,
+            const ConvBiasImpl::NCBKernSizeParam& param, WorkspaceBundle& whole_bundle,
+            WorkspaceBundle& matmul_bundle, Conv1x1StrategyBase* conv1x1_strategy,
             const MatrixMulImpl::AlgoBase* matmul_algo, size_t oc_block_size) {
-        auto kern_packA =
-                [whole_bundle, matmul_bundle, param, matmul_algo, oc_block_size,
-                 conv1x1_strategy](
-                        const ConvBiasImpl::NCBKernParam& ncb_param,
-                        const ConvBiasImpl::NCBKernIndex& ncb_index) mutable {
-                    conv1x1_strategy->packA(whole_bundle, matmul_bundle,
-                                            oc_block_size, matmul_algo, param,
-                                            ncb_param, std::move(ncb_index));
-                };
+        auto kern_packA = [whole_bundle, matmul_bundle, param, matmul_algo,
+                           oc_block_size, conv1x1_strategy](
+                                  const ConvBiasImpl::NCBKernParam& ncb_param,
+                                  const ConvBiasImpl::NCBKernIndex& ncb_index) mutable {
+            conv1x1_strategy->packA(
+                    whole_bundle, matmul_bundle, oc_block_size, matmul_algo, param,
+                    ncb_param, std::move(ncb_index));
+        };
         size_t GROUP = param.filter_meta.group;
         size_t OC = param.filter_meta.ocpg;
         size_t oc_blocks_per_group = div_ceil(OC, oc_block_size);
@@ -125,17 +118,16 @@ public:
         ret_kern.push_back({kern_packA, {GROUP, oc_blocks_per_group}});
         return ret_kern;
     }
-
 };
 
-template<>
+template <>
 class Conv1x1Kerns<MatrixMulImpl::AlgoBase::PackMode::ONLY_PACKA> {
 public:
     //! get_bundle
-    WorkspaceBundle get_bundle(const ConvBiasImpl::NCBKernSizeParam& param,
-                               const MatrixMulImpl::KernSizeParam& matmul_param,
-                               const MatrixMulImpl::AlgoBase* matmul_algo,
-                               size_t oc_tile_size) {
+    WorkspaceBundle get_bundle(
+            const ConvBiasImpl::NCBKernSizeParam& param,
+            const MatrixMulImpl::KernSizeParam& matmul_param,
+            const MatrixMulImpl::AlgoBase* matmul_algo, size_t oc_tile_size) {
         size_t GROUP = param.filter_meta.group;
         size_t OC = param.filter_meta.ocpg;
         //! bundle per thread
@@ -156,34 +148,29 @@ public:
                         ? 0
                         : packa_bytes_per_oc_tile * oc_tiles_per_group * GROUP;
 
-        return WorkspaceBundle{nullptr,
-                               {all_packa_bytes, 0, all_threads_bytes}};
+        return WorkspaceBundle{nullptr, {all_packa_bytes, 0, all_threads_bytes}};
     }
     SmallVector<ConvBiasImpl::NCBKern> get_kern(
-            const ConvBiasImpl::NCBKernSizeParam& param,
-            WorkspaceBundle& whole_bundle, WorkspaceBundle& matmul_bundle,
-            WorkspaceBundle& thread_bundle,
+            const ConvBiasImpl::NCBKernSizeParam& param, WorkspaceBundle& whole_bundle,
+            WorkspaceBundle& matmul_bundle, WorkspaceBundle& thread_bundle,
             Conv1x1StrategyBase* conv1x1_strategy,
             const MatrixMulImpl::AlgoBase* matmul_algo, size_t oc_block_size) {
-        auto kern_packA =
-                [whole_bundle, matmul_bundle, param, matmul_algo, oc_block_size,
-                 conv1x1_strategy](
-                        const ConvBiasImpl::NCBKernParam& ncb_param,
-                        const ConvBiasImpl::NCBKernIndex& ncb_index) mutable {
-                    conv1x1_strategy->packA(whole_bundle, matmul_bundle,
-                                            oc_block_size, matmul_algo, param,
-                                            ncb_param, std::move(ncb_index));
-                };
-        auto kern_compt =
-                [whole_bundle, matmul_bundle, thread_bundle, matmul_algo, param,
-                 oc_block_size, conv1x1_strategy](
-                        const ConvBiasImpl::NCBKernParam& ncb_param,
-                        const ConvBiasImpl::NCBKernIndex& ncb_index) mutable {
-                    conv1x1_strategy->exec(whole_bundle, matmul_bundle,
-                                           thread_bundle, oc_block_size,
-                                           matmul_algo, param, ncb_param,
-                                           std::move(ncb_index));
-                };
+        auto kern_packA = [whole_bundle, matmul_bundle, param, matmul_algo,
+                           oc_block_size, conv1x1_strategy](
+                                  const ConvBiasImpl::NCBKernParam& ncb_param,
+                                  const ConvBiasImpl::NCBKernIndex& ncb_index) mutable {
+            conv1x1_strategy->packA(
+                    whole_bundle, matmul_bundle, oc_block_size, matmul_algo, param,
+                    ncb_param, std::move(ncb_index));
+        };
+        auto kern_compt = [whole_bundle, matmul_bundle, thread_bundle, matmul_algo,
+                           param, oc_block_size, conv1x1_strategy](
+                                  const ConvBiasImpl::NCBKernParam& ncb_param,
+                                  const ConvBiasImpl::NCBKernIndex& ncb_index) mutable {
+            conv1x1_strategy->exec(
+                    whole_bundle, matmul_bundle, thread_bundle, oc_block_size,
+                    matmul_algo, param, ncb_param, std::move(ncb_index));
+        };
         size_t GROUP = param.filter_meta.group;
         size_t BATCH = param.n;
         size_t OC = param.filter_meta.ocpg;
@@ -196,19 +183,17 @@ public:
         return ret_kern;
     }
     SmallVector<ConvBiasImpl::NCBKern> get_kern_preprocess(
-            const ConvBiasImpl::NCBKernSizeParam& param,
-            WorkspaceBundle& whole_bundle, WorkspaceBundle& matmul_bundle,
-            Conv1x1StrategyBase* conv1x1_strategy,
+            const ConvBiasImpl::NCBKernSizeParam& param, WorkspaceBundle& whole_bundle,
+            WorkspaceBundle& matmul_bundle, Conv1x1StrategyBase* conv1x1_strategy,
             const MatrixMulImpl::AlgoBase* matmul_algo, size_t oc_block_size) {
-        auto kern_packA =
-                [whole_bundle, matmul_bundle, param, matmul_algo, oc_block_size,
-                 conv1x1_strategy](
-                        const ConvBiasImpl::NCBKernParam& ncb_param,
-                        const ConvBiasImpl::NCBKernIndex& ncb_index) mutable {
-                    conv1x1_strategy->packA(whole_bundle, matmul_bundle,
-                                            oc_block_size, matmul_algo, param,
-                                            ncb_param, std::move(ncb_index));
-                };
+        auto kern_packA = [whole_bundle, matmul_bundle, param, matmul_algo,
+                           oc_block_size, conv1x1_strategy](
+                                  const ConvBiasImpl::NCBKernParam& ncb_param,
+                                  const ConvBiasImpl::NCBKernIndex& ncb_index) mutable {
+            conv1x1_strategy->packA(
+                    whole_bundle, matmul_bundle, oc_block_size, matmul_algo, param,
+                    ncb_param, std::move(ncb_index));
+        };
         size_t GROUP = param.filter_meta.group;
         size_t OC = param.filter_meta.ocpg;
         size_t oc_blocks_per_group = div_ceil(OC, oc_block_size);
@@ -218,38 +203,34 @@ public:
     }
 };
 
-template<>
+template <>
 class Conv1x1Kerns<MatrixMulImpl::AlgoBase::PackMode::NO_PACK> {
 public:
     //! get_bundle
-    WorkspaceBundle get_bundle(const ConvBiasImpl::NCBKernSizeParam& param,
-                               const MatrixMulImpl::KernSizeParam& matmul_param,
-                               const MatrixMulImpl::AlgoBase* matmul_algo,
-                               size_t oc_tile_size) {
+    WorkspaceBundle get_bundle(
+            const ConvBiasImpl::NCBKernSizeParam& param,
+            const MatrixMulImpl::KernSizeParam& matmul_param,
+            const MatrixMulImpl::AlgoBase* matmul_algo, size_t oc_tile_size) {
         size_t matmul_size = matmul_algo->get_workspace(matmul_param);
-        auto thread_bundle =
-                utils::get_thread_bundle(param, matmul_size, oc_tile_size);
+        auto thread_bundle = utils::get_thread_bundle(param, matmul_size, oc_tile_size);
         //! size per thread
         size_t all_threads_bytes =
                 thread_bundle.total_size_in_bytes() * param.nr_threads;
         return WorkspaceBundle{nullptr, {0, 0, all_threads_bytes}};
     }
     SmallVector<ConvBiasImpl::NCBKern> get_kern(
-            const ConvBiasImpl::NCBKernSizeParam& param,
-            WorkspaceBundle& whole_bundle, WorkspaceBundle& matmul_bundle,
-            WorkspaceBundle& thread_bundle,
+            const ConvBiasImpl::NCBKernSizeParam& param, WorkspaceBundle& whole_bundle,
+            WorkspaceBundle& matmul_bundle, WorkspaceBundle& thread_bundle,
             Conv1x1StrategyBase* conv1x1_strategy,
             const MatrixMulImpl::AlgoBase* matmul_algo, size_t oc_block_size) {
-        auto kern_compt =
-                [whole_bundle, matmul_bundle, thread_bundle, matmul_algo, param,
-                 oc_block_size, conv1x1_strategy](
-                        const ConvBiasImpl::NCBKernParam& ncb_param,
-                        const ConvBiasImpl::NCBKernIndex& ncb_index) mutable {
-                    conv1x1_strategy->exec(whole_bundle, matmul_bundle,
-                                           thread_bundle, oc_block_size,
-                                           matmul_algo, param, ncb_param,
-                                           std::move(ncb_index));
-                };
+        auto kern_compt = [whole_bundle, matmul_bundle, thread_bundle, matmul_algo,
+                           param, oc_block_size, conv1x1_strategy](
+                                  const ConvBiasImpl::NCBKernParam& ncb_param,
+                                  const ConvBiasImpl::NCBKernIndex& ncb_index) mutable {
+            conv1x1_strategy->exec(
+                    whole_bundle, matmul_bundle, thread_bundle, oc_block_size,
+                    matmul_algo, param, ncb_param, std::move(ncb_index));
+        };
         size_t GROUP = param.filter_meta.group;
         size_t BATCH = param.n;
         size_t OC = param.filter_meta.ocpg;
@@ -259,9 +240,8 @@ public:
         return ret_kern;
     }
     SmallVector<ConvBiasImpl::NCBKern> get_kern_preprocess(
-            const ConvBiasImpl::NCBKernSizeParam&, WorkspaceBundle&,
-            WorkspaceBundle&, Conv1x1StrategyBase*,
-            const MatrixMulImpl::AlgoBase*, size_t) {
+            const ConvBiasImpl::NCBKernSizeParam&, WorkspaceBundle&, WorkspaceBundle&,
+            Conv1x1StrategyBase*, const MatrixMulImpl::AlgoBase*, size_t) {
         return {};
     }
 };

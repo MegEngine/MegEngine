@@ -9,8 +9,8 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-#include "src/cuda/query_blocksize.cuh"
 #include "src/cuda/deformable_conv/kimpl/deformable_conv.cuh"
+#include "src/cuda/query_blocksize.cuh"
 
 using namespace megdnn;
 using namespace cuda;
@@ -18,9 +18,9 @@ using namespace deformable_conv;
 
 namespace {
 
-__device__ float dmcn_im2col_bilinear(const float* bottom_data,
-                                      const int data_width, const int height,
-                                      const int width, float h, float w) {
+__device__ float dmcn_im2col_bilinear(
+        const float* bottom_data, const int data_width, const int height,
+        const int width, float h, float w) {
     int h_low = floor(h);
     int w_low = floor(w);
     int h_high = h_low + 1;
@@ -49,11 +49,10 @@ __device__ float dmcn_im2col_bilinear(const float* bottom_data,
     return val;
 }
 
-__device__ float dmcn_get_gradient_weight(float argmax_h, float argmax_w,
-                                          const int h, const int w,
-                                          const int height, const int width) {
-    if (argmax_h <= -1 || argmax_h >= height || argmax_w <= -1 ||
-        argmax_w >= width) {
+__device__ float dmcn_get_gradient_weight(
+        float argmax_h, float argmax_w, const int h, const int w, const int height,
+        const int width) {
+    if (argmax_h <= -1 || argmax_h >= height || argmax_w <= -1 || argmax_w >= width) {
         return 0;
     }
 
@@ -74,13 +73,10 @@ __device__ float dmcn_get_gradient_weight(float argmax_h, float argmax_w,
     return weight;
 }
 
-__device__ float dmcn_get_coordinate_weight(float argmax_h, float argmax_w,
-                                            const int height, const int width,
-                                            const float* im_data,
-                                            const int data_width,
-                                            const int bp_dir) {
-    if (argmax_h <= -1 || argmax_h >= height || argmax_w <= -1 ||
-        argmax_w >= width) {
+__device__ float dmcn_get_coordinate_weight(
+        float argmax_h, float argmax_w, const int height, const int width,
+        const float* im_data, const int data_width, const int bp_dir) {
+    if (argmax_h <= -1 || argmax_h >= height || argmax_w <= -1 || argmax_w >= width) {
         return 0;
     }
 
@@ -122,8 +118,8 @@ __device__ float dmcn_get_coordinate_weight(float argmax_h, float argmax_w,
     return weight;
 }
 
-__global__ void deformable_im2col(Param p, const float* im, const float* offset,
-                                  const float* mask, float* col) {
+__global__ void deformable_im2col(
+        Param p, const float* im, const float* offset, const float* mask, float* col) {
     size_t n = blockIdx.y;
     const size_t N = p.batch_sz;
     const size_t loops = p.IC * p.OH * p.OW;
@@ -146,17 +142,13 @@ __global__ void deformable_im2col(Param p, const float* im, const float* offset,
         const float* im_ptr = &im[ic * p.IH * p.IW];
         const float* offset_ptr =
                 &offset[(dg * 2 * p.FH * p.FW * p.OH + oh) * p.OW + ow];
-        const float* mask_ptr =
-                &mask[(dg * p.FH * p.FW * p.OH + oh) * p.OW + ow];
-        float* col_ptr =
-                &col[((((ic * p.FH * p.FW) * N + n) * p.OH + oh) * p.OW + ow)];
+        const float* mask_ptr = &mask[(dg * p.FH * p.FW * p.OH + oh) * p.OW + ow];
+        float* col_ptr = &col[((((ic * p.FH * p.FW) * N + n) * p.OH + oh) * p.OW + ow)];
 
         for (int i = 0; i < p.FH; ++i)
             for (int j = 0; j < p.FW; ++j) {
-                const float off_h =
-                        offset_ptr[(2 * (i * p.FW + j)) * p.OH * p.OW];
-                const float off_w =
-                        offset_ptr[(2 * (i * p.FW + j) + 1) * p.OH * p.OW];
+                const float off_h = offset_ptr[(2 * (i * p.FW + j)) * p.OH * p.OW];
+                const float off_w = offset_ptr[(2 * (i * p.FW + j) + 1) * p.OH * p.OW];
                 const float m = mask_ptr[(i * p.FW + j) * p.OH * p.OW];
 
                 float val = 0.f;
@@ -169,9 +161,8 @@ __global__ void deformable_im2col(Param p, const float* im, const float* offset,
     }
 }
 
-__global__ void deformable_col2im(Param p, const float* col,
-                                  const float* offset, const float* mask,
-                                  float* im) {
+__global__ void deformable_col2im(
+        Param p, const float* col, const float* offset, const float* mask, float* im) {
     size_t dg = blockIdx.y % p.deformable_group;
     size_t n = blockIdx.y / p.deformable_group;
     const size_t loops = p.FH * p.FW * p.OH * p.OW;
@@ -194,8 +185,7 @@ __global__ void deformable_col2im(Param p, const float* col,
         const float* mask_ptr = &mask[dg * p.FH * p.FW * p.OH * p.OW];
 
         const int off_h_idx = ((2 * (fh * p.FW + fw)) * p.OH + oh) * p.OW + ow;
-        const int off_w_idx =
-                ((2 * (fh * p.FW + fw) + 1) * p.OH + oh) * p.OW + ow;
+        const int off_w_idx = ((2 * (fh * p.FW + fw) + 1) * p.OH + oh) * p.OW + ow;
         const int mask_idx = ((fh * p.FW + fw) * p.OH + oh) * p.OW + ow;
 
         const float off_h = offset_ptr[off_h_idx];
@@ -209,8 +199,7 @@ __global__ void deformable_col2im(Param p, const float* col,
             const int iw = ow * p.SW - p.PW;
 
             const int col_idx =
-                    (((((ic * p.FH) + fh) * p.FW + fw) * N + n) * p.OH + oh) *
-                            p.OW +
+                    (((((ic * p.FH) + fh) * p.FW + fw) * N + n) * p.OH + oh) * p.OW +
                     ow;
             const float top_grad = col[col_idx] * m;
 
@@ -219,16 +208,13 @@ __global__ void deformable_col2im(Param p, const float* col,
 
             const int h_hat = (int)h, w_hat = (int)w;
 #pragma unroll
-            for (int dy = -2; dy <= 2;
-                 dy++) {  // use 0-1 is better, same for dx
+            for (int dy = -2; dy <= 2; dy++) {  // use 0-1 is better, same for dx
 #pragma unroll
                 for (int dx = -2; dx <= 2; dx++) {
-                    if (h_hat + dy >= 0 && h_hat + dy < p.IH &&
-                        w_hat + dx >= 0 && w_hat + dx < p.IW &&
-                        abs(h - (h_hat + dy)) < 1 &&
+                    if (h_hat + dy >= 0 && h_hat + dy < p.IH && w_hat + dx >= 0 &&
+                        w_hat + dx < p.IW && abs(h - (h_hat + dy)) < 1 &&
                         abs(w - (w_hat + dx)) < 1) {
-                        int bottom_pos =
-                                (ic * p.IH + h_hat + dy) * p.IW + w_hat + dx;
+                        int bottom_pos = (ic * p.IH + h_hat + dy) * p.IW + w_hat + dx;
                         float weight = dmcn_get_gradient_weight(
                                 h, w, h_hat + dy, w_hat + dx, p.IH, p.IW);
                         atomicAdd(&im[bottom_pos], weight * top_grad);
@@ -239,9 +225,9 @@ __global__ void deformable_col2im(Param p, const float* col,
     }
 }
 
-__global__ void deformable_col2coord(Param p, const float* im, const float* col,
-                                     const float* offset, const float* mask,
-                                     float* offset_grad, float* mask_grad) {
+__global__ void deformable_col2coord(
+        Param p, const float* im, const float* col, const float* offset,
+        const float* mask, float* offset_grad, float* mask_grad) {
     size_t n = blockIdx.y;
     const size_t N = p.batch_sz;
     const size_t loops = p.deformable_group * p.FH * p.FW * 2 * p.OH * p.OW;
@@ -263,8 +249,7 @@ __global__ void deformable_col2coord(Param p, const float* im, const float* col,
         const int oh = (idx / 2 / p.OW) % p.OH;
         const int fw = (idx / 2 / p.OW / p.OH) % p.FW;
         const int fh = (idx / 2 / p.OW / p.OH / p.FW) % p.FH;
-        const int dg =
-                (idx / 2 / p.OW / p.OH / p.FW / p.FH) % p.deformable_group;
+        const int dg = (idx / 2 / p.OW / p.OH / p.FW / p.FH) % p.deformable_group;
 
         const int ih = oh * p.SH - p.PH;
         const int iw = ow * p.SW - p.PW;
@@ -272,14 +257,11 @@ __global__ void deformable_col2coord(Param p, const float* im, const float* col,
         const float* offset_ptr = &offset[dg * 2 * p.FH * p.FW * p.OH * p.OW];
         const float* mask_ptr = &mask[dg * p.FH * p.FW * p.OH * p.OW];
 
-        float* offset_grad_ptr =
-                &offset_grad[dg * 2 * p.FH * p.FW * p.OH * p.OW];
+        float* offset_grad_ptr = &offset_grad[dg * 2 * p.FH * p.FW * p.OH * p.OW];
         float* mask_grad_ptr = &mask_grad[dg * p.FH * p.FW * p.OH * p.OW];
 
-        const int offset_h_idx =
-                ((2 * (fh * p.FW + fw)) * p.OH + oh) * p.OW + ow;
-        const int offset_w_idx =
-                ((2 * (fh * p.FW + fw) + 1) * p.OH + oh) * p.OW + ow;
+        const int offset_h_idx = ((2 * (fh * p.FW + fw)) * p.OH + oh) * p.OW + ow;
+        const int offset_w_idx = ((2 * (fh * p.FW + fw) + 1) * p.OH + oh) * p.OW + ow;
         const int mask_idx = ((fh * p.FW + fw) * p.OH + oh) * p.OW + ow;
         const int offset_grad_idx = (hw == 0) ? offset_h_idx : offset_w_idx;
 
@@ -295,25 +277,23 @@ __global__ void deformable_col2coord(Param p, const float* im, const float* col,
         for (int ic = ic_l; ic < ic_r; ++ic) {
             const float* im_ptr = &im[ic * p.IH * p.IW];
             const int col_idx =
-                    (((((ic * p.FH + fh) * p.FW + fw) * N + n) * p.OH + oh) *
-                             p.OW +
+                    (((((ic * p.FH + fh) * p.FW + fw) * N + n) * p.OH + oh) * p.OW +
                      ow);
             const float col_grad = col[col_idx];
 
             if (h <= -1 || w <= -1 || h >= p.IH || w >= p.IW) {
                 h = w = -2;
             } else if (hw % 2 == 0) {
-                mval += col_grad *
-                        dmcn_im2col_bilinear(im_ptr, p.IW, p.IH, p.IW, h, w);
+                mval += col_grad * dmcn_im2col_bilinear(im_ptr, p.IW, p.IH, p.IW, h, w);
             }
             const float top_grad = col_grad * m;
-            const float weight = dmcn_get_coordinate_weight(h, w, p.IH, p.IW,
-                                                            im_ptr, p.IW, hw);
+            const float weight =
+                    dmcn_get_coordinate_weight(h, w, p.IH, p.IW, im_ptr, p.IW, hw);
             val += weight * top_grad;
         }
 
         offset_grad_ptr[offset_grad_idx] = val;
-        if (hw % 2 ==0) {
+        if (hw % 2 == 0) {
             mask_grad_ptr[mask_idx] = mval;
         }
     }
@@ -325,36 +305,38 @@ namespace megdnn {
 namespace cuda {
 namespace deformable_conv {
 
-void im2col(const float* dev_im, const float* dev_offset, const float* dev_mask,
-            float* dev_col, const Param& p) {
+void im2col(
+        const float* dev_im, const float* dev_offset, const float* dev_mask,
+        float* dev_col, const Param& p) {
     dim3 grid;
     size_t loops = p.IC * p.OH * p.OW;
     int nr_thds = query_blocksize_for_kernel(deformable_im2col);
 
     grid.x = DIVUP(loops, nr_thds), grid.y = p.batch_sz;
 
-    deformable_im2col<<<grid, nr_thds, 0, p.stream>>>(p, dev_im, dev_offset,
-                                                         dev_mask, dev_col);
+    deformable_im2col<<<grid, nr_thds, 0, p.stream>>>(
+            p, dev_im, dev_offset, dev_mask, dev_col);
     after_kernel_launch();
 }
 
-void col2im(const float* dev_col, const float* dev_offset,
-            const float* dev_mask, float* dev_im_grad, const Param& p) {
+void col2im(
+        const float* dev_col, const float* dev_offset, const float* dev_mask,
+        float* dev_im_grad, const Param& p) {
     dim3 grid;
     size_t loops = p.FH * p.FW * p.OH * p.OW;
     int nr_thds = query_blocksize_for_kernel(deformable_col2im);
 
     grid.x = DIVUP(loops, nr_thds), grid.y = p.batch_sz * p.deformable_group;
 
-    deformable_col2im<<<grid, nr_thds, 0, p.stream>>>(p, dev_col, dev_offset,
-                                                         dev_mask, dev_im_grad);
+    deformable_col2im<<<grid, nr_thds, 0, p.stream>>>(
+            p, dev_col, dev_offset, dev_mask, dev_im_grad);
     after_kernel_launch();
 }
 
-void col2im_coord(const float* dev_im, const float* dev_col,
-                  const float* dev_offset, const float* dev_mask,
-                  float* dev_offset_grad, float* dev_mask_grad,
-                  const Param& p) {
+void col2im_coord(
+        const float* dev_im, const float* dev_col, const float* dev_offset,
+        const float* dev_mask, float* dev_offset_grad, float* dev_mask_grad,
+        const Param& p) {
     dim3 grid;
     size_t loops = 2 * p.FH * p.FW * p.OH * p.OW * p.deformable_group;
     int nr_thds = query_blocksize_for_kernel(deformable_col2coord);
@@ -363,8 +345,7 @@ void col2im_coord(const float* dev_im, const float* dev_col,
     grid.y = p.batch_sz;
 
     deformable_col2coord<<<grid, nr_thds, 0, p.stream>>>(
-            p, dev_im, dev_col, dev_offset, dev_mask, dev_offset_grad,
-            dev_mask_grad);
+            p, dev_im, dev_col, dev_offset, dev_mask, dev_offset_grad, dev_mask_grad);
     after_kernel_launch();
 }
 

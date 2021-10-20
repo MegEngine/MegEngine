@@ -24,27 +24,26 @@ using namespace opr;
 namespace mgb {
 namespace opr {
 namespace intl {
-    template<>
-    struct MegDNNOprInitPostCtor<Argmax> {
-        static void apply(cg::OperatorNodeBase &opr) {
-            opr.output(0)->dtype(dtype::Int32());
-        }
-    };
+template <>
+struct MegDNNOprInitPostCtor<Argmax> {
+    static void apply(cg::OperatorNodeBase& opr) {
+        opr.output(0)->dtype(dtype::Int32());
+    }
+};
 
-    template<>
-    struct MegDNNOprInitPostCtor<Argmin>: public MegDNNOprInitPostCtor<Argmax> {
-    };
+template <>
+struct MegDNNOprInitPostCtor<Argmin> : public MegDNNOprInitPostCtor<Argmax> {};
 
-    template<>
-    struct MegDNNOprInitPostCtor<ArgsortForward> {
-        static void apply(cg::OperatorNodeBase &opr) {
-            opr.output(0)->dtype(opr.input(0)->dtype());
-            opr.output(1)->dtype(dtype::Int32());
-        }
-    };
-}
-}
-}
+template <>
+struct MegDNNOprInitPostCtor<ArgsortForward> {
+    static void apply(cg::OperatorNodeBase& opr) {
+        opr.output(0)->dtype(opr.input(0)->dtype());
+        opr.output(1)->dtype(dtype::Int32());
+    }
+};
+}  // namespace intl
+}  // namespace opr
+}  // namespace mgb
 
 /* ================= Argmxx ================= */
 
@@ -75,16 +74,46 @@ MEGDNN_OPR_INIT1(Argmin, "argmin")
 /* ================= ArgsortForward =================  */
 
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(ArgsortForward);
-MEGDNN_OPR_CTOR_INIT1(ArgsortForward, "argsort")
+// MEGDNN_OPR_CTOR_INIT1(ArgsortForward, "argsort")
+
+ArgsortForward::ArgsortForward(
+        VarNode* i0, const Param& param, const OperatorNodeConfig& config)
+        : Super(OperatorNodeBaseCtorParam{i0->owner_graph(), config, "argsort", {i0}}) {
+    init_megdnn_opr(*this, param);
+    add_input({i0});
+    output(0)->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);  // sorted value
+    output(1)->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);  // sorted index
+    intl::MegDNNOprInitPostCtor<ArgsortForward>::apply(*this);
+}
 
 std::array<SymbolVar, 2> ArgsortForward::make(
-        SymbolVar in_tensor, const Param &param,
-        const OperatorNodeConfig &config)
-{
+        SymbolVar in_tensor, const Param& param, const OperatorNodeConfig& config) {
     auto node = in_tensor.node()->owner_graph()->insert_opr(
             std::make_unique<ArgsortForward>(in_tensor.node(), param, config));
     mgb_assert(node->output().size() == 3);
     return {node->output(0), node->output(1)};
+}
+
+void ArgsortForward::scn_do_execute() {
+    if (input(0)->dev_tensor().empty()) {
+        mgb_assert(output(0)->dev_tensor().empty() && output(1)->dev_tensor().empty());
+        return;
+    }
+    mgb_assert(!output(0)->dev_tensor().empty() && !output(1)->dev_tensor().empty());
+    Super::scn_do_execute();
+}
+
+void ArgsortForward::get_output_var_shape(
+        const TensorShapeArray& inp_shape, TensorShapeArray& out_shape) const {
+    mgb_assert(inp_shape.size() == 1 && out_shape.size() == 2);
+    out_shape[0] = inp_shape[0];
+    out_shape[1] = inp_shape[0];
+}
+
+ArgsortForward::NodeProp* ArgsortForward::do_make_node_prop() const {
+    auto ret = Super::do_make_node_prop();
+    ret->add_dep_type_existing_var(input(0), NodeProp::DepType::VALUE_ALLOW_EMPTY);
+    return ret;
 }
 
 #if MGB_ENABLE_GRAD
@@ -105,8 +134,7 @@ MEGDNN_OPR_INIT3(ArgsortBackward, "argsort_bwd", 2, false)
 
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(Cumsum);
 
-Cumsum::Cumsum(VarNode* opr, const Param& param,
-               const OperatorNodeConfig& config)
+Cumsum::Cumsum(VarNode* opr, const Param& param, const OperatorNodeConfig& config)
         : Super{opr->owner_graph(), config, "Cumsum", {opr}} {
     init_megdnn_opr(*this, param);
     add_input({opr}, AddInputSortType::CUR_ADDED);
@@ -121,15 +149,15 @@ MGB_IMPL_OPR_GRAD(Cumsum) {
 }
 #endif
 
-SymbolVar Cumsum::make(SymbolVar opr, const Param& param,
-                       const OperatorNodeConfig& config) {
+SymbolVar Cumsum::make(
+        SymbolVar opr, const Param& param, const OperatorNodeConfig& config) {
     return opr.insert_single_output_opr<Cumsum>(opr.node(), param, config);
 }
 
 void Cumsum::scn_do_execute() {
-    megdnn_opr()->exec(input(0)->dev_tensor().as_megdnn(),
-                       output(0)->dev_tensor().as_megdnn(),
-                       intl::get_megdnn_workspace_from_var(output().back()));
+    megdnn_opr()->exec(
+            input(0)->dev_tensor().as_megdnn(), output(0)->dev_tensor().as_megdnn(),
+            intl::get_megdnn_workspace_from_var(output().back()));
 }
 
 void Cumsum::add_input_layout_constraint() {
@@ -144,8 +172,7 @@ void Cumsum::init_output_static_infer_desc() {
         return true;
     };
     owner_graph()->static_infer_manager().register_shape_infer(
-            output(0),
-            {SourceType::DEP, {{input(0), DepType::SHAPE}}, infer_shape});
+            output(0), {SourceType::DEP, {{input(0), DepType::SHAPE}}, infer_shape});
     auto infer_workspace = [this](TensorShape& dest, const InpVal& iv) {
         auto dtype = input(0)->dtype();
         auto ishp = iv.val.at(0).shape();
@@ -181,8 +208,8 @@ void NvOf::init_output_dtype() {
     output(0)->dtype(dtype::Int16());
 }
 
-SymbolVar NvOf::make(SymbolVar opr, const Param& param,
-                     const OperatorNodeConfig& config) {
+SymbolVar NvOf::make(
+        SymbolVar opr, const Param& param, const OperatorNodeConfig& config) {
     return opr.insert_single_output_opr<NvOf>(opr.node(), param, config);
 }
 
@@ -214,11 +241,9 @@ void NvOf::scn_do_execute() {
     }
 
     nv_flow_extractor->extract_flow(
-            static_cast<unsigned char*>(
-                    input(0)->dev_tensor().as_megdnn().raw_ptr),
+            static_cast<unsigned char*>(input(0)->dev_tensor().as_megdnn().raw_ptr),
             vshape,
-            reinterpret_cast<int16_t*>(
-                    output(0)->dev_tensor().as_megdnn().raw_ptr));
+            reinterpret_cast<int16_t*>(output(0)->dev_tensor().as_megdnn().raw_ptr));
 }
 
 void NvOf::init_output_static_infer_desc() {
@@ -241,27 +266,33 @@ void NvOf::init_output_static_infer_desc() {
         return true;
     };
     owner_graph()->static_infer_manager().register_shape_infer(
-            output(0),
-            {SourceType::DEP, {{input(0), DepType::SHAPE}}, infer_shape});
+            output(0), {SourceType::DEP, {{input(0), DepType::SHAPE}}, infer_shape});
 }
 #endif
 
 /* ================= CondTake =================  */
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(CondTake);
 
-CondTake::CondTake(VarNode *data, VarNode *mask,
-        const Param &param, const OperatorNodeConfig &config):
-    Super(data->owner_graph(), config, "cond_take", {data, mask})
-{
+CondTake::CondTake(
+        VarNode* data, VarNode* mask, const Param& param,
+        const OperatorNodeConfig& config)
+        : Super(data->owner_graph(), config, "cond_take", {data, mask}) {
     init_megdnn_opr(*this, param);
     add_input({data, mask});
     auto dtypes = megdnn_opr()->infer_dtype(data->dtype(), mask->dtype());
-    for (int i = 0; i < 2; ++ i) {
+    for (int i = 0; i < 2; ++i) {
         output(i)
-            ->add_flag(VarNode::Flag::NO_SYS_MEM_ALLOC)
-            .add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE)
-            .dtype(dtypes[i]);
+                ->add_flag(VarNode::Flag::NO_SYS_MEM_ALLOC)
+                .add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE)
+                .dtype(dtypes[i]);
     }
+}
+
+CondTake::NodeProp* CondTake::do_make_node_prop() const {
+    auto ret = Super::do_make_node_prop();
+    ret->add_dep_type_existing_var(input(0), NodeProp::DepType::VALUE_ALLOW_EMPTY);
+    ret->add_dep_type_existing_var(input(1), NodeProp::DepType::VALUE_ALLOW_EMPTY);
+    return ret;
 }
 
 #if MGB_ENABLE_GRAD
@@ -279,8 +310,8 @@ MGB_IMPL_OPR_GRAD(CondTake) {
 #endif
 
 std::array<SymbolVar, 2> CondTake::make(
-        SymbolVar data, SymbolVar mask,
-        const Param &param, const OperatorNodeConfig &config) {
+        SymbolVar data, SymbolVar mask, const Param& param,
+        const OperatorNodeConfig& config) {
     auto ov0 = data.insert_single_output_opr<CondTake>(
             data.node(), mask.node(), param, config);
     return {ov0, ov0.node()->owner_opr()->output(1)};
@@ -305,19 +336,30 @@ void CondTake::add_input_layout_constraint() {
 }
 
 void CondTake::scn_do_execute() {
+    auto&& data = input(0)->dev_tensor();
+    auto&& mask = input(1)->dev_tensor();
     intl::MegDNNDynOutMallocImpl dyn_malloc{this, comp_node()};
-    megdnn_opr()->exec(input(0)->dev_tensor().as_megdnn(),
-                       input(1)->dev_tensor().as_megdnn(),
-                       intl::get_megdnn_workspace_from_var(output().back()),
-                       &dyn_malloc);
+    if (data.layout().is_empty()) {
+        mgb_assert(
+                data.layout().eq_shape(mask.layout()),
+                "CondTake shape differs: data=%s mask=%s",
+                data.layout().TensorShape::to_string().c_str(),
+                mask.layout().TensorShape::to_string().c_str());
+        dyn_malloc.alloc_output(0, data.layout().dtype, {0}, nullptr);
+        dyn_malloc.alloc_output(1, dtype::Int32(), {0}, nullptr);
+    } else {
+        megdnn_opr()->exec(
+                data.as_megdnn(), mask.as_megdnn(),
+                intl::get_megdnn_workspace_from_var(output().back()), &dyn_malloc);
+    }
 }
 
 /* ================= TopK =================  */
 
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(TopK);
 
-TopK::TopK(VarNode* data, VarNode* k, const Param& param,
-           const OperatorNodeConfig& config)
+TopK::TopK(
+        VarNode* data, VarNode* k, const Param& param, const OperatorNodeConfig& config)
         : Super(data->owner_graph(), config, "top_k", {data, k}) {
     init_megdnn_opr(*this, param);
     add_input({data, k});
@@ -328,9 +370,9 @@ TopK::TopK(VarNode* data, VarNode* k, const Param& param,
     }
 }
 
-std::array<SymbolVar, 2> TopK::make(SymbolVar data, SymbolVar k,
-                                    const Param& param,
-                                    const OperatorNodeConfig& config) {
+std::array<SymbolVar, 2> TopK::make(
+        SymbolVar data, SymbolVar k, const Param& param,
+        const OperatorNodeConfig& config) {
     auto opr = data.node()->owner_graph()->insert_opr(
             std::make_unique<TopK>(data.node(), k.node(), param, config));
     auto o1 = opr->output(1);
@@ -341,16 +383,18 @@ std::array<SymbolVar, 2> TopK::make(SymbolVar data, SymbolVar k,
 }
 
 void TopK::init_output_dtype() {
-    mgb_assert(input(1)->dtype() == dtype::Int32{}, "k must be int32, got %s",
-               input(1)->dtype().name());
+    mgb_assert(
+            input(1)->dtype() == dtype::Int32{}, "k must be int32, got %s",
+            input(1)->dtype().name());
     output(0)->dtype(input(0)->dtype());
     output(1)->dtype(dtype::Int32{});
 }
 
 void TopK::add_input_layout_constraint() {
     auto check = [](const TensorLayout& layout) {
-        mgb_assert(layout.ndim == 2, "top-k input must be two-dim, got %s",
-                   layout.TensorShape::to_string().c_str());
+        mgb_assert(
+                layout.ndim == 2, "top-k input must be two-dim, got %s",
+                layout.TensorShape::to_string().c_str());
         return layout.stride[1] == 1;
     };
     input(0)->add_layout_constraint(check);
@@ -362,25 +406,24 @@ void TopK::init_output_static_infer_desc() {
 
     auto infer_oshp0 = [this](TensorShape& dst, const InpVal& iv) {
         auto&& k_tensor = iv.val[1].value();
-        mgb_assert(k_tensor.shape().is_scalar(), "k must be scalar, got %s",
-                   k_tensor.shape().to_string().c_str());
+        mgb_assert(
+                k_tensor.shape().is_scalar(), "k must be scalar, got %s",
+                k_tensor.shape().to_string().c_str());
         TensorLayout o0, o1;
-        megdnn_opr()->deduce_layout(k_tensor.ptr<int>()[0],
-                                    {iv.val[0].shape(), input(0)->dtype()}, o0,
-                                    o1);
+        megdnn_opr()->deduce_layout(
+                k_tensor.ptr<int>()[0], {iv.val[0].shape(), input(0)->dtype()}, o0, o1);
         dst = o0;
         return true;
     };
-    mgr.register_shape_infer(output(0), {SourceType::DEP,
-                                         {{input(0), DepType::SHAPE},
-                                          {input(1), DepType::VALUE}},
-                                         infer_oshp0});
+    mgr.register_shape_infer(
+            output(0), {SourceType::DEP,
+                        {{input(0), DepType::SHAPE}, {input(1), DepType::VALUE}},
+                        infer_oshp0});
 
     if (param().mode == Param::Mode::KTH_ONLY) {
         mgr.register_shape_infer(output(1), ShapeInferDesc::make_const({}));
     } else {
-        mgr.register_shape_infer(output(1),
-                                 ShapeInferDesc::make_identity(output(0)));
+        mgr.register_shape_infer(output(1), ShapeInferDesc::make_identity(output(0)));
     }
 
     auto infer_workspace = [this](TensorShape& dst, const InpVal& iv) {
@@ -395,21 +438,22 @@ void TopK::init_output_static_infer_desc() {
         dst.shape[0] = size;
         return true;
     };
-    mgr.register_shape_infer(output(2), {SourceType::DEP,
-                                         {{input(0), DepType::SHAPE},
-                                          {output(0), DepType::SHAPE},
-                                          {output(1), DepType::SHAPE},
-                                          {input(1), DepType::VALUE}},
-                                         infer_workspace});
+    mgr.register_shape_infer(
+            output(2), {SourceType::DEP,
+                        {{input(0), DepType::SHAPE},
+                         {output(0), DepType::SHAPE},
+                         {output(1), DepType::SHAPE},
+                         {input(1), DepType::VALUE}},
+                        infer_workspace});
 }
 
 void TopK::scn_do_execute() {
     auto&& mgr = owner_graph()->static_infer_manager();
     auto k = mgr.infer_value(input(1)).ptr<int>()[0];
-    megdnn_opr()->exec(k, input(0)->dev_tensor().as_megdnn(),
-                       output(0)->dev_tensor().as_megdnn(),
-                       output(1)->dev_tensor().as_megdnn(),
-                       intl::get_megdnn_workspace_from_var(output(2)));
+    megdnn_opr()->exec(
+            k, input(0)->dev_tensor().as_megdnn(), output(0)->dev_tensor().as_megdnn(),
+            output(1)->dev_tensor().as_megdnn(),
+            intl::get_megdnn_workspace_from_var(output(2)));
 }
 
 void TopK::record_execute_deps(ExecDependencyArray& deps) {
@@ -419,7 +463,8 @@ void TopK::record_execute_deps(ExecDependencyArray& deps) {
 #if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(TopK) {
     // TopK has no gradient on the input k
-    if (wrt_idx) return nullptr;
+    if (wrt_idx)
+        return nullptr;
     if (opr.param().mode == TopK::Param::Mode::KTH_ONLY) {
         mgb_assert(out_grad[0] && !out_grad[1] && !out_grad[2]);
         auto add_axis = [](SymbolVar x) {
@@ -432,24 +477,23 @@ MGB_IMPL_OPR_GRAD(TopK) {
     }
     if (!out_grad[0])
         return nullptr;
-    return ArgsortBackward::make(out_grad[0], opr.output(1), opr.input(0))
-            .node();
+    return ArgsortBackward::make(out_grad[0], opr.output(1), opr.input(0)).node();
 }
 #endif
 
-/* ================= CheckHasInf =================  */
+/* ================= CheckNonFinite =================  */
 namespace mgb {
 namespace opr {
 namespace intl {
-template<>
-struct MegDNNOprInitPostCtor<CheckHasInf> {
-    static void apply(cg::OperatorNodeBase &opr) {
+template <>
+struct MegDNNOprInitPostCtor<CheckNonFinite> {
+    static void apply(cg::OperatorNodeBase& opr) {
         opr.output(0)->dtype(dtype::Int32());
     }
 };
-}
-}
-}
-MGB_DYN_TYPE_OBJ_FINAL_IMPL(CheckHasInf);
-MEGDNN_OPR_INIT1(CheckHasInf, "check_has_inf")
+}  // namespace intl
+}  // namespace opr
+}  // namespace mgb
+MGB_DYN_TYPE_OBJ_FINAL_IMPL(CheckNonFinite);
+MEGDNN_OPR_INIT1(CheckNonFinite, "check_non_finite")
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

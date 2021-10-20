@@ -19,7 +19,7 @@ struct OptimizedBackwardGraphResult {
     SmallVector<bool> save_for_backward;
     SmallVector<bool> input_has_grad;
 
-    OptimizedBackwardGraphResult(const EncodedSubraph& bgraph);
+    OptimizedBackwardGraphResult(const EncodedSubgraph& bgraph);
 };
 
-} // namespace mgb::imperative
+}  // namespace mgb::imperative

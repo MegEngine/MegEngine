@@ -8,13 +8,13 @@
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-#include "hcc_detail/hcc_defs_prologue.h"
 #include "test/rocm/fixture.h"
+#include "hcc_detail/hcc_defs_prologue.h"
 #include "src/rocm/handle.h"
+#include "src/rocm/utils.h"
 #include "test/common/memory_manager.h"
 #include "test/common/random_state.h"
 #include "test/common/utils.h"
-#include "src/rocm/utils.h"
 
 #include <cstdlib>
 #include "hip_header.h"
@@ -34,8 +34,7 @@ void setup_device() {
     }
     auto pci_bus_id_env = std::getenv("MEGDNN_PCI_BUS_ID");
     if (pci_bus_id_env) {
-        megdnn_assert(hipSuccess ==
-                      hipDeviceGetByPCIBusId(&device_id, pci_bus_id_env));
+        megdnn_assert(hipSuccess == hipDeviceGetByPCIBusId(&device_id, pci_bus_id_env));
         std::cout << "Select device " << pci_bus_id_env << " (" << device_id
                   << ") because MEGDNN_PCI_BUS_ID is set." << std::endl;
     }
@@ -108,8 +107,8 @@ void ROCM_ERROR_INFO::TearDown() {
 megcore::AsyncErrorInfo ROCM_ERROR_INFO::get_error_info() {
     megcore::AsyncErrorInfo ret;
     auto stream = rocm::hip_stream(m_handle_rocm.get());
-    hip_check(hipMemcpyAsync(&ret, m_error_info_dev, sizeof(ret),
-                             hipMemcpyDeviceToHost, stream));
+    hip_check(hipMemcpyAsync(
+            &ret, m_error_info_dev, sizeof(ret), hipMemcpyDeviceToHost, stream));
     hip_check(hipStreamSynchronize(stream));
     return ret;
 }

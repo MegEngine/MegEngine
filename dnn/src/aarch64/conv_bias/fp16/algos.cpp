@@ -22,18 +22,17 @@ using namespace aarch64;
 /* ===================== stride-2 algo ===================== */
 MIDOUT_DECL(megdnn_aarch64_conv_bias_stride2_conv2357_fp16)
 
-bool ConvBiasImpl::AlgoF16DirectStride2::usable(const NCBKernSizeParam& param,
-                                                AlgoSelectionStrategy) const {
+bool ConvBiasImpl::AlgoF16DirectStride2::usable(
+        const NCBKernSizeParam& param, AlgoSelectionStrategy) const {
     MIDOUT_BEGIN(megdnn_aarch64_conv_bias_stride2_conv2357_fp16, 0, 0) {
         auto&& fm = param.filter_meta;
         auto FH = fm.spatial[0];
         return param.filter_meta.format == param::Convolution::Format::NCHW &&
                param.src_type.enumv() == DTypeEnum::Float16 &&
                param.filter_type.enumv() == DTypeEnum::Float16 &&
-               param.dst_type.enumv() == DTypeEnum::Float16 &&
-               !fm.should_flip && fm.spatial_ndim == 2 && fm.dilation[0] == 1 &&
-               fm.dilation[1] == 1 && fm.stride[0] == 2 && fm.stride[1] == 2 &&
-               FH == fm.spatial[1] &&
+               param.dst_type.enumv() == DTypeEnum::Float16 && !fm.should_flip &&
+               fm.spatial_ndim == 2 && fm.dilation[0] == 1 && fm.dilation[1] == 1 &&
+               fm.stride[0] == 2 && fm.stride[1] == 2 && FH == fm.spatial[1] &&
                (FH == 2 || FH == 3 || FH == 5 || FH == 7);
     }
     MIDOUT_END();
@@ -52,8 +51,7 @@ size_t ConvBiasImpl::AlgoF16DirectStride2::get_workspace(
     return 0;
 }
 
-SmallVector<ConvBiasImpl::NCBKern>
-ConvBiasImpl::AlgoF16DirectStride2::dispatch_kerns(
+SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoF16DirectStride2::dispatch_kerns(
         const NCBKernSizeParam& param) const {
     MIDOUT_BEGIN(megdnn_aarch64_conv_bias_stride2_conv2357_fp16, 0, 2) {
         return get_kimpls(param);
@@ -62,8 +60,7 @@ ConvBiasImpl::AlgoF16DirectStride2::dispatch_kerns(
     return {};
 }
 
-SmallVector<ConvBiasImpl::NCBKern>
-ConvBiasImpl::AlgoF16DirectStride2::get_kimpls(
+SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoF16DirectStride2::get_kimpls(
         const NCBKernSizeParam& param) const {
     auto fm = param.filter_meta;
     auto FH = fm.spatial[0];
@@ -72,8 +69,9 @@ ConvBiasImpl::AlgoF16DirectStride2::get_kimpls(
     size_t OC = param.filter_meta.ocpg;
     size_t group = fm.group;
     bool large_group = group >= param.nr_threads;
-    using Func = std::function<void(const __fp16*, const __fp16*, __fp16*,
-                                    size_t, size_t, size_t, size_t, size_t)>;
+    using Func = std::function<void(
+            const __fp16*, const __fp16*, __fp16*, size_t, size_t, size_t, size_t,
+            size_t)>;
     Func conv = nullptr;
     if (FH == 2) {
         conv = fp16::conv_stride2::do_conv_2x2_stride2;
@@ -101,31 +99,35 @@ ConvBiasImpl::AlgoF16DirectStride2::get_kimpls(
             bundle.set(kern_param.workspace_ptr);
             for (size_t ic = 0; ic < IC; ic++) {
                 arm_common::MultithreadDirectConvCommon<dt_float16, __fp16>::
-                        copy_padding_kern_stride(bundle, kern_param, ncb_index,
-                                                 {ncb_index.thread_id, 0, ic});
+                        copy_padding_kern_stride(
+                                bundle, kern_param, ncb_index,
+                                {ncb_index.thread_id, 0, ic});
             }
             for (size_t oc = 0; oc < OC; oc++) {
                 arm_common::MultithreadDirectConvCommon<dt_float16, __fp16>::
-                        do_conv_kern_stride(bundle, kern_param, ncb_index, conv,
-                                            {ncb_index.thread_id, 0, oc});
+                        do_conv_kern_stride(
+                                bundle, kern_param, ncb_index, conv,
+                                {ncb_index.thread_id, 0, oc});
             }
         };
         ret_kerns.push_back({exec_one_group, {group, N, 1_z}});
     } else {
-        auto copy_padding = [bundle](const NCBKernParam& kern_param,
-                                     const NCBKernIndex& ncb_index) mutable {
+        auto copy_padding = [bundle](
+                                    const NCBKernParam& kern_param,
+                                    const NCBKernIndex& ncb_index) mutable {
             bundle.set(kern_param.workspace_ptr);
             arm_common::MultithreadDirectConvCommon<dt_float16, __fp16>::
-                    copy_padding_kern_stride(bundle, kern_param, ncb_index,
-                                             ncb_index.ndrange_id);
+                    copy_padding_kern_stride(
+                            bundle, kern_param, ncb_index, ncb_index.ndrange_id);
         };
         ret_kerns.push_back({copy_padding, {group, N, IC}});
-        auto do_conv = [bundle, conv](const NCBKernParam& kern_param,
-                                      const NCBKernIndex& ncb_index) mutable {
+        auto do_conv = [bundle, conv](
+                               const NCBKernParam& kern_param,
+                               const NCBKernIndex& ncb_index) mutable {
             bundle.set(kern_param.workspace_ptr);
             arm_common::MultithreadDirectConvCommon<dt_float16, __fp16>::
-                    do_conv_kern_stride(bundle, kern_param, ncb_index, conv,
-                                        ncb_index.ndrange_id);
+                    do_conv_kern_stride(
+                            bundle, kern_param, ncb_index, conv, ncb_index.ndrange_id);
         };
         ret_kerns.push_back({do_conv, {group, N, OC}});
     }

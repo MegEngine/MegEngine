@@ -36,8 +36,8 @@ DType dtype_c2cpp(MGBDType dtype) {
             return dtype::Float16{};
 #endif
         default:
-            mgb_throw(SerializationError, "bad dtype value: %d",
-                      static_cast<int>(dtype));
+            mgb_throw(
+                    SerializationError, "bad dtype value: %d", static_cast<int>(dtype));
     }
 }
 
@@ -68,41 +68,38 @@ class MGBOprDescImpl {
         return user_data(self)->bias == user_data(rhs)->bias;
     }
 
-    static void execute(const MGBOprDesc* self, const MGBTensor* input,
-                        const MGBTensor* output) {
+    static void execute(
+            const MGBOprDesc* self, const MGBTensor* input, const MGBTensor* output) {
         if (self->dynamic_param) {
             auto device_id = self->dynamic_param->device_id;
             mgb_assert(0 == device_id || 8 == device_id);
         }
         bool use_extern_input =
-                (self->dynamic_param && self->dynamic_param->nr_input > 0)
-                        ? true
-                        : false;
+                (self->dynamic_param && self->dynamic_param->nr_input > 0) ? true
+                                                                           : false;
         bool use_extern_output =
-                (self->dynamic_param && self->dynamic_param->nr_output > 0)
-                        ? true
-                        : false;
+                (self->dynamic_param && self->dynamic_param->nr_output > 0) ? true
+                                                                            : false;
 
         auto&& i = input[0].layout;
         auto&& o = output[0].layout;
-        mgb_assert(i.shape.ndim == 1 && o.shape.ndim == 1 &&
-                   i.shape.shape[0] == o.shape.shape[0]);
+        mgb_assert(
+                i.shape.ndim == 1 && o.shape.ndim == 1 &&
+                i.shape.shape[0] == o.shape.shape[0]);
         mgb_assert(i.dtype == MGB_DTYPE_FLOAT32 && o.dtype == out_dtype);
         auto input_p = static_cast<float*>(input[0].data);
         if (use_extern_input)
-            input_p = static_cast<float*>(
-                    self->dynamic_param->input[0].device_ptr);
+            input_p = static_cast<float*>(self->dynamic_param->input[0].device_ptr);
         auto bias = user_data(self)->bias;
         if (out_dtype == MGB_DTYPE_FLOAT32) {
             auto output_p = static_cast<float*>(output[0].data);
             if (use_extern_output)
-                output_p = static_cast<float*>(
-                        self->dynamic_param->output[0].device_ptr);
+                output_p =
+                        static_cast<float*>(self->dynamic_param->output[0].device_ptr);
             for (size_t x = 0; x < i.shape.shape[0]; ++x) {
                 output_p[x] = input_p[x] + bias;
             }
-        } else if (DNN_FLOAT16_SELECT(out_dtype == MGB_DTYPE_FLOAT16,
-                                         false)) {
+        } else if (DNN_FLOAT16_SELECT(out_dtype == MGB_DTYPE_FLOAT16, false)) {
 #if !MEGDNN_DISABLE_FLOAT16
             auto output_p = static_cast<dt_float16*>(output[0].data);
             for (size_t x = 0; x < i.shape.shape[0]; ++x) {
@@ -118,21 +115,21 @@ class MGBOprDescImpl {
         }
     }
 
-    static void infer_shape(const MGBOprDesc*, const MGBTensorShape* input,
-                            MGBTensorShape* output) {
+    static void infer_shape(
+            const MGBOprDesc*, const MGBTensorShape* input, MGBTensorShape* output) {
         output[0] = input[0];
     }
 
-    static void infer_dtype(const struct MGBOprDesc* self,
-                            const MGBDType* input, MGBDType* output) {
+    static void infer_dtype(
+            const struct MGBOprDesc* self, const MGBDType* input, MGBDType* output) {
         output[0] = out_dtype;
     }
 
     static const char* name() {
         return out_dtype == MGB_DTYPE_FLOAT32
-                       ? "bias_adder_f23"
-                       : (out_dtype == MGB_DTYPE_INT32 ? "bias_adder_int32"
-                                                       : "bias_addr_float16");
+                     ? "bias_adder_f23"
+                     : (out_dtype == MGB_DTYPE_INT32 ? "bias_adder_int32"
+                                                     : "bias_addr_float16");
     }
 
 public:
@@ -158,8 +155,7 @@ int MGBOprDescImpl<out_dtype>::nr_inst = 0;
 
 template <MGBDType out_dtype = MGBDType::MGB_DTYPE_FLOAT32>
 class MGBOprLoaderImpl {
-    static MGBOprDesc* create_desc(size_t nr_input, const void* buf,
-                                   size_t buf_len) {
+    static MGBOprDesc* create_desc(size_t nr_input, const void* buf, size_t buf_len) {
         mgb_assert(buf_len == sizeof(float));
         prev_desc_buf_addr = buf;
         prev_desc_buf_size = buf_len;
@@ -173,9 +169,9 @@ public:
 
     static const char* name() {
         return out_dtype == MGB_DTYPE_FLOAT32
-                       ? "bias_adder_dump"
-                       : (out_dtype == MGB_DTYPE_INT32 ? "bias_adder_dump_i32"
-                                                       : "bias_adder_dump_f16");
+                     ? "bias_adder_dump"
+                     : (out_dtype == MGB_DTYPE_INT32 ? "bias_adder_dump_i32"
+                                                     : "bias_adder_dump_f16");
     }
 };
 
@@ -195,8 +191,8 @@ MGBOprLoaderReg<MGB_DTYPE_INT32> loader_reg_i32;
 MGBOprLoaderReg<MGB_DTYPE_FLOAT16> loader_reg_f16;
 #endif
 
-std::vector<uint8_t> create_graph_dump(float bias, float extra_scale,
-                                       float sleep, MGBDType dtype) {
+std::vector<uint8_t> create_graph_dump(
+        float bias, float extra_scale, float sleep, MGBDType dtype) {
     HostTensorGenerator<> gen;
     auto host_x = gen({1}, "cpux");
     auto graph = ComputingGraph::make();
@@ -220,13 +216,11 @@ std::vector<uint8_t> create_graph_dump(float bias, float extra_scale,
     return ret;
 }
 
-void check_dump_by_compute(std::unique_ptr<serialization::InputFile> input_file,
-                           CompNode cn, MGBDType dtype, float bias,
-                           float scale) {
+void check_dump_by_compute(
+        std::unique_ptr<serialization::InputFile> input_file, CompNode cn,
+        MGBDType dtype, float bias, float scale) {
     GraphLoadConfig config;
-    config.comp_node_mapper = [loc = cn.locator()](CompNode::Locator & t) {
-        t = loc;
-    };
+    config.comp_node_mapper = [loc = cn.locator()](CompNode::Locator& t) { t = loc; };
     auto loader = GraphLoader::make(std::move(input_file));
     auto load_ret = loader->load(config);
     load_ret.graph->options().var_sanity_check_first_run = false;
@@ -263,9 +257,7 @@ void check_dump_by_compute_with_param(
         std::unique_ptr<serialization::InputFile> input_file, CompNode cn,
         MGBDType dtype, float bias, std::shared_ptr<ExternCOprParam> param) {
     GraphLoadConfig config;
-    config.comp_node_mapper = [loc = cn.locator()](CompNode::Locator& t) {
-        t = loc;
-    };
+    config.comp_node_mapper = [loc = cn.locator()](CompNode::Locator& t) { t = loc; };
     auto loader = GraphLoader::make(std::move(input_file));
     auto load_ret = loader->load(config);
     load_ret.graph->options().var_sanity_check_first_run = false;
@@ -281,8 +273,7 @@ void check_dump_by_compute_with_param(
         auto py = y_expect.ptr<float>();
         float* extern_input_device_ptr = nullptr;
         if (param->nr_input && param->input && param->input->device_ptr) {
-            extern_input_device_ptr =
-                    static_cast<float*>(param->input->device_ptr);
+            extern_input_device_ptr = static_cast<float*>(param->input->device_ptr);
         }
         for (int i = 0; i < 23; ++i) {
             float t = 0;
@@ -322,16 +313,16 @@ void run_compute_test(CompNode cn, MGBDType dtype) {
     float bias = 1.2, scale = -2.1;
     auto graph_dump = create_graph_dump(bias, scale, 0.3, dtype);
     check_dump_by_compute(
-            InputFile::make_mem_proxy(graph_dump.data(), graph_dump.size()), cn,
-            dtype, bias, scale);
+            InputFile::make_mem_proxy(graph_dump.data(), graph_dump.size()), cn, dtype,
+            bias, scale);
 }
-void run_compute_test_with_param(CompNode cn, MGBDType dtype,
-                                 std::shared_ptr<ExternCOprParam> param) {
+void run_compute_test_with_param(
+        CompNode cn, MGBDType dtype, std::shared_ptr<ExternCOprParam> param) {
     float bias = 1.2, scale = 0;
     auto graph_dump = create_graph_dump(bias, scale, 0.3, dtype);
     check_dump_by_compute_with_param(
-            InputFile::make_mem_proxy(graph_dump.data(), graph_dump.size()), cn,
-            dtype, bias, param);
+            InputFile::make_mem_proxy(graph_dump.data(), graph_dump.size()), cn, dtype,
+            bias, param);
 }
 }  // namespace
 
@@ -342,8 +333,7 @@ TEST(TestExternCOpr, ExternCOprParam) {
     MGBTensorLayout input_layput, output_layput;
     ExternDeviceTensor input, output;
     float* input_device_ptr = (float*)malloc(input_output_size * sizeof(float));
-    float* output_device_ptr =
-            (float*)malloc(input_output_size * sizeof(float));
+    float* output_device_ptr = (float*)malloc(input_output_size * sizeof(float));
 
     auto reset = [&] {
         memset(c_opr_param.get(), 0, sizeof(ExternCOprParam));
@@ -360,8 +350,8 @@ TEST(TestExternCOpr, ExternCOprParam) {
     };
 
     auto run_test = [&] {
-        run_compute_test_with_param(CompNode::load("cpux"), MGB_DTYPE_FLOAT32,
-                                    c_opr_param);
+        run_compute_test_with_param(
+                CompNode::load("cpux"), MGB_DTYPE_FLOAT32, c_opr_param);
     };
 
     auto init_param = [&] {

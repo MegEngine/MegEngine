@@ -30,11 +30,11 @@ required = _RequiredParameter()
 
 
 class Optimizer(metaclass=ABCMeta):
-    r"""
-    Base class for all optimizers.
+    r"""Base class for all optimizers.
 
-    :param params: specifies what Tensors should be optimized.
-    :param defaults: a dict of default parameters of Optimizer, like learning rate or momentum.
+    Args:
+        params: specifies what Tensors should be optimized.
+        defaults: a dict of default parameters of Optimizer, like learning rate or momentum.
     """
 
     def __init__(  # pylint: disable=too-many-branches
@@ -76,14 +76,13 @@ class Optimizer(metaclass=ABCMeta):
             self._create_state(group)
 
     def add_param_group(self, param_group: dict):
-        r"""
-        Add a param group to ``param_groups`` of the :class:`~megengine.optim.optimizer.Optimizer`.
-
+        r"""Add a param group to ``param_groups`` of the :class:`~megengine.optim.optimizer.Optimizer`.
+        
         This can be useful when fine tuning a pre-trained network as frozen layers can be made
         trainable and added to the :class:`~megengine.optim.optimizer.Optimizer` as training progresses.
 
-        :param param_group: specifies what tensors should be optimized along with group.
-
+        Args:
+            param_group: specifies what tensors should be optimized along with group.
         """
         assert isinstance(param_group, dict), "param group must be a dict"
 
@@ -143,10 +142,7 @@ class Optimizer(metaclass=ABCMeta):
         return params
 
     def step(self):
-        r"""
-        Performs a single optimization step.
-
-        """
+        r"""Performs a single optimization step."""
         # set the globle state `_enable_convert_inputs` to `False` to disable
         # the `convert_inputs` for param updates
         set_option("record_computing_path", 0)
@@ -176,9 +172,7 @@ class Optimizer(metaclass=ABCMeta):
                     param.grad.reset_zero()
 
     def clear_grad(self):
-        r"""
-        Set the grad attribute to None for all parameters.
-        """
+        r"""Set the grad attribute to None for all parameters."""
         for param_group in self.param_groups:
             push_scope("clear_grad")
             for param in param_group["params"]:
@@ -186,10 +180,10 @@ class Optimizer(metaclass=ABCMeta):
             pop_scope("clear_grad")
 
     def state_dict(self, keep_var=False) -> Dict:
-        r"""
-        Export the optimizer state.
+        r"""Export the optimizer state.
 
-        :return: optimizer state. Can be loaded by :meth:`load_state_dict`.
+        Return:
+            optimizer state. Can be loaded by :meth:`load_state_dict`.
         """
         param_groups = []
         state = dict()
@@ -217,10 +211,10 @@ class Optimizer(metaclass=ABCMeta):
         return {"param_groups": param_groups, "state": state}
 
     def load_state_dict(self, state: dict):
-        r"""
-        Loads the optimizer state.
+        r"""Loads the optimizer state.
 
-        :param state: optimizer state. Should be an object returned
+        Args:
+            state: optimizer state. Should be an object returned
                 from a call to :meth:`state_dict`.
         """
         if len(self.param_groups) != len(state["param_groups"]):

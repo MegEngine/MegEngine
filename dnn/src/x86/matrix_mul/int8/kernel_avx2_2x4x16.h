@@ -121,10 +121,9 @@ static inline void kern_gemm_s8s8s32_2x4x16_remain(
     }
 }
 MEGDNN_ATTRIBUTE_TARGET("avx2")
-static inline void kern_gemm_s8s8s32_2x4x16(const int8_t* pack_a_ptr,
-                                            const int8_t* pack_b_ptr,
-                                            int32_t* c_ptr, const int32_t ldc,
-                                            const int32_t k) {
+static inline void kern_gemm_s8s8s32_2x4x16(
+        const int8_t* pack_a_ptr, const int8_t* pack_b_ptr, int32_t* c_ptr,
+        const int32_t ldc, const int32_t k) {
     int32_t* c0_ptr = c_ptr + 0 * ldc;
     int32_t* c1_ptr = c_ptr + 1 * ldc;
 
@@ -236,10 +235,9 @@ static inline void kern_gemm_s8s8s32_2x4x16(const int8_t* pack_a_ptr,
     c1_ptr[3] = _mm256_extract_epi32(c_vec[5], 1);
 }
 
-static inline void gemm_avx2_s8s8s32_2x4x16_pack_bn(dt_int8* out,
-                                                    const dt_int8* in, int ldin,
-                                                    int n_start, int n_max,
-                                                    int k_start, int k_max) {
+static inline void gemm_avx2_s8s8s32_2x4x16_pack_bn(
+        dt_int8* out, const dt_int8* in, int ldin, int n_start, int n_max, int k_start,
+        int k_max) {
     constexpr int tile_n = 4;
     constexpr int tile_k = 16;
     constexpr int tile_len = tile_n * tile_k;
@@ -258,29 +256,31 @@ static inline void gemm_avx2_s8s8s32_2x4x16_pack_bn(dt_int8* out,
             outptr += pack_line_len;
         }
         if (n_end < n_max) {
-            naive_transpose_kn_pad(outptr, in + k * ldin + n_end, ldin, tile_k,
-                                   n_remain, tile_k, tile_n);
+            naive_transpose_kn_pad(
+                    outptr, in + k * ldin + n_end, ldin, tile_k, n_remain, tile_k,
+                    tile_n);
         }
         out += tile_len;
     }
     if (k_max > k_end) {
         int8_t* outptr = out;
         for (int n = n_start; n < n_end; n += tile_n) {
-            naive_transpose_kn_pad(outptr, in + k_end * ldin + n, ldin,
-                                   k_remain, tile_n, tile_k, tile_n);
+            naive_transpose_kn_pad(
+                    outptr, in + k_end * ldin + n, ldin, k_remain, tile_n, tile_k,
+                    tile_n);
             outptr += pack_line_len;
         }
         if (n_end < n_max) {
-            naive_transpose_kn_pad(outptr, in + k * ldin + n_end, ldin,
-                                   k_remain, n_remain, tile_k, tile_n);
+            naive_transpose_kn_pad(
+                    outptr, in + k * ldin + n_end, ldin, k_remain, n_remain, tile_k,
+                    tile_n);
         }
     }
 }
 
-static inline void gemm_avx2_s8s8s32_2x4x16_pack_bt(dt_int8* out,
-                                                    const dt_int8* in, int ldin,
-                                                    int n_start, int n_max,
-                                                    int k_start, int k_max) {
+static inline void gemm_avx2_s8s8s32_2x4x16_pack_bt(
+        dt_int8* out, const dt_int8* in, int ldin, int n_start, int n_max, int k_start,
+        int k_max) {
     constexpr int tile_n = 4;
     constexpr int tile_k = 16;
     constexpr int tile_len = tile_n * tile_k;
@@ -359,10 +359,9 @@ static inline void gemm_avx2_s8s8s32_2x4x16_pack_bt(dt_int8* out,
     }
 }
 
-static inline void gemm_avx2_s8s8s32_2x4x16_pack_an(dt_int8* out,
-                                                    const dt_int8* in, int ldin,
-                                                    int m_start, int m_max,
-                                                    int k_start, int k_max) {
+static inline void gemm_avx2_s8s8s32_2x4x16_pack_an(
+        dt_int8* out, const dt_int8* in, int ldin, int m_start, int m_max, int k_start,
+        int k_max) {
     constexpr int tile_m = 2;
     constexpr int tile_k = 16;
     constexpr int tile_len = tile_m * tile_k;
@@ -403,10 +402,9 @@ static inline void gemm_avx2_s8s8s32_2x4x16_pack_an(dt_int8* out,
         }
     }
 }
-static inline void gemm_avx2_s8s8s32_2x4x16_pack_at(dt_int8* out,
-                                                    const dt_int8* in, int ldin,
-                                                    int m_start, int m_max,
-                                                    int k_start, int k_max) {
+static inline void gemm_avx2_s8s8s32_2x4x16_pack_at(
+        dt_int8* out, const dt_int8* in, int ldin, int m_start, int m_max, int k_start,
+        int k_max) {
     constexpr int tile_m = 2;
     constexpr int tile_k = 16;
     constexpr int tile_len = tile_m * tile_k;
@@ -425,21 +423,24 @@ static inline void gemm_avx2_s8s8s32_2x4x16_pack_at(dt_int8* out,
             outptr += pack_line_len;
         }
         if (m_end < m_max) {
-            naive_transpose_kn_pad(outptr, in + k * ldin + m_end, ldin, tile_k,
-                                   m_remain, tile_k, tile_m);
+            naive_transpose_kn_pad(
+                    outptr, in + k * ldin + m_end, ldin, tile_k, m_remain, tile_k,
+                    tile_m);
         }
         out += tile_len;
     }
     if (k_max > k_end) {
         int8_t* outptr = out;
         for (int m = m_start; m < m_end; m += tile_m) {
-            naive_transpose_kn_pad(outptr, in + k_end * ldin + m, ldin,
-                                   k_remain, tile_m, tile_k, tile_m);
+            naive_transpose_kn_pad(
+                    outptr, in + k_end * ldin + m, ldin, k_remain, tile_m, tile_k,
+                    tile_m);
             outptr += pack_line_len;
         }
         if (m_end < m_max) {
-            naive_transpose_kn_pad(outptr, in + k * ldin + m_end, ldin,
-                                   k_remain, m_remain, tile_k, tile_m);
+            naive_transpose_kn_pad(
+                    outptr, in + k * ldin + m_end, ldin, k_remain, m_remain, tile_k,
+                    tile_m);
         }
     }
 }

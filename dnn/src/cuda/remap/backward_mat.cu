@@ -23,8 +23,8 @@ using namespace rounding;
 namespace {
 
 template <const uint32_t format>
-__device__ inline int get_offset(int height, int width, int channel, int h,
-                                 int w, int c);
+__device__ inline int get_offset(
+        int height, int width, int channel, int h, int w, int c);
 
 template <>
 __device__ inline int get_offset<param_enumv::Remap::Format::NCHW>(
@@ -34,8 +34,8 @@ __device__ inline int get_offset<param_enumv::Remap::Format::NCHW>(
 
 template <typename ctype, const uint32_t format, ::BorderMode bmode>
 struct GetSrcData {
-    __device__ static inline int get_index(int height, int width, int channel,
-                                           int h, int w, int c) {
+    __device__ static inline int get_index(
+            int height, int width, int channel, int h, int w, int c) {
         height = megcv::border_interpolate<bmode>(height, h);
         width = megcv::border_interpolate<bmode>(width, w);
         return get_offset<format>(height, width, channel, h, w, c);
@@ -44,18 +44,18 @@ struct GetSrcData {
 
 template <typename ctype, const uint32_t format>
 struct GetSrcData<ctype, format, ::BorderMode::BORDER_CONSTANT> {
-    __device__ static inline int get_index(int height, int width, int channel,
-                                           int h, int w, int c) {
+    __device__ static inline int get_index(
+            int height, int width, int channel, int h, int w, int c) {
         return (height >= 0 && height < h && width >= 0 && width < w)
-                       ? get_offset<format>(height, width, channel, h, w, c)
-                       : -1;
+                     ? get_offset<format>(height, width, channel, h, w, c)
+                     : -1;
     }
 };
 
 template <typename ctype, const uint32_t format, ::BorderMode bmode>
-__global__ void kern_general(const ctype* src, const float* map_xy,
-                             const ctype* diff, float* __restrict grad, int C,
-                             int IH, int IW, int OH, int OW, float scalar) {
+__global__ void kern_general(
+        const ctype* src, const float* map_xy, const ctype* diff,
+        float* __restrict grad, int C, int IH, int IW, int OH, int OW, float scalar) {
     int ow = blockIdx.x * blockDim.x + threadIdx.x;
     int oh = blockIdx.y * blockDim.y + threadIdx.y;
     src += blockIdx.z * C * IH * IW;
@@ -73,9 +73,8 @@ __global__ void kern_general(const ctype* src, const float* map_xy,
         float u = index_row - row;  // alphah
         const float one = 1.f;
         for (int c = 0; c < C; ++c) {
-            float hidden = static_cast<float>(
-                    diff[get_offset<format>(
-                            oh, ow, c, OH, OW, C)]);
+            float hidden =
+                    static_cast<float>(diff[get_offset<format>(oh, ow, c, OH, OW, C)]);
             float du = 0.f, dv = 0.f;
 
             int a00 = GetSrcData<ctype, format, bmode>::get_index(
@@ -104,10 +103,9 @@ __global__ void kern_general(const ctype* src, const float* map_xy,
 }
 
 template <typename ctype, const uint32_t format, ::BorderMode bmode>
-void dispatch_backwardmat(const ctype* src, const float* map_xy,
-                          const ctype* diff, float* grad, int N, int C, int IH,
-                          int IW, int OH, int OW, float scalar,
-                          cudaStream_t stream) {
+void dispatch_backwardmat(
+        const ctype* src, const float* map_xy, const ctype* diff, float* grad, int N,
+        int C, int IH, int IW, int OH, int OW, float scalar, cudaStream_t stream) {
     const int BX = 32, BY = 16;
     const int max_batch_size = 65535;
     while (N) {
@@ -116,8 +114,7 @@ void dispatch_backwardmat(const ctype* src, const float* map_xy,
         dim3 blocks((OW + BX - 1) / BX, (OH + BY - 1) / BY, curr_batch_size);
 
         cuda_check(cudaMemsetAsync(
-                grad, 0, sizeof(float) * curr_batch_size * OH * OW * 2,
-                stream));
+                grad, 0, sizeof(float) * curr_batch_size * OH * OW * 2, stream));
         kern_general<ctype, format, bmode><<<blocks, threads, 0, stream>>>(
                 src, map_xy, diff, grad, C, IH, IW, OH, OW, scalar);
 
@@ -136,19 +133,19 @@ namespace cuda {
 namespace remap {
 
 template <typename ctype, const uint32_t format, ::BorderMode bmode>
-void backwardmat_proxy(const ctype* src, const float* map_xy, const ctype* diff,
-                       float* grad, int N, int C, int IH, int IW, int OH,
-                       int OW, float scalar, cudaStream_t stream) {
-    dispatch_backwardmat<ctype, format, bmode>(src, map_xy, diff, grad, N, C,
-                                               IH, IW, OH, OW, scalar, stream);
+void backwardmat_proxy(
+        const ctype* src, const float* map_xy, const ctype* diff, float* grad, int N,
+        int C, int IH, int IW, int OH, int OW, float scalar, cudaStream_t stream) {
+    dispatch_backwardmat<ctype, format, bmode>(
+            src, map_xy, diff, grad, N, C, IH, IW, OH, OW, scalar, stream);
     after_kernel_launch();
 }
 
-#define INST(ctype, format, bmode)                                             \
-    template void backwardmat_proxy<ctype, param_enumv::Remap::Format::format, \
-                                    ::BorderMode::bmode>(                      \
-            const ctype*, const float*, const ctype*, float*, int, int, int,   \
-            int, int, int, float, cudaStream_t);
+#define INST(ctype, format, bmode)                                                     \
+    template void                                                                      \
+    backwardmat_proxy<ctype, param_enumv::Remap::Format::format, ::BorderMode::bmode>( \
+            const ctype*, const float*, const ctype*, float*, int, int, int, int, int, \
+            int, float, cudaStream_t);
 
 #define FOR_FORMAT_BMODE(ctype)           \
     INST(ctype, NCHW, BORDER_CONSTANT)    \

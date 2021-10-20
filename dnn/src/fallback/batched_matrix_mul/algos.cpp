@@ -30,13 +30,13 @@ BatchedMatrixMulForwardImpl::AlgoPack BatchedMatrixMulForwardImpl::sm_algo_pack;
 MEGDNN_DEF_GET_ALGO_FROM_DESC(BatchedMatrixMulForwardImpl)
 
 BatchedMatrixMulForwardImpl::AlgoBase::SizeArgs::SizeArgs(
-        BatchedMatrixMulForwardImpl* o, const TensorLayout& A,
-        const TensorLayout& B, const TensorLayout& C)
+        BatchedMatrixMulForwardImpl* o, const TensorLayout& A, const TensorLayout& B,
+        const TensorLayout& C)
         : opr{o}, layout_a{A}, layout_b{B}, layout_c{C} {}
 
 BatchedMatrixMulForwardImpl::AlgoBase::ExecArgs::ExecArgs(
-        BatchedMatrixMulForwardImpl* opr, _megdnn_tensor_in A,
-        _megdnn_tensor_in B, _megdnn_tensor_out C, _megdnn_workspace workspace)
+        BatchedMatrixMulForwardImpl* opr, _megdnn_tensor_in A, _megdnn_tensor_in B,
+        _megdnn_tensor_out C, _megdnn_workspace workspace)
         : SizeArgs(opr, A.layout, B.layout, C.layout),
           tensor_a{A},
           tensor_b{B},
@@ -69,8 +69,7 @@ size_t BatchedMatrixMulForwardImpl::AlgoDefault::get_workspace_in_bytes(
     return opr->get_workspace_in_bytes(A_, B_, C_);
 }
 
-void BatchedMatrixMulForwardImpl::AlgoDefault::exec(
-        const ExecArgs& args) const {
+void BatchedMatrixMulForwardImpl::AlgoDefault::exec(const ExecArgs& args) const {
     //! As megbrain may modify param when checking all transpose situations, so
     //! here we should copy the param when dispatching kern
     auto param = args.opr->param();
@@ -89,8 +88,7 @@ void BatchedMatrixMulForwardImpl::AlgoDefault::exec(
              Cstrd = args.layout_c.dtype.size() * args.layout_c.stride[0];
 
         auto advance_ptr = [](TensorND& dest, ptrdiff_t d) {
-            dest.raw_ptr =
-                    static_cast<void*>(static_cast<dt_byte*>(dest.raw_ptr) + d);
+            dest.raw_ptr = static_cast<void*>(static_cast<dt_byte*>(dest.raw_ptr) + d);
         };
 
         auto opr = inplace_cpu_handle()->create_operator<MatrixMul>();

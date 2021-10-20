@@ -26,8 +26,7 @@ using namespace mgb;
 
 #define DEF_IMPL_CHAIN()                                 \
     template <size_t nr_inp, size_t nr_out, class dtype> \
-    AutoOprChecker<nr_inp, nr_out, dtype>&               \
-            AutoOprChecker<nr_inp, nr_out, dtype>
+    AutoOprChecker<nr_inp, nr_out, dtype>& AutoOprChecker<nr_inp, nr_out, dtype>
 
 DEF_IMPL()::AutoOprChecker(GraphMaker maker, FwdNumeric fwd, CompNode comp_node)
         : m_fwd(fwd), m_maker(maker), m_comp_node{comp_node} {
@@ -72,8 +71,8 @@ DEF_IMPL(void)::build_graph() {
 
     for (size_t i = 0; i < nr_inp; ++i) {
         // to trigger graph trans
-        sym_in[i] = opr::Host2DeviceCopy::make(*graph, m_inputs[i],
-                                               ssprintf("inp%zu", i));
+        sym_in[i] =
+                opr::Host2DeviceCopy::make(*graph, m_inputs[i], ssprintf("inp%zu", i));
         auto dt = sym_in[i].dtype();
         auto a = opr::TypeCvt::make(one, dt), b = opr::TypeCvt::make(zero, dt);
         sym_in[i] = sym_in[i] * a + b;
@@ -85,8 +84,7 @@ DEF_IMPL(void)::build_graph() {
 
     for (size_t i = 0; i < nr_out; ++i) {
         m_outputs_truth[i].comp_node(m_comp_node).dtype(sym_out[i].dtype());
-        m_outspec_fwd_grad.push_back(
-                make_callback_copy(sym_out[i], m_outputs[i]));
+        m_outspec_fwd_grad.push_back(make_callback_copy(sym_out[i], m_outputs[i]));
     }
 
     if (!m_need_grad_check)
@@ -99,8 +97,8 @@ DEF_IMPL(void)::build_graph() {
             m_loss_p[i] = std::make_shared<HostTensorND>(m_comp_node, dtype());
             auto cur = opr::Dot::make(
                     sym_out[i].flatten(),
-                    opr::Host2DeviceCopy::make(*graph, m_loss_p[i],
-                                               ssprintf("lossp%zu", i)));
+                    opr::Host2DeviceCopy::make(
+                            *graph, m_loss_p[i], ssprintf("lossp%zu", i)));
             if (first_loss) {
                 loss = cur;
             } else {
@@ -146,8 +144,9 @@ DEF_IMPL(void)::build_graph() {
 }
 
 DEF_IMPL()::~AutoOprChecker() {
-    mgb_assert(m_failed || m_run_cnt >= 3,
-               "less than 3 runs for autocheker; some paths not taken");
+    mgb_assert(
+            m_failed || m_run_cnt >= 3,
+            "less than 3 runs for autocheker; some paths not taken");
 }
 
 DEF_IMPL_CHAIN()::set_input_generator(size_t idx, const InputGenerator& gen) {
@@ -170,8 +169,7 @@ DEF_IMPL_CHAIN()::set_input_allow_grad(size_t idx, bool allowed) {
     return *this;
 }
 
-DEF_IMPL_CHAIN()::set_input_default_shape(size_t idx,
-                                          const TensorShape& shape) {
+DEF_IMPL_CHAIN()::set_input_default_shape(size_t idx, const TensorShape& shape) {
     mgb_assert(!m_built, "cannot set_input_allow_grad after the first run");
     mgb_assert(idx < nr_inp);
     m_inputs[idx]->resize(shape);
@@ -202,8 +200,8 @@ DEF_IMPL(void)::do_run(const ShapeInpArray& shapes, const RunOptions& opt) {
                 ishp_str.append(", ");
             ishp_str.append(i.to_string());
         }
-        std::string msg = ssprintf("%s failed: input shapes: [%s]",
-                                   type.c_str(), ishp_str.c_str());
+        std::string msg = ssprintf(
+                "%s failed: input shapes: [%s]", type.c_str(), ishp_str.c_str());
         if (m_inp_dump_on_error) {
             std::string extra_msg = m_inp_dump_on_error(m_inputs);
             if (!extra_msg.empty()) {
@@ -232,8 +230,7 @@ DEF_IMPL(void)::do_run(const ShapeInpArray& shapes, const RunOptions& opt) {
         for (size_t i = 0; i < nr_inp; ++i) {
             write_tensor_to_file(*m_inputs[i], fname.c_str(), i ? 'a' : 'w');
         }
-        mgb_log("autocheck: %zu input tensors written to %s", nr_inp,
-                fname.c_str());
+        mgb_log("autocheck: %zu input tensors written to %s", nr_inp, fname.c_str());
     }
     if (m_input_coordinator)
         m_input_coordinator(m_inputs);
@@ -250,7 +247,6 @@ DEF_IMPL(void)::do_run(const ShapeInpArray& shapes, const RunOptions& opt) {
         for (size_t i = 0; i < nr_out; ++i) {
             if (m_outputs_allow_grad[i]) {
                 auto nr = m_outputs_truth[i].shape().total_nr_elems();
-                mgb_assert(nr, "got empty output");
                 if (opt.cont_loss_p) {
                     m_loss_p[i]->resize({nr});
                     auto ptr = m_loss_p[i]->template ptr<float>();
@@ -281,11 +277,9 @@ DEF_IMPL(void)::do_run(const ShapeInpArray& shapes, const RunOptions& opt) {
 
     if (m_run_cnt % 3 == 0) {
         auto spec = m_outspec_loss;
-        spec.insert(spec.end(), m_outspec_fwd_grad.begin(),
-                    m_outspec_fwd_grad.end());
+        spec.insert(spec.end(), m_outspec_fwd_grad.begin(), m_outspec_fwd_grad.end());
         m_func = m_graph->compile(spec);
-    } else if (!m_disable_check_loss_grad_seperate_compile &&
-               m_run_cnt % 3 == 2)
+    } else if (!m_disable_check_loss_grad_seperate_compile && m_run_cnt % 3 == 2)
         m_func = m_graph->compile(m_outspec_fwd_grad);
 
     m_should_copy_grad = true;
@@ -296,8 +290,8 @@ DEF_IMPL(void)::do_run(const ShapeInpArray& shapes, const RunOptions& opt) {
 
     for (size_t i = 0; i < nr_out; ++i) {
         if (m_outputs_allow_check[i]) {
-            MGB_ASSERT_TENSOR_NEAR(m_outputs_truth[i], m_outputs[i],
-                                   opt.outputs_max_err)
+            MGB_ASSERT_TENSOR_NEAR(
+                    m_outputs_truth[i], m_outputs[i], opt.outputs_max_err)
                     << failstr(ssprintf("output[%zu]", i));
         }
     }
@@ -357,11 +351,9 @@ DEF_IMPL(void)::do_run(const ShapeInpArray& shapes, const RunOptions& opt) {
 
             // check that grad2 == 2 * grad
             if (m_need_multi_loss_check) {
-                MGB_ASSERT_TENSOR_NEAR(mul2_inplace(m_grads[i]),
-                                       m_grads_mul2[i], err)
+                MGB_ASSERT_TENSOR_NEAR(mul2_inplace(m_grads[i]), m_grads_mul2[i], err)
                         << failstr(ssprintf(
-                                   "2 * grad[%zu] (grad with another loss var)",
-                                   i));
+                                   "2 * grad[%zu] (grad with another loss var)", i));
             }
         }
     }
@@ -403,20 +395,18 @@ I(5, 1);
 I(6, 1);
 
 #undef I
-}
+}  // namespace mgb
 
 TEST(TestAutoCheck, APlusB) {
     using Checker = AutoOprChecker<2, 1>;
-    auto make_graph =
-            [](const Checker::SymInpArray& inputs) -> Checker::SymOutArray {
+    auto make_graph = [](const Checker::SymInpArray& inputs) -> Checker::SymOutArray {
         return {inputs[0] + inputs[1] * inputs[1]};
     };
     auto fwd = [](Checker::NumOutArray& dest, Checker::NumInpArray inp) {
         DeviceTensorND i0, i1, tmp, out;
         i0.copy_from(*inp[0]);
         i1.copy_from(*inp[1]);
-        auto opr = opr::intl::create_megdnn_opr<megdnn::Elemwise>(
-                dest[0].comp_node());
+        auto opr = opr::intl::create_megdnn_opr<megdnn::Elemwise>(dest[0].comp_node());
         using Mode = opr::Elemwise::Mode;
         opr::Elemwise::perform(Mode::MUL, tmp, {i1, i1}, opr);
         opr::Elemwise::perform(Mode::ADD, out, {tmp, i0}, opr);

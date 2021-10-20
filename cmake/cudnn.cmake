@@ -3,10 +3,6 @@ if(${PkgConfig_FOUND})
     pkg_check_modules(PC_CUDNN QUIET CUDNN)
 endif()
 
-if(NOT "$ENV{LIBRARY_PATH}" STREQUAL "")
-    string(REPLACE ":" ";" SYSTEM_LIBRARY_PATHS $ENV{LIBRARY_PATH})
-endif()
-
 if("${CUDNN_ROOT_DIR}" STREQUAL "" AND NOT "$ENV{CUDNN_ROOT_DIR}"  STREQUAL "")
     set(CUDNN_ROOT_DIR $ENV{CUDNN_ROOT_DIR})
 endif()
@@ -14,21 +10,21 @@ endif()
 if(MGE_CUDA_USE_STATIC AND NOT MGE_WITH_CUDNN_SHARED)
     find_library(CUDNN_LIBRARY 
         NAMES libcudnn_static.a cudnn.lib
-        PATHS $ENV{LD_LIBRARY_PATH} ${CUDNN_ROOT_DIR} ${PC_CUDNN_LIBRARY_DIRS} ${CMAKE_INSTALL_PREFIX}
-        HINTS ${SYSTEM_LIBRARY_PATHS}
+        PATHS ${ALTER_LD_LIBRARY_PATHS} ${CUDNN_ROOT_DIR} ${PC_CUDNN_LIBRARY_DIRS} ${CMAKE_INSTALL_PREFIX}
+        HINTS ${ALTER_LIBRARY_PATHS}
         PATH_SUFFIXES lib lib64
         DOC "CUDNN library." )
 else()
     find_library(CUDNN_LIBRARY 
         NAMES libcudnn.so libcudnn.dylib cudnn64.dll
-        PATHS $ENV{LD_LIBRARY_PATH} ${CUDNN_ROOT_DIR} ${PC_CUDNN_LIBRARY_DIRS} ${CMAKE_INSTALL_PREFIX}
-        HINTS ${SYSTEM_LIBRARY_PATHS}
+        PATHS ${ALTER_LD_LIBRARY_PATHS} ${CUDNN_ROOT_DIR} ${PC_CUDNN_LIBRARY_DIRS} ${CMAKE_INSTALL_PREFIX}
+        HINTS ${ALTER_LIBRARY_PATHS}
         PATH_SUFFIXES lib lib64
         DOC "CUDNN library." )
 endif()
 
 if(CUDNN_LIBRARY STREQUAL "CUDNN_LIBRARY-NOTFOUND")
-    message(FATAL_ERROR "Can not find CuDNN Library")
+    message(FATAL_ERROR "Can not find CuDNN Library, please refer to scripts/cmake-build/BUILD_README.md to init CUDNN env")
 endif()
 
 get_filename_component(__found_cudnn_root ${CUDNN_LIBRARY}/../.. REALPATH)
@@ -39,7 +35,7 @@ find_path(CUDNN_INCLUDE_DIR
     DOC "Path to CUDNN include directory." )
 
 if(CUDNN_INCLUDE_DIR STREQUAL "CUDNN_INCLUDE_DIR-NOTFOUND")
-    message(FATAL_ERROR "Can not find CuDNN Library")
+    message(FATAL_ERROR "Can not find CuDNN INCLUDE, please refer to scripts/cmake-build/BUILD_README.md to init CUDNN env")
 endif()
 
 if(EXISTS ${CUDNN_INCLUDE_DIR}/cudnn_version.h)

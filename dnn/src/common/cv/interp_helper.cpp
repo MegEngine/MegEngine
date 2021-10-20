@@ -60,10 +60,7 @@
 #pragma GCC diagnostic ignored "-Wnon-virtual-dtor"
 // TableHolderBase has no problem; ignore the warning for old clang versions
 
-#include "./helper.h"
 #include "./interp_helper.h"
-
-#include "src/common/utils.h"
 
 using namespace megdnn;
 using namespace megdnn::megcv;
@@ -79,8 +76,7 @@ static constexpr double MEGCV_PI_4 = 0.78539816339744830962; /* pi/4 */
     typename InterpolationTable<                                           \
             INTER_BITS_, INTER_MAX_,                                       \
             INTER_REMAP_COEF_BITS_>::template TableHolder<_ksize>          \
-            InterpolationTable<INTER_BITS_, INTER_MAX_,                    \
-                               INTER_REMAP_COEF_BITS_>::_name
+            InterpolationTable<INTER_BITS_, INTER_MAX_, INTER_REMAP_COEF_BITS_>::_name
 
 DEF_TABLE_HOLDER(sm_tab_linear, 2);
 DEF_TABLE_HOLDER(sm_tab_cubic, 4);
@@ -150,8 +146,9 @@ DEF_FUN(const int16_t*) get_linear_ic4_table() {
     short* itab = nullptr;
     MEGDNN_MARK_USED_VAR(tab);
     MEGDNN_MARK_USED_VAR(itab);
-    megdnn_assert(table_holder->get(&tab, &itab),
-                  "invoke get_table before get_linear_ic4_table");
+    megdnn_assert(
+            table_holder->get(&tab, &itab),
+            "invoke get_table before get_linear_ic4_table");
     return table_holder->table->bilineartab_ic4_buf;
 }
 #endif
@@ -192,8 +189,8 @@ DEF_FUN(const void*) get_table(InterpolationMode imode, bool fixpt) {
                     for (k2 = 0; k2 < ksize; ++k2) {
                         float v = vy * _tab[j * ksize + k2];
                         tab[k1 * ksize + k2] = v;
-                        isum += itab[k1 * ksize + k2] = saturate_cast<short>(
-                                v * INTER_REMAP_COEF_SCALE);
+                        isum += itab[k1 * ksize + k2] =
+                                saturate_cast<short>(v * INTER_REMAP_COEF_SCALE);
                     }
                 }
                 if (isum != INTER_REMAP_COEF_SCALE) {
@@ -202,12 +199,11 @@ DEF_FUN(const void*) get_table(InterpolationMode imode, bool fixpt) {
                     int mk1 = ksize2, mk2 = ksize2;
                     for (k1 = ksize2; k1 < ksize2 + 2; ++k1)
                         for (k2 = ksize2; k2 < ksize2 + 2; ++k2) {
-                            if (itab[k1 * ksize + k2] <
-                                itab[mk1 * ksize + mk2]) {
+                            if (itab[k1 * ksize + k2] < itab[mk1 * ksize + mk2]) {
                                 mk1 = k1;
                                 mk2 = k2;
-                            } else if (itab[k1 * ksize + k2] >
-                                       itab[Mk1 * ksize + Mk2]) {
+                            } else if (
+                                    itab[k1 * ksize + k2] > itab[Mk1 * ksize + Mk2]) {
                                 Mk1 = k1;
                                 Mk2 = k2;
                             }
@@ -226,8 +222,7 @@ DEF_FUN(const void*) get_table(InterpolationMode imode, bool fixpt) {
 
 #if MEGDNN_X86
         if (imode == IMode::INTER_LINEAR) {
-            int16_t* bilineartab_ic4_buf =
-                    sm_tab_linear.table->bilineartab_ic4_buf;
+            int16_t* bilineartab_ic4_buf = sm_tab_linear.table->bilineartab_ic4_buf;
             for (i = 0; i < INTER_TAB_SIZE2; i++)
                 for (j = 0; j < 4; j++) {
                     bilineartab_ic4_buf[i * 2 * 8 + 0 * 8 + j * 2] =

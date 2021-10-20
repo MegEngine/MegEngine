@@ -58,15 +58,15 @@
  *
  * ---------------------------------------------------------------------------
  */
-#include <cstring>
 #include "src/arm_common/cvt_color/opr_impl.h"
+#include <cstring>
+#include "midout.h"
 #include "src/arm_common/handle.h"
 #include "src/arm_common/simd_macro/marm_neon.h"
 #include "src/common/cv/common.h"
 #include "src/common/cv/cvt_color.h"
 #include "src/common/cv/helper.h"
 #include "src/common/utils.h"
-#include "midout.h"
 
 MIDOUT_DECL(megdnn_arm_cvtcolor)
 MIDOUT_DECL(megdnn_arm_cvtcolor_cases)
@@ -147,23 +147,17 @@ void cvt_yuv_transform(const Mat8u& src, Mat8u& dst) {
         for (; c <= (int)(width - 16); c += 16, index0 += 48, index1 += 48) {
             int16x8x2_t v_vu_s16;
             if (is_planar) {
-                v_vu_s16.val[0] =
-                        vreinterpretq_s16_u16(vmovl_u8(vld1_u8(pV + c / 2)));
-                v_vu_s16.val[1] =
-                        vreinterpretq_s16_u16(vmovl_u8(vld1_u8(pU + c / 2)));
+                v_vu_s16.val[0] = vreinterpretq_s16_u16(vmovl_u8(vld1_u8(pV + c / 2)));
+                v_vu_s16.val[1] = vreinterpretq_s16_u16(vmovl_u8(vld1_u8(pU + c / 2)));
             } else {
                 if (is_uv) {
                     v_vu = vld2_u8(pU + c);
-                    v_vu_s16.val[0] =
-                            vreinterpretq_s16_u16(vmovl_u8(v_vu.val[1]));
-                    v_vu_s16.val[1] =
-                            vreinterpretq_s16_u16(vmovl_u8(v_vu.val[0]));
+                    v_vu_s16.val[0] = vreinterpretq_s16_u16(vmovl_u8(v_vu.val[1]));
+                    v_vu_s16.val[1] = vreinterpretq_s16_u16(vmovl_u8(v_vu.val[0]));
                 } else {
                     v_vu = vld2_u8(pV + c);
-                    v_vu_s16.val[0] =
-                            vreinterpretq_s16_u16(vmovl_u8(v_vu.val[0]));
-                    v_vu_s16.val[1] =
-                            vreinterpretq_s16_u16(vmovl_u8(v_vu.val[1]));
+                    v_vu_s16.val[0] = vreinterpretq_s16_u16(vmovl_u8(v_vu.val[0]));
+                    v_vu_s16.val[1] = vreinterpretq_s16_u16(vmovl_u8(v_vu.val[1]));
                 }
             }
 
@@ -180,11 +174,9 @@ void cvt_yuv_transform(const Mat8u& src, Mat8u& dst) {
             v_RV1 = vshrq_n_s32(vmull_s16(v_v0, v_359), 8);
             v_RV3 = vshrq_n_s32(vmull_s16(v_v1, v_359), 8);
             v_GVU1 = vshrq_n_s32(
-                    vaddq_s32(vmull_s16(v_u0, v_88), vmull_s16(v_v0, v_183)),
-                    8);
+                    vaddq_s32(vmull_s16(v_u0, v_88), vmull_s16(v_v0, v_183)), 8);
             v_GVU3 = vshrq_n_s32(
-                    vaddq_s32(vmull_s16(v_u1, v_88), vmull_s16(v_v1, v_183)),
-                    8);
+                    vaddq_s32(vmull_s16(v_u1, v_88), vmull_s16(v_v1, v_183)), 8);
             v_BU1 = vshrq_n_s32(vmull_s16(v_u0, v_454), 8);
             v_BU3 = vshrq_n_s32(vmull_s16(v_u1, v_454), 8);
 
@@ -239,38 +231,38 @@ void cvt_yuv_transform(const Mat8u& src, Mat8u& dst) {
 
             if (rgb) {
                 v_RGB.val[0] = vcombine_u8(
-                        vqmovun_s16(vcombine_s16(vmovn_s32(v_R.val[0]),
-                                                 vmovn_s32(v_R.val[1]))),
-                        vqmovun_s16(vcombine_s16(vmovn_s32(v_R.val[2]),
-                                                 vmovn_s32(v_R.val[3]))));
+                        vqmovun_s16(vcombine_s16(
+                                vmovn_s32(v_R.val[0]), vmovn_s32(v_R.val[1]))),
+                        vqmovun_s16(vcombine_s16(
+                                vmovn_s32(v_R.val[2]), vmovn_s32(v_R.val[3]))));
                 v_RGB.val[1] = vcombine_u8(
-                        vqmovun_s16(vcombine_s16(vmovn_s32(v_G.val[0]),
-                                                 vmovn_s32(v_G.val[1]))),
-                        vqmovun_s16(vcombine_s16(vmovn_s32(v_G.val[2]),
-                                                 vmovn_s32(v_G.val[3]))));
+                        vqmovun_s16(vcombine_s16(
+                                vmovn_s32(v_G.val[0]), vmovn_s32(v_G.val[1]))),
+                        vqmovun_s16(vcombine_s16(
+                                vmovn_s32(v_G.val[2]), vmovn_s32(v_G.val[3]))));
                 v_RGB.val[2] = vcombine_u8(
-                        vqmovun_s16(vcombine_s16(vmovn_s32(v_B.val[0]),
-                                                 vmovn_s32(v_B.val[1]))),
-                        vqmovun_s16(vcombine_s16(vmovn_s32(v_B.val[2]),
-                                                 vmovn_s32(v_B.val[3]))));
+                        vqmovun_s16(vcombine_s16(
+                                vmovn_s32(v_B.val[0]), vmovn_s32(v_B.val[1]))),
+                        vqmovun_s16(vcombine_s16(
+                                vmovn_s32(v_B.val[2]), vmovn_s32(v_B.val[3]))));
 
                 vst3q_u8((dst0 + c * 3), v_RGB);
             } else {
                 v_BGR.val[0] = vcombine_u8(
-                        vqmovun_s16(vcombine_s16(vmovn_s32(v_B.val[0]),
-                                                 vmovn_s32(v_B.val[1]))),
-                        vqmovun_s16(vcombine_s16(vmovn_s32(v_B.val[2]),
-                                                 vmovn_s32(v_B.val[3]))));
+                        vqmovun_s16(vcombine_s16(
+                                vmovn_s32(v_B.val[0]), vmovn_s32(v_B.val[1]))),
+                        vqmovun_s16(vcombine_s16(
+                                vmovn_s32(v_B.val[2]), vmovn_s32(v_B.val[3]))));
                 v_BGR.val[1] = vcombine_u8(
-                        vqmovun_s16(vcombine_s16(vmovn_s32(v_G.val[0]),
-                                                 vmovn_s32(v_G.val[1]))),
-                        vqmovun_s16(vcombine_s16(vmovn_s32(v_G.val[2]),
-                                                 vmovn_s32(v_G.val[3]))));
+                        vqmovun_s16(vcombine_s16(
+                                vmovn_s32(v_G.val[0]), vmovn_s32(v_G.val[1]))),
+                        vqmovun_s16(vcombine_s16(
+                                vmovn_s32(v_G.val[2]), vmovn_s32(v_G.val[3]))));
                 v_BGR.val[2] = vcombine_u8(
-                        vqmovun_s16(vcombine_s16(vmovn_s32(v_R.val[0]),
-                                                 vmovn_s32(v_R.val[1]))),
-                        vqmovun_s16(vcombine_s16(vmovn_s32(v_R.val[2]),
-                                                 vmovn_s32(v_R.val[3]))));
+                        vqmovun_s16(vcombine_s16(
+                                vmovn_s32(v_R.val[0]), vmovn_s32(v_R.val[1]))),
+                        vqmovun_s16(vcombine_s16(
+                                vmovn_s32(v_R.val[2]), vmovn_s32(v_R.val[3]))));
                 vst3q_u8((dst0 + c * 3), v_BGR);
             }
 
@@ -302,38 +294,38 @@ void cvt_yuv_transform(const Mat8u& src, Mat8u& dst) {
 
             if (rgb) {
                 v_RGB.val[0] = vcombine_u8(
-                        vqmovun_s16(vcombine_s16(vmovn_s32(v_R.val[0]),
-                                                 vmovn_s32(v_R.val[1]))),
-                        vqmovun_s16(vcombine_s16(vmovn_s32(v_R.val[2]),
-                                                 vmovn_s32(v_R.val[3]))));
+                        vqmovun_s16(vcombine_s16(
+                                vmovn_s32(v_R.val[0]), vmovn_s32(v_R.val[1]))),
+                        vqmovun_s16(vcombine_s16(
+                                vmovn_s32(v_R.val[2]), vmovn_s32(v_R.val[3]))));
                 v_RGB.val[1] = vcombine_u8(
-                        vqmovun_s16(vcombine_s16(vmovn_s32(v_G.val[0]),
-                                                 vmovn_s32(v_G.val[1]))),
-                        vqmovun_s16(vcombine_s16(vmovn_s32(v_G.val[2]),
-                                                 vmovn_s32(v_G.val[3]))));
+                        vqmovun_s16(vcombine_s16(
+                                vmovn_s32(v_G.val[0]), vmovn_s32(v_G.val[1]))),
+                        vqmovun_s16(vcombine_s16(
+                                vmovn_s32(v_G.val[2]), vmovn_s32(v_G.val[3]))));
                 v_RGB.val[2] = vcombine_u8(
-                        vqmovun_s16(vcombine_s16(vmovn_s32(v_B.val[0]),
-                                                 vmovn_s32(v_B.val[1]))),
-                        vqmovun_s16(vcombine_s16(vmovn_s32(v_B.val[2]),
-                                                 vmovn_s32(v_B.val[3]))));
+                        vqmovun_s16(vcombine_s16(
+                                vmovn_s32(v_B.val[0]), vmovn_s32(v_B.val[1]))),
+                        vqmovun_s16(vcombine_s16(
+                                vmovn_s32(v_B.val[2]), vmovn_s32(v_B.val[3]))));
 
                 vst3q_u8((dst1 + c * 3), v_RGB);
             } else {
                 v_BGR.val[0] = vcombine_u8(
-                        vqmovun_s16(vcombine_s16(vmovn_s32(v_B.val[0]),
-                                                 vmovn_s32(v_B.val[1]))),
-                        vqmovun_s16(vcombine_s16(vmovn_s32(v_B.val[2]),
-                                                 vmovn_s32(v_B.val[3]))));
+                        vqmovun_s16(vcombine_s16(
+                                vmovn_s32(v_B.val[0]), vmovn_s32(v_B.val[1]))),
+                        vqmovun_s16(vcombine_s16(
+                                vmovn_s32(v_B.val[2]), vmovn_s32(v_B.val[3]))));
                 v_BGR.val[1] = vcombine_u8(
-                        vqmovun_s16(vcombine_s16(vmovn_s32(v_G.val[0]),
-                                                 vmovn_s32(v_G.val[1]))),
-                        vqmovun_s16(vcombine_s16(vmovn_s32(v_G.val[2]),
-                                                 vmovn_s32(v_G.val[3]))));
+                        vqmovun_s16(vcombine_s16(
+                                vmovn_s32(v_G.val[0]), vmovn_s32(v_G.val[1]))),
+                        vqmovun_s16(vcombine_s16(
+                                vmovn_s32(v_G.val[2]), vmovn_s32(v_G.val[3]))));
                 v_BGR.val[2] = vcombine_u8(
-                        vqmovun_s16(vcombine_s16(vmovn_s32(v_R.val[0]),
-                                                 vmovn_s32(v_R.val[1]))),
-                        vqmovun_s16(vcombine_s16(vmovn_s32(v_R.val[2]),
-                                                 vmovn_s32(v_R.val[3]))));
+                        vqmovun_s16(vcombine_s16(
+                                vmovn_s32(v_R.val[0]), vmovn_s32(v_R.val[1]))),
+                        vqmovun_s16(vcombine_s16(
+                                vmovn_s32(v_R.val[2]), vmovn_s32(v_R.val[3]))));
                 vst3q_u8((dst1 + c * 3), v_BGR);
             }
         }
@@ -450,7 +442,7 @@ void cvt_BT601_yuv_transform(const Mat8u& src, Mat8u& dst) {
         out[index++] = R;     \
     }
 
-#define YG 18997  /* round(1.164 * 64 * 256 * 256 / 257) */
+#define YG  18997 /* round(1.164 * 64 * 256 * 256 / 257) */
 #define YGB -1160 /* 1.164 * 64 * -16 + 64 / 2 */
 
 // U and V contributions to R,G,B.
@@ -503,24 +495,18 @@ void cvt_BT601_yuv_transform(const Mat8u& src, Mat8u& dst) {
         for (; j <= (int)(width - 16); j += 16, index += 48, index1 += 48) {
             int16x8x2_t v_vu_s16;
             if (is_planar) {
-                v_vu_s16.val[0] =
-                        vreinterpretq_s16_u16(vmovl_u8(vld1_u8(pV + jV)));
-                v_vu_s16.val[1] =
-                        vreinterpretq_s16_u16(vmovl_u8(vld1_u8(pU + jV)));
+                v_vu_s16.val[0] = vreinterpretq_s16_u16(vmovl_u8(vld1_u8(pV + jV)));
+                v_vu_s16.val[1] = vreinterpretq_s16_u16(vmovl_u8(vld1_u8(pU + jV)));
                 jV += 8;
             } else {
                 if (is_uv) {
                     v_vu = vld2_u8(pU + j);
-                    v_vu_s16.val[0] =
-                            vreinterpretq_s16_u16(vmovl_u8(v_vu.val[1]));
-                    v_vu_s16.val[1] =
-                            vreinterpretq_s16_u16(vmovl_u8(v_vu.val[0]));
+                    v_vu_s16.val[0] = vreinterpretq_s16_u16(vmovl_u8(v_vu.val[1]));
+                    v_vu_s16.val[1] = vreinterpretq_s16_u16(vmovl_u8(v_vu.val[0]));
                 } else {
                     v_vu = vld2_u8(pV + j);
-                    v_vu_s16.val[0] =
-                            vreinterpretq_s16_u16(vmovl_u8(v_vu.val[0]));
-                    v_vu_s16.val[1] =
-                            vreinterpretq_s16_u16(vmovl_u8(v_vu.val[1]));
+                    v_vu_s16.val[0] = vreinterpretq_s16_u16(vmovl_u8(v_vu.val[0]));
+                    v_vu_s16.val[1] = vreinterpretq_s16_u16(vmovl_u8(v_vu.val[1]));
                 }
             }
 
@@ -560,16 +546,17 @@ void cvt_BT601_yuv_transform(const Mat8u& src, Mat8u& dst) {
             int32x4_t v_y3 = vmovl_s16(vget_high_s16(v_y_2quarter));
 
             //! calc
-#define CALC(_idx)                                                            \
-    v_Y1 = vshrq_n_s32(vmulq_s32(vmulq_s32(v_y##_idx, v_0101), v_YG), 16);    \
-    v_B.val[_idx] = vshrq_n_s32(                                              \
-            vsubq_s32(vaddq_s32(v_Y1, v_BB), vmulq_s32(v_u##_idx, v_UB)), 6); \
-    v_G.val[_idx] =                                                           \
-            vshrq_n_s32(vsubq_s32(vaddq_s32(v_Y1, v_BG),                      \
-                                  vaddq_s32(vmulq_s32(v_u##_idx, v_UG),       \
-                                            vmulq_s32(v_v##_idx, v_VG))),     \
-                        6);                                                   \
-    v_R.val[_idx] = vshrq_n_s32(                                              \
+#define CALC(_idx)                                                                    \
+    v_Y1 = vshrq_n_s32(vmulq_s32(vmulq_s32(v_y##_idx, v_0101), v_YG), 16);            \
+    v_B.val[_idx] = vshrq_n_s32(                                                      \
+            vsubq_s32(vaddq_s32(v_Y1, v_BB), vmulq_s32(v_u##_idx, v_UB)), 6);         \
+    v_G.val[_idx] = vshrq_n_s32(                                                      \
+            vsubq_s32(                                                                \
+                    vaddq_s32(v_Y1, v_BG),                                            \
+                    vaddq_s32(                                                        \
+                            vmulq_s32(v_u##_idx, v_UG), vmulq_s32(v_v##_idx, v_VG))), \
+            6);                                                                       \
+    v_R.val[_idx] = vshrq_n_s32(                                                      \
             vsubq_s32(vaddq_s32(v_Y1, v_BR), vmulq_s32(v_v##_idx, v_VR)), 6);
 
             CALC(0);
@@ -579,37 +566,37 @@ void cvt_BT601_yuv_transform(const Mat8u& src, Mat8u& dst) {
 
             if (rgb) {
                 v_RGB.val[0] = vcombine_u8(
-                        vqmovun_s16(vcombine_s16(vmovn_s32(v_R.val[0]),
-                                                 vmovn_s32(v_R.val[1]))),
-                        vqmovun_s16(vcombine_s16(vmovn_s32(v_R.val[2]),
-                                                 vmovn_s32(v_R.val[3]))));
+                        vqmovun_s16(vcombine_s16(
+                                vmovn_s32(v_R.val[0]), vmovn_s32(v_R.val[1]))),
+                        vqmovun_s16(vcombine_s16(
+                                vmovn_s32(v_R.val[2]), vmovn_s32(v_R.val[3]))));
                 v_RGB.val[1] = vcombine_u8(
-                        vqmovun_s16(vcombine_s16(vmovn_s32(v_G.val[0]),
-                                                 vmovn_s32(v_G.val[1]))),
-                        vqmovun_s16(vcombine_s16(vmovn_s32(v_G.val[2]),
-                                                 vmovn_s32(v_G.val[3]))));
+                        vqmovun_s16(vcombine_s16(
+                                vmovn_s32(v_G.val[0]), vmovn_s32(v_G.val[1]))),
+                        vqmovun_s16(vcombine_s16(
+                                vmovn_s32(v_G.val[2]), vmovn_s32(v_G.val[3]))));
                 v_RGB.val[2] = vcombine_u8(
-                        vqmovun_s16(vcombine_s16(vmovn_s32(v_B.val[0]),
-                                                 vmovn_s32(v_B.val[1]))),
-                        vqmovun_s16(vcombine_s16(vmovn_s32(v_B.val[2]),
-                                                 vmovn_s32(v_B.val[3]))));
+                        vqmovun_s16(vcombine_s16(
+                                vmovn_s32(v_B.val[0]), vmovn_s32(v_B.val[1]))),
+                        vqmovun_s16(vcombine_s16(
+                                vmovn_s32(v_B.val[2]), vmovn_s32(v_B.val[3]))));
                 vst3q_u8((out + index), v_RGB);
             } else {
                 v_BGR.val[0] = vcombine_u8(
-                        vqmovun_s16(vcombine_s16(vmovn_s32(v_B.val[0]),
-                                                 vmovn_s32(v_B.val[1]))),
-                        vqmovun_s16(vcombine_s16(vmovn_s32(v_B.val[2]),
-                                                 vmovn_s32(v_B.val[3]))));
+                        vqmovun_s16(vcombine_s16(
+                                vmovn_s32(v_B.val[0]), vmovn_s32(v_B.val[1]))),
+                        vqmovun_s16(vcombine_s16(
+                                vmovn_s32(v_B.val[2]), vmovn_s32(v_B.val[3]))));
                 v_BGR.val[1] = vcombine_u8(
-                        vqmovun_s16(vcombine_s16(vmovn_s32(v_G.val[0]),
-                                                 vmovn_s32(v_G.val[1]))),
-                        vqmovun_s16(vcombine_s16(vmovn_s32(v_G.val[2]),
-                                                 vmovn_s32(v_G.val[3]))));
+                        vqmovun_s16(vcombine_s16(
+                                vmovn_s32(v_G.val[0]), vmovn_s32(v_G.val[1]))),
+                        vqmovun_s16(vcombine_s16(
+                                vmovn_s32(v_G.val[2]), vmovn_s32(v_G.val[3]))));
                 v_BGR.val[2] = vcombine_u8(
-                        vqmovun_s16(vcombine_s16(vmovn_s32(v_R.val[0]),
-                                                 vmovn_s32(v_R.val[1]))),
-                        vqmovun_s16(vcombine_s16(vmovn_s32(v_R.val[2]),
-                                                 vmovn_s32(v_R.val[3]))));
+                        vqmovun_s16(vcombine_s16(
+                                vmovn_s32(v_R.val[0]), vmovn_s32(v_R.val[1]))),
+                        vqmovun_s16(vcombine_s16(
+                                vmovn_s32(v_R.val[2]), vmovn_s32(v_R.val[3]))));
                 vst3q_u8((out + index), v_BGR);
             }
 
@@ -630,37 +617,37 @@ void cvt_BT601_yuv_transform(const Mat8u& src, Mat8u& dst) {
 
             if (rgb) {
                 v_RGB.val[0] = vcombine_u8(
-                        vqmovun_s16(vcombine_s16(vmovn_s32(v_R.val[0]),
-                                                 vmovn_s32(v_R.val[1]))),
-                        vqmovun_s16(vcombine_s16(vmovn_s32(v_R.val[2]),
-                                                 vmovn_s32(v_R.val[3]))));
+                        vqmovun_s16(vcombine_s16(
+                                vmovn_s32(v_R.val[0]), vmovn_s32(v_R.val[1]))),
+                        vqmovun_s16(vcombine_s16(
+                                vmovn_s32(v_R.val[2]), vmovn_s32(v_R.val[3]))));
                 v_RGB.val[1] = vcombine_u8(
-                        vqmovun_s16(vcombine_s16(vmovn_s32(v_G.val[0]),
-                                                 vmovn_s32(v_G.val[1]))),
-                        vqmovun_s16(vcombine_s16(vmovn_s32(v_G.val[2]),
-                                                 vmovn_s32(v_G.val[3]))));
+                        vqmovun_s16(vcombine_s16(
+                                vmovn_s32(v_G.val[0]), vmovn_s32(v_G.val[1]))),
+                        vqmovun_s16(vcombine_s16(
+                                vmovn_s32(v_G.val[2]), vmovn_s32(v_G.val[3]))));
                 v_RGB.val[2] = vcombine_u8(
-                        vqmovun_s16(vcombine_s16(vmovn_s32(v_B.val[0]),
-                                                 vmovn_s32(v_B.val[1]))),
-                        vqmovun_s16(vcombine_s16(vmovn_s32(v_B.val[2]),
-                                                 vmovn_s32(v_B.val[3]))));
+                        vqmovun_s16(vcombine_s16(
+                                vmovn_s32(v_B.val[0]), vmovn_s32(v_B.val[1]))),
+                        vqmovun_s16(vcombine_s16(
+                                vmovn_s32(v_B.val[2]), vmovn_s32(v_B.val[3]))));
                 vst3q_u8((out1 + index1), v_RGB);
             } else {
                 v_BGR.val[0] = vcombine_u8(
-                        vqmovun_s16(vcombine_s16(vmovn_s32(v_B.val[0]),
-                                                 vmovn_s32(v_B.val[1]))),
-                        vqmovun_s16(vcombine_s16(vmovn_s32(v_B.val[2]),
-                                                 vmovn_s32(v_B.val[3]))));
+                        vqmovun_s16(vcombine_s16(
+                                vmovn_s32(v_B.val[0]), vmovn_s32(v_B.val[1]))),
+                        vqmovun_s16(vcombine_s16(
+                                vmovn_s32(v_B.val[2]), vmovn_s32(v_B.val[3]))));
                 v_BGR.val[1] = vcombine_u8(
-                        vqmovun_s16(vcombine_s16(vmovn_s32(v_G.val[0]),
-                                                 vmovn_s32(v_G.val[1]))),
-                        vqmovun_s16(vcombine_s16(vmovn_s32(v_G.val[2]),
-                                                 vmovn_s32(v_G.val[3]))));
+                        vqmovun_s16(vcombine_s16(
+                                vmovn_s32(v_G.val[0]), vmovn_s32(v_G.val[1]))),
+                        vqmovun_s16(vcombine_s16(
+                                vmovn_s32(v_G.val[2]), vmovn_s32(v_G.val[3]))));
                 v_BGR.val[2] = vcombine_u8(
-                        vqmovun_s16(vcombine_s16(vmovn_s32(v_R.val[0]),
-                                                 vmovn_s32(v_R.val[1]))),
-                        vqmovun_s16(vcombine_s16(vmovn_s32(v_R.val[2]),
-                                                 vmovn_s32(v_R.val[3]))));
+                        vqmovun_s16(vcombine_s16(
+                                vmovn_s32(v_R.val[0]), vmovn_s32(v_R.val[1]))),
+                        vqmovun_s16(vcombine_s16(
+                                vmovn_s32(v_R.val[2]), vmovn_s32(v_R.val[3]))));
                 vst3q_u8((out1 + index1), v_BGR);
             }
 #undef CALC
@@ -748,18 +735,24 @@ void cvt_BT601_yuv_transform(const Mat8u& src, Mat8u& dst) {
 
 }  // namespace
 
+template <bool rgb = true>
 void cvt_rgb2gray_32f_neon(const Mat32f& src, Mat32f& dst) {
     static const float coef[] = {0.299f, 0.587f, 0.114f};
     // load coef into neon types
-    const float32x4_t v_cr(vdupq_n_f32(coef[0])), v_cg(vdupq_n_f32(coef[1])),
-            v_cb(vdupq_n_f32(coef[2]));
+    float coef_c0 = rgb ? coef[0] : coef[2];
+    float coef_c1 = coef[1];
+    float coef_c2 = rgb ? coef[2] : coef[0];
 
-#define EXPAND(offset)                                                         \
-    v_src = vld3q_f32(psrc + offset * 3);                                      \
-    vst1q_f32(pdst + offset,                                                   \
-              vmlaq_f32(vmlaq_f32(vmulq_f32(v_src.val[0], v_cr), v_src.val[1], \
-                                  v_cg),                                       \
-                        v_src.val[2], v_cb));
+    const float32x4_t v_cr(vdupq_n_f32(coef_c0)), v_cg(vdupq_n_f32(coef_c1)),
+            v_cb(vdupq_n_f32(coef_c2));
+
+#define EXPAND(offset)                                                            \
+    v_src = vld3q_f32(psrc + offset * 3);                                         \
+    vst1q_f32(                                                                    \
+            pdst + offset,                                                        \
+            vmlaq_f32(                                                            \
+                    vmlaq_f32(vmulq_f32(v_src.val[0], v_cr), v_src.val[1], v_cg), \
+                    v_src.val[2], v_cb));
     for (size_t r = 0; r < src.rows(); ++r) {
         const float* psrc = src.ptr(r);
         float* pdst = dst.ptr(r);
@@ -796,7 +789,7 @@ void cvt_rgb2gray_32f_neon(const Mat32f& src, Mat32f& dst) {
         }
         // loop over left pixels
         for (; psrc < pend; psrc += 3, pdst += 1) {
-            *pdst = psrc[0] * coef[0] + psrc[1] * coef[1] + psrc[2] * coef[2];
+            *pdst = psrc[0] * coef_c0 + psrc[1] * coef_c1 + psrc[2] * coef_c2;
         }
     }
 #undef EXPAND
@@ -840,44 +833,43 @@ void cvt_rgb2yuv_8u_neon(const Mat8u& src, Mat8u& dst) {
             v_src0.val[1] = vget_low_s16(v_src16.val[1]);
             v_src0.val[2] = vget_low_s16(v_src16.val[2]);
 
-            int32x4_t v_Y0 = vmlal_s16(vmlal_s16(vmull_s16(v_src0.val[0], v_c0),
-                                                 v_src0.val[1], v_c1),
-                                       v_src0.val[2], v_c2);
+            int32x4_t v_Y0 = vmlal_s16(
+                    vmlal_s16(vmull_s16(v_src0.val[0], v_c0), v_src0.val[1], v_c1),
+                    v_src0.val[2], v_c2);
             v_Y0 = vshrq_n_s32(vaddq_s32(v_Y0, v_delta2), yuv_shift);
-            int32x4_t v_Cr0 = vmlaq_s32(
-                    v_delta, vsubq_s32(vmovl_s16(v_src0.val[0]), v_Y0), v_c3);
+            int32x4_t v_Cr0 =
+                    vmlaq_s32(v_delta, vsubq_s32(vmovl_s16(v_src0.val[0]), v_Y0), v_c3);
             v_Cr0 = vshrq_n_s32(vaddq_s32(v_Cr0, v_delta2), yuv_shift);
-            int32x4_t v_Cb0 = vmlaq_s32(
-                    v_delta, vsubq_s32(vmovl_s16(v_src0.val[2]), v_Y0), v_c4);
+            int32x4_t v_Cb0 =
+                    vmlaq_s32(v_delta, vsubq_s32(vmovl_s16(v_src0.val[2]), v_Y0), v_c4);
             v_Cb0 = vshrq_n_s32(vaddq_s32(v_Cb0, v_delta2), yuv_shift);
 
             v_src0.val[0] = vget_high_s16(v_src16.val[0]);
             v_src0.val[1] = vget_high_s16(v_src16.val[1]);
             v_src0.val[2] = vget_high_s16(v_src16.val[2]);
 
-            int32x4_t v_Y1 = vmlal_s16(vmlal_s16(vmull_s16(v_src0.val[0], v_c0),
-                                                 v_src0.val[1], v_c1),
-                                       v_src0.val[2], v_c2);
+            int32x4_t v_Y1 = vmlal_s16(
+                    vmlal_s16(vmull_s16(v_src0.val[0], v_c0), v_src0.val[1], v_c1),
+                    v_src0.val[2], v_c2);
             v_Y1 = vshrq_n_s32(vaddq_s32(v_Y1, v_delta2), yuv_shift);
-            int32x4_t v_Cr1 = vmlaq_s32(
-                    v_delta, vsubq_s32(vmovl_s16(v_src0.val[0]), v_Y1), v_c3);
+            int32x4_t v_Cr1 =
+                    vmlaq_s32(v_delta, vsubq_s32(vmovl_s16(v_src0.val[0]), v_Y1), v_c3);
             v_Cr1 = vshrq_n_s32(vaddq_s32(v_Cr1, v_delta2), yuv_shift);
-            int32x4_t v_Cb1 = vmlaq_s32(
-                    v_delta, vsubq_s32(vmovl_s16(v_src0.val[2]), v_Y1), v_c4);
+            int32x4_t v_Cb1 =
+                    vmlaq_s32(v_delta, vsubq_s32(vmovl_s16(v_src0.val[2]), v_Y1), v_c4);
             v_Cb1 = vshrq_n_s32(vaddq_s32(v_Cb1, v_delta2), yuv_shift);
 
-            v_dst.val[0] = vqmovun_s16(
-                    vcombine_s16(vqmovn_s32(v_Y0), vqmovn_s32(v_Y1)));
-            v_dst.val[1] = vqmovun_s16(
-                    vcombine_s16(vqmovn_s32(v_Cr0), vqmovn_s32(v_Cr1)));
-            v_dst.val[2] = vqmovun_s16(
-                    vcombine_s16(vqmovn_s32(v_Cb0), vqmovn_s32(v_Cb1)));
+            v_dst.val[0] =
+                    vqmovun_s16(vcombine_s16(vqmovn_s32(v_Y0), vqmovn_s32(v_Y1)));
+            v_dst.val[1] =
+                    vqmovun_s16(vcombine_s16(vqmovn_s32(v_Cr0), vqmovn_s32(v_Cr1)));
+            v_dst.val[2] =
+                    vqmovun_s16(vcombine_s16(vqmovn_s32(v_Cb0), vqmovn_s32(v_Cb1)));
 
             vst3_u8(pdst, v_dst);
         }
         for (; psrc < pend; psrc += 3, pdst += 3) {
-            int Y = descale(psrc[0] * C0 + psrc[1] * C1 + psrc[2] * C2,
-                            yuv_shift);
+            int Y = descale(psrc[0] * C0 + psrc[1] * C1 + psrc[2] * C2, yuv_shift);
             int Cr = descale((psrc[0] - Y) * C3 + delta, yuv_shift);
             int Cb = descale((psrc[2] - Y) * C4 + delta, yuv_shift);
             pdst[0] = saturate_cast<uchar>(Y);
@@ -907,13 +899,13 @@ void cvt_rgb2yuv_32f_neon(const Mat32f& src, Mat32f& dst) {
 
         for (; psrc <= pend - 4 * 3; psrc += 4 * 3, pdst += 4 * 3) {
             float32x4x3_t v_src = vld3q_f32(psrc), v_dst;
-            v_dst.val[0] = vmlaq_f32(vmlaq_f32(vmulq_f32(v_src.val[0], v_c0),
-                                               v_src.val[1], v_c1),
-                                     v_src.val[2], v_c2);
-            v_dst.val[1] = vmlaq_f32(
-                    v_delta, vsubq_f32(v_src.val[0], v_dst.val[0]), v_c3);
-            v_dst.val[2] = vmlaq_f32(
-                    v_delta, vsubq_f32(v_src.val[2], v_dst.val[0]), v_c4);
+            v_dst.val[0] = vmlaq_f32(
+                    vmlaq_f32(vmulq_f32(v_src.val[0], v_c0), v_src.val[1], v_c1),
+                    v_src.val[2], v_c2);
+            v_dst.val[1] =
+                    vmlaq_f32(v_delta, vsubq_f32(v_src.val[0], v_dst.val[0]), v_c3);
+            v_dst.val[2] =
+                    vmlaq_f32(v_delta, vsubq_f32(v_src.val[2], v_dst.val[0]), v_c4);
 
             vst3q_f32(pdst, v_dst);
         }
@@ -958,39 +950,30 @@ void cvt_yuv2rgb_8u_neon(const Mat8u& src, Mat8u& dst) {
                       v_Cb = vget_low_s16(v_src16.val[2]);
 
             int32x4_t v_b0 = vmulq_s32(v_c3, vsubl_s16(v_Cb, v_delta));
-            v_b0 = vaddw_s16(vshrq_n_s32(vaddq_s32(v_b0, v_delta2), yuv_shift),
-                             v_Y);
-            int32x4_t v_g0 =
-                    vmlaq_s32(vmulq_s32(vsubl_s16(v_Cr, v_delta), v_c1),
-                              vsubl_s16(v_Cb, v_delta), v_c2);
-            v_g0 = vaddw_s16(vshrq_n_s32(vaddq_s32(v_g0, v_delta2), yuv_shift),
-                             v_Y);
+            v_b0 = vaddw_s16(vshrq_n_s32(vaddq_s32(v_b0, v_delta2), yuv_shift), v_Y);
+            int32x4_t v_g0 = vmlaq_s32(
+                    vmulq_s32(vsubl_s16(v_Cr, v_delta), v_c1), vsubl_s16(v_Cb, v_delta),
+                    v_c2);
+            v_g0 = vaddw_s16(vshrq_n_s32(vaddq_s32(v_g0, v_delta2), yuv_shift), v_Y);
             int32x4_t v_r0 = vmulq_s32(v_c0, vsubl_s16(v_Cr, v_delta));
-            v_r0 = vaddw_s16(vshrq_n_s32(vaddq_s32(v_r0, v_delta2), yuv_shift),
-                             v_Y);
+            v_r0 = vaddw_s16(vshrq_n_s32(vaddq_s32(v_r0, v_delta2), yuv_shift), v_Y);
 
             v_Y = vget_high_s16(v_src16.val[0]);
             v_Cr = vget_high_s16(v_src16.val[1]);
             v_Cb = vget_high_s16(v_src16.val[2]);
 
             int32x4_t v_b1 = vmulq_s32(v_c3, vsubl_s16(v_Cb, v_delta));
-            v_b1 = vaddw_s16(vshrq_n_s32(vaddq_s32(v_b1, v_delta2), yuv_shift),
-                             v_Y);
-            int32x4_t v_g1 =
-                    vmlaq_s32(vmulq_s32(vsubl_s16(v_Cr, v_delta), v_c1),
-                              vsubl_s16(v_Cb, v_delta), v_c2);
-            v_g1 = vaddw_s16(vshrq_n_s32(vaddq_s32(v_g1, v_delta2), yuv_shift),
-                             v_Y);
+            v_b1 = vaddw_s16(vshrq_n_s32(vaddq_s32(v_b1, v_delta2), yuv_shift), v_Y);
+            int32x4_t v_g1 = vmlaq_s32(
+                    vmulq_s32(vsubl_s16(v_Cr, v_delta), v_c1), vsubl_s16(v_Cb, v_delta),
+                    v_c2);
+            v_g1 = vaddw_s16(vshrq_n_s32(vaddq_s32(v_g1, v_delta2), yuv_shift), v_Y);
             int32x4_t v_r1 = vmulq_s32(v_c0, vsubl_s16(v_Cr, v_delta));
-            v_r1 = vaddw_s16(vshrq_n_s32(vaddq_s32(v_r1, v_delta2), yuv_shift),
-                             v_Y);
+            v_r1 = vaddw_s16(vshrq_n_s32(vaddq_s32(v_r1, v_delta2), yuv_shift), v_Y);
 
-            uint8x8_t v_b =
-                    vqmovun_s16(vcombine_s16(vmovn_s32(v_b0), vmovn_s32(v_b1)));
-            uint8x8_t v_g =
-                    vqmovun_s16(vcombine_s16(vmovn_s32(v_g0), vmovn_s32(v_g1)));
-            uint8x8_t v_r =
-                    vqmovun_s16(vcombine_s16(vmovn_s32(v_r0), vmovn_s32(v_r1)));
+            uint8x8_t v_b = vqmovun_s16(vcombine_s16(vmovn_s32(v_b0), vmovn_s32(v_b1)));
+            uint8x8_t v_g = vqmovun_s16(vcombine_s16(vmovn_s32(v_g0), vmovn_s32(v_g1)));
+            uint8x8_t v_r = vqmovun_s16(vcombine_s16(vmovn_s32(v_r0), vmovn_s32(v_r1)));
 
             uint8x8x3_t v_dst;
             v_dst.val[0] = v_r;
@@ -1004,8 +987,7 @@ void cvt_yuv2rgb_8u_neon(const Mat8u& src, Mat8u& dst) {
             uchar Cb = psrc[2];
 
             int b = Y + descale((Cb - delta) * C3, yuv_shift);
-            int g = Y +
-                    descale((Cb - delta) * C2 + (Cr - delta) * C1, yuv_shift);
+            int g = Y + descale((Cb - delta) * C2 + (Cr - delta) * C1, yuv_shift);
             int r = Y + descale((Cr - delta) * C0, yuv_shift);
 
             pdst[0] = saturate_cast<uchar>(r);
@@ -1033,13 +1015,13 @@ void cvt_yuv2rgb_32f_neon(const Mat32f& src, Mat32f& dst) {
         const float* const pend = psrc + src.cols() * 3;
         for (; psrc <= pend - 4 * 3; psrc += 4 * 3, pdst += 4 * 3) {
             float32x4x3_t v_src = vld3q_f32(psrc), v_dst;
-            float32x4_t v_Y = v_src.val[0], v_Cr = v_src.val[1],
-                        v_Cb = v_src.val[2];
+            float32x4_t v_Y = v_src.val[0], v_Cr = v_src.val[1], v_Cb = v_src.val[2];
 
             v_dst.val[0] = vmlaq_f32(v_Y, vsubq_f32(v_Cr, v_delta), v_c0);
             v_dst.val[1] = vaddq_f32(
-                    vmlaq_f32(vmulq_f32(vsubq_f32(v_Cb, v_delta), v_c2),
-                              vsubq_f32(v_Cr, v_delta), v_c1),
+                    vmlaq_f32(
+                            vmulq_f32(vsubq_f32(v_Cb, v_delta), v_c2),
+                            vsubq_f32(v_Cr, v_delta), v_c1),
                     v_Y);
             v_dst.val[2] = vmlaq_f32(v_Y, vsubq_f32(v_Cb, v_delta), v_c3);
 
@@ -1173,9 +1155,8 @@ void cvt_rgb2gray<uchar>(const Mat8u& src, Mat8u& dst) {
             uchar x0 = temp_src[0];
             uchar x1 = temp_src[1];
             uchar x2 = temp_src[2];
-            temp_dst[0] =
-                    (x0 * R2Y + x1 * G2Y + x2 * B2Y + (1 << (yuv_shift - 1))) >>
-                    yuv_shift;
+            temp_dst[0] = (x0 * R2Y + x1 * G2Y + x2 * B2Y + (1 << (yuv_shift - 1))) >>
+                          yuv_shift;
         }
     }
 }
@@ -1187,7 +1168,7 @@ void cvt_rgb2gray<float>(const Mat32f& src, Mat32f& dst) {
     megdnn_assert(src.rows() == dst.rows());
     megdnn_assert(src.cols() == dst.cols());
 
-    return cvt_rgb2gray_32f_neon(src, dst);
+    return cvt_rgb2gray_32f_neon<true>(src, dst);
 }
 
 // gray2rgb
@@ -1328,9 +1309,8 @@ void cvt_rgba2gray<uchar>(const Mat8u& src, Mat8u& dst) {
             uchar x0 = temp_src[0];
             uchar x1 = temp_src[1];
             uchar x2 = temp_src[2];
-            temp_dst[0] =
-                    (x0 * R2Y + x1 * G2Y + x2 * B2Y + (1 << (yuv_shift - 1))) >>
-                    yuv_shift;
+            temp_dst[0] = (x0 * R2Y + x1 * G2Y + x2 * B2Y + (1 << (yuv_shift - 1))) >>
+                          yuv_shift;
         }
     }
 }
@@ -1375,10 +1355,19 @@ void cvt_bgr2gray<uchar>(const Mat8u& src, Mat8u& dst) {
             uchar x0 = temp_src[0];
             uchar x1 = temp_src[1];
             uchar x2 = temp_src[2];
-            temp_dst[0] =
-                    (tab[x2] + tab[x1 + 256] + tab[x0 + 512]) >> yuv_shift;
+            temp_dst[0] = (tab[x2] + tab[x1 + 256] + tab[x0 + 512]) >> yuv_shift;
         }
     }
+}
+
+template <>
+void cvt_bgr2gray<float>(const Mat32f& src, Mat32f& dst) {
+    megdnn_assert(src.channels() == 3);
+    megdnn_assert(dst.channels() == 1);
+    megdnn_assert(src.rows() == dst.rows());
+    megdnn_assert(src.cols() == dst.cols());
+
+    return cvt_rgb2gray_32f_neon<false>(src, dst);
 }
 
 template <>
@@ -1444,8 +1433,8 @@ void cvt_yuv2bgr_yu12<uchar>(const Mat8u& src, Mat8u& dst) {
 }
 
 template <typename T>
-void cvt_bt601_yuv(const megcv::Mat<T>& src, megcv::Mat<T>& dst,
-                   param::CvtColor::Mode mode) {
+void cvt_bt601_yuv(
+        const megcv::Mat<T>& src, megcv::Mat<T>& dst, param::CvtColor::Mode mode) {
     MEGDNN_MARK_USED_VAR(src);
     MEGDNN_MARK_USED_VAR(dst);
     MEGDNN_MARK_USED_VAR(mode);
@@ -1453,8 +1442,9 @@ void cvt_bt601_yuv(const megcv::Mat<T>& src, megcv::Mat<T>& dst,
 }
 
 template <>
-void cvt_bt601_yuv<uchar>(const megcv::Mat<uchar>& src, megcv::Mat<uchar>& dst,
-                          param::CvtColor::Mode mode) {
+void cvt_bt601_yuv<uchar>(
+        const megcv::Mat<uchar>& src, megcv::Mat<uchar>& dst,
+        param::CvtColor::Mode mode) {
     using Mode = param::CvtColor::Mode;
     switch (mode) {
         case Mode::BT601_YUV2RGB_NV21:
@@ -1503,8 +1493,8 @@ void cvt_bt601_yuv<uchar>(const megcv::Mat<uchar>& src, megcv::Mat<uchar>& dst,
 }
 
 template <typename T>
-void CvtColorImpl::cvt_color_exec(const TensorND& src_tensor,
-                                  const TensorND& dst_tensor) {
+void CvtColorImpl::cvt_color_exec(
+        const TensorND& src_tensor, const TensorND& dst_tensor) {
     auto mode = param().mode;
     for (size_t i = 0; i < src_tensor.layout.shape[0]; ++i) {
         Mat<T> src = TensorND2Mat<T>(src_tensor, i);
@@ -1645,19 +1635,23 @@ void CvtColorImpl::cvt_color_exec(const TensorND& src_tensor,
         }
     }
 }
-void CvtColorImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in dst,
-                        _megdnn_workspace workspace) {
+void CvtColorImpl::exec(
+        _megdnn_tensor_in src, _megdnn_tensor_in dst, _megdnn_workspace workspace) {
     using namespace megcv;
     check_exec(src.layout, dst.layout, workspace.size);
     if (dst.layout.dtype == dtype::Float32()) {
         MIDOUT_BEGIN(megdnn_arm_cvtcolor MEGDNN_COMMA midout_iv(0)) {
-        MEGDNN_DISPATCH_CPU_KERN_OPR(cvt_color_exec<float>(src, dst));
-        } MIDOUT_END();
+            MEGDNN_DISPATCH_CPU_KERN_OPR(cvt_color_exec<float>(src, dst));
+        }
+        MIDOUT_END();
     } else if (dst.layout.dtype == dtype::Uint8()) {
         MIDOUT_BEGIN(megdnn_arm_cvtcolor MEGDNN_COMMA midout_iv(1)) {
             MEGDNN_DISPATCH_CPU_KERN_OPR(cvt_color_exec<uchar>(src, dst));
-        } MIDOUT_END();
-    } else { megdnn_throw("Unsupported datatype of CvtColor optr."); };
+        }
+        MIDOUT_END();
+    } else {
+        megdnn_throw("Unsupported datatype of CvtColor optr.");
+    };
 }
 
 }  // namespace arm_common

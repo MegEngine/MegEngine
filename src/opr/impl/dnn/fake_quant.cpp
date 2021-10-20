@@ -26,9 +26,8 @@ MEGDNN_OPR_INIT3(FakeQuantForward, "fakequant_fwd");
 MGB_IMPL_OPR_GRAD(FakeQuantForward) {
     if (wrt_idx == 0) {
         // wrt src
-        SymbolVar grad =
-                FakeQuantBackward::make(out_grad[0], opr.input(0), opr.input(1),
-                                        opr.input(2), opr.param());
+        SymbolVar grad = FakeQuantBackward::make(
+                out_grad[0], opr.input(0), opr.input(1), opr.input(2), opr.param());
         return grad.node();
     } else {
         return nullptr;

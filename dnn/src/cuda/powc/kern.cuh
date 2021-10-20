@@ -15,8 +15,9 @@
 namespace megdnn {
 namespace cuda {
 
-void powc_kern(const TensorND& dest, const TensorND& src, const float* exp_f,
-               const int* exp_i, cudaStream_t stream);
+void powc_kern(
+        const TensorND& dest, const TensorND& src, const float* exp_f, const int* exp_i,
+        cudaStream_t stream);
 
 }  // namespace cuda
 }  // namespace megdnn

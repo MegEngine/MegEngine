@@ -12,19 +12,18 @@
 #include <xmmintrin.h>  // SSE
 #include "src/x86/simd_macro/sse_helper_typedef.h"
 
-#define MEGDNN_SIMD_NAME SSE
-#define MEGDNN_SIMD_TARGET sse
-#define MEGDNN_SIMD_ATTRIBUTE_TARGET MEGDNN_ATTRIBUTE_TARGET("sse")
-#define MEGDNN_SIMD_LAMBDA_ATTRIBUTE_TARGET \
-    MEGDNN_LAMBDA_ATTRIBUTE_TARGET("sse")
-#define MEGDNN_SIMD_WIDTH 4
-#define MEGDNN_SIMD_TYPE __m128
-#define MEGDNN_SIMD_LOADU(addr) _mm_loadu_ps(addr)
-#define MEGDNN_SIMD_STOREU(addr, reg) _mm_storeu_ps(addr, reg)
-#define MEGDNN_SIMD_SETZERO() _mm_setzero_ps()
-#define MEGDNN_SIMD_SET1(num) _mm_set1_ps(num)
-#define MEGDNN_SIMD_FMADD(a, b, c) _mm_add_ps(c, _mm_mul_ps(a, b))
-#define MEGDNN_SIMD_MAX(a, b) _mm_max_ps(a, b)
+#define MEGDNN_SIMD_NAME                    SSE
+#define MEGDNN_SIMD_TARGET                  sse
+#define MEGDNN_SIMD_ATTRIBUTE_TARGET        MEGDNN_ATTRIBUTE_TARGET("sse")
+#define MEGDNN_SIMD_LAMBDA_ATTRIBUTE_TARGET MEGDNN_LAMBDA_ATTRIBUTE_TARGET("sse")
+#define MEGDNN_SIMD_WIDTH                   4
+#define MEGDNN_SIMD_TYPE                    __m128
+#define MEGDNN_SIMD_LOADU(addr)             _mm_loadu_ps(addr)
+#define MEGDNN_SIMD_STOREU(addr, reg)       _mm_storeu_ps(addr, reg)
+#define MEGDNN_SIMD_SETZERO()               _mm_setzero_ps()
+#define MEGDNN_SIMD_SET1(num)               _mm_set1_ps(num)
+#define MEGDNN_SIMD_FMADD(a, b, c)          _mm_add_ps(c, _mm_mul_ps(a, b))
+#define MEGDNN_SIMD_MAX(a, b)               _mm_max_ps(a, b)
 #define MEGDNN_SIMD_UZP(s0, s1, d0, d1)                       \
     do {                                                      \
         d0 = _mm_shuffle_ps(s0, s1, _MM_SHUFFLE(2, 0, 2, 0)); \
@@ -34,26 +33,23 @@
 
 #define MEGDNN_SIMD_TYPE2 float32x4x2_t
 
-#define _INSERTPS_NDX(srcField, dstField) \
-    (((srcField) << 6) | ((dstField) << 4))
-#define _M64(out, inp) _mm_storel_epi64((__m128i*)&(out), inp)
-#define _pM128i(a) _mm_loadl_epi64((__m128i*)&(a))
-#define _pM128(a) _mm_castsi128_ps(_pM128i(a))
-#define _M128i(a) _mm_castps_si128(a)
-#define _M128(a) _mm_castsi128_ps(a)
-#define _M64f(out, inp) out.m64_i64[0] = _mm_cvtsi128_si64(_M128i(inp));
+#define _INSERTPS_NDX(srcField, dstField) (((srcField) << 6) | ((dstField) << 4))
+#define _M64(out, inp)                    _mm_storel_epi64((__m128i*)&(out), inp)
+#define _pM128i(a)                        _mm_loadl_epi64((__m128i*)&(a))
+#define _pM128(a)                         _mm_castsi128_ps(_pM128i(a))
+#define _M128i(a)                         _mm_castps_si128(a)
+#define _M128(a)                          _mm_castsi128_ps(a)
+#define _M64f(out, inp)                   out.m64_i64[0] = _mm_cvtsi128_si64(_M128i(inp));
 
-#define MEGDNN_SIMD_LOAD2(addr)                                              \
-    ({                                                                       \
-        float32x4x2_t v;                                                     \
-        v.val[0] = _mm_loadu_ps(addr);                                       \
-        v.val[1] = _mm_loadu_ps(addr + 4);                                   \
-        float32x4x2_t ret__;                                                 \
-        ret__.val[0] =                                                       \
-                _mm_shuffle_ps(v.val[0], v.val[1], _MM_SHUFFLE(2, 0, 2, 0)); \
-        ret__.val[1] =                                                       \
-                _mm_shuffle_ps(v.val[0], v.val[1], _MM_SHUFFLE(3, 1, 3, 1)); \
-        ret__;                                                               \
+#define MEGDNN_SIMD_LOAD2(addr)                                                     \
+    ({                                                                              \
+        float32x4x2_t v;                                                            \
+        v.val[0] = _mm_loadu_ps(addr);                                              \
+        v.val[1] = _mm_loadu_ps(addr + 4);                                          \
+        float32x4x2_t ret__;                                                        \
+        ret__.val[0] = _mm_shuffle_ps(v.val[0], v.val[1], _MM_SHUFFLE(2, 0, 2, 0)); \
+        ret__.val[1] = _mm_shuffle_ps(v.val[0], v.val[1], _MM_SHUFFLE(3, 1, 3, 1)); \
+        ret__;                                                                      \
     })
 
 #define MEGDNN_SIMD_EXT(a, b, c)                                   \

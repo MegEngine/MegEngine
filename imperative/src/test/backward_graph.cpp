@@ -22,8 +22,8 @@ using namespace cg;
 using namespace imperative;
 
 template <typename T>
-T prepare_backward_graph_inputs(const EncodedSubraph& bg, const T& inputs,
-                                const T& outputs, const T& grads) {
+T prepare_backward_graph_inputs(
+        const EncodedSubgraph& bg, const T& inputs, const T& outputs, const T& grads) {
     T ret;
     size_t i = 0;
     for (auto&& t : inputs) {
@@ -56,9 +56,9 @@ T expand_grads(const U& mask, const T& outputs) {
 }
 
 template <typename T>
-T prepare_optimized_backward_inputs(const OptimizedBackwardGraphResult& bg,
-                                    const T& precomp, const T& inputs,
-                                    const T& outputs, const T& grads) {
+T prepare_optimized_backward_inputs(
+        const OptimizedBackwardGraphResult& bg, const T& precomp, const T& inputs,
+        const T& outputs, const T& grads) {
     T ret = precomp;
     size_t i = 0;
     for (auto&& t : inputs) {
@@ -102,8 +102,7 @@ TEST(TestImperative, BackwardGraphBasic) {
     for (auto&& i : inputs) {
         input_descs.push_back({i->layout(), i->comp_node()});
     }
-    auto result = OpDef::make_backward_graph(*attr, input_descs, {true, true},
-                                             {true});
+    auto result = OpDef::make_backward_graph(*attr, input_descs, {true, true}, {true});
     auto&& save_for_backward = result.input_mask;
     auto&& input_has_grad = result.output_mask;
 
@@ -124,9 +123,9 @@ TEST(TestImperative, BackwardGraphBasic) {
         }
     }
     inputs.clear();
-    auto input_grads = result.graph.apply(backward_graph_inputs,
-                                             apply_shared_on_physical_tensor,
-                                             [&](auto&& x) { return x; });
+    auto input_grads = result.graph.apply(
+            backward_graph_inputs, apply_shared_on_physical_tensor,
+            [&](auto&& x) { return x; });
     mgb_assert(input_grads.size() == input_has_grad.size());
     for (size_t i = 0; i < input_has_grad.size(); ++i) {
         mgb_assert(input_has_grad[i] == static_cast<bool>(input_grads[i]));
@@ -139,8 +138,9 @@ TEST(TestImperative, BackwardGraphBasic) {
     }
     for (size_t i = 0; i < 42; ++i) {
         for (size_t j = 0; j < 1; ++j) {
-            ASSERT_EQ(hvs[2].ptr<float>()[i] * hvs[j].ptr<float>()[i],
-                      res[j ^ 1].ptr<float>()[i]);
+            ASSERT_EQ(
+                    hvs[2].ptr<float>()[i] * hvs[j].ptr<float>()[i],
+                    res[j ^ 1].ptr<float>()[i]);
         }
     }
 }
@@ -157,8 +157,7 @@ TEST(TestImperative, BackwardGraphIdentity) {
 
     SmallVector<LogicalTensorDesc> input_descs;
     input_descs.push_back({a->layout(), a->comp_node()});
-    auto result =
-            OpDef::make_backward_graph(*attr, input_descs, {true}, {true});
+    auto result = OpDef::make_backward_graph(*attr, input_descs, {true}, {true});
     auto&& save_for_backward = result.input_mask;
     auto&& input_has_grad = result.output_mask;
 
@@ -178,9 +177,9 @@ TEST(TestImperative, BackwardGraphIdentity) {
         }
     }
     inputs.clear();
-    auto input_grads = result.graph.apply(backward_graph_inputs,
-                                             apply_shared_on_physical_tensor,
-                                             [&](auto&& x) { return x; });
+    auto input_grads = result.graph.apply(
+            backward_graph_inputs, apply_shared_on_physical_tensor,
+            [&](auto&& x) { return x; });
     mgb_assert(input_grads.size() == input_has_grad.size());
     for (size_t i = 0; i < input_has_grad.size(); ++i) {
         mgb_assert(input_has_grad[i] == static_cast<bool>(input_grads[i]));
@@ -200,23 +199,24 @@ TEST(TestImperative, BatchNormGrad) {
     LogicalTensorDesc inp{TensorLayout{{N, C, H, W}, dtype::Float32()}, cn};
     LogicalTensorDesc stat{TensorLayout{{C}, dtype::Float32()}, cn};
     {
-        auto op = OprAttr::make("BatchNorm");
+        auto op = OprAttr::make("BatchNormV1");
         auto&& attr = op->cast_final_safe<OprAttr>();
         Param param;
         param.fwd_mode = Param::FwdMode::TRAINING;
         attr.param.write_pod(param);
-        OpDef::make_backward_graph(attr, {inp, stat, stat, stat, stat},
-                                   {true, true, true, false, false},
-                                   {false, false, false, false, true});
+        OpDef::make_backward_graph(
+                attr, {inp, stat, stat, stat, stat}, {true, true, true, false, false},
+                {false, false, false, false, false, true});
     }
     {
-        auto op = OprAttr::make("BatchNorm");
+        auto op = OprAttr::make("BatchNormV1");
         auto&& attr = op->cast_final_safe<OprAttr>();
         Param param;
         param.fwd_mode = Param::FwdMode::TRAINING;
         attr.param.write_pod(param);
-        OpDef::make_backward_graph(attr, {inp, stat, stat}, {true, true, true},
-                                   {false, false, true});
+        OpDef::make_backward_graph(
+                attr, {inp, stat, stat}, {true, true, true},
+                {false, false, false, true});
     }
 }
 
@@ -225,8 +225,7 @@ TEST(TestImperative, OptimizedBackwardGraphBasic) {
     LogicalTensorDesc desc = {TensorLayout(dtype::Float32()), cn};
     HostTensorGenerator<> gen;
     auto op = std::shared_ptr<OpDef>(Elemwise::make(Elemwise::Mode::ADD));
-    auto bg =
-            OpDef::make_backward_graph(*op, {desc, desc}, {true, true}, {true});
+    auto bg = OpDef::make_backward_graph(*op, {desc, desc}, {true, true}, {true});
     auto obg = OptimizedBackwardGraphResult(bg);
     ASSERT_EQ(obg.save_for_backward.size(), 4);
     ASSERT_FALSE(obg.save_for_backward[0]);
@@ -241,30 +240,30 @@ TEST(TestImperative, OptimizedBackwardGraphBasic) {
     auto dc_tn = Tensor::make(*dc_hv);
     auto c_tn = OpDef::apply_on_physical_tensor(*op, {a_tn, b_tn})[0];
 
-    auto backward_graph_inputs =
-            prepare_backward_graph_inputs<SmallVector<TensorPtr>>(
-                    bg, {a_tn, b_tn}, {c_tn}, {dc_tn});
-    auto grads =
-            expand_grads(bg.output_mask, bg.graph.apply(backward_graph_inputs,
-                                               apply_shared_on_physical_tensor,
-                                               [&](auto&& x) { return x; }));
+    auto backward_graph_inputs = prepare_backward_graph_inputs<SmallVector<TensorPtr>>(
+            bg, {a_tn, b_tn}, {c_tn}, {dc_tn});
+    auto grads = expand_grads(
+            bg.output_mask,
+            bg.graph.apply(
+                    backward_graph_inputs, apply_shared_on_physical_tensor,
+                    [&](auto&& x) { return x; }));
 
-    auto precomp = obg.precomp.apply(SmallVector<TensorPtr>{a_tn, b_tn, c_tn},
-                                     apply_shared_on_physical_tensor,
-                                     [&](auto&& x) { return x; });
+    auto precomp = obg.precomp.apply(
+            SmallVector<TensorPtr>{a_tn, b_tn, c_tn}, apply_shared_on_physical_tensor,
+            [&](auto&& x) { return x; });
     ASSERT_EQ(precomp.size(), 2);
     ASSERT_EQ(precomp[0]->shape().ndim, 1);
     ASSERT_LE(precomp[0]->shape()[0], 2);
     ASSERT_EQ(precomp[1]->shape().ndim, 1);
     ASSERT_LE(precomp[1]->shape()[0], 2);
 
-    auto backward_inputs =
-            prepare_optimized_backward_inputs<SmallVector<TensorPtr>>(
-                    obg, precomp, {a_tn, b_tn}, {c_tn}, {dc_tn});
+    auto backward_inputs = prepare_optimized_backward_inputs<SmallVector<TensorPtr>>(
+            obg, precomp, {a_tn, b_tn}, {c_tn}, {dc_tn});
     auto grads2 = expand_grads(
             obg.input_has_grad,
-            obg.backward.apply(backward_inputs, apply_shared_on_physical_tensor,
-                               [&](auto&& x) { return x; }));
+            obg.backward.apply(
+                    backward_inputs, apply_shared_on_physical_tensor,
+                    [&](auto&& x) { return x; }));
 
     ASSERT_EQ(grads2.size(), 2);
     MGB_ASSERT_TENSOR_EQ(grads[0]->get_value(), grads2[0]->get_value());

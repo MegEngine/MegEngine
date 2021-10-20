@@ -9,8 +9,8 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-#include "src/common/utils.h"
 #include "./default_computing_context.hpp"
+#include "src/common/utils.h"
 
 #include <cstring>
 
@@ -35,32 +35,29 @@ using namespace megcore;
 using namespace cpu;
 
 DefaultComputingContext::DefaultComputingContext(
-        megcoreDeviceHandle_t dev_handle, unsigned int flags):
-    ComputingContext(dev_handle, flags),
-    m_dispatcher{megdnn::make_unique<InplaceDispatcher>()}
-{
+        megcoreDeviceHandle_t dev_handle, unsigned int flags)
+        : ComputingContext(dev_handle, flags),
+          m_dispatcher{megdnn::make_unique<InplaceDispatcher>()} {
     megcorePlatform_t platform;
     megcoreGetPlatform(dev_handle, &platform);
-    megdnn_throw_if(!(platform & megcorePlatformCPU), megdnn_error,
-                    "can not be default ComputingContext");
+    megdnn_throw_if(
+            !(platform & megcorePlatformCPU), megdnn_error,
+            "can not be default ComputingContext");
 }
 
 DefaultComputingContext::~DefaultComputingContext() noexcept = default;
 
-void DefaultComputingContext::memcpy(void *dst, const void *src,
-        size_t size_in_bytes,
-        megcoreMemcpyKind_t /* kind */)
-{
+void DefaultComputingContext::memcpy(
+        void* dst, const void* src, size_t size_in_bytes,
+        megcoreMemcpyKind_t /* kind */) {
     ::memcpy(dst, src, size_in_bytes);
 }
 
-void DefaultComputingContext::memset(void *dst, int value, size_t size_in_bytes)
-{
+void DefaultComputingContext::memset(void* dst, int value, size_t size_in_bytes) {
     ::memset(dst, value, size_in_bytes);
 }
 
-void DefaultComputingContext::synchronize()
-{
+void DefaultComputingContext::synchronize() {
     m_dispatcher->sync();
 }
 

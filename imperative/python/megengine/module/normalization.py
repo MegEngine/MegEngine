@@ -15,8 +15,7 @@ from .module import Module
 
 
 class GroupNorm(Module):
-    """
-    Simple implementation of GroupNorm. Only support 4d tensor now.
+    """Simple implementation of GroupNorm. Only support 4d tensor now.
     Reference: https://arxiv.org/pdf/1803.08494.pdf.
     """
 
@@ -64,8 +63,7 @@ class GroupNorm(Module):
 
 
 class InstanceNorm(Module):
-    """
-    Simple implementation of InstanceNorm. Only support 4d tensor now.
+    """Simple implementation of InstanceNorm. Only support 4d tensor now.
     Reference: https://arxiv.org/abs/1607.08022.
     Note that InstanceNorm equals using GroupNome with num_groups=num_channels.
     """
@@ -108,8 +106,7 @@ class InstanceNorm(Module):
 
 
 class LayerNorm(Module):
-    """
-    Simple implementation of LayerNorm. Support tensor of any shape as input.
+    """Simple implementation of LayerNorm. Support tensor of any shape as input.
     Reference: https://arxiv.org/pdf/1803.08494.pdf.
     """
 
@@ -135,18 +132,9 @@ class LayerNorm(Module):
             zeros_(self.bias)
 
     def forward(self, x):
-        x_shape = x.shape
-        dim_delta = len(x_shape) - len(self.normalized_shape)
-        non_flatten_shape = x_shape[:dim_delta]
-        x = x.reshape(*non_flatten_shape, -1)
-
-        mean = x.mean(axis=-1, keepdims=True)
-        var = (x ** 2).mean(axis=-1, keepdims=True) - mean * mean
-
-        x = (x - mean) / F.sqrt(var + self.eps)
-        x = x.reshape(x_shape)
-        if self.affine:
-            x = self.weight * x + self.bias
+        x = F.nn.layer_norm(
+            x, self.normalized_shape, self.affine, self.weight, self.bias, self.eps
+        )
         return x
 
     def _module_info_string(self) -> str:

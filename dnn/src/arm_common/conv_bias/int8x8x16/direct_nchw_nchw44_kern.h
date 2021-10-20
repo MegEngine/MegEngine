@@ -34,14 +34,13 @@ namespace i8i8i16_direct_nchw_nchw44 {
  * @param ic
  */
 template <int stride>
-inline void pack_weight_int8_nchw_nchw44(const int8_t* in_ptr, int8_t* dst_ptr,
-                                         const int oc, const int kh,
-                                         const int kw, const int ic);
+inline void pack_weight_int8_nchw_nchw44(
+        const int8_t* in_ptr, int8_t* dst_ptr, const int oc, const int kh, const int kw,
+        const int ic);
 template <>
-inline void pack_weight_int8_nchw_nchw44<2>(const int8_t* in_ptr,
-                                            int8_t* dst_ptr, const int oc,
-                                            const int kh, const int kw,
-                                            const int ic) {
+inline void pack_weight_int8_nchw_nchw44<2>(
+        const int8_t* in_ptr, int8_t* dst_ptr, const int oc, const int kh, const int kw,
+        const int ic) {
     constexpr int in_pack_oc = 4;
     constexpr int out_pack_oc = 8;
     constexpr int out_pair = 2;
@@ -59,10 +58,10 @@ inline void pack_weight_int8_nchw_nchw44<2>(const int8_t* in_ptr,
             for (int ic_idx = 0; ic_idx < ic; ++ic_idx) {
                 int32_t temp0 = *in_oc0_ptr++;
                 int32_t temp1 = *in_oc1_ptr++;
-                pack_dst_ptr[(ic_idx * filter_size + filter_idx) * out_pair +
-                             0] = temp0;
-                pack_dst_ptr[(ic_idx * filter_size + filter_idx) * out_pair +
-                             1] = temp1;
+                pack_dst_ptr[(ic_idx * filter_size + filter_idx) * out_pair + 0] =
+                        temp0;
+                pack_dst_ptr[(ic_idx * filter_size + filter_idx) * out_pair + 1] =
+                        temp1;
             }
         }
         pack_dst_ptr += ic * filter_size * out_pair;
@@ -74,19 +73,18 @@ inline void pack_weight_int8_nchw_nchw44<2>(const int8_t* in_ptr,
             for (int ic_idx = 0; ic_idx < ic; ++ic_idx) {
                 int32_t temp0 = *in_oc0_ptr++;
                 int32_t temp1 = 0;
-                pack_dst_ptr[(ic_idx * filter_size + filter_idx) * out_pair +
-                             0] = temp0;
-                pack_dst_ptr[(ic_idx * filter_size + filter_idx) * out_pair +
-                             1] = temp1;
+                pack_dst_ptr[(ic_idx * filter_size + filter_idx) * out_pair + 0] =
+                        temp0;
+                pack_dst_ptr[(ic_idx * filter_size + filter_idx) * out_pair + 1] =
+                        temp1;
             }
         }
     }
 }
 template <>
-inline void pack_weight_int8_nchw_nchw44<1>(const int8_t* in_ptr,
-                                            int8_t* dst_ptr, const int oc,
-                                            const int kh, const int kw,
-                                            const int ic) {
+inline void pack_weight_int8_nchw_nchw44<1>(
+        const int8_t* in_ptr, int8_t* dst_ptr, const int oc, const int kh, const int kw,
+        const int ic) {
     constexpr int in_pack_oc = 4;
     constexpr int out_pack_oc = 8;
     constexpr int out_pair = 4;
@@ -104,14 +102,14 @@ inline void pack_weight_int8_nchw_nchw44<1>(const int8_t* in_ptr,
             for (int ic_idx = 0; ic_idx < ic; ++ic_idx) {
                 int32_t temp0 = *in_oc0_ptr++;
                 int32_t temp1 = *in_oc1_ptr++;
-                pack_dst_ptr[(ic_idx * filter_size + filter_idx) * out_pair +
-                             0] = temp0;
-                pack_dst_ptr[(ic_idx * filter_size + filter_idx) * out_pair +
-                             1] = temp1;
-                pack_dst_ptr[(ic_idx * filter_size + filter_idx) * out_pair +
-                             2] = temp0;
-                pack_dst_ptr[(ic_idx * filter_size + filter_idx) * out_pair +
-                             3] = temp1;
+                pack_dst_ptr[(ic_idx * filter_size + filter_idx) * out_pair + 0] =
+                        temp0;
+                pack_dst_ptr[(ic_idx * filter_size + filter_idx) * out_pair + 1] =
+                        temp1;
+                pack_dst_ptr[(ic_idx * filter_size + filter_idx) * out_pair + 2] =
+                        temp0;
+                pack_dst_ptr[(ic_idx * filter_size + filter_idx) * out_pair + 3] =
+                        temp1;
             }
         }
         pack_dst_ptr += ic * filter_size * out_pair;
@@ -123,26 +121,25 @@ inline void pack_weight_int8_nchw_nchw44<1>(const int8_t* in_ptr,
             for (int ic_idx = 0; ic_idx < ic; ++ic_idx) {
                 int32_t temp0 = *in_oc0_ptr++;
                 int32_t temp1 = 0;
-                pack_dst_ptr[(ic_idx * filter_size + filter_idx) * out_pair +
-                             0] = temp0;
-                pack_dst_ptr[(ic_idx * filter_size + filter_idx) * out_pair +
-                             1] = temp1;
-                pack_dst_ptr[(ic_idx * filter_size + filter_idx) * out_pair +
-                             2] = temp0;
-                pack_dst_ptr[(ic_idx * filter_size + filter_idx) * out_pair +
-                             3] = temp1;
+                pack_dst_ptr[(ic_idx * filter_size + filter_idx) * out_pair + 0] =
+                        temp0;
+                pack_dst_ptr[(ic_idx * filter_size + filter_idx) * out_pair + 1] =
+                        temp1;
+                pack_dst_ptr[(ic_idx * filter_size + filter_idx) * out_pair + 2] =
+                        temp0;
+                pack_dst_ptr[(ic_idx * filter_size + filter_idx) * out_pair + 3] =
+                        temp1;
             }
         }
     }
 }
 
 template <BiasMode bias_mode, typename Op, int filter_size, int stride>
-void conv_direct_i8i8i16_nchw_nchw44(const int8_t* src, const int8_t* filter,
-                                     const int16_t* bias, int8_t*, int16_t* dst,
-                                     const int oc, const int ic, const int ih,
-                                     const int iw, const int oh,
-                                     const int oh_block, const int ow,
-                                     const Op& op, const int, const int);
+void conv_direct_i8i8i16_nchw_nchw44(
+        const int8_t* src, const int8_t* filter, const int16_t* bias, int8_t*,
+        int16_t* dst, const int oc, const int ic, const int ih, const int iw,
+        const int oh, const int oh_block, const int ow, const Op& op, const int,
+        const int);
 
 }  // namespace i8i8i16_direct_nchw_nchw44
 

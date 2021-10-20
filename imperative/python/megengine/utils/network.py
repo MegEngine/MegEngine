@@ -48,9 +48,7 @@ class Network:
 
     @property
     def metadata(self):
-        r"""
-        Load metadata as a dict.
-        """
+        r"""Load metadata as a dict."""
         if not self._metadata.is_valid:
             logger.info("metadata is not valid!")
             return None
@@ -71,10 +69,11 @@ class Network:
 
     @classmethod
     def load(cls, model_path: str, outspec: List[str] = None):
-        """
-        Loads a computing graph as a Network object.
-        :param model_path: file path of mge model.
-        :param outspec: only load the subgraph with outspec as its endpoints.
+        r"""Loads a computing graph as a Network object.
+
+        Args:
+            model_path: file path of mge model.
+            outspec: only load the subgraph with outspec as its endpoints.
         """
         self = cls()
         ret = G.load_graph(model_path)
@@ -116,52 +115,50 @@ class Network:
                 self.all_vars_map[o.var.id] = o
 
     def optimize_for_inference(self, dest_vars, **kwargs):
-        r"""
-        Applies optimize_for_inference pass for operator graph.
+        r"""Applies optimize_for_inference pass for operator graph.
 
-            :param dest_vars: list of output vars in the operator graph
+        Args:
+            dest_vars: list of output vars in the operator graph
 
-            :Keyword Arguments:
+        Keyword Arguments:
 
-                * enable_io16xc32 --
-                    whether to use float16 for I/O between oprs and use
-                    float32 as internal computation precision. Note the output var would be
-                    changed to float16.
-                * enable_ioc16 --
-                    whether to use float16 for both I/O and computation
-                    precision.
-
-                * enable_hwcd4 --
-                    whether to use NHWCD4 data layout. This is faster on some
-                    OpenCL backend.
-                * enable_nchw88 --
-                    whether to use NCHW88 data layout, currently
-                    used in X86 AVX backend.
-                * enable_nchw44 --
-                    whether to use NCHW44 data layout, currently
-                    used in arm backend.
-                * enable_nchw44_dot --
-                    whether to use NCHW44_dot data layout, currently
-                    used in armv8.2+dotprod backend.
-                * enable_nchw4 --
-                    whether to use NCHW4 data layout, currently
-                    used in nvidia backend(based on cudnn).
-                * enable_nchw32 --
-                    whether to use NCHW32 data layout, currently
-                    used in nvidia backend with tensorcore(based on cudnn).
-                * enable_chwn4 --
-                    whether to use CHWN4 data layout, currently
-                    used in nvidia backend with tensorcore.
-                * enable_nchw64 --
-                    whether to use NCHW64 data layout, used for fast int4
-                    support on Nvidia GPU.
-
-                * enable_fuse_conv_bias_nonlinearity: whether to fuse conv+bias+nonlinearty
-                    into one opr.
-                * enable_fuse_conv_bias_with_z: whether to fuse conv_bias with z
-                    input for inference on nvidia backend(this optimization pass will
-                    result in mismatch of the precision of output of training and
-                    inference)
+        * enable_io16xc32 --
+          whether to use float16 for I/O between oprs and use
+          float32 as internal computation precision. Note the output var would be
+          changed to float16.
+        * enable_ioc16 --
+          whether to use float16 for both I/O and computation
+          precision.
+        * enable_hwcd4 --
+          whether to use NHWCD4 data layout. This is faster on some
+          OpenCL backend.
+        * enable_nchw88 --
+          whether to use NCHW88 data layout, currently
+          used in X86 AVX backend.
+        * enable_nchw44 --
+          whether to use NCHW44 data layout, currently
+          used in arm backend.
+        * enable_nchw44_dot --
+          whether to use NCHW44_dot data layout, currently
+          used in armv8.2+dotprod backend.
+        * enable_nchw4 --
+          whether to use NCHW4 data layout, currently
+          used in nvidia backend(based on cudnn).
+        * enable_nchw32 --
+          whether to use NCHW32 data layout, currently
+          used in nvidia backend with tensorcore(based on cudnn).
+        * enable_chwn4 --
+          whether to use CHWN4 data layout, currently
+          used in nvidia backend with tensorcore.
+        * enable_nchw64 --
+          whether to use NCHW64 data layout, used for fast int4
+          support on Nvidia GPU.
+        * enable_fuse_conv_bias_nonlinearity: whether to fuse conv+bias+nonlinearty
+          into one opr.
+        * enable_fuse_conv_bias_with_z: whether to fuse conv_bias with z
+          input for inference on nvidia backend(this optimization pass will
+          result in mismatch of the precision of output of training and
+          inference)
         """
 
         if not isinstance(dest_vars, Sequence):
@@ -186,35 +183,33 @@ class Network:
         enable_metadata=True,
         **kwargs
     ):
-        """
-        Serializes graph to file.
+        r"""Serializes graph to file.
 
-        :param file: output file, could be file object or filename.
-        :param append: whether output is appended to ``file``.
-            Only works when ``file`` is str.
-        :param keep_var_name: level for keeping variable names:
+        Args:
+            file: output file, could be file object or filename.
+            append: whether output is appended to ``file``.
+                Only works when ``file`` is str.
+            keep_var_name: level for keeping variable names:
 
-            * 0: none of the names are kept
-            * 1: (default)keep names of output vars
-            * 2: keep names of all (output and internal) vars
-        :param keep_opr_name: whether to keep operator names.
-        :param keep_param_name: whether to keep param names, so param values can be
-            easily manipulated after loading model
-        :param keep_opr_priority: whether to keep priority setting for operators
-        :param strip_info_file: a string for path or a file handler. if is not None,
-            then the dump information for code strip would be written to ``strip_info_file``
-        :param append_json: will be check when `strip_info_file` is not None. if set
-            true, the information for code strip will be append to strip_info_file.
-            if set false, will rewrite strip_info_file
-        :param optimize_for_inference: enbale optmizations,
-            will skip all optimize options if this is False. Default: True
-        :param user_info: any type object, which will be pickled to bytes.
-        :param enable_metadata: whether to save metadata into output file.
+                * 0: none of the names are kept
+                * 1: (default)keep names of output vars
+                * 2: keep names of all (output and internal) vars
 
-        :Keyword Arguments:
+            keep_opr_name: whether to keep operator names.
+            keep_param_name: whether to keep param names, so param values can be
+                easily manipulated after loading model
+            keep_opr_priority: whether to keep priority setting for operators
+            strip_info_file: a string for path or a file handler. if is not None,
+                then the dump information for code strip would be written to ``strip_info_file``
+            append_json: will be check when `strip_info_file` is not None. if set
+                true, the information for code strip will be append to strip_info_file.
+                if set false, will rewrite strip_info_file
+            optimize_for_inference: enbale optmizations,
+                will skip all optimize options if this is False. Default: True
+            user_info: any type object, which will be pickled to bytes.
+            enable_metadata: whether to save metadata into output file.
 
-            See also :py:meth:`optimize_for_inference`.
-
+        See more detials in :meth:`~.trace.dump`.
         """
 
         def _set_var_name(var):
@@ -262,22 +257,19 @@ class Network:
         file.write(dump_content)
 
     def make_const(self, data, name=None, device=None):
-        """Makes an ImmutableTensor OpNode to provide a parameter for the network.
-        """
+        r"""Makes an ImmutableTensor OpNode to provide a parameter for the network."""
         node = ImmutableTensor(data, name, device, self.graph)
         node.compile(self.graph)
         return node.outputs[0]
 
     def make_input_node(self, shape, dtype, name=None, device=None):
-        """Makes a Host2DeviceCopy OpNode to provide an input varnode for the network.
-        """
+        r"""Makes a Host2DeviceCopy OpNode to provide an input varnode for the network."""
         node = Host2DeviceCopy(shape, dtype, name, device)
         node.compile(self.graph)
         return node.outputs[0]
 
     def add_output(self, *vars: VarNode):
-        """Adds vars into the network output node list
-        """
+        r"""Adds vars into the network output node list"""
         if not all([var.owner for var in vars]):
             self.add_dep_oprs(*vars)
         for var in vars:
@@ -287,8 +279,7 @@ class Network:
                 self.output_vars.append(var)
 
     def remove_output(self, *vars: VarNode):
-        """Removes vars from the network output node list.
-        """
+        r"""Removes vars from the network output node list"""
         for var in vars:
             # use list pop instead of remove to avoid
             # compare VarNode use elemwise equal
@@ -321,12 +312,12 @@ class Network:
         return list(vars)
 
     def modify_opr_names(self, modifier):
-        """Modifies names of operators **inplace**; useful for merging loaded
+        r"""Modifies names of operators **inplace**; useful for merging loaded
         network into another network
 
-        :param modifier: a string to be prepended to the name, or a function
-            that maps from name to name
-        :type modifier: str or callable
+        Args:
+            modifier(str or callable): a string to be prepended to the name, or a function
+                that maps from name to name
         """
         if isinstance(modifier, str):
             om = modifier
@@ -339,11 +330,12 @@ class Network:
             i.name = v1
 
     def reset_batch_size(self, batchsize, *, blacklist=()):
-        """Helper for reset batch size; first dimension of all data providers
+        r"""Helper for reset batch size; first dimension of all data providers
         not in blacklist are assumed to be the batch size
 
-        :param blacklist: data provider names whose first dimension is not
-            batchbatch size
+        Args:
+            blacklist: data provider names whose first dimension is not
+                batchbatch size
         """
         blacklist = set(blacklist)
         prev_batchsize = None
@@ -366,9 +358,10 @@ class Network:
         assert not blacklist, "unused items in blacklist: {}".format(blacklist)
 
     def replace_vars(self, repl_dict: Dict[VarNode, VarNode]):
-        """
-        Replaces vars in the graph.
-        :param repl_dict: the map {old_var: new_var} that specifies how to replace the vars.
+        r"""Replaces vars in the graph.
+
+        Args:
+            repl_dict: the map {old_var: new_var} that specifies how to replace the vars.
         """
         if not all([var.owner for var in repl_dict.values()]):
             self.add_dep_oprs(*list(repl_dict.values()))
@@ -378,7 +371,9 @@ class Network:
                 if repl_var is var:
                     continue
                 for opnode in var.users:
-                    assert var in opnode.inputs
+                    # use method 'is' instead of 'in' to avoid
+                    # compare VarNode use elemwise equal
+                    assert any([var is _ for _ in opnode.inputs])
                     opnode.inputs = [repl_var if var is i else i for i in opnode.inputs]
                     if opnode not in repl_var.users:
                         repl_var.users.append(opnode)
@@ -386,9 +381,10 @@ class Network:
         self._compile()
 
     def replace_oprs(self, repl_dict: Dict[OpNode, OpNode]):
-        """
-        Replaces operators in the graph.
-        :param oprmap: the map {old_opr: new_opr} that specifies how to replace the operators.
+        r"""Replaces operators in the graph.
+
+        Args:
+            repl_dict: the map {old_opr: new_opr} that specifies how to replace the operators.
         """
         for opr in self.all_oprs:
             if opr in repl_dict:
@@ -427,45 +423,38 @@ class Network:
         return rst
 
     def get_var_receive_oprs(self, var):
-        """ Gets all oprs which use var as input
-        """
+        r"""Gets all oprs which use var as input"""
         return self.opr_filter.has_input(var).as_list()
 
     def get_dep_oprs(self, var):
-        """Gets dependent oprs of var
-        """
+        r"""Gets dependent oprs of var"""
         return get_oprs_seq(var, False, False)
 
     @property
     def opr_filter(self):
-        """Filter on all opnodes of the Network.
-        """
+        r"""Filter on all opnodes of the Network."""
         oprs = self.all_oprs
         return NodeFilter(itertools.islice(oprs, len(oprs)))
 
     @property
     def var_filter(self):
-        """Filter on all varnode of the Network.
-        """
+        r"""Filter on all varnode of the Network."""
         vars = self.all_vars
         return NodeFilter(itertools.islice(vars, len(vars)))
 
     @property
     def params_filter(self):  # all immutable tensor
-        """Filter on all parameters (ImmutableTensor Opr) of the Network
-        """
+        r"""Filter on all parameters (ImmutableTensor Opr) of the Network"""
         return self.opr_filter.param_provider()
 
     @property
     def data_providers_filter(self):  # all host2devicecopy
-        """Filter on all input nodes (Host2DeviceCopy Opr) of the Network
-        """
+        r"""Filter on all input nodes (Host2DeviceCopy Opr) of the Network"""
         return self.opr_filter.data_provider()
 
     @property
     def dest_vars(self):
-        """Output varnodes of the Network.
-        """
+        r"""Output varnodes of the Network."""
         return self.output_vars
 
     @property
@@ -485,9 +474,7 @@ class Network:
         return self.opr_filter.as_dict()
 
     def _add_opr(self, opr) -> Optional[OpNode]:
-        """
-        Used for loading and building graph.
-        """
+        r"""Used for loading and building graph."""
         assert isinstance(opr, _imperative_rt.graph.OperatorNode)
 
         # TODO: use megbrain C++ RTTI to replace type string
@@ -520,9 +507,7 @@ class Network:
             return None
 
     def _get_var(self, x):
-        """
-        Convert :class:`~._imperative_rt.graph.VarNode` to :class:`~.VarNode`.
-        """
+        r"""Convert :class:`~._imperative_rt.graph.VarNode` to :class:`~.VarNode`."""
         assert isinstance(x, _imperative_rt.graph.VarNode)
         if x.id not in self.all_vars_map or self.all_vars_map[x.id].var != x:
             self.all_vars_map[x.id] = VarNode.load(x, self._get_opr(x.owner))
@@ -530,24 +515,25 @@ class Network:
 
 
 def set_symbolic_shape(option: bool):
-    """
-    Set the VarNode use symbolic shape or not, return the last status.
+    r"""Set the VarNode use symbolic shape or not, return the last status.
     Please set to True and must recover after dump if want to change the input batch size.
-    :param option: True for enable symbolic shape.
+
+    Args:
+        option: True for enable symbolic shape.
     """
     return _set_symbolic_shape(option)
 
 
 def as_varnode(obj):
-    """convert a :class:`.VarNode` compatible object to :class:`.VarNode`.
+    r"""convert a :class:`.VarNode` compatible object to :class:`.VarNode`.
 
-    :param obj: it must be one of the following:
+    Args:
+        obj: it must be one of the following:
 
-        1. a :class:`.VarNode` object
-        2. a :class:`.OpNode` object that has unique output
-        3. an iterable that produces either type 1 or 2, with length 1
+            1. a :class:`.VarNode` object
+            2. a :class:`.OpNode` object that has unique output
+            3. an iterable that produces either type 1 or 2, with length 1
 
-    :rtype: :class:`.VarNode`
     """
     if type(obj) is VarNode:
         return obj
@@ -575,8 +561,9 @@ def as_varnode(obj):
 
 
 def as_oprnode(obj):
-    """convert a :class:`.OpNode` compatible object to
-    :class:`.OpNode`; it works like :func:`as_varnode`."""
+    r"""convert a :class:`.OpNode` compatible object to
+    :class:`.OpNode`; it works like :func:`as_varnode`.i
+    """
     if type(obj) is VarNode:
         return obj.owner
 
@@ -595,23 +582,24 @@ def as_oprnode(obj):
 
 
 class NodeFilter:
-    """Filter on node iterator. This class is an iterator of
+    r"""Filter on node iterator. This class is an iterator of
     :class:`.NetworkNode` objects and multiple filtering conditions and
     mappers can be chained.
 
-    Example::
+    Example:
 
-        # find all :class:`.ImmutableTensor` nodes
-        for i in NodeFilter(node_iter).param_provider():
-            print(i)
+        .. code-block::
 
-        # find all :class:`.ImmutableTensor` nodes that end with ':W'
-        for i in NodeFilter(node_iter).param_provider().name('*:W'):
-            print(i)
+           # find all :class:`.ImmutableTensor` nodes
+           for i in NodeFilter(node_iter).param_provider():
+               print(i)
 
-        # number of inputs
-        nr_input = NodeFilter(node_iter).data_provider().as_count()
+           # find all :class:`.ImmutableTensor` nodes that end with ':W'
+           for i in NodeFilter(node_iter).param_provider().name('*:W'):
+               print(i)
 
+           # number of inputs
+           nr_input = NodeFilter(node_iter).data_provider().as_count()
     """
 
     _iter = None
@@ -638,106 +626,117 @@ class NodeFilter:
 
     @classmethod
     def make_all_deps(cls, *dest_vars):
-        """make a :class:`NodeFilter` that contains all deps of given vars"""
+        r"""make a :class:`NodeFilter` that contains all deps of given vars"""
         return cls(list(get_oprs_seq(dest_vars, False, False)))
 
     def __iter__(self):
-        """to be overwritten by subclass to implement filters"""
+        r"""to be overwritten by subclass to implement filters"""
         return iter(self._iter)
 
     def type(self, node_type):
-        """filter by specific node type
+        r"""filter by specific node type
 
-        :param node_type: node type class
-        :return: a new :class:`NodeFilter` object
+        Args:
+            node_type: node type class
+
+        Returns:
+            a new :class:`NodeFilter` object
         """
         return NodeFilterType(self, node_type)
 
     def check_type(self, node_type):
-        """assert that all oprs produced by this iterator are instances of
+        r"""assert that all oprs produced by this iterator are instances of
         certain type
 
-        :param node_type: node type class
-        :return: a new :class:`NodeFilter` object
-        :raises TypeError: if type check failed
+        Args:
+            node_type: node type class
+
+        Returns:
+            a new :class:`NodeFilter` object
+
+        Raises:
+            TypeError if type check failed
         """
         return NodeFilterCheckType(self, node_type)
 
     def not_type(self, node_type):
-        """remove oprs of specific type
+        r"""remove oprs of specific type
 
-        :param node_type: node type class
-        :return: a new :class:`NodeFilter` object
+        Args:
+            node_type: node type class
+
+        Returns:
+            a new :class:`NodeFilter` object
         """
         return NodeFilterNotType(self, node_type)
 
     def param_provider(self):
-        """get :class:`.ParamProvider` oprs; shorthand for
-        ``.type(ParamProvider)``"""
+        r"""get :class:`~.ParamProvider` oprs; shorthand for
+        ``.type(ParamProvider)``
+        """
 
         return self.type(ImmutableTensor)
 
     def data_provider(self):
-        """get :class:`.DataProvider` oprs; shorthand for
-        ``.type(DataProvider)``"""
+        r"""get :class:`.DataProvider` oprs; shorthand for
+        ``.type(DataProvider)``
+        """
 
         return self.type(Host2DeviceCopy)
 
     def name(self, pattern, ignorecase=True):
-        """filter by node name
+        r"""filter by node name
 
-        :param pattern: a string in glob syntax that can contain ``?`` and
-            ``*`` to match a single or arbitrary characters.
-        :type pattern: :class:`str`
-        :param ignorecase: whether to ignroe case
-        :type ignorecase: bool
-        :return: a new :class:`NodeFilter` object
+        Args:
+            pattern(class:`str`): a string in glob syntax that can contain ``?`` and
+                ``*`` to match a single or arbitrary characters.
+            ignorecase(bool, optional): whether to ignroe case
+
+        Returns:
+            a new :class:`NodeFilter` object
         """
         return NodeFilterName(self, pattern, ignorecase)
 
     def has_input(self, var):
-        """an opr is kept if it has given var as one of its inputs
+        r"""an opr is kept if it has given var as one of its inputs
 
-        :param var: var node to checked
-        :return: a new :class:`NodeFilter` object
+        Args:
+            var: var node to checked
+
+        Returns:
+            a new :class:`NodeFilter` object
         """
         return NodeFilterHasInput(self, var)
 
     def as_list(self):
-        """consume this iterator and return its content as a list
-
-        :rtype: [:class:`.GraphNodeBase`]
-        """
+        r"""consume this iterator and return its content as a list"""
         return list(self)
 
     def as_unique(self):
-        """assert that this iterator yields only one node and return it
+        r"""assert that this iterator yields only one node and return it
 
-        :return: the unique node
-        :rtype: :class:`.GraphNodeBase`
-        :raises ValueError: if this iterator does not yield a unique node
+        Returns:
+            class:`.GraphNodeBase`: the unique node
+
+        Raises:
+            ValueError if this iterator does not yield a unique node
         """
         (opr,) = self
         return opr
 
     def as_dict(self):
-        """construct an ordered dict to map from node names to objects in
+        r"""construct an ordered dict to map from node names to objects in
         this iterator
-
-        :rtype: :class:`OrderedDict`
         """
         return collections.OrderedDict((i.name, i) for i in self)
 
     def as_count(self):
-        """consume this iterator and get the number of elements
-
-        :rtype: int
-        """
+        r"""consume this iterator and get the number of elements"""
         return sum(1 for _ in self)
 
 
 class NodeFilterType(NodeFilter):
-    """see :meth:`NodeFilter.type`"""
+    r"""see :meth:`NodeFilter.type`"""
 
     _node_type = None
 
@@ -753,7 +752,7 @@ class NodeFilterType(NodeFilter):
 
 
 class NodeFilterNotType(NodeFilterType):
-    """see :meth:`NodeFilter.not_type`"""
+    r"""see :meth:`NodeFilter.not_type`"""
 
     def __iter__(self):
         for i in self._iter:
@@ -762,7 +761,7 @@ class NodeFilterNotType(NodeFilterType):
 
 
 class NodeFilterCheckType(NodeFilterType):
-    """see :meth:`NodeFilter.check_type`"""
+    r"""see :meth:`NodeFilter.check_type`"""
 
     def __iter__(self):
         for i in self._iter:
@@ -774,7 +773,7 @@ class NodeFilterCheckType(NodeFilterType):
 
 
 class NodeFilterHasInput(NodeFilter):
-    """see :meth:`NodeFilter.has_input`"""
+    r"""see :meth:`NodeFilter.has_input`"""
 
     _var = None
 
@@ -793,7 +792,7 @@ class NodeFilterHasInput(NodeFilter):
 
 
 class NodeFilterName(NodeFilter):
-    """see :meth:`NodeFilter.name`"""
+    r"""see :meth:`NodeFilter.name`"""
 
     _re = None
 

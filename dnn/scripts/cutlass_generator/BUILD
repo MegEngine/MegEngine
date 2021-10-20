@@ -9,6 +9,7 @@ genrule(
           CUTLASS_WITH_LONG_PATH=true python3 $$GEN --operations gemm --type tensorop1688 $(@D)
           CUTLASS_WITH_LONG_PATH=true python3 $$GEN --operations gemv --type simt $(@D)
           CUTLASS_WITH_LONG_PATH=true python3 $$GEN --operations deconv --type simt $(@D)
+          CUTLASS_WITH_LONG_PATH=true python3 $$GEN --operations deconv --type tensorop8816 $(@D)
           CUTLASS_WITH_LONG_PATH=true python3 $$GEN --operations conv2d --type simt $(@D)
           CUTLASS_WITH_LONG_PATH=true python3 $$GEN --operations conv2d --type tensorop8816 $(@D)
           CUTLASS_WITH_LONG_PATH=true python3 $$GEN --operations conv2d --type tensorop8832 $(@D)

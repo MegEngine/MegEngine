@@ -132,6 +132,7 @@ class ParamElemVisitor<ndim, dt_quint4, CONTIG_OTHER> {
     int m_shape[ndim];
     bool m_is_contiguous;
     bool m_is_physical_contiguous;
+    bool m_is_min_stride_2;
 
     //! m_shape_highdim[i] = original_shape[i + 1]
 #ifdef _MSC_VER
@@ -153,8 +154,7 @@ public:
 
     devfunc void next() {}
 
-    devfunc void get_shape_from_access(uint32_t access_idx,
-                                       int (&shape_idx)[ndim]) {
+    devfunc void get_shape_from_access(uint32_t access_idx, int (&shape_idx)[ndim]) {
 #pragma unroll
         for (int i = ndim - 1; i >= 1; --i) {
             Uint32Fastdiv& align_shp = m_align_shape_highdim[i - 1];
@@ -185,7 +185,7 @@ public:
         } else {
             int shape_idx[ndim];
             get_shape_from_access(access_idx, shape_idx);
-    #pragma unroll
+#pragma unroll
             for (int i = ndim - 1; i >= 0; --i) {
                 offset += shape_idx[i] * m_stride[i];
             }
@@ -197,7 +197,7 @@ public:
         int idx = 0;
         if (m_is_physical_contiguous) {
             idx = access_idx;
-        } else {
+        } else if (!m_is_min_stride_2) {
             int shape_idx[ndim];
             bool valid = true;
             get_shape_from_access(access_idx, shape_idx);
@@ -209,6 +209,8 @@ public:
                 idx = (idx + shape_idx[i]) * m_shape[i + 1];
             }
             idx = valid ? idx + shape_idx[ndim - 1] : -1;
+        } else {  // min_stride == 2
+            idx = ((access_idx & 0x1) == 0) ? ((int)access_idx >> 1) : -1;
         }
         return idx;
     }

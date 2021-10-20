@@ -34,18 +34,18 @@ if [[ "$TEST_PLAT" =~ "local" ]]; then
     esac
 
     echo "test local env at: ${test_dirs}"
-    PY_IGNORE_IMPORTMISMATCH=1 python3 -m pytest -v $test_dirs -m 'not isolated_distributed'
+    PY_IGNORE_IMPORTMISMATCH=1 python3 -m pytest -s -v $test_dirs -m 'not isolated_distributed'
     if [[ "$TEST_PLAT" =~ "cuda" ]]; then
         echo "test GPU pytest now"
-        PY_IGNORE_IMPORTMISMATCH=1 python3 -m pytest -v $test_dirs -m 'isolated_distributed'
+        PY_IGNORE_IMPORTMISMATCH=1 python3 -m pytest -s -v $test_dirs -m 'isolated_distributed'
     fi
 else
     cd $(dirname "${BASH_SOURCE[0]}")/..
     test_dirs="megengine test"
     echo "test develop env"
-    PYTHONPATH="." PY_IGNORE_IMPORTMISMATCH=1 python3 -m pytest -v $test_dirs -m 'not isolated_distributed'
+    PYTHONPATH="." PY_IGNORE_IMPORTMISMATCH=1 python3 -m pytest -s -v $test_dirs -m 'not isolated_distributed'
     if [[ "$TEST_PLAT" =~ "cuda" ]]; then
         echo "test GPU pytest now"
-        PYTHONPATH="." PY_IGNORE_IMPORTMISMATCH=1 python3 -m pytest -v $test_dirs -m 'isolated_distributed'
+        PYTHONPATH="." PY_IGNORE_IMPORTMISMATCH=1 python3 -m pytest -s -v $test_dirs -m 'isolated_distributed'
     fi
 fi

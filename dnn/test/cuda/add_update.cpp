@@ -28,19 +28,19 @@ TEST_F(CUDA, ADD_UPDATE) {
     checker.set_dtype(0, dtype::BFloat16())
             .set_dtype(1, dtype::BFloat16())
             .execs({{2, 3, 4}, {2, 3, 4}});
-    checker.execl({{{2, 3, 4}, dtype::Float32()},
-                   {{2, 3, 4}, {16, 4, 1}, dtype::Float32()}});
-    checker.execl({{{2, 3, 4}, dtype::Float16()},
-                   {{2, 3, 4}, {16, 4, 1}, dtype::Float16()}});
-    checker.execl({{{2, 3, 4}, dtype::BFloat16()},
-                   {{2, 3, 4}, {16, 4, 1}, dtype::BFloat16()}});
+    checker.execl(
+            {{{2, 3, 4}, dtype::Float32()}, {{2, 3, 4}, {16, 4, 1}, dtype::Float32()}});
+    checker.execl(
+            {{{2, 3, 4}, dtype::Float16()}, {{2, 3, 4}, {16, 4, 1}, dtype::Float16()}});
+    checker.execl(
+            {{{2, 3, 4}, dtype::BFloat16()},
+             {{2, 3, 4}, {16, 4, 1}, dtype::BFloat16()}});
 
-    checker.execl({{{2, 3, 4}, {16, 4, 1}, dtype::Float32()},
-                   {{2, 3, 4}, dtype::Float32()}});
+    checker.execl(
+            {{{2, 3, 4}, {16, 4, 1}, dtype::Float32()}, {{2, 3, 4}, dtype::Float32()}});
 
     checker.execl({{{2, 3, 4}, dtype::Float32()}, {{1}, dtype::Float32()}});
-    checker.execl(
-            {{{2, 3, 4}, dtype::Float32()}, {{2, 1, 4}, dtype::Float32()}});
+    checker.execl({{{2, 3, 4}, dtype::Float32()}, {{2, 1, 4}, dtype::Float32()}});
     checker.set_param({2, -1, 3})
             .set_dtype(0, dtype::Int32())
             .set_dtype(1, dtype::Int32())
@@ -52,19 +52,12 @@ TEST_F(CUDA, ADD_UPDATE) {
             .set_dtype(1, dtype::Uint8())
             .execs({{2, 3, 2}, {2, 3, 2}});
     // test scalar
-    checker.set_dtype(0, dtype::Int8())
-            .set_dtype(1, dtype::Int8())
-            .execs({{1}, {1}});
-    checker.set_dtype(0, dtype::Int8())
-            .set_dtype(1, dtype::Int8())
-            .execs({{4}, {1}});
-    checker.execl({{{2, 3, 4}, dtype::Int8()},
-                   {{2, 3, 4}, {16, 4, 1}, dtype::Int8()}});
-    checker.execl({{{2, 3, 4}, dtype::Int8()},
-                   {{1, 3, 1}, {16, 4, 1}, dtype::Int8()}});
+    checker.set_dtype(0, dtype::Int8()).set_dtype(1, dtype::Int8()).execs({{1}, {1}});
+    checker.set_dtype(0, dtype::Int8()).set_dtype(1, dtype::Int8()).execs({{4}, {1}});
+    checker.execl({{{2, 3, 4}, dtype::Int8()}, {{2, 3, 4}, {16, 4, 1}, dtype::Int8()}});
+    checker.execl({{{2, 3, 4}, dtype::Int8()}, {{1, 3, 1}, {16, 4, 1}, dtype::Int8()}});
 
-    checker.execl({{{2, 3, 4}, {16, 4, 1}, dtype::Int8()},
-                   {{2, 3, 4}, dtype::Int8()}});
+    checker.execl({{{2, 3, 4}, {16, 4, 1}, dtype::Int8()}, {{2, 3, 4}, dtype::Int8()}});
 }
 
 }  // namespace test

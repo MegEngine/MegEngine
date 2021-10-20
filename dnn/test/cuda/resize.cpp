@@ -52,6 +52,7 @@ TEST_F(CUDA, RESIZE_FORWARD) {
             checker.set_param(arg.param)
                     .set_dtype(0, dtype::Uint8())
                     .set_dtype(1, dtype::Uint8())
+                    .set_epsilon(1)
                     .execs({arg.src, arg.dst});
         }
 
@@ -67,7 +68,7 @@ TEST_F(CUDA, RESIZE_FORWARD) {
             checker.set_param(arg.param)
                     .set_dtype(0, dtype::Int8())
                     .set_dtype(1, dtype::Int8())
-                    .set_epsilon(1e-3)
+                    .set_epsilon(1)
                     .execs({arg.src, arg.dst});
         }
     }
@@ -76,14 +77,14 @@ TEST_F(CUDA, RESIZE_FORWARD) {
 TEST_F(CUDA, RESIZE_NCHW4) {
     using namespace resize;
     Checker<Resize> checker(handle_cuda());
-    
+
     auto args = get_nchw4_args();
     for (auto&& arg : args) {
         checker.set_param(arg.param)
-            .set_dtype(0, dtype::QuantizedS8(0.1f))
-            .set_dtype(1, dtype::QuantizedS8(0.1f))
-            .set_epsilon(1 + 1e-3)
-            .execs({arg.src, arg.dst});
+                .set_dtype(0, dtype::QuantizedS8(0.1f))
+                .set_dtype(1, dtype::QuantizedS8(0.1f))
+                .set_epsilon(1 + 1e-3)
+                .execs({arg.src, arg.dst});
     }
 }
 
@@ -94,18 +95,16 @@ TEST_F(CUDA, RESIZE_NCHW_WITH_STRIDE) {
         param.format = param::Resize::Format::NCHW;
         param.imode = imode;
         Checker<Resize> checker(handle_cuda());
-        checker.set_epsilon(1 + 1e-3)
-            .set_param(param);
+        checker.set_epsilon(1 + 1e-3).set_param(param);
 
         auto run = [&](TensorShape src_shape, std::vector<ptrdiff_t> src_layout,
                        TensorShape dst_shape, DType dtype) {
-            checker.set_dtype(0, dtype)
-                   .set_dtype(1, dtype)
-                   .execl({{src_shape, src_layout, dtype}, {dst_shape, dtype}});
+            checker.set_dtype(0, dtype).set_dtype(1, dtype).execl(
+                    {{src_shape, src_layout, dtype}, {dst_shape, dtype}});
         };
 
-        for (DType& dtype : std::vector<DType>{dtype::Float32(), dtype::Uint8(),
-                                               dtype::Int8()}) {
+        for (DType& dtype :
+             std::vector<DType>{dtype::Float32(), dtype::Uint8(), dtype::Int8()}) {
             run({2, 3, 4, 4}, {256, 32, 8, 1}, {2, 3, 3, 3}, dtype);
             run({1, 3, 4, 3}, {105, 35, 7, 2}, {1, 3, 5, 5}, dtype);
             run({1, 3, 40, 40}, {25600, 3200, 80, 1}, {1, 3, 30, 30}, dtype);
@@ -147,17 +146,15 @@ TEST_F(CUDA, BENCHMARK_RESIZE_CV) {
 
         //! bandwith: each dst elem require 4 read and 1 write
         //! gflops: each dst elem require 4 mul + 3 add
-        printf("run %s->%s used: %f ms %f GBPS %f Gflops\n",
-               src.to_string().c_str(), dst.to_string().c_str(), used,
+        printf("run %s->%s used: %f ms %f GBPS %f Gflops\n", src.to_string().c_str(),
+               dst.to_string().c_str(), used,
                dst.total_nr_elems() * (4.f + 1.f) * sizeof(float) /
                        (1024 * 1024 * 1024) / used * 1e3,
-               dst.total_nr_elems() * (4.f + 3.f) / (1024 * 1024 * 1024) /
-                       used * 1e3);
+               dst.total_nr_elems() * (4.f + 3.f) / (1024 * 1024 * 1024) / used * 1e3);
     };
 
     run({1, 128, 128, 3}, {1, 256, 256, 3});
 }
-
 
 TEST_F(CUDA, BENCHMARK_RESIZE_FORWARD) {
     Benchmarker<Resize> benchmarker(handle_cuda());
@@ -172,12 +169,11 @@ TEST_F(CUDA, BENCHMARK_RESIZE_FORWARD) {
 
         //! bandwith: each dst elem require 4 read and 1 write
         //! gflops: each dst elem require 4 mul + 3 add
-        printf("run %s->%s used: %f ms %f GBPS %f Gflops\n",
-               src.to_string().c_str(), dst.to_string().c_str(), used,
+        printf("run %s->%s used: %f ms %f GBPS %f Gflops\n", src.to_string().c_str(),
+               dst.to_string().c_str(), used,
                dst.total_nr_elems() * (4.f + 1.f) * sizeof(float) /
                        (1024 * 1024 * 1024) / used * 1e3,
-               dst.total_nr_elems() * (4.f + 3.f) / (1024 * 1024 * 1024) /
-                       used * 1e3);
+               dst.total_nr_elems() * (4.f + 3.f) / (1024 * 1024 * 1024) / used * 1e3);
     };
 
     run({1, 100, 256, 256}, {1, 100, 256, 5120});
@@ -187,7 +183,6 @@ TEST_F(CUDA, BENCHMARK_RESIZE_FORWARD) {
 }
 
 TEST_F(CUDA, BENCHMARK_RESIZE_FORWARD_NCHW4) {
-
     Benchmarker<Resize> benchmarker(handle_cuda());
     param::Resize param;
     param.imode = param::Resize::InterpolationMode::LINEAR;
@@ -198,12 +193,10 @@ TEST_F(CUDA, BENCHMARK_RESIZE_FORWARD_NCHW4) {
 
         //! bandwith: each dst elem require 4 read and 1 write
         //! gflops: each dst elem require 4 mul + 3 add
-        printf("run %s->%s used: %f ms %f GBPS %f Gflops\n",
-               src.to_string().c_str(), dst.to_string().c_str(), used,
-               dst.total_nr_elems() * (4.f + 1.f) /
-                       (1024 * 1024 * 1024) / used * 1e3,
-               dst.total_nr_elems() * (4.f + 3.f) / (1024 * 1024 * 1024) /
-                       used * 1e3);
+        printf("run %s->%s used: %f ms %f GBPS %f Gflops\n", src.to_string().c_str(),
+               dst.to_string().c_str(), used,
+               dst.total_nr_elems() * (4.f + 1.f) / (1024 * 1024 * 1024) / used * 1e3,
+               dst.total_nr_elems() * (4.f + 3.f) / (1024 * 1024 * 1024) / used * 1e3);
     };
     param.format = param::Resize::Format::NCHW;
     benchmarker.set_param(param);
@@ -234,15 +227,14 @@ TEST_F(CUDA, BENCHMARK_RESIZE_BACKWARD) {
     const size_t RUNS = 5;
     benchmarker.set_times(RUNS);
 
-    auto run = [&benchmarker](const TensorShape& diff,
-                              const TensorShape& grad) {
+    auto run = [&benchmarker](const TensorShape& diff, const TensorShape& grad) {
         auto used = benchmarker.execs({diff, grad});
         used /= RUNS;
 
         //! bandwith: each dst elem require 1 read and 4 write
         //! gflops: each dst elem require 4 add
-        printf("run %s<-%s used: %f ms %f GBPS %f Gflops\n",
-               diff.to_string().c_str(), grad.to_string().c_str(), used,
+        printf("run %s<-%s used: %f ms %f GBPS %f Gflops\n", diff.to_string().c_str(),
+               grad.to_string().c_str(), used,
                diff.total_nr_elems() * (4.f + 1.f) * sizeof(float) /
                        (1024 * 1024 * 1024) / used * 1e3,
                diff.total_nr_elems() * 4.f / (1024 * 1024 * 1024) / used * 1e3);

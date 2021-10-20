@@ -121,8 +121,7 @@ void test::run_topk_test(Handle* handle) {
             checker.execl({layout, {}, {}});
         }
         if (!checker.prev_succ()) {
-            fprintf(stderr,
-                    "topk failed for (%zu,%zu):%d mode=%d cont=%d tie=%d\n", m,
+            fprintf(stderr, "topk failed for (%zu,%zu):%d mode=%d cont=%d tie=%d\n", m,
                     n, k, static_cast<int>(mode), !lda, tie_breaking_mode);
             return;
         }
@@ -156,8 +155,7 @@ void test::run_topk_test(Handle* handle) {
         }
     }
 
-    for (auto mode :
-         {Mode::KTH_ONLY, Mode::VALUE_IDX_NOSORT, Mode::VALUE_IDX_SORTED}) {
+    for (auto mode : {Mode::KTH_ONLY, Mode::VALUE_IDX_NOSORT, Mode::VALUE_IDX_SORTED}) {
         run(1, 1, 1, mode);
         run(-1, 1, 1, mode);
         run(1, 23, 1, mode);
@@ -194,7 +192,7 @@ INST(dtype::Float32);
 INST(dtype::Int32);
 DNN_INC_FLOAT16(INST(dtype::Float16));
 #undef INST
-}
+}  // namespace test
 }  // namespace megdnn
 
 // vim: syntax=cpp.doxygen

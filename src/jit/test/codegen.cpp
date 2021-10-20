@@ -57,8 +57,7 @@ void run<simple>(Backend backend, CompNode cn) {
     y = opr::TypeCvt::make((y + y.make_scalar_dt(1.f)), dtype::Float32{});
 
     VarNodeArray inputs{a.node(), b.node(), c.node()}, outputs{y.node()};
-    auto ig_gen =
-            std::make_unique<InternalGraphGenerator>(y.node()->owner_opr());
+    auto ig_gen = std::make_unique<InternalGraphGenerator>(y.node()->owner_opr());
 
     for (auto i : get_rev_topo_order(y)) {
         if (!i->same_type<opr::Host2DeviceCopy>()) {
@@ -70,8 +69,8 @@ void run<simple>(Backend backend, CompNode cn) {
     auto y_jit = JITExecutor::make(igraph, ig_gen->orig_inps());
 
     HostTensorND host_y, host_y_jit;
-    auto func = graph->compile({make_callback_copy(y, host_y),
-                                make_callback_copy(y_jit, host_y_jit)});
+    auto func = graph->compile(
+            {make_callback_copy(y, host_y), make_callback_copy(y_jit, host_y_jit)});
     func->execute();
 
     MGB_ASSERT_TENSOR_NEAR(host_y, host_y_jit, 5e-3);
@@ -94,8 +93,7 @@ void run<grad>(Backend backend, CompNode cn) {
     auto y = opr::floor_div(a, opr::abs(b) + 0.1f) * opr::sin(c);
 
     VarNodeArray inputs{a.node(), b.node(), c.node()}, outputs{y.node()};
-    auto ig_gen =
-            std::make_unique<InternalGraphGenerator>(y.node()->owner_opr());
+    auto ig_gen = std::make_unique<InternalGraphGenerator>(y.node()->owner_opr());
 
     for (auto i : get_rev_topo_order(y)) {
         if (!i->same_type<opr::Host2DeviceCopy>()) {
@@ -107,14 +105,13 @@ void run<grad>(Backend backend, CompNode cn) {
     auto y_jit = JITExecutor::make(igraph, ig_gen->orig_inps());
 
     HostTensorND host_y, host_y_jit;
-    auto func = graph->compile({make_callback_copy(y, host_y),
-                                make_callback_copy(y_jit, host_y_jit)});
+    auto func = graph->compile(
+            {make_callback_copy(y, host_y), make_callback_copy(y_jit, host_y_jit)});
     func->execute();
 
     MGB_ASSERT_TENSOR_EQ(host_y, host_y_jit);
 
-    auto grad = [loss = opr::reduce_sum(y_jit, y_jit.make_scalar(1))](
-            SymbolVar x) {
+    auto grad = [loss = opr::reduce_sum(y_jit, y_jit.make_scalar(1))](SymbolVar x) {
         return cg::grad(loss, x, false, false).node();
     };
     ASSERT_EQ(nullptr, grad(a));
@@ -140,8 +137,7 @@ void run_mlir(CompNode cn) {
 
     auto y = a + b * c + 0.3f;
 
-    auto ig_gen =
-            std::make_unique<InternalGraphGenerator>(y.node()->owner_opr());
+    auto ig_gen = std::make_unique<InternalGraphGenerator>(y.node()->owner_opr());
 
     for (auto i : get_rev_topo_order(y)) {
         if (!i->same_type<opr::Host2DeviceCopy>()) {
@@ -153,8 +149,8 @@ void run_mlir(CompNode cn) {
     auto y_jit = JITExecutor::make(igraph, ig_gen->orig_inps());
 
     HostTensorND host_y, host_y_jit;
-    auto func = graph->compile({make_callback_copy(y, host_y),
-                                make_callback_copy(y_jit, host_y_jit)});
+    auto func = graph->compile(
+            {make_callback_copy(y, host_y), make_callback_copy(y_jit, host_y_jit)});
     func->execute();
 
     MGB_ASSERT_TENSOR_EQ(host_y, host_y_jit);
@@ -173,12 +169,10 @@ void run_mlir_broadcast(CompNode cn) {
          c = opr::Host2DeviceCopy::make(*graph, host_x2),
          d = opr::Host2DeviceCopy::make(*graph, host_x3);
 
-    auto y =
-            opr::Elemwise::make({a, b, c}, opr::Elemwise::Mode::FUSE_MUL_ADD3) +
-            opr::Elemwise::make({d}, opr::Elemwise::Mode::ABS) - 0.3f;
+    auto y = opr::Elemwise::make({a, b, c}, opr::Elemwise::Mode::FUSE_MUL_ADD3) +
+             opr::Elemwise::make({d}, opr::Elemwise::Mode::ABS) - 0.3f;
 
-    auto ig_gen =
-            std::make_unique<InternalGraphGenerator>(y.node()->owner_opr());
+    auto ig_gen = std::make_unique<InternalGraphGenerator>(y.node()->owner_opr());
 
     for (auto i : get_rev_topo_order(y)) {
         if (!i->same_type<opr::Host2DeviceCopy>()) {
@@ -190,8 +184,8 @@ void run_mlir_broadcast(CompNode cn) {
     auto y_jit = JITExecutor::make(igraph, ig_gen->orig_inps());
 
     HostTensorND host_y, host_y_jit;
-    auto func = graph->compile({make_callback_copy(y, host_y),
-                                make_callback_copy(y_jit, host_y_jit)});
+    auto func = graph->compile(
+            {make_callback_copy(y, host_y), make_callback_copy(y_jit, host_y_jit)});
     func->execute();
 
     MGB_ASSERT_TENSOR_EQ(host_y, host_y_jit);
@@ -206,8 +200,7 @@ void run_mlir_different_shape(CompNode cn) {
         auto host_x = gen(tshp, cn);
         auto x = opr::Host2DeviceCopy::make(*graph, host_x);
         auto y = x * 2;
-        auto ig_gen =
-                std::make_unique<InternalGraphGenerator>(y.node()->owner_opr());
+        auto ig_gen = std::make_unique<InternalGraphGenerator>(y.node()->owner_opr());
 
         for (auto i : get_rev_topo_order(y)) {
             if (!i->same_type<opr::Host2DeviceCopy>()) {
@@ -219,8 +212,8 @@ void run_mlir_different_shape(CompNode cn) {
         auto y_jit = JITExecutor::make(igraph, ig_gen->orig_inps());
 
         HostTensorND host_y, host_y_jit;
-        auto func = graph->compile({make_callback_copy(y, host_y),
-                                    make_callback_copy(y_jit, host_y_jit)});
+        auto func = graph->compile(
+                {make_callback_copy(y, host_y), make_callback_copy(y_jit, host_y_jit)});
         func->execute();
 
         MGB_ASSERT_TENSOR_EQ(host_y, host_y_jit);
@@ -246,8 +239,7 @@ struct MlirTestOpt get_mode_opt(opr::Elemwise::Mode mode) {
     } else if (mode == opr::Elemwise::Mode::LOG) {
         opt.low = 0.1;
         opt.high = 4;
-    } else if (mode == opr::Elemwise::Mode::ERF or
-               mode == opr::Elemwise::Mode::ERFC) {
+    } else if (mode == opr::Elemwise::Mode::ERF or mode == opr::Elemwise::Mode::ERFC) {
         opt.low = -5;
         opt.high = 5;
     } else if (mode == opr::Elemwise::Mode::ERFINV) {
@@ -267,21 +259,19 @@ void run_mlir_mode(CompNode cn) {
     set_backend(Backend::MLIR);
     auto graph = ComputingGraph::make();
     auto opt = get_mode_opt(tag::mode);
-    HostTensorGenerator<dtype::Float32, RandomDistribution::UNIFORM> gen(opt.low,
-                                                                         opt.high);
+    HostTensorGenerator<dtype::Float32, RandomDistribution::UNIFORM> gen(
+            opt.low, opt.high);
 
     SmallVector<std::shared_ptr<HostTensorND>> hosts;
     VarNodeArray input_vars;
     for (int i = 0; i < arity; i++) {
         hosts.push_back(gen({2323, 4242}, cn));
-        input_vars.push_back(
-                opr::Host2DeviceCopy::make(*graph, hosts[i]).node());
+        input_vars.push_back(opr::Host2DeviceCopy::make(*graph, hosts[i]).node());
     }
 
     auto y = opr::Elemwise::make(input_vars, tag::mode);
 
-    auto ig_gen =
-            std::make_unique<InternalGraphGenerator>(y.node()->owner_opr());
+    auto ig_gen = std::make_unique<InternalGraphGenerator>(y.node()->owner_opr());
 
     for (auto i : get_rev_topo_order(y)) {
         if (!i->template same_type<opr::Host2DeviceCopy>()) {
@@ -293,8 +283,8 @@ void run_mlir_mode(CompNode cn) {
     auto y_jit = JITExecutor::make(igraph, ig_gen->orig_inps());
 
     HostTensorND host_y, host_y_jit;
-    auto func = graph->compile({make_callback_copy(y, host_y),
-                                make_callback_copy(y_jit, host_y_jit)});
+    auto func = graph->compile(
+            {make_callback_copy(y, host_y), make_callback_copy(y_jit, host_y_jit)});
     func->execute();
 
     MGB_ASSERT_TENSOR_NEAR(host_y, host_y_jit, opt.maxerr);
@@ -381,8 +371,7 @@ FOREACH_UNARY_MODE(def_tag)
 #undef def_tag
 
 #define t(n) n,
-        using mlir_elemwise_unary_types =
-                ::testing::Types<FOREACH_UNARY_MODE(t) ABS>;
+using mlir_elemwise_unary_types = ::testing::Types<FOREACH_UNARY_MODE(t) ABS>;
 #undef t
 TYPED_TEST_CASE(TestJITMlirUnaryElemwise, mlir_elemwise_unary_types);
 
@@ -449,8 +438,7 @@ FOREACH_BINARY_MODE(def_tag)
 #undef def_tag
 
 #define t(n) n,
-        using mlir_elemwise_binary_types =
-                ::testing::Types<FOREACH_BINARY_MODE(t) ADD>;
+using mlir_elemwise_binary_types = ::testing::Types<FOREACH_BINARY_MODE(t) ADD>;
 #undef t
 TYPED_TEST_CASE(TestJITMlirBinaryElemwise, mlir_elemwise_binary_types);
 TYPED_TEST(TestJITMlirBinaryElemwise, run) {

@@ -40,8 +40,8 @@ megcoreStatus_t megcore::createComputingHandleWithCambriconContext(
     return megcoreSuccess;
 }
 
-megcoreStatus_t megcore::getCambriconContext(megcoreComputingHandle_t handle,
-                                             CambriconContext* ctx) {
+megcoreStatus_t megcore::getCambriconContext(
+        megcoreComputingHandle_t handle, CambriconContext* ctx) {
     auto&& H = handle;
     megdnn_assert(H);
     megcoreDeviceHandle_t dev_handle = H->content->dev_handle();
@@ -55,5 +55,3 @@ megcoreStatus_t megcore::getCambriconContext(megcoreComputingHandle_t handle,
 }
 
 // vim: syntax=cpp.doxygen
-
-

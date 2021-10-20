@@ -16,9 +16,9 @@
 #include "src/common/utils.h"
 #include "src/fallback/conv_bias/winograd/winograd.h"
 
-#include "src/naive/matrix_mul/matrix_mul_helper.h"
-#include "src/arm_common/elemwise_helper/op_unary.h"
 #include "src/arm_common/conv_bias/fp32/helper.h"
+#include "src/arm_common/elemwise_helper/op_unary.h"
+#include "src/naive/matrix_mul/matrix_mul_helper.h"
 
 #include "midout.h"
 MIDOUT_DECL(megdnn_arm_common_winograd_nchw44_fp32_F23_mk4)
@@ -32,11 +32,10 @@ constexpr size_t pack_size = 4;
 
 struct InputTransformF23_NCHW44 {
     template <bool inner>
-    static void transform(float* patchT, const float* input,
-                          float* input_transform_buf, size_t ih_start,
-                          size_t iw_start, size_t IH, size_t IW,
-                          size_t unit_idx, size_t nr_units_in_tile, size_t ic,
-                          size_t IC) {
+    static void transform(
+            float* patchT, const float* input, float* input_transform_buf,
+            size_t ih_start, size_t iw_start, size_t IH, size_t IW, size_t unit_idx,
+            size_t nr_units_in_tile, size_t ic, size_t IC) {
         size_t IW4 = IW * pack_size;
         size_t icb = ic / pack_size;
         size_t iw4_start = iw_start * pack_size;
@@ -74,14 +73,11 @@ struct InputTransformF23_NCHW44 {
                 for (int iw = iw0_act; iw < iw1_act; ++iw) {
                     size_t iho = ih - ih_start, iwo = iw - iw_start;
                     auto src = vld1q_f32(input_ptr + ih * IW4 + iw * pack_size);
-                    vst1q_f32(
-                            patchT + iho * alpha * pack_size + iwo * pack_size,
-                            src);
+                    vst1q_f32(patchT + iho * alpha * pack_size + iwo * pack_size, src);
                 }
             }
-#define cb(m, n)                                                      \
-    d##m##n = Vector<float, 4>::load(patchT + m * alpha * pack_size + \
-                                     n * pack_size);
+#define cb(m, n) \
+    d##m##n = Vector<float, 4>::load(patchT + m * alpha * pack_size + n * pack_size);
             UNROLL_CALL_NOWRAPPER_D2(4, 4, cb);
 #undef cb
         }
@@ -107,10 +103,11 @@ struct InputTransformF23_NCHW44 {
         UNROLL_CALL_NOWRAPPER(4, cb);
 #undef cb
 
-#define cb(m, n)                                                        \
-    d##m##n.save(input_transform_buf +                                  \
-                 (m * alpha + n) * ICB * nr_units_in_tile * pack_size + \
-                 icb * nr_units_in_tile * pack_size + unit_idx * pack_size);
+#define cb(m, n)                                                   \
+    d##m##n.save(                                                  \
+            input_transform_buf +                                  \
+            (m * alpha + n) * ICB * nr_units_in_tile * pack_size + \
+            icb * nr_units_in_tile * pack_size + unit_idx * pack_size);
         UNROLL_CALL_NOWRAPPER_D2(4, 4, cb)
 #undef cb
     }
@@ -119,13 +116,11 @@ struct InputTransformF23_NCHW44 {
 #define CONCAT(a, idx) a##idx
 template <BiasMode bmode, typename Op>
 struct OutputTransformF23_NCHW44 {
-    static void transform(const float* output_transform_buf, const float* bias,
-                          float* output, float* transform_mid_buf,
-                          size_t oh_start, size_t ow_start, size_t OH,
-                          size_t OW, size_t oc_start, size_t oc_end,
-                          size_t oc_index, size_t unit_idx,
-                          size_t nr_units_in_tile, const DType& src_dtype,
-                          const DType& dst_dtype) {
+    static void transform(
+            const float* output_transform_buf, const float* bias, float* output,
+            float* transform_mid_buf, size_t oh_start, size_t ow_start, size_t OH,
+            size_t OW, size_t oc_start, size_t oc_end, size_t oc_index, size_t unit_idx,
+            size_t nr_units_in_tile, const DType& src_dtype, const DType& dst_dtype) {
         MEGDNN_MARK_USED_VAR(transform_mid_buf);
         Op op(src_dtype, dst_dtype);
         //! AT * m * A
@@ -173,20 +168,19 @@ struct OutputTransformF23_NCHW44 {
             UNROLL_CALL_RAW_D2(2, 2, cb);
 #undef cb
         }
-#define out_save(oho, owo)                                                  \
-    do {                                                                    \
-        size_t oh = oh_start + oho;                                         \
-        size_t ow = ow_start + owo;                                         \
-        if (oh < OH && ow < OW) {                                           \
-            if (bmode == BiasMode::BIAS) {                                  \
-                v##oho##owo += Vector<float, 4>::load(bias + oc * OH * OW + \
-                                                      oh * OW * pack_size + \
-                                                      ow * pack_size);      \
-                v##oho##owo = op(v##oho##owo.value);                        \
-            }                                                               \
-            v##oho##owo.save(output + oc * OH * OW + oh * OW * pack_size +  \
-                             ow * pack_size);                               \
-        }                                                                   \
+#define out_save(oho, owo)                                                           \
+    do {                                                                             \
+        size_t oh = oh_start + oho;                                                  \
+        size_t ow = ow_start + owo;                                                  \
+        if (oh < OH && ow < OW) {                                                    \
+            if (bmode == BiasMode::BIAS) {                                           \
+                v##oho##owo += Vector<float, 4>::load(                               \
+                        bias + oc * OH * OW + oh * OW * pack_size + ow * pack_size); \
+                v##oho##owo = op(v##oho##owo.value);                                 \
+            }                                                                        \
+            v##oho##owo.save(                                                        \
+                    output + oc * OH * OW + oh * OW * pack_size + ow * pack_size);   \
+        }                                                                            \
     } while (0);
         UNROLL_CALL_RAW_D2(2, 2, out_save);
 #undef out_save
@@ -200,11 +194,9 @@ namespace arm_common {
 namespace winograd {
 
 MEGDNN_REG_WINOGRAD_STRATEGY_IMPL(winograd_F23_mk4_f_nchw44)
-void winograd_F23_mk4_f_nchw44::filter(const float* filter,
-                                       float* filter_transform_buf,
-                                       float* transform_mid_buf, size_t OC,
-                                       size_t IC, size_t oc_start,
-                                       size_t oc_end) {
+void winograd_F23_mk4_f_nchw44::filter(
+        const float* filter, float* filter_transform_buf, float* transform_mid_buf,
+        size_t OC, size_t IC, size_t oc_start, size_t oc_end) {
     //! 1      0    0    v00 v01 v02   1 0.5  0.5 0
     //! 0.5  0.5  0.5    v10 v11 v12   0 0.5 -0.5 0
     //! 0.5 -0.5  0.5    v20 v21 v22   0 0.5  0.5 1
@@ -213,12 +205,12 @@ void winograd_F23_mk4_f_nchw44::filter(const float* filter,
     constexpr size_t pack_size = 4;
 
     MEGDNN_MARK_USED_VAR(transform_mid_buf);
-    megdnn_assert((oc_end - oc_start) % pack_size == 0 &&
-                          oc_start % pack_size == 0 &&
-                          oc_end % pack_size == 0 && IC % pack_size == 0 &&
-                          OC % pack_size == 0,
-                  "NCHW44 Winograd filter transform requires both OC and IC "
-                  "are times of 4");
+    megdnn_assert(
+            (oc_end - oc_start) % pack_size == 0 && oc_start % pack_size == 0 &&
+                    oc_end % pack_size == 0 && IC % pack_size == 0 &&
+                    OC % pack_size == 0,
+            "NCHW44 Winograd filter transform requires both OC and IC "
+            "are times of 4");
     size_t OCB = OC / pack_size;
     size_t ICB = IC / pack_size;
 
@@ -226,9 +218,8 @@ void winograd_F23_mk4_f_nchw44::filter(const float* filter,
         for (size_t icb = 0; icb < ICB; icb++) {
             for (size_t ic_inner = 0; ic_inner < pack_size; ic_inner++) {
                 const float* fptr = filter +
-                                    (ocb * ICB + icb) * KERNEL_SIZE *
-                                            KERNEL_SIZE * pack_size *
-                                            pack_size +
+                                    (ocb * ICB + icb) * KERNEL_SIZE * KERNEL_SIZE *
+                                            pack_size * pack_size +
                                     ic_inner * pack_size;
 
 #define cb(m, n)                                       \
@@ -248,11 +239,12 @@ void winograd_F23_mk4_f_nchw44::filter(const float* filter,
                 UNROLL_CALL_RAW(3, FILTER_TRANSFORM, wd, g);
                 UNROLL_CALL_RAW(4, FILTER_TRANSFORM, ret, wd);
 #undef FILTER_TRANSFORM
-#define cb_save(m, n)                                                    \
-    ret##m##n.save(filter_transform_buf +                                \
-                   (m * ALPHA + n) * OCB * ICB * pack_size * pack_size + \
-                   ocb * ICB * pack_size * pack_size +                   \
-                   icb * pack_size * pack_size + ic_inner * pack_size);
+#define cb_save(m, n)                                                         \
+    ret##m##n.save(                                                           \
+            filter_transform_buf +                                            \
+            (m * ALPHA + n) * OCB * ICB * pack_size * pack_size +             \
+            ocb * ICB * pack_size * pack_size + icb * pack_size * pack_size + \
+            ic_inner * pack_size);
                 UNROLL_CALL_NOWRAPPER_D2(4, 4, cb_save)
 #undef cb_save
             }
@@ -260,18 +252,15 @@ void winograd_F23_mk4_f_nchw44::filter(const float* filter,
     }
 }
 
-void winograd_F23_mk4_f_nchw44::input(const float* input,
-                                      float* input_transform_buf,
-                                      float* transform_mid_buf, size_t IH,
-                                      size_t IW, size_t IC, size_t PH,
-                                      size_t PW, size_t unit_start_idx,
-                                      size_t nr_units_in_tile) {
+void winograd_F23_mk4_f_nchw44::input(
+        const float* input, float* input_transform_buf, float* transform_mid_buf,
+        size_t IH, size_t IW, size_t IC, size_t PH, size_t PW, size_t unit_start_idx,
+        size_t nr_units_in_tile) {
     megdnn_assert(IC % 4 == 0);
     constexpr int alpha = 3 + 2 - 1;
 
     // OW = IW + 2 * PW - KERNEL_SIZE + 1
-    auto units_w =
-            div_ceil<size_t>(IW + 2 * PW - KERNEL_SIZE + 1, OUTPUT_BLOCK_SIZE);
+    auto units_w = div_ceil<size_t>(IW + 2 * PW - KERNEL_SIZE + 1, OUTPUT_BLOCK_SIZE);
     float* patchT = transform_mid_buf + 4 * alpha * alpha;
 
     for (size_t ic = 0; ic < IC; ic += 4) {
@@ -284,50 +273,49 @@ void winograd_F23_mk4_f_nchw44::input(const float* input,
             if (ih_start >= 0 && ih_start + alpha <= static_cast<int>(IH) &&
                 iw_start >= 0 && iw_start + alpha <= static_cast<int>(IW)) {
                 InputTransformF23_NCHW44::transform<true>(
-                        patchT, input, input_transform_buf, ih_start, iw_start,
-                        IH, IW, unit_idx, nr_units_in_tile, ic, IC);
+                        patchT, input, input_transform_buf, ih_start, iw_start, IH, IW,
+                        unit_idx, nr_units_in_tile, ic, IC);
             } else {
                 InputTransformF23_NCHW44::transform<false>(
-                        patchT, input, input_transform_buf, ih_start, iw_start,
-                        IH, IW, unit_idx, nr_units_in_tile, ic, IC);
+                        patchT, input, input_transform_buf, ih_start, iw_start, IH, IW,
+                        unit_idx, nr_units_in_tile, ic, IC);
             }
         }
     }
 }
 
-void winograd_F23_mk4_f_nchw44::output(const float* output_transform_buf,
-                                       const float* bias, float* output,
-                                       float* transform_mid_buf, BiasMode bmode,
-                                       NonlineMode nonline_mode, size_t OH,
-                                       size_t OW, size_t oc_start,
-                                       size_t oc_end, size_t unit_start_idx,
-                                       size_t nr_units_in_tile) {
-#define cb(_bmode, _nonline_op, ...)                                        \
-    for (size_t oc = oc_start; oc < oc_end; oc += 4) {                      \
-        size_t oc_index = oc - oc_start;                                    \
-        rep(unit_idx, nr_units_in_tile) {                                   \
-            size_t index = unit_start_idx + unit_idx;                       \
-            auto nh = index / units_w;                                      \
-            auto nw = index % units_w;                                      \
-            size_t oh_start = nh * OUTPUT_BLOCK_SIZE;                       \
-            size_t ow_start = nw * OUTPUT_BLOCK_SIZE;                       \
-            OutputTransformF23_NCHW44<_bmode, _nonline_op>::transform(      \
-                    output_transform_buf, bias, output, transform_mid_buf,  \
-                    oh_start, ow_start, OH, OW, oc_start, oc_end, oc_index, \
-                    unit_idx, nr_units_in_tile, src_dtype, dst_dtype);      \
-        }                                                                   \
+void winograd_F23_mk4_f_nchw44::output(
+        const float* output_transform_buf, const float* bias, float* output,
+        float* transform_mid_buf, BiasMode bmode, NonlineMode nonline_mode, size_t OH,
+        size_t OW, size_t oc_start, size_t oc_end, size_t unit_start_idx,
+        size_t nr_units_in_tile) {
+#define cb(_bmode, _nonline_op, ...)                                                 \
+    for (size_t oc = oc_start; oc < oc_end; oc += 4) {                               \
+        size_t oc_index = oc - oc_start;                                             \
+        rep(unit_idx, nr_units_in_tile) {                                            \
+            size_t index = unit_start_idx + unit_idx;                                \
+            auto nh = index / units_w;                                               \
+            auto nw = index % units_w;                                               \
+            size_t oh_start = nh * OUTPUT_BLOCK_SIZE;                                \
+            size_t ow_start = nw * OUTPUT_BLOCK_SIZE;                                \
+            OutputTransformF23_NCHW44<_bmode, _nonline_op>::transform(               \
+                    output_transform_buf, bias, output, transform_mid_buf, oh_start, \
+                    ow_start, OH, OW, oc_start, oc_end, oc_index, unit_idx,          \
+                    nr_units_in_tile, src_dtype, dst_dtype);                         \
+        }                                                                            \
     }
 
     auto units_w = div_ceil<size_t>(OW, OUTPUT_BLOCK_SIZE);
     constexpr size_t pack_size = 4;
 
     size_t OC = oc_end - oc_start;
-    megdnn_assert(OC % pack_size == 0 && oc_start % pack_size == 0 &&
-                          oc_end % pack_size == 0,
-                  "NCHW44 Winograd filter transform requires OC is times of 4");
+    megdnn_assert(
+            OC % pack_size == 0 && oc_start % pack_size == 0 && oc_end % pack_size == 0,
+            "NCHW44 Winograd filter transform requires OC is times of 4");
 
-    DISPATCH_CONV_WINOGRAD_BIAS(megdnn_arm_common_winograd_nchw44_fp32_F23_mk4,
-                                cb, float, float, bmode, nonline_mode);
+    DISPATCH_CONV_WINOGRAD_BIAS(
+            megdnn_arm_common_winograd_nchw44_fp32_F23_mk4, cb, float, float, bmode,
+            nonline_mode);
 #undef cb
 }
 

@@ -7,24 +7,24 @@
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 class FetcherError(Exception):
-    """Base class for fetch related error."""
+    r"""Base class for fetch related error."""
 
 
 class InvalidRepo(FetcherError):
-    """The repo provided was somehow invalid."""
+    r"""The repo provided was somehow invalid."""
 
 
 class InvalidGitHost(FetcherError):
-    """The git host provided was somehow invalid."""
+    r"""The git host provided was somehow invalid."""
 
 
 class GitPullError(FetcherError):
-    """A git pull error occurred."""
+    r"""A git pull error occurred."""
 
 
 class GitCheckoutError(FetcherError):
-    """A git checkout error occurred."""
+    r"""A git checkout error occurred."""
 
 
 class InvalidProtocol(FetcherError):
-    """The protocol provided was somehow invalid."""
+    r"""The protocol provided was somehow invalid."""

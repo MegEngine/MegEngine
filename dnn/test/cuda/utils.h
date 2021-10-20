@@ -10,9 +10,9 @@
  */
 
 #pragma once
-#include <cstdio>
 #include <cuda.h>
 #include <cuda_runtime.h>
+#include <cstdio>
 
 #define cuda_check(expr)                                   \
     do {                                                   \

@@ -35,9 +35,9 @@ namespace {
 using LoopIterationFn = function_ref<Value(
         OpBuilder& rewriter, ValueRange memRefOperands, ValueRange loopIvs)>;
 
-void lower_op_to_loops(Operation* op, ValueRange operands,
-                       PatternRewriter& rewriter,
-                       LoopIterationFn process_iteration) {
+void lower_op_to_loops(
+        Operation* op, ValueRange operands, PatternRewriter& rewriter,
+        LoopIterationFn process_iteration) {
     auto memref_type = (*op->result_type_begin()).cast<MemRefType>();
     auto loc = op->getLoc();
 
@@ -48,10 +48,8 @@ void lower_op_to_loops(Operation* op, ValueRange operands,
     buildAffineLoopNest(
             rewriter, loc, lower_bounds, memref_type.getShape(), steps,
             [&](OpBuilder& nested_builder, Location loc, ValueRange ivs) {
-                Value value_to_store =
-                        process_iteration(nested_builder, operands, ivs);
-                nested_builder.create<AffineStoreOp>(loc, value_to_store, alloc,
-                                                     ivs);
+                Value value_to_store = process_iteration(nested_builder, operands, ivs);
+                nested_builder.create<AffineStoreOp>(loc, value_to_store, alloc, ivs);
             });
 
     // Replace this operation with the generated alloc.
@@ -60,8 +58,7 @@ void lower_op_to_loops(Operation* op, ValueRange operands,
 
 struct ElemwiseLowering : public ConversionPattern {
     ElemwiseLowering(MLIRContext* ctx)
-            : ConversionPattern(mgb::dialect::Elemwise::getOperationName(), 1,
-                                ctx) {}
+            : ConversionPattern(mgb::dialect::Elemwise::getOperationName(), 1, ctx) {}
 
     LogicalResult matchAndRewrite(
             Operation* op, ArrayRef<Value> operands,
@@ -72,13 +69,13 @@ struct ElemwiseLowering : public ConversionPattern {
         dst_layout.init_contiguous_stride();
         lower_op_to_loops(
                 op, operands, rewriter,
-                [dst_layout, loc, op](OpBuilder& builder,
-                                      ValueRange memref_operands,
-                                      ValueRange loop_ivs) {
-                    auto inputs = llvm::to_vector<4>(llvm::map_range(
-                            memref_operands, [&](mlir::Value val) {
-                                return get_affine_load_op(builder, loc, val,
-                                                          loop_ivs, dst_layout);
+                [dst_layout, loc, op](
+                        OpBuilder& builder, ValueRange memref_operands,
+                        ValueRange loop_ivs) {
+                    auto inputs = llvm::to_vector<4>(
+                            llvm::map_range(memref_operands, [&](mlir::Value val) {
+                                return get_affine_load_op(
+                                        builder, loc, val, loop_ivs, dst_layout);
                             }));
                     return lower_elemwise_to_std(op, builder, loc, inputs);
                 });
@@ -88,8 +85,7 @@ struct ElemwiseLowering : public ConversionPattern {
 
 struct TypeCvtLowering : public ConversionPattern {
     TypeCvtLowering(MLIRContext* ctx)
-            : ConversionPattern(mgb::dialect::TypeCvt::getOperationName(), 1,
-                                ctx) {}
+            : ConversionPattern(mgb::dialect::TypeCvt::getOperationName(), 1, ctx) {}
 
     LogicalResult matchAndRewrite(
             Operation* op, ArrayRef<Value> operands,
@@ -97,8 +93,9 @@ struct TypeCvtLowering : public ConversionPattern {
         auto loc = op->getLoc();
         lower_op_to_loops(
                 op, operands, rewriter,
-                [loc, op](OpBuilder& builder, ValueRange memref_operands,
-                          ValueRange loop_ivs) {
+                [loc, op](
+                        OpBuilder& builder, ValueRange memref_operands,
+                        ValueRange loop_ivs) {
                     mlir::Value input = get_operand<AffineLoadOp>(
                             builder, loc, memref_operands[0], loop_ivs);
                     return lower_typecvt_to_std(op, builder, loc, input);
@@ -109,8 +106,7 @@ struct TypeCvtLowering : public ConversionPattern {
 
 struct DimshuffleLowering : public ConversionPattern {
     DimshuffleLowering(MLIRContext* ctx)
-            : ConversionPattern(mgb::dialect::Dimshuffle::getOperationName(), 1,
-                                ctx) {}
+            : ConversionPattern(mgb::dialect::Dimshuffle::getOperationName(), 1, ctx) {}
 
     static mlir::AffineMap get_affinemap_from_pattern(
             const std::vector<int32_t>& pattern, mlir::MLIRContext* ctx) {
@@ -133,10 +129,11 @@ struct DimshuffleLowering : public ConversionPattern {
         auto map = get_affinemap_from_pattern(pattern, op->getContext());
         lower_op_to_loops(
                 op, operands, rewriter,
-                [loc, op, &map](OpBuilder& builder, ValueRange memref_operands,
-                                ValueRange loop_ivs) {
-                    return builder.create<AffineLoadOp>(loc, memref_operands[0],
-                                                        map, loop_ivs);
+                [loc, op, &map](
+                        OpBuilder& builder, ValueRange memref_operands,
+                        ValueRange loop_ivs) {
+                    return builder.create<AffineLoadOp>(
+                            loc, memref_operands[0], map, loop_ivs);
                 });
         return success();
     }
@@ -144,8 +141,7 @@ struct DimshuffleLowering : public ConversionPattern {
 
 struct AssignOpLowering : public ConversionPattern {
     AssignOpLowering(MLIRContext* ctx)
-            : ConversionPattern(dialect::AssignOp::getOperationName(), 1, ctx) {
-    }
+            : ConversionPattern(dialect::AssignOp::getOperationName(), 1, ctx) {}
 
     LogicalResult matchAndRewrite(
             Operation* op, ArrayRef<Value> operands,
@@ -173,20 +169,19 @@ struct AssignOpLowering : public ConversionPattern {
 struct ReturnOpLowering : public OpRewritePattern<dialect::ReturnOp> {
     using OpRewritePattern<dialect::ReturnOp>::OpRewritePattern;
 
-    LogicalResult matchAndRewrite(dialect::ReturnOp op,
-                                  PatternRewriter& rewriter) const final {
+    LogicalResult matchAndRewrite(
+            dialect::ReturnOp op, PatternRewriter& rewriter) const final {
         // We lower "mgb.return" directly to "std.return".
         rewriter.replaceOpWithNewOp<mlir::ReturnOp>(op);
         return success();
     }
 };
 
-struct ConstantScalarOpLowering
-        : public OpRewritePattern<dialect::ConstantScalarOp> {
+struct ConstantScalarOpLowering : public OpRewritePattern<dialect::ConstantScalarOp> {
     using OpRewritePattern<dialect::ConstantScalarOp>::OpRewritePattern;
 
-    LogicalResult matchAndRewrite(dialect::ConstantScalarOp op,
-                                  PatternRewriter& rewriter) const final {
+    LogicalResult matchAndRewrite(
+            dialect::ConstantScalarOp op, PatternRewriter& rewriter) const final {
         dialect::ConstantScalarOpAdaptor constant_scalar_adaptor(op);
         rewriter.replaceOpWithNewOp<mlir::ConstantOp>(
                 op, constant_scalar_adaptor.value());
@@ -209,12 +204,13 @@ public:
         target.addIllegalDialect<MgbDialect>();
 
         OwningRewritePatternList patterns;
-        patterns.insert<ElemwiseLowering, TypeCvtLowering, DimshuffleLowering,
-                        ReturnOpLowering, AssignOpLowering,
-                        ConstantScalarOpLowering>(&getContext());
+        patterns
+                .insert<ElemwiseLowering, TypeCvtLowering, DimshuffleLowering,
+                        ReturnOpLowering, AssignOpLowering, ConstantScalarOpLowering>(
+                        &getContext());
 
-        if (failed(applyPartialConversion(getFunction(), target,
-                                          std::move(patterns)))) {
+        if (failed(applyPartialConversion(
+                    getFunction(), target, std::move(patterns)))) {
             signalPassFailure();
         }
     }

@@ -11,19 +11,19 @@
  */
 
 #pragma once
-#include "megdnn/oprs.h"
-#include "src/common/utils.h"
-#include "src/cuda/matrix_mul/opr_impl.h"
-#include "src/common/algo_base.h"
-#include "src/common/metahelper.h"
-
-#include <unordered_map>
 #include <cuda.h>
 #include <memory>
+#include <unordered_map>
+#include "megdnn/oprs.h"
+#include "src/common/algo_base.h"
+#include "src/common/metahelper.h"
+#include "src/common/utils.h"
+#include "src/cuda/conv_bias/algo.h"
+#include "src/cuda/conv_bias/opr_impl.h"
+#include "src/cuda/matrix_mul/opr_impl.h"
 #if CUDA_VERSION >= 10010
 #include <cublasLt.h>
 #endif
-
 namespace megdnn {
 namespace cuda {
 
@@ -42,6 +42,7 @@ public:
         CUDA_CUBLASLT,
         CUDA_NAIVE,
         CUDA_BFLOAT16,
+        CUDA_CONV1X1_CUDNN,
 #if CUDA_VERSION >= 9020
         CUDA_FLOAT32_SIMT,
         CUDA_FLOAT32_SIMT_SPLIT_K,
@@ -58,8 +59,9 @@ public:
         TensorLayout layout_a, layout_b, layout_c;
 
         std::string to_string() const;
-        SizeArgs(MatrixMulForwardImpl* opr, const TensorLayout& A,
-                 const TensorLayout& B, const TensorLayout& C);
+        SizeArgs(
+                MatrixMulForwardImpl* opr, const TensorLayout& A, const TensorLayout& B,
+                const TensorLayout& C);
 
         bool can_be_treated_as_int8x8x32() const {
             return layout_a.dtype.enumv() == layout_b.dtype.enumv() &&
@@ -74,9 +76,9 @@ public:
         TensorND tensor_a, tensor_b, tensor_c;
         Workspace workspace;
 
-        ExecArgs(MatrixMulForwardImpl* opr, _megdnn_tensor_in A,
-                 _megdnn_tensor_in B, _megdnn_tensor_out C,
-                 _megdnn_workspace workspace);
+        ExecArgs(
+                MatrixMulForwardImpl* opr, _megdnn_tensor_in A, _megdnn_tensor_in B,
+                _megdnn_tensor_out C, _megdnn_workspace workspace);
     };
     virtual bool is_available(const SizeArgs& args) const = 0;
     virtual size_t get_workspace_in_bytes(const SizeArgs& args) const = 0;
@@ -91,16 +93,14 @@ public:
             const AlgoAttribute& negative_attr = AlgoAttribute::DEFAULT,
             size_t limit = std::numeric_limits<size_t>::max()) const {
         return contain_attribute_all(positive_attr) &&
-               !contain_attribute_any(negative_attr) &&
-               is_available_wk(args, limit);
+               !contain_attribute_any(negative_attr) && is_available_wk(args, limit);
     }
-    AlgoBase& check_workspace(const SizeArgs& args,
-                              const Workspace& workspace) {
+    AlgoBase& check_workspace(const SizeArgs& args, const Workspace& workspace) {
         auto req = get_workspace_in_bytes(args);
         megdnn_assert(
                 req <= workspace.size,
-                "matrix mul fwd algo %s: required workspace %zu bytes, got %zu",
-                name(), req, workspace.size);
+                "matrix mul fwd algo %s: required workspace %zu bytes, got %zu", name(),
+                req, workspace.size);
         return *this;
     }
 };
@@ -116,8 +116,7 @@ public:
     void exec(const ExecArgs& args) const override;
     MEGDNN_DECL_ALGO_TYPE(CUDA_CUBLAS)
     AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE |
-               AlgoAttribute::USABLE_DEPEND_ON_SHAPE |
+        return AlgoAttribute::REPRODUCIBLE | AlgoAttribute::USABLE_DEPEND_ON_SHAPE |
                AlgoAttribute::ACCURACY_DEPEND_ON_BATCH;
     }
 };
@@ -131,9 +130,7 @@ public:
     const char* name() const override { return "UINT4x4x32_WMMA"; }
     void exec(const ExecArgs& args) const override;
     MEGDNN_DECL_ALGO_TYPE(CUDA_WMMA_UINT4X4X32)
-    AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE;
-    }
+    AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }
 };
 #endif
 #if CUDA_VERSION >= 10010
@@ -145,8 +142,7 @@ public:
     void exec(const ExecArgs& args) const override;
     MEGDNN_DECL_ALGO_TYPE(CUDA_CUBLASLT)
     AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE |
-               AlgoAttribute::ACCURACY_DEPEND_ON_BATCH;
+        return AlgoAttribute::REPRODUCIBLE | AlgoAttribute::ACCURACY_DEPEND_ON_BATCH;
     }
 };
 #endif
@@ -175,19 +171,48 @@ public:
     MEGDNN_DECL_ALGO_TYPE(CUDA_BFLOAT16)
 
     std::vector<SearchItem> get_subopr_list(
-            const TensorLayoutArray& layouts,
-            const OperatorBase* opr) const override;
+            const TensorLayoutArray& layouts, const OperatorBase* opr) const override;
 
     const char* name() const override { return "MATMUL_BFLOAT16"; }
 
-    AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE;
-    }
+    AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }
 
 private:
     WorkspaceBundle get_workspace_bundle(void* ptr, const SizeArgs& args) const;
 };
 #endif
+
+class MatrixMulForwardImpl::AlgoConv1X1CUDNN final : public AlgoBase {
+public:
+    AlgoConv1X1CUDNN(cudnnConvolutionFwdAlgo_t algo_enum) {
+        m_impl = std::make_unique<ConvBiasForwardImpl::AlgoCUDNNConv>(
+                ConvBiasForwardImpl::AlgoCUDNNConv(algo_enum));
+        std::string algoname(m_impl.get()->name());
+        m_name = "MATMUL_CONV1X1:" + algoname;
+    }
+    bool is_available(const SizeArgs& args) const override;
+    size_t get_workspace_in_bytes(const SizeArgs& args) const override;
+    const char* name() const override { return m_name.c_str(); }
+    void exec(const ExecArgs& args) const override;
+    AlgoAttribute attribute() const override {
+        auto ret = AlgoAttribute::DEFAULT;
+#define cb(attr)                                     \
+    if (m_impl.get()->contain_attribute_all(attr)) { \
+        ret |= attr;                                 \
+    }
+        MEGDNN_FOREACH_ALGO_ATTRIBUTE_INHERITABLE(cb)
+#undef cb
+        if (m_impl.get()->contain_attribute_all(AlgoAttribute::REPRODUCIBLE)) {
+            ret |= AlgoAttribute::REPRODUCIBLE;
+        }
+        return ret;
+    }
+    MEGDNN_DECL_ALGO_TYPE(CUDA_CONV1X1_CUDNN)
+private:
+    std::unique_ptr<ConvBiasForwardImpl::AlgoCUDNNConv> m_impl;
+    std::string m_name;
+    WorkspaceBundle get_workspace_bundle(void* ptr, const SizeArgs& args) const;
+};
 
 #if CUDA_VERSION >= 9020
 class MatrixMulForwardImpl::AlgoCutlassMatrixMulBase : public AlgoBase {
@@ -196,9 +221,10 @@ public:
         int threadblock_m, threadblock_n, threadblock_k;
         int warp_m, warp_n, warp_k;
         int instruction_m, instruction_n, instruction_k;
-        AlgoParam(int threadblock_m_, int threadblock_n_, int threadblock_k_,
-                  int warp_m_, int warp_n_, int warp_k_, int instruction_m_ = 1,
-                  int instruction_n_ = 1, int instruction_k_ = 1)
+        AlgoParam(
+                int threadblock_m_, int threadblock_n_, int threadblock_k_, int warp_m_,
+                int warp_n_, int warp_k_, int instruction_m_ = 1,
+                int instruction_n_ = 1, int instruction_k_ = 1)
                 : threadblock_m{threadblock_m_},
                   threadblock_n{threadblock_n_},
                   threadblock_k{threadblock_k_},
@@ -227,31 +253,29 @@ protected:
     AlgoParam m_algo_param;
 };
 
-class MatrixMulForwardImpl::AlgoFloat32SIMT final
-        : public AlgoCutlassMatrixMulBase {
+class MatrixMulForwardImpl::AlgoFloat32SIMT final : public AlgoCutlassMatrixMulBase {
 public:
     AlgoFloat32SIMT(AlgoParam algo_param)
             : AlgoCutlassMatrixMulBase{algo_param},
-              m_name{ssprintf("CUTLASS_FLOAT32_SIMT_%s",
-                              m_algo_param.to_string().c_str())} {}
+              m_name{ssprintf(
+                      "CUTLASS_FLOAT32_SIMT_%s", m_algo_param.to_string().c_str())} {}
     bool is_available(const SizeArgs& args) const override;
+
     size_t get_workspace_in_bytes(const SizeArgs& args) const override;
     const char* name() const override { return m_name.c_str(); }
-    AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE;
-    }
+    AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }
     MEGDNN_DECL_ALGO_TYPE(CUDA_FLOAT32_SIMT)
     std::string param() const override {
         std::string ret;
-        // FIXME: algo param compatible with old version, to avoid fastrun cache error
+        // FIXME: algo param compatible with old version, to avoid fastrun cache
+        // error
         struct AlgoParam_ {
             int threadblock_m, threadblock_n, threadblock_k;
             int warp_m, warp_n, warp_k;
         };
-        AlgoParam_ algo_param{
-                m_algo_param.threadblock_m, m_algo_param.threadblock_n,
-                m_algo_param.threadblock_k, m_algo_param.warp_m,
-                m_algo_param.warp_n,        m_algo_param.warp_k};
+        AlgoParam_ algo_param{m_algo_param.threadblock_m, m_algo_param.threadblock_n,
+                              m_algo_param.threadblock_k, m_algo_param.warp_m,
+                              m_algo_param.warp_n,        m_algo_param.warp_k};
         serialize_write_pod(algo_param, ret);
         return ret;
     }
@@ -260,6 +284,7 @@ private:
     void do_exec(const ExecArgs& args) const override;
     int min_alignment_requirement() const override { return 1; }
     std::string m_name;
+    const void* get_available_op(const SizeArgs& args) const;
 };
 
 class MatrixMulForwardImpl::AlgoFloat32SIMTSplitK final
@@ -267,14 +292,15 @@ class MatrixMulForwardImpl::AlgoFloat32SIMTSplitK final
 public:
     AlgoFloat32SIMTSplitK(AlgoParam algo_param)
             : AlgoCutlassMatrixMulBase{algo_param},
-              m_name{ssprintf("CUTLASS_FLOAT32_SIMT_SPLIT_K_%s",
-                              m_algo_param.to_string().c_str())} {}
+              m_name{ssprintf(
+                      "CUTLASS_FLOAT32_SIMT_SPLIT_K_%s",
+                      m_algo_param.to_string().c_str())} {}
     bool is_available(const SizeArgs& args) const override;
+
     size_t get_workspace_in_bytes(const SizeArgs& args) const override;
     const char* name() const override { return m_name.c_str(); }
     AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE |
-               AlgoAttribute::USABLE_DEPEND_ON_SHAPE;
+        return AlgoAttribute::REPRODUCIBLE | AlgoAttribute::USABLE_DEPEND_ON_SHAPE;
     }
     MEGDNN_DECL_ALGO_TYPE(CUDA_FLOAT32_SIMT_SPLIT_K)
     std::string param() const override {
@@ -285,10 +311,9 @@ public:
             int threadblock_m, threadblock_n, threadblock_k;
             int warp_m, warp_n, warp_k;
         };
-        AlgoParam_ algo_param{
-                m_algo_param.threadblock_m, m_algo_param.threadblock_n,
-                m_algo_param.threadblock_k, m_algo_param.warp_m,
-                m_algo_param.warp_n,        m_algo_param.warp_k};
+        AlgoParam_ algo_param{m_algo_param.threadblock_m, m_algo_param.threadblock_n,
+                              m_algo_param.threadblock_k, m_algo_param.warp_m,
+                              m_algo_param.warp_n,        m_algo_param.warp_k};
         serialize_write_pod(algo_param, ret);
         return ret;
     }
@@ -297,22 +322,21 @@ private:
     void do_exec(const ExecArgs& args) const override;
     int min_alignment_requirement() const override { return 1; }
     std::string m_name;
+    const void* get_available_op(const SizeArgs& args) const;
 };
 
-class MatrixMulForwardImpl::AlgoFloat32SIMTGemvBatchedStrided final
-        : public AlgoBase {
+class MatrixMulForwardImpl::AlgoFloat32SIMTGemvBatchedStrided final : public AlgoBase {
 public:
     AlgoFloat32SIMTGemvBatchedStrided(int threadblock_n)
             : m_threadblock_n{threadblock_n},
-              m_name{ssprintf("CUTLASS_FLOAT32_SIMT_GEMV_BATCHED_STRIDED_%d",
-                              m_threadblock_n)} {}
+              m_name{ssprintf(
+                      "CUTLASS_FLOAT32_SIMT_GEMV_BATCHED_STRIDED_%d",
+                      m_threadblock_n)} {}
     bool is_available(const SizeArgs& args) const override;
     size_t get_workspace_in_bytes(const SizeArgs& args) const override;
     const char* name() const override { return m_name.c_str(); }
     void exec(const ExecArgs& args) const override;
-    AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE;
-    }
+    AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }
     MEGDNN_DECL_ALGO_TYPE(CUDA_FLOAT32_SIMT_GEMV_BATCHED_STRIDED)
 
     std::string param() const override {
@@ -332,17 +356,14 @@ class MatrixMulForwardImpl::AlgoFloat16TensorOp final
 public:
     AlgoFloat16TensorOp(AlgoParam algo_param)
             : AlgoCutlassMatrixMulBase{algo_param},
-              m_name{ssprintf("CUTLASS_FLOAT16_TENSOR_OP_h%d%d%d_%s",
-                              m_algo_param.instruction_m,
-                              m_algo_param.instruction_n,
-                              m_algo_param.instruction_k,
-                              m_algo_param.to_string().c_str())} {}
+              m_name{ssprintf(
+                      "CUTLASS_FLOAT16_TENSOR_OP_h%d%d%d_%s",
+                      m_algo_param.instruction_m, m_algo_param.instruction_n,
+                      m_algo_param.instruction_k, m_algo_param.to_string().c_str())} {}
     bool is_available(const SizeArgs& args) const override;
     size_t get_workspace_in_bytes(const SizeArgs& args) const override;
     const char* name() const override { return m_name.c_str(); }
-    AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE;
-    }
+    AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }
     MEGDNN_DECL_ALGO_TYPE(CUDA_FLOAT16_TENSOR_OP)
 
 private:
@@ -356,17 +377,15 @@ class MatrixMulForwardImpl::AlgoFloat16TensorOpSplitK final
 public:
     AlgoFloat16TensorOpSplitK(AlgoParam algo_param)
             : AlgoCutlassMatrixMulBase{algo_param},
-              m_name{ssprintf("CUTLASS_FLOAT16_TENSOR_OP_SPLIT_K_h%d%d%d_%s",
-                              m_algo_param.instruction_m,
-                              m_algo_param.instruction_n,
-                              m_algo_param.instruction_k,
-                              m_algo_param.to_string().c_str())} {}
+              m_name{ssprintf(
+                      "CUTLASS_FLOAT16_TENSOR_OP_SPLIT_K_h%d%d%d_%s",
+                      m_algo_param.instruction_m, m_algo_param.instruction_n,
+                      m_algo_param.instruction_k, m_algo_param.to_string().c_str())} {}
     bool is_available(const SizeArgs& args) const override;
     size_t get_workspace_in_bytes(const SizeArgs& args) const override;
     const char* name() const override { return m_name.c_str(); }
     AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE |
-               AlgoAttribute::USABLE_DEPEND_ON_SHAPE;
+        return AlgoAttribute::REPRODUCIBLE | AlgoAttribute::USABLE_DEPEND_ON_SHAPE;
     }
     MEGDNN_DECL_ALGO_TYPE(CUDA_FLOAT16_TENSOR_OP_SPLIT_K)
 
@@ -398,13 +417,13 @@ public:
 #if CUDA_VERSION >= 9020
     std::vector<AlgoFloat32SIMT> simt_float32;
     std::vector<AlgoFloat32SIMTSplitK> simt_float32_split_k;
-    std::vector<AlgoFloat32SIMTGemvBatchedStrided>
-            simt_float32_gemv_batched_strided;
+    std::vector<AlgoFloat32SIMTGemvBatchedStrided> simt_float32_gemv_batched_strided;
 #if CUDA_VERSION >= 10020
     std::vector<AlgoFloat16TensorOp> tensorop_float16;
     std::vector<AlgoFloat16TensorOpSplitK> tensorop_float16_split_k;
 #endif
 #endif
+    std::vector<AlgoConv1X1CUDNN> conv1x1;
     std::vector<AlgoBase*> all_algos;
 
     const AlgoBase::Mapper& all_algos_map() const { return m_all_algos_map; }

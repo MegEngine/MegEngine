@@ -18,7 +18,6 @@ namespace megdnn {
 namespace aarch64 {
 namespace matmul_mk4_8x8x8 {
 
-
 /**
  * Overview of register layout:
  *
@@ -39,18 +38,18 @@ namespace matmul_mk4_8x8x8 {
  *  | v16 |             | v28                            |
  *  | v17 |             | v29                            |
  *  | v16 |             | v30                            |
- *  | v17 |             | v31                            |    
+ *  | v17 |             | v31                            |
  *  +--------+ - - - - +---------------------------------+
  *
  *                            Accumulator
  */
-static void kern_8x8(const int8_t* packA, const int8_t* packB, int K,
-                     int16_t* output, int LDC, bool is_first_k, int m_remain,
-                     int n_remain) {
+static void kern_8x8(
+        const int8_t* packA, const int8_t* packB, int K, int16_t* output, int LDC,
+        bool is_first_k, int m_remain, int n_remain) {
     K /= 8;
     LDC = LDC * sizeof(int16_t);
-    const int8_t* a_ptr = packB;//packA;
-    const int8_t* b_ptr = packA;//packB;
+    const int8_t* a_ptr = packB;  // packA;
+    const int8_t* b_ptr = packA;  // packB;
 // clang-format off
 #define LOAD_C_8 \
     "ld1 {v0.8h}, [x0], #16\n"     \
@@ -291,17 +290,17 @@ static void kern_8x8(const int8_t* packA, const int8_t* packB, int K,
               "v11", "v12", "v13", "v14", "v15", "v16", "v17", "v18", "v19",
               "v20", "v21", "v22", "v23", "v24", "v25", "v26", "v27", "v28",
               "v29", "v30", "v31");
-// clang-format on
+    // clang-format on
 }
 
-static void kern_8x8_remain(const int8_t* packA, const int8_t* packB, int K,
-                     int16_t* output, int LDC, bool is_first_k, int m_remain,
-                     int n_remain) {
+static void kern_8x8_remain(
+        const int8_t* packA, const int8_t* packB, int K, int16_t* output, int LDC,
+        bool is_first_k, int m_remain, int n_remain) {
     K /= 8;
     LDC = LDC * sizeof(int16_t);
     const int8_t* a_ptr = packB;
     const int8_t* b_ptr = packA;
-//  clang-format off
+    //  clang-format off
     register int16_t* outptr asm("x0") = output;
     asm volatile(
             "add x1, x0, %x[LDC]\n"
@@ -476,7 +475,7 @@ static void kern_8x8_remain(const int8_t* packA, const int8_t* packB, int K,
             "cbnz %w[K], 1b\n"
 
             "cmp %w[is_first_k], #1\n"
-            "beq 2f\n" 
+            "beq 2f\n"
             "cmp  %x[m_remain], #8     \n"
             "beq  8f                   \n"
             "cmp  %x[m_remain], #4     \n"
@@ -633,7 +632,7 @@ static void kern_8x8_remain(const int8_t* packA, const int8_t* packB, int K,
             "zip2 v15.2d,  v30.2d,  v31.2d  \n"
             "add v6.8h,  v6.8h,  v13.8h     \n"
             "add v7.8h,  v7.8h,  v15.8h     \n"
-//save to memory
+            // save to memory
             "cmp  %x[m_remain], #8     \n"
             "beq  4f                   \n"
             "cmp  %x[m_remain], #4     \n"
@@ -766,31 +765,27 @@ static void kern_8x8_remain(const int8_t* packA, const int8_t* packB, int K,
             "b 1000f                   \n"
 
             "1000:                     \n"
+            : [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr), [is_first_k] "+r"(is_first_k),
+              [K] "+r"(K), [LDC] "+r"(LDC), [outptr] "+r"(outptr),
+              [m_remain] "+r"(m_remain), [n_remain] "+r"(n_remain)
             :
-            [ a_ptr ] "+r"(a_ptr), [ b_ptr ] "+r"(b_ptr),
-            [ is_first_k ] "+r"(is_first_k), [ K ] "+r"(K), [ LDC ] "+r"(LDC),
-            [ outptr ] "+r"(outptr), [ m_remain ] "+r"(m_remain),
-            [ n_remain ] "+r"(n_remain)
-            :
-            : "cc", "memory", "x1", "x2", "x3", "x4", "x5", "x6", "x7", "x8",
-              "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10",
-              "v11", "v12", "v13", "v14", "v15", "v16", "v17", "v18", "v19",
-              "v20", "v21", "v22", "v23", "v24", "v25", "v26", "v27", "v28",
-              "v29", "v30", "v31");
-// clang-format on
+            : "cc", "memory", "x1", "x2", "x3", "x4", "x5", "x6", "x7", "x8", "v0",
+              "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10", "v11", "v12",
+              "v13", "v14", "v15", "v16", "v17", "v18", "v19", "v20", "v21", "v22",
+              "v23", "v24", "v25", "v26", "v27", "v28", "v29", "v30", "v31");
+    // clang-format on
 
 #undef LOAD_C_8
 #undef STORE_C_8
 }
 
-
-static void kern_4x8(const int8_t* packA, const int8_t* packB, int K,
-                     int16_t* output, int LDC, bool is_first_k, int m_remain,
-                     int n_remain) {
+static void kern_4x8(
+        const int8_t* packA, const int8_t* packB, int K, int16_t* output, int LDC,
+        bool is_first_k, int m_remain, int n_remain) {
     K /= 8;
     LDC = LDC * sizeof(int16_t);
-    const int8_t* a_ptr = packB;//packA;
-    const int8_t* b_ptr = packA;//packB;
+    const int8_t* a_ptr = packB;  // packA;
+    const int8_t* b_ptr = packA;  // packB;
 // clang-format off
 #define LOAD_C_4 \
     "ld1 {v0.8h}, [x0], #16\n"     \
@@ -1018,14 +1013,14 @@ static void kern_4x8(const int8_t* packA, const int8_t* packB, int K,
 #undef LOAD_C_4
 #undef STORE_C_4
 }
-static void kern_4x8_remain(const int8_t* packA, const int8_t* packB, int K,
-                     int16_t* output, int LDC, bool is_first_k, int m_remain,
-                     int n_remain) {
+static void kern_4x8_remain(
+        const int8_t* packA, const int8_t* packB, int K, int16_t* output, int LDC,
+        bool is_first_k, int m_remain, int n_remain) {
     K /= 8;
     LDC = LDC * sizeof(int16_t);
-    const int8_t* a_ptr = packB;//packA;
-    const int8_t* b_ptr = packA;//packB;
-// clang-format off
+    const int8_t* a_ptr = packB;  // packA;
+    const int8_t* b_ptr = packA;  // packB;
+    // clang-format off
     register int16_t* outptr asm("x0") = output;
     asm volatile(
 
@@ -1324,13 +1319,12 @@ static void kern_4x8_remain(const int8_t* packA, const int8_t* packB, int K,
 #undef STORE_C_4
 }
 
-
 //! pack to icxoc
 //! (M/4,K/4,4(K),4(M)) pack to (M/8,k/8,8(K_ic_0~3_ic_4~7),8(M_oc0~3_OC_4~7))
-//! if M K is not times of 8,pack 0 instead 
-static void gemm_s8x8x16_mk4_8x8x8_pack_A(dt_int8* outptr,
-                                          const dt_int8* inptr, int ldin,
-                                          int m0, int mmax, int k0, int kmax) {
+//! if M K is not times of 8,pack 0 instead
+static void gemm_s8x8x16_mk4_8x8x8_pack_A(
+        dt_int8* outptr, const dt_int8* inptr, int ldin, int m0, int mmax, int k0,
+        int kmax) {
     megdnn_assert(m0 % 4 == 0 && mmax % 4 == 0, "M must be time of 4");
     megdnn_assert(k0 % 4 == 0 && kmax % 4 == 0, "K must be time of 4");
     constexpr int pack_m = 8;
@@ -1349,8 +1343,8 @@ static void gemm_s8x8x16_mk4_8x8x8_pack_A(dt_int8* outptr,
         prefetch_2x(inptr0);
         prefetch_2x(inptr1);
         int k_idx = k0;
-        for ( ; k_idx + 7 < kmax; k_idx += pack_k) {
-            interleave_8x8_mk4_b(inptr0,inptr1,outptr);
+        for (; k_idx + 7 < kmax; k_idx += pack_k) {
+            interleave_8x8_mk4_b(inptr0, inptr1, outptr);
         }
 
         if (k_idx < kmax) {
@@ -1368,9 +1362,9 @@ static void gemm_s8x8x16_mk4_8x8x8_pack_A(dt_int8* outptr,
         prefetch_2x(inptr0);
         prefetch_2x(inptr1);
         int k_idx = k0;
-        for ( ; k_idx + 7 < kmax; k_idx += pack_k) {
+        for (; k_idx + 7 < kmax; k_idx += pack_k) {
             inptr1 = zerobuff;
-            interleave_8x8_mk4_b(inptr0,inptr1,outptr);
+            interleave_8x8_mk4_b(inptr0, inptr1, outptr);
         }
 
         if (k_idx < kmax) {
@@ -1383,9 +1377,8 @@ static void gemm_s8x8x16_mk4_8x8x8_pack_A(dt_int8* outptr,
 }
 //! pack to nxic
 //! (K/4,N,4) pack to K/8,N,8(ic0~7) ,K is not times of 8 ,pack 0 instead.
-static void gemm_s8x8x16_mk4_8x8x8_pack_B(dt_int8* out, const dt_int8* in,
-                                          int ldin, int n0, int nmax, int k0,
-                                          int kmax) {
+static void gemm_s8x8x16_mk4_8x8x8_pack_B(
+        dt_int8* out, const dt_int8* in, int ldin, int n0, int nmax, int k0, int kmax) {
     megdnn_assert(k0 % 4 == 0 && kmax % 4 == 0, "K must be time of 4");
 
     constexpr int pack_n = 8;
@@ -1394,14 +1387,14 @@ static void gemm_s8x8x16_mk4_8x8x8_pack_B(dt_int8* out, const dt_int8* in,
     int8_t tmpbuff0[pack_n * pack_size] = {0};
     int8_t tmpbuff1[pack_n * pack_size] = {0};
     int8_t zerobuff[pack_n * pack_size] = {0};
-    const int ksize = round_up<int>((kmax - k0),8);
+    const int ksize = round_up<int>((kmax - k0), 8);
     const int nsize = nmax - n0;
     const int n_end = nsize / pack_n * pack_n + n0;
     const int remain_n = nsize % pack_n;
     int output_stride = ksize * pack_n;
     int8_t* outptr_base = out;
     int k_idx = k0;
-    for ( ; k_idx + 7 < kmax; k_idx += pack_k) {
+    for (; k_idx + 7 < kmax; k_idx += pack_k) {
         const int8_t* inptr0 = in + k_idx / pack_size * ldin + n0 * pack_size;
         const int8_t* inptr1 = inptr0 + ldin;
         prefetch_3x(inptr0);
@@ -1410,7 +1403,7 @@ static void gemm_s8x8x16_mk4_8x8x8_pack_B(dt_int8* out, const dt_int8* in,
         auto outptr = outptr_base;
         for (int n_idx = n0; n_idx < n_end; n_idx += pack_n) {
             transpose_8x8_mk4_b(inptr0, inptr1, outptr);
-           outptr += output_stride;
+            outptr += output_stride;
         }
         if (remain_n > 0) {
             memcpy(tmpbuff0, inptr0, sizeof(int8_t) * remain_n * pack_size);
@@ -1422,8 +1415,8 @@ static void gemm_s8x8x16_mk4_8x8x8_pack_B(dt_int8* out, const dt_int8* in,
         }
         outptr_base += pack_n * pack_k;
     }
-    
-    if(k_idx < kmax){
+
+    if (k_idx < kmax) {
         const int8_t* inptr0 = in + k_idx / pack_size * ldin + n0 * pack_size;
         const int8_t* inptr1 = nullptr;
         prefetch_3x(inptr0);
@@ -1444,7 +1437,7 @@ static void gemm_s8x8x16_mk4_8x8x8_pack_B(dt_int8* out, const dt_int8* in,
     }
 }
 
-}  // namespace matmul_mk4_16x12x4_a53
+}  // namespace matmul_mk4_8x8x8
 }  // namespace aarch64
 }  // namespace megdnn
 

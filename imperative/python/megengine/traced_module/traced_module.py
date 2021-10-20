@@ -17,7 +17,19 @@ import re
 import weakref
 from inspect import getcallargs, getmembers, isclass, ismethod
 from itertools import chain
-from typing import Callable, Dict, Iterable, List, Optional, Sequence, Type, Union
+from types import FunctionType
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    Sequence,
+    Tuple,
+    Type,
+    Union,
+)
 
 from megengine import tensor
 
@@ -246,6 +258,10 @@ def _init_id2name(mod: Module, prefix: str = ""):
 class _InsertExprs:
     def __init__(self, graph, expr: Optional[Expr] = None):
         self.graph = graph
+        while graph.top_graph is not None:
+            graph = graph.top_graph
+        assert graph.inputs[0].owner._is_top
+        self.root_graph = graph
         self.global_scope = InternalGraph(
             graph._name, graph._prefix_name, graph._module_name
         )
@@ -255,6 +271,9 @@ class _InsertExprs:
 
     def __enter__(self):
         self.use_sym_shape = set_symbolic_shape(True)
+        node_id, expr_id = self.root_graph._total_ids
+        Node._set_next_id(node_id)
+        Expr._set_next_id(expr_id)
         set_module_tracing()
         _set_convert_node_flag(True)
         assert active_module_tracer() is None
@@ -333,27 +352,60 @@ class _InsertExprs:
             insert_index += 1
 
         self.graph._used_names.update(self.global_scope._used_names)
-        graph = self.graph
-        while graph.top_graph is not None:
-            graph = graph.top_graph
-        graph.inputs[0].owner._update_ref()
+        self.root_graph._total_ids = (Node._get_next_id(), Expr._get_next_id())
+        self.root_graph.inputs[0].owner._update_ref()
         return True
 
 
 class InternalGraph:
-    """
-    ``InternalGraph`` is a graph consist of ``Node`` and  ``Expr``, it is used to represent the execution procedure of Module's forward method.
+    r"""``InternalGraph`` is the main data structure used in the TracedModule.
+    It is used to represent the execution procedure of Module's forward method.
 
-    Attributes:
-    _exprs: List of Exprs in order of execution
-    _inputs: Input Nodes of InternalGraph
-    _outputs: Output Nodes of InternalGraph
+    For example, the following code
+
+    .. code-block::
+
+        import megengine.random as rand
+        import megengine.functional as F
+        import megengine.module as M
+
+        import megengine.traced_module as tm
+
+        class MyModule(M.Module):
+            def __init__(self):
+                super().__init__()
+                self.param = rand.normal(size=(3, 4))
+                self.linear = M.Linear(4, 5)
+
+            def forward(self, x):
+                return F.relu(self.linear(x + self.param))
+
+        net = MyModule()
+
+        inp = F.zeros(shape = (3, 4))
+        traced_module = tm.trace_module(net, inp)
+    
+    Will produce the following ``InternalGraph``::
+
+        print(traced_module.graph)
+
+    .. code-block:: text
+
+        MyModule.Graph (self, x) {
+                %2:     linear = getattr(self, "linear") -> (Linear)
+                %3:     param = getattr(self, "param") -> (Tensor)
+                %4:     add_out = x.__add__(param, )
+                %5:     linear_out = linear(add_out, )
+                %6:     relu_out = nn.relu(linear_out, )
+                return relu_out
+        }
     """
 
     _exprs = None  # type: List[Expr]
     _inputs = None  # type: List[Node]
     _outputs = None  # type: List[Node]
-    _top_graph = None
+    _top_graph = None  # type: InternalGraph
+    _total_ids = None  # type: List[int]
 
     def __init__(self, name: str = None, prefix_name: str = "", module_name: str = ""):
         self._exprs = []
@@ -388,44 +440,154 @@ class InternalGraph:
         return name
 
     @property
-    def inputs(self):
+    def inputs(self) -> List[Node]:
+        r"""Get the list of input Nodes of this graph.
+
+        Returns:
+            A list of ``Node``.
+        """
         return self._inputs
 
     @property
-    def outputs(self):
+    def outputs(self) -> List[Node]:
+        r"""Get the list of output Nodes of this graph.
+
+        Returns:
+            A list of Node.
+        """
         return self._outputs
 
     @property
     def top_graph(self):
+        r"""Get the parent graph of this graph.
+
+        Returns:
+            An ``InternalGraph``.
+        """
         if self._top_graph:
             return self._top_graph()
         return None
 
     def exprs(self, recursive=True):
+        r"""Get the Exprs that constitute this graph.
+
+        Args:
+            recursive: whether to get the Exprs in the subgraph.
+                Default: True
+        Returns:
+            A ``ExprFilter`` containing all Exprs of this graph.
+        """
         return ExprFilter(_expr_iter(self, recursive))
 
     def nodes(self, recursive=True):
+        r"""Get the Nodes that constitute this graph.
+
+        Args:
+            recursive: whether to get the Nodes in the subgraph.
+                Default: True
+        Returns:
+            A ``NodeFilter`` containing all Nodes of this graph.
+        """
         return NodeFilter(_node_iter(self, recursive))
 
     def get_function_by_type(self, func: Callable = None, recursive=True):
+        r"""Filter Exprs by the type of ``CallFunction``.
+
+        Args:
+            func: a built-in function, such as ``F.relu``.
+            recursive: whether to get the Exprs in the subgraph.
+                Default: True
+        Returns:
+            A :class:`~.TracedModule.ExprFilterCallFunction`.
+        """
         return self.exprs(recursive).call_function(func)
 
     def get_method_by_type(self, method: str = None, recursive=True):
+        r"""Filter Exprs by the type of ``CallMethod``.
+
+        Args:
+            method: a method string, such as "__add__".
+            recursive: whether to get the Exprs in the subgraph.
+                Default: True
+        Returns:
+            A :class:`~.TracedModule.ExprFilterCallMethod`.
+        """
         return self.exprs(recursive).call_method(method)
 
     def get_expr_by_id(self, expr_id: List[int] = None, recursive=True):
+        r"""Filter Exprs by their ``id``.
+
+        Args:
+            expr_id: a list of :class:`int`.
+            recursive: whether to get the Exprs in the subgraph.
+                Default: True
+        Returns:
+            A :class:`~.TracedModule.ExprFilterExprId`.
+        """
         return self.exprs(recursive).expr_id(expr_id)
 
     def get_module_by_type(self, module_cls: Module, recursive=True):
+        r"""Filter Nodes by the ``module_type`` of ``ModuleNode``.
+
+        Args:
+            module_cls: a subclass of :class:`~.Module`.
+            recursive: whether to get the Nodes in the subgraph.
+                Default: True
+        Returns:
+            A :class:`~.TracedModule.NodeFilterType`.
+        """
         assert issubclass(module_cls, Module)
-        return self.nodes(recursive).type(module_cls, ModuleNode)
+        return self.nodes(recursive).type(module_cls)
 
     def get_node_by_id(self, node_id: List[int] = None, recursive=True):
+        r"""Filter Nodes by their ``id``.
+
+        The ``id`` of the ``Node`` can be obtained by the following code
+
+        .. code-block::
+
+            # node : Node
+            print("{:i}".format(node))
+            print(node.__format__("i"))
+            # graph : InternalGraph
+            print("{:i}".format(graph))
+            print(graph.__format__("i"))
+
+        Args:
+            node_id: a list of :class:`int`.
+            recursive: whether to get the Nodes in the subgraph.
+                Default: True
+        Returns:
+            A :class:`~.TracedModule.NodeFilterNodeId`.
+        """
         return self.nodes(recursive).node_id(node_id)
 
     def get_node_by_name(
         self, name: str = None, ignorecase: bool = True, recursive=True
     ):
+        r"""Filter Nodes by their full name.
+
+        The full name of the ``Node`` can be obtained by the following code
+
+        .. code-block::
+
+            # node : Node
+            print("{:p}".format(node))
+            print(node.__format__("p"))
+            # graph : InternalGraph
+            print("{:p}".format(graph))
+            print(graph.__format__("p"))
+        
+        Args:
+            name: a string in glob syntax that can contain ``?`` and
+             ``*`` to match a single or arbitrary characters.
+            ignorecase: whether to ignroe case.
+                Default: True
+            recursive: whether to get the Nodes in the subgraph.
+                Default: True
+        Returns:
+            A :class:`~.TracedModule.NodeFilterName`.
+        """
         return self.nodes(recursive).name(name, ignorecase)
 
     def _add_input(self, i):
@@ -484,6 +646,13 @@ class InternalGraph:
                         o._orig_name = "{}{}".format(module_name, o._orig_name)
 
     def get_dep_exprs(self, nodes: Sequence[Node]) -> List[Expr]:
+        r"""Get the dependent Exprs of the ``nodes``.
+        
+        Args:
+            nodes: a list of :class:`Node`.
+        Returns:
+            A list of dependent :class:`Expr`.
+        """
         if not isinstance(nodes, Sequence):
             nodes = (nodes,)
         ret = list()
@@ -554,11 +723,22 @@ class InternalGraph:
         self._inputs[:] = formal_node_inputs
         moudle.argdef_graph_map[tree_def] = moudle.argdef_graph_map.pop(org_argdef)
         moudle.argdef_outdef_map[tree_def] = moudle.argdef_outdef_map.pop(org_argdef)
-
-        # return formal_node_inputs[1:], actual_nodes
         return formal_node_inputs[1:]
 
-    def add_input_node(self, shape, dtype="float32", name="args"):
+    def add_input_node(
+        self, shape: Tuple[int], dtype: str = "float32", name: str = "args"
+    ):
+        r"""Add an input node to the graph.
+
+        The new Node will be the last of the positional arguments.
+
+        Args:
+            shape: the shape of the new input Node.
+            dtype: the dtype of the new input Node.
+                Default: float32
+            name: the name of the new input Node. When the name is used in the graph, 
+             a suffix will be added to it.
+        """
         forma_mnode = self.inputs[0]
         actual_mnodes = forma_mnode.actual_node
 
@@ -607,18 +787,63 @@ class InternalGraph:
 
         moudle.argdef_graph_map[tree_def] = moudle.argdef_graph_map.pop(org_argdef)
         moudle.argdef_outdef_map[tree_def] = moudle.argdef_outdef_map.pop(org_argdef)
-
-        # return formal_inp_node, actual_inp_nodes
         return formal_inp_node
 
     def reset_outputs(self, outputs):
+        r"""Reset the output Nodes of the graph.
+        
+        .. note::
+
+            This method only supports resetting the output of graphs
+            that do not have a parent graph.
+            
+        Args:
+            outputs: an object which inner element is Node. Support tuple, list
+             dict, etc.
+        
+        For example, the following code
+
+        .. code-block::
+
+            import megengine.functional as F
+            import megengine.module as M
+            import megengine.traced_module as tm
+
+            class MyModule(M.Module):
+                def forward(self, x):
+                    x = x + 1
+                    return x
+
+            net = MyModule()
+
+            inp = F.zeros(shape = (1, ))
+            traced_module = tm.trace_module(net, inp)
+            graph = traced_module.graph
+            inp_node = graph.inputs[1]
+            out_node = graph.outputs[0]
+            graph.reset_outputs((out_node, {"input": inp_node}))
+            out = traced_module(inp)
+        
+        Will produce the following ``InternalGraph`` and ``out``::
+
+            print(graph)
+            print(out)
+
+        .. code-block:: text
+
+            MyModule.Graph (self, x) {
+                    %2:     add_out = x.__add__(1, )
+                    return add_out, x
+            }
+            (Tensor([1.], device=xpux:0), {'input': Tensor([0.], device=xpux:0)})
+        """
         outputs, out_def = tree_flatten(
             outputs, is_leaf=lambda x: isinstance(x, TensorNode),
         )
         forma_mnode = self.inputs[0]
 
         moudle = forma_mnode.owner
-        assert moudle._is_top, "reset_outputs only support the top-level graph"
+        assert moudle._is_top, "reset_outputs only support the top graph"
 
         actual_mnodes = forma_mnode.actual_node
         call_nodes = []
@@ -651,10 +876,53 @@ class InternalGraph:
         return actual_nodes
 
     def add_output_node(self, node: TensorNode):
+        r"""Add an output node to the Graph.
+        
+        The Graph output will become a ``tuple`` after calling ``add_output_node``.
+        The first element of the ``tuple`` is the original output, and the second 
+        is the ``node``.
+
+        For example, the following code
+
+        .. code-block::
+
+            import megengine.functional as F
+            import megengine.module as M
+            import megengine.traced_module as tm
+
+            class MyModule(M.Module):
+                def forward(self, x):
+                    x = x + 1
+                    return x
+
+            net = MyModule()
+
+            inp = F.zeros(shape = (1, ))
+            traced_module = tm.trace_module(net, inp)
+            graph = traced_module.graph
+            inp_node = graph.inputs[1]
+            out_node = graph.outputs[0]
+            graph.add_output_node(inp_node)
+            graph.add_output_node(out_node)
+            out = traced_module(inp)
+        
+        Will produce the following ``InternalGraph`` and ``out``::
+
+            print(graph)
+            print(out)
+
+        .. code-block:: text
+
+            MyModule.Graph (self, x) {
+                    %2:     add_out = x.__add__(1, )
+                    return add_out, x, add_out
+            }
+            ((Tensor([1.], device=xpux:0), Tensor([0.], device=xpux:0)), Tensor([1.], device=xpux:0))
+        """
         forma_mnode = self.inputs[0]
 
         moudle = forma_mnode.owner
-        assert moudle._is_top, "add_output_node only support the top-level graph"
+        assert moudle._is_top, "add_output_node only support the top graph"
 
         actual_mnodes = forma_mnode.actual_node
         call_nodes = []
@@ -697,15 +965,41 @@ class InternalGraph:
         return actual_out_nodes
 
     def insert_exprs(self, expr: Optional[Expr] = None):
+        r"""Initialize the trace mode and insertion position.
+
+        When used within a 'with' statement, this will temporary set the trace mode and
+        then restore normal mode when the with statement exits::
+
+            with graph.insert_exprs(e): # set the trace mode
+                ... # trace function or module
+            ... # inert exprs into graph and resotre normal mode
+
+        Args:
+            expr: the ``expr`` after which to insert. If None, the insertion position will be 
+                automatically set based on the input node.
+
+        Returns:
+            A resource manager that will initialize trace mode on ``__enter__`` and 
+            restore normal mode on ``__exit__``.
+        """
         if expr is not None:
             assert expr.top_graph == self, "Expr to insert after is not in graph."
         return _InsertExprs(self, expr)
 
     def replace_node(self, repl_dict: Dict[Node, Node]):
+        r"""Replace the Nodes in the graph.
+        
+        Args:
+            repl_dict: the map {old_Node: new_Node} that specifies how to replace the Nodes.
+        """
         while repl_dict:
             node, repl_node = repl_dict.popitem()
+            assert type(node) == type(
+                repl_node
+            ), "The type of {}({}) and {}({}) are not the same".format(
+                node, type(node).__name__, repl_node, type(repl_node).__name__
+            )
             # check graph inputs and outputs
-            # assert node not in self.inputs, "Cannot replace inputs"
             for i, n in enumerate(self.outputs):
                 if n is node:
                     self.outputs[i] = repl_node
@@ -713,7 +1007,10 @@ class InternalGraph:
             # update inputs of expr in node.users
             graph = repl_node.top_graph
             assert graph is not None
-            index = graph._exprs.index(repl_node.expr)
+            assert graph is self
+            index = -1
+            if not isinstance(repl_node.expr, Input):
+                index = graph._exprs.index(repl_node.expr)
             dep_exprs = self.get_dep_exprs(repl_node)
             i = 0
             while i < len(node.users):
@@ -733,9 +1030,7 @@ class InternalGraph:
                 n.inputs[idx] = repl_node
 
     def compile(self):
-        """
-        Delete unused expr.
-        """
+        r"""Delete unused expr."""
         dep_exprs = self.get_dep_exprs(self.outputs)
         i = 0
         while i < len(self._exprs):
@@ -746,6 +1041,13 @@ class InternalGraph:
             for n in expr.inputs:
                 n.users.remove(expr)
             self._exprs.remove(expr)
+
+    def _reset_ids(self):
+        for total_expr_id, expr in enumerate(self.exprs()):
+            expr._id = total_expr_id
+        for total_node_id, node in enumerate(self.nodes()):
+            node._id = total_node_id
+        self._total_ids = (total_node_id + 1, total_expr_id + 1)
 
     def interpret(self, *inputs):
         node2value = {}
@@ -759,26 +1061,39 @@ class InternalGraph:
                 return not end_nodes_set
             return False
 
+        ref_count = lambda n: len(n.users) + (1 if n in self._outputs else 0)
+
         for n, v in zip(self._inputs, inputs):
-            node2value[n] = v
+            if ref_count(n) > 0:
+                node2value[n] = [v, ref_count(n)]
             if n in self._watch_point:
                 self._rst[n].append(v)
             if n in self._end_point and get_all_endnode_val(n, v):
                 return list(endnode2value[i] for i in self._end_point)
 
         for expr in self._exprs:
-            values = expr.interpret(*list(node2value[i] for i in expr.inputs))
+            values = expr.interpret(*list(node2value[i][0] for i in expr.inputs))
+            for n in expr.inputs:
+                node2value[n][1] -= 1
+                if node2value[n][1] == 0:
+                    node2value.pop(n)
             if values is not None:
                 for n, v in zip(expr.outputs, values):
-                    node2value[n] = v
+                    if ref_count(n) > 0:
+                        node2value[n] = [v, ref_count(n)]
                     if n in self._watch_point:
                         self._rst[n] = v
                     if self._end_point and get_all_endnode_val(n, v):
                         return list(endnode2value[i] for i in self._end_point)
 
-        return list(node2value[i] for i in self._outputs)
+        return list(node2value[i][0] for i in self._outputs)
 
-    def eval(self, *inputs):
+    def eval(self, *inputs: Tuple[Tensor]):
+        r"""Call this method to execute the graph.
+
+        Args:
+            inputs: the tensors corresponding to the ``graph.inputs[1:]``.
+        """
         assert len(inputs) == len(self._inputs) - 1
         inp = [self._inputs[0].owner] + list(inputs)
         return self.interpret(*inp)
@@ -787,7 +1102,7 @@ class InternalGraph:
         return self.__format__()
 
     def __format__(self, format_spec: str = "") -> str:
-        saved_format_spec = Node.set_format_spec(format_spec)
+        saved_format_spec = Node._set_format_spec(format_spec)
         name = ""
         if self._name:
             name = "%s.Graph" % self._name
@@ -797,7 +1112,7 @@ class InternalGraph:
             "\n\t".join("{}".format(str(i)) for i in self._exprs),
             ", ".join(str(i) for i in self._outputs),
         )
-        Node.set_format_spec(saved_format_spec)
+        Node._set_format_spec(saved_format_spec)
         return res
 
     def __getstate__(self):
@@ -983,6 +1298,8 @@ class TracedModuleBuilder(NodeMixin):
             )
             for _, g in self._argdef_graph_map.items():
                 g.compile()
+                if self._is_top:
+                    g._total_ids = (Node._get_next_id(), Expr._get_next_id())
 
             for k, v in self.__dict__.items():
                 if k not in TracedModuleBuilder.__builder_attributes__:
@@ -1145,6 +1462,11 @@ class TracedModuleBuilder(NodeMixin):
         else:
             attr = getattr(self._mod, name)
             full_name = None
+            if (
+                isinstance(attr, FunctionType)
+                and id(attr) in active_module_tracer().patcher.patched_fn_ids
+            ):
+                return active_module_tracer().patcher.wrap_fn(attr)
 
             if id(attr) in active_module_tracer().id2name:
                 full_name = active_module_tracer().id2name[id(attr)]
@@ -1236,6 +1558,8 @@ class _expr_iter:
         self.recursive = recursive
 
     def __iter__(self):
+        for inp_node in self.graph.inputs:
+            yield inp_node.expr
         for expr in self.graph._exprs:
             if isinstance(expr, CallMethod) and isinstance(expr.inputs[0], ModuleNode):
                 yield expr
@@ -1251,10 +1575,10 @@ class _node_iter:
         node_ids = set()
         for expr in graph.exprs(recursive):
             for n in expr.inputs + expr.outputs:
-                if n._id in node_ids:
+                if id(n) in node_ids:
                     continue
                 nodes.append(n)
-                node_ids.add(n._id)
+                node_ids.add(id(n))
         self.nodes = list(sorted(nodes, key=lambda x: x._id))
 
     def __iter__(self):
@@ -1263,59 +1587,106 @@ class _node_iter:
 
 
 class BaseFilter:
-    def __init__(self, expr_iter: Iterable):
-        self._iter = expr_iter
+    r"""``BaseFilter`` exposes some methods for converting ``_node_iter/_expr_iter`` to ``list``, ``dict``, etc."""
+
+    def __init__(self, iter: Iterable):
+        self._iter = iter
 
     def __iter__(self):
         return iter(self._iter)
 
     def as_list(self):
+        r"""Consume this iterator and return its content as a list.
+
+        Returns:
+            A list of ``Node`` or ``Expr``.
+        """
         return list(self)
 
     def as_dict(self):
+        r"""Construct an ordered dict to map from ``id`` to objects in this iterator.
+
+        Returns:
+            An :class:`OrderedDict`.
+        """
         return collections.OrderedDict((i._id, i) for i in self)
 
     def as_unique(self):
+        """Assert that this iterator yields only one ``Node`` or ``Expr`` and return it.
+
+        Rerurns:
+            A ``Node`` or ``Expr``.
+        """
         rst = self.as_list()
         assert len(rst) == 1, "{} elements found".format(len(rst))
-        (expr,) = self
-        return expr
+        (elem,) = self
+        return elem
 
     def as_count(self):
+        r"""Consume this iterator and get the number of elements."""
         return sum(1 for _ in self)
 
 
 class ExprFilter(BaseFilter):
+    """Filter on Expr iterator.
+    This class is an iterator of :class:`.Expr` objects and multiple 
+    filtering conditions and mappers can be chained.
+    """
+
     def call_function(self, func):
+        r"""Filter by specific ``CallFunction.func``.
+        See :meth:`~.InternalGraph.get_function_by_type` for details.
+        """
         return ExprFilterCallFunction(self, func)
 
     def call_method(self, method):
+        r"""Filter by specific ``CallMethod.method``.
+        See :meth:`~.InternalGraph.get_function_by_type` for details.
+        """
         return ExprFilterCallMethod(self, method)
 
     def expr_id(self, expr_id: List[int]):
+        r"""Filter Exprs by their ``id``.
+        See :meth:`~.InternalGraph.get_function_by_type` for details.
+        """
         return ExprFilterExprId(self, expr_id)
 
 
 class NodeFilter(BaseFilter):
-    def type(self, owner_type, node_type):
-        return NodeFilterType(self, owner_type, node_type)
+    """Filter on Node iterator.
+    This class is an iterator of :class:`.Node` objects and multiple 
+    filtering conditions and mappers can be chained.
+    """
+
+    def type(self, owner_type):
+        r"""Filter by specific Module type.
+        See :meth:`~.InternalGraph.get_module_by_type` for details.
+        """
+        return NodeFilterType(self, owner_type)
 
     def node_id(self, node_id: List[int]):
+        r"""Filter Nodes by their ``id``.
+        See :meth:`~.InternalGraph.get_node_by_id` for details.
+        """
         return NodeFilterNodeId(self, node_id)
 
     def name(self, name: str, ignorecase: bool = True):
+        r"""Filter Nodes by their full name.
+        See :meth:`~.InternalGraph.get_node_by_name` for details.
+        """
         return NodeFilterName(self, name, ignorecase)
 
 
 class NodeFilterType(NodeFilter):
-    def __init__(self, expr_iter, owner_type, node_type):
+    """See :meth:`~.InternalGraph.get_module_by_type`"""
+
+    def __init__(self, expr_iter, owner_type):
         super().__init__(expr_iter)
         self.owner_type = owner_type
-        self.node_type = node_type
 
     def __iter__(self):
         for node in self._iter:
-            if not isinstance(node, self.node_type):
+            if not isinstance(node, ModuleNode):
                 continue
             if not hasattr(node, "owner"):
                 continue
@@ -1324,6 +1695,8 @@ class NodeFilterType(NodeFilter):
 
 
 class NodeFilterNodeId(NodeFilter):
+    """See :meth:`~.InternalGraph.get_node_by_id`"""
+
     def __init__(self, expr_iter, node_id: List[int]):
         super().__init__(expr_iter)
         if not isinstance(node_id, Sequence):
@@ -1337,6 +1710,8 @@ class NodeFilterNodeId(NodeFilter):
 
 
 class NodeFilterName(NodeFilter):
+    """See :meth:`~.InternalGraph.get_node_by_name`"""
+
     _re = None
 
     def __init__(self, node_iter, pattern, ignorecase):
@@ -1364,6 +1739,8 @@ class NodeFilterName(NodeFilter):
 
 
 class ExprFilterCallFunction(ExprFilter):
+    """See :meth:`~.InternalGraph.get_function_by_type`"""
+
     def __init__(self, expr_iter, func: Callable = None):
         super().__init__(expr_iter)
         self.func = func
@@ -1377,6 +1754,8 @@ class ExprFilterCallFunction(ExprFilter):
 
 
 class ExprFilterCallMethod(ExprFilter):
+    """See :meth:`~.InternalGraph.get_method_by_type`"""
+
     def __init__(self, expr_iter, method: str = None):
         super().__init__(expr_iter)
         self.method = method
@@ -1390,6 +1769,8 @@ class ExprFilterCallMethod(ExprFilter):
 
 
 class ExprFilterExprId(ExprFilter):
+    """See :meth:`~.InternalGraph.get_expr_by_id`"""
+
     def __init__(self, expr_iter, expr_id: List[int]):
         super().__init__(expr_iter)
         if not isinstance(expr_id, Sequence):
@@ -1403,10 +1784,16 @@ class ExprFilterExprId(ExprFilter):
 
 
 class TracedModule(Module):
+    r"""``TracedModule`` is the Module created by tracing normal module. 
+    
+    It owns an argdef to graph(InternalGraph) map. The forward method of ``TracedModule`` 
+    will get a graph from ``argdef_graph_map`` according to the argdef of input ``args/kwargs`` 
+    and interpret it.
+    
+    .. note::
+        ``TracedModule`` can only be created by :func:`~.trace_module`. See :func:`~.trace_module` 
+        for more details.
     """
-    `TracedModule` is the Module created by tracing normal module. It owns an argdef to graph(InternalGraph) map. The forward method of `TracedModule` will get a graph from `argdef_graph_map` according to the argdef of input args/kwargs and interpret it.
-    """
-
     # m_node = None  # type: ModuleNode
     argdef_graph_map = None
     argdef_outdef_map = None
@@ -1442,19 +1829,97 @@ class TracedModule(Module):
         return outputs
 
     def set_watch_points(self, nodes):
+        r"""Initialize the :attr:`~.TracedModule.watch_points`.
+
+        You can call this function to get the ``Tensor/Module`` corresponding to a ``Node`` at runtime.
+        
+        Args:
+            nodes: a list of ``Node``.
+        
+        For example, the following code
+
+        .. code-block::
+
+            import megengine.module as M
+            import megengine as mge
+            import megengine.traced_module as tm
+
+            class MyModule(M.Module):
+                def forward(self, x):
+                    x = x + 1 + 2
+                    return x
+
+            net = MyModule()
+
+            inp = mge.Tensor([0])
+            traced_module = tm.trace_module(net, inp)
+            add_1_node = traced_module.graph.get_node_by_id(2).as_unique()
+            traced_module.set_watch_points(add_1_node)
+
+            out = traced_module(inp)
+        
+        Will get the following ``watch_node_value``::
+
+            print(traced_module.watch_node_value)
+
+        .. code-block:: text
+
+            {add_out: Tensor([1.], device=xpux:0)}
+        """
         if not isinstance(nodes, Sequence):
             nodes = [nodes]
         self.watch_points = nodes
+        if nodes:
+            nodes[0].top_graph._watch_point = []
         for n in nodes:
             n.top_graph._watch_point.append(n)
 
     def clear_watch_points(self):
+        r"""Clear the :attr:`~.TracedModule.watch_points` and :attr:`~.TracedModule.watch_node_value`.
+        """
         for n in self.watch_points:
             n.top_graph._watch_point = []
         self.watch_points = []
         self.watch_node_value = {}
 
-    def set_end_points(self, nodes):
+    def set_end_points(self, nodes: Sequence[Node]):
+        r"""Initialize the :attr:`~.TracedModule.end_points`.
+
+        When all the ``nodes`` are generated, the Module will stop execution and return directly.
+        
+        Args:
+            nodes: a list of ``Node``.
+
+        For example, the following code
+
+        .. code-block::
+
+            import megengine.module as M
+            import megengine as mge
+            import megengine.traced_module as tm
+
+            class MyModule(M.Module):
+                def forward(self, x):
+                    x = x + 1 + 2
+                    return x
+
+            net = MyModule()
+
+            inp = mge.Tensor([0])
+            traced_module = tm.trace_module(net, inp)
+            add_1_node = traced_module.graph.get_node_by_id(2).as_unique()
+            traced_module.set_end_points(add_1_node)
+
+            out = traced_module(inp)
+        
+        Will get the following ``out``::
+
+            print(out)
+
+        .. code-block:: text
+
+            [Tensor([1.], device=xpux:0)]
+        """
         if not isinstance(nodes, Sequence):
             nodes = [nodes]
         self.end_points = nodes
@@ -1464,12 +1929,16 @@ class TracedModule(Module):
             n.top_graph._end_point.append(n)
 
     def clear_end_points(self):
+        r"""Clear the :attr:`~.TracedModule.end_points`.
+        """
         for n in self.end_points:
             n.top_graph._end_point = []
         self.end_points = []
 
     @property
     def graph(self) -> InternalGraph:
+        """Return the ``InternalGraph`` of this ``TracedModule``
+        """
         if self._is_top:
             self._update_ref()
         assert len(self.argdef_graph_map) == 1
@@ -1526,10 +1995,10 @@ class TracedModule(Module):
                     obj._update_ref(mnode_map, graph)
 
     def flatten(self):
-        """
-        Get a new module, which eliminates ``GetAttr`` and has no hierarchy.
+        r"""Get a new TracedModule, which eliminates ``GetAttr`` and has no hierarchy.
 
-        :return: :class:`TracedModule`
+        Retruns:
+            A new :class:`TracedModule`.
         """
         new_module = copy.deepcopy(self)
         assert active_module_tracer() is None
@@ -1538,6 +2007,7 @@ class TracedModule(Module):
         active_module_tracer().push_scope(new_module.graph)
 
         def _flatten_subgraph(
+            parent_graph: InternalGraph,
             graph: InternalGraph,
             module: Module,
             call=None,
@@ -1581,7 +2051,11 @@ class TracedModule(Module):
                             for index, inp in enumerate(expr.inputs):
                                 if inp is call_out:
                                     expr.inputs[index] = repl_dict[out]
-
+                                    repl_dict[out].users.append(expr)
+                        if parent_graph is not None:
+                            for index, parent_out in enumerate(parent_graph._outputs):
+                                if parent_out is call_out:
+                                    parent_graph._outputs[index] = repl_dict[out]
                         continue
                     repl_dict[out] = call.outputs[ind]
 
@@ -1613,6 +2087,7 @@ class TracedModule(Module):
                             )
                             exprs.extend(
                                 _flatten_subgraph(
+                                    graph,
                                     expr_graph,
                                     obj,
                                     expr,
@@ -1634,19 +2109,10 @@ class TracedModule(Module):
                     i.users.remove(call)
             return exprs
 
-        new_module.graph._exprs = _flatten_subgraph(new_module.graph, new_module)
+        new_module.graph._exprs = _flatten_subgraph(None, new_module.graph, new_module)
         new_module.graph.compile()
         set_active_module_tracer(None)
-        for _id, expr in enumerate(new_module.graph._exprs):
-            expr._id = _id
-        total_node_id = 0
-        for i in new_module.graph._inputs:
-            i._id = total_node_id
-            total_node_id += 1
-        for expr in new_module.graph._exprs:
-            for o in expr.outputs:
-                o._id = total_node_id
-                total_node_id += 1
+        new_module.graph._reset_ids()
         return new_module
 
     def __getstate__(self):
@@ -1661,17 +2127,34 @@ def cpp_apply_module_trace(opdef, *args):
 
 
 def register_as_builtin(mod_cls: Type[Module]) -> None:
-    """
-    Registers class ``mod_cls`` (subclass of megengine.module.Module) as builtin module.
+    r"""Registers class ``mod_cls`` (subclass of :class:`~.Module`) as builtin module.
 
-    param mod_cls: the Module class which will be threated as builtin module in tracing
+    Args:
+        mod_cls: the module class which will be treated as builtin module in tracing.
     """
     module_tracer.register_as_builtin(mod_cls)
 
 
 def wrap(func: Callable):
-    """
-    Call this function to register func as a builtin function.
+    r"""Call this function to register ``func`` as a builtin function.
+
+    This function can be called at module-level scope to register ``func`` as a builtin function.
+    A builtin function will be converted to a :class:`CallFunction` Expr in tracing::
+
+        def my_func(x, y):
+            return x + y
+
+        import megengine.traced_module as tm
+        tm.wrap(my_func)
+
+    This function can also equivalently be used as a decorator::
+
+        @tm.wrap
+        def my_func(x, y):
+            return x + y
+    
+    Args:
+        func: the function of the global function to insert into the graph when it's called.
     """
     assert callable(func), "func must be a callable"
     assert hasattr(func, "__code__")
@@ -1712,13 +2195,15 @@ def _register_all_builtin_module():
     module_tracer.register_as_builtin(TM_FakeQuant)
 
 
-def trace_module(mod: Module, *args: Tensor, **kwargs: Tensor) -> TracedModule:
-    """
-    Traces module ``mod`` and returns corresponding TracedModule.
+def trace_module(
+    mod: Module, *args: Tuple[Any], **kwargs: Dict[str, Any]
+) -> TracedModule:
+    r"""Traces module ``mod`` and returns corresponding :class:`TracedModule`.
 
-    param mod: the module will be converted to TracedModule
-    param input: the positional arguments passed to forward method of ``mod``
-    param kwargs: the keyword arguments passed to forward method of ``mod``
+    Args:
+        mod: the module will be converted to :class:`TracedModule`.
+        args: the positional arguments passed to forward method of ``mod``.
+        kwargs: the keyword arguments passed to forward method of ``mod``.
     """
     assert active_module_tracer() is None
     assert isinstance(mod, Module)
@@ -1728,6 +2213,8 @@ def trace_module(mod: Module, *args: Tensor, **kwargs: Tensor) -> TracedModule:
         set_active_module_tracer(
             module_tracer(_wrapped_function, _init_id2name(mod, "self"))
         )
+        for cls in [Expr, Node]:
+            cls._set_next_id(0)
         with active_module_tracer().patcher:
             global_scope = InternalGraph(name="")
             active_module_tracer().push_scope(global_scope)
@@ -1743,7 +2230,9 @@ def trace_module(mod: Module, *args: Tensor, **kwargs: Tensor) -> TracedModule:
                     )
             builder(*args, **kwargs)
             active_module_tracer().pop_scope()
-            return builder.build()
+            traced_mod = builder.build()
+            traced_mod.graph._reset_ids()
+            return traced_mod
     finally:
         set_symbolic_shape(use_sym_shape)
         set_active_module_tracer(None)

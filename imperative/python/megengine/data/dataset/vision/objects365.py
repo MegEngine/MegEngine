@@ -23,9 +23,7 @@ from .meta_vision import VisionDataset
 
 
 class Objects365(VisionDataset):
-    r"""
-    `Objects365 <https://www.objects365.org/overview.html>`_ Dataset.
-    """
+    r"""`Objects365 <https://www.objects365.org/overview.html>`_ Dataset."""
 
     supported_order = (
         "image",

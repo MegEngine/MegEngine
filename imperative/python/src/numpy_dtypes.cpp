@@ -24,8 +24,7 @@ namespace {
 
 inline bool _is_quantize(PyArray_Descr* dtype) {
     static PyObject* PY_MGB_DTYPE_KEY = PyUnicode_FromString("mgb_dtype");
-    return dtype->metadata &&
-           PyDict_CheckExact(dtype->metadata) &&
+    return dtype->metadata && PyDict_CheckExact(dtype->metadata) &&
            PyDict_Contains(dtype->metadata, PY_MGB_DTYPE_KEY) == 1;
 }
 
@@ -68,7 +67,9 @@ long _get_zero_point(PyArray_Descr* dtype) {
     const char* s = PyUnicode_AsUTF8(name);
     if (strcmp(s, "Quantized8Asymm") != 0 && strcmp(s, "Quantized4Asymm") != 0) {
         Py_DECREF(ob);
-        throw py::value_error(ssprintf("expect name to be \"Quantized8Asymm\" or \"Quantized4Asymm\", got %s", s));
+        throw py::value_error(ssprintf(
+                "expect name to be \"Quantized8Asymm\" or \"Quantized4Asymm\", got %s",
+                s));
     }
     PyObject* zp = PyDict_GetItemString(ob, "zero_point");
     if (!zp) {
@@ -81,18 +82,19 @@ long _get_zero_point(PyArray_Descr* dtype) {
 }
 
 bool _is_dtype_equal(PyArray_Descr* dt1, PyArray_Descr* dt2) {
-    bool q1 = _is_quantize(dt1),
-         q2 = _is_quantize(dt2);
+    bool q1 = _is_quantize(dt1), q2 = _is_quantize(dt2);
     if (q1 && q2) {
         if (_get_scale(dt1) != _get_scale(dt2)) {
             return false;
         }
         PyObject* zp1 = PyDict_GetItemString(
-            PyDict_GetItemString(dt1->metadata, "mgb_dtype"), "zero_point");
+                PyDict_GetItemString(dt1->metadata, "mgb_dtype"), "zero_point");
         PyObject* zp2 = PyDict_GetItemString(
-            PyDict_GetItemString(dt2->metadata, "mgb_dtype"), "zero_point");
-        if (!zp1 && !zp2) return true;
-        if (!zp1 || !zp2) return false;
+                PyDict_GetItemString(dt2->metadata, "mgb_dtype"), "zero_point");
+        if (!zp1 && !zp2)
+            return true;
+        if (!zp1 || !zp2)
+            return false;
         return PyLong_AsLong(zp1) == PyLong_AsLong(zp2);
     }
     if (!q1 && !q2) {
@@ -101,7 +103,7 @@ bool _is_dtype_equal(PyArray_Descr* dt1, PyArray_Descr* dt2) {
     return false;
 }
 
-template<auto f>
+template <auto f>
 struct _wrap {
     static constexpr size_t n_args = []() {
         using F = decltype(f);
@@ -122,33 +124,37 @@ struct _wrap {
         return impl(self, arr, size);
     }
 
-    static PyObject* impl(PyObject* self, PyObject*const* args, size_t nargs) {
+    static PyObject* impl(PyObject* self, PyObject* const* args, size_t nargs) {
         if (nargs != n_args) {
             PyErr_Format(PyExc_ValueError, "expected %lu arguments", n_args);
             return nullptr;
         }
-        for (size_t i=0; i<nargs; ++i) {
+        for (size_t i = 0; i < nargs; ++i) {
             if (args[i] == Py_None) {
-                PyErr_SetString(PyExc_ValueError, "can not convert null PyObject to numpy dtype");
+                PyErr_SetString(
+                        PyExc_ValueError,
+                        "can not convert null PyObject to numpy dtype");
                 return nullptr;
             }
         }
         try {
-            PyArray_Descr *dt1;
-            if(!PyArray_DescrConverter(args[0], &dt1)) {
-                throw ConversionError(ssprintf("can not convert to numpy.dtype from %s",
-                            args[0]->ob_type->tp_name));
+            PyArray_Descr* dt1;
+            if (!PyArray_DescrConverter(args[0], &dt1)) {
+                throw ConversionError(ssprintf(
+                        "can not convert to numpy.dtype from %s",
+                        args[0]->ob_type->tp_name));
             }
             if constexpr (n_args == 1) {
                 auto res = (*f)(dt1);
                 Py_DECREF(dt1);
                 return py::cast(res).release().ptr();
             } else {
-                PyArray_Descr *dt2;            
-                if(!PyArray_DescrConverter(args[1], &dt2)) {
+                PyArray_Descr* dt2;
+                if (!PyArray_DescrConverter(args[1], &dt2)) {
                     Py_DECREF(dt1);
-                    throw ConversionError(ssprintf("can not convert to numpy.dtype from %s",
-                                args[1]->ob_type->tp_name));
+                    throw ConversionError(ssprintf(
+                            "can not convert to numpy.dtype from %s",
+                            args[1]->ob_type->tp_name));
                 }
                 auto&& res = (*f)(dt1, dt2);
                 Py_DECREF(dt1);
@@ -162,14 +168,14 @@ struct _wrap {
     }
 };
 
-} // anonymous namespace
+}  // anonymous namespace
 
 #ifdef METH_FASTCALL
 #define MGE_PY_INTERFACE(NAME, FUN) \
-    { #NAME, (PyCFunction)_wrap < &(FUN) > ::impl, METH_FASTCALL, nullptr }
+    { #NAME, (PyCFunction)_wrap < &(FUN)> ::impl, METH_FASTCALL, nullptr }
 #else
 #define MGE_PY_INTERFACE(NAME, FUN) \
-    { #NAME, (PyCFunction)_wrap < &(FUN) > ::impl_py35, METH_VARARGS, nullptr }
+    { #NAME, (PyCFunction)_wrap < &(FUN)> ::impl_py35, METH_VARARGS, nullptr }
 #endif
 
 void init_dtypes(py::module m) {
@@ -179,15 +185,16 @@ void init_dtypes(py::module m) {
             MGE_PY_INTERFACE(get_zero_point, _get_zero_point),
             MGE_PY_INTERFACE(is_dtype_equal, _is_dtype_equal),
             {nullptr, nullptr, 0, nullptr}};
-    for (auto&& def: method_defs) {
+    for (auto&& def : method_defs) {
         if (def.ml_meth != nullptr) {
             auto* func = PyCFunction_NewEx(&def, nullptr, nullptr);
-            if (!func) throw py::error_already_set();
-            py::setattr(m, def.ml_name, func);    
+            if (!func)
+                throw py::error_already_set();
+            py::setattr(m, def.ml_name, func);
         }
     }
 }
 
 #undef MGE_PY_INTERFACE
 
-} // namespace mgb
+}  // namespace mgb

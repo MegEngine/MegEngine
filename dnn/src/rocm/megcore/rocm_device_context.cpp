@@ -10,10 +10,10 @@
  */
 #include "hcc_detail/hcc_defs_prologue.h"
 
+#include "./device_context.hpp"
 #include "megcore.h"
 #include "src/common/utils.h"
 #include "src/rocm/utils.h"
-#include "./device_context.hpp"
 
 #include "./rocm_device_context.hpp"
 
@@ -23,13 +23,13 @@
 using namespace megcore;
 using namespace rocm;
 
-std::unique_ptr<DeviceContext> megcore::make_rocm_device_context(int deviceID, unsigned int flags) {
+std::unique_ptr<DeviceContext> megcore::make_rocm_device_context(
+        int deviceID, unsigned int flags) {
     return std::make_unique<ROCMDeviceContext>(deviceID, flags);
 }
 
-ROCMDeviceContext::ROCMDeviceContext(int device_id, unsigned int flags):
-    DeviceContext(megcorePlatformROCM, device_id, flags)
-{
+ROCMDeviceContext::ROCMDeviceContext(int device_id, unsigned int flags)
+        : DeviceContext(megcorePlatformROCM, device_id, flags) {
     int version;
     hip_check(hipRuntimeGetVersion(&version));
     int id = device_id;
@@ -48,23 +48,20 @@ size_t ROCMDeviceContext::mem_alignment_in_bytes() const noexcept {
 #endif
 }
 
-void ROCMDeviceContext::activate()
-{
+void ROCMDeviceContext::activate() {
     int id = device_id();
     if (id >= 0) {
         hip_check(hipSetDevice(id));
     }
 }
 
-void *ROCMDeviceContext::malloc(size_t size_in_bytes)
-{
-    void *ptr;
+void* ROCMDeviceContext::malloc(size_t size_in_bytes) {
+    void* ptr;
     hip_check(hipMalloc(&ptr, size_in_bytes));
     return ptr;
 }
 
-void ROCMDeviceContext::free(void *ptr)
-{
+void ROCMDeviceContext::free(void* ptr) {
     hip_check(hipFree(ptr));
 }
 

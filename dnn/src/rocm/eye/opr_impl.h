@@ -21,7 +21,6 @@ public:
     size_t get_workspace_in_bytes(const TensorLayout&) override { return 0; }
 };
 
-} // namespace rocm
-} // namespace megdnn
+}  // namespace rocm
+}  // namespace megdnn
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
-

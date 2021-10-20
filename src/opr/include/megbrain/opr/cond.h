@@ -43,19 +43,18 @@ public:
     //! related runtime management
     class GlobalRegistry;
 
-    CondExecPred(VarNode* pred, const VarNodeArrayView& keys,
-                 const Param& param, const OperatorNodeConfig& config);
+    CondExecPred(
+            VarNode* pred, const VarNodeArrayView& keys, const Param& param,
+            const OperatorNodeConfig& config);
 
-    static OperatorNodeBase* make_opr(SymbolVar pred,
-                                      const VarNodeArrayView& keys,
-                                      const Param& param,
-                                      const OperatorNodeConfig& config);
+    static OperatorNodeBase* make_opr(
+            SymbolVar pred, const VarNodeArrayView& keys, const Param& param,
+            const OperatorNodeConfig& config);
 
-    static SymbolVarArray make(SymbolVar pred, const VarNodeArrayView& keys,
-                               const Param& param = {},
-                               const OperatorNodeConfig& config = {}) {
-        return cg::to_symbol_var_array(
-                make_opr(pred, keys, param, config)->output());
+    static SymbolVarArray make(
+            SymbolVar pred, const VarNodeArrayView& keys, const Param& param = {},
+            const OperatorNodeConfig& config = {}) {
+        return cg::to_symbol_var_array(make_opr(pred, keys, param, config)->output());
     }
 
     const ExecutionMaskArray& masks() const { return m_masks; }
@@ -95,11 +94,13 @@ public:
     using Mode = Param::Mode;
     using ExecutionMask = cg::ExecutionMask;
 
-    CondExecPredLogical(const VarNodeArrayView& preds, const Param& param,
-                        const OperatorNodeConfig& config);
+    CondExecPredLogical(
+            const VarNodeArrayView& preds, const Param& param,
+            const OperatorNodeConfig& config);
 
-    static SymbolVar make(const VarNodeArrayView& preds, const Param& param,
-                          const OperatorNodeConfig& config = {});
+    static SymbolVar make(
+            const VarNodeArrayView& preds, const Param& param,
+            const OperatorNodeConfig& config = {});
 
     ExecutionMask* mask() const { return m_mask.get(); }
 
@@ -132,28 +133,27 @@ MGB_DEFINE_OPR_CLASS(CondExecMark, cg::SingleCNOperatorNodeBase) // {
 public:
     using Param = megdnn::param::CondExecMark;
 
-    CondExecMark(VarNode* ppv, const VarNodeArrayView& inputs,
-                 const Param& param, const OperatorNodeConfig& config);
+    CondExecMark(
+            VarNode* ppv, const VarNodeArrayView& inputs, const Param& param,
+            const OperatorNodeConfig& config);
 
-    static OperatorNodeBase* make_opr(SymbolVar ppv,
-                                      const VarNodeArrayView& inputs,
-                                      const Param& param,
-                                      const OperatorNodeConfig& config);
+    static OperatorNodeBase* make_opr(
+            SymbolVar ppv, const VarNodeArrayView& inputs, const Param& param,
+            const OperatorNodeConfig& config);
 
-    static SymbolVarArray make(SymbolVar ppv, const VarNodeArrayView& inputs,
-                               const Param& param = {},
-                               const OperatorNodeConfig& config = {}) {
-        return cg::to_symbol_var_array(
-                make_opr(ppv, inputs, param, config)->output());
+    static SymbolVarArray make(
+            SymbolVar ppv, const VarNodeArrayView& inputs, const Param& param = {},
+            const OperatorNodeConfig& config = {}) {
+        return cg::to_symbol_var_array(make_opr(ppv, inputs, param, config)->output());
     }
 
     /*!
      * \brief mark the input var by a CondExecMark if \p maybe_ppv is a PPV or
      *      controlled by ExecutionMask
      */
-    static SymbolVar mark_if_need(SymbolVar maybe_ppv, SymbolVar input,
-                                  const Param& param = {},
-                                  const OperatorNodeConfig& config = {});
+    static SymbolVar mark_if_need(
+            SymbolVar maybe_ppv, SymbolVar input, const Param& param = {},
+            const OperatorNodeConfig& config = {});
 
     const Param& param() const { return m_param; }
 
@@ -196,24 +196,23 @@ public:
     using Param = megdnn::param::CondExecMerge;
     using Mode = Param::Mode;
 
-    CondExecMerge(const VarNodeArrayView& inputs,
-                  const VarNodeArrayView& out_shapes, const Param& param,
-                  const OperatorNodeConfig& config);
+    CondExecMerge(
+            const VarNodeArrayView& inputs, const VarNodeArrayView& out_shapes,
+            const Param& param, const OperatorNodeConfig& config);
 
     /*!
      * note: \p out_shapes is needed when mode is SUM. If it is nullptr,
      * input shape in at least one branch must be statically inferrable and its
      * shape would be used.
      */
-    static OperatorNodeBase* make_opr(const VarNodeArrayView& inputs,
-                                      const VarNodeArrayView& out_shapes,
-                                      const Param& param,
-                                      const OperatorNodeConfig& config);
+    static OperatorNodeBase* make_opr(
+            const VarNodeArrayView& inputs, const VarNodeArrayView& out_shapes,
+            const Param& param, const OperatorNodeConfig& config);
 
-    static SymbolVarArray make(const VarNodeArrayView& inputs,
-                               const Param& param,
-                               const VarNodeArrayView& out_shapes = {},
-                               const OperatorNodeConfig& config = {}) {
+    static SymbolVarArray make(
+            const VarNodeArrayView& inputs, const Param& param,
+            const VarNodeArrayView& out_shapes = {},
+            const OperatorNodeConfig& config = {}) {
         return cg::to_symbol_var_array(
                 make_opr(inputs, out_shapes, param, config)->output());
     }
@@ -225,9 +224,7 @@ public:
         return m_branch_masks.at(branch);
     }
 
-    const SmallVector<ExecutionMask*>& branch_masks() const {
-        return m_branch_masks;
-    }
+    const SmallVector<ExecutionMask*>& branch_masks() const { return m_branch_masks; }
 
     /*!
      * \brief merge CondExecMerge oprs for gradient computing

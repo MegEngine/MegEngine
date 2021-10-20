@@ -20,9 +20,8 @@ MGB_DYN_TYPE_OBJ_FINAL_IMPL(AffineInt);
 
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(ElemwiseMultiType);
 
-ElemwiseMultiType::ElemwiseMultiType(const VarNodeArrayView& inputs,
-                                     Param param,
-                                     const OperatorNodeConfig& config)
+ElemwiseMultiType::ElemwiseMultiType(
+        const VarNodeArrayView& inputs, Param param, const OperatorNodeConfig& config)
         : Super{inputs.at(0)->owner_graph(), config,
                 ModeTrait::from_mode(param.mode).name, inputs} {
     Super::init_megdnn_opr(*this, param);
@@ -31,8 +30,8 @@ ElemwiseMultiType::ElemwiseMultiType(const VarNodeArrayView& inputs,
     }
 }
 
-SymbolVar ElemwiseMultiType::make(const VarNodeArrayView& inputs, Param param,
-                                  const OperatorNodeConfig& config) {
+SymbolVar ElemwiseMultiType::make(
+        const VarNodeArrayView& inputs, Param param, const OperatorNodeConfig& config) {
     mgb_assert(!inputs.empty());
     return SymbolVar{inputs[0]}.insert_single_output_opr<ElemwiseMultiType>(
             inputs, param, config);
@@ -40,9 +39,10 @@ SymbolVar ElemwiseMultiType::make(const VarNodeArrayView& inputs, Param param,
 
 void ElemwiseMultiType::init_output_dtype() {
     auto trait = ModeTrait::from_mode(param().mode);
-    mgb_throw_if(trait.arity != input().size(), MegBrainError,
-                 "%s requires %u inputs, but %zu are given", trait.name,
-                 trait.arity, input().size());
+    mgb_throw_if(
+            trait.arity != input().size(), MegBrainError,
+            "%s requires %u inputs, but %zu are given", trait.name, trait.arity,
+            input().size());
     for (size_t i = 0; i < trait.arity; ++i) {
         auto dtype = input()[i]->dtype();
         trait.check_inp[i](dtype);

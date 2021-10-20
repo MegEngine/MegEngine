@@ -14,8 +14,7 @@ from .module import Module
 
 
 class Softmax(Module):
-    r"""
-    Applies a softmax function. Softmax is defined as:
+    r"""Applies a softmax function. Softmax is defined as:
 
     .. math::
             \text{Softmax}(x_{i}) = \frac{exp(x_i)}{\sum_j exp(x_j)}
@@ -23,29 +22,29 @@ class Softmax(Module):
     It is applied to all elements along axis, and rescales elements so that
     they stay in the range `[0, 1]` and sum to 1.
 
-    :param axis: Along which axis softmax will be applied. By default,
-        softmax will apply along the highest ranked axis.
+    Args:
+        axis: Along which axis softmax will be applied. By default,
+            softmax will apply along the highest ranked axis.
 
     Examples:
 
-    .. testcode::
+        .. testcode::
 
-        import numpy as np
-        import megengine as mge
-        import megengine.module as M
+            import numpy as np
+            import megengine as mge
+            import megengine.module as M
 
-        data = mge.tensor(np.array([-2,-1,0,1,2]).astype(np.float32))
-        softmax = M.Softmax()
-        output = softmax(data)
-        with np.printoptions(precision=6):
-            print(output.numpy())
+            data = mge.tensor(np.array([-2,-1,0,1,2]).astype(np.float32))
+            softmax = M.Softmax()
+            output = softmax(data)
+            with np.printoptions(precision=6):
+                print(output.numpy())
 
-    Outputs:
+        Outputs:
 
-    .. testoutput::
+        .. testoutput::
 
-        [0.011656 0.031685 0.086129 0.234122 0.636409]
-
+            [0.011656 0.031685 0.086129 0.234122 0.636409]
     """
 
     def __init__(self, axis=None, **kwargs):
@@ -60,32 +59,31 @@ class Softmax(Module):
 
 
 class Sigmoid(Module):
-    r"""
-    Applies the element-wise function:
+    r"""Applies the element-wise function:
 
     .. math::
+
         \text{Sigmoid}(x) = \frac{1}{1 + \exp(-x)}
 
     Examples:
 
-    .. testcode::
+        .. testcode::
 
-        import numpy as np
-        import megengine as mge
-        import megengine.module as M
+            import numpy as np
+            import megengine as mge
+            import megengine.module as M
 
-        data = mge.tensor(np.array([-2,-1,0,1,2,]).astype(np.float32))
-        sigmoid = M.Sigmoid()
-        output = sigmoid(data)
-        with np.printoptions(precision=6):
-            print(output.numpy())
+            data = mge.tensor(np.array([-2,-1,0,1,2,]).astype(np.float32))
+            sigmoid = M.Sigmoid()
+            output = sigmoid(data)
+            with np.printoptions(precision=6):
+                print(output.numpy())
 
-    Outputs:
+        Outputs:
 
-    .. testoutput::
+        .. testoutput::
 
-        [0.119203 0.268941 0.5      0.731059 0.880797]
-
+            [0.119203 0.268941 0.5      0.731059 0.880797]
     """
 
     def forward(self, inputs):
@@ -93,32 +91,31 @@ class Sigmoid(Module):
 
 
 class SiLU(Module):
-    r"""
-    Applies the element-wise function:
+    r"""Applies the element-wise function:
 
     .. math::
+
         \text{SiLU}(x) = \frac{x}{1 + \exp(-x)}
 
     Examples:
 
-    .. testcode::
+        .. testcode::
 
-        import numpy as np
-        import megengine as mge
-        import megengine.module as M
+            import numpy as np
+            import megengine as mge
+            import megengine.module as M
 
-        data = mge.tensor(np.array([-2,-1,0,1,2,]).astype(np.float32))
-        silu = M.SiLU()
-        output = silu(data)
-        with np.printoptions(precision=6):
-            print(output.numpy())
+            data = mge.tensor(np.array([-2,-1,0,1,2,]).astype(np.float32))
+            silu = M.SiLU()
+            output = silu(data)
+            with np.printoptions(precision=6):
+                print(output.numpy())
 
-    Outputs:
+        Outputs:
 
-    .. testoutput::
+        .. testoutput::
 
-        [-0.238406 -0.268941  0.        0.731059  1.761594]
-
+            [-0.238406 -0.268941  0.        0.731059  1.761594]
     """
 
     def forward(self, inputs):
@@ -126,8 +123,7 @@ class SiLU(Module):
 
 
 class GELU(Module):
-    r"""
-    Applies the element-wise function:
+    r"""Applies the element-wise function:
 
     .. math::
         \text{GELU}(x) = x\Phi(x)
@@ -136,24 +132,23 @@ class GELU(Module):
 
     Examples:
 
-    .. testcode::
+        .. testcode::
 
-        import numpy as np
-        import megengine as mge
-        import megengine.module as M
+            import numpy as np
+            import megengine as mge
+            import megengine.module as M
 
-        data = mge.tensor(np.array([-2,-1,0,1,2,]).astype(np.float32))
-        gelu = M.GELU()
-        output = gelu(data)
-        with np.printoptions(precision=4):
-            print(output.numpy())
+            data = mge.tensor(np.array([-2,-1,0,1,2,]).astype(np.float32))
+            gelu = M.GELU()
+            output = gelu(data)
+            with np.printoptions(precision=4):
+                print(output.numpy())
 
-    Outputs:
+        Outputs:
 
-    .. testoutput::
+        .. testoutput::
 
-        [-0.0455 -0.1587  0.      0.8413  1.9545]
-
+            [-0.0455 -0.1587  0.      0.8413  1.9545]
     """
 
     def forward(self, inputs):
@@ -161,31 +156,29 @@ class GELU(Module):
 
 
 class ReLU(Module):
-    r"""
-    Applies the element-wise function:
+    r"""Applies the element-wise function:
 
     .. math::
         \text{ReLU}(x) = \max(x, 0)
 
     Examples:
 
-    .. testcode::
+        .. testcode::
 
-        import numpy as np
-        import megengine as mge
-        import megengine.module as M
-        data = mge.tensor(np.array([-2,-1,0,1,2,]).astype(np.float32))
-        relu = M.ReLU()
-        output = relu(data)
-        with np.printoptions(precision=6):
-            print(output.numpy())
+            import numpy as np
+            import megengine as mge
+            import megengine.module as M
+            data = mge.tensor(np.array([-2,-1,0,1,2,]).astype(np.float32))
+            relu = M.ReLU()
+            output = relu(data)
+            with np.printoptions(precision=6):
+                print(output.numpy())
 
-    Outputs:
+        Outputs:
 
-    .. testoutput::
+        .. testoutput::
 
-        [0. 0. 0. 1. 2.]
-
+            [0. 0. 0. 1. 2.]
     """
 
     def forward(self, x):
@@ -193,8 +186,7 @@ class ReLU(Module):
 
 
 class PReLU(Module):
-    r"""
-    Applies the element-wise function:
+    r"""Applies the element-wise function:
 
     .. math::
         \text{PReLU}(x) = \max(0,x) + a * \min(0,x)
@@ -211,28 +203,28 @@ class PReLU(Module):
     Here :math:`a` is a learnable parameter. When called without arguments, `PReLU()` uses
     a single paramter :math:`a` across all input channel. If called with `PReLU(num_of_channels)`, each input channle will has it's own :math:`a`.
 
-    :param num_parameters: number of :math:`a` to learn, there is only two
-        values are legitimate: 1, or the number of channels at input. Default: 1
-    :param init: the initial value of :math:`a`. Default: 0.25
+    Args:
+        num_parameters: number of :math:`a` to learn, there is only two
+            values are legitimate: 1, or the number of channels at input. Default: 1
+        init: the initial value of :math:`a`. Default: 0.25
 
     Examples:
 
-    .. testcode::
+        .. testcode::
 
-        import numpy as np
-        import megengine as mge
-        import megengine.module as M
-        data = mge.tensor(np.array([-1.2, -3.7, 2.7]).astype(np.float32))
-        prelu = M.PReLU()
-        output = prelu(data)
-        print(output.numpy())
+            import numpy as np
+            import megengine as mge
+            import megengine.module as M
+            data = mge.tensor(np.array([-1.2, -3.7, 2.7]).astype(np.float32))
+            prelu = M.PReLU()
+            output = prelu(data)
+            print(output.numpy())
 
-    Outputs:
+        Outputs:
 
-    .. testoutput::
+        .. testoutput::
 
-        [-0.3   -0.925  2.7  ]
-
+            [-0.3   -0.925  2.7  ]
     """
 
     def __init__(self, num_parameters: int = 1, init: float = 0.25, **kwargs):
@@ -257,8 +249,7 @@ class PReLU(Module):
 
 
 class LeakyReLU(Module):
-    r"""
-    Applies the element-wise function:
+    r"""Applies the element-wise function:
 
     .. math::
         \text{LeakyReLU}(x) = \max(0,x) + negative\_slope \times \min(0,x)
@@ -274,23 +265,22 @@ class LeakyReLU(Module):
 
     Examples:
 
-    .. testcode::
+        .. testcode::
 
-        import numpy as np
-        import megengine as mge
-        import megengine.module as M
-        data = mge.tensor(np.array([-8, -12, 6, 10]).astype(np.float32))
+            import numpy as np
+            import megengine as mge
+            import megengine.module as M
+            data = mge.tensor(np.array([-8, -12, 6, 10]).astype(np.float32))
 
-        leakyrelu = M.LeakyReLU(0.01)
-        output = leakyrelu(data)
-        print(output.numpy())
+            leakyrelu = M.LeakyReLU(0.01)
+            output = leakyrelu(data)
+            print(output.numpy())
 
-    Outputs:
+        Outputs:
 
-    .. testoutput::
+        .. testoutput::
 
-        [-0.08 -0.12  6.   10.  ]
-
+            [-0.08 -0.12  6.   10.  ]
     """
 
     def __init__(self, negative_slope: float = 0.01, **kwargs):

@@ -42,8 +42,9 @@ namespace {
 //  +--+ - - - -  +--------+--------+--------+
 //
 //                        Accumulator
-void kern_4x12(const float* packA, const float* packB, int K, float* output,
-               int LDC, bool is_first_k, int m_remain) {
+void kern_4x12(
+        const float* packA, const float* packB, int K, float* output, int LDC,
+        bool is_first_k, int m_remain) {
     const float* a_ptr = packA;
     const float* b_ptr = packB;
     int oddk = (K & 1);
@@ -208,15 +209,14 @@ void kern_4x12(const float* packA, const float* packB, int K, float* output,
 
             "6:\n" STORE_C
 
-            : [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr), [K] "+r"(K),
-              [LDC] "+r"(LDC), [is_first_k] "+r"(is_first_k), [oddk] "+r"(oddk),
+            : [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr), [K] "+r"(K), [LDC] "+r"(LDC),
+              [is_first_k] "+r"(is_first_k), [oddk] "+r"(oddk),
               [m_remain] "+r"(m_remain), [outptr] "+r"(outptr)
             :
-            : "d0", "d1", "d2", "d3", "d4", "d5", "d6", "d7", "d8", "d9", "d10",
-              "d11", "d12", "d13", "d14", "d15", "d16", "d17", "d18", "d19",
-              "d20", "d21", "d22", "d23", "d24", "d25", "d26", "d27", "d28",
-              "d29", "d30", "d31", "r1", "r2", "r3", "r9", "r10", "cc",
-              "memory");
+            : "d0", "d1", "d2", "d3", "d4", "d5", "d6", "d7", "d8", "d9", "d10", "d11",
+              "d12", "d13", "d14", "d15", "d16", "d17", "d18", "d19", "d20", "d21",
+              "d22", "d23", "d24", "d25", "d26", "d27", "d28", "d29", "d30", "d31",
+              "r1", "r2", "r3", "r9", "r10", "cc", "memory");
 
 #undef LOAD_LINE
 #undef LOAD_C
@@ -248,8 +248,9 @@ void kern_4x12(const float* packA, const float* packB, int K, float* output,
 //  +--+--+ - - - -  +--------+
 //
 //                        Accumulator
-void kern_4x4(const float* packA, const float* packB, int K, float* output,
-              int LDC, bool is_first_k, int m_remain, int n_remain) {
+void kern_4x4(
+        const float* packA, const float* packB, int K, float* output, int LDC,
+        bool is_first_k, int m_remain, int n_remain) {
     const float* a_ptr = packA;
     const float* b_ptr = packB;
     int oddk = (K & 1);
@@ -386,22 +387,22 @@ void kern_4x4(const float* packA, const float* packB, int K, float* output,
 
             "6:\n" STORE_C
 
-            : [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr), [K] "+r"(K),
-              [LDC] "+r"(LDC), [is_first_k] "+r"(is_first_k), [oddk] "+r"(oddk),
+            : [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr), [K] "+r"(K), [LDC] "+r"(LDC),
+              [is_first_k] "+r"(is_first_k), [oddk] "+r"(oddk),
               [m_remain] "+r"(m_remain), [n_remain] "+r"(n_remain),
               [outptr] "+r"(outptr)
             :
-            : "d0", "d1", "d2", "d3", "d4", "d5", "d6", "d7", "d8", "d9", "d10",
-              "d11", "d12", "d13", "d14", "d15", "r1", "r2", "r3", "r10", "cc",
-              "memory");
+            : "d0", "d1", "d2", "d3", "d4", "d5", "d6", "d7", "d8", "d9", "d10", "d11",
+              "d12", "d13", "d14", "d15", "r1", "r2", "r3", "r10", "cc", "memory");
 #undef LOAD_LINE
 #undef LOAD_C
 #undef STORE_LINE
 #undef STORE_C
 }
 
-void sgemm_4x12_pack_A_n(float* outptr, const float* inptr, int ldin, int y0,
-                         int ymax, int k0, int kmax) {
+void sgemm_4x12_pack_A_n(
+        float* outptr, const float* inptr, int ldin, int y0, int ymax, int k0,
+        int kmax) {
     float zerobuff[4];
     std::memset(zerobuff, 0, sizeof(float) * 4);
 
@@ -480,8 +481,8 @@ void sgemm_4x12_pack_A_n(float* outptr, const float* inptr, int ldin, int y0,
     }
 }
 
-void sgemm_4x12_pack_A_t(float* out, const float* in, int ldin, int x0,
-                         int xmax, int k0, int kmax) {
+void sgemm_4x12_pack_A_t(
+        float* out, const float* in, int ldin, int x0, int xmax, int k0, int kmax) {
     int ksize = kmax - k0;
     int ksize4 = (ksize << 2);
     float* outptr_base = out;
@@ -502,8 +503,7 @@ void sgemm_4x12_pack_A_t(float* out, const float* in, int ldin, int x0,
         auto outptr = outptr_base;
         for (; x + 4 <= xmax; x += 4) {
             auto outptr_interleave = outptr;
-            interleave_4x4_1_s(inptr, inptr1, inptr2, inptr3,
-                               outptr_interleave);
+            interleave_4x4_1_s(inptr, inptr1, inptr2, inptr3, outptr_interleave);
             outptr += ksize4;
         }
 
@@ -533,8 +533,8 @@ void sgemm_4x12_pack_A_t(float* out, const float* in, int ldin, int x0,
     }
 }
 
-void sgemm_4x12_pack_B_n(float* out, const float* in, int ldin, int x0,
-                         int xmax, int k0, int kmax) {
+void sgemm_4x12_pack_B_n(
+        float* out, const float* in, int ldin, int x0, int xmax, int k0, int kmax) {
     int ksize = kmax - k0;
     int ksize12 = ksize * 12;
     int ksize4 = (ksize << 2);
@@ -557,15 +557,13 @@ void sgemm_4x12_pack_B_n(float* out, const float* in, int ldin, int x0,
         auto outptr = outptr_base;
         for (; x + 12 <= xmax; x += 12) {
             auto outptr_interleave = outptr;
-            interleave_4x12_1_s(inptr, inptr1, inptr2, inptr3,
-                                outptr_interleave);
+            interleave_4x12_1_s(inptr, inptr1, inptr2, inptr3, outptr_interleave);
             outptr += ksize12;
         }
         outptr = outptr_base4;
         for (; x + 4 <= xmax; x += 4) {
             auto outptr_interleave = outptr;
-            interleave_4x4_1_s(inptr, inptr1, inptr2, inptr3,
-                               outptr_interleave);
+            interleave_4x4_1_s(inptr, inptr1, inptr2, inptr3, outptr_interleave);
             outptr += ksize4;
         }
 
@@ -603,8 +601,8 @@ void sgemm_4x12_pack_B_n(float* out, const float* in, int ldin, int x0,
     }
 }
 
-void sgemm_4x12_pack_B_t(float* out, const float* in, int ldin, int y0,
-                         int ymax, int k0, int kmax) {
+void sgemm_4x12_pack_B_t(
+        float* out, const float* in, int ldin, int y0, int ymax, int k0, int kmax) {
     float* outptr = out;
     const float* inptr = in;
     float zerobuff[4];
@@ -629,8 +627,7 @@ void sgemm_4x12_pack_B_t(float* out, const float* in, int ldin, int y0,
 
             int x = (kmax - k0);
             for (; x > 3; x -= 4) {
-                transpose_4x4_1_s(inptr0, inptr1, inptr2, inptr3, outptr_inner,
-                                  48);
+                transpose_4x4_1_s(inptr0, inptr1, inptr2, inptr3, outptr_inner, 48);
             }
             for (; x > 0; x--) {
                 *outptr_inner++ = *inptr0++;
@@ -704,8 +701,9 @@ void sgemm_4x12_pack_B_t(float* out, const float* in, int ldin, int y0,
 
 MEGDNN_REG_GEMM_STRATEGY_IMPL(sgemm_4x12);
 
-void sgemm_4x12::pack_A(float* out, const float* in, int ldin, int y0, int ymax,
-                        int k0, int kmax, bool transpose_A) const {
+void sgemm_4x12::pack_A(
+        float* out, const float* in, int ldin, int y0, int ymax, int k0, int kmax,
+        bool transpose_A) const {
     if (transpose_A) {
         sgemm_4x12_pack_A_t(out, in, ldin, y0, ymax, k0, kmax);
     } else {
@@ -713,8 +711,9 @@ void sgemm_4x12::pack_A(float* out, const float* in, int ldin, int y0, int ymax,
     }
 }
 
-void sgemm_4x12::pack_B(float* out, const float* in, int ldin, int x0, int xmax,
-                        int k0, int kmax, bool transpose_B) const {
+void sgemm_4x12::pack_B(
+        float* out, const float* in, int ldin, int x0, int xmax, int k0, int kmax,
+        bool transpose_B) const {
     if (transpose_B) {
         sgemm_4x12_pack_B_t(out, in, ldin, x0, xmax, k0, kmax);
     } else {
@@ -722,12 +721,12 @@ void sgemm_4x12::pack_B(float* out, const float* in, int ldin, int x0, int xmax,
     }
 }
 
-void sgemm_4x12::kern(const float* packA, const float* packB, size_t M,
-                      size_t N, size_t K, float* C, size_t LDC, bool is_first_k,
-                      const float*, float*) const {
-    megdnn_assert(A_dtype.enumv() == B_dtype.enumv() &&
-                  A_dtype.enumv() == C_dtype.enumv() &&
-                  A_dtype.enumv() == DTypeEnum::Float32);
+void sgemm_4x12::kern(
+        const float* packA, const float* packB, size_t M, size_t N, size_t K, float* C,
+        size_t LDC, bool is_first_k, const float*, float*) const {
+    megdnn_assert(
+            A_dtype.enumv() == B_dtype.enumv() && A_dtype.enumv() == C_dtype.enumv() &&
+            A_dtype.enumv() == DTypeEnum::Float32);
     MEGDNN_MARK_USED_VAR(A_dtype);
     MEGDNN_MARK_USED_VAR(B_dtype);
     MEGDNN_MARK_USED_VAR(C_dtype);
@@ -744,15 +743,17 @@ void sgemm_4x12::kern(const float* packA, const float* packB, size_t M,
         size_t n = 0;
         const float* cur_packB = packB;
         for (; n + B_INTERLEAVE - 1 < N; n += B_INTERLEAVE) {
-            kern_4x12(packA, cur_packB, K, output, LDC, is_first_k,
-                      std::min<size_t>(M - m, 4));
+            kern_4x12(
+                    packA, cur_packB, K, output, LDC, is_first_k,
+                    std::min<size_t>(M - m, 4));
             output += B_INTERLEAVE;
             cur_packB += K12;
         }
 
         for (; n < N; n += 4) {
-            kern_4x4(packA, cur_packB, K, output, LDC, is_first_k,
-                     std::min<size_t>(M - m, 4), std::min<size_t>(N - n, 4));
+            kern_4x4(
+                    packA, cur_packB, K, output, LDC, is_first_k,
+                    std::min<size_t>(M - m, 4), std::min<size_t>(N - n, 4));
             output += 4;
             cur_packB += K4;
         }

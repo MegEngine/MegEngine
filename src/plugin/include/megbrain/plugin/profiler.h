@@ -29,8 +29,7 @@ class OprProfileHolder final : public mgb::UserDataContainer::UserData {
     MGB_TYPEINFO_OBJ_DECL;
 
 public:
-    mgb::ThinHashMap<mgb::cg::OperatorNodeBase*,
-                     std::shared_ptr<mgb::json::Value>>
+    mgb::ThinHashMap<mgb::cg::OperatorNodeBase*, std::shared_ptr<mgb::json::Value>>
             id2object_map;
 };
 }  // namespace opr_profile
@@ -57,21 +56,20 @@ class GraphProfiler final : public PluginBase {
     const CompNode::UnorderedSet* m_used_comp_node = nullptr;
 
     //! (opr, dispatch thread) => host time
-    std::unordered_map<std::pair<cg::OperatorNodeBase*, std::thread::id>,
-                       OprHostTime, pairhash>
+    std::unordered_map<
+            std::pair<cg::OperatorNodeBase*, std::thread::id>, OprHostTime, pairhash>
             m_host_time;
 
     //! (opr, comp node) => kern event
-    std::unordered_map<std::pair<cg::OperatorNodeBase*, CompNode>, OprKernEvent,
-                       pairhash>
+    std::unordered_map<
+            std::pair<cg::OperatorNodeBase*, CompNode>, OprKernEvent, pairhash>
             m_kern_event;
 
     //! (opr) => computation and memory usage
     using OprFootprintRst = OprFootprint::Result;
     std::unordered_map<cg::OperatorNodeBase*, OprFootprintRst> m_opr_fp_rst;
 
-    std::unique_ptr<OprFootprint> m_opr_footprint_ptr{
-            std::make_unique<OprFootprint>()};
+    std::unique_ptr<OprFootprint> m_opr_footprint_ptr{std::make_unique<OprFootprint>()};
 
     //! first event on each comp node
     Maybe<CompNode::UnorderedMap<CompNodeEventPtr>> m_start_of_time;
@@ -96,10 +94,9 @@ public:
     /*!
      * \brief dump to visualizer format
      */
-    std::shared_ptr<json::Object> to_json_full(
-            cg::AsyncExecutable* graph_exec) const {
-        return json::Object::make({{"graph_exec", graph_exec->to_json()},
-                                   {"profiler", to_json()}});
+    std::shared_ptr<json::Object> to_json_full(cg::AsyncExecutable* graph_exec) const {
+        return json::Object::make(
+                {{"graph_exec", graph_exec->to_json()}, {"profiler", to_json()}});
     }
 };
 

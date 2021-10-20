@@ -229,3 +229,18 @@ def test_user_set_pop():
             assert ret == 1
 
     worker()
+
+
+@pytest.mark.require_ngpu(2)
+@pytest.mark.isolated_distributed
+def test_get_cuda_compute_capability():
+
+    assert mge.device.get_cuda_compute_capability(0) > 0
+    assert mge.device.get_cuda_compute_capability(1) > 0
+
+    @dist.launcher
+    def worker():
+        x = mge.tensor([1.0])
+        assert mge.device.get_cuda_compute_capability(dist.get_rank()) > 0
+
+    worker()

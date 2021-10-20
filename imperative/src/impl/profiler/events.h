@@ -11,49 +11,63 @@
 
 #pragma once
 
+#include "megbrain/imperative/profiler.h"
 #include "megbrain/utils/small_vector.h"
 
+#include "../interpreter/stack_manager.h"
 #include "../op_trait.h"
 
 namespace mgb::imperative::profiler {
 
 enum class TensorProp {
-    InvalidProp, Device, Shape, DType, DevValue, HostValue,
+    InvalidProp,
+    Device,
+    Shape,
+    DType,
+    DevValue,
+    HostValue,
 };
 
 using OpParams = std::unordered_map<std::string, std::string>;
 
-}
+}  // namespace mgb::imperative::profiler
 
 namespace mgb::imperative {
 
 template <>
-struct ToStringTrait<profiler::TensorProp>{
+struct ToStringTrait<profiler::TensorProp> {
     using TensorProp = profiler::TensorProp;
     std::string operator()(TensorProp prop) const {
-        switch(prop) {
-        case TensorProp::DType:
-            return "dtype";
-        case TensorProp::DevValue:
-            return "dev_value";
-        case TensorProp::Device:
-            return "device";
-        case TensorProp::HostValue:
-            return "host_value";
-        case TensorProp::Shape:
-            return "shape";
-        default:
-            return "unknown";
+        switch (prop) {
+            case TensorProp::DType:
+                return "dtype";
+            case TensorProp::DevValue:
+                return "dev_value";
+            case TensorProp::Device:
+                return "device";
+            case TensorProp::HostValue:
+                return "host_value";
+            case TensorProp::Shape:
+                return "shape";
+            default:
+                return "unknown";
         }
     }
 };
 
-}
+}  // namespace mgb::imperative
 
 namespace mgb::imperative::profiler {
 
+using Trace = interpreter::intl::StackManager::Trace;
+
+struct ProfileOperatorState;
+struct ProfileTensorState;
+
 #define DEF_EVENT(X, ...) struct X##Event __VA_ARGS__;
-#define DEF_DUR_EVENT(X, ...) struct X##Event __VA_ARGS__; struct X##FinishEvent __VA_ARGS__;
+#define DEF_DUR_EVENT(X, ...)    \
+    struct X##Event __VA_ARGS__; \
+    struct X##FinishEvent __VA_ARGS__;
 
 DEF_EVENT(OpDispatch, {
     uint64_t op_id;
@@ -61,14 +75,10 @@ DEF_EVENT(OpDispatch, {
     std::function<OpParams()> op_params;
     SmallVector<uint64_t> inputs;
     SmallVector<uint64_t> outputs;
+    Trace trace;
 });
 
 DEF_DUR_EVENT(OpInput, {
-    uint64_t tensor_id;
-    TensorShape shape;
-});
-
-DEF_DUR_EVENT(OpDel, {
     uint64_t tensor_id;
     TensorShape shape;
 });
@@ -80,16 +90,14 @@ DEF_DUR_EVENT(OpOutput, {
 
 DEF_DUR_EVENT(OpExecute, {
     uint64_t op_id;
+    SmallVector<CompNode> device_list;
+    std::string reason;
 });
 
-DEF_DUR_EVENT(OpPostExecute, {
-    uint64_t op_id;
-});
-
-DEF_DUR_EVENT(KernelExecute, {
+DEF_DUR_EVENT(KernelLaunch, {
     uint64_t op_id;
     uint64_t kernel_id;
-    std::shared_ptr<CompNode::Event> event;
+    CompNode device;
 });
 
 DEF_EVENT(TensorDeclare, {
@@ -104,13 +112,9 @@ DEF_EVENT(TensorProduce, {
     void* ptr;
 });
 
-DEF_EVENT(TensorUsage, {
-    uint64_t tensor_id;
-});
+DEF_EVENT(TensorUsage, { uint64_t tensor_id; });
 
-DEF_EVENT(TensorRelease, {
-    uint64_t tensor_id;
-});
+DEF_EVENT(TensorRelease, { uint64_t tensor_id; });
 
 DEF_EVENT(TensorErase, {
     uint64_t tensor_id;
@@ -128,17 +132,10 @@ DEF_EVENT(TensorNotifyProp, {
     TensorProp prop;
 });
 
-DEF_EVENT(TensorWaitProp, {
+DEF_DUR_EVENT(TensorWaitProp, {
     uint64_t tensor_id;
     uint64_t wait_id;
     TensorProp prop;
-});
-
-DEF_EVENT(TensorWaitPropFinish, {
-    uint64_t tensor_id;
-    uint64_t wait_id;
-    TensorProp prop;
-    bool notified;
 });
 
 DEF_DUR_EVENT(SampleDevice, {
@@ -149,33 +146,29 @@ DEF_DUR_EVENT(SampleDevice, {
 
 DEF_EVENT(WorkerException, {});
 
-DEF_EVENT(ShapeInfer, {
-    bool success;
-});
+DEF_EVENT(ShapeInfer, { bool success; });
 
-DEF_DUR_EVENT(Scope, {
-    std::string name;
-});
+DEF_DUR_EVENT(Scope, { std::string name; });
 
-DEF_DUR_EVENT(DeviceScope, {
-    std::string name;
-    std::shared_ptr<CompNode::Event> event;
-});
+DEF_DUR_EVENT(Sync, { Trace trace; });
 
-DEF_DUR_EVENT(Sync, {});
+DEF_DUR_EVENT(StartProfile, { size_t capture_count; });
 
-DEF_DUR_EVENT(StartProfile, {
-    size_t capture_count;
-});
+DEF_DUR_EVENT(StopProfile, { size_t escape_count; });
 
-DEF_DUR_EVENT(StopProfile, {
-    size_t escape_count;
-});
+enum class TensorCommandKind {
+    Put,
+    Del,
+    SwapIn,
+    SwapOut,
+    Drop,
+    ReGen,
+    RecFree,
+    GetValue
+};
 
 DEF_DUR_EVENT(TensorCommand, {
-    enum Kind {
-        Put, Del, SwapIn, SwapOut, Drop, ReGen, RecFree, GetValue
-    };
+    using Kind = TensorCommandKind;
     uint64_t tensor_id;
     Kind kind;
 });
@@ -185,9 +178,19 @@ DEF_DUR_EVENT(AutoEvict, {});
 DEF_DUR_EVENT(Custom, {
     std::string title;
     std::string content;
+    CompNode device;
+});
+
+DEF_EVENT(RecordDevice, { std::shared_ptr<CompNode::Event> event; });
+
+DEF_DUR_EVENT(HostToDevice, {
+    TensorLayout layout;
+    CompNode device;
+    void* host_ptr;
+    void* device_ptr;
 });
 
 #undef DEF_EVENT
 #undef DEF_DUR_EVENT
 
-}
+}  // namespace mgb::imperative::profiler

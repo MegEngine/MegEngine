@@ -18,8 +18,7 @@ using namespace megdnn;
 using namespace cuda;
 using namespace batched_matrix_mul;
 
-bool BatchedMatrixMulForwardImpl::AlgoCublas::is_available(
-        const SizeArgs& args) const {
+bool BatchedMatrixMulForwardImpl::AlgoCublas::is_available(const SizeArgs& args) const {
     auto dtype = args.layout_a.dtype;
     auto&& param = args.opr->param();
     auto&& handle = concrete_handle(args.opr->handle());
@@ -61,19 +60,22 @@ void BatchedMatrixMulForwardImpl::AlgoCublas::exec(const ExecArgs& args) const {
     auto k = args.layout_a.shape[param.transposeA ? 1 : 2];
     auto workspace = args.workspace;
 
-    uintptr_t* As = static_cast<uintptr_t*>(static_cast<void*>(
-            workspace.raw_ptr + 0 * batch * sizeof(uintptr_t)));
-    uintptr_t* Bs = static_cast<uintptr_t*>(static_cast<void*>(
-            workspace.raw_ptr + 1 * batch * sizeof(uintptr_t)));
-    uintptr_t* Cs = static_cast<uintptr_t*>(static_cast<void*>(
-            workspace.raw_ptr + 2 * batch * sizeof(uintptr_t)));
+    uintptr_t* As = static_cast<uintptr_t*>(
+            static_cast<void*>(workspace.raw_ptr + 0 * batch * sizeof(uintptr_t)));
+    uintptr_t* Bs = static_cast<uintptr_t*>(
+            static_cast<void*>(workspace.raw_ptr + 1 * batch * sizeof(uintptr_t)));
+    uintptr_t* Cs = static_cast<uintptr_t*>(
+            static_cast<void*>(workspace.raw_ptr + 2 * batch * sizeof(uintptr_t)));
 
-    arange<uintptr_t>(As, reinterpret_cast<uintptr_t>(args.tensor_a.raw_ptr),
-                      args.layout_a.stride[0] * dtype.size(), batch, stream);
-    arange<uintptr_t>(Bs, reinterpret_cast<uintptr_t>(args.tensor_b.raw_ptr),
-                      args.layout_b.stride[0] * dtype.size(), batch, stream);
-    arange<uintptr_t>(Cs, reinterpret_cast<uintptr_t>(args.tensor_c.raw_ptr),
-                      args.layout_c.stride[0] * dtype.size(), batch, stream);
+    arange<uintptr_t>(
+            As, reinterpret_cast<uintptr_t>(args.tensor_a.raw_ptr),
+            args.layout_a.stride[0] * dtype.size(), batch, stream);
+    arange<uintptr_t>(
+            Bs, reinterpret_cast<uintptr_t>(args.tensor_b.raw_ptr),
+            args.layout_b.stride[0] * dtype.size(), batch, stream);
+    arange<uintptr_t>(
+            Cs, reinterpret_cast<uintptr_t>(args.tensor_c.raw_ptr),
+            args.layout_c.stride[0] * dtype.size(), batch, stream);
 
     auto io32_c32 = [&]() {
         auto zero = handle->zero_device();
@@ -81,12 +83,9 @@ void BatchedMatrixMulForwardImpl::AlgoCublas::exec(const ExecArgs& args) const {
         cublas_check(cublasSgemmBatched(
                 cublas_handle, param.transposeB ? CUBLAS_OP_T : CUBLAS_OP_N,
                 param.transposeA ? CUBLAS_OP_T : CUBLAS_OP_N, n, m, k, one,
-                reinterpret_cast<const dt_float32**>(Bs),
-                args.layout_b.stride[1],
-                reinterpret_cast<const dt_float32**>(As),
-                args.layout_a.stride[1], zero,
-                reinterpret_cast<dt_float32**>(Cs), args.layout_c.stride[1],
-                batch));
+                reinterpret_cast<const dt_float32**>(Bs), args.layout_b.stride[1],
+                reinterpret_cast<const dt_float32**>(As), args.layout_a.stride[1], zero,
+                reinterpret_cast<dt_float32**>(Cs), args.layout_c.stride[1], batch));
     };
 
 #if CUDART_VERSION >= 9010
@@ -97,12 +96,10 @@ void BatchedMatrixMulForwardImpl::AlgoCublas::exec(const ExecArgs& args) const {
         cublas_check(cublasGemmBatchedEx(
                 cublas_handle, param.transposeB ? CUBLAS_OP_T : CUBLAS_OP_N,
                 param.transposeA ? CUBLAS_OP_T : CUBLAS_OP_N, n, m, k, one,
-                reinterpret_cast<const void**>(Bs), CUDA_R_16F,
-                args.layout_b.stride[1], reinterpret_cast<const void**>(As),
-                CUDA_R_16F, args.layout_a.stride[1], zero,
-                reinterpret_cast<void**>(Cs), CUDA_R_16F,
-                args.layout_c.stride[1], batch, CUDA_R_32F,
-                CUBLAS_GEMM_DEFAULT));
+                reinterpret_cast<const void**>(Bs), CUDA_R_16F, args.layout_b.stride[1],
+                reinterpret_cast<const void**>(As), CUDA_R_16F, args.layout_a.stride[1],
+                zero, reinterpret_cast<void**>(Cs), CUDA_R_16F, args.layout_c.stride[1],
+                batch, CUDA_R_32F, CUBLAS_GEMM_DEFAULT));
         cublas_check(cublasSetMathMode(cublas_handle, CUBLAS_DEFAULT_MATH));
     };
 #endif
@@ -116,9 +113,8 @@ void BatchedMatrixMulForwardImpl::AlgoCublas::exec(const ExecArgs& args) const {
                 cublas_handle, param.transposeB ? CUBLAS_OP_T : CUBLAS_OP_N,
                 param.transposeA ? CUBLAS_OP_T : CUBLAS_OP_N, n, m, k, one,
                 reinterpret_cast<const __half**>(Bs), args.layout_b.stride[1],
-                reinterpret_cast<const __half**>(As), args.layout_a.stride[1],
-                zero, reinterpret_cast<__half**>(Cs), args.layout_c.stride[1],
-                batch));
+                reinterpret_cast<const __half**>(As), args.layout_a.stride[1], zero,
+                reinterpret_cast<__half**>(Cs), args.layout_c.stride[1], batch));
         cublas_check(cublasSetMathMode(cublas_handle, CUBLAS_DEFAULT_MATH));
     };
 #endif

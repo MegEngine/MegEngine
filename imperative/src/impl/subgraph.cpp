@@ -33,9 +33,11 @@ void Subgraph::remove_unused_exprs() {
             expr.op = nullptr;
         }
     }
-    exprs.erase(std::remove_if(exprs.begin(), exprs.end(),
-                               [](auto expr) { return expr.op == nullptr; }),
-                exprs.end());
+    exprs.erase(
+            std::remove_if(
+                    exprs.begin(), exprs.end(),
+                    [](auto expr) { return expr.op == nullptr; }),
+            exprs.end());
 }
 
 SmallVector<bool> Subgraph::gen_input_mask() {
@@ -59,8 +61,7 @@ SmallVector<bool> Subgraph::gen_input_mask() {
 }
 
 SmallVector<bool> Subgraph::gen_output_mask() {
-    std::unordered_set<size_t> invalid_outputs = {outputs.begin(),
-                                                  outputs.end()};
+    std::unordered_set<size_t> invalid_outputs = {outputs.begin(), outputs.end()};
     for (auto&& input : inputs) {
         invalid_outputs.erase(input);
     }
@@ -69,7 +70,7 @@ SmallVector<bool> Subgraph::gen_output_mask() {
             invalid_outputs.erase(output);
         }
     }
-    for (auto&& constant: constants) {
+    for (auto&& constant : constants) {
         invalid_outputs.erase(constant.first);
     }
     invalid_outputs.insert(0);
@@ -82,8 +83,7 @@ SmallVector<bool> Subgraph::gen_output_mask() {
     return mask;
 }
 
-void Subgraph::replace_vars(
-        const std::unordered_map<size_t, size_t>& replace_map) {
+void Subgraph::replace_vars(const std::unordered_map<size_t, size_t>& replace_map) {
     // FIXME: preprocess replace_map
     auto replace_var = [&](var_t& var) {
         // TODO: detect infinite loop
@@ -101,7 +101,7 @@ void Subgraph::replace_vars(
     }
 }
 
-std::string EncodedSubraph::repr() const {
+std::string EncodedSubgraph::repr() const {
     std::string buffer;
     buffer.push_back('|');
     for (size_t i = 0; i < input_mask.size(); ++i) {
@@ -118,7 +118,7 @@ std::string EncodedSubraph::repr() const {
     return buffer;
 }
 
-size_t EncodedSubraph::hash() const {
+size_t EncodedSubgraph::hash() const {
     return std::hash<std::string>{}(repr());
 }
 

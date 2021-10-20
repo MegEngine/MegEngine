@@ -52,38 +52,37 @@ uint32_t _get_kern_block_size(const void* kern);
 }  // namespace cuda
 }  // namespace megdnn
 
-#define unpack_local_share_params(_src, _filter, _dst, _param)            \
-    size_t n = _src[0], ci = _src[1], hi = _src[2], wi = _src[3];         \
-    size_t weight_spatial_pos;                                            \
-    if (_param.sparse == LocalShare::Param::Sparse::DENSE) {              \
-        weight_spatial_pos = 3;                                           \
-    } else {                                                              \
-        megdnn_assert(_param.sparse == LocalShare::Param::Sparse::GROUP); \
-        weight_spatial_pos = 4;                                           \
-    }                                                                     \
-    size_t fh = _filter[weight_spatial_pos],                              \
-           fw = _filter[weight_spatial_pos + 1];                          \
-    size_t co = _dst[1], ho = _dst[2], wo = _dst[3];                      \
-    size_t ph = _param.pad_h, pw = _param.pad_w;                          \
-    size_t sh = _param.stride_h, sw = _param.stride_w;                    \
-    size_t dh = _param.dilate_h, dw = _param.dilate_w;                    \
-    size_t sgh = _param.spatial_groups_h, sgw = _param.spatial_groups_w;  \
-    MEGDNN_MARK_USED_VAR(n);                                              \
-    MEGDNN_MARK_USED_VAR(ci);                                             \
-    MEGDNN_MARK_USED_VAR(hi);                                             \
-    MEGDNN_MARK_USED_VAR(wi);                                             \
-    MEGDNN_MARK_USED_VAR(co);                                             \
-    MEGDNN_MARK_USED_VAR(fh);                                             \
-    MEGDNN_MARK_USED_VAR(fw);                                             \
-    MEGDNN_MARK_USED_VAR(ho);                                             \
-    MEGDNN_MARK_USED_VAR(wo);                                             \
-    MEGDNN_MARK_USED_VAR(ph);                                             \
-    MEGDNN_MARK_USED_VAR(pw);                                             \
-    MEGDNN_MARK_USED_VAR(sh);                                             \
-    MEGDNN_MARK_USED_VAR(sw);                                             \
-    MEGDNN_MARK_USED_VAR(dh);                                             \
-    MEGDNN_MARK_USED_VAR(dw);                                             \
-    MEGDNN_MARK_USED_VAR(sgh);                                            \
+#define unpack_local_share_params(_src, _filter, _dst, _param)                     \
+    size_t n = _src[0], ci = _src[1], hi = _src[2], wi = _src[3];                  \
+    size_t weight_spatial_pos;                                                     \
+    if (_param.sparse == LocalShare::Param::Sparse::DENSE) {                       \
+        weight_spatial_pos = 3;                                                    \
+    } else {                                                                       \
+        megdnn_assert(_param.sparse == LocalShare::Param::Sparse::GROUP);          \
+        weight_spatial_pos = 4;                                                    \
+    }                                                                              \
+    size_t fh = _filter[weight_spatial_pos], fw = _filter[weight_spatial_pos + 1]; \
+    size_t co = _dst[1], ho = _dst[2], wo = _dst[3];                               \
+    size_t ph = _param.pad_h, pw = _param.pad_w;                                   \
+    size_t sh = _param.stride_h, sw = _param.stride_w;                             \
+    size_t dh = _param.dilate_h, dw = _param.dilate_w;                             \
+    size_t sgh = _param.spatial_groups_h, sgw = _param.spatial_groups_w;           \
+    MEGDNN_MARK_USED_VAR(n);                                                       \
+    MEGDNN_MARK_USED_VAR(ci);                                                      \
+    MEGDNN_MARK_USED_VAR(hi);                                                      \
+    MEGDNN_MARK_USED_VAR(wi);                                                      \
+    MEGDNN_MARK_USED_VAR(co);                                                      \
+    MEGDNN_MARK_USED_VAR(fh);                                                      \
+    MEGDNN_MARK_USED_VAR(fw);                                                      \
+    MEGDNN_MARK_USED_VAR(ho);                                                      \
+    MEGDNN_MARK_USED_VAR(wo);                                                      \
+    MEGDNN_MARK_USED_VAR(ph);                                                      \
+    MEGDNN_MARK_USED_VAR(pw);                                                      \
+    MEGDNN_MARK_USED_VAR(sh);                                                      \
+    MEGDNN_MARK_USED_VAR(sw);                                                      \
+    MEGDNN_MARK_USED_VAR(dh);                                                      \
+    MEGDNN_MARK_USED_VAR(dw);                                                      \
+    MEGDNN_MARK_USED_VAR(sgh);                                                     \
     MEGDNN_MARK_USED_VAR(sgw);
 
 // vim: syntax=cuda.doxygen

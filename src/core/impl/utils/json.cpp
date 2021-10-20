@@ -10,14 +10,14 @@
  */
 
 #include "megbrain/utils/json.h"
-#include "megbrain/utils/thread.h"
 #include "megbrain/utils/debug.h"
+#include "megbrain/utils/thread.h"
 
 #if MGB_ENABLE_JSON
 
-#include <limits>
-#include <cstring>
 #include <cerrno>
+#include <cstring>
+#include <limits>
 
 using namespace mgb::json;
 
@@ -38,7 +38,7 @@ void write_indent(std::string& fout, int indent) {
     }
 }
 
-} // anonymous namespace
+}  // anonymous namespace
 
 std::string Value::to_string(int indent) const {
     std::string ostr;
@@ -52,13 +52,22 @@ void Value::writeto_fpath(const char* fout_path, int indent) const {
 }
 
 void Number::writeto(std::string& fout, int) const {
+    if (std::isinf(m_val)) {
+        fout += "\"inf\"";
+        return;
+    }
+    if (std::isnan(m_val)) {
+        fout += "\"nan\"";
+        return;
+    }
     static char fmt[16];
     static Spinlock fmt_mtx;
     if (!fmt[sizeof(fmt) - 1]) {
         MGB_LOCK_GUARD(fmt_mtx);
         if (!fmt[sizeof(fmt) - 1]) {
-            snprintf(fmt, sizeof(fmt) - 1, "%%.%dg", static_cast<int>(
-                        std::numeric_limits<decltype(m_val)>::digits10));
+            snprintf(
+                    fmt, sizeof(fmt) - 1, "%%.%dg",
+                    static_cast<int>(std::numeric_limits<decltype(m_val)>::digits10));
             fmt[sizeof(fmt) - 1] = 1;
         }
     }
@@ -71,7 +80,7 @@ void NumberInt::writeto(std::string& fout, int) const {
     fout += std::to_string(m_val);
 }
 
-void Bool::writeto(std::string &fout, int) const {
+void Bool::writeto(std::string& fout, int) const {
     fout += (m_val ? "true" : "false");
 }
 
@@ -81,9 +90,9 @@ std::shared_ptr<Bool> Bool::make(bool v) {
     return v ? vtrue : vfalse;
 }
 
-void String::writeto(std::string &fout, int) const  {
+void String::writeto(std::string& fout, int) const {
     fout += '"';
-    for (char ch: m_val) {
+    for (char ch : m_val) {
         switch (ch) {
             case '"':
                 fout += "\\\"";
@@ -117,17 +126,17 @@ void String::writeto(std::string &fout, int) const  {
     fout += '"';
 }
 
-void Object::writeto(std::string &fout, int indent) const {
+void Object::writeto(std::string& fout, int indent) const {
     char linebreak;
     if (indent) {
         linebreak = '\n';
-        ++ indent;
+        ++indent;
     } else {
         linebreak = ' ';
     }
     fout.append("{").append(1, linebreak);
     bool first = true;
-    for (auto &&i: m_val) {
+    for (auto&& i : m_val) {
         if (first) {
             first = false;
         } else {
@@ -145,17 +154,17 @@ void Object::writeto(std::string &fout, int indent) const {
     fout += '}';
 }
 
-void Array::writeto(std::string &fout, int indent) const {
+void Array::writeto(std::string& fout, int indent) const {
     char linebreak;
     if (indent) {
         linebreak = '\n';
-        ++ indent;
+        ++indent;
     } else {
         linebreak = ' ';
     }
     fout += "[";
     bool first = true;
-    for (auto &&i: m_val) {
+    for (auto&& i : m_val) {
         if (first) {
             first = false;
         } else {
@@ -172,11 +181,10 @@ void Array::writeto(std::string &fout, int indent) const {
     fout += ']';
 }
 
-void Null::writeto(std::string &fout, int /*indent*/) const {
+void Null::writeto(std::string& fout, int /*indent*/) const {
     fout += "null";
 }
 
-#endif // MGB_ENABLE_JSON
+#endif  // MGB_ENABLE_JSON
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
-

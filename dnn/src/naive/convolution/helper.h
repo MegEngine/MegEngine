@@ -56,18 +56,19 @@ struct StrategyFwd {
 // C++17. We workaround this by marking the implmentation as inline and move
 // out of class definition.
 template <>
-inline void StrategyFwd::on(dt_quint8& s, dt_quint8& f, dt_qint32& d,
-                            DType src_dt, DType filt_dt, DType) {
+inline void StrategyFwd::on(
+        dt_quint8& s, dt_quint8& f, dt_qint32& d, DType src_dt, DType filt_dt, DType) {
     auto cast = [](const dt_quint8& val, DType dt) {
-        return dt_qint32(static_cast<int32_t>(val.as_uint8()) -
-                         dt.param<dtype::Quantized8Asymm>().zero_point);
+        return dt_qint32(
+                static_cast<int32_t>(val.as_uint8()) -
+                dt.param<dtype::Quantized8Asymm>().zero_point);
     };
     d += cast(s, src_dt) * cast(f, filt_dt);
 }
 
 template <>
-inline void StrategyFwd::on(dt_qint8& s, dt_qint8& f, dt_float32& d,
-                            DType src_dt, DType filt_dt, DType) {
+inline void StrategyFwd::on(
+        dt_qint8& s, dt_qint8& f, dt_float32& d, DType src_dt, DType filt_dt, DType) {
     auto cast = [](const dt_qint8& val, DType dt) {
         return dt.param<dtype::QuantizedS8>().dequantize(val);
     };
@@ -75,8 +76,8 @@ inline void StrategyFwd::on(dt_qint8& s, dt_qint8& f, dt_float32& d,
 }
 
 template <>
-inline void StrategyFwd::on(dt_qint8& s, dt_qint8& f, dt_qint32& d, DType,
-                            DType, DType) {
+inline void StrategyFwd::on(
+        dt_qint8& s, dt_qint8& f, dt_qint32& d, DType, DType, DType) {
     auto cast = [](const dt_qint8& val) {
         return dt_qint32(static_cast<int32_t>(val.as_int8()));
     };
@@ -97,8 +98,8 @@ struct StrategyBwdData {
 };
 
 template <>
-inline void StrategyBwdData::on(int& s, signed char& f, signed char& d, DType,
-                                DType, DType) {
+inline void StrategyBwdData::on(
+        int& s, signed char& f, signed char& d, DType, DType, DType) {
     auto cast = [](signed char& val) {
         return static_cast<int32_t>(((megdnn::dt_qint8)val).as_int8());
     };
@@ -106,18 +107,19 @@ inline void StrategyBwdData::on(int& s, signed char& f, signed char& d, DType,
 }
 
 template <>
-inline void StrategyBwdData::on(dt_qint32& s, dt_quint8& f, dt_quint8& d, DType,
-                                DType filt_dt, DType dst_dt) {
+inline void StrategyBwdData::on(
+        dt_qint32& s, dt_quint8& f, dt_quint8& d, DType, DType filt_dt, DType dst_dt) {
     auto cast = [](const dt_quint8& val, DType dt) {
-        return dt_qint32(static_cast<int32_t>(val.as_uint8()) -
-                         dt.param<dtype::Quantized8Asymm>().zero_point);
+        return dt_qint32(
+                static_cast<int32_t>(val.as_uint8()) -
+                dt.param<dtype::Quantized8Asymm>().zero_point);
     };
     s += cast(f, filt_dt) * cast(d, dst_dt);
 }
 
 template <>
-inline void StrategyBwdData::on(dt_qint32& s, dt_qint8& f, dt_qint8& d, DType,
-                                DType, DType) {
+inline void StrategyBwdData::on(
+        dt_qint32& s, dt_qint8& f, dt_qint8& d, DType, DType, DType) {
     auto cast = [](const dt_qint8& val) {
         return dt_qint32(static_cast<int32_t>(val.as_int8()));
     };
@@ -139,30 +141,29 @@ struct StrategyBwdFlt {
 
 struct ConvFilterVisitor {
     template <typename ftype>
-    static ftype* get_current_ptr(ftype* fptr, size_t /* batch */,
-                                  size_t /* oc */, size_t /* oh */,
-                                  size_t /* ow */, size_t /* filter_sizes*/) {
+    static ftype* get_current_ptr(
+            ftype* fptr, size_t /* batch */, size_t /* oc */, size_t /* oh */,
+            size_t /* ow */, size_t /* filter_sizes*/) {
         return fptr;
     }
 };
 
-template <typename stype, typename ftype, typename dtype, typename comp_type,
-          class Strategy, typename FilterMeta,
-          typename FilterVisitor = ConvFilterVisitor>
-void compute2d(_megdnn_tensor_in src, ftype* __restrict fptr,
-               _megdnn_tensor_out dst, const FilterMeta& filter_meta) {
+template <
+        typename stype, typename ftype, typename dtype, typename comp_type,
+        class Strategy, typename FilterMeta, typename FilterVisitor = ConvFilterVisitor>
+void compute2d(
+        _megdnn_tensor_in src, ftype* __restrict fptr, _megdnn_tensor_out dst,
+        const FilterMeta& filter_meta) {
     size_t spatial_start, channel_pos, batch_pos;
     using Format = param::Convolution::Format;
-    if (filter_meta.format == Format::NCHW ||
-        filter_meta.format == Format::NCHW88 ||
+    if (filter_meta.format == Format::NCHW || filter_meta.format == Format::NCHW88 ||
         filter_meta.format == Format::NCHW44 ||
         filter_meta.format == Format::NCHW44_DOT ||
         filter_meta.format == Format::NCHW4 ||
         filter_meta.format == Format::NCHW4_NCHW ||
-        filter_meta.format == Format::NCHW4_NHWC || 
+        filter_meta.format == Format::NCHW4_NHWC ||
         filter_meta.format == Format::NCHW4_NCHW32 ||
-        filter_meta.format == Format::NCHW8 ||
-        filter_meta.format == Format::NCHW32 ||
+        filter_meta.format == Format::NCHW8 || filter_meta.format == Format::NCHW32 ||
         filter_meta.format == Format::NCHW32_NCHW4 ||
         filter_meta.format == Format::NCHW64) {
         spatial_start = 2;
@@ -173,8 +174,7 @@ void compute2d(_megdnn_tensor_in src, ftype* __restrict fptr,
         channel_pos = 0;
         batch_pos = 3;
     } else {
-        megdnn_assert(filter_meta.format == Format::NHWC,
-                      "invalid conv format");
+        megdnn_assert(filter_meta.format == Format::NHWC, "invalid conv format");
         spatial_start = 1;
         channel_pos = 3;
         batch_pos = 0;
@@ -185,38 +185,35 @@ void compute2d(_megdnn_tensor_in src, ftype* __restrict fptr,
     auto FH = filter_meta.spatial[0], FW = filter_meta.spatial[1];
     size_t OC, OH, OW;
     if (filter_meta.format == Format::NCHW4_NHWC) {
-        OC = dst.layout.shape[3], OH = dst.layout.shape[1],
-        OW = dst.layout.shape[2];
+        OC = dst.layout.shape[3], OH = dst.layout.shape[1], OW = dst.layout.shape[2];
     } else {
-        OC = dst.layout.shape[channel_pos],
-        OH = dst.layout.shape[spatial_start],
+        OC = dst.layout.shape[channel_pos], OH = dst.layout.shape[spatial_start],
         OW = dst.layout.shape[spatial_start + 1];
     }
 
-    if (filter_meta.format == Format::NCHW4 ||
-        filter_meta.format == Format::CHWN4 ||
+    if (filter_meta.format == Format::NCHW4 || filter_meta.format == Format::CHWN4 ||
         filter_meta.format == Format::NCHW44_DOT ||
-        filter_meta.format == Format::NCHW44 || 
+        filter_meta.format == Format::NCHW44 ||
         filter_meta.format == Format::NCHW32_NCHW4) {
         OC *= 4;
-    } else if (filter_meta.format == Format::NCHW8 ||
-               filter_meta.format == Format::NCHW88) {
+    } else if (
+            filter_meta.format == Format::NCHW8 ||
+            filter_meta.format == Format::NCHW88) {
         OC *= 8;
-    } else if (filter_meta.format == Format::NCHW32 ||
-               filter_meta.format == Format::NCHW4_NCHW32) {
+    } else if (
+            filter_meta.format == Format::NCHW32 ||
+            filter_meta.format == Format::NCHW4_NCHW32) {
         OC *= 32;
     } else if (filter_meta.format == Format::NCHW64) {
         OC *= 64;
     }
 
     size_t FS_G, FS_OC, FS_IC, FS_SPATIAL;
-    if (filter_meta.format == Format::NCHW ||
-        filter_meta.format == Format::NCHW4 ||
+    if (filter_meta.format == Format::NCHW || filter_meta.format == Format::NCHW4 ||
         filter_meta.format == Format::NCHW4_NCHW ||
-        filter_meta.format == Format::NCHW4_NHWC || 
+        filter_meta.format == Format::NCHW4_NHWC ||
         filter_meta.format == Format::NCHW4_NCHW32 ||
-        filter_meta.format == Format::NCHW8 ||
-        filter_meta.format == Format::NCHW32 ||
+        filter_meta.format == Format::NCHW8 || filter_meta.format == Format::NCHW32 ||
         filter_meta.format == Format::NCHW32_NCHW4 ||
         filter_meta.format == Format::NCHW64) {
         // g, oc, ic, fh, fw
@@ -231,8 +228,8 @@ void compute2d(_megdnn_tensor_in src, ftype* __restrict fptr,
         FS_OC = 4;
         FS_G = FS_IC * filter_meta.icpg;
     } else if (filter_meta.format == Format::NCHW88) {
-        if (filter_meta.group > 1 && filter_meta.icpg == 1 &&
-            src.layout.ndim == 5 && filter_meta.ocpg == 1) {
+        if (filter_meta.group > 1 && filter_meta.icpg == 1 && src.layout.ndim == 5 &&
+            filter_meta.ocpg == 1) {
             FS_SPATIAL = 8;
             FS_IC = FH * FW * FS_SPATIAL;
             FS_OC = FS_IC * filter_meta.icpg;
@@ -250,10 +247,11 @@ void compute2d(_megdnn_tensor_in src, ftype* __restrict fptr,
                 FS_G = FS_OC * filter_meta.ocpg / 8;
             }
         }
-    } else if (filter_meta.format == Format::NCHW44 ||
-               filter_meta.format == Format::NCHW44_DOT) {
-        if (filter_meta.group > 1 && filter_meta.icpg == 1 &&
-            src.layout.ndim == 5 && filter_meta.ocpg == 1) {
+    } else if (
+            filter_meta.format == Format::NCHW44 ||
+            filter_meta.format == Format::NCHW44_DOT) {
+        if (filter_meta.group > 1 && filter_meta.icpg == 1 && src.layout.ndim == 5 &&
+            filter_meta.ocpg == 1) {
             FS_SPATIAL = 4;
             FS_IC = FH * FW * FS_SPATIAL;
             FS_OC = FS_IC * filter_meta.icpg;
@@ -293,18 +291,19 @@ void compute2d(_megdnn_tensor_in src, ftype* __restrict fptr,
         dw = -dw;
     }
 
-    auto get_linear_addr = [&filter_meta, &src](ptrdiff_t n, ptrdiff_t c,
-                                                ptrdiff_t h, ptrdiff_t w,
-                                                const TensorLayout& layout,
-                                                bool is_output) -> ptrdiff_t {
+    auto get_linear_addr = [&filter_meta, &src](
+                                   ptrdiff_t n, ptrdiff_t c, ptrdiff_t h, ptrdiff_t w,
+                                   const TensorLayout& layout,
+                                   bool is_output) -> ptrdiff_t {
         if (filter_meta.format == Format::NCHW) {
-            return n * layout.stride[0] + c * layout.stride[1] +
-                   h * layout.stride[2] + w * layout.stride[3];
+            return n * layout.stride[0] + c * layout.stride[1] + h * layout.stride[2] +
+                   w * layout.stride[3];
         } else if (filter_meta.format == Format::NHWC) {
-            return n * layout.stride[0] + h * layout.stride[1] +
-                   w * layout.stride[2] + c * layout.stride[3];
-        } else if (filter_meta.format == Format::NCHW8 ||
-                   filter_meta.format == Format::NCHW88) {
+            return n * layout.stride[0] + h * layout.stride[1] + w * layout.stride[2] +
+                   c * layout.stride[3];
+        } else if (
+                filter_meta.format == Format::NCHW8 ||
+                filter_meta.format == Format::NCHW88) {
             if (filter_meta.format == Format::NCHW88 && !is_output &&
                 src.layout.ndim == 4) {
                 return n * layout.stride[0] + c * layout.stride[1] +
@@ -314,8 +313,9 @@ void compute2d(_megdnn_tensor_in src, ftype* __restrict fptr,
                        h * layout.stride[2] + w * layout.stride[3] +
                        (c & 0b111) * layout.stride[4];
             }
-        } else if (filter_meta.format == Format::NCHW44 ||
-                   filter_meta.format == Format::NCHW44_DOT) {
+        } else if (
+                filter_meta.format == Format::NCHW44 ||
+                filter_meta.format == Format::NCHW44_DOT) {
             if (!is_output && src.layout.ndim == 4) {
                 return n * layout.stride[0] + c * layout.stride[1] +
                        h * layout.stride[2] + w * layout.stride[3];
@@ -375,61 +375,59 @@ void compute2d(_megdnn_tensor_in src, ftype* __restrict fptr,
                    h * layout.stride[2] + w * layout.stride[3] +
                    (c & 0x3F) * layout.stride[4];
         } else {
-            megdnn_assert(filter_meta.format == Format::NCHW4,
-                          "invalid conv format");
+            megdnn_assert(filter_meta.format == Format::NCHW4, "invalid conv format");
             return n * layout.stride[0] + (c / 4) * layout.stride[1] +
                    h * layout.stride[2] + w * layout.stride[3] +
                    (c & 0b11) * layout.stride[4];
         }
     };
 
-    auto get_filter_addr = [&](GroupCounter& gc_out, size_t ic, size_t ic0,
-                               size_t fh, size_t fw) {
+    auto get_filter_addr = [&](GroupCounter& gc_out, size_t ic, size_t ic0, size_t fh,
+                               size_t fw) {
         if (filter_meta.format == Format::NCHW4 ||
             filter_meta.format == Format::NCHW4_NCHW ||
             filter_meta.format == Format::NCHW4_NHWC ||
             filter_meta.format == Format::NCHW4_NCHW32) {
             return gc_out.cur_grp * FS_G + gc_out.cur_off * FS_OC +
-                   (ic - ic0) / 4 * FS_IC * 4 +
-                   (fh * FW + fw) * FS_SPATIAL * 4 + ((ic - ic0) & 0b11);
+                   (ic - ic0) / 4 * FS_IC * 4 + (fh * FW + fw) * FS_SPATIAL * 4 +
+                   ((ic - ic0) & 0b11);
         } else if (filter_meta.format == Format::NCHW8) {
             return gc_out.cur_grp * FS_G + gc_out.cur_off * FS_OC +
-                   (ic - ic0) / 8 * FS_IC * 8 +
-                   (fh * FW + fw) * FS_SPATIAL * 8 + ((ic - ic0) & 0b111);
-        } else if (filter_meta.format == Format::NCHW32 ||
-                   filter_meta.format == Format::NCHW32_NCHW4) {
+                   (ic - ic0) / 8 * FS_IC * 8 + (fh * FW + fw) * FS_SPATIAL * 8 +
+                   ((ic - ic0) & 0b111);
+        } else if (
+                filter_meta.format == Format::NCHW32 ||
+                filter_meta.format == Format::NCHW32_NCHW4) {
             return gc_out.cur_grp * FS_G + gc_out.cur_off * FS_OC +
-                   (ic - ic0) / 32 * FS_IC * 32 +
-                   (fh * FW + fw) * FS_SPATIAL * 32 + ((ic - ic0) & 0x1F);
+                   (ic - ic0) / 32 * FS_IC * 32 + (fh * FW + fw) * FS_SPATIAL * 32 +
+                   ((ic - ic0) & 0x1F);
         } else if (filter_meta.format == Format::CHWN4) {
             return gc_out.cur_grp * FS_G + gc_out.cur_off * FS_OC +
                    (ic - ic0) / 4 * FS_IC + (fh * FW + fw) * FS_SPATIAL +
                    ((ic - ic0) % 4);
-        } else if (filter_meta.format == Format::NCHW88 ||
-                   filter_meta.format == Format::NCHW44) {
+        } else if (
+                filter_meta.format == Format::NCHW88 ||
+                filter_meta.format == Format::NCHW44) {
             size_t pack_c_size = 4_z;
-            if(filter_meta.format == Format::NCHW88){
+            if (filter_meta.format == Format::NCHW88) {
                 pack_c_size = 8_z;
             }
             if (src.layout.ndim == 4) {
                 // ic < 8, input is nchw
-                return gc_out.cur_grp * FS_G +
-                       gc_out.cur_off / pack_c_size * FS_OC +
+                return gc_out.cur_grp * FS_G + gc_out.cur_off / pack_c_size * FS_OC +
                        (fh * FW + fw) * FS_SPATIAL + (ic - ic0) * FS_IC +
                        gc_out.cur_off % pack_c_size;
-            } else if (filter_meta.group > 1 && filter_meta.icpg == 1 &&
-                       filter_meta.ocpg == 1 && src.layout.ndim == 5) {
+            } else if (
+                    filter_meta.group > 1 && filter_meta.icpg == 1 &&
+                    filter_meta.ocpg == 1 && src.layout.ndim == 5) {
                 // dw case
-                return gc_out.cur_grp / pack_c_size * FS_G +
-                       gc_out.cur_off * FS_OC + (ic - ic0) * FS_IC +
-                       (fh * FW + fw) * FS_SPATIAL +
+                return gc_out.cur_grp / pack_c_size * FS_G + gc_out.cur_off * FS_OC +
+                       (ic - ic0) * FS_IC + (fh * FW + fw) * FS_SPATIAL +
                        gc_out.cur_grp % pack_c_size;
             } else if (src.layout.ndim == 5) {
                 // normal case
-                return gc_out.cur_grp * FS_G +
-                       gc_out.cur_off / pack_c_size * FS_OC +
-                       (ic - ic0) / pack_c_size * FS_IC +
-                       (fh * FW + fw) * FS_SPATIAL +
+                return gc_out.cur_grp * FS_G + gc_out.cur_off / pack_c_size * FS_OC +
+                       (ic - ic0) / pack_c_size * FS_IC + (fh * FW + fw) * FS_SPATIAL +
                        ((ic - ic0) % pack_c_size) * pack_c_size +
                        gc_out.cur_off % pack_c_size;
             } else {
@@ -443,8 +441,9 @@ void compute2d(_megdnn_tensor_in src, ftype* __restrict fptr,
                 return gc_out.cur_grp * FS_G + gc_out.cur_off / 4 * FS_OC +
                        (fh * FW + fw) * FS_SPATIAL + (ic - ic0) * FS_IC +
                        gc_out.cur_off % 4;
-            } else if (filter_meta.group > 1 && filter_meta.icpg == 1 &&
-                       filter_meta.ocpg == 1 && src.layout.ndim == 5) {
+            } else if (
+                    filter_meta.group > 1 && filter_meta.icpg == 1 &&
+                    filter_meta.ocpg == 1 && src.layout.ndim == 5) {
                 // dw case
                 return gc_out.cur_grp / 4 * FS_G + gc_out.cur_off * FS_OC +
                        (ic - ic0) * FS_IC + (fh * FW + fw) * FS_SPATIAL +
@@ -455,16 +454,15 @@ void compute2d(_megdnn_tensor_in src, ftype* __restrict fptr,
                        (ic - ic0) / 4 * FS_IC + (fh * FW + fw) * FS_SPATIAL +
                        (gc_out.cur_off % 4) * 4 + ((ic - ic0) % 4);
             } else {
-                megdnn_throw(
-                        "nchw44_dot naive not support this input and output\n");
+                megdnn_throw("nchw44_dot naive not support this input and output\n");
             }
         } else if (filter_meta.format == Format::NCHW64) {
             return gc_out.cur_grp * FS_G + gc_out.cur_off * FS_OC +
-                   (ic - ic0) / 64 * FS_IC * 64 +
-                   (fh * FW + fw) * FS_SPATIAL * 64 + ((ic - ic0) & 0x3F);
+                   (ic - ic0) / 64 * FS_IC * 64 + (fh * FW + fw) * FS_SPATIAL * 64 +
+                   ((ic - ic0) & 0x3F);
         } else {
-            return gc_out.cur_grp * FS_G + gc_out.cur_off * FS_OC +
-                   (ic - ic0) * FS_IC + (fh * FW + fw) * FS_SPATIAL;
+            return gc_out.cur_grp * FS_G + gc_out.cur_off * FS_OC + (ic - ic0) * FS_IC +
+                   (fh * FW + fw) * FS_SPATIAL;
         }
     };
     size_t filter_sizes = filter_meta.ocpg * filter_meta.icpg * FH * FW;
@@ -473,8 +471,8 @@ void compute2d(_megdnn_tensor_in src, ftype* __restrict fptr,
         for (size_t oc = 0; oc < OC; ++oc, gc_out.next())
             for (size_t oh = 0; oh < OH; ++oh)
                 for (size_t ow = 0; ow < OW; ++ow) {
-                    comp_type dval = dptr[get_linear_addr(n, oc, oh, ow,
-                                                          dst.layout, true)];
+                    comp_type dval =
+                            dptr[get_linear_addr(n, oc, oh, ow, dst.layout, true)];
                     ftype* fptr_cur = FilterVisitor::template get_current_ptr(
                             fptr, n, oc, oh, ow, filter_sizes);
                     Strategy::init_dval(dval);
@@ -493,25 +491,25 @@ void compute2d(_megdnn_tensor_in src, ftype* __restrict fptr,
                                             n, ic, ih, iw, src.layout, false)];
                                     ftype& fval = fptr_cur[get_filter_addr(
                                             gc_out, ic, ic0, fh, fw)];
-                                    Strategy::on(sval, fval, dval,
-                                                 src.layout.dtype,
-                                                 filter_meta.dtype,
-                                                 dst.layout.dtype);
+                                    Strategy::on(
+                                            sval, fval, dval, src.layout.dtype,
+                                            filter_meta.dtype, dst.layout.dtype);
                                 }
                             }
                         }
-                    Strategy::write(dval,
-                                    dptr[get_linear_addr(n, oc, oh, ow,
-                                                         dst.layout, true)]);
+                    Strategy::write(
+                            dval,
+                            dptr[get_linear_addr(n, oc, oh, ow, dst.layout, true)]);
                 }
     }
 }
 
-template <typename stype, typename ftype, typename dtype, typename comp_type,
-          class Strategy, typename FilterMeta,
-          typename FilterVisitor = ConvFilterVisitor>
-void compute2d_hwcd4(_megdnn_tensor_in src, _megdnn_tensor_in filter,
-                     _megdnn_tensor_out dst, const FilterMeta& filter_meta) {
+template <
+        typename stype, typename ftype, typename dtype, typename comp_type,
+        class Strategy, typename FilterMeta, typename FilterVisitor = ConvFilterVisitor>
+void compute2d_hwcd4(
+        _megdnn_tensor_in src, _megdnn_tensor_in filter, _megdnn_tensor_out dst,
+        const FilterMeta& filter_meta) {
     // The filter's layout is (G, OC/4, FH, FW, IC, 4) when using mad
     // and (G, OC/4, FH, FW, IC/4, 4, 4) when using dot.
     bool use_dot = false;
@@ -524,8 +522,7 @@ void compute2d_hwcd4(_megdnn_tensor_in src, _megdnn_tensor_in filter,
 
     using Format = param::Convolution::Format;
     megdnn_assert(filter_meta.format == Format::NHWCD4);
-    auto N = src.layout.shape[0], IH = src.layout.shape[1],
-         IW = src.layout.shape[3];
+    auto N = src.layout.shape[0], IH = src.layout.shape[1], IW = src.layout.shape[3];
     auto FH = filter_meta.spatial[0], FW = filter_meta.spatial[1];
     auto OC = dst.layout.shape[2] * 4, OH = dst.layout.shape[1],
          OW = dst.layout.shape[3];
@@ -574,8 +571,9 @@ void compute2d_hwcd4(_megdnn_tensor_in src, _megdnn_tensor_in filter,
         FS_G = filter.layout.stride[0];
         FS_OCB = filter.layout.stride[1];
         FS_SPATIAL = filter.layout.stride[3];
-    } else if (use_dot && filter.layout.ndim == 5 && filter_meta.ocpg == 1 &&
-               filter_meta.icpg == 1) {
+    } else if (
+            use_dot && filter.layout.ndim == 5 && filter_meta.ocpg == 1 &&
+            filter_meta.icpg == 1) {
         // chanwise conv, (G/4, 1, FH, FW, 4)
         FS_G = filter.layout.stride[0];
         FS_OCB = 0;
@@ -584,21 +582,18 @@ void compute2d_hwcd4(_megdnn_tensor_in src, _megdnn_tensor_in filter,
         megdnn_assert(0, "invalid filter layout");
     }
 
-    auto get_filter_addr = [&use_dot, &FS_G, &FS_OCB, &FS_SPATIAL, &FW,
-                            &filter_meta](size_t group, size_t offset,
-                                          size_t fh, size_t fw,
-                                          size_t c) -> size_t {
+    auto get_filter_addr = [&use_dot, &FS_G, &FS_OCB, &FS_SPATIAL, &FW, &filter_meta](
+                                   size_t group, size_t offset, size_t fh, size_t fw,
+                                   size_t c) -> size_t {
         if (filter_meta.ocpg == 1 && filter_meta.icpg == 1) {
-            return (group / 4) * FS_G + (fh * FW + fw) * FS_SPATIAL +
-                   (group % 4);
+            return (group / 4) * FS_G + (fh * FW + fw) * FS_SPATIAL + (group % 4);
         } else if (!use_dot) {
-            return group * FS_G + (offset / 4) * FS_OCB +
-                   (fh * FW + fw) * FS_SPATIAL + c * 4 + (offset % 4);
+            return group * FS_G + (offset / 4) * FS_OCB + (fh * FW + fw) * FS_SPATIAL +
+                   c * 4 + (offset % 4);
         } else {
             megdnn_assert(use_dot);
-            return group * FS_G + (offset / 4) * FS_OCB +
-                   (fh * FW + fw) * FS_SPATIAL + (c / 4) * 16 +
-                   (offset % 4) * 4 + (c % 4);
+            return group * FS_G + (offset / 4) * FS_OCB + (fh * FW + fw) * FS_SPATIAL +
+                   (c / 4) * 16 + (offset % 4) * 4 + (c % 4);
         }
     };
 
@@ -608,8 +603,7 @@ void compute2d_hwcd4(_megdnn_tensor_in src, _megdnn_tensor_in filter,
         for (size_t oc = 0; oc < OC; ++oc, gc_out.next())
             for (size_t oh = 0; oh < OH; ++oh)
                 for (size_t ow = 0; ow < OW; ++ow) {
-                    comp_type dval =
-                            dptr[get_linear_addr(n, oc, oh, ow, dst.layout)];
+                    comp_type dval = dptr[get_linear_addr(n, oc, oh, ow, dst.layout)];
                     Strategy::init_dval(dval);
                     ftype* fptr_cur = FilterVisitor::template get_current_ptr(
                             fptr, n, oc, oh, ow, filter_sizes);
@@ -627,26 +621,25 @@ void compute2d_hwcd4(_megdnn_tensor_in src, _megdnn_tensor_in filter,
                                     stype& sval = sptr[get_linear_addr(
                                             n, ic, ih, iw, src.layout)];
                                     ftype& fval = fptr_cur[get_filter_addr(
-                                            gc_out.cur_grp, gc_out.cur_off, fh,
-                                            fw, ic - ic0)];
-                                    Strategy::on(sval, fval, dval,
-                                                 src.layout.dtype,
-                                                 filter_meta.dtype,
-                                                 dst.layout.dtype);
+                                            gc_out.cur_grp, gc_out.cur_off, fh, fw,
+                                            ic - ic0)];
+                                    Strategy::on(
+                                            sval, fval, dval, src.layout.dtype,
+                                            filter_meta.dtype, dst.layout.dtype);
                                 }
                             }
                         }
                     Strategy::write(
-                            dval,
-                            dptr[get_linear_addr(n, oc, oh, ow, dst.layout)]);
+                            dval, dptr[get_linear_addr(n, oc, oh, ow, dst.layout)]);
                 }
     }
 }
 
 //! forward with only filter ptr
 template <typename stype, typename ftype, typename dtype, typename comp_type>
-void forward(_megdnn_tensor_in src, const ftype* fptr, _megdnn_tensor_out dst,
-             const Convolution::CanonizedFilterMeta& filter_meta) {
+void forward(
+        _megdnn_tensor_in src, const ftype* fptr, _megdnn_tensor_out dst,
+        const Convolution::CanonizedFilterMeta& filter_meta) {
     megdnn_assert(filter_meta.spatial_ndim == 2);
     megdnn_assert(
             filter_meta.format == param::Convolution::Format::NCHW ||
@@ -664,9 +657,9 @@ void forward(_megdnn_tensor_in src, const ftype* fptr, _megdnn_tensor_out dst,
 
 //! forward with full filter (for API compatibility)
 template <typename stype, typename ftype, typename dtype, typename comp_type>
-void forward(_megdnn_tensor_in src, _megdnn_tensor_in filter,
-             _megdnn_tensor_out dst,
-             const Convolution::CanonizedFilterMeta& filter_meta) {
+void forward(
+        _megdnn_tensor_in src, _megdnn_tensor_in filter, _megdnn_tensor_out dst,
+        const Convolution::CanonizedFilterMeta& filter_meta) {
     if (filter_meta.format == param::Convolution::Format::NHWCD4) {
         return compute2d_hwcd4<stype, ftype, dtype, comp_type, StrategyFwd>(
                 src, filter, dst, filter_meta);
@@ -676,9 +669,9 @@ void forward(_megdnn_tensor_in src, _megdnn_tensor_in filter,
 }
 
 template <typename ftype, typename dtype, typename gtype>
-void backward_data(_megdnn_tensor_in filter, _megdnn_tensor_in diff,
-                   _megdnn_tensor_out grad,
-                   const Convolution::CanonizedFilterMeta& filter_meta) {
+void backward_data(
+        _megdnn_tensor_in filter, _megdnn_tensor_in diff, _megdnn_tensor_out grad,
+        const Convolution::CanonizedFilterMeta& filter_meta) {
     memset(grad.raw_ptr, 0, grad.layout.span().dist_byte());
     megdnn_assert(filter_meta.spatial_ndim == 2);
     if (filter_meta.format == param::Convolution::Format::NHWCD4) {
@@ -690,20 +683,22 @@ void backward_data(_megdnn_tensor_in filter, _megdnn_tensor_in diff,
 }
 
 template <typename stype, typename dtype, typename gtype>
-void backward_filter(_megdnn_tensor_in src, _megdnn_tensor_in diff,
-                     _megdnn_tensor_out grad,
-                     const Convolution::CanonizedFilterMeta& filter_meta) {
+void backward_filter(
+        _megdnn_tensor_in src, _megdnn_tensor_in diff, _megdnn_tensor_out grad,
+        const Convolution::CanonizedFilterMeta& filter_meta) {
     memset(grad.raw_ptr, 0, grad.layout.span().dist_byte());
     megdnn_assert(filter_meta.spatial_ndim == 2);
     compute2d<stype, gtype, dtype, dtype, StrategyBwdFlt>(
             src, grad.compatible_ptr<gtype>(), diff, filter_meta);
 }
 
-template <typename stype, typename ftype, typename dtype, typename comp_type,
-          typename FilterMeta, typename FilterVisitor = ConvFilterVisitor>
-void forward_bias(_megdnn_tensor_in src, _megdnn_tensor_in filter,
-                  _megdnn_tensor_in bias, _megdnn_tensor_out dst,
-                  dt_byte* /* workspace_ptr */, const FilterMeta& filter_meta) {
+template <
+        typename stype, typename ftype, typename dtype, typename comp_type,
+        typename FilterMeta, typename FilterVisitor = ConvFilterVisitor>
+void forward_bias(
+        _megdnn_tensor_in src, _megdnn_tensor_in filter, _megdnn_tensor_in bias,
+        _megdnn_tensor_out dst, dt_byte* /* workspace_ptr */,
+        const FilterMeta& filter_meta) {
     megdnn_assert(filter_meta.spatial_ndim == 2);
     switch (filter_meta.format) {
         case param::Convolution::Format::NCHW:
@@ -720,14 +715,15 @@ void forward_bias(_megdnn_tensor_in src, _megdnn_tensor_in filter,
         case param::Convolution::Format::NCHW32_NCHW4:
         case param::Convolution::Format::CHWN4:
         case param::Convolution::Format::NCHW64:
-            compute2d<stype, ftype, dtype, comp_type, StrategyFwd, FilterMeta,
-                      FilterVisitor>(src, filter.compatible_ptr<ftype>(), dst,
-                                     filter_meta);
+            compute2d<
+                    stype, ftype, dtype, comp_type, StrategyFwd, FilterMeta,
+                    FilterVisitor>(
+                    src, filter.compatible_ptr<ftype>(), dst, filter_meta);
             break;
         case param::Convolution::Format::NHWCD4:
-            compute2d_hwcd4<stype, ftype, dtype, comp_type, StrategyFwd,
-                            FilterMeta, FilterVisitor>(src, filter, dst,
-                                                       filter_meta);
+            compute2d_hwcd4<
+                    stype, ftype, dtype, comp_type, StrategyFwd, FilterMeta,
+                    FilterVisitor>(src, filter, dst, filter_meta);
             break;
         default:
             megdnn_assert_internal(0);
@@ -771,26 +767,25 @@ void forward_bias(_megdnn_tensor_in src, _megdnn_tensor_in filter,
                 }
                 break;
             };
-#define BIAS_ADD_NCHWx(_pack_size)                                        \
-    do {                                                                  \
-        megdnn_assert(dst.layout.is_contiguous());                        \
-        int dst_batch = dst.layout.shape[0];                              \
-        int dst_channel = dst.layout.shape[1] * (_pack_size);             \
-        int chann_stride = dst.layout.shape[2] * dst.layout.shape[3];     \
-        dtype* dst_ptr = dst.compatible_ptr<dtype>();                     \
-        for (int batch = 0; batch < dst_batch; ++batch) {                 \
-            for (int chan = 0; chan < dst_channel; ++chan) {              \
-                dtype bias_val = bias.compatible_ptr<dtype>()[chan];      \
-                for (int i = 0; i < chann_stride; ++i) {                  \
-                    int idx = batch * dst_channel * chann_stride +        \
-                              (chan / (_pack_size)) *                     \
-                                      (chann_stride * (_pack_size)) +     \
-                              i * (_pack_size) + chan % (_pack_size);     \
-                    dst_ptr[idx] = static_cast<comp_type>(dst_ptr[idx]) + \
-                                   static_cast<comp_type>(bias_val);      \
-                }                                                         \
-            }                                                             \
-        }                                                                 \
+#define BIAS_ADD_NCHWx(_pack_size)                                                    \
+    do {                                                                              \
+        megdnn_assert(dst.layout.is_contiguous());                                    \
+        int dst_batch = dst.layout.shape[0];                                          \
+        int dst_channel = dst.layout.shape[1] * (_pack_size);                         \
+        int chann_stride = dst.layout.shape[2] * dst.layout.shape[3];                 \
+        dtype* dst_ptr = dst.compatible_ptr<dtype>();                                 \
+        for (int batch = 0; batch < dst_batch; ++batch) {                             \
+            for (int chan = 0; chan < dst_channel; ++chan) {                          \
+                dtype bias_val = bias.compatible_ptr<dtype>()[chan];                  \
+                for (int i = 0; i < chann_stride; ++i) {                              \
+                    int idx = batch * dst_channel * chann_stride +                    \
+                              (chan / (_pack_size)) * (chann_stride * (_pack_size)) + \
+                              i * (_pack_size) + chan % (_pack_size);                 \
+                    dst_ptr[idx] = static_cast<comp_type>(dst_ptr[idx]) +             \
+                                   static_cast<comp_type>(bias_val);                  \
+                }                                                                     \
+            }                                                                         \
+        }                                                                             \
     } while (0)
             case Format::NCHW44:
             case Format::NCHW44_DOT:
@@ -803,7 +798,7 @@ void forward_bias(_megdnn_tensor_in src, _megdnn_tensor_in filter,
                 BIAS_ADD_NCHWx(8);
                 break;
             };
-            case Format::NCHW4_NCHW32: 
+            case Format::NCHW4_NCHW32:
             case Format::NCHW32: {
                 BIAS_ADD_NCHWx(32);
                 break;
@@ -816,33 +811,31 @@ void forward_bias(_megdnn_tensor_in src, _megdnn_tensor_in filter,
                 BIAS_ADD_NCHWx(64);
                 break;
             };
-#define BIAS_ADD_CHWNx(_pack_size)                                            \
-    do {                                                                      \
-        megdnn_assert(dst.layout.is_contiguous());                            \
-        int dst_batch = dst.layout.shape[3];                                  \
-        int dst_channel = dst.layout.shape[0] * (_pack_size);                 \
-        int chann_stride =                                                    \
-                dst.layout.shape[1] * dst.layout.shape[2] * dst_batch;        \
-        dtype* dst_ptr = dst.compatible_ptr<dtype>();                         \
-        for (int chan = 0; chan < dst_channel; ++chan) {                      \
-            dtype bias_val = bias.compatible_ptr<dtype>()[chan];              \
-            for (int i = 0; i < chann_stride; ++i) {                          \
-                int idx =                                                     \
-                        (chan / (_pack_size)) * chann_stride * (_pack_size) + \
-                        i * (_pack_size) + chan % (_pack_size);               \
-                dst_ptr[idx] = static_cast<comp_type>(dst_ptr[idx]) +         \
-                               static_cast<comp_type>(bias_val);              \
-            }                                                                 \
-        }                                                                     \
+#define BIAS_ADD_CHWNx(_pack_size)                                                \
+    do {                                                                          \
+        megdnn_assert(dst.layout.is_contiguous());                                \
+        int dst_batch = dst.layout.shape[3];                                      \
+        int dst_channel = dst.layout.shape[0] * (_pack_size);                     \
+        int chann_stride = dst.layout.shape[1] * dst.layout.shape[2] * dst_batch; \
+        dtype* dst_ptr = dst.compatible_ptr<dtype>();                             \
+        for (int chan = 0; chan < dst_channel; ++chan) {                          \
+            dtype bias_val = bias.compatible_ptr<dtype>()[chan];                  \
+            for (int i = 0; i < chann_stride; ++i) {                              \
+                int idx = (chan / (_pack_size)) * chann_stride * (_pack_size) +   \
+                          i * (_pack_size) + chan % (_pack_size);                 \
+                dst_ptr[idx] = static_cast<comp_type>(dst_ptr[idx]) +             \
+                               static_cast<comp_type>(bias_val);                  \
+            }                                                                     \
+        }                                                                         \
     } while (0)
             case Format::CHWN4: {
                 BIAS_ADD_CHWNx(4);
                 break;
             }
-            case Format::NCHW4_NHWC: 
+            case Format::NCHW4_NHWC:
             case Format::NHWC: {
-                int dst_nhw = dst.layout.shape[0] * dst.layout.shape[1] *
-                              dst.layout.shape[2];
+                int dst_nhw =
+                        dst.layout.shape[0] * dst.layout.shape[1] * dst.layout.shape[2];
                 int dst_channel = dst.layout.shape[3];
                 dtype* dst_ptr = dst.compatible_ptr<dtype>();
 
@@ -864,16 +857,14 @@ void forward_bias(_megdnn_tensor_in src, _megdnn_tensor_in filter,
                         for (size_t cb = 0; cb < dst.layout[2]; cb++) {
                             for (size_t w = 0; w < dst.layout[3]; w++) {
                                 for (size_t i = 0; i < 4; i++) {
-                                    auto ptr = dst_ptr +
-                                               n * dst.layout.stride[0] +
+                                    auto ptr = dst_ptr + n * dst.layout.stride[0] +
                                                h * dst.layout.stride[1] +
                                                cb * dst.layout.stride[2] +
                                                w * dst.layout.stride[3] +
                                                i * dst.layout.stride[4];
-                                    comp_type val =
-                                            static_cast<comp_type>(ptr[0]) +
-                                            static_cast<comp_type>(
-                                                    bias_ptr[cb * 4 + i]);
+                                    comp_type val = static_cast<comp_type>(ptr[0]) +
+                                                    static_cast<comp_type>(
+                                                            bias_ptr[cb * 4 + i]);
                                     ptr[0] = val;
                                 }
                             }

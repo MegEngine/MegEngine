@@ -35,8 +35,7 @@ const char* dtype_to_cstr(DType dtype) {
         return "__half";
     if (dtype == dtype::Float32())
         return "float";
-    mgb_throw(GraphError, "unsupported output dtype %s in JIT fusion",
-              dtype.name());
+    mgb_throw(GraphError, "unsupported output dtype %s in JIT fusion", dtype.name());
 }
 
 std::string gen_fastdiv_offset(size_t nr_inps) {
@@ -80,15 +79,16 @@ std::string gen_fastdiv_offset(size_t nr_inps) {
 }
 
 ASTPtr gen_data_ast(size_t input_id, const JITExecutor::Args::Data& n) {
-    auto res = ssprintf("(static_cast<%s*>(data.inputs[%zu]))[offset_%zu]",
-                        dtype_to_cstr(n.layout.dtype), input_id, input_id);
+    auto res = ssprintf(
+            "(static_cast<%s*>(data.inputs[%zu]))[offset_%zu]",
+            dtype_to_cstr(n.layout.dtype), input_id, input_id);
     return ASTPtr::make<VariableAST>(res);
 }
 
 //! generate code to access input values in the kernel
-void gen_input_code(str_util::StrReplaceMap& replace_map, VarNode2AST& var2ast,
-                    const JITExecutor::Args& args,
-                    const PlaceholderArray& placeholders) {
+void gen_input_code(
+        str_util::StrReplaceMap& replace_map, VarNode2AST& var2ast,
+        const JITExecutor::Args& args, const PlaceholderArray& placeholders) {
     std::string decl_exps_str, assign_exps_str, decl_fastdiv_offset_str;
     for (size_t i = 0; i < args.inputs.size(); i++) {
         ASTPtr elem_var = ASTPtr::make<VariableAST>("x" + std::to_string(i));
@@ -99,8 +99,7 @@ void gen_input_code(str_util::StrReplaceMap& replace_map, VarNode2AST& var2ast,
         decl_exps_str += elem_decl->code_gen();
         assign_exps_str += elem_assign->code_gen();
 
-        ASTPtr offset_var =
-                ASTPtr::make<VariableAST>("offset_" + std::to_string(i));
+        ASTPtr offset_var = ASTPtr::make<VariableAST>("offset_" + std::to_string(i));
         ASTPtr offset_decl = ASTPtr::make<DeclIntAST>(offset_var);
         decl_fastdiv_offset_str += offset_decl->code_gen();
     }
@@ -213,8 +212,7 @@ extern "C" __global__ void {{KERNEL_NAME}} (Data data, size_t num_elements,
     str_util::StrReplaceMap source_replace_map;
 
     // add inputs to the replace map
-    gen_input_code(source_replace_map, var2ast, args,
-                   internal_graph.placeholders());
+    gen_input_code(source_replace_map, var2ast, args, internal_graph.placeholders());
 
     // add other oprs
     std::string internal_decl_exps_str, internal_assign_exps_str;
@@ -224,16 +222,14 @@ extern "C" __global__ void {{KERNEL_NAME}} (Data data, size_t num_elements,
         if (opr->same_type<JITPlaceholder>()) {
             return;
         }
-        ASTPtr elem_var =
-                ASTPtr::make<VariableAST>("y" + std::to_string(cur_opr_cnt));
+        ASTPtr elem_var = ASTPtr::make<VariableAST>("y" + std::to_string(cur_opr_cnt));
         ASTPtr elem_val = gen_opr_ast(opr, var2ast);
         ASTPtr elem_decl = ASTPtr::make<DeclFloatAST>(elem_var);
         ASTPtr elem_assign = ASTPtr::make<AssignAST>(elem_var, elem_val);
         var2ast[opr->output(0)] = elem_var;
         internal_decl_exps_str += elem_decl->code_gen();
         internal_assign_exps_str += elem_assign->code_gen();
-    }}
-            .add(internal_graph.output());
+    }}.add(internal_graph.output());
 
     str_util::append_replace_map(
             source_replace_map,
@@ -243,8 +239,7 @@ extern "C" __global__ void {{KERNEL_NAME}} (Data data, size_t num_elements,
              {"{{INTERNAL_DECL_EXPRS}}", internal_decl_exps_str},
              {"{{INTERNAL_ASSIGN_EXPRS}}", internal_assign_exps_str},
              {"{{EXP}}", var2ast.at(internal_graph.output())->code_gen()},
-             {"{{OUTPUT_DTYPE}}",
-              dtype_to_cstr(args.outputs[0].layout.dtype)}});
+             {"{{OUTPUT_DTYPE}}", dtype_to_cstr(args.outputs[0].layout.dtype)}});
 
     str_util::replace_all_pairs_inplace(cuda_kernel, source_replace_map);
     str_util::replace_all_pairs_inplace(cuda_kernel, source_replace_map);
@@ -252,8 +247,8 @@ extern "C" __global__ void {{KERNEL_NAME}} (Data data, size_t num_elements,
     auto kernel_name = ssprintf(
             "jit_nvrtc_%" PRIx64,
             XXHash{}.update(cuda_kernel.data(), cuda_kernel.size()).digest());
-    str_util::replace_all_pairs_inplace(cuda_kernel,
-                                        {{"{{KERNEL_NAME}}", kernel_name}});
+    str_util::replace_all_pairs_inplace(
+            cuda_kernel, {{"{{KERNEL_NAME}}", kernel_name}});
 
     if (ExecutableHelper::keep_interm()) {
         ExecutableHelper::get().write_file(

@@ -14,6 +14,33 @@
 * MacOS cross build IOS           (ok)
 
 # Build env prepare
+## Prerequisites
+
+Most of the dependencies of MegBrain(MegEngine) are located in [third_party](../../third_party) directory, which can be prepared by executing:
+
+```bash
+./third_party/prepare.sh
+./third_party/install-mkl.sh
+```
+Windows shell env(bash from windows-git), infact if you can use git command on Windows, which means you always install bash.exe at the same dir of git.exe, find it, then you can prepare third-party code by
+
+* command:
+```
+bash.exe ./third_party/prepare.sh
+bash.exe ./third_party/install-mkl.sh
+if you are use github MegEngine and build for Windows XP, please
+	1: donwload mkl for xp from: http://registrationcenter-download.intel.com/akdlm/irc_nas/4617/w_mkl_11.1.4.237.exe
+	2: install exe, then from install dir:
+		2a: cp include file to third_party/mkl/x86_32/include/
+		2b: cp lib file to third_party/mkl/x86_32/lib/
+```
+
+But some dependencies need to be installed manually:
+
+* [CUDA](https://developer.nvidia.com/cuda-toolkit-archive)(>=10.1), [cuDNN](https://developer.nvidia.com/cudnn)(>=7.6) are required when building MegBrain with CUDA support.
+* [TensorRT](https://docs.nvidia.com/deeplearning/sdk/tensorrt-archived/index.html)(>=5.1.5) is required when building with TensorRT support.
+* LLVM/Clang(>=6.0) is required when building with Halide JIT support.
+* Python(>=3.5) and numpy are required to build Python modules.
 ## Package install
 ### Windows host build
 * commands:
@@ -74,7 +101,10 @@
 1: install Cmake, which version >= 3.15.2, ninja-build
 2: install gcc/g++, which version >= 6, (gcc/g++ >= 7, if need build training mode)
 3: install build-essential git git-lfs gfortran libgfortran-6-dev autoconf gnupg flex bison gperf curl zlib1g-dev gcc-multilib g++-multilib lib32ncurses5-dev libxml2-utils xsltproc unzip libtool librdmacm-dev rdmacm-utils python3-dev python3-numpy texinfo
-4: CUDA env(if enable CUDA), version detail refer to README.md
+4: CUDA env(if build with CUDA), please export CUDA/CUDNN/TRT env, for example:
+export CUDA_ROOT_DIR=/path/to/cuda
+export CUDNN_ROOT_DIR=/path/to/cudnn
+export TRT_ROOT_DIR=/path/to/tensorrt
 ```
 
 ### MacOS host build
@@ -114,42 +144,38 @@ Now we only support cross build to IOS from MACOS
 1: install full xcode: https://developer.apple.com/xcode/
 ```
 
-## Third-party code prepare
-With bash env(Linux/MacOS/Unix-Like tools on Windows, eg: msys etc)
-
-* commands:
-```
-./third_party/prepare.sh
-./third_party/install-mkl.sh
-```
-
-Windows shell env(bash from windows-git), infact if you can use git command on Windows, which means you always install bash.exe at the same dir of git.exe, find it, then you can prepare third-party code by
-
-* command:
-```
-bash.exe ./third_party/prepare.sh
-bash.exe ./third_party/install-mkl.sh
-if you are use github MegEngine and build for Windows XP, please
-	1: donwload mkl for xp from: http://registrationcenter-download.intel.com/akdlm/irc_nas/4617/w_mkl_11.1.4.237.exe
-	2: install exe, then from install dir:
-		2a: cp include file to third_party/mkl/x86_32/include/
-		2b: cp lib file to third_party/mkl/x86_32/lib/
-```
-
 # How to build
 ## With bash env(Linux/MacOS/Windows-git-bash)
 
-* command:
-```
-1: host build just use scripts:scripts/cmake-build/host_build.sh
+* host build just use scripts:scripts/cmake-build/host_build.sh
+  builds MegBrain(MegEngine) that runs on the same host machine (i.e., no cross compiling)
+  The following command displays the usage:
+  ```
+  scripts/cmake-build/host_build.sh -h
+    more example:
     1a: build for Windows for XP (sp3): (dbg) EXTRA_CMAKE_ARGS="-DMGE_DEPLOY_INFERENCE_ON_WINDOWS_XP=ON" ./scripts/cmake-build/host_build.sh -m -d
                                         (opt) EXTRA_CMAKE_ARGS="-DMGE_DEPLOY_INFERENCE_ON_WINDOWS_XP=ON" ./scripts/cmake-build/host_build.sh -m
     2a: build for Windows for XP (sp2): (dbg) EXTRA_CMAKE_ARGS="-DMGE_DEPLOY_INFERENCE_ON_WINDOWS_XP_SP2=ON" ./scripts/cmake-build/host_build.sh -m -d
                                         (opt) EXTRA_CMAKE_ARGS="-DMGE_DEPLOY_INFERENCE_ON_WINDOWS_XP_SP2=ON" ./scripts/cmake-build/host_build.sh -m
-2: cross build to ARM-Android: scripts/cmake-build/cross_build_android_arm_inference.sh
-3: cross build to ARM-Linux:   scripts/cmake-build/cross_build_linux_arm_inference.sh
-4: cross build to IOS:         scripts/cmake-build/cross_build_ios_arm_inference.sh
-```
+  ```
+* cross build to ARM-Android: scripts/cmake-build/cross_build_android_arm_inference.sh
+  builds MegBrain(MegEngine) for inference on Android-ARM platforms.
+  The following command displays the usage:
+  ```
+  scripts/cmake-build/cross_build_android_arm_inference.sh -h
+  ```
+* cross build to ARM-Linux:   scripts/cmake-build/cross_build_linux_arm_inference.sh
+  builds MegBrain(MegEngine) for inference on Linux-ARM platforms.
+  The following command displays the usage:
+  ```
+  scripts/cmake-build/cross_build_linux_arm_inference.sh -h
+  ```
+* cross build to IOS:         scripts/cmake-build/cross_build_ios_arm_inference.sh
+  builds MegBrain(MegEngine) for inference on iOS (iPhone/iPad) platforms.
+  The following command displays the usage:
+  ```
+  scripts/cmake-build/cross_build_ios_arm_inference.sh -h
+  ```
 
 ## Visual Studio GUI(only for Windows host)
 

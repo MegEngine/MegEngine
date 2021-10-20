@@ -22,8 +22,7 @@ using namespace cuda;
 using namespace convolution;
 
 #if CUDA_VERSION >= 10020
-std::string ConvBiasForwardImpl::AlgoInt4NCHW64IMMAImplicitGemmBase::param()
-        const {
+std::string ConvBiasForwardImpl::AlgoInt4NCHW64IMMAImplicitGemmBase::param() const {
     std::string ret;
     serialize_write_pod(m_algo_param, ret);
     return ret;
@@ -76,6 +75,14 @@ bool ConvBiasForwardImpl::AlgoInt4NCHW64IMMAImplicitGemmBase::is_available(
     if (fh * fw > kMaxFilterPixels)
         return false;
 
+    bool use_conv_filter_unity_opt = (fh == 1 && fw == 1);
+    bool without_shared_load = true;
+    const auto* op = get_cutlass_conv_op(
+            args, ConvOperator::kFprop, ConvType::kConvolution,
+            use_conv_filter_unity_opt, without_shared_load);
+    if (op == nullptr)
+        return false;
+
     return true;
 }
 
@@ -83,13 +90,10 @@ void ConvBiasForwardImpl::AlgoInt4NCHW64IMMAImplicitGemmBase::exec(
         const ExecArgs& args) const {
     auto&& param = args.opr->param();
     auto&& fm = args.filter_meta;
-    size_t n = args.src_layout->operator[](0),
-           ci = args.src_layout->operator[](1) * 64,
-           hi = args.src_layout->operator[](2),
-           wi = args.src_layout->operator[](3);
+    size_t n = args.src_layout->operator[](0), ci = args.src_layout->operator[](1) * 64,
+           hi = args.src_layout->operator[](2), wi = args.src_layout->operator[](3);
     size_t co = args.dst_layout->operator[](1) * 64,
-           ho = args.dst_layout->operator[](2),
-           wo = args.dst_layout->operator[](3);
+           ho = args.dst_layout->operator[](2), wo = args.dst_layout->operator[](3);
     UNPACK_CONV_PARAMETER(fm, param);
     MARK_USED_VAR
 
@@ -110,39 +114,37 @@ void ConvBiasForwardImpl::AlgoInt4NCHW64IMMAImplicitGemmBase::exec(
     float dst_scale = 0.f;
     float threshold = 0.f;
     uint8_t src_zero = 0;
-    bool load_from_const = !(fh == 1 && fw == 1);
+    bool use_conv_filter_unity_opt = (fh == 1 && fw == 1);
     bool without_shared_load = true;
 
     if (args.dst_layout->dtype.enumv() == DTypeEnum::Quantized4Asymm) {
-        dst_scale =
-                args.dst_layout->dtype.param<dtype::Quantized4Asymm>().scale;
-        src_zero = args.src_layout->dtype.param<dtype::Quantized4Asymm>()
-                           .zero_point;
+        dst_scale = args.dst_layout->dtype.param<dtype::Quantized4Asymm>().scale;
+        src_zero = args.src_layout->dtype.param<dtype::Quantized4Asymm>().zero_point;
     } else {  // DTypeEnum::QuantizedS4
         dst_scale = args.dst_layout->dtype.param<dtype::QuantizedS4>().scale;
     }
 
     cudaStream_t stream = cuda_stream(args.opr->handle());
 
-    const auto* op = get_cutlass_conv_op(args, ConvOperator::kFprop,
-                                         ConvType::kConvolution,
-                                         load_from_const, without_shared_load);
+    const auto* op = get_cutlass_conv_op(
+            args, ConvOperator::kFprop, ConvType::kConvolution,
+            use_conv_filter_unity_opt, without_shared_load);
 
-    execute_cutlass_conv_op(op, args.src_tensor->raw_ptr, filter_ptr, bias_ptr,
-                            z_ptr, args.dst_tensor->raw_ptr, nullptr, n, hi, wi,
-                            ci, co, fh, fw, ho, wo, ph, pw, sh, sw, dh, dw,
-                            &alpha, &beta, &gamma, &delta, &theta, &threshold,
-                            &dst_scale, stream, &src_zero);
+    execute_cutlass_conv_op(
+            op, args.src_tensor->raw_ptr, filter_ptr, bias_ptr, z_ptr,
+            args.dst_tensor->raw_ptr, nullptr, n, hi, wi, ci, co, fh, fw, ho, wo, ph,
+            pw, sh, sw, dh, dw, &alpha, &beta, &gamma, &delta, &theta, &threshold,
+            &dst_scale, stream, &src_zero);
 
     after_kernel_launch();
 }
 
 std::string ConvBiasForwardImpl::AlgoInt4NCHW64IMMAImplicitGemmBase::to_string(
         AlgoParam algo_param) {
-    return ssprintf("%dX%dX%d_%dX%dX%d_%d", algo_param.threadblock_m,
-                    algo_param.threadblock_n, algo_param.threadblock_k,
-                    algo_param.warp_m, algo_param.warp_n, algo_param.warp_k,
-                    algo_param.stage);
+    return ssprintf(
+            "%dX%dX%d_%dX%dX%d_%d", algo_param.threadblock_m, algo_param.threadblock_n,
+            algo_param.threadblock_k, algo_param.warp_m, algo_param.warp_n,
+            algo_param.warp_k, algo_param.stage);
 }
 
 void ConvBiasForwardImpl::AlgoInt4NCHW64IMMAImplicitGemmBase::reorder_filter(
@@ -157,8 +159,8 @@ void ConvBiasForwardImpl::AlgoInt4NCHW64IMMAImplicitGemmBase::reorder_filter(
     // filter: KCRS64 => CRSK64 and reorder oc
     cutlass_wrapper::reorder_ncxhwx_imma_filter<4, 64>(
             reinterpret_cast<int8_t*>(reordered_filter),
-            reinterpret_cast<int8_t*>(args.filter_tensor->raw_ptr), co, ci, fh,
-            fw, true, stream);
+            reinterpret_cast<int8_t*>(args.filter_tensor->raw_ptr), co, ci, fh, fw,
+            true, stream);
 }
 #endif
 

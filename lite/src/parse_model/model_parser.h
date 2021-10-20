@@ -10,11 +10,11 @@
  */
 
 #pragma once
-#include "lite/global.h"
 #include "../network_impl_base.h"
+#include "lite/global.h"
 
-#include "pack_model_generated.h"
 #include <flatbuffers/flatbuffers.h>
+#include "pack_model_generated.h"
 
 #include <unordered_map>
 
@@ -39,8 +39,7 @@ public:
             std::string& extra_info) const;
 
     //! parse the model and decrypt the model
-    std::shared_ptr<void> parse_model(size_t& model_length,
-                                      const Config& config) const;
+    std::shared_ptr<void> parse_model(size_t& model_length, const Config& config) const;
 
 private:
     //! parse the header of the model and store the model related information
@@ -49,9 +48,9 @@ private:
 
     //! decrypt a memory with length of length and decryption method name
     //! decrypt_name
-    std::shared_ptr<void> decrypt_memory(const uint8_t* data, size_t length,
-                                         const std::string decryption_name,
-                                         size_t& result_length) const;
+    std::shared_ptr<void> decrypt_memory(
+            const uint8_t* data, size_t length, const std::string decryption_name,
+            size_t& result_length) const;
 
 private:
     std::string m_model_name;

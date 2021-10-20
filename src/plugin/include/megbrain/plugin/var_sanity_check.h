@@ -51,8 +51,8 @@ class VarSanityCheck final : public PluginBase {
 
         void add_producer(VarNode* var);
         void add_receiver(VarNode* var);
-        void on_var_produced(VarSanityCheck* checker, VarNode* var,
-                             ChecksumResult checksum);
+        void on_var_produced(
+                VarSanityCheck* checker, VarNode* var, ChecksumResult checksum);
         void on_var_received(VarNode* var);
     };
 
@@ -75,18 +75,17 @@ class VarSanityCheck final : public PluginBase {
     ThinHashSet<VarNode*> m_modified_vars;
     MGB_MUTEX m_id2chksum_mtx;
 
-    typedef void (VarSanityCheck::*input_checker_fn)(cg::OperatorNodeBase*,
-                                                     VarNode*);
+    typedef void (VarSanityCheck::*input_checker_fn)(cg::OperatorNodeBase*, VarNode*);
 
     void on_var_produced(VarNode* var);
     void on_var_received(cg::OperatorNodeBase* recv_opr, VarNode* var);
     //! check after opr exec that input is not modified
     void check_input_unmodified(cg::OperatorNodeBase* recv_opr, VarNode* var);
-    void check_single_input(bool add_debug_log, cg::OperatorNodeBase* recv_opr,
-                            VarNode* var);
-    void setup_input_checker(bool add_debug_log, cg::OperatorNodeBase* opr,
-                             cg::GraphExecutable::ExecEnv& env,
-                             input_checker_fn checker);
+    void check_single_input(
+            bool add_debug_log, cg::OperatorNodeBase* recv_opr, VarNode* var);
+    void setup_input_checker(
+            bool add_debug_log, cg::OperatorNodeBase* opr,
+            cg::GraphExecutable::ExecEnv& env, input_checker_fn checker);
 
     static std::string str(const ChecksumResult& result);
 

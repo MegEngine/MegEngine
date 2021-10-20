@@ -167,13 +167,11 @@ public:
 
     TensorIter(const TensorND& tensor) : m_tensor(tensor) {}
 
-    Iter begin() const {
-        return Iter::make(const_cast<TensorND&>(m_tensor), 0);
-    }
+    Iter begin() const { return Iter::make(const_cast<TensorND&>(m_tensor), 0); }
 
     Iter end() const {
-        return Iter::make(const_cast<TensorND&>(m_tensor),
-                          m_tensor.layout.total_nr_elems());
+        return Iter::make(
+                const_cast<TensorND&>(m_tensor), m_tensor.layout.total_nr_elems());
     }
 };
 /*!

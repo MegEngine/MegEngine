@@ -71,6 +71,9 @@ ConvBiasForwardImpl::AlgoPack::AlgoPack() {
     for (auto&& algo : int8_nchw32_imma) {
         all_algos.push_back(&algo);
     }
+    for (auto&& algo : int8_nhwc_imma) {
+        all_algos.push_back(&algo);
+    }
     for (auto&& algo : int4_int4_nchw64_imma) {
         all_algos.push_back(&algo);
     }
@@ -106,18 +109,17 @@ MEGDNN_DEF_GET_ALGO_FROM_DESC(ConvBiasForwardImpl)
 
 ConvBiasForwardImpl::AlgoBase::SizeArgs::SizeArgs(
         const ConvBiasForwardImpl* o, const TensorLayout& src,
-        const TensorLayout& filter, const TensorLayout& bias,
-        const TensorLayout& z, const TensorLayout& dst,
-        const PreprocessedFilter* preprocessed_filter)
-        : SizeArgs(o, src, filter,
-                   o->make_canonized_filter_meta(src.ndim, filter), bias, z,
-                   dst, preprocessed_filter) {}
+        const TensorLayout& filter, const TensorLayout& bias, const TensorLayout& z,
+        const TensorLayout& dst, const PreprocessedFilter* preprocessed_filter)
+        : SizeArgs(
+                  o, src, filter, o->make_canonized_filter_meta(src.ndim, filter), bias,
+                  z, dst, preprocessed_filter) {}
 
 ConvBiasForwardImpl::AlgoBase::SizeArgs::SizeArgs(
         const ConvBiasForwardImpl* o, const TensorLayout& src,
         const TensorLayout& filter, const CanonizedFilterMeta& filter_meta,
-        const TensorLayout& bias, const TensorLayout& z,
-        const TensorLayout& dst, const PreprocessedFilter* preprocessed_filter)
+        const TensorLayout& bias, const TensorLayout& z, const TensorLayout& dst,
+        const PreprocessedFilter* preprocessed_filter)
         : BiasForwardSizeArgs{concrete_handle(o->handle()),
                               &src,
                               &filter,
@@ -130,12 +132,12 @@ ConvBiasForwardImpl::AlgoBase::SizeArgs::SizeArgs(
           preprocessed_filter{preprocessed_filter} {}
 
 ConvBiasForwardImpl::AlgoBase::ExecArgs::ExecArgs(
-        ConvBiasForwardImpl* opr, _megdnn_tensor_in src,
-        _megdnn_tensor_in filter, _megdnn_tensor_in bias, _megdnn_tensor_in z,
-        _megdnn_tensor_out dst, _megdnn_workspace workspace,
-        const PreprocessedFilter* preprocessed_filter)
-        : SizeArgs(opr, src.layout, filter.layout, bias.layout, z.layout,
-                   dst.layout, preprocessed_filter),
+        ConvBiasForwardImpl* opr, _megdnn_tensor_in src, _megdnn_tensor_in filter,
+        _megdnn_tensor_in bias, _megdnn_tensor_in z, _megdnn_tensor_out dst,
+        _megdnn_workspace workspace, const PreprocessedFilter* preprocessed_filter)
+        : SizeArgs(
+                  opr, src.layout, filter.layout, bias.layout, z.layout, dst.layout,
+                  preprocessed_filter),
           src_tensor{&src},
           filter_tensor{&filter},
           bias_tensor{&bias},
@@ -169,9 +171,9 @@ std::string ConvBiasForwardImpl::AlgoBase::SizeArgs::to_string() const {
             "nonlinear_mode=%s",
             src_layout->to_string().c_str(), filter_layout->to_string().c_str(),
             bias_layout->to_string().c_str(), z_layout->to_string().c_str(),
-            dst_layout->to_string().c_str(), fm.padding[0], fm.padding[1],
-            fm.stride[0], fm.stride[1], fm.dilation[0], fm.dilation[1],
-            !fm.should_flip, src_layout->dtype.name(), dst_layout->dtype.name(),
+            dst_layout->to_string().c_str(), fm.padding[0], fm.padding[1], fm.stride[0],
+            fm.stride[1], fm.dilation[0], fm.dilation[1], !fm.should_flip,
+            src_layout->dtype.name(), dst_layout->dtype.name(),
             nonlinear_mode_str.c_str());
 }
 
@@ -197,46 +199,40 @@ void ConvBiasForwardImpl::AlgoPack::fill_imma_algos() {
     int8_nchw4_imma.push_back(
             {AlgoInt8NCHW4IMMAImplicitGemm::MMATileSize::IMMA8x32x16});
     int8_chwn4_imma_reorder_filter.push_back(
-            {AlgoInt8CHWN4IMMAImplicitGemmReorderFilter::MMATileSize::
-                     IMMA16x16x16});
+            {AlgoInt8CHWN4IMMAImplicitGemmReorderFilter::MMATileSize::IMMA16x16x16});
     int8_chwn4_imma_reorder_filter.push_back(
-            {AlgoInt8CHWN4IMMAImplicitGemmReorderFilter::MMATileSize::
-                     IMMA32x8x16});
+            {AlgoInt8CHWN4IMMAImplicitGemmReorderFilter::MMATileSize::IMMA32x8x16});
     int8_chwn4_imma_reorder_filter.push_back(
-            {AlgoInt8CHWN4IMMAImplicitGemmReorderFilter::MMATileSize::
-                     IMMA8x32x16});
+            {AlgoInt8CHWN4IMMAImplicitGemmReorderFilter::MMATileSize::IMMA8x32x16});
     int8_chwn4_imma_unroll_width.push_back(
-            {AlgoInt8CHWN4IMMAImplicitGemmUnrollWidth::MMATileSize::
-                     IMMA16x16x16});
+            {AlgoInt8CHWN4IMMAImplicitGemmUnrollWidth::MMATileSize::IMMA16x16x16});
     int8_chwn4_imma_unroll_width.push_back(
-            {AlgoInt8CHWN4IMMAImplicitGemmUnrollWidth::MMATileSize::
-                     IMMA32x8x16});
+            {AlgoInt8CHWN4IMMAImplicitGemmUnrollWidth::MMATileSize::IMMA32x8x16});
     int8_chwn4_imma_unroll_width.push_back(
-            {AlgoInt8CHWN4IMMAImplicitGemmUnrollWidth::MMATileSize::
-                     IMMA8x32x16});
+            {AlgoInt8CHWN4IMMAImplicitGemmUnrollWidth::MMATileSize::IMMA8x32x16});
 #if CUDA_VERSION >= 10020
     {
         using AlgoParam = AlgoInt8NCHW32IMMAImplicitGemm::AlgoParam;
-        int8_nchw32_imma.emplace_back(
-                AlgoParam{128, 256, 64, 64, 64, 64, 8, 8, 16, 2});
-        int8_nchw32_imma.emplace_back(
-                AlgoParam{256, 128, 64, 64, 64, 64, 8, 8, 16, 2});
-        int8_nchw32_imma.emplace_back(
-                AlgoParam{128, 128, 64, 64, 64, 64, 8, 8, 16, 2});
-        int8_nchw32_imma.emplace_back(
-                AlgoParam{128, 64, 64, 64, 32, 64, 8, 8, 16, 2});
-        int8_nchw32_imma.emplace_back(
-                AlgoParam{64, 128, 64, 32, 64, 64, 8, 8, 16, 2});
-        int8_nchw32_imma.emplace_back(
-                AlgoParam{128, 64, 32, 64, 32, 32, 8, 8, 16, 1});
-        int8_nchw32_imma.emplace_back(
-                AlgoParam{128, 32, 32, 64, 32, 32, 8, 8, 16, 1});
-        int8_nchw32_imma.emplace_back(
-                AlgoParam{64, 128, 32, 32, 64, 32, 8, 8, 16, 1});
-        int8_nchw32_imma.emplace_back(
-                AlgoParam{32, 128, 32, 32, 64, 32, 8, 8, 16, 1});
+        int8_nchw32_imma.emplace_back(AlgoParam{128, 256, 64, 64, 64, 64, 8, 8, 16, 2});
+        int8_nchw32_imma.emplace_back(AlgoParam{256, 128, 64, 64, 64, 64, 8, 8, 16, 2});
+        int8_nchw32_imma.emplace_back(AlgoParam{128, 128, 64, 64, 64, 64, 8, 8, 16, 2});
+        int8_nchw32_imma.emplace_back(AlgoParam{128, 64, 64, 64, 32, 64, 8, 8, 16, 2});
+        int8_nchw32_imma.emplace_back(AlgoParam{64, 128, 64, 32, 64, 64, 8, 8, 16, 2});
+        int8_nchw32_imma.emplace_back(AlgoParam{128, 64, 32, 64, 32, 32, 8, 8, 16, 1});
+        int8_nchw32_imma.emplace_back(AlgoParam{128, 32, 32, 64, 32, 32, 8, 8, 16, 1});
+        int8_nchw32_imma.emplace_back(AlgoParam{64, 128, 32, 32, 64, 32, 8, 8, 16, 1});
+        int8_nchw32_imma.emplace_back(AlgoParam{32, 128, 32, 32, 64, 32, 8, 8, 16, 1});
     }
-
+    {
+        using AlgoParam = AlgoInt8NHWCIMMAImplicitGemm::AlgoParam;
+        int8_nhwc_imma.emplace_back(AlgoParam{64, 16, 32, 64, 16, 32, 8, 8, 16, 2, 16});
+        int8_nhwc_imma.emplace_back(AlgoParam{64, 16, 32, 64, 16, 32, 8, 8, 16, 2, 8});
+        int8_nhwc_imma.emplace_back(AlgoParam{64, 16, 32, 64, 16, 32, 8, 8, 16, 2, 4});
+        int8_nhwc_imma.emplace_back(
+                AlgoParam{128, 32, 32, 64, 32, 32, 8, 8, 16, 1, 16});
+        int8_nhwc_imma.emplace_back(AlgoParam{128, 32, 32, 64, 32, 32, 8, 8, 16, 1, 8});
+        int8_nhwc_imma.emplace_back(AlgoParam{128, 32, 32, 64, 32, 32, 8, 8, 16, 1, 4});
+    }
     {
         using AlgoParam = AlgoInt4Int4NCHW64IMMAImplicitGemm::AlgoParam;
         int4_int4_nchw64_imma.emplace_back(
@@ -262,6 +258,12 @@ void ConvBiasForwardImpl::AlgoPack::fill_imma_algos() {
     {
         using AlgoParam = AlgoInt4Int4NHWCIMMAImplicitGemm::AlgoParam;
         int4_int4_nhwc_imma.emplace_back(
+                AlgoParam{128, 16, 64, 128, 16, 64, 8, 8, 32, 2, 32});
+        int4_int4_nhwc_imma.emplace_back(
+                AlgoParam{128, 16, 64, 128, 16, 64, 8, 8, 32, 2, 16});
+        int4_int4_nhwc_imma.emplace_back(
+                AlgoParam{128, 16, 64, 128, 16, 64, 8, 8, 32, 2, 8});
+        int4_int4_nhwc_imma.emplace_back(
                 AlgoParam{128, 32, 64, 64, 32, 64, 8, 8, 32, 1, 32});
         int4_int4_nhwc_imma.emplace_back(
                 AlgoParam{128, 32, 64, 64, 32, 64, 8, 8, 32, 1, 16});
@@ -276,6 +278,12 @@ void ConvBiasForwardImpl::AlgoPack::fill_imma_algos() {
     }
     {
         using AlgoParam = AlgoUInt4Int4NHWCIMMAImplicitGemm::AlgoParam;
+        uint4_int4_nhwc_imma.emplace_back(
+                AlgoParam{128, 16, 64, 128, 16, 64, 8, 8, 32, 2, 32});
+        uint4_int4_nhwc_imma.emplace_back(
+                AlgoParam{128, 16, 64, 128, 16, 64, 8, 8, 32, 2, 16});
+        uint4_int4_nhwc_imma.emplace_back(
+                AlgoParam{128, 16, 64, 128, 16, 64, 8, 8, 32, 2, 8});
         uint4_int4_nhwc_imma.emplace_back(
                 AlgoParam{128, 32, 64, 64, 32, 64, 8, 8, 32, 1, 32});
         uint4_int4_nhwc_imma.emplace_back(
@@ -295,46 +303,35 @@ void ConvBiasForwardImpl::AlgoPack::fill_imma_algos() {
 
 void ConvBiasForwardImpl::AlgoPack::fill_dp4a_algos() {
     using AlgoParam = AlgoInt8NCHW4DotProdImplicitGemm::AlgoParam;
-    int8_nchw4_dotprod.emplace_back(
-            AlgoParam{128, 128, 32, 64, 32, 32, 1, 1, 4, 2});
-    int8_nchw4_dotprod.emplace_back(
-            AlgoParam{128, 64, 32, 64, 32, 32, 1, 1, 4, 2});
-    int8_nchw4_dotprod.emplace_back(
-            AlgoParam{64, 128, 32, 64, 32, 32, 1, 1, 4, 2});
-    int8_nchw4_dotprod.emplace_back(
-            AlgoParam{32, 128, 32, 32, 64, 32, 1, 1, 4, 2});
-    int8_nchw4_dotprod.emplace_back(
-            AlgoParam{128, 32, 32, 64, 32, 32, 1, 1, 4, 2});
-    int8_nchw4_dotprod.emplace_back(
-            AlgoParam{32, 64, 32, 32, 64, 32, 1, 1, 4, 2});
-    int8_nchw4_dotprod.emplace_back(
-            AlgoParam{64, 32, 32, 64, 32, 32, 1, 1, 4, 2});
-    int8_nchw4_dotprod.emplace_back(
-            AlgoParam{16, 128, 16, 16, 128, 16, 1, 1, 4, 1});
-    int8_nchw4_dotprod.emplace_back(
-            AlgoParam{16, 64, 8, 16, 64, 8, 1, 1, 4, 2});
+    int8_nchw4_dotprod.emplace_back(AlgoParam{128, 128, 32, 64, 32, 32, 1, 1, 4, 2});
+    int8_nchw4_dotprod.emplace_back(AlgoParam{128, 64, 32, 64, 32, 32, 1, 1, 4, 2});
+    int8_nchw4_dotprod.emplace_back(AlgoParam{64, 128, 32, 64, 32, 32, 1, 1, 4, 2});
+    int8_nchw4_dotprod.emplace_back(AlgoParam{32, 128, 32, 32, 64, 32, 1, 1, 4, 2});
+    int8_nchw4_dotprod.emplace_back(AlgoParam{128, 32, 32, 64, 32, 32, 1, 1, 4, 2});
+    int8_nchw4_dotprod.emplace_back(AlgoParam{32, 64, 32, 32, 64, 32, 1, 1, 4, 2});
+    int8_nchw4_dotprod.emplace_back(AlgoParam{64, 32, 32, 64, 32, 32, 1, 1, 4, 2});
+    int8_nchw4_dotprod.emplace_back(AlgoParam{16, 128, 16, 16, 128, 16, 1, 1, 4, 1});
+    int8_nchw4_dotprod.emplace_back(AlgoParam{16, 64, 8, 16, 64, 8, 1, 1, 4, 2});
 }
 
-ConvBiasForwardImpl::AlgoBase*
-ConvBiasForwardImpl::AlgoPack::cudnn_conv_from_enum(
+ConvBiasForwardImpl::AlgoBase* ConvBiasForwardImpl::AlgoPack::cudnn_conv_from_enum(
         cudnnConvolutionFwdAlgo_t algo) {
     for (auto&& i : cudnn_convs) {
         if (i.cudnn_enum() == algo)
             return &i;
     }
-    megdnn_throw(ssprintf("can not find cudnn conv fwd algorithm %d",
-                          static_cast<int>(algo)));
+    megdnn_throw(ssprintf(
+            "can not find cudnn conv fwd algorithm %d", static_cast<int>(algo)));
 }
 
-ConvBiasForwardImpl::AlgoBase*
-ConvBiasForwardImpl::AlgoPack::cudnn_conv_bias_act_from_enum(
-        cudnnConvolutionFwdAlgo_t algo) {
+ConvBiasForwardImpl::AlgoBase* ConvBiasForwardImpl::AlgoPack::
+        cudnn_conv_bias_act_from_enum(cudnnConvolutionFwdAlgo_t algo) {
     for (auto&& i : cudnn_conv_bias_activations) {
         if (i.cudnn_enum() == algo)
             return &i;
     }
-    megdnn_throw(ssprintf("can not find cudnn conv bias act algorithm %d",
-                          static_cast<int>(algo)));
+    megdnn_throw(ssprintf(
+            "can not find cudnn conv bias act algorithm %d", static_cast<int>(algo)));
 }
 
 // vim: syntax=cpp.doxygen

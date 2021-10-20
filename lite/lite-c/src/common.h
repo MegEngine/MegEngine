@@ -52,12 +52,12 @@ int LiteHandleException(const std::exception& e);
     return 0;
 #else
 /*! \brief  macro to guard a function */
-#define LITE_CAPI_BEGIN()  {
+#define LITE_CAPI_BEGIN() {
 /*! \brief every function starts with LITE_CAPI_BEGIN();
  * ends with LITE_CAPI_END or LITE_CAPI_END_WITH_STMS
  */
-#define LITE_CAPI_END()                       \
-    }                                         \
+#define LITE_CAPI_END() \
+    }                   \
     return 0;
 #endif
 /*!

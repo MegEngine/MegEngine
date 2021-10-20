@@ -16,34 +16,31 @@
 namespace mgb {
 namespace opr {
 
-MGB_DEFINE_OPR_CLASS(Images2NeibsForward,
-        intl::MegDNNOprWrapperFwd<megdnn::Images2NeibsForward>) // {
+MGB_DEFINE_OPR_CLASS(
+        Images2NeibsForward, intl::MegDNNOprWrapperFwd<megdnn::Images2NeibsForward>) // {
+public:
+    Images2NeibsForward(
+            VarNode* src, const Param& param, const OperatorNodeConfig& config);
 
-    public:
-        Images2NeibsForward(VarNode *src,
-                const Param &param,
-                const OperatorNodeConfig &config);
-
-        static SymbolVar make(SymbolVar src,
-                const Param &param = {},
-                const OperatorNodeConfig &config = {});
+    static SymbolVar make(
+            SymbolVar src, const Param& param = {},
+            const OperatorNodeConfig& config = {});
 };
 using Images2Neibs = Images2NeibsForward;
 
-MGB_DEFINE_OPR_CLASS(Images2NeibsBackward,
-        intl::MegDNNOprWrapperBwd<megdnn::Images2NeibsBackward>) // {
+MGB_DEFINE_OPR_CLASS(
+        Images2NeibsBackward, intl::MegDNNOprWrapperBwd<megdnn::Images2NeibsBackward>) // {
+public:
+    Images2NeibsBackward(
+            VarNode* diff, VarNode* src_for_shape, const Param& param,
+            const OperatorNodeConfig& config);
 
-    public:
-        Images2NeibsBackward(VarNode *diff, VarNode *src_for_shape,
-                const Param &param,
-                const OperatorNodeConfig &config);
-
-        static SymbolVar make(SymbolVar diff, SymbolVar src_for_shape,
-                const Param &param = {},
-                const OperatorNodeConfig &config = {});
+    static SymbolVar make(
+            SymbolVar diff, SymbolVar src_for_shape, const Param& param = {},
+            const OperatorNodeConfig& config = {});
 };
 
-} // namespace opr
-} // namespace mgb
+}  // namespace opr
+}  // namespace mgb
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

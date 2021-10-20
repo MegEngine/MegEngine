@@ -28,8 +28,9 @@ using namespace megdnn;
 using namespace x86;
 
 MEGDNN_ATTRIBUTE_TARGET("fma")
-void add_update_fp32_fma(_megdnn_tensor_inout dest, _megdnn_tensor_in delta,
-                         const AddUpdate::Param& param) {
+void add_update_fp32_fma(
+        _megdnn_tensor_inout dest, _megdnn_tensor_in delta,
+        const AddUpdate::Param& param) {
     dt_float32 alpha(param.alpha), beta(param.beta), bias(param.bias);
     __m256 packed_alpha(_mm256_set1_ps(alpha));
     __m256 packed_beta(_mm256_set1_ps(beta));
@@ -64,8 +65,7 @@ void AddUpdateImpl::exec(_megdnn_tensor_inout dest, _megdnn_tensor_in delta) {
         dest.layout.is_contiguous() && delta.layout.eq_shape(dest.layout) &&
         dest.layout.dtype == delta.layout.dtype) {
         if (dest.layout.dtype == ::megdnn::dtype::Float32()) {
-            MEGDNN_DISPATCH_CPU_KERN_OPR(
-                    add_update_fp32_fma(dest, delta, m_param));
+            MEGDNN_DISPATCH_CPU_KERN_OPR(add_update_fp32_fma(dest, delta, m_param));
             return;
         }
     }

@@ -23,8 +23,7 @@ ROCMBenchmarker<Opr>::ROCMBenchmarker(Handle* handle_rocm, Handle* handle_naive)
           m_handle_rocm{handle_rocm},
           m_default_rng{new NormalRNG()},
           m_param{Param()},
-          m_device_timer{
-                  megdnn::rocm::concrete_handle(m_handle_rocm)->stream()} {}
+          m_device_timer{megdnn::rocm::concrete_handle(m_handle_rocm)->stream()} {}
 
 template <typename Opr>
 float ROCMBenchmarker<Opr>::exec(const TensorShapeArray& shapes) {
@@ -53,14 +52,13 @@ float ROCMBenchmarker<Opr>::exec(TensorLayoutArray layouts) {
         auto trans_func = [handle](const TensorLayout& layout) {
             auto span = layout.span();
             TensorND res;
-            res.raw_ptr = static_cast<uint8_t*>(
-                                  megdnn_malloc(handle, span.dist_byte())) +
-                          span.low_byte;
+            res.raw_ptr =
+                    static_cast<uint8_t*>(megdnn_malloc(handle, span.dist_byte())) +
+                    span.low_byte;
             res.layout = layout;
             return res;
         };
-        std::transform(layouts.begin(), layouts.end(), tensors.begin(),
-                       trans_func);
+        std::transform(layouts.begin(), layouts.end(), tensors.begin(), trans_func);
         return tensors;
     };
     auto tensors_cur = allocate(m_handle_rocm);
@@ -73,8 +71,7 @@ float ROCMBenchmarker<Opr>::exec(TensorLayoutArray layouts) {
             rng = m_default_rng.get();
         auto size = tensor.layout.span().high_byte;
         rng->gen(tensor);
-        megdnn_memcpy_H2D(m_handle_rocm, tensors_cur[i].raw_ptr, tensor.raw_ptr,
-                          size);
+        megdnn_memcpy_H2D(m_handle_rocm, tensors_cur[i].raw_ptr, tensor.raw_ptr, size);
     }
     m_device_timer.reset();
     m_device_timer.start();
@@ -85,17 +82,16 @@ float ROCMBenchmarker<Opr>::exec(TensorLayoutArray layouts) {
         std::cout << "Total time is " << time_in_ms << "ms " << std::endl;
     }
     auto free = [](Handle* handle, TensorNDArray& tensors) {
-        std::for_each(tensors.begin(), tensors.end(),
-                      [handle](const TensorND& tensor) {
-                          megdnn_free(handle, tensor.raw_ptr);
-                      });
+        std::for_each(tensors.begin(), tensors.end(), [handle](const TensorND& tensor) {
+            megdnn_free(handle, tensor.raw_ptr);
+        });
     };
     free(m_handle_rocm, tensors_cur);
     free(m_handle_naive, tensors_cur_host);
     return time_in_ms;
 }
 
-} // namespace test
-} // namespace megdnn
+}  // namespace test
+}  // namespace megdnn
 
 // vim: syntax=cpp.doxygen

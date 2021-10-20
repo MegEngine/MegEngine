@@ -9,8 +9,8 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-#include "src/aarch64/matrix_mul/fp16/strategy.h"
 #include "src/aarch64/matrix_mul/asm/common.h"
+#include "src/aarch64/matrix_mul/fp16/strategy.h"
 #include "src/arm_common/simd_macro/marm_neon.h"
 #include "src/common/utils.h"
 
@@ -21,8 +21,9 @@ using namespace aarch64::matmul;
 
 namespace {
 
-void kern_8x1(const dt_float16* a_ptr, const dt_float16* b_ptr, int LDB, int K,
-              dt_float16* output) {
+void kern_8x1(
+        const dt_float16* a_ptr, const dt_float16* b_ptr, int LDB, int K,
+        dt_float16* output) {
     LDB *= sizeof(dt_float16);
     asm volatile(
             ".arch armv8.2-a+fp16\n"
@@ -86,9 +87,8 @@ void kern_8x1(const dt_float16* a_ptr, const dt_float16* b_ptr, int LDB, int K,
             : [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr), [K] "+r"(K),
               [output] "+r"(output), [LDB] "+r"(LDB)
             :
-            : "v0", "v16", "v17", "v18", "v19", "v20", "v21", "v22", "v23",
-              "v24", "v25", "v26", "v27", "v28", "v29", "v30", "v31", "cc",
-              "memory");
+            : "v0", "v16", "v17", "v18", "v19", "v20", "v21", "v22", "v23", "v24",
+              "v25", "v26", "v27", "v28", "v29", "v30", "v31", "cc", "memory");
 }
 
 // Overview of register layout:
@@ -115,8 +115,9 @@ void kern_8x1(const dt_float16* a_ptr, const dt_float16* b_ptr, int LDB, int K,
 //  |v23[0-7]|          |v27[0-7]|
 //  +--------+          +--------+
 //                      Accumulator
-void kern_8x4(const dt_float16* a_ptr, const dt_float16* b_ptr, int LDB, int K,
-              dt_float16* output) {
+void kern_8x4(
+        const dt_float16* a_ptr, const dt_float16* b_ptr, int LDB, int K,
+        dt_float16* output) {
     //! LDB means number of elements in one block in B. we will read 24 numbers
     //! first. so minus 24 * 2 bytes here.
     LDB = (LDB - 24) * sizeof(dt_float16);
@@ -263,8 +264,8 @@ void kern_8x4(const dt_float16* a_ptr, const dt_float16* b_ptr, int LDB, int K,
             : [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr), [K] "+r"(K),
               [output] "+r"(output), [LDB] "+r"(LDB)
             :
-            : "v0", "v1", "v2", "v3", "v16", "v17", "v18", "v19", "v20", "v21", 
-              "v22", "v23", "v24", "v25", "v26", "v27", "cc", "memory");
+            : "v0", "v1", "v2", "v3", "v16", "v17", "v18", "v19", "v20", "v21", "v22",
+              "v23", "v24", "v25", "v26", "v27", "cc", "memory");
 }
 
 // Overview of register layout:
@@ -295,8 +296,9 @@ void kern_8x4(const dt_float16* a_ptr, const dt_float16* b_ptr, int LDB, int K,
 //  | v7[0-7]|          |v31[0-7]|
 //  +--------+          +--------+
 //                      Accumulator
-void kern_8x8(const dt_float16* a_ptr, const dt_float16* b_ptr, int LDB, int K,
-              dt_float16* output) {
+void kern_8x8(
+        const dt_float16* a_ptr, const dt_float16* b_ptr, int LDB, int K,
+        dt_float16* output) {
     //! As each load 128 number from B, but the pos add 112 * 2, so we minus 112
     //! here.
     LDB = (LDB - 32) * sizeof(dt_float16);
@@ -467,20 +469,19 @@ void kern_8x8(const dt_float16* a_ptr, const dt_float16* b_ptr, int LDB, int K,
             : [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr), [K] "+r"(K),
               [output] "+r"(output), [LDB] "+r"(LDB)
             :
-            : "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10",
-              "v11", "v12", "v13", "v14", "v15", "v24", "v25", "v26", "v27",
-              "v28", "v29", "v30", "v31", "cc", "memory");
+            : "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10", "v11",
+              "v12", "v13", "v14", "v15", "v24", "v25", "v26", "v27", "v28", "v29",
+              "v30", "v31", "cc", "memory");
 }
 
 }  // anonymous namespace
 
 MEGDNN_REG_GEMM_STRATEGY_IMPL_NOPACK(gemm_nopack_f16_8x8);
 
-void gemm_nopack_f16_8x8::kern(const dt_float16* A, size_t LDA,
-                               const dt_float16* B, size_t LDB, dt_float16* C,
-                               size_t LDC, size_t M, size_t K, size_t N,
-                               const dt_float16*, void*, bool trA,
-                               bool trB) const {
+void gemm_nopack_f16_8x8::kern(
+        const dt_float16* A, size_t LDA, const dt_float16* B, size_t LDB, dt_float16* C,
+        size_t LDC, size_t M, size_t K, size_t N, const dt_float16*, void*, bool trA,
+        bool trB) const {
     constexpr static size_t MB = 8;
     constexpr static size_t KB = 8;
     constexpr static size_t NB = 8;

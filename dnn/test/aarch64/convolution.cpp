@@ -23,14 +23,12 @@ TEST_F(AARCH64, CONVOLUTION_BACKWARD_DATA_FP16) {
     Checker<ConvolutionBackwardData> checker(handle());
     using Param = ConvolutionBackwardData::Param;
     Param param;
-    auto run = [&](size_t n, size_t ic, size_t oh, size_t ow, size_t oc,
-                   size_t fh, size_t fw, size_t stride, size_t padding,
-                   size_t group = 1) {
+    auto run = [&](size_t n, size_t ic, size_t oh, size_t ow, size_t oc, size_t fh,
+                   size_t fw, size_t stride, size_t padding, size_t group = 1) {
         param.pad_h = param.pad_w = padding;
         param.stride_h = param.stride_w = stride;
 
-        TensorLayout diff =
-                TensorLayout{{n, oc * group, oh, ow}, dtype::Float16()};
+        TensorLayout diff = TensorLayout{{n, oc * group, oh, ow}, dtype::Float16()};
         TensorLayout grad;
         TensorLayout filter;
         if (group == 1) {
@@ -51,15 +49,15 @@ TEST_F(AARCH64, CONVOLUTION_BACKWARD_DATA_FP16) {
                 .set_dtype(0, dtype::Float16())
                 .set_dtype(1, dtype::Float16())
                 .set_dtype(2, dtype::Float16())
-                .set_rng(0, &rng).set_rng(1, &rng)
+                .set_rng(0, &rng)
+                .set_rng(1, &rng)
                 .set_epsilon(1e-2)
                 .set_before_exec_callback(
-                AlgoChecker<ConvolutionBackwardData>("DeconvMatmul"));
+                        AlgoChecker<ConvolutionBackwardData>("DeconvMatmul"));
         checker.exec(TensorLayoutArray{filter, diff, grad});
     };
 
-    for (auto mode :
-         {Param::Mode::CONVOLUTION, Param::Mode::CROSS_CORRELATION}) {
+    for (auto mode : {Param::Mode::CONVOLUTION, Param::Mode::CROSS_CORRELATION}) {
         param.mode = mode;
         run(4, 3, 10, 13, 5, 1, 1, 1, 0, 1);
         run(4, 3, 10, 45, 2, 1, 1, 1, 0, 4);
@@ -71,7 +69,6 @@ TEST_F(AARCH64, CONVOLUTION_BACKWARD_DATA_FP16) {
     }
 }
 
-
 #if MEGDNN_WITH_BENCHMARK
 TEST_F(AARCH64, BENCHMARK_MATRIX_MUL_QUICK_FP16) {
     int exec_times = 10;
@@ -82,21 +79,15 @@ TEST_F(AARCH64, BENCHMARK_MATRIX_MUL_QUICK_FP16) {
     auto run = [&](size_t M, size_t K, size_t N) {
         float time = 1.f, perf = 1.f;
 
-        std::cout << "GEMM: (" << M << ", " << K << ", " << N << ")"
-                  << std::endl;
-        benchmarker_gemm.set_dtype(0, dtype::Float32())
-                .set_dtype(1, dtype::Float32());
+        std::cout << "GEMM: (" << M << ", " << K << ", " << N << ")" << std::endl;
+        benchmarker_gemm.set_dtype(0, dtype::Float32()).set_dtype(1, dtype::Float32());
         time = benchmarker_gemm.exec({{M, K}, {K, N}, {}});
         perf = 2.f * M * K * N / time * mod;
-        std::cout << "gemm fp32, Performance is " << perf << " Gflops"
-                  << std::endl;
-        benchmarker_gemm.set_dtype(0, dtype::Float16())
-                .set_dtype(1, dtype::Float16());
+        std::cout << "gemm fp32, Performance is " << perf << " Gflops" << std::endl;
+        benchmarker_gemm.set_dtype(0, dtype::Float16()).set_dtype(1, dtype::Float16());
         time = benchmarker_gemm.exec({{M, K}, {K, N}, {}});
         perf = 2.f * M * K * N / time * mod;
-        std::cout << "gemm fp16, Performance is " << perf << " Gflops"
-                  << std::endl;
-
+        std::cout << "gemm fp16, Performance is " << perf << " Gflops" << std::endl;
     };
 
     // run M = K = N
@@ -118,21 +109,15 @@ TEST_F(AARCH64, BENCHMARK_MATRIX_MUL_ALL_SIZES_FP16) {
     auto run = [&](size_t M, size_t K, size_t N) {
         float time = 1.f, perf = 1.f;
 
-        std::cout << "GEMM: (" << M << ", " << K << ", " << N << ")"
-                  << std::endl;
-        benchmarker_gemm.set_dtype(0, dtype::Float32())
-                .set_dtype(1, dtype::Float32());
+        std::cout << "GEMM: (" << M << ", " << K << ", " << N << ")" << std::endl;
+        benchmarker_gemm.set_dtype(0, dtype::Float32()).set_dtype(1, dtype::Float32());
         time = benchmarker_gemm.exec({{M, K}, {K, N}, {}});
         perf = 2.f * M * K * N / time * mod;
-        std::cout << "gemm fp32, Performance is " << perf << " Gflops"
-                  << std::endl;
-        benchmarker_gemm.set_dtype(0, dtype::Float16())
-                .set_dtype(1, dtype::Float16());
+        std::cout << "gemm fp32, Performance is " << perf << " Gflops" << std::endl;
+        benchmarker_gemm.set_dtype(0, dtype::Float16()).set_dtype(1, dtype::Float16());
         time = benchmarker_gemm.exec({{M, K}, {K, N}, {}});
         perf = 2.f * M * K * N / time * mod;
-        std::cout << "gemm fp16, Performance is " << perf << " Gflops"
-                  << std::endl;
-
+        std::cout << "gemm fp16, Performance is " << perf << " Gflops" << std::endl;
     };
 
     std::cout << "warm up:\n";
@@ -216,7 +201,6 @@ TEST_F(AARCH64, BENCHMARK_MATRIX_MUL_ALL_SIZES_FP16) {
     run(512, 512 * 3 * 3, 14 * 14);
 }
 
-
 #endif
 #endif
 
@@ -226,24 +210,24 @@ TEST_F(AARCH64, BENCHMARK_CONVOLUTION_STRIDE2) {
     auto run = [&](const TensorShapeArray& shapes, Param param) {
         Benchmarker<Convolution> benchmarker_float(handle());
         size_t RUN = 50;
-        auto tfloat =
-                benchmarker_float.set_display(false)
-                        .set_dtype(0, dtype::Float32{})
-                        .set_dtype(1, dtype::Float32{})
-                        .set_before_exec_callback(AlgoChecker<Convolution>(
-                                "CONVOLUTION_DEFAULT_ARMV8F32STRD2_LARGE_"
-                                "GROUP"))
-                        .set_times(RUN)
-                        .set_param(param)
-                        .exec(shapes);
+        auto tfloat = benchmarker_float.set_display(false)
+                              .set_dtype(0, dtype::Float32{})
+                              .set_dtype(1, dtype::Float32{})
+                              .set_before_exec_callback(AlgoChecker<Convolution>(
+                                      "CONVOLUTION_DEFAULT_ARMV8F32STRD2_LARGE_"
+                                      "GROUP"))
+                              .set_times(RUN)
+                              .set_param(param)
+                              .exec(shapes);
         size_t IC = shapes[1][1];
         size_t FH = shapes[1][2];
         size_t FW = shapes[1][3];
         TensorLayout dst_layout;
         auto opr = handle()->create_operator<Convolution>();
         opr->param() = param;
-        opr->deduce_layout({shapes[0], dtype::Float32()},
-                           {shapes[1], dtype::Float32()}, dst_layout);
+        opr->deduce_layout(
+                {shapes[0], dtype::Float32()}, {shapes[1], dtype::Float32()},
+                dst_layout);
         printf("fp32 flops: %.3f mflops\n",
                (IC * dst_layout.total_nr_elems() * FH * FW * 2) /
                        (tfloat / RUN * 1000));
@@ -252,24 +236,24 @@ TEST_F(AARCH64, BENCHMARK_CONVOLUTION_STRIDE2) {
     auto run1 = [&](const TensorShapeArray& shapes, Param param) {
         Benchmarker<Convolution> benchmarker_float(handle());
         size_t RUN = 50;
-        auto tfloat =
-                benchmarker_float.set_display(false)
-                        .set_dtype(0, dtype::Float16())
-                        .set_dtype(1, dtype::Float16())
-                        .set_before_exec_callback(AlgoChecker<Convolution>(
-                                "CONVOLUTION_DEFAULT_ARMV8F16STRD2_LARGE_"
-                                "GROUP"))
-                        .set_times(RUN)
-                        .set_param(param)
-                        .exec(shapes);
+        auto tfloat = benchmarker_float.set_display(false)
+                              .set_dtype(0, dtype::Float16())
+                              .set_dtype(1, dtype::Float16())
+                              .set_before_exec_callback(AlgoChecker<Convolution>(
+                                      "CONVOLUTION_DEFAULT_ARMV8F16STRD2_LARGE_"
+                                      "GROUP"))
+                              .set_times(RUN)
+                              .set_param(param)
+                              .exec(shapes);
         size_t IC = shapes[1][1];
         size_t FH = shapes[1][2];
         size_t FW = shapes[1][3];
         TensorLayout dst_layout;
         auto opr = handle()->create_operator<Convolution>();
         opr->param() = param;
-        opr->deduce_layout({shapes[0], dtype::Float16()},
-                           {shapes[1], dtype::Float16()}, dst_layout);
+        opr->deduce_layout(
+                {shapes[0], dtype::Float16()}, {shapes[1], dtype::Float16()},
+                dst_layout);
         printf("fp16 flops: %.3f mflops\n",
                (IC * dst_layout.total_nr_elems() * FH * FW * 2) /
                        (tfloat / RUN * 1000));
@@ -282,14 +266,13 @@ TEST_F(AARCH64, BENCHMARK_CONVOLUTION_STRIDE2) {
         param.stride_w = stride;
         param.pad_h = kernel / 2;
         param.pad_w = kernel / 2;
-        printf("oc: %zd ic: %zd w: %zd h: %zd stride: %zd kernel_size: %zd\n",
-               oc, ic, w, h, stride, kernel);
+        printf("oc: %zd ic: %zd w: %zd h: %zd stride: %zd kernel_size: %zd\n", oc, ic,
+               w, h, stride, kernel);
 
         run({{1, ic, h, w}, {oc, ic, kernel, kernel}, {}}, param);
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
         run1({{1, ic, h, w}, {oc, ic, kernel, kernel}, {}}, param);
 #endif
-
     };
 
     for (size_t kernel : {2, 3, 5, 7}) {
@@ -304,6 +287,4 @@ TEST_F(AARCH64, BENCHMARK_CONVOLUTION_STRIDE2) {
 }
 #endif
 
-
 // vim: syntax=cpp.doxygen
-

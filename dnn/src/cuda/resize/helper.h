@@ -19,9 +19,8 @@ namespace resize {
 
 InterpolationMode get_imode(param::Resize::InterpolationMode imode);
 
-} // namespace resize
-} // namespace cuda
-} // namespace megdnn
+}  // namespace resize
+}  // namespace cuda
+}  // namespace megdnn
 
 // vim: syntax=cpp.doxygen
-

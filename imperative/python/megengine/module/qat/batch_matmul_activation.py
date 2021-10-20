@@ -10,9 +10,7 @@ from .module import QATModule
 
 
 class BatchMatMulActivation(Float.BatchMatMulActivation, QATModule):
-    r"""
-    A :class:`~.QATModule` :class:`~.module.BatchMatMulActivation` with QAT support.
-    """
+    r"""A :class:`~.QATModule` :class:`~.module.BatchMatMulActivation` with QAT support."""
 
     def forward(self, inp):
         w_qat = self.apply_quant_weight(self.weight)

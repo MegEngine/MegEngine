@@ -25,8 +25,7 @@ class _AdaptivePoolNd(Module):
 
 
 class AdaptiveMaxPool2d(_AdaptivePoolNd):
-    r"""
-    Applies a 2D max adaptive pooling over an input.
+    r"""Applies a 2D max adaptive pooling over an input.
 
     For instance, given an input of the size :math:`(N, C, H, W)` and
     an output shape :math:`(OH, OW)`, this layer generates the output of
@@ -40,29 +39,30 @@ class AdaptiveMaxPool2d(_AdaptivePoolNd):
         \end{aligned}
 
     ``kernel_size`` and ``stride`` can be inferred from input shape and out shape:
+
     * padding: (0, 0)
     * stride: (floor(IH / OH), floor(IW / OW))
     * kernel_size: (IH - (OH - 1) * stride_h, IW - (OW - 1) * stride_w)
 
     Examples:
 
-    .. testcode::
+        .. testcode::
 
-        import numpy as np
-        import megengine as mge
-        import megengine.module as M
+            import numpy as np
+            import megengine as mge
+            import megengine.module as M
 
-        m = M.AdaptiveMaxPool2d((2, 2))
-        inp = mge.tensor(np.arange(0, 16).astype("float32").reshape(1, 1, 4, 4))
-        oup = m(inp)
-        print(oup.numpy())
+            m = M.AdaptiveMaxPool2d((2, 2))
+            inp = mge.tensor(np.arange(0, 16).astype("float32").reshape(1, 1, 4, 4))
+            oup = m(inp)
+            print(oup.numpy())
 
-    Outputs:
+        Outputs:
 
-    .. testoutput::
+        .. testoutput::
 
-        [[[[ 5.  7.]
-           [13. 15.]]]]
+            [[[[ 5.  7.]
+               [13. 15.]]]]
 
     """
 
@@ -71,8 +71,7 @@ class AdaptiveMaxPool2d(_AdaptivePoolNd):
 
 
 class AdaptiveAvgPool2d(_AdaptivePoolNd):
-    r"""
-    Applies a 2D average pooling over an input.
+    r"""Applies a 2D average pooling over an input.
 
     For instance, given an input of the size :math:`(N, C, H, W)` and
     an output shape :math:`(OH, OW)`, this layer generates the output of
@@ -84,29 +83,30 @@ class AdaptiveAvgPool2d(_AdaptivePoolNd):
                                input(N_i, C_j, stride[0] \times h + m, stride[1] \times w + n)
 
     ``kernel_size`` and ``stride`` can be inferred from input shape and out shape:
+
     * padding: (0, 0)
     * stride: (floor(IH / OH), floor(IW / OW))
     * kernel_size: (IH - (OH - 1) * stride_h, IW - (OW - 1) * stride_w)
 
     Examples:
 
-    .. testcode::
+        .. testcode::
 
-        import numpy as np
-        import megengine as mge
-        import megengine.module as M
+            import numpy as np
+            import megengine as mge
+            import megengine.module as M
 
-        m = M.AdaptiveAvgPool2d((2, 2))
-        inp = mge.tensor(np.arange(0, 16).astype("float32").reshape(1, 1, 4, 4))
-        oup = m(inp)
-        print(oup.numpy())
+            m = M.AdaptiveAvgPool2d((2, 2))
+            inp = mge.tensor(np.arange(0, 16).astype("float32").reshape(1, 1, 4, 4))
+            oup = m(inp)
+            print(oup.numpy())
 
-    Outputs:
+        Outputs:
 
-    .. testoutput::
+        .. testoutput::
 
-        [[[[ 2.5  4.5]
-           [10.5 12.5]]]]
+            [[[[ 2.5  4.5]
+               [10.5 12.5]]]]
 
     """
 

@@ -9,15 +9,15 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-#include "megbrain/test/helper.h"
 #include "megbrain/test/autocheck.h"
+#include "megbrain/test/helper.h"
 #include "megbrain/test/host_static_calc.h"
 
 #include "megbrain/opr/basic_arith_wrapper.h"
 #include "megbrain/opr/blas.h"
 #include "megbrain/opr/io.h"
-#include "megbrain/opr/utility.h"
 #include "megbrain/opr/tensor_manip.h"
+#include "megbrain/opr/utility.h"
 #include "megbrain/utils/timer.h"
 
 #include "megdnn/tensor_iter.h"
@@ -35,12 +35,10 @@ TEST(TestOprBasicArith, AddUpdate) {
     dev_x->copy_from(*host_x);
 
     auto graph = ComputingGraph::make();
-    SymbolVar dev_x_shared = opr::SharedDeviceTensor::make(
-                    *graph, dev_x, {"x"}),
+    SymbolVar dev_x_shared = opr::SharedDeviceTensor::make(*graph, dev_x, {"x"}),
               dev_y = opr::Host2DeviceCopy::make(*graph, host_y, {"y"}),
               dev_x_updated = opr::AddUpdate::make(dev_x_shared, dev_y, param);
-    auto func = graph->compile({{
-            dev_x_updated, [&](DeviceTensorND &){}}});
+    auto func = graph->compile({{dev_x_updated, [&](DeviceTensorND&) {}}});
     func->execute();
     ASSERT_EQ(dev_x->raw_ptr(), dev_x_updated.node()->prev_dev_ptr());
 
@@ -50,12 +48,11 @@ TEST(TestOprBasicArith, AddUpdate) {
     get.copy_from(*dev_x).sync();
     ASSERT_TRUE(get.layout().eq_layout(host_x->layout()));
 
-    auto x = host_x->ptr<float>(), y = host_y->ptr<float>(),
-         z = get.ptr<float>();
-    for (size_t i = 0; i < SIZE; i ++) {
+    auto x = host_x->ptr<float>(), y = host_y->ptr<float>(), z = get.ptr<float>();
+    for (size_t i = 0; i < SIZE; i++) {
         auto expect = x[i] * param.alpha->get_cast<float>() +
-            y[i] * param.beta->get_cast<float>() +
-            param.bias->get_cast<float>();
+                      y[i] * param.beta->get_cast<float>() +
+                      param.bias->get_cast<float>();
         MGB_ASSERT_FLOAT_EQ(expect, z[i]);
     }
 }
@@ -69,12 +66,10 @@ TEST(TestOprBasicArith, AddUpdateInt) {
     dev_x->copy_from(*host_x);
 
     auto graph = ComputingGraph::make();
-    SymbolVar dev_x_shared = opr::SharedDeviceTensor::make(
-                    *graph, dev_x, {"x"}),
+    SymbolVar dev_x_shared = opr::SharedDeviceTensor::make(*graph, dev_x, {"x"}),
               dev_y = opr::Host2DeviceCopy::make(*graph, host_y, {"y"}),
               dev_x_updated = opr::AddUpdate::make(dev_x_shared, dev_y, param);
-    auto func = graph->compile({{
-            dev_x_updated, [&](DeviceTensorND &){}}});
+    auto func = graph->compile({{dev_x_updated, [&](DeviceTensorND&) {}}});
     func->execute();
     ASSERT_EQ(dev_x->raw_ptr(), dev_x_updated.node()->prev_dev_ptr());
 
@@ -82,12 +77,10 @@ TEST(TestOprBasicArith, AddUpdateInt) {
     get.copy_from(*dev_x).sync();
     ASSERT_TRUE(get.layout().eq_layout(host_x->layout()));
 
-    auto x = host_x->ptr<int>(), y = host_y->ptr<int>(),
-         z = get.ptr<int>();
-    for (size_t i = 0; i < SIZE; i ++) {
+    auto x = host_x->ptr<int>(), y = host_y->ptr<int>(), z = get.ptr<int>();
+    for (size_t i = 0; i < SIZE; i++) {
         auto expect = x[i] * param.alpha->get_cast<int>() +
-            y[i] * param.beta->get_cast<int>() +
-            param.bias->get_cast<int>();
+                      y[i] * param.beta->get_cast<int>() + param.bias->get_cast<int>();
         ASSERT_EQ(expect, z[i]) << ssprintf("i=%zu x=%d y=%d", i, x[i], y[i]);
     }
 
@@ -105,12 +98,12 @@ TEST(TestOprBasicArith, DynAddUpdate) {
 
     auto graph = ComputingGraph::make();
     auto x = opr::SharedDeviceTensor::make(*graph, dev_x, {"x"}),
-         y = opr::MarkDynamicVar::make(opr::Host2DeviceCopy::make(*graph,
-                     host_y, {"y"})),
+         y = opr::MarkDynamicVar::make(
+                 opr::Host2DeviceCopy::make(*graph, host_y, {"y"})),
          x_updated = opr::AddUpdate::make(x, y, {});
     ASSERT_FALSE(cg::is_static_var_shape(y.node()));
     ASSERT_TRUE(cg::is_static_var_shape(x_updated.node()));
-    auto func = graph->compile({{x_updated, [&](DeviceTensorND &){}}});
+    auto func = graph->compile({{x_updated, [&](DeviceTensorND&) {}}});
     func->execute();
 
     HostTensorND host_xu;
@@ -120,7 +113,7 @@ TEST(TestOprBasicArith, DynAddUpdate) {
     {
         auto x = host_x->ptr<float>(), y = host_y->ptr<float>(),
              z = host_xu.ptr<float>();
-        for (size_t i = 0; i < SIZE; i ++) {
+        for (size_t i = 0; i < SIZE; i++) {
             MGB_ASSERT_FLOAT_EQ(x[i] + y[i], z[i]);
         }
     }
@@ -136,9 +129,9 @@ TEST(TestOprBasicArith, AddUpdateBroadcast) {
 
     auto graph = ComputingGraph::make();
     SymbolVar x = opr::SharedDeviceTensor::make(*graph, dev_x, {"x"}),
-              delta = opr::Subtensor::make(x,
-                      {opr::Subtensor::AxisIndexer::make_index(0,
-                              x.make_scalar(3))}),
+              delta = opr::Subtensor::make(
+                      x,
+                      {opr::Subtensor::AxisIndexer::make_index(0, x.make_scalar(3))}),
               x_updated = opr::AddUpdate::make(x, delta, param);
     auto func = graph->compile({{x_updated, {}}});
     func->execute();
@@ -148,10 +141,10 @@ TEST(TestOprBasicArith, AddUpdateBroadcast) {
     ASSERT_TRUE(get.layout().eq_layout(host_x->layout()));
 
     auto xp = host_x->ptr<float>(), z = get.ptr<float>();
-    for (size_t i = 0; i < SIZE; ++ i) {
+    for (size_t i = 0; i < SIZE; ++i) {
         auto expect = xp[i] * param.alpha->get_cast<float>() +
-            xp[3] * param.beta->get_cast<float>() +
-            param.bias->get_cast<float>();
+                      xp[3] * param.beta->get_cast<float>() +
+                      param.bias->get_cast<float>();
         MGB_ASSERT_FLOAT_EQ(expect, z[i]);
     }
 }
@@ -159,8 +152,7 @@ TEST(TestOprBasicArith, AddUpdateBroadcast) {
 TEST(TestOprBasicArith, AddUpdateNan) {
     constexpr size_t SIZE = 23;
     HostTensorGenerator<> gen;
-    auto host_x = gen({SIZE}),
-         host_src = gen({1});
+    auto host_x = gen({SIZE}), host_src = gen({1});
 
     host_x->ptr<float>()[0] = NAN;
     auto dev_x = std::make_shared<DeviceTensorND>(CompNode::load("xpu0"));
@@ -175,15 +167,14 @@ TEST(TestOprBasicArith, AddUpdateNan) {
 
     HostTensorND host_y;
     host_y.copy_from(*dev_x).sync();
-    for (size_t i = 0; i < SIZE; ++ i)
+    for (size_t i = 0; i < SIZE; ++i)
         MGB_ASSERT_FLOAT_EQ(host_src->ptr<float>()[0], host_y.ptr<float>()[i]);
 }
 
 TEST(TestOprBasicArith, AddInplace) {
     constexpr size_t SIZE = 102400;
     HostTensorGenerator<> gen;
-    auto host_opr0 = gen({SIZE}), host_opr1 = gen({SIZE}),
-         host_opr2 = gen({SIZE});
+    auto host_opr0 = gen({SIZE}), host_opr1 = gen({SIZE}), host_opr2 = gen({SIZE});
 
     // for operations with commutable input, must check both input order:
     // opr1 + opr0, opr1 + opr2
@@ -199,54 +190,54 @@ TEST(TestOprBasicArith, AddInplace) {
     ASSERT_EQ(sum0.node(), (opr0 + opr1).node());
 
     HostTensorND host_sum0, host_sum1;
-    auto func = graph->compile({make_callback_copy(sum0, host_sum0),
-            make_callback_copy(sum1, host_sum1)});
+    auto func = graph->compile(
+            {make_callback_copy(sum0, host_sum0), make_callback_copy(sum1, host_sum1)});
 
     func->execute();
 
-    EXPECT_TRUE(dev_ptr(sum0) == dev_ptr(opr1) ||
-            dev_ptr(sum0) == dev_ptr(opr0));
-    EXPECT_TRUE(dev_ptr(sum1) == dev_ptr(opr1) ||
-            dev_ptr(sum1) == dev_ptr(opr2));
+    EXPECT_TRUE(dev_ptr(sum0) == dev_ptr(opr1) || dev_ptr(sum0) == dev_ptr(opr0));
+    EXPECT_TRUE(dev_ptr(sum1) == dev_ptr(opr1) || dev_ptr(sum1) == dev_ptr(opr2));
     func->to_json()->writeto_fpath(output_file("TestAddInplaceFunc0.json"));
 
     ASSERT_TRUE(host_sum0.layout().eq_layout(host_opr0->layout()));
     ASSERT_TRUE(host_sum1.layout().eq_layout(host_opr0->layout()));
 
     auto o0 = host_opr0->ptr<float>(), o1 = host_opr1->ptr<float>(),
-         o2 = host_opr2->ptr<float>(),
-         s0 = host_sum0.sync().ptr<float>(), s1 = host_sum1.sync().ptr<float>();
-    for (size_t i = 0; i < SIZE; i ++) {
-        MGB_ASSERT_FLOAT_EQ(o1[i] + o0[i], s0[i]) <<
-            ssprintf("failed opr1(%.5f)+opr0(%.5f) at %zd", o1[i], o0[i], i);
-        MGB_ASSERT_FLOAT_EQ(o1[i] + o2[i], s1[i]) <<
-            ssprintf("failed opr1(%.5f)+opr2(%.5f) at %zd", o1[i], o2[i], i);
+         o2 = host_opr2->ptr<float>(), s0 = host_sum0.sync().ptr<float>(),
+         s1 = host_sum1.sync().ptr<float>();
+    for (size_t i = 0; i < SIZE; i++) {
+        MGB_ASSERT_FLOAT_EQ(o1[i] + o0[i], s0[i])
+                << ssprintf("failed opr1(%.5f)+opr0(%.5f) at %zd", o1[i], o0[i], i);
+        MGB_ASSERT_FLOAT_EQ(o1[i] + o2[i], s1[i])
+                << ssprintf("failed opr1(%.5f)+opr2(%.5f) at %zd", o1[i], o2[i], i);
     }
 
     *host_opr0 = *gen({SIZE});
     *host_opr1 = *gen({SIZE});
     *host_opr2 = *gen({SIZE});
     HostTensorND host_sum2;
-    func = graph->compile({make_callback_copy(sum0, host_sum0),
-            make_callback_copy(sum1, host_sum1),
-            make_callback_copy(sum2, host_sum2)});
+    func = graph->compile(
+            {make_callback_copy(sum0, host_sum0), make_callback_copy(sum1, host_sum1),
+             make_callback_copy(sum2, host_sum2)});
     func->execute();
     func->to_json()->writeto_fpath(output_file("TestAddInplaceFunc1.json"));
     ASSERT_TRUE(host_sum0.layout().eq_layout(host_opr0->layout()));
     ASSERT_TRUE(host_sum1.layout().eq_layout(host_opr0->layout()));
     ASSERT_TRUE(host_sum2.layout().eq_layout(host_opr0->layout()));
 
-    o0 = host_opr0->ptr<float>(); o1 = host_opr1->ptr<float>();
+    o0 = host_opr0->ptr<float>();
+    o1 = host_opr1->ptr<float>();
     o2 = host_opr2->ptr<float>();
-    s0 = host_sum0.ptr<float>(); s1 = host_sum1.ptr<float>();
+    s0 = host_sum0.ptr<float>();
+    s1 = host_sum1.ptr<float>();
     auto s2 = host_sum2.sync().ptr<float>();
-    for (size_t i = 0; i < SIZE; i ++) {
-        MGB_ASSERT_FLOAT_EQ(o1[i] + o0[i], s0[i]) <<
-            ssprintf("failed opr1(%.5f)+opr0(%.5f) at %zd", o1[i], o0[i], i);
-        MGB_ASSERT_FLOAT_EQ(o1[i] + o2[i], s1[i]) <<
-            ssprintf("failed opr1(%.5f)+opr2(%.5f) at %zd", o1[i], o2[i], i);
-        MGB_ASSERT_FLOAT_EQ(o2[i] + o0[i], s2[i]) <<
-            ssprintf("failed opr2(%.5f)+opr0(%.5f) at %zd", o2[i], o0[i], i);
+    for (size_t i = 0; i < SIZE; i++) {
+        MGB_ASSERT_FLOAT_EQ(o1[i] + o0[i], s0[i])
+                << ssprintf("failed opr1(%.5f)+opr0(%.5f) at %zd", o1[i], o0[i], i);
+        MGB_ASSERT_FLOAT_EQ(o1[i] + o2[i], s1[i])
+                << ssprintf("failed opr1(%.5f)+opr2(%.5f) at %zd", o1[i], o2[i], i);
+        MGB_ASSERT_FLOAT_EQ(o2[i] + o0[i], s2[i])
+                << ssprintf("failed opr2(%.5f)+opr0(%.5f) at %zd", o2[i], o0[i], i);
     }
 }
 
@@ -257,9 +248,7 @@ TEST(TestOprBasicArith, AddUpdateOtherStream) {
     auto graph = ComputingGraph::make();
 
     std::atomic_bool flag{false};
-    auto set_flag = [&flag](DeviceTensorND&) {
-        flag = true;
-    };
+    auto set_flag = [&flag](DeviceTensorND&) { flag = true; };
 
     auto wait_flag = [&flag](DeviceTensorND&) {
         while (!flag) {
@@ -280,13 +269,13 @@ TEST(TestOprBasicArith, AddUpdateOtherStream) {
     auto callback = opr::CallbackInjector::make(add_update, set_flag);
 
     auto waiter = opr::CallbackInjector::make(
-            opr::SharedDeviceTensor::make(*graph, *host_val),
-            wait_flag);
+            opr::SharedDeviceTensor::make(*graph, *host_val), wait_flag);
 
     HostTensorND host_out0;
     HostTensorND host_out1;
-    auto func = graph->compile({make_callback_copy(callback, host_out0),
-            make_callback_copy(waiter, host_out1)});
+    auto func = graph->compile(
+            {make_callback_copy(callback, host_out0),
+             make_callback_copy(waiter, host_out1)});
     func->execute();
 }
 
@@ -299,12 +288,10 @@ TEST(TestOprBasicArith, DisableAddUpdate) {
     dev_x->copy_from(*host_x);
 
     auto graph = ComputingGraph::make();
-    SymbolVar dev_x_shared = opr::SharedDeviceTensor::make(
-                    *graph, dev_x, {"x"}),
+    SymbolVar dev_x_shared = opr::SharedDeviceTensor::make(*graph, dev_x, {"x"}),
               dev_y = opr::Host2DeviceCopy::make(*graph, host_y, {"y"}),
               dev_x_updated = opr::AddUpdate::make(dev_x_shared, dev_y, param);
-    auto func = graph->compile({{
-            dev_x_updated, [&](DeviceTensorND &){}}});
+    auto func = graph->compile({{dev_x_updated, [&](DeviceTensorND&) {}}});
     func->execute();
     ASSERT_EQ(dev_x->raw_ptr(), dev_x_updated.node()->prev_dev_ptr());
 
@@ -315,7 +302,7 @@ TEST(TestOprBasicArith, DisableAddUpdate) {
     ASSERT_TRUE(get.layout().eq_layout(host_x->layout()));
 
     auto x = host_x->ptr<float>(), y = get.ptr<float>();
-    for (size_t i = 0; i < SIZE; i ++) {
+    for (size_t i = 0; i < SIZE; i++) {
         MGB_ASSERT_FLOAT_EQ(x[i], y[i]);
     }
 }
@@ -337,17 +324,18 @@ TEST(TestOprBasicArith, AddUpdateVolatile) {
         *dev_x = dev_x0;
         auto graph = ComputingGraph::make();
         graph->options().force_dynamic_alloc = dynamic_alloc;
-        SymbolVar dev_x_shared = opr::VolatileSharedDeviceTensor::make(
-                        *graph, dev_x, {"x"}),
-                dev_y = opr::Host2DeviceCopy::make(*graph, host_y, {"y"}),
-                dev_x_updated = opr::AddUpdate::make(dev_x_shared, dev_y, param),
-                // check read-only forward on force updated var
-                dev_x_updated_sub = opr::Subtensor::make(dev_x_updated, {
-                    opr::Subtensor::AxisIndexer::make_interval(-1, None, None,
-                       dev_x_shared.make_scalar(SIZE >> 1))});
-        auto func = graph->compile({
-                {dev_x_updated, [&](DeviceTensorND &){}},
-                {make_callback_copy(dev_x_updated_sub, host_sub)}});
+        SymbolVar dev_x_shared =
+                          opr::VolatileSharedDeviceTensor::make(*graph, dev_x, {"x"}),
+                  dev_y = opr::Host2DeviceCopy::make(*graph, host_y, {"y"}),
+                  dev_x_updated = opr::AddUpdate::make(dev_x_shared, dev_y, param),
+                  // check read-only forward on force updated var
+                dev_x_updated_sub = opr::Subtensor::make(
+                        dev_x_updated,
+                        {opr::Subtensor::AxisIndexer::make_interval(
+                                -1, None, None, dev_x_shared.make_scalar(SIZE >> 1))});
+        auto func = graph->compile(
+                {{dev_x_updated, [&](DeviceTensorND&) {}},
+                 {make_callback_copy(dev_x_updated_sub, host_sub)}});
         auto run = [&] {
             HostTensorND origin_x{cn}, get{cn};
             origin_x.copy_from(*dev_x).sync();
@@ -357,35 +345,35 @@ TEST(TestOprBasicArith, AddUpdateVolatile) {
             get.copy_from(*dev_x).sync();
             ASSERT_TRUE(get.layout().eq_layout(origin_x.layout()));
 
-            mgb_assert(origin_x.layout().is_contiguous() &&
-                        get.layout().is_contiguous() &&
-                        host_y->layout().is_contiguous());
+            mgb_assert(
+                    origin_x.layout().is_contiguous() && get.layout().is_contiguous() &&
+                    host_y->layout().is_contiguous());
             auto x = origin_x.ptr<float>(), y = host_y->ptr<float>(),
-                z = get.ptr<float>();
+                 z = get.ptr<float>();
             bool bcast = dev_x->shape().ndim > 1;
             auto expect = [&](size_t i) {
                 return x[i] * param.alpha->get_cast<float>() +
-                    (bcast ? y[i / SIZE] : y[i]) *
-                    param.beta->get_cast<float>() +
-                    param.bias->get_cast<float>();
+                       (bcast ? y[i / SIZE] : y[i]) * param.beta->get_cast<float>() +
+                       param.bias->get_cast<float>();
             };
-            for (size_t i = 0; i < SIZE * 2; i ++) {
+            for (size_t i = 0; i < SIZE * 2; i++) {
                 MGB_ASSERT_FLOAT_EQ(expect(i), z[i]);
             }
-            mgb_assert(host_sub.shape().total_nr_elems() == 4 &&
-                host_sub.layout().is_contiguous());
-            for (size_t i = 0; i < 4; ++ i) {
+            mgb_assert(
+                    host_sub.shape().total_nr_elems() == 4 &&
+                    host_sub.layout().is_contiguous());
+            for (size_t i = 0; i < 4; ++i) {
                 size_t idx = i * (SIZE >> 1);
                 MGB_ASSERT_FLOAT_EQ(expect(idx), host_sub.ptr<float>()[i]);
             }
         };
         run();
         run();
-        *dev_x = dev_x1; // ptr change
+        *dev_x = dev_x1;  // ptr change
         run();
         host_x = gen({2, SIZE});
         host_y->copy_from(*gen({2, 1})).sync();
-        dev_x->copy_from(*host_x).sync(); // shape change
+        dev_x->copy_from(*host_x).sync();  // shape change
         run();
     }
 }
@@ -417,43 +405,41 @@ TEST(TestOprBasicArith, MemFwd) {
     auto host_x = gen({SIZE});
     auto graph = ComputingGraph::make();
     auto x = opr::Host2DeviceCopy::make_no_fwd(*graph, host_x).rename("x"),
-         y = opr::sin(x),
-         z = y + 1;
+         y = opr::sin(x), z = y + 1;
     HostTensorND host_z;
     auto func = graph->compile({make_callback_copy(z, host_z)});
     func->execute();
 
     ASSERT_EQ(dev_ptr(x), dev_ptr(y));
     ASSERT_EQ(dev_ptr(x), dev_ptr(z));
-    for (size_t i = 0; i < SIZE; ++ i) {
-        MGB_ASSERT_FLOAT_EQ(host_z.ptr<float>()[i],
-                std::sin(host_x->ptr<float>()[i]) + 1.f);
+    for (size_t i = 0; i < SIZE; ++i) {
+        MGB_ASSERT_FLOAT_EQ(
+                host_z.ptr<float>()[i], std::sin(host_x->ptr<float>()[i]) + 1.f);
     };
 }
 
 TEST(TestOprBasicArith, BinaryGradWithBroadcast) {
     using Checker = AutoOprChecker<3, 1>;
-    auto make_graph = [](const Checker::SymInpArray &inputs) ->
-            Checker::SymOutArray {
+    auto make_graph = [](const Checker::SymInpArray& inputs) -> Checker::SymOutArray {
         return {inputs[0] + (opr::MarkDynamicVar::make(inputs[1]) + inputs[2])};
     };
-    auto fwd = [](Checker::NumOutArray &dest, Checker::NumInpArray inp) {
+    auto fwd = [](Checker::NumOutArray& dest, Checker::NumInpArray inp) {
         host_add(dest[0], *inp[0], *inp[1]);
         host_add(dest[0], dest[0], *inp[2]);
     };
-    Checker(make_graph, fwd).
-        run({TensorShape{2, 3}, TensorShape{2, 3}, TensorShape{1}}).
-        run({TensorShape{1, 5}, TensorShape{1, 1}, TensorShape{5, 1}}).
-        run({TensorShape{2, 1, 1}, TensorShape{1, 3, 1}, TensorShape{1, 1, 4}}).
-        run({TensorShape{1, 1, 1}, TensorShape{1, 3, 1}, TensorShape{2, 3, 4}});
+    Checker(make_graph, fwd)
+            .run({TensorShape{2, 3}, TensorShape{2, 3}, TensorShape{1}})
+            .run({TensorShape{1, 5}, TensorShape{1, 1}, TensorShape{5, 1}})
+            .run({TensorShape{2, 1, 1}, TensorShape{1, 3, 1}, TensorShape{1, 1, 4}})
+            .run({TensorShape{1, 1, 1}, TensorShape{1, 3, 1}, TensorShape{2, 3, 4}});
 }
 
 TEST(TestOprBasicArith, BinaryBroadcastCorrectness) {
     using Checker = AutoOprChecker<2, 1>;
 
     auto run = [&](bool dyn_inp) {
-        auto make_graph = [&](const Checker::SymInpArray &inputs) ->
-                Checker::SymOutArray {
+        auto make_graph =
+                [&](const Checker::SymInpArray& inputs) -> Checker::SymOutArray {
             auto x = inputs[0], y = inputs[1];
             if (dyn_inp) {
                 x = opr::MarkDynamicVar::make(x);
@@ -465,36 +451,33 @@ TEST(TestOprBasicArith, BinaryBroadcastCorrectness) {
             return {x * y};
         };
 
-        auto fwd = [](Checker::NumOutArray &dest, Checker::NumInpArray inp) {
+        auto fwd = [](Checker::NumOutArray& dest, Checker::NumInpArray inp) {
             TensorShape oshp;
-            megdnn::Elemwise::deduce_shape({inp[0]->shape(), inp[1]->shape()},
-                    oshp);
-            auto &&dv = dest[0].comp_node(inp[0]->comp_node()).resize(oshp);
+            megdnn::Elemwise::deduce_shape({inp[0]->shape(), inp[1]->shape()}, oshp);
+            auto&& dv = dest[0].comp_node(inp[0]->comp_node()).resize(oshp);
             auto &&iv0 = inp[0]->sub(SubTensorSpec::make_from_layout(
-                        inp[0]->layout().broadcast(oshp))),
+                         inp[0]->layout().broadcast(oshp))),
                  &&iv1 = inp[1]->sub(SubTensorSpec::make_from_layout(
-                             inp[1]->layout().broadcast(oshp)));
+                         inp[1]->layout().broadcast(oshp)));
 
-            auto it0 = megdnn::tensor_iter_valonly<float>(
-                    iv0.as_megdnn()).begin(),
-                 it1 = megdnn::tensor_iter_valonly<float>(
-                    iv1.as_megdnn()).begin();
-            for (size_t i = 0, it = oshp.total_nr_elems(); i < it; ++ i) {
+            auto it0 = megdnn::tensor_iter_valonly<float>(iv0.as_megdnn()).begin(),
+                 it1 = megdnn::tensor_iter_valonly<float>(iv1.as_megdnn()).begin();
+            for (size_t i = 0, it = oshp.total_nr_elems(); i < it; ++i) {
                 dv.ptr<float>()[i] = *it0 * *it1;
-                ++ it0;
-                ++ it1;
+                ++it0;
+                ++it1;
             }
         };
 
         Checker::RunOptions opt;
         opt.numdiff_eps = 1;
-        Checker(make_graph, fwd).
-            run({TensorShape{5, 3}, {5, 3}}, opt).
-            run({TensorShape{2, 2, 1, 1}, {1, 2, 1, 1}}, opt).
-            run({TensorShape{1, 2}, {2, 1}}, opt).
-            run({TensorShape{3, 2, 5}, {1}}, opt).
-            run({TensorShape{4, 5, 1, 1}, {4, 5, 6, 7}}, opt).
-            run({TensorShape{8, 4, 1, 1}, {1, 4, 5, 1}}, opt);
+        Checker(make_graph, fwd)
+                .run({TensorShape{5, 3}, {5, 3}}, opt)
+                .run({TensorShape{2, 2, 1, 1}, {1, 2, 1, 1}}, opt)
+                .run({TensorShape{1, 2}, {2, 1}}, opt)
+                .run({TensorShape{3, 2, 5}, {1}}, opt)
+                .run({TensorShape{4, 5, 1, 1}, {4, 5, 6, 7}}, opt)
+                .run({TensorShape{8, 4, 1, 1}, {1, 4, 5, 1}}, opt);
     };
 
     run(false);
@@ -506,22 +489,21 @@ TEST(TestOprBasicArith, Optimize) {
     HostTensorGenerator<> gen;
     auto host_x = gen({23});
     auto x = opr::Host2DeviceCopy::make(*graph, host_x),
-         x_sum2 = opr::reduce_sum(
-                 opr::pow(x, x.make_scalar(2)), x.make_scalar(1));
+         x_sum2 = opr::reduce_sum(opr::pow(x, x.make_scalar(2)), x.make_scalar(1));
 
-    ASSERT_EQ(opr::Reduce::Mode::SUM_SQR,
-            x_sum2.node()->owner_opr()->cast_final_safe<opr::Reduce>().
-            param().mode);
+    ASSERT_EQ(
+            opr::Reduce::Mode::SUM_SQR,
+            x_sum2.node()->owner_opr()->cast_final_safe<opr::Reduce>().param().mode);
 
     float sum2 = 0;
     auto xptr = host_x->ptr<float>();
-    for (size_t i = 0, it = host_x->shape().total_nr_elems(); i < it;  ++ i) {
+    for (size_t i = 0, it = host_x->shape().total_nr_elems(); i < it; ++i) {
         sum2 += xptr[i] * xptr[i];
     }
     HostTensorND host_x_sum2;
     auto func = graph->compile({make_callback_copy(x_sum2, host_x_sum2)});
     func->execute();
-    ASSERT_EQ(TensorShape{1},  host_x_sum2.shape());
+    ASSERT_EQ(TensorShape{1}, host_x_sum2.shape());
     MGB_ASSERT_FLOAT_EQ(sum2, host_x_sum2.ptr<float>()[0]);
 }
 
@@ -562,7 +544,7 @@ TEST(TestOprBasicArith, TypeCvtBool) {
     func->execute();
 
     auto py = host_y.ptr<bool>();
-    for (size_t i = 0;i < 3;i ++) {
+    for (size_t i = 0; i < 3; i++) {
         ASSERT_EQ(static_cast<bool>(px[i]), py[i]);
     }
     ASSERT_EQ(TensorShape({3}), host_y.shape());
@@ -583,7 +565,7 @@ TEST(TestOprBasicArith, TypeCvtFromBool) {
     func->execute();
 
     auto py = host_y.ptr<int>();
-    for (size_t i = 0;i < 2;i ++) {
+    for (size_t i = 0; i < 2; i++) {
         ASSERT_EQ(static_cast<int>(px[i]), py[i]);
     }
     ASSERT_EQ(TensorShape({2}), host_y.shape());
@@ -610,25 +592,20 @@ TEST(TestOprBasicArith, ElemwiseMemFwd) {
     auto graph = ComputingGraph::make();
     graph->options().graph_opt_level = 0;
     HostTensorGenerator<> gen;
-    auto host_x = gen({3, 3}),
-         host_y = gen({3, 3});
+    auto host_x = gen({3, 3}), host_y = gen({3, 3});
 
     // x[:, ::-1]
     auto rev = [](SymbolVar x) {
-        return opr::Subtensor::make(x,
-                                    {opr::Subtensor::AxisIndexer::make_interval(
-                                            1, None, None, x.make_scalar(-1))});
+        return opr::Subtensor::make(
+                x, {opr::Subtensor::AxisIndexer::make_interval(
+                           1, None, None, x.make_scalar(-1))});
     };
     auto x = opr::Host2DeviceCopy::make_no_fwd(*graph, host_x),
-         y = opr::Host2DeviceCopy::make_no_fwd(*graph, host_y),
-         y0 = rev(y),
-         y1 = rev(x),
-         z0 = x + y0,
-         z1 = x + y1,
-         z2 = x + x;
+         y = opr::Host2DeviceCopy::make_no_fwd(*graph, host_y), y0 = rev(y),
+         y1 = rev(x), z0 = x + y0, z1 = x + y1, z2 = x + x;
 
-    auto check = [&graph, &host_x, x](SymbolVar y, SymbolVar z, float* py,
-                                      bool rev_y, bool should_fwd) {
+    auto check = [&graph, &host_x,
+                  x](SymbolVar y, SymbolVar z, float* py, bool rev_y, bool should_fwd) {
         HostTensorND host_z;
         auto func = graph->compile({make_callback_copy(z, host_z)});
         func->execute();
@@ -670,17 +647,14 @@ TEST(TestOprBasicArith, ElemwiseRequireContig) {
 
     auto x = opr::Host2DeviceCopy::make_no_fwd(*graph, host_x),
          y = opr::Host2DeviceCopy::make_no_fwd(*graph, host_y),
-         xt = opr::Dimshuffle::make(x, {1, 0}),
-         yb = y.broadcast({3, 3}),
-         z = xt + yb;
+         xt = opr::Dimshuffle::make(x, {1, 0}), yb = y.broadcast({3, 3}), z = xt + yb;
 
     HostTensorND host_z;
     auto func = graph->compile({make_callback_copy(z, host_z)});
     func->execute();
     HostTensorND expect{host_x->comp_node(), host_x->dtype()};
     expect.resize({3, 3});
-    auto px = host_x->ptr<float>(), py = host_y->ptr<float>(),
-         pe = expect.ptr<float>();
+    auto px = host_x->ptr<float>(), py = host_y->ptr<float>(), pe = expect.ptr<float>();
     for (size_t i = 0; i < 3; ++i) {
         for (size_t j = 0; j < 3; ++j) {
             pe[i * 3 + j] = px[j * 3 + i] + py[j];
@@ -699,13 +673,13 @@ TEST(TestOprBasicArith, TypeCvtDedup) {
     auto graph = ComputingGraph::make();
     auto x = opr::Host2DeviceCopy::make(*graph, host_x);
 
-    dtype::Quantized8Asymm dtype1(0.01f, (uint8_t) 123);
-    dtype::Quantized8Asymm dtype2(0.02f, (uint8_t) 234);
+    dtype::Quantized8Asymm dtype1(0.01f, (uint8_t)123);
+    dtype::Quantized8Asymm dtype2(0.02f, (uint8_t)234);
     auto cvt1 = opr::TypeCvt::make(x, dtype1);
     auto cvt2 = opr::TypeCvt::make(x, dtype2);
     ASSERT_NE(cvt1.node(), cvt2.node());
 
-    dtype::Quantized8Asymm dtype3(0.01f, (uint8_t) 123);
+    dtype::Quantized8Asymm dtype3(0.01f, (uint8_t)123);
     auto cvt3 = opr::TypeCvt::make(x, dtype3);
     ASSERT_EQ(cvt1.node(), cvt3.node());
 }
@@ -713,8 +687,7 @@ TEST(TestOprBasicArith, TypeCvtDedup) {
 TEST(TestOprBasicArith, PowC) {
     using Checker = AutoOprChecker<1, 1>;
     SymbolVar inp, sub;
-    auto make_graph =
-            [&](const Checker::SymInpArray& inputs) -> Checker::SymOutArray {
+    auto make_graph = [&](const Checker::SymInpArray& inputs) -> Checker::SymOutArray {
         // test non-contig
         inp = inputs[0];
         sub = opr::Subtensor::make(
@@ -725,8 +698,7 @@ TEST(TestOprBasicArith, PowC) {
     auto fwd = [](Checker::NumOutArray& dest, Checker::NumInpArray inp) {
         TensorShape oshp = inp[0]->shape();
         oshp[1] -= 2;
-        size_t size_x = oshp[0],
-               strd_x = inp[0]->shape().total_nr_elems() / size_x,
+        size_t size_x = oshp[0], strd_x = inp[0]->shape().total_nr_elems() / size_x,
                size_y = oshp.total_nr_elems() / size_x;
 
         auto px = inp[0]->ptr<float>(), py = dest[0].resize(oshp).ptr<float>();
@@ -778,8 +750,7 @@ TEST(TestOprBasicArith, PowCEmptyIO) {
     auto graph = ComputingGraph::make();
     // empty input
     auto host_x = gen({4, 0, 2, 3});
-    auto x = opr::Host2DeviceCopy::make(*graph, host_x),
-         y = opr::PowC::make(x, 3.f);
+    auto x = opr::Host2DeviceCopy::make(*graph, host_x), y = opr::PowC::make(x, 3.f);
     HostTensorND host_y;
     auto func = graph->compile({make_callback_copy(y, host_y)});
     ASSERT_NO_THROW(func->execute().wait());

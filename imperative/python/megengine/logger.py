@@ -17,14 +17,11 @@ _default_level = logging.getLevelName(_default_level_name.upper())
 
 
 def set_log_file(fout, mode="a"):
-    r"""
-    Sets log output file.
+    r"""Sets log output file.
 
-    :type fout: str or file-like
-    :param fout: file-like object that supports write and flush, or string for
-        the filename
-    :type mode: str
-    :param mode: specify the mode to open log file if *fout* is a string
+    Args:
+        fout: file-like object that supports write and flush, or string for the filename
+        mode: specify the mode to open log file if *fout* is a string
     """
     if isinstance(fout, str):
         fout = open(fout, mode)
@@ -39,45 +36,31 @@ class MegEngineLogFormatter(logging.Formatter):
     max_lines = 256
 
     def _color_exc(self, msg):
-        r"""
-        Sets the color of message as the execution type.
-        """
+        r"""Sets the color of message as the execution type."""
         return "\x1b[34m{}\x1b[0m".format(msg)
 
     def _color_dbg(self, msg):
-        r"""
-        Sets the color of message as the debugging type.
-        """
+        r"""Sets the color of message as the debugging type."""
         return "\x1b[36m{}\x1b[0m".format(msg)
 
     def _color_warn(self, msg):
-        r"""
-        Sets the color of message as the warning type.
-        """
+        r"""Sets the color of message as the warning type."""
         return "\x1b[1;31m{}\x1b[0m".format(msg)
 
     def _color_err(self, msg):
-        r"""
-        Sets the color of message as the error type.
-        """
+        r"""Sets the color of message as the error type."""
         return "\x1b[1;4;31m{}\x1b[0m".format(msg)
 
     def _color_omitted(self, msg):
-        r"""
-        Sets the color of message as the omitted type.
-        """
+        r"""Sets the color of message as the omitted type."""
         return "\x1b[35m{}\x1b[0m".format(msg)
 
     def _color_normal(self, msg):
-        r"""
-        Sets the color of message as the normal type.
-        """
+        r"""Sets the color of message as the normal type."""
         return msg
 
     def _color_date(self, msg):
-        r"""
-        Sets the color of message the same as date.
-        """
+        r"""Sets the color of message the same as date."""
         return "\x1b[32m{}\x1b[0m".format(msg)
 
     def format(self, record):
@@ -150,9 +133,7 @@ class MegEngineLogFormatter(logging.Formatter):
 
 
 def get_logger(name=None, formatter=MegEngineLogFormatter):
-    r"""
-    Gets megengine logger with given name.
-    """
+    r"""Gets megengine logger with given name."""
 
     logger = logging.getLogger(name)
     if getattr(logger, "_init_done__", None):
@@ -170,12 +151,11 @@ def get_logger(name=None, formatter=MegEngineLogFormatter):
 
 
 def set_log_level(level, update_existing=True):
-    """
-    Sets default logging level.
+    r"""Sets default logging level.
 
-    :type level: int e.g. logging.INFO
-    :param level: loggin level given by python :mod:`logging` module
-    :param update_existing: whether to update existing loggers
+    Args:
+        level: loggin level given by python :mod:`logging` module
+        update_existing: whether to update existing loggers
     """
     global _default_level  # pylint: disable=global-statement
     _default_level = level
@@ -202,12 +182,13 @@ try:
     _imperative_rt_logger.set_log_handler(_megbrain_logger)
 
     def set_mgb_log_level(level):
-        r"""
-        Sets megbrain log level
+        r"""Sets megbrain log level
 
-        :type level: int e.g. logging.INFO
-        :param level: new log level
-        :return: original log level
+        Args:
+            level: new log level
+
+        Returns:
+            original log level
         """
         _megbrain_logger.setLevel(level)
         if level == logging.getLevelName("ERROR"):
@@ -235,11 +216,10 @@ except ImportError as exc:
 
 @contextlib.contextmanager
 def replace_mgb_log_level(level):
-    r"""
-    Replaces megbrain log level in a block and restore after exiting.
+    r"""Replaces megbrain log level in a block and restore after exiting.
 
-    :type level: int e.g. logging.INFO
-    :param level: new log level
+    Args:
+        level: new log level
     """
     old = set_mgb_log_level(level)
     try:
@@ -249,8 +229,6 @@ def replace_mgb_log_level(level):
 
 
 def enable_debug_log():
-    r"""
-    Sets logging level to debug for all components.
-    """
+    r"""Sets logging level to debug for all components."""
     set_log_level(logging.DEBUG)
     set_mgb_log_level(logging.DEBUG)

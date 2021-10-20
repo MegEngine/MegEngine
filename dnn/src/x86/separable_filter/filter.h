@@ -59,13 +59,12 @@
  * ---------------------------------------------------------------------------
  */
 
-
 #pragma once
-#include "src/common/cv/filter.h"
-#include <cfloat>
-#include <cmath>
 #include <pmmintrin.h>
 #include <smmintrin.h>
+#include <cfloat>
+#include <cmath>
+#include "src/common/cv/filter.h"
 
 namespace megdnn {
 namespace megcv {
@@ -173,10 +172,10 @@ struct SymmRowSmallVec_8u32s {
                     x1 = _mm_loadu_si128((__m128i*)src);
                     x2 = _mm_loadu_si128((__m128i*)(src + cn));
 
-                    y0 = _mm_add_epi16(_mm_unpackhi_epi8(x0, z),
-                                       _mm_unpackhi_epi8(x2, z));
-                    x0 = _mm_add_epi16(_mm_unpacklo_epi8(x0, z),
-                                       _mm_unpacklo_epi8(x2, z));
+                    y0 = _mm_add_epi16(
+                            _mm_unpackhi_epi8(x0, z), _mm_unpackhi_epi8(x2, z));
+                    x0 = _mm_add_epi16(
+                            _mm_unpacklo_epi8(x0, z), _mm_unpacklo_epi8(x2, z));
                     y1 = _mm_unpackhi_epi8(x1, z);
                     x1 = _mm_unpacklo_epi8(x1, z);
 
@@ -215,10 +214,10 @@ struct SymmRowSmallVec_8u32s {
                     x0 = _mm_loadu_si128((__m128i*)(src - cn));
                     x1 = _mm_loadu_si128((__m128i*)src);
                     x2 = _mm_loadu_si128((__m128i*)(src + cn));
-                    y0 = _mm_add_epi16(_mm_unpackhi_epi8(x0, z),
-                                       _mm_unpackhi_epi8(x2, z));
-                    x0 = _mm_add_epi16(_mm_unpacklo_epi8(x0, z),
-                                       _mm_unpacklo_epi8(x2, z));
+                    y0 = _mm_add_epi16(
+                            _mm_unpackhi_epi8(x0, z), _mm_unpackhi_epi8(x2, z));
+                    x0 = _mm_add_epi16(
+                            _mm_unpacklo_epi8(x0, z), _mm_unpacklo_epi8(x2, z));
                     y1 = _mm_unpackhi_epi8(x1, z);
                     x1 = _mm_unpacklo_epi8(x1, z);
 
@@ -242,10 +241,10 @@ struct SymmRowSmallVec_8u32s {
 
                     x0 = _mm_loadu_si128((__m128i*)(src - cn * 2));
                     x1 = _mm_loadu_si128((__m128i*)(src + cn * 2));
-                    y1 = _mm_add_epi16(_mm_unpackhi_epi8(x0, z),
-                                       _mm_unpackhi_epi8(x1, z));
-                    y0 = _mm_add_epi16(_mm_unpacklo_epi8(x0, z),
-                                       _mm_unpacklo_epi8(x1, z));
+                    y1 = _mm_add_epi16(
+                            _mm_unpackhi_epi8(x0, z), _mm_unpackhi_epi8(x1, z));
+                    y0 = _mm_add_epi16(
+                            _mm_unpacklo_epi8(x0, z), _mm_unpacklo_epi8(x1, z));
 
                     t1 = _mm_mulhi_epi16(y0, k2);
                     t0 = _mm_mullo_epi16(y0, k2);
@@ -316,8 +315,7 @@ struct ColumnVec_32s8u {
     ~ColumnVec_32s8u() { free(kernel); }
 
     MEGDNN_ATTRIBUTE_TARGET("sse2")
-    int operator()(const uchar** _src, uchar* dst, int& count,
-                   int width) const {
+    int operator()(const uchar** _src, uchar* dst, int& count, int width) const {
         MEGDNN_MARK_USED_VAR(count);
         const float* ky = kernel;
         int i = 0, k;
@@ -362,8 +360,7 @@ struct ColumnVec_32s8u {
 
         for (; i <= width - 4; i += 4) {
             __m128i x0;
-            __m128 s0 = _mm_cvtepi32_ps(
-                    _mm_load_si128((const __m128i*)(src[0] + i)));
+            __m128 s0 = _mm_cvtepi32_ps(_mm_load_si128((const __m128i*)(src[0] + i)));
             s0 = _mm_mul_ps(s0, f0);
 
             for (k = 1; k < static_cast<int>(ksize); k++) {
@@ -400,8 +397,7 @@ struct SymmColumnVec_32s8u {
     ~SymmColumnVec_32s8u() { free(kernel); }
 
     MEGDNN_ATTRIBUTE_TARGET("sse2")
-    int operator()(const uchar** _src, uchar* dst, int& count,
-                   int width) const {
+    int operator()(const uchar** _src, uchar* dst, int& count, int width) const {
         MEGDNN_MARK_USED_VAR(count);
         int ksize2 = (ksize) / 2;
         const float* ky = kernel + ksize2;
@@ -432,14 +428,11 @@ struct SymmColumnVec_32s8u {
                 f = _mm_shuffle_ps(f, f, 0);
                 x0 = _mm_add_epi32(_mm_load_si128(S), _mm_load_si128(S2));
                 s0 = _mm_add_ps(s0, _mm_mul_ps(_mm_cvtepi32_ps(x0), f));
-                x1 = _mm_add_epi32(_mm_load_si128(S + 1),
-                                   _mm_load_si128(S2 + 1));
+                x1 = _mm_add_epi32(_mm_load_si128(S + 1), _mm_load_si128(S2 + 1));
                 s1 = _mm_add_ps(s1, _mm_mul_ps(_mm_cvtepi32_ps(x1), f));
-                x0 = _mm_add_epi32(_mm_load_si128(S + 2),
-                                   _mm_load_si128(S2 + 2));
+                x0 = _mm_add_epi32(_mm_load_si128(S + 2), _mm_load_si128(S2 + 2));
                 s2 = _mm_add_ps(s2, _mm_mul_ps(_mm_cvtepi32_ps(x0), f));
-                x1 = _mm_add_epi32(_mm_load_si128(S + 3),
-                                   _mm_load_si128(S2 + 3));
+                x1 = _mm_add_epi32(_mm_load_si128(S + 3), _mm_load_si128(S2 + 3));
                 s3 = _mm_add_ps(s3, _mm_mul_ps(_mm_cvtepi32_ps(x1), f));
             }
 
@@ -451,8 +444,7 @@ struct SymmColumnVec_32s8u {
 
         for (; i <= width - 4; i += 4) {
             __m128i x0;
-            __m128 s0 = _mm_cvtepi32_ps(
-                    _mm_load_si128((const __m128i*)(src[0] + i)));
+            __m128 s0 = _mm_cvtepi32_ps(_mm_load_si128((const __m128i*)(src[0] + i)));
             s0 = _mm_mul_ps(s0, f0);
 
             for (k = 1; k <= ksize2; k++) {
@@ -489,8 +481,7 @@ struct SymmColumnSmallVec_32s8u {
     ~SymmColumnSmallVec_32s8u() { free(kernel); }
 
     MEGDNN_ATTRIBUTE_TARGET("sse2")
-    int operator()(const uchar** _src, uchar* dst, int& count,
-                   int width) const {
+    int operator()(const uchar** _src, uchar* dst, int& count, int width) const {
         int ksize2 = (ksize) / 2;
         const float* ky = kernel + ksize2;
         int i = 0, k;
@@ -535,15 +526,13 @@ struct SymmColumnSmallVec_32s8u {
                 d00 = _mm_add_ps(d00, _mm_mul_ps(_mm_add_ps(s00, s20), f1));
                 s01 = _mm_cvtepi32_ps(_mm_load_si128(S0 + 1));
                 d01 = _mm_add_ps(d01, _mm_mul_ps(_mm_add_ps(s01, s21), f1));
-                d_0 = _mm_packs_epi32(_mm_cvtps_epi32(d00),
-                                      _mm_cvtps_epi32(d01));
+                d_0 = _mm_packs_epi32(_mm_cvtps_epi32(d00), _mm_cvtps_epi32(d01));
                 s02 = _mm_cvtepi32_ps(_mm_load_si128(S0 + 2));
                 d02 = _mm_add_ps(d02, _mm_mul_ps(_mm_add_ps(s02, s22), f1));
                 s03 = _mm_cvtepi32_ps(_mm_load_si128(S0 + 3));
                 d03 = _mm_add_ps(d03, _mm_mul_ps(_mm_add_ps(s03, s23), f1));
 
-                d_1 = _mm_packs_epi32(_mm_cvtps_epi32(d02),
-                                      _mm_cvtps_epi32(d03));
+                d_1 = _mm_packs_epi32(_mm_cvtps_epi32(d02), _mm_cvtps_epi32(d03));
                 d_0 = _mm_packus_epi16(d_0, d_1);
 
                 _mm_storeu_si128((__m128i*)(dst + i), d_0);
@@ -555,8 +544,7 @@ struct SymmColumnSmallVec_32s8u {
                 s01 = _mm_cvtepi32_ps(_mm_load_si128(S2 + 1));
                 d01 = _mm_mul_ps(s21, f0);
                 d01 = _mm_add_ps(d01, _mm_mul_ps(_mm_add_ps(s01, s11), f1));
-                d_0 = _mm_packs_epi32(_mm_cvtps_epi32(d00),
-                                      _mm_cvtps_epi32(d01));
+                d_0 = _mm_packs_epi32(_mm_cvtps_epi32(d00), _mm_cvtps_epi32(d01));
                 s02 = _mm_cvtepi32_ps(_mm_load_si128(S2 + 2));
                 d02 = _mm_mul_ps(s22, f0);
                 d02 = _mm_add_ps(d02, _mm_mul_ps(_mm_add_ps(s02, s12), f1));
@@ -564,8 +552,7 @@ struct SymmColumnSmallVec_32s8u {
                 d03 = _mm_mul_ps(s23, f0);
                 d03 = _mm_add_ps(d03, _mm_mul_ps(_mm_add_ps(s03, s13), f1));
 
-                d_1 = _mm_packs_epi32(_mm_cvtps_epi32(d02),
-                                      _mm_cvtps_epi32(d03));
+                d_1 = _mm_packs_epi32(_mm_cvtps_epi32(d02), _mm_cvtps_epi32(d03));
                 d_0 = _mm_packus_epi16(d_0, d_1);
 
                 _mm_storeu_si128((__m128i*)(dst + width + i), d_0);
@@ -577,8 +564,7 @@ struct SymmColumnSmallVec_32s8u {
                 s11 = _mm_cvtepi32_ps(_mm_load_si128(S2 + 1));
                 d01 = _mm_mul_ps(s01, f0);
                 d01 = _mm_add_ps(d01, _mm_mul_ps(_mm_add_ps(s21, s11), f1));
-                d_0 = _mm_packs_epi32(_mm_cvtps_epi32(d00),
-                                      _mm_cvtps_epi32(d01));
+                d_0 = _mm_packs_epi32(_mm_cvtps_epi32(d00), _mm_cvtps_epi32(d01));
                 s12 = _mm_cvtepi32_ps(_mm_load_si128(S2 + 2));
                 d02 = _mm_mul_ps(s02, f0);
                 d02 = _mm_add_ps(d02, _mm_mul_ps(_mm_add_ps(s22, s12), f1));
@@ -586,8 +572,7 @@ struct SymmColumnSmallVec_32s8u {
                 d03 = _mm_mul_ps(s03, f0);
                 d03 = _mm_add_ps(d03, _mm_mul_ps(_mm_add_ps(s23, s13), f1));
 
-                d_1 = _mm_packs_epi32(_mm_cvtps_epi32(d02),
-                                      _mm_cvtps_epi32(d03));
+                d_1 = _mm_packs_epi32(_mm_cvtps_epi32(d02), _mm_cvtps_epi32(d03));
                 d_0 = _mm_packus_epi16(d_0, d_1);
 
                 _mm_storeu_si128((__m128i*)(dst + width * 2 + i), d_0);
@@ -599,8 +584,7 @@ struct SymmColumnSmallVec_32s8u {
                 s21 = _mm_cvtepi32_ps(_mm_load_si128(S2 + 1));
                 d01 = _mm_mul_ps(s11, f0);
                 d01 = _mm_add_ps(d01, _mm_mul_ps(_mm_add_ps(s01, s21), f1));
-                d_0 = _mm_packs_epi32(_mm_cvtps_epi32(d00),
-                                      _mm_cvtps_epi32(d01));
+                d_0 = _mm_packs_epi32(_mm_cvtps_epi32(d00), _mm_cvtps_epi32(d01));
                 s22 = _mm_cvtepi32_ps(_mm_load_si128(S2 + 2));
                 d02 = _mm_mul_ps(s12, f0);
                 d02 = _mm_add_ps(d02, _mm_mul_ps(_mm_add_ps(s02, s22), f1));
@@ -608,8 +592,7 @@ struct SymmColumnSmallVec_32s8u {
                 d03 = _mm_mul_ps(s13, f0);
                 d03 = _mm_add_ps(d03, _mm_mul_ps(_mm_add_ps(s03, s23), f1));
 
-                d_1 = _mm_packs_epi32(_mm_cvtps_epi32(d02),
-                                      _mm_cvtps_epi32(d03));
+                d_1 = _mm_packs_epi32(_mm_cvtps_epi32(d02), _mm_cvtps_epi32(d03));
                 d_0 = _mm_packus_epi16(d_0, d_1);
 
                 _mm_storeu_si128((__m128i*)(dst + width * 3 + i), d_0);
@@ -620,16 +603,13 @@ struct SymmColumnSmallVec_32s8u {
                 __m128 s0, s1, s2;
                 __m128 d0, d1;
 
-                s2 = _mm_cvtepi32_ps(
-                        _mm_load_si128((const __m128i*)(src[1] + i)));
+                s2 = _mm_cvtepi32_ps(_mm_load_si128((const __m128i*)(src[1] + i)));
                 d1 = _mm_mul_ps(s2, f0);
 
-                s1 = _mm_cvtepi32_ps(
-                        _mm_load_si128((const __m128i*)(src[0] + i)));
+                s1 = _mm_cvtepi32_ps(_mm_load_si128((const __m128i*)(src[0] + i)));
                 d0 = _mm_mul_ps(s1, f0);
 
-                s0 = _mm_cvtepi32_ps(
-                        _mm_load_si128((const __m128i*)(src[-1] + i)));
+                s0 = _mm_cvtepi32_ps(_mm_load_si128((const __m128i*)(src[-1] + i)));
                 d0 = _mm_add_ps(d0, _mm_mul_ps(_mm_add_ps(s0, s2), f1));
 
                 x0 = _mm_cvtps_epi32(d0);
@@ -637,8 +617,7 @@ struct SymmColumnSmallVec_32s8u {
                 x0 = _mm_packus_epi16(x0, x0);
                 *(int*)(dst + i) = _mm_cvtsi128_si32(x0);
 
-                s0 = _mm_cvtepi32_ps(
-                        _mm_load_si128((const __m128i*)(src[2] + i)));
+                s0 = _mm_cvtepi32_ps(_mm_load_si128((const __m128i*)(src[2] + i)));
                 d0 = _mm_mul_ps(s0, f0);
                 d1 = _mm_add_ps(d1, _mm_mul_ps(_mm_add_ps(s0, s1), f1));
                 x0 = _mm_cvtps_epi32(d1);
@@ -646,8 +625,7 @@ struct SymmColumnSmallVec_32s8u {
                 x0 = _mm_packus_epi16(x0, x0);
                 *(int*)(dst + width + i) = _mm_cvtsi128_si32(x0);
 
-                s1 = _mm_cvtepi32_ps(
-                        _mm_load_si128((const __m128i*)(src[3] + i)));
+                s1 = _mm_cvtepi32_ps(_mm_load_si128((const __m128i*)(src[3] + i)));
                 d1 = _mm_mul_ps(s1, f0);
                 d0 = _mm_add_ps(d0, _mm_mul_ps(_mm_add_ps(s2, s1), f1));
                 x0 = _mm_cvtps_epi32(d0);
@@ -655,8 +633,7 @@ struct SymmColumnSmallVec_32s8u {
                 x0 = _mm_packus_epi16(x0, x0);
                 *(int*)(dst + width * 2 + i) = _mm_cvtsi128_si32(x0);
 
-                s2 = _mm_cvtepi32_ps(
-                        _mm_load_si128((const __m128i*)(src[4] + i)));
+                s2 = _mm_cvtepi32_ps(_mm_load_si128((const __m128i*)(src[4] + i)));
                 d1 = _mm_add_ps(d1, _mm_mul_ps(_mm_add_ps(s0, s2), f1));
                 x0 = _mm_cvtps_epi32(d1);
                 x0 = _mm_packs_epi32(x0, x0);
@@ -722,24 +699,21 @@ struct SymmColumnSmallVec_32s8u {
                         S2 = (const __m128i*)(src[-k] + i);
                         __m128 f = _mm_load_ss(ky + k);
                         f = _mm_shuffle_ps(f, f, 0);
-                        x0 = _mm_add_epi32(_mm_load_si128(S),
-                                           _mm_load_si128(S2));
+                        x0 = _mm_add_epi32(_mm_load_si128(S), _mm_load_si128(S2));
                         s0 = _mm_add_ps(s0, _mm_mul_ps(_mm_cvtepi32_ps(x0), f));
-                        x1 = _mm_add_epi32(_mm_load_si128(S + 1),
-                                           _mm_load_si128(S2 + 1));
+                        x1 = _mm_add_epi32(
+                                _mm_load_si128(S + 1), _mm_load_si128(S2 + 1));
                         s1 = _mm_add_ps(s1, _mm_mul_ps(_mm_cvtepi32_ps(x1), f));
-                        x0 = _mm_add_epi32(_mm_load_si128(S + 2),
-                                           _mm_load_si128(S2 + 2));
+                        x0 = _mm_add_epi32(
+                                _mm_load_si128(S + 2), _mm_load_si128(S2 + 2));
                         s2 = _mm_add_ps(s2, _mm_mul_ps(_mm_cvtepi32_ps(x0), f));
-                        x1 = _mm_add_epi32(_mm_load_si128(S + 3),
-                                           _mm_load_si128(S2 + 3));
+                        x1 = _mm_add_epi32(
+                                _mm_load_si128(S + 3), _mm_load_si128(S2 + 3));
                         s3 = _mm_add_ps(s3, _mm_mul_ps(_mm_cvtepi32_ps(x1), f));
                     }
 
-                    x0 = _mm_packs_epi32(_mm_cvtps_epi32(s0),
-                                         _mm_cvtps_epi32(s1));
-                    x1 = _mm_packs_epi32(_mm_cvtps_epi32(s2),
-                                         _mm_cvtps_epi32(s3));
+                    x0 = _mm_packs_epi32(_mm_cvtps_epi32(s0), _mm_cvtps_epi32(s1));
+                    x1 = _mm_packs_epi32(_mm_cvtps_epi32(s2), _mm_cvtps_epi32(s3));
                     x0 = _mm_packus_epi16(x0, x1);
                     _mm_storeu_si128((__m128i*)(dst + i), x0);
                 }
@@ -757,8 +731,7 @@ struct SymmColumnSmallVec_32s8u {
                         S2 = (const __m128i*)(src[-k] + i);
                         f = _mm_load_ss(ky + k);
                         f = _mm_shuffle_ps(f, f, 0);
-                        x0 = _mm_add_epi32(_mm_load_si128(S),
-                                           _mm_load_si128(S2));
+                        x0 = _mm_add_epi32(_mm_load_si128(S), _mm_load_si128(S2));
                         s0 = _mm_add_ps(s0, _mm_mul_ps(_mm_cvtepi32_ps(x0), f));
                     }
 
@@ -773,8 +746,7 @@ struct SymmColumnSmallVec_32s8u {
                     d0 = (float)(*(src[0] + i)) * f_0;
 
                     for (k = 1; k <= ksize2; k++)
-                        d0 += ((float)(*(src[-k] + i)) +
-                               (float)(*(src[k] + i))) *
+                        d0 += ((float)(*(src[-k] + i)) + (float)(*(src[k] + i))) *
                               (*(ky + k));
 
                     *(dst + i) = (uchar)((int)d0);
@@ -884,10 +856,11 @@ struct SymmRowSmallVec_32f {
                     x0 = _mm_add_ps(x0, _mm_mul_ps(x1, k0));
                     y0 = _mm_add_ps(y0, _mm_mul_ps(y1, k0));
 
-                    x2 = _mm_add_ps(_mm_loadu_ps(src + cn * 2),
-                                    _mm_loadu_ps(src - cn * 2));
-                    y2 = _mm_add_ps(_mm_loadu_ps(src + cn * 2 + 4),
-                                    _mm_loadu_ps(src - cn * 2 + 4));
+                    x2 = _mm_add_ps(
+                            _mm_loadu_ps(src + cn * 2), _mm_loadu_ps(src - cn * 2));
+                    y2 = _mm_add_ps(
+                            _mm_loadu_ps(src + cn * 2 + 4),
+                            _mm_loadu_ps(src - cn * 2 + 4));
                     x0 = _mm_add_ps(x0, _mm_mul_ps(x2, k2));
                     y0 = _mm_add_ps(y0, _mm_mul_ps(y2, k2));
 
@@ -1041,8 +1014,7 @@ struct SymmColumnVec_32f {
                     f = _mm_shuffle_ps(f, f, 0);
                     S = src[k] + i;
                     S2 = src[-k] + i;
-                    x0 = _mm_add_ps(_mm_load_ps(src[k] + i),
-                                    _mm_load_ps(src[-k] + i));
+                    x0 = _mm_add_ps(_mm_load_ps(src[k] + i), _mm_load_ps(src[-k] + i));
                     s0 = _mm_add_ps(s0, _mm_mul_ps(x0, f));
                 }
 
@@ -1065,8 +1037,7 @@ struct SymmColumnSmallVec_32f {
     }
 
     MEGDNN_ATTRIBUTE_TARGET("sse2")
-    int operator()(const uchar** _src, uchar* _dst, int& count,
-                   int width) const {
+    int operator()(const uchar** _src, uchar* _dst, int& count, int width) const {
         (void)count;
 
         int ksize2 = (ksize) / 2;
@@ -1113,8 +1084,7 @@ struct SymmColumnSmallVec_32f {
                 s0 = _mm_mul_ps(s0, k0);
                 s1 = _mm_mul_ps(s1, k0);
                 x0 = _mm_add_ps(_mm_load_ps(S0 + i), _mm_load_ps(S2 + i));
-                x1 = _mm_add_ps(_mm_load_ps(S0 + i + 4),
-                                _mm_load_ps(S2 + i + 4));
+                x1 = _mm_add_ps(_mm_load_ps(S0 + i + 4), _mm_load_ps(S2 + i + 4));
                 s0 = _mm_add_ps(s0, _mm_mul_ps(x0, k1));
                 s1 = _mm_add_ps(s1, _mm_mul_ps(x1, k1));
                 _mm_storeu_ps(dst + i, s0);
@@ -1143,14 +1113,13 @@ static BaseColumnFilter* getLinearColumnFilter(Mat<FT>& kernel, int bits) {
 
     if (ksize == 3 && SYMM) {
         if (std::is_same<DT, uchar>::value && std::is_same<FT, int>::value)
-            return new SymmColumnSmallFilter<FixedPtCastEx<FT, DT>,
-                                             SymmColumnSmallVec_32s8u>(
+            return new SymmColumnSmallFilter<
+                    FixedPtCastEx<FT, DT>, SymmColumnSmallVec_32s8u>(
                     kernel, anchor, FixedPtCastEx<FT, DT>(bits),
                     SymmColumnSmallVec_32s8u(kernel_str, ksize, bits));
-        if (std::is_same<DT, float>::value &&
-            std::is_same<FT, float>::value)
-            return new SymmColumnSmallFilter<FixedPtCastEx<FT, DT>,
-                                             SymmColumnSmallVec_32f>(
+        if (std::is_same<DT, float>::value && std::is_same<FT, float>::value)
+            return new SymmColumnSmallFilter<
+                    FixedPtCastEx<FT, DT>, SymmColumnSmallVec_32f>(
                     kernel, anchor, FixedPtCastEx<FT, DT>(0),
                     SymmColumnSmallVec_32f(kernel_str, ksize, 0));
     }
@@ -1166,8 +1135,7 @@ static BaseColumnFilter* getLinearColumnFilter(Mat<FT>& kernel, int bits) {
                 ColumnVec_32f(kernel_str, ksize, 0));
     }
 
-    MegCVException(
-            "Unsupported combination of source format and buffer format\n");
+    MegCVException("Unsupported combination of source format and buffer format\n");
 }
 
 /*!
@@ -1196,11 +1164,10 @@ static BaseRowFilter* getLinearRowFilter(Mat<FT>& kernel) {
                 kernel, anchor, RowVec_8u32s(kernel_str, ksize));
 
     if (std::is_same<ST, float>::value && std::is_same<FT, float>::value)
-        return new RowFilter<ST, FT, RowVec_32f>(kernel, anchor,
-                                                 RowVec_32f(kernel_str, ksize));
+        return new RowFilter<ST, FT, RowVec_32f>(
+                kernel, anchor, RowVec_32f(kernel_str, ksize));
 
-    MegCVException(
-            "Unsupported combination of source format and buffer format\n");
+    MegCVException("Unsupported combination of source format and buffer format\n");
 }
 
 }  // namespace sep_filter

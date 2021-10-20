@@ -9,10 +9,10 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
  * implied.
  */
+#include "test/common/matrix_mul.h"
 #include "src/common/utils.h"
 #include "test/common/benchmarker.h"
 #include "test/common/checker.h"
-#include "test/common/matrix_mul.h"
 
 using namespace megdnn;
 using namespace test;
@@ -39,8 +39,7 @@ std::vector<matrix_mul::TestArg> matrix_mul::get_matmul_args_no_mask() {
     return args;
 }
 
-std::vector<matrix_mul::TestArg> matrix_mul::get_matmul_mk_packed_args(
-        size_t nbase) {
+std::vector<matrix_mul::TestArg> matrix_mul::get_matmul_mk_packed_args(size_t nbase) {
     std::vector<TestArg> args;
     for (size_t m : {1, 2, 3, 4, 5, 6, 7, 8, 11})
         for (size_t n : {1, 2, 3, 4, 5, 8, 12, 16, 24})
@@ -49,8 +48,7 @@ std::vector<matrix_mul::TestArg> matrix_mul::get_matmul_mk_packed_args(
     return args;
 }
 
-std::vector<matrix_mul::TestArg>
-matrix_mul::get_batched_matmul_args_cublaslt() {
+std::vector<matrix_mul::TestArg> matrix_mul::get_batched_matmul_args_cublaslt() {
     std::vector<TestArg> args;
     for (size_t m : {4, 6, 8, 16}) {
         for (size_t n : {4, 6, 8, 16}) {
@@ -59,32 +57,30 @@ matrix_mul::get_batched_matmul_args_cublaslt() {
             // so please uncomment it if the bug is fixed
 
             for (size_t k : {32, 64}) {
-                args.emplace_back(m, n, k, 0, TestArg::UNSET_STRIDE_VAL,
-                                  TestArg::UNSET_STRIDE_VAL,
-                                  TestArg::UNSET_STRIDE_VAL, 2);
+                args.emplace_back(
+                        m, n, k, 0, TestArg::UNSET_STRIDE_VAL,
+                        TestArg::UNSET_STRIDE_VAL, TestArg::UNSET_STRIDE_VAL, 2);
             }
         }
     }
     return args;
 }
 
-std::vector<matrix_mul::TestArg>
-matrix_mul::get_batched_matmul_args_int8x8x32() {
+std::vector<matrix_mul::TestArg> matrix_mul::get_batched_matmul_args_int8x8x32() {
     std::vector<TestArg> args;
     for (size_t m : {1, 2, 3, 4, 5, 8, 64}) {
         for (size_t n : {1, 2, 3, 4, 5, 8, 64}) {
             for (size_t k : {1, 2, 3, 4, 5, 8, 64}) {
-                args.emplace_back(m, n, k, 0, TestArg::UNSET_STRIDE_VAL,
-                                  TestArg::UNSET_STRIDE_VAL,
-                                  TestArg::UNSET_STRIDE_VAL, 2);
+                args.emplace_back(
+                        m, n, k, 0, TestArg::UNSET_STRIDE_VAL,
+                        TestArg::UNSET_STRIDE_VAL, TestArg::UNSET_STRIDE_VAL, 2);
             }
         }
     }
     return args;
 }
 
-std::vector<matrix_mul::TestArg> matrix_mul::get_matmul_args_mask(
-        uint8_t mask) {
+std::vector<matrix_mul::TestArg> matrix_mul::get_matmul_args_mask(uint8_t mask) {
     std::vector<TestArg> args;
 
     std::vector<TestArg> args_temp = matrix_mul::get_matmul_args_no_mask();
@@ -146,16 +142,14 @@ std::vector<matrix_mul::TestArg> matrix_mul::get_batched_matmul_args_mask(
 std::vector<matrix_mul::TestArg> matrix_mul::get_batched_matmul_args() {
     std::vector<TestArg> args;
     for (size_t mask = 0; mask < 4; ++mask) {
-        std::vector<TestArg> args_temp =
-                matrix_mul::get_batched_matmul_args_mask(mask);
+        std::vector<TestArg> args_temp = matrix_mul::get_batched_matmul_args_mask(mask);
         for (auto arg : args_temp)
             args.emplace_back(arg);
     }
     return args;
 }
 
-std::vector<matrix_mul::TestArg>
-matrix_mul::get_batched_matmul_broadcast_args() {
+std::vector<matrix_mul::TestArg> matrix_mul::get_batched_matmul_broadcast_args() {
     std::vector<TestArg> args;
     for (size_t mask = 0; mask < 4; ++mask) {
         std::vector<TestArg> args_temp =
@@ -166,11 +160,10 @@ matrix_mul::get_batched_matmul_broadcast_args() {
     return args;
 }
 
-std::vector<matrix_mul::TestArg>
-matrix_mul::get_batched_matmul_broadcast_args_mask(uint8_t mask) {
+std::vector<matrix_mul::TestArg> matrix_mul::get_batched_matmul_broadcast_args_mask(
+        uint8_t mask) {
     std::vector<TestArg> args;
-    std::vector<TestArg> args_temp =
-            matrix_mul::get_batched_matmul_args_mask(mask);
+    std::vector<TestArg> args_temp = matrix_mul::get_batched_matmul_args_mask(mask);
     for (auto arg : args_temp) {
         args.emplace_back(arg);
         args.back().A_batch_stride = 0;
@@ -179,13 +172,11 @@ matrix_mul::get_batched_matmul_broadcast_args_mask(uint8_t mask) {
 }
 
 template <typename Opr>
-void matrix_mul::check_matrix_mul(DType A_dtype, DType B_dtype, DType C_dtype,
-                                  Handle* handle,
-                                  const ExecutionPolicyAlgoName& algo,
-                                  param::MatrixMul::Format format, size_t nbase,
-                                  float eps, std::vector<TestArg>&& user_args,
-                                  bool force_deduce_dst,
-                                  param::MatrixMul::ComputeMode compute_mode) {
+void matrix_mul::check_matrix_mul(
+        DType A_dtype, DType B_dtype, DType C_dtype, Handle* handle,
+        const ExecutionPolicyAlgoName& algo, param::MatrixMul::Format format,
+        size_t nbase, float eps, std::vector<TestArg>&& user_args,
+        bool force_deduce_dst, param::MatrixMul::ComputeMode compute_mode) {
     megdnn_assert(A_dtype.enumv() == B_dtype.enumv());
     Checker<Opr> checker(handle);
     checker.set_force_deduce_dst(force_deduce_dst);
@@ -198,8 +189,9 @@ void matrix_mul::check_matrix_mul(DType A_dtype, DType B_dtype, DType C_dtype,
         A_dtype.enumv() == DTypeEnum::QuantizedS8) {
         //! use larger rng to check the overflow
         rng = std::make_unique<UniformIntRNG>(-127, 127);
-    } else if (A_dtype.enumv() == DTypeEnum::Uint8 ||
-               A_dtype.enumv() == DTypeEnum::Quantized8Asymm) {
+    } else if (
+            A_dtype.enumv() == DTypeEnum::Uint8 ||
+            A_dtype.enumv() == DTypeEnum::Quantized8Asymm) {
         rng = std::make_unique<NormalRNG>(128.f);
     } else if (A_dtype.enumv() == DTypeEnum::Int16) {
         rng = std::make_unique<UniformIntRNG>(-32767, 32767);
@@ -224,8 +216,7 @@ void matrix_mul::check_matrix_mul(DType A_dtype, DType B_dtype, DType C_dtype,
         }
     };
 
-    constexpr static bool batched =
-            std::is_same<Opr, megdnn::BatchedMatrixMul>::value;
+    constexpr static bool batched = std::is_same<Opr, megdnn::BatchedMatrixMul>::value;
     using Param = MatrixMul::Param;
     std::vector<TestArg> args;
     if (user_args.empty()) {
@@ -237,8 +228,7 @@ void matrix_mul::check_matrix_mul(DType A_dtype, DType B_dtype, DType C_dtype,
             }
 
         } else {
-            megdnn_assert(!batched,
-                          "BatchedMatrixMul does not support MK4/MK8");
+            megdnn_assert(!batched, "BatchedMatrixMul does not support MK4/MK8");
             args = matrix_mul::get_matmul_mk_packed_args(nbase);
         }
     } else {
@@ -264,9 +254,7 @@ void matrix_mul::check_matrix_mul(DType A_dtype, DType B_dtype, DType C_dtype,
         param.transposeB = arg.mask & 0x2;
         param.compute_mode = compute_mode;
         param.format = format;
-        checker.set_dtype(0, A_dtype)
-                .set_dtype(1, B_dtype)
-                .set_dtype(2, C_dtype);
+        checker.set_dtype(0, A_dtype).set_dtype(1, B_dtype).set_dtype(2, C_dtype);
         size_t A0 = m, A1 = k, B0 = k, B1 = n;
         TensorShape A, B;
         if (param.transposeA) {
@@ -289,49 +277,49 @@ void matrix_mul::check_matrix_mul(DType A_dtype, DType B_dtype, DType C_dtype,
         checker.set_param(param);
         if (format == param::MatrixMul::Format::DEFAULT) {
             if (batched) {
-                checker.execl({TensorLayout{{arg.b, A0, A1},
-                                            {A_batch_stride, A_stride, 1},
-                                            A_dtype},
-                               TensorLayout{{arg.b, B0, B1},
-                                            {B_batch_stride, B_stride, 1},
-                                            B_dtype},
-                               TensorLayout{{arg.b, m, n},
-                                            {C_batch_stride, C_stride, 1},
-                                            C_dtype}});
+                checker.execl(
+                        {TensorLayout{
+                                 {arg.b, A0, A1},
+                                 {A_batch_stride, A_stride, 1},
+                                 A_dtype},
+                         TensorLayout{
+                                 {arg.b, B0, B1},
+                                 {B_batch_stride, B_stride, 1},
+                                 B_dtype},
+                         TensorLayout{
+                                 {arg.b, m, n},
+                                 {C_batch_stride, C_stride, 1},
+                                 C_dtype}});
             } else {
-                checker.execl({TensorLayout{{A0, A1}, {A_stride, 1}, A_dtype},
-                               TensorLayout{{B0, B1}, {B_stride, 1}, B_dtype},
-                               TensorLayout{{m, n}, {C_stride, 1}, C_dtype}});
+                checker.execl(
+                        {TensorLayout{{A0, A1}, {A_stride, 1}, A_dtype},
+                         TensorLayout{{B0, B1}, {B_stride, 1}, B_dtype},
+                         TensorLayout{{m, n}, {C_stride, 1}, C_dtype}});
             }
         } else {
             //! ignore non-contiguous, only DEFAULT format support
             //! non-contiguous input
-            checker.execs(
-                    {{A0, A1, pack_size, pack_size}, {B0, B1, pack_size}, {}});
+            checker.execs({{A0, A1, pack_size, pack_size}, {B0, B1, pack_size}, {}});
         }
     }
 }
 
-void matrix_mul::check_batched_matrix_mul(DType A_dtype, DType B_dtype,
-                                          DType C_dtype, Handle* handle,
-                                          const ExecutionPolicyAlgoName& algo,
-                                          float eps,
-                                          std::vector<TestArg>&& args,
-                                          bool force_deduce_dst) {
+void matrix_mul::check_batched_matrix_mul(
+        DType A_dtype, DType B_dtype, DType C_dtype, Handle* handle,
+        const ExecutionPolicyAlgoName& algo, float eps, std::vector<TestArg>&& args,
+        bool force_deduce_dst) {
     check_matrix_mul<megdnn::BatchedMatrixMul>(
-            A_dtype, B_dtype, C_dtype, handle, algo,
-            param::MatrixMul::Format::DEFAULT, 8, eps,
-            std::forward<decltype(args)>(args), force_deduce_dst);
+            A_dtype, B_dtype, C_dtype, handle, algo, param::MatrixMul::Format::DEFAULT,
+            8, eps, std::forward<decltype(args)>(args), force_deduce_dst);
 }
 
-void matrix_mul::check_matrix_mul(DType A_dtype, DType B_dtype, DType C_dtype,
-                                  Handle* handle,
-                                  const ExecutionPolicyAlgoName& algo,
-                                  param::MatrixMul::Format format, size_t nbase,
-                                  float eps, bool force_deduce_dst) {
-    check_matrix_mul<megdnn::MatrixMul>(A_dtype, B_dtype, C_dtype, handle, algo,
-                                        format, nbase, eps, {},
-                                        force_deduce_dst);
+void matrix_mul::check_matrix_mul(
+        DType A_dtype, DType B_dtype, DType C_dtype, Handle* handle,
+        const ExecutionPolicyAlgoName& algo, param::MatrixMul::Format format,
+        size_t nbase, float eps, bool force_deduce_dst) {
+    check_matrix_mul<megdnn::MatrixMul>(
+            A_dtype, B_dtype, C_dtype, handle, algo, format, nbase, eps, {},
+            force_deduce_dst);
 }
 
 #if MEGDNN_WITH_BENCHMARK
@@ -357,8 +345,8 @@ std::vector<matrix_mul::TestArg> matrix_mul::get_benchmark_matmul_args() {
     return args;
 }
 
-std::vector<matrix_mul::TestArg>
-matrix_mul::get_benchmark_matmul_mk_packed_args(size_t nbase) {
+std::vector<matrix_mul::TestArg> matrix_mul::get_benchmark_matmul_mk_packed_args(
+        size_t nbase) {
     std::vector<TestArg> args;
     for (size_t m : {2, 4, 8, 16, 24, 32, 64})
         for (size_t n : {1, 2, 3, 4, 8, 16, 32, 64})
@@ -368,10 +356,9 @@ matrix_mul::get_benchmark_matmul_mk_packed_args(size_t nbase) {
 }
 
 void matrix_mul::benchmark_with_contrast(
-        Handle* handle, const std::vector<TestArg>& args, DType A_dtype,
-        DType B_dtype, DType C_dtype, const char* algo,
-        param::MatrixMul::Format format, DType contrast_A_dtype,
-        DType contrast_B_dtype, DType contrast_C_dtype,
+        Handle* handle, const std::vector<TestArg>& args, DType A_dtype, DType B_dtype,
+        DType C_dtype, const char* algo, param::MatrixMul::Format format,
+        DType contrast_A_dtype, DType contrast_B_dtype, DType contrast_C_dtype,
         const char* contrast_algo, param::MatrixMul::Format contrast_format) {
     using Param = MatrixMul::Param;
 
@@ -395,14 +382,13 @@ void matrix_mul::benchmark_with_contrast(
     benchmark_contrast.set_times(RUNS);
 
     auto bench = [](Benchmarker<MatrixMul>& benchmark, Param param,
-                    param::MatrixMul::Format format, size_t m, size_t n,
-                    size_t k, size_t pack_size) -> float {
+                    param::MatrixMul::Format format, size_t m, size_t n, size_t k,
+                    size_t pack_size) -> float {
         param.format = format;
         benchmark.set_param(param);
         float used_algo = 1.0;
         if (format == param::MatrixMul::Format::DEFAULT) {
-            size_t A0 = m * pack_size, A1 = k * pack_size, B0 = k * pack_size,
-                   B1 = n;
+            size_t A0 = m * pack_size, A1 = k * pack_size, B0 = k * pack_size, B1 = n;
             TensorShape A, B;
             if (param.transposeA) {
                 std::swap(A0, A1);
@@ -420,10 +406,10 @@ void matrix_mul::benchmark_with_contrast(
                 std::swap(B0, B1);
             }
 
-            used_algo = benchmark.execs({{A0, A1, pack_size, pack_size},
-                                         {B0, B1, pack_size},
-                                         {}}) /
-                        RUNS;
+            used_algo =
+                    benchmark.execs(
+                            {{A0, A1, pack_size, pack_size}, {B0, B1, pack_size}, {}}) /
+                    RUNS;
         }
         return used_algo;
     };
@@ -436,13 +422,13 @@ void matrix_mul::benchmark_with_contrast(
         param.transposeA = arg.mask & 0x1;
         param.transposeB = arg.mask & 0x2;
 
-        auto used_contrast = bench(benchmark_contrast, param, contrast_format,
-                                   arg.m, arg.n, arg.k, pack_size);
+        auto used_contrast =
+                bench(benchmark_contrast, param, contrast_format, arg.m, arg.n, arg.k,
+                      pack_size);
         auto used_algo =
                 bench(benchmark, param, format, arg.m, arg.n, arg.k, pack_size);
 
-        float computations =
-                2.f * arg.m * pack_size * arg.k * pack_size * arg.n * 1e-6;
+        float computations = 2.f * arg.m * pack_size * arg.k * pack_size * arg.n * 1e-6;
         printf("run: {(%zu, %zu) x (%zu, %zu)} contrast: %f ms %f Gflops %s: "
                "%f "
                "ms "

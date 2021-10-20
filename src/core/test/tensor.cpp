@@ -12,29 +12,28 @@
 #include "megbrain/test/helper.h"
 
 #include "megbrain/comp_node_env.h"
-#include "megbrain/tensor.h"
-#include "megbrain/opr/utility.h"
-#include "megbrain/utils/timer.h"
-#include "megbrain/utils/debug.h"
 #include "megbrain/exception.h"
+#include "megbrain/opr/utility.h"
+#include "megbrain/tensor.h"
+#include "megbrain/utils/debug.h"
+#include "megbrain/utils/timer.h"
 #include "megdnn/tensor_format.h"
 
 #include <cmath>
 
 using namespace mgb;
 
-constexpr double ASYNC_SLEEP_TIME = 0.15,
-          ASYNC_MAX_ISSUE_TIME = 0.07;
+constexpr double ASYNC_SLEEP_TIME = 0.15, ASYNC_MAX_ISSUE_TIME = 0.07;
 
 namespace {
 
-template<class Src, class Dst>
+template <class Src, class Dst>
 void run_noncontig_test() {
     // use a relatively large size so synchronization problems can be detected
     constexpr size_t S0 = 200, S1 = 500;
     HostTensorND hv_init{CompNode::load("xpu0"), dtype::Float32()};
     hv_init.resize({S0, S1});
-    for (size_t i = 0; i < S0 * S1; ++ i)
+    for (size_t i = 0; i < S0 * S1; ++i)
         hv_init.ptr<float>()[i] = i;
 
     Src src;
@@ -54,10 +53,10 @@ void run_noncontig_test() {
         rst.copy_from(dst).sync();
 
         auto ptr = rst.ptr<float>();
-        for (size_t i = 0; i < S0; ++ i)
-            for (size_t j = begin; j < end; ++ j) {
+        for (size_t i = 0; i < S0; ++i)
+            for (size_t j = begin; j < end; ++j) {
                 ASSERT_EQ(float(i * S1 + j), *ptr);
-                ++ ptr;
+                ++ptr;
             }
 
         HostTensorND hv_zero{hv_init.comp_node(), dtype::Float32()};
@@ -69,8 +68,8 @@ void run_noncontig_test() {
         HostTensorND src_hv;
         src_hv.copy_from(src).sync();
         ptr = src_hv.ptr<float>();
-        for (size_t i = 0; i < S0; ++ i)
-            for (size_t j = begin; j < end; ++ j) {
+        for (size_t i = 0; i < S0; ++i)
+            for (size_t j = begin; j < end; ++j) {
                 ASSERT_EQ(0.f, ptr[i * S1 + j]);
             }
 
@@ -85,7 +84,7 @@ void run_noncontig_test() {
     check(1, S1);
     check(12, 21);
 }
-} // anonymous namespace
+}  // anonymous namespace
 
 TEST(TestTensorStorage, InvalidAlloc) {
     {
@@ -101,14 +100,15 @@ TEST(TestTensorStorage, InvalidAlloc) {
 TEST(TestTensorStorage, CopyFromFixLayoutImage2DPack4TensorFormat) {
     CompNode cn = CompNode::load("xpu0");
     HostTensorND dst(
-            cn, TensorLayout(TensorShape{1, 1, 1, 1, 4}, dtype::Float32{},
-                             megdnn::DefaultTensorFormat::make()));
+            cn, TensorLayout(
+                        TensorShape{1, 1, 1, 1, 4}, dtype::Float32{},
+                        megdnn::DefaultTensorFormat::make()));
     HostTensorGenerator<> gen;
     auto src_default = gen({1, 1, 1, 1, 4});
     HostTensorND src(
-            cn,
-            TensorLayout(TensorShape{1, 1, 1, 1, 4}, dtype::Float32{},
-                         megdnn::Image2DPack4TensorFormat::make_raw(2, 64)));
+            cn, TensorLayout(
+                        TensorShape{1, 1, 1, 1, 4}, dtype::Float32{},
+                        megdnn::Image2DPack4TensorFormat::make_raw(2, 64)));
 
     EXPECT_NO_THROW(src.copy_from_fixlayout(*src_default).sync());
     EXPECT_NO_THROW(dst.copy_from_fixlayout(src).sync());
@@ -168,14 +168,16 @@ TEST(TestTensorStorage, D2DCopyNoSync) {
     // XPU-226
     auto use_time = timer.get_secs();
     if (use_time >= ASYNC_MAX_ISSUE_TIME) {
-        mgb_log_warn("expect time [%f < %f], got %f", use_time,
-                     ASYNC_MAX_ISSUE_TIME, use_time);
+        mgb_log_warn(
+                "expect time [%f < %f], got %f", use_time, ASYNC_MAX_ISSUE_TIME,
+                use_time);
     }
     t1.sync();
     use_time = timer.get_secs();
     if (use_time <= ASYNC_SLEEP_TIME) {
-        mgb_log_warn("expect time [%f > %f], got %f", use_time,
-                     ASYNC_MAX_ISSUE_TIME, use_time);
+        mgb_log_warn(
+                "expect time [%f > %f], got %f", use_time, ASYNC_MAX_ISSUE_TIME,
+                use_time);
     }
     ASSERT_GT(fabs(t3.sync().ptr<float>()[0] - t0.ptr<float>()[0]), 0.1);
 }
@@ -192,7 +194,7 @@ TEST(TestTensorStorage, D2DCopyNonCont) {
     auto cn0 = cns[0], cn1 = cns[1];
     auto event = cn0.create_event();
     HostTensorND hv(cn0, {S0, S1, S2});
-    for (size_t i = 0, it = hv.layout().total_nr_elems(); i < it; i ++)
+    for (size_t i = 0, it = hv.layout().total_nr_elems(); i < it; i++)
         hv.ptr<float>()[i] = i;
     DeviceTensorND dv, dv_sub0(cn1), dv_sub1;
     dv.copy_from(hv);
@@ -206,28 +208,26 @@ TEST(TestTensorStorage, D2DCopyNonCont) {
     hv_sub0.copy_from(dv_sub0);
     hv_sub1.copy_from(dv_sub1);
 
-    auto idx = [](size_t i, size_t j, size_t k) {
-        return i * S1 * S2 + j * S2 + k;
-    };
+    auto idx = [](size_t i, size_t j, size_t k) { return i * S1 * S2 + j * S2 + k; };
 
     {
         auto ptr = hv_sub0.sync().ptr<float>();
         ASSERT_EQ(TensorShape({S0, 2, S2}), hv_sub0.shape());
-        for (size_t i = 0; i < S0; i ++)
-            for (size_t j = 0; j < 2; j ++)
-                for (size_t k = 0; k < S2; k ++) {
-                    MGB_ASSERT_FLOAT_EQ(idx(i, j + 2, k), *(ptr ++)) <<
-                        ssprintf("sub0: failed at (%zu, %zu, %zu)", i, j, k);
+        for (size_t i = 0; i < S0; i++)
+            for (size_t j = 0; j < 2; j++)
+                for (size_t k = 0; k < S2; k++) {
+                    MGB_ASSERT_FLOAT_EQ(idx(i, j + 2, k), *(ptr++))
+                            << ssprintf("sub0: failed at (%zu, %zu, %zu)", i, j, k);
                 }
     }
     {
         auto ptr = hv_sub1.sync().ptr<float>();
         ASSERT_EQ(TensorShape({S0 / 4, S1 / 2, S2 / 3}), hv_sub1.shape());
-        for (size_t i = 0; i < S0 / 4; i ++)
-            for (size_t j = 0; j < S1 / 2; j ++)
-                for (size_t k = 0; k < S2 / 3; k ++) {
-                    MGB_ASSERT_FLOAT_EQ(idx(i * 4, j * 2, k * 3), *(ptr ++)) <<
-                        ssprintf("sub1: failed at (%zu, %zu, %zu)", i, j, k);
+        for (size_t i = 0; i < S0 / 4; i++)
+            for (size_t j = 0; j < S1 / 2; j++)
+                for (size_t k = 0; k < S2 / 3; k++) {
+                    MGB_ASSERT_FLOAT_EQ(idx(i * 4, j * 2, k * 3), *(ptr++))
+                            << ssprintf("sub1: failed at (%zu, %zu, %zu)", i, j, k);
                 }
     }
 }
@@ -237,7 +237,7 @@ TEST(TestTensorStorage, CrossCNCopy2D) {
     constexpr size_t S0 = 200, S1 = 500;
     HostTensorND hv{cns[0], dtype::Float32()};
     hv.resize({S0, S1});
-    for (size_t i = 0; i < S0 * S1; ++ i)
+    for (size_t i = 0; i < S0 * S1; ++i)
         hv.ptr<float>()[i] = i;
     DeviceTensorND dev0;
     dev0.copy_from(hv).sync();
@@ -255,10 +255,10 @@ TEST(TestTensorStorage, CrossCNCopy2D) {
         rst.copy_from(dev1).sync();
 
         auto ptr = rst.ptr<float>();
-        for (size_t i = 0; i < S0; ++ i)
-            for (size_t j = begin; j < end; ++ j) {
+        for (size_t i = 0; i < S0; ++i)
+            for (size_t j = begin; j < end; ++j) {
                 ASSERT_EQ(float(i * S1 + j), *ptr);
-                ++ ptr;
+                ++ptr;
             }
 
         failed = false;
@@ -384,13 +384,12 @@ TEST(TestTensor, NegativeIndex) {
 
 TEST(TestTensor, CpuCudaD2DCopy) {
     REQUIRE_GPU(1);
-    auto cn_cpu = CompNode::load("cpu0"),
-         cn_gpu = CompNode::load("gpu0");
+    auto cn_cpu = CompNode::load("cpu0"), cn_gpu = CompNode::load("gpu0");
 
     HostTensorGenerator<> gen;
     constexpr size_t length = 233333;
     auto a = gen({length});
-    for (auto config: {true, false}) {
+    for (auto config : {true, false}) {
         DeviceTensorND dev_a{cn_cpu}, dev_b{cn_gpu, a->shape(), a->dtype()};
         dev_a.copy_from(*a).sync();
 
@@ -401,8 +400,8 @@ TEST(TestTensor, CpuCudaD2DCopy) {
         }
 
         auto iadd = [ptr = dev_a.ptr<float>(), length = dev_a.shape()[0],
-                stride = dev_a.layout().stride[0]]() {
-            for (size_t i = 0; i < length; ++ i) {
+                     stride = dev_a.layout().stride[0]]() {
+            for (size_t i = 0; i < length; ++i) {
                 ptr[i * stride] += 1;
             }
         };

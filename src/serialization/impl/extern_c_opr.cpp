@@ -27,9 +27,8 @@ const char PLACEHOLDER_TYPE_NAME[] = "placeholder";
 
 typedef MGBOprDesc* (*opr_desc_transformer_t)(void* input);
 
-using LoaderMap =
-        std::unordered_map<std::string,
-                           std::pair<MGBOprLoader, opr_desc_transformer_t>>;
+using LoaderMap = std::unordered_map<
+        std::string, std::pair<MGBOprLoader, opr_desc_transformer_t>>;
 
 //! singleton LoaderMap
 LoaderMap& loader_map() {
@@ -43,8 +42,7 @@ class MGBOprDescHash final : public HashableVD {
     MGBOprDesc* const m_desc;
 
     bool is_same_st(const Hashable& rhs) const override {
-        return m_desc->is_same(m_desc,
-                               static_cast<const MGBOprDescHash&>(rhs).m_desc);
+        return m_desc->is_same(m_desc, static_cast<const MGBOprDescHash&>(rhs).m_desc);
     }
 
 public:
@@ -69,8 +67,9 @@ MGBDType dtype_cpp2c(DType dtype) {
             return MGB_DTYPE_FLOAT16;
 #endif
         default:
-            mgb_throw(InternalError, "unsupported dtype for extern C API: %s",
-                      dtype.name());
+            mgb_throw(
+                    InternalError, "unsupported dtype for extern C API: %s",
+                    dtype.name());
     }
 }
 
@@ -89,8 +88,8 @@ DType dtype_c2cpp(MGBDType dtype) {
             return dtype::Float16{};
 #endif
         default:
-            mgb_throw(SerializationError, "bad dtype value: %d",
-                      static_cast<int>(dtype));
+            mgb_throw(
+                    SerializationError, "bad dtype value: %d", static_cast<int>(dtype));
     }
 }
 
@@ -119,12 +118,13 @@ struct MGBOprDescV23 {
     int (*is_same)(const MGBOprDescV23* self, const MGBOprDescV23* rhs);
 
     //! perform the computation
-    void (*execute)(const MGBOprDescV23* self, const MGBTensor* input,
-                    const MGBTensor* output);
+    void (*execute)(
+            const MGBOprDescV23* self, const MGBTensor* input, const MGBTensor* output);
 
     //! infer output shapes from input shapes
-    void (*infer_shape)(const MGBOprDescV23* self, const MGBTensorShape* input,
-                        MGBTensorShape* output);
+    void (*infer_shape)(
+            const MGBOprDescV23* self, const MGBTensorShape* input,
+            MGBTensorShape* output);
 
     //! custom user data to be associated with this descriptor
     void* user_data;
@@ -151,8 +151,7 @@ struct MGBOprDescV23 {
             p->execute(p, input, output);
         };
 
-        auto infer_shape = [](const MGBOprDesc* self,
-                              const MGBTensorShape* input,
+        auto infer_shape = [](const MGBOprDesc* self, const MGBTensorShape* input,
                               MGBTensorShape* output) {
             auto p = static_cast<MGBOprDescV23*>(self->user_data);
             p->infer_shape(p, input, output);
@@ -198,21 +197,20 @@ class PlaceholderMGBOprDesc {
 
     //! perform the computation
     static void execute(const MGBOprDesc*, const MGBTensor*, const MGBTensor*) {
-        mgb_throw(MegBrainError,
-                  "placeholder ExternCOprRunner can not be executed");
+        mgb_throw(MegBrainError, "placeholder ExternCOprRunner can not be executed");
     }
 
-    static void infer_shape(const MGBOprDesc* self, const MGBTensorShape* input,
-                            MGBTensorShape* output);
+    static void infer_shape(
+            const MGBOprDesc* self, const MGBTensorShape* input,
+            MGBTensorShape* output);
 
-    static void infer_dtype(const struct MGBOprDesc* self,
-                            const MGBDType* input, MGBDType* output);
+    static void infer_dtype(
+            const struct MGBOprDesc* self, const MGBDType* input, MGBDType* output);
 
 public:
-    static MGBOprDesc* make(size_t nr_input, const char* name,
-                            const TensorShapeArray& output_shapes,
-                            const SmallVector<DType>& output_dtypes,
-                            const void* data, size_t data_len);
+    static MGBOprDesc* make(
+            size_t nr_input, const char* name, const TensorShapeArray& output_shapes,
+            const SmallVector<DType>& output_dtypes, const void* data, size_t data_len);
 
     static void dump(OprDumpContext& ctx, MGBOprDesc* desc);
 };
@@ -220,33 +218,29 @@ public:
 }  // anonymous namespace
 
 /* ===================== PlaceholderMGBOprDesc ===================== */
-void PlaceholderMGBOprDesc::infer_shape(const MGBOprDesc* self,
-                                        const MGBTensorShape* input,
-                                        MGBTensorShape* output) {
+void PlaceholderMGBOprDesc::infer_shape(
+        const MGBOprDesc* self, const MGBTensorShape* input, MGBTensorShape* output) {
     auto ud = user_data(self);
     for (size_t i = 0; i < ud->output_shapes.size(); ++i) {
         output[i] = ExternCOprRunner::tensor_shape_to_c(ud->output_shapes[i]);
     }
 }
 
-void PlaceholderMGBOprDesc::infer_dtype(const struct MGBOprDesc* self,
-                                        const MGBDType* input,
-                                        MGBDType* output) {
+void PlaceholderMGBOprDesc::infer_dtype(
+        const struct MGBOprDesc* self, const MGBDType* input, MGBDType* output) {
     auto ud = user_data(self);
     for (size_t i = 0; i < ud->output_dtypes.size(); ++i) {
         output[i] = dtype_cpp2c(ud->output_dtypes[i]);
     }
 }
 
-MGBOprDesc* PlaceholderMGBOprDesc::make(size_t nr_input, const char* name,
-                                        const TensorShapeArray& output_shapes,
-                                        const SmallVector<DType>& output_dtypes,
-                                        const void* data, size_t data_len) {
+MGBOprDesc* PlaceholderMGBOprDesc::make(
+        size_t nr_input, const char* name, const TensorShapeArray& output_shapes,
+        const SmallVector<DType>& output_dtypes, const void* data, size_t data_len) {
     constexpr size_t align = std::max(alignof(MGBOprDesc), alignof(UserData)),
                      desc_size = ((sizeof(MGBOprDesc) - 1) / align + 1) * align;
     std::unique_ptr<uint8_t, void (*)(void*)> ptr(
-            static_cast<uint8_t*>(malloc(desc_size + sizeof(UserData))),
-            ::free);
+            static_cast<uint8_t*>(malloc(desc_size + sizeof(UserData))), ::free);
     mgb_assert(ptr);
     auto del_ud = [](UserData* p) { p->~UserData(); };
     std::unique_ptr<UserData, decltype(del_ud)> ud(
@@ -271,9 +265,10 @@ MGBOprDesc* PlaceholderMGBOprDesc::make(size_t nr_input, const char* name,
 }
 
 void PlaceholderMGBOprDesc::dump(OprDumpContext& ctx, MGBOprDesc* desc) {
-    mgb_assert(desc->type_name == PLACEHOLDER_TYPE_NAME,
-               "only placeholder ExternCOprRunner can be dumped; got type %s",
-               desc->type_name);
+    mgb_assert(
+            desc->type_name == PLACEHOLDER_TYPE_NAME,
+            "only placeholder ExternCOprRunner can be dumped; got type %s",
+            desc->type_name);
     auto ud = user_data(desc);
     ctx.dump_buf_with_len(ud->name.c_str(), ud->name.size());
     ctx.dump_buf_with_len(ud->data.get(), ud->data_len);
@@ -281,22 +276,22 @@ void PlaceholderMGBOprDesc::dump(OprDumpContext& ctx, MGBOprDesc* desc) {
 
 /* ===================== ExternCOprRunner ===================== */
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(ExternCOprRunner);
-ExternCOprRunner::ExternCOprRunner(std::string& name,
-                                   const VarNodeArray& inputs,
-                                   std::shared_ptr<MGBOprDesc> desc,
-                                   const OperatorNodeConfig& config)
+ExternCOprRunner::ExternCOprRunner(
+        std::string& name, const VarNodeArray& inputs, std::shared_ptr<MGBOprDesc> desc,
+        const OperatorNodeConfig& config)
         : Super{inputs[0]->owner_graph(), config, desc->type_name, inputs},
           m_desc{std::move(desc)},
           m_dump_name{name},
           m_param{nullptr} {
     auto size_diff = sizeof(MGBOprDesc) - m_desc->size;
     is_loader_support_dynamic_param = (0 == size_diff) ? true : false;
-    mgb_assert(0 == size_diff || sizeof(ExternCOprParam*) == size_diff,
-               "invalid OprDesc size: expect=%zu got=%u, may caused by "
-               "extern_c_opr.h mismatch, please confirm that the "
-               "extern_c_opr.h used when compiling the loader is consistent "
-               "with the runtime caller build used",
-               sizeof(MGBOprDesc), m_desc->size);
+    mgb_assert(
+            0 == size_diff || sizeof(ExternCOprParam*) == size_diff,
+            "invalid OprDesc size: expect=%zu got=%u, may caused by "
+            "extern_c_opr.h mismatch, please confirm that the "
+            "extern_c_opr.h used when compiling the loader is consistent "
+            "with the runtime caller build used",
+            sizeof(MGBOprDesc), m_desc->size);
     for (auto i : inputs) {
         add_input({i});
     }
@@ -305,18 +300,17 @@ ExternCOprRunner::ExternCOprRunner(std::string& name,
         for (size_t i = 0, it = nr_out; i < it; ++i)
             add_output(ssprintf("o%zu", i));
     } else {
-        mgb_assert(nr_out == 1,
-                   "could not create an operator with %u outputs: %s", nr_out,
-                   cname());
+        mgb_assert(
+                nr_out == 1, "could not create an operator with %u outputs: %s", nr_out,
+                cname());
         add_output(None);
     }
     add_equivalence_component<MGBOprDescHash>(m_desc.get());
 }
 
-void ExternCOprRunner::get_output_var_shape(const TensorShapeArray& inp_shape,
-                                            TensorShapeArray& out_shape) const {
-    SmallVector<MGBTensorShape> c_inp(inp_shape.size()),
-            c_out(out_shape.size());
+void ExternCOprRunner::get_output_var_shape(
+        const TensorShapeArray& inp_shape, TensorShapeArray& out_shape) const {
+    SmallVector<MGBTensorShape> c_inp(inp_shape.size()), c_out(out_shape.size());
     for (size_t i = 0; i < inp_shape.size(); ++i) {
         c_inp[i] = tensor_shape_to_c(inp_shape[i]);
     }
@@ -350,8 +344,8 @@ void ExternCOprRunner::check_param() {
     if (!is_loader_support_dynamic_param)
         return;
     auto check = [](size_t nr_config_tensor, size_t var_node_size,
-                    ExternDeviceTensor* e_tensor,
-                    const VarNodeArray& var_node_array, const char* msg) {
+                    ExternDeviceTensor* e_tensor, const VarNodeArray& var_node_array,
+                    const char* msg) {
         mgb_assert(e_tensor, "%s ExternDeviceTensor should not be null!!", msg);
         mgb_assert(
                 nr_config_tensor == var_node_size,
@@ -359,38 +353,40 @@ void ExternCOprRunner::check_param() {
                 "mismatch with the number of %s, got %zu, expected %zu",
                 msg, msg, nr_config_tensor, var_node_size);
         for (size_t i = 0; i < nr_config_tensor; i++) {
-            mgb_assert(e_tensor[i].device_ptr,
-                       "%s ExternDeviceTensor(index: %zu) device_ptr should "
-                       "not be null!!",
-                       msg, i);
+            mgb_assert(
+                    e_tensor[i].device_ptr,
+                    "%s ExternDeviceTensor(index: %zu) device_ptr should "
+                    "not be null!!",
+                    msg, i);
             auto param_shape = e_tensor[i].layout.shape;
             auto shape = var_node_array.at(i)->shape();
             auto param_dtype = e_tensor[i].layout.dtype;
             auto dtype = dtype_cpp2c(var_node_array.at(i)->dtype());
-            mgb_assert(param_dtype == dtype,
-                       "%s dtype provided mismatch, expected: %u, got: %d", msg,
-                       param_dtype, dtype);
-            mgb_assert(shape.ndim == param_shape.ndim,
-                       "%s ndim provided mismatch got: %u, expect: %zu of "
-                       "index: %zu",
-                       msg, param_shape.ndim, shape.ndim, i);
+            mgb_assert(
+                    param_dtype == dtype,
+                    "%s dtype provided mismatch, expected: %u, got: %d", msg,
+                    param_dtype, dtype);
+            mgb_assert(
+                    shape.ndim == param_shape.ndim,
+                    "%s ndim provided mismatch got: %u, expect: %zu of "
+                    "index: %zu",
+                    msg, param_shape.ndim, shape.ndim, i);
             for (size_t j = 0; j < shape.ndim; j++) {
-                mgb_assert(param_shape.shape[j] == shape.shape[j],
-                           "config %s shape should same with c opr %s shape: "
-                           "(got: %u expect: %zu) of index: %zu",
-                           msg, msg, param_shape.shape[j], shape.shape[j], j);
+                mgb_assert(
+                        param_shape.shape[j] == shape.shape[j],
+                        "config %s shape should same with c opr %s shape: "
+                        "(got: %u expect: %zu) of index: %zu",
+                        msg, msg, param_shape.shape[j], shape.shape[j], j);
             }
         }
     };
 
     if (m_param && m_param->nr_input > 0) {
-        check(m_param->nr_input, input().size(), m_param->input, input(),
-              "input");
+        check(m_param->nr_input, input().size(), m_param->input, input(), "input");
     }
 
     if (m_param && m_param->nr_output > 0) {
-        check(m_param->nr_output, output().size(), m_param->output, output(),
-              "output");
+        check(m_param->nr_output, output().size(), m_param->output, output(), "output");
     }
 }
 
@@ -451,10 +447,9 @@ void ExternCOprRunner::add_input_layout_constraint() {
 cg::OperatorNodeBase* ExternCOprRunner::make_placeholder(
         const SymbolVarArray& inputs, const TensorShapeArray& output_shapes,
         const char* name, const void* data, size_t data_len,
-        const OperatorNodeConfig& config,
-        const SmallVector<DType>& output_dtypes) {
-    auto desc = PlaceholderMGBOprDesc::make(inputs.size(), name, output_shapes,
-                                            output_dtypes, data, data_len);
+        const OperatorNodeConfig& config, const SmallVector<DType>& output_dtypes) {
+    auto desc = PlaceholderMGBOprDesc::make(
+            inputs.size(), name, output_shapes, output_dtypes, data, data_len);
 
     VarNodeArray var_inp(inputs.size());
     for (size_t i = 0; i < inputs.size(); ++i) {
@@ -473,8 +468,8 @@ cg::OperatorNodeBase* ExternCOprRunner::make_from_desc(
 }
 
 cg::OperatorNodeBase* ExternCOprRunner::make_from_desc_shared(
-        std::string& name, const VarNodeArray& inputs,
-        std::shared_ptr<MGBOprDesc> desc, const OperatorNodeConfig& config) {
+        std::string& name, const VarNodeArray& inputs, std::shared_ptr<MGBOprDesc> desc,
+        const OperatorNodeConfig& config) {
     mgb_assert(!inputs.empty() && desc->nr_output);
 
 #define CHECK(name) mgb_assert(desc->name, #name " is not given");
@@ -485,8 +480,7 @@ cg::OperatorNodeBase* ExternCOprRunner::make_from_desc_shared(
         const_cast<OperatorNodeConfig&>(config).name(name);
 
     auto opr = inputs[0]->owner_graph()->insert_opr(
-            std::make_unique<ExternCOprRunner>(name, inputs, std::move(desc),
-                                               config));
+            std::make_unique<ExternCOprRunner>(name, inputs, std::move(desc), config));
     return &opr->cast_final_safe<ExternCOprRunner>();
 }
 
@@ -494,15 +488,14 @@ bool ExternCOprRunner::unregister_loader(const char* name) {
     return loader_map().erase(name);
 }
 
-void ExternCOprRunner::dump(OprDumpContext& ctx,
-                            const cg::OperatorNodeBase& opr_) {
+void ExternCOprRunner::dump(OprDumpContext& ctx, const cg::OperatorNodeBase& opr_) {
     auto&& opr = opr_.cast_final<ExternCOprRunner>();
     PlaceholderMGBOprDesc::dump(ctx, opr.m_desc.get());
 }
 
-cg::OperatorNodeBase* ExternCOprRunner::load(OprLoadContext& ctx,
-                                             const cg::VarNodeArray& inputs,
-                                             const OperatorNodeConfig& config) {
+cg::OperatorNodeBase* ExternCOprRunner::load(
+        OprLoadContext& ctx, const cg::VarNodeArray& inputs,
+        const OperatorNodeConfig& config) {
     auto dump_name = ctx.load_buf_with_len();
     auto name = dump_name;
     //! use to compat dump ExternCOprRunner with more info
@@ -510,17 +503,19 @@ cg::OperatorNodeBase* ExternCOprRunner::load(OprLoadContext& ctx,
         name = name.substr(0, index);
     auto&& map = loader_map();
     auto iter = map.find(name);
-    mgb_assert(iter != map.end(),
-               "can not find loader for ExternCOprRunner `%s'", name.c_str());
+    mgb_assert(
+            iter != map.end(), "can not find loader for ExternCOprRunner `%s'",
+            name.c_str());
     auto data = ctx.load_shared_buf_with_len();
-    auto desc = iter->second.first.create_desc(inputs.size(), data.data(),
-                                               data.size());
+    auto desc = iter->second.first.create_desc(inputs.size(), data.data(), data.size());
+
+    mgb_throw_if(nullptr == desc, MegBrainError, "loader create desc returns nullptr");
+
     if (auto trans = iter->second.second) {
         desc = trans(desc);
     }
 
-    mgb_throw_if(nullptr == desc, MegBrainError,
-                 "loader create desc returns nullptr");
+    mgb_throw_if(nullptr == desc, MegBrainError, "loader create desc returns nullptr");
 
     return make_from_desc(dump_name, inputs, desc, config);
 }
@@ -535,8 +530,9 @@ cg::OperatorNodeBase* ExternCOprRunner::shallow_copy(
 }
 
 MGBTensorShape ExternCOprRunner::tensor_shape_to_c(const TensorShape& shape) {
-    mgb_throw_if(shape.ndim > MGB_TENSOR_MAX_NDIM, MegBrainError,
-                 "shape ndim too large: %zu", shape.ndim);
+    mgb_throw_if(
+            shape.ndim > MGB_TENSOR_MAX_NDIM, MegBrainError,
+            "shape ndim too large: %zu", shape.ndim);
     MGBTensorShape ret;
     ret.ndim = shape.ndim;
     for (size_t i = 0; i < shape.ndim; ++i) {
@@ -546,8 +542,9 @@ MGBTensorShape ExternCOprRunner::tensor_shape_to_c(const TensorShape& shape) {
 }
 
 TensorShape ExternCOprRunner::tensor_shape_from_c(const MGBTensorShape& shape) {
-    mgb_assert(shape.ndim <= TensorShape::MAX_NDIM, "shape ndim too large: %u",
-               shape.ndim);
+    mgb_assert(
+            shape.ndim <= TensorShape::MAX_NDIM, "shape ndim too large: %u",
+            shape.ndim);
     TensorShape ret;
     ret.ndim = shape.ndim;
     for (size_t i = 0; i < shape.ndim; ++i) {
@@ -567,12 +564,10 @@ void mgb::config_extern_c_opr_dynamic_param(
         if (auto c_opr = opr->try_cast_final<opr::ExternCOprRunner>()) {
             auto dump_name = c_opr->get_dump_name().c_str();
             if (!param->extern_c_opr_dump_name ||
-                !strncmp(param->extern_c_opr_dump_name, dump_name,
-                         strlen(dump_name))) {
+                !strncmp(param->extern_c_opr_dump_name, dump_name, strlen(dump_name))) {
                 c_opr->set_param(param);
                 find_config_opr = true;
-                mgb_log_debug("config dynamic param for extern c opr: %s",
-                              dump_name);
+                mgb_log_debug("config dynamic param for extern c opr: %s", dump_name);
             }
         }
 
@@ -581,9 +576,10 @@ void mgb::config_extern_c_opr_dynamic_param(
 
     func->iter_opr_seq(cb);
 
-    mgb_throw_if(!find_config_opr, MegBrainError,
-                 "graph do not include a ExternCOprRunner opr or error config "
-                 "extern_c_opr_dump_name!!");
+    mgb_throw_if(
+            !find_config_opr, MegBrainError,
+            "graph do not include a ExternCOprRunner opr or error config "
+            "extern_c_opr_dump_name!!");
 }
 
 /* ===================== public APIs ===================== */
@@ -594,8 +590,7 @@ const MGBExternCOprApi* mgb_get_extern_c_opr_api_versioned(int version) {
     if (version == 0x23) {
         auto reg23 = [](const MGBOprLoader* loader) -> int {
             return loader_map()
-                    .insert({loader->name,
-                             {*loader, MGBOprDescV23::as_opr_desc}})
+                    .insert({loader->name, {*loader, MGBOprDescV23::as_opr_desc}})
                     .second;
         };
         static const MGBExternCOprApi ret = {reg23, unreg};

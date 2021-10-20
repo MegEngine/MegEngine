@@ -14,9 +14,7 @@ from .module import QuantizedModule
 
 
 class Concat(QuantizedModule):
-    r"""
-    A :class:`~.QuantizedModule` to do quantized :func:`~.concat`, used for inference only.
-    """
+    r"""A :class:`~.QuantizedModule` to do quantized :func:`~.concat`, used for inference only."""
 
     def __init__(self, dtype=None, **kwargs):
         super().__init__(**kwargs)

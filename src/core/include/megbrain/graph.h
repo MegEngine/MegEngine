@@ -16,17 +16,16 @@
 
 namespace mgb {
 
-using cg::VarNode;
-using cg::VarNodeArray;
-using cg::GraphError;
 using cg::ComputingGraph;
+using cg::GraphError;
+using cg::OperatorNodeConfig;
 using cg::SymbolVar;
 using cg::SymbolVarArray;
-using cg::VarNodeArrayView;
 using cg::SymbolVarArrayView;
-using cg::OperatorNodeConfig;
+using cg::VarNode;
+using cg::VarNodeArray;
+using cg::VarNodeArrayView;
 
-} // namespace mgb
+}  // namespace mgb
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
-

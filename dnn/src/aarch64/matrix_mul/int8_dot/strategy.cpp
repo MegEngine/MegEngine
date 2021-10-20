@@ -12,10 +12,10 @@
 #include "src/aarch64/matrix_mul/int8_dot/strategy.h"
 #if MGB_ENABLE_DOT
 #include "src/aarch64/matrix_mul/asm/common.h"
-#include "src/arm_common/simd_macro/marm_neon.h"
-#include "src/common/utils.h"
 #include "src/aarch64/matrix_mul/int8_dot/kernel_8x12x4.h"
 #include "src/aarch64/matrix_mul/int8_dot/kernel_mk4_8x12x4.h"
+#include "src/arm_common/simd_macro/marm_neon.h"
+#include "src/common/utils.h"
 
 using namespace megdnn;
 using namespace aarch64;
@@ -24,20 +24,19 @@ using namespace aarch64::matmul;
 /* ====================== gemm_s8_8x12 ===========================*/
 MEGDNN_REG_GEMM_STRATEGY_IMPL(gemm_s8_8x12);
 
-void gemm_s8_8x12::pack_A(dt_int8* outptr, const dt_int8* inptr, int ldin,
-                          int y0, int ymax, int k0, int kmax,
-                          bool transpose) const {
+void gemm_s8_8x12::pack_A(
+        dt_int8* outptr, const dt_int8* inptr, int ldin, int y0, int ymax, int k0,
+        int kmax, bool transpose) const {
     if (transpose) {
-        matmul_8x12x4::gemm_s8_8x12_pack_A_t(outptr, inptr, ldin, y0, ymax, k0,
-                                             kmax);
+        matmul_8x12x4::gemm_s8_8x12_pack_A_t(outptr, inptr, ldin, y0, ymax, k0, kmax);
     } else {
-        matmul_8x12x4::gemm_s8_8x12_pack_A_n(outptr, inptr, ldin, y0, ymax, k0,
-                                             kmax);
+        matmul_8x12x4::gemm_s8_8x12_pack_A_n(outptr, inptr, ldin, y0, ymax, k0, kmax);
     }
 }
 
-void gemm_s8_8x12::pack_B(dt_int8* out, const dt_int8* in, int ldin, int x0,
-                          int xmax, int k0, int kmax, bool transpose) const {
+void gemm_s8_8x12::pack_B(
+        dt_int8* out, const dt_int8* in, int ldin, int x0, int xmax, int k0, int kmax,
+        bool transpose) const {
     if (transpose) {
         matmul_8x12x4::gemm_s8_8x12_pack_B_t(out, in, ldin, x0, xmax, k0, kmax);
     } else {
@@ -45,16 +44,16 @@ void gemm_s8_8x12::pack_B(dt_int8* out, const dt_int8* in, int ldin, int x0,
     }
 }
 
-void gemm_s8_8x12::kern(const dt_int8* packA, const dt_int8* packB, size_t M,
-                        size_t N, size_t K, dt_int32* C, size_t LDC,
-                        bool is_first_k, const dt_int32*, dt_int32*) const {
-    megdnn_assert(A_dtype.enumv() == B_dtype.enumv() &&
-                          ((A_dtype.enumv() == DTypeEnum::Int8 &&
-                            C_dtype.enumv() == DTypeEnum::Int32) ||
-                           (A_dtype.enumv() == DTypeEnum::QuantizedS8 &&
-                            C_dtype.enumv() == DTypeEnum::QuantizedS32)),
-                  "A: %s B: %s C: %s", A_dtype.name(), B_dtype.name(),
-                  C_dtype.name());
+void gemm_s8_8x12::kern(
+        const dt_int8* packA, const dt_int8* packB, size_t M, size_t N, size_t K,
+        dt_int32* C, size_t LDC, bool is_first_k, const dt_int32*, dt_int32*) const {
+    megdnn_assert(
+            A_dtype.enumv() == B_dtype.enumv() &&
+                    ((A_dtype.enumv() == DTypeEnum::Int8 &&
+                      C_dtype.enumv() == DTypeEnum::Int32) ||
+                     (A_dtype.enumv() == DTypeEnum::QuantizedS8 &&
+                      C_dtype.enumv() == DTypeEnum::QuantizedS32)),
+            "A: %s B: %s C: %s", A_dtype.name(), B_dtype.name(), C_dtype.name());
 
     MEGDNN_MARK_USED_VAR(A_dtype);
     MEGDNN_MARK_USED_VAR(B_dtype);
@@ -75,15 +74,15 @@ void gemm_s8_8x12::kern(const dt_int8* packA, const dt_int8* packB, size_t M,
         size_t n = 0;
         const dt_int8* cur_packB = packB;
         for (; n + B_INTERLEAVE - 1 < N; n += B_INTERLEAVE) {
-            matmul_8x12x4::kern_8x12(packA, cur_packB, K, output, LDC,
-                                     is_first_k);
+            matmul_8x12x4::kern_8x12(packA, cur_packB, K, output, LDC, is_first_k);
             output += B_INTERLEAVE;
             cur_packB += K12;
         }
 
         for (; n < N; n += 4) {
-            matmul_8x12x4::kern_8x4(packA, cur_packB, K, output, LDC,
-                                    is_first_k, std::min<size_t>(N - n, 4));
+            matmul_8x12x4::kern_8x4(
+                    packA, cur_packB, K, output, LDC, is_first_k,
+                    std::min<size_t>(N - n, 4));
             output += 4;
             cur_packB += K4;
         }
@@ -95,16 +94,17 @@ void gemm_s8_8x12::kern(const dt_int8* packA, const dt_int8* packB, size_t M,
         const dt_int8* cur_packB = packB;
         size_t n = 0;
         for (; n + B_INTERLEAVE - 1 < N; n += B_INTERLEAVE) {
-            matmul_8x12x4::kern_4x12(packA, cur_packB, K, output, LDC,
-                                     is_first_k, std::min<size_t>(M - m, 4));
+            matmul_8x12x4::kern_4x12(
+                    packA, cur_packB, K, output, LDC, is_first_k,
+                    std::min<size_t>(M - m, 4));
             output += B_INTERLEAVE;
             cur_packB += K12;
         }
 
         for (; n < N; n += 4) {
-            matmul_8x12x4::kern_4x4(packA, cur_packB, K, output, LDC,
-                                    is_first_k, std::min<size_t>(M - m, 4),
-                                    std::min<size_t>(N - n, 4));
+            matmul_8x12x4::kern_4x4(
+                    packA, cur_packB, K, output, LDC, is_first_k,
+                    std::min<size_t>(M - m, 4), std::min<size_t>(N - n, 4));
             output += 4;
             cur_packB += K4;
         }
@@ -115,32 +115,32 @@ void gemm_s8_8x12::kern(const dt_int8* packA, const dt_int8* packB, size_t M,
 /* ====================== gemm_mk4_s8_8x12 ===========================*/
 MEGDNN_REG_GEMM_STRATEGY_IMPL(gemm_mk4_s8_8x12);
 
-void gemm_mk4_s8_8x12::pack_A(dt_int8* outptr, const dt_int8* inptr, int ldin,
-                              int y0, int ymax, int k0, int kmax,
-                              bool transpose) const {
-    megdnn_assert(!transpose, "matrix mul mk4 with transposed matrix A is not supported");
-    matmul_mk4_8x12x4::gemm_mk4_s8_8x12_pack_A(outptr, inptr, ldin, y0, ymax, k0,
-                                             kmax);
+void gemm_mk4_s8_8x12::pack_A(
+        dt_int8* outptr, const dt_int8* inptr, int ldin, int y0, int ymax, int k0,
+        int kmax, bool transpose) const {
+    megdnn_assert(
+            !transpose, "matrix mul mk4 with transposed matrix A is not supported");
+    matmul_mk4_8x12x4::gemm_mk4_s8_8x12_pack_A(outptr, inptr, ldin, y0, ymax, k0, kmax);
 }
 
-void gemm_mk4_s8_8x12::pack_B(dt_int8* out, const dt_int8* in, int ldin, int x0,
-                              int xmax, int k0, int kmax,
-                              bool transpose) const {
-    megdnn_assert(!transpose, "matrix mul mk4 with transposed matrix B is not supported");
+void gemm_mk4_s8_8x12::pack_B(
+        dt_int8* out, const dt_int8* in, int ldin, int x0, int xmax, int k0, int kmax,
+        bool transpose) const {
+    megdnn_assert(
+            !transpose, "matrix mul mk4 with transposed matrix B is not supported");
     matmul_mk4_8x12x4::gemm_mk4_s8_8x12_pack_B(out, in, ldin, x0, xmax, k0, kmax);
 }
 
-void gemm_mk4_s8_8x12::kern(const dt_int8* packA, const dt_int8* packB,
-                            size_t M, size_t N, size_t K, dt_int32* C,
-                            size_t LDC, bool is_first_k, const dt_int32*,
-                            dt_int32*) const {
-    megdnn_assert(A_dtype.enumv() == B_dtype.enumv() &&
-                          ((A_dtype.enumv() == DTypeEnum::Int8 &&
-                            C_dtype.enumv() == DTypeEnum::Int32) ||
-                           (A_dtype.enumv() == DTypeEnum::QuantizedS8 &&
-                            C_dtype.enumv() == DTypeEnum::QuantizedS32)),
-                  "A: %s B: %s C: %s", A_dtype.name(), B_dtype.name(),
-                  C_dtype.name());
+void gemm_mk4_s8_8x12::kern(
+        const dt_int8* packA, const dt_int8* packB, size_t M, size_t N, size_t K,
+        dt_int32* C, size_t LDC, bool is_first_k, const dt_int32*, dt_int32*) const {
+    megdnn_assert(
+            A_dtype.enumv() == B_dtype.enumv() &&
+                    ((A_dtype.enumv() == DTypeEnum::Int8 &&
+                      C_dtype.enumv() == DTypeEnum::Int32) ||
+                     (A_dtype.enumv() == DTypeEnum::QuantizedS8 &&
+                      C_dtype.enumv() == DTypeEnum::QuantizedS32)),
+            "A: %s B: %s C: %s", A_dtype.name(), B_dtype.name(), C_dtype.name());
 
     MEGDNN_MARK_USED_VAR(A_dtype);
     MEGDNN_MARK_USED_VAR(B_dtype);
@@ -161,15 +161,15 @@ void gemm_mk4_s8_8x12::kern(const dt_int8* packA, const dt_int8* packB,
         size_t n = 0;
         const dt_int8* cur_packB = packB;
         for (; n + B_INTERLEAVE - 1 < N; n += B_INTERLEAVE) {
-            matmul_mk4_8x12x4::kern_8x12(packA, cur_packB, K, output, LDC,
-                                         is_first_k);
+            matmul_mk4_8x12x4::kern_8x12(packA, cur_packB, K, output, LDC, is_first_k);
             output += (B_INTERLEAVE << 2);
             cur_packB += K12;
         }
 
         for (; n < N; n += 4) {
-            matmul_mk4_8x12x4::kern_8x4(packA, cur_packB, K, output, LDC,
-                                        is_first_k, std::min<size_t>(N - n, 4));
+            matmul_mk4_8x12x4::kern_8x4(
+                    packA, cur_packB, K, output, LDC, is_first_k,
+                    std::min<size_t>(N - n, 4));
             output += 16;
             cur_packB += K4;
         }
@@ -181,15 +181,15 @@ void gemm_mk4_s8_8x12::kern(const dt_int8* packA, const dt_int8* packB,
         const dt_int8* cur_packB = packB;
         size_t n = 0;
         for (; n + B_INTERLEAVE - 1 < N; n += B_INTERLEAVE) {
-            matmul_mk4_8x12x4::kern_4x12(packA, cur_packB, K, output, LDC,
-                                         is_first_k);
+            matmul_mk4_8x12x4::kern_4x12(packA, cur_packB, K, output, LDC, is_first_k);
             output += (B_INTERLEAVE << 2);
             cur_packB += K12;
         }
 
         for (; n < N; n += 4) {
-            matmul_mk4_8x12x4::kern_4x4(packA, cur_packB, K, output, LDC,
-                                        is_first_k, std::min<size_t>(N - n, 4));
+            matmul_mk4_8x12x4::kern_4x4(
+                    packA, cur_packB, K, output, LDC, is_first_k,
+                    std::min<size_t>(N - n, 4));
             output += 16;
             cur_packB += K4;
         }

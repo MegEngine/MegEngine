@@ -17,13 +17,13 @@
 #include "megdnn/internal/visibility_prologue.h"
 
 namespace megdnn {
-    struct Version {
-        int major, minor, patch;
-    };
+struct Version {
+    int major, minor, patch;
+};
 
-    //! get megdnn version of the binary
-    Version get_version();
-}
+//! get megdnn version of the binary
+Version get_version();
+}  // namespace megdnn
 
 #include "megdnn/internal/visibility_epilogue.h"
 

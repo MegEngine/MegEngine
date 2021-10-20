@@ -18,10 +18,11 @@ namespace rocm {
 class BatchedMatrixMulForwardImpl : public BatchedMatrixMulForward {
 public:
     using BatchedMatrixMulForward::BatchedMatrixMulForward;
-    void exec(_megdnn_tensor_in A, _megdnn_tensor_in B, _megdnn_tensor_out C,
-              _megdnn_workspace workspace) override;
-    size_t get_workspace_in_bytes(const TensorLayout&, const TensorLayout&,
-                                  const TensorLayout&) override;
+    void exec(
+            _megdnn_tensor_in A, _megdnn_tensor_in B, _megdnn_tensor_out C,
+            _megdnn_workspace workspace) override;
+    size_t get_workspace_in_bytes(
+            const TensorLayout&, const TensorLayout&, const TensorLayout&) override;
 
     bool is_thread_safe() const override { return true; }
 
@@ -33,6 +34,9 @@ public:
 
 private:
     std::vector<Algorithm*> get_all_algorithms(
+            const TensorLayout& /*A*/, const TensorLayout& /*B*/,
+            const TensorLayout& /*C*/) override;
+    std::vector<Algorithm*> get_all_algorithms_safe(
             const TensorLayout& /*A*/, const TensorLayout& /*B*/,
             const TensorLayout& /*C*/) override;
 

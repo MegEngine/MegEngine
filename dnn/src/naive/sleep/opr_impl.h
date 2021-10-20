@@ -15,14 +15,14 @@
 namespace megdnn {
 namespace naive {
 
-class SleepForwardImpl: public SleepForward {
-    public:
-        using SleepForward::SleepForward;
+class SleepForwardImpl : public SleepForward {
+public:
+    using SleepForward::SleepForward;
 
-        void exec() override;
+    void exec() override;
 };
 
-} // namespace naive
-} // namespace megdnn
+}  // namespace naive
+}  // namespace megdnn
 
 // vim: syntax=cpp.doxygen

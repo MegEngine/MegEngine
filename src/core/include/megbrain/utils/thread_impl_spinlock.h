@@ -11,25 +11,24 @@
 
 #pragma once
 
-#include "megbrain/common.h"
-#include <thread>
 #include <atomic>
+#include <thread>
+#include "megbrain/common.h"
+#include "megbrain/utils/metahelper.h"
 
 namespace mgb {
 
 //! lightweight spinlock
-class Spinlock final: public NonCopyableObj {
+class Spinlock final : public NonCopyableObj {
     std::atomic_flag m_state = ATOMIC_FLAG_INIT;
 
-    public:
+public:
+    void lock() {
+        while (m_state.test_and_set(std::memory_order_acquire)) {
+        };
+    }
 
-        void lock() {
-            while (m_state.test_and_set(std::memory_order_acquire));
-        }
-
-        void unlock() {
-            m_state.clear(std::memory_order_release);
-        }
+    void unlock() { m_state.clear(std::memory_order_release); }
 };
 
 //! recursive spinlock
@@ -46,4 +45,3 @@ public:
 
 }  // namespace mgb
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
-

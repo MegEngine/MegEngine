@@ -94,14 +94,13 @@ const ElemGeneratorMap& ast_c::elem_opr_generator() {
             ENTRY(ERFC, make_call("erfcf", inps)),
             ENTRY(H_SWISH,
                   inps[0] *
-                          make_call("fmaxf",
-                                    {make_call("fminf", {inps[0] + 3.f, 6.f}),
-                                     0.f}) /
+                          make_call(
+                                  "fmaxf",
+                                  {make_call("fminf", {inps[0] + 3.f, 6.f}), 0.f}) /
                           6.f),
 
             // binary
-            ENTRY(ABS_GRAD,
-                  ASTPtr::make<Cond3AST>(inps[0] > 0, inps[1], -inps[1])),
+            ENTRY(ABS_GRAD, ASTPtr::make<Cond3AST>(inps[0] > 0, inps[1], -inps[1])),
             ENTRY(ADD, inps[0] + inps[1]),
             ENTRY(FLOOR_DIV, make_call("floorf", {inps[0] / inps[1]})),
             ENTRY(MAX, make_call("fmaxf", inps)),
@@ -114,8 +113,7 @@ const ElemGeneratorMap& ast_c::elem_opr_generator() {
             ENTRY(SWITCH_GT0, ASTPtr::make<Cond3AST>(inps[0] > 0, inps[1], 0)),
             ENTRY(TANH_GRAD, (1 - inps[0] * inps[0]) * inps[1]),
             ENTRY(TRUE_DIV, inps[0] / inps[1]),
-            ENTRY(LOG_SUM_EXP,
-                  make_call("mgb_log_sum_exp", {inps[0], inps[1]})),
+            ENTRY(LOG_SUM_EXP, make_call("mgb_log_sum_exp", {inps[0], inps[1]})),
             ENTRY(LT, ASTPtr::make<BinaryAST>("<", inps[0], inps[1])),
             ENTRY(LEQ, ASTPtr::make<BinaryAST>("<=", inps[0], inps[1])),
             ENTRY(EQ, ASTPtr::make<BinaryAST>("==", inps[0], inps[1])),
@@ -140,8 +138,7 @@ const ElemGeneratorMap& ast_c::elem_opr_generator() {
                   (inps[0] + inps[1]) *
                           make_call(
                                   "fmaxf",
-                                  {make_call("fminf",
-                                             {(inps[0] + inps[1]) + 3.f, 6.f}),
+                                  {make_call("fminf", {(inps[0] + inps[1]) + 3.f, 6.f}),
                                    0.f}) /
                           6.f),
     };
@@ -152,14 +149,11 @@ const ElemGeneratorMap& ast_c::elem_opr_generator() {
 #undef ADD_OPR
 }
 
-ASTPtrArray ast_c::opr2AST(cg::OperatorNodeBase* opr,
-                           const ASTPtrArray& inputs) {
+ASTPtrArray ast_c::opr2AST(cg::OperatorNodeBase* opr, const ASTPtrArray& inputs) {
     using namespace opr;
     if (auto elem = gopt::try_cast_as_op<Elemwise>(opr)) {
         if (check_elem_mode(elem->param().mode)) {
-            return elem_opr_generator()
-                    .find(elem->param().mode)
-                    ->second(inputs);
+            return elem_opr_generator().find(elem->param().mode)->second(inputs);
         }
     }
 
@@ -180,9 +174,9 @@ ASTPtrArray ast_c::opr2AST(cg::OperatorNodeBase* opr,
         } else if (dtype == dtype::Float16()) {
             scalar_value = imm->get<dt_float16>();
         } else {
-            mgb_throw(InternalError,
-                      "dtype(%s) is not any of [Float16, Float32, Int32]",
-                      dtype.name());
+            mgb_throw(
+                    InternalError, "dtype(%s) is not any of [Float16, Float32, Int32]",
+                    dtype.name());
         }
         return {ASTPtr::make<FloatAST>(scalar_value)};
     }
@@ -193,8 +187,9 @@ ASTPtrArray ast_c::opr2AST(cg::OperatorNodeBase* opr,
         return inputs;
     }
 
-    mgb_throw(InternalError, "unknown opr %s{%s}", opr->cname(),
-              opr->dyn_typeinfo()->name);
+    mgb_throw(
+            InternalError, "unknown opr %s{%s}", opr->cname(),
+            opr->dyn_typeinfo()->name);
 }
 
 #endif  // MGB_JIT

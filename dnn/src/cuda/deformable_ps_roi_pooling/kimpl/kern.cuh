@@ -31,16 +31,14 @@ struct Param {
     cudaStream_t stream;
 };
 
-void DeformablePSROIPoolForward(const TensorND& data, const TensorND& rois,
-                                const TensorND& trans, const TensorND& out_data,
-                                const TensorND& out_count, Param& p);
+void DeformablePSROIPoolForward(
+        const TensorND& data, const TensorND& rois, const TensorND& trans,
+        const TensorND& out_data, const TensorND& out_count, Param& p);
 
-void DeformablePSROIPoolBackwardAcc(const TensorND& data, const TensorND& rois,
-                                    const TensorND& trans,
-                                    const TensorND& out_diff,
-                                    const TensorND& out_count,
-                                    const TensorND& data_diff,
-                                    const TensorND& trans_diff, Param& p);
+void DeformablePSROIPoolBackwardAcc(
+        const TensorND& data, const TensorND& rois, const TensorND& trans,
+        const TensorND& out_diff, const TensorND& out_count, const TensorND& data_diff,
+        const TensorND& trans_diff, Param& p);
 
 }  // namespace deformable_ps_roi_pooling
 }  // namespace cuda

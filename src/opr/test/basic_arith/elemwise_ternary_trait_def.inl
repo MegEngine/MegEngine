@@ -15,16 +15,16 @@
 
 /* ======================= ternary ======================= */
 #define _CUR_ARITY 3
-#define _EXPAND_PARAMS \
+#define _EXPAND_PARAMS     \
     ctype x = inp[0][idx]; \
     ctype y = inp[1][idx]; \
     ctype z = inp[2][idx]
 
-#define _ALLOW_BOOL false
+#define _ALLOW_BOOL  false
 #define _ALLOW_FLOAT true
-#define _ALLOW_INT true
+#define _ALLOW_INT   true
 DEF_TRAIT(COND_LEQ_MOV, x <= y ? z : 0)
-DEF_TRAIT(FUSE_MUL_ADD3, x * y + z)
+DEF_TRAIT(FUSE_MUL_ADD3, x* y + z)
 #undef _ALLOW_INT
 #undef _ALLOW_FLOAT
 
@@ -33,15 +33,15 @@ DEF_TRAIT(FUSE_MUL_ADD3, x * y + z)
 
 /* ======================= quaternary ======================= */
 #define _CUR_ARITY 4
-#define _EXPAND_PARAMS \
+#define _EXPAND_PARAMS      \
     ctype i0 = inp[0][idx]; \
     ctype i1 = inp[1][idx]; \
     ctype i2 = inp[2][idx]; \
     ctype i3 = inp[3][idx]
 
 #define _ALLOW_FLOAT true
-#define _ALLOW_INT true
-DEF_TRAIT(FUSE_MUL_ADD4, i0 * i1 + i2 * i3)
+#define _ALLOW_INT   true
+DEF_TRAIT(FUSE_MUL_ADD4, i0* i1 + i2 * i3)
 #undef _ALLOW_INT
 #undef _ALLOW_FLOAT
 

@@ -25,7 +25,8 @@
  *
  * --------------------------------------------------------------------------
  * * This file has been modified by Megvii ("Megvii Modifications").
- * * All Megvii Modifications are Copyright (C) 2014-2021 Megvii Inc. All rights reserved.
+ * * All Megvii Modifications are Copyright (C) 2014-2021 Megvii Inc. All rights
+ * reserved.
  * --------------------------------------------------------------------------
  */
 #include "filter_act_templates.cuh"
@@ -34,9 +35,8 @@ namespace megdnn {
 namespace cuda {
 
 /*
- * Block size B_YxB_X. Each block applies B_Y * filtersPerThread filters to B_X * imgsPerThread images.
- * threadIdx.x determines image
- * threadIdx.y determines filter
+ * Block size B_YxB_X. Each block applies B_Y * filtersPerThread filters to B_X *
+ * imgsPerThread images. threadIdx.x determines image threadIdx.y determines filter
  *
  * blockIdx.x determines image batch of B_X * imgsPerThread
  * blockIdx.y determines filter batch of B_Y * filtersPerThread
@@ -60,30 +60,35 @@ namespace cuda {
  * numFilters must be divisible by numGroups.
  * no restrictions on pixelCache
  * The imgSize here is the size of the actual image without the padding.
- * As always, try to make B_X * imgsPerThread == B_Y * filtersPerThread for maximum efficiency.
+ * As always, try to make B_X * imgsPerThread == B_Y * filtersPerThread for maximum
+ * efficiency.
  *
  */
-template <int B_Y, int B_X, int imgsPerThread, int filtersPerThread, int colorCache,
-          bool scale, bool checkImgBounds>
-__global__ void filterActs_YxX_sparse2(float* images, float* filters, float* targets,
-                                       const int numImages, const int numFilters,
-                                       const int imgSizeY, const int imgSizeX,
-                                       const int filterSize, const int paddingStart,
-                                       const int moduleStride,
-                                       const int numModulesY, const int numModulesX,
-                                       const int imgStride, const int numImgColors,
-                                       const int numGroups,
-                                       const float scaleTargets, const float scaleOutputs,
-                                       const bool conv) {
-    __shared__ float shFilters[colorCache][B_Y * filtersPerThread]; // pre-load 1 pixel from B_Y*filtersPerThread filters
-    __shared__ float shImages[colorCache][B_X * imgsPerThread]; // pre-load 1 pixel from B_X*imgsPerThread images
-    fill_shared_mem<float>((float *)shFilters, sizeof(shFilters)/sizeof(float), 0);
-    fill_shared_mem<float>((float *)shImages, sizeof(shImages)/sizeof(float), 0);
+template <
+        int B_Y, int B_X, int imgsPerThread, int filtersPerThread, int colorCache,
+        bool scale, bool checkImgBounds>
+__global__ void filterActs_YxX_sparse2(
+        float* images, float* filters, float* targets, const int numImages,
+        const int numFilters, const int imgSizeY, const int imgSizeX,
+        const int filterSize, const int paddingStart, const int moduleStride,
+        const int numModulesY, const int numModulesX, const int imgStride,
+        const int numImgColors, const int numGroups, const float scaleTargets,
+        const float scaleOutputs, const bool conv) {
+    __shared__ float shFilters
+            [colorCache]
+            [B_Y *
+             filtersPerThread];  // pre-load 1 pixel from B_Y*filtersPerThread filters
+    __shared__ float
+            shImages[colorCache]
+                    [B_X *
+                     imgsPerThread];  // pre-load 1 pixel from B_X*imgsPerThread images
+    fill_shared_mem<float>((float*)shFilters, sizeof(shFilters) / sizeof(float), 0);
+    fill_shared_mem<float>((float*)shImages, sizeof(shImages) / sizeof(float), 0);
     __syncthreads();
     const int imgPixels = imgSizeY * imgSizeX;
     const int filterPixels = filterSize * filterSize;
     const int numFilterColors = numImgColors / numGroups;
-    const int blocksPerModule = DIVUP(numFilters, (B_Y*filtersPerThread));
+    const int blocksPerModule = DIVUP(numFilters, (B_Y * filtersPerThread));
     const int moduleIdx = blockIdx.y / blocksPerModule;
     const int blockFilterIdx = filtersPerThread * B_Y * (blockIdx.y % blocksPerModule);
     const int numFiltersPerGroup = numFilters / numGroups;
@@ -102,22 +107,21 @@ __global__ void filterActs_YxX_sparse2(float* images, float* filters, float* tar
     const int myImgIdx = blockIdx.x * B_X * imgsPerThread + threadIdx.x;
 
     images += (blockColorIdx + threadIdx.y) * imgPixels * imgStride + myImgIdx;
-    filters +=blockFilterIdx + shFilterLoadX
-            + shFilterLoadY * numFilters * filterPixels;
+    filters +=
+            blockFilterIdx + shFilterLoadX + shFilterLoadY * numFilters * filterPixels;
     if (!conv) {
         filters += moduleIdx * numFilterColors * filterPixels * numFilters;
     }
     bool active_thread_y = (blockFilterIdx + shFilterLoadX) < numFilters;
 
-    targets += moduleIdx * numImages
-            + (blockFilterIdx + threadIdx.y) * numImages * numModules
-            + myImgIdx;
+    targets += moduleIdx * numImages +
+               (blockFilterIdx + threadIdx.y) * numImages * numModules + myImgIdx;
 
     float prod[filtersPerThread][imgsPerThread];
-    #pragma unroll
-    for(int f = 0; f < filtersPerThread; f++) {
-        #pragma unroll
-        for(int g = 0; g < imgsPerThread; g++) {
+#pragma unroll
+    for (int f = 0; f < filtersPerThread; f++) {
+#pragma unroll
+        for (int g = 0; g < imgsPerThread; g++) {
             prod[f][g] = 0;
         }
     }
@@ -125,33 +129,42 @@ __global__ void filterActs_YxX_sparse2(float* images, float* filters, float* tar
     const int imgStartY = MAX(0, imgLoadModPosY);
     const int imgEndX = MIN(imgLoadModPosX + filterSize, imgSizeX);
     const int imgEndY = MIN(imgLoadModPosY + filterSize, imgSizeY);
-//    __shared__ int imgPos[]
+    //    __shared__ int imgPos[]
 
     for (int imgY = imgStartY; imgY < imgEndY; ++imgY) {
         const int filterPxY = imgY - imgLoadModPosY;
         for (int imgX = imgStartX; imgX < imgEndX; ++imgX) {
             const int filterPxX = imgX - imgLoadModPosX;
             const int p = filterPxY * filterSize + filterPxX;
-            for (int oc = 0; oc < numFilterColors; oc += colorCache) { // oc stands for outer color (loop)
+            for (int oc = 0; oc < numFilterColors;
+                 oc += colorCache) {  // oc stands for outer color (loop)
 
                 /*
                  * Load a pixel from B_Y*filtersPerThread filters
-                 * This condition covers the case when B_X is not divisible by filtersPerThread.
-                 * In this case, not all of the threads will participate in the loading operation.
-                 * This ensures that in each loop iteration, an integer number of rows of shFilters
+                 * This condition covers the case when B_X is not divisible by
+                 filtersPerThread.
+                 * In this case, not all of the threads will participate in the loading
+                 operation.
+                 * This ensures that in each loop iteration, an integer number of rows
+                 of shFilters
                  * are filled, which makes indexing simple.
 
-                 * nvcc is behaving in a completely insane way: removing this condition under
+                 * nvcc is behaving in a completely insane way: removing this condition
+                 under
                  * template parameters that guarantee it to be true actually slows down
                  * the computation.
                  *
                  */
-                if (/*B_X % filtersPerThread == 0 ||*/ shFilterLoadY < B_X/filtersPerThread) {
-                    #pragma unroll
-                    for (int c = 0; c < colorCache; c += B_X/filtersPerThread) {
-                        if (colorCache % (B_X/filtersPerThread) == 0 || c + shFilterLoadY < colorCache) {
+                if (/*B_X % filtersPerThread == 0 ||*/ shFilterLoadY <
+                    B_X / filtersPerThread) {
+#pragma unroll
+                    for (int c = 0; c < colorCache; c += B_X / filtersPerThread) {
+                        if (colorCache % (B_X / filtersPerThread) == 0 ||
+                            c + shFilterLoadY < colorCache) {
                             if (active_thread_y) {
-                                shFilters[c + shFilterLoadY][shFilterLoadX] = filters[((oc+c) * filterPixels + p) * numFilters];
+                                shFilters[c + shFilterLoadY][shFilterLoadX] =
+                                        filters[((oc + c) * filterPixels + p) *
+                                                numFilters];
                             } else {
                                 shFilters[c + shFilterLoadY][shFilterLoadX] = 0;
                             }
@@ -162,16 +175,17 @@ __global__ void filterActs_YxX_sparse2(float* images, float* filters, float* tar
                 /*
                  * Load a pixel from B_X*imgsPerThread images.
                  */
-                const int pixIdx = imgY * imgSizeX + imgX;// Pixel index in img
+                const int pixIdx = imgY * imgSizeX + imgX;  // Pixel index in img
 
                 float* m = &images[imgStride * (oc * imgPixels + pixIdx)];
-                #pragma unroll
+#pragma unroll
                 for (int c = 0; c < colorCache; c += B_Y) {
                     if (colorCache % B_Y == 0 || threadIdx.y + c < colorCache) {
-                        #pragma unroll
+#pragma unroll
                         for (int i = 0; i < imgsPerThread; i++) {
                             if (!checkImgBounds || myImgIdx + i * B_X < numImages) {
-                                shImages[c + threadIdx.y][threadIdx.x + i * B_X] = m[c * imgStride * imgPixels + i * B_X];
+                                shImages[c + threadIdx.y][threadIdx.x + i * B_X] =
+                                        m[c * imgStride * imgPixels + i * B_X];
                             } else {
                                 shImages[c + threadIdx.y][threadIdx.x + i * B_X] = 0;
                             }
@@ -182,11 +196,12 @@ __global__ void filterActs_YxX_sparse2(float* images, float* filters, float* tar
                 __syncthreads();
 
                 for (int c = 0; c < colorCache; c++) {
-                    #pragma unroll
-                    for(int g = 0; g < imgsPerThread; g++) {
-                        #pragma unroll
-                        for(int f = 0; f < filtersPerThread; f++) {
-                            prod[f][g] += shImages[c][g * B_X + threadIdx.x] * shFilters[c][threadIdx.y + f * B_Y];
+#pragma unroll
+                    for (int g = 0; g < imgsPerThread; g++) {
+#pragma unroll
+                        for (int f = 0; f < filtersPerThread; f++) {
+                            prod[f][g] += shImages[c][g * B_X + threadIdx.x] *
+                                          shFilters[c][threadIdx.y + f * B_Y];
                         }
                     }
                 }
@@ -196,32 +211,37 @@ __global__ void filterActs_YxX_sparse2(float* images, float* filters, float* tar
     }
 
     int filtersThisThread = filtersPerThread;
-    //if(checkFilterBounds) {
-        int filtersThisBlock = numFilters - (blockIdx.y % blocksPerModule)
-                               * (B_Y*filtersPerThread);
-        if (filtersThisBlock < (B_Y * filtersPerThread)) {
-            filtersThisThread = (filtersThisBlock - threadIdx.y + filtersPerThread - 1) / filtersPerThread;
-        }
+    // if(checkFilterBounds) {
+    int filtersThisBlock =
+            numFilters - (blockIdx.y % blocksPerModule) * (B_Y * filtersPerThread);
+    if (filtersThisBlock < (B_Y * filtersPerThread)) {
+        filtersThisThread = (filtersThisBlock - threadIdx.y + filtersPerThread - 1) /
+                            filtersPerThread;
+    }
     //}
 
     if (scale) {
-        #pragma unroll
+#pragma unroll
         for (int g = 0; g < imgsPerThread; g++) {
             if (!checkImgBounds || myImgIdx + g * B_X < numImages) {
-                #pragma unroll
+#pragma unroll
                 for (int f = 0; f < filtersThisThread; f++) {
-                    targets[g * B_X + f * B_Y * numImages * numModules] = scaleTargets * targets[g * B_X + f * B_Y * numImages * numModules] + scaleOutputs * prod[f][g];
+                    targets[g * B_X + f * B_Y * numImages * numModules] =
+                            scaleTargets * targets[g * B_X +
+                                                   f * B_Y * numImages * numModules] +
+                            scaleOutputs * prod[f][g];
                 }
             }
         }
     } else {
-        // Note: reversing order of these loops saves 2 registers, but costs time
-        #pragma unroll
+// Note: reversing order of these loops saves 2 registers, but costs time
+#pragma unroll
         for (int f = 0; f < filtersThisThread; f++) {
-            #pragma unroll
+#pragma unroll
             for (int g = 0; g < imgsPerThread; g++) {
                 if (!checkImgBounds || myImgIdx + g * B_X < numImages) {
-                    targets[g * B_X + f * B_Y * numImages * numModules] = scaleOutputs * prod[f][g];
+                    targets[g * B_X + f * B_Y * numImages * numModules] =
+                            scaleOutputs * prod[f][g];
                 }
             }
         }
@@ -231,31 +251,31 @@ __global__ void filterActs_YxX_sparse2(float* images, float* filters, float* tar
 #define FILTER_SPARSE2_HEAD template __global__ void filterActs_YxX_sparse2
 
 // <B_Y, B_X, imgsPerThread, filtersPerThread, colorCache, scale, checkImgBounds>
-#define FILTER_SPARSE2(scale, ckImg) \
-FILTER_SPARSE2_HEAD < 4, 32, 4, 8, 8, scale, ckImg > (FILTER_SPARSE2_PARAMS);   \
-FILTER_SPARSE2_HEAD < 4, 32, 4, 4, 8, scale, ckImg > (FILTER_SPARSE2_PARAMS);   \
-\
-FILTER_SPARSE2_HEAD < 8, 32, 2, 16, 8, scale, ckImg > (FILTER_SPARSE2_PARAMS);  \
-FILTER_SPARSE2_HEAD < 4, 32, 2, 16, 8, scale, ckImg > (FILTER_SPARSE2_PARAMS);  \
-FILTER_SPARSE2_HEAD < 4, 32, 2, 8, 8, scale, ckImg > (FILTER_SPARSE2_PARAMS);   \
-FILTER_SPARSE2_HEAD < 4, 32, 2, 4, 8, scale, ckImg > (FILTER_SPARSE2_PARAMS);   \
-\
-FILTER_SPARSE2_HEAD < 8, 32, 1, 16, 8, scale, ckImg > (FILTER_SPARSE2_PARAMS);  \
-FILTER_SPARSE2_HEAD < 4, 32, 1, 16, 8, scale, ckImg > (FILTER_SPARSE2_PARAMS);  \
-FILTER_SPARSE2_HEAD < 4, 32, 1, 8, 8, scale, ckImg > (FILTER_SPARSE2_PARAMS);   \
-FILTER_SPARSE2_HEAD < 4, 32, 1, 4, 8, scale, ckImg > (FILTER_SPARSE2_PARAMS);   \
-\
-FILTER_SPARSE2_HEAD < 4, 32, 4, 16, 4, scale, ckImg > (FILTER_SPARSE2_PARAMS);  \
-FILTER_SPARSE2_HEAD < 4, 32, 4, 8, 4, scale, ckImg > (FILTER_SPARSE2_PARAMS);   \
-FILTER_SPARSE2_HEAD < 4, 32, 4, 4, 4, scale, ckImg > (FILTER_SPARSE2_PARAMS);   \
-\
-FILTER_SPARSE2_HEAD < 4, 32, 2, 16, 4, scale, ckImg > (FILTER_SPARSE2_PARAMS);  \
-FILTER_SPARSE2_HEAD < 4, 32, 2, 8, 4, scale, ckImg > (FILTER_SPARSE2_PARAMS);   \
-FILTER_SPARSE2_HEAD < 4, 32, 2, 4, 4, scale, ckImg > (FILTER_SPARSE2_PARAMS);   \
-\
-FILTER_SPARSE2_HEAD < 4, 32, 1, 16, 4, scale, ckImg > (FILTER_SPARSE2_PARAMS);  \
-FILTER_SPARSE2_HEAD < 4, 32, 1, 8, 4, scale, ckImg > (FILTER_SPARSE2_PARAMS);   \
-FILTER_SPARSE2_HEAD < 4, 32, 1, 4, 4, scale, ckImg > (FILTER_SPARSE2_PARAMS);
+#define FILTER_SPARSE2(scale, ckImg)                                           \
+    FILTER_SPARSE2_HEAD<4, 32, 4, 8, 8, scale, ckImg>(FILTER_SPARSE2_PARAMS);  \
+    FILTER_SPARSE2_HEAD<4, 32, 4, 4, 8, scale, ckImg>(FILTER_SPARSE2_PARAMS);  \
+                                                                               \
+    FILTER_SPARSE2_HEAD<8, 32, 2, 16, 8, scale, ckImg>(FILTER_SPARSE2_PARAMS); \
+    FILTER_SPARSE2_HEAD<4, 32, 2, 16, 8, scale, ckImg>(FILTER_SPARSE2_PARAMS); \
+    FILTER_SPARSE2_HEAD<4, 32, 2, 8, 8, scale, ckImg>(FILTER_SPARSE2_PARAMS);  \
+    FILTER_SPARSE2_HEAD<4, 32, 2, 4, 8, scale, ckImg>(FILTER_SPARSE2_PARAMS);  \
+                                                                               \
+    FILTER_SPARSE2_HEAD<8, 32, 1, 16, 8, scale, ckImg>(FILTER_SPARSE2_PARAMS); \
+    FILTER_SPARSE2_HEAD<4, 32, 1, 16, 8, scale, ckImg>(FILTER_SPARSE2_PARAMS); \
+    FILTER_SPARSE2_HEAD<4, 32, 1, 8, 8, scale, ckImg>(FILTER_SPARSE2_PARAMS);  \
+    FILTER_SPARSE2_HEAD<4, 32, 1, 4, 8, scale, ckImg>(FILTER_SPARSE2_PARAMS);  \
+                                                                               \
+    FILTER_SPARSE2_HEAD<4, 32, 4, 16, 4, scale, ckImg>(FILTER_SPARSE2_PARAMS); \
+    FILTER_SPARSE2_HEAD<4, 32, 4, 8, 4, scale, ckImg>(FILTER_SPARSE2_PARAMS);  \
+    FILTER_SPARSE2_HEAD<4, 32, 4, 4, 4, scale, ckImg>(FILTER_SPARSE2_PARAMS);  \
+                                                                               \
+    FILTER_SPARSE2_HEAD<4, 32, 2, 16, 4, scale, ckImg>(FILTER_SPARSE2_PARAMS); \
+    FILTER_SPARSE2_HEAD<4, 32, 2, 8, 4, scale, ckImg>(FILTER_SPARSE2_PARAMS);  \
+    FILTER_SPARSE2_HEAD<4, 32, 2, 4, 4, scale, ckImg>(FILTER_SPARSE2_PARAMS);  \
+                                                                               \
+    FILTER_SPARSE2_HEAD<4, 32, 1, 16, 4, scale, ckImg>(FILTER_SPARSE2_PARAMS); \
+    FILTER_SPARSE2_HEAD<4, 32, 1, 8, 4, scale, ckImg>(FILTER_SPARSE2_PARAMS);  \
+    FILTER_SPARSE2_HEAD<4, 32, 1, 4, 4, scale, ckImg>(FILTER_SPARSE2_PARAMS);
 
-} // namespace cuda
-} // namespace megdnn
+}  // namespace cuda
+}  // namespace megdnn

@@ -20,20 +20,18 @@ namespace serialization {
 
 template <>
 struct OprLoadDumpImpl<opr::AtlasRuntimeOpr, 0> {
-
     static void dump(OprDumpContext& ctx, const cg::OperatorNodeBase& opr_) {
         auto&& opr = opr_.cast_final_safe<opr::AtlasRuntimeOpr>();
         auto&& buf = opr.buffer();
         ctx.dump_buf_with_len(buf.data(), buf.size());
     }
-    static cg::OperatorNodeBase* load(OprLoadContext& ctx,
-                                      const cg::VarNodeArray& inputs,
-                                      const OperatorNodeConfig& config) {
+    static cg::OperatorNodeBase* load(
+            OprLoadContext& ctx, const cg::VarNodeArray& inputs,
+            const OperatorNodeConfig& config) {
         inputs.at(0)->comp_node().activate();
         auto buf = ctx.load_shared_buf_with_len();
         return opr::AtlasRuntimeOpr::make(
-                       std::move(buf), cg::to_symbol_var_array(inputs),
-                       config)
+                       std::move(buf), cg::to_symbol_var_array(inputs), config)
                 .at(0)
                 .node()
                 ->owner_opr();
@@ -49,9 +47,8 @@ cg::OperatorNodeBase* opr_shallow_copy_atlas_runtime_opr(
         const OperatorNodeConfig& config) {
     MGB_MARK_USED_VAR(ctx);
     auto&& opr = opr_.cast_final_safe<AtlasRuntimeOpr>();
-    return AtlasRuntimeOpr::make(opr.buffer(), opr.model(),
-                                 cg::to_symbol_var_array(inputs),
-                                 config)
+    return AtlasRuntimeOpr::make(
+                   opr.buffer(), opr.model(), cg::to_symbol_var_array(inputs), config)
             .at(0)
             .node()
             ->owner_opr();

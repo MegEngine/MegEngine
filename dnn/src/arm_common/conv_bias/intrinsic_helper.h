@@ -101,8 +101,7 @@ struct Store_OC4_OW8_Remain<1, Op> {
 };
 
 template <int ow_remain, typename Op>
-__ai void store_oc4_ow8_remain_static(int32x4_t c[8], const Op& op,
-                                      int8_t* dst_ptr) {
+__ai void store_oc4_ow8_remain_static(int32x4_t c[8], const Op& op, int8_t* dst_ptr) {
     Store_OC4_OW8_Remain<ow_remain, Op>::impl(c, op, dst_ptr);
 }
 
@@ -113,15 +112,13 @@ struct StoreOcxOw4Remain {
 
 template <typename Op, typename T>
 struct StoreOcxOw4Remain<2, 0, Op, T> {
-    static __ai void impl(int32x4_t c[2][4], const Op& op, int8_t* dst_ptr,
-                          int ld_dst_oc) {
+    static __ai void impl(
+            int32x4_t c[2][4], const Op& op, int8_t* dst_ptr, int ld_dst_oc) {
         op({{c[0][0], c[0][1]}}, reinterpret_cast<dt_qint8*>(dst_ptr));
         op({{c[0][2], c[0][3]}}, reinterpret_cast<dt_qint8*>(dst_ptr + 8));
 
-        op({{c[1][0], c[1][1]}},
-           reinterpret_cast<dt_qint8*>(dst_ptr + ld_dst_oc));
-        op({{c[1][2], c[1][3]}},
-           reinterpret_cast<dt_qint8*>(dst_ptr + ld_dst_oc + 8));
+        op({{c[1][0], c[1][1]}}, reinterpret_cast<dt_qint8*>(dst_ptr + ld_dst_oc));
+        op({{c[1][2], c[1][3]}}, reinterpret_cast<dt_qint8*>(dst_ptr + ld_dst_oc + 8));
     }
 };
 
@@ -131,8 +128,7 @@ struct StoreOcxOw4Remain<2, 3, Op, T> {
         op({{c[0][0], c[0][1]}}, reinterpret_cast<dt_qint8*>(dst_ptr));
         op(c[0][2], reinterpret_cast<dt_qint8*>(dst_ptr + 8));
 
-        op({{c[1][0], c[1][1]}},
-           reinterpret_cast<dt_qint8*>(dst_ptr + ld_dst_oc));
+        op({{c[1][0], c[1][1]}}, reinterpret_cast<dt_qint8*>(dst_ptr + ld_dst_oc));
         op(c[1][2], reinterpret_cast<dt_qint8*>(dst_ptr + ld_dst_oc + 8));
     }
 };
@@ -140,8 +136,7 @@ template <typename Op, typename T>
 struct StoreOcxOw4Remain<2, 2, Op, T> {
     static __ai void impl(T& c, const Op& op, int8_t* dst_ptr, int ld_dst_oc) {
         op({{c[0][0], c[0][1]}}, reinterpret_cast<dt_qint8*>(dst_ptr));
-        op({{c[1][0], c[1][1]}},
-           reinterpret_cast<dt_qint8*>(dst_ptr + ld_dst_oc));
+        op({{c[1][0], c[1][1]}}, reinterpret_cast<dt_qint8*>(dst_ptr + ld_dst_oc));
     }
 };
 template <typename Op, typename T>
@@ -154,8 +149,8 @@ struct StoreOcxOw4Remain<2, 1, Op, T> {
 
 template <typename Op, typename T>
 struct StoreOcxOw4Remain<1, 0, Op, T> {
-    static __ai void impl(int32x4_t c[2][4], const Op& op, int8_t* dst_ptr,
-                          int ld_dst_oc) {
+    static __ai void impl(
+            int32x4_t c[2][4], const Op& op, int8_t* dst_ptr, int ld_dst_oc) {
         MEGDNN_MARK_USED_VAR(ld_dst_oc);
         op({{c[0][0], c[0][1]}}, reinterpret_cast<dt_qint8*>(dst_ptr));
         op({{c[0][2], c[0][3]}}, reinterpret_cast<dt_qint8*>(dst_ptr + 8));
@@ -185,13 +180,12 @@ struct StoreOcxOw4Remain<1, 1, Op, T> {
     }
 };
 template <int c_dim, int ow_remain, typename Op, typename T>
-__ai void store_ocx_ow4_remain_static(T& c, const Op& op, int8_t* dst_ptr,
-                                      int ld_dst_oc) {
+__ai void store_ocx_ow4_remain_static(
+        T& c, const Op& op, int8_t* dst_ptr, int ld_dst_oc) {
     StoreOcxOw4Remain<c_dim, ow_remain, Op, T>::impl(c, op, dst_ptr, ld_dst_oc);
 }
 ////////////////////Store_OCX_OW8_Remain/////////////////////////
-template <int c_dim, int ow_remain, typename Op, typename T, typename T2,
-          typename T3>
+template <int c_dim, int ow_remain, typename Op, typename T, typename T2, typename T3>
 struct StoreOcxOw8Remain {
     static __ai void impl(T& c, const Op& op, T2 dst_ptr, int ld_dst_oc);
 };
@@ -206,10 +200,8 @@ struct StoreOcxOw8Remain<2, 0, Op, T, T2, T3> {
 
         op({{c[1][0], c[1][1]}}, reinterpret_cast<T3>(dst_ptr + ld_dst_oc));
         op({{c[1][2], c[1][3]}}, reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 8));
-        op({{c[1][4], c[1][5]}},
-           reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 16));
-        op({{c[1][6], c[1][7]}},
-           reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 24));
+        op({{c[1][4], c[1][5]}}, reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 16));
+        op({{c[1][6], c[1][7]}}, reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 24));
     }
 };
 template <typename Op, typename T, typename T2, typename T3>
@@ -222,10 +214,8 @@ struct StoreOcxOw8Remain<2, 8, Op, T, T2, T3> {
 
         op({{c[1][0], c[1][1]}}, reinterpret_cast<T3>(dst_ptr + ld_dst_oc));
         op({{c[1][2], c[1][3]}}, reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 8));
-        op({{c[1][4], c[1][5]}},
-           reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 16));
-        op({{c[1][6], c[1][7]}},
-           reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 24));
+        op({{c[1][4], c[1][5]}}, reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 16));
+        op({{c[1][6], c[1][7]}}, reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 24));
     }
 };
 template <typename Op, typename T, typename T2, typename T3>
@@ -238,8 +228,7 @@ struct StoreOcxOw8Remain<2, 7, Op, T, T2, T3> {
 
         op({{c[1][0], c[1][1]}}, reinterpret_cast<T3>(dst_ptr + ld_dst_oc));
         op({{c[1][2], c[1][3]}}, reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 8));
-        op({{c[1][4], c[1][5]}},
-           reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 16));
+        op({{c[1][4], c[1][5]}}, reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 16));
         op(c[1][6], reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 24));
     }
 };
@@ -252,8 +241,7 @@ struct StoreOcxOw8Remain<2, 6, Op, T, T2, T3> {
 
         op({{c[1][0], c[1][1]}}, reinterpret_cast<T3>(dst_ptr + ld_dst_oc));
         op({{c[1][2], c[1][3]}}, reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 8));
-        op({{c[1][4], c[1][5]}},
-           reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 16));
+        op({{c[1][4], c[1][5]}}, reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 16));
     }
 };
 template <typename Op, typename T, typename T2, typename T3>
@@ -375,34 +363,32 @@ struct StoreOcxOw8Remain<1, 1, Op, T, T2, T3> {
 };
 
 template <int c_dim, int ow_remain, typename Op, typename T, typename T2>
-__ai void store_ocx_ow8_remain_static(T& c, const Op& op, T2 dst_ptr,
-                                      int ld_dst_oc) {
-    StoreOcxOw8Remain<c_dim, ow_remain, Op, T, T2, T2>::impl(c, op, dst_ptr,
-                                                             ld_dst_oc);
+__ai void store_ocx_ow8_remain_static(T& c, const Op& op, T2 dst_ptr, int ld_dst_oc) {
+    StoreOcxOw8Remain<c_dim, ow_remain, Op, T, T2, T2>::impl(c, op, dst_ptr, ld_dst_oc);
 }
-template <int c_dim, int ow_remain, typename Op, typename T3, typename T,
-          typename T2>
-__ai void store_ocx_ow8_remain_static_dt(T& c, const Op& op, T2 dst_ptr,
-                                         int ld_dst_oc) {
-    StoreOcxOw8Remain<c_dim, ow_remain, Op, T, T2, T3>::impl(c, op, dst_ptr,
-                                                             ld_dst_oc);
+template <int c_dim, int ow_remain, typename Op, typename T3, typename T, typename T2>
+__ai void store_ocx_ow8_remain_static_dt(
+        T& c, const Op& op, T2 dst_ptr, int ld_dst_oc) {
+    StoreOcxOw8Remain<c_dim, ow_remain, Op, T, T2, T3>::impl(c, op, dst_ptr, ld_dst_oc);
 }
 ////////////////////Store_OCX_OW8_Remain/////////////////////////
-template <int c_dim, int ow_block, int nr_group, int out_group, typename T,
-          typename T2, typename T3>
+template <
+        int c_dim, int ow_block, int nr_group, int out_group, typename T, typename T2,
+        typename T3>
 struct StoreOc4Ow8Remain {
     static __ai void impl(T& c, T2 dst_ptr, int ld_dst_oc, const int ow_remain);
 };
 
-#define cb(step)                                               \
-    vst1q_lane_s64((int64_t*)(dst_ptr + step * 4),             \
-                   vreinterpretq_s64_s16(c[0][step]), 0);      \
-    vst1q_lane_s64((int64_t*)(dst_ptr + step * 4 + ld_dst_oc), \
-                   vreinterpretq_s64_s16(c[0][step]), 1);
+#define cb(step)                                                                   \
+    vst1q_lane_s64(                                                                \
+            (int64_t*)(dst_ptr + step * 4), vreinterpretq_s64_s16(c[0][step]), 0); \
+    vst1q_lane_s64(                                                                \
+            (int64_t*)(dst_ptr + step * 4 + ld_dst_oc),                            \
+            vreinterpretq_s64_s16(c[0][step]), 1);
 
-#define cb2(step)                                  \
-    vst1q_lane_s64((int64_t*)(dst_ptr + step * 4), \
-                   vreinterpretq_s64_s16(c[0][step]), 0);
+#define cb2(step)   \
+    vst1q_lane_s64( \
+            (int64_t*)(dst_ptr + step * 4), vreinterpretq_s64_s16(c[0][step]), 0);
 
 #define cb_case(step)              \
     case step:                     \
@@ -415,8 +401,7 @@ struct StoreOc4Ow8Remain {
         break;
 template <typename T, typename T2, typename T3>
 struct StoreOc4Ow8Remain<1, 8, 2, 2, T, T2, T3> {
-    static __ai void impl(T& c, T2 dst_ptr, int ld_dst_oc,
-                          const int ow_remain) {
+    static __ai void impl(T& c, T2 dst_ptr, int ld_dst_oc, const int ow_remain) {
         if (ow_remain == 8) {
             UNROLL_CALL_RAW(8, cb)
         } else {
@@ -462,10 +447,9 @@ struct StoreOc4Ow8Remain<1, 8, 2, 1, T, T2, T3> {
 #undef cb_case
 #undef cb_case2
 
-template <int c_dim, int ow_block, int nr_group, int out_group, typename T,
-          typename T2>
-__ai void store_oc4_ow8_remain_static(T& c, T2 dst_ptr, const int ld_dst_oc,
-                                      const int ow_remain) {
+template <int c_dim, int ow_block, int nr_group, int out_group, typename T, typename T2>
+__ai void store_oc4_ow8_remain_static(
+        T& c, T2 dst_ptr, const int ld_dst_oc, const int ow_remain) {
     StoreOc4Ow8Remain<c_dim, ow_block, nr_group, out_group, T, T2, T2>::impl(
             c, dst_ptr, ld_dst_oc, ow_remain);
 }
@@ -474,121 +458,105 @@ __ai void store_oc4_ow8_remain_static(T& c, T2 dst_ptr, const int ld_dst_oc,
 
 template <int ow_remain, typename Op>
 struct Store_OC8_OW8_Remain {
-    static __ai void impl(int32x4_t c[2][8], const Op& op, int8_t* dst_ptr,
-                          int ld_dst_oc);
+    static __ai void impl(
+            int32x4_t c[2][8], const Op& op, int8_t* dst_ptr, int ld_dst_oc);
 };
 
 template <typename Op>
 struct Store_OC8_OW8_Remain<0, Op> {
-    static __ai void impl(int32x4_t c[2][8], const Op& op, int8_t* dst_ptr,
-                          int ld_dst_oc) {
+    static __ai void impl(
+            int32x4_t c[2][8], const Op& op, int8_t* dst_ptr, int ld_dst_oc) {
         op({{c[0][0], c[0][1]}}, reinterpret_cast<dt_qint8*>(dst_ptr));
         op({{c[0][2], c[0][3]}}, reinterpret_cast<dt_qint8*>(dst_ptr + 8));
         op({{c[0][4], c[0][5]}}, reinterpret_cast<dt_qint8*>(dst_ptr + 16));
         op({{c[0][6], c[0][7]}}, reinterpret_cast<dt_qint8*>(dst_ptr + 24));
 
-        op({{c[1][0], c[1][1]}},
-           reinterpret_cast<dt_qint8*>(dst_ptr + ld_dst_oc));
-        op({{c[1][2], c[1][3]}},
-           reinterpret_cast<dt_qint8*>(dst_ptr + ld_dst_oc + 8));
-        op({{c[1][4], c[1][5]}},
-           reinterpret_cast<dt_qint8*>(dst_ptr + ld_dst_oc + 16));
-        op({{c[1][6], c[1][7]}},
-           reinterpret_cast<dt_qint8*>(dst_ptr + ld_dst_oc + 24));
+        op({{c[1][0], c[1][1]}}, reinterpret_cast<dt_qint8*>(dst_ptr + ld_dst_oc));
+        op({{c[1][2], c[1][3]}}, reinterpret_cast<dt_qint8*>(dst_ptr + ld_dst_oc + 8));
+        op({{c[1][4], c[1][5]}}, reinterpret_cast<dt_qint8*>(dst_ptr + ld_dst_oc + 16));
+        op({{c[1][6], c[1][7]}}, reinterpret_cast<dt_qint8*>(dst_ptr + ld_dst_oc + 24));
     }
 };
 
 template <typename Op>
 struct Store_OC8_OW8_Remain<7, Op> {
-    static __ai void impl(int32x4_t c[2][8], const Op& op, int8_t* dst_ptr,
-                          int ld_dst_oc) {
+    static __ai void impl(
+            int32x4_t c[2][8], const Op& op, int8_t* dst_ptr, int ld_dst_oc) {
         op({{c[0][0], c[0][1]}}, reinterpret_cast<dt_qint8*>(dst_ptr));
         op({{c[0][2], c[0][3]}}, reinterpret_cast<dt_qint8*>(dst_ptr + 8));
         op({{c[0][4], c[0][5]}}, reinterpret_cast<dt_qint8*>(dst_ptr + 16));
         op(c[0][6], reinterpret_cast<dt_qint8*>(dst_ptr + 24));
 
-        op({{c[1][0], c[1][1]}},
-           reinterpret_cast<dt_qint8*>(dst_ptr + ld_dst_oc));
-        op({{c[1][2], c[1][3]}},
-           reinterpret_cast<dt_qint8*>(dst_ptr + ld_dst_oc + 8));
-        op({{c[1][4], c[1][5]}},
-           reinterpret_cast<dt_qint8*>(dst_ptr + ld_dst_oc + 16));
+        op({{c[1][0], c[1][1]}}, reinterpret_cast<dt_qint8*>(dst_ptr + ld_dst_oc));
+        op({{c[1][2], c[1][3]}}, reinterpret_cast<dt_qint8*>(dst_ptr + ld_dst_oc + 8));
+        op({{c[1][4], c[1][5]}}, reinterpret_cast<dt_qint8*>(dst_ptr + ld_dst_oc + 16));
         op(c[1][6], reinterpret_cast<dt_qint8*>(dst_ptr + ld_dst_oc + 24));
     }
 };
 
 template <typename Op>
 struct Store_OC8_OW8_Remain<6, Op> {
-    static __ai void impl(int32x4_t c[2][8], const Op& op, int8_t* dst_ptr,
-                          int ld_dst_oc) {
+    static __ai void impl(
+            int32x4_t c[2][8], const Op& op, int8_t* dst_ptr, int ld_dst_oc) {
         op({{c[0][0], c[0][1]}}, reinterpret_cast<dt_qint8*>(dst_ptr));
         op({{c[0][2], c[0][3]}}, reinterpret_cast<dt_qint8*>(dst_ptr + 8));
         op({{c[0][4], c[0][5]}}, reinterpret_cast<dt_qint8*>(dst_ptr + 16));
 
-        op({{c[1][0], c[1][1]}},
-           reinterpret_cast<dt_qint8*>(dst_ptr + ld_dst_oc));
-        op({{c[1][2], c[1][3]}},
-           reinterpret_cast<dt_qint8*>(dst_ptr + ld_dst_oc + 8));
-        op({{c[1][4], c[1][5]}},
-           reinterpret_cast<dt_qint8*>(dst_ptr + ld_dst_oc + 16));
+        op({{c[1][0], c[1][1]}}, reinterpret_cast<dt_qint8*>(dst_ptr + ld_dst_oc));
+        op({{c[1][2], c[1][3]}}, reinterpret_cast<dt_qint8*>(dst_ptr + ld_dst_oc + 8));
+        op({{c[1][4], c[1][5]}}, reinterpret_cast<dt_qint8*>(dst_ptr + ld_dst_oc + 16));
     }
 };
 
 template <typename Op>
 struct Store_OC8_OW8_Remain<5, Op> {
-    static __ai void impl(int32x4_t c[2][8], const Op& op, int8_t* dst_ptr,
-                          int ld_dst_oc) {
+    static __ai void impl(
+            int32x4_t c[2][8], const Op& op, int8_t* dst_ptr, int ld_dst_oc) {
         op({{c[0][0], c[0][1]}}, reinterpret_cast<dt_qint8*>(dst_ptr));
         op({{c[0][2], c[0][3]}}, reinterpret_cast<dt_qint8*>(dst_ptr + 8));
         op(c[0][4], reinterpret_cast<dt_qint8*>(dst_ptr + 16));
 
-        op({{c[1][0], c[1][1]}},
-           reinterpret_cast<dt_qint8*>(dst_ptr + ld_dst_oc));
-        op({{c[1][2], c[1][3]}},
-           reinterpret_cast<dt_qint8*>(dst_ptr + ld_dst_oc + 8));
+        op({{c[1][0], c[1][1]}}, reinterpret_cast<dt_qint8*>(dst_ptr + ld_dst_oc));
+        op({{c[1][2], c[1][3]}}, reinterpret_cast<dt_qint8*>(dst_ptr + ld_dst_oc + 8));
         op(c[1][4], reinterpret_cast<dt_qint8*>(dst_ptr + ld_dst_oc + 16));
     }
 };
 
 template <typename Op>
 struct Store_OC8_OW8_Remain<4, Op> {
-    static __ai void impl(int32x4_t c[2][8], const Op& op, int8_t* dst_ptr,
-                          int ld_dst_oc) {
+    static __ai void impl(
+            int32x4_t c[2][8], const Op& op, int8_t* dst_ptr, int ld_dst_oc) {
         op({{c[0][0], c[0][1]}}, reinterpret_cast<dt_qint8*>(dst_ptr));
         op({{c[0][2], c[0][3]}}, reinterpret_cast<dt_qint8*>(dst_ptr + 8));
 
-        op({{c[1][0], c[1][1]}},
-           reinterpret_cast<dt_qint8*>(dst_ptr + ld_dst_oc));
-        op({{c[1][2], c[1][3]}},
-           reinterpret_cast<dt_qint8*>(dst_ptr + ld_dst_oc + 8));
+        op({{c[1][0], c[1][1]}}, reinterpret_cast<dt_qint8*>(dst_ptr + ld_dst_oc));
+        op({{c[1][2], c[1][3]}}, reinterpret_cast<dt_qint8*>(dst_ptr + ld_dst_oc + 8));
     }
 };
 
 template <typename Op>
 struct Store_OC8_OW8_Remain<3, Op> {
-    static __ai void impl(int32x4_t c[2][8], const Op& op, int8_t* dst_ptr,
-                          int ld_dst_oc) {
+    static __ai void impl(
+            int32x4_t c[2][8], const Op& op, int8_t* dst_ptr, int ld_dst_oc) {
         op({{c[0][0], c[0][1]}}, reinterpret_cast<dt_qint8*>(dst_ptr));
         op(c[0][2], reinterpret_cast<dt_qint8*>(dst_ptr + 8));
 
-        op({{c[1][0], c[1][1]}},
-           reinterpret_cast<dt_qint8*>(dst_ptr + ld_dst_oc));
+        op({{c[1][0], c[1][1]}}, reinterpret_cast<dt_qint8*>(dst_ptr + ld_dst_oc));
         op(c[1][2], reinterpret_cast<dt_qint8*>(dst_ptr + ld_dst_oc + 8));
     }
 };
 template <typename Op>
 struct Store_OC8_OW8_Remain<2, Op> {
-    static __ai void impl(int32x4_t c[2][8], const Op& op, int8_t* dst_ptr,
-                          int ld_dst_oc) {
+    static __ai void impl(
+            int32x4_t c[2][8], const Op& op, int8_t* dst_ptr, int ld_dst_oc) {
         op({{c[0][0], c[0][1]}}, reinterpret_cast<dt_qint8*>(dst_ptr));
-        op({{c[1][0], c[1][1]}},
-           reinterpret_cast<dt_qint8*>(dst_ptr + ld_dst_oc));
+        op({{c[1][0], c[1][1]}}, reinterpret_cast<dt_qint8*>(dst_ptr + ld_dst_oc));
     }
 };
 template <typename Op>
 struct Store_OC8_OW8_Remain<1, Op> {
-    static __ai void impl(int32x4_t c[2][8], const Op& op, int8_t* dst_ptr,
-                          int ld_dst_oc) {
+    static __ai void impl(
+            int32x4_t c[2][8], const Op& op, int8_t* dst_ptr, int ld_dst_oc) {
         op(c[0][0], reinterpret_cast<dt_qint8*>(dst_ptr));
         op(c[1][0], reinterpret_cast<dt_qint8*>(dst_ptr + ld_dst_oc));
     }
@@ -597,8 +565,7 @@ struct Store_OC8_OW8_Remain<1, Op> {
 ///////////
 
 template <int ow_remain, typename Op, typename T, typename T2>
-__ai void store_oc8_ow8_remain_static(T& c, const Op& op, T2 dst_ptr,
-                                      int ld_dst_oc) {
+__ai void store_oc8_ow8_remain_static(T& c, const Op& op, T2 dst_ptr, int ld_dst_oc) {
     Store_OC8_OW8_Remain<ow_remain, Op>::impl(c, op, dst_ptr, ld_dst_oc);
 }
 #pragma GCC diagnostic pop
@@ -618,8 +585,7 @@ __ai void init_oc4_ow8(int32x4_t c[8], const int32_t* bias_ptr) {
 }
 
 template <BiasMode bias_mode>
-__ai void init_oc8_ow8(int32x4_t c[2][8], const int32_t* bias_ptr,
-                       int oc_step) {
+__ai void init_oc8_ow8(int32x4_t c[2][8], const int32_t* bias_ptr, int oc_step) {
     if (bias_mode == BiasMode::BROADCAST_CHANNEL_BIAS) {
 #define BAIS_INIT(step)               \
     c[0][step] = vld1q_s32(bias_ptr); \
@@ -682,8 +648,7 @@ struct InitOcxOw8<c_dim, bias_mode, 0, T, T2> {
 #define BAIS_INIT_NO_BIAS_C2(step)                 \
     c[0][step] = neon_vdupq_n(static_cast<T2>(0)); \
     c[1][step] = neon_vdupq_n(static_cast<T2>(0));
-#define BAIS_INIT_NO_BIAS_C1(step) \
-    c[0][step] = neon_vdupq_n(static_cast<T2>(0));
+#define BAIS_INIT_NO_BIAS_C1(step) c[0][step] = neon_vdupq_n(static_cast<T2>(0));
 
 #define BAIS_INIT_BROADCAST_C2(step)   \
     c[0][step] = neon_vld1q(bias_ptr); \
@@ -694,31 +659,29 @@ struct InitOcxOw8<c_dim, bias_mode, 0, T, T2> {
     c[0][step] = neon_vld1q(bias_ptr + step * simd_len); \
     c[1][step] = neon_vld1q(bias_ptr + oc_step + step * simd_len);
 
-#define BAIS_INIT_BIAS_C1(step) \
-    c[0][step] = neon_vld1q(bias_ptr + step * simd_len);
+#define BAIS_INIT_BIAS_C1(step) c[0][step] = neon_vld1q(bias_ptr + step * simd_len);
 
-#define INSTANCE_InitOcxOw8(ow_remain, cdim)                                \
-    template <typename T, typename T2>                                      \
-    struct InitOcxOw8<cdim, BiasMode::NO_BIAS, ow_remain, T, T2> {          \
-        static __ai void impl(T& c, const T2*, int) {                       \
-            UNROLL_CALL_RAW(ow_remain, BAIS_INIT_NO_BIAS_C##cdim);          \
-        }                                                                   \
-    };                                                                      \
-    template <typename T, typename T2>                                      \
-    struct InitOcxOw8<cdim, BiasMode::BROADCAST_CHANNEL_BIAS, ow_remain, T, \
-                      T2> {                                                 \
-        static __ai void impl(T& c, const T2* bias_ptr, int oc_step) {      \
-            (void)oc_step;                                                  \
-            UNROLL_CALL_RAW(ow_remain, BAIS_INIT_BROADCAST_C##cdim);        \
-        }                                                                   \
-    };                                                                      \
-    template <typename T, typename T2>                                      \
-    struct InitOcxOw8<cdim, BiasMode::BIAS, ow_remain, T, T2> {             \
-        static __ai void impl(T& c, const T2* bias_ptr, int oc_step) {      \
-            constexpr int simd_len = NeonLdqSimd<T2>::simd_len;             \
-            (void)oc_step;                                                  \
-            UNROLL_CALL_RAW(ow_remain, BAIS_INIT_BIAS_C##cdim);             \
-        }                                                                   \
+#define INSTANCE_InitOcxOw8(ow_remain, cdim)                                      \
+    template <typename T, typename T2>                                            \
+    struct InitOcxOw8<cdim, BiasMode::NO_BIAS, ow_remain, T, T2> {                \
+        static __ai void impl(T& c, const T2*, int) {                             \
+            UNROLL_CALL_RAW(ow_remain, BAIS_INIT_NO_BIAS_C##cdim);                \
+        }                                                                         \
+    };                                                                            \
+    template <typename T, typename T2>                                            \
+    struct InitOcxOw8<cdim, BiasMode::BROADCAST_CHANNEL_BIAS, ow_remain, T, T2> { \
+        static __ai void impl(T& c, const T2* bias_ptr, int oc_step) {            \
+            (void)oc_step;                                                        \
+            UNROLL_CALL_RAW(ow_remain, BAIS_INIT_BROADCAST_C##cdim);              \
+        }                                                                         \
+    };                                                                            \
+    template <typename T, typename T2>                                            \
+    struct InitOcxOw8<cdim, BiasMode::BIAS, ow_remain, T, T2> {                   \
+        static __ai void impl(T& c, const T2* bias_ptr, int oc_step) {            \
+            constexpr int simd_len = NeonLdqSimd<T2>::simd_len;                   \
+            (void)oc_step;                                                        \
+            UNROLL_CALL_RAW(ow_remain, BAIS_INIT_BIAS_C##cdim);                   \
+        }                                                                         \
     };
 #define INSTANCE_InitOcxOw8_C(ow_remain) \
     INSTANCE_InitOcxOw8(ow_remain, 2);   \
@@ -793,8 +756,7 @@ __ai void init_ocx_ow4(T& c, const int32_t* bias_ptr, int oc_step) {
 }
 ///////////////////////////////////////
 
-static inline void memcpy_s8_dup(int8_t* outptr, const int8_t* inptr,
-                                 int count) {
+static inline void memcpy_s8_dup(int8_t* outptr, const int8_t* inptr, int count) {
     constexpr int expand = 8;
     for (; count >= 8; count -= 8) {
         int8x8_t in = vld1_s8(inptr);

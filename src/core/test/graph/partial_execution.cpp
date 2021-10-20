@@ -39,8 +39,8 @@ namespace mgb {
 namespace opr {
 namespace {
 static const SmallVector<Typeinfo*>& internal_opr_types() {
-    static SmallVector<Typeinfo*> ret = cg::ComputingGraphImpl::
-            MultiPartCompiler::test_get_internal_opr_types();
+    static SmallVector<Typeinfo*> ret =
+            cg::ComputingGraphImpl::MultiPartCompiler::test_get_internal_opr_types();
     return ret;
 }
 #define DEF(name, idx)                                                       \
@@ -72,18 +72,16 @@ ThinHashMap<Typeinfo*, size_t> get_opr_types(
 }
 #define ASSERT_OPR(_set, _type, _num) \
     ASSERT_EQ(_num##u, _set.at(opr::_type::typeinfo()))
-#define ASSERT_NO_OPR(_set, _type) \
-    ASSERT_EQ(0u, _set.count(opr::_type::typeinfo()))
+#define ASSERT_NO_OPR(_set, _type) ASSERT_EQ(0u, _set.count(opr::_type::typeinfo()))
 
 class TrackableDynamicMemAlloc final : public cg::DeviceMemoryAllocator {
     std::atomic_size_t m_nr_alive{0};
 
 public:
-    void alloc_dynamic(VarNode*, DeviceTensorStorage& dest,
-                       size_t size) override {
+    void alloc_dynamic(VarNode*, DeviceTensorStorage& dest, size_t size) override {
         auto ptr = dest.comp_node().alloc_device(size);
         ++m_nr_alive;
-        auto del = [ this, cn = dest.comp_node() ](void* ptr) {
+        auto del = [this, cn = dest.comp_node()](void* ptr) {
             cn.free_device(ptr);
             --m_nr_alive;
         };
@@ -130,8 +128,8 @@ TEST(TestPartialExecution, Simple) {
     // it should execute in part2 albeit with high priority
     set_priority(delta, -100);
     HostTensorND host_y1;
-    auto funcs = graph->compile_multi_part(
-            {{{y0, {}}}, {make_callback_copy(y1, host_y1)}});
+    auto funcs =
+            graph->compile_multi_part({{{y0, {}}}, {make_callback_copy(y1, host_y1)}});
     ASSERT_EQ(2u, funcs.size());
 
     for (int i = 0; i < 4; ++i) {
@@ -171,8 +169,8 @@ TEST(TestPartialExecution, AddUpdate) {
          y1 = opr::AddUpdate::make(x, x.make_scalar(-1.2f)) + 0.3f;
 
     HostTensorND host_y0, host_y1;
-    auto funcs = graph->compile_multi_part({{make_callback_copy(y0, host_y0)},
-                                            {make_callback_copy(y1, host_y1)}});
+    auto funcs = graph->compile_multi_part(
+            {{make_callback_copy(y0, host_y0)}, {make_callback_copy(y1, host_y1)}});
 
     funcs[0]->execute();
     MGB_ASSERT_TENSOR_EQ(make_expect(2.3), host_y0);
@@ -206,9 +204,9 @@ TEST(TestPartialExecution, CompOrderDep) {
          y1 = opr::AddUpdate::make(x, x.make_scalar(-1.2f)) + 0.3f;
 
     HostTensorND host_y0, host_y1;
-    auto funcs =
-            graph->compile_multi_part({{make_callback_copy(y0, host_y0, false)},
-                                       {make_callback_copy(y1, host_y1)}});
+    auto funcs = graph->compile_multi_part(
+            {{make_callback_copy(y0, host_y0, false)},
+             {make_callback_copy(y1, host_y1)}});
 
     RealTimer timer;
     funcs[0]->execute();
@@ -217,8 +215,8 @@ TEST(TestPartialExecution, CompOrderDep) {
     // XPU-226
     auto use_time = timer.get_secs();
     if (use_time >= SLEEP_TIME / 2) {
-        mgb_log_warn("expect time [%f < %f], got %f", use_time, SLEEP_TIME / 2,
-                     use_time);
+        mgb_log_warn(
+                "expect time [%f < %f], got %f", use_time, SLEEP_TIME / 2, use_time);
     }
     MGB_ASSERT_TENSOR_EQ(*hv, cur_dv());
     ASSERT_EQ(hv->shape(), host_y0.shape());
@@ -229,8 +227,7 @@ TEST(TestPartialExecution, CompOrderDep) {
     // XPU-226
     use_time = timer.get_secs();
     if (use_time <= SLEEP_TIME) {
-        mgb_log_warn("expect time [%f > %f], got %f", use_time, SLEEP_TIME,
-                     use_time);
+        mgb_log_warn("expect time [%f > %f], got %f", use_time, SLEEP_TIME, use_time);
     }
     MGB_ASSERT_TENSOR_EQ(make_expect(-1.2f), cur_dv());
     MGB_ASSERT_TENSOR_EQ(make_expect(-0.9f), host_y1);
@@ -253,10 +250,10 @@ TEST(TestPartialExecution, MultiDepType) {
             p2_z = p0_x.reshape(p0_z.symshape()) + p0_y;
 
     HostTensorND host_z0, host_z1, host_z2;
-    auto funcs =
-            graph->compile_multi_part({{make_callback_copy(p0_z, host_z0)},
-                                       {make_callback_copy(p1_z, host_z1)},
-                                       {make_callback_copy(p2_z, host_z2)}});
+    auto funcs = graph->compile_multi_part(
+            {{make_callback_copy(p0_z, host_z0)},
+             {make_callback_copy(p1_z, host_z1)},
+             {make_callback_copy(p2_z, host_z2)}});
 
     auto oprs_1 = get_opr_types(funcs[1]), oprs_2 = get_opr_types(funcs[2]);
 
@@ -330,10 +327,10 @@ TEST(TestPartialExecution, ValueReuse) {
     auto x = opr::Host2DeviceCopy::make(*graph, host_x),
          y = opr::Host2DeviceCopy::make(*graph, host_y);
     HostTensorND out0, out1, out2;
-    auto funcs =
-            graph->compile_multi_part({{make_callback_copy(x, out0)},
-                                       {make_callback_copy(x * y + 2, out1)},
-                                       {make_callback_copy(y, out2)}});
+    auto funcs = graph->compile_multi_part(
+            {{make_callback_copy(x, out0)},
+             {make_callback_copy(x * y + 2, out1)},
+             {make_callback_copy(y, out2)}});
 
     funcs[0]->execute();
     MGB_ASSERT_TENSOR_EQ(*host_x, out0);
@@ -357,8 +354,7 @@ TEST(TestPartialExecution, MemoryManagement) {
     auto cb0 = [&](DeviceTensorND&) { ASSERT_EQ(1u, allocator->nr_alive()); };
     auto cb1 = [&](DeviceTensorND&) { ASSERT_EQ(0u, allocator->nr_alive()); };
     auto x = opr::Host2DeviceCopy::make(*graph, host_x), y = x + 1,
-         z = opr::CallbackInjector::make(
-                 opr::CallbackInjector::make(y, cb0) * 2, cb1);
+         z = opr::CallbackInjector::make(opr::CallbackInjector::make(y, cb0) * 2, cb1);
     HostTensorND host_y, host_z;
     auto funcs = graph->compile_multi_part(
             {{make_callback_copy(y, host_y)}, {make_callback_copy(z, host_z)}});
@@ -371,8 +367,7 @@ TEST(TestPartialExecution, MemoryManagement) {
 
         auto px = host_x->ptr<float>(), py = host_y.ptr<float>(),
              pz = host_z.ptr<float>();
-        for (size_t i = 0, it = host_x->layout().total_nr_elems(); i < it;
-             ++i) {
+        for (size_t i = 0, it = host_x->layout().total_nr_elems(); i < it; ++i) {
             ASSERT_EQ(px[i] + 1.f, py[i]);
             ASSERT_EQ((px[i] + 1.f) * 2.f, pz[i]);
         }
@@ -390,9 +385,10 @@ TEST(TestPartialExecution, MemoryManagementAbort) {
     auto x = opr::Host2DeviceCopy::make_no_fwd(*graph, host_x), y = x + 1;
     graph->options().graph_opt_level = 0;
     HostTensorND out0, out1, out2;
-    auto funcs = graph->compile_multi_part({{make_callback_copy(x, out0)},
-                                            {make_callback_copy(y, out1)},
-                                            {make_callback_copy(y * 2, out2)}});
+    auto funcs = graph->compile_multi_part(
+            {{make_callback_copy(x, out0)},
+             {make_callback_copy(y, out1)},
+             {make_callback_copy(y * 2, out2)}});
 
     funcs[0]->execute();
     ASSERT_EQ(1u, allocator->nr_alive());
@@ -468,8 +464,7 @@ TEST(TestPartialExecution, OrderCheck) {
     auto host_x = gen({2, 3}), host_y = gen({2, 3});
     auto x = opr::Host2DeviceCopy::make(*graph, host_x),
          y = opr::Host2DeviceCopy::make(*graph, host_y);
-    auto funcs =
-            graph->compile_multi_part({{{x, {}}}, {{y, {}}}, {{x + y, {}}}});
+    auto funcs = graph->compile_multi_part({{{x, {}}}, {{y, {}}}, {{x + y, {}}}});
 
     funcs[0]->execute();
     funcs[1]->execute();

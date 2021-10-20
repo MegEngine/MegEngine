@@ -26,16 +26,15 @@ logger = get_logger(__name__)
 
 
 class Tensor(_Tensor, ArrayMethodMixin):
-    r"""
-    A tensor object represents a multidimensional, homogeneous array of fixed-size items.
+    r"""A tensor object represents a multidimensional, homogeneous array of fixed-size items.
 
-    :param data: The value of returned Tensor.
-    :type data: Tensor, :class:`~.numpy.ndarray`, :class:`list` or python number.
-    :param dtype: The dtype of returned Tensor. Uses data's dtype if not specified.
-    :param device: The desired device of returned Tensor. Uses :func:`get_default_device` if not specified.
-    :param is_const: Whether make it a ``ImutableTensor`` in tracing mode.
-    :param no_cache: Whether cache it for memory sharing.
-    :param name: Used to improve convenience in graph operation on dumped model.
+    Args:
+        data(Tensor, :class:`~.numpy.ndarray`, :class:`list` or python number.): The value of returned Tensor.
+        dtype: The dtype of returned Tensor. Uses data's dtype if not specified.
+        device: The desired device of returned Tensor. Uses :func:`get_default_device` if not specified.
+        is_const: Whether make it a ``ImutableTensor`` in tracing mode.
+        no_cache: Whether cache it for memory sharing.
+        name: Used to improve convenience in graph operation on dumped model.
     """
 
     grad = None
@@ -88,18 +87,16 @@ class Tensor(_Tensor, ArrayMethodMixin):
 
     @property
     def shape(self) -> Union[tuple, "Tensor"]:
-        r"""
-        Returns a :class:`tuple` or a :class:`~.Tensor` represents tensor dimensions.
+        r"""Returns a :class:`tuple` or a :class:`~.Tensor` represents tensor dimensions.
 
-        .. note::
-
+        Note:
            The shape of a tensor was usually represented by a :class:`tuple`.
-           But if a tensor was treated as symbolic placeholder with tracing, 
+           But if a tensor was treated as symbolic placeholder with tracing,
            it's shape could also be a :class:`~.Tensor`. See :class:`~.trace` for more details.
 
-        The shape property is usually used to get the current shape of a tensor, 
-        but may also be used to reshape the tensor in-place by assigning a tuple of tensor dimensions to it. 
-        As with :func:`~.reshape`, one of the new shape dimensions can be -1, 
+        The shape property is usually used to get the current shape of a tensor,
+        but may also be used to reshape the tensor in-place by assigning a tuple of tensor dimensions to it.
+        As with :func:`~.reshape`, one of the new shape dimensions can be -1,
         in which case its value is inferred from the size of the tensor and the remaining dimensions.
         """
         shape = super().shape
@@ -113,23 +110,17 @@ class Tensor(_Tensor, ArrayMethodMixin):
 
     @property
     def device(self) -> CompNode:
-        r"""
-        Returns a string represents the device a :class:`~.Tensor` storaged on. 
-        """
+        r"""Returns a string represents the device a :class:`~.Tensor` storaged on."""
         return super().device
 
     @property
     def dtype(self) -> np.dtype:
-        r"""
-        Returns a :class:`numpy.dtype` object represents the data type of a :class:`~.Tensor`.
-        """
+        r"""Returns a :class:`numpy.dtype` object represents the data type of a :class:`~.Tensor`."""
         return super().dtype
 
     @property
     def qparams(self):
-        r"""
-        Returns a :class:`~.QParams` object containing quantization params of a :class:`~.Tensor`.
-        """
+        r"""Returns a :class:`~.QParams` object containing quantization params of a :class:`~.Tensor`."""
         from .quantization.utils import create_qparams  # pylint: disable=all
 
         if self._qparams is None:
@@ -137,15 +128,11 @@ class Tensor(_Tensor, ArrayMethodMixin):
         return self._qparams
 
     def numpy(self) -> np.ndarray:
-        r"""
-        Returns self :class:`~.Tensor` as a :class:`numpy.ndarray`.
-        """
+        r"""Returns self :class:`~.Tensor` as a :class:`numpy.ndarray`."""
         return super().numpy()
 
     def detach(self):
-        r"""
-        Returns a new :class:`~.Tensor`, detached from the current graph.
-        """
+        r"""Returns a new :class:`~.Tensor`, detached from the current graph."""
         return super().detach()
 
     def _reset(self, other):
@@ -180,9 +167,7 @@ class Tensor(_Tensor, ArrayMethodMixin):
         self *= 0
 
     def to(self, device):
-        r"""
-        Copy self :class:`~.Tensor` to specified device. See :func:`~.copy`
-        """
+        r"""Copy self :class:`~.Tensor` to specified device. See :func:`~.copy`"""
         if isinstance(device, str) and not _valid_device(device):
             raise ValueError(
                 "invalid device name {}. For the correct format of the device name, please refer to the instruction of megengine.device.set_default_device()".format(
@@ -208,13 +193,11 @@ class Tensor(_Tensor, ArrayMethodMixin):
         return id(self)
 
     def __getnewargs__(self):
-        r""" __getnewargs__ will be called for pickle serialization or deep copy
-        """
+        r""" __getnewargs__ will be called for pickle serialization or deep copy"""
         return (self.numpy(), self.dtype, self.device.logical_name)
 
     def __getstate__(self):
-        r""" __getstate__ will be called for pickle serialization or deep copy
-        """
+        r""" __getstate__ will be called for pickle serialization or deep copy"""
         state = {}
         if self._qparams is not None:
             state["qparams"] = self._qparams
@@ -245,13 +228,10 @@ tensor = Tensor
 
 
 class Parameter(Tensor):
-    r"""
-    A kind of Tensor that is to be considered a module parameter.
+    r"""A kind of Tensor that is to be considered a module parameter.
 
-    .. note::
-
+    Note:
         Operations happened on Parameter usually return a Tensor instead of Parameter.
         For example, with a Parameter ``x``, ``x.reshape/to/sum/...`` will result into a Tensor.
         Any operations between Parameter and Tensor will have Tensor as outputs.
-
     """

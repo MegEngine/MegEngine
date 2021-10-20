@@ -9,9 +9,9 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 #pragma once
-#include "megdnn/opr_param_defs.h"
-#include "megdnn/basic_types.h"
 #include <cstddef>
+#include "megdnn/basic_types.h"
+#include "megdnn/opr_param_defs.h"
 
 namespace megdnn {
 namespace test {
@@ -76,13 +76,13 @@ static inline std::vector<TestArg> get_args_for_opencl() {
             for (size_t OC : {1, 3, 32}) {
                 test_args.emplace_back(
                         param::Convolution{
-                                param::Convolution::Mode::CROSS_CORRELATION, 0,
-                                0, 1, 1},
+                                param::Convolution::Mode::CROSS_CORRELATION, 0, 0, 1,
+                                1},
                         N, IC, 7, 7, OC, 5, 5, 3, 3);
                 test_args.emplace_back(
                         param::Convolution{
-                                param::Convolution::Mode::CROSS_CORRELATION, 1,
-                                1, 1, 1},
+                                param::Convolution::Mode::CROSS_CORRELATION, 1, 1, 1,
+                                1},
                         N, IC, 7, 7, OC, 7, 7, 3, 3);
             }
     return test_args;
@@ -123,24 +123,19 @@ static inline std::vector<TestArg> get_args_bwd_filter_for_cuda() {
 static inline std::vector<TestArg> get_args_for_fp16() {
     std::vector<TestArg> test_args;
     test_args.emplace_back(
-            param::Convolution{param::Convolution::Mode::CROSS_CORRELATION, 1,
-                               1, 1, 1},
+            param::Convolution{param::Convolution::Mode::CROSS_CORRELATION, 1, 1, 1, 1},
             64, 16, 8, 7, 16, 8, 7, 3, 3);
     test_args.emplace_back(
-            param::Convolution{param::Convolution::Mode::CROSS_CORRELATION, 0,
-                               0, 1, 1},
+            param::Convolution{param::Convolution::Mode::CROSS_CORRELATION, 0, 0, 1, 1},
             15, 15, 7, 7, 16, 5, 5, 3, 3);
     test_args.emplace_back(
-            param::Convolution{param::Convolution::Mode::CONVOLUTION, 0, 0, 1,
-                               1},
-            15, 15, 7, 7, 16, 5, 5, 3, 3);
+            param::Convolution{param::Convolution::Mode::CONVOLUTION, 0, 0, 1, 1}, 15,
+            15, 7, 7, 16, 5, 5, 3, 3);
     test_args.emplace_back(
-            param::Convolution{param::Convolution::Mode::CROSS_CORRELATION, 1,
-                               1, 1, 1},
+            param::Convolution{param::Convolution::Mode::CROSS_CORRELATION, 1, 1, 1, 1},
             15, 15, 5, 5, 16, 5, 5, 3, 3);
     test_args.emplace_back(
-            param::Convolution{param::Convolution::Mode::CROSS_CORRELATION, 0,
-                               0, 2, 2},
+            param::Convolution{param::Convolution::Mode::CROSS_CORRELATION, 0, 0, 2, 2},
             15, 15, 7, 7, 16, 3, 3, 3, 3);
     /*! \warning: this operator need reduce values along the axis of IC, so this
      * will results in large error in fp16 situation. so in the test cases, we
@@ -166,24 +161,19 @@ static inline std::vector<TestArg> get_args_for_fp16() {
 static inline std::vector<TestArg> get_args() {
     std::vector<TestArg> test_args;
     test_args.emplace_back(
-            param::Convolution{param::Convolution::Mode::CROSS_CORRELATION, 1,
-                               1, 1, 1},
+            param::Convolution{param::Convolution::Mode::CROSS_CORRELATION, 1, 1, 1, 1},
             64, 16, 8, 7, 16, 8, 7, 3, 3);
     test_args.emplace_back(
-            param::Convolution{param::Convolution::Mode::CROSS_CORRELATION, 0,
-                               0, 1, 1},
+            param::Convolution{param::Convolution::Mode::CROSS_CORRELATION, 0, 0, 1, 1},
             15, 15, 7, 7, 16, 5, 5, 3, 3);
     test_args.emplace_back(
-            param::Convolution{param::Convolution::Mode::CONVOLUTION, 0, 0, 1,
-                               1},
-            15, 15, 7, 7, 16, 5, 5, 3, 3);
+            param::Convolution{param::Convolution::Mode::CONVOLUTION, 0, 0, 1, 1}, 15,
+            15, 7, 7, 16, 5, 5, 3, 3);
     test_args.emplace_back(
-            param::Convolution{param::Convolution::Mode::CROSS_CORRELATION, 1,
-                               1, 1, 1},
+            param::Convolution{param::Convolution::Mode::CROSS_CORRELATION, 1, 1, 1, 1},
             15, 15, 5, 5, 16, 5, 5, 3, 3);
     test_args.emplace_back(
-            param::Convolution{param::Convolution::Mode::CROSS_CORRELATION, 0,
-                               0, 2, 2},
+            param::Convolution{param::Convolution::Mode::CROSS_CORRELATION, 0, 0, 2, 2},
             15, 15, 7, 7, 16, 3, 3, 3, 3);
     for (size_t N : {1, 2})
         // clang-format off

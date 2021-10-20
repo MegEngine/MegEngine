@@ -24,13 +24,16 @@ namespace mgb {
 namespace swap {
 namespace opr {
 
-MGB_DEFINE_OPR_CLASS(WaitSwapInMS, cg::SingleCNOperatorNodeBase,
-                           mgb::opr::mixin::ForwardInputToOutput) // {
+MGB_DEFINE_OPR_CLASS(
+        WaitSwapInMS, cg::SingleCNOperatorNodeBase,
+        mgb::opr::mixin::ForwardInputToOutput) // {
 public:
-    WaitSwapInMS(ComputingGraph& grpah, const VarNodeArray& inputs,
-                 const OperatorNodeConfig& config);
-    static SymbolVar make(ComputingGraph& graph, const SymbolVarArray& inputs,
-                          const OperatorNodeConfig& config = {});
+    WaitSwapInMS(
+            ComputingGraph& grpah, const VarNodeArray& inputs,
+            const OperatorNodeConfig& config);
+    static SymbolVar make(
+            ComputingGraph& graph, const SymbolVarArray& inputs,
+            const OperatorNodeConfig& config = {});
     void scn_do_execute() override;
     NodeProp* do_make_node_prop() const override;
     void init_output_static_infer_desc() override;
@@ -43,13 +46,15 @@ public:
         Param(std::shared_ptr<SwapVarRecorder> htp = nullptr)
                 : swap_var_recorder_ptr{htp} {};
     };
-    SwapOutMS(ComputingGraph& graph, VarNode* inp, const Param& param,
-              const OperatorNodeConfig& config);
-    static SymbolVar make(ComputingGraph& graph, SymbolVar inp,
-                          const Param& param,
-                          const OperatorNodeConfig& config = {});
-    static SymbolVar make(ComputingGraph& graph, SymbolVar inp,
-                          const OperatorNodeConfig& config = {}) {
+    SwapOutMS(
+            ComputingGraph& graph, VarNode* inp, const Param& param,
+            const OperatorNodeConfig& config);
+    static SymbolVar make(
+            ComputingGraph& graph, SymbolVar inp, const Param& param,
+            const OperatorNodeConfig& config = {});
+    static SymbolVar make(
+            ComputingGraph& graph, SymbolVar inp,
+            const OperatorNodeConfig& config = {}) {
         return make(graph, inp, {}, config);
     }
 
@@ -57,9 +62,7 @@ public:
         m_recorder = svr_ptr;
     }
 
-    const std::shared_ptr<SwapVarRecorder>& recorder() const {
-        return m_recorder;
-    }
+    const std::shared_ptr<SwapVarRecorder>& recorder() const { return m_recorder; }
 
     Param param() const { return m_param; }
 
@@ -78,13 +81,15 @@ public:
         Param(std::shared_ptr<SwapVarRecorder> htp = nullptr)
                 : swap_var_recorder_ptr{htp} {};
     };
-    SwapInMS(ComputingGraph& graph, VarNode* swap_out_var, VarNode* dep_var,
-             const Param& param, const OperatorNodeConfig& config);
-    static SymbolVar make(ComputingGraph& graph, SymbolVar inp, SymbolVar d,
-                          const Param& param,
-                          const OperatorNodeConfig& config = {});
-    static SymbolVar make(ComputingGraph& graph, SymbolVar inp, SymbolVar d,
-                          const OperatorNodeConfig& config = {}) {
+    SwapInMS(
+            ComputingGraph& graph, VarNode* swap_out_var, VarNode* dep_var,
+            const Param& param, const OperatorNodeConfig& config);
+    static SymbolVar make(
+            ComputingGraph& graph, SymbolVar inp, SymbolVar d, const Param& param,
+            const OperatorNodeConfig& config = {});
+    static SymbolVar make(
+            ComputingGraph& graph, SymbolVar inp, SymbolVar d,
+            const OperatorNodeConfig& config = {}) {
         return make(graph, inp, d, {}, config);
     }
 
@@ -92,9 +97,7 @@ public:
         m_recorder = svr_ptr;
     }
 
-    const std::shared_ptr<SwapVarRecorder>& recorder() const {
-        return m_recorder;
-    }
+    const std::shared_ptr<SwapVarRecorder>& recorder() const { return m_recorder; }
 
     Param param() const { return m_param; }
 
@@ -116,13 +119,12 @@ public:
            const std::shared_ptr<HostTensorND>& host_data,
            const OperatorNodeConfig& config);
 
-    static SymbolVar make(ComputingGraph& graph, const SymbolVarArray inputs,
-                          const std::shared_ptr<HostTensorND>& host_data,
-                          const OperatorNodeConfig& config);
+    static SymbolVar make(
+            ComputingGraph& graph, const SymbolVarArray inputs,
+            const std::shared_ptr<HostTensorND>& host_data,
+            const OperatorNodeConfig& config);
 
-    const std::shared_ptr<HostTensorND>& host_data() const {
-        return m_host_data;
-    }
+    const std::shared_ptr<HostTensorND>& host_data() const { return m_host_data; }
 
 private:
     std::shared_ptr<HostTensorND> m_host_data;
@@ -137,22 +139,20 @@ public:
     struct Param {
         std::shared_ptr<HostTensorND> host_tensor_ptr;
         //! a shared ptr to the host tensor
-        Param(std::shared_ptr<HostTensorND> htp = nullptr)
-                : host_tensor_ptr{htp} {};
+        Param(std::shared_ptr<HostTensorND> htp = nullptr) : host_tensor_ptr{htp} {};
     };
     SwapOut(ComputingGraph& graph, VarNode* inp, const Param& param,
             const OperatorNodeConfig& config);
-    static SymbolVar make(ComputingGraph& graph, SymbolVar inp,
-                          const Param& param,
-                          const OperatorNodeConfig& config = {});
-    static SymbolVar make(ComputingGraph& graph, SymbolVar inp,
-                          const OperatorNodeConfig& config = {}) {
+    static SymbolVar make(
+            ComputingGraph& graph, SymbolVar inp, const Param& param,
+            const OperatorNodeConfig& config = {});
+    static SymbolVar make(
+            ComputingGraph& graph, SymbolVar inp,
+            const OperatorNodeConfig& config = {}) {
         return make(graph, inp, {}, config);
     }
 
-    const std::shared_ptr<HostTensorND>& host_data() const {
-        return m_host_data;
-    }
+    const std::shared_ptr<HostTensorND>& host_data() const { return m_host_data; }
     Param param() const { return m_param; }
 
 private:

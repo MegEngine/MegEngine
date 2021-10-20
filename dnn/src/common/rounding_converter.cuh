@@ -20,8 +20,7 @@ struct RoundingConverter;
 
 template <>
 struct RoundingConverter<float> {
-    MEGDNN_HOST MEGDNN_DEVICE MEGDNN_FORCE_INLINE float operator()(
-            float x) const {
+    MEGDNN_HOST MEGDNN_DEVICE MEGDNN_FORCE_INLINE float operator()(float x) const {
         return x;
     }
 };
@@ -38,8 +37,8 @@ struct RoundingConverter<half_float::half> {
 
 template <>
 struct RoundingConverter<half_bfloat16::bfloat16> {
-    MEGDNN_HOST MEGDNN_DEVICE MEGDNN_FORCE_INLINE half_bfloat16::bfloat16
-    operator()(float x) const {
+    MEGDNN_HOST MEGDNN_DEVICE MEGDNN_FORCE_INLINE half_bfloat16::bfloat16 operator()(
+            float x) const {
         return static_cast<half_bfloat16::bfloat16>(x);
     }
 };
@@ -48,8 +47,7 @@ struct RoundingConverter<half_bfloat16::bfloat16> {
 
 template <>
 struct RoundingConverter<int8_t> {
-    MEGDNN_HOST MEGDNN_DEVICE MEGDNN_FORCE_INLINE int8_t
-    operator()(float x) const {
+    MEGDNN_HOST MEGDNN_DEVICE MEGDNN_FORCE_INLINE int8_t operator()(float x) const {
 #if MEGDNN_CC_HOST
         using std::round;
 #endif
@@ -59,8 +57,7 @@ struct RoundingConverter<int8_t> {
 
 template <>
 struct RoundingConverter<uint8_t> {
-    MEGDNN_HOST MEGDNN_DEVICE MEGDNN_FORCE_INLINE uint8_t
-    operator()(float x) const {
+    MEGDNN_HOST MEGDNN_DEVICE MEGDNN_FORCE_INLINE uint8_t operator()(float x) const {
 #if MEGDNN_CC_HOST
         using std::max;
         using std::min;
@@ -73,8 +70,7 @@ struct RoundingConverter<uint8_t> {
 
 template <>
 struct RoundingConverter<dt_qint4> {
-    MEGDNN_HOST MEGDNN_DEVICE MEGDNN_FORCE_INLINE dt_qint4
-    operator()(float x) const {
+    MEGDNN_HOST MEGDNN_DEVICE MEGDNN_FORCE_INLINE dt_qint4 operator()(float x) const {
 #if MEGDNN_CC_HOST
         using std::round;
 #endif
@@ -84,8 +80,7 @@ struct RoundingConverter<dt_qint4> {
 
 template <>
 struct RoundingConverter<dt_quint4> {
-    MEGDNN_HOST MEGDNN_DEVICE MEGDNN_FORCE_INLINE dt_quint4
-    operator()(float x) const {
+    MEGDNN_HOST MEGDNN_DEVICE MEGDNN_FORCE_INLINE dt_quint4 operator()(float x) const {
 #if MEGDNN_CC_HOST
         using std::round;
 #endif

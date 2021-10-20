@@ -16,8 +16,8 @@
 #include "test/common/pooling.h"
 #include "test/rocm/benchmarker.h"
 
-#include "src/rocm/utils.h"
 #include "src/common/utils.h"
+#include "src/rocm/utils.h"
 
 namespace megdnn {
 namespace test {
@@ -35,10 +35,8 @@ TEST_F(ROCM, POOLING_FORWARD) {
                 param.format = format;
                 Checker<Pooling> checker(handle_rocm());
                 checker.set_epsilon(1e-2);
-                checker.set_param(param)
-                        .set_dtype(0, dtype)
-                        .set_dtype(1, dtype)
-                        .exec(TensorShapeArray{src, {}});
+                checker.set_param(param).set_dtype(0, dtype).set_dtype(1, dtype).exec(
+                        TensorShapeArray{src, {}});
             }
 }
 
@@ -49,20 +47,17 @@ TEST_F(ROCM, POOLING_BACKWARD) {
         TensorLayout ilayout = TensorLayout(arg.ishape, dtype::Float32());
         TensorLayout olayout;
 
-        auto constraint = [this,
-                           arg](CheckerHelper::TensorValueArray& tensors_orig) {
+        auto constraint = [this, arg](CheckerHelper::TensorValueArray& tensors_orig) {
             megdnn_assert(tensors_orig.size() == 4);
             auto opr = handle_rocm()->create_operator<PoolingForward>();
             opr->param() = arg.param;
 
             auto tensors_rocm_storage = CheckerHelper::alloc_tensors(
-                    handle_rocm(),
-                    {tensors_orig[0].layout, tensors_orig[1].layout}, 0);
+                    handle_rocm(), {tensors_orig[0].layout, tensors_orig[1].layout}, 0);
             auto&& tensors_rocm = *tensors_rocm_storage;
 
             auto span = tensors_rocm[0].layout.span();
-            auto dst = static_cast<dt_byte*>(tensors_rocm[0].raw_ptr) +
-                       span.low_byte;
+            auto dst = static_cast<dt_byte*>(tensors_rocm[0].raw_ptr) + span.low_byte;
             auto src = static_cast<const dt_byte*>(tensors_orig[0].raw_ptr) +
                        span.low_byte;
             megdnn_memcpy_H2D(handle_rocm(), dst, src, span.dist_byte());
@@ -70,16 +65,13 @@ TEST_F(ROCM, POOLING_BACKWARD) {
             auto workspace_size = opr->get_workspace_in_bytes(
                     tensors_rocm[0].layout, tensors_rocm[1].layout);
             auto workspace_rocm = megdnn_malloc(handle_rocm(), workspace_size);
-            Workspace workspace{static_cast<dt_byte*>(workspace_rocm),
-                                workspace_size};
+            Workspace workspace{static_cast<dt_byte*>(workspace_rocm), workspace_size};
             opr->exec(tensors_rocm[0], tensors_rocm[1], workspace);
             megdnn_free(handle_rocm(), workspace_rocm);
 
             span = tensors_rocm[1].layout.span();
-            dst = static_cast<dt_byte*>(tensors_orig[1].raw_ptr) +
-                  span.low_byte;
-            src = static_cast<const dt_byte*>(tensors_rocm[1].raw_ptr) +
-                  span.low_byte;
+            dst = static_cast<dt_byte*>(tensors_orig[1].raw_ptr) + span.low_byte;
+            src = static_cast<const dt_byte*>(tensors_rocm[1].raw_ptr) + span.low_byte;
             megdnn_memcpy_D2H(handle_rocm(), dst, src, span.dist_byte());
         };
 
@@ -152,12 +144,11 @@ TEST_F(ROCM, POOLING_FWD_BENCHMARK) {
 TEST_F(ROCM, POOLING_BWD_BENCHMARK) {
     using Mode = param::Pooling::Mode;
     megdnn::rocm::enable_miopen_algo_search(handle_rocm(), true);
-    auto benchmarker = ROCMBenchmarker<PoolingBackward>(handle_rocm(),
-                                                        handle_naive(false));
+    auto benchmarker =
+            ROCMBenchmarker<PoolingBackward>(handle_rocm(), handle_naive(false));
     auto run = [&](size_t N, size_t IC, size_t IH, size_t IW, size_t SH = 1,
                    size_t SW = 1, size_t FH = 1, size_t FW = 1, size_t PH = 0,
-                   size_t PW = 0,
-                   Mode mode = Mode::AVERAGE_COUNT_EXCLUDE_PADDING,
+                   size_t PW = 0, Mode mode = Mode::AVERAGE_COUNT_EXCLUDE_PADDING,
                    DType dtype = dtype::Float32()) {
         benchmarker.set_dtype(0, dtype).set_dtype(1, dtype);
         benchmarker.set_display(true);
@@ -173,19 +164,13 @@ TEST_F(ROCM, POOLING_BWD_BENCHMARK) {
         size_t OH = infer_conv_shape(IH, FH, SH, PH);
         size_t OW = infer_conv_shape(IW, FW, SW, PW);
         // warm up
-        benchmarker.execs({{N, IC, IH, IW},
-                           {N, IC, OH, OW},
-                           {N, IC, OH, OW},
-                           {N, IC, IH, IW}});
+        benchmarker.execs(
+                {{N, IC, IH, IW}, {N, IC, OH, OW}, {N, IC, OH, OW}, {N, IC, IH, IW}});
         // do actual benchmark
-        auto time_ms = benchmarker.execs({{N, IC, IH, IW},
-                                          {N, IC, OH, OW},
-                                          {N, IC, OH, OW},
-                                          {N, IC, IH, IW}});
-        time_ms = benchmarker.execs({{N, IC, IH, IW},
-                                     {N, IC, OH, OW},
-                                     {N, IC, OH, OW},
-                                     {N, IC, IH, IW}});
+        auto time_ms = benchmarker.execs(
+                {{N, IC, IH, IW}, {N, IC, OH, OW}, {N, IC, OH, OW}, {N, IC, IH, IW}});
+        time_ms = benchmarker.execs(
+                {{N, IC, IH, IW}, {N, IC, OH, OW}, {N, IC, OH, OW}, {N, IC, IH, IW}});
         double io = 0.;
         double gbps = 0.;
         if (mode == Mode::AVERAGE_COUNT_EXCLUDE_PADDING) {
@@ -217,7 +202,7 @@ TEST_F(ROCM, POOLING_BWD_BENCHMARK) {
 }
 #endif
 
-} // namespace test
-} // namespace megdnn
+}  // namespace test
+}  // namespace megdnn
 
 // vim: syntax=cpp.doxygen

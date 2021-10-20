@@ -18,10 +18,9 @@
 using namespace megdnn;
 using namespace arm_common;
 using conv_fun = std::function<void(
-        const WorkspaceBundle& bundle,
-        const ConvBiasImpl::NCBKernParam& kern_param,
-        const ConvBiasImpl::NCBKernIndex& ncb_index,
-        const CpuNDRange& workspace_ids, const CpuNDRange& ncb_range)>;
+        const WorkspaceBundle& bundle, const ConvBiasImpl::NCBKernParam& kern_param,
+        const ConvBiasImpl::NCBKernIndex& ncb_index, const CpuNDRange& workspace_ids,
+        const CpuNDRange& ncb_range)>;
 MIDOUT_DECL(megdnn_arm_common_conv_bias_int8x8x16_nchw44_direct)
 
 static void get_rectified_size(
@@ -47,11 +46,9 @@ static WorkspaceBundle get_bundle(const ConvBiasImpl::NCBKernSizeParam& param) {
 
     if (group == 1) {
         size_t src_size = 0;
-        bool need_padding = param.filter_meta.padding[0] > 0 ||
-                            param.filter_meta.padding[1] > 0;
-        src_size = need_padding
-                           ? batch * group * IC * IH2 * IW2 * sizeof(int8_t)
-                           : 0;
+        bool need_padding =
+                param.filter_meta.padding[0] > 0 || param.filter_meta.padding[1] > 0;
+        src_size = need_padding ? batch * group * IC * IH2 * IW2 * sizeof(int8_t) : 0;
 #if MEGDNN_ARMV7
         if (fm.stride[0] == 1) {
             constexpr int src_expand_element = 4;
@@ -62,11 +59,10 @@ static WorkspaceBundle get_bundle(const ConvBiasImpl::NCBKernSizeParam& param) {
         return {nullptr, {src_size}};
     } else {
         size_t src_size = 0;
-        bool need_padding = param.filter_meta.padding[0] > 0 ||
-                            param.filter_meta.padding[1] > 0;
-        src_size = need_padding
-                           ? param.nr_threads * IC * IH2 * IW2 * sizeof(int8_t)
-                           : 0;
+        bool need_padding =
+                param.filter_meta.padding[0] > 0 || param.filter_meta.padding[1] > 0;
+        src_size =
+                need_padding ? param.nr_threads * IC * IH2 * IW2 * sizeof(int8_t) : 0;
 #if MEGDNN_ARMV7
         if (fm.stride[0] == 1) {
             constexpr int src_expand_element = 4;
@@ -79,10 +75,9 @@ static WorkspaceBundle get_bundle(const ConvBiasImpl::NCBKernSizeParam& param) {
 };
 
 #if MEGDNN_ARMV7
-static void copy_padding_kern(const WorkspaceBundle& bundle,
-                              const ConvBiasImpl::NCBKernParam& kern_param,
-                              const ConvBiasImpl::NCBKernIndex& ncb_index,
-                              const CpuNDRange& workspace_ids) {
+static void copy_padding_kern(
+        const WorkspaceBundle& bundle, const ConvBiasImpl::NCBKernParam& kern_param,
+        const ConvBiasImpl::NCBKernIndex& ncb_index, const CpuNDRange& workspace_ids) {
     int IH = kern_param.isz[0];
     int IW = kern_param.isz[1];
     int IC = kern_param.filter_meta.icpg;
@@ -94,7 +89,8 @@ static void copy_padding_kern(const WorkspaceBundle& bundle,
     int padding_group_size = IH2 * IW2 * IC;
     //! Used for get the workspace offset
     constexpr int pack_ic = 4;
-    constexpr int src_expand_element = 4;;
+    constexpr int src_expand_element = 4;
+    ;
     size_t workspace_ic_block = 4;
     size_t workspace_batch_id = workspace_ids[0];
     size_t workspace_group_id = workspace_ids[1];
@@ -112,11 +108,11 @@ static void copy_padding_kern(const WorkspaceBundle& bundle,
             batch_id, group_id, workspace_ic_id, group_pack_size, pack_ic));
 
     //! copy to sptr_base to eliminate padding effect
-    int8_t* sptr_base = static_cast<int8_t*>(bundle.get(0)) +
-                        (workspace_batch_id * GROUP * padding_group_size +
-                         workspace_group_id * padding_group_size +
-                         workspace_ic * IH2 * IW2) *
-                                src_expand_element;
+    int8_t* sptr_base =
+            static_cast<int8_t*>(bundle.get(0)) +
+            (workspace_batch_id * GROUP * padding_group_size +
+             workspace_group_id * padding_group_size + workspace_ic * IH2 * IW2) *
+                    src_expand_element;
     size_t nr_ic = workspace_ic_block;
     if (GROUP > 1) {
         nr_ic = IC;
@@ -139,10 +135,9 @@ static void copy_padding_kern(const WorkspaceBundle& bundle,
 }
 #endif
 
-static void copy_padding_kern_no_pack_src(const WorkspaceBundle& bundle,
-                              const ConvBiasImpl::NCBKernParam& kern_param,
-                              const ConvBiasImpl::NCBKernIndex& ncb_index,
-                              const CpuNDRange& workspace_ids) {
+static void copy_padding_kern_no_pack_src(
+        const WorkspaceBundle& bundle, const ConvBiasImpl::NCBKernParam& kern_param,
+        const ConvBiasImpl::NCBKernIndex& ncb_index, const CpuNDRange& workspace_ids) {
     int IH = kern_param.isz[0];
     int IW = kern_param.isz[1];
     int IC = kern_param.filter_meta.icpg;
@@ -172,11 +167,11 @@ static void copy_padding_kern_no_pack_src(const WorkspaceBundle& bundle,
             batch_id, group_id, workspace_ic_id, group_pack_size, pack_ic));
 
     //! copy to sptr_base to eliminate padding effect
-    int8_t* sptr_base = static_cast<int8_t*>(bundle.get(0)) +
-                        (workspace_batch_id * GROUP * padding_group_size +
-                         workspace_group_id * padding_group_size +
-                         workspace_ic * IH2 * IW2) *
-                                src_expand_element;
+    int8_t* sptr_base =
+            static_cast<int8_t*>(bundle.get(0)) +
+            (workspace_batch_id * GROUP * padding_group_size +
+             workspace_group_id * padding_group_size + workspace_ic * IH2 * IW2) *
+                    src_expand_element;
     size_t nr_ic = workspace_ic_block;
     if (GROUP > 1) {
         nr_ic = IC;
@@ -199,11 +194,10 @@ static void copy_padding_kern_no_pack_src(const WorkspaceBundle& bundle,
 }
 
 template <size_t filter, BiasMode bias_mode, int stride>
-static void do_conv_kern(const WorkspaceBundle& bundle,
-                         const ConvBiasImpl::NCBKernParam& kern_param,
-                         const ConvBiasImpl::NCBKernIndex& ncb_index,
-                         const CpuNDRange& workspace_ids,
-                         const CpuNDRange& ncb_range) {
+static void do_conv_kern(
+        const WorkspaceBundle& bundle, const ConvBiasImpl::NCBKernParam& kern_param,
+        const ConvBiasImpl::NCBKernIndex& ncb_index, const CpuNDRange& workspace_ids,
+        const CpuNDRange& ncb_range) {
     size_t OH = kern_param.osz[0];
     size_t OW = kern_param.osz[1];
     size_t FH = kern_param.filter_meta.spatial[0];
@@ -230,36 +224,33 @@ static void do_conv_kern(const WorkspaceBundle& bundle,
     if (oc_id == (oc_block_num - 1)) {
         oc_block = OC - oc_id * nr_pack_per_step * pack_c;
     }
-    megdnn_assert(oc_block % pack_c == 0,
-                  "oc must be devisible by 4, but oc = %zu", oc_block);
+    megdnn_assert(
+            oc_block % pack_c == 0, "oc must be devisible by 4, but oc = %zu",
+            oc_block);
 
     bool need_padding = kern_param.filter_meta.padding[0] > 0 ||
                         kern_param.filter_meta.padding[1] > 0;
-    const int8_t* sptr = need_padding
-                   ? static_cast<int8_t*>(bundle.get(0)) +
-                             workspace_batch_id * GROUP * padding_group_size +
-                             workspace_group_id * padding_group_size
-                   : kern_param.src<int8_t>(batch_id, group_id);
+    const int8_t* sptr =
+            need_padding ? static_cast<int8_t*>(bundle.get(0)) +
+                                   workspace_batch_id * GROUP * padding_group_size +
+                                   workspace_group_id * padding_group_size
+                         : kern_param.src<int8_t>(batch_id, group_id);
     //！armv7 use packsrc mode
 #if MEGDNN_ARMV7
     if (stride == 1) {
         constexpr size_t src_expand_size = 4;
         sptr = static_cast<int8_t*>(bundle.get(0)) +
-               workspace_batch_id * GROUP * padding_group_size *
-                       src_expand_size +
+               workspace_batch_id * GROUP * padding_group_size * src_expand_size +
                workspace_group_id * padding_group_size * src_expand_size;
     }
 #endif
 
-    const int8_t* fptr =
-            kern_param.filter<dt_int8>(group_id) + oc_idx * FH * FW * IC;
+    const int8_t* fptr = kern_param.filter<dt_int8>(group_id) + oc_idx * FH * FW * IC;
     int16_t* dst = reinterpret_cast<int16_t*>(
             kern_param.dst<void>(batch_id, group_id, oc_idx));
-    const int16_t* bptr =
-            kern_param.bias<dt_int16>(batch_id, group_id) + oc_idx;
-    int8x8x16_direct_nchw44::ConvDirectInt8Nchw44Choose<
-            bias_mode, filter, stride>::impl(sptr, fptr, bptr, dst, oc_block,
-                                             IC, IH2, IW2, OH, OW);
+    const int16_t* bptr = kern_param.bias<dt_int16>(batch_id, group_id) + oc_idx;
+    int8x8x16_direct_nchw44::ConvDirectInt8Nchw44Choose<bias_mode, filter, stride>::
+            impl(sptr, fptr, bptr, dst, oc_block, IC, IH2, IW2, OH, OW);
 }
 
 bool ConvBiasImpl::AlgoS8x8x16DirectNCHW44::usable(
@@ -277,23 +268,21 @@ bool ConvBiasImpl::AlgoS8x8x16DirectNCHW44::usable(
              param.dst_type.enumv() == DTypeEnum::Int16) &&
             (fm.format == param::Convolution::Format::NCHW44) &&
             (oc % 4 == 0 && ic % 4 == 0 && oc >= 4) && !fm.should_flip &&
-            fm.spatial_ndim == 2 && fm.dilation[0] == 1 &&
-            fm.dilation[1] == 1 && fm.stride[0] == fm.stride[1] &&
-            (fm.stride[0] == 2 || fm.stride[0] == 1) && fh == fw &&
-            (fh == 2 || fh == 3 || fh == 5 || fh == 7) &&
+            fm.spatial_ndim == 2 && fm.dilation[0] == 1 && fm.dilation[1] == 1 &&
+            fm.stride[0] == fm.stride[1] && (fm.stride[0] == 2 || fm.stride[0] == 1) &&
+            fh == fw && (fh == 2 || fh == 3 || fh == 5 || fh == 7) &&
             param.nonlineMode == NonlineMode::IDENTITY &&
             param.bias_mode != BiasMode::BIAS;
     return avaible;
 }
 
 size_t ConvBiasImpl::AlgoS8x8x16DirectNCHW44::get_workspace(
-         const NCBKernSizeParam& param) const {
+        const NCBKernSizeParam& param) const {
     return get_bundle(param).total_size_in_bytes();
 }
 
-SmallVector<ConvBiasImpl::NCBKern>
-ConvBiasImpl::AlgoS8x8x16DirectNCHW44::dispatch_kerns(
-        const NCBKernSizeParam& param) const {
+SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoS8x8x16DirectNCHW44::
+        dispatch_kerns(const NCBKernSizeParam& param) const {
     auto fm = param.filter_meta;
     size_t N = param.n;
     size_t IC = fm.icpg;
@@ -306,65 +295,69 @@ ConvBiasImpl::AlgoS8x8x16DirectNCHW44::dispatch_kerns(
     WorkspaceBundle wbundle = get_bundle(param);
     conv_fun do_conv_fun = nullptr;
 
-#define DO_CONV_KERN_FUN(stride, dst_type, filter, bias_mode)           \
-    MIDOUT_BEGIN(megdnn_arm_common_conv_bias_int8x8x16_nchw44_direct,   \
-                 midout_iv("int8x8x16_nchw44_direct_"                   \
-                           "conv" #stride #filter #bias_mode##_hash)) { \
-        do_conv_fun = do_conv_kern<filter, bias_mode, stride>;          \
-    }                                                                   \
+#define DO_CONV_KERN_FUN(stride, dst_type, filter, bias_mode)      \
+    MIDOUT_BEGIN(                                                  \
+            megdnn_arm_common_conv_bias_int8x8x16_nchw44_direct,   \
+            midout_iv("int8x8x16_nchw44_direct_"                   \
+                      "conv" #stride #filter #bias_mode##_hash)) { \
+        do_conv_fun = do_conv_kern<filter, bias_mode, stride>;     \
+    }                                                              \
     MIDOUT_END();
 
-#define GET_OP_PARAM(stride, filter, bias_mode)                             \
-    switch (param.nonlineMode) {                                            \
-        case param::ConvBias::NonlineMode::IDENTITY:                        \
-            DO_CONV_KERN_FUN(stride, dt_int16, filter, bias_mode)           \
-            break;                                                          \
-        default:                                                            \
-            megdnn_throw(ssprintf("only support IDENTITY mode when dst is " \
-                                  "dt_int16 nonlineMode is %d",             \
-                                  uint32_t(param.nonlineMode))              \
-                                 .c_str());                                 \
-            break;                                                          \
+#define GET_OP_PARAM(stride, filter, bias_mode)                            \
+    switch (param.nonlineMode) {                                           \
+        case param::ConvBias::NonlineMode::IDENTITY:                       \
+            DO_CONV_KERN_FUN(stride, dt_int16, filter, bias_mode)          \
+            break;                                                         \
+        default:                                                           \
+            megdnn_throw(ssprintf(                                         \
+                                 "only support IDENTITY mode when dst is " \
+                                 "dt_int16 nonlineMode is %d",             \
+                                 uint32_t(param.nonlineMode))              \
+                                 .c_str());                                \
+            break;                                                         \
     }
 
-#define GET_BIAS_MODE_PARAM(stride, filter)                                   \
-    switch (param.bias_mode) {                                                \
-        case BiasMode::NO_BIAS:                                               \
-            GET_OP_PARAM(stride, filter, BiasMode::NO_BIAS)                   \
+#define GET_BIAS_MODE_PARAM(stride, filter)                                  \
+    switch (param.bias_mode) {                                               \
+        case BiasMode::NO_BIAS:                                              \
+            GET_OP_PARAM(stride, filter, BiasMode::NO_BIAS)                  \
+            break;                                                           \
+        case BiasMode::BROADCAST_CHANNEL_BIAS:                               \
+            GET_OP_PARAM(stride, filter, BiasMode::BROADCAST_CHANNEL_BIAS)   \
+            break;                                                           \
+        default:                                                             \
+            megdnn_throw(ssprintf(                                           \
+                                 "only support NO_BIAS/BROADCAST  biasmode " \
+                                 "when dst is "                              \
+                                 "dt_int16 biasmode is %d",                  \
+                                 uint32_t(param.bias_mode))                  \
+                                 .c_str());                                  \
+            break;                                                           \
+    }
+
+#define DISPATCH_CONV_KERN(stride)                                            \
+    switch (param.filter_meta.spatial[0]) {                                   \
+        case 2:                                                               \
+            GET_BIAS_MODE_PARAM(stride, 2)                                    \
             break;                                                            \
-        case BiasMode::BROADCAST_CHANNEL_BIAS:                                \
-            GET_OP_PARAM(stride, filter, BiasMode::BROADCAST_CHANNEL_BIAS)    \
+        case 3:                                                               \
+            GET_BIAS_MODE_PARAM(stride, 3)                                    \
+            break;                                                            \
+        case 5:                                                               \
+            GET_BIAS_MODE_PARAM(stride, 5)                                    \
+            break;                                                            \
+        case 7:                                                               \
+            GET_BIAS_MODE_PARAM(stride, 7)                                    \
             break;                                                            \
         default:                                                              \
-            megdnn_throw(ssprintf("only support NO_BIAS/BROADCAST  biasmode " \
-                                  "when dst is "                              \
-                                  "dt_int16 biasmode is %d",                  \
-                                  uint32_t(param.bias_mode))                  \
+            megdnn_throw(ssprintf(                                            \
+                                 "only support 2x2 3x3 5x5 7x7 filters size " \
+                                 "when dst is "                               \
+                                 "dt_int16 filter size is %u",                \
+                                 uint32_t(param.filter_meta.spatial[0]))      \
                                  .c_str());                                   \
             break;                                                            \
-    }
-
-#define DISPATCH_CONV_KERN(stride)                                             \
-    switch (param.filter_meta.spatial[0]) {                                    \
-        case 2:                                                                \
-            GET_BIAS_MODE_PARAM(stride, 2)                                     \
-            break;                                                             \
-        case 3:                                                                \
-            GET_BIAS_MODE_PARAM(stride, 3)                                     \
-            break;                                                             \
-        case 5:                                                                \
-            GET_BIAS_MODE_PARAM(stride, 5)                                     \
-            break;                                                             \
-        case 7:                                                                \
-            GET_BIAS_MODE_PARAM(stride, 7)                                     \
-            break;                                                             \
-        default:                                                               \
-            megdnn_throw(ssprintf("only support 2x2 3x3 5x5 7x7 filters size " \
-                                  "when dst is "                               \
-                                  "dt_int16 filter size is %u",                \
-                                  uint32_t(param.filter_meta.spatial[0]))      \
-                                 .c_str());                                    \
-            break;                                                             \
     }
 
     switch (param.filter_meta.stride[0]) {
@@ -375,8 +368,9 @@ ConvBiasImpl::AlgoS8x8x16DirectNCHW44::dispatch_kerns(
             DISPATCH_CONV_KERN(2);
             break;
         default:
-            megdnn_throw(ssprintf("Unsupport stride size %u for the 8x8x16 direct conv",
-                                  param.filter_meta.stride[0])
+            megdnn_throw(ssprintf(
+                                 "Unsupport stride size %u for the 8x8x16 direct conv",
+                                 param.filter_meta.stride[0])
                                  .c_str());
             break;
     }
@@ -405,18 +399,17 @@ ConvBiasImpl::AlgoS8x8x16DirectNCHW44::dispatch_kerns(
                                         const NCBKernParam& kern_param,
                                         const NCBKernIndex& ncb_index) mutable {
                 wbundle.set(kern_param.workspace_ptr);
-                copy_padding_kern(wbundle, kern_param, ncb_index,
-                                  ncb_index.ndrange_id);
+                copy_padding_kern(wbundle, kern_param, ncb_index, ncb_index.ndrange_id);
             };
             constexpr size_t pack_ic = 4;
-            ret_kerns.push_back(
-                    {copy_padding, {N, group, div_ceil(IC, pack_ic)}});
+            ret_kerns.push_back({copy_padding, {N, group, div_ceil(IC, pack_ic)}});
             auto do_conv = [wbundle, do_conv_fun, ncb_range](
                                    const NCBKernParam& kern_param,
                                    const NCBKernIndex& ncb_index) mutable {
                 wbundle.set(kern_param.workspace_ptr);
-                do_conv_fun(wbundle, kern_param, ncb_index,
-                            ncb_index.ndrange_id, ncb_range);
+                do_conv_fun(
+                        wbundle, kern_param, ncb_index, ncb_index.ndrange_id,
+                        ncb_range);
             };
             ret_kerns.push_back({do_conv, ncb_range});
         } else {
@@ -425,38 +418,39 @@ ConvBiasImpl::AlgoS8x8x16DirectNCHW44::dispatch_kerns(
                                    const NCBKernParam& kern_param,
                                    const NCBKernIndex& ncb_index) mutable {
                 wbundle.set(kern_param.workspace_ptr);
-                copy_padding_kern(wbundle, kern_param, ncb_index,
-                                  {0, ncb_index.thread_id, 0});
-                do_conv_fun(wbundle, kern_param, ncb_index,
-                            {0, ncb_index.thread_id, 0}, ncb_range);
+                copy_padding_kern(
+                        wbundle, kern_param, ncb_index, {0, ncb_index.thread_id, 0});
+                do_conv_fun(
+                        wbundle, kern_param, ncb_index, {0, ncb_index.thread_id, 0},
+                        ncb_range);
             };
             ret_kerns.push_back({do_conv, ncb_range});
         }
-    return ret_kerns;
+        return ret_kerns;
     }
 #endif
 
-    bool need_padding = ph > 0 || pw >0;
+    bool need_padding = ph > 0 || pw > 0;
 
     if (group == 1) {
         CpuNDRange ncb_range = {N, group, div_ceil(OC, oc_step)};
-        auto copy_padding = [wbundle](const NCBKernParam& kern_param,
-                                      const NCBKernIndex& ncb_index) mutable {
+        auto copy_padding = [wbundle](
+                                    const NCBKernParam& kern_param,
+                                    const NCBKernIndex& ncb_index) mutable {
             wbundle.set(kern_param.workspace_ptr);
-            copy_padding_kern_no_pack_src(wbundle, kern_param, ncb_index,
-                                          ncb_index.ndrange_id);
+            copy_padding_kern_no_pack_src(
+                    wbundle, kern_param, ncb_index, ncb_index.ndrange_id);
         };
         constexpr size_t pack_ic = 4;
         if (need_padding) {
-            ret_kerns.push_back(
-                    {copy_padding, {N, group, div_ceil(IC, pack_ic)}});
+            ret_kerns.push_back({copy_padding, {N, group, div_ceil(IC, pack_ic)}});
         }
         auto do_conv = [wbundle, do_conv_fun, ncb_range](
                                const NCBKernParam& kern_param,
                                const NCBKernIndex& ncb_index) mutable {
             wbundle.set(kern_param.workspace_ptr);
-            do_conv_fun(wbundle, kern_param, ncb_index, ncb_index.ndrange_id,
-                        ncb_range);
+            do_conv_fun(
+                    wbundle, kern_param, ncb_index, ncb_index.ndrange_id, ncb_range);
         };
         ret_kerns.push_back({do_conv, ncb_range});
     } else {
@@ -466,11 +460,12 @@ ConvBiasImpl::AlgoS8x8x16DirectNCHW44::dispatch_kerns(
                                const NCBKernIndex& ncb_index) mutable {
             wbundle.set(kern_param.workspace_ptr);
             if (need_padding) {
-                copy_padding_kern_no_pack_src(wbundle, kern_param, ncb_index,
-                                              {0, ncb_index.thread_id, 0});
+                copy_padding_kern_no_pack_src(
+                        wbundle, kern_param, ncb_index, {0, ncb_index.thread_id, 0});
             };
-            do_conv_fun(wbundle, kern_param, ncb_index,
-                        {0, ncb_index.thread_id, 0}, ncb_range);
+            do_conv_fun(
+                    wbundle, kern_param, ncb_index, {0, ncb_index.thread_id, 0},
+                    ncb_range);
         };
         ret_kerns.push_back({do_conv, ncb_range});
     }

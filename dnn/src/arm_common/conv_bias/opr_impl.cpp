@@ -57,8 +57,7 @@ class ConvBiasImpl::AlgoPack : NonCopyableObj {
     AlgoS8DirectStride1 s8_direct_stride1;
     AlgoS8ChanWiseStride1NCHW44 s8_channel_wise_stride1_nchw44;
     AlgoS8ChanWiseStride2NCHW44 s8_channel_wise_stride2_nchw44;
-    AlgoS8x8x16ChanWiseStride1Stride2NCHW44
-            s8x8x16_channel_wise_stride1_stride2_nchw44;
+    AlgoS8x8x16ChanWiseStride1Stride2NCHW44 s8x8x16_channel_wise_stride1_stride2_nchw44;
 
 #if MGB_ENABLE_DOT
     AlgoDotS8DirectStride1 ds8_direct_stride1;
@@ -85,6 +84,8 @@ class ConvBiasImpl::AlgoPack : NonCopyableObj {
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
     AlgoF16Direct f16_direct;
     AlgoF16DirectStride1 f16_direct_stride1;
+    AlgoF16ChannelWiseNCHW88 f16_channel_wise_nchw88;
+    AlgoF16DirectNCHW88 f16_direct_nchw88;
 #endif
 
     SmallVector<std::unique_ptr<AlgoBase>> refhold;
@@ -111,14 +112,15 @@ public:
         m_direct_algos.emplace_back(&s8_direct_nchw_nchw44);
         m_direct_algos.emplace_back(&s8_direct_stride1);
 
-        m_direct_algos.emplace_back(
-                &s8x8x16_channel_wise_stride1_stride2_nchw44);
+        m_direct_algos.emplace_back(&s8x8x16_channel_wise_stride1_stride2_nchw44);
         m_direct_algos.emplace_back(&s8_channel_wise_stride1_nchw44);
         m_direct_algos.emplace_back(&s8_channel_wise_stride2_nchw44);
 
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
         m_direct_algos.emplace_back(&f16_direct_stride1);
         m_direct_algos.emplace_back(&f16_direct);
+        m_direct_algos.emplace_back(&f16_channel_wise_nchw88);
+        m_direct_algos.emplace_back(&f16_direct_nchw88);
 #endif
         m_direct_algos.emplace_back(&i8x8x16_direct);
         m_direct_algos.emplace_back(&i8x8x16_stride2_filter2);
@@ -138,8 +140,7 @@ public:
         using MatmulFormat = param::MatrixMul::Format;
         auto&& matmul_algos =
                 static_cast<arm_common::MatrixMulImpl*>(matmul_opr)
-                        ->select_algo_type(
-                                {AlgoDataType::FLOAT32, MatmulFormat::MK4});
+                        ->select_algo_type({AlgoDataType::FLOAT32, MatmulFormat::MK4});
         for (auto&& algo : matmul_algos) {
             if (is_fallback_or_naive(algo))
                 continue;
@@ -175,8 +176,8 @@ public:
             }
         }
         matmul_algos = static_cast<arm_common::MatrixMulImpl*>(matmul_opr)
-                               ->select_algo_type({AlgoDataType::FLOAT32,
-                                                   MatmulFormat::DEFAULT});
+                               ->select_algo_type(
+                                       {AlgoDataType::FLOAT32, MatmulFormat::DEFAULT});
         for (auto&& algo : matmul_algos) {
             if (is_fallback_or_naive(algo))
                 continue;
@@ -198,8 +199,8 @@ public:
 
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
         matmul_algos = static_cast<arm_common::MatrixMulImpl*>(matmul_opr)
-                               ->select_algo_type({AlgoDataType::FLOAT16,
-                                                   MatmulFormat::DEFAULT});
+                               ->select_algo_type(
+                                       {AlgoDataType::FLOAT16, MatmulFormat::DEFAULT});
         for (auto&& algo : matmul_algos) {
             if (is_fallback_or_naive(algo))
                 continue;
@@ -218,9 +219,9 @@ public:
                 m_winograd_algos.emplace_back(refhold.back().get());
             }
         }
-        matmul_algos = static_cast<arm_common::MatrixMulImpl*>(matmul_opr)
-                               ->select_algo_type({AlgoDataType::FLOAT16,
-                                                   MatmulFormat::MK8});
+        matmul_algos =
+                static_cast<arm_common::MatrixMulImpl*>(matmul_opr)
+                        ->select_algo_type({AlgoDataType::FLOAT16, MatmulFormat::MK8});
         for (auto&& algo : matmul_algos) {
             if (is_fallback_or_naive(algo))
                 continue;
@@ -233,8 +234,8 @@ public:
         }
 #endif
         matmul_algos = static_cast<arm_common::MatrixMulImpl*>(matmul_opr)
-                               ->select_algo_type({AlgoDataType::INT16X16X32,
-                                                   MatmulFormat::MK8});
+                               ->select_algo_type(
+                                       {AlgoDataType::INT16X16X32, MatmulFormat::MK8});
         for (auto&& algo : matmul_algos) {
             if (is_fallback_or_naive(algo))
                 continue;
@@ -250,7 +251,6 @@ public:
             }
         }
 
-
         for (auto&& algo : m_direct_algos) {
             m_all_algos_map.emplace(algo->info().desc, algo);
         }
@@ -259,12 +259,10 @@ public:
         }
     }
 
-    const SmallVector<fallback::ConvBiasImpl::AlgoBase*>& direct_algos()
-            const {
+    const SmallVector<fallback::ConvBiasImpl::AlgoBase*>& direct_algos() const {
         return m_direct_algos;
     }
-    const SmallVector<fallback::ConvBiasImpl::AlgoBase*>& winograd_algos()
-            const {
+    const SmallVector<fallback::ConvBiasImpl::AlgoBase*>& winograd_algos() const {
         return m_winograd_algos;
     }
     const AlgoBase::Mapper& all_algos_map() const { return m_all_algos_map; }
@@ -277,21 +275,21 @@ const ConvBiasImpl::AlgoPack& ConvBiasImpl::algo_pack() {
 
 MEGDNN_FB_DEF_GET_ALGO_FROM_DESC(ConvBiasImpl)
 
-SmallVector<fallback::ConvBiasImpl::AlgoBase*>
-ConvBiasImpl::get_all_packed_algo() {
+SmallVector<fallback::ConvBiasImpl::AlgoBase*> ConvBiasImpl::get_all_packed_algo() {
     auto&& algos = fallback::ConvBiasImpl::get_all_packed_algo();
-    algos.insert(algos.begin(), algo_pack().direct_algos().begin(),
-                 algo_pack().direct_algos().end());
-    algos.insert(algos.end(), algo_pack().winograd_algos().begin(),
-                 algo_pack().winograd_algos().end());
+    algos.insert(
+            algos.begin(), algo_pack().direct_algos().begin(),
+            algo_pack().direct_algos().end());
+    algos.insert(
+            algos.end(), algo_pack().winograd_algos().begin(),
+            algo_pack().winograd_algos().end());
     return std::move(algos);
 }
 
 bool ConvBiasImpl::is_matmul_quantized_prefer(
         const ConvBiasImpl::NCBKernSizeParam& param) const {
     fallback::ConvBiasImpl::NCBKernSizeParam conv_ncb_param(
-            param, {}, 0, BiasMode::NO_BIAS,
-            param::ConvBias::NonlineMode::IDENTITY);
+            param, {}, 0, BiasMode::NO_BIAS, param::ConvBias::NonlineMode::IDENTITY);
     conv_ncb_param.dst_type = param.bias_type;
     conv_ncb_param.filter_meta.group = 1;
 
@@ -305,10 +303,10 @@ bool ConvBiasImpl::is_matmul_quantized_prefer(
                         conv_ncb_param);
     } else if (param.dst_type.enumv() == DTypeEnum::Quantized8Asymm) {
         conv_direct_unusable =
-                !arm_common::direct_quint8_stride1::
-                        can_conv_direct_stride1_quint8(conv_ncb_param) &&
-                !arm_common::direct_quint8_stride2::
-                        can_conv_direct_stride2_quint8(conv_ncb_param);
+                !arm_common::direct_quint8_stride1::can_conv_direct_stride1_quint8(
+                        conv_ncb_param) &&
+                !arm_common::direct_quint8_stride2::can_conv_direct_stride2_quint8(
+                        conv_ncb_param);
     }
     return conv_direct_unusable;
 }
@@ -336,11 +334,9 @@ SmallVector<AlgoCategory> ConvBiasImpl::suggest_algo_category_order(
         }
     }
     if (im2col_prefer) {
-        return {AlgoCategory::IM2COL, AlgoCategory::DIRECT,
-                AlgoCategory::NAIVE};
+        return {AlgoCategory::IM2COL, AlgoCategory::DIRECT, AlgoCategory::NAIVE};
     } else {
-        return {AlgoCategory::DIRECT, AlgoCategory::IM2COL,
-                AlgoCategory::NAIVE};
+        return {AlgoCategory::DIRECT, AlgoCategory::IM2COL, AlgoCategory::NAIVE};
     }
 }
 

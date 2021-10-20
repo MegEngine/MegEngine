@@ -9,12 +9,12 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-#include "megdnn/oprs.h"
-#include "test/x86/fixture.h"
-#include "test/common/checker.h"
 #include "test/common/elemwise_multi_type.h"
+#include "megdnn/oprs.h"
+#include "test/common/checker.h"
 #include "test/common/timer.h"
 #include "test/common/workspace_wrapper.h"
+#include "test/x86/fixture.h"
 
 using namespace megdnn;
 using namespace test;
@@ -22,8 +22,7 @@ using namespace test;
 namespace {
 template <typename tag>
 class X86_ELEMWISE_MULTI_TYPE : public X86 {};
-TYPED_TEST_CASE(X86_ELEMWISE_MULTI_TYPE,
-                elemwise_multi_type::test_types);
+TYPED_TEST_CASE(X86_ELEMWISE_MULTI_TYPE, elemwise_multi_type::test_types);
 }  // anonymous namespace
 
 TYPED_TEST(X86_ELEMWISE_MULTI_TYPE, run) {
@@ -35,8 +34,9 @@ TEST_F(X86, ELEMWISE_QUANTIZED_MODE_UNARY) {
     Checker<ElemwiseMultiType> checker(handle());
 
     std::unique_ptr<RNG> rng;
-    for (auto mode : {Mode::QRELU, Mode::QABS, Mode::QSIGMOID, Mode::QEXP,
-                      Mode::QTANH, Mode::QFAST_TANH, Mode::QH_SWISH}) {
+    for (auto mode :
+         {Mode::QRELU, Mode::QABS, Mode::QSIGMOID, Mode::QEXP, Mode::QTANH,
+          Mode::QFAST_TANH, Mode::QH_SWISH}) {
         checker.set_param({mode});
 
         for (DType src_type : std::vector<DType>{
@@ -49,11 +49,10 @@ TEST_F(X86, ELEMWISE_QUANTIZED_MODE_UNARY) {
                 checker.set_dtype(1, dtype::QuantizedS8(1.7f));
             } else if (src_type.enumv() == DTypeEnum::Quantized8Asymm) {
                 rng = std::make_unique<UniformIntRNG>(0, 255);
-                checker.set_dtype(1, dtype::Quantized8Asymm(
-                                             1.7f, static_cast<uint8_t>(10)));
+                checker.set_dtype(
+                        1, dtype::Quantized8Asymm(1.7f, static_cast<uint8_t>(10)));
             } else {
-                rng = std::make_unique<UniformIntRNG>(INT16_MIN >> 1,
-                                                      INT16_MAX >> 1);
+                rng = std::make_unique<UniformIntRNG>(INT16_MIN >> 1, INT16_MAX >> 1);
             }
 
             checker.set_rng(0, rng.get());
@@ -86,8 +85,7 @@ TEST_F(X86, ELEMWISE_QUANTIZED_MODE_BINARY) {
     Checker<ElemwiseMultiType> checker(handle());
 
     // qint32 to qint8/quint8
-    for (auto mode :
-         {Mode::QADD, Mode::QFUSE_ADD_RELU, Mode::QFUSE_ADD_H_SWISH}) {
+    for (auto mode : {Mode::QADD, Mode::QFUSE_ADD_RELU, Mode::QFUSE_ADD_H_SWISH}) {
         checker.set_param({mode});
         UniformIntRNG rng{INT16_MIN >> 1, INT16_MAX >> 1};
         checker.set_rng(0, &rng)
@@ -95,10 +93,9 @@ TEST_F(X86, ELEMWISE_QUANTIZED_MODE_BINARY) {
                 .set_dtype(0, dtype::QuantizedS32(1.3f))
                 .set_dtype(1, dtype::QuantizedS32(1.2f));
 
-        for (DType dst_type :
-             std::vector<DType>{dtype::QuantizedS8(32718.6f),
-                                dtype::Quantized8Asymm(
-                                        32729.6f, static_cast<uint8_t>(128))}) {
+        for (DType dst_type : std::vector<DType>{
+                     dtype::QuantizedS8(32718.6f),
+                     dtype::Quantized8Asymm(32729.6f, static_cast<uint8_t>(128))}) {
             checker.set_dtype(2, dst_type);
 
             //! VEC + SCALAR
@@ -117,9 +114,9 @@ TEST_F(X86, ELEMWISE_QUANTIZED_MODE_BINARY) {
         }
     }
 
-    for (auto mode : {Mode::QMUL, Mode::QADD, Mode::QMIN, Mode::QMAX,
-                      Mode::QSUB, Mode::QFUSE_ADD_RELU, Mode::QFUSE_ADD_SIGMOID,
-                      Mode::QFUSE_ADD_H_SWISH}) {
+    for (auto mode :
+         {Mode::QMUL, Mode::QADD, Mode::QMIN, Mode::QMAX, Mode::QSUB,
+          Mode::QFUSE_ADD_RELU, Mode::QFUSE_ADD_SIGMOID, Mode::QFUSE_ADD_H_SWISH}) {
         checker.set_param({mode});
 
         // qint8 to qint8
@@ -145,12 +142,9 @@ TEST_F(X86, ELEMWISE_QUANTIZED_MODE_BINARY) {
         UniformIntRNG rng_uint8{0, 255};
         checker.set_rng(0, &rng_uint8)
                 .set_rng(1, &rng_uint8)
-                .set_dtype(0, dtype::Quantized8Asymm(1.35f,
-                                                     static_cast<uint8_t>(128)))
-                .set_dtype(1, dtype::Quantized8Asymm(1.15f,
-                                                     static_cast<uint8_t>(128)))
-                .set_dtype(2, dtype::Quantized8Asymm(
-                                      1.75f, static_cast<uint8_t>(128)));
+                .set_dtype(0, dtype::Quantized8Asymm(1.35f, static_cast<uint8_t>(128)))
+                .set_dtype(1, dtype::Quantized8Asymm(1.15f, static_cast<uint8_t>(128)))
+                .set_dtype(2, dtype::Quantized8Asymm(1.75f, static_cast<uint8_t>(128)));
 
         checker.execs({{3, 4, 5, 6}, {1, 1, 1, 1}, {}});
         checker.execs({{1, 1, 1, 1}, {3, 4, 5, 6}, {}});
@@ -190,12 +184,9 @@ TEST_F(X86, ELEMWISE_QUANTIZED_MODE_BINARY) {
     UniformIntRNG rng_uint8_2{0, 127};
     checker.set_rng(0, &rng_uint8_1)
             .set_rng(1, &rng_uint8_2)
-            .set_dtype(0,
-                       dtype::Quantized8Asymm(1.35f, static_cast<uint8_t>(128)))
-            .set_dtype(1,
-                       dtype::Quantized8Asymm(1.15f, static_cast<uint8_t>(128)))
-            .set_dtype(2, dtype::Quantized8Asymm(1.75f,
-                                                 static_cast<uint8_t>(128)));
+            .set_dtype(0, dtype::Quantized8Asymm(1.35f, static_cast<uint8_t>(128)))
+            .set_dtype(1, dtype::Quantized8Asymm(1.15f, static_cast<uint8_t>(128)))
+            .set_dtype(2, dtype::Quantized8Asymm(1.75f, static_cast<uint8_t>(128)));
 
     checker.execs({{3, 4, 5, 6}, {1, 1, 1, 1}, {}});
     checker.execs({{1, 1, 1, 1}, {3, 4, 5, 6}, {}});
@@ -231,12 +222,9 @@ TEST_F(X86, ELEMWISE_QUANTIZED_MODE_BINARY) {
     UniformIntRNG rng_uint8{123, 133};
     checker.set_rng(0, &rng_uint8)
             .set_rng(1, &rng_uint8)
-            .set_dtype(0,
-                       dtype::Quantized8Asymm(1.1f, static_cast<uint8_t>(128)))
-            .set_dtype(1,
-                       dtype::Quantized8Asymm(1.4f, static_cast<uint8_t>(128)))
-            .set_dtype(2,
-                       dtype::Quantized8Asymm(1.7f, static_cast<uint8_t>(128)));
+            .set_dtype(0, dtype::Quantized8Asymm(1.1f, static_cast<uint8_t>(128)))
+            .set_dtype(1, dtype::Quantized8Asymm(1.4f, static_cast<uint8_t>(128)))
+            .set_dtype(2, dtype::Quantized8Asymm(1.7f, static_cast<uint8_t>(128)));
 
     checker.execs({{3, 4, 5, 6}, {1, 1, 1, 1}, {}});
     checker.execs({{1, 1, 1, 1}, {3, 4, 5, 6}, {}});
@@ -280,14 +268,10 @@ TEST_F(X86, ELEMWISE_QUANTIZED_MODE_TERNARY) {
         checker.set_rng(0, &rng_uint8)
                 .set_rng(1, &rng_uint8)
                 .set_rng(2, &rng_uint8)
-                .set_dtype(0, dtype::Quantized8Asymm(1.35f,
-                                                     static_cast<uint8_t>(128)))
-                .set_dtype(1, dtype::Quantized8Asymm(1.15f,
-                                                     static_cast<uint8_t>(128)))
-                .set_dtype(2, dtype::Quantized8Asymm(1.75f,
-                                                     static_cast<uint8_t>(128)))
-                .set_dtype(3, dtype::Quantized8Asymm(1.45f,
-                                                     static_cast<uint8_t>(128)));
+                .set_dtype(0, dtype::Quantized8Asymm(1.35f, static_cast<uint8_t>(128)))
+                .set_dtype(1, dtype::Quantized8Asymm(1.15f, static_cast<uint8_t>(128)))
+                .set_dtype(2, dtype::Quantized8Asymm(1.75f, static_cast<uint8_t>(128)))
+                .set_dtype(3, dtype::Quantized8Asymm(1.45f, static_cast<uint8_t>(128)));
 
         checker.execs({{3, 4, 5, 6}, {3, 4, 5, 6}, {1, 1, 1, 1}, {}});
         checker.execs({{1, 4, 1, 1}, {3, 4, 5, 6}, {1, 4, 1, 1}, {}});

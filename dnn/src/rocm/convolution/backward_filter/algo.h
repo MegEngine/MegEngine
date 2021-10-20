@@ -12,9 +12,9 @@
 #pragma once
 
 #include <unordered_map>
-#include "src/rocm/convolution/helper.h"
 #include "src/common/algo_base.h"
 #include "src/common/metahelper.h"
+#include "src/rocm/convolution/helper.h"
 
 namespace megdnn {
 namespace rocm {
@@ -28,11 +28,7 @@ protected:
     ~AlgoBase() = default;
 
 public:
-    enum class AlgoType : uint32_t {
-        ROCM_MIOPEN,
-        ROCM_MATMUL,
-        ROCM_CHANWISE
-    };
+    enum class AlgoType : uint32_t { ROCM_MIOPEN, ROCM_MATMUL, ROCM_CHANWISE };
     using Mapper = std::unordered_map<AlgorithmDesc, AlgoBase*>;
 
     AlgoBase() : Algorithm() { m_handle_type = Handle::HandleType::ROCM; }
@@ -47,10 +43,12 @@ public:
         void init_desc(convolution::MIOpenBwdFilterDescs& desc) const {
             desc.set(*src_layout, *diff_layout, grad_filter_meta, opr->param());
         }
-        SizeArgs(ConvolutionBackwardFilterImpl* opr, const TensorLayout& src,
-                 const TensorLayout& diff, const TensorLayout& grad);
-        SizeArgs(ConvolutionBackwardFilterImpl* opr, const TensorLayout& src,
-                 const TensorLayout& diff, const CanonizedFilterMeta& grad);
+        SizeArgs(
+                ConvolutionBackwardFilterImpl* opr, const TensorLayout& src,
+                const TensorLayout& diff, const TensorLayout& grad);
+        SizeArgs(
+                ConvolutionBackwardFilterImpl* opr, const TensorLayout& src,
+                const TensorLayout& diff, const CanonizedFilterMeta& grad);
 
         convolution::ForwardSizeArgs as_fwd_args() const {
             return {handle, src_layout, grad_filter_meta, diff_layout};
@@ -60,9 +58,10 @@ public:
         const TensorND *src_tensor, *diff_tensor, *grad_tensor;
         Workspace workspace;
 
-        ExecArgs(ConvolutionBackwardFilterImpl* opr, _megdnn_tensor_in src,
-                 _megdnn_tensor_in diff, _megdnn_tensor_out grad,
-                 _megdnn_workspace workspace);
+        ExecArgs(
+                ConvolutionBackwardFilterImpl* opr, _megdnn_tensor_in src,
+                _megdnn_tensor_in diff, _megdnn_tensor_out grad,
+                _megdnn_workspace workspace);
     };
     virtual bool is_available(const SizeArgs& args) const = 0;
     virtual size_t get_workspace_in_bytes(const SizeArgs& args) const = 0;
@@ -77,17 +76,16 @@ public:
             const AlgoAttribute& negative_attr = AlgoAttribute::DEFAULT,
             size_t limit = std::numeric_limits<size_t>::max()) {
         return contain_attribute_all(positive_attr) &&
-               !contain_attribute_any(negative_attr) &&
-               is_available_wk(args, limit);
+               !contain_attribute_any(negative_attr) && is_available_wk(args, limit);
     }
 
-    AlgoBase& check_workspace(const SizeArgs& args,
-                              const Workspace& workspace) {
+    AlgoBase& check_workspace(const SizeArgs& args, const Workspace& workspace) {
         auto req = get_workspace_in_bytes(args);
-        megdnn_assert(req <= workspace.size,
-                      "conv bwd filter algo %s: "
-                      "required workspace %zu bytes, got %zu",
-                      name(), req, workspace.size);
+        megdnn_assert(
+                req <= workspace.size,
+                "conv bwd filter algo %s: "
+                "required workspace %zu bytes, got %zu",
+                name(), req, workspace.size);
         return *this;
     }
 
@@ -108,12 +106,8 @@ public:
     size_t get_workspace_in_bytes(const SizeArgs& args) const override;
     void exec(const ExecArgs& args) const override;
 
-    AlgoAttribute attribute() const override {
-        return m_algo_attribute;
-    }
-    const char* name() const override {
-        return "MIOpenConvolutionBackwardFilter";
-    }
+    AlgoAttribute attribute() const override { return m_algo_attribute; }
+    const char* name() const override { return "MIOpenConvolutionBackwardFilter"; }
 
     bool is_miopen() const override { return true; }
     MEGDNN_DECL_ALGO_TYPE(ROCM_MIOPEN)
@@ -139,9 +133,7 @@ public:
 
     const char* name() const override { return "MATMUL"; }
     MEGDNN_DECL_ALGO_TYPE(ROCM_MATMUL)
-    AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE;
-    }
+    AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }
 };
 
 class ConvolutionBackwardFilterImpl::AlgoChanwise final : public AlgoBase {
@@ -152,15 +144,14 @@ public:
 
     const char* name() const override { return "CHANNEL_WISE"; }
     MEGDNN_DECL_ALGO_TYPE(ROCM_CHANWISE)
-    AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE;
-    }
+    AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }
 };
 
 class ConvolutionBackwardFilterImpl::AlgoPack : NonCopyableObj {
     void fill_miopen_algos();
 
     AlgoBase::Mapper m_all_algos_map;
+
 public:
     AlgoPack();
 
@@ -174,7 +165,7 @@ public:
     const AlgoBase::Mapper& all_algos_map() const { return m_all_algos_map; }
 };
 
-} // namespace rocm
-} // namespace megdnn
+}  // namespace rocm
+}  // namespace megdnn
 
 // vim: syntax=cpp.doxygen

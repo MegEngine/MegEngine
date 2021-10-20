@@ -32,11 +32,11 @@ TEST_F(FALLBACK, REDUCE) {
     };
     std::vector<Config> configs;
     // general
-    for (auto mode : {Mode::SUM, Mode::MEAN, Mode::SUM_SQR, Mode::PRODUCT,
-                      Mode::MIN, Mode::MAX})
-        for (auto dtype : std::vector<DType>{dtype::Float16(), dtype::Float32(),
-                                             dtype::Int32(), dtype::Int16(),
-                                             dtype::Int8(), dtype::Uint8()})
+    for (auto mode :
+         {Mode::SUM, Mode::MEAN, Mode::SUM_SQR, Mode::PRODUCT, Mode::MIN, Mode::MAX})
+        for (auto dtype : std::vector<DType>{
+                     dtype::Float16(), dtype::Float32(), dtype::Int32(), dtype::Int16(),
+                     dtype::Int8(), dtype::Uint8()})
             for (int32_t axis : {0, 1, 2, 3}) {
                 TensorShape shape{2, 3, 20, 5};
                 Param param(mode, axis);
@@ -74,6 +74,15 @@ TEST_F(FALLBACK, REDUCE) {
                 Config config(param, dtype, shape);
                 configs.push_back(config);
             }
+
+    {
+        // large reduce_mean for O16C32
+        TensorShape shape{1, 65536, 5};
+        Param param(Mode::MEAN, 1, DataType::FLOAT_O16xC32);
+        Config config(param, dtype::Float16(), shape);
+        configs.push_back(config);
+    }
+
     for (auto&& config : configs) {
         auto&& dtype = config.dtype;
         auto&& param = config.param;

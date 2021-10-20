@@ -75,8 +75,7 @@ typedef void* LiteTensor;
  * \return int if the return is not zero, error happened, the error message
  * can get by LITE_get_last_error
  */
-LITE_API int LITE_make_tensor(const LiteTensorDesc tensor_describe,
-                              LiteTensor* tensor);
+LITE_API int LITE_make_tensor(const LiteTensorDesc tensor_describe, LiteTensor* tensor);
 
 /**
  * \brief Destroy a lite tensor object.
@@ -102,8 +101,8 @@ LITE_API int LITE_set_tensor_layout(LiteTensor tensor, const LiteLayout layout);
  * \param[in] data_length_in_byte The length of the allocated memory
  * layout
  */
-LITE_API int LITE_reset_tensor_memory(LiteTensor tensor, void* prepared_data,
-                                      size_t data_length_in_byte);
+LITE_API int LITE_reset_tensor_memory(
+        LiteTensor tensor, void* prepared_data, size_t data_length_in_byte);
 
 /**
  * \brief  use the user allocated data and corresponding layout to reset the
@@ -114,8 +113,8 @@ LITE_API int LITE_reset_tensor_memory(LiteTensor tensor, void* prepared_data,
  * \param[in] prepared_data The allocated memory which satisfy the layout to be
  * set
  */
-LITE_API int LITE_reset_tensor(LiteTensor tensor, const LiteLayout layout,
-                               void* prepared_data);
+LITE_API int LITE_reset_tensor(
+        LiteTensor tensor, const LiteLayout layout, void* prepared_data);
 
 /**
  * \brief reshape a tensor with the memroy not change, the total number of
@@ -138,9 +137,9 @@ LITE_API int LITE_tensor_reshape(LiteTensor tensor, const int* shape, int size);
  * \param[in] size the number axis to be sliced
  * \param[out] sliced_tensor the result tensor sliced from the origin tensor
  */
-LITE_API int LITE_tensor_slice(const LiteTensor tensor, const size_t* start,
-                               const size_t* end, const size_t* step,
-                               size_t size, LiteTensor* slice_tensor);
+LITE_API int LITE_tensor_slice(
+        const LiteTensor tensor, const size_t* start, const size_t* end,
+        const size_t* step, size_t size, LiteTensor* slice_tensor);
 
 /**
  * \brief fill zero to the tensor
@@ -153,16 +152,15 @@ LITE_API int LITE_tensor_fill_zero(LiteTensor tensor);
  * \param[out] dst_tensor The Tensor to copy into
  * \param[in] src_tensor The Tensor to copy from
  */
-LITE_API int LITE_tensor_copy(LiteTensor dst_tensor,
-                              const LiteTensor src_tensor);
+LITE_API int LITE_tensor_copy(LiteTensor dst_tensor, const LiteTensor src_tensor);
 
 /**
  * \brief share memory form other tensor
  * \param[out] dst_tensor The Tensor to share into
  * \param[in] src_tensor The Tensor to be shared
  */
-LITE_API int LITE_tensor_share_memory_with(LiteTensor dst_tensor,
-                                           const LiteTensor src_tensor);
+LITE_API int LITE_tensor_share_memory_with(
+        LiteTensor dst_tensor, const LiteTensor src_tensor);
 
 /**
  * \brief get the memory pointer of a Tensor object.
@@ -178,9 +176,8 @@ LITE_API int LITE_get_tensor_memory(const LiteTensor tensor, void** data);
  * \param[in] size The lenght of coordinate
  * \param[out] data a pointer to void pointer
  */
-LITE_API int LITE_get_tensor_memory_with_index(const LiteTensor tensor,
-                                               const size_t* index, size_t size,
-                                               void** data);
+LITE_API int LITE_get_tensor_memory_with_index(
+        const LiteTensor tensor, const size_t* index, size_t size, void** data);
 
 /**
  * \brief get the tensor capacity in byte of a Tensor object.
@@ -188,24 +185,22 @@ LITE_API int LITE_get_tensor_memory_with_index(const LiteTensor tensor,
  * \param[out] size_ptr a pointer to the return size
 
  */
-LITE_API int LITE_get_tensor_total_size_in_byte(const LiteTensor tensor,
-                                                size_t* size);
+LITE_API int LITE_get_tensor_total_size_in_byte(const LiteTensor tensor, size_t* size);
 
 /**
  * \brief get the tensor layout of a Tensor object.
  * \param[in] tensor The input Tensor
  * \param[out] layout_ptr a pointer will be write with the layout of the tensor
  */
-LITE_API int LITE_get_tensor_layout(const LiteTensor tensor,
-                                    LiteLayout* layout);
+LITE_API int LITE_get_tensor_layout(const LiteTensor tensor, LiteLayout* layout);
 
 /**
  * \brief get the tensor device of a Tensor object.
  * \param[in] tensor The input Tensor
  * \param[out] device_ptr a pointer will be write with the device of the tensor
  */
-LITE_API int LITE_get_tensor_device_type(const LiteTensor tensor,
-                                         LiteDeviceType* device_type);
+LITE_API int LITE_get_tensor_device_type(
+        const LiteTensor tensor, LiteDeviceType* device_type);
 
 /**
  * \brief get the tensor device id of a Tensor object.
@@ -242,9 +237,9 @@ LITE_API int LITE_is_memory_continue(const LiteTensor tensor, int* is_continue);
  * tensor device id will get from the first tensor
  * \param[out] result_tensor the result tensor after concat
  */
-LITE_API int LITE_tensor_concat(LiteTensor* tensors, int nr_tensor, int dim,
-                                LiteDeviceType dst_device, int device_id,
-                                LiteTensor* result_tensor);
+LITE_API int LITE_tensor_concat(
+        LiteTensor* tensors, int nr_tensor, int dim, LiteDeviceType dst_device,
+        int device_id, LiteTensor* result_tensor);
 
 #ifdef __cplusplus
 }

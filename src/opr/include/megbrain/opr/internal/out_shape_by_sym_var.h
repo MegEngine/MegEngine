@@ -25,133 +25,127 @@ namespace mixin {
  *
  * assuming single output.
  */
-class OutshapeBySymvarOpr: public cg::OperatorNodeMixinBase {
+class OutshapeBySymvarOpr : public cg::OperatorNodeMixinBase {
     using NodeProp = cg::OperatorNodeBase::NodeProp;
 
-    protected:
-        ~OutshapeBySymvarOpr();
+protected:
+    ~OutshapeBySymvarOpr();
 
-        /*!
-         * \brief static shape infer is added here
-         */
-        void mixin_init_output_static_infer_desc(OperatorNodeBase &opr);
+    /*!
+     * \brief static shape infer is added here
+     */
+    void mixin_init_output_static_infer_desc(OperatorNodeBase& opr);
 
-        /*!
-         * \brief enable inferring output shape from other symbol var, and
-         *      initialize; should be called in constructor after all inputs and
-         *      outputs are added
-         *
-         * \param nr_shape_inp number of inputs whose shapes are required to
-         *      infer output shape; must be placed at the beginning of inputs
-         * \param hostval_inp_start starting index of inputs whose values are
-         *      needed to infer output shape, and their device value must not
-         *      be needed (i.e. they should not be involved in actual
-         *      computing); they must be placed at the end of inputs
-         */
-        void mixin_outshape_by_symvar_enable(
-                OperatorNodeBase &opr,
-                size_t nr_shape_inp, size_t hostval_inp_start);
+    /*!
+     * \brief enable inferring output shape from other symbol var, and
+     *      initialize; should be called in constructor after all inputs and
+     *      outputs are added
+     *
+     * \param nr_shape_inp number of inputs whose shapes are required to
+     *      infer output shape; must be placed at the beginning of inputs
+     * \param hostval_inp_start starting index of inputs whose values are
+     *      needed to infer output shape, and their device value must not
+     *      be needed (i.e. they should not be involved in actual
+     *      computing); they must be placed at the end of inputs
+     */
+    void mixin_outshape_by_symvar_enable(
+            OperatorNodeBase& opr, size_t nr_shape_inp, size_t hostval_inp_start);
 
-        /*!
-         * \brief struct containing information needed for inferring output
-         *      shape
-         */
-        struct ShapeInferInfo {
-            //! shapes for the inputs [:nr_shape_inp]
-            TensorShapeArray shape_inp_shp;
+    /*!
+     * \brief struct containing information needed for inferring output
+     *      shape
+     */
+    struct ShapeInferInfo {
+        //! shapes for the inputs [:nr_shape_inp]
+        TensorShapeArray shape_inp_shp;
 
-            //! values for the inputs [hostval_inp_start:]
-            std::vector<const DeviceTensorND*> shpval_inp_val;
-        };
+        //! values for the inputs [hostval_inp_start:]
+        std::vector<const DeviceTensorND*> shpval_inp_val;
+    };
 
-        /*!
-         * \brief implemented by subclasses to compute output shape
-         */
-        virtual void outshape_by_symvar_do_get_output_shape(
-                TensorShape &dest, const ShapeInferInfo &shpinfo) = 0;
+    /*!
+     * \brief implemented by subclasses to compute output shape
+     */
+    virtual void outshape_by_symvar_do_get_output_shape(
+            TensorShape& dest, const ShapeInferInfo& shpinfo) = 0;
 
-        /*!
-         * \brief called by subclass to get ShapeInferInfo eagerly; usually used
-         *      in graph execution for NO_SYS_MEM_ALLOC vars
-         */
-        const ShapeInferInfo& mixin_outshape_by_symvar_get_shape_infer_info(
-                const OperatorNodeBase &opr) const;
+    /*!
+     * \brief called by subclass to get ShapeInferInfo eagerly; usually used
+     *      in graph execution for NO_SYS_MEM_ALLOC vars
+     */
+    const ShapeInferInfo& mixin_outshape_by_symvar_get_shape_infer_info(
+            const OperatorNodeBase& opr) const;
 
-        /*!
-         * \brief update node prop to set dependency type
-         */
-        void mixin_outshape_by_symvar_reset_node_dep_type(
-                const OperatorNodeBase &opr, NodeProp *prop) const;
+    /*!
+     * \brief update node prop to set dependency type
+     */
+    void mixin_outshape_by_symvar_reset_node_dep_type(
+            const OperatorNodeBase& opr, NodeProp* prop) const;
 
-    private:
-        bool m_enable_out_shape_by_symbol_var = false;
-        size_t m_nr_shape_inp = -1, m_hostval_inp_start = -1;
-        mutable ShapeInferInfo m_shape_infer_info;
+private:
+    bool m_enable_out_shape_by_symbol_var = false;
+    size_t m_nr_shape_inp = -1, m_hostval_inp_start = -1;
+    mutable ShapeInferInfo m_shape_infer_info;
 };
 
 /*!
  * \brief OutshapeBySymvarOpr on single comp node
  */
-template<class SCNBase = cg::mixin::SingleCNOperatorNode>
-class OutshapeBySymvarSCNOpr: public OutshapeBySymvarOpr, public SCNBase {
-    protected:
-        using NodeProp = cg::OperatorNodeBase::NodeProp;
+template <class SCNBase = cg::mixin::SingleCNOperatorNode>
+class OutshapeBySymvarSCNOpr : public OutshapeBySymvarOpr, public SCNBase {
+protected:
+    using NodeProp = cg::OperatorNodeBase::NodeProp;
 
-        ~OutshapeBySymvarSCNOpr() = default;
+    ~OutshapeBySymvarSCNOpr() = default;
 
-        NodeProp* mixin_do_make_node_prop(const OperatorNodeBase &opr) const {
-            auto prop = SCNBase::mixin_do_make_node_prop(opr);
-            this->mixin_outshape_by_symvar_reset_node_dep_type(opr, prop);
-            return prop;
-        }
+    NodeProp* mixin_do_make_node_prop(const OperatorNodeBase& opr) const {
+        auto prop = SCNBase::mixin_do_make_node_prop(opr);
+        this->mixin_outshape_by_symvar_reset_node_dep_type(opr, prop);
+        return prop;
+    }
 };
 
-}
+}  // namespace mixin
 
 namespace intl {
 
 //! glue class for mixin::OutshapeBySymvarOpr
-template<class Base = cg::OperatorNodeBase,
-         class MixinImpl = mixin::OutshapeBySymvarOpr>
-class OutshapeBySymvarOpr: public mixin::CheckBase<Base>::Base,
-                           public MixinImpl {
-    protected:
-        using Base::Base;
-        using ShapeInferInfo = mixin::OutshapeBySymvarOpr::ShapeInferInfo;
-        using NodeProp = typename Base::NodeProp;
-        using ExecEnv = typename Base::ExecEnv;
+template <
+        class Base = cg::OperatorNodeBase, class MixinImpl = mixin::OutshapeBySymvarOpr>
+class OutshapeBySymvarOpr : public mixin::CheckBase<Base>::Base, public MixinImpl {
+protected:
+    using Base::Base;
+    using ShapeInferInfo = mixin::OutshapeBySymvarOpr::ShapeInferInfo;
+    using NodeProp = typename Base::NodeProp;
+    using ExecEnv = typename Base::ExecEnv;
 
-        void init_output_static_infer_desc() override {
-            this->mixin_init_output_static_infer_desc(*this);
-        }
+    void init_output_static_infer_desc() override {
+        this->mixin_init_output_static_infer_desc(*this);
+    }
 
-        //! see mixin_outshape_by_symvar_enable for docs
-        void outshape_by_symvar_enable(
-                size_t nr_shape_inp, size_t hostval_inp_start) {
-            this->mixin_outshape_by_symvar_enable(
-                    *this, nr_shape_inp, hostval_inp_start);
-        }
+    //! see mixin_outshape_by_symvar_enable for docs
+    void outshape_by_symvar_enable(size_t nr_shape_inp, size_t hostval_inp_start) {
+        this->mixin_outshape_by_symvar_enable(*this, nr_shape_inp, hostval_inp_start);
+    }
 
-        const ShapeInferInfo& outshape_by_symvar_get_shape_infer_info() const {
-            return this->mixin_outshape_by_symvar_get_shape_infer_info(*this);
-        }
+    const ShapeInferInfo& outshape_by_symvar_get_shape_infer_info() const {
+        return this->mixin_outshape_by_symvar_get_shape_infer_info(*this);
+    }
 
-        void outshape_by_symvar_reset_node_dep_type(NodeProp *prop) const {
-            this->mixin_outshape_by_symvar_reset_node_dep_type(*this, prop);
-        }
+    void outshape_by_symvar_reset_node_dep_type(NodeProp* prop) const {
+        this->mixin_outshape_by_symvar_reset_node_dep_type(*this, prop);
+    }
 };
 
 using OutshapeBySymvarOprBase = OutshapeBySymvarOpr<>;
-template<class SCNBase = cg::mixin::SingleCNOperatorNode>
+template <class SCNBase = cg::mixin::SingleCNOperatorNode>
 using OutshapeBySymvarSCNOpr = OutshapeBySymvarOpr<
-    cg::SingleCNOperatorNodeBaseT<mixin::OutshapeBySymvarSCNOpr<SCNBase>>,
-    cg::mixin::EmptyMixinImpl
->;
+        cg::SingleCNOperatorNodeBaseT<mixin::OutshapeBySymvarSCNOpr<SCNBase>>,
+        cg::mixin::EmptyMixinImpl>;
 using OutshapeBySymvarSCNOprBase = OutshapeBySymvarSCNOpr<>;
 
-} // intl
-} // opr
-} // mgb
+}  // namespace intl
+}  // namespace opr
+}  // namespace mgb
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
-

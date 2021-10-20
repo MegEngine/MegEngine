@@ -64,14 +64,12 @@ TEST(TestCapiTensor, Basic) {
 TEST(TestCapiTensor, SetLayoutReAlloc) {
     LiteTensor c_tensor0;
     LiteTensorDesc description = default_desc;
-    description.layout =
-            LiteLayout{{1, 3, 224, 224}, 4, LiteDataType::LITE_FLOAT};
+    description.layout = LiteLayout{{1, 3, 224, 224}, 4, LiteDataType::LITE_FLOAT};
     LITE_make_tensor(description, &c_tensor0);
     void *old_ptr, *new_ptr;
     LITE_get_tensor_memory(c_tensor0, &old_ptr);
 
-    LiteLayout new_layout =
-            LiteLayout{{1, 3, 100, 100}, 4, LiteDataType::LITE_INT8};
+    LiteLayout new_layout = LiteLayout{{1, 3, 100, 100}, 4, LiteDataType::LITE_INT8};
     LITE_set_tensor_layout(c_tensor0, new_layout);
     LITE_get_tensor_memory(c_tensor0, &new_ptr);
 
@@ -94,10 +92,10 @@ TEST(TestCapiTensor, Reset) {
     //! make sure memory is allocted
     ASSERT_NO_THROW(memcpy(old_ptr0, old_ptr1, 3 * 20 * 4));
 
-    std::shared_ptr<float> new_ptr0(new float[3 * 20],
-                                    [](float* ptr) { delete[] ptr; });
-    std::shared_ptr<float> new_ptr1(new float[3 * 20],
-                                    [](float* ptr) { delete[] ptr; });
+    std::shared_ptr<float> new_ptr0(
+            new float[3 * 20], [](float* ptr) { delete[] ptr; });
+    std::shared_ptr<float> new_ptr1(
+            new float[3 * 20], [](float* ptr) { delete[] ptr; });
     LITE_reset_tensor_memory(c_tensor0, new_ptr0.get(), 3 * 20 * 4);
     LITE_reset_tensor_memory(c_tensor1, new_ptr1.get(), 3 * 20 * 4);
     void *tmp_ptr0, *tmp_ptr1;
@@ -109,10 +107,8 @@ TEST(TestCapiTensor, Reset) {
     ASSERT_NO_THROW(memcpy(new_ptr0.get(), new_ptr1.get(), 3 * 20 * 4));
 
     LiteLayout layout1{{6, 20}, 2, LiteDataType::LITE_FLOAT};
-    std::shared_ptr<float> ptr2(new float[6 * 20],
-                                [](float* ptr) { delete[] ptr; });
-    std::shared_ptr<float> ptr3(new float[6 * 20],
-                                [](float* ptr) { delete[] ptr; });
+    std::shared_ptr<float> ptr2(new float[6 * 20], [](float* ptr) { delete[] ptr; });
+    std::shared_ptr<float> ptr3(new float[6 * 20], [](float* ptr) { delete[] ptr; });
     LITE_reset_tensor(c_tensor0, layout1, new_ptr0.get());
     LITE_reset_tensor(c_tensor1, layout1, new_ptr1.get());
 
@@ -136,8 +132,7 @@ TEST(TestCapiTensor, CrossCNCopy) {
     LiteTensorDesc description = default_desc;
     LITE_make_tensor(description, &c_tensor0);
 
-    description.layout =
-            LiteLayout{{1, 3, 224, 224}, 4, LiteDataType::LITE_FLOAT};
+    description.layout = LiteLayout{{1, 3, 224, 224}, 4, LiteDataType::LITE_FLOAT};
     LITE_make_tensor(description, &c_tensor1);
     LITE_make_tensor(description, &c_tensor2);
 
@@ -172,8 +167,7 @@ TEST(TestCapiTensor, ShareMemoryWith) {
     LiteTensorDesc description = default_desc;
     LITE_make_tensor(description, &c_tensor0);
 
-    description.layout =
-            LiteLayout{{1, 3, 224, 224}, 4, LiteDataType::LITE_FLOAT};
+    description.layout = LiteLayout{{1, 3, 224, 224}, 4, LiteDataType::LITE_FLOAT};
     LITE_make_tensor(description, &c_tensor1);
 
     ASSERT_EQ(LITE_tensor_share_memory_with(c_tensor1, c_tensor0), -1);
@@ -191,8 +185,7 @@ TEST(TestCapiTensor, ShareMemoryWith) {
 TEST(TestCapiTensor, Reshape) {
     LiteTensor c_tensor0;
     LiteTensorDesc description = default_desc;
-    description.layout =
-            LiteLayout{{8, 8, 100, 100}, 4, LiteDataType::LITE_FLOAT};
+    description.layout = LiteLayout{{8, 8, 100, 100}, 4, LiteDataType::LITE_FLOAT};
     LITE_make_tensor(description, &c_tensor0);
     void* old_ptr;
     LITE_get_tensor_memory(c_tensor0, &old_ptr);
@@ -244,11 +237,10 @@ TEST(TestCapiTensor, Slice) {
         size_t step_ptr[2] = {step, step};
 
         if (have_step) {
-            LITE_tensor_slice(c_tensor0, start_ptr, end_ptr, step_ptr, 2,
-                              &slice_tensor);
+            LITE_tensor_slice(
+                    c_tensor0, start_ptr, end_ptr, step_ptr, 2, &slice_tensor);
         } else {
-            LITE_tensor_slice(c_tensor0, start_ptr, end_ptr, nullptr, 2,
-                              &slice_tensor);
+            LITE_tensor_slice(c_tensor0, start_ptr, end_ptr, nullptr, 2, &slice_tensor);
         }
         int is_continue = true;
         LITE_is_memory_continue(slice_tensor, &is_continue);

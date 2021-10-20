@@ -16,17 +16,15 @@
 namespace megdnn {
 namespace test {
 
-TEST_F(FALLBACK, TILE)
-{
+TEST_F(FALLBACK, TILE) {
     Checker<TileForward> checker(handle());
     auto args = tile_repeat::get_args();
-    for (auto &&arg: args) {
+    for (auto&& arg : args) {
         checker.set_param(arg.param()).execs({arg.src, {}});
     }
 }
 
-} // namespace test
-} // namespace megdnn
+}  // namespace test
+}  // namespace megdnn
 
 // vim: syntax=cpp.doxygen
-

@@ -18,11 +18,13 @@ import megengine.amp as amp
 import megengine.core.ops.builtin as builtin
 import megengine.core.tensor.dtype as dtype
 import megengine.functional as F
+import megengine.jit as jit
 from megengine import Parameter, Tensor, is_cuda_available, tensor
 from megengine.core._trace_option import use_symbolic_shape
 from megengine.core.autodiff.grad import Grad
 from megengine.core.tensor.utils import make_shape_tuple
 from megengine.device import get_device_count
+from megengine.module import LayerNorm
 
 
 def test_where():
@@ -56,10 +58,14 @@ def test_where():
 
 
 def test_dropout():
-    data = tensor(np.ones(10, dtype=np.float32))
-    out = F.dropout(data, 1.0 / 3.0, training=False)
+    # test training mode
+    data = tensor(np.ones(10000000, dtype=np.float32))
+    out = F.nn.dropout(data, 1.0 / 3.0, training=True)
+    assert not out.numpy().all()
 
-    assert out.numpy().sum() >= 0.0
+    # test eval mode
+    out = F.nn.dropout(data, 1.0 / 3.0, training=False)
+    assert out.numpy().all()
 
 
 def test_matinv():
@@ -135,6 +141,26 @@ def test_matmul():
         transpose_a=True,
         transpose_b=True,
     )
+
+
+@pytest.mark.parametrize(
+    "shape_a, shape_b", [((0,), (0,)), ((10, 0), (0, 10)), ((3, 10, 0), (3, 0, 10)),],
+)
+@pytest.mark.parametrize("is_symbolic", [None, True, False])
+def test_matmul_empty_tensor(shape_a, shape_b, is_symbolic):
+    def func(a, b):
+        return F.matmul(a, b)
+
+    if is_symbolic is not None:
+        func = jit.trace(symbolic=is_symbolic)(func)
+
+    a = tensor(np.random.randn(*shape_a))
+    b = tensor(np.random.randn(*shape_b))
+    for _ in range(3):
+        out = func(a, b)
+        assert np.all(out.numpy() == 0)
+        if is_symbolic is None:
+            break
 
 
 def test_interpolate():
@@ -595,7 +621,19 @@ def test_hinge_loss():
     opr_test(cases, hinge_loss_with_l2_norm)
 
 
-def test_nms():
+@pytest.mark.parametrize("is_symbolic", [None, False, True])
+def test_nms(is_symbolic):
+    def fn(inp, scores):
+        return F.vision.nms(
+            inp,
+            scores=scores,
+            iou_thresh=0.5,
+            max_output=None if is_symbolic is None else 4,
+        )
+
+    if is_symbolic is not None:
+        fn = jit.trace(symbolic=is_symbolic)(fn)
+
     x = np.array(
         [
             [0, 0, 100, 100],
@@ -607,8 +645,16 @@ def test_nms():
     )
     inp = tensor(x)
     scores = tensor([0.5, 0.8, 0.9, 0.6], dtype=np.float32)
-    result = F.vision.nms(inp, scores=scores, iou_thresh=0.5)
-    np.testing.assert_equal(result.numpy(), np.array([2, 1, 3], dtype=np.int32))
+    for _ in range(3):
+        result = fn(inp, scores=scores)
+        np.testing.assert_equal(result.numpy(), np.array([2, 1, 3], dtype=np.int32))
+
+    x = np.array([], dtype=np.float32,).reshape(0, 4)
+    inp = tensor(x)
+    scores = tensor([], dtype=np.float32)
+    for _ in range(3):
+        result = fn(inp, scores=scores)
+        np.testing.assert_equal(result.numpy(), np.array([], dtype=np.int32))
 
 
 @pytest.mark.skipif(
@@ -765,7 +811,8 @@ def test_batch_conv_bias():
     run(1, 4, 4, 5, 5, 3, 3, 0, 0, 1, 1, True)
 
 
-def test_conv2d_io16c32():
+def test_conv2d_autocast():
+    """check amp's result is equal to manually converted result"""
     amp.enabled = True
     inp = tensor(np.random.randn(1, 3, 224, 224), dtype=np.float32)
     weight = tensor(np.random.randn(64, 3, 7, 7), dtype=np.float32)
@@ -817,11 +864,69 @@ def test_conv1d():
     )
 
 
-def test_batchnorm2d_io16c32():
+def test_layer_norm():
+    def _layer_norm(x, normalized_shape, affine, weight=None, bias=None, eps=1e-5):
+        __layer_norm = LayerNorm(normalized_shape=normalized_shape, affine=affine)
+        __layer_norm.weight = weight
+        __layer_norm.bias = bias
+        return __layer_norm(x)
+
+    def _layer_norm_numpy(
+        x, normalized_shape, affine, weight=None, bias=None, eps=1e-5
+    ):
+        x_shape = x.shape
+        dim_delta = len(x_shape) - len(normalized_shape)
+        non_flatten_shape = x_shape[:dim_delta]
+        x = x.reshape(*non_flatten_shape, -1)
+
+        mean = x.mean(axis=-1, keepdims=True)
+        var = (x ** 2).mean(axis=-1, keepdims=True) - mean * mean
+
+        x = (x - mean) / F.sqrt(var + eps)
+        x = x.reshape(x_shape)
+        if affine:
+            x = weight * x + bias
+
+        return x
+
+    normalized_shape = (28, 28)
+    inp_feat = Tensor(np.random.randn(32, 64, 28, 28), dtype="float32")
+    weight = Tensor(np.random.randn(28, 28), dtype="float32")
+    bias = Tensor(np.random.randn(28, 28), dtype="float32")
+
+    inp_feat = inp_feat + 1
+    weight = weight + 1
+    bias = bias
+
+    affine = False
+
+    outvar = F.nn.layer_norm(inp_feat, normalized_shape, affine, weight, bias)
+    targetvar = _layer_norm_numpy(inp_feat, normalized_shape, affine, weight, bias)
+
+    assert abs(outvar - targetvar).mean() < 1e-7
+
+    # no random, affine True
+    normalized_shape = (28, 28)
+    inp_feat = Tensor(np.ones((32, 64, 28, 28)), dtype="float32")
+    weight = Tensor(np.ones((28, 28)), dtype="float32")
+    bias = Tensor(np.zeros((28, 28)), dtype="float32")
+
+    affine = True
+
+    outvar = F.nn.layer_norm(inp_feat, normalized_shape, affine, weight, bias)
+    targetvar = _layer_norm(inp_feat, normalized_shape, affine, weight, bias)
+    assert abs((outvar - targetvar).mean()) < 1e-7
+    assert abs(outvar.mean()) < 1e-7
+
+
+def test_batchnorm2d_autocast():
+    """check amp's result is equal to manually converted result"""
     amp.enabled = True
-    inp = tensor(np.random.randn(1, 3, 224, 224), dtype=np.float32)
-    weight = tensor(np.ones((1, 3, 1, 1)), dtype=np.float32)
-    bias = tensor(np.zeros((1, 3, 1, 1)), dtype=np.float32)
+    tshape = (1, 3, 224, 224)
+    pshape = (1, 3, 1, 1)
+    inp = tensor(np.random.randn(*tshape), dtype=np.float32)
+    weight = tensor(np.ones(pshape, dtype=np.float32))
+    bias = tensor(np.zeros(pshape, dtype=np.float32))
 
     out = F.batch_norm(inp, weight=weight, bias=bias, training=True, inplace=False)
 
@@ -843,7 +948,6 @@ def test_conv3d():
     inp = tensor(np.ones((2, 2, 4, 4, 4), dtype=np.float32))
     weight = tensor(np.ones((3, 2, 2, 2, 2), dtype=np.float32))
     out = F.conv3d(inp, weight, None, 2, 0, 1, 1)
-    print(out.numpy().shape)
     np.testing.assert_equal(
         out.numpy(), np.ones((2, 3, 2, 2, 2), dtype=np.float32) * 16
     )
@@ -857,6 +961,35 @@ def test_condtake():
     val, idx = F.cond_take(yy, xx)
     np.testing.assert_equal(val.numpy(), x[y])
     np.testing.assert_equal(idx.numpy(), np.where(y.reshape(-1))[0])
+
+
+@pytest.mark.parametrize("is_symbolic", [None, False, True])
+def test_condtake(is_symbolic):
+    shapes = [
+        (3, 3, 3),
+        (0,),
+        (3, 0, 3),
+    ]
+
+    def fn(mask, data):
+        return F.cond_take(mask, data)
+
+    if is_symbolic is not None:
+        fn = jit.trace(symbolic=is_symbolic)(fn)
+
+    for shp in shapes:
+        x_np = np.random.randn(*shp).astype("float32")
+        mask_np = x_np > 0
+        x = tensor(x_np)
+        mask = tensor(mask_np)
+        ref_out = x_np[mask_np]
+        ref_idx = mask_np.flatten().nonzero()[0]
+        for i in range(3):
+            out, idx = fn(mask, x)
+            np.testing.assert_equal(out.numpy(), ref_out)
+            np.testing.assert_equal(idx.numpy(), ref_idx)
+            if is_symbolic is None:
+                break
 
 
 def test_condtake_is_same():
@@ -924,11 +1057,18 @@ def test_cvt_color():
     def rgb2gray(rgb):
         return np.dot(rgb[..., :3], [0.299, 0.587, 0.114])
 
+    def bgr2gray(bgr):
+        return np.dot(bgr[..., :3], [0.114, 0.587, 0.299])
+
     inp = np.random.randn(3, 3, 3, 3).astype(np.float32)
     out = np.expand_dims(rgb2gray(inp), 3).astype(np.float32)
     x = tensor(inp)
     y = F.vision.cvt_color(x, mode="RGB2GRAY")
     np.testing.assert_allclose(y.numpy(), out, atol=1e-5)
+
+    out1 = np.expand_dims(bgr2gray(inp), 3).astype(np.float32)
+    y1 = F.vision.cvt_color(x, mode="BGR2GRAY")
+    np.testing.assert_allclose(y1.numpy(), out1, atol=1e-5)
 
 
 @pytest.mark.parametrize("val", [2, [2,], [2, 3]])
@@ -1028,3 +1168,93 @@ def test_sliding_window_transpose():
         dilation=(dh, dw),
     )
     np.testing.assert_equal(gt_out, out.numpy())
+
+
+def test_pad():
+    src = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], dtype=np.float32)
+    dst = np.pad(src, ((2, 2), (2, 2)), "constant")
+    res = F.nn.pad(tensor(src), ((2, 2), (2, 2)), "CONSTANT")
+    np.testing.assert_allclose(res, dst, atol=1e-5)
+
+    dst = np.pad(src, ((2, 2), (2, 2)), "constant", constant_values=3)
+    res = F.nn.pad(tensor(src), ((2, 2), (2, 2)), "CONSTANT", constant_value=3)
+    np.testing.assert_allclose(res, dst, atol=1e-5)
+
+    dst = np.pad(src, ((2, 2), (2, 2)), "edge")
+    res = F.nn.pad(tensor(src), ((2, 2), (2, 2)), "EDGE")
+    np.testing.assert_allclose(res, dst, atol=1e-5)
+
+    dst = np.pad(src, ((2, 2), (2, 2)), "reflect")
+    res = F.nn.pad(tensor(src), ((2, 2), (2, 2)), "REFLECT")
+    np.testing.assert_allclose(res, dst, atol=1e-5)
+
+
+def pixel_shuffle(data, r):
+    high_dim = data.shape[:-3]
+    data = data.reshape(-1, data.shape[-3], data.shape[-2], data.shape[-1])
+    inn, ic, ih, iw = data.shape
+    res = np.zeros((inn, int(ic / (r * r)), ih * r, iw * r))
+    for n in range(inn):
+        for c in range(ic):
+            for h in range(ih):
+                for w in range(iw):
+                    res[
+                        n,
+                        int(c / r / r),
+                        h * r + int((c % (r * r)) / r),
+                        w * r + c % r,
+                    ] = data[n, c, h, w]
+    if len(high_dim) > 0:
+        res = res.reshape((*high_dim, int(ic / r / r), ih * r, iw * r))
+    else:
+        res = res[0]
+    return res
+
+
+def test_pixel_shuffle():
+    # ndim = 3
+    inp = np.arange(16 * 3 * 3).reshape(16, 3, 3)
+    out = F.pixel_shuffle(tensor(inp), upscale_factor=4)
+    golden = pixel_shuffle(inp, 4)
+    np.testing.assert_equal(out.numpy(), golden)
+
+    # ndim = 4
+    inp = np.arange(3 * 18 * 3 * 3).reshape(3, 18, 3, 3)
+    out = F.pixel_shuffle(tensor(inp), upscale_factor=3)
+    golden = pixel_shuffle(inp, 3)
+    np.testing.assert_equal(out.numpy(), golden)
+
+    # ndim = 5
+    inp = np.arange(5 * 3 * 20 * 3 * 4).reshape(5, 3, 20, 3, 4)
+    out = F.pixel_shuffle(tensor(inp), upscale_factor=2)
+    golden = pixel_shuffle(inp, 2)
+    np.testing.assert_equal(out.numpy(), golden)
+
+    # ndim = 6
+    inp = np.arange(6 * 5 * 3 * 25 * 3 * 4).reshape(6, 5, 3, 25, 3, 4)
+    out = F.pixel_shuffle(tensor(inp), upscale_factor=5)
+    golden = pixel_shuffle(inp, 5)
+    np.testing.assert_equal(out.numpy(), golden)
+
+    # ndim = 7
+    inp = np.arange(2 * 3 * 5 * 3 * 20 * 3 * 4).reshape(2, 3, 5, 3, 20, 3, 4)
+    out = F.pixel_shuffle(tensor(inp), upscale_factor=2)
+    golden = pixel_shuffle(inp, 2)
+    np.testing.assert_equal(out.numpy(), golden)
+
+
+@pytest.mark.parametrize("is_symbolic", [False, True])
+def test_pixel_shuffle_symbolic(is_symbolic):
+    def fn(inp, upscale_factor):
+        return F.pixel_shuffle(inp, upscale_factor=upscale_factor)
+
+    if is_symbolic is not None:
+        fn = jit.trace(symbolic=is_symbolic)(fn)
+
+    inp = tensor(np.arange(3 * 4 * 5 * 5).reshape(3, 4, 5, 5))
+    golden = pixel_shuffle(inp, 2)
+    for _ in range(3):
+        out = fn(inp, 2)
+        np.testing.assert_equal(out.numpy(), golden)
+        if is_symbolic is None:
+            break

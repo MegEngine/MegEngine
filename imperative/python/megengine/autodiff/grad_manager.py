@@ -32,8 +32,7 @@ _global_priority = 0
 
 
 class GradManager:
-    r"""
-    GradManager computes gradients or more generally, vector-Jacobian product, by reverse mode
+    r"""GradManager computes gradients or more generally, vector-Jacobian product, by reverse mode
     automatic differentiation (a.k.a. back propagation).
 
     Reverse mode autodiff normally reuses many intermediate tensors for best computation efficiency.
@@ -120,7 +119,6 @@ class GradManager:
 
         gm = GradManager()
         gm.attach(model.parameters(), callback=dist.make_allreduce_cb("MEAN"))
-
     """
 
     def __init__(self):
@@ -136,8 +134,7 @@ class GradManager:
         return [spec.tensor() for spec in self._attach_specs.values()]
 
     def attach(self, tensors: Iterable[Tensor], callbacks=None):
-        r"""
-        Instruct GradManager to track operations on tensors, so that gradients with respect
+        r"""Instruct GradManager to track operations on tensors, so that gradients with respect
         to those tensors could be evaluated later.
 
         :meth:`attach` also accepts a list of callbacks, which will be called with the tensor and
@@ -188,8 +185,9 @@ class GradManager:
             multiple uses of a GradManager, which is unrelated to whether resources is timely
             released within a single use.
 
-        :param tensors: tensor or list of tensors to track
-        :param callbacks: callback or list of callbacks
+        Args:
+            tensors: tensor or list of tensors to track
+            callbacks: callback or list of callbacks
         """
         if callbacks is None:
             callbacks = []
@@ -234,8 +232,7 @@ class GradManager:
         y: Union[Tensor, List[Tensor]] = None,
         dy: Union[Tensor, List[Tensor]] = None,
     ):
-        r"""
-        Compute gradients (or vector-Jacobian product) for all attached tensors, accumulate to
+        r"""Compute gradients (or vector-Jacobian product) for all attached tensors, accumulate to
         corresponding .grad attribute, and release resources along the way.
 
         :meth:`backward` computes the vector-Jacobian product :math:`dx_j = \sum_{i} dy_i J_{ij}`
@@ -257,8 +254,9 @@ class GradManager:
         process of this call. When the call successfully finishes, the GradManager will be put back
         to an inactive state.
 
-        :param y: tensor or list of tensors
-        :param dy: tensor or list of tensors. Defaults to 1 if y is scalar
+        Args:
+            y: tensor or list of tensors
+            dy: tensor or list of tensors. Defaults to 1 if y is scalar
         """
         push_scope("backward")
         set_option("record_computing_path", 0)
@@ -310,8 +308,7 @@ class GradManager:
         pop_scope("backward")
 
     def record(self):
-        r"""
-        Start recording operations
+        r"""Start recording operations
 
         After this call, you will be able to call :meth:`backward`.
         """
@@ -342,8 +339,7 @@ class GradManager:
         self._grad.wrt(tensor, callback=callback)
 
     def release(self):
-        r"""
-        Stop recording operations and release resources kept for gradient computation
+        r"""Stop recording operations and release resources kept for gradient computation
 
         After this call, you will not be able to call :meth:`backward`.
         """

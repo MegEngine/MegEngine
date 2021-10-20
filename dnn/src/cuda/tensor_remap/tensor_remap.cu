@@ -17,12 +17,11 @@ namespace cuda {
 namespace {
 
 template <typename ctype>
-__global__ void forward_kernel(const ctype* src, const int* map, ctype* dst,
-                               uint32_t sdim, uint32_t ddim,
-                               array_wrapper<int, MEGDNN_MAX_NDIM> sstride,
-                               array_wrapper<int, MEGDNN_MAX_NDIM> dstride,
-                               array_wrapper<uint32_t, MEGDNN_MAX_NDIM> dshape,
-                               uint32_t total) {
+__global__ void forward_kernel(
+        const ctype* src, const int* map, ctype* dst, uint32_t sdim, uint32_t ddim,
+        array_wrapper<int, MEGDNN_MAX_NDIM> sstride,
+        array_wrapper<int, MEGDNN_MAX_NDIM> dstride,
+        array_wrapper<uint32_t, MEGDNN_MAX_NDIM> dshape, uint32_t total) {
     uint32_t didx_cont = threadIdx.x + blockIdx.x * blockDim.x;
     if (didx_cont < total) {
         uint32_t midx = didx_cont * sdim;
@@ -43,10 +42,9 @@ __global__ void forward_kernel(const ctype* src, const int* map, ctype* dst,
 }
 
 template <typename ctype>
-__global__ void fill_zero_kernel(ctype* a, uint32_t dim,
-                                 array_wrapper<int, MEGDNN_MAX_NDIM> stride,
-                                 array_wrapper<uint32_t, MEGDNN_MAX_NDIM> shape,
-                                 uint32_t total) {
+__global__ void fill_zero_kernel(
+        ctype* a, uint32_t dim, array_wrapper<int, MEGDNN_MAX_NDIM> stride,
+        array_wrapper<uint32_t, MEGDNN_MAX_NDIM> shape, uint32_t total) {
     uint32_t idx_cont = threadIdx.x + blockIdx.x * blockDim.x;
     if (idx_cont < total) {
         uint32_t idx = 0u;
@@ -61,12 +59,11 @@ __global__ void fill_zero_kernel(ctype* a, uint32_t dim,
 }
 
 template <typename ctype>
-__global__ void backward_kernel(const ctype* diff, const int* map, ctype* grad,
-                                uint32_t sdim, uint32_t ddim,
-                                array_wrapper<int, MEGDNN_MAX_NDIM> sstride,
-                                array_wrapper<int, MEGDNN_MAX_NDIM> dstride,
-                                array_wrapper<uint32_t, MEGDNN_MAX_NDIM> dshape,
-                                uint32_t total) {
+__global__ void backward_kernel(
+        const ctype* diff, const int* map, ctype* grad, uint32_t sdim, uint32_t ddim,
+        array_wrapper<int, MEGDNN_MAX_NDIM> sstride,
+        array_wrapper<int, MEGDNN_MAX_NDIM> dstride,
+        array_wrapper<uint32_t, MEGDNN_MAX_NDIM> dshape, uint32_t total) {
     uint32_t didx_cont = threadIdx.x + blockIdx.x * blockDim.x;
     if (didx_cont < total) {
         uint32_t midx = didx_cont * sdim;
@@ -88,8 +85,8 @@ __global__ void backward_kernel(const ctype* diff, const int* map, ctype* grad,
 
 template <typename ctype>
 __global__ void backward_kernel_non_overlapping(
-        const ctype* diff, const int* map, ctype* grad, uint32_t sdim,
-        uint32_t ddim, array_wrapper<int, MEGDNN_MAX_NDIM> sstride,
+        const ctype* diff, const int* map, ctype* grad, uint32_t sdim, uint32_t ddim,
+        array_wrapper<int, MEGDNN_MAX_NDIM> sstride,
         array_wrapper<int, MEGDNN_MAX_NDIM> dstride,
         array_wrapper<uint32_t, MEGDNN_MAX_NDIM> dshape, uint32_t total) {
     uint32_t didx_cont = threadIdx.x + blockIdx.x * blockDim.x;
@@ -115,16 +112,15 @@ __global__ void backward_kernel_non_overlapping(
 
 namespace tensor_remap {
 template <typename ctype>
-void forward(const ctype* src, const int* map, ctype* dst, uint32_t sdim,
-             uint32_t ddim, const array_wrapper<int, MEGDNN_MAX_NDIM>& sstride,
-             const array_wrapper<int, MEGDNN_MAX_NDIM>& dstride,
-             const array_wrapper<uint32_t, MEGDNN_MAX_NDIM>& dshape,
-             cudaStream_t stream) {
+void forward(
+        const ctype* src, const int* map, ctype* dst, uint32_t sdim, uint32_t ddim,
+        const array_wrapper<int, MEGDNN_MAX_NDIM>& sstride,
+        const array_wrapper<int, MEGDNN_MAX_NDIM>& dstride,
+        const array_wrapper<uint32_t, MEGDNN_MAX_NDIM>& dshape, cudaStream_t stream) {
     uint32_t total = 1u;
     for (uint32_t i = 0u; i < ddim; ++i)
         total *= dshape.data[i];
-    uint32_t threads =
-            query_blocksize_for_kernel((void*)&forward_kernel<ctype>);
+    uint32_t threads = query_blocksize_for_kernel((void*)&forward_kernel<ctype>);
     uint32_t blocks = DIVUP(total, threads);
     forward_kernel<ctype><<<blocks, threads, 0, stream>>>(
             src, map, dst, sdim, ddim, sstride, dstride, dshape, total);
@@ -132,22 +128,22 @@ void forward(const ctype* src, const int* map, ctype* dst, uint32_t sdim,
 }
 
 template <typename ctype>
-void backward(const ctype* diff, const int* map, ctype* grad, uint32_t sdim,
-              uint32_t ddim, const array_wrapper<int, MEGDNN_MAX_NDIM>& sstride,
-              const array_wrapper<int, MEGDNN_MAX_NDIM>& dstride,
-              const array_wrapper<uint32_t, MEGDNN_MAX_NDIM>& sshape,
-              const array_wrapper<uint32_t, MEGDNN_MAX_NDIM>& dshape,
-              bool is_non_overlapping, cudaStream_t stream) {
+void backward(
+        const ctype* diff, const int* map, ctype* grad, uint32_t sdim, uint32_t ddim,
+        const array_wrapper<int, MEGDNN_MAX_NDIM>& sstride,
+        const array_wrapper<int, MEGDNN_MAX_NDIM>& dstride,
+        const array_wrapper<uint32_t, MEGDNN_MAX_NDIM>& sshape,
+        const array_wrapper<uint32_t, MEGDNN_MAX_NDIM>& dshape, bool is_non_overlapping,
+        cudaStream_t stream) {
     {
         // Fill grad with zeros.
         uint32_t total = 1u;
         for (uint32_t i = 0u; i < sdim; ++i)
             total *= sshape.data[i];
-        uint32_t threads =
-                query_blocksize_for_kernel((void*)&fill_zero_kernel<ctype>);
+        uint32_t threads = query_blocksize_for_kernel((void*)&fill_zero_kernel<ctype>);
         uint32_t blocks = DIVUP(total, threads);
-        fill_zero_kernel<ctype><<<blocks, threads, 0, stream>>>(
-                grad, sdim, sstride, sshape, total);
+        fill_zero_kernel<ctype>
+                <<<blocks, threads, 0, stream>>>(grad, sdim, sstride, sshape, total);
         after_kernel_launch();
     }
     {
@@ -159,35 +155,32 @@ void backward(const ctype* diff, const int* map, ctype* grad, uint32_t sdim,
             uint32_t threads = query_blocksize_for_kernel(
                     (void*)&backward_kernel_non_overlapping<ctype>);
             uint32_t blocks = DIVUP(total, threads);
-            backward_kernel_non_overlapping<ctype>
-                    <<<blocks, threads, 0, stream>>>(diff, map, grad, sdim,
-                                                     ddim, sstride, dstride,
-                                                     dshape, total);
+            backward_kernel_non_overlapping<ctype><<<blocks, threads, 0, stream>>>(
+                    diff, map, grad, sdim, ddim, sstride, dstride, dshape, total);
         } else {
             uint32_t threads =
                     query_blocksize_for_kernel((void*)&backward_kernel<ctype>);
             uint32_t blocks = DIVUP(total, threads);
             backward_kernel<ctype><<<blocks, threads, 0, stream>>>(
-                    diff, map, grad, sdim, ddim, sstride, dstride, dshape,
-                    total);
+                    diff, map, grad, sdim, ddim, sstride, dstride, dshape, total);
         }
         after_kernel_launch();
     }
 }
 
-#define INST(T)                                                                \
-    template void forward<T>(                                                  \
-            const T* src, const int* map, T* dst, uint32_t sdim,               \
-            uint32_t ddim, const array_wrapper<int, MEGDNN_MAX_NDIM>& sstride, \
-            const array_wrapper<int, MEGDNN_MAX_NDIM>& dstride,                \
-            const array_wrapper<uint32_t, MEGDNN_MAX_NDIM>& dshape,            \
-            cudaStream_t stream);                                              \
-    template void backward<T>(                                                 \
-            const T* diff, const int* map, T* grad, uint32_t sdim,             \
-            uint32_t ddim, const array_wrapper<int, MEGDNN_MAX_NDIM>& sstride, \
-            const array_wrapper<int, MEGDNN_MAX_NDIM>& dstride,                \
-            const array_wrapper<uint32_t, MEGDNN_MAX_NDIM>& sshape,            \
-            const array_wrapper<uint32_t, MEGDNN_MAX_NDIM>& dshape,            \
+#define INST(T)                                                                   \
+    template void forward<T>(                                                     \
+            const T* src, const int* map, T* dst, uint32_t sdim, uint32_t ddim,   \
+            const array_wrapper<int, MEGDNN_MAX_NDIM>& sstride,                   \
+            const array_wrapper<int, MEGDNN_MAX_NDIM>& dstride,                   \
+            const array_wrapper<uint32_t, MEGDNN_MAX_NDIM>& dshape,               \
+            cudaStream_t stream);                                                 \
+    template void backward<T>(                                                    \
+            const T* diff, const int* map, T* grad, uint32_t sdim, uint32_t ddim, \
+            const array_wrapper<int, MEGDNN_MAX_NDIM>& sstride,                   \
+            const array_wrapper<int, MEGDNN_MAX_NDIM>& dstride,                   \
+            const array_wrapper<uint32_t, MEGDNN_MAX_NDIM>& sshape,               \
+            const array_wrapper<uint32_t, MEGDNN_MAX_NDIM>& dshape,               \
             bool is_non_overlapping, cudaStream_t stream);
 INST(dt_float32)
 INST(dt_int32)

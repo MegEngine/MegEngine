@@ -29,36 +29,33 @@ using namespace arm_common;
         init_sum = vdupq_n_s16(0);                       \
     }
 
-#define STORE_1_LINE_RESULT(dst, oh, ow, OW, sum)                        \
-    do {                                                                 \
-        dt_int16* dptr =                                                 \
-                reinterpret_cast<dt_int16*>(dst) + (oh)*OW * 4 + ow * 4; \
-        vst1q_s16(dptr, sum[0]);                                         \
-        vst1q_s16(dptr + 8, sum[1]);                                     \
-        vst1q_s16(dptr + 16, sum[2]);                                    \
-        vst1q_s16(dptr + 24, sum[3]);                                    \
+#define STORE_1_LINE_RESULT(dst, oh, ow, OW, sum)                                 \
+    do {                                                                          \
+        dt_int16* dptr = reinterpret_cast<dt_int16*>(dst) + (oh)*OW * 4 + ow * 4; \
+        vst1q_s16(dptr, sum[0]);                                                  \
+        vst1q_s16(dptr + 8, sum[1]);                                              \
+        vst1q_s16(dptr + 16, sum[2]);                                             \
+        vst1q_s16(dptr + 24, sum[3]);                                             \
     } while (0);
 
-#define STORE_1_LINE_4_RESULT(dst, oh, ow, OW, sum)                      \
-    do {                                                                 \
-        dt_int16* dptr =                                                 \
-                reinterpret_cast<dt_int16*>(dst) + (oh)*OW * 4 + ow * 4; \
-        vst1q_s16(dptr, sum[0]);                                         \
-        vst1q_s16(dptr + 8, sum[1]);                                     \
+#define STORE_1_LINE_4_RESULT(dst, oh, ow, OW, sum)                               \
+    do {                                                                          \
+        dt_int16* dptr = reinterpret_cast<dt_int16*>(dst) + (oh)*OW * 4 + ow * 4; \
+        vst1q_s16(dptr, sum[0]);                                                  \
+        vst1q_s16(dptr + 8, sum[1]);                                              \
     } while (0);
 
-#define STORE_REMAIN(dst, oh, ow, OW, sum, remain)                       \
-    do {                                                                 \
-        dt_int16* dptr =                                                 \
-                reinterpret_cast<dt_int16*>(dst) + oh * OW * 4 + ow * 4; \
-        if (remain == 1) {                                               \
-            vst1_s16(dptr, vget_low_s16(sum[0]));                        \
-        } else if (remain == 2) {                                        \
-            vst1q_s16(dptr, sum[0]);                                     \
-        } else if (remain == 3) {                                        \
-            vst1q_s16(dptr, sum[0]);                                     \
-            vst1_s16(dptr + 8, vget_low_s16(sum[1]));                    \
-        }                                                                \
+#define STORE_REMAIN(dst, oh, ow, OW, sum, remain)                                \
+    do {                                                                          \
+        dt_int16* dptr = reinterpret_cast<dt_int16*>(dst) + oh * OW * 4 + ow * 4; \
+        if (remain == 1) {                                                        \
+            vst1_s16(dptr, vget_low_s16(sum[0]));                                 \
+        } else if (remain == 2) {                                                 \
+            vst1q_s16(dptr, sum[0]);                                              \
+        } else if (remain == 3) {                                                 \
+            vst1q_s16(dptr, sum[0]);                                              \
+            vst1_s16(dptr + 8, vget_low_s16(sum[1]));                             \
+        }                                                                         \
     } while (0);
 
 template <BiasMode bias_mode>
@@ -91,15 +88,15 @@ void channel_wise_nchw44_8x8x16::direct_stride1_2x2_int8x8x16(
     _src[1] = vextq_s8(_src[0], _src[2], 4); \
     _src[3] = vextq_s8(_src[2], _src[3], 4);
 
-#define CALC_ONE_LINE_8_RESULT(_sum,_src,_kid0,_kid1)\
-            _sum[0]=vmlal_s8(_sum[0], vget_low_s8(_src[0]),kern[_kid0]);\
-            _sum[1]=vmlal_s8(_sum[1],vget_high_s8(_src[0]),kern[_kid0]);\
-            _sum[2]=vmlal_s8(_sum[2], vget_low_s8(_src[2]),kern[_kid0]);\
-            _sum[3]=vmlal_s8(_sum[3],vget_high_s8(_src[2]),kern[_kid0]);\
-            _sum[0]=vmlal_s8(_sum[0], vget_low_s8(_src[1]),kern[_kid1]);\
-            _sum[1]=vmlal_s8(_sum[1],vget_high_s8(_src[1]),kern[_kid1]);\
-            _sum[2]=vmlal_s8(_sum[2], vget_low_s8(_src[3]),kern[_kid1]);\
-            _sum[3]=vmlal_s8(_sum[3],vget_high_s8(_src[3]),kern[_kid1]);
+#define CALC_ONE_LINE_8_RESULT(_sum, _src, _kid0, _kid1)             \
+    _sum[0] = vmlal_s8(_sum[0], vget_low_s8(_src[0]), kern[_kid0]);  \
+    _sum[1] = vmlal_s8(_sum[1], vget_high_s8(_src[0]), kern[_kid0]); \
+    _sum[2] = vmlal_s8(_sum[2], vget_low_s8(_src[2]), kern[_kid0]);  \
+    _sum[3] = vmlal_s8(_sum[3], vget_high_s8(_src[2]), kern[_kid0]); \
+    _sum[0] = vmlal_s8(_sum[0], vget_low_s8(_src[1]), kern[_kid1]);  \
+    _sum[1] = vmlal_s8(_sum[1], vget_high_s8(_src[1]), kern[_kid1]); \
+    _sum[2] = vmlal_s8(_sum[2], vget_low_s8(_src[3]), kern[_kid1]);  \
+    _sum[3] = vmlal_s8(_sum[3], vget_high_s8(_src[3]), kern[_kid1]);
 
     size_t oh = 0_z;
     for (; oh + 2 <= OH; oh += 2) {
@@ -225,7 +222,6 @@ void channel_wise_nchw44_8x8x16::direct_stride1_2x2_int8x8x16(
             CALC_ONE_LINE_4_RESULT(sum, src[1], 2, 3);
 
             STORE_1_LINE_4_RESULT(dst, oh, ow, OW, sum);
-
         }
 
         if (ow < OW) {
@@ -379,33 +375,33 @@ void channel_wise_nchw44_8x8x16::direct_stride1_3x3_int8x8x16(
 
             int8x16_t src[2][3];
 
-            LOAD_3_SRC(sptr0,src[0]);
-            LOAD_3_SRC(sptr1,src[1]);
+            LOAD_3_SRC(sptr0, src[0]);
+            LOAD_3_SRC(sptr1, src[1]);
 
-            CALC_ONE_LINE(src[0],kern[0],kern[1],kern[2],sum0);//line0
-            CALC_ONE_LINE(src[1],kern[3],kern[4],kern[5],sum0);//line1
-            CALC_ONE_LINE(src[1],kern[0],kern[1],kern[2],sum1);//line1
+            CALC_ONE_LINE(src[0], kern[0], kern[1], kern[2], sum0);  // line0
+            CALC_ONE_LINE(src[1], kern[3], kern[4], kern[5], sum0);  // line1
+            CALC_ONE_LINE(src[1], kern[0], kern[1], kern[2], sum1);  // line1
 
-            LOAD_3_SRC(sptr2,src[0]);//line2
+            LOAD_3_SRC(sptr2, src[0]);  // line2
 
-            CALC_ONE_LINE(src[0],kern[6],kern[7],kern[8],sum0);//line2
+            CALC_ONE_LINE(src[0], kern[6], kern[7], kern[8], sum0);  // line2
             STORE_1_LINE_4_RESULT(dst, oh, ow, OW, sum0)
 
-            CALC_ONE_LINE(src[0],kern[3],kern[4],kern[5],sum1);//line2
-            CALC_ONE_LINE(src[0],kern[0],kern[1],kern[2],sum2);//line2
-            LOAD_3_SRC(sptr3,src[1]);//line3
+            CALC_ONE_LINE(src[0], kern[3], kern[4], kern[5], sum1);  // line2
+            CALC_ONE_LINE(src[0], kern[0], kern[1], kern[2], sum2);  // line2
+            LOAD_3_SRC(sptr3, src[1]);                               // line3
 
-            CALC_ONE_LINE(src[1],kern[6],kern[7],kern[8],sum1);//line3
-            STORE_1_LINE_4_RESULT(dst, (oh+1), ow, OW, sum1)
-            CALC_ONE_LINE(src[1],kern[3],kern[4],kern[5],sum2);//line3
-            LOAD_3_SRC(sptr4,src[0]);
-            CALC_ONE_LINE(src[0],kern[6],kern[7],kern[8],sum2);//line4
-            STORE_1_LINE_4_RESULT(dst, (oh+2), ow, OW, sum2)
+            CALC_ONE_LINE(src[1], kern[6], kern[7], kern[8], sum1);  // line3
+            STORE_1_LINE_4_RESULT(dst, (oh + 1), ow, OW, sum1)
+            CALC_ONE_LINE(src[1], kern[3], kern[4], kern[5], sum2);  // line3
+            LOAD_3_SRC(sptr4, src[0]);
+            CALC_ONE_LINE(src[0], kern[6], kern[7], kern[8], sum2);  // line4
+            STORE_1_LINE_4_RESULT(dst, (oh + 2), ow, OW, sum2)
         }
         if (ow < OW) {
             size_t iw = ow;
             size_t remain = OW - ow;
-            
+
             const int8_t* __restrict sptr0 = sptr + ih * IW * 4 + iw * 4;
             const int8_t* __restrict sptr1 = sptr + (ih + 1) * IW * 4 + iw * 4;
             const int8_t* __restrict sptr2 = sptr + (ih + 2) * IW * 4 + iw * 4;
@@ -420,27 +416,27 @@ void channel_wise_nchw44_8x8x16::direct_stride1_3x3_int8x8x16(
             UNROLL_CALL_NOWRAPPER(2, cb);
 #undef cb
 
-            LOAD_3_SRC(sptr0,src[0]);//line2
-            LOAD_3_SRC(sptr1,src[1]);//line2
+            LOAD_3_SRC(sptr0, src[0]);                               // line2
+            LOAD_3_SRC(sptr1, src[1]);                               // line2
             CALC_ONE_LINE(src[0], kern[0], kern[1], kern[2], sum0);  // line0
-            CALC_ONE_LINE(src[1],kern[3],kern[4],kern[5],sum0);//line1
-            CALC_ONE_LINE(src[1],kern[0],kern[1],kern[2],sum1);//line1
+            CALC_ONE_LINE(src[1], kern[3], kern[4], kern[5], sum0);  // line1
+            CALC_ONE_LINE(src[1], kern[0], kern[1], kern[2], sum1);  // line1
 
-            LOAD_3_SRC(sptr2,src[0]);//line2
+            LOAD_3_SRC(sptr2, src[0]);  // line2
 
-            CALC_ONE_LINE(src[0],kern[6],kern[7],kern[8],sum0);//line2
-            STORE_REMAIN(dst, (oh+0), ow, OW, sum0,remain)
+            CALC_ONE_LINE(src[0], kern[6], kern[7], kern[8], sum0);  // line2
+            STORE_REMAIN(dst, (oh + 0), ow, OW, sum0, remain)
 
-            CALC_ONE_LINE(src[0],kern[3],kern[4],kern[5],sum1);//line2
-            CALC_ONE_LINE(src[0],kern[0],kern[1],kern[2],sum2);//line2
-            LOAD_3_SRC(sptr3,src[1]);//line3
+            CALC_ONE_LINE(src[0], kern[3], kern[4], kern[5], sum1);  // line2
+            CALC_ONE_LINE(src[0], kern[0], kern[1], kern[2], sum2);  // line2
+            LOAD_3_SRC(sptr3, src[1]);                               // line3
 
-            CALC_ONE_LINE(src[1],kern[6],kern[7],kern[8],sum1);//line3
-            STORE_REMAIN(dst, (oh+1), ow, OW, sum1,remain)
-            CALC_ONE_LINE(src[1],kern[3],kern[4],kern[5],sum2);//line3
-            LOAD_3_SRC(sptr4,src[0]);
-            CALC_ONE_LINE(src[0],kern[6],kern[7],kern[8],sum2);//line4
-            STORE_REMAIN(dst, (oh+2), ow, OW, sum2, remain)
+            CALC_ONE_LINE(src[1], kern[6], kern[7], kern[8], sum1);  // line3
+            STORE_REMAIN(dst, (oh + 1), ow, OW, sum1, remain)
+            CALC_ONE_LINE(src[1], kern[3], kern[4], kern[5], sum2);  // line3
+            LOAD_3_SRC(sptr4, src[0]);
+            CALC_ONE_LINE(src[0], kern[6], kern[7], kern[8], sum2);  // line4
+            STORE_REMAIN(dst, (oh + 2), ow, OW, sum2, remain)
         }
     }
     for (; oh < OH; oh++) {
@@ -521,7 +517,7 @@ void channel_wise_nchw44_8x8x16::direct_stride1_3x3_int8x8x16(
             LOAD_3_SRC(sptr2, src[0]);  // line2
 
             CALC_ONE_LINE(src[0], kern[6], kern[7], kern[8], sum00);  // line2
-            STORE_REMAIN(dst, oh, ow, OW, sum00,(OW-ow))
+            STORE_REMAIN(dst, oh, ow, OW, sum00, (OW - ow))
         }
     }
 #undef LOAD_3_SRC
@@ -560,40 +556,39 @@ void channel_wise_nchw44_8x8x16::direct_stride1_5x5_int8x8x16(
     src[6] = vextq_s8(src[4], src[8], 8);  \
     src[7] = vextq_s8(src[4], src[8], 12);
 
+#define CALC_ONE_LINE_4_RESULT(_sum, _src, _kid0, _kid1, _kid2, _kid3, _kid4) \
+    _sum[0] = vmlal_s8(_sum[0], vget_low_s8(_src[0]), kern[_kid0]);           \
+    _sum[1] = vmlal_s8(_sum[1], vget_high_s8(_src[0]), kern[_kid0]);          \
+    _sum[0] = vmlal_s8(_sum[0], vget_low_s8(_src[1]), kern[_kid1]);           \
+    _sum[1] = vmlal_s8(_sum[1], vget_high_s8(_src[1]), kern[_kid1]);          \
+    _sum[0] = vmlal_s8(_sum[0], vget_low_s8(_src[2]), kern[_kid2]);           \
+    _sum[1] = vmlal_s8(_sum[1], vget_high_s8(_src[2]), kern[_kid2]);          \
+    _sum[0] = vmlal_s8(_sum[0], vget_low_s8(_src[3]), kern[_kid3]);           \
+    _sum[1] = vmlal_s8(_sum[1], vget_high_s8(_src[3]), kern[_kid3]);          \
+    _sum[0] = vmlal_s8(_sum[0], vget_low_s8(_src[4]), kern[_kid4]);           \
+    _sum[1] = vmlal_s8(_sum[1], vget_high_s8(_src[4]), kern[_kid4]);
 
-#define CALC_ONE_LINE_4_RESULT(_sum,_src,_kid0,_kid1,_kid2,_kid3,_kid4)\
-            _sum[0]=vmlal_s8(_sum[0], vget_low_s8(_src[0]),kern[_kid0]);\
-            _sum[1]=vmlal_s8(_sum[1],vget_high_s8(_src[0]),kern[_kid0]);\
-            _sum[0]=vmlal_s8(_sum[0], vget_low_s8(_src[1]),kern[_kid1]);\
-            _sum[1]=vmlal_s8(_sum[1],vget_high_s8(_src[1]),kern[_kid1]);\
-            _sum[0]=vmlal_s8(_sum[0], vget_low_s8(_src[2]),kern[_kid2]);\
-            _sum[1]=vmlal_s8(_sum[1],vget_high_s8(_src[2]),kern[_kid2]);\
-            _sum[0]=vmlal_s8(_sum[0], vget_low_s8(_src[3]),kern[_kid3]);\
-            _sum[1]=vmlal_s8(_sum[1],vget_high_s8(_src[3]),kern[_kid3]);\
-            _sum[0]=vmlal_s8(_sum[0], vget_low_s8(_src[4]),kern[_kid4]);\
-            _sum[1]=vmlal_s8(_sum[1],vget_high_s8(_src[4]),kern[_kid4]);
-
-#define CALC_ONE_LINE_8_RESULT(_sum,_src,_kid0,_kid1,_kid2,_kid3,_kid4)\
-            _sum[0]=vmlal_s8(_sum[0], vget_low_s8(_src[0]),kern[_kid0]);\
-            _sum[1]=vmlal_s8(_sum[1],vget_high_s8(_src[0]),kern[_kid0]);\
-            _sum[2]=vmlal_s8(_sum[2], vget_low_s8(_src[4]),kern[_kid0]);\
-            _sum[3]=vmlal_s8(_sum[3],vget_high_s8(_src[4]),kern[_kid0]);\
-            _sum[0]=vmlal_s8(_sum[0], vget_low_s8(_src[1]),kern[_kid1]);\
-            _sum[1]=vmlal_s8(_sum[1],vget_high_s8(_src[1]),kern[_kid1]);\
-            _sum[2]=vmlal_s8(_sum[2], vget_low_s8(_src[5]),kern[_kid1]);\
-            _sum[3]=vmlal_s8(_sum[3],vget_high_s8(_src[5]),kern[_kid1]);\
-            _sum[0]=vmlal_s8(_sum[0], vget_low_s8(_src[2]),kern[_kid2]);\
-            _sum[1]=vmlal_s8(_sum[1],vget_high_s8(_src[2]),kern[_kid2]);\
-            _sum[2]=vmlal_s8(_sum[2], vget_low_s8(_src[6]),kern[_kid2]);\
-            _sum[3]=vmlal_s8(_sum[3],vget_high_s8(_src[6]),kern[_kid2]);\
-            _sum[0]=vmlal_s8(_sum[0], vget_low_s8(_src[3]),kern[_kid3]);\
-            _sum[1]=vmlal_s8(_sum[1],vget_high_s8(_src[3]),kern[_kid3]);\
-            _sum[2]=vmlal_s8(_sum[2], vget_low_s8(_src[7]),kern[_kid3]);\
-            _sum[3]=vmlal_s8(_sum[3],vget_high_s8(_src[7]),kern[_kid3]);\
-            _sum[0]=vmlal_s8(_sum[0], vget_low_s8(_src[4]),kern[_kid4]);\
-            _sum[1]=vmlal_s8(_sum[1],vget_high_s8(_src[4]),kern[_kid4]);\
-            _sum[2]=vmlal_s8(_sum[2], vget_low_s8(_src[8]),kern[_kid4]);\
-            _sum[3]=vmlal_s8(_sum[3],vget_high_s8(_src[8]),kern[_kid4]);
+#define CALC_ONE_LINE_8_RESULT(_sum, _src, _kid0, _kid1, _kid2, _kid3, _kid4) \
+    _sum[0] = vmlal_s8(_sum[0], vget_low_s8(_src[0]), kern[_kid0]);           \
+    _sum[1] = vmlal_s8(_sum[1], vget_high_s8(_src[0]), kern[_kid0]);          \
+    _sum[2] = vmlal_s8(_sum[2], vget_low_s8(_src[4]), kern[_kid0]);           \
+    _sum[3] = vmlal_s8(_sum[3], vget_high_s8(_src[4]), kern[_kid0]);          \
+    _sum[0] = vmlal_s8(_sum[0], vget_low_s8(_src[1]), kern[_kid1]);           \
+    _sum[1] = vmlal_s8(_sum[1], vget_high_s8(_src[1]), kern[_kid1]);          \
+    _sum[2] = vmlal_s8(_sum[2], vget_low_s8(_src[5]), kern[_kid1]);           \
+    _sum[3] = vmlal_s8(_sum[3], vget_high_s8(_src[5]), kern[_kid1]);          \
+    _sum[0] = vmlal_s8(_sum[0], vget_low_s8(_src[2]), kern[_kid2]);           \
+    _sum[1] = vmlal_s8(_sum[1], vget_high_s8(_src[2]), kern[_kid2]);          \
+    _sum[2] = vmlal_s8(_sum[2], vget_low_s8(_src[6]), kern[_kid2]);           \
+    _sum[3] = vmlal_s8(_sum[3], vget_high_s8(_src[6]), kern[_kid2]);          \
+    _sum[0] = vmlal_s8(_sum[0], vget_low_s8(_src[3]), kern[_kid3]);           \
+    _sum[1] = vmlal_s8(_sum[1], vget_high_s8(_src[3]), kern[_kid3]);          \
+    _sum[2] = vmlal_s8(_sum[2], vget_low_s8(_src[7]), kern[_kid3]);           \
+    _sum[3] = vmlal_s8(_sum[3], vget_high_s8(_src[7]), kern[_kid3]);          \
+    _sum[0] = vmlal_s8(_sum[0], vget_low_s8(_src[4]), kern[_kid4]);           \
+    _sum[1] = vmlal_s8(_sum[1], vget_high_s8(_src[4]), kern[_kid4]);          \
+    _sum[2] = vmlal_s8(_sum[2], vget_low_s8(_src[8]), kern[_kid4]);           \
+    _sum[3] = vmlal_s8(_sum[3], vget_high_s8(_src[8]), kern[_kid4]);
 
     size_t oh = 0_z;
     for (; oh + 2 <= OH; oh += 2) {
@@ -617,27 +612,27 @@ void channel_wise_nchw44_8x8x16::direct_stride1_5x5_int8x8x16(
 
             UNROLL_CALL_NOWRAPPER(4, cb);
 #undef cb
-            
-            LOAD_1_LINE_10_SRC(sptr0,src[0]);
-            LOAD_1_LINE_10_SRC(sptr1,src[1]);
 
-            CALC_ONE_LINE_8_RESULT(sum[0],src[0],0,1,2,3,4);
-            LOAD_1_LINE_10_SRC(sptr2,src[0]);//line2
-            CALC_ONE_LINE_8_RESULT(sum[0],src[1],5,6,7,8,9);//line1
-            CALC_ONE_LINE_8_RESULT(sum[1],src[1],0,1,2,3,4);//line1
-            LOAD_1_LINE_10_SRC(sptr3,src[1]);//line3
-            CALC_ONE_LINE_8_RESULT(sum[0],src[0],10,11,12,13,14);//line2
-            CALC_ONE_LINE_8_RESULT(sum[1],src[0],5,6,7,8,9);//line2
-            LOAD_1_LINE_10_SRC(sptr4,src[0]);//line4
-            CALC_ONE_LINE_8_RESULT(sum[0],src[1],15,16,17,18,19);//line3
-            CALC_ONE_LINE_8_RESULT(sum[1],src[1],10,11,12,13,14);//line3
-            LOAD_1_LINE_10_SRC(sptr5,src[1]);//line5
-            CALC_ONE_LINE_8_RESULT(sum[0],src[0],20,21,22,23,24);//line4
-            CALC_ONE_LINE_8_RESULT(sum[1],src[0],15,16,17,18,19);//line3
-            CALC_ONE_LINE_8_RESULT(sum[1],src[1],20,21,22,23,24);//line3
+            LOAD_1_LINE_10_SRC(sptr0, src[0]);
+            LOAD_1_LINE_10_SRC(sptr1, src[1]);
 
-            STORE_1_LINE_RESULT(dst,oh,ow,OW,sum[0]);
-            STORE_1_LINE_RESULT(dst,(oh+1),ow,OW,sum[1]);
+            CALC_ONE_LINE_8_RESULT(sum[0], src[0], 0, 1, 2, 3, 4);
+            LOAD_1_LINE_10_SRC(sptr2, src[0]);                           // line2
+            CALC_ONE_LINE_8_RESULT(sum[0], src[1], 5, 6, 7, 8, 9);       // line1
+            CALC_ONE_LINE_8_RESULT(sum[1], src[1], 0, 1, 2, 3, 4);       // line1
+            LOAD_1_LINE_10_SRC(sptr3, src[1]);                           // line3
+            CALC_ONE_LINE_8_RESULT(sum[0], src[0], 10, 11, 12, 13, 14);  // line2
+            CALC_ONE_LINE_8_RESULT(sum[1], src[0], 5, 6, 7, 8, 9);       // line2
+            LOAD_1_LINE_10_SRC(sptr4, src[0]);                           // line4
+            CALC_ONE_LINE_8_RESULT(sum[0], src[1], 15, 16, 17, 18, 19);  // line3
+            CALC_ONE_LINE_8_RESULT(sum[1], src[1], 10, 11, 12, 13, 14);  // line3
+            LOAD_1_LINE_10_SRC(sptr5, src[1]);                           // line5
+            CALC_ONE_LINE_8_RESULT(sum[0], src[0], 20, 21, 22, 23, 24);  // line4
+            CALC_ONE_LINE_8_RESULT(sum[1], src[0], 15, 16, 17, 18, 19);  // line3
+            CALC_ONE_LINE_8_RESULT(sum[1], src[1], 20, 21, 22, 23, 24);  // line3
+
+            STORE_1_LINE_RESULT(dst, oh, ow, OW, sum[0]);
+            STORE_1_LINE_RESULT(dst, (oh + 1), ow, OW, sum[1]);
         }
 #endif
         for (; ow + 4 <= OW; ow += 4) {
@@ -658,27 +653,26 @@ void channel_wise_nchw44_8x8x16::direct_stride1_5x5_int8x8x16(
             UNROLL_CALL_NOWRAPPER(2, cb);
 #undef cb
 
-            
-            LOAD_1_LINE_SRC(sptr0,src[0]);
-            LOAD_1_LINE_SRC(sptr1,src[1]);
+            LOAD_1_LINE_SRC(sptr0, src[0]);
+            LOAD_1_LINE_SRC(sptr1, src[1]);
 
-            CALC_ONE_LINE_4_RESULT(sum[0],src[0],0,1,2,3,4);
-            LOAD_1_LINE_SRC(sptr2,src[0]);//line2
-            CALC_ONE_LINE_4_RESULT(sum[0],src[1],5,6,7,8,9);//line1
-            CALC_ONE_LINE_4_RESULT(sum[1],src[1],0,1,2,3,4);//line1
-            LOAD_1_LINE_SRC(sptr3,src[1]);//line3
-            CALC_ONE_LINE_4_RESULT(sum[0],src[0],10,11,12,13,14);//line2
-            CALC_ONE_LINE_4_RESULT(sum[1],src[0],5,6,7,8,9);//line2
-            LOAD_1_LINE_SRC(sptr4,src[0]);//line4
-            CALC_ONE_LINE_4_RESULT(sum[0],src[1],15,16,17,18,19);//line3
-            CALC_ONE_LINE_4_RESULT(sum[1],src[1],10,11,12,13,14);//line3
-            LOAD_1_LINE_SRC(sptr5,src[1]);//line5
-            CALC_ONE_LINE_4_RESULT(sum[0],src[0],20,21,22,23,24);//line4
-            CALC_ONE_LINE_4_RESULT(sum[1],src[0],15,16,17,18,19);//line3
-            CALC_ONE_LINE_4_RESULT(sum[1],src[1],20,21,22,23,24);//line3
+            CALC_ONE_LINE_4_RESULT(sum[0], src[0], 0, 1, 2, 3, 4);
+            LOAD_1_LINE_SRC(sptr2, src[0]);                              // line2
+            CALC_ONE_LINE_4_RESULT(sum[0], src[1], 5, 6, 7, 8, 9);       // line1
+            CALC_ONE_LINE_4_RESULT(sum[1], src[1], 0, 1, 2, 3, 4);       // line1
+            LOAD_1_LINE_SRC(sptr3, src[1]);                              // line3
+            CALC_ONE_LINE_4_RESULT(sum[0], src[0], 10, 11, 12, 13, 14);  // line2
+            CALC_ONE_LINE_4_RESULT(sum[1], src[0], 5, 6, 7, 8, 9);       // line2
+            LOAD_1_LINE_SRC(sptr4, src[0]);                              // line4
+            CALC_ONE_LINE_4_RESULT(sum[0], src[1], 15, 16, 17, 18, 19);  // line3
+            CALC_ONE_LINE_4_RESULT(sum[1], src[1], 10, 11, 12, 13, 14);  // line3
+            LOAD_1_LINE_SRC(sptr5, src[1]);                              // line5
+            CALC_ONE_LINE_4_RESULT(sum[0], src[0], 20, 21, 22, 23, 24);  // line4
+            CALC_ONE_LINE_4_RESULT(sum[1], src[0], 15, 16, 17, 18, 19);  // line3
+            CALC_ONE_LINE_4_RESULT(sum[1], src[1], 20, 21, 22, 23, 24);  // line3
 
-            STORE_1_LINE_4_RESULT(dst,oh,ow,OW,sum[0]);
-            STORE_1_LINE_4_RESULT(dst,(oh+1),ow,OW,sum[1]);
+            STORE_1_LINE_4_RESULT(dst, oh, ow, OW, sum[0]);
+            STORE_1_LINE_4_RESULT(dst, (oh + 1), ow, OW, sum[1]);
         }
         if (ow < OW) {
             size_t remain = OW - ow;
@@ -689,7 +683,7 @@ void channel_wise_nchw44_8x8x16::direct_stride1_5x5_int8x8x16(
             const int8_t* __restrict sptr3 = sptr2 + IW * 4;
             const int8_t* __restrict sptr4 = sptr3 + IW * 4;
             const int8_t* __restrict sptr5 = sptr4 + IW * 4;
-            
+
             int16x8_t sum[2][2];
             int8x16_t src[2][5];
 #define cb(j)             \
@@ -698,26 +692,26 @@ void channel_wise_nchw44_8x8x16::direct_stride1_5x5_int8x8x16(
 
             UNROLL_CALL_NOWRAPPER(2, cb);
 #undef cb
-            LOAD_1_LINE_SRC(sptr0,src[0]);
-            LOAD_1_LINE_SRC(sptr1,src[1]);
+            LOAD_1_LINE_SRC(sptr0, src[0]);
+            LOAD_1_LINE_SRC(sptr1, src[1]);
 
-            CALC_ONE_LINE_4_RESULT(sum[0],src[0],0,1,2,3,4);
-            LOAD_1_LINE_SRC(sptr2,src[0]);//line2
-            CALC_ONE_LINE_4_RESULT(sum[0],src[1],5,6,7,8,9);//line1
-            CALC_ONE_LINE_4_RESULT(sum[1],src[1],0,1,2,3,4);//line1
-            LOAD_1_LINE_SRC(sptr3,src[1]);//line3
-            CALC_ONE_LINE_4_RESULT(sum[0],src[0],10,11,12,13,14);//line2
-            CALC_ONE_LINE_4_RESULT(sum[1],src[0],5,6,7,8,9);//line2
-            LOAD_1_LINE_SRC(sptr4,src[0]);//line4
-            CALC_ONE_LINE_4_RESULT(sum[0],src[1],15,16,17,18,19);//line3
-            CALC_ONE_LINE_4_RESULT(sum[1],src[1],10,11,12,13,14);//line3
-            LOAD_1_LINE_SRC(sptr5,src[1]);//line5
-            CALC_ONE_LINE_4_RESULT(sum[0],src[0],20,21,22,23,24);//line4
-            CALC_ONE_LINE_4_RESULT(sum[1],src[0],15,16,17,18,19);//line3
-            CALC_ONE_LINE_4_RESULT(sum[1],src[1],20,21,22,23,24);//line3
+            CALC_ONE_LINE_4_RESULT(sum[0], src[0], 0, 1, 2, 3, 4);
+            LOAD_1_LINE_SRC(sptr2, src[0]);                              // line2
+            CALC_ONE_LINE_4_RESULT(sum[0], src[1], 5, 6, 7, 8, 9);       // line1
+            CALC_ONE_LINE_4_RESULT(sum[1], src[1], 0, 1, 2, 3, 4);       // line1
+            LOAD_1_LINE_SRC(sptr3, src[1]);                              // line3
+            CALC_ONE_LINE_4_RESULT(sum[0], src[0], 10, 11, 12, 13, 14);  // line2
+            CALC_ONE_LINE_4_RESULT(sum[1], src[0], 5, 6, 7, 8, 9);       // line2
+            LOAD_1_LINE_SRC(sptr4, src[0]);                              // line4
+            CALC_ONE_LINE_4_RESULT(sum[0], src[1], 15, 16, 17, 18, 19);  // line3
+            CALC_ONE_LINE_4_RESULT(sum[1], src[1], 10, 11, 12, 13, 14);  // line3
+            LOAD_1_LINE_SRC(sptr5, src[1]);                              // line5
+            CALC_ONE_LINE_4_RESULT(sum[0], src[0], 20, 21, 22, 23, 24);  // line4
+            CALC_ONE_LINE_4_RESULT(sum[1], src[0], 15, 16, 17, 18, 19);  // line3
+            CALC_ONE_LINE_4_RESULT(sum[1], src[1], 20, 21, 22, 23, 24);  // line3
 
-            STORE_REMAIN(dst,oh,ow,OW,sum[0],remain);
-            STORE_REMAIN(dst,(oh+1),ow,OW,sum[1],remain);
+            STORE_REMAIN(dst, oh, ow, OW, sum[0], remain);
+            STORE_REMAIN(dst, (oh + 1), ow, OW, sum[1], remain);
         }
     }
     for (; oh < OH; oh++) {
@@ -738,19 +732,19 @@ void channel_wise_nchw44_8x8x16::direct_stride1_5x5_int8x8x16(
 
             UNROLL_CALL_NOWRAPPER(4, cb);
 #undef cb
-            LOAD_1_LINE_10_SRC(sptr0,src[0]);
-            LOAD_1_LINE_10_SRC(sptr1,src[1]);
+            LOAD_1_LINE_10_SRC(sptr0, src[0]);
+            LOAD_1_LINE_10_SRC(sptr1, src[1]);
 
-            CALC_ONE_LINE_8_RESULT(sum,src[0],0,1,2,3,4);
-            LOAD_1_LINE_10_SRC(sptr2,src[0]);//line2
-            CALC_ONE_LINE_8_RESULT(sum,src[1],5,6,7,8,9);//line1
-            LOAD_1_LINE_10_SRC(sptr3,src[1]);//line3
-            CALC_ONE_LINE_8_RESULT(sum,src[0],10,11,12,13,14);//line2
-            LOAD_1_LINE_10_SRC(sptr4,src[0]);//line4
-            CALC_ONE_LINE_8_RESULT(sum,src[1],15,16,17,18,19);//line3
-            CALC_ONE_LINE_8_RESULT(sum,src[0],20,21,22,23,24);//line4
+            CALC_ONE_LINE_8_RESULT(sum, src[0], 0, 1, 2, 3, 4);
+            LOAD_1_LINE_10_SRC(sptr2, src[0]);                        // line2
+            CALC_ONE_LINE_8_RESULT(sum, src[1], 5, 6, 7, 8, 9);       // line1
+            LOAD_1_LINE_10_SRC(sptr3, src[1]);                        // line3
+            CALC_ONE_LINE_8_RESULT(sum, src[0], 10, 11, 12, 13, 14);  // line2
+            LOAD_1_LINE_10_SRC(sptr4, src[0]);                        // line4
+            CALC_ONE_LINE_8_RESULT(sum, src[1], 15, 16, 17, 18, 19);  // line3
+            CALC_ONE_LINE_8_RESULT(sum, src[0], 20, 21, 22, 23, 24);  // line4
 
-            STORE_1_LINE_RESULT(dst,oh,ow,OW,sum);
+            STORE_1_LINE_RESULT(dst, oh, ow, OW, sum);
         }
 #endif
         for (; ow + 4 <= OW; ow += 4) {
@@ -763,24 +757,23 @@ void channel_wise_nchw44_8x8x16::direct_stride1_5x5_int8x8x16(
 
             int16x8_t sum[2];
             int8x16_t src[2][5];
-            sum[0]=init_sum;
-            sum[1]=init_sum;
+            sum[0] = init_sum;
+            sum[1] = init_sum;
 
-            
-            LOAD_1_LINE_SRC(sptr0,src[0]);
-            LOAD_1_LINE_SRC(sptr1,src[1]);
+            LOAD_1_LINE_SRC(sptr0, src[0]);
+            LOAD_1_LINE_SRC(sptr1, src[1]);
 
-            CALC_ONE_LINE_4_RESULT(sum,src[0],0,1,2,3,4);
-            LOAD_1_LINE_SRC(sptr2,src[0]);//line2
-            CALC_ONE_LINE_4_RESULT(sum,src[1],5,6,7,8,9);//line1
-            LOAD_1_LINE_SRC(sptr3,src[1]);//line3
-            CALC_ONE_LINE_4_RESULT(sum,src[0],10,11,12,13,14);//line2
-            LOAD_1_LINE_SRC(sptr4,src[0]);//line4
-            CALC_ONE_LINE_4_RESULT(sum,src[1],15,16,17,18,19);//line3
-            CALC_ONE_LINE_4_RESULT(sum,src[0],20,21,22,23,24);//line4
+            CALC_ONE_LINE_4_RESULT(sum, src[0], 0, 1, 2, 3, 4);
+            LOAD_1_LINE_SRC(sptr2, src[0]);                           // line2
+            CALC_ONE_LINE_4_RESULT(sum, src[1], 5, 6, 7, 8, 9);       // line1
+            LOAD_1_LINE_SRC(sptr3, src[1]);                           // line3
+            CALC_ONE_LINE_4_RESULT(sum, src[0], 10, 11, 12, 13, 14);  // line2
+            LOAD_1_LINE_SRC(sptr4, src[0]);                           // line4
+            CALC_ONE_LINE_4_RESULT(sum, src[1], 15, 16, 17, 18, 19);  // line3
+            CALC_ONE_LINE_4_RESULT(sum, src[0], 20, 21, 22, 23, 24);  // line4
 
-            STORE_1_LINE_4_RESULT(dst,oh,ow,OW,sum);
-            }
+            STORE_1_LINE_4_RESULT(dst, oh, ow, OW, sum);
+        }
         if (ow < OW) {
             size_t remain = OW - ow;
             size_t iw = ow;
@@ -791,21 +784,21 @@ void channel_wise_nchw44_8x8x16::direct_stride1_5x5_int8x8x16(
             const int8_t* __restrict sptr4 = sptr3 + IW * 4;
             int16x8_t sum[2];
             int8x16_t src[2][5];
-            sum[0]=init_sum;
-            sum[1]=init_sum;
-            
-            LOAD_1_LINE_SRC(sptr0,src[0]);
-            LOAD_1_LINE_SRC(sptr1,src[1]);
+            sum[0] = init_sum;
+            sum[1] = init_sum;
 
-            CALC_ONE_LINE_4_RESULT(sum,src[0],0,1,2,3,4);
-            LOAD_1_LINE_SRC(sptr2,src[0]);//line2
-            CALC_ONE_LINE_4_RESULT(sum,src[1],5,6,7,8,9);//line1
-            LOAD_1_LINE_SRC(sptr3,src[1]);//line3
-            CALC_ONE_LINE_4_RESULT(sum,src[0],10,11,12,13,14);//line2
-            LOAD_1_LINE_SRC(sptr4,src[0]);//line4
-            CALC_ONE_LINE_4_RESULT(sum,src[1],15,16,17,18,19);//line3
-            CALC_ONE_LINE_4_RESULT(sum,src[0],20,21,22,23,24);//line4
-            STORE_REMAIN(dst,oh,ow,OW,sum,remain);
+            LOAD_1_LINE_SRC(sptr0, src[0]);
+            LOAD_1_LINE_SRC(sptr1, src[1]);
+
+            CALC_ONE_LINE_4_RESULT(sum, src[0], 0, 1, 2, 3, 4);
+            LOAD_1_LINE_SRC(sptr2, src[0]);                           // line2
+            CALC_ONE_LINE_4_RESULT(sum, src[1], 5, 6, 7, 8, 9);       // line1
+            LOAD_1_LINE_SRC(sptr3, src[1]);                           // line3
+            CALC_ONE_LINE_4_RESULT(sum, src[0], 10, 11, 12, 13, 14);  // line2
+            LOAD_1_LINE_SRC(sptr4, src[0]);                           // line4
+            CALC_ONE_LINE_4_RESULT(sum, src[1], 15, 16, 17, 18, 19);  // line3
+            CALC_ONE_LINE_4_RESULT(sum, src[0], 20, 21, 22, 23, 24);  // line4
+            STORE_REMAIN(dst, oh, ow, OW, sum, remain);
         }
     }
 #undef LOAD_1_LINE_SRC
@@ -821,13 +814,13 @@ void channel_wise_nchw44_8x8x16::direct_stride2_2x2_int8x8x16(
     MEGDNN_MARK_USED_VAR(IH);
     const int16_t* __restrict bptr = bias;
     INIT_SUM();
-const int* fptr = reinterpret_cast<const int*>(filter);
+    const int* fptr = reinterpret_cast<const int*>(filter);
     int8x8_t kern[4];
 #define cb(i) kern[i] = vreinterpret_s8_s32(vld1_dup_s32(fptr + i));
     UNROLL_CALL_NOWRAPPER(4, cb);
 #undef cb
 
-#define CALC_ONE_LINE_8_RESULT(_sum, _rowid, _kid0, _kid1)           \
+#define CALC_ONE_LINE_8_RESULT(_sum, _rowid, _kid0, _kid1)                  \
     _sum[0] = vmlal_s8(_sum[0], vget_low_s8(row##_rowid##0), kern[_kid0]);  \
     _sum[1] = vmlal_s8(_sum[1], vget_high_s8(row##_rowid##0), kern[_kid0]); \
     _sum[2] = vmlal_s8(_sum[2], vget_low_s8(row##_rowid##2), kern[_kid0]);  \
@@ -837,11 +830,11 @@ const int* fptr = reinterpret_cast<const int*>(filter);
     _sum[2] = vmlal_s8(_sum[2], vget_low_s8(row##_rowid##3), kern[_kid1]);  \
     _sum[3] = vmlal_s8(_sum[3], vget_high_s8(row##_rowid##3), kern[_kid1]);
 
-#define CALC_ONE_LINE_4_RESULT(_sum, _rowid, _kid0, _kid1)           \
+#define CALC_ONE_LINE_4_RESULT(_sum, _rowid, _kid0, _kid1)                  \
     _sum[0] = vmlal_s8(_sum[0], vget_low_s8(row##_rowid##0), kern[_kid0]);  \
     _sum[1] = vmlal_s8(_sum[1], vget_high_s8(row##_rowid##0), kern[_kid0]); \
     _sum[0] = vmlal_s8(_sum[0], vget_low_s8(row##_rowid##1), kern[_kid1]);  \
-    _sum[1] = vmlal_s8(_sum[1], vget_high_s8(row##_rowid##1), kern[_kid1]); 
+    _sum[1] = vmlal_s8(_sum[1], vget_high_s8(row##_rowid##1), kern[_kid1]);
 
     size_t oh = 0_z;
     for (; oh + 2 <= OH; oh += 2) {
@@ -861,32 +854,31 @@ const int* fptr = reinterpret_cast<const int*>(filter);
     sum[1][i] = init_sum;
             UNROLL_CALL_NOWRAPPER(4, cb);
 #undef cb
-#define cb(i)\
-const int32_t* tmp_sptr##i = reinterpret_cast<const int32_t*>(sptr##i);
+#define cb(i) const int32_t* tmp_sptr##i = reinterpret_cast<const int32_t*>(sptr##i);
 
-            UNROLL_CALL_NOWRAPPER(4,cb)
+            UNROLL_CALL_NOWRAPPER(4, cb)
 #undef cb
 
-#define cb(i)\
-           int32x4x2_t tmp_row##i##_00 = vld2q_s32(tmp_sptr##i);\
-           int32x4x2_t tmp_row##i##_01 = vld2q_s32(tmp_sptr##i+8);
+#define cb(i)                                             \
+    int32x4x2_t tmp_row##i##_00 = vld2q_s32(tmp_sptr##i); \
+    int32x4x2_t tmp_row##i##_01 = vld2q_s32(tmp_sptr##i + 8);
 
-            UNROLL_CALL_NOWRAPPER(4,cb)
+            UNROLL_CALL_NOWRAPPER(4, cb)
 #undef cb
 
-#define cb(i)\
-            int8x16_t row##i##0 =vreinterpretq_s8_s32(tmp_row##i##_00.val[0]);\
-            int8x16_t row##i##1 =vreinterpretq_s8_s32(tmp_row##i##_00.val[1]);\
-            int8x16_t row##i##2 =vreinterpretq_s8_s32(tmp_row##i##_01.val[0]);\
-            int8x16_t row##i##3 =vreinterpretq_s8_s32(tmp_row##i##_01.val[1]);
+#define cb(i)                                                           \
+    int8x16_t row##i##0 = vreinterpretq_s8_s32(tmp_row##i##_00.val[0]); \
+    int8x16_t row##i##1 = vreinterpretq_s8_s32(tmp_row##i##_00.val[1]); \
+    int8x16_t row##i##2 = vreinterpretq_s8_s32(tmp_row##i##_01.val[0]); \
+    int8x16_t row##i##3 = vreinterpretq_s8_s32(tmp_row##i##_01.val[1]);
 
-            UNROLL_CALL_NOWRAPPER(4,cb)
+            UNROLL_CALL_NOWRAPPER(4, cb)
 #undef cb
 
-            CALC_ONE_LINE_8_RESULT(sum[0],0,0,1);
-            CALC_ONE_LINE_8_RESULT(sum[0],1,2,3);
-            CALC_ONE_LINE_8_RESULT(sum[1],2,0,1);
-            CALC_ONE_LINE_8_RESULT(sum[1],3,2,3);
+            CALC_ONE_LINE_8_RESULT(sum[0], 0, 0, 1);
+            CALC_ONE_LINE_8_RESULT(sum[0], 1, 2, 3);
+            CALC_ONE_LINE_8_RESULT(sum[1], 2, 0, 1);
+            CALC_ONE_LINE_8_RESULT(sum[1], 3, 2, 3);
             STORE_1_LINE_RESULT(dst, oh, ow, OW, sum[0]);
             STORE_1_LINE_RESULT(dst, (oh + 1), ow, OW, sum[1]);
         }
@@ -904,29 +896,27 @@ const int32_t* tmp_sptr##i = reinterpret_cast<const int32_t*>(sptr##i);
             UNROLL_CALL_NOWRAPPER(2, cb);
 #undef cb
 
-#define cb(i) \
-    const int32_t* tmp_sptr##i = reinterpret_cast<const int32_t*>(sptr##i);
+#define cb(i) const int32_t* tmp_sptr##i = reinterpret_cast<const int32_t*>(sptr##i);
 
             UNROLL_CALL_NOWRAPPER(4, cb);
 #undef cb
 
-#define cb(i)\
-            int32x4x2_t tmp_row##i = vld2q_s32(tmp_sptr##i);
+#define cb(i) int32x4x2_t tmp_row##i = vld2q_s32(tmp_sptr##i);
 
             UNROLL_CALL_NOWRAPPER(4, cb);
 #undef cb
 
-#define cb(i)\
-           int8x16_t row##i##0 =vreinterpretq_s8_s32(tmp_row##i.val[0]);\
-           int8x16_t row##i##1 =vreinterpretq_s8_s32(tmp_row##i.val[1]);\
+#define cb(i)                                                      \
+    int8x16_t row##i##0 = vreinterpretq_s8_s32(tmp_row##i.val[0]); \
+    int8x16_t row##i##1 = vreinterpretq_s8_s32(tmp_row##i.val[1]);
 
             UNROLL_CALL_NOWRAPPER(4, cb);
 #undef cb
-            CALC_ONE_LINE_4_RESULT(sum[0],0,0,1);
-            CALC_ONE_LINE_4_RESULT(sum[0],1,2,3);
+            CALC_ONE_LINE_4_RESULT(sum[0], 0, 0, 1);
+            CALC_ONE_LINE_4_RESULT(sum[0], 1, 2, 3);
 
-            CALC_ONE_LINE_4_RESULT(sum[1],2,0,1);
-            CALC_ONE_LINE_4_RESULT(sum[1],3,2,3);
+            CALC_ONE_LINE_4_RESULT(sum[1], 2, 0, 1);
+            CALC_ONE_LINE_4_RESULT(sum[1], 3, 2, 3);
             STORE_1_LINE_4_RESULT(dst, oh, ow, OW, sum[0]);
             STORE_1_LINE_4_RESULT(dst, (oh + 1), ow, OW, sum[1]);
         }
@@ -944,8 +934,7 @@ const int32_t* tmp_sptr##i = reinterpret_cast<const int32_t*>(sptr##i);
     sum[1][i] = init_sum;
             UNROLL_CALL_NOWRAPPER(2, cb);
 #undef cb
-#define cb(i) \
-    const int32_t* tmp_sptr##i = reinterpret_cast<const int32_t*>(sptr##i);
+#define cb(i) const int32_t* tmp_sptr##i = reinterpret_cast<const int32_t*>(sptr##i);
 
             UNROLL_CALL_NOWRAPPER(4, cb);
 #undef cb
@@ -955,20 +944,20 @@ const int32_t* tmp_sptr##i = reinterpret_cast<const int32_t*>(sptr##i);
             UNROLL_CALL_NOWRAPPER(4, cb);
 #undef cb
 
-#define cb(i)\
-           int8x16_t row##i##0 =vreinterpretq_s8_s32(tmp_row##i.val[0]);\
-           int8x16_t row##i##1 =vreinterpretq_s8_s32(tmp_row##i.val[1]);\
+#define cb(i)                                                      \
+    int8x16_t row##i##0 = vreinterpretq_s8_s32(tmp_row##i.val[0]); \
+    int8x16_t row##i##1 = vreinterpretq_s8_s32(tmp_row##i.val[1]);
 
             UNROLL_CALL_NOWRAPPER(4, cb);
 #undef cb
-            CALC_ONE_LINE_4_RESULT(sum[0],0,0,1);
-            CALC_ONE_LINE_4_RESULT(sum[0],1,2,3);
+            CALC_ONE_LINE_4_RESULT(sum[0], 0, 0, 1);
+            CALC_ONE_LINE_4_RESULT(sum[0], 1, 2, 3);
 
-            CALC_ONE_LINE_4_RESULT(sum[1],2,0,1);
-            CALC_ONE_LINE_4_RESULT(sum[1],3,2,3);
+            CALC_ONE_LINE_4_RESULT(sum[1], 2, 0, 1);
+            CALC_ONE_LINE_4_RESULT(sum[1], 3, 2, 3);
 
-            STORE_REMAIN(dst, (oh+0), ow, OW, sum[0], remain);
-            STORE_REMAIN(dst, (oh+1), ow, OW, sum[1], remain);
+            STORE_REMAIN(dst, (oh + 0), ow, OW, sum[0], remain);
+            STORE_REMAIN(dst, (oh + 1), ow, OW, sum[1], remain);
         }
     }
     for (; oh < OH; oh++) {
@@ -980,8 +969,7 @@ const int32_t* tmp_sptr##i = reinterpret_cast<const int32_t*>(sptr##i);
             const int8_t* __restrict sptr0 = src + ih * IW * 4 + iw * 4;
             const int8_t* __restrict sptr1 = src + (ih + 1) * IW * 4 + iw * 4;
             int16x8_t sum[4] = {init_sum, init_sum, init_sum, init_sum};
-#define cb(i) \
-    const int32_t* tmp_sptr##i = reinterpret_cast<const int32_t*>(sptr##i);
+#define cb(i) const int32_t* tmp_sptr##i = reinterpret_cast<const int32_t*>(sptr##i);
 
             UNROLL_CALL_NOWRAPPER(2, cb)
 #undef cb
@@ -1011,9 +999,8 @@ const int32_t* tmp_sptr##i = reinterpret_cast<const int32_t*>(sptr##i);
             size_t iw = ow * 2;
             const int8_t* __restrict sptr0 = src + ih * IW * 4 + iw * 4;
             const int8_t* __restrict sptr1 = src + (ih + 1) * IW * 4 + iw * 4;
-            int16x8_t sum[2]={init_sum,init_sum};
-#define cb(i) \
-    const int32_t* tmp_sptr##i = reinterpret_cast<const int32_t*>(sptr##i);
+            int16x8_t sum[2] = {init_sum, init_sum};
+#define cb(i) const int32_t* tmp_sptr##i = reinterpret_cast<const int32_t*>(sptr##i);
 
             UNROLL_CALL_NOWRAPPER(2, cb);
 #undef cb
@@ -1023,14 +1010,14 @@ const int32_t* tmp_sptr##i = reinterpret_cast<const int32_t*>(sptr##i);
             UNROLL_CALL_NOWRAPPER(2, cb);
 #undef cb
 
-#define cb(i)\
-           int8x16_t row##i##0 =vreinterpretq_s8_s32(tmp_row##i.val[0]);\
-           int8x16_t row##i##1 =vreinterpretq_s8_s32(tmp_row##i.val[1]);
+#define cb(i)                                                      \
+    int8x16_t row##i##0 = vreinterpretq_s8_s32(tmp_row##i.val[0]); \
+    int8x16_t row##i##1 = vreinterpretq_s8_s32(tmp_row##i.val[1]);
 
             UNROLL_CALL_NOWRAPPER(2, cb);
 #undef cb
-            CALC_ONE_LINE_4_RESULT(sum,0,0,1);
-            CALC_ONE_LINE_4_RESULT(sum,1,2,3);
+            CALC_ONE_LINE_4_RESULT(sum, 0, 0, 1);
+            CALC_ONE_LINE_4_RESULT(sum, 1, 2, 3);
 
             STORE_1_LINE_4_RESULT(dst, oh, ow, OW, sum);
         }
@@ -1039,9 +1026,8 @@ const int32_t* tmp_sptr##i = reinterpret_cast<const int32_t*>(sptr##i);
             size_t remain = OW - ow;
             const int8_t* __restrict sptr0 = src + ih * IW * 4 + iw * 4;
             const int8_t* __restrict sptr1 = src + (ih + 1) * IW * 4 + iw * 4;
-            int16x8_t sum[2]={init_sum,init_sum};
-#define cb(i) \
-    const int32_t* tmp_sptr##i = reinterpret_cast<const int32_t*>(sptr##i);
+            int16x8_t sum[2] = {init_sum, init_sum};
+#define cb(i) const int32_t* tmp_sptr##i = reinterpret_cast<const int32_t*>(sptr##i);
 
             UNROLL_CALL_NOWRAPPER(2, cb);
 #undef cb
@@ -1051,14 +1037,14 @@ const int32_t* tmp_sptr##i = reinterpret_cast<const int32_t*>(sptr##i);
             UNROLL_CALL_NOWRAPPER(2, cb);
 #undef cb
 
-#define cb(i)\
-           int8x16_t row##i##0 =vreinterpretq_s8_s32(tmp_row##i.val[0]);\
-           int8x16_t row##i##1 =vreinterpretq_s8_s32(tmp_row##i.val[1]);
+#define cb(i)                                                      \
+    int8x16_t row##i##0 = vreinterpretq_s8_s32(tmp_row##i.val[0]); \
+    int8x16_t row##i##1 = vreinterpretq_s8_s32(tmp_row##i.val[1]);
 
             UNROLL_CALL_NOWRAPPER(2, cb);
 #undef cb
-            CALC_ONE_LINE_4_RESULT(sum,0,0,1);
-            CALC_ONE_LINE_4_RESULT(sum,1,2,3);
+            CALC_ONE_LINE_4_RESULT(sum, 0, 0, 1);
+            CALC_ONE_LINE_4_RESULT(sum, 1, 2, 3);
             STORE_REMAIN(dst, oh, ow, OW, sum, remain);
         }
     }
@@ -1122,8 +1108,7 @@ void channel_wise_nchw44_8x8x16::direct_stride2_3x3_int8x8x16(
 
             UNROLL_CALL_NOWRAPPER(4, cb);
 #undef cb
-#define cb(i) \
-    const int32_t* tmp_sptr##i = reinterpret_cast<const int32_t*>(sptr##i);
+#define cb(i) const int32_t* tmp_sptr##i = reinterpret_cast<const int32_t*>(sptr##i);
             UNROLL_CALL_NOWRAPPER(5, cb);
 #undef cb
 
@@ -1142,8 +1127,8 @@ void channel_wise_nchw44_8x8x16::direct_stride2_3x3_int8x8x16(
             vextq_s32(tmp_row##i##_00.val[0], tmp_row##i##_03.val[0], 1)); \
     int8x16_t row##i##3 = vreinterpretq_s8_s32(tmp_row##i##_03.val[0]);    \
     int8x16_t row##i##4 = vreinterpretq_s8_s32(tmp_row##i##_03.val[1]);    \
-    int8x16_t row##i##5 = vreinterpretq_s8_s32(                            \
-            vextq_s32(tmp_row##i##_03.val[0], tmp_row##i, 1));
+    int8x16_t row##i##5 =                                                  \
+            vreinterpretq_s8_s32(vextq_s32(tmp_row##i##_03.val[0], tmp_row##i, 1));
 
             UNROLL_CALL_NOWRAPPER(5, cb)
 #undef cb
@@ -1174,8 +1159,7 @@ void channel_wise_nchw44_8x8x16::direct_stride2_3x3_int8x8x16(
 
             UNROLL_CALL_NOWRAPPER(2, cb);
 #undef cb
-#define cb(i) \
-    const int32_t* tmp_sptr##i = reinterpret_cast<const int32_t*>(sptr##i);
+#define cb(i) const int32_t* tmp_sptr##i = reinterpret_cast<const int32_t*>(sptr##i);
 
             UNROLL_CALL_NOWRAPPER(5, cb);
 #undef cb
@@ -1187,10 +1171,10 @@ void channel_wise_nchw44_8x8x16::direct_stride2_3x3_int8x8x16(
             UNROLL_CALL_NOWRAPPER(5, cb);
 #undef cb
 
-#define cb(i)                                               \
+#define cb(i)                                                          \
     int8x16_t row##i##0 = vreinterpretq_s8_s32(tmp_row##i##_0.val[0]); \
     int8x16_t row##i##1 = vreinterpretq_s8_s32(tmp_row##i##_0.val[1]); \
-    int8x16_t row##i##2 =                                   \
+    int8x16_t row##i##2 =                                              \
             vreinterpretq_s8_s32(vextq_s32(tmp_row##i##_0.val[0], tmp_row##i##_1, 1));
 
             UNROLL_CALL_NOWRAPPER(5, cb);
@@ -1221,8 +1205,7 @@ void channel_wise_nchw44_8x8x16::direct_stride2_3x3_int8x8x16(
             UNROLL_CALL_NOWRAPPER(2, cb);
 #undef cb
 
-#define cb(i) \
-    const int32_t* tmp_sptr##i = reinterpret_cast<const int32_t*>(sptr##i);
+#define cb(i) const int32_t* tmp_sptr##i = reinterpret_cast<const int32_t*>(sptr##i);
 
             UNROLL_CALL_NOWRAPPER(5, cb);
 #undef cb
@@ -1234,10 +1217,10 @@ void channel_wise_nchw44_8x8x16::direct_stride2_3x3_int8x8x16(
             UNROLL_CALL_NOWRAPPER(5, cb);
 #undef cb
 
-#define cb(i)                                               \
+#define cb(i)                                                          \
     int8x16_t row##i##0 = vreinterpretq_s8_s32(tmp_row##i##_0.val[0]); \
     int8x16_t row##i##1 = vreinterpretq_s8_s32(tmp_row##i##_0.val[1]); \
-    int8x16_t row##i##2 =                                   \
+    int8x16_t row##i##2 =                                              \
             vreinterpretq_s8_s32(vextq_s32(tmp_row##i##_0.val[0], tmp_row##i##_1, 1));
 
             UNROLL_CALL_NOWRAPPER(5, cb);
@@ -1264,8 +1247,7 @@ void channel_wise_nchw44_8x8x16::direct_stride2_3x3_int8x8x16(
             const int8_t* __restrict sptr2 = src + (ih + 2) * IW * 4 + iw * 4;
 
             int16x8_t sum[4] = {init_sum, init_sum, init_sum, init_sum};
-#define cb(i) \
-    const int32_t* tmp_sptr##i = reinterpret_cast<const int32_t*>(sptr##i);
+#define cb(i) const int32_t* tmp_sptr##i = reinterpret_cast<const int32_t*>(sptr##i);
             UNROLL_CALL_NOWRAPPER(3, cb);
 #undef cb
 
@@ -1278,14 +1260,14 @@ void channel_wise_nchw44_8x8x16::direct_stride2_3x3_int8x8x16(
 #undef cb
 
 #define cb(i)                                                              \
-    int8x16_t row##i##0 = vreinterpretq_s8_s32(tmp_row##i##_00.val[0]);     \
-    int8x16_t row##i##1 = vreinterpretq_s8_s32(tmp_row##i##_00.val[1]);     \
-    int8x16_t row##i##2 = vreinterpretq_s8_s32(                             \
+    int8x16_t row##i##0 = vreinterpretq_s8_s32(tmp_row##i##_00.val[0]);    \
+    int8x16_t row##i##1 = vreinterpretq_s8_s32(tmp_row##i##_00.val[1]);    \
+    int8x16_t row##i##2 = vreinterpretq_s8_s32(                            \
             vextq_s32(tmp_row##i##_00.val[0], tmp_row##i##_03.val[0], 1)); \
     int8x16_t row##i##3 = vreinterpretq_s8_s32(tmp_row##i##_03.val[0]);    \
     int8x16_t row##i##4 = vreinterpretq_s8_s32(tmp_row##i##_03.val[1]);    \
-    int8x16_t row##i##5 = vreinterpretq_s8_s32(                            \
-            vextq_s32(tmp_row##i##_03.val[0], tmp_row##i, 1));
+    int8x16_t row##i##5 =                                                  \
+            vreinterpretq_s8_s32(vextq_s32(tmp_row##i##_03.val[0], tmp_row##i, 1));
 
             UNROLL_CALL_NOWRAPPER(3, cb)
 #undef cb
@@ -1302,8 +1284,7 @@ void channel_wise_nchw44_8x8x16::direct_stride2_3x3_int8x8x16(
             const int8_t* __restrict sptr1 = src + (ih + 1) * IW * 4 + iw * 4;
             const int8_t* __restrict sptr2 = src + (ih + 2) * IW * 4 + iw * 4;
             int16x8_t sum[2] = {init_sum, init_sum};
-#define cb(i) \
-    const int32_t* tmp_sptr##i = reinterpret_cast<const int32_t*>(sptr##i);
+#define cb(i) const int32_t* tmp_sptr##i = reinterpret_cast<const int32_t*>(sptr##i);
 
             UNROLL_CALL_NOWRAPPER(3, cb)
 #undef cb
@@ -1315,10 +1296,10 @@ void channel_wise_nchw44_8x8x16::direct_stride2_3x3_int8x8x16(
             UNROLL_CALL_NOWRAPPER(3, cb)
 #undef cb
 
-#define cb(i)                                               \
+#define cb(i)                                                          \
     int8x16_t row##i##0 = vreinterpretq_s8_s32(tmp_row##i##_0.val[0]); \
     int8x16_t row##i##1 = vreinterpretq_s8_s32(tmp_row##i##_0.val[1]); \
-    int8x16_t row##i##2 =                                   \
+    int8x16_t row##i##2 =                                              \
             vreinterpretq_s8_s32(vextq_s32(tmp_row##i##_0.val[0], tmp_row##i##_1, 1));
 
             UNROLL_CALL_NOWRAPPER(3, cb)
@@ -1336,8 +1317,7 @@ void channel_wise_nchw44_8x8x16::direct_stride2_3x3_int8x8x16(
             const int8_t* __restrict sptr1 = src + (ih + 1) * IW * 4 + iw * 4;
             const int8_t* __restrict sptr2 = src + (ih + 2) * IW * 4 + iw * 4;
             int16x8_t sum[2] = {init_sum, init_sum};
-#define cb(i) \
-    const int32_t* tmp_sptr##i = reinterpret_cast<const int32_t*>(sptr##i);
+#define cb(i) const int32_t* tmp_sptr##i = reinterpret_cast<const int32_t*>(sptr##i);
 
             UNROLL_CALL_NOWRAPPER(3, cb)
 #undef cb
@@ -1349,10 +1329,10 @@ void channel_wise_nchw44_8x8x16::direct_stride2_3x3_int8x8x16(
             UNROLL_CALL_NOWRAPPER(3, cb)
 #undef cb
 
-#define cb(i)                                               \
+#define cb(i)                                                          \
     int8x16_t row##i##0 = vreinterpretq_s8_s32(tmp_row##i##_0.val[0]); \
     int8x16_t row##i##1 = vreinterpretq_s8_s32(tmp_row##i##_0.val[1]); \
-    int8x16_t row##i##2 =                                   \
+    int8x16_t row##i##2 =                                              \
             vreinterpretq_s8_s32(vextq_s32(tmp_row##i##_0.val[0], tmp_row##i##_1, 1));
 
             UNROLL_CALL_NOWRAPPER(3, cb)
@@ -1386,76 +1366,73 @@ void channel_wise_nchw44_8x8x16::direct_stride2_5x5_int8x8x16(
     UNROLL_CALL_NOWRAPPER(25, cb);
 #undef cb
 
-#define LOAD_5_SRC(_src, _id)                                  \
-    do {                                                       \
-        int32x4x2_t tmp_row_01 = vld2q_s32(tmp_sptr##_id);     \
-        int32x4x2_t tmp_row_23 = vld2q_s32(tmp_sptr##_id + 2); \
-        int32x4_t tmp_row = vld1q_s32(tmp_sptr##_id + 10);     \
-        _src[0] = vreinterpretq_s8_s32(tmp_row_01.val[0]);     \
-        _src[1] = vreinterpretq_s8_s32(tmp_row_01.val[1]);     \
-        _src[2] = vreinterpretq_s8_s32(tmp_row_23.val[0]);     \
-        _src[3] = vreinterpretq_s8_s32(tmp_row_23.val[1]);     \
-        _src[4] = vreinterpretq_s8_s32(                        \
-                vextq_s32(tmp_row_23.val[0], tmp_row, 1));     \
+#define LOAD_5_SRC(_src, _id)                                                     \
+    do {                                                                          \
+        int32x4x2_t tmp_row_01 = vld2q_s32(tmp_sptr##_id);                        \
+        int32x4x2_t tmp_row_23 = vld2q_s32(tmp_sptr##_id + 2);                    \
+        int32x4_t tmp_row = vld1q_s32(tmp_sptr##_id + 10);                        \
+        _src[0] = vreinterpretq_s8_s32(tmp_row_01.val[0]);                        \
+        _src[1] = vreinterpretq_s8_s32(tmp_row_01.val[1]);                        \
+        _src[2] = vreinterpretq_s8_s32(tmp_row_23.val[0]);                        \
+        _src[3] = vreinterpretq_s8_s32(tmp_row_23.val[1]);                        \
+        _src[4] = vreinterpretq_s8_s32(vextq_s32(tmp_row_23.val[0], tmp_row, 1)); \
     } while (0);
 
-#define CALC_ONE_LINE_4_RESULT(_sum, _src, _kid0, _kid1, _kid2, _kid3,     \
-                                   _kid4)                                  \
-    _sum[0] = vmlal_s8(_sum[0], vget_low_s8(_src[0]), kern[_kid0]);        \
-    _sum[1] = vmlal_s8(_sum[1], vget_high_s8(_src[0]), kern[_kid0]);       \
-    _sum[0] = vmlal_s8(_sum[0], vget_low_s8(_src[1]), kern[_kid1]);        \
-    _sum[1] = vmlal_s8(_sum[1], vget_high_s8(_src[1]), kern[_kid1]);       \
-    _sum[0] = vmlal_s8(_sum[0], vget_low_s8(_src[2]), kern[_kid2]);        \
-    _sum[1] = vmlal_s8(_sum[1], vget_high_s8(_src[2]), kern[_kid2]);       \
-    _sum[0] = vmlal_s8(_sum[0], vget_low_s8(_src[3]), kern[_kid3]);        \
-    _sum[1] = vmlal_s8(_sum[1], vget_high_s8(_src[3]), kern[_kid3]);       \
-    _sum[0] = vmlal_s8(_sum[0], vget_low_s8(_src[4]), kern[_kid4]);        \
+#define CALC_ONE_LINE_4_RESULT(_sum, _src, _kid0, _kid1, _kid2, _kid3, _kid4) \
+    _sum[0] = vmlal_s8(_sum[0], vget_low_s8(_src[0]), kern[_kid0]);           \
+    _sum[1] = vmlal_s8(_sum[1], vget_high_s8(_src[0]), kern[_kid0]);          \
+    _sum[0] = vmlal_s8(_sum[0], vget_low_s8(_src[1]), kern[_kid1]);           \
+    _sum[1] = vmlal_s8(_sum[1], vget_high_s8(_src[1]), kern[_kid1]);          \
+    _sum[0] = vmlal_s8(_sum[0], vget_low_s8(_src[2]), kern[_kid2]);           \
+    _sum[1] = vmlal_s8(_sum[1], vget_high_s8(_src[2]), kern[_kid2]);          \
+    _sum[0] = vmlal_s8(_sum[0], vget_low_s8(_src[3]), kern[_kid3]);           \
+    _sum[1] = vmlal_s8(_sum[1], vget_high_s8(_src[3]), kern[_kid3]);          \
+    _sum[0] = vmlal_s8(_sum[0], vget_low_s8(_src[4]), kern[_kid4]);           \
     _sum[1] = vmlal_s8(_sum[1], vget_high_s8(_src[4]), kern[_kid4]);
 
-#define LOAD_10_SRC(_src, _id)                                       \
-    do {                                                             \
-        int32x4x2_t tmp_row_01 = vld2q_s32(tmp_sptr##_id);           \
-        int32x4x2_t tmp_row_23 = vld2q_s32(tmp_sptr##_id + 8);       \
-        int32x4x2_t tmp_row = vld2q_s32(tmp_sptr##_id + 16);         \
-        _src[0] = vreinterpretq_s8_s32(tmp_row_01.val[0]);           \
-        _src[1] = vreinterpretq_s8_s32(tmp_row_01.val[1]);           \
-        _src[2] = vreinterpretq_s8_s32(                              \
-                vextq_s32(tmp_row_01.val[0], tmp_row_23.val[0], 1)); \
-        _src[3] = vreinterpretq_s8_s32(                              \
-                vextq_s32(tmp_row_01.val[1], tmp_row_23.val[1], 1)); \
-        _src[4] = vreinterpretq_s8_s32(                              \
-                vextq_s32(tmp_row_01.val[0], tmp_row_23.val[0], 2)); \
-        _src[5] = vreinterpretq_s8_s32(tmp_row_23.val[0]);           \
-        _src[6] = vreinterpretq_s8_s32(tmp_row_23.val[1]);           \
-        _src[7] = vreinterpretq_s8_s32(                              \
-                vextq_s32(tmp_row_23.val[0], tmp_row.val[0], 1));    \
-        _src[8] = vreinterpretq_s8_s32(                              \
-                vextq_s32(tmp_row_23.val[1], tmp_row.val[1], 1));    \
-        _src[9] = vreinterpretq_s8_s32(                              \
-                vextq_s32(tmp_row_23.val[0], tmp_row.val[0], 2));    \
+#define LOAD_10_SRC(_src, _id)                                                         \
+    do {                                                                               \
+        int32x4x2_t tmp_row_01 = vld2q_s32(tmp_sptr##_id);                             \
+        int32x4x2_t tmp_row_23 = vld2q_s32(tmp_sptr##_id + 8);                         \
+        int32x4x2_t tmp_row = vld2q_s32(tmp_sptr##_id + 16);                           \
+        _src[0] = vreinterpretq_s8_s32(tmp_row_01.val[0]);                             \
+        _src[1] = vreinterpretq_s8_s32(tmp_row_01.val[1]);                             \
+        _src[2] = vreinterpretq_s8_s32(                                                \
+                vextq_s32(tmp_row_01.val[0], tmp_row_23.val[0], 1));                   \
+        _src[3] = vreinterpretq_s8_s32(                                                \
+                vextq_s32(tmp_row_01.val[1], tmp_row_23.val[1], 1));                   \
+        _src[4] = vreinterpretq_s8_s32(                                                \
+                vextq_s32(tmp_row_01.val[0], tmp_row_23.val[0], 2));                   \
+        _src[5] = vreinterpretq_s8_s32(tmp_row_23.val[0]);                             \
+        _src[6] = vreinterpretq_s8_s32(tmp_row_23.val[1]);                             \
+        _src[7] =                                                                      \
+                vreinterpretq_s8_s32(vextq_s32(tmp_row_23.val[0], tmp_row.val[0], 1)); \
+        _src[8] =                                                                      \
+                vreinterpretq_s8_s32(vextq_s32(tmp_row_23.val[1], tmp_row.val[1], 1)); \
+        _src[9] =                                                                      \
+                vreinterpretq_s8_s32(vextq_s32(tmp_row_23.val[0], tmp_row.val[0], 2)); \
     } while (0);
 
-#define CALC_ONE_LINE_8_RESULT(_sum, _src, _kid0, _kid1, _kid2, _kid3,     \
-                                   _kid4)                                  \
-    _sum[0] = vmlal_s8(_sum[0], vget_low_s8(_src[0]), kern[_kid0]);        \
-    _sum[1] = vmlal_s8(_sum[1], vget_high_s8(_src[0]), kern[_kid0]);       \
-    _sum[2] = vmlal_s8(_sum[2], vget_low_s8(_src[5]), kern[_kid0]);        \
-    _sum[3] = vmlal_s8(_sum[3], vget_high_s8(_src[5]), kern[_kid0]);       \
-    _sum[0] = vmlal_s8(_sum[0], vget_low_s8(_src[1]), kern[_kid1]);        \
-    _sum[1] = vmlal_s8(_sum[1], vget_high_s8(_src[1]), kern[_kid1]);       \
-    _sum[2] = vmlal_s8(_sum[2], vget_low_s8(_src[6]), kern[_kid1]);        \
-    _sum[3] = vmlal_s8(_sum[3], vget_high_s8(_src[6]), kern[_kid1]);       \
-    _sum[0] = vmlal_s8(_sum[0], vget_low_s8(_src[2]), kern[_kid2]);        \
-    _sum[1] = vmlal_s8(_sum[1], vget_high_s8(_src[2]), kern[_kid2]);       \
-    _sum[2] = vmlal_s8(_sum[2], vget_low_s8(_src[7]), kern[_kid2]);        \
-    _sum[3] = vmlal_s8(_sum[3], vget_high_s8(_src[7]), kern[_kid2]);       \
-    _sum[0] = vmlal_s8(_sum[0], vget_low_s8(_src[3]), kern[_kid3]);        \
-    _sum[1] = vmlal_s8(_sum[1], vget_high_s8(_src[3]), kern[_kid3]);       \
-    _sum[2] = vmlal_s8(_sum[2], vget_low_s8(_src[8]), kern[_kid3]);        \
-    _sum[3] = vmlal_s8(_sum[3], vget_high_s8(_src[8]), kern[_kid3]);       \
-    _sum[0] = vmlal_s8(_sum[0], vget_low_s8(_src[4]), kern[_kid4]);        \
-    _sum[1] = vmlal_s8(_sum[1], vget_high_s8(_src[4]), kern[_kid4]);       \
-    _sum[2] = vmlal_s8(_sum[2], vget_low_s8(_src[9]), kern[_kid4]);        \
+#define CALC_ONE_LINE_8_RESULT(_sum, _src, _kid0, _kid1, _kid2, _kid3, _kid4) \
+    _sum[0] = vmlal_s8(_sum[0], vget_low_s8(_src[0]), kern[_kid0]);           \
+    _sum[1] = vmlal_s8(_sum[1], vget_high_s8(_src[0]), kern[_kid0]);          \
+    _sum[2] = vmlal_s8(_sum[2], vget_low_s8(_src[5]), kern[_kid0]);           \
+    _sum[3] = vmlal_s8(_sum[3], vget_high_s8(_src[5]), kern[_kid0]);          \
+    _sum[0] = vmlal_s8(_sum[0], vget_low_s8(_src[1]), kern[_kid1]);           \
+    _sum[1] = vmlal_s8(_sum[1], vget_high_s8(_src[1]), kern[_kid1]);          \
+    _sum[2] = vmlal_s8(_sum[2], vget_low_s8(_src[6]), kern[_kid1]);           \
+    _sum[3] = vmlal_s8(_sum[3], vget_high_s8(_src[6]), kern[_kid1]);          \
+    _sum[0] = vmlal_s8(_sum[0], vget_low_s8(_src[2]), kern[_kid2]);           \
+    _sum[1] = vmlal_s8(_sum[1], vget_high_s8(_src[2]), kern[_kid2]);          \
+    _sum[2] = vmlal_s8(_sum[2], vget_low_s8(_src[7]), kern[_kid2]);           \
+    _sum[3] = vmlal_s8(_sum[3], vget_high_s8(_src[7]), kern[_kid2]);          \
+    _sum[0] = vmlal_s8(_sum[0], vget_low_s8(_src[3]), kern[_kid3]);           \
+    _sum[1] = vmlal_s8(_sum[1], vget_high_s8(_src[3]), kern[_kid3]);          \
+    _sum[2] = vmlal_s8(_sum[2], vget_low_s8(_src[8]), kern[_kid3]);           \
+    _sum[3] = vmlal_s8(_sum[3], vget_high_s8(_src[8]), kern[_kid3]);          \
+    _sum[0] = vmlal_s8(_sum[0], vget_low_s8(_src[4]), kern[_kid4]);           \
+    _sum[1] = vmlal_s8(_sum[1], vget_high_s8(_src[4]), kern[_kid4]);          \
+    _sum[2] = vmlal_s8(_sum[2], vget_low_s8(_src[9]), kern[_kid4]);           \
     _sum[3] = vmlal_s8(_sum[3], vget_high_s8(_src[9]), kern[_kid4]);
 
     size_t oh = 0_z;
@@ -1479,8 +1456,7 @@ void channel_wise_nchw44_8x8x16::direct_stride2_5x5_int8x8x16(
 
             UNROLL_CALL_NOWRAPPER(4, cb);
 #undef cb
-#define cb(i) \
-    const int32_t* tmp_sptr##i = reinterpret_cast<const int32_t*>(sptr##i);
+#define cb(i) const int32_t* tmp_sptr##i = reinterpret_cast<const int32_t*>(sptr##i);
             UNROLL_CALL_NOWRAPPER(7, cb);
 #undef cb
 
@@ -1523,8 +1499,7 @@ void channel_wise_nchw44_8x8x16::direct_stride2_5x5_int8x8x16(
             UNROLL_CALL_NOWRAPPER(2, cb);
 #undef cb
 
-#define cb(i) \
-    const int32_t* tmp_sptr##i = reinterpret_cast<const int32_t*>(sptr##i);
+#define cb(i) const int32_t* tmp_sptr##i = reinterpret_cast<const int32_t*>(sptr##i);
             UNROLL_CALL_NOWRAPPER(7, cb);
 #undef cb
 
@@ -1567,8 +1542,7 @@ void channel_wise_nchw44_8x8x16::direct_stride2_5x5_int8x8x16(
 
             UNROLL_CALL_NOWRAPPER(2, cb);
 #undef cb
-#define cb(i) \
-    const int32_t* tmp_sptr##i = reinterpret_cast<const int32_t*>(sptr##i);
+#define cb(i) const int32_t* tmp_sptr##i = reinterpret_cast<const int32_t*>(sptr##i);
             UNROLL_CALL_NOWRAPPER(7, cb);
 #undef cb
             LOAD_5_SRC(src[0], 0);  // line0
@@ -1605,8 +1579,7 @@ void channel_wise_nchw44_8x8x16::direct_stride2_5x5_int8x8x16(
             const int8_t* __restrict sptr4 = src + (ih + 4) * IW * 4 + iw * 4;
             int16x8_t sum[4] = {init_sum, init_sum, init_sum, init_sum};
             int8x16_t src[3][10];
-#define cb(i) \
-    const int32_t* tmp_sptr##i = reinterpret_cast<const int32_t*>(sptr##i);
+#define cb(i) const int32_t* tmp_sptr##i = reinterpret_cast<const int32_t*>(sptr##i);
             UNROLL_CALL_NOWRAPPER(5, cb);
 #undef cb
             LOAD_10_SRC(src[0], 0);  // line0
@@ -1631,8 +1604,7 @@ void channel_wise_nchw44_8x8x16::direct_stride2_5x5_int8x8x16(
             const int8_t* __restrict sptr4 = src + (ih + 4) * IW * 4 + iw * 4;
 
             int16x8_t sum[2] = {init_sum, init_sum};
-#define cb(i) \
-    const int32_t* tmp_sptr##i = reinterpret_cast<const int32_t*>(sptr##i);
+#define cb(i) const int32_t* tmp_sptr##i = reinterpret_cast<const int32_t*>(sptr##i);
             UNROLL_CALL_NOWRAPPER(5, cb);
 #undef cb
 
@@ -1660,8 +1632,7 @@ void channel_wise_nchw44_8x8x16::direct_stride2_5x5_int8x8x16(
             const int8_t* __restrict sptr4 = src + (ih + 4) * IW * 4 + iw * 4;
             int16x8_t sum[2] = {init_sum, init_sum};
 
-#define cb(i) \
-    const int32_t* tmp_sptr##i = reinterpret_cast<const int32_t*>(sptr##i);
+#define cb(i) const int32_t* tmp_sptr##i = reinterpret_cast<const int32_t*>(sptr##i);
             UNROLL_CALL_NOWRAPPER(5, cb);
 #undef cb
 
@@ -1695,41 +1666,41 @@ void channel_wise_nchw44_8x8x16::direct_stride2_5x5_int8x8x16(
     const int32_t* tmp_filter = reinterpret_cast<const int32_t*>(filter);
     INIT_SUM();
     int8x8_t kern0[3], kern1[3], kern2[3], kern3[3], kern4[3];
-    
+
     int32x2_t tmp_kern = vdup_n_s32(tmp_filter[4]);
-    tmp_kern = vset_lane_s32(0,tmp_kern,1);
+    tmp_kern = vset_lane_s32(0, tmp_kern, 1);
     kern0[0] = vld1_s8(filter);
     kern0[1] = vld1_s8(filter + 8);
     kern0[2] = vreinterpret_s8_s32(tmp_kern);
-    
+
     tmp_kern = vdup_n_s32(tmp_filter[9]);
-    tmp_kern = vset_lane_s32(0,tmp_kern,1);
+    tmp_kern = vset_lane_s32(0, tmp_kern, 1);
     kern1[0] = vld1_s8(filter + 20);
     kern1[1] = vld1_s8(filter + 28);
     kern1[2] = vreinterpret_s8_s32(tmp_kern);
-    
+
     tmp_kern = vdup_n_s32(tmp_filter[14]);
-    tmp_kern = vset_lane_s32(0,tmp_kern,1);
+    tmp_kern = vset_lane_s32(0, tmp_kern, 1);
     kern2[0] = vld1_s8(filter + 40);
     kern2[1] = vld1_s8(filter + 48);
     kern2[2] = vreinterpret_s8_s32(tmp_kern);
-    
+
     tmp_kern = vdup_n_s32(tmp_filter[19]);
-    tmp_kern = vset_lane_s32(0,tmp_kern,1);
+    tmp_kern = vset_lane_s32(0, tmp_kern, 1);
     kern3[0] = vld1_s8(filter + 60);
     kern3[1] = vld1_s8(filter + 68);
     kern3[2] = vreinterpret_s8_s32(tmp_kern);
-    
+
     tmp_kern = vdup_n_s32(tmp_filter[24]);
-    tmp_kern = vset_lane_s32(0,tmp_kern,1);
+    tmp_kern = vset_lane_s32(0, tmp_kern, 1);
     kern4[0] = vld1_s8(filter + 80);
     kern4[1] = vld1_s8(filter + 88);
     kern4[2] = vreinterpret_s8_s32(tmp_kern);
 
-#define LOAD_3_SRC_ARRAY(_src,_sptr)\
-            _src[0] = vld1q_s8(_sptr);/*0 1 2 3  */\
-            _src[1] = vld1q_s8(_sptr + 16);/*4 5 6 7 */\
-            _src[2] = vld1q_s8(_sptr + 32);/*8 9 10 11*/
+#define LOAD_3_SRC_ARRAY(_src, _sptr)             \
+    _src[0] = vld1q_s8(_sptr);      /*0 1 2 3  */ \
+    _src[1] = vld1q_s8(_sptr + 16); /*4 5 6 7 */  \
+    _src[2] = vld1q_s8(_sptr + 32); /*8 9 10 11*/
 
 #define CALC_ONE_LINE(_src, _kern, _sum)                                 \
     tmpsum0 = vmull_s8(vget_low_s8(_src[0]), _kern[0]);           /*01*/ \
@@ -1744,7 +1715,7 @@ void channel_wise_nchw44_8x8x16::direct_stride2_5x5_int8x8x16(
                                                                          \
     tmpsum0 = vmull_s8(vget_low_s8(_src[1]), _kern[0]);           /*45*/ \
     tmpsum1 = vmull_s8(vget_high_s8(_src[1]), _kern[0]);          /*67*/ \
-    tmpsum0 = vmlal_s8(tmpsum0, vget_high_s8(_src[1]), _kern[1]);  /*67*/ \
+    tmpsum0 = vmlal_s8(tmpsum0, vget_high_s8(_src[1]), _kern[1]); /*67*/ \
     tmpsum1 = vmlal_s8(tmpsum1, vget_low_s8(_src[2]), _kern[1]);  /*89*/ \
     tmpsum0 = vmlal_s8(tmpsum0, vget_low_s8(_src[2]), _kern[2]);  /*8*/  \
     tmpsum1 = vmlal_s8(tmpsum1, vget_high_s8(_src[2]), _kern[2]); /*10*/ \
@@ -1795,7 +1766,7 @@ void channel_wise_nchw44_8x8x16::direct_stride2_5x5_int8x8x16(
     for (; oh + 2 <= OH; oh += 2) {
         size_t ih = oh * 2;
         size_t ow = 0_z;
-        
+
         for (; ow + 4 <= OW; ow += 4) {
             size_t iw = ow * 2;
             const int8_t* __restrict sptr0 = src + ih * IW * 4 + iw * 4;
@@ -1841,8 +1812,8 @@ void channel_wise_nchw44_8x8x16::direct_stride2_5x5_int8x8x16(
             int16x4_t res0, res1;
 
             CALC_8_RESULT();
-            STORE_REMAIN(dst, oh, ow, OW, sum[0],remain);
-            STORE_REMAIN(dst, (oh + 1), ow, OW, sum[1],remain);
+            STORE_REMAIN(dst, oh, ow, OW, sum[0], remain);
+            STORE_REMAIN(dst, (oh + 1), ow, OW, sum[1], remain);
         }
     }
     for (; oh < OH; oh++) {
@@ -1856,13 +1827,13 @@ void channel_wise_nchw44_8x8x16::direct_stride2_5x5_int8x8x16(
             const int8_t* __restrict sptr3 = src + (ih + 3) * IW * 4 + iw * 4;
             const int8_t* __restrict sptr4 = src + (ih + 4) * IW * 4 + iw * 4;
 
-            int16x8_t sum[2]={init_sum,init_sum};
+            int16x8_t sum[2] = {init_sum, init_sum};
 
             int8x16_t src0[3], src1[3];
             int16x8_t tmpsum0, tmpsum1;
             int16x4_t res0, res1;
             CALC_4_RESULT();
-            STORE_1_LINE_4_RESULT(dst, oh,ow, OW, sum);
+            STORE_1_LINE_4_RESULT(dst, oh, ow, OW, sum);
         }
         if (OW > ow) {
             size_t iw = ow * 2;
@@ -1892,11 +1863,11 @@ void channel_wise_nchw44_8x8x16::direct_stride2_5x5_int8x8x16(
 #undef STORE_1_LINE_4_RESULT
 #undef STORE_REMAIN
 
-#define INSTANTIATION(stride, i, bias)                                   \
-    template void channel_wise_nchw44_8x8x16::                           \
-            direct_##stride##_##i##x##i##_int8x8x16<bias>(               \
-                    const int8_t*, const int8_t*, const int16_t*, void*, \
-                    const size_t, const size_t, const size_t, const size_t);
+#define INSTANTIATION(stride, i, bias)                                                 \
+    template void                                                                      \
+            channel_wise_nchw44_8x8x16::direct_##stride##_##i##x##i##_int8x8x16<bias>( \
+                    const int8_t*, const int8_t*, const int16_t*, void*, const size_t, \
+                    const size_t, const size_t, const size_t);
 
 #define FOR_OP(stride, i, bias) INSTANTIATION(stride, i, bias)
 

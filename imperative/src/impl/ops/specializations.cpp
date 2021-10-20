@@ -21,10 +21,12 @@
 #include "megbrain/opr/dnn/fake_quant.h"
 #include "megbrain/opr/dnn/images2neibs.h"
 #include "megbrain/opr/dnn/local.h"
+#include "megbrain/opr/dnn/lrn.h"
 #include "megbrain/opr/dnn/lsq.h"
 #include "megbrain/opr/dnn/pooling.h"
 #include "megbrain/opr/dnn/roi_align.h"
 #include "megbrain/opr/dnn/roi_pooling.h"
+#include "megbrain/opr/dnn/sliding_window_transpose.h"
 #include "megbrain/opr/dnn/tqt.h"
 #include "megbrain/opr/imgproc.h"
 #include "megbrain/opr/indexing.h"
@@ -35,8 +37,6 @@
 #include "megbrain/opr/tensor_gen.h"
 #include "megbrain/opr/tensor_manip.h"
 #include "megbrain/opr/utility.h"
-#include "megbrain/opr/dnn/images2neibs.h"
-#include "megbrain/opr/dnn/sliding_window_transpose.h"
 
 #include "../op_trait.h"
 
@@ -96,9 +96,7 @@ auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
     return opr::AxisAddRemove::make(inputs[0], param, config);
 }
 
-OP_TRAIT_REG(RemoveAxis, RemoveAxis)
-        .apply_on_var_node(apply_on_var_node)
-        .fallback();
+OP_TRAIT_REG(RemoveAxis, RemoveAxis).apply_on_var_node(apply_on_var_node).fallback();
 }  // namespace remove_axis
 }  // namespace
 
@@ -121,8 +119,7 @@ namespace adaptive_pooling {
 auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
     auto&& pool = static_cast<const AdaptivePooling&>(def);
     OperatorNodeConfig config{pool.make_name()};
-    return opr::AdaptivePooling::make(inputs[0], inputs[1], pool.param(),
-                                      config);
+    return opr::AdaptivePooling::make(inputs[0], inputs[1], pool.param(), config);
 }
 
 OP_TRAIT_REG(AdaptivePooling, AdaptivePooling)
@@ -138,21 +135,20 @@ auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
     cg::OperatorNodeConfig config{conv.dtype};
     config.name(conv.make_name());
     if (inputs.size() == 2) {
-        return opr::ConvBias::make(inputs[0], inputs[1], conv.param(),
-                                   conv.policy(), config);
+        return opr::ConvBias::make(
+                inputs[0], inputs[1], conv.param(), conv.policy(), config);
     } else if (inputs.size() == 3) {
-        return opr::ConvBias::make(inputs[0], inputs[1], inputs[2],
-                                   conv.param(), conv.policy(), config);
+        return opr::ConvBias::make(
+                inputs[0], inputs[1], inputs[2], conv.param(), conv.policy(), config);
     } else if (inputs.size() == 4) {
-        return opr::ConvBias::make(inputs[0], inputs[1], inputs[2], inputs[3],
-                                   conv.param(), conv.policy(), config);
+        return opr::ConvBias::make(
+                inputs[0], inputs[1], inputs[2], inputs[3], conv.param(), conv.policy(),
+                config);
     }
     mgb_assert(0);
 }
 
-OP_TRAIT_REG(ConvBias, ConvBias)
-        .apply_on_var_node(apply_on_var_node)
-        .fallback();
+OP_TRAIT_REG(ConvBias, ConvBias).apply_on_var_node(apply_on_var_node).fallback();
 }  // namespace conv_bias
 }  // namespace
 
@@ -163,15 +159,15 @@ auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
     cg::OperatorNodeConfig config{conv.dtype};
     config.name(conv.make_name());
     if (inputs.size() == 2) {
-        return opr::BatchConvBias::make(inputs[0], inputs[1], conv.param(),
-                                        conv.policy(), config);
+        return opr::BatchConvBias::make(
+                inputs[0], inputs[1], conv.param(), conv.policy(), config);
     } else if (inputs.size() == 3) {
-        return opr::BatchConvBias::make(inputs[0], inputs[1], inputs[2],
-                                        conv.param(), conv.policy(), config);
+        return opr::BatchConvBias::make(
+                inputs[0], inputs[1], inputs[2], conv.param(), conv.policy(), config);
     } else if (inputs.size() == 4) {
-        return opr::BatchConvBias::make(inputs[0], inputs[1], inputs[2],
-                                        inputs[3], conv.param(), conv.policy(),
-                                        config);
+        return opr::BatchConvBias::make(
+                inputs[0], inputs[1], inputs[2], inputs[3], conv.param(), conv.policy(),
+                config);
     }
     mgb_assert(0);
 }
@@ -199,12 +195,10 @@ auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
     auto&& matmul = static_cast<const MatrixMul&>(def);
     mgb_assert(inputs.size() == 2);
     OperatorNodeConfig config{matmul.make_name()};
-    return opr::MatrixMul::make(inputs[0], inputs[1], matmul.param(),
-                                matmul.policy(), config);
+    return opr::MatrixMul::make(
+            inputs[0], inputs[1], matmul.param(), matmul.policy(), config);
 }
-OP_TRAIT_REG(MatrixMul, MatrixMul)
-        .apply_on_var_node(apply_on_var_node)
-        .fallback();
+OP_TRAIT_REG(MatrixMul, MatrixMul).apply_on_var_node(apply_on_var_node).fallback();
 }  // namespace matrix_mul
 }  // namespace
 
@@ -214,8 +208,8 @@ auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
     auto&& matmul = static_cast<const BatchedMatrixMul&>(def);
     mgb_assert(inputs.size() == 2);
     OperatorNodeConfig config{matmul.make_name()};
-    return opr::BatchedMatrixMul::make(inputs[0], inputs[1], matmul.param(),
-                                       matmul.policy(), config);
+    return opr::BatchedMatrixMul::make(
+            inputs[0], inputs[1], matmul.param(), matmul.policy(), config);
 }
 OP_TRAIT_REG(BatchedMatrixMul, BatchedMatrixMul)
         .apply_on_var_node(apply_on_var_node)
@@ -274,12 +268,12 @@ auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
     auto&& warp = static_cast<const WarpPerspective&>(def);
     OperatorNodeConfig config{warp.make_name()};
     if (inputs.size() == 3) {
-        return opr::WarpPerspective::make(inputs[0], inputs[1], inputs[2],
-                                          warp.param(), config);
+        return opr::WarpPerspective::make(
+                inputs[0], inputs[1], inputs[2], warp.param(), config);
     } else {
         mgb_assert(inputs.size() == 4);
-        return opr::WarpPerspective::make(inputs[0], inputs[1], inputs[2],
-                                          inputs[3], warp.param(), config);
+        return opr::WarpPerspective::make(
+                inputs[0], inputs[1], inputs[2], inputs[3], warp.param(), config);
     }
 }
 OP_TRAIT_REG(WarpPerspective, WarpPerspective)
@@ -296,24 +290,8 @@ auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
     OperatorNodeConfig config{local.make_name()};
     return opr::GroupLocal::make(inputs[0], inputs[1], local.param(), config);
 }
-OP_TRAIT_REG(GroupLocal, GroupLocal)
-        .apply_on_var_node(apply_on_var_node)
-        .fallback();
+OP_TRAIT_REG(GroupLocal, GroupLocal).apply_on_var_node(apply_on_var_node).fallback();
 }  // namespace group_local
-}  // namespace
-
-namespace {
-namespace indexing_one_hot {
-auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
-    auto&& op = static_cast<const IndexingOneHot&>(def);
-    mgb_assert(inputs.size() == 2);
-    OperatorNodeConfig config{op.make_name()};
-    return opr::IndexingOneHot::make(inputs[0], inputs[1], op.param(), config);
-}
-OP_TRAIT_REG(IndexingOneHot, IndexingOneHot)
-        .apply_on_var_node(apply_on_var_node)
-        .fallback();
-}  // namespace indexing_one_hot
 }  // namespace
 
 namespace {
@@ -322,8 +300,8 @@ auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
     auto&& op = static_cast<const IndexingSetOneHot&>(def);
     mgb_assert(inputs.size() == 3);
     OperatorNodeConfig config{op.make_name()};
-    return opr::IndexingSetOneHot::make(inputs[0], inputs[1], inputs[2],
-                                        op.param(), config);
+    return opr::IndexingSetOneHot::make(
+            inputs[0], inputs[1], inputs[2], op.param(), config);
 }
 OP_TRAIT_REG(IndexingSetOneHot, IndexingSetOneHot)
         .apply_on_var_node(apply_on_var_node)
@@ -368,24 +346,20 @@ OP_TRAIT_REG(Copy, Copy).apply_on_var_node(apply_on_var_node).fallback();
 }  // namespace copy
 }  // namespace
 
-namespace { namespace assert_equal {
-auto apply_on_var_node(
-        const OpDef& def,
-        const VarNodeArray& inputs) {
+namespace {
+namespace assert_equal {
+auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
     auto&& op = def.cast_final<AssertEqual>();
     if (inputs.size() == 2) {
         return opr::AssertEqual::make(inputs[0], inputs[1], op.param());
     } else {
         // workaround for MiniGraph, which only allow one opr in the graph
         mgb_assert(inputs.size() == 3);
-        return opr::AssertEqual::make(inputs[0], inputs[1], inputs[2],
-                                      op.param(), {});
+        return opr::AssertEqual::make(inputs[0], inputs[1], inputs[2], op.param(), {});
     }
 }
 
-OP_TRAIT_REG(AssertEqual, AssertEqual)
-        .apply_on_var_node(apply_on_var_node)
-        .fallback();
+OP_TRAIT_REG(AssertEqual, AssertEqual).apply_on_var_node(apply_on_var_node).fallback();
 }  // namespace assert_equal
 }  // namespace
 
@@ -400,9 +374,7 @@ VarNodeArray apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
                         ->owner_opr();
     return {opr->output(0), opr->output(1)};
 }
-OP_TRAIT_REG(ROIAlign, ROIAlign)
-        .apply_on_var_node(apply_on_var_node)
-        .fallback();
+OP_TRAIT_REG(ROIAlign, ROIAlign).apply_on_var_node(apply_on_var_node).fallback();
 }  // namespace roi_align
 }  // namespace
 
@@ -414,9 +386,7 @@ auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
     OperatorNodeConfig config{op.make_name()};
     return opr::Correlation::make(inputs[0], inputs[1], op.param(), config);
 }
-OP_TRAIT_REG(Correlation, Correlation)
-        .apply_on_var_node(apply_on_var_node)
-        .fallback();
+OP_TRAIT_REG(Correlation, Correlation).apply_on_var_node(apply_on_var_node).fallback();
 }  // namespace correlation
 }  // namespace
 
@@ -441,12 +411,9 @@ auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
     mgb_assert(inputs.size() == 3);
     cg::OperatorNodeConfig config{op.comp_node};
     config.name(op.make_name());
-    return opr::Linspace::make(inputs[0], inputs[1], inputs[2], op.param(),
-                               config);
+    return opr::Linspace::make(inputs[0], inputs[1], inputs[2], op.param(), config);
 }
-OP_TRAIT_REG(Linspace, Linspace)
-        .apply_on_var_node(apply_on_var_node)
-        .fallback();
+OP_TRAIT_REG(Linspace, Linspace).apply_on_var_node(apply_on_var_node).fallback();
 }  // namespace linspace
 }  // namespace
 
@@ -470,15 +437,13 @@ VarNodeArray apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
     auto&& op = static_cast<const ROIPooling&>(def);
     mgb_assert(inputs.size() == 3);
     OperatorNodeConfig config{op.make_name()};
-    auto* opr = opr::ROIPooling::make(inputs[0], inputs[1], inputs[2],
-                                      op.param(), config)
-                        .node()
-                        ->owner_opr();
+    auto* opr =
+            opr::ROIPooling::make(inputs[0], inputs[1], inputs[2], op.param(), config)
+                    .node()
+                    ->owner_opr();
     return {opr->output(0), opr->output(1)};
 }
-OP_TRAIT_REG(ROIPooling, ROIPooling)
-        .apply_on_var_node(apply_on_var_node)
-        .fallback();
+OP_TRAIT_REG(ROIPooling, ROIPooling).apply_on_var_node(apply_on_var_node).fallback();
 }  // namespace roi_pooling
 }  // namespace
 
@@ -521,18 +486,15 @@ auto get_index(
 #define IN1 inputs[0]
 #define IN2 inputs[0], inputs[1]
 
-#define FANCY_INDEXING_IMPL(NAME, NR_INPUT)                                    \
-    namespace NAME##_impl {                                                    \
-        auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) { \
-            auto&& op = static_cast<const NAME&>(def);                         \
-            OperatorNodeConfig config{op.make_name()};                         \
-            return opr::NAME::make(IN##NR_INPUT,                               \
-                                   get_index(inputs, NR_INPUT, op.items),      \
-                                   config);                                    \
-        }                                                                      \
-        OP_TRAIT_REG(NAME, NAME)                                               \
-                .apply_on_var_node(apply_on_var_node)                          \
-                .fallback();                                                   \
+#define FANCY_INDEXING_IMPL(NAME, NR_INPUT)                                       \
+    namespace NAME##_impl {                                                       \
+        auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {    \
+            auto&& op = static_cast<const NAME&>(def);                            \
+            OperatorNodeConfig config{op.make_name()};                            \
+            return opr::NAME::make(                                               \
+                    IN##NR_INPUT, get_index(inputs, NR_INPUT, op.items), config); \
+        }                                                                         \
+        OP_TRAIT_REG(NAME, NAME).apply_on_var_node(apply_on_var_node).fallback(); \
     }
 
 FANCY_INDEXING_IMPL(Subtensor, 1)
@@ -559,12 +521,9 @@ auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
     auto&& op = static_cast<const FakeQuant&>(def);
     mgb_assert(inputs.size() == 3);
     OperatorNodeConfig config{op.make_name()};
-    return opr::FakeQuant::make(inputs[0], inputs[1], inputs[2], op.param(),
-                                config);
+    return opr::FakeQuant::make(inputs[0], inputs[1], inputs[2], op.param(), config);
 }
-OP_TRAIT_REG(FakeQuant, FakeQuant)
-        .apply_on_var_node(apply_on_var_node)
-        .fallback();
+OP_TRAIT_REG(FakeQuant, FakeQuant).apply_on_var_node(apply_on_var_node).fallback();
 }  // namespace fake_quant
 }  // namespace
 
@@ -628,25 +587,25 @@ auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
     auto&& op = static_cast<const LSQ&>(def);
     mgb_assert(inputs.size() == 4);
     OperatorNodeConfig config{op.make_name()};
-    return opr::LSQ::make(inputs[0], inputs[1], inputs[2], inputs[3],
-                          op.param(), config);
+    return opr::LSQ::make(
+            inputs[0], inputs[1], inputs[2], inputs[3], op.param(), config);
 }
 OP_TRAIT_REG(LSQ, LSQ).apply_on_var_node(apply_on_var_node).fallback();
 }  // namespace lsq
 }  // namespace
 
-namespace { namespace sliding_window_transpose {
-auto apply_on_var_node(
-        const OpDef& def,
-        const VarNodeArray& inputs) {
+namespace {
+namespace sliding_window_transpose {
+auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
     auto&& op = static_cast<const SlidingWindowTranspose&>(def);
     OperatorNodeConfig config{op.make_name()};
     return opr::SlidingWindowTranspose::make(inputs[0], op.param(), config);
 }
 OP_TRAIT_REG(SlidingWindowTranspose, SlidingWindowTranspose)
-    .apply_on_var_node(apply_on_var_node)
-    .fallback();
-}} // sliding_window_transpose
+        .apply_on_var_node(apply_on_var_node)
+        .fallback();
+}  // namespace sliding_window_transpose
+}  // namespace
 
 namespace {
 namespace cumsum {
@@ -660,4 +619,21 @@ OP_TRAIT_REG(Cumsum, Cumsum).apply_on_var_node(apply_on_var_node).fallback();
 }  // namespace cumsum
 }  // namespace
 
-} // namespace mgb::imperative
+namespace padding {
+auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
+    auto&& op = static_cast<const Padding&>(def);
+    mgb_assert(inputs.size() == 1);
+    return opr::Padding::make(inputs[0], op.param());
+}
+OP_TRAIT_REG(Padding, Padding).apply_on_var_node(apply_on_var_node).fallback();
+}  // namespace padding
+
+namespace lrn {
+auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
+    auto&& op = static_cast<const LRN&>(def);
+    mgb_assert(inputs.size() == 1);
+    return opr::LRN::make(inputs[0], op.param());
+}
+OP_TRAIT_REG(LRN, LRN).apply_on_var_node(apply_on_var_node).fallback();
+}  // namespace lrn
+}  // namespace mgb::imperative

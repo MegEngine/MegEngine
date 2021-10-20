@@ -17,15 +17,13 @@ namespace serialization {
 SharedBuffer::~SharedBuffer() = default;
 
 /* ====================== InputFile ====================== */
-void InputFile::read_into_tensor(HostTensorND& dest,
-                                 const TensorLayout& layout) {
+void InputFile::read_into_tensor(HostTensorND& dest, const TensorLayout& layout) {
     dest.dtype(layout.dtype).resize(layout);
     read(dest.raw_ptr(), layout.span().high_byte);
 }
 
 SharedBuffer InputFile::read_shared(size_t size) {
-    std::shared_ptr<void> shptr{new uint8_t[size],
-                                [](uint8_t* p) { delete[] p; }};
+    std::shared_ptr<void> shptr{new uint8_t[size], [](uint8_t* p) { delete[] p; }};
     read(shptr.get(), size);
     return {std::move(shptr), size};
 }
@@ -165,9 +163,10 @@ public:
     }
 
     void read(void* dst, size_t size) override {
-        mgb_assert(m_usable,
-                   "can not read SharedMemProxyImpl again after buf has "
-                   "been modified");
+        mgb_assert(
+                m_usable,
+                "can not read SharedMemProxyImpl again after buf has "
+                "been modified");
         mgb_assert(m_offset + size <= m_size);
         memcpy(dst, m_ptr + m_offset, size);
         m_offset += size;
@@ -175,8 +174,7 @@ public:
 
     size_t tell() override { return m_offset; }
 
-    void read_into_tensor(HostTensorND& dest,
-                          const TensorLayout& layout) override;
+    void read_into_tensor(HostTensorND& dest, const TensorLayout& layout) override;
 
     SharedBuffer read_shared(size_t size) override;
 };
@@ -188,8 +186,7 @@ void InputFile::SharedMemProxyImpl::read_into_tensor(
     void* ptr = m_ptr + m_offset;
     auto align = dest.comp_node().get_mem_addr_alignment();
     auto aligned_write_pos =
-            static_cast<intptr_t>(reinterpret_cast<uintptr_t>(ptr) &
-                                  ~(align - 1)) -
+            static_cast<intptr_t>(reinterpret_cast<uintptr_t>(ptr) & ~(align - 1)) -
             reinterpret_cast<intptr_t>(m_ptr);
 
     void* ptr_to_share = nullptr;
@@ -203,16 +200,16 @@ void InputFile::SharedMemProxyImpl::read_into_tensor(
         }
         m_write_end = aligned_write_pos + size;
         ptr_to_share = ptr_aligned;
-    } else if (!m_writable &&
-               !(reinterpret_cast<uintptr_t>(ptr) & (align - 1))) {
+    } else if (!m_writable && !(reinterpret_cast<uintptr_t>(ptr) & (align - 1))) {
         // aligned by chance in read-only mode
         ptr_to_share = ptr;
     }
 
     if (ptr_to_share) {
         HostTensorStorage storage;
-        storage.reset(dest.comp_node(), size,
-                      {m_refhold, static_cast<dt_byte*>(ptr_to_share)});
+        storage.reset(
+                dest.comp_node(), size,
+                {m_refhold, static_cast<dt_byte*>(ptr_to_share)});
         dest.reset(storage, layout);
     } else {
         // copy to new buffer
@@ -234,14 +231,12 @@ SharedBuffer InputFile::SharedMemProxyImpl::read_shared(size_t size) {
     return {std::move(ret), size};
 }
 
-std::unique_ptr<InputFile> InputFile::make_mem_proxy(const void* ptr,
-                                                     size_t size) {
+std::unique_ptr<InputFile> InputFile::make_mem_proxy(const void* ptr, size_t size) {
     return std::make_unique<MemProxyImpl>(ptr, size);
 }
 
-std::unique_ptr<InputFile> InputFile::make_mem_proxy(std::shared_ptr<void> ptr,
-                                                     size_t size,
-                                                     bool writable) {
+std::unique_ptr<InputFile> InputFile::make_mem_proxy(
+        std::shared_ptr<void> ptr, size_t size, bool writable) {
     return std::make_unique<SharedMemProxyImpl>(std::move(ptr), size, writable);
 }
 
@@ -271,8 +266,7 @@ public:
     size_t tell() override { return m_offset; }
 };
 
-std::unique_ptr<OutputFile> OutputFile::make_vector_proxy(
-        std::vector<uint8_t>* buf) {
+std::unique_ptr<OutputFile> OutputFile::make_vector_proxy(std::vector<uint8_t>* buf) {
     return std::make_unique<VectorProxyImpl>(buf);
 }
 

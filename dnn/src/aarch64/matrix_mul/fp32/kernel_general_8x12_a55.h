@@ -43,8 +43,9 @@ struct matmul_general_8x12_a55 {
     //  +--+   ---  -  +--------+--------+--------+
     //
     //                        Accumulator
-    static void kern_8x12(const float* packA, const float* packB, int K,
-                          float* output, int LDC, bool is_first_k) {
+    static void kern_8x12(
+            const float* packA, const float* packB, int K, float* output, int LDC,
+            bool is_first_k) {
         const float* a_ptr = packA;
         const float* b_ptr = packB;
         int oddk = (K & 1);
@@ -525,15 +526,14 @@ struct matmul_general_8x12_a55 {
                 "6:\n"
 
                 : [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr), [K] "+r"(K),
-                  [LDC] "+r"(LDC), [is_first_k] "+r"(is_first_k),
-                  [oddk] "+r"(oddk), [outptr] "+r"(outptr)
+                  [LDC] "+r"(LDC), [is_first_k] "+r"(is_first_k), [oddk] "+r"(oddk),
+                  [outptr] "+r"(outptr)
                 :
-                : "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9",
-                  "v10", "v11", "v12", "v13", "v14", "v15", "v16", "v17", "v18",
-                  "v19", "v20", "v21", "v22", "v23", "v24", "v25", "v26", "v27",
-                  "v28", "v29", "v30", "v31", "x1", "x2", "x3", "x4", "x5",
-                  "x6", "x7", "x8", "x9", "x10", "x11", "x12", "x13", "cc",
-                  "memory");
+                : "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10",
+                  "v11", "v12", "v13", "v14", "v15", "v16", "v17", "v18", "v19", "v20",
+                  "v21", "v22", "v23", "v24", "v25", "v26", "v27", "v28", "v29", "v30",
+                  "v31", "x1", "x2", "x3", "x4", "x5", "x6", "x7", "x8", "x9", "x10",
+                  "x11", "x12", "x13", "cc", "memory");
 #undef LOAD_LINE
 #undef LOAD_C
     }
@@ -565,9 +565,9 @@ struct matmul_general_8x12_a55 {
     //  +--+   ---  -  +--------+
     //
     //                        Accumulator
-    static void kern_8x4(const float* packA, const float* packB, int K,
-                         float* output, int LDC, bool is_first_k,
-                         int n_remain) {
+    static void kern_8x4(
+            const float* packA, const float* packB, int K, float* output, int LDC,
+            bool is_first_k, int n_remain) {
         const float* a_ptr = packA;
         const float* b_ptr = packB;
         int oddk = (K & 1);
@@ -742,13 +742,12 @@ struct matmul_general_8x12_a55 {
                 "6:\n" STORE_C
 
                 : [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr), [K] "+r"(K),
-                  [LDC] "+r"(LDC), [is_first_k] "+r"(is_first_k),
-                  [oddk] "+r"(oddk), [outptr] "+r"(outptr),
-                  [n_remain] "+r"(n_remain)
+                  [LDC] "+r"(LDC), [is_first_k] "+r"(is_first_k), [oddk] "+r"(oddk),
+                  [outptr] "+r"(outptr), [n_remain] "+r"(n_remain)
                 :
-                : "v0", "v1", "v2", "v5", "v8", "v11", "v14", "v17", "v20",
-                  "v23", "v26", "v29", "x1", "x2", "x3", "x4", "x5", "x6", "x7",
-                  "x10", "cc", "memory");
+                : "v0", "v1", "v2", "v5", "v8", "v11", "v14", "v17", "v20", "v23",
+                  "v26", "v29", "x1", "x2", "x3", "x4", "x5", "x6", "x7", "x10", "cc",
+                  "memory");
 
 #undef LOAD_LINE
 #undef LOAD_C
@@ -779,9 +778,9 @@ struct matmul_general_8x12_a55 {
     //  +--+   ---  -  +--------+--------+--------+
     //
     //                        Accumulator
-    static void kern_4x12(const float* packA, const float* packB, int K,
-                          float* output, int LDC, bool is_first_k,
-                          int m_remain) {
+    static void kern_4x12(
+            const float* packA, const float* packB, int K, float* output, int LDC,
+            bool is_first_k, int m_remain) {
         const float* a_ptr = packA;
         const float* b_ptr = packB;
         int oddk = (K & 1);
@@ -972,14 +971,12 @@ struct matmul_general_8x12_a55 {
                 "6:\n" STORE_C
 
                 : [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr), [K] "+r"(K),
-                  [LDC] "+r"(LDC), [is_first_k] "+r"(is_first_k),
-                  [oddk] "+r"(oddk), [outptr] "+r"(outptr),
-                  [m_remain] "+r"(m_remain)
+                  [LDC] "+r"(LDC), [is_first_k] "+r"(is_first_k), [oddk] "+r"(oddk),
+                  [outptr] "+r"(outptr), [m_remain] "+r"(m_remain)
                 :
-                : "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9",
-                  "v10", "v11", "v12", "v13", "v14", "v15", "v16", "v17", "v18",
-                  "v19", "x1", "x2", "x3", "x10", "x20", "x21", "x22", "cc",
-                  "memory");
+                : "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10",
+                  "v11", "v12", "v13", "v14", "v15", "v16", "v17", "v18", "v19", "x1",
+                  "x2", "x3", "x10", "x20", "x21", "x22", "cc", "memory");
 
 #undef LOAD_LINE
 #undef LOAD_C
@@ -1010,9 +1007,9 @@ struct matmul_general_8x12_a55 {
     //  +--+   ---  -  +--------+
     //
     //                        Accumulator
-    static void kern_4x4(const float* packA, const float* packB, int K,
-                         float* output, int LDC, bool is_first_k, int m_remain,
-                         int n_remain) {
+    static void kern_4x4(
+            const float* packA, const float* packB, int K, float* output, int LDC,
+            bool is_first_k, int m_remain, int n_remain) {
         const float* a_ptr = packA;
         const float* b_ptr = packB;
         int oddk = (K & 1);
@@ -1151,12 +1148,12 @@ struct matmul_general_8x12_a55 {
                 "6:\n" STORE_C
 
                 : [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr), [K] "+r"(K),
-                  [LDC] "+r"(LDC), [is_first_k] "+r"(is_first_k),
-                  [oddk] "+r"(oddk), [outptr] "+r"(outptr),
-                  [n_remain] "+r"(n_remain), [m_remain] "+r"(m_remain)
+                  [LDC] "+r"(LDC), [is_first_k] "+r"(is_first_k), [oddk] "+r"(oddk),
+                  [outptr] "+r"(outptr), [n_remain] "+r"(n_remain),
+                  [m_remain] "+r"(m_remain)
                 :
-                : "v0", "v1", "v2", "v5", "v8", "v11", "v14", "v17", "x1", "x2",
-                  "x3", "x10", "cc", "memory");
+                : "v0", "v1", "v2", "v5", "v8", "v11", "v14", "v17", "x1", "x2", "x3",
+                  "x10", "cc", "memory");
 #undef LOAD_LINE
 #undef LOAD_C
 #undef STORE_LINE

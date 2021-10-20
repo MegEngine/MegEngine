@@ -60,8 +60,7 @@ public:
 
     double get_secs() const {
         auto now = std::chrono::high_resolution_clock::now();
-        return std::chrono::duration_cast<std::chrono::nanoseconds>(now -
-                                                                    m_start)
+        return std::chrono::duration_cast<std::chrono::nanoseconds>(now - m_start)
                        .count() *
                1e-9;
     }

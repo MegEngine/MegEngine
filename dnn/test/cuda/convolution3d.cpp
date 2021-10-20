@@ -91,8 +91,8 @@ TEST_F(CUDA, CONVOLUTION3D_FORWARD) {
     Checker<Convolution3DForward> checker(handle_cuda());
     NormalRNG default_rng;
     for (auto&& arg : args) {
-        float scale = 1.0f / sqrt(arg.filter[1] * arg.filter[2] *
-                                  arg.filter[3] * arg.filter[4]);
+        float scale = 1.0f / sqrt(arg.filter[1] * arg.filter[2] * arg.filter[3] *
+                                  arg.filter[4]);
         UniformFloatRNG rng(scale, 2 * scale);
         checker.set_dtype(0, dtype::Float32())
                 .set_dtype(1, dtype::Float32())
@@ -119,8 +119,8 @@ TEST_F(CUDA, CONVOLUTION3D_1X1X1_FORWARD) {
     Checker<Convolution3DForward> checker(handle_cuda());
     NormalRNG default_rng;
     for (auto&& arg : args) {
-        float scale = 1.0f / sqrt(arg.filter[1] * arg.filter[2] *
-                                  arg.filter[3] * arg.filter[4]);
+        float scale = 1.0f / sqrt(arg.filter[1] * arg.filter[2] * arg.filter[3] *
+                                  arg.filter[4]);
         UniformFloatRNG rng(scale, 2 * scale);
         checker.set_dtype(0, dtype::Float32())
                 .set_dtype(1, dtype::Float32())
@@ -138,86 +138,72 @@ TEST_F(CUDA, CONVOLUTION3D_MATMUL_FORWARD) {
     Checker<Convolution3DForward> checker(handle_cuda());
     NormalRNG default_rng;
     for (auto&& arg : args) {
-        float scale = 1.0f / sqrt(arg.filter[1] * arg.filter[2] *
-                                  arg.filter[3] * arg.filter[4]);
+        float scale = 1.0f / sqrt(arg.filter[1] * arg.filter[2] * arg.filter[3] *
+                                  arg.filter[4]);
         UniformFloatRNG rng(scale, 2 * scale);
         checker.set_dtype(0, dtype::Float32())
                 .set_dtype(1, dtype::Float32())
                 .set_rng(0, &default_rng)
                 .set_rng(1, &default_rng)
-                .set_param(arg.param).
-                execs({arg.src, arg.filter, {}});
+                .set_param(arg.param)
+                .execs({arg.src, arg.filter, {}});
     }
 }
 
 TEST_F(CUDA, CONVOLUTION3D_FORWARD_NONCONTIG_CUDNN) {
     using namespace convolution3d;
     Checker<Convolution3DForward> checker(handle_cuda());
-    checker.set_before_exec_callback(AlgoChecker<Convolution3DForward>(
-            "CUDNN"));
+    checker.set_before_exec_callback(AlgoChecker<Convolution3DForward>("CUDNN"));
     param::Convolution3D param;
     param.pad_d = param.pad_h = param.pad_w = 1;
     checker.set_dtype(0, dtype::Float32())
-                .set_dtype(1, dtype::Float32())
-                .set_epsilon(1e-3);
+            .set_dtype(1, dtype::Float32())
+            .set_epsilon(1e-3);
 
     //! noncontiguous case
     {
         checker.set_param(param).execl(TensorLayoutArray{
-                {{4, 5, 16, 16, 16},
-                 {40960, 4096, 256, 16, 1},
-                 dtype::Float32()},
+                {{4, 5, 16, 16, 16}, {40960, 4096, 256, 16, 1}, dtype::Float32()},
                 {{5, 5, 3, 3, 3}, {135, 27, 9, 3, 1}, dtype::Float32()},
-                {{4, 5, 16, 16, 16},
-                 {40960, 4096, 256, 16, 1},
-                 dtype::Float32()}});
+                {{4, 5, 16, 16, 16}, {40960, 4096, 256, 16, 1}, dtype::Float32()}});
     }
 }
 
 TEST_F(CUDA, CONVOLUTION3D_FORWARD_NONCONTIG_INPLACE_MATMUL) {
     using namespace convolution3d;
     Checker<Convolution3DForward> checker(handle_cuda());
-    checker.set_before_exec_callback(AlgoChecker<Convolution3DForward>(
-            "INPLACE_MATMUL"));
+    checker.set_before_exec_callback(
+            AlgoChecker<Convolution3DForward>("INPLACE_MATMUL"));
     param::Convolution3D param;
     param.pad_d = param.pad_h = param.pad_w = 1;
     checker.set_dtype(0, dtype::Float32())
-                .set_dtype(1, dtype::Float32())
-                .set_epsilon(1e-3);
+            .set_dtype(1, dtype::Float32())
+            .set_epsilon(1e-3);
 
     //! noncontiguous case
     {
         checker.set_param(param).execl(TensorLayoutArray{
-                {{4, 5, 16, 16, 16},
-                 {40960, 4096, 256, 16, 1},
-                 dtype::Float32()},
+                {{4, 5, 16, 16, 16}, {40960, 4096, 256, 16, 1}, dtype::Float32()},
                 {{5, 5, 3, 3, 3}, {135, 27, 9, 3, 1}, dtype::Float32()},
-                {{4, 5, 16, 16, 16},
-                 {40960, 4096, 256, 16, 1},
-                 dtype::Float32()}});
+                {{4, 5, 16, 16, 16}, {40960, 4096, 256, 16, 1}, dtype::Float32()}});
     }
 }
 
 TEST_F(CUDA, CONVOLUTION3D_FORWARD_NONCONTIG_1x1x1) {
     using namespace convolution3d;
     Checker<Convolution3DForward> checker(handle_cuda());
-    checker.set_before_exec_callback(AlgoChecker<Convolution3DForward>(
-            "1x1x1"));
+    checker.set_before_exec_callback(AlgoChecker<Convolution3DForward>("1x1x1"));
     param::Convolution3D param;
     checker.set_dtype(0, dtype::Float32())
-                .set_dtype(1, dtype::Float32())
-                .set_epsilon(1e-3);
+            .set_dtype(1, dtype::Float32())
+            .set_epsilon(1e-3);
 
     //! noncontiguous case
     {
         checker.set_param(param).execl(TensorLayoutArray{
-                {{4, 5, 16, 16, 16},
-                 {40960, 4096, 256, 16, 1},
-                 dtype::Float32()},
+                {{4, 5, 16, 16, 16}, {40960, 4096, 256, 16, 1}, dtype::Float32()},
                 {{5, 5, 1, 1, 1}, {5, 1, 1, 1, 1}, dtype::Float32()},
-                {{4, 5, 16, 16, 16},
-                 {40960, 4096, 256, 16, 1},
-                 dtype::Float32()}});
+                {{4, 5, 16, 16, 16}, {40960, 4096, 256, 16, 1}, dtype::Float32()}});
     }
 }
 
@@ -228,8 +214,8 @@ TEST_F(CUDA, BENCHMARK_CONVOLUTION3D_MATMUL_BACKWARD_FILTER) {
     Benchmarker<Convolution3DBackwardFilter> marker(handle_cuda());
     NormalRNG default_rng;
     for (auto&& arg : args) {
-        float scale = 1.0f / sqrt(arg.filter[1] * arg.filter[2] *
-                                  arg.filter[3] * arg.filter[4]);
+        float scale = 1.0f / sqrt(arg.filter[1] * arg.filter[2] * arg.filter[3] *
+                                  arg.filter[4]);
         auto src = TensorLayout(arg.src, dtype::Float32());
         auto filter = TensorLayout(arg.filter, dtype::Float32());
         TensorLayout dst;
@@ -252,14 +238,14 @@ TEST_F(CUDA, BENCHMARK_CONVOLUTION3D_MATMUL_FORWARD) {
     Benchmarker<Convolution3DForward> marker(handle_cuda());
     NormalRNG default_rng;
     for (auto&& arg : args) {
-        float scale = 1.0f / sqrt(arg.filter[1] * arg.filter[2] *
-                                  arg.filter[3] * arg.filter[4]);
+        float scale = 1.0f / sqrt(arg.filter[1] * arg.filter[2] * arg.filter[3] *
+                                  arg.filter[4]);
         UniformFloatRNG rng(scale, 2 * scale);
         marker.set_dtype(0, dtype::Float32())
                 .set_dtype(1, dtype::Float32())
                 .set_rng(0, &default_rng)
                 .set_rng(1, &default_rng)
-                . //set_param(arg.param).
+                .  // set_param(arg.param).
                 execs({arg.src, arg.filter, {}});
     }
 }
@@ -270,8 +256,8 @@ TEST_F(CUDA, BENCHMARK_CONVOLUTION3D_1X1X1_FORWARD) {
     Benchmarker<Convolution3DForward> marker(handle_cuda());
     NormalRNG default_rng;
     for (auto&& arg : args) {
-        float scale = 1.0f / sqrt(arg.filter[1] * arg.filter[2] *
-                                  arg.filter[3] * arg.filter[4]);
+        float scale = 1.0f / sqrt(arg.filter[1] * arg.filter[2] * arg.filter[3] *
+                                  arg.filter[4]);
         UniformFloatRNG rng(scale, 2 * scale);
         marker.set_dtype(0, dtype::Float32())
                 .set_dtype(1, dtype::Float32())
@@ -304,8 +290,8 @@ TEST_F(CUDA, BENCHMARK_CONVOLUTION3D_FORWARD) {
     Benchmarker<Convolution3DForward> marker(handle_cuda());
     NormalRNG default_rng;
     for (auto&& arg : args) {
-        float scale = 1.0f / sqrt(arg.filter[1] * arg.filter[2] *
-                                  arg.filter[3] * arg.filter[4]);
+        float scale = 1.0f / sqrt(arg.filter[1] * arg.filter[2] * arg.filter[3] *
+                                  arg.filter[4]);
         UniformFloatRNG rng(scale, 2 * scale);
         marker.set_dtype(0, dtype::Float32())
                 .set_dtype(1, dtype::Float32())
@@ -324,15 +310,14 @@ TEST_F(CUDA, BENCHMARK_CONVOLUTION3D_FORWARD) {
 
 #endif
 
-
 TEST_F(CUDA, CONVOLUTION3D_BACKWARD_DATA) {
     using namespace convolution3d;
     std::vector<TestArg> args = get_args();
     Checker<Convolution3DBackwardData> checker(handle_cuda());
     NormalRNG default_rng;
     for (auto&& arg : args) {
-        float scale = 1.0f / sqrt(arg.filter[0] * arg.filter[2] *
-                                  arg.filter[3] * arg.filter[4]);
+        float scale = 1.0f / sqrt(arg.filter[0] * arg.filter[2] * arg.filter[3] *
+                                  arg.filter[4]);
         UniformFloatRNG rng(scale, 2 * scale);
         auto src = TensorLayout(arg.src, dtype::Float32());
         auto filter = TensorLayout(arg.filter, dtype::Float32());
@@ -397,8 +382,8 @@ TEST_F(CUDA, CONVOLUTION3D_MATMUL_BACKWARD_FILTER) {
     Checker<Convolution3DBackwardFilter> checker(handle_cuda());
     NormalRNG default_rng;
     for (auto&& arg : args) {
-        float scale = 1.0f / sqrt(arg.filter[1] * arg.filter[2] *
-                                  arg.filter[3] * arg.filter[4]);
+        float scale = 1.0f / sqrt(arg.filter[1] * arg.filter[2] * arg.filter[3] *
+                                  arg.filter[4]);
         UniformFloatRNG rng(scale, 2 * scale);
         auto src = TensorLayout(arg.src, dtype::Float32());
         auto filter = TensorLayout(arg.filter, dtype::Float32());
@@ -417,8 +402,7 @@ TEST_F(CUDA, CONVOLUTION3D_MATMUL_BACKWARD_FILTER) {
 TEST_F(CUDA, CONVOLUTION3D_BACKWARD_DATA_NONCONTIG_CUDNN) {
     using namespace convolution3d;
     Checker<Convolution3DBackwardData> checker(handle_cuda());
-    checker.set_before_exec_callback(AlgoChecker<Convolution3DBackwardData>(
-            "CUDNN"));
+    checker.set_before_exec_callback(AlgoChecker<Convolution3DBackwardData>("CUDNN"));
     Convolution3DBackwardData::Param param;
     param.pad_d = param.pad_h = param.pad_w = 1;
     NormalRNG default_rng;
@@ -432,20 +416,15 @@ TEST_F(CUDA, CONVOLUTION3D_BACKWARD_DATA_NONCONTIG_CUDNN) {
     {
         checker.execl(TensorLayoutArray{
                 {{5, 5, 3, 3, 3}, {135, 27, 9, 3, 1}, dtype::Float32()},
-                {{4, 5, 16, 16, 16},
-                 {40960, 4096, 256, 16, 1},
-                 dtype::Float32()},
-                {{4, 5, 16, 16, 16},
-                 {40960, 4096, 256, 16, 1},
-                 dtype::Float32()}});
+                {{4, 5, 16, 16, 16}, {40960, 4096, 256, 16, 1}, dtype::Float32()},
+                {{4, 5, 16, 16, 16}, {40960, 4096, 256, 16, 1}, dtype::Float32()}});
     }
 }
 
 TEST_F(CUDA, CONVOLUTION3D_BACKWARD_FILTER_NONCONTIG_CUDNN) {
     using namespace convolution3d;
     Checker<Convolution3DBackwardFilter> checker(handle_cuda());
-    checker.set_before_exec_callback(AlgoChecker<Convolution3DBackwardFilter>(
-            "CUDNN"));
+    checker.set_before_exec_callback(AlgoChecker<Convolution3DBackwardFilter>("CUDNN"));
     Convolution3DBackwardFilter::Param param;
     param.pad_d = param.pad_h = param.pad_w = 1;
     NormalRNG default_rng;
@@ -458,12 +437,8 @@ TEST_F(CUDA, CONVOLUTION3D_BACKWARD_FILTER_NONCONTIG_CUDNN) {
     //! noncontiguous case
     {
         checker.execl(TensorLayoutArray{
-                {{4, 5, 16, 16, 16},
-                 {40960, 4096, 256, 16, 1},
-                 dtype::Float32()},
-                {{4, 5, 16, 16, 16},
-                 {40960, 4096, 256, 16, 1},
-                 dtype::Float32()},
+                {{4, 5, 16, 16, 16}, {40960, 4096, 256, 16, 1}, dtype::Float32()},
+                {{4, 5, 16, 16, 16}, {40960, 4096, 256, 16, 1}, dtype::Float32()},
                 {{5, 5, 3, 3, 3}, {135, 27, 9, 3, 1}, dtype::Float32()}});
     }
 }

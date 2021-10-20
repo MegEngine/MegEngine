@@ -14,13 +14,12 @@
 #include "./quint8/algos.h"
 
 #include "src/common/metahelper.h"
+#include "src/common/opr_delegate.h"
 #include "src/common/utils.h"
 #include "src/naive/handle.h"
-#include "src/common/opr_delegate.h"
 
 using namespace megdnn;
 using namespace arm_common;
-
 
 /* ===================== ConvolutionBackwardData ===================== */
 class ConvolutionBackwardDataImpl::AlgoPack : NonCopyableObj {
@@ -32,8 +31,7 @@ class ConvolutionBackwardDataImpl::AlgoPack : NonCopyableObj {
 #endif
 
     fallback::ConvolutionBackwardDataImpl::AlgoBase::Mapper m_all_algos_map;
-    SmallVector<fallback::ConvolutionBackwardDataImpl::AlgoBase*>
-            m_all_algos;
+    SmallVector<fallback::ConvolutionBackwardDataImpl::AlgoBase*> m_all_algos;
 
 public:
     AlgoPack() {
@@ -49,15 +47,14 @@ public:
         }
     }
 
-    const SmallVector<fallback::ConvolutionBackwardDataImpl::AlgoBase*>&
-    all_algos() const {
+    const SmallVector<fallback::ConvolutionBackwardDataImpl::AlgoBase*>& all_algos()
+            const {
         return m_all_algos;
     }
     const AlgoBase::Mapper& all_algos_map() const { return m_all_algos_map; }
 };
 
-const ConvolutionBackwardDataImpl::AlgoPack&
-ConvolutionBackwardDataImpl::algo_pack() {
+const ConvolutionBackwardDataImpl::AlgoPack& ConvolutionBackwardDataImpl::algo_pack() {
     static AlgoPack algo_pack;
     return algo_pack;
 }
@@ -67,19 +64,18 @@ MEGDNN_FB_DEF_GET_ALGO_FROM_DESC(ConvolutionBackwardDataImpl)
 SmallVector<fallback::ConvolutionBackwardDataImpl::AlgoBase*>
 ConvolutionBackwardDataImpl::get_all_packed_algo() {
     auto&& algos = fallback::ConvolutionBackwardDataImpl::get_all_packed_algo();
-    algos.insert(algos.begin(), algo_pack().all_algos().begin(),
-                 algo_pack().all_algos().end());
+    algos.insert(
+            algos.begin(), algo_pack().all_algos().begin(),
+            algo_pack().all_algos().end());
     return std::move(algos);
 }
 
-ConvolutionBackwardDataImpl::ncb_kern_t
-ConvolutionBackwardDataImpl::ncb_1g_dispatch_kern(
-        Algorithm* algo, const NCBKernSizeParam& param) {
+ConvolutionBackwardDataImpl::ncb_kern_t ConvolutionBackwardDataImpl::
+        ncb_1g_dispatch_kern(Algorithm* algo, const NCBKernSizeParam& param) {
     if (algo->handle_type() == Handle::HandleType::ARM_COMMON) {
         return static_cast<AlgoBase*>(algo)->dispatch_kern(this, param);
     }
-    return fallback::ConvolutionBackwardDataImpl::ncb_1g_dispatch_kern(algo,
-                                                                       param);
+    return fallback::ConvolutionBackwardDataImpl::ncb_1g_dispatch_kern(algo, param);
 }
 
 size_t ConvolutionBackwardDataImpl::ncb_1g_get_workspace(
@@ -87,8 +83,7 @@ size_t ConvolutionBackwardDataImpl::ncb_1g_get_workspace(
     if (algo->handle_type() == Handle::HandleType::ARM_COMMON) {
         return static_cast<AlgoBase*>(algo)->get_workspace(this, param);
     }
-    return fallback::ConvolutionBackwardDataImpl::ncb_1g_get_workspace(algo,
-                                                                       param);
+    return fallback::ConvolutionBackwardDataImpl::ncb_1g_get_workspace(algo, param);
 }
 
 const char* ConvolutionBackwardDataImpl::get_algorithm_set_name() const {

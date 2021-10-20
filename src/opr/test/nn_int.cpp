@@ -24,8 +24,7 @@ using Checker31 = AutoOprChecker<3, 1>;
 std::unique_ptr<Checker31> make_elemwise_multi_type_checker3(
         opr::ElemwiseMultiType::Mode mode, const std::array<DType, 3>& dtypes) {
     using Checker = Checker31;
-    auto make_graph =
-            [=](const Checker::SymInpArray& inputs) -> Checker::SymOutArray {
+    auto make_graph = [=](const Checker::SymInpArray& inputs) -> Checker::SymOutArray {
         auto as_type = [&dtypes, &inputs](size_t i) {
             return opr::TypeCvt::make(inputs[i], dtypes[i]);
         };
@@ -34,10 +33,8 @@ std::unique_ptr<Checker31> make_elemwise_multi_type_checker3(
         return {opr::TypeCvt::make(ovar, dtype::Float32{})};
     };
     auto fwd = [=](Checker::NumOutArray& dest, Checker::NumInpArray inp) {
-        auto opr = megdnn_naive_handle()
-                           ->create_operator<megdnn::ElemwiseMultiType>();
-        auto opr_typecvt =
-                megdnn_naive_handle()->create_operator<megdnn::TypeCvt>();
+        auto opr = megdnn_naive_handle()->create_operator<megdnn::ElemwiseMultiType>();
+        auto opr_typecvt = megdnn_naive_handle()->create_operator<megdnn::TypeCvt>();
         opr->param() = {mode};
         megdnn::TensorShapeArray inp_shapes(3);
         megdnn::TensorNDArray inp_tensors(3);
@@ -76,8 +73,7 @@ TEST(TestOprElemwiseMultiType, Fma3Int16x32x32x32) {
 }
 
 TEST(TestOprElemwiseMultiType, Fma3IXxf32xf32xi8) {
-    std::array<DType, 3> src_types{dtype::Int8{}, dtype::Int16{},
-                                   dtype::Int32{}};
+    std::array<DType, 3> src_types{dtype::Int8{}, dtype::Int16{}, dtype::Int32{}};
     for (auto src_type : src_types) {
         make_elemwise_multi_type_checker3(
                 opr::ElemwiseMultiType::Mode::FUSE_MUL_ADD3_IXxF32xF32xI8,
@@ -96,15 +92,14 @@ TEST(TestOprElemwiseMultiType, QuantizedModeBinary_IS8_OS32) {
     DType z_dtype = dtype::QuantizedS32(0.15f);
     using Mode = opr::ElemwiseMultiType::Param::Mode;
     for (auto mode : {Mode::QFUSE_ADD_RELU, Mode::QADD, Mode::QMUL}) {
-        auto make_graph = [&](const Checker::SymInpArray& inputs)
-                -> Checker::SymOutArray {
+        auto make_graph =
+                [&](const Checker::SymInpArray& inputs) -> Checker::SymOutArray {
             OperatorNodeConfig config{z_dtype};
             auto cpu = CompNode::load("cpux");
             auto a = opr::Copy::make(inputs[0], cpu);
             auto b = opr::Copy::make(inputs[1], cpu);
             auto y = opr::ElemwiseMultiType::make(
-                    {opr::TypeCvt::make(a, x_dtype),
-                     opr::TypeCvt::make(b, y_dtype)},
+                    {opr::TypeCvt::make(a, x_dtype), opr::TypeCvt::make(b, y_dtype)},
                     {mode}, config);
             y = opr::TypeCvt::make(y, dtype::Float32());
             return {y};
@@ -112,10 +107,10 @@ TEST(TestOprElemwiseMultiType, QuantizedModeBinary_IS8_OS32) {
         auto fwd = [&](Checker::NumOutArray& dest, Checker::NumInpArray inp) {
             auto cg = ComputingGraph::make();
             cg->options().graph_opt_level = 0;
-            auto x = opr::TypeCvt::make(opr::Host2DeviceCopy::make(*cg, inp[0]),
-                                        x_dtype);
-            auto y = opr::TypeCvt::make(opr::Host2DeviceCopy::make(*cg, inp[1]),
-                                        y_dtype);
+            auto x = opr::TypeCvt::make(
+                    opr::Host2DeviceCopy::make(*cg, inp[0]), x_dtype);
+            auto y = opr::TypeCvt::make(
+                    opr::Host2DeviceCopy::make(*cg, inp[1]), y_dtype);
             SymbolVar z;
             if (mode == Mode::QMUL) {
                 z = opr::TypeCvt::make(x, dtype::Float32()) *
@@ -148,27 +143,27 @@ TEST(TestOprElemwiseMultiType, QuantizedModeBinary_IS8_OS32) {
 }
 
 auto gen_postive = [](HostTensorND& dest) {
-    HostTensorGenerator<dtype::Float32, RandomDistribution::UNIFORM>
-            mask_generator{0.f, FLT_MAX};
+    HostTensorGenerator<dtype::Float32, RandomDistribution::UNIFORM> mask_generator{
+            0.f, FLT_MAX};
     dest = *mask_generator(dest.shape(), dest.comp_node());
 };
 //! \warning: asin and acos has lower precision,
 //! they may produce nan.
 auto gen_asin_acos = [](HostTensorND& dest) {
-    HostTensorGenerator<dtype::Float32, RandomDistribution::UNIFORM>
-            mask_generator{-0.5f, 0.5f};
+    HostTensorGenerator<dtype::Float32, RandomDistribution::UNIFORM> mask_generator{
+            -0.5f, 0.5f};
     dest = *mask_generator(dest.shape(), dest.comp_node());
 };
 //! \warning: erfinv and erfcinv has lower precision,
 //! should give them more strict input.
 auto gen_erfinv = [](HostTensorND& dest) {
-    HostTensorGenerator<dtype::Float32, RandomDistribution::UNIFORM>
-            mask_generator{-0.5f, 0.5f};
+    HostTensorGenerator<dtype::Float32, RandomDistribution::UNIFORM> mask_generator{
+            -0.5f, 0.5f};
     dest = *mask_generator(dest.shape(), dest.comp_node());
 };
 auto gen_erfcinv = [](HostTensorND& dest) {
-    HostTensorGenerator<dtype::Float32, RandomDistribution::UNIFORM>
-            mask_generator{0.5f, 1.5f};
+    HostTensorGenerator<dtype::Float32, RandomDistribution::UNIFORM> mask_generator{
+            0.5f, 1.5f};
     dest = *mask_generator(dest.shape(), dest.comp_node());
 };
 
@@ -182,28 +177,26 @@ TEST(TestOprElemwiseMultiType, QuantizedModeUnary_IS8_OS8) {
     DType d_dtype = dtype::QuantizedS8(2.00f);
     using Mode = opr::ElemwiseMultiType::Param::Mode;
     for (auto mode :
-         {Mode::QRELU, Mode::QABS,    Mode::QSIGMOID, Mode::QEXP,
-          Mode::QTANH, Mode::QNEGATE, Mode::QACOS,    Mode::QASIN,
-          Mode::QCEIL, Mode::QCOS,    Mode::QEXPM1,   Mode::QFLOOR,
-          Mode::QLOG,  Mode::QLOG1P,  Mode::QSIN,     Mode::QROUND,
-          Mode::QERF,  Mode::QERFINV, Mode::QERFC,    Mode::QERFCINV,
+         {Mode::QRELU,      Mode::QABS,    Mode::QSIGMOID, Mode::QEXP,   Mode::QTANH,
+          Mode::QNEGATE,    Mode::QACOS,   Mode::QASIN,    Mode::QCEIL,  Mode::QCOS,
+          Mode::QEXPM1,     Mode::QFLOOR,  Mode::QLOG,     Mode::QLOG1P, Mode::QSIN,
+          Mode::QROUND,     Mode::QERF,    Mode::QERFINV,  Mode::QERFC,  Mode::QERFCINV,
           Mode::QFAST_TANH, Mode::QH_SWISH}) {
-        auto make_graph = [&](const Checker::SymInpArray& inputs)
-                -> Checker::SymOutArray {
+        auto make_graph =
+                [&](const Checker::SymInpArray& inputs) -> Checker::SymOutArray {
             OperatorNodeConfig config{d_dtype};
             auto cpu = CompNode::load("cpux");
             auto a = opr::Copy::make(inputs[0], cpu);
             auto d = opr::ElemwiseMultiType::make(
-                    {opr::TypeCvt::make(a, x_dtype)},
-                    {mode}, config);
+                    {opr::TypeCvt::make(a, x_dtype)}, {mode}, config);
             d = opr::TypeCvt::make(d, dtype::Float32());
             return {d};
         };
         auto fwd = [&](Checker::NumOutArray& dest, Checker::NumInpArray inp) {
             auto cg = ComputingGraph::make();
             cg->options().graph_opt_level = 0;
-            auto x = opr::TypeCvt::make(opr::Host2DeviceCopy::make(*cg, inp[0]),
-                                        x_dtype);
+            auto x = opr::TypeCvt::make(
+                    opr::Host2DeviceCopy::make(*cg, inp[0]), x_dtype);
             SymbolVar d;
             auto xf = opr::TypeCvt::make(x, dtype::Float32());
             switch (mode) {
@@ -272,28 +265,26 @@ TEST(TestOprElemwiseMultiType, QuantizedModeUnary_I8Asymm_O8Asymm) {
     DType d_dtype = dtype::Quantized8Asymm(2.00f, static_cast<uint8_t>(128));
     using Mode = opr::ElemwiseMultiType::Param::Mode;
     for (auto mode :
-         {Mode::QRELU, Mode::QABS,    Mode::QSIGMOID, Mode::QEXP,
-          Mode::QTANH, Mode::QNEGATE, Mode::QACOS,    Mode::QASIN,
-          Mode::QCEIL, Mode::QCOS,    Mode::QEXPM1,   Mode::QFLOOR,
-          Mode::QLOG,  Mode::QLOG1P,  Mode::QSIN,     Mode::QROUND,
-          Mode::QERF,  Mode::QERFINV, Mode::QERFC,    Mode::QERFCINV,
+         {Mode::QRELU,     Mode::QABS,   Mode::QSIGMOID, Mode::QEXP,   Mode::QTANH,
+          Mode::QNEGATE,   Mode::QACOS,  Mode::QASIN,    Mode::QCEIL,  Mode::QCOS,
+          Mode::QEXPM1,    Mode::QFLOOR, Mode::QLOG,     Mode::QLOG1P, Mode::QSIN,
+          Mode::QROUND,    Mode::QERF,   Mode::QERFINV,  Mode::QERFC,  Mode::QERFCINV,
           Mode::QFAST_TANH}) {
-        auto make_graph = [&](const Checker::SymInpArray& inputs)
-                -> Checker::SymOutArray {
+        auto make_graph =
+                [&](const Checker::SymInpArray& inputs) -> Checker::SymOutArray {
             OperatorNodeConfig config{d_dtype};
             auto cpu = CompNode::load("cpux");
             auto a = opr::Copy::make(inputs[0], cpu);
             auto d = opr::ElemwiseMultiType::make(
-                    {opr::TypeCvt::make(a, x_dtype)},
-                    {mode}, config);
+                    {opr::TypeCvt::make(a, x_dtype)}, {mode}, config);
             d = opr::TypeCvt::make(d, dtype::Float32());
             return {d};
         };
         auto fwd = [&](Checker::NumOutArray& dest, Checker::NumInpArray inp) {
             auto cg = ComputingGraph::make();
             cg->options().graph_opt_level = 0;
-            auto x = opr::TypeCvt::make(opr::Host2DeviceCopy::make(*cg, inp[0]),
-                                        x_dtype);
+            auto x = opr::TypeCvt::make(
+                    opr::Host2DeviceCopy::make(*cg, inp[0]), x_dtype);
             SymbolVar d;
             auto xf = opr::TypeCvt::make(x, dtype::Float32());
             switch (mode) {
@@ -366,23 +357,37 @@ TEST(TestOprElemwiseMultiType, QuantizedModeBinary_IS8_OS8) {
     DType y_dtype = dtype::QuantizedS8(2.0f);
     DType d_dtype = dtype::QuantizedS8(1.15f);
     using Mode = opr::ElemwiseMultiType::Param::Mode;
-    for (auto mode : {Mode::QFUSE_ADD_RELU, Mode::QADD, Mode::QMUL,
-                      Mode::QMIN, Mode::QMAX, Mode::QSUB, Mode::QTRUE_DIV,
-                      Mode::QFUSE_ADD_SIGMOID, Mode::QFUSE_ADD_TANH,
-                      Mode::QABS_GRAD, Mode::QFLOOR_DIV,
-                      Mode::QMOD, Mode::QSIGMOID_GRAD, Mode::QSWITCH_GT0,
-                      Mode::QTANH_GRAD, Mode::QLT, Mode::QLEQ, Mode::QEQ,
-                      Mode::QPOW, Mode::QLOG_SUM_EXP,
-                      Mode::QFAST_TANH_GRAD, Mode::QATAN2}) {
-        auto make_graph = [&](const Checker::SymInpArray& inputs)
-                -> Checker::SymOutArray {
+    for (auto mode :
+         {Mode::QFUSE_ADD_RELU,
+          Mode::QADD,
+          Mode::QMUL,
+          Mode::QMIN,
+          Mode::QMAX,
+          Mode::QSUB,
+          Mode::QTRUE_DIV,
+          Mode::QFUSE_ADD_SIGMOID,
+          Mode::QFUSE_ADD_TANH,
+          Mode::QABS_GRAD,
+          Mode::QFLOOR_DIV,
+          Mode::QMOD,
+          Mode::QSIGMOID_GRAD,
+          Mode::QSWITCH_GT0,
+          Mode::QTANH_GRAD,
+          Mode::QLT,
+          Mode::QLEQ,
+          Mode::QEQ,
+          Mode::QPOW,
+          Mode::QLOG_SUM_EXP,
+          Mode::QFAST_TANH_GRAD,
+          Mode::QATAN2}) {
+        auto make_graph =
+                [&](const Checker::SymInpArray& inputs) -> Checker::SymOutArray {
             OperatorNodeConfig config{d_dtype};
             auto cpu = CompNode::load("cpux");
             auto a = opr::Copy::make(inputs[0], cpu);
             auto b = opr::Copy::make(inputs[1], cpu);
             auto d = opr::ElemwiseMultiType::make(
-                    {opr::TypeCvt::make(a, x_dtype),
-                     opr::TypeCvt::make(b, y_dtype)},
+                    {opr::TypeCvt::make(a, x_dtype), opr::TypeCvt::make(b, y_dtype)},
                     {mode}, config);
             d = opr::TypeCvt::make(d, dtype::Float32());
             return {d};
@@ -390,10 +395,10 @@ TEST(TestOprElemwiseMultiType, QuantizedModeBinary_IS8_OS8) {
         auto fwd = [&](Checker::NumOutArray& dest, Checker::NumInpArray inp) {
             auto cg = ComputingGraph::make();
             cg->options().graph_opt_level = 0;
-            auto x = opr::TypeCvt::make(opr::Host2DeviceCopy::make(*cg, inp[0]),
-                                        x_dtype);
-            auto y = opr::TypeCvt::make(opr::Host2DeviceCopy::make(*cg, inp[1]),
-                                        y_dtype);
+            auto x = opr::TypeCvt::make(
+                    opr::Host2DeviceCopy::make(*cg, inp[0]), x_dtype);
+            auto y = opr::TypeCvt::make(
+                    opr::Host2DeviceCopy::make(*cg, inp[1]), y_dtype);
             SymbolVar d;
             auto xf = opr::TypeCvt::make(x, dtype::Float32());
             auto yf = opr::TypeCvt::make(y, dtype::Float32());
@@ -454,38 +459,38 @@ TEST(TestOprElemwiseMultiType, QuantizedModeBinary_I8Asymm_O8Asymm) {
     DType y_dtype = dtype::Quantized8Asymm(2.0f, static_cast<uint8_t>(128));
     DType d_dtype = dtype::Quantized8Asymm(1.15f, static_cast<uint8_t>(128));
     using Mode = opr::ElemwiseMultiType::Param::Mode;
-    for (auto mode : {Mode::QFUSE_ADD_RELU,
-                      Mode::QADD,
-                      Mode::QMUL,
-                      Mode::QMIN,
-                      Mode::QMAX,
-                      Mode::QSUB,
-                      Mode::QTRUE_DIV,
-                      Mode::QFUSE_ADD_SIGMOID,
-                      Mode::QFUSE_ADD_TANH,
-                      Mode::QFUSE_ADD_H_SWISH,
-                      Mode::QABS_GRAD,
-                      Mode::QFLOOR_DIV,
-                      Mode::QMOD,
-                      Mode::QSIGMOID_GRAD,
-                      Mode::QSWITCH_GT0,
-                      Mode::QTANH_GRAD,
-                      Mode::QLT,
-                      Mode::QLEQ,
-                      Mode::QEQ,
-                      Mode::QPOW,
-                      Mode::QLOG_SUM_EXP,
-                      Mode::QFAST_TANH_GRAD,
-                      Mode::QATAN2}) {
-        auto make_graph = [&](const Checker::SymInpArray& inputs)
-                -> Checker::SymOutArray {
+    for (auto mode :
+         {Mode::QFUSE_ADD_RELU,
+          Mode::QADD,
+          Mode::QMUL,
+          Mode::QMIN,
+          Mode::QMAX,
+          Mode::QSUB,
+          Mode::QTRUE_DIV,
+          Mode::QFUSE_ADD_SIGMOID,
+          Mode::QFUSE_ADD_TANH,
+          Mode::QFUSE_ADD_H_SWISH,
+          Mode::QABS_GRAD,
+          Mode::QFLOOR_DIV,
+          Mode::QMOD,
+          Mode::QSIGMOID_GRAD,
+          Mode::QSWITCH_GT0,
+          Mode::QTANH_GRAD,
+          Mode::QLT,
+          Mode::QLEQ,
+          Mode::QEQ,
+          Mode::QPOW,
+          Mode::QLOG_SUM_EXP,
+          Mode::QFAST_TANH_GRAD,
+          Mode::QATAN2}) {
+        auto make_graph =
+                [&](const Checker::SymInpArray& inputs) -> Checker::SymOutArray {
             OperatorNodeConfig config{d_dtype};
             auto cpu = CompNode::load("cpux");
             auto a = opr::Copy::make(inputs[0], cpu);
             auto b = opr::Copy::make(inputs[1], cpu);
             auto d = opr::ElemwiseMultiType::make(
-                    {opr::TypeCvt::make(a, x_dtype),
-                     opr::TypeCvt::make(b, y_dtype)},
+                    {opr::TypeCvt::make(a, x_dtype), opr::TypeCvt::make(b, y_dtype)},
                     {mode}, config);
             d = opr::TypeCvt::make(d, dtype::Float32());
             return {d};
@@ -493,10 +498,10 @@ TEST(TestOprElemwiseMultiType, QuantizedModeBinary_I8Asymm_O8Asymm) {
         auto fwd = [&](Checker::NumOutArray& dest, Checker::NumInpArray inp) {
             auto cg = ComputingGraph::make();
             cg->options().graph_opt_level = 0;
-            auto x = opr::TypeCvt::make(opr::Host2DeviceCopy::make(*cg, inp[0]),
-                                        x_dtype);
-            auto y = opr::TypeCvt::make(opr::Host2DeviceCopy::make(*cg, inp[1]),
-                                        y_dtype);
+            auto x = opr::TypeCvt::make(
+                    opr::Host2DeviceCopy::make(*cg, inp[0]), x_dtype);
+            auto y = opr::TypeCvt::make(
+                    opr::Host2DeviceCopy::make(*cg, inp[1]), y_dtype);
             SymbolVar d;
             auto xf = opr::TypeCvt::make(x, dtype::Float32());
             auto yf = opr::TypeCvt::make(y, dtype::Float32());
@@ -565,16 +570,15 @@ TEST(TestOprElemwiseMultiType, QuantizedModeTernary_IS8_OS8) {
     DType d_dtype = dtype::QuantizedS8(1.15f);
     using Mode = opr::ElemwiseMultiType::Param::Mode;
     for (auto mode : {Mode::QFUSE_MUL_ADD3, Mode::QCOND_LEQ_MOV}) {
-        auto make_graph = [&](const Checker::SymInpArray& inputs)
-                -> Checker::SymOutArray {
+        auto make_graph =
+                [&](const Checker::SymInpArray& inputs) -> Checker::SymOutArray {
             OperatorNodeConfig config{d_dtype};
             auto cpu = CompNode::load("cpux");
             auto a = opr::Copy::make(inputs[0], cpu);
             auto b = opr::Copy::make(inputs[1], cpu);
             auto c = opr::Copy::make(inputs[2], cpu);
             auto d = opr::ElemwiseMultiType::make(
-                    {opr::TypeCvt::make(a, x_dtype),
-                     opr::TypeCvt::make(b, y_dtype),
+                    {opr::TypeCvt::make(a, x_dtype), opr::TypeCvt::make(b, y_dtype),
                      opr::TypeCvt::make(c, z_dtype)},
                     {mode}, config);
             d = opr::TypeCvt::make(d, dtype::Float32());
@@ -583,12 +587,12 @@ TEST(TestOprElemwiseMultiType, QuantizedModeTernary_IS8_OS8) {
         auto fwd = [&](Checker::NumOutArray& dest, Checker::NumInpArray inp) {
             auto cg = ComputingGraph::make();
             cg->options().graph_opt_level = 0;
-            auto x = opr::TypeCvt::make(opr::Host2DeviceCopy::make(*cg, inp[0]),
-                                        x_dtype);
-            auto y = opr::TypeCvt::make(opr::Host2DeviceCopy::make(*cg, inp[1]),
-                                        y_dtype);
-            auto z = opr::TypeCvt::make(opr::Host2DeviceCopy::make(*cg, inp[2]),
-                                        z_dtype);
+            auto x = opr::TypeCvt::make(
+                    opr::Host2DeviceCopy::make(*cg, inp[0]), x_dtype);
+            auto y = opr::TypeCvt::make(
+                    opr::Host2DeviceCopy::make(*cg, inp[1]), y_dtype);
+            auto z = opr::TypeCvt::make(
+                    opr::Host2DeviceCopy::make(*cg, inp[2]), z_dtype);
             SymbolVar d;
             auto xf = opr::TypeCvt::make(x, dtype::Float32());
             auto yf = opr::TypeCvt::make(y, dtype::Float32());
@@ -623,16 +627,15 @@ TEST(TestOprElemwiseMultiType, QuantizedModeTernary_I8Asymm_O8Asymm) {
     DType d_dtype = dtype::Quantized8Asymm(1.15f, static_cast<uint8_t>(128));
     using Mode = opr::ElemwiseMultiType::Param::Mode;
     for (auto mode : {Mode::QFUSE_MUL_ADD3, Mode::QCOND_LEQ_MOV}) {
-        auto make_graph = [&](const Checker::SymInpArray& inputs)
-                -> Checker::SymOutArray {
+        auto make_graph =
+                [&](const Checker::SymInpArray& inputs) -> Checker::SymOutArray {
             OperatorNodeConfig config{d_dtype};
             auto cpu = CompNode::load("cpux");
             auto a = opr::Copy::make(inputs[0], cpu);
             auto b = opr::Copy::make(inputs[1], cpu);
             auto c = opr::Copy::make(inputs[2], cpu);
             auto d = opr::ElemwiseMultiType::make(
-                    {opr::TypeCvt::make(a, x_dtype),
-                     opr::TypeCvt::make(b, y_dtype),
+                    {opr::TypeCvt::make(a, x_dtype), opr::TypeCvt::make(b, y_dtype),
                      opr::TypeCvt::make(c, z_dtype)},
                     {mode}, config);
             d = opr::TypeCvt::make(d, dtype::Float32());
@@ -641,12 +644,12 @@ TEST(TestOprElemwiseMultiType, QuantizedModeTernary_I8Asymm_O8Asymm) {
         auto fwd = [&](Checker::NumOutArray& dest, Checker::NumInpArray inp) {
             auto cg = ComputingGraph::make();
             cg->options().graph_opt_level = 0;
-            auto x = opr::TypeCvt::make(opr::Host2DeviceCopy::make(*cg, inp[0]),
-                                        x_dtype);
-            auto y = opr::TypeCvt::make(opr::Host2DeviceCopy::make(*cg, inp[1]),
-                                        y_dtype);
-            auto z = opr::TypeCvt::make(opr::Host2DeviceCopy::make(*cg, inp[2]),
-                                        z_dtype);
+            auto x = opr::TypeCvt::make(
+                    opr::Host2DeviceCopy::make(*cg, inp[0]), x_dtype);
+            auto y = opr::TypeCvt::make(
+                    opr::Host2DeviceCopy::make(*cg, inp[1]), y_dtype);
+            auto z = opr::TypeCvt::make(
+                    opr::Host2DeviceCopy::make(*cg, inp[2]), z_dtype);
             SymbolVar d;
             auto xf = opr::TypeCvt::make(x, dtype::Float32());
             auto yf = opr::TypeCvt::make(y, dtype::Float32());

@@ -12,8 +12,8 @@
 
 #include "src/common/utils.h"
 #include "src/naive/handle.h"
-#include "src/x86/utils.h"
 #include "src/x86/simd_helper.h"
+#include "src/x86/utils.h"
 
 namespace {
 
@@ -21,14 +21,12 @@ using namespace megdnn;
 using namespace x86;
 
 template <SIMDType simd_type>
-void lrn_single_instance(const float * __restrict src,
-        float * __restrict dst,
-        size_t C, size_t H, size_t W,
-        size_t n, float k, float alpha, float beta)
-{
+void lrn_single_instance(
+        const float* __restrict src, float* __restrict dst, size_t C, size_t H,
+        size_t W, size_t n, float k, float alpha, float beta) {
     using type = typename simd_traits<simd_type>::type;
     static MEGDNN_CONSTEXPR auto width = simd_traits<simd_type>::width;
-    auto HW = H*W;
+    auto HW = H * W;
     auto half_n = n / 2;
     auto loadu = &simd_traits<simd_type>::loadu;
     auto storeu = &simd_traits<simd_type>::storeu;
@@ -41,15 +39,15 @@ void lrn_single_instance(const float * __restrict src,
     type valpha = set1(alpha);
     type vnbeta = set1(-beta);
     rep(c, C) {
-        auto sptr = src + c*HW;
-        auto dptr = dst + c*HW;
+        auto sptr = src + c * HW;
+        auto dptr = dst + c * HW;
         size_t hw = 0u;
         size_t c_start = (c >= half_n ? c - half_n : 0u);
         size_t c_end = std::min(c + half_n, C - 1);
-        for (; hw+width <= HW; hw += width, sptr += width, dptr += width) {
+        for (; hw + width <= HW; hw += width, sptr += width, dptr += width) {
             type suma2 = simd_traits<simd_type>::setzero();
             for (size_t sc = c_start; sc <= c_end; ++sc) {
-                type sval = loadu(src + (sc*H*W + hw));
+                type sval = loadu(src + (sc * H * W + hw));
                 suma2 = fmadd(sval, sval, suma2);
             }
             type a = fmadd(valpha, suma2, vk);
@@ -62,51 +60,38 @@ void lrn_single_instance(const float * __restrict src,
         for (; hw < HW; ++hw, ++sptr, ++dptr) {
             float suma2 = 0.0f;
             for (size_t sc = c_start; sc <= c_end; ++sc) {
-                float sval = src[sc*HW + hw];
+                float sval = src[sc * HW + hw];
                 suma2 += sqr(sval);
             }
-            float_t multiplicand = std::pow(
-                    k + alpha * suma2,
-                    -beta);
+            float_t multiplicand = std::pow(k + alpha * suma2, -beta);
             float_t multiplier = *sptr;
             *dptr = multiplicand * multiplier;
         }
     }
 }
 
-template MEGDNN_ATTRIBUTE_TARGET("fma")
-void lrn_single_instance<SIMDType::FMA>(const float *,
-        float *,
-        size_t, size_t, size_t,
-        size_t, float, float, float);
-template MEGDNN_ATTRIBUTE_TARGET("avx")
-void lrn_single_instance<SIMDType::AVX>(const float *,
-        float *,
-        size_t, size_t, size_t,
-        size_t, float, float, float);
-template MEGDNN_ATTRIBUTE_TARGET("sse")
-void lrn_single_instance<SIMDType::SSE>(const float *,
-        float *,
-        size_t, size_t, size_t,
-        size_t, float, float, float);
+template MEGDNN_ATTRIBUTE_TARGET("fma") void lrn_single_instance<SIMDType::FMA>(
+        const float*, float*, size_t, size_t, size_t, size_t, float, float, float);
+template MEGDNN_ATTRIBUTE_TARGET("avx") void lrn_single_instance<SIMDType::AVX>(
+        const float*, float*, size_t, size_t, size_t, size_t, float, float, float);
+template MEGDNN_ATTRIBUTE_TARGET("sse") void lrn_single_instance<SIMDType::SSE>(
+        const float*, float*, size_t, size_t, size_t, size_t, float, float, float);
 
-} // anonymous namespace
+}  // anonymous namespace
 
 namespace megdnn {
 namespace x86 {
 
-void LRNImpl::exec(_megdnn_tensor_in src,
-        _megdnn_tensor_out dst,
-        _megdnn_workspace workspace)
-{
+void LRNImpl::exec(
+        _megdnn_tensor_in src, _megdnn_tensor_out dst, _megdnn_workspace workspace) {
     check_exec(src.layout, dst.layout, workspace.size);
-    auto N = src.layout.shape[0], C = src.layout.shape[1],
-         H = src.layout.shape[2], W = src.layout.shape[3];
+    auto N = src.layout.shape[0], C = src.layout.shape[1], H = src.layout.shape[2],
+         W = src.layout.shape[3];
     auto sptr_ = src.ptr<dt_float32>(), dptr_ = dst.ptr<dt_float32>();
 
-    std::function<void(const float *, float *,
-            size_t, size_t, size_t,
-            size_t, float, float, float)> f = nullptr;
+    std::function<void(
+            const float*, float*, size_t, size_t, size_t, size_t, float, float, float)>
+            f = nullptr;
     if (is_supported(SIMDType::FMA)) {
         f = &lrn_single_instance<SIMDType::FMA>;
     } else if (is_supported(SIMDType::AVX)) {
@@ -120,20 +105,14 @@ void LRNImpl::exec(_megdnn_tensor_in src,
     auto k = param().k;
     auto alpha = param().alpha;
     auto beta = param().beta;
-    MEGDNN_DISPATCH_CPU_KERN_OPR(
-        auto sptr = sptr_;
-        auto dptr = dptr_;
-        rep(i, N) {
-            f(sptr, dptr,
-                    C, H, W,
-                    n, k, alpha, beta);
-            sptr += C*H*W;
-            dptr += C*H*W;
-        }
-    );
+    MEGDNN_DISPATCH_CPU_KERN_OPR(auto sptr = sptr_; auto dptr = dptr_; rep(i, N) {
+        f(sptr, dptr, C, H, W, n, k, alpha, beta);
+        sptr += C * H * W;
+        dptr += C * H * W;
+    });
 }
 
-} // namespace x86
-} // namespace megdnn
+}  // namespace x86
+}  // namespace megdnn
 
 // vim: syntax=cpp.doxygen

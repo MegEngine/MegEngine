@@ -21,7 +21,7 @@ namespace {
 
 struct HashWrapper {
     size_t hash;
-    constexpr operator size_t() {return hash;}
+    constexpr operator size_t() { return hash; }
 
     constexpr HashWrapper operator+(HashWrapper rhs) {
         // NOTE: use a + b + c + d, not a + (b + (c + d)) !!!
@@ -34,18 +34,18 @@ constexpr size_t hash_many(const Args&... args) {
     return (... + HashWrapper{mgb::hash(args)});
 }
 
-} // anonymous namespace
+}  // anonymous namespace
 
-template<typename T, typename ...Args>
+template <typename T, typename... Args>
 struct HashTrait<std::tuple<T, Args...>> {
-    static size_t eval(const std::tuple<T, Args...> &t) {
+    static size_t eval(const std::tuple<T, Args...>& t) {
         return std::apply(hash_many<T, Args...>, t);
     }
 };
-} // namespace mgb
+}  // namespace mgb
 
 namespace mgb::imperative {
 
 #include "./opdef.cpp.inl"
 
-} // namespace mgb::imperative
+}  // namespace mgb::imperative

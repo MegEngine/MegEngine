@@ -20,9 +20,9 @@ namespace {
 
 #define UNROLL_OUT(cb, step) UNROLL_CALL_RAW(step, cb)
 
-void hgemv_naive_n(const __fp16* __restrict A, const __fp16* __restrict B,
-                   __fp16* __restrict C, size_t M, size_t N, size_t K,
-                   size_t Astride, size_t Bstride, size_t Cstride) {
+void hgemv_naive_n(
+        const __fp16* __restrict A, const __fp16* __restrict B, __fp16* __restrict C,
+        size_t M, size_t N, size_t K, size_t Astride, size_t Bstride, size_t Cstride) {
     megdnn_assert(N == 1 && Bstride == 1);
 #define vaddvq_f16(v) \
     ((v)[0] + (v)[1] + (v)[2] + (v)[3] + (v)[4] + (v)[5] + (v)[6] + (v)[7])
@@ -96,11 +96,9 @@ void hgemv_naive_n(const __fp16* __restrict A, const __fp16* __restrict B,
 }
 }  // namespace
 
-void megdnn::arm_common::gemv_like(const __fp16* __restrict A,
-                                   const __fp16* __restrict B,
-                                   __fp16* __restrict C, size_t M, size_t N,
-                                   size_t K, size_t Astride, size_t Bstride,
-                                   size_t Cstride) {
+void megdnn::arm_common::gemv_like(
+        const __fp16* __restrict A, const __fp16* __restrict B, __fp16* __restrict C,
+        size_t M, size_t N, size_t K, size_t Astride, size_t Bstride, size_t Cstride) {
     megdnn_assert((M <= 4) || (M == 8 && K <= 2) || (N == 1 && Bstride == 1));
     if (N == 1) {
         return hgemv_naive_n(A, B, C, M, N, K, Astride, Bstride, Cstride);
@@ -112,12 +110,12 @@ void megdnn::arm_common::gemv_like(const __fp16* __restrict A,
         for (; k + 4 <= K; k += 4) {
             size_t n = 0;
             for (; n + 8 <= N; n += 8) {
-                float16x8_t a00, a01, a02, a03, a10, a11, a12, a13, a20, a21,
-                        a22, a23, a30, a31, a32, a33;
+                float16x8_t a00, a01, a02, a03, a10, a11, a12, a13, a20, a21, a22, a23,
+                        a30, a31, a32, a33;
                 float16x8_t b0, b1, b2, b3;
                 float16x8_t c0, c1, c2, c3;
-#define loadB(i) b##i = vld1q_f16(B + (k + i) * Bstride + n);
-#define loadC(i) c##i = vld1q_f16(C + (m + i) * Cstride + n);
+#define loadB(i)  b##i = vld1q_f16(B + (k + i) * Bstride + n);
+#define loadC(i)  c##i = vld1q_f16(C + (m + i) * Cstride + n);
 #define loadA0(i) a0##i = vdupq_n_f16(A[(m + 0) * Astride + k + i]);
 #define loadA1(i) a1##i = vdupq_n_f16(A[(m + 1) * Astride + k + i]);
 #define loadA2(i) a2##i = vdupq_n_f16(A[(m + 2) * Astride + k + i]);
@@ -151,12 +149,12 @@ void megdnn::arm_common::gemv_like(const __fp16* __restrict A,
 #undef vstore
             }
             for (; n + 4 <= N; n += 4) {
-                float16x4_t a00, a01, a02, a03, a10, a11, a12, a13, a20, a21,
-                        a22, a23, a30, a31, a32, a33;
+                float16x4_t a00, a01, a02, a03, a10, a11, a12, a13, a20, a21, a22, a23,
+                        a30, a31, a32, a33;
                 float16x4_t b0, b1, b2, b3;
                 float16x4_t c0, c1, c2, c3;
-#define loadB(i) b##i = vld1_f16(B + (k + i) * Bstride + n);
-#define loadC(i) c##i = vld1_f16(C + (m + i) * Cstride + n);
+#define loadB(i)  b##i = vld1_f16(B + (k + i) * Bstride + n);
+#define loadC(i)  c##i = vld1_f16(C + (m + i) * Cstride + n);
 #define loadA0(i) a0##i = vdup_n_f16(A[(m + 0) * Astride + k + i]);
 #define loadA1(i) a1##i = vdup_n_f16(A[(m + 1) * Astride + k + i]);
 #define loadA2(i) a2##i = vdup_n_f16(A[(m + 2) * Astride + k + i]);
@@ -190,8 +188,8 @@ void megdnn::arm_common::gemv_like(const __fp16* __restrict A,
 #undef vstore
             }
             for (; n < N; n += 1) {
-                __fp16 a00, a01, a02, a03, a10, a11, a12, a13, a20, a21, a22,
-                        a23, a30, a31, a32, a33;
+                __fp16 a00, a01, a02, a03, a10, a11, a12, a13, a20, a21, a22, a23, a30,
+                        a31, a32, a33;
                 __fp16 b0, b1, b2, b3;
                 __fp16 c0, c1, c2, c3;
 #define loadC(i) c##i = C[(m + i) * Cstride + n];
@@ -227,8 +225,8 @@ void megdnn::arm_common::gemv_like(const __fp16* __restrict A,
                 float16x8_t a00, a01, a10, a11, a20, a21, a30, a31;
                 float16x8_t b0, b1;
                 float16x8_t c0, c1, c2, c3;
-#define loadB(i) b##i = vld1q_f16(B + (k + i) * Bstride + n);
-#define loadC(i) c##i = vld1q_f16(C + (m + i) * Cstride + n);
+#define loadB(i)  b##i = vld1q_f16(B + (k + i) * Bstride + n);
+#define loadC(i)  c##i = vld1q_f16(C + (m + i) * Cstride + n);
 #define loadA0(i) a0##i = vdupq_n_f16(A[(m + 0) * Astride + k + i]);
 #define loadA1(i) a1##i = vdupq_n_f16(A[(m + 1) * Astride + k + i]);
 #define loadA2(i) a2##i = vdupq_n_f16(A[(m + 2) * Astride + k + i]);
@@ -265,8 +263,8 @@ void megdnn::arm_common::gemv_like(const __fp16* __restrict A,
                 float16x4_t a00, a01, a10, a11, a20, a21, a30, a31;
                 float16x4_t b0, b1;
                 float16x4_t c0, c1, c2, c3;
-#define loadB(i) b##i = vld1_f16(B + (k + i) * Bstride + n);
-#define loadC(i) c##i = vld1_f16(C + (m + i) * Cstride + n);
+#define loadB(i)  b##i = vld1_f16(B + (k + i) * Bstride + n);
+#define loadC(i)  c##i = vld1_f16(C + (m + i) * Cstride + n);
 #define loadA0(i) a0##i = vdup_n_f16(A[(m + 0) * Astride + k + i]);
 #define loadA1(i) a1##i = vdup_n_f16(A[(m + 1) * Astride + k + i]);
 #define loadA2(i) a2##i = vdup_n_f16(A[(m + 2) * Astride + k + i]);
@@ -336,8 +334,8 @@ void megdnn::arm_common::gemv_like(const __fp16* __restrict A,
                 float16x8_t a00, a10, a20, a30;
                 float16x8_t b0;
                 float16x8_t c0, c1, c2, c3;
-#define loadB(i) b##i = vld1q_f16(B + (k + i) * Bstride + n);
-#define loadC(i) c##i = vld1q_f16(C + (m + i) * Cstride + n);
+#define loadB(i)  b##i = vld1q_f16(B + (k + i) * Bstride + n);
+#define loadC(i)  c##i = vld1q_f16(C + (m + i) * Cstride + n);
 #define loadA0(i) a0##i = vdupq_n_f16(A[(m + 0) * Astride + k + i]);
 #define loadA1(i) a1##i = vdupq_n_f16(A[(m + 1) * Astride + k + i]);
 #define loadA2(i) a2##i = vdupq_n_f16(A[(m + 2) * Astride + k + i]);
@@ -374,8 +372,8 @@ void megdnn::arm_common::gemv_like(const __fp16* __restrict A,
                 float16x4_t a00, a10, a20, a30;
                 float16x4_t b0;
                 float16x4_t c0, c1, c2, c3;
-#define loadB(i) b##i = vld1_f16(B + (k + i) * Bstride + n);
-#define loadC(i) c##i = vld1_f16(C + (m + i) * Cstride + n);
+#define loadB(i)  b##i = vld1_f16(B + (k + i) * Bstride + n);
+#define loadC(i)  c##i = vld1_f16(C + (m + i) * Cstride + n);
 #define loadA0(i) a0##i = vdup_n_f16(A[(m + 0) * Astride + k + i]);
 #define loadA1(i) a1##i = vdup_n_f16(A[(m + 1) * Astride + k + i]);
 #define loadA2(i) a2##i = vdup_n_f16(A[(m + 2) * Astride + k + i]);
@@ -449,8 +447,8 @@ void megdnn::arm_common::gemv_like(const __fp16* __restrict A,
                 float16x8_t a00, a01, a02, a03, a10, a11, a12, a13;
                 float16x8_t b0, b1, b2, b3;
                 float16x8_t c0, c1;
-#define loadB(i) b##i = vld1q_f16(B + (k + i) * Bstride + n);
-#define loadC(i) c##i = vld1q_f16(C + (m + i) * Cstride + n);
+#define loadB(i)  b##i = vld1q_f16(B + (k + i) * Bstride + n);
+#define loadC(i)  c##i = vld1q_f16(C + (m + i) * Cstride + n);
 #define loadA0(i) a0##i = vdupq_n_f16(A[(m + 0) * Astride + k + i]);
 #define loadA1(i) a1##i = vdupq_n_f16(A[(m + 1) * Astride + k + i]);
                 UNROLL_OUT(loadC, 2)
@@ -475,8 +473,8 @@ void megdnn::arm_common::gemv_like(const __fp16* __restrict A,
                 float16x4_t a00, a01, a02, a03, a10, a11, a12, a13;
                 float16x4_t b0, b1, b2, b3;
                 float16x4_t c0, c1;
-#define loadB(i) b##i = vld1_f16(B + (k + i) * Bstride + n);
-#define loadC(i) c##i = vld1_f16(C + (m + i) * Cstride + n);
+#define loadB(i)  b##i = vld1_f16(B + (k + i) * Bstride + n);
+#define loadC(i)  c##i = vld1_f16(C + (m + i) * Cstride + n);
 #define loadA0(i) a0##i = vdup_n_f16(A[(m + 0) * Astride + k + i]);
 #define loadA1(i) a1##i = vdup_n_f16(A[(m + 1) * Astride + k + i]);
                 UNROLL_OUT(loadC, 2)
@@ -526,8 +524,8 @@ void megdnn::arm_common::gemv_like(const __fp16* __restrict A,
                 float16x8_t a00, a01, a10, a11;
                 float16x8_t b0, b1;
                 float16x8_t c0, c1;
-#define loadB(i) b##i = vld1q_f16(B + (k + i) * Bstride + n);
-#define loadC(i) c##i = vld1q_f16(C + (m + i) * Cstride + n);
+#define loadB(i)  b##i = vld1q_f16(B + (k + i) * Bstride + n);
+#define loadC(i)  c##i = vld1q_f16(C + (m + i) * Cstride + n);
 #define loadA0(i) a0##i = vdupq_n_f16(A[(m + 0) * Astride + k + i]);
 #define loadA1(i) a1##i = vdupq_n_f16(A[(m + 1) * Astride + k + i]);
                 UNROLL_OUT(loadC, 2)
@@ -552,8 +550,8 @@ void megdnn::arm_common::gemv_like(const __fp16* __restrict A,
                 float16x4_t a00, a01, a10, a11;
                 float16x4_t b0, b1;
                 float16x4_t c0, c1;
-#define loadB(i) b##i = vld1_f16(B + (k + i) * Bstride + n);
-#define loadC(i) c##i = vld1_f16(C + (m + i) * Cstride + n);
+#define loadB(i)  b##i = vld1_f16(B + (k + i) * Bstride + n);
+#define loadC(i)  c##i = vld1_f16(C + (m + i) * Cstride + n);
 #define loadA0(i) a0##i = vdup_n_f16(A[(m + 0) * Astride + k + i]);
 #define loadA1(i) a1##i = vdup_n_f16(A[(m + 1) * Astride + k + i]);
                 UNROLL_OUT(loadC, 2)
@@ -603,8 +601,8 @@ void megdnn::arm_common::gemv_like(const __fp16* __restrict A,
                 float16x8_t a00, a10;
                 float16x8_t b0;
                 float16x8_t c0, c1;
-#define loadB(i) b##i = vld1q_f16(B + (k + i) * Bstride + n);
-#define loadC(i) c##i = vld1q_f16(C + (m + i) * Cstride + n);
+#define loadB(i)  b##i = vld1q_f16(B + (k + i) * Bstride + n);
+#define loadC(i)  c##i = vld1q_f16(C + (m + i) * Cstride + n);
 #define loadA0(i) a0##i = vdupq_n_f16(A[(m + 0) * Astride + k + i]);
 #define loadA1(i) a1##i = vdupq_n_f16(A[(m + 1) * Astride + k + i]);
                 UNROLL_OUT(loadC, 2)
@@ -629,8 +627,8 @@ void megdnn::arm_common::gemv_like(const __fp16* __restrict A,
                 float16x4_t a00, a10;
                 float16x4_t b0;
                 float16x4_t c0, c1;
-#define loadB(i) b##i = vld1_f16(B + (k + i) * Bstride + n);
-#define loadC(i) c##i = vld1_f16(C + (m + i) * Cstride + n);
+#define loadB(i)  b##i = vld1_f16(B + (k + i) * Bstride + n);
+#define loadC(i)  c##i = vld1_f16(C + (m + i) * Cstride + n);
 #define loadA0(i) a0##i = vdup_n_f16(A[(m + 0) * Astride + k + i]);
 #define loadA1(i) a1##i = vdup_n_f16(A[(m + 1) * Astride + k + i]);
                 UNROLL_OUT(loadC, 2)
@@ -684,8 +682,8 @@ void megdnn::arm_common::gemv_like(const __fp16* __restrict A,
                 float16x8_t a00, a01, a02, a03;
                 float16x8_t b0, b1, b2, b3;
                 float16x8_t c0;
-#define loadB(i) b##i = vld1q_f16(B + (k + i) * Bstride + n);
-#define loadC(i) c##i = vld1q_f16(C + (m + i) * Cstride + n);
+#define loadB(i)  b##i = vld1q_f16(B + (k + i) * Bstride + n);
+#define loadC(i)  c##i = vld1q_f16(C + (m + i) * Cstride + n);
 #define loadA0(i) a0##i = vdupq_n_f16(A[(m + 0) * Astride + k + i]);
                 UNROLL_OUT(loadC, 1)
                 UNROLL_OUT(loadB, 4)
@@ -704,8 +702,8 @@ void megdnn::arm_common::gemv_like(const __fp16* __restrict A,
                 float16x4_t a00, a01, a02, a03;
                 float16x4_t b0, b1, b2, b3;
                 float16x4_t c0;
-#define loadB(i) b##i = vld1_f16(B + (k + i) * Bstride + n);
-#define loadC(i) c##i = vld1_f16(C + (m + i) * Cstride + n);
+#define loadB(i)  b##i = vld1_f16(B + (k + i) * Bstride + n);
+#define loadC(i)  c##i = vld1_f16(C + (m + i) * Cstride + n);
 #define loadA0(i) a0##i = vdup_n_f16(A[(m + 0) * Astride + k + i]);
                 UNROLL_OUT(loadC, 1)
                 UNROLL_OUT(loadB, 4)
@@ -745,8 +743,8 @@ void megdnn::arm_common::gemv_like(const __fp16* __restrict A,
                 float16x8_t a00, a01;
                 float16x8_t b0, b1;
                 float16x8_t c0;
-#define loadB(i) b##i = vld1q_f16(B + (k + i) * Bstride + n);
-#define loadC(i) c##i = vld1q_f16(C + (m + i) * Cstride + n);
+#define loadB(i)  b##i = vld1q_f16(B + (k + i) * Bstride + n);
+#define loadC(i)  c##i = vld1q_f16(C + (m + i) * Cstride + n);
 #define loadA0(i) a0##i = vdupq_n_f16(A[(m + 0) * Astride + k + i]);
                 UNROLL_OUT(loadC, 1)
                 UNROLL_OUT(loadB, 2)
@@ -765,8 +763,8 @@ void megdnn::arm_common::gemv_like(const __fp16* __restrict A,
                 float16x4_t a00, a01;
                 float16x4_t b0, b1;
                 float16x4_t c0;
-#define loadB(i) b##i = vld1_f16(B + (k + i) * Bstride + n);
-#define loadC(i) c##i = vld1_f16(C + (m + i) * Cstride + n);
+#define loadB(i)  b##i = vld1_f16(B + (k + i) * Bstride + n);
+#define loadC(i)  c##i = vld1_f16(C + (m + i) * Cstride + n);
 #define loadA0(i) a0##i = vdup_n_f16(A[(m + 0) * Astride + k + i]);
                 UNROLL_OUT(loadC, 1)
                 UNROLL_OUT(loadB, 2)
@@ -806,8 +804,8 @@ void megdnn::arm_common::gemv_like(const __fp16* __restrict A,
                 float16x8_t a00;
                 float16x8_t b0;
                 float16x8_t c0;
-#define loadB(i) b##i = vld1q_f16(B + (k + i) * Bstride + n);
-#define loadC(i) c##i = vld1q_f16(C + (m + i) * Cstride + n);
+#define loadB(i)  b##i = vld1q_f16(B + (k + i) * Bstride + n);
+#define loadC(i)  c##i = vld1q_f16(C + (m + i) * Cstride + n);
 #define loadA0(i) a0##i = vdupq_n_f16(A[(m + 0) * Astride + k + i]);
                 UNROLL_OUT(loadC, 1)
                 UNROLL_OUT(loadB, 1)
@@ -826,8 +824,8 @@ void megdnn::arm_common::gemv_like(const __fp16* __restrict A,
                 float16x4_t a00;
                 float16x4_t b0;
                 float16x4_t c0;
-#define loadB(i) b##i = vld1_f16(B + (k + i) * Bstride + n);
-#define loadC(i) c##i = vld1_f16(C + (m + i) * Cstride + n);
+#define loadB(i)  b##i = vld1_f16(B + (k + i) * Bstride + n);
+#define loadC(i)  c##i = vld1_f16(C + (m + i) * Cstride + n);
 #define loadA0(i) a0##i = vdup_n_f16(A[(m + 0) * Astride + k + i]);
                 UNROLL_OUT(loadC, 1)
                 UNROLL_OUT(loadB, 1)
@@ -863,10 +861,9 @@ void megdnn::arm_common::gemv_like(const __fp16* __restrict A,
         }
     }
 }
-bool megdnn::arm_common::is_hgemv_preferred(bool transposeA, bool transposeB,
-                                            size_t M, size_t N, size_t K,
-                                            size_t /*LDA*/, size_t LDB,
-                                            size_t /*LDC*/) {
+bool megdnn::arm_common::is_hgemv_preferred(
+        bool transposeA, bool transposeB, size_t M, size_t N, size_t K, size_t /*LDA*/,
+        size_t LDB, size_t /*LDC*/) {
     if (transposeA)
         return false;
     if (transposeB)

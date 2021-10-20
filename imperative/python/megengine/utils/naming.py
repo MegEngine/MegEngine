@@ -10,8 +10,7 @@ from ..core._imperative_rt.core2 import pop_scope, push_scope
 
 
 class AutoNaming:
-    r"""
-    Name all executed operators automaticlly during tracing and record all tensors
+    r"""Name all executed operators automaticlly during tracing and record all tensors
     renamed by the user.
     """
 

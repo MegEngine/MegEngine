@@ -31,12 +31,10 @@ protected:
         int* midx_ptr;  //!< can be null
         Workspace workspace;
 
-        static KernParam from_tensors(Format format, BorderMode bmode,
-                                      float border_val, _megdnn_tensor_in src,
-                                      _megdnn_tensor_in mat,
-                                      _megdnn_tensor_in mat_idx,
-                                      _megdnn_tensor_out dst,
-                                      _megdnn_workspace workspace) {
+        static KernParam from_tensors(
+                Format format, BorderMode bmode, float border_val,
+                _megdnn_tensor_in src, _megdnn_tensor_in mat, _megdnn_tensor_in mat_idx,
+                _megdnn_tensor_out dst, _megdnn_workspace workspace) {
             KernParam ret;
             ret.format = format;
             ret.bmode = bmode;
@@ -53,8 +51,7 @@ protected:
                 ret.n_mat = ret.n_src;
                 ret.midx_ptr = nullptr;
             }
-            if (format == Format::NCHW ||
-                format == Format::NCHW_NCHW4_IC_SMALL) {
+            if (format == Format::NCHW || format == Format::NCHW_NCHW4_IC_SMALL) {
                 ret.c = src.layout.shape[1];
                 ret.ih = src.layout.shape[2];
                 ret.iw = src.layout.shape[3];
@@ -66,8 +63,9 @@ protected:
                 ret.iw = src.layout.shape[2];
                 ret.oh = dst.layout.shape[1];
                 ret.ow = dst.layout.shape[2];
-            } else if (format == Format::NHWC_NCHW ||
-                       format == Format::NHWC_NCHW4_IC_SMALL) {
+            } else if (
+                    format == Format::NHWC_NCHW ||
+                    format == Format::NHWC_NCHW4_IC_SMALL) {
                 ret.c = src.layout.shape[3];
                 ret.ih = src.layout.shape[1];
                 ret.iw = src.layout.shape[2];
@@ -106,16 +104,17 @@ protected:
                 ret.sptr = src.compatible_ptr<ctype>();
                 ret.mptr = mat.ptr<mtype>();
                 ret.dptr = dst.compatible_ptr<ctype>();
-            } else if (src.layout.dtype.enumv() == DTypeEnum::QuantizedS8 ||
-                       src.layout.dtype.enumv() == DTypeEnum::QuantizedS4 ||
-                       src.layout.dtype.enumv() == DTypeEnum::Quantized4Asymm) {
+            } else if (
+                    src.layout.dtype.enumv() == DTypeEnum::QuantizedS8 ||
+                    src.layout.dtype.enumv() == DTypeEnum::QuantizedS4 ||
+                    src.layout.dtype.enumv() == DTypeEnum::Quantized4Asymm) {
                 ret.sptr = src.compatible_ptr<ctype>();
                 ret.mptr = mat.ptr<mtype>();
                 ret.dptr = dst.compatible_ptr<ctype>();
-            } else if ((src.layout.dtype.enumv() == DTypeEnum::Uint8 ||
-                        src.layout.dtype.enumv() ==
-                                DTypeEnum::Quantized8Asymm) &&
-                       src.layout.dtype.enumv() != dst.layout.dtype.enumv()) {
+            } else if (
+                    (src.layout.dtype.enumv() == DTypeEnum::Uint8 ||
+                     src.layout.dtype.enumv() == DTypeEnum::Quantized8Asymm) &&
+                    src.layout.dtype.enumv() != dst.layout.dtype.enumv()) {
                 ret.sptr = src.compatible_ptr<ctype>();
                 ret.mptr = mat.ptr<mtype>();
                 ret.dptr = reinterpret_cast<ctype*>(dst.raw_ptr);
@@ -136,22 +135,20 @@ protected:
 
 public:
     using WarpPerspectiveForward::WarpPerspectiveForward;
-    void exec(_megdnn_tensor_in src, _megdnn_tensor_in mat,
-              _megdnn_tensor_in mat_idx, _megdnn_tensor_out dst,
-              _megdnn_workspace workspace) override;
-    size_t get_workspace_in_bytes(const TensorLayout&, const TensorLayout&,
-                                  const TensorLayout&,
-                                  const TensorLayout&) override {
+    void exec(
+            _megdnn_tensor_in src, _megdnn_tensor_in mat, _megdnn_tensor_in mat_idx,
+            _megdnn_tensor_out dst, _megdnn_workspace workspace) override;
+    size_t get_workspace_in_bytes(
+            const TensorLayout&, const TensorLayout&, const TensorLayout&,
+            const TensorLayout&) override {
         return 0;
     }
 
 private:
     template <typename ctype, typename mtype>
-    void kern_naive_nhwcd4(const KernParam<ctype, mtype>& kern_param,
-                           size_t task_id);
+    void kern_naive_nhwcd4(const KernParam<ctype, mtype>& kern_param, size_t task_id);
     template <typename ctype, typename mtype>
-    void kern_naive_int4(const KernParam<ctype, mtype>& kern_param,
-                           size_t task_id);
+    void kern_naive_int4(const KernParam<ctype, mtype>& kern_param, size_t task_id);
     template <typename ctype, typename dst_ctype, typename mtype>
     void kern_naive_dimshuffle_typecvt(
             const KernParam<ctype, mtype>& kern_param, size_t task_id);
@@ -166,10 +163,9 @@ protected:
         mtype* mptr;
         int* midx_ptr;  //!< can be null
 
-        static KernParam from_tensors(_megdnn_tensor_in mat,
-                                      _megdnn_tensor_in mat_idx,
-                                      _megdnn_tensor_in diff,
-                                      _megdnn_tensor_out grad) {
+        static KernParam from_tensors(
+                _megdnn_tensor_in mat, _megdnn_tensor_in mat_idx,
+                _megdnn_tensor_in diff, _megdnn_tensor_out grad) {
             KernParam ret;
             ret.n_src = grad.layout.shape[0], ret.c = grad.layout.shape[1];
             ret.ih = grad.layout.shape[2], ret.iw = grad.layout.shape[3];
@@ -192,12 +188,12 @@ protected:
 
 public:
     using WarpPerspectiveBackwardData::WarpPerspectiveBackwardData;
-    void exec(_megdnn_tensor_in mat, _megdnn_tensor_in mat_idx,
-              _megdnn_tensor_in diff, _megdnn_tensor_out grad,
-              _megdnn_workspace workspace) override;
-    size_t get_workspace_in_bytes(const TensorLayout&, const TensorLayout&,
-                                  const TensorLayout&,
-                                  const TensorLayout&) override {
+    void exec(
+            _megdnn_tensor_in mat, _megdnn_tensor_in mat_idx, _megdnn_tensor_in diff,
+            _megdnn_tensor_out grad, _megdnn_workspace workspace) override;
+    size_t get_workspace_in_bytes(
+            const TensorLayout&, const TensorLayout&, const TensorLayout&,
+            const TensorLayout&) override {
         return 0;
     }
 
@@ -216,11 +212,10 @@ protected:
         int* midx_ptr;  //!< can be null
         float border_val;
 
-        static KernParam from_tensors(float border_val_, _megdnn_tensor_in src,
-                                      _megdnn_tensor_in mat,
-                                      _megdnn_tensor_in mat_idx,
-                                      _megdnn_tensor_in diff,
-                                      _megdnn_tensor_out grad) {
+        static KernParam from_tensors(
+                float border_val_, _megdnn_tensor_in src, _megdnn_tensor_in mat,
+                _megdnn_tensor_in mat_idx, _megdnn_tensor_in diff,
+                _megdnn_tensor_out grad) {
             KernParam ret;
             ret.border_val = border_val_;
             ret.n_src = src.layout.shape[0], ret.c = src.layout.shape[1];
@@ -245,12 +240,13 @@ protected:
 
 public:
     using WarpPerspectiveBackwardMat::WarpPerspectiveBackwardMat;
-    void exec(_megdnn_tensor_in src, _megdnn_tensor_in mat,
-              _megdnn_tensor_in mat_idx, _megdnn_tensor_in diff,
-              _megdnn_tensor_out grad, _megdnn_workspace workspace) override;
-    size_t get_workspace_in_bytes(const TensorLayout&, const TensorLayout&,
-                                  const TensorLayout&, const TensorLayout&,
-                                  const TensorLayout&) override {
+    void exec(
+            _megdnn_tensor_in src, _megdnn_tensor_in mat, _megdnn_tensor_in mat_idx,
+            _megdnn_tensor_in diff, _megdnn_tensor_out grad,
+            _megdnn_workspace workspace) override;
+    size_t get_workspace_in_bytes(
+            const TensorLayout&, const TensorLayout&, const TensorLayout&,
+            const TensorLayout&, const TensorLayout&) override {
         return 0;
     }
 
@@ -259,14 +255,14 @@ private:
     void kern_naive(const KernParam<ctype, mtype>& kern_param);
 };
 
-#define UNPACK_WARP_PERSPECTIVE_FWD_KERN_PARAM(p)                         \
-    auto N_SRC = p.n_src, N_MAT = p.n_mat, C = p.c, IH = p.ih, IW = p.iw, \
-         OH = p.oh, OW = p.ow;                                            \
-    ctype* __restrict sptr = p.sptr;                                      \
-    mtype* __restrict mptr = p.mptr;                                      \
-    ctype* __restrict dptr = p.dptr;                                      \
-    int* __restrict midx_ptr = p.midx_ptr;                                \
-    auto bmode = p.bmode;                                                 \
+#define UNPACK_WARP_PERSPECTIVE_FWD_KERN_PARAM(p)                                    \
+    auto N_SRC = p.n_src, N_MAT = p.n_mat, C = p.c, IH = p.ih, IW = p.iw, OH = p.oh, \
+         OW = p.ow;                                                                  \
+    ctype* __restrict sptr = p.sptr;                                                 \
+    mtype* __restrict mptr = p.mptr;                                                 \
+    ctype* __restrict dptr = p.dptr;                                                 \
+    int* __restrict midx_ptr = p.midx_ptr;                                           \
+    auto bmode = p.bmode;                                                            \
     float border_val = p.border_val
 
 }  // namespace naive

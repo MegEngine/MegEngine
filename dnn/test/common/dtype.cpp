@@ -10,8 +10,8 @@
  */
 
 #include "megdnn/dtype.h"
-#include "megdnn/dtype/bfloat16.hpp"
 #include <gtest/gtest.h>
+#include "megdnn/dtype/bfloat16.hpp"
 #include "test/common/fix_gtest_on_platforms_without_exception.inl"
 
 #include <limits>
@@ -27,18 +27,15 @@ TEST(TestDType, SizeCheck) {
     ASSERT_EQ(static_cast<size_t>(2), ::megdnn::dtype::IntB4().size(4));
     ASSERT_EQ(static_cast<size_t>(3), ::megdnn::dtype::IntB4().size(5));
     ASSERT_EQ(static_cast<size_t>(2), ::megdnn::dtype::Uint16().size(1));
-    ASSERT_EQ(static_cast<size_t>(2),
-              ::megdnn::dtype::Quantized4Asymm(1.0f, static_cast<uint8_t>(12))
-                      .size(3));
-    ASSERT_EQ(static_cast<size_t>(2),
-              ::megdnn::dtype::Quantized4Asymm(2.f, static_cast<uint8_t>(1))
-                      .size(4));
-    ASSERT_EQ(static_cast<size_t>(2),
-              ::megdnn::dtype::QuantizedS4(0.1f).size(3));
-    ASSERT_EQ(static_cast<size_t>(2),
-              ::megdnn::dtype::QuantizedS4(2.f).size(4));
-    ASSERT_EQ(static_cast<size_t>(3),
-              ::megdnn::dtype::QuantizedS4(0.086f).size(5));
+    ASSERT_EQ(
+            static_cast<size_t>(2),
+            ::megdnn::dtype::Quantized4Asymm(1.0f, static_cast<uint8_t>(12)).size(3));
+    ASSERT_EQ(
+            static_cast<size_t>(2),
+            ::megdnn::dtype::Quantized4Asymm(2.f, static_cast<uint8_t>(1)).size(4));
+    ASSERT_EQ(static_cast<size_t>(2), ::megdnn::dtype::QuantizedS4(0.1f).size(3));
+    ASSERT_EQ(static_cast<size_t>(2), ::megdnn::dtype::QuantizedS4(2.f).size(4));
+    ASSERT_EQ(static_cast<size_t>(3), ::megdnn::dtype::QuantizedS4(0.086f).size(5));
 }
 
 TEST(TestDType, TestQuantized8Asymm) {
@@ -61,8 +58,7 @@ TEST(TestDType, TestQuantized8Asymm) {
     dtype::Quantized8Asymm q8_diff_zp(0.1f, static_cast<uint8_t>(233));
     EXPECT_ANY_THROW(q8_diff_zp.assert_is(q8));
 
-    dtype::Quantized8Asymm q8_diff_scale(0.1f + 1e-5f,
-                                         static_cast<uint8_t>(128));
+    dtype::Quantized8Asymm q8_diff_scale(0.1f + 1e-5f, static_cast<uint8_t>(128));
     EXPECT_ANY_THROW(q8_diff_scale.assert_is(q8));
 
     DType parent = q8;
@@ -141,7 +137,7 @@ TEST(TestDType, BFLOAT16) {
     ASSERT_TRUE(m1 == m4 && m1 >= m4 && m1 <= m4);
     ASSERT_TRUE(m3 != m4 && m4 > m3);
     ASSERT_FALSE(m2 < m4);
-    
+
     //! Arithmetic operators
     ASSERT_FLOAT_EQ(m1 + m2, 4.703125f);
     ASSERT_FLOAT_EQ(m4 - 3.43281f, -1.08906f);
@@ -211,7 +207,7 @@ TEST(TestDType, BFLOAT16) {
     //! Special(Denormal) number.
     //! flaot -> bfloat16
     float finf = std::numeric_limits<float>::infinity(),
-    fnan = std::numeric_limits<float>::quiet_NaN();
+          fnan = std::numeric_limits<float>::quiet_NaN();
     bfloat16 bfinf(finf), bfnan(fnan);
     ASSERT_TRUE(isinf(bfinf));
     ASSERT_FALSE(isfinite(bfinf));

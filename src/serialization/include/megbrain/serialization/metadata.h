@@ -26,13 +26,13 @@ struct Metadata {
     bool optimized_for_inference = false;
     uint64_t optimize_options;
 
-#define ADD_PROPERTY(type, name)       \
+#define ADD_PROPERTY(type, name)             \
     type get_##name() const { return name; } \
-    void set_##name(type x) {          \
-        name = x;                      \
-        has_##name = true;             \
+    void set_##name(type x) {                \
+        name = x;                            \
+        has_##name = true;                   \
     }
-ADD_PROPERTY(std::string, user_info)
+    ADD_PROPERTY(std::string, user_info)
 #undef ADD_PROPERTY
 
     uint64_t get_optimize_options() { return optimize_options; }

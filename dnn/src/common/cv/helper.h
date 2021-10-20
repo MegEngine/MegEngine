@@ -133,8 +133,7 @@ static inline DT saturate_cast(ST x) {
 
 template <>
 inline unsigned char saturate_cast<unsigned char, int>(int x) {
-    return (unsigned char)((unsigned)x <= UCHAR_MAX ? x
-                                                    : x > 0 ? UCHAR_MAX : 0);
+    return (unsigned char)((unsigned)x <= UCHAR_MAX ? x : x > 0 ? UCHAR_MAX : 0);
 }
 
 template <>
@@ -198,9 +197,7 @@ struct FixedPtCast {
     typedef DT rtype;
     enum { SHIFT = bits, DELTA = 1 << (bits - 1) };
 
-    DT operator()(ST val) const {
-        return saturate_cast<DT>((val + DELTA) >> SHIFT);
-    }
+    DT operator()(ST val) const { return saturate_cast<DT>((val + DELTA) >> SHIFT); }
 };
 
 template <typename ST, typename DT>
@@ -242,8 +239,9 @@ static inline int border_interpolate(int p, int len) {
         ;
     else if (bmode == BorderMode::BORDER_REPLICATE)
         p = p < 0 ? 0 : len - 1;
-    else if (bmode == BorderMode::BORDER_REFLECT ||
-             bmode == BorderMode::BORDER_REFLECT_101) {
+    else if (
+            bmode == BorderMode::BORDER_REFLECT ||
+            bmode == BorderMode::BORDER_REFLECT_101) {
         int delta = (bmode == BorderMode::BORDER_REFLECT_101);
         if (len == 1)
             return 0;
@@ -259,8 +257,9 @@ static inline int border_interpolate(int p, int len) {
         while (p >= len) {
             p -= len;
         }
-    } else if (bmode == BorderMode::BORDER_CONSTANT ||
-               bmode == BorderMode::BORDER_TRANSPARENT)
+    } else if (
+            bmode == BorderMode::BORDER_CONSTANT ||
+            bmode == BorderMode::BORDER_TRANSPARENT)
         p = -1;
     else
         megdnn_throw("Unknown/unsupported border type");

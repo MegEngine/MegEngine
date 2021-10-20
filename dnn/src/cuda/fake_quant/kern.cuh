@@ -35,8 +35,9 @@ struct FakeQuantKernOp {
     }
 
 #if MEGDNN_CC_HOST
-    FakeQuantKernOp(const TensorND& input, const TensorND& output,
-                    const FakeQuant::Param& param)
+    FakeQuantKernOp(
+            const TensorND& input, const TensorND& output,
+            const FakeQuant::Param& param)
             : input{input.ptr<ctype>()},
               output{output.ptr<ctype>()},
               qmin(param.qmin),
@@ -57,8 +58,9 @@ struct FakeQuantBwdKernOp {
     }
 
 #if MEGDNN_CC_HOST
-    FakeQuantBwdKernOp(const TensorND& diff, const TensorND& input,
-                       const TensorND& grad, const FakeQuant::Param& param)
+    FakeQuantBwdKernOp(
+            const TensorND& diff, const TensorND& input, const TensorND& grad,
+            const FakeQuant::Param& param)
             : diff{diff.ptr<ctype>()},
               input{input.ptr<ctype>()},
               grad{grad.ptr<ctype>()},
@@ -72,8 +74,8 @@ struct FakeQuantKernOpNonContig {
     ctype qmin;
     ctype qmax;
 
-    __device__ void operator()(uint32_t, ctype& output, ctype input,
-                               ctype scale, ctype zero_point) {
+    __device__ void operator()(
+            uint32_t, ctype& output, ctype input, ctype scale, ctype zero_point) {
         ctype x = round(input / scale) + zero_point;
         x = fmaxf(fminf(x, qmax), qmin);
         output = (x - zero_point) * scale;
@@ -90,8 +92,9 @@ struct FakeQuantBwdKernOpNonContig {
     ctype qmin;
     ctype qmax;
 
-    __device__ void operator()(uint32_t, ctype& grad, ctype diff, ctype input,
-                               ctype scale, ctype zero_point) {
+    __device__ void operator()(
+            uint32_t, ctype& grad, ctype diff, ctype input, ctype scale,
+            ctype zero_point) {
         ctype x = round(input / scale) + zero_point;
         grad = x <= qmax && x >= qmin ? diff : 0.0;
     }

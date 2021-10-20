@@ -10,10 +10,10 @@
 
 #include <stdio.h>
 #include <algorithm>
+#include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
-#include <memory>
 
 #include "../src/decryption/rc4/rc4_cryption_base.h"
 #include "../src/decryption/rc4_cryption.h"
@@ -185,7 +185,6 @@ int command_hash(int argc, char** argv) {
     printf("%llx\n", static_cast<unsigned long long>(hasher.get()));
     return 0;
 }
-
 
 std::unordered_map<std::string, CommandHandler> commands = {
         {"encrypt_predefined_rc4", command_encrypt_predefined_rc4},

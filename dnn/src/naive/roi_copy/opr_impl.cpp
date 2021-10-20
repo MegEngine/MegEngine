@@ -20,9 +20,8 @@
 namespace megdnn {
 namespace naive {
 
-void ROICopyImpl::exec(_megdnn_tensor_in src,
-        _megdnn_tensor_in dst,
-        _megdnn_workspace workspace) {
+void ROICopyImpl::exec(
+        _megdnn_tensor_in src, _megdnn_tensor_in dst, _megdnn_workspace workspace) {
     check_exec(src.layout, dst.layout, workspace.size);
 
 #define cb(DType)                                                     \
@@ -34,24 +33,24 @@ void ROICopyImpl::exec(_megdnn_tensor_in src,
     MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
 #undef cb
     megdnn_assert_internal(0);
-
 }
 
 template <typename T>
 void ROICopyImpl::exec_internal(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
-    auto N = dst.layout.shape[0], OH = dst.layout.shape[1],
-         OW = dst.layout.shape[2], CH = dst.layout.shape[3];
+    auto N = dst.layout.shape[0], OH = dst.layout.shape[1], OW = dst.layout.shape[2],
+         CH = dst.layout.shape[3];
 
     rep(n, N) rep(oh, OH) rep(ow, OW) {
         size_t ih = param().row_from + oh;
         size_t iw = param().col_from + ow;
 
         rep(c, CH) {
-            dst.ptr<T>()[n * dst.layout.stride[0] + oh * dst.layout.stride[1] +
-                         ow * dst.layout.stride[2] + c * dst.layout.stride[3]] =
-                src.ptr<
-                    T>()[n * src.layout.stride[0] + ih * src.layout.stride[1] +
-                         iw * src.layout.stride[2] + c * src.layout.stride[3]];
+            dst.ptr<T>()
+                    [n * dst.layout.stride[0] + oh * dst.layout.stride[1] +
+                     ow * dst.layout.stride[2] + c * dst.layout.stride[3]] =
+                    src.ptr<T>()
+                            [n * src.layout.stride[0] + ih * src.layout.stride[1] +
+                             iw * src.layout.stride[2] + c * src.layout.stride[3]];
         }
     }
 }

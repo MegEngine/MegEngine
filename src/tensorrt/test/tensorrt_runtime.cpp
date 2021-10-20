@@ -11,11 +11,11 @@
  */
 
 #include "megbrain/comp_node_env.h"
+#include "megbrain/opr/basic_arith.h"
 #include "megbrain/test/autocheck.h"
 #include "megbrain/test/helper.h"
 #include "megbrain/test/megdnn_helper.h"
 #include "megbrain/utils/debug.h"
-#include "megbrain/opr/basic_arith.h"
 
 #if MGB_ENABLE_TENSOR_RT
 
@@ -40,13 +40,11 @@ TEST(TestOprTensorRT, RuntimeBasic) {
         TensorRTUniquePtr<IBuilder> builder{p.first, {}};
         builder->setMaxBatchSize(5);
 #if NV_TENSOR_RT_VERSION >= 6001
-        TensorRTUniquePtr<IBuilderConfig> build_config{
-                builder->createBuilderConfig()};
+        TensorRTUniquePtr<IBuilderConfig> build_config{builder->createBuilderConfig()};
         TensorRTUniquePtr<ICudaEngine> cuda_engine{
                 builder->buildEngineWithConfig(*trt_net, *build_config)};
 #else
-        TensorRTUniquePtr<ICudaEngine> cuda_engine{
-                builder->buildCudaEngine(*trt_net)};
+        TensorRTUniquePtr<ICudaEngine> cuda_engine{builder->buildCudaEngine(*trt_net)};
 #endif
         TensorRTUniquePtr<IHostMemory> mem{cuda_engine->serialize(), {}};
         return TensorRTRuntimeOpr::make(mem->data(), mem->size(), {net.x})[0];
@@ -55,8 +53,8 @@ TEST(TestOprTensorRT, RuntimeBasic) {
 
     HostTensorND host_z1;
     HostTensorND host_z2;
-    auto func = net.graph->compile({make_callback_copy(net.y, host_z1),
-                                    make_callback_copy(y2, host_z2)});
+    auto func = net.graph->compile(
+            {make_callback_copy(net.y, host_z1), make_callback_copy(y2, host_z2)});
     func->execute();
     MGB_ASSERT_TENSOR_NEAR(host_z1, host_z2, 5e-4);
 }
@@ -70,26 +68,23 @@ TEST(TestOprTensorRT, RuntimeBasicBatched) {
         TensorRTUniquePtr<IBuilder> builder{p.first, {}};
         builder->setMaxBatchSize(5);
 #if NV_TENSOR_RT_VERSION >= 6001
-        TensorRTUniquePtr<IBuilderConfig> build_config{
-                builder->createBuilderConfig()};
+        TensorRTUniquePtr<IBuilderConfig> build_config{builder->createBuilderConfig()};
         TensorRTUniquePtr<ICudaEngine> cuda_engine{
                 builder->buildEngineWithConfig(*trt_net, *build_config)};
 #else
-        TensorRTUniquePtr<ICudaEngine> cuda_engine{
-                builder->buildCudaEngine(*trt_net)};
+        TensorRTUniquePtr<ICudaEngine> cuda_engine{builder->buildCudaEngine(*trt_net)};
 #endif
         TensorRTUniquePtr<IHostMemory> mem{cuda_engine->serialize(), {}};
         auto nx = opr::Broadcast::make(
-                net.x,
-                {1, net.x.shape()[0], net.x.shape()[1], net.x.shape()[2]});
+                net.x, {1, net.x.shape()[0], net.x.shape()[1], net.x.shape()[2]});
         return TensorRTRuntimeOpr::make(mem->data(), mem->size(), {nx})[0];
     };
     auto y2 = make_trt();
 
     HostTensorND host_z1;
     HostTensorND host_z2;
-    auto func = net.graph->compile({make_callback_copy(net.y, host_z1),
-                                    make_callback_copy(y2, host_z2)});
+    auto func = net.graph->compile(
+            {make_callback_copy(net.y, host_z1), make_callback_copy(y2, host_z2)});
     func->execute();
     MGB_ASSERT_TENSOR_NEAR(host_z1, host_z2, 5e-4);
 }
@@ -105,10 +100,8 @@ TEST(TestOprTensorRT, ConcatRuntimeBasic) {
         TensorRTUniquePtr<IBuilder> builder{p.first, {}};
         builder->setMaxBatchSize(5);
 #if NV_TENSOR_RT_VERSION >= 6001
-        TensorRTUniquePtr<IBuilderConfig> build_config{
-                builder->createBuilderConfig()};
-        auto cuda_engine =
-                builder->buildEngineWithConfig(*trt_net, *build_config);
+        TensorRTUniquePtr<IBuilderConfig> build_config{builder->createBuilderConfig()};
+        auto cuda_engine = builder->buildEngineWithConfig(*trt_net, *build_config);
 #else
         auto cuda_engine = builder->buildCudaEngine(*trt_net);
 #endif
@@ -126,8 +119,8 @@ TEST(TestOprTensorRT, ConcatRuntimeBasic) {
 
     HostTensorND host_z1;
     HostTensorND host_z2;
-    auto func = net.graph->compile({make_callback_copy(net.y, host_z1),
-                                    make_callback_copy(y2, host_z2)});
+    auto func = net.graph->compile(
+            {make_callback_copy(net.y, host_z1), make_callback_copy(y2, host_z2)});
     func->execute();
     MGB_ASSERT_TENSOR_NEAR(host_z1, host_z2, 1e-4);
 }
@@ -141,13 +134,11 @@ TEST(TestOprTensorRT, RuntimeChangeBatchSize) {
         TensorRTUniquePtr<IBuilder> builder{p.first, {}};
         builder->setMaxBatchSize(10);
 #if NV_TENSOR_RT_VERSION >= 6001
-        TensorRTUniquePtr<IBuilderConfig> build_config{
-                builder->createBuilderConfig()};
+        TensorRTUniquePtr<IBuilderConfig> build_config{builder->createBuilderConfig()};
         TensorRTUniquePtr<ICudaEngine> cuda_engine{
                 builder->buildEngineWithConfig(*trt_net, *build_config)};
 #else
-        TensorRTUniquePtr<ICudaEngine> cuda_engine{
-                builder->buildCudaEngine(*trt_net)};
+        TensorRTUniquePtr<ICudaEngine> cuda_engine{builder->buildCudaEngine(*trt_net)};
 #endif
         TensorRTUniquePtr<IHostMemory> mem{cuda_engine->serialize(), {}};
         return TensorRTRuntimeOpr::make(mem->data(), mem->size(), {net.x})[0];
@@ -156,8 +147,8 @@ TEST(TestOprTensorRT, RuntimeChangeBatchSize) {
 
     HostTensorND host_z1;
     HostTensorND host_z2;
-    auto func = net.graph->compile({make_callback_copy(net.y, host_z1),
-                                    make_callback_copy(y2, host_z2)});
+    auto func = net.graph->compile(
+            {make_callback_copy(net.y, host_z1), make_callback_copy(y2, host_z2)});
     func->execute();
     MGB_ASSERT_TENSOR_NEAR(host_z1, host_z2, 5e-4);
     *net.host_x = *net.gen({1, 23, 28, 28});
@@ -178,13 +169,11 @@ TEST(TestOprTensorRT, IOFormatFree) {
     ::memset(&flags, 0, sizeof(nvinfer1::NetworkDefinitionCreationFlags));
     flags = 1 << static_cast<int>(
                     nvinfer1::NetworkDefinitionCreationFlag::kEXPLICIT_BATCH);
-    TensorRTUniquePtr<INetworkDefinition> network{
-            builder->createNetworkV2(flags), {}};
+    TensorRTUniquePtr<INetworkDefinition> network{builder->createNetworkV2(flags), {}};
     auto cast = [](size_t i) { return static_cast<int>(i); };
     ITensor* data = network->addInput(
             "data", DataType::kINT8, Dims4{cast(N), cast(C), cast(H), cast(W)});
-    TensorFormats formats = 1
-                            << static_cast<int>(nvinfer1::TensorFormat::kCHW4);
+    TensorFormats formats = 1 << static_cast<int>(nvinfer1::TensorFormat::kCHW4);
     data->setAllowedFormats(formats);
     data->setDynamicRange(-127.f * 1.2f, 127.f * 1.2f);
     HostTensorGenerator<> fgen;
@@ -194,17 +183,15 @@ TEST(TestOprTensorRT, IOFormatFree) {
     mean_weights.count = N * C * H * W;
     auto constant = network->addConstant(
             Dims4{cast(N), cast(C), cast(H), cast(W)}, mean_weights);
-    auto out = network->addElementWise(*network->getInput(0),
-                                       *constant->getOutput(0),
-                                       ElementWiseOperation::kSUB);
+    auto out = network->addElementWise(
+            *network->getInput(0), *constant->getOutput(0), ElementWiseOperation::kSUB);
     out->getOutput(0)->setDynamicRange(-127.f * 2.3f, 127.f * 2.3f);
     network->markOutput(*out->getOutput(0));
     network->getInput(0)->setType(DataType::kINT8);
     network->getOutput(0)->setType(DataType::kFLOAT);
     network->getOutput(0)->setAllowedFormats(
             1 << static_cast<int>(nvinfer1::TensorFormat::kLINEAR));
-    TensorRTUniquePtr<IBuilderConfig> build_config{
-            builder->createBuilderConfig()};
+    TensorRTUniquePtr<IBuilderConfig> build_config{builder->createBuilderConfig()};
     build_config->setFlag(BuilderFlag::kINT8);
     build_config->setFlag(BuilderFlag::kSTRICT_TYPES);
     TensorRTUniquePtr<ICudaEngine> cuda_engine{
@@ -214,11 +201,9 @@ TEST(TestOprTensorRT, IOFormatFree) {
     HostTensorGenerator<dtype::Int8> gen;
     auto graph = ComputingGraph::make();
     graph->options().graph_opt_level = 0;
-    auto mkvar = [&](const char* name, const TensorShape& shp,
-                     const DType& dtype) {
+    auto mkvar = [&](const char* name, const TensorShape& shp, const DType& dtype) {
         return opr::TypeCvt::make(
-                opr::Host2DeviceCopy::make(*graph, gen(shp)).rename(name),
-                dtype);
+                opr::Host2DeviceCopy::make(*graph, gen(shp)).rename(name), dtype);
     };
     auto x = mkvar("x", {N, C, H, W}, dtype::QuantizedS8(1.2f));
     auto fx = opr::TypeCvt::make(x, dtype::Float32());
@@ -229,7 +214,8 @@ TEST(TestOprTensorRT, IOFormatFree) {
     func1->execute();
 
     TensorShape shp{N, 1, H, W};
-    auto host = std::make_shared<HostTensorND>(x.node()->comp_node(), x.node()->dtype());
+    auto host =
+            std::make_shared<HostTensorND>(x.node()->comp_node(), x.node()->dtype());
     host->resize(shp);
     auto ptr = host->raw_ptr();
     size_t size_bytes = TensorLayout{shp, x.node()->dtype()}.span().dist_byte();
@@ -244,8 +230,7 @@ TEST(TestOprTensorRT, IOFormatFree) {
         auto sub = [&xshp, &cv](int idx) {
             return opr::IndexAt::make(xshp, {{0, cv(idx)}});
         };
-        auto tshp = opr::Concat::make(
-                {sub(0), sub(1) / 4, cv(4), sub(2), sub(3)}, 0);
+        auto tshp = opr::Concat::make({sub(0), sub(1) / 4, cv(4), sub(2), sub(3)}, 0);
         auto y0 = opr::Reshape::make(x, tshp);
         auto y1 = opr::Dimshuffle::make(y0, {0, 1, 3, 4, 2});
         return y1;

@@ -21,9 +21,9 @@ struct OprLoadDumpImpl<opr::ExternCOprRunner, 0> {
         opr::ExternCOprRunner::dump(ctx, opr);
     }
 
-    static cg::OperatorNodeBase* load(OprLoadContext& ctx,
-                                      const cg::VarNodeArray& inputs,
-                                      const OperatorNodeConfig& config) {
+    static cg::OperatorNodeBase* load(
+            OprLoadContext& ctx, const cg::VarNodeArray& inputs,
+            const OperatorNodeConfig& config) {
         return opr::ExternCOprRunner::load(ctx, inputs, config);
     }
 };

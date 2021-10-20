@@ -11,19 +11,19 @@
 
 #pragma once
 
-#include <type_traits>
-#include <functional>
-#include <utility>
-#include <memory>
 #include <cstdlib>
+#include <functional>
+#include <memory>
+#include <type_traits>
+#include <utility>
 
 #include "megdnn/internal/visibility_prologue.h"
 
 namespace megdnn {
-template<typename Signature>
+template <typename Signature>
 using thin_function = ::std::function<Signature>;
 
-} // namespace megdnn
+}  // namespace megdnn
 
 #include "megdnn/internal/visibility_epilogue.h"
 

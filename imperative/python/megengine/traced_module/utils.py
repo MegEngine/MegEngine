@@ -53,8 +53,7 @@ def replace_container_with_module_container(container):
 
 
 class _ModuleList(Module, MutableSequence):
-    r"""
-    A List-like container.
+    r"""A List-like container.
 
     Using a ``ModuleList``, one can visit, add, delete and modify submodules
     just like an ordinary python list.
@@ -140,8 +139,7 @@ class _ModuleList(Module, MutableSequence):
 
 
 class _ModuleDict(Module, MutableMapping):
-    r"""
-    A Dict-like container.
+    r"""A Dict-like container.
 
     Using a ``ModuleDict``, one can visit, add, delete and modify submodules
     just like an ordinary python dict.

@@ -39,6 +39,9 @@ endif()
 add_subdirectory(${PROJECT_SOURCE_DIR}/third_party/range-v3 ${PROJECT_BINARY_DIR}/third_party/range-v3)
 target_link_libraries(${MODULE_NAME} PRIVATE range-v3)
 
+add_subdirectory(${PROJECT_SOURCE_DIR}/third_party/Json ${PROJECT_BINARY_DIR}/third_party/Json)
+target_link_libraries(${MODULE_NAME} PRIVATE nlohmann_json::nlohmann_json)
+
 target_include_directories(${MODULE_NAME} PUBLIC src/include PRIVATE ${PYTHON_INCLUDE_DIRS} ${NUMPY_INCLUDE_DIR} ${MGB_OPDEF_OUT_DIR})
 target_compile_definitions(${MODULE_NAME} PRIVATE MODULE_NAME=${MODULE_NAME})
 target_compile_options(${MODULE_NAME} PRIVATE -Wno-unused-parameter)

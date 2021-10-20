@@ -18,13 +18,18 @@ namespace naive {
 class BatchedMatrixMulForwardImpl : public BatchedMatrixMulForward {
 public:
     BatchedMatrixMulForwardImpl(Handle* handle);
-    void exec(_megdnn_tensor_in A, _megdnn_tensor_in B, _megdnn_tensor_out C,
-              _megdnn_workspace workspace) override;
+    void exec(
+            _megdnn_tensor_in A, _megdnn_tensor_in B, _megdnn_tensor_out C,
+            _megdnn_workspace workspace) override;
 
-    size_t get_workspace_in_bytes(const TensorLayout& A, const TensorLayout& B,
-                                  const TensorLayout& C) override;
+    size_t get_workspace_in_bytes(
+            const TensorLayout& A, const TensorLayout& B,
+            const TensorLayout& C) override;
 
     std::vector<Algorithm*> get_all_algorithms(
+            const TensorLayout& /*A*/, const TensorLayout& /*B*/,
+            const TensorLayout& /*C*/) override;
+    std::vector<Algorithm*> get_all_algorithms_safe(
             const TensorLayout& /*A*/, const TensorLayout& /*B*/,
             const TensorLayout& /*C*/) override;
 

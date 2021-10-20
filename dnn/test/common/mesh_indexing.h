@@ -19,39 +19,38 @@
 namespace megdnn {
 namespace test {
 
-#define MESH_INDEXING_LIKE_OPR_PROXY(__opr)                                    \
-    template <>                                                                \
-    struct OprProxy<__opr> : public OprProxyIndexingMultiAxisVecHelper {       \
-        using OprProxyIndexingMultiAxisVecHelper::                             \
-                OprProxyIndexingMultiAxisVecHelper;                            \
-        void exec(__opr* opr, const TensorNDArray& tensors) const {            \
-            WorkspaceWrapper W(opr->handle(), opr->get_workspace_in_bytes(     \
-                                                      tensors[1].layout, axes, \
-                                                      tensors.size() - 2));    \
-            opr->exec(tensors[0], make_index_desc(tensors), tensors[1],        \
-                      W.workspace());                                          \
-        }                                                                      \
-        void deduce_layout(__opr* opr, TensorLayoutArray& layouts) {           \
-            MEGDNN_MARK_USED_VAR(opr);                                         \
-            MEGDNN_MARK_USED_VAR(layouts);                                     \
-            opr->deduce_layout(layouts[0], make_index_layout(layouts),         \
-                               layouts[1]);                                    \
-        }                                                                      \
+#define MESH_INDEXING_LIKE_OPR_PROXY(__opr)                                           \
+    template <>                                                                       \
+    struct OprProxy<__opr> : public OprProxyIndexingMultiAxisVecHelper {              \
+        using OprProxyIndexingMultiAxisVecHelper::OprProxyIndexingMultiAxisVecHelper; \
+        void exec(__opr* opr, const TensorNDArray& tensors) const {                   \
+            WorkspaceWrapper W(                                                       \
+                    opr->handle(),                                                    \
+                    opr->get_workspace_in_bytes(                                      \
+                            tensors[1].layout, axes, tensors.size() - 2));            \
+            opr->exec(                                                                \
+                    tensors[0], make_index_desc(tensors), tensors[1], W.workspace()); \
+        }                                                                             \
+        void deduce_layout(__opr* opr, TensorLayoutArray& layouts) {                  \
+            MEGDNN_MARK_USED_VAR(opr);                                                \
+            MEGDNN_MARK_USED_VAR(layouts);                                            \
+            opr->deduce_layout(layouts[0], make_index_layout(layouts), layouts[1]);   \
+        }                                                                             \
     };
 
-#define MESH_MODIFY_LIKE_OPR_PROXY(__opr)                                      \
-    template <>                                                                \
-    struct OprProxy<__opr> : public OprProxyIndexingMultiAxisVecHelper {       \
-        using OprProxyIndexingMultiAxisVecHelper::                             \
-                OprProxyIndexingMultiAxisVecHelper;                            \
-        void exec(__opr* opr, const TensorNDArray& tensors) const {            \
-            WorkspaceWrapper W(opr->handle(), opr->get_workspace_in_bytes(     \
-                                                      tensors[1].layout, axes, \
-                                                      tensors.size() - 2));    \
-            opr->exec(tensors[0], tensors[1], make_index_desc(tensors),        \
-                      W.workspace());                                          \
-        }                                                                      \
-        void deduce_layout(__opr*, TensorLayoutArray&) {}                      \
+#define MESH_MODIFY_LIKE_OPR_PROXY(__opr)                                             \
+    template <>                                                                       \
+    struct OprProxy<__opr> : public OprProxyIndexingMultiAxisVecHelper {              \
+        using OprProxyIndexingMultiAxisVecHelper::OprProxyIndexingMultiAxisVecHelper; \
+        void exec(__opr* opr, const TensorNDArray& tensors) const {                   \
+            WorkspaceWrapper W(                                                       \
+                    opr->handle(),                                                    \
+                    opr->get_workspace_in_bytes(                                      \
+                            tensors[1].layout, axes, tensors.size() - 2));            \
+            opr->exec(                                                                \
+                    tensors[0], tensors[1], make_index_desc(tensors), W.workspace()); \
+        }                                                                             \
+        void deduce_layout(__opr*, TensorLayoutArray&) {}                             \
     };
 
 MESH_INDEXING_LIKE_OPR_PROXY(MeshIndexing);

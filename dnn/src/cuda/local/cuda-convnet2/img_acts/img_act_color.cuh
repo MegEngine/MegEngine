@@ -25,7 +25,8 @@
  *
  * --------------------------------------------------------------------------
  * * This file has been modified by Megvii ("Megvii Modifications").
- * * All Megvii Modifications are Copyright (C) 2014-2021 Megvii Inc. All rights reserved.
+ * * All Megvii Modifications are Copyright (C) 2014-2021 Megvii Inc. All rights
+ * reserved.
  * --------------------------------------------------------------------------
  */
 #include "img_act_templates.cuh"
@@ -42,8 +43,8 @@ namespace cuda {
  * threadIdx.y determines pixel.
  *
  * hidActs:     (numFilters, numModulesY, numModulesX, numImages)
- * filters:     (numColors, filterPixels, numFilters)                               if conv
- *              (numModulesY, numModulesX, numColors, filterPixels, numFilters)     otherwise
+ * filters:     (numColors, filterPixels, numFilters)                               if
+ * conv (numModulesY, numModulesX, numColors, filterPixels, numFilters)     otherwise
  * targets:     (numColors, imgSizeY, imgSizeX, numImages)
  *
  * Each block reconstructs one 4x4 pixels from 16*imgsPerThread cases.
@@ -57,18 +58,19 @@ namespace cuda {
  * This version conserves shared memory by loading 16 filters at a time rather than 32.
  */
 template <int imgsPerThread, int numColors, bool scale, bool checkCaseBounds, bool conv>
-__global__ void img_acts_color(const float* hidActs, const float* filters, float* targets,
-                                   const int numModulesY, const int numModulesX, const int numImages, const int numFilters,
-                                   const int filterSize, const int imgSizeY, const int imgSizeX,
-                                   const int paddingStart, const int moduleStride,
-                                   const float scaleTargets, const float scaleOutputs) {
-    __shared__ float shFilters[numColors*16][16 + 1];
-    __shared__ float shHidActs[16][16*imgsPerThread];
-    fill_shared_mem<float>((float *)shFilters, sizeof(shFilters)/sizeof(float), 0);
-    fill_shared_mem<float>((float *)shHidActs, sizeof(shHidActs)/sizeof(float), 0);
+__global__ void img_acts_color(
+        const float* hidActs, const float* filters, float* targets,
+        const int numModulesY, const int numModulesX, const int numImages,
+        const int numFilters, const int filterSize, const int imgSizeY,
+        const int imgSizeX, const int paddingStart, const int moduleStride,
+        const float scaleTargets, const float scaleOutputs) {
+    __shared__ float shFilters[numColors * 16][16 + 1];
+    __shared__ float shHidActs[16][16 * imgsPerThread];
+    fill_shared_mem<float>((float*)shFilters, sizeof(shFilters) / sizeof(float), 0);
+    fill_shared_mem<float>((float*)shHidActs, sizeof(shHidActs) / sizeof(float), 0);
     __syncthreads();
 
-    const int blockCaseIdx = blockIdx.x * 16*imgsPerThread;
+    const int blockCaseIdx = blockIdx.x * 16 * imgsPerThread;
     const int numRegionsX = DIVUP(imgSizeX, 4);
     const int blockRegionIdx = blockIdx.y;
     const int blockRegionIdxX = blockRegionIdx % numRegionsX;
@@ -90,21 +92,26 @@ __global__ void img_acts_color(const float* hidActs, const float* filters, float
     filters += threadIdx.x;
     targets += pxIdx * numImages + blockCaseIdx + threadIdx.x;
 
-
     float prod[numColors][imgsPerThread];
-    #pragma unroll
+#pragma unroll
     for (int c = 0; c < numColors; c++) {
-        #pragma unroll
+#pragma unroll
         for (int i = 0; i < imgsPerThread; i++) {
             prod[c][i] = 0;
         }
     }
-    const int startY = blockRegionTop - paddingStart < filterSize ? 0
-                        : 1 + (blockRegionTop - paddingStart - filterSize) / moduleStride;
-    const int endY = MIN(numModulesY, 1 + (blockRegionTop + 3 - paddingStart) / moduleStride);
-    const int startX = blockRegionLeft - paddingStart < filterSize ? 0
-                        : 1 + (blockRegionLeft - paddingStart - filterSize) / moduleStride;
-    const int endX = MIN(numModulesX, 1 + (blockRegionLeft + 3 - paddingStart) / moduleStride);
+    const int startY =
+            blockRegionTop - paddingStart < filterSize
+                    ? 0
+                    : 1 + (blockRegionTop - paddingStart - filterSize) / moduleStride;
+    const int endY =
+            MIN(numModulesY, 1 + (blockRegionTop + 3 - paddingStart) / moduleStride);
+    const int startX =
+            blockRegionLeft - paddingStart < filterSize
+                    ? 0
+                    : 1 + (blockRegionLeft - paddingStart - filterSize) / moduleStride;
+    const int endX =
+            MIN(numModulesX, 1 + (blockRegionLeft + 3 - paddingStart) / moduleStride);
 
     float* shilterLoad = &shFilters[threadIdx.y][threadIdx.x];
     float* shHidActLoad = &shHidActs[loadY][loadX];
@@ -118,59 +125,73 @@ __global__ void img_acts_color(const float* hidActs, const float* filters, float
             const int moduleLeft = paddingStart + mx * moduleStride;
             const int pxInModuleX = pxX - moduleLeft;
 
-            const bool isPxInModule = pxInModuleY >= 0 && pxInModuleY < filterSize && pxInModuleX >= 0 && pxInModuleX < filterSize;
+            const bool isPxInModule = pxInModuleY >= 0 && pxInModuleY < filterSize &&
+                                      pxInModuleX >= 0 && pxInModuleX < filterSize;
             const int pxIdxInModule = pxInModuleY * filterSize + pxInModuleX;
 
-            for (int f = 0; f < numFilters; f += 16) { // multiply with 16 filters at a time
-                // Now the threads split up into half-warps, and each half-warp decides if it's interested.
+            for (int f = 0; f < numFilters;
+                 f += 16) {  // multiply with 16 filters at a time
+                // Now the threads split up into half-warps, and each half-warp decides
+                // if it's interested.
                 const float* hLoad = &hidActs[(moduleIdx + f * numModules) * numImages];
-                #pragma unroll
+#pragma unroll
                 for (int i = 0; i < imgsPerThread * 16; i += 32) {
                     if (!checkCaseBounds || blockCaseIdx + i + loadX < numImages) {
-                        #pragma unroll
-                        for (int j = 0; j < 16; j += 8) { // load 16 rows of imgsPerThread*16 cols, 8 * 32 elements at a time.
+#pragma unroll
+                        for (int j = 0; j < 16;
+                             j += 8) {  // load 16 rows of imgsPerThread*16 cols, 8 * 32
+                                        // elements at a time.
                             if (f + loadY + j < numFilters) {
-                                shHidActLoad[j * 16 * imgsPerThread + i] = hLoad[j * numModules * numImages + i];
+                                shHidActLoad[j * 16 * imgsPerThread + i] =
+                                        hLoad[j * numModules * numImages + i];
                             } else {
                                 shHidActLoad[j * 16 * imgsPerThread + i] = 0;
                             }
                         }
                     } else {
-                        #pragma unroll
-                        for (int j = 0; j < 16; j += 8) { // load 16 rows of imgsPerThread*16 cols, 8 * 32 elements at a time.
+#pragma unroll
+                        for (int j = 0; j < 16;
+                             j += 8) {  // load 16 rows of imgsPerThread*16 cols, 8 * 32
+                                        // elements at a time.
                             shHidActLoad[j * 16 * imgsPerThread + i] = 0;
                         }
                     }
                 }
 
                 if (isPxInImg && isPxInModule) {
-                    // This half-warp is interested, so it's going to load the weights from this module to its pixel.
-                    // Not fully coalesced read :(
-                    // But taking out this read entirely only reduces the runtime by ~2.8%, so it isn't costing me much.
-                    const float* fLoad = conv ? &filters[pxIdxInModule * numFilters + f]
-                                              : &filters[(moduleIdx * numColors * filterPixels + pxIdxInModule) * numFilters + f];
-                    #pragma unroll
+                    // This half-warp is interested, so it's going to load the weights
+                    // from this module to its pixel. Not fully coalesced read :( But
+                    // taking out this read entirely only reduces the runtime by ~2.8%,
+                    // so it isn't costing me much.
+                    const float* fLoad =
+                            conv ? &filters[pxIdxInModule * numFilters + f]
+                                 : &filters
+                                            [(moduleIdx * numColors * filterPixels +
+                                              pxIdxInModule) *
+                                                     numFilters +
+                                             f];
+#pragma unroll
                     for (int c = 0; c < numColors; c++) {
                         if (f + threadIdx.x < numFilters) {
-                            shilterLoad[c * 16 * (16 + 1)] = fLoad[c * filterPixels * numFilters];
+                            shilterLoad[c * 16 * (16 + 1)] =
+                                    fLoad[c * filterPixels * numFilters];
                         } else {
                             shilterLoad[c * 16 * (16 + 1)] = 0;
                         }
                     }
-
-
                 }
 
                 __syncthreads();
                 // Do some actual computation
                 if (isPxInImg && isPxInModule) {
-                    #pragma unroll
+#pragma unroll
                     for (int c = 0; c < numColors; c++) {
-                        #pragma unroll
+#pragma unroll
                         for (int w = 0; w < 16; w++) {
-                            #pragma unroll
+#pragma unroll
                             for (int i = 0; i < imgsPerThread; i++) {
-                                prod[c][i] += shFilters[threadIdx.y + c * 16][w] * shHidActs[w][threadIdx.x + i * 16];
+                                prod[c][i] += shFilters[threadIdx.y + c * 16][w] *
+                                              shHidActs[w][threadIdx.x + i * 16];
                             }
                         }
                     }
@@ -179,25 +200,32 @@ __global__ void img_acts_color(const float* hidActs, const float* filters, float
             }
         }
     }
-    // Not fully coalesced write :(... shmem (and fully coalesced) version is actually slightly slower, though
+    // Not fully coalesced write :(... shmem (and fully coalesced) version is actually
+    // slightly slower, though
     if (isPxInImg) {
         if (scale) {
-            #pragma unroll
+#pragma unroll
             for (int i = 0; i < imgsPerThread; i++) {
-                if (!checkCaseBounds || blockCaseIdx + threadIdx.x + i * 16 < numImages) {
-                    #pragma unroll
+                if (!checkCaseBounds ||
+                    blockCaseIdx + threadIdx.x + i * 16 < numImages) {
+#pragma unroll
                     for (int c = 0; c < numColors; c++) {
-                        targets[c * imgPixels * numImages + i * 16] = scaleTargets * targets[c * imgPixels * numImages + i * 16] + scaleOutputs * prod[c][i];
+                        targets[c * imgPixels * numImages + i * 16] =
+                                scaleTargets *
+                                        targets[c * imgPixels * numImages + i * 16] +
+                                scaleOutputs * prod[c][i];
                     }
                 }
             }
         } else {
-            #pragma unroll
+#pragma unroll
             for (int i = 0; i < imgsPerThread; i++) {
-                if (!checkCaseBounds || blockCaseIdx + threadIdx.x + i * 16 < numImages) {
-                    #pragma unroll
+                if (!checkCaseBounds ||
+                    blockCaseIdx + threadIdx.x + i * 16 < numImages) {
+#pragma unroll
                     for (int c = 0; c < numColors; c++) {
-                        targets[c * imgPixels * numImages + i * 16] = scaleOutputs * prod[c][i];
+                        targets[c * imgPixels * numImages + i * 16] =
+                                scaleOutputs * prod[c][i];
                     }
                 }
             }
@@ -206,16 +234,16 @@ __global__ void img_acts_color(const float* hidActs, const float* filters, float
 }
 
 #define IMG_COLOR_K_HEAD template __global__ void img_acts_color
-#define IMG_COLOR_K(scale, ckCase, conv) \
-    IMG_COLOR_K_HEAD < 8, 2, scale, ckCase, conv >(COLOR_KEP_PARAM); \
-    IMG_COLOR_K_HEAD < 4, 2, scale, ckCase, conv >(COLOR_KEP_PARAM); \
-    IMG_COLOR_K_HEAD < 2, 2, scale, ckCase, conv >(COLOR_KEP_PARAM); \
-    IMG_COLOR_K_HEAD < 8, 3, scale, ckCase, conv >(COLOR_KEP_PARAM); \
-    IMG_COLOR_K_HEAD < 4, 3, scale, ckCase, conv >(COLOR_KEP_PARAM); \
-    IMG_COLOR_K_HEAD < 2, 3, scale, ckCase, conv >(COLOR_KEP_PARAM); \
-    IMG_COLOR_K_HEAD < 8, 1, scale, ckCase, conv >(COLOR_KEP_PARAM); \
-    IMG_COLOR_K_HEAD < 4, 1, scale, ckCase, conv >(COLOR_KEP_PARAM); \
-    IMG_COLOR_K_HEAD < 2, 1, scale, ckCase, conv >(COLOR_KEP_PARAM);
+#define IMG_COLOR_K(scale, ckCase, conv)                          \
+    IMG_COLOR_K_HEAD<8, 2, scale, ckCase, conv>(COLOR_KEP_PARAM); \
+    IMG_COLOR_K_HEAD<4, 2, scale, ckCase, conv>(COLOR_KEP_PARAM); \
+    IMG_COLOR_K_HEAD<2, 2, scale, ckCase, conv>(COLOR_KEP_PARAM); \
+    IMG_COLOR_K_HEAD<8, 3, scale, ckCase, conv>(COLOR_KEP_PARAM); \
+    IMG_COLOR_K_HEAD<4, 3, scale, ckCase, conv>(COLOR_KEP_PARAM); \
+    IMG_COLOR_K_HEAD<2, 3, scale, ckCase, conv>(COLOR_KEP_PARAM); \
+    IMG_COLOR_K_HEAD<8, 1, scale, ckCase, conv>(COLOR_KEP_PARAM); \
+    IMG_COLOR_K_HEAD<4, 1, scale, ckCase, conv>(COLOR_KEP_PARAM); \
+    IMG_COLOR_K_HEAD<2, 1, scale, ckCase, conv>(COLOR_KEP_PARAM);
 
-} // namespace cuda
-} // namespace megdnn
+}  // namespace cuda
+}  // namespace megdnn

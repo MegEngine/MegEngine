@@ -58,9 +58,9 @@ LiteDeviceType get_device_from_locator(const mgb::CompNode::Locator& locator);
  * 3. CF = 2: float32 stride + float32 base + uint16 weight (return s*w+b)
  *
  */
-void decompressed_tensor_value_loader(void* ptr_,
-                                      const mgb::TensorLayout& layout,
-                                      mgb::serialization::InputFile& fin);
+void decompressed_tensor_value_loader(
+        void* ptr_, const mgb::TensorLayout& layout,
+        mgb::serialization::InputFile& fin);
 
 }  // namespace lite
 #endif

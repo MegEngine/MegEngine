@@ -9,8 +9,8 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 #pragma once
-#include "megdnn/opr_param_defs.h"
 #include "megdnn/basic_types.h"
+#include "megdnn/opr_param_defs.h"
 
 namespace megdnn {
 namespace test {
@@ -19,8 +19,7 @@ namespace gaussian_blur {
 struct TestArg {
     param::GaussianBlur param;
     TensorShape src;
-    TestArg(param::GaussianBlur param, TensorShape src)
-            : param(param), src(src) {}
+    TestArg(param::GaussianBlur param, TensorShape src) : param(param), src(src) {}
 };
 
 inline static std::vector<TestArg> get_args() {

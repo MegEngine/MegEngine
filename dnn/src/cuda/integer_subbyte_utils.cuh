@@ -43,8 +43,7 @@ MEGDNN_DEVICE __forceinline__ static int transform_int8_to_int4x8(
             "cvt.pack.sat.s4.s32.b32    %0, %2, %1, r4;"
             "}"
             : "=r"(out)
-            : "r"(s0), "r"(s1), "r"(s2), "r"(s3), "r"(s4), "r"(s5), "r"(s6),
-              "r"(s7));
+            : "r"(s0), "r"(s1), "r"(s2), "r"(s3), "r"(s4), "r"(s5), "r"(s6), "r"(s7));
 #else
 #define CVT_SAT_S4_S32(r, bits) \
     r = r <= -8 ? -8 : r;       \
@@ -78,8 +77,7 @@ MEGDNN_DEVICE __forceinline__ static int transform_int8_to_uint4x8(
             "cvt.pack.sat.u4.s32.b32    %0, %2, %1, r4;"
             "}"
             : "=r"(out)
-            : "r"(s0), "r"(s1), "r"(s2), "r"(s3), "r"(s4), "r"(s5), "r"(s6),
-              "r"(s7));
+            : "r"(s0), "r"(s1), "r"(s2), "r"(s3), "r"(s4), "r"(s5), "r"(s6), "r"(s7));
 #else
 #define CVT_SAT_U4_S32(r, bits) \
     r = r <= 0 ? 0 : r;         \
@@ -100,8 +98,7 @@ MEGDNN_DEVICE __forceinline__ static int transform_int8_to_uint4x8(
 }
 
 template <bool signedness, typename T>
-MEGDNN_DEVICE __forceinline__ static int unpack_integer_4bits(T storage,
-                                                              int bits) {
+MEGDNN_DEVICE __forceinline__ static int unpack_integer_4bits(T storage, int bits) {
     //! size in bits of 32 bit integer - 4 bits
     static constexpr int shift = 28;
     using type = typename integer_trait<signedness>::type;

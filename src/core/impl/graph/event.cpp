@@ -33,4 +33,3 @@ MGB_TYPEINFO_OBJ_IMPL(BeforeMemDefrag);
 #endif
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
-

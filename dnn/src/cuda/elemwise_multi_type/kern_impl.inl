@@ -20,13 +20,12 @@
 namespace megdnn {
 namespace cuda {
 
-#define cb(_m)                                                                 \
-    typedef ElemwiseKern<megcorePlatformCUDA, param_enumv::Elemwise::Mode::_m, \
-                         float>                                                \
-            KernImpl;                                                          \
-    typedef kern_ops_quantized::QuantizedMultiTypeOp<                          \
-            KERN_IMPL_ARITY, KERN_IMPL_STYPE, KERN_IMPL_DTYPE, KernImpl>       \
-            Op;                                                                \
+#define cb(_m)                                                                        \
+    typedef ElemwiseKern<megcorePlatformCUDA, param_enumv::Elemwise::Mode::_m, float> \
+            KernImpl;                                                                 \
+    typedef kern_ops_quantized::QuantizedMultiTypeOp<                                 \
+            KERN_IMPL_ARITY, KERN_IMPL_STYPE, KERN_IMPL_DTYPE, KernImpl>              \
+            Op;                                                                       \
     INST_RUN_ELEMWISE(Op, KERN_IMPL_STYPE, KERN_IMPL_ARITY);
 
 KERN_IMPL_MODE(cb)

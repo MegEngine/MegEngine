@@ -9,13 +9,13 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 #include "megbrain/utils/thread_pool.h"
-#include "megbrain/comp_node.h"
-#include "megbrain/system.h"
-#include "megbrain/test/helper.h"
-#include "megbrain/opr/io.h"
-#include "megbrain/opr/utility.h"
 #include <atomic>
 #include <random>
+#include "megbrain/comp_node.h"
+#include "megbrain/opr/io.h"
+#include "megbrain/opr/utility.h"
+#include "megbrain/system.h"
+#include "megbrain/test/helper.h"
 
 #if MGB_HAVE_THREAD
 using namespace mgb;

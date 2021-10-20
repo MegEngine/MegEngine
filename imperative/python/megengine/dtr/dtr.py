@@ -30,24 +30,20 @@ def _str2bytes(text: str) -> int:
 
 @property
 def eviction_threshold(mod):
-    r"""
-    Get or set the eviction threshold in bytes. It can also be set to a string,
+    r"""Get or set the eviction threshold in bytes. It can also be set to a string,
     whose formatting supports byte(B), kilobyte(KB), megabyte(MB) and
     gigabyte(GB) units.
-
-    .. note::
-
+    
+    Note: 
        When GPU memory usage exceeds this value, DTR will heuristically select
        and evict resident tensors until the amount of used memory falls below
        this threshold.
-
+    
     Examples:
+        .. code-block::
 
-    .. code-block::
-
-        import megengine as mge
-        mge.dtr.eviction_threshold = "2GB"
-
+           import megengine as mge
+           mge.dtr.eviction_threshold = "2GB"
     """
     return _eviction_threshold
 
@@ -66,24 +62,21 @@ def eviction_threshold(mod, value: Union[int, str]):
 
 @property
 def evictee_minimum_size(mod):
-    r"""
-    Get or set the memory threshold of tensors in bytes. It can also be set to a
+    r"""Get or set the memory threshold of tensors in bytes. It can also be set to a
     string, whose formatting supports byte(B), kilobyte(KB), megabyte(MB) and
     gigabyte(GB) units.
-
-    .. note::
-
+    
+    Note:
        Only tensors whose size exceeds this threshold will be added to the
        candidate set. A tensor that is not added to the candidate set will
        never be evicted during its lifetime.
-
+    
     Examples:
+    
+        .. code-block::
 
-    .. code-block::
-
-        import megengine as mge
-        mge.dtr.evictee_minimum_size = "2MB"
-
+           import megengine as mge
+           mge.dtr.evictee_minimum_size = "2MB"
     """
     return _evictee_minimum_size
 
@@ -102,19 +95,16 @@ def evictee_minimum_size(mod, value: Union[int, str]):
 
 @property
 def enable_sqrt_sampling(mod):
-    r"""
-    Get or set whether sqrt sampling is allowed. Sqrt sampling means that given
+    r"""Get or set whether sqrt sampling is allowed. Sqrt sampling means that given
     the size of the candidate set is N, only enumerate sqrt(N) tensors. When
     the number of tensors is very high, enabling this optimization will speed
     up the training.
+    
+    Examples:    
+        .. code-block::
 
-    Examples:
-
-    .. code-block::
-
-        import megengine as mge
-        mge.dtr.enable_sqrt_sampling = True
-
+           import megengine as mge
+           mge.dtr.enable_sqrt_sampling = True
     """
     return _enable_sqrt_sampling
 
@@ -127,9 +117,7 @@ def enable_sqrt_sampling(mod, value: bool):
 
 
 def enable():
-    r"""
-    Enable to record computing path of tensors and to perform DTR policy.
-    """
+    r"""Enable to record computing path of tensors and to perform DTR policy."""
     _set_defrag(True)
     _set_option("enable_dtr_auto_drop", 1)
     _set_option("enable_drop", 1)
@@ -138,9 +126,7 @@ def enable():
 
 
 def disable():
-    r"""
-    Stop recording computing path of tensors and performing DTR policy.
-    """
+    r"""Stop recording computing path of tensors and performing DTR policy."""
     _set_defrag(False)
     _set_option("enable_dtr_auto_drop", 0)
     _set_option("enable_drop", 0)

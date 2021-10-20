@@ -9,103 +9,99 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-
 #include "megbrain/tensor.h"
 #include "megbrain/comp_node_env.h"
-#include "megbrain/opr/param_defs.h"
 #include "megbrain/opr/internal/megdnn_opr_wrapper.h"
+#include "megbrain/opr/param_defs.h"
 
 #include "megdnn/oprs.h"
 
 #include <thread>
 
-#include <cstring>
 #include <cmath>
+#include <cstring>
 
 using namespace mgb;
 
 namespace {
 
-    //! implement non-contiguous d2d copy
-    void noncont_tensor_copy(
-            const DeviceTensorND &dest, const DeviceTensorND &src,
-            bool contig_dest, bool contig_src) {
-        auto src_cn = src.comp_node();
-        auto dst_cn = dest.comp_node();
-        if (src_cn.device_type() == dst_cn.device_type()) {
-            // perform relayout op for better performance when src and dst are
-            // placed on comp nodes with the same device type
-            auto &&src_env = CompNodeEnv::from_comp_node(src.comp_node());
-            auto relayout = opr::intl::get_megdnn_global_opr<megdnn::Relayout>(
-                    dst_cn);
-            dst_cn.activate();
-            relayout->exec(
-                    const_cast<DeviceTensorND&>(src).as_megdnn(),
-                    dest.as_megdnn(), MegDNNHandle::get(src_env).handle());
-        } else {
-            if (contig_src) {
-                mgb_assert(!contig_dest);
-                DeviceTensorND tmp{dst_cn};
-                tmp.copy_from(src);
-                dest.copy_from_fixlayout(tmp);
-                return;
-            }
-            DeviceTensorND tmp;
-            tmp.copy_from(src);
-            dest.copy_from_fixlayout(tmp);
-        }
-    }
-
-    //! implement non-contiguous h2h copy
-    void noncont_tensor_copy(
-            const HostTensorND &dest, const HostTensorND &src, bool, bool) {
-        auto opr = opr::intl::get_megdnn_global_opr<megdnn::Relayout>(
-                CompNode::default_cpu());
-
-        opr->exec(
-                const_cast<HostTensorND&>(src).as_megdnn(),
-                dest.as_megdnn());
-    }
-
-    //! implement non-contiguous d2h copy
-    void noncont_tensor_copy(
-            const HostTensorND &dest, const DeviceTensorND &src,
-            bool contig_dest, bool contig_src) {
+//! implement non-contiguous d2d copy
+void noncont_tensor_copy(
+        const DeviceTensorND& dest, const DeviceTensorND& src, bool contig_dest,
+        bool contig_src) {
+    auto src_cn = src.comp_node();
+    auto dst_cn = dest.comp_node();
+    if (src_cn.device_type() == dst_cn.device_type()) {
+        // perform relayout op for better performance when src and dst are
+        // placed on comp nodes with the same device type
+        auto&& src_env = CompNodeEnv::from_comp_node(src.comp_node());
+        auto relayout = opr::intl::get_megdnn_global_opr<megdnn::Relayout>(dst_cn);
+        dst_cn.activate();
+        relayout->exec(
+                const_cast<DeviceTensorND&>(src).as_megdnn(), dest.as_megdnn(),
+                MegDNNHandle::get(src_env).handle());
+    } else {
         if (contig_src) {
             mgb_assert(!contig_dest);
-            HostTensorND tmp;
-            tmp.copy_from(src).sync();
-            dest.copy_from_fixlayout(tmp);  // sync not needed for h2h copy
+            DeviceTensorND tmp{dst_cn};
+            tmp.copy_from(src);
+            dest.copy_from_fixlayout(tmp);
             return;
         }
         DeviceTensorND tmp;
         tmp.copy_from(src);
         dest.copy_from_fixlayout(tmp);
     }
+}
 
-    //! implement non-contiguous h2d copy
-    void noncont_tensor_copy(
-            const DeviceTensorND &dest, const HostTensorND &src,
-            bool contig_dest, bool contig_src) {
-        if (contig_src) {
-            mgb_assert(!contig_dest);
-            DeviceTensorND tmp;
-            // no need to sync because device free is async-safe with respect to
-            // host thread
-            tmp.copy_from(src);
-            dest.copy_from_fixlayout(tmp);
-            return;
-        }
+//! implement non-contiguous h2h copy
+void noncont_tensor_copy(
+        const HostTensorND& dest, const HostTensorND& src, bool, bool) {
+    auto opr =
+            opr::intl::get_megdnn_global_opr<megdnn::Relayout>(CompNode::default_cpu());
+
+    opr->exec(const_cast<HostTensorND&>(src).as_megdnn(), dest.as_megdnn());
+}
+
+//! implement non-contiguous d2h copy
+void noncont_tensor_copy(
+        const HostTensorND& dest, const DeviceTensorND& src, bool contig_dest,
+        bool contig_src) {
+    if (contig_src) {
+        mgb_assert(!contig_dest);
         HostTensorND tmp;
-        tmp.copy_from(src);
-        dest.copy_from_fixlayout(tmp).sync();
+        tmp.copy_from(src).sync();
+        dest.copy_from_fixlayout(tmp);  // sync not needed for h2h copy
+        return;
     }
-} // anonymous namespace
+    DeviceTensorND tmp;
+    tmp.copy_from(src);
+    dest.copy_from_fixlayout(tmp);
+}
+
+//! implement non-contiguous h2d copy
+void noncont_tensor_copy(
+        const DeviceTensorND& dest, const HostTensorND& src, bool contig_dest,
+        bool contig_src) {
+    if (contig_src) {
+        mgb_assert(!contig_dest);
+        DeviceTensorND tmp;
+        // no need to sync because device free is async-safe with respect to
+        // host thread
+        tmp.copy_from(src);
+        dest.copy_from_fixlayout(tmp);
+        return;
+    }
+    HostTensorND tmp;
+    tmp.copy_from(src);
+    dest.copy_from_fixlayout(tmp).sync();
+}
+}  // anonymous namespace
 
 /* ============= Slice and SubTensorSpec ============= */
 
 SubTensorSpec SubTensorSpec::make_from_offset_elem(
-        const TensorLayout &layout, ptrdiff_t offset_elem) {
+        const TensorLayout& layout, ptrdiff_t offset_elem) {
     mgb_assert(layout.ndim && layout.dtype.valid());
     return {layout, offset_elem};
 }
@@ -115,45 +111,63 @@ SubTensorSpec Slice::apply(TensorLayout layout, int axis) const {
     if (axis == megdnn::param::OptionalAxisV1::INVALID_AXIS) {
         axis = 0;
         layout = layout.collapse_contiguous();
-        mgb_assert(layout.ndim == 1,
-                   "apply Slice with axis==INVALID_AXIS on non-contig layout");
+        mgb_assert(
+                layout.ndim == 1,
+                "apply Slice with axis==INVALID_AXIS on non-contig layout");
     }
     // axis in [-ndim, ndim) is available
     if (axis < 0)
         axis += layout.ndim;
-    mgb_assert(axis >= 0 && static_cast<size_t>(axis) < layout.ndim,
+    mgb_assert(
+            axis >= 0 && static_cast<size_t>(axis) < layout.ndim,
             "invalid axis: %d; ndim=%zu", axis, layout.ndim);
 
     ptrdiff_t size_ax = layout.shape[axis];
     ptrdiff_t begin, end, step = m_step.val_with_default(1);
     mgb_assert(step, "Slice step can not be zero");
 
-    auto tostr = [](const Maybe<ptrdiff_t> &v) -> std::string {
+    auto tostr = [](const Maybe<ptrdiff_t>& v) -> std::string {
         if (!v.valid())
             return "None";
         return std::to_string(v.val());
     };
-    auto mod_size = [size_ax](ptrdiff_t v) {
+    auto mod_size = [size_ax](ptrdiff_t v) -> ptrdiff_t {
+        if (size_ax == 0)
+            return 0;
         return v < 0 ? v + size_ax : v;
     };
     MGB_MARK_USED_VAR(tostr);
 
-#define CHECK(cond) \
-    mgb_assert(cond, \
-            "index out of bound: layout=%s; request begin=%s end=%s step=%s " \
-            "axis=%d", \
-            layout.to_string().c_str(), tostr(m_begin).c_str(), \
-            tostr(m_end).c_str(), tostr(m_step).c_str(), axis)
+#define CHECK(cond)                                                               \
+    if (m_is_scalar_idx) {                                                        \
+        mgb_assert(                                                               \
+                cond, "index out of bound: layout=%s; request index=%s, axis=%d", \
+                layout.to_string().c_str(), tostr(m_begin).c_str(), axis);        \
+    } else {                                                                      \
+        mgb_assert(                                                               \
+                cond,                                                             \
+                "index out of bound: layout=%s; request begin=%s end=%s step=%s " \
+                "axis=%d",                                                        \
+                layout.to_string().c_str(), tostr(m_begin).c_str(),               \
+                tostr(m_end).c_str(), tostr(m_step).c_str(), axis);               \
+    }
 
     if (step > 0) {
         begin = mod_size(m_begin.val_with_default(0));
         end = mod_size(m_end.val_with_default(size_ax));
-        CHECK(begin >= 0 && end >= begin && end <= size_ax);
+        if (!m_is_scalar_idx) {
+            end = std::min(end, size_ax);
+            begin = std::min(begin, end);
+        }
+        CHECK(begin >= 0 && end >= begin && end <= size_ax)
     } else {
         begin = mod_size(m_begin.val_with_default(size_ax - 1));
         end = m_end.valid() ? mod_size(m_end.val()) : -1;
-        CHECK(step < 0 && begin >= 0 && end <= begin && begin < size_ax &&
-              end >= -1);
+        if (!m_is_scalar_idx) {
+            begin = std::min(begin, std::max<ptrdiff_t>(size_ax - 1, 0));
+            end = std::min(end, begin);
+        }
+        CHECK(step < 0 && begin >= 0 && end <= begin && begin < size_ax && end >= -1)
     }
     auto step_abs = std::abs(step);
     layout.shape[axis] = (std::abs(end - begin) + step_abs - 1) / step_abs;
@@ -162,13 +176,14 @@ SubTensorSpec Slice::apply(TensorLayout layout, int axis) const {
 
     // make stride as contiguous as possible
     if (layout.shape[axis] != 1 && axis)
-        -- axis;
+        --axis;
     if (layout.shape[axis] == 1) {
         auto stride = layout.stride[axis] =
-            axis + 1 < static_cast<int>(layout.ndim) ?
-            layout.stride[axis + 1] * layout.shape[axis + 1] : 1;
+                axis + 1 < static_cast<int>(layout.ndim)
+                        ? layout.stride[axis + 1] * layout.shape[axis + 1]
+                        : 1;
 
-        for (int i = axis - 1; i >= 0; -- i) {
+        for (int i = axis - 1; i >= 0; --i) {
             if (layout.shape[i] == 1) {
                 layout.stride[i] = stride;
             } else {
@@ -183,8 +198,9 @@ SubTensorSpec Slice::apply(TensorLayout layout, int axis) const {
 #undef CHECK
 }
 
-void SubTensorSpec::merge_with(const SubTensorSpec &rhs) {
-    mgb_assert(m_layout.dtype.valid() && m_layout.dtype == rhs.m_layout.dtype &&
+void SubTensorSpec::merge_with(const SubTensorSpec& rhs) {
+    mgb_assert(
+            m_layout.dtype.valid() && m_layout.dtype == rhs.m_layout.dtype &&
             rhs.m_layout.ndim);
     m_offset_elem += rhs.m_offset_elem;
     m_layout = rhs.m_layout;
@@ -193,30 +209,21 @@ void SubTensorSpec::merge_with(const SubTensorSpec &rhs) {
 /* ===================== TensorStorage ===================== */
 
 class mgb::HostTensorStorageTrait {
-    public:
-        static void* alloc(CompNode node, size_t size) {
-            return node.alloc_host(size);
-        }
+public:
+    static void* alloc(CompNode node, size_t size) { return node.alloc_host(size); }
 
-        static void free(CompNode node, void *data) {
-            node.free_host(data);
-        }
+    static void free(CompNode node, void* data) { node.free_host(data); }
 };
 
 class mgb::DeviceTensorStorageTrait {
-    public:
-        static void* alloc(CompNode node, size_t size) {
-            return node.alloc_device(size);
-        }
+public:
+    static void* alloc(CompNode node, size_t size) { return node.alloc_device(size); }
 
-        static void free(CompNode node, void *data) {
-            node.free_device(data);
-        }
+    static void free(CompNode node, void* data) { node.free_device(data); }
 };
 
-template<class Trait>
-TensorStorage<Trait>& TensorStorage<Trait>::operator = (
-        const TensorStorage& rhs) {
+template <class Trait>
+TensorStorage<Trait>& TensorStorage<Trait>::operator=(const TensorStorage& rhs) {
     if (rhs.m_size > rhs.m_capacity) {
         rhs.ptr();
     }
@@ -229,10 +236,11 @@ TensorStorage<Trait>& TensorStorage<Trait>::operator = (
     return *this;
 }
 
-template<class Trait>
+template <class Trait>
 TensorStorage<Trait>& TensorStorage<Trait>::ensure_size(size_t sz) {
     if (sz > m_size) {
-        mgb_throw_if(!m_allow_realloc || m_offset, MegBrainError,
+        mgb_throw_if(
+                !m_allow_realloc || m_offset, MegBrainError,
                 "can not grow a tensor that does not allow realloc");
         check_comp_node_valid();
     }
@@ -240,38 +248,42 @@ TensorStorage<Trait>& TensorStorage<Trait>::ensure_size(size_t sz) {
     return *this;
 }
 
-template<class Trait>
-TensorStorage<Trait> TensorStorage<Trait>::sub(
-        ptrdiff_t offset) const {
-    ptr(); // apply lazy resize
+template <class Trait>
+TensorStorage<Trait> TensorStorage<Trait>::sub(ptrdiff_t offset) const {
+    ptr();  // apply lazy resize
     ptrdiff_t toff = offset + m_offset;
     if (offset == static_cast<ptrdiff_t>(m_size)) {
         return {false, m_comp_node, 0, 0, 0, RawStorage{}};
     }
-    mgb_assert(toff >= 0 && offset < static_cast<ptrdiff_t>(m_size),
-            "bad subtensor: offset=%td m_offset=%zu m_size=%zu",
-            offset, m_offset, m_size);
-    return {false, m_comp_node, m_size - offset, m_capacity - offset,
-        static_cast<size_t>(toff), m_data};
+    mgb_assert(
+            toff >= 0 && offset < static_cast<ptrdiff_t>(m_size),
+            "bad subtensor: offset=%td m_offset=%zu m_size=%zu", offset, m_offset,
+            m_size);
+    return {false,
+            m_comp_node,
+            m_size - offset,
+            m_capacity - offset,
+            static_cast<size_t>(toff),
+            m_data};
 }
 
-template<class Trait>
+template <class Trait>
 dt_byte* TensorStorage<Trait>::apply_lazy_and_get_ptr() {
     check_comp_node_valid();
     if (m_size > m_capacity) {
         mgb_assert(m_allow_realloc && !m_offset);
-        m_data.reset(); // free old ptr
-        m_capacity = 0; // to be exception safe
+        m_data.reset();  // free old ptr
+        m_capacity = 0;  // to be exception safe
         auto ptr = static_cast<dt_byte*>(Trait::alloc(m_comp_node, m_size));
         mgb_throw_if(!ptr, SystemError, "failed to allocate memory");
         CompNode cn = m_comp_node;
-        m_data.reset(ptr, [cn](void *p){Trait::free(cn, p);});
+        m_data.reset(ptr, [cn](void* p) { Trait::free(cn, p); });
         m_capacity = m_size;
     }
     return m_data.get() + m_offset;
 }
 
-template<class Trait>
+template <class Trait>
 TensorStorage<Trait>& TensorStorage<Trait>::comp_node(
         CompNode node, bool allow_mem_node_change) {
     mgb_assert(node.valid());
@@ -285,9 +297,8 @@ TensorStorage<Trait>& TensorStorage<Trait>::comp_node(
     return *this;
 }
 
-template<class Trait>
-void TensorStorage<Trait>::reset(CompNode node, size_t size,
-        RawStorage data) {
+template <class Trait>
+void TensorStorage<Trait>::reset(CompNode node, size_t size, RawStorage data) {
     mgb_assert(m_allow_realloc);
     m_comp_node = node;
     m_size = size;
@@ -296,44 +307,50 @@ void TensorStorage<Trait>::reset(CompNode node, size_t size,
     m_data = std::move(data);
 }
 
-template<class Trait>
-template<class RTrait, typename>
+template <class Trait>
+template <class RTrait, typename>
 TensorStorage<Trait> TensorStorage<Trait>::make_proxy(
-        const TensorStorage<RTrait> &src) {
-    mgb_assert(src.comp_node().mem_node() == CompNode::default_cpu().mem_node(),
+        const TensorStorage<RTrait>& src) {
+    mgb_assert(
+            src.comp_node().mem_node() == CompNode::default_cpu().mem_node(),
             "proxy source should be on CPU; got %s",
             src.comp_node().to_string().c_str());
     src.ptr();
-    return {true, src.m_comp_node, src.m_size, src.m_capacity, src.m_offset,
-        src.m_data};
+    return {true,           src.m_comp_node, src.m_size,
+            src.m_capacity, src.m_offset,    src.m_data};
 }
 
-template<class Trait>
+template <class Trait>
 void TensorStorage<Trait>::on_invalid_comp_node() {
-    mgb_throw(MegBrainError, "trying to acccess TensorStorage with invalid "
+    mgb_throw(
+            MegBrainError,
+            "trying to acccess TensorStorage with invalid "
             "comp node");
 }
 
 namespace mgb {
 
 // host to host
-template<> template<>
+template <>
+template <>
 void TensorStorage<HostTensorStorageTrait>::copy_from(
-        const TensorStorage<HostTensorStorageTrait> &src, size_t size) const {
+        const TensorStorage<HostTensorStorageTrait>& src, size_t size) const {
     mgb_assert(size <= this->size() && size <= src.size());
     memcpy(ptr(), src.ptr(), size);
 }
 
 // device to host
-template<> template<>
+template <>
+template <>
 void TensorStorage<HostTensorStorageTrait>::copy_from(
-        const TensorStorage<DeviceTensorStorageTrait> &src, size_t size) const {
+        const TensorStorage<DeviceTensorStorageTrait>& src, size_t size) const {
     bool need_sync = false;
     mgb_assert(size <= this->size() && size <= src.size());
     if (m_comp_node != src.comp_node()) {
         auto default_cpu = CompNode::default_cpu();
         if (src.comp_node() != default_cpu) {
-            mgb_assert(m_comp_node == default_cpu,
+            mgb_assert(
+                    m_comp_node == default_cpu,
                     "inconsistent D2H copy:"
                     " copy from device to host using different comp nodes:"
                     " device_node=%s host_node=%s",
@@ -351,17 +368,19 @@ void TensorStorage<HostTensorStorageTrait>::copy_from(
 }
 
 // host to device
-template<> template<>
+template <>
+template <>
 void TensorStorage<DeviceTensorStorageTrait>::copy_from(
-        const TensorStorage<HostTensorStorageTrait> &src, size_t size) const {
+        const TensorStorage<HostTensorStorageTrait>& src, size_t size) const {
     mgb_assert(size <= this->size() && size <= src.size());
     m_comp_node.copy_to_device(ptr(), src.ptr(), size);
 }
 
 // device to device
-template<> template<>
+template <>
+template <>
 void TensorStorage<DeviceTensorStorageTrait>::copy_from(
-        const TensorStorage<DeviceTensorStorageTrait> &src, size_t size) const {
+        const TensorStorage<DeviceTensorStorageTrait>& src, size_t size) const {
     mgb_assert(size <= this->size() && size <= src.size());
     if (src.comp_node().device_type() == CompNode::DeviceType::CPU &&
         comp_node().device_type() == CompNode::DeviceType::CUDA) {
@@ -387,20 +406,18 @@ void TensorStorage<DeviceTensorStorageTrait>::copy_from(
     }
 }
 
-
 // proxy host to device
-template TensorStorage<DeviceTensorStorageTrait>
-TensorStorage<DeviceTensorStorageTrait>::
-make_proxy<HostTensorStorageTrait, void>(
-        const TensorStorage<HostTensorStorageTrait>&);
+template TensorStorage<DeviceTensorStorageTrait> TensorStorage<
+        DeviceTensorStorageTrait>::
+        make_proxy<HostTensorStorageTrait, void>(
+                const TensorStorage<HostTensorStorageTrait>&);
 
 // proxy device to host
-template TensorStorage<HostTensorStorageTrait>
-TensorStorage<HostTensorStorageTrait>::
-make_proxy<DeviceTensorStorageTrait, void>(
-        const TensorStorage<DeviceTensorStorageTrait>&);
+template TensorStorage<HostTensorStorageTrait> TensorStorage<HostTensorStorageTrait>::
+        make_proxy<DeviceTensorStorageTrait, void>(
+                const TensorStorage<DeviceTensorStorageTrait>&);
 
-}
+}  // namespace mgb
 
 /* ===================== TensorND ===================== */
 
@@ -427,19 +444,20 @@ DEF(CompNode node, const TensorShape& shape, DType dtype, TensorFormat format)
 //! used)
 DEF(CompNode node, const TensorLayout& layout)
         : TensorND(node, layout, layout.dtype, layout.format) {
-    mgb_assert(layout.is_contiguous(),
-               "non-contiguous layout used for initializing a tensor: %s",
-               layout.to_string().c_str());
+    mgb_assert(
+            layout.is_contiguous(),
+            "non-contiguous layout used for initializing a tensor: %s",
+            layout.to_string().c_str());
 }
 
 #undef DEF
 // ctor def }
 
 // def {
-#define DEF(name, ret) \
-template<class TensorStorage> \
-typename TensorND<TensorStorage>::ChainReturnType ret \
-TensorND<TensorStorage>::name
+#define DEF(name, ret)                                    \
+    template <class TensorStorage>                        \
+    typename TensorND<TensorStorage>::ChainReturnType ret \
+            TensorND<TensorStorage>::name
 
 DEF(resize, &)(const TensorShape& shape) {
     mgb_assert(m_layout.dtype.valid());
@@ -448,12 +466,11 @@ DEF(resize, &)(const TensorShape& shape) {
     return static_cast<ChainReturnType&>(*this);
 }
 
-DEF(reset, &)(TensorStorage storage, const TensorLayout &layout) {
+DEF(reset, &)(TensorStorage storage, const TensorLayout& layout) {
     //! The storage to be reset is either satisfy the layout or empty.
     //! Empty storage is used after weight preprocess for saving memory and
     //! checking layout when running
-    mgb_assert(!layout.ndim || storage.valid_span(layout.span()) ||
-               storage.empty());
+    mgb_assert(!layout.ndim || storage.valid_span(layout.span()) || storage.empty());
     m_storage = std::move(storage);
     m_layout = layout;
     return static_cast<ChainReturnType&>(*this);
@@ -468,9 +485,8 @@ DEF(comp_node, &)(CompNode comp_node, bool allow_mem_node_change) {
     return static_cast<ChainReturnType&>(*this);
 }
 
-DEF(storage, &)(const TensorStorage &storage) {
-    if (m_storage.empty() || storage.empty() ||
-            m_storage.ptr() != storage.ptr()) {
+DEF(storage, &)(const TensorStorage& storage) {
+    if (m_storage.empty() || storage.empty() || m_storage.ptr() != storage.ptr()) {
         m_storage = storage;
         m_layout.ndim = 0;
     }
@@ -493,17 +509,17 @@ DEF(format, &)(TensorFormat format) {
     return static_cast<ChainReturnType&>(*this);
 }
 
-DEF(operator[], ) (std::initializer_list<Slice> slice) const {
+DEF(operator[], )(std::initializer_list<Slice> slice) const {
     auto subspec = SubTensorSpec::make_from_offset_elem(m_layout, 0);
     size_t axis = 0;
-    for (auto &&i: slice) {
+    for (auto&& i : slice) {
         subspec.merge_with(i.apply(subspec.layout(), axis));
-        axis ++;
+        axis++;
     }
     return sub(subspec);
 }
 
-DEF(sub, )(const SubTensorSpec &spec) const {
+DEF(sub, )(const SubTensorSpec& spec) const {
     mgb_assert(
             spec.layout().dtype == dtype() && spec.layout().format == format(),
             "invalid subtensor spec: sub_layout=%s self=%s",
@@ -526,23 +542,21 @@ namespace {
  * overlap check should be done
  */
 template <typename TensorStorage, typename RStorage>
-inline bool should_check_overlap(const TensorND<TensorStorage>& dst,
-                                 const TensorND<RStorage>& src) {
+inline bool should_check_overlap(
+        const TensorND<TensorStorage>& dst, const TensorND<RStorage>& src) {
     return true;
 }
 
 template <>
 inline bool should_check_overlap<HostTensorStorage, DeviceTensorStorage>(
         const HostTensorND& dst, const DeviceTensorND& src) {
-    return src.comp_node().contain_flag(
-            CompNode::Flag::SUPPORT_UNIFIED_ADDRESS);
+    return src.comp_node().contain_flag(CompNode::Flag::SUPPORT_UNIFIED_ADDRESS);
 }
 
 template <>
 inline bool should_check_overlap<DeviceTensorStorage, HostTensorStorage>(
         const DeviceTensorND& dst, const HostTensorND& src) {
-    return dst.comp_node().contain_flag(
-            CompNode::Flag::SUPPORT_UNIFIED_ADDRESS);
+    return dst.comp_node().contain_flag(CompNode::Flag::SUPPORT_UNIFIED_ADDRESS);
 }
 
 /**
@@ -554,29 +568,29 @@ inline bool should_check_overlap<DeviceTensorStorage, HostTensorStorage>(
 template <>
 inline bool should_check_overlap<DeviceTensorStorage, DeviceTensorStorage>(
         const DeviceTensorND& dst, const DeviceTensorND& src) {
-    bool is_same_memnode =
-            dst.comp_node().mem_node() == src.comp_node().mem_node();
-    bool unified_address = src.comp_node().contain_flag(
-                                   CompNode::Flag::SUPPORT_UNIFIED_ADDRESS) &&
-                           dst.comp_node().contain_flag(
-                                   CompNode::Flag::SUPPORT_UNIFIED_ADDRESS);
+    bool is_same_memnode = dst.comp_node().mem_node() == src.comp_node().mem_node();
+    bool unified_address =
+            src.comp_node().contain_flag(CompNode::Flag::SUPPORT_UNIFIED_ADDRESS) &&
+            dst.comp_node().contain_flag(CompNode::Flag::SUPPORT_UNIFIED_ADDRESS);
     return is_same_memnode || unified_address;
 }
 
 /**
  * \brief check overlap of two tensors. throw exception when overlapped
  */
-inline void check_overlapped(const dt_byte* dst_min, const dt_byte* dst_max,
-                             const dt_byte* src_min, const dt_byte* src_max) {
-    mgb_throw_if(src_min < dst_max && dst_min < src_max, TensorCopyOverlapError,
-                 "cound not perform copy between overlapped tensors");
+inline void check_overlapped(
+        const dt_byte* dst_min, const dt_byte* dst_max, const dt_byte* src_min,
+        const dt_byte* src_max) {
+    mgb_throw_if(
+            src_min < dst_max && dst_min < src_max, TensorCopyOverlapError,
+            "cound not perform copy between overlapped tensors");
 }
 }  // namespace
 
-template<class TensorStorage>
-template<class RStorage>
-typename TensorND<TensorStorage>::ChainReturnType&
-TensorND<TensorStorage>::copy_from(const TensorND<RStorage> &src) {
+template <class TensorStorage>
+template <class RStorage>
+typename TensorND<TensorStorage>::ChainReturnType& TensorND<TensorStorage>::copy_from(
+        const TensorND<RStorage>& src) {
     if (!m_storage.comp_node_valid())
         m_storage.comp_node(src.comp_node());
 
@@ -595,13 +609,11 @@ TensorND<TensorStorage>::copy_from(const TensorND<RStorage> &src) {
     // default case, physical contiguous
     // lowbit aligned, logical contiguous
     if (src.layout().is_physical_contiguous() ||
-        (src.layout().format.is_lowbit_aligned() &&
-         src.layout().is_contiguous())) {
+        (src.layout().format.is_lowbit_aligned() && src.layout().is_contiguous())) {
         if (should_check_overlap(*this, src)) {
-            check_overlapped(m_storage.ptr(),
-                             m_storage.ptr() + size_bytes,
-                             src.storage().ptr(),
-                             src.storage().ptr() + size_bytes);
+            check_overlapped(
+                    m_storage.ptr(), m_storage.ptr() + size_bytes, src.storage().ptr(),
+                    src.storage().ptr() + size_bytes);
         }
         m_storage.copy_from(src.storage(), size_bytes);
         return static_cast<ChainReturnType&>(*this);
@@ -611,12 +623,11 @@ TensorND<TensorStorage>::copy_from(const TensorND<RStorage> &src) {
 
 template <class TensorStorage>
 template <class RStorage>
-const typename TensorND<TensorStorage>::ChainReturnType&
-TensorND<TensorStorage>::copy_from_fixlayout(
-        const TensorND<RStorage>& src) const {
-
+const typename TensorND<TensorStorage>::ChainReturnType& TensorND<
+        TensorStorage>::copy_from_fixlayout(const TensorND<RStorage>& src) const {
     dtype().assert_is(src.dtype());
-    mgb_assert(m_layout.eq_shape(src.layout()),
+    mgb_assert(
+            m_layout.eq_shape(src.layout()),
             "shape differs in copy_from_fixlayout: %s vs %s",
             static_cast<const TensorShape&>(m_layout).to_string().c_str(),
             static_cast<const TensorShape&>(src.layout()).to_string().c_str());
@@ -625,38 +636,37 @@ TensorND<TensorStorage>::copy_from_fixlayout(
         return static_cast<const ChainReturnType&>(*this);
     }
 
-    mgb_assert(m_layout.is_non_overlapping_strong(),
+    mgb_assert(
+            m_layout.is_non_overlapping_strong(),
             "copy dest must have non-overlapping layout");
 
-    TensorLayout::Span
-        src_span = src.layout().span(),
-        dst_span = layout().span();
+    TensorLayout::Span src_span = src.layout().span(), dst_span = layout().span();
 
     if (should_check_overlap(*this, src)) {
-        check_overlapped(this->raw_ptr() + dst_span.low_byte,
-                         this->raw_ptr() + dst_span.high_byte,
-                         src.raw_ptr() + src_span.low_byte,
-                         src.raw_ptr() + src_span.high_byte);
+        check_overlapped(
+                this->raw_ptr() + dst_span.low_byte,
+                this->raw_ptr() + dst_span.high_byte, src.raw_ptr() + src_span.low_byte,
+                src.raw_ptr() + src_span.high_byte);
     }
 
-    bool self_contig = m_layout.is_physical_contiguous() ||
-                       (m_layout.format.is_lowbit_aligned() &&
-                        m_layout.is_contiguous()),
+    bool self_contig =
+                 m_layout.is_physical_contiguous() ||
+                 (m_layout.format.is_lowbit_aligned() && m_layout.is_contiguous()),
          src_contig = src.layout().is_physical_contiguous() ||
                       (src.layout().format.is_lowbit_aligned() &&
                        src.layout().is_contiguous());
     if (self_contig && src_contig) {
-        if ((m_layout.format.is_default() &&
-             src.layout().format.is_default()) ||
+        if ((m_layout.format.is_default() && src.layout().format.is_default()) ||
             (m_layout.format.is_lowbit_aligned() &&
              src.layout().format.is_lowbit_aligned())) {
-            mgb_assert(src_span.low_byte == 0 && dst_span.low_byte == 0 &&
-                       src_span.high_byte == dst_span.high_byte);
+            mgb_assert(
+                    src_span.low_byte == 0 && dst_span.low_byte == 0 &&
+                    src_span.high_byte == dst_span.high_byte);
             m_storage.copy_from(src.storage(), src_span.high_byte);
         } else {
             mgb_assert(src_span.low_byte == 0 && dst_span.low_byte == 0);
-            m_storage.copy_from(src.storage(), std::min(src_span.high_byte,
-                                                        dst_span.high_byte));
+            m_storage.copy_from(
+                    src.storage(), std::min(src_span.high_byte, dst_span.high_byte));
         }
         return static_cast<const ChainReturnType&>(*this);
     }
@@ -674,59 +684,57 @@ void mgb::dev_tensor_memset(const DeviceTensorND& tensor, int val) {
     switch (env.property().type) {
 #if MGB_CUDA
         case CompNode::DeviceType::CUDA:
-            MGB_CUDA_CHECK(
-                    cudaMemsetAsync(ptr, val, size, env.cuda_env().stream));
+            MGB_CUDA_CHECK(cudaMemsetAsync(ptr, val, size, env.cuda_env().stream));
             break;
 #endif
 #if MGB_ATLAS
-       case CompNode::DeviceType::ATLAS:
+        case CompNode::DeviceType::ATLAS:
 #if MGB_USE_ATLAS_ASYNC_API
-           MGB_ATLAS_CHECK(aclrtMemsetAsync(ptr, -1, val, size,
-                                            env.atlas_env().stream));
+            MGB_ATLAS_CHECK(
+                    aclrtMemsetAsync(ptr, -1, val, size, env.atlas_env().stream));
 #else
-           MGB_ATLAS_CHECK(aclrtMemset(ptr, -1, val, size));
+            MGB_ATLAS_CHECK(aclrtMemset(ptr, -1, val, size));
 #endif
-           break;
+            break;
 #endif
 #if MGB_CAMBRICON
-       case CompNode::DeviceType::CAMBRICON:
-           MGB_CNRT_CHECK(cnrtSyncQueue(env.cnrt_env().queue));
-           MGB_CNRT_CHECK(cnrtMemset(ptr, val, size));
-           break;
+        case CompNode::DeviceType::CAMBRICON:
+            MGB_CNRT_CHECK(cnrtSyncQueue(env.cnrt_env().queue));
+            MGB_CNRT_CHECK(cnrtMemset(ptr, val, size));
+            break;
 #endif
-       case CompNode::DeviceType::CPU: {
+        case CompNode::DeviceType::CPU: {
             auto fill = [ptr, size, val]() { std::memset(ptr, val, size); };
             env.cpu_env().dispatch(fill);
         } break;
         default:
-            mgb_throw(MegBrainError,
-                      "unhandled comp node in dev_tensor_memset: %s",
-                      tensor.comp_node().to_string().c_str());
+            mgb_throw(
+                    MegBrainError, "unhandled comp node in dev_tensor_memset: %s",
+                    tensor.comp_node().to_string().c_str());
     }
 }
 
 namespace mgb {
-    template class TensorStorage<HostTensorStorageTrait>;
-    template class TensorStorage<DeviceTensorStorageTrait>;
-    template class TensorND<TensorStorage<HostTensorStorageTrait>>;
-    template class TensorND<TensorStorage<DeviceTensorStorageTrait>>;
+template class TensorStorage<HostTensorStorageTrait>;
+template class TensorStorage<DeviceTensorStorageTrait>;
+template class TensorND<TensorStorage<HostTensorStorageTrait>>;
+template class TensorND<TensorStorage<DeviceTensorStorageTrait>>;
 
-    /* ===== copy_from related ===== */
+/* ===== copy_from related ===== */
 
 #define HT_RAW TensorND<HostTensorStorage>
 #define DT_RAW TensorND<DeviceTensorStorage>
-#define HT(f) f<HostTensorStorage>(const HT_RAW&)
-#define DT(f) f<DeviceTensorStorage> (const DT_RAW&)
+#define HT(f)  f<HostTensorStorage>(const HT_RAW&)
+#define DT(f)  f<DeviceTensorStorage>(const DT_RAW&)
 
-
-#define INST(f, c) \
-    template c HostTensorND& HT_RAW::HT(f) c; \
-    template c HostTensorND& HT_RAW::DT(f) c; \
+#define INST(f, c)                              \
+    template c HostTensorND& HT_RAW::HT(f) c;   \
+    template c HostTensorND& HT_RAW::DT(f) c;   \
     template c DeviceTensorND& DT_RAW::HT(f) c; \
     template c DeviceTensorND& DT_RAW::DT(f) c
 
-    INST(copy_from, );
-    INST(copy_from_fixlayout, const);
+INST(copy_from, );
+INST(copy_from_fixlayout, const);
 
 #undef INST
 #undef DT
@@ -734,6 +742,6 @@ namespace mgb {
 #undef DT_RAW
 #undef HT_RAW
 
-}
+}  // namespace mgb
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

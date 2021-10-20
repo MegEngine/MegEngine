@@ -16,7 +16,8 @@
 using namespace mgb;
 using namespace cg;
 
-void SeqModifierBase::ModifyActionPlannerBase::init_seq(const OprNodeArray& opr_seq, bool remove_unused_output) {
+void SeqModifierBase::ModifyActionPlannerBase::init_seq(
+        const OprNodeArray& opr_seq, bool remove_unused_output) {
     m_orig_opr_seq = &opr_seq;
 
     m_var_storage.clear();
@@ -26,6 +27,7 @@ void SeqModifierBase::ModifyActionPlannerBase::init_seq(const OprNodeArray& opr_
     m_nr_endpoint_oprs = 0;
 
     ThinHashMap<VarNode*, Var*> varmap;
+    ThinHashMap<VarNode*, Opr*> var_used;
     for (auto orig_opr : *m_orig_opr_seq) {
         auto time = m_seq.size();
         m_seq.emplace_back(m_opr_mempool.alloc_unique(orig_opr, time));
@@ -38,6 +40,12 @@ void SeqModifierBase::ModifyActionPlannerBase::init_seq(const OprNodeArray& opr_
             auto iter = varmap.find(dep.first);
             if (iter == varmap.end()) {
                 // input var needs not to be considered
+                size_t size =
+                        dep.first->dtype().size(dep.first->shape().total_nr_elems());
+                if (!var_used[dep.first]) {
+                    opr->inputs_size.push_back(size);
+                }
+                var_used[dep.first] = opr;
                 continue;
             }
 
@@ -75,7 +83,10 @@ void SeqModifierBase::ModifyActionPlannerBase::init_seq(const OprNodeArray& opr_
         }
         mgb_assert(!opr->output.empty());
     }
-
+    for (auto x : var_used) {
+        size_t size = x.first->dtype().size(x.first->shape().total_nr_elems());
+        var_used[x.first]->inputs_size.push_back(-static_cast<ptrdiff_t>(size));
+    }
     if (remove_unused_output) {
         for (auto&& i : m_seq) {
             auto&& oarr = i->output;
@@ -110,10 +121,10 @@ OperatorNodeBase* SeqModifierBase::copy_opr_from_new_inputs(
     // some pair of recomp-opr and dup-opr have the same inputs, params and
     // config, we use instance id to differentiate them. To be safe, we update
     // instance id whatever reason is `recomp` or `dup`
-    config.name(opr->name() + (recomp ? ":recomp" : ":dup") + std::to_string(recomp_cnt));
+    config.name(
+            opr->name() + (recomp ? ":recomp" : ":dup") + std::to_string(recomp_cnt));
     config.update_instance_id(reinterpret_cast<void*>(
-                                reinterpret_cast<size_t>(this) + 
-                                (recomp_cnt << 1 | (recomp & 1))));
+            reinterpret_cast<size_t>(this) + (recomp_cnt << 1 | (recomp & 1))));
 
     // Note: if all outputs of op were placed on the same comp_node, since its
     // stream maybe changed during seq_comp_node_opt, output's comp_node has
@@ -137,12 +148,12 @@ OperatorNodeBase* SeqModifierBase::copy_opr_from_new_inputs(
     mgb_assert(out0.size() == out1.size());
     bool stream_changed = false;
     for (size_t i = 0; i < out0.size(); ++i) {
-        auto &&cn0 = out0[i]->comp_node(),
-             &&cn1 = out1[i]->comp_node();
+        auto &&cn0 = out0[i]->comp_node(), &&cn1 = out1[i]->comp_node();
         if (cn0 != cn1) {
             mgb_assert(recomp);
-            mgb_assert(cn0.locator().type == cn1.locator().type &&
-                       cn0.locator().device == cn1.locator().device);
+            mgb_assert(
+                    cn0.locator().type == cn1.locator().type &&
+                    cn0.locator().device == cn1.locator().device);
             out1[i]->comp_node(cn0);
             stream_changed = true;
         }

@@ -30,10 +30,10 @@ void test::run_powc_test(Handle* handle, DType dtype) {
 
     dt_val_max /= 4;
 
-    for (float exp : {0.f, 1.f / 3.f, 1.f / 3.f + 0.01f, .5f, 1.f, 1.2f, 2.f,
-                      3.f, 4.f, 7.f, 8.f}) {
-        float rng_max = exp ? std::pow(dt_val_max, std::min(1.f / exp, 1.f))
-                            : dt_val_max;
+    for (float exp :
+         {0.f, 1.f / 3.f, 1.f / 3.f + 0.01f, .5f, 1.f, 1.2f, 2.f, 3.f, 4.f, 7.f, 8.f}) {
+        float rng_max =
+                exp ? std::pow(dt_val_max, std::min(1.f / exp, 1.f)) : dt_val_max;
         bool allow_neg;
         {
             auto d = exp - std::floor(exp);
@@ -79,4 +79,3 @@ void test::run_powc_test(Handle* handle, DType dtype) {
 }
 
 // vim: syntax=cpp.doxygen
-

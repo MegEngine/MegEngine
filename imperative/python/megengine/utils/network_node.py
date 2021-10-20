@@ -58,13 +58,11 @@ class VarNode(NetworkNode, SymbolVar, ArrayMethodMixin, metaclass=VarNodeMeta):
 
     @property
     def partial_shape(self):
-        """Return the tuple type inferred shape of VarNode
-        """
+        r"""Return the tuple type inferred shape of VarNode"""
         return tuple(self._get_var_shape().numpy())
 
     def shapeof(self, axis):
-        """Return the symbolic shape of axis
-        """
+        r"""Return the symbolic shape of axis"""
         return self._get_var_shape(axis=axis) if self.var else None
 
     @property
@@ -73,8 +71,8 @@ class VarNode(NetworkNode, SymbolVar, ArrayMethodMixin, metaclass=VarNodeMeta):
 
     @property
     def shape(self):
-        """Return the symbolic shape if using set_symbolic_shape(True)
-           else inferred shape
+        r"""Return the symbolic shape if using set_symbolic_shape(True)
+        else inferred shape
         """
         rst = None
         if self.var:

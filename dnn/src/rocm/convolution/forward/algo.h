@@ -33,6 +33,7 @@ namespace rocm {
 class ConvolutionForwardImpl::AlgoBase : public Algorithm {
 protected:
     ~AlgoBase() = default;
+
 public:
     enum class AlgoType : uint32_t {
         ROCM_MIOPEN,
@@ -53,18 +54,21 @@ public:
         void init_desc(convolution::MIOpenForwardDescs& desc) const {
             desc.set(*src_layout, filter_meta, *dst_layout, opr->param());
         }
-        SizeArgs(ConvolutionForwardImpl* opr, const TensorLayout& src,
-                 const TensorLayout& filter, const TensorLayout& dst);
-        SizeArgs(ConvolutionForwardImpl* opr, const TensorLayout& src,
-                 const CanonizedFilterMeta& filter, const TensorLayout& dst);
+        SizeArgs(
+                ConvolutionForwardImpl* opr, const TensorLayout& src,
+                const TensorLayout& filter, const TensorLayout& dst);
+        SizeArgs(
+                ConvolutionForwardImpl* opr, const TensorLayout& src,
+                const CanonizedFilterMeta& filter, const TensorLayout& dst);
     };
     struct ExecArgs : public SizeArgs {
         const TensorND *src_tensor, *filter_tensor, *dst_tensor;
         Workspace workspace;
 
-        ExecArgs(ConvolutionForwardImpl* opr, _megdnn_tensor_in src,
-                 _megdnn_tensor_in filter, _megdnn_tensor_out dst,
-                 _megdnn_workspace workspace);
+        ExecArgs(
+                ConvolutionForwardImpl* opr, _megdnn_tensor_in src,
+                _megdnn_tensor_in filter, _megdnn_tensor_out dst,
+                _megdnn_workspace workspace);
     };
     virtual bool is_available(const SizeArgs& args) const = 0;
     virtual size_t get_workspace_in_bytes(const SizeArgs& args) const = 0;
@@ -79,16 +83,15 @@ public:
             const AlgoAttribute& negative_attr = AlgoAttribute::DEFAULT,
             size_t limit = std::numeric_limits<size_t>::max()) {
         return contain_attribute_all(positive_attr) &&
-               !contain_attribute_any(negative_attr) &&
-               is_available_wk(args, limit);
+               !contain_attribute_any(negative_attr) && is_available_wk(args, limit);
     }
 
-    AlgoBase& check_workspace(const SizeArgs& args,
-                              const Workspace& workspace) {
+    AlgoBase& check_workspace(const SizeArgs& args, const Workspace& workspace) {
         auto req = get_workspace_in_bytes(args);
-        megdnn_assert(req <= workspace.size,
-                      "conv fwd algo %s: required workspace %zu bytes, got %zu",
-                      name(), req, workspace.size);
+        megdnn_assert(
+                req <= workspace.size,
+                "conv fwd algo %s: required workspace %zu bytes, got %zu", name(), req,
+                workspace.size);
         return *this;
     }
 
@@ -109,9 +112,7 @@ public:
     size_t get_workspace_in_bytes(const SizeArgs& args) const override;
     void exec(const ExecArgs& args) const override;
 
-    AlgoAttribute attribute() const override {
-        return m_algo_attribute;
-    }
+    AlgoAttribute attribute() const override { return m_algo_attribute; }
 
     const char* name() const override { return "MIOpenConvolutionForward"; }
 
@@ -138,9 +139,7 @@ public:
     void exec(const ExecArgs& args) const override;
 
     const char* name() const override { return "MATMUL"; }
-    AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE;
-    }
+    AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }
     MEGDNN_DECL_ALGO_TYPE(ROCM_MATMUL)
 };
 
@@ -153,15 +152,13 @@ public:
 
     const char* name() const override { return "INPLACE_MATMUL"; }
     MEGDNN_DECL_ALGO_TYPE(ROCM_INPLACE_MATMUL)
-    AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE;
-    }
+    AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }
 };
 
 //! optimized 1x1 conv
 class ConvolutionForwardImpl::Algo1x1 final : public AlgoBase {
-    static void extract_matmul_layouts(const SizeArgs& args, TensorLayout& A,
-                                       TensorLayout& B, TensorLayout& C);
+    static void extract_matmul_layouts(
+            const SizeArgs& args, TensorLayout& A, TensorLayout& B, TensorLayout& C);
 
 public:
     bool is_available(const SizeArgs& args) const override;
@@ -170,15 +167,13 @@ public:
 
     const char* name() const override { return "1x1"; }
     MEGDNN_DECL_ALGO_TYPE(ROCM_1X1)
-    AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE;
-    }
+    AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }
 };
 
 //! optimized 1x1 conv when input data batchsize is larger than 32
 class ConvolutionForwardImpl::Algo1x1LargeBatch final : public AlgoBase {
-    static void extract_matmul_layouts(const SizeArgs& args, TensorLayout& A,
-                                       TensorLayout& B, TensorLayout& C);
+    static void extract_matmul_layouts(
+            const SizeArgs& args, TensorLayout& A, TensorLayout& B, TensorLayout& C);
 
 public:
     bool is_available(const SizeArgs& args) const override;
@@ -187,9 +182,7 @@ public:
 
     const char* name() const override { return "LARGE_BATCH_1x1"; }
     MEGDNN_DECL_ALGO_TYPE(ROCM_1X1_LARGE_BATCH)
-    AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE;
-    }
+    AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }
 };
 
 class ConvolutionForwardImpl::AlgoChanwise final : public AlgoBase {
@@ -200,9 +193,7 @@ public:
 
     const char* name() const override { return "CHANNEL_WISE"; }
     MEGDNN_DECL_ALGO_TYPE(ROCM_CHANWISE)
-    AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE;
-    }
+    AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }
 };
 
 class ConvolutionForwardImpl::AlgoPack : NonCopyableObj {
@@ -210,6 +201,7 @@ class ConvolutionForwardImpl::AlgoPack : NonCopyableObj {
     void fill_miopen_algos();
 
     AlgoBase::Mapper m_all_algos_map;
+
 public:
     AlgoPack();
 

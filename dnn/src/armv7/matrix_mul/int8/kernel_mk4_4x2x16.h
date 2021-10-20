@@ -64,8 +64,9 @@ namespace matmul_mk4_4x2x16 {
  *                               Accumulator
  */
 
-static void kern_4x2(const int8_t* packA, const int8_t* packB, int K,
-                     int32_t* output, bool is_first_k, int n_remain) {
+static void kern_4x2(
+        const int8_t* packA, const int8_t* packB, int K, int32_t* output,
+        bool is_first_k, int n_remain) {
     MEGDNN_MARK_USED_VAR(n_remain);
     K /= 16;
     const int8_t* a_ptr = packA;
@@ -201,24 +202,25 @@ static void kern_4x2(const int8_t* packA, const int8_t* packB, int K,
             "vstr d8, [%[outptr]]\n"
             "vstr d9, [%[outptr], #8]\n"
 
-            : [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr),
-              [is_first_k] "+r"(is_first_k), [K] "+r"(K), [outptr] "+r"(output),
-              [n_remain] "+r"(n_remain)
+            : [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr), [is_first_k] "+r"(is_first_k),
+              [K] "+r"(K), [outptr] "+r"(output), [n_remain] "+r"(n_remain)
             :
-            : "cc", "memory", "q0", "q1", "q2", "q3", "q4", "q5", "q6", "q7",
-              "q8", "q9", "q10", "q11", "q12", "q13", "q14", "q15");
+            : "cc", "memory", "q0", "q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8",
+              "q9", "q10", "q11", "q12", "q13", "q14", "q15");
 }
 
-static void gemm_mk4_s8_4x2_pack_A(dt_int8* outptr, const dt_int8* inptr,
-                                   int ldin, int y0, int ymax, int k0,
-                                   int kmax) {
+static void gemm_mk4_s8_4x2_pack_A(
+        dt_int8* outptr, const dt_int8* inptr, int ldin, int y0, int ymax, int k0,
+        int kmax) {
     //! pack form {oc/4, ic/4, 4(ic), 4(oc)} to {oc/4, ic/16, 4(oc), 16(ic)}
     int8_t zerobuff[4][64];
     std::memset(zerobuff, 0, sizeof(int8_t) * 64 * 4);
-    megdnn_assert(ymax % 4 == 0 && y0 % 4 == 0 && (ymax - y0) % 4 == 0,
-                  "mk4 matmul with m is not times of 4");
-    megdnn_assert(kmax % 4 == 0 && k0 % 4 == 0 && (kmax - k0) % 4 == 0,
-                  "mk4 matmul with k is not times of 4");
+    megdnn_assert(
+            ymax % 4 == 0 && y0 % 4 == 0 && (ymax - y0) % 4 == 0,
+            "mk4 matmul with m is not times of 4");
+    megdnn_assert(
+            kmax % 4 == 0 && k0 % 4 == 0 && (kmax - k0) % 4 == 0,
+            "mk4 matmul with k is not times of 4");
     size_t roundk = round_up(kmax - k0, 16);
     size_t out_offset = roundk * 4;
     int y = y0;
@@ -235,8 +237,8 @@ static void gemm_mk4_s8_4x2_pack_A(dt_int8* outptr, const dt_int8* inptr,
         prefetch_2x(inptr3);
         int K = kmax - k0;
         for (; K > 15; K -= 16) {
-            transpose_interleave_4x4_4_b(inptr0, inptr1, inptr2, inptr3, output,
-                                         out_offset);
+            transpose_interleave_4x4_4_b(
+                    inptr0, inptr1, inptr2, inptr3, output, out_offset);
             output += 64;
         }
         if (K > 0) {
@@ -248,8 +250,8 @@ static void gemm_mk4_s8_4x2_pack_A(dt_int8* outptr, const dt_int8* inptr,
             inptr1 = zerobuff[1];
             inptr2 = zerobuff[2];
             inptr3 = zerobuff[3];
-            transpose_interleave_4x4_4_b(inptr0, inptr1, inptr2, inptr3, output,
-                                         out_offset);
+            transpose_interleave_4x4_4_b(
+                    inptr0, inptr1, inptr2, inptr3, output, out_offset);
             output += 64;
         }
     }
@@ -271,21 +273,21 @@ static void gemm_mk4_s8_4x2_pack_A(dt_int8* outptr, const dt_int8* inptr,
     }
 }
 
-static void gemm_mk4_s8_4x2_pack_B(dt_int8* out, const dt_int8* in, int ldin,
-                                   int x0, int xmax, int k0, int kmax) {
+static void gemm_mk4_s8_4x2_pack_B(
+        dt_int8* out, const dt_int8* in, int ldin, int x0, int xmax, int k0, int kmax) {
     int32_t zerobuff[4];
     std::memset(zerobuff, 0, sizeof(int8_t) * 16);
     const int ksize = kmax - k0;
     const int ICB = (ksize) / 4;
     const int ksize2 = round_up<int>(ICB, 4) * 2;
     int32_t* outptr = reinterpret_cast<int32_t*>(out);
-    megdnn_assert(kmax % 4 == 0 && k0 % 4 == 0 && ksize % 4 == 0,
-                  "mk4 matmul with k is not times of 4");
+    megdnn_assert(
+            kmax % 4 == 0 && k0 % 4 == 0 && ksize % 4 == 0,
+            "mk4 matmul with k is not times of 4");
 
     int k = k0 / 4;
     for (; k + 3 < ICB; k += 4) {
-        const int32_t* inptr0 =
-                reinterpret_cast<const int32_t*>(in + k * ldin + x0);
+        const int32_t* inptr0 = reinterpret_cast<const int32_t*>(in + k * ldin + x0);
         const int32_t* inptr1 =
                 reinterpret_cast<const int32_t*>(in + (k + 1) * ldin + x0);
         const int32_t* inptr2 =
@@ -308,8 +310,7 @@ static void gemm_mk4_s8_4x2_pack_B(dt_int8* out, const dt_int8* in, int ldin,
         outptr += 4 * 2;
     }
     if (k < ICB) {
-        const int32_t* inptr0 =
-                reinterpret_cast<const int32_t*>(in + k * ldin + x0);
+        const int32_t* inptr0 = reinterpret_cast<const int32_t*>(in + k * ldin + x0);
         const int32_t* inptr1 =
                 reinterpret_cast<const int32_t*>(in + (k + 1) * ldin + x0);
         const int32_t* inptr2 =

@@ -15,15 +15,15 @@
 #include "megbrain/system.h"
 #include "megbrain/utils/metahelper.h"
 
-#include <string>
-#include <thread>
-#include <condition_variable>
-#include "megbrain/utils/thin/function.h"
 #include <atomic>
+#include <condition_variable>
+#include <deque>
 #include <exception>
 #include <future>
+#include <string>
+#include <thread>
 #include <vector>
-#include <deque>
+#include "megbrain/utils/thin/function.h"
 
 namespace mgb {
 
@@ -39,62 +39,62 @@ namespace mgb {
  * requested to stop. And in such case, this AsyncWorkerSet can not be used
  * again.
  */
-class AsyncWorkerSet final: public NonCopyableObj {
-    public:
-        using Task = thin_function<void()>;
+class AsyncWorkerSet final : public NonCopyableObj {
+public:
+    using Task = thin_function<void()>;
 
-        ~AsyncWorkerSet();
+    ~AsyncWorkerSet();
 
-        //! whether there has been no worker added
-        bool empty() const { return m_worker_threads.empty(); }
+    //! whether there has been no worker added
+    bool empty() const { return m_worker_threads.empty(); }
 
-        /*!
-         * \brief add a worker thread
-         */
-        void add_worker(const std::string &name, const Task &task);
+    /*!
+     * \brief add a worker thread
+     */
+    void add_worker(const std::string& name, const Task& task);
 
-        /*!
-         * \brief start all the workers
-         *
-         * start() can be called multiple times without calling wait_all, and
-         * for each call, task() would be invoked in the worker thread.
-         */
-        void start();
+    /*!
+     * \brief start all the workers
+     *
+     * start() can be called multiple times without calling wait_all, and
+     * for each call, task() would be invoked in the worker thread.
+     */
+    void start();
 
-        /*!
-         * \brief wait for all previously started workers to finish;
-         *
-         * Note that exceptions throw in previous start would be rethrown from
-         * here.
-         */
-        void wait_all();
+    /*!
+     * \brief wait for all previously started workers to finish;
+     *
+     * Note that exceptions throw in previous start would be rethrown from
+     * here.
+     */
+    void wait_all();
 
-    private:
-        bool volatile m_should_stop = false;
-        MGB_IF_EXCEPTION(std::exception_ptr m_prev_exception = nullptr);
-        size_t m_nr_start_call = 0;
-        //! number of workers currently working (i.e. calling task())
-        size_t volatile m_nr_worker_to_wait;
-        std::atomic_bool m_worker_init_finished;
-        std::mutex m_mtx;
-        std::condition_variable m_cv_start, m_cv_finish;
-        std::vector<std::thread> m_worker_threads;
+private:
+    bool volatile m_should_stop = false;
+    MGB_IF_EXCEPTION(std::exception_ptr m_prev_exception = nullptr);
+    size_t m_nr_start_call = 0;
+    //! number of workers currently working (i.e. calling task())
+    size_t volatile m_nr_worker_to_wait;
+    std::atomic_bool m_worker_init_finished;
+    std::mutex m_mtx;
+    std::condition_variable m_cv_start, m_cv_finish;
+    std::vector<std::thread> m_worker_threads;
 
-        void check_exception();
+    void check_exception();
 
-        //! arrange all workers to exit
-        void issue_stop_workers();
+    //! arrange all workers to exit
+    void issue_stop_workers();
 
-        /*!
-         * \brief call given task repeatedly until m_should_stop
-         *
-         * Note: exception from task() would be propogated to
-         * worker_impl_wrapper() to stop all workers
-         */
-        void worker_impl(const Task &task);
+    /*!
+     * \brief call given task repeatedly until m_should_stop
+     *
+     * Note: exception from task() would be propogated to
+     * worker_impl_wrapper() to stop all workers
+     */
+    void worker_impl(const Task& task);
 
-        //! set name, check exception, etc.
-        void worker_impl_wrapper(const std::string *name, const Task *task);
+    //! set name, check exception, etc.
+    void worker_impl_wrapper(const std::string* name, const Task* task);
 };
 
 /*!
@@ -107,8 +107,8 @@ class AsyncWorkerSet final: public NonCopyableObj {
  *
  * \tparam R return value of the tasks
  */
-template<class R>
-class FutureThreadPool final: public NonCopyableObj {
+template <class R>
+class FutureThreadPool final : public NonCopyableObj {
     using Task = std::packaged_task<R()>;
     std::deque<Task> m_tasks;
     std::mutex m_mtx;
@@ -126,13 +126,12 @@ class FutureThreadPool final: public NonCopyableObj {
         }
 
         if (m_name.valid()) {
-            sys::set_thread_name(
-                    ssprintf("%s:%zu", m_name->c_str(), id));
+            sys::set_thread_name(ssprintf("%s:%zu", m_name->c_str(), id));
         }
 
-        for (; ; ) {
+        for (;;) {
             Task task;
-            for (; ; ) {
+            for (;;) {
                 std::unique_lock<std::mutex> lk(m_mtx);
                 if (m_should_stop)
                     return;
@@ -148,86 +147,76 @@ class FutureThreadPool final: public NonCopyableObj {
         }
     }
 
-    public:
-        using Future = std::future<R>;
+public:
+    using Future = std::future<R>;
 
-        /*!
-         * \param name thread name for the workers
-         */
-        FutureThreadPool(const Maybe<std::string> &name = None):
-            m_name{name}
-        {
+    /*!
+     * \param name thread name for the workers
+     */
+    FutureThreadPool(const Maybe<std::string>& name = None) : m_name{name} {}
+
+    ~FutureThreadPool() { stop(); }
+
+    /*!
+     * \brief launch a task with given function and args
+     */
+    template <typename Func, typename... Args>
+    Future launch(Func&& func, Args&&... args) {
+        auto bfunc = std::bind(std::forward<Func>(func), std::forward<Args>(args)...);
+
+        MGB_LOCK_GUARD(m_mtx);
+        m_tasks.emplace_back(std::move(bfunc));
+        m_cv_more_task.notify_all();
+        return m_tasks.back().get_future();
+    }
+
+    /*!
+     * \brief start worker threads with given concurrency
+     * \return thread IDs of the workers
+     */
+    const std::vector<std::thread::id>& start(size_t concurrency) {
+        mgb_assert(concurrency > 0);
+        mgb_assert(m_should_stop && m_worker_threads.empty() && m_worker_tids.empty());
+        m_should_stop = false;
+        m_worker_threads.reserve(concurrency);
+        for (size_t i = 0; i < concurrency; ++i) {
+            m_worker_threads.emplace_back(
+                    std::bind(&FutureThreadPool<R>::worker_impl, this, i));
         }
 
-        ~FutureThreadPool() {
-            stop();
-        }
-
-        /*!
-         * \brief launch a task with given function and args
-         */
-        template<typename Func, typename ...Args>
-        Future launch(Func&& func, Args&&... args) {
-            auto bfunc = std::bind(
-                    std::forward<Func>(func),
-                    std::forward<Args>(args)...);
-
-            MGB_LOCK_GUARD(m_mtx);
-            m_tasks.emplace_back(std::move(bfunc));
-            m_cv_more_task.notify_all();
-            return m_tasks.back().get_future();
-        }
-
-        /*!
-         * \brief start worker threads with given concurrency
-         * \return thread IDs of the workers
-         */
-        const std::vector<std::thread::id>& start(size_t concurrency) {
-            mgb_assert(concurrency > 0);
-            mgb_assert(m_should_stop && m_worker_threads.empty() &&
-                    m_worker_tids.empty());
-            m_should_stop = false;
-            m_worker_threads.reserve(concurrency);
-            for (size_t i = 0; i < concurrency; ++ i) {
-                m_worker_threads.emplace_back(std::bind(
-                            &FutureThreadPool<R>::worker_impl, this, i));
-            }
-
-            for (; ; ) {
-                {
-                    MGB_LOCK_GUARD(m_mtx);
-                    if (m_worker_tids.size() == concurrency)
-                        return m_worker_tids;
-                }
-                std::this_thread::yield();
-            }
-        }
-
-        /*!
-         * \brief after all futures have been processed, call this method to
-         *      stop the workers
-         *
-         * Note that this method would not wait for unfinished task.
-         */
-        void stop() {
-            if (m_should_stop)
-                return;
-
+        for (;;) {
             {
                 MGB_LOCK_GUARD(m_mtx);
-                m_should_stop = true;
-                m_cv_more_task.notify_all();
+                if (m_worker_tids.size() == concurrency)
+                    return m_worker_tids;
             }
-            for (auto &&i: m_worker_threads)
-                i.join();
-
-            m_worker_threads.clear();
-            m_worker_tids.clear();
+            std::this_thread::yield();
         }
+    }
+
+    /*!
+     * \brief after all futures have been processed, call this method to
+     *      stop the workers
+     *
+     * Note that this method would not wait for unfinished task.
+     */
+    void stop() {
+        if (m_should_stop)
+            return;
+
+        {
+            MGB_LOCK_GUARD(m_mtx);
+            m_should_stop = true;
+            m_cv_more_task.notify_all();
+        }
+        for (auto&& i : m_worker_threads)
+            i.join();
+
+        m_worker_threads.clear();
+        m_worker_tids.clear();
+    }
 };
 
-}
-
+}  // namespace mgb
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
-

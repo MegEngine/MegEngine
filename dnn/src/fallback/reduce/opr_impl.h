@@ -14,15 +14,13 @@
 namespace megdnn {
 namespace fallback {
 
-class ReduceImpl: public naive::ReduceForwardImpl {
-    public:
-        using ReduceForwardImpl::ReduceForwardImpl;
-        void exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
-                _megdnn_workspace) override;
+class ReduceImpl : public naive::ReduceForwardImpl {
+public:
+    using ReduceForwardImpl::ReduceForwardImpl;
+    void exec(
+            _megdnn_tensor_in src, _megdnn_tensor_out dst, _megdnn_workspace) override;
 };
 
-} // namespace fallback
-} // namespace megdnn
+}  // namespace fallback
+}  // namespace megdnn
 // vim: syntax=cpp.doxygen
-
-

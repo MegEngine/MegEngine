@@ -94,15 +94,14 @@ static BaseRowFilter* getLinearRowFilter(Mat<FT>& kernel) {
     }
 
     if (std::is_same<ST, uchar>::value && std::is_same<FT, int>::value)
-        return new RowFilter<ST, FT, RowNoVec>(kernel, anchor,
-                                              RowNoVec(kernel_str, ksize));
+        return new RowFilter<ST, FT, RowNoVec>(
+                kernel, anchor, RowNoVec(kernel_str, ksize));
 
     if (std::is_same<ST, float>::value && std::is_same<FT, float>::value)
-        return new RowFilter<ST, FT, RowNoVec>(kernel, anchor,
-                                              RowNoVec(kernel_str, ksize));
+        return new RowFilter<ST, FT, RowNoVec>(
+                kernel, anchor, RowNoVec(kernel_str, ksize));
 
-    MegCVException(
-            "Unsupported combination of source format and buffer format\n");
+    MegCVException("Unsupported combination of source format and buffer format\n");
 }
 
 /*!
@@ -119,14 +118,14 @@ static BaseColumnFilter* getLinearColumnFilter(Mat<FT>& kernel, int bits) {
     uchar* kernel_str = static_cast<uchar*>(kernel.raw_ptr());
     if (ksize == 3) {
         if (std::is_same<DT, uchar>::value && std::is_same<FT, int>::value)
-            return new SymmColumnSmallFilter<FixedPtCastEx<FT, DT>,
-                                             SymmColumnSmallNoVec>(
+            return new SymmColumnSmallFilter<
+                    FixedPtCastEx<FT, DT>, SymmColumnSmallNoVec>(
                     kernel, anchor, FixedPtCastEx<FT, DT>(bits),
                     SymmColumnSmallNoVec(kernel_str, ksize, bits));
 
         if (std::is_same<DT, float>::value && std::is_same<FT, float>::value)
-            return new SymmColumnSmallFilter<FixedPtCastEx<FT, DT>,
-                                             SymmColumnSmallNoVec>(
+            return new SymmColumnSmallFilter<
+                    FixedPtCastEx<FT, DT>, SymmColumnSmallNoVec>(
                     kernel, anchor, FixedPtCastEx<FT, DT>(0),
                     SymmColumnSmallNoVec(kernel_str, ksize, 0));
     }
@@ -140,8 +139,7 @@ static BaseColumnFilter* getLinearColumnFilter(Mat<FT>& kernel, int bits) {
                 kernel, anchor, FixedPtCastEx<FT, DT>(),
                 ColumnNoVec(kernel_str, ksize, 0));
 
-    MegCVException(
-            "Unsupported combination of source format and buffer format\n");
+    MegCVException("Unsupported combination of source format and buffer format\n");
 }
 
 }  // namespace gaussian_blur

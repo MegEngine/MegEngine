@@ -77,10 +77,7 @@ TEST_F(CUDA, ROI_ALIGN_BACKWARD) {
                     .set_rng(1, &rng)
                     .set_rng(2, &index_rng)
                     .set_rng(3, &const_0)
-                    .execs({{M, C, OH, OW},
-                            {M, 5},
-                            {M, C, OH, OW},
-                            {N, C, IH, IW}});
+                    .execs({{M, C, OH, OW}, {M, 5}, {M, C, OH, OW}, {N, C, IH, IW}});
         }
     };
     run(dtype::Float32());
@@ -93,4 +90,3 @@ TEST_F(CUDA, ROI_ALIGN_BACKWARD) {
 }  // namespace megdnn
 
 // vim: syntax=cpp.doxygen
-

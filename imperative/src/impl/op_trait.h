@@ -11,8 +11,8 @@
 
 #pragma once
 
-#include "megbrain/imperative/op_def.h"
 #include "megbrain/imperative/graph_cache.h"
+#include "megbrain/imperative/op_def.h"
 
 namespace mgb {
 namespace imperative {
@@ -20,28 +20,26 @@ namespace detail {
 template <typename Tag, typename Signature>
 struct OpMeth;
 
-template<typename T>
-struct ToVarNodeArray: std::false_type {};
-template<>
-struct ToVarNodeArray<SymbolVar>: std::true_type {
-    VarNodeArray operator()(const SymbolVar& inp) {
-        return {inp.node()};
-    }
+template <typename T>
+struct ToVarNodeArray : std::false_type {};
+template <>
+struct ToVarNodeArray<SymbolVar> : std::true_type {
+    VarNodeArray operator()(const SymbolVar& inp) { return {inp.node()}; }
 };
-template<>
-struct ToVarNodeArray<SymbolVarArray>: std::true_type {
+template <>
+struct ToVarNodeArray<SymbolVarArray> : std::true_type {
     VarNodeArray operator()(const SymbolVarArray& inputs) {
         return cg::to_var_node_array(inputs);
     }
 };
-template<size_t N>
-struct ToVarNodeArray<std::array<SymbolVar, N>>: std::true_type {
+template <size_t N>
+struct ToVarNodeArray<std::array<SymbolVar, N>> : std::true_type {
     VarNodeArray operator()(const std::array<SymbolVar, N>& inp) {
         return cg::to_var_node_array({inp.begin(), inp.end()});
     }
 };
-template<>
-struct ToVarNodeArray<cg::OperatorNodeBase*>: std::true_type {
+template <>
+struct ToVarNodeArray<cg::OperatorNodeBase*> : std::true_type {
     VarNodeArray operator()(const cg::OperatorNodeBase* opr) {
         return opr->usable_output();
     }
@@ -116,31 +114,29 @@ struct OpMethNotImpl {
     }
 };
 
-struct OpMethFallback: OpMethImplBase {
+struct OpMethFallback : OpMethImplBase {
     using OpMethImplBase::impl;
     static void impl(DecideDispatchMode& func, op_meth_tag::DecideDispatchMode);
     static void impl(MakeNameFunc& func, op_meth_tag::MakeNameFunc);
 };
 
-struct OpMethFallbackByProxyGraph: OpMethImplBase {
+struct OpMethFallbackByProxyGraph : OpMethImplBase {
     using OpMethImplBase::impl;
-    static void impl(ApplyOnPhysicalTensor& func,
-                     op_meth_tag::ApplyOnPhysicalTensor);
+    static void impl(ApplyOnPhysicalTensor& func, op_meth_tag::ApplyOnPhysicalTensor);
     static void impl(Execute& func, op_meth_tag::Execute);
     static void impl(InferOutputMemDesc& func, op_meth_tag::InferOutputMemDesc);
-    static void impl(InferOutputAttrsFallible& func,
-                     op_meth_tag::InferOutputAttrsFallible);
+    static void impl(
+            InferOutputAttrsFallible& func, op_meth_tag::InferOutputAttrsFallible);
     static void impl(GradMaker& func, op_meth_tag::GradMaker);
 };
 
-struct OpMethFallbackFromSubgraph: OpMethImplBase {
+struct OpMethFallbackFromSubgraph : OpMethImplBase {
     using OpMethImplBase::impl;
-    static void impl(ApplyOnPhysicalTensor& func,
-                     op_meth_tag::ApplyOnPhysicalTensor);
+    static void impl(ApplyOnPhysicalTensor& func, op_meth_tag::ApplyOnPhysicalTensor);
     static void impl(InferOutputMemDesc& func, op_meth_tag::InferOutputMemDesc);
     static void impl(ApplyOnVarNode& func, op_meth_tag::ApplyOnVarNode);
-    static void impl(InferOutputAttrsFallible& func,
-                     op_meth_tag::InferOutputAttrsFallible);
+    static void impl(
+            InferOutputAttrsFallible& func, op_meth_tag::InferOutputAttrsFallible);
     static void impl(GradMaker& func, op_meth_tag::GradMaker);
 };
 
@@ -154,12 +150,12 @@ struct OpMethFallbackMode {
 template <typename Tag, typename RType, typename... Args>
 struct OpMeth<Tag, RType(Args...)> : public thin_function<RType(Args...)> {
     using Base = thin_function<RType(Args...)>;
-    OpMeth() : Base{}{};
+    OpMeth() : Base{} {};
     explicit OpMeth(const Base& base) { this->Base::operator=(base); }
     using Base::operator bool;
     RType operator()(Args... args) const {
         uint64_t mode_mask = ~uint64_t(0);
-        auto match_mode = [&](uint64_t mode){
+        auto match_mode = [&](uint64_t mode) {
             if ((fallback_mode & mode_mask) & mode) {
                 mode_mask &= ~mode;
                 return true;
@@ -221,36 +217,35 @@ struct OpTrait {
     cb(hash)                        \
     cb(is_same_st)                  \
     cb(make_name)                   \
-    cb(make_forward_graph)          \
+    cb(make_forward_graph)
 
 // clang-format on
 
 struct OpTraitRegistry {
     OpTrait* trait;
-#define DECL(meth)                                                             \
-    OpTraitRegistry& meth(decltype(OpTrait::meth)::Base f) {                   \
-        mgb_assert(!trait->meth, "op %s has duplicate method %s", trait->name, \
-                   #meth);                                                     \
-        trait->meth.Base::operator=(f);                                        \
-        return *this;                                                          \
+#define DECL(meth)                                                                     \
+    OpTraitRegistry& meth(decltype(OpTrait::meth)::Base f) {                           \
+        mgb_assert(!trait->meth, "op %s has duplicate method %s", trait->name, #meth); \
+        trait->meth.Base::operator=(f);                                                \
+        return *this;                                                                  \
     }
     FOR_EACH_OP_METH(DECL)
 #undef DECL
 
     OpTraitRegistry& fallback();
 
-    template<typename T>
+    template <typename T>
     void insert() {
         do_insert(T::typeinfo());
     }
 
-    template<typename T0, typename T1, typename ...Ts>
+    template <typename T0, typename T1, typename... Ts>
     void insert() {
         insert<T0>();
         insert<T1, Ts...>();
     }
 
-    template<typename ...Args>
+    template <typename... Args>
     static OpTraitRegistry insert(const char* name) {
         auto&& ret = do_insert(name);
         ret.insert<Args...>();
@@ -261,9 +256,9 @@ struct OpTraitRegistry {
 
     static OpTraitRegistry do_insert(const char* name);
 
-    template<typename T,
-        typename To = detail::ToVarNodeArray<T>,
-        typename = std::enable_if_t<To::value>>
+    template <
+            typename T, typename To = detail::ToVarNodeArray<T>,
+            typename = std::enable_if_t<To::value>>
     OpTraitRegistry& apply_on_var_node(T (*f)(const OpDef&, const VarNodeArray&)) {
         return apply_on_var_node([=](const OpDef& opdef, const VarNodeArray& inputs) {
             return To()(f(opdef, inputs));
@@ -272,10 +267,10 @@ struct OpTraitRegistry {
 };
 
 }  // namespace imperative
-} // namespace mgb
+}  // namespace mgb
 
-#define OP_TRAIT_REG(name, ...) \
+#define OP_TRAIT_REG(name, ...)                           \
     static OpTraitRegistry __##name##_global_registry__ = \
-        OpTraitRegistry::insert<__VA_ARGS__>(#name)
+            OpTraitRegistry::insert<__VA_ARGS__>(#name)
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

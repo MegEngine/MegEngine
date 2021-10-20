@@ -12,9 +12,9 @@
 #pragma once
 
 #include <type_traits>
-#include "src/fallback/matrix_mul/opr_impl.h"
-#include "src/fallback/matrix_mul/gemm_common.h"
 #include "src/common/algo_base.h"
+#include "src/fallback/matrix_mul/gemm_common.h"
+#include "src/fallback/matrix_mul/opr_impl.h"
 
 namespace megdnn {
 namespace fallback {

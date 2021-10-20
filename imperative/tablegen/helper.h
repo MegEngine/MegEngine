@@ -26,20 +26,20 @@
 #include "mlir/TableGen/Operator.h"
 
 using llvm::formatv;
-using llvm::StringRef;
 using llvm::Record;
+using llvm::StringRef;
 
-#define ASSERT(stmt, msg) \
-    if (!(stmt)) { \
-        std::cerr << "\033[1;31m" \
-            << "tablegen autogen abort due to: " << msg \
-            << "\033[0m" << std::endl; \
-        exit(1); \
+#define ASSERT(stmt, msg)                                                  \
+    if (!(stmt)) {                                                         \
+        std::cerr << "\033[1;31m"                                          \
+                  << "tablegen autogen abort due to: " << msg << "\033[0m" \
+                  << std::endl;                                            \
+        exit(1);                                                           \
     }
 
 namespace mlir {
 namespace tblgen {
-template<typename ConcreteType>
+template <typename ConcreteType>
 struct MgbInterface : public ConcreteType {
     MgbInterface() = delete;
     MgbInterface(const MgbInterface&) = delete;
@@ -51,14 +51,11 @@ struct MgbAttrWrapperBase : public MgbInterface<Attribute> {
 private:
     struct RecordVisitor : public MgbInterface<Constraint> {
     public:
-        static bool classof(const Constraint*) {
-            return true;
-        }
+        static bool classof(const Constraint*) { return true; }
 
-        const llvm::Record* getDef() const {
-            return def;
-        }
+        const llvm::Record* getDef() const { return def; }
     };
+
 public:
     static bool classof(const Attribute* attr) {
         return attr->isSubClassOf("MgbAttrWrapperBase");
@@ -123,25 +120,21 @@ struct MgbAliasAttrMixin : public MgbAttrWrapperBase {
 
 class MgbPackedParam {
 public:
-    MgbPackedParam(Record* def_): def(def_) {
+    MgbPackedParam(Record* def_) : def(def_) {
         auto&& dag = def->getValueAsDag("fields");
-        for (size_t i = 0; i < dag->getNumArgs(); ++ i) {
-            fields.push_back({
-                dag->getArgNameStr(i),
-                Attribute(llvm::cast<llvm::DefInit>(dag->getArg(i)))
-            });
+        for (size_t i = 0; i < dag->getNumArgs(); ++i) {
+            fields.push_back(
+                    {dag->getArgNameStr(i),
+                     Attribute(llvm::cast<llvm::DefInit>(dag->getArg(i)))});
         }
     }
 
-    llvm::StringRef getFullName() const {
-        return def->getValueAsString("fullName");
-    }
-    std::vector<NamedAttribute> getFields() const {
-        return fields;
-    }
+    llvm::StringRef getFullName() const { return def->getValueAsString("fullName"); }
+    std::vector<NamedAttribute> getFields() const { return fields; }
     llvm::StringRef getAccessor() const {
         return def->getValueAsString("paramAccessor");
     }
+
 private:
     std::vector<NamedAttribute> fields;
     Record* def;
@@ -159,7 +152,7 @@ public:
 
     std::vector<NamedAttribute> getMgbAttributes() const {
         std::vector<NamedAttribute> ret;
-        for (auto&& i: getAttributes()) {
+        for (auto&& i : getAttributes()) {
             if (isa<MgbAttrWrapperBase>(i.attr)) {
                 ret.push_back(i);
             }
@@ -169,11 +162,10 @@ public:
     std::vector<NamedAttribute> getExtraArguments() const {
         std::vector<NamedAttribute> ret;
         auto&& dag = getDef().getValueAsDag("extraArguments");
-        for (size_t i = 0; i < dag->getNumArgs(); ++ i) {
-            ret.push_back({
-                dag->getArgNameStr(i),
-                Attribute(llvm::cast<llvm::DefInit>(dag->getArg(i)))
-            });
+        for (size_t i = 0; i < dag->getNumArgs(); ++i) {
+            ret.push_back(
+                    {dag->getArgNameStr(i),
+                     Attribute(llvm::cast<llvm::DefInit>(dag->getArg(i)))});
         }
         return ret;
     }
@@ -207,11 +199,11 @@ private:
                 return attr.getHashFunctionTemplate();
             };
             mlir::tblgen::FmtContext ctx;
-            for (auto&& it: getMgbAttributes()) {
-                body += formatv(
-                    "    val = mgb::hash_pair_combine(val, {0});\n",
-                    mlir::tblgen::tgfmt(getHashFunc(it), &ctx, "$_self." + it.name)
-                );
+            for (auto&& it : getMgbAttributes()) {
+                body +=
+                        formatv("    val = mgb::hash_pair_combine(val, {0});\n",
+                                mlir::tblgen::tgfmt(
+                                        getHashFunc(it), &ctx, "$_self." + it.name));
             }
         }
         body += "    return val;\n";
@@ -223,49 +215,53 @@ private:
             mlir::tblgen::FmtContext ctx;
             for (auto&& it : getMgbAttributes()) {
                 auto&& attr = llvm::cast<MgbHashableAttrMixin>(it.attr);
-                body += formatv(
-                    "    if ({0}) return false;\n",
-                    mlir::tblgen::tgfmt(attr.getCmpFunctionTemplate(),
-                        &ctx, "$0." + it.name, "$1." + it.name)
-                );
+                body +=
+                        formatv("    if ({0}) return false;\n",
+                                mlir::tblgen::tgfmt(
+                                        attr.getCmpFunctionTemplate(), &ctx,
+                                        "$0." + it.name, "$1." + it.name));
             }
         }
         body += "    return true;\n";
         return body;
     }
     std::string getDefaultPropsFunction() const {
-        std::string body = "    std::vector<std::pair<const char*, std::string>> props_;\n";
+        std::string body =
+                "    std::vector<std::pair<const char*, std::string>> props_;\n";
         if (!getMgbAttributes().empty()) {
             mlir::tblgen::FmtContext ctx;
             for (auto&& it : getMgbAttributes()) {
                 if (auto* enumAttr = llvm::dyn_cast<MgbEnumAttrMixin>(&it.attr)) {
                     body += formatv("    switch ({0}){{\n", "$_self." + it.name);
-                    for (auto&& enumMember: enumAttr->getEnumMembers()) {
+                    for (auto&& enumMember : enumAttr->getEnumMembers()) {
+                        size_t d1 = enumMember.find(' ');
+                        size_t d2 = enumMember.find('=');
+                        size_t d = d1 <= d2 ? d1 : d2;
                         body += formatv(
-                            "    case {0}::{1}::{2}:\n",
-                            getCppClassName(), enumAttr->getEnumName(), enumMember
-                        );
-                        body += formatv(
-                            "        props_.emplace_back(\"{0}\", \"{1}\");\n",
-                            it.name, enumMember
-                        );
+                                "    case {0}::{1}::{2}:\n", getCppClassName(),
+                                enumAttr->getEnumName(), enumMember.substr(0, d));
+                        body +=
+                                formatv("        props_.emplace_back(\"{0}\", "
+                                        "\"{1}\");\n",
+                                        it.name, enumMember.substr(0, d));
                         body += "        break;\n";
                     }
                     body += "    default: break;\n";
                     body += "    }\n";
                 } else {
                     auto&& attr = llvm::cast<MgbHashableAttrMixin>(it.attr);
-                    body += formatv(
-                        "    props_.emplace_back(\"{0}\", {1});\n", it.name,
-                        mlir::tblgen::tgfmt(attr.getReprFunctionTemplate(),
-                            &ctx, "$_self." + it.name)
-                    );
+                    body +=
+                            formatv("    props_.emplace_back(\"{0}\", {1});\n", it.name,
+                                    mlir::tblgen::tgfmt(
+                                            attr.getReprFunctionTemplate(), &ctx,
+                                            "$_self." + it.name));
                 }
             }
         }
         body += "    return props_;\n";
         return body;
     }
+
 public:
     static bool classof(const Operator* op) {
         return op->getDef().isSubClassOf("MgbHashableOpMixin");
@@ -298,21 +294,23 @@ using MgbAliasAttr = mlir::tblgen::MgbAliasAttrMixin;
 using MgbOp = mlir::tblgen::MgbOpBase;
 using MgbHashableOp = mlir::tblgen::MgbHashableOpMixin;
 
-static inline void foreach_operator(llvm::RecordKeeper &keeper,
-        std::function<void(MgbOp&)> callback) {
+static inline void foreach_operator(
+        llvm::RecordKeeper& keeper, std::function<void(MgbOp&)> callback) {
     auto op_base_class = keeper.getClass("Op");
     ASSERT(op_base_class, "could not find base class Op");
-    for (auto&& i: keeper.getDefs()) {
+    for (auto&& i : keeper.getDefs()) {
         auto&& r = i.second;
         if (r->isSubClassOf(op_base_class)) {
             auto op = mlir::tblgen::Operator(r.get());
             if (op.getDialectName().str() == "mgb") {
-                std::cerr << "\033[34;15m" << "Generating " << r->getName().str() << "\033[0m" << std::endl;
+                std::cerr << "\033[34;15m"
+                          << "Generating " << r->getName().str() << "\033[0m"
+                          << std::endl;
                 callback(llvm::cast<MgbOp>(op));
             }
         }
     }
 }
 
-} // namespace tblgen
-} // namespace mlir
+}  // namespace tblgen
+}  // namespace mlir

@@ -44,22 +44,25 @@ public:
         const TensorLayout& dst_layout;
 
         std::string to_string() const;
-        SizeArgs(DeformableConvForwardImpl* opr, const TensorLayout& im,
-                 const TensorLayout& filter, const TensorLayout& offset,
-                 const TensorLayout& mask, const TensorLayout& dst);
-        SizeArgs(DeformableConvForwardImpl* opr, const TensorLayout& im,
-                 const CanonizedFilterMeta& filter, const TensorLayout& offset,
-                 const TensorLayout& mask, const TensorLayout& dst);
+        SizeArgs(
+                DeformableConvForwardImpl* opr, const TensorLayout& im,
+                const TensorLayout& filter, const TensorLayout& offset,
+                const TensorLayout& mask, const TensorLayout& dst);
+        SizeArgs(
+                DeformableConvForwardImpl* opr, const TensorLayout& im,
+                const CanonizedFilterMeta& filter, const TensorLayout& offset,
+                const TensorLayout& mask, const TensorLayout& dst);
     };
     struct ExecArgs : public SizeArgs {
         const TensorND &im_tensor, filter_tensor, offset_tensor, mask_tensor,
                 dst_tensor;
         Workspace workspace;
 
-        ExecArgs(DeformableConvForwardImpl* opr, _megdnn_tensor_in im,
-                 _megdnn_tensor_in filter, _megdnn_tensor_in offset,
-                 _megdnn_tensor_in mask, _megdnn_tensor_out dst,
-                 _megdnn_workspace workspace);
+        ExecArgs(
+                DeformableConvForwardImpl* opr, _megdnn_tensor_in im,
+                _megdnn_tensor_in filter, _megdnn_tensor_in offset,
+                _megdnn_tensor_in mask, _megdnn_tensor_out dst,
+                _megdnn_workspace workspace);
     };
     virtual bool is_available(const SizeArgs& args) const = 0;
     virtual size_t get_workspace_in_bytes(const SizeArgs& args) const = 0;
@@ -74,16 +77,15 @@ public:
             const AlgoAttribute& negative_attr = AlgoAttribute::DEFAULT,
             size_t limit = std::numeric_limits<size_t>::max()) {
         return contain_attribute_all(positive_attr) &&
-               !contain_attribute_any(negative_attr) &&
-               is_available_wk(args, limit);
+               !contain_attribute_any(negative_attr) && is_available_wk(args, limit);
     }
-    AlgoBase& check_workspace(const SizeArgs& args,
-                              const Workspace& workspace) {
+    AlgoBase& check_workspace(const SizeArgs& args, const Workspace& workspace) {
         auto req = get_workspace_in_bytes(args);
-        megdnn_assert(req <= workspace.size,
-                      "deformable_conv fwd algo %s: required workspace %zu "
-                      "bytes, got %zu",
-                      name(), req, workspace.size);
+        megdnn_assert(
+                req <= workspace.size,
+                "deformable_conv fwd algo %s: required workspace %zu "
+                "bytes, got %zu",
+                name(), req, workspace.size);
         return *this;
     }
 };
@@ -97,13 +99,10 @@ public:
     size_t get_workspace_in_bytes(const SizeArgs& args) const override;
     void exec(const ExecArgs& args) const override;
 
-    AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE;
-    }
+    AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }
 
     std::vector<SearchItem> get_subopr_list(
-            const TensorLayoutArray& layouts,
-            const OperatorBase* opr) const override;
+            const TensorLayoutArray& layouts, const OperatorBase* opr) const override;
 
     const char* name() const override { return "MATMUL"; }
     MEGDNN_DECL_ALGO_TYPE(CUDA_MATMUL)
@@ -111,6 +110,7 @@ public:
 
 class DeformableConvForwardImpl::AlgoPack : NonCopyableObj {
     AlgoBase::Mapper m_all_algos_map;
+
 public:
     AlgoPack();
     AlgoMatmul algo_matmul;

@@ -53,8 +53,7 @@ template <typename Opr>
 struct DeduceLayoutProxy<Opr, 5, true> {
     static void deduce_layout(Opr* opr, TensorLayoutArray& layouts) {
         megdnn_assert(layouts.size() == 5);
-        opr->deduce_layout(layouts[0], layouts[1], layouts[2], layouts[3],
-                           layouts[4]);
+        opr->deduce_layout(layouts[0], layouts[1], layouts[2], layouts[3], layouts[4]);
     }
 };
 
@@ -77,11 +76,21 @@ template <typename Opr>
 struct DeduceLayoutProxy<Opr, 8, true> {
     static void deduce_layout(Opr* opr, TensorLayoutArray& layouts) {
         megdnn_assert(layouts.size() == 8);
-        opr->deduce_layout(layouts[0], layouts[1], layouts[2], layouts[3],
-                           layouts[4], layouts[5], layouts[6], layouts[7]);
+        opr->deduce_layout(
+                layouts[0], layouts[1], layouts[2], layouts[3], layouts[4], layouts[5],
+                layouts[6], layouts[7]);
     }
 };
 
+template <typename Opr>
+struct DeduceLayoutProxy<Opr, 9, true> {
+    static void deduce_layout(Opr* opr, TensorLayoutArray& layouts) {
+        megdnn_assert(layouts.size() == 9);
+        opr->deduce_layout(
+                layouts[0], layouts[1], layouts[2], layouts[3], layouts[4], layouts[5],
+                layouts[6], layouts[7], layouts[8]);
+    }
+};
 }  // namespace test
 }  // namespace megdnn
 

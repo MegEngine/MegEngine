@@ -20,8 +20,7 @@ namespace megdnn {
 namespace fallback {
 
 class ConvBiasImpl::AlgoConv1x1 final : public AlgoBase {
-    WorkspaceBundle get_bundle_according_packmode(
-            const NCBKernSizeParam& param) const;
+    WorkspaceBundle get_bundle_according_packmode(const NCBKernSizeParam& param) const;
     SmallVector<NCBKern> get_kerns_according_packmode(
             const NCBKernSizeParam& param, bool weight_preprocess) const;
 
@@ -29,36 +28,32 @@ public:
     AlgoConv1x1(MatrixMulImpl::AlgoBase* matmul_algo, size_t oc_block_size)
             : m_matmul_algo(matmul_algo), m_oc_block_size(oc_block_size) {}
 
-    AlgoAttribute attribute() const override {
-        return m_matmul_algo->attribute();
-    }
+    AlgoAttribute attribute() const override { return m_matmul_algo->attribute(); }
 
     const char* name() const override {
         if (m_name.empty()) {
-            m_name = ssprintf("CONV1x1:%s:%zu", m_matmul_algo->name(),
-                              m_oc_block_size);
+            m_name = ssprintf("CONV1x1:%s:%zu", m_matmul_algo->name(), m_oc_block_size);
         }
         return m_name.c_str();
     }
 
-    bool usable(const NCBKernSizeParam& param,
-                AlgoSelectionStrategy algo_selection_strategy) const override;
+    bool usable(
+            const NCBKernSizeParam& param,
+            AlgoSelectionStrategy algo_selection_strategy) const override;
     size_t get_workspace(const NCBKernSizeParam& param) const override;
-    SmallVector<NCBKern> dispatch_kerns(
-            const NCBKernSizeParam& param) const override;
+    SmallVector<NCBKern> dispatch_kerns(const NCBKernSizeParam& param) const override;
 
     bool is_preferred(const NCBKernSizeParam&) const override;
 
     SmallVector<TensorLayout> deduce_preprocessed_filter_layout(
             const NCBKernSizeParam& param) const override;
-    size_t get_preprocess_workspace(
-            const NCBKernSizeParam& /*param*/) const override {
+    size_t get_preprocess_workspace(const NCBKernSizeParam& /*param*/) const override {
         return 0;
     }
     SmallVector<NCBKern> dispatch_preprocess_kerns(
             const NCBKernSizeParam& param) const override;
 
-    ConvAlgoTypePack get_algo_type() const override{
+    ConvAlgoTypePack get_algo_type() const override {
         return {m_matmul_algo->matmul_description().algo_type.data_type,
                 AlgoCategory::IM2COL};
     }

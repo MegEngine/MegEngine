@@ -18,8 +18,7 @@ namespace ZmqRpc {
 
 class ZmqRpcServerImpl {
 public:
-    virtual void solve_request(zmq::message_t& request,
-                               zmq::message_t& reply) = 0;
+    virtual void solve_request(zmq::message_t& request, zmq::message_t& reply) = 0;
     virtual ~ZmqRpcServerImpl() = default;
 };
 
@@ -46,8 +45,7 @@ private:
 class ZmqRpcServer {
 public:
     ZmqRpcServer() = delete;
-    ZmqRpcServer(std::string address, int port,
-                 std::unique_ptr<ZmqRpcServerImpl> impl);
+    ZmqRpcServer(std::string address, int port, std::unique_ptr<ZmqRpcServerImpl> impl);
     ~ZmqRpcServer() { close(); }
     void run();
     void close();

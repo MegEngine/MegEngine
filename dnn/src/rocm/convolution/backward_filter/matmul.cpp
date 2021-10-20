@@ -10,9 +10,9 @@
  */
 
 #include "./algo.h"
-#include "src/rocm/utils.h"
 #include "src/rocm/convolution/helper.h"
 #include "src/rocm/convolution/im2col.h.hip"
+#include "src/rocm/utils.h"
 
 using namespace megdnn;
 using namespace rocm;
@@ -28,12 +28,10 @@ bool ConvolutionBackwardFilterImpl::AlgoMatmul::is_available(
 
 size_t ConvolutionBackwardFilterImpl::AlgoMatmul::get_workspace_in_bytes(
         const SizeArgs& args) const {
-    return matmul_get_workspace_bundle(args.as_fwd_args())
-            .total_size_in_bytes();
+    return matmul_get_workspace_bundle(args.as_fwd_args()).total_size_in_bytes();
 }
 
-void ConvolutionBackwardFilterImpl::AlgoMatmul::exec(
-        const ExecArgs& args) const {
+void ConvolutionBackwardFilterImpl::AlgoMatmul::exec(const ExecArgs& args) const {
 #define cb(DType)                                        \
     if (args.diff_layout->dtype == DType()) {            \
         using ctype = typename DTypeTrait<DType>::ctype; \
@@ -47,16 +45,14 @@ void ConvolutionBackwardFilterImpl::AlgoMatmul::exec(
 }
 
 template <typename T>
-void ConvolutionBackwardFilterImpl::AlgoMatmul::exec_internal(
-        const ExecArgs& args) {
+void ConvolutionBackwardFilterImpl::AlgoMatmul::exec_internal(const ExecArgs& args) {
     auto&& fm = args.grad_filter_meta;
-    size_t N = args.src_layout->shape[0], IC = fm.icpg,
-           IH = args.src_layout->shape[2], IW = args.src_layout->shape[3],
-           OC = fm.ocpg, OH = args.diff_layout->shape[2],
-           OW = args.diff_layout->shape[3], FH = fm.spatial[0],
-           FW = fm.spatial[1], PH = fm.padding[0], PW = fm.padding[1],
-           SH = fm.stride[0], SW = fm.stride[1], DH = fm.dilation[0],
-           DW = fm.dilation[1];
+    size_t N = args.src_layout->shape[0], IC = fm.icpg, IH = args.src_layout->shape[2],
+           IW = args.src_layout->shape[3], OC = fm.ocpg,
+           OH = args.diff_layout->shape[2], OW = args.diff_layout->shape[3],
+           FH = fm.spatial[0], FW = fm.spatial[1], PH = fm.padding[0],
+           PW = fm.padding[1], SH = fm.stride[0], SW = fm.stride[1],
+           DH = fm.dilation[0], DW = fm.dilation[1];
     auto stream = hip_stream(args.handle);
     auto wbundle = matmul_get_workspace_bundle(args.as_fwd_args());
     wbundle.set(args.workspace.raw_ptr);
@@ -73,15 +69,14 @@ void ConvolutionBackwardFilterImpl::AlgoMatmul::exec_internal(
         args.handle->relayout_opr()->exec(from, to);
     }
     {
-        convolution::im2col<T>(args.src_tensor->ptr<T>(), col, N,
-                               args.src_tensor->layout.stride[0], IC, IH, IW,
-                               FH, FW, OH, OW, PH, PW, SH, SW, DH, DW, stream);
+        convolution::im2col<T>(
+                args.src_tensor->ptr<T>(), col, N, args.src_tensor->layout.stride[0],
+                IC, IH, IW, FH, FW, OH, OW, PH, PW, SH, SW, DH, DW, stream);
     }
     {
         // take gemm grad
         TensorLayout Al({OC, IC * FH * FW}, typename DTypeTrait<T>::dtype()),
-                Bl({IC * FH * FW, OH * OW * N},
-                   typename DTypeTrait<T>::dtype()),
+                Bl({IC * FH * FW, OH * OW * N}, typename DTypeTrait<T>::dtype()),
                 Cl({OC, OH * OW * N}, typename DTypeTrait<T>::dtype());
         TensorND A(args.grad_tensor->ptr<T>(), Al), B(col, Bl), C(diff_t, Cl);
         if (fm.should_flip) {

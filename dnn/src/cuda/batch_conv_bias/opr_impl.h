@@ -18,14 +18,14 @@ namespace cuda {
 class BatchConvBiasForwardImpl : public BatchConvBiasForward {
 public:
     using BatchConvBiasForward::BatchConvBiasForward;
-    void exec(_megdnn_tensor_in src, _megdnn_tensor_in filter,
-              _megdnn_tensor_in bias, _megdnn_tensor_in z,
-              _megdnn_tensor_out dst, _megdnn_workspace workspace) override;
-    size_t get_workspace_in_bytes(const TensorLayout& src,
-                                  const TensorLayout& filter,
-                                  const TensorLayout& bias,
-                                  const TensorLayout& z,
-                                  const TensorLayout& dst) override;
+    void exec(
+            _megdnn_tensor_in src, _megdnn_tensor_in filter, _megdnn_tensor_in bias,
+            _megdnn_tensor_in z, _megdnn_tensor_out dst,
+            _megdnn_workspace workspace) override;
+    size_t get_workspace_in_bytes(
+            const TensorLayout& src, const TensorLayout& filter,
+            const TensorLayout& bias, const TensorLayout& z,
+            const TensorLayout& dst) override;
     const char* get_algorithm_set_name() const override;
 
     class AlgoBase;
@@ -42,11 +42,14 @@ protected:
             const TensorLayout& src, const TensorLayout& filter,
             const TensorLayout& bias, const TensorLayout& z,
             const TensorLayout& dst) override;
-    Algorithm* get_algorithm_heuristic(
+    std::vector<Algorithm*> get_all_algorithms_safe(
             const TensorLayout& src, const TensorLayout& filter,
             const TensorLayout& bias, const TensorLayout& z,
-            const TensorLayout& dst, size_t workspace_limit_in_bytes,
-            const AlgoAttribute& positive_attr,
+            const TensorLayout& dst) override;
+    Algorithm* get_algorithm_heuristic(
+            const TensorLayout& src, const TensorLayout& filter,
+            const TensorLayout& bias, const TensorLayout& z, const TensorLayout& dst,
+            size_t workspace_limit_in_bytes, const AlgoAttribute& positive_attr,
             const AlgoAttribute& negative_attr) override;
 
 private:

@@ -11,27 +11,31 @@
 
 #pragma once
 
-#include "./helper.h"
 #include "./enum_macro.h"
+#include "./helper.h"
 
-#include "megdnn/opr_param_defs.h"
+#include "megbrain/imperative/ops/custom_opdef.h"
 #include "megbrain/opr/param_defs.h"
+#include "megdnn/opr_param_defs.h"
 
 namespace PYBIND11_NAMESPACE {
 namespace detail {
 
-#define ENUM_CASTER_DEF(name) \
-template<> struct type_caster<name> { \
-    PYBIND11_TYPE_CASTER(name, _(#name)); \
-public: \
-    bool load(handle src, bool); \
-    static handle cast(const name& v, return_value_policy, handle); \
-};
+#define ENUM_CASTER_DEF(name)                                           \
+    template <>                                                         \
+    struct type_caster<name> {                                          \
+        PYBIND11_TYPE_CASTER(name, _(#name));                           \
+                                                                        \
+    public:                                                             \
+        bool load(handle src, bool);                                    \
+        static handle cast(const name& v, return_value_policy, handle); \
+    };
 
 FOR_EACH_ENUM_PARAM(ENUM_CASTER_DEF)
 FOR_EACH_BIT_COMBINED_ENUM_PARAM(ENUM_CASTER_DEF)
 
-} // detail
-} // PYBIND11_NAMESPACE
+}  // namespace detail
+}  // namespace PYBIND11_NAMESPACE
 
 void init_ops(pybind11::module m);
+void init_custom(pybind11::module m);

@@ -36,8 +36,8 @@
  * implied.
  */
 
-#include "src/common/utils.h"
 #include "src/cuda/cutlass/operation_table.h"
+#include "src/common/utils.h"
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -86,8 +86,7 @@ GemmKey get_gemm_key_from_desc(const GemmDescription& desc) {
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
-ConvolutionKey get_convolution_key_from_desc(
-        const ConvolutionDescription& desc) {
+ConvolutionKey get_convolution_key_from_desc(const ConvolutionDescription& desc) {
     ConvolutionKey key;
 
     key.conv_op = desc.conv_op;
@@ -124,7 +123,7 @@ ConvolutionKey get_convolution_key_from_desc(
     key.epilogue_type = desc.epilogue_type;
 
     key.stages = desc.tile_description.threadblock_stages;
-    key.need_load_from_const_mem = desc.need_load_from_const_mem;
+    key.special_optimization = desc.special_optimization;
     key.without_shared_load = desc.without_shared_load;
 
     return key;
@@ -139,8 +138,8 @@ void OperationTable::append(Manifest const& manifest) {
 
         // insert all gemm operations into operation table
         if (desc.kind == OperationKind::kGemm) {
-            GemmKey key = get_gemm_key_from_desc(
-                    static_cast<GemmDescription const&>(desc));
+            GemmKey key =
+                    get_gemm_key_from_desc(static_cast<GemmDescription const&>(desc));
             gemm_operations[key].push_back(operation.get());
         }
 
@@ -156,23 +155,25 @@ void OperationTable::append(Manifest const& manifest) {
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
 Operation const* OperationTable::find_op(GemmKey const& key) const {
-    megdnn_assert(gemm_operations.count(key) > 0,
-                  "key not found in cutlass operation table");
-    auto const& ops = gemm_operations.at(key);
-    megdnn_assert(ops.size() == 1, "exactly one kernel expected, got %zu",
-                  ops.size());
-    return ops[0];
+    if (gemm_operations.count(key)) {
+        auto const& ops = gemm_operations.at(key);
+        megdnn_assert(
+                ops.size() == 1, "exactly one kernel expected, got %zu", ops.size());
+        return ops[0];
+    }
+    return nullptr;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
 Operation const* OperationTable::find_op(ConvolutionKey const& key) const {
-    megdnn_assert(convolution_operations.count(key) > 0,
-                  "key not found in cutlass operation table");
-    auto const& ops = convolution_operations.at(key);
-    megdnn_assert(ops.size() == 1, "exactly one kernel expected, got %zu",
-                  ops.size());
-    return ops[0];
+    if (convolution_operations.count(key) > 0) {
+        auto const& ops = convolution_operations.at(key);
+        megdnn_assert(
+                ops.size() == 1, "exactly one kernel expected, got %zu", ops.size());
+        return ops[0];
+    }
+    return nullptr;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////

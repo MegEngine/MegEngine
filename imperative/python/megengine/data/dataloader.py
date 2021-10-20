@@ -15,12 +15,15 @@ import queue
 import random
 import threading
 import time
-from typing import Callable
+from typing import Callable, Union
 
 import numpy as np
 
+from ..device import _sh, get_default_device
+from ..functional.tensor import copy
 from ..logger import get_logger
 from ..random.rng import _random_seed_generator
+from ..tensor import Tensor
 from .collator import Collator
 from .dataset import Dataset, StreamDataset
 from .sampler import MapSampler, Sampler, SequentialSampler, StreamSampler
@@ -49,23 +52,25 @@ class DataLoader:
     :class:`~.Sampler`, :class:`~.Transform` and :class:`~.Collator`,
     make it flexible to get minibatch continually from a dataset.
 
-    :param dataset: dataset from which to load the minibatch.
-    :param sampler: defines the strategy to sample data from the dataset.
-    :param transform: defined the transforming strategy for a sampled batch.
-        Default: None
-    :param collator: defined the merging strategy for a transformed batch.
-        Default: None
-    :param num_workers: the number of sub-process to load, transform and collate
-        the batch. ``0`` means using single-process. Default: 0
-    :param timeout: if positive, means the timeout value(second) for collecting a
-        batch from workers. Default: 0
-    :param timeout_event: callback function triggered by timeout, default to raise
-        runtime error.
-    :param divide: define the paralleling strategy in multi-processing mode.
-        ``True`` means one batch is divided into :attr:`num_workers` pieces, and
-        the workers will process these pieces parallelly. ``False`` means
-        different sub-process will process different batch. Default: False
-
+    Args:
+        dataset: dataset from which to load the minibatch.
+        sampler: defines the strategy to sample data from the dataset.
+        transform: defined the transforming strategy for a sampled batch.
+            Default: None
+        collator: defined the merging strategy for a transformed batch.
+            Default: None
+        num_workers: the number of sub-process to load, transform and collate
+            the batch. ``0`` means using single-process. Default: 0
+        timeout: if positive, means the timeout value(second) for collecting a
+            batch from workers. Default: 0
+        timeout_event: callback function triggered by timeout, default to raise
+            runtime error.
+        divide: define the paralleling strategy in multi-processing mode.
+            ``True`` means one batch is divided into :attr:`num_workers` pieces, and
+            the workers will process these pieces parallelly. ``False`` means
+            different sub-process will process different batch. Default: False
+        preload: Defines whether to apply the preloading strategy of dataloader, and parallelize the copy of host2device while kernal is executed to improve the loading speed. default is seted False
+            the output will change from np.ndarry to dtype tensor. the support dtypes for preload are int,float,list[int,float],tuple[int,float],and another type is not supported.
     """
     __initialized = False
 
@@ -79,6 +84,7 @@ class DataLoader:
         timeout: int = 0,
         timeout_event: Callable = raise_timeout_error,
         divide: bool = False,
+        preload: bool = False,
     ):
         if num_workers < 0:
             raise ValueError("num_workers should not be negative")
@@ -96,6 +102,7 @@ class DataLoader:
         self.timeout_event = timeout_event
 
         self.divide = divide
+        self.preload = preload
 
         if isinstance(dataset, StreamDataset):
             self.sampler = sampler if sampler else StreamSampler(batch_size=1)
@@ -145,24 +152,74 @@ class DataLoader:
             self.num_workers = 0
         if isinstance(self.dataset, StreamDataset):
             if not self.num_workers:
-                return _SerialStreamDataLoaderIter(self)
+                return _SerialStreamDataLoaderIter(self, self.preload)
             else:
-                return _ParallelStreamDataLoaderIter(self)
+                return _ParallelStreamDataLoaderIter(self, self.preload)
         else:
             assert isinstance(
                 self.dataset, Dataset
             ), "Can not recognize this kind of dataset: %s" % type(self.dataset)
             if not self.num_workers:
-                return _SerialMapDataLoaderIter(self)
+                return _SerialMapDataLoaderIter(self, self.preload)
             else:
-                return _ParallelMapDataLoaderIter(self)
+                return _ParallelMapDataLoaderIter(self, self.preload)
 
     def __len__(self):
         return len(self.sampler)
 
 
-class _BaseMapDataLoaderIter:
-    def __init__(self, loader):
+class PreLoader:
+    def __init__(self, preload):
+        if preload:
+            self.default_device = get_default_device()
+            self.pre_load_device = self.default_device + ":" + str(_sh.get_next())
+            self.pre_load_device_cache = None
+        self.preload = preload
+
+    """
+    strategy one: load from numpy data, and generate dtype tensor
+    """
+
+    def _load_tensor(self, batch, cached=True):
+        if isinstance(batch, np.ndarray):
+            device = self.pre_load_device if cached else self.default_device
+            return Tensor(batch, device=device)
+        elif isinstance(batch, collections.abc.Mapping):
+            return {k: self._load_tensor(v, cached) for k, v in batch.items()}
+        elif isinstance(batch, tuple) and hasattr(batch, "_fields"):  # namedtuple
+            return type(batch)(*(self._load_tensor(value, cached) for value in batch))
+        elif isinstance(batch, collections.abc.Sequence):
+            return [self._load_tensor(value, cached) for value in batch]
+        else:
+            return batch
+
+    """
+    strategy two: load from cache that is already tensor just do d2d copy
+    """
+
+    def _load_cache(self, data):
+        if isinstance(data, Tensor):
+            if data.device == self.default_device:
+                return data
+            return copy(data, device=self.default_device)
+        elif isinstance(data, collections.abc.Mapping):
+            return {k: self._load_cache(v) for k, v in data.items()}
+        elif isinstance(data, tuple) and hasattr(data, "_fields"):  # namedtuple
+            return type(data)(*(self._load_cache(value) for value in data))
+        elif isinstance(data, collections.abc.Sequence):
+            return [self._load_cache(value) for value in data]
+        else:
+            return data
+
+    def _swap_out_cache(self):
+        out = self._load_cache(self.pre_load_device_cache)
+        self.pre_load_device_cache = None  # clean cache
+        return out
+
+
+class _BaseMapDataLoaderIter(PreLoader):
+    def __init__(self, loader, preload):
+        super().__init__(preload)
         self.dataset = loader.dataset
         self.sampler = loader.sampler
         self.seed = _random_seed_generator().__next__()
@@ -184,16 +241,35 @@ class _BaseMapDataLoaderIter:
         return self
 
     def __next__(self):
+        if self.preload:
+            cached = self.pre_load_device_cache
+            if cached is None:  # first and last
+                if self.num_processed >= len(self):  # last
+                    raise StopIteration
+                elif self.num_processed == 0:  # first
+                    self._try_load_tensor(cached=False)  # first do the h2d
+            out = self._swap_out_cache()
+            self._try_load_tensor()
+            return out
+        else:
+            if self.num_processed >= len(self):
+                raise StopIteration
+            minibatch = self._get_next_batch()
+            self.num_processed += 1
+            return minibatch
+
+    def _try_load_tensor(self, cached=True):
         if self.num_processed >= len(self):
-            raise StopIteration
-        minibatch = self._get_next_batch()
-        self.num_processed += 1
-        return minibatch
+            return
+        else:
+            self.num_processed += 1
+            batch = self._get_next_batch()
+            self.pre_load_device_cache = self._load_tensor(batch, cached)
 
 
 class _SerialMapDataLoaderIter(_BaseMapDataLoaderIter):
-    def __init__(self, loader):
-        super(_SerialMapDataLoaderIter, self).__init__(loader)
+    def __init__(self, loader, preload):
+        super(_SerialMapDataLoaderIter, self).__init__(loader, preload)
         self.indices_iter = iter(self.sampler)
 
     def _get_next_batch(self):
@@ -206,8 +282,8 @@ class _SerialMapDataLoaderIter(_BaseMapDataLoaderIter):
 class _ParallelMapDataLoaderIter(_BaseMapDataLoaderIter):
     __initialized = False
 
-    def __init__(self, loader):
-        super(_ParallelMapDataLoaderIter, self).__init__(loader)
+    def __init__(self, loader, preload):
+        super(_ParallelMapDataLoaderIter, self).__init__(loader, preload)
 
         self.task_queues = [
             multiprocessing.Queue(maxsize=2) for _ in range(self.num_workers)
@@ -358,8 +434,9 @@ class _ParallelMapDataLoaderIter(_BaseMapDataLoaderIter):
             self._shutdown()
 
 
-class _BaseStreamDataLoaderIter:
-    def __init__(self, loader):
+class _BaseStreamDataLoaderIter(PreLoader):
+    def __init__(self, loader, preload):
+        super().__init__(preload)
         self.dataset = loader.dataset
         self.sampler = loader.sampler
         self.transform = loader.transform
@@ -388,12 +465,23 @@ class _BaseStreamDataLoaderIter:
         return self
 
     def __next__(self):
-        return self._get_next_batch()
+        if self.preload:
+            if self.pre_load_device_cache is None:
+                self._try_load_tensor(cached=False)  # load in current
+            out = self._swap_out_cache()
+            self._try_load_tensor()  # load in cached
+            return out
+        else:
+            return self._get_next_batch()
+
+    def _try_load_tensor(self, cached=True):
+        batch = self._get_next_batch()
+        self.pre_load_device_cache = self._load_tensor(batch, cached)
 
 
 class _SerialStreamDataLoaderIter(_BaseStreamDataLoaderIter):
-    def __init__(self, loader):
-        super().__init__(loader)
+    def __init__(self, loader, preload):
+        super().__init__(loader, preload)
         self.dataset_iter = iter(self.dataset)
         self.idx = 0
         self.unused = []
@@ -439,8 +527,8 @@ class _SerialStreamDataLoaderIter(_BaseStreamDataLoaderIter):
 class _ParallelStreamDataLoaderIter(_BaseStreamDataLoaderIter):
     __initialized = False
 
-    def __init__(self, loader):
-        super().__init__(loader)
+    def __init__(self, loader, preload):
+        super().__init__(loader, preload)
 
         self.shutdown_flag = multiprocessing.Value("i", 0)
 

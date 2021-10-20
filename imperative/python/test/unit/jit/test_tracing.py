@@ -96,6 +96,19 @@ def test_output_copy_trace():
 
 
 @pytest.mark.parametrize("trace_mode", [False, True])
+def test_tensor_detach(trace_mode):
+    @trace(symbolic=True)
+    def f(x):
+        y = x.detach() ** 2
+        z = y.detach() + 1
+        return z.detach()
+
+    x = tensor([1, 2, 3, 4])
+    for _ in range(3):
+        f(x).numpy()
+
+
+@pytest.mark.parametrize("trace_mode", [False, True])
 def test_exclude_from_trace(trace_mode):
     @trace(symbolic=trace_mode)
     def f(x):
@@ -521,16 +534,20 @@ def test_trace_valid_broadcast():
     f(x2, shape)
 
 
-def test_clip():
+@pytest.mark.parametrize("trace_mode", [False, True])
+def test_clip(trace_mode):
     x = tensor(np.random.randn(10, 10))
 
-    @trace(symbolic=True)
+    @trace(symbolic=trace_mode)
     def f(x, lower, upper):
         y = F.clip(x, lower, upper)
         return y
 
     for i in range(3):
         f(x, tensor([0]), tensor([1]))
+
+    for i in range(3):
+        f(x, tensor([5]), tensor([4]))
 
 
 # test returning noncontiguous tensor from trace

@@ -14,9 +14,12 @@ from ..tensor import Tensor
 
 
 def get_expand_structure(obj: Module, key: str):
-    """
-    Gets Module's attribute compatible with complex key from Module's :meth:`~.named_children`.
+    r"""Gets Module's attribute compatible with complex key from Module's :meth:`~.named_children`.
     Supports handling structure containing list or dict.
+
+    Args:
+        obj: Module: 
+        key: str: 
     """
 
     def f(_, __, cur):
@@ -26,8 +29,7 @@ def get_expand_structure(obj: Module, key: str):
 
 
 def set_expand_structure(obj: Module, key: str, value):
-    """
-    Sets Module's attribute compatible with complex key from Module's :meth:`~.named_children`.
+    r"""Sets Module's attribute compatible with complex key from Module's :meth:`~.named_children`.
     Supports handling structure containing list or dict.
     """
 
@@ -48,10 +50,11 @@ def set_expand_structure(obj: Module, key: str, value):
 def set_module_mode_safe(
     module: Module, training: bool = False,
 ):
-    """Adjust module to training/eval mode temporarily.
+    r"""Adjust module to training/eval mode temporarily.
 
-    :param module: used module.
-    :param training: training (bool): training mode. True for train mode, False fro eval mode.
+    Args:
+        module: used module.
+        training: training (bool): training mode. True for train mode, False fro eval mode.
     """
     backup_stats = {}
 

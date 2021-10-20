@@ -10,9 +10,9 @@
  * implied.
  */
 #pragma once
+#include <unordered_map>
 #include "megdnn/oprs/base.h"
 #include "src/fallback/pooling/opr_impl.h"
-#include <unordered_map>
 
 namespace megdnn {
 namespace arm_common {
@@ -38,10 +38,10 @@ private:
 
 public:
     using fallback::PoolingImpl::PoolingImpl;
-    void exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
-              _megdnn_workspace workspace) override;
-    size_t get_workspace_in_bytes(const TensorLayout&,
-                                  const TensorLayout&) override;
+    void exec(
+            _megdnn_tensor_in src, _megdnn_tensor_out dst,
+            _megdnn_workspace workspace) override;
+    size_t get_workspace_in_bytes(const TensorLayout&, const TensorLayout&) override;
 
     static size_t constexpr MAX_SPATIAL_DIM = 2;
 
@@ -83,10 +83,9 @@ public:
             fallback::PoolingImpl* opr, const TensorLayout& src,
             const TensorLayout& dst);
 
-    PoolingKernParam make_pooling_kern_param(fallback::PoolingImpl* opr,
-                                             _megdnn_tensor_in src,
-                                             _megdnn_tensor_out dst,
-                                             _megdnn_workspace workspace);
+    PoolingKernParam make_pooling_kern_param(
+            fallback::PoolingImpl* opr, _megdnn_tensor_in src, _megdnn_tensor_out dst,
+            _megdnn_workspace workspace);
     class AlgoBase : public detail::Algorithm {
     public:
         enum class AlgoType : uint32_t {
@@ -115,8 +114,7 @@ public:
         uint32_t type() const override { return INVALID_ALGO_TYPE; };
         bool is_available_attribute(
                 const PoolingKernSizeParam& param,
-                const AlgoAttribute& positive_attr =
-                        AlgoAttribute::REPRODUCIBLE,
+                const AlgoAttribute& positive_attr = AlgoAttribute::REPRODUCIBLE,
                 const AlgoAttribute& negative_attr = AlgoAttribute::DEFAULT) {
             return contain_attribute_all(positive_attr) &&
                    !contain_attribute_any(negative_attr) && usable(param);
@@ -131,6 +129,8 @@ public:
 
     std::vector<Algorithm*> get_all_algorithms(
             const TensorLayout& src, const TensorLayout& dst) override;
+    std::vector<Algorithm*> get_all_algorithms_safe(
+            const TensorLayout& src, const TensorLayout& dst) override;
 
     Algorithm* get_algorithm_heuristic(
             const TensorLayout& src, const TensorLayout& dst,
@@ -141,8 +141,8 @@ public:
             const TensorLayout& src, const TensorLayout& dst,
             size_t workspace_limit_in_bytes, const AlgoAttribute& positive_attr,
             const AlgoAttribute& negative_attr) {
-        return get_algorithm_heuristic(src, dst, workspace_limit_in_bytes,
-                                       positive_attr, negative_attr)
+        return get_algorithm_heuristic(
+                       src, dst, workspace_limit_in_bytes, positive_attr, negative_attr)
                 ->info();
     }
 

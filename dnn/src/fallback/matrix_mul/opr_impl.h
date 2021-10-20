@@ -32,11 +32,12 @@ public:
 
     bool is_thread_safe() const override { return true; }
 
-    size_t get_workspace_in_bytes(const TensorLayout&, const TensorLayout&,
-                                  const TensorLayout&) override;
+    size_t get_workspace_in_bytes(
+            const TensorLayout&, const TensorLayout&, const TensorLayout&) override;
 
-    void exec(_megdnn_tensor_in A, _megdnn_tensor_in B, _megdnn_tensor_out C,
-              _megdnn_workspace workspace) override;
+    void exec(
+            _megdnn_tensor_in A, _megdnn_tensor_in B, _megdnn_tensor_out C,
+            _megdnn_workspace workspace) override;
 
     struct KernSizeParam {
         DType A_type, B_type, C_type;
@@ -80,8 +81,8 @@ public:
     };
 
     typedef void (*kern_t)(const KernParam&);
-    typedef void (*kern_naked_t)(const KernParam&, const void* a_panel,
-                                 const void* b_panel);
+    typedef void (*kern_naked_t)(
+            const KernParam&, const void* a_panel, const void* b_panel);
     class AlgoBase : public Algorithm {
     protected:
         virtual ~AlgoBase() = default;
@@ -220,13 +221,10 @@ public:
         virtual WorkspaceBundle get_bundle(const KernSizeParam&) const {
             megdnn_assert(0);
         };
-        virtual InnerBlockSize get_inner_block_size() const {
-            megdnn_assert(0);
-        };
+        virtual InnerBlockSize get_inner_block_size() const { megdnn_assert(0); };
         bool preferred_attribute(
                 const KernSizeParam& param,
-                const AlgoAttribute& positive_attr =
-                        AlgoAttribute::REPRODUCIBLE,
+                const AlgoAttribute& positive_attr = AlgoAttribute::REPRODUCIBLE,
                 const AlgoAttribute& negative_attr = AlgoAttribute::DEFAULT) {
             return contain_attribute_all(positive_attr) &&
                    !contain_attribute_any(negative_attr) && preferred(param);
@@ -246,7 +244,6 @@ private:
     Algorithm* get_algorithm_from_desc(const AlgorithmDesc& desc) override;
 
 public:
-
     /**
      * \brief get all the algorithm for the opr.
      */
@@ -258,17 +255,20 @@ public:
     SmallVector<AlgoBase*> select_algo_type(AlgoTypePack algo_type);
 
 protected:
-    KernSizeParam make_kern_size_param(const TensorLayout& A,
-                                       const TensorLayout& B,
-                                       const TensorLayout& C);
+    KernSizeParam make_kern_size_param(
+            const TensorLayout& A, const TensorLayout& B, const TensorLayout& C);
 
-    KernParam make_kern_param(_megdnn_tensor_in A, _megdnn_tensor_in B,
-                              _megdnn_tensor_out C,
-                              _megdnn_workspace workspace);
+    KernParam make_kern_param(
+            _megdnn_tensor_in A, _megdnn_tensor_in B, _megdnn_tensor_out C,
+            _megdnn_workspace workspace);
 
-    std::vector<Algorithm*> get_all_algorithms(const TensorLayout& A,
-                                               const TensorLayout& B,
-                                               const TensorLayout& C) override;
+    std::vector<Algorithm*> get_all_algorithms(
+            const TensorLayout& A, const TensorLayout& B,
+            const TensorLayout& C) override;
+
+    std::vector<Algorithm*> get_all_algorithms_safe(
+            const TensorLayout& A, const TensorLayout& B,
+            const TensorLayout& C) override;
 
     Algorithm* get_algorithm_heuristic(
             const TensorLayout& A, const TensorLayout& B, const TensorLayout& C,

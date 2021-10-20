@@ -103,6 +103,7 @@ def test_Compose():
     )
     aug_data = t.apply_batch(generate_data())
     aug_data_shape = [(a.shape, b.shape) for a, b in aug_data]
-    print(aug_data_shape)
     target_shape = [((3, 90, 70), label_shape)] * 4
-    assert aug_data_shape == target_shape
+    assert aug_data_shape == target_shape, "aug {}, target {}".format(
+        aug_data_shape, target_shape
+    )

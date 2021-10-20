@@ -16,15 +16,15 @@
 
 using namespace lite;
 
-std::vector<uint8_t> RC4::decrypt_model(const void* model_mem, size_t size,
-                                        const std::vector<uint8_t>& key) {
+std::vector<uint8_t> RC4::decrypt_model(
+        const void* model_mem, size_t size, const std::vector<uint8_t>& key) {
     RC4Impl rc4_impl(model_mem, size, key);
     rc4_impl.init_rc4_state();
     return rc4_impl.decrypt_model();
 }
 
-std::vector<uint8_t> RC4::encrypt_model(const void* model_mem, size_t size,
-                                        const std::vector<uint8_t>& key) {
+std::vector<uint8_t> RC4::encrypt_model(
+        const void* model_mem, size_t size, const std::vector<uint8_t>& key) {
     RC4Impl rc4_impl(model_mem, size, key);
     return rc4_impl.encrypt_model();
 }

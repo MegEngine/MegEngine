@@ -119,11 +119,11 @@ protected:
 private:
     using ArgsCache = big_key_hash_map::BigKeyHashMap<
             std::unique_ptr<Executable>, JITExecutor::Args::HashEq,
-            big_key_hash_map::Ref<JITExecutor::Args> >;
+            big_key_hash_map::Ref<JITExecutor::Args>>;
 
-    using ExprCache =
-            std::unordered_map<const InternalGraph*, ArgsCache,
-                               InternalGraph::PtrHash, InternalGraph::PtrEqual>;
+    using ExprCache = std::unordered_map<
+            const InternalGraph*, ArgsCache, InternalGraph::PtrHash,
+            InternalGraph::PtrEqual>;
 
     class EmptyCompiler;
 

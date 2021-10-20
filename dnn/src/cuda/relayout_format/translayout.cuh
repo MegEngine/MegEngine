@@ -36,12 +36,10 @@ struct qtype_signedness<dtype::Quantized4Asymm> {
 
 template <typename dt_src, typename dt_dst>
 struct enable_qtype_b4 {
-    static constexpr bool val_src =
-            std::is_same<dt_src, dtype::QuantizedS4>::value ||
-            std::is_same<dt_src, dtype::Quantized4Asymm>::value;
-    static constexpr bool val_dst =
-            std::is_same<dt_dst, dtype::QuantizedS4>::value ||
-            std::is_same<dt_dst, dtype::Quantized4Asymm>::value;
+    static constexpr bool val_src = std::is_same<dt_src, dtype::QuantizedS4>::value ||
+                                    std::is_same<dt_src, dtype::Quantized4Asymm>::value;
+    static constexpr bool val_dst = std::is_same<dt_dst, dtype::QuantizedS4>::value ||
+                                    std::is_same<dt_dst, dtype::Quantized4Asymm>::value;
     static constexpr bool value =
             std::is_same<dt_src, dt_dst>::value && val_src && val_dst;
     using type = typename std::enable_if<value>::type;
@@ -50,20 +48,18 @@ struct enable_qtype_b4 {
 // The input fragment is stored in RowMajor order. The translayout operator
 // performs a transpose operation on the input fragment, and produces a
 // reordered fragment, i.e. a fragment stored in ColumnMajor order.
-template <int col, int row, typename SrcType, typename DnnSrcType,
-          typename DnnDstType, bool same_scale, typename enable = void>
+template <
+        int col, int row, typename SrcType, typename DnnSrcType, typename DnnDstType,
+        bool same_scale, typename enable = void>
 struct Translayout;
 
 // partial specialization for translayout operator for qint8 and quint8
-template <typename SrcType, typename DnnSrcType, typename DnnDstType,
-          bool same_scale>
+template <typename SrcType, typename DnnSrcType, typename DnnDstType, bool same_scale>
 struct Translayout<1, 4, SrcType, DnnSrcType, DnnDstType, same_scale> {
-    using InnerDtype =
-            typename DTypeRWHelper<typename DTypeTrait<DnnSrcType>::ctype,
-                                   1>::InnerDtype;
+    using InnerDtype = typename DTypeRWHelper<
+            typename DTypeTrait<DnnSrcType>::ctype, 1>::InnerDtype;
     using DstDtype =
-            typename DTypeRWHelper<typename DTypeTrait<DnnSrcType>::ctype,
-                                   1>::DstDtype;
+            typename DTypeRWHelper<typename DTypeTrait<DnnSrcType>::ctype, 1>::DstDtype;
     static inline __device__ void trans(
             DstDtype (&dst_width)[1], InnerDtype (&read_channel)[4],
             CudaPostProcess<DnnSrcType, DnnDstType, same_scale>& post_process,
@@ -75,15 +71,12 @@ struct Translayout<1, 4, SrcType, DnnSrcType, DnnDstType, same_scale> {
     }
 };
 
-template <typename SrcType, typename DnnSrcType, typename DnnDstType,
-          bool same_scale>
+template <typename SrcType, typename DnnSrcType, typename DnnDstType, bool same_scale>
 struct Translayout<4, 4, SrcType, DnnSrcType, DnnDstType, same_scale> {
-    using InnerDtype =
-            typename DTypeRWHelper<typename DTypeTrait<DnnSrcType>::ctype,
-                                   4>::InnerDtype;
+    using InnerDtype = typename DTypeRWHelper<
+            typename DTypeTrait<DnnSrcType>::ctype, 4>::InnerDtype;
     using DstDtype =
-            typename DTypeRWHelper<typename DTypeTrait<DnnSrcType>::ctype,
-                                   4>::DstDtype;
+            typename DTypeRWHelper<typename DTypeTrait<DnnSrcType>::ctype, 4>::DstDtype;
     static inline __device__ void trans(
             DstDtype (&dst_width)[4], InnerDtype (&read_channel)[4],
             CudaPostProcess<DnnSrcType, DnnDstType, same_scale>& post_process,
@@ -114,18 +107,16 @@ struct Translayout<4, 4, SrcType, DnnSrcType, DnnDstType, same_scale> {
 
 // partial specialization for translayout operator for qint4
 // NCHW <-> NCHW64
-template <typename SrcType, typename DnnSrcType_, typename DnnDstType_,
-          bool same_scale>
-struct Translayout<2, 64, SrcType, DnnSrcType_, DnnDstType_, same_scale,
-                   typename enable_qtype_b4<DnnSrcType_, DnnDstType_>::type> {
+template <typename SrcType, typename DnnSrcType_, typename DnnDstType_, bool same_scale>
+struct Translayout<
+        2, 64, SrcType, DnnSrcType_, DnnDstType_, same_scale,
+        typename enable_qtype_b4<DnnSrcType_, DnnDstType_>::type> {
     using DnnSrcType = DnnSrcType_;
     using DnnDstType = DnnDstType_;
-    using InnerDtype =
-            typename DTypeRWHelper<typename DTypeTrait<DnnSrcType>::ctype,
-                                   2>::InnerDtype;
+    using InnerDtype = typename DTypeRWHelper<
+            typename DTypeTrait<DnnSrcType>::ctype, 2>::InnerDtype;
     using DstDtype =
-            typename DTypeRWHelper<typename DTypeTrait<DnnSrcType>::ctype,
-                                   2>::DstDtype;
+            typename DTypeRWHelper<typename DTypeTrait<DnnSrcType>::ctype, 2>::DstDtype;
     static constexpr bool signedness = qtype_signedness<DnnSrcType>::value;
     static inline __device__ void trans(
             DstDtype (&dst_width)[2], InnerDtype (&read_channel)[64],
@@ -147,29 +138,21 @@ struct Translayout<2, 64, SrcType, DnnSrcType_, DnnDstType_, same_scale,
 #pragma unroll
         for (int i = 0; i < 64; i += 8) {
             transform_b4x2_to_int8<signedness>(
-                    intermediate[0],
-                    reinterpret_cast<uint8_t&>(read_channel[i + 0]));
+                    intermediate[0], reinterpret_cast<uint8_t&>(read_channel[i + 0]));
             transform_b4x2_to_int8<signedness>(
-                    intermediate[1],
-                    reinterpret_cast<uint8_t&>(read_channel[i + 1]));
+                    intermediate[1], reinterpret_cast<uint8_t&>(read_channel[i + 1]));
             transform_b4x2_to_int8<signedness>(
-                    intermediate[2],
-                    reinterpret_cast<uint8_t&>(read_channel[i + 2]));
+                    intermediate[2], reinterpret_cast<uint8_t&>(read_channel[i + 2]));
             transform_b4x2_to_int8<signedness>(
-                    intermediate[3],
-                    reinterpret_cast<uint8_t&>(read_channel[i + 3]));
+                    intermediate[3], reinterpret_cast<uint8_t&>(read_channel[i + 3]));
             transform_b4x2_to_int8<signedness>(
-                    intermediate[4],
-                    reinterpret_cast<uint8_t&>(read_channel[i + 4]));
+                    intermediate[4], reinterpret_cast<uint8_t&>(read_channel[i + 4]));
             transform_b4x2_to_int8<signedness>(
-                    intermediate[5],
-                    reinterpret_cast<uint8_t&>(read_channel[i + 5]));
+                    intermediate[5], reinterpret_cast<uint8_t&>(read_channel[i + 5]));
             transform_b4x2_to_int8<signedness>(
-                    intermediate[6],
-                    reinterpret_cast<uint8_t&>(read_channel[i + 6]));
+                    intermediate[6], reinterpret_cast<uint8_t&>(read_channel[i + 6]));
             transform_b4x2_to_int8<signedness>(
-                    intermediate[7],
-                    reinterpret_cast<uint8_t&>(read_channel[i + 7]));
+                    intermediate[7], reinterpret_cast<uint8_t&>(read_channel[i + 7]));
 
             int frag_idx = i / 8;
             dst_frag[0 * 8 + frag_idx] = pack_channel(0);
@@ -185,18 +168,16 @@ struct Translayout<2, 64, SrcType, DnnSrcType_, DnnDstType_, same_scale,
     }
 };
 
-template <typename SrcType, typename DnnSrcType_, typename DnnDstType_,
-          bool same_scale>
-struct Translayout<8, 64, SrcType, DnnSrcType_, DnnDstType_, same_scale,
-                   typename enable_qtype_b4<DnnSrcType_, DnnDstType_>::type> {
+template <typename SrcType, typename DnnSrcType_, typename DnnDstType_, bool same_scale>
+struct Translayout<
+        8, 64, SrcType, DnnSrcType_, DnnDstType_, same_scale,
+        typename enable_qtype_b4<DnnSrcType_, DnnDstType_>::type> {
     using DnnSrcType = DnnSrcType_;
     using DnnDstType = DnnDstType_;
-    using InnerDtype =
-            typename DTypeRWHelper<typename DTypeTrait<DnnSrcType>::ctype,
-                                   8>::InnerDtype;
+    using InnerDtype = typename DTypeRWHelper<
+            typename DTypeTrait<DnnSrcType>::ctype, 8>::InnerDtype;
     using DstDtype =
-            typename DTypeRWHelper<typename DTypeTrait<DnnSrcType>::ctype,
-                                   8>::DstDtype;
+            typename DTypeRWHelper<typename DTypeTrait<DnnSrcType>::ctype, 8>::DstDtype;
     static constexpr bool signedness = qtype_signedness<DnnSrcType>::value;
     static inline __device__ void trans(
             DstDtype (&dst_width)[8], InnerDtype (&read_channel)[64],
@@ -217,22 +198,14 @@ struct Translayout<8, 64, SrcType, DnnSrcType_, DnnDstType_, same_scale,
         };
 #pragma unroll
         for (int i = 0; i < 64; i += 8) {
-            transform_b4x8_to_int8<signedness>(intermediate[0],
-                                               read_channel[i + 0]);
-            transform_b4x8_to_int8<signedness>(intermediate[1],
-                                               read_channel[i + 1]);
-            transform_b4x8_to_int8<signedness>(intermediate[2],
-                                               read_channel[i + 2]);
-            transform_b4x8_to_int8<signedness>(intermediate[3],
-                                               read_channel[i + 3]);
-            transform_b4x8_to_int8<signedness>(intermediate[4],
-                                               read_channel[i + 4]);
-            transform_b4x8_to_int8<signedness>(intermediate[5],
-                                               read_channel[i + 5]);
-            transform_b4x8_to_int8<signedness>(intermediate[6],
-                                               read_channel[i + 6]);
-            transform_b4x8_to_int8<signedness>(intermediate[7],
-                                               read_channel[i + 7]);
+            transform_b4x8_to_int8<signedness>(intermediate[0], read_channel[i + 0]);
+            transform_b4x8_to_int8<signedness>(intermediate[1], read_channel[i + 1]);
+            transform_b4x8_to_int8<signedness>(intermediate[2], read_channel[i + 2]);
+            transform_b4x8_to_int8<signedness>(intermediate[3], read_channel[i + 3]);
+            transform_b4x8_to_int8<signedness>(intermediate[4], read_channel[i + 4]);
+            transform_b4x8_to_int8<signedness>(intermediate[5], read_channel[i + 5]);
+            transform_b4x8_to_int8<signedness>(intermediate[6], read_channel[i + 6]);
+            transform_b4x8_to_int8<signedness>(intermediate[7], read_channel[i + 7]);
             int frag_idx = i / 8;
             dst_frag[0 * 8 + frag_idx] = pack_channel(0);
             dst_frag[1 * 8 + frag_idx] = pack_channel(1);
@@ -253,10 +226,10 @@ struct Translayout<8, 64, SrcType, DnnSrcType_, DnnDstType_, same_scale,
     }
 };
 
-template <typename SrcType, typename DnnSrcType_, typename DnnDstType_,
-          bool same_scale>
-struct Translayout<64, 8, SrcType, DnnSrcType_, DnnDstType_, same_scale,
-                   typename enable_qtype_b4<DnnSrcType_, DnnDstType_>::type> {
+template <typename SrcType, typename DnnSrcType_, typename DnnDstType_, bool same_scale>
+struct Translayout<
+        64, 8, SrcType, DnnSrcType_, DnnDstType_, same_scale,
+        typename enable_qtype_b4<DnnSrcType_, DnnDstType_>::type> {
     using DnnSrcType = DnnSrcType_;
     using DnnDstType = DnnDstType_;
     static constexpr int row = 8;
@@ -265,8 +238,7 @@ struct Translayout<64, 8, SrcType, DnnSrcType_, DnnDstType_, same_scale,
     static constexpr int col_in_type = col * size_nbits / (8 * sizeof(SrcType));
     static constexpr int elements_in_type = row * col_in_type;
     static constexpr int inc_col = 8;
-    static constexpr int inc_col_in_type =
-            inc_col * size_nbits / (8 * sizeof(SrcType));
+    static constexpr int inc_col_in_type = inc_col * size_nbits / (8 * sizeof(SrcType));
     static constexpr bool signedness = qtype_signedness<DnnSrcType>::value;
     using Fragment = array_wrapper<SrcType, elements_in_type>;
     static MEGDNN_DEVICE __forceinline__ void trans(
@@ -323,10 +295,10 @@ struct Translayout<64, 8, SrcType, DnnSrcType_, DnnDstType_, same_scale,
     }
 };
 
-template <typename SrcType, typename DnnSrcType_, typename DnnDstType_,
-          bool same_scale>
-struct Translayout<64, 2, SrcType, DnnSrcType_, DnnDstType_, same_scale,
-                   typename enable_qtype_b4<DnnSrcType_, DnnDstType_>::type> {
+template <typename SrcType, typename DnnSrcType_, typename DnnDstType_, bool same_scale>
+struct Translayout<
+        64, 2, SrcType, DnnSrcType_, DnnDstType_, same_scale,
+        typename enable_qtype_b4<DnnSrcType_, DnnDstType_>::type> {
     using DnnSrcType = DnnSrcType_;
     using DnnDstType = DnnDstType_;
     static constexpr int row = 2;
@@ -335,8 +307,7 @@ struct Translayout<64, 2, SrcType, DnnSrcType_, DnnDstType_, same_scale,
     static constexpr int col_in_type = col * size_nbits / (8 * sizeof(SrcType));
     static constexpr int elements_in_type = row * col_in_type;
     static constexpr int inc_col = 8;
-    static constexpr int inc_col_in_type =
-            inc_col * size_nbits / (8 * sizeof(SrcType));
+    static constexpr int inc_col_in_type = inc_col * size_nbits / (8 * sizeof(SrcType));
     static constexpr bool signedness = qtype_signedness<DnnSrcType>::value;
     using Fragment = array_wrapper<SrcType, elements_in_type>;
     static MEGDNN_DEVICE __forceinline__ void trans(
@@ -379,10 +350,10 @@ struct Translayout<64, 2, SrcType, DnnSrcType_, DnnDstType_, same_scale,
 
 // partial specialization for translayout operator for qint4
 // NCHW <-> NHWC
-template <typename SrcType, typename DnnSrcType_, typename DnnDstType_,
-          bool same_scale>
-struct Translayout<2, 8, SrcType, DnnSrcType_, DnnDstType_, same_scale,
-                   typename enable_qtype_b4<DnnSrcType_, DnnDstType_>::type> {
+template <typename SrcType, typename DnnSrcType_, typename DnnDstType_, bool same_scale>
+struct Translayout<
+        2, 8, SrcType, DnnSrcType_, DnnDstType_, same_scale,
+        typename enable_qtype_b4<DnnSrcType_, DnnDstType_>::type> {
     using DnnSrcType = DnnSrcType_;
     using DnnDstType = DnnDstType_;
     static constexpr int row = 8;
@@ -437,10 +408,10 @@ struct Translayout<2, 8, SrcType, DnnSrcType_, DnnDstType_, same_scale,
     }
 };
 
-template <typename SrcType, typename DnnSrcType_, typename DnnDstType_,
-          bool same_scale>
-struct Translayout<8, 8, SrcType, DnnSrcType_, DnnDstType_, same_scale,
-                   typename enable_qtype_b4<DnnSrcType_, DnnDstType_>::type> {
+template <typename SrcType, typename DnnSrcType_, typename DnnDstType_, bool same_scale>
+struct Translayout<
+        8, 8, SrcType, DnnSrcType_, DnnDstType_, same_scale,
+        typename enable_qtype_b4<DnnSrcType_, DnnDstType_>::type> {
     using DnnSrcType = DnnSrcType_;
     using DnnDstType = DnnDstType_;
     static constexpr int row = 8;
@@ -493,10 +464,10 @@ struct Translayout<8, 8, SrcType, DnnSrcType_, DnnDstType_, same_scale,
     }
 };
 
-template <typename SrcType, typename DnnSrcType_, typename DnnDstType_,
-          bool same_scale>
-struct Translayout<8, 2, SrcType, DnnSrcType_, DnnDstType_, same_scale,
-                   typename enable_qtype_b4<DnnSrcType_, DnnDstType_>::type> {
+template <typename SrcType, typename DnnSrcType_, typename DnnDstType_, bool same_scale>
+struct Translayout<
+        8, 2, SrcType, DnnSrcType_, DnnDstType_, same_scale,
+        typename enable_qtype_b4<DnnSrcType_, DnnDstType_>::type> {
     using DnnSrcType = DnnSrcType_;
     using DnnDstType = DnnDstType_;
     static constexpr int row = 2;
@@ -516,23 +487,15 @@ struct Translayout<8, 2, SrcType, DnnSrcType_, DnnDstType_, same_scale,
                 intermediate[1], reinterpret_cast<const int&>(src[1 * col_in_type]));
         int* dst_frag = reinterpret_cast<int*>(&dst);
         dst_frag[0] = transform_int8_to_b4x8<signedness>(
-                post_process(intermediate[0][0]),
-                post_process(intermediate[1][0]),
-                post_process(intermediate[0][1]),
-                post_process(intermediate[1][1]),
-                post_process(intermediate[0][2]),
-                post_process(intermediate[1][2]),
-                post_process(intermediate[0][3]),
-                post_process(intermediate[1][3]));
+                post_process(intermediate[0][0]), post_process(intermediate[1][0]),
+                post_process(intermediate[0][1]), post_process(intermediate[1][1]),
+                post_process(intermediate[0][2]), post_process(intermediate[1][2]),
+                post_process(intermediate[0][3]), post_process(intermediate[1][3]));
         dst_frag[1] = transform_int8_to_b4x8<signedness>(
-                post_process(intermediate[0][4]),
-                post_process(intermediate[1][4]),
-                post_process(intermediate[0][5]),
-                post_process(intermediate[1][5]),
-                post_process(intermediate[0][6]),
-                post_process(intermediate[1][6]),
-                post_process(intermediate[0][7]),
-                post_process(intermediate[1][7]));
+                post_process(intermediate[0][4]), post_process(intermediate[1][4]),
+                post_process(intermediate[0][5]), post_process(intermediate[1][5]),
+                post_process(intermediate[0][6]), post_process(intermediate[1][6]),
+                post_process(intermediate[0][7]), post_process(intermediate[1][7]));
     }
 };
 

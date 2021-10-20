@@ -24,8 +24,8 @@ using namespace rounding;
 namespace {
 
 template <const uint32_t format>
-__device__ inline int get_offset(int height, int width, int channel, int h,
-                                 int w, int c);
+__device__ inline int get_offset(
+        int height, int width, int channel, int h, int w, int c);
 
 template <>
 __device__ inline int get_offset<param_enumv::Remap::Format::NCHW>(
@@ -41,9 +41,9 @@ __device__ inline int get_offset<param_enumv::Remap::Format::NHWC>(
 
 template <typename ctype, const uint32_t format, ::BorderMode bmode>
 struct GetSrcData {
-    __device__ static inline ctype get(const ctype* src, int height, int width,
-                                       int channel, int h, int w, int c,
-                                       float) {
+    __device__ static inline ctype get(
+            const ctype* src, int height, int width, int channel, int h, int w, int c,
+            float) {
         height = megcv::border_interpolate<bmode>(height, h);
         width = megcv::border_interpolate<bmode>(width, w);
         return src[get_offset<format>(height, width, channel, h, w, c)];
@@ -52,21 +52,20 @@ struct GetSrcData {
 
 template <typename ctype, const uint32_t format>
 struct GetSrcData<ctype, format, ::BorderMode::BORDER_CONSTANT> {
-    __device__ static inline ctype get(const ctype* src, int height, int width,
-                                       int channel, int h, int w, int c,
-                                       float scalar) {
+    __device__ static inline ctype get(
+            const ctype* src, int height, int width, int channel, int h, int w, int c,
+            float scalar) {
         RoundingConverter<ctype> round_converter;
         return (height >= 0 && height < h && width >= 0 && width < w)
-                       ? src[get_offset<format>(height, width, channel, h, w,
-                                                c)]
-                       : round_converter(scalar);
+                     ? src[get_offset<format>(height, width, channel, h, w, c)]
+                     : round_converter(scalar);
     }
 };
 
 template <typename ctype, ::BorderMode bmode>
-__global__ void kern_general(const ctype* __restrict sptr, const float* map_xy,
-                             ctype* __restrict dst, int C, int IH, int IW,
-                             int OH, int OW, float scalar) {
+__global__ void kern_general(
+        const ctype* __restrict sptr, const float* map_xy, ctype* __restrict dst, int C,
+        int IH, int IW, int OH, int OW, float scalar) {
     int ow = blockIdx.x * blockDim.x + threadIdx.x;
     int oh = blockIdx.y * blockDim.y + threadIdx.y;
     sptr += blockIdx.z * C * IH * IW;
@@ -82,34 +81,29 @@ __global__ void kern_general(const ctype* __restrict sptr, const float* map_xy,
         float v = index_col - col;
         float u = index_row - row;
         for (int c = 0; c < C; ++c) {
-            ctype a00 = GetSrcData<ctype, param_enumv::Remap::Format::NCHW,
-                                   bmode>::get(sptr, row + 0, col + 0, c, IH,
-                                               IW, C, scalar);
-            ctype a01 = GetSrcData<ctype, param_enumv::Remap::Format::NCHW,
-                                   bmode>::get(sptr, row + 0, col + 1, c, IH,
-                                               IW, C, scalar);
-            ctype a10 = GetSrcData<ctype, param_enumv::Remap::Format::NCHW,
-                                   bmode>::get(sptr, row + 1, col + 0, c, IH,
-                                               IW, C, scalar);
-            ctype a11 = GetSrcData<ctype, param_enumv::Remap::Format::NCHW,
-                                   bmode>::get(sptr, row + 1, col + 1, c, IH,
-                                               IW, C, scalar);
+            ctype a00 = GetSrcData<ctype, param_enumv::Remap::Format::NCHW, bmode>::get(
+                    sptr, row + 0, col + 0, c, IH, IW, C, scalar);
+            ctype a01 = GetSrcData<ctype, param_enumv::Remap::Format::NCHW, bmode>::get(
+                    sptr, row + 0, col + 1, c, IH, IW, C, scalar);
+            ctype a10 = GetSrcData<ctype, param_enumv::Remap::Format::NCHW, bmode>::get(
+                    sptr, row + 1, col + 0, c, IH, IW, C, scalar);
+            ctype a11 = GetSrcData<ctype, param_enumv::Remap::Format::NCHW, bmode>::get(
+                    sptr, row + 1, col + 1, c, IH, IW, C, scalar);
             /* in remap, we use float as the type of intermediate result */
             float result = static_cast<float>(a00) * (1.f - u) * (1.f - v) +
                            static_cast<float>(a01) * (1.f - u) * v +
                            static_cast<float>(a10) * (1.f - v) * u +
                            static_cast<float>(a11) * u * v;
-            dst[get_offset<param_enumv::Remap::Format::NCHW>(
-                    oh, ow, c, OH, OW, C)] = round_converter(result);
+            dst[get_offset<param_enumv::Remap::Format::NCHW>(oh, ow, c, OH, OW, C)] =
+                    round_converter(result);
         }
     }
 }
 
 template <typename ctype, ::BorderMode bmode>
-__global__ void kern_general_nhwc(const ctype* __restrict sptr,
-                                  const float* map_xy, ctype* __restrict dst,
-                                  int C, int IH, int IW, int OH, int OW,
-                                  float scalar) {
+__global__ void kern_general_nhwc(
+        const ctype* __restrict sptr, const float* map_xy, ctype* __restrict dst, int C,
+        int IH, int IW, int OH, int OW, float scalar) {
     int ow = blockIdx.x * blockDim.x + threadIdx.x;
     int oh = blockIdx.y * blockDim.y + threadIdx.y;
     sptr += blockIdx.z * C * IH * IW;
@@ -125,33 +119,29 @@ __global__ void kern_general_nhwc(const ctype* __restrict sptr,
         float v = index_col - col;
         float u = index_row - row;
         for (int c = 0; c < C; ++c) {
-            ctype a00 = GetSrcData<ctype, param_enumv::Remap::Format::NHWC,
-                                   bmode>::get(sptr, row + 0, col + 0, c, IH,
-                                               IW, C, scalar);
-            ctype a01 = GetSrcData<ctype, param_enumv::Remap::Format::NHWC,
-                                   bmode>::get(sptr, row + 0, col + 1, c, IH,
-                                               IW, C, scalar);
-            ctype a10 = GetSrcData<ctype, param_enumv::Remap::Format::NHWC,
-                                   bmode>::get(sptr, row + 1, col + 0, c, IH,
-                                               IW, C, scalar);
-            ctype a11 = GetSrcData<ctype, param_enumv::Remap::Format::NHWC,
-                                   bmode>::get(sptr, row + 1, col + 1, c, IH,
-                                               IW, C, scalar);
+            ctype a00 = GetSrcData<ctype, param_enumv::Remap::Format::NHWC, bmode>::get(
+                    sptr, row + 0, col + 0, c, IH, IW, C, scalar);
+            ctype a01 = GetSrcData<ctype, param_enumv::Remap::Format::NHWC, bmode>::get(
+                    sptr, row + 0, col + 1, c, IH, IW, C, scalar);
+            ctype a10 = GetSrcData<ctype, param_enumv::Remap::Format::NHWC, bmode>::get(
+                    sptr, row + 1, col + 0, c, IH, IW, C, scalar);
+            ctype a11 = GetSrcData<ctype, param_enumv::Remap::Format::NHWC, bmode>::get(
+                    sptr, row + 1, col + 1, c, IH, IW, C, scalar);
             /* in remap, we use float as the type of intermediate result */
             float result = static_cast<float>(a00) * (1.f - u) * (1.f - v) +
                            static_cast<float>(a01) * (1.f - u) * v +
                            static_cast<float>(a10) * (1.f - v) * u +
                            static_cast<float>(a11) * u * v;
-            dst[get_offset<param_enumv::Remap::Format::NHWC>(
-                    oh, ow, c, OH, OW, C)] = round_converter(result);
+            dst[get_offset<param_enumv::Remap::Format::NHWC>(oh, ow, c, OH, OW, C)] =
+                    round_converter(result);
         }
     }
 }
 
 template <typename ctype, const uint32_t format, ::BorderMode bmode>
-void dispatch_forward(const ctype* src, const float* map_xy, ctype* dst, int N,
-                      int C, int IH, int IW, int OH, int OW, float scalar,
-                      cudaStream_t stream) {
+void dispatch_forward(
+        const ctype* src, const float* map_xy, ctype* dst, int N, int C, int IH, int IW,
+        int OH, int OW, float scalar, cudaStream_t stream) {
     const int BX = 32, BY = 16;
 
     const int max_batch_size = 65535;
@@ -182,19 +172,19 @@ namespace cuda {
 namespace remap {
 
 template <typename ctype, const uint32_t format, ::BorderMode bmode>
-void forward_proxy(const ctype* src, const float* map_xy, ctype* dst, int N,
-                   int C, int IH, int IW, int OH, int OW, float scalar,
-                   cudaStream_t stream) {
-    dispatch_forward<ctype, format, bmode>(src, map_xy, dst, N, C, IH, IW, OH,
-                                           OW, scalar, stream);
+void forward_proxy(
+        const ctype* src, const float* map_xy, ctype* dst, int N, int C, int IH, int IW,
+        int OH, int OW, float scalar, cudaStream_t stream) {
+    dispatch_forward<ctype, format, bmode>(
+            src, map_xy, dst, N, C, IH, IW, OH, OW, scalar, stream);
     after_kernel_launch();
 }
 
-#define INST(ctype, format, bmode)                                            \
-    template void forward_proxy<ctype, param_enumv::Remap::Format::format,    \
-                                ::BorderMode::bmode>(                         \
-            const ctype*, const float*, ctype*, int, int, int, int, int, int, \
-            float, cudaStream_t);
+#define INST(ctype, format, bmode)                                                   \
+    template void                                                                    \
+    forward_proxy<ctype, param_enumv::Remap::Format::format, ::BorderMode::bmode>(   \
+            const ctype*, const float*, ctype*, int, int, int, int, int, int, float, \
+            cudaStream_t);
 
 #define FOR_FORMAT_BMODE(ctype)           \
     INST(ctype, NCHW, BORDER_CONSTANT)    \

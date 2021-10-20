@@ -47,8 +47,8 @@ public:
      * \param id id of this placeholder in the sub graph
      * \param inp_type input type of this placeholder as described in InpType
      */
-    static SymbolVar make(VarNode* src_var, size_t id,
-                          InpType inp_type = InpType::DEV_VALUE);
+    static SymbolVar make(
+            VarNode* src_var, size_t id, InpType inp_type = InpType::DEV_VALUE);
 
     //! index of this var in the inputs of the JIT opr
     size_t input_id() const { return m_id; }

@@ -41,10 +41,8 @@ inline static std::vector<TestArg> get_args() {
                     cur_param.format = megdnn::param::Correlation::Format::NCHW;
 
                     args.emplace_back(
-                            cur_param,
-                            TensorShape{batch_size, channel, height, width},
+                            cur_param, TensorShape{batch_size, channel, height, width},
                             TensorShape{batch_size, channel, height, width});
-
                 }
             }
         }

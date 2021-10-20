@@ -13,8 +13,8 @@
 
 #if MGB_JIT
 
-#include "megbrain/utils/debug.h"
 #include "megbrain/jit/utils.h"
+#include "megbrain/utils/debug.h"
 
 #if MGB_CUDA
 #include "megbrain/utils/cuda_helper.h"
@@ -82,17 +82,19 @@ class ExecutableHelperImpl final : public ExecutableHelper {
         std::string out;
         std::array<char, 128> buffer;
         FILE* pipe = popen((cmd + " 2>&1").c_str(), "r");
-        mgb_throw_if(!pipe, SystemError, "popen() for cmd %s failed: %s",
-                     cmd.c_str(), strerror(errno));
+        mgb_throw_if(
+                !pipe, SystemError, "popen() for cmd %s failed: %s", cmd.c_str(),
+                strerror(errno));
         std::unique_ptr<FILE, int (*)(FILE*)> pipe_close{pipe, ::pclose};
         while (fgets(buffer.data(), buffer.size(), pipe) != nullptr) {
             out += buffer.data();
         }
         pipe_close.release();
         int ret = pclose(pipe);
-        mgb_throw_if(ret, SystemError,
-                     "command %s failed: return code=%d; captured output:\n%s",
-                     cmd.c_str(), ret, out.c_str());
+        mgb_throw_if(
+                ret, SystemError,
+                "command %s failed: return code=%d; captured output:\n%s", cmd.c_str(),
+                ret, out.c_str());
     }
 
 public:
@@ -101,16 +103,18 @@ public:
             struct stat sb;
             if (!(stat(set, &sb) == 0 && S_ISDIR(sb.st_mode))) {
                 int err = mkdir(set, 0700);
-                mgb_throw_if(err, SystemError, "failed to create dir %s: %s",
-                             set, strerror(errno));
+                mgb_throw_if(
+                        err, SystemError, "failed to create dir %s: %s", set,
+                        strerror(errno));
                 m_workdir_need_rm = true;
             }
             m_workdir = set;
         } else {
             char name[] = "/tmp/mgbjit-XXXXXX";
             auto ptr = mkdtemp(name);
-            mgb_throw_if(!ptr, SystemError, "failed to create temp dir: %s",
-                         strerror(errno));
+            mgb_throw_if(
+                    !ptr, SystemError, "failed to create temp dir: %s",
+                    strerror(errno));
             m_workdir = ptr;
             m_workdir_need_rm = true;
         }
@@ -132,8 +136,7 @@ public:
                         struct FTW* ftwbuf) -> int {
             int err = ::remove(fpath);
             if (err) {
-                mgb_log_error("failed to remove %s: %s", fpath,
-                              strerror(errno));
+                mgb_log_error("failed to remove %s: %s", fpath, strerror(errno));
             } else {
                 mgb_log_debug("removed temp file in workdir: %s", fpath);
             }
@@ -147,15 +150,17 @@ public:
 
     void* load_lib(const std::string& name) override {
         auto ret = dlopen(realpath(name).c_str(), RTLD_LAZY | RTLD_LOCAL);
-        mgb_throw_if(!ret, SystemError, "failed to load library %s: %s",
-                     name.c_str(), dlerror());
+        mgb_throw_if(
+                !ret, SystemError, "failed to load library %s: %s", name.c_str(),
+                dlerror());
         return ret;
     }
 
     void* resolve_func(void* handle, const std::string& func_name) override {
         auto ret = dlsym(handle, func_name.c_str());
-        mgb_throw_if(!ret, SystemError, "failed to resolve %s: %s",
-                     func_name.c_str(), dlerror());
+        mgb_throw_if(
+                !ret, SystemError, "failed to resolve %s: %s", func_name.c_str(),
+                dlerror());
         return ret;
     }
 
@@ -172,36 +177,34 @@ public:
                 path = lmap->l_name;
             }
             if (dlclose(handle)) {
-                mgb_log_error("failed to close %s: %s", path.c_str(),
-                              dlerror());
+                mgb_log_error("failed to close %s: %s", path.c_str(), dlerror());
             }
             if (path_good) {
                 auto h1 = dlopen(path.c_str(), RTLD_NOLOAD | RTLD_LOCAL);
                 if (h1) {
                     dlclose(h1);
-                    mgb_log_warn("library %s is not totally released",
-                                 path.c_str());
+                    mgb_log_warn("library %s is not totally released", path.c_str());
                 }
             }
         }
     }
 
-    std::string compile_cpp_source_secondary(const char* source,
-                                             const char* out_name) override {
+    std::string compile_cpp_source_secondary(
+            const char* source, const char* out_name) override {
         std::string uniq_name{out_name};
         uniq_name.append("-");
-        uniq_name.append(std::to_string(
-                XXHash{}.update(source, strlen(source)).digest()));
+        uniq_name.append(
+                std::to_string(XXHash{}.update(source, strlen(source)).digest()));
         auto src_name = uniq_name + ".cpp", obj_name = uniq_name + ".o";
         write_file(src_name, source);
-        check_exec(ssprintf("g++ -O2 -fPIC -std=c++11 '%s' -o '%s' -c",
-                            realpath(src_name).c_str(),
-                            realpath(obj_name).c_str()));
+        check_exec(ssprintf(
+                "g++ -O2 -fPIC -std=c++11 '%s' -o '%s' -c", realpath(src_name).c_str(),
+                realpath(obj_name).c_str()));
         return obj_name;
     }
 
-    void link(const SmallVector<std::string>& inp_names,
-              const std::string& out_name) override {
+    void link(const SmallVector<std::string>& inp_names, const std::string& out_name)
+            override {
         std::string cmd{"g++ -shared -std=c++11 -o '"};
         cmd.append(realpath(out_name));
         cmd.append("'");
@@ -220,8 +223,9 @@ public:
 
     void remove(const std::string& name) override {
         int err = unlink(realpath(name).c_str());
-        mgb_throw_if(err, SystemError, "failed to unlink %s: %s", name.c_str(),
-                     strerror(errno));
+        mgb_throw_if(
+                err, SystemError, "failed to unlink %s: %s", name.c_str(),
+                strerror(errno));
     }
 };
 
@@ -229,17 +233,18 @@ public:
 
 }  // anonymous namespace
 
-void ExecutableHelper::write_file(const std::string& name,
-                                  const std::string& data) {
+void ExecutableHelper::write_file(const std::string& name, const std::string& data) {
     auto full_name = realpath(name);
     FILE* fptr = fopen(full_name.c_str(), "wb");
-    mgb_throw_if(!fptr, SystemError, "failed to open %s: %s", full_name.c_str(),
-                 strerror(errno));
+    mgb_throw_if(
+            !fptr, SystemError, "failed to open %s: %s", full_name.c_str(),
+            strerror(errno));
     std::unique_ptr<FILE, int (*)(FILE*)> fptr_close{fptr, ::fclose};
     auto done = fwrite(data.data(), 1, data.size(), fptr);
-    mgb_throw_if(done != data.size(), SystemError,
-                 "failed to write file: req=%zu written=%zu: %s", data.size(),
-                 done, strerror(errno));
+    mgb_throw_if(
+            done != data.size(), SystemError,
+            "failed to write file: req=%zu written=%zu: %s", data.size(), done,
+            strerror(errno));
     fptr_close.release();
     int err = fclose(fptr);
     mgb_throw_if(err, SystemError, "failed to close file: %s", strerror(errno));
@@ -259,7 +264,7 @@ std::vector<std::string> mgb::jit::get_cuda_include_opts() {
 #if MGB_CUDA
     std::vector<std::string> opts;
     auto paths = mgb::get_cuda_include_path();
-    for (auto path:paths) {
+    for (auto path : paths) {
         opts.emplace_back("-I" + path);
     }
     return opts;

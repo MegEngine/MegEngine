@@ -12,16 +12,14 @@ _low_prec_dtype = "float16"
 
 @property
 def enabled(mod):
-    r"""
-    Get or set amp autocast mode enabled or not.
-
+    r"""Get or set amp autocast mode enabled or not.
+    
     Examples:
+    
+        .. code-block::
 
-    .. code-block::
-
-        import megengine as mge
-        mge.amp.enabled = True
-
+           import megengine as mge
+           mge.amp.enabled = True
     """
     return _enabled
 
@@ -34,17 +32,15 @@ def enabled(mod, enabled: bool):
 
 @property
 def high_prec_dtype(mod):
-    r"""
-    Get or set amp autocast mode's higher precision dtype. It will change the
+    r"""Get or set amp autocast mode's higher precision dtype. It will change the
     target dtype in tensor casting for better precision. Default: float32.
-
+    
     Examples:
+    
+        .. code-block::
 
-    .. code-block::
-
-        import megengine as mge
-        mge.amp.high_prec_dtype = "float32"
-
+           import megengine as mge
+           mge.amp.high_prec_dtype = "float32"
     """
     return _high_prec_dtype
 
@@ -57,17 +53,15 @@ def high_prec_dtype(mod, dtype: str):
 
 @property
 def low_prec_dtype(mod):
-    r"""
-    Get or set amp autocast mode's lower precision dtype. It will change the
+    r"""Get or set amp autocast mode's lower precision dtype. It will change the
     target dtype in tensor casting for better speed and memory. Default: float16.
-
+    
     Examples:
+    
+        .. code-block::
 
-    .. code-block::
-
-        import megengine as mge
-        mge.amp.low_prec_dtype = "float16"
-
+           import megengine as mge
+           mge.amp.low_prec_dtype = "float16"
     """
     return _low_prec_dtype
 

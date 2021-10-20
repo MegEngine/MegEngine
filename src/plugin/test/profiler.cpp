@@ -9,35 +9,33 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
+#include "megbrain/plugin/profiler.h"
+#include <sstream>
 #include "megbrain/opr/basic_arith.h"
 #include "megbrain/opr/io.h"
-#include "megbrain/plugin/profiler.h"
 #include "megbrain/test/helper.h"
-#include <sstream>
 
 using namespace mgb;
 
 namespace {
-    void run_test(CompNode cn, const char *fpath) {
-        HostTensorGenerator<> gen;
-        auto host_x = gen({1}), host_y = gen({1});
-        auto graph = ComputingGraph::make();
-        SymbolVar
-            x = opr::Host2DeviceCopy::make(*graph, host_x, cn).rename("x"),
-            y = opr::Host2DeviceCopy::make(*graph, host_y, cn).rename("y"),
-            z = x + y;
+void run_test(CompNode cn, const char* fpath) {
+    HostTensorGenerator<> gen;
+    auto host_x = gen({1}), host_y = gen({1});
+    auto graph = ComputingGraph::make();
+    SymbolVar x = opr::Host2DeviceCopy::make(*graph, host_x, cn).rename("x"),
+              y = opr::Host2DeviceCopy::make(*graph, host_y, cn).rename("y"), z = x + y;
 
-        HostTensorND host_z;
-        auto func = graph->compile({make_callback_copy(z, host_z)});
-        auto profiler = std::make_shared<GraphProfiler>(graph.get());
-        func->execute();
-        float vx = host_x->ptr<float>()[0], vy = host_y->ptr<float>()[0],
-        vz = host_z.sync().ptr<float>()[0];
-        ASSERT_FLOAT_EQ(vx + vy, vz);
+    HostTensorND host_z;
+    auto func = graph->compile({make_callback_copy(z, host_z)});
+    auto profiler = std::make_shared<GraphProfiler>(graph.get());
+    func->execute();
+    float vx = host_x->ptr<float>()[0], vy = host_y->ptr<float>()[0],
+          vz = host_z.sync().ptr<float>()[0];
+    ASSERT_FLOAT_EQ(vx + vy, vz);
 
-        profiler->to_json()->writeto_fpath(output_file(fpath));
-    }
+    profiler->to_json()->writeto_fpath(output_file(fpath));
 }
+}  // namespace
 
 TEST(TestGraphProfiler, APlusBGPU) {
     REQUIRE_GPU(1);
@@ -49,4 +47,3 @@ TEST(TestGraphProfiler, APlusBCPU) {
 }
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
-

@@ -9,60 +9,60 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
  * implied.
  */
+#include "src/cuda/conv_bias/opr_impl.h"
 #include "megdnn/dtype.h"
 #include "src/cuda/conv_bias/algo.h"
 #include "src/cuda/conv_bias/helper.h"
-#include "src/cuda/conv_bias/opr_impl.h"
 #include "src/cuda/handle.h"
 #include "src/cuda/utils.h"
 
-#include "src/common/conv_bias.h"
 #include "src/common/algo_chooser.h"
+#include "src/common/conv_bias.h"
 
 #include "src/cuda/cudnn_with_check.h"
 
 namespace megdnn {
 namespace cuda {
 
-void ConvBiasForwardImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in filter,
-                               _megdnn_tensor_in bias, _megdnn_tensor_in z,
-                               _megdnn_tensor_out dst,
-                               const PreprocessedFilter* preprocessed_filter,
-                               _megdnn_workspace workspace) {
-    check_exec_allow_noncontiguous(src.layout, filter.layout, bias.layout,
-                                   z.layout, dst.layout, workspace.size,
-                                   preprocessed_filter);
-    AlgoBase::ExecArgs args(this, src, filter, bias, z, dst, workspace,
-                            preprocessed_filter);
-    auto algo = get_algorithm(this, src.layout, filter.layout, bias.layout,
-                              z.layout, dst.layout);
-    algo->check_workspace(args, workspace).exec(args);
+void ConvBiasForwardImpl::exec(
+        _megdnn_tensor_in src, _megdnn_tensor_in filter, _megdnn_tensor_in bias,
+        _megdnn_tensor_in z, _megdnn_tensor_out dst,
+        const PreprocessedFilter* preprocessed_filter, _megdnn_workspace workspace) {
+    check_exec_allow_noncontiguous(
+            src.layout, filter.layout, bias.layout, z.layout, dst.layout,
+            workspace.size, preprocessed_filter);
+    AlgoBase::ExecArgs args(
+            this, src, filter, bias, z, dst, workspace, preprocessed_filter);
+    auto algo = get_algorithm(
+            this, src.layout, filter.layout, bias.layout, z.layout, dst.layout);
+    algo->exec(args);
 };
 
-std::vector<ConvBiasForward::Algorithm*>
-ConvBiasForwardImpl::get_all_algorithms(const TensorLayout& src,
-                                        const TensorLayout& filter,
-                                        const TensorLayout& bias,
-                                        const TensorLayout& z,
-                                        const TensorLayout& dst) {
+std::vector<ConvBiasForward::Algorithm*> ConvBiasForwardImpl::get_all_algorithms(
+        const TensorLayout& src, const TensorLayout& filter, const TensorLayout& bias,
+        const TensorLayout& z, const TensorLayout& dst) {
     return megdnn::get_all_algorithms<ConvBiasForwardImpl>(
             {this, src, filter, bias, z, dst});
 }
 
+std::vector<ConvBiasForward::Algorithm*> ConvBiasForwardImpl::get_all_algorithms_safe(
+        const TensorLayout& src, const TensorLayout& filter, const TensorLayout& bias,
+        const TensorLayout& z, const TensorLayout& dst) {
+    return megdnn::get_all_algorithms_safe<ConvBiasForwardImpl>(
+            {this, src, filter, bias, z, dst});
+}
+
 ConvBiasForward::Algorithm* ConvBiasForwardImpl::get_algorithm_heuristic(
-        const TensorLayout& src, const TensorLayout& filter,
-        const TensorLayout& bias, const TensorLayout& z,
-        const TensorLayout& dst, size_t workspace_limit_in_bytes,
-        const AlgoAttribute& positive_attr,
-        const AlgoAttribute& negative_attr) {
+        const TensorLayout& src, const TensorLayout& filter, const TensorLayout& bias,
+        const TensorLayout& z, const TensorLayout& dst, size_t workspace_limit_in_bytes,
+        const AlgoAttribute& positive_attr, const AlgoAttribute& negative_attr) {
     using namespace conv_bias;
     AlgoBase::SizeArgs args{this, src, filter, bias, z, dst};
     auto dst_layout = *args.dst_layout;
     if (dst_layout.dtype.enumv() != args.bias_layout->dtype.enumv()) {
         dst_layout.dtype = DType();
-        args.opr->check_or_deduce_dtype_fwd(args.src_layout->dtype,
-                                            args.filter_layout->dtype,
-                                            dst_layout.dtype);
+        args.opr->check_or_deduce_dtype_fwd(
+                args.src_layout->dtype, args.filter_layout->dtype, dst_layout.dtype);
     }
     auto conv_args = args;
 
@@ -79,27 +79,25 @@ ConvBiasForward::Algorithm* ConvBiasForwardImpl::get_algorithm_heuristic(
     auto get_cudnn_algo =
             [this, &conv_args, &args, workspace_limit_in_bytes, positive_attr,
              negative_attr](
-                    const thin_function<AlgoBase*(cudnnConvolutionFwdAlgo_t)>&
-                            cb) -> AlgoBase* {
+                    const thin_function<AlgoBase*(cudnnConvolutionFwdAlgo_t)>& cb)
+            -> AlgoBase* {
         auto cudnn_handle = cuda::cudnn_handle(this->handle());
         CUDNNForwardDescs desc;
         conv_args.init_conv_desc(desc);
 #if CUDNN_MAJOR >= 7
-        auto& cudnn = static_cast<HandleImpl*>(this->handle())->cudnn();
         int max_count = 0;
-        cudnn_check(cudnn.GetConvolutionForwardAlgorithmMaxCount(cudnn_handle,
-                                                                &max_count));
+        cudnn_check(
+                cudnnGetConvolutionForwardAlgorithmMaxCount(cudnn_handle, &max_count));
         SmallVector<cudnnConvolutionFwdAlgoPerf_t> algo_perf(max_count);
         int ret_count = 0;
-        cudnn_check(cudnn.GetConvolutionForwardAlgorithm_v7(
+        cudnn_check(cudnnGetConvolutionForwardAlgorithm_v7(
                 cudnn_handle, desc.src_desc.desc, desc.filter_desc.desc,
-                desc.conv_desc.conv_desc, desc.dst_desc.desc, max_count,
-                &ret_count, algo_perf.data()));
+                desc.conv_desc.conv_desc, desc.dst_desc.desc, max_count, &ret_count,
+                algo_perf.data()));
         for (int i = 0; i < ret_count; ++i) {
             auto conv_bias_algo = cb(algo_perf[i].algo);
             if (conv_bias_algo->is_available_attribute(
-                        args, positive_attr, negative_attr,
-                        workspace_limit_in_bytes)) {
+                        args, positive_attr, negative_attr, workspace_limit_in_bytes)) {
                 return conv_bias_algo;
             }
         }
@@ -108,13 +106,12 @@ ConvBiasForward::Algorithm* ConvBiasForwardImpl::get_algorithm_heuristic(
         cudnn_check(cudnnGetConvolutionForwardAlgorithm(
                 cudnn_handle, desc.src_desc.desc, desc.filter_desc.desc,
                 desc.conv_desc.conv_desc, desc.dst_desc.desc,
-                CUDNN_CONVOLUTION_FWD_SPECIFY_WORKSPACE_LIMIT,
-                workspace_limit_in_bytes, &algo));
+                CUDNN_CONVOLUTION_FWD_SPECIFY_WORKSPACE_LIMIT, workspace_limit_in_bytes,
+                &algo));
 
         auto conv_bias_algo = cb(algo);
-        if (conv_bias_algo->is_available_attribute(args, positive_attr,
-                                                   negative_attr,
-                                                   workspace_limit_in_bytes))
+        if (conv_bias_algo->is_available_attribute(
+                    args, positive_attr, negative_attr, workspace_limit_in_bytes))
             return conv_bias_algo;
 #endif
         return nullptr;
@@ -124,20 +121,18 @@ ConvBiasForward::Algorithm* ConvBiasForwardImpl::get_algorithm_heuristic(
                          negative_attr](const AlgoBase::SizeArgs& size_arg)
             -> ConvBiasForwardImpl::AlgoBase* {
         if (sm_algo_pack.batched_matmul.is_available_attribute(
-                    size_arg, positive_attr, negative_attr,
-                    workspace_limit_in_bytes)) {
+                    size_arg, positive_attr, negative_attr, workspace_limit_in_bytes)) {
             return &sm_algo_pack.batched_matmul;
         }
         return nullptr;
     };
 
-    const bool is_chanwise =
-            (args.filter_meta.format == Param::Format::NCHW &&
-             args.filter_meta.group == src[1]) ||
-            (args.filter_meta.format == Param::Format::NCHW4 &&
-             args.filter_meta.group == src[1] * 4) ||
-            (args.filter_meta.format == Param::Format::NCHW32 &&
-             args.filter_meta.group == src[1] * 32);
+    const bool is_chanwise = (args.filter_meta.format == Param::Format::NCHW &&
+                              args.filter_meta.group == src[1]) ||
+                             (args.filter_meta.format == Param::Format::NCHW4 &&
+                              args.filter_meta.group == src[1] * 4) ||
+                             (args.filter_meta.format == Param::Format::NCHW32 &&
+                              args.filter_meta.group == src[1] * 32);
     // prefer special chanwise impl since as the group conv of cudnn
     // whose version is lower than v7.5.0 is still slower than our
     // implementation in many channel-wise cases
@@ -147,19 +142,17 @@ ConvBiasForward::Algorithm* ConvBiasForwardImpl::get_algorithm_heuristic(
     const int hw_size = src[2] * src[3];
     //! choose dnn when stride != 1, may need calibrate for different cudnn
     //! version
-    const bool prefer_dnn_chanwise =
-            slow_cudnn_chanwise_impl || args.filter_meta.stride[0] != 1 ||
-            args.filter_meta.stride[1] != 1 || hw_size < 512;
+    const bool prefer_dnn_chanwise = slow_cudnn_chanwise_impl ||
+                                     args.filter_meta.stride[0] != 1 ||
+                                     args.filter_meta.stride[1] != 1 || hw_size < 512;
     //! avoid bad case in cudnn, check dnn chanwise impl first
     if (is_chanwise) {
         if (prefer_dnn_chanwise) {
             if (sm_algo_pack.chanwise.is_available_attribute(
-                        args, positive_attr, negative_attr,
-                        workspace_limit_in_bytes))
+                        args, positive_attr, negative_attr, workspace_limit_in_bytes))
                 return &sm_algo_pack.chanwise;
             if (sm_algo_pack.chanwise8x8x32.is_available_attribute(
-                        args, positive_attr, negative_attr,
-                        workspace_limit_in_bytes))
+                        args, positive_attr, negative_attr, workspace_limit_in_bytes))
                 return &sm_algo_pack.chanwise8x8x32;
         } else {
             conv_args.dst_layout = &dst_layout;
@@ -174,8 +167,8 @@ ConvBiasForward::Algorithm* ConvBiasForwardImpl::get_algorithm_heuristic(
     //! Prefer CUDNN CONVBIAS.
     bool cudnn_conv_bias_act_supported = false;
     for (auto&& algo : sm_algo_pack.cudnn_conv_bias_activations) {
-        if (algo.is_available_attribute(args, positive_attr, negative_attr,
-                                        workspace_limit_in_bytes)) {
+        if (algo.is_available_attribute(
+                    args, positive_attr, negative_attr, workspace_limit_in_bytes)) {
             cudnn_conv_bias_act_supported = true;
             break;
         }
@@ -224,30 +217,33 @@ const char* ConvBiasForwardImpl::get_algorithm_set_name() const {
 }
 
 size_t ConvBiasForwardImpl::get_workspace_in_bytes(
-        const TensorLayout& src, const TensorLayout& filter,
-        const TensorLayout& bias, const TensorLayout& z,
-        const TensorLayout& dst,
+        const TensorLayout& src, const TensorLayout& filter, const TensorLayout& bias,
+        const TensorLayout& z, const TensorLayout& dst,
         const PreprocessedFilter* preprocessed_filter) {
-    AlgoBase::SizeArgs args{
-            this, src, filter, bias, z, dst, preprocessed_filter};
-    return get_algorithm(this, src, filter, bias, z, dst)
-            ->get_workspace_in_bytes(args);
+    TensorLayoutArray layouts{src, filter, bias, z, dst};
+    HeuristicCache::Key key{this->handle(), this->get_opr_type(),
+                            layouts.data(), layouts.size(),
+                            &this->param(), sizeof(this->param())};
+    auto rst = HeuristicCache::instance().get(key);
+    if (rst.policy.algo.valid()) {
+        return rst.workspace;
+    }
+
+    AlgoBase::SizeArgs args{this, src, filter, bias, z, dst, preprocessed_filter};
+    return get_algorithm(this, src, filter, bias, z, dst)->get_workspace_in_bytes(args);
 };
 
 size_t ConvBiasForwardImpl::get_preprocess_workspace_in_bytes(
-        const TensorLayout& src, const TensorLayout& filter,
-        const TensorLayout& bias, const TensorLayout& z,
-        const TensorLayout& dst) {
+        const TensorLayout& src, const TensorLayout& filter, const TensorLayout& bias,
+        const TensorLayout& z, const TensorLayout& dst) {
     AlgoBase::SizeArgs args{this, src, filter, bias, z, dst};
     return get_algorithm(this, src, filter, bias, z, dst)
             ->get_preprocess_workspace_in_bytes(args);
 }
 
-SmallVector<TensorLayout>
-ConvBiasForwardImpl::deduce_preprocessed_filter_layout(
-        const TensorLayout& src, const TensorLayout& filter,
-        const TensorLayout& bias, const TensorLayout& z,
-        const TensorLayout& dst) {
+SmallVector<TensorLayout> ConvBiasForwardImpl::deduce_preprocessed_filter_layout(
+        const TensorLayout& src, const TensorLayout& filter, const TensorLayout& bias,
+        const TensorLayout& z, const TensorLayout& dst) {
     AlgoBase::SizeArgs args{this, src, filter, bias, z, dst};
     return get_algorithm(this, src, filter, bias, z, dst)
             ->deduce_preprocessed_filter_layout(args);
@@ -258,12 +254,11 @@ void ConvBiasForwardImpl::exec_preprocess(
         _megdnn_tensor_in bias, const TensorLayout& z_layout,
         const TensorLayout& dst_layout, PreprocessedFilter* preprocessed_filter,
         _megdnn_workspace workspace) {
-    TensorND src{nullptr, src_layout}, dst{nullptr, dst_layout},
-            z{nullptr, z_layout};
-    AlgoBase::ExecArgs args(this, src, filter, bias, z, dst, workspace,
-                            preprocessed_filter);
-    auto algo = get_algorithm(this, src.layout, filter.layout, bias.layout,
-                              z.layout, dst.layout);
+    TensorND src{nullptr, src_layout}, dst{nullptr, dst_layout}, z{nullptr, z_layout};
+    AlgoBase::ExecArgs args(
+            this, src, filter, bias, z, dst, workspace, preprocessed_filter);
+    auto algo = get_algorithm(
+            this, src.layout, filter.layout, bias.layout, z.layout, dst.layout);
     return algo->exec_preprocess(args);
 }
 

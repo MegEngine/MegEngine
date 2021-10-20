@@ -50,9 +50,9 @@ LITE_API int LITE_try_coalesce_all_free_memory();
  * the output_data
  * \return size of decrypted data
  */
-typedef size_t (*LiteDecryptionFunc)(const void* input_data, size_t input_size,
-                                     const uint8_t* key_data, size_t key_size,
-                                     const void* output_data);
+typedef size_t (*LiteDecryptionFunc)(
+        const void* input_data, size_t input_size, const uint8_t* key_data,
+        size_t key_size, const void* output_data);
 
 /**
  * \brief Model information parse function
@@ -71,11 +71,10 @@ typedef size_t (*LiteDecryptionFunc)(const void* input_data, size_t input_size,
  * \param[in] use_tensorrt the address to store is_cpu_inplace_mode, default
  * false
  */
-typedef int (*LiteParseInfoFunc)(const void* info_data, size_t info_size,
-                                 const char* model_name, LiteConfig* config,
-                                 LiteNetworkIO* network_io, int* device_id,
-                                 size_t* nr_threads, int* is_cpu_inplace_mode,
-                                 int* use_tensorrt);
+typedef int (*LiteParseInfoFunc)(
+        const void* info_data, size_t info_size, const char* model_name,
+        LiteConfig* config, LiteNetworkIO* network_io, int* device_id,
+        size_t* nr_threads, int* is_cpu_inplace_mode, int* use_tensorrt);
 
 /**
  * \brief register a custom decryption method and key to lite.
@@ -88,10 +87,9 @@ typedef int (*LiteParseInfoFunc)(const void* info_data, size_t info_size,
  * \param[in] key_data the decryption key of the method
  * \param[in] key_size the size of decryption key
  */
-LITE_API int LITE_register_decryption_and_key(const char* decrypt_name,
-                                              const LiteDecryptionFunc func,
-                                              const uint8_t* key_data,
-                                              size_t key_size);
+LITE_API int LITE_register_decryption_and_key(
+        const char* decrypt_name, const LiteDecryptionFunc func,
+        const uint8_t* key_data, size_t key_size);
 
 /**
  * \brief update decryption function or key of a custom decryption method.
@@ -106,10 +104,9 @@ LITE_API int LITE_register_decryption_and_key(const char* decrypt_name,
  * \param[in] key the decryption key of the method, if the size of key is zero,
  * it will not be updated
  */
-LITE_API int LITE_update_decryption_or_key(const char* decrypt_name,
-                                           const LiteDecryptionFunc func,
-                                           const uint8_t* key_data,
-                                           size_t key_size);
+LITE_API int LITE_update_decryption_or_key(
+        const char* decrypt_name, const LiteDecryptionFunc func,
+        const uint8_t* key_data, size_t key_size);
 
 /**
  * \brief register a custom parser function to lite.
@@ -121,8 +118,8 @@ LITE_API int LITE_update_decryption_or_key(const char* decrypt_name,
  * information and modify the Network Config and IO.
  *
  */
-LITE_API int LITE_register_parse_info_func(const char* info_type,
-                                           const LiteParseInfoFunc parse_func);
+LITE_API int LITE_register_parse_info_func(
+        const char* info_type, const LiteParseInfoFunc parse_func);
 
 /*!
  * \brief Set the loader to the lite

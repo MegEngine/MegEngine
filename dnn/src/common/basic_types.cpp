@@ -104,8 +104,9 @@ LogHandler g_log_handler = nullptr;
 }  // anonymous namespace
 
 #if MEGDNN_ENABLE_LOGGING
-void megdnn::__log__(LogLevel level, const char* file, const char* func,
-                     int line, const char* fmt, ...) {
+void megdnn::__log__(
+        LogLevel level, const char* file, const char* func, int line, const char* fmt,
+        ...) {
     if (!g_log_handler)
         return;
     va_list ap;
@@ -124,10 +125,11 @@ LogHandler megdnn::set_log_handler(LogHandler handler) {
 /* ===================== TensorShape =====================  */
 
 TensorShape::TensorShape(const SmallVector<size_t>& init_shape) {
-    megdnn_assert(init_shape.size() <= MAX_NDIM,
-                  "Illegal to construct a TensorShape with "
-                  "more than MAX_NDIM(%zu) axes; init_shape is %s",
-                  MAX_NDIM, vec2str(init_shape).c_str());
+    megdnn_assert(
+            init_shape.size() <= MAX_NDIM,
+            "Illegal to construct a TensorShape with "
+            "more than MAX_NDIM(%zu) axes; init_shape is %s",
+            MAX_NDIM, vec2str(init_shape).c_str());
     ndim = init_shape.size();
     memcpy(this->shape, init_shape.data(), sizeof(size_t) * ndim);
 }
@@ -195,8 +197,7 @@ bool TensorShape::is_empty() const {
 /* ===================== TensorLayout =====================  */
 TensorLayout::TensorLayout() = default;
 
-TensorLayout::TensorLayout(DType dtype_)
-        : dtype{dtype_}, format{Format(dtype)} {}
+TensorLayout::TensorLayout(DType dtype_) : dtype{dtype_}, format{Format(dtype)} {}
 
 TensorLayout::TensorLayout(DType dtype_, Format format_)
         : dtype{dtype_}, format{format_} {}
@@ -204,19 +205,18 @@ TensorLayout::TensorLayout(DType dtype_, Format format_)
 TensorLayout::TensorLayout(const TensorShape& shape, DType dtype)
         : TensorLayout(shape, dtype, Format(dtype)) {}
 
-TensorLayout::TensorLayout(const TensorShape& shape, DType dtype,
-                           TensorFormat format_)
+TensorLayout::TensorLayout(const TensorShape& shape, DType dtype, TensorFormat format_)
         : TensorShape(shape), dtype{dtype}, format{format_} {
     init_contiguous_stride();
 }
 
-TensorLayout::TensorLayout(const TensorShape& shape,
-                           const std::vector<ptrdiff_t>& stride, DType dtype)
+TensorLayout::TensorLayout(
+        const TensorShape& shape, const std::vector<ptrdiff_t>& stride, DType dtype)
         : TensorLayout(shape, stride, dtype, Format(dtype)) {}
 
-TensorLayout::TensorLayout(const TensorShape& shape,
-                           const std::vector<ptrdiff_t>& stride, DType dtype,
-                           TensorFormat format_)
+TensorLayout::TensorLayout(
+        const TensorShape& shape, const std::vector<ptrdiff_t>& stride, DType dtype,
+        TensorFormat format_)
         : TensorShape(shape), dtype{dtype}, format{format_} {
     megdnn_assert_eq_size_t(stride.size(), ndim);
     for (size_t i = 0; i < shape.ndim; ++i)
@@ -232,8 +232,8 @@ size_t TensorLayout::init_contiguous_stride(const TensorShape& shape) {
     return init_contiguous_stride();
 }
 
-size_t TensorLayout::init_contiguous_stride(const TensorShape& shape,
-                                            TensorFormat format_) {
+size_t TensorLayout::init_contiguous_stride(
+        const TensorShape& shape, TensorFormat format_) {
     this->TensorShape::operator=(shape);
     this->format = format_;
     return init_contiguous_stride();
@@ -268,11 +268,11 @@ void TensorLayout::remove_axis_inplace(size_t axis) {
     }
 }
 
-void TensorLayout::add_axis_inplace(size_t axis, size_t shape,
-                                    ptrdiff_t stride) {
-    megdnn_assert(ndim + 1 <= MAX_NDIM && axis <= ndim && shape,
-                  "can not add axis at %zu (current ndim %zu, MAX_NDIM %zu)",
-                  axis, ndim, MAX_NDIM);
+void TensorLayout::add_axis_inplace(size_t axis, size_t shape, ptrdiff_t stride) {
+    megdnn_assert(
+            ndim + 1 <= MAX_NDIM && axis <= ndim && shape,
+            "can not add axis at %zu (current ndim %zu, MAX_NDIM %zu)", axis, ndim,
+            MAX_NDIM);
     ndim++;
     for (size_t i = ndim - 1; i > axis; i--) {
         this->shape[i] = this->shape[i - 1];
@@ -307,8 +307,8 @@ bool TensorLayout::is_abs_monotonous_allow_brdcst() const {
         return false;
     if (ndim == 1)
         return true;
-    ptrdiff_t last = std::abs(stride[ndim - 1]) *
-                     static_cast<ptrdiff_t>(shape[ndim - 1]);
+    ptrdiff_t last =
+            std::abs(stride[ndim - 1]) * static_cast<ptrdiff_t>(shape[ndim - 1]);
     for (int i = ndim - 2; i >= 0; --i) {
         if (!stride[i] || shape[i] == 1)
             continue;
@@ -375,13 +375,13 @@ bool TensorLayout::is_non_overlapping_strong() const {
 }
 
 bool TensorLayout::eq_layout(const TensorLayout& rhs) const {
-    megdnn_assert(dtype == rhs.dtype,
-                  "could not compare layout on different dtypes: %s vs %s",
-                  dtype.name(), rhs.dtype.name());
+    megdnn_assert(
+            dtype == rhs.dtype,
+            "could not compare layout on different dtypes: %s vs %s", dtype.name(),
+            rhs.dtype.name());
     MEGDNN_STATIC_ASSERT(MAX_NDIM == 7, "please update the code");
 
-    auto ax = [](size_t shape0, size_t shape1, ptrdiff_t stride0,
-                 ptrdiff_t stride1) {
+    auto ax = [](size_t shape0, size_t shape1, ptrdiff_t stride0, ptrdiff_t stride1) {
         return (shape0 == shape1) & ((shape0 == 1) | (stride0 == stride1));
     };
     if (ndim == rhs.ndim) {
@@ -424,12 +424,20 @@ size_t TensorLayout::access_bytes() const {
     if (dtype.is_low_bit()) {
         ret = 1;
         int align_size_in_elements = 8 / dtype.low_bit();
+        auto min_stride = contig.stride[0];
         for (size_t i = 0; i < contig.ndim; ++i) {
             if (contig.stride[i] == 1) {
                 ret *= round_up((int)contig.shape[i], align_size_in_elements);
             } else {
                 ret *= contig.shape[i];
             }
+            if (min_stride > contig.stride[i]) {
+                min_stride = contig.stride[i];
+            }
+        }
+        if (min_stride != 1) {
+            megdnn_assert(min_stride == align_size_in_elements);
+            ret *= min_stride;
         }
         ret /= align_size_in_elements;
     } else {
@@ -439,8 +447,9 @@ size_t TensorLayout::access_bytes() const {
 }
 
 TensorLayout TensorLayout::broadcast(const TensorShape& tshape) const {
-    megdnn_throw_if(!ndim || !tshape.ndim, tensor_reshape_error,
-                    "broadcast involves empty tensor");
+    megdnn_throw_if(
+            !ndim || !tshape.ndim, tensor_reshape_error,
+            "broadcast involves empty tensor");
 
     if (is_scalar()) {
         TensorLayout result{dtype, format};
@@ -452,10 +461,12 @@ TensorLayout TensorLayout::broadcast(const TensorShape& tshape) const {
         return result;
     }
 
-    megdnn_throw_if(tshape.ndim < ndim, tensor_reshape_error,
-                    ssprintf("dimension for broadcast less than "
-                             "dst_shape: src_shape=%s dst_shape=%s",
-                             to_string().c_str(), tshape.to_string().c_str()));
+    megdnn_throw_if(
+            tshape.ndim < ndim, tensor_reshape_error,
+            ssprintf(
+                    "dimension for broadcast less than "
+                    "dst_shape: src_shape=%s dst_shape=%s",
+                    to_string().c_str(), tshape.to_string().c_str()));
     TensorLayout result{dtype, format};
     for (size_t i = 0; i < tshape.ndim; ++i) {
         int target_idx = tshape.ndim - i - 1;
@@ -465,9 +476,10 @@ TensorLayout TensorLayout::broadcast(const TensorShape& tshape) const {
         if (tshape.shape[target_idx] != cur_shape) {
             megdnn_throw_if(
                     cur_shape != 1 && cur_stride != 0, tensor_reshape_error,
-                    ssprintf("broadcast on dim with shape not equal to 1: "
-                             "src_shape=%s dst_shape=%s",
-                             to_string().c_str(), tshape.to_string().c_str()));
+                    ssprintf(
+                            "broadcast on dim with shape not equal to 1: "
+                            "src_shape=%s dst_shape=%s",
+                            to_string().c_str(), tshape.to_string().c_str()));
             result.shape[target_idx] = tshape.shape[target_idx];
             result.stride[target_idx] = 0;
         } else {
@@ -479,8 +491,7 @@ TensorLayout TensorLayout::broadcast(const TensorShape& tshape) const {
     return result;
 }
 
-bool TensorLayout::try_reshape(TensorLayout& result,
-                               const TensorShape& tshp) const {
+bool TensorLayout::try_reshape(TensorLayout& result, const TensorShape& tshp) const {
     megdnn_assert(tshp.ndim);
 
     bool is_empty_shape = false;
@@ -497,10 +508,11 @@ bool TensorLayout::try_reshape(TensorLayout& result,
     megdnn_throw_if(
             !tshp.ndim || total_nr_elems() != tshp.total_nr_elems(),
             tensor_reshape_error,
-            ssprintf("number of elements do not match "
-                     "in reshape: src=%s dest=%s",
-                     static_cast<const TensorShape&>(*this).to_string().c_str(),
-                     tshp.to_string().c_str()));
+            ssprintf(
+                    "number of elements do not match "
+                    "in reshape: src=%s dest=%s",
+                    static_cast<const TensorShape&>(*this).to_string().c_str(),
+                    tshp.to_string().c_str()));
 
     auto cont = collapse_contiguous();
     result.dtype = this->dtype;
@@ -539,9 +551,11 @@ bool TensorLayout::try_reshape(TensorLayout& result,
 TensorLayout TensorLayout::reshape(const TensorShape& shape) const {
     TensorLayout ret;
     auto succ = try_reshape(ret, shape);
-    megdnn_throw_if(!succ, tensor_reshape_error,
-                    ssprintf("can not reshape from %s to %s",
-                             to_string().c_str(), shape.to_string().c_str()));
+    megdnn_throw_if(
+            !succ, tensor_reshape_error,
+            ssprintf(
+                    "can not reshape from %s to %s", to_string().c_str(),
+                    shape.to_string().c_str()));
     return ret;
 }
 
@@ -583,8 +597,7 @@ std::string TensorLayout::serialize() const {
             MEGDNN_FOREACH_PARAMETERIZED_DTYPE(cb)
 #undef cb
             default:
-                megdnn_assert(false,
-                              "cannot serialize unknown parameterized DType");
+                megdnn_assert(false, "cannot serialize unknown parameterized DType");
                 break;
         }
     }

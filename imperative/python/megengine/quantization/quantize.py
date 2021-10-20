@@ -57,14 +57,14 @@ qat_modules = tuple(_qat2quantized_dict.keys())
 
 
 def quantize(module: Module, inplace: bool = True, mapping: dict = None):
-    r"""
-    Recursively convert :class:`~.QATModule` to :class:`~.QuantizedModule`
+    r"""Recursively convert :class:`~.QATModule` to :class:`~.QuantizedModule`
     through :meth:`~.Module.apply`.
 
-    :param module: root module to do convert recursively.
-    :param inplace: whether to convert submodules in-place.
-    :param mapping: a dict indicating how to convert custom modules from QATModule to
-        QuantizedModule. Will be combined with internal default convert mapping dict.
+    Args:
+        module: root module to do convert recursively.
+        inplace: whether to convert submodules in-place.
+        mapping: a dict indicating how to convert custom modules from QATModule to
+            QuantizedModule. Will be combined with internal default convert mapping dict.
     """
 
     if not inplace:
@@ -94,16 +94,16 @@ def quantize_qat(
     qconfig: QConfig = ema_fakequant_qconfig,
     mapping: dict = None,
 ):
-    r"""
-    Recursively convert float :class:`~.Module` to :class:`~.QATModule`
+    r"""Recursively convert float :class:`~.Module` to :class:`~.QATModule`
     through :meth:`~.Module.apply` and set qconfig relatively.
 
-    :param module: root module to do convert recursively.
-    :param inplace: whether to convert submodules in-place.
-    :param qconfig: an instance of :class:`~.QConfig` to be set as submodules' qconfig.
-        default is ``ema_fakequant_qconfig``.
-    :param mapping: a dict indicating how to convert custom modules from Module to QATModule.
-        Will be combined with internal default convert mapping dict.
+    Args:
+        module: root module to do convert recursively.
+        inplace: whether to convert submodules in-place.
+        qconfig: an instance of :class:`~.QConfig` to be set as submodules' qconfig.
+            default is ``ema_fakequant_qconfig``.
+        mapping: a dict indicating how to convert custom modules from Module to QATModule.
+            Will be combined with internal default convert mapping dict.
     """
 
     if not inplace:
@@ -133,12 +133,12 @@ def quantize_qat(
 
 
 def reset_qconfig(module: Module, qconfig: QConfig, inplace: bool = True):
-    r"""
-    Reset :class:`~._FakeQuantize` and :class:`~.Observer` according to ``qconfig``
+    r"""Reset :class:`~._FakeQuantize` and :class:`~.Observer` according to ``qconfig``
 
-    :param module: root module to reset recursively.
-    :param qconfig: an instance of :class:`~.QConfig` to be set as submodules' qconfig.
-    :param inplace: whether to reset submodules in-place.
+    Args:
+        module: root module to reset recursively.
+        qconfig: an instance of :class:`~.QConfig` to be set as submodules' qconfig.
+        inplace: whether to reset submodules in-place.
     """
 
     if not inplace:
@@ -175,19 +175,17 @@ def _propagate(module: Module, func_str: str, *args, **kargs):
 
 
 def propagate_qconfig(module: QATModule, qconfig: QConfig):
-    r"""
-    Recursively set ``module``'s qconfig through :meth:`~.Module.apply`.
+    r"""Recursively set ``module``'s qconfig through :meth:`~.Module.apply`.
 
-    :param module: root module to traverse recursively.
-    :param qconfig: a instance of :class:`~.QConfig` to be set as submodules' qconfig.
+    Args:
+        module: root module to traverse recursively.
+        qconfig: a instance of :class:`~.QConfig` to be set as submodules' qconfig.
     """
     _propagate(module, "set_qconfig", qconfig)
 
 
 def hook_qat_module(module: Module, func: Callable):
-    r"""
-    Add hooks for all :class:`~.QATModule` submodule
-    """
+    r"""Add hooks for all :class:`~.QATModule` submodule"""
 
     def is_qat(mod: Module):
         return isinstance(mod, QATModule)
@@ -202,15 +200,16 @@ def hook_qat_module(module: Module, func: Callable):
 def apply_easy_quant(
     module: Module, data: Tensor, start: float = 0.8, stop: float = 1.2, num: int = 40
 ):
-    r"""
-    Implementation of ``EasyQuant``: https://arxiv.org/pdf/2006.16669.
+    r"""Implementation of ``EasyQuant``: https://arxiv.org/pdf/2006.16669.
     Search for optimal scales.
 
-    :param module: root module.
-    :param data: input tensor used to search optimal scale.
-    :param start: lower bound of the search interval.
-    :param stop: upper bound of the search interval.
-    :param num: number of samples to search.
+    Args:
+        module: root module.
+        data: input tensor used to search optimal scale.
+        start: lower bound of the search interval.
+        stop: upper bound of the search interval.
+        num: number of samples to search.
+        module: Module: 
     """
 
     batch_size = data.shape[0]
@@ -267,40 +266,40 @@ def apply_easy_quant(
 
 
 def disable_fake_quant(module: Module):
-    r"""
-    Recursively disable ``module`` fake quantization in QATModule through :meth:`~.Module.apply`
+    r"""Recursively disable ``module`` fake quantization in QATModule through :meth:`~.Module.apply`
 
-    :param module: root module to do disable fake quantization recursively.
+    Args:
+        module: root module to do disable fake quantization recursively.
     """
 
     _propagate(module, "set_fake_quant", False)
 
 
 def disable_observer(module: Module):
-    r"""
-    Recursively disable ``module`` observer in QATModule through :meth:`~.Module.apply`
+    r"""Recursively disable ``module`` observer in QATModule through :meth:`~.Module.apply`
 
-    :param module: root module to do disable observer recursively.
+    Args:
+        module: root module to do disable observer recursively.
     """
 
     _propagate(module, "set_observer", False)
 
 
 def enable_fake_quant(module: Module):
-    r"""
-    Recursively enable ``module`` fake quantization in QATModule through :meth:`~.Module.apply`
+    r"""Recursively enable ``module`` fake quantization in QATModule through :meth:`~.Module.apply`
 
-    :param module: root module to do enable fake quantization recursively.
+    Args:
+        module: root module to do enable fake quantization recursively.
     """
 
     _propagate(module, "set_fake_quant", True)
 
 
 def enable_observer(module: Module):
-    r"""
-    Recursively enable ``module`` observer in QATModule through :meth:`~.Module.apply`
+    r"""Recursively enable ``module`` observer in QATModule through :meth:`~.Module.apply`
 
-    :param module: root module to do enable observer recursively.
+    Args:
+        module: root module to do enable observer recursively.
     """
 
     _propagate(module, "set_observer", True)

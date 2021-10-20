@@ -58,8 +58,8 @@
  *
  * ---------------------------------------------------------------------------
  */
-#include "src/cuda/cv/kernel_common.cuh"
 #include "src/common/resize.cuh"
+#include "src/cuda/cv/kernel_common.cuh"
 #include "src/cuda/resize/resize_cv.cuh"
 #include "src/cuda/utils.cuh"
 
@@ -70,16 +70,15 @@ using megdnn::resize::interpolate_cubic;
 
 namespace {
 
-#define SCALE 11
+#define SCALE           11
 #define at(A, r, c, ch) A[(r)*A##_step + (c)*CH + (ch)]
-#define ONE (1 << SCALE)
+#define ONE             (1 << SCALE)
 
 #define ELEMENTS_PER_THREADS 8
-#define THREADS_X 32
-#define THREADS_Y 16
+#define THREADS_X            32
+#define THREADS_Y            16
 
-__global__ void precompute_lanczos4_coef_f32(float* dst, float scale,
-                                             size_t size) {
+__global__ void precompute_lanczos4_coef_f32(float* dst, float scale, size_t size) {
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
     if (tid >= size)
         return;
@@ -97,8 +96,7 @@ __global__ void precompute_lanczos4_coef_f32(float* dst, float scale,
     }
 }
 
-__global__ void precompute_lanczos4_coef_u8(short* dst, float scale,
-                                            size_t size) {
+__global__ void precompute_lanczos4_coef_u8(short* dst, float scale, size_t size) {
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
     if (tid >= size)
         return;
@@ -116,8 +114,7 @@ __global__ void precompute_lanczos4_coef_u8(short* dst, float scale,
     }
 }
 
-__global__ void precompute_cubic_coef_f32(float* dst, float scale,
-                                          size_t size) {
+__global__ void precompute_cubic_coef_f32(float* dst, float scale, size_t size) {
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
     if (tid >= size)
         return;
@@ -183,9 +180,9 @@ __global__ void resize_nearest_vector_kernel(
 
 template <typename T, size_t CH>
 __global__ void resize_nearest_kernel(
-        const T* __restrict__ src, T* dst, const size_t dst_rows,
-        const size_t dst_cols, const size_t src_step, const size_t dst_step,
-        const float row_scale, const float col_scale) {
+        const T* __restrict__ src, T* dst, const size_t dst_rows, const size_t dst_cols,
+        const size_t src_step, const size_t dst_step, const float row_scale,
+        const float col_scale) {
     size_t dc = blockIdx.x * blockDim.x + threadIdx.x;
     size_t dr = blockIdx.y * blockDim.y + threadIdx.y;
     if (dr < dst_rows && dc < dst_cols) {
@@ -200,47 +197,43 @@ __global__ void resize_nearest_kernel(
 }
 
 template <typename T, size_t CH>
-void resize_nearest_proxy(const T* src, T* dst, const size_t src_rows,
-                          const size_t src_cols, const size_t dst_rows,
-                          const size_t dst_cols, const size_t src_step,
-                          const size_t dst_step, void* workspace,
-                          cudaStream_t stream) {
+void resize_nearest_proxy(
+        const T* src, T* dst, const size_t src_rows, const size_t src_cols,
+        const size_t dst_rows, const size_t dst_cols, const size_t src_step,
+        const size_t dst_step, void* workspace, cudaStream_t stream) {
     MEGDNN_MARK_USED_VAR(workspace);
     float row_scale = (float)src_rows / dst_rows;
     float col_scale = (float)src_cols / dst_cols;
 
-    if (CH == 3 && sizeof(T) == 4 &&
-        (dst_cols * dst_rows <= src_cols * src_rows)) {
+    if (CH == 3 && sizeof(T) == 4 && (dst_cols * dst_rows <= src_cols * src_rows)) {
         dim3 THREADS(32, 8, 1);
         dim3 BLOCKS(DIVUP(dst_cols, THREADS.x), DIVUP(dst_rows, THREADS.y));
 
         cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
 
         resize_nearest_kernel<T, CH><<<BLOCKS, THREADS, 0, stream>>>(
-                src, dst, dst_rows, dst_cols, src_step, dst_step, row_scale,
-                col_scale);
+                src, dst, dst_rows, dst_cols, src_step, dst_step, row_scale, col_scale);
 
     } else {
         dim3 THREADS(32, 8, 1);
-        dim3 BLOCKS(DIVUP(dst_cols, THREADS.x),
-                    DIVUP(dst_rows, THREADS.y * ELEMENTS_PER_THREADS));
+        dim3 BLOCKS(
+                DIVUP(dst_cols, THREADS.x),
+                DIVUP(dst_rows, THREADS.y * ELEMENTS_PER_THREADS));
 
         if (CH == 3 && sizeof(T) == 1)
             cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
 
         resize_nearest_vector_kernel<T, CH><<<BLOCKS, THREADS, 0, stream>>>(
-                src, dst, dst_rows, dst_cols, src_step, dst_step, row_scale,
-                col_scale);
+                src, dst, dst_rows, dst_cols, src_step, dst_step, row_scale, col_scale);
     }
 }
 
 template <typename T, size_t CH>
 __global__ void resize_linear_Restric_kernel(
-        const T* __restrict__ src, T* dst, const size_t src_rows,
-        const size_t src_cols, const size_t dst_rows, const size_t dst_cols,
-        const size_t src_step, const size_t dst_step, const float row_scale,
-        const float col_scale, const float inverse_row_scale,
-        const float inverse_col_scale) {
+        const T* __restrict__ src, T* dst, const size_t src_rows, const size_t src_cols,
+        const size_t dst_rows, const size_t dst_cols, const size_t src_step,
+        const size_t dst_step, const float row_scale, const float col_scale,
+        const float inverse_row_scale, const float inverse_col_scale) {
     size_t dc = blockIdx.x * blockDim.x + threadIdx.x;
     size_t dr = blockIdx.y * blockDim.y + threadIdx.y;
 
@@ -353,19 +346,19 @@ __global__ void resize_linear_vector_kernel(
 }
 
 template <typename T, size_t CH>
-void resize_area_proxy(const T*, T*, size_t, size_t, size_t, size_t, size_t,
-                       size_t, void*, cudaStream_t);
+void resize_area_proxy(
+        const T*, T*, size_t, size_t, size_t, size_t, size_t, size_t, void*,
+        cudaStream_t);
 
 template <typename T, size_t CH>
-void resize_linear_proxy(const T* src, T* dst, const size_t src_rows,
-                         const size_t src_cols, const size_t dst_rows,
-                         const size_t dst_cols, const size_t src_step,
-                         const size_t dst_step, void* workspace,
-                         cudaStream_t stream) {
+void resize_linear_proxy(
+        const T* src, T* dst, const size_t src_rows, const size_t src_cols,
+        const size_t dst_rows, const size_t dst_cols, const size_t src_step,
+        const size_t dst_step, void* workspace, cudaStream_t stream) {
     if (src_rows == dst_rows * 2 && src_cols == dst_cols * 2) {
-        resize_area_proxy<T, CH>(src, dst, src_rows, src_cols, dst_rows,
-                                 dst_cols, src_step, dst_step, workspace,
-                                 stream);
+        resize_area_proxy<T, CH>(
+                src, dst, src_rows, src_cols, dst_rows, dst_cols, src_step, dst_step,
+                workspace, stream);
         return;
     }
 
@@ -380,18 +373,19 @@ void resize_linear_proxy(const T* src, T* dst, const size_t src_rows,
         cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
 
         resize_linear_Restric_kernel<T, CH><<<BLOCKS, THREADS, 0, stream>>>(
-                src, dst, src_rows, src_cols, dst_rows, dst_cols, src_step,
-                dst_step, row_scale, col_scale, 1 / row_scale, 1 / col_scale);
+                src, dst, src_rows, src_cols, dst_rows, dst_cols, src_step, dst_step,
+                row_scale, col_scale, 1 / row_scale, 1 / col_scale);
 
     } else {
-        dim3 BLOCKS(DIVUP(dst_cols, THREADS.x),
-                    DIVUP(dst_rows, THREADS.y * ELEMENTS_PER_THREADS));
+        dim3 BLOCKS(
+                DIVUP(dst_cols, THREADS.x),
+                DIVUP(dst_rows, THREADS.y * ELEMENTS_PER_THREADS));
 
         cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
 
         resize_linear_vector_kernel<T, CH><<<BLOCKS, THREADS, 0, stream>>>(
-                src, dst, src_rows, src_cols, dst_rows, dst_cols, src_step,
-                dst_step, row_scale, col_scale, 1 / row_scale, 1 / col_scale);
+                src, dst, src_rows, src_cols, dst_rows, dst_cols, src_step, dst_step,
+                row_scale, col_scale, 1 / row_scale, 1 / col_scale);
     }
 }
 
@@ -422,18 +416,16 @@ __global__ void resize_cubic_32f_kernel_vector(
 #pragma unroll
             for (int offset_r = 0; offset_r < 4; ++offset_r) {
                 int tr_step =
-                        saturate(sr + offset_r - 1, 0, (int)src_rows - 1) *
-                        src_step;
+                        saturate(sr + offset_r - 1, 0, (int)src_rows - 1) * src_step;
 #pragma unroll
                 for (int offset_c = 0; offset_c < 4; ++offset_c) {
                     int tc_step =
-                            saturate(sc + offset_c - 1, 0, (int)src_cols - 1) *
-                            CH;
+                            saturate(sc + offset_c - 1, 0, (int)src_cols - 1) * CH;
                     int src_address = tr_step + tc_step;
 #pragma unroll
                     for (size_t ch = 0; ch < CH; ++ch) {
-                        dst_data[ch] += coef_row[offset_r] *
-                                        coef_col[offset_c] * src[src_address++];
+                        dst_data[ch] += coef_row[offset_r] * coef_col[offset_c] *
+                                        src[src_address++];
                     }
                 }
             }
@@ -485,18 +477,15 @@ __global__ void resize_cubic_8u_kernel_vector(
 #pragma unroll
             for (int offset_r = 0; offset_r < 4; ++offset_r) {
                 int tr_step =
-                        saturate(sr + offset_r - 1, 0, (int)src_rows - 1) *
-                        src_step;
+                        saturate(sr + offset_r - 1, 0, (int)src_rows - 1) * src_step;
 #pragma unroll
                 for (int offset_c = 0; offset_c < 4; ++offset_c) {
                     int tc_step =
-                            saturate(sc + offset_c - 1, 0, (int)src_cols - 1) *
-                            CH;
+                            saturate(sc + offset_c - 1, 0, (int)src_cols - 1) * CH;
                     int src_address = tr_step + tc_step;
 #pragma unroll
                     for (size_t ch = 0; ch < CH; ++ch) {
-                        dst_data[ch] += icoef_row[offset_r] *
-                                        icoef_col[offset_c] *
+                        dst_data[ch] += icoef_row[offset_r] * icoef_col[offset_c] *
                                         src[src_address++];
                     }
                 }
@@ -504,8 +493,7 @@ __global__ void resize_cubic_8u_kernel_vector(
             int dst_address = dr * dst_step + dc * CH;
 #pragma unroll
             for (int i = 0; i < CH; i++)
-                dst[dst_address++] =
-                        saturate(dst_data[i] >> (SCALE + SCALE), 0, 255);
+                dst[dst_address++] = saturate(dst_data[i] >> (SCALE + SCALE), 0, 255);
             dr += blockDim.y;
         }
     }
@@ -513,10 +501,10 @@ __global__ void resize_cubic_8u_kernel_vector(
 
 template <size_t CH>
 __global__ void resize_cubic_32f_kernel_cacheToGlobal(
-        const float* src, float* dst, const size_t src_rows,
-        const size_t src_cols, const size_t dst_rows, const size_t dst_cols,
-        const size_t src_step, const size_t dst_step, const float* gl_coef_row,
-        const float* gl_coef_col, const int* gl_sr, const int* gl_sc) {
+        const float* src, float* dst, const size_t src_rows, const size_t src_cols,
+        const size_t dst_rows, const size_t dst_cols, const size_t src_step,
+        const size_t dst_step, const float* gl_coef_row, const float* gl_coef_col,
+        const int* gl_sr, const int* gl_sc) {
     size_t dc = blockIdx.x * blockDim.x + threadIdx.x;
     size_t dr = blockIdx.y * blockDim.y * ELEMENTS_PER_THREADS + threadIdx.y;
 
@@ -540,18 +528,16 @@ __global__ void resize_cubic_32f_kernel_cacheToGlobal(
 #pragma unroll
             for (int offset_r = 0; offset_r < 4; ++offset_r) {
                 int tr_step =
-                        saturate(sr + offset_r - 1, 0, (int)src_rows - 1) *
-                        src_step;
+                        saturate(sr + offset_r - 1, 0, (int)src_rows - 1) * src_step;
 #pragma unroll
                 for (int offset_c = 0; offset_c < 4; ++offset_c) {
                     int tc_step =
-                            saturate(sc + offset_c - 1, 0, (int)src_cols - 1) *
-                            CH;
+                            saturate(sc + offset_c - 1, 0, (int)src_cols - 1) * CH;
                     int src_address = tr_step + tc_step;
 #pragma unroll
                     for (size_t ch = 0; ch < CH; ++ch) {
-                        dst_data[ch] += coef_row[offset_r] *
-                                        coef_col[offset_c] * src[src_address++];
+                        dst_data[ch] += coef_row[offset_r] * coef_col[offset_c] *
+                                        src[src_address++];
                     }
                 }
             }
@@ -567,10 +553,10 @@ __global__ void resize_cubic_32f_kernel_cacheToGlobal(
 
 template <size_t CH>
 __global__ void resize_cubic_8u_kernel_cacheToGlobal(
-        const uchar* src, uchar* dst, const size_t src_rows,
-        const size_t src_cols, const size_t dst_rows, const size_t dst_cols,
-        const size_t src_step, const size_t dst_step, const short* gl_icoef_row,
-        const short* gl_icoef_col, const int* gl_sr, const int* gl_sc) {
+        const uchar* src, uchar* dst, const size_t src_rows, const size_t src_cols,
+        const size_t dst_rows, const size_t dst_cols, const size_t src_step,
+        const size_t dst_step, const short* gl_icoef_row, const short* gl_icoef_col,
+        const int* gl_sr, const int* gl_sc) {
     size_t dc = blockIdx.x * blockDim.x + threadIdx.x;
     size_t dr = blockIdx.y * blockDim.y * ELEMENTS_PER_THREADS + threadIdx.y;
 
@@ -594,18 +580,15 @@ __global__ void resize_cubic_8u_kernel_cacheToGlobal(
 #pragma unroll
             for (int offset_r = 0; offset_r < 4; ++offset_r) {
                 int tr_step =
-                        saturate(sr + offset_r - 1, 0, (int)src_rows - 1) *
-                        src_step;
+                        saturate(sr + offset_r - 1, 0, (int)src_rows - 1) * src_step;
 #pragma unroll
                 for (int offset_c = 0; offset_c < 4; ++offset_c) {
                     int tc_step =
-                            saturate(sc + offset_c - 1, 0, (int)src_cols - 1) *
-                            CH;
+                            saturate(sc + offset_c - 1, 0, (int)src_cols - 1) * CH;
                     int src_address = tr_step + tc_step;
 #pragma unroll
                     for (size_t ch = 0; ch < CH; ++ch) {
-                        dst_data[ch] += icoef_row[offset_r] *
-                                        icoef_col[offset_c] *
+                        dst_data[ch] += icoef_row[offset_r] * icoef_col[offset_c] *
                                         src[src_address++];
                     }
                 }
@@ -613,8 +596,7 @@ __global__ void resize_cubic_8u_kernel_cacheToGlobal(
             int dst_address = dr * dst_step + dc * CH;
 #pragma unroll
             for (int i = 0; i < CH; i++)
-                dst[dst_address++] =
-                        saturate(dst_data[i] >> (SCALE + SCALE), 0, 255);
+                dst[dst_address++] = saturate(dst_data[i] >> (SCALE + SCALE), 0, 255);
 
             dr += blockDim.y;
         }
@@ -622,11 +604,10 @@ __global__ void resize_cubic_8u_kernel_cacheToGlobal(
 }
 
 template <typename T, size_t CH>
-void resize_cubic_proxy(const T* src, T* dst, const size_t src_rows,
-                        const size_t src_cols, const size_t dst_rows,
-                        const size_t dst_cols, const size_t src_step,
-                        const size_t dst_step, void* workspace,
-                        cudaStream_t stream) {
+void resize_cubic_proxy(
+        const T* src, T* dst, const size_t src_rows, const size_t src_cols,
+        const size_t dst_rows, const size_t dst_cols, const size_t src_step,
+        const size_t dst_step, void* workspace, cudaStream_t stream) {
     dim3 THREADS(32, 8, 1);
     float row_scale = (float)src_rows / dst_rows;
     float col_scale = (float)src_cols / dst_cols;
@@ -645,24 +626,24 @@ void resize_cubic_proxy(const T* src, T* dst, const size_t src_rows,
                                   (F32_1 && dst_area_size <= 1000 * 1000)));
 
     if (use_vector) {
-        dim3 BLOCKS(DIVUP(dst_cols, THREADS.x),
-                    DIVUP(dst_rows, THREADS.y * ELEMENTS_PER_THREADS));
+        dim3 BLOCKS(
+                DIVUP(dst_cols, THREADS.x),
+                DIVUP(dst_rows, THREADS.y * ELEMENTS_PER_THREADS));
 
         if (sizeof(T) == sizeof(float)) {
             resize_cubic_32f_kernel_vector<CH><<<BLOCKS, THREADS, 0, stream>>>(
-                    (const float*)src, (float*)dst, src_rows, src_cols,
-                    dst_rows, dst_cols, src_step, dst_step, row_scale,
-                    col_scale);
+                    (const float*)src, (float*)dst, src_rows, src_cols, dst_rows,
+                    dst_cols, src_step, dst_step, row_scale, col_scale);
         } else {
             resize_cubic_8u_kernel_vector<CH><<<BLOCKS, THREADS, 0, stream>>>(
-                    (const uchar*)src, (uchar*)dst, src_rows, src_cols,
-                    dst_rows, dst_cols, src_step, dst_step, row_scale,
-                    col_scale);
+                    (const uchar*)src, (uchar*)dst, src_rows, src_cols, dst_rows,
+                    dst_cols, src_step, dst_step, row_scale, col_scale);
         }
 
     } else {
-        dim3 BLOCKS(DIVUP(dst_cols, THREADS.x),
-                    DIVUP(dst_rows, THREADS.y * ELEMENTS_PER_THREADS));
+        dim3 BLOCKS(
+                DIVUP(dst_cols, THREADS.x),
+                DIVUP(dst_rows, THREADS.y * ELEMENTS_PER_THREADS));
 
         cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
 
@@ -677,11 +658,10 @@ void resize_cubic_proxy(const T* src, T* dst, const size_t src_rows,
             precompute_cubic_coef_f32<<<DIVUP(dst_cols, 128), 128, 0, stream>>>(
                     dev_coef_col, col_scale, dst_cols);
 
-            resize_cubic_32f_kernel_cacheToGlobal<CH>
-                    <<<BLOCKS, THREADS, 0, stream>>>(
-                            (const float*)src, (float*)dst, src_rows, src_cols,
-                            dst_rows, dst_cols, src_step, dst_step,
-                            dev_coef_row, dev_coef_col, dev_sr, dev_sc);
+            resize_cubic_32f_kernel_cacheToGlobal<CH><<<BLOCKS, THREADS, 0, stream>>>(
+                    (const float*)src, (float*)dst, src_rows, src_cols, dst_rows,
+                    dst_cols, src_step, dst_step, dev_coef_row, dev_coef_col, dev_sr,
+                    dev_sc);
 
         } else {
             short* dev_coef_row = static_cast<short*>(workspace);
@@ -694,11 +674,10 @@ void resize_cubic_proxy(const T* src, T* dst, const size_t src_rows,
             precompute_cubic_coef_u8<<<DIVUP(dst_cols, 128), 128, 0, stream>>>(
                     dev_coef_col, col_scale, dst_cols);
 
-            resize_cubic_8u_kernel_cacheToGlobal<CH>
-                    <<<BLOCKS, THREADS, 0, stream>>>(
-                            (const uchar*)src, (uchar*)dst, src_rows, src_cols,
-                            dst_rows, dst_cols, src_step, dst_step,
-                            dev_coef_row, dev_coef_col, dev_sr, dev_sc);
+            resize_cubic_8u_kernel_cacheToGlobal<CH><<<BLOCKS, THREADS, 0, stream>>>(
+                    (const uchar*)src, (uchar*)dst, src_rows, src_cols, dst_rows,
+                    dst_cols, src_step, dst_step, dev_coef_row, dev_coef_col, dev_sr,
+                    dev_sc);
         }
     }
 }
@@ -730,18 +709,16 @@ __global__ void resize_lanczos4_32f_kernel_vector(
 #pragma unroll
             for (int offset_r = 0; offset_r < 8; ++offset_r) {
                 int tr_step =
-                        saturate(sr + offset_r - 3, 0, (int)src_rows - 1) *
-                        src_step;
+                        saturate(sr + offset_r - 3, 0, (int)src_rows - 1) * src_step;
 #pragma unroll
                 for (int offset_c = 0; offset_c < 8; ++offset_c) {
                     int tc_step =
-                            saturate(sc + offset_c - 3, 0, (int)src_cols - 1) *
-                            CH;
+                            saturate(sc + offset_c - 3, 0, (int)src_cols - 1) * CH;
                     int src_address = tr_step + tc_step;
 #pragma unroll
                     for (size_t ch = 0; ch < CH; ++ch) {
-                        dst_data[ch] += coef_row[offset_r] *
-                                        coef_col[offset_c] * src[src_address++];
+                        dst_data[ch] += coef_row[offset_r] * coef_col[offset_c] *
+                                        src[src_address++];
                     }
                 }
             }
@@ -778,13 +755,11 @@ __global__ void resize_lanczos4_8u_kernel_vector(
             else {
                 float coef_col[8];
                 float sum = 0;
-                float y0 = -(fc + 3) * MEGCV_PI * 0.25, s0 = sin(y0),
-                      c0 = cos(y0);
+                float y0 = -(fc + 3) * MEGCV_PI * 0.25, s0 = sin(y0), c0 = cos(y0);
 #pragma unroll
                 for (int i = 0; i < 8; i++) {
                     float y = -(fc + 3 - i) * MEGCV_PI * 0.25;
-                    coef_col[i] =
-                            (float)((cs[i][0] * s0 + cs[i][1] * c0) / (y * y));
+                    coef_col[i] = (float)((cs[i][0] * s0 + cs[i][1] * c0) / (y * y));
                     sum += coef_col[i];
                 }
 
@@ -810,13 +785,12 @@ __global__ void resize_lanczos4_8u_kernel_vector(
                 else {
                     float coef_row[8];
                     float sum = 0;
-                    float y0 = -(fr + 3) * MEGCV_PI * 0.25, s0 = sin(y0),
-                          c0 = cos(y0);
+                    float y0 = -(fr + 3) * MEGCV_PI * 0.25, s0 = sin(y0), c0 = cos(y0);
 #pragma unroll
                     for (int i = 0; i < 8; i++) {
                         float y = -(fr + 3 - i) * MEGCV_PI * 0.25;
-                        coef_row[i] = (float)((cs[i][0] * s0 + cs[i][1] * c0) /
-                                              (y * y));
+                        coef_row[i] =
+                                (float)((cs[i][0] * s0 + cs[i][1] * c0) / (y * y));
                         sum += coef_row[i];
                     }
 
@@ -833,18 +807,15 @@ __global__ void resize_lanczos4_8u_kernel_vector(
 #pragma unroll
             for (int offset_r = 0; offset_r < 8; ++offset_r) {
                 int tr_step =
-                        saturate(sr + offset_r - 3, 0, (int)src_rows - 1) *
-                        src_step;
+                        saturate(sr + offset_r - 3, 0, (int)src_rows - 1) * src_step;
 #pragma unroll
                 for (int offset_c = 0; offset_c < 8; ++offset_c) {
                     int tc_step =
-                            saturate(sc + offset_c - 3, 0, (int)src_cols - 1) *
-                            CH;
+                            saturate(sc + offset_c - 3, 0, (int)src_cols - 1) * CH;
                     int src_address = tr_step + tc_step;
 #pragma unroll
                     for (size_t ch = 0; ch < CH; ++ch) {
-                        dst_data[ch] += icoef_row[offset_r] *
-                                        icoef_col[offset_c] *
+                        dst_data[ch] += icoef_row[offset_r] * icoef_col[offset_c] *
                                         src[src_address++];
                     }
                 }
@@ -852,8 +823,7 @@ __global__ void resize_lanczos4_8u_kernel_vector(
 
             int dst_address = dr * dst_step + dc * CH;
             for (int ch = 0; ch < CH; ch++)
-                dst[dst_address++] =
-                        saturate(dst_data[ch] >> (SCALE + SCALE), 0, 255);
+                dst[dst_address++] = saturate(dst_data[ch] >> (SCALE + SCALE), 0, 255);
             dr += blockDim.y;
         }
     }
@@ -861,10 +831,10 @@ __global__ void resize_lanczos4_8u_kernel_vector(
 
 template <size_t CH>
 __global__ void resize_lanczos4_32f_kernel_cacheToGlobal(
-        const float* src, float* dst, const size_t src_rows,
-        const size_t src_cols, const size_t dst_rows, const size_t dst_cols,
-        const size_t src_step, const size_t dst_step, const float* gl_coef_row,
-        const float* gl_coef_col, const int* gl_sr, const int* gl_sc) {
+        const float* src, float* dst, const size_t src_rows, const size_t src_cols,
+        const size_t dst_rows, const size_t dst_cols, const size_t src_step,
+        const size_t dst_step, const float* gl_coef_row, const float* gl_coef_col,
+        const int* gl_sr, const int* gl_sc) {
     size_t dc = blockIdx.x * blockDim.x + threadIdx.x;
     size_t dr = blockIdx.y * blockDim.y * ELEMENTS_PER_THREADS + threadIdx.y;
 
@@ -888,18 +858,16 @@ __global__ void resize_lanczos4_32f_kernel_cacheToGlobal(
 #pragma unroll
             for (int offset_r = 0; offset_r < 8; ++offset_r) {
                 int tr_step =
-                        saturate(sr + offset_r - 3, 0, (int)src_rows - 1) *
-                        src_step;
+                        saturate(sr + offset_r - 3, 0, (int)src_rows - 1) * src_step;
 #pragma unroll
                 for (int offset_c = 0; offset_c < 8; ++offset_c) {
                     int tc_step =
-                            saturate(sc + offset_c - 3, 0, (int)src_cols - 1) *
-                            CH;
+                            saturate(sc + offset_c - 3, 0, (int)src_cols - 1) * CH;
                     int src_address = tr_step + tc_step;
 #pragma unroll
                     for (size_t ch = 0; ch < CH; ++ch) {
-                        dst_data[ch] += coef_row[offset_r] *
-                                        coef_col[offset_c] * src[src_address++];
+                        dst_data[ch] += coef_row[offset_r] * coef_col[offset_c] *
+                                        src[src_address++];
                     }
                 }
             }
@@ -915,10 +883,10 @@ __global__ void resize_lanczos4_32f_kernel_cacheToGlobal(
 
 template <size_t CH>
 __global__ void resize_lanczos4_8u_kernel_cacheToGlobal(
-        const uchar* src, uchar* dst, const size_t src_rows,
-        const size_t src_cols, const size_t dst_rows, const size_t dst_cols,
-        const size_t src_step, const size_t dst_step, const short* gl_icoef_row,
-        const short* gl_icoef_col, const int* gl_sr, const int* gl_sc) {
+        const uchar* src, uchar* dst, const size_t src_rows, const size_t src_cols,
+        const size_t dst_rows, const size_t dst_cols, const size_t src_step,
+        const size_t dst_step, const short* gl_icoef_row, const short* gl_icoef_col,
+        const int* gl_sr, const int* gl_sc) {
     size_t dc = blockIdx.x * blockDim.x + threadIdx.x;
     size_t dr = blockIdx.y * blockDim.y * ELEMENTS_PER_THREADS + threadIdx.y;
 
@@ -942,18 +910,15 @@ __global__ void resize_lanczos4_8u_kernel_cacheToGlobal(
 #pragma unroll
             for (int offset_r = 0; offset_r < 8; ++offset_r) {
                 int tr_step =
-                        saturate(sr + offset_r - 3, 0, (int)src_rows - 1) *
-                        src_step;
+                        saturate(sr + offset_r - 3, 0, (int)src_rows - 1) * src_step;
 #pragma unroll
                 for (int offset_c = 0; offset_c < 8; ++offset_c) {
                     int tc_step =
-                            saturate(sc + offset_c - 3, 0, (int)src_cols - 1) *
-                            CH;
+                            saturate(sc + offset_c - 3, 0, (int)src_cols - 1) * CH;
                     int src_address = tr_step + tc_step;
 #pragma unroll
                     for (size_t ch = 0; ch < CH; ++ch) {
-                        dst_data[ch] += icoef_row[offset_r] *
-                                        icoef_col[offset_c] *
+                        dst_data[ch] += icoef_row[offset_r] * icoef_col[offset_c] *
                                         src[src_address++];
                     }
                 }
@@ -961,8 +926,7 @@ __global__ void resize_lanczos4_8u_kernel_cacheToGlobal(
             int dst_address = dr * dst_step + dc * CH;
 #pragma unroll
             for (int i = 0; i < CH; i++)
-                dst[dst_address++] =
-                        saturate(dst_data[i] >> (SCALE + SCALE), 0, 255);
+                dst[dst_address++] = saturate(dst_data[i] >> (SCALE + SCALE), 0, 255);
 
             dr += blockDim.y;
         }
@@ -970,11 +934,10 @@ __global__ void resize_lanczos4_8u_kernel_cacheToGlobal(
 }
 
 template <typename T, size_t CH>
-void resize_lanczos4_proxy(const T* src, T* dst, const size_t src_rows,
-                           const size_t src_cols, const size_t dst_rows,
-                           const size_t dst_cols, const size_t src_step,
-                           const size_t dst_step, void* workspace,
-                           cudaStream_t stream) {
+void resize_lanczos4_proxy(
+        const T* src, T* dst, const size_t src_rows, const size_t src_cols,
+        const size_t dst_rows, const size_t dst_cols, const size_t src_step,
+        const size_t dst_step, void* workspace, cudaStream_t stream) {
     dim3 THREADS(16, 16, 1);
 
     float row_scale = (float)src_rows / dst_rows;
@@ -994,26 +957,24 @@ void resize_lanczos4_proxy(const T* src, T* dst, const size_t src_rows,
                                   (F32_1 && dst_area_size <= 1000 * 1000)));
 
     if (use_vector) {
-        dim3 BLOCKS(DIVUP(dst_cols, THREADS.x),
-                    DIVUP(dst_rows, THREADS.y * ELEMENTS_PER_THREADS));
+        dim3 BLOCKS(
+                DIVUP(dst_cols, THREADS.x),
+                DIVUP(dst_rows, THREADS.y * ELEMENTS_PER_THREADS));
 
         if (sizeof(T) == sizeof(float)) {
-            resize_lanczos4_32f_kernel_vector<CH>
-                    <<<BLOCKS, THREADS, 0, stream>>>(
-                            (const float*)src, (float*)dst, src_rows, src_cols,
-                            dst_rows, dst_cols, src_step, dst_step, row_scale,
-                            col_scale);
+            resize_lanczos4_32f_kernel_vector<CH><<<BLOCKS, THREADS, 0, stream>>>(
+                    (const float*)src, (float*)dst, src_rows, src_cols, dst_rows,
+                    dst_cols, src_step, dst_step, row_scale, col_scale);
         } else {
-            resize_lanczos4_8u_kernel_vector<CH>
-                    <<<BLOCKS, THREADS, 0, stream>>>(
-                            (const uchar*)src, (uchar*)dst, src_rows, src_cols,
-                            dst_rows, dst_cols, src_step, dst_step, row_scale,
-                            col_scale);
+            resize_lanczos4_8u_kernel_vector<CH><<<BLOCKS, THREADS, 0, stream>>>(
+                    (const uchar*)src, (uchar*)dst, src_rows, src_cols, dst_rows,
+                    dst_cols, src_step, dst_step, row_scale, col_scale);
         }
 
     } else {
-        dim3 BLOCKS(DIVUP(dst_cols, THREADS.x),
-                    DIVUP(dst_rows, THREADS.y * ELEMENTS_PER_THREADS));
+        dim3 BLOCKS(
+                DIVUP(dst_cols, THREADS.x),
+                DIVUP(dst_rows, THREADS.y * ELEMENTS_PER_THREADS));
 
         cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
 
@@ -1023,17 +984,15 @@ void resize_lanczos4_proxy(const T* src, T* dst, const size_t src_rows,
             float* dev_coef_col = reinterpret_cast<float*>(dev_sr + dst_rows);
             int* dev_sc = reinterpret_cast<int*>(dev_coef_col + dst_cols * 8);
 
-            precompute_lanczos4_coef_f32<<<DIVUP(dst_rows, 128), 128, 0,
-                                           stream>>>(dev_coef_row, row_scale,
-                                                     dst_rows);
-            precompute_lanczos4_coef_f32<<<DIVUP(dst_cols, 128), 128, 0,
-                                           stream>>>(dev_coef_col, col_scale,
-                                                     dst_cols);
+            precompute_lanczos4_coef_f32<<<DIVUP(dst_rows, 128), 128, 0, stream>>>(
+                    dev_coef_row, row_scale, dst_rows);
+            precompute_lanczos4_coef_f32<<<DIVUP(dst_cols, 128), 128, 0, stream>>>(
+                    dev_coef_col, col_scale, dst_cols);
             resize_lanczos4_32f_kernel_cacheToGlobal<CH>
                     <<<BLOCKS, THREADS, 0, stream>>>(
                             (const float*)src, (float*)dst, src_rows, src_cols,
-                            dst_rows, dst_cols, src_step, dst_step,
-                            dev_coef_row, dev_coef_col, dev_sr, dev_sc);
+                            dst_rows, dst_cols, src_step, dst_step, dev_coef_row,
+                            dev_coef_col, dev_sr, dev_sc);
 
         } else {
             short* dev_coef_row = static_cast<short*>(workspace);
@@ -1041,28 +1000,25 @@ void resize_lanczos4_proxy(const T* src, T* dst, const size_t src_rows,
             short* dev_coef_col = reinterpret_cast<short*>(dev_sr + dst_rows);
             int* dev_sc = reinterpret_cast<int*>(dev_coef_col + dst_cols * 8);
 
-            precompute_lanczos4_coef_u8<<<DIVUP(dst_rows, 128), 128, 0,
-                                          stream>>>(dev_coef_row, row_scale,
-                                                    dst_rows);
-            precompute_lanczos4_coef_u8<<<DIVUP(dst_cols, 128), 128, 0,
-                                          stream>>>(dev_coef_col, col_scale,
-                                                    dst_cols);
+            precompute_lanczos4_coef_u8<<<DIVUP(dst_rows, 128), 128, 0, stream>>>(
+                    dev_coef_row, row_scale, dst_rows);
+            precompute_lanczos4_coef_u8<<<DIVUP(dst_cols, 128), 128, 0, stream>>>(
+                    dev_coef_col, col_scale, dst_cols);
 
-            resize_lanczos4_8u_kernel_cacheToGlobal<CH>
-                    <<<BLOCKS, THREADS, 0, stream>>>(
-                            (const uchar*)src, (uchar*)dst, src_rows, src_cols,
-                            dst_rows, dst_cols, src_step, dst_step,
-                            dev_coef_row, dev_coef_col, dev_sr, dev_sc);
+            resize_lanczos4_8u_kernel_cacheToGlobal<CH><<<BLOCKS, THREADS, 0, stream>>>(
+                    (const uchar*)src, (uchar*)dst, src_rows, src_cols, dst_rows,
+                    dst_cols, src_step, dst_step, dev_coef_row, dev_coef_col, dev_sr,
+                    dev_sc);
         }
     }
 }
 
 template <size_t CH>
 __global__ void resize_area_version1_shrink_32f_kernel(
-        const float* src, float* dst, const size_t src_rows,
-        const size_t src_cols, const size_t dst_rows, const size_t dst_cols,
-        const size_t src_step, const size_t dst_step, const float row_scale,
-        const float col_scale, const float _row_scale, const float _col_scale) {
+        const float* src, float* dst, const size_t src_rows, const size_t src_cols,
+        const size_t dst_rows, const size_t dst_cols, const size_t src_step,
+        const size_t dst_step, const float row_scale, const float col_scale,
+        const float _row_scale, const float _col_scale) {
     size_t dc = blockIdx.x * blockDim.x + threadIdx.x;
     size_t dr = blockIdx.y * blockDim.y + threadIdx.y;
     if (dr < dst_rows && dc < dst_cols) {
@@ -1139,8 +1095,7 @@ __global__ void resize_area_version1_shrink_32f_kernel(
             {
                 float coefc = (float)(fsc2 - (sc2 - 1)) * _col_scale;
                 for (size_t ch = 0; ch < CH; ++ch) {
-                    dst_data[ch] +=
-                            coefr * coefc * at(src, sr2 - 1, sc2 - 1, ch);
+                    dst_data[ch] += coefr * coefc * at(src, sr2 - 1, sc2 - 1, ch);
                 }
             }
         }
@@ -1152,10 +1107,10 @@ __global__ void resize_area_version1_shrink_32f_kernel(
 
 template <size_t CH>
 __global__ void resize_area_version1_shrink_8u_kernel(
-        const uchar* src, uchar* dst, const size_t src_rows,
-        const size_t src_cols, const size_t dst_rows, const size_t dst_cols,
-        const size_t src_step, const size_t dst_step, const float row_scale,
-        const float col_scale, const float _row_scale, const float _col_scale) {
+        const uchar* src, uchar* dst, const size_t src_rows, const size_t src_cols,
+        const size_t dst_rows, const size_t dst_cols, const size_t src_step,
+        const size_t dst_step, const float row_scale, const float col_scale,
+        const float _row_scale, const float _col_scale) {
     size_t dc = blockIdx.x * blockDim.x + threadIdx.x;
     size_t dr = blockIdx.y * blockDim.y + threadIdx.y;
     if (dr < dst_rows && dc < dst_cols) {
@@ -1230,8 +1185,7 @@ __global__ void resize_area_version1_shrink_8u_kernel(
             {
                 float coefc = (float)(fsc2 - (sc2 - 1)) * _col_scale;
                 for (size_t ch = 0; ch < CH; ++ch) {
-                    dst_data[ch] +=
-                            coefr * coefc * at(src, sr2 - 1, sc2 - 1, ch);
+                    dst_data[ch] += coefr * coefc * at(src, sr2 - 1, sc2 - 1, ch);
                 }
             }
         }
@@ -1243,10 +1197,10 @@ __global__ void resize_area_version1_shrink_8u_kernel(
 
 template <size_t CH>
 __global__ void resize_area_version2_shrink_32f_kernel(
-        const float* src, float* dst, const size_t src_rows,
-        const size_t src_cols, const size_t dst_rows, const size_t dst_cols,
-        const size_t src_step, const size_t dst_step, const float row_scale,
-        const float col_scale, const float _row_scale, const float _col_scale) {
+        const float* src, float* dst, const size_t src_rows, const size_t src_cols,
+        const size_t dst_rows, const size_t dst_cols, const size_t src_step,
+        const size_t dst_step, const float row_scale, const float col_scale,
+        const float _row_scale, const float _col_scale) {
     size_t dc0 = blockIdx.x * blockDim.x;
     size_t dr = blockIdx.y * blockDim.y + threadIdx.y;
     if (dr < dst_rows && dc0 < dst_cols) {
@@ -1289,18 +1243,20 @@ __global__ void resize_area_version2_shrink_32f_kernel(
             size_t multi = floor(((sc_address / CH) + 1) * _col_scale);
             float x = ((sc_address / CH) + 1) - multi * col_scale;
             if (x >= 1) {
-                atomicAdd(&(lc_dst_data[threadIdx.y]
-                                       [(multi - dc0) * CH + sc_address % CH]),
-                          sum * _col_scale);
+                atomicAdd(
+                        &(lc_dst_data[threadIdx.y]
+                                     [(multi - dc0) * CH + sc_address % CH]),
+                        sum * _col_scale);
             } else {
                 if (multi < dc0 + blockDim.x)
-                    atomicAdd(&(lc_dst_data[threadIdx.y][(multi - dc0) * CH +
-                                                         sc_address % CH]),
-                              sum * (x * _col_scale));
+                    atomicAdd(
+                            &(lc_dst_data[threadIdx.y]
+                                         [(multi - dc0) * CH + sc_address % CH]),
+                            sum * (x * _col_scale));
                 if (multi - 1 >= dc0)
                     atomicAdd(
-                            &(lc_dst_data[threadIdx.y][(multi - 1 - dc0) * CH +
-                                                       sc_address % CH]),
+                            &(lc_dst_data[threadIdx.y]
+                                         [(multi - 1 - dc0) * CH + sc_address % CH]),
                             sum * ((1 - x) * _col_scale));
             }
         }
@@ -1309,18 +1265,17 @@ __global__ void resize_area_version2_shrink_32f_kernel(
 
         if (dc < dst_cols) {
             for (size_t ch = 0; ch < CH; ++ch)
-                at(dst, dr, dc, ch) =
-                        lc_dst_data[threadIdx.y][(threadIdx.x) * CH + ch];
+                at(dst, dr, dc, ch) = lc_dst_data[threadIdx.y][(threadIdx.x) * CH + ch];
         }
     }
 }
 
 template <size_t CH>
 __global__ void resize_area_version2_shrink_8u_kernel(
-        const uchar* src, uchar* dst, const size_t src_rows,
-        const size_t src_cols, const size_t dst_rows, const size_t dst_cols,
-        const size_t src_step, const size_t dst_step, const float row_scale,
-        const float col_scale, const float _row_scale, const float _col_scale) {
+        const uchar* src, uchar* dst, const size_t src_rows, const size_t src_cols,
+        const size_t dst_rows, const size_t dst_cols, const size_t src_step,
+        const size_t dst_step, const float row_scale, const float col_scale,
+        const float _row_scale, const float _col_scale) {
     size_t dc0 = blockIdx.x * blockDim.x;
     size_t dr = blockIdx.y * blockDim.y + threadIdx.y;
     if (dr < dst_rows && dc0 < dst_cols) {
@@ -1363,18 +1318,20 @@ __global__ void resize_area_version2_shrink_8u_kernel(
             size_t multi = floor(((sc_address / CH) + 1) * _col_scale);
             float x = ((sc_address / CH) + 1) - multi * col_scale;
             if (x >= 1) {
-                atomicAdd(&(lc_dst_data[threadIdx.y]
-                                       [(multi - dc0) * CH + sc_address % CH]),
-                          sum * _col_scale);
+                atomicAdd(
+                        &(lc_dst_data[threadIdx.y]
+                                     [(multi - dc0) * CH + sc_address % CH]),
+                        sum * _col_scale);
             } else {
                 if (multi < dc0 + blockDim.x)
-                    atomicAdd(&(lc_dst_data[threadIdx.y][(multi - dc0) * CH +
-                                                         sc_address % CH]),
-                              sum * (x * _col_scale));
+                    atomicAdd(
+                            &(lc_dst_data[threadIdx.y]
+                                         [(multi - dc0) * CH + sc_address % CH]),
+                            sum * (x * _col_scale));
                 if (multi - 1 >= dc0)
                     atomicAdd(
-                            &(lc_dst_data[threadIdx.y][(multi - 1 - dc0) * CH +
-                                                       sc_address % CH]),
+                            &(lc_dst_data[threadIdx.y]
+                                         [(multi - 1 - dc0) * CH + sc_address % CH]),
                             sum * ((1 - x) * _col_scale));
             }
         }
@@ -1384,8 +1341,7 @@ __global__ void resize_area_version2_shrink_8u_kernel(
         if (dc < dst_cols) {
             for (size_t ch = 0; ch < CH; ++ch)
                 at(dst, dr, dc, ch) = saturate(
-                        (int)lc_dst_data[threadIdx.y][(threadIdx.x) * CH + ch],
-                        0, 255);
+                        (int)lc_dst_data[threadIdx.y][(threadIdx.x) * CH + ch], 0, 255);
         }
     }
 }
@@ -1395,8 +1351,7 @@ __global__ void resize_area_version1_shrink_fast_32f_kernel(
         const float* __restrict__ src, float* dst, const size_t src_rows,
         const size_t src_cols, const size_t dst_rows, const size_t dst_cols,
         const size_t src_step, const size_t dst_step, const size_t cell_rows,
-        const size_t cell_cols, const float _cell_rows,
-        const float _cell_cols) {
+        const size_t cell_cols, const float _cell_rows, const float _cell_cols) {
     size_t dc = blockIdx.x * blockDim.x + threadIdx.x;
     size_t dr = blockIdx.y * blockDim.y + threadIdx.y;
     if (dr < dst_rows && dc < dst_cols) {
@@ -1421,8 +1376,7 @@ __global__ void resize_area_version1_shrink_fast_8u_kernel(
         const uchar* __restrict__ src, uchar* dst, const size_t src_rows,
         const size_t src_cols, const size_t dst_rows, const size_t dst_cols,
         const size_t src_step, const size_t dst_step, const size_t cell_rows,
-        const size_t cell_cols, const float _cell_rows,
-        const float _cell_cols) {
+        const size_t cell_cols, const float _cell_rows, const float _cell_cols) {
     size_t dc = blockIdx.x * blockDim.x + threadIdx.x;
     size_t dr = blockIdx.y * blockDim.y + threadIdx.y;
     if (dr < dst_rows && dc < dst_cols) {
@@ -1438,8 +1392,7 @@ __global__ void resize_area_version1_shrink_fast_8u_kernel(
         }
 
         for (size_t ch = 0; ch < CH; ++ch) {
-            at(dst, dr, dc, ch) =
-                    (uchar)(dst_data[ch] * _cell_rows * _cell_cols);
+            at(dst, dr, dc, ch) = (uchar)(dst_data[ch] * _cell_rows * _cell_cols);
         }
     }
 }
@@ -1449,8 +1402,7 @@ __global__ void resize_area_version2_shrink_fast_32f_kernel(
         const float* __restrict__ src, float* dst, const size_t src_rows,
         const size_t src_cols, const size_t dst_rows, const size_t dst_cols,
         const size_t src_step, const size_t dst_step, const size_t cell_rows,
-        const size_t cell_cols, const float _cell_rows,
-        const float _cell_cols) {
+        const size_t cell_cols, const float _cell_rows, const float _cell_cols) {
     size_t dc0 = blockIdx.x * blockDim.x;
     size_t dr = blockIdx.y * blockDim.y + threadIdx.y;
     if (dr < dst_rows && dc0 < dst_cols) {
@@ -1468,12 +1420,11 @@ __global__ void resize_area_version2_shrink_fast_32f_kernel(
              i < block_cell_width && sc < src_cols * CH;
              i += blockDim.x, sc += blockDim.x) {
             float sum = 0;
-            for (int j = 0, sr = sr0 * src_step; j < cell_rows;
-                 j++, sr += src_step)
+            for (int j = 0, sr = sr0 * src_step; j < cell_rows; j++, sr += src_step)
                 sum += src[sr + sc];
-            atomicAdd(&(lc_dst_data[threadIdx.y]
-                                   [(i / (cell_cols * CH)) * CH + i % CH]),
-                      sum);
+            atomicAdd(
+                    &(lc_dst_data[threadIdx.y][(i / (cell_cols * CH)) * CH + i % CH]),
+                    sum);
         }
 
         __syncthreads();
@@ -1481,9 +1432,8 @@ __global__ void resize_area_version2_shrink_fast_32f_kernel(
         size_t dc = dc0 + threadIdx.x;
         if (dc < dst_cols) {
             for (size_t ch = 0; ch < CH; ++ch)
-                at(dst, dr, dc, ch) =
-                        lc_dst_data[threadIdx.y][threadIdx.x * CH + ch] *
-                        _cell_rows * _cell_cols;
+                at(dst, dr, dc, ch) = lc_dst_data[threadIdx.y][threadIdx.x * CH + ch] *
+                                      _cell_rows * _cell_cols;
         }
     }
 }
@@ -1493,8 +1443,7 @@ __global__ void resize_area_version2_shrink_fast_8u_kernel(
         const uchar* __restrict__ src, uchar* dst, const size_t src_rows,
         const size_t src_cols, const size_t dst_rows, const size_t dst_cols,
         const size_t src_step, const size_t dst_step, const size_t cell_rows,
-        const size_t cell_cols, const float _cell_rows,
-        const float _cell_cols) {
+        const size_t cell_cols, const float _cell_rows, const float _cell_cols) {
     size_t dc0 = blockIdx.x * blockDim.x;
     size_t dr = blockIdx.y * blockDim.y + threadIdx.y;
     if (dr < dst_rows && dc0 < dst_cols) {
@@ -1512,12 +1461,11 @@ __global__ void resize_area_version2_shrink_fast_8u_kernel(
              i < block_cell_width && sc < src_cols * CH;
              i += blockDim.x, sc += blockDim.x) {
             int sum = 0;
-            for (int j = 0, sr = sr0 * src_step; j < cell_rows;
-                 j++, sr += src_step)
+            for (int j = 0, sr = sr0 * src_step; j < cell_rows; j++, sr += src_step)
                 sum += src[sr + sc];
-            atomicAdd(&(lc_dst_data[threadIdx.y]
-                                   [(i / (cell_cols * CH)) * CH + i % CH]),
-                      sum);
+            atomicAdd(
+                    &(lc_dst_data[threadIdx.y][(i / (cell_cols * CH)) * CH + i % CH]),
+                    sum);
         }
 
         __syncthreads();
@@ -1525,19 +1473,18 @@ __global__ void resize_area_version2_shrink_fast_8u_kernel(
         size_t dc = dc0 + threadIdx.x;
         if (dc < dst_cols) {
             for (size_t ch = 0; ch < CH; ++ch)
-                at(dst, dr, dc, ch) = (uchar)(
-                        lc_dst_data[threadIdx.y][threadIdx.x * CH + ch] *
-                        _cell_rows * _cell_cols);
+                at(dst, dr, dc, ch) =
+                        (uchar)(lc_dst_data[threadIdx.y][threadIdx.x * CH + ch] *
+                                _cell_rows * _cell_cols);
         }
     }
 }
 
 template <typename T, size_t CH>
-void resize_area_proxy(const T* src, T* dst, const size_t src_rows,
-                       const size_t src_cols, const size_t dst_rows,
-                       const size_t dst_cols, const size_t src_step,
-                       const size_t dst_step, void* workspace,
-                       cudaStream_t stream) {
+void resize_area_proxy(
+        const T* src, T* dst, const size_t src_rows, const size_t src_cols,
+        const size_t dst_rows, const size_t dst_cols, const size_t src_step,
+        const size_t dst_step, void* workspace, cudaStream_t stream) {
     dim3 THREADS(THREADS_X, THREADS_Y, 1);
 
     float row_scale = (float)src_rows / dst_rows;
@@ -1553,20 +1500,18 @@ void resize_area_proxy(const T* src, T* dst, const size_t src_rows,
                     cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
                     resize_area_version1_shrink_fast_32f_kernel<CH>
                             <<<BLOCKS, THREADS, 0, stream>>>(
-                                    (const float*)src, (float*)dst, src_rows,
-                                    src_cols, dst_rows, dst_cols, src_step,
-                                    dst_step, (size_t)row_scale,
-                                    (size_t)col_scale, (float)1 / row_scale,
-                                    (float)1 / col_scale);
+                                    (const float*)src, (float*)dst, src_rows, src_cols,
+                                    dst_rows, dst_cols, src_step, dst_step,
+                                    (size_t)row_scale, (size_t)col_scale,
+                                    (float)1 / row_scale, (float)1 / col_scale);
                 } else {
                     cudaDeviceSetCacheConfig(cudaFuncCachePreferShared);
                     resize_area_version2_shrink_fast_32f_kernel<CH>
                             <<<BLOCKS, THREADS, 0, stream>>>(
-                                    (const float*)src, (float*)dst, src_rows,
-                                    src_cols, dst_rows, dst_cols, src_step,
-                                    dst_step, (size_t)row_scale,
-                                    (size_t)col_scale, (float)1 / row_scale,
-                                    (float)1 / col_scale);
+                                    (const float*)src, (float*)dst, src_rows, src_cols,
+                                    dst_rows, dst_cols, src_step, dst_step,
+                                    (size_t)row_scale, (size_t)col_scale,
+                                    (float)1 / row_scale, (float)1 / col_scale);
                 }
 
             } else {
@@ -1574,74 +1519,70 @@ void resize_area_proxy(const T* src, T* dst, const size_t src_rows,
                     cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
                     resize_area_version1_shrink_fast_8u_kernel<CH>
                             <<<BLOCKS, THREADS, 0, stream>>>(
-                                    (const uchar*)src, (uchar*)dst, src_rows,
-                                    src_cols, dst_rows, dst_cols, src_step,
-                                    dst_step, (size_t)row_scale,
-                                    (size_t)col_scale, (float)1 / row_scale,
-                                    (float)1 / col_scale);
+                                    (const uchar*)src, (uchar*)dst, src_rows, src_cols,
+                                    dst_rows, dst_cols, src_step, dst_step,
+                                    (size_t)row_scale, (size_t)col_scale,
+                                    (float)1 / row_scale, (float)1 / col_scale);
                 } else {
                     cudaDeviceSetCacheConfig(cudaFuncCachePreferShared);
                     resize_area_version2_shrink_fast_8u_kernel<CH>
                             <<<BLOCKS, THREADS, 0, stream>>>(
-                                    (const uchar*)src, (uchar*)dst, src_rows,
-                                    src_cols, dst_rows, dst_cols, src_step,
-                                    dst_step, (size_t)row_scale,
-                                    (size_t)col_scale, (float)1 / row_scale,
-                                    (float)1 / col_scale);
+                                    (const uchar*)src, (uchar*)dst, src_rows, src_cols,
+                                    dst_rows, dst_cols, src_step, dst_step,
+                                    (size_t)row_scale, (size_t)col_scale,
+                                    (float)1 / row_scale, (float)1 / col_scale);
                 }
             }
 
         } else {
             size_t access_step = (int)(sizeof(T) * CH * col_scale);
             if (access_step <= 24) {
-                dim3 BLOCKS(DIVUP(dst_cols, THREADS.x),
-                            DIVUP(dst_rows, THREADS.y));
+                dim3 BLOCKS(DIVUP(dst_cols, THREADS.x), DIVUP(dst_rows, THREADS.y));
 
                 cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
 
                 if (sizeof(T) == sizeof(float)) {
                     resize_area_version1_shrink_32f_kernel<CH>
                             <<<BLOCKS, THREADS, 0, stream>>>(
-                                    (const float*)src, (float*)dst, src_rows,
-                                    src_cols, dst_rows, dst_cols, src_step,
-                                    dst_step, row_scale, col_scale,
-                                    (float)1 / row_scale, (float)1 / col_scale);
+                                    (const float*)src, (float*)dst, src_rows, src_cols,
+                                    dst_rows, dst_cols, src_step, dst_step, row_scale,
+                                    col_scale, (float)1 / row_scale,
+                                    (float)1 / col_scale);
                 } else {
                     resize_area_version1_shrink_8u_kernel<CH>
                             <<<BLOCKS, THREADS, 0, stream>>>(
-                                    (const uchar*)src, (uchar*)dst, src_rows,
-                                    src_cols, dst_rows, dst_cols, src_step,
-                                    dst_step, row_scale, col_scale,
-                                    (float)1 / row_scale, (float)1 / col_scale);
+                                    (const uchar*)src, (uchar*)dst, src_rows, src_cols,
+                                    dst_rows, dst_cols, src_step, dst_step, row_scale,
+                                    col_scale, (float)1 / row_scale,
+                                    (float)1 / col_scale);
                 }
 
             } else if (access_step > 24) {
-                dim3 BLOCKS(DIVUP(dst_cols, THREADS.x),
-                            DIVUP(dst_rows, THREADS.y));
+                dim3 BLOCKS(DIVUP(dst_cols, THREADS.x), DIVUP(dst_rows, THREADS.y));
 
                 cudaDeviceSetCacheConfig(cudaFuncCachePreferNone);
 
                 if (sizeof(T) == sizeof(float)) {
                     resize_area_version2_shrink_32f_kernel<CH>
                             <<<BLOCKS, THREADS, 0, stream>>>(
-                                    (const float*)src, (float*)dst, src_rows,
-                                    src_cols, dst_rows, dst_cols, src_step,
-                                    dst_step, row_scale, col_scale,
-                                    (float)1 / row_scale, (float)1 / col_scale);
+                                    (const float*)src, (float*)dst, src_rows, src_cols,
+                                    dst_rows, dst_cols, src_step, dst_step, row_scale,
+                                    col_scale, (float)1 / row_scale,
+                                    (float)1 / col_scale);
                 } else {
                     resize_area_version2_shrink_8u_kernel<CH>
                             <<<BLOCKS, THREADS, 0, stream>>>(
-                                    (const uchar*)src, (uchar*)dst, src_rows,
-                                    src_cols, dst_rows, dst_cols, src_step,
-                                    dst_step, row_scale, col_scale,
-                                    (float)1 / row_scale, (float)1 / col_scale);
+                                    (const uchar*)src, (uchar*)dst, src_rows, src_cols,
+                                    dst_rows, dst_cols, src_step, dst_step, row_scale,
+                                    col_scale, (float)1 / row_scale,
+                                    (float)1 / col_scale);
                 }
             }
         }
     } else {
-        resize_linear_proxy<T, CH>(src, dst, src_rows, src_cols, dst_rows,
-                                   dst_cols, src_step, dst_step, workspace,
-                                   stream);
+        resize_linear_proxy<T, CH>(
+                src, dst, src_rows, src_cols, dst_rows, dst_cols, src_step, dst_step,
+                workspace, stream);
     }
 }
 
@@ -1651,21 +1592,21 @@ template <typename T>
 void megdnn::cuda::resize::resize_cv(
         const T* src, T* dst, const size_t src_rows, const size_t src_cols,
         const size_t dst_rows, const size_t dst_cols, const size_t src_step,
-        const size_t dst_step, size_t ch, InterpolationMode imode,
-        void* workspace, cudaStream_t stream) {
+        const size_t dst_step, size_t ch, InterpolationMode imode, void* workspace,
+        cudaStream_t stream) {
     megdnn_assert(ch == 1 || ch == 3);
-#define cb(_mode, _MODE)                                               \
-    case INTER_##_MODE: {                                              \
-        if (ch == 1) {                                                 \
-            resize_##_mode##_proxy<T, 1>(src, dst, src_rows, src_cols, \
-                                         dst_rows, dst_cols, src_step, \
-                                         dst_step, workspace, stream); \
-        } else {                                                       \
-            resize_##_mode##_proxy<T, 3>(src, dst, src_rows, src_cols, \
-                                         dst_rows, dst_cols, src_step, \
-                                         dst_step, workspace, stream); \
-        }                                                              \
-        break;                                                         \
+#define cb(_mode, _MODE)                                                        \
+    case INTER_##_MODE: {                                                       \
+        if (ch == 1) {                                                          \
+            resize_##_mode##_proxy<T, 1>(                                       \
+                    src, dst, src_rows, src_cols, dst_rows, dst_cols, src_step, \
+                    dst_step, workspace, stream);                               \
+        } else {                                                                \
+            resize_##_mode##_proxy<T, 3>(                                       \
+                    src, dst, src_rows, src_cols, dst_rows, dst_cols, src_step, \
+                    dst_step, workspace, stream);                               \
+        }                                                                       \
+        break;                                                                  \
     }
 
     switch (imode) {
@@ -1681,13 +1622,12 @@ void megdnn::cuda::resize::resize_cv(
 #undef cb
 }
 
-#define INST(_type)                                                    \
-    template void megdnn::cuda::resize::resize_cv<_type>(              \
-            const _type* src, _type* dst, const size_t src_rows,       \
-            const size_t src_cols, const size_t dst_rows,              \
-            const size_t dst_cols, const size_t src_step,              \
-            const size_t dst_step, size_t ch, InterpolationMode imode, \
-            void* workspace, cudaStream_t stream);
+#define INST(_type)                                                              \
+    template void megdnn::cuda::resize::resize_cv<_type>(                        \
+            const _type* src, _type* dst, const size_t src_rows,                 \
+            const size_t src_cols, const size_t dst_rows, const size_t dst_cols, \
+            const size_t src_step, const size_t dst_step, size_t ch,             \
+            InterpolationMode imode, void* workspace, cudaStream_t stream);
 
 INST(float);
 INST(uchar);

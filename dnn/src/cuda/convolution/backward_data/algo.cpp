@@ -36,6 +36,12 @@ ConvolutionBackwardDataImpl::AlgoPack::AlgoPack() {
         int8_algos.push_back(&algo);
     }
 
+    fill_int8_imma_algos();
+    for (auto&& algo : int8_nhwc_imma) {
+        all_algos.push_back(&algo);
+        int8_algos.push_back(&algo);
+    }
+
     int8_algos.push_back(&int8_nchw_dotprod);
     all_algos.push_back(&int8_nchw_dotprod);
 
@@ -50,15 +56,14 @@ ConvolutionBackwardDataImpl::AlgoPack::AlgoPack() {
 
 MEGDNN_DEF_GET_ALGO_FROM_DESC(ConvolutionBackwardDataImpl)
 
-ConvolutionBackwardDataImpl::AlgoCUDNN*
-ConvolutionBackwardDataImpl::AlgoPack::cudnn_from_enum(
-        cudnnConvolutionBwdDataAlgo_t algo) {
+ConvolutionBackwardDataImpl::AlgoCUDNN* ConvolutionBackwardDataImpl::AlgoPack::
+        cudnn_from_enum(cudnnConvolutionBwdDataAlgo_t algo) {
     for (auto&& i : cudnn) {
         if (i.cudnn_enum() == algo)
             return &i;
     }
-    megdnn_throw(ssprintf("can not find cudnn bwd_data algorithm %d",
-                          static_cast<int>(algo)));
+    megdnn_throw(ssprintf(
+            "can not find cudnn bwd_data algorithm %d", static_cast<int>(algo)));
 }
 
 ConvolutionBackwardDataImpl::AlgoPack ConvolutionBackwardDataImpl::sm_algo_pack;
@@ -66,8 +71,9 @@ ConvolutionBackwardDataImpl::AlgoPack ConvolutionBackwardDataImpl::sm_algo_pack;
 ConvolutionBackwardDataImpl::AlgoBase::SizeArgs::SizeArgs(
         const ConvolutionBackwardDataImpl* o, const TensorLayout& filter,
         const TensorLayout& diff, const TensorLayout& grad)
-        : SizeArgs(o, filter, o->make_canonized_filter_meta(grad.ndim, filter),
-                   diff, grad) {}
+        : SizeArgs(
+                  o, filter, o->make_canonized_filter_meta(grad.ndim, filter), diff,
+                  grad) {}
 
 ConvolutionBackwardDataImpl::AlgoBase::SizeArgs::SizeArgs(
         const ConvolutionBackwardDataImpl* o, const TensorLayout& filter,
@@ -82,8 +88,7 @@ ConvolutionBackwardDataImpl::AlgoBase::SizeArgs::SizeArgs(
 
 ConvolutionBackwardDataImpl::AlgoBase::ExecArgs::ExecArgs(
         const ConvolutionBackwardDataImpl* opr, _megdnn_tensor_in filter,
-        _megdnn_tensor_in diff, _megdnn_tensor_out grad,
-        _megdnn_workspace workspace)
+        _megdnn_tensor_in diff, _megdnn_tensor_out grad, _megdnn_workspace workspace)
         : SizeArgs(opr, filter.layout, diff.layout, grad.layout),
           filter_tensor{&filter},
           diff_tensor{&diff},
@@ -98,9 +103,9 @@ std::string ConvolutionBackwardDataImpl::AlgoBase::SizeArgs::to_string() const {
             "pad=%ux%u, stride=%ux%u, dilate=%ux%u, xcorr=%d, dtype=%s,%s",
             fm.group, fm.ocpg, fm.icpg, fm.spatial[0], fm.spatial[1],
             diff_layout->to_string().c_str(), grad_layout->to_string().c_str(),
-            fm.padding[0], fm.padding[1], fm.stride[0], fm.stride[1],
-            fm.dilation[0], fm.dilation[1], !fm.should_flip,
-            diff_layout->dtype.name(), grad_layout->dtype.name());
+            fm.padding[0], fm.padding[1], fm.stride[0], fm.stride[1], fm.dilation[0],
+            fm.dilation[1], !fm.should_flip, diff_layout->dtype.name(),
+            grad_layout->dtype.name());
 }
 
 // vim: syntax=cpp.doxygen

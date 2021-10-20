@@ -55,33 +55,32 @@ class GraphOptimizer {
      * \return nullptr if failed to replace; otherwise it returns the new
      *      ImmutableTensor opr
      */
-    OperatorNodeBase* replace_const_var(VarNode *var);
+    OperatorNodeBase* replace_const_var(VarNode* var);
 
-    public:
+public:
+    /*!
+     * \brief called at beginning of inserting opr to graph
+     *
+     * This method should be first quried when inserting an operator; if it
+     * returns nullptr, normal insertion procedure continuous; otherwise the
+     * returned opr should be used and new opr to be inserted should be
+     * discarded.
+     */
+    OperatorNodeBase* insert_pre(OperatorNodeBase* opr);
 
-        /*!
-         * \brief called at beginning of inserting opr to graph
-         *
-         * This method should be first quried when inserting an operator; if it
-         * returns nullptr, normal insertion procedure continuous; otherwise the
-         * returned opr should be used and new opr to be inserted should be
-         * discarded.
-         */
-        OperatorNodeBase* insert_pre(OperatorNodeBase *opr);
-
-        /*!
-         * \brief called at end of inserting opr to graph
-         *
-         * This method should be quried after new operator is initialized and
-         * stored; it would either return *opr*, or an optimized version of
-         * *opr*.
-         *
-         * Currently it only replaces const values for single output operator.
-         */
-        OperatorNodeBase* insert_post(OperatorNodeBase *opr);
+    /*!
+     * \brief called at end of inserting opr to graph
+     *
+     * This method should be quried after new operator is initialized and
+     * stored; it would either return *opr*, or an optimized version of
+     * *opr*.
+     *
+     * Currently it only replaces const values for single output operator.
+     */
+    OperatorNodeBase* insert_post(OperatorNodeBase* opr);
 };
 
-} // namespace cg
-} // namespace mgb
+}  // namespace cg
+}  // namespace mgb
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

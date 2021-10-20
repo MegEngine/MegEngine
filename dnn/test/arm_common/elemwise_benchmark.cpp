@@ -86,8 +86,7 @@ TEST_F(ARM_COMMON, BENCHMARK_ELEMWISE_UNARY) {
                          const char* mode_str, DType dtype) {
         B.set_param(mode).set_dtype(0, dtype);
         float time = B.execs({shape, {}}) / RUN_TIMES;
-        float computations =
-                shape.total_nr_elems() * 2 / (1024.f * 1024.f * 1024.f);
+        float computations = shape.total_nr_elems() * 2 / (1024.f * 1024.f * 1024.f);
         printf("%s(%s):\tlayout(%s)\ttime(%fms)\tbandwidth(%fGBps)\n", mode_str,
                dtype.name(), shape.to_string().c_str(), time,
                computations * dtype.size() / time * 1e3);
@@ -122,16 +121,13 @@ TEST_F(ARM_COMMON, BENCHMARK_ELEMWISE_UNARY_MULTI_TYPE) {
     const size_t RUN_TIMES = 20;
     B.set_times(RUN_TIMES).set_display(false);
 
-    auto run_unary = [&](const TensorShape& shape, Mode mode,
-                         const char* mode_str, DType src_dtype,
-                         DType dst_dtype) {
+    auto run_unary = [&](const TensorShape& shape, Mode mode, const char* mode_str,
+                         DType src_dtype, DType dst_dtype) {
         B.set_param(mode).set_dtype(0, src_dtype).set_dtype(1, dst_dtype);
         float time = B.execs({shape, {}}) / RUN_TIMES;
-        float computations =
-                shape.total_nr_elems() * 2 / (1024.f * 1024.f * 1024.f);
-        printf("type %s %s(%s) to %s \ttime(%fms)\tbandwidth(%fGBps)\n",
-               mode_str, src_dtype.name(), shape.to_string().c_str(),
-               dst_dtype.name(), time,
+        float computations = shape.total_nr_elems() * 2 / (1024.f * 1024.f * 1024.f);
+        printf("type %s %s(%s) to %s \ttime(%fms)\tbandwidth(%fGBps)\n", mode_str,
+               src_dtype.name(), shape.to_string().c_str(), dst_dtype.name(), time,
                computations * src_dtype.size() / time * 1e3);
     };
 
@@ -143,8 +139,7 @@ TEST_F(ARM_COMMON, BENCHMARK_ELEMWISE_UNARY_MULTI_TYPE) {
     RUN(shape, Mode::QABS, src_dtype, dst_dtye)
 
     TensorShape shape = {10, 50, 10, 100};
-    BENCHMARK_CASES_INT(shape, dtype::QuantizedS32(62.5f),
-                        dtype::QuantizedS8(2.5f));
+    BENCHMARK_CASES_INT(shape, dtype::QuantizedS32(62.5f), dtype::QuantizedS8(2.5f));
 #undef BENCHMARK_CASES_INT
 #undef BENCHMARK_CASES_FLOAT
 #undef RUN
@@ -162,16 +157,14 @@ TEST_F(ARM_COMMON, BENCHMARK_ELEMWISE_BINARY) {
                           DType dtype) {
         B.set_param(mode).set_dtype(0, dtype).set_dtype(1, dtype);
         float time = B.execs({shape0, shape1, {}}) / RUN_TIMES;
-        float bandwidth =
-                (shape0.total_nr_elems() + shape1.total_nr_elems() +
-                 std::max(shape0.total_nr_elems(), shape1.total_nr_elems())) /
-                (1024.f * 1024.f * 1024.f) * dtype.size() / time * 1e3;
-        printf("%s(%s):\tlayout(%s %s)\ttime(%fms)\tbandwidth(%fGBps)\n",
-               mode_str, dtype.name(), shape0.to_string().c_str(),
-               shape1.to_string().c_str(), time, bandwidth);
+        float bandwidth = (shape0.total_nr_elems() + shape1.total_nr_elems() +
+                           std::max(shape0.total_nr_elems(), shape1.total_nr_elems())) /
+                          (1024.f * 1024.f * 1024.f) * dtype.size() / time * 1e3;
+        printf("%s(%s):\tlayout(%s %s)\ttime(%fms)\tbandwidth(%fGBps)\n", mode_str,
+               dtype.name(), shape0.to_string().c_str(), shape1.to_string().c_str(),
+               time, bandwidth);
     };
-#define RUN(shape0, shape1, mode, dtype) \
-    run_binary(shape0, shape1, mode, #mode, dtype);
+#define RUN(shape0, shape1, mode, dtype) run_binary(shape0, shape1, mode, #mode, dtype);
 
 #define BENCHMARK_CASES_INT(shape0, shape1, dtype) \
     RUN(shape0, shape1, Mode::ADD, dtype)          \
@@ -216,40 +209,37 @@ TEST_F(ARM_COMMON, BENCHMARK_ELEMWISE_TERNARY) {
     B.set_times(RUN_TIMES).set_display(false);
 
     auto run_ternary = [&](const TensorShape& shape0, const TensorShape& shape1,
-                           const TensorShape& shape2,
-                           param::Elemwise::Mode mode, const char* mode_str,
-                           DType dtype) {
-        B.set_param(mode).set_dtype(0, dtype).set_dtype(1, dtype).set_dtype(
-                2, dtype);
+                           const TensorShape& shape2, param::Elemwise::Mode mode,
+                           const char* mode_str, DType dtype) {
+        B.set_param(mode).set_dtype(0, dtype).set_dtype(1, dtype).set_dtype(2, dtype);
         float time = B.execs({shape0, shape1, shape2, {}}) / RUN_TIMES;
-        float bandwidth = (shape0.total_nr_elems() * 2 +
-                           shape1.total_nr_elems() + shape2.total_nr_elems()) /
-                          (1024.f * 1024.f * 1024.f) * dtype.size() / time *
-                          1e3;
-        printf("%s(%s):\tlayout(%s %s %s)\ttime(%fms)\tbandwidth(%fGBps)\n",
-               mode_str, dtype.name(), shape0.to_string().c_str(),
-               shape1.to_string().c_str(), shape2.to_string().c_str(), time,
-               bandwidth);
+        float bandwidth = (shape0.total_nr_elems() * 2 + shape1.total_nr_elems() +
+                           shape2.total_nr_elems()) /
+                          (1024.f * 1024.f * 1024.f) * dtype.size() / time * 1e3;
+        printf("%s(%s):\tlayout(%s %s %s)\ttime(%fms)\tbandwidth(%fGBps)\n", mode_str,
+               dtype.name(), shape0.to_string().c_str(), shape1.to_string().c_str(),
+               shape2.to_string().c_str(), time, bandwidth);
     };
 
     TensorShape shape = {10, 50, 10, 100};
-    run_ternary(shape, shape, shape, Mode::FUSE_MUL_ADD3, "FUSE_MUL_ADD3",
-                dtype::Int32());
-    run_ternary(shape, shape, shape, Mode::FUSE_MUL_ADD3, "FUSE_MUL_ADD3",
-                dtype::Int16());
-    run_ternary(shape, shape, shape, Mode::FUSE_MUL_ADD3, "FUSE_MUL_ADD3",
-                dtype::Int8());
-    run_ternary(shape, shape, shape, Mode::FUSE_MUL_ADD3, "FUSE_MUL_ADD3",
-                dtype::Float32());
+    run_ternary(
+            shape, shape, shape, Mode::FUSE_MUL_ADD3, "FUSE_MUL_ADD3", dtype::Int32());
+    run_ternary(
+            shape, shape, shape, Mode::FUSE_MUL_ADD3, "FUSE_MUL_ADD3", dtype::Int16());
+    run_ternary(
+            shape, shape, shape, Mode::FUSE_MUL_ADD3, "FUSE_MUL_ADD3", dtype::Int8());
+    run_ternary(
+            shape, shape, shape, Mode::FUSE_MUL_ADD3, "FUSE_MUL_ADD3",
+            dtype::Float32());
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
-    run_ternary(shape, {1}, {1}, Mode::FUSE_MUL_ADD3, "FUSE_MUL_ADD3",
-                dtype::Float32());
-    run_ternary(shape, {1}, {1}, Mode::FUSE_MUL_ADD3, "FUSE_MUL_ADD3",
-                dtype::Float16());
-    run_ternary({1}, shape, {1}, Mode::FUSE_MUL_ADD3, "FUSE_MUL_ADD3",
-                dtype::Float32());
-    run_ternary({1}, shape, {1}, Mode::FUSE_MUL_ADD3, "FUSE_MUL_ADD3",
-                dtype::Float16());
+    run_ternary(
+            shape, {1}, {1}, Mode::FUSE_MUL_ADD3, "FUSE_MUL_ADD3", dtype::Float32());
+    run_ternary(
+            shape, {1}, {1}, Mode::FUSE_MUL_ADD3, "FUSE_MUL_ADD3", dtype::Float16());
+    run_ternary(
+            {1}, shape, {1}, Mode::FUSE_MUL_ADD3, "FUSE_MUL_ADD3", dtype::Float32());
+    run_ternary(
+            {1}, shape, {1}, Mode::FUSE_MUL_ADD3, "FUSE_MUL_ADD3", dtype::Float16());
 #endif
 }
 #endif

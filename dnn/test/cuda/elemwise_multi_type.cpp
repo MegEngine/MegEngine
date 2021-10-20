@@ -44,10 +44,8 @@ static void run_test(int arity, Checker<ElemwiseMultiType>& checker, Mode mode) 
             if (mode != Mode::QRELU && mode != Mode::QH_SWISH &&
                 mode != Mode::QSIGMOID && mode != Mode::QTANH &&
                 mode != Mode::QFAST_TANH && mode != Mode::QADD &&
-                mode != Mode::QFUSE_ADD_RELU &&
-                mode != Mode::QFUSE_ADD_SIGMOID &&
-                mode != Mode::QFUSE_ADD_TANH &&
-                mode != Mode::QFUSE_ADD_H_SWISH) {
+                mode != Mode::QFUSE_ADD_RELU && mode != Mode::QFUSE_ADD_SIGMOID &&
+                mode != Mode::QFUSE_ADD_TANH && mode != Mode::QFUSE_ADD_H_SWISH) {
                 return;
             }
         }
@@ -67,8 +65,8 @@ static void run_test(int arity, Checker<ElemwiseMultiType>& checker, Mode mode) 
                 megdnn_assert(dtype.enumv() == DTypeEnum::QuantizedS32);
                 checker.set_rng(i, &rng_int32);
             }
-            if (mode == Mode::QEXP || mode == Mode::QPOW ||
-                mode == Mode::QTRUE_DIV || mode == Mode::QLOG_SUM_EXP) {
+            if (mode == Mode::QEXP || mode == Mode::QPOW || mode == Mode::QTRUE_DIV ||
+                mode == Mode::QLOG_SUM_EXP) {
                 checker.set_rng(i, &rng_low);
             }
             checker.set_dtype(i, dtype);
@@ -90,7 +88,7 @@ static void run_test(int arity, Checker<ElemwiseMultiType>& checker, Mode mode) 
                     .execs({{3}, {}})
                     .execs({{9}, {}})
                     .execs({{17}, {}});
-        } else if (arity == 2){
+        } else if (arity == 2) {
             checker.execs({{3, 4, 5, 6}, {3, 4, 5, 6}, {}})
                     .execs({{3, 4, 5, 6}, {1, 1, 1, 1}, {}})
                     .execs({{1, 4, 5, 1}, {4, 1, 1, 5}, {}})
@@ -101,12 +99,10 @@ static void run_test(int arity, Checker<ElemwiseMultiType>& checker, Mode mode) 
     }
 }
 
-static void run_test_q4(int arity, Checker<ElemwiseMultiType>& checker,
-                        Mode mode) {
+static void run_test_q4(int arity, Checker<ElemwiseMultiType>& checker, Mode mode) {
     for (auto type : std::vector<std::pair<DType, DType>>{
                  {dtype::QuantizedS4(1.4f), dtype::QuantizedS4(1.7f)},
-                 {dtype::Quantized4Asymm(8, 1.4f),
-                  dtype::Quantized4Asymm(8, 1.7f)},
+                 {dtype::Quantized4Asymm(8, 1.4f), dtype::Quantized4Asymm(8, 1.7f)},
                  {dtype::QuantizedS4(1.4f), dtype::QuantizedS32(0.1f)},
                  {dtype::QuantizedS32(0.1f), dtype::QuantizedS4(0.4f)}}) {
         if (type.first.enumv() == DTypeEnum::QuantizedS32 ||
@@ -114,10 +110,8 @@ static void run_test_q4(int arity, Checker<ElemwiseMultiType>& checker,
             if (mode != Mode::QRELU && mode != Mode::QH_SWISH &&
                 mode != Mode::QSIGMOID && mode != Mode::QTANH &&
                 mode != Mode::QFAST_TANH && mode != Mode::QADD &&
-                mode != Mode::QFUSE_ADD_RELU &&
-                mode != Mode::QFUSE_ADD_SIGMOID &&
-                mode != Mode::QFUSE_ADD_TANH &&
-                mode != Mode::QFUSE_ADD_H_SWISH) {
+                mode != Mode::QFUSE_ADD_RELU && mode != Mode::QFUSE_ADD_SIGMOID &&
+                mode != Mode::QFUSE_ADD_TANH && mode != Mode::QFUSE_ADD_H_SWISH) {
                 return;
             }
         }
@@ -152,7 +146,8 @@ static void run_test_q4(int arity, Checker<ElemwiseMultiType>& checker,
                     .execs({{1, 4, 5, 5}, {1, 4, 5, 5}});
         } else if (arity == 2) {
             checker.execs({{3, 4, 5, 6}, {3, 4, 5, 6}, {3, 4, 5, 6}})
-                    .execs({{1, 4, 5, 5}, {1, 4, 5, 5}, {1, 4, 5, 5}});
+                    .execs({{1, 4, 5, 5}, {1, 4, 5, 5}, {1, 4, 5, 5}})
+                    .execs({{2, 2, 3, 1}, {2, 2, 3, 1}, {2, 2, 3, 1}});
         } else {
             megdnn_assert(0);
         }
@@ -162,17 +157,17 @@ static void run_test_q4(int arity, Checker<ElemwiseMultiType>& checker,
 TEST_F(CUDA, ELEMWISE_QUANTIZED_MODE_UNARY) {
     Checker<ElemwiseMultiType> checker(handle_cuda());
     for (auto mode :
-         {Mode::QRELU,    Mode::QABS,    Mode::QACOS,   Mode::QASIN,
-          Mode::QCEIL,    Mode::QCOS,    Mode::QEXP,    Mode::QEXPM1,
-          Mode::QFLOOR,   Mode::QLOG,    Mode::QLOG1P,  Mode::QNEGATE,
-          Mode::QSIGMOID, Mode::QSIN,    Mode::QTANH,   Mode::QFAST_TANH,
-          Mode::QROUND,   Mode::QERF,    Mode::QERFINV, Mode::QERFC,
-          Mode::QERFCINV, Mode::QH_SWISH}) {
+         {Mode::QRELU,      Mode::QABS,    Mode::QACOS,    Mode::QASIN,   Mode::QCEIL,
+          Mode::QCOS,       Mode::QEXP,    Mode::QEXPM1,   Mode::QFLOOR,  Mode::QLOG,
+          Mode::QLOG1P,     Mode::QNEGATE, Mode::QSIGMOID, Mode::QSIN,    Mode::QTANH,
+          Mode::QFAST_TANH, Mode::QROUND,  Mode::QERF,     Mode::QERFINV, Mode::QERFC,
+          Mode::QERFCINV,   Mode::QH_SWISH}) {
         run_test(1, checker, mode);
     }
-    for (auto mode : {Mode::QRELU, Mode::QABS, Mode::QCEIL, Mode::QFLOOR,
-                      Mode::QNEGATE, Mode::QSIGMOID, Mode::QTANH,
-                      Mode::QFAST_TANH, Mode::QROUND, Mode::QH_SWISH}) {
+    for (auto mode :
+         {Mode::QRELU, Mode::QABS, Mode::QCEIL, Mode::QFLOOR, Mode::QNEGATE,
+          Mode::QSIGMOID, Mode::QTANH, Mode::QFAST_TANH, Mode::QROUND,
+          Mode::QH_SWISH}) {
         run_test_q4(1, checker, mode);
     }
 }
@@ -181,39 +176,40 @@ TEST_F(CUDA, ELEMWISE_QUANTIZED_MODE_BINARY) {
     using Mode = ElemwiseMultiType::Param::Mode;
 
     Checker<ElemwiseMultiType> checker(handle_cuda());
-    for (auto mode : {Mode::QABS_GRAD,
-                      Mode::QADD,
-                      Mode::QFLOOR_DIV,
-                      Mode::QMAX,
-                      Mode::QMIN,
-                      Mode::QMOD,
-                      Mode::QMUL,
-                      Mode::QPOW,
-                      Mode::QSUB,
-                      Mode::QSWITCH_GT0,
-                      Mode::QTRUE_DIV,
-                      Mode::QLOG_SUM_EXP,
+    for (auto mode :
+         {Mode::QABS_GRAD,
+          Mode::QADD,
+          Mode::QFLOOR_DIV,
+          Mode::QMAX,
+          Mode::QMIN,
+          Mode::QMOD,
+          Mode::QMUL,
+          Mode::QPOW,
+          Mode::QSUB,
+          Mode::QSWITCH_GT0,
+          Mode::QTRUE_DIV,
+          Mode::QLOG_SUM_EXP,
 
-                      Mode::QLT,
-                      Mode::QLEQ,
-                      Mode::QEQ,
+          Mode::QLT,
+          Mode::QLEQ,
+          Mode::QEQ,
 
-                      Mode::QFUSE_ADD_RELU,
-                      Mode::QFUSE_ADD_SIGMOID,
-                      Mode::QFUSE_ADD_TANH,
-                      Mode::QFAST_TANH_GRAD,
-                      Mode::QATAN2,
-                      Mode::QH_SWISH_GRAD,
-                      Mode::QFUSE_ADD_H_SWISH}) {
+          Mode::QFUSE_ADD_RELU,
+          Mode::QFUSE_ADD_SIGMOID,
+          Mode::QFUSE_ADD_TANH,
+          Mode::QFAST_TANH_GRAD,
+          Mode::QATAN2,
+          Mode::QH_SWISH_GRAD,
+          Mode::QFUSE_ADD_H_SWISH}) {
         run_test(2, checker, mode);
     }
-    for (auto mode : {Mode::QADD, Mode::QMAX, Mode::QMIN, Mode::QMUL,
-                      Mode::QSUB, Mode::QSWITCH_GT0,
+    for (auto mode :
+         {Mode::QADD, Mode::QMAX, Mode::QMIN, Mode::QMUL, Mode::QSUB, Mode::QSWITCH_GT0,
 
-                      Mode::QLT, Mode::QLEQ, Mode::QEQ,
+          Mode::QLT, Mode::QLEQ, Mode::QEQ,
 
-                      Mode::QFUSE_ADD_RELU, Mode::QFUSE_ADD_SIGMOID,
-                      Mode::QFUSE_ADD_TANH, Mode::QFUSE_ADD_H_SWISH}) {
+          Mode::QFUSE_ADD_RELU, Mode::QFUSE_ADD_SIGMOID, Mode::QFUSE_ADD_TANH,
+          Mode::QFUSE_ADD_H_SWISH}) {
         run_test_q4(2, checker, mode);
     }
 }
@@ -260,12 +256,11 @@ TEST_F(CUDA, BENCHMARK_ELEMWISE_QUANTIZED_MODE_UNARY) {
     UniformIntRNG rng{-128, 127};
 
     for (auto mode :
-         {Mode::QRELU,    Mode::QABS,    Mode::QACOS,   Mode::QASIN,
-          Mode::QCEIL,    Mode::QCOS,    Mode::QEXP,    Mode::QEXPM1,
-          Mode::QFLOOR,   Mode::QLOG,    Mode::QLOG1P,  Mode::QNEGATE,
-          Mode::QSIGMOID, Mode::QSIN,    Mode::QTANH,   Mode::QFAST_TANH,
-          Mode::QROUND,   Mode::QERF,    Mode::QERFINV, Mode::QERFC,
-          Mode::QERFCINV, Mode::QH_SWISH}) {
+         {Mode::QRELU,      Mode::QABS,    Mode::QACOS,    Mode::QASIN,   Mode::QCEIL,
+          Mode::QCOS,       Mode::QEXP,    Mode::QEXPM1,   Mode::QFLOOR,  Mode::QLOG,
+          Mode::QLOG1P,     Mode::QNEGATE, Mode::QSIGMOID, Mode::QSIN,    Mode::QTANH,
+          Mode::QFAST_TANH, Mode::QROUND,  Mode::QERF,     Mode::QERFINV, Mode::QERFC,
+          Mode::QERFCINV,   Mode::QH_SWISH}) {
         printf("Benchmark mode: %d\n", (int)mode);
         bencher.set_param({mode})
                 .set_rng(0, &rng)
@@ -295,7 +290,6 @@ TEST_F(CUDA, BENCHMARK_ELEMWISE_QUANTIZED_MODE_UNARY) {
             time = bencher.execs({{N * C * H * W}, {}}) / nr_times;
             printf("time = %.2f, bandwidth = %.2f GB/s\n", time,
                    (2.0 * N * C * H * W) / (time * 1e6));
-
         };
         run_bench(256, 256, 56, 56);
         run_bench(64, 256, 56, 56);
@@ -309,32 +303,33 @@ TEST_F(CUDA, BENCHMARK_ELEMWISE_QUANTIZED_MODE_BINARY) {
     CUBenchmarker<ElemwiseMultiType> bencher(handle_cuda());
     UniformIntRNG rng{-128, 127};
 
-    for (auto mode : {Mode::QABS_GRAD,
-                      Mode::QADD,
-                      Mode::QFLOOR_DIV,
-                      Mode::QMAX,
-                      Mode::QMIN,
-                      Mode::QMOD,
-                      Mode::QMUL,
-                      Mode::QPOW,
-                      Mode::QSIGMOID_GRAD,
-                      Mode::QSUB,
-                      Mode::QSWITCH_GT0,
-                      Mode::QTANH_GRAD,
-                      Mode::QTRUE_DIV,
-                      Mode::QLOG_SUM_EXP,
+    for (auto mode :
+         {Mode::QABS_GRAD,
+          Mode::QADD,
+          Mode::QFLOOR_DIV,
+          Mode::QMAX,
+          Mode::QMIN,
+          Mode::QMOD,
+          Mode::QMUL,
+          Mode::QPOW,
+          Mode::QSIGMOID_GRAD,
+          Mode::QSUB,
+          Mode::QSWITCH_GT0,
+          Mode::QTANH_GRAD,
+          Mode::QTRUE_DIV,
+          Mode::QLOG_SUM_EXP,
 
-                      Mode::QLT,
-                      Mode::QLEQ,
-                      Mode::QEQ,
+          Mode::QLT,
+          Mode::QLEQ,
+          Mode::QEQ,
 
-                      Mode::QFUSE_ADD_RELU,
-                      Mode::QFUSE_ADD_SIGMOID,
-                      Mode::QFUSE_ADD_TANH,
-                      Mode::QFAST_TANH_GRAD,
-                      Mode::QATAN2,
-                      Mode::QH_SWISH_GRAD,
-                      Mode::QFUSE_ADD_H_SWISH}) {
+          Mode::QFUSE_ADD_RELU,
+          Mode::QFUSE_ADD_SIGMOID,
+          Mode::QFUSE_ADD_TANH,
+          Mode::QFAST_TANH_GRAD,
+          Mode::QATAN2,
+          Mode::QH_SWISH_GRAD,
+          Mode::QFUSE_ADD_H_SWISH}) {
         printf("Benchmark mode: %d\n", (int)mode);
         bencher.set_param({mode})
                 .set_rng(0, &rng)
@@ -346,38 +341,31 @@ TEST_F(CUDA, BENCHMARK_ELEMWISE_QUANTIZED_MODE_BINARY) {
         bencher.set_times(nr_times);
         auto run_bench = [&](size_t N, size_t C, size_t H, size_t W) {
             printf("(NxCxHxW)=(%zux%zux%zux%zu)\n", N, C, H, W);
-            auto time =
-                    bencher.execs(
-                            {{N, C / 4, H, W, 4}, {N, C / 4, H, W, 4}, {}}) /
-                    nr_times;
+            auto time = bencher.execs({{N, C / 4, H, W, 4}, {N, C / 4, H, W, 4}, {}}) /
+                        nr_times;
             printf("time = %.2f, bandwidth = %.2f GB/s\n", time,
                    (3.0 * N * C * H * W) / (time * 1e6));
-            time = bencher.execs(
-                           {{N, C / 4, H, W, 4}, {1, C / 4, 1, 1, 4}, {}}) /
+            time = bencher.execs({{N, C / 4, H, W, 4}, {1, C / 4, 1, 1, 4}, {}}) /
                    nr_times;
             printf("time = %.2f, bandwidth = %.2f GB/s\n", time,
                    (C + 2.0 * N * C * H * W) / (time * 1e6));
 
-            time = bencher.execs(
-                           {{N, C / 32, H, W, 32}, {N, C / 32, H, W, 32}, {}}) /
+            time = bencher.execs({{N, C / 32, H, W, 32}, {N, C / 32, H, W, 32}, {}}) /
                    nr_times;
             printf("time = %.2f, bandwidth = %.2f GB/s\n", time,
                    (3.0 * N * C * H * W) / (time * 1e6));
 
-            time = bencher.execs(
-                           {{N, C / 32, H, W, 32}, {1, C / 32, 1, 1, 32}, {}}) /
+            time = bencher.execs({{N, C / 32, H, W, 32}, {1, C / 32, 1, 1, 32}, {}}) /
                    nr_times;
             printf("time = %.2f, bandwidth = %.2f GB/s\n", time,
                    (C + 2.0 * N * C * H * W) / (time * 1e6));
-            time = bencher.execs(
-                           {{N * C * H * W + 1}, {N * C * H * W + 1}, {}}) /
+            time = bencher.execs({{N * C * H * W + 1}, {N * C * H * W + 1}, {}}) /
                    nr_times;
             printf("time = %.2f, bandwidth = %.2f GB/s\n", time,
                    (3.0 * (N * C * H * W + 1)) / (time * 1e6));
             time = bencher.execs({{N * C * H * W}, {1}, {}}) / nr_times;
             printf("time = %.2f, bandwidth = %.2f GB/s\n", time,
                    (2.0 * N * C * H * W + 1) / (time * 1e6));
-
         };
         run_bench(256, 256, 56, 56);
         run_bench(64, 256, 56, 56);
@@ -404,47 +392,51 @@ TEST_F(CUDA, BENCHMARK_ELEMWISE_QUANTIZED_MODE_TENARY) {
         bencher.set_times(nr_times);
         auto run_bench = [&](size_t N, size_t C, size_t H, size_t W) {
             printf("(NxCxHxW)=(%zux%zux%zux%zu)\n", N, C, H, W);
-            auto time = bencher.execs({{N, C / 4, H, W, 4},
-                                       {N, C / 4, H, W, 4},
-                                       {N, C / 4, H, W, 4},
-                                       {}}) /
+            auto time = bencher.execs(
+                                {{N, C / 4, H, W, 4},
+                                 {N, C / 4, H, W, 4},
+                                 {N, C / 4, H, W, 4},
+                                 {}}) /
                         nr_times;
             printf("time = %.2f, bandwidth = %.2f GB/s\n", time,
                    (4.0 * N * C * H * W) / (time * 1e6));
-            time = bencher.execs({{N, C / 4, H, W, 4},
-                                  {1, C / 4, 1, 1, 4},
-                                  {1, C / 4, 1, 1, 4},
-                                  {}}) /
+            time = bencher.execs(
+                           {{N, C / 4, H, W, 4},
+                            {1, C / 4, 1, 1, 4},
+                            {1, C / 4, 1, 1, 4},
+                            {}}) /
                    nr_times;
             printf("time = %.2f, bandwidth = %.2f GB/s\n", time,
                    (2 * C + 2.0 * N * C * H * W) / (time * 1e6));
 
-            time = bencher.execs({{N, C / 32, H, W, 32},
-                                  {N, C / 32, H, W, 32},
-                                  {N, C / 32, H, W, 32},
-                                  {}}) /
+            time = bencher.execs(
+                           {{N, C / 32, H, W, 32},
+                            {N, C / 32, H, W, 32},
+                            {N, C / 32, H, W, 32},
+                            {}}) /
                    nr_times;
             printf("time = %.2f, bandwidth = %.2f GB/s\n", time,
                    (4.0 * N * C * H * W) / (time * 1e6));
 
-            time = bencher.execs({{N, C / 32, H, W, 32},
-                                  {1, C / 32, 1, 1, 32},
-                                  {1, C / 32, 1, 1, 32},
-                                  {}}) /
+            time = bencher.execs(
+                           {{N, C / 32, H, W, 32},
+                            {1, C / 32, 1, 1, 32},
+                            {1, C / 32, 1, 1, 32},
+                            {}}) /
                    nr_times;
             printf("time = %.2f, bandwidth = %.2f GB/s\n", time,
                    (2 * C + 2.0 * N * C * H * W) / (time * 1e6));
-            time = bencher.execs({{N * C * H * W + 1},
-                                  {N * C * H * W + 1},
-                                  {N * C * H * W + 1},
-                                  {}}) /
+            time = bencher.execs(
+                           {{N * C * H * W + 1},
+                            {N * C * H * W + 1},
+                            {N * C * H * W + 1},
+                            {}}) /
                    nr_times;
             printf("time = %.2f, bandwidth = %.2f GB/s\n", time,
                    (4.0 * (N * C * H * W + 1)) / (time * 1e6));
             time = bencher.execs({{N * C * H * W}, {1}, {1}, {}}) / nr_times;
             printf("time = %.2f, bandwidth = %.2f GB/s\n", time,
                    (2.0 * N * C * H * W + 1) / (time * 1e6));
-
         };
         run_bench(256, 256, 56, 56);
         run_bench(64, 256, 56, 56);
@@ -458,8 +450,9 @@ TEST_F(CUDA, BENCHMARK_ELEMWISE_QUANTIZED_MODE_BINARY_Q4) {
     CUBenchmarker<ElemwiseMultiType> bencher(handle_cuda());
     UniformIntRNG rng{-7, 7};
 
-    for (auto mode : {Mode::QADD, Mode::QFUSE_ADD_RELU, Mode::QFUSE_ADD_SIGMOID,
-                      Mode::QFUSE_ADD_TANH, Mode::QFUSE_ADD_H_SWISH}) {
+    for (auto mode :
+         {Mode::QADD, Mode::QFUSE_ADD_RELU, Mode::QFUSE_ADD_SIGMOID,
+          Mode::QFUSE_ADD_TANH, Mode::QFUSE_ADD_H_SWISH}) {
         printf("Benchmark mode: %d\n", (int)mode);
         bencher.set_param({mode})
                 .set_rng(0, &rng)
@@ -471,15 +464,15 @@ TEST_F(CUDA, BENCHMARK_ELEMWISE_QUANTIZED_MODE_BINARY_Q4) {
         bencher.set_times(nr_times);
         auto run_bench = [&](size_t N, size_t C, size_t H, size_t W) {
             printf("(NxCxHxW)=(%zux%zux%zux%zu)\n", N, C, H, W);
-            auto time =
-                    bencher.execs({{N, C, H, W}, {N, C, H, W}, {N, C, H, W}}) /
-                    nr_times;
+            auto time = bencher.execs({{N, C, H, W}, {N, C, H, W}, {N, C, H, W}}) /
+                        nr_times;
             printf("time = %.2f, bandwidth = %.2f GB/s\n", time,
                    (3.0 * N * C * H * W) / 2 / (time * 1e6));
 
-            time = bencher.execs({{N, C / 64, H, W, 64},
-                                  {N, C / 64, H, W, 64},
-                                  {N, C / 64, H, W, 64}}) /
+            time = bencher.execs(
+                           {{N, C / 64, H, W, 64},
+                            {N, C / 64, H, W, 64},
+                            {N, C / 64, H, W, 64}}) /
                    nr_times;
             printf("time = %.2f, bandwidth = %.2f GB/s\n", time,
                    (3.0 * N * C * H * W) / 2 / (time * 1e6));

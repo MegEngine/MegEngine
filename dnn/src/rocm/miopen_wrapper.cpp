@@ -8,9 +8,9 @@
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
+#include "src/rocm/miopen_wrapper.h"
 #include "hcc_detail/hcc_defs_prologue.h"
 #include "megdnn/opr_param_defs.h"
-#include "src/rocm/miopen_wrapper.h"
 
 #include "src/common/utils.h"
 #include "src/rocm/utils.h"
@@ -19,8 +19,8 @@ namespace {
 
 using namespace megdnn;
 
-miopenDataType_t to_miopen_dtype(DType type,
-                                 const param::Convolution::Format format = {}) {
+miopenDataType_t to_miopen_dtype(
+        DType type, const param::Convolution::Format format = {}) {
     MEGDNN_MARK_USED_VAR(format);
     //! TODO check quantized type
     switch (type.enumv()) {
@@ -53,10 +53,11 @@ TensorDesc::~TensorDesc() {
     miopen_check(miopenDestroyTensorDescriptor(desc));
 }
 
-void TensorDesc::set(const TensorLayout& layout,
-                     const param::Convolution::Format format) {
-    megdnn_assert(format == param::Convolution::Format::NCHW,
-                  "for now, miopen only support NCHW format");
+void TensorDesc::set(
+        const TensorLayout& layout, const param::Convolution::Format format) {
+    megdnn_assert(
+            format == param::Convolution::Format::NCHW,
+            "for now, miopen only support NCHW format");
     megdnn_assert_eq_size_t(layout.ndim, 4_z);
     int n = layout[0];
     int c = layout[1];
@@ -74,8 +75,9 @@ ConvDesc::~ConvDesc() {
     miopen_check(miopenDestroyConvolutionDescriptor(desc));
 }
 
-void ConvDesc::set(const param::Convolution& param, const size_t nr_group,
-                   const bool is_depthwise) {
+void ConvDesc::set(
+        const param::Convolution& param, const size_t nr_group,
+        const bool is_depthwise) {
     miopenConvolutionMode_t mode;
     if (param.mode == param::Convolution::Mode::CROSS_CORRELATION) {
         mode = miopenConvolution;
@@ -87,8 +89,8 @@ void ConvDesc::set(const param::Convolution& param, const size_t nr_group,
     }
 
     miopen_check(miopenInitConvolutionDescriptor(
-            desc, mode, param.pad_h, param.pad_w, param.stride_h,
-            param.stride_w, param.dilate_h, param.dilate_w));
+            desc, mode, param.pad_h, param.pad_w, param.stride_h, param.stride_w,
+            param.dilate_h, param.dilate_w));
     if (mode == miopenGroupConv || mode == miopenDepthwise) {
         miopen_check(miopenSetConvolutionGroupCount(desc, nr_group));
     }
@@ -106,16 +108,16 @@ LRNDesc::~LRNDesc() {
 
 void LRNDesc::set(const param::LRN& param) {
     MEGDNN_MARK_USED_VAR(param);
-//! TODO MIOpen has two LRN Mode, miopenLRNWithinChannel and
-//! miopenLRNCrossChannel, need to check what do these modes mean.
+    //! TODO MIOpen has two LRN Mode, miopenLRNWithinChannel and
+    //! miopenLRNCrossChannel, need to check what do these modes mean.
 }
 
 BNParamDesc::BNParamDesc() {
     miopen_check(miopenCreateTensorDescriptor(&desc));
 }
 
-void BNParamDesc::set(const miopenTensorDescriptor_t xDesc,
-                      miopenBatchNormMode_t mode) {
+void BNParamDesc::set(
+        const miopenTensorDescriptor_t xDesc, miopenBatchNormMode_t mode) {
     miopen_check(miopenDeriveBNTensorDescriptor(desc, xDesc, mode));
 }
 

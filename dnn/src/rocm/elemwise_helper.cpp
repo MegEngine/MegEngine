@@ -10,9 +10,9 @@
  */
 #include "hcc_detail/hcc_defs_prologue.h"
 
-#include "src/rocm/utils.h"
-#include "src/rocm/elemwise_helper.h.hip"
 #include "megcore_cdefs.h"
+#include "src/rocm/elemwise_helper.h.hip"
+#include "src/rocm/utils.h"
 
 #include "src/common/utils.h"
 
@@ -21,8 +21,7 @@
 #include <unordered_map>
 
 #define _cb_check_ndim(n) megdnn::TensorShape::MAX_NDIM == n ||
-static_assert(MEGDNN_FOREACH_TENSOR_NDIM(_cb_check_ndim) false,
-              "bad foreach ndim");
+static_assert(MEGDNN_FOREACH_TENSOR_NDIM(_cb_check_ndim) false, "bad foreach ndim");
 #undef _cb_check_ndim
 
 namespace megdnn {
@@ -32,9 +31,8 @@ namespace rocm {
 namespace elemwise_intl {
 
 template <int ndim, typename ctype>
-void ParamElemVisitor<ndim, ctype, BCAST_OTHER>::host_init(const TensorND& rv,
-                                                           int /*grid_size*/,
-                                                           int /*block_size*/) {
+void ParamElemVisitor<ndim, ctype, BCAST_OTHER>::host_init(
+        const TensorND& rv, int /*grid_size*/, int /*block_size*/) {
     megdnn_assert(rv.layout.ndim && rv.layout.ndim <= ndim);
     m_ptr = rv.ptr<ctype>();
     for (size_t i = 0; i < rv.layout.ndim; ++i) {
@@ -51,9 +49,8 @@ void ParamElemVisitor<ndim, ctype, BCAST_OTHER>::host_init(const TensorND& rv,
 }
 
 template <typename ctype>
-void ParamElemVisitor<3, ctype, BCAST_101>::host_init(const TensorND& rv,
-                                                      int grid_size,
-                                                      int block_size) {
+void ParamElemVisitor<3, ctype, BCAST_101>::host_init(
+        const TensorND& rv, int grid_size, int block_size) {
     uint32_t shape2, shape1;
     int stride1;
     if (rv.layout.ndim == 3) {
@@ -73,9 +70,8 @@ void ParamElemVisitor<3, ctype, BCAST_101>::host_init(const TensorND& rv,
 }
 
 template <typename ctype>
-void ParamElemVisitor<2, ctype, BCAST_10>::host_init(const TensorND& rv,
-                                                     int grid_size,
-                                                     int block_size) {
+void ParamElemVisitor<2, ctype, BCAST_10>::host_init(
+        const TensorND& rv, int grid_size, int block_size) {
     megdnn_assert(rv.layout.ndim == NDIM && !rv.layout.stride[0]);
     m_ptr = rv.ptr<ctype>();
     m_stride1 = rv.layout.stride[1];
@@ -83,9 +79,8 @@ void ParamElemVisitor<2, ctype, BCAST_10>::host_init(const TensorND& rv,
 }
 
 template <typename ctype>
-void ParamElemVisitor<2, ctype, BCAST_01>::host_init(const TensorND& rv,
-                                                     int grid_size,
-                                                     int block_size) {
+void ParamElemVisitor<2, ctype, BCAST_01>::host_init(
+        const TensorND& rv, int grid_size, int block_size) {
     megdnn_assert(rv.layout.ndim == NDIM && !rv.layout.stride[1]);
     m_ptr = rv.ptr<ctype>();
     m_stride0 = rv.layout.stride[0];
@@ -93,9 +88,8 @@ void ParamElemVisitor<2, ctype, BCAST_01>::host_init(const TensorND& rv,
 }
 
 template <typename ctype>
-void ParamElemVisitor<1, ctype, BCAST_FULL>::host_init(const TensorND& rv,
-                                                       int /*grid_size*/,
-                                                       int /*block_size*/) {
+void ParamElemVisitor<1, ctype, BCAST_FULL>::host_init(
+        const TensorND& rv, int /*grid_size*/, int /*block_size*/) {
     megdnn_assert(rv.layout.ndim == NDIM && !rv.layout.stride[0]);
     m_ptr = rv.ptr<ctype>();
 }
@@ -156,8 +150,8 @@ INST_FOR_CTYPE
 
 }  // namespace elemwise_intl
 
-void elemwise_intl::get_launch_spec(const void* /*kern*/, size_t size,
-                                    int* grid_size, int* block_size) {
+void elemwise_intl::get_launch_spec(
+        const void* /*kern*/, size_t size, int* grid_size, int* block_size) {
     safe_size_in_kern(size);
     const uint32_t blocks = 256;
     *block_size = blocks;
@@ -178,6 +172,4 @@ void elemwise_intl::on_bad_ndim(int ndim) {
 }  // namespace rocm
 }  // namespace megdnn
 
-
 // vim: ft=cpp syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
-

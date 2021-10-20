@@ -37,14 +37,14 @@ class _PoolNd(Module):
 
 
 class MaxPool2d(_PoolNd):
-    r"""
-    Applies a 2D max pooling over an input.
+    r"""Applies a 2D max pooling over an input.
 
     For instance, given an input of the size :math:`(N, C, H, W)` and
     :attr:`kernel_size` :math:`(kH, kW)`, this layer generates the output of
     the size :math:`(N, C, H_{out}, W_{out})` through a process described as:
 
     .. math::
+
         \begin{aligned}
             out(N_i, C_j, h, w) ={} & \max_{m=0, \ldots, kH-1} \max_{n=0, \ldots, kW-1}
                 \text{input}(N_i, C_j, \text{stride[0]} \times h + m,
@@ -54,30 +54,30 @@ class MaxPool2d(_PoolNd):
     If :attr:`padding` is non-zero, then the input is implicitly zero-padded on
     both sides for :attr:`padding` number of points.
 
-    :param kernel_size: the size of the window to take a max over.
-    :param stride: the stride of the window. Default value is kernel_size.
-    :param padding: implicit zero padding to be added on both sides.
+    Args:
+        kernel_size: the size of the window to take a max over.
+        stride: the stride of the window. Default value is kernel_size.
+        padding: implicit zero padding to be added on both sides.
 
     Examples:
 
-    .. testcode::
+        .. testcode::
 
-        import numpy as np
-        import megengine as mge
-        import megengine.module as M
+            import numpy as np
+            import megengine as mge
+            import megengine.module as M
 
-        m = M.MaxPool2d(kernel_size=3, stride=1, padding=0)
-        inp = mge.tensor(np.arange(0, 16).astype("float32").reshape(1, 1, 4, 4))
-        oup = m(inp)
-        print(oup.numpy())
+            m = M.MaxPool2d(kernel_size=3, stride=1, padding=0)
+            inp = mge.tensor(np.arange(0, 16).astype("float32").reshape(1, 1, 4, 4))
+            oup = m(inp)
+            print(oup.numpy())
 
-    Outputs:
+        Outputs:
 
-    .. testoutput::
+        .. testoutput::
 
-        [[[[10. 11.]
-           [14. 15.]]]]
-
+            [[[[10. 11.]
+               [14. 15.]]]]
     """
 
     def forward(self, inp):
@@ -85,8 +85,7 @@ class MaxPool2d(_PoolNd):
 
 
 class AvgPool2d(_PoolNd):
-    r"""
-    Applies a 2D average pooling over an input.
+    r"""Applies a 2D average pooling over an input.
 
     For instance, given an input of the size :math:`(N, C, H, W)` and
     :attr:`kernel_size` :math:`(kH, kW)`, this layer generates the output of
@@ -100,33 +99,13 @@ class AvgPool2d(_PoolNd):
     If :attr:`padding` is non-zero, then the input is implicitly zero-padded on
     both sides for :attr:`padding` number of points.
 
-    :param kernel_size: the size of the window.
-    :param stride: the stride of the window. Default value is kernel_size。
-    :param padding: implicit zero padding to be added on both sides.
-    :param mode: whether to count padding values. "average" mode will do counting and 
-        "average_count_exclude_padding" mode won't do counting. 
-        Default: "average_count_exclude_padding"
-
-    Examples:
-
-    .. testcode::
-
-        import numpy as np
-        import megengine as mge
-        import megengine.module as M
-
-        m = M.AvgPool2d(kernel_size=3, stride=1, padding=0)
-        inp = mge.tensor(np.arange(0, 16).astype("float32").reshape(1, 1, 4, 4))
-        oup = m(inp)
-        print(oup.numpy())
-
-    Outputs:
-
-    .. testoutput::
-
-        [[[[ 5.  6.]
-           [ 9. 10.]]]]
-
+    Args:
+        kernel_size: the size of the window.
+        stride: the stride of the window. Default value is kernel_size。
+        padding: implicit zero padding to be added on both sides.
+        mode: whether to count padding values. "average" mode will do counting and
+            "average_count_exclude_padding" mode won't do counting.
+            Default: "average_count_exclude_padding"
     """
 
     def __init__(

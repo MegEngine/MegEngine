@@ -24,7 +24,7 @@ void SleepForwardImpl::exec() {
     sleep(hdl->stream(), hdl->device_prop().clockRate * 1e3 * seconds * 1.2);
 }
 
-} // namespace cuda
-} // namespace megdnn
+}  // namespace cuda
+}  // namespace megdnn
 
 // vim: syntax=cpp.doxygen

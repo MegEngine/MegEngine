@@ -35,38 +35,36 @@ bool LocalShareForwardImpl::AlgoCHWNBatchSizeAwareSmallImage::is_available(
     available &= (sparse == Sparse::DENSE);
     // mode must be cross correlation
     available &= (mode == Mode::CROSS_CORRELATION);
-    unpack_local_share_params(args.src_layout, args.filter_layout,
-                              args.dst_layout, param);
+    unpack_local_share_params(
+            args.src_layout, args.filter_layout, args.dst_layout, param);
     available &= (ho % sgh == 0 && wo % sgw == 0);
     // not support dilated convolution
     available &= (dh == 1 && dw == 1);
     available &= (ci % 4 == 0);
-    auto src_dtype = args.src_layout.dtype,
-         filter_dtype = args.filter_layout.dtype,
+    auto src_dtype = args.src_layout.dtype, filter_dtype = args.filter_layout.dtype,
          dst_dtype = args.dst_layout.dtype;
     // only support float32
-    available &= (src_dtype == filter_dtype && src_dtype == dst_dtype &&
-                  src_dtype == dtype::Float32());
+    available &=
+            (src_dtype == filter_dtype && src_dtype == dst_dtype &&
+             src_dtype == dtype::Float32());
     // only support sm_60 or later
     available &= is_compute_capability_required(6, 0);
 
     return available;
 }
 
-WorkspaceBundle
-LocalShareForwardImpl::AlgoCHWNBatchSizeAwareSmallImage::get_workspace_bundle(
-        dt_byte* raw_ptr, const SizeArgs& args) const {
+WorkspaceBundle LocalShareForwardImpl::AlgoCHWNBatchSizeAwareSmallImage::
+        get_workspace_bundle(dt_byte* raw_ptr, const SizeArgs& args) const {
     auto&& param = args.opr->param();
-    unpack_local_share_params(args.src_layout, args.filter_layout,
-                              args.dst_layout, param);
+    unpack_local_share_params(
+            args.src_layout, args.filter_layout, args.dst_layout, param);
     size_t ws_size_src = n * ci * hi * wi * args.src_layout.dtype.size();
     size_t ws_size_dst = n * co * ho * wo * args.dst_layout.dtype.size();
     WorkspaceBundle ws{raw_ptr, {ws_size_src, ws_size_dst}};
     return ws;
 }
 
-size_t
-LocalShareForwardImpl::AlgoCHWNBatchSizeAwareSmallImage::get_workspace_in_bytes(
+size_t LocalShareForwardImpl::AlgoCHWNBatchSizeAwareSmallImage::get_workspace_in_bytes(
         const SizeArgs& args) const {
     return get_workspace_bundle(nullptr, args).total_size_in_bytes();
 }
@@ -75,12 +73,12 @@ void LocalShareForwardImpl::AlgoCHWNBatchSizeAwareSmallImage::exec(
         const ExecArgs& args) const {
     local_share::Param kern_param;
     auto&& param = args.opr->param();
-    unpack_local_share_params(args.src_layout, args.filter_layout,
-                              args.dst_layout, param);
-    kern_param.n = n, kern_param.co = co, kern_param.ci = ci,
-    kern_param.hi = hi, kern_param.wi = wi, kern_param.ph = ph,
-    kern_param.pw = pw, kern_param.grp_ho = ho / sgh,
-    kern_param.grp_wo = wo / sgw, kern_param.sgh = sgh, kern_param.sgw = sgw;
+    unpack_local_share_params(
+            args.src_layout, args.filter_layout, args.dst_layout, param);
+    kern_param.n = n, kern_param.co = co, kern_param.ci = ci, kern_param.hi = hi,
+    kern_param.wi = wi, kern_param.ph = ph, kern_param.pw = pw,
+    kern_param.grp_ho = ho / sgh, kern_param.grp_wo = wo / sgw, kern_param.sgh = sgh,
+    kern_param.sgw = sgw;
     auto&& handle = concrete_handle(args.opr->handle());
     auto&& cublas_hdl = cublas_handle(args.opr->handle());
     auto&& stream = cuda_stream(args.opr->handle());
@@ -89,8 +87,7 @@ void LocalShareForwardImpl::AlgoCHWNBatchSizeAwareSmallImage::exec(
     auto zero = handle->zero_device();
 
     local_share::_do_local_share_convolution_large_batch_size_small_image(
-            args.src_tensor->ptr<dt_float32>(),
-            args.filter_tensor->ptr<dt_float32>(),
+            args.src_tensor->ptr<dt_float32>(), args.filter_tensor->ptr<dt_float32>(),
             args.dst_tensor->ptr<dt_float32>(),
             reinterpret_cast<float*>(args.workspace.raw_ptr), fh, fw, sh, sw,
             kern_param, cublas_hdl, stream, one, zero);

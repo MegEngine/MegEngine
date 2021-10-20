@@ -16,12 +16,12 @@ namespace megdnn {
 namespace arm_common {
 namespace channel_wise_nchw44 {
 
-#define KERN(stride, i)                                                   \
-    template <bool quantized, BiasMode bias_mode, typename Op>            \
-    void direct_##stride##_##i##x##i##_int8(                              \
-            const int8_t* src, const int8_t* filter, const int32_t* bias, \
-            void* dst, const size_t IH, const size_t IW, const size_t OH, \
-            const size_t OW, const Op& op);
+#define KERN(stride, i)                                                              \
+    template <bool quantized, BiasMode bias_mode, typename Op>                       \
+    void direct_##stride##_##i##x##i##_int8(                                         \
+            const int8_t* src, const int8_t* filter, const int32_t* bias, void* dst, \
+            const size_t IH, const size_t IW, const size_t OH, const size_t OW,      \
+            const Op& op);
 
 KERN(stride1, 2)
 KERN(stride1, 3)

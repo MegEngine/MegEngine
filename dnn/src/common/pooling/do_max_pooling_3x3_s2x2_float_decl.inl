@@ -25,14 +25,12 @@ namespace megdnn {
 
 #define FUNC_NAME CONCAT_STR(do_max_pooling_3x3_s2x2_float_, MEGDNN_SIMD_NAME)
 
-void FUNC_NAME(const float *src, float *dst,
-        size_t IH_, size_t IW_, size_t OH_, size_t OW_, size_t PH_, size_t PW_,
-        const WorkspaceBundle& ws)
-MEGDNN_SIMD_ATTRIBUTE_TARGET;
+void FUNC_NAME(
+        const float* src, float* dst, size_t IH_, size_t IW_, size_t OH_, size_t OW_,
+        size_t PH_, size_t PW_, const WorkspaceBundle& ws) MEGDNN_SIMD_ATTRIBUTE_TARGET;
 
 #undef FUNC_NAME
 
-}
+}  // namespace megdnn
 
 #include "src/common/macro_helper_epilogue.h"
-

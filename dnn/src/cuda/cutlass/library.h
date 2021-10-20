@@ -100,6 +100,9 @@ enum class LayoutTypeID {
     kTensorNC64HW64,
     kTensorC64RSK64,
     kTensorK4RSC4,
+    kTensorCK4RS4,
+    kTensorCK8RS8,
+    kTensorCK16RS16,
     kInvalid
 };
 
@@ -180,13 +183,7 @@ enum class ScalarPointerMode { kHost, kDevice, kInvalid };
 enum class SplitKMode { kNone, kSerial, kParallel, kParallelSerial, kInvalid };
 
 /// Indicates the classificaition of the math instruction
-enum class OpcodeClassID {
-    kSimt,
-    kTensorOp,
-    kWmmaTensorOp,
-    kSparseTensorOp,
-    kInvalid
-};
+enum class OpcodeClassID { kSimt, kTensorOp, kWmmaTensorOp, kSparseTensorOp, kInvalid };
 
 enum class ArchTagID {
     kSm50,
@@ -225,6 +222,7 @@ enum class ThreadblockSwizzleID {
     kConvolutionFpropNCxHWx,
     kConvolutionFpropTrans,
     kConvolutionDgradNCxHWx,
+    kConvolutionDgradTrans,
     kInvalid
 };
 
@@ -288,8 +286,7 @@ struct MathInstructionDescription {
     //
 
     MathInstructionDescription(
-            cutlass::gemm::GemmCoord instruction_shape =
-                    cutlass::gemm::GemmCoord(),
+            cutlass::gemm::GemmCoord instruction_shape = cutlass::gemm::GemmCoord(),
             NumericTypeID element_accumulator = NumericTypeID::kInvalid,
             OpcodeClassID opcode_class = OpcodeClassID::kInvalid,
             MathOperationID math_operation = MathOperationID::kMultiplyAdd)
@@ -340,14 +337,11 @@ struct TileDescription {
     //
 
     TileDescription(
-            cutlass::gemm::GemmCoord threadblock_shape =
-                    cutlass::gemm::GemmCoord(),
+            cutlass::gemm::GemmCoord threadblock_shape = cutlass::gemm::GemmCoord(),
             int threadblock_stages = 0,
             cutlass::gemm::GemmCoord warp_count = cutlass::gemm::GemmCoord(),
-            MathInstructionDescription math_instruction =
-                    MathInstructionDescription(),
-            int minimum_compute_capability = 0,
-            int maximum_compute_capability = 0)
+            MathInstructionDescription math_instruction = MathInstructionDescription(),
+            int minimum_compute_capability = 0, int maximum_compute_capability = 0)
             : threadblock_shape(threadblock_shape),
               threadblock_stages(threadblock_stages),
               warp_count(warp_count),
@@ -361,15 +355,12 @@ struct TileDescription {
                 (threadblock_stages == rhs.threadblock_stages) &&
                 (warp_count == rhs.warp_count) &&
                 (math_instruction == rhs.math_instruction) &&
-                (minimum_compute_capability ==
-                 rhs.minimum_compute_capability) &&
+                (minimum_compute_capability == rhs.minimum_compute_capability) &&
                 (maximum_compute_capability == rhs.maximum_compute_capability));
     }
 
     // Inequality operator
-    inline bool operator!=(TileDescription const& rhs) const {
-        return !(*this == rhs);
-    }
+    inline bool operator!=(TileDescription const& rhs) const { return !(*this == rhs); }
 };
 
 /// High-level description of an operation
@@ -390,8 +381,7 @@ struct OperationDescription {
     // Methods
     //
     OperationDescription(
-            char const* name = "unknown",
-            OperationKind kind = OperationKind::kInvalid,
+            char const* name = "unknown", OperationKind kind = OperationKind::kInvalid,
             TileDescription const& tile_description = TileDescription())
             : name(name), kind(kind), tile_description(tile_description) {}
 };
@@ -417,10 +407,10 @@ struct TensorDescription {
     // Methods
     //
 
-    TensorDescription(NumericTypeID element = NumericTypeID::kInvalid,
-                      LayoutTypeID layout = LayoutTypeID::kInvalid,
-                      int alignment = 1, int log_extent_range = 24,
-                      int log_stride_range = 24)
+    TensorDescription(
+            NumericTypeID element = NumericTypeID::kInvalid,
+            LayoutTypeID layout = LayoutTypeID::kInvalid, int alignment = 1,
+            int log_extent_range = 24, int log_stride_range = 24)
             : element(element),
               layout(layout),
               alignment(alignment),
@@ -487,7 +477,7 @@ struct ConvolutionDescription : public OperationDescription {
 
     ThreadblockSwizzleID threadblock_swizzle;
 
-    bool need_load_from_const_mem;
+    conv::SpecialOptimizeDesc special_optimization;
     conv::ImplicitGemmMode gemm_mode;
     bool without_shared_load;
 };
@@ -529,8 +519,9 @@ public:
 
     virtual OperationDescription const& description() const = 0;
 
-    virtual Status run(void const* arguments, void* device_workspace = nullptr,
-                       cudaStream_t stream = nullptr) const = 0;
+    virtual Status run(
+            void const* arguments, void* device_workspace = nullptr,
+            cudaStream_t stream = nullptr) const = 0;
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
