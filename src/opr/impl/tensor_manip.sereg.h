@@ -155,7 +155,6 @@ struct ParamConverter<opr::Repeat::Param> {
     using FlatBufferType = param::TileRepeat;
     static opr::Repeat::Param to_param(const FlatBufferType* fb) {
         opr::Repeat::Param param;
-        param.TAG = fb->TAG();
         mgb_assert(
                     fb->nr_times() <= sizeof(param.times.shape) / sizeof(param.times.shape[0]));
         param.times.ndim = fb->nr_times();
@@ -175,7 +174,7 @@ struct ParamConverter<opr::Repeat::Param> {
             times[i] = static_cast<uint>(p.times.shape[i]);
         }
         return param::CreateTileRepeat(
-                builder, p.TAG, builder.CreateVector(times, p.times.ndim), static_cast<uint>(p.times.ndim));
+                builder, builder.CreateVector(times, p.times.ndim), static_cast<uint>(p.times.ndim));
     }
 };
 }  // namespace fbs

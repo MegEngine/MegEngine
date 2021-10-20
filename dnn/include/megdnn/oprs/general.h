@@ -614,14 +614,11 @@ class TileRepeatBase : public OperatorBase {
 public:
     TileRepeatBase(Handle* handle) : OperatorBase(handle) {}
     struct Param {
-        static uint32_t TAG;
+        static MEGDNN_CONSTEXPR uint32_t TAG = 123456789u;
         TensorShape times;
     };
     Param& param() { return m_param; }
     const Param& param() const { return m_param; }
-    void set_param_tag(uint32_t tag) {
-        m_param.TAG = tag;
-    }
 
 protected:
     void check_layout_fwd(const TensorLayout& src, const TensorLayout& dst);

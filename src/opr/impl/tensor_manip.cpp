@@ -1651,10 +1651,7 @@ MGB_DYN_TYPE_OBJ_FINAL_IMPL(RepeatForward);
 RepeatForward::RepeatForward(
         VarNode* src, const Param& param, const OperatorNodeConfig& config)
         : Super(OperatorNodeBaseCtorParam{src->owner_graph(), config, "repeat", {src}}) {
-    Param tagged_param;
-    tagged_param.times = param.times;
-    tagged_param.TAG = param_tag::Repeat;
-    init_megdnn_opr(*this, tagged_param);
+    init_megdnn_opr(*this, param);
     add_input({src});
     intl::MegDNNOprInitPostCtor<RepeatForward>::apply(*this);
 }
