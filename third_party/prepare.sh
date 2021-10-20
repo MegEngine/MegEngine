@@ -48,6 +48,7 @@ function git_submodule_update() {
     git submodule update -f --init libzmq
     git submodule update -f --init cppzmq
     git submodule update -f --init OpenBLAS
+    git submodule update -f --init gflags
     update_cpuinfo
 
     git submodule update -f --init MegRay
