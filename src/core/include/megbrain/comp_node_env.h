@@ -503,12 +503,19 @@ public:
         using AffinityCallBack = thin_function<void(size_t)>;
 
         std::shared_ptr<CPUDispatcher> dispatcher;
+#if MGB_HAVE_THREAD
+        static MGB_THREAD_LOCAL_PTR(bool) do_task_inplace;
+#else
+        bool* do_task_inplace = nullptr;
+#endif
 
-        void dispatch(Task&& task) const { dispatcher->dispatch(std::move(task)); }
+        void enable_dispatch();
 
-        void dispatch(MultiThreadingTask&& task, size_t parallelism) const {
-            dispatcher->dispatch(std::move(task), parallelism);
-        }
+        void disable_dispatch(bool* flag);
+
+        void dispatch(Task&& task) const;
+
+        void dispatch(MultiThreadingTask&& task, size_t parallelism) const;
 
         void set_affinity(AffinityCallBack&& cb) const {
             dispatcher->set_affinity(std::move(cb));
@@ -516,6 +523,12 @@ public:
     };
 
     const CpuEnv& cpu_env() const {
+        if (mgb_unlikely(m_property.type != DeviceType::CPU))
+            on_bad_device_type(DeviceType::CPU);
+        return m_cpu_env;
+    }
+
+    CpuEnv& cpu_env() {
         if (mgb_unlikely(m_property.type != DeviceType::CPU))
             on_bad_device_type(DeviceType::CPU);
         return m_cpu_env;

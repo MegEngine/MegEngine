@@ -213,9 +213,13 @@ TEST(TestGraph, MultiThreadRecorder) {
              z = opr::Convolution::make(x, y, param);
         graph->options().comp_node_seq_record_level = record_level;
         graph->options().var_sanity_check_first_run = false;
-        auto func = graph->compile({make_callback_copy(z, host_z)});
+        auto sync = (record_level != 1);
+        auto func = graph->compile({make_callback_copy(z, host_z, sync)});
         for (int i = 0; i < 5; i++) {
             func->execute();
+            if (!sync) {
+                func->wait();
+            }
         }
         auto expect = eval_conv_cpu<opr::Convolution>(*host_x, *host_y, param);
         MGB_ASSERT_TENSOR_NEAR(expect, host_z, 1e-3);

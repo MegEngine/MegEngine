@@ -168,12 +168,32 @@ MGB_DEFINE_OPR_CLASS(
         ComputingGraphImpl::CallbackCaller, SingleCNOperatorNodeBase) // {
     std::vector<std::vector<ComputingGraph::Callback>> m_cb;
 
+    //! CallbackCaller supports change memory address in output tensor record mode(only
+    //! on CPU). The whole callback will be dispatched(like dispatching tensor copy
+    //! instead of dispatching memcpy).
+    //! Side effect: sync() is not supported in callback anymore. Users should call
+    //! func->wait() instead out of callback to sync data from Device to Host.
+    //! Note : only record level 1 supports change memory address in output tensor.
+    //! HostTensor captured in callback should not on cpu default.
     void scn_do_execute() override {
         for (size_t i = 0; i < input().size(); ++i) {
             auto&& in = input(i)->dev_tensor();
             for (auto&& callback : m_cb[i]) {
-                // const cast for backward API compatibility
-                callback(const_cast<DeviceTensorND&>(in));
+                if (this->owner_graph()->options().comp_node_seq_record_level == 1 &&
+                    in.comp_node().device_type() == CompNode::DeviceType::CPU &&
+                    in.comp_node() != CompNode::default_cpu()) {
+                    auto record_cb = [&in, &callback]() {
+                        auto comp_node = in.comp_node();
+                        bool do_task_inplace = true;
+                        comp_node.disable_dispatch(&do_task_inplace);
+                        callback(const_cast<DeviceTensorND&>(in));
+                        comp_node.enable_dispatch();
+                    };
+                    in.comp_node().add_callback(record_cb);
+                } else {
+                    // const cast for backward API compatibility
+                    callback(const_cast<DeviceTensorND&>(in));
+                }
             }
         }
     }

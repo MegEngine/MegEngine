@@ -474,4 +474,35 @@ void CompNodeEnv::on_bad_device_type(DeviceType expected) const {
 
 MGB_VERSION_SYMBOL3(MEGDNN, MEGDNN_MAJOR, MEGDNN_MINOR, MEGDNN_PATCH);
 
+void CompNodeEnv::CpuEnv::enable_dispatch() {
+    do_task_inplace = nullptr;
+}
+
+void CompNodeEnv::CpuEnv::disable_dispatch(bool* flag) {
+    do_task_inplace = flag;
+}
+
+void CompNodeEnv::CpuEnv::dispatch(Task&& task) const {
+    if (do_task_inplace && *do_task_inplace) {
+        task();
+    } else {
+        dispatcher->dispatch(std::move(task));
+    }
+}
+
+void CompNodeEnv::CpuEnv::dispatch(
+        MultiThreadingTask&& task, size_t parallelism) const {
+    if (do_task_inplace && *do_task_inplace) {
+        for (size_t i = 0; i < parallelism; ++i) {
+            task(i, 0);
+        }
+    } else {
+        dispatcher->dispatch(std::move(task), parallelism);
+    }
+}
+
+#if MGB_HAVE_THREAD
+MGB_THREAD_LOCAL_PTR(bool) CompNodeEnv::CpuEnv::do_task_inplace = nullptr;
+#endif
+
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

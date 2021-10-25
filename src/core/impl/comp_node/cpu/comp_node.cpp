@@ -810,6 +810,12 @@ public:
             task();
         }
     }
+
+    void enable_dispatch() override { m_env.cpu_env().enable_dispatch(); }
+
+    void disable_dispatch(bool* flag) override {
+        m_env.cpu_env().disable_dispatch(flag);
+    }
 };
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(CompNodeRecorderImpl);
 #if MGB_HAVE_THREAD

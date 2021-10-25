@@ -50,6 +50,7 @@ void run_test(CompNode cn, const PluginMaker& plugin_maker) {
         graph->options().var_sanity_check_first_run = false;
         graph->options().comp_node_seq_record_level = record;
         graph->options().graph_opt_level = 0;
+        auto sync = (record != 1);
         auto plug = plugin_maker(graph.get(), record);
 
         // make a non-contiguous value, also introduce some shape dependencies
@@ -76,11 +77,14 @@ void run_test(CompNode cn, const PluginMaker& plugin_maker) {
         cg::DepOprIter{cb_rename}.add(y);
 
         HostTensorND host_y;
-        auto func = graph->compile({make_callback_copy(y, host_y)});
+        auto func = graph->compile({make_callback_copy(y, host_y, sync)});
         if (record == 2) {
             ComputingGraph::assert_destroy(graph);
         }
         func->execute();
+        if (!sync) {
+            func->wait();
+        }
         plug->flush_lazy();
         MGB_ASSERT_TENSOR_EQ(make_expect(), host_y);
 
@@ -91,10 +95,16 @@ void run_test(CompNode cn, const PluginMaker& plugin_maker) {
             *host_x = *gen(host_x->shape(), cn);
         }
         func->execute();
+        if (!sync) {
+            func->wait();
+        }
         MGB_ASSERT_TENSOR_EQ(make_expect(), host_y);
         for (int i = 0; i < 2; ++i) {
             host_x->copy_from(*gen(host_x->shape(), cn));
             func->execute();
+            if (!sync) {
+                func->wait();
+            }
             MGB_ASSERT_TENSOR_EQ(make_expect(), host_y);
         }
 
