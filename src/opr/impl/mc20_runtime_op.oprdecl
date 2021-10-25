@@ -1,0 +1,17 @@
+decl_raw_opr(
+    'mc20_runtime',
+    desc='create an operator that could load and run mc20 model',
+    inputs=[
+        Doc('inputs', 'input vars', 'list of :class:`.SymbolVar`'),
+        Doc('data_bytes', 'serialized mc20 model'),
+    ],
+    body=[
+        'assert isinstance(data_bytes, bytes), '
+            '"data must be bytes; got {}".format(type(data_bytes))',
+        'output = _mgb._Opr.mc20_runtime(inputs, data_bytes, config)',
+        'cvt_result_kwargs["explode_single"] = False',
+    ],
+)
+
+# vim: ft=python
+
