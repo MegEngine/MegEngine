@@ -453,32 +453,35 @@ void init_graph_rt(py::module m) {
 
 #define CURRENT_CLASS cg::ComputingGraph::Options
 
+    // clang-format off
     auto PyComputingGraphOptions =
             py::class_<cg::ComputingGraph::Options>(PyComputingGraph, "Options")
-            // DEF_READWRITE(opr_attribute)
-            DEF_READWRITE(seq_opt) DEF_READWRITE(graph_opt) DEF_READWRITE(
-                    graph_opt_level) DEF_READWRITE(log_level)
-                    DEF_READWRITE(async_exec_level) DEF_READWRITE(
-                            force_dynamic_alloc) DEF_READWRITE(var_sanity_check_first_run)
-                            DEF_READWRITE(allocate_static_mem_after_graph_compile) DEF_READWRITE(
-                                    fake_next_exec) DEF_READWRITE(enable_sublinear_memory_opt)
-                                    DEF_READWRITE(enable_dtr_memory_opt) DEF_READWRITE(
-                                            no_profiling_on_shape_change)
-                                            DEF_READWRITE(enable_var_mem_defragment) DEF_READWRITE(
-                                                    enable_grad_var_static_reshape)
-                                                    DEF_READWRITE(enable_memory_swap) DEF_READWRITE(
-                                                            comp_node_seq_record_level)
-                                                            DEF_READWRITE(
-                                                                    no_force_inplace)
-                                                                    DEF_READWRITE(
-                                                                            sublinear_mem_config)
-                                                                            DEF_READWRITE(
-                                                                                    dtr_config)
-            // DEF_READWRITE(eager_evaluation)
-            // DEF_READWRITE(imperative_proxy_graph)
-            // DEF_READWRITE(extra_vardeps)
-            // DEF_READWRITE(user_data)
+                // DEF_READWRITE(opr_attribute)
+                DEF_READWRITE(seq_opt)
+                DEF_READWRITE(graph_opt)
+                DEF_READWRITE(graph_opt_level)
+                DEF_READWRITE(log_level)
+                DEF_READWRITE(async_exec_level)
+                DEF_READWRITE(force_dynamic_alloc)
+                DEF_READWRITE(var_sanity_check_first_run)
+                DEF_READWRITE(allocate_static_mem_after_graph_compile)
+                DEF_READWRITE(fake_next_exec)
+                DEF_READWRITE(enable_sublinear_memory_opt)
+                DEF_READWRITE(enable_dtr_memory_opt)
+                DEF_READWRITE(no_profiling_on_shape_change)
+                DEF_READWRITE(enable_var_mem_defragment)
+                DEF_READWRITE(enable_grad_var_static_reshape)
+                DEF_READWRITE(enable_memory_swap)
+                DEF_READWRITE(comp_node_seq_record_level)
+                DEF_READWRITE(no_force_inplace)
+                DEF_READWRITE(sublinear_mem_config)
+                DEF_READWRITE(dtr_config)
+                // DEF_READWRITE(eager_evaluation)
+                // DEF_READWRITE(imperative_proxy_graph)
+                // DEF_READWRITE(extra_vardeps)
+                // DEF_READWRITE(user_data)
             ;
+    // clang-format on
 
 #undef CURRENT_CLASS
 #define CURRENT_CLASS cg::ComputingGraph::Options::SeqOpt
