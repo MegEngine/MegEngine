@@ -318,7 +318,7 @@ def test_add_remove_output():
     out = g.run(a.numpy(), b.numpy())
 
     np.testing.assert_equal(out["new_o1"], ((a + b) * 3).numpy())
-    np.testing.assert_equal(out["new_o2"], (F.sigmoid((a + b))).numpy())
+    np.testing.assert_almost_equal(out["new_o2"], (F.sigmoid((a + b))).numpy())
 
 
 def test_query():

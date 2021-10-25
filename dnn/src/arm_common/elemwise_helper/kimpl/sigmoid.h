@@ -33,34 +33,27 @@ struct SigmoidOpBase : UnaryOpBase<src_ctype, dst_ctype> {
 template <typename src_ctype, typename dst_ctype = src_ctype>
 struct SigmoidOp;
 
-#define OP(_ctype, _neon_type, _neon_type2, _func_suffix, _simd_width)                \
-    template <>                                                                       \
-    struct SigmoidOp<_ctype> : SigmoidOpBase<_ctype> {                                \
-        using SigmoidOpBase::SigmoidOpBase;                                           \
-        using SigmoidOpBase::operator();                                              \
-        constexpr static size_t SIMD_WIDTH = _simd_width;                             \
-        void operator()(const _neon_type2& src, _ctype* dst) const {                  \
-            auto vitem = operator()(src);                                             \
-            vst1q_##_func_suffix(dst, vitem.val[0]);                                  \
-            vst1q_##_func_suffix(dst + SIMD_WIDTH, vitem.val[1]);                     \
-        }                                                                             \
-        void operator()(const _neon_type& src, _ctype* dst) const {                   \
-            auto vitem = operator()(src);                                             \
-            vst1q_##_func_suffix(dst, vitem);                                         \
-        }                                                                             \
-        _neon_type2 operator()(const _neon_type2& src) const {                        \
-            return {{operator()(src.val[0]), operator()(src.val[1])}};                \
-        }                                                                             \
-        _neon_type operator()(const _neon_type& src) const {                          \
-            auto zero_val = vdupq_n_##_func_suffix(0.f);                              \
-            auto one_val = vdupq_n_##_func_suffix(1.f);                               \
-            auto val1 = vsubq_##_func_suffix(zero_val, src);                          \
-            val1 = exp_ps_##_func_suffix(val1);                                       \
-            auto recipe1 = vaddq_##_func_suffix(one_val, val1);                       \
-            val1 = vrecpeq_##_func_suffix(recipe1);                                   \
-            val1 = vmulq_##_func_suffix(vrecpsq_##_func_suffix(recipe1, val1), val1); \
-            return val1;                                                              \
-        }                                                                             \
+#define OP(_ctype, _neon_type, _neon_type2, _func_suffix, _simd_width) \
+    template <>                                                        \
+    struct SigmoidOp<_ctype> : SigmoidOpBase<_ctype> {                 \
+        using SigmoidOpBase::SigmoidOpBase;                            \
+        using SigmoidOpBase::operator();                               \
+        constexpr static size_t SIMD_WIDTH = _simd_width;              \
+        void operator()(const _neon_type2& src, _ctype* dst) const {   \
+            auto vitem = operator()(src);                              \
+            vst1q_##_func_suffix(dst, vitem.val[0]);                   \
+            vst1q_##_func_suffix(dst + SIMD_WIDTH, vitem.val[1]);      \
+        }                                                              \
+        void operator()(const _neon_type& src, _ctype* dst) const {    \
+            auto vitem = operator()(src);                              \
+            vst1q_##_func_suffix(dst, vitem);                          \
+        }                                                              \
+        _neon_type2 operator()(const _neon_type2& src) const {         \
+            return {{operator()(src.val[0]), operator()(src.val[1])}}; \
+        }                                                              \
+        _neon_type operator()(const _neon_type& src) const {           \
+            return sigmoid_ps_##_func_suffix(src);                     \
+        }                                                              \
     };
 OP(dt_float32, float32x4_t, float32x4x2_t, f32, 4)
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC

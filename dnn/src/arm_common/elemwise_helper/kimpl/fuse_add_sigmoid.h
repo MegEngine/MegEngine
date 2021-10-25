@@ -47,24 +47,14 @@ struct FuseAddSigmoidOp;
             vst1q_##_func_suffix(dst + SIMD_WIDTH, vitem.val[1]);                     \
         }                                                                             \
         _neon_type operator()(const _neon_type& src0, const _neon_type& src1) const { \
-            auto zero_val = vdupq_n_##_func_suffix(0.f);                              \
-            auto one_val = vdupq_n_##_func_suffix(1.f);                               \
             auto val1 = src0.val[0];                                                  \
             auto val2 = src0.val[1];                                                  \
             auto val3 = src1.val[0];                                                  \
             auto val4 = src1.val[1];                                                  \
             val1 = vaddq_##_func_suffix(val1, val3);                                  \
             val2 = vaddq_##_func_suffix(val2, val4);                                  \
-            val1 = vsubq_##_func_suffix(zero_val, val1);                              \
-            val2 = vsubq_##_func_suffix(zero_val, val2);                              \
-            val1 = exp_ps_##_func_suffix(val1);                                       \
-            val2 = exp_ps_##_func_suffix(val2);                                       \
-            auto recipe1 = vaddq_##_func_suffix(one_val, val1);                       \
-            auto recipe2 = vaddq_##_func_suffix(one_val, val2);                       \
-            val1 = vrecpeq_##_func_suffix(recipe1);                                   \
-            val2 = vrecpeq_##_func_suffix(recipe2);                                   \
-            val1 = vmulq_##_func_suffix(vrecpsq_##_func_suffix(recipe1, val1), val1); \
-            val2 = vmulq_##_func_suffix(vrecpsq_##_func_suffix(recipe2, val2), val2); \
+            val1 = sigmoid_ps_##_func_suffix(val1);                                   \
+            val2 = sigmoid_ps_##_func_suffix(val2);                                   \
             return {{val1, val2}};                                                    \
         }                                                                             \
     };

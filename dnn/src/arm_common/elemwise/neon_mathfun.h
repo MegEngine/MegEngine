@@ -54,11 +54,38 @@ v4sf cos_ps_f32(v4sf x);
 
 v4sf tan_ps_f32(v4sf x);
 
+static inline v4sf div_ps_f32(v4sf x, v4sf y) {
+#if MEGDNN_AARCH64
+    return vdivq_f32(x, y);
+#else
+    //! armv7 not support vdiv, so compute the reciprocal and iterate again
+    float32x4_t recp = vrecpeq_f32(y);
+    recp = vmulq_f32(vrecpsq_f32(y, recp), recp);
+    return vmulq_f32(x, recp);
+#endif
+}
+
+v4sf sigmoid_ps_f32(v4sf x);
+
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
 /**
  * \brief compute for 8 half at once, the inner just invoke exp_ps_f32 twice
  */
 float16x8_t exp_ps_f16(float16x8_t x);
+
+static inline float16x8_t div_ps_f16(float16x8_t x, float16x8_t y) {
+#if MEGDNN_AARCH64
+    return vdivq_f16(x, y);
+#else
+    //! armv7 not support vdiv, so compute the reciprocal and iterate again
+    float16x8_t recp = vrecpeq_f16(y);
+    recp = vmulq_f16(vrecpsq_f16(y, recp), recp);
+    return vmulq_f16(x, recp);
+#endif
+}
+
+float16x8_t sigmoid_ps_f16(float16x8_t x);
+
 #endif
 
 }  // namespace arm_common
