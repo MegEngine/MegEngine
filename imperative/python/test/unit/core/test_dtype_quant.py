@@ -85,54 +85,6 @@ def _check_result_attr(oup, dtype, dtype_str, is_unsigned=True):
         np.testing.assert_equal(get_zero_point(oup.dtype), get_zero_point(dtype))
 
 
-def test_dtype_int8_ffi_handle():
-    device = "xpux"
-    shape = (3, 3, 3)
-    data = np.random.random(shape).astype(np.float32) * 5 - 1
-
-    def identity(x):
-        return x
-
-    dtype = quint8(0.01, 127)
-    inp = convert_to_quint8(data, dtype)
-    oup = _get_compiled_result(inp, dtype, shape, device, calc_func=identity)
-    _check_result_attr(oup, dtype, "quint8")
-    np.testing.assert_allclose(convert_from_quint8(oup), convert_from_quint8(inp))
-
-    dtype = qint8(0.01)
-    inp = convert_to_qint8(data, dtype)
-    oup = _get_compiled_result(inp, dtype, shape, device, calc_func=identity)
-    _check_result_attr(oup, dtype, "qint8", is_unsigned=False)
-    np.testing.assert_allclose(convert_from_qint8(oup), convert_from_qint8(inp))
-
-
-def test_quint8_typecvt():
-    device = "xpux"
-    shape = (3, 3, 3)
-    data = np.random.random(shape).astype(np.float32) * 5 - 1
-
-    def typecvt(x, dt=None):
-        (y,) = G.apply_normal_varnode(ops.TypeCvt(dtype=dt), x)
-        return y
-
-    # convert to quint8
-    dtype = quint8(0.01, 135)
-    oup = _get_compiled_result(
-        data, np.float32, shape, device, calc_func=partial(typecvt, dt=dtype)
-    )
-    _check_result_attr(oup, dtype, "quint8")
-    np.testing.assert_equal(oup, convert_to_quint8(data, dtype))
-
-    # convert from quint8 to float32
-    oup_float = _get_compiled_result(
-        oup, dtype, shape, device, calc_func=partial(typecvt, dt=np.float32)
-    )
-    assert oup_float.dtype == np.float32
-    np.testing.assert_equal(
-        oup_float, convert_from_quint8(convert_to_quint8(data, dtype))
-    )
-
-
 def test_dtype_quint4():
     with pytest.raises(ValueError):
         blah = quint4(0.05, 0.233)
@@ -161,31 +113,43 @@ def test_dtype_qint4():
     np.testing.assert_allclose(get_scale(dt), 0.01)
 
 
-def test_dtype_int4_ffi_handle():
+@pytest.mark.parametrize(
+    "dtype, dtype_name",
+    [
+        (quint4(0.01, 5), "quint4"),
+        (qint4(0.01), "qint4"),
+        (quint8(0.01, 135), "quint8"),
+        (qint8(0.01), "qint8"),
+    ],
+)
+def test_dtype_qint_mgb_ffi_handle(dtype, dtype_name):
+    def identity(x):
+        return x
+
+    convert_to_dtype = eval("convert_to_%s" % dtype_name)
+    convert_from_dtype = eval("convert_from_%s" % dtype_name)
     device = "xpux"
     shape = (3, 3, 3)
     data = np.random.random(shape).astype(np.float32) * 5 - 1
 
-    def identity(x):
-        return x
-
-    dtype = quint4(0.01, 7)
-    inp = convert_to_quint4(data, dtype)
+    inp = convert_to_dtype(data, dtype)
     oup = _get_compiled_result(inp, dtype, shape, device, calc_func=identity)
-    _check_result_attr(oup, dtype, "quint4")
-    np.testing.assert_allclose(convert_from_quint4(oup), convert_from_quint4(inp))
-
-    dtype = qint4(0.01)
-    inp = convert_to_qint4(data, dtype)
-    oup = _get_compiled_result(inp, dtype, shape, device, calc_func=identity)
-    _check_result_attr(oup, dtype, "qint4", is_unsigned=False)
-    np.testing.assert_allclose(convert_from_qint4(oup), convert_from_qint4(inp))
+    _check_result_attr(oup, dtype, dtype_name, dtype_name.startswith("qu"))
+    np.testing.assert_allclose(convert_from_dtype(oup), convert_from_dtype(inp))
 
 
-@pytest.mark.skipif(
-    get_device_count("gpu") != 0, reason="TypeCvt to quint4 is not supported on GPU",
+@pytest.mark.parametrize(
+    "dtype, dtype_name",
+    [
+        (quint4(0.01, 5), "quint4"),
+        (qint4(0.01), "qint4"),
+        (quint8(0.01, 135), "quint8"),
+        (qint8(0.01), "qint8"),
+    ],
 )
-def test_quint4_typecvt():
+def test_qint_typecvt(dtype, dtype_name):
+    convert_to_dtype = eval("convert_to_%s" % dtype_name)
+    convert_from_dtype = eval("convert_from_%s" % dtype_name)
     device = "xpux"
     shape = (3, 3, 3)
     data = np.random.random(shape).astype(np.float32) * 5 - 1
@@ -195,12 +159,11 @@ def test_quint4_typecvt():
         return y
 
     # convert to quint4
-    dtype = quint4(0.01, 5)
     oup = _get_compiled_result(
         data, np.float32, shape, device, calc_func=partial(typecvt, dt=dtype)
     )
-    _check_result_attr(oup, dtype, "quint4")
-    np.testing.assert_equal(oup, convert_to_quint4(data, dtype))
+    _check_result_attr(oup, dtype, dtype_name, dtype_name.startswith("qu"))
+    np.testing.assert_equal(oup, convert_to_dtype(data, dtype))
 
     # convert from quint4 to float32
     oup_float = _get_compiled_result(
@@ -208,5 +171,62 @@ def test_quint4_typecvt():
     )
     assert oup_float.dtype == np.float32
     np.testing.assert_equal(
-        oup_float, convert_from_quint4(convert_to_quint4(data, dtype))
+        oup_float, convert_from_dtype(convert_to_dtype(data, dtype))
+    )
+
+
+@pytest.mark.parametrize(
+    "dtype, dtype_name",
+    [
+        (quint4(0.01, 5), "quint4"),
+        (qint4(0.01), "qint4"),
+        (quint8(0.01, 135), "quint8"),
+        (qint8(0.01), "qint8"),
+    ],
+)
+def test_qint_astype(dtype, dtype_name):
+    convert_to_dtype = eval("convert_to_%s" % dtype_name)
+    convert_from_dtype = eval("convert_from_%s" % dtype_name)
+    shape = (3, 3, 3)
+    data = np.random.random(shape).astype(np.float32) * 5 - 1
+
+    inp = Tensor(data, dtype="float32")
+    # convert to quint4
+    oup = inp.astype(dtype)
+    _check_result_attr(oup, dtype, dtype_name, dtype_name.startswith("qu"))
+    np.testing.assert_equal(oup.numpy(), convert_to_dtype(data, dtype))
+
+    # convert from quint4 to float32
+    oup_float = oup.astype("float32")
+    assert oup_float.dtype == np.float32
+    np.testing.assert_equal(
+        oup_float.numpy(), convert_from_dtype(convert_to_dtype(data, dtype))
+    )
+
+
+@pytest.mark.parametrize(
+    "dtype, dtype_name",
+    [
+        (quint4(0.01, 5), "quint4"),
+        (qint4(0.01), "qint4"),
+        (quint8(0.01, 135), "quint8"),
+        (qint8(0.01), "qint8"),
+    ],
+)
+def test_qint_new_tensor(dtype, dtype_name):
+
+    convert_to_dtype = eval("convert_to_%s" % dtype_name)
+    convert_from_dtype = eval("convert_from_%s" % dtype_name)
+    shape = (3, 3, 3)
+    data = np.random.random(shape).astype(np.float32) * 5 - 1
+    # create a new Tensor with quint8 dtype
+    inp = Tensor(convert_to_dtype(data, dtype), dtype=dtype)
+    _check_result_attr(inp, dtype, dtype_name, dtype_name.startswith("qu"))
+    np.testing.assert_equal(inp.numpy(), convert_to_dtype(data, dtype))
+
+    # convert from quint8 to float32
+    inp_float = inp.astype("float32")
+    assert inp_float.dtype == np.float32
+    np.testing.assert_equal(
+        inp_float.numpy(), convert_from_dtype(convert_to_dtype(data, dtype))
     )

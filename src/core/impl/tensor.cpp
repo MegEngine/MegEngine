@@ -435,6 +435,11 @@ DEF(DType dtype) : m_layout{dtype} {}
 DEF(CompNode node, DType dtype) : m_storage{node}, m_layout{dtype} {}
 
 //! allocate contiguous from given comp node, shape and dtype
+DEF(CompNode node, const TensorShape& shape, DType dtype)
+        : m_storage{node}, m_layout{dtype} {
+    resize(shape);
+}
+
 DEF(CompNode node, const TensorShape& shape, DType dtype, TensorFormat format)
         : m_storage{node}, m_layout{dtype, format} {
     resize(shape);

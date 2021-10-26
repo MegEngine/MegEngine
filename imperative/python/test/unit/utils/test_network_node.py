@@ -13,7 +13,11 @@ import megengine.random as rand
 from megengine.core._imperative_rt.core2 import apply
 from megengine.core._wrap import Device
 from megengine.core.ops import builtin
-from megengine.device import get_device_count, is_cuda_available
+from megengine.device import (
+    get_cuda_compute_capability,
+    get_device_count,
+    is_cuda_available,
+)
 from megengine.functional.debug_param import (
     get_execution_strategy,
     set_execution_strategy,
@@ -287,7 +291,7 @@ def test_deformable_ps_roi_pooling():
 
 
 @pytest.mark.skipif(
-    get_device_count("gpu") > 0,
+    get_cuda_compute_capability(0) < 61,
     reason="does not support int8 when gpu compute capability less than 6.1",
 )
 def test_convbias():
@@ -299,6 +303,27 @@ def test_convbias():
 
     inp = Tensor(np.random.random((1, 3, 64, 64)), dtype=dtype.qint8(scale=1.0))
     weight = Tensor(np.random.random((32, 3, 3, 3)), dtype=dtype.qint8(scale=1.0))
+    bias = Tensor(np.random.random((1, 32, 1, 1)), dtype=dtype.qint32(scale=1.0))
+    result = fwd(inp, weight, bias)
+    check_pygraph_dump(fwd, [inp, weight, bias], [result])
+
+
+@pytest.mark.skip(reason="does not support int4 when cuda version is lower than 10.2")
+def test_conv_bias_int4():
+    @trace(symbolic=True, capture_as_const=True)
+    def fwd(inp, weight, bias):
+        return F.quantized.conv_bias_activation(
+            inp,
+            weight,
+            bias,
+            dtype=dtype.quint4(scale=1.0, zero_point=0),
+            nonlinear_mode="relu",
+        )
+
+    inp = Tensor(
+        np.random.random((1, 3, 64, 64)), dtype=dtype.quint4(scale=1.0, zero_point=0)
+    )
+    weight = Tensor(np.random.random((32, 3, 3, 3)), dtype=dtype.qint4(scale=1.0))
     bias = Tensor(np.random.random((1, 32, 1, 1)), dtype=dtype.qint32(scale=1.0))
     result = fwd(inp, weight, bias)
     check_pygraph_dump(fwd, [inp, weight, bias], [result])

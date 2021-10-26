@@ -339,8 +339,10 @@ public:
 
     //! allocate contiguous tensor
     MGE_WIN_DECLSPEC_FUC TensorND(
-            CompNode node, const TensorShape& shape, DType dtype = dtype::Float32{},
-            TensorFormat format = {});
+            CompNode node, const TensorShape& shape, DType dtype = dtype::Float32{});
+
+    MGE_WIN_DECLSPEC_FUC TensorND(
+            CompNode node, const TensorShape& shape, DType dtype, TensorFormat format);
 
     //! allocate contiguous tensor from given comp node and layout; layout
     //! is required to be contiguous, and its dtype and format would be used

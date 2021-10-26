@@ -616,6 +616,7 @@ public:
             descs.emplace_back();
             auto& desc = descs.back();
             desc.layout.dtype = minigraph.output_var(i)->dtype();
+            desc.layout.format = minigraph.output_var(i)->format();
             desc.comp_node = minigraph.output_var(i)->comp_node();
             if (auto* shape = sess.infer_shape(i, false)) {
                 desc.layout.init_contiguous_stride(*shape);
