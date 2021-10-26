@@ -22,6 +22,7 @@
 
 using namespace mgb;
 
+#if CNRT_MAJOR_VERSION < 5
 namespace {
 class CnmlModelContext {
 public:
@@ -620,6 +621,7 @@ TEST(TestCambriconRuntimeOpr, CrossCNCopy) {
     MGB_ASSERT_TENSOR_NEAR(out_cnml, out_mgb, 1e-4);
 }
 
+#endif
 #endif
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

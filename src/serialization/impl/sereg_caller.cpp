@@ -43,6 +43,7 @@ void call_sereg() {}
 #endif
 #if MGB_CAMBRICON
 #include "../../cambricon/impl/cambricon_runtime_opr.sereg.h"
+#include "../../cambricon/impl/magicmind_runtime_opr.sereg.h"
 #endif
 
 #if MGB_CUSTOM_OP

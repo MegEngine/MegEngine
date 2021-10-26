@@ -193,11 +193,19 @@ public:
     std::pair<size_t, size_t> get_mem_status_bytes() override {
         m_env.cnrt_env().activate();
         cndevMemoryInfo_t mem_info;
+#if CNRT_MAJOR_VERSION >= 5
+        mem_info.version = CNDEV_VERSION_5;
+#endif
         MGB_CNDEV_CHECK(cndevGetMemoryUsage(&mem_info, m_env.cnrt_env().device));
         size_t tot, used, free;
         constexpr size_t mb2size = 1024 * 1024;
+#if CNRT_MAJOR_VERSION >= 5
+        tot = static_cast<size_t>(mem_info.physicalMemoryTotal) * mb2size;
+        used = static_cast<size_t>(mem_info.physicalMemoryUsed) * mb2size;
+#else
         tot = static_cast<size_t>(mem_info.PhysicalMemoryTotal) * mb2size;
         used = static_cast<size_t>(mem_info.PhysicalMemoryUsed) * mb2size;
+#endif
         free = tot - used + m_mem_alloc->get_free_memory_dev().tot;
         return {tot, free};
     }
@@ -417,10 +425,18 @@ size_t CambriconCompNodeImpl::DeviceInfo::get_mem_reserve_size() {
         }
         size_t tot, free;
         cndevMemoryInfo_t mem_info;
+#if CNRT_MAJOR_VERSION >= 5
+        mem_info.version = CNDEV_VERSION_5;
+#endif
         MGB_CNDEV_CHECK(cndevGetMemoryUsage(&mem_info, dev_num));
         constexpr size_t mb2size = 1024 * 1024;
+#if CNRT_MAJOR_VERSION >= 5
+        tot = static_cast<size_t>(mem_info.physicalMemoryTotal) * mb2size;
+        size_t used = static_cast<size_t>(mem_info.physicalMemoryUsed) * mb2size;
+#else
         tot = static_cast<size_t>(mem_info.PhysicalMemoryTotal) * mb2size;
         size_t used = static_cast<size_t>(mem_info.PhysicalMemoryUsed) * mb2size;
+#endif
         free = tot - used;
         return free - get_min_system_memory(free);
     } else {
@@ -701,11 +717,19 @@ void mgb::mem_alloc::CambriconRawAlloctor::get_mem_info(size_t& free, size_t& to
     }
     mgb_assert(device >= 0, "current device has not been initialized in static data");
     cndevMemoryInfo_t mem_info;
+#if CNRT_MAJOR_VERSION >= 5
+    mem_info.version = CNDEV_VERSION_5;
+#endif
     auto ret = cndevGetMemoryUsage(&mem_info, device);
     if (ret == CNDEV_SUCCESS) {
         constexpr size_t mb2size = 1024 * 1024;
+#if CNRT_MAJOR_VERSION >= 5
+        tot = static_cast<size_t>(mem_info.physicalMemoryTotal) * mb2size;
+        size_t used = static_cast<size_t>(mem_info.physicalMemoryUsed) * mb2size;
+#else
         tot = static_cast<size_t>(mem_info.PhysicalMemoryTotal) * mb2size;
         size_t used = static_cast<size_t>(mem_info.PhysicalMemoryUsed) * mb2size;
+#endif
         free = tot - used;
         return;
     }

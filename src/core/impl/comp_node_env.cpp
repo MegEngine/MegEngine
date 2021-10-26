@@ -318,6 +318,7 @@ void CompNodeEnv::init_rocm_async(
 #endif
 
 #if MGB_CAMBRICON
+#if CNRT_MAJOR_VERSION < 5
 const char* mgb::cnml_get_error_string(cnmlStatus_t err) {
     switch (err) {
 #define cb(_err) \
@@ -341,6 +342,7 @@ const char* mgb::cnml_get_error_string(cnmlStatus_t err) {
     }
     return "Unknown CNML error";
 }
+#endif
 
 void mgb::_on_cnrt_error(
         const char* expr, cnrtRet_t err, const char* file, const char* func, int line) {
@@ -357,6 +359,7 @@ void mgb::_on_cndev_error(
             cndevGetErrorString(err), expr, file, func, line);
 }
 
+#if CNRT_MAJOR_VERSION < 5
 void mgb::_on_cnml_error(
         const char* expr, cnmlStatus_t err, const char* file, const char* func,
         int line) {
@@ -364,6 +367,7 @@ void mgb::_on_cnml_error(
             CnmlError, "cnml error %d: %s (%s at %s:%s:%d)", int(err),
             cnml_get_error_string(err), expr, file, func, line);
 }
+#endif
 #endif
 
 void CompNodeEnv::init_cpu(const CpuEnv& env, CompNode comp_node) {

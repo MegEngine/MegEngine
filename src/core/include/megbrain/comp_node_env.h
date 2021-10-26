@@ -116,8 +116,10 @@
 
 #if MGB_CAMBRICON
 #include <cndev.h>
-#include <cnml.h>
 #include <cnrt.h>
+#if CNRT_MAJOR_VERSION < 5
+#include <cnml.h>
+#endif
 
 #if MGB_ENABLE_LOGGING
 #define MGB_CNRT_CHECK(expr)                                                 \
@@ -204,14 +206,18 @@ namespace mgb {
 #endif
 
 #if MGB_CAMBRICON
+#if CNRT_MAJOR_VERSION < 5
 const char* cnml_get_error_string(cnmlStatus_t err);
+#endif
 [[noreturn]] void _on_cnrt_error(
         const char* expr, cnrtRet_t err, const char* file, const char* func, int line);
 [[noreturn]] void _on_cndev_error(
         const char* expr, cndevRet_t err, const char* file, const char* func, int line);
+#if CNRT_MAJOR_VERSION < 5
 [[noreturn]] void _on_cnml_error(
         const char* expr, cnmlStatus_t err, const char* file, const char* func,
         int line);
+#endif
 #endif
 
 class CPUDispatcher : public MegcoreCPUDispatcher {
@@ -456,6 +462,13 @@ public:
                     initialized = cnrt_err == CNRT_RET_SUCCESS;
                     auto cndev_err = cndevInit(0);
                     initialized &= cndev_err == CNDEV_SUCCESS;
+#if CNRT_MAJOR_VERSION >= 5
+                    mgb_throw_if(
+                            !initialized, CnrtError,
+                            "cnrt/cndev initialize failed: (cnrt:%d, "
+                            "cndev:%d)",
+                            static_cast<int>(cnrt_err), static_cast<int>(cndev_err));
+#else
                     auto cnml_err = cnmlInit(0);
                     initialized &= cnml_err == CNML_STATUS_SUCCESS;
                     mgb_throw_if(
@@ -464,11 +477,14 @@ public:
                             "cndev:%d, cnml: %d)",
                             static_cast<int>(cnrt_err), static_cast<int>(cndev_err),
                             static_cast<int>(cnml_err));
+#endif
                 }
             }
             ~InitStatus() {
                 if (initialized) {
+#if CNRT_MAJOR_VERSION < 5
                     MGB_CNML_CHECK(cnmlExit());
+#endif
                     MGB_CNDEV_CHECK(cndevRelease());
                     cnrtDestroy();
                     initialized = false;
