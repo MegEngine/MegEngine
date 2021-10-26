@@ -674,6 +674,7 @@ TEST(TestCompNodeCambricon, D2DCopy) {
     REQUIRE_CAMBRICON_DEVICE(1);
     auto cn = CompNode::load("cambricon0");
     run(cn);
+    REQUIRE_CAMBRICON_DEVICE(2);
     cn = CompNode::load("cambricon1");
     run(cn);
 }
