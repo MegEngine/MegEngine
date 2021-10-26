@@ -74,8 +74,7 @@ class Node:
             "The name(%s) is already in use. Please try a different one again."
             % (new_name)
         )
-        new_name = graph._namespace.create_unique_name(new_name)
-        self._name = new_name
+        self._name = graph._namespace.create_unique_name(new_name, self)
 
     @property
     def qualname(self):

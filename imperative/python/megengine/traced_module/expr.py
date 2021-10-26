@@ -69,6 +69,10 @@ def is_apply_def(expr):
     return isinstance(expr, Apply)
 
 
+def is_input(expr):
+    return isinstance(expr, Input)
+
+
 class Expr:
     r"""``Expr`` represents the operations (i.e. ``CallMethod``, ``CallFunction``, ``Apply``, 
     ``GetAttr``, ``Input``, ``Constant``) on ``Node``.
@@ -215,9 +219,11 @@ class Input(Expr):
     @classmethod
     def make(cls, *args, **kwargs):
         assert active_module_tracer() is not None
+        current_graph = active_module_tracer().current_scope()
         expr = cls(*args, **kwargs)
         out_node = expr.outputs[0]
-        active_module_tracer().current_scope()._add_input(out_node)
+        current_graph._namespace.auto_naming_for_outputs(expr)
+        current_graph._add_input(out_node)
         return expr.outputs[0]
 
     def __repr__(self):
