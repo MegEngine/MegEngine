@@ -73,14 +73,14 @@ __attribute__((unused)) static std::shared_ptr<Tensor> get_input_data(
     std::vector<npy::ndarray_len_t> stl_shape;
     std::vector<int8_t> raw;
     npy::LoadArrayFromNumpy(path, type_str, stl_shape, raw);
-
     auto lite_tensor = std::make_shared<Tensor>(LiteDeviceType::LITE_CPU);
     Layout layout;
     layout.ndim = stl_shape.size();
     const std::map<std::string, LiteDataType> type_map = {
-            {"f4", LiteDataType::LITE_FLOAT},
-            {"i4", LiteDataType::LITE_INT},
-            {"i1", LiteDataType::LITE_INT8},
+            {"f4", LiteDataType::LITE_FLOAT},  {"f2", LiteDataType::LITE_HALF},
+            {"i8", LiteDataType::LITE_INT64},  {"i4", LiteDataType::LITE_INT},
+            {"u4", LiteDataType::LITE_UINT},   {"i2", LiteDataType::LITE_INT16},
+            {"u2", LiteDataType::LITE_UINT16}, {"i1", LiteDataType::LITE_INT8},
             {"u1", LiteDataType::LITE_UINT8}};
     layout.shapes[0] = 1;
     for (size_t i = 0; i < stl_shape.size(); i++) {

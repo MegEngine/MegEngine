@@ -109,7 +109,7 @@ def main():
 
     PackModel.PackModelStartModelsVector(builder, 1)
     builder.PrependUOffsetTRelative(model)
-    models = builder.EndVector(1)
+    models = builder.EndVector()
 
     PackModel.PackModelStart(builder)
     PackModel.PackModelAddModels(builder, models)

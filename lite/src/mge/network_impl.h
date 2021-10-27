@@ -39,6 +39,7 @@ class NetworkImplDft final : public Network::NetworkImplBase {
     LITE_DYN_TYPE_OBJ_FINAL_DECL;
 
 public:
+    NetworkImplDft() { m_load_config.comp_graph = mgb::ComputingGraph::make(); }
     using S = megdnn::param::ExecutionPolicy::Strategy;
     //! set the config of the network, include:
     //! the inference device

@@ -44,7 +44,6 @@ LITE_DYN_TYPE_OBJ_FINAL_IMPL(NetworkImplDft);
 void NetworkImplDft::set_config(const Config& config) {
     m_user_config = std::make_unique<Config>();
     *m_user_config = config;
-    m_load_config.comp_graph = mgb::ComputingGraph::make();
     m_compnode_locator = to_compnode_locator(m_user_config->device_type);
     m_compnode_locator.device = config.device_id;
 }
