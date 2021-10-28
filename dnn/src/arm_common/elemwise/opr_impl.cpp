@@ -27,6 +27,7 @@ class ElemwiseImpl::AlgoPack {
     AlgoBinaryVecVec algo_binary_vec_vec;
     AlgoBinaryVecScalar algo_binary_vec_sca;
     AlgoBinaryVecBcast101 algo_binary_vec_bcast101;
+    AlgoBinaryVecBcastX0X algo_binary_vec_bcastX0X;
     AlgoBinaryVecBcast111C algo_binary_vec_bcast110;
     AlgoBinaryVecBcast101xX algo_binary_VEC_BCAST101xX;
     AlgoTernaryFma3VecVecVec algo_ternaryfma3_vec_vec_vec;
@@ -46,6 +47,7 @@ public:
         all_algos.emplace_back(&algo_binary_vec_vec);
         all_algos.emplace_back(&algo_binary_vec_sca);
         all_algos.emplace_back(&algo_binary_vec_bcast101);
+        all_algos.emplace_back(&algo_binary_vec_bcastX0X);
         all_algos.emplace_back(&algo_binary_vec_bcast110);
         all_algos.emplace_back(&algo_binary_VEC_BCAST101xX);
         all_algos.emplace_back(&algo_ternaryfma3_vec_vec_vec);
@@ -199,6 +201,16 @@ ElemwiseImpl::KernParam ElemwiseImpl::make_kern_param(ElemwiseImpl* opr) {
 
         if (is_vector(src1.layout) && is_broadcasted_channel_like(src0.layout, binfo)) {
             kern_param.broad_cast_type = BcastType::BCAST101_VEC;
+            return kern_param;
+        }
+
+        if (is_vector(src0.layout) && is_broadcasted_3dim_like(src1.layout, binfo)) {
+            kern_param.broad_cast_type = BcastType::VEC_BCASTX0X;
+            return kern_param;
+        }
+
+        if (is_vector(src1.layout) && is_broadcasted_3dim_like(src0.layout, binfo)) {
+            kern_param.broad_cast_type = BcastType::BCASTX0X_VEC;
             return kern_param;
         }
 

@@ -150,6 +150,20 @@ bool ElemwiseLayoutHelper::is_broadcasted_channel_like(
     return false;
 }
 
+bool ElemwiseLayoutHelper::is_broadcasted_3dim_like(
+        const TensorLayout& layout, BroadcastChannelInfo& info) {
+    if (layout.format.type() == TensorFormat::Type::DEFAULT) {
+        if (layout.ndim == 3 && (layout.stride[0] - layout.shape[2]) == 0 &&
+            layout.stride[1] == 0 && layout.stride[2] == 1) {
+            info.x = layout.shape[0];
+            info.y = layout.shape[1];
+            info.z = layout.shape[2];
+            return true;
+        }
+    }
+    return false;
+}
+
 bool ElemwiseLayoutHelper::is_NHWC_broadcasted_channel_like(
         const TensorLayout& layout, BroadcastChannelInfo& info) {
     if (layout.format.type() == TensorFormat::Type::DEFAULT) {

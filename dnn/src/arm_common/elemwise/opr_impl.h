@@ -38,6 +38,7 @@ private:
     class AlgoBinaryVecVec;
     class AlgoBinaryVecScalar;
     class AlgoBinaryVecBcast101;
+    class AlgoBinaryVecBcastX0X;
     class AlgoBinaryVecBcast111C;
     class AlgoBinaryVecBcast101xX;
     class AlgoTernaryFma3VecVecVec;

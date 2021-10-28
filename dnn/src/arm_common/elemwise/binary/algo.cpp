@@ -104,6 +104,21 @@ bool ElemwiseImpl::AlgoBinaryVecBcast101::is_available(
     return false;
 }
 
+bool ElemwiseImpl::AlgoBinaryVecBcastX0X::is_available(
+        const KernParam& kern_param) const {
+    if (!is_available_common(kern_param.mode) ||
+        ((BcastType::VEC_BCASTX0X != kern_param.broad_cast_type) &&
+         (BcastType::BCASTX0X_VEC != kern_param.broad_cast_type)))
+        return false;
+
+    auto& elparam = kern_param.binary_elparam;
+    auto& src0 = elparam[0];
+
+    DISPATCH_TYPE("AlgoBinaryVecBcastX0X::is_available"_hash);
+
+    return false;
+}
+
 bool ElemwiseImpl::AlgoBinaryVecBcast111C::is_available(
         const KernParam& kern_param) const {
     if (!is_available_common(kern_param.mode) ||
@@ -342,6 +357,72 @@ void ElemwiseImpl::AlgoBinaryVecBcast101::exec(const KernParam& kern_param) cons
         return
 
         DISPATCH_TYPE("AlgoBinaryVecBcast101::exec_b_vec"_hash);
+
+#undef DISPATCH_BINARY
+    }
+    return;
+}
+
+void ElemwiseImpl::AlgoBinaryVecBcastX0X::exec(const KernParam& kern_param) const {
+    auto& elparam = kern_param.binary_elparam;
+    auto &src0 = elparam[0], &src1 = elparam[1];
+    auto&& dst = *(kern_param.m_dst);
+    BroadcastChannelInfo binfo;
+
+    // Case: BcastType::VEC + BCAST_X0X
+    if (BcastType::VEC_BCASTX0X == kern_param.broad_cast_type &&
+        is_broadcasted_3dim_like(src1.layout, binfo)) {
+#define DISPATCH_BINARY(_mode, _case, _type, _type_midout_id, _op)                   \
+    case Mode::_mode:                                                                \
+        MIDOUT_BEGIN(                                                                \
+                megdnn_arm_common_elemwise_binary, midout_iv(_case),                 \
+                midout_iv(Mode::_mode), _type_midout_id) {                           \
+            thin_function<void(                                                      \
+                    const _type*, const _type*, _type*, DType, DType, DType, size_t, \
+                    size_t, size_t)>                                                 \
+                    run = OpCallerBinary<                                            \
+                            _op<_type, _type>, BcastType::VEC_BCASTX0X>::run;        \
+            MEGDNN_DISPATCH_CPU_KERN(                                                \
+                    static_cast<naive::HandleImpl*>(kern_param.handle),              \
+                    run(static_cast<const _type*>(src0.raw_ptr),                     \
+                        static_cast<const _type*>(src1.raw_ptr),                     \
+                        static_cast<_type*>(dst.raw_ptr), src0.layout.dtype,         \
+                        src1.layout.dtype, dst.layout.dtype, binfo.x, binfo.y,       \
+                        binfo.z));                                                   \
+        }                                                                            \
+        MIDOUT_END();                                                                \
+        return
+
+        DISPATCH_TYPE("AlgoBinaryVecBcastX0X::exec_vec_b"_hash);
+
+#undef DISPATCH_BINARY
+    }
+
+    // BCAST_X0X + BcastType::VEC
+    if (BcastType::BCASTX0X_VEC == kern_param.broad_cast_type &&
+        is_broadcasted_3dim_like(src0.layout, binfo)) {
+#define DISPATCH_BINARY(_mode, _case, _type, _type_midout_id, _op)                   \
+    case Mode::_mode:                                                                \
+        MIDOUT_BEGIN(                                                                \
+                megdnn_arm_common_elemwise_binary, midout_iv(_case),                 \
+                midout_iv(Mode::_mode), _type_midout_id) {                           \
+            thin_function<void(                                                      \
+                    const _type*, const _type*, _type*, DType, DType, DType, size_t, \
+                    size_t, size_t)>                                                 \
+                    run = OpCallerBinary<                                            \
+                            _op<_type, _type>, BcastType::BCASTX0X_VEC>::run;        \
+            MEGDNN_DISPATCH_CPU_KERN(                                                \
+                    static_cast<naive::HandleImpl*>(kern_param.handle),              \
+                    run(static_cast<const _type*>(src0.raw_ptr),                     \
+                        static_cast<const _type*>(src1.raw_ptr),                     \
+                        static_cast<_type*>(dst.raw_ptr), src0.layout.dtype,         \
+                        src1.layout.dtype, dst.layout.dtype, binfo.x, binfo.y,       \
+                        binfo.z));                                                   \
+        }                                                                            \
+        MIDOUT_END();                                                                \
+        return
+
+        DISPATCH_TYPE("AlgoBinaryVecBcastX0X::exec_b_vec"_hash);
 
 #undef DISPATCH_BINARY
     }

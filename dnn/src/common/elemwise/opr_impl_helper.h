@@ -81,6 +81,14 @@ public:
             const TensorLayout& layout, BroadcastChannelInfo& info);
 
     /*!
+     * \brief check whether layout matches BroadcastChannelInfo like N1HW
+     *
+     * Note layout should be [N, 1, H*W] like
+     */
+    static bool is_broadcasted_3dim_like(
+            const TensorLayout& layout, BroadcastChannelInfo& info);
+
+    /*!
      * \brief check whether layout matches BroadcastChannelInfo under NHWC
      * layout
      *

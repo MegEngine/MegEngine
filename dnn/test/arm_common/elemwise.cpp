@@ -356,6 +356,30 @@ TEST_F(ARM_COMMON, ELEMWISE_FORWARD_NHWC_FP32_BCAST) {
     run_3d_incontig(Mode::FUSE_MUL_ADD3);
 }
 
+TEST_F(ARM_COMMON, ELEMWISE_FORWARD_N1HW_FP32_BCAST) {
+    using Mode = ElemwiseForward::Param::Mode;
+    Checker<ElemwiseForward> checker(handle());
+
+    UniformFloatRNG rng(1e-5, 7e1);
+    checker.set_rng(0, &rng);
+    checker.set_epsilon(1e-5);
+    checker.set_dtype(0, dtype::Float32());
+    checker.set_dtype(1, dtype::Float32());
+
+    //! 2 dim
+    auto run = [&](Mode mode) {
+        // VEC_BCASTX0X
+        checker.set_param(mode).execs({{2, 8, 4, 4}, {2, 1, 4, 4}, {}});
+        checker.set_param(mode).execs({{4, 21, 78}, {4, 1, 78}, {}});
+        // BCASTX0X_VEC
+        checker.set_param(mode).execs({{2, 1, 4, 4}, {2, 8, 4, 4}, {}});
+        checker.set_param(mode).execs({{4, 1, 78}, {4, 21, 78}, {}});
+    };
+    run(Mode::ADD);
+    run(Mode::MUL);
+    run(Mode::SUB);
+}
+
 #if MEGDNN_WITH_BENCHMARK
 namespace {
 void run_elemwise_benchmark(

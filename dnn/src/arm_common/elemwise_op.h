@@ -107,11 +107,13 @@ enum BcastType {
     VEC,
     VEC_VEC,
     VEC_BCAST101,
+    VEC_BCASTX0X,
     VEC_BCAST111C,
     VEC_BCAST101xX,
     VEC_SCALAR,
     SCALAR_VEC,
     BCAST101_VEC,
+    BCASTX0X_VEC,
     BCAST111C_VEC,
     BCAST101xX_VEC,
     VEC_VEC_VEC,
@@ -231,6 +233,34 @@ struct OpCallerBinary<PowOp<ctype, ctype>, VEC_BCAST101> {
 };
 
 template <typename ctype>
+struct OpCallerBinary<PowOp<ctype, ctype>, VEC_BCASTX0X> {
+    using Op = PowOp<ctype, ctype>;
+    static void run(
+            const typename Op::src_ctype* src0, const typename Op::src_ctype* src1,
+            typename Op::dst_ctype* dst, DType src0_dtype, DType src1_dtype,
+            DType dst_dtype, size_t batch, size_t channel, size_t channel_stride) {
+        Op op(src0_dtype, src1_dtype, dst_dtype);
+        for (size_t b = 0; b < batch; b++) {
+            const typename Op::src_ctype* src1_ptr_base = src1 + b * channel_stride;
+            for (size_t c = 0; c < channel; c++) {
+                size_t i = 0;
+                auto src1_ptr = src1_ptr_base;
+#if MEGDNN_FIX_AARCH32_BUG
+// FIXME: as llvm may cause cannot select error if enable vectorize
+#pragma clang loop vectorize(disable)
+#endif
+                for (; i < channel_stride; i++) {
+                    op(*src0, *src1_ptr, dst);
+                    src0++;
+                    src1_ptr++;
+                    dst++;
+                }
+            }
+        }
+    }
+};
+
+template <typename ctype>
 struct OpCallerBinary<PowOp<ctype, ctype>, VEC_BCAST111C> {
     using Op = PowOp<ctype, ctype>;
     static void run(
@@ -332,6 +362,34 @@ struct OpCallerBinary<PowOp<ctype, ctype>, BCAST101_VEC> {
     }
 };
 
+template <typename ctype>
+struct OpCallerBinary<PowOp<ctype, ctype>, BCASTX0X_VEC> {
+    using Op = PowOp<ctype, ctype>;
+    static void run(
+            const typename Op::src_ctype* src0, const typename Op::src_ctype* src1,
+            typename Op::dst_ctype* dst, DType src0_dtype, DType src1_dtype,
+            DType dst_dtype, size_t batch, size_t channel, size_t channel_stride) {
+        Op op(src0_dtype, src1_dtype, dst_dtype);
+        for (size_t b = 0; b < batch; b++) {
+            auto src0_ptr_base = src0 + b * channel_stride;
+            for (size_t c = 0; c < channel; c++) {
+                size_t i = 0;
+                auto src0_ptr = src0_ptr_base;
+#if MEGDNN_FIX_AARCH32_BUG
+// FIXME: as llvm may cause cannot select error if enable vectorize
+#pragma clang loop vectorize(disable)
+#endif
+                for (; i < channel_stride; i++) {
+                    op(*src0_ptr, *src1, dst);
+                    src0_ptr++;
+                    src1++;
+                    dst++;
+                }
+            }
+        }
+    }
+};
+
 template <typename Op>
 struct OpCallerBinary<Op, VEC_VEC> {
     static void run(
@@ -393,6 +451,45 @@ struct OpCallerBinary<Op, VEC_BCAST101> {
                     dst++;
                 }
                 src1_ptr++;
+            }
+        }
+    }
+};
+
+template <typename Op>
+struct OpCallerBinary<Op, VEC_BCASTX0X> {
+    static void run(
+            const typename Op::src_ctype* src0, const typename Op::src_ctype* src1,
+            typename Op::dst_ctype* dst, DType src0_dtype, DType src1_dtype,
+            DType dst_dtype, size_t batch, size_t channel, size_t channel_stride) {
+        Op op(src0_dtype, src1_dtype, dst_dtype);
+        ParamElemVisitor<typename Op::src_ctype> vis;
+        for (size_t b = 0; b < batch; b++) {
+            const typename Op::src_ctype* src1_ptr_base = src1 + b * channel_stride;
+            for (size_t c = 0; c < channel; c++) {
+                size_t i = 0;
+                auto src1_ptr = src1_ptr_base;
+                for (; i + Op::SIMD_WIDTH * 2 <= channel_stride;
+                     i += Op::SIMD_WIDTH * 2) {
+                    auto src0_neon0 = vis(src0);
+                    auto src0_neon1 = vis(src0 + Op::SIMD_WIDTH);
+                    auto src1_neon0 = vis(src1_ptr);
+                    auto src1_neon1 = vis(src1_ptr + Op::SIMD_WIDTH);
+                    op({{src0_neon0, src0_neon1}}, {{src1_neon0, src1_neon1}}, dst);
+                    src0 += Op::SIMD_WIDTH * 2;
+                    src1_ptr += Op::SIMD_WIDTH * 2;
+                    dst += Op::SIMD_WIDTH * 2;
+                }
+#if MEGDNN_FIX_AARCH32_BUG
+// FIXME: as llvm may cause cannot select error if enable vectorize
+#pragma clang loop vectorize(disable)
+#endif
+                for (; i < channel_stride; i++) {
+                    op(*src0, *src1_ptr, dst);
+                    src0++;
+                    src1_ptr++;
+                    dst++;
+                }
             }
         }
     }
@@ -839,6 +936,45 @@ struct OpCallerBinary<Op, BCAST101_VEC> {
                     dst++;
                 }
                 src0_ptr++;
+            }
+        }
+    }
+};
+
+template <typename Op>
+struct OpCallerBinary<Op, BCASTX0X_VEC> {
+    static void run(
+            const typename Op::src_ctype* src0, const typename Op::src_ctype* src1,
+            typename Op::dst_ctype* dst, DType src0_dtype, DType src1_dtype,
+            DType dst_dtype, size_t batch, size_t channel, size_t channel_stride) {
+        Op op(src0_dtype, src1_dtype, dst_dtype);
+        ParamElemVisitor<typename Op::src_ctype> vis;
+        for (size_t b = 0; b < batch; b++) {
+            auto src0_ptr_base = src0 + b * channel_stride;
+            for (size_t c = 0; c < channel; c++) {
+                auto src0_ptr = src0_ptr_base;
+                size_t i = 0;
+                for (; i + Op::SIMD_WIDTH * 2 <= channel_stride;
+                     i += Op::SIMD_WIDTH * 2) {
+                    auto src0_neon0 = vis(src0_ptr);
+                    auto src0_neon1 = vis(src0_ptr + Op::SIMD_WIDTH);
+                    auto src1_neon0 = vis(src1);
+                    auto src1_neon1 = vis(src1 + Op::SIMD_WIDTH);
+                    op({{src0_neon0, src0_neon1}}, {{src1_neon0, src1_neon1}}, dst);
+                    src0_ptr += Op::SIMD_WIDTH * 2;
+                    src1 += Op::SIMD_WIDTH * 2;
+                    dst += Op::SIMD_WIDTH * 2;
+                }
+#if MEGDNN_FIX_AARCH32_BUG
+// FIXME: as llvm may cause cannot select error if enable vectorize
+#pragma clang loop vectorize(disable)
+#endif
+                for (; i < channel_stride; i++) {
+                    op(*src0_ptr, *src1, dst);
+                    src0_ptr++;
+                    src1++;
+                    dst++;
+                }
             }
         }
     }
