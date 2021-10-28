@@ -160,6 +160,8 @@ REGIST_EXAMPLE("reset_input", reset_input);
 REGIST_EXAMPLE("reset_input_output", reset_input_output);
 REGIST_EXAMPLE("config_user_allocator", config_user_allocator);
 REGIST_EXAMPLE("async_forward", async_forward);
+REGIST_EXAMPLE("set_input_callback", set_input_callback);
+REGIST_EXAMPLE("set_output_callback", set_output_callback);
 
 REGIST_EXAMPLE("basic_c_interface", basic_c_interface);
 REGIST_EXAMPLE("device_io_c_interface", device_io_c_interface);

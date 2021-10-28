@@ -67,7 +67,8 @@ bool config_user_allocator(const Args& args);
 bool register_cryption_method(const Args& args);
 bool update_cryption_key(const Args& args);
 bool async_forward(const Args& args);
-
+bool set_input_callback(const Args& arg);
+bool set_output_callback(const Args& arg);
 #if LITE_WITH_CUDA
 bool device_input(const Args& args);
 bool device_input_output(const Args& args);

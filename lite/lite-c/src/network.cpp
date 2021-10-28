@@ -355,6 +355,22 @@ int LITE_set_async_callback(
     LITE_CAPI_END();
 }
 
+int LITE_set_async_callback_with_userdata(
+        LiteNetwork network, LiteAsyncCallbackWithData async_callback,
+        void* user_data) {
+    LITE_CAPI_BEGIN();
+    LITE_ASSERT(network, "The network pass to LITE api is null");
+    LITE_ASSERT(async_callback, "The ptr pass to LITE api is null");
+
+    auto lite_async_callback = [async_callback, user_data]() -> void {
+        async_callback(user_data);
+    };
+    static_cast<lite::Network*>(network)->set_async_callback(
+            std::move(lite_async_callback));
+
+    LITE_CAPI_END();
+}
+
 int LITE_set_start_callback(
         LiteNetwork network, const LiteStartCallback start_callback) {
     LITE_CAPI_BEGIN();
@@ -381,6 +397,34 @@ int LITE_set_start_callback(
     LITE_CAPI_END();
 }
 
+int LITE_set_start_callback_with_userdata(
+        LiteNetwork network, const LiteStartCallbackWithData start_callback,
+        void* user_data) {
+    LITE_CAPI_BEGIN();
+    LITE_ASSERT(network, "The network pass to LITE api is null");
+    auto lite_start_callback =
+            [start_callback,
+             user_data](const std::unordered_map<
+                        std::string,
+                        std::pair<lite::IO, std::shared_ptr<lite::Tensor>>>& inputs_map)
+            -> void {
+        std::vector<LiteIO> ios;
+        std::vector<LiteTensor> io_tensors;
+        size_t nr_io = 0;
+        for (const auto& io : inputs_map) {
+            nr_io++;
+            auto&& lite_io = io.second.first;
+            ios.push_back(
+                    {lite_io.name.c_str(), lite_io.is_host, lite_io.io_type,
+                     convert_to_clayout(lite_io.config_layout)});
+            io_tensors.push_back(io.second.second.get());
+        }
+        start_callback(ios.data(), io_tensors.data(), nr_io, user_data);
+    };
+    static_cast<lite::Network*>(network)->set_start_callback(lite_start_callback);
+    LITE_CAPI_END();
+}
+
 int LITE_set_finish_callback(
         LiteNetwork network, const LiteFinishCallback finish_callback) {
     LITE_CAPI_BEGIN();
@@ -402,6 +446,34 @@ int LITE_set_finish_callback(
             io_tensors.push_back(io.second.second.get());
         }
         finish_callback(ios.data(), io_tensors.data(), nr_io);
+    };
+    static_cast<lite::Network*>(network)->set_finish_callback(lite_finish_callback);
+    LITE_CAPI_END();
+}
+
+int LITE_set_finish_callback_with_userdata(
+        LiteNetwork network, const LiteFinishCallbackWithData finish_callback,
+        void* user_data) {
+    LITE_CAPI_BEGIN();
+    LITE_ASSERT(network, "The network pass to LITE api is null");
+    auto lite_finish_callback =
+            [finish_callback,
+             user_data](const std::unordered_map<
+                        std::string,
+                        std::pair<lite::IO, std::shared_ptr<lite::Tensor>>>&
+                                outputs_map) -> void {
+        std::vector<LiteIO> ios;
+        std::vector<LiteTensor> io_tensors;
+        size_t nr_io = 0;
+        for (const auto& io : outputs_map) {
+            nr_io++;
+            auto&& lite_io = io.second.first;
+            ios.push_back(
+                    {lite_io.name.c_str(), lite_io.is_host, lite_io.io_type,
+                     convert_to_clayout(lite_io.config_layout)});
+            io_tensors.push_back(io.second.second.get());
+        }
+        finish_callback(ios.data(), io_tensors.data(), nr_io, user_data);
     };
     static_cast<lite::Network*>(network)->set_finish_callback(lite_finish_callback);
     LITE_CAPI_END();

@@ -184,6 +184,8 @@ typedef int (*LiteThreadAffinityCallback)(int thread_id);
 
 typedef int (*LiteAsyncCallback)();
 
+typedef int (*LiteAsyncCallbackWithData)(void* user_data);
+
 /*!
  * \brief the start/finish callback function
  * \param unordered_map map from the io tensor name to the pair of which is the
@@ -193,8 +195,16 @@ typedef int (*LiteAsyncCallback)();
 typedef int (*LiteStartCallback)(
         const LiteIO* inputs, const LiteTensor* input_tensors, size_t size);
 
+typedef int (*LiteStartCallbackWithData)(
+        const LiteIO* inputs, const LiteTensor* input_tensors, size_t size,
+        void* user_data);
+
 typedef int (*LiteFinishCallback)(
         const LiteIO* outputs, const LiteTensor* output_tensors, size_t size);
+
+typedef int (*LiteFinishCallbackWithData)(
+        const LiteIO* outputs, const LiteTensor* output_tensors, size_t size,
+        void* user_data);
 
 /*!
  * \brief The network is construct form a model, implement model load, init,
@@ -443,6 +453,19 @@ LITE_API int LITE_set_async_callback(
         LiteNetwork network, const LiteAsyncCallback async_callback);
 
 /**
+ * \brief set the network forward in async mode and set the async callback
+ * function
+ * \param[in] network The loaded model
+ * \param[in] async_callback when network finish forwarding, the callback
+ * will be called
+ * \param[in] user_data user defined data for something user want to deploy
+ * at forward finish stage
+ */
+LITE_API int LITE_set_async_callback_with_userdata(
+        LiteNetwork network, const LiteAsyncCallbackWithData async_callback,
+        void* user_data);
+
+/**
  * \brief set the start forward callback function, which will be execute beform
  *  forward, this can be used to check network input or dump model inputs
  *  for debug
@@ -454,6 +477,20 @@ LITE_API int LITE_set_start_callback(
         LiteNetwork network, const LiteStartCallback start_callback);
 
 /**
+ * \brief set the start forward callback function, which will be execute beform
+ *  forward, this can be used to check network input or dump model inputs
+ *  for debug
+ * \param[in] network The loaded model
+ * \param[in] start_callback when network start forwarding, the callbak
+ * will be called
+ * \param[in] user_data user defined data for something user want to deploy
+ * at forward start stage
+ */
+LITE_API int LITE_set_start_callback_with_userdata(
+        LiteNetwork network, const LiteStartCallbackWithData start_callback,
+        void* user_data);
+
+/**
  * \brief set the finish forward callback function, which will be execute after
  * forward, this can be used to dump model outputs for debug
  * \param[in] network The loaded model
@@ -462,6 +499,19 @@ LITE_API int LITE_set_start_callback(
  */
 LITE_API int LITE_set_finish_callback(
         LiteNetwork network, const LiteFinishCallback finish_callback);
+
+/**
+ * \brief set the finish forward callback function, which will be execute after
+ * forward, this can be used to dump model outputs for debug
+ * \param[in] network The loaded model
+ * \param[in] finish_callback when network finish forwarding, the callbak
+ * will be called
+ * \param[in] user_data user defined data for something user want to deploy
+ * at finish stage
+ */
+LITE_API int LITE_set_finish_callback_with_userdata(
+        LiteNetwork network, const LiteFinishCallbackWithData finish_callback,
+        void* user_data);
 
 /**
  * \brief set threads affinity callback

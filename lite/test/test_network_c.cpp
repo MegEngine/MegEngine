@@ -74,8 +74,18 @@ int multi_thread_affinity(int id) {
 };
 
 volatile bool finished = false;
-int finish_callback() {
+int async_callback() {
     finished = true;
+    return 0;
+}
+
+volatile bool finished_with_data = false;
+int async_callback_with_data(void* user_data) {
+    if (user_data != NULL) {
+        std::cout << "async_callback user_data addr=" << std::hex << user_data
+                  << std::endl;
+    }
+    finished_with_data = true;
     return 0;
 }
 
@@ -96,11 +106,56 @@ int start_callback(const LiteIO* inputs, const LiteTensor* input_tensors, size_t
     return 0;
 }
 
+volatile bool start_checked_with_data = false;
+int start_callback_with_data(
+        const LiteIO* inputs, const LiteTensor* input_tensors, size_t size,
+        void* user_data) {
+    start_checked_with_data = true;
+    auto check_func = [&]() {
+        if (user_data != NULL) {
+            std::cout << "start_callback user_data addr=" << std::hex << user_data
+                      << std::endl;
+        }
+        ASSERT_EQ(size, 1);
+        ASSERT_EQ(std::string(inputs->name), "data");
+        LiteLayout layout;
+        LITE_get_tensor_layout(*input_tensors, &layout);
+        ASSERT_EQ(layout.ndim, 4);
+        ASSERT_EQ(layout.shapes[1], 3);
+        ASSERT_EQ(layout.shapes[2], 224);
+        ASSERT_EQ(layout.shapes[3], 224);
+    };
+    check_func();
+    return 0;
+}
+
 volatile bool finish_checked = false;
 int finish_callback(
         const LiteIO* outputs, const LiteTensor* output_tensors, size_t size) {
     finish_checked = true;
     auto check_func = [&]() {
+        ASSERT_EQ(size, 1);
+        ASSERT_EQ(
+                std::string(outputs->name),
+                "TRUE_DIV(EXP[12065],reduce0[12067])[12077]");
+        LiteLayout layout;
+        LITE_get_tensor_layout(*output_tensors, &layout);
+        ASSERT_EQ(layout.shapes[1], 1000);
+    };
+    check_func();
+    return 0;
+}
+
+volatile bool finish_checked_with_data = false;
+int finish_callback_with_data(
+        const LiteIO* outputs, const LiteTensor* output_tensors, size_t size,
+        void* user_data) {
+    finish_checked_with_data = true;
+    auto check_func = [&]() {
+        if (user_data != NULL) {
+            std::cout << "finish_callback user_data addr=" << std::hex << user_data
+                      << std::endl;
+        }
         ASSERT_EQ(size, 1);
         ASSERT_EQ(
                 std::string(outputs->name),
@@ -671,6 +726,21 @@ TEST(TestCapiNetWork, StartCallBack) {
     LITE_CAPI_CHECK(LITE_destroy_network(c_network));
 }
 
+TEST(TestCapiNetWork, StartCallBackWithData) {
+    ForwardMgb;
+    MakeNetwork;
+    LoadNetwork;
+    size_t user_data = 1;
+    LITE_CAPI_CHECK(LITE_set_start_callback_with_userdata(
+            c_network, start_callback_with_data, &user_data));
+    SetInput;
+    ForwardNetwork;
+    GetOutput;
+    CompareResult;
+    ASSERT_TRUE(start_checked_with_data);
+    LITE_CAPI_CHECK(LITE_destroy_network(c_network));
+}
+
 TEST(TestCapiNetWork, FinishCallBack) {
     ForwardMgb;
     MakeNetwork;
@@ -681,6 +751,21 @@ TEST(TestCapiNetWork, FinishCallBack) {
     GetOutput;
     CompareResult;
     ASSERT_TRUE(finish_checked);
+    LITE_CAPI_CHECK(LITE_destroy_network(c_network));
+}
+
+TEST(TestCapiNetWork, FinishCallBackWtihData) {
+    ForwardMgb;
+    MakeNetwork;
+    LoadNetwork;
+    size_t user_data = 1;
+    LITE_CAPI_CHECK(LITE_set_finish_callback_with_userdata(
+            c_network, finish_callback_with_data, &user_data));
+    SetInput;
+    ForwardNetwork;
+    GetOutput;
+    CompareResult;
+    ASSERT_TRUE(finish_checked_with_data);
     LITE_CAPI_CHECK(LITE_destroy_network(c_network));
 }
 
@@ -723,7 +808,7 @@ TEST(TestCapiNetWork, AsyncExec) {
     LiteConfig c_config = *default_config();
     c_config.options.var_sanity_check_first_run = false;
     LITE_CAPI_CHECK(LITE_make_network(&c_network, c_config, *default_network_io()));
-    LITE_CAPI_CHECK(LITE_set_async_callback(c_network, finish_callback));
+    LITE_CAPI_CHECK(LITE_set_async_callback(c_network, async_callback));
     LoadNetwork;
     SetInput;
 
@@ -734,6 +819,32 @@ TEST(TestCapiNetWork, AsyncExec) {
     }
     ASSERT_GT(count, 0);
     finished = false;
+
+    GetOutput;
+    CompareResult;
+    LITE_CAPI_CHECK(LITE_destroy_network(c_network));
+}
+
+TEST(TestCapiNetWork, AsyncExecWithData) {
+    finished = false;
+    ForwardMgb;
+    LiteNetwork c_network;
+    LiteConfig c_config = *default_config();
+    c_config.options.var_sanity_check_first_run = false;
+    LITE_CAPI_CHECK(LITE_make_network(&c_network, c_config, *default_network_io()));
+    size_t user_data = 1;
+    LITE_CAPI_CHECK(LITE_set_async_callback_with_userdata(
+            c_network, async_callback_with_data, &user_data));
+    LoadNetwork;
+    SetInput;
+
+    LITE_forward(c_network);
+    size_t count = 0;
+    while (finished_with_data == false) {
+        count++;
+    }
+    ASSERT_GT(count, 0);
+    finished_with_data = false;
 
     GetOutput;
     CompareResult;
