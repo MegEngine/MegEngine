@@ -239,12 +239,6 @@ class PReLU(Module):
             self.weight = Parameter(data=[init])
 
     def forward(self, inputs):
-        assert self.weight.shape == (1,) or self.weight.shape == (
-            1,
-            int(inputs.shape[1]),
-            1,
-            1,
-        ), "invalid weight's shape"
         return prelu(inputs, self.weight)
 
 
