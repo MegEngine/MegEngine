@@ -150,6 +150,9 @@ if(MGE_WITH_TEST)
     add_subdirectory(test)
 endif()
 
+#load_and_run
+add_subdirectory(load_and_run)
+
 # tools and example
 add_executable(rc4_encryptor tools/rc4_encrypt.cpp)
 

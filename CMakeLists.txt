@@ -74,7 +74,6 @@ option(MGE_ENABLE_EXCEPTIONS "Build with exceptions" ON)
 option(MGE_WITH_TEST "Enable test for MegEngine." OFF)
 option(MGE_WITH_DISTRIBUTED "Build with distributed support" ON)
 option(MGE_BUILD_IMPERATIVE_RT "Build _imperative_rt Python Module " ON)
-option(MGE_BUILD_SDK "Build load_and_run" ON)
 option(MGE_INFERENCE_ONLY "Build inference only library." OFF)
 option(MGE_WITH_MKLDNN "Enable Intel MKL_DNN support," ON)
 option(MGE_WITH_ROCM "Enable ROCM support" OFF)
@@ -541,6 +540,8 @@ endif()
 if(MGE_WITH_TEST)
     include(cmake/gtest.cmake)
 endif()
+
+include(cmake/gflags.cmake)
 
 if(MGE_BUILD_IMPERATIVE_RT)
     set(CMAKE_CXX_STANDARD 17)
@@ -1146,10 +1147,6 @@ if(MGE_WITH_DISTRIBUTED)
 endif()
 
 add_subdirectory(src)
-
-if(MGE_BUILD_SDK)
-    add_subdirectory(sdk/load-and-run)
-endif()
 
 if(MGE_BUILD_IMPERATIVE_RT)
     add_subdirectory(imperative)
