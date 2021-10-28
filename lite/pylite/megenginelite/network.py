@@ -235,15 +235,29 @@ class LiteNetworkIO(object):
 
 
 LiteAsyncCallback = CFUNCTYPE(c_int)
+LiteStartCallback = CFUNCTYPE(c_int, POINTER(LiteIO), POINTER(_Ctensor), c_size_t)
+LiteFinishCallback = CFUNCTYPE(c_int, POINTER(LiteIO), POINTER(_Ctensor), c_size_t)
+
+
+def wrap_async_callback(func):
+    global wrapper
+
+    @CFUNCTYPE(c_int)
+    def wrapper():
+        return func()
+
+    return wrapper
 
 
 def start_finish_callback(func):
+    global wrapper
+
     @CFUNCTYPE(c_int, POINTER(LiteIO), POINTER(_Ctensor), c_size_t)
     def wrapper(c_ios, c_tensors, size):
         ios = {}
         for i in range(size):
             tensor = LiteTensor()
-            tensor._tensor = c_tensors[i]
+            tensor._tensor = c_void_p(c_tensors[i])
             tensor.update()
             io = c_ios[i]
             ios[io] = tensor
@@ -288,8 +302,8 @@ class _NetworkAPI(_LiteCObjBase):
         ("LITE_enable_io_txt_dump", [_Cnetwork, c_char_p]),
         ("LITE_enable_io_bin_dump", [_Cnetwork, c_char_p]),
         ("LITE_set_async_callback", [_Cnetwork, LiteAsyncCallback]),
-        ("LITE_set_start_callback", [_Cnetwork]),
-        ("LITE_set_finish_callback", [_Cnetwork]),
+        ("LITE_set_start_callback", [_Cnetwork, LiteStartCallback]),
+        ("LITE_set_finish_callback", [_Cnetwork, LiteFinishCallback]),
         ("LITE_get_static_memory_alloc_info", [_Cnetwork, c_char_p]),
     ]
 
@@ -482,8 +496,8 @@ class LiteNetwork(object):
         self._api.LITE_share_runtime_memroy(self._network, src_network._network)
 
     def async_with_callback(self, async_callback):
-        async_callback = LiteAsyncCallback(async_callback)
-        self._api.LITE_set_async_callback(self._network, async_callback)
+        callback = wrap_async_callback(async_callback)
+        self._api.LITE_set_async_callback(self._network, callback)
 
     def set_start_callback(self, start_callback):
         """
@@ -491,7 +505,8 @@ class LiteNetwork(object):
         the start_callback with param mapping from LiteIO to the corresponding
         LiteTensor
         """
-        self._api.LITE_set_start_callback(self._network, start_callback)
+        callback = start_finish_callback(start_callback)
+        self._api.LITE_set_start_callback(self._network, callback)
 
     def set_finish_callback(self, finish_callback):
         """
@@ -499,7 +514,8 @@ class LiteNetwork(object):
         the finish_callback with param mapping from LiteIO to the corresponding
         LiteTensor
         """
-        self._api.LITE_set_finish_callback(self._network, finish_callback)
+        callback = start_finish_callback(finish_callback)
+        self._api.LITE_set_finish_callback(self._network, callback)
 
     def enable_profile_performance(self, profile_file):
         c_file = profile_file.encode("utf-8")

@@ -274,83 +274,81 @@ class TestNetwork(TestShuffleNet):
         self.do_forward(src_network)
         self.do_forward(new_network)
 
-    #    def test_network_async(self):
-    #        count = 0
-    #        finished = False
-    #
-    #        def async_callback():
-    #            nonlocal finished
-    #            finished = True
-    #            return 0
-    #
-    #        option = LiteOptions()
-    #        option.var_sanity_check_first_run = 0
-    #        config = LiteConfig(option=option)
-    #
-    #        network = LiteNetwork(config=config)
-    #        network.load(self.model_path)
-    #
-    #        network.async_with_callback(async_callback)
-    #
-    #        input_tensor = network.get_io_tensor(network.get_input_name(0))
-    #        output_tensor = network.get_io_tensor(network.get_output_name(0))
-    #
-    #        input_tensor.set_data_by_share(self.input_data)
-    #        network.forward()
-    #
-    #        while not finished:
-    #            count += 1
-    #
-    #        assert count > 0
-    #        output_data = output_tensor.to_numpy()
-    #        self.check_correct(output_data)
-    #
-    #    def test_network_start_callback(self):
-    #        network = LiteNetwork()
-    #        network.load(self.model_path)
-    #        start_checked = False
-    #
-    #        @start_finish_callback
-    #        def start_callback(ios):
-    #            nonlocal start_checked
-    #            start_checked = True
-    #            assert len(ios) == 1
-    #            for key in ios:
-    #                io = key
-    #                data = ios[key].to_numpy().flatten()
-    #                input_data = self.input_data.flatten()
-    #                assert data.size == input_data.size
-    #                assert io.name.decode("utf-8") == "data"
-    #                for i in range(data.size):
-    #                    assert data[i] == input_data[i]
-    #            return 0
-    #
-    #        network.set_start_callback(start_callback)
-    #        self.do_forward(network, 1)
-    #        assert start_checked == True
-    #
-    #    def test_network_finish_callback(self):
-    #        network = LiteNetwork()
-    #        network.load(self.model_path)
-    #        finish_checked = False
-    #
-    #        @start_finish_callback
-    #        def finish_callback(ios):
-    #            nonlocal finish_checked
-    #            finish_checked = True
-    #            assert len(ios) == 1
-    #            for key in ios:
-    #                io = key
-    #                data = ios[key].to_numpy().flatten()
-    #                output_data = self.correct_data.flatten()
-    #                assert data.size == output_data.size
-    #                for i in range(data.size):
-    #                    assert data[i] == output_data[i]
-    #            return 0
-    #
-    #        network.set_finish_callback(finish_callback)
-    #        self.do_forward(network, 1)
-    #        assert finish_checked == True
+    def test_network_async(self):
+        count = 0
+        finished = False
+
+        def async_callback():
+            nonlocal finished
+            finished = True
+            return 0
+
+        option = LiteOptions()
+        option.var_sanity_check_first_run = 0
+        config = LiteConfig(option=option)
+
+        network = LiteNetwork(config=config)
+        network.load(self.model_path)
+
+        network.async_with_callback(async_callback)
+
+        input_tensor = network.get_io_tensor(network.get_input_name(0))
+        output_tensor = network.get_io_tensor(network.get_output_name(0))
+
+        input_tensor.set_data_by_share(self.input_data)
+        network.forward()
+
+        while not finished:
+            count += 1
+
+        assert count > 0
+        output_data = output_tensor.to_numpy()
+        self.check_correct(output_data)
+
+    def test_network_start_callback(self):
+        network = LiteNetwork()
+        network.load(self.model_path)
+        start_checked = False
+
+        def start_callback(ios):
+            nonlocal start_checked
+            start_checked = True
+            assert len(ios) == 1
+            for key in ios:
+                io = key
+                data = ios[key].to_numpy().flatten()
+                input_data = self.input_data.flatten()
+                assert data.size == input_data.size
+                assert io.name.decode("utf-8") == "data"
+                for i in range(data.size):
+                    assert data[i] == input_data[i]
+            return 0
+
+        network.set_start_callback(start_callback)
+        self.do_forward(network, 1)
+        assert start_checked == True
+
+    def test_network_finish_callback(self):
+        network = LiteNetwork()
+        network.load(self.model_path)
+        finish_checked = False
+
+        def finish_callback(ios):
+            nonlocal finish_checked
+            finish_checked = True
+            assert len(ios) == 1
+            for key in ios:
+                io = key
+                data = ios[key].to_numpy().flatten()
+                output_data = self.correct_data.flatten()
+                assert data.size == output_data.size
+                for i in range(data.size):
+                    assert data[i] == output_data[i]
+            return 0
+
+        network.set_finish_callback(finish_callback)
+        self.do_forward(network, 1)
+        assert finish_checked == True
 
     def test_enable_profile(self):
         network = LiteNetwork()

@@ -186,6 +186,57 @@ class TestNetwork(TestShuffleNetCuda):
         self.do_forward(src_network)
         self.do_forward(new_network)
 
+    @require_cuda
+    def test_network_start_callback(self):
+        config = LiteConfig()
+        config.device = LiteDeviceType.LITE_CUDA
+        network = LiteNetwork(config)
+        network.load(self.model_path)
+        start_checked = False
+
+        def start_callback(ios):
+            nonlocal start_checked
+            start_checked = True
+            assert len(ios) == 1
+            for key in ios:
+                io = key
+                data = ios[key].to_numpy().flatten()
+                input_data = self.input_data.flatten()
+                assert data.size == input_data.size
+                assert io.name.decode("utf-8") == "data"
+                for i in range(data.size):
+                    assert data[i] == input_data[i]
+            return 0
+
+        network.set_start_callback(start_callback)
+        self.do_forward(network, 1)
+        assert start_checked == True
+
+    @require_cuda
+    def test_network_finish_callback(self):
+        config = LiteConfig()
+        config.device = LiteDeviceType.LITE_CUDA
+        network = LiteNetwork(config)
+        network.load(self.model_path)
+        finish_checked = False
+
+        def finish_callback(ios):
+            nonlocal finish_checked
+            finish_checked = True
+            assert len(ios) == 1
+            for key in ios:
+                io = key
+                data = ios[key].to_numpy().flatten()
+                output_data = self.correct_data.flatten()
+                assert data.size == output_data.size
+                for i in range(data.size):
+                    assert data[i] == output_data[i]
+            return 0
+
+        network.set_finish_callback(finish_callback)
+        self.do_forward(network, 1)
+        assert finish_checked == True
+
     @require_cuda()
     def test_enable_profile(self):
         config = LiteConfig()
