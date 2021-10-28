@@ -41,6 +41,20 @@ TEST_F(AARCH64, Relayout) {
     }
 }
 
+TEST_F(AARCH64, RelayoutNonContig) {
+    Checker<Relayout> checker(handle());
+    std::vector<::megdnn::DType> dtype_vec;
+    dtype_vec.push_back(dtype::Float32());
+    dtype_vec.push_back(dtype::Int16());
+    dtype_vec.push_back(dtype::Uint16());
+    dtype_vec.push_back(dtype::Int8());
+    for (auto dtype : dtype_vec) {
+        TensorLayout src({4, 90, 15, 29}, {41760, 1, 2784, 96}, dtype);
+        TensorLayout dst({4, 90, 15, 29}, {39150, 435, 29, 1}, dtype);
+        checker.execl({src, dst});
+    }
+}
+
 TEST_F(AARCH64, RelayoutBig) {
     Checker<Relayout> checker(handle());
     ConsecutiveRNG rng;

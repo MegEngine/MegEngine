@@ -29,17 +29,24 @@ bool is_transpose_single(
      * assuming contig layout is:
      *  shape: b, m, n, c
      *  stride: mnc, nc, c, 1
+     * assuming non-contig layout is:
+     *  shape: b, m, n, c
+     *  stride: m*stride_m*c, stride_m*c, c, 1
      *
      * then given layout should be:
      *  shape: b, n, m, c
      *  stride: mnc, c, nc, 1
+     *  non-contig stride: m*stride_m*c, c, stride_m*c, 1
      *
      * if c == 1:
      *  shape: b, n, m
      *  stride: mn, 1, n
+     *  non-contig stride: m*stride_m, 1, stride_m
+     *
      * if b == 1:
      *  shape: n, m, c
      *  stride: c, nc, 1
+     *  non-contig stride: c, stride_m*c, 1
      *
      * if b == 1 && c == 1:
      *  shape: n, m
@@ -65,7 +72,16 @@ bool is_transpose_single(
             p.n = layout[1];
             p.m = layout[2];
             p.c = 1;
-            return strd(2, p.n) && strd(0, p.m * p.n);
+
+            if (strd(2, p.n) && strd(0, p.m * p.n)) {
+                return true;
+            } else if (
+                    allow_no_contig && (size_t)(layout.stride[2]) >= p.n &&
+                    strd(0, p.m * (size_t)(layout.stride[2])) && strd(1, 1)) {
+                p.stride_m = layout.stride[2];
+                return true;
+            }
+            return false;
         }
         if (strd(2, 1)) {
             // b == 1
