@@ -18,16 +18,18 @@ namespace megdnn {
 namespace cuda {
 
 class CheckNonFiniteImpl final : public CheckNonFinite {
+    size_t _get_workspace_in_bytes() override;
+
 public:
     using CheckNonFinite::CheckNonFinite;
 
     size_t get_workspace_in_bytes(
-            const TensorLayout& src, const TensorLayout& dst) override;
+            const TensorNDArray& srcs, const TensorLayout& dst) override;
 
     bool is_thread_safe() const override { return true; }
 
     void exec(
-            _megdnn_tensor_in src, _megdnn_tensor_out dst,
+            _megdnn_in const TensorNDArray& srcs, _megdnn_tensor_out dst,
             _megdnn_workspace workspace) override;
 };
 

@@ -17,21 +17,25 @@
 namespace {
 using namespace megdnn;
 
-#define src_ctype dt_float32
-#define wtype     dt_int32
+#define wtype dt_int32
 
-void reduce_fwd(const src_ctype* sptr, wtype* dptr, size_t size) {
-    std::function<wtype(size_t, size_t)> func;
-    func = [&](size_t l, size_t r) -> wtype {
-        if (l + 1 < r) {
-            size_t mid = l + (r - l) / 2;
-            return func(l, mid) | func(mid, r);
-        } else {
-            return static_cast<wtype>(!std::isfinite(sptr[l]));
-        }
-    };
-
-    dptr[0] = func(0, size);
+void reduce_fwd(const TensorNDArray& srcs, wtype* dptr) {
+    dptr[0] = 0;
+    for (auto src : srcs) {
+        auto sptr = src.ptr<dt_float32>();
+        size_t size = src.layout.total_nr_elems();
+        std::function<wtype(wtype, wtype)> func;
+        func = [&](wtype l, wtype r) -> wtype {
+            if (l + 1 < r) {
+                wtype mid = l + (r - l) / 2;
+                return func(l, mid) | func(mid, r);
+            } else {
+                auto val = std::isfinite(sptr[l]);
+                return static_cast<wtype>(!val);
+            }
+        };
+        dptr[0] |= func(0, size);
+    }
 }
 
 }  // namespace
@@ -39,20 +43,13 @@ void reduce_fwd(const src_ctype* sptr, wtype* dptr, size_t size) {
 namespace megdnn {
 namespace naive {
 
-size_t CheckNonFiniteImpl::get_workspace_in_bytes(
-        const TensorLayout&, const TensorLayout&) {
-    return 0;
-}
-
 void CheckNonFiniteImpl::exec(
-        _megdnn_tensor_in src, _megdnn_tensor_out dst, _megdnn_workspace workspace) {
-    check_exec(src.layout, dst.layout, workspace.size);
+        _megdnn_in const TensorNDArray& srcs, _megdnn_tensor_out dst,
+        _megdnn_workspace workspace) {
+    check_exec(srcs, dst, workspace.size);
 
     auto handle = static_cast<HandleImpl*>(this->handle());
-    MEGDNN_DISPATCH_CPU_KERN(
-            handle, reduce_fwd(
-                            src.ptr<dt_float32>(), dst.ptr<dt_int32>(),
-                            src.layout.total_nr_elems()));
+    MEGDNN_DISPATCH_CPU_KERN(handle, reduce_fwd(srcs, dst.ptr<dt_int32>()));
 }
 }  // namespace naive
 }  // namespace megdnn

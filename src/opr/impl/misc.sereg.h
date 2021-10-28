@@ -55,6 +55,10 @@ struct OprMaker<opr::TopK, 2> {
     }
 };
 
+template <>
+struct OprMaker<opr::CheckNonFinite, 0> : public OprMakerVariadic<opr::CheckNonFinite> {
+};
+
 }  // namespace serialization
 
 namespace opr {
@@ -72,7 +76,7 @@ MGB_SEREG_OPR(CumsumV1, 1);
 #if MGB_CUDA
 MGB_SEREG_OPR(NvOf, 1);
 #endif
-MGB_SEREG_OPR(CheckNonFinite, 1);
+MGB_SEREG_OPR(CheckNonFinite, 0);
 
 }  // namespace opr
 }  // namespace mgb

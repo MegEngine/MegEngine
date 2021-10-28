@@ -9,7 +9,7 @@
 import collections
 import math
 from functools import lru_cache
-from typing import Optional, Sequence, Tuple, Union
+from typing import Iterable, Optional, Sequence, Tuple, Union
 
 from ..core import _config
 from ..core._imperative_rt.core2 import apply, dtype_promotion
@@ -1183,7 +1183,7 @@ def svd(inp: Tensor, full_matrices=False, compute_uv=True) -> Tensor:
     return U, sigma, V
 
 
-def _check_non_finite(inp: Tensor) -> Tensor:
+def _check_non_finite(inps: Iterable[Tensor]) -> Tensor:
     r"""Check whether input contains infinite or nan value.
 
     Args:
@@ -1193,6 +1193,6 @@ def _check_non_finite(inp: Tensor) -> Tensor:
         a int32 scalar tensor, 0 for False and 1 for True.
     """
     op = builtin.CheckNonFinite()
-    (oup,) = apply(op, inp.reshape(-1).astype("float32"))
+    (oup,) = apply(op, *inps)
     oup._setscalar()
     return oup

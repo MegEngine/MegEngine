@@ -482,18 +482,74 @@ MGB_IMPL_OPR_GRAD(TopK) {
 #endif
 
 /* ================= CheckNonFinite =================  */
-namespace mgb {
-namespace opr {
-namespace intl {
-template <>
-struct MegDNNOprInitPostCtor<CheckNonFinite> {
-    static void apply(cg::OperatorNodeBase& opr) {
-        opr.output(0)->dtype(dtype::Int32());
-    }
-};
-}  // namespace intl
-}  // namespace opr
-}  // namespace mgb
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(CheckNonFinite);
-MEGDNN_OPR_INIT1(CheckNonFinite, "check_non_finite")
+CheckNonFinite::CheckNonFinite(
+        const VarNodeArrayView& inp, const Param& param,
+        const OperatorNodeConfig& config)
+        : Super(OperatorNodeBaseCtorParam{
+                  inp[0]->owner_graph(), config, "check_non_finite", inp}) {
+    mgb_assert(!inp.empty());
+    for (auto&& i : inp) {
+        add_input({i});
+    }
+    add_output(None)->dtype(dtype::Int32()).add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
+    cg::add_workspace_output(this);
+}
+
+SymbolVar CheckNonFinite::make(
+        const VarNodeArrayView& inp, const Param& param,
+        const OperatorNodeConfig& config) {
+    mgb_assert(!inp.empty());
+    intl::BatchedDTypePromotion dtp{inp};
+    return SymbolVar{inp[0]}.insert_single_output_opr<CheckNonFinite>(
+            dtp.get_vars(), param, config);
+}
+
+void CheckNonFinite::scn_do_execute() {
+    megdnn::TensorNDArray inp_arr(input().size());
+    for (size_t i = 0; i < input().size(); ++i) {
+        inp_arr[i] = input()[i]->dev_tensor().as_megdnn();
+    }
+    megdnn_opr()->exec(
+            inp_arr, output(0)->dev_tensor().as_megdnn(),
+            intl::get_megdnn_workspace_from_var(output(1)));
+}
+
+void CheckNonFinite::init_output_static_infer_desc() {
+    using namespace cg::static_infer;
+
+    auto&& mgr = owner_graph()->static_infer_manager();
+
+    auto infer_oshp = [](TensorShape& dest, const InpVal& iv) {
+        TensorLayout dst;
+        dst.shape[0] = 1;
+        dst.ndim = 1;
+        dst.dtype = dtype::Int32();
+        dst.init_contiguous_stride();
+        dest = dst;
+        return true;
+    };
+    DepVal deps;
+    for (auto i : input())
+        deps.push_back({i, DepType::SHAPE});
+    mgr.register_shape_infer(output(0), {SourceType::DEP, deps, infer_oshp});
+
+    auto infer_wk = [this](TensorShape& dest, const InpVal& inp) {
+        dest.ndim = 1;
+        megdnn::TensorNDArray inp_arr(input().size());
+        for (size_t i = 0; i < input().size(); ++i) {
+            inp_arr[i] = {NULL, {inp.val.at(i).shape(), input(0)->dtype()}};
+        }
+        dest.shape[0] = megdnn_opr()->get_workspace_in_bytes(
+                inp_arr, {output(0)->shape(), output(0)->dtype()});
+        return true;
+    };
+    mgr.register_shape_infer(output(1), {SourceType::DEP, deps, infer_wk});
+}
+
+void CheckNonFinite::add_input_layout_constraint() {
+    for (auto i : input()) {
+        i->add_layout_constraint_contiguous();
+    }
+}
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

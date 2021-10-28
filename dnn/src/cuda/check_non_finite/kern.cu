@@ -19,7 +19,8 @@ namespace cuda {
 #define COMMA ,
 
 INST_REDUCE(
-        device_reduce::CheckNonFiniteOp<dt_float32 COMMA dt_int32 COMMA dt_int32>,
+        device_reduce::CheckNonFiniteOp<
+                dt_float32 COMMA size_t COMMA dt_int32 COMMA dt_int32>,
         false);
 
 #undef COMMA

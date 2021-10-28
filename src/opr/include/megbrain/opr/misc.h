@@ -142,6 +142,8 @@ using CondTakeBase = cg::SingleCNOperatorNode<
         cg::OperatorNodeBase, mixin::MegDNNOprHolderImpl<megdnn::CondTake>>;
 using TopKBase = cg::SingleCNOperatorNode<
         cg::OperatorNodeBase, mixin::MegDNNOprHolderImpl<megdnn::TopK>>;
+using CheckNonFiniteBase = cg::SingleCNOperatorNode<
+        cg::OperatorNodeBase, mixin::MegDNNOprHolderImpl<megdnn::CheckNonFinite>>;
 }  // namespace intl
 
 /*!
@@ -181,7 +183,19 @@ public:
             const OperatorNodeConfig& config = {});
 };
 
-MGB_DEFINE_MEGDNN_OPR_WRAPPER_FWD1(CheckNonFinite);
+MGB_DEFINE_OPR_CLASS(CheckNonFinite, intl::CheckNonFiniteBase)  //{
+void scn_do_execute() override;
+void init_output_static_infer_desc() override;
+void add_input_layout_constraint() override;
+
+public:
+MGE_WIN_DECLSPEC_FUC CheckNonFinite(
+        const VarNodeArrayView& inp, const Param& param,
+        const OperatorNodeConfig& config);
+MGE_WIN_DECLSPEC_FUC static SymbolVar make(
+        const VarNodeArrayView& inp, const Param& param = {},
+        const OperatorNodeConfig& config = {});
+};
 
 }  // namespace opr
 }  // namespace mgb

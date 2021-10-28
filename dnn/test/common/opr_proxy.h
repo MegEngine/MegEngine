@@ -203,6 +203,27 @@ struct OprProxy<ConcatForward> {
 };
 
 template <>
+struct OprProxy<CheckNonFinite> {
+    static void deduce_layout(CheckNonFinite* opr, TensorLayoutArray& layouts) {
+        megdnn_assert(layouts.size() >= 2);
+        auto inp = layouts;
+        inp.pop_back();
+        opr->deduce_layout(inp, layouts.back());
+    }
+
+    static void exec(CheckNonFinite* opr, const TensorNDArray& tensors) {
+        megdnn_assert(tensors.size() >= 2);
+        auto inps = tensors;
+        inps.pop_back();
+
+        WorkspaceWrapper W(
+                opr->handle(),
+                opr->get_workspace_in_bytes(inps, tensors.back().layout));
+        opr->exec(inps, tensors.back(), W.workspace());
+    }
+};
+
+template <>
 struct OprProxy<SplitForward> : DeduceLayoutProxy<SplitForward, 0, false> {
     WorkspaceWrapper W;
     void exec(SplitForward* opr, const TensorNDArray& tensors) {

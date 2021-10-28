@@ -15,16 +15,15 @@
 namespace megdnn {
 
 void CheckNonFinite::check_exec(
-        const TensorLayout& src, const TensorLayout& dst, size_t workspace_in_bytes) {
-    megdnn_assert_contiguous(src);
-    megdnn_assert_contiguous(dst);
-    megdnn_assert(src.ndim == 1);
-    megdnn_assert(src.dtype == dtype::Float32());
-    auto required_workspace_in_bytes = get_workspace_in_bytes(src, dst);
+        const TensorNDArray& srcs, const TensorND& dst, size_t workspace_in_bytes) {
+    megdnn_assert_contiguous(dst.layout);
+    megdnn_assert(srcs.size() > 0);
+    megdnn_assert(srcs.begin()->layout.dtype == dtype::Float32());
+    auto required_workspace_in_bytes = _get_workspace_in_bytes();
     megdnn_assert(workspace_in_bytes >= required_workspace_in_bytes);
 }
 
-void CheckNonFinite::deduce_layout(const TensorLayout&, TensorLayout& dst) {
+void CheckNonFinite::deduce_layout(const TensorLayoutArray&, TensorLayout& dst) {
     dst.shape[0] = 1;
     dst.ndim = 1;
     dst.dtype = dtype::Int32();

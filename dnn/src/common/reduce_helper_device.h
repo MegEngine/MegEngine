@@ -185,28 +185,41 @@ struct MaxOp<src_ctype, dst_ctype, dt_float32> {
             : INIT(wtype(DTypeTrait<wtype>::min())), src(src), dst(dst), B(B) {}
 };
 
-template <typename src_ctype, typename dst_ctype, typename wtype_>
+template <typename src_ctype, typename index_ctype, typename dst_ctype, typename wtype_>
 struct CheckNonFiniteOp {
     typedef wtype_ wtype;
     const wtype INIT;
 
-    src_ctype* src;
+    src_ctype** srcs;
+    index_ctype* srcs_total_nr_elems;
     dst_ctype* dst;
     const size_t B;
 
     MEGDNN_HOST MEGDNN_DEVICE wtype read(uint32_t idx) {
+        size_t x = idx / B;
+        size_t y = idx % B;
+        if (y < srcs_total_nr_elems[x]) {
 #if defined(__CUDA_ARCH__)
-        return !isfinite(src[idx]);
+            wtype val = isfinite(srcs[x][y]);
 #else
-        return !std::isfinite(src[idx]);
+            wtype val = std::isfinite(srcs[x][y]);
 #endif
+            return !val;
+        }
+        return 0;
     }
     MEGDNN_HOST MEGDNN_DEVICE void write(uint32_t idx, wtype val) { dst[idx] = val; }
     static MEGDNN_HOST MEGDNN_DEVICE wtype apply(wtype lhs, wtype rhs) {
         return lhs | rhs;
     }
-    MEGDNN_HOST MEGDNN_DEVICE CheckNonFiniteOp(src_ctype* src, dst_ctype* dst, size_t B)
-            : INIT(wtype(0)), src(src), dst(dst), B(B) {}
+    MEGDNN_HOST MEGDNN_DEVICE CheckNonFiniteOp(
+            src_ctype** srcs, index_ctype* srcs_total_nr_elems, dst_ctype* dst,
+            size_t B)
+            : INIT(wtype(0)),
+              srcs(srcs),
+              srcs_total_nr_elems(srcs_total_nr_elems),
+              dst(dst),
+              B(B) {}
 };
 
 }  // namespace device_reduce
