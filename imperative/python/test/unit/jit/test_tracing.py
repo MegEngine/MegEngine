@@ -287,6 +287,16 @@ def test_dump_backward_graph():
     np.testing.assert_equal(results[1], dx0)
 
 
+def test_dump_with_testcase():
+    @trace(symbolic=True, capture_as_const=True)
+    def f(x):
+        return exp(x)
+
+    f(tensor(1.0))
+    file = io.BytesIO()
+    f.dump(file, input_data=["#rand(0, 255, 1)"])
+
+
 @pytest.mark.parametrize("trace_mode", [False, True])
 def test_trace_profiler(trace_mode):
     @trace(symbolic=trace_mode, profiling=True)
