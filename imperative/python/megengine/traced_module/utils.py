@@ -5,16 +5,15 @@
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-import collections
 import copy
 import inspect
 from collections.abc import MutableMapping, MutableSequence
 from inspect import FullArgSpec
-from typing import Callable, Dict, Iterable, List, Optional, Sequence, Type, Union
+from typing import Callable, Dict, Iterable, List, Optional, Sequence, Union
 
 from .. import get_logger
 from ..module import Module
-from ..tensor import Parameter, Tensor
+from ..tensor import Tensor
 
 logger = get_logger(__name__)
 

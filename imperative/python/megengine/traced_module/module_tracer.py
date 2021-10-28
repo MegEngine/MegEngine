@@ -12,6 +12,7 @@ from .. import functional as F
 from ..core.tensor.array_method import ArrayMethodMixin
 from ..module import Module
 from ..module.qat import QATModule
+from .checker import TracedModuleChecker
 
 _active_module_tracer = None
 
@@ -128,6 +129,7 @@ class module_tracer:
 
     def __init__(self, wrap_fn):
         self._active_scopes = []
+        self.checker = TracedModuleChecker(self)
         self.patcher = Patcher(wrap_fn)
 
     @classmethod
@@ -142,9 +144,11 @@ class module_tracer:
 
     def push_scope(self, scope):
         self._active_scopes.append(scope)
+        self.checker.push_scope()
 
     def pop_scope(self):
         self._active_scopes.pop()
+        self.checker.pop_scope()
 
     def current_scope(self):
         if self._active_scopes:

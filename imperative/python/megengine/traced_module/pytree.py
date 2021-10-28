@@ -212,7 +212,11 @@ def tree_flatten(
     to reconstruct the pytree.
     """
     if type(values) not in SUPPORTED_TYPE:
-        assert is_leaf(values), values
+        assert is_leaf(
+            values
+        ), 'doesn\'t support {} type, MUST use "register_supported_type" method to register self-defined type'.format(
+            values
+        )
         node = LeafDef(leaf_type(values))
         if is_const_leaf(values):
             node.const_val = values

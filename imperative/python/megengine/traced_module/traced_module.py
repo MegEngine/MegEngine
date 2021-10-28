@@ -36,11 +36,14 @@ from .. import get_logger
 from .. import module as M
 from ..core._imperative_rt.core2 import Tensor as RawTensor
 from ..core._imperative_rt.core2 import (
+    apply,
     is_tracing_module,
     set_module_tracing,
     unset_module_tracing,
 )
 from ..core._trace_option import set_symbolic_shape
+from ..core.ops.builtin import Copy
+from ..core.tensor.utils import isscalar, setscalar
 from ..module import Module
 from ..module import external as MExternal
 from ..module.qat import QATModule
@@ -98,6 +101,13 @@ from .serialization import (
     load_call_tensor_method_expr,
     load_functional,
 )
+from .tm_config import (
+    _exclude_from_trace,
+    _get_default_checker,
+    _get_expr_checker,
+    _graph_surgery_mode,
+    _set_graph_surgery_mode,
+)
 from .utils import (
     _check_builtin_module_attr,
     _check_obj_attr,
@@ -117,24 +127,12 @@ def _is_builtin_name(name: str) -> bool:
 
 
 def _is_leaf(node):
-    assert isinstance(node, RawTensor), "doesn't support {} in return values".format(
+    assert isinstance(
+        node, RawTensor
+    ), 'doesn\'t support {} in return values, MUST use Tensor or use "register_supported_type" method to register self-defined type'.format(
         type(node)
     )
     return isinstance(node, RawTensor)
-
-
-_enable_graph_surgery_mode = False
-
-
-def _graph_surgery_mode():
-    return _enable_graph_surgery_mode
-
-
-def _set_graph_surgery_mode(mode: bool):
-    global _enable_graph_surgery_mode
-    pre_mode = _enable_graph_surgery_mode
-    _enable_graph_surgery_mode = mode
-    return pre_mode
 
 
 def _node_to_tensor(*args, **kwargs):
@@ -1295,7 +1293,12 @@ def _wrapped_function(orig_func):
                         return orig_func(*args, **kwargs)
                     if isinstance(args[1], RawTensor):
                         node = NodeMixin.get(inputs[1])
-                        inputs[1] = copy.copy(inputs[1])
+                        is_scalar = isscalar(inputs[1])
+                        inputs[1] = apply(
+                            Copy(comp_node=inputs[1].device), Tensor(inputs[1])
+                        )[0]
+                        if is_scalar:
+                            setscalar(inputs[1])
                         # copy inputs[1] to avoid tensor and Tensor(tensor) share same m_tensor,
                         # which will cause they have same _NodeMixin__node in tracing.
                         NodeMixin.wrap_safe(inputs[1], node)
@@ -1319,6 +1322,13 @@ def _wrapped_function(orig_func):
             else:
                 outputs = None
             call_node.add_outputs(outputs)
+
+            if _get_expr_checker():
+                with _exclude_from_trace():
+                    active_module_tracer().checker.check_expr_interpret(
+                        call_node, outputs
+                    )
+
             set_module_tracing()
             return rst
         return orig_func(*args, **kwargs)
@@ -1500,6 +1510,12 @@ class TracedModuleBuilder(NodeMixin):
             unset_module_tracing()
             rst = self._mod(*args, **kwargs)
             outputs, out_def = tree_flatten(rst, is_leaf=_is_leaf)
+            if _get_expr_checker():
+                with _exclude_from_trace():
+                    tmp = self.build()
+                    active_module_tracer().checker.check_builtin_module(
+                        tmp, callnode, outputs
+                    )
             set_module_tracing()
             if self._is_builtin:
                 self._body = None
@@ -1674,7 +1690,9 @@ class TracedModuleBuilder(NodeMixin):
                     if not isinstance(mod_attr, (List, Dict, QATModule)):
                         assert mod_attr is wrapped._mod
                 else:
-                    assert mod_attr is wrapped
+                    assert (
+                        mod_attr is wrapped
+                    ), "TracedModule do not support modify attributes, please check your code."
 
                 if isinstance(wrapped, (NodeMixin, RawTensor)):
                     NodeMixin.wrap(
@@ -2469,11 +2487,23 @@ def trace_module(
                             qualname="{}.[{}]".format(net_name, "arg_{}".format(_)),
                         ),
                     )
-            builder(*args, **kwargs)
+            rst = builder(*copy.deepcopy(args), **copy.deepcopy(kwargs))
             active_module_tracer().pop_scope()
             traced_mod = builder.build()
             traced_mod.argspec = forward_argspec
             traced_mod.graph._reset_ids()
+
+            has_expr_not_check = False
+            if _get_expr_checker():
+                has_expr_not_check = (
+                    active_module_tracer().checker.check_node_not_in_scope()
+                )
+            if _get_default_checker() or has_expr_not_check:
+                with _exclude_from_trace():
+                    tm_res = traced_mod(*args, **kwargs)
+                    tm_res, _ = tree_flatten(tm_res, is_leaf=_is_leaf)
+                    rst, _ = tree_flatten(rst, is_leaf=_is_leaf)
+                    active_module_tracer().checker.check_net_outputs(tm_res, rst)
             return traced_mod
     finally:
         set_symbolic_shape(use_sym_shape)
