@@ -19,6 +19,7 @@
 #include <cinttypes>
 
 #if MGB_ENABLE_TENSOR_RT
+#include <NvInferPlugin.h>
 
 using namespace mgb;
 using namespace opr;
@@ -208,6 +209,7 @@ SymbolVarArray TensorRTRuntimeOpr::make(
             !CompNode::get_device_count(CompNode::DeviceType::CUDA), SystemError,
             "can not create TensorRTRuntimeOpr when CUDA is not available");
     mgb_assert(!src.empty(), "no inputs provided");
+    initLibNvInferPlugins(&TensorRTOpr::Logger::instance(), "");
     TensorRTUniquePtr<nvinfer1::IRuntime> runtime{
             nvinfer1::createInferRuntime(TensorRTOpr::Logger::instance()), {}};
     auto gpu_allocator = std::make_shared<GpuAllocator>(src[0].node()->comp_node());

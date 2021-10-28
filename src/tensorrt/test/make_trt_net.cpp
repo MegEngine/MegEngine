@@ -25,6 +25,7 @@
 #include "make_trt_net.h"
 #include "megbrain/tensorrt/tensorrt_opr.h"
 
+#include <NvInferPlugin.h>
 #include <random>
 
 using namespace mgb;
@@ -399,6 +400,84 @@ std::pair<nvinfer1::IBuilder*, INetworkDefinition*> intl::ConcatConvTensorRTNetw
         nvinfer1::TensorFormats formats =
                 1 << static_cast<int>(nvinfer1::TensorFormat::kLINEAR);
         conv1->getOutput(0)->setAllowedFormats(formats);
+    }
+#endif
+    return std::make_pair(builder, network);
+}
+
+intl::ReshapeConcatTensorRTNetwork::ReshapeConcatTensorRTNetwork() {
+    host_x0 = gen({2, 2, 2, 2});
+    host_y0 = gen({2, 3, 2, 2});
+
+    graph = ComputingGraph::make();
+    x0 = Host2DeviceCopy::make(*graph, host_x0);
+    y0 = Host2DeviceCopy::make(*graph, host_y0);
+    auto x1 = opr::Reshape::make(x0, {2, 8, 1, 1}),
+         y1 = opr::Reshape::make(y0, {2, 12, 1, 1});
+    z = opr::Concat::make({x1, y1}, 1);
+}
+
+std::pair<nvinfer1::IBuilder*, INetworkDefinition*> intl::ReshapeConcatTensorRTNetwork::
+        create_trt_network(bool has_batch_dim) {
+    initLibNvInferPlugins(&TensorRTOpr::Logger::instance(), "");
+
+    CompNode::load("xpu0").activate();
+    auto builder = createInferBuilder(TensorRTOpr::Logger::instance());
+#if NV_TENSOR_RT_VERSION >= 6001
+    nvinfer1::NetworkDefinitionCreationFlags flags;
+    ::memset(&flags, 0, sizeof(nvinfer1::NetworkDefinitionCreationFlags));
+    if (has_batch_dim)
+        flags = 1 << static_cast<int>(
+                        nvinfer1::NetworkDefinitionCreationFlag::kEXPLICIT_BATCH);
+    auto network = builder->createNetworkV2(flags);
+#else
+    auto network = builder->createNetwork();
+#endif
+    nvinfer1::ITensor *data0, *data1;
+#if NV_TENSOR_RT_VERSION >= 6001
+    if (has_batch_dim) {
+        data0 = network->addInput("x0", DataType::kFLOAT, Dims4{2, 2, 2, 2});
+        data1 = network->addInput("y0", DataType::kFLOAT, Dims4{2, 3, 2, 2});
+    } else {
+        data0 = network->addInput("x0", DataType::kFLOAT, Dims3{2, 2, 2});
+        data1 = network->addInput("y0", DataType::kFLOAT, Dims3{3, 2, 2});
+    }
+    {
+        nvinfer1::TensorFormats formats =
+                1 << static_cast<int>(nvinfer1::TensorFormat::kLINEAR);
+        data0->setAllowedFormats(formats);
+        data1->setAllowedFormats(formats);
+    }
+#else
+    if (has_batch_dim) {
+        data0 = network->addInput("x0", DataType::kFLOAT, DimsNCHW{2, 2, 2, 2});
+        data1 = network->addInput("y0", DataType::kFLOAT, DimsNCHW{2, 3, 2, 2});
+    } else {
+        data0 = network->addInput("x0", DataType::kFLOAT, DimsCHW{2, 2, 2});
+        data1 = network->addInput("y0", DataType::kFLOAT, DimsCHW{3, 2, 2});
+    }
+#endif
+    int axis = 1;
+    bool ignoreBatch = false;
+    nvinfer1::PluginField fields[2] = {
+            nvinfer1::PluginField{"axis", &axis, nvinfer1::PluginFieldType::kINT32, 1},
+            nvinfer1::PluginField{
+                    "ignoreBatch", &ignoreBatch, nvinfer1::PluginFieldType::kINT32, 1},
+    };
+    nvinfer1::PluginFieldCollection fc{2, fields};
+
+    auto creator = getPluginRegistry()->getPluginCreator("FlattenConcat_TRT", "1", "");
+    TensorRTUniquePtr<nvinfer1::IPluginV2> plugin(
+            creator->createPlugin("FlattenConcat_TRT", &fc));
+    ITensor* inputTensors[] = {data0, data1};
+    auto flt_cct = network->addPluginV2(inputTensors, 2, *plugin);
+    mgb_assert(flt_cct != nullptr, "FlattenConcat_TRT is invalid");
+    network->markOutput(*flt_cct->getOutput(0));
+#if NV_TENSOR_RT_VERSION >= 6001
+    {
+        nvinfer1::TensorFormats formats =
+                1 << static_cast<int>(nvinfer1::TensorFormat::kLINEAR);
+        flt_cct->getOutput(0)->setAllowedFormats(formats);
     }
 #endif
     return std::make_pair(builder, network);

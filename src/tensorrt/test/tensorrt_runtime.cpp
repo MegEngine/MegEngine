@@ -23,6 +23,7 @@
 #include "megbrain/tensorrt/tensorrt_opr.h"
 #include "megbrain/tensorrt/tensorrt_runtime_opr.h"
 
+#include <fstream>
 #include <random>
 
 using namespace mgb;
@@ -243,6 +244,68 @@ TEST(TestOprTensorRT, IOFormatFree) {
     MGB_ASSERT_TENSOR_EQ(y1, y2);
 }
 #endif
+
+TEST(TestOprTensorRT, FlattenConcatPlugin) {
+    REQUIRE_GPU(1);
+    intl::ReshapeConcatTensorRTNetwork net;
+    auto make_trt = [&net]() {
+        auto p = net.create_trt_network(false);
+        TensorRTUniquePtr<INetworkDefinition> trt_net{p.second, {}};
+        TensorRTUniquePtr<IBuilder> builder{p.first, {}};
+        builder->setMaxBatchSize(5);
+#if NV_TENSOR_RT_VERSION >= 6001
+        TensorRTUniquePtr<IBuilderConfig> build_config{builder->createBuilderConfig()};
+        TensorRTUniquePtr<ICudaEngine> cuda_engine{
+                builder->buildEngineWithConfig(*trt_net, *build_config)};
+#else
+        TensorRTUniquePtr<ICudaEngine> cuda_engine{builder->buildCudaEngine(*trt_net)};
+#endif
+        TensorRTUniquePtr<IHostMemory> mem{cuda_engine->serialize(), {}};
+        return TensorRTRuntimeOpr::make(mem->data(), mem->size(), {net.x0, net.y0})[0];
+    };
+    auto z2 = make_trt();
+
+    HostTensorND host_z1;
+    HostTensorND host_z2;
+    auto func = net.graph->compile(
+            {make_callback_copy(net.z, host_z1), make_callback_copy(z2, host_z2)});
+    func->execute();
+    MGB_ASSERT_TENSOR_EQ(host_z1, host_z2);
+}
+
+TEST(TestOprTensorRT, ICudaEngine) {
+    REQUIRE_GPU(1);
+    CompNode::load("xpu0").activate();
+    std::ifstream engineFile("model.trt", std::ios::binary);
+    if (!engineFile)
+        return;
+
+    engineFile.seekg(0, engineFile.end);
+    long int fsize = engineFile.tellg();
+    engineFile.seekg(0, engineFile.beg);
+
+    std::vector<char> engineData(fsize);
+    engineFile.read(engineData.data(), fsize);
+    if (!engineFile)
+        return;
+
+    std::shared_ptr<ComputingGraph> graph;
+    graph = ComputingGraph::make();
+
+    HostTensorGenerator<> gen;
+    std::shared_ptr<HostTensorND> host_x0, host_y0;
+    host_x0 = gen({2, 3, 375, 500});
+    host_y0 = gen({2, 1, 1, 3});
+
+    SymbolVar x0 = Host2DeviceCopy::make(*graph, host_x0);
+    SymbolVar y0 = Host2DeviceCopy::make(*graph, host_y0);
+
+    auto z = TensorRTRuntimeOpr::make(engineData.data(), fsize, {x0, y0})[0];
+    HostTensorND host_z;
+
+    auto func = graph->compile({make_callback_copy(z, host_z)});
+    func->execute();
+}
 
 #endif  // MGB_ENABLE_TENSOR_RT
 

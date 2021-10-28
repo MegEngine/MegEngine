@@ -92,6 +92,18 @@ struct ConcatConvTensorRTNetwork {
             bool has_batch_dim);
 };
 
+struct ReshapeConcatTensorRTNetwork {
+    HostTensorGenerator<> gen;
+    std::shared_ptr<HostTensorND> host_x0, host_y0;
+    std::shared_ptr<ComputingGraph> graph;
+    SymbolVar x0, y0, z;
+
+    ReshapeConcatTensorRTNetwork();
+
+    std::pair<nvinfer1::IBuilder*, INetworkDefinition*> create_trt_network(
+            bool has_batch_dim);
+};
+
 }  // namespace intl
 }  // namespace opr
 }  // namespace mgb

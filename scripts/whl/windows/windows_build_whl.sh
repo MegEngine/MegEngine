@@ -70,6 +70,7 @@ fi
 
 # config NVIDIA libs
 TRT_LIB="/c/Program Files/NVIDIA GPU Computing Toolkit/TensorRT-6.0.1.5/lib/nvinfer.dll"
+TRT_PLUGIN_LIB="/c/Program Files/NVIDIA GPU Computing Toolkit/TensorRT-6.0.1.5/lib/nvinfer_plugin.dll"
 CUDNN_LIB="/c/Program Files/NVIDIA GPU Computing Toolkit/cudnn-10.1-windows10-x64-v7.6.5.32/cuda/bin/cudnn64_7.dll"
 CUSOLVER_LIB="/c/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v10.1/bin/cusolver64_10.dll"
 CUBLAS_LIB="/c/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v10.1/bin/cublas64_10.dll"
@@ -86,6 +87,7 @@ function depend_real_copy() {
     if [ ${BUILD_WHL_CPU_ONLY} = "OFF" ]; then
         echo "copy nvidia lib...."
         cp "${TRT_LIB}" ${REAL_DST}
+        cp "${TRT_PLUGIN_LIB}" ${REAL_DST}
         cp "${CUDNN_LIB}" ${REAL_DST}
         cp "${CUSOLVER_LIB}" ${REAL_DST}
         cp "${CUBLAS_LIB}" ${REAL_DST}
