@@ -9,7 +9,7 @@ if(CNLIGHT_LIBRARY STREQUAL "CNLIGHT_LIBRARY-NOTFOUND")
     message(FATAL_ERROR "Can not find CNLIGHT Library")
 endif()
 
-get_filename_component(__found_cnlight_root "${CNLIGHT_LIBRARY}/../include" REALPATH)
+get_filename_component(__found_cnlight_root "${CNLIGHT_LIBRARY}/../.." REALPATH)
 find_path(CNLIGHT_INCLUDE_DIR 
     NAMES cnlight.h
     HINTS "$ENV{NEUWARE_HOME}/include" ${__found_cnlight_root}

@@ -9,7 +9,7 @@ if(CNNL_LIBRARY STREQUAL "CNNL_LIBRARY-NOTFOUND")
     message(FATAL_ERROR "Can not find CNNL Library")
 endif()
 
-get_filename_component(__found_cnnl_root "${CNNL_LIBRARY}/../include" REALPATH)
+get_filename_component(__found_cnnl_root "${CNNL_LIBRARY}/../.." REALPATH)
 find_path(CNNL_INCLUDE_DIR 
     NAMES cnnl.h
     HINTS "$ENV{NEUWARE_HOME}/include" ${__found_cnnl_root}
@@ -49,7 +49,7 @@ if(CNNL_EXTRA_LIBRARY STREQUAL "CNNL_EXTRA_LIBRARY-NOTFOUND")
     message(FATAL_ERROR "Can not find CNNL_EXTRA Library")
 endif()
 
-get_filename_component(__found_cnnl_extra_root "${CNNL_EXTRA_LIBRARY}/../include" REALPATH)
+get_filename_component(__found_cnnl_extra_root "${CNNL_EXTRA_LIBRARY}/../.." REALPATH)
 find_path(CNNL_EXTRA_INCLUDE_DIR 
     NAMES cnnl_extra.h
     HINTS "$ENV{NEUWARE_HOME}/include" ${__found_cnnl_extra_root}

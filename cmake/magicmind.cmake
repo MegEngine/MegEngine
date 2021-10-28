@@ -9,7 +9,7 @@ if(MAGICMIND_LIBRARY STREQUAL "MAGICMIND_LIBRARY-NOTFOUND")
     message(FATAL_ERROR "Can not find MAGICMIND Library")
 endif()
 
-get_filename_component(__found_magicmind_root "${MAGICMIND_LIBRARY}/../include" REALPATH)
+get_filename_component(__found_magicmind_root "${MAGICMIND_LIBRARY}/../../" REALPATH)
 find_path(MAGICMIND_INCLUDE_DIR 
     NAMES common.h
     HINTS "$ENV{NEUWARE_HOME}/include" ${__found_magicmind_root}
@@ -40,7 +40,7 @@ message(STATUS "Found MAGICMIND: ${__found_magicmind_root} (found version: ${MAG
 
 find_library(MAGICMIND_RUNTIME_LIBRARY 
     NAMES libmagicmind_runtime.so
-    PATHS "${__found_magicmind_root}/../lib64"
+    PATHS "${__found_magicmind_root}/lib64"
     )
 
 if(MAGICMIND_RUNTIME_LIBRARY STREQUAL "MAGICMIND_RUNTIME_LIBRARY-NOTFOUND")

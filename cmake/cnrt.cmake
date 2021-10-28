@@ -9,7 +9,7 @@ if(CNRT_LIBRARY STREQUAL "CNRT_LIBRARY-NOTFOUND")
     message(FATAL_ERROR "Can not find CNRT Library")
 endif()
 
-get_filename_component(__found_cnrt_root "${CNRT_LIBRARY}/../include" REALPATH)
+get_filename_component(__found_cnrt_root ${CNRT_LIBRARY}/../../ REALPATH)
 find_path(CNRT_INCLUDE_DIR 
     NAMES cnrt.h
     HINTS "$ENV{NEUWARE_HOME}/include" ${__found_cnrt_root}
