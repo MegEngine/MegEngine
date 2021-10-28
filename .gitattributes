@@ -18,3 +18,4 @@ ci/resource/dump/roi_align_backward_8.8.0.mdl filter=lfs diff=lfs merge=lfs -tex
 ci/resource/dump/relayout_format_8.10.0.mdl filter=lfs diff=lfs merge=lfs -text
 ci/resource/dump/batch_conv_bias_with_policy_8.8.0.mdl filter=lfs diff=lfs merge=lfs -text
 ci/resource/prof/model_with_err_assert.mdl filter=lfs diff=lfs merge=lfs -text
+ci/resource/prof/test_mge.mge filter=lfs diff=lfs merge=lfs -text

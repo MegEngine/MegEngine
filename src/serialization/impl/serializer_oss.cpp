@@ -638,12 +638,12 @@ void GraphLoaderOSS::OprLoadContextImpl::load_tensor_value(
     mgb_throw_if(
             consumed_size > data_size, SerializationError,
             "Custom tensor value loader consumed more data than "
-            "available: consumed %lu, has %u",
+            "available: consumed %zu, has %u",
             consumed_size, data_size);
     if (consumed_size < data_size) {
         mgb_log_warn(
                 "Tensor value loader consumed less data than available: "
-                "consumed %lu bytes, has %u bytes",
+                "consumed %zu bytes, has %u bytes",
                 consumed_size, data_size);
         file->skip(data_size - consumed_size);
     }

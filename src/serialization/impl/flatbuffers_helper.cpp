@@ -67,6 +67,9 @@ megdnn::DType load_dtype(const fbs::DType* dtype) {
             return dtype::Quantized4Asymm{param->scale(), param->zero_point()};
         case DTypeEnum::DTypeEnum_Quantized8Asymm:
             return dtype::Quantized8Asymm{param->scale(), param->zero_point()};
+        default:
+            // Float16 may be disabled
+            megdnn_trap();
     }
     return {};
 }
