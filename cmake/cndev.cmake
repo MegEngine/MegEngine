@@ -9,7 +9,7 @@ if(CNDEV_LIBRARY STREQUAL "CNDEV_LIBRARY-NOTFOUND")
     message(FATAL_ERROR "Can not find CNDEV Library")
 endif()
 
-get_filename_component(__found_cndev_root "${CNDEV_LIBRARY}/../include" REALPATH)
+get_filename_component(__found_cndev_root ${CNDEV_LIBRARY}/../.. REALPATH)
 find_path(CNDEV_INCLUDE_DIR 
     NAMES cndev.h
     HINTS "$ENV{NEUWARE_HOME}/include" ${__found_cndev_root}

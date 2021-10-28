@@ -9,7 +9,7 @@ if(CNML_LIBRARY STREQUAL "CNML_LIBRARY-NOTFOUND")
     message(FATAL_ERROR "Can not find CNML Library")
 endif()
 
-get_filename_component(__found_cnml_root "${CNML_LIBRARY}/../include" REALPATH)
+get_filename_component(__found_cnml_root "${CNML_LIBRARY}/../.." REALPATH)
 find_path(CNML_INCLUDE_DIR 
     NAMES cnml.h
     HINTS "$ENV{NEUWARE_HOME}/include" ${__found_cnml_root}
