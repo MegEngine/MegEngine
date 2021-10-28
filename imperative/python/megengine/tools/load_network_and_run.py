@@ -384,7 +384,7 @@ def main():
     parser.add_argument(
         "--dump-cpp-model",
         help="write a C++ model that can be loaded by "
-        "megbrain/sdk/load-and-run; "
+        "megbrain/lite/load_and_run; "
         "this implies --embed-input",
     )
     parser.add_argument(
