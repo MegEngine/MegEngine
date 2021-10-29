@@ -320,6 +320,7 @@ void RemapBackwardDataImpl::exec(
 
         support_dtype(dtype::Float32);
         DNN_INC_FLOAT16(support_dtype(dtype::BFloat16));
+        DNN_INC_FLOAT16(support_dtype(dtype::Float16));
 #undef cb
 #undef support_dtype
 
@@ -371,6 +372,7 @@ void RemapBackwardMatImpl::exec(
 
         support_dtype(dtype::Float32);
         DNN_INC_FLOAT16(support_dtype(dtype::BFloat16));
+        DNN_INC_FLOAT16(support_dtype(dtype::Float16));
 #undef cb
 #undef support_dtype
 

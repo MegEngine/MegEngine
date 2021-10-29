@@ -156,6 +156,7 @@ void backwardmat_proxy(
 
 FOR_FORMAT_BMODE(float)
 DNN_INC_FLOAT16(FOR_FORMAT_BMODE(dt_bfloat16))
+DNN_INC_FLOAT16(FOR_FORMAT_BMODE(dt_float16))
 
 #undef FOR_FORMAT_BMODE
 #undef INST

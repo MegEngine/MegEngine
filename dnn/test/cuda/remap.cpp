@@ -180,6 +180,7 @@ TEST_F(CUDA, REMAP_BACKWARD_DATA) {
                 .execs({arg.map_xy, arg.dst, arg.src});                      \
     }
     cb(dtype::BFloat16(), float_rng);
+    cb(dtype::Float16(), float_rng);
 #undef cb
 }
 
@@ -222,6 +223,7 @@ TEST_F(CUDA, REMAP_BACKWARD_MAT) {
                 .execs({arg.src, arg.map_xy, arg.dst, arg.map_xy});          \
     }
     cb(dtype::BFloat16(), float_rng);
+    cb(dtype::Float16(), float_rng);
 #undef cb
 }
 

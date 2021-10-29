@@ -62,6 +62,7 @@ void RemapBackwardMatImpl::exec(
     switch (src.layout.dtype.enumv()) {
         support_dtype(dtype::Float32);
         support_dtype(dtype::BFloat16);
+        support_dtype(dtype::Float16);
         default:
             megdnn_throw("unsupported dtype in remap backward cuda\n");
     }
