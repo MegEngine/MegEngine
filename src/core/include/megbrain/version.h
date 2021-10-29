@@ -13,9 +13,10 @@
 
 #include "megbrain_build_config.h"
 
-#define MGB_MAJOR 8
-#define MGB_MINOR 9999
-#define MGB_PATCH 0
+#define MGE_MAJOR 1
+#define MGE_MINOR 7
+#define MGE_PATCH 0
+
 //! whether it is development version
 #ifndef MGB_IS_DEV
 #define MGB_IS_DEV 0

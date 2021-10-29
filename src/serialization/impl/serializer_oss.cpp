@@ -45,7 +45,7 @@ using namespace mgb::serialization;
 
 namespace {
 
-constexpr uint32_t MGB_VERSION = (MGB_MAJOR * 1000 + MGB_MINOR) * 100 + MGB_PATCH;
+constexpr uint32_t MGB_VERSION = (MGE_MAJOR * 1000 + MGE_MINOR) * 100 + MGE_PATCH;
 
 constexpr uint32_t MGB_MAGIC = 0x5342474D;
 

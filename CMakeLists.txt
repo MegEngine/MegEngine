@@ -1199,7 +1199,7 @@ if (NOT MGE_WITH_DISTRIBUTED)
     )
     write_basic_package_version_file(
         ${CMAKE_CURRENT_BINARY_DIR}/MegEngineConfigVersion.cmake
-        VERSION ${MGB_VER_MAJOR}.${MGB_VER_MINOR}.${MGB_VER_PATCH}
+        VERSION ${MGB_VER_STRING}
         COMPATIBILITY SameMajorVersion)
 
     install(EXPORT ${MGE_EXPORT_TARGETS} DESTINATION ${MGE_INSTALL_CMAKEDIR})

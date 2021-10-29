@@ -14,7 +14,11 @@
 using namespace mgb;
 
 Version mgb::get_version() {
+#ifdef MGB_MAJOR
     return {MGB_MAJOR, MGB_MINOR, MGB_PATCH, MGB_IS_DEV};
+#else
+    return {MGE_MAJOR, MGE_MINOR, MGE_PATCH, MGB_IS_DEV};
+#endif
 }
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
