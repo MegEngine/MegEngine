@@ -130,3 +130,27 @@ class AtlasRuntimeSubgraph(Module):
 
     def forward(self, *inputs):
         return atlas_runtime_opr(inputs, data=self._data)
+
+class MagicMindRuntimeSubgraph(Module):
+    r"""Load a serialized MagicMindRuntime subgraph.
+    
+    See :func:`~.magicmind_runtime_opr` for more details.
+    """
+
+    def __init__(self, data, **kwargs):
+        super(MagicMindRuntimeSubgraph, self).__init__(**kwargs)
+        self._data = data
+
+    @property
+    def data(self):
+        return self._data
+
+    @data.setter
+    def data(self, val):
+        self._data = np.frombuffer(val, dtype=np.uint8)
+
+    def forward(self, *inputs):
+        return magicmind_runtime_opr(inputs, data=self._data)
+
+
+

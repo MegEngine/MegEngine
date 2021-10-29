@@ -66,3 +66,15 @@ def atlas_runtime_opr(inputs, data):
 
     op = builtin.AtlasRuntime(data, len(data))
     return apply(op, *inputs)
+
+
+def magicmind_runtime_opr(inputs, data):
+    r"""Load a serialized MagicMind model as a runtime operator in MegEngine.
+
+    Args:
+        inputs: list of input tensors.
+        data: the serialized MagicMind model.
+    """
+
+    op = builtin.MagicMindRuntime(data, len(data))
+    return apply(op, *inputs)
