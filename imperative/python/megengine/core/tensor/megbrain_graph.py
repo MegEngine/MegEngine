@@ -11,13 +11,12 @@ import json
 import os
 import weakref
 from concurrent.futures import ThreadPoolExecutor
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Tuple, Union
 
 import numpy as np
 
 from .. import _imperative_rt
-from .._imperative_rt import GraphOptimizeOptions
-from .._imperative_rt.core2 import apply, set_cpp_apply_backward_varnode
+from .._imperative_rt import GraphOptimizeOptions, SerializationFormat
 from .._wrap import as_device
 from ..ops.builtin import OpDef
 
@@ -377,7 +376,8 @@ def dump_graph(
     keep_opr_priority: bool = False,
     strip_info_file=None,
     append_json=False,
-    metadata=None
+    metadata=None,
+    dump_format=None
 ) -> Tuple[bytes, CompGraphDumpResult]:
     r"""serialize the computing graph of `output_vars` and get byte result.
 
@@ -398,6 +398,7 @@ def dump_graph(
         append_json: will be check when `strip_info_file` is not None. if set
             true, the information for code strip will be append to strip_info_file.
             if set false, will rewrite strip_info_file
+        dump_format: using different dump formats.
 
     Note:
         The underlying C++ API only accepts a var list. If a dict is given,
@@ -434,6 +435,12 @@ def dump_graph(
     outputs = []
     params = []
 
+    dump_format_map = {
+        None: None,
+        "FBS": SerializationFormat.FBS,
+    }
+    dump_format = dump_format_map[dump_format]
+
     dump_content = _imperative_rt.dump_graph(
         ov,
         keep_var_name,
@@ -441,6 +448,7 @@ def dump_graph(
         keep_param_name,
         keep_opr_priority,
         metadata,
+        dump_format,
         stat,
         inputs,
         outputs,

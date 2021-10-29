@@ -190,7 +190,13 @@ def test_print_in_trace():
             np.testing.assert_equal(z, buf)
 
 
-def test_dump():
+@pytest.mark.parametrize(
+    "dump_format",
+    [
+        "FBS",
+    ],
+)
+def test_dump(dump_format):
     @trace(symbolic=True, capture_as_const=True)
     def f(a, b):
         return a + b
@@ -205,7 +211,7 @@ def test_dump():
         np.testing.assert_equal(f(a, b).numpy(), y)
 
     file = io.BytesIO()
-    dump_info = f.dump(file)
+    dump_info = f.dump(file, dump_format=dump_format)
     assert dump_info.nr_opr == 3
     np.testing.assert_equal(dump_info.inputs, ["arg_0", "arg_1"])
     np.testing.assert_equal(dump_info.outputs, ["ADD"])

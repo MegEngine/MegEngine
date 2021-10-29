@@ -35,6 +35,7 @@ using _OptimizeForInferenceOptions = mgb::gopt::OptimizeForInferenceOptions;
 using _LayoutTransform = _OptimizeForInferenceOptions::LayoutTransform;
 using _AlgoStrategy = opr::mixin::AlgoChooserHelper::ExecutionPolicy::Strategy;
 using _SerializationMetadata = mgb::serialization::Metadata;
+using _SerializationFormat = mgb::serialization::GraphDumpFormat;
 
 namespace {
 class _CompGraphProfilerImpl {
@@ -310,6 +311,10 @@ void init_graph_rt(py::module m) {
             .value("NCHW64", _LayoutTransform::NCHW64)
             .export_values();
 
+    py::enum_<_SerializationFormat>(m, "SerializationFormat")
+            .value("FBS", _SerializationFormat::FLATBUFFERS)
+            .export_values();
+
     m.def("optimize_for_inference",
           [](const VarNodeArray& dest_vars, const _OptimizeForInferenceOptions& opt) {
               SymbolVarArray symvars(dest_vars.begin(), dest_vars.end());
@@ -380,11 +385,18 @@ void init_graph_rt(py::module m) {
     m.def("dump_graph",
           [](const std::vector<VarNode*>& dest_vars, int keep_var_name,
              bool keep_opr_name, bool keep_param_name, bool keep_opr_priority,
-             std::optional<_SerializationMetadata> metadata, py::list& stat,
+             std::optional<_SerializationMetadata> metadata,
+             std::optional<_SerializationFormat> dump_format, py::list& stat,
              py::list& inputs, py::list& outputs, py::list& params) {
               std::vector<uint8_t> buf;
-              auto dumper =
-                      ser::GraphDumper::make(ser::OutputFile::make_vector_proxy(&buf));
+              ser::GraphDumpFormat format;
+              if (dump_format.has_value()) {
+                  format = dump_format.value();
+              } else {
+                  format = {};
+              }
+              auto dumper = ser::GraphDumper::make(
+                      ser::OutputFile::make_vector_proxy(&buf), format);
               SymbolVarArray symvars(dest_vars.begin(), dest_vars.end());
 
               ser::GraphDumper::DumpConfig config{

@@ -1008,6 +1008,7 @@ class trace:
         maxerr=1e-4,
         resize_input=False,
         input_transform=None,
+        dump_format: str = None,
         **kwargs
     ):
         r"""Serializes trace to file system.
@@ -1059,6 +1060,7 @@ class trace:
             resize_input: whether resize input image to fit input var shape.
             input_transform: a python expression to transform the input data.
                 Example: data / np.std(data)
+            dump_format: using different dump formats.
 
         Keyword Arguments:
 
@@ -1265,6 +1267,7 @@ class trace:
             strip_info_file=strip_info_file,
             append_json=append_json,
             metadata=metadata,
+            dump_format=dump_format,
         )
         file.write(dump_content)
 
