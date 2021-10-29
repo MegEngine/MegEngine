@@ -388,6 +388,13 @@ def CambriconRuntime: MgbHashableOp<"CambriconRuntime"> {
   );
 }
 
+def MagicMindRuntime: MgbHashableOp<"MagicMindRuntime"> {
+  let extraArguments = (ins
+    MgbStringAttr:$buf,
+    MgbSizeTAddr:$buf_size
+  );
+}
+
 def CvtColor: MgbHashableOp<"CvtColor", [CvtColorParam]>;
 
 def CheckNonFinite: MgbHashableOp<"CheckNonFinite", [EmptyParam]>;

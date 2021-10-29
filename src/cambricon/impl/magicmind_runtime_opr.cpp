@@ -166,8 +166,8 @@ MagicMindRuntimeOpr::MagicMindRuntimeOpr(
         const OperatorNodeConfig& config)
         : Super(inputs[0]->owner_graph(), config, "magic_runtime", inputs),
           m_allocator{std::move(allocator)},
-          m_context{nullptr},
           m_engine{nullptr},
+          m_context{nullptr},
           m_model{std::move(model)} {
     mgb_assert(
             inputs[0]->comp_node().device_type() == CompNode::DeviceType::CAMBRICON,
@@ -207,7 +207,7 @@ void MagicMindRuntimeOpr::scn_do_execute() {
     cnrt_env.activate();
     std::vector<IRTTensor*> inputs, outputs;
     MM_CHECK(CreateInputTensors(m_context.get(), &inputs));
-    MM_CHECK(CreateInputTensors(m_context.get(), &outputs));
+    MM_CHECK(CreateOutputTensors(m_context.get(), &outputs));
     size_t nr_inputs = input().size();
     mgb_assert(nr_inputs == inputs.size());
     for (size_t i = 0; i < nr_inputs; ++i) {
@@ -234,11 +234,9 @@ void MagicMindRuntimeOpr::scn_do_execute() {
     MM_CHECK(m_context->SetWorkspace(output().back()->dev_tensor().raw_ptr(), size));
     MM_CHECK(m_context->Enqueue(inputs, outputs, cnrt_env.queue));
     for (auto&& i : inputs) {
-        i->SetData(nullptr);
         i->Destroy();
     }
     for (auto&& o : outputs) {
-        o->SetData(nullptr);
         o->Destroy();
     }
 }
@@ -260,7 +258,7 @@ void MagicMindRuntimeOpr::get_output_var_shape(
     }
     std::vector<IRTTensor*> inputs, outputs;
     MM_CHECK(CreateInputTensors(m_context.get(), &inputs));
-    MM_CHECK(CreateInputTensors(m_context.get(), &outputs));
+    MM_CHECK(CreateOutputTensors(m_context.get(), &outputs));
     size_t nr_inputs = input().size();
     mgb_assert(nr_inputs == inputs.size());
     for (size_t i = 0; i < nr_inputs; ++i) {
@@ -295,12 +293,11 @@ void MagicMindRuntimeOpr::get_output_var_shape(
                 false, "static shape infer for MagicMindRuntimeOpr(%s) failed",
                 cname());
     }
+    return;
     for (auto&& i : inputs) {
-        i->SetData(nullptr);
         i->Destroy();
     }
     for (auto&& o : outputs) {
-        o->SetData(nullptr);
         o->Destroy();
     }
 }
@@ -332,10 +329,10 @@ void MagicMindRuntimeOpr::init_output_dtype() {
     }
     std::vector<DataType> out_dtypes = m_model->GetOutputDataTypes();
     mgb_assert(
-            out_dtypes.size() == output().size(),
+            out_dtypes.size() + 1 == output().size(),
             "output size mismatch(got:%zu,expected:%zu)", out_dtypes.size(),
             output().size());
-    size_t nr_outputs = output().size();
+    size_t nr_outputs = out_dtypes.size();
     for (size_t i = 0; i < nr_outputs; ++i) {
         auto dt_mm = mm_dtype_to_mgb_dtype(out_dtypes[i]);
         mgb_assert(

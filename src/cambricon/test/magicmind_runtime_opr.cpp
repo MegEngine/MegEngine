@@ -135,10 +135,10 @@ public:
         constexpr int kh = 3, kw = 3;
         constexpr int stride_h = 1, stride_w = 1;
         constexpr int pad_h = 1, pad_w = 1;
-        magicmind::Dims input_dim{{ni, ci, hi, wi}};
-        magicmind::Dims filter_dim{{co, ci, kh, kw}};
+        magicmind::Dims input_dim{{ni, hi, wi, ci}};
+        magicmind::Dims filter_dim{{co, kh, kw, ci}};
         magicmind::Dims bias_dim{{co}};
-        magicmind::Dims add_dim{{no, co, ho, wo}};
+        magicmind::Dims add_dim{{no, ho, wo, co}};
         magicmind::DataType output_datatype = magicmind::DataType::FLOAT32;
 
         // init
@@ -148,13 +148,13 @@ public:
 {
     "graph_shape_mutable": {{GRAPH_SHAPE_MUTABLE}},  
     "precision_config": {
-      "precision_mode": "qint8_mixed_float16"
+      "precision_mode": "qint8_mixed_float32"
     }
 }
 )";
         replace_all_pairs_inplace(
                 user_json_config,
-                {{"{{GRAPH_SHAPE_MUTABLE}}", std::to_string(graph_shape_mutable_)}});
+                {{"{{GRAPH_SHAPE_MUTABLE}}", graph_shape_mutable_ ? "true" : "false"}});
         config->ParseFromString(user_json_config);
         auto network = make_mm_unique_ptr(magicmind::CreateINetwork());
         magicmind::Range filter_range = {0.0f, 0.0f};
@@ -278,6 +278,9 @@ public:
         std::string buf;
         buf.resize(size);
         MM_CHECK(model_->SerializeToMemory(reinterpret_cast<void*>(buf.data()), size));
+        model_.reset();
+        model_ = std::move(MagicMindRuntimeOpr::make_model_ptr(CreateIModel()));
+        model_->DeserializeFromMemory(reinterpret_cast<void*>(buf.data()), size);
         if (serialize_to_file) {
             std::string fname = ssprintf(
                     "./output/MagicMindRuntimeOprTest.%s.mlu",
@@ -332,6 +335,10 @@ public:
         printf("inference time = %.2fs\n", time / static_cast<float>(runs) * 1e-3);
         MGB_CNRT_CHECK(cnrtDestroyNotifier(&start));
         MGB_CNRT_CHECK(cnrtDestroyNotifier(&end));
+        for (auto&& i : input_tensors)
+            i->Destroy();
+        for (auto&& o : output_tensors)
+            o->Destroy();
     }
 };
 }  // namespace
@@ -387,9 +394,9 @@ TEST(TestMagicMindRuntimeOpr, Basic) {
             add_output_mlu_ptr, mlu_deleter};
 
     network.infer_model(
-            {conv_input_mlu_ptr, add_output_mlu_ptr},
+            {conv_input_mlu_ptr, add_input_mlu_ptr},
             {relu_output_mlu_ptr, add_output_mlu_ptr},
-            {Dims{{ni, ci, hi, wi}}, Dims{{no, co, ho, wo}}});
+            {Dims{{ni, hi, wi, ci}}, Dims{{no, ho, wo, co}}});
 
     // result memory copy cnml->cpu
     // memory copy cpu->mlu
@@ -402,9 +409,9 @@ TEST(TestMagicMindRuntimeOpr, Basic) {
 
     auto buf = network.get_serialized_model(false);
     auto x = std::make_shared<HostTensorND>(
-            cn, TensorLayout{{ni, ci, hi, wi}, dtype::Float32()});
+            cn, TensorLayout{{ni, hi, wi, ci}, dtype::Float32()});
     auto add = std::make_shared<HostTensorND>(
-            cn, TensorLayout{{no, co, ho, wo}, dtype::Float32()});
+            cn, TensorLayout{{no, ho, wo, co}, dtype::Float32()});
     std::memcpy(
             reinterpret_cast<void*>(x->ptr<dt_float32>()), conv_input_cpu_data.data(),
             conv_input_count * sizeof(float));
@@ -418,13 +425,13 @@ TEST(TestMagicMindRuntimeOpr, Basic) {
             reinterpret_cast<const void*>(buf.data()), buf.size(), {x_, add_});
     auto out1 = outs[0];
     auto out2 = outs[1];
-    HostTensorND o1(cn, {no, co, ho, wo}, dtype::Float32());
-    HostTensorND o2(cn, {no, co, ho, wo}, dtype::Float32());
+    HostTensorND o1(cn, {no, ho, wo, co}, dtype::Float32());
+    HostTensorND o2(cn, {no, ho, wo, co}, dtype::Float32());
     auto func = graph->compile(
             {make_callback_copy(out1, o1), make_callback_copy(out2, o2)});
     func->execute();
-    HostTensorND o1_mm(cn, {no, co, ho, wo}, dtype::Float32()),
-            o2_mm(cn, {no, co, ho, wo}, dtype::Float32());
+    HostTensorND o1_mm(cn, {no, ho, wo, co}, dtype::Float32()),
+            o2_mm(cn, {no, ho, wo, co}, dtype::Float32());
     std::memcpy(
             o1_mm.ptr<float>(), relu_output_cpu_data.data(),
             relu_output_count * sizeof(float));
@@ -486,9 +493,9 @@ TEST(TestMagicMindRuntimeOpr, InputQInt8) {
             add_output_mlu_ptr, mlu_deleter};
 
     network.infer_model(
-            {conv_input_mlu_ptr, add_output_mlu_ptr},
+            {conv_input_mlu_ptr, add_input_mlu_ptr},
             {relu_output_mlu_ptr, add_output_mlu_ptr},
-            {Dims{{ni, ci, hi, wi}}, Dims{{no, co, ho, wo}}});
+            {Dims{{ni, hi, wi, ci}}, Dims{{no, ho, wo, co}}});
 
     // result memory copy cnml->cpu
     // memory copy cpu->mlu
@@ -501,9 +508,9 @@ TEST(TestMagicMindRuntimeOpr, InputQInt8) {
 
     auto buf = network.get_serialized_model(false);
     auto x = std::make_shared<HostTensorND>(
-            cn, TensorLayout{{ni, ci, hi, wi}, dtype::QuantizedS8{1.f}});
+            cn, TensorLayout{{ni, hi, wi, ci}, dtype::QuantizedS8{1.f}});
     auto add = std::make_shared<HostTensorND>(
-            cn, TensorLayout{{no, co, ho, wo}, dtype::Float32()});
+            cn, TensorLayout{{no, ho, wo, co}, dtype::Float32()});
     std::memcpy(
             reinterpret_cast<void*>(x->raw_ptr()), conv_input_cpu_data.data(),
             conv_input_count * sizeof(int8_t));
@@ -517,13 +524,13 @@ TEST(TestMagicMindRuntimeOpr, InputQInt8) {
             reinterpret_cast<const void*>(buf.data()), buf.size(), {x_, add_});
     auto out1 = outs[0];
     auto out2 = outs[1];
-    HostTensorND o1(cn, {no, co, ho, wo}, dtype::Float32());
-    HostTensorND o2(cn, {no, co, ho, wo}, dtype::Float32());
+    HostTensorND o1(cn, {no, ho, wo, co}, dtype::Float32());
+    HostTensorND o2(cn, {no, ho, wo, co}, dtype::Float32());
     auto func = graph->compile(
             {make_callback_copy(out1, o1), make_callback_copy(out2, o2)});
     func->execute();
-    HostTensorND o1_mm(cn, {no, co, ho, wo}, dtype::Float32()),
-            o2_mm(cn, {no, co, ho, wo}, dtype::Float32());
+    HostTensorND o1_mm(cn, {no, ho, wo, co}, dtype::Float32()),
+            o2_mm(cn, {no, ho, wo, co}, dtype::Float32());
     std::memcpy(
             o1_mm.ptr<float>(), relu_output_cpu_data.data(),
             relu_output_count * sizeof(float));
@@ -591,9 +598,9 @@ TEST(TestMagicMindRuntimeOpr, GraphShapeMutable) {
                 add_output_mlu_ptr, mlu_deleter};
 
         network.infer_model(
-                {conv_input_mlu_ptr, add_output_mlu_ptr},
+                {conv_input_mlu_ptr, add_input_mlu_ptr},
                 {relu_output_mlu_ptr, add_output_mlu_ptr},
-                {Dims{{ni, ci, hi, wi}}, Dims{{no, co, ho, wo}}});
+                {Dims{{ni, hi, wi, ci}}, Dims{{no, ho, wo, co}}});
 
         // result memory copy cnml->cpu
         // memory copy cpu->mlu
@@ -607,11 +614,11 @@ TEST(TestMagicMindRuntimeOpr, GraphShapeMutable) {
         auto buf = network.get_serialized_model(true);
         auto mkshp = [](int n, int c, int h, int w) {
             size_t nz = n, cz = c, hz = h, wz = w;
-            return TensorShape{nz, cz, hz, wz};
+            return TensorShape{nz, hz, wz, cz};
         };
         auto mkly = [](int n, int c, int h, int w, DType dtype) {
             size_t nz = n, cz = c, hz = h, wz = w;
-            return TensorLayout{{nz, cz, hz, wz}, dtype};
+            return TensorLayout{{nz, hz, wz, cz}, dtype};
         };
         auto x = std::make_shared<HostTensorND>(
                 cn, mkly(ni, ci, hi, wi, dtype::Float32()));
@@ -662,9 +669,9 @@ TEST(TestMagicMindRuntimeOpr, Serialization) {
     const int ni = 1, ci = 64, hi = 32, wi = 32;
     const int no = 1, co = 64, ho = 32, wo = 32;
     auto x = std::make_shared<HostTensorND>(
-            cn, TensorLayout{{ni, ci, hi, wi}, dtype::Float32()});
+            cn, TensorLayout{{ni, hi, wi, ci}, dtype::Float32()});
     auto add = std::make_shared<HostTensorND>(
-            cn, TensorLayout{{no, co, ho, wo}, dtype::Float32()});
+            cn, TensorLayout{{no, ho, wo, co}, dtype::Float32()});
     auto graph = ComputingGraph::make();
     auto x_ = opr::Host2DeviceCopy::make(*graph, x);
     auto add_ = opr::Host2DeviceCopy::make(*graph, add);
@@ -693,11 +700,11 @@ TEST(TestMagicMindRuntimeOpr, Profiling) {
     MMNetwork network(cn, magicmind::DataType::FLOAT32, true);
     auto buf = network.get_serialized_model(false);
     const int ni = 8, ci = 64, hi = 32, wi = 32;
-    const int no = 1, co = 64, ho = 32, wo = 32;
+    const int no = 8, co = 64, ho = 32, wo = 32;
 
     HostTensorGenerator<dtype::Float32, RandomDistribution::GAUSSIAN> gen(0, 1);
-    auto x = gen({ni, ci, hi, wi}, cn);
-    auto add = gen({no, co, ho, wo}, cn);
+    auto x = gen({ni, hi, wi, ci}, cn);
+    auto add = gen({no, ho, wo, co}, cn);
 
     auto graph = ComputingGraph::make();
     GraphProfiler profiler{graph.get()};
@@ -708,8 +715,8 @@ TEST(TestMagicMindRuntimeOpr, Profiling) {
     auto out1 = outs[0];
     auto out2 = outs[1];
     graph->options().var_sanity_check_first_run = false;
-    HostTensorND o1(cn, {no, co, ho, wo}, dtype::Float32());
-    HostTensorND o2(cn, {no, co, ho, wo}, dtype::Float32());
+    HostTensorND o1(cn, {no, ho, wo, co}, dtype::Float32());
+    HostTensorND o2(cn, {no, ho, wo, co}, dtype::Float32());
     auto func = graph->compile(
             {make_callback_copy(out1, o1), make_callback_copy(out2, o2)});
     func->execute();
@@ -768,9 +775,9 @@ TEST(TestMagicMindRuntimeOpr, CrossCNCopy) {
             add_output_mlu_ptr, mlu_deleter};
 
     network.infer_model(
-            {conv_input_mlu_ptr, add_output_mlu_ptr},
+            {conv_input_mlu_ptr, add_input_mlu_ptr},
             {relu_output_mlu_ptr, add_output_mlu_ptr},
-            {Dims{{ni, ci, hi, wi}}, Dims{{no, co, ho, wo}}});
+            {Dims{{ni, hi, wi, ci}}, Dims{{no, ho, wo, co}}});
 
     // result memory copy cnml->cpu
     // memory copy cpu->mlu
@@ -784,9 +791,9 @@ TEST(TestMagicMindRuntimeOpr, CrossCNCopy) {
     auto cn_cpu = CompNode::load("cpu0");
     auto buf = network.get_serialized_model(false);
     auto x = std::make_shared<HostTensorND>(
-            cn_cpu, TensorLayout{{ni, ci, hi, wi}, dtype::Float32()});
+            cn_cpu, TensorLayout{{ni, hi, wi, ci}, dtype::Float32()});
     auto add = std::make_shared<HostTensorND>(
-            cn_cpu, TensorLayout{{no, co, ho, wo}, dtype::Float32()});
+            cn_cpu, TensorLayout{{no, ho, wo, co}, dtype::Float32()});
     std::memcpy(
             reinterpret_cast<void*>(x->ptr<dt_float32>()), conv_input_cpu_data.data(),
             conv_input_count * sizeof(float));
@@ -802,13 +809,13 @@ TEST(TestMagicMindRuntimeOpr, CrossCNCopy) {
             reinterpret_cast<const void*>(buf.data()), buf.size(), {x_, add_});
     auto out1 = outs[0];
     auto out2 = outs[1];
-    HostTensorND o1(cn, {no, co, ho, wo}, dtype::Float32());
-    HostTensorND o2(cn, {no, co, ho, wo}, dtype::Float32());
+    HostTensorND o1(CompNode::default_cpu(), {no, ho, wo, co}, dtype::Float32());
+    HostTensorND o2(CompNode::default_cpu(), {no, ho, wo, co}, dtype::Float32());
     auto func = graph->compile(
             {make_callback_copy(out1, o1), make_callback_copy(out2, o2)});
     func->execute();
-    HostTensorND o1_mm(cn, {no, co, ho, wo}, dtype::Float32()),
-            o2_mm(cn, {no, co, ho, wo}, dtype::Float32());
+    HostTensorND o1_mm(cn, {no, ho, wo, co}, dtype::Float32()),
+            o2_mm(cn, {no, ho, wo, co}, dtype::Float32());
     std::memcpy(
             o1_mm.ptr<float>(), relu_output_cpu_data.data(),
             relu_output_count * sizeof(float));
