@@ -10,7 +10,6 @@
  */
 
 #include "megbrain/cambricon/magicmind_runtime_opr.h"
-#include <sstream>
 #include "megbrain/common.h"
 #include "megbrain/comp_node_env.h"
 
@@ -19,16 +18,6 @@
 using namespace mgb;
 using namespace opr;
 using namespace magicmind;
-
-#define MM_CHECK(stmt)                                                               \
-    do {                                                                             \
-        auto ret = (stmt);                                                           \
-        if (ret != magicmind::Status::OK()) {                                        \
-            std::ostringstream msg;                                                  \
-            msg << ret;                                                              \
-            mgb_throw(MegBrainError, "mm failure(extra msg:%s)", msg.str().c_str()); \
-        }                                                                            \
-    } while (0)
 
 namespace {
 Dims mgb_shape_to_mm_dims(TensorShape mgb_shp) {
@@ -390,7 +379,6 @@ SymbolVarArray MagicMindRuntimeOpr::make(
     model->DeserializeFromMemory(const_cast<void*>(buf), size);
     return make(std::move(model), std::move(cambricon_allocator), src, config);
 }
-#undef MM_CHECK
 
 #endif  // MGB_CAMBRICON
 

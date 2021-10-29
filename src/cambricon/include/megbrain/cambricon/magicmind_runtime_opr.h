@@ -16,7 +16,18 @@
 
 #if MGB_CAMBRICON
 
+#include <sstream>
 #include "interface_runtime.h"
+
+#define MM_CHECK(stmt)                                                               \
+    do {                                                                             \
+        auto ret = (stmt);                                                           \
+        if (ret != magicmind::Status::OK()) {                                        \
+            std::ostringstream msg;                                                  \
+            msg << ret;                                                              \
+            mgb_throw(MegBrainError, "mm failure(extra msg:%s)", msg.str().c_str()); \
+        }                                                                            \
+    } while (0)
 
 namespace mgb {
 namespace opr {

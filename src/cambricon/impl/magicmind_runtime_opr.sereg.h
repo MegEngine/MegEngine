@@ -9,22 +9,11 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-#include <sstream>
 #include "megbrain/cambricon/magicmind_runtime_opr.h"
 #include "megbrain/serialization/sereg.h"
 
 namespace mgb {
 namespace serialization {
-
-#define MM_CHECK(stmt)                                                               \
-    do {                                                                             \
-        auto ret = (stmt);                                                           \
-        if (ret != magicmind::Status::OK()) {                                        \
-            std::ostringstream msg;                                                  \
-            msg << ret;                                                              \
-            mgb_throw(MegBrainError, "mm failure(extra msg:%s)", msg.str().c_str()); \
-        }                                                                            \
-    } while (0)
 
 template <>
 struct OprLoadDumpImpl<opr::MagicMindRuntimeOpr, 0> {
@@ -70,7 +59,6 @@ cg::OperatorNodeBase* opr_shallow_copy_magicmind_runtime_opr(
 MGB_SEREG_OPR(MagicMindRuntimeOpr, 0);
 MGB_REG_OPR_SHALLOW_COPY(MagicMindRuntimeOpr, opr_shallow_copy_magicmind_runtime_opr);
 
-#undef MM_CHECK
 }  // namespace opr
 }  // namespace mgb
 
