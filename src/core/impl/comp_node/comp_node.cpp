@@ -154,11 +154,17 @@ CompNode::Locator CompNode::Locator::parse(const std::string& id) {
 
     // parse dev_type
             if (ptr[0] == 'a') {
-        if (strncmp(ptr, "atlas", 5)) {
-            err();
-        }
-        dev_type = DeviceType::ATLAS;
-        ptr += 5;
+#if MGB_MC20
+        if (strncmp(ptr, "ax", 2) == 0) {
+            dev_type = DeviceType::AX;
+            ptr += 2;
+        } else {
+#endif
+            if (strncmp(ptr, "atlas", 5)) {
+                err();
+            }
+            dev_type = DeviceType::ATLAS;
+            ptr += 5;
     }
     else if (ptr[0] == 'r') {
         if (strncmp(ptr, "rocm", 4)) {
@@ -173,11 +179,11 @@ CompNode::Locator CompNode::Locator::parse(const std::string& id) {
         dev_type = DeviceType::CAMBRICON;
         ptr += 9;
     } else if (ptr[0] == 'm') {
-                if (strncmp(ptr, "multithread", 11)) {
-                    err();
-                }
-                dev_type = DeviceType::MULTITHREAD;
-                ptr += 11;
+            if (strncmp(ptr, "multithread", 11)) {
+                err();
+            }
+            dev_type = DeviceType::MULTITHREAD;
+            ptr += 11;
     }
     else {
         if (ptr[1] != 'p' || ptr[2] != 'u') {
