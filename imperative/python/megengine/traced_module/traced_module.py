@@ -2078,9 +2078,7 @@ class TracedModule(Module):
 
                 for node, repl_node in repl_dict.items():
                     assert node in graph._inputs or node in graph._outputs
-                    for i in node.users:
-                        if i not in repl_node.users:
-                            repl_node.users.append(i)
+                    repl_node.users.extend(node.users)
 
                 rename_blacklist = list(chain(call.inputs, call.outputs))
 
