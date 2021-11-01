@@ -492,6 +492,36 @@ SmallVector<std::unique_ptr<AsyncExecutable>> ComputingGraphImpl::compile_multi_
 #endif
 }
 
+void ComputingGraphImpl::dest_var_optimize(VarNodeArray& dest_vars) {
+    using F = VarNode::Flag;
+    if (dest_vars[0]->owner_graph()->options().force_output_dynamic_alloc) {
+        for (auto&& i : dest_vars) {
+            if (!i->contain_flag(F::NO_SYS_MEM_ALLOC | F::NO_SYS_STATIC_MEM_ALLOC)) {
+                mgb_assert(
+                        !i->contain_flag(F::DISALLOW_RT_FORCE_DYNAMIC_MEM_ALLOC),
+                        "Can not force graph output dynamic alloc with "
+                        "DISALLOW_RT_FORCE_DYNAMIC_MEM_ALLOC flag, var: %s",
+                        i->cname());
+                i->add_flag(F::NO_SYS_STATIC_MEM_ALLOC);
+            }
+            i->add_flag(F::NO_MEM_RECLAIM);
+        }
+    }
+    if (dest_vars[0]->owner_graph()->options().force_output_write_to_user_memory) {
+        for (auto&& i : dest_vars) {
+            mgb_assert(
+                    !i->contain_flag(F::RT_FORCE_DYNAMIC_MEM_ALLOC),
+                    "var %s with force dynamic allocate should be set to write output "
+                    "to "
+                    "user memory",
+                    i->cname());
+            i->add_flag(
+                    F::NO_SYS_MEM_ALLOC | F::NO_SYS_STATIC_MEM_ALLOC |
+                    F::NO_MEM_RECLAIM);
+        }
+    }
+}
+
 ComputingGraphImpl::CompileState ComputingGraphImpl::compile_prepare(
         const OutputSpec& out_spec) {
     auto&& cmpnt = components();
@@ -620,21 +650,7 @@ ComputingGraphImpl::CompileState ComputingGraphImpl::compile_prepare(
         std::unordered_map<
                 CallbackCallerKey, CallbackCallerVal, CallbackCallerKey::Hash>
                 opr2vars;
-        using F = VarNode::Flag;
-        if (dest_vars[0]->owner_graph()->options().force_output_dynamic_alloc) {
-            for (auto&& i : dest_vars) {
-                if (!i->contain_flag(
-                            F::NO_SYS_MEM_ALLOC | F::NO_SYS_STATIC_MEM_ALLOC)) {
-                    mgb_assert(
-                            !i->contain_flag(F::DISALLOW_RT_FORCE_DYNAMIC_MEM_ALLOC),
-                            "Can not force graph output dynamic alloc with "
-                            "DISALLOW_RT_FORCE_DYNAMIC_MEM_ALLOC flag, var: %s",
-                            i->cname());
-                    i->add_flag(F::NO_SYS_STATIC_MEM_ALLOC);
-                }
-                i->add_flag(F::NO_MEM_RECLAIM);
-            }
-        }
+        dest_var_optimize(dest_vars);
         for (size_t i = 0; i < out_spec.size(); ++i) {
             auto&& cb = out_spec[i].second;
             if (cb) {

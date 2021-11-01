@@ -417,6 +417,12 @@ public:
          */
         bool force_output_dynamic_alloc = false;
 
+        /*!
+         * Force the output to be written to the user specified memory, which
+         * can optimize the copy of output data at one time
+         */
+        bool force_output_write_to_user_memory = false;
+
         //! whether to perform var sanity check on first run
         bool var_sanity_check_first_run = true;
 

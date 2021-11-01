@@ -142,6 +142,9 @@ class ComputingGraphImpl final : public ComputingGraph {
     //! finalize the computing sequence for compiling
     std::unique_ptr<AsyncExecutable> compile_commit(CompileState state);
 
+    //! process the dest var optimization
+    void dest_var_optimize(VarNodeArray& dest_vars);
+
 public:
     class ComputingSequence;
 
