@@ -507,13 +507,12 @@ void ComputingGraphImpl::dest_var_optimize(VarNodeArray& dest_vars) {
             i->add_flag(F::NO_MEM_RECLAIM);
         }
     }
-    if (dest_vars[0]->owner_graph()->options().force_output_write_to_user_memory) {
+    if (dest_vars[0]->owner_graph()->options().force_output_use_user_specified_memory) {
         for (auto&& i : dest_vars) {
             mgb_assert(
                     !i->contain_flag(F::RT_FORCE_DYNAMIC_MEM_ALLOC),
-                    "var %s with force dynamic allocate should be set to write output "
-                    "to "
-                    "user memory",
+                    "var %s with RT_FORCE_DYNAMIC_MEM_ALLOC flag should not set "
+                    "force write output to user memory",
                     i->cname());
             i->add_flag(
                     F::NO_SYS_MEM_ALLOC | F::NO_SYS_STATIC_MEM_ALLOC |

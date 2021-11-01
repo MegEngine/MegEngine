@@ -574,6 +574,10 @@ MemAllocPlan& VarNode::init_mem_plan(const DeviceTensorND* fixed_alloc) {
     return m_mem_plan;
 }
 
+bool VarNode::is_graph_dest_varnode() {
+    return ComputingGraphImpl::downcast(owner_graph())->var_receiver(this).size() == 0;
+}
+
 VarNode& VarNode::add_flag(Flag flag) {
     modify_flag(flag, m_flag | flag);
     return *this;
@@ -582,10 +586,13 @@ VarNode& VarNode::add_flag(Flag flag) {
 void VarNode::modify_flag(Flag delta, Flag new_flag) {
     if (contain_flag(Flag::FLAG_FREEZED)) {
         mgb_assert(
-                (delta & (Flag::NO_SYS_MEM_ALLOC | Flag::NO_MEM_RECLAIM |
-                          Flag::NO_SYS_STATIC_MEM_ALLOC |
-                          Flag::RT_FORCE_DYNAMIC_MEM_ALLOC)) == delta ||
-                (new_flag & Flag::MEMORY_NO_NEED));
+                (delta & (Flag::NO_MEM_RECLAIM | Flag::NO_SYS_STATIC_MEM_ALLOC |
+                          Flag::RT_FORCE_DYNAMIC_MEM_ALLOC | Flag::MEMORY_NO_NEED)) ==
+                                delta ||
+                        is_graph_dest_varnode(),
+                "After the FLAG_FREEZED flag setting, var can only modify "
+                "NO_MEM_RECLAIM, NO_SYS_STATIC_MEM_ALLOC, RT_FORCE_DYNAMIC_MEM_ALLOC, "
+                "MEMORY_NO_NEED flag except graph dest var.");
 
         mgb_assert(
                 !ComputingGraphImpl::downcast(owner_graph())

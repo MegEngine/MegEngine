@@ -12,6 +12,7 @@
 #pragma once
 
 #include "lite_build_config.h"
+#include "megbrain/graph.h"
 
 #if LITE_BUILD_WITH_MGE
 #include "lite/network.h"
@@ -41,6 +42,7 @@ class NetworkImplDft final : public Network::NetworkImplBase {
 public:
     NetworkImplDft() { m_load_config.comp_graph = mgb::ComputingGraph::make(); }
     using S = megdnn::param::ExecutionPolicy::Strategy;
+    using Var = mgb::cg::SymbolVar;
     //! set the config of the network, include:
     //! the inference device
     //! the other inference options, such as record_level, weight_preprocess...
@@ -207,8 +209,10 @@ private:
     void compile_graph();
 
     //! try to infer output tensor layout
-    void try_infer_tensor_layout(
-            std::shared_ptr<Tensor> tensor, mgb::cg::SymbolVar var);
+    void try_infer_tensor_layout(std::shared_ptr<Tensor> tensor, Var var);
+
+    //! optimized output tensor copy
+    void output_tensor_copy_optimize(Var var, std::shared_ptr<Tensor> tensor);
 
 private:
     bool m_async = false;

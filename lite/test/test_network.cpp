@@ -397,6 +397,73 @@ TEST(TestNetWork, ResetOutput) {
     compare_lite_tensor<float>(output_tensor, result_mgb);
 }
 
+TEST(TestNetWork, OutputNoCopy) {
+    Config config;
+    config.options.force_output_use_user_specified_memory = true;
+    auto tensor = get_input_data("./input_data.npy");
+    std::string model_path = "./shufflenet.mge";
+    std::string input_name = "data";
+    auto result_mgb = mgb_lar(model_path, config, input_name, tensor);
+
+    std::shared_ptr<Network> network = std::make_shared<Network>(config);
+
+    network->load_model(model_path);
+    std::shared_ptr<Tensor> input_tensor = network->get_io_tensor(input_name);
+
+    auto src_ptr = tensor->get_memory_ptr();
+    auto src_layout = tensor->get_layout();
+    input_tensor->reset(src_ptr, src_layout);
+
+    std::shared_ptr<Tensor> output_tensor = network->get_output_tensor(0);
+    size_t times = 5;
+    std::vector<std::shared_ptr<Tensor>> result_tensors;
+    for (size_t i = 0; i < times; i++) {
+        auto tmp = std::make_shared<Tensor>(
+                LiteDeviceType::LITE_CPU,
+                Layout{{1, 1000}, 2, LiteDataType::LITE_FLOAT});
+        result_tensors.push_back(tmp);
+    }
+
+    for (size_t i = 0; i < times; i++) {
+        void* out_data = result_tensors[i]->get_memory_ptr();
+        output_tensor->reset(out_data, result_tensors[i]->get_layout());
+
+        network->forward();
+        network->wait();
+        ASSERT_EQ(output_tensor->get_memory_ptr(), out_data);
+        compare_lite_tensor<float>(output_tensor, result_mgb);
+    }
+    for (size_t i = 0; i < times; i++) {
+        compare_lite_tensor<float>(result_tensors[i], result_mgb);
+    }
+}
+
+TEST(TestNetWork, OutputDynamicAlloc) {
+    Config config;
+    config.options.force_output_dynamic_alloc = true;
+    auto tensor = get_input_data("./input_data.npy");
+    std::string model_path = "./shufflenet.mge";
+    std::string input_name = "data";
+    auto result_mgb = mgb_lar(model_path, config, input_name, tensor);
+
+    std::shared_ptr<Network> network = std::make_shared<Network>(config);
+
+    network->load_model(model_path);
+    std::shared_ptr<Tensor> input_tensor = network->get_io_tensor(input_name);
+
+    auto src_ptr = tensor->get_memory_ptr();
+    auto src_layout = tensor->get_layout();
+    input_tensor->reset(src_ptr, src_layout);
+
+    std::shared_ptr<Tensor> output_tensor = network->get_output_tensor(0);
+    size_t times = 5;
+    for (size_t i = 0; i < times; i++) {
+        network->forward();
+        network->wait();
+        compare_lite_tensor<float>(output_tensor, result_mgb);
+    }
+}
+
 TEST(TestNetWork, AsyncExec) {
     Config config;
     config.options.var_sanity_check_first_run = false;

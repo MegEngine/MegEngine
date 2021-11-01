@@ -29,6 +29,7 @@ class LiteOptions(Structure):
         ("const_shape", c_int),
         ("force_dynamic_alloc", c_int),
         ("force_output_dynamic_alloc", c_int),
+        ("force_output_use_user_specified_memory", c_int),
         ("no_profiling_on_shape_change", c_int),
         ("jit_level", c_int),
         ("comp_node_seq_record_level", c_int),
@@ -52,6 +53,7 @@ class LiteOptions(Structure):
         self.const_shape = False
         self.force_dynamic_alloc = False
         self.force_output_dynamic_alloc = False
+        self.force_output_use_user_specified_memory = False
         self.no_profiling_on_shape_change = False
         self.jit_level = 0
         self.comp_node_seq_record_level = 0
@@ -67,6 +69,7 @@ class LiteOptions(Structure):
             "const_shape": bool(self.const_shape),
             "force_dynamic_alloc": bool(self.force_dynamic_alloc),
             "force_output_dynamic_alloc": bool(self.force_output_dynamic_alloc),
+            "force_output_nocopy": bool(self.force_output_nocopy),
             "no_profiling_on_shape_change": bool(self.no_profiling_on_shape_change),
             "jit_level": self.jit_level,
             "comp_node_seq_record_level": self.comp_node_seq_record_level,

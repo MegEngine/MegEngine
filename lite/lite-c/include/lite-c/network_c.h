@@ -83,6 +83,7 @@ typedef struct Options {
     int const_shape;
     int force_dynamic_alloc;
     int force_output_dynamic_alloc;
+    int force_output_use_user_specified_memory;
     int no_profiling_on_shape_change;
     int jit_level;
     int comp_node_seq_record_level;

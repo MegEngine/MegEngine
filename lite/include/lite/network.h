@@ -93,6 +93,7 @@ struct LITE_API Options {
     bool const_shape = false;
     bool force_dynamic_alloc = false;
     bool force_output_dynamic_alloc = false;
+    bool force_output_use_user_specified_memory = false;
     bool no_profiling_on_shape_change = false;
     uint8_t jit_level = 0;
     uint8_t comp_node_seq_record_level = 0;

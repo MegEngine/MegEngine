@@ -84,6 +84,9 @@ void NetworkImplDft::application_config() {
     m_load_config.const_var_shape = m_user_config->options.const_shape;
     ConfigOption(force_dynamic_alloc, force_dynamic_alloc);
     ConfigOption(force_output_dynamic_alloc, force_output_dynamic_alloc);
+    ConfigOption(
+            force_output_use_user_specified_memory,
+            force_output_use_user_specified_memory);
     ConfigOption(no_profiling_on_shape_change, no_profiling_on_shape_change);
     LITE_ASSERT(
             m_user_config->options.jit_level == 0 ||
@@ -250,7 +253,13 @@ void NetworkImplDft::make_output_spec() {
                     }
                 }
             };
-            m_output_spec.emplace_back(load_out, std::move(cb));
+            //! if write to user-specified memory, the CallbackCaller must be nullptr.
+            if (m_user_config->options.force_output_use_user_specified_memory ||
+                m_user_config->options.force_output_dynamic_alloc) {
+                m_output_spec.emplace_back(load_out, nullptr);
+            } else {
+                m_output_spec.emplace_back(load_out, std::move(cb));
+            }
         } else {
             LITE_THROW(ssprintf("no output named : %s in the mode", out.name.c_str()));
         }
@@ -444,8 +453,7 @@ void NetworkImplDft::set_io(const NetworkIO& network_io) {
     }
 }
 
-void NetworkImplDft::try_infer_tensor_layout(
-        std::shared_ptr<Tensor> tensor, mgb::cg::SymbolVar var) {
+void NetworkImplDft::try_infer_tensor_layout(std::shared_ptr<Tensor> tensor, Var var) {
     auto&& static_infer_mgr = m_load_config.comp_graph->static_infer_manager();
     auto infer_trait = var.node()->get_static_infer_trait();
     if (std::get<0>(infer_trait)) {
@@ -455,9 +463,13 @@ void NetworkImplDft::try_infer_tensor_layout(
                     "Lite infer output shape failed, maybe the model is "
                     "dynamic "
                     "shape.\n");
+            LITE_ASSERT(
+                    !m_user_config->options.force_output_use_user_specified_memory,
+                    "force_output_use_user_specified_memory can't be used when output "
+                    "shape can't be derived.");
             return;
         }
-        Layout layout = to_lite_layout(mgb::TensorLayout{*shape, var.dtype()});
+        Layout layout = to_lite_layout(TensorLayout{*shape, var.dtype()});
         tensor->set_layout(layout);
     }
 }
@@ -559,8 +571,7 @@ void NetworkImplDft::update_output() {
          out_it != m_network_io->outputs.end();) {
         if (std::find_if(
                     m_load_result.output_var_list.begin(),
-                    m_load_result.output_var_list.end(),
-                    [out_it](const mgb::SymbolVar var) {
+                    m_load_result.output_var_list.end(), [out_it](const SymbolVar var) {
                         return var.node()->name() == out_it->name;
                     }) == m_load_result.output_var_list.end()) {
             LITE_LOG("%s is not the network output, ignore it.", out_it->name.c_str());
@@ -584,7 +595,7 @@ void NetworkImplDft::update_output() {
                 out_it->lite_tensor =
                         std::make_shared<Tensor>(device_id, stream_id, device_type);
             }
-            mgb::SymbolVar var;
+            SymbolVar var;
             for (auto&& out_var : m_load_result.output_var_list) {
                 if (out_var.node()->name() == out_it->name) {
                     var = out_var;
@@ -592,10 +603,12 @@ void NetworkImplDft::update_output() {
                 }
             }
             try_infer_tensor_layout(out_it->lite_tensor, var);
+            output_tensor_copy_optimize(var, out_it->lite_tensor);
         }
         //! user not set, use default output
     } else {
         for (auto&& out : m_load_result.output_var_list) {
+            std::shared_ptr<Tensor> lite_tensor = nullptr;
             auto it = std::find_if(
                     m_network_io->outputs.begin(), m_network_io->outputs.end(),
                     [&out](const IOInner io) { return io.name == out.node()->name(); });
@@ -608,6 +621,7 @@ void NetworkImplDft::update_output() {
                             std::make_shared<Tensor>(device_id, stream_id, device_type);
                 }
                 try_infer_tensor_layout(it->lite_tensor, out);
+                lite_tensor = it->lite_tensor;
             } else {
                 IOInner output;
                 output.name = out.node()->name();
@@ -615,8 +629,44 @@ void NetworkImplDft::update_output() {
                         device_id, stream_id, device_type, true);
                 m_network_io->outputs.push_back({output});
                 try_infer_tensor_layout(output.lite_tensor, out);
+                lite_tensor = output.lite_tensor;
             }
+            output_tensor_copy_optimize(out, lite_tensor);
         }
+    }
+}
+
+void NetworkImplDft::output_tensor_copy_optimize(
+        Var var, std::shared_ptr<Tensor> tensor) {
+    LITE_ASSERT(
+            !(m_user_config->options.force_output_use_user_specified_memory &&
+              m_user_config->options.force_output_dynamic_alloc),
+            "Can't set force_output_use_user_specified_memory and "
+            "force_output_dynamic_alloc at the same time.");
+    if (m_user_config->options.force_output_use_user_specified_memory) {
+        TensorHelper::implement(tensor)
+                ->cast_final_safe<TensorImplDft>()
+                .set_reset_callback([var](TensorImplDft* dft_tensor) {
+                    dft_tensor->device_share_host_memory();
+                    auto dv = dft_tensor->dev_tensor().get();
+                    dv->comp_node(var.node()->comp_node(), true);
+                    var.node()->init_mem_plan(dv);
+                    var.node()->reset_dev_tensor_from_tensor(*dv);
+                });
+    }
+    if (m_user_config->options.force_output_dynamic_alloc) {
+        TensorHelper::implement(tensor)
+                ->cast_final_safe<TensorImplDft>()
+                .set_get_memory_callback([var](TensorImplDft* dft_tensor) {
+                    if (dft_tensor->is_host()) {
+                        auto host_tensor = dft_tensor->m_host_tensor;
+                        *host_tensor =
+                                HostTensorND::make_proxy(var.node()->dev_tensor());
+                    } else {
+                        auto dev_tensor = dft_tensor->m_dev_tensor;
+                        *dev_tensor = var.node()->dev_tensor();
+                    }
+                });
     }
 }
 

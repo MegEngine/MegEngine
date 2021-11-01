@@ -29,6 +29,7 @@ const LiteOptions default_option = {
         .const_shape = false,
         .force_dynamic_alloc = false,
         .force_output_dynamic_alloc = false,
+        .force_output_use_user_specified_memory = false,
         .no_profiling_on_shape_change = false,
         .jit_level = 0,
         .comp_node_seq_record_level = 0,
@@ -122,7 +123,9 @@ lite::Config convert_to_lite_config(const LiteConfig c_config) {
     lite_config.options.var_sanity_check_first_run =
             c_config.options.var_sanity_check_first_run;
     lite_config.options.const_shape = c_config.options.const_shape;
-    lite_config.options.force_dynamic_alloc = c_config.options.const_shape;
+    lite_config.options.force_dynamic_alloc = c_config.options.force_dynamic_alloc;
+    lite_config.options.force_output_use_user_specified_memory =
+            c_config.options.force_output_use_user_specified_memory;
     lite_config.options.force_output_dynamic_alloc =
             c_config.options.force_output_dynamic_alloc;
     lite_config.options.no_profiling_on_shape_change =

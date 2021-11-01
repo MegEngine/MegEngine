@@ -153,6 +153,10 @@ std::shared_ptr<Tensor> Network::get_output_tensor(size_t index) {
 
 Network& Network::set_async_callback(const AsyncCallback& callback) {
     LITE_ERROR_HANDLER_BEGIN
+    LITE_ASSERT(
+            !m_config.options.force_output_use_user_specified_memory,
+            "Async mode can't run with force_output_use_user_specified_memory which "
+            "output data is written to use specific memory.");
     LITE_CHECK_NON_NULL_POINTER(m_impl);
     m_impl->set_async_callback(std::move(callback));
     return *this;

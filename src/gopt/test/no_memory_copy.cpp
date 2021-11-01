@@ -82,7 +82,7 @@ TEST(TestNoCopy, BasicInputNoCopy) {
 TEST(TestNoCopy, IONoCopyPtrEQ) {
     auto test_graph = TestGraph();
     auto compute_graph = test_graph.m_network->graph;
-    compute_graph->options().force_output_write_to_user_memory = true;
+    compute_graph->options().force_output_use_user_specified_memory = true;
     test_graph.create_graph();
     auto func = test_graph.compile_without_copy();
     auto&& outvar = func->get_output_vars()[0];
@@ -123,7 +123,7 @@ TEST(TestNoCopy, IONoCopyPtrEQ) {
 TEST(TestNoCopy, IONoCopyCorrect) {
     auto test_graph = TestGraph();
     auto compute_graph = test_graph.m_network->graph;
-    compute_graph->options().force_output_write_to_user_memory = true;
+    compute_graph->options().force_output_use_user_specified_memory = true;
     test_graph.create_graph();
     HostTensorND truth;
     auto func = test_graph.compile_without_copy();

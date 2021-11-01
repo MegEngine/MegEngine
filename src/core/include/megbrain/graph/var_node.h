@@ -549,6 +549,10 @@ private:
 
     MGE_WIN_DECLSPEC_FUC void modify_flag(Flag delta, Flag new_flag);
 
+    //! whether the var is graph output, if it is output, the Flag of
+    //! NO_SYS_MEM_ALLOC can be modified.
+    bool is_graph_dest_varnode();
+
     MGE_WIN_DECLSPEC_FUC void assign_dev_tensor_from_tensor(
             const DeviceTensorND& value);
 

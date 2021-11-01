@@ -97,10 +97,21 @@ public:
 
     //! get host tensor
     std::shared_ptr<mgb::HostTensorND> host_tensor() const { return m_host_tensor; }
+
     //! get device tensor
     std::shared_ptr<mgb::DeviceTensorND> dev_tensor() const { return m_dev_tensor; }
+
     //! copy from mgb tensor
     void copy_from_mge_tensor(const mgb::DeviceTensorND& dv);
+
+    //! set tensor reset callback
+    void set_reset_callback(const std::function<void(TensorImplDft*)>& cb);
+
+    //! set tensor get memory callback
+    void set_get_memory_callback(const std::function<void(TensorImplDft*)>& cb);
+
+    //! shared the same memory with host and device tensor
+    void device_share_host_memory();
 
 public:
     friend class NetworkImplDft;
@@ -115,6 +126,8 @@ private:
     void set_mge_tensor_compnode(const mgb::CompNode& comp_node);
 
 private:
+    std::function<void(TensorImplDft*)> m_get_memory_callback;
+    std::function<void(TensorImplDft*)> m_reset_callback;
     std::shared_ptr<mgb::HostTensorND> m_host_tensor;
     std::shared_ptr<mgb::DeviceTensorND> m_dev_tensor;
 };
