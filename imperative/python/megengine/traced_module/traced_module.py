@@ -293,19 +293,10 @@ class _InsertExprs:
 
         module = self.graph.inputs[0].owner
 
-        for mod, parent in module.modules(with_parent=True):
-            name = mod._name
-            if isinstance(mod, TracedModuleBuilder):
-                mod = mod.build()
-                if hasattr(mod, "argdef_graph_map"):
-                    for g in mod.argdef_graph_map.values():
-                        for n in g.nodes(False):
-                            if isinstance(n, TensorNode):
-                                n.value = None
-                setattr(parent, name, mod)
-
-        for node in self.global_scope.nodes(False):
-            node.value = None
+        for k, v in module.__dict__.items():
+            if isinstance(v, TracedModuleBuilder):
+                v = v.build()
+                setattr(module, k, v)
 
         extra_inp_nodes = set(self.global_scope.inputs)
         max_inp_expr_idx = -1
@@ -334,6 +325,9 @@ class _InsertExprs:
         self.graph._namespace.merge(self.global_scope._namespace)
         self.root_graph._total_ids = (Node._get_next_id(), Expr._get_next_id())
         self.root_graph.inputs[0].owner._update_ref()
+        for node in self.root_graph.nodes():
+            if isinstance(node, TensorNode):
+                node.value = None
         return True
 
 
@@ -1519,6 +1513,7 @@ class TracedModuleBuilder(NodeMixin):
                 return active_module_tracer().patcher.wrap_fn(attr)
 
             if isinstance(attr, (List, Dict)):
+                flag = _set_convert_node_flag(False)
                 unset_module_tracing()
                 has_module, m_container = replace_container_with_module_container(attr)
                 if m_container:
@@ -1529,6 +1524,7 @@ class TracedModuleBuilder(NodeMixin):
                         " Module and Non-Module objects."
                     )
                 set_module_tracing()
+                _set_convert_node_flag(flag)
 
             if isinstance(attr, Module):
                 attr = TracedModuleBuilder(attr)
