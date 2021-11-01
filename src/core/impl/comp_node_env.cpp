@@ -390,7 +390,11 @@ void CompNodeEnv::init_cnrt(
     MGB_CNRT_CHECK(cnrtGetDeviceInfo(&m_cnrt_env.device_info, dev));
     // FIXME: doc doesn't describe the aligment requirement for device memory
     // address
+#if CNRT_MAJOR_VERSION >= 5
+    m_property.mem_alignment = 256u;
+#else
     m_property.mem_alignment = 1u;
+#endif
     // ensure exception safe
     bool queue_created = false;
     MGB_MARK_USED_VAR(queue_created);

@@ -13,6 +13,7 @@ from ..functional.external import (
     atlas_runtime_opr,
     cambricon_runtime_opr,
     extern_opr_subgraph,
+    magicmind_runtime_opr,
     tensorrt_runtime_opr,
 )
 from .module import Module
@@ -131,6 +132,7 @@ class AtlasRuntimeSubgraph(Module):
     def forward(self, *inputs):
         return atlas_runtime_opr(inputs, data=self._data)
 
+
 class MagicMindRuntimeSubgraph(Module):
     r"""Load a serialized MagicMindRuntime subgraph.
     
@@ -151,6 +153,3 @@ class MagicMindRuntimeSubgraph(Module):
 
     def forward(self, *inputs):
         return magicmind_runtime_opr(inputs, data=self._data)
-
-
-
