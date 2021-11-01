@@ -30,7 +30,7 @@ def main():
     parser.add_argument("--input", help="mace model file")
     parser.add_argument("--param", help="mace param file")
     parser.add_argument(
-        "--output", help="converted model that can be fed to dump_with_testcase_mge.py"
+        "--output", help="converted mge model"
     )
     parser.add_argument("--config", help="config file with yaml format")
     args = parser.parse_args()
