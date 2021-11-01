@@ -267,7 +267,7 @@ void MagicMindRuntimeOpr::get_output_var_shape(
         mgb_assert(
                 tensor != nullptr, "failed to find input tensor(name:%s)",
                 iname.c_str());
-        MM_CHECK(tensor->SetDimensions(mgb_shape_to_mm_dims(input(i)->shape())));
+        MM_CHECK(tensor->SetDimensions(mgb_shape_to_mm_dims(inp_shape[i])));
     }
     if (Status::OK() == m_context->InferOutputShape(inputs, outputs)) {
         size_t nr_outputs = output().size();
@@ -283,7 +283,7 @@ void MagicMindRuntimeOpr::get_output_var_shape(
         }
         std::vector<Dims> shape(inp_shape.size());
         for (size_t i = 0; i < nr_inputs; ++i) {
-            shape[i] = mgb_shape_to_mm_dims(input(i)->shape());
+            shape[i] = mgb_shape_to_mm_dims(inp_shape[i]);
         }
         size_t wk_size = 0;
         MM_CHECK(m_engine->QueryContextMaxWorkspaceSize(shape, &wk_size));
