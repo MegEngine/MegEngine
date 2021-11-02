@@ -119,6 +119,28 @@ struct MinOp {
             : INIT(wtype(DTypeTrait<wtype>::max())), src(src), dst(dst), B(B) {}
 };
 
+template <typename src_ctype, typename dst_ctype>
+struct MinOp<src_ctype, dst_ctype, dt_float32> {
+    typedef dt_float32 wtype;
+    const wtype INIT;
+
+    src_ctype* src;
+    dst_ctype* dst;
+    const size_t B;
+
+    MEGDNN_HOST MEGDNN_DEVICE wtype read(uint32_t idx) { return src[idx]; }
+    MEGDNN_HOST MEGDNN_DEVICE void write(uint32_t idx, wtype val) { dst[idx] = val; }
+    static MEGDNN_HOST MEGDNN_DEVICE wtype apply(wtype lhs, wtype rhs) {
+#if defined(__CUDA_ARCH__)
+        return (isnan(lhs) || lhs < rhs) ? lhs : rhs;
+#else
+        return (std::isnan(lhs) || lhs < rhs) ? lhs : rhs;
+#endif
+    }
+    MEGDNN_HOST MEGDNN_DEVICE MinOp(src_ctype* src, dst_ctype* dst, size_t B)
+            : INIT(wtype(DTypeTrait<wtype>::max())), src(src), dst(dst), B(B) {}
+};
+
 template <typename src_ctype, typename dst_ctype, typename wtype_>
 struct MaxOp {
     typedef wtype_ wtype;
@@ -135,6 +157,28 @@ struct MaxOp {
         return lhs > rhs ? lhs : rhs;
 #else
         return std::max(lhs, rhs);
+#endif
+    }
+    MEGDNN_HOST MEGDNN_DEVICE MaxOp(src_ctype* src, dst_ctype* dst, size_t B)
+            : INIT(wtype(DTypeTrait<wtype>::min())), src(src), dst(dst), B(B) {}
+};
+
+template <typename src_ctype, typename dst_ctype>
+struct MaxOp<src_ctype, dst_ctype, dt_float32> {
+    typedef dt_float32 wtype;
+    const wtype INIT;
+
+    src_ctype* src;
+    dst_ctype* dst;
+    const size_t B;
+
+    MEGDNN_HOST MEGDNN_DEVICE wtype read(uint32_t idx) { return src[idx]; }
+    MEGDNN_HOST MEGDNN_DEVICE void write(uint32_t idx, wtype val) { dst[idx] = val; }
+    static MEGDNN_HOST MEGDNN_DEVICE wtype apply(wtype lhs, wtype rhs) {
+#if defined(__CUDA_ARCH__)
+        return (isnan(lhs) || lhs > rhs) ? lhs : rhs;
+#else
+        return (std::isnan(lhs) || lhs > rhs) ? lhs : rhs;
 #endif
     }
     MEGDNN_HOST MEGDNN_DEVICE MaxOp(src_ctype* src, dst_ctype* dst, size_t B)

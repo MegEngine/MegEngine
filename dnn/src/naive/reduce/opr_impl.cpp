@@ -73,25 +73,35 @@ const ctype Trait<Mode::PRODUCT, ctype>::INIT = ctype(1);
 
 template <typename ctype>
 struct Trait<Mode::MIN, ctype> {
-    static const ctype INIT;
-
     static ctype apply(ctype x, ctype y) { return x < y ? x : y; }
     static ctype visit(ctype x) { return x; }
     static ctype write(ctype x, size_t) { return x; }
 };
-template <typename ctype>
-const ctype Trait<Mode::MIN, ctype>::INIT = DTypeTrait<ctype>::max();
+
+template <>
+struct Trait<Mode::MIN, dt_float32> {
+    using ctype = dt_float32;
+
+    static ctype apply(ctype x, ctype y) { return (std::isnan(x) || x < y) ? x : y; }
+    static ctype visit(ctype x) { return x; }
+    static ctype write(ctype x, size_t) { return x; }
+};
 
 template <typename ctype>
 struct Trait<Mode::MAX, ctype> {
-    static const ctype INIT;
-
     static ctype apply(ctype x, ctype y) { return x > y ? x : y; }
     static ctype visit(ctype x) { return x; }
     static ctype write(ctype x, size_t) { return x; }
 };
-template <typename ctype>
-const ctype Trait<Mode::MAX, ctype>::INIT = DTypeTrait<ctype>::min();
+
+template <>
+struct Trait<Mode::MAX, dt_float32> {
+    using ctype = dt_float32;
+
+    static ctype apply(ctype x, ctype y) { return (std::isnan(x) || x > y) ? x : y; }
+    static ctype visit(ctype x) { return x; }
+    static ctype write(ctype x, size_t) { return x; }
+};
 
 template <Mode mode, typename ctype>
 void reduce_fwd(

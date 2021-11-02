@@ -26,14 +26,18 @@ struct traits;
 template <>
 struct traits<true> {
     static const float init;
-    static bool better_than(float lhs, float rhs) { return lhs > rhs; }
+    static bool better_than(float lhs, float rhs) {
+        return std::isnan(lhs) ? true : lhs > rhs;
+    }
 };
 const float traits<true>::init = std::numeric_limits<float>::lowest();
 
 template <>
 struct traits<false> {
     static const float init;
-    static float better_than(float lhs, float rhs) { return lhs < rhs; }
+    static float better_than(float lhs, float rhs) {
+        return std::isnan(lhs) ? true : lhs < rhs;
+    }
 };
 const float traits<false>::init = std::numeric_limits<float>::max();
 

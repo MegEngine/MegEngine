@@ -54,6 +54,20 @@ TEST_F(CUDA, REDUCE) {
     // very large reduce
     checker.execs({{1, 4194304, 1}, {}});
 
+    // inputs have nan
+    {
+        const auto nan = std::numeric_limits<float>::quiet_NaN();
+        UniformFloatWithValueRNG rng1 =
+                UniformFloatWithValueRNG(-1.0f, 1.0f, 0.5f, nan);
+        checker.set_allow_invalid_check(true).set_rng(0, &rng1);
+        for (auto mode : {Mode::MIN, Mode::MAX}) {
+            checker.set_param({mode, 1});
+            checker.execs({{2, 64, 32}, {}});
+        }
+        checker.set_allow_invalid_check(false);
+    }
+    checker.set_rng(0, &rng);
+
     auto check = [&](Reduce::Mode mode, DType src_dtype, DType dst_dtype,
                      Reduce::DataType data_type) {
         for (int32_t axis : {0, 1, 2, 3}) {

@@ -21,7 +21,11 @@ def common_test_reduce(opr, ref_opr):
     data2_shape = (2, 9, 12)
     data1 = np.random.random(data1_shape).astype(np.float32)
     data2 = np.random.random(data2_shape).astype(np.float32)
-    cases = [{"input": data1}, {"input": data2}]
+    cases = [
+        {"input": data1},
+        {"input": data2},
+        {"input": np.array([[[1, 2, np.nan, 4], [8, 6, 5, 2], [2, 3, 4, 5]]])},
+    ]
 
     if opr not in (F.argmin, F.argmax):
         # test default axis

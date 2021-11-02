@@ -143,6 +143,11 @@ def test_fakequant():
         assert np.allclose(x.grad.numpy(), x1.grad.numpy())
         assert make_shape_tuple(x.grad.shape) == make_shape_tuple(x1.grad.shape)
 
+        # test nan
+        x = F.full((1, 32, 3, 3), np.nan)
+        y = fake_quant_tensor(x, qparams).numpy()
+        assert np.isnan(y).all()
+
     zero_point = tensor([1.0], dtype=np.float32)
     scale = tensor([4.0], dtype=np.float32)
     run(zero_point, scale)

@@ -30,6 +30,10 @@ struct FakeQuantKernOp {
 
     __device__ void operator()(uint32_t idx, ctype scale, ctype zero_point) {
         ctype x = round(input[idx] / scale) + zero_point;
+        if (isnan(x)) {
+            output[idx] = NAN;
+            return;
+        }
         x = fmaxf(fminf(x, qmax), qmin);
         output[idx] = (x - zero_point) * scale;
     }
@@ -54,7 +58,7 @@ struct FakeQuantBwdKernOp {
 
     __device__ void operator()(uint32_t idx, ctype scale, ctype zero_point) {
         ctype x = round(input[idx] / scale) + zero_point;
-        grad[idx] = x <= qmax && x >= qmin ? diff[idx] : 0.0;
+        grad[idx] = isnan(x) ? NAN : x <= qmax && x >= qmin ? diff[idx] : 0.0;
     }
 
 #if MEGDNN_CC_HOST
@@ -77,6 +81,10 @@ struct FakeQuantKernOpNonContig {
     __device__ void operator()(
             uint32_t, ctype& output, ctype input, ctype scale, ctype zero_point) {
         ctype x = round(input / scale) + zero_point;
+        if (isnan(x)) {
+            output = NAN;
+            return;
+        }
         x = fmaxf(fminf(x, qmax), qmin);
         output = (x - zero_point) * scale;
     }
@@ -96,7 +104,7 @@ struct FakeQuantBwdKernOpNonContig {
             uint32_t, ctype& grad, ctype diff, ctype input, ctype scale,
             ctype zero_point) {
         ctype x = round(input / scale) + zero_point;
-        grad = x <= qmax && x >= qmin ? diff : 0.0;
+        grad = isnan(x) ? NAN : x <= qmax && x >= qmin ? diff : 0.0;
     }
 
 #if MEGDNN_CC_HOST
