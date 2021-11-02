@@ -31,9 +31,10 @@ typedef enum {
     LITE_CUDA = 1,
     LITE_ATLAS = 3,
     LITE_NPU = 4,
+    LITE_CAMBRICON = 5,
     //! when the device information is set in model, so set LITE_DEVICE_DEFAULT
     //! in lite
-    LITE_DEVICE_DEFAULT = 5,
+    LITE_DEVICE_DEFAULT = 6,
 } LiteDeviceType;
 
 typedef enum {

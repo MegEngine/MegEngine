@@ -69,6 +69,8 @@ bool default_parse_info(
             return LiteDeviceType::LITE_CUDA;
         if (type == "ATLAS")
             return LiteDeviceType::LITE_ATLAS;
+        if (type == "CAMBRICON")
+            return LiteDeviceType::LITE_CAMBRICON;
         if (type == "NPU")
             return LiteDeviceType::LITE_NPU;
         else {

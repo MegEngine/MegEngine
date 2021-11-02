@@ -1232,72 +1232,102 @@ TEST(TestNetWork, DeviceAsyncExec) {
 
 #endif
 #endif
-#if MGB_ATLAS
-TEST(TestNetWork, AtlasLoadNoDevice) {
+
+#if MGB_ATLAS || MGB_CAMBRICON
+namespace {
+void load_no_device(LiteDeviceType device_type, const std::string& model_path) {
     lite::Config config;
-    config.device_type = LiteDeviceType::LITE_DEVICE_DEFAULT;
+    config.device_type = device_type;
     auto network = std::make_shared<lite::Network>(config);
-    network->load_model("./model_atlas.mgb");
+    network->load_model(model_path);
     network->forward();
     network->wait();
 }
 
-TEST(TestNetWork, AtlasLoadDeviceInput) {
+void load_device_input(
+        LiteDeviceType device_type, const std::string& model_path,
+        const std::vector<std::string>& inputs) {
     lite::NetworkIO networkio;
     lite::IO input_data_io = {};
-    input_data_io.name = "data";
+    input_data_io.name = inputs[0];
     input_data_io.is_host = false;
     networkio.inputs.emplace_back(input_data_io);
     lite::IO input_input0_io = {};
-    input_input0_io.name = "input0";
+    input_input0_io.name = inputs[1];
     input_input0_io.is_host = false;
     networkio.inputs.emplace_back(input_input0_io);
     lite::Config config;
-    config.device_type = LiteDeviceType::LITE_DEVICE_DEFAULT;
+    config.device_type = device_type;
     auto network = std::make_shared<lite::Network>(config, networkio);
-    network->load_model("./model_atlas.mgb");
+    network->load_model(model_path);
     network->forward();
     network->wait();
 }
 
-TEST(TestNetWork, AtlasLoadAtlas) {
+void load_device_id(
+        LiteDeviceType device_type, int device_id, const std::string& model_path) {
     lite::Config config;
-    config.device_type = LiteDeviceType::LITE_ATLAS;
+    config.device_type = device_type;
     auto network = std::make_shared<lite::Network>(config);
-    network->load_model("./model_atlas.mgb");
-    network->forward();
-    network->wait();
-}
-
-TEST(TestNetWork, AtlasLoadAtlasDeviceInput) {
-    lite::NetworkIO networkio;
-    lite::IO input_data_io = {};
-    input_data_io.name = "data";
-    input_data_io.is_host = false;
-    networkio.inputs.emplace_back(input_data_io);
-    lite::IO input_input0_io = {};
-    input_input0_io.name = "input0";
-    input_input0_io.is_host = false;
-    networkio.inputs.emplace_back(input_input0_io);
-    lite::Config config;
-    config.device_type = LiteDeviceType::LITE_ATLAS;
-    auto network = std::make_shared<lite::Network>(config, networkio);
-    network->load_model("./model_atlas.mgb");
-    network->forward();
-    network->wait();
-}
-
-TEST(TestNetWork, AtlasDeviceID) {
-    lite::Config config;
-    config.device_type = LiteDeviceType::LITE_ATLAS;
-    auto network = std::make_shared<lite::Network>(config);
-    network->set_device_id(1);
-    network->load_model("./model_atlas.mgb");
+    network->set_device_id(device_id);
+    network->load_model(model_path);
     std::shared_ptr<Tensor> input_tensor = network->get_input_tensor(0);
     std::shared_ptr<Tensor> output_tensor = network->get_output_tensor(0);
     network->forward();
     network->wait();
-    ASSERT_EQ(output_tensor->get_device_id(), 1);
+    ASSERT_EQ(output_tensor->get_device_id(), device_id);
+}
+}  // namespace
+#endif
+
+#if MGB_ATLAS
+TEST(TestNetWork, AtlasLoadNoDevice) {
+    load_no_device(LiteDeviceType::LITE_DEVICE_DEFAULT, "./model_atlas.mgb");
+}
+
+TEST(TestNetWork, AtlasLoadDeviceInput) {
+    load_device_input(
+            LiteDeviceType::LITE_DEVICE_DEFAULT, "./model_atlas.mgb",
+            {"data", "input0"});
+}
+
+TEST(TestNetWork, AtlasLoadAtlas) {
+    load_no_device(LiteDeviceType::LITE_ATLAS, "./model_atlas.mgb");
+}
+
+TEST(TestNetWork, AtlasLoadAtlasDeviceInput) {
+    load_device_input(
+            LiteDeviceType::LITE_ATLAS, "./model_atlas.mgb", {"data", "input0"});
+}
+
+TEST(TestNetWork, AtlasDeviceID) {
+    load_device_id(LiteDeviceType::LITE_ATLAS, 1, "./model_atlas.mgb");
+}
+#endif
+
+#if MGB_CAMBRICON
+TEST(TestNetWork, CambriconLoadNoDevice) {
+    load_no_device(LiteDeviceType::LITE_DEVICE_DEFAULT, "./model_magicmind.mgb");
+}
+
+TEST(TestNetWork, CambriconLoadDeviceInput) {
+    load_device_input(
+            LiteDeviceType::LITE_DEVICE_DEFAULT, "./model_magicmind.mgb",
+            {"data", "input0"});
+}
+
+TEST(TestNetWork, CambriconLoadCambricon) {
+    load_no_device(LiteDeviceType::LITE_CAMBRICON, "./model_magicmind.mgb");
+}
+
+TEST(TestNetWork, CambriconLoadCambriconDeviceInput) {
+    load_device_input(
+            LiteDeviceType::LITE_CAMBRICON, "./model_magicmind.mgb",
+            {"data", "input0"});
+}
+
+TEST(TestNetWork, CambriconDeviceID) {
+    load_device_id(LiteDeviceType::LITE_CAMBRICON, 0, "./model_magicmind.mgb");
 }
 #endif
 #endif
