@@ -13,6 +13,7 @@ function config_docker_file() {
 }
 
 function ninja_dry_run_and_check_increment() {
+    echo "into ninja_dry_run_and_check_increment"
     if [ $# -eq 3 ]; then
         _BUILD_SHELL=$1
         _BUILD_FLAGS="$2 -n"
@@ -26,10 +27,40 @@ function ninja_dry_run_and_check_increment() {
 
     DIRTY_LOG=`cat dry_run.log`
     if [[ "${DIRTY_LOG}" =~ ${_INCREMENT_KEY_WORDS} ]]; then
+        echo "DIRTY_LOG is:"
+        echo ${DIRTY_LOG}
         echo "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
         echo "python3 switch increment build failed, some MR make a wrong CMakeLists.txt depends"
         echo "or build env can not find default python3 in PATH env"
         echo "please refs for PYTHON3_EXECUTABLE_WITHOUT_VERSION define at SRC_ROOT/CMakeLists.txt"
+        echo "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+        exit -1
+    fi
+
+    CHECK_NINJA_DRY_ISSUE_KEY_WORDS="VerifyGlobs"
+    if [[ "${DIRTY_LOG}" =~ ${CHECK_NINJA_DRY_ISSUE_KEY_WORDS} ]]; then
+        echo "DIRTY_LOG is:"
+        echo ${DIRTY_LOG}
+        echo "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+        echo "python3 switch increment build failed, some MR make a wrong CMakeLists.txt"
+        echo "for example use GLOB with CONFIGURE_DEPENDS flag may lead to ninja dry run failed"
+        echo "about CONFIGURE_DEPENDS (please do not use it):"
+        echo "a: we use scripts/cmake-build/*.sh to trigger rerun cmake, so no need CONFIGURE_DEPENDS"
+        echo "b: as https://cmake.org/cmake/help/latest/command/file.html Note"
+        echo "   CONFIGURE_DEPENDS do not support for all generators"
+        echo "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+        exit -1
+    fi
+
+    # as python3 change, imperative src need rebuild, force check it!
+    MUST_INCLUDE_KEY_WORDS="imperative"
+    if [[ "${DIRTY_LOG}" =~ ${MUST_INCLUDE_KEY_WORDS} ]]; then
+        echo "valid increment dry run log"
+    else
+        echo "DIRTY_LOG is:"
+        echo ${DIRTY_LOG}
+        echo "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+        echo "python3 switch increment build failed, some MR make a wrong CMakeLists.txt depends"
         echo "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
         exit -1
     fi

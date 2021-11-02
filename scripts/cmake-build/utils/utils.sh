@@ -83,16 +83,24 @@ function config_ninja_target_cmd() {
     fi
     if [ -z "${_NINJA_TARGET}" ]; then
         NINJA_CMD="${NINJA_BASE} all -j ${_NINJA_MAX_JOBS}"
-    elif [[ ${_NINJA_TARGET} =~ "install" ]]; then
-        NINJA_CMD="${NINJA_BASE} all -j ${_NINJA_MAX_JOBS} && ${NINJA_BASE} ${_NINJA_TARGET}"
     else
         NINJA_CMD="${NINJA_BASE} ${_NINJA_TARGET} -j ${_NINJA_MAX_JOBS}"
     fi
 
     if [ ${_NINJA_DRY_RUN} = "ON" ]; then
+        if [[ "${NINJA_CMD}" =~ "&" ]]; then
+            echo "code issue happened!!! base cmd can not include & before ninja explain"
+            echo "now cmd: ${NINJA_CMD}"
+            exit -1
+        fi
         NINJA_CMD="${NINJA_CMD} -d explain -n"
     else
         if [ ${_NINJA_VERBOSE} = "ON" ]; then
+            if [[ "${NINJA_CMD}" =~ "&" ]]; then
+                echo "code issue happened!!! base cmd can not include & before ninja explain"
+                echo "now cmd: ${NINJA_CMD}"
+                exit -1
+            fi
             NINJA_CMD="${NINJA_CMD} -d explain -v"
         fi
         if [ ${_BUILD_DEVELOP} = "ON" ]; then
