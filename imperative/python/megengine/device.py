@@ -199,7 +199,8 @@ def coalesce_free_memory():
     this func was called
 
     .. note::
-    Please notice that this function will not move any memory in-use.
-    Please notice that this function may do nothing if there are no chunks that can be freed
+
+       * This function will not move any memory in-use;
+       * This function may do nothing if there are no chunks that can be freed.
     """
     return _try_coalesce_all_free_memory()
