@@ -679,7 +679,7 @@ TEST(TestMagicMindRuntimeOpr, Serialization) {
             reinterpret_cast<const void*>(buf.data()), buf.size(), {x_, add_});
     auto out1 = outs[0];
     auto out2 = outs[1];
-    auto fname = output_file("MagicMindRuntimeOprTest");
+    auto fname = output_file("model_magicmind.mgb");
     auto dump = [&]() {
         auto dumper = GraphDumper::make(OutputFile::make_fs(fname.c_str()));
         auto rst = dumper->dump({out1, out2});

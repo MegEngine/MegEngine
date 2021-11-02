@@ -164,6 +164,9 @@ mgb::CompNode::Locator lite::to_compnode_locator(const LiteDeviceType& device) {
         case LiteDeviceType::LITE_ATLAS:
             loc.type = mgb::CompNode::DeviceType::ATLAS;
             break;
+        case LiteDeviceType::LITE_CAMBRICON:
+            loc.type = mgb::CompNode::DeviceType::CAMBRICON;
+            break;
         case LiteDeviceType::LITE_DEVICE_DEFAULT:
             loc.type = mgb::CompNode::DeviceType::UNSPEC;
             break;
@@ -183,6 +186,8 @@ LiteDeviceType lite::get_device_from_locator(const mgb::CompNode::Locator& locat
             return LiteDeviceType::LITE_CUDA;
         case mgb::CompNode::DeviceType::ATLAS:
             return LiteDeviceType::LITE_ATLAS;
+        case mgb::CompNode::DeviceType::CAMBRICON:
+            return LiteDeviceType::LITE_CAMBRICON;
         case mgb::CompNode::DeviceType::UNSPEC:
             return LiteDeviceType::LITE_DEVICE_DEFAULT;
         default:

@@ -21,7 +21,8 @@ class LiteDeviceType(IntEnum):
     LITE_CUDA = 1
     LITE_ATLAS = 3
     LITE_NPU = 4
-    LITE_DEVICE_DEFAULT = 5
+    LITE_CAMBRICON = 5
+    LITE_DEVICE_DEFAULT = 6
 
 
 class LiteDataType(IntEnum):
