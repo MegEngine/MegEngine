@@ -377,6 +377,15 @@ bool ConvBiasImpl::AlgoIm2col::usable(
         }
 #endif
 
+        //! 8x8x32 and 8x8x8 and NO_PACK is not supported
+        if (matmul_desc.packmode == Pack_Mode::NO_PACK &&
+            param.src_type.enumv() == DTypeEnum::QuantizedS8 &&
+            param.bias_type.enumv() == DTypeEnum::QuantizedS32 &&
+            (param.dst_type.enumv() == DTypeEnum::QuantizedS8 ||
+             param.dst_type.enumv() == DTypeEnum::QuantizedS32)) {
+            return false;
+        }
+
         //! make sure 8x8x16 and 8x8x32 biasmode is  nobias and nonlineMode is
         //! identity otherwise return false mean that 8x8x32 and 8x8x16 not
         //! support PostProcess
