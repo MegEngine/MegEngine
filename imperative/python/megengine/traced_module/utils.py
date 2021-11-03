@@ -96,6 +96,12 @@ class _ModuleList(Module, MutableSequence):
                 raise IndexError("list index out of range")
         return rst if len(rst) > 1 else rst[0]
 
+    def __setattr__(self, key, value):
+        # clear mod name to avoid warning in Module's setattr
+        if isinstance(value, Module):
+            value._name = None
+        super().__setattr__(key, value)
+
     def __setitem__(self, idx: int, mod: Module):
         if not isinstance(mod, Module):
             raise ValueError("invalid sub-module")
@@ -158,6 +164,12 @@ class _ModuleDict(Module, MutableMapping):
 
     def __getitem__(self, key):
         return getattr(self, key)
+
+    def __setattr__(self, key, value):
+        # clear mod name to avoid warning in Module's setattr
+        if isinstance(value, Module):
+            value._name = None
+        super().__setattr__(key, value)
 
     def __setitem__(self, key, value):
         if not isinstance(value, Module):

@@ -32,7 +32,7 @@ class _ConvBnActivation2d(Module):
         track_running_stats=True,
         **kwargs
     ):
-        super().__init__()
+        super().__init__(**kwargs)
         self.conv = Conv2d(
             in_channels,
             out_channels,

@@ -158,10 +158,12 @@ def set_log_level(level, update_existing=True):
         update_existing: whether to update existing loggers
     """
     global _default_level  # pylint: disable=global-statement
+    origin_level = _default_level
     _default_level = level
     if update_existing:
         for i in _all_loggers:
             i.setLevel(level)
+    return origin_level
 
 
 _logger = get_logger(__name__)

@@ -49,17 +49,13 @@ def _access_structure(obj, key, callback=None):
     parent = None
     for k in key_list:
         parent = cur
-        if isinstance(cur, (Tensor, Module)):
-            cur = getattr(cur, k)
-        elif isinstance(cur, (list, tuple)):
+        if isinstance(cur, (list, tuple)):
             k = int(k)
             cur = cur[k]
         elif isinstance(cur, dict):
             cur = cur[k]
         else:
-            raise ValueError(
-                "Unsupport value type {} to access attribute".format(type(cur))
-            )
+            cur = getattr(cur, k)
     return callback(parent, k, cur)
 
 
@@ -650,8 +646,8 @@ class Module(metaclass=ABCMeta):
                 v._name = k
             elif v._name != k:
                 logger.warning(
-                    "try setting the submodule `{}` to a new attribute `{}`, its name `{}` will remain unchanged".format(
-                        v._name, k, v._name
+                    "try setting the submodule `{}` to `{}`'s new attribute `{}`, its name `{}` will remain unchanged".format(
+                        type(v), type(self), k, v._name
                     )
                 )
         super().__setattr__(name, value)

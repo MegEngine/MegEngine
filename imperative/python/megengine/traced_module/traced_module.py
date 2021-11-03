@@ -642,7 +642,6 @@ class InternalGraph:
         Returns:
             A :class:`~.TracedModule.NodeFilterType`.
         """
-        assert issubclass(module_cls, Module)
         return self.nodes(recursive).type(module_cls)
 
     def get_node_by_id(self, node_id: List[int] = None, recursive=True):
