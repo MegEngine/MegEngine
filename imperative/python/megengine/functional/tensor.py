@@ -1069,32 +1069,39 @@ def arange(
     dtype="float32",
     device: Optional[CompNode] = None,
 ) -> Tensor:
-    r"""Returns a tensor with values from start to stop with adjacent interval step.
+    r"""Returns evenly spaced values within the half-open interval ``[start, stop)`` as a one-dimensional tensor. 
+
+    Note:
+        * This function is not completely consistent with the specifications in the
+          `Python array API standard <https://data-apis.org/array-api/latest/>`_ --
+          The data type would not be inferred from ``start``, ``stop`` and ``step``.
+        * This function cannot guarantee that the interval does not include the stop value in those cases 
+          where step is not an integer and floating-point rounding errors affect the length of the output tensor.
 
     Args:
-        start: starting value of the squence, shoule be scalar.
-        stop: ending value of the squence, shoule be scalar.
-        step: gap between each pair of adjacent values. Default: 1
-        dtype: result data type.
+        start: if ``stop`` is specified, the start of interval (inclusive); otherwise, 
+            the end of the interval (exclusive). If ``stop`` is not specified, the default starting value is ``0``. 
+        stop: the end of the interval. Default: ``None``.
+        step: the distance between two adjacent elements ( ``out[i+1] - out[i]`` ). Must not be 0 ; 
+            may be negative, this results i an empty tensor if stop >= start . Default: 1 . 
+
+    Keyword args:
+        dtype( :attr:`.Tensor.dtype` ): output tensor data type. Default: ``float32``.
+        device( :attr:`.Tensor.device` ): device on which to place the created tensor. Default: ``None``.
 
     Returns:
-        generated tensor.
+        A one-dimensional tensor containing evenly spaced values.
+
+        The length of the output tensor must be ``ceil((stop-start)/step)`` 
+        if ``stop - start`` and ``step`` have the same sign, and length 0 otherwise.
 
     Examples:
 
-        .. testcode::
+        >>> F.arange(5)
+        Tensor([0. 1. 2. 3. 4.], device=xpux:0)
+        >>> F.arange(1, 4)
+        Tensor([1. 2. 3.], device=xpux:0)
 
-            import numpy as np
-            import megengine.functional as F
-
-            a = F.arange(5)
-            print(a.numpy())
-
-        Outputs:
-
-        .. testoutput::
-
-            [0. 1. 2. 3. 4.]
     """
     if stop is None:
         start, stop = 0, start
