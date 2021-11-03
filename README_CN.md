@@ -64,6 +64,18 @@ python3 -m pip install megengine -f https://megengine.org.cn/whl/mge.html
 
 ## 开源许可
 
-MegEngine 使用 Apache License, Version 2.0
+MegEngine 使用 Apache License, Version 2.0 。
+
+## 引用 MegEngine
+如果在您的研究中使用了 MegEngine ，建议您使用如下 BibTeX 格式引用文案。
+
+```
+@Misc{MegEngine,
+  institution = {megvii},
+  title =  {MegEngine:A fast, scalable and easy-to-use deep learning framework},
+  howpublished = {\url{https://github.com/MegEngine/MegEngine}},
+  year = {2020}
+}
+
 
 Copyright (c) 2014-2021 Megvii Inc. All rights reserved.

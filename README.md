@@ -65,4 +65,16 @@ We strive to build an open and friendly community. We aim to power humanity with
 
 MegEngine is licensed under the Apache License, Version 2.0
 
+## Citation
+If you use MegEngine in your publication,please cite it by using the following BibTeX entry.
+
+```
+@Misc{MegEngine,
+  institution = {megvii},
+  title =  {MegEngine:A fast, scalable and easy-to-use deep learning framework},
+  howpublished = {\url{https://github.com/MegEngine/MegEngine}},
+  year = {2020}
+}
+```
+
 Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
