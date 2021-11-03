@@ -1977,7 +1977,12 @@ class TracedModule(Module):
         if hasattr(self, "argspec") and self.argspec is not None:
             args, kwargs = _convert_kwargs_to_args(self.argspec, args, kwargs, True)
         inputs, treedef = tree_flatten(((self, *args), kwargs))
-        assert treedef in self.argdef_graph_map
+        assert (
+            treedef in self.argdef_graph_map
+        ), "support input args kwargs format: \n{}, but get: \n{}".format(
+            "\n ".join("forward({})".format(i._args_kwargs_repr()) for i in self.argdef_graph_map.keys()),
+            treedef._args_kwargs_repr(),
+        )
         inputs = filter(
             lambda i: isinstance(i, (Module, TracedModuleBuilder, RawTensor)), inputs
         )  # allow TracedModuleBuilder for retrace.
