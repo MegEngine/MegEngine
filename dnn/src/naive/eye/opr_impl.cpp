@@ -31,6 +31,7 @@ void EyeImpl::exec(_megdnn_tensor_out dst, _megdnn_workspace workspace) {
         MEGDNN_DISPATCH_CPU_KERN_OPR(exec_internal<ctype>(dst.ptr<ctype>(), m, n)); \
     }
     MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
+    cb(::megdnn::dtype::Bool)
 #undef cb
 }
 

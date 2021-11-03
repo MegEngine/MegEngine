@@ -44,7 +44,7 @@ void exec_internal(T* dst, size_t m, size_t n, int k, hipStream_t stream) {
     template void exec_internal<T>(T*, size_t, size_t, int, hipStream_t);
 #define cb(DType) INST(typename DTypeTrait<DType>::ctype)
 MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
-
+cb(::megdnn::dtype::Bool)
 }  // namespace eye
 }  // namespace rocm
 }  // namespace megdnn

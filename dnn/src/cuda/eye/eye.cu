@@ -39,6 +39,7 @@ void exec_internal(T* dst, size_t m, size_t n, int k, cudaStream_t stream) {
 #define INST(T)   template void exec_internal<T>(T*, size_t, size_t, int, cudaStream_t);
 #define cb(DType) INST(typename DTypeTrait<DType>::ctype)
 MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
+cb(::megdnn::dtype::Bool)
 
 }  // namespace eye
 }  // namespace cuda
