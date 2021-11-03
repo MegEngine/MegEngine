@@ -101,6 +101,21 @@ TEST(TestNetWork, GetAllName) {
     ASSERT_TRUE(output_names[0] == "TRUE_DIV(EXP[12065],reduce0[12067])[12077]");
 }
 
+TEST(TestNetWork, LoadFBSModel) {
+    Config config;
+    std::string model_path = "./ax.mge";
+    std::shared_ptr<Network> network = std::make_shared<Network>(config);
+    network->load_model(model_path);
+
+    auto output_tensor = network->get_output_tensor(0);
+    auto out_layout = output_tensor->get_layout();
+    ASSERT_EQ(out_layout.ndim, 4);
+    ASSERT_EQ(out_layout.shapes[0], 1);
+    ASSERT_EQ(out_layout.shapes[1], 1);
+    ASSERT_EQ(out_layout.shapes[2], 40);
+    ASSERT_EQ(out_layout.shapes[3], 180);
+}
+
 TEST(TestNetWork, BasicInplaceAndSingleThreadAffinity) {
     Config config;
     auto lite_tensor = get_input_data("./input_data.npy");

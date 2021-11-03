@@ -66,6 +66,16 @@ public:
     MGE_WIN_DECLSPEC_FUC TagHandler* get_tag_handler_for_value(Tag tag);
 
     /*!
+     * \brief check if there is a registered shape infer func in tag
+     */
+    bool has_shape_infer(Tag tag) const;
+
+    /*!
+     * \brief check if there is a registered value infer func in tag
+     */
+    bool has_value_infer(Tag tag) const;
+
+    /*!
      * \brief clear registered handler for a tag; this is only used in error
      *      handling in opr creation
      */

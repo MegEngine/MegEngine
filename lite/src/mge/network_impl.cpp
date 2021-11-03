@@ -454,9 +454,8 @@ void NetworkImplDft::set_io(const NetworkIO& network_io) {
 }
 
 void NetworkImplDft::try_infer_tensor_layout(std::shared_ptr<Tensor> tensor, Var var) {
-    auto&& static_infer_mgr = m_load_config.comp_graph->static_infer_manager();
-    auto infer_trait = var.node()->get_static_infer_trait();
-    if (std::get<0>(infer_trait)) {
+    if (var.node()->capable_shape_infer()) {
+        auto&& static_infer_mgr = m_load_config.comp_graph->static_infer_manager();
         auto shape = static_infer_mgr.infer_shape_fallible(var.node());
         if (!shape) {
             LITE_WARN(

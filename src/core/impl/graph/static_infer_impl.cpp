@@ -892,6 +892,16 @@ StaticInferManagerImpl::TagHandler* StaticInferManagerImpl::get_tag_handler_for_
     return c.value;
 }
 
+bool StaticInferManagerImpl::has_shape_infer(Tag tag) const {
+    auto&& c = get_tag_trait_container(tag);
+    return c.shape != nullptr;
+}
+
+bool StaticInferManagerImpl::has_value_infer(Tag tag) const {
+    auto&& c = get_tag_trait_container(tag);
+    return c.value != nullptr;
+}
+
 StaticInferManagerImpl::TagTraitBase* StaticInferManagerImpl::get_tag_trait_for_dep(
         const DepElement& dep) {
     TagHandler* ret;
