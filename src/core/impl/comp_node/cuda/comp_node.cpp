@@ -208,20 +208,7 @@ class CudaCompNode::CompNodeImpl final : public CompNode::Impl {
 public:
     CompNodeImpl() : Impl(static_free_device, static_free_host) {}
 
-    void* alloc_device(size_t size) override {
-        activate();
-#if MGB_BUILD_SLIM_SERVING
-        return m_mem_alloc->alloc(size);
-#else
-        void* ptr = m_mem_alloc->alloc(size);
-        {
-            MGB_LOCK_GUARD(m_update_mem);
-            ptr2size[ptr] = size;
-            m_used_mem += size;
-        }
-        return ptr;
-#endif
-    }
+    void* alloc_device(size_t size) override;
 
     void free_device(void* ptr);
 
@@ -311,20 +298,30 @@ public:
     uint64_t get_uid() override { return m_uid; }
 
 #if !MGB_BUILD_SLIM_SERVING
-    size_t get_used_memory() override { return m_used_mem; }
+    size_t get_used_memory() override;
+
+    size_t get_max_used_memory() override;
+
+    size_t get_reserved_memory() override;
+
+    size_t get_max_reserved_memory() override;
+
+    void reset_max_used_memory() override;
+    void reset_max_reserved_memory() override;
 #endif
 
 private:
     uint64_t m_uid;
 #if !MGB_BUILD_SLIM_SERVING
     std::unordered_map<void*, size_t> ptr2size;
-    size_t m_used_mem = 0;
 #endif
 };
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(CudaCompNode::CompNodeImpl);
 
 struct CudaCompNodeImpl::DeviceInfo {
     int dev_num = -1;
+    std::atomic_size_t m_used_mem{0};
+    std::atomic_size_t m_max_used_mem{0};
     std::unique_ptr<mem_alloc::DevMemAlloc> mem_alloc;
 
     bool init_done() const { return mem_alloc.get(); }
@@ -438,6 +435,24 @@ void CudaCompNodeImpl::fini() {
     m_initialized = false;
 }
 
+void* CudaCompNodeImpl::alloc_device(size_t size) {
+    activate();
+#if MGB_BUILD_SLIM_SERVING
+    return m_mem_alloc->alloc(size);
+#else
+    void* ptr = m_mem_alloc->alloc(size);
+    {
+        MGB_LOCK_GUARD(m_update_mem);
+        ptr2size[ptr] = size;
+        m_device_info->m_used_mem += size;
+        if (m_device_info->m_used_mem > m_device_info->m_max_used_mem) {
+            m_device_info->m_max_used_mem = m_device_info->m_used_mem.load();
+        }
+    }
+    return ptr;
+#endif
+}
+
 void CudaCompNodeImpl::free_device(void* ptr) {
     if (check_global_finalized())
         return;
@@ -447,12 +462,38 @@ void CudaCompNodeImpl::free_device(void* ptr) {
     {
         MGB_LOCK_GUARD(m_update_mem);
         mgb_assert(ptr2size.find(ptr) != ptr2size.end(), "ptr %p not found!", ptr);
-        m_used_mem -= ptr2size.at(ptr);
+        m_device_info->m_used_mem -= ptr2size.at(ptr);
         ptr2size.erase(ptr);
     }
 #endif
     m_mem_alloc->free(ptr);
 }
+
+#if !MGB_BUILD_SLIM_SERVING
+size_t CudaCompNodeImpl::get_used_memory() {
+    return m_device_info->m_used_mem.load();
+}
+
+size_t CudaCompNodeImpl::get_max_used_memory() {
+    return m_device_info->m_max_used_mem.load();
+}
+
+void CudaCompNodeImpl::reset_max_used_memory() {
+    m_device_info->m_max_used_mem = 0;
+}
+
+size_t CudaCompNodeImpl::get_reserved_memory() {
+    return m_device_info->mem_alloc->get_used_memory();
+}
+
+size_t CudaCompNodeImpl::get_max_reserved_memory() {
+    return m_device_info->mem_alloc->get_max_used_memory();
+}
+
+void CudaCompNodeImpl::reset_max_reserved_memory() {
+    m_device_info->mem_alloc->reset_max_used_memory();
+}
+#endif
 
 void* CudaCompNodeImpl::alloc_host(size_t size) {
     // need activate because it create cuda cuda context in current device

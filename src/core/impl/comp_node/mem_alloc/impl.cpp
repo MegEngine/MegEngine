@@ -226,6 +226,9 @@ StreamMemAlloc* DevMemAllocImpl::add_stream(StreamKey stream) {
 MemAllocImplHelper::MemAddr DevMemAllocImpl::alloc(size_t size) {
     auto addr = do_alloc(size, true);
     m_used_size += size;
+    if (m_used_size > m_max_used_size) {
+        m_max_used_size = m_used_size.load();
+    }
     return addr;
 }
 
@@ -291,6 +294,9 @@ MemAllocImplHelper::MemAddr DevMemAllocImpl::alloc_from_parent(size_t size) {
                 // exception would be thrown from here
                 auto t = do_alloc(size, false, true);
                 m_used_size += size;
+                if (m_used_size > m_max_used_size) {
+                    m_max_used_size = m_used_size.load();
+                }
                 return t;
             }
         }
@@ -419,6 +425,9 @@ void DevMemAllocImpl::insert_free_unsafe(const FreeBlock& block) {
             child->insert_free_unsafe(block);
         }
         m_used_size += block.size;
+        if (m_used_size > m_max_used_size) {
+            m_max_used_size = m_used_size.load();
+        }
     } else {
         MemAllocImplHelper::insert_free_unsafe(block);
     }

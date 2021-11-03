@@ -25,6 +25,11 @@ __all__ = [
     "set_default_device",
     "get_mem_status_bytes",
     "get_cuda_compute_capability",
+    "get_allocated_memory",
+    "get_reserved_memory",
+    "get_max_reserved_memory",
+    "get_max_allocated_memory",
+    "reset_max_memory_stats",
     "set_prealloc_config",
     "coalesce_free_memory",
     "DeviceType",
@@ -155,6 +160,61 @@ def get_cuda_compute_capability(device: int, device_type=DeviceType.CUDA) -> int
         a version number, or `SM version`.
     """
     return _get_cuda_compute_capability(device, device_type)
+
+
+def get_allocated_memory(device: Optional[str] = None):
+    r"""Returns the current memory occupied by tensors on the computing device in bytes.
+
+    Due to the asynchronous execution of MegEngine, please call megengine._full_sync
+    before calling this function in order to get accurate value.
+    """
+    if device is None:
+        device = get_default_device()
+    return CompNode(device).get_used_memory
+
+
+def get_reserved_memory(device: Optional[str] = None):
+    r"""Returns the current memory managed by the caching allocator on the computing device in bytes.
+
+    Due to the asynchronous execution of MegEngine, please call megengine._full_sync
+    before calling this function in order to get accurate value.
+    """
+    if device is None:
+        device = get_default_device()
+    return CompNode(device).get_reserved_memory
+
+
+def get_max_reserved_memory(device: Optional[str] = None):
+    r"""Returns the maximum memory managed by the caching allocator on the computing device in bytes.
+
+    Due to the asynchronous execution of MegEngine, please call megengine._full_sync
+    before calling this function in order to get accurate value.
+    """
+    if device is None:
+        device = get_default_device()
+    return CompNode(device).get_max_reserved_memory
+
+
+def get_max_allocated_memory(device: Optional[str] = None):
+    r"""Returns the maximum memory occupied by tensors on the computing device in bytes.
+
+    Due to the asynchronous execution of MegEngine, please call megengine._full_sync
+    before calling this function in order to get accurate value.
+    """
+    if device is None:
+        device = get_default_device()
+    return CompNode(device).get_max_used_memory
+
+
+def reset_max_memory_stats(device: Optional[str] = None):
+    r"""Resets the maximum stats on the computing device.
+
+    Due to the asynchronous execution of MegEngine, please call megengine._full_sync
+    before calling this function in order to properly reset memory stats.
+    """
+    if device is None:
+        device = get_default_device()
+    CompNode.reset_max_memory_stats(device)
 
 
 set_default_device(os.getenv("MGE_DEFAULT_DEVICE", "xpux"))

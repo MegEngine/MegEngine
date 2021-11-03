@@ -73,6 +73,26 @@ void init_common(py::module m) {
                             [](const CompNode& cn) {
                                 return cn.get_mem_status_bytes();
                             })
+                    .def_property_readonly(
+                            "get_used_memory",
+                            [](const CompNode& cn) { return cn.get_used_memory(); })
+                    .def_property_readonly(
+                            "get_max_used_memory",
+                            [](const CompNode& cn) { return cn.get_max_used_memory(); })
+                    .def_property_readonly(
+                            "get_reserved_memory",
+                            [](const CompNode& cn) { return cn.get_reserved_memory(); })
+                    .def_property_readonly(
+                            "get_max_reserved_memory",
+                            [](const CompNode& cn) {
+                                return cn.get_max_reserved_memory();
+                            })
+                    .def_static(
+                            "reset_max_memory_stats",
+                            [](const CompNode& cn) {
+                                cn.reset_max_used_memory();
+                                cn.reset_max_reserved_memory();
+                            })
                     .def("create_event", &CompNode::create_event,
                          py::arg("flags") = 0ul)
                     .def_static("_set_default_device", &set_default_device)

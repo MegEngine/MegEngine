@@ -335,11 +335,23 @@ public:
 
     size_t get_used_memory() const { return m_impl->get_used_memory(); }
 
+    size_t get_reserved_memory() const { return m_impl->get_reserved_memory(); }
+
+    size_t get_max_reserved_memory() const { return m_impl->get_max_reserved_memory(); }
+
+    size_t get_max_used_memory() const { return m_impl->get_max_used_memory(); }
+
     size_t get_max_block_size_available() const {
         return m_impl->get_max_block_size_available();
     }
 
     size_t get_free_mem() const { return m_impl->get_free_mem(); }
+
+    void reset_max_reserved_memory() const {
+        return m_impl->reset_max_reserved_memory();
+    }
+
+    void reset_max_used_memory() const { return m_impl->reset_max_used_memory(); }
 #endif
 
     //! change to another stream on the same memory node
@@ -533,8 +545,13 @@ protected:
             return {x - x, y - y};
         }
         virtual size_t get_used_memory() { return 0; }
+        virtual size_t get_reserved_memory() { return 0; }
+        virtual size_t get_max_reserved_memory() { return 0; }
+        virtual size_t get_max_used_memory() { return 0; }
         virtual size_t get_max_block_size_available() { return 0; }
         virtual size_t get_free_mem() { return 0; }
+        virtual void reset_max_reserved_memory() {}
+        virtual void reset_max_used_memory() {}
 #endif
 
         virtual Locator locator() = 0;

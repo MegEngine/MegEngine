@@ -275,6 +275,10 @@ public:
 
     const PreAllocConfig& prealloc_config() { return m_prealloc_config; }
 
+    virtual size_t get_used_memory() { return 0; }
+    virtual size_t get_max_used_memory() { return 0; }
+    virtual void reset_max_used_memory() {}
+
 private:
     size_t m_alignment = 1;
     PreAllocConfig m_prealloc_config;

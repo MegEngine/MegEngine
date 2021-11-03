@@ -171,6 +171,7 @@ class DevMemAllocImpl final : public DevMemAlloc, public MemAllocImplHelper {
 
     size_t m_tot_allocated_from_raw = 0;
     std::atomic_size_t m_used_size{0};
+    std::atomic_size_t m_max_used_size{0};
 
     /*!
      * \brief gather all free blocks from child streams, and release full chunks
@@ -196,6 +197,10 @@ class DevMemAllocImpl final : public DevMemAlloc, public MemAllocImplHelper {
     }
 
     size_t get_used_memory() override { return m_used_size.load(); }
+
+    size_t get_max_used_memory() override { return m_max_used_size.load(); }
+
+    void reset_max_used_memory() override { m_max_used_size = 0; }
 
     void insert_free_unsafe(const FreeBlock& block) override;
 
