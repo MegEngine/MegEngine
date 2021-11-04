@@ -335,7 +335,7 @@ private:
         CompNode comp_node;
 
         //! store all tensors that may be evicted
-        std::unordered_set<TensorInfo*> candidates;
+        SmallVector<TensorInfo*> candidates;
 
         bool is_bad_op(std::string op_name) {
             return std::find(op_blacklist.begin(), op_blacklist.end(), op_name) !=

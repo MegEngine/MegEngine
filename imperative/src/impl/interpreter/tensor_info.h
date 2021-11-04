@@ -170,6 +170,9 @@ struct TensorInfo {
     bool size_exceeds_thd(size_t thd) { return memory > thd; }
 
     SmallVector<ComputePath*> users;
+
+    // UINT_MAX as a magic default value
+    size_t cand_index = UINT_MAX;
 };
 }  // namespace interpreter::intl
 
