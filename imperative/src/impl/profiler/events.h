@@ -156,16 +156,7 @@ DEF_DUR_EVENT(StartProfile, { size_t capture_count; });
 
 DEF_DUR_EVENT(StopProfile, { size_t escape_count; });
 
-enum class TensorCommandKind {
-    Put,
-    Del,
-    SwapIn,
-    SwapOut,
-    Drop,
-    ReGen,
-    RecFree,
-    GetValue
-};
+enum class TensorCommandKind { Put, Del, Drop, ReGen, RecFree, GetValue };
 
 DEF_DUR_EVENT(TensorCommand, {
     using Kind = TensorCommandKind;

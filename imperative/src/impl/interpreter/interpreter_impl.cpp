@@ -197,32 +197,6 @@ void ChannelImpl::del_impl(Handle handle) {
     m_buffer.enqueue(Del{info});
 }
 
-void ChannelImpl::swap_in(Handle handle) {
-    MGB_LOCK_GUARD(m_spin);
-    mgb_assert(check_available(), "Channel already closed");
-    auto& state = get_channel_state();
-    if (state.options.enable_swap) {
-        mgb_assert(
-                m_valid_handle.find(handle) != m_valid_handle.end(),
-                "invalid handle: %p", handle);
-        auto* info = reinterpret_cast<TensorInfo*>(handle);
-        m_buffer.enqueue(SwapIn{info});
-    }
-}
-
-void ChannelImpl::swap_out(Handle handle) {
-    MGB_LOCK_GUARD(m_spin);
-    mgb_assert(check_available(), "Channel already closed");
-    auto& state = get_channel_state();
-    if (state.options.enable_swap) {
-        mgb_assert(
-                m_valid_handle.find(handle) != m_valid_handle.end(),
-                "invalid handle: %p", handle);
-        auto* info = reinterpret_cast<TensorInfo*>(handle);
-        m_buffer.enqueue(SwapOut{info});
-    }
-}
-
 void ChannelImpl::drop(Handle handle) {
     MGB_LOCK_GUARD(m_spin);
     mgb_assert(check_available(), "Channel already closed");
@@ -266,7 +240,7 @@ void ChannelImpl::dispatch_default_cpu(
                 input_tensornds.emplace_back(
                         info->ptr->get_value().proxy_to_default_cpu());
             } else {
-                // It's OK for SwapOut. We assign h_value before drop ptr
+                // We assign h_value before drop ptr
                 mgb_assert(!info->h_value.empty(), "inp->h_value is empty!");
                 input_tensornds.emplace_back(info->h_value.proxy_to_default_cpu());
             }
@@ -660,10 +634,6 @@ void ChannelImpl::regenerate(TensorInfo* dest) {
                  "dtr"});
         if (!m_applying)
             flush_apply_stack();
-    } else if (dest->evict_type == EvictType::SWAP) {
-        MGB_RECORD_EVENT(TensorCommandEvent, dest->id, TensorCommandKind::ReGen);
-        produce_tensor(dest, Tensor::make(dest->h_value));
-        MGB_RECORD_EVENT(TensorCommandFinishEvent, dest->id, TensorCommandKind::ReGen);
     }
 }
 
@@ -1185,29 +1155,6 @@ void ChannelImpl::process_one_task(Command& icmd) {
             MGB_LOCK_GUARD(m_mutex);
             notify_tensor_unsafe(cmd.dest);
             imperative_log_profile_end("GetValue");
-        } else if constexpr (std::is_same_v<T, SwapIn>) {
-            if (cmd.dest->invalid)
-                return;
-            MGB_RECORD_EVENT(
-                    TensorCommandEvent, cmd.dest->id, TensorCommandKind::SwapIn);
-            produce_tensor(cmd.dest, Tensor::make(cmd.dest->h_value));
-            MGB_RECORD_EVENT(
-                    TensorCommandFinishEvent, cmd.dest->id, TensorCommandKind::SwapIn);
-            sample_on_device(cmd.dest->desc.comp_node, false);
-        } else if constexpr (std::is_same_v<T, SwapOut>) {
-            if (cmd.dest->invalid)
-                return;
-            MGB_RECORD_EVENT(
-                    TensorCommandEvent, cmd.dest->id, TensorCommandKind::SwapOut);
-            cmd.dest->h_value = cmd.dest->ptr->get_value();
-            if (cmd.dest->evict_type == EvictType::NONE) {
-                cmd.dest->evict_type = EvictType::SWAP;
-                cmd.dest->status = TensorInfo::Swapped;
-                release_tensor(cmd.dest);
-            }
-            MGB_RECORD_EVENT(
-                    TensorCommandFinishEvent, cmd.dest->id, TensorCommandKind::SwapOut);
-            sample_on_device(cmd.dest->desc.comp_node, false);
         } else if constexpr (std::is_same_v<T, Drop>) {
             if (cmd.dest->invalid)
                 return;
@@ -1223,7 +1170,7 @@ void ChannelImpl::process_one_task(Command& icmd) {
             for (auto* info : cmd.capture_tensors) {
                 MGB_RECORD_EVENT(TensorDeclareEvent, info->id, info->name);
                 if (info->status == TensorInfo::Produced) {
-                    // TODO: handle swap/drop
+                    // TODO: handle drop
                     MGB_RECORD_EVENT(
                             TensorProduceEvent, info->id, info->desc.layout,
                             info->desc.comp_node, info->ptr->dev_tensor().raw_ptr());
@@ -1387,9 +1334,7 @@ auto ChannelImpl::CommandBuffer::find_last_usage(TensorInfo* dest, Range range)
                         if (cmd.dest == dest) {
                             found = iter;
                         }
-                    } else if constexpr (
-                            std::is_same_v<T, SwapIn> || std::is_same_v<T, SwapOut> ||
-                            std::is_same_v<T, Drop>) {
+                    } else if constexpr (std::is_same_v<T, Drop>) {
                         // TODO: ignore swap-like commands, just remove them from buffer
                         if (cmd.dest == dest) {
                             found = iter;

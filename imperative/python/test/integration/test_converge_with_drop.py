@@ -14,12 +14,7 @@ import megengine as mge
 import megengine.autodiff as ad
 import megengine.functional as F
 from megengine import Tensor
-from megengine.core._imperative_rt.core2 import (
-    _set_drop_flag,
-    _set_swap_flag,
-    get_option,
-    set_option,
-)
+from megengine.core._imperative_rt.core2 import _set_drop_flag, get_option, set_option
 from megengine.module import Linear, Module
 from megengine.optimizer import SGD
 
@@ -70,7 +65,6 @@ class XORNet(Module):
 
     def forward(self, x):
         y = self.fc0(x)
-        x._swap_out()
         x = F.tanh(y)
         y = self.fc1(x)
         x = F.tanh(y)
@@ -80,8 +74,7 @@ class XORNet(Module):
         return y
 
 
-def test_training_converge_with_swap_and_drop():
-    _set_swap_flag(True)
+def test_training_converge_with_drop():
     _set_drop_flag(True)
     old_buffer_length = get_option("buffer_length")
     set_option("buffer_length", 0)
@@ -125,6 +118,5 @@ def test_training_converge_with_swap_and_drop():
         precision
     )
 
-    _set_swap_flag(False)
     _set_drop_flag(False)
     set_option("buffer_length", old_buffer_length)

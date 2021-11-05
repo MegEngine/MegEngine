@@ -194,8 +194,6 @@ struct TensorWrapper {
     void setscalar();
     void unsetscalar();
     PyObject* _dev_tensor();
-    void _swap_in();
-    void _swap_out();
     void _drop();
     PyObject* varnode();
     void reset_varnode();

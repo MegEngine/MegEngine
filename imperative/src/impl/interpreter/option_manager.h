@@ -35,7 +35,6 @@ public:
             "level 2: both device and user side errors are async;\n"
             "level 1: user side errors are sync;\n"
             "level 0: both sync.");
-    DEF_OPTION(enable_swap, "MEGENGINE_ENABLE_SWAP", 0, "");
     DEF_OPTION(enable_drop, "MEGENGINE_ENABLE_DROP", 0, "");
     DEF_OPTION(max_recompute_time, "MEGENGINE_MAX_RECOMP_TIME", 1, "");
     DEF_OPTION(

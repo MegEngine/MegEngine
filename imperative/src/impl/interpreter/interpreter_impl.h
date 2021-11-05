@@ -46,8 +46,6 @@ struct ChannelImpl : Interpreter::Channel {
     Handle put(const DeviceTensorND& value, const HostTensorND& hvalue) override;
 
     void del(Handle) override;
-    void swap_in(Handle) override;
-    void swap_out(Handle) override;
     void drop(Handle) override;
 
     SmallVector<Handle> apply_op(

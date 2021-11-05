@@ -84,28 +84,6 @@ struct GetValue {
     const char* get_name() const { return "GetValue"; }
 };
 
-struct SwapIn {
-    TensorInfo* dest;
-
-    template <typename TFunctor>
-    void get_props(TFunctor&& functor) const {
-        functor("dest", dest);
-    }
-
-    const char* get_name() const { return "SwapIn"; }
-};
-
-struct SwapOut {
-    TensorInfo* dest;
-
-    template <typename TFunctor>
-    void get_props(TFunctor&& functor) const {
-        functor("dest", dest);
-    }
-
-    const char* get_name() const { return "SwapOut"; }
-};
-
 struct Drop {
     TensorInfo* dest;
 
@@ -171,8 +149,8 @@ struct PopScope {
 };
 
 using CommandData = std::variant<
-        Put, ApplyOp, Del, GetValue, SwapIn, SwapOut, Drop, SetOption, StartProfile,
-        StopProfile, PushScope, PopScope>;
+        Put, ApplyOp, Del, GetValue, Drop, SetOption, StartProfile, StopProfile,
+        PushScope, PopScope>;
 
 struct Command {
     uint64_t id;

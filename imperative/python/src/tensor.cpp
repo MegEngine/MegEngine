@@ -605,14 +605,6 @@ PyObject* TensorWrapper::_dev_tensor() {
     return py::cast(dev_tensor).release().ptr();
 }
 
-void TensorWrapper::_swap_out() {
-    interpreter_for_py->swap_out(m_tensor->m_handle.get());
-}
-
-void TensorWrapper::_swap_in() {
-    interpreter_for_py->swap_in(m_tensor->m_handle.get());
-}
-
 void TensorWrapper::_drop() {
     interpreter_for_py->drop(m_tensor->m_handle.get());
 }
@@ -931,8 +923,6 @@ void init_tensor(py::module m) {
                     .def<&TensorWrapper::unsetscalar>("_unsetscalar")
                     .def<&TensorWrapper::detach>("detach")
                     .def<&TensorWrapper::_dev_tensor>("_dev_tensor")
-                    .def<&TensorWrapper::_swap_out>("_swap_out")
-                    .def<&TensorWrapper::_swap_in>("_swap_in")
                     .def<&TensorWrapper::_drop>("_drop")
                     .def<&TensorWrapper::reset_varnode>("_reset_varnode")
                     .def<&TensorWrapper::_use_cnt>("_use_cnt")
@@ -1032,8 +1022,6 @@ void init_tensor(py::module m) {
     });
     m.def("get_option",
           [](std::string name) { return interpreter_for_py->get_option(name); });
-    m.def("_set_swap_flag",
-          [](bool flag) { interpreter_for_py->set_option("enable_swap", flag); });
     m.def("_set_drop_flag",
           [](bool flag) { interpreter_for_py->set_option("enable_drop", flag); });
     m.def("config_async_level", [](int level) {

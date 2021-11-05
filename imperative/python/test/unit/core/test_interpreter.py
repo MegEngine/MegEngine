@@ -9,7 +9,6 @@ import megengine.functional as F
 from megengine.core._imperative_rt.core2 import (
     AsyncError,
     _set_drop_flag,
-    _set_swap_flag,
     config_async_level,
     get_async_level,
 )
@@ -61,24 +60,20 @@ def test_host_compute_elemwise():
         d = F.reshape(a, c)
 
 
-def test_swap_drop_basic():
-    _set_swap_flag(True)
+def test_drop_basic():
     _set_drop_flag(True)
     # test xpu compute
     x = mge.tensor(np.ones((3, 3)), dtype=np.float32)
     y = mge.tensor(np.ones((3, 3)), dtype=np.float32)
     z = x + y
-    x._swap_out()
     z._drop()
     z.numpy()
     # test host value compute
     x = mge.tensor(np.ones((2, 2)), dtype=np.float32)
     y = mge.tensor(np.ones((2, 2)), dtype=np.float32)
     z = x + y
-    x._swap_out()
     z._drop()
     z.numpy()
-    _set_swap_flag(False)
     _set_drop_flag(False)
 
 

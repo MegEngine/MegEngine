@@ -21,8 +21,7 @@ namespace interpreter::intl {
 
 enum EvictType {
     NONE = 0,
-    SWAP = 1,
-    DROP = 2,
+    DROP = 1,
 };
 
 /*!
@@ -49,7 +48,6 @@ struct TensorInfo {
         InvalidStatus,
         Allocated,
         Produced,
-        Swapped,
         Dropped,
         Deleted,
     };
@@ -75,9 +73,7 @@ struct TensorInfo {
     // Status should be only modified in worker thread
     Status status = InvalidStatus;
 
-    // Used by HostCompute and Memory Swap.
-    // HostCompute and Swap does not happen in one thread.
-    // Maybe a barrier is needed.
+    // Used by HostCompute
     HostTensorND h_value;
 
     // reserved for auto drop

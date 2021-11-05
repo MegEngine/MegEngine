@@ -39,8 +39,6 @@ struct Interpreter {
         virtual Handle put(const DeviceTensorND& value, const HostTensorND& hvalue) = 0;
 
         virtual void del(Handle) = 0;
-        virtual void swap_in(Handle) = 0;
-        virtual void swap_out(Handle) = 0;
         virtual void drop(Handle) = 0;
 
         virtual SmallVector<Handle> apply_op(

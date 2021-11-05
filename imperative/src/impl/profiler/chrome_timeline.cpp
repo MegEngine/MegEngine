@@ -232,10 +232,6 @@ struct ChromeTimelineEventVisitor : EventVisitor<ChromeTimelineEventVisitor> {
                 return "Drop";
             case TensorCommandKind::Del:
                 return "Del";
-            case TensorCommandKind::SwapIn:
-                return "SwapIn";
-            case TensorCommandKind::SwapOut:
-                return "SwapOut";
             case TensorCommandKind::RecFree:
                 return "RecFree";
             case TensorCommandKind::ReGen:

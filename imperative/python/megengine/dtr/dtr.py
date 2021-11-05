@@ -118,7 +118,6 @@ def enable_sqrt_sampling(mod, value: bool):
 
 def enable():
     r"""Enable to record computing path of tensors and to perform DTR policy."""
-    _set_defrag(True)
     _set_option("enable_dtr_auto_drop", 1)
     _set_option("enable_drop", 1)
     _set_option("buffer_length", 0)
@@ -127,7 +126,6 @@ def enable():
 
 def disable():
     r"""Stop recording computing path of tensors and performing DTR policy."""
-    _set_defrag(False)
     _set_option("enable_dtr_auto_drop", 0)
     _set_option("enable_drop", 0)
     _set_option("record_computing_path", 0)
