@@ -79,9 +79,15 @@ if(DEFINED MGB_VER_MAJOR)
     set(IS_INTERNAL "--internal")
 else()
     set(IS_INTERNAL "")
-endif()
+endif(DEFINED MGB_VER_MAJOR)
+
+if(DEFINED MGE_EXTRA_NAME)
+    set(RC_NAME "--rc=${MGE_EXTRA_NAME}")
+else()
+    set(RC_NAME "")
+endif(DEFINED MGE_EXTRA_NAME)
 
 add_custom_command(
     TARGET ${MODULE_NAME} POST_BUILD
-    COMMAND "${PYTHON_EXECUTABLE}" ${CMAKE_CURRENT_SOURCE_DIR}/python/gen_version.py --output ${CMAKE_CURRENT_BINARY_DIR}/python/megengine/version.py --major ${MGE_VER_MAJOR} --minor ${MGE_VER_MINOR} --patch ${MGE_VER_PATCH} ${IS_INTERNAL}
+    COMMAND "${PYTHON_EXECUTABLE}" ${CMAKE_CURRENT_SOURCE_DIR}/python/gen_version.py --output ${CMAKE_CURRENT_BINARY_DIR}/python/megengine/version.py --major ${MGE_VER_MAJOR} --minor ${MGE_VER_MINOR} --patch ${MGE_VER_PATCH} ${RC_NAME} ${IS_INTERNAL}
 )

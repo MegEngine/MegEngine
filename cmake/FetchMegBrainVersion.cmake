@@ -27,6 +27,9 @@ set (MGE_VER_MINOR ${CMAKE_MATCH_1})
 string (REGEX MATCH "MGE_PATCH *([0-9]+)" _ ${content})
 set (MGE_VER_PATCH ${CMAKE_MATCH_1})
 
+string (REGEX MATCH "MGE_EXTRA_NAME *\"(.*)\"" _ ${content})
+set (MGE_EXTRA_NAME ${CMAKE_MATCH_1})
+
 if (MGB_FORCE_DEV_VERSION)
     set (MGB_IS_DEV 1)
 else()
