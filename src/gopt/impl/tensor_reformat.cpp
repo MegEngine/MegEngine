@@ -555,6 +555,7 @@ std::unique_ptr<EnableTensorCorePass> EnableTensorCorePass::
     replace_func[opr::Reshape::typeinfo()] = replace_inps_to_nchw4;
     replace_func[opr::GetVarShape::typeinfo()] = replace_inps_to_nchw4;
     replace_func[opr::Dimshuffle::typeinfo()] = replace_inps_to_nchw4;
+    replace_func[opr::BatchConvBias::typeinfo()] = replace_inps_to_nchw4;
     return ret;
     MIDOUT_E
 }
