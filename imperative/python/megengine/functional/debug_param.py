@@ -8,18 +8,23 @@
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 import os
 
+from ..core import _config
 from ..core.ops import builtin
 from ..logger import get_logger
 from ..utils.deprecation import deprecated
 
 Strategy = builtin.ops.Convolution.Strategy
 
-_execution_strategy = os.getenv("MEGENGINE_EXECUTION_STRATEGY", "HEURISTIC")
-
 if os.getenv("MEGENGINE_CONV_EXECUTION_STRATEGY") != None:
     get_logger().warning(
         "Environment variable `MEGENGINE_CONV_EXECUTION_STRATEGY` is deprecated, please use `MEGENGINE_EXECUTION_STRATEGY`"
     )
+
+_valid_string_option = {
+    "REPRODUCIBLE": Strategy.REPRODUCIBLE,
+    "HEURISTIC": Strategy.HEURISTIC,
+    "PROFILE": Strategy.PROFILE,
+}
 
 
 def get_execution_strategy() -> Strategy:
@@ -27,7 +32,14 @@ def get_execution_strategy() -> Strategy:
 
     See :func:`~.set_execution_strategy` for possible return values
     """
-    return _execution_strategy
+    strategy = Strategy(0)
+    if _config._benchmark_kernel:
+        strategy |= Strategy.PROFILE
+    else:
+        strategy |= Strategy.HEURISTIC
+    if _config._deterministic_kernel:
+        strategy |= Strategy.REPRODUCIBLE
+    return strategy
 
 
 def set_execution_strategy(option):
@@ -50,7 +62,6 @@ def set_execution_strategy(option):
 
     * 'HEURISTIC' uses heuristic to choose the fastest algorithm.
     * 'PROFILE' runs possible algorithms on real device to find the best one.
-    * 'PROFILE_HEURISTIC' uses profiling result and heuristic to choose the fastest algorithm.
     * 'PROFILE_REPRODUCIBLE' uses the fastest of profiling result that is also reproducible.
     * 'HEURISTIC_REPRODUCIBLE' uses heuristic to choose the fastest algorithm that is also reproducible.
 
@@ -58,29 +69,33 @@ def set_execution_strategy(option):
 
     It can also be set through the environment variable 'MEGENGINE_EXECUTION_STRATEGY'.
     """
-    valid_string_option = {
-        "REPRODUCIBLE": Strategy.REPRODUCIBLE,
-        "HEURISTIC": Strategy.HEURISTIC,
-        "PROFILE": Strategy.PROFILE,
-    }
 
-    global _execution_strategy  # pylint: disable=global-statement
     if isinstance(option, Strategy):
-        _execution_strategy = option
+        _config._benchmark_kernel = (
+            True if option & _valid_string_option["PROFILE"] != Strategy(0) else False
+        )
+        _config._deterministic_kernel = (
+            True
+            if option & _valid_string_option["REPRODUCIBLE"] != Strategy(0)
+            else False
+        )
         return
 
     assert isinstance(option, str)
 
-    strategy_tmp = Strategy(0)
+    _config._benchmark_kernel = False
+    _config._deterministic_kernel = False
     for opt in option.split("_"):
-        if not opt in valid_string_option:
+        if not opt in _valid_string_option:
             raise ValueError(
                 "Valid option can only be one of {}, or combine them with '_'.".format(
-                    valid_string_option.keys()
+                    _valid_string_option.keys()
                 )
             )
-        strategy_tmp = strategy_tmp | valid_string_option[opt]
-    _execution_strategy = strategy_tmp
+        _config._benchmark_kernel |= _valid_string_option[opt] == Strategy.PROFILE
+        _config._deterministic_kernel |= (
+            _valid_string_option[opt] == Strategy.REPRODUCIBLE
+        )
 
 
 @deprecated(version="1.3", reason="use get_execution_strategy() instead")
@@ -91,3 +106,6 @@ def get_conv_execution_strategy() -> str:
 @deprecated(version="1.3", reason="use set_execution_strategy() instead")
 def set_conv_execution_strategy(option: str):
     return set_execution_strategy(option)
+
+
+set_execution_strategy(os.getenv("MEGENGINE_EXECUTION_STRATEGY", "HEURISTIC"))
