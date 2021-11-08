@@ -41,6 +41,14 @@ def test_eye():
         )
 
 
+def test_full():
+    shape = (2, 3)
+    values = [True, 4, 5.0]
+    for value in values:
+        np.testing.assert_allclose(F.full(shape, value).numpy(), np.full(shape, value))
+        assert F.full(shape, value).dtype == tensor(value).dtype
+
+
 @pytest.mark.parametrize("is_varnode", [True, False])
 def test_concat(is_varnode):
     if is_varnode:

@@ -98,18 +98,27 @@ def eye(N, M=None, *, dtype="float32", device: Optional[CompNode] = None) -> Ten
     return result
 
 
-def full(shape, value, dtype="float32", device=None) -> Tensor:
+def full(
+    shape: Union[int, tuple, list],
+    value: Union[bool, int, float, Tensor],
+    dtype=None,
+    device=None,
+) -> Tensor:
     r"""Creates a tensor of shape ``shape`` filled with ``value``.
 
     Args:
-        shape: a list, tuple or integer defining the shape of the output tensor.
-        value: the value to fill the output tensor with.
-        dtype: the desired data type of the output tensor. Default: ``float32``.
-        device: the desired device of the output tensor. Default: if ``None``,
-            use the default device (see :func:`~.megengine.get_default_device`).
+        shape: output tensor shape.
+        value: fill value.
+        dtype: output tensor data type. If ``dtype`` is ``None``, the output tensor
+            data type must be inferred from ``value``. If the value is an ``int``,
+            the output tensor data type must be the default integer data type. If the
+            value is a ``float``, the output tensor data type must be the default
+            floating-point data type. If the value is a ``bool``, the output tensor 
+            must have boolean data type. Default: ``None``.
+        device: device on which to place the created tensor. Default: ``None``.
 
     Returns:
-        output tensor.
+        a tensor where every element is equal to ``value``.
 
     Examples:
 
