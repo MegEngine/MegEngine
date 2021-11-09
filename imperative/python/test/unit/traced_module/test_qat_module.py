@@ -108,9 +108,8 @@ def check_qparams(qparmsa: Q.QParams, qparmsb: Q.QParams):
 def build_observered_net(net: M.Module, observer_cls):
     qat_net = Q.quantize_qat(net, qconfig=get_observer_config(observer_cls))
     Q.enable_observer(qat_net)
-    for _ in range(5):
-        inp = Tensor(np.random.random(size=(5, 3, 32, 32)))
-        qat_net(inp)
+    inp = Tensor(np.random.random(size=(5, 3, 32, 32)))
+    qat_net(inp)
     Q.disable_observer(qat_net)
     return qat_net
 

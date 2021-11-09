@@ -281,11 +281,8 @@ class _InsertExprs:
     def __exit__(self, ty, va, tr):
         if va is not None:
             return False
-        set_symbolic_shape(self.use_sym_shape)
         active_module_tracer().patcher.__exit__(ty, va, tr)
         _set_convert_node_flag(False)
-        set_active_module_tracer(None)
-        unset_module_tracing()
 
         while self._tensor_method_patch:
             pf = self._tensor_method_patch.pop()
@@ -297,6 +294,10 @@ class _InsertExprs:
             if isinstance(v, TracedModuleBuilder):
                 v = v.build()
                 setattr(module, k, v)
+
+        set_symbolic_shape(self.use_sym_shape)
+        set_active_module_tracer(None)
+        unset_module_tracing()
 
         extra_inp_nodes = set(self.global_scope.inputs)
         max_inp_expr_idx = -1
