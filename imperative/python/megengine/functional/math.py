@@ -11,6 +11,7 @@ import math
 from functools import lru_cache
 from typing import Optional, Sequence, Tuple, Union
 
+from ..core import _config
 from ..core._imperative_rt.core2 import apply, dtype_promotion
 from ..core._imperative_rt.ops import SubgraphBuilder as _SubgraphBuilder
 from ..core._trace_option import use_symbolic_shape
@@ -1077,6 +1078,7 @@ def matmul(
     dim1, dim2 = inp1.ndim, inp2.ndim
     assert dim1 > 0 and dim2 > 0
     maxdim = dim1 if dim1 > dim2 else dim2
+    compute_mode = _config._get_actual_op_param(compute_mode, _config.__compute_mode)
     if dim1 == 1 and dim2 == 1:  # dispatch to Dot
         return dot(inp1, inp2)
     elif maxdim <= 2 or dim2 <= 2:  # dispath to MatrixMul

@@ -12,6 +12,7 @@ from typing import Union
 
 import numpy as np
 
+from .. import _config
 from .._imperative_rt.common import CompNode
 from .._imperative_rt.core2 import SymbolVar, Tensor, apply, dtype_promotion
 from ..ops import builtin
@@ -87,6 +88,7 @@ def _matmul(inp1, inp2):
             inp1 = inp1.astype(dtype)
         if inp2.dtype != dtype:
             inp2 = inp2.astype(dtype)
+    compute_mode = _config._get_actual_op_param(compute_mode, _config.__compute_mode)
     op = builtin.MatrixMul(
         transposeA=False, transposeB=False, compute_mode=compute_mode, format="default"
     )

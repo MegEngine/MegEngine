@@ -10,6 +10,7 @@
 from functools import lru_cache
 from typing import NamedTuple, Optional, Sequence, Tuple, Union
 
+from ..core import _config
 from ..core._imperative_rt.core2 import apply, dtype_promotion
 from ..core._imperative_rt.ops import SubgraphBuilder as _SubgraphBuilder
 from ..core.ops import builtin
@@ -115,6 +116,7 @@ def linear(
         weight: weight with shape `(out_features, in_features)`.
         bias: bias with shape `(out_features,)`. Default: None
     """
+    compute_mode = _config._get_actual_op_param(compute_mode, _config.__compute_mode)
     ret = matmul(inp, weight, transpose_b=True, compute_mode=compute_mode)
     if bias is not None:
         if amp._enabled:
@@ -185,6 +187,8 @@ def conv1d(
     pad_h = padding
     dilate_h = dilation
 
+    compute_mode = _config._get_actual_op_param(compute_mode, _config.__compute_mode)
+    conv_format = _config._get_actual_op_param("NCHW", _config.__conv_format)
     sparse_type = "dense" if groups == 1 else "group"
     op = builtin.Convolution(
         stride_h=stride_h,
@@ -197,6 +201,7 @@ def conv1d(
         mode=conv_mode,
         compute_mode=compute_mode,
         sparse=sparse_type,
+        format=conv_format,
     )
     (output,) = apply(op, inp, weight)
     if bias is not None:
@@ -261,6 +266,8 @@ def conv2d(
     dilate_h, dilate_w = expand_hw(dilation)
 
     sparse_type = "dense" if groups == 1 else "group"
+    compute_mode = _config._get_actual_op_param(compute_mode, _config.__compute_mode)
+    conv_format = _config._get_actual_op_param("NCHW", _config.__conv_format)
     op = builtin.Convolution(
         stride_h=stride_h,
         stride_w=stride_w,
@@ -272,6 +279,7 @@ def conv2d(
         mode=conv_mode,
         compute_mode=compute_mode,
         sparse=sparse_type,
+        format=conv_format,
     )
     (output,) = apply(op, inp, weight)
     if bias is not None:
@@ -403,6 +411,7 @@ def conv_transpose2d(
     stride_h, stride_w = expand_hw(stride)
     pad_h, pad_w = expand_hw(padding)
     dilate_h, dilate_w = expand_hw(dilation)
+    compute_mode = _config._get_actual_op_param(compute_mode, _config.__compute_mode)
 
     op = builtin.ConvolutionBackwardData(
         stride_h=stride_h,
@@ -474,6 +483,7 @@ def deformable_conv2d(
     pad_h, pad_w = expand_hw(padding)
     dilate_h, dilate_w = expand_hw(dilation)
 
+    compute_mode = _config._get_actual_op_param(compute_mode, _config.__compute_mode)
     sparse_type = "dense" if groups == 1 else "group"
     op = builtin.DeformableConv(
         stride_h=stride_h,
@@ -614,6 +624,7 @@ def max_pool2d(
     window_h, window_w = _pair_nonzero(kernel_size)
     stride_h, stride_w = _pair_nonzero(stride)
     padding_h, padding_w = _pair(padding)
+    conv_format = _config._get_actual_op_param("NCHW", _config.__conv_format)
 
     op = builtin.Pooling(
         window_h=window_h,
@@ -623,6 +634,7 @@ def max_pool2d(
         pad_h=padding_h,
         pad_w=padding_w,
         mode="max",
+        format=conv_format,
     )
     (output,) = apply(op, inp)
     return output
@@ -656,6 +668,7 @@ def avg_pool2d(
     window_h, window_w = _pair_nonzero(kernel_size)
     stride_h, stride_w = _pair_nonzero(stride)
     padding_h, padding_w = _pair(padding)
+    conv_format = _config._get_actual_op_param("NCHW", _config.__conv_format)
 
     op = builtin.Pooling(
         window_h=window_h,
@@ -665,6 +678,7 @@ def avg_pool2d(
         pad_h=padding_h,
         pad_w=padding_w,
         mode=mode,
+        format=conv_format,
     )
     (output,) = apply(op, inp)
     return output
@@ -686,8 +700,9 @@ def adaptive_max_pool2d(
     """
     if isinstance(oshp, int):
         oshp = (oshp, oshp)
+    conv_format = _config._get_actual_op_param("NCHW", _config.__conv_format)
 
-    op = builtin.AdaptivePooling(mode="max", format="NCHW",)
+    op = builtin.AdaptivePooling(mode="max", format=conv_format,)
     oshp = astensor1d(oshp, inp, dtype="int32", device=inp.device)
     (output,) = apply(op, inp, oshp)
     return output

@@ -8,6 +8,7 @@
 # pylint: disable=too-many-lines
 from typing import Tuple, Union
 
+from ..core import _config
 from ..core._imperative_rt.core2 import apply
 from ..core.ops import builtin
 from ..tensor import Tensor
@@ -55,6 +56,8 @@ def conv_bias_activation(
     sh, sw = _pair_nonzero(stride)
     dh, dw = _pair_nonzero(dilation)
     sparse_type = "dense" if groups == 1 else "group"
+    compute_mode = _config._get_actual_op_param(compute_mode, _config.__compute_mode)
+    conv_format = _config._get_actual_op_param("NCHW", _config.__conv_format)
     op = builtin.ConvBias(
         stride_h=sh,
         stride_w=sw,
@@ -63,7 +66,7 @@ def conv_bias_activation(
         dilate_h=dh,
         dilate_w=dw,
         dtype=dtype,
-        format="NCHW",
+        format=conv_format,
         strategy=get_execution_strategy(),
         nonlineMode=nonlinear_mode,
         mode=conv_mode,
@@ -114,6 +117,8 @@ def batch_conv_bias_activation(
     sh, sw = _pair_nonzero(stride)
     dh, dw = _pair_nonzero(dilation)
     sparse_type = "dense" if groups == 1 else "group"
+    compute_mode = _config._get_actual_op_param(compute_mode, _config.__compute_mode)
+    conv_format = _config._get_actual_op_param("NCHW", _config.__conv_format)
     op = builtin.BatchConvBias(
         stride_h=sh,
         stride_w=sw,
@@ -122,7 +127,7 @@ def batch_conv_bias_activation(
         dilate_h=dh,
         dilate_w=dw,
         dtype=dtype,
-        format="NCHW",
+        format=conv_format,
         strategy=get_execution_strategy(),
         nonlineMode=nonlinear_mode,
         mode=conv_mode,
@@ -164,6 +169,7 @@ def conv_transpose2d(
     pad_h, pad_w = _pair(padding)
     stride_h, stride_w = _pair_nonzero(stride)
     dilate_h, dilate_w = _pair_nonzero(dilation)
+    compute_mode = _config._get_actual_op_param(compute_mode, _config.__compute_mode)
 
     # should be replaced by Op with bias such as ConvolutionBackwardDataBias
     op = builtin.ConvolutionBackwardData(

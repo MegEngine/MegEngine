@@ -10,6 +10,7 @@ from typing import Iterable, Optional, Tuple, Union
 
 import numpy as np
 
+from ..core import _config
 from ..core._imperative_rt.core2 import apply
 from ..core.ops import builtin
 from ..core.tensor import megbrain_graph, utils
@@ -143,9 +144,11 @@ def correlation(
         pad_size: int (non-negative), optional, default=0) – pad for Correlation
         is_multiply: boolean, optional, default=True) – operation type is either multiplication or absolute difference
     """
+    conv_format = _config._get_actual_op_param("NCHW", _config.__conv_format)
+    assert conv_format == "NCHW", "Currently correlation only support NCHW mode"
 
     op = builtin.Correlation(
-        format="NCHW",
+        format=conv_format,
         kernel_size=kernel_size,
         max_displacement=max_displacement,
         stride1=stride1,
@@ -215,10 +218,12 @@ def roi_align(
         sample_points = (sample_points, sample_points)
     sample_height, sample_width = sample_points
     offset = 0.5 if aligned else 0.0
+    conv_format = _config._get_actual_op_param("NCHW", _config.__conv_format)
+    assert conv_format == "NCHW", "Currently roi_align only support NCHW mode"
 
     op = builtin.ROIAlign(
         mode=mode,
-        format="NCHW",
+        format=conv_format,
         spatial_scale=spatial_scale,
         offset=offset,
         pooled_height=pooled_height,
@@ -343,9 +348,10 @@ def remap(
             [[[[1. 4.]
                [4. 4.]]]]
     """
+    conv_format = _config._get_actual_op_param("NCHW", _config.__conv_format)
 
     op = builtin.Remap(
-        imode=interp_mode, border_type=border_mode, format="NCHW", scalar=scalar
+        imode=interp_mode, border_type=border_mode, format=conv_format, scalar=scalar
     )
     assert isinstance(inp, (Tensor, megbrain_graph.VarNode)), "inp must be Tensor type"
     (result,) = apply(op, inp, map_xy)
@@ -384,10 +390,12 @@ def warp_affine(
         however it does not mean that you can use all the combinations.
         On different platforms, different combinations are supported.
     """
+    conv_format = _config._get_actual_op_param(format, _config.__conv_format)
+
     op = builtin.WarpAffine(
         border_mode=border_mode,
         border_val=border_val,
-        format=format,
+        format=conv_format,
         imode=interp_mode,
     )
     out_shape = utils.astensor1d(out_shape, inp, dtype="int32", device=inp.device)
@@ -466,8 +474,9 @@ def warp_perspective(
         mat = mat.astype("float32")
     if inp.dtype == np.float16:
         inp = inp.astype("float32")
+    conv_format = _config._get_actual_op_param(format, _config.__conv_format)
     op = builtin.WarpPerspective(
-        imode=interp_mode, bmode=border_mode, format=format, border_val=border_val
+        imode=interp_mode, bmode=border_mode, format=conv_format, border_val=border_val
     )
     out_shape = astensor1d(out_shape, inp, dtype="int32", device=inp.device)
     if mat_idx is not None:
@@ -602,7 +611,9 @@ def interpolate(
         }
         if inp.dtype == np.float16:
             inp = inp.astype("float32")
-        op = builtin.Resize(imode=mode_map[mode], format="NCHW")
+        conv_format = _config._get_actual_op_param("NCHW", _config.__conv_format)
+        assert conv_format == "NCHW", "Currently resize only support NCHW mode"
+        op = builtin.Resize(imode=mode_map[mode], format=conv_format)
         shape = astensor1d(dsize, inp, dtype="int32", device=inp.device)
         (ret,) = apply(op, inp, shape)
     else:
