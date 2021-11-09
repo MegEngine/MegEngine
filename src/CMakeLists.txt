@@ -1,3 +1,8 @@
+# force define a SHARED target for whl, caused by when build for APPLE
+# we will force set BUILD_SHARED_LIBS=OFF for xcode needed
+set(MGE_SHARED_LIB megengine_shared)
+set(MGE_SHARED_LIB ${MGE_SHARED_LIB} PARENT_SCOPE)
+
 if(MGE_WITH_JIT_MLIR)
     add_subdirectory(jit/include/megbrain/jit/mlir/ir)
 endif()
@@ -206,32 +211,30 @@ set (_VER_FILE ${PROJECT_SOURCE_DIR}/src/version.ld)
 
 # Build as SHARED or STATIC depending on BUILD_SHARED_LIBS=ON/OFF
 add_library(megengine)
-# force define a SHARED target for whl, caused by when build for APPLE
-# we will force set BUILD_SHARED_LIBS=OFF for xcode needed
-add_library(megengine_shared SHARED)
+add_library(${MGE_SHARED_LIB} SHARED)
 target_link_libraries(megengine PRIVATE ${MGE_CUDA_LIBS})
 target_link_libraries(megengine PUBLIC megbrain megdnn)
-target_link_libraries(megengine_shared PUBLIC megbrain megdnn)
-target_link_libraries(megengine_shared PRIVATE ${MGE_CUDA_LIBS})
+target_link_libraries(${MGE_SHARED_LIB} PUBLIC megbrain megdnn)
+target_link_libraries(${MGE_SHARED_LIB} PRIVATE ${MGE_CUDA_LIBS})
 if (UNIX AND NOT APPLE)
     target_link_options(megengine PRIVATE -Wl,--no-undefined -Wl,--version-script=${_VER_FILE})
     set_target_properties(megengine PROPERTIES LINK_DEPENDS ${_VER_FILE})
-    target_link_options(megengine_shared PRIVATE -Wl,--no-undefined -Wl,--version-script=${_VER_FILE})
-    set_target_properties(megengine_shared PROPERTIES LINK_DEPENDS ${_VER_FILE})
+    target_link_options(${MGE_SHARED_LIB} PRIVATE -Wl,--no-undefined -Wl,--version-script=${_VER_FILE})
+    set_target_properties(${MGE_SHARED_LIB} PROPERTIES LINK_DEPENDS ${_VER_FILE})
 endif()
 if(WIN32 OR MSVC)
     target_compile_definitions(megbrain PRIVATE MGE_DLL_EXPORT)
     target_compile_definitions(megdnn PRIVATE MGE_DLL_EXPORT)
     target_compile_definitions(megengine PRIVATE MGE_DLL_EXPORT)
-    target_compile_definitions(megengine_shared PRIVATE MGE_DLL_EXPORT)
+    target_compile_definitions(${MGE_SHARED_LIB} PRIVATE MGE_DLL_EXPORT)
     # please do not use WINDOWS_EXPORT_ALL_SYMBOLS, as symbols max than 65535 when build with CUDA
     #set_target_properties(megengine PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS TRUE)
-    #set_target_properties(megengine_shared PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS TRUE)
+    #set_target_properties(${MGE_SHARED_LIB} PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS TRUE)
 endif()
 if (MGE_WITH_DISTRIBUTED)
     message(VERBOSE "megengine configured to link megray")
     target_link_libraries(megengine PUBLIC megray)
-    target_link_libraries(megengine_shared PUBLIC megray)
+    target_link_libraries(${MGE_SHARED_LIB} PUBLIC megray)
 endif()
 # Do not export targets if MGE_WITH_DISTRIBUTED is on. MegRay is not ready
 # for this.

@@ -1145,6 +1145,14 @@ if(TARGET _imperative_rt)
         COMMAND ${CMAKE_COMMAND} -E create_symlink
           ${CMAKE_CURRENT_BINARY_DIR}/imperative/python/${PACKAGE_NAME}/version.py
           ${CMAKE_CURRENT_SOURCE_DIR}/imperative/python/${PACKAGE_NAME}/version.py
+        COMMAND ${CMAKE_COMMAND} -E create_symlink
+          ${CMAKE_CURRENT_SOURCE_DIR}/src/custom/include
+          ${CMAKE_CURRENT_SOURCE_DIR}/imperative/python/${PACKAGE_NAME}/core/include
+        COMMAND ${CMAKE_COMMAND} -E make_directory
+          ${CMAKE_CURRENT_SOURCE_DIR}/imperative/python/${PACKAGE_NAME}/core/lib
+        COMMAND ${CMAKE_COMMAND} -E create_symlink
+          ${CMAKE_CURRENT_BINARY_DIR}/src/$<TARGET_FILE_NAME:${MGE_SHARED_LIB}>
+          ${CMAKE_CURRENT_SOURCE_DIR}/imperative/python/${PACKAGE_NAME}/core/lib/$<TARGET_FILE_NAME:${MGE_SHARED_LIB}>
         DEPENDS _imperative_rt
         VERBATIM
     )

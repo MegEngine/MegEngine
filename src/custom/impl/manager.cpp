@@ -18,11 +18,30 @@
 
 #ifndef _WIN32
 #include <dlfcn.h>
+#else
+#include <windows.h>
 #endif
 
 using namespace mgb;
 
 namespace custom {
+
+#ifdef _WIN32
+#define RTLD_LAZY 0
+
+void* dlopen(const char* file, int) {
+    return static_cast<void*>(LoadLibrary(file));
+}
+
+int dlclose(void* handle) {
+    return static_cast<int>(FreeLibrary(static_cast<HMODULE>(handle)));
+}
+
+const char* dlerror(void) {
+    static char win_err_info[] = "no dlerror info in windows";
+    return win_err_info;
+}
+#endif
 
 CustomOpManager* CustomOpManager::inst(void) {
     static CustomOpManager op_manager;
@@ -127,7 +146,6 @@ std::vector<RunTimeId> CustomOpManager::op_id_list(void) {
     return ret;
 }
 
-#ifndef _WIN32
 CustomLib::CustomLib(const std::string& path, int mode = RTLD_LAZY)
         : m_handle(nullptr, [](void* handle) { dlclose(handle); }) {
     auto op_list_before_load = CustomOpManager::inst()->op_name_list();
@@ -146,12 +164,6 @@ CustomLib::CustomLib(const std::string& path, int mode = RTLD_LAZY)
         }
     }
 }
-#else
-CustomLib::CustomLib(const std::string& path, int mode = 0)
-        : m_handle(nullptr, [](void* handle) {}) {
-    mgb_assert(false, "custom op is only supported on Linux now");
-}
-#endif
 
 const std::vector<std::string>& CustomLib::ops_in_lib(void) const {
     return m_ops;

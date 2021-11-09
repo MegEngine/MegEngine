@@ -30,9 +30,9 @@ namespace custom {
 #define CUSTOM_DEVICE_TYPE_ENUM_DECL(custom_type, builtin_type, builtin_str) \
     custom_type,
 
-class Device {
-    MGE_WIN_DECLSPEC_FUC const void* impl() const;
-    MGE_WIN_DECLSPEC_FUC Device(const void* impl);
+class MGE_WIN_DECLSPEC_FUC Device {
+    const void* impl() const;
+    Device(const void* impl);
     CUSTOM_PIMPL_CLS_DECL(Device);
 
 public:
@@ -40,19 +40,19 @@ public:
         CUSTOM_FOR_EACH_DEVICE_TYPE(CUSTOM_DEVICE_TYPE_ENUM_DECL)
     };
 
-    MGE_WIN_DECLSPEC_FUC Device(const std::string& device);
-    MGE_WIN_DECLSPEC_FUC Device(const char* device);
-    MGE_WIN_DECLSPEC_FUC Device(DeviceEnum device);
+    Device(const std::string& device);
+    Device(const char* device);
+    Device(DeviceEnum device);
 
-    MGE_WIN_DECLSPEC_FUC std::string str(void) const;
-    MGE_WIN_DECLSPEC_FUC DeviceEnum enumv(void) const;
+    std::string str(void) const;
+    DeviceEnum enumv(void) const;
 
-    MGE_WIN_DECLSPEC_FUC static bool is_legal(const std::string& device);
-    MGE_WIN_DECLSPEC_FUC static bool is_legal(DeviceEnum device);
-    MGE_WIN_DECLSPEC_FUC static std::vector<std::string> legal_devices(void);
+    static bool is_legal(const std::string& device);
+    static bool is_legal(DeviceEnum device);
+    static std::vector<std::string> legal_devices(void);
 
     friend class Tensor;
-    friend bool operator==(const Device& lhs, const Device& rhs);
+    MGE_WIN_DECLSPEC_FUC friend bool operator==(const Device& lhs, const Device& rhs);
     CUSTOM_DATA_ADAPTOR_FRIEND_DECL;
 };
 
@@ -60,23 +60,23 @@ using DeviceEnum = Device::DeviceEnum;
 
 bool operator==(const Device& lhs, const Device& rhs);
 
-class Shape {
-    MGE_WIN_DECLSPEC_FUC const void* impl() const;
-    MGE_WIN_DECLSPEC_FUC Shape(const void* impl);
+class MGE_WIN_DECLSPEC_FUC Shape {
+    const void* impl() const;
+    Shape(const void* impl);
     CUSTOM_PIMPL_CLS_DECL(Shape);
 
 public:
-    MGE_WIN_DECLSPEC_FUC Shape(const std::vector<size_t>& rhs);
-    MGE_WIN_DECLSPEC_FUC Shape(const std::initializer_list<size_t>& rhs);
+    Shape(const std::vector<size_t>& rhs);
+    Shape(const std::initializer_list<size_t>& rhs);
 
     size_t& operator[](size_t idx);
     size_t operator[](size_t idx) const;
 
-    MGE_WIN_DECLSPEC_FUC void ndim(size_t dim);
-    MGE_WIN_DECLSPEC_FUC size_t ndim(void) const;
+    void ndim(size_t dim);
+    size_t ndim(void) const;
 
     friend class Tensor;
-    friend bool operator==(const Shape& lhs, const Shape& rhs);
+    MGE_WIN_DECLSPEC_FUC friend bool operator==(const Shape& lhs, const Shape& rhs);
     CUSTOM_DATA_ADAPTOR_FRIEND_DECL;
 };
 
@@ -104,9 +104,9 @@ using bfloat16_t = uint16_t;
 
 #define CUSTOM_DTYPE_ENUM_DECL(custom_type, builtin_type, ctype) custom_type,
 
-class DType {
-    MGE_WIN_DECLSPEC_FUC const void* impl() const;
-    MGE_WIN_DECLSPEC_FUC DType(const void* impl);
+class MGE_WIN_DECLSPEC_FUC DType {
+    const void* impl() const;
+    DType(const void* impl);
     CUSTOM_PIMPL_CLS_DECL(DType);
 
 public:
@@ -114,27 +114,33 @@ public:
         CUSTOM_FOR_EACH_TENSOR_DATA_TYPE(CUSTOM_DTYPE_ENUM_DECL)
     };
 
-    MGE_WIN_DECLSPEC_FUC DType(const std::string& dtype);
-    MGE_WIN_DECLSPEC_FUC DType(const char* dtype);
-    MGE_WIN_DECLSPEC_FUC DType(
-            const std::string& dtype, float scale, uint8_t zero_point = 0);
-    MGE_WIN_DECLSPEC_FUC DType(const char* dtype, float scale, uint8_t zero_point = 0);
-    MGE_WIN_DECLSPEC_FUC DType(DTypeEnum dtype);
-    MGE_WIN_DECLSPEC_FUC DType(DTypeEnum dtype, float scale, uint8_t zero_point = 0);
+    DType(const std::string& dtype);
+    DType(const char* dtype);
+    DType(const std::string& dtype, float scale, uint8_t zero_point = 0);
+    DType(const char* dtype, float scale, uint8_t zero_point = 0);
+    DType(DTypeEnum dtype);
+    DType(DTypeEnum dtype, float scale, uint8_t zero_point = 0);
 
-    MGE_WIN_DECLSPEC_FUC std::string str(void) const;
-    MGE_WIN_DECLSPEC_FUC DTypeEnum enumv() const;
-    MGE_WIN_DECLSPEC_FUC float scale(void) const;
-    MGE_WIN_DECLSPEC_FUC uint8_t zero_point(void) const;
+    std::string str(void) const;
+    DTypeEnum enumv() const;
+    float scale(void) const;
+    uint8_t zero_point(void) const;
     template <typename T>
-    MGE_WIN_DECLSPEC_FUC bool is_compatible(void) const;
+    bool is_compatible(void) const;
 
-    MGE_WIN_DECLSPEC_FUC static bool is_legal(const std::string& dtype);
-    MGE_WIN_DECLSPEC_FUC static bool is_legal(const DTypeEnum& dtype);
-    MGE_WIN_DECLSPEC_FUC static std::vector<std::string> legal_dtypes(void);
+    static bool is_legal(const std::string& dtype);
+    static bool is_legal(const DTypeEnum& dtype);
+    static std::vector<std::string> legal_dtypes(void);
 
     friend class Tensor;
-    friend bool operator==(const DType& lhs, const DType& rhs);
+    MGE_WIN_DECLSPEC_FUC friend bool operator==(const DType& lhs, const DType& rhs);
+    MGE_WIN_DECLSPEC_FUC friend bool operator==(
+            const DType& lhs, const std::string& rhs);
+    MGE_WIN_DECLSPEC_FUC friend bool operator==(const DType& lhs, const char* rhs);
+    MGE_WIN_DECLSPEC_FUC friend bool operator==(
+            const std::string& lhs, const DType& rhs);
+    MGE_WIN_DECLSPEC_FUC friend bool operator==(const char* lhs, const DType& rhs);
+
     CUSTOM_DATA_ADAPTOR_FRIEND_DECL;
 };
 
@@ -180,45 +186,45 @@ bool operator==(const DType& lhs, const char* rhs);
 bool operator==(const std::string& lhs, const DType& rhs);
 bool operator==(const char* lhs, const DType& rhs);
 
-class Format {
-    MGE_WIN_DECLSPEC_FUC const void* impl() const;
-    MGE_WIN_DECLSPEC_FUC Format(const void* impl);
+class MGE_WIN_DECLSPEC_FUC Format {
+    const void* impl() const;
+    Format(const void* impl);
     CUSTOM_PIMPL_CLS_DECL(Format);
 
 public:
-    MGE_WIN_DECLSPEC_FUC Format(const std::string& format);
-    MGE_WIN_DECLSPEC_FUC Format(const char* format);
+    Format(const std::string& format);
+    Format(const char* format);
 
-    MGE_WIN_DECLSPEC_FUC std::string str(void) const;
-    MGE_WIN_DECLSPEC_FUC bool is_default(void) const;
+    std::string str(void) const;
+    bool is_default(void) const;
 
     friend class Tensor;
     CUSTOM_DATA_ADAPTOR_FRIEND_DECL;
 };
 
-class Tensor {
+class MGE_WIN_DECLSPEC_FUC Tensor {
     void* m_tensor;
 
-    MGE_WIN_DECLSPEC_FUC const void* impl(void) const;
-    MGE_WIN_DECLSPEC_FUC Tensor(const void* impl);
+    const void* impl(void) const;
+    Tensor(const void* impl);
 
-    MGE_WIN_DECLSPEC_FUC const size_t* shapes_raw(void) const;
-    MGE_WIN_DECLSPEC_FUC const ptrdiff_t* strides_raw(void) const;
+    const size_t* shapes_raw(void) const;
+    const ptrdiff_t* strides_raw(void) const;
 
 public:
     Tensor() = delete;
-    MGE_WIN_DECLSPEC_FUC Tensor(const Tensor& rhs);
-    MGE_WIN_DECLSPEC_FUC Tensor& operator=(const Tensor& rhs);
+    Tensor(const Tensor& rhs);
+    Tensor& operator=(const Tensor& rhs);
 
-    MGE_WIN_DECLSPEC_FUC Shape shape(void) const;
-    MGE_WIN_DECLSPEC_FUC DType dtype(void) const;
-    MGE_WIN_DECLSPEC_FUC Format format(void) const;
-    MGE_WIN_DECLSPEC_FUC Device device(void) const;
+    Shape shape(void) const;
+    DType dtype(void) const;
+    Format format(void) const;
+    Device device(void) const;
 
-    MGE_WIN_DECLSPEC_FUC size_t size(void) const;
-    MGE_WIN_DECLSPEC_FUC std::vector<ptrdiff_t> stride(void) const;
-    MGE_WIN_DECLSPEC_FUC float scale(void) const;
-    MGE_WIN_DECLSPEC_FUC uint8_t zero_point(void) const;
+    size_t size(void) const;
+    std::vector<ptrdiff_t> stride(void) const;
+    float scale(void) const;
+    uint8_t zero_point(void) const;
 
     void* data(void);
     const void* data(void) const;

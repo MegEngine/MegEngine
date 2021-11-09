@@ -32,27 +32,26 @@ namespace custom {
 
 using RunTimeId = uint64_t;
 
-class ArgInfo {
+class MGE_WIN_DECLSPEC_FUC ArgInfo {
     CUSTOM_PIMPL_CLS_DECL(ArgInfo);
-    MGE_WIN_DECLSPEC_FUC ArgInfo(
-            const std::string& name, const std::string& desc,
+    ArgInfo(const std::string& name, const std::string& desc,
             const std::unordered_set<std::string>& dtypes, const int& ndim,
             const std::string& mem_stgy);
 
-    MGE_WIN_DECLSPEC_FUC const std::string& name(void) const;
-    MGE_WIN_DECLSPEC_FUC const std::string& desc(void) const;
-    MGE_WIN_DECLSPEC_FUC const std::unordered_set<std::string>& dtypes(void) const;
-    MGE_WIN_DECLSPEC_FUC int ndim(void) const;
-    MGE_WIN_DECLSPEC_FUC const std::string& mem_strategy(void) const;
+    const std::string& name(void) const;
+    const std::string& desc(void) const;
+    const std::unordered_set<std::string>& dtypes(void) const;
+    int ndim(void) const;
+    const std::string& mem_strategy(void) const;
 
-    MGE_WIN_DECLSPEC_FUC std::string str() const;
+    std::string str() const;
 };
 
-class CustomOp {
+class MGE_WIN_DECLSPEC_FUC CustomOp {
     std::unique_ptr<void, void_deleter> m_impl;
 
 public:
-    MGE_WIN_DECLSPEC_FUC CustomOp(const std::string& op_type, uint32_t version);
+    CustomOp(const std::string& op_type, uint32_t version);
     PREVENT_COPY_AND_ASSIGN(CustomOp);
 
     using DeviceInferFuncPtr =
@@ -71,70 +70,65 @@ public:
             void (*)(const std::vector<Tensor>&, const Param&, std::vector<Tensor>&);
 
     // write for forward
-    MGE_WIN_DECLSPEC_FUC CustomOp& set_device_infer(DeviceInferFuncPtr func);
-    MGE_WIN_DECLSPEC_FUC CustomOp& set_shape_infer(ShapeInferFuncPtr func);
-    MGE_WIN_DECLSPEC_FUC CustomOp& set_dtype_infer(DTypeInferFuncPtr func);
-    MGE_WIN_DECLSPEC_FUC CustomOp& set_format_infer(FormatInferFuncPtr func);
-    MGE_WIN_DECLSPEC_FUC CustomOp& set_preprocess(PreprocessFuncPtr func);
-    MGE_WIN_DECLSPEC_FUC CustomOp& set_preprocess(
-            const std::string& device, PreprocessFuncPtr func);
-    MGE_WIN_DECLSPEC_FUC CustomOp& set_postprocess(PostprocessFuncPtr func);
-    MGE_WIN_DECLSPEC_FUC CustomOp& set_postprocess(
-            const std::string& device, PostprocessFuncPtr func);
-    MGE_WIN_DECLSPEC_FUC CustomOp& set_compute(ComputeFuncPtr func);
-    MGE_WIN_DECLSPEC_FUC CustomOp& set_compute(
-            const std::string& device, ComputeFuncPtr func);
+    CustomOp& set_device_infer(DeviceInferFuncPtr func);
+    CustomOp& set_shape_infer(ShapeInferFuncPtr func);
+    CustomOp& set_dtype_infer(DTypeInferFuncPtr func);
+    CustomOp& set_format_infer(FormatInferFuncPtr func);
+    CustomOp& set_preprocess(PreprocessFuncPtr func);
+    CustomOp& set_preprocess(const std::string& device, PreprocessFuncPtr func);
+    CustomOp& set_postprocess(PostprocessFuncPtr func);
+    CustomOp& set_postprocess(const std::string& device, PostprocessFuncPtr func);
+    CustomOp& set_compute(ComputeFuncPtr func);
+    CustomOp& set_compute(const std::string& device, ComputeFuncPtr func);
 
-    MGE_WIN_DECLSPEC_FUC CustomOp& set_description(const std::string& op_desc);
-    MGE_WIN_DECLSPEC_FUC CustomOp& add_input(
+    CustomOp& set_description(const std::string& op_desc);
+    CustomOp& add_input(
             const std::string& name, const std::string& desc,
             const std::initializer_list<std::string>& legal_dtypes = {"float32"},
             int dims = -1, const std::string& mem_stgy = "default");
-    MGE_WIN_DECLSPEC_FUC CustomOp& add_output(
+    CustomOp& add_output(
             const std::string& name, const std::string& desc,
             const std::initializer_list<std::string>& legal_dtypes = {"float32"},
             int dims = -1, const std::string& mem_stgy = "default");
-    MGE_WIN_DECLSPEC_FUC CustomOp& add_input(
+    CustomOp& add_input(
             const std::string& name,
             const std::initializer_list<std::string>& legal_dtypes = {"float32"},
             int dims = -1, const std::string& mem_stgy = "default");
-    MGE_WIN_DECLSPEC_FUC CustomOp& add_output(
+    CustomOp& add_output(
             const std::string& name,
             const std::initializer_list<std::string>& legal_dtypes = {"float32"},
             int dims = -1, const std::string& mem_stgy = "default");
-    MGE_WIN_DECLSPEC_FUC CustomOp& add_inputs(const size_t& input_num);
-    MGE_WIN_DECLSPEC_FUC CustomOp& add_outputs(const size_t& output_num);
-    MGE_WIN_DECLSPEC_FUC CustomOp& add_param(
-            const std::string& name, const ParamVal& default_val);
-    MGE_WIN_DECLSPEC_FUC CustomOp& add_param(
+    CustomOp& add_inputs(const size_t& input_num);
+    CustomOp& add_outputs(const size_t& output_num);
+    CustomOp& add_param(const std::string& name, const ParamVal& default_val);
+    CustomOp& add_param(
             const std::string& name, const std::string& desc,
             const ParamVal& default_val);
 
     // read
-    MGE_WIN_DECLSPEC_FUC std::string op_type(void) const;
-    MGE_WIN_DECLSPEC_FUC std::string op_desc(void) const;
-    MGE_WIN_DECLSPEC_FUC RunTimeId runtime_id(void) const;
-    MGE_WIN_DECLSPEC_FUC size_t input_num(void) const;
-    MGE_WIN_DECLSPEC_FUC size_t output_num(void) const;
-    MGE_WIN_DECLSPEC_FUC std::string str(void) const;
+    std::string op_type(void) const;
+    std::string op_desc(void) const;
+    RunTimeId runtime_id(void) const;
+    size_t input_num(void) const;
+    size_t output_num(void) const;
+    std::string str(void) const;
 
-    MGE_WIN_DECLSPEC_FUC const ParamInfo& param_info(void) const;
-    MGE_WIN_DECLSPEC_FUC ArgInfo input_info(size_t idx) const;
-    MGE_WIN_DECLSPEC_FUC ArgInfo output_info(size_t idx) const;
-    MGE_WIN_DECLSPEC_FUC const std::vector<ArgInfo>& inputs_info(void) const;
-    MGE_WIN_DECLSPEC_FUC const std::vector<ArgInfo>& outputs_info(void) const;
+    const ParamInfo& param_info(void) const;
+    ArgInfo input_info(size_t idx) const;
+    ArgInfo output_info(size_t idx) const;
+    const std::vector<ArgInfo>& inputs_info(void) const;
+    const std::vector<ArgInfo>& outputs_info(void) const;
 
     // use
-    MGE_WIN_DECLSPEC_FUC std::vector<Device> infer_output_device(
+    std::vector<Device> infer_output_device(
             const std::vector<Device>&, const Param&) const;
-    MGE_WIN_DECLSPEC_FUC std::vector<Shape> infer_output_shape(
+    std::vector<Shape> infer_output_shape(
             const std::vector<Shape>&, const Param&) const;
-    MGE_WIN_DECLSPEC_FUC std::vector<DType> infer_output_dtype(
+    std::vector<DType> infer_output_dtype(
             const std::vector<DType>&, const Param&) const;
-    MGE_WIN_DECLSPEC_FUC std::vector<Format> infer_output_format(
+    std::vector<Format> infer_output_format(
             const std::vector<Format>&, const Param&) const;
-    MGE_WIN_DECLSPEC_FUC void compute(
-            const std::vector<Tensor>&, const Param&, std::vector<Tensor>&) const;
+    void compute(const std::vector<Tensor>&, const Param&, std::vector<Tensor>&) const;
 };
 
 }  // namespace custom

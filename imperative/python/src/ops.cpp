@@ -766,6 +766,13 @@ void init_custom(pybind11::module m) {
     m.def("_install", &install_custom);
     m.def("_uninstall", &uninstall_custom);
     m.def("_get_custom_op_list", &get_custom_op_list);
+    m.def("get_custom_op_abi_tag", [](void) -> int {
+        int ret = 0;
+#ifdef _GLIBCXX_USE_CXX11_ABI
+        ret = _GLIBCXX_USE_CXX11_ABI;
+#endif
+        return ret;
+    });
 
     static PyMethodDef method_def = {
 #ifdef METH_FASTCALL
