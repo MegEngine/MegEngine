@@ -94,14 +94,12 @@ TEST(TestImperative, Split) {
 }
 
 #if MGB_CUDA && MGB_ENABLE_EXCEPTION
-void run_graph(size_t mem_reserved, bool enable_defrag) {
+void run_graph(size_t mem_reserved) {
     CompNode::try_coalesce_all_free_memory();
     CompNode::finalize();
 
     auto cn = CompNode::load("gpux");
     cn.sync();  // wait for async init to finish
-
-    BlobManager::inst()->set_enable(enable_defrag);
 
     HostTensorGenerator<> gen;
     using TensorPtr = std::shared_ptr<Tensor>;
@@ -159,10 +157,7 @@ TEST(TestImperative, Defragment) {
     }
     auto reserve_setting = ssprintf("b:%zu", reserve);
 
-    auto do_run = [reserve]() {
-        ASSERT_THROW(run_graph(reserve, false), MemAllocError);
-        run_graph(reserve, true);
-    };
+    auto do_run = [reserve]() { run_graph(reserve); };
 
     // reserve memory explicitly to avoid uncontrollable factors
     constexpr const char* KEY = "MGB_CUDA_RESERVE_MEMORY";

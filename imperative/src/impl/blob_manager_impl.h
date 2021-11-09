@@ -38,7 +38,6 @@ class BlobManagerImpl final : public BlobManager {
 
     std::mutex m_mtx;
     CompNode::UnorderedMap<BlobSetWithMux> m_comp2blobs_map;
-    bool m_enable = true;
 
     void defrag(const CompNode& cn) override;
 
@@ -57,8 +56,6 @@ public:
     void register_blob(Blob* blob) override;
 
     void unregister_blob(Blob* blob) override;
-
-    void set_enable(bool flag) override;
 };
 
 }  // namespace imperative

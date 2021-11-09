@@ -41,22 +41,14 @@ void BlobManagerImpl::unregister_blob(Blob* blob) {
 }
 
 void BlobManagerImpl::alloc_with_defrag(Blob* blob, size_t size) {
-    if (!m_enable) {
+    // try alloc
+    MGB_TRY { alloc_direct(blob, size); }
+    // if fail, try defrag, alloc again
+    MGB_CATCH(MemAllocError&, {
+        mgb_log_warn("memory allocation failed for blob; try defragmenting");
+        defrag(blob->m_comp_node);
         alloc_direct(blob, size);
-    } else {
-        // // debug
-        // defrag(blob->m_comp_node);
-        // alloc_direct(blob, storage, size);
-
-        // try alloc
-        MGB_TRY { alloc_direct(blob, size); }
-        // if fail, try defrag, alloc again
-        MGB_CATCH(MemAllocError&, {
-            mgb_log_warn("memory allocation failed for blob; try defragmenting");
-            defrag(blob->m_comp_node);
-            alloc_direct(blob, size);
-        });
-    }
+    });
 }
 
 void BlobManagerImpl::alloc_direct(Blob* blob, size_t size) {
@@ -69,16 +61,12 @@ void BlobManagerImpl::alloc_direct(Blob* blob, size_t size) {
 DeviceTensorND BlobManagerImpl::alloc_workspace_with_defrag(
         CompNode cn, TensorLayout layout) {
     DeviceTensorND dev_tensor;
-    if (!m_enable) {
+    MGB_TRY { dev_tensor = alloc_workspace(cn, layout); }
+    MGB_CATCH(MemAllocError&, {
+        mgb_log_warn("memory allocation failed for workspace; try defragmenting");
+        defrag(cn);
         dev_tensor = alloc_workspace(cn, layout);
-    } else {
-        MGB_TRY { dev_tensor = alloc_workspace(cn, layout); }
-        MGB_CATCH(MemAllocError&, {
-            mgb_log_warn("memory allocation failed for workspace; try defragmenting");
-            defrag(cn);
-            dev_tensor = alloc_workspace(cn, layout);
-        });
-    }
+    });
     return dev_tensor;
 };
 
@@ -154,10 +142,6 @@ void BlobManagerImpl::defrag(const CompNode& cn) {
     cn.sync();
 }
 
-void BlobManagerImpl::set_enable(bool flag) {
-    m_enable = flag;
-}
-
 struct BlobManagerStub : BlobManager {
     void alloc_direct(Blob* blob, size_t size) {
         mgb_assert(0, "prohibited after global variable destruction");
@@ -172,9 +156,6 @@ struct BlobManagerStub : BlobManager {
         mgb_assert(0, "prohibited after global variable destruction");
     };
     void unregister_blob(Blob* blob){};
-    void set_enable(bool flag) {
-        mgb_assert(0, "prohibited after global variable destruction");
-    };
     void defrag(const CompNode& cn) {
         mgb_assert(0, "prohibited after global variable destruction");
     };

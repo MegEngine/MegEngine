@@ -33,8 +33,6 @@ public:
 
     virtual void unregister_blob(Blob* blob) = 0;
 
-    virtual void set_enable(bool flag) = 0;
-
     virtual void defrag(const CompNode& cn) = 0;
 };
 

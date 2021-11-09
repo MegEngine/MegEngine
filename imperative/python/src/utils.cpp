@@ -216,9 +216,6 @@ void init_utils(py::module m) {
 #endif
 
     // Debug code, internal only
-    m.def("_set_defrag", [](bool enable) {
-        mgb::imperative::BlobManager::inst()->set_enable(enable);
-    });
     m.def("_defrag", [](const mgb::CompNode& cn) {
         mgb::imperative::BlobManager::inst()->defrag(cn);
     });
