@@ -64,6 +64,7 @@ struct ChannelImpl : Interpreter::Channel {
 
     size_t get_option(std::string name) override;
     void set_option(std::string name, size_t value) override;
+    void clear_candidates() override;
 
     void start_profile() override;
     void stop_profile() override;
@@ -308,7 +309,7 @@ private:
         /*!
          * \brief unpin the tensors in vec
          */
-        void unpin(const SmallVector<TensorInfo*>& vec);
+        void unpin(const SmallVector<TensorInfo*>& vec, WorkerState& state);
 
         /*!
          * \brief add the tensor to the candidate set

@@ -9,6 +9,7 @@
 import re
 from typing import Union
 
+from ..core._imperative_rt.core2 import clear_candidates as _clear_candidates
 from ..core._imperative_rt.core2 import set_option as _set_option
 
 _eviction_threshold = 0
@@ -128,3 +129,4 @@ def disable():
     _set_option("enable_dtr_auto_drop", 0)
     _set_option("enable_drop", 0)
     _set_option("record_computing_path", 0)
+    _clear_candidates()

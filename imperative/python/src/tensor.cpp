@@ -1020,6 +1020,7 @@ void init_tensor(py::module m) {
     m.def("set_option", [](std::string name, size_t value) {
         interpreter_for_py->set_option(name, value);
     });
+    m.def("clear_candidates", []() { interpreter_for_py->clear_candidates(); });
     m.def("get_option",
           [](std::string name) { return interpreter_for_py->get_option(name); });
     m.def("_set_drop_flag",

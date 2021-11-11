@@ -494,6 +494,12 @@ void ChannelImpl::set_option(std::string name, size_t value) {
     m_buffer.enqueue(SetOption{name, value});
 }
 
+void ChannelImpl::clear_candidates() {
+    MGB_LOCK_GUARD(m_spin);
+    mgb_assert(check_available(), "Channel already closed");
+    m_dtr.candidates.clear();
+}
+
 TensorInfo* ChannelImpl::alloc() {
     auto& state = get_channel_state();
     auto info = [this] {
@@ -798,7 +804,7 @@ void ChannelImpl::do_apply_op(const ApplyOp& cmd, std::string reason) {
                 i->compute_time = estimate_compute_time;
             }
         }
-        m_dtr.unpin(cmd.inputs);
+        m_dtr.unpin(cmd.inputs, state);
     }
     MGB_RECORD_EVENT(OpExecuteFinishEvent, apply_id, {}, reason);
     // End profiling operator
@@ -1430,12 +1436,19 @@ void ChannelImpl::sample_on_device(CompNode device, bool force) {
 void ChannelImpl::DynamicSublinear::pin(const SmallVector<TensorInfo*>& vec) {
     for (auto i : vec) {
         i->pin();
+        erase_candidate(i);
     }
 }
 
-void ChannelImpl::DynamicSublinear::unpin(const SmallVector<TensorInfo*>& vec) {
+void ChannelImpl::DynamicSublinear::unpin(
+        const SmallVector<TensorInfo*>& vec, WorkerState& state) {
     for (auto i : vec) {
         i->unpin();
+        if (i->pinned == 0 &&
+            i->size_exceeds_thd(state.options.dtr_evictee_minimum_size) &&
+            i->cand_index == UINT_MAX) {
+            insert_candidate(i);
+        }
     }
 }
 
@@ -1504,7 +1517,7 @@ TensorInfo* ChannelImpl::DynamicSublinear::find_best_tensor(
             ti = vi;
         }
         auto i = candidates[ti];
-        if (i->producer && i->ptr && !i->pinned && i->evict_type == EvictType::NONE) {
+        if (i->producer && i->ptr && i->evict_type == EvictType::NONE) {
             double neighbor_cost = estimate_neighbor_cost(i);
             size_t begin_ptr =
                     reinterpret_cast<size_t>(i->ptr->blob()->storage().get());
@@ -1561,7 +1574,12 @@ void ChannelImpl::DynamicSublinear::insert_candidate(TensorInfo* ptr) {
 }
 
 void ChannelImpl::DynamicSublinear::erase_candidate(TensorInfo* ptr) {
-    // some tensors may be erased already, so just skip them
+    // close dtr will just clear candidates, so nothing to erase
+    if (candidates.empty()) {
+        ptr->cand_index = UINT_MAX;
+        return;
+    }
+    // some tensors may be erased already, just skip them
     if (ptr->cand_index != UINT_MAX) {
         std::swap(candidates[ptr->cand_index], candidates.back());
         candidates[ptr->cand_index]->cand_index = ptr->cand_index;

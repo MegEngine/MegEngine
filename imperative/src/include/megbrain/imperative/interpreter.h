@@ -57,6 +57,7 @@ struct Interpreter {
 
         virtual size_t get_option(std::string name) = 0;
         virtual void set_option(std::string name, size_t value) = 0;
+        virtual void clear_candidates() = 0;
 
         virtual void start_profile() = 0;
         virtual void stop_profile() = 0;
