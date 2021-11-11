@@ -253,22 +253,16 @@
 #ifdef WIN32
 #ifdef MGE_DLL_EXPORT
 #define MGE_WIN_DECLSPEC_FUC __declspec(dllexport)
-#else
-#define MGE_WIN_DECLSPEC_FUC
-#endif
-#else
-#define MGE_WIN_DECLSPEC_FUC
-#endif
-
-#ifdef WIN32
-#if defined(MGE_DLL_EXPORT_DATA)
 #define MGE_WIN_DECLSPEC_DATA __declspec(dllexport)
-#elif defined(MGE_DLL_IMPORT_DATA)
-#define MGE_WIN_DECLSPEC_DATA __declspec(dllimport)
-#else
+#elif defined(MGE_WINDOWS_STATIC_LINK)
+#define MGE_WIN_DECLSPEC_FUC
 #define MGE_WIN_DECLSPEC_DATA
+#else
+#define MGE_WIN_DECLSPEC_FUC
+#define MGE_WIN_DECLSPEC_DATA __declspec(dllimport)
 #endif
 #else
+#define MGE_WIN_DECLSPEC_FUC
 #define MGE_WIN_DECLSPEC_DATA
 #endif
 

@@ -33,10 +33,6 @@ if(BUILD_SHARED_LIBS)
     target_link_libraries(load_and_run_depends_shared gflags)
     target_link_libraries(load_and_run_depends_shared megengine)
 
-    if(WIN32 OR MSVC)
-        target_compile_definitions(load_and_run_depends_shared PRIVATE MGE_DLL_IMPORT_DATA)
-    endif()
-
     if(LITE_BUILD_WITH_RKNPU)
         #rknn sdk1.0.0 depend on libc++_shared, use gold to remove NEEDED so symbol check
         target_link_options(load_and_run_depends_shared  PRIVATE "-fuse-ld=gold")
