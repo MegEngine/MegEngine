@@ -11,6 +11,7 @@ fi
 IV=`openssl rand -hex 16`
 
 Key=000102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F
+
 if [ $# == 3 ] ; then
 Key=$3
 fi

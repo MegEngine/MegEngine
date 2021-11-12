@@ -71,25 +71,3 @@ class TestGlobal(TestShuffleNet):
         network.load(model_path)
 
         self.do_forward(network)
-
-    def test_update_decryption_key(self):
-        wrong_key = [0] * 32
-        LiteGlobal.update_decryption_key("AES_default", wrong_key)
-
-        with self.assertRaises(RuntimeError):
-            config = LiteConfig()
-            config.bare_model_cryption_name = "AES_default".encode("utf-8")
-            network = LiteNetwork(config)
-            model_path = os.path.join(self.source_dir, "shufflenet_crypt_aes.mge")
-            network.load(model_path)
-
-        right_key = [i for i in range(32)]
-        LiteGlobal.update_decryption_key("AES_default", right_key)
-
-        config = LiteConfig()
-        config.bare_model_cryption_name = "AES_default".encode("utf-8")
-        network = LiteNetwork(config)
-        model_path = os.path.join(self.source_dir, "shufflenet_crypt_aes.mge")
-        network.load(model_path)
-
-        self.do_forward(network)
