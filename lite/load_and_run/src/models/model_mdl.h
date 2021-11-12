@@ -50,8 +50,16 @@ public:
     //! get load config for megDL model
     mgb::serialization::GraphLoadConfig& get_mdl_config() { return m_load_config; }
 
-    //! reset the graph loader for dump_with_testcase model
-    std::shared_ptr<mgb::serialization::GraphLoader>& reset_loader();
+    /*! reset the underlying graph loader from which further load() would read()
+     *
+     * \param input_file new input_file, can be null
+     * \return new loader
+     */
+    std::shared_ptr<mgb::serialization::GraphLoader>& reset_loader(
+            std::unique_ptr<mgb::serialization::InputFile> input_file = {});
+
+    //! get the underlying graph loader
+    std::shared_ptr<mgb::serialization::GraphLoader>& get_loader() { return m_loader; }
 
     //!  algo strategy for runing model
     void set_mdl_strategy(Strategy& u_strategy) { m_strategy = u_strategy; }
@@ -88,11 +96,18 @@ public:
                 m_load_config.comp_graph.get(), range);
     }
 
+    std::unique_ptr<mgb::serialization::GraphDumper> get_dumper(
+            std::unique_ptr<mgb::serialization::OutputFile> out_file) {
+        return mgb::serialization::GraphDumper::make(
+                std::move(out_file), m_format.val());
+    }
+
 private:
     bool share_model_mem;
     std::string model_path;
     std::unique_ptr<mgb::serialization::InputFile> m_model_file;
     mgb::serialization::GraphLoadConfig m_load_config;
+    mgb::Maybe<mgb::serialization::GraphDumpFormat> m_format;
 
     mgb::serialization::GraphLoader::LoadResult m_load_result;
     std::shared_ptr<mgb::serialization::GraphLoader> m_loader;

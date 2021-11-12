@@ -36,6 +36,8 @@ enum class RunStage {
     AFTER_RUNNING_ITER = 6,
 
     AFTER_MODEL_RUNNING = 7,
+
+    GLOBAL_OPTIMIZATION = 8,
 };
 /*!
  * \brief: type of different model

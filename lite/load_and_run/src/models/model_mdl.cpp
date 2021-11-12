@@ -52,15 +52,15 @@ void ModelMdl::load_model() {
         m_model_file->read(&testcase_num, sizeof(testcase_num));
     }
 
-    auto format =
+    m_format =
             mgb::serialization::GraphLoader::identify_graph_dump_format(*m_model_file);
     mgb_assert(
-            format.valid(),
+            m_format.valid(),
             "invalid format, please make sure model is dumped by GraphDumper");
 
     //! load computing graph of model
     m_loader = mgb::serialization::GraphLoader::make(
-            std::move(m_model_file), format.val());
+            std::move(m_model_file), m_format.val());
     m_load_result = m_loader->load(m_load_config, false);
     m_load_config.comp_graph.reset();
 
@@ -87,9 +87,15 @@ void ModelMdl::make_output_spec() {
     m_asyc_exec = m_load_result.graph_compile(m_output_spec);
 }
 
-std::shared_ptr<mgb::serialization::GraphLoader>& ModelMdl::reset_loader() {
-    m_loader = mgb::serialization::GraphLoader::make(
-            m_loader->reset_file(), m_loader->format());
+std::shared_ptr<mgb::serialization::GraphLoader>& ModelMdl::reset_loader(
+        std::unique_ptr<mgb::serialization::InputFile> input_file) {
+    if (input_file) {
+        m_loader = mgb::serialization::GraphLoader::make(
+                std::move(input_file), m_loader->format());
+    } else {
+        m_loader = mgb::serialization::GraphLoader::make(
+                m_loader->reset_file(), m_loader->format());
+    }
     return m_loader;
 }
 

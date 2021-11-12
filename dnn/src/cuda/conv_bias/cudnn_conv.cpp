@@ -138,7 +138,7 @@ void ConvBiasForwardImpl::AlgoCUDNNConv::exec(const ExecArgs& args) const {
     if (args.z_layout->ndim > 0) {
         auto z_tensor = *args.z_tensor;
         if (args.z_layout->dtype.enumv() != args.bias_layout->dtype.enumv()) {
-            z_tensor.raw_ptr = bundle.get(2);
+            z_tensor = TensorND{bundle.get(2), args.z_tensor->layout};
             z_tensor.layout.dtype = DType();
             args.opr->check_or_deduce_dtype_fwd(
                     args.src_layout->dtype, args.filter_layout->dtype,

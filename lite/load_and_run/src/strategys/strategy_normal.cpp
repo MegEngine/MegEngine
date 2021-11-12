@@ -60,6 +60,9 @@ void NormalStrategy::run_subline() {
     m_runtime_param.stage = RunStage::AFTER_MODEL_LOAD;
     stage_config_model();
 
+    m_runtime_param.stage = RunStage::GLOBAL_OPTIMIZATION;
+    stage_config_model();
+
     m_runtime_param.stage = RunStage::BEFORE_OUTSPEC_SET;
     stage_config_model();
 
