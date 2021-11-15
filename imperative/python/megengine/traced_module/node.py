@@ -74,7 +74,7 @@ class Node:
         r"""Set a new name to this Node."""
         graph = self.top_graph
         assert graph is not None, "The parent graph of this Node cannot be None."
-        assert new_name not in graph._namespace.used_names, (
+        assert graph._namespace.used_names.get(new_name, None) is None, (
             "The name(%s) is already in use. Please try a different one again."
             % (new_name)
         )
