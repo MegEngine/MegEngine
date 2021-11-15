@@ -17,6 +17,7 @@
 #include "megbrain/opr/blas.h"
 #include "megbrain/opr/dnn/batch_norm.h"
 #include "megbrain/opr/dnn/convolution.h"
+#include "megbrain/opr/dnn/images2neibs.h"
 #include "megbrain/opr/dnn/local.h"
 #include "megbrain/opr/dnn/pooling.h"
 #include "megbrain/opr/imgproc.h"
@@ -1651,6 +1652,7 @@ std::unique_ptr<ConvertFormatPass> ConvertFormatPass::make_nhwcd4_converter() {
     replace_func[opr::Concat::typeinfo()] = replace_concat_opr;
     replace_func[opr::Reshape::typeinfo()] = relayout_inp_to_chw;
     replace_func[opr::GetVarShape::typeinfo()] = relayout_inp_to_chw;
+    replace_func[opr::Images2NeibsBackward::typeinfo()] = relayout_inp_to_chw;
     replace_func[opr::Dimshuffle::typeinfo()] = relayout_inp_to_chw;
     replace_func[opr::Reduce::typeinfo()] = relayout_inp_to_chw;
     replace_func[opr::AssertEqual::typeinfo()] = relayout_inp_to_chw;
