@@ -616,7 +616,8 @@ void ChannelImpl::produce_tensor(TensorInfo* dest, TensorPtr ptr) {
     dest->ptr = std::move(ptr);
     dest->evict_type = EvictType::NONE;
     dest->status = TensorInfo::Produced;
-    if (dest->size_exceeds_thd(state.options.dtr_evictee_minimum_size)) {
+    if (dest->pinned == 0 &&
+        dest->size_exceeds_thd(state.options.dtr_evictee_minimum_size)) {
         m_dtr.insert_candidate(dest);
     }
     notify_tensor_unsafe(dest);
