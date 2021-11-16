@@ -71,11 +71,12 @@ bool ConvBiasForwardImpl::AlgoCUDNNConvBiasActivation::is_available(
         return false;
     }
 
+#if CUDNN_VERSION < 7605
     if (args.src_layout->dtype.enumv() == DTypeEnum::Float16 &&
-        args.dst_layout->dtype.enumv() == DTypeEnum::Float16 &&
-        param.format == param::ConvBias::Format::NHWC) {
+        args.dst_layout->dtype.enumv() == DTypeEnum::Float16) {
         return false;
     }
+#endif
 
 #if CUDNN_MAJOR < 8
     if (m_cudnn_enum == CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_GEMM &&

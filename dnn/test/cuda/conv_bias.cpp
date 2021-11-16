@@ -1293,6 +1293,56 @@ TEST_F(CUDA, CONV_BIAS_FORWARD_TENSORCORE_INT8) {
     }
 }
 
+TEST_F(CUDA, CONV_BIAS_ADD_Z_CUDNN_CONVOLUTION) {
+    using namespace conv_bias;
+    Checker<ConvBiasForward> checker(handle_cuda());
+
+    checker.set_before_exec_callback(conv_bias::ConvBiasAlgoChecker<ConvBias>(
+            ConvBiasForward::algo_name<ConvBias::DefaultParam>("CUDNN:Convolution", {})
+                    .c_str()));
+
+    NormalRNG default_rng;
+    param::ConvBias param;
+    param.pad_h = param.pad_w = 1;
+    using Format = param::ConvBias::Format;
+    using NLMode = param::ConvBias::NonlineMode;
+    param.nonlineMode = NLMode::RELU;
+    auto c = [&](DType dt) {
+        param.format = Format::NCHW;
+        /// set epsilon to be 2e-3 to bypass low accuracy of winograd algorithm
+        float eps = 2e-3;
+        if (dt == dtype::Float16()) {
+            eps = 1e-2;
+            param.compute_mode = param::ConvBias::ComputeMode::FLOAT32;
+        }
+        checker.set_dtype(0, dt)
+                .set_dtype(1, dt)
+                .set_dtype(2, dt)
+                .set_dtype(3, dt)
+                .set_dtype(4, dt)
+                .set_rng(0, &default_rng)
+                .set_rng(1, &default_rng)
+                .set_rng(2, &default_rng)
+                .set_rng(3, &default_rng)
+                .set_epsilon(eps)
+                .set_param(param)
+                .execs({{16, 256, 7, 7},
+                        {256, 256, 3, 3},
+                        {1, 256, 1, 1},
+                        {16, 256, 7, 7},
+                        {}});
+        param.format = Format::NHWC;
+        checker.set_param(param).execs(
+                {{16, 7, 7, 256},
+                 {256, 3, 3, 256},
+                 {1, 1, 1, 256},
+                 {16, 7, 7, 256},
+                 {}});
+    };
+    c(dtype::Float32());
+    c(dtype::Float16());
+}
+
 #if MEGDNN_WITH_BENCHMARK
 TEST_F(CUDA, BENCHMARK_CONV_BIAS_FORWARD_TENSORCORE_INT8) {
     require_compute_capability(7, 5);
