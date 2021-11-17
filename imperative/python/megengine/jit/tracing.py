@@ -104,6 +104,7 @@ class TensorInfo:
         "shape",
         "is_const",
         "bound_data",
+        "bound_data_numpy",
         # resources for execution
         "varnode",
         "data_setter",
@@ -119,11 +120,17 @@ class TensorInfo:
         self.shape_read = None
         self.value_read = None
         self.bound_data = None
+        self.bound_data_numpy = None
 
         self.data_setter = None
         self.shape_reader = None
         self.value_reader = None
         self.data_reader = None
+
+    def get_numpy(self):
+        if self.bound_data_numpy is None:
+            self.bound_data_numpy = self.bound_data.numpy()
+        return self.bound_data_numpy
 
 
 _io_op_types = {AssertEqual, CollectiveComm, RemoteSend, RemoteRecv}
@@ -292,7 +299,7 @@ class trace:
         # Const op is represented by a str
         assert isinstance(op_, str) and op_ == "Const"
 
-        expected = self._tinfo[ohandles[0]].bound_data.numpy()
+        expected = self._tinfo[ohandles[0]].get_numpy()
         shape = value.shape
         if shape != expected.shape or dtype != expected.dtype:
             eq = False
@@ -369,6 +376,7 @@ class trace:
         info.dtype = x.dtype
         info.shape = x.shape
         info.bound_data = x
+        info.bound_data_numpy = None
         info.is_const = True
         x._mixin_handle = h
         x._recording = True
@@ -612,9 +620,7 @@ class trace:
                     assert info.external
                     assert info.bound_data
                     info.varnode = graph.make_const(
-                        info.bound_data.numpy(),
-                        info.bound_data.dtype,
-                        info.bound_data.device,
+                        info.get_numpy(), info.bound_data.dtype, info.bound_data.device,
                     )
                 continue
 
@@ -627,7 +633,7 @@ class trace:
                     if info.bound_data:
                         if getattr(info, "is_const", False):
                             info.varnode = graph.make_const(
-                                info.bound_data.numpy(),
+                                info.get_numpy(),
                                 info.bound_data.dtype,
                                 info.bound_data.device,
                             )
@@ -1174,7 +1180,7 @@ class trace:
                     assert info.external
                     assert info.bound_data
                     h2v[h] = graph.make_const(
-                        info.bound_data.numpy(),
+                        info.get_numpy(),
                         dtype=info.dtype,
                         device=dumped_device(info),
                         name=info.name,
@@ -1187,7 +1193,7 @@ class trace:
                     assert info.external
                     assert info.bound_data
                     h2v[h] = graph.make_const(
-                        info.bound_data.numpy(),
+                        info.get_numpy(),
                         dtype=info.dtype,
                         device=dumped_device(info),
                         name=info.name,

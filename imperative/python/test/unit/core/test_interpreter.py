@@ -96,6 +96,15 @@ def test_regression_2870():
     (x + x).numpy()
 
 
+@pytest.mark.require_ngpu(1)
+def test_async_error_check():
+    src = mge.tensor([[1.0, 2.0]])
+    index = mge.tensor([3])
+    val = F.indexing_one_hot(src, index)
+    with pytest.raises(RuntimeError):
+        val.numpy()
+
+
 # NOTE: DO NOT REMOVE THIS TEST
 #   This is also a compatibility test for
 #   mge.core.set_option('async_level', 0).
