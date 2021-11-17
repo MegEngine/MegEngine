@@ -26,10 +26,6 @@
 #include "megcore_rocm.h"
 #endif
 
-#if MGB_CAMBRICON
-#include "megcore_cambricon.h"
-#endif
-
 #if MGB_ATLAS
 #include "acl/acl.h"
 #include "megcore_atlas.h"
@@ -81,10 +77,6 @@ MegDNNHandle::MegDNNHandle(const CompNodeEnv& env) {
 #if MGB_CAMBRICON
     if (env.property().type == CompNode::DeviceType::CAMBRICON) {
         CompNodeEnv::CnrtEnv::init_status.init();
-        megcore::createDeviceHandleWithGlobalInitStatus(
-                &m_dev_hdl, env.cnrt_env().device, 0, true);
-        megcore::createComputingHandleWithCambriconContext(
-                &m_comp_hdl, m_dev_hdl, 0, {env.cnrt_env().queue});
         init = true;
     }
 #endif

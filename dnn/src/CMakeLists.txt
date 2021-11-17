@@ -163,19 +163,6 @@ if(MGE_WITH_CUDA)
     list(APPEND SOURCES ${CUSOURCES})
 endif()
 
-if(MGE_WITH_CAMBRICON)
-    file(GLOB_RECURSE SOURCES_ cambricon/*.cpp)
-    list(APPEND SOURCES ${SOURCES_})
-
-    file(GLOB_RECURSE BANG_SOURCES cambricon/*.mlu)
-    list(APPEND MEGDNN_INCLUDES "${PROJECT_SOURCE_DIR}/dnn/include")
-    list(APPEND MEGDNN_INCLUDES "${PROJECT_SOURCE_DIR}/dnn")
-    list(APPEND MEGDNN_INCLUDES "${PROJECT_BINARY_DIR}/genfiles")
-    bang_compile(BANG_OBJS "${BANG_SOURCES}" "${MEGDNN_INCLUDES}")
-    list(APPEND SOURCES ${BANG_OBJS})
-
-endif()
-
 if(MGE_WITH_ATLAS)
     file(GLOB_RECURSE SOURCES_ atlas/*.cpp)
     list(APPEND SOURCES ${SOURCES_})
@@ -262,10 +249,6 @@ endif()
 
 if(CMAKE_THREAD_LIBS_INIT)
     target_link_libraries(megdnn PRIVATE Threads::Threads)
-endif()
-
-if(MGE_WITH_CAMBRICON)
-    target_link_libraries(megdnn PRIVATE ${BANG_OBJS} ${MGE_CAMBRICON_LIBS})
 endif()
 
 install(TARGETS megdnn EXPORT ${MGE_EXPORT_TARGETS})
