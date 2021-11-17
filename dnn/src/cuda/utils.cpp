@@ -85,7 +85,10 @@ void cuda::__throw_cusolver_error__(cusolverStatus_t err, const char* msg) {
 }
 
 void cuda::__throw_cuda_driver_error__(CUresult err, const char* msg) {
-    auto s = ssprintf("cuda driver error %d occurred; expr: %s", int(err), msg);
+    const char* err_str = nullptr;
+    cuGetErrorName(err, &err_str);
+    err_str = err_str ? err_str : "unknown error";
+    auto s = ssprintf("cuda driver error %d(%s) occurred; expr: %s", int(err), err_str, msg);
     megdnn_throw(s.c_str());
 }
 
