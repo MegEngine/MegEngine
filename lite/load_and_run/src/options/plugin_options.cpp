@@ -271,7 +271,7 @@ void DebugOption::config_model_internel<ModelMdl>(
             getchar();
         }
 #endif
-    } else if (runtime_param.stage == RunStage::AFTER_OUTSPEC_SET) {
+    } else if (runtime_param.stage == RunStage::BEFORE_OUTSPEC_SET) {
         if (enable_display_model_info) {
             mgb_log_warn("enable display model information");
             format_and_print<ModelMdl>("Runtime Model Info", model);
