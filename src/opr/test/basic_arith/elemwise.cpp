@@ -39,6 +39,19 @@ int do_mod(int a, int b) {
     return a % b;
 }
 
+float do_floor_div(float a, float b) {
+    return std::floor(a / b);
+}
+
+int do_floor_div(int a, int b) {
+    if ((a ^ b) < 0) {
+        const auto quot = a / b;
+        const auto rem = a % b;
+        return rem ? quot - 1 : quot;
+    }
+    return a / b;
+}
+
 float do_erfinv(float x) {
     return erfinvf(x);
 }

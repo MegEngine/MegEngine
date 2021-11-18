@@ -41,7 +41,7 @@ DEF_TRAIT(LT, x < y)
 #define _ALLOW_INT   true
 DEF_TRAIT(ABS_GRAD, x > 0 ? y : -y)
 DEF_TRAIT(ADD, x + y)
-DEF_TRAIT(FLOOR_DIV, floor(x / y))
+DEF_TRAIT(FLOOR_DIV, do_floor_div(x, y))
 DEF_TRAIT(MAX, std::max(x, y))
 DEF_TRAIT(MIN, std::min(x, y))
 DEF_TRAIT(MOD, do_mod(x, y))

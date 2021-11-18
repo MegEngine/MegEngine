@@ -59,12 +59,22 @@ def test_multiply():
 
 def test_div():
     np.testing.assert_allclose(
-        F.div(tensor([3, 4]), 2).numpy(),
+        F.div(tensor([3.0, 4.0]), 2).numpy(),
         np.divide(np.array([3, 4], dtype=np.float32), 2),
     )
 
     np.testing.assert_allclose(
         (tensor([3, 4]) / 2).numpy(), np.divide(np.array([3, 4], dtype=np.float32), 2),
+    )
+
+    np.testing.assert_allclose(
+        F.floor_div(tensor([-5.0, -7.0]), 2).numpy(),
+        np.floor_divide(np.array([-5.0, -7.0], dtype=np.float32), 2),
+    )
+
+    np.testing.assert_allclose(
+        (tensor([-5, -7]) // 2).numpy(),
+        np.floor_divide(np.array([-5, -7], dtype=np.int32), 2),
     )
 
 

@@ -119,6 +119,15 @@ __device__ __host__ inline float dispatch_powf(float x, float y) {
     return powf(x, y);
 }
 
+__device__ __host__ inline int dispatch_floordiv_int(int x, int y) {
+    if ((x ^ y) < 0) {
+        const auto quot = x / y;
+        const auto rem = x % y;
+        return rem ? quot - 1 : quot;
+    }
+    return x / y;
+}
+
 #include "src/common/elemwise/each_mode.inl"
 
 template <megcorePlatform_t plat, uint32_t mode, typename dtype>
@@ -227,7 +236,7 @@ DEF_KERN(dt_bool, LT, x < y);
 DEF_KERN(dt_bool, LEQ, x <= y);
 DEF_KERN(dt_bool, EQ, x == y);
 
-DEF_KERN_INT(FLOOR_DIV, x / y);
+DEF_KERN_INT(FLOOR_DIV, dispatch_floordiv_int(x, y));
 DEF_KERN_FLOAT(FLOOR_DIV, floorf(x / y));
 
 DEF_KERN_INT(MOD, x % y);
