@@ -56,6 +56,7 @@ class Group:
     def reset(self, proc_ranks):
         self.check(proc_ranks)
         self.proc_ranks = proc_ranks
+        self.is_single_machine_cache = None
         self.stream = _sh.get_next()
 
     def check(self, proc_ranks):
