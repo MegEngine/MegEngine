@@ -891,6 +891,7 @@ class ConvTranspose3d(_ConvNd):
         padding: Union[int, Tuple[int, int, int]] = 0,
         dilation: Union[int, Tuple[int, int, int]] = 1,
         bias: bool = True,
+        groups: int = 1,
     ):
         kernel_size = _triple_nonzero(kernel_size)
         stride = _triple_nonzero(stride)
@@ -903,7 +904,7 @@ class ConvTranspose3d(_ConvNd):
             stride=stride,
             padding=padding,
             dilation=dilation,
-            groups=1,
+            groups=groups,
             bias=bias,
         )
 
@@ -913,10 +914,21 @@ class ConvTranspose3d(_ConvNd):
         return kt * kh * kw * ic
 
     def _infer_weight_shape(self):
+        group = self.groups
         ichl = self.in_channels
         ochl = self.out_channels
         kt, kh, kw = self.kernel_size
-        return (ichl, ochl, kt, kh, kw)
+        if group == 1:
+            # Assume format is NCHW
+            return (ichl, ochl, kt, kh, kw)
+
+        assert (
+            ichl % group == 0 and ochl % group == 0
+        ), "invalid config: in_channels={} out_channels={} group={}".format(
+            ichl, ochl, group
+        )
+        # Assume format is NCHW
+        return (group, ichl // group, ochl // group, kt, kh, kw)
 
     def _infer_bias_shape(self):
         # Assume format is NCTHW

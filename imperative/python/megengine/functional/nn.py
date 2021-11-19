@@ -372,6 +372,7 @@ def conv_transpose2d(
     Args:
         inp: feature map of the convolution operation.
         weight: convolution kernel.
+            weight usually has shape ``(in_channels, out_channels, height, width)``.
         bias: bias added to the result of convolution (if given).
         stride: stride of the 2D convolution operation. Default: 1
         padding: size of the paddings added to the input on both sides of its
@@ -405,14 +406,12 @@ def conv_transpose2d(
         if weight.dtype != dtype:
             weight = weight.astype(dtype)
 
-    if groups != 1:
-        raise NotImplementedError("group transposed conv2d is not supported yet.")
-
     stride_h, stride_w = expand_hw(stride)
     pad_h, pad_w = expand_hw(padding)
     dilate_h, dilate_w = expand_hw(dilation)
-    compute_mode = _config._get_actual_op_param(compute_mode, _config.__compute_mode)
 
+    compute_mode = _config._get_actual_op_param(compute_mode, _config.__compute_mode)
+    sparse_type = "dense" if groups == 1 else "group"
     op = builtin.ConvolutionBackwardData(
         stride_h=stride_h,
         stride_w=stride_w,
@@ -422,6 +421,7 @@ def conv_transpose2d(
         dilate_w=dilate_w,
         strategy=get_execution_strategy(),
         compute_mode=compute_mode,
+        sparse=sparse_type,
     )
     (output,) = apply(op, weight, inp)
     if bias is not None:
@@ -447,6 +447,7 @@ def deformable_conv2d(
     Args:
         inp: input feature map.
         weight: convolution kernel.
+            weight usually has shape ``(out_channels, in_channels, height, width)``.
         offset: input offset to kernel, channel of this tensor should match the deformable settings.
         mask: input mask to kernel, channel of this tensor should match the deformable settings.
         bias: bias added to the result of convolution (if given).
@@ -551,6 +552,7 @@ def conv_transpose3d(
     stride: Union[int, Tuple[int, int, int]] = 1,
     padding: Union[int, Tuple[int, int, int]] = 0,
     dilation: Union[int, Tuple[int, int, int]] = 1,
+    groups: int = 1,
 ) -> Tensor:
     r"""3D transposed convolution operation. Only support the case that groups = 1
     and conv_mode = "cross_correlation".
@@ -581,6 +583,7 @@ def conv_transpose3d(
     if weight.dtype != dtype:
         weight = weight.astype(dtype)
 
+    sparse_type = "dense" if groups == 1 else "group"
     op = builtin.Convolution3DBackwardData(
         pad_d=pad[D],
         pad_h=pad[H],
@@ -592,6 +595,7 @@ def conv_transpose3d(
         dilate_h=dilate[H],
         dilate_w=dilate[W],
         strategy=get_execution_strategy(),
+        sparse=sparse_type,
     )
     (output,) = apply(op, weight, inp)
     if bias is not None:

@@ -1290,3 +1290,62 @@ def test_set_warp_perspective_config():
     expected = F.vision.warp_perspective(inp, M, (2, 2), format="NHWC")
     np.testing.assert_allclose(config_out.numpy(), expected.numpy())
     np.testing.assert_allclose(context_out.numpy(), expected.numpy())
+
+
+@pytest.mark.parametrize("stride", [(1, 1)])
+@pytest.mark.parametrize("padding", [(1, 1)])
+@pytest.mark.parametrize("dilation", [(1, 1)])
+@pytest.mark.parametrize("ksize", [(3, 3)])
+@pytest.mark.parametrize("groups", [1, 2])
+def test_local_conv2d(stride, padding, dilation, ksize, groups):
+    batch_size, in_channels, out_channels = 2, 4, 8
+    input_height, input_width = 10, 10
+    output_height = (input_height + padding[0] * 2 - ksize[0]) // stride[0] + 1
+    output_width = (input_width + padding[1] * 2 - ksize[1]) // stride[1] + 1
+
+    def local_conv2d_np(data, weight, stride, padding, dialtion):
+        # naive calculation use numpy
+        # only test output_height == input_height, output_width == input_width
+        data = np.pad(data, ((0, 0), (0, 0), (1, 1), (1, 1)))
+        expected = np.zeros(
+            (batch_size, out_channels, output_height, output_width), dtype=np.float32,
+        )
+        ic_group_size = in_channels // groups
+        oc_group_size = out_channels // groups
+        for n, oc, oh, ow in itertools.product(
+            *map(range, [batch_size, out_channels, output_height, output_width])
+        ):
+            ih, iw = oh * stride[0], ow * stride[1]
+            g_id = oc // oc_group_size
+            expected[n, oc, ih, iw] = np.sum(
+                data[
+                    n,
+                    g_id * ic_group_size : (g_id + 1) * ic_group_size,
+                    ih : ih + ksize[0],
+                    iw : iw + ksize[1],
+                ]
+                * weight[g_id, oh, ow, :, :, :, oc % oc_group_size]
+            )
+        return expected
+
+    data = np.random.rand(batch_size, in_channels, input_height, input_width).astype(
+        "float32"
+    )
+    weight = np.random.rand(
+        groups,
+        output_height,
+        output_width,
+        in_channels // groups,
+        *ksize,
+        out_channels // groups,
+    ).astype("float32")
+    output = F.local_conv2d(
+        tensor(data),
+        tensor(weight),
+        None,
+        stride=stride,
+        padding=padding,
+        dilation=dilation,
+    )
+    ref = local_conv2d_np(data, weight, stride, padding, dilation)
+    np.testing.assert_almost_equal(output.numpy(), ref, 5)
