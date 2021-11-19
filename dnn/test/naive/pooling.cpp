@@ -100,4 +100,35 @@ TEST_F(NAIVE, POOLING_QUANTIZED_Q4) {
                         TensorValueLowbit4({1, 1, 2, 2}, u4_dt, u8_avg_exclu_dst_vec)});
     }
 }
+
+TEST_F(NAIVE, POOLING_INT_AVERAGE) {
+    using Mode = Pooling::Param::Mode;
+
+    Checker<Pooling> checker(handle(), /* check_dispatch */ false);
+    auto dt = dtype::Int8();
+    Pooling::Param param = {Mode::AVERAGE, 0, 0, 1, 1, 2, 2};
+    Testcase input_positive{
+            TensorValue(
+                    {1, 1, 3, 3}, dt, {127, 127, 127, 127, 127, 127, 127, 127, 127}),
+            {}};
+    Testcase input_negative{
+            TensorValue(
+                    {1, 1, 3, 3}, dt,
+                    {-127, -127, -127, -127, -127, -127, -127, -127, -127}),
+            {}};
+    checker.set_param(param).exect(
+            input_positive,
+            Testcase{{}, TensorValue({1, 1, 2, 2}, dt, {127, 127, 127, 127})});
+    checker.set_param(param).exect(
+            input_negative,
+            Testcase{{}, TensorValue({1, 1, 2, 2}, dt, {-127, -127, -127, -127})});
+    param = {Mode::AVERAGE_COUNT_EXCLUDE_PADDING, 0, 0, 1, 1, 2, 2};
+    checker.set_param(param).exect(
+            input_positive,
+            Testcase{{}, TensorValue({1, 1, 2, 2}, dt, {127, 127, 127, 127})});
+    checker.set_param(param).exect(
+            input_negative,
+            Testcase{{}, TensorValue({1, 1, 2, 2}, dt, {-127, -127, -127, -127})});
+}
+
 // vim: syntax=cpp.doxygen
