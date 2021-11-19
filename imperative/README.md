@@ -94,6 +94,6 @@ Tensor-likes have a dataflow semantic, thus immutable. `TensorWrapper` provide a
 
    * op always return a tuple
 
-      `result, = outputs`
+      `result = outputs`
 
    * input can be any tensor-like
