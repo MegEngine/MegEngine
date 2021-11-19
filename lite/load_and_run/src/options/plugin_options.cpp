@@ -276,7 +276,16 @@ void DebugOption::config_model_internel<ModelMdl>(
             mgb_log_warn("enable display model information");
             format_and_print<ModelMdl>("Runtime Model Info", model);
         }
-
+    } else if (runtime_param.stage == RunStage::AFTER_OUTSPEC_SET) {
+#ifndef __IN_TEE_ENV__
+#if MGB_ENABLE_JSON
+        if (!static_mem_log_dir_path.empty()) {
+            mgb_log_warn("enable get static memeory information");
+            model->get_async_func()->get_static_memory_alloc_info(
+                    static_mem_log_dir_path);
+        }
+#endif
+#endif
         if (disable_assert_throw) {
             mgb_log_warn("disable assert throw");
             auto on_opr = [](mgb::cg::OperatorNodeBase* opr) {
@@ -289,20 +298,6 @@ void DebugOption::config_model_internel<ModelMdl>(
                 iter.add(i.first.node()->owner_opr());
             }
         }
-    } else if (runtime_param.stage == RunStage::AFTER_OUTSPEC_SET) {
-        //! FIX:it don't work for cpu build (nothing dumped)
-        //! megbrain/sdk origin code will assert(m_recorded) in
-        //! EventImplHelper::finished();
-
-#ifndef __IN_TEE_ENV__
-#if MGB_ENABLE_JSON
-        if (!static_mem_log_dir_path.empty()) {
-            mgb_log_warn("enable get static memeory information");
-            model->get_async_func()->get_static_memory_alloc_info(
-                    static_mem_log_dir_path);
-        }
-#endif
-#endif
     } else if (runtime_param.stage == RunStage::AFTER_MODEL_RUNNING) {
         if (enable_display_model_info) {
             format_and_print<ModelMdl>("Runtime Model Info", model);
