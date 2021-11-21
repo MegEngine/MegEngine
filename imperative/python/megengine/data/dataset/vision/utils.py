@@ -27,9 +27,7 @@ def _default_dataset_root():
     return default_dataset_root
 
 
-def load_raw_data_from_url(
-    url: str, filename: str, target_md5: str, raw_data_dir: str, timeout: int
-):
+def load_raw_data_from_url(url: str, filename: str, target_md5: str, raw_data_dir: str):
     cached_file = os.path.join(raw_data_dir, filename)
     logger.debug(
         "load_raw_data_from_url: downloading to or using cached %s ...", cached_file
@@ -41,7 +39,7 @@ def load_raw_data_from_url(
                 "    File may be downloaded multiple times. We recommend\n"
                 "    users to download in single process first."
             )
-        md5 = download_from_url(url, cached_file, http_read_timeout=timeout)
+        md5 = download_from_url(url, cached_file)
     else:
         md5 = calculate_md5(cached_file)
     if target_md5 == md5:

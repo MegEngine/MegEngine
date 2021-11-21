@@ -25,7 +25,6 @@ from .const import (
     DEFAULT_PROTOCOL,
     ENV_MGE_HOME,
     ENV_XDG_CACHE_HOME,
-    HTTP_READ_TIMEOUT,
     HUBCONF,
     HUBDEPENDENCY,
 )
@@ -263,14 +262,14 @@ def load_serialized_obj_from_url(url: str, model_dir=None) -> Any:
                 "    File may be downloaded multiple times. We recommend\n"
                 "    users to download in single process first."
             )
-        download_from_url(url, cached_file, HTTP_READ_TIMEOUT)
+        download_from_url(url, cached_file)
 
     state_dict = _mge_load_serialized(cached_file)
     return state_dict
 
 
 class pretrained:
-    r"""Decorator which helps to download pretrained weights from the given url.
+    r"""Decorator which helps to download pretrained weights from the given url. Including fs, s3, http(s).
 
     For example, we can decorate a resnet18 function as follows
 

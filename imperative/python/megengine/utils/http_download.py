@@ -12,6 +12,7 @@ import shutil
 from tempfile import NamedTemporaryFile
 
 import requests
+from megfile import smart_copy, smart_getmd5, smart_getsize
 from tqdm import tqdm
 
 from ..logger import get_logger
@@ -26,41 +27,21 @@ class HTTPDownloadError(BaseException):
     r"""The class that represents http request error."""
 
 
-def download_from_url(url: str, dst: str, http_read_timeout=120):
+class Bar:
+    def __init__(self, total=100):
+        self._bar = tqdm(total=total, unit="iB", unit_scale=True, ncols=80)
+
+    def __call__(self, bytes_num):
+        self._bar.update(bytes_num)
+
+
+def download_from_url(url: str, dst: str):
     r"""Downloads file from given url to ``dst``.
 
     Args:
         url: source URL.
         dst: saving path.
-        http_read_timeout: how many seconds to wait for data before giving up.
     """
     dst = os.path.expanduser(dst)
-    dst_dir = os.path.dirname(dst)
-
-    resp = requests.get(
-        url, timeout=(HTTP_CONNECTION_TIMEOUT, http_read_timeout), stream=True
-    )
-    if resp.status_code != 200:
-        raise HTTPDownloadError("An error occured when downloading from {}".format(url))
-
-    md5 = hashlib.md5()
-    total_size = int(resp.headers.get("Content-Length", 0))
-    bar = tqdm(
-        total=total_size, unit="iB", unit_scale=True, ncols=80
-    )  # pylint: disable=blacklisted-name
-    try:
-        with NamedTemporaryFile("w+b", delete=False, suffix=".tmp", dir=dst_dir) as f:
-            logger.info("Download file to temp file %s", f.name)
-            for chunk in resp.iter_content(CHUNK_SIZE):
-                if not chunk:
-                    break
-                bar.update(len(chunk))
-                f.write(chunk)
-                md5.update(chunk)
-            bar.close()
-        shutil.move(f.name, dst)
-    finally:
-        # ensure tmp file is removed
-        if os.path.exists(f.name):
-            os.remove(f.name)
-    return md5.hexdigest()
+    smart_copy(url, dst, callback=Bar(total=smart_getsize(url)))
+    return smart_getmd5(dst)
