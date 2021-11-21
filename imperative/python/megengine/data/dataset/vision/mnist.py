@@ -118,7 +118,7 @@ class MNIST(VisionDataset):
     def download(self):
         for file_name, md5 in zip(self.raw_file_name, self.raw_file_md5):
             url = self.url_path + file_name
-            load_raw_data_from_url(url, file_name, md5, self.root, self.timeout)
+            load_raw_data_from_url(url, file_name, md5, self.root)
 
     def process(self, train):
         # load raw files and transform them into meta data and datasets Tuple(np.array)

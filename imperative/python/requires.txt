@@ -8,3 +8,4 @@ redispy
 deprecated
 mprop
 wheel
+megfile>=0.0.10

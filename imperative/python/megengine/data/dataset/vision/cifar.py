@@ -106,9 +106,7 @@ class CIFAR10(VisionDataset):
 
     def download(self):
         url = self.url_path + self.raw_file_name
-        load_raw_data_from_url(
-            url, self.raw_file_name, self.raw_file_md5, self.root, self.timeout
-        )
+        load_raw_data_from_url(url, self.raw_file_name, self.raw_file_md5, self.root)
         self.process()
 
     def untar(self, file_path, dirs):
