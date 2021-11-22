@@ -69,7 +69,7 @@ template <>
 void InputOption::config_model_internel<ModelMdl>(
         RuntimeParam& runtime_param, std::shared_ptr<ModelMdl> model) {
     if (runtime_param.stage == RunStage::BEFORE_MODEL_LOAD) {
-        auto parser = model->get_input_parser();
+        auto&& parser = model->get_input_parser();
         for (size_t idx = 0; idx < data_path.size(); ++idx) {
             parser.feed(data_path[idx].c_str());
         }
