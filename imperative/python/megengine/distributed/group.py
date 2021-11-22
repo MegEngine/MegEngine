@@ -50,6 +50,7 @@ class Group:
         if len(proc_ranks) == 0:  # empty group
             self.proc_ranks = None
             self.stream = None
+            self.is_single_machine_cache = None
         else:
             self.reset(proc_ranks)
 
@@ -57,6 +58,7 @@ class Group:
         self.check(proc_ranks)
         self.proc_ranks = proc_ranks
         self.stream = _sh.get_next()
+        self.is_single_machine_cache = None
 
     def check(self, proc_ranks):
         assert _sd is not None, "please call init_process_group first"
