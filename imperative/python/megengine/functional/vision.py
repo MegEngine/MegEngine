@@ -44,6 +44,37 @@ def cvt_color(inp: Tensor, mode: str = ""):
     Returns:
         convert result.
 
+    Note:
+        There are different supported modes for different combinations of :attr:`~.Tensor.device` and :attr:`~.Tensor.dtype`.
+
+        x86/ARM:
+
+        float32:
+        "RGB2GRAY", "RGB2YUV", "YUV2RGB", "GRAY2RGB", "BGR2GRAY"
+
+        uint8:
+        "RGB2GRAY", "RGB2YUV", "YUV2RGB", "GRAY2RGB", "RGBA2RGB", "RGBA2BGR",
+        "RGBA2GRAY", "RGB2BGR", "BGR2GRAY", "BGR2RGB", "YUV2GRAY_NV21", "YUV2RGB_NV21",
+        "YUV2BGR_NV21", "YUV2GRAY_NV12", "YUV2RGB_NV12", "YUV2BGR_NV12", "YUV2GRAY_YV12",
+        "YUV2RGB_YV12", "YUV2BGR_YV12", "YUV2GRAY_YU12", "YUV2RGB_YU12", "YUV2BGR_YU12",
+        "YCrCb2RGB", "YCrCb2BGR", "BT601_YUV2RGB_NV21", "BT601_YUV2BGR_NV21", "BT601_YUV2RGB_NV12",
+        "BT601_YUV2BGR_NV12", "BT601_YUV2RGB_YV12", "BT601_YUV2BGR_YV12" ,"BT601_YUV2RGB_YU12",
+        "BT601_YUV2BGR_YU12"
+
+
+        CUDA:
+
+        float32:
+        "RGB2GRAY", "BGR2GRAY", "RGB2YUV", "YUV2RGB", "GRAY2RGB"
+
+        uint8:
+        "RGB2GRAY", "BGR2GRAY", "RGB2YUV", "YUV2RGB", "GRAY2RGB",
+        "YUV2GRAY_NV12",  "YUV2GRAY_NV21", "YUV2GRAY_YU12"
+        "YUV2GRAY_YV12", "YUV2RGB_NV12", "YUV2RGB_NV21", "YUV2BGR_NV12"
+        "YUV2BGR_NV21", "YUV2RGB_YU12", "YUV2RGB_YV12", "YUV2BGR_YU12",
+        "YUV2BGR_YV12"
+
+
     Examples:
 
         .. testcode::
@@ -62,7 +93,7 @@ def cvt_color(inp: Tensor, mode: str = ""):
 
             [[[[0.86555195]]]]
     """
-    mode = mode.upper()
+    mode = mode.upper() if "YCrCb" not in mode else mode
     assert mode in builtin.CvtColor.Mode.__dict__, "unspport mode for cvt_color"
     mode = getattr(builtin.CvtColor.Mode, mode)
     assert isinstance(mode, builtin.CvtColor.Mode)

@@ -480,6 +480,10 @@ class GraphInference:
 
         Returns:
             a dict {output_name: output_value}.
+
+        Note:
+            Note that the order of the Graph's input nodes may be different from the order of the origin traced function's arguments.
+            It is recommended to use ``inp_dict`` to provide input data by name.
         """
         assert len(inp_args) <= len(
             self._inp_dict
