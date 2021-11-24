@@ -816,4 +816,79 @@ TYPED_TEST(TestCPUCompSeqRec, run_multi_thread_default) {
 }
 }  // anonymous namespace
 
+#include "megbrain/opr/basic_arith_wrapper.h"
+#include "megbrain/opr/io.h"
+#include "megbrain/opr/tensor_manip.h"
+#include "megbrain/opr/utility.h"
+
+TEST(TestCPUCompSeqRec, run_dyn_ptr) {
+    CompNode cn = CompNode::load("cpux");
+
+    HostTensorGenerator<> gen;
+    auto host_x0 = gen({4, 1}, cn), host_y0 = gen({4, 1}, cn),
+         host_z0 = gen({4, 1}, cn);
+    auto host_x1 = gen({4, 1}, cn), host_y1 = gen({4, 1}, cn),
+         host_z1 = gen({4, 1}, cn);
+
+    auto dev_x0 = std::make_shared<DeviceTensorND>(cn);
+    auto dev_y0 = std::make_shared<DeviceTensorND>(cn);
+    auto dev_z0 = std::make_shared<DeviceTensorND>(cn);
+    auto dev_x1 = std::make_shared<DeviceTensorND>(cn);
+    auto dev_y1 = std::make_shared<DeviceTensorND>(cn);
+    auto dev_z1 = std::make_shared<DeviceTensorND>(cn);
+
+    (*dev_x0).comp_node(cn).copy_from(*host_x0).sync();
+    (*dev_y0).comp_node(cn).copy_from(*host_y0).sync();
+    (*dev_z0).comp_node(cn).copy_from(*host_z0).sync();
+    (*dev_x1).comp_node(cn).copy_from(*host_x1).sync();
+    (*dev_y1).comp_node(cn).copy_from(*host_y1).sync();
+    (*dev_z1).comp_node(cn).copy_from(*host_z1).sync();
+
+    auto check = [&]() {
+        HostTensorND ret(CompNode::load("cpux"), host_x0->shape());
+        auto px = host_x0->ptr<float>(), py = host_y0->ptr<float>(),
+             pz = host_z0->ptr<float>(), pw = ret.ptr<float>();
+        auto sz0 = host_x0->shape()[0], sz1 = host_x0->shape()[1];
+
+        for (size_t i = 0; i < sz0; ++i) {
+            for (size_t j = 0; j < sz1; ++j) {
+                pw[i * sz1 + j] = px[i * sz1 + j] * py[i * sz1 + j] + pz[i * sz1 + j];
+            }
+        }
+        return ret;
+    };
+
+    auto graph = ComputingGraph::make();
+    // test record on first run
+    graph->options().var_sanity_check_first_run = false;
+    graph->options().graph_opt_level = 0;
+    graph->options().comp_node_seq_record_level = 1;
+    graph->options().fake_next_exec = true;
+
+    auto x = opr::VolatileSharedDeviceTensor::make(*graph, dev_x0),
+         y = opr::VolatileSharedDeviceTensor::make(*graph, dev_y0),
+         z = opr::VolatileSharedDeviceTensor::make(*graph, dev_z0),
+         w = opr::Elemwise::make({x, y, z}, opr::Elemwise::Mode::FUSE_MUL_ADD3);
+
+    HostTensorND host_w;
+    auto func = graph->compile({{w, [&host_w](DeviceTensorND& d) {
+                                     host_w = mgb::HostTensorND::make_proxy(d);
+                                 }}});
+    func->execute();
+
+    for (int i = 0; i < 4; ++i) {
+        if (i == 2) {
+            *host_x0 = *host_x1;
+            *host_y0 = *host_y1;
+            *host_z0 = *host_z1;
+            dev_x0->only_reset_raw_storage(dev_x1->storage());
+            dev_y0->only_reset_raw_storage(dev_y1->storage());
+            dev_z0->only_reset_raw_storage(dev_z1->storage());
+        }
+        func->execute();
+        auto expect = check();
+        MGB_ASSERT_TENSOR_EQ(expect, host_w) << "iter " << i;
+    }
+}
+
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

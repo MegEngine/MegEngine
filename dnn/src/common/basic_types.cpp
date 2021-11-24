@@ -605,4 +605,14 @@ std::string TensorLayout::serialize() const {
     return rst;
 }
 
+void RefPtr::reset(const void* ptr, size_t offset) {
+    megdnn_assert(m_mutable, "this RefPtr can't change.");
+    *m_ref = const_cast<void*>(ptr);
+    m_offset = offset;
+}
+
+void TensorND::reset_ptr(void* ptr, size_t offset) {
+    m_ref_ptr.reset(ptr, offset);
+}
+
 // vim: syntax=cpp.doxygen

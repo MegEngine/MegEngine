@@ -178,7 +178,7 @@ VarSanityCheck::ChecksumResult VarSanityCheck::calc_checksum(VarNode* var) {
 
     auto span = dt.layout().span();
     megdnn::TensorND tensor;
-    tensor.raw_ptr = dt.raw_ptr() + span.low_byte;
+    tensor.reset_ptr(dt.raw_ptr() + span.low_byte);
     tensor.layout.init_contiguous_stride({span.dist_byte()});
     tensor.layout.dtype = dtype::Byte();
 

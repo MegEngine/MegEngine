@@ -2572,8 +2572,8 @@ TEST_F(TestWeightPreprocess, PreprocessCalledOnlyOnce) {
                     ASSERT_EQ(pf->tensors.size(), 2);
                     ASSERT_TRUE(pf->tensors[0].layout.eq_shape({1, 2, 3, 4}));
                     ASSERT_TRUE(pf->tensors[1].layout.eq_shape({5, 6, 7, 8}));
-                    ASSERT_NE(pf->tensors[0].raw_ptr, nullptr);
-                    ASSERT_NE(pf->tensors[1].raw_ptr, nullptr);
+                    ASSERT_NE(pf->tensors[0].raw_ptr(), nullptr);
+                    ASSERT_NE(pf->tensors[1].raw_ptr(), nullptr);
                     pf->tensors[0].ptr<float>()[0] = 114.514f;
                     pf->tensors[1].ptr<float>()[0] = 1926.0817f;
                 }));

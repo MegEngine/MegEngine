@@ -1425,7 +1425,7 @@ void ParamPackConcat::scn_do_execute() {
     m_inp_ptr.resize(inputs.size() - 1);
     auto ptr = m_inp_ptr.data();
     for (size_t i = 0; i < inputs.size() - 1; i++) {
-        ptr[i] = inputs[i]->dev_tensor().as_megdnn().raw_ptr;
+        ptr[i] = inputs[i]->dev_tensor().as_megdnn().raw_ptr();
     }
     auto offsets = inputs.back()->dev_tensor().as_megdnn();
     megdnn::TensorND srcs(

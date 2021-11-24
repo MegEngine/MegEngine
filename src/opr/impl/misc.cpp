@@ -241,9 +241,9 @@ void NvOf::scn_do_execute() {
     }
 
     nv_flow_extractor->extract_flow(
-            static_cast<unsigned char*>(input(0)->dev_tensor().as_megdnn().raw_ptr),
+            static_cast<unsigned char*>(input(0)->dev_tensor().as_megdnn().raw_ptr()),
             vshape,
-            reinterpret_cast<int16_t*>(output(0)->dev_tensor().as_megdnn().raw_ptr));
+            reinterpret_cast<int16_t*>(output(0)->dev_tensor().as_megdnn().raw_ptr()));
 }
 
 void NvOf::init_output_static_infer_desc() {

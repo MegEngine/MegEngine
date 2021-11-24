@@ -250,9 +250,14 @@ std::unique_ptr<CompNodeSeqRecorder> ComputingGraphImpl::ComputingSequence::
                 "graph.");
         return {};
     }
+    auto is_graph_dest_varnode = [&](VarNode* var) {
+        return ComputingGraphImpl::downcast(owner_graph())->var_receiver(var).size() ==
+               0;
+    };
+
     for (auto i : *m_opr_seq) {
         for (auto j : i->output()) {
-            if (!is_static_var_storage(j)) {
+            if (!is_static_var_storage(j) && !is_graph_dest_varnode(j)) {
                 mgb_log_error(
                         "can not enable CompNodeSeqRecorder because var "
                         "storage not static: %s",

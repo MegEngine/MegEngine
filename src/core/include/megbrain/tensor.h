@@ -226,6 +226,12 @@ public:
     MGE_WIN_DECLSPEC_FUC void reset(CompNode node, size_t size, RawStorage data);
 
     /*!
+     * \brief reset the tensor storage to given memory area
+     */
+    MGE_WIN_DECLSPEC_FUC void only_reset_raw_storage(
+            CompNode node, size_t size, RawStorage data, size_t offset);
+
+    /*!
      * \brief make a TensorStorage that shares memory with another
      *      TensorStorage some different storage type
      *
@@ -270,6 +276,11 @@ public:
         return m_data;
     }
 
+    std::shared_ptr<void*> get_ref_ptr() const {
+        ptr();
+        return m_ref_ptr;
+    }
+
 private:
     template <class T>
     friend class TensorStorage;
@@ -289,16 +300,20 @@ private:
 
     RawStorage m_data;
 
+    std::shared_ptr<void*> m_ref_ptr = std::make_shared<void*>((void*)nullptr);
+
     //! used internally for returning a predefined TensorStorage
     TensorStorage(
             bool allow_realloc, CompNode comp_node, size_t size, size_t capacity,
-            size_t offset, const RawStorage& data)
+            size_t offset, const RawStorage& data,
+            std::shared_ptr<void*> ref_ptr = std::make_shared<void*>((void*)nullptr))
             : m_allow_realloc(allow_realloc),
               m_comp_node(comp_node),
               m_size(size),
               m_capacity(capacity),
               m_offset(offset),
-              m_data(data) {}
+              m_data(data),
+              m_ref_ptr(ref_ptr) {}
 
     void check_comp_node_valid() const {
         if (mgb_unlikely(!m_comp_node.valid()))
@@ -423,6 +438,8 @@ public:
     MGE_WIN_DECLSPEC_FUC ChainReturnType& reset(
             TensorStorage storage, const TensorLayout& layout);
 
+    MGE_WIN_DECLSPEC_FUC ChainReturnType& only_reset_raw_storage(TensorStorage storage);
+
     /* ================= getter and setters =================  */
 
     /*!
@@ -501,7 +518,8 @@ public:
 
     //! convert to megdnn::TensorND
     megdnn::TensorND as_megdnn() const {
-        return {const_cast<void*>(static_cast<const void*>(raw_ptr())), m_layout};
+        megdnn::RefPtr ref_ptr(m_storage.get_ref_ptr(), m_storage.offset(), false);
+        return {m_layout, ref_ptr};
     }
 
     /* ================= misc =================  */

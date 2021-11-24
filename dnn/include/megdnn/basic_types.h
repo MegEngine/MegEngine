@@ -15,6 +15,8 @@
 #include "megdnn/dtype.h"
 #include "megdnn/internal/defs.h"
 
+#include <memory>
+
 #if MEGDNN_CC_HOST
 #include <cstdarg>
 #include <string>
@@ -402,31 +404,94 @@ struct TensorLayout : public TensorShape {
     MGE_WIN_DECLSPEC_FUC size_t access_bytes() const;
 };
 
+class RefPtr {
+    std::shared_ptr<void*> m_ref;
+    size_t m_offset;
+    bool m_mutable;
+
+public:
+    RefPtr() {
+        m_ref = std::make_shared<void*>((void*)nullptr);
+        m_offset = 0;
+        m_mutable = true;
+    }
+
+    RefPtr(void* ref_ptr, const size_t offset = 0) {
+        m_ref = std::make_shared<void*>(ref_ptr);
+        m_offset = offset;
+        m_mutable = true;
+    }
+
+    explicit RefPtr(
+            std::shared_ptr<void*> ref_ptr, const size_t offset = 0,
+            bool is_mutable = true) {
+        m_ref = ref_ptr;
+        m_offset = offset;
+        m_mutable = is_mutable;
+    }
+
+    void* get_ptr() const {
+        return static_cast<void*>(
+                (*m_ref != NULL) ? static_cast<dt_byte*>(*m_ref) + m_offset : nullptr);
+    }
+
+    bool is_mutable() const { return m_mutable; }
+
+    void reset(const void* ptr, size_t offset = 0);
+
+    RefPtr& operator+=(size_t offset) {
+        m_offset += offset;
+        return *this;
+    }
+
+    bool operator==(const RefPtr& other) const {
+        return *m_ref == *other.m_ref && m_offset == other.m_offset;
+    }
+
+    template <typename T>
+    T* ptr() const {
+        return static_cast<T*>(get_ptr());
+    }
+};
+
 /**
  * \brief A simple encapsulation class for n-dimensional tensor.
  */
 struct TensorND {
-    void* raw_ptr;
     TensorLayout layout;
 
-    TensorND() : raw_ptr(NULL) {}
+    TensorND() : m_ref_ptr(RefPtr((void*)nullptr)) {}
 
     TensorND(void* raw_ptr_, const TensorLayout& layout_)
-            : raw_ptr(raw_ptr_), layout(layout_) {}
+            : layout(layout_), m_ref_ptr(raw_ptr_) {}
+
+    TensorND(const TensorLayout& layout_, const RefPtr& ref_ptr)
+            : layout(layout_), m_ref_ptr(ref_ptr) {}
+
+    MGE_WIN_DECLSPEC_FUC void reset_ptr(void* ptr, size_t offset = 0);
+
+    void* raw_ptr() const { return m_ref_ptr.get_ptr(); }
+
+    const RefPtr get_ref_ptr() const { return m_ref_ptr; }
+
+    RefPtr& get_ref_ptr() { return m_ref_ptr; }
 
     //! get typed pointer; type check is performed
     template <typename T>
     T* ptr() const {
         layout.dtype.assert_is_ctype<T>();
-        return static_cast<T*>(raw_ptr);
+        return static_cast<T*>(m_ref_ptr.get_ptr());
     }
 
     //! get typed pointer of compatible type
     template <typename T>
     T* compatible_ptr() const {
         layout.dtype.assert_is_compatible_ctype<T>();
-        return reinterpret_cast<T*>(raw_ptr);
+        return reinterpret_cast<T*>(m_ref_ptr.get_ptr());
     }
+
+private:
+    RefPtr m_ref_ptr;
 };
 
 #if MEGDNN_CC_HOST

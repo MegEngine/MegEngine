@@ -1157,7 +1157,7 @@ void CondExecMerge::scn_do_execute() {
                 if (forwarded[oidx]) {
                     ovar->shape_alloc(ovar->shape());
                     auto&& own_dest = ovar->dev_tensor().as_megdnn();
-                    mgb_assert(own_dest.raw_ptr != dest.raw_ptr);
+                    mgb_assert(own_dest.raw_ptr() != dest.raw_ptr());
                     dnn_opr->exec({dest, src}, own_dest);
                     forwarded[oidx] = false;
                 } else {

@@ -1269,7 +1269,9 @@ void Reduce::KernScheduler::update_ptr(
     mgb_assert(
             dest.shape().total_nr_elems() ==
             m_kern_param.back().output.layout.total_nr_elems());
-    m_kern_param[0].input.raw_ptr = const_cast<dt_byte*>(input.raw_ptr());
+    auto in_tensor = input.as_megdnn();
+    in_tensor.layout = m_kern_param[0].input.layout;
+    m_kern_param[0].input = in_tensor;
 
     dt_byte *workspace_begin = workspace_size()
                                      ? const_cast<dt_byte*>(workspace.raw_ptr())
@@ -1280,12 +1282,14 @@ void Reduce::KernScheduler::update_ptr(
             *kern_workspace = workspace_begin + m_workspace_spec[2].offset;
     for (size_t i = 0; i < m_kern_param.size() - 1; ++i) {
         auto optr = tmp_reduce_ptr[i % 2];
-        m_kern_param[i].output.raw_ptr = optr;
-        m_kern_param[i + 1].input.raw_ptr = optr;
+        m_kern_param[i].output.reset_ptr(optr);
+        m_kern_param[i + 1].input.reset_ptr(optr);
     }
     for (auto&& i : m_kern_param)
         i.workspace.raw_ptr = kern_workspace;
-    m_kern_param.back().output.raw_ptr = const_cast<dt_byte*>(dest.raw_ptr());
+    auto out_tensor = dest.as_megdnn();
+    out_tensor.layout = m_kern_param.back().output.layout;
+    m_kern_param.back().output = out_tensor;
 }
 
 void Reduce::KernScheduler::execute(
@@ -1343,8 +1347,8 @@ void Reduce::KernScheduler::execute(
     }
     mgb_assert(
             input.layout().is_contiguous() &&
-            input.raw_ptr() == m_kern_param[0].input.raw_ptr &&
-            dest.raw_ptr() == m_kern_param.back().output.raw_ptr);
+            input.raw_ptr() == m_kern_param[0].input.raw_ptr() &&
+            dest.raw_ptr() == m_kern_param.back().output.raw_ptr());
     for (auto&& i : m_kern_param) {
         opr->param() = i.KernParam::kparam;
         opr->exec(i.input, i.output, i.workspace);

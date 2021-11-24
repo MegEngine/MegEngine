@@ -412,9 +412,12 @@ TEST(TestNetWork, ResetOutput) {
     compare_lite_tensor<float>(output_tensor, result_mgb);
 }
 
-TEST(TestNetWork, OutputNoCopy) {
+namespace {
+
+void test_output_no_copy(int record) {
     Config config;
     config.options.force_output_use_user_specified_memory = true;
+    config.options.comp_node_seq_record_level = record;
     auto tensor = get_input_data("./input_data.npy");
     std::string model_path = "./shufflenet.mge";
     std::string input_name = "data";
@@ -451,6 +454,65 @@ TEST(TestNetWork, OutputNoCopy) {
     for (size_t i = 0; i < times; i++) {
         compare_lite_tensor<float>(result_tensors[i], result_mgb);
     }
+}
+
+void test_input_no_copy(int record) {
+    Config config;
+    config.options.force_output_use_user_specified_memory = true;
+    config.options.comp_node_seq_record_level = record;
+    std::string model_path = "./shufflenet.mge";
+    std::string input_name = "data";
+
+    Layout layout_in{{1, 3, 224, 224}, 4};
+    std::vector<std::shared_ptr<Tensor>> inputs;
+    std::vector<std::shared_ptr<Tensor>> outputs;
+    for (int i = 0; i < 3; i++) {
+        auto tmp_in = std::make_shared<Tensor>(LiteDeviceType::LITE_CPU, layout_in);
+
+        auto ptr = static_cast<float*>(tmp_in->get_memory_ptr());
+        for (size_t id = 0; id < 2 * 224 * 224; id++) {
+            ptr[id] = i + 1;
+        }
+        inputs.push_back(tmp_in);
+        outputs.push_back(mgb_lar(model_path, config, input_name, tmp_in));
+    }
+
+    std::shared_ptr<Network> network = std::make_shared<Network>(config);
+
+    network->load_model(model_path);
+    std::shared_ptr<Tensor> input_tensor = network->get_io_tensor(input_name);
+    std::shared_ptr<Tensor> output_tensor = network->get_output_tensor(0);
+
+    for (int i = 0; i < 3; i++) {
+        auto ptr = inputs[i]->get_memory_ptr();
+        input_tensor->reset(ptr, layout_in);
+
+        auto tmp_out = std::make_shared<Tensor>(
+                LiteDeviceType::LITE_CPU,
+                Layout{{1, 1000}, 2, LiteDataType::LITE_FLOAT});
+        output_tensor->reset(tmp_out->get_memory_ptr(), output_tensor->get_layout());
+
+        network->forward();
+        network->wait();
+        compare_lite_tensor<float>(output_tensor, outputs[i]);
+    }
+}
+}  // namespace
+
+TEST(TestNetWork, OutputNoCopy) {
+    test_output_no_copy(0);
+}
+
+TEST(TestNetWork, OutputNoCopyRecord) {
+    test_output_no_copy(1);
+}
+
+TEST(TestNetWork, IONoCopy) {
+    test_input_no_copy(0);
+}
+
+TEST(TestNetWork, IONoCopyRecord) {
+    test_input_no_copy(1);
 }
 
 TEST(TestNetWork, OutputDynamicAlloc) {

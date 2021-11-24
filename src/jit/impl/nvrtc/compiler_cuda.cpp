@@ -133,7 +133,7 @@ void setup_and_launch(const JITExecutor* fusion_opr, CUfunction func, int block_
         host_init_pvisitor<out_dim>(pvisitors[i], args.inputs[i].layout);
     }
     datum[nr_inps] = reinterpret_cast<CUdeviceptr>(
-            args.outputs[0].from->dev_tensor().as_megdnn().raw_ptr);
+            args.outputs[0].from->dev_tensor().as_megdnn().raw_ptr());
     size_t num_elements = args.outputs[0].layout.total_nr_elems();
     mgb_assert(
             num_elements <= UINT32_MAX,
@@ -152,11 +152,11 @@ void setup_and_launch(const JITExecutor* fusion_opr, CUfunction func, int block_
         exec_args[0] = datum.data();
         exec_args[2] = pvisitors.data();
     } else {
-        datum_dev = args.outputs[1].from->dev_tensor().as_megdnn().raw_ptr;
+        datum_dev = args.outputs[1].from->dev_tensor().as_megdnn().raw_ptr();
         MGB_CUDA_CHECK(cudaMemcpyAsync(
                 datum_dev, datum.data(), (nr_inps + 1) * sizeof(CUdeviceptr),
                 cudaMemcpyHostToDevice, env.cuda_env().stream));
-        p_visitors_dev = args.outputs[2].from->dev_tensor().as_megdnn().raw_ptr;
+        p_visitors_dev = args.outputs[2].from->dev_tensor().as_megdnn().raw_ptr();
         MGB_CUDA_CHECK(cudaMemcpyAsync(
                 p_visitors_dev, pvisitors.data(),
                 nr_inps * sizeof(ParamElemVisitor<out_dim>), cudaMemcpyHostToDevice,

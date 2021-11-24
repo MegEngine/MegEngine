@@ -126,6 +126,7 @@ private:
     void set_mge_tensor_compnode(const mgb::CompNode& comp_node);
 
 private:
+    bool m_record_reset = false;
     std::function<void(TensorImplDft*)> m_get_memory_callback;
     std::function<void(TensorImplDft*)> m_reset_callback;
     std::shared_ptr<mgb::HostTensorND> m_host_tensor;

@@ -314,14 +314,22 @@ void TensorImplDft::reset(void* prepared_data) {
         size_t size = mge_layout.span().dist_byte();
         mgb::HostTensorStorage storage;
         storage.reset(cn, size, raw_storage);
-        m_host_tensor->reset(storage, mge_layout);
+        if (m_record_reset) {
+            m_host_tensor->only_reset_raw_storage(storage);
+        } else {
+            m_host_tensor->reset(storage, mge_layout);
+        }
     } else {
         auto cn = m_dev_tensor->comp_node();
         auto mge_layout = m_dev_tensor->layout();
         size_t size = mge_layout.span().dist_byte();
         mgb::DeviceTensorStorage storage;
         storage.reset(cn, size, raw_storage);
-        m_dev_tensor->reset(storage, mge_layout);
+        if (m_record_reset) {
+            m_dev_tensor->only_reset_raw_storage(storage);
+        } else {
+            m_dev_tensor->reset(storage, mge_layout);
+        }
     }
     if (m_reset_callback) {
         m_reset_callback(this);
@@ -455,14 +463,9 @@ void TensorImplDft::device_share_host_memory() {
                     m_host_tensor->comp_node(), m_host_tensor->layout());
         }
         if (m_host_tensor->raw_ptr() != m_dev_tensor->raw_ptr()) {
-            auto raw_storage = std::shared_ptr<mgb::dt_byte>(
-                    m_host_tensor->raw_ptr(), [](void*) {});
-            auto cn = m_host_tensor->comp_node();
-            auto mge_layout = m_host_tensor->layout();
-            size_t size = mge_layout.span().dist_byte();
-            mgb::DeviceTensorStorage storage;
-            storage.reset(cn, size, raw_storage);
-            m_dev_tensor->reset(storage, mge_layout);
+            auto&& storage =
+                    mgb::DeviceTensorStorage::make_proxy(m_host_tensor->storage());
+            m_dev_tensor->only_reset_raw_storage(storage);
         }
     }
 }

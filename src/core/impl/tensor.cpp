@@ -233,6 +233,7 @@ TensorStorage<Trait>& TensorStorage<Trait>::operator=(const TensorStorage& rhs) 
     m_capacity = rhs.m_capacity;
     m_offset = rhs.m_offset;
     m_data = rhs.m_data;
+    m_ref_ptr = rhs.m_ref_ptr;
     return *this;
 }
 
@@ -264,7 +265,8 @@ TensorStorage<Trait> TensorStorage<Trait>::sub(ptrdiff_t offset) const {
             m_size - offset,
             m_capacity - offset,
             static_cast<size_t>(toff),
-            m_data};
+            m_data,
+            m_ref_ptr};
 }
 
 template <class Trait>
@@ -278,8 +280,10 @@ dt_byte* TensorStorage<Trait>::apply_lazy_and_get_ptr() {
         mgb_throw_if(!ptr, SystemError, "failed to allocate memory");
         CompNode cn = m_comp_node;
         m_data.reset(ptr, [cn](void* p) { Trait::free(cn, p); });
+        m_ref_ptr = std::make_shared<void*>(static_cast<void*>(nullptr));
         m_capacity = m_size;
     }
+    *m_ref_ptr = static_cast<void*>(m_data.get());
     return m_data.get() + m_offset;
 }
 
@@ -305,6 +309,19 @@ void TensorStorage<Trait>::reset(CompNode node, size_t size, RawStorage data) {
     m_capacity = size;
     m_offset = 0;
     m_data = std::move(data);
+    m_ref_ptr = std::make_shared<void*>(static_cast<void*>(m_data.get()));
+}
+
+template <class Trait>
+void TensorStorage<Trait>::only_reset_raw_storage(
+        CompNode node, size_t size, RawStorage data, size_t offset) {
+    mgb_assert(m_allow_realloc);
+    m_comp_node = node;
+    m_size = size;
+    m_capacity = size;
+    m_offset = offset;
+    m_data = std::move(data);
+    *m_ref_ptr = static_cast<void*>(m_data.get());
 }
 
 template <class Trait>
@@ -316,8 +333,8 @@ TensorStorage<Trait> TensorStorage<Trait>::make_proxy(
             "proxy source should be on CPU; got %s",
             src.comp_node().to_string().c_str());
     src.ptr();
-    return {true,           src.m_comp_node, src.m_size,
-            src.m_capacity, src.m_offset,    src.m_data};
+    return {true,         src.m_comp_node, src.m_size,   src.m_capacity,
+            src.m_offset, src.m_data,      src.m_ref_ptr};
 }
 
 template <class Trait>
@@ -478,6 +495,17 @@ DEF(reset, &)(TensorStorage storage, const TensorLayout& layout) {
     mgb_assert(!layout.ndim || storage.valid_span(layout.span()) || storage.empty());
     m_storage = std::move(storage);
     m_layout = layout;
+    return static_cast<ChainReturnType&>(*this);
+}
+
+DEF(only_reset_raw_storage, &)(TensorStorage storage) {
+    //! The storage to be reset is either satisfy the layout or empty.
+    //! Empty storage is used after weight preprocess for saving memory and
+    //! checking layout when running
+    mgb_assert(storage.valid_span(m_layout.span()) || storage.empty());
+    m_storage.only_reset_raw_storage(
+            storage.comp_node(), storage.size(), storage.raw_storage(),
+            storage.offset());
     return static_cast<ChainReturnType&>(*this);
 }
 

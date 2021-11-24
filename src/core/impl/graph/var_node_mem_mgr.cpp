@@ -319,7 +319,7 @@ bool VarNodeMemManager::DynamicAllocOprInfo::check_if_mem_status_change() {
     for (size_t i = 0; i < dev_val_input.size(); i++) {
         auto&& t = prev_dev_val_input[i];
         auto s = dev_val_input[i]->dev_tensor().as_megdnn();
-        if (t.raw_ptr != s.raw_ptr || !t.layout.eq_layout(s.layout)) {
+        if (t.raw_ptr() != s.raw_ptr() || !t.layout.eq_layout(s.layout)) {
             same = false;
             t = s;
         }

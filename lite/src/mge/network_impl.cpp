@@ -527,6 +527,10 @@ void NetworkImplDft::update_input() {
                     config_in.lite_tensor->set_layout(
                             to_lite_layout(in_tensor_iter.second->layout()));
                 }
+                TensorHelper::implement(config_in.lite_tensor)
+                        ->cast_final_safe<TensorImplDft>()
+                        .m_record_reset =
+                        m_user_config->options.comp_node_seq_record_level > 0;
                 if (config_in.config_layout.ndim &&
                     !(config_in.config_layout == config_in.lite_tensor->get_layout())) {
                     config_in.lite_tensor->set_layout(config_in.config_layout);
@@ -541,6 +545,10 @@ void NetworkImplDft::update_input() {
             TensorHelper::implement(io_in.lite_tensor)
                     ->cast_final_safe<TensorImplDft>()
                     .m_host_tensor = in_tensor_iter.second;
+            TensorHelper::implement(io_in.lite_tensor)
+                    ->cast_final_safe<TensorImplDft>()
+                    .m_record_reset =
+                    m_user_config->options.comp_node_seq_record_level > 0;
             io_in.lite_tensor->update_from_implement();
             m_network_io->inputs.push_back(io_in);
         }
@@ -603,6 +611,10 @@ void NetworkImplDft::update_output() {
             }
             try_infer_tensor_layout(out_it->lite_tensor, var);
             output_tensor_copy_optimize(var, out_it->lite_tensor);
+            TensorHelper::implement(out_it->lite_tensor)
+                    ->cast_final_safe<TensorImplDft>()
+                    .m_record_reset =
+                    m_user_config->options.comp_node_seq_record_level > 0;
         }
         //! user not set, use default output
     } else {
@@ -631,6 +643,10 @@ void NetworkImplDft::update_output() {
                 lite_tensor = output.lite_tensor;
             }
             output_tensor_copy_optimize(out, lite_tensor);
+            TensorHelper::implement(lite_tensor)
+                    ->cast_final_safe<TensorImplDft>()
+                    .m_record_reset =
+                    m_user_config->options.comp_node_seq_record_level > 0;
         }
     }
 }
@@ -643,14 +659,20 @@ void NetworkImplDft::output_tensor_copy_optimize(
             "Can't set force_output_use_user_specified_memory and "
             "force_output_dynamic_alloc at the same time.");
     if (m_user_config->options.force_output_use_user_specified_memory) {
+        bool in_record = m_user_config->options.comp_node_seq_record_level > 0;
         TensorHelper::implement(tensor)
                 ->cast_final_safe<TensorImplDft>()
-                .set_reset_callback([var](TensorImplDft* dft_tensor) {
+                .set_reset_callback([var, in_record](TensorImplDft* dft_tensor) {
                     dft_tensor->device_share_host_memory();
                     auto dv = dft_tensor->dev_tensor().get();
                     dv->comp_node(var.node()->comp_node(), true);
                     var.node()->init_mem_plan(dv);
-                    var.node()->reset_dev_tensor_from_tensor(*dv);
+                    if (in_record) {
+                        auto&& device_tensor = var.node()->mutable_dev_tensor();
+                        device_tensor.only_reset_raw_storage(dv->storage());
+                    } else {
+                        var.node()->reset_dev_tensor_from_tensor(*dv);
+                    }
                 });
     }
     if (m_user_config->options.force_output_dynamic_alloc) {

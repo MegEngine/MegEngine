@@ -342,7 +342,7 @@ void param_pack_concat_execute(
             [comp_node](dt_byte* ptr) { comp_node.free_host(ptr); }};
     TensorLayout srcs_layout = TensorLayout{{nr_inputs}, dtype::Int32()};
     for (size_t i = 0; i < nr_inputs; ++i) {
-        srcs_raw_ptr[i] = inputs[i]->dev_tensor().as_megdnn().raw_ptr;
+        srcs_raw_ptr[i] = inputs[i]->dev_tensor().as_megdnn().raw_ptr();
     }
     HostTensorStorage srcs_storage;
     srcs_storage.reset(comp_node, srcs_size, srcs_ptr);
@@ -392,7 +392,7 @@ SmallVector<TensorPtr> param_pack_concat_apply_on_physical_tensor(
                 src_shapes, inputs.back()->shape(), TensorShape{});
     }
     for (size_t i = 0; i < nr_inputs; ++i) {
-        srcs_raw_ptr[i] = inputs[i]->dev_tensor().as_megdnn().raw_ptr;
+        srcs_raw_ptr[i] = inputs[i]->dev_tensor().as_megdnn().raw_ptr();
     }
     HostTensorStorage srcs_storage;
     srcs_storage.reset(comp_node, srcs_size, srcs_ptr);
