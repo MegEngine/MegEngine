@@ -211,9 +211,6 @@ void NetworkImplDft::use_tensorrt() {
 void NetworkImplDft::set_async_callback(const AsyncCallback& callback) {
     LITE_ASSERT(!m_is_cpu_inplace_mode, "cpu inplace mode not support async mode");
     LITE_ASSERT(
-            m_user_config->options.comp_node_seq_record_level == 0,
-            "record mode not support async mode");
-    LITE_ASSERT(
             m_user_config->device_type == LiteDeviceType::LITE_CPU ||
                     m_user_config->device_type == LiteDeviceType::LITE_CUDA,
             "Now only cpu and cuda>10.0 support async mode");

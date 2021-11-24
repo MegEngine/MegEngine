@@ -1375,17 +1375,13 @@ TEST(TestGraph, CompNodeFinalize) {
             graph->options().var_sanity_check_first_run = false;
             graph->options().comp_node_seq_record_level = rec;
         }
-        auto sync = (rec != 1);
-        auto func = graph->compile({make_callback_copy(z, host_z, sync)});
+        auto func = graph->compile({make_callback_copy(z, host_z)});
         if (rec == 2) {
             ComputingGraph::assert_destroy(graph);
         }
         for (int i = 0; i < 5; ++i) {
             host_x->copy_from(*gen({1}, cn));
             func->execute();
-            if (!sync) {
-                func->wait();
-            }
             MGB_ASSERT_FLOAT_EQ(
                     host_x->ptr<float>()[0] + host_y->ptr<float>()[0],
                     host_z.ptr<float>()[0]);
@@ -1937,7 +1933,6 @@ void test_free_memory_in_weight_preprocess(int record_level, CompNode cn) {
 #endif
     graph->options().graph_opt.weight_preprocess = true;
     graph->options().comp_node_seq_record_level = record_level;
-    auto sync = (record_level != 1);
     auto mkvar = [&](const char* name, const TensorShape& shp) {
         return opr::Host2DeviceCopy::make(*graph, gen(shp, cn)).rename(name);
     };
@@ -1975,17 +1970,11 @@ void test_free_memory_in_weight_preprocess(int record_level, CompNode cn) {
             });
 
     HostTensorND host_y;
-    auto func = graph->compile({make_callback_copy(y, host_y, sync)});
+    auto func = graph->compile({make_callback_copy(y, host_y)});
     //! flag the no need memory of var
     func->execute();
-    if (!sync) {
-        func->wait();
-    }
     //! free the no need memory of var
     func->execute();
-    if (!sync) {
-        func->wait();
-    }
     auto check = [&](SymbolVar v) {
         ASSERT_TRUE(v.node()->contain_flag(VarNode::Flag::MEMORY_NO_NEED));
         ASSERT_TRUE(v.node()->dev_tensor().empty());
