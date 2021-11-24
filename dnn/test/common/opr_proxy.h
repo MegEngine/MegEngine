@@ -172,6 +172,7 @@ struct OprProxy<ElemwiseMultiType> {
 
 template <>
 struct OprProxy<ConcatForward> {
+    WorkspaceWrapper W;
     static void deduce_layout(ConcatForward* opr, TensorLayoutArray& layouts) {
         megdnn_assert(layouts.size() >= 2);
         auto inp = layouts;
@@ -179,7 +180,10 @@ struct OprProxy<ConcatForward> {
         opr->deduce_layout(inp, layouts.back());
     }
 
-    static void exec(ConcatForward* opr, const TensorNDArray& tensors) {
+    void exec(ConcatForward* opr, const TensorNDArray& tensors) {
+        if (!W.valid()) {
+            W = WorkspaceWrapper(opr->handle(), 0);
+        }
         megdnn_assert(tensors.size() >= 2);
         auto inp = tensors;
         inp.pop_back();
@@ -191,10 +195,7 @@ struct OprProxy<ConcatForward> {
         auto inp_layouts = layouts;
         inp_layouts.pop_back();
 
-        WorkspaceWrapper W(
-                opr->handle(),
-                opr->get_workspace_in_bytes(inp_layouts, layouts.back()));
-
+        W.update(opr->get_workspace_in_bytes(inp_layouts, layouts.back()));
         auto inp_tensors = tensors;
         inp_tensors.pop_back();
         opr->exec(inp_tensors, tensors.back(), W.workspace());
@@ -203,8 +204,12 @@ struct OprProxy<ConcatForward> {
 
 template <>
 struct OprProxy<SplitForward> : DeduceLayoutProxy<SplitForward, 0, false> {
-    static void exec(SplitForward* opr, const TensorNDArray& tensors) {
+    WorkspaceWrapper W;
+    void exec(SplitForward* opr, const TensorNDArray& tensors) {
         megdnn_assert(tensors.size() >= 2);
+        if (!W.valid()) {
+            W = WorkspaceWrapper(opr->handle(), 0);
+        }
         auto out = tensors;
         out.erase(out.begin());
 
@@ -215,9 +220,7 @@ struct OprProxy<SplitForward> : DeduceLayoutProxy<SplitForward, 0, false> {
         auto out_layouts = layouts;
         out_layouts.erase(out_layouts.begin());
 
-        WorkspaceWrapper W(
-                opr->handle(),
-                opr->get_workspace_in_bytes(layouts.front(), out_layouts));
+        W.update(opr->get_workspace_in_bytes(layouts.front(), out_layouts));
 
         auto out_tensors = tensors;
         out_tensors.erase(out_tensors.begin());
@@ -249,7 +252,7 @@ struct OprProxyProfilingBase
         auto deleter = [handle](TensorNDArray* ptr) {
             for (auto&& i : *ptr) {
                 auto pdata =
-                        static_cast<dt_byte*>(i.raw_ptr) + i.layout.span().low_byte;
+                        static_cast<dt_byte*>(i.raw_ptr()) + i.layout.span().low_byte;
                 megdnn_free(handle, pdata);
             }
             delete ptr;

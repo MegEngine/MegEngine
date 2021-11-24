@@ -109,27 +109,31 @@ void RotateImpl::exec(
         _megdnn_tensor_in src, _megdnn_tensor_in dst, _megdnn_workspace workspace) {
     using namespace megcv;
     check_exec(src.layout, dst.layout, workspace.size);
-
-    MEGDNN_DISPATCH_CPU_KERN_OPR(
-            if (dst.layout.dtype == dtype::Float32()) {
-                for (size_t i = 0; i < src.layout.shape[0]; ++i) {
-                    Mat<float> src_mat = TensorND2Mat<float>(src, i);
-                    Mat<float> dst_mat = TensorND2Mat<float>(dst, i);
-                    rotate_intl::rotate<float>(src_mat, dst_mat, param().clockwise);
-                }
-            } else if (dst.layout.dtype == dtype::Int32()) {
-                for (size_t i = 0; i < src.layout.shape[0]; ++i) {
-                    Mat<int> src_mat = TensorND2Mat<int>(src, i);
-                    Mat<int> dst_mat = TensorND2Mat<int>(dst, i);
-                    rotate_intl::rotate<int>(src_mat, dst_mat, param().clockwise);
-                }
-            } else if (dst.layout.dtype == dtype::Uint8()) {
-                for (size_t i = 0; i < src.layout.shape[0]; ++i) {
-                    Mat<uchar> src_mat = TensorND2Mat<uchar>(src, i);
-                    Mat<uchar> dst_mat = TensorND2Mat<uchar>(dst, i);
-                    rotate_intl::rotate<uchar>(src_mat, dst_mat, param().clockwise);
-                }
-            } else { megdnn_throw("Unsupported datatype of Rotate optr."); });
+    auto clockwise = param().clockwise;
+    auto run = [src, dst, clockwise]() {
+        if (dst.layout.dtype == dtype::Float32()) {
+            for (size_t i = 0; i < src.layout.shape[0]; ++i) {
+                Mat<float> src_mat = TensorND2Mat<float>(src, i);
+                Mat<float> dst_mat = TensorND2Mat<float>(dst, i);
+                rotate_intl::rotate<float>(src_mat, dst_mat, clockwise);
+            }
+        } else if (dst.layout.dtype == dtype::Int32()) {
+            for (size_t i = 0; i < src.layout.shape[0]; ++i) {
+                Mat<int> src_mat = TensorND2Mat<int>(src, i);
+                Mat<int> dst_mat = TensorND2Mat<int>(dst, i);
+                rotate_intl::rotate<int>(src_mat, dst_mat, clockwise);
+            }
+        } else if (dst.layout.dtype == dtype::Uint8()) {
+            for (size_t i = 0; i < src.layout.shape[0]; ++i) {
+                Mat<uchar> src_mat = TensorND2Mat<uchar>(src, i);
+                Mat<uchar> dst_mat = TensorND2Mat<uchar>(dst, i);
+                rotate_intl::rotate<uchar>(src_mat, dst_mat, clockwise);
+            }
+        } else {
+            megdnn_throw("Unsupported datatype of Rotate optr.");
+        }
+    };
+    MEGDNN_DISPATCH_CPU_KERN_OPR(run());
 }
 
 // vim: syntax=cpp.doxygen

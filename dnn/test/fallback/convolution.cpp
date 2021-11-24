@@ -17,10 +17,32 @@
 #include "test/common/convolution.h"
 
 #include "test/common/rng.h"
-
+#include "test/common/task_record_check.h"
 using namespace megdnn;
 using namespace test;
-
+namespace megdnn {
+namespace test {
+TEST_F(FALLBACK, CONVOLUTION_MATRIX_MUL_RECORD) {
+    using Param = Convolution::Param;
+    TaskRecordChecker<Convolution> checker(1);
+    NormalRNG default_rng;
+    UniformIntRNG int_rng{-50, 50};
+    Param param;
+    param.stride_h = 2;
+    param.stride_w = 2;
+    param.pad_h = 3 / 2;
+    param.pad_w = 3 / 2;
+    param.pad_h = 0;
+    param.pad_w = 0;
+    checker.set_dtype(0, dtype::Float32())
+            .set_dtype(1, dtype::Float32())
+            .set_rng(0, &default_rng)
+            .set_rng(1, &default_rng)
+            .set_param(param)
+            .execs({{1, 3, 20, 40}, {24, 3, 3, 3}, {}});
+}
+}  // namespace test
+}  // namespace megdnn
 #if MEGDNN_WITH_BENCHMARK
 
 TEST_F(FALLBACK, BENCHMARK_CONVOLUTION_MATRIX_MUL) {
@@ -407,6 +429,53 @@ TEST_F(FALLBACK, CONVOLUTION_MATRIX_MUL_SINT8) {
 
 TEST_F(FALLBACK, CONVOLUTION_BACKWARD_DATA) {
     Checker<ConvolutionBackwardData> checker(handle());
+    using Param = ConvolutionBackwardData::Param;
+
+    Param param;
+    auto run = [&](size_t n, size_t ic, size_t oh, size_t ow, size_t oc, size_t fh,
+                   size_t fw, size_t stride, size_t padding, size_t dilate = 1,
+                   size_t group = 1) {
+        param.pad_h = param.pad_w = padding;
+        param.stride_h = param.stride_w = stride;
+        param.dilate_h = param.dilate_w = dilate;
+
+        TensorLayout diff = TensorLayout{{n, oc * group, oh, ow}, dtype::Float32()};
+        TensorLayout grad;
+        TensorLayout filter;
+        if (group == 1) {
+            param.sparse = Param::Sparse::DENSE;
+            filter = {{oc, ic, fh, fw}, dtype::Float32()};
+        } else {
+            param.sparse = Param::Sparse::GROUP;
+            filter = {{group, oc, ic, fh, fw}, dtype::Float32()};
+        }
+        // TensorLayout grad;
+        {
+            auto opr = handle()->create_operator<ConvolutionBackwardData>();
+            opr->param() = param;
+            opr->deduce_layout(filter, diff, grad);
+        }
+        checker.set_param(param)
+                .set_dtype(0, dtype::Float32())
+                .set_dtype(1, dtype::Float32());
+        checker.exec(TensorLayoutArray{filter, diff, grad});
+    };
+
+    for (auto mode : {Param::Mode::CONVOLUTION, Param::Mode::CROSS_CORRELATION}) {
+        param.mode = mode;
+        run(4, 3, 10, 13, 5, 1, 1, 1, 0, 1, 1);
+        run(5, 5, 24, 43, 11, 9, 3, 3, 12, 1, 2);
+        run(4, 3, 10, 45, 2, 1, 1, 1, 0, 4, 3);
+        run(2, 3, 9, 12, 2, 4, 6, 1, 0, 1, 2);
+        run(3, 4, 17, 32, 2, 3, 2, 5, 4, 4, 3);
+        run(5, 5, 24, 43, 11, 9, 3, 3, 12, 2, 2);
+        run(2, 3, 20, 33, 3, 5, 7, 4, 15, 2, 3);
+        run(4, 4, 6, 7, 9, 3, 2, 2, 1, 3, 2);
+    }
+}
+
+TEST_F(FALLBACK, CONVOLUTION_BACKWARD_DATA_RECORD) {
+    TaskRecordChecker<ConvolutionBackwardData> checker(1);
     using Param = ConvolutionBackwardData::Param;
 
     Param param;

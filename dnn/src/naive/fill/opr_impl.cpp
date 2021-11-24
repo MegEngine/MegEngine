@@ -22,11 +22,10 @@ namespace naive {
 void FillImpl::exec(_megdnn_tensor_out dst, _megdnn_workspace workspace) {
     check_exec(dst.layout, workspace.size);
     size_t size = dst.layout.total_nr_elems();
-#define cb(DType)                                                      \
-    if (dst.layout.dtype.enumv() == DTypeTrait<DType>::enumv) {        \
-        using ctype = typename DTypeTrait<DType>::ctype;               \
-        ctype* ptr = dst.ptr<ctype>();                                 \
-        MEGDNN_DISPATCH_CPU_KERN_OPR(exec_internal<ctype>(ptr, size)); \
+#define cb(DType)                                                                   \
+    if (dst.layout.dtype.enumv() == DTypeTrait<DType>::enumv) {                     \
+        using ctype = typename DTypeTrait<DType>::ctype;                            \
+        MEGDNN_DISPATCH_CPU_KERN_OPR(exec_internal<ctype>(dst.ptr<ctype>(), size)); \
     }
     MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
 #undef cb

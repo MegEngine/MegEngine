@@ -57,8 +57,8 @@ TEST_F(CUDA, ADAPTIVE_POOLING_BACKWARD) {
             auto&& tensors_cuda = *tensors_cuda_storage;
 
             auto span = tensors_cuda[0].layout.span();
-            auto dst = static_cast<dt_byte*>(tensors_cuda[0].raw_ptr) + span.low_byte;
-            auto src = static_cast<const dt_byte*>(tensors_orig[0].raw_ptr) +
+            auto dst = static_cast<dt_byte*>(tensors_cuda[0].raw_ptr()) + span.low_byte;
+            auto src = static_cast<const dt_byte*>(tensors_orig[0].raw_ptr()) +
                        span.low_byte;
             megdnn_memcpy_H2D(handle_cuda(), dst, src, span.dist_byte());
 
@@ -70,8 +70,9 @@ TEST_F(CUDA, ADAPTIVE_POOLING_BACKWARD) {
             megdnn_free(handle_cuda(), workspace_cuda);
 
             span = tensors_cuda[1].layout.span();
-            dst = static_cast<dt_byte*>(tensors_orig[1].raw_ptr) + span.low_byte;
-            src = static_cast<const dt_byte*>(tensors_cuda[1].raw_ptr) + span.low_byte;
+            dst = static_cast<dt_byte*>(tensors_orig[1].raw_ptr()) + span.low_byte;
+            src = static_cast<const dt_byte*>(tensors_cuda[1].raw_ptr()) +
+                  span.low_byte;
             megdnn_memcpy_D2H(handle_cuda(), dst, src, span.dist_byte());
         };
 

@@ -18,9 +18,9 @@
 #include "test/common/checker.h"
 #include "test/common/convolution.h"
 #include "test/common/rng.h"
+#include "test/common/task_record_check.h"
 #include "test/common/tensor.h"
 #include "test/common/workspace_wrapper.h"
-
 namespace {
 #if MEGDNN_X86_WITH_MKL_DNN
 struct ConvArg {
@@ -126,6 +126,38 @@ TEST_F(X86, DEFAULT_CONV_DIRECT_STRIDE1) {
     Checker<ConvolutionForward> checker(handle());
     checker.set_before_exec_callback(AlgoChecker<ConvolutionForward>(
             "CONVOLUTION_DEFAULT_X86_CONV_BIAS_DIRECT_STRIDE1_LARGE_GROUP"));
+    checker.set_epsilon(1);
+    UniformIntRNG rng{-50, 50};
+    checker.set_dtype(0, dtype::Float32())
+            .set_dtype(1, dtype::Float32())
+            .set_dtype(2, dtype::Float32())
+            .set_rng(0, &rng)
+            .set_rng(1, &rng)
+            .set_rng(2, &rng);
+
+    for (auto&& arg : args) {
+        checker.set_param(arg.param).exec({arg.src, arg.filter, {}});
+    }
+}
+
+TEST_F(X86, DEFAULT_CONV_DIRECT_STRIDE1_RECORD) {
+    using namespace convolution;
+    std::vector<TestArg> args;
+    auto run = [&](size_t oc, size_t ic, size_t w, size_t h, size_t kernel, size_t p) {
+        if (w + 2 * p < kernel || h + 2 * p < kernel)
+            return;
+        param::Convolution param;
+        param.stride_h = 1;
+        param.stride_w = 1;
+        param.pad_h = p;
+        param.pad_w = p;
+
+        args.emplace_back(
+                param, TensorShape{1, ic, h, w}, TensorShape{oc, ic, kernel, kernel});
+    };
+    run(1, 1, 20, 20, 3, 2);
+
+    TaskRecordChecker<ConvolutionForward> checker(0);
     checker.set_epsilon(1);
     UniformIntRNG rng{-50, 50};
     checker.set_dtype(0, dtype::Float32())

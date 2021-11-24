@@ -127,15 +127,10 @@ void Fwd::exec(
            FW = filter_meta.spatial[1], OC = filter_meta.group * filter_meta.ocpg,
            OH = out.layout[2], OW = out.layout[3];
 
-    const float* __restrict im_ptr = im.ptr<float>();
-    const float* __restrict filter_ptr = filter.ptr<float>();
-    const float* __restrict offset_ptr = offset.ptr<float>();
-    const float* __restrict mask_ptr = mask.ptr<float>();
-    float* __restrict dst_ptr = dst.ptr<float>();
-
     MEGDNN_DISPATCH_CPU_KERN_OPR(deformable_conv_forward(
-            im_ptr, filter_ptr, offset_ptr, mask_ptr, dst_ptr, OC, IC, N, FH, FW, IH,
-            IW, PH, PW, DH, DW, SH, SW, OH, OW, group, deformable_group));
+            im.ptr<float>(), filter.ptr<float>(), offset.ptr<float>(),
+            mask.ptr<float>(), dst.ptr<float>(), OC, IC, N, FH, FW, IH, IW, PH, PW, DH,
+            DW, SH, SW, OH, OW, group, deformable_group));
     return;
 }
 
@@ -398,15 +393,11 @@ void BwdFlt::exec(
            FH = fm.spatial[0], FW = fm.spatial[1], OC = fm.group * fm.ocpg,
            OH = out.layout[2], OW = out.layout[3];
 
-    const float* __restrict im_ptr = im.ptr<float>();
-    const float* __restrict offset_ptr = offset.ptr<float>();
-    const float* __restrict mask_ptr = mask.ptr<float>();
-    const float* __restrict out_grad_ptr = out_grad.ptr<float>();
-    float* __restrict filter_grad_ptr = filter_grad.ptr<float>();
     // backward filter
     MEGDNN_DISPATCH_CPU_KERN_OPR(deformable_conv_backward_weight(
-            im_ptr, offset_ptr, mask_ptr, out_grad_ptr, filter_grad_ptr, OC, IC, N, FH,
-            FW, IH, IW, PH, PW, DH, DW, SH, SW, OH, OW, group, deformable_group));
+            im.ptr<float>(), offset.ptr<float>(), mask.ptr<float>(),
+            out_grad.ptr<float>(), filter_grad.ptr<float>(), OC, IC, N, FH, FW, IH, IW,
+            PH, PW, DH, DW, SH, SW, OH, OW, group, deformable_group));
 }
 size_t BwdData::get_workspace_in_bytes(
         const TensorLayout& /* im */, const TensorLayout& /* filter */,
@@ -429,21 +420,12 @@ void BwdData::exec(
            FH = fm.spatial[0], FW = fm.spatial[1], OC = fm.group * fm.ocpg,
            OH = out_grad.layout[2], OW = out_grad.layout[3];
 
-    const float* __restrict im_ptr = im.ptr<float>();
-    const float* __restrict filter_ptr = filter.ptr<float>();
-    const float* __restrict offset_ptr = offset.ptr<float>();
-    const float* __restrict mask_ptr = mask.ptr<float>();
-    const float* __restrict out_grad_ptr = out_grad.ptr<float>();
-
-    float* __restrict im_grad_ptr = im_grad.ptr<float>();
-    float* __restrict offset_grad_ptr = offset_grad.ptr<float>();
-    float* __restrict mask_grad_ptr = mask_grad.ptr<float>();
-
     // backward coordinate data
     MEGDNN_DISPATCH_CPU_KERN_OPR(deformable_conv_backward_data(
-            im_ptr, filter_ptr, offset_ptr, mask_ptr, out_grad_ptr, im_grad_ptr,
-            offset_grad_ptr, mask_grad_ptr, OC, IC, N, FH, FW, IH, IW, PH, PW, SH, SW,
-            DH, DW, OH, OW, group, deformable_group));
+            im.ptr<float>(), filter.ptr<float>(), offset.ptr<float>(),
+            mask.ptr<float>(), out_grad.ptr<float>(), im_grad.ptr<float>(),
+            offset_grad.ptr<float>(), mask_grad.ptr<float>(), OC, IC, N, FH, FW, IH, IW,
+            PH, PW, SH, SW, DH, DW, OH, OW, group, deformable_group));
 }
 
 // vim: syntax=cpp.doxygen

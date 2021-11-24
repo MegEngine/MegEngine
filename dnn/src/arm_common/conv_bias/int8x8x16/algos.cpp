@@ -531,10 +531,10 @@ SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoI8x8x16Stride2Filter2::
                 megdnn_arm_common_conv_bias_int8816_kimpl,
                 midout_iv("AlgoI8x8x16Stride2Filter2::dispatch_kerns"_hash)) {
             auto ncb_param = param;
-            ncb_param.src_ptr = param.src<void>(0, ncb_index.ndrange_id[0]);
-            ncb_param.dst_ptr = param.dst<void>(0, ncb_index.ndrange_id[0]);
-            ncb_param.filter_ptr = param.filter<void>(ncb_index.ndrange_id[0]);
-            ncb_param.bias_ptr = param.bias<void>(0, ncb_index.ndrange_id[0]);
+            ncb_param.src_ptr += param.src_offset(0, ncb_index.ndrange_id[0]);
+            ncb_param.dst_ptr += param.dst_offset(0, ncb_index.ndrange_id[0]);
+            ncb_param.filter_ptr += param.filter_offset(ncb_index.ndrange_id[0]);
+            ncb_param.bias_ptr += param.bias_offset(0, ncb_index.ndrange_id[0]);
             conv_bias::conv_int8x8x16_stride2_flt2(ncb_param);
         }
         MIDOUT_END();

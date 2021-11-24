@@ -85,7 +85,7 @@ struct CUDNNBwdFilterDescs {
  * change \p raw_ptr to workspace.
  */
 void flip_filter(
-        const ForwardSizeArgs& args, const Workspace& workspace, void*& raw_ptr);
+        const ForwardSizeArgs& args, const Workspace& workspace, RefPtr& raw_ptr);
 
 }  // namespace convolution
 }  // namespace cuda

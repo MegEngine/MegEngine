@@ -192,13 +192,13 @@ void dispatch_dtype(
         megdnn::naive::HandleImpl* handle, const TensorND& src, const TensorND& dst,
         size_t A, size_t B, size_t C) {
     switch (src.layout.dtype.enumv()) {
-#define cb(_dt)                                                                    \
-    case DTypeTrait<_dt>::enumv: {                                                 \
-        using ctype = DTypeTrait<_dt>::ctype;                                      \
-        auto sptr = src.ptr<ctype>(), dptr = dst.ptr<ctype>();                     \
-        MEGDNN_DISPATCH_CPU_KERN(                                                  \
-                handle, reduce_fwd<mode MEGDNN_COMMA ctype>(sptr, dptr, A, B, C)); \
-        return;                                                                    \
+#define cb(_dt)                                                                \
+    case DTypeTrait<_dt>::enumv: {                                             \
+        using ctype = DTypeTrait<_dt>::ctype;                                  \
+        MEGDNN_DISPATCH_CPU_KERN(                                              \
+                handle, reduce_fwd<mode MEGDNN_COMMA ctype>(                   \
+                                src.ptr<ctype>(), dst.ptr<ctype>(), A, B, C)); \
+        return;                                                                \
     }
         MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
         MEGDNN_FOREACH_QUANTIZED_DTYPE(cb)
@@ -286,7 +286,7 @@ void ReduceForwardImpl::exec(
     auto typecvt = handle()->create_operator<TypeCvt>();
 
     auto copy_to = [&typecvt](const TensorND& from, const TensorND& to) {
-        if (from.raw_ptr != to.raw_ptr)
+        if (from.raw_ptr() != to.raw_ptr())
             typecvt->exec(from, to);
     };
 

@@ -18,7 +18,8 @@ namespace x86 {
 class CvtColorImpl : public naive::CvtColorImpl {
 private:
     template <typename T>
-    void cvt_color_exec(_megdnn_tensor_in src, _megdnn_tensor_out dst);
+    void cvt_color_exec(
+            _megdnn_tensor_in src, _megdnn_tensor_out dst, Param::Mode mode);
 
 public:
     using naive::CvtColorImpl::CvtColorImpl;

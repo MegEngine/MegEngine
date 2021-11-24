@@ -63,7 +63,7 @@ void WarpPerspectiveBackwardDataImpl::exec(
              IH = grad.layout.shape[2], IW = grad.layout.shape[3],
              OH = diff.layout.shape[2], OW = diff.layout.shape[3];
         int* midx_ptr = nullptr;
-        if (mat_idx.raw_ptr) {
+        if (mat_idx.raw_ptr()) {
             megdnn_assert(mat_idx.layout.ndim == 1);
             N = mat_idx.layout.shape[0];
             midx_ptr = mat_idx.ptr<int>();

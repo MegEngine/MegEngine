@@ -12,7 +12,7 @@
 #include "hcc_detail/hcc_defs_prologue.h"
 
 #include "src/common/argmxx_helper.h"
-#include "src/common/reduce_helper.h"
+#include "src/common/reduce_helper_device.h"
 #include "src/rocm/reduce_helper.h.hip"
 #include "src/rocm/utils.h"
 

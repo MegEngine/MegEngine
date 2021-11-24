@@ -19,18 +19,18 @@ using namespace megdnn;
 using namespace naive;
 
 void ElemwiseMultiTypeImpl::on_fuse_mul_add3_int16x32x32x32(
-        const ElemwiseOpParamN<3>& param, dt_int32* dst) {
-    auto iter0 = tensor_iter_valonly<dt_int16>(param[0]).begin();
-    auto iter1 = tensor_iter_valonly<dt_int32>(param[1]).begin();
-    auto iter2 = tensor_iter_valonly<dt_int32>(param[2]).begin();
-
+        const ElemwiseOpParamN<3>& param, const TensorND& dst) {
     auto size = param.size;
-    auto work = [iter0, iter1, iter2, size, dst]() {
-        auto i0 = iter0;
-        auto i1 = iter1;
-        auto i2 = iter2;
+    auto src0 = param[0];
+    auto src1 = param[1];
+    auto src2 = param[2];
+    auto work = [src0, src1, src2, size, dst]() {
+        auto i0 = tensor_iter_valonly<dt_int16>(src0).begin();
+        auto i1 = tensor_iter_valonly<dt_int32>(src1).begin();
+        auto i2 = tensor_iter_valonly<dt_int32>(src2).begin();
+        auto dst_ptr = dst.ptr<dt_int32>();
         for (size_t i = 0; i < size; ++i) {
-            dst[i] = (*i0) * (*i1) + (*i2);
+            dst_ptr[i] = (*i0) * (*i1) + (*i2);
             ++i0;
             ++i1;
             ++i2;
@@ -40,7 +40,7 @@ void ElemwiseMultiTypeImpl::on_fuse_mul_add3_int16x32x32x32(
 }
 
 void ElemwiseMultiTypeImpl::on_fuse_mul_add3_iXxf32xf32xi8(
-        const ElemwiseOpParamN<3>& param, dt_int8* dst) {
+        const ElemwiseOpParamN<3>& param, const TensorND& dst) {
     switch (param[0].layout.dtype.enumv()) {
 #define cb(t)                  \
     case DTypeTrait<t>::enumv: \
@@ -54,19 +54,19 @@ void ElemwiseMultiTypeImpl::on_fuse_mul_add3_iXxf32xf32xi8(
 
 template <typename ctype>
 void ElemwiseMultiTypeImpl::dispatch_fma3_iXxf32xf32xi8(
-        const ElemwiseOpParamN<3>& param, dt_int8* dst) {
-    auto iter0 = tensor_iter_valonly<ctype>(param[0]).begin();
-    auto iter1 = tensor_iter_valonly<dt_float32>(param[1]).begin();
-    auto iter2 = tensor_iter_valonly<dt_float32>(param[2]).begin();
-
+        const ElemwiseOpParamN<3>& param, const TensorND& dst) {
     auto size = param.size;
-    auto work = [iter0, iter1, iter2, size, dst]() {
+    auto src0 = param[0];
+    auto src1 = param[1];
+    auto src2 = param[2];
+    auto work = [src0, src1, src2, size, dst]() {
         elemwise_multi_type::Fma3iXxf32xf32xiYOp<ctype, dt_int8> op;
-        auto i0 = iter0;
-        auto i1 = iter1;
-        auto i2 = iter2;
+        auto i0 = tensor_iter_valonly<ctype>(src0).begin();
+        auto i1 = tensor_iter_valonly<dt_float32>(src1).begin();
+        auto i2 = tensor_iter_valonly<dt_float32>(src2).begin();
+        auto dst_ptr = dst.ptr<dt_int8>();
         for (size_t i = 0; i < size; ++i) {
-            dst[i] = op(*i0, *i1, *i2);
+            dst_ptr[i] = op(*i0, *i1, *i2);
             ++i0;
             ++i1;
             ++i2;
@@ -76,7 +76,7 @@ void ElemwiseMultiTypeImpl::dispatch_fma3_iXxf32xf32xi8(
 }
 
 void ElemwiseMultiTypeImpl::on_round_shr_saturate_iXxi8xi8(
-        const ElemwiseOpParamN<2>& param, dt_int8* dst) {
+        const ElemwiseOpParamN<2>& param, const TensorND& dst) {
     switch (param[0].layout.dtype.enumv()) {
 #define cb(t)                                                                       \
     case DTypeTrait<t>::enumv:                                                      \
@@ -91,16 +91,15 @@ void ElemwiseMultiTypeImpl::on_round_shr_saturate_iXxi8xi8(
 
 template <typename ctype, typename dst_ctype>
 void ElemwiseMultiTypeImpl::dispatch_round_shr_saturate_iXxi8xiX(
-        const ElemwiseOpParamN<2>& param, dst_ctype* dst) {
-    auto iter_a = tensor_iter_valonly<ctype>(param[0]).begin();
-    auto iter_b = tensor_iter_valonly<dt_int8>(param[1]).begin();
-
+        const ElemwiseOpParamN<2>& param, const TensorND& dst) {
+    auto src0 = param[0];
+    auto src1 = param[1];
     auto size = param.size;
-    auto work = [size, iter_a, iter_b, dst]() {
+    auto work = [src0, src1, size, dst]() {
         // This is needed as these iterators are captured as const value.
-        auto iA = iter_a;
-        auto iB = iter_b;
-        auto pD = dst;
+        auto iA = tensor_iter_valonly<ctype>(src0).begin();
+        auto iB = tensor_iter_valonly<dt_int8>(src1).begin();
+        auto pD = dst.ptr<dst_ctype>();
         for (size_t i = 0; i < size; i++) {
             *pD = elemwise_multi_type::round_shr_saturate<ctype, dst_ctype>(*iA, *iB);
             ++iA;
@@ -113,28 +112,28 @@ void ElemwiseMultiTypeImpl::dispatch_round_shr_saturate_iXxi8xiX(
 
 template <typename ctype>
 void ElemwiseMultiTypeImpl::dispatch_fuse_add_rmulh_round_shr_saturate(
-        const ElemwiseOpParamN<6>& param, megdnn::dt_int8* dst) {
-    auto iter0 = tensor_iter_valonly<ctype>(param[0]).begin();
-    auto iter1 = tensor_iter_valonly<ctype>(param[1]).begin();
-    auto iter2 = tensor_iter_valonly<ctype>(param[2]).begin();
-    auto iter3 = tensor_iter_valonly<dt_int8>(param[3]).begin();
-    auto iter4 = tensor_iter_valonly<dt_int8>(param[4]).begin();
-    auto iter5 = tensor_iter_valonly<dt_int8>(param[5]).begin();
-
+        const ElemwiseOpParamN<6>& param, const TensorND& dst) {
     auto size = param.size;
-    auto work = [iter0, iter1, iter2, iter3, iter4, iter5, size, dst]() {
-        auto i0 = iter0;
-        auto i1 = iter1;
-        auto i2 = iter2;
-        auto ioff = iter3;
-        auto imin = iter4;
-        auto imax = iter5;
+    auto src0 = param[0];
+    auto src1 = param[1];
+    auto src2 = param[2];
+    auto src3 = param[3];
+    auto src4 = param[4];
+    auto src5 = param[5];
+    auto work = [size, src0, src1, src2, src3, src4, src5, dst]() {
+        auto i0 = tensor_iter_valonly<ctype>(src0).begin();
+        auto i1 = tensor_iter_valonly<ctype>(src1).begin();
+        auto i2 = tensor_iter_valonly<ctype>(src2).begin();
+        auto ioff = tensor_iter_valonly<dt_int8>(src3).begin();
+        auto imin = tensor_iter_valonly<dt_int8>(src4).begin();
+        auto imax = tensor_iter_valonly<dt_int8>(src5).begin();
+        auto dst_ptr = dst.ptr<dt_int8>();
         for (size_t i = 0; i < size; ++i) {
             auto res = elemwise_multi_type::round_shr_saturate<ctype, dt_int8>(
                     round_mulh_saturate<ctype>(*i0 + *i1, *i2), *ioff);
             res = std::min(res, *imax);
             res = std::max(res, *imin);
-            dst[i] = res;
+            dst_ptr[i] = res;
             ++i0;
             ++i1;
             ++i2;
@@ -147,17 +146,17 @@ void ElemwiseMultiTypeImpl::dispatch_fuse_add_rmulh_round_shr_saturate(
 }
 
 void ElemwiseMultiTypeImpl::on_fuse_add_rmulh_round_shr_saturate_int16x16x16x8(
-        const ElemwiseOpParamN<6>& param, megdnn::dt_int8* dst) {
+        const ElemwiseOpParamN<6>& param, const TensorND& dst) {
     dispatch_fuse_add_rmulh_round_shr_saturate<dt_int16>(param, dst);
 }
 
 void ElemwiseMultiTypeImpl::on_fuse_add_rmulh_round_shr_saturate_int32x32x32x8(
-        const ElemwiseOpParamN<6>& param, megdnn::dt_int8* dst) {
+        const ElemwiseOpParamN<6>& param, const TensorND& dst) {
     dispatch_fuse_add_rmulh_round_shr_saturate<dt_int32>(param, dst);
 }
 
 void ElemwiseMultiTypeImpl::on_round_shr_saturate_iXxi8xi16(
-        const ElemwiseOpParamN<2>& param, dt_int16* dst) {
+        const ElemwiseOpParamN<2>& param, const TensorND& dst) {
     switch (param[0].layout.dtype.enumv()) {
 #define cb(t)                                                                        \
     case DTypeTrait<t>::enumv:                                                       \
@@ -174,16 +173,15 @@ void ElemwiseMultiTypeImpl::on_round_shr_saturate_iXxi8xi16(
 template <typename KernImpl, typename src_ctype, typename dst_ctype>
 void ElemwiseMultiTypeImpl::dispatch_add_qint_op(
         const ElemwiseOpParamN<1>& param, const TensorND& dst_tensor) {
-    auto iter_a = tensor_iter_valonly<src_ctype>(param[0]).begin();
+    auto src = param[0];
     auto size = param.size;
-    auto param0 = param[0].layout.dtype.param<typename DTypeTrait<src_ctype>::dtype>();
-    auto dst = tensor_iter_valonly<dst_ctype>(dst_tensor).begin();
-    auto dst_param =
-            dst_tensor.layout.dtype.param<typename DTypeTrait<dst_ctype>::dtype>();
+    auto work = [src, size, dst_tensor]() {
+        auto iA = tensor_iter_valonly<src_ctype>(src).begin();
+        auto pD = tensor_iter_valonly<dst_ctype>(dst_tensor).begin();
 
-    auto work = [size, iter_a, dst, param0, dst_param]() {
-        auto iA = iter_a;
-        auto pD = dst;
+        auto param0 = src.layout.dtype.param<typename DTypeTrait<src_ctype>::dtype>();
+        auto dst_param =
+                dst_tensor.layout.dtype.param<typename DTypeTrait<dst_ctype>::dtype>();
         for (size_t i = 0; i < size; i++) {
             src_ctype a = *iA;
             *pD = dst_param.quantize(KernImpl::apply(param0.dequantize(a)));
@@ -197,20 +195,18 @@ void ElemwiseMultiTypeImpl::dispatch_add_qint_op(
 template <typename KernImpl, typename src_ctype, typename dst_ctype>
 void ElemwiseMultiTypeImpl::dispatch_add_qint_op(
         const ElemwiseOpParamN<2>& param, const TensorND& dst_tensor) {
-    auto iter_a = tensor_iter_valonly<src_ctype>(param[0]).begin();
-    auto iter_b = tensor_iter_valonly<src_ctype>(param[1]).begin();
     auto size = param.size;
-    auto param0 = param[0].layout.dtype.param<typename DTypeTrait<src_ctype>::dtype>();
-    auto param1 = param[1].layout.dtype.param<typename DTypeTrait<src_ctype>::dtype>();
-    auto dst = tensor_iter_valonly<dst_ctype>(dst_tensor).begin();
-    auto dst_param =
-            dst_tensor.layout.dtype.param<typename DTypeTrait<dst_ctype>::dtype>();
-
-    auto work = [size, iter_a, iter_b, dst, param0, param1, dst_param]() {
+    auto src0 = param[0];
+    auto src1 = param[1];
+    auto work = [src0, src1, size, dst_tensor]() {
         // This is needed as these iterators are captured as const value.
-        auto iA = iter_a;
-        auto iB = iter_b;
-        auto pD = dst;
+        auto iA = tensor_iter_valonly<src_ctype>(src0).begin();
+        auto iB = tensor_iter_valonly<src_ctype>(src1).begin();
+        auto pD = tensor_iter_valonly<dst_ctype>(dst_tensor).begin();
+        auto param0 = src0.layout.dtype.param<typename DTypeTrait<src_ctype>::dtype>();
+        auto param1 = src1.layout.dtype.param<typename DTypeTrait<src_ctype>::dtype>();
+        auto dst_param =
+                dst_tensor.layout.dtype.param<typename DTypeTrait<dst_ctype>::dtype>();
         for (size_t i = 0; i < size; i++) {
             src_ctype a = *iA;
             src_ctype b = *iB;
@@ -227,24 +223,21 @@ void ElemwiseMultiTypeImpl::dispatch_add_qint_op(
 template <typename KernImpl, typename src_ctype, typename dst_ctype>
 void ElemwiseMultiTypeImpl::dispatch_add_qint_op(
         const ElemwiseOpParamN<3>& param, const TensorND& dst_tensor) {
-    auto iter_a = tensor_iter_valonly<src_ctype>(param[0]).begin();
-    auto iter_b = tensor_iter_valonly<src_ctype>(param[1]).begin();
-    auto iter_c = tensor_iter_valonly<src_ctype>(param[2]).begin();
     auto size = param.size;
-    auto param0 = param[0].layout.dtype.param<typename DTypeTrait<src_ctype>::dtype>();
-    auto param1 = param[1].layout.dtype.param<typename DTypeTrait<src_ctype>::dtype>();
-    auto param2 = param[2].layout.dtype.param<typename DTypeTrait<src_ctype>::dtype>();
-    auto dst = tensor_iter_valonly<dst_ctype>(dst_tensor).begin();
-    auto dst_param =
-            dst_tensor.layout.dtype.param<typename DTypeTrait<dst_ctype>::dtype>();
-
-    auto work = [size, iter_a, iter_b, iter_c, dst, param0, param1, param2,
-                 dst_param]() {
+    auto src0 = param[0];
+    auto src1 = param[1];
+    auto src2 = param[2];
+    auto work = [src0, src1, src2, size, dst_tensor]() {
         // This is needed as these iterators are captured as const value.
-        auto iA = iter_a;
-        auto iB = iter_b;
-        auto iC = iter_c;
-        auto pD = dst;
+        auto iA = tensor_iter_valonly<src_ctype>(src0).begin();
+        auto iB = tensor_iter_valonly<src_ctype>(src1).begin();
+        auto iC = tensor_iter_valonly<src_ctype>(src2).begin();
+        auto pD = tensor_iter_valonly<dst_ctype>(dst_tensor).begin();
+        auto param0 = src0.layout.dtype.param<typename DTypeTrait<src_ctype>::dtype>();
+        auto param1 = src1.layout.dtype.param<typename DTypeTrait<src_ctype>::dtype>();
+        auto param2 = src2.layout.dtype.param<typename DTypeTrait<src_ctype>::dtype>();
+        auto dst_param =
+                dst_tensor.layout.dtype.param<typename DTypeTrait<dst_ctype>::dtype>();
         for (size_t i = 0; i < size; i++) {
             src_ctype a = *iA;
             src_ctype b = *iB;

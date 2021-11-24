@@ -96,9 +96,9 @@ void Convolution3DBackwardDataImpl::AlgoGroupConvGeneral::exec(
     auto bundle = get_workspace_bundle(args.workspace.raw_ptr, args);
     {
         auto config = prepare_sub_opr(args);
-        TensorND tfilter{args.filter_tensor->raw_ptr, config.first[0]};
-        TensorND tdiff{args.diff_tensor->raw_ptr, config.first[1]};
-        TensorND tgrad{args.grad_tensor->raw_ptr, config.first[2]};
+        TensorND tfilter{args.filter_tensor->raw_ptr(), config.first[0]};
+        TensorND tdiff{args.diff_tensor->raw_ptr(), config.first[1]};
+        TensorND tgrad{args.grad_tensor->raw_ptr(), config.first[2]};
 
         size_t c_pos = 1;
         auto grp = args.filter_meta.group;
@@ -114,9 +114,9 @@ void Convolution3DBackwardDataImpl::AlgoGroupConvGeneral::exec(
 
         for (uint32_t g = 0; g < grp; ++g) {
             config.second->exec(tfilter, tdiff, tgrad, bundle.get_workspace(0));
-            incr_voidp(tfilter.raw_ptr, strd_flt);
-            incr_voidp(tdiff.raw_ptr, strd_diff);
-            incr_voidp(tgrad.raw_ptr, strd_grad);
+            incr_refp(tfilter.get_ref_ptr(), strd_flt);
+            incr_refp(tdiff.get_ref_ptr(), strd_diff);
+            incr_refp(tgrad.get_ref_ptr(), strd_grad);
         }
     }
 }

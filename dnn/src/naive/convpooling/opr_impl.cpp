@@ -1,5 +1,5 @@
 /**
- * \file dnn/src/naive/convpooling/conv_pooling.cpp
+ * \file dnn/src/naive/convpooling/opr_impl.cpp
  * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
  *
  * Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
@@ -85,7 +85,7 @@ void ConvPoolingForwardImpl::exec(
         const _megdnn_in TensorND bias, _megdnn_out TensorND dst,
         _megdnn_out Workspace workspace) {
     Workspace empty_wsp;
-    TensorND conv_dst((float*)(workspace.raw_ptr), conv_dst_layout);
+    TensorND conv_dst{workspace.raw_ptr, conv_dst_layout};
     // convFwd->check_layout(src.layout, filter.layout, workspace.layout,
     // empty_wsp.layout);
     check_layout(src.layout, filter.layout, bias.layout, dst.layout, workspace.size);

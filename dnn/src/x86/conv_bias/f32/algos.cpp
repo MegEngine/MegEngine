@@ -500,7 +500,7 @@ static inline void mkldnn_fp32_conv_instance(
                 dnnl::memory::format_tag::nchw);
     }
     auto user_src_mem =
-            dnnl::memory(user_src_desc, eng_mkldnn, const_cast<void*>(param.src_ptr));
+            dnnl::memory(user_src_desc, eng_mkldnn, param.src_ptr.get_ptr());
 
     auto weight_tag = dnnl::memory::format_tag::OIhw8i8o;
     if (group > 1) {
@@ -517,8 +517,8 @@ static inline void mkldnn_fp32_conv_instance(
     auto user_weights_desc = dnnl::memory::desc(
             {weight_shape}, dnnl::memory::data_type::f32, weight_tag);
 
-    auto user_weights_mem = dnnl::memory(
-            user_weights_desc, eng_mkldnn, const_cast<void*>(param.filter_ptr));
+    auto user_weights_mem =
+            dnnl::memory(user_weights_desc, eng_mkldnn, param.filter_ptr.get_ptr());
     auto user_bias_desc = dnnl::memory::desc();
     if (param.bias_mode == megdnn::BiasMode::BROADCAST_CHANNEL_BIAS) {
         user_bias_desc = dnnl::memory::desc(
@@ -526,12 +526,12 @@ static inline void mkldnn_fp32_conv_instance(
                 dnnl::memory::format_tag::x);
     }
     auto user_bias_mem =
-            dnnl::memory(user_bias_desc, eng_mkldnn, const_cast<void*>(param.bias_ptr));
+            dnnl::memory(user_bias_desc, eng_mkldnn, param.bias_ptr.get_ptr());
     auto user_dst_desc = dnnl::memory::desc(
             {dst_shape}, dnnl::memory::data_type::f32,
             dnnl::memory::format_tag::nChw8c);
     auto user_dst_mem =
-            dnnl::memory(user_dst_desc, eng_mkldnn, const_cast<void*>(param.dst_ptr));
+            dnnl::memory(user_dst_desc, eng_mkldnn, param.dst_ptr.get_ptr());
     auto conv_desc = dnnl::convolution_forward::desc(
             dnnl::prop_kind::forward_inference, dnnl::algorithm::convolution_auto,
             user_src_mem.get_desc(), user_weights_mem.get_desc(),
@@ -599,9 +599,9 @@ struct NCBKernParamEqual {
 
 struct NCBKernParamHash {
     std::size_t operator()(const fallback::ConvBiasImpl::NCBKernParam& param) const {
-        std::size_t result = reinterpret_cast<std::size_t>(param.filter_ptr);
-        result = result ^ (reinterpret_cast<std::size_t>(param.src_ptr) << 3);
-        result = result ^ (reinterpret_cast<std::size_t>(param.dst_ptr) << 7);
+        std::size_t result = reinterpret_cast<std::size_t>(param.filter_ptr.get_ptr());
+        result = result ^ (reinterpret_cast<std::size_t>(param.src_ptr.get_ptr()) << 3);
+        result = result ^ (reinterpret_cast<std::size_t>(param.dst_ptr.get_ptr()) << 7);
         result = result ^ (static_cast<std::size_t>(param.n) << 11);
         return result;
     };
@@ -669,14 +669,14 @@ void ConvBiasImpl::AlgoMkldnnConv::kern_mkldnn_fp32(
          *do not need any bias op
          **/
         PostProcess<float>::run(
-                param.dst_ptr, const_cast<void*>(param.bias_ptr), param.dst_ptr,
-                megdnn::BiasMode::NO_BIAS, param.nonlineMode, param.bias_type,
-                param.dst_type, in, oc, oh, ow);
+                param.dst_ptr.get_ptr(), param.bias_ptr.get_ptr(),
+                param.dst_ptr.get_ptr(), megdnn::BiasMode::NO_BIAS, param.nonlineMode,
+                param.bias_type, param.dst_type, in, oc, oh, ow);
     } else if (param.bias_mode == megdnn::BiasMode::BIAS) {
         PostProcess<float>::run(
-                param.dst_ptr, const_cast<void*>(param.bias_ptr), param.dst_ptr,
-                param.bias_mode, param.nonlineMode, param.bias_type, param.dst_type, in,
-                oc, oh, ow);
+                param.dst_ptr.get_ptr(), param.bias_ptr.get_ptr(),
+                param.dst_ptr.get_ptr(), param.bias_mode, param.nonlineMode,
+                param.bias_type, param.dst_type, in, oc, oh, ow);
     }
 }
 #endif

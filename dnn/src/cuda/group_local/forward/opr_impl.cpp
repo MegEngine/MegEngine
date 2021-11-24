@@ -32,11 +32,6 @@ std::unique_ptr<LocalForward> get_opr(Handle* handle, param::Convolution param) 
     return std::move(opr);
 }
 
-template <typename T>
-void incr_ptr(T*& dst, ptrdiff_t delta) {
-    dst = reinterpret_cast<T*>(reinterpret_cast<uintptr_t>(dst) + delta);
-}
-
 TensorLayout prepare_src_dst(const TensorLayout& input, size_t g) {
     TensorLayout ret = input;
     megdnn_assert(ret[1] % g == 0);
@@ -84,18 +79,20 @@ void GroupLocalForwardImpl::exec(
                 SH, SW, stream);
     } else {
         auto&& opr = get_opr(handle, param());
-        TensorND src_g = {src.raw_ptr, prepare_src_dst(src.layout, G)};
-        TensorND dst_g = {dst.raw_ptr, prepare_src_dst(dst.layout, G)};
-        TensorND filter_g = {filter.raw_ptr, prepare_filter(filter.layout)};
+        TensorND src_g = {src.raw_ptr(), prepare_src_dst(src.layout, G)};
+        TensorND dst_g = {dst.raw_ptr(), prepare_src_dst(dst.layout, G)};
+        TensorND filter_g = {filter.raw_ptr(), prepare_filter(filter.layout)};
         for (size_t g = 0; g < G; ++g) {
             opr->exec(src_g, filter_g, dst_g, workspace);
-            incr_ptr(
-                    src_g.raw_ptr, src_g.layout.stride[1] * src_g.layout.shape[1] *
-                                           src_g.layout.dtype.size());
-            incr_ptr(
-                    dst_g.raw_ptr, dst_g.layout.stride[1] * dst_g.layout.shape[1] *
-                                           dst_g.layout.dtype.size());
-            incr_ptr(filter_g.raw_ptr, filter_g.layout.span().dist_byte());
+            incr_refp(
+                    src_g.get_ref_ptr(), src_g.layout.stride[1] *
+                                                 src_g.layout.shape[1] *
+                                                 src_g.layout.dtype.size());
+            incr_refp(
+                    dst_g.get_ref_ptr(), dst_g.layout.stride[1] *
+                                                 dst_g.layout.shape[1] *
+                                                 dst_g.layout.dtype.size());
+            incr_refp(filter_g.get_ref_ptr(), filter_g.layout.span().dist_byte());
         }
     }
 }

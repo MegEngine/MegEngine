@@ -76,11 +76,11 @@ void BatchedMatrixMulForwardImpl::AlgoDefault::exec(const ExecArgs& args) const 
     auto kern = [args, param]() {
         auto N = args.layout_a.shape[0];
         TensorND A_, B_, C_;
-        A_.raw_ptr = args.tensor_a.raw_ptr;
+        A_.reset_ptr(args.tensor_a.raw_ptr());
         A_.layout = args.layout_a.remove_axis(0);
-        B_.raw_ptr = args.tensor_b.raw_ptr;
+        B_.reset_ptr(args.tensor_b.raw_ptr());
         B_.layout = args.layout_b.remove_axis(0);
-        C_.raw_ptr = args.tensor_c.raw_ptr;
+        C_.reset_ptr(args.tensor_c.raw_ptr());
         C_.layout = args.layout_c.remove_axis(0);
 
         auto Astrd = args.layout_a.dtype.size() * args.layout_a.stride[0],
@@ -88,7 +88,8 @@ void BatchedMatrixMulForwardImpl::AlgoDefault::exec(const ExecArgs& args) const 
              Cstrd = args.layout_c.dtype.size() * args.layout_c.stride[0];
 
         auto advance_ptr = [](TensorND& dest, ptrdiff_t d) {
-            dest.raw_ptr = static_cast<void*>(static_cast<dt_byte*>(dest.raw_ptr) + d);
+            dest.reset_ptr(
+                    static_cast<void*>(static_cast<dt_byte*>(dest.raw_ptr()) + d));
         };
 
         auto opr = inplace_cpu_handle()->create_operator<MatrixMul>();

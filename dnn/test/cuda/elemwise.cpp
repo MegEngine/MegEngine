@@ -52,7 +52,7 @@ void run_tensor_add(
     cudnn_check(cudnnCreate(&cudnn_handle));
     cuda_check(cudaDeviceSynchronize());
     cuda_check(cudaMemcpy(
-            c.raw_ptr, a.raw_ptr, a.layout.span().dist_byte(),
+            c.raw_ptr(), a.raw_ptr(), a.layout.span().dist_byte(),
             cudaMemcpyDeviceToDevice));
 
     auto bdesc = make_cudnn_tensor_desc(b.layout),
@@ -61,14 +61,14 @@ void run_tensor_add(
     float alpha = 1, beta = 1;
     cudaProfilerStart();
     cudnn_check(cudnnAddTensor(
-            cudnn_handle, &alpha, bdesc, b.raw_ptr, &beta, cdesc, c.raw_ptr));
+            cudnn_handle, &alpha, bdesc, b.raw_ptr(), &beta, cdesc, c.raw_ptr()));
     cudaProfilerStop();
 
     cudnn_check(cudnnDestroyTensorDescriptor(cdesc));
     cudnn_check(cudnnDestroyTensorDescriptor(bdesc));
     cudnn_check(cudnnDestroy(cudnn_handle));
 
-    cuda_check(cudaMemset(c.raw_ptr, 0, c.layout.span().dist_byte()));
+    cuda_check(cudaMemset(c.raw_ptr(), 0, c.layout.span().dist_byte()));
     cuda_check(cudaDeviceSynchronize());
 #endif
 

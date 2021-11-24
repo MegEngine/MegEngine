@@ -22,10 +22,10 @@ namespace {
 class TensorWrapper {
 public:
     TensorWrapper(Handle* handle, TensorLayout layout) : m_handle(handle) {
-        m_tensornd.raw_ptr = megdnn_malloc(m_handle, layout.span().dist_byte());
-        m_tensornd.layout = layout;
+        auto raw_ptr = megdnn_malloc(m_handle, layout.span().dist_byte());
+        m_tensornd = TensorND{raw_ptr, layout};
     }
-    ~TensorWrapper() { megdnn_free(m_handle, m_tensornd.raw_ptr); }
+    ~TensorWrapper() { megdnn_free(m_handle, m_tensornd.raw_ptr()); }
 
     TensorND tensornd() const { return m_tensornd; }
 
@@ -86,9 +86,9 @@ TEST_F(NAIVE, CONV_BIAS_QUANTIZED4x4x32) {
                                    const std::vector<int>& values) {
         TensorND tensor;
         tensor.layout = {shape, dtype};
-        tensor.raw_ptr =
-                static_cast<dt_byte*>(malloc(tensor.layout.span().dist_byte()));
-        uint8_t* ptr = static_cast<uint8_t*>(tensor.raw_ptr);
+        tensor.reset_ptr(
+                static_cast<dt_byte*>(malloc(tensor.layout.span().dist_byte())));
+        uint8_t* ptr = static_cast<uint8_t*>(tensor.raw_ptr());
         megdnn_assert(values.size() == tensor.layout.span().dist_elem());
         for (size_t i = 0; i < tensor.layout.span().dist_elem(); i += 2) {
             int val0 = values[i], val1 = values[i + 1];
@@ -670,10 +670,9 @@ TEST_F(NAIVE, CONV_BIAS_QUANTIZED4) {
 
     auto GenTensorValue = [](const TensorShape& shape, dtype::QuantizedS32 dtype,
                              std::vector<int> values) {
-        TensorND tensor;
-        tensor.layout = {shape, dtype};
-        tensor.raw_ptr =
-                static_cast<dt_byte*>(malloc(tensor.layout.span().dist_byte()));
+        TensorLayout layout = {shape, dtype};
+        auto raw_ptr = static_cast<dt_byte*>(malloc(layout.span().dist_byte()));
+        TensorND tensor{raw_ptr, layout};
         megdnn_assert(
                 values.size() == tensor.layout.total_nr_elems(), "%zu == %zu",
                 values.size(), tensor.layout.total_nr_elems());
@@ -3015,10 +3014,9 @@ TEST_F(NAIVE, CONV_BIAS_NCHW64_Q4) {
 
     auto GenTensorValue = [](const TensorShape& shape, dtype::QuantizedS32 dtype,
                              std::vector<int> values) {
-        TensorND tensor;
-        tensor.layout = {shape, dtype};
-        tensor.raw_ptr =
-                static_cast<dt_byte*>(malloc(tensor.layout.span().dist_byte()));
+        TensorLayout layout = {shape, dtype};
+        auto raw_ptr = static_cast<dt_byte*>(malloc(layout.span().dist_byte()));
+        TensorND tensor{raw_ptr, layout};
         megdnn_assert(
                 values.size() == tensor.layout.total_nr_elems(), "%zu == %zu",
                 values.size(), tensor.layout.total_nr_elems());

@@ -15,6 +15,7 @@ namespace x86 {
 class SeparableFilterImpl : public SeparableFilterForward {
 public:
     using SeparableFilterForward::SeparableFilterForward;
+    using Param = param::SeparableFilter;
     void exec(
             _megdnn_tensor_in src, _megdnn_tensor_in filter_x,
             _megdnn_tensor_in filter_y, _megdnn_tensor_out dst,
@@ -30,10 +31,10 @@ private:
     template <typename T>
     void separable_filter_exec(
             _megdnn_tensor_in src, _megdnn_tensor_in filter_x,
-            _megdnn_tensor_in filter_y, _megdnn_tensor_out dst);
+            _megdnn_tensor_in filter_y, _megdnn_tensor_out dst, const Param& param);
     void separable_filter_exec_8u(
             _megdnn_tensor_in src, _megdnn_tensor_in filter_x,
-            _megdnn_tensor_in filter_y, _megdnn_tensor_out dst);
+            _megdnn_tensor_in filter_y, _megdnn_tensor_out dst, const Param& param);
 };
 
 }  // namespace x86

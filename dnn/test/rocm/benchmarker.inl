@@ -52,9 +52,9 @@ float ROCMBenchmarker<Opr>::exec(TensorLayoutArray layouts) {
         auto trans_func = [handle](const TensorLayout& layout) {
             auto span = layout.span();
             TensorND res;
-            res.raw_ptr =
-                    static_cast<uint8_t*>(megdnn_malloc(handle, span.dist_byte())) +
-                    span.low_byte;
+            res.reset_ptr(
+                    (static_cast<uint8_t*>(megdnn_malloc(handle, span.dist_byte())) +
+                     span.low_byte));
             res.layout = layout;
             return res;
         };
@@ -71,7 +71,8 @@ float ROCMBenchmarker<Opr>::exec(TensorLayoutArray layouts) {
             rng = m_default_rng.get();
         auto size = tensor.layout.span().high_byte;
         rng->gen(tensor);
-        megdnn_memcpy_H2D(m_handle_rocm, tensors_cur[i].raw_ptr, tensor.raw_ptr, size);
+        megdnn_memcpy_H2D(
+                m_handle_rocm, tensors_cur[i].raw_ptr(), tensor.raw_ptr(), size);
     }
     m_device_timer.reset();
     m_device_timer.start();
@@ -83,7 +84,7 @@ float ROCMBenchmarker<Opr>::exec(TensorLayoutArray layouts) {
     }
     auto free = [](Handle* handle, TensorNDArray& tensors) {
         std::for_each(tensors.begin(), tensors.end(), [handle](const TensorND& tensor) {
-            megdnn_free(handle, tensor.raw_ptr);
+            megdnn_free(handle, tensor.raw_ptr());
         });
     };
     free(m_handle_rocm, tensors_cur);

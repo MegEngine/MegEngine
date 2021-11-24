@@ -339,8 +339,8 @@ void relayout_format::relayout_format_cuda_nchw_nchwx(
         const dim3 block_dim(DIVUP(hw, nr_threads* _pack_w), out_n);                \
         const dim3 thread_dim(nr_threads);                                          \
         return kernel<<<block_dim, thread_dim, 0, stream>>>(                        \
-                (_src_c_type*)src.raw_ptr, (_dst_c_type*)dst.raw_ptr, in_n, ic, hw, \
-                n_stride_src, ic_stride, n_stride_dst, oc_stride,                   \
+                (_src_c_type*)src.raw_ptr(), (_dst_c_type*)dst.raw_ptr(), in_n, ic, \
+                hw, n_stride_src, ic_stride, n_stride_dst, oc_stride,               \
                 CudaPostProcess<dtype::_src_type, dtype::_dst_type, _same_scale>(   \
                         src_scale, src_zero_point, dst_scale, dst_zero_point),      \
                 src_zero_point, group, ocpg);                                       \
@@ -407,8 +407,8 @@ void relayout_format::relayout_format_cuda_nchw_nchwx(
         n_stride_dst = n_stride_dst * _size_nbits / (8 * sizeof(_dst_c_type));       \
         oc_stride = oc_stride * _size_nbits / (8 * sizeof(_dst_c_type));             \
         typename RelayoutProblem_::Param param{                                      \
-                SrcIterator_{(InnerDtype_*)src.raw_ptr, ic_stride, ic, w, w_pad},    \
-                DstIterator_{(_dst_c_type*)dst.raw_ptr, oc_stride, oc, w, w_pad},    \
+                SrcIterator_{(InnerDtype_*)src.raw_ptr(), ic_stride, ic, w, w_pad},  \
+                DstIterator_{(_dst_c_type*)dst.raw_ptr(), oc_stride, oc, w, w_pad},  \
                 CudaPostProcess_{                                                    \
                         src_scale, src_zero_point, dst_scale, dst_zero_point},       \
                 n_stride_src,                                                        \
@@ -505,8 +505,8 @@ void relayout_format::relayout_format_cuda_nchwx_nchw(
         n_stride_dst = n_stride_dst * _size_nbits / (8 * sizeof(InnerDtype_));       \
         oc_stride = oc_stride * _size_nbits / (8 * sizeof(InnerDtype_));             \
         typename RelayoutProblem_::Param param{                                      \
-                SrcIterator_{(_src_c_type*)src.raw_ptr, ic_stride, ic, w, w_pad},    \
-                DstIterator_{(InnerDtype_*)dst.raw_ptr, oc_stride, oc, w, w_pad},    \
+                SrcIterator_{(_src_c_type*)src.raw_ptr(), ic_stride, ic, w, w_pad},  \
+                DstIterator_{(InnerDtype_*)dst.raw_ptr(), oc_stride, oc, w, w_pad},  \
                 CudaPostProcess_{                                                    \
                         src_scale, src_zero_point, dst_scale, dst_zero_point},       \
                 n_stride_src,                                                        \
@@ -554,7 +554,7 @@ void relayout_format::relayout_format_cuda_nchw4_nchw(
     const dim3 block_dim(DIVUP(hw, nr_threads * pack_w), n);
     const dim3 thread_dim(nr_threads);
     kern_nchw4_nchw<<<block_dim, thread_dim, 0, stream>>>(
-            (int8_t*)src.raw_ptr, (int8_t*)dst.raw_ptr, n, ic, oc, h, w, group);
+            (int8_t*)src.raw_ptr(), (int8_t*)dst.raw_ptr(), n, ic, oc, h, w, group);
     after_kernel_launch();
 }
 
@@ -581,7 +581,7 @@ void relayout_format::relayout_format_cuda_nchw_nchw4_weight(
     const dim3 thread_dim(nr_threads);
 
     kern_nchw_nchw4_weight<<<block_dim, thread_dim, 0, stream>>>(
-            (char*)src.raw_ptr, (char*)dst.raw_ptr, oc, ic, hw, oc_stride_src,
+            (char*)src.raw_ptr(), (char*)dst.raw_ptr(), oc, ic, hw, oc_stride_src,
             ic_stride, oc_stride_dst, group_stride_src, group_stride_dst, 0, {});
     after_kernel_launch();
 }

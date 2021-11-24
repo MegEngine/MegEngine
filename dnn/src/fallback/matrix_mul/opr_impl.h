@@ -51,28 +51,28 @@ public:
     };
 
     struct KernParam : public KernSizeParam {
-        const void* A_ptr;
-        const void* B_ptr;
-        void* C_ptr;
-        void* workspace_ptr;
-        size_t workspace_size;
+        RefPtr A_ptr;
+        RefPtr B_ptr;
+        RefPtr C_ptr;
+        void* workspace_ptr = nullptr;
+        size_t workspace_size = 0;
 
         template <typename T>
         inline const T* A() const {
             // A_type.assert_is_compatible_ctype<T>();
-            return static_cast<const T*>(A_ptr);
+            return static_cast<const T*>(A_ptr.get_ptr());
         }
 
         template <typename T>
         inline const T* B() const {
             // B_type.assert_is_compatible_ctype<T>();
-            return static_cast<const T*>(B_ptr);
+            return static_cast<const T*>(B_ptr.get_ptr());
         }
 
         template <typename T>
         inline T* C() const {
             // C_type.assert_is_compatible_ctype<T>();
-            return static_cast<T*>(C_ptr);
+            return static_cast<T*>(C_ptr.get_ptr());
         }
         template <typename T>
         inline T* workspace() const {

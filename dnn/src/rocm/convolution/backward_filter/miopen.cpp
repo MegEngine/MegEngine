@@ -78,9 +78,9 @@ miopenConvBwdWeightsAlgorithm_t ConvolutionBackwardFilterImpl::AlgoMIOpen::
     int ret_algo_count;
     miopenConvAlgoPerf_t algo_perf;
     miopen_check(miopenFindConvolutionBackwardWeightsAlgorithm(
-            args.handle->miopen_handle(), D.diff_desc.desc, args.diff_tensor->raw_ptr,
-            D.src_desc.desc, args.src_tensor->raw_ptr, D.conv_desc.desc,
-            D.grad_desc.desc, args.grad_tensor->raw_ptr, req_algo_count,
+            args.handle->miopen_handle(), D.diff_desc.desc, args.diff_tensor->raw_ptr(),
+            D.src_desc.desc, args.src_tensor->raw_ptr(), D.conv_desc.desc,
+            D.grad_desc.desc, args.grad_tensor->raw_ptr(), req_algo_count,
             &ret_algo_count, &algo_perf, args.workspace.raw_ptr, args.workspace.size,
             exhaustive_search));
     //    algo_perf.bwd_weights_algo = miopenConvolutionBwdWeightsAlgoGEMM;
@@ -96,9 +96,9 @@ void ConvolutionBackwardFilterImpl::AlgoMIOpen::exec(const ExecArgs& args) const
     float alpha = 1.0f, beta = 0.0f;
     auto status = miopenConvolutionBackwardWeights(
             args.handle->miopen_handle(), &alpha, D.diff_desc.desc,
-            args.diff_tensor->raw_ptr, D.src_desc.desc, args.src_tensor->raw_ptr,
-            D.conv_desc.desc, algo, &beta, D.grad_desc.desc, args.grad_tensor->raw_ptr,
-            args.workspace.raw_ptr, args.workspace.size);
+            args.diff_tensor->raw_ptr(), D.src_desc.desc, args.src_tensor->raw_ptr(),
+            D.conv_desc.desc, algo, &beta, D.grad_desc.desc,
+            args.grad_tensor->raw_ptr(), args.workspace.raw_ptr, args.workspace.size);
     megdnn_assert(
             status == miopenStatusSuccess, "conv bwd_filter failed: %s; info: %s",
             miopenGetErrorString(status), args.to_string().c_str());

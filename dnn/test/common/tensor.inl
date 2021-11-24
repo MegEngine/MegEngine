@@ -24,13 +24,13 @@ Tensor<T, C>::Tensor(Handle* handle, TensorLayout layout)
         : m_handle(handle), m_comparator(C()) {
     if (!layout.dtype.valid())
         layout.dtype = get_dtype_from_static_type<T>();
-    m_tensornd.raw_ptr = megdnn_malloc(m_handle, layout.span().dist_byte());
-    m_tensornd.layout = layout;
+    auto raw_ptr = megdnn_malloc(m_handle, layout.span().dist_byte());
+    m_tensornd = TensorND{raw_ptr, layout};
 }
 
 template <typename T, typename C>
 Tensor<T, C>::~Tensor() {
-    megdnn_free(m_handle, m_tensornd.raw_ptr);
+    megdnn_free(m_handle, m_tensornd.raw_ptr());
 }
 
 template <typename T, typename C>

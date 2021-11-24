@@ -15,9 +15,9 @@
 #include "test/common/relayout.h"
 #include "test/common/tensor.h"
 
-#include "megdnn/basic_types.h"
-
 #include <ctime>
+#include "megdnn/basic_types.h"
+#include "test/common/task_record_check.h"
 
 using namespace megdnn;
 using namespace test;
@@ -30,6 +30,21 @@ TYPED_TEST(FALLBACK_RELAYOUT, run) {
     relayout::run_test<TypeParam>(this->handle());
 }
 }  // namespace
+
+TEST_F(FALLBACK, RELAYOUT_CONTINUE) {
+    Checker<Relayout> checker(handle());
+    checker.set_dtype(0, dtype::Int32());
+    checker.set_dtype(1, dtype::Int32());
+    checker.exec({{2, 2, 2}, {2, 2, 2}});
+}
+
+TEST_F(FALLBACK, RELAYOUT_RECORD) {
+    TaskRecordChecker<Relayout> checker(1);
+    checker.set_dtype(0, dtype::Int32());
+    checker.set_dtype(1, dtype::Int32());
+    checker.exec({{2, 2, 2}, {2, 2, 2}});
+}
+
 #if MEGDNN_WITH_BENCHMARK
 TEST_F(FALLBACK, BENCHMARK_RELAYOUT_CV) {
     relayout::run_cv_benchmark(handle());

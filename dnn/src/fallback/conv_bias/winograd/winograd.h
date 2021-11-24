@@ -291,7 +291,7 @@ public:
         //! Filter trans dst ptr
         input_filter_compute_type* filter_transform_buf =
                 reinterpret_cast<input_filter_compute_type*>(
-                        reinterpret_cast<uintptr_t>(preprocessed_tensor.raw_ptr) +
+                        reinterpret_cast<uintptr_t>(preprocessed_tensor.raw_ptr()) +
                         group_id * filter_group_size);
         //! Filter trans src ptr
         input_filter_compute_type* transform_mid_buf =
@@ -367,7 +367,8 @@ public:
         //! NCHW88_WINOGRAD and NCHW_WINOGRAD is the same offset
         const input_filter_compute_type* filter_transform_buf = nullptr;
         if (nullptr != ncb_param.preprocessed_filter) {
-            auto preprocess_raw_ptr = ncb_param.preprocessed_filter->tensors[0].raw_ptr;
+            auto preprocess_raw_ptr =
+                    ncb_param.preprocessed_filter->tensors[0].raw_ptr();
             filter_transform_buf = reinterpret_cast<input_filter_compute_type*>(
                     reinterpret_cast<uintptr_t>(preprocess_raw_ptr) +
                     group_id * filter_group_size);
@@ -411,30 +412,37 @@ public:
 
         rep(i, Strategy::ALPHA) rep(j, Strategy::ALPHA) {
             if (format == param::MatrixMul::Format::DEFAULT) {
-                matmul_param.A_ptr = input_transform_buf +
-                                     (i * Strategy::ALPHA + j) * nr_tiles_in_unit * IC;
-                matmul_param.B_ptr = filter_transform_buf +
-                                     (i * Strategy::ALPHA + j) * OC * IC + oc_start_idx;
+                matmul_param.A_ptr = RefPtr(
+                        (void*)(input_transform_buf +
+                                (i * Strategy::ALPHA + j) * nr_tiles_in_unit * IC));
 
-                matmul_param.C_ptr = output_transform_buf + (i * Strategy::ALPHA + j) *
-                                                                    nr_tiles_in_unit *
-                                                                    nr_oc_in_unit;
+                matmul_param.B_ptr = RefPtr(
+                        (void*)(filter_transform_buf +
+                                (i * Strategy::ALPHA + j) * OC * IC + oc_start_idx));
+
+                matmul_param.C_ptr = RefPtr(
+                        (void*)(output_transform_buf + (i * Strategy::ALPHA + j) *
+                                                               nr_tiles_in_unit *
+                                                               nr_oc_in_unit));
 
                 matmul_param.M = nr_tiles_in_unit;
                 matmul_param.N = nr_oc_in_unit;
                 matmul_param.LDB = OC;
                 matmul_param.LDC = nr_oc_in_unit;
             } else {
-                matmul_param.A_ptr = filter_transform_buf +
-                                     (i * Strategy::ALPHA + j) * OC * IC +
-                                     oc_start_idx * IC;
+                matmul_param.A_ptr = RefPtr(
+                        (void*)(filter_transform_buf +
+                                (i * Strategy::ALPHA + j) * OC * IC +
+                                oc_start_idx * IC));
 
-                matmul_param.B_ptr = input_transform_buf +
-                                     (i * Strategy::ALPHA + j) * nr_tiles_in_unit * IC;
+                matmul_param.B_ptr = RefPtr(
+                        (void*)(input_transform_buf +
+                                (i * Strategy::ALPHA + j) * nr_tiles_in_unit * IC));
 
-                matmul_param.C_ptr = output_transform_buf + (i * Strategy::ALPHA + j) *
-                                                                    nr_tiles_in_unit *
-                                                                    nr_oc_in_unit;
+                matmul_param.C_ptr = RefPtr(
+                        (void*)(output_transform_buf + (i * Strategy::ALPHA + j) *
+                                                               nr_tiles_in_unit *
+                                                               nr_oc_in_unit));
                 matmul_param.N = nr_tiles_in_unit;
                 matmul_param.M = nr_oc_in_unit;
                 matmul_param.LDB = matmul_param.N * Strategy::IC_BLOCK_SIZE;

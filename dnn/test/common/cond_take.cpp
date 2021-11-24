@@ -43,7 +43,7 @@ std::vector<CondTakeTestcase> CondTakeTestcase::make() {
     UniformIntRNG rng_byte(0, 255);
     auto fill_data = [&](TensorND data) {
         auto sz = data.layout.span().dist_byte(), szf = sz / sizeof(dt_float32);
-        auto pf = static_cast<dt_float32*>(data.raw_ptr);
+        auto pf = static_cast<dt_float32*>(data.raw_ptr());
         data_rng.fill_fast_float32(pf, szf);
 
         auto prem = reinterpret_cast<uint8_t*>(pf + szf);
@@ -57,8 +57,8 @@ std::vector<CondTakeTestcase> CondTakeTestcase::make() {
         auto size0 = i.m_data.layout.span().dist_byte(),
              size1 = i.m_mask.layout.span().dist_byte();
         i.m_mem.reset(new uint8_t[size0 + size1]);
-        i.m_data.raw_ptr = i.m_mem.get();
-        i.m_mask.raw_ptr = i.m_mem.get() + size0;
+        i.m_data.reset_ptr(i.m_mem.get());
+        i.m_mask.reset_ptr(i.m_mem.get() + size0);
         fill_data(i.m_data);
 
         auto mean = i.m_param.val;

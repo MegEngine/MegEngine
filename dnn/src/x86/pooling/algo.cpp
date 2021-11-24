@@ -51,8 +51,7 @@ dnnl::memory tensor_to_mkl_memory(
         auto megdnn_src_memory = dnnl::memory(megdnn_src_md, mkldnn_eng);
         return megdnn_src_memory;
     } else {
-        auto megdnn_src_memory =
-                dnnl::memory(megdnn_src_md, mkldnn_eng, const_cast<void*>(src.raw_ptr));
+        auto megdnn_src_memory = dnnl::memory(megdnn_src_md, mkldnn_eng, src.raw_ptr());
         return megdnn_src_memory;
     }
 }
@@ -92,8 +91,8 @@ PoolingImpl::AlgoBase::ExecArgs::ExecArgs(
         PoolingImpl* opr, _megdnn_tensor_in src, _megdnn_tensor_out dst,
         _megdnn_workspace workspace)
         : SizeArgs(opr, src.layout, dst.layout),
-          src_tensor{&src},
-          dst_tensor{&dst},
+          src_tensor{src},
+          dst_tensor{dst},
           workspace{workspace} {}
 
 std::string PoolingImpl::AlgoBase::SizeArgs::to_string() const {
@@ -123,14 +122,16 @@ void PoolingImpl::AlgoMeanW2S2AVX::exec(const ExecArgs& args) const {
     auto OW = args.layout_dst.shape[3];
     auto PH = args.opr->param().pad_h;
     auto PW = args.opr->param().pad_w;
-    auto sptr = reinterpret_cast<dt_float32*>(args.src_tensor->raw_ptr);
-    auto dptr = reinterpret_cast<dt_float32*>(args.dst_tensor->raw_ptr);
+
     auto handle = [=]() { return args.handle; };
-    MEGDNN_DISPATCH_CPU_KERN_OPR(rep(n, N) rep(c, C) {
-        mean_pooling_w2x2_s2x2_avx(
-                sptr + n * C * IH * IW + c * IH * IW, IH, IW,
-                dptr + n * C * OH * OW + c * OH * OW, OH, OW, PH, PW, true);
-    });
+    MEGDNN_DISPATCH_CPU_KERN_OPR(
+            auto sptr = reinterpret_cast<dt_float32*>(args.src_tensor.raw_ptr());
+            auto dptr = reinterpret_cast<dt_float32*>(args.dst_tensor.raw_ptr());
+            rep(n, N) rep(c, C) {
+                mean_pooling_w2x2_s2x2_avx(
+                        sptr + n * C * IH * IW + c * IH * IW, IH, IW,
+                        dptr + n * C * OH * OW + c * OH * OW, OH, OW, PH, PW, true);
+            });
 }
 
 bool PoolingImpl::AlgoMeanW2S2SSE3::is_available(const SizeArgs& args) const {
@@ -154,14 +155,16 @@ void PoolingImpl::AlgoMeanW2S2SSE3::exec(const ExecArgs& args) const {
     auto OW = args.layout_dst.shape[3];
     auto PH = args.opr->param().pad_h;
     auto PW = args.opr->param().pad_w;
-    auto sptr = reinterpret_cast<dt_float32*>(args.src_tensor->raw_ptr);
-    auto dptr = reinterpret_cast<dt_float32*>(args.dst_tensor->raw_ptr);
+
     auto handle = [=]() { return args.handle; };
-    MEGDNN_DISPATCH_CPU_KERN_OPR(rep(n, N) rep(c, C) {
-        mean_pooling_w2x2_s2x2_sse3(
-                sptr + n * C * IH * IW + c * IH * IW, IH, IW,
-                dptr + n * C * OH * OW + c * OH * OW, OH, OW, PH, PW, true);
-    });
+    MEGDNN_DISPATCH_CPU_KERN_OPR(
+            auto sptr = reinterpret_cast<dt_float32*>(args.src_tensor.raw_ptr());
+            auto dptr = reinterpret_cast<dt_float32*>(args.dst_tensor.raw_ptr());
+            rep(n, N) rep(c, C) {
+                mean_pooling_w2x2_s2x2_sse3(
+                        sptr + n * C * IH * IW + c * IH * IW, IH, IW,
+                        dptr + n * C * OH * OW + c * OH * OW, OH, OW, PH, PW, true);
+            });
 }
 
 bool PoolingImpl::AlgoMaxW2S2SSE::is_available(const SizeArgs& args) const {
@@ -185,14 +188,16 @@ void PoolingImpl::AlgoMaxW2S2SSE::exec(const ExecArgs& args) const {
     auto OW = args.layout_dst.shape[3];
     auto PH = args.opr->param().pad_h;
     auto PW = args.opr->param().pad_w;
-    auto sptr = reinterpret_cast<dt_float32*>(args.src_tensor->raw_ptr);
-    auto dptr = reinterpret_cast<dt_float32*>(args.dst_tensor->raw_ptr);
+
     auto handle = [=]() { return args.handle; };
-    MEGDNN_DISPATCH_CPU_KERN_OPR(rep(n, N) rep(c, C) {
-        max_pooling_w2x2_s2x2_sse(
-                sptr + n * C * IH * IW + c * IH * IW, IH, IW,
-                dptr + n * C * OH * OW + c * OH * OW, OH, OW, PH, PW);
-    });
+    MEGDNN_DISPATCH_CPU_KERN_OPR(
+            auto sptr = reinterpret_cast<dt_float32*>(args.src_tensor.raw_ptr());
+            auto dptr = reinterpret_cast<dt_float32*>(args.dst_tensor.raw_ptr());
+            rep(n, N) rep(c, C) {
+                max_pooling_w2x2_s2x2_sse(
+                        sptr + n * C * IH * IW + c * IH * IW, IH, IW,
+                        dptr + n * C * OH * OW + c * OH * OW, OH, OW, PH, PW);
+            });
 }
 
 bool PoolingImpl::AlgoMaxW3S3SSE::is_available(const SizeArgs& args) const {
@@ -216,13 +221,14 @@ void PoolingImpl::AlgoMaxW3S3SSE::exec(const ExecArgs& args) const {
     auto OW = args.layout_dst.shape[3];
     auto PH = args.opr->param().pad_h;
     auto PW = args.opr->param().pad_w;
-    auto sptr = reinterpret_cast<dt_float32*>(args.src_tensor->raw_ptr);
-    auto dptr = reinterpret_cast<dt_float32*>(args.dst_tensor->raw_ptr);
     auto handle = [=]() { return args.handle; };
+    WorkspaceBundle ws =
+            get_bundle(args.layout_src, args.layout_dst, args.opr->param());
+    ws.set(args.workspace.raw_ptr);
     MEGDNN_DISPATCH_CPU_KERN_OPR(
-            WorkspaceBundle ws =
-                    get_bundle(args.layout_src, args.layout_dst, args.opr->param());
-            ws.set(args.workspace.raw_ptr); rep(n, N) rep(c, C) {
+            auto sptr = reinterpret_cast<dt_float32*>(args.src_tensor.raw_ptr());
+            auto dptr = reinterpret_cast<dt_float32*>(args.dst_tensor.raw_ptr());
+            rep(n, N) rep(c, C) {
                 do_max_pooling_3x3_s2x2_float_SSE(
                         sptr + n * C * IH * IW + c * IH * IW,
                         dptr + n * C * OH * OW + c * OH * OW, IH, IW, OH, OW, PH, PW,
@@ -255,32 +261,30 @@ void PoolingImpl::AlgoMKLDNNNCHW::exec(const ExecArgs& args) const {
     dnnl::memory::dims pool_padding = {PH, PW};
     dnnl::memory::dims pool_kernel = {FH, FW};
 
-    dnnl::memory&& megdnn_src_memory_ori =
-            tensor_to_mkl_memory<dnnl::memory::format_tag::nchw, false>(
-                    *args.src_tensor, mkldnn_eng, dnnl::memory::data_type::s8);
-    dnnl::memory&& megdnn_dst_memory_ori =
-            tensor_to_mkl_memory<dnnl::memory::format_tag::nchw, false>(
-                    *args.dst_tensor, mkldnn_eng, dnnl::memory::data_type::s8);
+    auto run = [args, pool_strides, pool_padding, pool_kernel, mkldnn_eng,
+                mkldnn_stream, mkldnn_pooling_mode](void) {
+        dnnl::memory&& megdnn_src_memory_ori =
+                tensor_to_mkl_memory<dnnl::memory::format_tag::nchw, false>(
+                        args.src_tensor, mkldnn_eng, dnnl::memory::data_type::s8);
+        dnnl::memory&& megdnn_dst_memory_ori =
+                tensor_to_mkl_memory<dnnl::memory::format_tag::nchw, false>(
+                        args.dst_tensor, mkldnn_eng, dnnl::memory::data_type::s8);
 
-    dnnl::memory&& megdnn_src_memory =
-            tensor_to_mkl_memory<dnnl::memory::format_tag::nhwc, true>(
-                    *args.src_tensor, mkldnn_eng, dnnl::memory::data_type::s8);
-    dnnl::memory&& megdnn_dst_memory =
-            tensor_to_mkl_memory<dnnl::memory::format_tag::nhwc, true>(
-                    *args.dst_tensor, mkldnn_eng, dnnl::memory::data_type::s8);
+        dnnl::memory&& megdnn_src_memory =
+                tensor_to_mkl_memory<dnnl::memory::format_tag::nhwc, true>(
+                        args.src_tensor, mkldnn_eng, dnnl::memory::data_type::s8);
+        dnnl::memory&& megdnn_dst_memory =
+                tensor_to_mkl_memory<dnnl::memory::format_tag::nhwc, true>(
+                        args.dst_tensor, mkldnn_eng, dnnl::memory::data_type::s8);
 
-    auto reorder_src = dnnl::reorder(megdnn_src_memory_ori, megdnn_src_memory);
-    auto reorder_dst = dnnl::reorder(megdnn_dst_memory, megdnn_dst_memory_ori);
-    auto pool1_desc = dnnl::pooling_forward::desc(
-            dnnl::prop_kind::forward_inference, mkldnn_pooling_mode,
-            megdnn_src_memory.get_desc(), megdnn_dst_memory.get_desc(), pool_strides,
-            pool_kernel, pool_padding, pool_padding);
-    auto pool_pd = dnnl::pooling_forward::primitive_desc(pool1_desc, mkldnn_eng);
-    auto pool = dnnl::pooling_forward(pool_pd);
-
-    auto run = [mkldnn_stream, mkldnn_eng, reorder_src, pool, reorder_dst,
-                megdnn_src_memory_ori, megdnn_src_memory, megdnn_dst_memory,
-                megdnn_dst_memory_ori](void) {
+        auto reorder_src = dnnl::reorder(megdnn_src_memory_ori, megdnn_src_memory);
+        auto reorder_dst = dnnl::reorder(megdnn_dst_memory, megdnn_dst_memory_ori);
+        auto pool1_desc = dnnl::pooling_forward::desc(
+                dnnl::prop_kind::forward_inference, mkldnn_pooling_mode,
+                megdnn_src_memory.get_desc(), megdnn_dst_memory.get_desc(),
+                pool_strides, pool_kernel, pool_padding, pool_padding);
+        auto pool_pd = dnnl::pooling_forward::primitive_desc(pool1_desc, mkldnn_eng);
+        auto pool = dnnl::pooling_forward(pool_pd);
         MEGDNN_MARK_USED_VAR(mkldnn_eng);
         auto mkl_stream = mkldnn_stream;
         reorder_src.execute(
@@ -336,21 +340,20 @@ void PoolingImpl::AlgoMKLDNNNCHW88::exec(const ExecArgs& args) const {
     dnnl::memory::dims pool_strides = {SH, SW};
     dnnl::memory::dims pool_padding = {PH, PW};
     dnnl::memory::dims pool_kernel = {FH, FW};
-    dnnl::memory&& megdnn_src_memory_ori =
-            tensor_to_mkl_memory<dnnl::memory::format_tag::nChw8c, false>(
-                    *args.src_tensor, mkldnn_eng, dnnl::memory::data_type::f32);
-    dnnl::memory&& megdnn_dst_memory_ori =
-            tensor_to_mkl_memory<dnnl::memory::format_tag::nChw8c, false>(
-                    *args.dst_tensor, mkldnn_eng, dnnl::memory::data_type::f32);
-    auto pool_desc = dnnl::pooling_forward::desc(
-            dnnl::prop_kind::forward_inference, mkldnn_pooling_mode,
-            megdnn_src_memory_ori.get_desc(), megdnn_dst_memory_ori.get_desc(),
-            pool_strides, pool_kernel, pool_padding, pool_padding);
-    auto pool_pd = dnnl::pooling_forward::primitive_desc(pool_desc, mkldnn_eng);
-    auto pool = dnnl::pooling_forward(pool_pd);
-
-    auto run = [mkldnn_stream, pool, mkldnn_eng, megdnn_src_memory_ori,
-                megdnn_dst_memory_ori](void) {
+    auto run = [args, pool_strides, pool_padding, pool_kernel, mkldnn_eng,
+                mkldnn_stream, mkldnn_pooling_mode](void) {
+        dnnl::memory&& megdnn_src_memory_ori =
+                tensor_to_mkl_memory<dnnl::memory::format_tag::nChw8c, false>(
+                        args.src_tensor, mkldnn_eng, dnnl::memory::data_type::f32);
+        dnnl::memory&& megdnn_dst_memory_ori =
+                tensor_to_mkl_memory<dnnl::memory::format_tag::nChw8c, false>(
+                        args.dst_tensor, mkldnn_eng, dnnl::memory::data_type::f32);
+        auto pool_desc = dnnl::pooling_forward::desc(
+                dnnl::prop_kind::forward_inference, mkldnn_pooling_mode,
+                megdnn_src_memory_ori.get_desc(), megdnn_dst_memory_ori.get_desc(),
+                pool_strides, pool_kernel, pool_padding, pool_padding);
+        auto pool_pd = dnnl::pooling_forward::primitive_desc(pool_desc, mkldnn_eng);
+        auto pool = dnnl::pooling_forward(pool_pd);
         MEGDNN_MARK_USED_VAR(mkldnn_eng);
         auto mkl_stream = mkldnn_stream;
 
@@ -477,11 +480,10 @@ void PoolingImpl::AlgoMaxS1NCHW88AVX::exec(const ExecArgs& args) const {
     size_t IW = args.layout_src.shape[3];
     size_t OH = args.layout_dst.shape[2];
     size_t OW = args.layout_dst.shape[3];
-    float* src_ptr = reinterpret_cast<float*>(args.src_tensor->raw_ptr);
-    float* dst_ptr = reinterpret_cast<float*>(args.dst_tensor->raw_ptr);
 
-    auto run = [IC, src_ptr, dst_ptr, IH, IW, OH, OW, PH, PW, WH, WW](
-                       size_t index, size_t) {
+    auto run = [args, IC, IH, IW, OH, OW, PH, PW, WH, WW](size_t index, size_t) {
+        float* src_ptr = reinterpret_cast<float*>(args.src_tensor.raw_ptr());
+        float* dst_ptr = reinterpret_cast<float*>(args.dst_tensor.raw_ptr());
         size_t n = index / IC;
         size_t c = index % IC;
         float* src = src_ptr + n * IH * IW * IC * VECSIZE + IH * IW * c * VECSIZE;

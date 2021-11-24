@@ -47,7 +47,7 @@ std::function<void(const TensorNDArray&)> extra_impl_helper(
         }
 
         for (size_t i = 0; i < tensors.size(); ++i) {
-            free(fp32_tensors[i].raw_ptr);
+            free(fp32_tensors[i].raw_ptr());
         }
     };
     return std::bind(impl, std::placeholders::_1, h, std::cref(p));

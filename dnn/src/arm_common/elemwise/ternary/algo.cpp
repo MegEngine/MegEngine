@@ -79,10 +79,10 @@ void ElemwiseImpl::AlgoTernaryFma3VecVecVec::exec(const KernParam& kern_param) c
                             _op<_type, _type>, BcastType::VEC_VEC_VEC>::run;        \
             MEGDNN_DISPATCH_CPU_KERN(                                               \
                     static_cast<naive::HandleImpl*>(kern_param.handle),             \
-                    run(static_cast<const _type*>(src0.raw_ptr),                    \
-                        static_cast<const _type*>(src1.raw_ptr),                    \
-                        static_cast<const _type*>(src2.raw_ptr),                    \
-                        static_cast<_type*>(dst.raw_ptr), src0.layout.dtype,        \
+                    run(static_cast<const _type*>(src0.raw_ptr()),                  \
+                        static_cast<const _type*>(src1.raw_ptr()),                  \
+                        static_cast<const _type*>(src2.raw_ptr()),                  \
+                        static_cast<_type*>(dst.raw_ptr()), src0.layout.dtype,      \
                         src1.layout.dtype, src2.layout.dtype, dst.layout.dtype,     \
                         src0.layout.total_nr_elems()));                             \
         }                                                                           \
@@ -113,10 +113,10 @@ void ElemwiseImpl::AlgoTernaryFma3VecVecScalar::exec(
                             _op<_type, _type>, BcastType::VEC_VEC_SCALAR>::run;    \
             MEGDNN_DISPATCH_CPU_KERN(                                              \
                     static_cast<naive::HandleImpl*>(kern_param.handle),            \
-                    run(static_cast<const _type*>(src0.raw_ptr),                   \
-                        static_cast<const _type*>(src1.raw_ptr),                   \
-                        static_cast<const _type*>(src2.raw_ptr)[0],                \
-                        static_cast<_type*>(dst.raw_ptr), src0.layout.dtype,       \
+                    run(static_cast<const _type*>(src0.raw_ptr()),                 \
+                        static_cast<const _type*>(src1.raw_ptr()),                 \
+                        static_cast<const _type*>(src2.raw_ptr())[0],              \
+                        static_cast<_type*>(dst.raw_ptr()), src0.layout.dtype,     \
                         src1.layout.dtype, src2.layout.dtype, dst.layout.dtype,    \
                         src0.layout.total_nr_elems()));                            \
         }                                                                          \
@@ -149,10 +149,10 @@ void ElemwiseImpl::AlgoTernaryFma3Bcast101VecBcast101::exec(
                             _op<_type, _type>, BcastType::BCAST101_VEC_BCAST101>::run; \
             MEGDNN_DISPATCH_CPU_KERN(                                                  \
                     static_cast<naive::HandleImpl*>(kern_param.handle),                \
-                    run(static_cast<const _type*>(src0.raw_ptr),                       \
-                        static_cast<const _type*>(src1.raw_ptr),                       \
-                        static_cast<const _type*>(src2.raw_ptr),                       \
-                        static_cast<_type*>(dst.raw_ptr), src0.layout.dtype,           \
+                    run(static_cast<const _type*>(src0.raw_ptr()),                     \
+                        static_cast<const _type*>(src1.raw_ptr()),                     \
+                        static_cast<const _type*>(src2.raw_ptr()),                     \
+                        static_cast<_type*>(dst.raw_ptr()), src0.layout.dtype,         \
                         src1.layout.dtype, src2.layout.dtype, dst.layout.dtype,        \
                         binfo.x, binfo.y, binfo.z));                                   \
         }                                                                              \
@@ -187,11 +187,11 @@ void ElemwiseImpl::AlgoTernaryFma3Bcast111CVecBcast111C::exec(
                             BcastType::BCAST111C_VEC_BCAST111C>::run;                 \
             MEGDNN_DISPATCH_CPU_KERN(                                                 \
                     static_cast<naive::HandleImpl*>(kern_param.handle),               \
-                    run(static_cast<const _type*>(src0.raw_ptr),                      \
-                        static_cast<const _type*>(src1.raw_ptr),                      \
+                    run(static_cast<const _type*>(src0.raw_ptr()),                    \
+                        static_cast<const _type*>(src1.raw_ptr()),                    \
                         is_vector(src1.layout) ? 0 : src1.layout.stride[0] - binfo.z, \
-                        static_cast<const _type*>(src2.raw_ptr),                      \
-                        static_cast<_type*>(dst.raw_ptr), src0.layout.dtype,          \
+                        static_cast<const _type*>(src2.raw_ptr()),                    \
+                        static_cast<_type*>(dst.raw_ptr()), src0.layout.dtype,        \
                         src1.layout.dtype, src2.layout.dtype, dst.layout.dtype,       \
                         binfo.x, binfo.y, binfo.z));                                  \
         }                                                                             \
@@ -228,10 +228,10 @@ void ElemwiseImpl::AlgoTernaryFma3Bcast101xXVecBcast101xX::exec(
                             BcastType::BCAST101xX_VEC_BCAST101xX>::run;             \
             MEGDNN_DISPATCH_CPU_KERN(                                               \
                     static_cast<naive::HandleImpl*>(kern_param.handle),             \
-                    run(static_cast<const _type*>(src0.raw_ptr),                    \
-                        static_cast<const _type*>(src1.raw_ptr),                    \
-                        static_cast<const _type*>(src2.raw_ptr),                    \
-                        static_cast<_type*>(dst.raw_ptr), src0.layout.dtype,        \
+                    run(static_cast<const _type*>(src0.raw_ptr()),                  \
+                        static_cast<const _type*>(src1.raw_ptr()),                  \
+                        static_cast<const _type*>(src2.raw_ptr()),                  \
+                        static_cast<_type*>(dst.raw_ptr()), src0.layout.dtype,      \
                         src1.layout.dtype, src2.layout.dtype, dst.layout.dtype,     \
                         batch_size, binfo.x, binfo.y, binfo.z));                    \
         }                                                                           \
@@ -268,10 +268,10 @@ void ElemwiseImpl::AlgoTernaryFma3VecBcast101xXVec::exec(
                             _op<_type, _type>, BcastType::VEC_BCAST101xX_VEC>::run; \
             MEGDNN_DISPATCH_CPU_KERN(                                               \
                     static_cast<naive::HandleImpl*>(kern_param.handle),             \
-                    run(static_cast<const _type*>(src0.raw_ptr),                    \
-                        static_cast<const _type*>(src1.raw_ptr),                    \
-                        static_cast<const _type*>(src2.raw_ptr),                    \
-                        static_cast<_type*>(dst.raw_ptr), src0.layout.dtype,        \
+                    run(static_cast<const _type*>(src0.raw_ptr()),                  \
+                        static_cast<const _type*>(src1.raw_ptr()),                  \
+                        static_cast<const _type*>(src2.raw_ptr()),                  \
+                        static_cast<_type*>(dst.raw_ptr()), src0.layout.dtype,      \
                         src1.layout.dtype, src2.layout.dtype, dst.layout.dtype,     \
                         batch_size, binfo.x, binfo.y, binfo.z));                    \
         }                                                                           \
@@ -306,10 +306,10 @@ void ElemwiseImpl::AlgoTernaryFma3VecBcast101Vec::exec(
                             _op<_type, _type>, BcastType::VEC_BCAST101_VEC>::run;   \
             MEGDNN_DISPATCH_CPU_KERN(                                               \
                     static_cast<naive::HandleImpl*>(kern_param.handle),             \
-                    run(static_cast<const _type*>(src0.raw_ptr),                    \
-                        static_cast<const _type*>(src1.raw_ptr),                    \
-                        static_cast<const _type*>(src2.raw_ptr),                    \
-                        static_cast<_type*>(dst.raw_ptr), src0.layout.dtype,        \
+                    run(static_cast<const _type*>(src0.raw_ptr()),                  \
+                        static_cast<const _type*>(src1.raw_ptr()),                  \
+                        static_cast<const _type*>(src2.raw_ptr()),                  \
+                        static_cast<_type*>(dst.raw_ptr()), src0.layout.dtype,      \
                         src1.layout.dtype, src2.layout.dtype, dst.layout.dtype,     \
                         binfo.x, binfo.y, binfo.z));                                \
         }                                                                           \
@@ -343,12 +343,12 @@ void ElemwiseImpl::AlgoTernaryFma3VecBcast111CVec::exec(
                             _op<_type, _type>, BcastType::VEC_BCAST111C_VEC>::run;    \
             MEGDNN_DISPATCH_CPU_KERN(                                                 \
                     static_cast<naive::HandleImpl*>(kern_param.handle),               \
-                    run(static_cast<const _type*>(src0.raw_ptr),                      \
+                    run(static_cast<const _type*>(src0.raw_ptr()),                    \
                         is_vector(src0.layout) ? 0 : src0.layout.stride[0] - binfo.z, \
-                        static_cast<const _type*>(src1.raw_ptr),                      \
-                        static_cast<const _type*>(src2.raw_ptr),                      \
+                        static_cast<const _type*>(src1.raw_ptr()),                    \
+                        static_cast<const _type*>(src2.raw_ptr()),                    \
                         is_vector(src2.layout) ? 0 : src2.layout.stride[0] - binfo.z, \
-                        static_cast<_type*>(dst.raw_ptr), src0.layout.dtype,          \
+                        static_cast<_type*>(dst.raw_ptr()), src0.layout.dtype,        \
                         src1.layout.dtype, src2.layout.dtype, dst.layout.dtype,       \
                         binfo.x, binfo.y, binfo.z));                                  \
         }                                                                             \
@@ -380,10 +380,10 @@ void ElemwiseImpl::AlgoTernaryFma3VecScalarVec::exec(
                             _op<_type, _type>, BcastType::VEC_SCALAR_VEC>::run;    \
             MEGDNN_DISPATCH_CPU_KERN(                                              \
                     static_cast<naive::HandleImpl*>(kern_param.handle),            \
-                    run(static_cast<const _type*>(src0.raw_ptr),                   \
-                        static_cast<const _type*>(src1.raw_ptr)[0],                \
-                        static_cast<const _type*>(src2.raw_ptr),                   \
-                        static_cast<_type*>(dst.raw_ptr), src0.layout.dtype,       \
+                    run(static_cast<const _type*>(src0.raw_ptr()),                 \
+                        static_cast<const _type*>(src1.raw_ptr())[0],              \
+                        static_cast<const _type*>(src2.raw_ptr()),                 \
+                        static_cast<_type*>(dst.raw_ptr()), src0.layout.dtype,     \
                         src1.layout.dtype, src2.layout.dtype, dst.layout.dtype,    \
                         src0.layout.total_nr_elems()));                            \
         }                                                                          \
@@ -414,10 +414,10 @@ void ElemwiseImpl::AlgoTernaryFma3VecScalarScalar::exec(
                             _op<_type, _type>, BcastType::VEC_SCALAR_SCALAR>::run; \
             MEGDNN_DISPATCH_CPU_KERN(                                              \
                     static_cast<naive::HandleImpl*>(kern_param.handle),            \
-                    run(static_cast<const _type*>(src0.raw_ptr),                   \
-                        static_cast<const _type*>(src1.raw_ptr)[0],                \
-                        static_cast<const _type*>(src2.raw_ptr)[0],                \
-                        static_cast<_type*>(dst.raw_ptr), src0.layout.dtype,       \
+                    run(static_cast<const _type*>(src0.raw_ptr()),                 \
+                        static_cast<const _type*>(src1.raw_ptr())[0],              \
+                        static_cast<const _type*>(src2.raw_ptr())[0],              \
+                        static_cast<_type*>(dst.raw_ptr()), src0.layout.dtype,     \
                         src1.layout.dtype, src2.layout.dtype, dst.layout.dtype,    \
                         src0.layout.total_nr_elems()));                            \
         }                                                                          \

@@ -77,11 +77,15 @@ void kern_default(const ConvBiasImpl::NCBKernParam& p) {
     auto filter_meta = *filter_meta_ptr;
     auto layouts = get_layouts(p);
 
-    TensorND src{reinterpret_cast<dt_byte*>(const_cast<void*>(p.src_ptr)), layouts[0]};
-    TensorND filter{const_cast<void*>(p.filter_ptr), layouts[1]};
-    auto bias_ptr = reinterpret_cast<dt_byte*>(const_cast<void*>(p.bias_ptr));
+    TensorND src{
+            reinterpret_cast<dt_byte*>(const_cast<void*>(p.src_ptr.get_ptr())),
+            layouts[0]};
+    TensorND filter{const_cast<void*>(p.filter_ptr.get_ptr()), layouts[1]};
+    auto bias_ptr = reinterpret_cast<dt_byte*>(const_cast<void*>(p.bias_ptr.get_ptr()));
     TensorND bias{bias_ptr, layouts[2]};
-    TensorND dst{reinterpret_cast<dt_byte*>(const_cast<void*>(p.dst_ptr)), layouts[3]};
+    TensorND dst{
+            reinterpret_cast<dt_byte*>(const_cast<void*>(p.dst_ptr.get_ptr())),
+            layouts[3]};
 
     auto sfb = dst;
     if (bias.layout.dtype.enumv() != dst.layout.dtype.enumv()) {
@@ -153,13 +157,13 @@ void kern_default(const ConvBiasImpl::NCBKernParam& p) {
             auto nonlinear = inplace_cpu_handle()->create_operator<ElemwiseForward>();
             nonlinear->param().mode = Elemwise::Param::Mode::SIGMOID;
             nonlinear->exec({res}, res);
-            if (res.raw_ptr != dst.raw_ptr) {
+            if (res.raw_ptr() != dst.raw_ptr()) {
                 inplace_cpu_handle()->create_operator<TypeCvt>()->exec(res, dst);
             }
             break;
         }
         case NonlineMode::IDENTITY: {
-            if (res.raw_ptr != dst.raw_ptr) {
+            if (res.raw_ptr() != dst.raw_ptr()) {
                 inplace_cpu_handle()->create_operator<TypeCvt>()->exec(res, dst);
             }
             break;
@@ -224,10 +228,12 @@ SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoNaive::dispatch_kerns(
             thread_param.workspace_ptr = reinterpret_cast<void*>(
                     reinterpret_cast<ptrdiff_t>(param.workspace_ptr) +
                     thread_id * workspace_per_thread);
-            thread_param.filter_ptr = param.filter<void>(group_id);
-            thread_param.dst_ptr = param.dst<void>(batch_id, group_id);
-            thread_param.src_ptr = param.src<void>(batch_id, group_id);
-            thread_param.bias_ptr = param.bias<void>(batch_id, group_id);
+
+            thread_param.filter_ptr += param.filter_offset(group_id);
+            thread_param.dst_ptr += param.dst_offset(batch_id, group_id);
+            thread_param.src_ptr += param.src_offset(batch_id, group_id);
+            thread_param.bias_ptr += param.bias_offset(batch_id, group_id);
+
             kern_default(thread_param);
         }
         MIDOUT_END();

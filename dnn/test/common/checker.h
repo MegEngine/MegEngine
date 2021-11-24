@@ -55,6 +55,12 @@ public:
 
     Handle* handle() const { return m_handle_cur; }
 
+    CheckerHelper() {
+        auto tmp_handle = create_cpu_handle(2, false);
+        m_handle_naive = std::move(tmp_handle);
+        m_default_rng = std::unique_ptr<RNG>(new NormalRNG());
+    }
+
 protected:
     //! whether to use physically contiguous (i.e. default layout) for naive
     //! impl
@@ -111,12 +117,13 @@ protected:
     void copy_tensors_from_device(
             const TensorValueArray& dest, const TensorValueArray& src);
 
+    void check_tensors(
+            const TensorValueArray& expected, const TensorValueArray& computed);
+
 private:
     std::shared_ptr<TensorValueArray> m_tensors_naive;
 
     void init_naive_values();
-    void check_tensors(
-            const TensorValueArray& expected, const TensorValueArray& computed);
 };
 
 template <typename Opr, typename Proxy = OprProxy<Opr>>
@@ -439,9 +446,9 @@ Checker<Opr, Proxy>& Checker<Opr, Proxy>::exect(
 template <typename T, typename U>
 TensorND TensorValue(
         const TensorShape& shape, T dtype, std::initializer_list<U> values) {
-    TensorND tensor;
-    tensor.layout = {shape, dtype};
-    tensor.raw_ptr = static_cast<dt_byte*>(malloc(tensor.layout.span().dist_byte()));
+    TensorLayout layout{shape, dtype};
+    auto buf = static_cast<dt_byte*>(malloc(layout.span().dist_byte()));
+    TensorND tensor{buf, layout};
     megdnn_assert(
             values.size() == tensor.layout.total_nr_elems(), "%zu == %zu",
             values.size(), tensor.layout.total_nr_elems());
@@ -454,12 +461,11 @@ TensorND TensorValue(
 
 template <typename T, typename U>
 TensorND TensorValueLowbit4(const TensorShape& shape, T dtype, std::vector<U> values) {
-    TensorND tensor;
-    tensor.layout = {shape, dtype};
-    tensor.raw_ptr = static_cast<dt_byte*>(malloc(tensor.layout.span().dist_byte()));
+    TensorLayout layout{shape, dtype};
+    auto buf = static_cast<dt_byte*>(malloc(layout.span().dist_byte()));
+    TensorND tensor{buf, layout};
     megdnn_assert(values.size() == tensor.layout.total_nr_elems());
     auto ptr = tensor.ptr<typename DTypeTrait<T>::ctype>();
-    auto layout = tensor.layout;
     auto dim_in = shape[layout.ndim - 1];
     auto elems = tensor.layout.total_nr_elems();
     auto dim_out = elems / dim_in;
@@ -489,8 +495,8 @@ public:
     ~Testcase() {
         // Suicide
         for (const auto& tensor : *this) {
-            if (tensor.raw_ptr) {
-                free(tensor.raw_ptr);
+            if (tensor.raw_ptr()) {
+                free(tensor.raw_ptr());
             }
         }
     }

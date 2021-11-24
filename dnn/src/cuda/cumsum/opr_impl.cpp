@@ -12,7 +12,7 @@
 #include "./opr_impl.h"
 #include "./kern.cuh"
 
-#include "src/common/reduce_helper.h"
+#include "src/common/reduce_helper_device.h"
 #include "src/cuda/utils.h"
 
 using namespace megdnn;

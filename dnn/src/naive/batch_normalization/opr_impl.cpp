@@ -77,8 +77,7 @@ void bn_forward_exec(
 
     if (param.fwd_mode == param::BN::FwdMode::TRAINING) {
         // Calculate the means of this batch (Mu)
-        memset(batch_mean.raw_ptr, 0,
-               batch_mean.layout.total_nr_elems() * sizeof(float));
+        memset(batch_mean_p, 0, batch_mean.layout.total_nr_elems() * sizeof(float));
         rep_4d(src_shape, dim_offset) batch_mean_p[param_pos] += src_p[src_pos];
         rep_4d_end
 
@@ -91,7 +90,7 @@ void bn_forward_exec(
         }
 
         // Calculate the variances of this batch (Sigma)
-        memset(batch_inv_variance.raw_ptr, 0,
+        memset(batch_inv_variance_p, 0,
                batch_inv_variance.layout.total_nr_elems() * sizeof(float));
         rep_4d(src_shape, dim_offset) sigma_p =
                 src_p[src_pos] - batch_mean_p[param_pos];

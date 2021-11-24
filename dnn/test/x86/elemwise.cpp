@@ -12,6 +12,7 @@
 #include "megdnn/oprs.h"
 #include "test/common/checker.h"
 #include "test/common/rng.h"
+#include "test/common/task_record_check.h"
 #include "test/x86/fixture.h"
 
 using namespace megdnn;
@@ -224,6 +225,61 @@ class X86_ELEMWISE : public X86 {};
 TYPED_TEST_CASE(X86_ELEMWISE, elemwise::test_types);
 TYPED_TEST(X86_ELEMWISE, run) {
     elemwise::run_test<TypeParam>(this->handle());
+}
+#undef UNARY_TEST_CASE
+#undef BUILD_UNARY_TEST_CASE_FLOAT
+
+#define UNARY_TEST_CASE(_optr) checker.set_param(Mode::_optr).execs({{1, 155}, {}});
+
+#define BUILD_UNARY_TEST_CASE_FLOAT UNARY_TEST_CASE(ABS)
+
+TEST_F(X86, ELEMWISE_UNARY_RECORD) {
+    using Mode = ElemwiseForward::Param::Mode;
+    TaskRecordChecker<ElemwiseForward> checker(0);
+    // case float
+    UniformFloatRNG rng(1e-2, 6e1);
+    checker.set_rng(0, &rng);
+    checker.set_epsilon(1e-6);
+    checker.set_dtype(0, dtype::Float32());
+    BUILD_UNARY_TEST_CASE_FLOAT
+}
+
+#undef BINARY_COMPLATE_TEST_CASE
+#undef BUILD_BINARY_COMPLATE_TEST_CASE_FLOAT32
+
+#define BINARY_COMPLATE_TEST_CASE(_optr) \
+    checker.set_param(Mode::_optr).execs({{3, 4, 7}, {3, 4, 7}, {}});
+
+#define BUILD_BINARY_COMPLATE_TEST_CASE_FLOAT32 BINARY_COMPLATE_TEST_CASE(ADD)
+
+TEST_F(X86, ELEMWISE_BINARY_RECORD) {
+    using Mode = ElemwiseForward::Param::Mode;
+    TaskRecordChecker<ElemwiseForward> checker(0);
+
+    // case float
+    UniformFloatRNG rng(1e-5, 7e1);
+    checker.set_rng(0, &rng);
+    checker.set_epsilon(1e-5);
+    checker.set_dtype(0, dtype::Float32());
+    checker.set_dtype(1, dtype::Float32());
+    BUILD_BINARY_COMPLATE_TEST_CASE_FLOAT32
+}
+#undef TERNARY_COMPLATE_TEST_CASE
+#undef BUILD_TERNARY_COMPLATE_TEST_CASE
+#define TERNARY_COMPLATE_TEST_CASE(_optr) \
+    checker.set_param(Mode::_optr).execs({{3, 4, 7}, {3, 4, 7}, {3, 4, 7}, {}});
+
+#define BUILD_TERNARY_COMPLATE_TEST_CASE TERNARY_COMPLATE_TEST_CASE(FUSE_MUL_ADD3)
+
+TEST_F(X86, ELEMWISE_TERNARY_RECORD) {
+    using Mode = ElemwiseForward::Param::Mode;
+    TaskRecordChecker<ElemwiseForward> checker(0);
+    // case int
+    checker.set_dtype(0, dtype::Int8());
+    checker.set_dtype(1, dtype::Int8());
+    checker.set_dtype(2, dtype::Int8());
+    // BUILD_TERNARY_TEST_CASE
+    BUILD_TERNARY_COMPLATE_TEST_CASE
 }
 
 // vim: syntax=cpp.doxygen

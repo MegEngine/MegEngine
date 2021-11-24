@@ -130,6 +130,7 @@ std::vector<TestArg> get_cv_args();
 
 void run_mat_idx_test(Handle* handle);
 void run_int8_test(Handle* handle);
+void run_int8_test_record(int debug_level);
 void run_quint8_test(Handle* handle);
 
 }  // namespace warp_perspective

@@ -27,12 +27,16 @@ public:
         InterpolationMode imode;
         size_t n, c, ih, iw, oh, ow;
         ptrdiff_t s_in, s_ic, s_ih, s_iw;
-        ctype *sptr, *dptr;
+        RefPtr sptr, dptr;
         Workspace workspace;
 
         static KernParam from_tensors(
                 Format format, InterpolationMode imode, _megdnn_tensor_in src,
                 _megdnn_tensor_out dst, _megdnn_workspace workspace);
+
+        const ctype* src() const { return static_cast<const ctype*>(sptr.get_ptr()); }
+
+        ctype* dst() const { return static_cast<ctype*>(dptr.get_ptr()); }
     };
 
     using Resize::Resize;
@@ -66,8 +70,8 @@ private:
 
 #define UNPACK_RESIZE_FWD_KERN_PARAM(p)                                \
     auto N = p.n, C = p.c, IH = p.ih, IW = p.iw, OH = p.oh, OW = p.ow; \
-    ctype* __restrict sptr = p.sptr;                                   \
-    ctype* __restrict dptr = p.dptr;
+    ctype* __restrict sptr = static_cast<ctype*>(p.sptr.get_ptr());    \
+    ctype* __restrict dptr = static_cast<ctype*>(p.dptr.get_ptr());
 
 #define UNPACK_RESIZE_FWD_KERN_PARAM_WITH_STRIDE(p) \
     UNPACK_RESIZE_FWD_KERN_PARAM(p)                 \

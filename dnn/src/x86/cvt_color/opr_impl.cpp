@@ -1833,12 +1833,11 @@ void cvt_bt601_yuv<uchar>(
 
 template <typename T>
 void CvtColorImpl::cvt_color_exec(
-        _megdnn_tensor_in src_tensor, _megdnn_tensor_out dst_tensor) {
-    auto mode = param().mode;
+        _megdnn_tensor_in src_tensor, _megdnn_tensor_out dst_tensor, Param::Mode mode) {
     for (size_t i = 0; i < src_tensor.layout.shape[0]; ++i) {
         Mat<T> src = TensorND2Mat<T>(src_tensor, i);
         Mat<T> dst = TensorND2Mat<T>(dst_tensor, i);
-        switch (param().mode) {
+        switch (mode) {
             case Param::Mode::RGB2GRAY:
                 cvt_rgb2gray<T>(src, dst);
                 break;
@@ -1926,11 +1925,12 @@ void CvtColorImpl::exec(
         naive::CvtColorImpl::exec(src, dst, workspace);
         return;
     }
+    auto mode = this->param().mode;
     MEGDNN_DISPATCH_CPU_KERN_OPR(
             if (dst.layout.dtype == dtype::Float32()) {
-                cvt_color_exec<float>(src, dst);
+                cvt_color_exec<float>(src, dst, mode);
             } else if (dst.layout.dtype == dtype::Uint8()) {
-                cvt_color_exec<uchar>(src, dst);
+                cvt_color_exec<uchar>(src, dst, mode);
             } else { megdnn_throw("Unsupported datatype of CvtColor optr."); });
 }
 

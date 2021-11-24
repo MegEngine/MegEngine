@@ -68,9 +68,9 @@ void ConvolutionBackwardDataImpl::AlgoChanwiseSmall::exec(const ExecArgs& args) 
 #if CUDA_VERSION >= 9000
         case DTypeEnum::Float16:
             return chanwise::run_bwd_data_small(
-                    static_cast<half*>(args.grad_tensor->raw_ptr),
-                    static_cast<half*>(args.diff_tensor->raw_ptr),
-                    static_cast<half*>(args.filter_tensor->raw_ptr), kparam, stream);
+                    static_cast<half*>(args.grad_tensor->raw_ptr()),
+                    static_cast<half*>(args.diff_tensor->raw_ptr()),
+                    static_cast<half*>(args.filter_tensor->raw_ptr()), kparam, stream);
 #endif
         default:
             break;

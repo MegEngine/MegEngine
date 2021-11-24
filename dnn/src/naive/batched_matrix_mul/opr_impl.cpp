@@ -34,35 +34,37 @@ void BatchedMatrixMulForwardImpl::exec(
 
     m_opr->param() = this->param();
     auto N = A.layout.shape[0];
-    TensorND A_, B_, C_;
-    A_.raw_ptr = A.raw_ptr;
-    A_.layout = A.layout.remove_axis(0);
-    B_.raw_ptr = B.raw_ptr;
-    B_.layout = B.layout.remove_axis(0);
-    C_.raw_ptr = C.raw_ptr;
-    C_.layout = C.layout.remove_axis(0);
 
     auto Astrd = A.layout.dtype.size() * A.layout.stride[0],
          Bstrd = B.layout.dtype.size() * B.layout.stride[0],
          Cstrd = C.layout.dtype.size() * C.layout.stride[0];
 
-    auto advance_ptr = [](TensorND& dest, ptrdiff_t d) {
-        dest.raw_ptr = static_cast<void*>(static_cast<dt_byte*>(dest.raw_ptr) + d);
-    };
+    auto Aref = A.get_ref_ptr();
+    auto Bref = B.get_ref_ptr();
+    auto Cref = C.get_ref_ptr();
 
     rep(n, N) {
+        //! all tensors should share the same RefPtr
+        auto A_ref = Aref;
+        A_ref += n * Astrd;
+        auto B_ref = Bref;
+        B_ref += n * Bstrd;
+        auto C_ref = Cref;
+        C_ref += n * Cstrd;
+        TensorND A_{A.layout.remove_axis(0), A_ref};
+        TensorND B_{B.layout.remove_axis(0), B_ref};
+        TensorND C_{C.layout.remove_axis(0), C_ref};
         m_opr->exec(A_, B_, C_, workspace);
-        advance_ptr(A_, Astrd);
-        advance_ptr(B_, Bstrd);
-        advance_ptr(C_, Cstrd);
     }
 }
+
 std::vector<BatchedMatrixMulForward::Algorithm*> BatchedMatrixMulForwardImpl::
         get_all_algorithms(
                 const TensorLayout& /*A*/, const TensorLayout& /*B*/,
                 const TensorLayout& /*C*/) {
     return {static_cast<HandleImpl*>(handle())->default_batched_matmul_fwd_algo()};
 }
+
 std::vector<BatchedMatrixMulForward::Algorithm*> BatchedMatrixMulForwardImpl::
         get_all_algorithms_safe(
                 const TensorLayout& /*A*/, const TensorLayout& /*B*/,

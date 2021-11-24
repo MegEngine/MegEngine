@@ -136,10 +136,10 @@ void armv7::RelayoutForwardImpl::exec(
     relayout::TransposeParam trans_param;
     bool trans = relayout::is_transpose(src.layout, dst.layout, trans_param);
     if (trans && trans_param.c == 1 && src0.layout.dtype.size() == 1) {
-        auto sptr = static_cast<TransposeByte*>(src.raw_ptr),
-             dptr = static_cast<TransposeByte*>(dst.raw_ptr);
         MEGDNN_DISPATCH_CPU_KERN_OPR(transpose_fallback::transpose<TransposeByte>(
-                trans_param.batch, trans_param.m, trans_param.n, sptr, dptr));
+                trans_param.batch, trans_param.m, trans_param.n,
+                static_cast<TransposeByte*>(src.raw_ptr()),
+                static_cast<TransposeByte*>(dst.raw_ptr())));
         return;
     }
     exec_after_preprocess(src, dst, trans ? &trans_param : nullptr);

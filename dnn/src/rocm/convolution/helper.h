@@ -68,7 +68,7 @@ WorkspaceBundle matmul_get_workspace_bundle(const ForwardSizeArgs& args);
  * change \p raw_ptr to workspace.
  * */
 void flip_filter(
-        const ForwardSizeArgs& args, const Workspace& workspace, void*& raw_ptr);
+        const ForwardSizeArgs& args, const Workspace& workspace, RefPtr& ref_ptr);
 
 struct MIOpenForwardDescs {
     TensorDesc src_desc, filter_desc, dst_desc;

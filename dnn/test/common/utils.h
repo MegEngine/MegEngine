@@ -171,9 +171,6 @@ public:
     ~CpuDispatchChecker() {
         if (!std::uncaught_exception()) {
             megdnn_assert(!m_recursive_dispatch);
-#if !MEGDNN_NO_THREAD
-            megdnn_assert(m_nr_call && "cpu dispatch must be called");
-#endif
         } else {
             if (m_recursive_dispatch) {
                 fprintf(stderr,

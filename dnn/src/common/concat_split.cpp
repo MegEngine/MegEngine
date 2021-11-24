@@ -38,10 +38,9 @@ void ConcatSplitBase::check_layout_common(
         megdnn_assert_eq_size_t(src.ndim, ndim);
     }
     // ensure param().axis is correct
-    auto errmsg = "param().axis=" + std::to_string(param().axis) +
-                  ", ndim=" + std::to_string(ndim);
-    MEGDNN_MARK_USED_VAR(errmsg);
-    megdnn_assert(param().axis < static_cast<int32_t>(ndim), "%s", errmsg.c_str());
+    megdnn_assert(
+            param().axis < static_cast<int32_t>(ndim), "param().axis=%u, ndim=%zu",
+            param().axis, ndim);
     // ensure shape size for each axis is correct
     for (size_t i = 0; i < ndim; ++i) {
         if (i == static_cast<size_t>(param().axis)) {

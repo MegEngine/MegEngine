@@ -31,17 +31,18 @@ void ElemwiseImpl::unary_kern(const ElemwiseOpParamN<1>& param) {
     using ctype = typename DTypeTrait<dtype>::ctype;
     using Kern = ElemwiseKern<megcorePlatformCPU, mode, ctype>;
     MIDOUT_BEGIN(megdnn_fallback_elemwise_unary, ctype, midout_iv(mode)) {
-        ctype* __restrict src = param[0].ptr<ctype>();
-        ctype* __restrict dst = m_dst->ptr<ctype>();
-
         // only specialize for the most common 1-dim case
+        auto tot = param.size;
+        auto stride = param[0].layout.stride[0];
+        auto src0 = param[0];
+        auto dst_tensor = *m_dst;
         if (param.max_ndim == 1) {
             MIDOUT_BEGIN(
                     megdnn_fallback_elemwise_unary, ctype, midout_iv(mode),
                     midout_iv(1)) {
-                auto tot = param.size;
-                auto stride = param[0].layout.stride[0];
                 MEGDNN_DISPATCH_CPU_KERN_OPR({
+                    ctype* __restrict src = static_cast<ctype*>(src0.raw_ptr());
+                    ctype* __restrict dst = static_cast<ctype*>(dst_tensor.raw_ptr());
                     for (size_t i = 0; i < tot; ++i) {
                         dst[i] = Kern::apply(src[i * stride]);
                     }
@@ -61,17 +62,20 @@ void ElemwiseImpl::binary_kern(const ElemwiseOpParamN<2>& param) {
     using Kern = ElemwiseKern<megcorePlatformCPU, mode, ctype>;
 
     MIDOUT_BEGIN(megdnn_fallback_elemwise_binary, ctype, midout_iv(mode)) {
-        ctype* __restrict a = param[0].ptr<ctype>();
-        ctype* __restrict b = param[1].ptr<ctype>();
-        ctype* __restrict dst = m_dst->ptr<ctype>();
-
         if (param.max_ndim == 1) {
             MIDOUT_BEGIN(
                     megdnn_fallback_elemwise_binary, ctype, midout_iv(mode),
                     midout_iv(1)) {
                 auto tot = param.size;
                 auto as = param[0].layout.stride[0], bs = param[1].layout.stride[0];
+                auto src0 = param[0];
+                auto src1 = param[1];
+                auto dst_tensor = *m_dst;
+
                 MEGDNN_DISPATCH_CPU_KERN_OPR({
+                    ctype* __restrict a = static_cast<ctype*>(src0.raw_ptr());
+                    ctype* __restrict b = static_cast<ctype*>(src1.raw_ptr());
+                    ctype* __restrict dst = static_cast<ctype*>(dst_tensor.raw_ptr());
                     for (size_t i = 0; i < tot; ++i) {
                         dst[i] = Kern::apply(a[i * as], b[i * bs]);
                     }
@@ -94,7 +98,15 @@ void ElemwiseImpl::binary_kern(const ElemwiseOpParamN<2>& param) {
                          bs0 = param[1].layout.stride[0],
                          bs1 = param[1].layout.stride[1];
                     auto n0 = param[1].layout.shape[0], n1 = param[1].layout.shape[1];
+                    auto src0 = param[0];
+                    auto src1 = param[1];
+                    auto dst_tensor = *m_dst;
+
                     MEGDNN_DISPATCH_CPU_KERN_OPR({
+                        ctype* __restrict a = static_cast<ctype*>(src0.raw_ptr());
+                        ctype* __restrict b = static_cast<ctype*>(src1.raw_ptr());
+                        ctype* __restrict dst =
+                                static_cast<ctype*>(dst_tensor.raw_ptr());
                         ptrdiff_t toff = 0;
                         for (size_t i = 0; i < n0; ++i) {
                             for (size_t j = 0; j < n1; ++j) {
@@ -116,8 +128,14 @@ void ElemwiseImpl::binary_kern(const ElemwiseOpParamN<2>& param) {
                 auto bs = param[1].layout.stride[0], as0 = param[0].layout.stride[0],
                      as1 = param[0].layout.stride[1];
                 auto n0 = param[0].layout.shape[0], n1 = param[0].layout.shape[1];
+                auto src0 = param[0];
+                auto src1 = param[1];
+                auto dst_tensor = *m_dst;
 
                 MEGDNN_DISPATCH_CPU_KERN_OPR({
+                    ctype* __restrict a = static_cast<ctype*>(src0.raw_ptr());
+                    ctype* __restrict b = static_cast<ctype*>(src1.raw_ptr());
+                    ctype* __restrict dst = static_cast<ctype*>(dst_tensor.raw_ptr());
                     ptrdiff_t toff = 0;
                     for (size_t i = 0; i < n0; ++i) {
                         for (size_t j = 0; j < n1; ++j) {
@@ -143,7 +161,15 @@ void ElemwiseImpl::binary_kern(const ElemwiseOpParamN<2>& param) {
                     auto as = param[0].layout.stride[0], bs = param[1].layout.stride[1];
                     auto n0 = param[1].layout.shape[0], n1 = param[1].layout.shape[1],
                          n2 = param[1].layout.shape[2];
+                    auto src0 = param[0];
+                    auto src1 = param[1];
+                    auto dst_tensor = *m_dst;
+
                     MEGDNN_DISPATCH_CPU_KERN_OPR({
+                        ctype* __restrict a = static_cast<ctype*>(src0.raw_ptr());
+                        ctype* __restrict b = static_cast<ctype*>(src1.raw_ptr());
+                        ctype* __restrict dst =
+                                static_cast<ctype*>(dst_tensor.raw_ptr());
                         size_t toff = 0;
                         for (size_t i = 0; i < n0; ++i) {
                             for (size_t j = 0; j < n1; ++j) {
@@ -165,7 +191,14 @@ void ElemwiseImpl::binary_kern(const ElemwiseOpParamN<2>& param) {
                     auto as = param[0].layout.stride[1], bs = param[1].layout.stride[0];
                     auto n0 = param[0].layout.shape[0], n1 = param[0].layout.shape[1],
                          n2 = param[0].layout.shape[2];
+                    auto src0 = param[0];
+                    auto src1 = param[1];
+                    auto dst_tensor = *m_dst;
                     MEGDNN_DISPATCH_CPU_KERN_OPR({
+                        ctype* __restrict a = static_cast<ctype*>(src0.raw_ptr());
+                        ctype* __restrict b = static_cast<ctype*>(src1.raw_ptr());
+                        ctype* __restrict dst =
+                                static_cast<ctype*>(dst_tensor.raw_ptr());
                         size_t toff = 0;
                         for (size_t i = 0; i < n0; ++i) {
                             for (size_t j = 0; j < n1; ++j) {
@@ -188,8 +221,9 @@ void ElemwiseImpl::binary_kern(const ElemwiseOpParamN<2>& param) {
 }
 
 void ElemwiseImpl::exec(const TensorNDArray& srcs, _megdnn_tensor_out dst) {
-    if (!dst.layout.is_contiguous())
+    if (!dst.layout.is_contiguous()) {
         return naive::ElemwiseForwardImpl::exec(srcs, dst);
+    }
 
     m_src = &srcs;
     m_dst = &dst;

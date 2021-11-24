@@ -116,9 +116,11 @@ struct remap_func_holder<uint8_t, bmode> {
         using namespace megcv;
 
         Mat<float> kx_(
-                1, filter_x.layout.shape[3], 1, static_cast<float*>(filter_x.raw_ptr));
+                1, filter_x.layout.shape[3], 1,
+                static_cast<float*>(filter_x.raw_ptr()));
         Mat<float> ky_(
-                1, filter_y.layout.shape[3], 1, static_cast<float*>(filter_y.raw_ptr));
+                1, filter_y.layout.shape[3], 1,
+                static_cast<float*>(filter_y.raw_ptr()));
 
         uint32_t kernel_height = ky_.width();
         uint32_t kernel_width = kx_.width();
@@ -160,10 +162,10 @@ struct remap_func_holder<uint8_t, bmode> {
 };
 
 template <typename T>
-void SeparableFilterForwardImpl::exec_internal(
+void exec_internal(
         _megdnn_tensor_in src, _megdnn_tensor_in kx, _megdnn_tensor_in ky,
-        _megdnn_tensor_out dst) {
-    switch (param().borderMode) {
+        _megdnn_tensor_out dst, const param::WarpPerspective::BorderMode& mode) {
+    switch (mode) {
 #define cb(bmode)                                                                \
     case param::WarpPerspective::BorderMode::bmode:                              \
         return remap_func_holder<T, param::WarpPerspective::BorderMode::bmode>:: \
@@ -187,12 +189,12 @@ void SeparableFilterForwardImpl::exec(
     check_exec(
             src.layout, filter_x.layout, filter_y.layout, dst.layout, workspace.size);
 
-#define cb(dt)                                                       \
-    if (src.layout.dtype == dt()) {                                  \
-        using ctype = typename DTypeTrait<dt>::ctype;                \
-        MEGDNN_DISPATCH_CPU_KERN_OPR(                                \
-                exec_internal<ctype>(src, filter_x, filter_y, dst)); \
-        return;                                                      \
+#define cb(dt)                                                      \
+    if (src.layout.dtype == dt()) {                                 \
+        using ctype = typename DTypeTrait<dt>::ctype;               \
+        MEGDNN_DISPATCH_CPU_KERN_OPR(exec_internal<ctype>(          \
+                src, filter_x, filter_y, dst, param().borderMode)); \
+        return;                                                     \
     }
     cb(dtype::Uint8);
     cb(dtype::Float32);

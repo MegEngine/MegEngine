@@ -231,7 +231,7 @@ void ConvBiasForwardImpl::AlgoCUDNNConvBiasActivation::exec(
 
     auto workspace_ptr = args.workspace.raw_ptr;
     auto workspace_size = args.workspace.size;
-    auto bias_ptr = args.bias_tensor->raw_ptr;
+    auto bias_ptr = args.bias_tensor->raw_ptr();
     if (args.bias_layout && args.bias_layout->dtype != dtype::Float32() &&
         args.src_layout->dtype.category() != DTypeCategory::FLOAT) {
         auto cvt = args.handle->create_operator<TypeCvt>();
@@ -242,7 +242,7 @@ void ConvBiasForwardImpl::AlgoCUDNNConvBiasActivation::exec(
         auto bias_size_in_bytes = float_bias_layout.span().dist_byte();
         megdnn_assert(args.workspace.size >= bias_size_in_bytes);
         cvt->exec(
-                {args.bias_tensor->raw_ptr, converted_bias_layout},
+                {args.bias_tensor->raw_ptr(), converted_bias_layout},
                 TensorND{workspace_ptr, float_bias_layout});
 
         bias_ptr = workspace_ptr;
@@ -254,19 +254,19 @@ void ConvBiasForwardImpl::AlgoCUDNNConvBiasActivation::exec(
     if (args.z_layout->ndim == 0) {
         status = cudnnConvolutionBiasActivationForward(
                 args.handle->cudnn_handle(), &alpha, D.src_desc.desc,
-                args.src_tensor->raw_ptr, D.filter_desc.desc,
-                args.filter_tensor->raw_ptr, D.conv_desc.conv_desc, m_cudnn_enum,
+                args.src_tensor->raw_ptr(), D.filter_desc.desc,
+                args.filter_tensor->raw_ptr(), D.conv_desc.conv_desc, m_cudnn_enum,
                 workspace_ptr, workspace_size, &beta, D.dst_desc.desc,
-                args.dst_tensor->raw_ptr, D.bias_desc.desc, bias_ptr,
-                D.conv_desc.act_desc, D.dst_desc.desc, args.dst_tensor->raw_ptr);
+                args.dst_tensor->raw_ptr(), D.bias_desc.desc, bias_ptr,
+                D.conv_desc.act_desc, D.dst_desc.desc, args.dst_tensor->raw_ptr());
     } else {
         status = cudnnConvolutionBiasActivationForward(
                 args.handle->cudnn_handle(), &alpha, D.src_desc.desc,
-                args.src_tensor->raw_ptr, D.filter_desc.desc,
-                args.filter_tensor->raw_ptr, D.conv_desc.conv_desc, m_cudnn_enum,
+                args.src_tensor->raw_ptr(), D.filter_desc.desc,
+                args.filter_tensor->raw_ptr(), D.conv_desc.conv_desc, m_cudnn_enum,
                 workspace_ptr, workspace_size, &beta, D.z_desc.desc,
-                args.z_tensor->raw_ptr, D.bias_desc.desc, bias_ptr,
-                D.conv_desc.act_desc, D.dst_desc.desc, args.dst_tensor->raw_ptr);
+                args.z_tensor->raw_ptr(), D.bias_desc.desc, bias_ptr,
+                D.conv_desc.act_desc, D.dst_desc.desc, args.dst_tensor->raw_ptr());
     }
 
     megdnn_assert(

@@ -174,9 +174,9 @@ float BenchmarkerBase<Opr, T>::exec(TensorLayoutArray layouts) {
         auto trans_func = [handle](const TensorLayout& layout) {
             auto span = layout.span();
             TensorND res;
-            res.raw_ptr =
+            res.reset_ptr(
                     static_cast<uint8_t*>(megdnn_malloc(handle, span.dist_byte())) +
-                    span.low_byte;
+                    span.low_byte);
             res.layout = layout;
             return res;
         };
@@ -201,7 +201,7 @@ float BenchmarkerBase<Opr, T>::exec(TensorLayoutArray layouts) {
         if (tensor.layout.ndim == 0)
             continue;
         auto size = tensor.layout.span().high_byte;
-        megdnn_memcpy_H2D(m_handle, tensors_cur[i].raw_ptr, tensor.raw_ptr, size);
+        megdnn_memcpy_H2D(m_handle, tensors_cur[i].raw_ptr(), tensor.raw_ptr(), size);
     }
     if (m_before_exec_callback) {
         m_before_exec_callback(opr, tensors_cur);
@@ -244,7 +244,7 @@ float BenchmarkerBase<Opr, T>::exec(TensorLayoutArray layouts) {
     }
     auto free = [](Handle* handle, TensorNDArray& tensors) {
         std::for_each(tensors.begin(), tensors.end(), [handle](const TensorND& tensor) {
-            megdnn_free(handle, tensor.raw_ptr);
+            megdnn_free(handle, tensor.raw_ptr());
         });
     };
     free(m_handle, tensors_cur);
@@ -282,9 +282,9 @@ float BenchmarkerBase<Opr, T>::exect(const TensorValueArray& testcase_in) {
         auto trans_func = [handle](const TensorLayout& layout) {
             auto span = layout.span();
             TensorND res;
-            res.raw_ptr =
+            res.reset_ptr(
                     static_cast<uint8_t*>(megdnn_malloc(handle, span.dist_byte())) +
-                    span.low_byte;
+                    span.low_byte);
             res.layout = layout;
             return res;
         };
@@ -298,7 +298,7 @@ float BenchmarkerBase<Opr, T>::exect(const TensorValueArray& testcase_in) {
         auto size = tensor.layout.span().high_byte;
         if (tensor.layout.ndim == 0)
             continue;
-        megdnn_memcpy_H2D(m_handle, tensors_cur[i].raw_ptr, tensor.raw_ptr, size);
+        megdnn_memcpy_H2D(m_handle, tensors_cur[i].raw_ptr(), tensor.raw_ptr(), size);
     }
     if (m_before_exec_callback) {
         m_before_exec_callback(opr, tensors_cur);
@@ -341,7 +341,7 @@ float BenchmarkerBase<Opr, T>::exect(const TensorValueArray& testcase_in) {
     }
     auto free = [](Handle* handle, TensorNDArray& tensors) {
         std::for_each(tensors.begin(), tensors.end(), [handle](const TensorND& tensor) {
-            megdnn_free(handle, tensor.raw_ptr);
+            megdnn_free(handle, tensor.raw_ptr());
         });
     };
     free(m_handle, tensors_cur);

@@ -123,5 +123,3 @@ size_t TopKImpl::get_workspace_in_bytes(
     MEGDNN_MARK_USED_VAR(indices);
     return std::max(sizeof(uint32_t), data.dtype.size()) * 2 * data[1];
 }
-
-// vim: syntax=cpp.doxygen

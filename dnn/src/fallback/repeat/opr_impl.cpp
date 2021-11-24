@@ -33,7 +33,7 @@ void RepeatImpl::exec(
     auto nr_reduces = count_not_ones_in_shape(times);
     if (nr_reduces == 0) {
         MEGDNN_DISPATCH_CPU_KERN_OPR(std::memcpy(
-                dst_.raw_ptr, src_.raw_ptr, sizeof(float) * dst.total_nr_elems()));
+                dst_.raw_ptr(), src_.raw_ptr(), sizeof(float) * dst.total_nr_elems()));
         return;
     }
 

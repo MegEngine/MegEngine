@@ -114,7 +114,7 @@ SmallVector<TensorLayout> ConvBiasForwardImpl::AlgoInt8NHWCIMMAImplicitGemm::
 
 void ConvBiasForwardImpl::AlgoInt8NHWCIMMAImplicitGemm::exec_preprocess(
         const ExecArgs& args) const {
-    void* filter_ptr = args.preprocessed_filter->tensors[0].raw_ptr;
+    void* filter_ptr = args.preprocessed_filter->tensors[0].raw_ptr();
     reorder_filter(args, m_algo_param.access_size, filter_ptr);
 }
 
@@ -189,15 +189,15 @@ void ConvBiasForwardImpl::AlgoInt8NHWCIMMAImplicitGemm::exec(
     void* z_ptr = nullptr;
 
     if (args.preprocessed_filter) {
-        filter_ptr = args.preprocessed_filter->tensors[0].raw_ptr;
+        filter_ptr = args.preprocessed_filter->tensors[0].raw_ptr();
     } else {
         filter_ptr = reinterpret_cast<void*>(args.workspace.raw_ptr);
         reorder_filter(args, m_algo_param.access_size, filter_ptr);
     }
-    bias_ptr = args.bias_tensor->raw_ptr;
+    bias_ptr = args.bias_tensor->raw_ptr();
 
     if (args.z_layout->ndim > 0)
-        z_ptr = args.z_tensor->raw_ptr;
+        z_ptr = args.z_tensor->raw_ptr();
 
     // \note these constants of cutlass epilogue will be passed to method
     // `execute_cutlass_conv_op` by pointer and interpreted as ElementCompute*,
@@ -233,8 +233,8 @@ void ConvBiasForwardImpl::AlgoInt8NHWCIMMAImplicitGemm::exec(
             use_conv_filter_unity_opt, without_shared_load);
 
     execute_cutlass_conv_op(
-            op, args.src_tensor->raw_ptr, filter_ptr, bias_ptr, z_ptr,
-            args.dst_tensor->raw_ptr, nullptr, n, hi, wi, ci, co, fh, fw, ho, wo, ph,
+            op, args.src_tensor->raw_ptr(), filter_ptr, bias_ptr, z_ptr,
+            args.dst_tensor->raw_ptr(), nullptr, n, hi, wi, ci, co, fh, fw, ho, wo, ph,
             pw, sh, sw, dh, dw, &alpha, &beta, &gamma, &delta, &theta, &threshold,
             &dst_scale, stream);
 
@@ -272,7 +272,7 @@ void ConvBiasForwardImpl::AlgoInt8NHWCIMMAImplicitGemm::reorder_filter(
 
     cutlass_wrapper::reorder_nhwc_imma_filter<8>(
             reinterpret_cast<int8_t*>(reordered_filter),
-            reinterpret_cast<int8_t*>(args.filter_tensor->raw_ptr), co, ci, fh, fw,
+            reinterpret_cast<int8_t*>(args.filter_tensor->raw_ptr()), co, ci, fh, fw,
             trans_oc, alignbits, oc_iterleaved, stream);
 }
 #endif

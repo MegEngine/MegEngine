@@ -355,7 +355,7 @@ template void typecvt_kern_n2q<dtype::Int8, dtype::QuantizedS8>(
         megdnn_assert(DTypeTrait<ctype_dest>::enumv == dest.layout.dtype.enumv().ev); \
         using dst_storage = typename VectTypeTrait<ctype_dest>::Storage;              \
         Op op;                                                                        \
-        op.dest = reinterpret_cast<dst_storage*>(dest.raw_ptr);                       \
+        op.dest = reinterpret_cast<dst_storage*>(dest.raw_ptr());                     \
         body;                                                                         \
         run_elemwise<Op, ctype_src, ctype_dest, 1>(param_src, param_dst, stream, op); \
         return;                                                                       \

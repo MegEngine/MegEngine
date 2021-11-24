@@ -16,9 +16,9 @@
 #include "test/common/benchmarker.h"
 #include "test/common/checker.h"
 #include "test/common/roi_copy.h"
+#include "test/common/task_record_check.h"
 #include "test/common/tensor.h"
 #include "test/fallback/fixture.h"
-
 namespace megdnn {
 namespace test {
 
@@ -26,6 +26,17 @@ TEST_F(FALLBACK, ROICOPY) {
     using namespace roi_copy;
     std::vector<TestArg> args = get_args();
     Checker<ROICopy> checker(handle());
+    checker.set_dtype(0, dtype::Int32());
+    checker.set_dtype(1, dtype::Int32());
+
+    for (auto&& arg : args) {
+        checker.set_param(arg.param).execs({arg.src, {}});
+    }
+}
+TEST_F(FALLBACK, ROICOPY_RECORD) {
+    using namespace roi_copy;
+    std::vector<TestArg> args = get_args();
+    TaskRecordChecker<ROICopy> checker(1);
     checker.set_dtype(0, dtype::Int32());
     checker.set_dtype(1, dtype::Int32());
 

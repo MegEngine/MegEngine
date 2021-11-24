@@ -87,9 +87,9 @@ void Strategy<
     matmul_param.N = sparam.output_block_size;
     matmul_param.LDB = sparam.output_block_size;
     matmul_param.LDC = sparam.output_block_size;
-    matmul_param.A_ptr = filter;
-    matmul_param.B_ptr = im2col_dst;
-    matmul_param.C_ptr = matmul_dst;
+    matmul_param.A_ptr.reset(filter);
+    matmul_param.B_ptr.reset(im2col_dst);
+    matmul_param.C_ptr.reset(matmul_dst);
     auto matmul_kern = matmul_algo->get_kern(matmul_param);
     matmul_kern(matmul_param);
 }

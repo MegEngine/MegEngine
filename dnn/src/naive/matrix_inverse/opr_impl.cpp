@@ -23,8 +23,7 @@ size_t MatrixInverseImpl::get_workspace_in_bytes(
 }
 
 template <typename ctype>
-void MatrixInverseImpl::do_exec(
-        ctype* dst, const ctype* src, size_t batch, size_t n, void* workspace) {
+void do_exec(ctype* dst, const ctype* src, size_t batch, size_t n, void* workspace) {
     auto row_ptr = static_cast<ctype**>(workspace);
     auto exmat = reinterpret_cast<ctype*>(row_ptr + n);
     for (size_t b = 0; b < batch; ++b, src += n * n, dst += n * n) {
@@ -81,14 +80,12 @@ void MatrixInverseImpl::exec(
         _megdnn_tensor_in src, _megdnn_tensor_out dst, _megdnn_workspace workspace) {
     size_t batch, n;
     check_exec(src.layout, dst.layout, workspace, &batch, &n);
-#define cb(DType)                                                                \
-    if (dst.layout.dtype == DType()) {                                           \
-        using ctype = typename DTypeTrait<DType>::ctype;                         \
-        auto psrc = src.ptr<ctype>();                                            \
-        auto pdst = dst.ptr<ctype>();                                            \
-        void* pwk = workspace.raw_ptr;                                           \
-        MEGDNN_DISPATCH_CPU_KERN_OPR(do_exec<ctype>(pdst, psrc, batch, n, pwk)); \
-        return;                                                                  \
+#define cb(DType)                                                                  \
+    if (dst.layout.dtype == DType()) {                                             \
+        using ctype = typename DTypeTrait<DType>::ctype;                           \
+        MEGDNN_DISPATCH_CPU_KERN_OPR(do_exec<ctype>(                               \
+                dst.ptr<ctype>(), src.ptr<ctype>(), batch, n, workspace.raw_ptr)); \
+        return;                                                                    \
     }
     MEGDNN_FOREACH_COMPUTING_DTYPE_FLOAT(cb)
 #undef cb

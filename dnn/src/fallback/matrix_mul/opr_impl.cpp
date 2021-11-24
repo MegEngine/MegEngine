@@ -215,9 +215,9 @@ MatrixMulImpl::KernParam MatrixMulImpl::make_kern_param(
     KernParam kern_param;
     static_cast<KernSizeParam&>(kern_param) =
             make_kern_size_param(A.layout, B.layout, C.layout);
-    kern_param.A_ptr = A.raw_ptr;
-    kern_param.B_ptr = B.raw_ptr;
-    kern_param.C_ptr = C.raw_ptr;
+    kern_param.A_ptr = A.get_ref_ptr();
+    kern_param.B_ptr = B.get_ref_ptr();
+    kern_param.C_ptr = C.get_ref_ptr();
     kern_param.workspace_ptr = workspace.raw_ptr;
     kern_param.workspace_size = workspace.size;
     return kern_param;

@@ -24,9 +24,10 @@ namespace {
 
 template <uint32_t mode, typename ctype>
 void gen_index(
-        size_t sz, dt_int32* dest, const ctype* inp,
+        size_t sz, dt_int32* dest, const TensorND& mask,
         cond_take::Pred<mode, ctype> pred) {
     int didx = 0;
+    auto inp = mask.ptr<ctype>();
     for (size_t i = 0; i < sz; ++i) {
         if (pred(inp[i])) {
             dest[didx++] = i;
@@ -59,11 +60,11 @@ CondTakeImpl::Output CondTakeImpl::exec(
     auto idx_tmp = workspace.ptr<dt_int32>();
 
     switch (mask.layout.dtype.enumv()) {
-#define cb(_dt)                                                   \
-    case DTypeTrait<_dt>::enumv: {                                \
-        using ctype = DTypeTrait<_dt>::ctype;                     \
-        dispatch_genidx<ctype>(size, idx_tmp, mask.ptr<ctype>()); \
-        break;                                                    \
+#define cb(_dt)                                      \
+    case DTypeTrait<_dt>::enumv: {                   \
+        using ctype = DTypeTrait<_dt>::ctype;        \
+        dispatch_genidx<ctype>(size, idx_tmp, mask); \
+        break;                                       \
     }
         MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
         cb(::megdnn::dtype::Bool)
@@ -75,17 +76,15 @@ CondTakeImpl::Output CondTakeImpl::exec(
     size_t out_size = idx_tmp[size];
     auto out_data = malloc_policy.alloc_output(0, data.layout.dtype, {out_size});
     auto out_idx = malloc_policy.alloc_output(1, dtype::Int32(), {out_size});
-    auto out_idx_ptr = out_idx.ptr<dt_int32>();
 
     switch (data.layout.dtype.enumv()) {
-#define cb(_dt)                                                           \
-    case DTypeTrait<_dt>::enumv: {                                        \
-        using ctype = DTypeTrait<_dt>::ctype;                             \
-        auto out_data_ptr = out_data.ptr<ctype>();                        \
-        auto data_ptr = data.ptr<ctype>();                                \
-        MEGDNN_DISPATCH_CPU_KERN_OPR(copy_data<ctype>(                    \
-                out_size, out_idx_ptr, out_data_ptr, idx_tmp, data_ptr)); \
-        break;                                                            \
+#define cb(_dt)                                                                    \
+    case DTypeTrait<_dt>::enumv: {                                                 \
+        using ctype = DTypeTrait<_dt>::ctype;                                      \
+        MEGDNN_DISPATCH_CPU_KERN_OPR(copy_data<ctype>(                             \
+                out_size, out_idx.ptr<dt_int32>(), out_data.ptr<ctype>(), idx_tmp, \
+                data.ptr<ctype>()));                                               \
+        break;                                                                     \
     }
         MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
         cb(::megdnn::dtype::Bool)
@@ -97,14 +96,14 @@ CondTakeImpl::Output CondTakeImpl::exec(
 }
 
 template <typename ctype>
-void CondTakeImpl::dispatch_genidx(size_t size, dt_int32* dest, const ctype* inp) {
+void CondTakeImpl::dispatch_genidx(size_t size, dt_int32* dest, const TensorND& mask) {
     KParam kparam(m_param);
     switch (m_param.mode) {
-#define cb(_m)                                                          \
-    case Param::Mode::_m: {                                             \
-        Pred<PEnum::_m, ctype> pred(kparam);                            \
-        MEGDNN_DISPATCH_CPU_KERN_OPR(gen_index(size, dest, inp, pred)); \
-        return;                                                         \
+#define cb(_m)                                                           \
+    case Param::Mode::_m: {                                              \
+        Pred<PEnum::_m, ctype> pred(kparam);                             \
+        MEGDNN_DISPATCH_CPU_KERN_OPR(gen_index(size, dest, mask, pred)); \
+        return;                                                          \
     }
         MEGDNN_FOREACH_COND_TAKE_MODE(cb)
 #undef cb

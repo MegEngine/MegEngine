@@ -133,7 +133,7 @@ void ConvolutionBackwardFilterImpl::AlgoMatmul::exec_internal(const ExecArgs& ar
         froml.stride[0] = args.diff_layout->stride[0];
         tol.stride[0] = 1;
         tol.stride[1] = N;
-        TensorND from(args.diff_tensor->ptr<T>(), froml), to(diff_t, tol);
+        TensorND from(args.diff_tensor->raw_ptr(), froml), to(diff_t, tol);
         args.handle->relayout_opr()->exec(from, to);
     }
     {
@@ -149,13 +149,13 @@ void ConvolutionBackwardFilterImpl::AlgoMatmul::exec_internal(const ExecArgs& ar
                 Cl({OC, OH * OW * N}, typename DTypeTrait<T>::dtype());
         TensorND A(args.grad_tensor->ptr<T>(), Al), B(col, Bl), C(diff_t, Cl);
         if (fm.should_flip) {
-            A.raw_ptr = wbundle.get(2);
+            A.reset_ptr(wbundle.get(2));
             config.second->exec(C, B, A, wbundle.get_workspace(3));
             convolution::flip_filter(
                     args.as_fwd_args(),
-                    {static_cast<dt_byte*>(args.grad_tensor->raw_ptr),
+                    {static_cast<dt_byte*>(args.grad_tensor->raw_ptr()),
                      wbundle.get_size(2)},
-                    A.raw_ptr);
+                    A.get_ref_ptr());
         } else {
             config.second->exec(C, B, A, wbundle.get_workspace(2));
         }

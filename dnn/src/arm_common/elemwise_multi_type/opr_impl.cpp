@@ -148,17 +148,17 @@ void ElemwiseMultiTypeImpl::neon_round_shr_saturate_bcast_scalar<int32_t>(
 
 template <typename ctype>
 void ElemwiseMultiTypeImpl::dispatch_round_shr_saturate_iXxi8xi8_bcast_scalar(
-        const ElemwiseOpParamN<2>& param, megdnn::dt_int8* dst) {
-    auto a_ptr = param[0].ptr<ctype>();
+        const ElemwiseOpParamN<2>& param, const TensorND& dst) {
     auto k = param[1].ptr<dt_int8>()[0];
     size_t size = param.size;
+    auto src = param[0];
 
-    MEGDNN_DISPATCH_CPU_KERN_OPR(
-            neon_round_shr_saturate_bcast_scalar(a_ptr, k, size, dst));
+    MEGDNN_DISPATCH_CPU_KERN_OPR(neon_round_shr_saturate_bcast_scalar(
+            src.ptr<ctype>(), k, size, static_cast<dt_int8*>(dst.raw_ptr())));
 }
 
 void ElemwiseMultiTypeImpl::on_round_shr_saturate_iXxi8xi8(
-        const ElemwiseOpParamN<2>& param, megdnn::dt_int8* dst) {
+        const ElemwiseOpParamN<2>& param, const TensorND& dst) {
     if (is_vector(param[0].layout) && is_broadcasted_scalar(param[1].layout)) {
         switch (param[0].layout.dtype.enumv()) {
 #define cb(t)                                                     \
@@ -282,7 +282,7 @@ void neon_fuse_add_rmulh_round_shr_saturate_bcast_1c11_int32(
 }
 
 bool ElemwiseMultiTypeImpl::dispatch_fuse_add_rmulh_rshr(
-        const ElemwiseOpParamN<6>& param, megdnn::dt_int8* dst) {
+        const ElemwiseOpParamN<6>& param, const TensorND& dst) {
     BroadcastChannelInfo binfo;
     if (is_vector(param[0].layout) &&
         is_broadcasted_channel_like(param[1].layout, binfo) &&
@@ -294,16 +294,18 @@ bool ElemwiseMultiTypeImpl::dispatch_fuse_add_rmulh_rshr(
         auto minv = param[4].ptr<dt_int8>()[0];
         auto maxv = param[5].ptr<dt_int8>()[0];
         switch (param[0].layout.dtype.enumv()) {
-#define DISPATCH(stype, suffix)                                                   \
-    case DTypeTrait<stype>::enumv: {                                              \
-        auto x_ptr = param[0].ptr<DTypeTrait<stype>::ctype>();                    \
-        auto b_ptr = param[1].ptr<DTypeTrait<stype>::ctype>();                    \
-        auto M = param[2].ptr<DTypeTrait<stype>::ctype>()[0];                     \
-        MEGDNN_DISPATCH_CPU_KERN_OPR(                                             \
-                neon_fuse_add_rmulh_round_shr_saturate_bcast_1c11_##suffix(       \
-                        binfo.x, binfo.y, binfo.z, x_ptr, b_ptr, M, offset, minv, \
-                        maxv, param.size, dst));                                  \
-        break;                                                                    \
+#define DISPATCH(stype, suffix)                                                      \
+    case DTypeTrait<stype>::enumv: {                                                 \
+        auto M = param[2].ptr<DTypeTrait<stype>::ctype>()[0];                        \
+        auto src0 = param[0];                                                        \
+        auto src1 = param[1];                                                        \
+        MEGDNN_DISPATCH_CPU_KERN_OPR(                                                \
+                neon_fuse_add_rmulh_round_shr_saturate_bcast_1c11_##suffix(          \
+                        binfo.x, binfo.y, binfo.z,                                   \
+                        src0.ptr<DTypeTrait<stype>::ctype>(),                        \
+                        src1.ptr<DTypeTrait<stype>::ctype>(), M, offset, minv, maxv, \
+                        param.size, static_cast<dt_int8*>(dst.raw_ptr())));          \
+        break;                                                                       \
     }
             DISPATCH(dtype::Int16, int16)
             DISPATCH(dtype::Int32, int32)
@@ -317,7 +319,7 @@ bool ElemwiseMultiTypeImpl::dispatch_fuse_add_rmulh_rshr(
 }
 
 void ElemwiseMultiTypeImpl::on_fuse_add_rmulh_round_shr_saturate_int16x16x16x8(
-        const ElemwiseOpParamN<6>& param, megdnn::dt_int8* dst) {
+        const ElemwiseOpParamN<6>& param, const TensorND& dst) {
     if (dispatch_fuse_add_rmulh_rshr(param, dst))
         return;
     fallback::ElemwiseMultiTypeImpl::on_fuse_add_rmulh_round_shr_saturate_int16x16x16x8(
@@ -325,7 +327,7 @@ void ElemwiseMultiTypeImpl::on_fuse_add_rmulh_round_shr_saturate_int16x16x16x8(
 }
 
 void ElemwiseMultiTypeImpl::on_fuse_add_rmulh_round_shr_saturate_int32x32x32x8(
-        const ElemwiseOpParamN<6>& param, megdnn::dt_int8* dst) {
+        const ElemwiseOpParamN<6>& param, const TensorND& dst) {
     if (dispatch_fuse_add_rmulh_rshr(param, dst))
         return;
     fallback::ElemwiseMultiTypeImpl::on_fuse_add_rmulh_round_shr_saturate_int32x32x32x8(

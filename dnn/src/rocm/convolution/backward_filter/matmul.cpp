@@ -80,16 +80,16 @@ void ConvolutionBackwardFilterImpl::AlgoMatmul::exec_internal(const ExecArgs& ar
                 Cl({OC, OH * OW * N}, typename DTypeTrait<T>::dtype());
         TensorND A(args.grad_tensor->ptr<T>(), Al), B(col, Bl), C(diff_t, Cl);
         if (fm.should_flip) {
-            A.raw_ptr = wbundle.get(2);
+            A.reset_ptr(wbundle.get(2));
         }
         args.handle->matmul_bT_opr()->exec(C, B, A, Workspace());
 
         if (fm.should_flip) {
             convolution::flip_filter(
                     args.as_fwd_args(),
-                    {static_cast<dt_byte*>(args.grad_tensor->raw_ptr),
+                    {static_cast<dt_byte*>(args.grad_tensor->raw_ptr()),
                      wbundle.get_size(2)},
-                    A.raw_ptr);
+                    A.get_ref_ptr());
         }
     }
 }

@@ -11,13 +11,38 @@
 #include "test/common/benchmarker.h"
 #include "test/common/checker.h"
 
+#include "test/common/task_record_check.h"
 #include "test/fallback/fixture.h"
-
 namespace megdnn {
 namespace test {
 
 TEST_F(FALLBACK, TYPE_CVT) {
     Checker<TypeCvt> checker(handle());
+    NormalRNG rng(128);
+    checker.set_rng(0, &rng);
+
+    std::vector<DType> dtypes = {
+            dtype::Float32(),
+            dtype::Float16(),
+            dtype::Int32(),
+            dtype::Int16(),
+            dtype::Int8(),
+            dtype::Uint8(),
+            dtype::QuantizedS8(0.5f),
+            dtype::QuantizedS32(0.5f),
+            dtype::Quantized8Asymm(2.0f, static_cast<uint8_t>(3))};
+
+    for (size_t size : {1, 7, 15, 33}) {
+        for (auto sdtype : dtypes)
+            for (auto ddtype : dtypes) {
+                checker.set_dtype(0, sdtype).set_dtype(1, ddtype).execs(
+                        {{size}, {size}});
+            }
+    }
+}
+
+TEST_F(FALLBACK, TYPE_CVT_RECORD) {
+    TaskRecordChecker<TypeCvt> checker(1);
     NormalRNG rng(128);
     checker.set_rng(0, &rng);
 

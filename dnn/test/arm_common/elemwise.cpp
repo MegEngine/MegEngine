@@ -13,6 +13,7 @@
 #include "test/arm_common/fixture.h"
 #include "test/common/benchmarker.h"
 #include "test/common/checker.h"
+#include "test/common/task_record_check.h"
 
 #include "megdnn/opr_param_defs.h"
 #include "megdnn/oprs/general.h"
@@ -378,6 +379,40 @@ TEST_F(ARM_COMMON, ELEMWISE_FORWARD_N1HW_FP32_BCAST) {
     run(Mode::ADD);
     run(Mode::MUL);
     run(Mode::SUB);
+}
+
+TEST_F(ARM_COMMON, ELEMWISE_FORWARD_TERNARY_RECORD) {
+    using Mode = ElemwiseForward::Param::Mode;
+    TaskRecordChecker<ElemwiseForward> checker(0);
+    checker.set_param(Mode::FUSE_MUL_ADD3);
+
+    auto run = [&] {
+        //! nchw44
+        checker.execs({{1, 3, 1, 1, 4}, {1, 3, 2, 2, 4}, {1, 3, 1, 1, 4}, {}});
+        checker.execs({{1, 3, 1, 1, 4}, {2, 3, 2, 2, 4}, {1, 3, 1, 1, 4}, {}});
+
+        //! nchw88
+        checker.execs({{1, 3, 1, 1, 8}, {1, 3, 2, 2, 8}, {1, 3, 1, 1, 8}, {}});
+        checker.execs({{1, 3, 1, 1, 8}, {2, 3, 2, 2, 8}, {1, 3, 1, 1, 8}, {}});
+
+        checker.execs({{3, 4, 7}, {3, 4, 7}, {3, 4, 7}, {}});
+        checker.execs({{1, 4, 1, 1}, {3, 4, 5, 7}, {1, 4, 1, 1}, {}});
+    };
+
+    // case int
+    checker.set_dtype(0, dtype::Int32());
+    checker.set_dtype(1, dtype::Int32());
+    checker.set_dtype(2, dtype::Int32());
+    run();
+
+    // case float
+    UniformFloatRNG rng(1e-5, 7e1);
+    checker.set_rng(0, &rng);
+    checker.set_epsilon(1e-5);
+    checker.set_dtype(0, dtype::Float32());
+    checker.set_dtype(1, dtype::Float32());
+    checker.set_dtype(2, dtype::Float32());
+    run();
 }
 
 #if MEGDNN_WITH_BENCHMARK

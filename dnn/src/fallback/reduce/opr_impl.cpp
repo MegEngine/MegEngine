@@ -82,15 +82,14 @@ void ReduceImpl::exec(
     check_exec(src.layout, dst.layout, workspace.size);
     size_t A, B, C;
     get_ABC(src.layout, A, B, C, param().axis);
-#define cb_by_op(src_type, dst_type, _wtype, mode_, Op_, kern_func) \
-    if (param().mode == mode_) {                                    \
-        typedef DTypeTrait<src_type>::ctype src_ctype;              \
-        typedef DTypeTrait<dst_type>::ctype dst_ctype;              \
-        typedef DTypeTrait<_wtype>::ctype wtype;                    \
-        Op_<src_ctype, dst_ctype, wtype> op(                        \
-                src.ptr<src_ctype>(), dst.ptr<dst_ctype>(), B);     \
-        MEGDNN_DISPATCH_CPU_KERN_OPR(kern_func);                    \
-        return;                                                     \
+#define cb_by_op(src_type, dst_type, _wtype, mode_, Op_, kern_func)                   \
+    if (param().mode == mode_) {                                                      \
+        typedef DTypeTrait<src_type>::ctype src_ctype;                                \
+        typedef DTypeTrait<dst_type>::ctype dst_ctype;                                \
+        typedef DTypeTrait<_wtype>::ctype wtype;                                      \
+        Op_<src_ctype, dst_ctype, wtype> op(src.get_ref_ptr(), dst.get_ref_ptr(), B); \
+        MEGDNN_DISPATCH_CPU_KERN_OPR({ kern_func; });                                 \
+        return;                                                                       \
     }
 #define cb_by_dtype(dtype_, kern_func, type_tuple)                    \
     if (dtype_() == src.layout.dtype) {                               \

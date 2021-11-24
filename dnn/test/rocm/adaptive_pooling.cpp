@@ -58,8 +58,8 @@ TEST_F(ROCM, ADAPTIVE_POOLING_BACKWARD) {
             auto&& tensors_rocm = *tensors_rocm_storage;
 
             auto span = tensors_rocm[0].layout.span();
-            auto dst = static_cast<dt_byte*>(tensors_rocm[0].raw_ptr) + span.low_byte;
-            auto src = static_cast<const dt_byte*>(tensors_orig[0].raw_ptr) +
+            auto dst = static_cast<dt_byte*>(tensors_rocm[0].raw_ptr()) + span.low_byte;
+            auto src = static_cast<const dt_byte*>(tensors_orig[0].raw_ptr()) +
                        span.low_byte;
             megdnn_memcpy_H2D(handle_rocm(), dst, src, span.dist_byte());
 
@@ -71,8 +71,9 @@ TEST_F(ROCM, ADAPTIVE_POOLING_BACKWARD) {
             megdnn_free(handle_rocm(), workspace_rocm);
 
             span = tensors_rocm[1].layout.span();
-            dst = static_cast<dt_byte*>(tensors_orig[1].raw_ptr) + span.low_byte;
-            src = static_cast<const dt_byte*>(tensors_rocm[1].raw_ptr) + span.low_byte;
+            dst = static_cast<dt_byte*>(tensors_orig[1].raw_ptr()) + span.low_byte;
+            src = static_cast<const dt_byte*>(tensors_rocm[1].raw_ptr()) +
+                  span.low_byte;
             megdnn_memcpy_D2H(handle_rocm(), dst, src, span.dist_byte());
         };
 

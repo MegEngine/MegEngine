@@ -67,7 +67,7 @@ TEST_F(NAIVE, BATCHED_MESH_INDEXING) {
                 if (i < 2) {
                     layout.add_axis_cont_inplace(0);
                 }
-                void* ptr = static_cast<dt_byte*>(tensor.raw_ptr) +
+                void* ptr = static_cast<dt_byte*>(tensor.raw_ptr()) +
                             tensor.layout.stride[0] * n * tensor.layout.dtype.size();
                 new_tensors.emplace_back(ptr, layout);
             }
@@ -161,7 +161,7 @@ TEST_F(NAIVE, BATCHED_MESH_MODIFY_INCREMENT) {
                 if (i < 2) {
                     layout.add_axis_cont_inplace(0);
                 }
-                void* ptr = static_cast<dt_byte*>(tensor.raw_ptr) +
+                void* ptr = static_cast<dt_byte*>(tensor.raw_ptr()) +
                             tensor.layout.dtype.size(tensor.layout.stride[0] * n);
                 new_tensors.emplace_back(ptr, layout);
             }

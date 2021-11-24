@@ -530,11 +530,11 @@ void ConvBiasImpl::AlgoMkldnnMatmulQint8::kern_mkldnn_matmul_s8x8x32(
         {
             TensorND A_, B_, C_;
             A_.layout = TensorLayout({OC, IC * FH * FW}, dtype::Int8());
-            A_.raw_ptr = const_cast<int8_t*>(param.filter<int8_t>(group_id));
+            A_.reset_ptr(const_cast<int8_t*>(param.filter<int8_t>(group_id)));
             B_.layout = TensorLayout({IC * FH * FW, OH * OW}, dtype::Int8());
-            B_.raw_ptr = B;
+            B_.reset_ptr(B);
             C_.layout = TensorLayout({OC, OH * OW}, dtype::Int32());
-            C_.raw_ptr = dst;
+            C_.reset_ptr(dst);
             Workspace workspace(
                     static_cast<dt_byte*>(bundle.get(2)), bundle.get_size(2));
             get_matmul_opr()->exec(A_, B_, C_, workspace);

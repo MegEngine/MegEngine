@@ -71,7 +71,7 @@ template <int ndim>
 void ParamElemVisitor<ndim, dt_quint4, CONTIG_OTHER>::host_init(
         const TensorND& rv, int /*grid_size*/, int /*block_size*/) {
     megdnn_assert(rv.layout.ndim && rv.layout.ndim <= ndim);
-    m_ptr = reinterpret_cast<Storage*>(rv.raw_ptr);
+    m_ptr = reinterpret_cast<Storage*>(rv.raw_ptr());
     ptrdiff_t min_stride = std::numeric_limits<ptrdiff_t>::max();
     for (size_t i = 0; i < rv.layout.ndim; ++i) {
         m_stride[i] = rv.layout.stride[i];

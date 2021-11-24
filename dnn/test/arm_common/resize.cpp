@@ -12,6 +12,7 @@
 #include "test/common/resize.h"
 #include "test/arm_common/fixture.h"
 #include "test/common/checker.h"
+#include "test/common/task_record_check.h"
 
 namespace megdnn {
 namespace test {
@@ -35,6 +36,26 @@ static void set_nchw_args(IMode imode, std::vector<TestArg>& args) {
 TEST_F(ARM_COMMON, RESIZE_CV) {
     std::vector<TestArg> args = get_cv_args();
     Checker<Resize> checker(handle());
+
+    for (auto&& arg : args) {
+        checker.set_param(arg.param)
+                .set_epsilon(1 + 1e-3)
+                .set_dtype(0, dtype::Uint8())
+                .set_dtype(1, dtype::Uint8())
+                .execs({arg.src, arg.dst});
+    }
+
+    for (auto&& arg : args) {
+        checker.set_param(arg.param)
+                .set_dtype(0, dtype::Float32())
+                .set_dtype(1, dtype::Float32())
+                .execs({arg.src, arg.dst});
+    }
+}
+
+TEST_F(ARM_COMMON, RESIZE_CV_RECORD) {
+    std::vector<TestArg> args = get_cv_args();
+    TaskRecordChecker<Resize> checker(0);
 
     for (auto&& arg : args) {
         checker.set_param(arg.param)

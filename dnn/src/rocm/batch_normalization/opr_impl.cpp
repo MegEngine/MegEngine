@@ -60,21 +60,23 @@ void BNForwardImpl::exec(
             miopen_check(miopenBatchNormalizationForwardTraining(
                     handle, m_tensor_desc.bn_mode, &alpha, &beta,
                     m_tensor_desc.xy_desc.desc,     // xDesc
-                    src.raw_ptr,                    // x
+                    src.raw_ptr(),                  // x
                     m_tensor_desc.xy_desc.desc,     // yDesc
-                    dst.raw_ptr,                    // y
+                    dst.raw_ptr(),                  // y
                     m_tensor_desc.param_desc.desc,  // bnScaleBiasMeanVarDesc
-                    bn_scale.raw_ptr, bn_bias.raw_ptr, m_param.avg_factor, mean.raw_ptr,
-                    variance.raw_ptr, m_param.epsilon, batch_mean.raw_ptr,
-                    batch_inv_variance.raw_ptr));
+                    bn_scale.raw_ptr(), bn_bias.raw_ptr(), m_param.avg_factor,
+                    mean.raw_ptr(), variance.raw_ptr(), m_param.epsilon,
+                    batch_mean.raw_ptr(), batch_inv_variance.raw_ptr()));
 
             break;
         case param::BN::FwdMode::INFERENCE:
             miopen_check(miopenBatchNormalizationForwardInference(
                     handle, m_tensor_desc.bn_mode, &alpha, &beta,
-                    m_tensor_desc.xy_desc.desc, src.raw_ptr, m_tensor_desc.xy_desc.desc,
-                    dst.raw_ptr, m_tensor_desc.param_desc.desc, bn_scale.raw_ptr,
-                    bn_bias.raw_ptr, mean.raw_ptr, variance.raw_ptr, m_param.epsilon));
+                    m_tensor_desc.xy_desc.desc, src.raw_ptr(),
+                    m_tensor_desc.xy_desc.desc, dst.raw_ptr(),
+                    m_tensor_desc.param_desc.desc, bn_scale.raw_ptr(),
+                    bn_bias.raw_ptr(), mean.raw_ptr(), variance.raw_ptr(),
+                    m_param.epsilon));
             break;
         default:
             megdnn_throw("Unknown forward mode type of batch normalization.");
@@ -96,11 +98,11 @@ void BNBackwardImpl::exec(
     float alpha = 1.0, beta = 0.0;
     miopen_check(miopenBatchNormalizationBackward(
             handle, m_tensor_desc.bn_mode, &alpha, &beta, &alpha, &beta,
-            m_tensor_desc.xy_desc.desc, x.raw_ptr, m_tensor_desc.xy_desc.desc,
-            dy.raw_ptr, m_tensor_desc.xy_desc.desc, dx.raw_ptr,
-            m_tensor_desc.param_desc.desc, bn_scale.raw_ptr, d_bn_scale.raw_ptr,
-            d_bn_bias.raw_ptr, m_param.epsilon, saved_batch_mean.raw_ptr,
-            saved_batch_inv_variance.raw_ptr));
+            m_tensor_desc.xy_desc.desc, x.raw_ptr(), m_tensor_desc.xy_desc.desc,
+            dy.raw_ptr(), m_tensor_desc.xy_desc.desc, dx.raw_ptr(),
+            m_tensor_desc.param_desc.desc, bn_scale.raw_ptr(), d_bn_scale.raw_ptr(),
+            d_bn_bias.raw_ptr(), m_param.epsilon, saved_batch_mean.raw_ptr(),
+            saved_batch_inv_variance.raw_ptr()));
 }
 
 }  // namespace rocm

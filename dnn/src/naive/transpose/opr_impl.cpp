@@ -16,6 +16,15 @@
 namespace megdnn {
 namespace naive {
 
+template <typename T>
+void exec_internal(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
+    auto m = dst.layout.shape[0], n = dst.layout.shape[1];
+    rep(i, m) rep(j, n) {
+        dst.ptr<T>()[i * dst.layout.stride[0] + j] =
+                src.ptr<T>()[j * src.layout.stride[0] + i];
+    }
+}
+
 void TransposeForwardImpl::exec(
         _megdnn_tensor_in src, _megdnn_tensor_out dst, _megdnn_workspace workspace) {
     check_exec(src.layout, dst.layout, workspace.size);
@@ -29,16 +38,6 @@ void TransposeForwardImpl::exec(
     MEGDNN_FOREACH_QUANTIZED_DTYPE(cb)
 #undef cb
     megdnn_assert_internal(0);
-}
-
-template <typename T>
-void TransposeForwardImpl::exec_internal(
-        _megdnn_tensor_in src, _megdnn_tensor_out dst) {
-    auto m = dst.layout.shape[0], n = dst.layout.shape[1];
-    rep(i, m) rep(j, n) {
-        dst.ptr<T>()[i * dst.layout.stride[0] + j] =
-                src.ptr<T>()[j * src.layout.stride[0] + i];
-    }
 }
 
 }  // namespace naive

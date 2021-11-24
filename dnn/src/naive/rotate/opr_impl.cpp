@@ -20,11 +20,9 @@ namespace megdnn {
 namespace naive {
 
 template <typename T>
-void RotateImpl::exec_internal(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
+void exec_internal(_megdnn_tensor_in src, _megdnn_tensor_out dst, bool clockwise) {
     auto N = src.layout.shape[0], IH = src.layout.shape[1], IW = src.layout.shape[2],
          IC = src.layout.shape[3];
-
-    bool clockwise = param().clockwise;
 
     rep(n, N) rep(ih, IH) rep(iw, IW) {
         int ow = clockwise ? IH - ih - 1 : ih;
@@ -44,11 +42,12 @@ void RotateImpl::exec_internal(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
 void RotateImpl::exec(
         _megdnn_tensor_in src, _megdnn_tensor_in dst, _megdnn_workspace workspace) {
     check_exec(src.layout, dst.layout, workspace.size);
-#define cb(DType)                                                     \
-    if (src.layout.dtype.enumv() == DTypeTrait<DType>::enumv) {       \
-        using ctype = typename DTypeTrait<DType>::ctype;              \
-        MEGDNN_DISPATCH_CPU_KERN_OPR(exec_internal<ctype>(src, dst)); \
-        return;                                                       \
+#define cb(DType)                                                   \
+    if (src.layout.dtype.enumv() == DTypeTrait<DType>::enumv) {     \
+        using ctype = typename DTypeTrait<DType>::ctype;            \
+        MEGDNN_DISPATCH_CPU_KERN_OPR(                               \
+                exec_internal<ctype>(src, dst, param().clockwise)); \
+        return;                                                     \
     }
     MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
     MEGDNN_FOREACH_QUANTIZED_DTYPE(cb)

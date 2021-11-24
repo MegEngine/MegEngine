@@ -16,10 +16,38 @@
 #include "test/common/checker.h"
 #include "test/common/matrix_mul.h"
 #include "test/common/rng.h"
+#include "test/common/task_record_check.h"
 using namespace megdnn;
 using namespace test;
 using namespace megdnn::x86;
+TEST_F(X86, MATRIX_MUL_RECORD) {
+    TaskRecordChecker<MatrixMul> checker(0);
+    using Param = MatrixMul::Param;
+    auto args = matrix_mul::get_matmul_args();
+    auto arg = args[0];
+    auto m = arg.m, n = arg.n, k = arg.k;
+    auto mask = arg.mask;
+    Param param;
+    param.transposeA = mask & 1;
+    param.transposeB = mask & 2;
+    TensorShape AS, BS, CS;
 
+    if (param.transposeA)
+        AS = TensorShape{k, m};
+    else
+        AS = TensorShape{m, k};
+    if (param.transposeB)
+        BS = TensorShape{n, k};
+    else
+        BS = TensorShape{k, n};
+    CS = TensorShape{m, n};
+    TensorLayout AL, BL, CL;
+    AL = TensorLayout(AS, dtype::Float32());
+    BL = TensorLayout(BS, dtype::Float32());
+    CL = TensorLayout(CS, dtype::Float32());
+    checker.set_param(param);
+    checker.execl({AL, BL, CL});
+}
 #if MEGDNN_X86_WITH_VNNI
 TEST_F(X86, MATRIX_MUL_VNNI_8X8X32) {
     matrix_mul::check_matrix_mul(
@@ -40,6 +68,7 @@ TEST_F(X86, MATRIX_MUL_MKLDNN_8X8X32) {
                 dtype::Int8{}, dtype::Int8{}, dtype::Int32{}, handle());
     }
 }
+
 #endif
 //! FIXME: need to add tests of GEMV and QUINT8
 TEST_F(X86, MATRIX_MUL_AVX2_8X8X32) {

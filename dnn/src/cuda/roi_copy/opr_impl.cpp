@@ -33,7 +33,7 @@ void ROICopyImpl::exec(
             {N, OH, OW, OC}, {istride0, istride1, istride2, istride3},
             src.layout.dtype);
     TensorND relayout_src(
-            static_cast<char*>(src.raw_ptr) +
+            static_cast<char*>(src.raw_ptr()) +
                     (param().row_from * istride1 + param().col_from * istride2) *
                             src.layout.dtype.size(),
             relayout_src_layout);

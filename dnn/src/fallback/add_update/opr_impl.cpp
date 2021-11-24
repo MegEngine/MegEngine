@@ -46,12 +46,12 @@ void AddUpdateImpl::exec(_megdnn_tensor_inout dest, _megdnn_tensor_in delta) {
         !dest.layout.eq_shape(delta.layout)) {
         return naive::AddUpdateForwardImpl::exec(dest, delta);
     }
-
-#define cb(DType)                                                           \
-    if (dest.layout.dtype == DType()) {                                     \
-        using ctype = typename DTypeTrait<DType>::ctype;                    \
-        MEGDNN_DISPATCH_CPU_KERN_OPR(forward<ctype>(dest, delta, m_param)); \
-        return;                                                             \
+    auto param = m_param;
+#define cb(DType)                                                         \
+    if (dest.layout.dtype == DType()) {                                   \
+        using ctype = typename DTypeTrait<DType>::ctype;                  \
+        MEGDNN_DISPATCH_CPU_KERN_OPR(forward<ctype>(dest, delta, param)); \
+        return;                                                           \
     }
     MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
 #undef cb

@@ -29,7 +29,7 @@ TEST_F(CUDA, BN_FORWARD_BACKWARD) {
     using cuda::cudnn_handle;
     using cuda::batch_normalization::BNTensorDescHolder;
     using cuda::batch_normalization::get_reserve_size;
-    std::vector<TestArg> args = get_args();
+    std::vector<TestArg> args = batch_normalization::get_args();
     Checker<BNForward> checker(handle_cuda());
     Checker<BNBackward> checker_bwd(handle_cuda());
     for (auto&& arg : args) {

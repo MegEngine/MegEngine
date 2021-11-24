@@ -51,7 +51,7 @@ struct TypeCvt<stype, dtype::Float16> {
         using sctype = typename DTypeTrait<stype>::ctype;
         auto n = src.layout.total_nr_elems();
         const sctype* __restrict sptr = src.ptr<sctype>();
-        FLOAT16* __restrict dptr = static_cast<FLOAT16*>(dst.raw_ptr);
+        FLOAT16* __restrict dptr = static_cast<FLOAT16*>(dst.raw_ptr());
         for (size_t i = 0; i < n; ++i) {
             dptr[i] = static_cast<FLOAT16>(sptr[i]);
         }
@@ -63,7 +63,7 @@ struct TypeCvt<dtype::Float16, dst_type> {
     static void do_cvt(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
         auto n = src.layout.total_nr_elems();
         using dctype = typename DTypeTrait<dst_type>::ctype;
-        const FLOAT16* __restrict sptr = static_cast<FLOAT16*>(src.raw_ptr);
+        const FLOAT16* __restrict sptr = static_cast<FLOAT16*>(src.raw_ptr());
         dctype* __restrict dptr = dst.ptr<dctype>();
         for (size_t i = 0; i < n; ++i) {
             dptr[i] = static_cast<FLOAT16>(sptr[i]);
@@ -75,8 +75,8 @@ template <>
 struct TypeCvt<dtype::Float16, dtype::Float16> {
     static void do_cvt(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
         auto n = src.layout.total_nr_elems();
-        const FLOAT16* __restrict sptr = static_cast<FLOAT16*>(src.raw_ptr);
-        FLOAT16* __restrict dptr = static_cast<FLOAT16*>(dst.raw_ptr);
+        const FLOAT16* __restrict sptr = static_cast<FLOAT16*>(src.raw_ptr());
+        FLOAT16* __restrict dptr = static_cast<FLOAT16*>(dst.raw_ptr());
         for (size_t i = 0; i < n; ++i) {
             dptr[i] = static_cast<FLOAT16>(sptr[i]);
         }
@@ -92,7 +92,7 @@ void do_cvt_normal_s8(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
     using sctype = typename DTypeTrait<stype>::ctype;
     auto n = src.layout.total_nr_elems();
     const sctype* __restrict sptr = src.ptr<sctype>();
-    int8_t* __restrict dptr = static_cast<int8_t*>(dst.raw_ptr);
+    int8_t* __restrict dptr = static_cast<int8_t*>(dst.raw_ptr());
     float scale = dst.layout.dtype.param<dtype::QuantizedS8>().scale;
     float dscale = 1.f / scale;
     for (size_t i = 0; i < n; ++i) {
@@ -105,7 +105,7 @@ void do_cvt_normal_s32(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
     using sctype = typename DTypeTrait<stype>::ctype;
     auto n = src.layout.total_nr_elems();
     const sctype* __restrict sptr = src.ptr<sctype>();
-    int32_t* __restrict dptr = static_cast<int32_t*>(dst.raw_ptr);
+    int32_t* __restrict dptr = static_cast<int32_t*>(dst.raw_ptr());
     float scale = dst.layout.dtype.param<dtype::QuantizedS32>().scale;
     float dscale = 1.f / scale;
     for (size_t i = 0; i < n; ++i) {
@@ -121,7 +121,7 @@ void do_cvt_normal_asymm8(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
     using sctype = typename DTypeTrait<stype>::ctype;
     auto n = src.layout.total_nr_elems();
     const sctype* __restrict sptr = src.ptr<sctype>();
-    uint8_t* __restrict dptr = static_cast<uint8_t*>(dst.raw_ptr);
+    uint8_t* __restrict dptr = static_cast<uint8_t*>(dst.raw_ptr());
     float scale = dst.layout.dtype.param<dtype::Quantized8Asymm>().scale;
     uint8_t zp = dst.layout.dtype.param<dtype::Quantized8Asymm>().zero_point;
     float dscale = 1.f / scale;
@@ -134,7 +134,7 @@ template <typename type>
 void do_cvt_s8_normal(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
     using dctype = typename DTypeTrait<type>::ctype;
     auto n = src.layout.total_nr_elems();
-    const int8_t* __restrict sptr = static_cast<int8_t*>(src.raw_ptr);
+    const int8_t* __restrict sptr = static_cast<int8_t*>(src.raw_ptr());
     dctype* __restrict dptr = dst.ptr<dctype>();
     float scale = src.layout.dtype.param<dtype::QuantizedS8>().scale;
     for (size_t i = 0; i < n; ++i) {
@@ -147,7 +147,7 @@ template <typename type>
 void do_cvt_s32_normal(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
     using dctype = typename DTypeTrait<type>::ctype;
     auto n = src.layout.total_nr_elems();
-    const int32_t* __restrict sptr = static_cast<int32_t*>(src.raw_ptr);
+    const int32_t* __restrict sptr = static_cast<int32_t*>(src.raw_ptr());
     dctype* __restrict dptr = dst.ptr<dctype>();
     float scale = src.layout.dtype.param<dtype::QuantizedS32>().scale;
     for (size_t i = 0; i < n; ++i) {
@@ -160,7 +160,7 @@ template <typename type>
 void do_cvt_asymm8_normal(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
     using dctype = typename DTypeTrait<type>::ctype;
     auto n = src.layout.total_nr_elems();
-    const uint8_t* __restrict sptr = static_cast<uint8_t*>(src.raw_ptr);
+    const uint8_t* __restrict sptr = static_cast<uint8_t*>(src.raw_ptr());
     dctype* __restrict dptr = dst.ptr<dctype>();
     float scale = src.layout.dtype.param<dtype::Quantized8Asymm>().scale;
     uint8_t zp = src.layout.dtype.param<dtype::Quantized8Asymm>().zero_point;
@@ -172,8 +172,8 @@ void do_cvt_asymm8_normal(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
 
 void do_cvt_s8_s8(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
     auto n = src.layout.total_nr_elems();
-    const int8_t* __restrict sptr = static_cast<int8_t*>(src.raw_ptr);
-    int8_t* __restrict dptr = static_cast<int8_t*>(dst.raw_ptr);
+    const int8_t* __restrict sptr = static_cast<int8_t*>(src.raw_ptr());
+    int8_t* __restrict dptr = static_cast<int8_t*>(dst.raw_ptr());
     float src_scale = src.layout.dtype.param<dtype::QuantizedS8>().scale;
     float dst_scale = dst.layout.dtype.param<dtype::QuantizedS8>().scale;
     float scale = src_scale / dst_scale;
@@ -184,8 +184,8 @@ void do_cvt_s8_s8(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
 
 void do_cvt_s32_s8(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
     auto n = src.layout.total_nr_elems();
-    const int32_t* __restrict sptr = static_cast<int32_t*>(src.raw_ptr);
-    int8_t* __restrict dptr = static_cast<int8_t*>(dst.raw_ptr);
+    const int32_t* __restrict sptr = static_cast<int32_t*>(src.raw_ptr());
+    int8_t* __restrict dptr = static_cast<int8_t*>(dst.raw_ptr());
     float src_scale = src.layout.dtype.param<dtype::QuantizedS32>().scale;
     float dst_scale = dst.layout.dtype.param<dtype::QuantizedS8>().scale;
     float scale = src_scale / dst_scale;
@@ -196,8 +196,8 @@ void do_cvt_s32_s8(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
 
 void do_cvt_asymm8_s8(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
     auto n = src.layout.total_nr_elems();
-    const uint8_t* __restrict sptr = static_cast<uint8_t*>(src.raw_ptr);
-    int8_t* __restrict dptr = static_cast<int8_t*>(dst.raw_ptr);
+    const uint8_t* __restrict sptr = static_cast<uint8_t*>(src.raw_ptr());
+    int8_t* __restrict dptr = static_cast<int8_t*>(dst.raw_ptr());
     float src_scale = src.layout.dtype.param<dtype::Quantized8Asymm>().scale;
     uint8_t src_zp = src.layout.dtype.param<dtype::Quantized8Asymm>().zero_point;
     float dst_scale = dst.layout.dtype.param<dtype::QuantizedS8>().scale;
@@ -210,8 +210,8 @@ void do_cvt_asymm8_s8(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
 
 void do_cvt_s8_s32(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
     auto n = src.layout.total_nr_elems();
-    const int8_t* __restrict sptr = static_cast<int8_t*>(src.raw_ptr);
-    int32_t* __restrict dptr = static_cast<int32_t*>(dst.raw_ptr);
+    const int8_t* __restrict sptr = static_cast<int8_t*>(src.raw_ptr());
+    int32_t* __restrict dptr = static_cast<int32_t*>(dst.raw_ptr());
     float src_scale = src.layout.dtype.param<dtype::QuantizedS8>().scale;
     float dst_scale = dst.layout.dtype.param<dtype::QuantizedS32>().scale;
     float scale = src_scale / dst_scale;
@@ -225,8 +225,8 @@ void do_cvt_s8_s32(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
 
 void do_cvt_s32_s32(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
     auto n = src.layout.total_nr_elems();
-    const int32_t* __restrict sptr = static_cast<int32_t*>(src.raw_ptr);
-    int32_t* __restrict dptr = static_cast<int32_t*>(dst.raw_ptr);
+    const int32_t* __restrict sptr = static_cast<int32_t*>(src.raw_ptr());
+    int32_t* __restrict dptr = static_cast<int32_t*>(dst.raw_ptr());
     float src_scale = src.layout.dtype.param<dtype::QuantizedS32>().scale;
     float dst_scale = dst.layout.dtype.param<dtype::QuantizedS32>().scale;
     float scale = src_scale / dst_scale;
@@ -240,8 +240,8 @@ void do_cvt_s32_s32(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
 
 void do_cvt_asymm8_s32(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
     auto n = src.layout.total_nr_elems();
-    const uint8_t* __restrict sptr = static_cast<uint8_t*>(src.raw_ptr);
-    int32_t* __restrict dptr = static_cast<int32_t*>(dst.raw_ptr);
+    const uint8_t* __restrict sptr = static_cast<uint8_t*>(src.raw_ptr());
+    int32_t* __restrict dptr = static_cast<int32_t*>(dst.raw_ptr());
     float src_scale = src.layout.dtype.param<dtype::Quantized8Asymm>().scale;
     uint8_t src_zp = src.layout.dtype.param<dtype::Quantized8Asymm>().zero_point;
     float dst_scale = dst.layout.dtype.param<dtype::QuantizedS32>().scale;
@@ -256,8 +256,8 @@ void do_cvt_asymm8_s32(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
 
 void do_cvt_s8_asymm8(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
     auto n = src.layout.total_nr_elems();
-    const int8_t* __restrict sptr = static_cast<int8_t*>(src.raw_ptr);
-    uint8_t* __restrict dptr = static_cast<uint8_t*>(dst.raw_ptr);
+    const int8_t* __restrict sptr = static_cast<int8_t*>(src.raw_ptr());
+    uint8_t* __restrict dptr = static_cast<uint8_t*>(dst.raw_ptr());
     float src_scale = src.layout.dtype.param<dtype::QuantizedS8>().scale;
     float dst_scale = dst.layout.dtype.param<dtype::Quantized8Asymm>().scale;
     uint8_t dst_zp = dst.layout.dtype.param<dtype::Quantized8Asymm>().zero_point;
@@ -270,8 +270,8 @@ void do_cvt_s8_asymm8(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
 
 void do_cvt_s32_asymm8(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
     auto n = src.layout.total_nr_elems();
-    const int32_t* __restrict sptr = static_cast<int32_t*>(src.raw_ptr);
-    uint8_t* __restrict dptr = static_cast<uint8_t*>(dst.raw_ptr);
+    const int32_t* __restrict sptr = static_cast<int32_t*>(src.raw_ptr());
+    uint8_t* __restrict dptr = static_cast<uint8_t*>(dst.raw_ptr());
     float src_scale = src.layout.dtype.param<dtype::QuantizedS32>().scale;
     float dst_scale = dst.layout.dtype.param<dtype::Quantized8Asymm>().scale;
     uint8_t dst_zp = dst.layout.dtype.param<dtype::Quantized8Asymm>().zero_point;
@@ -284,8 +284,8 @@ void do_cvt_s32_asymm8(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
 
 void do_cvt_asymm8_asymm8(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
     auto n = src.layout.total_nr_elems();
-    const uint8_t* __restrict sptr = static_cast<uint8_t*>(src.raw_ptr);
-    int8_t* __restrict dptr = static_cast<int8_t*>(dst.raw_ptr);
+    const uint8_t* __restrict sptr = static_cast<uint8_t*>(src.raw_ptr());
+    int8_t* __restrict dptr = static_cast<int8_t*>(dst.raw_ptr());
     float src_scale = src.layout.dtype.param<dtype::Quantized8Asymm>().scale;
     uint8_t src_zp = src.layout.dtype.param<dtype::Quantized8Asymm>().zero_point;
     float dst_scale = dst.layout.dtype.param<dtype::Quantized8Asymm>().scale;

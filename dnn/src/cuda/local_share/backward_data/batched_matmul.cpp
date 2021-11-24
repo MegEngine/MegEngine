@@ -106,7 +106,7 @@ void LocalShareBackwardDataImpl::AlgoBatchedMatMul::exec(const ExecArgs& args) c
         B1.stride[4] = wo;
         B1.stride[5] = 1;
         B1.stride[6] = co * ho * wo;
-        TensorND ts_B1{args.diff_tensor->raw_ptr, B1};
+        TensorND ts_B1{args.diff_tensor->raw_ptr(), B1};
         TensorLayout B2{
                 {groups * sgh * sgw, ocpg, ho / sgh * wo / sgw * n}, dtype::Float32()};
         B2.init_contiguous_stride();
@@ -122,7 +122,7 @@ void LocalShareBackwardDataImpl::AlgoBatchedMatMul::exec(const ExecArgs& args) c
     TensorLayout C{
             {groups * sgh * sgw, icpg * fh * fw, ho / sgh * wo / sgw * n},
             dtype::Float32()};
-    TensorND ts_A{args.filter_tensor->raw_ptr, A};
+    TensorND ts_A{args.filter_tensor->raw_ptr(), A};
     TensorND ts_B{ws_pretranspose, B};
     TensorND ts_C{ws_col2im, C};
     Workspace ws_wrapper;

@@ -167,16 +167,16 @@ void megdnn::naive::warp_affine_cv_exec(
     megdnn_assert(
             ch == 1 || ch == 3 || ch == 2,
             "unsupported src channel: %zu, avaiable channel size: 1/2/3", ch);
-    const float* trans_ptr = trans.ptr<dt_float32>();
+
     if (dst.layout.dtype.enumv() == DTypeEnum::Float32) {
 #define cb(_imode, _bmode, _ch)                                                  \
-    auto task = [src, trans_ptr, dst, border_value, parallelism_batch](          \
+    auto task = [src, trans, dst, border_value, parallelism_batch](              \
                         size_t index, size_t) {                                  \
         size_t batch_id = index / parallelism_batch;                             \
         size_t task_id = index % parallelism_batch;                              \
         Mat<float> src_mat = TensorND2Mat<float>(src, batch_id);                 \
         Mat<float> dst_mat = TensorND2Mat<float>(dst, batch_id);                 \
-        const float* task_trans_ptr = trans_ptr + batch_id * 2 * 3;              \
+        auto task_trans_ptr = trans.ptr<float>() + batch_id * 2 * 3;             \
         warp_affine_cv<                                                          \
                 float MEGDNN_COMMA _imode MEGDNN_COMMA _bmode MEGDNN_COMMA _ch>( \
                 src_mat MEGDNN_COMMA const_cast<Mat<float>&>(dst_mat)            \
@@ -189,13 +189,13 @@ void megdnn::naive::warp_affine_cv_exec(
     } else if (dst.layout.dtype.enumv() == DTypeEnum::Uint8) {
 #undef cb
 #define cb(_imode, _bmode, _ch)                                                  \
-    auto task = [src, trans_ptr, dst, border_value, parallelism_batch](          \
+    auto task = [src, trans, dst, border_value, parallelism_batch](              \
                         size_t index, size_t) {                                  \
         size_t batch_id = index / parallelism_batch;                             \
         size_t task_id = index % parallelism_batch;                              \
         Mat<uchar> src_mat = TensorND2Mat<uchar>(src, batch_id);                 \
         Mat<uchar> dst_mat = TensorND2Mat<uchar>(dst, batch_id);                 \
-        const float* task_trans_ptr = trans_ptr + batch_id * 2 * 3;              \
+        auto task_trans_ptr = trans.ptr<float>() + batch_id * 2 * 3;             \
         warp_affine_cv<                                                          \
                 uchar MEGDNN_COMMA _imode MEGDNN_COMMA _bmode MEGDNN_COMMA _ch>( \
                 src_mat MEGDNN_COMMA const_cast<Mat<uchar>&>(dst_mat)            \

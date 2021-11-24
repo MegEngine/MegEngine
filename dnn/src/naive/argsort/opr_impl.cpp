@@ -65,16 +65,14 @@ void ArgsortForwardImpl::exec(
         _megdnn_workspace workspace) {
     check_exec(src.layout, dst.layout, indices.layout, workspace.size);
     auto M = src.layout.shape[0], N = src.layout.shape[1];
-    auto iptr = indices.ptr<dt_int32>();
     switch (src.layout.dtype.enumv()) {
-#define cb(dt)                                                               \
-    case DTypeTrait<dt>::enumv: {                                            \
-        using ctype = DTypeTrait<dt>::ctype;                                 \
-        auto sptr = src.ptr<ctype>();                                        \
-        auto dptr = dst.ptr<ctype>();                                        \
-        MEGDNN_DISPATCH_CPU_KERN_OPR(forward_impl(                           \
-                M, N, sptr, dptr, iptr, param().order == Order::ASCENDING)); \
-        return;                                                              \
+#define cb(dt)                                                                     \
+    case DTypeTrait<dt>::enumv: {                                                  \
+        using ctype = DTypeTrait<dt>::ctype;                                       \
+        MEGDNN_DISPATCH_CPU_KERN_OPR(forward_impl(                                 \
+                M, N, src.ptr<ctype>(), dst.ptr<ctype>(), indices.ptr<dt_int32>(), \
+                param().order == Order::ASCENDING));                               \
+        return;                                                                    \
     }
         MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
 #undef cb
@@ -89,15 +87,14 @@ void ArgsortBackwardImpl::exec(
     check_exec(diff.layout, indices.layout, grad.layout, workspace.size);
     size_t M = grad.layout.shape[0], N = grad.layout.shape[1],
            SRC_W = indices.layout[1];
-    auto iptr = indices.ptr<dt_int32>();
     switch (diff.layout.dtype.enumv()) {
-#define cb(dt)                                                                      \
-    case DTypeTrait<dt>::enumv: {                                                   \
-        using ctype = DTypeTrait<dt>::ctype;                                        \
-        auto hptr = diff.ptr<ctype>();                                              \
-        auto gptr = grad.ptr<ctype>();                                              \
-        MEGDNN_DISPATCH_CPU_KERN_OPR(backward_impl(M, N, SRC_W, gptr, hptr, iptr)); \
-        return;                                                                     \
+#define cb(dt)                                                     \
+    case DTypeTrait<dt>::enumv: {                                  \
+        using ctype = DTypeTrait<dt>::ctype;                       \
+        MEGDNN_DISPATCH_CPU_KERN_OPR(backward_impl(                \
+                M, N, SRC_W, grad.ptr<ctype>(), diff.ptr<ctype>(), \
+                indices.ptr<dt_int32>()));                         \
+        return;                                                    \
     }
         MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
 #undef cb

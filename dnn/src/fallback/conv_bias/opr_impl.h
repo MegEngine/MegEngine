@@ -115,23 +115,35 @@ public:
     //! memory param for kernels with non-contiguous batch
     struct NCBKernParam : public NCBKernSizeParam {
         NCBKernParam() = default;
-        const void* src_ptr;
-        const void* filter_ptr;
-        const void* bias_ptr;
-        void* dst_ptr;
+        RefPtr src_ptr;
+        RefPtr filter_ptr;
+        RefPtr bias_ptr;
+        RefPtr dst_ptr;
         void* workspace_ptr;
         size_t workspace_size;
 
         template <typename T>
         const T* src() const {
             src_type.assert_is_compatible_ctype<T>();
-            return static_cast<const T*>(src_ptr);
+            return static_cast<const T*>(src_ptr.get_ptr());
         }
         //! when format is nchwxx, multi  channel will pack into one
         //! chnannel_pack_id. pack_channel_size is the number of packed channel
         //! when format is nchwxx and channel wise, multi group will pack into
         //! one group_pack_id. group_pack_size is the number of packed group
         //! together, like weight shape is {g/8, 1, 1, Fh, Fw, 8}
+        size_t src_offset(
+                size_t batch_id, size_t group_pack_id, size_t channel_pack_id = 0,
+                size_t group_pack_size = 1, size_t channel_pack_size = 1) const;
+
+        size_t bias_offset(
+                size_t batch_id, size_t group_pack_id, size_t channel_pack_id = 0,
+                size_t group_pack_size = 1, size_t channel_pack_size = 1) const;
+
+        size_t dst_offset(
+                size_t batch_id, size_t group_pack_id, size_t channel_pack_id = 0,
+                size_t group_pack_size = 1, size_t channel_pack_size = 1) const;
+
         template <typename T>
         const T* src(
                 size_t batch_id, size_t group_pack_id, size_t channel_pack_id = 0,
@@ -149,25 +161,27 @@ public:
         //! when format is nchwxx and channel wise, multi group will pack into
         //! one group_pack_id. group_pack_size is the number of packed group
         //! together, like weight shape is {g/8, 1, 1, Fh, Fw, 8}
+        size_t filter_offset(size_t group_pack_id, size_t pack_group_size = 1_z) const;
+
         template <typename T>
         const T* filter(size_t group_pack_id, size_t pack_group_size = 1_z) const;
 
         template <typename T>
         const T* filter() const {
             filter_type.assert_is_compatible_ctype<T>();
-            return static_cast<const T*>(filter_ptr);
+            return static_cast<const T*>(filter_ptr.get_ptr());
         }
 
         template <typename T>
         const T* bias() const {
             bias_type.assert_is_compatible_ctype<T>();
-            return static_cast<const T*>(bias_ptr);
+            return static_cast<const T*>(bias_ptr.get_ptr());
         }
 
         template <typename T>
         T* dst() const {
             dst_type.assert_is_compatible_ctype<T>();
-            return static_cast<T*>(dst_ptr);
+            return static_cast<T*>(dst_ptr.get_ptr());
         }
 
         template <typename T>

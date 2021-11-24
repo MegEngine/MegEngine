@@ -1,5 +1,5 @@
 /**
- * \file dnn/src/naive/tile/tile.cpp
+ * \file dnn/src/naive/tile/opr_impl.cpp
  * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
  *
  * Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
@@ -18,7 +18,7 @@ namespace megdnn {
 namespace naive {
 
 template <typename T>
-void TileForwardImpl::exec_internal(
+void exec_tile_forward(
         _megdnn_tensor_in src, _megdnn_tensor_out dst,
         _megdnn_workspace /* workspace */) {
     auto ndim = src.layout.ndim;
@@ -38,11 +38,11 @@ void TileForwardImpl::exec_internal(
 void TileForwardImpl::exec(
         _megdnn_tensor_in src, _megdnn_tensor_out dst, _megdnn_workspace workspace) {
     check_exec(src.layout, dst.layout, workspace.size);
-#define cb(DType)                                                                \
-    if (src.layout.dtype == DType()) {                                           \
-        using ctype = typename DTypeTrait<DType>::ctype;                         \
-        MEGDNN_DISPATCH_CPU_KERN_OPR(exec_internal<ctype>(src, dst, workspace)); \
-        return;                                                                  \
+#define cb(DType)                                                                    \
+    if (src.layout.dtype == DType()) {                                               \
+        using ctype = typename DTypeTrait<DType>::ctype;                             \
+        MEGDNN_DISPATCH_CPU_KERN_OPR(exec_tile_forward<ctype>(src, dst, workspace)); \
+        return;                                                                      \
     }
     MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
 #undef cb
@@ -50,7 +50,7 @@ void TileForwardImpl::exec(
 }
 
 template <typename T>
-void TileBackwardImpl::exec_internal(
+void exec_tile_backward(
         _megdnn_tensor_in diff, _megdnn_tensor_out grad,
         _megdnn_workspace /* workspace */) {
     auto ndim = diff.layout.ndim;
@@ -72,11 +72,12 @@ void TileBackwardImpl::exec_internal(
 void TileBackwardImpl::exec(
         _megdnn_tensor_in diff, _megdnn_tensor_out grad, _megdnn_workspace workspace) {
     check_exec(diff.layout, grad.layout, workspace.size);
-#define cb(DType)                                                                  \
-    if (diff.layout.dtype == DType()) {                                            \
-        using ctype = typename DTypeTrait<DType>::ctype;                           \
-        MEGDNN_DISPATCH_CPU_KERN_OPR(exec_internal<ctype>(diff, grad, workspace)); \
-        return;                                                                    \
+#define cb(DType)                                                  \
+    if (diff.layout.dtype == DType()) {                            \
+        using ctype = typename DTypeTrait<DType>::ctype;           \
+        MEGDNN_DISPATCH_CPU_KERN_OPR(                              \
+                exec_tile_backward<ctype>(diff, grad, workspace)); \
+        return;                                                    \
     }
     MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
 #undef cb

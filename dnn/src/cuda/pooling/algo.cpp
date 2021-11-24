@@ -149,7 +149,7 @@ void PoolingForwardImpl::AlgoCUDNN::exec(const ExecArgs& args) const {
                 args.opr->param().stride_w));
         cudnn_check(cudnnPoolingForward(
                 args.handle->cudnn_handle(), cudnn_desc, &alpha, src_desc.desc,
-                src.raw_ptr, &beta, dst_desc.desc, dst.raw_ptr));
+                src.raw_ptr(), &beta, dst_desc.desc, dst.raw_ptr()));
         cudnn_check(cudnnDestroyPoolingDescriptor(cudnn_desc));
     }
     if (args.layout_src->dtype.enumv() == DTypeTrait<dtype::BFloat16>::enumv) {
@@ -218,7 +218,7 @@ void PoolingForwardImpl::AlgoCUDNNMAXDETERMINISTIC::exec(const ExecArgs& args) c
                 args.opr->param().stride_w));
         cudnn_check(cudnnPoolingForward(
                 args.handle->cudnn_handle(), cudnn_desc, &alpha, src_desc.desc,
-                src.raw_ptr, &beta, dst_desc.desc, dst.raw_ptr));
+                src.raw_ptr(), &beta, dst_desc.desc, dst.raw_ptr()));
         cudnn_check(cudnnDestroyPoolingDescriptor(cudnn_desc));
     }
     if (args.layout_src->dtype.enumv() == DTypeTrait<dtype::BFloat16>::enumv) {
@@ -341,7 +341,7 @@ void PoolingForwardImpl::AlgoNHWC::exec(const ExecArgs& args) const {
         }
         auto&& stream = cuda_stream(args.handle);
         pooling2d::do_pooling2d_int4_nhwc(
-                (int8_t*)src.raw_ptr, (int8_t*)dst.raw_ptr, kern_param, stream,
+                (int8_t*)src.raw_ptr(), (int8_t*)dst.raw_ptr(), kern_param, stream,
                 static_cast<uint32_t>(args.opr->param().mode), uint_case, zero_point);
     }
 }
@@ -411,8 +411,8 @@ void PoolingForwardImpl::AlgoNCHW64::exec(const ExecArgs& args) const {
         get_inner_layout(
                 *args.layout_src, *args.layout_dst, src.layout, dst.layout, handle_ptr,
                 args.opr->param().format);
-        src.raw_ptr = wsb.get(0);
-        dst.raw_ptr = wsb.get(1);
+        src = TensorND{wsb.get(0), src.layout};
+        dst = TensorND{wsb.get(1), dst.layout};
         auto relayout_opr = handle_ptr->create_operator<RelayoutFormat>();
         RelayoutFormat::Param trans_param;
         trans_param.mode = RelayoutFormat::Param::Mode::NCHW_NCHW64;
@@ -441,7 +441,7 @@ void PoolingForwardImpl::AlgoNCHW64::exec(const ExecArgs& args) const {
         }
         auto&& stream = cuda_stream(args.handle);
         pooling2d::do_pooling2d_int4_ncdiv64hw64(
-                (int8_t*)src.raw_ptr, (int8_t*)dst.raw_ptr, kern_param, stream,
+                (int8_t*)src.raw_ptr(), (int8_t*)dst.raw_ptr(), kern_param, stream,
                 static_cast<uint32_t>(args.opr->param().mode), uint_case, zero_point);
     }
     if (args.layout_dst->ndim == 4) {
@@ -600,8 +600,8 @@ void PoolingBackwardImpl::AlgoCUDNN::exec(const ExecArgs& args) const {
                 args.opr->param().stride_w));
         cudnn_check(cudnnPoolingBackward(
                 args.handle->cudnn_handle(), cudnn_desc, &alpha, dst_desc.desc,
-                dst.raw_ptr, diff_desc.desc, diff.raw_ptr, src_desc.desc, src.raw_ptr,
-                &beta, grad_desc.desc, grad.raw_ptr));
+                dst.raw_ptr(), diff_desc.desc, diff.raw_ptr(), src_desc.desc,
+                src.raw_ptr(), &beta, grad_desc.desc, grad.raw_ptr()));
         cudnn_check(cudnnDestroyPoolingDescriptor(cudnn_desc));
     }
     if (args.layout_src->dtype.enumv() == DTypeTrait<dtype::BFloat16>::enumv) {

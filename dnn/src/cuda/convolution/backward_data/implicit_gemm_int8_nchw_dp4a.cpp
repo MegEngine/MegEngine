@@ -140,7 +140,8 @@ void ConvolutionBackwardDataImpl::AlgoInt8NCHWDotProdImplicitGemm::exec(
 
         auto&& relayout = args.opr->handle()->create_operator<RelayoutForward>();
         relayout->exec(
-                {args.filter_tensor->raw_ptr, exec_src}, {inner_filter_ptr, exec_dst});
+                {args.filter_tensor->raw_ptr(), exec_src},
+                {inner_filter_ptr, exec_dst});
     }
     {
         inner_diff_ptr = reinterpret_cast<int8_t*>(bundle.get(1));
@@ -152,7 +153,7 @@ void ConvolutionBackwardDataImpl::AlgoInt8NCHWDotProdImplicitGemm::exec(
 
         auto&& relayout = args.opr->handle()->create_operator<RelayoutForward>();
         relayout->exec(
-                {args.diff_tensor->raw_ptr, exec_src}, {inner_diff_ptr, exec_dst});
+                {args.diff_tensor->raw_ptr(), exec_src}, {inner_diff_ptr, exec_dst});
     }
     int8_t* inner_grad_ptr = reinterpret_cast<int8_t*>(bundle.get(2));
 
@@ -196,7 +197,7 @@ void ConvolutionBackwardDataImpl::AlgoInt8NCHWDotProdImplicitGemm::exec(
 
         auto&& relayout = args.opr->handle()->create_operator<RelayoutForward>();
         relayout->exec(
-                {inner_grad_ptr, exec_src}, {args.grad_tensor->raw_ptr, exec_dst});
+                {inner_grad_ptr, exec_src}, {args.grad_tensor->raw_ptr(), exec_dst});
     }
 }
 // vim: syntax=cpp.doxygen

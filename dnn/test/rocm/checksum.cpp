@@ -25,7 +25,7 @@ TEST_F(ROCM, CHECKSUM_FORWARD) {
         auto aligned_size = size + ((512 - size % 512) % 512);
         auto run = [&](megdnn::Checksum* opr, void* ptr, bool log_size) {
             TensorND tensor;
-            tensor.raw_ptr = ptr;
+            tensor.reset_ptr(ptr);
             tensor.layout.init_contiguous_stride({size});
             tensor.layout.dtype = dtype::Byte();
             WorkspaceWrapper workspace(

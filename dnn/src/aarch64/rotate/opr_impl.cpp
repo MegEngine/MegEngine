@@ -358,11 +358,13 @@ void RotateImpl::exec(
         return fallback::RotateImpl::exec(src, dst, workspace);
     }
 
+    auto clockwise = param().clockwise;
+
     MEGDNN_DISPATCH_CPU_KERN_OPR({
         for (size_t i = 0; i < src.layout.shape[0]; ++i) {
             Mat<uchar> src_mat = TensorND2Mat<uchar>(src, i);
             Mat<uchar> dst_mat = TensorND2Mat<uchar>(dst, i);
-            rotate(src_mat, dst_mat, param().clockwise);
+            rotate(src_mat, dst_mat, clockwise);
         }
     });
 }

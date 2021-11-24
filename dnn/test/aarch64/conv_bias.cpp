@@ -15,6 +15,7 @@
 #include "test/common/checker.h"
 #include "test/common/conv_bias.h"
 #include "test/common/rng.h"
+#include "test/common/task_record_check.h"
 #include "test/common/tensor.h"
 
 namespace megdnn {
@@ -83,6 +84,14 @@ TEST_F(AARCH64_MULTI_THREADS, CONVBIAS_DIRECT_FP32_STR2) {
     check_conv_bias(
             conv_bias::get_conv_bias_args({2, 3, 5, 7}, 2, false, false, false),
             handle(), "ARMV8F32STRD2");
+}
+
+TEST_F(AARCH64_MULTI_THREADS, CONVBIAS_RECORD) {
+    auto args = conv_bias::get_conv_bias_args({2, 3, 5, 7}, 2, false, false, false);
+    TaskRecordChecker<ConvBias> checker(0);
+    for (auto&& arg : args) {
+        checker.set_param(arg.param).execs({arg.src, arg.filter, arg.bias, {}, {}});
+    }
 }
 
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC

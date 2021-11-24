@@ -203,9 +203,9 @@ void int8x8x32_kern_mkldnn(const MatrixMulImpl::KernParam& kern_param) {
         const float alpha = 1.0f, beta = 0.0f;
         const int8_t ao = 0, bo = 0;
         const int32_t co = 0;
-        const int8_t* A_ptr = static_cast<const int8_t*>(kern_param.A_ptr);
-        const int8_t* B_ptr = static_cast<const int8_t*>(kern_param.B_ptr);
-        int32_t* C_ptr = static_cast<int32_t*>(kern_param.C_ptr);
+        const int8_t* A_ptr = static_cast<const int8_t*>(kern_param.A_ptr.get_ptr());
+        const int8_t* B_ptr = static_cast<const int8_t*>(kern_param.B_ptr.get_ptr());
+        int32_t* C_ptr = static_cast<int32_t*>(kern_param.C_ptr.get_ptr());
         auto status = mkldnn_gemm_s8s8s32(
                 transA, transB, offsetC, M, N, K, alpha, A_ptr, LDA, ao, B_ptr, LDB, bo,
                 beta, C_ptr, LDC, &co);

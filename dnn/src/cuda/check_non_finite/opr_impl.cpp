@@ -15,12 +15,12 @@
 #include "src/cuda/handle.h"
 #include "src/cuda/utils.h"
 
-#include "src/common/reduce_helper.h"
+#include "src/common/reduce_helper_device.h"
 
 namespace megdnn {
 namespace cuda {
 
-using reduce::CheckNonFiniteOp;
+using device_reduce::CheckNonFiniteOp;
 
 size_t CheckNonFiniteImpl::get_workspace_in_bytes(
         const TensorLayout& src, const TensorLayout& dst) {

@@ -33,7 +33,7 @@ bool RelayoutForwardImpl::Param::try_copy_contig() {
     if (lsrc.stride[0] != 1 || ldst.stride[0] != 1)
         return false;
     hip_check(hipMemcpyAsync(
-            m_dst.raw_ptr, m_src.raw_ptr, ldst.total_nr_elems() * dtype_size(),
+            m_dst.raw_ptr(), m_src.raw_ptr(), ldst.total_nr_elems() * dtype_size(),
             hipMemcpyDeviceToDevice, m_opr->stream()));
     return true;
 }
@@ -82,7 +82,7 @@ bool RelayoutForwardImpl::Param::try_copy_2d() {
     //! TODO: need refactor, hipMemcpy2DAsync has bug
     auto dsize = dtype_size();
     hip_check(hipMemcpy2DAsync(
-            m_dst.raw_ptr, ldst.stride[0] * dsize, m_src.raw_ptr,
+            m_dst.raw_ptr(), ldst.stride[0] * dsize, m_src.raw_ptr(),
             lsrc.stride[0] * dsize, ldst.shape[1] * dsize, ldst.shape[0],
             hipMemcpyDeviceToDevice, m_opr->stream()));
 

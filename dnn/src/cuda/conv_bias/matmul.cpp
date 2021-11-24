@@ -115,9 +115,10 @@ size_t ConvBiasForwardImpl::AlgoMatmul::get_workspace_in_bytes(
 
 void ConvBiasForwardImpl::AlgoMatmul::exec(const ExecArgs& args) const {
     auto bundle = get_workspace_bundle(args.workspace.raw_ptr, args);
-    auto conv_dst_tensor = *args.dst_tensor;
+    TensorND conv_dst_tensor = *args.dst_tensor;
     if (args.dst_layout->dtype.enumv() != args.bias_layout->dtype.enumv()) {
-        conv_dst_tensor.raw_ptr = bundle.get(bundle.nr_workspace() - 1);
+        conv_dst_tensor = TensorND{
+                bundle.get(bundle.nr_workspace() - 1), args.dst_tensor->layout};
         conv_dst_tensor.layout.dtype = DType();
         args.opr->check_or_deduce_dtype_fwd(
                 args.src_layout->dtype, args.filter_layout->dtype,
@@ -168,7 +169,7 @@ void ConvBiasForwardImpl::AlgoMatmul::exec_internal(
             C(dst_t, config.first[2]);
     size_t matmul_ws_idx = 2;
     if (fm.should_flip) {
-        conv_bias::flip_filter(args, bundle.get_workspace(2), A.raw_ptr);
+        conv_bias::flip_filter(args, bundle.get_workspace(2), A.get_ref_ptr());
         matmul_ws_idx = 3;
     }
 

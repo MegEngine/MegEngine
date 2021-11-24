@@ -82,8 +82,8 @@ void relayout_format::relayout_format_cuda_nchw_nhwc(
         n_stride_dst = n_stride_dst * _size_nbits / (8 * sizeof(_dst_c_type));      \
         hw_stride = hw_stride * _size_nbits / (8 * sizeof(_dst_c_type));            \
         typename RelayoutProblem_::Param param{                                     \
-                SrcIterator_{(InnerDtype_*)src.raw_ptr, ic_stride, ic, w, w_pad},   \
-                DstIterator_{(_dst_c_type*)dst.raw_ptr, hw_stride, oc, w, w_pad},   \
+                SrcIterator_{(InnerDtype_*)src.raw_ptr(), ic_stride, ic, w, w_pad}, \
+                DstIterator_{(_dst_c_type*)dst.raw_ptr(), hw_stride, oc, w, w_pad}, \
                 CudaPostProcess_{                                                   \
                         src_scale, src_zero_point, dst_scale, dst_zero_point},      \
                 n_stride_src,                                                       \
@@ -167,8 +167,8 @@ void relayout_format::relayout_format_cuda_nhwc_nchw(
         n_stride_dst = n_stride_dst * _size_nbits / (8 * sizeof(InnerDtype_));      \
         oc_stride = oc_stride * _size_nbits / (8 * sizeof(InnerDtype_));            \
         typename RelayoutProblem_::Param param{                                     \
-                SrcIterator_{(_src_c_type*)src.raw_ptr, hw_stride, ic, w, w_pad},   \
-                DstIterator_{(InnerDtype_*)dst.raw_ptr, oc_stride, oc, w, w_pad},   \
+                SrcIterator_{(_src_c_type*)src.raw_ptr(), hw_stride, ic, w, w_pad}, \
+                DstIterator_{(InnerDtype_*)dst.raw_ptr(), oc_stride, oc, w, w_pad}, \
                 CudaPostProcess_{                                                   \
                         src_scale, src_zero_point, dst_scale, dst_zero_point},      \
                 n_stride_src,                                                       \

@@ -174,7 +174,7 @@ void exec_matrix_mul_quint4x4x32_helper(
             static_cast<uint8_t*>(workspace) + nA.layout.span().dist_byte(),
             convert_layout(B_layout)};
     auto convert_4to8 = [](const TensorND& in, const TensorND& out) {
-        auto ptr = static_cast<uint8_t*>(in.raw_ptr) + in.layout.span().low_byte;
+        auto ptr = static_cast<uint8_t*>(in.raw_ptr()) + in.layout.span().low_byte;
         auto out_ptr = out.compatible_ptr<uint8_t>() + out.layout.span().low_byte;
         for (size_t i = 0; i < in.layout.span().dist_elem(); i += 2) {
             uint8_t val = ptr[i / 2];
@@ -225,7 +225,7 @@ void exec_matrix_mul_qint4x4x16_helper(
             static_cast<uint8_t*>(workspace) + nA.layout.span().dist_byte(),
             convert_layout(B_layout)};
     auto convert_4to8 = [](const TensorND& in, const TensorND& out) {
-        auto ptr = static_cast<int8_t*>(in.raw_ptr) + in.layout.span().low_byte;
+        auto ptr = static_cast<int8_t*>(in.raw_ptr()) + in.layout.span().low_byte;
         auto out_ptr = out.compatible_ptr<int8_t>() + out.layout.span().low_byte;
         for (size_t i = 0; i < in.layout.span().dist_elem(); i += 2) {
             int8_t cur = ptr[i / 2];

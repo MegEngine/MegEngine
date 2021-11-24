@@ -192,7 +192,7 @@ template <typename ftype, typename dtype, typename gtype>
 void backward_data(
         _megdnn_tensor_in filter, _megdnn_tensor_in diff, _megdnn_tensor_out grad,
         const Convolution3D::CanonizedFilterMeta& filter_meta) {
-    memset(grad.raw_ptr, 0, grad.layout.span().dist_byte());
+    memset(grad.raw_ptr(), 0, grad.layout.span().dist_byte());
     megdnn_assert(filter_meta.spatial_ndim == 3);
     compute3d<gtype, ftype, dtype, StrategyBwdData>(
             grad, filter.ptr<ftype>(), diff, filter_meta);
@@ -202,7 +202,7 @@ template <typename stype, typename dtype, typename gtype>
 void backward_filter(
         _megdnn_tensor_in src, _megdnn_tensor_in diff, _megdnn_tensor_out grad,
         const Convolution3D::CanonizedFilterMeta& filter_meta) {
-    memset(grad.raw_ptr, 0, grad.layout.span().dist_byte());
+    memset(grad.raw_ptr(), 0, grad.layout.span().dist_byte());
     megdnn_assert(filter_meta.spatial_ndim == 3);
     compute3d<stype, gtype, dtype, StrategyBwdFlt>(
             src, grad.ptr<gtype>(), diff, filter_meta);

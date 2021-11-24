@@ -82,8 +82,8 @@ ResizeImpl::KernParam<ctype> ResizeImpl::KernParam<ctype>::from_tensors(
         src.layout.dtype.enumv() == DTypeEnum::Uint8 ||
         src.layout.dtype.enumv() == DTypeEnum::QuantizedS8 ||
         src.layout.dtype.enumv() == DTypeEnum::Quantized8Asymm) {
-        ret.sptr = src.compatible_ptr<ctype>();
-        ret.dptr = dst.compatible_ptr<ctype>();
+        ret.sptr = src.get_ref_ptr();
+        ret.dptr = dst.get_ref_ptr();
     } else {
         megdnn_assert(
                 0, "current do not support dtype %s in resize",

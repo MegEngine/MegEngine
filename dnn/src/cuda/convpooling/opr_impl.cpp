@@ -169,10 +169,10 @@ void ConvPoolingForwardImpl::exec(
             nonlineMode = IDENTITY;
     }
 
-    float *src_ptr = static_cast<float*>(src.raw_ptr),
-          *filter_ptr = static_cast<float*>(filter.raw_ptr),
-          *bias_ptr = static_cast<float*>(bias.raw_ptr),
-          *dst_ptr = static_cast<float*>(dst.raw_ptr);
+    float *src_ptr = static_cast<float*>(src.raw_ptr()),
+          *filter_ptr = static_cast<float*>(filter.raw_ptr()),
+          *bias_ptr = static_cast<float*>(bias.raw_ptr()),
+          *dst_ptr = static_cast<float*>(dst.raw_ptr());
 
     switch (this->param().method) {
         case Param::Method::WITH_SHARED_MEM:

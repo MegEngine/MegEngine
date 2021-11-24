@@ -14,14 +14,32 @@
 #include "test/common/checker.h"
 #include "test/common/random_state.h"
 #include "test/common/rng.h"
+#include "test/common/task_record_check.h"
 #include "test/common/warp_affine.h"
 #include "test/common/warp_perspective.h"
-
 namespace megdnn {
 namespace test {
 
 TEST_F(X86, WARP_PERSPECTIVE_MAT_IDX) {
     warp_perspective::run_mat_idx_test(handle());
+}
+
+TEST_F(X86, WARP_PERSPECTIVE_MAT_IDX_RECORD) {
+    constexpr int N_SRC = 5;
+    TaskRecordChecker<WarpPerspectiveForward, WarpPerspectiveMatIdxProxy> checker(0);
+    WarpPerspectiveMatRNG mat_rng;
+    checker.set_rng(1, &mat_rng);
+
+    UniformIntRNG mat_idx_rng{0, N_SRC - 1};
+    checker.set_dtype(2, dtype::Int32());
+    checker.set_rng(2, &mat_idx_rng);
+
+    WarpPerspective::Param param;
+    param.bmode = WarpPerspective::Param::BorderMode::REFLECT;
+    param.imode = param::WarpPerspective::InterpolationMode::LINEAR;
+    checker.set_param(param);
+    checker.execs({{N_SRC, 3, 10, 11}, {2, 3, 3}, {2}, {2, 3, 11, 12}});
+    checker.execs({{N_SRC, 14, 17, 13}, {123, 3, 3}, {123}, {123, 14, 16, 15}});
 }
 
 TEST_F(X86_MULTI_THREADS, WARP_PERSPECTIVE_MAT_IDX) {
@@ -32,6 +50,29 @@ TEST_F(X86_MULTI_THREADS, WARP_AFFINE_CV) {
     using namespace warp_affine;
     std::vector<TestArg> args = get_cv_args();
     Checker<WarpAffine> checker(handle());
+
+    for (auto&& arg : args) {
+        checker.set_param(arg.param)
+                .set_epsilon(1 + 1e-3)
+                .set_dtype(0, dtype::Uint8())
+                .set_dtype(1, dtype::Float32())
+                .set_dtype(2, dtype::Uint8())
+                .execs({arg.src, arg.trans, arg.dst});
+    }
+
+    for (auto&& arg : args) {
+        checker.set_param(arg.param)
+                .set_dtype(0, dtype::Float32())
+                .set_dtype(1, dtype::Float32())
+                .set_dtype(2, dtype::Float32())
+                .execs({arg.src, arg.trans, arg.dst});
+    }
+}
+
+TEST_F(X86_MULTI_THREADS, WARP_AFFINE_CV_RECORD) {
+    using namespace warp_affine;
+    std::vector<TestArg> args = get_cv_args();
+    TaskRecordChecker<WarpAffine> checker(0);
 
     for (auto&& arg : args) {
         checker.set_param(arg.param)

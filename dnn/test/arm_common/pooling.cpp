@@ -14,6 +14,7 @@
 #include "test/common/checker.h"
 #include "test/common/pooling.h"
 #include "test/common/rng.h"
+#include "test/common/task_record_check.h"
 
 namespace megdnn {
 namespace test {
@@ -31,6 +32,55 @@ TEST_F(ARM_COMMON, POOLING) {
         param.stride_h = param.stride_w = 2;
         param.pad_h = param.pad_w = p;
         Checker<Pooling> checker(handle());
+        checker.set_param(param).exec({{2, 3, ih, iw}, {}});
+
+        param.mode = Param::Mode::AVERAGE;
+        param.window_h = param.window_w = 3;
+        param.stride_h = param.stride_w = 2;
+        param.pad_h = param.pad_w = p;
+        checker.set_param(param).exec({{2, 3, ih, iw}, {}});
+
+        param.mode = Param::Mode::MAX;
+        param.window_h = param.window_w = 4;
+        param.stride_h = param.stride_w = 2;
+        param.pad_h = param.pad_w = p;
+        checker.set_param(param).exec({{2, 3, ih, iw}, {}});
+
+        param.mode = Param::Mode::MAX;
+        param.window_h = param.window_w = 5;
+        param.stride_h = param.stride_w = 2;
+        param.pad_h = param.pad_w = p;
+        if (ih + p * 2 >= 5 && iw + p * 2 >= 5)
+            checker.set_param(param).exec({{2, 3, ih, iw}, {}});
+    }
+    for (size_t ih: {2, 3, 5, 7, 11, 13, 17, 19, 23, 24, 25, 26, 27, 28, 29, 30})
+    for (size_t iw: {2, 3, 5, 7, 11, 13, 17, 19, 23, 24, 25, 26, 27, 28, 29, 30})
+    for (size_t p: {1, 2})
+    {
+        Param param;
+        param.mode = Param::Mode::AVERAGE_COUNT_EXCLUDE_PADDING;
+        param.window_h = param.window_w = 3;
+        param.stride_h = param.stride_w = 1;
+        param.pad_h = param.pad_w = p;
+        Checker<Pooling> checker(handle());
+        checker.set_param(param).exec({{2, 3, ih, iw}, {}});
+    }
+    // clang-format on
+}
+
+TEST_F(ARM_COMMON, POOLING_RECORD) {
+    using Param = param::Pooling;
+    TaskRecordChecker<Pooling> checker(0);
+    // clang-format off
+    for (size_t ih: {2, 3, 5, 7, 11, 13, 17})
+    for (size_t iw: {2, 3, 5, 7, 11, 13, 17})
+    for (size_t p: {1, 2})
+    {
+        Param param;
+        param.mode = Param::Mode::MAX;
+        param.window_h = param.window_w = 3;
+        param.stride_h = param.stride_w = 2;
+        param.pad_h = param.pad_w = p;
         checker.set_param(param).exec({{2, 3, ih, iw}, {}});
 
         param.mode = Param::Mode::AVERAGE;

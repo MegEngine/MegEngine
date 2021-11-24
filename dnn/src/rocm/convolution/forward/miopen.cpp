@@ -76,10 +76,10 @@ miopenConvFwdAlgorithm_t ConvolutionForwardImpl::AlgoMIOpen::find_best_algo(
     int ret_algo_count;
     miopenConvAlgoPerf_t algo_perf;
     miopen_check(miopenFindConvolutionForwardAlgorithm(
-            args.handle->miopen_handle(), D.src_desc.desc, args.src_tensor->raw_ptr,
-            D.filter_desc.desc, args.filter_tensor->raw_ptr, D.conv_desc.desc,
-            D.dst_desc.desc, args.dst_tensor->raw_ptr, req_algo_count, &ret_algo_count,
-            &algo_perf, args.workspace.raw_ptr, args.workspace.size,
+            args.handle->miopen_handle(), D.src_desc.desc, args.src_tensor->raw_ptr(),
+            D.filter_desc.desc, args.filter_tensor->raw_ptr(), D.conv_desc.desc,
+            D.dst_desc.desc, args.dst_tensor->raw_ptr(), req_algo_count,
+            &ret_algo_count, &algo_perf, args.workspace.raw_ptr, args.workspace.size,
             exhaustive_search));
     sm_miopen_algo_cache.set(args, algo_perf.fwd_algo);
     return algo_perf.fwd_algo;
@@ -93,9 +93,10 @@ void ConvolutionForwardImpl::AlgoMIOpen::exec(const ExecArgs& args) const {
     float alpha = 1.0f, beta = 0.0f;
     auto status = miopenConvolutionForward(
             args.handle->miopen_handle(), &alpha, D.src_desc.desc,
-            args.src_tensor->raw_ptr, D.filter_desc.desc, args.filter_tensor->raw_ptr,
-            D.conv_desc.desc, algo, &beta, D.dst_desc.desc, args.dst_tensor->raw_ptr,
-            args.workspace.raw_ptr, args.workspace.size);
+            args.src_tensor->raw_ptr(), D.filter_desc.desc,
+            args.filter_tensor->raw_ptr(), D.conv_desc.desc, algo, &beta,
+            D.dst_desc.desc, args.dst_tensor->raw_ptr(), args.workspace.raw_ptr,
+            args.workspace.size);
     megdnn_assert(
             status == miopenStatusSuccess, "conv fwd failed: %s; info: %s",
             miopenGetErrorString(status), args.to_string().c_str());

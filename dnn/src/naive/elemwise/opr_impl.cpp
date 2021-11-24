@@ -53,13 +53,12 @@ void fuse_mul_add4(ctype* dest, const ElemwiseOpParamN<4>& param) {
 
 }  // anonymous namespace
 
-#define on_arity_dispatched_cb_dtype(_dt)                              \
-    if (m_dst->layout.dtype == _dt()) {                                \
-        using dtrait = DTypeTrait<_dt>;                                \
-        using ctype = dtrait::ctype;                                   \
-        return ModeDispatcher<arity, dtrait::category, ctype>::run(    \
-                static_cast<HandleImpl*>(handle()), src, m_param.mode, \
-                m_dst->ptr<ctype>());                                  \
+#define on_arity_dispatched_cb_dtype(_dt)                                       \
+    if (m_dst->layout.dtype == _dt()) {                                         \
+        using dtrait = DTypeTrait<_dt>;                                         \
+        using ctype = dtrait::ctype;                                            \
+        return ModeDispatcher<arity, dtrait::category, ctype>::run(             \
+                static_cast<HandleImpl*>(handle()), src, m_param.mode, *m_dst); \
     }
 
 #define _cb_dispatch_mode(_m)                                                          \
@@ -70,9 +69,10 @@ void fuse_mul_add4(ctype* dest, const ElemwiseOpParamN<4>& param) {
             MIDOUT_BEGIN(                                                              \
                     megdnn_naive_elemwise,                                             \
                     midout_iv(param_enumv::Elemwise::Mode::_m)) {                      \
+                auto params = src;                                                     \
                 MEGDNN_DISPATCH_CPU_KERN(                                              \
                         handle, ElemArithKernCaller<arity MEGDNN_COMMA KernImpl>::run( \
-                                        dst, src));                                    \
+                                        dst.ptr<ctype>(), params));                    \
                 return;                                                                \
             }                                                                          \
             MIDOUT_END();                                                              \
@@ -84,7 +84,7 @@ void fuse_mul_add4(ctype* dest, const ElemwiseOpParamN<4>& param) {
         static constexpr int arity = _arity;                                       \
         static void run(                                                           \
                 HandleImpl* handle, const ElemwiseOpParamN<arity>& src, Mode mode, \
-                ctype* dst) {                                                      \
+                const TensorND dst) {                                              \
             switch (mode) {                                                        \
                 FOREACH(_cb_dispatch_mode)                                         \
                 default:                                                           \
@@ -97,14 +97,16 @@ void fuse_mul_add4(ctype* dest, const ElemwiseOpParamN<4>& param) {
 
 template <typename ctype, bool c_is_scalar>
 void ElemwiseForwardImpl::impl_fuse_mul_add3(const ElemwiseOpParamN<3>& params) {
-    auto dptr = m_dst->ptr<ctype>();
-    MEGDNN_DISPATCH_CPU_KERN_OPR(fuse_mul_add3<c_is_scalar>(dptr, params));
+    auto dst = *m_dst;
+    auto elparam = params;
+    MEGDNN_DISPATCH_CPU_KERN_OPR(fuse_mul_add3<c_is_scalar>(dst.ptr<ctype>(), elparam));
 }
 
 template <typename ctype>
 void ElemwiseForwardImpl::impl_fuse_mul_add4(const ElemwiseOpParamN<4>& params) {
-    auto dptr = m_dst->ptr<ctype>();
-    MEGDNN_DISPATCH_CPU_KERN_OPR(fuse_mul_add4(dptr, params));
+    auto dst = *m_dst;
+    auto elparam = params;
+    MEGDNN_DISPATCH_CPU_KERN_OPR(fuse_mul_add4(dst.ptr<ctype>(), elparam));
 }
 }  // namespace naive
 }  // namespace megdnn

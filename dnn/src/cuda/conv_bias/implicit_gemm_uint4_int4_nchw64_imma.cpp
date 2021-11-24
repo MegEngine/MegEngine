@@ -52,8 +52,8 @@ SmallVector<TensorLayout> ConvBiasForwardImpl::AlgoUInt4Int4NCHW64IMMAImplicitGe
 void ConvBiasForwardImpl::AlgoUInt4Int4NCHW64IMMAImplicitGemm::exec_preprocess(
         const ExecArgs& args) const {
     megdnn_assert(args.preprocessed_filter->tensors.size() == 2);
-    void* filter_ptr = args.preprocessed_filter->tensors[0].raw_ptr;
-    void* bias_ptr = args.preprocessed_filter->tensors[1].raw_ptr;
+    void* filter_ptr = args.preprocessed_filter->tensors[0].raw_ptr();
+    void* bias_ptr = args.preprocessed_filter->tensors[1].raw_ptr();
     void* reduce_filter_ptr = reinterpret_cast<void*>(args.workspace.raw_ptr);
     void* reduce_workspace = reinterpret_cast<void*>(
             args.workspace.raw_ptr + args.bias_layout->span().dist_byte());
@@ -67,8 +67,8 @@ std::tuple<void*, void*> ConvBiasForwardImpl::AlgoUInt4Int4NCHW64IMMAImplicitGem
     void* bias_ptr = nullptr;
     if (args.preprocessed_filter) {
         megdnn_assert(args.preprocessed_filter->tensors.size() == 2);
-        filter_ptr = args.preprocessed_filter->tensors[0].raw_ptr;
-        bias_ptr = args.preprocessed_filter->tensors[1].raw_ptr;
+        filter_ptr = args.preprocessed_filter->tensors[0].raw_ptr();
+        bias_ptr = args.preprocessed_filter->tensors[1].raw_ptr();
         return {filter_ptr, bias_ptr};
     } else {
         filter_ptr = reinterpret_cast<void*>(args.workspace.raw_ptr);
@@ -130,7 +130,7 @@ void ConvBiasForwardImpl::AlgoUInt4Int4NCHW64IMMAImplicitGemm::update_bias(
     int src_zero_point =
             args.src_tensor->layout.dtype.param<dtype::Quantized4Asymm>().zero_point;
     do_dispatch_reduce_filter_and_update_bias_4bit<true>(
-            reinterpret_cast<uint8_t*>(args.filter_tensor->raw_ptr),
+            reinterpret_cast<uint8_t*>(args.filter_tensor->raw_ptr()),
             args.bias_tensor->compatible_ptr<int32_t>(), co, ci * fh * fw / 8,
             reinterpret_cast<int32_t*>(updated_bias),
             reinterpret_cast<int32_t*>(reduce_workspace), src_zero_point, stream);

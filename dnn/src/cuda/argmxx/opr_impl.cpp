@@ -11,7 +11,7 @@
 #include "src/cuda/argmxx/opr_impl.h"
 
 #include "src/common/argmxx_helper.h"
-#include "src/common/reduce_helper.h"
+#include "src/common/reduce_helper_device.h"
 #include "src/cuda/reduce_helper.cuh"
 #include "src/cuda/utils.h"
 

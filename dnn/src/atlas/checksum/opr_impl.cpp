@@ -36,7 +36,7 @@ ChecksumForward::Result ChecksumForwardImpl::exec(
     megcoreComputingHandle_t comp_handle = handle()->megcore_computing_handle();
     megcoreGetDeviceHandle(comp_handle, &dev_handle);
     megcoreMemcpy(
-            comp_handle, cpu_data.data(), data.raw_ptr, cpu_data.size(),
+            comp_handle, cpu_data.data(), data.raw_ptr(), cpu_data.size(),
             megcoreMemcpyDeviceToHost);
     megcoreSynchronize(comp_handle);
 

@@ -100,9 +100,9 @@ size_t ConvBiasForwardImpl::AlgoCUDNNConv::get_workspace_in_bytes(
 
 void ConvBiasForwardImpl::AlgoCUDNNConv::exec(const ExecArgs& args) const {
     auto bundle = get_workspace_bundle(args.workspace.raw_ptr, args);
-    auto conv_dst_tensor = *args.dst_tensor;
+    TensorND conv_dst_tensor = *args.dst_tensor;
     if (args.dst_layout->dtype.enumv() != args.bias_layout->dtype.enumv()) {
-        conv_dst_tensor.raw_ptr = bundle.get(1);
+        conv_dst_tensor = TensorND{bundle.get(1), args.dst_tensor->layout};
         conv_dst_tensor.layout.dtype = DType();
         args.opr->check_or_deduce_dtype_fwd(
                 args.src_layout->dtype, args.filter_layout->dtype,
@@ -120,10 +120,10 @@ void ConvBiasForwardImpl::AlgoCUDNNConv::exec(const ExecArgs& args) const {
         float alpha = 1.0f, beta = 0.0f;
         auto status = cudnnConvolutionForward(
                 conv_args.handle->cudnn_handle(), &alpha, D.src_desc.desc,
-                conv_args.src_tensor->raw_ptr, D.filter_desc.desc,
-                conv_args.filter_tensor->raw_ptr, D.conv_desc.conv_desc, m_cudnn_enum,
+                conv_args.src_tensor->raw_ptr(), D.filter_desc.desc,
+                conv_args.filter_tensor->raw_ptr(), D.conv_desc.conv_desc, m_cudnn_enum,
                 conv_workspace.raw_ptr, conv_workspace.size, &beta, D.dst_desc.desc,
-                conv_args.dst_tensor->raw_ptr);
+                conv_args.dst_tensor->raw_ptr());
         megdnn_assert(
                 status == CUDNN_STATUS_SUCCESS, "conv fwd failed: %s; info: %s",
                 cudnnGetErrorString(status), conv_args.to_string().c_str());

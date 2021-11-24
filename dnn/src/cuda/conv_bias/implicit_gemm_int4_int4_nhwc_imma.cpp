@@ -39,7 +39,7 @@ SmallVector<TensorLayout> ConvBiasForwardImpl::AlgoInt4Int4NHWCIMMAImplicitGemm:
 void ConvBiasForwardImpl::AlgoInt4Int4NHWCIMMAImplicitGemm::exec_preprocess(
         const ExecArgs& args) const {
     megdnn_assert(args.preprocessed_filter->tensors.size() == 1);
-    void* filter_ptr = args.preprocessed_filter->tensors[0].raw_ptr;
+    void* filter_ptr = args.preprocessed_filter->tensors[0].raw_ptr();
     reorder_filter(args, m_algo_param.access_size, filter_ptr);
 }
 
@@ -48,12 +48,12 @@ std::tuple<void*, void*> ConvBiasForwardImpl::AlgoInt4Int4NHWCIMMAImplicitGemm::
     void* filter_ptr = nullptr;
     if (args.preprocessed_filter) {
         megdnn_assert(args.preprocessed_filter->tensors.size() == 1);
-        filter_ptr = args.preprocessed_filter->tensors[0].raw_ptr;
+        filter_ptr = args.preprocessed_filter->tensors[0].raw_ptr();
     } else {
         filter_ptr = reinterpret_cast<void*>(args.workspace.raw_ptr);
         reorder_filter(args, m_algo_param.access_size, filter_ptr);
     }
-    void* bias_ptr = args.bias_tensor->raw_ptr;
+    void* bias_ptr = args.bias_tensor->raw_ptr();
     return {filter_ptr, bias_ptr};
 }
 

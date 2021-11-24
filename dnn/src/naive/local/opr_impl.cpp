@@ -1,5 +1,5 @@
 /**
- * \file dnn/src/naive/local/local.cpp
+ * \file dnn/src/naive/local/opr_impl.cpp
  * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
  *
  * Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
@@ -82,7 +82,7 @@ void LocalForwardImpl::exec(
 LocalForwardImpl::FloatNoncontigBatchKernParam LocalForwardImpl::make_float_kern_param(
         _megdnn_tensor_in src, _megdnn_tensor_in filter, _megdnn_tensor_out dst,
         _megdnn_workspace workspace) const {
-    return {src.raw_ptr, filter.raw_ptr, dst.raw_ptr,
+    return {src.get_ref_ptr(), filter.get_ref_ptr(), dst.get_ref_ptr(),
             // n
             src.layout.shape[0],
             // ic, ih, iw, oc, oh, ow, fh, fw
@@ -116,10 +116,10 @@ void LocalBackwardDataImpl::exec(
            OW = diff.layout.shape[3];
     size_t ph = param().pad_h, pw = param().pad_w;
     size_t sh = param().stride_h, sw = param().stride_w;
-    auto gptr = grad.ptr<dt_float32>(), fptr = filter.ptr<dt_float32>(),
-         hptr = diff.ptr<dt_float32>();
     auto mode = param().mode;
     auto kern = [=]() {
+        auto gptr = grad.ptr<dt_float32>(), fptr = filter.ptr<dt_float32>(),
+             hptr = diff.ptr<dt_float32>();
         memset(gptr, 0, sizeof(float_t) * N * IC * IH * IW);
         rep(n, N) rep(oc, OC) rep(oh, OH) rep(ow, OW) {
             // auto &hval = hptr[n*OC*OH*OW + oc*OH*OW + oh*OW + ow];
@@ -164,10 +164,10 @@ void LocalBackwardFilterImpl::exec(
            OW = diff.layout.shape[3];
     size_t ph = param().pad_h, pw = param().pad_w;
     size_t sh = param().stride_h, sw = param().stride_w;
-    auto gptr = grad.ptr<dt_float32>(), sptr = src.ptr<dt_float32>(),
-         hptr = diff.ptr<dt_float32>();
     auto mode = param().mode;
     auto kern = [=]() {
+        auto gptr = grad.ptr<dt_float32>(), sptr = src.ptr<dt_float32>(),
+             hptr = diff.ptr<dt_float32>();
         memset(gptr, 0, sizeof(float_t) * OH * OW * IC * FH * FW * OC);
         rep(n, N) rep(oc, OC) rep(oh, OH) rep(ow, OW) {
             // auto &hval = hptr[n*OC*OH*OW + oc*OH*OW + oh*OW + ow];

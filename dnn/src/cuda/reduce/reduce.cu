@@ -8,7 +8,7 @@
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-#include "src/common/reduce_helper.h"
+#include "src/common/reduce_helper_device.h"
 
 #include "megdnn/dtype.h"
 #include "src/cuda/reduce_helper.cuh"
@@ -16,7 +16,7 @@
 namespace megdnn {
 namespace cuda {
 
-using namespace reduce;
+using namespace device_reduce;
 
 #define COMMA ,
 

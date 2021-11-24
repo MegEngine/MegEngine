@@ -137,7 +137,7 @@ void MatrixMulForwardImpl::AlgoConv1X1CUDNN::exec(const ExecArgs& args) const {
                     {ori_tensor.layout.shape[1], ori_tensor.layout.shape[0]},
                     ori_tensor.layout.dtype);
             dst_tensor = TensorND(bundle.get(workspace_pos), dst_layout);
-            TensorND src_tensor(ori_tensor.raw_ptr, dst_layout);
+            TensorND src_tensor(ori_tensor.raw_ptr(), dst_layout);
             src_tensor.layout.stride[0] = ori_tensor.layout.stride[1];
             src_tensor.layout.stride[1] = ori_tensor.layout.stride[0];
 
@@ -156,11 +156,11 @@ void MatrixMulForwardImpl::AlgoConv1X1CUDNN::exec(const ExecArgs& args) const {
     TensorLayout filter_layout({m, k, 1, 1}, args.layout_a.dtype);
     TensorLayout dst_layout({1, m, 1, n}, args.layout_c.dtype);
 
-    TensorND src(B_dst_tensor.raw_ptr, src_layout);
-    TensorND filter(A_dst_tensor.raw_ptr, filter_layout);
+    TensorND src(B_dst_tensor.raw_ptr(), src_layout);
+    TensorND filter(A_dst_tensor.raw_ptr(), filter_layout);
     TensorND z(nullptr, TensorLayout(src_layout.dtype));
     TensorND bias(nullptr, TensorLayout(src_layout.dtype));
-    TensorND dst(args.tensor_c.raw_ptr, dst_layout);
+    TensorND dst(args.tensor_c.raw_ptr(), dst_layout);
 
     ConvBiasForwardImpl::AlgoBase::ExecArgs conv_exec_args(
             static_cast<ConvBiasForwardImpl*>(conv_opr_ptr.get()), src, filter, bias, z,

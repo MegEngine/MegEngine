@@ -37,10 +37,10 @@ void Strategy<
     size_t a_panel_offset = ncb_index.ndrange_id[1] * packed_per_oc_block_size;
     int8_t* tmp_ptr = sparam.enable_filter_preprocess
                             ? static_cast<int8_t*>(
-                                      param.preprocessed_filter->tensors[0].raw_ptr)
+                                      param.preprocessed_filter->tensors[0].raw_ptr())
                             : static_cast<int8_t*>(bundle.get(BUNDLE_PACKA_INDEX));
     int8_t* a_panel = tmp_ptr + group_id * sparam.packA_group_size + a_panel_offset;
-    matmul_param.A_ptr = const_cast<src_ctype*>(param.filter<src_ctype>(group_id));
+    matmul_param.A_ptr.reset(const_cast<src_ctype*>(param.filter<src_ctype>(group_id)));
     matmul_algo->pack_A(
             matmul_param, a_panel, ncb_index.ndrange_id[1],
             matmul_desc.innerblocksize.m);
@@ -162,7 +162,7 @@ void Strategy<
 
     int8_t* tmp_ptr = sparam.enable_filter_preprocess
                             ? static_cast<int8_t*>(
-                                      param.preprocessed_filter->tensors[0].raw_ptr)
+                                      param.preprocessed_filter->tensors[0].raw_ptr())
                             : static_cast<int8_t*>(bundle.get(BUNDLE_PACKA_INDEX));
 
     src_ctype* a_panel = reinterpret_cast<src_ctype*>(tmp_ptr + a_panel_offset);

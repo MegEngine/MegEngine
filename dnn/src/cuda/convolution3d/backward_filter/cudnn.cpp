@@ -56,9 +56,9 @@ void Convolution3DBackwardFilterImpl::AlgoCUDNN::exec(const ExecArgs& args) cons
     float alpha = 1.0f, beta = 0.0f;
     auto status = cudnnConvolutionBackwardFilter(
             args.handle->cudnn_handle(), &alpha, D.src_desc.desc,
-            args.src_tensor->raw_ptr, D.diff_desc.desc, args.diff_tensor->raw_ptr,
+            args.src_tensor->raw_ptr(), D.diff_desc.desc, args.diff_tensor->raw_ptr(),
             D.conv_desc.desc, m_cudnn_enum, args.workspace.raw_ptr, args.workspace.size,
-            &beta, D.grad_desc.desc, args.grad_tensor->raw_ptr);
+            &beta, D.grad_desc.desc, args.grad_tensor->raw_ptr());
     megdnn_assert(
             status == CUDNN_STATUS_SUCCESS, "conv bwd_data failed: %s; info: %s",
             cudnnGetErrorString(status), args.to_string().c_str());

@@ -357,10 +357,10 @@ void AccuracyShakeChecker<Opr, Proxy>::init_host_values() {
             rng = m_default_rng.get();
         rng->gen(tensor_single_batch);
 
-        dt_byte* raw_storage_cur = static_cast<dt_byte*>(tensor_cur.raw_ptr) +
+        dt_byte* raw_storage_cur = static_cast<dt_byte*>(tensor_cur.raw_ptr()) +
                                    tensor_cur.layout.span().low_byte;
         dt_byte* raw_storage_single_batch =
-                static_cast<dt_byte*>(tensor_single_batch.raw_ptr) +
+                static_cast<dt_byte*>(tensor_single_batch.raw_ptr()) +
                 tensor_single_batch.layout.span().low_byte;
         const size_t step = tensor_single_batch.layout.span().dist_byte();
         if (tensor_cur.layout.eq_shape(tensor_single_batch.layout)) {

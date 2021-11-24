@@ -25,11 +25,10 @@ void EyeImpl::exec(_megdnn_tensor_out dst, _megdnn_workspace workspace) {
             std::max(dst.layout.shape[0], dst.layout.shape[1]) <
             static_cast<size_t>(std::numeric_limits<int>::max()));
     int m = dst.layout.shape[0], n = dst.layout.shape[1];
-#define cb(DType)                                                      \
-    if (dst.layout.dtype.enumv() == DTypeTrait<DType>::enumv) {        \
-        using ctype = typename DTypeTrait<DType>::ctype;               \
-        ctype* ptr = dst.ptr<ctype>();                                 \
-        MEGDNN_DISPATCH_CPU_KERN_OPR(exec_internal<ctype>(ptr, m, n)); \
+#define cb(DType)                                                                   \
+    if (dst.layout.dtype.enumv() == DTypeTrait<DType>::enumv) {                     \
+        using ctype = typename DTypeTrait<DType>::ctype;                            \
+        MEGDNN_DISPATCH_CPU_KERN_OPR(exec_internal<ctype>(dst.ptr<ctype>(), m, n)); \
     }
     MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
 #undef cb

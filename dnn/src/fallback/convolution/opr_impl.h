@@ -115,28 +115,28 @@ public:
 
     //! memory param for kernels with non-contiguous batch
     struct NCBKernParam : public NCBKernSizeParam {
-        const void* src_ptr;
-        const void* filter_ptr;
-        void* dst_ptr;
+        RefPtr src_ptr;
+        RefPtr filter_ptr;
+        RefPtr dst_ptr;
         void* workspace_ptr;
         size_t workspace_size;
 
         template <typename T>
         const T* src() const {
             src_type.assert_is_compatible_ctype<T>();
-            return static_cast<const T*>(src_ptr);
+            return static_cast<const T*>(src_ptr.get_ptr());
         }
 
         template <typename T>
         const T* filter() const {
             filter_type.assert_is_compatible_ctype<T>();
-            return static_cast<const T*>(filter_ptr);
+            return static_cast<const T*>(filter_ptr.get_ptr());
         }
 
         template <typename T>
         T* dst() const {
             dst_type.assert_is_compatible_ctype<T>();
-            return static_cast<T*>(dst_ptr);
+            return static_cast<T*>(dst_ptr.get_ptr());
         }
 
         template <typename T>
@@ -154,7 +154,8 @@ public:
             size_t group_offset = group_pack_size * group_pack_id * filter_meta.ocpg *
                                   osz[0] * osz[1] * dst_type.size();
             return reinterpret_cast<T*>(
-                    reinterpret_cast<ptrdiff_t>(dst_ptr) + batch_offset + group_offset);
+                    reinterpret_cast<ptrdiff_t>(dst_ptr.get_ptr()) + batch_offset +
+                    group_offset);
         }
 
         template <typename T>
@@ -165,7 +166,8 @@ public:
             size_t group_offset = group_pack_size * group_pack_id * filter_meta.icpg *
                                   isz[0] * isz[1] * src_type.size();
             return reinterpret_cast<T*>(
-                    reinterpret_cast<ptrdiff_t>(src_ptr) + batch_offset + group_offset);
+                    reinterpret_cast<ptrdiff_t>(src_ptr.get_ptr()) + batch_offset +
+                    group_offset);
         }
 
         template <typename T>
@@ -174,7 +176,7 @@ public:
                                   filter_meta.ocpg * filter_meta.spatial[0] *
                                   filter_meta.spatial[1] * filter_type.size();
             return reinterpret_cast<T*>(
-                    reinterpret_cast<ptrdiff_t>(filter_ptr) + group_offset);
+                    reinterpret_cast<ptrdiff_t>(filter_ptr.get_ptr()) + group_offset);
         }
     };
 
@@ -356,28 +358,28 @@ public:
 
     //! memory param for kernels with non-contiguous batch
     struct NCBKernParam : public NCBKernSizeParam {
-        const void* filter_ptr;
-        const void* diff_ptr;
-        void* grad_ptr;
+        RefPtr filter_ptr;
+        RefPtr diff_ptr;
+        RefPtr grad_ptr;
         void* workspace_ptr;
         size_t workspace_size;
 
         template <typename T>
         const T* diff() const {
             diff_type.assert_is_compatible_ctype<T>();
-            return static_cast<const T*>(diff_ptr);
+            return static_cast<const T*>(diff_ptr.get_ptr());
         }
 
         template <typename T>
         const T* filter() const {
             filter_type.assert_is_compatible_ctype<T>();
-            return static_cast<const T*>(filter_ptr);
+            return static_cast<const T*>(filter_ptr.get_ptr());
         }
 
         template <typename T>
         T* grad() const {
             grad_type.assert_is_compatible_ctype<T>();
-            return static_cast<T*>(grad_ptr);
+            return static_cast<T*>(grad_ptr.get_ptr());
         }
 
         template <typename T>

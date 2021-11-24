@@ -174,7 +174,7 @@ void megdnn::x86::warp_perspective_cv_exec(
             "unsupported src channel: %zu, avaiable channel size: 1/2/3", ch);
     const float* trans_ptr = trans.ptr<dt_float32>();
     const int* midx_ptr = nullptr;
-    if (mat_idx.raw_ptr) {
+    if (mat_idx.raw_ptr()) {
         megdnn_assert(mat_idx.layout.ndim == 1);
         midx_ptr = mat_idx.ptr<int>();
     }

@@ -48,7 +48,7 @@ public:
         SizeArgs(PoolingImpl* opr, const TensorLayout& src, const TensorLayout& dst);
     };
     struct ExecArgs : public SizeArgs {
-        const TensorND *src_tensor, *dst_tensor;
+        const TensorND src_tensor, dst_tensor;
         Workspace workspace;
 
         ExecArgs(

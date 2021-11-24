@@ -93,8 +93,8 @@ void PoolingForwardImpl::AlgoMIOpen::exec(const ExecArgs& args) const {
 
     dt_float32 alpha = 1.0f, beta = 0.0f;
     miopen_check(miopenPoolingForward(
-            handle, miopen_desc, &alpha, src_desc.desc, args.src_tensor->raw_ptr, &beta,
-            dst_desc.desc, args.dst_tensor->raw_ptr, false, nullptr, 0_z));
+            handle, miopen_desc, &alpha, src_desc.desc, args.src_tensor->raw_ptr(),
+            &beta, dst_desc.desc, args.dst_tensor->raw_ptr(), false, nullptr, 0_z));
     miopen_check(miopenDestroyPoolingDescriptor(miopen_desc));
 }
 
@@ -189,13 +189,13 @@ void PoolingBackwardImpl::AlgoMIOpen::exec(const ExecArgs& args) const {
         //! of the forward opr which stored in workspace. We have to recompute
         //! the indices by calling miopenPoolingForward again.
         miopen_check(miopenPoolingForward(
-                handle, miopen_desc, &alpha, src_desc.desc, args.src_tensor->raw_ptr,
-                &beta, dst_desc.desc, args.dst_tensor->raw_ptr, true,
+                handle, miopen_desc, &alpha, src_desc.desc, args.src_tensor->raw_ptr(),
+                &beta, dst_desc.desc, args.dst_tensor->raw_ptr(), true,
                 args.workspace.raw_ptr, args.workspace.size));
     }
     miopen_check(miopenPoolingBackward(
-            handle, miopen_desc, &alpha, dst_desc.desc, args.dst_tensor->raw_ptr,
-            diff_desc.desc, args.diff_tensor->raw_ptr, src_desc.desc,
-            args.src_tensor->raw_ptr, &beta, grad_desc.desc, args.grad_tensor->raw_ptr,
-            args.workspace.raw_ptr));
+            handle, miopen_desc, &alpha, dst_desc.desc, args.dst_tensor->raw_ptr(),
+            diff_desc.desc, args.diff_tensor->raw_ptr(), src_desc.desc,
+            args.src_tensor->raw_ptr(), &beta, grad_desc.desc,
+            args.grad_tensor->raw_ptr(), args.workspace.raw_ptr));
 }

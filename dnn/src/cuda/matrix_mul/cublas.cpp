@@ -77,10 +77,10 @@ void MatrixMulForwardImpl::AlgoCuBlas::exec(const ExecArgs& args) const {
         auto sgemm_ex_err = cublasSgemmEx(
                 cublas_handle, param.transposeB ? CUBLAS_OP_T : CUBLAS_OP_N,
                 param.transposeA ? CUBLAS_OP_T : CUBLAS_OP_N, n, m, k, one,
-                args.tensor_b.raw_ptr, SE_CUDA_DATA_HALF,
-                args.tensor_b.layout.stride[0], args.tensor_a.raw_ptr,
+                args.tensor_b.raw_ptr(), SE_CUDA_DATA_HALF,
+                args.tensor_b.layout.stride[0], args.tensor_a.raw_ptr(),
                 SE_CUDA_DATA_HALF, args.tensor_a.layout.stride[0], zero,
-                args.tensor_c.raw_ptr, SE_CUDA_DATA_HALF,
+                args.tensor_c.raw_ptr(), SE_CUDA_DATA_HALF,
                 args.tensor_c.layout.stride[0]);
         cublas_check(sgemm_ex_err);
 #if CUDART_VERSION >= 9000
@@ -97,11 +97,11 @@ void MatrixMulForwardImpl::AlgoCuBlas::exec(const ExecArgs& args) const {
         auto hgemm_ex_err = cublasHgemm(
                 cublas_handle, param.transposeB ? CUBLAS_OP_T : CUBLAS_OP_N,
                 param.transposeA ? CUBLAS_OP_T : CUBLAS_OP_N, n, m, k, one_half,
-                static_cast<const __half*>(args.tensor_b.raw_ptr),
+                static_cast<const __half*>(args.tensor_b.raw_ptr()),
                 args.tensor_b.layout.stride[0],
-                static_cast<const __half*>(args.tensor_a.raw_ptr),
+                static_cast<const __half*>(args.tensor_a.raw_ptr()),
                 args.tensor_a.layout.stride[0], zero_half,
-                static_cast<__half*>(args.tensor_c.raw_ptr),
+                static_cast<__half*>(args.tensor_c.raw_ptr()),
                 args.tensor_c.layout.stride[0]);
         cublas_check(hgemm_ex_err);
 #if CUDART_VERSION >= 9000
@@ -115,10 +115,10 @@ void MatrixMulForwardImpl::AlgoCuBlas::exec(const ExecArgs& args) const {
         cublas_check(cublasGemmEx(
                 cublas_handle, param.transposeB ? CUBLAS_OP_T : CUBLAS_OP_N,
                 param.transposeA ? CUBLAS_OP_T : CUBLAS_OP_N, n, m, k, one,
-                args.tensor_b.raw_ptr, CUDA_R_8I, args.tensor_b.layout.stride[0],
-                args.tensor_a.raw_ptr, CUDA_R_8I, args.tensor_a.layout.stride[0], zero,
-                args.tensor_c.raw_ptr, CUDA_R_32I, args.tensor_c.layout.stride[0],
-                CUBLAS_COMPUTE_32I, CUBLAS_GEMM_DFALT));
+                args.tensor_b.raw_ptr(), CUDA_R_8I, args.tensor_b.layout.stride[0],
+                args.tensor_a.raw_ptr(), CUDA_R_8I, args.tensor_a.layout.stride[0],
+                zero, args.tensor_c.raw_ptr(), CUDA_R_32I,
+                args.tensor_c.layout.stride[0], CUBLAS_COMPUTE_32I, CUBLAS_GEMM_DFALT));
     };
 
     // Note that cublas takes column-major matrices as inputs,

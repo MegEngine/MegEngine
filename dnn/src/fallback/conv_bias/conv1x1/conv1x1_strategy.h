@@ -102,10 +102,11 @@ public:
                                          oc_tile_id_in_group * packa_bytes_per_oc_tile;
         size_t numbers_offset_of_filter = oc_tile_size * IC * oc_tile_id_in_group;
 
-        int8_t* tmp_ptr = is_enable_filter_preprocess(param)
-                                ? static_cast<int8_t*>(
-                                          param.preprocessed_filter->tensors[0].raw_ptr)
-                                : static_cast<int8_t*>(whole_bundle.get(0));
+        int8_t* tmp_ptr =
+                is_enable_filter_preprocess(param)
+                        ? static_cast<int8_t*>(
+                                  param.preprocessed_filter->tensors[0].raw_ptr())
+                        : static_cast<int8_t*>(whole_bundle.get(0));
 
         src_ctype* a_panel =
                 reinterpret_cast<src_ctype*>(tmp_ptr + bytes_offset_of_a_panel);
@@ -199,10 +200,11 @@ public:
         size_t bytes_offset_of_a_panel = group_id * packa_bytes_per_group +
                                          oc_tile_id_in_group * packa_bytes_per_oc_tile;
 
-        int8_t* tmp_ptr = is_enable_filter_preprocess(param)
-                                ? static_cast<int8_t*>(
-                                          param.preprocessed_filter->tensors[0].raw_ptr)
-                                : static_cast<int8_t*>(whole_bundle.get(0));
+        int8_t* tmp_ptr =
+                is_enable_filter_preprocess(param)
+                        ? static_cast<int8_t*>(
+                                  param.preprocessed_filter->tensors[0].raw_ptr())
+                        : static_cast<int8_t*>(whole_bundle.get(0));
 
         int8_t* a_panel = tmp_ptr + bytes_offset_of_a_panel;
 

@@ -29,7 +29,7 @@ void LRNForwardImpl::exec(
     float alpha = 1.0f, beta = 0.0f;
     cudnn_check(cudnnLRNCrossChannelForward(
             handle, lrn_desc.desc, CUDNN_LRN_CROSS_CHANNEL_DIM1, &alpha, src_desc.desc,
-            src.raw_ptr, &beta, dst_desc.desc, dst.raw_ptr));
+            src.raw_ptr(), &beta, dst_desc.desc, dst.raw_ptr()));
 }
 
 void LRNBackwardImpl::setup_descs(
@@ -51,8 +51,8 @@ void LRNBackwardImpl::exec(
     float alpha = 1.0f, beta = 0.0f;
     cudnn_check(cudnnLRNCrossChannelBackward(
             handle, lrn_desc.desc, CUDNN_LRN_CROSS_CHANNEL_DIM1, &alpha, dst_desc.desc,
-            dst.raw_ptr, diff_desc.desc, diff.raw_ptr, src_desc.desc, src.raw_ptr,
-            &beta, grad_desc.desc, grad.raw_ptr));
+            dst.raw_ptr(), diff_desc.desc, diff.raw_ptr(), src_desc.desc, src.raw_ptr(),
+            &beta, grad_desc.desc, grad.raw_ptr()));
 }
 
 }  // namespace cuda

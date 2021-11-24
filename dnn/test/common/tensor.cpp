@@ -30,12 +30,11 @@ void test::init_gaussian(
 std::shared_ptr<TensorND> test::make_tensor_h2d(
         Handle* handle, const TensorND& htensor) {
     auto span = htensor.layout.span();
-    TensorND ret{nullptr, htensor.layout};
     uint8_t* mptr = static_cast<uint8_t*>(megdnn_malloc(handle, span.dist_byte()));
     megdnn_memcpy_H2D(
-            handle, mptr, static_cast<uint8_t*>(htensor.raw_ptr) + span.low_byte,
+            handle, mptr, static_cast<uint8_t*>(htensor.raw_ptr()) + span.low_byte,
             span.dist_byte());
-    ret.raw_ptr = mptr + span.low_byte;
+    TensorND ret{mptr + span.low_byte, htensor.layout};
     auto deleter = [handle, mptr](TensorND* p) {
         megdnn_free(handle, mptr);
         delete p;
@@ -46,11 +45,10 @@ std::shared_ptr<TensorND> test::make_tensor_h2d(
 std::shared_ptr<TensorND> test::make_tensor_d2h(
         Handle* handle, const TensorND& dtensor) {
     auto span = dtensor.layout.span();
-    TensorND ret{nullptr, dtensor.layout};
     auto mptr = new uint8_t[span.dist_byte()];
-    ret.raw_ptr = mptr + span.low_byte;
+    TensorND ret{mptr + span.low_byte, dtensor.layout};
     megdnn_memcpy_D2H(
-            handle, mptr, static_cast<uint8_t*>(dtensor.raw_ptr) + span.low_byte,
+            handle, mptr, static_cast<uint8_t*>(dtensor.raw_ptr()) + span.low_byte,
             span.dist_byte());
     auto deleter = [mptr](TensorND* p) {
         delete[] mptr;

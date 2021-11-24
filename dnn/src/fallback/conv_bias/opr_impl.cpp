@@ -402,10 +402,10 @@ ConvBiasImpl::NCBKernParam ConvBiasImpl::make_ncb_kern_param(
     NCBKernParam ret;
     static_cast<NCBKernSizeParam&>(ret) = make_ncb_kern_size_param(
             src.layout, filter.layout, bias.layout, dst.layout, preprocessed_filter);
-    ret.src_ptr = src.raw_ptr;
-    ret.filter_ptr = filter.raw_ptr;
-    ret.bias_ptr = bias.raw_ptr;
-    ret.dst_ptr = dst.raw_ptr;
+    ret.src_ptr = src.get_ref_ptr();
+    ret.filter_ptr = filter.get_ref_ptr();
+    ret.bias_ptr = bias.get_ref_ptr();
+    ret.dst_ptr = dst.get_ref_ptr();
     ret.workspace_ptr = workspace.raw_ptr;
     ret.workspace_size = workspace.size;
     return ret;
@@ -543,8 +543,7 @@ const char* ConvBiasImpl::get_algorithm_set_name() const {
 namespace megdnn {
 namespace fallback {
 
-template <typename T>
-const T* ConvBiasImpl::NCBKernParam::src(
+size_t ConvBiasImpl::NCBKernParam::src_offset(
         size_t batch_id, size_t group_pack_id, size_t channel_pack_id,
         size_t group_pack_size, size_t channel_pack_size) const {
     size_t batch_offset = batch_id * inp_bs * src_type.size();
@@ -552,13 +551,21 @@ const T* ConvBiasImpl::NCBKernParam::src(
                           isz[1] * src_type.size();
     size_t channel_offset =
             channel_pack_size * channel_pack_id * isz[0] * isz[1] * src_type.size();
-    return reinterpret_cast<T*>(
-            reinterpret_cast<ptrdiff_t>(src_ptr) + batch_offset + group_offset +
-            channel_offset);
+    return (batch_offset + group_offset + channel_offset);
 }
 
 template <typename T>
-const T* ConvBiasImpl::NCBKernParam::filter(
+const T* ConvBiasImpl::NCBKernParam::src(
+        size_t batch_id, size_t group_pack_id, size_t channel_pack_id,
+        size_t group_pack_size, size_t channel_pack_size) const {
+    return reinterpret_cast<T*>(
+            reinterpret_cast<ptrdiff_t>(src_ptr.get_ptr()) +
+            src_offset(
+                    batch_id, group_pack_id, channel_pack_id, group_pack_size,
+                    channel_pack_size));
+}
+
+size_t ConvBiasImpl::NCBKernParam::filter_offset(
         size_t group_pack_id, size_t pack_group_size) const {
     size_t group_offset = 0_z;
     switch (filter_meta.format) {
@@ -613,11 +620,18 @@ const T* ConvBiasImpl::NCBKernParam::filter(
         default:
             megdnn_assert(0, "other filter format is not support yet");
     }
-    return reinterpret_cast<T*>(reinterpret_cast<ptrdiff_t>(filter_ptr) + group_offset);
+    return group_offset;
 }
 
 template <typename T>
-const T* ConvBiasImpl::NCBKernParam::bias(
+const T* ConvBiasImpl::NCBKernParam::filter(
+        size_t group_pack_id, size_t pack_group_size) const {
+    size_t group_offset = filter_offset(group_pack_id, pack_group_size);
+    return reinterpret_cast<T*>(
+            reinterpret_cast<ptrdiff_t>(filter_ptr.get_ptr()) + group_offset);
+}
+
+size_t ConvBiasImpl::NCBKernParam::bias_offset(
         size_t batch_id, size_t group_pack_id, size_t channel_pack_id,
         size_t group_pack_size, size_t channel_pack_size) const {
     size_t batch_offset = 0_z;
@@ -634,13 +648,21 @@ const T* ConvBiasImpl::NCBKernParam::bias(
                 group_pack_size * group_pack_id * filter_meta.ocpg * bias_type.size();
         channel_offset = channel_pack_size * channel_pack_id * bias_type.size();
     }
-    return reinterpret_cast<T*>(
-            reinterpret_cast<ptrdiff_t>(bias_ptr) + batch_offset + group_offset +
-            channel_offset);
+    return (batch_offset + group_offset + channel_offset);
 }
 
 template <typename T>
-T* ConvBiasImpl::NCBKernParam::dst(
+const T* ConvBiasImpl::NCBKernParam::bias(
+        size_t batch_id, size_t group_pack_id, size_t channel_pack_id,
+        size_t group_pack_size, size_t channel_pack_size) const {
+    return reinterpret_cast<T*>(
+            reinterpret_cast<ptrdiff_t>(bias_ptr.get_ptr()) +
+            bias_offset(
+                    batch_id, group_pack_id, channel_pack_id, group_pack_size,
+                    channel_pack_size));
+}
+
+size_t ConvBiasImpl::NCBKernParam::dst_offset(
         size_t batch_id, size_t group_pack_id, size_t channel_pack_id,
         size_t group_pack_size, size_t channel_pack_size) const {
     size_t batch_offset = batch_id * out_bs * dst_type.size();
@@ -648,9 +670,18 @@ T* ConvBiasImpl::NCBKernParam::dst(
                           osz[1] * dst_type.size();
     size_t channel_offset =
             channel_pack_size * channel_pack_id * osz[0] * osz[1] * dst_type.size();
+    return (batch_offset + group_offset + channel_offset);
+}
+
+template <typename T>
+T* ConvBiasImpl::NCBKernParam::dst(
+        size_t batch_id, size_t group_pack_id, size_t channel_pack_id,
+        size_t group_pack_size, size_t channel_pack_size) const {
     return reinterpret_cast<T*>(
-            reinterpret_cast<ptrdiff_t>(dst_ptr) + batch_offset + group_offset +
-            channel_offset);
+            reinterpret_cast<ptrdiff_t>(dst_ptr.get_ptr()) +
+            dst_offset(
+                    batch_id, group_pack_id, channel_pack_id, group_pack_size,
+                    channel_pack_size));
 }
 
 #define INST(T)                                                      \

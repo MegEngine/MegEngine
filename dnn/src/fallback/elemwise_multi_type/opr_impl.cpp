@@ -18,20 +18,20 @@ using namespace megdnn;
 using namespace fallback;
 
 void ElemwiseMultiTypeImpl::on_fuse_mul_add3_int16x32x32x32(
-        const ElemwiseOpParamN<3>& param, dt_int32* dst) {
+        const ElemwiseOpParamN<3>& param, const TensorND& dst) {
     BroadcastChannelInfo binfo0, binfo1;
     if (is_vector(param[0].layout) &&
         is_broadcasted_channel_like(param[1].layout, binfo0) &&
         is_broadcasted_channel_like(param[2].layout, binfo1) && binfo0 == binfo1) {
-        auto pa = param[0].ptr<dt_int16>();
-        auto pb = param[1].ptr<dt_int32>();
-        auto pc = param[2].ptr<dt_int32>();
         auto x = binfo0.x, y = binfo0.y, z = binfo0.z;
-        auto work = [pa, pb, pc, dst, x, y, z]() {
-            const dt_int16* __restrict__ a = pa;
-            const dt_int32* __restrict__ b = pb;
-            const dt_int32* __restrict__ c = pc;
-            dt_int32* __restrict__ d = dst;
+        auto src0 = param[0];
+        auto src1 = param[1];
+        auto src2 = param[2];
+        auto work = [=]() {
+            const dt_int16* __restrict__ a = static_cast<dt_int16*>(src0.raw_ptr());
+            const dt_int32* __restrict__ b = static_cast<dt_int32*>(src1.raw_ptr());
+            const dt_int32* __restrict__ c = static_cast<dt_int32*>(src2.raw_ptr());
+            dt_int32* __restrict__ d = dst.ptr<dt_int32>();
             for (size_t j = 0; j < y; ++j) {
                 auto bv = b[j], cv = c[j];
                 for (size_t i = 0; i < x; ++i) {
@@ -58,17 +58,18 @@ void ElemwiseMultiTypeImpl::on_fuse_mul_add3_int16x32x32x32(
 
 template <typename ctype>
 void ElemwiseMultiTypeImpl::dispatch_fma3_iXxf32xf32xi8_bcast_1x(
-        const ElemwiseOpParamN<3>& param, const Broadcast1xInfo& binfo, dt_int8* dst) {
-    auto pa = param[0].ptr<ctype>();
-    auto pb = param[1].ptr<dt_float32>();
-    auto pc = param[2].ptr<dt_float32>();
+        const ElemwiseOpParamN<3>& param, const Broadcast1xInfo& binfo,
+        const TensorND& dst) {
     size_t x = binfo.x, y = binfo.y;
-    auto work = [pa, pb, pc, dst, x, y]() {
+    auto src0 = param[0];
+    auto src1 = param[1];
+    auto src2 = param[2];
+    auto work = [=]() {
         elemwise_multi_type::Fma3iXxf32xf32xiYOp<ctype, dt_int8> op;
-        const ctype* __restrict__ a = pa;
-        const dt_float32* __restrict__ b = pb;
-        const dt_float32* __restrict__ c = pc;
-        dt_int8* __restrict__ d = dst;
+        const ctype* __restrict__ a = src0.ptr<ctype>();
+        const dt_float32* __restrict__ b = static_cast<dt_float32*>(src1.raw_ptr());
+        const dt_float32* __restrict__ c = static_cast<dt_float32*>(src2.raw_ptr());
+        dt_int8* __restrict__ d = dst.ptr<dt_int8>();
         for (size_t i = 0; i < x; ++i) {
             size_t j = 0;
             for (; j + 4 <= y; j += 4) {
@@ -90,7 +91,7 @@ void ElemwiseMultiTypeImpl::dispatch_fma3_iXxf32xf32xi8_bcast_1x(
 }
 
 void ElemwiseMultiTypeImpl::on_fuse_mul_add3_iXxf32xf32xi8(
-        const ElemwiseOpParamN<3>& param, dt_int8* dst) {
+        const ElemwiseOpParamN<3>& param, const TensorND& dst) {
     Broadcast1xInfo binfo0, binfo1;
     if (is_vector(param[0].layout) && is_broadcasted_1x(param[1].layout, binfo0) &&
         is_broadcasted_1x(param[2].layout, binfo1) && binfo0 == binfo1) {
@@ -107,27 +108,18 @@ void ElemwiseMultiTypeImpl::on_fuse_mul_add3_iXxf32xf32xi8(
     }
 
     // fallback to naive
-    switch (param[0].layout.dtype.enumv()) {
-#define cb(t)                                                             \
-    case DTypeTrait<t>::enumv:                                            \
-        return naive::ElemwiseMultiTypeImpl::dispatch_fma3_iXxf32xf32xi8< \
-                DTypeTrait<t>::ctype>(param, dst);
-        MEGDNN_FOREACH_COMPUTING_DTYPE_INT(cb)
-#undef cb
-        default:
-            megdnn_throw("unsupported src dtype");
-    }
+    naive::ElemwiseMultiTypeImpl::on_fuse_mul_add3_iXxf32xf32xi8(param, dst);
 }
 
 template <typename ctype, typename dst_ctype>
 void ElemwiseMultiTypeImpl::dispatch_round_shr_saturate_iXxi8xiX_bcast_scalar(
-        const ElemwiseOpParamN<2>& param, dst_ctype* dst) {
-    auto x_ptr = param[0].ptr<ctype>();
+        const ElemwiseOpParamN<2>& param, const TensorND& dst) {
+    auto src = param[0];
     auto k = param[1].ptr<dt_int8>()[0];
     size_t size = param.size;
-    auto work = [x_ptr, k, size, dst]() {
-        const ctype* __restrict__ xp = x_ptr;
-        dst_ctype* __restrict__ dp = dst;
+    auto work = [src, k, size, dst]() {
+        const ctype* __restrict__ xp = src.ptr<ctype>();
+        dst_ctype* __restrict__ dp = dst.ptr<dst_ctype>();
         for (size_t i = 0; i < size; i++) {
             dp[i] = elemwise_multi_type::round_shr_saturate<ctype, dst_ctype>(xp[i], k);
         }
@@ -137,7 +129,7 @@ void ElemwiseMultiTypeImpl::dispatch_round_shr_saturate_iXxi8xiX_bcast_scalar(
 }
 
 void ElemwiseMultiTypeImpl::on_round_shr_saturate_iXxi8xi8(
-        const ElemwiseOpParamN<2>& param, megdnn::dt_int8* dst) {
+        const ElemwiseOpParamN<2>& param, const TensorND& dst) {
     if (is_vector(param[0].layout) && is_broadcasted_scalar(param[1].layout)) {
         switch (param[0].layout.dtype.enumv()) {
 #define cb(t)                                                     \
@@ -157,7 +149,7 @@ void ElemwiseMultiTypeImpl::on_round_shr_saturate_iXxi8xi8(
 }
 
 void ElemwiseMultiTypeImpl::on_round_shr_saturate_iXxi8xi16(
-        const ElemwiseOpParamN<2>& param, megdnn::dt_int16* dst) {
+        const ElemwiseOpParamN<2>& param, const TensorND& dst) {
     if (is_vector(param[0].layout) && is_broadcasted_scalar(param[1].layout)) {
         switch (param[0].layout.dtype.enumv()) {
 #define cb(t)                                                     \
@@ -179,23 +171,25 @@ void ElemwiseMultiTypeImpl::on_round_shr_saturate_iXxi8xi16(
 
 template <typename ctype>
 void ElemwiseMultiTypeImpl::dispatch_fuse_add_rmulh_round_shr_saturate_bcast_1c11(
-        const ElemwiseOpParamN<6>& param, megdnn::dt_int8* dst,
+        const ElemwiseOpParamN<6>& param, const TensorND& dst,
         const BroadcastChannelInfo& broadcast_info) {
-    auto work = [param, dst, broadcast_info]() {
-        auto x_ptr = param[0].ptr<ctype>();
-        auto b_ptr = param[1].ptr<ctype>();
-        auto M = param[2].ptr<ctype>()[0];
-        auto k = param[3].ptr<dt_int8>()[0];
-        auto minv = param[4].ptr<dt_int8>()[0];
-        auto maxv = param[5].ptr<dt_int8>()[0];
-        auto dst_ptr = dst;
+    auto x = param[0];
+    auto b = param[1];
+    auto M = param[2].ptr<ctype>()[0];
+    auto k = param[3].ptr<dt_int8>()[0];
+    auto minv = param[4].ptr<dt_int8>()[0];
+    auto maxv = param[5].ptr<dt_int8>()[0];
+    auto work = [=]() {
         auto batch_stride = broadcast_info.y * broadcast_info.z;
         auto channel_stride = broadcast_info.z;
+        auto x_ptr = static_cast<ctype*>(x.raw_ptr());
+        auto dst_ptr = static_cast<dt_int8*>(dst.raw_ptr());
         for (size_t n = 0; n < broadcast_info.x; n++) {
             const ctype* __restrict__ xp = x_ptr;
+            auto b_ptr = static_cast<ctype*>(b.raw_ptr());
             dt_int8* __restrict__ dp = dst_ptr;
             for (size_t chan = 0; chan < broadcast_info.y; chan++) {
-                const ctype bias = b_ptr[chan * param[1].layout.stride[1]];
+                const ctype bias = b_ptr[chan * b.layout.stride[1]];
                 for (size_t i = 0; i < broadcast_info.z; i++) {
                     auto res = elemwise_multi_type::round_shr_saturate<ctype, dt_int8>(
                             round_mulh_saturate<ctype>(xp[i] + bias, M), k);
@@ -215,7 +209,7 @@ void ElemwiseMultiTypeImpl::dispatch_fuse_add_rmulh_round_shr_saturate_bcast_1c1
 }
 
 void ElemwiseMultiTypeImpl::on_fuse_add_rmulh_round_shr_saturate_int16x16x16x8(
-        const ElemwiseOpParamN<6>& param, megdnn::dt_int8* dst) {
+        const ElemwiseOpParamN<6>& param, const TensorND& dst) {
     bool all_scalar = true;
     for (int i = 3; i < 6; i++) {
         all_scalar &= is_broadcasted_scalar(param[i].layout);
@@ -229,7 +223,7 @@ void ElemwiseMultiTypeImpl::on_fuse_add_rmulh_round_shr_saturate_int16x16x16x8(
 }
 
 void ElemwiseMultiTypeImpl::on_fuse_add_rmulh_round_shr_saturate_int32x32x32x8(
-        const ElemwiseOpParamN<6>& param, megdnn::dt_int8* dst) {
+        const ElemwiseOpParamN<6>& param, const TensorND& dst) {
     bool all_scalar = true;
     for (int i = 3; i < 6; i++) {
         all_scalar &= is_broadcasted_scalar(param[i].layout);

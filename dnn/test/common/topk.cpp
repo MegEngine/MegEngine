@@ -23,7 +23,7 @@ class EqualValueRng final : public RNG {
 
 public:
     void gen(const TensorND& tensor) override {
-        memset(tensor.raw_ptr, 0, tensor.layout.span().dist_byte());
+        memset(tensor.raw_ptr(), 0, tensor.layout.span().dist_byte());
         ASSERT_EQ(2u, tensor.layout.ndim);
         size_t m = tensor.layout[0], n = tensor.layout[1];
         for (size_t i = 0; i < m; ++i) {

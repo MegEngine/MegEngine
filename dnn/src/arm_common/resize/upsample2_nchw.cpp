@@ -191,14 +191,14 @@ void nearest_upsample2_nchw(
 void megdnn::arm_common::resize_linear_upsample2_nchw_fp32(
         const ResizeImpl::KernParam<float>& kern_param) {
     linear_upsample2_nchw(
-            kern_param.sptr, kern_param.dptr, kern_param.n * kern_param.c,
+            kern_param.src(), kern_param.dst(), kern_param.n * kern_param.c,
             kern_param.ih, kern_param.iw);
 }
 
 void megdnn::arm_common::resize_nearest_upsample2_nchw_fp32(
         const ResizeImpl::KernParam<float>& kern_param) {
     nearest_upsample2_nchw(
-            kern_param.sptr, kern_param.dptr, kern_param.n * kern_param.c,
+            kern_param.src(), kern_param.dst(), kern_param.n * kern_param.c,
             kern_param.ih, kern_param.iw);
 }
 
@@ -206,16 +206,16 @@ void megdnn::arm_common::resize_nearest_upsample2_nchw_fp32(
 
 void megdnn::arm_common::resize_linear_upsample2_nchw_fp16(
         const ResizeImpl::KernParam<dt_float16>& kern_param) {
-    auto sptr = reinterpret_cast<const __fp16*>(kern_param.sptr);
-    auto dptr = reinterpret_cast<__fp16*>(kern_param.dptr);
+    auto sptr = reinterpret_cast<const __fp16*>(kern_param.sptr.get_ptr());
+    auto dptr = reinterpret_cast<__fp16*>(kern_param.dptr.get_ptr());
     linear_upsample2_nchw(
             sptr, dptr, kern_param.n * kern_param.c, kern_param.ih, kern_param.iw);
 }
 
 void megdnn::arm_common::resize_nearest_upsample2_nchw_fp16(
         const ResizeImpl::KernParam<dt_float16>& kern_param) {
-    auto sptr = reinterpret_cast<const __fp16*>(kern_param.sptr);
-    auto dptr = reinterpret_cast<__fp16*>(kern_param.dptr);
+    auto sptr = reinterpret_cast<const __fp16*>(kern_param.sptr.get_ptr());
+    auto dptr = reinterpret_cast<__fp16*>(kern_param.dptr.get_ptr());
     nearest_upsample2_nchw(
             sptr, dptr, kern_param.n * kern_param.c, kern_param.ih, kern_param.iw);
 }

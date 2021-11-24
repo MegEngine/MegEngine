@@ -24,12 +24,6 @@ public:
             const TensorShapeArray&, const TensorShape&, const TensorShape&) override {
         return 0;
     }
-
-private:
-    template <typename T>
-    void exec_internal(
-            _megdnn_tensor_in srcs, int32_t* offsets, _megdnn_tensor_out dst,
-            _megdnn_workspace workspace);
 };
 
 }  // namespace naive

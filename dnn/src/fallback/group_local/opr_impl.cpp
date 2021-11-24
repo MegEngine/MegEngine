@@ -58,19 +58,18 @@ void GroupLocalImpl::exec(
 
     auto kern = [fp, nr_group, kptr, flt_gstride, data_type_size_in_bytes]() {
         auto cur_fp = fp;
+        cur_fp.src = RefPtr();
+        cur_fp.filter = RefPtr();
+        cur_fp.dst = RefPtr();
         rep(g, nr_group) {
             auto ic = g * fp.ic;
             auto oc = g * fp.oc;
-            const int8_t* sptr_tmp = reinterpret_cast<const int8_t*>(fp.src);
-            const int8_t* fptr_tmp = reinterpret_cast<const int8_t*>(fp.filter);
-            int8_t* dptr_tmp = reinterpret_cast<int8_t*>(fp.dst);
-
-            sptr_tmp = sptr_tmp + ic * fp.ih * fp.iw * data_type_size_in_bytes;
-            fptr_tmp = fptr_tmp + g * flt_gstride * data_type_size_in_bytes;
-            dptr_tmp = dptr_tmp + oc * fp.oh * fp.ow * data_type_size_in_bytes;
-            cur_fp.src = static_cast<const void*>(sptr_tmp);
-            cur_fp.filter = static_cast<const void*>(fptr_tmp);
-            cur_fp.dst = static_cast<void*>(dptr_tmp);
+            cur_fp.src = fp.src;
+            cur_fp.filter = fp.filter;
+            cur_fp.dst = fp.dst;
+            cur_fp.src += ic * fp.ih * fp.iw * data_type_size_in_bytes;
+            cur_fp.filter += g * flt_gstride * data_type_size_in_bytes;
+            cur_fp.dst += oc * fp.oh * fp.ow * data_type_size_in_bytes;
             kptr(cur_fp);
         }
     };

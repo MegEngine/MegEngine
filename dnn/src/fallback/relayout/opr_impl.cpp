@@ -61,8 +61,6 @@ template <typename ctype>
 void dispatch_on_dtype_cont(
         Handle* handle, const TensorND& cont, const TensorND& nonc,
         memcpy_policy_t mcp_pol) {
-    auto ctptr = static_cast<uint8_t*>(cont.raw_ptr),
-         ncptr = static_cast<uint8_t*>(nonc.raw_ptr);
     thin_function<void()> kern;
     switch (nonc.layout.ndim) {
         case 2: {
@@ -70,8 +68,8 @@ void dispatch_on_dtype_cont(
             auto strd0_n = nonc.layout.stride[0] * sizeof(ctype);
             auto strd0_c = shp1 * sizeof(ctype);
             kern = [=]() {
-                auto cur_ctptr = ctptr;
-                auto cur_ncptr = ncptr;
+                auto cur_ctptr = static_cast<uint8_t*>(cont.raw_ptr());
+                auto cur_ncptr = static_cast<uint8_t*>(nonc.raw_ptr());
                 for (size_t i = 0; i < shp0; ++i) {
                     mcp_pol(cur_ctptr, cur_ncptr, strd0_c);
                     cur_ctptr += strd0_c;
@@ -87,8 +85,8 @@ void dispatch_on_dtype_cont(
                  strd1_n = nonc.layout.stride[1] * sizeof(ctype);
             auto strd1_c = shp2 * sizeof(ctype);
             kern = [=]() {
-                auto cur_ctptr = ctptr;
-                auto ncptr_row = ncptr;
+                auto cur_ctptr = static_cast<uint8_t*>(cont.raw_ptr());
+                auto ncptr_row = static_cast<uint8_t*>(nonc.raw_ptr());
                 for (size_t i = 0; i < shp0; ++i) {
                     auto cur_ncptr = ncptr_row;
                     for (size_t j = 0; j < shp1; ++j) {
@@ -249,71 +247,73 @@ void RelayoutForwardImpl::exec(
 void RelayoutForwardImpl::exec_after_preprocess(
         const TensorND& src, const TensorND& dst, relayout::TransposeParam* transpose) {
     if (transpose) {
-        auto dsize = src.layout.dtype.size() * transpose->c;
-        void (*kptr)(size_t, size_t, size_t, size_t, void*, void*, size_t) = nullptr;
-        auto src_addr = reinterpret_cast<uintptr_t>(src.raw_ptr),
-             dst_addr = reinterpret_cast<uintptr_t>(dst.raw_ptr);
-        if (dsize == 1) {
-            megdnn_assert(transpose->c == 1);
-            kptr = call_transpose<uint8_t>;
-        } else if (dsize == 2) {
-            transpose->c = 1;
-            if (!((src_addr | dst_addr) & (alignof(uint16_t) - 1))) {
-                kptr = call_transpose<uint16_t>;
-            } else {
-                kptr = call_transpose<equiv_ctype_storage<2>>;
-                megdnn_log_error("unaligned addr in relayout");
-            }
-        } else if (dsize == 3) {
-            transpose->c = 1;
-            kptr = call_transpose<equiv_ctype_storage<3>>;
-        } else if (dsize == 4) {
-            transpose->c = 1;
-            if (!((src_addr | dst_addr) & (alignof(uint32_t) - 1))) {
-                kptr = call_transpose<uint32_t>;
-            } else {
-                kptr = call_transpose<equiv_ctype_storage<4>>;
-                megdnn_log_error("unaligned addr in relayout");
-            }
-        } else if (dsize == 12) {
-            transpose->c = 1;
-            if (!((src_addr | dst_addr) & (alignof(uint32_t) - 1))) {
-                kptr = call_transpose<equiv_ctype_storage<3, uint32_t>>;
-            } else {
-                kptr = call_transpose<equiv_ctype_storage<12>>;
-                megdnn_log_error("unaligned addr in relayout");
-            }
-        } else if (dsize <= TRANSPOSE_CV_MAX_C) {
-            switch (dst.layout.dtype.enumv()) {
+        auto kernel = [tparam = *transpose, src, dst]() {
+            auto t = tparam;
+            auto dsize = src.layout.dtype.size() * t.c;
+            void (*kptr)(size_t, size_t, size_t, size_t, void*, void*, size_t) =
+                    nullptr;
+            auto src_addr = reinterpret_cast<uintptr_t>(src.raw_ptr()),
+                 dst_addr = reinterpret_cast<uintptr_t>(dst.raw_ptr());
+            if (dsize == 1) {
+                megdnn_assert(t.c == 1);
+                kptr = call_transpose<uint8_t>;
+            } else if (dsize == 2) {
+                t.c = 1;
+                if (!((src_addr | dst_addr) & (alignof(uint16_t) - 1))) {
+                    kptr = call_transpose<uint16_t>;
+                } else {
+                    kptr = call_transpose<equiv_ctype_storage<2>>;
+                    megdnn_log_error("unaligned addr in relayout");
+                }
+            } else if (dsize == 3) {
+                t.c = 1;
+                kptr = call_transpose<equiv_ctype_storage<3>>;
+            } else if (dsize == 4) {
+                t.c = 1;
+                if (!((src_addr | dst_addr) & (alignof(uint32_t) - 1))) {
+                    kptr = call_transpose<uint32_t>;
+                } else {
+                    kptr = call_transpose<equiv_ctype_storage<4>>;
+                    megdnn_log_error("unaligned addr in relayout");
+                }
+            } else if (dsize == 12) {
+                t.c = 1;
+                if (!((src_addr | dst_addr) & (alignof(uint32_t) - 1))) {
+                    kptr = call_transpose<equiv_ctype_storage<3, uint32_t>>;
+                } else {
+                    kptr = call_transpose<equiv_ctype_storage<12>>;
+                    megdnn_log_error("unaligned addr in relayout");
+                }
+            } else if (dsize <= TRANSPOSE_CV_MAX_C) {
+                switch (dst.layout.dtype.enumv()) {
 #define cb(_dt)                                             \
     case DTypeTrait<dtype::_dt>::enumv:                     \
         kptr = transpose_cv<equiv_ctype<dtype::_dt>::type>; \
         break;
-                MEGDNN_FOREACH_DTYPE_NAME(cb)
-                MEGDNN_FOREACH_PARAMETERIZED_DTYPE(cb)
+                    MEGDNN_FOREACH_DTYPE_NAME(cb)
+                    MEGDNN_FOREACH_PARAMETERIZED_DTYPE(cb)
 #undef cb
+                }
+                megdnn_assert(kptr);
             }
-            megdnn_assert(kptr);
-        }
 
-        if (kptr) {
-            auto kern = [t = *transpose, sptr = src.raw_ptr, dptr = dst.raw_ptr,
-                         kptr]() {
+            if (kptr) {
+                auto sptr = src.raw_ptr();
+                auto dptr = dst.raw_ptr();
                 kptr(t.batch, t.m, t.n, t.c, sptr, dptr, t.stride_m);
-            };
-            static_cast<naive::HandleImpl*>(handle())->dispatch_kern(kern);
-            return;
-        } else {
-            megdnn_assert(transpose->c != 1, "unsupported dtype size");
-        }
+                return;
+            } else {
+                megdnn_assert(t.c != 1, "unsupported dtype size");
+            }
+        };
+        MEGDNN_DISPATCH_CPU_KERN_OPR(kernel());
     }
 
     using relayout::is_contig;
 
     if (is_contig(dst.layout) && is_contig(src.layout)) {
-        auto sptr = src.raw_ptr, dptr = dst.raw_ptr;
         auto sz = src.layout.span().dist_byte();
-        MEGDNN_DISPATCH_CPU_KERN_OPR(memcpy(dptr, sptr, sz));
+        MEGDNN_DISPATCH_CPU_KERN_OPR(memcpy(dst.raw_ptr(), src.raw_ptr(), sz));
         return;
     }
 

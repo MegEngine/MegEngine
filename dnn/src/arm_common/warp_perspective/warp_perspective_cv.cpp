@@ -167,21 +167,17 @@ void megdnn::arm_common::warp_perspective_cv_exec(
     megdnn_assert(
             ch == 1 || ch == 3 || ch == 2,
             "unsupported src channel: %zu, avaiable channel size: 1/2/3", ch);
-    const float* trans_ptr = trans.ptr<dt_float32>();
-    const int* midx_ptr = nullptr;
-    if (mat_idx.raw_ptr) {
-        megdnn_assert(mat_idx.layout.ndim == 1);
-        midx_ptr = mat_idx.ptr<int>();
-    }
     if (dst.layout.dtype.enumv() == DTypeEnum::Float32) {
 #define cb(_imode, _bmode, _ch)                                                       \
-    auto task = [src, trans_ptr, midx_ptr, dst, border_value, parallelism_batch](     \
+    auto task = [src, trans, mat_idx, dst, border_value, parallelism_batch](          \
                         size_t index, size_t) {                                       \
         size_t batch_id = index / parallelism_batch;                                  \
         size_t task_id = index % parallelism_batch;                                   \
         size_t src_id = batch_id;                                                     \
-        if (midx_ptr) {                                                               \
-            src_id = midx_ptr[batch_id];                                              \
+        const float* trans_ptr = trans.ptr<dt_float32>();                             \
+        if (mat_idx.raw_ptr()) {                                                      \
+            megdnn_assert(mat_idx.layout.ndim == 1);                                  \
+            src_id = mat_idx.ptr<int>()[batch_id];                                    \
             megdnn_assert(                                                            \
                     src_id < src.layout.shape[0],                                     \
                     "mat_idx out of bound: mat_idx[%zu]=%zu src_batch=%zu", batch_id, \
@@ -202,13 +198,15 @@ void megdnn::arm_common::warp_perspective_cv_exec(
 #undef cb
     } else if (dst.layout.dtype.enumv() == DTypeEnum::Uint8) {
 #define cb(_imode, _bmode, _ch)                                                       \
-    auto task = [src, trans_ptr, midx_ptr, dst, border_value, parallelism_batch](     \
+    auto task = [src, trans, mat_idx, dst, border_value, parallelism_batch](          \
                         size_t index, size_t) {                                       \
         size_t batch_id = index / parallelism_batch;                                  \
         size_t task_id = index % parallelism_batch;                                   \
         size_t src_id = batch_id;                                                     \
-        if (midx_ptr) {                                                               \
-            src_id = midx_ptr[batch_id];                                              \
+        const float* trans_ptr = trans.ptr<dt_float32>();                             \
+        if (mat_idx.raw_ptr()) {                                                      \
+            megdnn_assert(mat_idx.layout.ndim == 1);                                  \
+            src_id = mat_idx.ptr<int>()[batch_id];                                    \
             megdnn_assert(                                                            \
                     src_id < src.layout.shape[0],                                     \
                     "mat_idx out of bound: mat_idx[%zu]=%zu src_batch=%zu", batch_id, \

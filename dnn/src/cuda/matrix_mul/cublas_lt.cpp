@@ -67,10 +67,10 @@ void MatrixMulForwardImpl::AlgoCuBlasLt::exec(const ExecArgs& args) const {
                 "workspace bundle size should be 1(ws_algo)");
         cublas_check(cublasLtMatmul(
                 cublasLt_handle, desc.matmul_desc, one_half,
-                static_cast<const __half*>(args.tensor_b.raw_ptr), desc.layout_b,
-                static_cast<const __half*>(args.tensor_a.raw_ptr), desc.layout_a,
-                zero_half, static_cast<const __half*>(args.tensor_c.raw_ptr),
-                desc.layout_c, static_cast<__half*>(args.tensor_c.raw_ptr),
+                static_cast<const __half*>(args.tensor_b.raw_ptr()), desc.layout_b,
+                static_cast<const __half*>(args.tensor_a.raw_ptr()), desc.layout_a,
+                zero_half, static_cast<const __half*>(args.tensor_c.raw_ptr()),
+                desc.layout_c, static_cast<__half*>(args.tensor_c.raw_ptr()),
                 desc.layout_c, &algo, ws_bundle.get(0), ws_bundle.get_size(0), stream));
     };
     auto igemm = [&]() {
@@ -90,14 +90,14 @@ void MatrixMulForwardImpl::AlgoCuBlasLt::exec(const ExecArgs& args) const {
                 transform_desc, CUBLASLT_MATRIX_TRANSFORM_DESC_POINTER_MODE, &pm,
                 sizeof(pm)));
         cublas_check(cublasLtMatrixTransform(
-                cublasLt_handle, transform_desc, one, args.tensor_b.raw_ptr,
+                cublasLt_handle, transform_desc, one, args.tensor_b.raw_ptr(),
                 desc.layout_b, zero, nullptr, nullptr, ws_b, desc.layout_trans_b,
                 stream));
         cublas_check(cublasLtMatrixTransformDescSetAttribute(
                 transform_desc, CUBLASLT_MATRIX_TRANSFORM_DESC_TRANSA, &trans_a,
                 sizeof(trans_a)));
         cublas_check(cublasLtMatrixTransform(
-                cublasLt_handle, transform_desc, one, args.tensor_a.raw_ptr,
+                cublasLt_handle, transform_desc, one, args.tensor_a.raw_ptr(),
                 desc.layout_a, zero, nullptr, nullptr, ws_a, desc.layout_trans_a,
                 stream));
         cublas_check(cublasLtMatmul(
@@ -110,7 +110,7 @@ void MatrixMulForwardImpl::AlgoCuBlasLt::exec(const ExecArgs& args) const {
                 sizeof(trans_c)));
         cublas_check(cublasLtMatrixTransform(
                 cublasLt_handle, transform_desc, one, ws_c, desc.layout_trans_c, zero,
-                nullptr, nullptr, args.tensor_c.raw_ptr, desc.layout_c, stream));
+                nullptr, nullptr, args.tensor_c.raw_ptr(), desc.layout_c, stream));
         cublas_check(cublasLtMatrixTransformDescDestroy(transform_desc));
     };
 #if CUDA_VERSION >= 11000

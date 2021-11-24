@@ -65,7 +65,7 @@ void ConvolutionForwardImpl::AlgoMatmul::exec_internal(const ExecArgs& args) {
             Cl({OC, OH * OW * N}, typename DTypeTrait<T>::dtype());
     TensorND A(args.filter_tensor->ptr<T>(), Al), B(col, Bl), C(dst_t, Cl);
     if (fm.should_flip) {
-        convolution::flip_filter(args, wbundle.get_workspace(2), A.raw_ptr);
+        convolution::flip_filter(args, wbundle.get_workspace(2), A.get_ref_ptr());
     }
     args.handle->matmul_opr()->exec(A, B, C, Workspace());
     TensorLayout C2l({OC * OH * OW, N}, typename DTypeTrait<T>::dtype()), C3l = C2l;

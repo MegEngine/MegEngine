@@ -220,9 +220,9 @@ void ElemwiseImpl::AlgoBinaryVecVec::exec(const KernParam& kern_param) const {
                     run = OpCallerBinary<_op<_type, _type>, BcastType::VEC_VEC>::run; \
             MEGDNN_DISPATCH_CPU_KERN(                                                 \
                     static_cast<naive::HandleImpl*>(kern_param.handle),               \
-                    run(static_cast<const _type*>(src0.raw_ptr),                      \
-                        static_cast<const _type*>(src1.raw_ptr),                      \
-                        static_cast<_type*>(dst.raw_ptr), src0.layout.dtype,          \
+                    run(static_cast<const _type*>(src0.raw_ptr()),                    \
+                        static_cast<const _type*>(src1.raw_ptr()),                    \
+                        static_cast<_type*>(dst.raw_ptr()), src0.layout.dtype,        \
                         src1.layout.dtype, dst.layout.dtype,                          \
                         src0.layout.total_nr_elems()));                               \
         }                                                                             \
@@ -254,9 +254,9 @@ void ElemwiseImpl::AlgoBinaryVecScalar::exec(const KernParam& kern_param) const 
                             _op<_type, _type>, BcastType::VEC_SCALAR>::run;          \
             MEGDNN_DISPATCH_CPU_KERN(                                                \
                     static_cast<naive::HandleImpl*>(kern_param.handle),              \
-                    run(static_cast<const _type*>(src0.raw_ptr),                     \
-                        static_cast<const _type*>(src1.raw_ptr)[0],                  \
-                        static_cast<_type*>(dst.raw_ptr), src0.layout.dtype,         \
+                    run(static_cast<const _type*>(src0.raw_ptr()),                   \
+                        static_cast<const _type*>(src1.raw_ptr())[0],                \
+                        static_cast<_type*>(dst.raw_ptr()), src0.layout.dtype,       \
                         src1.layout.dtype, dst.layout.dtype,                         \
                         src0.layout.total_nr_elems()));                              \
         }                                                                            \
@@ -280,9 +280,9 @@ void ElemwiseImpl::AlgoBinaryVecScalar::exec(const KernParam& kern_param) const 
                             _op<_type, _type>, BcastType::SCALAR_VEC>::run;          \
             MEGDNN_DISPATCH_CPU_KERN(                                                \
                     static_cast<naive::HandleImpl*>(kern_param.handle),              \
-                    run(static_cast<const _type*>(src0.raw_ptr)[0],                  \
-                        static_cast<const _type*>(src1.raw_ptr),                     \
-                        static_cast<_type*>(dst.raw_ptr), src0.layout.dtype,         \
+                    run(static_cast<const _type*>(src0.raw_ptr())[0],                \
+                        static_cast<const _type*>(src1.raw_ptr()),                   \
+                        static_cast<_type*>(dst.raw_ptr()), src0.layout.dtype,       \
                         src1.layout.dtype, dst.layout.dtype,                         \
                         src1.layout.total_nr_elems()));                              \
         }                                                                            \
@@ -318,9 +318,9 @@ void ElemwiseImpl::AlgoBinaryVecBcast101::exec(const KernParam& kern_param) cons
                             _op<_type, _type>, BcastType::VEC_BCAST101>::run;        \
             MEGDNN_DISPATCH_CPU_KERN(                                                \
                     static_cast<naive::HandleImpl*>(kern_param.handle),              \
-                    run(static_cast<const _type*>(src0.raw_ptr),                     \
-                        static_cast<const _type*>(src1.raw_ptr),                     \
-                        static_cast<_type*>(dst.raw_ptr), src0.layout.dtype,         \
+                    run(static_cast<const _type*>(src0.raw_ptr()),                   \
+                        static_cast<const _type*>(src1.raw_ptr()),                   \
+                        static_cast<_type*>(dst.raw_ptr()), src0.layout.dtype,       \
                         src1.layout.dtype, dst.layout.dtype, binfo.x, binfo.y,       \
                         binfo.z));                                                   \
         }                                                                            \
@@ -347,9 +347,9 @@ void ElemwiseImpl::AlgoBinaryVecBcast101::exec(const KernParam& kern_param) cons
                             _op<_type, _type>, BcastType::BCAST101_VEC>::run;        \
             MEGDNN_DISPATCH_CPU_KERN(                                                \
                     static_cast<naive::HandleImpl*>(kern_param.handle),              \
-                    run(static_cast<const _type*>(src0.raw_ptr),                     \
-                        static_cast<const _type*>(src1.raw_ptr),                     \
-                        static_cast<_type*>(dst.raw_ptr), src0.layout.dtype,         \
+                    run(static_cast<const _type*>(src0.raw_ptr()),                   \
+                        static_cast<const _type*>(src1.raw_ptr()),                   \
+                        static_cast<_type*>(dst.raw_ptr()), src0.layout.dtype,       \
                         src1.layout.dtype, dst.layout.dtype, binfo.x, binfo.y,       \
                         binfo.z));                                                   \
         }                                                                            \
@@ -384,9 +384,9 @@ void ElemwiseImpl::AlgoBinaryVecBcastX0X::exec(const KernParam& kern_param) cons
                             _op<_type, _type>, BcastType::VEC_BCASTX0X>::run;        \
             MEGDNN_DISPATCH_CPU_KERN(                                                \
                     static_cast<naive::HandleImpl*>(kern_param.handle),              \
-                    run(static_cast<const _type*>(src0.raw_ptr),                     \
-                        static_cast<const _type*>(src1.raw_ptr),                     \
-                        static_cast<_type*>(dst.raw_ptr), src0.layout.dtype,         \
+                    run(static_cast<const _type*>(src0.raw_ptr()),                   \
+                        static_cast<const _type*>(src1.raw_ptr()),                   \
+                        static_cast<_type*>(dst.raw_ptr()), src0.layout.dtype,       \
                         src1.layout.dtype, dst.layout.dtype, binfo.x, binfo.y,       \
                         binfo.z));                                                   \
         }                                                                            \
@@ -413,9 +413,9 @@ void ElemwiseImpl::AlgoBinaryVecBcastX0X::exec(const KernParam& kern_param) cons
                             _op<_type, _type>, BcastType::BCASTX0X_VEC>::run;        \
             MEGDNN_DISPATCH_CPU_KERN(                                                \
                     static_cast<naive::HandleImpl*>(kern_param.handle),              \
-                    run(static_cast<const _type*>(src0.raw_ptr),                     \
-                        static_cast<const _type*>(src1.raw_ptr),                     \
-                        static_cast<_type*>(dst.raw_ptr), src0.layout.dtype,         \
+                    run(static_cast<const _type*>(src0.raw_ptr()),                   \
+                        static_cast<const _type*>(src1.raw_ptr()),                   \
+                        static_cast<_type*>(dst.raw_ptr()), src0.layout.dtype,       \
                         src1.layout.dtype, dst.layout.dtype, binfo.x, binfo.y,       \
                         binfo.z));                                                   \
         }                                                                            \
@@ -450,9 +450,9 @@ void ElemwiseImpl::AlgoBinaryVecBcast111C::exec(const KernParam& kern_param) con
                             _op<_type, _type>, BcastType::VEC_BCAST111C>::run;       \
             MEGDNN_DISPATCH_CPU_KERN(                                                \
                     static_cast<naive::HandleImpl*>(kern_param.handle),              \
-                    run(static_cast<const _type*>(src0.raw_ptr),                     \
-                        static_cast<const _type*>(src1.raw_ptr),                     \
-                        static_cast<_type*>(dst.raw_ptr), src0.layout.dtype,         \
+                    run(static_cast<const _type*>(src0.raw_ptr()),                   \
+                        static_cast<const _type*>(src1.raw_ptr()),                   \
+                        static_cast<_type*>(dst.raw_ptr()), src0.layout.dtype,       \
                         src1.layout.dtype, dst.layout.dtype, binfo.x, binfo.y,       \
                         binfo.z));                                                   \
         }                                                                            \
@@ -479,9 +479,9 @@ void ElemwiseImpl::AlgoBinaryVecBcast111C::exec(const KernParam& kern_param) con
                             _op<_type, _type>, BcastType::BCAST111C_VEC>::run;       \
             MEGDNN_DISPATCH_CPU_KERN(                                                \
                     static_cast<naive::HandleImpl*>(kern_param.handle),              \
-                    run(static_cast<const _type*>(src0.raw_ptr),                     \
-                        static_cast<const _type*>(src1.raw_ptr),                     \
-                        static_cast<_type*>(dst.raw_ptr), src0.layout.dtype,         \
+                    run(static_cast<const _type*>(src0.raw_ptr()),                   \
+                        static_cast<const _type*>(src1.raw_ptr()),                   \
+                        static_cast<_type*>(dst.raw_ptr()), src0.layout.dtype,       \
                         src1.layout.dtype, dst.layout.dtype, binfo.x, binfo.y,       \
                         binfo.z));                                                   \
         }                                                                            \
@@ -519,9 +519,9 @@ void ElemwiseImpl::AlgoBinaryVecBcast101xX::exec(const KernParam& kern_param) co
                             _op<_type, _type>, BcastType::VEC_BCAST101xX>::run;      \
             MEGDNN_DISPATCH_CPU_KERN(                                                \
                     static_cast<naive::HandleImpl*>(kern_param.handle),              \
-                    run(static_cast<const _type*>(src0.raw_ptr),                     \
-                        static_cast<const _type*>(src1.raw_ptr),                     \
-                        static_cast<_type*>(dst.raw_ptr), src0.layout.dtype,         \
+                    run(static_cast<const _type*>(src0.raw_ptr()),                   \
+                        static_cast<const _type*>(src1.raw_ptr()),                   \
+                        static_cast<_type*>(dst.raw_ptr()), src0.layout.dtype,       \
                         src1.layout.dtype, dst.layout.dtype, batch_size, binfo.x,    \
                         binfo.y, binfo.z));                                          \
         }                                                                            \
@@ -551,9 +551,9 @@ void ElemwiseImpl::AlgoBinaryVecBcast101xX::exec(const KernParam& kern_param) co
                             _op<_type, _type>, BcastType::BCAST101xX_VEC>::run;      \
             MEGDNN_DISPATCH_CPU_KERN(                                                \
                     static_cast<naive::HandleImpl*>(kern_param.handle),              \
-                    run(static_cast<const _type*>(src0.raw_ptr),                     \
-                        static_cast<const _type*>(src1.raw_ptr),                     \
-                        static_cast<_type*>(dst.raw_ptr), src0.layout.dtype,         \
+                    run(static_cast<const _type*>(src0.raw_ptr()),                   \
+                        static_cast<const _type*>(src1.raw_ptr()),                   \
+                        static_cast<_type*>(dst.raw_ptr()), src0.layout.dtype,       \
                         src1.layout.dtype, dst.layout.dtype, batch_size, binfo.x,    \
                         binfo.y, binfo.z));                                          \
         }                                                                            \

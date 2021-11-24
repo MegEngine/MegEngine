@@ -96,11 +96,7 @@ void ConvBiasForwardImpl::AlgoInt8NCHW4IMMAImplicitGemm::exec(
         src.init_contiguous_stride();
         TensorLayout dst = src;
         dst.stride[0] = 1, dst.stride[1] = dst[0];
-        TensorND ts_src, ts_dst;
-        ts_src.raw_ptr = args.src_tensor->raw_ptr;
-        ts_src.layout = src;
-        ts_dst.raw_ptr = ws_src;
-        ts_dst.layout = dst;
+        TensorND ts_src{args.src_tensor->raw_ptr(), src}, ts_dst{ws_src, dst};
         auto&& transpose = args.opr->handle()->create_operator<RelayoutForward>();
         transpose->exec(ts_src, ts_dst);
     }
@@ -111,11 +107,7 @@ void ConvBiasForwardImpl::AlgoInt8NCHW4IMMAImplicitGemm::exec(
         src.init_contiguous_stride();
         TensorLayout dst = src;
         dst.stride[0] = 1, dst.stride[1] = dst[0];
-        TensorND ts_src, ts_dst;
-        ts_src.raw_ptr = args.filter_tensor->raw_ptr;
-        ts_src.layout = src;
-        ts_dst.raw_ptr = ws_filter;
-        ts_dst.layout = dst;
+        TensorND ts_src{args.filter_tensor->raw_ptr(), src}, ts_dst{ws_filter, dst};
         auto&& transpose = args.opr->handle()->create_operator<RelayoutForward>();
         transpose->exec(ts_src, ts_dst);
     }
@@ -142,11 +134,7 @@ void ConvBiasForwardImpl::AlgoInt8NCHW4IMMAImplicitGemm::exec(
         src.init_contiguous_stride();
         TensorLayout dst = src;
         dst.stride[0] = 1, dst.stride[1] = dst[0];
-        TensorND ts_src, ts_dst;
-        ts_src.raw_ptr = args.z_tensor->raw_ptr;
-        ts_src.layout = src;
-        ts_dst.raw_ptr = ws_z;
-        ts_dst.layout = dst;
+        TensorND ts_src{args.z_tensor->raw_ptr(), src}, ts_dst{ws_z, dst};
         auto&& transpose = args.opr->handle()->create_operator<RelayoutForward>();
         transpose->exec(ts_src, ts_dst);
         z_dev_ptr = reinterpret_cast<int8_t*>(ws_z);
@@ -168,11 +156,7 @@ void ConvBiasForwardImpl::AlgoInt8NCHW4IMMAImplicitGemm::exec(
         src.init_contiguous_stride();
         TensorLayout dst = src;
         dst.stride[0] = 1, dst.stride[1] = dst[0];
-        TensorND ts_src, ts_dst;
-        ts_src.raw_ptr = ws_dst;
-        ts_src.layout = src;
-        ts_dst.raw_ptr = args.dst_tensor->raw_ptr;
-        ts_dst.layout = dst;
+        TensorND ts_src{ws_dst, src}, ts_dst{args.dst_tensor->raw_ptr(), dst};
         auto&& transpose = args.opr->handle()->create_operator<RelayoutForward>();
         transpose->exec(ts_src, ts_dst);
     }

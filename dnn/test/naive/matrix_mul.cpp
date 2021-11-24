@@ -105,7 +105,7 @@ void run_matmul_mk_format(
         TensorNDArray default_tensors, mk4_tensors;
         for (size_t i = 0; i < 3; i++) {
             default_tensors.emplace_back(wb.get(i), default_layouts[i]);
-            mk4_tensors.emplace_back(tensors[i].raw_ptr, mk4_layouts[i]);
+            mk4_tensors.emplace_back(tensors[i].raw_ptr(), mk4_layouts[i]);
         }
         relayout_opr->exec(mk4_tensors[0], default_tensors[0]);
         relayout_opr->exec(mk4_tensors[1], default_tensors[1]);
@@ -158,9 +158,9 @@ TEST_F(NAIVE, MATRIX_MUL_QUANTIZED4x4x32) {
                                    const std::vector<int>& values) {
         TensorND tensor;
         tensor.layout = {shape, dtype};
-        tensor.raw_ptr =
-                static_cast<dt_byte*>(malloc(tensor.layout.span().dist_byte()));
-        uint8_t* ptr = static_cast<uint8_t*>(tensor.raw_ptr);
+        tensor.reset_ptr(
+                static_cast<dt_byte*>(malloc(tensor.layout.span().dist_byte())));
+        uint8_t* ptr = static_cast<uint8_t*>(tensor.raw_ptr());
         megdnn_assert(values.size() == tensor.layout.span().dist_elem());
         for (size_t i = 0; i < tensor.layout.span().dist_elem(); i += 2) {
             int val0 = values[i], val1 = values[i + 1];
@@ -209,9 +209,9 @@ TEST_F(NAIVE, MATRIX_MUL_QUANTIZEDS4_4x4x16) {
                                    const std::vector<int>& values) {
         TensorND tensor;
         tensor.layout = {shape, dtype};
-        tensor.raw_ptr =
-                static_cast<dt_byte*>(malloc(tensor.layout.span().dist_byte()));
-        uint8_t* ptr = static_cast<uint8_t*>(tensor.raw_ptr);
+        tensor.reset_ptr(
+                static_cast<dt_byte*>(malloc(tensor.layout.span().dist_byte())));
+        uint8_t* ptr = static_cast<uint8_t*>(tensor.raw_ptr());
         megdnn_assert(values.size() == tensor.layout.span().dist_elem());
         for (size_t i = 0; i < tensor.layout.span().dist_elem(); i += 2) {
             int val0 = values[i], val1 = values[i + 1];

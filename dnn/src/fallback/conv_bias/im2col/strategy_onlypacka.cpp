@@ -42,7 +42,7 @@ void Strategy<
 
     int8_t* tmp_ptr = sparam.enable_filter_preprocess
                             ? static_cast<int8_t*>(
-                                      param.preprocessed_filter->tensors[0].raw_ptr)
+                                      param.preprocessed_filter->tensors[0].raw_ptr())
                             : static_cast<int8_t*>(bundle.get(BUNDLE_PACKA_INDEX));
 
     int8_t* a_panel = tmp_ptr + group_id * sparam.packA_group_size + a_panel_offset;
@@ -75,7 +75,7 @@ void Strategy<
 
     int8_t* tmp_ptr = sparam.enable_filter_preprocess
                             ? static_cast<int8_t*>(
-                                      param.preprocessed_filter->tensors[0].raw_ptr)
+                                      param.preprocessed_filter->tensors[0].raw_ptr())
                             : static_cast<int8_t*>(bundle.get(BUNDLE_PACKA_INDEX));
 
     src_ctype* a_panel = reinterpret_cast<src_ctype*>(tmp_ptr + a_panel_offset);

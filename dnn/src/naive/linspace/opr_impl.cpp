@@ -19,12 +19,11 @@ namespace naive {
 void LinspaceImpl::exec(_megdnn_tensor_out dst, _megdnn_workspace workspace) {
     check_exec(dst.layout, workspace.size);
     size_t n = dst.layout.total_nr_elems();
-#define cb(DType)                                                   \
-    if (dst.layout.dtype == DType()) {                              \
-        using ctype = typename DTypeTrait<DType>::ctype;            \
-        auto ptr = dst.ptr<ctype>();                                \
-        MEGDNN_DISPATCH_CPU_KERN_OPR(exec_internal<ctype>(ptr, n)); \
-        return;                                                     \
+#define cb(DType)                                                                \
+    if (dst.layout.dtype == DType()) {                                           \
+        using ctype = typename DTypeTrait<DType>::ctype;                         \
+        MEGDNN_DISPATCH_CPU_KERN_OPR(exec_internal<ctype>(dst.ptr<ctype>(), n)); \
+        return;                                                                  \
     }
     MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
     megdnn_assert_internal(0);

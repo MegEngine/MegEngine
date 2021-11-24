@@ -58,7 +58,7 @@ SmallVector<size_t> matmul_get_workspace_bundle(const BiasForwardSizeArgs& args)
  * change \p raw_ptr to workspace.
  */
 void flip_filter(
-        const BiasForwardSizeArgs& args, const Workspace& workspace, void*& raw_ptr);
+        const BiasForwardSizeArgs& args, const Workspace& workspace, RefPtr& ref_ptr);
 
 struct CUDNNForwardDescs {
     TensorDesc src_desc, dst_desc, bias_desc, z_desc;

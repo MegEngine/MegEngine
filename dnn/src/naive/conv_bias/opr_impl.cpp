@@ -92,13 +92,13 @@ void handle_z_inp_and_activation_naive(
             auto nonlinear = handle->create_operator<ElemwiseForward>();
             nonlinear->param().mode = Elemwise::Param::Mode::SIGMOID;
             nonlinear->exec({res}, res);
-            if (res.raw_ptr != dst_tensor.raw_ptr) {
+            if (res.raw_ptr() != dst_tensor.raw_ptr()) {
                 handle->create_operator<TypeCvt>()->exec(res, dst_tensor);
             }
             break;
         }
         case NonlineMode::IDENTITY: {
-            if (res.raw_ptr != dst_tensor.raw_ptr) {
+            if (res.raw_ptr() != dst_tensor.raw_ptr()) {
                 handle->create_operator<TypeCvt>()->exec(res, dst_tensor);
             }
             break;

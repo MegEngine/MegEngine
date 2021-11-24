@@ -115,7 +115,7 @@ void ConvBiasForwardImpl::AlgoInt4NHWCIMMAImplicitGemmBase::exec(
 
     std::tie(filter_ptr, bias_ptr) = prepare_filter_bias(args);
     if (args.z_layout->ndim > 0)
-        z_ptr = args.z_tensor->raw_ptr;
+        z_ptr = args.z_tensor->raw_ptr();
 
     // \note these constants of cutlass epilogue will be passed to method
     // `execute_cutlass_conv_op` by pointer and interpreted as ElementCompute*,
@@ -151,8 +151,8 @@ void ConvBiasForwardImpl::AlgoInt4NHWCIMMAImplicitGemmBase::exec(
             use_conv_filter_unity_opt, without_shared_load);
 
     execute_cutlass_conv_op(
-            op, args.src_tensor->raw_ptr, filter_ptr, bias_ptr, z_ptr,
-            args.dst_tensor->raw_ptr, nullptr, n, hi, wi, ci, co, fh, fw, ho, wo, ph,
+            op, args.src_tensor->raw_ptr(), filter_ptr, bias_ptr, z_ptr,
+            args.dst_tensor->raw_ptr(), nullptr, n, hi, wi, ci, co, fh, fw, ho, wo, ph,
             pw, sh, sw, dh, dw, &alpha, &beta, &gamma, &delta, &theta, &threshold,
             &dst_scale, stream, &src_zero);
 
@@ -188,7 +188,7 @@ void ConvBiasForwardImpl::AlgoInt4NHWCIMMAImplicitGemmBase::reorder_filter(
 
     cutlass_wrapper::reorder_nhwc_imma_filter<4>(
             reinterpret_cast<int8_t*>(reordered_filter),
-            reinterpret_cast<int8_t*>(args.filter_tensor->raw_ptr), co, ci, fh, fw,
+            reinterpret_cast<int8_t*>(args.filter_tensor->raw_ptr()), co, ci, fh, fw,
             trans_oc, alignbits, oc_iterleaved, stream);
 }
 #endif

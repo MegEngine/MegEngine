@@ -46,7 +46,7 @@ ChecksumForward::Result ChecksumForwardImpl::exec(
     check_exec(data.layout, workspace.size);
     auto stream = hip_stream(handle());
 
-    auto ptr = static_cast<uint8_t*>(data.raw_ptr);
+    auto ptr = static_cast<uint8_t*>(data.raw_ptr());
     size_t size_all = data.layout.shape[0], size_ints = size_all / sizeof(uint32_t);
     auto last_val_size = std::min<size_t>(size_all, 4);
     hip_check(hipMemcpyAsync(
@@ -55,7 +55,7 @@ ChecksumForward::Result ChecksumForwardImpl::exec(
     if (size_ints) {
         checksum::calc(
                 static_cast<uint32_t*>(wbundle.get(1)),
-                static_cast<uint32_t*>(data.raw_ptr),
+                static_cast<uint32_t*>(data.raw_ptr()),
                 static_cast<uint32_t*>(wbundle.get(0)), size_ints, stream);
         hip_check(hipMemcpyAsync(
                 &result.checksum, wbundle.get(1), sizeof(result.checksum),

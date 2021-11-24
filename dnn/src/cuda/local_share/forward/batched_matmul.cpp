@@ -100,7 +100,7 @@ void LocalShareForwardImpl::AlgoBatchedMatMul::exec(const ExecArgs& args) const 
     TensorLayout C{
             {groups * sgh * sgw, ho / sgh * wo / sgw * n, ocpg}, dtype::Float32()};
     TensorND ts_A{ws_im2col, A};
-    TensorND ts_B{args.filter_tensor->raw_ptr, B};
+    TensorND ts_B{args.filter_tensor->raw_ptr(), B};
     TensorND ts_C{ws_posttranspose, C};
     Workspace ws_wrapper;
     ws_wrapper.raw_ptr = reinterpret_cast<dt_byte*>(ws_matmul);
@@ -119,7 +119,7 @@ void LocalShareForwardImpl::AlgoBatchedMatMul::exec(const ExecArgs& args) const 
         C1.stride[6] = ocpg;
         TensorLayout C2 = args.dst_layout;
         TensorND ts_C1{ws_posttranspose, C1};
-        TensorND ts_C2{args.dst_tensor->raw_ptr, C2};
+        TensorND ts_C2{args.dst_tensor->raw_ptr(), C2};
         auto&& relayout_opr = args.opr->handle()->create_operator<Relayout>();
         relayout_opr->exec(ts_C1, ts_C2);
     }

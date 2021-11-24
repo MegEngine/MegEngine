@@ -11,6 +11,7 @@
 #include "test/common/rotate.h"
 #include "test/common/benchmarker.h"
 #include "test/common/checker.h"
+#include "test/common/task_record_check.h"
 
 #include "test/aarch64/fixture.h"
 
@@ -21,6 +22,19 @@ TEST_F(AARCH64, ROTATE) {
     using namespace rotate;
     std::vector<TestArg> args = get_args();
     Checker<Rotate> checker(handle());
+
+    for (auto&& arg : args) {
+        checker.set_param(arg.param)
+                .set_dtype(0, arg.dtype)
+                .set_dtype(1, arg.dtype)
+                .execs({arg.src, {}});
+    }
+}
+
+TEST_F(AARCH64, ROTATE_RECORD) {
+    using namespace rotate;
+    std::vector<TestArg> args = get_args();
+    TaskRecordChecker<Rotate> checker(0);
 
     for (auto&& arg : args) {
         checker.set_param(arg.param)

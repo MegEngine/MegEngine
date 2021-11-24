@@ -28,7 +28,7 @@ void ParamPackConcatImpl::exec_internal(
     size_t inp_size = srcs.layout.shape[0], out_size = dst.layout.total_nr_elems();
     auto stream = cuda_stream(this->handle());
 
-    auto src_cpu = static_cast<const T**>(srcs.raw_ptr);
+    auto src_cpu = static_cast<const T**>(srcs.raw_ptr());
     megdnn_assert_internal(src_cpu);
     auto src_gpu = reinterpret_cast<const T**>(workspace.raw_ptr);
 

@@ -128,12 +128,10 @@ void ConvBiasForwardImpl::AlgoMatmul8x8x32::exec_internal(const ExecArgs& args) 
     auto bundle = get_bundle<format>(args);
     bundle.set(args.workspace.raw_ptr);
 
-    TensorND src_tensor, dst_tensor, filter_tensor;
-    if (format == Param::Format::NHWC) {
-        src_tensor = *args.src_tensor;
-        dst_tensor = *args.dst_tensor;
-        filter_tensor = *args.filter_tensor;
-    } else {
+    TensorND src_tensor = *args.src_tensor;
+    TensorND dst_tensor = *args.dst_tensor;
+    TensorND filter_tensor = *args.filter_tensor;
+    if (format == Param::Format::NCHW4) {
         // NCHW4
         auto to_nhwc = [](const TensorLayout& layout, void* raw_ptr) -> TensorND {
             return {raw_ptr,
@@ -147,7 +145,7 @@ void ConvBiasForwardImpl::AlgoMatmul8x8x32::exec_internal(const ExecArgs& args) 
             auto N = src.layout[0], C = src.layout[1] * 4, H = src.layout[2],
                  W = src.layout[3];
             args.handle->relayout_opr()->exec(
-                    {src.raw_ptr,
+                    {src.raw_ptr(),
                      TensorLayout{
                              {N, H, W, C / 4, 4},
                              {src.layout.stride[0], src.layout.stride[2],
@@ -156,8 +154,8 @@ void ConvBiasForwardImpl::AlgoMatmul8x8x32::exec_internal(const ExecArgs& args) 
                              src.layout.dtype}},
                     {dst_ptr, TensorLayout{{N, H, W, C / 4, 4}, src.layout.dtype}});
         };
-        relayout(*args.src_tensor, src_tensor.raw_ptr);
-        relayout(*args.filter_tensor, filter_tensor.raw_ptr);
+        relayout(*args.src_tensor, src_tensor.raw_ptr());
+        relayout(*args.filter_tensor, filter_tensor.raw_ptr());
     }
 
     size_t N, IH, IW, IC;
@@ -193,7 +191,7 @@ void ConvBiasForwardImpl::AlgoMatmul8x8x32::exec_internal(const ExecArgs& args) 
         // copy (OC, FH*FW*IC) to (OC, FH*FW*IC) with stride=LD
         inp1 = static_cast<int8_t*>(bundle.get(1));
         cuda_check(cudaMemcpy2DAsync(
-                inp1, LD * sizeof(int8_t), filter_tensor.raw_ptr,
+                inp1, LD * sizeof(int8_t), filter_tensor.raw_ptr(),
                 FH * FW * IC * sizeof(int8_t), FH * FW * IC * sizeof(int8_t), OC,
                 cudaMemcpyDeviceToDevice, stream));
         inp1_stride = LD;
@@ -222,12 +220,13 @@ void ConvBiasForwardImpl::AlgoMatmul8x8x32::exec_internal(const ExecArgs& args) 
 
 void ConvBiasForwardImpl::AlgoMatmul8x8x32::exec(const ExecArgs& args) const {
     ExecArgs conv_args = args;
-    auto conv_dst_tensor = *args.dst_tensor;
+    TensorND conv_dst_tensor = *args.dst_tensor;
     if (args.filter_meta.format == Param::Format::NHWC) {
         auto bundle = get_bundle<Param::Format::NHWC>(args);
         bundle.set(args.workspace.raw_ptr);
         if (args.dst_layout->dtype.enumv() != args.bias_layout->dtype.enumv()) {
-            conv_dst_tensor.raw_ptr = bundle.get(bundle.nr_workspace() - 1);
+            conv_dst_tensor = TensorND{
+                    bundle.get(bundle.nr_workspace() - 1), args.dst_tensor->layout};
             conv_dst_tensor.layout.dtype = DType();
             args.opr->check_or_deduce_dtype_fwd(
                     args.src_layout->dtype, args.filter_layout->dtype,
@@ -239,7 +238,8 @@ void ConvBiasForwardImpl::AlgoMatmul8x8x32::exec(const ExecArgs& args) const {
         auto bundle = get_bundle<Param::Format::NCHW4>(args);
         bundle.set(args.workspace.raw_ptr);
         if (args.dst_layout->dtype.enumv() != args.bias_layout->dtype.enumv()) {
-            conv_dst_tensor.raw_ptr = bundle.get(bundle.nr_workspace() - 1);
+            conv_dst_tensor = TensorND{
+                    bundle.get(bundle.nr_workspace() - 1), args.dst_tensor->layout};
             conv_dst_tensor.layout.dtype = DType();
             args.opr->check_or_deduce_dtype_fwd(
                     args.src_layout->dtype, args.filter_layout->dtype,

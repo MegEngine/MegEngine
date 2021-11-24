@@ -522,28 +522,7 @@ void WarpPerspectiveForwardImpl::exec(
             src.layout, mat.layout, mat_idx.layout, dst.layout, workspace.size);
     size_t batch = dst.layout[0];
 
-#define cb(dt, ct, mct)                                                               \
-    case DTypeTrait<dt>::enumv: {                                                     \
-        auto kparam = KernParam<ct, mct>::from_tensors(                               \
-                param().format, param().bmode, param().border_val, src, mat, mat_idx, \
-                dst, workspace);                                                      \
-        auto run = [kparam, this](size_t index, size_t) {                             \
-            kern_naive(kparam, index);                                                \
-        };                                                                            \
-        MEGDNN_DISPATCH_MULTI_THREAD_CPU_KERN_OPR(run, kparam.oh* batch);             \
-        return;                                                                       \
-    }
-
-#define KERN_CD4(ct, mct)                                                              \
-    auto kparam = KernParam<ct, mct>::from_tensors(                                    \
-            param().format, param().bmode, param().border_val, src, mat, mat_idx, dst, \
-            workspace);                                                                \
-    auto run = [kparam, this](size_t index, size_t) {                                  \
-        kern_naive_nhwcd4(kparam, index);                                              \
-    };                                                                                 \
-    MEGDNN_DISPATCH_MULTI_THREAD_CPU_KERN_OPR(run, batch* oh);
-
-#define KERN(ct, mct)                                                                  \
+#define KERN_NAIVE(ct, mct)                                                            \
     auto kparam = KernParam<ct, mct>::from_tensors(                                    \
             param().format, param().bmode, param().border_val, src, mat, mat_idx, dst, \
             workspace);                                                                \
@@ -556,6 +535,15 @@ void WarpPerspectiveForwardImpl::exec(
             workspace);                                                                \
     auto run = [kparam, this](size_t index, size_t) {                                  \
         kern_naive_int4(kparam, index);                                                \
+    };                                                                                 \
+    MEGDNN_DISPATCH_MULTI_THREAD_CPU_KERN_OPR(run, kparam.oh* batch);
+
+#define KERN_CD4(ct, mct)                                                              \
+    auto kparam = KernParam<ct, mct>::from_tensors(                                    \
+            param().format, param().bmode, param().border_val, src, mat, mat_idx, dst, \
+            workspace);                                                                \
+    auto run = [kparam, this](size_t index, size_t) {                                  \
+        kern_naive_nhwcd4(kparam, index);                                              \
     };                                                                                 \
     MEGDNN_DISPATCH_MULTI_THREAD_CPU_KERN_OPR(run, kparam.oh* batch);
 
@@ -577,7 +565,6 @@ void WarpPerspectiveForwardImpl::exec(
     }
 
     if (param().format == Format::NHWCD4) {
-        size_t oh = dst.layout[1];
         DISPATCH_ST(dtype::Float32, float, float, KERN_CD4);
         DISPATCH_ST(dtype::Quantized8Asymm, uint8_t, float, KERN_CD4);
         DISPATCH_ST(dtype::QuantizedS8, int8_t, float, KERN_CD4);
@@ -590,22 +577,20 @@ void WarpPerspectiveForwardImpl::exec(
                              src.layout.dtype.name())
                              .c_str());
     }
+#undef KERN_CD4
 
     if (src.layout.dtype.enumv() == DTypeTrait<dtype::QuantizedS4>::enumv) {
         DISPATCH_ST(dtype::QuantizedS4, dt_qint4, float, KERN_INT4);
-        megdnn_throw(ssprintf(
-                             "Unsupported input DType in "
-                             "WarpPerspective: %s",
-                             src.layout.dtype.name())
-                             .c_str());
+        megdnn_assert(
+                0, "Unsupported input DType in WarpPerspective: %s",
+                src.layout.dtype.name());
     } else if (src.layout.dtype.enumv() == DTypeTrait<dtype::Quantized4Asymm>::enumv) {
         DISPATCH_ST(dtype::Quantized4Asymm, dt_quint4, float, KERN_INT4);
-        megdnn_throw(ssprintf(
-                             "Unsupported input DType in "
-                             "WarpPerspective: %s",
-                             src.layout.dtype.name())
-                             .c_str());
+        megdnn_assert(
+                0, "Unsupported input DType in WarpPerspective: %s",
+                src.layout.dtype.name());
     }
+#undef KERN_INT4
 
     bool is_fusion_dtype = src.layout.dtype.enumv() != dst.layout.dtype.enumv();
     bool is_u8_or_qu8_in =
@@ -616,48 +601,40 @@ void WarpPerspectiveForwardImpl::exec(
         ((param().format == Format::NCHW_NCHW4_IC_SMALL) ||
          (param().format == Format::NHWC_NCHW4_IC_SMALL) ||
          (param().format == Format::NHWC_NCHW) || (param().format == Format::NCHW))) {
-        if (src.layout.dtype.enumv() == DTypeTrait<dtype::Quantized8Asymm>::enumv ||
-            src.layout.dtype.enumv() == DTypeTrait<dtype::Uint8>::enumv) {
-            float scale = 1.f;
+        megdnn_assert(
+                src.layout.dtype.enumv() == DTypeTrait<dtype::Quantized8Asymm>::enumv ||
+                        src.layout.dtype.enumv() == DTypeTrait<dtype::Uint8>::enumv,
+                "Unsupported input DType in WarpPerspective: %s",
+                src.layout.dtype.name());
 
-            if (src.layout.dtype.enumv() == DTypeTrait<dtype::Quantized8Asymm>::enumv) {
-                scale = src.layout.dtype.param<dtype::Quantized8Asymm>().scale;
-            }
-
-            auto kparam = KernParam<uint8_t, float>::from_tensors(
-                    param().format, param().bmode, param().border_val, src, mat,
-                    mat_idx, dst, workspace);
-
-            if (dst.layout.dtype.enumv() == DTypeTrait<dtype::Float32>::enumv) {
-                auto run = [kparam, this](size_t index, size_t) {
-                    kern_naive_dimshuffle_typecvt<uint8_t, float, float>(kparam, index);
-                };
-                MEGDNN_DISPATCH_MULTI_THREAD_CPU_KERN_OPR(run, kparam.oh * batch);
-                return;
-            } else if (
-                    (dst.layout.dtype.enumv() ==
-                     DTypeTrait<dtype::QuantizedS8>::enumv) &&
-                    (dst.layout.dtype.param<dtype::QuantizedS8>().scale == scale)) {
-                auto run = [kparam, this](size_t index, size_t) {
-                    kern_naive_dimshuffle_typecvt<uint8_t, int8_t, float>(
-                            kparam, index);
-                };
-                MEGDNN_DISPATCH_MULTI_THREAD_CPU_KERN_OPR(run, kparam.oh * batch);
-                return;
-            } else {
-                megdnn_throw(ssprintf(
-                                     "Unsupported DType in "
-                                     "WarpPerspective Dimshuffle Typecvt: %s",
-                                     src.layout.dtype.name())
-                                     .c_str());
-            }
+        float scale = 1.f;
+        if (src.layout.dtype.enumv() == DTypeTrait<dtype::Quantized8Asymm>::enumv) {
+            scale = src.layout.dtype.param<dtype::Quantized8Asymm>().scale;
         }
 
-        megdnn_throw(ssprintf(
-                             "Unsupported input DType in "
-                             "WarpPerspective: %s",
-                             src.layout.dtype.name())
-                             .c_str());
+        auto kparam = KernParam<uint8_t, float>::from_tensors(
+                param().format, param().bmode, param().border_val, src, mat, mat_idx,
+                dst, workspace);
+
+        if (dst.layout.dtype.enumv() == DTypeTrait<dtype::Float32>::enumv) {
+            auto run = [kparam, this](size_t index, size_t) {
+                kern_naive_dimshuffle_typecvt<uint8_t, float, float>(kparam, index);
+            };
+            MEGDNN_DISPATCH_MULTI_THREAD_CPU_KERN_OPR(run, kparam.oh * batch);
+            return;
+        } else if (
+                dst.layout.dtype.enumv() == DTypeTrait<dtype::QuantizedS8>::enumv &&
+                dst.layout.dtype.param<dtype::QuantizedS8>().scale == scale) {
+            auto run = [kparam, this](size_t index, size_t) {
+                kern_naive_dimshuffle_typecvt<uint8_t, int8_t, float>(kparam, index);
+            };
+            MEGDNN_DISPATCH_MULTI_THREAD_CPU_KERN_OPR(run, kparam.oh * batch);
+            return;
+        } else {
+            megdnn_assert(
+                    0, "Unsupported DType in WarpPerspective Dimshuffle Typecvt: %s",
+                    src.layout.dtype.name());
+        }
     }
 
     if (warp::is_cv_available(
@@ -680,24 +657,23 @@ void WarpPerspectiveForwardImpl::exec(
          * if input type is float16.
          */
 
-        DISPATCH_ST(dtype::Float32, float, float, KERN);
-        DISPATCH_ST(dtype::Int8, int8_t, float, KERN);
-        DISPATCH_ST(dtype::QuantizedS8, int8_t, float, KERN);
-        DISPATCH_ST(dtype::Uint8, uint8_t, float, KERN);
-        DISPATCH_ST(dtype::Quantized8Asymm, uint8_t, float, KERN);
+        DISPATCH_ST(dtype::Float32, float, float, KERN_NAIVE);
+        DISPATCH_ST(dtype::Int8, int8_t, float, KERN_NAIVE);
+        DISPATCH_ST(dtype::QuantizedS8, int8_t, float, KERN_NAIVE);
+        DISPATCH_ST(dtype::Uint8, uint8_t, float, KERN_NAIVE);
+        DISPATCH_ST(dtype::Quantized8Asymm, uint8_t, float, KERN_NAIVE);
 
-        DNN_INC_FLOAT16(DISPATCH_ST_MT(dtype::Float16, dt_float16, KERN));
-        DNN_INC_FLOAT16(DISPATCH_ST_MT(dtype::BFloat16, dt_bfloat16, KERN));
+        DNN_INC_FLOAT16(DISPATCH_ST_MT(dtype::Float16, dt_float16, KERN_NAIVE));
+        DNN_INC_FLOAT16(DISPATCH_ST_MT(dtype::BFloat16, dt_bfloat16, KERN_NAIVE));
         megdnn_throw(ssprintf(
                              "Unsupported input DType in "
                              "WarpPerspective: %s",
                              src.layout.dtype.name())
                              .c_str());
     }
+#undef KERN_NAIVE
 #undef DISPATCH_ST_MT
 #undef DISPATCH_ST
-#undef KERN
-#undef KERN_CD4
 }
 
 template <typename ctype, typename mtype>
@@ -706,13 +682,10 @@ void WarpPerspectiveBackwardDataImpl::kern_naive(
     const int N = kern_param.n_mat, C = kern_param.c, IH = kern_param.ih,
               IW = kern_param.iw;
     const int OH = kern_param.oh, OW = kern_param.ow;
-    const ctype* hptr_ = kern_param.hptr;
-    const mtype* mptr_ = kern_param.mptr;
-    ctype* sptr_ = kern_param.sptr;
-    int* midx_ptr = kern_param.midx_ptr;
-    auto hptr = hptr_;
-    auto mptr = mptr_;
-    auto sptr = sptr_;
+    auto hptr = static_cast<ctype*>(kern_param.diff_ptr.get_ptr());
+    auto mptr = static_cast<mtype*>(kern_param.mat_ptr.get_ptr());
+    auto sptr = static_cast<ctype*>(kern_param.grad_ptr.get_ptr());
+    auto midx_ptr = static_cast<int*>(kern_param.midx_ptr.get_ptr());
     if (midx_ptr) {
         std::memset(sptr, 0, sizeof(ctype) * kern_param.n_src * C * IH * IW);
     } else {
@@ -720,9 +693,10 @@ void WarpPerspectiveBackwardDataImpl::kern_naive(
     }
     rep(n, N) {
         if (midx_ptr) {
-            sptr = sptr_ + midx_ptr[n] * C * IH * IW;
+            sptr = static_cast<ctype*>(kern_param.grad_ptr.get_ptr()) +
+                   midx_ptr[n] * C * IH * IW;
         } else {
-            sptr = sptr_ + n * C * IH * IW;
+            sptr = static_cast<ctype*>(kern_param.grad_ptr.get_ptr()) + n * C * IH * IW;
         }
         rep(oh, OH) rep(ow, OW) {
             float numeratorw = mptr[0] * ow + mptr[1] * oh + mptr[2];
@@ -799,18 +773,19 @@ void WarpPerspectiveBackwardMatImpl::kern_naive(
               IW = kern_param.iw;
     const int OH = kern_param.oh, OW = kern_param.ow;
 
-    auto hptr = kern_param.hptr;
-    auto sptr = kern_param.sptr;
-    auto mptr = kern_param.mptr;
-    auto res = kern_param.res;
-    auto midx_ptr = kern_param.midx_ptr;
+    auto hptr = static_cast<ctype*>(kern_param.diff_ptr.get_ptr());
+    auto sptr = static_cast<ctype*>(kern_param.src_ptr.get_ptr());
+    auto res = static_cast<mtype*>(kern_param.grad_ptr.get_ptr());
+    auto mptr = static_cast<mtype*>(kern_param.mat_ptr.get_ptr());
+    auto midx_ptr = static_cast<int*>(kern_param.midx_ptr.get_ptr());
     auto border_val = kern_param.border_val;
     std::memset(res, 0, sizeof(float) * N * 3 * 3);
     rep(n, N) {
         if (midx_ptr) {
-            sptr = kern_param.sptr + midx_ptr[n] * C * IH * IW;
+            sptr = static_cast<ctype*>(kern_param.src_ptr.get_ptr()) +
+                   midx_ptr[n] * C * IH * IW;
         } else {
-            sptr = kern_param.sptr + n * C * IH * IW;
+            sptr = static_cast<ctype*>(kern_param.src_ptr.get_ptr()) + n * C * IH * IW;
         }
         rep(oh, OH) rep(ow, OW) {
             float numeratorw = mptr[0] * ow + mptr[1] * oh + mptr[2];

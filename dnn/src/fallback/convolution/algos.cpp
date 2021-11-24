@@ -109,12 +109,13 @@ void kern_matmul(const NCBKernParam& param) {
                 {static_cast<std::ptrdiff_t>(1),
                  static_cast<std::ptrdiff_t>(IC * FH * FW)},
                 param.filter_type);
-        A_src.raw_ptr = static_cast<void*>(filter);
+        A_src.reset_ptr(static_cast<void*>(filter));
         A_dst.layout = TensorLayout({IC * FH * FW, OC}, param.filter_type);
-        A_dst.raw_ptr = static_cast<void*>(bundle.get(2));
+        A_dst.reset_ptr(static_cast<void*>(bundle.get(2)));
         // TODO Should be removed once armv8 convolution support transpose.
         get_relayout_opr()->exec(A_src, A_dst, inplace_cpu_handle().get());
     }
+    TensorND B_, C_;
     for (size_t n = 0; n < N; ++n) {
         gtype *C_src, *C_dst;
         dtype* diff = const_cast<dtype*>(param.diff<dtype>() + n * param.inp_bs);
@@ -125,11 +126,10 @@ void kern_matmul(const NCBKernParam& param) {
             C_src = static_cast<gtype*>(bundle.get(0));
         }
         {
-            TensorND B_, C_;
             B_.layout = TensorLayout({OC, IH * IW}, param.diff_type);
-            B_.raw_ptr = static_cast<void*>(diff);
+            B_.reset_ptr(static_cast<void*>(diff));
             C_.layout = TensorLayout({IC * FH * FW, IH * IW}, param.grad_type);
-            C_.raw_ptr = C_src;
+            C_.reset_ptr(C_src);
             Workspace workspace(
                     static_cast<dt_byte*>(bundle.get(1)), bundle.get_size(1));
             get_matmul_opr(param)->exec(A_dst, B_, C_, workspace);
@@ -377,22 +377,15 @@ SmallVector<ConvolutionImpl::NCBKern> ConvolutionImpl::AlgoDefault::
                 algo->dispatch_preprocess_kerns(conv_bias_param);
         SmallVector<ConvolutionImpl::NCBKern> convolution_preprocess_kerns;
 
-        //! Set the conv_bias param using convolution param
-        auto set_param_filter_workspace_ptr =
-                [](const NCBKernParam& conv_param,
-                   ::ConvBiasImpl::NCBKernParam& conv_bias_param) {
-                    conv_bias_param.filter_ptr = conv_param.filter_ptr;
-                    conv_bias_param.workspace_ptr = conv_param.workspace_ptr;
-                    conv_bias_param.workspace_size = conv_param.workspace_size;
-                };
         for (size_t i = 0; i < conv_bias_preprocess_kerns.size(); i++) {
             auto kernel = conv_bias_preprocess_kerns[i];
             //! If the kerenl batch parallel
-            auto run = [param = conv_bias_param, kernel,
-                        &set_param_filter_workspace_ptr](
-                               const NCBKernParam& p,
-                               const NCBKernIndex& ncb_index) mutable {
-                set_param_filter_workspace_ptr(p, param);
+            auto run = [conv_bias_param, kernel](
+                               const NCBKernParam& p, const NCBKernIndex& ncb_index) {
+                auto param = conv_bias_param;
+                param.filter_ptr = p.filter_ptr;
+                param.workspace_ptr = p.workspace_ptr;
+                param.workspace_size = p.workspace_size;
                 kernel.kern(param, {ncb_index.thread_id, ncb_index.ndrange_id});
             };
             convolution_preprocess_kerns.push_back({run, kernel.global_size});
@@ -413,24 +406,17 @@ SmallVector<ConvolutionImpl::NCBKern> ConvolutionImpl::AlgoDefault::get_kimpl(
         auto&& conv_bias_kerns = algo->dispatch_kerns(conv_bias_param);
         SmallVector<ConvolutionImpl::NCBKern> convolution_kerns;
 
-        //! Set the conv_bias param using convolution param
-        auto set_copy_param_compute_address =
-                [](const NCBKernParam& conv_param,
-                   ::ConvBiasImpl::NCBKernParam& conv_bias_param) {
-                    conv_bias_param.src_ptr = conv_param.src_ptr;
-                    conv_bias_param.filter_ptr = conv_param.filter_ptr;
-                    conv_bias_param.dst_ptr = conv_param.dst_ptr;
-                    conv_bias_param.workspace_ptr = conv_param.workspace_ptr;
-                    conv_bias_param.workspace_size = conv_param.workspace_size;
-                };
         for (size_t i = 0; i < conv_bias_kerns.size(); i++) {
             auto&& kernel = conv_bias_kerns[i];
             //! If the kerenl batch parallel
-            auto run = [param = conv_bias_param, kernel,
-                        &set_copy_param_compute_address](
-                               const NCBKernParam& p,
-                               const NCBKernIndex& ncb_index) mutable {
-                set_copy_param_compute_address(p, param);
+            auto run = [conv_bias_param, kernel](
+                               const NCBKernParam& p, const NCBKernIndex& ncb_index) {
+                auto param = conv_bias_param;
+                param.src_ptr = p.src_ptr;
+                param.filter_ptr = p.filter_ptr;
+                param.dst_ptr = p.dst_ptr;
+                param.workspace_ptr = p.workspace_ptr;
+                param.workspace_size = p.workspace_size;
                 kernel.kern(param, {ncb_index.thread_id, ncb_index.ndrange_id});
             };
             convolution_kerns.push_back({run, kernel.global_size});

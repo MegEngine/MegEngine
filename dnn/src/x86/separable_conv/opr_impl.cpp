@@ -80,13 +80,11 @@ void SeparableConvImpl::exec(
     int oh = dst.layout.shape[2];
     int ow = dst.layout.shape[3];
 
-    filter_engine_ = new FilterEngine(
+    std::shared_ptr<FilterEngine> filter_engine = std::make_shared<FilterEngine>(
             ih, iw, oh, ow, param().ksize_h, param().ksize_w, param().anchor_h,
             param().anchor_w, param().borderMode, param().is_symm_kernel);
 
-    MEGDNN_DISPATCH_CPU_KERN_OPR(filter_engine_->exec(src, filter_x, filter_y, dst););
-
-    delete (filter_engine_);
+    MEGDNN_DISPATCH_CPU_KERN_OPR(filter_engine->exec(src, filter_x, filter_y, dst));
 }
 
 }  // namespace x86

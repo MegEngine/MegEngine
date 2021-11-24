@@ -14,7 +14,7 @@
 
 // =================================quint4======================================
 void megdnn::naive::uint4_to_uint8(const TensorND& in, const TensorND& out) {
-    auto in_ptr = static_cast<uint8_t*>(in.raw_ptr) + in.layout.span().low_byte;
+    auto in_ptr = static_cast<uint8_t*>(in.raw_ptr()) + in.layout.span().low_byte;
     auto out_ptr = out.compatible_ptr<uint8_t>() + out.layout.span().low_byte;
     const auto& ly = in.layout;
     auto dim_in = ly.shape[ly.ndim - 1];
@@ -34,8 +34,8 @@ void megdnn::naive::uint4_to_uint8(const TensorND& in, const TensorND& out) {
 }
 
 void megdnn::naive::uint8_to_uint4(const TensorND& in, const TensorND& out) {
-    auto in_ptr = static_cast<uint8_t*>(in.raw_ptr) + in.layout.span().low_byte;
-    auto out_ptr = static_cast<uint8_t*>(out.raw_ptr) + out.layout.span().low_byte;
+    auto in_ptr = static_cast<uint8_t*>(in.raw_ptr()) + in.layout.span().low_byte;
+    auto out_ptr = static_cast<uint8_t*>(out.raw_ptr()) + out.layout.span().low_byte;
     const auto& ly = in.layout;
     auto dim_in = ly.shape[ly.ndim - 1];
     auto elems = ly.total_nr_elems();
@@ -57,7 +57,7 @@ void megdnn::naive::uint8_to_uint4(const TensorND& in, const TensorND& out) {
 }
 
 void megdnn::naive::uint4_to_int8(const TensorND& in, const TensorND& out) {
-    auto in_ptr = static_cast<uint8_t*>(in.raw_ptr) + in.layout.span().low_byte;
+    auto in_ptr = static_cast<uint8_t*>(in.raw_ptr()) + in.layout.span().low_byte;
     auto out_ptr = out.compatible_ptr<int8_t>() + out.layout.span().low_byte;
     const auto& ly = in.layout;
     int8_t zero_point = (int8_t)ly.dtype.param<dtype::Quantized4Asymm>().zero_point;
@@ -78,8 +78,8 @@ void megdnn::naive::uint4_to_int8(const TensorND& in, const TensorND& out) {
 }
 
 void megdnn::naive::int8_to_uint4(const TensorND& in, const TensorND& out) {
-    auto in_ptr = static_cast<int8_t*>(in.raw_ptr) + in.layout.span().low_byte;
-    auto out_ptr = static_cast<uint8_t*>(out.raw_ptr) + out.layout.span().low_byte;
+    auto in_ptr = static_cast<int8_t*>(in.raw_ptr()) + in.layout.span().low_byte;
+    auto out_ptr = static_cast<uint8_t*>(out.raw_ptr()) + out.layout.span().low_byte;
     auto zero_point = out.layout.dtype.param<dtype::Quantized4Asymm>().zero_point;
     const auto& ly = in.layout;
     auto dim_in = ly.shape[ly.ndim - 1];
@@ -103,8 +103,8 @@ void megdnn::naive::int8_to_uint4(const TensorND& in, const TensorND& out) {
 
 // ==================================qint4======================================
 void megdnn::naive::int4_to_int8(const TensorND& in, const TensorND& out) {
-    auto in_ptr = static_cast<int8_t*>(in.raw_ptr) + in.layout.span().low_byte;
-    auto out_ptr = static_cast<int8_t*>(out.raw_ptr) + out.layout.span().low_byte;
+    auto in_ptr = static_cast<int8_t*>(in.raw_ptr()) + in.layout.span().low_byte;
+    auto out_ptr = static_cast<int8_t*>(out.raw_ptr()) + out.layout.span().low_byte;
     const auto& ly = in.layout;
     auto dim_in = ly.shape[ly.ndim - 1];
     auto elems = ly.total_nr_elems();
@@ -124,8 +124,8 @@ void megdnn::naive::int4_to_int8(const TensorND& in, const TensorND& out) {
 }
 
 void megdnn::naive::int8_to_int4(const TensorND& in, const TensorND& out) {
-    auto in_ptr = static_cast<int8_t*>(in.raw_ptr) + in.layout.span().low_byte;
-    auto out_ptr = static_cast<int8_t*>(out.raw_ptr) + out.layout.span().low_byte;
+    auto in_ptr = static_cast<int8_t*>(in.raw_ptr()) + in.layout.span().low_byte;
+    auto out_ptr = static_cast<int8_t*>(out.raw_ptr()) + out.layout.span().low_byte;
     const auto& ly = in.layout;
     auto dim_in = ly.shape[ly.ndim - 1];
     auto elems = ly.total_nr_elems();

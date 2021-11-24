@@ -133,7 +133,8 @@ static void pack_weight(
     constexpr int pack_oc = 8;
     if (kern_param.bias_mode == BiasMode::BROADCAST_CHANNEL_BIAS && oc % pack_oc != 0) {
         auto packed_bias = reinterpret_cast<int16_t*>(bundle.get(2));
-        memcpy(packed_bias, kern_param.bias_ptr, round_up(oc, 8) * sizeof(int16_t));
+        memcpy(packed_bias, kern_param.bias_ptr.get_ptr(),
+               round_up(oc, 8) * sizeof(int16_t));
     }
 }
 

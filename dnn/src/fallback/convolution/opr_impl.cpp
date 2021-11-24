@@ -263,9 +263,9 @@ ConvolutionImpl::NCBKernParam ConvolutionImpl::make_ncb_kern_param(
     NCBKernParam ret;
     static_cast<NCBKernSizeParam&>(ret) = make_ncb_kern_size_param(
             src.layout, filter.layout, dst.layout, preprocessed_filter);
-    ret.src_ptr = src.raw_ptr;
-    ret.filter_ptr = filter.raw_ptr;
-    ret.dst_ptr = dst.raw_ptr;
+    ret.src_ptr = src.get_ref_ptr();
+    ret.filter_ptr = filter.get_ref_ptr();
+    ret.dst_ptr = dst.get_ref_ptr();
     ret.workspace_ptr = workspace.raw_ptr;
     ret.workspace_size = workspace.size;
     return ret;
@@ -607,9 +607,9 @@ ConvolutionBackwardDataImpl::NCBKernParam ConvolutionBackwardDataImpl::
             workspace.size >= required_workspace_in_bytes,
             "required workspace: %zu; provided workspace: %zu",
             required_workspace_in_bytes, workspace.size);
-    ret.filter_ptr = filter.raw_ptr;
-    ret.diff_ptr = diff.raw_ptr;
-    ret.grad_ptr = grad.raw_ptr;
+    ret.filter_ptr = filter.get_ref_ptr();
+    ret.diff_ptr = diff.get_ref_ptr();
+    ret.grad_ptr = grad.get_ref_ptr();
     ret.workspace_ptr = workspace.raw_ptr;
     ret.workspace_size = workspace.size;
     return ret;
@@ -655,9 +655,9 @@ void ConvolutionBackwardDataImpl::exec_with_ncb_kern(const NCBKernParam& param) 
             }
             for (size_t i = 0; i < group; ++i) {
                 kptr(p1g);
-                incr_ptr(p1g.diff_ptr, istrd);
-                incr_ptr(p1g.filter_ptr, fstrd);
-                incr_ptr(p1g.grad_ptr, ostrd);
+                p1g.diff_ptr += istrd;
+                p1g.filter_ptr += fstrd;
+                p1g.grad_ptr += ostrd;
                 p1g.diff_extra_mem_size -= istrd;
                 p1g.filter_extra_mem_size -= fstrd;
                 p1g.grad_extra_mem_size -= ostrd;

@@ -24,28 +24,24 @@ void ElemwiseMultiTypeImplHelper::exec(
         _megdnn_in const TensorNDArray& src, _megdnn_tensor_out dst) {
     switch (m_param.mode) {
         case Mode::FUSE_MUL_ADD3_INT16x32x32x32:
-            on_fuse_mul_add3_int16x32x32x32(
-                    make_elemwise_op_param<3>(src, dst), dst.ptr<dt_int32>());
+            on_fuse_mul_add3_int16x32x32x32(make_elemwise_op_param<3>(src, dst), dst);
             break;
         case Mode::FUSE_MUL_ADD3_IXxF32xF32xI8:
-            on_fuse_mul_add3_iXxf32xf32xi8(
-                    make_elemwise_op_param<3>(src, dst), dst.ptr<dt_int8>());
+            on_fuse_mul_add3_iXxf32xf32xi8(make_elemwise_op_param<3>(src, dst), dst);
             break;
         case Mode::ROUND_SHR_SATURATE_IXxI8xI8:
-            on_round_shr_saturate_iXxi8xi8(
-                    make_elemwise_op_param<2>(src, dst), dst.ptr<dt_int8>());
+            on_round_shr_saturate_iXxi8xi8(make_elemwise_op_param<2>(src, dst), dst);
             break;
         case Mode::FUSE_ADD_RMULH_ROUND_SHR_SATURATE_INT16x16x16x8:
             on_fuse_add_rmulh_round_shr_saturate_int16x16x16x8(
-                    make_elemwise_op_param<6>(src, dst), dst.ptr<dt_int8>());
+                    make_elemwise_op_param<6>(src, dst), dst);
             break;
         case Mode::FUSE_ADD_RMULH_ROUND_SHR_SATURATE_INT32x32x32x8:
             on_fuse_add_rmulh_round_shr_saturate_int32x32x32x8(
-                    make_elemwise_op_param<6>(src, dst), dst.ptr<dt_int8>());
+                    make_elemwise_op_param<6>(src, dst), dst);
             break;
         case Mode::ROUND_SHR_SATURATE_IXxI8xI16:
-            on_round_shr_saturate_iXxi8xi16(
-                    make_elemwise_op_param<2>(src, dst), dst.ptr<dt_int16>());
+            on_round_shr_saturate_iXxi8xi16(make_elemwise_op_param<2>(src, dst), dst);
             break;
             ON_QUANTIZED_MODE(RELU, 1);
             ON_QUANTIZED_MODE(ABS, 1);

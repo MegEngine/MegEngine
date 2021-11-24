@@ -77,10 +77,11 @@ void MatrixMulForwardImpl::AlgoBlas::exec(const ExecArgs& args) const {
                                              : rocblas_operation_none,
                 args.opr->param().transposeA ? rocblas_operation_transpose
                                              : rocblas_operation_none,
-                n, m, k, one, args.tensor_b.raw_ptr, rocblas_datatype_f16_r,
-                args.layout_b.stride[0], args.tensor_a.raw_ptr, rocblas_datatype_f16_r,
-                args.layout_a.stride[0], zero, args.tensor_c.raw_ptr,
-                rocblas_datatype_f16_r, args.layout_c.stride[0], args.tensor_c.raw_ptr,
+                n, m, k, one, args.tensor_b.raw_ptr(), rocblas_datatype_f16_r,
+                args.layout_b.stride[0], args.tensor_a.raw_ptr(),
+                rocblas_datatype_f16_r, args.layout_a.stride[0], zero,
+                args.tensor_c.raw_ptr(), rocblas_datatype_f16_r,
+                args.layout_c.stride[0], args.tensor_c.raw_ptr(),
                 rocblas_datatype_f16_r, args.layout_c.stride[0], rocblas_datatype_f32_r,
                 rocblas_gemm_algo_standard, solution_index, flags, &ws_size, nullptr);
         rocblas_check(gemm_ex_err);
@@ -97,12 +98,12 @@ void MatrixMulForwardImpl::AlgoBlas::exec(const ExecArgs& args) const {
                 args.opr->param().transposeA ? rocblas_operation_transpose
                                              : rocblas_operation_none,
                 n, m, k, reinterpret_cast<const rocblas_half*>(one_half),
-                static_cast<const rocblas_half*>(args.tensor_b.raw_ptr),
+                static_cast<const rocblas_half*>(args.tensor_b.raw_ptr()),
                 args.layout_b.stride[0],
-                static_cast<const rocblas_half*>(args.tensor_a.raw_ptr),
+                static_cast<const rocblas_half*>(args.tensor_a.raw_ptr()),
                 args.layout_a.stride[0],
                 reinterpret_cast<const rocblas_half*>(zero_half),
-                static_cast<rocblas_half*>(args.tensor_c.raw_ptr),
+                static_cast<rocblas_half*>(args.tensor_c.raw_ptr()),
                 args.layout_c.stride[0]);
         rocblas_check(hgemm_err);
     };
@@ -145,11 +146,12 @@ void MatrixMulForwardImpl::AlgoBlas::exec(const ExecArgs& args) const {
                                              : rocblas_operation_none,
                 args.opr->param().transposeA ? rocblas_operation_transpose
                                              : rocblas_operation_none,
-                n, m, k, one, args.tensor_b.raw_ptr, rocblas_datatype_i8_r,
-                args.layout_b.stride[0], args.tensor_a.raw_ptr, rocblas_datatype_i8_r,
-                args.layout_a.stride[0], zero, args.tensor_c.raw_ptr,
-                rocblas_datatype_i32_r, args.layout_c.stride[0], args.tensor_c.raw_ptr,
-                rocblas_datatype_i32_r, args.layout_c.stride[0], rocblas_datatype_i32_r,
+                n, m, k, one, args.tensor_b.raw_ptr(), rocblas_datatype_i8_r,
+                args.layout_b.stride[0], args.tensor_a.raw_ptr(), rocblas_datatype_i8_r,
+                args.layout_a.stride[0], zero, args.tensor_c.raw_ptr(),
+                rocblas_datatype_i32_r, args.layout_c.stride[0],
+                args.tensor_c.raw_ptr(), rocblas_datatype_i32_r,
+                args.layout_c.stride[0], rocblas_datatype_i32_r,
                 rocblas_gemm_algo_standard, solution_index, flags, &ws_size, nullptr));
         MEGDNN_MARK_USED_VAR(ws_size);
     }

@@ -75,7 +75,7 @@ void ConvolutionBackwardDataImpl::AlgoMatmul::exec_internal(const ExecArgs& args
         TensorND A(args.filter_tensor->ptr<T>(), Al), B(col, Bl), C(diff_t, Cl);
         if (fm.should_flip) {
             convolution::flip_filter(
-                    args.as_fwd_args(), wbundle.get_workspace(2), A.raw_ptr);
+                    args.as_fwd_args(), wbundle.get_workspace(2), A.get_ref_ptr());
         }
         args.handle->matmul_aT_opr()->exec(A, C, B, Workspace());
     }

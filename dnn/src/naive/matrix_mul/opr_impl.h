@@ -43,11 +43,6 @@ public:
     Algorithm* get_algorithm_from_desc(const AlgorithmDesc&) override;
 
     const char* get_algorithm_set_name() const override { return "DEFAULT"; }
-
-private:
-    static void exec_internal(
-            _megdnn_tensor_in A, _megdnn_tensor_in B, _megdnn_tensor_out C,
-            _megdnn_workspace workspace, const Param& param);
 };
 
 }  // namespace naive

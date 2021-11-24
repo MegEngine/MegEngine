@@ -16,7 +16,7 @@ namespace naive {
 
 class CondTakeImpl : public CondTake {
     template <typename ctype>
-    void dispatch_genidx(size_t size, dt_int32* dest, const ctype* inp);
+    void dispatch_genidx(size_t size, dt_int32* dest, const TensorND& mask);
 
 public:
     using CondTake::CondTake;

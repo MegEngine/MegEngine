@@ -78,7 +78,7 @@ void ROIAlignBackwardImpl::exec(
     using namespace ::megdnn::roi_align;
     using namespace ::megdnn::cuda::roi_align;
     cuda_check(cudaMemsetAsync(
-            grad.raw_ptr, 0, grad.layout.total_nr_elems() * grad.layout.dtype.size(),
+            grad.raw_ptr(), 0, grad.layout.total_nr_elems() * grad.layout.dtype.size(),
             stream));
 #define cb(DType)                                                                      \
     if (diff.layout.dtype == DType()) {                                                \

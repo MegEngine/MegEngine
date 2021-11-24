@@ -291,11 +291,11 @@ void UniformRNGImpl::exec(_megdnn_tensor_inout dst, _megdnn_workspace workspace)
     auto size = dst.layout.total_nr_elems();
     auto prng = &m_rng.ensure_seed(m_param.seed);
     switch (dst.layout.dtype.enumv()) {
-#define cb(_dt)                                                           \
-    case DTypeTrait<_dt>::enumv: {                                        \
-        auto ptr = dst.ptr<DTypeTrait<_dt>::ctype>();                     \
-        MEGDNN_DISPATCH_CPU_KERN_OPR({ fill_uniform(prng, ptr, size); }); \
-        return;                                                           \
+#define cb(_dt)                                                                        \
+    case DTypeTrait<_dt>::enumv: {                                                     \
+        using ctype = DTypeTrait<_dt>::ctype;                                          \
+        MEGDNN_DISPATCH_CPU_KERN_OPR({ fill_uniform(prng, dst.ptr<ctype>(), size); }); \
+        return;                                                                        \
     }
         MEGDNN_FOREACH_COMPUTING_DTYPE_FLOAT(cb)
 #undef cb
@@ -309,14 +309,13 @@ void GaussianRNGImpl::exec(_megdnn_tensor_inout dst, _megdnn_workspace workspace
     auto size = dst.layout.total_nr_elems();
     auto prng = &m_rng.ensure_seed(m_param.seed);
     switch (dst.layout.dtype.enumv()) {
-#define cb(_dt)                                                         \
-    case DTypeTrait<_dt>::enumv: {                                      \
-        using ctype = DTypeTrait<_dt>::ctype;                           \
-        ctype mean(m_param.mean), std(m_param.std);                     \
-        auto ptr = dst.ptr<ctype>();                                    \
-        MEGDNN_DISPATCH_CPU_KERN_OPR(                                   \
-                { fill_gaussian<ctype>(prng, ptr, size, mean, std); }); \
-        return;                                                         \
+#define cb(_dt)                                                                      \
+    case DTypeTrait<_dt>::enumv: {                                                   \
+        using ctype = DTypeTrait<_dt>::ctype;                                        \
+        ctype mean(m_param.mean), std(m_param.std);                                  \
+        MEGDNN_DISPATCH_CPU_KERN_OPR(                                                \
+                { fill_gaussian<ctype>(prng, dst.ptr<ctype>(), size, mean, std); }); \
+        return;                                                                      \
     }
         MEGDNN_FOREACH_COMPUTING_DTYPE_FLOAT(cb)
 #undef cb
@@ -332,15 +331,15 @@ void GammaRNGImpl::exec(
     auto size = dst.layout.total_nr_elems();
     auto prng = &m_rng.ensure_seed(m_param.seed);
     switch (dst.layout.dtype.enumv()) {
-#define cb(_dt)                                                               \
-    case DTypeTrait<_dt>::enumv: {                                            \
-        using ctype = DTypeTrait<_dt>::ctype;                                 \
-        auto ptr = dst.ptr<ctype>();                                          \
-        MEGDNN_DISPATCH_CPU_KERN_OPR({                                        \
-            fill_gamma<float>(                                                \
-                    prng, ptr, size, shape.ptr<ctype>(), scale.ptr<ctype>()); \
-        };);                                                                  \
-        return;                                                               \
+#define cb(_dt)                                                       \
+    case DTypeTrait<_dt>::enumv: {                                    \
+        using ctype = DTypeTrait<_dt>::ctype;                         \
+        MEGDNN_DISPATCH_CPU_KERN_OPR({                                \
+            fill_gamma<float>(                                        \
+                    prng, dst.ptr<ctype>(), size, shape.ptr<ctype>(), \
+                    scale.ptr<ctype>());                              \
+        };);                                                          \
+        return;                                                       \
     }
         MEGDNN_FOREACH_COMPUTING_DTYPE_FLOAT(cb)
 #undef cb
@@ -355,14 +354,13 @@ void PoissonRNGImpl::exec(
     auto size = dst.layout.total_nr_elems();
     auto prng = &m_rng.ensure_seed(m_param.seed);
     switch (dst.layout.dtype.enumv()) {
-#define cb(_dt)                                                           \
-    case DTypeTrait<_dt>::enumv: {                                        \
-        using ctype = DTypeTrait<_dt>::ctype;                             \
-        auto dst_ptr = dst.ptr<ctype>();                                  \
-        auto lam_ptr = lam.ptr<ctype>();                                  \
-        MEGDNN_DISPATCH_CPU_KERN_OPR(                                     \
-                { fill_poisson<float>(prng, dst_ptr, lam_ptr, size); };); \
-        return;                                                           \
+#define cb(_dt)                                                                  \
+    case DTypeTrait<_dt>::enumv: {                                               \
+        using ctype = DTypeTrait<_dt>::ctype;                                    \
+        MEGDNN_DISPATCH_CPU_KERN_OPR({                                           \
+            fill_poisson<float>(prng, dst.ptr<ctype>(), lam.ptr<ctype>(), size); \
+        };);                                                                     \
+        return;                                                                  \
     }
         MEGDNN_FOREACH_COMPUTING_DTYPE_FLOAT(cb)
 #undef cb
@@ -378,15 +376,15 @@ void BetaRNGImpl::exec(
     auto size = dst.layout.total_nr_elems();
     auto prng = &m_rng.ensure_seed(m_param.seed);
     switch (dst.layout.dtype.enumv()) {
-#define cb(_dt)                                                                  \
-    case DTypeTrait<_dt>::enumv: {                                               \
-        using ctype = DTypeTrait<_dt>::ctype;                                    \
-        auto dst_ptr = dst.ptr<ctype>();                                         \
-        MEGDNN_DISPATCH_CPU_KERN_OPR({                                           \
-            fill_beta<float>(                                                    \
-                    prng, dst_ptr, alpha.ptr<ctype>(), beta.ptr<ctype>(), size); \
-        };);                                                                     \
-        return;                                                                  \
+#define cb(_dt)                                                                    \
+    case DTypeTrait<_dt>::enumv: {                                                 \
+        using ctype = DTypeTrait<_dt>::ctype;                                      \
+        MEGDNN_DISPATCH_CPU_KERN_OPR({                                             \
+            fill_beta<float>(                                                      \
+                    prng, dst.ptr<ctype>(), alpha.ptr<ctype>(), beta.ptr<ctype>(), \
+                    size);                                                         \
+        };);                                                                       \
+        return;                                                                    \
     }
         MEGDNN_FOREACH_COMPUTING_DTYPE_FLOAT(cb)
 #undef cb
@@ -400,14 +398,14 @@ void PermutationRNGImpl::exec(_megdnn_tensor_inout dst, _megdnn_workspace worksp
     auto size = dst.layout.total_nr_elems();
     auto prng = &m_rng.ensure_seed(m_param.seed);
     switch (dst.layout.dtype.enumv()) {
-#define cb(_dt)                                                                       \
-    case DTypeTrait<_dt>::enumv: {                                                    \
-        using ctype = DTypeTrait<_dt>::ctype;                                         \
-        ctype max_size = DTypeTrait<_dt>::max() - 1;                                  \
-        megdnn_assert((ctype(size) < max_size));                                      \
-        auto ptr = dst.ptr<ctype>();                                                  \
-        MEGDNN_DISPATCH_CPU_KERN_OPR({ fill_permutation<ctype>(prng, ptr, size); };); \
-        return;                                                                       \
+#define cb(_dt)                                                               \
+    case DTypeTrait<_dt>::enumv: {                                            \
+        using ctype = DTypeTrait<_dt>::ctype;                                 \
+        ctype max_size = DTypeTrait<_dt>::max() - 1;                          \
+        megdnn_assert((ctype(size) < max_size));                              \
+        MEGDNN_DISPATCH_CPU_KERN_OPR(                                         \
+                { fill_permutation<ctype>(prng, dst.ptr<ctype>(), size); };); \
+        return;                                                               \
     }
         cb(::megdnn::dtype::Float32) cb(::megdnn::dtype::Int32)
                 cb(::megdnn::dtype::Int16)
@@ -421,9 +419,9 @@ void ShuffleRNGForwardImpl::exec(
         _megdnn_workspace workspace) {
     check_exec(src.layout, dst.layout, indices.layout, workspace.size);
     const auto len = indices.layout[0];
-    auto iptr = indices.ptr<dt_int32>();
     auto prng = &m_rng.ensure_seed(m_param.seed);
-    fill_permutation<dt_int32>(prng, iptr, len);
+    MEGDNN_DISPATCH_CPU_KERN_OPR(
+            fill_permutation<dt_int32>(prng, indices.ptr<dt_int32>(), len));
     auto step = 0;
     for (size_t i = 1; i < src.layout.ndim; ++i) {
         step += src.layout[i];
@@ -431,12 +429,12 @@ void ShuffleRNGForwardImpl::exec(
     if (step <= 0)
         step = 1;
 
-#define cb(DType)                                                             \
-    if (src.layout.dtype == DType()) {                                        \
-        using T = typename DTypeTrait<DType>::ctype;                          \
-        MEGDNN_DISPATCH_CPU_KERN_OPR(                                         \
-                shuffle_fwd<T>(src.ptr<T>(), dst.ptr<T>(), iptr, len, step)); \
-        return;                                                               \
+#define cb(DType)                                                                 \
+    if (src.layout.dtype == DType()) {                                            \
+        using T = typename DTypeTrait<DType>::ctype;                              \
+        MEGDNN_DISPATCH_CPU_KERN_OPR(shuffle_fwd<T>(                              \
+                src.ptr<T>(), dst.ptr<T>(), indices.ptr<dt_int32>(), len, step)); \
+        return;                                                                   \
     }
     MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
 #undef cb
@@ -447,19 +445,18 @@ void ShuffleRNGBackwardImpl::exec(
         _megdnn_workspace workspace) {
     check_exec(diff.layout, indices.layout, grad.layout, workspace.size);
     const auto len = indices.layout[0];
-    auto iptr = indices.ptr<dt_int32>();
     auto step = 0;
     for (size_t i = 1; i < diff.layout.ndim; ++i) {
         step += diff.layout[i];
     }
     if (step <= 0)
         step = 1;
-#define cb(DType)                                                               \
-    if (diff.layout.dtype == DType()) {                                         \
-        using T = typename DTypeTrait<DType>::ctype;                            \
-        MEGDNN_DISPATCH_CPU_KERN_OPR(                                           \
-                shuffle_bwd<T>(grad.ptr<T>(), diff.ptr<T>(), iptr, len, step)); \
-        return;                                                                 \
+#define cb(DType)                                                                   \
+    if (diff.layout.dtype == DType()) {                                             \
+        using T = typename DTypeTrait<DType>::ctype;                                \
+        MEGDNN_DISPATCH_CPU_KERN_OPR(shuffle_bwd<T>(                                \
+                grad.ptr<T>(), diff.ptr<T>(), indices.ptr<dt_int32>(), len, step)); \
+        return;                                                                     \
     }
     MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
 #undef cb

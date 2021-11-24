@@ -26,9 +26,9 @@ public:
     }
 
     struct FloatNoncontigBatchKernParam {
-        const void* src;
-        const void* filter;
-        void* dst;
+        RefPtr src;
+        RefPtr filter;
+        RefPtr dst;
         size_t n, ic, ih, iw, oc, oh, ow, fh, fw;
         uint32_t ph, pw, sh, sw;
         ptrdiff_t inp_bs, out_bs;  //!< stride for batch of input, output
@@ -94,9 +94,9 @@ public:
 
 //! define local variables for fields in LocalImpl::FloatNoncontigBatchKernParam
 #define UNPACK_LOCAL_FLOAT_NONCONTIG_BATCH_KERN_PARAM(_p, _dtype)                   \
-    const _dtype* src = static_cast<const _dtype*>(_p.src);                         \
-    const _dtype* filter = static_cast<const _dtype*>(_p.filter);                   \
-    _dtype* dst = static_cast<_dtype*>(_p.dst);                                     \
+    const _dtype* src = static_cast<const _dtype*>(_p.src.get_ptr());               \
+    const _dtype* filter = static_cast<const _dtype*>(_p.filter.get_ptr());         \
+    _dtype* dst = static_cast<_dtype*>(_p.dst.get_ptr());                           \
     _dtype* workspace = static_cast<_dtype*>(_p.workspace);                         \
     const int N = _p.n, IC = _p.ic, IH = _p.ih, IW = _p.iw, OC = _p.oc, OH = _p.oh, \
               OW = _p.ow, FH = _p.fh, FW = _p.fw;                                   \

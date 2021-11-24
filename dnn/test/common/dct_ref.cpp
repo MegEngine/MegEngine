@@ -90,10 +90,10 @@ CheckerHelper::TensorsConstriant gen_dct_constriant(
                     "tensors_orig[2].layout == mask_val.layout");
             auto naive_handle = create_cpu_handle(2, false);
             megdnn_memcpy_D2D(
-                    naive_handle.get(), tensors_orig[1].raw_ptr, mask_offset.raw_ptr,
-                    mask_offset.layout.span().dist_byte());
+                    naive_handle.get(), tensors_orig[1].raw_ptr(),
+                    mask_offset.raw_ptr(), mask_offset.layout.span().dist_byte());
             megdnn_memcpy_D2D(
-                    naive_handle.get(), tensors_orig[2].raw_ptr, mask_val.raw_ptr,
+                    naive_handle.get(), tensors_orig[2].raw_ptr(), mask_val.raw_ptr(),
                     mask_val.layout.span().dist_byte());
         }
     };

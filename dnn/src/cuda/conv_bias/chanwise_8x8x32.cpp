@@ -50,9 +50,9 @@ size_t ConvBiasForwardImpl::AlgoChanwise8x8x32::get_workspace_in_bytes(
 
 void ConvBiasForwardImpl::AlgoChanwise8x8x32::exec(const ExecArgs& args) const {
     WorkspaceBundle bundle{args.workspace.raw_ptr, {get_workspace_in_bytes(args)}};
-    auto conv_dst_tensor = *args.dst_tensor;
+    TensorND conv_dst_tensor = *args.dst_tensor;
     if (args.dst_layout->dtype.enumv() != args.bias_layout->dtype.enumv()) {
-        conv_dst_tensor.raw_ptr = bundle.get(0);
+        conv_dst_tensor = TensorND{bundle.get(0), args.dst_tensor->layout};
         conv_dst_tensor.layout.dtype = DType();
         args.opr->check_or_deduce_dtype_fwd(
                 args.src_layout->dtype, args.filter_layout->dtype,

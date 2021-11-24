@@ -21,8 +21,10 @@ namespace x86 {
 class GaussianBlurImpl : public GaussianBlur {
 private:
     template <typename T>
-    void gaussian_blur_exec(const TensorND& src_tensor, const TensorND& dst_tensor);
-    void gaussian_blur_exec_8u(const TensorND& src_tensor, const TensorND& dst_tensor);
+    void gaussian_blur_exec(
+            const TensorND& src_tensor, const TensorND& dst_tensor, const Param& param);
+    void gaussian_blur_exec_8u(
+            const TensorND& src_tensor, const TensorND& dst_tensor, const Param& param);
 
     template <typename T>
     void createGaussianKernels(
@@ -31,6 +33,7 @@ private:
 
 public:
     using GaussianBlur::GaussianBlur;
+    using Param = param::GaussianBlur;
     size_t get_workspace_in_bytes(const TensorLayout&, const TensorLayout&) override {
         return 0;
     }

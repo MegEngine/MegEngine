@@ -152,7 +152,7 @@ void IIDRNG::gen(const TensorND& tensor) {
     cb(::megdnn::dtype::QuantizedS16)
 #undef cb
             if (tensor.layout.dtype.enumv() == DTypeEnum::Quantized4Asymm) {
-        auto ptr = static_cast<uint8_t*>(tensor.raw_ptr);
+        auto ptr = static_cast<uint8_t*>(tensor.raw_ptr());
         if (output_is_float()) {
             for (size_t i = 0; i < nr_elems; i += 2) {
                 uint8_t val0 = tensor.layout.dtype.param<dt_quint4>()
@@ -173,7 +173,7 @@ void IIDRNG::gen(const TensorND& tensor) {
         return;
     }
     if (tensor.layout.dtype.enumv() == DTypeEnum::QuantizedS4) {
-        auto ptr = static_cast<int8_t*>(tensor.raw_ptr);
+        auto ptr = static_cast<int8_t*>(tensor.raw_ptr());
         if (output_is_float()) {
             for (size_t i = 0; i < nr_elems; i += 2) {
                 int8_t val0 = tensor.layout.dtype.param<dt_qint4>()
@@ -199,7 +199,7 @@ void IIDRNG::gen(const TensorND& tensor) {
         return;
     }
     if (tensor.layout.dtype.enumv() == DTypeEnum::Byte) {
-        memset(tensor.raw_ptr, 0, tensor.layout.access_bytes());
+        memset(tensor.raw_ptr(), 0, tensor.layout.access_bytes());
         return;
     }
     if (tensor.layout.dtype.enumv() == DTypeEnum::Uint16) {

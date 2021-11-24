@@ -89,8 +89,8 @@ PoolingImpl::PoolingKernParam PoolingImpl::make_pooling_kern_param(
     PoolingKernParam ret;
     static_cast<PoolingKernSizeParam&>(ret) =
             make_pooling_kern_szie_param(opr, src.layout, dst.layout);
-    ret.src_ptr = src.raw_ptr;
-    ret.dst_ptr = dst.raw_ptr;
+    ret.src_ptr = src.get_ref_ptr();
+    ret.dst_ptr = dst.get_ref_ptr();
     ret.workspace_ptr = workspace.raw_ptr;
     ret.workspace_size = workspace.size;
     return ret;

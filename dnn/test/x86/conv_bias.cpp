@@ -18,6 +18,7 @@
 #include "test/common/checker.h"
 #include "test/common/conv_bias.h"
 #include "test/common/rng.h"
+#include "test/common/task_record_check.h"
 #include "test/common/tensor.h"
 #include "test/common/workspace_wrapper.h"
 namespace megdnn {
@@ -27,6 +28,25 @@ TEST_F(X86, CONV_BIAS_FORWARD) {
     using namespace conv_bias;
     std::vector<TestArg> args = get_args();
     Checker<ConvBiasForward> checker(handle());
+    NormalRNG default_rng;
+    ConstValue const_val;
+    for (auto&& arg : args) {
+        checker.set_dtype(0, dtype::Float32())
+                .set_dtype(1, dtype::Float32())
+                .set_dtype(2, dtype::Float32())
+                .set_rng(0, &default_rng)
+                .set_rng(1, &default_rng)
+                .set_rng(2, &default_rng)
+                .set_epsilon(1e-3)
+                .set_param(arg.param)
+                .execs({arg.src, arg.filter, arg.bias, {}, {}});
+    }
+}
+
+TEST_F(X86, CONV_BIAS_FORWARD_RECORD) {
+    using namespace conv_bias;
+    std::vector<TestArg> args = get_args();
+    TaskRecordChecker<ConvBiasForward> checker(0);
     NormalRNG default_rng;
     ConstValue const_val;
     for (auto&& arg : args) {
@@ -97,6 +117,49 @@ static void avx2_chanwise_direct_int8x8x32(
 TEST_F(X86_MULTI_THREADS, AVX2_CHANWISE_DIRECT_STRIDE1_INT8x8x32) {
     avx2_chanwise_direct_int8x8x32(
             handle(), 1, "X86_CONV_BIAS_CHANWISE_AVX2_INT8_STRIDE1");
+}
+
+TEST_F(X86, AVX2_CHANWISE_DIRECT_STRIDE1_INT8x8x32_RECORD) {
+    using namespace conv_bias;
+    std::vector<TestArg> args;
+    size_t stride = 1;
+    auto run = [&](size_t ic, size_t w, size_t h, size_t kernel, size_t p,
+                   NonlineMode nonline_mode) {
+        if (w + 2 * p < kernel || h + 2 * p < kernel)
+            return;
+        param::ConvBias param;
+        param.stride_h = stride;
+        param.stride_w = stride;
+        param.pad_h = p;
+        param.pad_w = p;
+        param.nonlineMode = nonline_mode;
+
+        param.sparse = param::ConvBias::Sparse::GROUP;
+        //! no bias
+        args.emplace_back(
+                param, TensorShape{2, ic, h, w}, TensorShape{ic, 1, 1, kernel, kernel},
+                TensorShape{});
+        //! bias channel
+        args.emplace_back(
+                param, TensorShape{2, ic, h, w}, TensorShape{ic, 1, 1, kernel, kernel},
+                TensorShape{1, ic, 1, 1});
+    };
+
+    run(5, 16, 7, 2, 1, NonlineMode::IDENTITY);
+
+    TaskRecordChecker<ConvBias> checker(0);
+    UniformIntRNG rng{-50, 50};
+    checker.set_dtype(0, dtype::Int8())
+            .set_dtype(1, dtype::Int8())
+            .set_dtype(2, dtype::Int32())
+            .set_dtype(4, dtype::Int32())
+            .set_rng(0, &rng)
+            .set_rng(1, &rng)
+            .set_rng(2, &rng)
+            .set_epsilon(1e-3);
+    for (auto&& arg : args) {
+        checker.set_param(arg.param).exec({arg.src, arg.filter, arg.bias, {}, {}});
+    }
 }
 
 TEST_F(X86_MULTI_THREADS, AVX2_CHANWISE_DIRECT_STRIDE2_INT8x8x32) {
@@ -1092,6 +1155,44 @@ TEST_F(X86, CONV_BIAS_IM2COLMATMUL_FP32) {
     cb("IM2COLMATMUL:X86_F32_BLAS");
 
 #undef cb
+}
+
+TEST_F(X86, CONV_BIAS_IM2COLMATMUL_FP32_RECORD) {
+    using namespace conv_bias;
+    std::vector<TestArg> args;
+
+    auto run = [&](size_t oc, size_t ic, size_t w, size_t h, size_t kernel, size_t p,
+                   NonlineMode nonline_mode) {
+        if (w + 2 * p < kernel || h + 2 * p < kernel)
+            return;
+        param::ConvBias param;
+        param.stride_h = 1;
+        param.stride_w = 1;
+        param.pad_h = p;
+        param.pad_w = p;
+        param.nonlineMode = nonline_mode;
+
+        //! no bias
+        args.emplace_back(
+                param, TensorShape{1, ic, h, w}, TensorShape{oc, ic, kernel, kernel},
+                TensorShape{});
+        args.emplace_back(
+                param, TensorShape{1, ic, h, w}, TensorShape{oc, ic, kernel, kernel},
+                TensorShape{1, oc, 1, 1});
+        args.emplace_back(
+                param, TensorShape{1, ic, h, w}, TensorShape{oc, ic, kernel, kernel},
+                TensorShape{
+                        1, oc, (h + 2 * p - kernel) / param.stride_h + 1,
+                        (w + 2 * p - kernel) / param.stride_w + 1});
+    };
+    for (NonlineMode nonline_mode : {NonlineMode::IDENTITY, NonlineMode::RELU}) {
+        run(1, 1, 24, 24, 2, 2, nonline_mode);
+    }
+
+    TaskRecordChecker<ConvBias> checker(0);
+    for (auto&& arg : args) {
+        checker.set_param(arg.param).execs({arg.src, arg.filter, arg.bias, {}, {}});
+    }
 }
 
 TEST_F(X86, CONV_BIAS_IM2COLMATMUL_FP32_NOPACK_PREPROCESS) {

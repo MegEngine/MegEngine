@@ -29,7 +29,6 @@ public:
         // TODO: deduce the size of ring buffer.
         return 0;
     }
-    FilterEngine* filter_engine_;
 };
 
 }  // namespace x86

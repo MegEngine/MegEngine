@@ -15,6 +15,7 @@
 
 #include "test/x86/fixture.h"
 
+#include "test/common/task_record_check.h"
 namespace megdnn {
 namespace test {
 
@@ -31,6 +32,16 @@ TEST_F(X86, CVTCOLOR) {
                 .set_dtype(1, arg.dtype)
                 .execs({arg.src, {}});
     }
+}
+
+TEST_F(X86, CVTCOLOR_RECORD) {
+    using namespace cvt_color;
+    std::vector<TestArg> args = get_args();
+    TaskRecordChecker<CvtColor> checker(0);
+    checker.set_param(args[0].param)
+            .set_dtype(0, args[0].dtype)
+            .set_dtype(1, args[0].dtype)
+            .execs({args[0].src, {}});
 }
 
 #ifdef MEGDNN_WITH_BENCHMARK

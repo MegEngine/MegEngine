@@ -189,7 +189,7 @@ TEST_F(NAIVE, CONVOLUTION_WITH_NCHW4) {
         TensorNDArray nchw4_tensors;
         for (size_t i = 0; i < tensors.size(); ++i) {
             auto layout = convert_true_format(nchw_tensors[i].layout);
-            nchw4_tensors.emplace_back(tensors[i].raw_ptr, std::move(layout));
+            nchw4_tensors.emplace_back(tensors[i].raw_ptr(), std::move(layout));
         }
 
         auto workspace_size = conv->get_workspace_in_bytes(
@@ -208,7 +208,7 @@ TEST_F(NAIVE, CONVOLUTION_WITH_NCHW4) {
 
         free(workspace_ptr);
         for (auto&& tensor : nchw_tensors) {
-            free(tensor.raw_ptr);
+            free(tensor.raw_ptr());
         }
     };
 

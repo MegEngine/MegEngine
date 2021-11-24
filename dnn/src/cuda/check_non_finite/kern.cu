@@ -8,7 +8,7 @@
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-#include "src/common/reduce_helper.h"
+#include "src/common/reduce_helper_device.h"
 
 #include "megdnn/dtype.h"
 #include "src/cuda/reduce_helper.cuh"
@@ -18,7 +18,9 @@ namespace cuda {
 
 #define COMMA ,
 
-INST_REDUCE(reduce::CheckNonFiniteOp<dt_float32 COMMA dt_int32 COMMA dt_int32>, false);
+INST_REDUCE(
+        device_reduce::CheckNonFiniteOp<dt_float32 COMMA dt_int32 COMMA dt_int32>,
+        false);
 
 #undef COMMA
 }  // namespace cuda

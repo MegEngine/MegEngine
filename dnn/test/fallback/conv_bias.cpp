@@ -15,9 +15,9 @@
 #include "test/common/benchmarker.h"
 #include "test/common/checker.h"
 #include "test/common/rng.h"
+#include "test/common/task_record_check.h"
 #include "test/common/tensor.h"
 #include "test/fallback/fixture.h"
-
 #if MEGDNN_X86
 #include "src/x86/utils.h"
 #endif
@@ -58,6 +58,46 @@ TEST_F(FALLBACK, CONV_BIAS_FORWARD) {
                 .set_param(arg.param)
                 .execs({arg.src, arg.filter, arg.bias, {}, {}});
     }
+    {
+        param.format = param::ConvBias::Format::NCHW;
+        param.sparse = ConvBias::Param::Sparse::GROUP;
+        auto src_shape = TensorShape{2, 16, 32, 24};
+        auto filter_shape = TensorShape{4, 4, 4, 1, 1};
+        auto bias_shape_channel = TensorShape{1, 16, 1, 1};
+        auto bias_shape = TensorShape{2, 16, 32, 24};
+        checker.set_dtype(0, dtype::Float32())
+                .set_dtype(1, dtype::Float32())
+                .set_dtype(2, dtype::Float32())
+                .set_rng(0, &default_rng)
+                .set_rng(1, &default_rng)
+                .set_rng(2, &default_rng)
+                .set_param(param)
+                .execs({src_shape, filter_shape, bias_shape, {}, {}})
+                .execs({src_shape, filter_shape, bias_shape_channel, {}, {}});
+    }
+}
+
+TEST_F(FALLBACK, CONV_BIAS_FORWARD_RECORD) {
+    using namespace conv_bias;
+    TaskRecordChecker<ConvBiasForward> checker(1);
+    NormalRNG default_rng;
+    UniformIntRNG int_rng{-50, 50};
+    param::ConvBias param;
+    {
+        param.format = param::ConvBias::Format::NHWC;
+        auto src_shape = TensorShape{2, 16, 32, 24};
+        auto filter_shape = TensorShape{4, 3, 3, 24};
+        auto bias_shape_channel = TensorShape{1, 1, 1, 4};
+        checker.set_dtype(0, dtype::Float32())
+                .set_dtype(1, dtype::Float32())
+                .set_dtype(2, dtype::Float32())
+                .set_rng(0, &default_rng)
+                .set_rng(1, &default_rng)
+                .set_rng(2, &default_rng)
+                .set_param(param)
+                .execs({src_shape, filter_shape, bias_shape_channel, {}, {}});
+    }
+
     {
         param.format = param::ConvBias::Format::NCHW;
         param.sparse = ConvBias::Param::Sparse::GROUP;

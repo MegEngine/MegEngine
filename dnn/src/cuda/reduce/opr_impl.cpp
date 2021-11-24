@@ -15,7 +15,7 @@
 #include "src/cuda/handle.h"
 #include "src/cuda/utils.h"
 
-#include "src/common/reduce_helper.h"
+#include "src/common/reduce_helper_device.h"
 
 namespace {
 
@@ -114,10 +114,10 @@ namespace cuda {
 
 void ReduceForwardImpl::exec(
         _megdnn_tensor_in src, _megdnn_tensor_out dst, _megdnn_workspace workspace) {
-    using namespace reduce;
+    using namespace device_reduce;
     check_exec(src.layout, dst.layout, workspace.size);
     size_t A, B, C;
-    get_ABC(src.layout, A, B, C, param().axis);
+    reduce::get_ABC(src.layout, A, B, C, param().axis);
     auto stream = cuda_stream(this->handle());
 #define CASE(_mode, _op)            \
     case _mode:                     \
@@ -142,9 +142,9 @@ size_t ReduceForwardImpl::get_workspace_in_bytes(
     megdnn_assert(
             param().data_type != Reduce::DataType::FLOAT_IO16xC32,
             "FLOAT_IO16xC32 is deprecated");
-    using namespace reduce;
+    using namespace device_reduce;
     size_t A, B, C;
-    get_ABC(src, A, B, C, param().axis);
+    reduce::get_ABC(src, A, B, C, param().axis);
 #define CASE(_mode, _op)                                                            \
     case _mode: {                                                                   \
         return dispatch_dtype_workspace<_op>(src, dst, A, B, C, param().data_type); \

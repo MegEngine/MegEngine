@@ -483,18 +483,18 @@ void TypeCvtImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
 #undef DISPATCH_QUANTIZED
 
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
-#define DISPATCH_FLOAT(_stype_enumv, _stype, _dtype_enumv, _dtype, _midout_iv)    \
-    if (src_dtype.enumv() == DTypeTrait<_stype_enumv>::enumv &&                   \
-        dst_dtype.enumv() == DTypeTrait<_dtype_enumv>::enumv) {                   \
-        MIDOUT_BEGIN(megdnn_arm_typecvt_float, midout_iv(_midout_iv)) {           \
-            using _TypeCvter = FloatTypeCvter<_stype, _dtype>;                    \
-            MEGDNN_DISPATCH_CPU_KERN_OPR(do_typecvt<_TypeCvter>(                  \
-                    reinterpret_cast<_stype*>(src.raw_ptr),                       \
-                    reinterpret_cast<_dtype*>(dst.raw_ptr), src_dtype, dst_dtype, \
-                    nr_elems));                                                   \
-            execed = true;                                                        \
-        }                                                                         \
-        MIDOUT_END();                                                             \
+#define DISPATCH_FLOAT(_stype_enumv, _stype, _dtype_enumv, _dtype, _midout_iv)      \
+    if (src_dtype.enumv() == DTypeTrait<_stype_enumv>::enumv &&                     \
+        dst_dtype.enumv() == DTypeTrait<_dtype_enumv>::enumv) {                     \
+        MIDOUT_BEGIN(megdnn_arm_typecvt_float, midout_iv(_midout_iv)) {             \
+            using _TypeCvter = FloatTypeCvter<_stype, _dtype>;                      \
+            MEGDNN_DISPATCH_CPU_KERN_OPR(do_typecvt<_TypeCvter>(                    \
+                    reinterpret_cast<_stype*>(src.raw_ptr()),                       \
+                    reinterpret_cast<_dtype*>(dst.raw_ptr()), src_dtype, dst_dtype, \
+                    nr_elems));                                                     \
+            execed = true;                                                          \
+        }                                                                           \
+        MIDOUT_END();                                                               \
     }
         DISPATCH_FLOAT(dt_float16, __fp16, float, float, 0);
         DISPATCH_FLOAT(float, float, dt_float16, __fp16, 1);

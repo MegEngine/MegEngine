@@ -53,9 +53,10 @@ void Convolution3DForwardImpl::AlgoCUDNN::exec(const ExecArgs& args) const {
     float alpha = 1.0f, beta = 0.0f;
     auto status = cudnnConvolutionForward(
             args.handle->cudnn_handle(), &alpha, D.src_desc.desc,
-            args.src_tensor->raw_ptr, D.filter_desc.desc, args.filter_tensor->raw_ptr,
-            D.conv_desc.desc, m_cudnn_enum, args.workspace.raw_ptr, args.workspace.size,
-            &beta, D.dst_desc.desc, args.dst_tensor->raw_ptr);
+            args.src_tensor->raw_ptr(), D.filter_desc.desc,
+            args.filter_tensor->raw_ptr(), D.conv_desc.desc, m_cudnn_enum,
+            args.workspace.raw_ptr, args.workspace.size, &beta, D.dst_desc.desc,
+            args.dst_tensor->raw_ptr());
     megdnn_assert(
             status == CUDNN_STATUS_SUCCESS, "conv fwd failed: %s; info: %s",
             cudnnGetErrorString(status), args.to_string().c_str());

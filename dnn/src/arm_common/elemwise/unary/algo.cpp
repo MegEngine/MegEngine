@@ -76,8 +76,8 @@ void ElemwiseImpl::AlgoUnary::exec(const KernParam& kern_param) const {
                 size_t offset = task_id * nr_elems_per_thread;                      \
                 size_t nr_elems_thread =                                            \
                         std::min(nr_elems - offset, nr_elems_per_thread);           \
-                run(static_cast<const _type*>(src0.raw_ptr) + offset,               \
-                    static_cast<_type*>(dst_tensor.raw_ptr) + offset,               \
+                run(static_cast<const _type*>(src0.raw_ptr()) + offset,             \
+                    static_cast<_type*>(dst_tensor.raw_ptr()) + offset,             \
                     src0.layout.dtype, dst_tensor.layout.dtype, nr_elems_thread);   \
             };                                                                      \
             MEGDNN_DISPATCH_MULTI_THREAD_CPU_KERN(                                  \

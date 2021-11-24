@@ -117,27 +117,27 @@ void PoolingImpl::AlgoFilterxModexStride1::exec(const PoolingKernParam& param) c
     auto PW = param.padding[1];
     auto FH = param.filter[0];
 
-    void* src_ptr = param.src_ptr;
-    void* dst_ptr = param.dst_ptr;
+    auto src_ptr = param.src_ptr;
+    auto dst_ptr = param.dst_ptr;
 
-#define DISPATCH_FUNC(Pooler, NeonPooler, window, midout_type_id)                     \
-    MIDOUT_BEGIN(                                                                     \
-            megdnn_arm_common_pooling, midout_iv(0), midout_iv(midout_type_id),       \
-            Pooler::MIDOUT_CASE_NUM, NeonPooler::MIDOUT_CASE_NUM, window) {           \
-        auto run = [C, IH, IW, OH, OW, PH, PW, src_ptr, dst_ptr,                      \
-                    src_dtype = param.src_type](size_t index, size_t) {               \
-            size_t n = index / C;                                                     \
-            size_t c = index % C;                                                     \
-            do_pooling_compact<Pooler MEGDNN_COMMA NeonPooler MEGDNN_COMMA window>(   \
-                    static_cast<const typename Pooler::ctype*>(src_ptr) +             \
-                            n * C * IH * IW + c * IH * IW,                            \
-                    static_cast<typename Pooler::ctype*>(dst_ptr) + n * C * OH * OW + \
-                            c * OH * OW,                                              \
-                    src_dtype, IH, IW, OH, OW, PH, PW);                               \
-        };                                                                            \
-        MEGDNN_DISPATCH_MULTI_THREAD_CPU_KERN(                                        \
-                static_cast<::megdnn::naive::HandleImpl*>(param.handle), N* C, run);  \
-    }                                                                                 \
+#define DISPATCH_FUNC(Pooler, NeonPooler, window, midout_type_id)                    \
+    MIDOUT_BEGIN(                                                                    \
+            megdnn_arm_common_pooling, midout_iv(0), midout_iv(midout_type_id),      \
+            Pooler::MIDOUT_CASE_NUM, NeonPooler::MIDOUT_CASE_NUM, window) {          \
+        auto run = [C, IH, IW, OH, OW, PH, PW, src_ptr, dst_ptr,                     \
+                    src_dtype = param.src_type](size_t index, size_t) {              \
+            size_t n = index / C;                                                    \
+            size_t c = index % C;                                                    \
+            do_pooling_compact<Pooler MEGDNN_COMMA NeonPooler MEGDNN_COMMA window>(  \
+                    static_cast<const typename Pooler::ctype*>(src_ptr.get_ptr()) +  \
+                            n * C * IH * IW + c * IH * IW,                           \
+                    static_cast<typename Pooler::ctype*>(dst_ptr.get_ptr()) +        \
+                            n * C * OH * OW + c * OH * OW,                           \
+                    src_dtype, IH, IW, OH, OW, PH, PW);                              \
+        };                                                                           \
+        MEGDNN_DISPATCH_MULTI_THREAD_CPU_KERN(                                       \
+                static_cast<::megdnn::naive::HandleImpl*>(param.handle), N* C, run); \
+    }                                                                                \
     MIDOUT_END()
 
 #define DISPATCH_WINDOW(Pooler, NeonPooler, dtype, ctype, comp_type, midout_type_id) \
@@ -213,26 +213,26 @@ void PoolingImpl::AlgoFilter2ModexStride2::exec(const PoolingKernParam& param) c
     auto PH = param.padding[0];
     auto PW = param.padding[1];
 
-    void* src_ptr = param.src_ptr;
-    void* dst_ptr = param.dst_ptr;
-#define DISPATCH_FUNC(Pooler, mode, midout_type_id)                                   \
-    MIDOUT_BEGIN(                                                                     \
-            megdnn_arm_common_pooling, midout_iv(1), midout_iv(midout_type_id),       \
-            Pooler::MIDOUT_CASE_NUM) {                                                \
-        auto run = [C, IH, IW, OH, OW, PH, PW, src_ptr, dst_ptr,                      \
-                    src_dtype = param.src_type](size_t index, size_t) {               \
-            size_t n = index / C;                                                     \
-            size_t c = index % C;                                                     \
-            do_pooling_2x2<Pooler MEGDNN_COMMA mode>(                                 \
-                    static_cast<const typename Pooler::ctype*>(src_ptr) +             \
-                            n * C * IH * IW + c * IH * IW,                            \
-                    static_cast<typename Pooler::ctype*>(dst_ptr) + n * C * OH * OW + \
-                            c * OH * OW,                                              \
-                    src_dtype, IH, IW, OH, OW, PH, PW);                               \
-        };                                                                            \
-        MEGDNN_DISPATCH_MULTI_THREAD_CPU_KERN(                                        \
-                static_cast<::megdnn::naive::HandleImpl*>(param.handle), N* C, run);  \
-    }                                                                                 \
+    auto src_ptr = param.src_ptr;
+    auto dst_ptr = param.dst_ptr;
+#define DISPATCH_FUNC(Pooler, mode, midout_type_id)                                  \
+    MIDOUT_BEGIN(                                                                    \
+            megdnn_arm_common_pooling, midout_iv(1), midout_iv(midout_type_id),      \
+            Pooler::MIDOUT_CASE_NUM) {                                               \
+        auto run = [C, IH, IW, OH, OW, PH, PW, src_ptr, dst_ptr,                     \
+                    src_dtype = param.src_type](size_t index, size_t) {              \
+            size_t n = index / C;                                                    \
+            size_t c = index % C;                                                    \
+            do_pooling_2x2<Pooler MEGDNN_COMMA mode>(                                \
+                    static_cast<const typename Pooler::ctype*>(src_ptr.get_ptr()) +  \
+                            n * C * IH * IW + c * IH * IW,                           \
+                    static_cast<typename Pooler::ctype*>(dst_ptr.get_ptr()) +        \
+                            n * C * OH * OW + c * OH * OW,                           \
+                    src_dtype, IH, IW, OH, OW, PH, PW);                              \
+        };                                                                           \
+        MEGDNN_DISPATCH_MULTI_THREAD_CPU_KERN(                                       \
+                static_cast<::megdnn::naive::HandleImpl*>(param.handle), N* C, run); \
+    }                                                                                \
     MIDOUT_END()
 
 #define DISPATCH_MODE(dtype, ctype, comp_type, midout_type_id)        \
@@ -286,8 +286,8 @@ void PoolingImpl::AlgoFilter3MaxStride2::exec(const PoolingKernParam& param) con
     auto PH = param.padding[0];
     auto PW = param.padding[1];
 
-    void* src_ptr = param.src_ptr;
-    void* dst_ptr = param.dst_ptr;
+    auto src_ptr = param.src_ptr;
+    auto dst_ptr = param.dst_ptr;
 
 #define DISPATCH_FUNC(type, func, midout_type_id)                                      \
     MIDOUT_BEGIN(megdnn_arm_common_pooling, midout_iv(2), midout_iv(midout_type_id)) { \
@@ -300,9 +300,11 @@ void PoolingImpl::AlgoFilter3MaxStride2::exec(const PoolingKernParam& param) con
             size_t n = index / C;                                                      \
             size_t c = index % C;                                                      \
             do_max_pooling_3x3_s2x2_##func##_NEON(                                     \
-                    static_cast<const type*>(src_ptr) + n * C * IH * IW + c * IH * IW, \
-                    static_cast<type*>(dst_ptr) + n * C * OH * OW + c * OH * OW, IH,   \
-                    IW, OH, OW, PH, PW, ws);                                           \
+                    static_cast<const type*>(src_ptr.get_ptr()) + n * C * IH * IW +    \
+                            c * IH * IW,                                               \
+                    static_cast<type*>(dst_ptr.get_ptr()) + n * C * OH * OW +          \
+                            c * OH * OW,                                               \
+                    IH, IW, OH, OW, PH, PW, ws);                                       \
         };                                                                             \
         MEGDNN_DISPATCH_MULTI_THREAD_CPU_KERN(                                         \
                 static_cast<::megdnn::naive::HandleImpl*>(param.handle), N* C, run);   \
@@ -339,8 +341,8 @@ void PoolingImpl::AlgoFilter3AverageStride2::exec(const PoolingKernParam& param)
     auto PH = param.padding[0];
     auto PW = param.padding[1];
 
-    void* src_ptr = param.src_ptr;
-    void* dst_ptr = param.dst_ptr;
+    auto src_ptr = param.src_ptr;
+    auto dst_ptr = param.dst_ptr;
 
 #define DISPATCH_FUNC(type, MEGDNN_SIMD_WIDTH, midout_type_id)                         \
     MIDOUT_BEGIN(megdnn_arm_common_pooling, midout_iv(3), midout_iv(midout_type_id)) { \
@@ -353,9 +355,11 @@ void PoolingImpl::AlgoFilter3AverageStride2::exec(const PoolingKernParam& param)
             size_t n = index / C;                                                      \
             size_t c = index % C;                                                      \
             do_average_pooling_3x3_s2x2_NEON(                                          \
-                    static_cast<const type*>(src_ptr) + n * C * IH * IW + c * IH * IW, \
-                    static_cast<type*>(dst_ptr) + n * C * OH * OW + c * OH * OW, IH,   \
-                    IW, OH, OW, PH, PW, ws, MEGDNN_SIMD_WIDTH);                        \
+                    static_cast<const type*>(src_ptr.get_ptr()) + n * C * IH * IW +    \
+                            c * IH * IW,                                               \
+                    static_cast<type*>(dst_ptr.get_ptr()) + n * C * OH * OW +          \
+                            c * OH * OW,                                               \
+                    IH, IW, OH, OW, PH, PW, ws, MEGDNN_SIMD_WIDTH);                    \
         };                                                                             \
         MEGDNN_DISPATCH_MULTI_THREAD_CPU_KERN(                                         \
                 static_cast<::megdnn::naive::HandleImpl*>(param.handle), N* C, run);   \
@@ -392,8 +396,8 @@ void PoolingImpl::AlgoFilter4MaxStride2::exec(const PoolingKernParam& param) con
     auto PH = param.padding[0];
     auto PW = param.padding[1];
 
-    void* src_ptr = param.src_ptr;
-    void* dst_ptr = param.dst_ptr;
+    auto src_ptr = param.src_ptr;
+    auto dst_ptr = param.dst_ptr;
 
 #define DISPATCH_FUNC(type, func, midout_type_id)                                      \
     MIDOUT_BEGIN(megdnn_arm_common_pooling, midout_iv(4), midout_iv(midout_type_id)) { \
@@ -402,8 +406,10 @@ void PoolingImpl::AlgoFilter4MaxStride2::exec(const PoolingKernParam& param) con
             size_t n = index / C;                                                      \
             size_t c = index % C;                                                      \
             do_max_pooling_w4x4_s2x2_##func##_NEON(                                    \
-                    static_cast<const type*>(src_ptr) + n * C * IH * IW + c * IH * IW, \
-                    static_cast<type*>(dst_ptr) + n * C * OH * OW + c * OH * OW,       \
+                    static_cast<const type*>(src_ptr.get_ptr()) + n * C * IH * IW +    \
+                            c * IH * IW,                                               \
+                    static_cast<type*>(dst_ptr.get_ptr()) + n * C * OH * OW +          \
+                            c * OH * OW,                                               \
                     src_dtype, IH, IW, OH, OW, PH, PW);                                \
         };                                                                             \
         MEGDNN_DISPATCH_MULTI_THREAD_CPU_KERN(                                         \
@@ -446,8 +452,8 @@ void PoolingImpl::AlgoFilter5MaxStride2::exec(const PoolingKernParam& param) con
     auto PH = param.padding[0];
     auto PW = param.padding[1];
 
-    void* src_ptr = param.src_ptr;
-    void* dst_ptr = param.dst_ptr;
+    auto src_ptr = param.src_ptr;
+    auto dst_ptr = param.dst_ptr;
 
 #define DISPATCH_FUNC(dtype, type, midout_type_id, MEGDNN_SIMD_WIDTH)                  \
     MIDOUT_BEGIN(megdnn_arm_common_pooling, midout_iv(5), midout_iv(midout_type_id)) { \
@@ -460,9 +466,11 @@ void PoolingImpl::AlgoFilter5MaxStride2::exec(const PoolingKernParam& param) con
             size_t n = index / C;                                                      \
             size_t c = index % C;                                                      \
             do_max_pooling_w5x5_s2x2_NEON<dtype>(                                      \
-                    static_cast<const type*>(src_ptr) + n * C * IH * IW + c * IH * IW, \
-                    static_cast<type*>(dst_ptr) + n * C * OH * OW + c * OH * OW, IH,   \
-                    IW, OH, OW, PH, PW, ws, MEGDNN_SIMD_WIDTH);                        \
+                    static_cast<const type*>(src_ptr.get_ptr()) + n * C * IH * IW +    \
+                            c * IH * IW,                                               \
+                    static_cast<type*>(dst_ptr.get_ptr()) + n * C * OH * OW +          \
+                            c * OH * OW,                                               \
+                    IH, IW, OH, OW, PH, PW, ws, MEGDNN_SIMD_WIDTH);                    \
         };                                                                             \
         MEGDNN_DISPATCH_MULTI_THREAD_CPU_KERN(                                         \
                 static_cast<::megdnn::naive::HandleImpl*>(param.handle), N* C, run);   \
@@ -593,8 +601,8 @@ void PoolingImpl::AlgoFilter3ModexStridexNCHW44::exec(
     auto PW = param.padding[1];
     auto SW = param.stride[0];
 
-    void* src_ptr = param.src_ptr;
-    void* dst_ptr = param.dst_ptr;
+    auto src_ptr = param.src_ptr;
+    auto dst_ptr = param.dst_ptr;
 
 #define DISPATCH_FUNC(type, func, i, mode)                                           \
     MIDOUT_BEGIN(                                                                    \
@@ -608,9 +616,9 @@ void PoolingImpl::AlgoFilter3ModexStridexNCHW44::exec(
             size_t n = index / C;                                                    \
             size_t c = index % C;                                                    \
             do_##mode##_pooling_3x3_stride##i##_##func##_nchw44_NEON(                \
-                    static_cast<const type*>(src_ptr) + n * C * IH * IW * 4 +        \
-                            c * IH * IW * 4,                                         \
-                    static_cast<type*>(dst_ptr) + n * C * OH * OW * 4 +              \
+                    static_cast<const type*>(src_ptr.get_ptr()) +                    \
+                            n * C * IH * IW * 4 + c * IH * IW * 4,                   \
+                    static_cast<type*>(dst_ptr.get_ptr()) + n * C * OH * OW * 4 +    \
                             c * OH * OW * 4,                                         \
                     IH, IW, OH, OW, PH, PW, ws);                                     \
         };                                                                           \
@@ -685,8 +693,8 @@ void PoolingImpl::AlgoFilter2ModexStridexNCHW44::exec(
     auto PW = param.padding[1];
     auto SW = param.stride[0];
 
-    void* src_ptr = param.src_ptr;
-    void* dst_ptr = param.dst_ptr;
+    auto src_ptr = param.src_ptr;
+    auto dst_ptr = param.dst_ptr;
 
 #define DISPATCH_FUNC(type, func, i, mode)                                           \
     MIDOUT_BEGIN(                                                                    \
@@ -700,9 +708,9 @@ void PoolingImpl::AlgoFilter2ModexStridexNCHW44::exec(
             size_t n = index / C;                                                    \
             size_t c = index % C;                                                    \
             do_##mode##_pooling_2x2_stride##i##_##func##_nchw44_NEON(                \
-                    static_cast<const type*>(src_ptr) + n * C * IH * IW * 4 +        \
-                            c * IH * IW * 4,                                         \
-                    static_cast<type*>(dst_ptr) + n * C * OH * OW * 4 +              \
+                    static_cast<const type*>(src_ptr.get_ptr()) +                    \
+                            n * C * IH * IW * 4 + c * IH * IW * 4,                   \
+                    static_cast<type*>(dst_ptr.get_ptr()) + n * C * OH * OW * 4 +    \
                             c * OH * OW * 4,                                         \
                     IH, IW, OH, OW, PH, PW, ws);                                     \
         };                                                                           \
@@ -778,8 +786,8 @@ void PoolingImpl::AlgoFilter4ModexStridexNCHW44::exec(
     auto PW = param.padding[1];
     auto SW = param.stride[0];
 
-    void* src_ptr = param.src_ptr;
-    void* dst_ptr = param.dst_ptr;
+    auto src_ptr = param.src_ptr;
+    auto dst_ptr = param.dst_ptr;
 
 #define DISPATCH_FUNC(type, func, i, mode)                                           \
     MIDOUT_BEGIN(                                                                    \
@@ -793,9 +801,9 @@ void PoolingImpl::AlgoFilter4ModexStridexNCHW44::exec(
             size_t n = index / C;                                                    \
             size_t c = index % C;                                                    \
             do_##mode##_pooling_4x4_stride##i##_##func##_nchw44_NEON(                \
-                    static_cast<const type*>(src_ptr) + n * C * IH * IW * 4 +        \
-                            c * IH * IW * 4,                                         \
-                    static_cast<type*>(dst_ptr) + n * C * OH * OW * 4 +              \
+                    static_cast<const type*>(src_ptr.get_ptr()) +                    \
+                            n * C * IH * IW * 4 + c * IH * IW * 4,                   \
+                    static_cast<type*>(dst_ptr.get_ptr()) + n * C * OH * OW * 4 +    \
                             c * OH * OW * 4,                                         \
                     IH, IW, OH, OW, PH, PW, ws);                                     \
         };                                                                           \
@@ -870,8 +878,8 @@ void PoolingImpl::AlgoFilter5ModexStridexNCHW44::exec(
     auto PW = param.padding[1];
     auto SW = param.stride[0];
 
-    void* src_ptr = param.src_ptr;
-    void* dst_ptr = param.dst_ptr;
+    auto src_ptr = param.src_ptr;
+    auto dst_ptr = param.dst_ptr;
 
 #define DISPATCH_FUNC(type, func, i, mode)                                           \
     MIDOUT_BEGIN(                                                                    \
@@ -885,9 +893,9 @@ void PoolingImpl::AlgoFilter5ModexStridexNCHW44::exec(
             size_t n = index / C;                                                    \
             size_t c = index % C;                                                    \
             do_##mode##_pooling_5x5_stride##i##_##func##_nchw44_NEON(                \
-                    static_cast<const type*>(src_ptr) + n * C * IH * IW * 4 +        \
-                            c * IH * IW * 4,                                         \
-                    static_cast<type*>(dst_ptr) + n * C * OH * OW * 4 +              \
+                    static_cast<const type*>(src_ptr.get_ptr()) +                    \
+                            n * C * IH * IW * 4 + c * IH * IW * 4,                   \
+                    static_cast<type*>(dst_ptr.get_ptr()) + n * C * OH * OW * 4 +    \
                             c * OH * OW * 4,                                         \
                     IH, IW, OH, OW, PH, PW, ws);                                     \
         };                                                                           \

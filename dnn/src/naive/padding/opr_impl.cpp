@@ -222,7 +222,7 @@ void PaddingBackwardImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
     }
     size_t n = src.layout.total_nr_elems();
 
-    memset(dst.raw_ptr, 0, dst.layout.access_bytes());
+    memset(dst.raw_ptr(), 0, dst.layout.access_bytes());
 
     switch (param().padding_mode) {
         case param::Padding::PaddingMode::CONSTANT:

@@ -29,9 +29,9 @@ template <int N, int OC>
 void local_xcorr_tpl(const LocalKParam& kparam) MEGDNN_SIMD_ATTRIBUTE_TARGET;
 template <int N, int OC>
 void local_xcorr_tpl(const LocalKParam& kparam) {
-    const float* src = static_cast<const float*>(kparam.src);
-    const float* filter = static_cast<const float*>(kparam.filter);
-    float* dst = static_cast<float*>(kparam.dst);
+    const float* src = static_cast<const float*>(kparam.src.get_ptr());
+    const float* filter = static_cast<const float*>(kparam.filter.get_ptr());
+    float* dst = static_cast<float*>(kparam.dst.get_ptr());
     float* workspace = static_cast<float*>(kparam.workspace);
     const int IC = kparam.ic, IH = kparam.ih, IW = kparam.iw, OH = kparam.oh,
               OW = kparam.ow, FH = kparam.fh, FW = kparam.fw;
@@ -191,9 +191,9 @@ template <int N, int OC>
 void local_conv_tpl(const LocalKParam& kparam) MEGDNN_SIMD_ATTRIBUTE_TARGET;
 template <int N, int OC>
 void local_conv_tpl(const LocalKParam& kparam) {
-    const float* src = static_cast<const float*>(kparam.src);
-    const float* filter = static_cast<const float*>(kparam.filter);
-    float* dst = static_cast<float*>(kparam.dst);
+    const float* src = static_cast<const float*>(kparam.src.get_ptr());
+    const float* filter = static_cast<const float*>(kparam.filter.get_ptr());
+    float* dst = static_cast<float*>(kparam.dst.get_ptr());
     float* workspace = static_cast<float*>(kparam.workspace);
     const int IC = kparam.ic, IH = kparam.ih, IW = kparam.iw, OH = kparam.oh,
               OW = kparam.ow, FH = kparam.fh, FW = kparam.fw;

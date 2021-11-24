@@ -37,11 +37,11 @@ void MatrixInverseImpl::exec(
     auto stream = handle->stream();
     batched_matrix_mul::arange<uintptr_t>(
             reinterpret_cast<uintptr_t*>(psrc_batch),
-            reinterpret_cast<uintptr_t>(src.raw_ptr), n * n * sizeof(float), batch,
+            reinterpret_cast<uintptr_t>(src.raw_ptr()), n * n * sizeof(float), batch,
             stream);
     batched_matrix_mul::arange<uintptr_t>(
             reinterpret_cast<uintptr_t*>(pdst_batch),
-            reinterpret_cast<uintptr_t>(dst.raw_ptr), n * n * sizeof(float), batch,
+            reinterpret_cast<uintptr_t>(dst.raw_ptr()), n * n * sizeof(float), batch,
             stream);
     cublas_check(cublasSmatinvBatched(
             handle->cublas_handle(), n, psrc_batch, n, pdst_batch, n, info, batch));

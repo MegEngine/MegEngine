@@ -63,13 +63,13 @@ void CumsumForwardImpl::exec(
 
     size_t A, B, C;
     reduce::get_ABC(src.layout, A, B, C, param().axis);
-#define cb(DType)                                                          \
-    if (src.layout.dtype == DType()) {                                     \
-        using ctype = DTypeTrait<DType>::ctype;                            \
-        ctype *sptr = src.ptr<ctype>(), *dptr = dst.ptr<ctype>();          \
-        MEGDNN_DISPATCH_CPU_KERN_OPR(exec_internal<ctype>(                 \
-                sptr, dptr, A, B, C, param().exclusive, param().reverse)); \
-        return;                                                            \
+#define cb(DType)                                                               \
+    if (src.layout.dtype == DType()) {                                          \
+        using ctype = DTypeTrait<DType>::ctype;                                 \
+        MEGDNN_DISPATCH_CPU_KERN_OPR(exec_internal<ctype>(                      \
+                src.ptr<ctype>(), dst.ptr<ctype>(), A, B, C, param().exclusive, \
+                param().reverse));                                              \
+        return;                                                                 \
     }
     MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
     megdnn_assert_internal(0);

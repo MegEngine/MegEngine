@@ -78,9 +78,9 @@ void SeparableFilterImpl::separable_filter_exec_8u(
     megdnn_assert(src.layout.dtype == dtype::Uint8());
 
     Mat<float> kernel_column(
-            1, filter_y.layout.shape[3], 1, static_cast<float*>(filter_y.raw_ptr));
+            1, filter_y.layout.shape[3], 1, static_cast<float*>(filter_y.raw_ptr()));
     Mat<float> kernel_row(
-            1, filter_x.layout.shape[3], 1, static_cast<float*>(filter_x.raw_ptr));
+            1, filter_x.layout.shape[3], 1, static_cast<float*>(filter_x.raw_ptr()));
 
     size_t src_channels = src.layout.shape[3];
 
@@ -128,9 +128,9 @@ void SeparableFilterImpl::separable_filter_exec(
         _megdnn_tensor_in src, _megdnn_tensor_in filter_x, _megdnn_tensor_in filter_y,
         _megdnn_tensor_out dst) {
     Mat<T> kernel_column(
-            1, filter_y.layout.shape[3], 1, static_cast<T*>(filter_y.raw_ptr));
+            1, filter_y.layout.shape[3], 1, static_cast<T*>(filter_y.raw_ptr()));
     Mat<T> kernel_row(
-            1, filter_x.layout.shape[3], 1, static_cast<T*>(filter_x.raw_ptr));
+            1, filter_x.layout.shape[3], 1, static_cast<T*>(filter_x.raw_ptr()));
     size_t src_channels = src.layout.shape[3];
 
     T border_value[4] = {0, 0, 0, 0};

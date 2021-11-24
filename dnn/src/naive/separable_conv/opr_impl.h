@@ -25,10 +25,7 @@ public:
 
     size_t get_workspace_in_bytes(
             const TensorLayout&, const TensorLayout&, const TensorLayout&,
-            const TensorLayout&) override {
-        // TODO: deduce the size of ring buffer.
-        return 0;
-    }
+            const TensorLayout&) override;
 };
 
 }  // namespace naive

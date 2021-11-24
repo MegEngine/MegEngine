@@ -35,7 +35,7 @@ std::function<void(const TensorNDArray&)> extra_impl_helper<AddUpdate>(
         type_cvt->exec(fp32_tensors[0], tensors[0]);
 
         for (size_t i = 0; i < tensors.size(); ++i) {
-            free(fp32_tensors[i].raw_ptr);
+            free(fp32_tensors[i].raw_ptr());
         }
     };
     return std::bind(impl, std::placeholders::_1, h, std::cref(p));

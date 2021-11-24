@@ -47,27 +47,27 @@ void RelayoutFormatImpl::exec(
             megdnn_assert(param().mode == param::RelayoutFormat::Mode::CHWN4_NCHW4);
             row = src.layout[0] * src.layout[1] * src.layout[2], col = src.layout[3];
         }
-        TensorND trans_in, trans_out;
-        trans_in.raw_ptr = src.raw_ptr;
-        trans_in.layout = {{row, col}, dtype::Int32()};
-        trans_in.layout.init_contiguous_stride();
-        trans_out.raw_ptr = dst.raw_ptr;
-        trans_out.layout = trans_in.layout;
-        trans_out.layout.stride[0] = 1;
-        trans_out.layout.stride[1] = row;
+        TensorLayout layout_in, layout_out;
+        layout_in = {{row, col}, dtype::Int32()};
+        layout_in.init_contiguous_stride();
+        layout_out = layout_in;
+        layout_out.stride[0] = 1;
+        layout_out.stride[1] = row;
+        TensorND trans_in{src.raw_ptr(), layout_in},
+                trans_out{dst.raw_ptr(), layout_out};
         return handle()->create_operator<RelayoutForward>()->exec(trans_in, trans_out);
     }
     if ((param().mode == Param::Mode::NCHW_NCHW4_IC_SMALL ||
          param().mode == Param::Mode::NCHW_NCHW4_IC_SMALL_CONV_DENSE_WEIGHT) &&
         src.layout[1] % 4 != 0) {
         megdnn_assert(
-                src.raw_ptr != dst.raw_ptr && src.layout.ndim == 4,
+                src.raw_ptr() != dst.raw_ptr() && src.layout.ndim == 4,
                 "The mode of NCHW_NCHW4 and NCHW_NCHW4_CONV_DENSE_WEIGHT "
                 "of RelayoutFormat opr(cuda backend) does not support "
                 "src.ptr == dst.ptr");
         megdnn_assert(src.layout[1] <= 4);
         cuda_check(cudaMemsetAsync(
-                dst.raw_ptr, 0, dst.layout.span().dist_byte(),
+                dst.raw_ptr(), 0, dst.layout.span().dist_byte(),
                 cuda_stream(this->handle())));
         TensorLayout exec_dst_layout = dst.layout;
         exec_dst_layout[4] = src.layout[1];
@@ -77,7 +77,7 @@ void RelayoutFormatImpl::exec(
                                                         src.layout[2], src.layout[3]})
                                                .dimshuffle({0, 2, 3, 4, 1});
         return handle()->create_operator<RelayoutForward>()->exec(
-                {src.raw_ptr, exec_src_layout}, {dst.raw_ptr, exec_dst_layout});
+                {src.raw_ptr(), exec_src_layout}, {dst.raw_ptr(), exec_dst_layout});
     }
     bool is_trans_4bits = (param().mode == Param::Mode::NCHW_NCHW64 ||
                            param().mode == Param::Mode::NCHW64_NCHW ||
@@ -103,8 +103,8 @@ void RelayoutFormatImpl::exec(
     // fallback impls
     TensorLayout exec_src, exec_dst, exec_workspace;
     deduce_exec_layout(src.layout, dst.layout, exec_workspace, exec_src, exec_dst);
-    TensorND exec_src_nd{src.raw_ptr, exec_src};
-    TensorND exec_dst_nd{dst.raw_ptr, exec_dst};
+    TensorND exec_src_nd{src.raw_ptr(), exec_src};
+    TensorND exec_dst_nd{dst.raw_ptr(), exec_dst};
     handle()->create_operator<RelayoutForward>()->exec(exec_src_nd, exec_dst_nd);
 }
 

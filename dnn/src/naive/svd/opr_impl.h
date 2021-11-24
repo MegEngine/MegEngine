@@ -27,10 +27,6 @@ public:
             _megdnn_tensor_out vt, _megdnn_workspace workspace) override;
 
 private:
-    template <typename T>
-    void exec_internal(
-            _megdnn_tensor_in src, _megdnn_tensor_out u, _megdnn_tensor_out s,
-            _megdnn_tensor_out vt, _megdnn_workspace workspace, Param p);
     WorkspaceBundle get_workspace_bundle(
             size_t m, size_t n, size_t dtype_size, void* raw_ptr = nullptr);
 };

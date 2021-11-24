@@ -51,15 +51,12 @@ void MatrixMulForwardImpl::AlgoCutlassMatrixMulBase::exec(const ExecArgs& args) 
     if (!aligned.first)
         return do_exec(args);
     const auto& layouts = aligned.second;
-    auto tensor_a = args.tensor_a;
-    auto tensor_b = args.tensor_b;
-    auto workspace = args.workspace;
     size_t copy_size = 0;
     for (const auto& ly : layouts)
         copy_size += ly.span().dist_byte();
     auto&& param = args.opr->param();
     auto&& stream = cuda_stream(args.opr->handle());
-
+    auto workspace = args.workspace;
     cuda_check(cudaMemsetAsync(workspace.raw_ptr, 0, copy_size, stream));
 
     auto&& relayout = args.opr->handle()->create_operator<RelayoutForward>();
@@ -69,14 +66,15 @@ void MatrixMulForwardImpl::AlgoCutlassMatrixMulBase::exec(const ExecArgs& args) 
         if (trans)
             std::swap(dst.stride[0], dst.stride[1]);
     };
+
+    TensorND tensor_a{workspace.raw_ptr, args.tensor_a.layout};
     copy_stride(layouts[0], tensor_a.layout, param.transposeA);
-    tensor_a.raw_ptr = workspace.raw_ptr;
     relayout->exec(args.tensor_a, tensor_a);
     workspace.raw_ptr += layouts[0].span().dist_byte();
     workspace.size -= layouts[0].span().dist_byte();
 
+    TensorND tensor_b{workspace.raw_ptr, args.tensor_b.layout};
     copy_stride(layouts[1], tensor_b.layout, param.transposeB);
-    tensor_b.raw_ptr = workspace.raw_ptr;
     relayout->exec(args.tensor_b, tensor_b);
     workspace.raw_ptr += layouts[1].span().dist_byte();
     workspace.size -= layouts[1].span().dist_byte();

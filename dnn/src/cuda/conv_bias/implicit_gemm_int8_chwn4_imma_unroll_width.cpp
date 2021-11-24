@@ -160,18 +160,15 @@ void ConvBiasForwardImpl::AlgoInt8CHWN4IMMAImplicitGemmUnrollWidth::exec(
     UNPACK_CONV_BIAS_CHWN4_PARAM(*(args.src_layout), fm, *(args.dst_layout), param);
     // reorder filter
     {
-        TensorLayout in = *(args.filter_layout);
-        TensorLayout out = {{ci / 16, 4, fh, fw, co, 4}, in.dtype};
+        TensorLayout out = {
+                {ci / 16, 4, fh, fw, co, 4}, args.filter_tensor->layout.dtype};
         out.stride[0] = 16 * co * fh * fw;
         out.stride[1] = 4;
         out.stride[2] = fw * co * 16;
         out.stride[3] = co * 16;
         out.stride[4] = 16;
         out.stride[5] = 1;
-        TensorND ts_in, ts_out;
-        ts_in.layout = in, ts_out.layout = out;
-        ts_in.raw_ptr = args.filter_tensor->raw_ptr,
-        ts_out.raw_ptr = args.workspace.raw_ptr;
+        TensorND ts_in = *args.filter_tensor, ts_out{args.workspace.raw_ptr, out};
         args.opr->handle()->create_operator<RelayoutForward>()->exec(ts_in, ts_out);
     }
 

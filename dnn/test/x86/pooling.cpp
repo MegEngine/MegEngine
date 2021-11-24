@@ -11,8 +11,8 @@
 #include "test/common/pooling.h"
 #include "test/common/benchmarker.h"
 #include "test/common/checker.h"
+#include "test/common/task_record_check.h"
 #include "test/x86/fixture.h"
-
 namespace megdnn {
 namespace test {
 
@@ -20,6 +20,14 @@ TEST_F(X86, POOLING) {
     auto args = pooling::get_args();
     for (auto&& arg : args) {
         Checker<Pooling> checker(handle());
+        checker.set_param(arg.param).exec(TensorShapeArray{arg.ishape, {}});
+    }
+}
+
+TEST_F(X86, POOLING_RECORD) {
+    auto args = pooling::get_args();
+    for (auto&& arg : args) {
+        TaskRecordChecker<Pooling> checker(0);
         checker.set_param(arg.param).exec(TensorShapeArray{arg.ishape, {}});
     }
 }
@@ -91,6 +99,17 @@ TEST_F(X86_MULTI_THREADS, S1POOLING88) {
 #if MEGDNN_X86_WITH_MKL_DNN
 TEST_F(X86, POOLING88) {
     Checker<Pooling> checker(handle());
+    auto args = pooling::get_args();
+    for (auto&& arg : args) {
+        arg.ishape.ndim = 5;
+        arg.ishape[1] = (arg.ishape[1] + 7) / 8;
+        arg.ishape[4] = 8;
+        arg.param.format = param::Pooling::Format::NCHW88;
+        checker.set_param(arg.param).exec(TensorShapeArray{arg.ishape, {}});
+    }
+}
+TEST_F(X86, POOLING88_RECORD) {
+    TaskRecordChecker<Pooling> checker(0);
     auto args = pooling::get_args();
     for (auto&& arg : args) {
         arg.ishape.ndim = 5;
@@ -207,6 +226,16 @@ TEST_F(X86, BENCHMARK_POOLING_MAX_S1_NCHW88) {
 #endif
 #if MEGDNN_X86_WITH_MKL_DNN
 TEST_F(X86, POOLING_INT8) {
+    auto args = pooling::get_args();
+    for (auto&& arg : args) {
+        Checker<Pooling> checker(handle());
+        auto rng = std::make_unique<UniformIntRNG>(-127, 127);
+        checker.set_dtype(0, dtype::Int8()).set_rng(0, rng.get());
+        checker.set_param(arg.param).exec(TensorShapeArray{arg.ishape, {}});
+    }
+}
+
+TEST_F(X86, POOLING_INT8_RECORD) {
     auto args = pooling::get_args();
     for (auto&& arg : args) {
         Checker<Pooling> checker(handle());

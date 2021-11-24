@@ -125,11 +125,11 @@ void ConvBiasForwardImpl::AlgoInt8NCHW32IMMAImplicitGemm::exec(
         filter_ptr = reinterpret_cast<int8_t*>(args.workspace.raw_ptr);
         // filter: KCRS32 => CRSK32 and reorder oc
         cutlass_wrapper::reorder_ncxhwx_imma_filter<8, 32>(
-                filter_ptr, reinterpret_cast<int8_t*>(args.filter_tensor->raw_ptr), co,
-                ci, fh, fw, trans_oc, stream);
+                filter_ptr, reinterpret_cast<int8_t*>(args.filter_tensor->raw_ptr()),
+                co, ci, fh, fw, trans_oc, stream);
     } else {
-        filter_ptr =
-                reinterpret_cast<int8_t*>(args.preprocessed_filter->tensors[0].raw_ptr);
+        filter_ptr = reinterpret_cast<int8_t*>(
+                args.preprocessed_filter->tensors[0].raw_ptr());
     }
 
     float src_scale = args.src_layout->dtype.param<dtype::QuantizedS8>().scale,
@@ -157,9 +157,9 @@ void ConvBiasForwardImpl::AlgoInt8NCHW32IMMAImplicitGemm::exec(
             use_conv_filter_unity_opt, without_shared_load);
 
     execute_cutlass_conv_op(
-            op, args.src_tensor->raw_ptr, filter_ptr, args.bias_tensor->raw_ptr,
-            z_dev_ptr, args.dst_tensor->raw_ptr, nullptr, n, hi, wi, ci, co, fh, fw, ho,
-            wo, ph, pw, sh, sw, dh, dw, &alpha, &beta, &gamma, &delta, &theta,
+            op, args.src_tensor->raw_ptr(), filter_ptr, args.bias_tensor->raw_ptr(),
+            z_dev_ptr, args.dst_tensor->raw_ptr(), nullptr, n, hi, wi, ci, co, fh, fw,
+            ho, wo, ph, pw, sh, sw, dh, dw, &alpha, &beta, &gamma, &delta, &theta,
             &threshold, &dst_scale, stream);
 
     after_kernel_launch();
@@ -204,8 +204,8 @@ void ConvBiasForwardImpl::AlgoInt8NCHW32IMMAImplicitGemm::exec_preprocess(
     cudaStream_t stream = cuda_stream(args.opr->handle());
     // filter: KCRS32 => CRSK32 and reorder oc
     cutlass_wrapper::reorder_ncxhwx_imma_filter<8, 32>(
-            reinterpret_cast<int8_t*>(args.preprocessed_filter->tensors[0].raw_ptr),
-            reinterpret_cast<int8_t*>(args.filter_tensor->raw_ptr), co, ci, fh, fw,
+            reinterpret_cast<int8_t*>(args.preprocessed_filter->tensors[0].raw_ptr()),
+            reinterpret_cast<int8_t*>(args.filter_tensor->raw_ptr()), co, ci, fh, fw,
             trans_oc, stream);
 }
 #endif

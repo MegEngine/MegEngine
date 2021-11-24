@@ -80,9 +80,9 @@ void BatchedMatrixMulForwardImpl::AlgoBruteForce::exec(const ExecArgs& args) con
     rep(n, N) {
         TensorND A_, B_, C_;
         auto tensor_n_from_batch = [n](const TensorND& in, TensorND& out) {
-            out.raw_ptr = static_cast<void*>(
-                    static_cast<dt_byte*>(in.raw_ptr) +
-                    n * in.layout.stride[0] * in.layout.dtype.size());
+            out.reset_ptr(static_cast<void*>(
+                    static_cast<dt_byte*>(in.raw_ptr()) +
+                    n * in.layout.stride[0] * in.layout.dtype.size()));
             out.layout = in.layout.remove_axis(0);
         };
         tensor_n_from_batch(args.tensor_a, A_);

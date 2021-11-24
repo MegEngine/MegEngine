@@ -189,19 +189,19 @@ SmallVector<size_t> matmul_get_workspace_bundle(const BiasForwardSizeArgs& args)
 }
 
 void flip_filter(
-        const BiasForwardSizeArgs& args, const Workspace& workspace, void*& raw_ptr) {
+        const BiasForwardSizeArgs& args, const Workspace& workspace, RefPtr& ref_ptr) {
     auto&& fm = args.filter_meta;
     megdnn_assert(fm.group == 1 && fm.spatial_ndim == 2);
     auto OC = fm.ocpg, IC = fm.icpg, FH = fm.spatial[0], FW = fm.spatial[1];
     auto dtype = fm.dtype;
     megdnn_assert(workspace.size >= dtype.size() * OC * IC * FH * FW);
 
-    TensorND src{raw_ptr, {{OC, IC, FH, FW}, dtype}},
+    TensorND src{{{OC, IC, FH, FW}, dtype}, ref_ptr},
             dst{workspace.raw_ptr + (FH * FW - 1) * dtype.size(), src.layout};
     dst.layout.stride[2] = -dst.layout.stride[2];
     dst.layout.stride[3] = -dst.layout.stride[3];
     args.handle->relayout_opr()->exec(src, dst);
-    raw_ptr = workspace.raw_ptr;
+    ref_ptr.reset(workspace.raw_ptr);
 }
 
 }  // namespace conv_bias

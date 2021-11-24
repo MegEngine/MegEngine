@@ -181,8 +181,8 @@ void WarpPerspectiveForwardImpl::exec(
         get_inner_layout(
                 ssrc.layout, sdst.layout, src.layout, dst.layout, handle_ptr,
                 param().format);
-        src.raw_ptr = bundle.get(0);
-        dst.raw_ptr = bundle.get(1);
+        src = TensorND{bundle.get(0), src.layout};
+        dst = TensorND{bundle.get(1), dst.layout};
         auto relayout_opr = handle_ptr->create_operator<RelayoutFormat>();
         RelayoutFormat::Param trans_param;
         trans_param.mode = RelayoutFormat::Param::Mode::NCHW_NCHW64;
@@ -198,7 +198,7 @@ void WarpPerspectiveForwardImpl::exec(
         if (is_nhwc && param().imode != Param::InterpolationMode::LINEAR) {
             // use opencv impl only for nhwc and non-linear interp
             megdnn_assert(
-                    !mat_idx.raw_ptr,
+                    !mat_idx.raw_ptr(),
                     "mat_idx is not supported in NHWC case with "
                     "non-linear interpolation");
             warp_perspective::warp_perspective_cv_exec(
@@ -272,7 +272,7 @@ void WarpPerspectiveForwardImpl::exec(
                 if (src.layout.dtype == dtype::Float32{}) {
                     warp_perspective::forward_proxy(
                             is_nhwc, src.ptr<dt_float32>(), mat.ptr<dt_float32>(),
-                            mat_idx.raw_ptr ? mat_idx.ptr<int>() : nullptr,
+                            mat_idx.raw_ptr() ? mat_idx.ptr<int>() : nullptr,
                             dst.ptr<dt_float32>(), src.layout[0], mat.layout[0], C, IH,
                             IW, OH, OW, bval, bmode, async_error_info(handle()),
                             m_error_tracker, stream);
@@ -281,7 +281,7 @@ void WarpPerspectiveForwardImpl::exec(
 #ifndef MEGDNN_DISABLE_FLOAT16
                     warp_perspective::forward_proxy(
                             is_nhwc, src.ptr<dt_float16>(), mat.ptr<dt_float32>(),
-                            mat_idx.raw_ptr ? mat_idx.ptr<int>() : nullptr,
+                            mat_idx.raw_ptr() ? mat_idx.ptr<int>() : nullptr,
                             dst.ptr<dt_float16>(), src.layout[0], mat.layout[0], C, IH,
                             IW, OH, OW, static_cast<dt_float16>(bval), bmode,
                             async_error_info(handle()), m_error_tracker, stream);
@@ -289,7 +289,7 @@ void WarpPerspectiveForwardImpl::exec(
                 } else if (src.layout.dtype == dtype::Uint8()) {
                     warp_perspective::forward_proxy<dt_uint8>(
                             is_nhwc, src.ptr<dt_uint8>(), mat.ptr<dt_float32>(),
-                            mat_idx.raw_ptr ? mat_idx.ptr<int>() : nullptr,
+                            mat_idx.raw_ptr() ? mat_idx.ptr<int>() : nullptr,
                             dst.ptr<dt_uint8>(), src.layout[0], mat.layout[0], C, IH,
                             IW, OH, OW, bval, bmode, async_error_info(handle()),
                             m_error_tracker, stream);
@@ -300,7 +300,7 @@ void WarpPerspectiveForwardImpl::exec(
                             "NHWC + Int8");
                     warp_perspective::forward_proxy<dt_int8>(
                             false, src.ptr<dt_int8>(), mat.ptr<dt_float32>(),
-                            mat_idx.raw_ptr ? mat_idx.ptr<int>() : nullptr,
+                            mat_idx.raw_ptr() ? mat_idx.ptr<int>() : nullptr,
                             dst.ptr<dt_int8>(), src.layout[0], mat.layout[0], C, IH, IW,
                             OH, OW, bval /* implicit float -> int8 conversion,
                                             should be safe */
@@ -313,7 +313,7 @@ void WarpPerspectiveForwardImpl::exec(
                             "QuantizedS8 only");
                     warp_perspective::forward_proxy_nchw4<dt_int8>(
                             src.compatible_ptr<dt_int8>(), mat.ptr<dt_float32>(),
-                            mat_idx.raw_ptr ? mat_idx.ptr<int>() : nullptr,
+                            mat_idx.raw_ptr() ? mat_idx.ptr<int>() : nullptr,
                             dst.compatible_ptr<dt_int8>(), src.layout[0], mat.layout[0],
                             C, IH, IW, OH, OW, bval, bmode, async_error_info(handle()),
                             m_error_tracker, stream);
@@ -325,7 +325,7 @@ void WarpPerspectiveForwardImpl::exec(
                     bval = fmin(fmax(-8.f, bval), 7.f);
                     warp_perspective::forward_proxy_nchw64<dt_qint4>(
                             src.compatible_ptr<dt_qint4>(), mat.ptr<dt_float32>(),
-                            mat_idx.raw_ptr ? mat_idx.ptr<int>() : nullptr,
+                            mat_idx.raw_ptr() ? mat_idx.ptr<int>() : nullptr,
                             dst.compatible_ptr<dt_qint4>(), src.layout[0],
                             mat.layout[0], C, IH, IW, OH, OW,
                             static_cast<dt_qint4>(bval), bmode,
@@ -346,7 +346,7 @@ void WarpPerspectiveForwardImpl::exec(
                     bval = fmin(fmax(0, bval), 15);
                     warp_perspective::forward_proxy_nchw64<dt_quint4>(
                             src.compatible_ptr<dt_quint4>(), mat.ptr<dt_float32>(),
-                            mat_idx.raw_ptr ? mat_idx.ptr<int>() : nullptr,
+                            mat_idx.raw_ptr() ? mat_idx.ptr<int>() : nullptr,
                             dst.compatible_ptr<dt_quint4>(), src.layout[0],
                             mat.layout[0], C, IH, IW, OH, OW,
                             static_cast<dt_quint4>(bval), bmode,
@@ -371,7 +371,7 @@ void WarpPerspectiveForwardImpl::exec(
                         if (C % 16 == 0) {
                             warp_perspective::forward_proxy_nhwc_bit4<dt_qint4, 16>(
                                     src.ptr<dt_qint4>(), mat.ptr<dt_float32>(),
-                                    mat_idx.raw_ptr ? mat_idx.ptr<int>() : nullptr,
+                                    mat_idx.raw_ptr() ? mat_idx.ptr<int>() : nullptr,
                                     dst.ptr<dt_qint4>(), src.layout[0], mat.layout[0],
                                     C, IH, IW, OH, OW, static_cast<dt_qint4>(bval),
                                     bmode, async_error_info(handle()), m_error_tracker,
@@ -379,7 +379,7 @@ void WarpPerspectiveForwardImpl::exec(
                         } else {
                             warp_perspective::forward_proxy_nhwc_bit4<dt_qint4, pack_c>(
                                     src.ptr<dt_qint4>(), mat.ptr<dt_float32>(),
-                                    mat_idx.raw_ptr ? mat_idx.ptr<int>() : nullptr,
+                                    mat_idx.raw_ptr() ? mat_idx.ptr<int>() : nullptr,
                                     dst.ptr<dt_qint4>(), src.layout[0], mat.layout[0],
                                     C, IH, IW, OH, OW, static_cast<dt_qint4>(bval),
                                     bmode, async_error_info(handle()), m_error_tracker,
@@ -390,7 +390,7 @@ void WarpPerspectiveForwardImpl::exec(
                         if (C % 16 == 0) {
                             warp_perspective::forward_proxy_nhwc_bit4<dt_quint4, 16>(
                                     src.ptr<dt_quint4>(), mat.ptr<dt_float32>(),
-                                    mat_idx.raw_ptr ? mat_idx.ptr<int>() : nullptr,
+                                    mat_idx.raw_ptr() ? mat_idx.ptr<int>() : nullptr,
                                     dst.ptr<dt_quint4>(), src.layout[0], mat.layout[0],
                                     C, IH, IW, OH, OW, static_cast<dt_quint4>(bval),
                                     bmode, async_error_info(handle()), m_error_tracker,
@@ -399,7 +399,7 @@ void WarpPerspectiveForwardImpl::exec(
                             warp_perspective::forward_proxy_nhwc_bit4<
                                     dt_quint4, pack_c>(
                                     src.ptr<dt_quint4>(), mat.ptr<dt_float32>(),
-                                    mat_idx.raw_ptr ? mat_idx.ptr<int>() : nullptr,
+                                    mat_idx.raw_ptr() ? mat_idx.ptr<int>() : nullptr,
                                     dst.ptr<dt_quint4>(), src.layout[0], mat.layout[0],
                                     C, IH, IW, OH, OW, static_cast<dt_quint4>(bval),
                                     bmode, async_error_info(handle()), m_error_tracker,
@@ -433,7 +433,7 @@ void WarpPerspectiveForwardImpl::exec(
                             dt_quint8, dt_uint8, dt_int8>(
                             is_nhwc_ic_small, src.compatible_ptr<dt_uint8>(),
                             mat.ptr<dt_float32>(),
-                            mat_idx.raw_ptr ? mat_idx.ptr<int>() : nullptr,
+                            mat_idx.raw_ptr() ? mat_idx.ptr<int>() : nullptr,
                             dst.compatible_ptr<dt_int8>(), src.layout[0], mat.layout[0],
                             C, IH, IW, OH, OW, bval, src_dtype_param, bmode,
                             async_error_info(handle()), m_error_tracker, stream);
@@ -448,7 +448,7 @@ void WarpPerspectiveForwardImpl::exec(
                             dt_quint8, dt_uint8, dt_float32>(
                             is_nhwc, src.compatible_ptr<dt_uint8>(),
                             mat.ptr<dt_float32>(),
-                            mat_idx.raw_ptr ? mat_idx.ptr<int>() : nullptr,
+                            mat_idx.raw_ptr() ? mat_idx.ptr<int>() : nullptr,
                             dst.compatible_ptr<dt_float32>(), src.layout[0],
                             mat.layout[0], C, IH, IW, OH, OW, bval, src_dtype_param,
                             bmode, async_error_info(handle()), m_error_tracker, stream);

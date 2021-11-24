@@ -37,7 +37,7 @@ void fma4_extra_opr_impl(const TensorNDArray& data) {
     megdnn_assert(data.size() == 5);
     std::vector<uint8_t> tmp_storage(data[4].layout.span().dist_byte());
     TensorND tmp;
-    tmp.raw_ptr = tmp_storage.data();
+    tmp.reset_ptr(tmp_storage.data());
     tmp.layout = data[4].layout;
     tmp.layout.init_contiguous_stride();
     auto handle = create_cpu_handle(2);

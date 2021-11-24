@@ -15,6 +15,7 @@
 #include "test/common/checker.h"
 #include "test/common/matrix_mul.h"
 #include "test/common/rng.h"
+#include "test/common/task_record_check.h"
 
 #if MGB_ENABLE_CPUINFO
 #include "cpuinfo.h"
@@ -307,6 +308,31 @@ TEST_F(ARM_COMMON, FP32_GEMV_MK4) {
     for (size_t M : {4, 16, 128, 1024})
         for (size_t K : {4, 8, 12, 128, 256, 4096})
             run(M, K);
+}
+
+TEST_F(ARM_COMMON, MATRIX_MUL_RECORD) {
+    TaskRecordChecker<MatrixMul> checker(0);
+    checker.set_epsilon(1e-2);
+    NormalRNG rng(2.f);
+    checker.set_rng(0, &rng).set_rng(1, &rng);
+
+    using Param = MatrixMul::Param;
+    auto args = matrix_mul::get_matmul_args_no_mask();
+
+    for (auto& arg : args) {
+        size_t m = arg.m, n = arg.n, k = arg.k;
+        Param param;
+        param.transposeA = false;
+        param.transposeB = false;
+        TensorShape A, B;
+        A = TensorShape{m, k};
+        B = TensorShape{k, n};
+        checker.set_param(param)
+                .set_dtype(0, dtype::Float32())
+                .set_dtype(1, dtype::Float32())
+                .set_dtype(2, dtype::Float32())
+                .execs({A, B, {}});
+    }
 }
 
 #if MEGDNN_WITH_BENCHMARK

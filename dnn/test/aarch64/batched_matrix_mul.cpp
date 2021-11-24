@@ -13,6 +13,7 @@
 #include "test/common/checker.h"
 #include "test/common/matrix_mul.h"
 #include "test/common/rng.h"
+#include "test/common/task_record_check.h"
 
 #include "test/aarch64/fixture.h"
 
@@ -21,6 +22,40 @@ namespace test {
 
 TEST_F(AARCH64, BATCHED_MATRIX_MUL) {
     Checker<BatchedMatrixMul> checker(handle());
+    checker.set_epsilon(1e-2);
+    using Param = MatrixMul::Param;
+    // auto args = get_batch_matmul_args();
+    auto args = matrix_mul::get_batched_matmul_args();
+
+    for (DType dtype : std::vector<DType>{dtype::Float32()}) {
+        for (unsigned mask = 0; mask < 4; ++mask) {
+            for (auto& arg : args) {
+                size_t b = arg.b, m = arg.m, n = arg.n, k = arg.k;
+                //! if test all batch sizes, the test case will time out.
+                if (b != 2) {
+                    continue;
+                }
+                Param param;
+                param.transposeA = mask & 1;
+                param.transposeB = mask & 2;
+                TensorShape A, B;
+                if (param.transposeA)
+                    A = TensorShape{b, k, m};
+                else
+                    A = TensorShape{b, m, k};
+                if (param.transposeB)
+                    B = TensorShape{b, n, k};
+                else
+                    B = TensorShape{b, k, n};
+                checker.set_param(param).set_dtype(0, dtype).set_dtype(1, dtype).execs(
+                        {A, B, {}});
+            }
+        }
+    }
+}
+
+TEST_F(AARCH64, BATCHED_MATRIX_MUL_RECORD) {
+    TaskRecordChecker<BatchedMatrixMul> checker(0);
     checker.set_epsilon(1e-2);
     using Param = MatrixMul::Param;
     // auto args = get_batch_matmul_args();

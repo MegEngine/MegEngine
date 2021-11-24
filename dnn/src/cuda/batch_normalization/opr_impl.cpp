@@ -117,32 +117,34 @@ void BNForwardImpl::exec(
 #if CUDNN_VERSION >= 7410
             cudnn_check(cudnnBatchNormalizationForwardTrainingEx(
                     handle, tensor_desc.bn_mode, CUDNN_BATCHNORM_OPS_BN, &alpha,
-                    &beta,                                  // one & zero
-                    tensor_desc.xy_desc.desc, src.raw_ptr,  // xDesc & x
-                    nullptr, nullptr,                       // zDesc & z
-                    tensor_desc.xy_desc.desc, dst.raw_ptr,  // yDesc & y
-                    tensor_desc.param_desc.desc,            // bnScaleBiasMeanVarDesc
-                    bn_scale.raw_ptr, bn_bias.raw_ptr, m_param.avg_factor, mean.raw_ptr,
-                    variance.raw_ptr, m_param.epsilon, batch_mean.raw_ptr,
-                    batch_inv_variance.raw_ptr, nullptr, workspace.raw_ptr,
-                    workspace.size, reserve.raw_ptr, reserve.layout.access_bytes()));
+                    &beta,                                    // one & zero
+                    tensor_desc.xy_desc.desc, src.raw_ptr(),  // xDesc & x
+                    nullptr, nullptr,                         // zDesc & z
+                    tensor_desc.xy_desc.desc, dst.raw_ptr(),  // yDesc & y
+                    tensor_desc.param_desc.desc,              // bnScaleBiasMeanVarDesc
+                    bn_scale.raw_ptr(), bn_bias.raw_ptr(), m_param.avg_factor,
+                    mean.raw_ptr(), variance.raw_ptr(), m_param.epsilon,
+                    batch_mean.raw_ptr(), batch_inv_variance.raw_ptr(), nullptr,
+                    workspace.raw_ptr, workspace.size, reserve.raw_ptr(),
+                    reserve.layout.access_bytes()));
 #else
             cudnn_check(cudnnBatchNormalizationForwardTraining(
                     handle, tensor_desc.bn_mode, &alpha, &beta,
-                    tensor_desc.xy_desc.desc, src.raw_ptr,  // xDesc & x
-                    tensor_desc.xy_desc.desc, dst.raw_ptr,  // yDesc & y
-                    tensor_desc.param_desc.desc,            // bnScaleBiasMeanVarDesc
-                    bn_scale.raw_ptr, bn_bias.raw_ptr, m_param.avg_factor, mean.raw_ptr,
-                    variance.raw_ptr, m_param.epsilon, batch_mean.raw_ptr,
-                    batch_inv_variance.raw_ptr));
+                    tensor_desc.xy_desc.desc, src.raw_ptr(),  // xDesc & x
+                    tensor_desc.xy_desc.desc, dst.raw_ptr(),  // yDesc & y
+                    tensor_desc.param_desc.desc,              // bnScaleBiasMeanVarDesc
+                    bn_scale.raw_ptr(), bn_bias.raw_ptr(), m_param.avg_factor,
+                    mean.raw_ptr(), variance.raw_ptr(), m_param.epsilon,
+                    batch_mean.raw_ptr(), batch_inv_variance.raw_ptr()));
 #endif  // CUDNN_VERSION >= 7410
             break;
         case param::BN::FwdMode::INFERENCE:
             cudnn_check(cudnnBatchNormalizationForwardInference(
                     handle, tensor_desc.bn_mode, &alpha, &beta,
-                    tensor_desc.xy_desc.desc, src.raw_ptr, tensor_desc.xy_desc.desc,
-                    dst.raw_ptr, tensor_desc.param_desc.desc, bn_scale.raw_ptr,
-                    bn_bias.raw_ptr, mean.raw_ptr, variance.raw_ptr, m_param.epsilon));
+                    tensor_desc.xy_desc.desc, src.raw_ptr(), tensor_desc.xy_desc.desc,
+                    dst.raw_ptr(), tensor_desc.param_desc.desc, bn_scale.raw_ptr(),
+                    bn_bias.raw_ptr(), mean.raw_ptr(), variance.raw_ptr(),
+                    m_param.epsilon));
             break;
         default:
             megdnn_throw("Unknown forward mode type of batch normalization.");
@@ -198,27 +200,27 @@ void BNBackwardImpl::exec(
     cudnn_check(cudnnBatchNormalizationBackwardEx(
             handle, tensor_desc.bn_mode, CUDNN_BATCHNORM_OPS_BN, &alpha, &beta, &alpha,
             &beta, tensor_desc.xy_desc.desc,
-            x.raw_ptr,                                      // xDesc & x
-            nullptr, nullptr,                               // yDesc & y
-            tensor_desc.xy_desc.desc, dy.raw_ptr,           // dyDesc & dy
-            nullptr, nullptr,                               // dzDesc & dz
-            tensor_desc.xy_desc.desc, dx.raw_ptr,           // dxDesc & dx
-            tensor_desc.param_desc.desc, bn_scale.raw_ptr,  // bnScale
-            nullptr,                                        // bnBias
-            d_bn_scale.raw_ptr, d_bn_bias.raw_ptr,          // dScale, dBias
-            m_param.epsilon, saved_batch_mean.raw_ptr, saved_batch_inv_variance.raw_ptr,
-            nullptr, workspace.raw_ptr, workspace.size, reserve.raw_ptr,
-            reserve.layout.access_bytes()));
+            x.raw_ptr(),                                      // xDesc & x
+            nullptr, nullptr,                                 // yDesc & y
+            tensor_desc.xy_desc.desc, dy.raw_ptr(),           // dyDesc & dy
+            nullptr, nullptr,                                 // dzDesc & dz
+            tensor_desc.xy_desc.desc, dx.raw_ptr(),           // dxDesc & dx
+            tensor_desc.param_desc.desc, bn_scale.raw_ptr(),  // bnScale
+            nullptr,                                          // bnBias
+            d_bn_scale.raw_ptr(), d_bn_bias.raw_ptr(),        // dScale, dBias
+            m_param.epsilon, saved_batch_mean.raw_ptr(),
+            saved_batch_inv_variance.raw_ptr(), nullptr, workspace.raw_ptr,
+            workspace.size, reserve.raw_ptr(), reserve.layout.access_bytes()));
 #else
     cudnn_check(cudnnBatchNormalizationBackward(
             handle, tensor_desc.bn_mode, &alpha, &beta, &alpha, &beta,
-            tensor_desc.xy_desc.desc, x.raw_ptr,            // xDesc & x
-            tensor_desc.xy_desc.desc, dy.raw_ptr,           // dyDesc & dy
-            tensor_desc.xy_desc.desc, dx.raw_ptr,           // dxDesc & dx
-            tensor_desc.param_desc.desc, bn_scale.raw_ptr,  // bnScale
-            d_bn_scale.raw_ptr, d_bn_bias.raw_ptr,          // dScale, dBias
-            m_param.epsilon, saved_batch_mean.raw_ptr,
-            saved_batch_inv_variance.raw_ptr));
+            tensor_desc.xy_desc.desc, x.raw_ptr(),            // xDesc & x
+            tensor_desc.xy_desc.desc, dy.raw_ptr(),           // dyDesc & dy
+            tensor_desc.xy_desc.desc, dx.raw_ptr(),           // dxDesc & dx
+            tensor_desc.param_desc.desc, bn_scale.raw_ptr(),  // bnScale
+            d_bn_scale.raw_ptr(), d_bn_bias.raw_ptr(),        // dScale, dBias
+            m_param.epsilon, saved_batch_mean.raw_ptr(),
+            saved_batch_inv_variance.raw_ptr()));
 #endif
 }
 

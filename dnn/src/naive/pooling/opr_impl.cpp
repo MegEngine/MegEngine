@@ -429,27 +429,21 @@ void PoolingForwardImpl::exec(
     auto wsb = get_workspace_bundle(workspace.raw_ptr, src.layout, dst.layout);
     if (src.layout.dtype.enumv() == DTypeEnum::QuantizedS4) {
         float scale = src.layout.dtype.param<dtype::QuantizedS4>().scale;
-        comp_src.layout.dtype = dtype::QuantizedS8(scale);
-        comp_src.layout.format = TensorLayout::Format(comp_src.layout.dtype);
-        comp_src.layout.init_contiguous_stride();
-        comp_src.raw_ptr = wsb.get(0);
-        comp_dst.layout.dtype = dtype::QuantizedS8(scale);
-        comp_dst.layout.format = TensorLayout::Format(comp_dst.layout.dtype);
-        comp_dst.layout.init_contiguous_stride();
-        comp_dst.raw_ptr = wsb.get(1);
+        TensorLayout src_layout{comp_src.layout, dtype::QuantizedS8(scale)};
+        comp_src = TensorND{wsb.get(0), src_layout};
+        TensorLayout dst_layout{comp_dst.layout, dtype::QuantizedS8(scale)};
+        comp_dst = TensorND{wsb.get(1), dst_layout};
         int4_to_int8(src, comp_src);
     } else if (src.layout.dtype.enumv() == DTypeEnum::Quantized4Asymm) {
         float scale = src.layout.dtype.param<dtype::Quantized4Asymm>().scale;
         uint8_t zero_point =
                 src.layout.dtype.param<dtype::Quantized4Asymm>().zero_point;
-        comp_src.layout.dtype = dtype::Quantized8Asymm(scale, zero_point);
-        comp_src.layout.format = TensorLayout::Format(comp_src.layout.dtype);
-        comp_src.layout.init_contiguous_stride();
-        comp_src.raw_ptr = wsb.get(0);
-        comp_dst.layout.dtype = dtype::Quantized8Asymm(scale, zero_point);
-        comp_dst.layout.format = TensorLayout::Format(comp_dst.layout.dtype);
-        comp_dst.layout.init_contiguous_stride();
-        comp_dst.raw_ptr = wsb.get(1);
+        TensorLayout src_layout{
+                comp_src.layout, dtype::Quantized8Asymm(scale, zero_point)};
+        comp_src = TensorND{wsb.get(0), src_layout};
+        TensorLayout dst_layout{
+                comp_dst.layout, dtype::Quantized8Asymm(scale, zero_point)};
+        comp_dst = TensorND{wsb.get(1), dst_layout};
         uint4_to_uint8(src, comp_src);
     }
 
@@ -510,8 +504,9 @@ void PoolingForwardImpl::exec(
         MEGDNN_DISPATCH_CPU_KERN(                                                    \
                 static_cast<naive::HandleImpl*>(handle()),                           \
                 pooling_forward_impl<Pooler MEGDNN_COMMA IdxGetter>(                 \
-                        sptr, dptr, comp_src.layout.dtype, N, C, IH, IW, OH, OW, PH, \
-                        PW, SH, SW, FH, FW));                                        \
+                        comp_src.ptr<ctype>(), comp_dst.ptr<ctype>(),                \
+                        comp_src.layout.dtype, N, C, IH, IW, OH, OW, PH, PW, SH, SW, \
+                        FH, FW));                                                    \
     }                                                                                \
     MIDOUT_END();
 
@@ -553,20 +548,14 @@ void PoolingForwardImpl::exec(
         using ctype = typename DTypeTrait<DType>::ctype;             \
         switch (param().mode) {                                      \
             case Mode::MAX: {                                        \
-                auto sptr = comp_src.ptr<ctype>();                   \
-                auto dptr = comp_dst.ptr<ctype>();                   \
                 DISPATCH_WITH_POOLER(MaxPooler<ctype>);              \
                 break;                                               \
             }                                                        \
             case Mode::AVERAGE: {                                    \
-                auto sptr = comp_src.ptr<ctype>();                   \
-                auto dptr = comp_dst.ptr<ctype>();                   \
                 DISPATCH_WITH_POOLER(MeanIncludePooler<ctype>);      \
                 break;                                               \
             }                                                        \
             case Mode::AVERAGE_COUNT_EXCLUDE_PADDING: {              \
-                auto sptr = comp_src.ptr<ctype>();                   \
-                auto dptr = comp_dst.ptr<ctype>();                   \
                 DISPATCH_WITH_POOLER(MeanExcludePooler<ctype>);      \
                 break;                                               \
             }                                                        \
@@ -709,12 +698,12 @@ void PoolingBackwardImpl::exec(
     size_t PH = param().pad_h, PW = param().pad_w;
     size_t FH = param().window_h, FW = param().window_w;
     size_t SH = param().stride_h, SW = param().stride_w;
-#define DISPATCH_WITH_FUNC_AND_IDX_GETTER(Func, ctype, IdxGetter)                   \
-    MEGDNN_DISPATCH_CPU_KERN(                                                       \
-            static_cast<naive::HandleImpl*>(handle()),                              \
-            Func<ctype MEGDNN_COMMA IdxGetter>(                                     \
-                    sptr, dptr, diffptr, gradptr, N, C, IH, IW, OH, OW, PH, PW, SH, \
-                    SW, FH, FW));
+#define DISPATCH_WITH_FUNC_AND_IDX_GETTER(Func, ctype, IdxGetter)          \
+    MEGDNN_DISPATCH_CPU_KERN(                                              \
+            static_cast<naive::HandleImpl*>(handle()),                     \
+            Func<ctype MEGDNN_COMMA IdxGetter>(                            \
+                    src.ptr<ctype>(), dst.ptr<ctype>(), diff.ptr<ctype>(), \
+                    grad.ptr<ctype>(), N, C, IH, IW, OH, OW, PH, PW, SH, SW, FH, FW));
 
 #define DISPATCH_WITH_FUNC(Func, ctype)                                    \
     switch (param().format) {                                              \
@@ -728,31 +717,25 @@ void PoolingBackwardImpl::exec(
             megdnn_throw("invalid pooling format");                        \
     }
 
-#define cb(DType)                                                              \
-    if (src.layout.dtype == DType()) {                                         \
-        using ctype = typename DTypeTrait<DType>::ctype;                       \
-        switch (param().mode) {                                                \
-            case Mode::AVERAGE: {                                              \
-                auto sptr = src.ptr<ctype>(), dptr = dst.ptr<ctype>(),         \
-                     diffptr = diff.ptr<ctype>(), gradptr = grad.ptr<ctype>(); \
-                DISPATCH_WITH_FUNC(pooling_backward_avg_impl, ctype);          \
-                break;                                                         \
-            }                                                                  \
-            case Mode::AVERAGE_COUNT_EXCLUDE_PADDING: {                        \
-                auto sptr = src.ptr<ctype>(), dptr = dst.ptr<ctype>(),         \
-                     diffptr = diff.ptr<ctype>(), gradptr = grad.ptr<ctype>(); \
-                DISPATCH_WITH_FUNC(pooling_backward_avg_expd_impl, ctype);     \
-                break;                                                         \
-            }                                                                  \
-            case Mode::MAX: {                                                  \
-                auto sptr = src.ptr<ctype>(), dptr = dst.ptr<ctype>(),         \
-                     diffptr = diff.ptr<ctype>(), gradptr = grad.ptr<ctype>(); \
-                DISPATCH_WITH_FUNC(pooling_backward_max_impl, ctype);          \
-                break;                                                         \
-            }                                                                  \
-            default:                                                           \
-                megdnn_assert_internal(0);                                     \
-        }                                                                      \
+#define cb(DType)                                                          \
+    if (src.layout.dtype == DType()) {                                     \
+        using ctype = typename DTypeTrait<DType>::ctype;                   \
+        switch (param().mode) {                                            \
+            case Mode::AVERAGE: {                                          \
+                DISPATCH_WITH_FUNC(pooling_backward_avg_impl, ctype);      \
+                break;                                                     \
+            }                                                              \
+            case Mode::AVERAGE_COUNT_EXCLUDE_PADDING: {                    \
+                DISPATCH_WITH_FUNC(pooling_backward_avg_expd_impl, ctype); \
+                break;                                                     \
+            }                                                              \
+            case Mode::MAX: {                                              \
+                DISPATCH_WITH_FUNC(pooling_backward_max_impl, ctype);      \
+                break;                                                     \
+            }                                                              \
+            default:                                                       \
+                megdnn_assert_internal(0);                                 \
+        }                                                                  \
     }
     MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
 #undef cb

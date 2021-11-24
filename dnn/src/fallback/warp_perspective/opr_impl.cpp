@@ -121,18 +121,25 @@ void WarpPerspectiveImpl::kern_fallback(const KernParam<ctype, mtype>& kern_para
     KernParam<ctype, mtype> sub_param = kern_param;
     sub_param.n_src = 1;
     sub_param.n_mat = 1;
-    sub_param.midx_ptr = nullptr;
+    sub_param.midx_ptr = RefPtr();
+    sub_param.src_ptr = RefPtr(kern_param.src_ptr.get_ptr());
+    sub_param.mat_ptr = RefPtr(kern_param.mat_ptr.get_ptr());
+    sub_param.dst_ptr = RefPtr(kern_param.dst_ptr.get_ptr());
     rep(n, N_MAT) {
         if (midx_ptr) {
             size_t idx = midx_ptr[n];
             megdnn_assert(
                     idx < N_SRC, "mat_idx out of bound: mat_idx[%zu]=%zu src_batch=%zu",
                     n, idx, N_SRC);
-            sub_param.sptr = kern_param.sptr + idx * (C * IH * IW);
+            sub_param.src_ptr.reset(
+                    static_cast<ctype*>(kern_param.src_ptr.get_ptr()) +
+                    idx * (C * IH * IW));
         } else if (n) {
-            sub_param.sptr += C * IH * IW;
+            sub_param.src_ptr.reset(
+                    static_cast<ctype*>(kern_param.src_ptr.get_ptr()) +
+                    n * C * IH * IW);
         }
-        if (is_resize_optimizable(sub_param.mptr)) {
+        if (is_resize_optimizable(static_cast<mtype*>(sub_param.mat_ptr.get_ptr()))) {
             if (bmode == BorderMode::CONSTANT) {
                 MIDOUT_BEGIN(
                         megdnn_fallback_warpperspective, midout_iv(1), midout_iv(true),
@@ -154,8 +161,8 @@ void WarpPerspectiveImpl::kern_fallback(const KernParam<ctype, mtype>& kern_para
             }
             MIDOUT_END();
         }
-        sub_param.mptr += 3 * 3;
-        sub_param.dptr += C * OH * OW;
+        sub_param.mat_ptr += 3 * 3 * sizeof(mtype);
+        sub_param.dst_ptr += C * OH * OW * sizeof(ctype);
     }
 }
 

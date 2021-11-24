@@ -11,11 +11,11 @@
 
 #include "test/fallback/fixture.h"
 
+#include <ctime>
 #include "test/common/checker.h"
 #include "test/common/elemwise.h"
+#include "test/common/task_record_check.h"
 #include "test/common/tensor.h"
-
-#include <ctime>
 
 using namespace megdnn;
 using namespace test;
@@ -25,6 +25,18 @@ class FALLBACK_ELEMWISE : public FALLBACK {};
 TYPED_TEST_CASE(FALLBACK_ELEMWISE, elemwise::test_types);
 TYPED_TEST(FALLBACK_ELEMWISE, run) {
     elemwise::run_test<TypeParam>(this->handle());
+}
+TEST_F(FALLBACK, ELEMWISE_RECORD) {
+    TaskRecordChecker<Elemwise> checker{1};
+    checker.set_param({Elemwise::Mode::ADD});
+    checker.set_dtype(0, dtype::Float32());
+    checker.set_dtype(1, dtype::Float32());
+    checker.set_dtype(2, dtype::Float32());
+    UniformIntRNG rng{-100, 100};
+    checker.set_rng(0, &rng);
+    checker.set_rng(1, &rng);
+    checker.set_rng(2, &rng);
+    checker.execs({{10, 10, 32}, {10, 10, 32}, {}});
 }
 #if MEGDNN_WITH_BENCHMARK
 TEST_F(FALLBACK, BENCHMARK_ELEMWISE) {

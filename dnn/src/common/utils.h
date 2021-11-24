@@ -362,6 +362,10 @@ static inline void copy_plane_in_bytes(
 
 megcoreDeviceHandle_t get_device_handle(Handle* handle);
 
+static inline void incr_refp(RefPtr& ptr, ptrdiff_t delta) {
+    ptr += (size_t)delta;
+}
+
 static inline void incr_voidp(void*& ptr, ptrdiff_t delta) {
     ptr = reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(ptr) + delta);
 }
@@ -674,7 +678,8 @@ struct CompTypeCvter {
                 comp.layout.dtype.enumv() != DTypeTrait<CompType>::enumv) {
                 comp.layout.dtype = CompType();
                 comp.layout.init_contiguous_stride();
-                comp.raw_ptr = m_workspace_bundle->get(m_workspace_idx++);
+                comp = TensorND{
+                        m_workspace_bundle->get(m_workspace_idx++), comp.layout};
                 if (src.layout.ndim) {
                     m_cvt_opr->exec(src, comp);
                 }
@@ -699,7 +704,7 @@ struct CompTypeCvter {
  * \brief get TensorND raw_ptr+low_byte pointer.
  */
 inline dt_byte* get_low_ptr(const TensorND* tensor) {
-    return static_cast<dt_byte*>(tensor->raw_ptr) + tensor->layout.span().low_byte;
+    return static_cast<dt_byte*>(tensor->raw_ptr()) + tensor->layout.span().low_byte;
 }
 
 /*!

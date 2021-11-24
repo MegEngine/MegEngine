@@ -97,10 +97,10 @@ void MatrixMulForwardImpl::AlgoFloat32SIMT::do_exec(const ExecArgs& args) const 
 
     GemmArguments gemm_args{
             problem_size,
-            args.tensor_a.raw_ptr,
-            args.tensor_b.raw_ptr,
-            args.tensor_c.raw_ptr,
-            args.tensor_c.raw_ptr,
+            args.tensor_a.raw_ptr(),
+            args.tensor_b.raw_ptr(),
+            args.tensor_c.raw_ptr(),
+            args.tensor_c.raw_ptr(),
             lda,
             ldb,
             ldc,

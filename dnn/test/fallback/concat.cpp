@@ -11,7 +11,7 @@
 #include "test/fallback/fixture.h"
 
 #include "test/common/checker.h"
-
+#include "test/common/task_record_check.h"
 namespace megdnn {
 namespace test {
 
@@ -34,6 +34,21 @@ TEST_F(FALLBACK, CONCAT) {
             checker.set_param(param).exec(shapes);
         }
     }
+}
+TEST_F(FALLBACK, CONCAT_RECORD) {
+    TaskRecordChecker<Concat> checker(1);
+    using Param = Concat::Param;
+
+    Param param;
+    param.axis = 0;
+    TensorShapeArray shapes(4, TensorShape({12, 13, 14, 15}));
+    for (size_t i = 0; i < 4; ++i) {
+        shapes[i].shape[0] = i + 1;
+    }
+    shapes.emplace_back();
+    for (size_t i = 0; i < shapes.size(); ++i)
+        checker.set_dtype(i, dtype::Float32());
+    checker.set_param(param).exec(shapes);
 }
 }  // namespace test
 }  // namespace megdnn

@@ -19,6 +19,7 @@
 #include "test/common/checker.h"
 #include "test/common/conv_bias.h"
 #include "test/common/rng.h"
+#include "test/common/task_record_check.h"
 #include "test/common/tensor.h"
 #include "test/common/workspace_wrapper.h"
 
@@ -38,6 +39,29 @@ TEST_F(ARM_COMMON, CONV_BIAS_MATMUL) {
     Checker<ConvBiasForward> checker(handle());
     checker.set_before_exec_callback(
             conv_bias::ConvBiasAlgoChecker<ConvBias>("S8MATMUL"));
+#if MEGDNN_ARMV7
+    checker.set_epsilon(1);
+#endif
+    UniformIntRNG rng{-50, 50};
+    for (auto&& arg : args) {
+        if (arg.bias.ndim == 4 && arg.bias[2] != 1 && arg.bias[3] != 1)
+            continue;
+        checker.set_dtype(0, dtype::QuantizedS8(0.41113496f))
+                .set_dtype(1, dtype::QuantizedS8(0.01887994f))
+                .set_dtype(2, dtype::QuantizedS32(0.41113496f * 0.01887994f))
+                .set_dtype(4, dtype::QuantizedS8(0.49550694f))
+                .set_rng(0, &rng)
+                .set_rng(1, &rng)
+                .set_rng(2, &rng)
+                .set_param(arg.param)
+                .execs({arg.src, arg.filter, arg.bias, {}, {}});
+    }
+}
+
+TEST_F(ARM_COMMON, CONV_BIAS_RECORD) {
+    using namespace conv_bias;
+    std::vector<TestArg> args = get_quantized_args();
+    TaskRecordChecker<ConvBiasForward> checker(0);
 #if MEGDNN_ARMV7
     checker.set_epsilon(1);
 #endif

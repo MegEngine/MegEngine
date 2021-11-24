@@ -143,15 +143,16 @@ void w2x2_s2x2_avg_int8(
 namespace megdnn {
 namespace fallback {
 
-void PoolingImpl::exec_w3x3_s1x1(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
+void PoolingImpl::exec_w3x3_s1x1(
+        _megdnn_tensor_in src, _megdnn_tensor_out dst, const Param& param) {
     auto N = src.layout.shape[0], C = src.layout.shape[1];
     auto IH = src.layout.shape[2], IW = src.layout.shape[3];
     auto OH = dst.layout.shape[2], OW = dst.layout.shape[3];
     for (size_t nc = 0; nc < N * C; ++nc) {
         pooling::w3x3_s1x1(
                 src.ptr<dt_float32>() + nc * IH * IW,
-                dst.ptr<dt_float32>() + nc * OH * OW, IH, IW, OH, OW, param().pad_h,
-                param().pad_w);
+                dst.ptr<dt_float32>() + nc * OH * OW, IH, IW, OH, OW, param.pad_h,
+                param.pad_w);
     }
 }
 
@@ -180,22 +181,23 @@ void PoolingImpl::exec_w2x2_s2x2_avg_int8(
 
 void PoolingImpl::exec(
         _megdnn_tensor_in src, _megdnn_tensor_out dst, _megdnn_workspace workspace) {
+    Param param = this->param();
     check_exec(src.layout, dst.layout, workspace.size);
-    if (src.layout.dtype == dtype::Float32() && param().format == Param::Format::NCHW &&
-        param().mode == Mode::MAX && param().window_h == 3 && param().window_w == 3 &&
-        param().stride_h == 1 && param().stride_w == 1 && param().pad_h <= 2 &&
-        param().pad_w <= 2) {
+    if (src.layout.dtype == dtype::Float32() && param.format == Param::Format::NCHW &&
+        param.mode == Mode::MAX && param.window_h == 3 && param.window_w == 3 &&
+        param.stride_h == 1 && param.stride_w == 1 && param.pad_h <= 2 &&
+        param.pad_w <= 2) {
         MIDOUT_BEGIN(megdnn_fallback_pooling, midout_iv(0)) {
-            MEGDNN_DISPATCH_CPU_KERN_OPR(exec_w3x3_s1x1(src, dst));
+            MEGDNN_DISPATCH_CPU_KERN_OPR(exec_w3x3_s1x1(src, dst, param));
         }
         MIDOUT_END();
         return;
     }
     // regular int conv case
-    if (src.layout.dtype == dtype::Int8() && param().mode == Mode::MAX &&
-        param().format == Param::Format::NCHW && param().window_h == 2 &&
-        param().window_w == 2 && param().stride_h == 2 && param().stride_w == 2 &&
-        param().pad_h == 0 && param().pad_w == 0) {
+    if (src.layout.dtype == dtype::Int8() && param.mode == Mode::MAX &&
+        param.format == Param::Format::NCHW && param.window_h == 2 &&
+        param.window_w == 2 && param.stride_h == 2 && param.stride_w == 2 &&
+        param.pad_h == 0 && param.pad_w == 0) {
         MIDOUT_BEGIN(megdnn_fallback_pooling, midout_iv(1)) {
             MEGDNN_DISPATCH_CPU_KERN_OPR(exec_w2x2_s2x2_int8(src, dst));
         }
@@ -203,10 +205,10 @@ void PoolingImpl::exec(
         return;
     }
     // int8 2x2 AVERAGE case
-    if (src.layout.dtype == dtype::Int8() && param().mode == Mode::AVERAGE &&
-        param().format == Param::Format::NCHW && param().window_h == 2 &&
-        param().window_w == 2 && param().stride_h == 2 && param().stride_w == 2 &&
-        param().pad_h == 0 && param().pad_w == 0) {
+    if (src.layout.dtype == dtype::Int8() && param.mode == Mode::AVERAGE &&
+        param.format == Param::Format::NCHW && param.window_h == 2 &&
+        param.window_w == 2 && param.stride_h == 2 && param.stride_w == 2 &&
+        param.pad_h == 0 && param.pad_w == 0) {
         MIDOUT_BEGIN(megdnn_fallback_pooling, midout_iv(2)) {
             MEGDNN_DISPATCH_CPU_KERN_OPR(exec_w2x2_s2x2_avg_int8(src, dst));
         }

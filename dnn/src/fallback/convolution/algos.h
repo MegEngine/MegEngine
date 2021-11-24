@@ -33,32 +33,34 @@ void kern_naive_forward(
                       p.filter_type.size();
     ptrdiff_t istrd = p.filter_meta.icpg * p.src_type.size();
     ptrdiff_t ostrd = p.filter_meta.ocpg * p.dst_type.size();
-    TensorND src, dst;
-
-    src.layout.dtype = p.src_type;
-    dst.layout.dtype = p.dst_type;
+    TensorLayout src_layout, dst_layout;
+    src_layout.dtype = p.src_type;
+    dst_layout.dtype = p.dst_type;
     if (p.filter_meta.format == param::Convolution::Format::NCHW) {
         istrd *= p.isz[0] * p.isz[1];
         ostrd *= p.osz[0] * p.osz[1];
-        src.layout.init_contiguous_stride({1, IC, IH, IW});
-        dst.layout.init_contiguous_stride({1, OC, OH, OW});
+        src_layout.init_contiguous_stride({1, IC, IH, IW});
+        dst_layout.init_contiguous_stride({1, OC, OH, OW});
     } else {
         // Must be NHWC
         megdnn_assert(
                 p.filter_meta.format == param::Convolution::Format::NHWC,
                 "AlgoNaive only support NCHW and NHWC, not support format %d",
                 static_cast<int>(p.filter_meta.format));
-        src.layout.init_contiguous_stride({1, IH, IW, IC});
-        dst.layout.init_contiguous_stride({1, OH, OW, OC});
+        src_layout.init_contiguous_stride({1, IH, IW, IC});
+        dst_layout.init_contiguous_stride({1, OH, OW, OC});
     }
-    src.raw_ptr = reinterpret_cast<void*>(
-            reinterpret_cast<uintptr_t>(p.src_ptr) +
-            batch_id * p.inp_bs * p.src_type.size() + group_id * istrd);
-    dst.raw_ptr = reinterpret_cast<void*>(
-            reinterpret_cast<uintptr_t>(p.dst_ptr) +
-            batch_id * p.out_bs * p.dst_type.size() + group_id * ostrd);
+
+    RefPtr src_refp = p.src_ptr;
+    RefPtr dst_refp = p.dst_ptr;
+
+    src_refp += (batch_id * p.inp_bs * p.src_type.size() + group_id * istrd);
+    dst_refp += (batch_id * p.out_bs * p.dst_type.size() + group_id * ostrd);
+
+    TensorND src{src_layout, src_refp}, dst{dst_layout, dst_refp};
+
     ST* filter = reinterpret_cast<ST*>(
-            reinterpret_cast<uintptr_t>(p.filter_ptr) + group_id * fstrd);
+            reinterpret_cast<uintptr_t>(p.filter_ptr.get_ptr()) + group_id * fstrd);
     std::copy(p.inp_s, p.inp_s + 4, src.layout.stride);
     std::copy(p.out_s, p.out_s + 4, dst.layout.stride);
     naive::convolution::forward<ST, ST, DT, CT>(src, filter, dst, p.filter_meta);
@@ -66,9 +68,9 @@ void kern_naive_forward(
 
 template <typename ftype, typename dtype, typename gtype>
 void kern_naive(const ConvolutionBackwardDataImpl::NCBKernParam& p) {
-    TensorND diff(const_cast<void*>(p.diff_ptr), p.diff_layout),
-            filter(const_cast<void*>(p.filter_ptr), p.filter_layout),
-            grad(p.grad_ptr, p.grad_layout);
+    TensorND diff(const_cast<void*>(p.diff_ptr.get_ptr()), p.diff_layout),
+            filter(const_cast<void*>(p.filter_ptr.get_ptr()), p.filter_layout),
+            grad(p.grad_ptr.get_ptr(), p.grad_layout);
     naive::convolution::backward_data<ftype, dtype, gtype>(
             filter, diff, grad, p.filter_meta);
 }

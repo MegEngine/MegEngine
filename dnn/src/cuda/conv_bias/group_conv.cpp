@@ -142,9 +142,10 @@ size_t ConvBiasForwardImpl::AlgoGroupConvGeneral::get_workspace_in_bytes(
 
 void ConvBiasForwardImpl::AlgoGroupConvGeneral::exec(const ExecArgs& args) const {
     auto bundle = get_workspace_bundle(args.workspace.raw_ptr, args);
-    auto conv_dst_tensor = *args.dst_tensor;
+    TensorND conv_dst_tensor = *args.dst_tensor;
     if (args.dst_layout->dtype.enumv() != args.bias_layout->dtype.enumv()) {
-        conv_dst_tensor.raw_ptr = bundle.get(bundle.nr_workspace() - 1);
+        conv_dst_tensor = TensorND{
+                bundle.get(bundle.nr_workspace() - 1), args.dst_tensor->layout};
         conv_dst_tensor.layout.dtype = DType();
         args.opr->check_or_deduce_dtype_fwd(
                 args.src_layout->dtype, args.filter_layout->dtype,
@@ -156,11 +157,11 @@ void ConvBiasForwardImpl::AlgoGroupConvGeneral::exec(const ExecArgs& args) const
         sub_args.dst_layout = &conv_dst_tensor.layout;
 
         auto config = prepare_sub_opr(sub_args);
-        TensorND tsrc{args.src_tensor->raw_ptr, config.first[0]};
-        TensorND tfilter{args.filter_tensor->raw_ptr, config.first[1]};
-        TensorND tbias{args.bias_tensor->raw_ptr, config.first[2]};
-        TensorND tz{args.z_tensor->raw_ptr, config.first[3]};
-        TensorND tdst{conv_dst_tensor.raw_ptr, config.first[4]};
+        TensorND tsrc{args.src_tensor->raw_ptr(), config.first[0]};
+        TensorND tfilter{args.filter_tensor->raw_ptr(), config.first[1]};
+        TensorND tbias{args.bias_tensor->raw_ptr(), config.first[2]};
+        TensorND tz{args.z_tensor->raw_ptr(), config.first[3]};
+        TensorND tdst{conv_dst_tensor.raw_ptr(), config.first[4]};
 
         size_t c_pos;
         if (args.filter_meta.format == Param::Format::NCHW ||
@@ -187,9 +188,9 @@ void ConvBiasForwardImpl::AlgoGroupConvGeneral::exec(const ExecArgs& args) const
         for (uint32_t g = 0; g < grp; ++g) {
             config.second->exec(
                     tsrc, tfilter, tbias, tz, tdst, nullptr, bundle.get_workspace(0));
-            incr_voidp(tsrc.raw_ptr, strd_src);
-            incr_voidp(tdst.raw_ptr, strd_dst);
-            incr_voidp(tfilter.raw_ptr, strd_flt);
+            incr_refp(tsrc.get_ref_ptr(), strd_src);
+            incr_refp(tdst.get_ref_ptr(), strd_dst);
+            incr_refp(tfilter.get_ref_ptr(), strd_flt);
         }
     }
     handle_bias_and_nonlinear(

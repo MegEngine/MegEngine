@@ -21,31 +21,31 @@ using namespace megdnn;
 using namespace cuda;
 
 void ElemwiseMultiTypeImpl::on_fuse_mul_add3_int16x32x32x32(
-        const ElemwiseOpParamN<3>& param, dt_int32* dst) {
+        const ElemwiseOpParamN<3>& param, const TensorND& dst) {
     BroadcastChannelInfo binfo0, binfo1;
     if (is_vector(param[0].layout) &&
         is_broadcasted_channel_like(param[1].layout, binfo0) &&
         is_broadcasted_channel_like(param[2].layout, binfo1) && binfo0 == binfo1) {
         elemwise_multi_type::fma3_int16x32x32x32_1c1(
-                param, dst, cuda_stream(this->handle()));
+                param, dst.ptr<dt_int32>(), cuda_stream(this->handle()));
         return;
     }
     megdnn_throw("unsupported fma3 int16x32x32x32 layout");
 }
 
 void ElemwiseMultiTypeImpl::on_fuse_mul_add3_iXxf32xf32xi8(
-        const ElemwiseOpParamN<3>& param, dt_int8* dst) {
+        const ElemwiseOpParamN<3>& param, const TensorND& dst) {
     Broadcast1xInfo binfo0, binfo1;
     auto p1 = param[1].ptr<float>(), p2 = param[2].ptr<float>();
     auto stream = cuda_stream(this->handle());
     if (is_vector(param[0].layout) && is_broadcasted_1x(param[1].layout, binfo0) &&
         is_broadcasted_1x(param[2].layout, binfo1) && binfo0 == binfo1) {
         switch (param[0].layout.dtype.enumv()) {
-#define cb(t)                                                                          \
-    case DTypeTrait<t>::enumv:                                                         \
-        elemwise_multi_type::fma3_iXxf32xf32xi8_bcast_1x(                              \
-                param[0].ptr<DTypeTrait<t>::ctype>(), p1, p2, dst, binfo0.x, binfo0.y, \
-                stream);                                                               \
+#define cb(t)                                                                     \
+    case DTypeTrait<t>::enumv:                                                    \
+        elemwise_multi_type::fma3_iXxf32xf32xi8_bcast_1x(                         \
+                param[0].ptr<DTypeTrait<t>::ctype>(), p1, p2, dst.ptr<dt_int8>(), \
+                binfo0.x, binfo0.y, stream);                                      \
         return;
             MEGDNN_FOREACH_COMPUTING_DTYPE_INT(cb)
 #undef cb
@@ -58,14 +58,14 @@ void ElemwiseMultiTypeImpl::on_fuse_mul_add3_iXxf32xf32xi8(
 }
 
 void ElemwiseMultiTypeImpl::on_round_shr_saturate_iXxi8xi8(
-        const ElemwiseOpParamN<2>& param, dt_int8* dst) {
+        const ElemwiseOpParamN<2>& param, const TensorND& dst) {
     auto stream = cuda_stream(this->handle());
     if (is_vector(param[0].layout) && is_broadcasted_scalar(param[1].layout)) {
         switch (param[0].layout.dtype.enumv()) {
-#define DISPATCH(t)                                                 \
-    case DTypeTrait<t>::enumv:                                      \
-        elemwise_multi_type::round_shr_saturate_iXxi8xiX_scalar<    \
-                DTypeTrait<t>::ctype, dt_int8>(param, dst, stream); \
+#define DISPATCH(t)                                                                \
+    case DTypeTrait<t>::enumv:                                                     \
+        elemwise_multi_type::round_shr_saturate_iXxi8xiX_scalar<                   \
+                DTypeTrait<t>::ctype, dt_int8>(param, dst.ptr<dt_int8>(), stream); \
         return;
             DISPATCH(::megdnn::dtype::Int32)
             DISPATCH(::megdnn::dtype::Int16)
@@ -85,7 +85,7 @@ void ElemwiseMultiTypeImpl::on_round_shr_saturate_iXxi8xi8(
 }
 
 void ElemwiseMultiTypeImpl::on_fuse_add_rmulh_round_shr_saturate_int16x16x16x8(
-        const ElemwiseOpParamN<6>& param, dt_int8* dst) {
+        const ElemwiseOpParamN<6>& param, const TensorND& dst) {
     auto stream = cuda_stream(this->handle());
     BroadcastChannelInfo info;
     if (is_vector(param[0].layout) &&
@@ -95,7 +95,7 @@ void ElemwiseMultiTypeImpl::on_fuse_add_rmulh_round_shr_saturate_int16x16x16x8(
         is_broadcasted_scalar(param[4].layout) &&
         is_broadcasted_scalar(param[5].layout)) {
         elemwise_multi_type::fuse_add_rmulh_round_shr_saturate_bcast_1c11<dt_int16>(
-                param, dst, stream);
+                param, dst.ptr<dt_int8>(), stream);
         return;
     }
     megdnn_throw(
@@ -106,7 +106,7 @@ void ElemwiseMultiTypeImpl::on_fuse_add_rmulh_round_shr_saturate_int16x16x16x8(
 }
 
 void ElemwiseMultiTypeImpl::on_fuse_add_rmulh_round_shr_saturate_int32x32x32x8(
-        const ElemwiseOpParamN<6>& param, dt_int8* dst) {
+        const ElemwiseOpParamN<6>& param, const TensorND& dst) {
     auto stream = cuda_stream(this->handle());
     BroadcastChannelInfo info;
     if (is_vector(param[0].layout) &&
@@ -116,7 +116,7 @@ void ElemwiseMultiTypeImpl::on_fuse_add_rmulh_round_shr_saturate_int32x32x32x8(
         is_broadcasted_scalar(param[4].layout) &&
         is_broadcasted_scalar(param[5].layout)) {
         elemwise_multi_type::fuse_add_rmulh_round_shr_saturate_bcast_1c11<dt_int32>(
-                param, dst, stream);
+                param, dst.ptr<dt_int8>(), stream);
         return;
     }
     megdnn_throw(
@@ -127,14 +127,14 @@ void ElemwiseMultiTypeImpl::on_fuse_add_rmulh_round_shr_saturate_int32x32x32x8(
 }
 
 void ElemwiseMultiTypeImpl::on_round_shr_saturate_iXxi8xi16(
-        const ElemwiseOpParamN<2>& param, dt_int16* dst) {
+        const ElemwiseOpParamN<2>& param, const TensorND& dst) {
     auto stream = cuda_stream(this->handle());
     if (is_vector(param[0].layout) && is_broadcasted_scalar(param[1].layout)) {
         switch (param[0].layout.dtype.enumv()) {
-#define DISPATCH(t)                                                  \
-    case DTypeTrait<t>::enumv:                                       \
-        elemwise_multi_type::round_shr_saturate_iXxi8xiX_scalar<     \
-                DTypeTrait<t>::ctype, dt_int16>(param, dst, stream); \
+#define DISPATCH(t)                                                                  \
+    case DTypeTrait<t>::enumv:                                                       \
+        elemwise_multi_type::round_shr_saturate_iXxi8xiX_scalar<                     \
+                DTypeTrait<t>::ctype, dt_int16>(param, dst.ptr<dt_int16>(), stream); \
         return;
             DISPATCH(::megdnn::dtype::Int32)
             DISPATCH(::megdnn::dtype::Int16)
@@ -227,22 +227,22 @@ IMPL_MODE_DISPATCHER(2, dt_quint4, dt_qint32);
 
 #undef _cb_dispatch_mode
 
-#define _cb_dispatch_mode(_m)                                                      \
-    case param::Elemwise::Mode::_m:                                                \
-        do {                                                                       \
-            using KernImpl = ElemwiseKern<                                         \
-                    megcorePlatformCUDA, param_enumv::Elemwise::Mode::_m, float>;  \
-            using Op = kern_ops_quantized::QuantizedMultiTypeOp<                   \
-                    arity, src_ctype, dst_ctype, KernImpl>;                        \
-            using dst_storage = typename VectTypeTrait<dst_ctype>::Storage;        \
-            dst_storage* dst = reinterpret_cast<dst_storage*>(dst_tensor.raw_ptr); \
-            Op op(src_params, dst, dst_param);                                     \
-            ElemwiseOpParamN<1> param_dst;                                         \
-            param_dst[0] = dst_tensor;                                             \
-            param_dst.init_from_given_tensor();                                    \
-            run_elemwise<Op, src_ctype, dst_ctype, arity>(                         \
-                    param, param_dst, stream, op);                                 \
-            return;                                                                \
+#define _cb_dispatch_mode(_m)                                                        \
+    case param::Elemwise::Mode::_m:                                                  \
+        do {                                                                         \
+            using KernImpl = ElemwiseKern<                                           \
+                    megcorePlatformCUDA, param_enumv::Elemwise::Mode::_m, float>;    \
+            using Op = kern_ops_quantized::QuantizedMultiTypeOp<                     \
+                    arity, src_ctype, dst_ctype, KernImpl>;                          \
+            using dst_storage = typename VectTypeTrait<dst_ctype>::Storage;          \
+            dst_storage* dst = reinterpret_cast<dst_storage*>(dst_tensor.raw_ptr()); \
+            Op op(src_params, dst, dst_param);                                       \
+            ElemwiseOpParamN<1> param_dst;                                           \
+            param_dst[0] = dst_tensor;                                               \
+            param_dst.init_from_given_tensor();                                      \
+            run_elemwise<Op, src_ctype, dst_ctype, arity>(                           \
+                    param, param_dst, stream, op);                                   \
+            return;                                                                  \
         } while (0);
 
 #define FOREACH(cb)                            \

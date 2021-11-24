@@ -131,26 +131,26 @@ void ConvBiasForwardImpl::AlgoQUInt4x4x32WMMA::exec(const ExecArgs& args) const 
     auto&& stream = cuda_stream(handle);
     // zp filter
     do_dispatch_reduce_with_scale_filter_4bit<false>(
-            static_cast<uint8_t*>(args.filter_tensor->raw_ptr), -zp_data, OC,
+            static_cast<uint8_t*>(args.filter_tensor->raw_ptr()), -zp_data, OC,
             FH * FW * IC / 8, ws_zp_filter.ptr<int32_t>(), stream);
     // zp data
     do_dispatch_reduce_with_scale_data_u4(
-            ws_zp_data.ptr<int32_t>(), static_cast<uint8_t*>(args.src_tensor->raw_ptr),
-            N, IH, IW, OH, OW, PH, PW, FH, FW, SH, SW, IC, -zp_filter,
-            static_cast<uint8_t>(zp_data), stream);
+            ws_zp_data.ptr<int32_t>(),
+            static_cast<uint8_t*>(args.src_tensor->raw_ptr()), N, IH, IW, OH, OW, PH,
+            PW, FH, FW, SH, SW, IC, -zp_filter, static_cast<uint8_t>(zp_data), stream);
 
     // do conv
     if (use_kernel_fhxfw(args)) {
         wmma_conv_integer_subbyte::_do_wmma_conv_integer_subbyte_fhxfw(
-                static_cast<uint8_t*>(args.src_tensor->raw_ptr),
-                static_cast<uint8_t*>(args.filter_tensor->raw_ptr),
+                static_cast<uint8_t*>(args.src_tensor->raw_ptr()),
+                static_cast<uint8_t*>(args.filter_tensor->raw_ptr()),
                 args.dst_tensor->compatible_ptr<int32_t>(), N, IH, IW, OH, OW, PH, PW,
                 IC, OC, FH, FW, SH, SW, static_cast<uint8_t>(zp_data), stream);
     } else {
         auto&& ws_relayout_filter = ws_bundle.get_workspace(2);
         wmma_conv_integer_subbyte::_do_wmma_conv_integer_subbyte_1xfw(
-                static_cast<uint8_t*>(args.src_tensor->raw_ptr),
-                static_cast<uint8_t*>(args.filter_tensor->raw_ptr),
+                static_cast<uint8_t*>(args.src_tensor->raw_ptr()),
+                static_cast<uint8_t*>(args.filter_tensor->raw_ptr()),
                 args.dst_tensor->compatible_ptr<int32_t>(),
                 ws_relayout_filter.ptr<uint8_t>(), N, IH, IW, OH, OW, PH, PW, IC, OC,
                 FH, FW, SH, SW, static_cast<uint8_t>(zp_data), stream);

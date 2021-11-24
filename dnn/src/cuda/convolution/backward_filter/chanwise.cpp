@@ -50,9 +50,9 @@ void ConvolutionBackwardFilterImpl::AlgoChanwise::exec(const ExecArgs& args) con
 #if CUDA_VERSION >= 9000
             if (is_compute_capability_required(5, 3)) {
                 return chanwise::run_bwd_filter(
-                        static_cast<__half*>(args.grad_tensor->raw_ptr),
-                        static_cast<__half*>(args.src_tensor->raw_ptr),
-                        static_cast<__half*>(args.diff_tensor->raw_ptr), kparam,
+                        static_cast<__half*>(args.grad_tensor->raw_ptr()),
+                        static_cast<__half*>(args.src_tensor->raw_ptr()),
+                        static_cast<__half*>(args.diff_tensor->raw_ptr()), kparam,
                         stream);
             } else {
                 return chanwise::run_bwd_filter(

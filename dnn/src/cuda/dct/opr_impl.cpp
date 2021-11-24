@@ -58,7 +58,7 @@ void DctChannelSelectForwardImpl::exec(
         megdnn_assert(
                 param().format == Param::Format::NCHW4, "qint8 only support nchw4");
         dct::call_kern_dct<dct_block, dct::DctLayoutFormat::NCHW4>(
-                src.ptr<uint8_t>(), (int8_t*)dst.raw_ptr, in, ic, ih, iw, oc,
+                src.ptr<uint8_t>(), (int8_t*)dst.raw_ptr(), in, ic, ih, iw, oc,
                 with_fix_32_mask, mask_offset_ptr, mask_val_ptr, stream, error_info,
                 m_error_tracker,
                 dst.layout.dtype.param<::megdnn::dtype::QuantizedS8>().scale);

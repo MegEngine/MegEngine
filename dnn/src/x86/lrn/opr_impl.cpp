@@ -87,7 +87,6 @@ void LRNImpl::exec(
     check_exec(src.layout, dst.layout, workspace.size);
     auto N = src.layout.shape[0], C = src.layout.shape[1], H = src.layout.shape[2],
          W = src.layout.shape[3];
-    auto sptr_ = src.ptr<dt_float32>(), dptr_ = dst.ptr<dt_float32>();
 
     std::function<void(
             const float*, float*, size_t, size_t, size_t, size_t, float, float, float)>
@@ -105,11 +104,12 @@ void LRNImpl::exec(
     auto k = param().k;
     auto alpha = param().alpha;
     auto beta = param().beta;
-    MEGDNN_DISPATCH_CPU_KERN_OPR(auto sptr = sptr_; auto dptr = dptr_; rep(i, N) {
-        f(sptr, dptr, C, H, W, n, k, alpha, beta);
-        sptr += C * H * W;
-        dptr += C * H * W;
-    });
+    MEGDNN_DISPATCH_CPU_KERN_OPR(auto sptr = src.ptr<dt_float32>();
+                                 auto dptr = dst.ptr<dt_float32>(); rep(i, N) {
+                                     f(sptr, dptr, C, H, W, n, k, alpha, beta);
+                                     sptr += C * H * W;
+                                     dptr += C * H * W;
+                                 });
 }
 
 }  // namespace x86

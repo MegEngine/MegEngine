@@ -52,14 +52,14 @@ bool RelayoutForwardImpl::Param::try_transpose() {
     size_t batch = transp.batch, m = transp.m, n = transp.n;
     size_t lda = n, ldb = m, stride_A = m * n, stride_B = m * n;
     auto&& stream = m_opr->stream();
-#define RUN(_dt)                                                                \
-    do {                                                                        \
-        typedef DTypeTrait<dtype::_dt>::ctype ctype;                            \
-        copy_by_transpose<ctype>(                                               \
-                reinterpret_cast<const ctype*>(m_src.raw_ptr),                  \
-                reinterpret_cast<ctype*>(m_dst.raw_ptr), batch, m, n, lda, ldb, \
-                stride_A, stride_B, stream);                                    \
-        return true;                                                            \
+#define RUN(_dt)                                                                  \
+    do {                                                                          \
+        typedef DTypeTrait<dtype::_dt>::ctype ctype;                              \
+        copy_by_transpose<ctype>(                                                 \
+                reinterpret_cast<const ctype*>(m_src.raw_ptr()),                  \
+                reinterpret_cast<ctype*>(m_dst.raw_ptr()), batch, m, n, lda, ldb, \
+                stride_A, stride_B, stream);                                      \
+        return true;                                                              \
     } while (0)
     switch (dsize) {
         case 1:
@@ -81,7 +81,7 @@ bool RelayoutForwardImpl::Param::try_copy_contig() {
     size_t copy_size = ldst.span().dist_byte();
 
     cuda_check(cudaMemcpyAsync(
-            m_dst.raw_ptr, m_src.raw_ptr, copy_size, cudaMemcpyDeviceToDevice,
+            m_dst.raw_ptr(), m_src.raw_ptr(), copy_size, cudaMemcpyDeviceToDevice,
             m_opr->stream()));
     return true;
 }
@@ -137,7 +137,7 @@ bool RelayoutForwardImpl::Param::try_copy_2d(bool cross_dev) {
 
     auto dsize = dtype_size();
     cuda_check(cudaMemcpy2DAsync(
-            m_dst.raw_ptr, ldst.stride[0] * dsize, m_src.raw_ptr,
+            m_dst.raw_ptr(), ldst.stride[0] * dsize, m_src.raw_ptr(),
             lsrc.stride[0] * dsize, ldst.shape[1] * dsize, ldst.shape[0],
             cudaMemcpyDeviceToDevice, m_opr->stream()));
 

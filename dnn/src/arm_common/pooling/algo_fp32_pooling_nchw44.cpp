@@ -50,8 +50,8 @@ void PoolingImpl::AlgoFp32ModexStridexNCHW44::exec(
     int sh = param.stride[0];
     int fh = param.filter[0];
 
-    void* src_ptr = param.src_ptr;
-    void* dst_ptr = param.dst_ptr;
+    auto src_ptr = param.src_ptr;
+    auto dst_ptr = param.dst_ptr;
 
 #define DISPATCH_FUNC(filter, stride, mode)                                           \
     MIDOUT_BEGIN(                                                                     \
@@ -60,9 +60,10 @@ void PoolingImpl::AlgoFp32ModexStridexNCHW44::exec(
         auto run = [ih, iw, oh, ow, ph, pw, src_ptr, dst_ptr](size_t index, size_t) { \
             const int c_idx = index;                                                  \
             pooling_fp32_nchw44<filter, stride, mode>(                                \
-                    static_cast<const float*>(src_ptr) + c_idx * ih * iw * 4,         \
-                    static_cast<float*>(dst_ptr) + c_idx * oh * ow * 4, ih, iw, oh,   \
-                    ow, ph, pw);                                                      \
+                    static_cast<const float*>(src_ptr.get_ptr()) +                    \
+                            c_idx * ih * iw * 4,                                      \
+                    static_cast<float*>(dst_ptr.get_ptr()) + c_idx * oh * ow * 4, ih, \
+                    iw, oh, ow, ph, pw);                                              \
         };                                                                            \
         MEGDNN_DISPATCH_MULTI_THREAD_CPU_KERN(                                        \
                 static_cast<::megdnn::naive::HandleImpl*>(param.handle), n* ic, run); \

@@ -13,6 +13,7 @@
 #include "test/common/warp_perspective.h"
 #include "test/common/benchmarker.h"
 #include "test/common/checker.h"
+#include "test/common/task_record_check.h"
 
 using namespace megdnn;
 using namespace test;
@@ -140,6 +141,46 @@ void warp_perspective::run_mat_idx_test(Handle* handle) {
             .set_epsilon(1e-1)
             .set_dtype(2, dtype::Int32());
     checker.execs({{N_SRC, 10, 11, 3}, {2, 3, 3}, {2}, {2, 11, 12, 3}});
+}
+
+void warp_perspective::run_int8_test_record(int debug_level) {
+    using Param = WarpPerspective::Param;
+    TaskRecordChecker<WarpPerspectiveForward> checker(debug_level);
+    UniformIntRNG input_rng{-128, 127};
+    WarpPerspectiveMatRNG mat_rng;
+    class ResizeBy2xMatRNG : public RNG {
+        void gen(const TensorND& tensor_) override {
+            float* ptr = tensor_.ptr<float>();
+            auto N = tensor_.layout.shape[0];
+            megdnn_assert(
+                    tensor_.layout.is_contiguous() && tensor_.layout.ndim == 3 &&
+                    tensor_.layout[1] == 3 && tensor_.layout[2] == 3);
+            for (size_t n = 0; n < N; ++n) {
+                //       | 1 0 0 |
+                // mat = | 0 1 0 |
+                //       | 0 0 2 |
+                // resize_2x
+                ptr[0] = ptr[4] = 1;
+                ptr[8] = 2;
+                ptr[1] = ptr[2] = ptr[3] = ptr[5] = ptr[6] = ptr[7] = 0;
+                ptr += 9;
+            }
+        }
+    } resize_2x_mat_rng;
+    checker.set_rng(0, &input_rng)
+            .set_rng(1, &mat_rng)
+            .set_dtype(0, dtype::Int8())
+            .set_dtype(1, dtype::Float32())
+            .set_dtype(2, dtype::Int8())
+            .set_param(
+                    {Param::InterpolationMode::LINEAR, Param::BorderMode::CONSTANT,
+                     Param::Format::NCHW, 0.f});
+    checker.execs({{99, 48, 17, 17}, {99, 3, 3}, {99, 48, 22, 22}})
+            .execs({{12, 3, 224, 224}, {12, 3, 3}, {12, 3, 256, 256}});
+
+    checker.set_rng(1, &resize_2x_mat_rng);
+    checker.execs({{98, 48, 17, 17}, {98, 3, 3}, {98, 48, 34, 34}})
+            .execs({{13, 3, 224, 224}, {13, 3, 3}, {13, 3, 448, 448}});
 }
 
 void warp_perspective::run_int8_test(Handle* handle) {

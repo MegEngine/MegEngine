@@ -69,6 +69,7 @@ void RepeatBackwardImpl::exec_internal(
                 diff_.ptr<T>(), grad_.ptr<T>(), workspace0, workspace1, current, next,
                 state, nr_reduces);
 
+        TensorND reduce_src, reduce_dst;
         for (size_t j = 0; j < ndim; ++j) {
             size_t i = j + 1;
             if (times.shape[j] != 1) {
@@ -82,11 +83,10 @@ void RepeatBackwardImpl::exec_internal(
                 // forward is repeat (m, n) to (m*times, n)
                 // backward is reduce (m, times, n) to (m, 1, n)
                 m_opr->param().axis = 1;
-                TensorND reduce_src;
-                reduce_src.raw_ptr = current;
+
+                reduce_src.reset_ptr(current);
                 reduce_src.layout = TensorLayout(TensorShape{m, times[j], n}, dtype);
-                TensorND reduce_dst;
-                reduce_dst.raw_ptr = next;
+                reduce_dst.reset_ptr(next);
                 reduce_dst.layout = TensorLayout(TensorShape{m, 1u, n}, dtype);
                 m_opr->exec(reduce_src, reduce_dst, Workspace());
                 update_tile_repeat_state(

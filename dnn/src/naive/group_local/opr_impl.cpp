@@ -142,13 +142,17 @@ void GroupLocalForwardImpl::exec(
     auto group = filter.layout.shape[0];
     auto FH = filter.layout.shape[4], FW = filter.layout.shape[5];
     auto OC = dst.layout.shape[1], OH = dst.layout.shape[2], OW = dst.layout.shape[3];
+    auto pad_h = param().pad_h;
+    auto pad_w = param().pad_w;
+    auto stride_h = param().stride_h;
+    auto stride_w = param().stride_w;
     if (src.layout.dtype == dtype::Float32() &&
         filter.layout.dtype == dtype::Float32() &&
         dst.layout.dtype == dtype::Float32()) {
-        MEGDNN_DISPATCH_CPU_KERN_OPR(forward(
-                src.ptr<dt_float32>(), filter.ptr<dt_float32>(), dst.ptr<dt_float32>(),
-                N, IC, IH, IW, FH, FW, OC, OH, OW, group, param().pad_h, param().pad_w,
-                param().stride_h, param().stride_w));
+        MEGDNN_DISPATCH_CPU_KERN_OPR(
+                forward(src.ptr<dt_float32>(), filter.ptr<dt_float32>(),
+                        dst.ptr<dt_float32>(), N, IC, IH, IW, FH, FW, OC, OH, OW, group,
+                        pad_h, pad_w, stride_h, stride_w));
     } else if (DNN_FLOAT16_SELECT(
                        src.layout.dtype == dtype::Float16() &&
                                filter.layout.dtype == dtype::Float16() &&
@@ -156,8 +160,8 @@ void GroupLocalForwardImpl::exec(
                        false)) {
         DNN_INC_FLOAT16(MEGDNN_DISPATCH_CPU_KERN_OPR(forward(
                 src.ptr<dt_float16>(), filter.ptr<dt_float16>(), dst.ptr<dt_float16>(),
-                N, IC, IH, IW, FH, FW, OC, OH, OW, group, param().pad_h, param().pad_w,
-                param().stride_h, param().stride_w)););
+                N, IC, IH, IW, FH, FW, OC, OH, OW, group, pad_h, pad_w, stride_h,
+                stride_w)););
 
     } else {
         megdnn_assert_internal(false);
@@ -174,10 +178,13 @@ void GroupLocalBackwardDataImpl::exec(
     auto FH = filter.layout.shape[4], FW = filter.layout.shape[5];
     auto OC = diff.layout.shape[1], OH = diff.layout.shape[2],
          OW = diff.layout.shape[3];
+    auto pad_h = param().pad_h;
+    auto pad_w = param().pad_w;
+    auto stride_h = param().stride_h;
+    auto stride_w = param().stride_w;
     MEGDNN_DISPATCH_CPU_KERN_OPR(backward_data(
             filter.ptr<dt_float32>(), diff.ptr<dt_float32>(), grad.ptr<dt_float32>(), N,
-            IC, IH, IW, FH, FW, OC, OH, OW, group, param().pad_h, param().pad_w,
-            param().stride_h, param().stride_w));
+            IC, IH, IW, FH, FW, OC, OH, OW, group, pad_h, pad_w, stride_h, stride_w));
 }
 
 void GroupLocalBackwardFilterImpl::exec(
@@ -190,10 +197,13 @@ void GroupLocalBackwardFilterImpl::exec(
     auto FH = grad.layout.shape[4], FW = grad.layout.shape[5];
     auto OC = diff.layout.shape[1], OH = diff.layout.shape[2],
          OW = diff.layout.shape[3];
+    auto pad_h = param().pad_h;
+    auto pad_w = param().pad_w;
+    auto stride_h = param().stride_h;
+    auto stride_w = param().stride_w;
     MEGDNN_DISPATCH_CPU_KERN_OPR(backward_filter(
             src.ptr<dt_float32>(), diff.ptr<dt_float32>(), grad.ptr<dt_float32>(), N,
-            IC, IH, IW, FH, FW, OC, OH, OW, group, param().pad_h, param().pad_w,
-            param().stride_h, param().stride_w));
+            IC, IH, IW, FH, FW, OC, OH, OW, group, pad_h, pad_w, stride_h, stride_w));
 }
 
 }  // namespace naive

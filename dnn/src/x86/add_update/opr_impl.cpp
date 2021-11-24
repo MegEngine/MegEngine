@@ -65,7 +65,8 @@ void AddUpdateImpl::exec(_megdnn_tensor_inout dest, _megdnn_tensor_in delta) {
         dest.layout.is_contiguous() && delta.layout.eq_shape(dest.layout) &&
         dest.layout.dtype == delta.layout.dtype) {
         if (dest.layout.dtype == ::megdnn::dtype::Float32()) {
-            MEGDNN_DISPATCH_CPU_KERN_OPR(add_update_fp32_fma(dest, delta, m_param));
+            auto param = m_param;
+            MEGDNN_DISPATCH_CPU_KERN_OPR(add_update_fp32_fma(dest, delta, param));
             return;
         }
     }

@@ -66,14 +66,14 @@ void kern_naive(const MatrixMulImpl::KernParam& kern_param) {
                 "M and N must time of pack_size  M: %zu N: %zu pack_size: %zu", M, N,
                 pack_size);
 
-#define DISPATCH(TA, TB)                                                             \
-    if (kern_param.trA == TA && kern_param.trB == TB) {                              \
-        naive::dispatch_ta_tb<TA, TB>(                                               \
-                kern_param.A_ptr, kern_param.B_ptr, kern_param.C_ptr,                \
-                kern_param.workspace_ptr, M / pack_size, N, K / pack_size, LDA, LDB, \
-                LDC, kern_param.A_type, kern_param.B_type, kern_param.C_type,        \
-                kern_param.format, kern_param.compute_mode);                         \
-        return;                                                                      \
+#define DISPATCH(TA, TB)                                                               \
+    if (kern_param.trA == TA && kern_param.trB == TB) {                                \
+        naive::dispatch_ta_tb<TA, TB>(                                                 \
+                kern_param.A_ptr.get_ptr(), kern_param.B_ptr.get_ptr(),                \
+                kern_param.C_ptr.get_ptr(), kern_param.workspace_ptr, M / pack_size,   \
+                N, K / pack_size, LDA, LDB, LDC, kern_param.A_type, kern_param.B_type, \
+                kern_param.C_type, kern_param.format, kern_param.compute_mode);        \
+        return;                                                                        \
     }
         DISPATCH(true, true);
         DISPATCH(true, false);

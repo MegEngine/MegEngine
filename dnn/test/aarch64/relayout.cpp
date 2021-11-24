@@ -14,6 +14,7 @@
 #include "test/common/checker.h"
 #include "test/common/relayout.h"
 #include "test/common/rng.h"
+#include "test/common/task_record_check.h"
 
 namespace megdnn {
 namespace test {
@@ -64,6 +65,20 @@ TEST_F(AARCH64, RelayoutBig) {
     TensorLayout src({(size_t)m, (size_t)n}, {1, n}, dtype::Float32());
     TensorLayout dst({(size_t)m, (size_t)n}, {n, 1}, dtype::Float32());
     checker.execl({src, dst});
+}
+
+TEST_F(AARCH64, RelayoutRecord) {
+    TaskRecordChecker<Relayout> checker(0);
+    std::vector<::megdnn::DType> dtype_vec;
+    dtype_vec.push_back(dtype::Float32());
+    dtype_vec.push_back(dtype::Int16());
+    dtype_vec.push_back(dtype::Uint16());
+    dtype_vec.push_back(dtype::Int8());
+    for (auto dtype : dtype_vec) {
+        TensorLayout src({1, 54, 112, 256}, {54, 1, 16384, 64}, dtype);
+        TensorLayout dst({1, 54, 112, 256}, {1548288, 28672, 256, 1}, dtype);
+        checker.execl({src, dst});
+    }
 }
 
 #if MEGDNN_WITH_BENCHMARK

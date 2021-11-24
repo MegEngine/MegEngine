@@ -11,7 +11,7 @@
  */
 #include "hcc_detail/hcc_defs_prologue.h"
 #include "hip_header.h"
-#include "src/common/reduce_helper.h"
+#include "src/common/reduce_helper_device.h"
 
 #include "megdnn/dtype.h"
 #include "src/rocm/reduce_helper.h.hip"
@@ -19,7 +19,7 @@
 namespace megdnn {
 namespace rocm {
 
-using namespace reduce;
+using namespace device_reduce;
 
 #define COMMA ,
 

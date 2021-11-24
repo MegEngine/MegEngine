@@ -11,13 +11,52 @@
 #include "test/common/benchmarker.h"
 #include "test/common/checker.h"
 
+#include "test/common/task_record_check.h"
 #include "test/x86/fixture.h"
-
 namespace megdnn {
 namespace test {
 
 TEST_F(X86, TYPE_CVT) {
     Checker<TypeCvt> checker(handle());
+    NormalRNG rng(0, 127);
+    checker.set_rng(0, &rng);
+
+    std::vector<DType> dtypes = {
+            dtype::Float32(),
+            dtype::Float16(),
+            dtype::Int32(),
+            dtype::Int16(),
+            dtype::Int8(),
+            dtype::Uint8(),
+            dtype::QuantizedS8(0.5f),
+            dtype::QuantizedS32(0.5f),
+            dtype::Quantized8Asymm(2.0f, static_cast<uint8_t>(3))};
+
+    for (size_t size : {1, 7, 15, 33}) {
+        for (auto sdtype : dtypes)
+            for (auto ddtype : dtypes) {
+                checker.set_dtype(0, sdtype).set_dtype(1, ddtype).execs(
+                        {{size}, {size}});
+                TensorLayout non_contig_src(
+                        {1, 10, 10, 12}, {10 * 10 * 18, 10 * 18, 18, 1}, sdtype);
+                TensorLayout non_contig_dst({1, 10, 10, 12}, ddtype);
+                checker.exec(TensorLayoutArray{non_contig_src, non_contig_dst});
+            }
+    }
+
+    for (size_t size : {1, 7, 15, 33}) {
+        checker.set_dtype(0, dtype::Uint16())
+                .set_dtype(1, dtype::Float32())
+                .execs({{size}, {size}});
+    }
+    TensorLayout non_contig_src(
+            {1, 10, 10, 12}, {10 * 10 * 18, 10 * 18, 18, 1}, dtype::Uint16());
+    TensorLayout non_contig_dst({1, 10, 10, 12}, dtype::Float32());
+    checker.exec(TensorLayoutArray{non_contig_src, non_contig_dst});
+}
+
+TEST_F(X86, TYPE_CVT_RECORD) {
+    TaskRecordChecker<TypeCvt> checker(0);
     NormalRNG rng(0, 127);
     checker.set_rng(0, &rng);
 

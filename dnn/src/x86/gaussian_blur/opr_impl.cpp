@@ -76,14 +76,14 @@ using BorderMode = param::GaussianBlur::BorderMode;
 
 template <typename T>
 void GaussianBlurImpl::gaussian_blur_exec(
-        const TensorND& src_tensor, const TensorND& dst_tensor) {
-    Size ksize = Size(param().kernel_height, param().kernel_width);
+        const TensorND& src_tensor, const TensorND& dst_tensor, const Param& param) {
+    Size ksize = Size(param.kernel_height, param.kernel_width);
 
     Mat<T> kernel_column(1, ksize.cols(), 1);
     Mat<T> kernel_row(1, ksize.rows(), 1);
 
     gaussian_blur::createGaussianKernels<T>(
-            kernel_column, kernel_row, ksize, param().sigma_x, param().sigma_y);
+            kernel_column, kernel_row, ksize, param.sigma_x, param.sigma_y);
     size_t src_channels = src_tensor.layout.shape[3];
 
     T border_value[4] = {0, 0, 0, 0};
@@ -94,9 +94,9 @@ void GaussianBlurImpl::gaussian_blur_exec(
     BaseColumnFilter* column_filter = getLinearColumnFilter<T, T>(kernel_row, (int)0);
 
     FilterEngine<T, T> filter(
-            row_filter, column_filter, src_channels, border_value, param().border_mode);
+            row_filter, column_filter, src_channels, border_value, param.border_mode);
 
-    megdnn_assert(param().border_mode != BorderMode::BORDER_ISOLATED);
+    megdnn_assert(param.border_mode != BorderMode::BORDER_ISOLATED);
     for (size_t i = 0; i < src_tensor.layout.shape[0]; ++i) {
         Mat<T> src = TensorND2Mat<T>(src_tensor, i);
         Mat<T> dst = TensorND2Mat<T>(dst_tensor, i);
@@ -106,15 +106,15 @@ void GaussianBlurImpl::gaussian_blur_exec(
 }
 
 void GaussianBlurImpl::gaussian_blur_exec_8u(
-        const TensorND& src_tensor, const TensorND& dst_tensor) {
+        const TensorND& src_tensor, const TensorND& dst_tensor, const Param& param) {
     megdnn_assert(src_tensor.layout.dtype == dtype::Uint8());
-    Size ksize = Size(param().kernel_height, param().kernel_width);
+    Size ksize = Size(param.kernel_height, param.kernel_width);
 
     Mat<float> kernel_column(1, ksize.cols(), 1);
     Mat<float> kernel_row(1, ksize.rows(), 1);
 
     gaussian_blur::createGaussianKernels<float>(
-            kernel_column, kernel_row, ksize, param().sigma_x, param().sigma_y);
+            kernel_column, kernel_row, ksize, param.sigma_x, param.sigma_y);
     size_t src_channels = src_tensor.layout.shape[3];
 
     const uint8_t bits = 8;
@@ -138,9 +138,9 @@ void GaussianBlurImpl::gaussian_blur_exec_8u(
             getLinearColumnFilter<int, uchar>(kernel_row_int, bits * 2);
 
     FilterEngine<uchar, int> filter(
-            rowFilter, columnFilter, src_channels, border_value, param().border_mode);
+            rowFilter, columnFilter, src_channels, border_value, param.border_mode);
 
-    megdnn_assert(param().border_mode != BorderMode::BORDER_ISOLATED);
+    megdnn_assert(param.border_mode != BorderMode::BORDER_ISOLATED);
     for (size_t i = 0; i < src_tensor.layout.shape[0]; ++i) {
         Mat<uchar> src = TensorND2Mat<uchar>(src_tensor, i);
         Mat<uchar> dst = TensorND2Mat<uchar>(dst_tensor, i);
@@ -153,11 +153,12 @@ void GaussianBlurImpl::exec(
         _megdnn_tensor_in src, _megdnn_tensor_in dst, _megdnn_workspace workspace) {
     using namespace megcv;
     check_exec(src.layout, dst.layout, workspace.size);
+    Param param = this->param();
     MEGDNN_DISPATCH_CPU_KERN_OPR(
             if (dst.layout.dtype == dtype::Float32()) {
-                gaussian_blur_exec<float>(src, dst);
+                gaussian_blur_exec<float>(src, dst, param);
             } else if (dst.layout.dtype == dtype::Uint8()) {
-                gaussian_blur_exec_8u(src, dst);
+                gaussian_blur_exec_8u(src, dst, param);
             } else { megdnn_throw("Unsupported datatype of GaussianBlur optr."); });
 }
 

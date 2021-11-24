@@ -22,8 +22,7 @@ public:
     struct KernParam {
         Format format;
         size_t n_src, n_mat, c, ih, iw, oh, ow;
-        ctype *sptr, *dptr;
-        mtype* mptr;
+        RefPtr src_ptr, dst_ptr, mat_ptr;
         Workspace workspace;
 
         static KernParam from_tensors(
@@ -58,13 +57,13 @@ public:
                 src.layout.dtype.enumv() == DTypeEnum::Uint8 ||
                 src.layout.dtype.enumv() == DTypeEnum::QuantizedS8 ||
                 src.layout.dtype.enumv() == DTypeEnum::Quantized8Asymm) {
-                ret.sptr = src.compatible_ptr<ctype>();
-                ret.mptr = mat.ptr<mtype>();
-                ret.dptr = dst.compatible_ptr<ctype>();
+                ret.src_ptr = src.get_ref_ptr();
+                ret.mat_ptr = mat.get_ref_ptr();
+                ret.dst_ptr = dst.get_ref_ptr();
             } else {
-                ret.sptr = nullptr;
-                ret.mptr = nullptr;
-                ret.dptr = nullptr;
+                ret.src_ptr = nullptr;
+                ret.mat_ptr = nullptr;
+                ret.dst_ptr = nullptr;
             }
             ret.workspace = workspace;
             return ret;
@@ -97,9 +96,9 @@ private:
 #define UNPACK_WARP_AFFINE_FWD_KERN_PARAM(p)                                         \
     auto N_SRC = p.n_src, N_MAT = p.n_mat, C = p.c, IH = p.ih, IW = p.iw, OH = p.oh, \
          OW = p.ow;                                                                  \
-    ctype* __restrict sptr = p.sptr;                                                 \
-    mtype* __restrict mptr = p.mptr;                                                 \
-    ctype* __restrict dptr = p.dptr;
+    ctype* __restrict sptr = static_cast<ctype*>(p.src_ptr.get_ptr());               \
+    mtype* __restrict mptr = static_cast<mtype*>(p.mat_ptr.get_ptr());               \
+    ctype* __restrict dptr = static_cast<ctype*>(p.dst_ptr.get_ptr());
 
 }  // namespace naive
 }  // namespace megdnn

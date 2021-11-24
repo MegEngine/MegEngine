@@ -11,8 +11,8 @@
 
 #include "test/common/elemwise_multi_type.h"
 #include "test/common/benchmarker.h"
+#include "test/common/task_record_check.h"
 #include "test/fallback/fixture.h"
-
 using namespace megdnn;
 using namespace test;
 
@@ -25,6 +25,21 @@ TYPED_TEST_CASE(FALLBACK_ELEMWISE_MULTI_TYPE, elemwise_multi_type::test_types);
 TYPED_TEST(FALLBACK_ELEMWISE_MULTI_TYPE, run) {
     elemwise_multi_type::run_test<TypeParam>(this->handle());
 }
+
+TEST_F(FALLBACK, ELEMWISE_MULTI_TYPE_RECORD_FMA3_INT16x32x32x32) {
+    TaskRecordChecker<ElemwiseMultiType> checker{1};
+    checker.set_param({ElemwiseMultiType::Mode::FUSE_MUL_ADD3_INT16x32x32x32});
+    checker.set_dtype(0, dtype::Int16());
+    checker.set_dtype(1, dtype::Int32());
+    checker.set_dtype(2, dtype::Int32());
+    UniformIntRNG rng{-10, 10};
+    checker.set_rng(0, &rng);
+    checker.set_rng(1, &rng);
+    checker.set_rng(2, &rng);
+    constexpr size_t A = 32, B = 602, C = 103;
+    checker.execs({{A, B, C}, {1, B, 1}, {1, B, 1}, {}});
+}
+
 #if MEGDNN_WITH_BENCHMARK
 TEST_F(FALLBACK, ELEMWISE_MULTI_TYPE_BENCHMARK_FMA3_INT16x32x32x32) {
     Benchmarker<ElemwiseMultiType> bench{handle()};

@@ -26,12 +26,6 @@ public:
             const TensorLayout&) override {
         return 0;
     }
-
-private:
-    template <typename T>
-    void exec_internal(
-            _megdnn_tensor_in src, _megdnn_tensor_in filter_x,
-            _megdnn_tensor_in filter_y, _megdnn_tensor_out dst);
 };
 
 }  // namespace naive

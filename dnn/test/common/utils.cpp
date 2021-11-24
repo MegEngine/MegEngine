@@ -139,7 +139,7 @@ std::shared_ptr<void> DynOutMallocPolicyImpl::make_output_refholder(
         const TensorND& out) {
     using namespace std::placeholders;
     auto deleter = std::bind(megdnn_free, m_handle, _1);
-    return {out.raw_ptr, deleter};
+    return {out.raw_ptr(), deleter};
 }
 
 NaivePitchAlignmentScope::NaivePitchAlignmentScope(size_t alignment)

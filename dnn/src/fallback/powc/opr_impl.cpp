@@ -189,17 +189,17 @@ void PowCImpl::do_exec_ct(
         _megdnn_tensor_in src, _megdnn_tensor_out dst, const float* exp_f,
         const int* exp_i) {
     auto handle = static_cast<naive::HandleImpl*>(this->handle());
-    auto sptr = reinterpret_cast<T*>(src.raw_ptr);
-    auto dptr = reinterpret_cast<T*>(dst.raw_ptr);
     auto size = src.layout.total_nr_elems();
 
-#define CALL(_expfunc)                                         \
-    do {                                                       \
-        auto kern = [sptr, dptr, size, expfunc = _expfunc]() { \
-            pow_invoke(sptr, dptr, size, expfunc);             \
-        };                                                     \
-        handle->dispatch_kern(kern);                           \
-        return;                                                \
+#define CALL(_expfunc)                                       \
+    do {                                                     \
+        auto kern = [src, dst, size, expfunc = _expfunc]() { \
+            auto sptr = reinterpret_cast<T*>(src.raw_ptr()); \
+            auto dptr = reinterpret_cast<T*>(dst.raw_ptr()); \
+            pow_invoke(sptr, dptr, size, expfunc);           \
+        };                                                   \
+        handle->dispatch_kern(kern);                         \
+        return;                                              \
     } while (0)
     if (exp_f) {
         float fv = *exp_f;

@@ -42,7 +42,7 @@ void transpose(
         megdnn::cuda::HandleImpl* handle, const TensorND& src, const TensorND& dst) {
     TensorLayout t = transposed_layout(src.layout);
     megdnn_assert(t.total_nr_elems() == dst.layout.total_nr_elems());
-    handle->relayout_opr()->exec({src.raw_ptr, t}, dst);
+    handle->relayout_opr()->exec({src.raw_ptr(), t}, dst);
 }
 
 }  // namespace
@@ -118,8 +118,8 @@ void SVDForwardImpl::exec(
                     wbundle.get_workspace(4).raw_ptr,
                     {transposed_shape(vt_shape), dtype::Float32()}};
         } else {
-            cur_v = {u.raw_ptr, u.layout.reshape(u_shape)};
-            cur_u = {vt.raw_ptr, vt.layout.reshape(vt_shape)};
+            cur_v = {u.raw_ptr(), u.layout.reshape(u_shape)};
+            cur_u = {vt.raw_ptr(), vt.layout.reshape(vt_shape)};
         }
     } else {
         cur_u = cur_v = {nullptr, {{0, 0}, dtype::Float32()}};
@@ -131,7 +131,7 @@ void SVDForwardImpl::exec(
     float* cusolver_ws = wbundle.get_workspace(1).ptr<float>();
     size_t cusolver_ws_size = wbundle.get_workspace(1).size / sizeof(float);
     int* info = wbundle.get_workspace(2).ptr<int>();
-    TensorND s_blk(s.raw_ptr, s.layout.reshape({block_cnt, min_mn}));
+    TensorND s_blk(s.raw_ptr(), s.layout.reshape({block_cnt, min_mn}));
 
     if (need_transpose) {
         ::transpose(handle, src, inp_copy);

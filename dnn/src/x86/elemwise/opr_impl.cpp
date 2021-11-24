@@ -57,9 +57,11 @@ void check_mkl_error(const char* func) {
 }  // namespace
 
 #if MEGDNN_X86_WITH_MKL
-#define DISPATCH_MKL(_mode, _func)                                                   \
-    case Mode::_mode:                                                                \
-        MEGDNN_DISPATCH_CPU_KERN_OPR(_func(n, sptr, dptr); check_mkl_error(#_func)); \
+#define DISPATCH_MKL(_mode, _func)                                      \
+    case Mode::_mode:                                                   \
+        MEGDNN_DISPATCH_CPU_KERN_OPR(                                   \
+                _func(n, src.ptr<dt_float32>(), dst.ptr<dt_float32>()); \
+                check_mkl_error(#_func));                               \
         return true
 #endif
 
@@ -84,15 +86,15 @@ void check_mkl_error(const char* func) {
     } while (0)
 
 bool ElemwiseImpl::exec_unary() {
-#define DISPATCH_UNARY(_mode, _type, _simd_type, _op)                           \
-    case Mode::_mode: {                                                         \
-        thin_function<void(const _type*, _type*, DType, DType, size_t)> run =   \
-                OpCallerUnary<_op<_simd_type, _type, _type>, _simd_type>::run;  \
-        MEGDNN_DISPATCH_CPU_KERN_OPR(                                           \
-                run(static_cast<const _type*>(src0.raw_ptr),                    \
-                    static_cast<_type*>(dst_tensor.raw_ptr), src0.layout.dtype, \
-                    dst_tensor.layout.dtype, nr_elems));                        \
-        return true;                                                            \
+#define DISPATCH_UNARY(_mode, _type, _simd_type, _op)                             \
+    case Mode::_mode: {                                                           \
+        thin_function<void(const _type*, _type*, DType, DType, size_t)> run =     \
+                OpCallerUnary<_op<_simd_type, _type, _type>, _simd_type>::run;    \
+        MEGDNN_DISPATCH_CPU_KERN_OPR(                                             \
+                run(static_cast<const _type*>(src0.raw_ptr()),                    \
+                    static_cast<_type*>(dst_tensor.raw_ptr()), src0.layout.dtype, \
+                    dst_tensor.layout.dtype, nr_elems));                          \
+        return true;                                                              \
     }
 
     if (m_src->size() != 1)
@@ -141,8 +143,8 @@ bool ElemwiseImpl::exec_unary() {
 
 #if MEGDNN_X86_WITH_MKL
     if (m_dst->layout.dtype == dtype::Float32()) {
-        auto n = elparam[0].layout.shape[0];
-        auto sptr = elparam[0].ptr<dt_float32>(), dptr = m_dst->ptr<dt_float32>();
+        auto n = src0.layout.shape[0];
+        auto src = src0, dst = dst_tensor;
 
         auto mkl_dispatch = [&]() {
             switch (param().mode) {
@@ -214,9 +216,9 @@ bool ElemwiseImpl::exec_binary() {
                 run = OpCallerBinary<                                                \
                         _op<_simd_type, _type, _type>, _simd_type, VEC_VEC>::run;    \
         MEGDNN_DISPATCH_CPU_KERN_OPR(run(                                            \
-                static_cast<const _type*>(src0.raw_ptr),                             \
-                static_cast<const _type*>(src1.raw_ptr),                             \
-                static_cast<_type*>(dst.raw_ptr), src0.layout.dtype,                 \
+                static_cast<const _type*>(src0.raw_ptr()),                           \
+                static_cast<const _type*>(src1.raw_ptr()),                           \
+                static_cast<_type*>(dst.raw_ptr()), src0.layout.dtype,               \
                 src1.layout.dtype, dst.layout.dtype, src0.layout.total_nr_elems())); \
         return true;                                                                 \
     }
@@ -234,9 +236,9 @@ bool ElemwiseImpl::exec_binary() {
                 run = OpCallerBinary<                                                \
                         _op<_simd_type, _type, _type>, _simd_type, VEC_SCALAR>::run; \
         MEGDNN_DISPATCH_CPU_KERN_OPR(run(                                            \
-                static_cast<const _type*>(src0.raw_ptr),                             \
-                static_cast<const _type*>(src1.raw_ptr)[0],                          \
-                static_cast<_type*>(dst.raw_ptr), src0.layout.dtype,                 \
+                static_cast<const _type*>(src0.raw_ptr()),                           \
+                static_cast<const _type*>(src1.raw_ptr())[0],                        \
+                static_cast<_type*>(dst.raw_ptr()), src0.layout.dtype,               \
                 src1.layout.dtype, dst.layout.dtype, src0.layout.total_nr_elems())); \
         return true;                                                                 \
     }
@@ -264,9 +266,9 @@ bool ElemwiseImpl::exec_binary() {
                 run = OpCallerBinary<                                                \
                         _op<_simd_type, _type, _type>, _simd_type, SCALAR_VEC>::run; \
         MEGDNN_DISPATCH_CPU_KERN_OPR(run(                                            \
-                static_cast<const _type*>(src0.raw_ptr)[0],                          \
-                static_cast<const _type*>(src1.raw_ptr),                             \
-                static_cast<_type*>(dst.raw_ptr), src0.layout.dtype,                 \
+                static_cast<const _type*>(src0.raw_ptr())[0],                        \
+                static_cast<const _type*>(src1.raw_ptr()),                           \
+                static_cast<_type*>(dst.raw_ptr()), src0.layout.dtype,               \
                 src1.layout.dtype, dst.layout.dtype, src1.layout.total_nr_elems())); \
         return true;                                                                 \
     }
@@ -289,9 +291,9 @@ bool ElemwiseImpl::exec_binary() {
                 run = OpCallerBinary<                                                  \
                         _op<_simd_type, _type, _type>, _simd_type, VEC_BCAST101>::run; \
         MEGDNN_DISPATCH_CPU_KERN_OPR(                                                  \
-                run(static_cast<const _type*>(src0.raw_ptr),                           \
-                    static_cast<const _type*>(src1.raw_ptr),                           \
-                    static_cast<_type*>(dst.raw_ptr), src0.layout.dtype,               \
+                run(static_cast<const _type*>(src0.raw_ptr()),                         \
+                    static_cast<const _type*>(src1.raw_ptr()),                         \
+                    static_cast<_type*>(dst.raw_ptr()), src0.layout.dtype,             \
                     src1.layout.dtype, dst.layout.dtype, binfo.x, binfo.y, binfo.z));  \
         return true;                                                                   \
     }
@@ -323,9 +325,9 @@ bool ElemwiseImpl::exec_binary() {
                 run = OpCallerBinary<                                                  \
                         _op<_simd_type, _type, _type>, _simd_type, BCAST101_VEC>::run; \
         MEGDNN_DISPATCH_CPU_KERN_OPR(                                                  \
-                run(static_cast<const _type*>(src0.raw_ptr),                           \
-                    static_cast<const _type*>(src1.raw_ptr),                           \
-                    static_cast<_type*>(dst.raw_ptr), src0.layout.dtype,               \
+                run(static_cast<const _type*>(src0.raw_ptr()),                         \
+                    static_cast<const _type*>(src1.raw_ptr()),                         \
+                    static_cast<_type*>(dst.raw_ptr()), src0.layout.dtype,             \
                     src1.layout.dtype, dst.layout.dtype, binfo.x, binfo.y, binfo.z));  \
         return true;                                                                   \
     }
@@ -347,9 +349,9 @@ bool ElemwiseImpl::exec_binary() {
                         _op<_simd_type, _type, _type>, _simd_type,                     \
                         BCAST101x_VEC>::run;                                           \
         MEGDNN_DISPATCH_CPU_KERN_OPR(                                                  \
-                run(static_cast<const _type*>(src0.raw_ptr),                           \
-                    static_cast<const _type*>(src1.raw_ptr),                           \
-                    static_cast<_type*>(dst.raw_ptr), src0.layout.dtype,               \
+                run(static_cast<const _type*>(src0.raw_ptr()),                         \
+                    static_cast<const _type*>(src1.raw_ptr()),                         \
+                    static_cast<_type*>(dst.raw_ptr()), src0.layout.dtype,             \
                     src1.layout.dtype, dst.layout.dtype, batch_size, binfo.x, binfo.y, \
                     binfo.z));                                                         \
         return true;                                                                   \
@@ -428,10 +430,10 @@ bool ElemwiseImpl::exec_ternary_fma3() {
                 run = OpCallerTernary<                                                 \
                         _op<_simd_type, _type, _type>, _simd_type, VEC_VEC_VEC>::run;  \
         MEGDNN_DISPATCH_CPU_KERN_OPR(                                                  \
-                run(static_cast<const _type*>(src0.raw_ptr),                           \
-                    static_cast<const _type*>(src1.raw_ptr),                           \
-                    static_cast<const _type*>(src2.raw_ptr),                           \
-                    static_cast<_type*>(dst.raw_ptr), src0.layout.dtype,               \
+                run(static_cast<const _type*>(src0.raw_ptr()),                         \
+                    static_cast<const _type*>(src1.raw_ptr()),                         \
+                    static_cast<const _type*>(src2.raw_ptr()),                         \
+                    static_cast<_type*>(dst.raw_ptr()), src0.layout.dtype,             \
                     src1.layout.dtype, src2.layout.dtype, dst.layout.dtype,            \
                     src0.layout.total_nr_elems()));                                    \
         return true;                                                                   \
@@ -457,10 +459,10 @@ bool ElemwiseImpl::exec_ternary_fma3() {
                         _op<_simd_type, _type, _type>, _simd_type,                    \
                         VEC_VEC_SCALAR>::run;                                         \
         MEGDNN_DISPATCH_CPU_KERN_OPR(                                                 \
-                run(static_cast<const _type*>(src0.raw_ptr),                          \
-                    static_cast<const _type*>(src1.raw_ptr),                          \
-                    static_cast<const _type*>(src2.raw_ptr)[0],                       \
-                    static_cast<_type*>(dst.raw_ptr), src0.layout.dtype,              \
+                run(static_cast<const _type*>(src0.raw_ptr()),                        \
+                    static_cast<const _type*>(src1.raw_ptr()),                        \
+                    static_cast<const _type*>(src2.raw_ptr())[0],                     \
+                    static_cast<_type*>(dst.raw_ptr()), src0.layout.dtype,            \
                     src1.layout.dtype, src2.layout.dtype, dst.layout.dtype,           \
                     src0.layout.total_nr_elems()));                                   \
         return true;                                                                  \
@@ -488,10 +490,10 @@ bool ElemwiseImpl::exec_ternary_fma3() {
                         _op<_simd_type, _type, _type>, _simd_type,                     \
                         BCAST101_VEC_BCAST101>::run;                                   \
         MEGDNN_DISPATCH_CPU_KERN_OPR(                                                  \
-                run(static_cast<const _type*>(src0.raw_ptr),                           \
-                    static_cast<const _type*>(src1.raw_ptr),                           \
-                    static_cast<const _type*>(src2.raw_ptr),                           \
-                    static_cast<_type*>(dst.raw_ptr), src0.layout.dtype,               \
+                run(static_cast<const _type*>(src0.raw_ptr()),                         \
+                    static_cast<const _type*>(src1.raw_ptr()),                         \
+                    static_cast<const _type*>(src2.raw_ptr()),                         \
+                    static_cast<_type*>(dst.raw_ptr()), src0.layout.dtype,             \
                     src1.layout.dtype, src2.layout.dtype, dst.layout.dtype, binfo.x,   \
                     binfo.y, binfo.z));                                                \
         return true;                                                                   \
@@ -519,10 +521,10 @@ bool ElemwiseImpl::exec_ternary_fma3() {
                         _op<_simd_type, _type, _type>, _simd_type,                     \
                         VEC_BCAST101_VEC>::run;                                        \
         MEGDNN_DISPATCH_CPU_KERN_OPR(                                                  \
-                run(static_cast<const _type*>(src0.raw_ptr),                           \
-                    static_cast<const _type*>(src1.raw_ptr),                           \
-                    static_cast<const _type*>(src2.raw_ptr),                           \
-                    static_cast<_type*>(dst.raw_ptr), src0.layout.dtype,               \
+                run(static_cast<const _type*>(src0.raw_ptr()),                         \
+                    static_cast<const _type*>(src1.raw_ptr()),                         \
+                    static_cast<const _type*>(src2.raw_ptr()),                         \
+                    static_cast<_type*>(dst.raw_ptr()), src0.layout.dtype,             \
                     src1.layout.dtype, src2.layout.dtype, dst.layout.dtype, binfo.x,   \
                     binfo.y, binfo.z));                                                \
         return true;                                                                   \
@@ -548,10 +550,10 @@ bool ElemwiseImpl::exec_ternary_fma3() {
                         _op<_simd_type, _type, _type>, _simd_type,                    \
                         VEC_SCALAR_VEC>::run;                                         \
         MEGDNN_DISPATCH_CPU_KERN_OPR(                                                 \
-                run(static_cast<const _type*>(src0.raw_ptr),                          \
-                    static_cast<const _type*>(src1.raw_ptr)[0],                       \
-                    static_cast<const _type*>(src2.raw_ptr),                          \
-                    static_cast<_type*>(dst.raw_ptr), src0.layout.dtype,              \
+                run(static_cast<const _type*>(src0.raw_ptr()),                        \
+                    static_cast<const _type*>(src1.raw_ptr())[0],                     \
+                    static_cast<const _type*>(src2.raw_ptr()),                        \
+                    static_cast<_type*>(dst.raw_ptr()), src0.layout.dtype,            \
                     src1.layout.dtype, src2.layout.dtype, dst.layout.dtype,           \
                     src0.layout.total_nr_elems()));                                   \
         return true;                                                                  \
@@ -577,10 +579,10 @@ bool ElemwiseImpl::exec_ternary_fma3() {
                         _op<_simd_type, _type, _type>, _simd_type,                   \
                         VEC_SCALAR_SCALAR>::run;                                     \
         MEGDNN_DISPATCH_CPU_KERN_OPR(                                                \
-                run(static_cast<const _type*>(src0.raw_ptr),                         \
-                    static_cast<const _type*>(src1.raw_ptr)[0],                      \
-                    static_cast<const _type*>(src2.raw_ptr)[0],                      \
-                    static_cast<_type*>(dst.raw_ptr), src0.layout.dtype,             \
+                run(static_cast<const _type*>(src0.raw_ptr()),                       \
+                    static_cast<const _type*>(src1.raw_ptr())[0],                    \
+                    static_cast<const _type*>(src2.raw_ptr())[0],                    \
+                    static_cast<_type*>(dst.raw_ptr()), src0.layout.dtype,           \
                     src1.layout.dtype, src2.layout.dtype, dst.layout.dtype,          \
                     src0.layout.total_nr_elems()));                                  \
         return true;                                                                 \

@@ -113,7 +113,7 @@ void copy_tensors(
         auto&& tensor = src[i];
         if (tensor.layout.ndim == 0)
             continue;
-        memcpy_noncontig(dest[i].raw_ptr, tensor.raw_ptr, tensor.layout, copy_impl);
+        memcpy_noncontig(dest[i].raw_ptr(), tensor.raw_ptr(), tensor.layout, copy_impl);
     }
 }
 
@@ -346,20 +346,19 @@ std::shared_ptr<CheckerHelper::TensorValueArray> CheckerHelper::alloc_tensors(
         Handle* handle, const TensorLayoutArray& layouts, const size_t offset) {
     auto deleter = [handle, offset](TensorValueArray* ptr) {
         for (auto&& i : *ptr) {
-            auto pdata = static_cast<dt_byte*>(i.raw_ptr) + i.layout.span().low_byte -
+            auto pdata = static_cast<dt_byte*>(i.raw_ptr()) + i.layout.span().low_byte -
                          offset;
             megdnn_free(handle, pdata);
         }
         delete ptr;
     };
     std::shared_ptr<TensorValueArray> ret{new TensorValueArray, deleter};
+
     for (size_t i = 0; i < layouts.size(); ++i) {
         auto span = layouts[i].span();
+        auto ptr = megdnn_malloc(handle, span.dist_byte() + offset);
         ret->emplace_back(
-                static_cast<dt_byte*>(
-                        megdnn_malloc(handle, span.dist_byte() + offset)) -
-                        span.low_byte + offset,
-                layouts[i]);
+                static_cast<dt_byte*>(ptr) - span.low_byte + offset, layouts[i]);
     }
     return ret;
 }
@@ -376,7 +375,7 @@ void CheckerHelper::init_naive_values() {
             auto&& src = load[i];
             auto&& dst = tensors_naive[i];
             megdnn_assert(src->layout.eq_layout(dst.layout));
-            memcpy_noncontig(dst.raw_ptr, src->raw_ptr, dst.layout, memcpy);
+            memcpy_noncontig(dst.raw_ptr(), src->raw_ptr(), dst.layout, memcpy);
         }
         return;
     }

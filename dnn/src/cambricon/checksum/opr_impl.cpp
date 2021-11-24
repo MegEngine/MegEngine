@@ -62,7 +62,7 @@ ChecksumForward::Result ChecksumForwardImpl::exec(
     check_exec(data.layout, workspace.size);
     auto queue = cnrt_queue(handle());
 
-    auto ptr = static_cast<uint8_t*>(data.raw_ptr);
+    auto ptr = static_cast<uint8_t*>(data.raw_ptr());
     size_t size_all = data.layout.shape[0], size_ints = size_all / sizeof(uint32_t);
     auto last_val_size = std::min<size_t>(size_all, 4);
     cnrt_check(cnrtMemcpyAsync(
@@ -72,7 +72,7 @@ ChecksumForward::Result ChecksumForwardImpl::exec(
         auto&& device_info = current_device_info();
         bang_c_wrapper(
                 reinterpret_cast<uint32_t*>(workspace.raw_ptr),
-                static_cast<uint32_t*>(data.raw_ptr), size_ints, queue,
+                static_cast<uint32_t*>(data.raw_ptr()), size_ints, queue,
                 device_info.core_version);
         cnrt_check(cnrtMemcpyAsync(
                 &result.checksum, workspace.raw_ptr, sizeof(result.checksum), queue,

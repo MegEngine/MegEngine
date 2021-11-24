@@ -22,10 +22,6 @@ public:
             _megdnn_workspace workspace) override;
 
 protected:
-    template <typename ctype>
-    static void do_exec(
-            ctype* dst, const ctype* src, size_t batch, size_t n, void* workspace);
-
     size_t get_workspace_in_bytes(size_t batch, size_t n, size_t dtype_size) override;
 };
 

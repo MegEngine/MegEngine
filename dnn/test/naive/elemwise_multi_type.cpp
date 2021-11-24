@@ -116,7 +116,7 @@ TEST_F(NAIVE, ELEMWISE_QUANTIZED_MODE_UNARY) {
             typecvt->exec(float_tensors[1], tensors[1]);
 
             for (auto&& tensor : float_tensors) {
-                free(tensor.raw_ptr);
+                free(tensor.raw_ptr());
             }
         };
 
@@ -208,7 +208,7 @@ TEST_F(NAIVE, ELEMWISE_QUANTIZED_MODE_BINARY) {
             typecvt->exec(float_tensors[2], tensors[2]);
 
             for (auto&& tensor : float_tensors) {
-                free(tensor.raw_ptr);
+                free(tensor.raw_ptr());
             }
         };
 
@@ -268,7 +268,7 @@ TEST_F(NAIVE, ELEMWISE_QUANTIZED_MODE_TERNARY) {
             typecvt->exec(float_tensors[3], tensors[3]);
 
             for (auto&& tensor : float_tensors) {
-                free(tensor.raw_ptr);
+                free(tensor.raw_ptr());
             }
         };
 

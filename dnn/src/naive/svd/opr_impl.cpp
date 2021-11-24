@@ -293,13 +293,10 @@ WorkspaceBundle SVDForwardImpl::get_workspace_bundle(
 }
 
 template <typename T>
-void SVDForwardImpl::exec_internal(
+void exec_internal(
         _megdnn_tensor_in src, _megdnn_tensor_out u, _megdnn_tensor_out s,
-        _megdnn_tensor_out vt, _megdnn_workspace workspace, Param p) {
-    size_t block_cnt, m, n;
-    canonize_params(src.layout, &block_cnt, &m, &n);
-
-    auto wbundle = get_workspace_bundle(m, n, sizeof(T), workspace.raw_ptr);
+        _megdnn_tensor_out vt, SVD::Param p, WorkspaceBundle wbundle, size_t block_cnt,
+        size_t m, size_t n) {
     const size_t max_mn = std::max(m, n);
     const size_t min_mn = std::min(m, n);
     const size_t src_block_size = src.layout.dtype.size(m * n);
@@ -388,9 +385,13 @@ void SVDForwardImpl::exec(
             !p.compute_uv || !p.full_matrices,
             "Computing full singular vectors is not supported in naive "
             "implementation.");
+    size_t block_cnt, m, n;
+    canonize_params(src.layout, &block_cnt, &m, &n);
     if (src.layout.dtype == dtype::Float32()) {
         using ctype = typename DTypeTrait<dtype::Float32>::ctype;
-        MEGDNN_DISPATCH_CPU_KERN_OPR(exec_internal<ctype>(src, u, s, vt, workspace, p));
+        auto wbundle = get_workspace_bundle(m, n, sizeof(ctype), workspace.raw_ptr);
+        MEGDNN_DISPATCH_CPU_KERN_OPR(
+                exec_internal<ctype>(src, u, s, vt, p, wbundle, block_cnt, m, n));
         return;
     }
     megdnn_assert_internal(0);

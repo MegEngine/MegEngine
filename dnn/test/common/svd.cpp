@@ -93,13 +93,13 @@ std::vector<SVDTestcase> SVDTestcase::make() {
     NormalRNG data_rng;
     auto fill_data = [&](TensorND& data) {
         auto sz = data.layout.span().dist_byte(), szf = sz / sizeof(dt_float32);
-        auto pf = static_cast<dt_float32*>(data.raw_ptr);
+        auto pf = static_cast<dt_float32*>(data.raw_ptr());
         data_rng.fill_fast_float32(pf, szf);
     };
 
     for (auto&& i : ret) {
         i.m_mem.reset(new dt_float32[i.m_mat.layout.span().dist_elem()]);
-        i.m_mat.raw_ptr = i.m_mem.get();
+        i.m_mat.reset_ptr(i.m_mem.get());
         fill_data(i.m_mat);
     }
 

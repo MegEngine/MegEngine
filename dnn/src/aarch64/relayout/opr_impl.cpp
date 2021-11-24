@@ -365,27 +365,22 @@ void aarch64::RelayoutForwardImpl::exec(
     relayout::TransposeParam trans_param;
     bool trans = relayout::is_transpose(src.layout, dst.layout, trans_param, true);
     if (trans && trans_param.c == 1 && src0.layout.dtype.size() == 1) {
-        auto sptr = static_cast<TransposeByte*>(src.raw_ptr),
-             dptr = static_cast<TransposeByte*>(dst.raw_ptr);
         MEGDNN_DISPATCH_CPU_KERN_OPR(transpose_fallback::transpose<TransposeByte>(
-                trans_param.batch, trans_param.m, trans_param.n, sptr, dptr,
-                trans_param.stride_m));
+                trans_param.batch, trans_param.m, trans_param.n,
+                static_cast<TransposeByte*>(src.raw_ptr()),
+                static_cast<TransposeByte*>(dst.raw_ptr()), trans_param.stride_m));
         return;
     } else if (trans && trans_param.c == 1 && src0.layout.dtype.size() == 2) {
-        auto sptr = static_cast<Transpose2Byte*>(src.raw_ptr),
-             dptr = static_cast<Transpose2Byte*>(dst.raw_ptr);
-
         MEGDNN_DISPATCH_CPU_KERN_OPR(transpose_fallback::transpose<Transpose2Byte>(
-                trans_param.batch, trans_param.m, trans_param.n, sptr, dptr,
-                trans_param.stride_m));
+                trans_param.batch, trans_param.m, trans_param.n,
+                static_cast<Transpose2Byte*>(src.raw_ptr()),
+                static_cast<Transpose2Byte*>(dst.raw_ptr()), trans_param.stride_m));
         return;
     } else if (trans && trans_param.c == 1 && src0.layout.dtype.size() == 4) {
-        auto sptr = static_cast<Transpose4Byte*>(src.raw_ptr),
-             dptr = static_cast<Transpose4Byte*>(dst.raw_ptr);
-
         MEGDNN_DISPATCH_CPU_KERN_OPR(transpose_fallback::transpose<Transpose4Byte>(
-                trans_param.batch, trans_param.m, trans_param.n, sptr, dptr,
-                trans_param.stride_m));
+                trans_param.batch, trans_param.m, trans_param.n,
+                static_cast<Transpose4Byte*>(src.raw_ptr()),
+                static_cast<Transpose4Byte*>(dst.raw_ptr()), trans_param.stride_m));
         return;
     }
 

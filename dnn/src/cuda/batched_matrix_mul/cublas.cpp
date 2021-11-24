@@ -76,13 +76,13 @@ void BatchedMatrixMulForwardImpl::AlgoCublas::exec(const ExecArgs& args) const {
             static_cast<void*>(workspace.raw_ptr + 2 * batch * sizeof(uintptr_t)));
 
     arange<uintptr_t>(
-            As, reinterpret_cast<uintptr_t>(args.tensor_a.raw_ptr),
+            As, reinterpret_cast<uintptr_t>(args.tensor_a.raw_ptr()),
             args.layout_a.stride[0] * dtype.size(), batch, stream);
     arange<uintptr_t>(
-            Bs, reinterpret_cast<uintptr_t>(args.tensor_b.raw_ptr),
+            Bs, reinterpret_cast<uintptr_t>(args.tensor_b.raw_ptr()),
             args.layout_b.stride[0] * dtype.size(), batch, stream);
     arange<uintptr_t>(
-            Cs, reinterpret_cast<uintptr_t>(args.tensor_c.raw_ptr),
+            Cs, reinterpret_cast<uintptr_t>(args.tensor_c.raw_ptr()),
             args.layout_c.stride[0] * dtype.size(), batch, stream);
 
     auto io32_c32 = [&]() {

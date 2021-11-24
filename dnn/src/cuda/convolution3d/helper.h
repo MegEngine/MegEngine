@@ -84,7 +84,7 @@ struct CUDNNBwdFilterDescs {
  * change \p raw_ptr to workspace.
  */
 void flip_filter(
-        const ForwardSizeArgs& args, const Workspace& workspace, void*& raw_ptr);
+        const ForwardSizeArgs& args, const Workspace& workspace, RefPtr& raw_ptr);
 
 inline bool cudnn_get_convolution_fwd_algo_helper(
         cudnnHandle_t cudnn_handle, const cudnnTensorDescriptor_t x_desc,

@@ -11,13 +11,42 @@
 #include "test/common/matrix_mul.h"
 #include "test/common/checker.h"
 #include "test/common/rng.h"
+#include "test/common/task_record_check.h"
 #include "test/fallback/fixture.h"
-
 namespace megdnn {
 namespace test {
 
 TEST_F(FALLBACK, MATRIX_MUL) {
     Checker<MatrixMul> checker(handle());
+    using Param = MatrixMul::Param;
+    auto args = matrix_mul::get_matmul_args();
+    for (auto arg : args) {
+        auto m = arg.m, n = arg.n, k = arg.k;
+        auto mask = arg.mask;
+        Param param;
+        param.transposeA = mask & 1;
+        param.transposeB = mask & 2;
+        TensorShape AS, BS, CS;
+
+        if (param.transposeA)
+            AS = TensorShape{k, m};
+        else
+            AS = TensorShape{m, k};
+        if (param.transposeB)
+            BS = TensorShape{n, k};
+        else
+            BS = TensorShape{k, n};
+        CS = TensorShape{m, n};
+        TensorLayout AL, BL, CL;
+        AL = TensorLayout(AS, dtype::Float32());
+        BL = TensorLayout(BS, dtype::Float32());
+        CL = TensorLayout(CS, dtype::Float32());
+        checker.set_param(param);
+        checker.execl({AL, BL, CL});
+    }
+}
+TEST_F(FALLBACK, MATRIX_MUL_RECORD) {
+    TaskRecordChecker<MatrixMul> checker(1);
     using Param = MatrixMul::Param;
     auto args = matrix_mul::get_matmul_args();
     for (auto arg : args) {

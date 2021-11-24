@@ -103,9 +103,9 @@ void Convolution3DForwardImpl::AlgoGroupConvGeneral::exec(const ExecArgs& args) 
     auto bundle = get_workspace_bundle(args.workspace.raw_ptr, args);
     {
         auto config = prepare_sub_opr(args);
-        TensorND tsrc{args.src_tensor->raw_ptr, config.first[0]};
-        TensorND tfilter{args.filter_tensor->raw_ptr, config.first[1]};
-        TensorND tdst{args.dst_tensor->raw_ptr, config.first[2]};
+        TensorND tsrc{args.src_tensor->raw_ptr(), config.first[0]};
+        TensorND tfilter{args.filter_tensor->raw_ptr(), config.first[1]};
+        TensorND tdst{args.dst_tensor->raw_ptr(), config.first[2]};
 
         size_t c_pos;
         if (args.filter_meta.format == Param::Format::NCDHW) {
@@ -127,9 +127,9 @@ void Convolution3DForwardImpl::AlgoGroupConvGeneral::exec(const ExecArgs& args) 
 
         for (uint32_t g = 0; g < grp; ++g) {
             config.second->exec(tsrc, tfilter, tdst, bundle.get_workspace(0));
-            incr_voidp(tsrc.raw_ptr, strd_src);
-            incr_voidp(tdst.raw_ptr, strd_dst);
-            incr_voidp(tfilter.raw_ptr, strd_flt);
+            incr_refp(tsrc.get_ref_ptr(), strd_src);
+            incr_refp(tdst.get_ref_ptr(), strd_dst);
+            incr_refp(tfilter.get_ref_ptr(), strd_flt);
         }
     }
 }

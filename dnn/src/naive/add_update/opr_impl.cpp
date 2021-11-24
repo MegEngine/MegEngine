@@ -20,7 +20,7 @@ namespace {
 using namespace megdnn;
 
 template <typename T>
-void forward(const ElemwiseOpParamN<2> src, const AddUpdate::Param& param) {
+void forward(const ElemwiseOpParamN<2>& src, const AddUpdate::Param& param) {
     T alpha(param.alpha), beta(param.beta), bias(param.bias);
 
     auto iter0 = tensor_iter_valonly<T>(src[0]).begin();
@@ -40,11 +40,12 @@ namespace naive {
 void AddUpdateForwardImpl::exec(_megdnn_tensor_inout dest, _megdnn_tensor_in delta) {
     check_exec(dest.layout, delta.layout);
     ElemwiseOpParamN<2> src = make_param(dest, delta);
-#define cb(DType)                                                   \
-    if (dest.layout.dtype == DType()) {                             \
-        using ctype = typename DTypeTrait<DType>::ctype;            \
-        MEGDNN_DISPATCH_CPU_KERN_OPR(forward<ctype>(src, m_param)); \
-        return;                                                     \
+    auto param = m_param;
+#define cb(DType)                                                 \
+    if (dest.layout.dtype == DType()) {                           \
+        using ctype = typename DTypeTrait<DType>::ctype;          \
+        MEGDNN_DISPATCH_CPU_KERN_OPR(forward<ctype>(src, param)); \
+        return;                                                   \
     }
     MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
 #undef cb

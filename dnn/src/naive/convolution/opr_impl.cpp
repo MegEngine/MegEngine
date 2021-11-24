@@ -1,5 +1,5 @@
 /**
- * \file dnn/src/naive/convolution/convolution.cpp
+ * \file dnn/src/naive/convolution/opr_impl.cpp
  * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
  *
  * Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
@@ -8,8 +8,8 @@
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-#include "./helper.h"
 #include "./opr_impl.h"
+#include "./helper.h"
 
 #include "megdnn/dtype.h"
 #include "megdnn/heuristic_cache.h"
@@ -125,10 +125,8 @@ void ConvolutionBackwardDataImpl::exec(
 #undef cb
 #if !MEGDNN_DISABLE_FLOAT16
     if (filter.layout.dtype == dtype::Float16() && cmode == ComputeMode::FLOAT32) {
-        TensorND grad_fp32;
-        grad_fp32.layout = grad.layout;
-        grad_fp32.layout.dtype = dtype::Float32();
-        grad_fp32.raw_ptr = workspace.raw_ptr;
+        TensorND grad_fp32{
+                workspace.raw_ptr, TensorLayout{grad.layout, dtype::Float32()}};
         auto&& type_cvt = handle()->create_operator<TypeCvt>();
         type_cvt->exec(grad, grad_fp32);
         MEGDNN_DISPATCH_CPU_KERN_OPR(
@@ -138,10 +136,8 @@ void ConvolutionBackwardDataImpl::exec(
         return;
     }
     if (filter.layout.dtype == dtype::BFloat16() && cmode == ComputeMode::FLOAT32) {
-        TensorND grad_fp32;
-        grad_fp32.layout = grad.layout;
-        grad_fp32.layout.dtype = dtype::Float32();
-        grad_fp32.raw_ptr = workspace.raw_ptr;
+        TensorND grad_fp32{
+                workspace.raw_ptr, TensorLayout{grad.layout, dtype::Float32()}};
         auto&& type_cvt = handle()->create_operator<TypeCvt>();
         type_cvt->exec(grad, grad_fp32);
         MEGDNN_DISPATCH_CPU_KERN_OPR(
@@ -235,10 +231,8 @@ void ConvolutionBackwardFilterImpl::exec(
 #undef cb
 #if !MEGDNN_DISABLE_FLOAT16
     if (src.layout.dtype == dtype::Float16() && cmode == ComputeMode::FLOAT32) {
-        TensorND grad_fp32;
-        grad_fp32.layout = grad.layout;
-        grad_fp32.layout.dtype = dtype::Float32();
-        grad_fp32.raw_ptr = workspace.raw_ptr;
+        TensorND grad_fp32{
+                workspace.raw_ptr, TensorLayout{grad.layout, dtype::Float32()}};
         auto&& type_cvt = handle()->create_operator<TypeCvt>();
         type_cvt->exec(grad, grad_fp32);
         MEGDNN_DISPATCH_CPU_KERN_OPR(
@@ -248,10 +242,8 @@ void ConvolutionBackwardFilterImpl::exec(
         return;
     }
     if (src.layout.dtype == dtype::BFloat16() && cmode == ComputeMode::FLOAT32) {
-        TensorND grad_fp32;
-        grad_fp32.layout = grad.layout;
-        grad_fp32.layout.dtype = dtype::Float32();
-        grad_fp32.raw_ptr = workspace.raw_ptr;
+        TensorND grad_fp32{
+                workspace.raw_ptr, TensorLayout{grad.layout, dtype::Float32()}};
         auto&& type_cvt = handle()->create_operator<TypeCvt>();
         type_cvt->exec(grad, grad_fp32);
         MEGDNN_DISPATCH_CPU_KERN_OPR(

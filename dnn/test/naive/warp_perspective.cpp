@@ -97,7 +97,7 @@ TEST_F(NAIVE, WARP_PERSPECTIVE_NCHW4) {
         TensorNDArray nchw4_tensors;
         for (size_t i = 0; i < tensors.size(); ++i) {
             auto layout = convert_true_format(nchw_tensors[i].layout);
-            nchw4_tensors.emplace_back(tensors[i].raw_ptr, std::move(layout));
+            nchw4_tensors.emplace_back(tensors[i].raw_ptr(), std::move(layout));
         }
 
         auto workspace_size = warp_perspective->get_workspace_in_bytes(
@@ -116,7 +116,7 @@ TEST_F(NAIVE, WARP_PERSPECTIVE_NCHW4) {
 
         free(workspace_ptr);
         for (auto&& tensor : nchw_tensors) {
-            free(tensor.raw_ptr);
+            free(tensor.raw_ptr());
         }
     };
 
@@ -143,7 +143,6 @@ TEST_F(NAIVE, WARP_PERSPECTIVE_NCHW4) {
         checker.execs({{1, 25, 25, 510, 4}, {1, 3, 3}, {1, 25, 25, 25, 4}});
         checker.execs({{1, 25, 25, 25, 4}, {1, 3, 3}, {1, 25, 51, 51, 4}});
         checker.execs({{1, 25, 51, 51, 4}, {1, 3, 3}, {1, 25, 25, 25, 4}});
-        break;
     }
 }
 
@@ -272,7 +271,7 @@ TEST_F(NAIVE_MULTI_THREADS, WARP_PERSPECTIVE_NCHW4) {
         TensorNDArray nchw4_tensors;
         for (size_t i = 0; i < tensors.size(); ++i) {
             auto layout = convert_true_format(nchw_tensors[i].layout);
-            nchw4_tensors.emplace_back(tensors[i].raw_ptr, std::move(layout));
+            nchw4_tensors.emplace_back(tensors[i].raw_ptr(), std::move(layout));
         }
 
         auto workspace_size = warp_perspective->get_workspace_in_bytes(
@@ -291,7 +290,7 @@ TEST_F(NAIVE_MULTI_THREADS, WARP_PERSPECTIVE_NCHW4) {
 
         free(workspace_ptr);
         for (auto&& tensor : nchw_tensors) {
-            free(tensor.raw_ptr);
+            free(tensor.raw_ptr());
         }
     };
 
@@ -318,7 +317,6 @@ TEST_F(NAIVE_MULTI_THREADS, WARP_PERSPECTIVE_NCHW4) {
         checker.execs({{1, 25, 25, 510, 4}, {1, 3, 3}, {1, 25, 25, 25, 4}});
         checker.execs({{1, 25, 25, 25, 4}, {1, 3, 3}, {1, 25, 51, 51, 4}});
         checker.execs({{1, 25, 51, 51, 4}, {1, 3, 3}, {1, 25, 25, 25, 4}});
-        break;
     }
 }
 
@@ -593,7 +591,7 @@ TEST_F(NAIVE, WARP_PERSPECTIVE_NCHW64) {
         TensorNDArray nchw64_tensors;
         for (size_t i = 0; i < tensors.size(); ++i) {
             auto layout = convert_true_format(nchw_tensors[i].layout);
-            nchw64_tensors.emplace_back(tensors[i].raw_ptr, std::move(layout));
+            nchw64_tensors.emplace_back(tensors[i].raw_ptr(), std::move(layout));
         }
 
         auto workspace_size = warp_perspective->get_workspace_in_bytes(
@@ -612,7 +610,7 @@ TEST_F(NAIVE, WARP_PERSPECTIVE_NCHW64) {
 
         free(workspace_ptr);
         for (auto&& tensor : nchw_tensors) {
-            free(tensor.raw_ptr);
+            free(tensor.raw_ptr());
         }
     };
 
@@ -675,7 +673,7 @@ TEST_F(NAIVE, WARP_PERSPECTIVE_NHWC) {
         TensorNDArray nhwc_tensors;
         for (size_t i = 0; i < tensors.size(); ++i) {
             auto layout = convert_true_format(nchw_tensors[i].layout);
-            nhwc_tensors.emplace_back(tensors[i].raw_ptr, std::move(layout));
+            nhwc_tensors.emplace_back(tensors[i].raw_ptr(), std::move(layout));
         }
 
         auto workspace_size = warp_perspective->get_workspace_in_bytes(
@@ -693,7 +691,7 @@ TEST_F(NAIVE, WARP_PERSPECTIVE_NHWC) {
         relayout->exec(nchw_tensors[2], nhwc_tensors[2]);
         free(workspace_ptr);
         for (auto&& tensor : nchw_tensors) {
-            free(tensor.raw_ptr);
+            free(tensor.raw_ptr());
         }
     };
 

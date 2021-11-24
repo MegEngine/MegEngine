@@ -23,18 +23,18 @@ class ElemwiseMultiTypeImpl : public fallback::ElemwiseMultiTypeImpl {
 
     template <typename ctype>
     void dispatch_round_shr_saturate_iXxi8xi8_bcast_scalar(
-            const ElemwiseOpParamN<2>& param, megdnn::dt_int8* dst);
+            const ElemwiseOpParamN<2>& param, const TensorND& dst);
 
     bool dispatch_fuse_add_rmulh_rshr(
-            const ElemwiseOpParamN<6>& param, megdnn::dt_int8* dst);
+            const ElemwiseOpParamN<6>& param, const TensorND& dst);
 
 protected:
     void on_round_shr_saturate_iXxi8xi8(
-            const ElemwiseOpParamN<2>& param, dt_int8* dst) override;
+            const ElemwiseOpParamN<2>& param, const TensorND& dst) override;
     void on_fuse_add_rmulh_round_shr_saturate_int16x16x16x8(
-            const ElemwiseOpParamN<6>& param, dt_int8* dst) override;
+            const ElemwiseOpParamN<6>& param, const TensorND& dst) override;
     void on_fuse_add_rmulh_round_shr_saturate_int32x32x32x8(
-            const ElemwiseOpParamN<6>& param, dt_int8* dst) override;
+            const ElemwiseOpParamN<6>& param, const TensorND& dst) override;
 
     void on_quantized_mode(
             const ElemwiseOpParamN<1>& param, const TensorND& dst,

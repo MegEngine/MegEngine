@@ -816,8 +816,8 @@ void ReduceImpl::exec(
         MIDOUT_BEGIN(                                                              \
                 megdnn_arm_common_reduce, ctype, dtype, comp_type, midout_iv(1)) { \
             MEGDNN_DISPATCH_CPU_KERN_OPR(do_reduce(                                \
-                    reinterpret_cast<ctype*>(src.raw_ptr),                         \
-                    reinterpret_cast<ctype*>(dst.raw_ptr), src_type, A, B, C));    \
+                    reinterpret_cast<ctype*>(src.raw_ptr()),                       \
+                    reinterpret_cast<ctype*>(dst.raw_ptr()), src_type, A, B, C));  \
             execed = true;                                                         \
         }                                                                          \
         MIDOUT_END();                                                              \
@@ -828,8 +828,8 @@ void ReduceImpl::exec(
         MIDOUT_BEGIN(                                                              \
                 megdnn_arm_common_reduce, ctype, dtype, comp_type, midout_iv(1)) { \
             MEGDNN_DISPATCH_CPU_KERN_OPR(do_reduce(                                \
-                    reinterpret_cast<ctype*>(src.raw_ptr),                         \
-                    reinterpret_cast<ctype*>(dst.raw_ptr), src_type, A, B, C));    \
+                    reinterpret_cast<ctype*>(src.raw_ptr()),                       \
+                    reinterpret_cast<ctype*>(dst.raw_ptr()), src_type, A, B, C));  \
             execed = true;                                                         \
         }                                                                          \
         MIDOUT_END();                                                              \

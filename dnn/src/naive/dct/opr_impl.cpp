@@ -206,7 +206,7 @@ void DctChannelSelectForwardImpl::exec(
         int ic = src.layout.shape[1];
         int ih = src.layout.shape[2];
         int iw = src.layout.shape[3];
-        megdnn_assert(dst.raw_ptr, "dst can not be nullptr");
+        megdnn_assert(dst.raw_ptr(), "dst can not be nullptr");
         const int block = param().dct_block_size;
         auto mask = mask_offset_to_2dmask(mask_offset, mask_val);
         if (dst.layout.dtype.enumv() == DTypeEnum::Float32) {
@@ -226,7 +226,7 @@ void DctChannelSelectForwardImpl::exec(
                             param().format == Param::Format::NCHW4,
                     "dst must be nchw4");
             MEGDNN_DISPATCH_CPU_KERN_OPR(naive_dct<Param::Format::NCHW4>(
-                    src.ptr<uint8_t>(), static_cast<int8_t*>(dst.raw_ptr), in, ic, ih,
+                    src.ptr<uint8_t>(), static_cast<int8_t*>(dst.raw_ptr()), in, ic, ih,
                     iw, block, mask, dst.layout.dtype));
         }
     }

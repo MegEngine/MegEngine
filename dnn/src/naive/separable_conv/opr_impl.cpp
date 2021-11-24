@@ -68,44 +68,57 @@ namespace megdnn {
 namespace naive {
 // using namespace sep_conv;
 
+size_t SeparableConvForwardImpl::get_workspace_in_bytes(
+        const TensorLayout& src, const TensorLayout& filter_x,
+        const TensorLayout& filter_y, const TensorLayout& dst) {
+    MEGDNN_MARK_USED_VAR(src);
+    MEGDNN_MARK_USED_VAR(filter_y);
+    MEGDNN_MARK_USED_VAR(dst);
+    auto kw = filter_x.shape[3];
+    auto kh = kw;
+    auto ic = filter_x.shape[1];
+    auto oc = filter_x.shape[0];
+    TensorLayout layout({oc, ic, kh, kw}, dtype::Float32());
+    return oc * ic * kh * kw * sizeof(float);
+}
+
 void SeparableConvForwardImpl::exec(
         _megdnn_tensor_in src, _megdnn_tensor_in filter_x, _megdnn_tensor_in filter_y,
         _megdnn_tensor_in dst, _megdnn_workspace workspace) {
     check_exec(
             src.layout, filter_x.layout, filter_y.layout, dst.layout, workspace.size);
 
-    // Create kernel tensor
-    int kw = filter_x.layout.shape[3];
-    int kh = kw;
-    int ic = filter_x.layout.shape[1];
-    int oc = filter_x.layout.shape[0];
+    auto kw = filter_x.layout.shape[3];
+    auto kh = kw;
+    auto ic = filter_x.layout.shape[1];
+    auto oc = filter_x.layout.shape[0];
 
-    TensorLayout kerLayout(
-            {(size_t)oc, (size_t)ic, (size_t)kh, (size_t)kw}, dtype::Float32());
-    void* filter2d_buf = malloc(oc * ic * kh * kw * sizeof(float));
-    TensorND filter2d(filter2d_buf, kerLayout);
-    float* kerx = (float*)filter_x.raw_ptr;
-    float* kery = (float*)filter_y.raw_ptr;
-    float* ker2d = (float*)filter2d_buf;
-
-    // Generate 2D-filter
-    int k_pos = 0;
-    for (int cn = 0; cn < ic * oc; ++cn) {
-        for (int h = 0; h < kh; ++h) {
-            for (int w = 0; w < kw; ++w) {
-                ker2d[k_pos++] = kerx[w] * kery[h];
+    auto transform_filter_2d = [=]() {
+        auto kerx = static_cast<float*>(filter_x.raw_ptr());
+        auto kery = static_cast<float*>(filter_y.raw_ptr());
+        auto filter2d_ptr = workspace.ptr<float>();
+        // Generate 2D-filter
+        size_t k_pos = 0;
+        for (size_t cn = 0; cn < ic * oc; ++cn) {
+            for (size_t h = 0; h < kh; ++h) {
+                for (size_t w = 0; w < kw; ++w) {
+                    filter2d_ptr[k_pos++] = kerx[w] * kery[h];
+                }
             }
+            kerx += kw;
+            kery += kw;
         }
-        kerx += kw;
-        kery += kw;
-    }
+    };
 
-    ConvolutionForwardImpl* convOptr = new ConvolutionForwardImpl(this->handle());
+    MEGDNN_DISPATCH_CPU_KERN_OPR(transform_filter_2d());
+
+    //! construct filter 2D tensor
+    TensorLayout layout({oc, ic, kh, kw}, dtype::Float32());
+    TensorND filter2d(workspace.raw_ptr, layout);
+
+    auto conv_opr = handle()->create_operator<ConvolutionForward>();
     Workspace empty_wsp;
-    convOptr->exec(src, filter2d, dst, nullptr, empty_wsp);
-    delete (convOptr);
-
-    free(filter2d_buf);
+    conv_opr->exec(src, filter2d, dst, nullptr, empty_wsp);
 }
 
 }  // namespace naive
