@@ -15,7 +15,7 @@ import megengine.functional as F
 import megengine.module as M
 import megengine.module.qat as qat
 from megengine.module.identity import Identity
-from megengine.traced_module import trace_module
+from megengine.traced_module import TracedModule, trace_module
 from megengine.traced_module.expr import CallFunction, CallMethod, Expr, GetAttr, Input
 from megengine.traced_module.node import ModuleNode, Node, TensorNode
 
@@ -182,7 +182,6 @@ def test_insert_module():
     setattr(traced_module, "neg", Neg(name="neg"))
     setattr(traced_module, "neg2", Neg(name="neg"))
     setattr(traced_module, "param", F.zeros((1,)))
-
     with graph.insert_exprs():
         neg_out = self.neg(relu_out)
         neg_out = self.neg2(relu_out)
@@ -198,6 +197,32 @@ def test_insert_module():
     for n in traced_module.graph.nodes():
         if isinstance(n, TensorNode):
             assert n.value is None
+
+    traced_module, x, expect = _init_module()
+    setattr(traced_module.block0, "neg", Neg(name=None))
+    graph = traced_module.graph
+    self = graph.inputs[0]
+    out_node = graph.outputs[0]
+    with graph.insert_exprs():
+        neg_out = self.block0.neg(out_node)
+    graph.replace_node({out_node: neg_out})
+    graph.compile()
+    np.testing.assert_allclose(expect, -traced_module(x), atol=1e-6)
+    assert isinstance(traced_module.block0.neg, TracedModule)
+    assert traced_module.block0.neg.graph is not None
+
+    setattr(traced_module.block0.neg, "neg", Neg(name=None))
+    setattr(traced_module.block0.neg.neg, "relu", M.ReLU())
+    out_node = graph.outputs[0]
+    with graph.insert_exprs():
+        neg_out = self.block0.neg.neg(out_node)
+        neg_out = self.block0.neg.neg(neg_out)
+        relu_out = self.block0.neg.neg.relu(neg_out)
+    graph.replace_node({out_node: relu_out})
+    graph.compile()
+    np.testing.assert_allclose(F.relu(-expect), traced_module(x), atol=1e-6)
+    assert isinstance(traced_module.block0.neg.neg, TracedModule)
+    assert traced_module.block0.neg.neg.graph is not None
 
 
 def test_insert_qat_module():
