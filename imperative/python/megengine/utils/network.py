@@ -283,9 +283,16 @@ class Network:
         for var in vars:
             # use list pop instead of remove to avoid
             # compare VarNode use elemwise equal
+            is_removed = False
             for idx, out_var in enumerate(self.output_vars):
                 if var is out_var:
                     self.output_vars.pop(idx)
+                    is_removed = True
+            if not is_removed:
+                logger.warning(
+                    "Failed to remove {}({}). Please check whether "
+                    "this node is in the output list.".format(var.name, id(var))
+                )
 
     def add_dep_oprs(self, *vars):
         if len(vars) == 0:
