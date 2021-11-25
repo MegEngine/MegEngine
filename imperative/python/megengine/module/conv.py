@@ -128,11 +128,11 @@ class Conv1d(_ConvNd):
         padding: size of the paddings added to the input on both sides of its
             spatial dimensions. Only zero-padding is supported. Default: 0
         dilation: dilation of the 1D convolution operation. Default: 1
-        groups: number of groups into which the input and output channels are divided,
+        groups: number of groups to divide input and output channels into,
             so as to perform a "grouped convolution". When ``groups`` is not 1,
             ``in_channels`` and ``out_channels`` must be divisible by ``groups``,
-            and there would be an extra dimension at the beginning of the weight's
-            shape. Default: 1
+            and the shape of weight should be ``(groups, out_channel // groups,
+            in_channels // groups, kernel_size)``. Default: 1
         bias: whether to add a bias onto the result of convolution. Default: True
         conv_mode: Supports `cross_correlation`. Default: `cross_correlation`
         compute_mode: When set to "default", no special requirements will be
@@ -290,10 +290,10 @@ class Conv2d(_ConvNd):
             spatial dimensions. Only zero-padding is supported. Default: 0
         dilation: dilation of the 2D convolution operation. Default: 1
         groups: number of groups into which the input and output channels are divided,
-            so as to perform a "grouped convolution". When ``groups`` is not 1,
+            so as to perform a ``grouped convolution``. When ``groups`` is not 1,
             ``in_channels`` and ``out_channels`` must be divisible by ``groups``,
-            and there would be an extra dimension at the beginning of the weight's
-            shape. Default: 1
+            and the shape of weight should be ``(groups, out_channel // groups,
+            in_channels // groups, height, width)``. Default: 1
         bias: whether to add a bias onto the result of convolution. Default: True
         conv_mode: Supports `cross_correlation`. Default: `cross_correlation`
         compute_mode: When set to "default", no special requirements will be
@@ -436,10 +436,10 @@ class Conv3d(_ConvNd):
             spatial dimensions. Only zero-padding is supported. Default: 0
         dilation: dilation of the 3D convolution operation. Default: 1
         groups: number of groups into which the input and output channels are divided,
-            so as to perform a "grouped convolution". When ``groups`` is not 1,
+            so as to perform a ``grouped convolution``. When ``groups`` is not 1,
             ``in_channels`` and ``out_channels`` must be divisible by ``groups``,
-            and there would be an extra dimension at the beginning of the weight's
-            shape. Default: 1
+            and the shape of weight should be ``(groups, out_channel // groups,
+            in_channels // groups, depth, height, width)``. Default: 1
         bias: whether to add a bias onto the result of convolution. Default: True
         conv_mode: Supports `cross_correlation`. Default: `cross_correlation`
 
@@ -560,10 +560,10 @@ class ConvTranspose2d(_ConvNd):
             spatial dimensions. Only zero-padding is supported. Default: 0
         dilation: dilation of the 2D convolution operation. Default: 1
         groups: number of groups into which the input and output channels are divided,
-            so as to perform a "grouped convolution". When ``groups`` is not 1,
-            ``in_channels`` and ``out_channels`` must be divisible by ``groups``,
-            and there would be an extra dimension at the beginning of the weight's
-            shape. Default: 1
+            so as to perform a ``grouped convolution``. When ``groups`` is not 1,
+            ``in_channels`` and ``out_channels`` must be divisible by groups,
+            and the shape of weight should be ``(groups, in_channels // groups,
+            out_channels // groups, height, width)``. Default: 1
         bias: wether to add a bias onto the result of convolution. Default: True
             conv_mode: Supports `cross_correlation`. Default: `cross_correlation`
         compute_mode: When set to "default", no special requirements will be
@@ -667,6 +667,7 @@ class LocalConv2d(Conv2d):
         stride: stride of the 2D convolution operation. Default: 1
         padding: size of the paddings added to the input on both sides of its
             spatial dimensions. Only zero-padding is supported. Default: 0
+        dilation: dilation of the 2D convolution operation. Default: 1
         groups: number of groups into which the input and output channels are divided,
             so as to perform a "grouped convolution". When ``groups`` is not 1,
             ``in_channels`` and ``out_channels`` must be divisible by ``groups``. Default: 1
@@ -759,10 +760,10 @@ class DeformableConv2d(_ConvNd):
             spatial dimensions. Only zero-padding is supported. Default: 0
         dilation: dilation of the 2D convolution operation. Default: 1
         groups: number of groups into which the input and output channels are divided,
-            so as to perform a "grouped convolution". When ``groups`` is not 1,
-            ``in_channels`` and ``out_channels`` must be divisible by ``groups``,
-            and there would be an extra dimension at the beginning of the weight's
-            shape. Default: 1
+            so as to perform a ``grouped convolution``. When ``groups`` is not 1,
+            ``in_channels`` and ``out_channels`` must be divisible by groups,
+            and the shape of weight should be ``(groups, out_channel // groups,
+            in_channels // groups, height, width)``. Default: 1
         bias: whether to add a bias onto the result of convolution. Default: True
         conv_mode: Supports `cross_correlation`. Default: `cross_correlation`
         compute_mode: When set to "default", no special requirements will be
@@ -875,6 +876,11 @@ class ConvTranspose3d(_ConvNd):
         padding: size of the paddings added to the input on all sides of its
             spatial dimensions. Only zero-padding is supported. Default: 0
         dilation: dilation of the 3D convolution operation. Default: 1
+        groups: number of groups into which the input and output channels are divided,
+            so as to perform a ``grouped convolution``. When ``groups`` is not 1,
+            ``in_channels`` and ``out_channels`` must be divisible by groups,
+            and the shape of weight should be ``(groups, in_channels // groups,
+            out_channels // groups, depth, height, width)``. Default: 1
         bias: wether to add a bias onto the result of convolution. Default: True
 
     Note:
@@ -890,8 +896,8 @@ class ConvTranspose3d(_ConvNd):
         stride: Union[int, Tuple[int, int, int]] = 1,
         padding: Union[int, Tuple[int, int, int]] = 0,
         dilation: Union[int, Tuple[int, int, int]] = 1,
-        bias: bool = True,
         groups: int = 1,
+        bias: bool = True,
     ):
         kernel_size = _triple_nonzero(kernel_size)
         stride = _triple_nonzero(stride)

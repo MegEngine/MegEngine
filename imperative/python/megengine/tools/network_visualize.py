@@ -53,8 +53,11 @@ def visualize(
     Args:
       model_path: dir path for megengine dumped model.
       log_path: dir path for tensorboard graph log.
-      input: user defined input data for running model and calculating stats, alternative with inp_dict, used when the model has only one input.
-      inp_dict: input dict for running model and calculating stats, alternative with input, used when the model has more than one input. When both input and inp_dict are None, a random input will be used.
+      input: user defined input data for running model and calculating stats,
+        alternative with inp_dict, used when the model has only one input.
+      inp_dict: input dict for running model and calculating stats, alternative with
+        input, used when the model has more than one input.
+        When both input and inp_dict are None, a random input will be used.
       cal_params: whether calculate and record params size.
       cal_flops: whether calculate and record op flops.
       cal_activations: whether calculate and record op activations.
