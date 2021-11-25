@@ -242,6 +242,20 @@ public:
         return m_impl->copy_to_device(device_ptr, host_ptr, size);
     }
 
+    //! copy from underlying device to host
+    void copy_to_host_ref(
+            megdnn::RefPtr& host_ref_ptr, megdnn::RefPtr& device_ref_ptr,
+            size_t size) const {
+        return m_impl->copy_to_host_ref(host_ref_ptr, device_ref_ptr, size);
+    }
+
+    //! copy from host to underlying device
+    void copy_to_device_ref(
+            megdnn::RefPtr& device_ref_ptr, megdnn::RefPtr& host_ref_ptr,
+            size_t size) const {
+        return m_impl->copy_to_device_ref(device_ref_ptr, host_ref_ptr, size);
+    }
+
     /*!
      * \brief copy from this device to another device; would use the
      *      computing resource on dest_node
@@ -251,6 +265,14 @@ public:
             CompNode dest_node, void* dest, const void* src, size_t size) const {
         return m_impl->peer_copy_to(
                 reinterpret_cast<Impl*>(dest_node.m_impl), dest, src, size);
+    }
+
+    void peer_copy_to_ref(
+            CompNode dest_node, megdnn::RefPtr& dst_ref_ptr,
+            megdnn::RefPtr& src_ref_ptr, size_t size) const {
+        return m_impl->peer_copy_to_ref(
+                reinterpret_cast<Impl*>(dest_node.m_impl), dst_ref_ptr, src_ref_ptr,
+                size);
     }
 
     //! get alignment requiement in bytes; guaranteed to be power of 2
@@ -517,8 +539,24 @@ protected:
                 void* host_ptr, const void* device_ptr, size_t size) = 0;
         virtual void copy_to_device(
                 void* device_ptr, const void* host_ptr, size_t size) = 0;
+        virtual void copy_to_host_ref(
+                megdnn::RefPtr& host_ref_ptr, megdnn::RefPtr& device_ref_ptr,
+                size_t size) {
+            copy_to_host(host_ref_ptr.get_ptr(), device_ref_ptr.get_ptr(), size);
+        }
+        virtual void copy_to_device_ref(
+                megdnn::RefPtr& device_ref_ptr, megdnn::RefPtr& host_ref_ptr,
+                size_t size) {
+            copy_to_device(device_ref_ptr.get_ptr(), host_ref_ptr.get_ptr(), size);
+        }
         virtual void peer_copy_to(
                 Impl* dest_impl, void* dest, const void* src, size_t size) = 0;
+
+        virtual void peer_copy_to_ref(
+                Impl* dest_impl, megdnn::RefPtr& dest, megdnn::RefPtr& src,
+                size_t size) {
+            peer_copy_to(dest_impl, dest.get_ptr(), src.get_ptr(), size);
+        }
 
         virtual size_t get_mem_addr_alignment() = 0;
         virtual size_t get_mem_padding();

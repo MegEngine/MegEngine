@@ -306,9 +306,35 @@ public:
         m_env.cpu_env().dispatch(do_copy);
     }
 
+    void copy_to_host_ref(
+            megdnn::RefPtr& host_ref_ptr, megdnn::RefPtr& device_ref_ptr,
+            size_t size) override {
+        // use lambda capture to avoid memory allocation in std::bind
+        auto do_copy = [host_ref_ptr, device_ref_ptr, size]() {
+            std::memcpy(host_ref_ptr.get_ptr(), device_ref_ptr.get_ptr(), size);
+        };
+        m_env.cpu_env().dispatch(do_copy);
+    }
+
+    void copy_to_device_ref(
+            megdnn::RefPtr& device_ref_ptr, megdnn::RefPtr& host_ref_ptr,
+            size_t size) override {
+        // use lambda capture to avoid memory allocation in std::bind
+        auto do_copy = [device_ref_ptr, host_ref_ptr, size]() {
+            std::memcpy(device_ref_ptr.get_ptr(), host_ref_ptr.get_ptr(), size);
+        };
+        m_env.cpu_env().dispatch(do_copy);
+    }
+
     void peer_copy_to(
             Impl* dest_impl, void* dest, const void* src, size_t size) override {
         dest_impl->copy_to_device(dest, src, size);
+    }
+
+    void peer_copy_to_ref(
+            Impl* dest_impl, megdnn::RefPtr& dest, megdnn::RefPtr& src,
+            size_t size) override {
+        dest_impl->copy_to_device_ref(dest, src, size);
     }
 
     size_t get_mem_addr_alignment() override { return m_env.property().mem_alignment; }
@@ -733,6 +759,24 @@ public:
         CompNodeBaseImpl::copy_to_device(device_ptr, host_ptr, size);
     }
 
+    void copy_to_host_ref(
+            megdnn::RefPtr& host_ref_ptr, megdnn::RefPtr& device_ref_ptr,
+            size_t size) override {
+        if (m_worker_queue) {
+            m_worker_queue->check_exception();
+        }
+        CompNodeBaseImpl::copy_to_host_ref(host_ref_ptr, device_ref_ptr, size);
+    }
+
+    void copy_to_device_ref(
+            megdnn::RefPtr& device_ref_ptr, megdnn::RefPtr& host_ref_ptr,
+            size_t size) override {
+        if (m_worker_queue) {
+            m_worker_queue->check_exception();
+        }
+        CompNodeBaseImpl::copy_to_device_ref(device_ref_ptr, host_ref_ptr, size);
+    }
+
     void peer_copy_to(
             Impl* dest_impl, void* dest, const void* src, size_t size) override {
         //! copy to default_cpu
@@ -772,6 +816,48 @@ public:
             }
         }
         dest_impl->copy_to_device(dest, src, size);
+    }
+
+    void peer_copy_to_ref(
+            Impl* dest_impl, megdnn::RefPtr& dest, megdnn::RefPtr& src,
+            size_t size) override {
+        //! copy to default_cpu
+        if (dest_impl->same_type<CpuCompNode::CompNodeDefaultImpl>()) {
+            CompNodeBaseImpl::peer_copy_to_ref(dest_impl, dest, src, size);
+            return;
+        }
+
+        if (!dest_impl->same_type<CpuCompNode::CompNodeRecorderImpl>()) {
+            if (dest_impl->env().property().type == DeviceType::ATLAS) {
+#if MGB_ATLAS
+                dest_impl->copy_to_device(dest.get_ptr(), src.get_ptr(), size);
+                return;
+#else
+                mgb_throw(
+                        MegBrainError,
+                        "Atlas comp_node used but "
+                        "ATLAS BUILD not enabled");
+#endif
+            } else if (dest_impl->env().property().type == DeviceType::CAMBRICON) {
+#if MGB_CAMBRICON
+                dest_impl->copy_to_device(dest.get_ptr(), src.get_ptr(), size);
+                return;
+#else
+                mgb_throw(
+                        MegBrainError,
+                        "Cambricon comp_node used but "
+                        "CAMBRICON BUILD not enabled");
+#endif
+            }
+            else {
+                mgb_assert(
+                        locator().device == Locator::DEVICE_CPU_DEFAULT,
+                        "currently only peer copy from default cpu comp "
+                        "nodes "
+                        "is implemented");
+            }
+        }
+        dest_impl->copy_to_device_ref(dest, src, size);
     }
 
     std::unique_ptr<Event> create_event(size_t flags) override {

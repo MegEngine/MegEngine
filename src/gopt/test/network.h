@@ -60,6 +60,7 @@ public:
             Padding padding = {0, 0},
             opr::Pooling::Param::Mode mode = opr::Pooling::Param::Mode::MAX);
     SymbolVar add_type_cvt(SymbolVar f, DType out_dtype = dtype::Float32());
+    SymbolVar add_concat(SymbolVar f, SymbolVar g, int axis = 0);
 };
 
 SymbolVar create_block(

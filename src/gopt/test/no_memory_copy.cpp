@@ -41,7 +41,8 @@ struct TestGraph {
         f = m_network->add_elemwise(
                 {f}, dtype::Float32(), opr::Elemwise::Param::Mode::EXP);
         f = m_network->add_conv(f, 8, {3, 3}, dtype::Float32(), true, {1, 1}, {1, 1});
-        m_out_var = m_network->add_pooling(f, {2, 2}, {2, 2});
+        f = m_network->add_pooling(f, {2, 2}, {2, 2});
+        m_out_var = m_network->add_concat(f, -f);
     }
 
     void create_graph_with_subtensor_forward() {
@@ -63,7 +64,8 @@ struct TestGraph {
         f = m_network->add_elemwise(
                 {f}, dtype::Float32(), opr::Elemwise::Param::Mode::EXP);
         f = m_network->add_conv(f, 8, {3, 3}, dtype::Float32(), true, {1, 1}, {1, 1});
-        m_out_var = m_network->add_pooling(f, {2, 2}, {2, 2});
+        f = m_network->add_pooling(f, {2, 2}, {2, 2});
+        m_out_var = m_network->add_concat(f, -f);
     }
 
     void create_graph_with_subtensor_relayout() {
@@ -86,7 +88,8 @@ struct TestGraph {
         f = m_network->add_elemwise(
                 {f}, dtype::Float32(), opr::Elemwise::Param::Mode::EXP);
         f = m_network->add_conv(f, 8, {3, 3}, dtype::Float32(), true, {1, 1}, {1, 1});
-        m_out_var = m_network->add_pooling(f, {2, 2}, {2, 2});
+        f = m_network->add_pooling(f, {2, 2}, {2, 2});
+        m_out_var = m_network->add_concat(f, -f);
     }
 
     void create_graph_with_setsubtensor() {
@@ -113,7 +116,8 @@ struct TestGraph {
         f = m_network->add_elemwise(
                 {f}, dtype::Float32(), opr::Elemwise::Param::Mode::EXP);
         f = m_network->add_conv(f, 8, {3, 3}, dtype::Float32(), true, {1, 1}, {1, 1});
-        m_out_var = m_network->add_pooling(f, {2, 2}, {2, 2});
+        f = m_network->add_pooling(f, {2, 2}, {2, 2});
+        m_out_var = m_network->add_concat(f, -f);
     }
 
     std::unique_ptr<cg::AsyncExecutable> compile_without_copy() {
@@ -173,8 +177,8 @@ TEST(TestNoCopy, IONoCopyPtrEQ) {
     test_graph.create_graph();
     auto func = test_graph.compile_without_copy();
     auto&& outvar = func->get_output_vars()[0];
-    DeviceTensorND dv0(test_graph.m_cn, {1, 8, 7, 7});
-    DeviceTensorND dv1(test_graph.m_cn, {1, 8, 7, 7});
+    DeviceTensorND dv0(test_graph.m_cn, {2, 8, 7, 7});
+    DeviceTensorND dv1(test_graph.m_cn, {2, 8, 7, 7});
     size_t times = 10;
     for (size_t i = 0; i < times; i++) {
         auto input_tensor = test_graph.input_tensor;
@@ -229,7 +233,7 @@ TEST(TestNoCopy, IONoCopyCorrect) {
             ptr[d] = i / 5 + 3;
         }
         input_tensor->reset(storage, layout);
-        DeviceTensorND dv(test_graph.m_cn, {1, 8, 7, 7});
+        DeviceTensorND dv(test_graph.m_cn, {2, 8, 7, 7});
         outvar->init_mem_plan(&dv);
         outvar->reset_dev_tensor_from_tensor(dv);
 
@@ -258,7 +262,7 @@ TEST(TestNoCopy, IONoCopyRecord) {
     HostTensorND truth;
     auto func = test_graph.compile_without_copy();
     auto&& outvar = func->get_output_vars()[0];
-    DeviceTensorND tmp(test_graph.m_cn, {1, 8, 7, 7});
+    DeviceTensorND tmp(test_graph.m_cn, {2, 8, 7, 7});
     outvar->init_mem_plan(&tmp);
     size_t times = 10;
     for (size_t i = 0; i < times; i++) {
@@ -272,7 +276,7 @@ TEST(TestNoCopy, IONoCopyRecord) {
             ptr[d] = i / 5 + 3;
         }
         input_tensor->only_reset_raw_storage(storage);
-        DeviceTensorND dv(test_graph.m_cn, {1, 8, 7, 7});
+        DeviceTensorND dv(test_graph.m_cn, {2, 8, 7, 7});
         dv.raw_ptr();
 
         auto& dev_tensor = outvar->mutable_dev_tensor();
@@ -306,7 +310,7 @@ void test_subtensor_record(int level) {
     HostTensorND truth;
     auto func = test_graph.compile_without_copy();
     auto&& outvar = func->get_output_vars()[0];
-    DeviceTensorND tmp(test_graph.m_cn, {1, 8, 7, 7});
+    DeviceTensorND tmp(test_graph.m_cn, {2, 8, 7, 7});
     outvar->init_mem_plan(&tmp);
     size_t times = 10;
     for (size_t i = 0; i < times; i++) {
@@ -320,7 +324,7 @@ void test_subtensor_record(int level) {
             ptr[d] = i / 5 + 3;
         }
         input_tensor->only_reset_raw_storage(storage);
-        DeviceTensorND dv(test_graph.m_cn, {1, 8, 7, 7});
+        DeviceTensorND dv(test_graph.m_cn, {2, 8, 7, 7});
         dv.raw_ptr();
 
         auto& dev_tensor = outvar->mutable_dev_tensor();

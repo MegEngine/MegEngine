@@ -379,7 +379,9 @@ MGE_WIN_DECLSPEC_FUC void TensorStorage<HostTensorStorageTrait>::copy_from(
             need_sync = true;
         }
     }
-    src.comp_node().copy_to_host(ptr(), src.ptr(), size);
+    megdnn::RefPtr src_ptr(src.get_ref_ptr(), src.offset(), false);
+    megdnn::RefPtr dst_ptr(get_ref_ptr(), offset(), false);
+    src.comp_node().copy_to_host_ref(dst_ptr, src_ptr, size);
     if (need_sync)
         src.comp_node().sync();
 }
@@ -390,7 +392,9 @@ template <>
 MGE_WIN_DECLSPEC_FUC void TensorStorage<DeviceTensorStorageTrait>::copy_from(
         const TensorStorage<HostTensorStorageTrait>& src, size_t size) const {
     mgb_assert(size <= this->size() && size <= src.size());
-    m_comp_node.copy_to_device(ptr(), src.ptr(), size);
+    megdnn::RefPtr src_ptr(src.get_ref_ptr(), src.offset(), false);
+    megdnn::RefPtr dst_ptr(get_ref_ptr(), offset(), false);
+    m_comp_node.copy_to_device_ref(dst_ptr, src_ptr, size);
 }
 
 // device to device
@@ -417,9 +421,13 @@ MGE_WIN_DECLSPEC_FUC void TensorStorage<DeviceTensorStorageTrait>::copy_from(
         // to pin the memory of src tensor, so it does not require synchronization
         // and is more efficient
         src.comp_node().sync();
-        comp_node().copy_to_device(ptr(), src.ptr(), size);
+        megdnn::RefPtr src_ptr(src.get_ref_ptr(), src.offset(), false);
+        megdnn::RefPtr dst_ptr(get_ref_ptr(), offset(), false);
+        comp_node().copy_to_device_ref(dst_ptr, src_ptr, size);
     } else {
-        src.comp_node().peer_copy_to(m_comp_node, ptr(), src.ptr(), size);
+        megdnn::RefPtr src_ptr(src.get_ref_ptr(), src.offset(), false);
+        megdnn::RefPtr dst_ptr(get_ref_ptr(), offset(), false);
+        src.comp_node().peer_copy_to_ref(m_comp_node, dst_ptr, src_ptr, size);
     }
 }
 
@@ -712,32 +720,34 @@ const typename TensorND<TensorStorage>::ChainReturnType& TensorND<
 void mgb::dev_tensor_memset(const DeviceTensorND& tensor, int val) {
     auto&& env = CompNodeEnv::from_comp_node(tensor.comp_node());
     env.activate();
-    void* ptr = tensor.raw_ptr();
     size_t size = tensor.layout().span().dist_byte();
     switch (env.property().type) {
 #if MGB_CUDA
         case CompNode::DeviceType::CUDA:
-            MGB_CUDA_CHECK(cudaMemsetAsync(ptr, val, size, env.cuda_env().stream));
+            MGB_CUDA_CHECK(cudaMemsetAsync(
+                    tensor.raw_ptr(), val, size, env.cuda_env().stream));
             break;
 #endif
 #if MGB_ATLAS
         case CompNode::DeviceType::ATLAS:
 #if MGB_USE_ATLAS_ASYNC_API
-            MGB_ATLAS_CHECK(
-                    aclrtMemsetAsync(ptr, -1, val, size, env.atlas_env().stream));
+            MGB_ATLAS_CHECK(aclrtMemsetAsync(
+                    tensor.raw_ptr(), -1, val, size, env.atlas_env().stream));
 #else
-            MGB_ATLAS_CHECK(aclrtMemset(ptr, -1, val, size));
+            MGB_ATLAS_CHECK(aclrtMemset(tensor.raw_ptr(), -1, val, size));
 #endif
             break;
 #endif
 #if MGB_CAMBRICON
         case CompNode::DeviceType::CAMBRICON:
             MGB_CNRT_CHECK(cnrtSyncQueue(env.cnrt_env().queue));
-            MGB_CNRT_CHECK(cnrtMemset(ptr, val, size));
+            MGB_CNRT_CHECK(cnrtMemset(tensor.raw_ptr(), val, size));
             break;
 #endif
         case CompNode::DeviceType::CPU: {
-            auto fill = [ptr, size, val]() { std::memset(ptr, val, size); };
+            auto fill = [tensor, size, val]() {
+                std::memset(tensor.as_megdnn().raw_ptr(), val, size);
+            };
             env.cpu_env().dispatch(fill);
         } break;
         default:

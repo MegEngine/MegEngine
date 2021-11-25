@@ -100,6 +100,10 @@ SymbolVar Network::add_type_cvt(SymbolVar f, DType out_dtype) {
     return opr::TypeCvt::make(f, out_dtype);
 }
 
+SymbolVar Network::add_concat(SymbolVar f, SymbolVar g, int axis) {
+    return opr::Concat::make({f, g}, axis);
+}
+
 SymbolVar mgb::create_block(
         Network& network, SymbolVar f_in, size_t stride, size_t num_outputs1,
         bool has_proj, DType out_dtype) {

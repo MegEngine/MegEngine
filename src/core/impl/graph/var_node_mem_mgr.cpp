@@ -81,9 +81,8 @@ const DeviceTensorStorage& StaticDeviceMemoryManager::alloc(
 void StaticDeviceMemoryManager::prefault() {
     for (auto&& i : m_storage) {
         if (i.first.device_type() == CompNode::DeviceType::CPU) {
-            auto set = [ptr = i.second.ptr(), size = i.second.size()]() {
-                memset(ptr, 0, size);
-            };
+            auto storage = i.second;
+            auto set = [storage]() { memset(storage.ptr(), 0, storage.size()); };
             CompNodeEnv::from_comp_node(i.first).cpu_env().dispatch(set);
             i.first.sync();
         }

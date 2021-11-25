@@ -139,11 +139,9 @@ void NMSKeep::CPUKern::exec(
     // See CUDAKern::exec for more explanation on output comp nodes.
     CompNode comp_node = out_idx.comp_node();
 
-    auto inp_ptr = inp.ptr<float>();
-    auto out_idx_ptr = reinterpret_cast<uint32_t*>(out_idx.ptr<int32_t>()),
-         out_size_ptr = reinterpret_cast<uint32_t*>(out_size.ptr<int32_t>());
     size_t batch = inp.shape(0), nr_boxes = inp.shape(1);
     if (nr_boxes == 0) {
+        auto out_size_ptr = reinterpret_cast<uint32_t*>(out_size.ptr<int32_t>());
         for (size_t i = 0; i < batch; ++i) {
             *(out_size_ptr + i) = 0;
         }
@@ -157,6 +155,11 @@ void NMSKeep::CPUKern::exec(
     // be dispatched on a different thread
     auto kern = [=]() {
         for (size_t i = 0; i < batch; ++i) {
+            auto inp_ptr = inp.as_megdnn().ptr<float>();
+            auto out_idx_ptr =
+                    reinterpret_cast<uint32_t*>(out_idx.as_megdnn().ptr<int32_t>());
+            auto out_size_ptr =
+                    reinterpret_cast<uint32_t*>(out_size.as_megdnn().ptr<int32_t>());
             nms::cpu_kern(
                     nr_boxes, param.max_output, param.iou_thresh,
                     inp_ptr + i * nr_boxes * 4, out_idx_ptr + i * param.max_output,
