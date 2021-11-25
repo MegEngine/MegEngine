@@ -15,6 +15,11 @@
 #include "./test_common.h"
 #include "megbrain/tensor.h"
 
+#ifndef WIN32
+#include <dirent.h>
+#include <string.h>
+#endif
+
 #include <chrono>
 #include <memory>
 #include <random>
@@ -497,6 +502,115 @@ void test_input_no_copy(int record) {
         compare_lite_tensor<float>(output_tensor, outputs[i]);
     }
 }
+
+void test_io_no_copy_ax(std::string model_name, int record = 1) {
+    std::string model_path = model_name;
+    std::vector<std::string> input_names, output_names;
+
+    std::vector<std::vector<std::shared_ptr<Tensor>>> inputs;
+    std::vector<std::vector<std::shared_ptr<Tensor>>> outputs;
+
+    std::shared_ptr<Network> network = std::make_shared<Network>();
+    network->load_model(model_path);
+
+    input_names = network->get_all_input_name();
+    output_names = network->get_all_output_name();
+
+    // prepare test data
+    for (int i = 0; i < 3; i++) {
+        std::vector<std::shared_ptr<Tensor>> net_inputs;
+        std::vector<std::shared_ptr<Tensor>> net_outputs;
+
+        for (size_t j = 0; j < input_names.size(); j++) {
+            auto in_tesnor = network->get_io_tensor(input_names[j]);
+            auto in_layout = in_tesnor->get_layout();
+            auto tmp_in = std::make_shared<Tensor>(LiteDeviceType::LITE_CPU, in_layout);
+
+            auto size = in_tesnor->get_tensor_total_size_in_byte() /
+                        in_layout.get_elem_size();
+            if (in_layout.data_type == LiteDataType::LITE_INT16) {
+                auto ptr = static_cast<short*>(tmp_in->get_memory_ptr());
+                for (size_t id = 0; id < size; id++) {
+                    ptr[id] = i + 1;
+                }
+            } else if (in_layout.data_type == LiteDataType::LITE_UINT8) {
+                auto ptr = static_cast<uint8_t*>(tmp_in->get_memory_ptr());
+                for (size_t id = 0; id < size; id++) {
+                    ptr[id] = i + 1;
+                }
+            }
+            net_inputs.push_back(tmp_in);
+            in_tesnor->copy_from(*tmp_in);
+        }
+
+        inputs.push_back(net_inputs);
+        network->forward();
+        network->wait();
+
+        for (size_t j = 0; j < output_names.size(); j++) {
+            auto out_tesnor = network->get_io_tensor(output_names[j]);
+            auto out_layout = out_tesnor->get_layout();
+            auto tmp_out =
+                    std::make_shared<Tensor>(LiteDeviceType::LITE_CPU, out_layout);
+
+            tmp_out->copy_from(*out_tesnor);
+            net_outputs.push_back(tmp_out);
+        }
+        outputs.push_back(net_outputs);
+    }
+
+    Config config;
+    config.options.force_output_use_user_specified_memory = true;
+    config.options.comp_node_seq_record_level = record;
+    config.options.const_shape = true;
+
+    std::shared_ptr<Network> network_record = std::make_shared<Network>(config);
+
+    network_record->load_model(model_path);
+
+    for (int i = 0; i < 3; i++) {
+        for (size_t j = 0; j < inputs[i].size(); j++) {
+            auto input_tensor = network_record->get_io_tensor(input_names[j]);
+            input_tensor->reset(
+                    inputs[i][j]->get_memory_ptr(), inputs[i][j]->get_layout());
+        }
+
+        std::vector<std::shared_ptr<Tensor>> net_outputs;
+
+        for (size_t j = 0; j < outputs[i].size(); j++) {
+            auto output_tensor = network_record->get_io_tensor(output_names[j]);
+            auto tmp_out = std::make_shared<Tensor>(
+                    LiteDeviceType::LITE_CPU, output_tensor->get_layout());
+            output_tensor->reset(
+                    tmp_out->get_memory_ptr(), output_tensor->get_layout());
+            net_outputs.push_back(tmp_out);
+        }
+
+        network_record->forward();
+        network_record->wait();
+
+        for (size_t j = 0; j < outputs[i].size(); j++) {
+            auto output_tensor = network_record->get_io_tensor(output_names[j]);
+            compare_lite_tensor<float>(output_tensor, outputs[i][j]);
+        }
+    }
+    printf("profile the model %s run\n", model_path.c_str());
+    std::vector<std::shared_ptr<Tensor>> net_outputs;
+    for (size_t j = 0; j < outputs[0].size(); j++) {
+        auto output_tensor = network_record->get_io_tensor(output_names[j]);
+        auto tmp_out = std::make_shared<Tensor>(
+                LiteDeviceType::LITE_CPU, output_tensor->get_layout());
+        output_tensor->reset(tmp_out->get_memory_ptr(), output_tensor->get_layout());
+        net_outputs.push_back(tmp_out);
+    }
+    lite::Timer timer("profile");
+    for (int i = 0; i < 10; i++) {
+        network_record->forward();
+        network_record->wait();
+    }
+    auto sum_time = timer.get_used_time();
+    printf("model %s used time average %f ms\n", model_path.c_str(), sum_time / 10);
+}
 }  // namespace
 
 TEST(TestNetWork, OutputNoCopy) {
@@ -513,6 +627,28 @@ TEST(TestNetWork, IONoCopy) {
 
 TEST(TestNetWork, IONoCopyRecord) {
     test_input_no_copy(1);
+}
+
+TEST(TestNetWork, IONoCopyRecordAx) {
+    std::vector<std::string> file_names;
+#ifndef WIN32
+    DIR* dirptr = NULL;
+    struct dirent* dirp;
+    std::string model_dir = "./ax_models";
+    dirptr = opendir(model_dir.c_str());
+    while (dirptr != NULL && (dirp = readdir(dirptr)) != NULL) {
+        std::string file_name(dirp->d_name);
+        if (file_name.find(".axe", 0) != std::string::npos) {
+            file_names.push_back(model_dir + "/" + file_name);
+        }
+    }
+    closedir(dirptr);
+#endif
+
+    for (auto file_name : file_names) {
+        printf("test model: %s\n", file_name.c_str());
+        test_io_no_copy_ax(file_name);
+    }
 }
 
 TEST(TestNetWork, OutputDynamicAlloc) {
