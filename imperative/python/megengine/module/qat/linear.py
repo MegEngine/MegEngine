@@ -11,7 +11,7 @@ from .module import QATModule
 
 class Linear(Float.Linear, QATModule):
     r"""A :class:`~.QATModule` version of :class:`~.module.Linear`.
-    Could be applied with :class:`~.Observer` and :class:`~.FakeQuantize`.
+    Could be applied with :class:`~.Observer` and :class:`~.quantization.fake_quant.FakeQuantize`.
 
     Args:
         in_features: size of each input sample.

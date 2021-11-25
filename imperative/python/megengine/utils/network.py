@@ -532,13 +532,13 @@ def set_symbolic_shape(option: bool):
 
 
 def as_varnode(obj):
-    r"""convert a :class:`.VarNode` compatible object to :class:`.VarNode`.
+    r"""convert a :class:`.utils.network_node.VarNode` compatible object to :class:`.utils.network_node.VarNode`.
 
     Args:
         obj: it must be one of the following:
 
-            1. a :class:`.VarNode` object
-            2. a :class:`.OpNode` object that has unique output
+            1. a :class:`.utils.network_node.VarNode` object
+            2. a :class:`.utils.network_node.OpNode` object that has unique output
             3. an iterable that produces either type 1 or 2, with length 1
 
     """
@@ -568,8 +568,8 @@ def as_varnode(obj):
 
 
 def as_oprnode(obj):
-    r"""convert a :class:`.OpNode` compatible object to
-    :class:`.OpNode`; it works like :func:`as_varnode`.i
+    r"""convert a :class:`.utils.network_node.OpNode` compatible object to
+    :class:`.utils.network_node.OpNode`; it works like :func:`as_varnode`.
     """
     if type(obj) is VarNode:
         return obj.owner

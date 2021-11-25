@@ -34,7 +34,7 @@ class QConfig(
         weight_observer: interface to instantiate an :class:`~.Observer` indicating
             how to collect scales and zero_point of wegiht.
         act_observer: similar to ``weight_observer`` but toward activation.
-        weight_fake_quant: interface to instantiate a :class:`~.FakeQuantize` indicating
+        weight_fake_quant: interface to instantiate a :class:`~.quantization.fake_quant.FakeQuantize` indicating
             how to do fake_quant calculation.
         act_observer: similar to ``weight_fake_quant`` but toward activation.
     

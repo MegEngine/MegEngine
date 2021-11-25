@@ -14,7 +14,7 @@ from .module import QATModule
 
 class Concat(Float.Concat, QATModule):
     r"""A :class:`~.QATModule` to do functional :func:`~.concat` with QAT support.
-    Could be applied with :class:`~.Observer` and :class:`~.FakeQuantize`.
+    Could be applied with :class:`~.Observer` and :class:`~.quantization.fake_quant.FakeQuantize`.
     """
 
     def forward(self, inps: Iterable[Tensor], axis: int = 0):

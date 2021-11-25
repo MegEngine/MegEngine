@@ -367,7 +367,7 @@ def conv_transpose2d(
 ) -> Tensor:
     r"""2D transposed convolution operation.
 
-    Refer to :class:`~.ConvTranspose2d` for more information.
+    Refer to :class:`~.module.conv.ConvTranspose2d` for more information.
 
     Args:
         inp: feature map of the convolution operation.
@@ -1519,7 +1519,7 @@ def dropout(inp: Tensor, drop_prob: float, training: bool = True) -> Tensor:
         inp: input tensor.
         drop_prob: probability to drop (set to zero) a single element.
         training: the default behavior of ``dropout`` during training is to rescale the output,
-            then it can be replaced by an :class:`~.Identity` during inference. Default: True
+            then it can be replaced by an :class:`~.module.identify.Identity` during inference. Default: True
     Returns:
         the ouput tensor
 
@@ -1669,7 +1669,7 @@ def sliding_window(
 ) -> Tensor:
     r"""Extracts sliding local blocks from a batched input tensor.
 
-    Refer to :class:`~.SlidingWindow` for more information.
+    Refer to :class:`~.module.sliding_window.SlidingWindow` for more information.
 
     Args:
         inp: input tensor.
@@ -1707,7 +1707,7 @@ def sliding_window_transpose(
 ) -> Tensor:
     r"""Sum over the sliding windows on the corresponding input location.
 
-    Refer to :class:`~.SlidingWindowTranspose` for more information.
+    Refer to :class:`~.module.sliding_window.SlidingWindowTranspose` for more information.
 
     Args:
         inp: input tensor.

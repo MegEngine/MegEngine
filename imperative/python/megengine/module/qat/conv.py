@@ -12,7 +12,7 @@ from .module import QATModule
 
 class Conv2d(Float.Conv2d, QATModule):
     r"""A :class:`~.QATModule` :class:`~.module.Conv2d` with QAT support.
-    Could be applied with :class:`~.Observer` and :class:`~.FakeQuantize`.
+    Could be applied with :class:`~.Observer` and :class:`~.quantization.fake_quant.FakeQuantize`.
     """
 
     def calc_conv_qat(self, inp):
@@ -50,7 +50,7 @@ class Conv2d(Float.Conv2d, QATModule):
 
 class ConvRelu2d(Conv2d):
     r"""A :class:`~.QATModule` include :class:`~.module.Conv2d` and :func:`~.relu` with QAT support.
-    Could be applied with :class:`~.Observer` and :class:`~.FakeQuantize`.
+    Could be applied with :class:`~.Observer` and :class:`~.quantization.fake_quant.FakeQuantize`.
     """
 
     def forward(self, inp):
@@ -59,7 +59,7 @@ class ConvRelu2d(Conv2d):
 
 class ConvTranspose2d(Float.ConvTranspose2d, QATModule):
     r"""A :class:`~.QATModule` :class:`~.module.ConvTranspose2d` with QAT support.
-    Could be applied with :class:`~.Observer` and :class:`~.FakeQuantize`.
+    Could be applied with :class:`~.Observer` and :class:`~.quantization.fake_quant.FakeQuantize`.
     """
 
     def calc_conv_transpose2d_qat(self, inp):

@@ -157,7 +157,7 @@ class _ConvBnActivation2d(Float._ConvBnActivation2d, QATModule):
 
 class ConvBn2d(_ConvBnActivation2d):
     r"""A fused :class:`~.QATModule` including :class:`~.module.Conv2d` and :class:`~.module.BatchNorm2d` with QAT support.
-    Could be applied with :class:`~.Observer` and :class:`~.FakeQuantize`.
+    Could be applied with :class:`~.Observer` and :class:`~.quantization.fake_quant.FakeQuantize`.
     """
 
     def forward(self, inp):
@@ -166,7 +166,7 @@ class ConvBn2d(_ConvBnActivation2d):
 
 class ConvBnRelu2d(_ConvBnActivation2d):
     r"""A fused :class:`~.QATModule` including :class:`~.module.Conv2d`, :class:`~.module.BatchNorm2d` and :func:`~.relu` with QAT support.
-    Could be applied with :class:`~.Observer` and :class:`~.FakeQuantize`.
+    Could be applied with :class:`~.Observer` and :class:`~.quantization.fake_quant.FakeQuantize`.
     """
 
     def forward(self, inp):
