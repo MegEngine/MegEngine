@@ -141,21 +141,26 @@ class SummaryWriterExtend(SummaryWriter):
 
     def add_text(self, tag, text_string_list, global_step=None, walltime=None):
         """Add text data to summary.
+
         Args:
             tag (string): Data identifier
             text_string_list (string list): String to save
             global_step (int): Global step value to record
             walltime (float): Optional override default walltime (time.time())
                 seconds after epoch of event
-        Examples::
-            # text can be divided into three levels by tag and global_step
-            from writer import SummaryWriterExtend
-            writer = SummaryWriterExtend()
 
-            writer.add_text('level1.0/level2.0', ['text0'], 0)
-            writer.add_text('level1.0/level2.0', ['text1'], 1)
-            writer.add_text('level1.0/level2.1', ['text2'])
-            writer.add_text('level1.1', ['text3'])
+        Examples:
+
+            .. code-block:: python
+
+               # text can be divided into three levels by tag and global_step
+               from writer import SummaryWriterExtend
+               writer = SummaryWriterExtend()
+
+               writer.add_text('level1.0/level2.0', ['text0'], 0)
+               writer.add_text('level1.0/level2.0', ['text1'], 1)
+               writer.add_text('level1.0/level2.1', ['text2'])
+               writer.add_text('level1.1', ['text3'])
         """
 
         self._get_file_writer().add_summary(
@@ -171,8 +176,11 @@ class SummaryWriterExtend(SummaryWriter):
         dtype=None,
         attributes={},
     ):
-        """Add node raw datas that can help build graph.After add all nodes, call
-           add_graph_by_node_raw_list() to build graph and add graph data to summary.
+        """Add node raw datas that can help build graph.
+
+        After add all nodes, call ``add_graph_by_node_raw_list()`` to build
+        graph and add graph data to summary.
+
         Args:
             name (string): opr name.
             op (string): opr class name.
@@ -180,15 +188,19 @@ class SummaryWriterExtend(SummaryWriter):
             outputshape (list): output shape.
             dtype (string): output data dtype.
             attributes (dict): attributes info.
-        Examples::
-            from writer import SummaryWriterExtend
-            writer = SummaryWriterExtend()
 
-            writer.add_node_raw('node1', 'opr1', outputshape=[6, 2, 3], dtype="float32", attributes={
-                    "peak_size": "12MB", "mmory_alloc": "2MB, percent: 16.7%"})
-            writer.add_node_raw('node2', 'opr2', outputshape=[6, 2, 3], dtype="float32", input="node1",  attributes={
-                                "peak_size": "12MB", "mmory_alloc": "2MB, percent: 16.7%"})
-            writer.add_graph_by_node_raw_list()
+        Examples:
+
+            .. code-block:: python
+
+               from writer import SummaryWriterExtend
+               writer = SummaryWriterExtend()
+
+               writer.add_node_raw('node1', 'opr1', outputshape=[6, 2, 3], dtype="float32", attributes={
+                       "peak_size": "12MB", "mmory_alloc": "2MB, percent: 16.7%"})
+               writer.add_node_raw('node2', 'opr2', outputshape=[6, 2, 3], dtype="float32", input="node1",  attributes={
+                                   "peak_size": "12MB", "mmory_alloc": "2MB, percent: 16.7%"})
+               writer.add_graph_by_node_raw_list()
 
         """
         # self.node_raw_list.append(

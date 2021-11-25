@@ -205,13 +205,17 @@ def convert(args):
 
 
 def main():
-    """`graph_info_analyze.py` is uesed to convert json dumped by `VisableDataSet` 
+    """`graph_info_analyze.py` is uesed to convert json dumped by `VisableDataSet`
     class to logs which can be read by python `tensorboard`.
-    Now `get_static_memory_alloc_info()` support this feature,it will dump a dir 
+    Now `get_static_memory_alloc_info()` support this feature,it will dump a dir
     which can be convert by `graph_info_analyze.py`.
-    Examples::
-        graph_info_analyze.py -i <input_dir_name> -o <output_dir_name>
-        tensorboard --logdir <output_dir_name>
+
+    Examples:
+
+        .. code-block:: shell
+
+           graph_info_analyze.py -i <input_dir_name> -o <output_dir_name>
+           tensorboard --logdir <output_dir_name>
     """
     parser = argparse.ArgumentParser(
         "convert json dumped by c to logs which can be read by python tensorboard",
