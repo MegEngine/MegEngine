@@ -8,6 +8,7 @@
 
 from ..core._imperative_rt.core2 import set_cpp_apply_module_trace
 from . import compat
+from ._passes import optimize
 from .traced_module import (
     TracedModule,
     _register_all_builtin_module,
@@ -19,3 +20,11 @@ from .traced_module import (
 
 _register_all_builtin_module()
 set_cpp_apply_module_trace(cpp_apply_module_trace)
+
+__all__ = {
+    "register_as_builtin",
+    "trace_module",
+    "wrap",
+    "TracedModule",
+    "optimize",
+}
