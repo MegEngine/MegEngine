@@ -44,7 +44,7 @@ public:
     }
 
     static CompNodeSyncManager& inst() {
-        static CompNodeSyncManager sl_inst;
+        static CompNodeSyncManager* sl_inst = new CompNodeSyncManager();
 #if MGB_CUDA && defined(WIN32)
         //! FIXME: windows cuda driver shutdown before call atexit function even
         //! register atexit function after init cuda driver! as a workround
@@ -55,7 +55,7 @@ public:
             mgb_assert(!err, "failed to register atexit function");
         }
 #endif
-        return sl_inst;
+        return *sl_inst;
     }
 
     CompNode::Event* get_or_create_event(Blob* blob) {
