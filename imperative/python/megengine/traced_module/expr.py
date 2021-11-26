@@ -13,7 +13,7 @@ import inspect
 import re
 import weakref
 from importlib import import_module
-from typing import Callable, Dict, List, Optional, Sequence, Tuple, Union
+from typing import Callable, Dict, Iterable, List, Optional, Sequence, Union
 
 from ..core._imperative_rt import OpDef
 from ..core._imperative_rt.core2 import Tensor as RawTensor
@@ -50,20 +50,30 @@ def get_suffix_name(prefix: str, name: str):
     return matchd.group(1)
 
 
-def is_call_module(expr):
+def is_call_module(expr, module_cls: Module = None):
     return (
         isinstance(expr, CallMethod)
         and isinstance(expr.inputs[0], ModuleNode)
         and expr.method == "__call__"
+    ) and (module_cls is None or isinstance(expr.inputs[0].owner, module_cls))
+
+
+def is_call_tensor_method(expr, method: Iterable[str] = None):
+    if method and isinstance(method, str):
+        method = (method,)
+    return (
+        isinstance(expr, CallMethod)
+        and not is_call_module(expr)
+        and (method is None or any(expr.method == f for f in method))
     )
 
 
-def is_call_tensor_method(expr):
-    return isinstance(expr, CallMethod) and not is_call_module(expr)
-
-
-def is_call_function(expr):
-    return isinstance(expr, CallFunction)
+def is_call_function(expr, func: Iterable[Callable] = None):
+    if func and not isinstance(func, Iterable):
+        func = (func,)
+    return isinstance(expr, CallFunction) and (
+        func is None or any(expr.func == f for f in func)
+    )
 
 
 def is_constant(expr):
@@ -74,8 +84,8 @@ def is_getattr(expr):
     return isinstance(expr, GetAttr)
 
 
-def is_apply_def(expr):
-    return isinstance(expr, Apply)
+def is_apply_def(expr, opdef=None):
+    return isinstance(expr, Apply) and (opdef is None or isinstance(expr.opdef, opdef))
 
 
 def is_input(expr):

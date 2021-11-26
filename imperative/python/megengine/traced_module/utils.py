@@ -14,6 +14,7 @@ from typing import Callable, Dict, Iterable, List, Optional, Sequence, Type, Uni
 
 from .. import get_logger
 from ..module import Module
+from ..tensor import Parameter, Tensor
 
 logger = get_logger(__name__)
 
@@ -301,3 +302,26 @@ class _ModuleDict(Module, MutableMapping):
 
     def forward(self):
         raise RuntimeError("ModuleList is not callable")
+
+
+def assign_attr(obj: Union[Module, Tensor], module: Module, target: str):
+    *prefix, name = target.split(".")
+    for item in prefix:
+        module = getattr(module, item)
+        if not isinstance(module, Module):
+            raise AttributeError("`{}` is not an Module".format(item))
+    setattr(module, name, obj)
+
+
+def get_subattr(module: Module, target: str):
+    # todo : remove this import
+    from .node import ModuleNode
+
+    if target == "":
+        return module
+    *prefix, name = target.split(".")
+    for item in prefix:
+        module = getattr(module, item)
+        if not isinstance(module, (Module, ModuleNode)):
+            raise AttributeError("`{}` is not an Module".format(item))
+    return getattr(module, name)

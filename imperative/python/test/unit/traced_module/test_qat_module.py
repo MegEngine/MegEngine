@@ -13,20 +13,7 @@ import megengine.quantization as Q
 from megengine import Tensor
 from megengine.module.qat.module import QATModule
 from megengine.traced_module import TracedModule, trace_module
-
-
-def get_subattr(self: M.Module, name: str):
-    if name == "":
-        return self
-    module_path, _, name = name.rpartition(".")
-    if module_path == "":
-        return getattr(self, name)
-    module_names = module_path.split(".")
-    for item in module_names:
-        self = getattr(self, item)
-        if not isinstance(self, M.Module):
-            raise AttributeError("`{}` is not an Module".format(item))
-    return getattr(self, name)
+from megengine.traced_module.utils import get_subattr
 
 
 class MyConvBnRelu2d(M.ConvBnRelu2d):
