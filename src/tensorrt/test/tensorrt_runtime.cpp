@@ -243,7 +243,6 @@ TEST(TestOprTensorRT, IOFormatFree) {
     func2->execute();
     MGB_ASSERT_TENSOR_EQ(y1, y2);
 }
-#endif
 
 TEST(TestOprTensorRT, FlattenConcatPlugin) {
     REQUIRE_GPU(1);
@@ -272,6 +271,7 @@ TEST(TestOprTensorRT, FlattenConcatPlugin) {
     func->execute();
     MGB_ASSERT_TENSOR_EQ(host_z1, host_z2);
 }
+#endif
 
 TEST(TestOprTensorRT, ICudaEngine) {
     REQUIRE_GPU(1);
