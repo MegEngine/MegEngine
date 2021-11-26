@@ -5,6 +5,7 @@ import numpy as np
 import megengine.functional as F
 import megengine.module as M
 from megengine import Tensor
+from megengine.module.module import Module
 from megengine.traced_module import TracedModule, trace_module
 from megengine.traced_module.expr import CallFunction
 
@@ -89,5 +90,46 @@ def test_trace_module():
 
     m4 = MyModule4()
     tm4 = trace_module(m4, a, b)
+    np.testing.assert_equal(tm4(a, b).numpy(), 3)
+    np.testing.assert_equal(tm4(a, y=b).numpy(), 3)
+    np.testing.assert_equal(tm4(x=a, y=b).numpy(), 3)
+
+    tm4 = trace_module(m4, a, y=b)
+    np.testing.assert_equal(tm4(a, b).numpy(), 3)
+    np.testing.assert_equal(tm4(a, y=b).numpy(), 3)
+    np.testing.assert_equal(tm4(x=a, y=b).numpy(), 3)
+
+    tm4 = trace_module(m4, x=a, y=b)
+    np.testing.assert_equal(tm4(a, b).numpy(), 3)
+    np.testing.assert_equal(tm4(a, y=b).numpy(), 3)
+    np.testing.assert_equal(tm4(x=a, y=b).numpy(), 3)
+
+    tm5 = trace_module(tm4, a, b)
+    np.testing.assert_equal(tm5(a, b).numpy(), 3)
+    np.testing.assert_equal(tm5(a, y=b).numpy(), 3)
+    np.testing.assert_equal(tm5(x=a, y=b).numpy(), 3)
+
+    tm5 = trace_module(tm4, a, y=b)
+    np.testing.assert_equal(tm5(a, b).numpy(), 3)
+    np.testing.assert_equal(tm5(a, y=b).numpy(), 3)
+    np.testing.assert_equal(tm5(x=a, y=b).numpy(), 3)
+
+    tm5 = trace_module(tm4, x=a, y=b)
+    np.testing.assert_equal(tm5(a, b).numpy(), 3)
+    np.testing.assert_equal(tm5(a, y=b).numpy(), 3)
+    np.testing.assert_equal(tm5(x=a, y=b).numpy(), 3)
+
     assert len(tm4.graph._exprs) == 1
     assert isinstance(tm4.graph._exprs[0], CallFunction)
+
+    class MyModule5(Module):
+        def __init__(self):
+            super().__init__()
+            self.m1 = tm4
+
+        def forward(self, x, y):
+            return self.m1(x, y)
+
+    tm6 = trace_module(MyModule5(), a, b)
+    assert tm6.m1.argspec is None
+    assert tm6.m1._is_top is False

@@ -1928,8 +1928,11 @@ class TracedModule(Module):
         self.watch_node_value = {}
         self.end_points = []
         self.is_qat = is_qat
+        self.argspec = None
 
     def forward(self, *args, **kwargs):
+        if hasattr(self, "argspec") and self.argspec is not None:
+            args, kwargs = _convert_kwargs_to_args(self.argspec, args, kwargs, True)
         inputs, treedef = tree_flatten(((self, *args), kwargs))
         assert treedef in self.argdef_graph_map
         inputs = filter(
@@ -2422,8 +2425,12 @@ def trace_module(
             NodeMixin.wrap_safe(
                 builder, Input.make(name="top", type=ModuleNode, qualname=net_name)
             )
-            args, kwargs = _convert_kwargs_to_args(mod.forward, args, kwargs, True)
-
+            forward_argspec = (
+                mod.argspec
+                if hasattr(mod, "argspec")
+                else inspect.getfullargspec(mod.forward)
+            )
+            args, kwargs = _convert_kwargs_to_args(forward_argspec, args, kwargs, True)
             inputs, _ = tree_flatten((args, kwargs))
             for _, i in enumerate(inputs):
                 # assert isinstance(i, Tensor), "not support "
@@ -2439,6 +2446,7 @@ def trace_module(
             builder(*args, **kwargs)
             active_module_tracer().pop_scope()
             traced_mod = builder.build()
+            traced_mod.argspec = forward_argspec
             traced_mod.graph._reset_ids()
             return traced_mod
     finally:

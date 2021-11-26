@@ -9,7 +9,8 @@ import collections
 import copy
 import inspect
 from collections.abc import MutableMapping, MutableSequence
-from typing import Dict, Iterable, List, Optional, Sequence, Type
+from inspect import FullArgSpec
+from typing import Callable, Dict, Iterable, List, Optional, Sequence, Type, Union
 
 from .. import get_logger
 from ..module import Module
@@ -57,9 +58,14 @@ def replace_container_with_module_container(container):
     return has_module, module_container
 
 
-def _convert_kwargs_to_args(func, args, kwargs, is_bounded=False):
+def _convert_kwargs_to_args(
+    argspecs: Union[Callable, FullArgSpec], args, kwargs, is_bounded=False
+):
     # is_bounded = True when func is a method and provided args don't include 'self'
-    arg_specs = inspect.getfullargspec(func)
+    arg_specs = (
+        inspect.getfullargspec(argspecs) if isinstance(argspecs, Callable) else argspecs
+    )
+    assert isinstance(arg_specs, FullArgSpec)
     arg_specs_args = arg_specs.args
     if is_bounded:
         arg_specs_args = arg_specs.args[1:]

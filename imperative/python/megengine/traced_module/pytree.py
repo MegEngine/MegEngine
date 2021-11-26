@@ -9,6 +9,7 @@
 import collections
 from collections import OrderedDict, defaultdict
 from functools import partial
+from inspect import FullArgSpec
 from typing import Callable, NamedTuple
 
 import numpy as np
@@ -53,6 +54,7 @@ SUPPORTED_LEAF_TYPE = {
     QuantMode,
     ArgsIndex,
     Group,
+    FullArgSpec,
 }
 
 USER_REGISTERED_LEAF_TYPE = []
