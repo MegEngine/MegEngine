@@ -450,7 +450,6 @@ void _init_py_op_def(py::module m) {
     py_type.tp_richcompare = PyOp(OpDef)::tp_richcompare;
     py_type.tp_getset = py_op::py_getsetters;
     py_type.tp_repr = py_op::py_repr;
-    py_type.tp_dealloc = py_dealloc_generic<PyOp(OpDef)>;
     mgb_assert(PyType_Ready(&py_type) >= 0);
     m.add_object("OpDef", reinterpret_cast<PyObject*>(&py_type));
 }
