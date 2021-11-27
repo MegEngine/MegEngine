@@ -421,7 +421,8 @@ class LiteTensor(object):
         """
         self.update()
         if self.nbytes <= 0:
-            return np.array([])
+            np_type = _lite_type_to_nptypes[LiteDataType(self._layout.data_type)]
+            return np.array([], dtype=np_type)
         if self.is_continue and (
             self.is_pinned_host or self.device_type == LiteDeviceType.LITE_CPU
         ):
