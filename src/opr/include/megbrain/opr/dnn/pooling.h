@@ -26,8 +26,8 @@ MGE_WIN_DECLSPEC_FUC PoolingForward(
         VarNode* src, const Param& param, const ExecutionPolicy& policy,
         const OperatorNodeConfig& config);
 MGE_WIN_DECLSPEC_FUC static SymbolVar make(
-        SymbolVar src, const Param& param, const OperatorNodeConfig& config = {},
-        const ExecutionPolicy& policy = {});
+        SymbolVar src, const Param& param, const ExecutionPolicy& policy = {},
+        const OperatorNodeConfig& config = {});
 
 void init_output_static_infer_desc() override;
 
@@ -47,7 +47,7 @@ MGE_WIN_DECLSPEC_FUC PoolingBackward(
 
 MGE_WIN_DECLSPEC_FUC static SymbolVar make(
         SymbolVar src, SymbolVar dst, SymbolVar diff, const Param& param,
-        const OperatorNodeConfig& config = {}, const ExecutionPolicy& policy = {});
+        const ExecutionPolicy& policy = {}, const OperatorNodeConfig& config = {});
 
 MGE_WIN_DECLSPEC_FUC size_t get_workspace_size_bytes(
         const TensorShapeArray& input_shapes,

@@ -253,4 +253,11 @@ struct IsComplete<T, decltype(void(sizeof(T)))> : std::true_type {};
             __caller_OprRegShallowCopy##_cls##_ins;                         \
     }
 
+/*!
+ * \brief register opr serialization and shallow copy methods
+ */
+#define MGB_SEREG_OPR_AND_REG_SHALLOW_COPY(_cls, _arity, _copy) \
+    MGB_SEREG_OPR(_cls, _arity)                                 \
+    MGB_REG_OPR_SHALLOW_COPY(_cls, ::mgb::serialization::_copy<_cls>)
+
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

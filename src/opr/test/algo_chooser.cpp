@@ -15,7 +15,9 @@
 #include "megbrain/opr/basic_arith.h"
 #include "megbrain/opr/blas.h"
 #include "megbrain/opr/dnn/convolution.h"
+#include "megbrain/opr/dnn/pooling.h"
 #include "megbrain/opr/tensor_manip.h"
+#include "megbrain/serialization/opr_shallow_copy.h"
 #include "megbrain/serialization/serializer.h"
 #include "megbrain/test/autocheck.h"
 #include "megbrain/test/helper.h"
@@ -32,10 +34,17 @@ using namespace mgb;
 
 namespace {
 
-#if MGB_CUDA
-#if MGB_ENABLE_FASTRUN
 template <typename MgbOpr, int arith>
 struct GraphMaker;
+
+template <>
+struct GraphMaker<opr::Pooling, 1> {
+    SymbolVar operator()(
+            const std::array<cg::SymbolVar, 1>& inputs, opr::Pooling::Param& param,
+            opr::Pooling::ExecutionPolicy& policy) {
+        return opr::Pooling::make(inputs[0], param, policy);
+    }
+};
 
 template <typename MgbOpr>
 struct GraphMaker<MgbOpr, 2> {
@@ -43,28 +52,6 @@ struct GraphMaker<MgbOpr, 2> {
             const std::array<cg::SymbolVar, 2>& inputs, typename MgbOpr::Param& param,
             typename MgbOpr::ExecutionPolicy& policy) {
         return MgbOpr::make(inputs[0], inputs[1], param, policy);
-    }
-};
-
-template <>
-struct GraphMaker<opr::ConvolutionBackwardData, 2> {
-    SymbolVar operator()(
-            const std::array<cg::SymbolVar, 2>& inputs,
-            opr::ConvolutionBackwardData::Param& param,
-            opr::ConvolutionBackwardData::ExecutionPolicy& policy) {
-        return opr::ConvolutionBackwardData::make_deconv(
-                inputs[0], inputs[1], param, policy);
-    }
-};
-
-template <>
-struct GraphMaker<opr::Convolution3DBackwardData, 2> {
-    SymbolVar operator()(
-            const std::array<cg::SymbolVar, 2>& inputs,
-            opr::Convolution3DBackwardData::Param& param,
-            opr::Convolution3DBackwardData::ExecutionPolicy& policy) {
-        return opr::Convolution3DBackwardData::make_deconv(
-                inputs[0], inputs[1], param, policy);
     }
 };
 
@@ -97,6 +84,37 @@ struct GraphMaker<MgbOpr, 5> {
                 {});
     }
 };
+
+template <typename MgbOpr, int arith, typename dtype = dtype::Float32>
+void test_execution_policy_shallow_copy(
+        std::array<TensorShape, arith> shapes, typename MgbOpr::Param param = {}) {
+    using Policy = typename MgbOpr::ExecutionPolicy;
+
+    Policy policy;
+    policy.strategy = Policy::Strategy::PROFILE;
+
+    auto cn = CompNode::load("cpu0");
+    auto graph0 = ComputingGraph::make(), graph1 = ComputingGraph::make();
+    std::array<cg::SymbolVar, arith> inputs0;
+    VarNodeArray inputs1;
+    for (size_t i = 0; i < arith; ++i) {
+        HostTensorND hi{cn, shapes[i], dtype()};
+        inputs0[i] = opr::ImmutableTensor::make(*graph0, hi);
+        inputs1.push_back(opr::ImmutableTensor::make(*graph1, hi).node());
+    }
+
+    GraphMaker<MgbOpr, arith> graph_maker;
+    auto opr0 = graph_maker(inputs0, param, policy).node()->owner_opr();
+    auto opr1 = serialization::copy_opr_shallow(*opr0, inputs1, OperatorNodeConfig{});
+    auto m0 = &(opr0->template cast_final<MgbOpr>());
+    auto m1 = &(opr1->template cast_final<MgbOpr>());
+
+    ASSERT_EQ(policy.strategy, m0->execution_policy().strategy);
+    ASSERT_EQ(policy.strategy, m1->execution_policy().strategy);
+}
+
+#if MGB_CUDA
+#if MGB_ENABLE_FASTRUN
 
 template <typename MgbOpr, int arith, typename dtype = dtype::Float32>
 void test_fastrun_opr(
@@ -162,16 +180,24 @@ void test_fastrun_opr(
     size_t nr_set_total = expect_nr_cache_set_inp1 + nr_set_inp0;
     ASSERT_EQ(cache_set_history.size(), nr_set_total);
 }
+#endif  // MGB_ENABLE_FASTRUN
+#endif  // MGB_CUDA
 
+}  // anonymous namespace
+
+#if MGB_CUDA
+#if MGB_ENABLE_FASTRUN
 TEST(TestOprDNN, FastrunIgnoreBatchSizeConvolution) {
     REQUIRE_GPU(1);
     test_fastrun_opr<opr::Convolution, 2>(
             {TensorShape{12, 3, 36, 36}, TensorShape{4, 3, 3, 3}},
             {TensorShape{1, 3, 36, 36}, TensorShape{4, 3, 3, 3}});
 
-    test_fastrun_opr<opr::ConvolutionBackwardData, 2>(
-            {TensorShape{12, 4, 23, 29}, TensorShape{4, 5, 3, 2}},
-            {TensorShape{2, 4, 23, 29}, TensorShape{4, 5, 3, 2}});
+    test_fastrun_opr<opr::ConvolutionBackwardData, 3>(
+            {TensorShape{4, 5, 3, 2}, TensorShape{12, 4, 23, 29},
+             TensorShape{12, 5, 25, 30}},
+            {TensorShape{4, 5, 3, 2}, TensorShape{2, 4, 23, 29},
+             TensorShape{2, 5, 25, 30}});
 
     test_fastrun_opr<opr::ConvolutionBackwardFilter, 3>(
             {TensorShape{12, 4, 23, 29}, TensorShape{12, 5, 21, 28},
@@ -195,9 +221,11 @@ TEST(TestOprDNN, FastrunIgnoreBatchSizeConvolution3D) {
             {TensorShape{8, 4, 12, 13, 14}, TensorShape{4, 4, 3, 3, 3}},
             {TensorShape{3, 4, 12, 13, 14}, TensorShape{4, 4, 3, 3, 3}});
 
-    test_fastrun_opr<opr::Convolution3DBackwardData, 2>(
-            {TensorShape{14, 5, 12, 12, 16}, TensorShape{5, 5, 3, 3, 3}},
-            {TensorShape{4, 5, 12, 12, 16}, TensorShape{5, 5, 3, 3, 3}});
+    test_fastrun_opr<opr::Convolution3DBackwardData, 3>(
+            {TensorShape{5, 5, 3, 3, 3}, TensorShape{14, 5, 12, 12, 16},
+             TensorShape{14, 5, 14, 14, 18}},
+            {TensorShape{5, 5, 3, 3, 3}, TensorShape{4, 5, 12, 12, 16},
+             TensorShape{4, 5, 14, 14, 18}});
 
     test_fastrun_opr<opr::Convolution3DBackwardFilter, 3>(
             {TensorShape{64, 16, 18, 18, 18}, TensorShape{64, 16, 18, 18, 18},
@@ -295,6 +323,87 @@ TEST(TestOprDNN, FastrunIgnoreBatchSizeBatchedMatrixMul) {
 #endif  // MGB_ENABLE_FASTRUN
 #endif  // MGB_CUDA
 
-}  // anonymous namespace
+TEST(TestOprDNN, ExecutionPolicyShallowCopyConvolution) {
+    test_execution_policy_shallow_copy<opr::Convolution, 2>(
+            {TensorShape{12, 3, 36, 36}, TensorShape{4, 3, 3, 3}});
+
+    test_execution_policy_shallow_copy<opr::ConvolutionBackwardData, 3>(
+            {TensorShape{4, 5, 3, 2}, TensorShape{12, 4, 23, 29},
+             TensorShape{12, 5, 25, 30}});
+
+    test_execution_policy_shallow_copy<opr::ConvolutionBackwardFilter, 3>(
+            {TensorShape{12, 4, 23, 29}, TensorShape{12, 5, 21, 28},
+             TensorShape{5, 4, 3, 2}});
+}
+
+TEST(TestOprDNN, ExecutionPolicyShallowCopyConvBias) {
+    test_execution_policy_shallow_copy<opr::ConvBias, 3>(
+            {TensorShape{20, 16, 50, 50}, TensorShape{24, 16, 3, 3},
+             TensorShape{1, 24, 1, 1}});
+}
+
+TEST(TestOprDNN, ExecutionPolicyShallowCopyConvolution3D) {
+    test_execution_policy_shallow_copy<opr::Convolution3D, 2>(
+            {TensorShape{8, 4, 12, 13, 14}, TensorShape{4, 4, 3, 3, 3}});
+
+    test_execution_policy_shallow_copy<opr::Convolution3DBackwardData, 3>(
+            {TensorShape{5, 5, 3, 3, 3}, TensorShape{14, 5, 12, 12, 16},
+             TensorShape{14, 5, 14, 14, 18}});
+
+    test_execution_policy_shallow_copy<opr::Convolution3DBackwardFilter, 3>(
+            {TensorShape{64, 16, 18, 18, 18}, TensorShape{64, 16, 18, 18, 18},
+             TensorShape{16, 16, 1, 1, 1}});
+}
+
+TEST(TestOprDNN, ExecutionPolicyShallowCopyLocalShare) {
+    opr::LocalShare::Param local_share_param;
+    local_share_param.mode = opr::LocalShare::Param::Mode::CROSS_CORRELATION;
+    local_share_param.pad_h = local_share_param.pad_w = 1;
+    local_share_param.stride_h = local_share_param.stride_w = 1;
+    local_share_param.spatial_groups_h = local_share_param.spatial_groups_w = 2;
+    test_execution_policy_shallow_copy<opr::LocalShareForward, 2>(
+            {TensorShape{32, 2, 23, 23}, TensorShape{2, 2, 2, 2, 2, 7}},
+            local_share_param);
+
+    test_execution_policy_shallow_copy<opr::LocalShareBackwardData, 3>(
+            {TensorShape{3, 3, 128, 1, 1, 128}, TensorShape{32, 128, 24, 24},
+             TensorShape{32, 128, 24, 24}});
+
+    test_execution_policy_shallow_copy<opr::LocalShareBackwardFilter, 3>(
+            {TensorShape{12, 3, 36, 36}, TensorShape{12, 4, 35, 35},
+             TensorShape{3, 3, 3, 3, 3, 4}});
+}
+
+TEST(TestOprDNN, ExecutionPolicyShallowCopyDeformableConv) {
+    test_execution_policy_shallow_copy<opr::DeformableConvForward, 4>(
+            {TensorShape{12, 6, 20, 20}, TensorShape{6, 6, 3, 3},
+             TensorShape{12, 18, 18, 18}, TensorShape{12, 9, 18, 18}});
+
+    test_execution_policy_shallow_copy<opr::DeformableConvBackwardData, 5>(
+            {TensorShape{12, 6, 20, 20}, TensorShape{6, 6, 3, 3},
+             TensorShape{12, 18, 18, 18}, TensorShape{12, 9, 18, 18},
+             TensorShape{12, 6, 18, 18}});
+
+    test_execution_policy_shallow_copy<opr::DeformableConvBackwardFilter, 5>(
+            {TensorShape{12, 6, 20, 20}, TensorShape{6, 6, 3, 3},
+             TensorShape{12, 18, 18, 18}, TensorShape{12, 9, 18, 18},
+             TensorShape{12, 6, 18, 18}});
+}
+
+TEST(TestOprDNN, ExecutionPolicyShallowCopyMatrixMul) {
+    test_execution_policy_shallow_copy<opr::MatrixMul, 2>(
+            {TensorShape{10, 12}, TensorShape{12, 12}});
+
+    test_execution_policy_shallow_copy<opr::BatchedMatrixMul, 2>(
+            {TensorShape{12, 6, 8}, TensorShape{12, 8, 4}});
+}
+
+TEST(TestOprDNN, ExecutionPolicyShallowCopyPooling) {
+    test_execution_policy_shallow_copy<opr::Pooling, 1>({TensorShape{1, 20, 24, 24}});
+
+    test_execution_policy_shallow_copy<opr::PoolingBackward, 3>(
+            {TensorShape{1, 20, 24, 24}, TensorShape{1, 20, 12, 12},
+             TensorShape{1, 20, 12, 12}});
+}
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

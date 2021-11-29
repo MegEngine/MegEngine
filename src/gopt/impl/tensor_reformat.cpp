@@ -525,8 +525,8 @@ std::unique_ptr<EnableTensorCorePass> EnableTensorCorePass::
             }
             auto new_param = pooling.param();
             new_param.format = Format::NCHW32;
-            auto new_pooling =
-                    opr::PoolingForward::make(new_inp_var, new_param, opr->config());
+            auto new_pooling = opr::PoolingForward::make(
+                    new_inp_var, new_param, pooling.execution_policy(), opr->config());
             return new_pooling.node()->owner_opr();
         }
         return serialization::copy_opr_shallow(*opr, new_inp, opr->config());
@@ -795,8 +795,8 @@ std::unique_ptr<EnableCHWN4Pass> EnableCHWN4Pass::make_chwn4_converter() {
         if (varshape_changed.count(new_inp[0])) {
             auto new_param = pooling.param();
             new_param.format = Format::CHWN4;
-            auto new_pooling =
-                    opr::PoolingForward::make(new_inp[0], new_param, opr->config());
+            auto new_pooling = opr::PoolingForward::make(
+                    new_inp[0], new_param, pooling.execution_policy(), opr->config());
             varshape_changed.insert(new_pooling.node());
             return new_pooling.node()->owner_opr();
         }
@@ -1174,8 +1174,8 @@ std::unique_ptr<EnableNCHW4Pass> EnableNCHW4Pass::make_nchw4_converter() {
             mgb_assert(new_inp[0]->dtype().enumv() == DTypeEnum::QuantizedS8);
             auto new_param = pooling.param();
             new_param.format = Format::NCHW4;
-            auto new_pooling =
-                    opr::PoolingForward::make(new_inp[0], new_param, opr->config());
+            auto new_pooling = opr::PoolingForward::make(
+                    new_inp[0], new_param, pooling.execution_policy(), opr->config());
             mgb_assert(
                     new_pooling.shape().ndim == 5,
                     "out var of Pooling opr after transform must be 5 (got: "
@@ -1646,8 +1646,8 @@ void EnableNchwxxPass::fill_opr_convert_fun(size_t pack_c_size) {
         if (inp->shape().ndim == 5) {
             auto new_param = pooling_opr.param();
             new_param.format = pooling_format;
-            auto new_pooling_opr =
-                    opr::PoolingForward::make(inp, new_param, opr->config());
+            auto new_pooling_opr = opr::PoolingForward::make(
+                    inp, new_param, pooling_opr.execution_policy(), opr->config());
             mgb_assert(
                     new_pooling_opr.shape().ndim == 5,
                     "The pooling dst dim is not trans to nchwxx");
@@ -3003,7 +3003,8 @@ std::unique_ptr<EnableNCHW64Pass> EnableNCHW64Pass::make_nchw64_converter() {
             auto target_format = cur == Format::NCHW64 ? cur : Format::NHWC;
             auto param = pooling.param();
             param.format = target_format;
-            auto new_pool = opr::PoolingForward::make(inps[0], param, pooling.config());
+            auto new_pool = opr::PoolingForward::make(
+                    inps[0], param, pooling.execution_policy(), pooling.config());
             auto ret = new_pool.node()->owner_opr();
             format_map.insert(std::make_pair(ret, target_format));
             return ret;
@@ -3055,7 +3056,8 @@ std::unique_ptr<EnableNCHW64Pass> EnableNCHW64Pass::make_nchw64_converter() {
 
             auto param = pooling.param();
             param.format = out_format;
-            auto new_pool = opr::PoolingForward::make(inps[0], param, pooling.config());
+            auto new_pool = opr::PoolingForward::make(
+                    inps[0], param, pooling.execution_policy(), pooling.config());
             auto ret = new_pool.node()->owner_opr();
             format_map.insert(std::make_pair(ret, out_format));
             return ret;

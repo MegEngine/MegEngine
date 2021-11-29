@@ -183,7 +183,7 @@ namespace pooling {
 auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
     auto&& pool = static_cast<const Pooling&>(def);
     OperatorNodeConfig config{pool.make_name()};
-    return opr::Pooling::make(inputs[0], pool.param(), config);
+    return opr::Pooling::make(inputs[0], pool.param(), pool.policy(), config);
 }
 OP_TRAIT_REG(Pooling, Pooling).apply_on_var_node(apply_on_var_node).fallback();
 }  // namespace pooling

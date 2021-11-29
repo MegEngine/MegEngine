@@ -281,7 +281,7 @@ TEST(TestLayoutTransform, Resnet18_QS4) {
     auto new_out_var = new_output[0];
     /// check global layout transform pass
     auto nr_dimshuffle = find_opr_num<opr::Dimshuffle>(new_out_var);
-    ASSERT_EQ(nr_dimshuffle, 3u);
+    ASSERT_EQ(nr_dimshuffle, 5u);
     /// check pass fuse conv bias with z
     auto nr_elemwise_mult_type = find_opr_num<opr::ElemwiseMultiType>(new_out_var);
     ASSERT_EQ(nr_elemwise_mult_type, 4u);
@@ -822,7 +822,7 @@ TEST(TestLayoutTransform, Resnet18_F16) {
     auto new_out_var = new_output[0];
     /// check global layout transform pass
     auto nr_dimshuffle = find_opr_num<opr::Dimshuffle>(new_out_var);
-    ASSERT_EQ(nr_dimshuffle, 4u);
+    ASSERT_EQ(nr_dimshuffle, 2u);
     /// check pass fuse conv bias with z
     auto nr_elemwise = find_opr_num<opr::Elemwise>(new_out_var);
     ASSERT_EQ(nr_elemwise, 4u);

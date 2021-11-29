@@ -1492,7 +1492,8 @@ std::unique_ptr<ConvertFormatPass> ConvertFormatPass::make_nhwcd4_converter() {
         }
         auto new_param = pooling_opr.param();
         new_param.format = megdnn::param::Pooling::Format::NHWCD4;
-        auto new_pooling_opr = opr::PoolingForward::make(inp, new_param, opr->config());
+        auto new_pooling_opr = opr::PoolingForward::make(
+                inp, new_param, pooling_opr.execution_policy(), opr->config());
         return new_pooling_opr.node()->owner_opr();
     };
 

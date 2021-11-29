@@ -80,14 +80,26 @@ struct OprLoadDumpImpl<opr::BatchedMatrixMul, 2>
                   opr::BatchedMatrixMul, MakeMatrixMulCaller<megdnn::BatchedMatrixMul>,
                   megdnn::BatchedMatrixMul> {};
 
+template <typename Opr>
+cg::OperatorNodeBase* opr_shallow_copy_matmul(
+        const serialization::OprShallowCopyContext& ctx,
+        const cg::OperatorNodeBase& opr_, const VarNodeArray& inputs,
+        const OperatorNodeConfig& config) {
+    MGB_MARK_USED_VAR(ctx);
+    auto&& opr = opr_.cast_final_safe<Opr>();
+    return OprLoadDumpImpl<Opr, 2>::make(
+                   inputs, opr.param(), opr.execution_policy_transient(), config)
+            ->owner_opr();
+}
+
 }  // namespace serialization
 
 namespace opr {
 
 using MatrixMulV2 = MatrixMul;
 using BatchedMatrixMulV2 = BatchedMatrixMul;
-MGB_SEREG_OPR(MatrixMulV2, 2);
-MGB_SEREG_OPR(BatchedMatrixMulV2, 2);
+MGB_SEREG_OPR_AND_REG_SHALLOW_COPY(MatrixMulV2, 2, opr_shallow_copy_matmul);
+MGB_SEREG_OPR_AND_REG_SHALLOW_COPY(BatchedMatrixMulV2, 2, opr_shallow_copy_matmul);
 MGB_SEREG_OPR(Dot, 2);
 MGB_SEREG_OPR(MatrixInverse, 1);
 MGB_SEREG_OPR(SVD, 1);

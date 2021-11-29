@@ -63,7 +63,7 @@ def DeformableConv : MgbHashableOp<"DeformableConv", [ConvolutionParam, Executio
 
 def GroupLocal: MgbHashableOp<"GroupLocal", [ConvolutionParam]>;
 
-def Pooling: MgbHashableOp<"Pooling", [PoolingParam]>;
+def Pooling: MgbHashableOp<"Pooling", [PoolingParam, ExecutionPolicyParamBase<"policy">]>;
 
 def AdaptivePooling : MgbHashableOp<"AdaptivePooling", [AdaptivePoolingParam]>;
 

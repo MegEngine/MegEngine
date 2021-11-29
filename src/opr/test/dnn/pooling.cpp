@@ -135,7 +135,7 @@ TEST(TestOprDNN, PoolingExePolicy) {
     Policy policy;
     policy.strategy = strategy;
 
-    auto pooling = opr::PoolingForward::make(input, param, {}, policy);
+    auto pooling = opr::PoolingForward::make(input, param, policy);
 
     auto loss0 = opr::reduce_sum_sqr(pooling, pooling.make_scalar(1));
     auto grad = cg::grad(loss0, input, true, false);
@@ -187,7 +187,7 @@ TEST(TestOprDNN, PoolingForwardFastrun) {
     Policy policy;
     policy.strategy = strategy;
 
-    auto pooling = opr::PoolingForward::make(input, param, {}, policy);
+    auto pooling = opr::PoolingForward::make(input, param, policy);
 
     auto func = graph->compile({make_callback_copy(pooling, host_y)});
     func->execute().wait();

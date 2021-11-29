@@ -31,7 +31,21 @@ using namespace opr;
 
 namespace {
 template <class MegDNNConv = megdnn::Convolution>
-struct MakeConvCaller2 {
+struct MakeOprWithPolicyCaller1 {
+    template <typename Opr>
+    static VarNode* make(
+            const cg::VarNodeArray& inputs, const typename MegDNNConv::Param& param,
+            const megdnn::param::ExecutionPolicy& execution_policy,
+            const OperatorNodeConfig& config) {
+        if (inputs.size() == 1) {
+            return Opr::make(inputs[0], param, execution_policy, config).node();
+        }
+        return nullptr;
+    }
+};
+
+template <class MegDNNConv = megdnn::Convolution>
+struct MakeOprWithPolicyCaller2 {
     template <typename Opr>
     static VarNode* make(
             const cg::VarNodeArray& inputs, const typename MegDNNConv::Param& param,
@@ -46,7 +60,7 @@ struct MakeConvCaller2 {
 };
 
 template <class MegDNNConv = megdnn::Convolution>
-struct MakeConvCaller3 {
+struct MakeOprWithPolicyCaller3 {
     template <typename Opr>
     static VarNode* make(
             const cg::VarNodeArray& inputs, const typename MegDNNConv::Param& param,
@@ -63,7 +77,7 @@ struct MakeConvCaller3 {
 };
 
 template <class MegDNNConv = megdnn::Convolution>
-struct MakeConvCaller4 {
+struct MakeOprWithPolicyCaller4 {
     template <typename Opr>
     static VarNode* make(
             const cg::VarNodeArray& inputs, const typename MegDNNConv::Param& param,
@@ -80,7 +94,7 @@ struct MakeConvCaller4 {
 };
 
 template <class MegDNNConv = megdnn::Convolution>
-struct MakeConvCaller5 {
+struct MakeOprWithPolicyCaller5 {
     template <typename Opr>
     static VarNode* make(
             const cg::VarNodeArray& inputs, const typename MegDNNConv::Param& param,
@@ -97,7 +111,7 @@ struct MakeConvCaller5 {
 };
 
 template <class MegDNNConv = megdnn::Convolution>
-struct MakeConvCallerEmpty {
+struct MakeOprWithPolicyCallerEmpty {
     template <typename Opr>
     static VarNode* make(
             const cg::VarNodeArray&, const typename MegDNNConv::Param&,
@@ -108,10 +122,10 @@ struct MakeConvCallerEmpty {
 
 template <
         class Opr, class Maker0, class MegDNNConv,
-        class Maker1 = MakeConvCallerEmpty<MegDNNConv>,
-        class Maker2 = MakeConvCallerEmpty<MegDNNConv>,
-        typename ConvParam = megdnn::param::Convolution>
-struct ConvMakerImpl {
+        class Maker1 = MakeOprWithPolicyCallerEmpty<MegDNNConv>,
+        class Maker2 = MakeOprWithPolicyCallerEmpty<MegDNNConv>,
+        typename ConvParam = typename MegDNNConv::Param>
+struct OprWithPolicyMakerImpl {
     static VarNode* make(
             const cg::VarNodeArray& inputs, const ConvParam& param,
             const megdnn::param::ExecutionPolicy& execution_policy,
@@ -130,33 +144,43 @@ struct ConvMakerImpl {
 };
 
 template <typename Opr>
-struct ConvMaker;
+struct OprWithPolicyMaker;
 
 template <>
-struct ConvMaker<opr::Convolution>
-        : public ConvMakerImpl<
-                  opr::Convolution, MakeConvCaller2<megdnn::Convolution>,
+struct OprWithPolicyMaker<opr::Pooling>
+        : public OprWithPolicyMakerImpl<
+                  opr::Pooling, MakeOprWithPolicyCaller1<megdnn::Pooling>,
+                  megdnn::Pooling> {};
+
+template <>
+struct OprWithPolicyMaker<opr::Convolution>
+        : public OprWithPolicyMakerImpl<
+                  opr::Convolution, MakeOprWithPolicyCaller2<megdnn::Convolution>,
                   megdnn::Convolution> {};
 template <>
-struct ConvMaker<opr::ConvolutionBackwardData>
-        : public ConvMakerImpl<
-                  opr::ConvolutionBackwardData, MakeConvCaller2<megdnn::Convolution>,
-                  megdnn::Convolution, MakeConvCaller3<megdnn::Convolution>> {};
+struct OprWithPolicyMaker<opr::ConvolutionBackwardData>
+        : public OprWithPolicyMakerImpl<
+                  opr::ConvolutionBackwardData,
+                  MakeOprWithPolicyCaller2<megdnn::Convolution>, megdnn::Convolution,
+                  MakeOprWithPolicyCaller3<megdnn::Convolution>> {};
 
 template <>
-struct ConvMaker<opr::ConvBiasForward>
-        : public ConvMakerImpl<
-                  opr::ConvBiasForward, MakeConvCaller2<megdnn::ConvBiasForward>,
-                  megdnn::ConvBiasForward, MakeConvCaller3<megdnn::ConvBiasForward>,
-                  MakeConvCaller4<megdnn::ConvBiasForward>, megdnn::param::ConvBias> {};
+struct OprWithPolicyMaker<opr::ConvBiasForward>
+        : public OprWithPolicyMakerImpl<
+                  opr::ConvBiasForward,
+                  MakeOprWithPolicyCaller2<megdnn::ConvBiasForward>,
+                  megdnn::ConvBiasForward,
+                  MakeOprWithPolicyCaller3<megdnn::ConvBiasForward>,
+                  MakeOprWithPolicyCaller4<megdnn::ConvBiasForward>,
+                  megdnn::param::ConvBias> {};
 template <>
-struct ConvMaker<opr::BatchConvBiasForward>
-        : public ConvMakerImpl<
+struct OprWithPolicyMaker<opr::BatchConvBiasForward>
+        : public OprWithPolicyMakerImpl<
                   opr::BatchConvBiasForward,
-                  MakeConvCaller2<megdnn::BatchConvBiasForward>,
+                  MakeOprWithPolicyCaller2<megdnn::BatchConvBiasForward>,
                   megdnn::BatchConvBiasForward,
-                  MakeConvCaller3<megdnn::BatchConvBiasForward>,
-                  MakeConvCaller4<megdnn::BatchConvBiasForward>,
+                  MakeOprWithPolicyCaller3<megdnn::BatchConvBiasForward>,
+                  MakeOprWithPolicyCaller4<megdnn::BatchConvBiasForward>,
                   megdnn::param::BatchConvBias> {};
 
 #include "../../opr/impl/internal/invoke.h"
@@ -254,7 +278,7 @@ struct OprFormatModifier;
             auto&& opr = opr_->cast_final_safe<_Opr>();              \
             auto param = opr.param();                                \
             param.format = opr_format;                               \
-            return ConvMaker<_Opr>::make(                            \
+            return OprWithPolicyMaker<_Opr>::make(                   \
                     i, param, opr.execution_policy(), opr.config()); \
             MIDOUT_E                                                 \
         }                                                            \
@@ -263,6 +287,7 @@ INST(Convolution);
 INST(ConvBiasForward);
 INST(ConvolutionBackwardData);
 INST(BatchConvBiasForward);
+INST(Pooling);
 #undef INST
 
 template <>
@@ -303,7 +328,6 @@ struct OprFormatModifier<WarpPerspective> {
             MIDOUT_E                                                     \
         }                                                                \
     };
-INST(PoolingForward, 1);
 INST(Resize, 2);
 #undef INST
 

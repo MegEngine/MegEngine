@@ -32,8 +32,8 @@ PoolingForward::PoolingForward(
 }
 
 SymbolVar PoolingForward::make(
-        SymbolVar i0, const Param& param, const OperatorNodeConfig& config,
-        const ExecutionPolicy& policy) {
+        SymbolVar i0, const Param& param, const ExecutionPolicy& policy,
+        const OperatorNodeConfig& config) {
     intl::MegDNNOprInitInputsModifier<PoolingForward>::apply(param, {&i0});
     return i0.insert_single_output_opr<PoolingForward>(
             i0.node(), param, policy, config);
@@ -75,12 +75,13 @@ PoolingBackward::PoolingBackward(
                   0, true) {
     init_megdnn_opr(*this, param);
     add_input({i0, i1, i2});
+    m_policy = policy;
     intl::MegDNNOprInitPostCtor<PoolingBackward>::apply(*this);
 }
 
 SymbolVar PoolingBackward::make(
         SymbolVar i0, SymbolVar i1, SymbolVar i2, const Param& param,
-        const OperatorNodeConfig& config, const ExecutionPolicy& policy) {
+        const ExecutionPolicy& policy, const OperatorNodeConfig& config) {
     intl::MegDNNOprInitInputsModifier<PoolingBackward>::apply(param, {&i0, &i1, &i2});
     return i0.insert_single_output_opr<PoolingBackward>(
             i0.node(), i1.node(), i2.node(), param, policy, config);
