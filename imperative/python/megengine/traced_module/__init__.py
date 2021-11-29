@@ -21,10 +21,10 @@ from .traced_module import (
 _register_all_builtin_module()
 set_cpp_apply_module_trace(cpp_apply_module_trace)
 
-__all__ = {
+__all__ = [
     "register_as_builtin",
     "trace_module",
     "wrap",
     "TracedModule",
     "optimize",
-}
+]

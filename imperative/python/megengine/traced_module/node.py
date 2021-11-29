@@ -222,7 +222,7 @@ class TensorNode(Node):
 
     def __init__(
         self,
-        expr: "Expr",
+        expr,
         name: str = None,
         qualname: str = None,
         shape: Tuple[int] = None,
