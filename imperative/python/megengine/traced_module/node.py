@@ -231,7 +231,7 @@ class TensorNode(Node):
     ):
         super().__init__(expr, name, qualname)
         self._shape = shape
-        self._dtype = shape
+        self._dtype = dtype
         self._qparams = qparams
 
     def __getstate__(self):
