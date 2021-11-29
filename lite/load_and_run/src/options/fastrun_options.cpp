@@ -55,8 +55,8 @@ void FastRunOption::config_model_internel<ModelLite>(
         auto lite_strategy = static_cast<Strategy>(strategy);
         model->set_lite_strategy(lite_strategy);
     } else if (runtime_param.stage == RunStage::AFTER_MODEL_LOAD) {
-        auto lite_network = model->get_lite_network();
-        auto lite_strategy = model->get_lite_strategy();
+        auto&& lite_network = model->get_lite_network();
+        auto&& lite_strategy = model->get_lite_strategy();
         //! set algo policy for model
         lite::Runtime::set_network_algo_policy(
                 lite_network, lite_strategy, share_batch_size, batch_binary_equal);
@@ -121,8 +121,8 @@ void FastRunOption::config_model_internel<ModelMdl>(
                     .fast_run_config.shared_batch_size = share_batch_size;
         }
     } else if (runtime_param.stage == RunStage::AFTER_MODEL_LOAD) {
-        auto vars = model->get_mdl_load_result().output_var_list;
-        auto strategy = model->get_mdl_strategy();
+        auto& vars = model->get_mdl_load_result().output_var_list;
+        auto&& strategy = model->get_mdl_strategy();
         mgb::gopt::modify_opr_algo_strategy_inplace(vars, strategy);
         // set algo cache path
         if (!m_fast_run_cache.empty()) {

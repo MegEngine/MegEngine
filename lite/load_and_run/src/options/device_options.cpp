@@ -37,7 +37,7 @@ void XPUDeviceOption::config_model_internel<ModelLite>(
         }
 #endif
     } else if (runtime_param.stage == RunStage::AFTER_MODEL_LOAD) {
-        auto network = model->get_lite_network();
+        auto&& network = model->get_lite_network();
         if (enable_cpu_default) {
             LITE_WARN("using cpu default device\n");
             lite::Runtime::set_cpu_inplace_mode(network);

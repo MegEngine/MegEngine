@@ -40,7 +40,7 @@ public:
     void wait() override;
 
     //! get the network of lite model
-    std::shared_ptr<lite::Network> get_lite_network() { return m_network; }
+    std::shared_ptr<lite::Network>& get_lite_network() { return m_network; }
 
     //! get the config of lite model
     lite::Config& get_config() { return config; }

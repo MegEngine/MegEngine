@@ -67,13 +67,16 @@ public:
 
     //! get data parser
     DataParser& get_input_parser() { return parser; }
+
     uint32_t get_testcase_num() { return testcase_num; }
+
     std::vector<std::pair<std::string, mgb::HostTensorND*>>& get_test_input() {
         return test_input_tensors;
     }
 
     //! get output specified configuration
     mgb::ComputingGraph::OutputSpec& get_output_spec() { return m_output_spec; }
+
     std::unique_ptr<mgb::cg::AsyncExecutable>& get_async_func() { return m_asyc_exec; }
 
     void set_output_callback(std::vector<mgb::ComputingGraph::Callback>& cb) {
@@ -84,6 +87,7 @@ public:
             m_callbacks[i] = cb[i];
         }
     }
+
 #if MGB_ENABLE_JSON
     std::unique_ptr<mgb::GraphProfiler>& get_profiler() { return m_profiler; }
     void set_profiler() {
@@ -91,6 +95,7 @@ public:
                 std::make_unique<mgb::GraphProfiler>(m_load_config.comp_graph.get());
     }
 #endif
+
     void set_num_range_checker(float range) {
         m_num_range_checker = std::make_unique<mgb::NumRangeChecker>(
                 m_load_config.comp_graph.get(), range);

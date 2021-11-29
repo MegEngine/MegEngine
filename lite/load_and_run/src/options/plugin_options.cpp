@@ -46,7 +46,7 @@ template <>
 void PluginOption::config_model_internel<ModelMdl>(
         RuntimeParam& runtime_param, std::shared_ptr<ModelMdl> model) {
     if (runtime_param.stage == RunStage::BEFORE_MODEL_LOAD) {
-        auto config = model->get_mdl_config();
+        auto&& config = model->get_mdl_config();
         if (range > 0) {
             mgb_log_warn("enable number range check");
             model->set_num_range_checker(float(range));
@@ -151,7 +151,7 @@ template <>
 void DebugOption::format_and_print(
         const std::string& tablename, std::shared_ptr<ModelLite> model) {
     auto table = mgb::TextTable(tablename);
-    auto network = model->get_lite_network();
+    auto&& network = model->get_lite_network();
     table.padding(1);
     table.align(mgb::TextTable::Align::Mid).add("type").add("name").add("shape").eor();
 
@@ -259,7 +259,6 @@ template <>
 void DebugOption::config_model_internel<ModelMdl>(
         RuntimeParam& runtime_param, std::shared_ptr<ModelMdl> model) {
     if (runtime_param.stage == RunStage::BEFORE_MODEL_LOAD) {
-        auto config = model->get_mdl_config();
         if (enable_verbose) {
             mgb_log_warn("enable verbose");
             mgb::set_log_level(mgb::LogLevel::DEBUG);

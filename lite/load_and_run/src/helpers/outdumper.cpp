@@ -39,7 +39,7 @@ void OutputDumper::write_to_file() {
                             info.owner_inputs_info.c_str()));
             mgb::debug::write_to_file(
                     mgb::ssprintf(
-                            "%s/run%zu-var %zd", dump_file.c_str(), m_run_id, info.id)
+                            "%s/run%zu-var%zd", dump_file.c_str(), m_run_id, info.id)
                             .c_str(),
                     value);
         }

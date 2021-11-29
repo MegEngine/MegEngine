@@ -365,7 +365,7 @@ void MemoryOptimizeOption::config_model_internel<ModelMdl>(
         }
         if (workspace_limit < SIZE_MAX) {
             mgb_log_warn("set workspace limit to %ld", workspace_limit);
-            auto output_spec = model->get_output_spec();
+            auto&& output_spec = model->get_output_spec();
             mgb::SymbolVarArray vars;
             for (auto i : output_spec) {
                 vars.push_back(i.first);
