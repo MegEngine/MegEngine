@@ -14,7 +14,7 @@
 #include "megbrain_build_config.h"
 
 #define MGE_MAJOR 1
-#define MGE_MINOR 7
+#define MGE_MINOR 8
 #define MGE_PATCH 0
 
 // for rc version, could be like "rc1", "rc2", etc
