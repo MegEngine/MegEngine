@@ -54,7 +54,7 @@ v4sf cos_ps_f32(v4sf x);
 
 v4sf tan_ps_f32(v4sf x);
 
-static inline v4sf div_ps_f32(v4sf x, v4sf y) {
+static inline v4sf div_ps_f32(v4sf& x, v4sf& y) {
 #if MEGDNN_AARCH64
     return vdivq_f32(x, y);
 #else
@@ -65,6 +65,12 @@ static inline v4sf div_ps_f32(v4sf x, v4sf y) {
 #endif
 }
 
+#if defined(__ARM_FEATURE_FMA)
+#define fma_ps_f32(c, b, a) vfmaq_f32((c), (a), (b))
+#else
+#define fma_ps_f32(c, b, a) vmlaq_f32((c), (a), (b))
+#endif
+
 v4sf sigmoid_ps_f32(v4sf x);
 
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
@@ -73,7 +79,7 @@ v4sf sigmoid_ps_f32(v4sf x);
  */
 float16x8_t exp_ps_f16(float16x8_t x);
 
-static inline float16x8_t div_ps_f16(float16x8_t x, float16x8_t y) {
+static inline float16x8_t div_ps_f16(float16x8_t& x, float16x8_t& y) {
 #if MEGDNN_AARCH64
     return vdivq_f16(x, y);
 #else
