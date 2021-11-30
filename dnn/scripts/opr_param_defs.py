@@ -759,6 +759,14 @@ pdef('Sleep').add_fields('float32', Doc('time', 'time to sleep in seconds'), 0)
      'dtype', Doc('dtype', 'data type of output value'),
      'DTypeEnum::Float32'))
 
+(pdef('Diag').
+ add_fields(
+     'int32',
+     Doc('k', 'Index of the diagonal: 0 (the default) refers to the main '
+         'diagonal, a positive value refers to an upper diagonal, and a '
+         'negative value to a lower diagonal.'),
+     0))
+
 (pdef('UniformRNG', version=0, is_legacy=True).
  add_fields('uint64', 'seed', 0))
 

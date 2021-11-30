@@ -52,6 +52,37 @@ void gen_index_onehot(int* max_value, HostTensorND& dest) {
     }
 }
 
+void test_diag(int32_t axis, const TensorShapeArray& test_cases) {
+    using Checker = AutoOprChecker<1, 1>;
+    auto nopr = megdnn_naive_handle()->create_operator<megdnn::Diag>();
+    nopr->param() = {axis};
+
+    auto make_graph = [&](const Checker::SymInpArray& inputs) -> Checker::SymOutArray {
+        return {opr::Diag::make(inputs[0], {axis})};
+    };
+
+    auto fwd = [&](Checker::NumOutArray& dest, Checker::NumInpArray inp) {
+        auto&& src = *inp[0];
+        TensorShape oshp(src.shape());
+        if (oshp.ndim == 1) {
+            size_t o = oshp.shape[0] + std::abs(axis);
+            oshp = {o, o};
+        } else {
+            size_t m = oshp.shape[0];
+            size_t n = oshp.shape[1];
+            size_t o = (axis >= 0) ? std::min(n - axis, m) : std::min(m + axis, n);
+            oshp = {o};
+        }
+        dest[0].resize(oshp);
+        nopr->exec(src.as_megdnn(), dest[0].as_megdnn(), {});
+    };
+
+    Checker checker{make_graph, fwd};
+    for (auto&& i : test_cases) {
+        checker.run({i});
+    }
+}
+
 void test_one_hot_get(int32_t axis, const TensorShapeArray& test_cases) {
     using Checker = AutoOprChecker<2, 1>;
 
@@ -144,6 +175,12 @@ void test_one_hot(int32_t axis, const TensorShapeArray& test_cases) {
 }
 
 }  // anonymous namespace
+
+TEST(TestOprDiag, Diag) {
+    TensorShapeArray cases = {{7, 7}, {7, 9}, {9, 7}, {8}};
+    for (int32_t k = -3; k < 3; ++k)
+        test_diag(k, cases);
+}
 
 TEST(TestOprIndexing, OneHot2D) {
     TensorShapeArray cases = {{1, 1}, {2, 2}, {10, 8}, {8, 10}};

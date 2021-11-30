@@ -28,6 +28,7 @@ __all__ = [
     "concat",
     "cond_take",
     "cumsum",
+    "diag",
     "expand_dims",
     "eye",
     "flatten",
@@ -51,6 +52,32 @@ __all__ = [
     "zeros",
     "zeros_like",
 ]
+
+
+def diag(inp, k=0) -> Tensor:
+    r"""If ``inp`` is a 1D tensor, then returns a 2D tensor with the elements of ``inp`` as the diagonal.
+    If ``inp`` is a 2D tensor, then returns a 1D tensor with the diagonal elements of ``inp``.
+
+    Args:
+        inp: input tensor.
+        k: diagonal in consider. Use :math:`k=0` for the main diagonal, :math:`k>0` for diagonals above the
+           main diagonal, and :math:`k<0` for diagonals below the main diagonal. Default: 0.
+
+    Returns:
+        the extracted diagonal or constructed diagonal array.
+
+    Examples:
+        >>> inp = F.arange(6, dtype='int32').reshape(2,3)
+        >>> out = F.diag(inp, k=1)
+        >>> out
+        Tensor([1 5], dtype=int32, device=xpux:0)
+        >>> F.diag(out)
+        Tensor([[1 0]
+         [0 5]], dtype=int32, device=xpux:0)
+    """
+    op = builtin.Diag(k=k)
+    (result,) = apply(op, inp)
+    return result
 
 
 def eye(N, M=None, *, dtype="float32", device: Optional[CompNode] = None) -> Tensor:

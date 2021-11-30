@@ -25,6 +25,8 @@ MGB_SEREG_MODIFY_SUBTENSOR_OPR(BatchedSetMeshIndexing);
 
 namespace mgb {
 namespace opr {
+MGB_SEREG_OPR(Diag, 1);
+MGB_SEREG_OPR(DiagBackward, 2);
 MGB_SEREG_OPR(IndexingOneHot, 2);
 MGB_SEREG_OPR(IndexingRemap, 2);
 MGB_SEREG_OPR(IndexingRemapBackward, 3);

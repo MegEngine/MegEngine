@@ -240,6 +240,8 @@ def Eye: MgbHashableOp<"Eye", [EyeParam]> {
   );
 }
 
+def Diag: MgbHashableOp<"Diag", [DiagParam]>;
+
 def GetVarShape : MgbHashableOp<"GetVarShape", [OptionalAxisV1Param]>;
 
 def Concat: MgbHashableOp<"Concat", [AxisParam]> {

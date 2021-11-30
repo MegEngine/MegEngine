@@ -146,6 +146,7 @@ private:
     cb(BatchedSetMeshIndexing) \
     cb(Linspace) \
     cb(Eye) \
+    cb(Diag) \
     cb(SleepForward) \
     cb(UniformRNG) \
     cb(GaussianRNG) \

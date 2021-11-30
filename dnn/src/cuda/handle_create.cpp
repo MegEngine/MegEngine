@@ -33,6 +33,7 @@
 #include "src/cuda/dct/opr_impl.h"
 #include "src/cuda/deformable_conv/opr_impl.h"
 #include "src/cuda/deformable_ps_roi_pooling/opr_impl.h"
+#include "src/cuda/diag/opr_impl.h"
 #include "src/cuda/dot/opr_impl.h"
 #include "src/cuda/dropout/opr_impl.h"
 #include "src/cuda/elemwise/opr_impl.h"
@@ -154,6 +155,7 @@ MEGDNN_SPECIALIZE_CREATE_OPERATOR(BatchedIncrMeshIndexing);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(BatchedSetMeshIndexing);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(Linspace);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(Eye);
+MEGDNN_SPECIALIZE_CREATE_OPERATOR(Diag);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(SleepForward);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(UniformRNG);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(GaussianRNG);

@@ -433,6 +433,19 @@ OP_TRAIT_REG(Eye, Eye).apply_on_var_node(apply_on_var_node).fallback();
 }  // namespace
 
 namespace {
+namespace diag {
+auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
+    auto&& op = static_cast<const Diag&>(def);
+    mgb_assert(inputs.size() == 1);
+    cg::OperatorNodeConfig config{op.make_name()};
+    opr::Diag::Param param{op.k};
+    return opr::Diag::make(inputs[0], param, config);
+}
+OP_TRAIT_REG(Diag, Diag).apply_on_var_node(apply_on_var_node).fallback();
+}  // namespace diag
+}  // namespace
+
+namespace {
 namespace roi_pooling {
 VarNodeArray apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
     auto&& op = static_cast<const ROIPooling&>(def);

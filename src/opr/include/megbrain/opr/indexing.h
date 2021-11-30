@@ -19,6 +19,37 @@
 namespace mgb {
 namespace opr {
 
+MGB_DEFINE_OPR_CLASS(Diag, intl::MegDNNOprWrapperFwd<megdnn::Diag>) // {
+public:
+    MGE_WIN_DECLSPEC_FUC Diag(
+            VarNode* src, const Param& param, const OperatorNodeConfig& config);
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
+            SymbolVar src, const Param& param, const OperatorNodeConfig& config = {});
+};
+
+MGB_DEFINE_OPR_CLASS(DiagBackward, cg::SingleCNOperatorNodeBase) // {
+public:
+    using Param = megdnn::Diag::Param;
+    MGE_WIN_DECLSPEC_FUC DiagBackward(
+            VarNode* shape, VarNode* value, const Param& param,
+            const OperatorNodeConfig& config);
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
+            SymbolVar shape, SymbolVar value, const Param& param,
+            const OperatorNodeConfig& config = {});
+
+    const Param& param() const { return m_param; }
+
+private:
+    Param m_param;
+    intl::UniqPtrWithCN<megdnn::Diag> m_dnn_opr;
+
+    void scn_do_execute() override;
+    void init_output_static_infer_desc() override;
+    NodeProp* do_make_node_prop() const override;
+
+    void record_execute_deps(ExecDependencyArray& deps) override;
+};
+
 MGB_DEFINE_OPR_CLASS(
         IndexingOneHot, intl::MegDNNOprWrapperFwd<megdnn::IndexingOneHotForward>) // {
 public:

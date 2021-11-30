@@ -75,6 +75,91 @@ struct MegDNNOprInitInputsModifier<IndexingSetOneHot>
 }  // namespace opr
 }  // namespace mgb
 
+/* ==================== Diag ==================== */
+MGB_DYN_TYPE_OBJ_FINAL_IMPL(Diag);
+MEGDNN_OPR_INIT1(Diag, "diag")
+
+#if MGB_ENABLE_GRAD
+MGB_IMPL_OPR_GRAD(Diag) {
+    if (wrt_idx == 0) {
+        SymbolVar data_sym{opr.input(0)};
+        return DiagBackward::make(data_sym.symshape(), out_grad[0], opr.param()).node();
+    }
+    return InvalidGrad::make(opr, wrt_idx);
+}
+#endif
+
+/* ==================== DiagBackward ==================== */
+MGB_DYN_TYPE_OBJ_FINAL_IMPL(DiagBackward);
+
+DiagBackward::DiagBackward(
+        VarNode* shape, VarNode* value, const Param& param,
+        const OperatorNodeConfig& config)
+        : Super{shape->owner_graph(), config, "diag_backward", {shape, value}},
+          m_param{param} {
+    add_input({shape, value});
+    add_output(None)->dtype(value->dtype());
+    add_equivalence_component<PODHash<Param>>(&m_param);
+}
+
+SymbolVar DiagBackward::make(
+        SymbolVar shape, SymbolVar value, const Param& param,
+        const OperatorNodeConfig& config) {
+    return shape.insert_single_output_opr<DiagBackward>(
+            shape.node(), value.node(), param, config);
+}
+
+cg::OperatorNodeBase::NodeProp* DiagBackward::do_make_node_prop() const {
+    auto prop = Super::do_make_node_prop();
+    using D = NodeProp::DepType;
+    prop->add_dep_type(input(0), D::HOST_VALUE);
+    return prop;
+}
+
+void DiagBackward::scn_do_execute() {
+    auto&& dest = output(0)->dev_tensor();
+    auto&& val = input(1)->dev_tensor();
+    auto&& layout = dest.layout();
+    mgb_assert(layout.ndim == 1 || layout.ndim == 2);
+    if (layout.ndim == 2) {
+        dev_tensor_memset(dest, 0);
+        size_t offset = (m_param.k >= 0) ? (m_param.k * layout.stride[1])
+                                         : (-m_param.k * layout.stride[0]);
+        auto dest_sub = dest.sub(SubTensorSpec::make_from_offset_elem(
+                {val.shape(), {layout.stride[0] + layout.stride[1]}, val.dtype()},
+                offset));
+        dest_sub.copy_from_fixlayout(val);
+    } else {
+        auto&& opr = m_dnn_opr;
+        if (!opr) {
+            opr = intl::create_megdnn_opr<megdnn::Diag>(comp_node());
+            opr->param() = m_param;
+        }
+        opr->exec(val.as_megdnn(), dest.as_megdnn(), {});
+    }
+}
+
+void DiagBackward::record_execute_deps(ExecDependencyArray& deps) {
+    deps.emplace_back(std::make_unique<intl::MegDNNGraphDep>(std::move(m_dnn_opr)));
+}
+
+void DiagBackward::init_output_static_infer_desc() {
+    using namespace cg::static_infer;
+    auto&& mgr = owner_graph()->static_infer_manager();
+    auto infer_shape = [](TensorShape& dest, const InpVal& inp) {
+        cg::copy_tensor_value_to_shape(dest, inp.val.at(0).value());
+        return true;
+    };
+    mgr.register_shape_infer(
+            output(0), {SourceType::DEP, {{input(0), DepType::VALUE}}, infer_shape});
+}
+
+#if MGB_ENABLE_GRAD
+MGB_IMPL_OPR_GRAD(DiagBackward) {
+    return InvalidGrad::make(opr, wrt_idx);
+}
+#endif
+
 /* ==================== IndexingOneHot ==================== */
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(IndexingOneHot);
 MEGDNN_OPR_INIT2(IndexingOneHot, "indexing_one_hot")

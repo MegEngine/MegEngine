@@ -42,6 +42,26 @@ def test_eye():
             )
 
 
+@pytest.mark.parametrize("is_varnode", [False, True])
+def test_diag(is_varnode):
+    if is_varnode:
+        network = Network()
+    else:
+        network = None
+
+    shapes = [(10, 10), (6, 9), (8, 7), (8,)]
+    cases = []
+    for shp in shapes:
+        cases.append({"input": [np.random.random(shp).astype("float32")]})
+
+    for axis in range(-2, 3):
+
+        def run(data):
+            return F.diag(data, k=axis)
+
+        opr_test(cases, run, ref_fn=lambda x: np.diag(x, axis), network=network)
+
+
 def test_full():
     shape = (2, 3)
     values = [True, 4, 5.0]

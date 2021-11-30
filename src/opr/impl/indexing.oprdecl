@@ -1,3 +1,25 @@
+decl_opr(
+    'Diag',
+    desc='Extract a diagonal or construct a diagonal array',
+    inputs=[
+        Doc('k', 'Index of the diagonal: 0 (the default) refers to the main '
+            'diagonal, a positive value refers to an upper diagonal, and a '
+            'negative value to a lower diagonal.')
+    ],
+    params='Diag'
+)
+
+decl_opr(
+    'DiagBackward',
+    desc='backward function of Diag',
+    inputs=[
+        Doc('k', 'Index of the diagonal: 0 (the default) refers to the main '
+            'diagonal, a positive value refers to an upper diagonal, and a '
+            'negative value to a lower diagonal.')
+    ],
+    params='Diag'
+)
+
 decl_opr('IndexingOneHot', pyname='_indexing_one_hot',
          inputs=['src', 'index'],
          params=[('axis', 'Axis')])

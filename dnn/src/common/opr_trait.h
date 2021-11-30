@@ -88,6 +88,7 @@ DEF(IndexingRemapForward, 3, true, true);
 DEF(IndexingRemapBackward, 3, true, false);
 DEF(Linspace, 1, true, false);
 DEF(Eye, 1, true, false);
+DEF(Diag, 2, true, true);
 DEF(Flip, 2, true, true);
 DEF(ROICopy, 2, true, true);
 DEF(Rotate, 2, true, true);
