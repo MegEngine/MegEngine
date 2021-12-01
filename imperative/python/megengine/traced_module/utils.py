@@ -5,8 +5,8 @@
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+import collections
 import copy
-import contextlib
 import inspect
 from collections.abc import MutableMapping, MutableSequence
 from inspect import FullArgSpec
@@ -71,7 +71,9 @@ def _convert_kwargs_to_args(
     arg_specs_args = arg_specs.args
     arg_specs_defaults = arg_specs.defaults if arg_specs.defaults else []
     arg_specs_kwonlyargs = arg_specs.kwonlyargs
-    arg_specs_kwonlydefaults = arg_specs.kwonlydefaults if arg_specs.kwonlydefaults else dict()
+    arg_specs_kwonlydefaults = (
+        arg_specs.kwonlydefaults if arg_specs.kwonlydefaults else dict()
+    )
     if is_bounded:
         arg_specs_args = arg_specs.args[1:]
     new_args = []
@@ -104,17 +106,17 @@ def _convert_kwargs_to_args(
             new_kwargs[kwarg_name] = kwargs[kwarg_name]
         else:
             if kwarg_name not in arg_specs_kwonlydefaults:
-                raise TypeError("{} missing required keyword-only argument: {}".format(
-                    func_name, kwarg_name
-                ))
+                raise TypeError(
+                    "{} missing required keyword-only argument: {}".format(
+                        func_name, kwarg_name
+                    )
+                )
             new_kwargs[kwarg_name] = arg_specs_kwonlydefaults[kwarg_name]
     for k, v in kwargs.items():
         if k not in arg_specs_args and k not in arg_specs_kwonlyargs:
             if arg_specs.varkw is None:
                 raise TypeError(
-                    "{} got an unexpected keyword argument {}".format(
-                    func_name, k
-                    )
+                    "{} got an unexpected keyword argument {}".format(func_name, k)
                 )
             new_kwargs[k] = v
     return tuple(new_args), new_kwargs
