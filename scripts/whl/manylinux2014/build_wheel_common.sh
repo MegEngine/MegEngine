@@ -12,7 +12,7 @@ CUDA_LIB_DIR="/usr/local/cuda/lib64/"
 
 SDK_NAME="unknown"
 x86_64_support_version="cu101 cu111 cu112 cpu"
-aarch64_support_version="cu111 cpu"
+aarch64_support_version="cu102_JetsonNano cu111 cpu"
 if [[ -z ${IN_CI} ]]
 then
     IN_CI="false"
@@ -67,6 +67,28 @@ if [ $SDK_NAME == "cu101" ];then
     REQUIR_CUDNN_VERSION="7.6.3" 
     REQUIR_TENSORRT_VERSION="6.0.1.5" 
     REQUIR_CUBLAS_VERSION="10.2.1.243"
+
+elif [ $SDK_NAME == "cu102_JetsonNano" ];then
+    # Jetson Nano B01 version
+    REQUIR_CUDA_VERSION="10020"
+    REQUIR_CUDNN_VERSION="8.2.1"
+    REQUIR_TENSORRT_VERSION="8.0.1.6"
+    REQUIR_CUBLAS_VERSION="10.2.3.300"
+
+    CUDA_COPY_LIB_LIST="\
+        ${CUDA_LIB_DIR}/libnvrtc.so.10.2:\
+        ${CUDA_LIB_DIR}/libcublasLt.so.10:\
+        ${CUDA_LIB_DIR}/libcublas.so.10:\
+        ${CUDNN_LIB_DIR}/libcudnn_adv_infer.so.8:\
+        ${CUDNN_LIB_DIR}/libcudnn_adv_train.so.8:\
+        ${CUDNN_LIB_DIR}/libcudnn_cnn_infer.so.8:\
+        ${CUDNN_LIB_DIR}/libcudnn_cnn_train.so.8:\
+        ${CUDNN_LIB_DIR}/libcudnn_ops_infer.so.8:\
+        ${CUDNN_LIB_DIR}/libcudnn_ops_train.so.8:\
+        ${CUDNN_LIB_DIR}/libcudnn.so.8"
+
+    EXTRA_CMAKE_FLAG="-DMGE_WITH_CUDNN_SHARED=ON -DMGE_WITH_CUBLAS_SHARED=ON -DMGE_CUDA_GENCODE=\"-gencode arch=compute_53,code=sm_53\" "
+
 elif [ $SDK_NAME == "cu111" ];then
     if [ ${machine} == "aarch64" ];then
         REQUIR_CUDA_VERSION="11010"
@@ -182,10 +204,13 @@ if [ ${BUILD_WHL_CPU_ONLY} = "OFF" ]; then
 
     CUBLAS_VERSION_PATH=${CUDA_ROOT_DIR_}/include/cublas_api.h
     CUDA_VERSION_PATH=${CUDA_ROOT_DIR_}/include/cuda.h
-    if [ "$REQUIR_CUDA_VERSION" -ge "11000" ];then
+    if [ -e ${CUDNN_ROOT_DIR_}/include/cudnn_version.h ];then
         CUDNN_VERSION_PATH=${CUDNN_ROOT_DIR_}/include/cudnn_version.h
-    else
+    elif [ -e ${CUDNN_ROOT_DIR_}/include/cudnn.h ];then
         CUDNN_VERSION_PATH=${CUDNN_ROOT_DIR_}/include/cudnn.h
+    else
+        echo "cannot determine CUDNN_VERSION_PATH from CUDNN_ROOT_DIR."
+        exit -1
     fi
     TENSORRT_VERSION_PATH=${TENSORRT_ROOT_DIR_}/include/NvInferVersion.h
 
