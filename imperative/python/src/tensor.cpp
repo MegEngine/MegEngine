@@ -1074,10 +1074,6 @@ void init_tensor(py::module m) {
             []() {
                 interpreter_for_py->sync();
                 CompNode::sync_all();
-                CompNode::foreach ([](CompNode cn) {
-                    auto err = cn.check_async_error();
-                    mgb_assert(!err, "%s", err->what());
-                });
                 sync_py_task_q();
             },
             py::call_guard<py::gil_scoped_release>());

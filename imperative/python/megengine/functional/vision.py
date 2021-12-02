@@ -420,7 +420,6 @@ def warp_affine(
         Here all available options for params are listed,
         however it does not mean that you can use all the combinations.
         On different platforms, different combinations are supported.
-        ``warp_affine`` only support forward inference, Please refer to ``warp_perspective`` if backward is needed.
     """
     conv_format = _config._get_actual_op_param(format, _config.__conv_format)
 
