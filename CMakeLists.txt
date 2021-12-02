@@ -877,6 +877,8 @@ if(MGE_WITH_JIT AND MGE_WITH_HALIDE)
     include(cmake/Halide.cmake)
 endif()
 
+include(cmake/cpp_redis.cmake)
+
 # Thread
 IF(APPLE)
     set(CMAKE_THREAD_LIBS_INIT "-lpthread")

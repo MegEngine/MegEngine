@@ -1,12 +1,11 @@
 import pytest
 
-import megengine
-from megengine.utils.persistent_cache import PersistentCacheOnServer
+from megengine.utils.persistent_cache import _manager
 
 
 @pytest.mark.skip(reason="fixme: github ci failed")
 def test_persistent_cache():
-    pc = PersistentCacheOnServer()
+    pc = _manager
     k0 = b"\x00\x00"
     k1 = b"\x00\x01"
     cat = "test"

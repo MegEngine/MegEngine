@@ -23,6 +23,7 @@
 #include "megbrain/common.h"
 #include "megbrain/comp_node.h"
 #include "megbrain/imperative/blob_manager.h"
+#include "megbrain/imperative/persistent_cache.h"
 #include "megbrain/imperative/profiler.h"
 #include "megbrain/imperative/tensor_sanity_check.h"
 #include "megbrain/serialization/helper.h"
@@ -229,83 +230,55 @@ void init_utils(py::module m) {
         mgb::sys::TimedFuncInvoker::ins().fork_exec_impl_mainloop(user_data.c_str());
     });
 
-    using mgb::PersistentCache;
-    class PyPersistentCache : public mgb::PersistentCache {
-    private:
-        using KeyPair = std::pair<std::string, std::string>;
-        using BlobPtr = std::unique_ptr<Blob, void (*)(Blob*)>;
+    using PersistentCache = mgb::PersistentCache;
+    using ExtendedPersistentCache =
+            mgb::imperative::persistent_cache::ExtendedPersistentCache;
 
-        std::shared_mutex m_mutex;
-        std::unordered_map<KeyPair, BlobPtr, mgb::pairhash> m_local_cache;
+    struct PersistentCacheManager {
+        std::shared_ptr<ExtendedPersistentCache> instance;
 
-        static size_t hash_key_pair(const KeyPair& kp) {
-            std::hash<std::string> hasher;
-            return hasher(kp.first) ^ hasher(kp.second);
-        }
-
-        std::string blob_to_str(const Blob& key) {
-            return std::string(reinterpret_cast<const char*>(key.ptr), key.size);
-        }
-
-        BlobPtr copy_blob(const Blob& blob) {
-            auto blob_deleter = [](Blob* blob) {
-                if (blob) {
-                    std::free(const_cast<void*>(blob->ptr));
-                    delete blob;
-                }
-            };
-            auto blob_ptr = BlobPtr{new Blob(), blob_deleter};
-            blob_ptr->ptr = std::malloc(blob.size);
-            std::memcpy(const_cast<void*>(blob_ptr->ptr), blob.ptr, blob.size);
-            blob_ptr->size = blob.size;
-            return blob_ptr;
-        }
-
-        BlobPtr str_to_blob(const std::string& str) {
-            auto blob = Blob{str.data(), str.size()};
-            return copy_blob(blob);
-        }
-
-        std::unique_ptr<Blob, void (*)(Blob*)> empty_blob() {
-            return BlobPtr{nullptr, [](Blob* blob) {}};
-        }
-
-    public:
-        mgb::Maybe<Blob> get(const std::string& category, const Blob& key) override {
-            auto py_get = [this](const std::string& category,
-                                 const Blob& key) -> mgb::Maybe<Blob> {
-                PYBIND11_OVERLOAD_PURE(
-                        mgb::Maybe<Blob>, PersistentCache, get, category, key);
-            };
-            KeyPair kp = {category, blob_to_str(key)};
-            std::shared_lock<decltype(m_mutex)> rlock;
-            auto iter = m_local_cache.find(kp);
-            if (iter == m_local_cache.end()) {
-                auto py_ret = py_get(category, key);
-                if (!py_ret.valid()) {
-                    iter = m_local_cache.insert({kp, empty_blob()}).first;
-                } else {
-                    iter = m_local_cache.insert({kp, copy_blob(py_ret.val())}).first;
-                }
+        bool try_reg(std::shared_ptr<ExtendedPersistentCache> cache) {
+            if (cache) {
+                instance = cache;
+                PersistentCache::set_impl(cache);
+                return true;
             }
-            if (iter->second) {
-                return *iter->second;
+            return false;
+        }
+        bool open_redis(
+                std::string ip, size_t port, std::string password, std::string prefix) {
+            return try_reg(mgb::imperative::persistent_cache::make_redis(
+                    ip, port, password, prefix));
+        }
+        bool open_file(std::string path) {
+            return try_reg(mgb::imperative::persistent_cache::make_in_file(path));
+        }
+        std::optional<size_t> clean() {
+            if (instance) {
+                return instance->clear();
+            }
+            return {};
+        }
+        void put(std::string category, std::string key, std::string value) {
+            PersistentCache::inst().put(
+                    category, {key.data(), key.size()}, {value.data(), value.size()});
+        }
+        py::object get(std::string category, std::string key) {
+            auto value =
+                    PersistentCache::inst().get(category, {key.data(), key.size()});
+            if (value.valid()) {
+                return py::bytes(std::string((const char*)value->ptr, value->size));
             } else {
-                return {};
+                return py::none();
             }
-        }
-        void put(const std::string& category, const Blob& key, const Blob& value)
-                override {
-            KeyPair kp = {category, blob_to_str(key)};
-            std::unique_lock<decltype(m_mutex)> wlock;
-            m_local_cache.insert_or_assign(kp, copy_blob(value));
-            PYBIND11_OVERLOAD_PURE(void, PersistentCache, put, category, key, value);
         }
     };
-    py::class_<PersistentCache, PyPersistentCache, std::shared_ptr<PersistentCache>>(
-            m, "PersistentCache")
+
+    py::class_<PersistentCacheManager>(m, "PersistentCacheManager")
             .def(py::init<>())
-            .def("get", &PersistentCache::get)
-            .def("put", &PersistentCache::put)
-            .def("reg", &PersistentCache::set_impl);
+            .def("try_open_redis", &PersistentCacheManager::open_redis)
+            .def("try_open_file", &PersistentCacheManager::open_file)
+            .def("clean", &PersistentCacheManager::clean)
+            .def("put", &PersistentCacheManager::put)
+            .def("get", &PersistentCacheManager::get);
 }

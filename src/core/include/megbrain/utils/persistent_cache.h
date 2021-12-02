@@ -74,14 +74,19 @@ class InMemoryPersistentCache final : public PersistentCache {
         };
     };
 
-    Maybe<Blob> get(const std::string& category, const Blob& key) override;
-    void put(const std::string& category, const Blob& key, const Blob& value) override;
+    MGE_WIN_DECLSPEC_FUC Maybe<Blob> get(
+            const std::string& category, const Blob& key) override;
+    MGE_WIN_DECLSPEC_FUC void put(
+            const std::string& category, const Blob& key, const Blob& value) override;
 
     std::unordered_map<
             std::string,
             std::unordered_map<BlobStorage, BlobStorage, BlobStorage::Hash>>
             m_cache;
     MGB_MUTEX m_mtx;
+
+public:
+    MGE_WIN_DECLSPEC_FUC InMemoryPersistentCache() = default;
 };
 
 /*!

@@ -5,6 +5,7 @@ set(PACKAGE_NAME ${PACKAGE_NAME} PARENT_SCOPE)
 set(MODULE_NAME _imperative_rt)
 set(MODULE_NAME ${MODULE_NAME} PARENT_SCOPE)
 file(GLOB_RECURSE SRCS src/impl/*.cpp src/include/*.h python/src/*.cpp python/src/*.h)
+set(SRCS ${SRCS} ${CPP_REDIS_SRCS})
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DMGB_WITH_IMPERATIVE=1")
 
@@ -42,7 +43,7 @@ target_link_libraries(${MODULE_NAME} PRIVATE range-v3)
 add_subdirectory(${PROJECT_SOURCE_DIR}/third_party/Json ${PROJECT_BINARY_DIR}/third_party/Json)
 target_link_libraries(${MODULE_NAME} PRIVATE nlohmann_json::nlohmann_json)
 
-target_include_directories(${MODULE_NAME} PUBLIC src/include PRIVATE ${PYTHON_INCLUDE_DIRS} ${NUMPY_INCLUDE_DIR} ${MGB_OPDEF_OUT_DIR})
+target_include_directories(${MODULE_NAME} PUBLIC src/include PRIVATE ${PYTHON_INCLUDE_DIRS} ${NUMPY_INCLUDE_DIR} ${MGB_OPDEF_OUT_DIR} ${CPP_REDIS_INCLUDES})
 target_compile_definitions(${MODULE_NAME} PRIVATE MODULE_NAME=${MODULE_NAME})
 target_compile_options(${MODULE_NAME} PRIVATE -Wno-unused-parameter)
 if(CXX_SUPPORT_WCLASS_MEMACCESS)

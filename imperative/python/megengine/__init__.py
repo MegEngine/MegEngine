@@ -92,9 +92,6 @@ _set_fork_exec_path_for_timed_func(
     os.path.join(os.path.dirname(__file__), "utils", "_timed_func_fork_exec_entry.py"),
 )
 
-_persistent_cache_impl_ins = persistent_cache.PersistentCacheOnServer()
-_persistent_cache_impl_ins.reg()
-
 atexit.register(_close)
 
 del _set_fork_exec_path_for_timed_func
@@ -135,3 +132,5 @@ import megengine.quantization
 import megengine.random
 import megengine.utils
 import megengine.traced_module
+
+persistent_cache.get_manager()
