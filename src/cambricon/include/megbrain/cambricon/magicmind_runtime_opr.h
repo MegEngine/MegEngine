@@ -93,6 +93,7 @@ private:
     IEnginePtr m_engine;
     mutable IContextPtr m_context;
     IModelPtr m_model;
+    dt_byte* m_current_ptr;
 };
 
 }  // namespace opr

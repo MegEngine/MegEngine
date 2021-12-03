@@ -642,6 +642,7 @@ TEST(TestMagicMindRuntimeOpr, GraphShapeMutable) {
         auto func = graph->compile(
                 {make_callback_copy(out1, o1), make_callback_copy(out2, o2)});
         func->execute();
+        func->execute();
         HostTensorND o1_mm(cn, mkshp(no, co, ho, wo), dtype::Float32()),
                 o2_mm(cn, mkshp(no, co, ho, wo), dtype::Float32());
         std::memcpy(
