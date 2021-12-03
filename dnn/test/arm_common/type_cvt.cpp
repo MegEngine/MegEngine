@@ -161,24 +161,251 @@ TEST_F(ARM_COMMON, TYPE_CVT_RECORD) {
             .execs({{1, 32, 24, 128}, {1, 32, 24, 128}});
 }
 
-TEST_F(ARM_COMMON, TYPE_CVT_16_F32) {
-    Checker<TypeCvt> checker(handle());
-    UniformIntRNG rng{INT16_MIN >> 1, INT16_MAX >> 1};
+TEST_F(ARM_COMMON, TYPE_CVT_NONCONTIGUOUS) {
+    UniformIntRNG rng32{INT32_MIN >> 1, INT32_MAX >> 1};
+    UniformIntRNG rng16{INT16_MIN >> 1, INT16_MAX >> 1};
+    UniformIntRNG rng8{INT8_MIN >> 1, INT8_MAX >> 1};
 
+    Checker<TypeCvt> checker(handle());
+
+    size_t N = 1;
+    size_t C = 96;
+    size_t H = 64;
+    size_t W = 120;
+    TensorShape shape{N, C, H, W};
+    std::vector<ptrdiff_t> stride{
+            static_cast<long>(C * H * (W + 8)), static_cast<long>(H * (W + 8)),
+            static_cast<long>(W + 8), 1};
+    TensorLayout src, dst;
+
+    //! float32 -> float16
+    src = TensorLayout{shape, stride, dtype::Float32()};
+    dst = TensorLayout{shape, dtype::Float16()};
+    checker.execl({src, dst});
+
+    //! float16 -> float32
+    src = TensorLayout{shape, stride, dtype::Float16()};
+    dst = TensorLayout{shape, dtype::Float32()};
+    checker.execl({src, dst});
+
+    //! float -> s8
+    src = TensorLayout{shape, stride, dtype::Float32()};
+    dst = TensorLayout{shape, dtype::QuantizedS8(0.245121f)};
+    checker.execl({src, dst});
+
+    //! float -> as8
+    src = TensorLayout{shape, stride, dtype::Float32()};
+    dst = TensorLayout{shape, dtype::Quantized8Asymm(0.1f, static_cast<uint8_t>(3))};
+    checker.execl({src, dst});
+
+    checker.set_rng(0, &rng32);
+    //! s32 -> as8
+    src = TensorLayout{shape, stride, dtype::QuantizedS32(0.0000113264f)};
+    dst = TensorLayout{
+            shape, dtype::Quantized8Asymm(0.018909f, static_cast<uint8_t>(3))};
+    checker.execl({src, dst});
+
+    src = TensorLayout{shape, stride, dtype::QuantizedS32(0.0003f)};
+    dst = TensorLayout{shape, dtype::Quantized8Asymm(0.1f, static_cast<uint8_t>(3))};
+    checker.execl({src, dst});
+
+    //! s32 -> s8
+    src = TensorLayout{shape, stride, dtype::QuantizedS32(0.000815917f)};
+    dst = TensorLayout{shape, dtype::QuantizedS8(0.245121f)};
+    checker.execl({src, dst});
+
+    src = TensorLayout{shape, stride, dtype::QuantizedS32(0.0003f)};
+    dst = TensorLayout{shape, dtype::QuantizedS8(0.2f)};
+    checker.execl({src, dst});
+
+    checker.set_rng(0, &rng8);
+    //! s32 -> s32
+    src = TensorLayout{shape, stride, dtype::QuantizedS32(0.0004f)};
+    dst = TensorLayout{shape, dtype::QuantizedS32(0.0002f)};
+    checker.execl({src, dst});
+
+    //! s8 -> s8
+    src = TensorLayout{shape, stride, dtype::QuantizedS8(0.3f)};
+    dst = TensorLayout{shape, dtype::QuantizedS8(0.2f)};
+    checker.execl({src, dst});
+
+    //! as8 -> as8
+    src = TensorLayout{
+            shape, stride, dtype::Quantized8Asymm(0.3f, static_cast<uint8_t>(8))};
+    dst = TensorLayout{shape, dtype::Quantized8Asymm(0.1f, static_cast<uint8_t>(3))};
+    checker.execl({src, dst});
+
+    //! s8 -> s32
+    src = TensorLayout{shape, stride, dtype::QuantizedS8(0.245121f)};
+    dst = TensorLayout{shape, dtype::QuantizedS32(0.000815917f)};
+    checker.execl({src, dst});
+
+    src = TensorLayout{shape, stride, dtype::QuantizedS8(0.2f)};
+    dst = TensorLayout{shape, dtype::QuantizedS32(0.0003f)};
+    checker.execl({src, dst});
+
+    //! s8 -> float
+    src = TensorLayout{shape, stride, dtype::QuantizedS8(0.3f)};
+    dst = TensorLayout{shape, dtype::Float32()};
+    checker.execl({src, dst});
+
+    //! as8 -> float
+    src = TensorLayout{
+            shape, stride, dtype::Quantized8Asymm(0.3f, static_cast<uint8_t>(8))};
+    dst = TensorLayout{shape, dtype::Float32()};
+    checker.execl({src, dst});
+
+    //! int8/uint8 -> float
+    src = TensorLayout{shape, stride, dtype::Int8()};
+    dst = TensorLayout{shape, dtype::Float32()};
+    checker.execl({src, dst});
+
+    src = TensorLayout{shape, stride, dtype::Uint8()};
+    dst = TensorLayout{shape, dtype::Float32()};
+    checker.execl({src, dst});
+
+    //! int16/uint16 -> float
+    checker.set_rng(0, &rng16);
     for (size_t size : {3, 7, 15, 33, 10000}) {
-        checker.set_rng(0, &rng);
         checker.set_dtype(0, dtype::Int16()).execs({{size}, {size}});
         checker.set_dtype(0, dtype::Uint16()).execs({{size}, {size}});
     }
-    TensorLayout src_int16{
-            {1, 96, 64, 120}, {128 * 64 * 96, 128 * 64, 128, 1}, dtype::Int16()};
-    TensorLayout dst_int16{{1, 96, 64, 120}, dtype::Float32()};
-    checker.execl({src_int16, dst_int16});
 
-    TensorLayout src_uint16{
-            {1, 96, 64, 120}, {128 * 64 * 96, 128 * 64, 128, 1}, dtype::Uint16()};
-    TensorLayout dst_uint16{{1, 96, 64, 120}, dtype::Float32()};
-    checker.execl({src_uint16, dst_uint16});
+    src = TensorLayout{shape, stride, dtype::Int16()};
+    dst = TensorLayout{shape, dtype::Float32()};
+    checker.execl({src, dst});
+
+    src = TensorLayout{shape, stride, dtype::Uint16()};
+    dst = TensorLayout{shape, dtype::Float32()};
+    checker.execl({src, dst});
+
+    UniformIntRNG narrow_rng{-40000, 40000};
+    checker.set_rng(0, &narrow_rng);
+    //! s32 -> as8
+    src = TensorLayout{shape, stride, dtype::QuantizedS32(0.000163794f)};
+    dst = TensorLayout{
+            shape, dtype::Quantized8Asymm(0.0479196f, static_cast<uint8_t>(144))};
+    checker.execl({src, dst});
+}
+
+TEST_F(ARM_COMMON, TYPE_CVT_MONOTONOUS) {
+    UniformIntRNG rng32{INT32_MIN >> 1, INT32_MAX >> 1};
+    UniformIntRNG rng16{INT16_MIN >> 1, INT16_MAX >> 1};
+    UniformIntRNG rng8{INT8_MIN >> 1, INT8_MAX >> 1};
+
+    Checker<TypeCvt> checker(handle());
+
+    size_t N = 1;
+    size_t C = 96;
+    size_t H = 64;
+    size_t W = 120;
+    TensorShape shape{N, C, H, W};
+    std::vector<ptrdiff_t> stride{
+            static_cast<long>((C + 8) * (H + 8) * (W + 8)),
+            static_cast<long>((H + 8) * (W + 8)), static_cast<long>(W + 8), 1};
+    TensorLayout src, dst;
+
+    //! float32 -> float16
+    src = TensorLayout{shape, stride, dtype::Float32()};
+    dst = TensorLayout{shape, dtype::Float16()};
+    checker.execl({src, dst});
+
+    //! float16 -> float32
+    src = TensorLayout{shape, stride, dtype::Float16()};
+    dst = TensorLayout{shape, dtype::Float32()};
+    checker.execl({src, dst});
+
+    //! float -> s8
+    src = TensorLayout{shape, stride, dtype::Float32()};
+    dst = TensorLayout{shape, dtype::QuantizedS8(0.245121f)};
+    checker.execl({src, dst});
+
+    //! float -> as8
+    src = TensorLayout{shape, stride, dtype::Float32()};
+    dst = TensorLayout{shape, dtype::Quantized8Asymm(0.1f, static_cast<uint8_t>(3))};
+    checker.execl({src, dst});
+
+    checker.set_rng(0, &rng32);
+    //! s32 -> as8
+    src = TensorLayout{shape, stride, dtype::QuantizedS32(0.0000113264f)};
+    dst = TensorLayout{
+            shape, dtype::Quantized8Asymm(0.018909f, static_cast<uint8_t>(3))};
+    checker.execl({src, dst});
+
+    src = TensorLayout{shape, stride, dtype::QuantizedS32(0.0003f)};
+    dst = TensorLayout{shape, dtype::Quantized8Asymm(0.1f, static_cast<uint8_t>(3))};
+    checker.execl({src, dst});
+
+    //! s32 -> s8
+    src = TensorLayout{shape, stride, dtype::QuantizedS32(0.000815917f)};
+    dst = TensorLayout{shape, dtype::QuantizedS8(0.245121f)};
+    checker.execl({src, dst});
+
+    src = TensorLayout{shape, stride, dtype::QuantizedS32(0.0003f)};
+    dst = TensorLayout{shape, dtype::QuantizedS8(0.2f)};
+    checker.execl({src, dst});
+
+    checker.set_rng(0, &rng8);
+    //! s32 -> s32
+    src = TensorLayout{shape, stride, dtype::QuantizedS32(0.0004f)};
+    dst = TensorLayout{shape, dtype::QuantizedS32(0.0002f)};
+    checker.execl({src, dst});
+
+    //! s8 -> s8
+    src = TensorLayout{shape, stride, dtype::QuantizedS8(0.3f)};
+    dst = TensorLayout{shape, dtype::QuantizedS8(0.2f)};
+    checker.execl({src, dst});
+
+    //! as8 -> as8
+    src = TensorLayout{
+            shape, stride, dtype::Quantized8Asymm(0.3f, static_cast<uint8_t>(8))};
+    dst = TensorLayout{shape, dtype::Quantized8Asymm(0.1f, static_cast<uint8_t>(3))};
+    checker.execl({src, dst});
+
+    //! s8 -> s32
+    src = TensorLayout{shape, stride, dtype::QuantizedS8(0.245121f)};
+    dst = TensorLayout{shape, dtype::QuantizedS32(0.000815917f)};
+    checker.execl({src, dst});
+
+    src = TensorLayout{shape, stride, dtype::QuantizedS8(0.2f)};
+    dst = TensorLayout{shape, dtype::QuantizedS32(0.0003f)};
+    checker.execl({src, dst});
+
+    //! s8 -> float
+    src = TensorLayout{shape, stride, dtype::QuantizedS8(0.3f)};
+    dst = TensorLayout{shape, dtype::Float32()};
+    checker.execl({src, dst});
+
+    //! as8 -> float
+    src = TensorLayout{
+            shape, stride, dtype::Quantized8Asymm(0.3f, static_cast<uint8_t>(8))};
+    dst = TensorLayout{shape, dtype::Float32()};
+    checker.execl({src, dst});
+
+    //! int8/uint8 -> float
+    src = TensorLayout{shape, stride, dtype::Int8()};
+    dst = TensorLayout{shape, dtype::Float32()};
+    checker.execl({src, dst});
+
+    src = TensorLayout{shape, stride, dtype::Uint8()};
+    dst = TensorLayout{shape, dtype::Float32()};
+    checker.execl({src, dst});
+
+    src = TensorLayout{shape, stride, dtype::Int16()};
+    dst = TensorLayout{shape, dtype::Float32()};
+    checker.execl({src, dst});
+
+    src = TensorLayout{shape, stride, dtype::Uint16()};
+    dst = TensorLayout{shape, dtype::Float32()};
+    checker.execl({src, dst});
+
+    UniformIntRNG narrow_rng{-40000, 40000};
+    checker.set_rng(0, &narrow_rng);
+    //! s32 -> as8
+    src = TensorLayout{shape, stride, dtype::QuantizedS32(0.000163794f)};
+    dst = TensorLayout{
+            shape, dtype::Quantized8Asymm(0.0479196f, static_cast<uint8_t>(144))};
+    checker.execl({src, dst});
 }
 
 #if MEGDNN_WITH_BENCHMARK
