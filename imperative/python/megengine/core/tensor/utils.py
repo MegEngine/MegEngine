@@ -232,7 +232,6 @@ def subgraph(
     name, dtype, device, nr_inputs, gopt_level=None, jit_fusion=False, custom_grad=False
 ):
     if not device.physical_name.startswith("gpu"):
-        gopt_level = None  # disable jit and compile
         jit_fusion = False
 
     if jit_fusion and not jit_supported:
