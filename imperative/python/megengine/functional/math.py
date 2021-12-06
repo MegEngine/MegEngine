@@ -1151,36 +1151,52 @@ def dot(inp1: Tensor, inp2: Tensor) -> Tensor:
     return result
 
 
-def svd(inp: Tensor, full_matrices=False, compute_uv=True) -> Tensor:
-    r"""Computes the singular value decompositions of input matrix.
+def svd(x: Tensor, full_matrices=False, compute_uv=True) -> Tensor:
+    r"""Returns a singular value decomposition ``A = USVh`` of a matrix (or a stack of matrices) ``x`` , where ``U`` is a matrix (or a stack of matrices) with orthonormal columns, ``S`` is a vector of non-negative numbers (or stack of vectors), and ``Vh`` is a matrix (or a stack of matrices) with orthonormal rows.
 
     Args:
-        inp: input matrix, must has shape `[..., M, N]`.
+        x (Tensor): A input real tensor having the shape ``(..., M, N)`` with ``x.ndim >= 2`` .
+        full_matrices (bool, optional): If ``False`` , ``U`` and ``Vh`` have the shapes  ``(..., M, K)`` and ``(..., K, N)`` , respectively, where ``K = min(M, N)`` . If ``True`` , the shapes  are ``(..., M, M)`` and ``(..., N, N)`` , respectively. Default: ``False`` . 
+        compute_uv (bool, optional): Whether or not to compute ``U`` and ``Vh`` in addition to ``S`` . Default: ``True`` .
 
     Returns:
-        output matrices, `(U, sigma, V)`.
+        Returns a tuple ( ``U`` , ``S`` , ``Vh`` ), which are  SVD factors ``U`` , ``S``, ``Vh`` of  input matrix ``x``. ( ``U`` , ``Vh`` only returned when ``compute_uv`` is True). 
+            ``U`` contains matrices orthonormal columns (i.e., the columns are left singular vectors). If ``full_matrices`` is ``True`` , the array must have shape ``(..., M, M)`` . If ``full_matrices`` is ``False`` , the array must have shape ``(..., M, K)`` , where ``K = min(M, N)`` .
+
+            ``S`` contains the vector(s) of singular values of length ``K`` , where ``K = min(M, N)`` . For each vector, the singular values must be sorted in descending order by magnitude, such that ``s[..., 0]`` is the largest value, ``s[..., 1]`` is the second largest value, etc. The first ``x.ndim-2`` dimensions must have the same shape as those of the input ``x`` .
+
+            ``Vh`` contains orthonormal rows (i.e., the rows are the right singular vectors and the array is the adjoint). If ``full_matrices`` is ``True`` , the array must have shape ``(..., N, N)`` . If ``full_matrices`` is ``False`` , the array must have shape ``(..., K, N)`` where ``K = min(M, N)`` . The first ``x.ndim-2`` dimensions must have the same shape as those of the input ``x`` .
+        Each returned array must have the same floating-point data type as ``x`` .
 
     Examples:
+        >>> import numpy as np
+        >>> x = Tensor(np.random.randn(9, 6))
+        >>> y = Tensor(np.random.randn(2, 7, 8, 3))
+        
+        Reconstruction based on full SVD, 2D case:
+        >>> U, S, Vh = F.svd(x, full_matrices=True)
+        >>> U.shape, S.shape, Vh.shape
+        ((9, 9), (6,), (6, 6))
+        
+        Reconstruction based on reduced SVD, 2D case:
+        >>> U, S, Vh = F.svd(x, full_matrices=False)
+        >>> U.shape, S.shape, Vh.shape
+        ((9, 6), (6,), (6, 6))
 
-        .. testcode::
+        Reconsturction based on full SVD, 4D case:
+        >>> u, s, vh = F.svd(y, full_matrices=True)
+        >>> u.shape, s.shape, vh.shape
+        ((2, 7, 8, 8), (2, 7, 3), (2, 7, 3, 3))
 
-            import numpy as np
-            from megengine import tensor
-            import megengine.functional as F
-
-            x = tensor(np.arange(0, 6, dtype=np.float32).reshape(2,3))
-            _, y, _ = F.svd(x)
-            print(y.numpy().round(decimals=3))
-
-        Outputs:
-
-        .. testoutput::
-
-            [7.348 1.   ]
+        Reconsturction based on reduced SVD, 4D case:
+        >>> u, s, vh = F.svd(y, full_matrices=False)
+        >>> u.shape, s.shape, vh.shape
+        ((2, 7, 8, 3), (2, 7, 3), (2, 7, 3, 3))        
+    
     """
     op = builtin.SVD(full_matrices=full_matrices, compute_uv=compute_uv)
-    U, sigma, V = apply(op, inp)
-    return U, sigma, V
+    U, S, Vh = apply(op, x)
+    return U, S, Vh
 
 
 def _check_non_finite(inps: Iterable[Tensor], scale=1.0) -> Tensor:
