@@ -131,8 +131,56 @@ def sub(x, y):
     return _elwise(x, y, mode=Elemwise.Mode.SUB)
 
 
-def mul(x, y):
-    r"""Element-wise `multiplication`."""
+def mul(x: Tensor, y: Tensor) -> Tensor:
+    r"""Calculates the product for each element :math:`x_i` of the input tensor `x` with the respective element :math:`y_i` of the input tensor `y`.
+
+    Note:
+        * If either :math:`x_i` or :math:`y_i` is `NaN`, the result is `NaN`.
+        * If :math:`x_i` is either `+infinity` or `-infinity` and :math:`y_i` is either `+0` or `-0`, the result is `NaN`.
+        * If :math:`x_i` is either `+0` or `-0` and :math:`y_i` is either `+infinity` or `-infinity`, the result is `NaN`.
+        * If :math:`x_i` and :math:`y_i` have different mathematical signs, the result has a negative mathematical sign, unless the result is `NaN`.
+        * If :math:`x_i` is either `+infinity` or `-infinity` and :math:`y_i` is either `+infinity` or `-infinity`,
+          the result is a signed infinity with the mathematical sign determined by the rule already stated above.
+        * If :math:`x_i` is either `+infinity` or `-infinity` and :math:`y_i` is a nonzero finite number, 
+          the result is a signed infinity with the mathematical sign determined by the rule already stated above.
+        * If :math:`x_i` is a nonzero finite number and :math:`y_i` is either `+infinity` or `-infinity`, 
+          the result is a signed infinity with the mathematical sign determined by the rule already stated above.
+        * In the remaining cases, where neither `infinity` nor `NaN` is involved,
+          the product must be computed and rounded to the nearest representable value according to IEEE 754-2019 and a supported rounding mode.
+          If the magnitude is too large to represent, the result is an `infinity` of appropriate mathematical sign.
+          If the magnitude is too small to represent, the result is a zero of appropriate mathematical sign.
+        * Floating-point multiplication is not always associative due to finite precision.
+
+    Args:
+        x: first input tensor. Should have a numeric data type.
+        y: second input tensor. Must be compatible with `x` (see :ref:`broadcasting-rule` ). Should have a numeric data type.
+
+    Returns:
+        A tensor containing the element-wise products. The returned array must have a data type determined by :ref:`dtype-promotion`.
+
+    Examples:
+
+        >>> F.mul(2, 3)
+        Tensor(6, dtype=int32, device=xpux:0)
+
+        >>> F.mul(2.0, 3.0)
+        Tensor(6.0, device=xpux:0)
+
+        >>> x = F.arange(6.0).reshape(2, 3))
+        >>> y = F.arange(3.0)
+        >>> F.mul(x, y)
+        Tensor([[ 0.  1.  4.]
+         [ 0.  4. 10.]], device=xpux:0)
+
+        The `*` operator can be used as a shorthand for :func:`~.functional.mul` on tensors.
+
+        >>> x = F.arange(6.0).reshape((2, 3))
+        >>> y = F.arange(3.0)
+        >>> x * y
+        Tensor([[ 0.  1.  4.]
+         [ 0.  4. 10.]], device=xpux:0)
+
+    """
     return _elwise(x, y, mode=Elemwise.Mode.MUL)
 
 
