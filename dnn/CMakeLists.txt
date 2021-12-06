@@ -54,9 +54,12 @@ if(MGE_WITH_CUDA)
   add_library(cutlass INTERFACE)
   target_include_directories(
     cutlass
+    INTERFACE $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/third_party/cutlass/include>)
+  add_library(cudnn-frontend INTERFACE)
+  target_include_directories(
+    cudnn-frontend
     INTERFACE
-      $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/third_party/cutlass/include>
-      $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/third_party/cutlass/tools/util/include>)
+      $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/third_party/cudnn-frontend/include>)
 endif()
 
 if(MGE_WITH_TEST)

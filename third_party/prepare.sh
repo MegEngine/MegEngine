@@ -94,6 +94,7 @@ function git_submodule_update() {
     git submodule sync
     git submodule update -f --init midout
     git submodule update -f --init flatbuffers
+    git submodule update -f --init cudnn-frontend
     git submodule update -f --init Json
     git submodule update -f --init gflags
     git submodule update -f --init cpuinfo

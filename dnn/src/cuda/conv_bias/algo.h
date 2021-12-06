@@ -76,6 +76,8 @@ public:
         CUDA_IMPLICIT_BATCHED_GEMM_FMA_NCHW_F32,
         CUDA_IMPLICIT_BATCHED_GEMM_HMMA_NCHW_F16,
         CUDA_SIMPLE_INT1,
+        CUDA_CUDNN_CONV_V8,
+        CUDA_CUDNN_CONVBIAS_V8,
     };
     using Mapper = std::unordered_map<AlgorithmDesc, AlgoBase*>;
 
@@ -157,12 +159,40 @@ public:
     }
 
     virtual bool is_cudnn() const { return false; }
+
+    param::Convolution get_param_convolution(const SizeArgs& args) const;
 };
 
-class ConvBiasForwardImpl::AlgoCUDNNConvBiasActivation final : public AlgoBase {
+class ConvBiasForwardImpl::AlgoCUDNNConvBiasActivationBase : public AlgoBase {
+public:
+    AlgoCUDNNConvBiasActivationBase() = default;
+    virtual ~AlgoCUDNNConvBiasActivationBase() = default;
+
+    size_t get_workspace_in_bytes(const SizeArgs& args) const override;
+    void exec(const ExecArgs& args) const override;
+
+    bool is_cudnn() const override { return true; }
+
+    size_t get_preprocess_workspace_in_bytes(const SizeArgs& args) const override;
+    SmallVector<TensorLayout> deduce_preprocessed_filter_layout(
+            const SizeArgs& args) const override;
+    void exec_preprocess(const ExecArgs& args) const override;
+
+protected:
+    virtual size_t cudnn_get_workspace_in_bytes(const SizeArgs& args) const = 0;
+    virtual void cudnn_execute(
+            const ExecArgs& args, const Workspace& workspace, float alpha,
+            float beta) const = 0;
+
+protected:
+    std::string m_name;
+};
+
+class ConvBiasForwardImpl::AlgoCUDNNConvBiasActivation final
+        : public AlgoCUDNNConvBiasActivationBase {
 public:
     AlgoCUDNNConvBiasActivation(cudnnConvolutionFwdAlgo_t cudnn_enum)
-            : m_cudnn_enum(cudnn_enum) {
+            : AlgoCUDNNConvBiasActivationBase(), m_cudnn_enum(cudnn_enum) {
         megdnn_assert(
                 CudnnAlgoPack::conv_fwd_algos().find(cudnn_enum) !=
                 CudnnAlgoPack::conv_fwd_algos().end());
@@ -171,9 +201,6 @@ public:
                 "CUDNN:ConvBiasActivation:" + m_attr.name, {});
     }
 
-    size_t get_workspace_in_bytes(const SizeArgs& args) const override;
-    void exec(const ExecArgs& args) const override;
-    param::Convolution get_param_convolution(const SizeArgs& args) const;
     bool is_available(const SizeArgs&) const override;
 
     const char* name() const override { return m_name.c_str(); }
@@ -191,8 +218,6 @@ public:
 
     cudnnConvolutionFwdAlgo_t cudnn_enum() { return m_cudnn_enum; }
 
-    bool is_cudnn() const override { return true; }
-
     MEGDNN_DECL_ALGO_TYPE(CUDA_CUDNN_CONVBIAS)
 
     std::string param() const override {
@@ -202,10 +227,45 @@ public:
     }
 
 private:
-    std::string m_name;
+    size_t cudnn_get_workspace_in_bytes(const SizeArgs& args) const override;
+    void cudnn_execute(
+            const ExecArgs& args, const Workspace& workspace, float alpha,
+            float beta) const override;
+
+private:
     cudnnConvolutionFwdAlgo_t m_cudnn_enum;
     CudnnAlgoPack::Attr m_attr;
 };
+
+#if CUDNN_VERSION > 8004
+class ConvBiasForwardImpl::AlgoCUDNNConvBiasActivationV8 final
+        : public AlgoCUDNNConvBiasActivationBase {
+public:
+    AlgoCUDNNConvBiasActivationV8() : AlgoCUDNNConvBiasActivationBase() {
+        m_name = ConvBiasForward::algo_name<DefaultParam>(
+                "CUDNN:ConvBiasActivationV8", {});
+    }
+    ~AlgoCUDNNConvBiasActivationV8() = default;
+
+    bool is_available(const SizeArgs& args) const override;
+
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE | AlgoAttribute::ACCURACY_DEPEND_ON_BATCH;
+    }
+
+    const char* name() const override { return m_name.c_str(); }
+
+    MEGDNN_DECL_ALGO_TYPE(CUDA_CUDNN_CONVBIAS_V8)
+
+    std::string param() const override { return ""; }
+
+private:
+    size_t cudnn_get_workspace_in_bytes(const SizeArgs& args) const override;
+    void cudnn_execute(
+            const ExecArgs& args, const Workspace& workspace, float alpha,
+            float beta) const override;
+};
+#endif
 
 class ConvBiasForwardImpl::AlgoChanwise final : public AlgoBase {
 public:
@@ -284,9 +344,34 @@ private:
     mutable std::string m_name;
 };
 
-class ConvBiasForwardImpl::AlgoCUDNNConv final : public AlgoBase {
+class ConvBiasForwardImpl::AlgoCUDNNConvBase : public AlgoBase {
 public:
-    AlgoCUDNNConv(cudnnConvolutionFwdAlgo_t cudnn_enum) : m_cudnn_enum(cudnn_enum) {
+    AlgoCUDNNConvBase() = default;
+    virtual ~AlgoCUDNNConvBase() = default;
+
+    size_t get_workspace_in_bytes(const SizeArgs& args) const override {
+        return get_workspace_bundle(nullptr, args).total_size_in_bytes();
+    }
+    void exec(const ExecArgs& args) const override;
+
+    bool is_cudnn() const override { return true; }
+
+protected:
+    virtual size_t cudnn_get_workspace_in_bytes(const SizeArgs& args) const = 0;
+    virtual void cudnn_execute(
+            const ExecArgs& args, const Workspace& workspace) const = 0;
+
+private:
+    WorkspaceBundle get_workspace_bundle(void* ptr, const SizeArgs& args) const;
+
+protected:
+    std::string m_name;
+};
+
+class ConvBiasForwardImpl::AlgoCUDNNConv final : public AlgoCUDNNConvBase {
+public:
+    AlgoCUDNNConv(cudnnConvolutionFwdAlgo_t cudnn_enum)
+            : AlgoCUDNNConvBase(), m_cudnn_enum(cudnn_enum) {
         megdnn_assert(
                 CudnnAlgoPack::conv_fwd_algos().find(cudnn_enum) !=
                 CudnnAlgoPack::conv_fwd_algos().end());
@@ -296,8 +381,6 @@ public:
     }
 
     bool is_available(const SizeArgs& args) const override;
-    size_t get_workspace_in_bytes(const SizeArgs& args) const override;
-    void exec(const ExecArgs& args) const override;
 
     AlgoAttribute attribute() const override {
         auto ret = static_cast<AlgoAttribute>(0);
@@ -314,8 +397,6 @@ public:
 
     cudnnConvolutionFwdAlgo_t cudnn_enum() const { return m_cudnn_enum; }
 
-    bool is_cudnn() const override { return true; }
-
     MEGDNN_DECL_ALGO_TYPE(CUDA_CUDNN_CONV)
 
     std::string param() const override {
@@ -325,12 +406,38 @@ public:
     }
 
 private:
-    std::string m_name;
+    size_t cudnn_get_workspace_in_bytes(const SizeArgs& args) const override;
+    void cudnn_execute(const ExecArgs& args, const Workspace& workspace) const override;
+
+private:
     cudnnConvolutionFwdAlgo_t m_cudnn_enum;
     CudnnAlgoPack::Attr m_attr;
-
-    WorkspaceBundle get_workspace_bundle(void* ptr, const SizeArgs& args) const;
 };
+
+#if CUDNN_VERSION > 8004
+class ConvBiasForwardImpl::AlgoCUDNNConvV8 final : public AlgoCUDNNConvBase {
+public:
+    AlgoCUDNNConvV8() : AlgoCUDNNConvBase() {
+        m_name = ConvBiasForward::algo_name<DefaultParam>("CUDNN:ConvolutionV8", {});
+    }
+
+    bool is_available(const SizeArgs& args) const override;
+
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE | AlgoAttribute::ACCURACY_DEPEND_ON_BATCH;
+    }
+
+    const char* name() const override { return m_name.c_str(); }
+
+    MEGDNN_DECL_ALGO_TYPE(CUDA_CUDNN_CONV_V8)
+
+    std::string param() const override { return ""; }
+
+private:
+    size_t cudnn_get_workspace_in_bytes(const SizeArgs& args) const override;
+    void cudnn_execute(const ExecArgs& args, const Workspace& workspace) const override;
+};
+#endif
 
 //! compute small matmul in the kernel
 class ConvBiasForwardImpl::AlgoInplaceMatmul final : public AlgoBase {
@@ -1140,6 +1247,10 @@ public:
     AlgoGroupConvGeneral group;
     AlgoBFloat16 bfloat16;
     AlgoSimpleInt1 int1_simple;
+#if CUDNN_VERSION > 8004
+    AlgoCUDNNConvV8 cudnn_conv_v8;
+    AlgoCUDNNConvBiasActivationV8 cudnn_conv_bias_activation_v8;
+#endif
 
     AlgoBase* cudnn_conv_bias_act_from_enum(cudnnConvolutionFwdAlgo_t algo);
 

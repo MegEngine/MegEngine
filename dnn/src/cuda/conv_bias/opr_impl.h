@@ -1,6 +1,7 @@
 #pragma once
 #include "../elemwise/opr_impl.h"
 #include "megdnn/oprs.h"
+#include "src/cuda/cudnn_with_check.h"
 
 namespace megdnn {
 namespace cuda {
@@ -65,6 +66,12 @@ public:
     // The following algorithms are suitable for channel wise convolution
     class AlgoFloat32NCHWFMAImplicitBatchedGemm;
     class AlgoFloat16NCHWHMMAImplicitBatchedGemm;
+    class AlgoCUDNNConvBase;
+    class AlgoCUDNNConvBiasActivationBase;
+#if CUDNN_VERSION > 8004
+    class AlgoCUDNNConvV8;
+    class AlgoCUDNNConvBiasActivationV8;
+#endif
 
     class AlgoPack;
 

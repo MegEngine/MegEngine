@@ -197,8 +197,60 @@ void flip_filter(
     ref_ptr.reset(workspace.raw_ptr);
 }
 
-}  // namespace conv_bias
+std::pair<float, float> cudnn_get_conv_bias_act_scale_param(
+        const TensorLayout& x, const TensorLayout& y, const TensorLayout& w,
+        const TensorLayout& b, const TensorLayout& z) {
+    float alpha = 1.f, beta = 0.f;
+    if (z.ndim > 0)
+        beta = 1.f;
 
+    auto get_scale = [](const DType& dtype) -> float {
+        megdnn_assert(dtype.category() == DTypeCategory::QUANTIZED);
+        switch (dtype.enumv()) {
+#define cb(_dt)                  \
+    case DTypeTrait<_dt>::enumv: \
+        return dtype.param<_dt>().scale;
+            MEGDNN_FOREACH_QUANTIZED_DTYPE(cb)
+#undef cb
+            default:
+                megdnn_assert_internal(0);
+        }
+    };
+
+    auto x_dtype = x.dtype, y_dtype = y.dtype, w_dtype = w.dtype;
+    megdnn_assert(
+            (x_dtype.category() == y_dtype.category()) ||
+            (x_dtype.enumv() == DTypeEnum::QuantizedS8 &&
+             y_dtype.enumv() == DTypeEnum::Float32));
+    megdnn_assert(x_dtype.category() == w_dtype.category());
+
+    if (x_dtype.category() == DTypeCategory::QUANTIZED) {
+        auto expected_bias_scale = get_scale(x_dtype) * get_scale(w_dtype);
+        alpha = expected_bias_scale;
+        if (y_dtype.category() == DTypeCategory::QUANTIZED)
+            alpha /= get_scale(y_dtype);
+        if (z.ndim > 0 && z.dtype.category() == DTypeCategory::QUANTIZED) {
+            beta = get_scale(z.dtype) / get_scale(y_dtype);
+        }
+        if (b.dtype.category() == DTypeCategory::QUANTIZED) {
+            megdnn_assert(fabs(expected_bias_scale - get_scale(b.dtype)) < 1e-4);
+        }
+    }
+    return {alpha, beta};
+}
+
+void cudnn_reorder_filer_and_bias_nchw32(
+        const cudnnHandle_t& handle, const void* filter_ptr,
+        const CanonizedFilterMeta& fm, const void* bias_ptr, void* reordered_filter_ptr,
+        void* reordered_bias_ptr) {
+    FilterDesc<param::ConvBias> filter_desc;
+    filter_desc.set(fm);
+    int reorder_bias = bias_ptr != nullptr;
+    cudnn_check(cudnnReorderFilterAndBias(
+            handle, filter_desc.desc, CUDNN_DEFAULT_REORDER, filter_ptr,
+            reordered_filter_ptr, reorder_bias, bias_ptr, reordered_bias_ptr));
+}
+}  // namespace conv_bias
 }  // namespace cuda
 }  // namespace megdnn
 

@@ -47,6 +47,17 @@ ConvBiasForward::Algorithm* ConvBiasForwardImpl::get_algorithm_heuristic(
         const AlgoAttribute& positive_attr, const AlgoAttribute& negative_attr) {
     using namespace conv_bias;
     AlgoBase::SizeArgs args{this, src, filter, bias, z, dst};
+#if CUDNN_VERSION >= 8004
+    if (sm_algo_pack.cudnn_conv_v8.is_available_attribute(
+                args, positive_attr, negative_attr, workspace_limit_in_bytes)) {
+        return &sm_algo_pack.cudnn_conv_v8;
+    }
+    if (sm_algo_pack.cudnn_conv_bias_activation_v8.is_available_attribute(
+                args, positive_attr, negative_attr, workspace_limit_in_bytes)) {
+        return &sm_algo_pack.cudnn_conv_bias_activation_v8;
+    }
+#endif
+
     auto dst_layout = *args.dst_layout;
     if (dst_layout.dtype.enumv() != args.bias_layout->dtype.enumv()) {
         dst_layout.dtype = DType();

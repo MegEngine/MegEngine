@@ -222,6 +222,8 @@ target_link_libraries(megdnn PUBLIC opr_param_defs)
 if(MGE_WITH_CUDA)
   target_link_libraries(megdnn PRIVATE $<BUILD_INTERFACE:cutlass>)
   target_include_directories(megdnn PRIVATE ${CUDNN_INCLUDE_DIR})
+
+  target_link_libraries(megdnn PRIVATE $<BUILD_INTERFACE:cudnn-frontend>)
 endif()
 
 if(MGE_WITH_ROCM)

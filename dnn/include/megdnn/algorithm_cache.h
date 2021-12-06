@@ -22,7 +22,16 @@ public:
         bool operator==(const KeyStorage& k) const { return k1 == k.k1 && k2 == k.k2; }
     };
 
-    struct Key {
+    struct Hash {
+        size_t operator()(const KeyStorage& k) const {
+            size_t h1 = k.k1;
+            size_t h2 = k.k2;
+            h1 ^= h2 + 0x9e3779b9 + (h1 << 6) + (h1 >> 2);
+            return h1;
+        }
+    };
+
+    class Key {
         Handle* m_handle;
         uint32_t m_opr_type;
         const TensorLayout* m_inp_layouts_ptr;
@@ -62,14 +71,6 @@ public:
     MGE_WIN_DECLSPEC_FUC void clear();
 
 private:
-    struct Hash {
-        size_t operator()(const KeyStorage& k) const {
-            size_t h1 = k.k1;
-            size_t h2 = k.k2;
-            h1 ^= h2 + 0x9e3779b9 + (h1 << 6) + (h1 >> 2);
-            return h1;
-        }
-    };
     std::unordered_map<KeyStorage, Result, Hash> m_heuristic_cache;
 #if __DEPLOY_ON_XP_SP2__
     size_t m_mtx;

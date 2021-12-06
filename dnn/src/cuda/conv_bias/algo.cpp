@@ -14,6 +14,12 @@ ConvBiasForwardImpl::AlgoPack::AlgoPack() {
     non_cudnn_algos.push_back(&matmul8x8x32);
     non_cudnn_algos.push_back(&batched_matmul);
     non_cudnn_algos.push_back(&int1_simple);
+
+#if CUDNN_VERSION > 8004
+    all_algos.push_back(&cudnn_conv_v8);
+    all_algos.push_back(&cudnn_conv_bias_activation_v8);
+#endif
+
     fill_cudnn_algos();
     for (auto&& algo : cudnn_conv_bias_activations) {
         all_algos.push_back(&algo);
@@ -167,6 +173,30 @@ std::string ConvBiasForwardImpl::AlgoBase::SizeArgs::to_string() const {
             fm.stride[1], fm.dilation[0], fm.dilation[1], !fm.should_flip,
             src_layout->dtype.name(), dst_layout->dtype.name(),
             nonlinear_mode_str.c_str());
+}
+
+param::Convolution ConvBiasForwardImpl::AlgoBase::get_param_convolution(
+        const SizeArgs& args) const {
+    param::Convolution::Mode mode;
+    param::Convolution::Sparse sparse = args.filter_meta.group > 1
+                                              ? param::Convolution::Sparse::GROUP
+                                              : param::Convolution::Sparse::DENSE;
+    if (args.filter_meta.should_flip) {
+        mode = param::Convolution::Mode::CONVOLUTION;
+    } else {
+        mode = param::Convolution::Mode::CROSS_CORRELATION;
+    }
+    return param::Convolution{
+            mode,
+            args.filter_meta.padding[0],
+            args.filter_meta.padding[1],
+            args.filter_meta.stride[0],
+            args.filter_meta.stride[1],
+            args.filter_meta.dilation[1],
+            args.filter_meta.dilation[0],
+            sparse,
+            args.filter_meta.format,
+            args.opr->param().compute_mode};
 }
 
 void ConvBiasForwardImpl::AlgoPack::fill_cudnn_algos() {
