@@ -14,8 +14,6 @@ import weakref
 
 import numpy as np
 
-import megengine as mge
-
 from .._imperative_rt import core2, ops
 from ..ops.builtin import Elemwise, OpDef, RemoteSend
 from ..ops.special import Const

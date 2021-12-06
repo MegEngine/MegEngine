@@ -1,10 +1,9 @@
 import types
 from functools import partial
 
-import megengine.functional as F
-import megengine.module as M
-from megengine.functional.tensor import zeros
-from megengine.utils.module_utils import set_module_mode_safe
+from .. import functional as F
+from .. import module as M
+from ..utils.module_utils import set_module_mode_safe
 
 
 def get_norm_mod_value(weight, norm_value):
@@ -81,7 +80,7 @@ def get_scaled_model(model, scale_submodel, input_shape=None):
     if input_shape is None:
         raise ValueError("input_shape is required for calculating scale value")
 
-    input = zeros(input_shape)
+    input = F.zeros(input_shape)
 
     hooks = []
     for modelname, submodel in model.named_modules():

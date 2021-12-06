@@ -13,7 +13,7 @@ from typing import Any, Generator, Iterator, List, Union
 
 import numpy as np
 
-import megengine.distributed as dist
+from .. import distributed as dist
 
 
 class Sampler(ABC):
