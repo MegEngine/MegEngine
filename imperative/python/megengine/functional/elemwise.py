@@ -483,33 +483,34 @@ def clip(x: Tensor, lower=None, upper=None) -> Tensor:
         \end{cases}
 
     Args:
-        x: input tensor.
-        lower: lower-bound of the range to be clamped to.
-        upper: upper-bound of the range to be clamped to.
+        x (Tensor): The input tensor.
+        lower (Numberic，optional): lower-bound of the range to be clamped to.
+        upper (Numberic，optional): upper-bound of the range to be clamped to.        
+    
+    Note:
+        * If both `lower` and `upper` are None, raises an AssertionError.
+        * If `lower` is bigger than `upper`, the result is same as `clip(Tensor(), upper, upper)`.
 
     Returns:
-        output clamped tensor.
+        output clamped tensor. The result must have a data type determined by :ref:`dtype-promotion`.
 
     Examples:
 
-        .. testcode::
+        >>> x = Tensor([0,1,2,3,4]) 
+        >>> F.clip(x, 2, 4)
+        Tensor([2 2 2 3 4], dtype=int32, device=xpux:0)
 
-            import numpy as np
-            from megengine import tensor
-            import megengine.functional as F
+        >>> x = Tensor([0,1,2,3,4]) 
+        >>> F.clip(x, 4, 3)
+        Tensor([3 3 3 3 3], dtype=int32, device=xpux:0)
 
-            a = tensor(np.arange(5).astype(np.int32))
-            print(F.clip(a, 2, 4).numpy())
-            print(F.clip(a, lower=3).numpy())
-            print(F.clip(a, upper=3).numpy())
+        >>> x = F.arange(5) 
+        >>> F.clip(x, lower=3)
+        Tensor([3 3 3 3 4], dtype=int32, device=xpux:0)
 
-        Outputs:
-
-        .. testoutput::
-
-            [2 2 2 3 4]
-            [3 3 3 3 4]
-            [0 1 2 3 3]
+        >>> x = F.arange(5, dtype=int) 
+        >>> F.clip(x, upper=2.1)
+        Tensor([0. 1. 2. 2.1 2.1], device=xpux:0)
     """
     assert (
         lower is not None or upper is not None
