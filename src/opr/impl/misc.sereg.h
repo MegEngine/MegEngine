@@ -56,7 +56,16 @@ struct OprMaker<opr::TopK, 2> {
 };
 
 template <>
-struct OprMaker<opr::CheckNonFinite, 0> : public OprMakerVariadic<opr::CheckNonFinite> {
+struct OprMaker<opr::CheckNonFinite, 0> {
+    using Opr = opr::CheckNonFinite;
+    using Param = Opr::Param;
+    static cg::OperatorNodeBase* make(
+            const Param& param, const cg::VarNodeArray& inputs, ComputingGraph& graph,
+            const OperatorNodeConfig& config) {
+        MGB_MARK_USED_VAR(graph);
+        auto out = Opr::make(inputs, param, config);
+        return out[0].node()->owner_opr();
+    }
 };
 
 }  // namespace serialization

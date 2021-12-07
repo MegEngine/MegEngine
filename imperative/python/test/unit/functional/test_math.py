@@ -191,17 +191,21 @@ def test_sum_neg_axis():
 
 def test_non_finite():
     shape = (32, 3, 32, 32)
-    data1 = np.random.random(shape).astype(np.float32)
-    data2 = np.random.random(shape).astype(np.float32)
-    rst = F.math._check_non_finite([tensor(data1), tensor(data2)])
+    data = []
+    for i in range(2):
+        data.append(np.random.random(shape).astype(np.float32))
+    tensorList = [tensor(x) for x in data]
+    rst = F.math._check_non_finite(tensorList, 0.7)
     np.testing.assert_equal(rst.numpy(), [0])
+    for i in range(len(tensorList)):
+        np.testing.assert_allclose(tensorList[i].numpy() / 0.7, data[i], rtol=1e-6)
 
-    data2[0][0][0][0] = float("inf")
-    rst = F.math._check_non_finite([tensor(data1), tensor(data2)])
+    data[1][0][0][0][0] = float("inf")
+    rst = F.math._check_non_finite([tensor(x) for x in data], 0.7)
     np.testing.assert_equal(rst.numpy(), [1])
 
-    data2[0][0][0][0] = float("nan")
-    rst = F.math._check_non_finite([tensor(data1), tensor(data2)])
+    data[1][0][0][0][0] = float("nan")
+    rst = F.math._check_non_finite([tensor(x) for x in data], 0.7)
     np.testing.assert_equal(rst.numpy(), [1])
 
 

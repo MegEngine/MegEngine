@@ -487,39 +487,60 @@ CheckNonFinite::CheckNonFinite(
         const VarNodeArrayView& inp, const Param& param,
         const OperatorNodeConfig& config)
         : Super(OperatorNodeBaseCtorParam{
-                  inp[0]->owner_graph(), config, "check_non_finite", inp}) {
+                  inp[0]->owner_graph(), config, "check_non_finite", inp}),
+          m_scale(param.scale) {
     mgb_assert(!inp.empty());
+
     for (auto&& i : inp) {
         add_input({i});
+        add_output(None)
+                ->dtype(dtype::Float32())
+                .add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
     }
     add_output(None)->dtype(dtype::Int32()).add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
     cg::add_workspace_output(this);
 }
 
-SymbolVar CheckNonFinite::make(
+SymbolVarArray CheckNonFinite::make(
         const VarNodeArrayView& inp, const Param& param,
         const OperatorNodeConfig& config) {
     mgb_assert(!inp.empty());
     intl::BatchedDTypePromotion dtp{inp};
-    return SymbolVar{inp[0]}.insert_single_output_opr<CheckNonFinite>(
-            dtp.get_vars(), param, config);
+    auto outputs =
+            inp[0]->owner_graph()
+                    ->insert_opr(std::make_unique<CheckNonFinite>(inp, param, config))
+                    ->output();
+    mgb_assert(outputs.size() == inp.size() + 2);
+    SymbolVarArray ret(outputs.size() - 1);
+    for (size_t i = 0; i < ret.size(); ++i)
+        ret[i] = outputs[i];
+    return ret;
 }
 
 void CheckNonFinite::scn_do_execute() {
-    megdnn::TensorNDArray inp_arr(input().size());
-    for (size_t i = 0; i < input().size(); ++i) {
-        inp_arr[i] = input()[i]->dev_tensor().as_megdnn();
+    size_t size = input().size();
+    megdnn::TensorNDArray oup_arr(size);
+    // copy an outputs to the dnn for inplace
+    for (size_t i = 0; i < size; ++i) {
+        oup_arr[i] = output(i)
+                             ->dev_tensor()
+                             .copy_from_fixlayout(input(i)->dev_tensor())
+                             .as_megdnn();
     }
+    megdnn_opr()->param().scale = m_scale;
     megdnn_opr()->exec(
-            inp_arr, output(0)->dev_tensor().as_megdnn(),
-            intl::get_megdnn_workspace_from_var(output(1)));
+            oup_arr, output(size)->dev_tensor().as_megdnn(),
+            intl::get_megdnn_workspace_from_var(output(size + 1)));
 }
 
 void CheckNonFinite::init_output_static_infer_desc() {
     using namespace cg::static_infer;
 
     auto&& mgr = owner_graph()->static_infer_manager();
-
+    size_t size = input().size();
+    for (size_t i = 0; i < size; ++i) {
+        mgr.register_shape_infer(output(i), ShapeInferDesc::make_identity(input(i)));
+    }
     auto infer_oshp = [](TensorShape& dest, const InpVal& iv) {
         TensorLayout dst;
         dst.shape[0] = 1;
@@ -532,7 +553,7 @@ void CheckNonFinite::init_output_static_infer_desc() {
     DepVal deps;
     for (auto i : input())
         deps.push_back({i, DepType::SHAPE});
-    mgr.register_shape_infer(output(0), {SourceType::DEP, deps, infer_oshp});
+    mgr.register_shape_infer(output(size), {SourceType::DEP, deps, infer_oshp});
 
     auto infer_wk = [this](TensorShape& dest, const InpVal& inp) {
         dest.ndim = 1;
@@ -541,10 +562,11 @@ void CheckNonFinite::init_output_static_infer_desc() {
             inp_arr[i] = {NULL, {inp.val.at(i).shape(), input(0)->dtype()}};
         }
         dest.shape[0] = megdnn_opr()->get_workspace_in_bytes(
-                inp_arr, {output(0)->shape(), output(0)->dtype()});
+                inp_arr, {output(input().size() + 1)->shape(),
+                          output(input().size() + 1)->dtype()});
         return true;
     };
-    mgr.register_shape_infer(output(1), {SourceType::DEP, deps, infer_wk});
+    mgr.register_shape_infer(output(size + 1), {SourceType::DEP, deps, infer_wk});
 }
 
 void CheckNonFinite::add_input_layout_constraint() {

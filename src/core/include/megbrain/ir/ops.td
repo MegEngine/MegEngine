@@ -397,7 +397,7 @@ def MagicMindRuntime: MgbHashableOp<"MagicMindRuntime"> {
 
 def CvtColor: MgbHashableOp<"CvtColor", [CvtColorParam]>;
 
-def CheckNonFinite: MgbHashableOp<"CheckNonFinite", [EmptyParam]>;
+def CheckNonFinite: MgbHashableOp<"CheckNonFinite", [CheckNonFiniteParam]>;
 
 def FastpathCopy: MgbHashableOp<"FastpathCopy">;
 

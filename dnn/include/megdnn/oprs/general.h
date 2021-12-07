@@ -1344,7 +1344,7 @@ protected:
  * \brief check whether input contains inf or nan value.
  */
 class CheckNonFinite : public OperatorBase {
-    DEF_OPR_PARAM(Empty);
+    DEF_OPR_PARAM(CheckNonFinite);
     DEF_OPR_IMPL(CheckNonFinite, OperatorBase, -1, 1);
     size_t m_size = 0;
 

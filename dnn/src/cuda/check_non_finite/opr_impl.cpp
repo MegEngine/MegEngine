@@ -97,7 +97,7 @@ void CheckNonFiniteImpl::exec(
                             workspace_gpu.total_size_in_bytes())),
             1, m_size * total_nr_elems_max, 1, stream,
             Op(srcs_gpu, srcs_total_nr_elems_gpu, dst.ptr<dt_int32>(),
-               total_nr_elems_max));
+               total_nr_elems_max, param().scale));
 }
 
 }  // namespace cuda

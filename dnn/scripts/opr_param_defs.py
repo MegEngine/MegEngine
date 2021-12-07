@@ -1176,6 +1176,8 @@ Note: NCHW_NCHW4_WEIGHT will auto pad oc and ic, you should remove oc in later o
  )
 pdef('Fill').add_fields('float32', 'value', '0')
 
+pdef('CheckNonFinite').add_fields('float32', 'scale', '1.0')
+
 
 PADDING_MODES = [Doc('REPLICATE = 0', 'aaaaaa|abcdefgh|hhhhhhh'),
                 Doc('REFLECT = 1', 'fedcba|abcdefgh|hgfedcb'),

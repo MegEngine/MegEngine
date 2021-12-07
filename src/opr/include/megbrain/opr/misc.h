@@ -183,18 +183,19 @@ public:
             const OperatorNodeConfig& config = {});
 };
 
-MGB_DEFINE_OPR_CLASS(CheckNonFinite, intl::CheckNonFiniteBase)  //{
-void scn_do_execute() override;
-void init_output_static_infer_desc() override;
-void add_input_layout_constraint() override;
+MGB_DEFINE_OPR_CLASS(CheckNonFinite, intl::CheckNonFiniteBase) // {
+    void scn_do_execute() override;
+    void init_output_static_infer_desc() override;
+    void add_input_layout_constraint() override;
+    float m_scale = 1;
 
 public:
-MGE_WIN_DECLSPEC_FUC CheckNonFinite(
-        const VarNodeArrayView& inp, const Param& param,
-        const OperatorNodeConfig& config);
-MGE_WIN_DECLSPEC_FUC static SymbolVar make(
-        const VarNodeArrayView& inp, const Param& param = {},
-        const OperatorNodeConfig& config = {});
+    MGE_WIN_DECLSPEC_FUC CheckNonFinite(
+            const VarNodeArrayView& inp, const Param& param,
+            const OperatorNodeConfig& config);
+    MGE_WIN_DECLSPEC_FUC static SymbolVarArray make(
+            const VarNodeArrayView& inp, const Param& param = {},
+            const OperatorNodeConfig& config = {});
 };
 
 }  // namespace opr

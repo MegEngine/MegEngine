@@ -194,6 +194,7 @@ struct CheckNonFiniteOp {
     index_ctype* srcs_total_nr_elems;
     dst_ctype* dst;
     const size_t B;
+    const src_ctype scale;
 
     MEGDNN_HOST MEGDNN_DEVICE wtype read(uint32_t idx) {
         size_t x = idx / B;
@@ -204,6 +205,8 @@ struct CheckNonFiniteOp {
 #else
             wtype val = std::isfinite(srcs[x][y]);
 #endif
+            if (val)
+                srcs[x][y] *= scale;
             return !val;
         }
         return 0;
@@ -214,12 +217,13 @@ struct CheckNonFiniteOp {
     }
     MEGDNN_HOST MEGDNN_DEVICE CheckNonFiniteOp(
             src_ctype** srcs, index_ctype* srcs_total_nr_elems, dst_ctype* dst,
-            size_t B)
+            size_t B, src_ctype scale)
             : INIT(wtype(0)),
               srcs(srcs),
               srcs_total_nr_elems(srcs_total_nr_elems),
               dst(dst),
-              B(B) {}
+              B(B),
+              scale(scale) {}
 };
 
 }  // namespace device_reduce

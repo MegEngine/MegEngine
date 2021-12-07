@@ -156,37 +156,6 @@ struct MaxOp<src_ctype, dst_ctype, dt_float32> {
             : INIT(wtype(DTypeTrait<wtype>::min())), src(src), dst(dst), B(B) {}
 };
 
-template <typename src_ctype, typename index_ctype, typename dst_ctype, typename wtype_>
-struct CheckNonFiniteOp {
-    typedef wtype_ wtype;
-    const wtype INIT;
-
-    RefPtr* srcs;
-    RefPtr srcs_total_nr_elems;
-    RefPtr dst;
-    const size_t B;
-
-    wtype read(uint32_t idx) {
-        size_t x = idx / B;
-        size_t y = idx % B;
-        if (y < srcs_total_nr_elems.ptr<index_ctype>()[x]) {
-            RefPtr src = srcs[x];
-            return !std::isfinite(src.ptr<src_ctype>()[y]);
-        }
-        return 0;
-    }
-    void write(uint32_t idx, wtype val) { dst.ptr<dst_ctype>()[idx] = val; }
-    static wtype apply(wtype lhs, wtype rhs) { return lhs | rhs; }
-    CheckNonFiniteOp(
-            RefPtr* srcs, const RefPtr& srcs_total_nr_elems, const RefPtr& dst,
-            size_t B)
-            : INIT(wtype(0)),
-              srcs(srcs),
-              srcs_total_nr_elems(srcs_total_nr_elems),
-              dst(dst),
-              B(B) {}
-};
-
 void get_ABC(const TensorShape& shape, size_t& A, size_t& B, size_t& C, size_t axis);
 
 }  // namespace reduce

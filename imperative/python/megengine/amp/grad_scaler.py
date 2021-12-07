@@ -128,28 +128,28 @@ class GradScaler:
             grad_tensors: Tensors needed to unscale grads. Should be all tensors
                 that are affected by ``target`` tensor in GradManager's backward.
         """
-        # to support tracing, _check_gradients should be applied to every grad.
-        if self._check_gradients([x.grad for x in grad_tensors]):
-            self._found_non_finite = True
-
-        if self._found_non_finite:
-            for tensor in grad_tensors:
-                if tensor is None or getattr(tensor, "grad", None) is None:
-                    continue
-                tensor.grad = None
-        else:
+        if self.growth_interval == 0:
             # use float64 for better precision
             inv_scale = Tensor(1.0 / self.scale_factor)
             for tensor in grad_tensors:
                 if tensor is None or getattr(tensor, "grad", None) is None:
                     continue
                 tensor.grad *= inv_scale
+            return self
+
+        # to support tracing, _check_gradients should be applied to every grad.
+        if self._check_gradients(
+            [x.grad for x in grad_tensors], 1.0 / self.scale_factor
+        ):
+            self._found_non_finite = True
+            for tensor in grad_tensors:
+                if tensor is None or getattr(tensor, "grad", None) is None:
+                    continue
+                tensor.grad = None
         return self
 
-    def _check_gradients(self, grad):
-        if self.growth_interval == 0:
-            return False
-        return _check_non_finite(grad)
+    def _check_gradients(self, grad, scale):
+        return _check_non_finite(grad, scale)
 
     def update(self, new_scale: float = None):
         r"""Update the scale factor according to whether encountered overflow grad.

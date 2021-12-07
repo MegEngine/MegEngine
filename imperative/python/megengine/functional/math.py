@@ -1183,7 +1183,7 @@ def svd(inp: Tensor, full_matrices=False, compute_uv=True) -> Tensor:
     return U, sigma, V
 
 
-def _check_non_finite(inps: Iterable[Tensor]) -> Tensor:
+def _check_non_finite(inps: Iterable[Tensor], scale=1.0) -> Tensor:
     r"""Check whether input contains infinite or nan value.
 
     Args:
@@ -1192,7 +1192,11 @@ def _check_non_finite(inps: Iterable[Tensor]) -> Tensor:
     Returns:
         a int32 scalar tensor, 0 for False and 1 for True.
     """
-    op = builtin.CheckNonFinite()
-    (oup,) = apply(op, *inps)
-    oup._setscalar()
-    return oup
+    op = builtin.CheckNonFinite(scale=scale)
+    oups = apply(op, *inps)
+    out = oups[-1]
+    for i in range(len(inps)):
+        inps[i]._reset(oups[i])
+
+    out._setscalar()
+    return out
