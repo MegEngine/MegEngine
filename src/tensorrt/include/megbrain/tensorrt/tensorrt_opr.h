@@ -52,6 +52,8 @@ class TensorRTManager {
     void* m_device_workspace_memory_ptr;
 
 public:
+    const TensorRTUniquePtr<nvinfer1::IExecutionContext>& create_trt_context(
+            const TensorShapeArray& inp_shape, nvinfer1::ICudaEngine* engine);
     void exec(
             cg::SingleCNOperatorNodeBase* opr, CompNode comp_node_check,
             nvinfer1::ICudaEngine* engine, size_t batch = 1,

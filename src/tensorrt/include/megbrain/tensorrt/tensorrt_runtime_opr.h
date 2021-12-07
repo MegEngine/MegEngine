@@ -86,7 +86,7 @@ private:
     // note: gpu allocator must be released after other trt objects
     std::shared_ptr<TensorRTOpr::GpuAllocator> m_gpu_allocator;
     std::shared_ptr<nvinfer1::ICudaEngine> m_engine;
-    intl::TensorRTManager m_manager;
+    mutable intl::TensorRTManager m_manager;
     // if m_engine's dims with batch
     bool m_trt_engine_has_batch;
 };  // namespace mgb

@@ -101,7 +101,8 @@ TensorRTRuntimeOpr::TensorRTRuntimeOpr(
 void TensorRTRuntimeOpr::get_output_var_shape(
         const TensorShapeArray& inp_shape, TensorShapeArray& out_shape) const {
     auto batch = inp_shape.at(0)[0];
-    auto get_mgb_shape = [this, batch](int binding_idx) -> TensorShape {
+    auto&& context = m_manager.create_trt_context(inp_shape, m_engine.get());
+    auto get_mgb_shape = [&](int binding_idx) -> TensorShape {
         auto dims = m_engine->getBindingDimensions(binding_idx);
 #if NV_TENSOR_RT_VERSION >= 6001
         auto format = m_engine->getBindingFormat(binding_idx);
@@ -121,8 +122,25 @@ void TensorRTRuntimeOpr::get_output_var_shape(
             dims.d[dims.nbDims - 1] = 4;
         }
 #endif
-        return m_trt_engine_has_batch ? TensorRTOpr::dims2shape(dims)
-                                      : TensorRTOpr::dims2shape(dims, batch);
+        auto shape = m_trt_engine_has_batch ? TensorRTOpr::dims2shape(dims)
+                                            : TensorRTOpr::dims2shape(dims, batch);
+#if NV_TENSOR_RT_VERSION >= 6001
+        if (static_cast<size_t>(binding_idx) < inp_shape.size()) {
+            for (int i = 0; i < dims.nbDims; i++) {
+                if (dims.d[i] == -1) {
+                    shape[i] = inp_shape.at(binding_idx)[i];
+                }
+            }
+        } else {
+            auto trt_infer_dims = context->getBindingDimensions(binding_idx);
+            for (int i = 0; i < dims.nbDims; i++) {
+                if (dims.d[i] == -1) {
+                    shape[i] = trt_infer_dims.d[i];
+                }
+            }
+        }
+#endif
+        return shape;
     };
     for (size_t i = 0; i < inp_shape.size(); ++i) {
         mgb_assert(batch == inp_shape[i][0], "input batchsize not equal");
@@ -135,6 +153,8 @@ void TensorRTRuntimeOpr::get_output_var_shape(
         out_shape[i] = get_mgb_shape(i + input().size());
     }
     out_shape.back() = {intl::workspace_size(m_engine.get())};
+    // must clear context, otherwise it may cause unknwon error.
+    m_manager.clear_trt_context();
 }
 
 void TensorRTRuntimeOpr::add_input_layout_constraint() {
