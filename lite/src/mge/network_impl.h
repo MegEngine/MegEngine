@@ -214,6 +214,9 @@ private:
     //! optimized output tensor copy
     void output_tensor_copy_optimize(Var var, std::shared_ptr<Tensor> tensor);
 
+    //! adapt option valid, it should call after update_io
+    void adapt_option_valid();
+
 private:
     bool m_async = false;
     bool m_is_cpu_inplace_mode = false;

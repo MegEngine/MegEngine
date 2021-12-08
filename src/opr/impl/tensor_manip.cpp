@@ -919,7 +919,7 @@ Split::Options Split::Options::make_callback(
         int axis, size_t nr_part, callback_t callback) {
     mgb_assert(nr_part);
     Options rst;
-    rst.method = Method::CALLBACK;
+    rst.method = Method::CALL_BACK;
     rst.axis = axis;
     rst.callback = callback;
     rst.nr_part = nr_part;
@@ -955,7 +955,7 @@ Split::Split(VarNode* inp, const Options& opt, const OperatorNodeConfig& config)
         // disable dedup
         add_equivalence_component<ScalarHash<void*>>(this);
 
-        mgb_assert(m_opt.method == Options::Method::CALLBACK);
+        mgb_assert(m_opt.method == Options::Method::CALL_BACK);
         mgb_assert(m_opt.nr_part);
     }
 
