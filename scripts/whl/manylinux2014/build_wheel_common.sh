@@ -90,6 +90,7 @@ elif [ $SDK_NAME == "cu102_JetsonNano" ];then
     EXTRA_CMAKE_FLAG="-DMGE_WITH_CUDNN_SHARED=ON -DMGE_WITH_CUBLAS_SHARED=ON -DMGE_CUDA_GENCODE=\"-gencode arch=compute_53,code=sm_53\" "
 
 elif [ $SDK_NAME == "cu111" ];then
+    BUILD_GCC8="ON"
     if [ ${machine} == "aarch64" ];then
         REQUIR_CUDA_VERSION="11010"
         REQUIR_CUDNN_VERSION="8.0.5"
@@ -130,6 +131,7 @@ elif [ $SDK_NAME == "cu111" ];then
     fi
 
 elif [ $SDK_NAME == "cu112" ];then
+    BUILD_GCC8="ON"
     CUDA_COPY_LIB_LIST="\
         ${CUDA_LIB_DIR}/libnvrtc.so.11.2:\
         ${CUDA_LIB_DIR}/libcublasLt.so.11:\
