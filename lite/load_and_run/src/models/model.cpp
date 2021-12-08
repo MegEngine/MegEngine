@@ -24,12 +24,12 @@ ModelType ModelBase::get_model_type(std::string model_path) {
     fclose(fin);
 
     // get model type
-    // uint32_t MGB_MAGIC = 0x5342474D
     std::string tag(buf);
     ModelType type;
     if (tag.substr(0, 7) == std::string("mgb0001") ||
         tag.substr(0, 8) == std::string("mgb0000a") ||
         tag.substr(0, 4) == std::string("MGBS") ||
+        tag.substr(0, 4) == std::string("MGBC") ||
         tag.substr(0, 8) == std::string("mgbtest0")) {
         type = ModelType::MEGDL_MODEL;
 
