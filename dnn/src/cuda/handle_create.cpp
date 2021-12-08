@@ -45,6 +45,7 @@
 #include "src/cuda/images2neibs/opr_impl.h"
 #include "src/cuda/indexing_multi_axis_vec/opr_impl.h"
 #include "src/cuda/indexing_one_hot/opr_impl.h"
+#include "src/cuda/layer_norm/opr_impl.h"
 #include "src/cuda/linspace/opr_impl.h"
 #include "src/cuda/local/opr_impl.h"
 #include "src/cuda/local_share/opr_impl.h"

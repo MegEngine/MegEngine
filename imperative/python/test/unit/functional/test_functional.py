@@ -865,61 +865,6 @@ def test_conv1d():
     )
 
 
-def test_layer_norm():
-    def _layer_norm(x, normalized_shape, affine, weight=None, bias=None, eps=1e-5):
-        __layer_norm = LayerNorm(normalized_shape=normalized_shape, affine=affine)
-        __layer_norm.weight = weight
-        __layer_norm.bias = bias
-        return __layer_norm(x)
-
-    def _layer_norm_numpy(
-        x, normalized_shape, affine, weight=None, bias=None, eps=1e-5
-    ):
-        x_shape = x.shape
-        dim_delta = len(x_shape) - len(normalized_shape)
-        non_flatten_shape = x_shape[:dim_delta]
-        x = x.reshape(*non_flatten_shape, -1)
-
-        mean = x.mean(axis=-1, keepdims=True)
-        var = (x ** 2).mean(axis=-1, keepdims=True) - mean * mean
-
-        x = (x - mean) / F.sqrt(var + eps)
-        x = x.reshape(x_shape)
-        if affine:
-            x = weight * x + bias
-
-        return x
-
-    normalized_shape = (28, 28)
-    inp_feat = Tensor(np.random.randn(32, 64, 28, 28), dtype="float32")
-    weight = Tensor(np.random.randn(28, 28), dtype="float32")
-    bias = Tensor(np.random.randn(28, 28), dtype="float32")
-
-    inp_feat = inp_feat + 1
-    weight = weight + 1
-    bias = bias
-
-    affine = False
-
-    outvar = F.nn.layer_norm(inp_feat, normalized_shape, affine, weight, bias)
-    targetvar = _layer_norm_numpy(inp_feat, normalized_shape, affine, weight, bias)
-
-    assert abs(outvar - targetvar).mean() < 1e-7
-
-    # no random, affine True
-    normalized_shape = (28, 28)
-    inp_feat = Tensor(np.ones((32, 64, 28, 28)), dtype="float32")
-    weight = Tensor(np.ones((28, 28)), dtype="float32")
-    bias = Tensor(np.zeros((28, 28)), dtype="float32")
-
-    affine = True
-
-    outvar = F.nn.layer_norm(inp_feat, normalized_shape, affine, weight, bias)
-    targetvar = _layer_norm(inp_feat, normalized_shape, affine, weight, bias)
-    assert abs((outvar - targetvar).mean()) < 1e-7
-    assert abs(outvar.mean()) < 1e-7
-
-
 def test_batchnorm2d_autocast():
     """check amp's result is equal to manually converted result"""
     amp.enabled = True

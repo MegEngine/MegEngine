@@ -1212,3 +1212,10 @@ PADDING_MODES = [Doc('REPLICATE = 0', 'aaaaaa|abcdefgh|hhhhhhh'),
           member_alias=[(i, 'PADDING_{}'.format(i)) for i in PADDING_MODES]
           )
 )
+
+(pdef('LayerNorm')
+ .add_fields('bool', 'affine', 'true')
+ .add_fields('float32', 'eps', '1e-5f')
+ .add_fields('uint64', 'normalized_dim', '1')
+ .add_fields('uint64', 'normalized_size', '1')
+ )

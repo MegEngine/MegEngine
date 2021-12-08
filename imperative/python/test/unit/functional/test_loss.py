@@ -43,7 +43,7 @@ def test_cross_entropy():
     x = softmax(x)
     l_ref = ref(x, y)
     l = F.nn.cross_entropy(tensor(x, "float32"), tensor(y, "int32"), with_logits=False)
-    np.testing.assert_allclose(l.numpy(), l_ref)
+    np.testing.assert_allclose(l.numpy(), l_ref, 1e-6, 1e-6)
 
 
 def test_cross_entropy_reduction():

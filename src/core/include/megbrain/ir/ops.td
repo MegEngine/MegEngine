@@ -431,4 +431,6 @@ def Padding: MgbHashableOp<"Padding", [PaddingParam]>;
 
 def LRN: MgbHashableOp<"LRN", [LRNParam]>;
 
+def LayerNorm: MgbHashableOp<"LayerNorm", [LayerNormParam]>;
+
 #endif // MGB_OPS
