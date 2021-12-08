@@ -408,8 +408,8 @@ MGB_DEFINE_OPR_CLASS_WITH_EXPORT(Split, intl::OutshapeBySymvarOprBase) // {
 public:
     struct Options {
         enum class Method {
-            SPECIFY,  //!< specify output sizes
-            CALLBACK  //!< output sizes obtained from callback
+            SPECIFY,   //!< specify output sizes
+            CALL_BACK  //!< output sizes obtained from callback
         };
         Method method;
         size_t nr_part = 0;

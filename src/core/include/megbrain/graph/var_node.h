@@ -504,6 +504,10 @@ public:
      */
     MGE_WIN_DECLSPEC_FUC bool capable_value_infer();
 
+    //! whether the var is graph output, if it is output, the Flag of
+    //! NO_SYS_MEM_ALLOC can be modified.
+    MGE_WIN_DECLSPEC_FUC bool is_graph_dest_varnode();
+
 private:
     //! whether its memory should be allocated by mgb system during graph
     //! execution; initialized in VarNodeMemManager::reset_opr_seq()
@@ -551,10 +555,6 @@ private:
     std::vector<VarNode*> m_rt_force_dynamic_mem_alloc_imply_chain;
 
     MGE_WIN_DECLSPEC_FUC void modify_flag(Flag delta, Flag new_flag);
-
-    //! whether the var is graph output, if it is output, the Flag of
-    //! NO_SYS_MEM_ALLOC can be modified.
-    bool is_graph_dest_varnode();
 
     MGE_WIN_DECLSPEC_FUC void assign_dev_tensor_from_tensor(
             const DeviceTensorND& value);

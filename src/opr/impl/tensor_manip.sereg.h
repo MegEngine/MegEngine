@@ -172,7 +172,7 @@ cg::OperatorNodeBase* opr_shallow_copy_split(
     auto option = opr.options();
     using Meth = Split::Options::Method;
     switch (option.method) {
-        case Meth::CALLBACK:
+        case Meth::CALL_BACK:
             mgb_assert(inputs.size() == 1);
             break;
         case Meth::SPECIFY:
