@@ -31,8 +31,9 @@ void XPUDeviceOption::config_model_internel<ModelLite>(
             LITE_WARN("using cpu device\n");
             model->get_config().device_type = LiteDeviceType::LITE_CPU;
         }
-#if MGE_WITH_CUDA
+#if LITE_WITH_CUDA
         if (enable_cuda) {
+            LITE_WARN("using cuda device\n");
             model->get_config().device_type = LiteDeviceType::LITE_CUDA;
         }
 #endif
@@ -75,11 +76,12 @@ void XPUDeviceOption::config_model_internel<ModelMdl>(
                 loc.type = mgb::CompNode::DeviceType::CPU;
             };
         }
-#if MGE_WITH_CUDA
+#if MGB_CUDA
         if (enable_cuda) {
             mgb_log_warn("using cuda device\n");
             model->get_mdl_config().comp_node_mapper = [](mgb::CompNode::Locator& loc) {
                 loc.type = mgb::CompNode::DeviceType::CUDA;
+                loc.device = 0;
             };
         }
 #endif
@@ -130,7 +132,7 @@ void XPUDeviceOption::config_model_internel<ModelMdl>(
 XPUDeviceOption::XPUDeviceOption() {
     m_option_name = "xpu_device";
     enable_cpu = FLAGS_cpu;
-#if MGE_WITH_CUDA
+#if MGB_CUDA
     enable_cuda = FLAGS_cuda;
 #endif
     enable_cpu_default = FLAGS_cpu_default;
@@ -163,7 +165,7 @@ XPUDeviceOption::XPUDeviceOption() {
 
 bool XPUDeviceOption::is_valid() {
     bool ret = FLAGS_cpu || FLAGS_cpu_default;
-#if MGE_WITH_CUDA
+#if MGB_CUDA
     ret = ret || FLAGS_cuda;
 #endif
     ret = ret || FLAGS_multithread >= 0;
@@ -188,7 +190,7 @@ void XPUDeviceOption::config_model(
 }
 ///////////////////////// xpu gflags ////////////////////////////
 DEFINE_bool(cpu, false, "set CPU device as running device");
-#if MGE_WITH_CUDA
+#if MGB_CUDA || LITE_WITH_CUDA
 DEFINE_bool(cuda, false, "set CUDA device as running device ");
 #endif
 DEFINE_bool(cpu_default, false, "set running device as CPU device with inplace mode");

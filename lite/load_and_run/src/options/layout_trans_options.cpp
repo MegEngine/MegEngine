@@ -113,7 +113,7 @@ bool GoptLayoutOption::is_valid() {
             ret = true;
         }
     }
-    ret = ret || FLAGS_layout_transform_dump.empty();
+    ret = ret || !FLAGS_layout_transform_dump.empty();
     return ret;
 }
 

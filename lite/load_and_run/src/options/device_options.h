@@ -6,14 +6,13 @@
  *
  * \copyright Copyright (c) 2020-2021 Megvii Inc. All rights reserved.
  */
-
 #pragma once
 #include <gflags/gflags.h>
 #include "models/model.h"
 #include "option_base.h"
 
 DECLARE_bool(cpu);
-#if MGE_WITH_CUDA
+#if MGB_CUDA || LITE_WITH_CUDA
 DECLARE_bool(cuda);
 #endif
 DECLARE_bool(cpu_default);
@@ -35,7 +34,7 @@ private:
     template <typename ModelImpl>
     void config_model_internel(RuntimeParam&, std::shared_ptr<ModelImpl>){};
     bool enable_cpu;
-#if MGE_WITH_CUDA
+#if MGB_CUDA || LITE_WITH_CUDA
     bool enable_cuda;
 #endif
     bool enable_cpu_default;
