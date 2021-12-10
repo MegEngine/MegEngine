@@ -242,6 +242,8 @@ void Tensor::static_initialize() {
     AsyncReleaser::inst();
     CompNodeSyncManager::inst();
     MultiCNConstTensorCache::inst();
+    // clean all CompNodeDepedentObjects
+    mgb_assert(!atexit(CompNode::finalize), "atexit register failed");
 }
 
 }  // namespace imperative
