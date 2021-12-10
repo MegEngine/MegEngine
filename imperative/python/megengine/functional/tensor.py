@@ -111,13 +111,13 @@ def full(
         value: fill value.
         
     Keyword args:
-        dtype: output tensor data type. If ``dtype`` is ``None``, the output tensor
+        dtype(:attr:`.Tensor.dtype`): output tensor data type. If ``dtype`` is ``None``, the output tensor
             data type must be inferred from ``value``. If the value is an ``int``,
             the output tensor data type must be the default integer data type. If the
             value is a ``float``, the output tensor data type must be the default
             floating-point data type. If the value is a ``bool``, the output tensor 
             must have boolean data type. Default: ``None``.
-        device: device on which to place the created tensor. Default: ``None``.
+        device(:attr:`.Tensor.device`): device on which to place the created tensor. Default: ``None``.
 
     Returns:
         A tensor where every element is equal to ``value``.
