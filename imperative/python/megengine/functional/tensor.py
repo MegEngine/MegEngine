@@ -116,7 +116,7 @@ def full(
             the output tensor data type must be the default integer data type. If the
             value is a ``float``, the output tensor data type must be the default
             floating-point data type. If the value is a ``bool``, the output tensor 
-            must have boolean data type. Default: ``None``.
+            must be a boolean data type. Default: ``None``.
         device(:attr:`.Tensor.device`): device on which to place the created tensor. Default: ``None``.
 
     Returns:
