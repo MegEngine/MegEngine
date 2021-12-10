@@ -22,9 +22,6 @@ public:
     virtual std::optional<size_t> clear() = 0;
 };
 
-std::shared_ptr<ExtendedPersistentCache> make_redis(
-        std::string ip, size_t port, std::string password, std::string prefix);
-
 std::shared_ptr<ExtendedPersistentCache> make_in_file(std::string path);
 
 }  // namespace mgb::imperative::persistent_cache

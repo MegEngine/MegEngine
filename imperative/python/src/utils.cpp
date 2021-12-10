@@ -245,11 +245,6 @@ void init_utils(py::module m) {
             }
             return false;
         }
-        bool open_redis(
-                std::string ip, size_t port, std::string password, std::string prefix) {
-            return try_reg(mgb::imperative::persistent_cache::make_redis(
-                    ip, port, password, prefix));
-        }
         bool open_file(std::string path) {
             return try_reg(mgb::imperative::persistent_cache::make_in_file(path));
         }
@@ -276,7 +271,6 @@ void init_utils(py::module m) {
 
     py::class_<PersistentCacheManager>(m, "PersistentCacheManager")
             .def(py::init<>())
-            .def("try_open_redis", &PersistentCacheManager::open_redis)
             .def("try_open_file", &PersistentCacheManager::open_file)
             .def("clean", &PersistentCacheManager::clean)
             .def("put", &PersistentCacheManager::put)
