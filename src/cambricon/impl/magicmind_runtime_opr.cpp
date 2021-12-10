@@ -14,6 +14,7 @@
 #include "megbrain/comp_node_env.h"
 
 #if MGB_CAMBRICON
+#if CNRT_MAJOR_VERSION >= 5
 
 using namespace mgb;
 using namespace opr;
@@ -168,7 +169,7 @@ MagicMindRuntimeOpr::MagicMindRuntimeOpr(
           m_allocator{std::move(allocator)},
           m_engine{nullptr},
           m_context{nullptr},
-          m_model{std::move(model)}, 
+          m_model{std::move(model)},
           m_current_ptr{nullptr} {
     mgb_assert(
             inputs[0]->comp_node().device_type() == CompNode::DeviceType::CAMBRICON,
@@ -387,6 +388,7 @@ SymbolVarArray MagicMindRuntimeOpr::make(
     return make(std::move(model), std::move(cambricon_allocator), src, config);
 }
 
+#endif  // CNRT_MAJOR_VERSION
 #endif  // MGB_CAMBRICON
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

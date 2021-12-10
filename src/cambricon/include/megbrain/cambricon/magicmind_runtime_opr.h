@@ -15,6 +15,7 @@
 #include "megbrain/serialization/file.h"
 
 #if MGB_CAMBRICON
+#if CNRT_MAJOR_VERSION >= 5
 
 #include <sstream>
 #include "interface_runtime.h"
@@ -99,6 +100,7 @@ private:
 }  // namespace opr
 }  // namespace mgb
 
+#endif  // CNRT_MAJOR_VERSION
 #endif  // MGB_CAMBRICON
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

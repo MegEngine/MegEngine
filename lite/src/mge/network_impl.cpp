@@ -129,6 +129,17 @@ void NetworkImplDft::application_config() {
                     loc.stream = m_nr_threads;
                 }
             };
+            //! currently not set Locator type because a cambricon mgb model is a
+            //! cross-compnode graph
+        } else if (device_type == LiteDeviceType::LITE_CAMBRICON) {
+            m_load_config.comp_node_mapper = [this](mgb::CompNode::Locator& loc) {
+                if (loc.type == mgb::CompNode::DeviceType::CAMBRICON) {
+                    loc.device = m_compnode_locator.device;
+                    loc.stream = m_compnode_locator.stream;
+                } else if (loc.type == mgb::CompNode::DeviceType::MULTITHREAD) {
+                    loc.stream = m_nr_threads;
+                }
+            };
         } else {
             m_load_config.comp_node_mapper = [this](mgb::CompNode::Locator& loc) {
                 loc = m_compnode_locator;
