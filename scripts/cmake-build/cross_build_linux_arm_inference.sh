@@ -11,8 +11,6 @@ REMOVE_OLD_BUILD=false
 NINJA_VERBOSE=OFF
 NINJA_DRY_RUN=OFF
 SPECIFIED_TARGET="install/strip"
-CMAKE_C_FLAGS="-Wno-psabi"
-CMAKE_CXX_FLAGS="-Wno-psabi"
 READLINK=readlink
 OS=$(uname -s)
 
@@ -140,12 +138,6 @@ if [ $MGE_WITH_CUDA = "ON" ] && [ ! $ARCH = "arm64-v8a" ];then
     exit -1
 fi
 
-if [ $MGE_WITH_CUDA = "OFF" ];then
-    echo "config -Werror=unused-parameter when cuda off for CI check"
-    CMAKE_C_FLAGS="-Werror=unused-parameter -Wno-psabi"
-    CMAKE_CXX_FLAGS="-Werror=unused-parameter -Wno-psabi"
-fi
-
 function cmake_build() {
     BUILD_DIR=$SRC_DIR/build_dir/gnu-linux/MGE_WITH_CUDA_$3/$1/$BUILD_TYPE/build
     INSTALL_DIR=$BUILD_DIR/../install
@@ -163,8 +155,6 @@ function cmake_build() {
     mkdir -p $INSTALL_DIR
     cd_real_build_dir $BUILD_DIR
     bash -c "cmake -G Ninja \
-        -DCMAKE_C_FLAGS=$CMAKE_C_FLAGS \
-        -DCMAKE_CXX_FLAGS=$CMAKE_CXX_FLAGS \
         -DCMAKE_TOOLCHAIN_FILE=$TOOLCHAIN \
         -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
         -DMGE_INFERENCE_ONLY=ON \
