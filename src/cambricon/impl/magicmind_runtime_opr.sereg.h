@@ -12,6 +12,8 @@
 #include "megbrain/cambricon/magicmind_runtime_opr.h"
 #include "megbrain/serialization/sereg.h"
 
+#if CNRT_MAJOR_VERSION >= 5
+
 namespace mgb {
 namespace serialization {
 
@@ -61,5 +63,7 @@ MGB_REG_OPR_SHALLOW_COPY(MagicMindRuntimeOpr, opr_shallow_copy_magicmind_runtime
 
 }  // namespace opr
 }  // namespace mgb
+
+#endif
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

@@ -1097,7 +1097,8 @@ void CpuCompNode::CpuDispatchableBase::EventImpl::do_device_wait_by(Impl* cn_imp
         mgb_throw_if(
                 type != CompNode::DeviceType::CPU &&
                         type != CompNode::DeviceType::CUDA
-                        && type != CompNode::DeviceType::ATLAS
+                        && type != CompNode::DeviceType::ATLAS &&
+                        type != CompNode::DeviceType::CAMBRICON
                 ,
                 MegBrainError,
                 "currently CPU can only wait for CPU, CUDA, ATLAS"
@@ -1116,7 +1117,7 @@ void CpuCompNode::CpuDispatchableBase::EventImpl::do_device_wait_by(Impl* cn_imp
 #else
         mgb_throw(
                 MegBrainError,
-                "Cambricon comp_node used but MGB_CAMBRICON not enabled");
+                "Cambricon comp_node used but CAMBRICON BUILD not enabled");
 #endif
     }
 

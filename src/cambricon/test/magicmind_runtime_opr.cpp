@@ -17,6 +17,7 @@
 #include "megbrain/test/helper.h"
 
 #if MGB_CAMBRICON
+#if CNRT_MAJOR_VERSION >= 5
 
 #include "megbrain/cambricon/magicmind_runtime_opr.h"
 
@@ -827,6 +828,7 @@ TEST(TestMagicMindRuntimeOpr, CrossCNCopy) {
     MGB_ASSERT_TENSOR_NEAR(o2, o2_mm, 1e-4);
 }
 
+#endif
 #endif
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
