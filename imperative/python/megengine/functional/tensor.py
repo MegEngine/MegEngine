@@ -104,11 +104,13 @@ def full(
     dtype=None,
     device=None,
 ) -> Tensor:
-    r"""Creates a tensor of shape ``shape`` filled with ``value``.
+    r"""Return a tensor of shape ``shape`` filled with ``value``.
 
     Args:
         shape: output tensor shape.
         value: fill value.
+        
+    Keyword args:
         dtype: output tensor data type. If ``dtype`` is ``None``, the output tensor
             data type must be inferred from ``value``. If the value is an ``int``,
             the output tensor data type must be the default integer data type. If the
@@ -118,24 +120,19 @@ def full(
         device: device on which to place the created tensor. Default: ``None``.
 
     Returns:
-        a tensor where every element is equal to ``value``.
+        A tensor where every element is equal to ``value``.
 
     Examples:
 
-        .. testcode::
-
-            import numpy as np
-            import megengine.functional as F
-
-            out = F.full([2,3], 1.5)
-            print(out.numpy())
-
-        Outputs:
-
-        .. testoutput::
-
-            [[1.5 1.5 1.5]
-             [1.5 1.5 1.5]]
+        >>> F.full(1, 1.0)
+        Tensor([1.], device=xpux:0)
+        >>> F.full((3, 4), 0)
+        Tensor([[0. 0. 0. 0.]
+         [0. 0. 0. 0.]
+         [0. 0. 0. 0.]], device=xpux:0)
+        >>> F.full((2, 2), [1, 2])
+        Tensor([[1. 2.]
+         [1. 2.]], device=xpux:0)
     """
 
     if isinstance(shape, int):
