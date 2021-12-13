@@ -13,6 +13,7 @@
 
 #include "megbrain/comp_node.h"
 #include "megbrain/imperative/blob_manager.h"
+#include "megbrain/imperative/resource_manager.h"
 #include "megbrain/system.h"
 
 #include "./event_pool.h"
@@ -61,8 +62,8 @@ protected:
 
 public:
     static AsyncReleaser* inst() {
-        static AsyncReleaser releaser;
-        return &releaser;
+        static auto* releaser = ResourceManager::create_global<AsyncReleaser>();
+        return releaser;
     }
 
     ~AsyncReleaser() { m_waiter.wait_task_queue_empty(); }

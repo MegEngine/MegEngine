@@ -14,6 +14,7 @@
 #include <memory>
 #include <mutex>
 
+#include "megbrain/imperative/resource_manager.h"
 #include "megbrain/tensor.h"
 
 namespace mgb {
@@ -278,8 +279,9 @@ struct MultiCNConstTensorCache : CompNodeDepedentObject {
     }
 
     static MultiCNConstTensorCache& inst() {
-        static MultiCNConstTensorCache sl_inst;
-        return sl_inst;
+        static auto* sl_inst =
+                ResourceManager::create_global<MultiCNConstTensorCache>();
+        return *sl_inst;
     }
 };
 

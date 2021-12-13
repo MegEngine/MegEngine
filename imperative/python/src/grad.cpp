@@ -14,6 +14,7 @@
 #include "megbrain/imperative/backward_graph_opt.h"
 #include "megbrain/imperative/ops/autogen.h"
 #include "megbrain/imperative/proxy_graph_detail.h"
+#include "megbrain/imperative/resource_manager.h"
 #include "megbrain/utils/mempool.h"
 
 #include "range/v3/all.hpp"

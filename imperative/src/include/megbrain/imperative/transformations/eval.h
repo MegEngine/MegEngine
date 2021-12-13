@@ -63,10 +63,10 @@ public:
     using Channel = Interpreter::Channel;
 
 private:
-    std::unique_ptr<Channel> m_channel;
+    std::shared_ptr<Channel> m_channel;
 
 public:
-    explicit InterpreterTransformation(std::unique_ptr<Channel> channel)
+    explicit InterpreterTransformation(std::shared_ptr<Channel> channel)
             : m_channel{std::move(channel)} {}
 
     Channel* channel() { return m_channel.get(); }

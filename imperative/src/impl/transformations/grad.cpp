@@ -12,6 +12,7 @@
 #include "megbrain/imperative/transformations/grad.h"
 
 #include "megbrain/imperative/graph_cache.h"
+#include "megbrain/imperative/resource_manager.h"
 
 #include <range/v3/all.hpp>
 
@@ -24,7 +25,8 @@ static std::shared_ptr<OptimizedBackwardGraphResult> make_optimized_backward_gra
     // hash
     using OptimizedBackwardGraphCache = OpMethResultCache<
             std::shared_ptr<OptimizedBackwardGraphResult>, SmallVector<bool>>;
-    thread_local auto cache = std::make_unique<OptimizedBackwardGraphCache>();
+    thread_local auto& cache =
+            *ResourceManager::create_local<OptimizedBackwardGraphCache>();
     OptimizedBackwardGraphCache::key_t cache_key{op};
     SmallVector<LogicalTensorDesc>& input_descs = cache_key.inputs;
     std::get<0>(cache_key.extras) = inputs_require_grad.copy_into<SmallVector<bool>>();
@@ -34,8 +36,8 @@ static std::shared_ptr<OptimizedBackwardGraphResult> make_optimized_backward_gra
         input_descs[i].comp_node = inputs[i].device().cast<CompNodeValue>();
     }
 
-    auto iter = cache->find(cache_key);
-    if (iter != cache->end()) {
+    auto iter = cache.find(cache_key);
+    if (iter != cache.end()) {
         return iter->second;
     }
 
@@ -47,7 +49,7 @@ static std::shared_ptr<OptimizedBackwardGraphResult> make_optimized_backward_gra
     if (!bg.graph.empty()) {
         ret = std::make_shared<OptimizedBackwardGraphResult>(bg);
     }
-    cache->emplace(cache_key, ret);
+    cache.emplace(cache_key, ret);
     return ret;
 }
 

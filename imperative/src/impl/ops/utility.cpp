@@ -9,6 +9,7 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
+#include <atomic>
 #include <deque>
 
 #include "megbrain/imperative/graph_cache.h"
@@ -16,6 +17,7 @@
 #include "megbrain/imperative/ops/autogen.h"
 #include "megbrain/imperative/ops/opr_attr.h"
 #include "megbrain/imperative/ops/utility.h"
+#include "megbrain/imperative/resource_manager.h"
 #include "megbrain/imperative/subgraph_detail.h"
 #include "megbrain/opr/io.h"
 #include "megbrain/opr/tensor_gen.h"
@@ -510,16 +512,32 @@ struct ComputingGraphHolder {
     }
 };
 
+static std::atomic<size_t> nr_cg_cache = 0;
+
 template <HolderKind Kind>
 ComputingGraphHolder<Kind>& get_computing_graph(
         std::shared_ptr<OpDef> compiled_op,
         const SmallVector<LogicalTensorDesc>& descs) {
     using ComputingGraphHolderCache =
             OpMethResultCache<std::deque<std::unique_ptr<ComputingGraphHolder<Kind>>>>;
-    thread_local auto cache = std::make_unique<ComputingGraphHolderCache>();
+    thread_local auto& cache = ([]() -> auto& {
+        mgb_assert(
+                nr_cg_cache++ < 5,
+                "using subgraph in too many threads, this causes resource leakage");
+#if MGB_CUDA && defined(WIN32)
+        // FIXME: Create as global to skip resource finalize and windows with cuda
+        // doesn't cleanup global resources
+        return *ResourceManager::create_global<ComputingGraphHolderCache>();
+#else
+        // Otherwise this should be local because compnode may be unusable when global
+        // resource finalizing.
+        // For example, CpuCompNode.sync hang on because underlying thread died
+        return *ResourceManager::create_local<ComputingGraphHolderCache>();
+#endif
+    })();
     thread_local size_t nr_cg_holders = 0;
     typename ComputingGraphHolderCache::key_t cache_key = {compiled_op, descs};
-    auto& cg_holder_queue = (*cache)[cache_key];
+    auto& cg_holder_queue = cache[cache_key];
     std::unique_ptr<ComputingGraphHolder<Kind>> holder;
     if (!cg_holder_queue.empty()) {
         // pick one

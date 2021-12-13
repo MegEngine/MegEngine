@@ -12,6 +12,7 @@
 #include "megbrain/imperative.h"
 #include "megbrain/imperative/blob_manager.h"
 #include "megbrain/imperative/profiler.h"
+#include "megbrain/imperative/resource_manager.h"
 
 #include "./async_releaser.h"
 #include "./event_pool.h"
@@ -30,13 +31,6 @@ class CompNodeSyncManager : public CompNodeDepedentObject {
     std::mutex m_mtx;
 
 public:
-#if MGB_CUDA && defined(WIN32)
-    //! FIXME: windows cuda driver shutdown before call atexit function even
-    //! register atexit function after init cuda driver! as a workround
-    //! recovery resource by OS temporarily, may need remove this after
-    //! upgrade cuda runtime
-    static bool is_into_atexit;
-#endif
     std::shared_ptr<void> on_comp_node_finalize() override {
         MGB_LOCK_GUARD(m_mtx);
         m_blob2event.clear();
@@ -44,17 +38,7 @@ public:
     }
 
     static CompNodeSyncManager& inst() {
-        static CompNodeSyncManager* sl_inst = new CompNodeSyncManager();
-#if MGB_CUDA && defined(WIN32)
-        //! FIXME: windows cuda driver shutdown before call atexit function even
-        //! register atexit function after init cuda driver! as a workround
-        //! recovery resource by OS temporarily, may need remove this after
-        //! upgrade cuda runtime
-        if (!is_into_atexit) {
-            auto err = atexit([] { is_into_atexit = true; });
-            mgb_assert(!err, "failed to register atexit function");
-        }
-#endif
+        static auto* sl_inst = ResourceManager::create_global<CompNodeSyncManager>();
         return *sl_inst;
     }
 
@@ -73,13 +57,6 @@ public:
         m_blob2event.erase(blob);
     }
 };
-#if MGB_CUDA && defined(WIN32)
-//! FIXME: windows cuda driver shutdown before call atexit function even
-//! register atexit function after init cuda driver! as a workround
-//! recovery resource by OS temporarily, may need remove this after
-//! upgrade cuda runtime
-bool CompNodeSyncManager::is_into_atexit = false;
-#endif
 
 }  // namespace
 
@@ -106,15 +83,6 @@ Blob::Blob(CompNode cn, size_t sz) : m_comp_node{cn}, m_storage{}, m_size{sz} {
 
 Blob::~Blob() {
     BlobManager::inst()->unregister_blob(this);
-
-#if MGB_CUDA && defined(WIN32)
-    //! FIXME: windows cuda driver shutdown before call atexit function even
-    //! register atexit function after init cuda driver! as a workround
-    //! recovery resource by OS temporarily, may need remove this after
-    //! upgrade cuda runtime
-    if (CompNodeSyncManager::is_into_atexit)
-        return;
-#endif
     CompNodeSyncManager::inst().remove(this);
 }
 
@@ -242,8 +210,6 @@ void Tensor::static_initialize() {
     AsyncReleaser::inst();
     CompNodeSyncManager::inst();
     MultiCNConstTensorCache::inst();
-    // clean all CompNodeDepedentObjects
-    mgb_assert(!atexit(CompNode::finalize), "atexit register failed");
 }
 
 }  // namespace imperative

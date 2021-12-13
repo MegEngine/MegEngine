@@ -1158,11 +1158,16 @@ void init_tensor(py::module m) {
 
     using Segment = TransformationManager::Segment;
 
-    auto* channel = interpreter::Interpreter::inst().create_channel().release();
+    using Channel = interpreter::Interpreter::Channel;
+
+    auto* channel =
+            imperative::ResourceManager::create_global<std::unique_ptr<Channel>>(
+                    interpreter::Interpreter::inst().create_channel())
+                    ->get();
     interpreter_for_py = channel;
     transformations.register_at<Segment::Eval>(
             std::make_shared<InterpreterTransformation>(
-                    std::unique_ptr<interpreter::Interpreter::Channel>(channel)));
+                    std::shared_ptr<Channel>(channel, [](Channel*) {})));
     transformations.register_at<Segment::Scalar>(
             std::make_shared<ScalarTransformation>());
 

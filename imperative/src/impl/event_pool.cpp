@@ -10,6 +10,9 @@
  */
 
 #include "./event_pool.h"
+#include <memory>
+
+#include "megbrain/imperative/resource_manager.h"
 
 namespace mgb {
 namespace imperative {
@@ -17,22 +20,18 @@ namespace imperative {
 EventPool::EventPool(size_t flags) : m_flags{flags} {}
 
 EventPool& EventPool::with_timer() {
-    static Spinlock lock;
-    static std::unique_ptr<EventPool> ptr;
-    MGB_LOCK_GUARD(lock);
-    if (!ptr || ptr->is_finalized()) {
-        ptr.reset(new EventPool(CompNode::Event::NEED_TIMER));
-    }
-    return *ptr;
+    static auto* sm_pool =
+            ResourceManager::create_global<CompNodeDependentResource<EventPool>>([] {
+                return std::unique_ptr<EventPool>(
+                        new EventPool(CompNode::Event::NEED_TIMER));
+            });
+    return **sm_pool;
 }
 EventPool& EventPool::without_timer() {
-    static Spinlock lock;
-    static std::unique_ptr<EventPool> ptr;
-    MGB_LOCK_GUARD(lock);
-    if (!ptr || ptr->is_finalized()) {
-        ptr.reset(new EventPool());
-    }
-    return *ptr;
+    static auto* sm_pool =
+            ResourceManager::create_global<CompNodeDependentResource<EventPool>>(
+                    [] { return std::unique_ptr<EventPool>(new EventPool()); });
+    return **sm_pool;
 }
 CompNode::Event* EventPool::alloc(CompNode cn) {
     CompNode::EventPool* pool;
