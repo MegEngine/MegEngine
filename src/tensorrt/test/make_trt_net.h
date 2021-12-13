@@ -104,6 +104,19 @@ struct ReshapeConcatTensorRTNetwork {
             bool has_batch_dim);
 };
 
+#if NV_TENSOR_RT_VERSION >= 6001
+struct DynamicShapeTensorRTNetwork {
+    HostTensorGenerator<> gen;
+    std::shared_ptr<HostTensorND> host_x, host_w1, host_b1;
+    std::shared_ptr<ComputingGraph> graph;
+    SymbolVar x, y1;
+
+    DynamicShapeTensorRTNetwork(size_t n, size_t c, size_t h, size_t w);
+
+    TensorRTUniquePtr<ICudaEngine> create_trt_network();
+};
+#endif
+
 }  // namespace intl
 }  // namespace opr
 }  // namespace mgb

@@ -483,6 +483,78 @@ std::pair<nvinfer1::IBuilder*, INetworkDefinition*> intl::ReshapeConcatTensorRTN
     return std::make_pair(builder, network);
 }
 
+#if NV_TENSOR_RT_VERSION >= 6001
+intl::DynamicShapeTensorRTNetwork::DynamicShapeTensorRTNetwork(
+        size_t n, size_t c, size_t h, size_t w) {
+    host_x = gen({n, c, h, w});
+    host_w1 = gen({32, 23, 3, 3});
+    host_b1 = gen({1, 32, 1, 1});
+
+    graph = ComputingGraph::make();
+    x = Host2DeviceCopy::make(*graph, host_x);
+    auto w1 = Host2DeviceCopy::make(*graph, host_w1),
+         b1 = Host2DeviceCopy::make(*graph, host_b1),
+         y01 = opr::Convolution::make(x, w1);
+    y1 = y01 + b1;
+}
+
+TensorRTUniquePtr<ICudaEngine> intl::DynamicShapeTensorRTNetwork::create_trt_network() {
+    CompNode::load("xpu0").activate();
+    Weights wt_filter_1{DataType::kFLOAT, nullptr, 0},
+            wt_bias_1{DataType::kFLOAT, nullptr, 0};
+    wt_filter_1.type = DataType::kFLOAT;
+    wt_bias_1.type = DataType::kFLOAT;
+    wt_filter_1.values = host_w1->raw_ptr();
+    wt_bias_1.values = host_b1->raw_ptr();
+    wt_filter_1.count = host_w1->shape().total_nr_elems();
+    wt_bias_1.count = host_b1->shape().total_nr_elems();
+    auto builder = createInferBuilder(TensorRTOpr::Logger::instance());
+
+    auto network = builder->createNetworkV2(
+            1 << static_cast<int>(
+                    nvinfer1::NetworkDefinitionCreationFlag::kEXPLICIT_BATCH));
+
+    nvinfer1::ITensor* data;
+
+    data = network->addInput("data", DataType::kFLOAT, Dims4{-1, 23, -1, -1});
+
+    nvinfer1::IBuilderConfig* config = builder->createBuilderConfig();
+    nvinfer1::IOptimizationProfile* profile = builder->createOptimizationProfile();
+    profile->setDimensions(
+            "data", nvinfer1::OptProfileSelector::kMIN, Dims4(3, 23, 16, 16));
+    profile->setDimensions(
+            "data", nvinfer1::OptProfileSelector::kOPT, Dims4(4, 23, 24, 24));
+    profile->setDimensions(
+            "data", nvinfer1::OptProfileSelector::kMAX, Dims4(5, 23, 28, 28));
+    config->addOptimizationProfile(profile);
+
+    {
+        nvinfer1::TensorFormats formats =
+                1 << static_cast<int>(nvinfer1::TensorFormat::kLINEAR);
+        data->setAllowedFormats(formats);
+    }
+
+    mgb_assert(data != nullptr, "data is invalid");
+    auto conv1 =
+            network->addConvolution(*data, 32, DimsHW{3, 3}, wt_filter_1, wt_bias_1);
+    mgb_assert(conv1 != nullptr, "conv1 is invalid");
+    conv1->setStride(DimsHW{1, 1});
+    conv1->getOutput(0)->setName("prob1");
+    network->markOutput(*conv1->getOutput(0));
+
+    {
+        nvinfer1::TensorFormats formats =
+                1 << static_cast<int>(nvinfer1::TensorFormat::kLINEAR);
+        conv1->getOutput(0)->setAllowedFormats(formats);
+    }
+
+    TensorRTUniquePtr<ICudaEngine> cuda_engine{
+            builder->buildEngineWithConfig(*network, *config)};
+
+    return cuda_engine;
+}
+#endif
+
 #pragma GCC diagnostic pop
 #endif  // MGB_ENABLE_TENSOR_RT
 

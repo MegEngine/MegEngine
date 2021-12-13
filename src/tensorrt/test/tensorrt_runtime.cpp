@@ -307,6 +307,32 @@ TEST(TestOprTensorRT, ICudaEngine) {
     func->execute();
 }
 
+#if NV_TENSOR_RT_VERSION >= 6001
+TEST(TestOprTensorRT, RuntimeDynamicShape) {
+    REQUIRE_GPU(1);
+    intl::DynamicShapeTensorRTNetwork net1{5, 23, 26, 26}, net2{4, 23, 24, 24};
+    auto make_trt = [](intl::DynamicShapeTensorRTNetwork& net) {
+        TensorRTUniquePtr<ICudaEngine> cuda_engine = net.create_trt_network();
+        TensorRTUniquePtr<IHostMemory> mem{cuda_engine->serialize(), {}};
+        return TensorRTRuntimeOpr::make(mem->data(), mem->size(), {net.x});
+    };
+
+    HostTensorND host_z1, host_z2;
+
+    auto y1 = make_trt(net1);
+    auto func1 = net1.graph->compile(
+            {make_callback_copy(net1.y1, host_z1), make_callback_copy(y1[0], host_z2)});
+    func1->execute();
+    MGB_ASSERT_TENSOR_NEAR(host_z1, host_z2, 5e-4);
+
+    auto y2 = make_trt(net2);
+    auto func2 = net2.graph->compile(
+            {make_callback_copy(net2.y1, host_z1), make_callback_copy(y2[0], host_z2)});
+    func2->execute();
+    MGB_ASSERT_TENSOR_NEAR(host_z1, host_z2, 5e-4);
+}
+#endif
+
 #endif  // MGB_ENABLE_TENSOR_RT
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
