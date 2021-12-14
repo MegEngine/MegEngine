@@ -154,12 +154,6 @@ CompNode::Locator CompNode::Locator::parse(const std::string& id) {
 
     // parse dev_type
             if (ptr[0] == 'a') {
-#if MGB_MC20
-        if (strncmp(ptr, "ax", 2) == 0) {
-            dev_type = DeviceType::AX;
-            ptr += 2;
-        } else {
-#endif
             if (strncmp(ptr, "atlas", 5)) {
                 err();
             }
