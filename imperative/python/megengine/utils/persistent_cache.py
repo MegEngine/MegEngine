@@ -11,6 +11,7 @@ import argparse
 import getpass
 import os
 import sys
+import urllib.parse
 
 from ..core._imperative_rt import PersistentCacheManager as _PersistentCacheManager
 from ..logger import get_logger
@@ -23,8 +24,10 @@ class PersistentCacheManager(_PersistentCacheManager):
         if os.getenv("MGE_FASTRUN_CACHE_TYPE") == "MEMORY":
             get_logger().info("fastrun use in-memory cache")
             self.open_memory()
-        else:
+        elif os.getenv("MGE_FASTRUN_CACHE_TYPE") == "FILE":
             self.open_file()
+        else:
+            self.open_redis()
 
     def open_memory(self):
         pass
@@ -51,6 +54,28 @@ class PersistentCacheManager(_PersistentCacheManager):
             )
             self.open_memory()
 
+    def open_redis(self):
+        prefix = "mgbcache:{}:MGB{}:GIT:{}".format(
+            getpass.getuser(), __version__, git_version
+        )
+        url = os.getenv("MGE_FASTRUN_CACHE_URL")
+        if url is None:
+            self.open_file()
+        try:
+            assert sys.platform != "win32", "redis cache on windows not tested"
+            parse_result = urllib.parse.urlparse(url, scheme="redis")
+            assert parse_result.scheme == "redis", "unsupported scheme"
+            assert not parse_result.username, "redis conn with username unsupported"
+            assert self.try_open_redis(
+                parse_result.hostname, parse_result.port, parse_result.password, prefix
+            ), "connect failed"
+        except Exception as exc:
+            get_logger().error(
+                "failed to connect to cache server {!r}; try fallback to "
+                "in-file cache".format(exc)
+            )
+            self.open_file()
+
 
 _manager = None
 
@@ -60,3 +85,23 @@ def get_manager():
     if _manager is None:
         _manager = PersistentCacheManager()
     return _manager
+
+
+def _clean():
+    nr_del = get_manager().clean()
+    if nr_del is not None:
+        print("{} cache entries deleted".format(nr_del))
+
+
+def main():
+    parser = argparse.ArgumentParser(description="manage persistent cache")
+    subp = parser.add_subparsers(description="action to be performed", dest="cmd")
+    subp.required = True
+    subp_clean = subp.add_parser("clean", help="clean all the cache of current user")
+    subp_clean.set_defaults(action=_clean)
+    args = parser.parse_args()
+    args.action()
+
+
+if __name__ == "__main__":
+    main()

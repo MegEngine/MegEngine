@@ -35,6 +35,10 @@ configure_file(src/lite_build_config.h.in ${CMAKE_CURRENT_BINARY_DIR}/genfiles/l
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/genfiles/lite_build_config.h DESTINATION ${CMAKE_INSTALL_PREFIX}/lite/include)
 
 # begin config lite
+if(LITE_BUILD_WITH_MGE AND LITE_WITH_CUDA AND NOT WIN32)
+    # FXIME third_party cpp redis do not support build with clang-cl
+    list(APPEND SOURCES_LITE ${CPP_REDIS_SRCS})
+endif()
 add_library(lite_static STATIC ${SOURCES_LITE})
 add_dependencies(lite_static lite_fbs_generate)
 include_directories($<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/genfiles>)
@@ -105,6 +109,14 @@ else()
 endif()
 if(LITE_BUILD_WITH_MGE)
     target_link_libraries(lite_static_all_in_one PRIVATE megbrain megdnn ${MGE_CUDA_LIBS})
+endif()
+
+if(LITE_BUILD_WITH_MGE AND LITE_WITH_CUDA AND NOT WIN32)
+    # FXIME third_party cpp redis do not support build with clang-cl
+    target_include_directories(lite_static PRIVATE ${CPP_REDIS_INCLUDES})
+    target_include_directories(lite_shared PRIVATE ${CPP_REDIS_INCLUDES})
+    target_include_directories(lite_shared_whl PRIVATE ${CPP_REDIS_INCLUDES})
+    target_include_directories(lite_static_all_in_one PRIVATE ${CPP_REDIS_INCLUDES})
 endif()
 set(LITE_VERSION_SCRIPT ${PROJECT_SOURCE_DIR}/lite/src/version_lite.ld CACHE INTERNAL "Path to linker version script")
 add_custom_target(_lite_version_ld SOURCES ${LITE_VERSION_SCRIPT})
