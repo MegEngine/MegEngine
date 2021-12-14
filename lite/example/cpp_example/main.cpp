@@ -167,6 +167,9 @@ REGIST_EXAMPLE("basic_c_interface", basic_c_interface);
 REGIST_EXAMPLE("device_io_c_interface", device_io_c_interface);
 REGIST_EXAMPLE("async_c_interface", async_c_interface);
 
+REGIST_EXAMPLE("picture_classification", picture_classification);
+REGIST_EXAMPLE("detect_yolox", detect_yolox);
+
 #if LITE_WITH_CUDA
 REGIST_EXAMPLE("device_input", device_input);
 REGIST_EXAMPLE("device_input_output", device_input_output);

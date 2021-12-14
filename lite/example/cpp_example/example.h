@@ -53,9 +53,7 @@ template <int>
 struct Register;
 
 #if LITE_BUILD_WITH_MGE
-#if LITE_WITH_CUDA
-bool load_from_path_run_cuda(const Args& args);
-#endif
+
 bool basic_load_from_path(const Args& args);
 bool basic_load_from_path_with_loader(const Args& args);
 bool basic_load_from_memory(const Args& args);
@@ -69,7 +67,12 @@ bool update_cryption_key(const Args& args);
 bool async_forward(const Args& args);
 bool set_input_callback(const Args& arg);
 bool set_output_callback(const Args& arg);
+
+bool picture_classification(const Args& arg);
+bool detect_yolox(const Args& arg);
+
 #if LITE_WITH_CUDA
+bool load_from_path_run_cuda(const Args& args);
 bool device_input(const Args& args);
 bool device_input_output(const Args& args);
 bool pinned_host_input(const Args& args);
