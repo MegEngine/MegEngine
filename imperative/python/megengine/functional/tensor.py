@@ -57,32 +57,26 @@ def eye(N, M=None, *, dtype="float32", device: Optional[CompNode] = None) -> Ten
     r"""Returns a 2D tensor with ones on the diagonal and zeros elsewhere.
 
     Args:
-        shape: a list, tuple or integer defining the shape of the output tensor.
-        dtype: the desired data type of the output tensor. Default: ``float32``.
-        device: the desired device of the output tensor. Default: if ``None``,
-            use the default device (see :func:`~.megengine.get_default_device`).
+        N: the number of rows
+        M: the number of columns with default being ``N``
+
+    Keyword args:
+        dtype (:attr:`.Tensor.dtype`): output tensor data type. Default: ``float32``.
+        device (:attr:`.Tensor.device`): device on which to place the created tensor. Default: ``None``.
 
     Returns:
-        eye matrix.
+        A 2D tensor with ones on the diagonal and zeros elsewhere.
 
     Examples:
 
-        .. testcode::
-
-            import numpy as np
-            import megengine.functional as F
-
-            out = F.eye(4, 6, dtype=np.float32)
-            print(out.numpy())
-
-        Outputs:
-
-        .. testoutput::
-
-            [[1. 0. 0. 0. 0. 0.]
-             [0. 1. 0. 0. 0. 0.]
-             [0. 0. 1. 0. 0. 0.]
-             [0. 0. 0. 1. 0. 0.]]
+        >>> F.eye(3)
+        Tensor([[1. 0. 0.]
+         [0. 1. 0.]
+         [0. 0. 1.]], device=xpux:0)
+        >>> F.eye(3, 5)
+        Tensor([[1. 0. 0. 0. 0.]
+         [0. 1. 0. 0. 0.]
+         [0. 0. 1. 0. 0.]], device=xpux:0)
     """
     if M is not None:
         if isinstance(N, Tensor) or isinstance(M, Tensor):
