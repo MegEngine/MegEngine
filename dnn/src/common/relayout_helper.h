@@ -50,7 +50,8 @@ constexpr size_t BLOCK_LINE_SIZE_BYTES = 32;
 //! ref U54-MC arch
 constexpr size_t BLOCK_LINE_SIZE_BYTES = 64;
 #else
-#error "unknown megdnn arch"
+//! for fallback, need keep same with MEGDNN_NAIVE
+constexpr size_t BLOCK_LINE_SIZE_BYTES = 64;
 #endif
 
 /**
