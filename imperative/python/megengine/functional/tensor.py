@@ -101,26 +101,31 @@ def eye(N, M=None, *, dtype="float32", device: Optional[CompNode] = None) -> Ten
 def full(
     shape: Union[int, tuple, list],
     value: Union[bool, int, float, Tensor],
+    *,
     dtype=None,
     device=None,
 ) -> Tensor:
-    r"""Return a tensor of shape ``shape`` filled with ``value``.
+    r"""Returns a new tensor having a specified ``shape`` and filled with ``value``.
 
     Args:
-        shape: output tensor shape.
-        value: fill value.
+        shape (int or sequence of ints): output tensor shape.
+        value (Number): fill value.
         
     Keyword args:
-        dtype(:attr:`.Tensor.dtype`): output tensor data type. If ``dtype`` is ``None``, the output tensor
+        dtype (:attr:`.Tensor.dtype`): output tensor data type. If ``dtype`` is ``None``, the output tensor
             data type must be inferred from ``value``. If the value is an ``int``,
             the output tensor data type must be the default integer data type. If the
             value is a ``float``, the output tensor data type must be the default
-            floating-point data type. If the value is a ``bool``, the output tensor 
-            must be a boolean data type. Default: ``None``.
-        device(:attr:`.Tensor.device`): device on which to place the created tensor. Default: ``None``.
+            floating-point data type. If the value is a ``bool``, the output array 
+            must have boolean data type. Default: ``None``.
+        device (:attr:`.Tensor.device`): device on which to place the created tensor. Default: ``None``.
 
     Returns:
         A tensor where every element is equal to ``value``.
+    
+    Note:
+        If ``dtype`` is ``None`` and the ``value`` exceeds the precision of the resolved default output array data type, 
+        behavior is left unspecified and, thus, implementation-defined.
 
     Examples:
 
@@ -130,9 +135,6 @@ def full(
         Tensor([[0. 0. 0. 0.]
          [0. 0. 0. 0.]
          [0. 0. 0. 0.]], device=xpux:0)
-        >>> F.full((2, 2), [1, 2])
-        Tensor([[1. 2.]
-         [1. 2.]], device=xpux:0)
     """
 
     if isinstance(shape, int):
