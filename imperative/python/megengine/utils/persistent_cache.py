@@ -44,6 +44,8 @@ class _FakeRedisConn:
                 get_logger().info(
                     "fastrun use in-file cache in {}".format(self._cache_dir)
                 )
+                print("fastrun use in-file cache in {}".format(self._cache_dir))
+                print(len(self._dict))
             except Exception as exc:
                 self._dict = {}
                 self._is_shelve = False
@@ -51,6 +53,7 @@ class _FakeRedisConn:
                     "failed to create cache file in {} {!r}; fallback to "
                     "in-memory cache".format(self._cache_dir, exc)
                 )
+                print("fastrun use in-memory cache in {}".format(self._cache_dir))
 
     def get(self, key):
         if self._is_shelve and isinstance(key, bytes):
