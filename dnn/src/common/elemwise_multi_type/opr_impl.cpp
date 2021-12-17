@@ -155,6 +155,29 @@ const ModeTrait& ModeTrait::from_mode(Mode mode) {
             dst.name = name;
             dst.need_specify_out_dtype = true;
         };
+        auto init_fma3_int16xf32xf32xf32 = [&](ModeTrait& dst, const char* name) {
+            dst.arity = 3;
+            dst.check_inp[0] = make_check_dtype_func(dtype::Int16());
+            dst.check_inp[1] = make_check_dtype_func(dtype::Float32());
+            dst.check_inp[2] = make_check_dtype_func(dtype::Float32());
+            dst.check_out = make_out_dtype_func(dtype::Float32());
+            dst.name = name;
+        };
+        auto init_mul_int16xf32xf32 = [&](ModeTrait& dst, const char* name) {
+            dst.arity = 2;
+            dst.check_inp[0] = make_check_dtype_func(dtype::Int16());
+            dst.check_inp[1] = make_check_dtype_func(dtype::Float32());
+            dst.check_out = make_out_dtype_func(dtype::Float32());
+            dst.name = name;
+        };
+        auto init_fma3_uint8xf32xf32xf32 = [&](ModeTrait& dst, const char* name) {
+            dst.arity = 3;
+            dst.check_inp[0] = make_check_dtype_func(dtype::Uint8());
+            dst.check_inp[1] = make_check_dtype_func(dtype::Float32());
+            dst.check_inp[2] = make_check_dtype_func(dtype::Float32());
+            dst.check_out = make_out_dtype_func(dtype::Float32());
+            dst.name = name;
+        };
 
 #define SET(f, m)                                                         \
     MIDOUT_BEGIN(megdnn_common_elemwise_multi_type, midout_iv(Mode::m)) { \
@@ -169,6 +192,9 @@ const ModeTrait& ModeTrait::from_mode(Mode mode) {
         SET(init_fuse_add_rmulh_rshr_int32x32x32x8,
             FUSE_ADD_RMULH_ROUND_SHR_SATURATE_INT32x32x32x8);
         SET(init_rshrs_iXxi8xi16, ROUND_SHR_SATURATE_IXxI8xI16);
+        SET(init_fma3_int16xf32xf32xf32, FUSE_MUL_ADD3_INT16xF32xF32xF32);
+        SET(init_mul_int16xf32xf32, MUL_INT16xF32xF32);
+        SET(init_fma3_uint8xf32xf32xf32, FUSE_MUL_ADD3_UINT8xF32xF32xF32);
 
         //! quantized opr, with specified dtype.
         //! dispatch elemwise mode internally

@@ -11,6 +11,7 @@
  */
 
 #include "./opr_impl.h"
+#include "kernels.h"
 #include "src/common/elemwise_multi_type/kern_defs.cuh"
 #include "src/naive/handle.h"
 
@@ -849,6 +850,154 @@ void ElemwiseMultiTypeImpl::on_quantized_mode(
     fallback::ElemwiseMultiTypeImpl::on_quantized_mode(param, dst, mode);
 #undef DISPATCH
 #undef DISPATCH_QUANTIZED_MODE
+}
+
+void ElemwiseMultiTypeImpl::on_fuse_mul_add3_int16xf32xf32xf32(
+        const ElemwiseOpParamN<3>& param, const TensorND& dst) {
+    auto &src0 = param[0], &src1 = param[1], &src2 = param[2];
+    BroadcastChannelInfo binfo;
+
+    if (is_vector(src0.layout) &&
+        is_NHWC_broadcasted_channel_like(src1.layout, binfo) &&
+        src1.layout.eq_layout(src2.layout)) {
+        // VEC_BCAST111C_BCAST111C
+        MEGDNN_DISPATCH_CPU_KERN_OPR(
+                neon_fuse_mul_add3_int16xf32xf32xf32_vec_bcast111c_bcast111c(
+                        binfo.x, binfo.y, binfo.z,
+                        static_cast<dt_int16*>(src0.raw_ptr()),
+                        static_cast<dt_float32*>(src1.raw_ptr()),
+                        static_cast<dt_float32*>(src2.raw_ptr()),
+                        dst.ptr<dt_float32>()));
+        return;
+    } else if (
+            is_vector(src0.layout) && is_broadcasted_channel_like(src1.layout, binfo) &&
+            src1.layout.eq_layout(src2.layout)) {
+        // VEC_BCAST101_BCAST101
+        MEGDNN_DISPATCH_CPU_KERN_OPR(
+                neon_fuse_mul_add3_int16xf32xf32xf32_vec_bcast101_bcast101(
+                        binfo.x, binfo.y, binfo.z,
+                        static_cast<dt_int16*>(src0.raw_ptr()),
+                        static_cast<dt_float32*>(src1.raw_ptr()),
+                        static_cast<dt_float32*>(src2.raw_ptr()),
+                        dst.ptr<dt_float32>()));
+        return;
+    } else if (
+            is_vector(src0.layout) && is_vector(src1.layout) &&
+            is_vector(src2.layout)) {
+        // VEC_VEC_VEC
+        auto size = param.size;
+        MEGDNN_DISPATCH_CPU_KERN_OPR(neon_fuse_mul_add3_int16xf32xf32xf32_vec_vec_vec(
+                size, static_cast<dt_int16*>(src0.raw_ptr()),
+                static_cast<dt_float32*>(src1.raw_ptr()),
+                static_cast<dt_float32*>(src2.raw_ptr()), dst.ptr<dt_float32>()));
+        return;
+    } else if (
+            is_vector(src0.layout) && is_broadcasted_scalar(src1.layout) &&
+            is_broadcasted_scalar(src2.layout)) {
+        // VEC_SCALAR_SCALAR
+        auto size = param.size;
+        MEGDNN_DISPATCH_CPU_KERN_OPR(
+                neon_fuse_mul_add3_int16xf32xf32xf32_vec_scaler_scaler(
+                        size, static_cast<dt_int16*>(src0.raw_ptr()),
+                        static_cast<dt_float32*>(src1.raw_ptr()),
+                        static_cast<dt_float32*>(src2.raw_ptr()),
+                        dst.ptr<dt_float32>()));
+        return;
+    }
+    naive::ElemwiseMultiTypeImpl::on_fuse_mul_add3_int16xf32xf32xf32(param, dst);
+}
+
+void ElemwiseMultiTypeImpl::on_fuse_mul_add3_uint8xf32xf32xf32(
+        const ElemwiseOpParamN<3>& param, const TensorND& dst) {
+    auto &src0 = param[0], &src1 = param[1], &src2 = param[2];
+    BroadcastChannelInfo binfo;
+
+    if (is_vector(src0.layout) &&
+        is_NHWC_broadcasted_channel_like(src1.layout, binfo) &&
+        src1.layout.eq_layout(src2.layout)) {
+        // VEC_BCAST111C_BCAST111C
+        MEGDNN_DISPATCH_CPU_KERN_OPR(
+                neon_fuse_mul_add3_uint8xf32xf32xf32_vec_bcast111c_bcast111c(
+                        binfo.x, binfo.y, binfo.z,
+                        static_cast<dt_uint8*>(src0.raw_ptr()),
+                        static_cast<dt_float32*>(src1.raw_ptr()),
+                        static_cast<dt_float32*>(src2.raw_ptr()),
+                        dst.ptr<dt_float32>()));
+        return;
+    } else if (
+            is_vector(src0.layout) && is_broadcasted_channel_like(src1.layout, binfo) &&
+            src1.layout.eq_layout(src2.layout)) {
+        // VEC_BCAST101_BCAST101
+        MEGDNN_DISPATCH_CPU_KERN_OPR(
+                neon_fuse_mul_add3_uint8xf32xf32xf32_vec_bcast101_bcast101(
+                        binfo.x, binfo.y, binfo.z,
+                        static_cast<dt_uint8*>(src0.raw_ptr()),
+                        static_cast<dt_float32*>(src1.raw_ptr()),
+                        static_cast<dt_float32*>(src2.raw_ptr()),
+                        dst.ptr<dt_float32>()));
+        return;
+    } else if (
+            is_vector(src0.layout) && is_vector(src1.layout) &&
+            is_vector(src2.layout)) {
+        // VEC_VEC_VEC
+        auto size = param.size;
+        MEGDNN_DISPATCH_CPU_KERN_OPR(neon_fuse_mul_add3_uint8xf32xf32xf32_vec_vec_vec(
+                size, static_cast<dt_uint8*>(src0.raw_ptr()),
+                static_cast<dt_float32*>(src1.raw_ptr()),
+                static_cast<dt_float32*>(src2.raw_ptr()), dst.ptr<dt_float32>()));
+        return;
+    } else if (
+            is_vector(src0.layout) && is_broadcasted_scalar(src1.layout) &&
+            is_broadcasted_scalar(src2.layout)) {
+        // VEC_SCALAR_SCALAR
+        auto size = param.size;
+        MEGDNN_DISPATCH_CPU_KERN_OPR(
+                neon_fuse_mul_add3_uint8xf32xf32xf32_vec_scaler_scaler(
+                        size, static_cast<dt_uint8*>(src0.raw_ptr()),
+                        static_cast<dt_float32*>(src1.raw_ptr()),
+                        static_cast<dt_float32*>(src2.raw_ptr()),
+                        dst.ptr<dt_float32>()));
+        return;
+    }
+
+    naive::ElemwiseMultiTypeImpl::on_fuse_mul_add3_uint8xf32xf32xf32(param, dst);
+}
+
+void ElemwiseMultiTypeImpl::on_mul_int16xf32xf32(
+        const ElemwiseOpParamN<2>& param, const TensorND& dst) {
+    auto &src0 = param[0], &src1 = param[1];
+    BroadcastChannelInfo binfo;
+
+    if (is_vector(src0.layout) &&
+        is_NHWC_broadcasted_channel_like(src1.layout, binfo)) {
+        // VEC_BCAST111C
+        MEGDNN_DISPATCH_CPU_KERN_OPR(neon_mul_int16xf32xf32_vec_bcast111c(
+                binfo.x, binfo.y, binfo.z, static_cast<dt_int16*>(src0.raw_ptr()),
+                static_cast<dt_float32*>(src1.raw_ptr()), dst.ptr<dt_float32>()));
+        return;
+    } else if (
+            is_vector(src0.layout) && is_broadcasted_channel_like(src1.layout, binfo)) {
+        // VEC_BCAST101
+        MEGDNN_DISPATCH_CPU_KERN_OPR(neon_mul_int16xf32xf32_vec_bcast101(
+                binfo.x, binfo.y, binfo.z, static_cast<dt_int16*>(src0.raw_ptr()),
+                static_cast<dt_float32*>(src1.raw_ptr()), dst.ptr<dt_float32>()));
+        return;
+    } else if (is_vector(src0.layout) && is_vector(src1.layout)) {
+        // VEC_VEC
+        auto size = param.size;
+        MEGDNN_DISPATCH_CPU_KERN_OPR(neon_mul_int16xf32xf32_vec_vec(
+                size, static_cast<dt_int16*>(src0.raw_ptr()),
+                static_cast<dt_float32*>(src1.raw_ptr()), dst.ptr<dt_float32>()));
+        return;
+    } else if (is_vector(src0.layout) && is_broadcasted_scalar(src1.layout)) {
+        auto size = param.size;
+        MEGDNN_DISPATCH_CPU_KERN_OPR(neon_mul_int16xf32xf32_vec_scaler(
+                size, static_cast<dt_int16*>(src0.raw_ptr()),
+                static_cast<dt_float32*>(src1.raw_ptr()), dst.ptr<dt_float32>()));
+        return;
+    }
+
+    naive::ElemwiseMultiTypeImpl::on_mul_int16xf32xf32(param, dst);
 }
 
 }  // namespace arm_common

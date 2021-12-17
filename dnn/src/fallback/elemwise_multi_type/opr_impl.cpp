@@ -56,6 +56,216 @@ void ElemwiseMultiTypeImpl::on_fuse_mul_add3_int16x32x32x32(
     naive::ElemwiseMultiTypeImpl::on_fuse_mul_add3_int16x32x32x32(param, dst);
 }
 
+void ElemwiseMultiTypeImpl::on_fuse_mul_add3_int16xf32xf32xf32(
+        const ElemwiseOpParamN<3>& param, const TensorND& dst) {
+    BroadcastChannelInfo binfo0, binfo1;
+
+    if (is_vector(param[0].layout) &&
+        is_NHWC_broadcasted_channel_like(param[1].layout, binfo0) &&
+        is_NHWC_broadcasted_channel_like(param[2].layout, binfo1) && binfo0 == binfo1) {
+        auto x = binfo0.x, y = binfo0.y, z = binfo0.z;
+        auto src0 = param[0];
+        auto src1 = param[1];
+        auto src2 = param[2];
+        auto work = [=]() {
+            const dt_int16* __restrict__ a = static_cast<dt_int16*>(src0.raw_ptr());
+            const dt_float32* __restrict__ b = static_cast<dt_float32*>(src1.raw_ptr());
+            const dt_float32* __restrict__ c = static_cast<dt_float32*>(src2.raw_ptr());
+            dt_float32* __restrict__ d = dst.ptr<dt_float32>();
+            for (size_t i = 0; i < x; ++i) {
+                for (size_t j = 0; j < y; ++j) {
+                    auto off = i * (y * z) + j * z;
+                    size_t k = 0;
+                    for (; k + 4 <= z; k += 4) {
+                        d[off + k + 0] = a[off + k + 0] * b[k + 0] + c[k + 0];
+                        d[off + k + 1] = a[off + k + 1] * b[k + 1] + c[k + 1];
+                        d[off + k + 2] = a[off + k + 2] * b[k + 2] + c[k + 2];
+                        d[off + k + 3] = a[off + k + 3] * b[k + 3] + c[k + 3];
+                    }
+                    for (; k < z; ++k) {
+                        d[off + k] = a[off + k] * b[k] + c[k];
+                    }
+                }
+            }
+        };
+
+        MEGDNN_DISPATCH_CPU_KERN_OPR(work());
+        return;
+    } else if (
+            is_vector(param[0].layout) &&
+            is_broadcasted_channel_like(param[1].layout, binfo0) &&
+            is_broadcasted_channel_like(param[2].layout, binfo1) && binfo0 == binfo1) {
+        auto x = binfo0.x, y = binfo0.y, z = binfo0.z;
+        auto src0 = param[0];
+        auto src1 = param[1];
+        auto src2 = param[2];
+        auto work = [=]() {
+            const dt_int16* __restrict__ a = static_cast<dt_int16*>(src0.raw_ptr());
+            const dt_float32* __restrict__ b = static_cast<dt_float32*>(src1.raw_ptr());
+            const dt_float32* __restrict__ c = static_cast<dt_float32*>(src2.raw_ptr());
+            dt_float32* __restrict__ d = dst.ptr<dt_float32>();
+            for (size_t j = 0; j < y; ++j) {
+                auto bv = b[j], cv = c[j];
+                for (size_t i = 0; i < x; ++i) {
+                    auto off = i * (y * z) + j * z, offt = off + z;
+                    for (; off + 4 <= offt; off += 4) {
+                        d[off + 0] = a[off + 0] * bv + cv;
+                        d[off + 1] = a[off + 1] * bv + cv;
+                        d[off + 2] = a[off + 2] * bv + cv;
+                        d[off + 3] = a[off + 3] * bv + cv;
+                    }
+                    for (; off < offt; ++off) {
+                        d[off] = a[off] * bv + cv;
+                    }
+                }
+            }
+        };
+
+        MEGDNN_DISPATCH_CPU_KERN_OPR(work());
+        return;
+    }
+
+    naive::ElemwiseMultiTypeImpl::on_fuse_mul_add3_int16xf32xf32xf32(param, dst);
+}
+
+void ElemwiseMultiTypeImpl::on_mul_int16xf32xf32(
+        const ElemwiseOpParamN<2>& param, const TensorND& dst) {
+    BroadcastChannelInfo binfo;
+
+    if (is_vector(param[0].layout) &&
+        is_NHWC_broadcasted_channel_like(param[1].layout, binfo)) {
+        auto x = binfo.x, y = binfo.y, z = binfo.z;
+        auto src0 = param[0];
+        auto src1 = param[1];
+        auto work = [=]() {
+            const dt_int16* __restrict__ a = static_cast<dt_int16*>(src0.raw_ptr());
+            const dt_float32* __restrict__ b = static_cast<dt_float32*>(src1.raw_ptr());
+            dt_float32* __restrict__ d = dst.ptr<dt_float32>();
+            for (size_t i = 0; i < x; ++i) {
+                for (size_t j = 0; j < y; ++j) {
+                    auto off = i * (y * z) + j * z;
+                    size_t k = 0;
+                    for (; k + 4 <= z; k += 4) {
+                        d[off + k + 0] = a[off + k + 0] * b[k + 0];
+                        d[off + k + 1] = a[off + k + 1] * b[k + 1];
+                        d[off + k + 2] = a[off + k + 2] * b[k + 2];
+                        d[off + k + 3] = a[off + k + 3] * b[k + 3];
+                    }
+                    for (; k < z; ++k) {
+                        d[off + k] = a[off + k] * b[k];
+                    }
+                }
+            }
+        };
+
+        MEGDNN_DISPATCH_CPU_KERN_OPR(work());
+        return;
+    } else if (
+            is_vector(param[0].layout) &&
+            is_broadcasted_channel_like(param[1].layout, binfo)) {
+        auto x = binfo.x, y = binfo.y, z = binfo.z;
+        auto src0 = param[0];
+        auto src1 = param[1];
+        auto work = [=]() {
+            const dt_int16* __restrict__ a = static_cast<dt_int16*>(src0.raw_ptr());
+            const dt_float32* __restrict__ b = static_cast<dt_float32*>(src1.raw_ptr());
+            dt_float32* __restrict__ d = dst.ptr<dt_float32>();
+            for (size_t j = 0; j < y; ++j) {
+                auto bv = b[j];
+                for (size_t i = 0; i < x; ++i) {
+                    auto off = i * (y * z) + j * z, offt = off + z;
+                    for (; off + 4 <= offt; off += 4) {
+                        d[off + 0] = a[off + 0] * bv;
+                        d[off + 1] = a[off + 1] * bv;
+                        d[off + 2] = a[off + 2] * bv;
+                        d[off + 3] = a[off + 3] * bv;
+                    }
+                    for (; off < offt; ++off) {
+                        d[off] = a[off] * bv;
+                    }
+                }
+            }
+        };
+
+        MEGDNN_DISPATCH_CPU_KERN_OPR(work());
+        return;
+    }
+
+    naive::ElemwiseMultiTypeImpl::on_mul_int16xf32xf32(param, dst);
+}
+
+void ElemwiseMultiTypeImpl::on_fuse_mul_add3_uint8xf32xf32xf32(
+        const ElemwiseOpParamN<3>& param, const TensorND& dst) {
+    BroadcastChannelInfo binfo0, binfo1;
+
+    if (is_vector(param[0].layout) &&
+        is_NHWC_broadcasted_channel_like(param[1].layout, binfo0) &&
+        is_NHWC_broadcasted_channel_like(param[2].layout, binfo1) && binfo0 == binfo1) {
+        auto x = binfo0.x, y = binfo0.y, z = binfo0.z;
+        auto src0 = param[0];
+        auto src1 = param[1];
+        auto src2 = param[2];
+        auto work = [=]() {
+            const dt_uint8* __restrict__ a = static_cast<dt_uint8*>(src0.raw_ptr());
+            const dt_float32* __restrict__ b = static_cast<dt_float32*>(src1.raw_ptr());
+            const dt_float32* __restrict__ c = static_cast<dt_float32*>(src2.raw_ptr());
+            dt_float32* __restrict__ d = dst.ptr<dt_float32>();
+            for (size_t i = 0; i < x; ++i) {
+                for (size_t j = 0; j < y; ++j) {
+                    auto off = i * (y * z) + j * z;
+                    size_t k = 0;
+                    for (; k + 4 <= z; k += 4) {
+                        d[off + k + 0] = a[off + k + 0] * b[k + 0] + c[k + 0];
+                        d[off + k + 1] = a[off + k + 1] * b[k + 1] + c[k + 1];
+                        d[off + k + 2] = a[off + k + 2] * b[k + 2] + c[k + 2];
+                        d[off + k + 3] = a[off + k + 3] * b[k + 3] + c[k + 3];
+                    }
+                    for (; k < z; ++k) {
+                        d[off + k] = a[off + k] * b[k] + c[k];
+                    }
+                }
+            }
+        };
+
+        MEGDNN_DISPATCH_CPU_KERN_OPR(work());
+        return;
+    } else if (
+            is_vector(param[0].layout) &&
+            is_broadcasted_channel_like(param[1].layout, binfo0) &&
+            is_broadcasted_channel_like(param[2].layout, binfo1) && binfo0 == binfo1) {
+        auto x = binfo0.x, y = binfo0.y, z = binfo0.z;
+        auto src0 = param[0];
+        auto src1 = param[1];
+        auto src2 = param[2];
+        auto work = [=]() {
+            const dt_uint8* __restrict__ a = static_cast<dt_uint8*>(src0.raw_ptr());
+            const dt_float32* __restrict__ b = static_cast<dt_float32*>(src1.raw_ptr());
+            const dt_float32* __restrict__ c = static_cast<dt_float32*>(src2.raw_ptr());
+            dt_float32* __restrict__ d = dst.ptr<dt_float32>();
+            for (size_t j = 0; j < y; ++j) {
+                auto bv = b[j], cv = c[j];
+                for (size_t i = 0; i < x; ++i) {
+                    auto off = i * (y * z) + j * z, offt = off + z;
+                    for (; off + 4 <= offt; off += 4) {
+                        d[off + 0] = a[off + 0] * bv + cv;
+                        d[off + 1] = a[off + 1] * bv + cv;
+                        d[off + 2] = a[off + 2] * bv + cv;
+                        d[off + 3] = a[off + 3] * bv + cv;
+                    }
+                    for (; off < offt; ++off) {
+                        d[off] = a[off] * bv + cv;
+                    }
+                }
+            }
+        };
+
+        MEGDNN_DISPATCH_CPU_KERN_OPR(work());
+        return;
+    }
+
+    naive::ElemwiseMultiTypeImpl::on_fuse_mul_add3_uint8xf32xf32xf32(param, dst);
+}
+
 template <typename ctype>
 void ElemwiseMultiTypeImpl::dispatch_fma3_iXxf32xf32xi8_bcast_1x(
         const ElemwiseOpParamN<3>& param, const Broadcast1xInfo& binfo,

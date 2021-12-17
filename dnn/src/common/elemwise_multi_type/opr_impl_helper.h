@@ -50,6 +50,27 @@ protected:
     virtual void on_round_shr_saturate_iXxi8xi16(
             const ElemwiseOpParamN<2>& param, const TensorND& dst) = 0;
 
+    virtual void on_fuse_mul_add3_int16xf32xf32xf32(
+            const ElemwiseOpParamN<3>& param, const TensorND& dst) {
+        MEGDNN_MARK_USED_VAR(param);
+        MEGDNN_MARK_USED_VAR(dst);
+        megdnn_throw("unsupported ElemwiseMultiType fma3 int16xf32xf32xf32.");
+    }
+
+    virtual void on_mul_int16xf32xf32(
+            const ElemwiseOpParamN<2>& param, const TensorND& dst) {
+        MEGDNN_MARK_USED_VAR(param);
+        MEGDNN_MARK_USED_VAR(dst);
+        megdnn_throw("unsupported ElemwiseMultiType fma3 int16xf32xf32.");
+    }
+
+    virtual void on_fuse_mul_add3_uint8xf32xf32xf32(
+            const ElemwiseOpParamN<3>& param, const TensorND& dst) {
+        MEGDNN_MARK_USED_VAR(param);
+        MEGDNN_MARK_USED_VAR(dst);
+        megdnn_throw("unsupported ElemwiseMultiType fma3 uint8xf32xf32xf32.");
+    }
+
     virtual void on_quantized_mode(
             const ElemwiseOpParamN<1>& param, const TensorND& dst,
             Elemwise::Mode mode) {

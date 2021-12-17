@@ -497,7 +497,16 @@ pdef('ElemwiseMultiType').add_enum(
     Doc('QCOND_LEQ_MOV = 50', 'quantized cond_leq_mov'),
     Doc('QH_SWISH = 51', 'quantized h_swish'),
     Doc('QFUSE_ADD_H_SWISH = 52', 'quantized h_swish(x+y)'),
-    Doc('QH_SWISH_GRAD = 53', 'quantized h_swish_grad')
+    Doc('QH_SWISH_GRAD = 53', 'quantized h_swish_grad'),
+    Doc('FUSE_MUL_ADD3_INT16xF32xF32xF32 = 54',
+        'compute ``a * b + c`` requiring that ``a`` be int16 and ``b`` and '
+        '``c``  float32, and the result is float32.'),
+    Doc('MUL_INT16xF32xF32 = 55',
+        'compute ``a * b `` requiring that ``a`` be int16 and ``b`` float32, '
+        'and the result is float32.'),
+    Doc('FUSE_MUL_ADD3_UINT8xF32xF32xF32 = 56',
+        'compute ``a * b + c`` requiring that ``a`` be uint8 and ``b`` and '
+        '``c``  float32, and the result is float32.')
 )
 
 pdef('PowC', 'power with constant exponent').add_fields('float32', 'exp', 0)

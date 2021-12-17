@@ -79,6 +79,73 @@ DEF_TEST(fuse_mul_add3_int16x32x32x32) {
             .execs({{102, 67, 71}, {1, 67, 1}, {1, 67, 1}, {}});
 }
 
+DEF_TEST(fuse_mul_add3_int16xf32xf32xf32) {
+    // This is not implemented on CUDA.
+    if (handle->type() == Handle::HandleType::CUDA) {
+        return;
+    }
+    Checker<ElemwiseMultiType> checker(handle);
+    checker.set_param({ElemwiseMultiType::Mode::FUSE_MUL_ADD3_INT16xF32xF32xF32});
+    checker.set_dtype(0, dtype::Int16());
+    checker.set_dtype(1, dtype::Float32());
+    checker.set_dtype(2, dtype::Float32());
+    UniformIntRNG rng{-100, 100};
+    checker.set_rng(0, &rng);
+    checker.set_rng(1, &rng);
+    checker.set_rng(2, &rng);
+    checker.execs({{5, 7, 6}, {1, 1, 6}, {1, 1, 6}, {}})
+            .execs({{1, 700, 600}, {1, 1, 600}, {1, 1, 600}, {}})
+            .execs({{1, 700, 600}, {1, 700, 600}, {1, 700, 600}, {}})
+            .execs({{102, 71, 67}, {1, 1, 67}, {1, 1, 67}, {}})
+            .execs({{16, 16, 128}, {16, 16, 128}, {16, 16, 128}, {}})
+            .execs({{16, 128, 16, 16}, {1, 128, 1, 1}, {1, 128, 1, 1}, {}})
+            .execs({{16, 128, 16, 16}, {1, 1, 1, 1}, {1, 1, 1, 1}, {}});
+}
+
+DEF_TEST(fuse_mul_add3_uint8xf32xf32xf32) {
+    // This is not implemented on CUDA.
+    if (handle->type() == Handle::HandleType::CUDA) {
+        return;
+    }
+    Checker<ElemwiseMultiType> checker(handle);
+    checker.set_param({ElemwiseMultiType::Mode::FUSE_MUL_ADD3_UINT8xF32xF32xF32});
+    checker.set_dtype(0, dtype::Uint8());
+    checker.set_dtype(1, dtype::Float32());
+    checker.set_dtype(2, dtype::Float32());
+    UniformIntRNG rng{-100, 100};
+    checker.set_rng(0, &rng);
+    checker.set_rng(1, &rng);
+    checker.set_rng(2, &rng);
+    checker.execs({{5, 7, 6}, {1, 1, 6}, {1, 1, 6}, {}})
+            .execs({{1, 700, 600}, {1, 1, 600}, {1, 1, 600}, {}})
+            .execs({{1, 700, 600}, {1, 700, 600}, {1, 700, 600}, {}})
+            .execs({{102, 71, 67}, {1, 1, 67}, {1, 1, 67}, {}})
+            .execs({{16, 16, 128}, {16, 16, 128}, {16, 16, 128}, {}})
+            .execs({{16, 128, 16, 16}, {1, 128, 1, 1}, {1, 128, 1, 1}, {}})
+            .execs({{16, 128, 16, 16}, {1, 1, 1, 1}, {1, 1, 1, 1}, {}});
+}
+
+DEF_TEST(fuse_mul_add3_int16xf32xf32) {
+    // This is not implemented on CUDA.
+    if (handle->type() == Handle::HandleType::CUDA) {
+        return;
+    }
+    Checker<ElemwiseMultiType> checker(handle);
+    checker.set_param({ElemwiseMultiType::Mode::MUL_INT16xF32xF32});
+    checker.set_dtype(0, dtype::Int16());
+    checker.set_dtype(1, dtype::Float32());
+    UniformIntRNG rng{-100, 100};
+    checker.set_rng(0, &rng);
+    checker.set_rng(1, &rng);
+    checker.execs({{5, 7, 6}, {1, 1, 6}, {}})
+            .execs({{1, 700, 600}, {1, 1, 600}, {}})
+            .execs({{1, 700, 600}, {1, 700, 600}, {}})
+            .execs({{102, 71, 67}, {1, 1, 67}, {}})
+            .execs({{16, 16, 128}, {16, 16, 128}, {}})
+            .execs({{16, 128, 16, 16}, {1, 128, 1, 1}, {}})
+            .execs({{16, 128, 16, 16}, {1, 1, 1, 1}, {}});
+}
+
 DEF_TEST(fuse_mul_add3_iXxf32xf32xi8) {
     Checker<ElemwiseMultiType> checker(handle);
     checker.set_param({ElemwiseMultiType::Mode::FUSE_MUL_ADD3_IXxF32xF32xI8});

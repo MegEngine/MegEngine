@@ -48,6 +48,15 @@ protected:
             const ElemwiseOpParamN<3>& param, const TensorND& dst,
             Elemwise::Mode mode) override;
 
+    void on_fuse_mul_add3_int16xf32xf32xf32(
+            const ElemwiseOpParamN<3>& param, const TensorND& dst) override;
+
+    void on_mul_int16xf32xf32(
+            const ElemwiseOpParamN<2>& param, const TensorND& dst) override;
+
+    void on_fuse_mul_add3_uint8xf32xf32xf32(
+            const ElemwiseOpParamN<3>& param, const TensorND& dst) override;
+
 public:
     using fallback::ElemwiseMultiTypeImpl::ElemwiseMultiTypeImpl;
 };

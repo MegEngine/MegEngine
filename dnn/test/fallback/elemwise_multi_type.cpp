@@ -40,6 +40,24 @@ TEST_F(FALLBACK, ELEMWISE_MULTI_TYPE_RECORD_FMA3_INT16x32x32x32) {
     checker.execs({{A, B, C}, {1, B, 1}, {1, B, 1}, {}});
 }
 
+TEST_F(FALLBACK, ELEMWISE_MULTI_TYPE_RECORD_FMA3_INT16xF32xF32xF32) {
+    TaskRecordChecker<ElemwiseMultiType> checker{1};
+    checker.set_param({ElemwiseMultiType::Mode::FUSE_MUL_ADD3_INT16xF32xF32xF32});
+    checker.set_dtype(0, dtype::Int16());
+    checker.set_dtype(1, dtype::Float32());
+    checker.set_dtype(2, dtype::Float32());
+    UniformIntRNG rng{-10, 10};
+    checker.set_rng(0, &rng);
+    checker.set_rng(1, &rng);
+    checker.set_rng(2, &rng);
+    checker.execs({{5, 7, 16}, {1, 1, 16}, {1, 1, 16}, {}})
+            .execs({{2, 700, 600}, {1, 1, 600}, {1, 1, 600}, {}})
+            .execs({{2, 700, 600}, {2, 700, 600}, {2, 700, 600}, {}})
+            .execs({{16, 16, 128}, {16, 16, 128}, {16, 16, 128}, {}})
+            .execs({{16, 128, 16, 16}, {1, 128, 1, 1}, {1, 128, 1, 1}, {}})
+            .execs({{16, 128, 16, 16}, {1, 1, 1, 1}, {1, 1, 1, 1}, {}});
+}
+
 #if MEGDNN_WITH_BENCHMARK
 TEST_F(FALLBACK, ELEMWISE_MULTI_TYPE_BENCHMARK_FMA3_INT16x32x32x32) {
     Benchmarker<ElemwiseMultiType> bench{handle()};

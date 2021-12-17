@@ -43,6 +43,12 @@ protected:
             const ElemwiseOpParamN<6>& param, const TensorND& dst) override;
     void on_round_shr_saturate_iXxi8xi16(
             const ElemwiseOpParamN<2>& param, const TensorND& dst) override;
+    void on_fuse_mul_add3_int16xf32xf32xf32(
+            const ElemwiseOpParamN<3>& param, const TensorND& dst) override;
+    void on_mul_int16xf32xf32(
+            const ElemwiseOpParamN<2>& param, const TensorND& dst) override;
+    void on_fuse_mul_add3_uint8xf32xf32xf32(
+            const ElemwiseOpParamN<3>& param, const TensorND& dst) override;
 
 public:
     using naive::ElemwiseMultiTypeImpl::ElemwiseMultiTypeImpl;

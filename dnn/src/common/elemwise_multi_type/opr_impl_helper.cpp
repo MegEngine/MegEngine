@@ -43,6 +43,17 @@ void ElemwiseMultiTypeImplHelper::exec(
         case Mode::ROUND_SHR_SATURATE_IXxI8xI16:
             on_round_shr_saturate_iXxi8xi16(make_elemwise_op_param<2>(src, dst), dst);
             break;
+        case Mode::FUSE_MUL_ADD3_INT16xF32xF32xF32:
+            on_fuse_mul_add3_int16xf32xf32xf32(
+                    make_elemwise_op_param<3>(src, dst), dst);
+            break;
+        case Mode::MUL_INT16xF32xF32:
+            on_mul_int16xf32xf32(make_elemwise_op_param<2>(src, dst), dst);
+            break;
+        case Mode::FUSE_MUL_ADD3_UINT8xF32xF32xF32:
+            on_fuse_mul_add3_uint8xf32xf32xf32(
+                    make_elemwise_op_param<3>(src, dst), dst);
+            break;
             ON_QUANTIZED_MODE(RELU, 1);
             ON_QUANTIZED_MODE(ABS, 1);
             ON_QUANTIZED_MODE(ACOS, 1);
