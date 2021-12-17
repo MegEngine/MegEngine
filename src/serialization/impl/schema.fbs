@@ -121,6 +121,7 @@ union OperatorParam {
     param.RNNCell = 87,
     param.RNN = 88,
     param.LSTM = 89,
+    param.Softmax = 90,
 }
 
 table Operator {

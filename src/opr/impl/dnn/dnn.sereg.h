@@ -25,6 +25,7 @@
 #include "megbrain/opr/dnn/roi_align.h"
 #include "megbrain/opr/dnn/roi_pooling.h"
 #include "megbrain/opr/dnn/sliding_window_transpose.h"
+#include "megbrain/opr/dnn/softmax.h"
 #include "megbrain/opr/dnn/tqt.h"
 #include "megbrain/serialization/sereg.h"
 #include "megdnn/opr_param_defs.h"
@@ -319,6 +320,19 @@ struct OprMaker<opr::LSTMBackward, 9> {
         return opr::LSTMBackward::make(
                        i[0], i[1], i[2], i[3], i[4], i[5], i[6], i[7], i[8], param,
                        config)[0]
+                .node()
+                ->owner_opr();
+    }
+};
+
+template <>
+struct OprMaker<opr::SoftmaxBackward, 2> {
+    using Param = opr::SoftmaxBackward::Param;
+    static cg::OperatorNodeBase* make(
+            const Param& param, const cg::VarNodeArray& i, ComputingGraph& graph,
+            const OperatorNodeConfig& config) {
+        MGB_MARK_USED_VAR(graph);
+        return opr::SoftmaxBackward::make(i[0], i[1], param, config)
                 .node()
                 ->owner_opr();
     }
@@ -720,6 +734,8 @@ MGB_SEREG_OPR(RNNForward, 3);
 MGB_SEREG_OPR(RNNBackward, 7);
 MGB_SEREG_OPR(LSTMForward, 4);
 MGB_SEREG_OPR(LSTMBackward, 9);
+MGB_SEREG_OPR(Softmax, 1);
+MGB_SEREG_OPR(SoftmaxBackward, 2);
 }  // namespace opr
 
 }  // namespace mgb

@@ -145,6 +145,8 @@ DEF(RNNBackward, 10, true, true);
 DEF(LSTMCellForward, 10, true, true);
 DEF(LSTMForward, 8, true, true);
 DEF(LSTMBackward, 13, true, true);
+DEF(SoftmaxForward, 2, true, true);
+DEF(SoftmaxBackward, 3, true, false);
 }  // namespace megdnn
 
 // vim: syntax=cpp.doxygen

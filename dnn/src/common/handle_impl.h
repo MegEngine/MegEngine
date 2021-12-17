@@ -219,7 +219,9 @@ private:
     cb(RNN) \
     cb(RNNBackward) \
     cb(LSTM) \
-    cb(LSTMBackward)
+    cb(LSTMBackward) \
+    cb(SoftmaxForward) \
+    cb(SoftmaxBackward)
 // clang-format on
 
 /*!

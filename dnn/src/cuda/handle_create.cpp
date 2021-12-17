@@ -76,6 +76,7 @@
 #include "src/cuda/separable_filter/opr_impl.h"
 #include "src/cuda/sleep/opr_impl.h"
 #include "src/cuda/sliding_window_transpose/opr_impl.h"
+#include "src/cuda/softmax/opr_impl.h"
 #include "src/cuda/split/opr_impl.h"
 #include "src/cuda/svd/opr_impl.h"
 #include "src/cuda/tensor_remap/opr_impl.h"
@@ -221,6 +222,8 @@ MEGDNN_SPECIALIZE_CREATE_OPERATOR(LayerNormForward);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(LayerNormBackward);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(DropoutForward);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(DropoutBackward);
+MEGDNN_SPECIALIZE_CREATE_OPERATOR(SoftmaxForward);
+MEGDNN_SPECIALIZE_CREATE_OPERATOR(SoftmaxBackward);
 
 template <typename Opr>
 std::unique_ptr<Opr> HandleImpl::create_operator() {

@@ -327,4 +327,7 @@ decl_opr('TQT',
 decl_opr('LSQ',
          inputs=[Doc('src','input tensor'),Doc('scale','scale tensor'),Doc('zero_point','zero point tensor'),Doc('grad_scale','grad scale tensor')],
          params='LSQ')
+decl_opr('Softmax',
+         inputs=[Doc('src','input tensor')],
+         params='Softmax')
 # vim: ft=python

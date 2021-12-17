@@ -1061,10 +1061,15 @@ def softmax(inp: Tensor, axis: Optional[int] = None) -> Tensor:
     """
     if axis is None:
         axis = _get_softmax_axis(len(inp.shape))
-    offset = inp.max(axis=axis, keepdims=True).detach()
-    cached = exp(inp - offset)
-    down = sum(cached, axis=axis, keepdims=True)
-    return cached / down
+    if isinstance(axis, list):
+        offset = inp.max(axis=axis, keepdims=True).detach()
+        cached = exp(inp - offset)
+        down = sum(cached, axis=axis, keepdims=True)
+        return cached / down
+    else:
+        op = builtin.Softmax(axis=axis,)
+        (output,) = apply(op, inp)
+        return output
 
 
 def layer_norm(

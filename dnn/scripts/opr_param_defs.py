@@ -253,6 +253,10 @@ pdef('Axis').add_fields('int32', 'axis', 0)
  add_enum_alias('Format', 'Convolution')
  )
 
+(pdef('Softmax').
+ add_fields('int32', 'axis', -1)
+)
+
 (pdef('AdaptivePooling', version=0, is_legacy=True).
  add_enum_alias('Mode', 'PoolingV0').
  add_enum_alias('Format', 'ConvolutionV0')

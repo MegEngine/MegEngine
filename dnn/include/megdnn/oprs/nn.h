@@ -2048,6 +2048,53 @@ protected:
             const TensorLayout& doup, const TensorLayout& mask,
             const TensorLayout& dinp, size_t workspace_in_bytes);
 };
+class SoftmaxBase : public OperatorBase {
+    DEF_OPR_IMPL_CTOR(SoftmaxBase, OperatorBase);
+    DEF_OPR_PARAM(Softmax);
+
+protected:
+    void deduce_layout_fwd(const TensorLayout& input, TensorLayout& output);
+    void check_layout_fwd(const TensorLayout& input, const TensorLayout& output);
+};
+
+class SoftmaxForward : public SoftmaxBase {
+    DEF_OPR_IMPL(SoftmaxForward, SoftmaxBase, 1, 1);
+
+public:
+    /**
+     * \param[in] input input tensor
+     * \param[out] output output tensor
+     */
+    virtual void exec(
+            _megdnn_tensor_in input, _megdnn_tensor_out output,
+            _megdnn_workspace workspace) = 0;
+    void deduce_layout(const TensorLayout& input, TensorLayout& output);
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& input, const TensorLayout& output) = 0;
+
+protected:
+    void check_exec(
+            const TensorLayout& input, const TensorLayout& output,
+            size_t workspace_in_bytes);
+};
+using Softmax = SoftmaxForward;
+
+class SoftmaxBackward : public SoftmaxBase {
+    DEF_OPR_IMPL(SoftmaxBackward, SoftmaxBase, 2, 1);
+
+public:
+    virtual void exec(
+            _megdnn_tensor_in input, _megdnn_tensor_in diff, _megdnn_tensor_out grad_x,
+            _megdnn_workspace workspace) = 0;
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& input, const TensorLayout& diff,
+            const TensorLayout& grad_x) = 0;
+
+protected:
+    void check_exec(
+            const TensorLayout& input, const TensorLayout& diff,
+            const TensorLayout& grad_x, size_t workspace_in_bytes);
+};
 
 class RNNCellForward : public OperatorBase {
     DEF_OPR_PARAM(RNNCell);
