@@ -443,7 +443,7 @@ def module_stats(
             if isinstance(x, np.ndarray):
                 return Tensor(x)
             elif isinstance(x, collections.abc.Mapping):
-                return {k: load_tensor(x) for k, v in x.items()}
+                return {k: load_tensor(v) for k, v in x.items()}
             elif isinstance(x, tuple) and hasattr(x, "_fields"):  # nametuple
                 return type(x)(*(load_tensor(value) for value in x))
             elif isinstance(x, collections.abc.Sequence):
