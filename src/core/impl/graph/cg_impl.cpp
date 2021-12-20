@@ -126,7 +126,7 @@ ComputingGraph::ComputingGraph() {
 
 void ComputingGraph::assert_destroy(std::shared_ptr<ComputingGraph>& ptr) {
     mgb_assert(
-            ptr.use_count() == 1, "unexpected use_count: %zu", size_t(ptr.use_count()));
+            ptr.use_count() <= 2, "unexpected use_count: %zu", size_t(ptr.use_count()));
     ptr.reset();
 }
 

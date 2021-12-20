@@ -89,6 +89,23 @@ TEST(TestNetWorkOptions, const_shape) {
     compare_lite_tensor<float>(output_tensor, result_mgb);
 }
 
+TEST(TestNetWorkOptions, record2) {
+    Config config;
+    std::string model_path = "./shufflenet.mge";
+
+    config.options.var_sanity_check_first_run = false;
+    config.options.const_shape = true;
+    config.options.comp_node_seq_record_level = 2;
+    std::shared_ptr<Network> network = std::make_shared<Network>(config);
+
+    network->load_model(model_path);
+
+    for (int i = 0; i < 3; i++) {
+        network->forward();
+        network->wait();
+    }
+}
+
 TEST(TestNetWorkOptions, NCHW44) {
     Config config;
     auto tensor = get_input_data("./input_data.npy");

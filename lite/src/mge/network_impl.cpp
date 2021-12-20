@@ -436,6 +436,10 @@ void NetworkImplDft::start() const {
 
 void NetworkImplDft::forward() {
     start();
+    if (m_load_config.comp_graph &&
+        m_user_config->options.comp_node_seq_record_level == 2) {
+        m_load_config.comp_graph.reset();
+    }
     LITE_ASSERT(m_execute_func, "forward must be called after network loaded.");
     m_execute_func->execute();
 }
