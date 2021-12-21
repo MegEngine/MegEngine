@@ -410,28 +410,28 @@ def all_reduce_sum(
     Returns:
         A tensor with sum operation on each value across the group.
 
-        The shape of the output tensor must be the same as ``inp``, and the output 
+        The shape of the output tensor must be the same as ``inp``, and the output
         tensor is going to be bitwise identical in all processes across the group.
 
 
     Examples:
 
         >>> # We execute all_reduce_sum on rank 0 and rank 1
-        >>> input = F.arange(2) + 1 + 2 * rank
-        >>> input 
+        >>> input = F.arange(2) + 1 + 2 * rank # doctest: +SKIP
+        >>> input # doctest: +SKIP
         Tensor([1. 2.], device=xpux:0) # Rank 0
         Tensor([3. 4.], device=xpux:0) # Rank 1
-        >>> F.distributed.all_reduce_sum(input, group=[0, 1])
+        >>> F.distributed.all_reduce_sum(input, group=[0, 1]) # doctest: +SKIP
         Tensor([4. 6.], device=xpux:0) # Rank 0
         Tensor([4. 6.], device=xpux:0) # Rank 1
 
         >>> # We execute all_reduce_sum with on gpu0 with cuda stream 1
-        >>> megengine.set_default_device("gpu0")
-        >>> input = F.arange(2) + 1 + 2 * rank
-        >>> input 
+        >>> megengine.set_default_device("gpu0") # doctest: +SKIP
+        >>> input = F.arange(2) + 1 + 2 * rank # doctest: +SKIP
+        >>> input  # doctest: +SKIP
         Tensor([1. 2.], device=gpu0:0) # Rank 0
         Tensor([3. 4.], device=gpu0:0) # Rank 1
-        >>> F.distributed.all_reduce_sum(input, device="gpu0:1")
+        >>> F.distributed.all_reduce_sum(input, device="gpu0:1") # doctest: +SKIP
         Tensor([4. 6.], device=gpu0:0) # Rank 0
         Tensor([4. 6.], device=gpu0:0) # Rank 1
 
@@ -464,27 +464,27 @@ def all_reduce_max(
     Returns:
         A tensor with max operation on each value across the group.
 
-        The shape of the output tensor must be the same as ``inp``, and the output 
+        The shape of the output tensor must be the same as ``inp``, and the output
         tensor is going to be bitwise identical in all processes across the group.
 
     Examples:
 
         >>> # We execute all_reduce_max on rank 0 and rank 1
-        >>> input = F.arange(2) + 1 + 2 * rank
-        >>> input 
+        >>> input = F.arange(2) + 1 + 2 * rank # doctest: +SKIP
+        >>> input  # doctest: +SKIP
         Tensor([1. 2.], device=xpux:0) # Rank 0
         Tensor([3. 4.], device=xpux:0) # Rank 1
-        >>> F.distributed.all_reduce_max(input, group=[0, 1])
+        >>> F.distributed.all_reduce_max(input, group=[0, 1]) # doctest: +SKIP
         Tensor([3. 4.], device=xpux:0) # Rank 0
         Tensor([3. 4.], device=xpux:0) # Rank 1
 
         >>> # We execute all_reduce_max with on gpu0 with cuda stream 1
-        >>> megengine.set_default_device("gpu0")
-        >>> input = F.arange(2) + 1 + 2 * rank
-        >>> input 
+        >>> megengine.set_default_device("gpu0") # doctest: +SKIP
+        >>> input = F.arange(2) + 1 + 2 * rank # doctest: +SKIP
+        >>> input  # doctest: +SKIP
         Tensor([1. 2.], device=gpu0:0) # Rank 0
         Tensor([3. 4.], device=gpu0:0) # Rank 1
-        >>> F.distributed.all_reduce_max(input, device="gpu0:1")
+        >>> F.distributed.all_reduce_max(input, device="gpu0:1") # doctest: +SKIP
         Tensor([3. 4.], device=xpux:0) # Rank 0
         Tensor([3. 4.], device=xpux:0) # Rank 1
 
@@ -518,27 +518,27 @@ def all_reduce_min(
     Returns:
         A tensor with min operation on each value across the group.
 
-        The shape of the output tensor must be the same as ``inp``, and the output 
+        The shape of the output tensor must be the same as ``inp``, and the output
         tensor is going to be bitwise identical in all processes across the group.
 
     Examples:
 
         >>> # We execute all_reduce_min on rank 0 and rank 1
-        >>> input = F.arange(2) + 1 + 2 * rank
-        >>> input 
+        >>> input = F.arange(2) + 1 + 2 * rank # doctest: +SKIP
+        >>> input  # doctest: +SKIP
         Tensor([1. 2.], device=xpux:0) # Rank 0
         Tensor([3. 4.], device=xpux:0) # Rank 1
-        >>> F.distributed.all_reduce_min(input, group=[0, 1])
+        >>> F.distributed.all_reduce_min(input, group=[0, 1]) # doctest: +SKIP
         Tensor([1. 2.], device=xpux:0) # Rank 0
         Tensor([1. 2.], device=xpux:0) # Rank 1
 
         >>> # We execute all_reduce_min with on gpu0 with cuda stream 1
-        >>> megengine.set_default_device("gpu0")
-        >>> input = F.arange(2) + 1 + 2 * rank
-        >>> input 
+        >>> megengine.set_default_device("gpu0") # doctest: +SKIP
+        >>> input = F.arange(2) + 1 + 2 * rank # doctest: +SKIP
+        >>> input  # doctest: +SKIP
         Tensor([1. 2.], device=gpu0:0) # Rank 0
         Tensor([3. 4.], device=gpu0:0) # Rank 1
-        >>> F.distributed.all_reduce_min(input, device="gpu0:1")
+        >>> F.distributed.all_reduce_min(input, device="gpu0:1") # doctest: +SKIP
         Tensor([1. 2.], device=xpux:0) # Rank 0
         Tensor([1. 2.], device=xpux:0) # Rank 1
 
