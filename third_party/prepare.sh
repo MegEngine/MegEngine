@@ -33,6 +33,8 @@ function git_submodule_update() {
     git submodule update -f --init OpenBLAS
     git submodule update -f --init cpuinfo
     git submodule update -f --init gflags
+    git submodule update -f --init cpp_redis
+    git submodule update -f --init tacopie
 
     git submodule update -f --init MegRay
     pushd MegRay/third_party >/dev/null
