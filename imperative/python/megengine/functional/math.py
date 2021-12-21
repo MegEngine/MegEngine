@@ -22,6 +22,7 @@ from ..core.tensor import amp
 from ..core.tensor.utils import _normalize_axis, cast_tensors, setscalar, subgraph
 from ..jit import exclude_from_trace
 from ..tensor import Tensor
+from ..utils.deprecation import deprecated_kwargs_default
 from .debug_param import get_execution_strategy
 from .elemwise import clip, minimum
 from .tensor import broadcast_to, concat, expand_dims, squeeze
@@ -684,6 +685,7 @@ def sort(inp: Tensor, descending: bool = False) -> Tuple[Tensor, Tensor]:
     return tns, ind
 
 
+@deprecated_kwargs_default("1.12", "descending", 3)
 def topk(
     inp: Tensor,
     k: int,
@@ -712,7 +714,7 @@ def topk(
             import  megengine.functional as F
 
             x = tensor(np.array([2, 4, 6, 8, 7, 5, 3, 1], dtype=np.float32))
-            top, indices = F.topk(x, 5)
+            top, indices = F.topk(x, 5, descending=False)
             print(top.numpy(), indices.numpy())
 
         Outputs:
