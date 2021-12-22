@@ -34,7 +34,7 @@ typedef enum {
     LITE_CAMBRICON = 5,
     //! when the device information is set in model, so set LITE_DEVICE_DEFAULT
     //! in lite, which equal to xpu in megengine
-    LITE_DEVICE_DEFAULT = 6,
+    LITE_DEVICE_DEFAULT = 7,
 } LiteDeviceType;
 
 typedef enum {

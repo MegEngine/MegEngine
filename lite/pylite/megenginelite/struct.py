@@ -22,7 +22,7 @@ class LiteDeviceType(IntEnum):
     LITE_ATLAS = 3
     LITE_NPU = 4
     LITE_CAMBRICON = 5
-    LITE_DEVICE_DEFAULT = 6
+    LITE_DEVICE_DEFAULT = 7
 
 
 class LiteDataType(IntEnum):
