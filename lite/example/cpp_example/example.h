@@ -49,57 +49,20 @@ ExampleFuncMap* get_example_function_map();
 
 bool register_example(std::string example_name, const ExampleFunc& fuction);
 
-template <int>
-struct Register;
-
-#if LITE_BUILD_WITH_MGE
-
-bool basic_load_from_path(const Args& args);
-bool basic_load_from_path_with_loader(const Args& args);
-bool basic_load_from_memory(const Args& args);
-bool cpu_affinity(const Args& args);
-bool network_share_same_weights(const Args& args);
-bool reset_input(const Args& args);
-bool reset_input_output(const Args& args);
-bool config_user_allocator(const Args& args);
-bool register_cryption_method(const Args& args);
-bool update_cryption_key(const Args& args);
-bool async_forward(const Args& args);
-bool set_input_callback(const Args& arg);
-bool set_output_callback(const Args& arg);
-
-bool picture_classification(const Args& arg);
-bool detect_yolox(const Args& arg);
-
-#if LITE_WITH_CUDA
-bool load_from_path_run_cuda(const Args& args);
-bool device_input(const Args& args);
-bool device_input_output(const Args& args);
-bool pinned_host_input(const Args& args);
-#endif
-#endif
-
 }  // namespace example
 }  // namespace lite
-
-#if LITE_BUILD_WITH_MGE
-bool basic_c_interface(const lite::example::Args& args);
-bool device_io_c_interface(const lite::example::Args& args);
-bool async_c_interface(const lite::example::Args& args);
-#endif
 
 #define CONCAT_IMPL(a, b)  a##b
 #define MACRO_CONCAT(a, b) CONCAT_IMPL(a, b)
 
 #define REGIST_EXAMPLE(name_, func_) REGIST_EXAMPLE_WITH_NUM(__COUNTER__, name_, func_)
 
-#define REGIST_EXAMPLE_WITH_NUM(number_, name_, func_)          \
-    template <>                                                 \
-    struct Register<number_> {                                  \
-        Register() { register_example(name_, func_); }          \
-    };                                                          \
-    namespace {                                                 \
-    Register<number_> MACRO_CONCAT(example_function_, number_); \
+#define REGIST_EXAMPLE_WITH_NUM(number_, name_, func_)                        \
+    struct Register_##func_ {                                                 \
+        Register_##func_() { lite::example::register_example(name_, func_); } \
+    };                                                                        \
+    namespace {                                                               \
+    Register_##func_ MACRO_CONCAT(func_, number_);                            \
     }
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

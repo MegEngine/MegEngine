@@ -10,15 +10,17 @@
  */
 
 #include <thread>
-#include "../example.h"
+#include "example.h"
 #if LITE_BUILD_WITH_MGE
+#include "misc.h"
 
 using namespace lite;
 using namespace example;
 
 #if LITE_WITH_CUDA
 
-bool lite::example::device_input(const Args& args) {
+namespace {
+bool device_input(const Args& args) {
     std::string network_path = args.model_path;
     std::string input_path = args.input_path;
 
@@ -73,7 +75,7 @@ bool lite::example::device_input(const Args& args) {
     return true;
 }
 
-bool lite::example::device_input_output(const Args& args) {
+bool device_input_output(const Args& args) {
     std::string network_path = args.model_path;
     std::string input_path = args.input_path;
 
@@ -136,7 +138,7 @@ bool lite::example::device_input_output(const Args& args) {
     return true;
 }
 
-bool lite::example::pinned_host_input(const Args& args) {
+bool pinned_host_input(const Args& args) {
     std::string network_path = args.model_path;
     std::string input_path = args.input_path;
 
@@ -181,6 +183,11 @@ bool lite::example::pinned_host_input(const Args& args) {
     printf("max=%e, sum=%e\n", max, sum);
     return true;
 }
+}  // namespace
+
+REGIST_EXAMPLE("device_input", device_input);
+REGIST_EXAMPLE("device_input_output", device_input_output);
+REGIST_EXAMPLE("pinned_host_input", pinned_host_input);
 
 #endif
 #endif

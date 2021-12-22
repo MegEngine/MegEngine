@@ -9,13 +9,15 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-#include "../example.h"
+#include "example.h"
 #if LITE_BUILD_WITH_MGE
 
 using namespace lite;
 using namespace example;
 
-bool lite::example::reset_input(const Args& args) {
+namespace {
+
+bool reset_input(const Args& args) {
     std::string network_path = args.model_path;
     std::string input_path = args.input_path;
     lite::Config config;
@@ -53,7 +55,7 @@ bool lite::example::reset_input(const Args& args) {
     return true;
 }
 
-bool lite::example::reset_input_output(const Args& args) {
+bool reset_input_output(const Args& args) {
     std::string network_path = args.model_path;
     std::string input_path = args.input_path;
     lite::Config config;
@@ -92,5 +94,10 @@ bool lite::example::reset_input_output(const Args& args) {
     printf("max=%e, sum=%e\n", max, sum);
     return true;
 }
+}  // namespace
+
+REGIST_EXAMPLE("reset_input", reset_input);
+REGIST_EXAMPLE("reset_input_output", reset_input_output);
+
 #endif
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

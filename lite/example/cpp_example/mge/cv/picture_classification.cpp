@@ -10,7 +10,7 @@
  */
 
 #include <thread>
-#include "../../example.h"
+#include "example.h"
 #if LITE_BUILD_WITH_MGE
 #include <cstdio>
 
@@ -80,9 +80,8 @@ void classfication_process(
     }
     printf("output tensor sum is %f\n", sum);
 }
-}  // namespace
 
-bool lite::example::picture_classification(const Args& args) {
+bool picture_classification(const Args& args) {
     std::string network_path = args.model_path;
     std::string input_path = args.input_path;
 
@@ -109,6 +108,9 @@ bool lite::example::picture_classification(const Args& args) {
            class_id, score);
     return 0;
 }
+}  // namespace
+
+REGIST_EXAMPLE("picture_classification", picture_classification);
 
 #endif
 

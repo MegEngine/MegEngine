@@ -9,7 +9,7 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-#include "../example.h"
+#include "example.h"
 #include "misc.h"
 #if LITE_BUILD_WITH_MGE
 #include "lite-c/global_c.h"
@@ -218,5 +218,10 @@ bool async_c_interface(const lite::example::Args& args) {
     printf("max=%e, sum=%e\n", max, sum);
     return true;
 }
+
+REGIST_EXAMPLE("basic_c_interface", basic_c_interface);
+REGIST_EXAMPLE("device_io_c_interface", device_io_c_interface);
+REGIST_EXAMPLE("async_c_interface", async_c_interface);
+
 #endif
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

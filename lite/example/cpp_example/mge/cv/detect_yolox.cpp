@@ -10,7 +10,7 @@
  */
 
 #include <thread>
-#include "../../example.h"
+#include "example.h"
 #if LITE_BUILD_WITH_MGE
 #include <cstdio>
 
@@ -289,6 +289,10 @@ void decode_outputs(
 void draw_objects(
         uint8_t* image, int width, int height, int channel,
         const std::vector<Object>& objects) {
+    (void)image;
+    (void)width;
+    (void)height;
+    (void)channel;
     for (size_t i = 0; i < objects.size(); i++) {
         const Object& obj = objects[i];
 
@@ -297,9 +301,7 @@ void draw_objects(
     }
 }
 
-}  // namespace
-
-bool lite::example::detect_yolox(const Args& args) {
+bool detect_yolox(const Args& args) {
     std::string network_path = args.model_path;
     std::string input_path = args.input_path;
 
@@ -332,6 +334,9 @@ bool lite::example::detect_yolox(const Args& args) {
     stbi_image_free(image);
     return 0;
 }
+}  // namespace
+
+REGIST_EXAMPLE("detect_yolox", detect_yolox);
 
 #endif
 

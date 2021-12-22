@@ -1,5 +1,6 @@
 file (GLOB_RECURSE SOURCES ./*.cpp)
 add_executable(lite_examples  ${SOURCES})
+target_include_directories(lite_examples PUBLIC ./)
 
 if(LITE_BUILD_WITH_RKNPU)
     #rknn sdk1.0.0 depend on libc++_shared, use gold to remove NEEDED so symbol check
@@ -33,6 +34,7 @@ if(LITE_BUILD_WITH_RKNPU)
 endif()
 
 target_link_libraries(lite_examples_depends_shared lite_shared)
+target_include_directories(lite_examples_depends_shared PUBLIC ./)
 
 if(UNIX)
     if(APPLE OR ANDROID)

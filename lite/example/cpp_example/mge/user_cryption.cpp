@@ -9,7 +9,7 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-#include "../example.h"
+#include "example.h"
 #if LITE_BUILD_WITH_MGE
 
 using namespace lite;
@@ -31,9 +31,8 @@ std::vector<uint8_t> decrypt_model(
         return {};
     }
 }
-}  // namespace
 
-bool lite::example::register_cryption_method(const Args& args) {
+bool register_cryption_method(const Args& args) {
     std::string network_path = args.model_path;
     std::string input_path = args.input_path;
 
@@ -75,7 +74,7 @@ bool lite::example::register_cryption_method(const Args& args) {
     return true;
 }
 
-bool lite::example::update_cryption_key(const Args& args) {
+bool update_cryption_key(const Args& args) {
     std::string network_path = args.model_path;
     std::string input_path = args.input_path;
 
@@ -120,5 +119,9 @@ bool lite::example::update_cryption_key(const Args& args) {
     printf("max=%e, sum=%e\n", max, sum);
     return true;
 }
+}  // namespace
+
+REGIST_EXAMPLE("register_cryption_method", register_cryption_method);
+REGIST_EXAMPLE("update_cryption_key", update_cryption_key);
 #endif
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

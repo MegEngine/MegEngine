@@ -60,7 +60,8 @@ bool lite::example::register_example(
         std::string example_name, const ExampleFunc& fuction) {
     auto map = get_example_function_map();
     if (map->find(example_name) != map->end()) {
-        printf("Error!!! This example is registed yet\n");
+        printf("example_name: %s Error!!! This example is registed yet\n",
+               example_name.c_str());
         return false;
     }
     (*map)[example_name] = fuction;
@@ -142,41 +143,5 @@ int main(int argc, char** argv) {
         return -1;
     }
 }
-namespace lite {
-namespace example {
-
-#if LITE_BUILD_WITH_MGE
-#if LITE_WITH_CUDA
-REGIST_EXAMPLE("load_from_path_run_cuda", load_from_path_run_cuda);
-#endif
-REGIST_EXAMPLE("basic_load_from_path", basic_load_from_path);
-REGIST_EXAMPLE("basic_load_from_path_with_loader", basic_load_from_path_with_loader);
-REGIST_EXAMPLE("basic_load_from_memory", basic_load_from_memory);
-REGIST_EXAMPLE("cpu_affinity", cpu_affinity);
-REGIST_EXAMPLE("register_cryption_method", register_cryption_method);
-REGIST_EXAMPLE("update_cryption_key", update_cryption_key);
-REGIST_EXAMPLE("network_share_same_weights", network_share_same_weights);
-REGIST_EXAMPLE("reset_input", reset_input);
-REGIST_EXAMPLE("reset_input_output", reset_input_output);
-REGIST_EXAMPLE("config_user_allocator", config_user_allocator);
-REGIST_EXAMPLE("async_forward", async_forward);
-REGIST_EXAMPLE("set_input_callback", set_input_callback);
-REGIST_EXAMPLE("set_output_callback", set_output_callback);
-
-REGIST_EXAMPLE("basic_c_interface", basic_c_interface);
-REGIST_EXAMPLE("device_io_c_interface", device_io_c_interface);
-REGIST_EXAMPLE("async_c_interface", async_c_interface);
-
-REGIST_EXAMPLE("picture_classification", picture_classification);
-REGIST_EXAMPLE("detect_yolox", detect_yolox);
-
-#if LITE_WITH_CUDA
-REGIST_EXAMPLE("device_input", device_input);
-REGIST_EXAMPLE("device_input_output", device_input_output);
-REGIST_EXAMPLE("pinned_host_input", pinned_host_input);
-#endif
-#endif
-}  // namespace example
-}  // namespace lite
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

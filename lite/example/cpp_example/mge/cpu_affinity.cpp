@@ -9,13 +9,14 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-#include "../example.h"
+#include "example.h"
 #if LITE_BUILD_WITH_MGE
 
 using namespace lite;
 using namespace example;
 
-bool lite::example::cpu_affinity(const Args& args) {
+namespace {
+bool cpu_affinity(const Args& args) {
     std::string network_path = args.model_path;
     std::string input_path = args.input_path;
 
@@ -65,6 +66,9 @@ bool lite::example::cpu_affinity(const Args& args) {
     printf("max=%e, sum=%e\n", max, sum);
     return true;
 }
+}  // namespace
+
+REGIST_EXAMPLE("cpu_affinity", cpu_affinity);
 #endif
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

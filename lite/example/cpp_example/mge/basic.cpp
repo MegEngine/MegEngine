@@ -10,7 +10,7 @@
  */
 
 #include <thread>
-#include "../example.h"
+#include "example.h"
 #if LITE_BUILD_WITH_MGE
 #include <cstdio>
 
@@ -77,61 +77,8 @@ void output_data_info(std::shared_ptr<Network> network, size_t output_size) {
 }
 }  // namespace
 
-#if LITE_WITH_CUDA
-bool lite::example::load_from_path_run_cuda(const Args& args) {
-    std::string network_path = args.model_path;
-    std::string input_path = args.input_path;
-    set_log_level(LiteLogLevel::DEBUG);
-    //! config the network running in CUDA device
-    lite::Config config{false, -1, LiteDeviceType::LITE_CUDA};
-    //! set NetworkIO
-    NetworkIO network_io;
-    std::string input_name = "img0_comp_fullface";
-    bool is_host = false;
-    IO device_input{input_name, is_host};
-    network_io.inputs.push_back(device_input);
-    //! create and load the network
-    std::shared_ptr<Network> network = std::make_shared<Network>(config, network_io);
-    network->load_model(network_path);
-
-    std::shared_ptr<Tensor> input_tensor = network->get_input_tensor(0);
-    Layout input_layout = input_tensor->get_layout();
-
-    //! read data from numpy data file
-    auto src_tensor = parse_npy(input_path);
-
-    //! malloc the device memory
-    auto tensor_device = Tensor(LiteDeviceType::LITE_CUDA, input_layout);
-
-    //! copy to the device memory
-    tensor_device.copy_from(*src_tensor);
-
-    //! Now the device memory if filled with user input data, set it to the
-    //! input tensor
-    input_tensor->reset(tensor_device.get_memory_ptr(), input_layout);
-
-    //! forward
-    {
-        lite::Timer ltimer("warmup");
-        network->forward();
-        network->wait();
-        ltimer.print_used_time(0);
-    }
-    lite::Timer ltimer("forward_iter");
-    for (int i = 0; i < 10; i++) {
-        ltimer.reset_start();
-        network->forward();
-        network->wait();
-        ltimer.print_used_time(i);
-    }
-    //! get the output data or read tensor set in network_in
-    size_t output_size = network->get_all_output_name().size();
-    output_info(network, output_size);
-    output_data_info(network, output_size);
-    return true;
-}
-#endif
-bool lite::example::basic_load_from_path(const Args& args) {
+namespace {
+bool basic_load_from_path(const Args& args) {
     set_log_level(LiteLogLevel::DEBUG);
     std::string network_path = args.model_path;
     std::string input_path = args.input_path;
@@ -193,7 +140,7 @@ bool lite::example::basic_load_from_path(const Args& args) {
     return true;
 }
 
-bool lite::example::basic_load_from_path_with_loader(const Args& args) {
+bool basic_load_from_path_with_loader(const Args& args) {
     set_log_level(LiteLogLevel::DEBUG);
     lite::set_loader_lib_path(args.loader_path);
     std::string network_path = args.model_path;
@@ -251,7 +198,7 @@ bool lite::example::basic_load_from_path_with_loader(const Args& args) {
     return true;
 }
 
-bool lite::example::basic_load_from_memory(const Args& args) {
+bool basic_load_from_memory(const Args& args) {
     std::string network_path = args.model_path;
     std::string input_path = args.input_path;
 
@@ -307,7 +254,7 @@ bool lite::example::basic_load_from_memory(const Args& args) {
     return true;
 }
 
-bool lite::example::async_forward(const Args& args) {
+bool async_forward(const Args& args) {
     std::string network_path = args.model_path;
     std::string input_path = args.input_path;
     Config config;
@@ -366,7 +313,7 @@ bool lite::example::async_forward(const Args& args) {
     return true;
 }
 
-bool lite::example::set_input_callback(const Args& args) {
+bool set_input_callback(const Args& args) {
     std::string network_path = args.model_path;
     std::string input_path = args.input_path;
     Config config;
@@ -433,7 +380,7 @@ bool lite::example::set_input_callback(const Args& args) {
     return true;
 }
 
-bool lite::example::set_output_callback(const Args& args) {
+bool set_output_callback(const Args& args) {
     std::string network_path = args.model_path;
     std::string input_path = args.input_path;
     Config config;
@@ -500,7 +447,73 @@ bool lite::example::set_output_callback(const Args& args) {
     printf("max=%e, sum=%e\n", max, sum);
     return true;
 }
+}  // namespace
 
+REGIST_EXAMPLE("basic_load_from_path", basic_load_from_path);
+REGIST_EXAMPLE("basic_load_from_path_with_loader", basic_load_from_path_with_loader);
+REGIST_EXAMPLE("basic_load_from_memory", basic_load_from_memory);
+REGIST_EXAMPLE("async_forward", async_forward);
+REGIST_EXAMPLE("set_input_callback", set_input_callback);
+REGIST_EXAMPLE("set_output_callback", set_output_callback);
+
+#if LITE_WITH_CUDA
+namespace {
+bool load_from_path_run_cuda(const Args& args) {
+    std::string network_path = args.model_path;
+    std::string input_path = args.input_path;
+    set_log_level(LiteLogLevel::DEBUG);
+    //! config the network running in CUDA device
+    lite::Config config{false, -1, LiteDeviceType::LITE_CUDA};
+    //! set NetworkIO
+    NetworkIO network_io;
+    std::string input_name = "img0_comp_fullface";
+    bool is_host = false;
+    IO device_input{input_name, is_host};
+    network_io.inputs.push_back(device_input);
+    //! create and load the network
+    std::shared_ptr<Network> network = std::make_shared<Network>(config, network_io);
+    network->load_model(network_path);
+
+    std::shared_ptr<Tensor> input_tensor = network->get_input_tensor(0);
+    Layout input_layout = input_tensor->get_layout();
+
+    //! read data from numpy data file
+    auto src_tensor = parse_npy(input_path);
+
+    //! malloc the device memory
+    auto tensor_device = Tensor(LiteDeviceType::LITE_CUDA, input_layout);
+
+    //! copy to the device memory
+    tensor_device.copy_from(*src_tensor);
+
+    //! Now the device memory if filled with user input data, set it to the
+    //! input tensor
+    input_tensor->reset(tensor_device.get_memory_ptr(), input_layout);
+
+    //! forward
+    {
+        lite::Timer ltimer("warmup");
+        network->forward();
+        network->wait();
+        ltimer.print_used_time(0);
+    }
+    lite::Timer ltimer("forward_iter");
+    for (int i = 0; i < 10; i++) {
+        ltimer.reset_start();
+        network->forward();
+        network->wait();
+        ltimer.print_used_time(i);
+    }
+    //! get the output data or read tensor set in network_in
+    size_t output_size = network->get_all_output_name().size();
+    output_info(network, output_size);
+    output_data_info(network, output_size);
+    return true;
+}
+}  // namespace
+
+REGIST_EXAMPLE("load_from_path_run_cuda", load_from_path_run_cuda);
+#endif
 #endif
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

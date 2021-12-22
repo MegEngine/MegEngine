@@ -9,13 +9,15 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-#include "../example.h"
+#include "example.h"
 #if LITE_BUILD_WITH_MGE
 
 using namespace lite;
 using namespace example;
 
-bool lite::example::network_share_same_weights(const Args& args) {
+namespace {
+
+bool network_share_same_weights(const Args& args) {
     std::string network_path = args.model_path;
     std::string input_path = args.input_path;
 
@@ -75,5 +77,9 @@ bool lite::example::network_share_same_weights(const Args& args) {
     printf("max=%e, sum=%e\n", max, sum);
     return true;
 }
+}  // namespace
+
+REGIST_EXAMPLE("network_share_same_weights", network_share_same_weights);
+
 #endif
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
