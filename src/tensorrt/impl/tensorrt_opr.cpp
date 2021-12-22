@@ -153,49 +153,100 @@ void TensorRTOpr::GpuAllocator::free(void* memory) {
 }
 
 /* ========================== TensorRTManager ========================== */
-const intl::TensorRTUniquePtr<nvinfer1::IExecutionContext>& TensorRTManager::
-        create_trt_context(
-                const TensorShapeArray& inp_shape, nvinfer1::ICudaEngine* engine) {
+void TensorRTManager::create_trt_context(
+        mgb::CompNode cn, const TensorShapeArray& inp_shape,
+        nvinfer1::ICudaEngine* engine) {
     if (!m_context) {
         m_context = {engine->createExecutionContextWithoutDeviceMemory(), {}};
+        MGB_MARK_USED_VAR(cn);
 #if NV_TENSOR_RT_VERSION >= 6001
-        for (size_t i = 0; i < inp_shape.size(); ++i) {
+        auto profile_num = engine->getNbOptimizationProfiles();
+        auto bindings_per_profile = engine->getNbBindings() / profile_num;
+        // choose nearest profile
+        int profile_idx = 0;
+#if NV_TENSOR_RT_VERSION >= 7200
+        if (profile_num > 1) {
+            double dist = DBL_MAX;
+            for (int i = 0; i < profile_num; i++) {
+                double d_sum = 0;
+                for (size_t j = 0; j < inp_shape.size(); ++j) {
+                    double d = 0;
+                    double l = 0;
+                    auto min_dim = engine->getProfileDimensions(
+                            j + bindings_per_profile * i, i,
+                            nvinfer1::OptProfileSelector::kMIN);
+                    auto max_dim = engine->getProfileDimensions(
+                            j + bindings_per_profile * i, i,
+                            nvinfer1::OptProfileSelector::kMAX);
+                    auto opt_dim = engine->getProfileDimensions(
+                            j + bindings_per_profile * i, i,
+                            nvinfer1::OptProfileSelector::kOPT);
+                    for (int k = 0; k < min_dim.nbDims; k++) {
+                        int inp_v = static_cast<int>(inp_shape.at(j)[k]);
+                        if (inp_v < min_dim.d[k] || inp_v > max_dim.d[k]) {
+                            d = DBL_MAX;
+                            break;
+                        } else {
+                            d += pow(inp_v - opt_dim.d[k], 2);
+                            l += pow(opt_dim.d[k], 2);
+                        }
+                    }
+                    if (d != DBL_MAX) {
+                        d_sum += sqrt(d) / sqrt(l);
+                    } else {
+                        d_sum = DBL_MAX;
+                        break;
+                    }
+                }
+                if (d_sum < dist) {
+                    profile_idx = i;
+                    dist = d_sum;
+                }
+            }
+            cn.activate();
+            auto&& env = mgb::CompNodeEnv::from_comp_node(cn);
+            m_context->setOptimizationProfileAsync(profile_idx, env.cuda_env().stream);
+        }
+#endif
+        m_offset = profile_idx * bindings_per_profile;
+        for (size_t i = m_offset; i < m_offset + inp_shape.size(); ++i) {
             auto dims = m_context->getBindingDimensions(i);
             for (int j = 0; j < dims.nbDims; j++) {
                 if (dims.d[j] == -1) {
-                    dims.d[j] = inp_shape.at(i)[j];
+                    dims.d[j] = inp_shape.at(i - m_offset)[j];
                 }
             }
-            m_context->setBindingDimensions(i, dims);
+            m_context->setBindingDimensions(m_offset, dims);
         }
         // check if input shape is set correctly
-        for (int i = inp_shape.size(); i < engine->getNbBindings(); ++i) {
+        for (int i = m_offset + inp_shape.size(); i < m_offset + bindings_per_profile;
+             ++i) {
             auto dims = m_context->getBindingDimensions(i);
             if (dims.nbDims == -1) {
-                for (int j = 0; j < engine->getNbOptimizationProfiles(); j++) {
-                    mgb_log_debug("TensorRT profile %d:\n", j);
-                    for (size_t k = 0; k < inp_shape.size(); k++) {
-                        mgb_log_debug(
-                                "input[%zu]'s minimum shape is: %s\n", k,
+                for (int j = 0; j < profile_num; j++) {
+                    mgb_log_error("TensorRT profile %d:\n", j);
+                    for (size_t k = m_offset; k < m_offset + inp_shape.size(); k++) {
+                        mgb_log_error(
+                                "input[%zu]'s minimum shape is: %s\n", k - m_offset,
                                 TensorRTOpr::dims2shape(
                                         engine->getProfileDimensions(
-                                                j, k,
+                                                k, j,
                                                 nvinfer1::OptProfileSelector::kMIN))
                                         .to_string()
                                         .c_str());
-                        mgb_log_debug(
-                                "input[%zu]'s optimum shape is: %s\n", k,
+                        mgb_log_error(
+                                "input[%zu]'s optimum shape is: %s\n", k - m_offset,
                                 TensorRTOpr::dims2shape(
                                         engine->getProfileDimensions(
-                                                j, k,
+                                                k, j,
                                                 nvinfer1::OptProfileSelector::kOPT))
                                         .to_string()
                                         .c_str());
-                        mgb_log_debug(
-                                "input[%zu]'s maximum shape is: %s\n", k,
+                        mgb_log_error(
+                                "input[%zu]'s maximum shape is: %s\n", k - m_offset,
                                 TensorRTOpr::dims2shape(
                                         engine->getProfileDimensions(
-                                                j, k,
+                                                k, j,
                                                 nvinfer1::OptProfileSelector::kMAX))
                                         .to_string()
                                         .c_str());
@@ -209,8 +260,14 @@ const intl::TensorRTUniquePtr<nvinfer1::IExecutionContext>& TensorRTManager::
         }
 #endif
     }
-    return m_context;
 }
+
+#if NV_TENSOR_RT_VERSION >= 6001
+nvinfer1::Dims TensorRTManager::get_binding_dimensions(int binding_idx) const {
+    mgb_assert(m_context, "Please create_trt_context before get_binding_dimensions.");
+    return m_context->getBindingDimensions(binding_idx + m_offset);
+}
+#endif
 
 void TensorRTManager::exec(
         cg::SingleCNOperatorNodeBase* opr, CompNode comp_node_check,
@@ -232,8 +289,8 @@ void TensorRTManager::exec(
     for (auto&& i : opr->input()) {
         arr.push_back(i->shape());
     }
-    create_trt_context(arr, engine);
-    m_trt_iobuf.resize(opr->input().size() + opr->output().size() - 1);
+    create_trt_context(comp_node, arr, engine);
+    m_trt_iobuf.resize(engine->getNbBindings());
     bool is_trt_opr = false;
     if (opr->same_type<TensorRTOpr>()) {
         is_trt_opr = true;
@@ -250,10 +307,10 @@ void TensorRTManager::exec(
         }
     } else {
         for (size_t i = 0; i < opr->input().size(); ++i) {
-            m_trt_iobuf[i] = opr->input(i)->dev_tensor().raw_ptr();
+            m_trt_iobuf[i + m_offset] = opr->input(i)->dev_tensor().raw_ptr();
         }
         for (size_t i = 0; i < opr->output().size() - 1; ++i) {
-            m_trt_iobuf[opr->input().size() + i] =
+            m_trt_iobuf[opr->input().size() + i + m_offset] =
                     opr->output(i)->dev_tensor().raw_ptr();
         }
     }
@@ -265,6 +322,7 @@ void TensorRTManager::exec(
         m_context->setDeviceMemory(workspace_ptr);
         m_device_workspace_memory_ptr = workspace_ptr;
     }
+
     auto&& env = mgb::CompNodeEnv::from_comp_node(comp_node);
 
     bool exec_success = false;

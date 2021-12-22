@@ -310,7 +310,13 @@ TEST(TestOprTensorRT, ICudaEngine) {
 #if NV_TENSOR_RT_VERSION >= 6001
 TEST(TestOprTensorRT, RuntimeDynamicShape) {
     REQUIRE_GPU(1);
-    intl::DynamicShapeTensorRTNetwork net1{5, 23, 26, 26}, net2{4, 23, 24, 24};
+    intl::DynamicShapeTensorRTNetwork net1{2, 23, 14, 14};
+#if NV_TENSOR_RT_VERSION >= 7200
+    intl::DynamicShapeTensorRTNetwork net2{4, 23, 24, 24};
+#else
+    intl::DynamicShapeTensorRTNetwork net2{3, 23, 10, 10};
+#endif
+
     auto make_trt = [](intl::DynamicShapeTensorRTNetwork& net) {
         TensorRTUniquePtr<ICudaEngine> cuda_engine = net.create_trt_network();
         TensorRTUniquePtr<IHostMemory> mem{cuda_engine->serialize(), {}};

@@ -50,10 +50,15 @@ class TensorRTManager {
     std::vector<void*> m_trt_iobuf;
     TensorRTUniquePtr<nvinfer1::IExecutionContext> m_context;
     void* m_device_workspace_memory_ptr;
+    int m_offset;
 
 public:
-    const TensorRTUniquePtr<nvinfer1::IExecutionContext>& create_trt_context(
-            const TensorShapeArray& inp_shape, nvinfer1::ICudaEngine* engine);
+    void create_trt_context(
+            mgb::CompNode cn, const TensorShapeArray& inp_shape,
+            nvinfer1::ICudaEngine* engine);
+#if NV_TENSOR_RT_VERSION >= 6001
+    nvinfer1::Dims get_binding_dimensions(int binding_idx) const;
+#endif
     void exec(
             cg::SingleCNOperatorNodeBase* opr, CompNode comp_node_check,
             nvinfer1::ICudaEngine* engine, size_t batch = 1,

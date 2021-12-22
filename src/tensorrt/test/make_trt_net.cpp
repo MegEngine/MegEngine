@@ -519,14 +519,24 @@ TensorRTUniquePtr<ICudaEngine> intl::DynamicShapeTensorRTNetwork::create_trt_net
     data = network->addInput("data", DataType::kFLOAT, Dims4{-1, 23, -1, -1});
 
     nvinfer1::IBuilderConfig* config = builder->createBuilderConfig();
-    nvinfer1::IOptimizationProfile* profile = builder->createOptimizationProfile();
-    profile->setDimensions(
+
+    nvinfer1::IOptimizationProfile* profile1 = builder->createOptimizationProfile();
+    profile1->setDimensions(
+            "data", nvinfer1::OptProfileSelector::kMIN, Dims4(1, 23, 10, 10));
+    profile1->setDimensions(
+            "data", nvinfer1::OptProfileSelector::kOPT, Dims4(2, 23, 12, 12));
+    profile1->setDimensions(
+            "data", nvinfer1::OptProfileSelector::kMAX, Dims4(3, 23, 14, 14));
+    config->addOptimizationProfile(profile1);
+
+    nvinfer1::IOptimizationProfile* profile2 = builder->createOptimizationProfile();
+    profile2->setDimensions(
             "data", nvinfer1::OptProfileSelector::kMIN, Dims4(3, 23, 16, 16));
-    profile->setDimensions(
+    profile2->setDimensions(
             "data", nvinfer1::OptProfileSelector::kOPT, Dims4(4, 23, 24, 24));
-    profile->setDimensions(
+    profile2->setDimensions(
             "data", nvinfer1::OptProfileSelector::kMAX, Dims4(5, 23, 28, 28));
-    config->addOptimizationProfile(profile);
+    config->addOptimizationProfile(profile2);
 
     {
         nvinfer1::TensorFormats formats =

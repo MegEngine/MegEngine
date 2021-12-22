@@ -70,7 +70,13 @@ TensorRTRuntimeOpr::TensorRTRuntimeOpr(
             inputs[0]->comp_node().to_string().c_str());
     size_t nr_input = 0;
     bool is_input = true;
-    for (int i = 0; i < m_engine->getNbBindings(); ++i) {
+#if NV_TENSOR_RT_VERSION >= 6001
+    auto profile_num = m_engine->getNbOptimizationProfiles();
+#else
+    int profile_num = 1;
+#endif
+    auto bindings_per_profile = m_engine->getNbBindings() / profile_num;
+    for (int i = 0; i < bindings_per_profile; ++i) {
         if (m_engine->bindingIsInput(nr_input)) {
             mgb_assert(is_input, "mixed input/output bindings");
             // nbDims == 3, means CHW, without batch
@@ -81,7 +87,7 @@ TensorRTRuntimeOpr::TensorRTRuntimeOpr(
             is_input = false;
         }
     }
-    size_t nr_output = m_engine->getNbBindings() - nr_input;
+    size_t nr_output = bindings_per_profile - nr_input;
     mgb_assert(
             nr_input == inputs.size(), "inputs size not equal: expect=%zu got=%zu",
             nr_input, inputs.size());
@@ -101,7 +107,7 @@ TensorRTRuntimeOpr::TensorRTRuntimeOpr(
 void TensorRTRuntimeOpr::get_output_var_shape(
         const TensorShapeArray& inp_shape, TensorShapeArray& out_shape) const {
     auto batch = inp_shape.at(0)[0];
-    auto&& context = m_manager.create_trt_context(inp_shape, m_engine.get());
+    m_manager.create_trt_context(this->comp_node(), inp_shape, m_engine.get());
     auto get_mgb_shape = [&](int binding_idx) -> TensorShape {
         auto dims = m_engine->getBindingDimensions(binding_idx);
 #if NV_TENSOR_RT_VERSION >= 6001
@@ -132,7 +138,7 @@ void TensorRTRuntimeOpr::get_output_var_shape(
                 }
             }
         } else {
-            auto trt_infer_dims = context->getBindingDimensions(binding_idx);
+            auto trt_infer_dims = m_manager.get_binding_dimensions(binding_idx);
             for (int i = 0; i < dims.nbDims; i++) {
                 if (dims.d[i] == -1) {
                     shape[i] = trt_infer_dims.d[i];
