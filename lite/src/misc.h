@@ -40,7 +40,8 @@ private:
 };
 #endif
 
-std::string ssprintf(const char* fmt = 0, ...) __attribute__((format(printf, 1, 2)));
+LITE_API std::string ssprintf(const char* fmt = 0, ...)
+        __attribute__((format(printf, 1, 2)));
 
 /*!
  * \brief Print a message.
@@ -48,7 +49,7 @@ std::string ssprintf(const char* fmt = 0, ...) __attribute__((format(printf, 1, 
  * The message is printed only if level is above or equals to the current log
  * level.
  */
-void print_log(LiteLogLevel level, const char* format = 0, ...)
+LITE_API void print_log(LiteLogLevel level, const char* format = 0, ...)
         __attribute__((format(printf, 2, 3)));
 }  // namespace lite
 
