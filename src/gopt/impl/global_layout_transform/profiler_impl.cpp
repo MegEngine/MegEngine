@@ -22,6 +22,7 @@
 #include "megbrain/opr/tensor_manip.h"
 #include "megbrain/plugin/base.h"
 #include "megbrain/serialization/sereg.h"
+#include "megdnn/tensor_format.h"
 
 using namespace mgb;
 using namespace cg;
@@ -281,9 +282,6 @@ float ProfilerImpl::profile_operator(
             std::min(config.input_tensor_formats.size(), opr->input().size());
     for (; i < nr_input_tensor; ++i) {
         auto&& var = opr->input(i);
-        auto&& cn = var->comp_node();
-        auto&& dtype = var->dtype();
-        auto dval = std::make_shared<DeviceTensorND>(cn, dtype);
         TensorShape aligned_shape;
         if (config.input_tensor_types[i] == TensorType::WEIGHT) {
             mgb_assert(base_config.input_tensor_types[i] == TensorType::WEIGHT);
@@ -299,9 +297,12 @@ float ProfilerImpl::profile_operator(
                     var, base_config.input_tensor_formats[i],
                     config.input_tensor_formats[i], extra_attribute);
         }
-        dval->resize(aligned_shape);
+        std::shared_ptr<DeviceTensorND> dval = create_device_tensor_helper(
+                config, i, var, aligned_shape, extra_attribute);
+
         if (config.input_tensor_types[i] == TensorType::WEIGHT) {
-            new_inps[i] = opr::SharedDeviceTensor::make_const(*graph, dval).node();
+            new_inps[i] =
+                    opr::SharedDeviceTensorWithFormat::make_const(*graph, dval).node();
         } else {
             new_inps[i] = opr::VolatileSharedDeviceTensor::make(*graph, dval).node();
         }
@@ -368,10 +369,27 @@ float ProfilerImpl::profile_var_node(
         const VarNode* var, TensorFormats base_format, const ReformatKey& key) const {
     auto&& cn = var->comp_node();
     auto&& dtype = var->dtype();
-    auto dval = std::make_shared<DeviceTensorND>(cn, dtype);
     auto aligned_tensor_shape = ReformatManager::make_aligned_tensor_shape(
             var, base_format, key.input_format, key.attribute);
-    dval->resize(aligned_tensor_shape);
+
+    std::shared_ptr<DeviceTensorND> dval;
+    if (key.input_format == TensorFormats::NHCWc4 &&
+        key.attribute & ReformatAttribute::IMAGE2D) {
+        size_t align_axis = 2;
+        auto named_tensor = tensor_formats_to_named_tensor_shape(key.input_format);
+        for (size_t n = 0; n < named_tensor.ndim; n++) {
+            if (named_tensor[n].name() == megdnn::Dimension::Name::C) {
+                align_axis = n;
+                break;
+            }
+        }
+        dval = std::make_shared<DeviceTensorND>(
+                cn, aligned_tensor_shape, dtype,
+                megdnn::Image2DPack4TensorFormat::make(
+                        align_axis, opr::intl::get_megdnn_handle(cn)));
+    } else
+        dval = std::make_shared<DeviceTensorND>(cn, aligned_tensor_shape, dtype);
+
     auto graph = ComputingGraph::make();
     graph->options().graph_opt_level = 0;
     graph->options().var_sanity_check_first_run = false;
@@ -516,11 +534,46 @@ ProfilerImpl::OprFormatConfigID ProfilerImpl::tensor_formats_to_config_id(
             return OprFormatConfigID::NHWC;
         case TensorFormats::CHWNc4:
             return OprFormatConfigID::CHWN4;
+        case TensorFormats::NHCWc4:
+            return OprFormatConfigID::NHWCD4;
         default:
             mgb_throw(
                     MegBrainError, "tensor format(%u) is not supported",
                     static_cast<uint32_t>(tensor_format));
     }
+}
+
+std::shared_ptr<DeviceTensorND> ProfilerImpl::create_device_tensor_helper(
+        const OprTensorFormatsConfiguration& config, const size_t inp_idx,
+        const VarNode* var, const TensorShape aligned_shape,
+        ReformatAttribute extra_attribute) const {
+    auto&& cn = var->comp_node();
+    auto&& dtype = var->dtype();
+    std::shared_ptr<DeviceTensorND> dval;
+    if (config.config_id == OprFormatConfigID::NHWCD4 &&
+        extra_attribute & ReformatAttribute::IMAGE2D) {
+        size_t align_axis = 2;
+        auto named_tensor = tensor_formats_to_named_tensor_shape(
+                config.input_tensor_formats[inp_idx]);
+        for (size_t n = 0; n < named_tensor.ndim; n++) {
+            if (named_tensor[n].name() == megdnn::Dimension::Name::C) {
+                align_axis = n;
+                break;
+            }
+        }
+        // channel wise weight
+        bool is_channel_wise =
+                config.input_tensor_formats[inp_idx] == TensorFormats::C1RSc4;
+        if (is_channel_wise)
+            align_axis = 1;
+        dval = std::make_shared<DeviceTensorND>(
+                cn, aligned_shape, dtype,
+                megdnn::Image2DPack4TensorFormat::make(
+                        align_axis, opr::intl::get_megdnn_handle(cn)));
+    } else {
+        dval = std::make_shared<DeviceTensorND>(cn, aligned_shape, dtype);
+    }
+    return dval;
 }
 
 /* ================== ProfilerBase =================*/

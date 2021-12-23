@@ -229,6 +229,30 @@ struct OprSingleInOutTensorFormatsDispatcherImpl<OprFormatConfigID::NCHW64> {
     }
 };
 
+template <>
+struct OprSingleInOutTensorFormatsDispatcherImpl<OprFormatConfigID::NHWCD4> {
+    static Maybe<OprTensorFormatsConfiguration> dispatch(const OperatorNodeBase* opr) {
+        OprTensorFormatsConfiguration config;
+        config.typeinfo = opr->dyn_typeinfo();
+        config.opr_format = OprFormat::NHWCD4;
+        config.config_id = OprFormatConfigID::NHWCD4;
+        bool available =
+                opr->input(0)->dtype().enumv() == DTypeEnum::Float32 ||
+                DNN_FLOAT16_SELECT(
+                        (opr->input(0)->dtype().enumv() == DTypeEnum::Float16), true) ||
+                opr->input(0)->dtype().enumv() == DTypeEnum::Int8 ||
+                opr->input(0)->dtype().enumv() == DTypeEnum::QuantizedS8;
+        config.input_dtypes = {opr->input(0)->dtype().enumv()};
+        config.input_tensor_types = {TensorType::FEATURE};
+        config.output_dtypes = {opr->output(0)->dtype().enumv()};
+        config.input_tensor_formats = {TensorFormats::NHCWc4};
+        config.output_tensor_formats = {TensorFormats::NHCWc4};
+        if (available)
+            return config;
+        return None;
+    }
+};
+
 template <typename Opr, OprFormatConfigID config_id>
 struct ConvTensorFormatsDispatcherImpl;
 
@@ -814,6 +838,55 @@ struct ConvTensorFormatsDispatcherImpl<Opr, OprFormatConfigID::NCHW44_DOT_HYBRID
     }
 };
 
+template <typename Opr>
+struct ConvTensorFormatsDispatcherImpl<Opr, OprFormatConfigID::NHWCD4> {
+    static Maybe<OprTensorFormatsConfiguration> dispatch(const OperatorNodeBase* opr) {
+        const auto& conv = opr->cast_final_safe<Opr>();
+        OprTensorFormatsConfiguration config;
+        config.typeinfo = opr->dyn_typeinfo();
+        config.opr_format = OprFormat::NHWCD4;
+        config.config_id = OprFormatConfigID::NHWCD4;
+        for (size_t i = 0; i < opr->input().size(); ++i) {
+            config.input_dtypes.emplace_back(opr->input(i)->dtype().enumv());
+            TensorType tensor_type = i == 1 ? TensorType::WEIGHT : TensorType::FEATURE;
+            config.input_tensor_types.emplace_back(tensor_type);
+        }
+        config.output_dtypes.emplace_back(opr->output(0)->dtype().enumv());
+        if (conv.param().sparse == Opr::Param::Sparse::DENSE) {
+            if (opr->input(1)->dtype().enumv() == DTypeEnum::QuantizedS8 ||
+                opr->input(1)->dtype().enumv() == DTypeEnum::Quantized8Asymm) {
+                config.input_tensor_formats = {
+                        TensorFormats::NHCWc4, TensorFormats::KRSCk4c4,
+                        TensorFormats::NHCWc4, TensorFormats::NHCWc4};
+            } else {
+                config.input_tensor_formats = {
+                        TensorFormats::NHCWc4, TensorFormats::KRSCk4,
+                        TensorFormats::NHCWc4, TensorFormats::NHCWc4};
+            }
+        } else {
+            mgb_assert(conv.param().sparse == Opr::Param::Sparse::GROUP);
+            if (is_channel_wise_conv<Opr>(opr)) {
+                config.input_tensor_formats = {
+                        TensorFormats::NHCWc4, TensorFormats::C1RSc4,
+                        TensorFormats::NHCWc4, TensorFormats::NHCWc4};
+            } else {
+                if (opr->input(1)->dtype().enumv() == DTypeEnum::QuantizedS8 ||
+                    opr->input(1)->dtype().enumv() == DTypeEnum::Quantized8Asymm) {
+                    config.input_tensor_formats = {
+                            TensorFormats::NHCWc4, TensorFormats::GKRSCk4c4,
+                            TensorFormats::NHCWc4, TensorFormats::NHCWc4};
+                } else {
+                    config.input_tensor_formats = {
+                            TensorFormats::NHCWc4, TensorFormats::GKRSCk4,
+                            TensorFormats::NHCWc4, TensorFormats::NHCWc4};
+                }
+            }
+        }
+        config.output_tensor_formats = {TensorFormats::NHCWc4};
+        return config;
+    }
+};
+
 template <>
 struct ConvTensorFormatsDispatcherImpl<
         opr::ConvolutionBackwardData, OprFormatConfigID::NCHW> {
@@ -919,6 +992,57 @@ struct ConvTensorFormatsDispatcherImpl<
     }
 };
 
+template <>
+struct ConvTensorFormatsDispatcherImpl<
+        opr::ConvolutionBackwardData, OprFormatConfigID::NHWCD4> {
+    using Opr = opr::ConvolutionBackwardData;
+    static Maybe<OprTensorFormatsConfiguration> dispatch(const OperatorNodeBase* opr) {
+        const auto& conv = opr->cast_final_safe<Opr>();
+        OprTensorFormatsConfiguration config;
+        config.typeinfo = opr->dyn_typeinfo();
+        config.opr_format = OprFormat::NHWCD4;
+        config.config_id = OprFormatConfigID::NHWCD4;
+        for (size_t i = 0; i < opr->input().size(); ++i) {
+            config.input_dtypes.emplace_back(opr->input(i)->dtype().enumv());
+            TensorType tensor_type = i == 0 ? TensorType::WEIGHT : TensorType::FEATURE;
+            config.input_tensor_types.emplace_back(tensor_type);
+        }
+        config.output_dtypes.emplace_back(opr->output(0)->dtype().enumv());
+        if (conv.param().sparse == Opr::Param::Sparse::DENSE) {
+            if (opr->input(0)->dtype().enumv() == DTypeEnum::QuantizedS8 ||
+                opr->input(0)->dtype().enumv() == DTypeEnum::Quantized8Asymm) {
+                config.input_tensor_formats = {
+                        TensorFormats::KRSCk4c4, TensorFormats::NHCWc4,
+                        TensorFormats::NHCWc4, TensorFormats::NHCWc4};
+            } else {
+                config.input_tensor_formats = {
+                        TensorFormats::KRSCk4, TensorFormats::NHCWc4,
+                        TensorFormats::NHCWc4, TensorFormats::NHCWc4};
+            }
+        } else {
+            mgb_assert(conv.param().sparse == Opr::Param::Sparse::GROUP);
+            if (is_channel_wise_conv<Opr>(opr)) {
+                config.input_tensor_formats = {
+                        TensorFormats::C1RSc4, TensorFormats::NHCWc4,
+                        TensorFormats::NHCWc4, TensorFormats::NHCWc4};
+            } else {
+                if (opr->input(0)->dtype().enumv() == DTypeEnum::QuantizedS8 ||
+                    opr->input(0)->dtype().enumv() == DTypeEnum::Quantized8Asymm) {
+                    config.input_tensor_formats = {
+                            TensorFormats::GKRSCk4c4, TensorFormats::NHCWc4,
+                            TensorFormats::NHCWc4, TensorFormats::NHCWc4};
+                } else {
+                    config.input_tensor_formats = {
+                            TensorFormats::GKRSCk4, TensorFormats::NHCWc4,
+                            TensorFormats::NHCWc4, TensorFormats::NHCWc4};
+                }
+            }
+        }
+        config.output_tensor_formats = {TensorFormats::NHCWc4};
+        return config;
+    }
+};
+
 struct StaticData {
     struct KeyHash {
         size_t operator()(const std::pair<Typeinfo*, OprFormatConfigID>& val) const {
@@ -969,6 +1093,7 @@ StaticData::StaticData() {
     OPR_TENSOR_FORMATS_CONFIG_REG(ConvBias, NCHW44_DOT);
     OPR_TENSOR_FORMATS_CONFIG_REG(ConvBias, NCHW44_HYBRID);
     OPR_TENSOR_FORMATS_CONFIG_REG(ConvBias, NCHW44_DOT_HYBRID);
+    OPR_TENSOR_FORMATS_CONFIG_REG(ConvBias, NHWCD4);
 
     OPR_TENSOR_FORMATS_CONFIG_REG(ConvolutionForward, NCHW);
     OPR_TENSOR_FORMATS_CONFIG_REG(ConvolutionForward, NHWC);
@@ -979,15 +1104,18 @@ StaticData::StaticData() {
     OPR_TENSOR_FORMATS_CONFIG_REG(ConvolutionForward, NCHW44_DOT);
     OPR_TENSOR_FORMATS_CONFIG_REG(ConvolutionForward, NCHW44_HYBRID);
     OPR_TENSOR_FORMATS_CONFIG_REG(ConvolutionForward, NCHW44_DOT_HYBRID);
+    OPR_TENSOR_FORMATS_CONFIG_REG(ConvolutionForward, NHWCD4);
 
     OPR_TENSOR_FORMATS_CONFIG_REG(ConvolutionBackwardData, NCHW);
     OPR_TENSOR_FORMATS_CONFIG_REG(ConvolutionBackwardData, NHWC);
     OPR_TENSOR_FORMATS_CONFIG_REG(ConvolutionBackwardData, NCHW4);
+    OPR_TENSOR_FORMATS_CONFIG_REG(ConvolutionBackwardData, NHWCD4);
 
     OPR_SINGLE_IN_OUT_TENSOR_FORMATS_CONFIG_REG(WarpPerspectiveForward, NCHW);
     OPR_SINGLE_IN_OUT_TENSOR_FORMATS_CONFIG_REG(WarpPerspectiveForward, NHWC);
     OPR_SINGLE_IN_OUT_TENSOR_FORMATS_CONFIG_REG(WarpPerspectiveForward, NCHW4);
     OPR_SINGLE_IN_OUT_TENSOR_FORMATS_CONFIG_REG(WarpPerspectiveForward, NCHW64);
+    OPR_SINGLE_IN_OUT_TENSOR_FORMATS_CONFIG_REG(WarpPerspectiveForward, NHWCD4);
 
     OPR_SINGLE_IN_OUT_TENSOR_FORMATS_CONFIG_REG(PoolingForward, NCHW);
     OPR_SINGLE_IN_OUT_TENSOR_FORMATS_CONFIG_REG(PoolingForward, NHWC);
@@ -997,10 +1125,12 @@ StaticData::StaticData() {
     OPR_SINGLE_IN_OUT_TENSOR_FORMATS_CONFIG_REG(PoolingForward, NCHW64);
     OPR_SINGLE_IN_OUT_TENSOR_FORMATS_CONFIG_REG(PoolingForward, NCHW44);
     OPR_SINGLE_IN_OUT_TENSOR_FORMATS_CONFIG_REG(PoolingForward, NCHW88);
+    OPR_SINGLE_IN_OUT_TENSOR_FORMATS_CONFIG_REG(PoolingForward, NHWCD4);
 
     OPR_SINGLE_IN_OUT_TENSOR_FORMATS_CONFIG_REG(ResizeForward, NCHW);
     OPR_SINGLE_IN_OUT_TENSOR_FORMATS_CONFIG_REG(ResizeForward, NCHW44);
     OPR_SINGLE_IN_OUT_TENSOR_FORMATS_CONFIG_REG(ResizeForward, NCHW88);
+    OPR_SINGLE_IN_OUT_TENSOR_FORMATS_CONFIG_REG(ResizeForward, NHWCD4);
 
 #undef OPR_TENSOR_FORMATS_CONFIG_REG
 #undef OPR_SINGLE_IN_OUT_TENSOR_FORMATS_CONFIG_REG

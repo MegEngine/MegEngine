@@ -336,6 +336,10 @@ cg::OperatorNodeBase::NodeProp* VolatileSharedDeviceTensor::do_make_node_prop() 
     return ret;
 }
 
+void VolatileSharedDeviceTensor::init_output_format() {
+    output(0)->format(get_dev_tensor().format());
+}
+
 SymbolVar VolatileSharedDeviceTensor::make(
         ComputingGraph& graph, const std::shared_ptr<DeviceTensorND>& dev_data,
         const OperatorNodeConfig& config) {

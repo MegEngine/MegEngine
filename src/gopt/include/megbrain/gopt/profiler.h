@@ -202,6 +202,11 @@ protected:
             const ReformatKey& key) const;
     OprFormatConfigID tensor_formats_to_config_id(TensorFormats tensor_format) const;
 
+    std::shared_ptr<DeviceTensorND> create_device_tensor_helper(
+            const OprTensorFormatsConfiguration& config, const size_t inp_idx,
+            const VarNode* var, const TensorShape aligned_shape,
+            ReformatAttribute extra_attribute) const;
+
     OprFootprint m_opr_footprint;
     float m_opr_threshold;       /// a threshold, when the computation of the newly
                                  /// created operator that is built in some opr

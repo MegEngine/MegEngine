@@ -337,6 +337,8 @@ MGB_DEFINE_OPR_CLASS_WITH_EXPORT(
 public:
     using Super::Super;
 
+    void init_output_format() override;
+
     MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             ComputingGraph& graph, const std::shared_ptr<DeviceTensorND>& dev_data,
             const OperatorNodeConfig& config = {});

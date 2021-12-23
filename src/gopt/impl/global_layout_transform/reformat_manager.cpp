@@ -249,7 +249,7 @@ ReformatManager::ReformatManager() {
         m_cache.emplace(ReformatKey{i, o, Attribute::IMAGE2D}, impl);
     }
     {
-        auto i = TensorFormats::KCRS, o = TensorFormats::GKRSCk4;
+        auto i = TensorFormats::GKCRS, o = TensorFormats::GKRSCk4;
         auto&& impl = [](const VarNodeArray& vars) {
             return opr::RelayoutFormat::make(
                            vars[0],
@@ -259,7 +259,7 @@ ReformatManager::ReformatManager() {
         m_cache.emplace(ReformatKey{i, o, Attribute::IMAGE2D}, impl);
     }
     {
-        auto i = TensorFormats::KCRS, o = TensorFormats::C1RSc4;
+        auto i = TensorFormats::C11RS, o = TensorFormats::C1RSc4;
         auto&& impl = [](const VarNodeArray& vars) {
             return opr::RelayoutFormat::make(
                            vars[0],
@@ -267,6 +267,21 @@ ReformatManager::ReformatManager() {
                     .node();
         };
         m_cache.emplace(ReformatKey{i, o, Attribute::IMAGE2D}, impl);
+    }
+    {
+        auto i = TensorFormats::NCHW, o = TensorFormats::NHCWc4;
+        auto&& impl1 = [](const VarNodeArray& vars) {
+            return opr::RelayoutFormat::make(
+                           vars[0], megdnn::param::RelayoutFormat::Mode::NCHW_NHWCD4)
+                    .node();
+        };
+        m_cache.emplace(ReformatKey{i, o}, impl1);
+        auto&& impl2 = [](const VarNodeArray& vars) {
+            return opr::RelayoutFormat::make(
+                           vars[0], megdnn::param::RelayoutFormat::Mode::NHWCD4_NCHW)
+                    .node();
+        };
+        m_cache.emplace(ReformatKey{o, i}, impl2);
     }
     {
         auto i = TensorFormats::NCHW, o = TensorFormats::NHCWc4;
@@ -281,7 +296,7 @@ ReformatManager::ReformatManager() {
         auto i = TensorFormats::NHCWc4, o = TensorFormats::NCHW;
         auto&& impl = [](const VarNodeArray& vars) {
             return opr::RelayoutFormat::make(
-                           vars[0], megdnn::param::RelayoutFormat::Mode::NCHW_NHWCD4I)
+                           vars[0], megdnn::param::RelayoutFormat::Mode::NHWCD4I_NCHW)
                     .node();
         };
         m_cache.emplace(ReformatKey{i, o, Attribute::IMAGE2D}, impl);
@@ -344,6 +359,15 @@ ReformatManager::ReformatImpl ReformatManager::get(const ReformatKey& key) const
             if (find != m_cache.end()) {
                 auto rst = find->second;
                 return rst;
+            }
+        }
+        if (key.attribute == Attribute::IMAGE2D) {
+            auto key_ = key;
+            key_.input_dtype = DTypeEnum::Float32;
+            key_.output_dtype = DTypeEnum::Float32;
+            auto find = m_cache.find(key_);
+            if (find != m_cache.end()) {
+                return find->second;
             }
         }
         mgb_assert(
@@ -682,7 +706,8 @@ TensorShape ReformatManager::make_aligned_weight_shape(
     auto target_shape = tensor_formats_to_named_tensor_shape(target_formats);
     for (size_t i = 0; i < target_shape.ndim; ++i) {
         auto name = target_shape[i].name();
-        if ((name == Dimension::Name::K || name == Dimension::Name::N) &&
+        if ((name == Dimension::Name::K || name == Dimension::Name::N ||
+             (extra_formats == TensorFormats::NHCWc4 && name == Dimension::Name::C)) &&
             target_shape[i].extent() == UNDETERMINED_EXTENT) {
             size_t out_channels = tshp[i] * target_shape[i].stride();
             tshp[i] = divup(out_channels, out_channel_alignment) *

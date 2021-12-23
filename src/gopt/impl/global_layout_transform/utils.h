@@ -32,6 +32,7 @@ static inline const char* opr_format_to_string(
         cb(NCHW44);
         cb(NCHW88);
         cb(NCHW44_DOT);
+        cb(NHWCD4);
         default:
             mgb_assert(
                     false, "Invalid opr format(got:%u)",
@@ -63,6 +64,7 @@ static inline const char* config_id_to_string(
         cb(NCHW88_HYBRID);
         cb(NCHW44_DOT);
         cb(NCHW44_DOT_HYBRID);
+        cb(NHWCD4);
         default:
             mgb_assert(
                     false, "Invalid config id(got:%u)",
@@ -95,6 +97,8 @@ static inline TensorFormats opr_format_to_tensor_formats(
             return TensorFormats::NCHWc8;
         case OprFormat::NCHW44_DOT:
             return TensorFormats::NCHWc4;
+        case OprFormat::NHWCD4:
+            return TensorFormats::NHCWc4;
         default:
             mgb_throw(
                     AssertionError, "format(%s) is not supported",

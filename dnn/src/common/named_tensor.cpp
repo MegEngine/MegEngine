@@ -246,6 +246,8 @@ NamedTensorShape NamedTensorShape::make_named_tensor_shape(Format format) {
             return {{"N//8"}, {"C//8"}, {"H"}, {"W"}, {"C%8"}, {"N%8"}};
         case Format::NCHW44_DOT:
             return {{"N//4"}, {"C//4"}, {"H"}, {"W"}, {"N%4"}, {"C%4"}};
+        case Format::NHWCD4:
+            return {{"N"}, {"H"}, {"C//4"}, {"W"}, {"C%4"}};
         default:
             megdnn_throw(ssprintf("Format unimplement(%d)", static_cast<int>(format))
                                  .c_str());
