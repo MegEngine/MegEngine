@@ -106,6 +106,8 @@ def _uniform(
     _ref = Tensor([], dtype="int32", device=device)
     shape = utils.astensor1d(size, _ref, dtype="int32", device=device)
     (output,) = apply(op, shape)
+    if low == 0 and high == 1:
+        return output
     return low + (high - low) * output
 
 
