@@ -3,7 +3,6 @@ import pytest
 from megengine.utils.persistent_cache import _manager
 
 
-@pytest.mark.skip(reason="fixme: github ci failed")
 def test_persistent_cache():
     pc = _manager
     k0 = b"\x00\x00"
