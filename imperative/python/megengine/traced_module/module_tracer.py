@@ -92,7 +92,6 @@ BUILTIN_TENSOR_WRAP_METHOD = [
     "dtype",
     "grad",
     "item",
-    "name",
     "ndim",
     "numpy",
     "qparams",
@@ -150,6 +149,11 @@ class module_tracer:
     def current_scope(self):
         if self._active_scopes:
             return self._active_scopes[-1]
+        return None
+
+    def top_scope(self):
+        if self._active_scopes:
+            return self._active_scopes[0]
         return None
 
 
