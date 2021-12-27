@@ -510,7 +510,10 @@ void test_io_no_copy_ax(std::string model_name, int record = 1) {
     std::vector<std::vector<std::shared_ptr<Tensor>>> inputs;
     std::vector<std::vector<std::shared_ptr<Tensor>>> outputs;
 
-    std::shared_ptr<Network> network = std::make_shared<Network>();
+    Config config;
+
+    config.options.graph_opt_level = 0;
+    std::shared_ptr<Network> network = std::make_shared<Network>(config);
     network->load_model(model_path);
 
     input_names = network->get_all_input_name();
@@ -559,10 +562,10 @@ void test_io_no_copy_ax(std::string model_name, int record = 1) {
         outputs.push_back(net_outputs);
     }
 
-    Config config;
     config.options.force_output_use_user_specified_memory = true;
     config.options.comp_node_seq_record_level = record;
     config.options.const_shape = true;
+    config.options.graph_opt_level = 2;
 
     std::shared_ptr<Network> network_record = std::make_shared<Network>(config);
 

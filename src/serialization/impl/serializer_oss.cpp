@@ -946,6 +946,7 @@ GraphLoader::LoadResult GraphLoaderOSS::load(const LoadConfig& config, bool rewi
     mgb_assert(fbs_end > cur);
     // Skip to Graph end
     m_file->skip(fbs_end - cur);
+    result.graph_compile_ahead();
     return result;
 }
 

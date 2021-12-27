@@ -63,6 +63,14 @@ public:
          */
         MGE_WIN_DECLSPEC_FUC std::unique_ptr<cg::AsyncExecutable> graph_compile(
                 const ComputingGraph::OutputSpec& outspec);
+
+        /*!
+         * \brief after graph is loaded, do some basic optimized_for_inference,
+         * because some dest var maybe replaced, case error when optimize flag
+         * force_output_use_user_specified_memory is on
+         *
+         */
+        MGE_WIN_DECLSPEC_FUC void graph_compile_ahead();
     };
 
     //! helper to disable inplace arith graph optimization during
