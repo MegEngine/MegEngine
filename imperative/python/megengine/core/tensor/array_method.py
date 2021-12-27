@@ -50,6 +50,7 @@ def _elwise(*args, mode):
     if (
         mode
         in (
+            _ElwMod.TRUE_DIV,
             _ElwMod.EXP,
             _ElwMod.POW,
             _ElwMod.LOG,
@@ -66,7 +67,7 @@ def _elwise(*args, mode):
             amp._enabled
             or np.all([np.issubdtype(arg.dtype, np.integer) for arg in args])
         )
-        or mode in (_ElwMod.TRUE_DIV, _ElwMod.TANH,)
+        or mode in (_ElwMod.TANH,)
         and np.all([np.issubdtype(arg.dtype, np.integer) for arg in args])
     ):
         # autocast to FP32 to maintain precision
