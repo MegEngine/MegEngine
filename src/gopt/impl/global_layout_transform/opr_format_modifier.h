@@ -27,6 +27,9 @@ namespace intl {
 
 bool has_available_algo(const VarNodeArray& i, const cg::OperatorNodeBase* opr);
 
+bool has_no_naive_heuristic_algo(
+        const VarNodeArray& i, const cg::OperatorNodeBase* opr);
+
 struct OprFormatInfo {
     opr::Convolution::Param::Format opr_format;
     struct TensorFormatsInfo {

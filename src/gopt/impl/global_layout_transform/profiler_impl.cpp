@@ -331,7 +331,8 @@ float ProfilerImpl::profile_operator(
             opr::PoolingForward::typeinfo(),
     };
     if (multi_algo_oprs.count(opr->dyn_typeinfo()) &&
-        !mgb::gopt::intl::has_available_algo(new_inps, y->owner_opr()))
+        (!mgb::gopt::intl::has_available_algo(new_inps, y->owner_opr()) ||
+         !mgb::gopt::intl::has_no_naive_heuristic_algo(new_inps, y->owner_opr())))
         return PROFILE_TIME_OUT;
     if (!m_opr_filter(opr, y->owner_opr()))
         return PROFILE_TIME_OUT;

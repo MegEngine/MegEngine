@@ -12,6 +12,7 @@
 #pragma once
 
 #include "megbrain_build_config.h"
+#include "megdnn/oprs/base.h"
 
 #if MGB_ENABLE_GETENV
 #define MGB_GETENV ::std::getenv
@@ -36,6 +37,11 @@ bool has_available_algo(Opr* opr, Args&&... args) {
     return !all_algos.empty();
 }
 
+template <class Opr, typename... Args>
+bool has_no_naive_heuristic_algo(Opr* opr, Args&&... args) {
+    auto&& algo = opr->get_algorithm_info_heuristic(std::forward<Args>(args)...);
+    return !static_cast<bool>(algo.attribute & detail::Algorithm::Attribute::NAIVE);
+}
 }  // namespace megdnn
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
