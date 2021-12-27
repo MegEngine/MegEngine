@@ -149,9 +149,13 @@ TensorInfo* ChannelImpl::put_impl(const HostTensorND& value, bool no_cache) {
         const_cast<HostTensorND&>(value).reset(value.storage(), layout);
     }
     auto info = alloc();
-    init(info, {value.layout(), value.comp_node(), value.proxy_to_default_cpu()});
+    constexpr int size_threshold = TensorShape::MAX_NDIM;
+    init(info, {value.layout(), value.comp_node()});
+    if (value.layout().total_nr_elems() <= size_threshold) {
+        info->h_value = value;
+        info->desc.value = value.proxy_to_default_cpu();
+    }
     info->mem_desc.id = StorageIdentifier::make(++m_storage_id);
-    info->h_value = value;
     m_buffer.enqueue(Put{info, value, no_cache});
     if (m_async_level == 0) {
         sync_impl();

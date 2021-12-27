@@ -130,7 +130,10 @@ Tensor::Tensor(
         : m_layout(layout), m_blob(std::move(blob)), m_offset(offset), m_value(hv) {}
 
 Tensor::Tensor(const HostTensorND& hv) : Tensor(hv.layout(), hv.comp_node()) {
-    m_value = hv;
+    constexpr int size_threshold = TensorShape::MAX_NDIM;
+    if (hv.layout().total_nr_elems() <= size_threshold) {
+        m_value = hv;
+    }
     MGB_RECORD_EVENT(
             profiler::HostToDeviceEvent, hv.layout(), hv.comp_node(), hv.raw_ptr(),
             dev_tensor().raw_ptr());
