@@ -42,6 +42,7 @@ from ..core._imperative_rt.core2 import (
 )
 from ..core._trace_option import set_symbolic_shape
 from ..module import Module
+from ..module import external as MExternal
 from ..module.qat import QATModule
 from ..quantization.fake_quant import LSQ, TQT, FakeQuantize, _FakeQuantize
 from ..quantization.observer import (
@@ -207,6 +208,7 @@ def _wrap_method_to_tensor_node():
     for method in get_tensor_wrapable_method():
         patch = PatchedFn(TensorNode, method)
         if type(getattr(Tensor, method)) == property:
+            # Only support property.getter
             patch.set_func(property(_any_method(method, patch.origin_fn)))
         else:
             patch.set_func(_any_method(method, patch.origin_fn))
@@ -351,14 +353,14 @@ class _InsertExprs:
             assert (
                 node.top_graph == self.graph
             ), "The input node ({}) is not in the graph ({})".format(node, self.graph)
-            if isinstance(node, TensorNode) and node.expr in self.graph._exprs:
+            if node.expr in self.graph._exprs:
                 max_inp_expr_idx = max(
                     max_inp_expr_idx, self.graph._exprs.index(node.expr)
                 )
         max_inp_expr_idx += 1
 
         insert_index = -1
-        if self.expr is not None:
+        if self.expr in self.graph._exprs:
             insert_index = self.graph._exprs.index(self.expr)
         insert_index += 1
 
@@ -2070,7 +2072,8 @@ class TracedModule(Module):
         for inp_def, graph in self.argdef_graph_map.items():
             if top_graph is not None:
                 graph._top_graph = weakref.ref(top_graph)
-            for n in graph._inputs + graph.outputs:
+            for n in graph._inputs + graph._outputs:
+                n.expr._top_graph = weakref.ref(graph)
                 n._top_graph = weakref.ref(graph)
             graph._inputs[0]._owner = weakref.ref(self)
             for i, n in enumerate(graph._inputs):
@@ -2375,7 +2378,7 @@ def wrap(func: Callable):
 
 def _register_all_builtin_module():
 
-    for sub_mod in [M, M.qat, M.quantized]:
+    for sub_mod in [M, M.qat, M.quantized, MExternal]:
         for m in getmembers(sub_mod):
             if (
                 isclass(m[1])

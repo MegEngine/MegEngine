@@ -10,7 +10,7 @@ import collections
 from collections import OrderedDict, defaultdict
 from functools import partial
 from inspect import FullArgSpec
-from typing import Callable, NamedTuple
+from typing import Any, Callable, List, NamedTuple, Tuple
 
 import numpy as np
 
@@ -46,6 +46,8 @@ SUPPORTED_LEAF_TYPE = {
     int,
     float,
     bool,
+    bytes,
+    bytearray,
     QuantDtypeMeta,
     CompNode,
     Device,
@@ -74,18 +76,51 @@ SUPPORTED_LEAF_CLS = [
 NodeType = NamedTuple("NodeType", [("flatten", Callable), ("unflatten", Callable)])
 
 
-def register_supported_type(type, flatten=None, unflatten=None):
+def register_supported_type(
+    type,
+    flatten_fn: Callable[[Any], Tuple[List, Any]] = None,
+    unflatten_fn: Callable[[List, Any], Any] = None,
+):
+    r"""Call this function to register the ``type`` as a built-in type. The registered ``type`` 
+    can be used and serialized correctly in :py:class:`TracedModule`.
+
+    Examples:
+        .. code-block::
+
+            def dict_flatten(obj: Dict):
+                context, values = [], []
+                # obj.keys() needs to be sortable
+                keys = sorted(obj.keys())
+                for key in keys:
+                    values.append(obj[key])
+                    context.append(key)
+                return values, tuple(context)
+            
+            def dict_unflatten(values: List, context: Any):
+                return dict(zip(context, values))
+            
+            register_supported_type(dict, dict_flatten, dict_unflatten)
+
+    Args:
+        type: the type that needs to be registered.
+        flatten_fn: a function that should take an object created from ``type`` and return a
+            flat list of values. It can also return some context that is used in reconstructing
+            the object. Default: None
+        unflatten_fn: a function that should take a flat list of values and some context
+            (returned by flatten_fn). It returns the object by reconstructing
+            it from the list and the context. Default: None
+    """
     tp_info = (type.__module__, type.__qualname__)
-    if flatten and unflatten:
+    if flatten_fn and unflatten_fn:
         USER_REGISTERED_CONTAINER_TYPE.append(tp_info)
     else:
         USER_REGISTERED_LEAF_TYPE.append(tp_info)
-    _register_supported_type(type, flatten, unflatten)
+    _register_supported_type(type, flatten_fn, unflatten_fn)
 
 
-def _register_supported_type(type, flatten=None, unflatten=None):
-    if flatten and unflatten:
-        SUPPORTED_TYPE[type] = NodeType(flatten, unflatten)
+def _register_supported_type(type, flatten_fn=None, unflatten_fn=None):
+    if flatten_fn and unflatten_fn:
+        SUPPORTED_TYPE[type] = NodeType(flatten_fn, unflatten_fn)
     else:
         SUPPORTED_LEAF_CLS.append(type)
 
@@ -131,6 +166,7 @@ _register_supported_type(
 _register_supported_type(
     OrderedDict, partial(_dict_flatten, True), partial(_dict_unflatten, OrderedDict)
 )
+
 _register_supported_type(
     slice,
     lambda x: ([x.start, x.stop, x.step], None),
