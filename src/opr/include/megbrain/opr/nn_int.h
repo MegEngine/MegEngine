@@ -49,6 +49,8 @@ private:
     void init_output_dtype() override;
 
     void record_execute_deps(ExecDependencyArray& deps) override;
+
+    void add_input_layout_constraint() override;
 };
 
 //! deprecated; TODO: remove in megbrain 8

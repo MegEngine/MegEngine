@@ -2187,4 +2187,144 @@ void ParamMergePass::apply(OptState& opt_state) const {
     MIDOUT_E
 }
 
+/* ==================== FuseTypecvtElemwisePass ================= */
+const char* FuseTypecvtElemwisePass::name() const {
+    return mgb_cstr_log("Fuse typecvt elemwise pass");
+}
+
+void FuseTypecvtElemwisePass::apply(OptState& opt) const {
+    MIDOUT_B("FuseTypecvtElemwisePass::apply")
+    opt.set_var_replace_check_flag(
+            VarReplaceCheckFlag::CHECK_DTYPE | VarReplaceCheckFlag::CHECK_SHAPE);
+    auto rewriter = opt.graph().make_rewriter();
+    auto uniq_reader_check = UniqReaderCheck{opt.graph()};
+
+    auto try_typecvt_elemwise_fma_i16xf32xf32xf32 = [&rewriter, &uniq_reader_check](
+                                                            OperatorNodeBase* opr) {
+        // check elemwise
+        auto elemwise = try_cast_as_op<opr::Elemwise>(opr);
+        if (elemwise == nullptr)
+            return false;
+        if (elemwise->param().mode != opr::Elemwise::Mode::FUSE_MUL_ADD3)
+            return false;
+
+        bool is_elem_src_f32 =
+                elemwise->input(0)->dtype().enumv() == DTypeEnum::Float32;
+        bool is_elem_dst_f32 =
+                elemwise->output(0)->dtype().enumv() == DTypeEnum::Float32;
+
+        if (!(is_elem_src_f32 && is_elem_dst_f32))
+            return false;
+        if (!uniq_reader_check(elemwise->input(0)))
+            return false;
+
+        // check typecvt
+        auto typecvt = try_cast_as_op<opr::TypeCvt>(elemwise->input(0)->owner_opr());
+        if (typecvt == nullptr)
+            return false;
+
+        bool is_typecvt_src_i16 =
+                typecvt->input(0)->dtype().enumv() == DTypeEnum::Int16;
+        bool is_typecvt_src_u8 = typecvt->input(0)->dtype().enumv() == DTypeEnum::Uint8;
+        bool is_typecvt_dst_f32 =
+                typecvt->output(0)->dtype().enumv() == DTypeEnum::Float32;
+
+        if (!((is_typecvt_src_i16 || is_typecvt_src_u8) && is_typecvt_dst_f32))
+            return false;
+
+        SymbolVar new_elem;
+        auto src0 = rewriter.get_var(typecvt->input(0)),
+             src1 = rewriter.get_var(elemwise->input(1)),
+             src2 = rewriter.get_var(elemwise->input(2));
+        if (is_typecvt_src_i16) {
+            new_elem = opr::ElemwiseMultiType::make(
+                    {src0, src1, src2},
+                    {opr::ElemwiseMultiType::Mode::FUSE_MUL_ADD3_INT16xF32xF32xF32},
+                    OperatorNodeConfig{dtype::Float32()});
+        } else {
+            new_elem = opr::ElemwiseMultiType::make(
+                    {src0, src1, src2},
+                    {opr::ElemwiseMultiType::Mode::FUSE_MUL_ADD3_UINT8xF32xF32xF32},
+                    OperatorNodeConfig{dtype::Float32()});
+        }
+
+        rewriter.replace_var(
+                opr->output(0), new_elem.node(),
+                mgb_cstr_log("replace typecvt + elemwise(FUSE_MUL_ADD3)"
+                             "to ElemwiseMultiType(FUSE_MUL_ADD3_INTXxF32xF32xF32)"));
+
+        return true;
+    };
+
+    auto try_typecvt_elemwise_mul_i16xf32xf32 = [&rewriter, &uniq_reader_check](
+                                                        OperatorNodeBase* opr) {
+        // check elemwise
+        auto elemwise = try_cast_as_op<opr::Elemwise>(opr);
+        if (elemwise == nullptr)
+            return false;
+        if (elemwise->param().mode != opr::Elemwise::Mode::MUL)
+            return false;
+
+        bool is_elem_src_f32 =
+                elemwise->input(0)->dtype().enumv() == DTypeEnum::Float32;
+        bool is_elem_dst_f32 =
+                elemwise->output(0)->dtype().enumv() == DTypeEnum::Float32;
+
+        if (!(is_elem_src_f32 && is_elem_dst_f32))
+            return false;
+        // maybe src0 or src1
+        if (!(try_cast_as_op<opr::TypeCvt>(elemwise->input(0)->owner_opr()) ||
+              try_cast_as_op<opr::TypeCvt>(elemwise->input(1)->owner_opr())))
+            return false;
+
+        int typecvt_src_idx = (try_cast_as_op<opr::TypeCvt>(
+                                       elemwise->input(0)->owner_opr()) != nullptr)
+                                    ? 0
+                                    : 1;
+
+        int other_src_idx = (typecvt_src_idx == 0) ? 1 : 0;
+
+        if (!uniq_reader_check(elemwise->input(typecvt_src_idx)))
+            return false;
+
+        // check typecvt
+        auto typecvt = try_cast_as_op<opr::TypeCvt>(
+                elemwise->input(typecvt_src_idx)->owner_opr());
+
+        bool is_typecvt_src_i16 =
+                typecvt->input(0)->dtype().enumv() == DTypeEnum::Int16;
+        bool is_typecvt_dst_f32 =
+                typecvt->output(0)->dtype().enumv() == DTypeEnum::Float32;
+
+        if (!(is_typecvt_src_i16 && is_typecvt_dst_f32))
+            return false;
+
+        SymbolVar new_elem;
+        auto src0 = rewriter.get_var(typecvt->input(0)),
+             src1 = rewriter.get_var(elemwise->input(other_src_idx));
+        new_elem = opr::ElemwiseMultiType::make(
+                {src0, src1}, {opr::ElemwiseMultiType::Mode::MUL_INT16xF32xF32},
+                OperatorNodeConfig{dtype::Float32()});
+
+        rewriter.replace_var(
+                opr->output(0), new_elem.node(),
+                mgb_cstr_log("replace typecvt + elemwise(MUL)"
+                             "to ElemwiseMultiType(MUL_INT16xF32xF32)"));
+
+        return true;
+    };
+
+    auto on_opr = [&try_typecvt_elemwise_fma_i16xf32xf32xf32,
+                   &try_typecvt_elemwise_mul_i16xf32xf32,
+                   &rewriter](OperatorNodeBase* opr) {
+        if (!try_typecvt_elemwise_fma_i16xf32xf32xf32(opr) &&
+            !try_typecvt_elemwise_mul_i16xf32xf32(opr)) {
+            rewriter.auto_replace_outputs(opr);
+        }
+    };
+    opt.graph().iter(on_opr);
+    rewriter.apply_inplace();
+    MIDOUT_E
+}
+
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

@@ -644,6 +644,11 @@ GraphOptimizer& GraphOptimizer::add_preset_passes(
     add_pass<RemoveRedundantTypeCvtPass>();
     add_pass<RemoveRedundantCopyPass>();
 
+    //! Only arm_common implement Fuse TypeCvt and Elemwise optimized kernel
+#if (MEGDNN_AARCH64 || MEGDNN_ARMV7) && !MGB_OPENCL && !MGB_CUDA
+    add_pass<FuseTypecvtElemwisePass>();
+#endif
+
 #if MGB_JIT
     using JITConfig = cg::ComputingGraph::Options::GraphOpt::JITConfig;
     int jit_opt_level = 0;
@@ -691,6 +696,7 @@ GraphOptimizer& GraphOptimizer::add_preset_passes(
         // remove shape hint after inference optimization
         add_pass<RemoveShapeHintPass>();
     }
+
     return *this;
 }
 

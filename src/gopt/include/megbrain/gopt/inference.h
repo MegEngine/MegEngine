@@ -201,6 +201,15 @@ public:
 };
 
 /*!
+ * \brief Fuse typecvt elemwise
+ */
+class FuseTypecvtElemwisePass final : public Pass {
+public:
+    const char* name() const override;
+    void apply(OptState& opt) const override;
+};
+
+/*!
  * \brief tensor format converter to accelerate inference speed on Nvidia
  * platform
  */

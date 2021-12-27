@@ -1780,6 +1780,138 @@ TEST(TestGoptInference, ConvBiasNonlinearityFusePass_FullBias) {
     }
 }
 
+#if (MEGDNN_AARCH64 || MEGDNN_ARMV7) && !MGB_OPENCL && !MGB_CUDA
+TEST(TestGoptInference, FuseTypeCvtAndElemwiseCase0) {
+    HostTensorGenerator<dtype::Int16, RandomDistribution::UNIFORM> gen(0, 255);
+    auto cn = CompNode::load("cpu0");
+    auto graph = ComputingGraph::make();
+    graph->options().graph_opt_level = 0;
+
+    size_t n = 1;
+    size_t c = 128;
+    size_t h = 16;
+    size_t w = 16;
+    auto host_x1 = gen({n, h, w, c}, cn);
+    auto x = opr::Host2DeviceCopy::make(*graph, host_x1);
+
+    auto x_nchw = opr::Dimshuffle::make(x, {0, 3, 1, 2}, 4, cn);
+    auto x_f32 = opr::TypeCvt::make(x_nchw, dtype::Float32(), cn);
+    auto mkcvar = [&](const char* name, const TensorShape& shp) {
+        return opr::SharedDeviceTensor::make(*graph, *gen(shp, cn)).rename(name);
+    };
+    auto s = mkcvar("s", {1, c, 1, 1});
+    auto b = mkcvar("b", {1, c, 1, 1});
+
+    auto result = opr::Elemwise::make(
+            {x_f32, s, b}, opr::Elemwise::Param::Mode::FUSE_MUL_ADD3);
+
+    auto y = result;
+    SymbolVar y_opt;
+    auto options = gopt::OptimizeForInferenceOptions{};
+    unpack_vector(gopt::optimize_for_inference({y}, options), y_opt);
+
+    ASSERT_TRUE(y_opt.node()->owner_opr()->same_type<opr::ElemwiseMultiType>());
+
+    ASSERT_EQ(
+            opr::ElemwiseMultiType::Param::Mode::FUSE_MUL_ADD3_INT16xF32xF32xF32,
+            find_opr<opr::ElemwiseMultiType>(y_opt).param().mode);
+
+    HostTensorND host_y_opt, host_y;
+    auto func = graph->compile({make_callback_copy(y, host_y)});
+    func->execute();
+    graph->options().graph_opt_level = 2;
+    auto func_opt = graph->compile({make_callback_copy(y, host_y_opt)});
+    func_opt->execute();
+    MGB_ASSERT_TENSOR_NEAR(host_y, host_y_opt, 1e-5);
+}
+
+TEST(TestGoptInference, FuseTypeCvtAndElemwiseCase1) {
+    HostTensorGenerator<dtype::Int16, RandomDistribution::UNIFORM> gen(0, 255);
+    auto cn = CompNode::load("cpu0");
+    auto graph = ComputingGraph::make();
+    graph->options().graph_opt_level = 0;
+
+    size_t n = 1;
+    size_t c = 128;
+    size_t h = 16;
+    size_t w = 16;
+    auto host_x1 = gen({n, h, w, c}, cn);
+    auto x = opr::Host2DeviceCopy::make(*graph, host_x1);
+
+    auto x_nchw = opr::Dimshuffle::make(x, {0, 3, 1, 2}, 4, cn);
+    auto x_f32 = opr::TypeCvt::make(x_nchw, dtype::Float32(), cn);
+    auto mkcvar = [&](const char* name, const TensorShape& shp) {
+        return opr::SharedDeviceTensor::make(*graph, *gen(shp, cn)).rename(name);
+    };
+    auto s = mkcvar("s", {1, c, 1, 1});
+
+    auto result = opr::Elemwise::make({x_f32, s}, opr::Elemwise::Param::Mode::MUL);
+
+    auto y = result;
+    SymbolVar y_opt;
+    auto options = gopt::OptimizeForInferenceOptions{};
+    unpack_vector(gopt::optimize_for_inference({y}, options), y_opt);
+
+    ASSERT_TRUE(y_opt.node()->owner_opr()->same_type<opr::ElemwiseMultiType>());
+
+    ASSERT_EQ(
+            opr::ElemwiseMultiType::Param::Mode::MUL_INT16xF32xF32,
+            find_opr<opr::ElemwiseMultiType>(y_opt).param().mode);
+
+    HostTensorND host_y_opt, host_y;
+    auto func = graph->compile({make_callback_copy(y, host_y)});
+    func->execute();
+    graph->options().graph_opt_level = 2;
+    auto func_opt = graph->compile({make_callback_copy(y, host_y_opt)});
+    func_opt->execute();
+    MGB_ASSERT_TENSOR_NEAR(host_y, host_y_opt, 1e-5);
+}
+
+TEST(TestGoptInference, FuseTypeCvtAndElemwiseCase2) {
+    HostTensorGenerator<dtype::Uint8, RandomDistribution::UNIFORM> gen(0, 255);
+    auto cn = CompNode::load("cpu0");
+    auto graph = ComputingGraph::make();
+    graph->options().graph_opt_level = 0;
+
+    size_t n = 1;
+    size_t c = 128;
+    size_t h = 16;
+    size_t w = 16;
+    auto host_x1 = gen({n, h, w, c}, cn);
+    auto x = opr::Host2DeviceCopy::make(*graph, host_x1);
+
+    auto x_nchw = opr::Dimshuffle::make(x, {0, 3, 1, 2}, 4, cn);
+    auto x_f32 = opr::TypeCvt::make(x_nchw, dtype::Float32(), cn);
+    auto mkcvar = [&](const char* name, const TensorShape& shp) {
+        return opr::SharedDeviceTensor::make(*graph, *gen(shp, cn)).rename(name);
+    };
+    auto s = mkcvar("s", {1, c, 1, 1});
+    auto b = mkcvar("b", {1, c, 1, 1});
+
+    auto result = opr::Elemwise::make(
+            {x_f32, s, b}, opr::Elemwise::Param::Mode::FUSE_MUL_ADD3);
+
+    auto y = result;
+    SymbolVar y_opt;
+    auto options = gopt::OptimizeForInferenceOptions{};
+    unpack_vector(gopt::optimize_for_inference({y}, options), y_opt);
+
+    ASSERT_TRUE(y_opt.node()->owner_opr()->same_type<opr::ElemwiseMultiType>());
+
+    ASSERT_EQ(
+            opr::ElemwiseMultiType::Param::Mode::FUSE_MUL_ADD3_UINT8xF32xF32xF32,
+            find_opr<opr::ElemwiseMultiType>(y_opt).param().mode);
+
+    HostTensorND host_y_opt, host_y;
+    auto func = graph->compile({make_callback_copy(y, host_y)});
+    func->execute();
+    graph->options().graph_opt_level = 2;
+    auto func_opt = graph->compile({make_callback_copy(y, host_y_opt)});
+    func_opt->execute();
+    MGB_ASSERT_TENSOR_NEAR(host_y, host_y_opt, 1e-5);
+}
+#endif
+
 TEST(TestGoptInference, ParamMerge) {
     auto cns = load_multiple_xpus(2);
     HostTensorGenerator<> gen;

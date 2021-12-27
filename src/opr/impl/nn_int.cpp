@@ -77,4 +77,12 @@ void ElemwiseMultiType::record_execute_deps(ExecDependencyArray& deps) {
     record_megdnn_opr(deps);
 }
 
+void ElemwiseMultiType::add_input_layout_constraint() {
+#if (MEGDNN_AARCH64 || MEGDNN_ARMV7) && !MGB_OPENCL && !MGB_CUDA
+    for (auto i : input()) {
+        i->add_layout_constraint_contiguous();
+    }
+#endif
+}
+
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
