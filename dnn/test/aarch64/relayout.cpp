@@ -67,6 +67,18 @@ TEST_F(AARCH64, RelayoutBig) {
     checker.execl({src, dst});
 }
 
+TEST_F(AARCH64, RelayoutSplict) {
+    Checker<Relayout> checker(handle());
+    ConsecutiveRNG rng;
+    checker.set_rng(0, &rng);
+    int m = 4;
+    for (int n : {4, 28}) {
+        TensorLayout src({(size_t)m, (size_t)n}, {1, m}, dtype::Uint16());
+        TensorLayout dst({(size_t)m, (size_t)n}, {n, 1}, dtype::Uint16());
+        checker.execl({src, dst});
+    }
+}
+
 TEST_F(AARCH64, RelayoutRecord) {
     TaskRecordChecker<Relayout> checker(0);
     std::vector<::megdnn::DType> dtype_vec;
