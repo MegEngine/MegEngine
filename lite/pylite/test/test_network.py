@@ -21,6 +21,12 @@ def test_version():
     print("Lite verson: {}".format(version))
 
 
+def test_config():
+    config = LiteConfig()
+    config.bare_model_cryption_name = "nothing"
+    print(config)
+
+
 def test_network_io():
     input_io1 = LiteIO("data1", is_host=False, io_type=LiteIOType.LITE_IO_VALUE)
     input_io2 = LiteIO(
@@ -32,6 +38,7 @@ def test_network_io():
     io = LiteNetworkIO()
     io.add_input(input_io1)
     io.add_input(input_io2)
+    io.add_input("data3", False)
 
     output_io1 = LiteIO("out1", is_host=False)
     output_io2 = LiteIO("out2", is_host=True, layout=LiteLayout([1, 1000]))
@@ -39,7 +46,7 @@ def test_network_io():
     io.add_output(output_io1)
     io.add_output(output_io2)
 
-    assert len(io.inputs) == 2
+    assert len(io.inputs) == 3
     assert len(io.outputs) == 2
 
     assert io.inputs[0] == input_io1
@@ -47,8 +54,24 @@ def test_network_io():
 
     c_io = io._create_network_io()
 
-    assert c_io.input_size == 2
+    assert c_io.input_size == 3
     assert c_io.output_size == 2
+
+    ins = [["data1", True], ["data2", False, LiteIOType.LITE_IO_SHAPE]]
+    outs = [["out1", True], ["out2", False, LiteIOType.LITE_IO_VALUE]]
+
+    io2 = LiteNetworkIO(ins, outs)
+    assert len(io2.inputs) == 2
+    assert len(io2.outputs) == 2
+
+    io3 = LiteNetworkIO([input_io1, input_io2], [output_io1, output_io2])
+    assert len(io3.inputs) == 2
+    assert len(io3.outputs) == 2
+
+    test_io = LiteIO("test")
+    assert test_io.name == "test"
+    test_io.name = "test2"
+    assert test_io.name == "test2"
 
 
 class TestShuffleNet(unittest.TestCase):
@@ -319,9 +342,9 @@ class TestNetwork(TestShuffleNet):
                 data = ios[key].to_numpy().flatten()
                 input_data = self.input_data.flatten()
                 assert data.size == input_data.size
-                assert io.name.decode("utf-8") == "data"
+                assert io.name == "data"
                 for i in range(data.size):
-                    assert data[i] == input_data[i]
+                    assert abs(data[i] - input_data[i]) < 1e-5
             return 0
 
         network.set_start_callback(start_callback)
@@ -343,7 +366,7 @@ class TestNetwork(TestShuffleNet):
                 output_data = self.correct_data.flatten()
                 assert data.size == output_data.size
                 for i in range(data.size):
-                    assert data[i] == output_data[i]
+                    assert abs(data[i] - output_data[i]) < 1e-5
             return 0
 
         network.set_finish_callback(finish_callback)
@@ -404,3 +427,27 @@ class TestNetwork(TestShuffleNet):
             binary_equal_between_batch=True,
         )
         self.do_forward(network)
+
+    def test_device_tensor_no_copy(self):
+        # construct LiteOption
+        net_config = LiteConfig()
+        net_config.options.force_output_use_user_specified_memory = True
+
+        network = LiteNetwork(config=net_config)
+        network.load(self.model_path)
+
+        input_tensor = network.get_io_tensor("data")
+        # fill input_data with device data
+        input_tensor.set_data_by_share(self.input_data)
+
+        output_tensor = network.get_io_tensor(network.get_output_name(0))
+        out_array = np.zeros(output_tensor.layout.shapes, output_tensor.layout.dtype)
+
+        output_tensor.set_data_by_share(out_array)
+
+        # inference
+        for i in range(2):
+            network.forward()
+            network.wait()
+
+        self.check_correct(out_array)

@@ -69,7 +69,9 @@ class LiteOptions(Structure):
             "const_shape": bool(self.const_shape),
             "force_dynamic_alloc": bool(self.force_dynamic_alloc),
             "force_output_dynamic_alloc": bool(self.force_output_dynamic_alloc),
-            "force_output_nocopy": bool(self.force_output_nocopy),
+            "force_output_use_user_specified_memory": bool(
+                self.force_output_use_user_specified_memory
+            ),
             "no_profiling_on_shape_change": bool(self.no_profiling_on_shape_change),
             "jit_level": self.jit_level,
             "comp_node_seq_record_level": self.comp_node_seq_record_level,
@@ -99,7 +101,7 @@ class LiteConfig(Structure):
         ("device_id", c_int),
         ("device_type", c_int),
         ("backend", c_int),
-        ("bare_model_cryption_name", c_char_p),
+        ("_bare_model_cryption_name", c_char_p),
         ("options", LiteOptions),
     ]
 
@@ -110,10 +112,22 @@ class LiteConfig(Structure):
         else:
             self.options = LiteOptions()
 
-        self.bare_model_cryption_name = c_char_p(b"")
+        self._bare_model_cryption_name = c_char_p(b"")
         self.use_loader_dynamic_param = 0
         self.has_compression = 0
         self.backend = LiteBackend.LITE_DEFAULT
+
+    @property
+    def bare_model_cryption_name(self):
+        return self._bare_model_cryption_name.decode("utf-8")
+
+    @bare_model_cryption_name.setter
+    def bare_model_cryption_name(self, name):
+        if isinstance(name, str):
+            self._bare_model_cryption_name = name.encode("utf-8")
+        else:
+            assert isinstance(name, bytes), "name should be str or bytes type."
+            self._bare_model_cryption_name = name
 
     def __repr__(self):
         data = {
@@ -121,7 +135,7 @@ class LiteConfig(Structure):
             "device_id": LiteDeviceType(self.device_id),
             "device_type": LiteDeviceType(self.device_type),
             "backend": LiteBackend(self.backend),
-            "bare_model_cryption_name": self.bare_model_cryption_name.decode("utf-8"),
+            "bare_model_cryption_name": self.bare_model_cryption_name,
             "options": self.options,
         }
         return data.__repr__()
@@ -149,7 +163,7 @@ class LiteIO(Structure):
     """
 
     _fields_ = [
-        ("name", c_char_p),
+        ("_name", c_char_p),
         ("is_host", c_int),
         ("io_type", c_int),
         ("config_layout", LiteLayout),
@@ -159,9 +173,9 @@ class LiteIO(Structure):
         self, name, is_host=True, io_type=LiteIOType.LITE_IO_VALUE, layout=None
     ):
         if type(name) == str:
-            self.name = c_char_p(name.encode("utf-8"))
+            self._name = c_char_p(name.encode("utf-8"))
         else:
-            self.name = c_char_p(name)
+            self._name = c_char_p(name)
 
         if layout:
             self.config_layout = layout
@@ -170,6 +184,18 @@ class LiteIO(Structure):
 
         self.is_host = is_host
         self.io_type = io_type
+
+    @property
+    def name(self):
+        return self._name.decode("utf-8")
+
+    @name.setter
+    def name(self, name):
+        if isinstance(name, str):
+            self._name = name.encode("utf-8")
+        else:
+            assert isinstance(name, bytes), "name should be str or bytes type."
+            self._name = name
 
     def __repr__(self):
         data = {
@@ -208,17 +234,45 @@ class LiteNetworkIO(object):
     the input and output information for user to construct _LiteNetWorkIO
     """
 
-    def __init__(self):
+    def __init__(self, inputs=None, outputs=None):
         self.inputs = []
         self.outputs = []
+        if inputs:
+            for i in inputs:
+                if isinstance(i, list):
+                    self.inputs.append(LiteIO(*i))
+                else:
+                    assert isinstance(
+                        i, LiteIO
+                    ), "the param to construct LiteNetworkIO must be list of the LiteIO member or the LiteIO."
+                    self.inputs.append(i)
+        if outputs:
+            for i in outputs:
+                if isinstance(i, list):
+                    self.outputs.append(LiteIO(*i))
+                else:
+                    assert isinstance(
+                        i, LiteIO
+                    ), "the param to construct LiteNetworkIO must be list of the LiteIO member or the LiteIO."
+                    self.outputs.append(i)
 
-    def add_input(self, input_io):
-        assert isinstance(input_io, LiteIO)
-        self.inputs.append(input_io)
+    def add_input(
+        self, obj, is_host=True, io_type=LiteIOType.LITE_IO_VALUE, layout=None
+    ):
+        if isinstance(obj, LiteIO):
+            self.inputs.append(obj)
+        else:
+            name = obj
+            self.add_input(LiteIO(name, is_host, io_type, layout))
 
-    def add_output(self, output_io):
-        assert isinstance(output_io, LiteIO)
-        self.outputs.append(output_io)
+    def add_output(
+        self, obj, is_host=True, io_type=LiteIOType.LITE_IO_VALUE, layout=None
+    ):
+        if isinstance(obj, LiteIO):
+            self.outputs.append(obj)
+        else:
+            name = obj
+            self.add_output(LiteIO(name, is_host, io_type, layout))
 
     def _create_network_io(self):
         network_io = _LiteNetworkIO()

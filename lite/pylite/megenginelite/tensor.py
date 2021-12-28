@@ -48,6 +48,15 @@ ctype_to_lite_dtypes = {
     c_ushort: LiteDataType.LITE_UINT16,
 }
 
+_lite_dtypes_to_ctype = {
+    LiteDataType.LITE_INT: c_int,
+    LiteDataType.LITE_FLOAT: c_float,
+    LiteDataType.LITE_UINT8: c_ubyte,
+    LiteDataType.LITE_INT8: c_byte,
+    LiteDataType.LITE_INT16: c_short,
+    LiteDataType.LITE_UINT16: c_ushort,
+}
+
 
 class LiteLayout(Structure):
     """
@@ -55,7 +64,7 @@ class LiteLayout(Structure):
     """
 
     _fields_ = [
-        ("shapes", c_size_t * MAX_DIM),
+        ("_shapes", c_size_t * MAX_DIM),
         ("ndim", c_size_t),
         ("data_type", c_int),
     ]
@@ -64,10 +73,10 @@ class LiteLayout(Structure):
         if shape:
             shape = list(shape)
             assert len(shape) <= MAX_DIM, "Layout max dim is 7."
-            self.shapes = (c_size_t * MAX_DIM)(*shape)
+            self._shapes = (c_size_t * MAX_DIM)(*shape)
             self.ndim = len(shape)
         else:
-            self.shapes = (c_size_t * MAX_DIM)()
+            self._shapes = (c_size_t * MAX_DIM)()
             self.ndim = 0
         if not dtype:
             self.data_type = LiteDataType.LITE_FLOAT
@@ -83,9 +92,24 @@ class LiteLayout(Structure):
         else:
             raise RuntimeError("unkonw data type")
 
+    @property
+    def dtype(self):
+        return _lite_type_to_nptypes[LiteDataType(self.data_type)]
+
+    @property
+    def shapes(self):
+        return list(self._shapes)[0 : self.ndim]
+
+    @shapes.setter
+    def shapes(self, shape):
+        shape = list(shape)
+        assert len(shape) <= MAX_DIM, "Layout max dim is 7."
+        self._shapes = (c_size_t * MAX_DIM)(*shape)
+        self.ndim = len(shape)
+
     def __repr__(self):
         data = {
-            "shapes": list(self.shapes)[0 : self.ndim],
+            "shapes": self.shapes,
             "ndim": self.ndim,
             "data_type": _lite_type_to_nptypes[LiteDataType(self.data_type)],
         }
@@ -177,15 +201,20 @@ class LiteTensor(object):
         device_type=LiteDeviceType.LITE_CPU,
         device_id=0,
         is_pinned_host=False,
+        shapes=None,
+        dtype=None,
     ):
         """
-        create a Tensor with layout, device, is_pinned_host param
+        create a Tensor with layout, device, is_pinned_host or shapes, dtype,
+        device_type, device_id, is_pinned_host param
         """
         self._tensor = _Ctensor()
-        if layout:
+        self._layout = LiteLayout()
+        if layout is not None:
             self._layout = layout
-        else:
-            self._layout = LiteLayout()
+        elif shapes is not None:
+            shapes = list(shapes)
+            self._layout = LiteLayout(shapes, dtype)
         self._device_type = device_type
         self._device_id = device_id
         self._is_pinned_host = is_pinned_host
@@ -222,9 +251,12 @@ class LiteTensor(object):
 
     @layout.setter
     def layout(self, layout):
-        assert isinstance(layout, LiteLayout)
-        self._layout = layout
-        self._api.LITE_set_tensor_layout(self._tensor, layout)
+        if isinstance(layout, LiteLayout):
+            self._layout = layout
+        elif isinstance(layout, list):
+            self._layout.shapes = layout
+
+        self._api.LITE_set_tensor_layout(self._tensor, self._layout)
 
     @property
     def is_pinned_host(self):
@@ -270,7 +302,6 @@ class LiteTensor(object):
         """
         get the length of the meomry in byte
         """
-        self.update()
         length = c_size_t()
         self._api.LITE_get_tensor_total_size_in_byte(self._tensor, byref(length))
         return length.value
@@ -336,7 +367,6 @@ class LiteTensor(object):
         """
         get the memory of the tensor, return c_void_p of the tensor memory
         """
-        self.update()
         mem = c_void_p()
         self._api.LITE_get_tensor_memory(self._tensor, byref(mem))
         return mem
@@ -347,7 +377,6 @@ class LiteTensor(object):
         param data: the data will shared to the tensor, it should be a
         numpy.ndarray or ctypes data
         """
-        self.update()
         if isinstance(data, np.ndarray):
             assert (
                 self.is_continue
@@ -356,8 +385,7 @@ class LiteTensor(object):
                 self.is_pinned_host or self.device_type == LiteDeviceType.LITE_CPU
             ), "set_data_by_share can only apply in cpu tensor or pinned tensor."
 
-            np_type = _lite_type_to_nptypes[LiteDataType(self._layout.data_type)]
-            c_type = np.ctypeslib.as_ctypes_type(np_type)
+            c_type = _lite_dtypes_to_ctype[LiteDataType(self._layout.data_type)]
 
             if self.nbytes != data.nbytes:
                 self.layout = LiteLayout(data.shape, ctype_to_lite_dtypes[c_type])
@@ -377,7 +405,6 @@ class LiteTensor(object):
         param data: the data to copy to tensor, it should be list,
         numpy.ndarraya or ctypes with length
         """
-        self.update()
         if layout is not None:
             self.layout = layout
 
@@ -386,8 +413,7 @@ class LiteTensor(object):
             self.is_pinned_host or self.device_type == LiteDeviceType.LITE_CPU
         ), "set_data_by_copy can only apply in cpu tensor or pinned tensor."
 
-        np_type = _lite_type_to_nptypes[LiteDataType(self._layout.data_type)]
-        c_type = np.ctypeslib.as_ctypes_type(np_type)
+        c_type = _lite_dtypes_to_ctype[LiteDataType(self._layout.data_type)]
 
         tensor_memory = c_void_p()
 
@@ -414,6 +440,22 @@ class LiteTensor(object):
             ), "when input data is ctypes, the length of input data or layout must set"
             self._api.LITE_get_tensor_memory(self._tensor, byref(tensor_memory))
             memmove(tensor_memory, data, data_length)
+
+    def get_data_by_share(self):
+        """
+        get the data in the tensor, add share the data with a new numpy, and
+        return the numpy arrray, be careful, the data in numpy is valid before
+        the tensor memory is write again, such as LiteNetwok forward next time.
+        """
+        assert self.is_continue, "get_data_by_share can only apply in continue tensor."
+        assert (
+            self.is_pinned_host or self.device_type == LiteDeviceType.LITE_CPU
+        ), "get_data_by_share can only apply in CPU tensor or cpu pinned tensor."
+
+        memory = self.get_ctypes_memory()
+        c_type = _lite_dtypes_to_ctype[LiteDataType(self._layout.data_type)]
+        pnt = cast(memory, POINTER(c_type))
+        return np.ctypeslib.as_array(pnt, self._layout.shapes)
 
     def to_numpy(self):
         """
@@ -475,3 +517,13 @@ def LiteTensorConcat(
     )
     result_tensor.update()
     return result_tensor
+
+
+def lite_dtype_2_numpy(dtype):
+    """
+    convert lite dtype to corresponding numpy dtype
+    """
+    assert isinstance(
+        dtype, LiteDataType
+    ), "input must be LiteDataType when using lite_dtype_2_numpy."
+    return _lite_type_to_nptypes[dtype]
