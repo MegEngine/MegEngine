@@ -726,6 +726,28 @@ auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
 
 auto infer_output_attrs_fallible(
         const OpDef& def, const SmallVector<LogicalTensorDesc>& input_descs) {
+    TensorShape shape;
+    DType dtype = input_descs[0].layout.dtype;
+    CompNode comp_node = input_descs[0].comp_node;
+    for (auto&& desc : input_descs) {
+        if (desc.layout.ndim) {
+            shape = desc.layout;
+            break;
+        }
+    }
+    for (size_t i = 0; i < input_descs.size(); ++i) {
+        if (input_descs[i].layout.ndim) {
+            mgb_assert(
+                    input_descs[i].layout.eq_shape(shape),
+                    "inputs of JITFusionOp should have same shapes");
+        }
+        mgb_assert(
+                input_descs[i].layout.dtype == dtype,
+                "inputs of JITFusionOp should have same dtypes");
+        mgb_assert(
+                input_descs[i].comp_node == comp_node,
+                "inputs of JITFusionOp should have same devices");
+    }
     return OpDef::infer_output_attrs_fallible(
             *def.cast_final_safe<JITFusionOp>().op, input_descs);
 }
