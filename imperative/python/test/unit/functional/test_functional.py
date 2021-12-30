@@ -1218,30 +1218,49 @@ def test_pixel_shuffle():
     out = F.pixel_shuffle(tensor(inp), upscale_factor=4)
     golden = pixel_shuffle(inp, 4)
     np.testing.assert_equal(out.numpy(), golden)
+    inp_float = np.float32(inp)
+    out = F.pixel_shuffle(inp_float, 2)
+    golden = pixel_shuffle(inp_float, 2)
+    np.testing.assert_equal(out.numpy(),golden)
 
     # ndim = 4
     inp = np.arange(3 * 18 * 3 * 3).reshape(3, 18, 3, 3)
     out = F.pixel_shuffle(tensor(inp), upscale_factor=3)
     golden = pixel_shuffle(inp, 3)
     np.testing.assert_equal(out.numpy(), golden)
+    inp_float = np.float32(inp)
+    out = F.pixel_shuffle(inp_float, 2)
+    golden = pixel_shuffle(inp_float, 2)
+    np.testing.assert_equal(out.numpy(),golden)
 
     # ndim = 5
     inp = np.arange(5 * 3 * 20 * 3 * 4).reshape(5, 3, 20, 3, 4)
     out = F.pixel_shuffle(tensor(inp), upscale_factor=2)
     golden = pixel_shuffle(inp, 2)
     np.testing.assert_equal(out.numpy(), golden)
-
+    inp_float = np.float32(inp)
+    out = F.pixel_shuffle(inp_float, 2)
+    golden = pixel_shuffle(inp_float, 2)
+    np.testing.assert_equal(out.numpy(),golden)
     # ndim = 6
     inp = np.arange(6 * 5 * 3 * 25 * 3 * 4).reshape(6, 5, 3, 25, 3, 4)
     out = F.pixel_shuffle(tensor(inp), upscale_factor=5)
     golden = pixel_shuffle(inp, 5)
     np.testing.assert_equal(out.numpy(), golden)
+    inp_float = np.float32(inp)
+    out = F.pixel_shuffle(inp_float, 2)
+    golden = pixel_shuffle(inp_float, 2)
+    np.testing.assert_equal(out.numpy(),golden)
 
     # ndim = 7
     inp = np.arange(2 * 3 * 5 * 3 * 20 * 3 * 4).reshape(2, 3, 5, 3, 20, 3, 4)
     out = F.pixel_shuffle(tensor(inp), upscale_factor=2)
     golden = pixel_shuffle(inp, 2)
     np.testing.assert_equal(out.numpy(), golden)
+    inp_float = np.float32(inp)
+    out = F.pixel_shuffle(inp_float, 2)
+    golden = pixel_shuffle(inp_float, 2)
+    np.testing.assert_equal(out.numpy(),golden)
 
 
 @pytest.mark.parametrize("is_symbolic", [False, True])
@@ -1260,6 +1279,13 @@ def test_pixel_shuffle_symbolic(is_symbolic):
         if is_symbolic is None:
             break
 
+    inp = np.float32(inp)
+    golden = pixel_shuffle(inp, 2)
+    for _ in range(3):
+        out = fn(inp, 2)
+        np.testing.assert_equal(out.numpy(), golden)
+        if is_symbolic is None:
+            break
 
 def test_set_conv2d_config():
     """check setting config by contextmanager is equal to manually converted result"""
