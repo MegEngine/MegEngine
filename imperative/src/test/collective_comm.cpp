@@ -20,7 +20,7 @@ TEST(TestImperative, AllReduceBasic) {
     REQUIRE_GPU(2);
     const char* server_addr = "127.0.0.1";
     uint32_t port = 3456;
-    mgb_assert(create_zmqrpc_server(server_addr, port) > 0);
+    mgb_assert(opr::create_zmqrpc_server(server_addr, port) > 0);
     HostTensorGenerator<> gen;
     CompNode cn0 = CompNode::load("gpu0"), cn1 = CompNode::load("gpu1");
 

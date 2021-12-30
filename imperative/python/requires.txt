@@ -4,8 +4,8 @@ pyarrow
 requests
 tabulate
 tqdm
-redispy
 deprecated
 mprop
 wheel
 megfile>=0.0.10
+filelock

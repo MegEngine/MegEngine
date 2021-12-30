@@ -210,7 +210,7 @@ void init_utils(py::module m) {
             .def("disable", [](TensorSanityCheck& checker) { checker.disable(); });
 
 #if MGB_ENABLE_OPR_MM
-    m.def("create_mm_server", &create_zmqrpc_server, py::arg("addr"),
+    m.def("create_mm_server", &mgb::opr::create_zmqrpc_server, py::arg("addr"),
           py::arg("port") = 0);
 #else
     m.def("create_mm_server", []() {});
@@ -234,51 +234,108 @@ void init_utils(py::module m) {
     using ExtendedPersistentCache =
             mgb::imperative::persistent_cache::ExtendedPersistentCache;
 
-    struct PersistentCacheManager {
-        std::shared_ptr<ExtendedPersistentCache> instance;
+    struct ConfigurablePersistentCache : mgb::PersistentCache {
+        struct Config {
+            std::string type;
+            std::unordered_map<std::string, std::string> args;
+            std::string on_success;
+            std::string on_fail;
+        };
 
-        bool try_reg(std::shared_ptr<ExtendedPersistentCache> cache) {
-            if (cache) {
-                instance = cache;
-                PersistentCache::set_impl(cache);
-                return true;
+        std::shared_ptr<ExtendedPersistentCache> impl;
+        std::optional<Config> impl_config;
+        std::vector<Config> configs;
+
+        void add_config(
+                std::string type, std::unordered_map<std::string, std::string> args,
+                std::string on_success, std::string on_fail) {
+            configs.push_back({type, args, on_success, on_fail});
+        }
+
+        std::optional<size_t> clean() { return get_impl()->clear(); }
+
+        void load_config() {
+            std::optional<std::string> err_msg;
+            for (size_t i = 0; i < configs.size(); ++i) {
+                auto& config = configs[i];
+                if (err_msg) {
+                    mgb_log_warn("try fallback to %s cache", config.type.c_str());
+                } else {
+                    err_msg.emplace();
+                }
+                auto cache = ExtendedPersistentCache::make_from_config(
+                        config.type, config.args, *err_msg);
+                if (!cache) {
+                    mgb_log_warn("%s %s", config.on_fail.c_str(), err_msg->c_str());
+                } else {
+                    impl = cache;
+                    impl_config = config;
+                    break;
+                }
             }
-            return false;
+            mgb_assert(impl_config.has_value(), "not valid config");
         }
-        bool open_redis(
-                std::string ip, size_t port, std::string password, std::string prefix) {
-            return try_reg(mgb::imperative::persistent_cache::make_redis(
-                    ip, port, password, prefix));
-        }
-        bool open_file(std::string path) {
-            return try_reg(mgb::imperative::persistent_cache::make_in_file(path));
-        }
-        std::optional<size_t> clean() {
-            if (instance) {
-                return instance->clear();
+
+        std::shared_ptr<ExtendedPersistentCache> get_impl() {
+            if (!impl) {
+                load_config();
             }
-            return {};
+            return impl;
         }
-        void put(std::string category, std::string key, std::string value) {
-            PersistentCache::inst().put(
-                    category, {key.data(), key.size()}, {value.data(), value.size()});
+
+        virtual mgb::Maybe<Blob> get(const std::string& category, const Blob& key) {
+            return get_impl()->get(category, key);
         }
-        py::object get(std::string category, std::string key) {
-            auto value =
-                    PersistentCache::inst().get(category, {key.data(), key.size()});
+
+        virtual void put(
+                const std::string& category, const Blob& key, const Blob& value) {
+            return get_impl()->put(category, key, value);
+        }
+
+        virtual bool support_dump_cache() { return get_impl()->support_dump_cache(); }
+
+        py::object py_get(std::string category, std::string key) {
+            auto value = get_impl()->get(category, {key.data(), key.size()});
             if (value.valid()) {
                 return py::bytes(std::string((const char*)value->ptr, value->size));
             } else {
                 return py::none();
             }
         }
+
+        void py_put(std::string category, std::string key, std::string value) {
+            get_impl()->put(
+                    category, {key.data(), key.size()}, {value.data(), value.size()});
+        }
+
+        void flush() {
+            if (impl) {
+                impl->flush();
+            }
+        }
     };
 
-    py::class_<PersistentCacheManager>(m, "PersistentCacheManager")
-            .def(py::init<>())
-            .def("try_open_redis", &PersistentCacheManager::open_redis)
-            .def("try_open_file", &PersistentCacheManager::open_file)
-            .def("clean", &PersistentCacheManager::clean)
-            .def("put", &PersistentCacheManager::put)
-            .def("get", &PersistentCacheManager::get);
+    auto PyConfigurablePersistentCache =
+            py::class_<
+                    ConfigurablePersistentCache,
+                    std::shared_ptr<ConfigurablePersistentCache>>(m, "PersistentCache")
+                    .def(py::init<>())
+                    .def("add_config", &ConfigurablePersistentCache::add_config)
+                    .def("reg",
+                         [](std::shared_ptr<ConfigurablePersistentCache> inst) {
+                             PersistentCache::set_impl(inst);
+                         })
+                    .def("clean", &ConfigurablePersistentCache::clean)
+                    .def("get", &ConfigurablePersistentCache::py_get)
+                    .def("put", &ConfigurablePersistentCache::py_put)
+                    .def_readonly("config", &ConfigurablePersistentCache::impl_config)
+                    .def("flush", &ConfigurablePersistentCache::flush);
+
+    py::class_<ConfigurablePersistentCache::Config>(
+            PyConfigurablePersistentCache, "Config")
+            .def_readwrite("type", &ConfigurablePersistentCache::Config::type)
+            .def_readwrite("args", &ConfigurablePersistentCache::Config::args)
+            .def_readwrite("on_fail", &ConfigurablePersistentCache::Config::on_fail)
+            .def_readwrite(
+                    "on_success", &ConfigurablePersistentCache::Config::on_success);
 }

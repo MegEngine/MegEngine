@@ -13,8 +13,6 @@ global:
         base_exceptions*;
     };
     megcore*;
-    *GroupClientProxy*;
-    *create_zmqrpc_server*;
     *custom*;
 
 
