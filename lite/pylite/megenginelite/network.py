@@ -362,6 +362,8 @@ class _NetworkAPI(_LiteCObjBase):
         ("LITE_set_start_callback", [_Cnetwork, LiteStartCallback]),
         ("LITE_set_finish_callback", [_Cnetwork, LiteFinishCallback]),
         ("LITE_get_static_memory_alloc_info", [_Cnetwork, c_char_p]),
+        ("LITE_enable_global_layout_transform", [_Cnetwork]),
+        ("LITE_dump_layout_transform_model", [_Cnetwork, c_char_p]),
     ]
 
 
@@ -610,3 +612,10 @@ class LiteNetwork(object):
     def get_static_memory_alloc_info(self, log_dir="logs/test"):
         c_log_dir = log_dir.encode("utf-8")
         self._api.LITE_get_static_memory_alloc_info(self._network, c_log_dir)
+
+    def enable_global_layout_transform(self):
+        self._api.LITE_enable_global_layout_transform(self._network)
+
+    def dump_layout_transform_model(self, model_file):
+        c_file = model_file.encode("utf-8")
+        self._api.LITE_dump_layout_transform_model(self._network, c_file)

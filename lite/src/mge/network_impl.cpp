@@ -406,7 +406,7 @@ void NetworkImplDft::load_model(
         use_tensorrt();
     }
 
-    m_load_result = m_loader->load(m_load_config, false);
+    m_load_result = m_loader->load(m_load_config, true);
 
     global_layout_transform();
 

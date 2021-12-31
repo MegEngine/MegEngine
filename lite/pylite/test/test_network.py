@@ -451,3 +451,20 @@ class TestNetwork(TestShuffleNet):
             network.wait()
 
         self.check_correct(out_array)
+
+    def test_enable_global_layout_transform(self):
+        network = LiteNetwork()
+        network.enable_global_layout_transform()
+        network.load(self.model_path)
+        self.do_forward(network)
+
+    def test_dump_layout_transform_model(self):
+        network = LiteNetwork()
+        network.enable_global_layout_transform()
+        network.load(self.model_path)
+        network.dump_layout_transform_model("./model_afer_layoutTrans.mgb")
+        self.do_forward(network)
+
+        fi = open("./model_afer_layoutTrans.mgb", "r")
+        fi.close()
+        os.remove("./model_afer_layoutTrans.mgb")

@@ -910,7 +910,6 @@ TEST(TestNetWork, LoadPackedModel) {
 }
 
 TEST(TestNetWork, GlabalLayoutTransform) {
-    // set_log_level(LiteLogLevel::DEBUG);
     auto tensor = get_input_data("./input_data.npy");
     std::string model_path = "./shufflenet.mge";
     std::string input_name = "data";
@@ -931,6 +930,7 @@ TEST(TestNetWork, GlabalLayoutTransform) {
     network->forward();
     network->wait();
     ASSERT_TRUE(fopen(dump_model_name.c_str(), "r"));
+    remove(dump_model_name.c_str());
 }
 
 TEST(TestNetWork, GetDeviceType) {
