@@ -572,6 +572,22 @@ LITE_API int LITE_enable_io_bin_dump(LiteNetwork network, const char* io_bin_out
 LITE_API int LITE_get_static_memory_alloc_info(
         LiteNetwork network, const char* log_dir);
 
+/**
+ * \brief enable the global layout transform optimization
+ * \return int if the return is not zero, error happened, the error message
+ * can get by LITE_get_last_error
+ */
+LITE_API int LITE_enable_global_layout_transform(LiteNetwork network);
+
+/**
+ * \brief dump the model after the global layout transform optimization
+ * \param[in] dump_file_path The model file path need to dump
+ * \return int if the return is not zero, error happened, the error message
+ * can get by LITE_get_last_error
+ */
+LITE_API int LITE_dump_layout_transform_model(
+        LiteNetwork network, const char* dump_file_path);
+
 #ifdef __cplusplus
 }
 #endif

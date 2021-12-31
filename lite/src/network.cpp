@@ -505,4 +505,33 @@ void Runtime::shared_weight_with_network(
     LITE_ERROR_HANDLER_END
 }
 
+void Runtime::enable_global_layout_transform(std::shared_ptr<Network> network) {
+    LITE_ERROR_HANDLER_BEGIN
+    auto network_impl = NetworkHelper::implement(network);
+    if (network_impl->get_backend_type() == LiteBackend::LITE_DEFAULT) {
+        LITE_ASSERT(
+                !NetworkHelper::loaded(network),
+                "enable_global_layout_transform should be used before model loaded.");
+        call_func<NetworkImplDft, void>("enable_global_layout_transform", network_impl);
+        return;
+    }
+    LITE_THROW("enable_global_layout_transform is not aviliable in the backend.");
+    LITE_ERROR_HANDLER_END
+}
+
+void Runtime::dump_layout_transform_model(
+        std::shared_ptr<Network> network, std::string optimized_model_path) {
+    LITE_ERROR_HANDLER_BEGIN
+    auto network_impl = NetworkHelper::implement(network);
+    if (network_impl->get_backend_type() == LiteBackend::LITE_DEFAULT) {
+        LITE_ASSERT(
+                NetworkHelper::loaded(network),
+                "dump_layout_transform_model should be used after model loaded.");
+        call_func<NetworkImplDft, void>(
+                "dump_layout_transform_model", network_impl, optimized_model_path);
+        return;
+    }
+    LITE_THROW("dump_layout_transform_model is not aviliable in the backend.");
+    LITE_ERROR_HANDLER_END
+}
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

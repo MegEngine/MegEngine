@@ -22,7 +22,6 @@
 #include "megbrain/common.h"
 #include "megbrain/comp_node.h"
 #include "megbrain/comp_node_env.h"
-#include "megbrain/gopt/inference.h"
 #include "megbrain/graph.h"
 #include "megbrain/graph/cg.h"
 #include "megbrain/opr/io.h"
@@ -364,19 +363,26 @@ void NetworkImplDft::adapt_option_valid() {
     }
 }
 
+void NetworkImplDft::global_layout_transform() {
+    if (m_set_layout_transform) {
+        m_load_result.output_var_list = mgb::gopt::layout_transform(
+                m_load_result.output_var_list, m_layout_transform_target);
+    }
+}
+
 void NetworkImplDft::load_model(
         std::shared_ptr<void> model_mem, size_t size,
         std::unordered_map<std::string, LiteAny> separate_config_map) {
     if (!m_loader) {
         m_input_file =
                 mgb::serialization::InputFile::make_mem_proxy(model_mem, size, false);
-        auto format = mgb::serialization::GraphLoader::identify_graph_dump_format(
+        m_format = mgb::serialization::GraphLoader::identify_graph_dump_format(
                 *m_input_file);
-        if (!format.valid()) {
+        if (!m_format.valid()) {
             LITE_THROW("invalid model format");
         }
         m_loader = mgb::serialization::GraphLoader::make(
-                std::move(m_input_file), format.val());
+                std::move(m_input_file), m_format.val());
     }
 
     //! applay the user configration to mge model
@@ -400,7 +406,9 @@ void NetworkImplDft::load_model(
         use_tensorrt();
     }
 
-    m_load_result = m_loader->load(m_load_config, true);
+    m_load_result = m_loader->load(m_load_config, false);
+
+    global_layout_transform();
 
     adapt_option_valid();
 
@@ -847,9 +855,6 @@ const char* NetworkImplDft::get_input_name(size_t index) const {
 //! Plugin part
 void NetworkImplDft::enable_profile_performance(std::string profile_json_file) {
 #if MGB_ENABLE_JSON
-#if MGB_OPENCL
-    mgb::CompNode::enable_opencl_profile(true);
-#endif
     m_profiler = std::make_unique<mgb::GraphProfiler>(m_load_config.comp_graph.get());
     m_profiler_output_file = profile_json_file;
 #else
@@ -889,5 +894,40 @@ void NetworkImplDft::get_static_memory_alloc_info(const std::string& log_dir) co
     LITE_MARK_USED_VAR(log_dir);
 }
 
+void NetworkImplDft::enable_global_layout_transform() {
+    m_layout_transform_target = mgb::gopt::GraphTuningOptions::Target::UNSPEC;
+
+    switch (m_user_config->device_type) {
+        case LiteDeviceType::LITE_CPU:
+            m_layout_transform_target = mgb::gopt::GraphTuningOptions::Target::CPU;
+            break;
+        case LiteDeviceType::LITE_CUDA:
+            m_layout_transform_target = mgb::gopt::GraphTuningOptions::Target::CUDA;
+            break;
+        default:
+            m_layout_transform_target = mgb::gopt::GraphTuningOptions::Target::UNSPEC;
+            LITE_WARN(
+                    "lite compnode type: enum value: %d. is unspecial for layout "
+                    "transform",
+                    (int)(m_user_config->device_type));
+    }
+    m_set_layout_transform = true;
+}
+
+void NetworkImplDft::dump_layout_transform_model(std::string optimized_model_path) {
+    if (m_set_layout_transform) {
+        auto out_file = mgb::serialization::OutputFile::make_fs(
+                optimized_model_path.c_str(), 'w');
+        using DumpConfig = mgb::serialization::GraphDumper::DumpConfig;
+        DumpConfig config{1, false, false};
+        auto dumper = mgb::serialization::GraphDumper::make(
+                std::move(out_file), m_format.val());
+        dumper->dump(m_load_result.output_var_list, config);
+    } else {
+        LITE_THROW(
+                ssprintf("dump layout transform model should call "
+                         "enable_global_layout_transform before"));
+    }
+}
 #endif
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

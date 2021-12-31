@@ -909,6 +909,30 @@ TEST(TestNetWork, LoadPackedModel) {
     network->wait();
 }
 
+TEST(TestNetWork, GlabalLayoutTransform) {
+    // set_log_level(LiteLogLevel::DEBUG);
+    auto tensor = get_input_data("./input_data.npy");
+    std::string model_path = "./shufflenet.mge";
+    std::string input_name = "data";
+    std::string dump_model_name = "./shufflenet_after_trans.mge";
+
+    NetworkIO IO;
+    Config config;
+    std::shared_ptr<Network> network = std::make_shared<Network>(config, IO);
+    Runtime::enable_global_layout_transform(network);
+    network->load_model(model_path);
+
+    std::shared_ptr<Tensor> input_tensor = network->get_io_tensor(input_name);
+    auto src_ptr = tensor->get_memory_ptr();
+    auto src_layout = tensor->get_layout();
+    input_tensor->reset(src_ptr, src_layout);
+
+    Runtime::dump_layout_transform_model(network, dump_model_name);
+    network->forward();
+    network->wait();
+    ASSERT_TRUE(fopen(dump_model_name.c_str(), "r"));
+}
+
 TEST(TestNetWork, GetDeviceType) {
     auto tensor = get_input_data("./input_data.npy");
     std::string model_path = "./shufflenet.mge";

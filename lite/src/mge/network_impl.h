@@ -19,6 +19,9 @@
 #include "network_impl_base.h"
 #include "tensor_impl.h"
 
+#include <memory>
+#include <unordered_map>
+#include "megbrain/gopt/inference.h"
 #include "megbrain/graph/bases.h"
 #include "megbrain/plugin/opr_io_dump.h"
 #include "megbrain/plugin/profiler.h"
@@ -27,9 +30,6 @@
 #include "megbrain/serialization/load_dump_config.h"
 #include "megbrain/serialization/serializer.h"
 #include "megbrain/utils/thin/hash_table.h"
-
-#include <memory>
-#include <unordered_map>
 
 namespace lite {
 
@@ -170,10 +170,19 @@ public:
     void get_static_memory_alloc_info(
             const std::string& log_dir = "logs/test") const override;
 
+    //! set global layout transform optimization for network
+    void enable_global_layout_transform();
+
+    //! dump network after global layout transform optimization
+    void dump_layout_transform_model(std::string optimized_model_path);
+
 private:
     //! construct the outputspec according to the m_network_io, and set the
     //! call_back to the outputspec
     void make_output_spec();
+
+    //! do the global layout transform for the given platform target
+    void global_layout_transform();
 
     //! modify the execution policy
     void modify_exection_policy();
@@ -223,6 +232,7 @@ private:
     int m_nr_device_type = 0;
     size_t m_nr_threads = 1;
     bool m_compute_configured_output_only = false;
+    bool m_set_layout_transform = false;
     mgb::CompNode::Locator m_compnode_locator;
 
     AsyncCallback m_async_callback = nullptr;
@@ -233,6 +243,9 @@ private:
     //! The model load related data
     S m_execution_policy = static_cast<S>(0);
     std::unique_ptr<mgb::serialization::InputFile> m_input_file;
+    mgb::Maybe<mgb::serialization::GraphDumpFormat> m_format;
+    mgb::gopt::GraphTuningOptions::Target m_layout_transform_target;
+
     mgb::serialization::GraphLoadConfig m_load_config;
     mgb::serialization::GraphLoader::LoadResult m_load_result;
     mgb::ComputingGraph::OutputSpec m_output_spec;

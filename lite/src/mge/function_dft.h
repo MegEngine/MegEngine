@@ -121,6 +121,8 @@ inline void call_func<NetworkImplDft, void>(
         CALL_FUNC(use_tensorrt);
     } else if (func_name == "set_cpu_inplace_mode") {
         CALL_FUNC(set_cpu_inplace_mode);
+    } else if (func_name == "enable_global_layout_transform") {
+        CALL_FUNC(enable_global_layout_transform);
     } else {
         THROW_FUNC_ERROR(func_name);
     }
@@ -186,6 +188,8 @@ inline void call_func<NetworkImplDft, void>(
         return CALL_FUNC(enable_io_txt_dump, file_name);
     } else if (func_name == "enable_io_bin_dump") {
         return CALL_FUNC(enable_io_bin_dump, file_name);
+    } else if (func_name == "dump_layout_transform_model") {
+        return CALL_FUNC(dump_layout_transform_model, file_name);
     }
     THROW_FUNC_ERROR(func_name);
 }

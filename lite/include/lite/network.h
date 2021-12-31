@@ -97,7 +97,7 @@ struct LITE_API Options {
     bool no_profiling_on_shape_change = false;
     uint8_t jit_level = 0;
     uint8_t comp_node_seq_record_level = 0;
-    uint8_t graph_opt_level = 2;
+    uint8_t graph_opt_level = 0;
     uint16_t async_exec_level = 1;
 
     //! layout transform options
@@ -366,6 +366,14 @@ public:
     static void shared_weight_with_network(
             std::shared_ptr<Network> dst_network,
             const std::shared_ptr<Network> src_network);
+
+    //! set global layout transform optimization for network
+
+    static void enable_global_layout_transform(std::shared_ptr<Network> network);
+
+    //! dump network after global layout transform optimization
+    static void dump_layout_transform_model(
+            std::shared_ptr<Network> network, std::string optimized_model_path);
 };
 
 }  // namespace lite

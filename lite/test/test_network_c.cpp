@@ -889,6 +889,21 @@ TEST(TestCapiNetWork, ProfileIOdump) {
     LITE_CAPI_CHECK(LITE_destroy_network(c_network));
 }
 
+TEST(TestCapiNetWork, GlabalLayoutTransform) {
+    ForwardMgb;
+    MakeNetwork;
+    LITE_CAPI_CHECK(LITE_enable_global_layout_transform(c_network));
+    LoadNetwork;
+    LITE_CAPI_CHECK(LITE_dump_layout_transform_model(
+            c_network, "./shufflenet_after_trans.mge"));
+    SetInput;
+    ForwardNetwork;
+    ASSERT_TRUE(fopen("./shufflenet_after_trans.mge", "r"));
+    GetOutput;
+    CompareResult;
+    LITE_CAPI_CHECK(LITE_destroy_network(c_network));
+}
+
 TEST(TestCapiNetWork, GetDeviceType) {
     lite::Config config;
     auto lite_tensor = lite::get_input_data("./input_data.npy");

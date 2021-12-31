@@ -648,4 +648,21 @@ int LITE_get_static_memory_alloc_info(LiteNetwork network, const char* log_dir) 
     LITE_CAPI_END();
 }
 
+int LITE_enable_global_layout_transform(LiteNetwork network) {
+    LITE_CAPI_BEGIN();
+    LITE_ASSERT(network, "The network pass to LITE api is null");
+    std::shared_ptr<lite::Network> network_shared{
+            static_cast<lite::Network*>(network), [](void*) {}};
+    lite::Runtime::enable_global_layout_transform(network_shared);
+    LITE_CAPI_END();
+}
+
+int LITE_dump_layout_transform_model(LiteNetwork network, const char* dump_file_path) {
+    LITE_CAPI_BEGIN();
+    LITE_ASSERT(network, "The network pass to LITE api is null");
+    std::shared_ptr<lite::Network> network_shared{
+            static_cast<lite::Network*>(network), [](void*) {}};
+    lite::Runtime::dump_layout_transform_model(network_shared, dump_file_path);
+    LITE_CAPI_END();
+}
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
