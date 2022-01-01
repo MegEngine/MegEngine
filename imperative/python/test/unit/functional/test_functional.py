@@ -59,14 +59,47 @@ def test_where():
 
 
 def test_dropout():
-    # test training mode
-    data = tensor(np.ones(10000000, dtype=np.float32))
-    out = F.nn.dropout(data, 1.0 / 3.0, training=True)
-    assert not out.numpy().all()
+    from megengine.autodiff import GradManager
+    from megengine.core._imperative_rt.ops import set_global_rng_seed
 
-    # test eval mode
-    out = F.nn.dropout(data, 1.0 / 3.0, training=False)
-    assert out.numpy().all()
+    def test_dropout_with_shape(shape, rate):
+        data = tensor(np.ones(shape, dtype=np.float32))
+        gm = GradManager().attach([data])
+        with gm:
+            out = F.nn.dropout(data, rate, training=True)
+            gm.backward(out, tensor(np.ones(shape, dtype=np.float32)))
+            assert not out.numpy().all()
+            np.testing.assert_allclose(out.numpy(), data.grad.numpy(), 1e-7, 1e-7)
+
+    def test_multiple_dropout(shape, rate):
+        data = tensor(np.ones(shape, dtype=np.float32))
+        gm = GradManager().attach([data])
+        with gm:
+            out1 = F.nn.dropout(data, rate, training=True)
+            out2 = F.nn.dropout(out1, rate, training=True)
+            out3 = F.nn.dropout(out2, rate, training=True)
+            gm.backward(out3, tensor(np.ones(shape, dtype=np.float32)))
+            np.testing.assert_allclose(out3.numpy(), data.grad.numpy(), 1e-7, 1e-7)
+
+    def test_dropout_seed(shape, rate):
+        data = tensor(np.random.randn(*shape), dtype="float32")
+        set_global_rng_seed(111)
+        out1 = F.nn.dropout(data, rate, training=True)
+        out2 = F.nn.dropout(data, rate, training=True)
+        assert not (out1.numpy() == out2.numpy()).all()
+
+        set_global_rng_seed(111)
+        out3 = F.nn.dropout(data, rate, training=True)
+        assert (out1.numpy() == out3.numpy()).all()
+
+        set_global_rng_seed(222)
+        out4 = F.nn.dropout(data, rate, training=True)
+        assert not (out1.numpy() == out4.numpy()).all()
+
+    test_dropout_with_shape([13, 17, 63, 21], 0.4)
+    test_dropout_with_shape([16, 32, 64], 0.3)
+    test_multiple_dropout([1024], 0.2)
+    test_dropout_seed([16, 32], 0.2)
 
 
 def test_matinv():

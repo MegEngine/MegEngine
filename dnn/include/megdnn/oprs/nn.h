@@ -2005,6 +2005,50 @@ protected:
             size_t workspace_in_bytes);
 };
 
+class DropoutBase : public OperatorBase {
+    DEF_OPR_IMPL_CTOR(DropoutBase, OperatorBase);
+    DEF_OPR_PARAM(Dropout);
+};
+
+class DropoutForward : public DropoutBase {
+    DEF_OPR_IMPL(DropoutForward, DropoutBase, 1, 2);
+
+public:
+    void deduce_layout(const TensorLayout& inp, TensorLayout& oup, TensorLayout& mask);
+    virtual void exec(
+            _megdnn_tensor_in inp, _megdnn_tensor_out oup, _megdnn_tensor_out mask,
+            _megdnn_workspace workspace) = 0;
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& inp, const TensorLayout& oup,
+            const TensorLayout& mask) = 0;
+    virtual size_t get_mask_size_in_bytes(const TensorLayout& inp) = 0;
+
+protected:
+    void check_exec(
+            const TensorLayout& inp, const TensorLayout& oup, const TensorLayout& mask,
+            size_t workspace_in_bytes);
+};
+using Dropout = DropoutForward;
+
+class DropoutBackward : public DropoutBase {
+    DEF_OPR_IMPL(DropoutBackward, DropoutBase, 2, 1);
+
+public:
+    void deduce_layout(
+            const TensorLayout& doup, const TensorLayout& mask, TensorLayout& dinp);
+    virtual void exec(
+            _megdnn_tensor_in doup, _megdnn_tensor_in mask, _megdnn_tensor_out dinp,
+            _megdnn_workspace workspace) = 0;
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& doup, const TensorLayout& mask,
+            const TensorLayout& dinp) = 0;
+
+protected:
+    void check_exec(
+            const TensorLayout& doup, const TensorLayout& mask,
+            const TensorLayout& dinp, size_t workspace_in_bytes);
+};
+
 }  // namespace megdnn
 #include "megdnn/internal/opr_header_epilogue.h"
 

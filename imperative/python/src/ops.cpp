@@ -567,7 +567,15 @@ void init_ops(py::module m) {
                 rng::delete_handle(handle);
             },
             py::call_guard<py::gil_scoped_release>());
-    m.def("set_global_rng_seed", &rng::set_global_rng_seed);
+    m.def("set_global_rng_seed", [](uint64_t seed) -> void {
+        mgb_assert(
+                python::interpreter_for_py->check_available(),
+                "set global random seed failed since imperative interpreter has been "
+                "destroyed");
+        python::interpreter_for_py->sync();
+        mgb::CompNode::sync_all();
+        rng::set_global_rng_seed(seed);
+    });
     m.def("get_global_rng_seed", &rng::get_global_rng_seed);
     m.def("get_rng_handle_compnode", &rng::get_rng_handle_compnode);
 

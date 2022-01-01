@@ -36,6 +36,7 @@
 #include "src/naive/deformable_conv/opr_impl.h"
 #include "src/naive/deformable_ps_roi_pooling/opr_impl.h"
 #include "src/naive/dot/opr_impl.h"
+#include "src/naive/dropout/opr_impl.h"
 #include "src/naive/elemwise/opr_impl.h"
 #include "src/naive/elemwise_multi_type/opr_impl.h"
 #include "src/naive/eye/opr_impl.h"

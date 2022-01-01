@@ -211,8 +211,9 @@ private:
     cb(PaddingForward) \
     cb(PaddingBackward) \
     cb(LayerNormForward) \
-    cb(LayerNormBackward)
-
+    cb(LayerNormBackward) \
+    cb(DropoutForward) \
+    cb(DropoutBackward)
 // clang-format on
 
 /*!

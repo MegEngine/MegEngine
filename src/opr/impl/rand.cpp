@@ -201,6 +201,8 @@ template class RNGOprBase<::megdnn::BetaRNG>;
 template class RNGOprBase<::megdnn::PoissonRNG>;
 template class RNGOprBase<::megdnn::ShuffleRNGForward>;
 template class RNGOprBase<::megdnn::ShuffleRNGBackward>;
+template class RNGOprBase<::megdnn::DropoutForward>;
+template class RNGOprBase<::megdnn::DropoutBackward>;
 #if MGB_ENABLE_GRAD
 IMPL(GaussianRNG);
 IMPL(UniformRNG);
@@ -299,5 +301,135 @@ MGB_IMPL_OPR_GRAD(ShuffleRNGForward) {
 
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(ShuffleRNGBackward);
 MEGDNN_OPR_INIT3(ShuffleRNGBackward, "shuffle_rng_bwd", 2, true)
+
+/* ================= DropoutForward =================  */
+
+MGB_DYN_TYPE_OBJ_FINAL_IMPL(DropoutForward);
+
+DropoutForward::DropoutForward(
+        VarNode* inp, const Param& param, const OperatorNodeConfig& config)
+        : Super({inp->owner_graph(), config, "dropout", {inp}}, param) {
+    add_input({inp});
+    add_output(None)->dtype(inp->dtype()).add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
+    add_output(None)->dtype(dtype::Byte()).add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
+    cg::add_workspace_output(this);
+    add_equivalence_component<ScalarHash<void*>>(this);
+}
+
+SymbolVarArray DropoutForward::make(
+        SymbolVar inp, const Param& param, const OperatorNodeConfig& config) {
+    auto node = inp.node()->owner_graph()->insert_opr(
+            std::make_unique<DropoutForward>(inp.node(), param, config));
+    mgb_assert(node->output().size() == 3);
+    return {node->output(0), node->output(1)};
+}
+
+void DropoutForward::init_output_static_infer_desc() {
+    using namespace cg::static_infer;
+    auto&& mgr = owner_graph()->static_infer_manager();
+    mgr.register_shape_infer(output(0), ShapeInferDesc::make_identity(input(0)));
+
+    auto infer_mask = [this](TensorShape& dest, const InpVal& iv) {
+        ensure_megdnn_opr();
+        dest.ndim = 1;
+        dest.shape[0] = m_dnn_opr->get_mask_size_in_bytes(
+                {iv.val[0].shape(), input(0)->dtype()});
+        return true;
+    };
+    mgr.register_shape_infer(
+            output(1), {SourceType::DEP, {{input(0), DepType::SHAPE}}, infer_mask});
+
+    auto infer_wk = [this](TensorShape& dest, const InpVal& inp) {
+        ensure_megdnn_opr();
+        dest.ndim = 1;
+        dest.shape[0] = m_dnn_opr->get_workspace_in_bytes(
+                {inp.val[0].shape(), input(0)->dtype()},
+                {output(0)->shape(), output(0)->dtype()},
+                {output(1)->shape(), output(1)->dtype()});
+        return true;
+    };
+    mgr.register_shape_infer(
+            output(2), {SourceType::DEP, {{input(0), DepType::SHAPE}}, infer_wk});
+}
+
+void DropoutForward::add_input_layout_constraint() {
+    input(0)->add_layout_constraint_contiguous();
+};
+
+void DropoutForward::scn_do_execute() {
+    auto&& ret = output(0);
+    if (ret->layout().is_empty()) {
+        mgb_assert(ret->dev_tensor().empty());
+        return;
+    }
+    m_dnn_opr->exec(
+            input(0)->dev_tensor().as_megdnn(), output(0)->dev_tensor().as_megdnn(),
+            output(1)->dev_tensor().as_megdnn(),
+            get_megdnn_workspace_from_var(output(2)));
+}
+
+cg::OperatorNodeBase::NodeProp* DropoutForward::do_make_node_prop() const {
+    auto prop = Super::do_make_node_prop();
+    prop->add_flag(NodeProp::Flag::IMPURE_FUNC);
+    for (auto i : input()) {
+        prop->add_dep_type_existing_var(i, NodeProp::DepType::VALUE_ALLOW_EMPTY);
+    }
+    return prop;
+}
+
+#if MGB_ENABLE_GRAD
+MGB_IMPL_OPR_GRAD(DropoutForward) {
+    SymbolVar grad = DropoutBackward::make(out_grad[0], opr.output(1), opr.param());
+    VarNodeArray ret;
+    ret.push_back(grad.node());
+    return ret;
+}
+#endif
+
+/* ==================== LayerNormBackward ==================== */
+
+MGB_DYN_TYPE_OBJ_FINAL_IMPL(DropoutBackward);
+
+DropoutBackward::DropoutBackward(
+        VarNode* doup, VarNode* mask, const Param& param,
+        const OperatorNodeConfig& config)
+        : Super({doup->owner_graph(), config, "dropout_backward", {doup, mask}}, 0,
+                true) {
+    init_megdnn_opr(*this, param);
+    add_input({doup, mask});
+}
+
+SymbolVar DropoutBackward::make(
+        SymbolVar doup, SymbolVar mask, const Param& param,
+        const OperatorNodeConfig& config) {
+    return doup.insert_single_output_opr<DropoutBackward>(
+            doup.node(), mask.node(), param, config);
+}
+
+void DropoutBackward::init_output_static_infer_desc() {
+    using namespace cg::static_infer;
+    auto&& mgr = owner_graph()->static_infer_manager();
+    mgr.register_shape_infer(output(0), ShapeInferDesc::make_identity(input(0)));
+    this->init_output_static_infer_desc_workspace(false);
+}
+
+void DropoutBackward::init_output_dtype() {
+    output(0)->dtype(input(0)->dtype());
+}
+
+size_t DropoutBackward::get_workspace_size_bytes(
+        const TensorShapeArray& input_shapes,
+        const TensorShapeArray& output_shapes) const {
+    return megdnn_opr()->get_workspace_in_bytes(
+            {input_shapes[0], input(0)->dtype(), input(0)->format()},
+            {input_shapes[1], input(1)->dtype(), input(1)->format()},
+            {output_shapes[0], output(0)->dtype(), output(0)->format()});
+}
+
+void DropoutBackward::scn_do_execute() {
+    megdnn_opr()->exec(
+            input(0)->dev_tensor().as_megdnn(), input(1)->dev_tensor().as_megdnn(),
+            output(0)->dev_tensor().as_megdnn(), {});
+}
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

@@ -446,4 +446,42 @@ TEST(TestOprRand, PermutationReprod) {
     });
 }
 
+TEST(TestOprRand, Dropout) {
+    auto run = [&](TensorShape shape, uint64_t seed, float drop_prob) {
+        using Param = megdnn::DropoutBase::Param;
+        Param param(drop_prob, seed);
+        float scale = 1.0 / (1.0 - drop_prob);
+
+        std::shared_ptr<HostTensorND> inp_host(
+                new HostTensorND{CompNode::load("xpux"), shape, dtype::Float32()});
+        for (size_t i = 0; i < shape.total_nr_elems(); ++i) {
+            inp_host->ptr<dt_float32>()[i] = 1.0f;
+        }
+
+        auto graph = ComputingGraph::make();
+        auto inp_sym = opr::Host2DeviceCopy::make(*graph, inp_host);
+        auto outs = opr::DropoutForward::make(inp_sym, param);
+
+        HostTensorND oup_host, mask_host, ws_host;
+        auto func = graph->compile(
+                {make_callback_copy(outs[0], oup_host),
+                 make_callback_copy(outs[1], mask_host)});
+        func->execute();
+
+        size_t droped_cnt = 0;
+        for (size_t i = 0; i < shape.total_nr_elems(); ++i) {
+            ASSERT_TRUE(
+                    oup_host.ptr<dt_float32>()[i] == 0 ||
+                    oup_host.ptr<dt_float32>()[i] == scale);
+            if (oup_host.ptr<dt_float32>()[i] == 0) {
+                droped_cnt++;
+            }
+        }
+        float real_drop = droped_cnt * 1.0 / shape.total_nr_elems();
+        ASSERT_LT(abs(drop_prob - real_drop), 1e-2);
+    };
+    run({100000}, 0, 0.2);
+    run({64, 32, 16, 16}, 1, 0.4);
+}
+
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

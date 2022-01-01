@@ -87,6 +87,7 @@ _DEFINE_RNG_OPR_WITH_INPUT_CLASS(PoissonRNG)
 #undef _OUTPUTS
 #define _OUTPUTS SymbolVarArray
 _DEFINE_RNG_OPR_WITH_INPUT_CLASS(ShuffleRNGForward)
+_DEFINE_RNG_OPR_WITH_INPUT_CLASS(DropoutForward)
 #undef _OUTPUTS
 #undef _INPUTS
 
@@ -108,6 +109,8 @@ using PermutationRNG = intl::PermutationRNG;
 using PoissonRNG = intl::PoissonRNG;
 using BetaRNG = intl::BetaRNG;
 using ShuffleRNG = intl::ShuffleRNGForward;
+using Dropout = intl::DropoutForward;
+using DropoutForward = intl::DropoutForward;
 
 MGB_DEFINE_OPR_CLASS_WITH_EXPORT(
         ShuffleRNGBackward, intl::MegDNNOprWrapperBwd<megdnn::ShuffleRNGBackward>) // {
@@ -119,6 +122,26 @@ public:
     MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar out_diff, SymbolVar indices, SymbolVar result_shape,
             const Param& param = {}, const OperatorNodeConfig& config = {});
+};
+
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(
+        DropoutBackward, intl::MegDNNOprWrapperBwd<megdnn::DropoutBackward>) // {
+public:
+    MGE_WIN_DECLSPEC_FUC DropoutBackward(
+            VarNode* doup, VarNode* mask, const Param& param,
+            const OperatorNodeConfig& config);
+
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
+            SymbolVar doup, SymbolVar mask, const Param& param = {},
+            const OperatorNodeConfig& config = {});
+
+private:
+    void init_output_static_infer_desc() override;
+    void init_output_dtype() override;
+    size_t get_workspace_size_bytes(
+            const TensorShapeArray& input_shapes,
+            const TensorShapeArray& output_shapes) const override;
+    void scn_do_execute() override;
 };
 
 }  // namespace opr

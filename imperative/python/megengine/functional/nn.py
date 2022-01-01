@@ -13,10 +13,12 @@ from typing import NamedTuple, Optional, Sequence, Tuple, Union
 from ..core import _config
 from ..core._imperative_rt.core2 import apply, dtype_promotion
 from ..core._imperative_rt.ops import SubgraphBuilder as _SubgraphBuilder
+from ..core._imperative_rt.ops import get_global_rng_seed as _get_global_rng_seed
 from ..core.ops import builtin
 from ..core.ops.builtin import (
     BatchNorm,
     Dimshuffle,
+    Dropout,
     Elemwise,
     GetVarShape,
     Identity,
@@ -39,7 +41,6 @@ from ..core.tensor.utils import (
 from ..device import get_default_device
 from ..distributed import WORLD, is_distributed
 from ..jit import exclude_from_trace
-from ..random import uniform
 from ..tensor import Tensor
 from ..utils.deprecation import deprecated_func
 from ..utils.tuple_function import _pair, _pair_nonzero, _triple, _triple_nonzero
@@ -1503,12 +1504,9 @@ def dropout(inp: Tensor, drop_prob: float, training: bool = True) -> Tensor:
         return inp
 
     # model in training mode, e.g. model.train()
-    rv = uniform(size=inp.shape)
-    mask = rv > drop_prob
-    ret = inp * mask.astype(inp.dtype)
-    ret *= 1 / (1 - drop_prob)
-
-    return ret
+    op = Dropout(drop_prob=drop_prob, seed=_get_global_rng_seed(), handle=0)
+    outputs = apply(op, inp)
+    return outputs[0]
 
 
 def one_hot(inp: Tensor, num_classes: int) -> Tensor:

@@ -117,6 +117,7 @@ union OperatorParam {
     param.ShuffleRNG = 83,
     param.CheckNonFinite = 84,
     param.LayerNorm = 85,
+    param.Dropout = 86,
 }
 
 table Operator {

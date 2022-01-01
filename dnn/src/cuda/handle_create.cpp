@@ -34,6 +34,7 @@
 #include "src/cuda/deformable_conv/opr_impl.h"
 #include "src/cuda/deformable_ps_roi_pooling/opr_impl.h"
 #include "src/cuda/dot/opr_impl.h"
+#include "src/cuda/dropout/opr_impl.h"
 #include "src/cuda/elemwise/opr_impl.h"
 #include "src/cuda/elemwise_multi_type/opr_impl.h"
 #include "src/cuda/eye/opr_impl.h"
