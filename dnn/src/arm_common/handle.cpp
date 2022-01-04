@@ -19,9 +19,12 @@
 #include "src/arm_common/elemwise/opr_impl.h"
 #include "src/arm_common/elemwise_multi_type/opr_impl.h"
 #include "src/arm_common/local/opr_impl.h"
+#include "src/arm_common/lstm/opr_impl.h"
+#include "src/arm_common/lstm_cell/opr_impl.h"
 #include "src/arm_common/pooling/opr_impl.h"
 #include "src/arm_common/reduce/opr_impl.h"
 #include "src/arm_common/resize/opr_impl.h"
+#include "src/arm_common/rnn_cell/opr_impl.h"
 #include "src/arm_common/separable_conv/opr_impl.h"
 #include "src/arm_common/separable_filter/opr_impl.h"
 #include "src/arm_common/type_cvt/opr_impl.h"
@@ -50,6 +53,9 @@ MEGDNN_SPECIALIZE_CREATE_OPERATOR(TypeCvt)
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(Reduce)
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(ConvBias)
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(ConvolutionBackwardData)
+MEGDNN_SPECIALIZE_CREATE_OPERATOR(RNNCell)
+MEGDNN_SPECIALIZE_CREATE_OPERATOR(LSTMCell)
+MEGDNN_SPECIALIZE_CREATE_OPERATOR(LSTM)
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpragmas"
