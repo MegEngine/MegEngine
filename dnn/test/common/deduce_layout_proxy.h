@@ -77,17 +77,18 @@ struct DeduceLayoutProxy<Opr, 6, false> {
 };
 
 template <typename Opr>
-struct DeduceLayoutProxy<Opr, 6, true> {
-    static void deduce_layout(Opr* opr, TensorLayoutArray& layouts) {
-        megdnn_assert(layouts.size() == 6);
-        opr->deduce_layout(
-                layouts[0], layouts[1], layouts[2], layouts[3], layouts[4], layouts[5]);
-    }
+struct DeduceLayoutProxy<Opr, 7, false> {
+    static void deduce_layout(Opr*, TensorLayoutArray&) {}
 };
 
 template <typename Opr>
-struct DeduceLayoutProxy<Opr, 7, false> {
-    static void deduce_layout(Opr*, TensorLayoutArray&) {}
+struct DeduceLayoutProxy<Opr, 7, true> {
+    static void deduce_layout(Opr* opr, TensorLayoutArray& layouts) {
+        megdnn_assert(layouts.size() == 7);
+        opr->deduce_layout(
+                layouts[0], layouts[1], layouts[2], layouts[3], layouts[4], layouts[5],
+                layouts[6]);
+    }
 };
 
 template <typename Opr>
@@ -109,6 +110,38 @@ struct DeduceLayoutProxy<Opr, 9, true> {
                 layouts[6], layouts[7], layouts[8]);
     }
 };
+
+template <typename Opr>
+struct DeduceLayoutProxy<Opr, 10, true> {
+    static void deduce_layout(Opr* opr, TensorLayoutArray& layouts) {
+        megdnn_assert(layouts.size() == 10);
+        opr->deduce_layout(
+                layouts[0], layouts[1], layouts[2], layouts[3], layouts[4], layouts[5],
+                layouts[6], layouts[7], layouts[8], layouts[9]);
+    }
+};
+
+template <typename Opr>
+struct DeduceLayoutProxy<Opr, 10, false> {
+    static void deduce_layout(Opr*, TensorLayoutArray&) {}
+};
+
+template <typename Opr>
+struct DeduceLayoutProxy<Opr, 13, true> {
+    static void deduce_layout(Opr* opr, TensorLayoutArray& layouts) {
+        megdnn_assert(layouts.size() == 13);
+        opr->deduce_layout(
+                layouts[0], layouts[1], layouts[2], layouts[3], layouts[4], layouts[5],
+                layouts[6], layouts[7], layouts[8], layouts[9], layouts[10],
+                layouts[11], layouts[12]);
+    }
+};
+
+template <typename Opr>
+struct DeduceLayoutProxy<Opr, 13, false> {
+    static void deduce_layout(Opr*, TensorLayoutArray&) {}
+};
+
 }  // namespace test
 }  // namespace megdnn
 

@@ -224,5 +224,6 @@ std::unique_ptr<Opr> Handle::create_operator() {
 
 #define INST(opr) template std::unique_ptr<opr> Handle::create_operator();
 MEGDNN_FOREACH_OPR_CLASS(INST)
+
 #undef INST
 // vim: syntax=cpp.doxygen

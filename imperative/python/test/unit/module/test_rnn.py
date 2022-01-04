@@ -11,6 +11,7 @@ import pytest
 
 import megengine as mge
 import megengine.functional as F
+from megengine.device import get_device_count
 from megengine.module import LSTM, RNN, LSTMCell, RNNCell
 
 
@@ -20,6 +21,7 @@ def assert_tuple_equal(src, ref):
         assert i == j
 
 
+@pytest.mark.skipif(get_device_count("gpu") > 0, reason="no algorithm on cuda")
 @pytest.mark.parametrize(
     "batch_size, input_size, hidden_size, init_hidden",
     [(3, 10, 20, True), (3, 10, 20, False), (1, 10, 20, False)],
@@ -35,7 +37,7 @@ def test_rnn_cell(batch_size, input_size, hidden_size, init_hidden):
     assert_tuple_equal(h_new.shape, (batch_size, hidden_size))
 
 
-# is batch_size == 0 tolerated ? it will cause error in slice operation xx[:, ...]
+@pytest.mark.skipif(get_device_count("gpu") > 0, reason="no algorithm on cuda")
 @pytest.mark.parametrize(
     "batch_size, input_size, hidden_size, init_hidden",
     [(3, 10, 20, True), (3, 10, 20, False), (1, 10, 20, False)],
@@ -53,6 +55,7 @@ def test_lstm_cell(batch_size, input_size, hidden_size, init_hidden):
     assert_tuple_equal(c_new.shape, (batch_size, hidden_size))
 
 
+@pytest.mark.skipif(get_device_count("gpu") > 0, reason="no algorithm on cuda")
 @pytest.mark.parametrize(
     "batch_size, seq_len, input_size, hidden_size, num_layers, bidirectional, init_hidden, batch_first",
     [
@@ -70,7 +73,6 @@ def test_lstm_cell(batch_size, input_size, hidden_size, init_hidden):
         ),
     ],
 )
-# (0, 1, 1, 1, 1, False, True, False)])
 def test_rnn(
     batch_size,
     seq_len,
@@ -113,6 +115,7 @@ def test_rnn(
     )
 
 
+@pytest.mark.skipif(get_device_count("gpu") > 0, reason="no algorithm on cuda")
 @pytest.mark.parametrize(
     "batch_size, seq_len, input_size, hidden_size, num_layers, bidirectional, init_hidden, batch_first",
     [
@@ -130,7 +133,6 @@ def test_rnn(
         ),
     ],
 )
-# (0, 1, 1, 1, 1, False, True, False)])
 def test_lstm(
     batch_size,
     seq_len,
@@ -175,7 +177,3 @@ def test_lstm(
     assert_tuple_equal(
         h_n[1].shape, (num_directions * num_layers, batch_size, hidden_size)
     )
-
-
-if __name__ == "__main__":
-    test_lstm(5, 10, 10, 20, 1, False, False, True)

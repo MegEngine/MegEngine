@@ -27,6 +27,7 @@ public:
             const TensorLayout& bias_ih, const TensorLayout& hx,
             const TensorLayout& weight_hh, const TensorLayout& bias_hh,
             const TensorLayout& dst) override;
+    bool is_thread_safe() const override { return true; }
 };
 
 }  // namespace naive

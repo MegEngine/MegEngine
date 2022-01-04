@@ -30,6 +30,8 @@ public:
             const TensorLayout& weight_hh, const TensorLayout& bias_hh,
             const TensorLayout& cx, const TensorLayout& h_new,
             const TensorLayout& c_new, const TensorLayout& gates) override;
+
+    bool is_thread_safe() const override { return true; }
 };
 
 }  // namespace naive

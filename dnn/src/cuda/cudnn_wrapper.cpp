@@ -160,29 +160,6 @@ void TensorDesc::set(
     }
 }
 
-void TensorDesc::set_nd(const TensorLayout& layout, int pad) {
-    int nbDims = layout.ndim < pad ? pad : layout.ndim;
-    int dimA[nbDims], strideA[nbDims];
-
-    for (size_t i = 0; i < layout.ndim; ++i) {
-        dimA[i] = layout.shape[i];
-        // strideA[i] = layout.stride[i];
-    }
-    for (size_t i = layout.ndim; i < nbDims; ++i) {
-        dimA[i] = 1;  // unused
-        // strideA[i] = 1;
-    }
-    // stride
-    for (size_t i = 0; i < nbDims; ++i) {
-        strideA[i] = 1;
-        for (size_t j = i + 1; j < nbDims; ++j) {
-            strideA[i] *= dimA[j];
-        }
-    }
-    cudnn_check(cudnnSetTensorNdDescriptor(
-            desc, to_cudnn_dtype(layout.dtype), nbDims, dimA, strideA));
-}
-
 std::string TensorDesc::to_string() {
     cudnnDataType_t data_type;
     int n;
@@ -454,97 +431,6 @@ void Conv3DDesc::set(const param::Convolution3D& param, const size_t nr_group) {
     // in CUDNN_MAJOR < 6, all elements in dilA shoule be 1
     cudnn_check(cudnnSetConvolutionNdDescriptor(
             desc, 3, padA, filterStrideA, dilationA, mode, CUDNN_DATA_FLOAT));
-}
-
-DropoutDesc::DropoutDesc() {
-    cudnn_check(cudnnCreateDropoutDescriptor(&desc));
-}
-
-DropoutDesc::~DropoutDesc() {
-    cudnn_check(cudnnDestroyDropoutDescriptor(desc));
-}
-
-void DropoutDesc::set(float dropout, Handle* handle, TensorND& state) {
-    cudnn_check(cudnnSetDropoutDescriptor(
-            desc, cudnn_handle(handle), dropout, state.raw_ptr(),
-            state.layout.span().dist_byte(), 0  // seed
-            ));
-}
-
-void DropoutDesc::set_no_dropout(Handle* handle) {
-    cudnn_check(
-            cudnnSetDropoutDescriptor(desc, cudnn_handle(handle), 0, nullptr, 0, 0));
-}
-
-RNNDesc::RNNDesc() {
-    cudnn_check(cudnnCreateRNNDescriptor(&desc));
-}
-
-RNNDesc::~RNNDesc() {
-    cudnn_check(cudnnDestroyRNNDescriptor(desc));
-}
-
-void RNNDesc::set(
-        size_t input_size, size_t hidden_size, size_t proj_size, size_t num_layers,
-        bool bidirectional, bool bias, const megdnn::DType dtype, cudnnRNNMode_t mode,
-        DropoutDesc& dropout_desc, Handle* handle) {
-    cudnnRNNMode_t rnn_mode = mode;
-    cudnnRNNBiasMode_t bias_mode = bias ? CUDNN_RNN_DOUBLE_BIAS : CUDNN_RNN_NO_BIAS;
-    cudnnDirectionMode_t dir_mode =
-            bidirectional ? CUDNN_BIDIRECTIONAL : CUDNN_UNIDIRECTIONAL;
-    cudnnDataType_t math_prec;
-
-    // math precision
-    if (dtype.enumv() == DTypeEnum::Float16)
-        math_prec = CUDNN_DATA_HALF;
-    else
-        math_prec = CUDNN_DATA_FLOAT;
-
-#if false  // CUDNN_MAJOR >= 8
-    cudnn_check(cudnnSetRNNDescriptor_v8(
-            desc, CUDNN_RNN_ALGO_STANDARD, mode, bias_mode, dir_mode,
-            CUDNN_LINEAR_INPUT, to_cudnn_dtype(dtype), math_prec, CUDNN_DEFAULT_MATH,
-            input_size, hidden_size, proj_size, num_layers, dropout_desc.desc,
-            CUDNN_RNN_PADDED_IO_DISABLED));
-#else
-    cudnn_check(cudnnSetRNNDescriptor_v6(
-            cudnn_handle(handle), desc, hidden_size, num_layers, dropout_desc.desc,
-            CUDNN_LINEAR_INPUT, dir_mode, mode, CUDNN_RNN_ALGO_STANDARD, math_prec));
-#endif
-}
-
-RNNDataDesc::RNNDataDesc() {
-    cudnn_check(cudnnCreateRNNDataDescriptor(&desc));
-}
-
-RNNDataDesc::~RNNDataDesc() {
-    cudnn_check(cudnnDestroyRNNDataDescriptor(desc));
-}
-
-void RNNDataDesc::set(
-        int batchSize, int vectorSize, int maxSeqLength, const int* devSeqLengths,
-        DType dtype) {
-    // for now, all tensor are padded in python
-    // int seqLengthArray[batchSize];
-    // for (int i = 0; i < batchSize; ++i) seqLengthArray[i] = maxSeqLength;
-    cudnn_check(cudnnSetRNNDataDescriptor(
-            desc, to_cudnn_dtype(dtype), CUDNN_RNN_DATA_LAYOUT_SEQ_MAJOR_UNPACKED,
-            maxSeqLength, batchSize, vectorSize, devSeqLengths, nullptr));
-}
-
-RNNWeightFilterDesc::RNNWeightFilterDesc() {
-    cudnn_check(cudnnCreateFilterDescriptor(&desc));
-}
-
-RNNWeightFilterDesc::~RNNWeightFilterDesc() {
-    cudnn_check(cudnnDestroyFilterDescriptor(desc));
-}
-
-void RNNWeightFilterDesc::set(const TensorLayout& flatten_weights) {
-    int weight_elem_num = flatten_weights.total_nr_elems();
-    int dimW[] = {weight_elem_num, 1, 1};
-    cudnn_check(cudnnSetFilterNdDescriptor(
-            desc, to_cudnn_dtype(flatten_weights.dtype), CUDNN_TENSOR_NCHW, 3, dimW));
 }
 
 ////////////////////////// CudnnAlgoPack //////////////////////////

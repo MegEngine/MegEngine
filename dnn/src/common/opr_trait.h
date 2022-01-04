@@ -139,8 +139,12 @@ DEF(LayerNormForward, 6, true, true);
 DEF(LayerNormBackward, 8, true, true);
 DEF(DropoutForward, 3, true, true);
 DEF(DropoutBackward, 3, true, true);
-DEF(RNNCellForward, 6, true, true);
+DEF(RNNCellForward, 7, true, true);
 DEF(RNNForward, 6, true, true);
+DEF(RNNBackward, 10, true, true);
+DEF(LSTMCellForward, 10, true, true);
+DEF(LSTMForward, 8, true, true);
+DEF(LSTMBackward, 13, true, true);
 }  // namespace megdnn
 
 // vim: syntax=cpp.doxygen

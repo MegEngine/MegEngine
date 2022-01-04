@@ -19,7 +19,8 @@ void cell_opr_exec<LSTMCellForward>(
         _megdnn_tensor_in input, _megdnn_tensor_in weight_ih,
         _megdnn_tensor_in weight_hh, _megdnn_tensor_in bias_ih,
         _megdnn_tensor_in bias_hh, const TensorNDArray& states,
-        TensorNDArray& states_new, _megdnn_workspace workspace, Handle* handle) {
+        TensorNDArray& states_new, _megdnn_workspace workspace,
+        param::RNNCell::NonlineMode /*nonline_mode*/, Handle* handle) {
     auto opr = handle->create_operator<LSTMCellForward>();
     TensorLayout gates, h_new, c_new;
     opr->deduce_layout(

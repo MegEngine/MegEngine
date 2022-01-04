@@ -30,7 +30,6 @@ public:
     void set(
             const TensorLayout& layout,
             const param::Convolution::Format = param::Convolution::Format::NCHW);
-    void set_nd(const TensorLayout& layout, int pad = 3);  // at least 3 dimensions
     std::string to_string();
     ~TensorDesc();
     cudnnTensorDescriptor_t desc;
@@ -120,44 +119,6 @@ public:
     conv3d_bwd_flt_algos();
 
     static const std::unordered_map<cudnnConvolutionFwdAlgo_t, Attr> conv3d_fwd_algos();
-};
-
-class DropoutDesc {
-public:
-    DropoutDesc();
-    void set(float dropout, Handle* handle, TensorND& state);
-    void set_no_dropout(Handle* handle);
-    ~DropoutDesc();
-    cudnnDropoutDescriptor_t desc;
-};
-
-class RNNDesc {
-public:
-    RNNDesc();
-    void set(
-            size_t input_size, size_t hidden_size, size_t proj_size, size_t num_layers,
-            bool bidirectional, bool bias, const megdnn::DType dtype,
-            cudnnRNNMode_t mode, DropoutDesc& dropout_desc, Handle* handle);
-    ~RNNDesc();
-    cudnnRNNDescriptor_t desc;
-};
-
-class RNNDataDesc {
-public:
-    RNNDataDesc();
-    void set(
-            int batchSize, int vectorSize, int maxSeqLength, const int* devSeqLengths,
-            DType dtype);
-    ~RNNDataDesc();
-    cudnnRNNDataDescriptor_t desc;
-};
-
-class RNNWeightFilterDesc {
-public:
-    RNNWeightFilterDesc();
-    void set(const TensorLayout& flatten_weights);
-    ~RNNWeightFilterDesc();
-    cudnnFilterDescriptor_t desc;
 };
 
 }  // namespace cuda

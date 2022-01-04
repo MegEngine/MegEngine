@@ -19,8 +19,10 @@ void cell_opr_exec<RNNCellForward>(
         _megdnn_tensor_in input, _megdnn_tensor_in weight_ih,
         _megdnn_tensor_in weight_hh, _megdnn_tensor_in bias_ih,
         _megdnn_tensor_in bias_hh, const TensorNDArray& states,
-        TensorNDArray& states_new, _megdnn_workspace workspace, Handle* handle) {
+        TensorNDArray& states_new, _megdnn_workspace workspace,
+        param::RNNCell::NonlineMode nonline_mode, Handle* handle) {
     auto opr = handle->create_operator<RNNCellForward>();
+    opr->param().nonlineMode = nonline_mode;
     opr->exec(
             input, weight_ih, bias_ih, states[0], weight_hh, bias_hh, states_new[0],
             workspace);

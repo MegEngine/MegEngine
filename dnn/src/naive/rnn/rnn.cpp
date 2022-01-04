@@ -218,7 +218,11 @@ void LSTMCellWeightWrapper::backward(
             x, weight_ih, bias_ih, states[0], weight_hh, bias_hh, states[1], dstates[0],
             dstates[1], gates_tensor,
             new_workspace);  // no information left in the workspace
-    // i, f, o, g
+
+    // BUG: The order of gate_grad if i_g f_g o_g g_g , but it should be  i_g f_g g_g o_g
+    //      The returned gradient includes both horizontal and vertical gradients,
+    //      horizontal grad = douts[1]  vertical gradients = douts[1]
+    //      Here the variable is confusing !!!
     TensorLayout single_gate = {{gates.shape[0], gates.shape[1] / 4}, gates.dtype};
     TensorND i, f, o, g, i_grad, f_grad, o_grad,
             g_grad;  // grad refers to the grad of gates before activation
@@ -239,8 +243,8 @@ void LSTMCellWeightWrapper::backward(
     g_grad = {
             static_cast<uint8_t*>(o_grad.raw_ptr()) + single_gate.span().dist_byte(),
             single_gate};
-    // activation
     auto elem_opr = handle->create_operator<ElemwiseForward>();
+
     elem_opr->param().mode = Elemwise::Mode::SIGMOID;
     elem_opr->exec({i}, i);
     elem_opr->exec({f}, f);
@@ -254,8 +258,8 @@ void LSTMCellWeightWrapper::backward(
     mul_opr->exec({douts[0], tanh_cy}, dstates[0]);
     elem_opr->param().mode = Elemwise::Mode::SIGMOID_GRAD;
     elem_opr->exec({o, dstates[0]}, o_grad);  // grad of gate o
-    // use dstates[0] as tmp tensor to store dhy * o
     mul_opr->exec({douts[0], o}, dstates[0]);
+
     elem_opr->param().mode = Elemwise::Mode::TANH_GRAD;
     elem_opr->exec({tanh_cy, dstates[0]}, dstates[1]);  // grad of cy from hy
     elem_opr->param().mode = Elemwise::Mode::ADD;

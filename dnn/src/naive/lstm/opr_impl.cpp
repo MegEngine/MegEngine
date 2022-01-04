@@ -12,6 +12,9 @@
 #include "src/naive/rnn/funcs.h"
 #include "src/naive/rnn/rnn.h"
 
+#include "midout.h"
+MIDOUT_DECL(megdnn_naive_lstm_fwd)
+
 namespace megdnn {
 namespace naive {
 using rnn::LSTMCellWeightWrapper;
@@ -21,29 +24,32 @@ void LSTMImpl::exec(
         _megdnn_tensor_in flatten_weights, _megdnn_tensor_out output,
         _megdnn_tensor_out hy, _megdnn_tensor_out cy, _megdnn_tensor_out reserve_space,
         _megdnn_workspace workspace) {
-    auto _param = param();
-    size_t D = _param.bidirectional ? 2 : 1;
-    size_t num_layers = _param.num_layers;
-    size_t input_size = input.layout.shape[2];
-    std::vector<LSTMCellWeightWrapper> cells;
-    size_t used_workspace_size = rnn::get_cells<LSTMCellWeightWrapper>(
-            D, num_layers, input_size, _param.hidden_size, _param.bias, cells,
-            flatten_weights, workspace);
+    MIDOUT_BEGIN(megdnn_naive_lstm_fwd) {
+        auto _param = param();
+        size_t D = _param.bidirectional ? 2 : 1;
+        size_t num_layers = _param.num_layers;
+        size_t input_size = input.layout.shape[2];
+        std::vector<LSTMCellWeightWrapper> cells;
+        size_t used_workspace_size = rnn::get_cells<LSTMCellWeightWrapper>(
+                D, num_layers, input_size, _param.hidden_size, _param.bias, cells,
+                flatten_weights, workspace);
 
-    Workspace new_workspace(
-            workspace.raw_ptr + used_workspace_size,
-            workspace.size - used_workspace_size);
-    TensorNDArray states = {hx, cx}, states_new = {hy, cy};
-    rnn::exec_internal<LSTMCellWeightWrapper, LSTMCellForward>(
-            cells, input, states, states_new, output, reserve_space, num_layers, D,
-            this->handle(), new_workspace);
+        Workspace new_workspace(
+                workspace.raw_ptr + used_workspace_size,
+                workspace.size - used_workspace_size);
+        TensorNDArray states = {hx, cx}, states_new = {hy, cy};
+        rnn::exec_internal<LSTMCellWeightWrapper, LSTMCellForward>(
+                cells, input, states, states_new, output, reserve_space, num_layers, D,
+                param::RNNCell::NonlineMode::IDENTITY, this->handle(), new_workspace);
+    }
+    MIDOUT_END();
 }
 
 size_t LSTMImpl::get_workspace_in_bytes(
-        const TensorLayout& input, const TensorLayout& hx, const TensorLayout& cx,
-        const TensorLayout& flatten_weights, const TensorLayout& output,
-        const TensorLayout& hy, const TensorLayout& cy,
-        const TensorLayout& reserve_space) {
+        const TensorLayout& input, const TensorLayout& /*hx*/,
+        const TensorLayout& /*cx*/, const TensorLayout& flatten_weights,
+        const TensorLayout& output, const TensorLayout& /*hy*/,
+        const TensorLayout& /*cy*/, const TensorLayout& /*reserve_space*/) {
     size_t workspace_size = rnn::get_workspace_in_bytes<LSTMCellForward>(
             input, flatten_weights, param().hidden_size, param().bidirectional ? 2 : 1,
             this->handle());
@@ -77,6 +83,7 @@ void LSTMBackwardImpl::exec(
     size_t num_layers = param().num_layers;
     size_t D = param().bidirectional ? 2 : 1;
     size_t input_size = x.layout.shape[2];
+    size_t batch_size = x.layout.shape[1];
     size_t hidden_size = param().hidden_size;
     size_t used_workspace_size = 0;
 
@@ -90,10 +97,27 @@ void LSTMBackwardImpl::exec(
     Workspace new_workspace = Workspace(
             workspace.raw_ptr + used_workspace_size,
             workspace.size - used_workspace_size);
+    TensorNDArray states = {hx, cx};
+    std::vector<TensorNDArray> hx_param;
+    TensorLayout unfold_hx_layout{
+            TensorShape{batch_size, hidden_size}, hx.layout.dtype};
+    for (size_t layer = 0; layer < num_layers; ++layer) {
+        for (size_t d = 0; d < D; ++d) {
+            TensorNDArray unfold_hx;
+            size_t idx = layer * D + d;
+            size_t states_offset = idx * unfold_hx_layout.span().dist_byte();
+            for (size_t i = 0; i < states.size(); ++i) {
+                unfold_hx.push_back(TensorND{
+                        static_cast<uint8_t*>(states[i].raw_ptr()) + states_offset,
+                        unfold_hx_layout});
+            }
+            hx_param.push_back(unfold_hx);
+        }
+    }
     used_workspace_size += rnn::get_inputs_for_exec<LSTMCellWeightWrapper>(
-            x, y, reserve_space, num_layers, D, hidden_size, cells, layer_inputs,
-            layer_outputs, cell_seq_states, param::RNNCell::NonlineMode::IDENTITY,
-            new_workspace);
+            x, y, hx_param, reserve_space, num_layers, D, hidden_size, cells,
+            layer_inputs, layer_outputs, cell_seq_states,
+            param::RNNCell::NonlineMode::IDENTITY, new_workspace);
 
     // dhy arr, dhx arr
     TensorNDArray dhy_arr = {dhy, dcy}, dhx_arr = {dhx, dcx};
@@ -110,11 +134,12 @@ void LSTMBackwardImpl::exec(
 }
 
 size_t LSTMBackwardImpl::get_workspace_in_bytes(
-        const TensorLayout& x, const TensorLayout& y, const TensorLayout& hx,
-        const TensorLayout& cx, const TensorLayout& dy, const TensorLayout& dhy,
-        const TensorLayout& dcy, const TensorLayout& flatten_weights,
-        const TensorLayout& reserve_space, const TensorLayout& dx,
-        const TensorLayout& dhx, const TensorLayout& dcx, const TensorLayout& dw) {
+        const TensorLayout& x, const TensorLayout& y, const TensorLayout& /*hx*/,
+        const TensorLayout& /*cx*/, const TensorLayout& /*dy*/,
+        const TensorLayout& /*dhy*/, const TensorLayout& /*dcy*/,
+        const TensorLayout& flatten_weights, const TensorLayout& /*reserve_space*/,
+        const TensorLayout& /*dx*/, const TensorLayout& /*dhx*/,
+        const TensorLayout& /*dcx*/, const TensorLayout& /*dw*/) {
     size_t D = param().bidirectional ? 2 : 1;
     size_t num_layers = param().num_layers;
     size_t hidden_size = param().hidden_size;
@@ -142,5 +167,6 @@ size_t LSTMBackwardImpl::get_workspace_in_bytes(
     return workspace_size;
 }
 }  // namespace naive
-
 }  // namespace megdnn
+
+// vim: syntax=cpp.doxygen

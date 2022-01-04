@@ -9,7 +9,6 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
  * implied.
  */
-
 #include "src/naive/handle.h"
 
 #include "src/common/handle_impl.h"
@@ -140,4 +139,5 @@ MEGDNN_FOREACH_OPR_CLASS(MEGDNN_SPECIALIZE_CREATE_OPERATOR)
 
 }  // namespace naive
 }  // namespace megdnn
+
 // vim: syntax=cpp.doxygen

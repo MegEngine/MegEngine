@@ -8,7 +8,6 @@
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
  * ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-#include "test/common/rnn.h"
 #include "megdnn/dtype.h"
 #include "megdnn/oprs.h"
 #include "test/common/checker.h"
@@ -17,22 +16,7 @@
 namespace megdnn {
 namespace test {
 
-/*TEST_F(NAIVE, RNN) {
-    std::vector<rnn::TestArg> args = rnn::get_args();
-    Checker<RNN> checker(handle());
-    for (auto&& arg : args) {
-                checker.set_param(arg.param)
-                .set_dtype(0, dtype::Float32())
-                .set_dtype(1, dtype::Float32())
-                .set_dtype(2, dtype::Float32())
-                .set_dtype(3, dtype::Float32())
-                .set_dtype(4, dtype::Float32())
-                .set_dtype(5, dtype::Float32())
-                .execs({arg.input, arg.hx, arg.flatten_weights, {}, {}, {}});
-    }
-}*/
-
-TEST_F(NAIVE, RNN_HAND_MADE) {
+TEST_F(NAIVE, RNN_FORWARD) {
     Checker<RNN> checker(handle(), false);
     size_t batch_size = 2;
     size_t input_size = 3;
@@ -49,14 +33,17 @@ TEST_F(NAIVE, RNN_HAND_MADE) {
             Testcase{
                     TensorValue(
                             {seq_len, batch_size, input_size}, dtype::Float32(),
-                            {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}),  // input
+                            {-0.66536, 0.08049, 0.12008, 0.63423, 1.37801, 0.02591,
+                             0.09153, 0.82866, -1.70429, -1.26624, -0.06421,
+                             0.35816}),  // input
                     TensorValue(
                             {batch_size, hidden_size}, dtype::Float32(),
-                            {2, 1, 3, 5}),  // hx
+                            {-3.19544, -1.24232, 1.99512, -0.25692}),  // hx
                     TensorValue(
                             {gate_hidden_size, input_size + hidden_size},
                             dtype::Float32(),
-                            {3, 6, 1, 3, 2, 7, 9, 3, 5, 1}),  // weights
+                            {0.35355, 0.35355, 0.35355, 0.35355, 0.35355, 0.35355,
+                             0.35355, 0.35355, 0.35355, 0.35355}),  // flattern weights
                     {},
                     {},
                     {}},
@@ -66,13 +53,54 @@ TEST_F(NAIVE, RNN_HAND_MADE) {
                     {},
                     TensorValue(
                             {seq_len, batch_size, hidden_size}, dtype::Float32(),
-                            {39, 39, 90, 84, 300, 216, 546, 366}),  // output
+                            {0.0, 0.0, 1.3351, 1.3351, 0.0, 0.0, 0.6003,
+                             0.6003}),  // output
                     TensorValue(
                             {batch_size, hidden_size}, dtype::Float32(),
-                            {21, 11, 42, 20}),  // hy
+                            {0.0, 0.0, 0.6003, 0.6003}),  // hy
                     TensorValue(
                             {1, 2, 2, 2}, dtype::Float32(),
-                            {2, 1, 3, 5, 21, 11, 42, 20})  // reserve space
+                            {0.0, 0.0, 1.33512, 1.33512, 0.0, 0.0, 0.60031,
+                             0.60031})  // reserve space
+            });
+    param.num_layers = 2;
+    checker.set_param(param).exect(
+            Testcase{
+                    TensorValue(
+                            {seq_len, batch_size, input_size}, dtype::Float32(),
+                            {-0.66536, 0.08049, 0.12008, 0.63423, 1.37801, 0.02591,
+                             0.09153, 0.82866, -1.70429, -1.26624, -0.06421,
+                             0.35816}),  // input
+                    TensorValue(
+                            {2, batch_size, hidden_size}, dtype::Float32(),
+                            {-3.19544, -1.24232, 1.99512, -0.25692, -3.19544, -1.24232,
+                             1.99512, -0.25692}),  // hx
+                    TensorValue(
+                            {2, 9}, dtype::Float32(),
+                            {0.35355, 0.35355, 0.35355, 0.35355, 0.35355, 0.35355,
+                             0.35355, 0.35355, 0.35355, 0.35355, 0.35355, 0.35355,
+                             0.35355, 0.35355, 0.35355, 0.35355, 0.35355,
+                             0.35355}),  // weights
+                    {},
+                    {},
+                    {}},
+            Testcase{
+                    {},
+                    {},
+                    {},
+                    TensorValue(
+                            {seq_len, batch_size, hidden_size}, dtype::Float32(),
+                            {0.0, 0.0, 1.5586, 1.5586, 0.0, 0.0, 1.5266,
+                             1.5266}),  // output
+                    TensorValue(
+                            {2, batch_size, hidden_size}, dtype::Float32(),
+                            {0.0, 0.0, 0.6003, 0.6003, 0.0, 0.0, 1.5266,
+                             1.5266}),  // hy
+                    TensorValue(
+                            {2, 2, 2, 2}, dtype::Float32(),
+                            {0.0, 0.0, 1.33512, 1.33512, 0.0, 0.0, 0.60031, 0.60031,
+                             0.0, 0.0, 1.55861, 1.55861, 0.0, 0.0, 1.52658,
+                             1.52658})  // reserve space
             });
 }
 

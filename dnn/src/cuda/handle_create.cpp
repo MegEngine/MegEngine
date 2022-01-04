@@ -10,7 +10,7 @@
  * implied.
  */
 
-#include "src/common/handle_impl.h"
+// #include "src/common/handle_impl.h"
 
 #include "src/cuda/adaptive_pooling/opr_impl.h"
 #include "src/cuda/add_update/opr_impl.h"
@@ -52,8 +52,6 @@
 #include "src/cuda/local_share/opr_impl.h"
 #include "src/cuda/lrn/opr_impl.h"
 #include "src/cuda/lsq/opr_impl.h"
-#include "src/cuda/lstm/opr_impl.h"
-#include "src/cuda/lstm_cell/opr_impl.h"
 #include "src/cuda/mask_conv/opr_impl.h"
 #include "src/cuda/matrix_inverse/opr_impl.h"
 #include "src/cuda/matrix_mul/opr_impl.h"
@@ -70,8 +68,6 @@
 #include "src/cuda/repeat/opr_impl.h"
 #include "src/cuda/resize/opr_impl.h"
 #include "src/cuda/rng/opr_impl.h"
-#include "src/cuda/rnn/opr_impl.h"
-#include "src/cuda/rnn_cell/opr_impl.h"
 #include "src/cuda/roi_align/opr_impl.h"
 #include "src/cuda/roi_copy/opr_impl.h"
 #include "src/cuda/roi_pooling/opr_impl.h"
@@ -94,6 +90,7 @@
 namespace megdnn {
 namespace cuda {
 
+// After Adding CUDA LSTM, the declaration of CUDA Backend should be restored
 // MEGDNN_FOREACH_OPR_CLASS(MEGDNN_SPECIALIZE_CREATE_OPERATOR)
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(ConvolutionForward);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(ConvolutionBackwardData);
@@ -222,6 +219,8 @@ MEGDNN_SPECIALIZE_CREATE_OPERATOR(PaddingForward);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(PaddingBackward);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(LayerNormForward);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(LayerNormBackward);
+MEGDNN_SPECIALIZE_CREATE_OPERATOR(DropoutForward);
+MEGDNN_SPECIALIZE_CREATE_OPERATOR(DropoutBackward);
 
 template <typename Opr>
 std::unique_ptr<Opr> HandleImpl::create_operator() {
@@ -232,9 +231,11 @@ std::unique_ptr<Opr> HandleImpl::create_operator() {
 #define MEGDNN_INST_CREATE_OPERATOR(opr) \
     template std::unique_ptr<megdnn::opr> HandleImpl::create_operator();
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpragmas"
+#pragma GCC diagnostic ignored "-Winstantiation-after-specialization"
 MEGDNN_FOREACH_OPR_CLASS(MEGDNN_INST_CREATE_OPERATOR)
-
-
+#pragma GCC diagnostic pop
 }  // namespace cuda
 }  // namespace megdnn
 

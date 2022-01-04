@@ -123,7 +123,7 @@ MGB_IMPL_OPR_GRAD(LSTMCell) {
     SymbolVar input(opr.input(0)), weight_ih(opr.input(1)), hx(opr.input(3)),
             weight_hh(opr.input(4)), cx(opr.input(6));
     SymbolVar h_out(opr.output(0)), c_out(opr.output(1)), gates(opr.output(2)),
-            h_og{out_grad.at(0)}, c_og{out_grad.at(1)}, tmp;
+            h_og{out_grad.at(0)}, c_og{out_grad.at(1)};
     size_t ghs = gates.shape()[1] / 4;  // gate_hidden_size
     SymbolVarArray gates_array = Split::make(
             gates, Split::Options::make_partition(gates, 1, {ghs, ghs, ghs, ghs}));
@@ -141,7 +141,7 @@ MGB_IMPL_OPR_GRAD(LSTMCell) {
     f_grad = Elemwise::make({f, c_og * cx}, Mode::SIGMOID_GRAD);
     i_grad = Elemwise::make({i, c_og * g}, Mode::SIGMOID_GRAD);
     g_grad = Elemwise::make({g, c_og * i}, Mode::TANH_GRAD);
-    SymbolVar rnn_cell_grad = Concat::make({i_grad, f_grad, o_grad, g_grad}, {-1});
+    SymbolVar rnn_cell_grad = Concat::make({i_grad, f_grad, o_grad, g_grad}, -1);
 
     SymbolVar result;
     if (wrt_idx < 6) {
@@ -258,7 +258,6 @@ MGB_IMPL_OPR_GRAD(LSTM) {
     SymbolVarArray grads = LSTMBackward::make(
             opr.input(0), opr.output(0), opr.input(1), opr.input(2), out_grad.at(0),
             out_grad.at(1), out_grad.at(2), opr.input(3), opr.output(3), opr.param());
-    SymbolVar res;
     return grads.at(wrt_idx).node();  // input, hx, cx, weights
 }
 #endif

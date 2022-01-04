@@ -2059,7 +2059,7 @@ public:
             _megdnn_tensor_in bias_ih, _megdnn_tensor_in hx,
             _megdnn_tensor_in weight_hh, _megdnn_tensor_in bias_hh,
             _megdnn_tensor_out dst, _megdnn_workspace workspace) = 0;
-    static void deduce_layout(
+    void deduce_layout(
             const TensorLayout& input, const TensorLayout& weight_ih,
             const TensorLayout& bias_ih, const TensorLayout& hx,
             const TensorLayout& weight_hh, const TensorLayout& bias_hh,

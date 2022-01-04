@@ -38,6 +38,7 @@ public:
             _megdnn_tensor_out dwi, _megdnn_tensor_out dwh, _megdnn_tensor_out dbias,
             _megdnn_workspace workspace) const;
     virtual size_t num_states() const;
+    virtual ~CellWeightsWrapperBase() {}
 };
 
 class RNNCellWeightWrapper : public CellWeightsWrapperBase {
