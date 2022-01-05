@@ -702,10 +702,6 @@ void init_tensor(py::module m) {
     });
     m.def("get_option",
           [channel](std::string name) { return channel->get_option(name); });
-    m.def("set_buffer_length", [channel](int length) {
-        mgb_assert(length >= 0 and length < 100, "buffer_length should be in [0, 100)");
-        channel->set_option("buffer_length", length);
-    });
     m.def("push_scope", [channel](std::string name) {
         Transformation::push_scope(name);
         channel->push_scope(name);

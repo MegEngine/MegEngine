@@ -76,8 +76,6 @@ class XORNet(Module):
 
 def test_training_converge_with_drop():
     set_option("enable_drop", 1)
-    old_buffer_length = get_option("buffer_length")
-    set_option("buffer_length", 0)
     net = XORNet()
     opt = SGD(net.parameters(), lr=0.01, momentum=0.9, weight_decay=5e-4)
     gm = ad.GradManager().attach(net.parameters())
@@ -119,4 +117,3 @@ def test_training_converge_with_drop():
     )
 
     set_option("enable_drop", 0)
-    set_option("buffer_length", old_buffer_length)

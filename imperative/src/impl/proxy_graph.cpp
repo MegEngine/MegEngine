@@ -626,23 +626,12 @@ cg::OperatorNodeBase* ProxyGraph::get_proxy_opr(
 
 /*********************** Logical Tensor Impl ***********************/
 
-size_t ProxyGraph::get_opr_output_size(
-        const OpDef& opdef, const SmallVector<LogicalTensorDesc>& inputs) {
-    return get_proxy_opr(opdef, inputs)->usable_output().size();
-}
-
 std::tuple<SmallVector<LogicalTensorDesc>, bool> ProxyGraph::
         infer_output_attrs_fallible(
                 const OpDef& opdef, const SmallVector<LogicalTensorDesc>& inputs) {
-    auto opr = get_proxy_opr(opdef, inputs);
-    CUR_OPR_GUARD(opr);
-    SmallVector<LogicalTensorDesc> outputs;
-    bool validated = do_shape_infer(false);
-    for (auto&& i : opr->usable_output()) {
-        outputs.push_back({{i->shape(), i->dtype()}, i->comp_node()});
-    }
-    bool need_check = opr->same_type<opr::Reshape>();
-    return {outputs, validated && !need_check};
+    // this function is just a placeholder
+    // it will be overrided by ProxyGraphTypeI::infer_output_attrs_fallible in minigraph
+    mgb_assert(0);
 }
 
 std::tuple<SmallVector<MemoryDesc>, SmallVector<MemoryDesc>> ProxyGraph::
@@ -823,12 +812,6 @@ EncodedSubgraph ProxyGraph::make_backward_graph(
     return result;
 }
 
-cg::OperatorNodeBase* ProxyGraph::get_proxy_opr(
-        const OpDef& opdef, const SmallVector<LogicalTensorDesc>& inputs) {
-    mgb_assert(!m_cur_opr);
-    auto vinputs = make_input_place_holders(inputs);
-    return OpDef::apply_on_var_node(opdef, vinputs)[0]->owner_opr();
-}
 
 VarNodeArray ProxyGraph::make_input_place_holders(
         const SmallVector<LogicalTensorDesc>& inputs) {

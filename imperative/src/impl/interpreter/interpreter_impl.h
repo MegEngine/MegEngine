@@ -126,11 +126,6 @@ private:
     void assert_in_worker();
     std::thread::id get_worker_tid();
 
-    // template <typename TCommand>
-    // void enqueue_command(TCommand&& cmd) {
-    //     m_buffer.enqueue(Command{std::forward<TCommand>(cmd)});
-    // }
-
     void sample_on_device(CompNode device, bool force);
 
     // valid => status != Deleted
@@ -177,46 +172,6 @@ private:
     private:
         ChannelImpl* m_owner;
     } m_worker;
-
-    /**
-     * Buf a command window for following fuse
-     * example:
-     *     ---------------------------------------------------------------------
-     *     | ..., Apply{in: (i0, i1), out: (o0, o1)}, ... + Del{i0} + Del{i1}  |
-     *     ---------------------------------------------------------------------
-     *     | ..., Apply{in: (i0, i1), out: (o0, o1), del: (i0)}, ... + Del{i1} |
-     *     ---------------------------------------------------------------------
-     *     | ..., Apply{in: (i0, i1), out: (o0, o1), del: (i0, i1)}, ...       |
-     *     ---------------------------------------------------------------------
-     *     Then the fused Apply may be invoked inplace. see:
-     * ChannelImpl::process_one_task
-     */
-    struct CommandBuffer {
-        CommandBuffer(ChannelImpl* owner) : m_owner(owner) {}
-        void enqueue(CommandData cmd);
-        bool empty() const { return m_commands.empty(); }
-        void flush();
-
-    private:
-        ChannelImpl* m_owner;
-        std::deque<Command> m_commands;
-
-        using Handle = decltype(m_commands)::iterator;
-        // [begin, end)
-        using Range = std::array<Handle, 2>;
-
-        // Launch commands in range [m_commands.begin(), pos)
-        void flush(Handle pos);
-        // Select flush position for incoming cmd
-        Handle flush_pos_for(const Command& cmd);
-        // Fuse del command into suitable ApplyOp
-        bool fuse_del(const Del& cmd);
-        // Returns the last handle that dest is used within range. If dest is not used,
-        // returns range[1]
-        Handle find_last_usage(TensorInfo* dest, Range range);
-        // Returns the produce position of dest. If not found, returns range[1]
-        Handle find_produce(TensorInfo* dest, Range range);
-    } m_buffer;
 
     //! config whether raise error exactly when invoking op.
     //! level 2: both device and user side errors are async;

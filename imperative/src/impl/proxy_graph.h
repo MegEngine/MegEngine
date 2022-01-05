@@ -85,9 +85,6 @@ private:
 
     /********************** Logical Tensor Helper **********************/
 
-    cg::OperatorNodeBase* get_proxy_opr(
-            const OpDef& opdef, const SmallVector<LogicalTensorDesc>& inputs);
-
     cg::VarNodeArray make_input_place_holders(
             const SmallVector<LogicalTensorDesc>& inputs);
 

@@ -41,9 +41,6 @@ public:
             catch_worker_execption, "MEGENGINE_CATCH_WORKER_EXEC", 1,
             "catch worker exception if enabled, close it when debugging");
     DEF_OPTION(
-            buffer_length, "MEGENGINE_COMMAND_BUFFER_LENGTH", 3,
-            "set command buffer length.");
-    DEF_OPTION(
             enable_host_compute, "MEGENGINE_HOST_COMPUTE", 1,
             "enable host compute, thus computation may be done in host event if it's "
             "device is gpu.");

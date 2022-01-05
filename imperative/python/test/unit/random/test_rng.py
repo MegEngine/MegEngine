@@ -9,6 +9,7 @@
 import numpy as np
 import pytest
 
+import megengine as mge
 import megengine.functional as F
 from megengine import Tensor, jit, random
 from megengine.core._imperative_rt import CompNode
@@ -209,9 +210,12 @@ def test_permutation_op():
         assert str(output.device) == str(cn)
         assert output.dtype == dtype
 
+    # FIXME: remove this sync
+    mge.core.set_option("async_level", 0)
     test_permutation_op_dtype(np.float32)
     test_permutation_op_dtype(np.int32)
     test_permutation_op_dtype(np.int16)
+    mge.core.set_option("async_level", 2)
 
 
 @pytest.mark.skipif(

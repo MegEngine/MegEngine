@@ -120,7 +120,6 @@ def enable():
     r"""Enable to record computing path of tensors and to perform DTR policy."""
     _set_option("enable_dtr_auto_drop", 1)
     _set_option("enable_drop", 1)
-    _set_option("buffer_length", 0)
     _set_option("record_computing_path", 1)
 
 

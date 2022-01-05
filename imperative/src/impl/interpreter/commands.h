@@ -49,14 +49,12 @@ struct ApplyOp {
     std::shared_ptr<OpDef> op;
     SmallVector<TensorInfo*> inputs;
     SmallVector<TensorInfo*> outputs;
-    SmallVector<TensorInfo*> dels;
 
     template <typename TFunctor>
     void get_props(TFunctor&& functor) const {
         functor("op", op);
         functor("inputs", inputs);
         functor("outputs", outputs);
-        functor("dels", dels);
     }
 
     const char* get_name() const { return "ApplyOp"; }
