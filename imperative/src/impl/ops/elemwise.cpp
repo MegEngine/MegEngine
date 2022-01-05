@@ -158,70 +158,71 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
 
 MGB_DEFINE_OPR_CLASS(
         ForceInplaceElemwise,
-        cg::SingleCNOperatorNodeBaseT<opr::mixin::MegDNNOprHolder>)  //{
+        cg::SingleCNOperatorNodeBaseT<opr::mixin::MegDNNOprHolder>) // {
 public:
-struct Param {
-    using Mode = megdnn::Elemwise::Param::Mode;
-    Mode mode;
-    size_t inplace_index;
-};
-using Mode = Param::Mode;
-ForceInplaceElemwise(
-        const VarNodeArray& inputs, Param param, OperatorNodeConfig config = {})
-        : Super(inputs[0]->owner_graph(), config, "device_add_update", inputs),
-          m_param{param} {
-    for (auto* input : inputs) {
-        add_input({input});
+    struct Param {
+        using Mode = megdnn::Elemwise::Param::Mode;
+        Mode mode;
+        size_t inplace_index;
+    };
+    using Mode = Param::Mode;
+    ForceInplaceElemwise(
+            const VarNodeArray& inputs, Param param, OperatorNodeConfig config = {})
+            : Super(inputs[0]->owner_graph(), config, "device_add_update", inputs),
+              m_param{param} {
+        for (auto* input : inputs) {
+            add_input({input});
+        }
+        add_output(None)
+                ->set_fwd_in2out_writable_force(input(param.inplace_index))
+                .add_flag(VarNode::Flag::NO_MEM_RECLAIM);
     }
-    add_output(None)
-            ->set_fwd_in2out_writable_force(input(param.inplace_index))
-            .add_flag(VarNode::Flag::NO_MEM_RECLAIM);
-}
-static SymbolVar make(const VarNodeArray& inputs, Param param) {
-    return SymbolVar{inputs[0]}.insert_single_output_opr<ForceInplaceElemwise>(
-            inputs, param);
-}
-static cg::OperatorNodeBase* shallow_copy(
-        const serialization::OprShallowCopyContext& ctx,
-        const cg::OperatorNodeBase& opr_, const VarNodeArray& inputs,
-        const OperatorNodeConfig& config);
+    static SymbolVar make(const VarNodeArray& inputs, Param param) {
+        return SymbolVar{inputs[0]}.insert_single_output_opr<ForceInplaceElemwise>(
+                inputs, param);
+    }
+    static cg::OperatorNodeBase* shallow_copy(
+            const serialization::OprShallowCopyContext& ctx,
+            const cg::OperatorNodeBase& opr_, const VarNodeArray& inputs,
+            const OperatorNodeConfig& config);
 
 protected:
-NodeProp* do_make_node_prop() const override {
-    auto ret = Super::do_make_node_prop();
-    ret->add_flag(NodeProp::Flag::FORCE_UPDATE_INPUT_VAR);
-    return ret;
-}
-void create_megdnn_opr() override {
-    auto opr = DnnOprCaller<megdnn::Elemwise>::create_operator(comp_node());
-    opr->param().mode = m_param.mode;
-    set_megdnn_opr(std::move(opr));
-}
-void scn_do_execute() override {
-    auto to_dnnnd = [&](auto* var) { return var->dev_tensor().as_megdnn(); };
-    megdnn::TensorNDArray inputs_dnnnd;
-    for (auto* input : input()) {
-        inputs_dnnnd.push_back(to_dnnnd(input));
+    NodeProp* do_make_node_prop() const override {
+        auto ret = Super::do_make_node_prop();
+        ret->add_flag(NodeProp::Flag::FORCE_UPDATE_INPUT_VAR);
+        return ret;
     }
-    mgb_assert(
-            input(m_param.inplace_index)->contain_flag(VarNode::Flag::NO_SYS_MEM_ALLOC),
-            "ForceInplaceElemwise cannot be applied in internal tensor");
-    auto* out_dest = output(0);
-    auto* opr = static_cast<megdnn::Elemwise*>(megdnn_opr());
-    opr->exec(std::move(inputs_dnnnd), to_dnnnd(out_dest));
-}
-void init_output_static_infer_desc() override {
-    using namespace cg::static_infer;
+    void create_megdnn_opr() override {
+        auto opr = DnnOprCaller<megdnn::Elemwise>::create_operator(comp_node());
+        opr->param().mode = m_param.mode;
+        set_megdnn_opr(std::move(opr));
+    }
+    void scn_do_execute() override {
+        auto to_dnnnd = [&](auto* var) { return var->dev_tensor().as_megdnn(); };
+        megdnn::TensorNDArray inputs_dnnnd;
+        for (auto* input : input()) {
+            inputs_dnnnd.push_back(to_dnnnd(input));
+        }
+        mgb_assert(
+                input(m_param.inplace_index)
+                        ->contain_flag(VarNode::Flag::NO_SYS_MEM_ALLOC),
+                "ForceInplaceElemwise cannot be applied in internal tensor");
+        auto* out_dest = output(0);
+        auto* opr = static_cast<megdnn::Elemwise*>(megdnn_opr());
+        opr->exec(std::move(inputs_dnnnd), to_dnnnd(out_dest));
+    }
+    void init_output_static_infer_desc() override {
+        using namespace cg::static_infer;
 
-    owner_graph()->static_infer_manager().register_shape_infer(
-            output(0), ShapeInferDesc::make_identity(input(m_param.inplace_index)));
-}
+        owner_graph()->static_infer_manager().register_shape_infer(
+                output(0), ShapeInferDesc::make_identity(input(m_param.inplace_index)));
+    }
 
 private:
-Param m_param;
-void record_execute_deps(ExecDependencyArray& deps) override {
-    record_megdnn_opr(deps);
-}
+    Param m_param;
+    void record_execute_deps(ExecDependencyArray& deps) override {
+        record_megdnn_opr(deps);
+    }
 };
 
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(ForceInplaceElemwise);

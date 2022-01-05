@@ -19,7 +19,8 @@ failed_files = Manager().list()
 
 def process_file(file, clang_format, write):
     source = open(file, "r").read()
-    source = re.sub(r"MGB_DEFINE(?P<r>(.|\n)*?)// +{", "class MGB_DEFINE\g<r>{", source)
+    source = re.sub(r"MGB_DEFINE(?P<r>([^\\]|\n)*?)// *{", r"class MGB_DEFINE\g<r>{", source)
+    source, count = re.subn(r"(?<!#define )MGB_DEFINE(.*) +\\", r"class MGB_DEFINE\1{\\", source)
 
     result = subprocess.check_output(
         [
@@ -33,6 +34,8 @@ def process_file(file, clang_format, write):
     )
 
     result = result.decode("utf-8")
+    if count:
+        result = re.sub(r"class MGB_DEFINE(.*){( *)\\", r"MGB_DEFINE\1\2       \\", result)
     result = re.sub(r"class MGB_DEFINE((.|\n)*?){", r"MGB_DEFINE\1// {", result)
 
     if write:

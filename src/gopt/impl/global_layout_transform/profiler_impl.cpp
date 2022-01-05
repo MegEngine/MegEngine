@@ -99,7 +99,7 @@ float GraphPartitionProfiler::duration_in_usec() const {
  * \brief An operator that indicates its input var node is contiguous
  */
 // clang-format off
-MGB_DEFINE_OPR_CLASS(MarkInputContiguous, SingleCNOperatorNodeBase) //{
+MGB_DEFINE_OPR_CLASS(MarkInputContiguous, SingleCNOperatorNodeBase) // {
     void scn_do_execute() override {};
     void init_output_static_infer_desc() override;
     void add_input_layout_constraint() override {

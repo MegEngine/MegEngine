@@ -86,7 +86,7 @@ MGE_WIN_DECLSPEC_FUC void add_input_layout_constraint_contig(OperatorNodeBase& o
 //! called in constructor to add output vars
 MGE_WIN_DECLSPEC_FUC void add_output_vars(
         OperatorNodeBase& opr, size_t nr_output, bool add_workspace);
-}
+}  // namespace megdnn_utils
 
 /*!
  * \brief mixin for infer workspace size based on input and output shapes
@@ -344,34 +344,34 @@ private:
 }  // namespace mgb
 
 //! define a megdnn opr wrapper class with 1 input for forward
-#define MGB_DEFINE_MEGDNN_OPR_WRAPPER_FWD1(_name)                             \
-    MGB_DEFINE_OPR_CLASS(_name, intl::MegDNNOprWrapperFwd<megdnn::_name>)     \
-public:                                                                       \
-    _name(VarNode* p0, const Param& param, const OperatorNodeConfig& config); \
-    MGE_WIN_DECLSPEC_FUC static SymbolVar make(                               \
-            SymbolVar p0, const Param& param = {},                            \
-            const OperatorNodeConfig& config = {});                           \
+#define MGB_DEFINE_MEGDNN_OPR_WRAPPER_FWD1(_name)                                 \
+    MGB_DEFINE_OPR_CLASS(_name, intl::MegDNNOprWrapperFwd<megdnn::_name>)         \
+    public:                                                                       \
+        _name(VarNode* p0, const Param& param, const OperatorNodeConfig& config); \
+        MGE_WIN_DECLSPEC_FUC static SymbolVar make(                               \
+                SymbolVar p0, const Param& param = {},                            \
+                const OperatorNodeConfig& config = {});                           \
     }
 
 //! define a megdnn opr wrapper class with 2 inputs for forward
-#define MGB_DEFINE_MEGDNN_OPR_WRAPPER_FWD2(_name)                         \
-    MGB_DEFINE_OPR_CLASS(_name, intl::MegDNNOprWrapperFwd<megdnn::_name>) \
-public:                                                                   \
-    _name(VarNode* p0, VarNode* p1, const Param& param,                   \
-          const OperatorNodeConfig& config);                              \
-    MGE_WIN_DECLSPEC_FUC static SymbolVar make(                           \
-            SymbolVar p0, SymbolVar p1, const Param& param = {},          \
-            const OperatorNodeConfig& config = {});                       \
+#define MGB_DEFINE_MEGDNN_OPR_WRAPPER_FWD2(_name)                                 \
+    MGB_DEFINE_OPR_CLASS(_name, intl::MegDNNOprWrapperFwd<megdnn::_name>)         \
+    public:                                                                       \
+        _name(VarNode* p0, VarNode* p1, const Param& param,                       \
+              const OperatorNodeConfig& config);                                  \
+        MGE_WIN_DECLSPEC_FUC static SymbolVar make(                               \
+                SymbolVar p0, SymbolVar p1, const Param& param = {},              \
+                const OperatorNodeConfig& config = {});                           \
     }
 
 //! define a megdnn opr wrapper class with 3 inputs for grad
 #define MGB_DEFINE_MEGDNN_OPR_WRAPPER_BWD3(_name, _extra...)                         \
     MGB_DEFINE_OPR_CLASS(_name, intl::MegDNNOprWrapperBwd<megdnn::_name>)            \
-    _extra public : _name(VarNode* p0, VarNode* p1, VarNode* p2, const Param& param, \
-                          const OperatorNodeConfig& config);                         \
-    MGE_WIN_DECLSPEC_FUC static SymbolVar make(                                      \
-            SymbolVar p0, SymbolVar p1, SymbolVar p2, const Param& param = {},       \
-            const OperatorNodeConfig& config = {});                                  \
+        _extra public : _name(VarNode* p0, VarNode* p1, VarNode* p2,                 \
+                              const Param& param, const OperatorNodeConfig& config); \
+        MGE_WIN_DECLSPEC_FUC static SymbolVar make(                                  \
+                SymbolVar p0, SymbolVar p1, SymbolVar p2, const Param& param = {},   \
+                const OperatorNodeConfig& config = {});                              \
     }
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
