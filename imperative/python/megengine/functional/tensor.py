@@ -195,14 +195,28 @@ def ones(
     return full(shape, 1.0, dtype=dtype, device=device)
 
 
-def zeros(shape, dtype="float32", device=None) -> Tensor:
-    r"""Returns a zero tensor with given shape.
+def zeros(
+    shape: Union[int, Tuple[int, ...]],
+    *,
+    dtype="float32",
+    device: Optional[CompNode] = None
+) -> Tensor:
+    r"""Returns a new tensor having a specified shape and filled with zeros.
 
     Args:
-        shape: a list, tuple or integer defining the shape of the output tensor.
-        dtype: the desired data type of the output tensor. Default: ``float32``.
-        device: the desired device of the output tensor. Default: if ``None``,
-            use the default device (see :func:`~.megengine.get_default_device`).
+        shape (int or sequence of ints): the shape of the output tensor.
+
+    Keyword args:
+        dtype (:attr:`.Tensor.dtype`): output tensor data type. Default: ``float32``.
+        device (:attr:`.Tensor.device`): device on which to place the created tensor. Default: ``None``.
+
+    Returns:
+        a tensor containing zeros.
+
+    Examples:
+        >>> F.zeros((2, 1))
+        Tensor([[0.]
+         [0.]], device=xpux:0)
     """
     return full(shape, 0.0, dtype=dtype, device=device)
 
