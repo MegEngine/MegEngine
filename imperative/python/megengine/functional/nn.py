@@ -1754,7 +1754,7 @@ def sliding_window_transpose(
 
 def pad(
     src: Tensor,
-    pad_witdth: Tuple[Tuple[int, int], ...],
+    pad_width: Tuple[Tuple[int, int], ...],
     mode: str = "constant",
     constant_value: float = 0.0,
 ) -> Tensor:
@@ -1769,9 +1769,9 @@ def pad(
     if mode.lower() == "edge":
         mode = "replicate"
 
-    for i in range(0, len(pad_witdth)):
-        p_offsets[i * 2] = pad_witdth[i][0]
-        p_offsets[i * 2 + 1] = pad_witdth[i][1]
+    for i in range(0, len(pad_width)):
+        p_offsets[i * 2] = pad_width[i][0]
+        p_offsets[i * 2 + 1] = pad_width[i][1]
 
     op = builtin.Padding(
         front_offset_dim0=p_offsets[0],
