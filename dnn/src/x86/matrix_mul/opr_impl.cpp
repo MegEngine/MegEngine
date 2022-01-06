@@ -52,7 +52,6 @@ public:
         m_all_algos.emplace_back(&algoint8x8x32sse_m4n8k2);
         m_all_algos.emplace_back(&algoint8x8x16sse_m4n8k2);
         m_all_algos.emplace_back(&algof32mk8_8x8);
-        m_all_algos.emplace_back(&algof32_6x16);
 #if MEGDNN_X86_WITH_MKL_DNN
         m_all_algos.emplace_back(&algoint8x8x32mkldnn);
 #endif
@@ -60,6 +59,7 @@ public:
 #if MEGDNN_X86_WITH_MKL && SUPPORT_MKL_PACKED_GEMM
         m_all_algos.emplace_back(&f32mkl_packa);
 #endif
+        m_all_algos.emplace_back(&algof32_6x16);
 
         for (auto&& algo : m_all_algos) {
             m_all_algos_map.emplace(algo->info().desc, algo);
