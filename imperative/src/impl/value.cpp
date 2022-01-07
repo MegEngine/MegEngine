@@ -58,6 +58,10 @@ TypedValueRef<DTypeValue> ValueRef::dtype() const {
     return imperative::apply(GetAttr(GetAttr::DType), *this)[0].cast_ref<DTypeValue>();
 }
 
+TypedValueRef<FormatValue> ValueRef::format() const {
+    return imperative::apply(GetFormat(), *this)[0].as_ref<FormatValue>();
+}
+
 TypedValueRef<StringValue> ValueRef::name() const {
     return imperative::apply(GetName(), *this)[0].cast_ref<StringValue>();
 }

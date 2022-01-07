@@ -1,10 +1,11 @@
 #pragma once
 #pragma GCC diagnostic ignored "-Wmissing-field-initializers"
 
-#include <variant>
-
 #include <string>
 #include <unordered_map>
+#include <variant>
+
+#include "megbrain/imperative/dispatch.h"
 #include "megbrain/imperative/interpreter.h"
 #include "pybind11/pybind11.h"
 
@@ -57,6 +58,7 @@ public:
         }
         return *shape;
     }
+    inline Format format() { return *data().format(); }
     inline HostValue::ref_t numpy() { return data().numpy(); }
     inline void reset(ValueRef value) {
         m_data = value;
@@ -116,6 +118,7 @@ public:
     PyObject* shape();
     PyObject* dtype();
     PyObject* device();
+    PyObject* format();
     PyObject* numpy();
     void reset(PyObject*);
     PyObject* detach();

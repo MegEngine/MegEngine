@@ -33,14 +33,20 @@ std::string GetAttr::to_string() const {
     return ssprintf("GetAttr{attr=%s}", attr_name);
 }
 
-CreateTensor::CreateTensor(Kind kind, CompNode device, DType dtype, ValueShape shape)
-        : m_kind(kind), m_device(device), m_dtype(dtype), m_shape(shape) {}
+CreateTensor::CreateTensor(
+        Kind kind, CompNode device, DType dtype, ValueShape shape, Format format)
+        : m_kind(kind),
+          m_device(device),
+          m_dtype(dtype),
+          m_shape(shape),
+          m_format(format) {}
 
 CreateTensor::CreateTensor(Kind kind, CompNode device, TensorLayout layout)
         : m_kind(kind),
           m_device(device),
           m_dtype(layout.dtype),
-          m_shape(ValueShape::from(layout)) {
+          m_shape(ValueShape::from(layout)),
+          m_format(Format::Type::DEFAULT) {
     mgb_assert(
             layout.is_contiguous() || layout.is_empty(), "layout should be contiguous");
 }
@@ -74,8 +80,9 @@ auto CreateTensor::parse(Span<ValueRef> inputs) const -> Args {
 
 std::string CreateTensor::to_string() const {
     return ssprintf(
-            "CreateTensor{kind=%d, device=%s, dtype=%s, shape=%s}", (int)m_kind,
-            m_device.to_string().c_str(), m_dtype.name(), m_shape.to_string().c_str());
+            "CreateTensor{kind=%d, device=%s, dtype=%s, shape=%s, format=%s}",
+            (int)m_kind, m_device.to_string().c_str(), m_dtype.name(),
+            m_shape.to_string().c_str(), m_format.to_string().c_str());
 }
 
 std::string DTRCommand::to_string() const {

@@ -2,7 +2,13 @@
 import os
 from contextlib import contextmanager
 
-from ._imperative_rt.core2 import _clear_algorithm_cache, get_option, set_option
+from ._imperative_rt.core2 import (
+    _clear_algorithm_cache,
+    get_auto_format_convert,
+    get_option,
+    set_auto_format_convert,
+    set_option,
+)
 
 __compute_mode = "default"
 __conv_format = "default"
@@ -24,8 +30,8 @@ __all__ = [
 def benchmark_kernel(mod):
     r"""Whether or not run possible algorithms on real device to find the best one. The default option is false,
     which means use heuristic to choose the fastest algorithm.
-    
-    Examples:    
+
+    Examples:
         .. code-block::
 
            import megengine as mge
@@ -47,8 +53,8 @@ def benchmark_kernel(mod, option: bool):
 def deterministic_kernel(mod):
     r"""Whether or not the fastest algorithm choosed is reproducible. The default option is false,
     which means the algorithm is not reproducible.
-    
-    Examples:    
+
+    Examples:
         .. code-block::
 
            import megengine as mge
@@ -67,8 +73,8 @@ def deterministic_kernel(mod, option: bool):
 def async_level(mod) -> int:
     r"""Get or set config whether raise error exactly when invoking op. The default level is 2,
     which means both device and user side errors are async.
-    
-    Examples:    
+
+    Examples:
         .. code-block::
 
            import megengine as mge
@@ -108,8 +114,8 @@ def _compute_mode(mod):
     which means that no special requirements will be placed on.  When set to 'float32', it
     would be used for accumulator and intermediate result, but only effective when input and 
     output are of float16 dtype.
-    
-    Examples:    
+
+    Examples:
         .. code-block::
 
            import megengine as mge
@@ -137,8 +143,8 @@ def _conv_format(mod):
     ``NCHW88`` layout: ``{N, C/8, H, W, 8}``
     ``CHWN4`` layout: ``{C/4, H, W, N, 4}``
     ``NCHW64`` layout: ``{N, C/64, H, W, 64}``
-    
-    Examples:    
+
+    Examples:
         .. code-block::
 
            import megengine as mge
@@ -153,20 +159,41 @@ def _conv_format(mod, format: str):
     __conv_format = format
 
 
+@property
+def _auto_format_convert(mod):
+    r"""Automatically convert indexing params' order for NCHW Tensor to NHWC order.
+    The default value is False, which means no convert.
+
+    Examples:
+        .. code-block::
+
+           import megengine as mge
+           mge.config._auto_format_convert = True
+    """
+    return get_auto_format_convert()
+
+
+@_auto_format_convert.setter
+def _auto_format_convert(mod, option: bool):
+    set_auto_format_convert(option)
+
+
 def _reset_execution_config(
     benchmark_kernel=None,
     deterministic_kernel=None,
     async_level=None,
     compute_mode=None,
     conv_format=None,
+    auto_format_convert=None,
 ):
-    global _benchmark_kernel, _deterministic_kernel, _async_level, __compute_mode, __conv_format
+    global _benchmark_kernel, _deterministic_kernel, __compute_mode, __conv_format
     orig_flags = (
         _benchmark_kernel,
         _deterministic_kernel,
         get_option("async_level"),
         __compute_mode,
         __conv_format,
+        get_auto_format_convert(),
     )
     if benchmark_kernel is not None:
         _benchmark_kernel = benchmark_kernel
@@ -178,6 +205,8 @@ def _reset_execution_config(
         __compute_mode = compute_mode
     if conv_format is not None:
         __conv_format = conv_format
+    if auto_format_convert is not None:
+        set_auto_format_convert(auto_format_convert)
 
     return orig_flags
 
@@ -189,26 +218,33 @@ def _override(
     async_level=None,
     compute_mode=None,
     conv_format=None,
+    auto_format_convert=None,
 ):
     r"""A context manager that users can opt in by attaching the decorator to set 
     the config of the global variable.
-    
-    Examples:    
+
+    Examples:
         .. code-block::
 
            import megengine as mge
-           
+
            @mge.config._override(
                 benchmark_kernel = True,
                 deterministic_kernel = Fasle,
                 async_level=2,
                 compute_mode="float32",
                 conv_format="NHWC",
+                auto_format_convert=True,
             )
            def train():
     """
     orig_flags = _reset_execution_config(
-        benchmark_kernel, deterministic_kernel, async_level, compute_mode, conv_format,
+        benchmark_kernel,
+        deterministic_kernel,
+        async_level,
+        compute_mode,
+        conv_format,
+        auto_format_convert,
     )
     try:
         yield

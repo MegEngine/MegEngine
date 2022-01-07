@@ -3,6 +3,7 @@
 #include <future>
 #include <iomanip>
 
+#include "megbrain/imperative/utils/data_format.h"
 #include "megbrain/imperative/utils/helper.h"
 #include "megbrain/imperative/utils/value_shape.h"
 #include "megbrain/imperative/value.h"
@@ -146,6 +147,13 @@ public:
     using PrimitiveValue::PrimitiveValue;
 
     std::string to_string() const override;
+};
+
+class FormatValue final : public PrimitiveValue<FormatValue, Format> {
+public:
+    using PrimitiveValue::PrimitiveValue;
+
+    std::string to_string() const override { return Format::to_string(); }
 };
 
 class StringValue final : public PrimitiveValue<StringValue, std::string> {

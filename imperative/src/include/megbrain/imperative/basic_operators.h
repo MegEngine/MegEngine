@@ -5,6 +5,7 @@
 
 #include "megbrain/imperative/op_def.h"
 #include "megbrain/imperative/operator.h"
+#include "megbrain/imperative/utils/data_format.h"
 #include "megbrain/imperative/utils/helper.h"
 #include "megbrain/imperative/utils/value_shape.h"
 
@@ -82,9 +83,12 @@ private:
     CompNode m_device;
     DType m_dtype;
     ValueShape m_shape;
+    Format m_format;
 
 public:
-    CreateTensor(Kind kind, CompNode device, DType dtype, ValueShape shape);
+    CreateTensor(
+            Kind kind, CompNode device, DType dtype, ValueShape shape,
+            Format format = Format::Type::DEFAULT);
     CreateTensor(Kind kind, CompNode device, TensorLayout layout);
 
     /**
@@ -99,6 +103,7 @@ public:
     CompNode device() const { return m_device; }
     DType dtype() const { return m_dtype; }
     ValueShape shape() const { return m_shape; }
+    Format format() const { return m_format; }
 
     std::string to_string() const override;
 };
@@ -155,6 +160,11 @@ class IsScalar final : public OperatorImpl<IsScalar, Operator::GetAttrLike> {
 private:
 public:
     std::string to_string() const override;
+};
+
+class GetFormat final : public OperatorImpl<GetFormat, Operator::GetAttrLike> {
+public:
+    std::string to_string() const override { return "GetFormat{}"; }
 };
 
 class GetVarVal final : public OperatorImpl<GetVarVal, Operator::GetAttrLike> {

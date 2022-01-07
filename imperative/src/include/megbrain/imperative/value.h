@@ -31,6 +31,7 @@ class HostValue;
 class DeviceValue;
 class ShapeValue;
 class DTypeValue;
+class FormatValue;
 class CompNodeValue;
 class StringValue;
 class NodeValue;
@@ -219,6 +220,7 @@ public:
     TypedValueRef<CompNodeValue> device() const;
     TypedValueRef<ShapeValue> shape() const;
     TypedValueRef<DTypeValue> dtype() const;
+    TypedValueRef<FormatValue> format() const;
     TypedValueRef<StringValue> name() const;
     bool is_scalar() const;
 
@@ -431,9 +433,11 @@ inline const TypedValueRef<TValue>& ValueRef::cast_ref(const Type<TValue>& type)
 inline void ValueRef::on_cast_failure(const IType& type) const {
     // if this is ErrorValue, rethrow directly
     storage()->try_rethrow();
-    mgb_assert(
-            storage()->type() != type, "expect type %s, got %s", type.name().c_str(),
-            to_string().c_str());
+    if (storage()->type() != type) {
+        mgb_throw(
+                MegBrainError, "Unable to cast ValueRef: expect type %s, got %s",
+                type.name().c_str(), to_string().c_str());
+    }
 }
 
 /**

@@ -8,6 +8,7 @@
 #include "megbrain/imperative/transformations/dim_expansion.h"
 #include "megbrain/imperative/transformations/dtype_promote.h"
 #include "megbrain/imperative/transformations/eval.h"
+#include "megbrain/imperative/transformations/format.h"
 #include "megbrain/imperative/transformations/lazy.h"
 #include "megbrain/imperative/transformations/scalar.h"
 #include "megbrain/imperative/transformations/symbol.h"
@@ -492,6 +493,9 @@ ssize_t name2idx(const char* name) {
         // name
         case 'a': return compare_cstr<'m', 'e'>(ch) ? 5 : -1;
         }
+    case 'f':
+        // format
+        return compare_cstr<'o', 'r', 'm', 'a', 't'>(ch) ? 6 : -1;
     }
     // clang-format on
     return -1;
@@ -508,6 +512,7 @@ TensorWrapper::TensorWrapper(PyObject* args, PyObject* kwargs) {
                     {"is_const", []() -> py::object { return py::bool_(false); }},
                     {"no_cache", []() -> py::object { return py::bool_(false); }},
                     {"name", []() -> py::object { return py::none(); }},
+                    {"format", []() -> py::object { return py::none(); }},
             },
             name2idx};
     py::detail::loader_life_support life_sup;  // FIXME!!!required to cast DType
@@ -518,19 +523,23 @@ TensorWrapper::TensorWrapper(PyObject* args, PyObject* kwargs) {
     } else {
         tup = parse_args(tup, descs);
     }
-    mgb_assert(tup.size() == 6);
+    mgb_assert(tup.size() == 7);
     if (auto* t = try_cast(tup[0].ptr())) {
         m_tensor = t->m_tensor->copy();
     } else {
         auto data = tup[0];
         DType dtype = tup[1].cast<DType>();
+        CompNode cn = as_comp_node(tup[2]);
         bool is_const = tup[3].cast<bool>();
         bool no_cache = tup[4].cast<bool>();
         std::string name;
         if (!tup[5].is_none()) {
             name = tup[5].cast<std::string>();
         }
-        CompNode cn = as_comp_node(tup[2]);
+        Format format;
+        if (!tup[6].is_none()) {
+            format = tup[6].cast<std::string>();
+        }
 
         {
             CreateTensor::Kind kind = is_const ? CreateTensor::Const
@@ -544,7 +553,7 @@ TensorWrapper::TensorWrapper(PyObject* args, PyObject* kwargs) {
             } else {
                 auto&& hval = pyobj2hval(data, cn, dtype);
                 val = imperative::apply(
-                        CreateTensor(kind, cn, hval.dtype, hval.shape),
+                        CreateTensor(kind, cn, hval.dtype, hval.shape, format),
                         hval.storage)[0];
             }
             m_tensor.emplace(val);
@@ -608,6 +617,10 @@ PyObject* TensorWrapper::dtype() {
 
 PyObject* TensorWrapper::device() {
     return py::cast(m_tensor->comp_node()).release().ptr();
+}
+
+PyObject* TensorWrapper::format() {
+    return py::cast(m_tensor->format().to_string()).release().ptr();
 }
 
 PyObject* TensorWrapper::numpy() {
@@ -722,6 +735,7 @@ WRAP_FUNC_PY35(pixel_shuffle_cpp);
 void init_tensor(py::module m) {
     imperative::Tensor::static_initialize();
 
+    // Transformations
     static auto& transformations = TransformationManager::get_instance();
 
     using Segment = TransformationManager::Segment;
@@ -755,6 +769,9 @@ void init_tensor(py::module m) {
                               .register_at<Segment::DimExpansion>(
                                       std::make_shared<DimExpansionTransformation>())
                               .release());
+    auto format_trans = std::make_shared<FormatTransformation>();
+    MGB_MARK_USED_VAR(
+            transformations.register_at<Segment::Format>(format_trans).release());
 
     static py::exception<interpreter::AsyncError> py_async_error(
             m, "AsyncError", PyExc_RuntimeError);
@@ -788,12 +805,14 @@ void init_tensor(py::module m) {
         }
     });
 
+    // Tensor
     auto* tensor_type =
             TensorWrapper::wrap_t::type()
                     .def<&TensorWrapper::numpy>("numpy")
                     .def_getset<&TensorWrapper::shape>("shape")
                     .def_getset<&TensorWrapper::dtype>("dtype")
                     .def_getset<&TensorWrapper::device>("device")
+                    .def_getset<&TensorWrapper::format>("format")
                     .def<&TensorWrapper::reset>("_reset")
                     .def<&TensorWrapper::isscalar>("_isscalar")
                     .def<&TensorWrapper::detach>("detach")
@@ -812,6 +831,11 @@ void init_tensor(py::module m) {
     if (!tensor_type)
         throw py::error_already_set();
     py::setattr(m, "Tensor", tensor_type);
+    py::enum_<Format::Type>(m, "FormatType")
+            .value("DEFAULT", Format::Type::DEFAULT)
+            .value("NCHW", Format::Type::NCHW)
+            .value("NHWC", Format::Type::NHWC)
+            .export_values();
 
     py::class_<TensorWeakRef>(m, "TensorWeakRef")
             .def(py::init<const TensorWrapper&>())
@@ -911,6 +935,7 @@ void init_tensor(py::module m) {
         sync_py_task_q();
     });
 
+    // GradTransformation
     py::handle grad_key_type =
             GradKeyWrapper::wrap_t::type()
                     .def<&GradKeyWrapper::attach>("attach")
@@ -1203,6 +1228,7 @@ void init_tensor(py::module m) {
         return wrapped_outputs;
     });
 
+    // ModuleTraceTransformation
     static py::function module_trace_hook;
 
     static auto get_module_trace = [] {
@@ -1308,6 +1334,12 @@ void init_tensor(py::module m) {
     });
 
     m.def("_clear_algorithm_cache", [] { megdnn::AlgorithmCache::instance().clear(); });
+
+    // FormatTransformation
+    m.def("set_auto_format_convert",
+          [format_trans](bool enabled) { format_trans->set_auto_convert(enabled); });
+    m.def("get_auto_format_convert",
+          [format_trans]() { return format_trans->get_auto_convert(); });
 
     py::register_exception<TraceError>(m, "TraceError");
 }

@@ -19,6 +19,7 @@ public:
         DTypePromote,
         DimExpansion,
         Grad,
+        Format,
         Scalar,
         Symbol,
         Trace,

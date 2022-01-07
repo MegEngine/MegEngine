@@ -156,6 +156,7 @@ _atexit(_persistent_cache.flush)
 # subpackages
 import megengine.amp
 import megengine.autodiff
+import megengine.config
 import megengine.data
 import megengine.distributed
 import megengine.dtr

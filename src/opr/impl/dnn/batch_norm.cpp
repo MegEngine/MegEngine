@@ -200,7 +200,7 @@ void BatchNormForward::get_output_var_shape(
            bias_c = inp_shape[2][channel_idx];
     mgb_assert(
             inp_c == scale_c && inp_c == bias_c,
-            "inconsistent channel size, input chennel: %zu, scale channel: %zu, bias "
+            "inconsistent channel size, input channel: %zu, scale channel: %zu, bias "
             "channel: %zu",
             inp_c, scale_c, bias_c);
 

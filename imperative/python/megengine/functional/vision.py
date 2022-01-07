@@ -564,7 +564,6 @@ def interpolate(
         if inp.dtype == np.float16:
             inp = inp.astype("float32")
         conv_format = _config._get_actual_op_param("NCHW", _config.__conv_format)
-        assert conv_format == "NCHW", "Currently resize only support NCHW mode"
         op = builtin.Resize(imode=mode_map[mode], format=conv_format)
         shape = astensor1d(dsize, inp, dtype="int32", device=inp.device)
         (ret,) = apply(op, inp, shape)

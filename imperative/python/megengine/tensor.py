@@ -4,6 +4,7 @@ from typing import Union
 import numpy as np
 
 from .core._imperative_rt import CompNode
+from .core._imperative_rt.core2 import FormatType
 from .core._imperative_rt.core2 import Tensor as _Tensor
 from .core._imperative_rt.core2 import apply, set_py_tensor_type
 from .core._trace_option import use_symbolic_shape
@@ -45,6 +46,8 @@ class Tensor(_Tensor, ArrayMethodMixin):
         is_const: Whether make it a ``ImutableTensor`` in tracing mode, refer to :class:`.jit.trace`.
         no_cache: Whether cache it for memory sharing.
         name: Used to improve convenience in graph operation on dumped model.
+        format: Used to indicate which memory format Tensor uses. It will not affect actual memory order or stride,
+            but may affect some operators related to indexing and dimension. Only support "default", "nchw" and "nhwc".
 
     .. note::
 
@@ -73,6 +76,7 @@ class Tensor(_Tensor, ArrayMethodMixin):
         is_const: bool = False,
         no_cache: bool = False,
         name: str = None,
+        format: str = "default",
     ):
         if name is None:
             name = ""
@@ -115,6 +119,10 @@ class Tensor(_Tensor, ArrayMethodMixin):
     def dtype(self) -> np.dtype:
         r"""Returns a :class:`numpy.dtype` object represents the data type of a :class:`~.Tensor`."""
         return super().dtype
+
+    @property
+    def format(self) -> str:
+        return super().format
 
     @property
     def qparams(self):

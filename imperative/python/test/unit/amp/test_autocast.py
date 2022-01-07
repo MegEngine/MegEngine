@@ -2,7 +2,7 @@ from megengine import amp
 from megengine.core.tensor import amp as origin_amp
 
 
-def test_grad_scaler():
+def test_autocast():
     def check(enabled, low, high):
         assert amp.enabled == enabled
         assert origin_amp._enabled == enabled
