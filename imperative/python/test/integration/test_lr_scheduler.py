@@ -12,7 +12,7 @@ import numpy as np
 
 from megengine import Parameter, tensor
 from megengine.module import Module
-from megengine.optimizer import SGD, MultiStepLR
+from megengine.optimizer import SGD, MultiStepLR, CosineAnnealingLR
 
 
 class Simple(Module):
@@ -36,5 +36,26 @@ def test_multi_step_lr():
             np.testing.assert_almost_equal(
                 np.array(group["lr"], dtype=np.float32),
                 (lr * 0.1 ** bisect_right([3, 6, 8], i)).astype(np.float32),
+            )
+        scheduler.step()
+
+def test_cosine_annealing_lr():
+    epochs = 10
+    eta_min = 10e-6
+
+    net = Simple()
+    opt = SGD(net.parameters(), lr=0.01, momentum=0.9)
+    scheduler = CosineAnnealingLR(opt, T_max=epochs, eta_min=eta_min)
+
+    # closed form
+    def get_closed_form(epoch):
+        return eta_min + (0.01 - eta_min) * (1 + 
+            math.cos(math.pi * epoch / epochs)) / 2
+
+    for i in range(epochs):
+        for group in opt.param_groups:
+            np.testing.assert_almost_equal(
+                np.array(group["lr"], dtype=np.float32),
+                get_closed_form(i),
             )
         scheduler.step()

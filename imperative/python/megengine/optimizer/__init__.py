@@ -13,5 +13,6 @@ from .adamw import AdamW
 from .clip_grad import *
 from .lr_scheduler import LRScheduler
 from .multi_step_lr import MultiStepLR
+from .cosine_annealing_lr import CosineAnnealingLR
 from .optimizer import Optimizer
 from .sgd import SGD
