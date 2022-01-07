@@ -469,9 +469,12 @@ void conv_bias::conv_direct_fp32_nchw44(
     INSTANTIATION(filter_size, bias, HSwishOp<dt_float32>) \
     INSTANTIATION(filter_size, bias, SigmoidOp<dt_float32>)
 
-#define INSTANTIATION_CONV_S1(filter_size)                \
-    FOR_OP(filter_size, BiasMode::NO_BIAS)                \
-    FOR_OP(filter_size, BiasMode::BROADCAST_CHANNEL_BIAS) \
-    FOR_OP(filter_size, BiasMode::BIAS)
+#define INSTANTIATION_CONV_S1_NO_BIAS(filter_size) \
+    FOR_OP(filter_size, BiasMode::NO_BIAS)
+
+#define INSTANTIATION_CONV_S1_BROADCAST_CHANNEL_BIAS(filter_size) \
+    FOR_OP(filter_size, BiasMode::BROADCAST_CHANNEL_BIAS)
+
+#define INSTANTIATION_CONV_S1_BIAS(filter_size) FOR_OP(filter_size, BiasMode::BIAS)
 
 // vim: syntax=cpp.doxygen
