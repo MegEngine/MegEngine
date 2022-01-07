@@ -217,6 +217,12 @@ SymbolVarArray TensorRTRuntimeOpr::make(
         std::shared_ptr<nvinfer1::ICudaEngine> engine,
         std::shared_ptr<GpuAllocator> gpu_allocator, const SymbolVarArray& src,
         const OperatorNodeConfig& config) {
+    mgb_assert(
+            NV_TENSORRT_VERSION == getInferLibVersion(),
+            "TensorRT version mismatch: compiled with %d; detected %d at runtime , may "
+            "caused by customized environment, for example LD_LIBRARY_PATH on LINUX "
+            "and PATH on Windows!!",
+            NV_TENSORRT_VERSION, getInferLibVersion());
     VarNodeArray var_node_array = cg::to_var_node_array(src);
     auto tensor_rt_opr = std::make_unique<TensorRTRuntimeOpr>(
             std::move(engine), std::move(gpu_allocator), var_node_array, config);
