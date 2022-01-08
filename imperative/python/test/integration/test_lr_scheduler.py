@@ -8,6 +8,7 @@
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 from bisect import bisect_right
 
+import math
 import numpy as np
 
 from megengine import Parameter, tensor
@@ -39,6 +40,7 @@ def test_multi_step_lr():
             )
         scheduler.step()
 
+
 def test_cosine_annealing_lr():
     epochs = 10
     eta_min = 10e-6
@@ -59,3 +61,4 @@ def test_cosine_annealing_lr():
                 get_closed_form(i),
             )
         scheduler.step()
+

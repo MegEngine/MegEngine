@@ -6,6 +6,8 @@
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+import math
+
 from .lr_scheduler import LRScheduler
 from .optimizer import Optimizer
 
@@ -24,8 +26,8 @@ class CosineAnnealingLR(LRScheduler):
         self, 
         optimizer: Optimizer,
         T_max: int,
-        eta_min: float=0.0,
-        current_epoch: int=-1,
+        eta_min: float = 0.0,
+        current_epoch: int = -1,
     ):
         self.T_max = T_max
         self.eta_min = eta_min
@@ -37,9 +39,9 @@ class CosineAnnealingLR(LRScheduler):
             is not the optimizer.
         """
         return {
-            key: value 
-            for key, value in self.__dict__.items() 
-            if key != 'optimizer' and 'base_lr'
+            key: value
+            for key, value in self.__dict__.items()
+            if key != 'optimizer' and key != 'base_lrs'
         }
 
     def load_state_dict(self, state_dict):
