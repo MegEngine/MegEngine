@@ -78,6 +78,7 @@ __all__ = [
     "max_pool2d",
     "one_hot",
     "prelu",
+    "pad",
     "relu",
     "relu6",
     "remap",
