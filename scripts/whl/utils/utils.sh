@@ -23,7 +23,7 @@ function ninja_dry_run_and_check_increment() {
         exit -1
     fi
 
-    ${_BUILD_SHELL} ${_BUILD_FLAGS} 2>&1 | tee dry_run.log
+    bash ${_BUILD_SHELL} ${_BUILD_FLAGS} 2>&1 | tee dry_run.log
 
     DIRTY_LOG=`cat dry_run.log`
     if [[ "${DIRTY_LOG}" =~ ${_INCREMENT_KEY_WORDS} ]]; then
@@ -79,10 +79,23 @@ function check_build_ninja_python_api() {
             PYTHON_API_INCLUDES="3.5.4\\\\include 3.6.8\\\\include 3.7.7\\\\include 3.8.3\\\\include"
         elif [[ $OS =~ "Linux" ]]; then
             INCLUDE_KEYWORD="include/python3.${ver:1:1}"
-            PYTHON_API_INCLUDES="include/python3.5 include/python3.6 include/python3.7 include/python3.8"
+            info=`command -v termux-info || true`
+            if [[ "${info}" =~ "com.termux" ]]; then
+                echo "find termux-info at: ${info}"
+                is_punctuation=${ver:4:1}
+                INCLUDE_KEYWORD="include/python3.${ver:2:1}"
+                if [ ${is_punctuation} = "." ]; then
+                    INCLUDE_KEYWORD="include/python3.${ver:2:2}"
+                fi
+            fi
+            PYTHON_API_INCLUDES="include/python3.5 include/python3.6 include/python3.7 include/python3.8 include/python3.9 include/python3.10"
         elif [[ $OS =~ "Darwin" ]]; then
+            is_punctuation=${ver:4:1}
             INCLUDE_KEYWORD="include/python3.${ver:2:1}"
-            PYTHON_API_INCLUDES="include/python3.5 include/python3.6 include/python3.7 include/python3.8"
+            if [ ${is_punctuation} = "." ]; then
+                INCLUDE_KEYWORD="include/python3.${ver:2:2}"
+            fi
+            PYTHON_API_INCLUDES="include/python3.5 include/python3.6 include/python3.7 include/python3.8 include/python3.9 include/python3.10"
         else
             echo "unknown OS: ${OS}"
             exit -1

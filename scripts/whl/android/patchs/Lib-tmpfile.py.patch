@@ -1,0 +1,13 @@
+diff --git a/Lib/tempfile.py b/Lib/tempfile.py
+index 531cbf32f1..dae57e22bd 100644
+--- a/Lib/tempfile.py
++++ b/Lib/tempfile.py
+@@ -170,7 +170,7 @@ def _candidate_tempdir_list():
+                          _os.path.expandvars(r'%SYSTEMROOT%\Temp'),
+                          r'c:\temp', r'c:\tmp', r'\temp', r'\tmp' ])
+     else:
+-        dirlist.extend([ '/tmp', '/var/tmp', '/usr/tmp' ])
++        dirlist.extend([ '@TERMUX_PREFIX@/tmp' ])
+ 
+     # As a last resort, the current directory.
+     try:

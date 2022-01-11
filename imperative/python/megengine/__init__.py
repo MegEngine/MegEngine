@@ -12,6 +12,17 @@ import os
 import platform
 import sys
 
+if os.getenv("TERMUX_VERSION"):
+    try:
+        import cv2
+    except Exception as exc:
+        print("Run MegEngine python interface at Android/Termux env")
+        print("!!!You need build opencv-python manually!!!, by run sh:")
+        print(
+            "https://github.com/MegEngine/MegEngine/blob/master/scripts/whl/android/android_opencv_python.sh"
+        )
+        raise exc
+
 if sys.platform == "win32":
     lib_path = os.path.join(os.path.dirname(__file__), "core/lib")
     dll_paths = list(filter(os.path.exists, [lib_path,]))

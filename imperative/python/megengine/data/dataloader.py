@@ -10,6 +10,7 @@ import collections
 import gc
 import math
 import multiprocessing
+import os
 import platform
 import queue
 import random
@@ -148,6 +149,13 @@ class DataLoader:
         if platform.system() == "Windows" and self.num_workers > 0:
             print(
                 "pyarrow.plasma does not support ParallelDataLoader on windows, changing num_workers to be zero"
+            )
+            self.num_workers = 0
+        if os.getenv("TERMUX_VERSION"):
+            # FIXME: termux install pyarrow will build error now
+            # remove this logic after pyarrow fix this issue
+            print(
+                "pyarrow do not support on termux env now, changing num_workers to be zero"
             )
             self.num_workers = 0
         if isinstance(self.dataset, StreamDataset):

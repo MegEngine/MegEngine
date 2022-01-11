@@ -2,6 +2,7 @@
 * Windows build (cpu and gpu)
 * Linux build (cpu and gpu)
 * MacOS build (cpu only)
+* Android(termux) build (cpu only)
 
 # Build env prepare
 ## Linux
@@ -30,6 +31,15 @@
 ./scripts/whl/macos/macos_whl_env_prepare.sh
 ```
 
+## Android
+* install [termux](https://termux.com/) apk on Android Device
+    * at least 8G DDR
+    * at least Android 7
+* init wheel build-dependent env by command:
+```bash
+./scripts/whl/android/android_whl_env_prepare.sh
+```
+
 ## Windows
 * refer to [BUILD_README.md](../cmake-build/BUILD_README.md) Windows section to init base build environment
 
@@ -43,12 +53,12 @@ commands:
 ./scripts/whl/manylinux2014/build_wheel_common.sh -sdk cu101
 ```
 
-* And you can find all of the outputs in `output` directory.If you just want to build for a specific Python verison, you can use `ALL_PYTHON` environment variable. eg:
+* And you can find all of the outputs in `output` directory.If you just want to build for a specific Python verison, you can use `ALL_PYTHON` environment variable. such as:
 ```bash
 ALL_PYTHON="36m" ./scripts/whl/manylinux2014/build_wheel_common.sh -sdk cu101
 ```
 
-* If you just want to build with cpu only version, you can set `-sdk` environment 'cpu'. eg:
+* If you just want to build with cpu only version, you can set `-sdk` environment 'cpu'. such as:
 ```bash
 ALL_PYTHON="36m" ./scripts/whl/manylinux2014/build_wheel_common.sh -sdk cpu
 ```
@@ -58,7 +68,7 @@ ALL_PYTHON="36m" ./scripts/whl/manylinux2014/build_wheel_common.sh -sdk cpu
 ```bash
 ./scripts/whl/macos/macos_build_whl.sh
 ```
-* If you just want to build for a specific Python verison, you can use `ALL_PYTHON` environment variable. eg:
+* If you just want to build for a specific Python verison, you can use `ALL_PYTHON` environment variable. such as:
 ```bash
 ALL_PYTHON="3.7.7" ./scripts/whl/macos/macos_build_whl.sh
 ```
@@ -69,12 +79,22 @@ ALL_PYTHON="3.7.7" ./scripts/whl/macos/macos_build_whl.sh
 ./scripts/whl/windows/windows_build_whl.sh
 ```
 
-* If you just want to build for a specific Python verison, you can use `ALL_PYTHON` environment variable. eg:
+* If you just want to build for a specific Python verison, you can use `ALL_PYTHON` environment variable. such as:
 ```bash
 ALL_PYTHON="3.8.3" ./scripts/whl/windows/windows_build_whl.sh
 ```
 
-* If you just want to build with cpu only version, you can set `BUILD_WHL_CPU_ONLY` environment 'ON'. eg:
+* If you just want to build with cpu only version, you can set `BUILD_WHL_CPU_ONLY` environment 'ON'. such as:
 ```
 BUILD_WHL_CPU_ONLY="ON" ALL_PYTHON="3.8.3" ./scripts/whl/windows/windows_build_whl.sh
+```
+
+## Build for Android
+* commands:
+```bash
+scripts/whl/android/android_build_whl.sh
+```
+* If you just want to build for a specific Python verison, you can use `ALL_PYTHON` environment variable. such as:
+```bash
+ALL_PYTHON="3.10.1" ./scripts/whl/android/android_build_whl.sh
 ```

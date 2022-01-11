@@ -47,6 +47,10 @@ else()
     ${MODULE_NAME} PRIVATE megengine_shared -Wl,--version-script=${MGE_VERSION_SCRIPT})
 endif()
 
+if(ANDROID)
+  target_link_libraries(${MODULE_NAME} PRIVATE ${PYTHON_LIBRARIES})
+endif()
+
 add_subdirectory(${PROJECT_SOURCE_DIR}/third_party/range-v3
                  ${PROJECT_BINARY_DIR}/third_party/range-v3)
 target_link_libraries(${MODULE_NAME} PRIVATE range-v3)

@@ -1,0 +1,75 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index f6a2da5310..10354312c9 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -643,7 +643,7 @@ if(UNIX)
+   if(NOT APPLE)
+     CHECK_INCLUDE_FILE(pthread.h HAVE_PTHREAD)
+     if(ANDROID)
+-      set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} dl m log)
++      set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} dl m log z)
+     elseif(CMAKE_SYSTEM_NAME MATCHES "FreeBSD|NetBSD|DragonFly|OpenBSD|Haiku")
+       set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} m pthread)
+     elseif(EMSCRIPTEN)
+diff --git a/cmake/OpenCVDetectPython.cmake b/cmake/OpenCVDetectPython.cmake
+index 4ff02a77d3..db1305448f 100644
+--- a/cmake/OpenCVDetectPython.cmake
++++ b/cmake/OpenCVDetectPython.cmake
+@@ -123,7 +123,7 @@ if(NOT ${found})
+   if(_found)
+     set(_version_major_minor "${_version_major}.${_version_minor}")
+ 
+-    if(NOT ANDROID AND NOT APPLE_FRAMEWORK)
++    if(TRUE)
+       ocv_check_environment_variables(${library_env} ${include_dir_env})
+       if(NOT ${${library_env}} STREQUAL "")
+           set(PYTHON_LIBRARY "${${library_env}}")
+@@ -175,7 +175,7 @@ if(NOT ${found})
+       endif()
+     endif()
+ 
+-    if(NOT ANDROID AND NOT IOS)
++    if(TRUE)
+       if(CMAKE_HOST_UNIX)
+         execute_process(COMMAND ${_executable} -c "from distutils.sysconfig import *; print(get_python_lib())"
+                         RESULT_VARIABLE _cvpy_process
+@@ -240,7 +240,7 @@ if(NOT ${found})
+                           OUTPUT_STRIP_TRAILING_WHITESPACE)
+         endif()
+       endif()
+-    endif(NOT ANDROID AND NOT IOS)
++    endif()
+   endif()
+ 
+   # Export return values
+@@ -285,6 +285,17 @@ find_python("${OPENCV_PYTHON3_VERSION}" "${MIN_VER_PYTHON3}" PYTHON3_LIBRARY PYT
+     PYTHON3_INCLUDE_DIR PYTHON3_INCLUDE_DIR2 PYTHON3_PACKAGES_PATH
+     PYTHON3_NUMPY_INCLUDE_DIRS PYTHON3_NUMPY_VERSION)
+ 
++message("DEBUG PYTHON3_LIBRARIES: ${PYTHON3_LIBRARIES}")
++message("DEBUG PYTHON3_INCLUDE_DIR: ${PYTHON3_INCLUDE_DIR}")
++string(COMPARE EQUAL "${PYTHON3_LIBRARIES}" "" result)
++if(result)
++	message(FATAL_ERROR "can not find PYTHON3_LIBRARIES")
++endif()
++
++string(COMPARE EQUAL "${PYTHON3_INCLUDE_DIR}" "" result)
++if(result)
++	message(FATAL_ERROR "can not find PYTHON3_INCLUDE_DIR")
++endif()
+ 
+ if(PYTHON_DEFAULT_EXECUTABLE)
+     set(PYTHON_DEFAULT_AVAILABLE "TRUE")
+diff --git a/modules/python/CMakeLists.txt b/modules/python/CMakeLists.txt
+index a51acf386e..5605a54a32 100644
+--- a/modules/python/CMakeLists.txt
++++ b/modules/python/CMakeLists.txt
+@@ -3,7 +3,7 @@
+ # ----------------------------------------------------------------------------
+ if(DEFINED OPENCV_INITIAL_PASS)  # OpenCV build
+ 
+-if(ANDROID OR APPLE_FRAMEWORK OR WINRT)
++	if(False)
+   ocv_module_disable_(python2)
+   ocv_module_disable_(python3)
+   return()
