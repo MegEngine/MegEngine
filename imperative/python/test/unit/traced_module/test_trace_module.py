@@ -6,7 +6,7 @@ import megengine.functional as F
 import megengine.module as M
 from megengine import Tensor
 from megengine.module.module import Module
-from megengine.traced_module import TracedModule, trace_module
+from megengine.traced_module import TracedModule, enable_expr_checker, trace_module
 from megengine.traced_module.expr import CallFunction
 
 
@@ -58,7 +58,7 @@ class MyModule4(M.Module):
 
 
 def test_trace_module():
-
+    enable_expr_checker()
     x = Tensor(1)
     m1 = MyModule1()
     tm1 = trace_module(m1, x)

@@ -148,7 +148,6 @@ class module_tracer:
         self.checker.push_scope()
         self._activate_constant_cache.append([])
 
-
     def pop_scope(self):
         self._active_scopes.pop()
         self.checker.pop_scope()
@@ -156,7 +155,6 @@ class module_tracer:
         for obj in cache:
             if hasattr(obj, "_NodeMixin__node"):
                 delattr(obj, "_NodeMixin__node")
-
 
     def current_scope(self):
         if self._active_scopes:
