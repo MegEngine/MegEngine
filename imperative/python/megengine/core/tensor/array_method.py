@@ -99,7 +99,39 @@ def _transpose(data, axes):
 
 
 def _broadcast(inp, shape):
-    shape = astensor1d(shape, inp, dtype="int32", device=inp.device)
+    auto_infer = False
+    if isinstance(shape, (list, tuple)):
+        shape_tuple = list(shape)
+        for i, s in enumerate(shape_tuple):
+            if isinstance(s, type(None)):
+                if s is None:
+                    right = i - len(shape_tuple)
+                    inp_shape = inp._tuple_shape
+                    if len(inp_shape) + right >= 0:
+                        shape_tuple[right] = list(inp_shape)[right]
+                        auto_infer = True
+                        continue
+                    else:
+                        raise ValueError("invalided Broadcast shape")
+                else:
+                    raise ValueError(
+                        "expect shape[{}] >= 0 or use `None` or 'x' and 'X' to auto infer, got {}".format(
+                            i, s
+                        )
+                    )
+            if s < 0:
+                raise ValueError(
+                    "expect shape[{}] >= 0 or use `None` or 'x' and 'X' to auto infer, got {}".format(
+                        i, s
+                    )
+                )
+        if auto_infer:
+            shape = tuple(shape_tuple)
+    try:
+        shape_tuple = make_shape_tuple(shape)
+    except ValueError:
+        shape_tuple = shape
+    shape = astensor1d(shape_tuple, inp, dtype="int32", device=inp.device)
     (result,) = apply(builtin.Broadcast(), inp, shape)
     return result
 
