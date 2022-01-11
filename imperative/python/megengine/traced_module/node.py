@@ -380,6 +380,11 @@ class NodeMixin(abc.ABC):
             value._record_wrapped_nodes(node)
 
     @classmethod
+    def clear_node(cls, value):
+        if hasattr(value, "_NodeMixin__node"):
+            delattr(value, "_NodeMixin__node")
+
+    @classmethod
     def get(cls, value, *default):
         return getattr(value, "_NodeMixin__node", *default)
 

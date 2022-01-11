@@ -763,6 +763,7 @@ class Constant(Expr):
         current_graph = active_module_tracer().current_scope()
         current_graph._namespace.auto_naming_for_outputs(expr)
         current_graph._insert(expr)
+        active_module_tracer().current_constant_cache().append(expr.value)
         return expr.outputs[0]
 
     def interpret(self, *inputs):

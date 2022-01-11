@@ -131,6 +131,7 @@ class module_tracer:
         self._active_scopes = []
         self.checker = TracedModuleChecker(self)
         self.patcher = Patcher(wrap_fn)
+        self._activate_constant_cache = []
 
     @classmethod
     def register_as_builtin(cls, mod):
@@ -145,14 +146,26 @@ class module_tracer:
     def push_scope(self, scope):
         self._active_scopes.append(scope)
         self.checker.push_scope()
+        self._activate_constant_cache.append([])
+
 
     def pop_scope(self):
         self._active_scopes.pop()
         self.checker.pop_scope()
+        cache = self._activate_constant_cache.pop()
+        for obj in cache:
+            if hasattr(obj, "_NodeMixin__node"):
+                delattr(obj, "_NodeMixin__node")
+
 
     def current_scope(self):
         if self._active_scopes:
             return self._active_scopes[-1]
+        return None
+
+    def current_constant_cache(self):
+        if self._activate_constant_cache:
+            return self._activate_constant_cache[-1]
         return None
 
     def top_scope(self):

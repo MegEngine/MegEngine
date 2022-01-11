@@ -1980,7 +1980,10 @@ class TracedModule(Module):
         assert (
             treedef in self.argdef_graph_map
         ), "support input args kwargs format: \n{}, but get: \n{}".format(
-            "\n ".join("forward({})".format(i._args_kwargs_repr()) for i in self.argdef_graph_map.keys()),
+            "\n ".join(
+                "forward({})".format(i._args_kwargs_repr())
+                for i in self.argdef_graph_map.keys()
+            ),
             treedef._args_kwargs_repr(),
         )
         inputs = filter(
@@ -2514,3 +2517,7 @@ def trace_module(
         set_symbolic_shape(use_sym_shape)
         set_active_module_tracer(None)
         unset_module_tracing()
+        for t in mod.tensors(recursive=True):
+            NodeMixin.clear_node(t)
+        for t in inputs:
+            NodeMixin.clear_node(t)
