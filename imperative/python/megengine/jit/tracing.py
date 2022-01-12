@@ -1060,7 +1060,8 @@ class trace:
             resize_input: whether resize input image to fit input var shape.
             input_transform: a python expression to transform the input data.
                 Example: data / np.std(data)
-            dump_format: using different dump formats.
+            dump_format: using different dump formats. the open source MegEngine defaults to the FBS 
+                format. internal MegEngine have a choice of FBS and internal proprietary formats
 
         Keyword Arguments:
 
