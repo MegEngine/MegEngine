@@ -34,12 +34,13 @@ class PersistentCacheOnServer(_PersistentCache):
                     "in-file cache".format(exc)
                 )
             else:
-                self.add_config(
-                    "redis",
-                    redis_config,
-                    "fastrun use redis cache",
-                    "failed to connect to cache server",
-                )
+                if redis_config is not None:
+                    self.add_config(
+                        "redis",
+                        redis_config,
+                        "fastrun use redis cache",
+                        "failed to connect to cache server",
+                    )
         if cache_type != "MEMORY":
             path = self.get_cache_file(self.get_cache_dir())
             self.add_config(
