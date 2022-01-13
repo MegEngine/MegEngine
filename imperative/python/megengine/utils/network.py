@@ -241,7 +241,7 @@ class Network:
                 metadata.optimize_options = optimize_options
 
         G.set_priority_to_id([o._node if isinstance(o, G.VarNode) else o for o in out])
-        dump_content, _ = G.dump_graph(
+        dump_content, dump_info = G.dump_graph(
             out,
             keep_var_name=keep_var_name,
             keep_opr_name=keep_opr_name,
@@ -255,6 +255,7 @@ class Network:
             permission = "wb" if append == False else "ab"
             file = open(file, permission)
         file.write(dump_content)
+        return dump_info
 
     def make_const(self, data, name=None, device=None):
         r"""Makes an ImmutableTensor OpNode to provide a parameter for the network."""
