@@ -655,6 +655,10 @@ if(MGE_WITH_JIT_MLIR OR MGE_BUILD_IMPERATIVE_RT)
   include(cmake/llvm-project.cmake)
 endif()
 
+if(MGE_BUILD_IMPERATIVE_RT)
+  set(MGE_WITH_CUSTOM_OP ON)
+endif()
+
 if(MGE_WITH_DISTRIBUTED)
   include(cmake/protobuf.cmake)
   include(cmake/zmq.cmake)
