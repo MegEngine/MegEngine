@@ -37,7 +37,12 @@ def compare(ref, real):
 def build_and_clean(test_func):
     def wrapper():
         cur_dir_path = os.path.dirname(os.path.abspath(__file__))
-        build_path = os.path.join(cur_dir_path, "custom_opsrc", "build")
+        build_root_dir = custom_op_tools._get_default_build_root()
+        build_path = os.path.join(build_root_dir, "custom_opsrc", "build")
+
+        if os.path.exists(build_path):
+            shutil.rmtree(build_path)
+
         mgb_root_path = os.path.dirname(
             os.path.dirname(
                 os.path.dirname(os.path.dirname(os.path.dirname(cur_dir_path)))
@@ -67,20 +72,21 @@ def build_and_clean(test_func):
         else:
             custom_opsrc = [os.path.join(cur_dir_path, "custom_opsrc", "elem_add.cpp")]
 
-        lib_path = custom_op_tools.build_and_load(
-            "test_op",
-            custom_opsrc,
-            extra_include_paths=extra_include_paths,
-            extra_ldflags=extra_ld_flags,
-            build_dir=build_path,
-            verbose=False,
-            abi_tag=custom.get_custom_op_abi_tag(),
-        )
-        test_func()
+        try:
+            lib_path = custom_op_tools.build_and_load(
+                "test_op",
+                custom_opsrc,
+                extra_include_paths=extra_include_paths,
+                extra_ldflags=extra_ld_flags,
+                build_dir=build_path,
+                verbose=False,
+            )
+            test_func()
+            custom.unload(lib_path)
 
-        custom.unload(lib_path)
-        if os.path.exists(build_path):
-            shutil.rmtree(build_path)
+        finally:
+            if os.path.exists(build_path):
+                shutil.rmtree(build_path)
 
     return wrapper
 

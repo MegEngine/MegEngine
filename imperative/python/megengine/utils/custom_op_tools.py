@@ -16,7 +16,7 @@ import sys
 import time
 from typing import List, Optional, Union
 
-from ..core.ops.custom import load
+from ..core.ops.custom import get_custom_op_abi_tag, load
 from ..logger import get_logger
 
 
@@ -730,9 +730,10 @@ def build(
     """
 
     # phase 1: prepare config
-    if abi_tag != None:
-        global MGE_ABI_VER
-        MGE_ABI_VER = abi_tag
+    if abi_tag == None:
+        abi_tag = get_custom_op_abi_tag()
+    global MGE_ABI_VER
+    MGE_ABI_VER = abi_tag
 
     def strlist(args, name):
         assert isinstance(args, str) or isinstance(
