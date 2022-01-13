@@ -56,6 +56,8 @@ CUresult on_init_failed(int func_idx) {
 #include "./libcuda-wrap_11.1.h"
 #elif CUDA_VERSION == 11020
 #include "./libcuda-wrap_11.2.h"
+#elif CUDA_VERSION == 11040
+#include "./libcuda-wrap_11.4.h"
 #else
 #error "cuda stub not support this cuda version, you can close cuda stub to passby"
 #endif
