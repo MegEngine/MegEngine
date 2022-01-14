@@ -400,14 +400,14 @@ test_cases = [
 
 def perf_func(func, inps, reps, unpack_inps, is_mge):
     if is_mge:
-        mge._full_sync()
+        mge.sync()
         tik = time.time()
         for _ in range(reps):
             if unpack_inps:
                 out = func(*inps)
             else:
                 out = func(inps)
-        mge._full_sync()
+        mge.sync()
     else:
         torch.cuda.synchronize()
         with torch.no_grad():

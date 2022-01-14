@@ -76,7 +76,7 @@ if sys.platform == "win32":
     kernel32.SetErrorMode(old_error_mode)
 
 from .core._imperative_rt.core2 import close as _close
-from .core._imperative_rt.core2 import full_sync as _full_sync
+from .core._imperative_rt.core2 import full_sync as sync
 from .core._imperative_rt.core2 import sync as _sync
 from .core._imperative_rt.utils import _set_fork_exec_path_for_timed_func
 from .device import *
