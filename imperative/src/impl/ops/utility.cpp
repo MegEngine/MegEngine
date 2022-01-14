@@ -34,8 +34,20 @@ auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
     return inputs;
 }
 
+auto make_backward_graph(
+        const OpDef& def, const SmallVector<LogicalTensorDesc>& inputs,
+        const SmallVector<bool>& input_requires_grad,
+        const SmallVector<bool>& output_has_grad) {
+    Subgraph graph;
+    graph.inputs = {1, 2, 3};
+    graph.outputs = {3};
+    graph.exprs = {};
+    return EncodedSubgraph::make(graph);
+}
+
 OP_TRAIT_REG(FastpathCopy, FastpathCopy)
         .apply_on_var_node(apply_on_var_node)
+        .make_backward_graph(make_backward_graph)
         .fallback();
 }  // namespace fastpathcopy
 }  // namespace
@@ -290,10 +302,10 @@ ComputingGraphHolder& get_computing_graph(
         std::shared_ptr<OpDef> compiled_op, SmallVector<LogicalTensorDesc> descs) {
     using ComputingGraphHolderCache =
             OpMethResultCache<std::queue<std::unique_ptr<ComputingGraphHolder>>>;
-    thread_local ComputingGraphHolderCache cache;
+    thread_local auto cache = std::make_unique<ComputingGraphHolderCache>();
     thread_local size_t nr_cg_holders = 0;
     ComputingGraphHolderCache::key_t cache_key = {compiled_op, descs};
-    auto& cg_holder_queue = cache[cache_key];
+    auto& cg_holder_queue = (*cache)[cache_key];
     std::unique_ptr<ComputingGraphHolder> holder;
     if (!cg_holder_queue.empty()) {
         // pick one
