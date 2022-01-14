@@ -160,7 +160,7 @@ private:
     template <typename TItem>
     void register_converter() {
         m_table[typeid(TItem)] = [](const any_t& input) {
-            return variant_t(*input.as<TItem>());
+            return variant_t(input.cast<TItem>());
         };
     }
 

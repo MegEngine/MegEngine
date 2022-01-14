@@ -11,7 +11,6 @@
 
 #pragma once
 
-#include <any>
 #include <bitset>
 #include <chrono>
 #include <deque>
@@ -28,6 +27,7 @@
 
 #include "megbrain/imperative/op_def.h"
 #include "megbrain/imperative/physical_tensor.h"
+#include "megbrain/imperative/utils/any.h"
 
 namespace mgb {
 namespace imperative {
@@ -49,48 +49,6 @@ public:
     using Time = profiler::Time;
     static profiler::Time record_host();
     static std::shared_ptr<CompNode::Event> record_device(CompNode device);
-};
-
-class AnyPtr {
-public:
-    struct Deleter {
-        void* object;
-        void (*method)(void*, void*);
-        void operator()(void* ptr) { method(object, ptr); }
-    };
-
-private:
-    using holder_t = std::unique_ptr<void, Deleter>;
-
-    const std::type_info* m_type = nullptr;
-    holder_t m_holder = nullptr;
-
-public:
-    AnyPtr() = default;
-    template <
-            typename T,
-            typename = std::enable_if_t<!std::is_same_v<std::decay_t<T>, AnyPtr>>>
-    explicit AnyPtr(T* value, Deleter deleter) {
-        m_type = &typeid(T);
-        m_holder = {value, deleter};
-    }
-    template <typename T>
-    T* as() {
-        mgb_assert(is_exactly<T>(), "type mismatch");
-        return reinterpret_cast<T*>(m_holder.get());
-    }
-    template <typename T>
-    const T* as() const {
-        mgb_assert(is_exactly<T>(), "type mismatch");
-        return reinterpret_cast<const T*>(m_holder.get());
-    }
-    template <typename T>
-    bool is_exactly() const {
-        return std::type_index{typeid(T)} == std::type_index{*m_type};
-    }
-    const std::type_info& type() const { return *m_type; }
-    bool operator==(std::nullptr_t nptr) const { return m_holder == nullptr; }
-    operator bool() const { return m_holder != nullptr; }
 };
 
 class Profiler {
@@ -128,7 +86,6 @@ private:
     std::thread::id m_thread_id;
     std::vector<Record> m_records;
     std::atomic<Status> m_status = Running;
-    std::unordered_map<std::type_index, AnyPtr> m_mem_pools;
 
     static std::vector<entry_t> sm_records;
     static options_t sm_profile_options;
@@ -161,42 +118,21 @@ public:
         return *tm_profiler;
     }
 
-    template <typename T>
-    static MemPool<T>& get_mem_pool() {
-        thread_local MemPool<T>* t_pool = nullptr;
-        if (t_pool == nullptr) {
-            auto& pool = get_instance().m_mem_pools[typeid(MemPool<T>)];
-            if (pool == nullptr) {
-                pool =
-                        AnyPtr(new MemPool<T>(),
-                               {nullptr, [](void*, void* ptr) {
-                                    delete reinterpret_cast<MemPool<T>*>(ptr);
-                                }});
-            }
-            t_pool = pool.as<MemPool<T>>();
-        }
-        return *t_pool;
-    }
-
     static uint64_t next_id() { return sm_last_id++; }
 
     template <typename T, typename... TArgs>
     static uint64_t record(TArgs&&... args) {
         auto& profiler = get_instance();
-        auto& mem_pool = get_mem_pool<T>();
+        // auto& mem_pool = get_mem_pool<T>();
         if constexpr (sm_debug) {
             Status expected = Running;
             mgb_assert(profiler.m_status.compare_exchange_strong(expected, Recording));
         }
         uint64_t id = next_id();
         profiler::Time time = sm_timer.record_host();
-        auto deleter = [](void* obj, void* ptr) {
-            reinterpret_cast<MemPool<T>*>(obj)->free(reinterpret_cast<T*>(ptr));
-        };
         profiler.m_records.emplace_back(
                 id, profiler.m_thread_id, time,
-                AnyPtr{mem_pool.alloc(T{std::forward<TArgs>(args)...}),
-                       {&mem_pool, deleter}});
+                AnyPtr::make<T>(T{std::forward<TArgs&&>(args)...}));
         if constexpr (sm_debug) {
             Status expected = Recording;
             mgb_assert(profiler.m_status.compare_exchange_strong(expected, Running));
@@ -241,7 +177,7 @@ public:
         bundle.options = get_options();
         bundle.start_at = sm_start_at;
         bundle.thread_dict = get_thread_dict();
-        return std::move(bundle);
+        return bundle;
     }
 
     static option_t get_option(std::string key, option_t default_val) {

@@ -28,10 +28,10 @@ TEST(TestProfiler, ImperativeLogProfile) {
     auto results = imperative::Profiler::collect();
     imperative::Profiler::stop_profile();
     mgb_assert(results.entries.size() == 2);
-    auto* event_start = results.entries[0].data.as<profiler::CustomEvent>();
-    auto* event_finish = results.entries[1].data.as<profiler::CustomFinishEvent>();
-    mgb_assert(event_start && event_start->title == "XXX");
-    mgb_assert(event_finish && event_finish->title == "XXX");
+    auto& event_start = results.entries[0].data.cast<profiler::CustomEvent>();
+    auto& event_finish = results.entries[1].data.cast<profiler::CustomFinishEvent>();
+    mgb_assert(event_start.title == "XXX");
+    mgb_assert(event_finish.title == "XXX");
     mgb_assert(results.entries[0].time < results.entries[1].time);
     mgb_assert(results.entries[0].id < results.entries[1].id);
 }

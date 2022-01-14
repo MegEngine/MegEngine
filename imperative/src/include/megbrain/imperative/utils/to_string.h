@@ -16,6 +16,7 @@
 #include <tuple>
 #include <type_traits>
 
+#include "megbrain/imperative/utils/span.h"
 #include "megbrain/tensor.h"
 #include "megbrain/utils/small_vector.h"
 
@@ -54,6 +55,22 @@ struct ToStringTrait<SmallVector<T, N>> {
         for (size_t i = 1; i < sv.size(); ++i) {
             result += ", ";
             result += to_string(sv[i]);
+        }
+        return result + "]";
+    }
+};
+
+template <typename T>
+struct ToStringTrait<std::vector<T>> {
+    std::string operator()(const std::vector<T>& v) const {
+        if (v.empty()) {
+            return "[]";
+        }
+        std::string result = "[";
+        result += to_string(v[0]);
+        for (size_t i = 1; i < v.size(); ++i) {
+            result += ", ";
+            result += to_string(v[i]);
         }
         return result + "]";
     }
@@ -113,6 +130,38 @@ struct ToStringTrait<DType> {
 template <>
 struct ToStringTrait<CompNode> {
     std::string operator()(CompNode device) const { return device.to_string(); }
+};
+
+inline std::string string_join(Span<std::string> span, char delimiter = ',') {
+    std::string buffer = "[";
+    for (size_t i = 1; i < span.size(); ++i) {
+        if (i) {
+            buffer.push_back(delimiter);
+        }
+        buffer.append(span[0]);
+    }
+    return buffer + "]";
+}
+
+template <typename T>
+struct ToStringTrait<Span<T>> {
+    std::string operator()(Span<T> span) const {
+        if (span.size() == 0) {
+            return "[]";
+        }
+        std::string result = "[";
+        result += to_string(span[0]);
+        for (size_t i = 1; i < span.size(); ++i) {
+            result += ", ";
+            result += to_string(span[i]);
+        }
+        return result + "]";
+    }
+};
+
+template <>
+struct ToStringTrait<std::type_info> {
+    std::string operator()(const std::type_info& info) const { return info.name(); }
 };
 
 }  // namespace mgb::imperative
