@@ -9,12 +9,12 @@
 import os
 from contextlib import contextmanager
 
+from ._imperative_rt.core2 import get_option, set_option
+
 __compute_mode = "default"
 __conv_format = "default"
 _benchmark_kernel = False
 _deterministic_kernel = False
-_async_level = os.getenv("MEGENGINE_INTERP_ASYNC_LEVEL", 2)
-
 
 __all__ = [
     "benchmark_kernel",
@@ -77,13 +77,13 @@ def async_level(mod) -> int:
            import megengine as mge
            mge.config.async_level = 2
     """
-    return _async_level
+    return get_option("async_level")
 
 
 @async_level.setter
 def async_level(mod, level: int):
-    global _async_level
-    _async_level = level
+    assert level >= 0 and level <= 2, "async_level should be 0, 1 or 2"
+    set_option("async_level", level)
 
 
 @property
@@ -148,7 +148,7 @@ def _reset_execution_config(
     orig_flags = (
         _benchmark_kernel,
         _deterministic_kernel,
-        _async_level,
+        get_option("async_level"),
         __compute_mode,
         __conv_format,
     )
@@ -157,7 +157,7 @@ def _reset_execution_config(
     if deterministic_kernel is not None:
         _deterministic_kernel = deterministic_kernel
     if async_level is not None:
-        _async_level = async_level
+        set_option("async_level", async_level)
     if compute_mode is not None:
         __compute_mode = compute_mode
     if conv_format is not None:

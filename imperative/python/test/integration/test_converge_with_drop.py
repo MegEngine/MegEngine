@@ -14,7 +14,7 @@ import megengine as mge
 import megengine.autodiff as ad
 import megengine.functional as F
 from megengine import Tensor
-from megengine.core._imperative_rt.core2 import _set_drop_flag, get_option, set_option
+from megengine.core import get_option, set_option
 from megengine.module import Linear, Module
 from megengine.optimizer import SGD
 
@@ -75,7 +75,7 @@ class XORNet(Module):
 
 
 def test_training_converge_with_drop():
-    _set_drop_flag(True)
+    set_option("enable_drop", 1)
     old_buffer_length = get_option("buffer_length")
     set_option("buffer_length", 0)
     net = XORNet()
@@ -118,5 +118,5 @@ def test_training_converge_with_drop():
         precision
     )
 
-    _set_drop_flag(False)
+    set_option("enable_drop", 0)
     set_option("buffer_length", old_buffer_length)

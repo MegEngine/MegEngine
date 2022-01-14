@@ -79,6 +79,7 @@ from .core._imperative_rt.core2 import close as _close
 from .core._imperative_rt.core2 import full_sync as sync
 from .core._imperative_rt.core2 import sync as _sync
 from .core._imperative_rt.utils import _set_fork_exec_path_for_timed_func
+from .config import *
 from .device import *
 from .logger import enable_debug_log, get_logger, set_log_file, set_log_level
 from .serialization import load, save

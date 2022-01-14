@@ -9,8 +9,8 @@
 import re
 from typing import Union
 
+from ..core import set_option as _set_option
 from ..core._imperative_rt.core2 import clear_candidates as _clear_candidates
-from ..core._imperative_rt.core2 import set_option as _set_option
 
 _eviction_threshold = 0
 _evictee_minimum_size = 1024 ** 2

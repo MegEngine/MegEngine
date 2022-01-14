@@ -599,7 +599,7 @@ void init_tensor(py::module m) {
                 auto val2 = py_async_error.py::object::operator()(
                         "An async error is reported. See above for the actual cause."
                         " Hint: This is where it is reported, not where it happened."
-                        " You may call `megengine.core.set_option('async_level', 0)` "
+                        " You may call `megengine.config.async_level = 0 "
                         "to get better error reporting.");
                 PyException_SetCause(
                         val2.ptr(), val);  // PyException_SetCause steals reference
@@ -698,20 +698,12 @@ void init_tensor(py::module m) {
         py_task_q.wait_all_task_finish();
     };
 
+    m.def("clear_candidates", [channel]() { channel->clear_candidates(); });
     m.def("set_option", [channel](std::string name, size_t value) {
         channel->set_option(name, value);
     });
-    m.def("clear_candidates", [channel]() { channel->clear_candidates(); });
     m.def("get_option",
           [channel](std::string name) { return channel->get_option(name); });
-    m.def("_set_drop_flag",
-          [channel](bool flag) { channel->set_option("enable_drop", flag); });
-    m.def("config_async_level", [channel](int level) {
-        mgb_assert(level >= 0 and level <= 2, "async_level should be 0, 1 or 2");
-        channel->set_option("async_level", level);
-    });
-    m.def("get_async_level",
-          [channel]() { return channel->get_option("async_level"); });
     m.def("set_buffer_length", [channel](int length) {
         mgb_assert(length >= 0 and length < 100, "buffer_length should be in [0, 100)");
         channel->set_option("buffer_length", length);
