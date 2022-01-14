@@ -47,8 +47,13 @@ cg::OperatorNodeBase* apply_on_var_node_remote_recv(
     auto group_client = std::make_shared<opr::GroupClientProxy>(
             ssprintf("%s:%d", recv.addr.data(), recv.port));
     auto&& graph = inputs[0]->owner_graph();
+    mgb_assert(!recv.shape.empty());
+    TensorShape shape;
+    for (auto&& dim : recv.shape) {
+        shape[shape.ndim++] = dim;
+    }
     return graph->insert_opr(std::make_unique<mgb::opr::RemoteRecv>(
-            recv.key, inputs[0], *graph, group_client, config, recv.shape, recv.dtype,
+            recv.key, inputs[0], *graph, group_client, config, shape, recv.dtype,
             recv.backend));
 }
 

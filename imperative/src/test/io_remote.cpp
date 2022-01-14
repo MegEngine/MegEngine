@@ -42,7 +42,7 @@ TEST(TestImperative, IORemote) {
     auto run_recv = [&](std::shared_ptr<HostTensorND> hnd) {
         auto def = imperative::RemoteRecv::make(
                 "io_remote_test", server_addr, port, 0, CompNode::load("gpu1"),
-                TensorShape{vector_size}, dtype::Float32(), "nccl");
+                std::vector<int32_t>{(int32_t)vector_size}, dtype::Float32(), "nccl");
         auto inp = Tensor::make(*hnd);
         auto oup = OpDef::apply_on_physical_tensor(*def, {inp});
         HostTensorND host_v;

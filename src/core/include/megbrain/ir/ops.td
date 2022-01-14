@@ -284,7 +284,7 @@ def RemoteRecv : MgbHashableOp<"RemoteRecv"> {
     MgbUI32Attr:$port,
     MgbUI32Attr:$rank_from,
     MgbCompNodeAttr:$cn,
-    MgbTensorShapeAttr:$shape,
+    MgbArrayAttr<MgbI32Attr>:$shape,
     MgbDTypeAttr:$dtype,
     MgbStringAttr:$backend
   );
