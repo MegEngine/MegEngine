@@ -113,7 +113,7 @@ def full(
             data type must be inferred from ``value``. If the value is an ``int``,
             the output tensor data type must be the default integer data type. If the
             value is a ``float``, the output tensor data type must be the default
-            floating-point data type. If the value is a ``bool``, the output tensor 
+            floating-point data type. If the value is a ``bool``, the output tensor
             must have boolean data type. Default: ``None``.
         device: device on which to place the created tensor. Default: ``None``.
 
@@ -195,77 +195,65 @@ def ones(
     return full(shape, 1.0, dtype=dtype, device=device)
 
 
-def zeros(shape, dtype="float32", device=None) -> Tensor:
-    r"""Returns a zero tensor with given shape.
+def zeros(
+    shape: Union[int, Tuple[int, ...]],
+    *,
+    dtype="float32",
+    device: Optional[CompNode] = None
+) -> Tensor:
+    r"""Returns a new tensor having a specified shape and filled with zeros.
 
     Args:
-        shape: a list, tuple or integer defining the shape of the output tensor.
-        dtype: the desired data type of the output tensor. Default: ``float32``.
-        device: the desired device of the output tensor. Default: if ``None``,
-            use the default device (see :func:`~.megengine.get_default_device`).
+        shape (int or sequence of ints): the shape of the output tensor.
+
+    Keyword args:
+        dtype (:attr:`.Tensor.dtype`): output tensor data type. Default: ``float32``.
+        device (:attr:`.Tensor.device`): device on which to place the created tensor. Default: ``None``.
+
+    Returns:
+        a tensor containing zeros.
+
+    Examples:
+        >>> F.zeros((2, 1))
+        Tensor([[0.]
+         [0.]], device=xpux:0)
     """
     return full(shape, 0.0, dtype=dtype, device=device)
 
 
 def zeros_like(inp: Union[Tensor, SymbolVar]) -> Union[Tensor, SymbolVar]:
-    r"""Returns a zero tensor with the same shape as input tensor.
+    r"""Returns a tensor filled with zeros with the same shape and data type as input tensor.
 
     Args:
-        inp: input tensor.
+        inp (Tensor): input tensor.
 
     Return:
-        output tensor.
+        a tensor containing zeros.
 
     Examples:
-
-        .. testcode::
-
-            import numpy as np
-            from megengine import tensor
-            import megengine.functional as F
-
-            inp = tensor(np.arange(1, 7, dtype=np.int32).reshape(2,3))
-            out = F.zeros_like(inp)
-            print(out.numpy())
-
-        Outputs:
-
-        .. testoutput::
-
-            [[0 0 0]
-             [0 0 0]]
-
+        >>> input = F.arange(9, dtype='int32').reshape(3,3)
+        >>> F.zeros_like(input)
+        Tensor([[0 0 0]
+         [0 0 0]
+         [0 0 0]], dtype=int32, device=xpux:0)
     """
     return full_like(inp, 0.0)
 
 
 def ones_like(inp: Union[Tensor, SymbolVar]) -> Union[Tensor, SymbolVar]:
-    r"""Returns a ones tensor with the same shape as input tensor.
+    r"""Returns a tensor filled with ones with the same shape and data type as input tensor.
 
     Args:
-        inp: input tensor.
+        inp (Tensor): input tensor.
 
     Return:
-        output tensor.
+        a tensor containing ones.
 
     Examples:
-
-        .. testcode::
-
-            import numpy as np
-            from megengine import tensor
-            import megengine.functional as F
-
-            inp = tensor(np.arange(1, 7, dtype=np.int32).reshape(2,3))
-            out = F.ones_like(inp)
-            print(out.numpy())
-
-        Outputs:
-
-        .. testoutput::
-
-            [[1 1 1]
-             [1 1 1]]
+        >>> input = F.arange(6, dtype='int32').reshape(2,3)
+        >>> F.ones_like(input)
+        Tensor([[1 1 1]
+         [1 1 1]], dtype=int32, device=xpux:0)
     """
     return full_like(inp, 1.0)
 
@@ -1094,18 +1082,18 @@ def arange(
     dtype="float32",
     device: Optional[CompNode] = None,
 ) -> Tensor:
-    r"""Returns evenly spaced values within the half-open interval ``[start, stop)`` as a one-dimensional tensor. 
+    r"""Returns evenly spaced values within the half-open interval ``[start, stop)`` as a one-dimensional tensor.
 
     Note:
-        This function cannot guarantee that the interval does not include the stop value in those cases 
+        This function cannot guarantee that the interval does not include the stop value in those cases
         where step is not an integer and floating-point rounding errors affect the length of the output tensor.
 
     Args:
-        start: if ``stop`` is specified, the start of interval (inclusive); otherwise, 
-            the end of the interval (exclusive). If ``stop`` is not specified, the default starting value is ``0``. 
+        start: if ``stop`` is specified, the start of interval (inclusive); otherwise,
+            the end of the interval (exclusive). If ``stop`` is not specified, the default starting value is ``0``.
         stop: the end of the interval. Default: ``None``.
-        step: the distance between two adjacent elements ( ``out[i+1] - out[i]`` ). Must not be 0 ; 
-            may be negative, this results i an empty tensor if stop >= start . Default: 1 . 
+        step: the distance between two adjacent elements ( ``out[i+1] - out[i]`` ). Must not be 0 ;
+            may be negative, this results i an empty tensor if stop >= start . Default: 1 .
 
     Keyword args:
         dtype( :attr:`.Tensor.dtype` ): output tensor data type. Default: ``float32``.
@@ -1114,7 +1102,7 @@ def arange(
     Returns:
         A one-dimensional tensor containing evenly spaced values.
 
-        The length of the output tensor must be ``ceil((stop-start)/step)`` 
+        The length of the output tensor must be ``ceil((stop-start)/step)``
         if ``stop - start`` and ``step`` have the same sign, and length 0 otherwise.
 
     Examples:

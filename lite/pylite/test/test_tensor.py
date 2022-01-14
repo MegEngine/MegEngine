@@ -54,6 +54,16 @@ def test_tensor_make():
     tensor = LiteTensor(layout, device_id=1)
     assert tensor.device_id == 1
 
+    tensor.layout = [8, 14]
+    assert tensor.layout.shapes[0] == 8
+    assert tensor.layout.shapes[1] == 14
+    assert tensor.layout.data_type == LiteDataType.LITE_FLOAT
+
+    tensor_new = LiteTensor(shapes=[1, 3, 224], dtype=np.int8)
+    assert tensor_new.layout.shapes[1] == 3
+    assert tensor_new.layout.shapes[2] == 224
+    assert tensor_new.layout.data_type == LiteDataType.LITE_INT8
+
 
 def test_tensor_set_data():
     layout = LiteLayout([2, 16], "int8")
@@ -292,3 +302,24 @@ def test_tensor_concat():
         for i in range(128):
             index = j * 128 + i
             assert real_data[index // 32][index % 32] == j
+
+
+def test_tensor_get_memory_by_share():
+    layout = LiteLayout([4, 32], "int16")
+    tensor = LiteTensor(layout)
+    assert tensor.nbytes == 4 * 32 * 2
+
+    arr = np.ones([4, 32], "int16")
+    for i in range(128):
+        arr[i // 32][i % 32] = i
+    tensor.set_data_by_copy(arr)
+    test_data = tensor.get_data_by_share()
+    real_data = tensor.to_numpy()
+    for i in range(128):
+        assert real_data[i // 32][i % 32] == test_data[i // 32][i % 32]
+
+    arr[1][18] = 5
+    arr[3][7] = 345
+    tensor.set_data_by_copy(arr)
+    assert test_data[1][18] == 5
+    assert test_data[3][7] == 345

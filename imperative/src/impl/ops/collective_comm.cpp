@@ -27,7 +27,7 @@ namespace imperative {
 namespace {
 cg::OperatorNodeBase* apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
     auto&& comm = def.cast_final_safe<CollectiveComm>();
-    auto group_client = std::make_shared<GroupClientProxy>(
+    auto group_client = std::make_shared<opr::GroupClientProxy>(
             ssprintf("%s:%d", comm.addr.data(), comm.port));
     SmallVector<std::shared_ptr<mgb::DeviceTensorND>> dev_buffer_arr(1, nullptr);
     auto disable = std::make_shared<DTypeScalar>();

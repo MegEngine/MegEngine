@@ -109,6 +109,7 @@ def build_observered_net(net: M.Module, observer_cls):
     )
     Q.enable_observer(qat_net)
     inp = Tensor(np.random.random(size=(5, 3, 32, 32)))
+    qat_net.eval()
     qat_net(inp)
     Q.disable_observer(qat_net)
     return qat_net
@@ -116,6 +117,7 @@ def build_observered_net(net: M.Module, observer_cls):
 
 def build_fakequanted_net(net: QATModule, fakequant_cls):
     qat_net = Q.reset_qconfig(net, get_lsq_config(fakequant_cls))
+    qat_net.eval()
     return qat_net
 
 
@@ -162,6 +164,7 @@ def test_load_param():
 
     def _check_module(build_func: Callable):
         net = build_func()
+        net.eval()
         buffer = io.BytesIO()
         mge.save(net.state_dict(), buffer)
         buffer.seek(0)
@@ -185,6 +188,7 @@ def test_load_param():
 def test_qualname():
     def _check_qualname(net):
         inp = Tensor(np.random.random(size=(5, 3, 32, 32)))
+        net.eval()
         traced_net = trace_module(net, inp)
         base_qualname = traced_net.graph.qualname
         for node in traced_net.graph.nodes():

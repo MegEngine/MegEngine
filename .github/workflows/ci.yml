@@ -29,6 +29,7 @@ jobs:
         uses: actions/checkout@v2
       - name: Checkout submodules
         run: |
+          apt update&&apt install ninja-build
           ./third_party/prepare.sh
           ./third_party/install-mkl.sh
       - name: Build MegEngine
@@ -57,6 +58,7 @@ jobs:
         uses: actions/checkout@v2
       - name: Checkout submodules
         run: |
+          apt update&&apt install ninja-build
           ./third_party/prepare.sh
           ./third_party/install-mkl.sh
       - name: Build MegEngine

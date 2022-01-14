@@ -156,6 +156,8 @@ TensorInfo* ChannelImpl::put_impl(const HostTensorND& value, bool no_cache) {
     if (m_async_level == 0) {
         sync_impl();
         info->desc.comp_node.sync();
+        auto err = info->desc.comp_node.check_async_error();
+        mgb_assert(!err, "%s", err->what());
     }
     return info;
 }
@@ -336,6 +338,8 @@ void ChannelImpl::dispatch_kernel(
         for (auto&& oup : *outputs) {
             auto info = reinterpret_cast<TensorInfo*>(oup);
             info->ptr->comp_node().sync();
+            auto err = info->ptr->comp_node().check_async_error();
+            mgb_assert(!err, "%s", err->what());
         }
     }
 }
@@ -931,7 +935,8 @@ TensorPtr ChannelImpl::wait_tensor(TensorInfo* info, TensorProp prop) {
     MGB_RECORD_EVENT(TensorWaitPropEvent, info->id, m_waitee_id, prop);
     bool require_host = prop == TensorProp::HostValue;
     auto host_available = [&] { return info->ptr && info->ptr->value_fetched(); };
-    if (require_host && !host_available()) {
+    bool wait_host = !host_available();
+    if (require_host && wait_host) {
         // avoid dead lock
         lock.unlock();
         m_buffer.enqueue(GetValue{info});
@@ -944,6 +949,10 @@ TensorPtr ChannelImpl::wait_tensor(TensorInfo* info, TensorProp prop) {
     });
     MGB_RECORD_EVENT(TensorWaitPropFinishEvent, info->id, m_waitee_id, prop);
     m_waitee = nullptr;
+    if (require_host && wait_host) {
+        auto err = info->ptr->comp_node().check_async_error();
+        mgb_assert(!err, "%s", err->what());
+    }
     return info->ptr;
 }
 

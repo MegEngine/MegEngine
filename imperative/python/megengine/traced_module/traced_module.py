@@ -36,12 +36,16 @@ from .. import get_logger
 from .. import module as M
 from ..core._imperative_rt.core2 import Tensor as RawTensor
 from ..core._imperative_rt.core2 import (
+    apply,
     is_tracing_module,
     set_module_tracing,
     unset_module_tracing,
 )
 from ..core._trace_option import set_symbolic_shape
+from ..core.ops.builtin import Copy
+from ..core.tensor.utils import isscalar, setscalar
 from ..module import Module
+from ..module import external as MExternal
 from ..module.qat import QATModule
 from ..quantization.fake_quant import LSQ, TQT, FakeQuantize, _FakeQuantize
 from ..quantization.observer import (
@@ -54,6 +58,7 @@ from ..quantization.observer import (
     SyncMinMaxObserver,
 )
 from ..tensor import Tensor
+from ..utils.max_recursion_limit import max_recursion_limit
 from ..version import __version__
 from .expr import (
     Apply,
@@ -97,6 +102,13 @@ from .serialization import (
     load_call_tensor_method_expr,
     load_functional,
 )
+from .tm_config import (
+    _exclude_from_trace,
+    _get_default_checker,
+    _get_expr_checker,
+    _graph_surgery_mode,
+    _set_graph_surgery_mode,
+)
 from .utils import (
     _check_builtin_module_attr,
     _check_obj_attr,
@@ -116,24 +128,12 @@ def _is_builtin_name(name: str) -> bool:
 
 
 def _is_leaf(node):
-    assert isinstance(node, RawTensor), "doesn't support {} in return values".format(
+    assert isinstance(
+        node, RawTensor
+    ), 'doesn\'t support {} in return values, MUST use Tensor or use "register_supported_type" method to register self-defined type'.format(
         type(node)
     )
     return isinstance(node, RawTensor)
-
-
-_enable_graph_surgery_mode = False
-
-
-def _graph_surgery_mode():
-    return _enable_graph_surgery_mode
-
-
-def _set_graph_surgery_mode(mode: bool):
-    global _enable_graph_surgery_mode
-    pre_mode = _enable_graph_surgery_mode
-    _enable_graph_surgery_mode = mode
-    return pre_mode
 
 
 def _node_to_tensor(*args, **kwargs):
@@ -179,6 +179,25 @@ def _tensor_to_node(tensors):
     return nodes
 
 
+def _name_setter(node: Node, new_name: str):
+    surgery_mode = _set_graph_surgery_mode(False)
+    graph = active_module_tracer().current_scope()
+
+    if node.top_graph is not None:
+        top_graph = active_module_tracer().top_scope()
+        if node is top_graph._namespace.used_names.get(node._name, None):
+            graph = top_graph
+        else:
+            graph = node.top_graph
+
+    assert (
+        graph._namespace.used_names.get(new_name, None) is None
+    ), "The name(%s) is already in use. Please try a different one again." % (new_name)
+    graph._namespace.unassociate_name_with_obj(node)
+    node._name = graph._namespace.create_unique_name(new_name, node)
+    _set_graph_surgery_mode(surgery_mode)
+
+
 def _wrap_method_to_tensor_node():
     def _any_method(name, func):
         def _any(*args, **kwargs):
@@ -207,10 +226,15 @@ def _wrap_method_to_tensor_node():
     for method in get_tensor_wrapable_method():
         patch = PatchedFn(TensorNode, method)
         if type(getattr(Tensor, method)) == property:
+            # Only support property.getter
             patch.set_func(property(_any_method(method, patch.origin_fn)))
         else:
             patch.set_func(_any_method(method, patch.origin_fn))
         tensor_method_patch.append(patch)
+
+    patch = PatchedFn(Node, "name")
+    patch.set_func(property(patch.origin_fn.fget, _name_setter))
+    tensor_method_patch.append(patch)
     return tensor_method_patch
 
 
@@ -351,14 +375,14 @@ class _InsertExprs:
             assert (
                 node.top_graph == self.graph
             ), "The input node ({}) is not in the graph ({})".format(node, self.graph)
-            if isinstance(node, TensorNode) and node.expr in self.graph._exprs:
+            if node.expr in self.graph._exprs:
                 max_inp_expr_idx = max(
                     max_inp_expr_idx, self.graph._exprs.index(node.expr)
                 )
         max_inp_expr_idx += 1
 
         insert_index = -1
-        if self.expr is not None:
+        if self.expr in self.graph._exprs:
             insert_index = self.graph._exprs.index(self.expr)
         insert_index += 1
 
@@ -1224,17 +1248,18 @@ class InternalGraph:
         return result
 
     def __deepcopy__(self, memo):
-        if id(self) in memo:
-            return memo[id(self)]
-        cls = self.__class__
-        result = cls.__new__(cls)
-        state = {}
-        memo[id(self)] = result
-        for k, v in self.__dict__.items():
-            if not isinstance(v, weakref.ReferenceType):
-                state[k] = copy.deepcopy(v, memo)
-        result.__dict__.update(state)
-        return result
+        with max_recursion_limit():
+            if id(self) in memo:
+                return memo[id(self)]
+            cls = self.__class__
+            result = cls.__new__(cls)
+            state = {}
+            memo[id(self)] = result
+            for k, v in self.__dict__.items():
+                if not isinstance(v, weakref.ReferenceType):
+                    state[k] = copy.deepcopy(v, memo)
+            result.__dict__.update(state)
+            return result
 
 
 def _get_meth_name(obj, func):
@@ -1270,7 +1295,12 @@ def _wrapped_function(orig_func):
                         return orig_func(*args, **kwargs)
                     if isinstance(args[1], RawTensor):
                         node = NodeMixin.get(inputs[1])
-                        inputs[1] = copy.copy(inputs[1])
+                        is_scalar = isscalar(inputs[1])
+                        inputs[1] = apply(
+                            Copy(comp_node=inputs[1].device), Tensor(inputs[1])
+                        )[0]
+                        if is_scalar:
+                            setscalar(inputs[1])
                         # copy inputs[1] to avoid tensor and Tensor(tensor) share same m_tensor,
                         # which will cause they have same _NodeMixin__node in tracing.
                         NodeMixin.wrap_safe(inputs[1], node)
@@ -1294,6 +1324,13 @@ def _wrapped_function(orig_func):
             else:
                 outputs = None
             call_node.add_outputs(outputs)
+
+            if _get_expr_checker():
+                with _exclude_from_trace():
+                    active_module_tracer().checker.check_expr_interpret(
+                        call_node, outputs
+                    )
+
             set_module_tracing()
             return rst
         return orig_func(*args, **kwargs)
@@ -1475,6 +1512,12 @@ class TracedModuleBuilder(NodeMixin):
             unset_module_tracing()
             rst = self._mod(*args, **kwargs)
             outputs, out_def = tree_flatten(rst, is_leaf=_is_leaf)
+            if _get_expr_checker():
+                with _exclude_from_trace():
+                    tmp = self.build()
+                    active_module_tracer().checker.check_builtin_module(
+                        tmp, callnode, outputs
+                    )
             set_module_tracing()
             if self._is_builtin:
                 self._body = None
@@ -1649,7 +1692,9 @@ class TracedModuleBuilder(NodeMixin):
                     if not isinstance(mod_attr, (List, Dict, QATModule)):
                         assert mod_attr is wrapped._mod
                 else:
-                    assert mod_attr is wrapped
+                    assert (
+                        mod_attr is wrapped
+                    ), "TracedModule do not support modify attributes, please check your code."
 
                 if isinstance(wrapped, (NodeMixin, RawTensor)):
                     NodeMixin.wrap(
@@ -1934,7 +1979,15 @@ class TracedModule(Module):
         if hasattr(self, "argspec") and self.argspec is not None:
             args, kwargs = _convert_kwargs_to_args(self.argspec, args, kwargs, True)
         inputs, treedef = tree_flatten(((self, *args), kwargs))
-        assert treedef in self.argdef_graph_map
+        assert (
+            treedef in self.argdef_graph_map
+        ), "support input args kwargs format: \n{}, but get: \n{}".format(
+            "\n ".join(
+                "forward({})".format(i._args_kwargs_repr())
+                for i in self.argdef_graph_map.keys()
+            ),
+            treedef._args_kwargs_repr(),
+        )
         inputs = filter(
             lambda i: isinstance(i, (Module, TracedModuleBuilder, RawTensor)), inputs
         )  # allow TracedModuleBuilder for retrace.
@@ -2070,7 +2123,8 @@ class TracedModule(Module):
         for inp_def, graph in self.argdef_graph_map.items():
             if top_graph is not None:
                 graph._top_graph = weakref.ref(top_graph)
-            for n in graph._inputs + graph.outputs:
+            for n in graph._inputs + graph._outputs:
+                n.expr._top_graph = weakref.ref(graph)
                 n._top_graph = weakref.ref(graph)
             graph._inputs[0]._owner = weakref.ref(self)
             for i, n in enumerate(graph._inputs):
@@ -2307,16 +2361,17 @@ class TracedModule(Module):
         return result
 
     def __deepcopy__(self, memo):
-        cls = self.__class__
-        result = cls.__new__(cls)
-        state = {}
-        memo[id(self)] = result
-        for k, v in self.__dict__.items():
-            if not isinstance(v, weakref.ReferenceType):
-                state[k] = copy.deepcopy(v, memo)
-        result.__dict__.update(state)
-        result._update_ref()
-        return result
+        with max_recursion_limit():
+            cls = self.__class__
+            result = cls.__new__(cls)
+            state = {}
+            memo[id(self)] = result
+            for k, v in self.__dict__.items():
+                if not isinstance(v, weakref.ReferenceType):
+                    state[k] = copy.deepcopy(v, memo)
+            result.__dict__.update(state)
+            result._update_ref()
+            return result
 
 
 def cpp_apply_module_trace(opdef, *args):
@@ -2375,7 +2430,7 @@ def wrap(func: Callable):
 
 def _register_all_builtin_module():
 
-    for sub_mod in [M, M.qat, M.quantized]:
+    for sub_mod in [M, M.qat, M.quantized, MExternal]:
         for m in getmembers(sub_mod):
             if (
                 isclass(m[1])
@@ -2443,13 +2498,29 @@ def trace_module(
                             qualname="{}.[{}]".format(net_name, "arg_{}".format(_)),
                         ),
                     )
-            builder(*args, **kwargs)
+            rst = builder(*copy.deepcopy(args), **copy.deepcopy(kwargs))
             active_module_tracer().pop_scope()
             traced_mod = builder.build()
             traced_mod.argspec = forward_argspec
             traced_mod.graph._reset_ids()
+
+            has_expr_not_check = False
+            if _get_expr_checker():
+                has_expr_not_check = (
+                    active_module_tracer().checker.check_node_not_in_scope()
+                )
+            if _get_default_checker() or has_expr_not_check:
+                with _exclude_from_trace():
+                    tm_res = traced_mod(*args, **kwargs)
+                    tm_res, _ = tree_flatten(tm_res, is_leaf=_is_leaf)
+                    rst, _ = tree_flatten(rst, is_leaf=_is_leaf)
+                    active_module_tracer().checker.check_net_outputs(tm_res, rst)
             return traced_mod
     finally:
         set_symbolic_shape(use_sym_shape)
         set_active_module_tracer(None)
         unset_module_tracing()
+        for t in mod.tensors(recursive=True):
+            NodeMixin.clear_node(t)
+        for t in inputs:
+            NodeMixin.clear_node(t)

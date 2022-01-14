@@ -20,38 +20,38 @@ namespace opr {
 
 MGB_DEFINE_OPR_CLASS(
         PoolingForward, intl::MegDNNOprWrapperFwd<megdnn::PoolingForward>,
-        public mixin::AlgoChooserHelper)  //{
+        public mixin::AlgoChooserHelper) // {
 public:
-MGE_WIN_DECLSPEC_FUC PoolingForward(
-        VarNode* src, const Param& param, const ExecutionPolicy& policy,
-        const OperatorNodeConfig& config);
-MGE_WIN_DECLSPEC_FUC static SymbolVar make(
-        SymbolVar src, const Param& param, const ExecutionPolicy& policy = {},
-        const OperatorNodeConfig& config = {});
+    MGE_WIN_DECLSPEC_FUC PoolingForward(
+            VarNode* src, const Param& param, const ExecutionPolicy& policy,
+            const OperatorNodeConfig& config);
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
+            SymbolVar src, const Param& param, const ExecutionPolicy& policy = {},
+            const OperatorNodeConfig& config = {});
 
-void init_output_static_infer_desc() override;
+    void init_output_static_infer_desc() override;
 
-size_t get_workspace_size_bytes(
-        const TensorShapeArray& input_shapes,
-        const TensorShapeArray& output_shapes) const override;
+    size_t get_workspace_size_bytes(
+            const TensorShapeArray& input_shapes,
+            const TensorShapeArray& output_shapes) const override;
 };
 using Pooling = PoolingForward;
 
 MGB_DEFINE_OPR_CLASS(
         PoolingBackward, intl::MegDNNOprWrapperBwd<megdnn::PoolingBackward>,
-        public mixin::AlgoChooserHelper)  //{
+        public mixin::AlgoChooserHelper) // {
 public:
-MGE_WIN_DECLSPEC_FUC PoolingBackward(
-        VarNode* src, VarNode* dst, VarNode* diff, const Param& param,
-        const ExecutionPolicy& policy, const OperatorNodeConfig& config);
+    MGE_WIN_DECLSPEC_FUC PoolingBackward(
+            VarNode* src, VarNode* dst, VarNode* diff, const Param& param,
+            const ExecutionPolicy& policy, const OperatorNodeConfig& config);
 
-MGE_WIN_DECLSPEC_FUC static SymbolVar make(
-        SymbolVar src, SymbolVar dst, SymbolVar diff, const Param& param,
-        const ExecutionPolicy& policy = {}, const OperatorNodeConfig& config = {});
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
+            SymbolVar src, SymbolVar dst, SymbolVar diff, const Param& param,
+            const ExecutionPolicy& policy = {}, const OperatorNodeConfig& config = {});
 
-MGE_WIN_DECLSPEC_FUC size_t get_workspace_size_bytes(
-        const TensorShapeArray& input_shapes,
-        const TensorShapeArray& output_shapes) const override final;
+    MGE_WIN_DECLSPEC_FUC size_t get_workspace_size_bytes(
+            const TensorShapeArray& input_shapes,
+            const TensorShapeArray& output_shapes) const override final;
 };
 
 }  // namespace opr

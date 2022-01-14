@@ -13,10 +13,12 @@ from typing import NamedTuple, Optional, Sequence, Tuple, Union
 from ..core import _config
 from ..core._imperative_rt.core2 import apply, dtype_promotion
 from ..core._imperative_rt.ops import SubgraphBuilder as _SubgraphBuilder
+from ..core._imperative_rt.ops import get_global_rng_seed as _get_global_rng_seed
 from ..core.ops import builtin
 from ..core.ops.builtin import (
     BatchNorm,
     Dimshuffle,
+    Dropout,
     Elemwise,
     GetVarShape,
     Identity,
@@ -39,7 +41,6 @@ from ..core.tensor.utils import (
 from ..device import get_default_device
 from ..distributed import WORLD, is_distributed
 from ..jit import exclude_from_trace
-from ..random import uniform
 from ..tensor import Tensor
 from ..utils.deprecation import deprecated_func
 from ..utils.tuple_function import _pair, _pair_nonzero, _triple, _triple_nonzero
@@ -77,6 +78,7 @@ __all__ = [
     "max_pool2d",
     "one_hot",
     "prelu",
+    "pad",
     "relu",
     "relu6",
     "remap",
@@ -1066,57 +1068,6 @@ def softmax(inp: Tensor, axis: Optional[int] = None) -> Tensor:
     return cached / down
 
 
-@lru_cache(maxsize=None)
-def _get_layerNorm(device, dtype, dim, gopt_level=2):
-    @subgraph("LayerNormAffine", dtype, device, 5, gopt_level=gopt_level)
-    def layerNormAffine(inputs, f, c):
-        inp, eps, _flatten_shape, weight, bias = inputs
-        inp_shape = f(GetVarShape(), inp)
-
-        inp = f(Reshape(axis=dim), inp, _flatten_shape)
-        mean = f(Reduce(mode="mean", axis=-1), inp)
-        x2s = f(Reduce(mode="sum_sqr", axis=-1), inp)
-        reduce_shape = f(GetVarShape(), x2s)
-        reduce_size = f(
-            "//",
-            f(Reduce(mode="product", axis=0), inp_shape),
-            f(Reduce(mode="product", axis=0), reduce_shape),
-        )
-        reduce_size_f = f(TypeCvt(dtype=dtype), reduce_size)
-        var = f("-", f("/", x2s, reduce_size_f), f("**", mean, c(2)))
-        inv_sqrt_var = f("**", f("+", var, eps), c(-0.5))
-        oup = f("fma3", inp, inv_sqrt_var, f("*", f("-", mean), inv_sqrt_var))
-        affine_oup = f(Reshape(), oup, inp_shape)
-        affine_oup = f("fma3", affine_oup, weight, bias)
-
-        # NOTE: return oup make backward faster but take more memory
-        return (affine_oup, oup, mean, x2s), (True, False, False, False)
-
-    @subgraph("LayerNorm", dtype, device, 3, gopt_level=gopt_level)
-    def layerNorm(inputs, f, c):
-        inp, eps, _flatten_shape = inputs
-        inp_shape = f(GetVarShape(), inp)
-
-        inp = f(Reshape(axis=dim), inp, _flatten_shape)
-        mean = f(Reduce(mode="mean", axis=-1), inp)
-        x2s = f(Reduce(mode="sum_sqr", axis=-1), inp)
-        reduce_shape = f(GetVarShape(), x2s)
-        reduce_size = f(
-            "//",
-            f(Reduce(mode="product", axis=0), inp_shape),
-            f(Reduce(mode="product", axis=0), reduce_shape),
-        )
-        reduce_size_f = f(TypeCvt(dtype=dtype), reduce_size)
-        var = f("-", f("/", x2s, reduce_size_f), f("**", mean, c(2)))
-        inv_sqrt_var = f("**", f("+", var, eps), c(-0.5))
-        oup = f("fma3", inp, inv_sqrt_var, f("*", f("-", mean), inv_sqrt_var))
-        oup = f(Reshape(), oup, inp_shape)
-
-        return (oup,), (True,)
-
-    return (layerNorm, layerNormAffine)
-
-
 def layer_norm(
     inp: Tensor,
     normalized_shape: tuple,
@@ -1133,32 +1084,34 @@ def layer_norm(
         normalized_shape: the shape that you want to be normalizated 
         affine: whether to use weight and bias
         weight: must not be None when the affine is true
-        bias: must not be None when the bias is true
+        bias: must not be None when the affine is true
         eps: a value added to the denominator for numerical stability. Default: 1e-5
     """
-
     if amp._enabled:
         inp, weight, bias = cast_tensors(inp, weight, bias, promote=True)
 
-    _device = inp.device
-    _dtype = inp.dtype
-    _dim = len(inp.shape) - len(normalized_shape)
+    if isinstance(normalized_shape, int):
+        normalized_shape = [normalized_shape]
 
-    _flatten_shape = concat(
-        (
-            convert_single_value(inp.shape[:_dim], dtype="int32", device=inp.device),
-            convert_single_value(-1, dtype="int32", device=inp.device),
-        )
+    normalized_dim = len(normalized_shape)
+    assert normalized_dim > 0
+
+    normalized_size = 1
+    for i in range(normalized_dim):
+        normalized_size = normalized_size * normalized_shape[i]
+
+    op = builtin.LayerNorm(
+        affine=affine,
+        eps=eps,
+        normalized_dim=normalized_dim,
+        normalized_size=normalized_size,
     )
-    (layerNorm, layerNormAffine) = _get_layerNorm(_device, _dtype, _dim)
-
-    eps = convert_single_value(eps, dtype=inp.dtype, device=inp.device)
     if affine:
-        outvar, *_ = apply(layerNormAffine(), inp, eps, _flatten_shape, weight, bias)
+        assert weight is not None and bias is not None
+        return apply(op, inp, weight, bias)[0]
     else:
-        outvar, *_ = apply(layerNorm(), inp, eps, _flatten_shape)
-
-    return outvar
+        # assert weight is None and bias is None
+        return apply(op, inp)[0]
 
 
 def batch_norm(
@@ -1552,12 +1505,9 @@ def dropout(inp: Tensor, drop_prob: float, training: bool = True) -> Tensor:
         return inp
 
     # model in training mode, e.g. model.train()
-    rv = uniform(size=inp.shape)
-    mask = rv > drop_prob
-    ret = inp * mask.astype(inp.dtype)
-    ret *= 1 / (1 - drop_prob)
-
-    return ret
+    op = Dropout(drop_prob=drop_prob, seed=_get_global_rng_seed(), handle=0)
+    outputs = apply(op, inp)
+    return outputs[0]
 
 
 def one_hot(inp: Tensor, num_classes: int) -> Tensor:

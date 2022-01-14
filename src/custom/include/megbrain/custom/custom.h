@@ -16,7 +16,8 @@
 #include "tensor.h"
 
 namespace custom {
-std::shared_ptr<CustomOp> op_insert(std::string opname, uint32_t version);
+MGE_WIN_DECLSPEC_FUC std::shared_ptr<CustomOp> op_insert(
+        std::string opname, uint32_t version);
 }
 
 #define CUSTOM_OP_REG(OpName) \

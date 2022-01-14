@@ -5,16 +5,15 @@
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-import collections
 import copy
 import inspect
 from collections.abc import MutableMapping, MutableSequence
 from inspect import FullArgSpec
-from typing import Callable, Dict, Iterable, List, Optional, Sequence, Type, Union
+from typing import Callable, Dict, Iterable, List, Optional, Sequence, Union
 
 from .. import get_logger
 from ..module import Module
-from ..tensor import Parameter, Tensor
+from ..tensor import Tensor
 
 logger = get_logger(__name__)
 
@@ -126,10 +125,12 @@ def _check_obj_attr(obj):
     for _, v in obj.items():
         leafs, _ = tree_flatten(v, is_leaf=lambda _: True)
         for leaf in leafs:
-            assert _check_leaf_type(
-                leaf
-            ), "Type {} is not supported by traced module".format(
-                leaf if isinstance(leaf, type) else type(leaf)
+            assert _check_leaf_type(leaf), (
+                "Type {} is not supported in TracedModule serialization by default. "
+                "If you want to save this object to file, please call tm.register_supported_type({}) "
+                "before saving.".format(
+                    leaf if isinstance(leaf, type) else type(leaf), type(leaf).__name__
+                )
             )
 
 

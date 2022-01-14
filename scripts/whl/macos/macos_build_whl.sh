@@ -171,6 +171,7 @@ function do_build() {
         mkdir -p staging
 
         cp -a imperative/python/{megengine,setup.py,requires.txt,requires-style.txt,requires-test.txt} staging/
+        cp -a ${SRC_DIR}/src/custom/include staging/megengine/core/include/
         cd ${BUILD_DIR}/staging/megengine/core
         rt_file=`ls _imperative_rt.*.so`
         echo "rt file is: ${rt_file}"

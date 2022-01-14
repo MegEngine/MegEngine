@@ -27,8 +27,10 @@ public:
         m_local = std::make_shared<mgb::InMemoryPersistentCache>();
     }
 
-    bool connect(std::string ip, size_t port, std::string password) {
-        m_client.auth(password);
+    void connect(std::string ip, size_t port, std::optional<std::string> password) {
+        if (password) {
+            m_client.auth(*password);
+        }
         m_client.connect(
                 ip, port,
                 [](const std::string& host, std::size_t port,
@@ -40,15 +42,31 @@ public:
                     }
                 },
                 std::uint32_t(200));
-        if (!m_client.is_connected()) {
-            return false;
-        }
+        mgb_assert(m_client.is_connected(), "connect failed");
         auto flag = m_client.get("mgb-cache-flag");
         sync();
-        return flag.get().ok();
+        auto is_valid = [](const cpp_redis::reply& reply) {
+            switch (reply.get_type()) {
+                case cpp_redis::reply::type::error:
+                case cpp_redis::reply::type::null:
+                    return false;
+                case cpp_redis::reply::type::integer:
+                    return reply.as_integer() != 0;
+                case cpp_redis::reply::type::simple_string:
+                case cpp_redis::reply::type::bulk_string:
+                    return !reply.as_string().empty();
+                case cpp_redis::reply::type::array:
+                    return !reply.as_array().empty();
+                default:
+                    mgb_assert(false, "unknown reply type %d", (int)reply.get_type());
+            }
+        };
+        mgb_assert(is_valid(flag.get()), "invalid mgb-cache-flag");
     }
 
     bool valid() const override { return m_client.is_connected(); }
+
+    void flush() override {}
 
     mgb::Maybe<Blob> get(const std::string& category, const Blob& key) override {
         MGB_LOCK_GUARD(m_mtx);
@@ -75,7 +93,7 @@ public:
         MGB_LOCK_GUARD(m_mtx);
         std::string key_str(static_cast<const char*>(key.ptr), key.size);
         std::string redis_key_str;
-        encode(category + '@' + key_str, redis_key_str);
+        encode(category + '@' + key_str, redis_key_str, 24);
         std::string value_str(static_cast<const char*>(value.ptr), value.size);
         std::string redis_value_str;
         encode(value_str, redis_value_str);
@@ -118,18 +136,16 @@ private:
 
 class ExtendedInFilePersistentCache final : public ExtendedPersistentCache {
 private:
-    std::string m_path;
+    std::optional<std::string> m_path;
     std::unique_ptr<mgb::InFilePersistentCache> m_impl;
 
 public:
     ExtendedInFilePersistentCache() = default;
 
-    bool open(std::string path) {
+    void open(std::string path) {
         std::fstream file;
         file.open(path, std::ios::in | std::ios::binary);
-        if (!file.is_open()) {
-            return false;
-        }
+        mgb_assert(file.is_open(), "can't open file in %s", path.c_str());
         std::vector<char> bytes = {
                 std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>()};
         if (bytes.size()) {
@@ -139,14 +155,11 @@ public:
             m_impl = std::make_unique<mgb::InFilePersistentCache>();
         }
         m_path = path;
-        return true;
     }
 
-    ~ExtendedInFilePersistentCache() {
-        if (m_impl) {
-            m_impl->dump_cache(m_path.c_str());
-        }
-    }
+    void open() { m_impl = std::make_unique<mgb::InFilePersistentCache>(); }
+
+    ~ExtendedInFilePersistentCache() { flush(); }
 
     mgb::Maybe<Blob> get(const std::string& category, const Blob& key) override {
         return m_impl->get(category, key);
@@ -157,29 +170,64 @@ public:
     }
 
     std::optional<size_t> clear() override {
-        m_impl = std::make_unique<mgb::InFilePersistentCache>();
-        m_impl->dump_cache(m_path.c_str());
+        if (m_impl) {
+            m_impl = std::make_unique<mgb::InFilePersistentCache>();
+            if (m_path) {
+                m_impl->dump_cache(m_path->c_str());
+            }
+        }
         return {};
     }
 
     bool valid() const override { return m_impl != nullptr; }
+
+    void flush() override {
+        if (m_impl && m_path) {
+            m_impl->dump_cache(m_path->c_str());
+        }
+    }
 };
 
-std::shared_ptr<ExtendedPersistentCache> make_redis(
-        std::string ip, size_t port, std::string password, std::string prefix) {
-    auto cache = std::make_shared<RedisCache>(prefix, 100);
-    if (!cache->connect(ip, port, password)) {
-        return nullptr;
+std::shared_ptr<ExtendedPersistentCache> ExtendedPersistentCache::make_from_config(
+        std::string type, std::unordered_map<std::string, std::string> args,
+        std::string& err_msg) {
+    try {
+        if (type == "redis") {
+            std::string prefix = args.at("prefix");
+            std::optional<std::string> password = args.count("password")
+                                                        ? args.at("password")
+                                                        : std::optional<std::string>();
+            auto cache = std::make_shared<RedisCache>(prefix, 100);
+            if (args.count("unixsocket")) {
+                std::string unixsocket = args.at("unixsocket");
+                cache->connect(unixsocket, 0, password);
+            } else {
+                std::string ip = args.at("hostname");
+                int port = atoi(args.at("port").c_str());
+                std::optional<std::string> password =
+                        args.count("password") ? args.at("password")
+                                               : std::optional<std::string>();
+                cache->connect(ip, port, password);
+            }
+            return cache;
+        } else if (type == "in-file") {
+            std::string path = args.at("path");
+            auto cache = std::make_shared<ExtendedInFilePersistentCache>();
+            cache->open(path);
+            return cache;
+        } else if (type == "in-memory") {
+            auto cache = std::make_shared<ExtendedInFilePersistentCache>();
+            cache->open();
+            return cache;
+        } else {
+            mgb_assert(false, "persistent cache type %s unsupported", type.c_str());
+        }
+    } catch (const std::exception& exc) {
+        err_msg = exc.what();
+    } catch (...) {
+        err_msg = "unknown exception";
     }
-    return cache;
-}
-
-std::shared_ptr<ExtendedPersistentCache> make_in_file(std::string path) {
-    auto cache = std::make_shared<ExtendedInFilePersistentCache>();
-    if (!cache->open(path)) {
-        return nullptr;
-    }
-    return cache;
+    return nullptr;
 }
 
 }  // namespace mgb::imperative::persistent_cache

@@ -29,6 +29,19 @@ struct OprMaker<opr::ShuffleRNG, 1> {
         return out[0].node()->owner_opr();
     }
 };
+
+// OprMaker in MGB_SEREG_OPR only support unique output opr
+template <>
+struct OprMaker<opr::DropoutForward, 1> {
+    using Param = opr::DropoutForward::Param;
+    static cg::OperatorNodeBase* make(
+            const Param& param, const cg::VarNodeArray& i, ComputingGraph& graph,
+            const OperatorNodeConfig& config) {
+        MGB_MARK_USED_VAR(graph);
+        return opr::DropoutForward::make(i[0], param, config)[0].node()->owner_opr();
+    }
+};
+
 }  // namespace serialization
 
 namespace opr {
@@ -43,6 +56,8 @@ MGB_SEREG_OPR(PermutationRNG, 1);
 MGB_SEREG_OPR(BetaRNG, 2);
 MGB_SEREG_OPR(ShuffleRNG, 1);
 MGB_SEREG_OPR(ShuffleRNGBackward, 3);
+MGB_SEREG_OPR(Dropout, 1);
+MGB_SEREG_OPR(DropoutBackward, 2);
 
 }  // namespace opr
 }  // namespace mgb

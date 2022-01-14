@@ -97,7 +97,7 @@ TEST_F(CUDA, SHAKE_CONV_BIAS_FORWARD_QS8_NHWC) {
 
 TEST_F(CUDA, SHAKE_CONV_BIAS_FORWARD_QS8_NCHWX) {
     using Format = ConvBias::Param::Format;
-    require_compute_capability(6, 1);
+    require_compute_capability(7, 5);
     AccuracyShakeChecker<ConvBiasForward> checker(handle_cuda());
     UniformIntRNG int_rng{-5, 5};
     UniformFloatRNG float_rng{-50, 50};

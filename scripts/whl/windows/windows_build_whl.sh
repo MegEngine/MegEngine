@@ -77,11 +77,13 @@ CUBLAS_LIB="/c/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v10.1/bin/cublas6
 CURAND_LIB="/c/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v10.1/bin/curand64_10.dll"
 CUBLASLT_LIB="/c/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v10.1/bin/cublasLt64_10.dll"
 CUDART_LIB="/c/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v10.1/bin/cudart64_101.dll"
-MGE_EXPORT_LIB="${SRC_DIR}/build_dir/host/build/src/megengine_shared.dll"
+MGE_EXPORT_DLL="${SRC_DIR}/build_dir/host/build/src/megengine_shared.dll"
+MGE_EXPORT_LIB="${SRC_DIR}/build_dir/host/build/src/megengine_shared.lib"
 
 function depend_real_copy() {
     REAL_DST=$1
     echo "real copy lib to $1"
+    cp "${MGE_EXPORT_DLL}" ${REAL_DST}
     cp "${MGE_EXPORT_LIB}" ${REAL_DST}
 
     if [ ${BUILD_WHL_CPU_ONLY} = "OFF" ]; then
@@ -190,6 +192,7 @@ function do_build() {
         rm -rf staging
         mkdir -p staging
         cp -a imperative/python/{megengine,setup.py,requires.txt,requires-style.txt,requires-test.txt} staging/
+        cp -a ${SRC_DIR}/src/custom/include/megbrain staging/megengine/core/include/
         cd ${BUILD_DIR}/staging/megengine/core
         rt_file=`ls _imperative_rt.*.pyd`
         echo "rt file is: ${rt_file}"

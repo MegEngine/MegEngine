@@ -23,7 +23,7 @@ class ParamInfoImpl;
 class ParamImpl;
 
 // Schema of a param element
-class ParamSchema {
+class MGE_WIN_DECLSPEC_FUC ParamSchema {
     CUSTOM_PIMPL_CLS_DECL(ParamSchema);
     ParamSchema(
             const std::string& name, const ParamVal& value,
@@ -36,7 +36,7 @@ class ParamSchema {
     std::string str(void) const;
 };
 
-class ParamInfo {
+class MGE_WIN_DECLSPEC_FUC ParamInfo {
     CUSTOM_PIMPL_CLS_DECL(ParamInfo);
 
     void set_tag(const std::string&);
@@ -46,16 +46,16 @@ class ParamInfo {
     const std::vector<ParamSchema>& meta(void) const;
 };
 
-class Param {
+class MGE_WIN_DECLSPEC_FUC Param {
     CUSTOM_PIMPL_CLS_DECL(Param);
 
-    MGE_WIN_DECLSPEC_FUC Param(const ParamInfo&);
-    MGE_WIN_DECLSPEC_FUC ParamVal& operator[](const std::string&);
-    MGE_WIN_DECLSPEC_FUC const ParamVal& operator[](const std::string&) const;
-    MGE_WIN_DECLSPEC_FUC const std::unordered_map<std::string, ParamVal>& raw() const;
-    MGE_WIN_DECLSPEC_FUC bool exist(const std::string& name) const;
-    MGE_WIN_DECLSPEC_FUC std::string to_bytes(void) const;
-    MGE_WIN_DECLSPEC_FUC void from_bytes(const std::string&);
+    Param(const ParamInfo&);
+    ParamVal& operator[](const std::string&);
+    const ParamVal& operator[](const std::string&) const;
+    const std::unordered_map<std::string, ParamVal>& raw() const;
+    bool exist(const std::string& name) const;
+    std::string to_bytes(void) const;
+    void from_bytes(const std::string&);
 };
 
 MGE_WIN_DECLSPEC_FUC bool operator==(const Param&, const Param&);

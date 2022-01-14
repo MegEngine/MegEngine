@@ -17,6 +17,9 @@
 #include "megbrain/opr/zmq_rpc.h"
 #include "mm_handler.pb.h"
 
+using namespace mgb;
+using namespace opr;
+
 /* ======================== GroupServerProxy ========================== */
 /*!
  * A proxy that receives zmqrpc call, direct call to NCCL Manager
@@ -213,7 +216,7 @@ struct ServerInfo {
     std::unique_ptr<ZmqRpc::ZmqRpcServer> server;
 };
 
-int create_zmqrpc_server(const std::string& server_addr, int port) {
+int mgb::opr::create_zmqrpc_server(const std::string& server_addr, int port) {
     static std::unordered_map<std::string, ServerInfo> addr2server;
     static std::mutex mtx;
     MGB_LOCK_GUARD(mtx);

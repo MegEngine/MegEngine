@@ -93,7 +93,7 @@ void PoolingBase::deduce_layout_fwd(const TensorLayout& src, TensorLayout& dst) 
     size_t ph = this->param().pad_h;
     size_t pw = this->param().pad_w;
     if (ph >= fh || pw >= fw) {
-        megdnn_log_error(
+        megdnn_log_warn(
                 "pooling padding size (%zu %zu) should not be bigger than "
                 "window size (%zu %zu), it only can be used in CaffePooling",
                 pw, ph, fw, fh);

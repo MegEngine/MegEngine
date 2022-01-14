@@ -19,10 +19,19 @@
 
 namespace custom {
 
-void assert_failed_log(
+#ifndef MGE_WIN_DECLSPEC_FUC
+#ifdef _WIN32
+#define MGE_WIN_DECLSPEC_FUC __declspec(dllexport)
+#else
+#define MGE_WIN_DECLSPEC_FUC
+#endif
+#endif
+
+MGE_WIN_DECLSPEC_FUC void assert_failed_log(
         const char* file, int line, const char* func, const char* expr,
         const char* msg_fmt, ...);
 
+#ifndef _WIN32
 #define custom_expect(expr, msg...)                                               \
     if (!(expr)) {                                                                \
         assert_failed_log(__FILE__, __LINE__, __PRETTY_FUNCTION__, #expr, ##msg); \
@@ -33,8 +42,22 @@ void assert_failed_log(
         assert_failed_log(__FILE__, __LINE__, __PRETTY_FUNCTION__, #expr, ##msg); \
     }                                                                             \
     assert((expr))
+#else
+#define custom_expect(expr, ...)                                              \
+    if (!(expr)) {                                                            \
+        assert_failed_log(                                                    \
+                __FILE__, __LINE__, __PRETTY_FUNCTION__, #expr, __VA_ARGS__); \
+    }
 
-class UnImpleWarnLog {
+#define custom_assert(expr, ...)                                              \
+    if (!(expr)) {                                                            \
+        assert_failed_log(                                                    \
+                __FILE__, __LINE__, __PRETTY_FUNCTION__, #expr, __VA_ARGS__); \
+    }                                                                         \
+    assert((expr))
+#endif
+
+class MGE_WIN_DECLSPEC_FUC UnImpleWarnLog {
 public:
     UnImpleWarnLog(
             const std::string& func, const std::string& attr, const std::string& val);
@@ -54,9 +77,9 @@ void impl_deleter(void* ptr) {
     std::unique_ptr<void, void_deleter> m_impl; \
                                                 \
 public:                                         \
-    MGE_WIN_DECLSPEC_FUC Cls();                 \
-    MGE_WIN_DECLSPEC_FUC Cls(const Cls& rhs);   \
-    MGE_WIN_DECLSPEC_FUC Cls& operator=(const Cls& rhs)
+    Cls();                                      \
+    Cls(const Cls& rhs);                        \
+    Cls& operator=(const Cls& rhs)
 
 #define CUSTOM_PIMPL_CLS_DEFINE(Cls)                                                 \
     Cls::Cls() : m_impl(new Cls##Impl(), impl_deleter<Cls##Impl>) {}                 \

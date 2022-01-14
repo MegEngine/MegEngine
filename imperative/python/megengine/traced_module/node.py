@@ -18,6 +18,8 @@ from ..core._imperative_rt.core2 import Tensor as RawTensor
 from ..module import Module
 from ..quantization.utils import QParams
 from ..tensor import Tensor
+from .module_tracer import active_module_tracer
+from .tm_config import _get_expr_checker
 from .utils import _check_obj_attr
 
 logger = get_logger(__name__)
@@ -343,6 +345,11 @@ class NodeMixin(abc.ABC):
                 if isinstance(value, NodeMixin):
                     value._record_wrapped_nodes(node)
                 setattr(value, "_NodeMixin__node", node)
+                if _get_expr_checker():
+                    if isinstance(value, RawTensor):
+                        active_module_tracer().checker.record_node2value(node, value)
+                    if isinstance(value, NodeMixin):
+                        active_module_tracer().checker.record_nodemixin(node, value)
             else:
                 assert callable(node)
                 n = node()
@@ -352,6 +359,11 @@ class NodeMixin(abc.ABC):
                 if isinstance(value, NodeMixin):
                     value._record_wrapped_nodes(n)
                 setattr(value, "_NodeMixin__node", n)
+                if _get_expr_checker():
+                    if isinstance(value, RawTensor):
+                        active_module_tracer().checker.record_node2value(n, value)
+                    if isinstance(value, NodeMixin):
+                        active_module_tracer().checker.record_nodemixin(n, value)
 
     @classmethod
     def wrap_safe(cls, value, node):
@@ -359,8 +371,18 @@ class NodeMixin(abc.ABC):
         if isinstance(value, RawTensor):
             cls._record_tensornode_property(node, value)
         setattr(value, "_NodeMixin__node", node)
+        if _get_expr_checker():
+            if isinstance(value, RawTensor):
+                active_module_tracer().checker.record_node2value(node, value)
+            if isinstance(value, NodeMixin):
+                active_module_tracer().checker.record_nodemixin(node, value)
         if isinstance(value, NodeMixin):
             value._record_wrapped_nodes(node)
+
+    @classmethod
+    def clear_node(cls, value):
+        if hasattr(value, "_NodeMixin__node"):
+            delattr(value, "_NodeMixin__node")
 
     @classmethod
     def get(cls, value, *default):

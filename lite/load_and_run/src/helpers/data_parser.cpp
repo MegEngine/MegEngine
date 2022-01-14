@@ -30,7 +30,12 @@ void DataParser::feed(const std::string& path) {
     }
 
     auto endWith = [blob_string](std::string suffix) -> bool {
-        return blob_string.rfind(suffix) == (blob_string.length() - suffix.length());
+        const auto index = blob_string.rfind(suffix);
+        if (index != std::string::npos and
+            index == blob_string.length() - suffix.length()) {
+            return true;
+        }
+        return false;
     };
 
     if (endWith(".ppm") || endWith(".pgm")) {

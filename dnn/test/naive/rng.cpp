@@ -231,6 +231,67 @@ void run_shuffle(Handle* handle, bool bwd_flag) {
     run({10});
     run({6, 3});
 }
+
+template <typename T>
+void run_dropout(Handle* handle) {
+    using ctype = typename DTypeTrait<T>::ctype;
+    auto run = [&](TensorShape shape, float drop_prob) {
+        auto fwd = handle->create_operator<DropoutForward>();
+        auto bwd = handle->create_operator<DropoutBackward>();
+        fwd->param().drop_prob = drop_prob;
+        bwd->param().drop_prob = drop_prob;
+        double scale = 1.0 / (1.0 - drop_prob);
+
+        TensorLayout inp_lay{shape, T()};
+        TensorLayout oup_lay{shape, T()};
+        TensorLayout mask_lay{{fwd->get_mask_size_in_bytes(inp_lay)}, dtype::Byte()};
+        TensorLayout doup_lay{shape, T()};
+        TensorLayout dinp_lay{shape, T()};
+        TensorLayout fwd_ws_lay{
+                {fwd->get_workspace_in_bytes(inp_lay, oup_lay, mask_lay)},
+                dtype::Byte()};
+        TensorLayout bwd_ws_lay{
+                {bwd->get_workspace_in_bytes(doup_lay, mask_lay, dinp_lay)},
+                dtype::Byte()};
+
+        Tensor<ctype> inp(handle, inp_lay);
+        Tensor<ctype> oup(handle, oup_lay);
+        Tensor<DTypeTrait<dt_byte>::ctype> mask(handle, mask_lay);
+        Tensor<ctype> doup(handle, doup_lay);
+        Tensor<ctype> dinp(handle, dinp_lay);
+        Tensor<DTypeTrait<dt_byte>::ctype> fwd_ws(handle, fwd_ws_lay);
+        Tensor<DTypeTrait<dt_byte>::ctype> bwd_ws(handle, bwd_ws_lay);
+
+        for (size_t i = 0; i < inp.layout().total_nr_elems(); ++i) {
+            inp.ptr()[i] = 1;
+            doup.ptr()[i] = 1;
+        }
+
+        fwd->exec(
+                inp.tensornd(), oup.tensornd(), mask.tensornd(),
+                {fwd_ws.ptr(), fwd_ws.layout().total_nr_elems()});
+        size_t droped_cnt = 0;
+        for (size_t i = 0; i < inp.layout().total_nr_elems(); ++i) {
+            ASSERT_TRUE(oup.ptr()[i] == 0 || oup.ptr()[i] == static_cast<ctype>(scale));
+            if (oup.ptr()[i] == 0) {
+                droped_cnt++;
+            }
+        }
+        float real_drop = droped_cnt * 1.0 / inp.layout().total_nr_elems();
+        ASSERT_LT(abs(drop_prob - real_drop), 1e-2);
+
+        bwd->exec(
+                doup.tensornd(), mask.tensornd(), dinp.tensornd(),
+                {bwd_ws.ptr(), bwd_ws.layout().total_nr_elems()});
+        for (size_t i = 0; i < inp.layout().total_nr_elems(); ++i) {
+            ASSERT_TRUE(oup.ptr()[i] == dinp.ptr()[i]);
+        }
+    };
+
+    run({32, 32, 32, 32}, 0.2);
+    run({100000}, 0.3);
+}
+
 }  // namespace
 
 TEST_F(NAIVE, UNIFORM_RNG_F32) {
@@ -307,6 +368,14 @@ TEST_F(NAIVE, SHUFFLE_RNG_BWD_INT32) {
 
 TEST_F(NAIVE, SHUFFLE_RNG_BWD_F16) {
     run_shuffle<dtype::Float16>(handle(), true);
+}
+
+TEST_F(NAIVE, DROPOUT_F32) {
+    run_dropout<dtype::Float32>(handle());
+}
+
+TEST_F(NAIVE, DROPOUT_F16) {
+    run_dropout<dtype::Float16>(handle());
 }
 
 }  // namespace test

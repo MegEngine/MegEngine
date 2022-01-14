@@ -577,7 +577,7 @@ protected:
         virtual size_t get_max_reserved_memory() { return 0; }
         virtual size_t get_max_used_memory() { return 0; }
         virtual size_t get_max_block_size_available() { return 0; }
-        virtual size_t get_free_mem() { return 0; }
+        virtual size_t get_free_mem() { return get_mem_status_bytes().second; }
         virtual void reset_max_reserved_memory() {}
         virtual void reset_max_used_memory() {}
 #endif

@@ -431,4 +431,21 @@ def Padding: MgbHashableOp<"Padding", [PaddingParam]>;
 
 def LRN: MgbHashableOp<"LRN", [LRNParam]>;
 
+def LayerNorm: MgbHashableOp<"LayerNorm", [LayerNormParam]>;
+
+def Dropout: MgbHashableOp<"Dropout", [DropoutParam]> {
+  let extraArguments = (ins
+    MgbSizeTAddr:$handle
+  );
+  let hashFunction = [{
+    return mgb::hash_pair_combine(
+      mgb::hash($_self.dyn_typeinfo()),
+      mgb::hash_pair_combine(
+        mgb::hash($_self.drop_prob),
+        mgb::hash($_self.handle))
+      );
+  }];
+  let cmpFunction = [{return $0.handle == $1.handle && $0.drop_prob == $1.drop_prob;}];
+
+}
 #endif // MGB_OPS

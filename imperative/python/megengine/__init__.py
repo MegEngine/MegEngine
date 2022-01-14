@@ -84,7 +84,7 @@ from .logger import enable_debug_log, get_logger, set_log_file, set_log_level
 from .serialization import load, save
 from .tensor import Parameter, Tensor, tensor
 from .utils import comp_graph_tools as cgtools
-from .utils import persistent_cache
+from .utils.persistent_cache import PersistentCacheOnServer as _PersistentCacheOnServer
 from .version import __version__
 
 _set_fork_exec_path_for_timed_func(
@@ -92,15 +92,13 @@ _set_fork_exec_path_for_timed_func(
     os.path.join(os.path.dirname(__file__), "utils", "_timed_func_fork_exec_entry.py"),
 )
 
-atexit.register(_close)
-
 del _set_fork_exec_path_for_timed_func
 
 _exit_handlers = []
 
 
 def _run_exit_handlers():
-    for handler in _exit_handlers:
+    for handler in reversed(_exit_handlers):
         handler()
     _exit_handlers.clear()
 
@@ -117,6 +115,13 @@ def _atexit(handler):
     _exit_handlers.append(handler)
 
 
+_atexit(_close)
+
+_persistent_cache = _PersistentCacheOnServer()
+_persistent_cache.reg()
+
+_atexit(_persistent_cache.flush)
+
 # subpackages
 import megengine.amp
 import megengine.autodiff
@@ -132,5 +137,3 @@ import megengine.quantization
 import megengine.random
 import megengine.utils
 import megengine.traced_module
-
-persistent_cache.get_manager()

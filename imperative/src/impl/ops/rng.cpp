@@ -282,6 +282,21 @@ struct OpMeth<ShuffleRNG> {
     }
 };
 
+template <>
+struct OpMeth<Dropout> {
+    using DnnOp = megdnn::Dropout;
+    using Param = DnnOp::Param;
+    using OpNode = mgb::opr::Dropout;
+    static Param make_param(const Dropout& opdef) {
+        auto handle_seed = RNGDnnOpManager::get_seed(opdef.handle);
+        mgb_assert(
+                handle_seed == opdef.seed,
+                "inconsistent dropout seed: dropout op: %lu handle: %lu", handle_seed,
+                opdef.seed);
+        return {opdef.drop_prob, handle_seed};
+    }
+};
+
 template <bool>
 struct _InferLayout;
 
@@ -482,6 +497,26 @@ SmallVector<LogicalTensorDesc> infer_output_attrs<ShuffleRNG>(
     return dests;
 }
 
+template <>
+SmallVector<LogicalTensorDesc> infer_output_attrs<Dropout>(
+        const OpDef& op, const SmallVector<TensorPtr>& inputs) {
+    SmallVector<LogicalTensorDesc> dests(2);
+    auto&& cn = inputs[0]->comp_node();
+
+    dests[0].comp_node = cn;
+    dests[0].layout = TensorLayout(inputs[0]->layout());
+    dests[0].layout.dtype = inputs[0]->layout().dtype;
+
+    auto get_mask_size = [&]() -> size_t {
+        auto dnn_handle = MegDNNHandle::get(CompNodeEnv::from_comp_node(cn)).handle();
+        return dnn_handle->create_operator<megdnn::Dropout>()->get_mask_size_in_bytes(
+                inputs[0]->layout());
+    };
+    dests[1].comp_node = cn;
+    dests[1].layout = TensorLayout(TensorShape({get_mask_size()}), dtype::Byte());
+    return dests;
+}
+
 template <typename Op>
 std::tuple<SmallVector<MemoryDesc>, SmallVector<MemoryDesc>> infer_output_mem_desc(
         const OpDef& def, const SmallVector<TensorPtr>& inputs_tensors,
@@ -559,6 +594,25 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible<
     return {dests, true};
 }
 
+template <>
+std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible<Dropout>(
+        const OpDef& op, const SmallVector<LogicalTensorDesc>& inputs) {
+    SmallVector<LogicalTensorDesc> dests(2);
+    auto cn = inputs[0].comp_node;
+    dests[0].comp_node = cn;
+    dests[0].layout = TensorLayout(inputs[0].layout);
+    dests[0].layout.dtype = inputs[0].layout.dtype;
+
+    auto get_mask_size = [&]() -> size_t {
+        auto dnn_handle = MegDNNHandle::get(CompNodeEnv::from_comp_node(cn)).handle();
+        return dnn_handle->create_operator<megdnn::Dropout>()->get_mask_size_in_bytes(
+                inputs[0].layout);
+    };
+    dests[1].comp_node = cn;
+    dests[1].layout = TensorLayout(TensorShape({get_mask_size()}), dtype::Byte());
+    return {dests, true};
+}
+
 }  // anonymous namespace
 
 Handle new_handle(CompNode comp_node, uint64_t seed) {
@@ -599,6 +653,7 @@ REG_RNG_OP(PermutationRNG, SymbolVar)
 REG_RNG_OP(PoissonRNG, SymbolVar)
 REG_RNG_OP(BetaRNG, SymbolVar)
 REG_RNG_OP(ShuffleRNG, SymbolVarArray)
+REG_RNG_OP(Dropout, SymbolVarArray)
 #undef REG_RNG_OP
 
 }  // namespace mgb::imperative::rng

@@ -12,13 +12,19 @@ from ...core.ops.builtin import GetVarShape
 from ...logger import get_logger
 from ...tensor import Tensor
 from ..expr import Constant, Expr, is_apply_def, is_constant, is_getattr
-from ..node import Node, TensorNode
+from ..node import Node, NodeMixin, TensorNode
 from .matcher import PatternMatcher
 from .pass_base import BackwardPass, ForwardPass, register_pass
 from .pattern import is_op
 from .utils import get_const_value
 
 logger = get_logger(__name__)
+
+
+def _as_const_node(x):
+    node = Constant.make(x)
+    NodeMixin.wrap(x, node)
+    return node
 
 
 @register_pass("AttrToConstant")
@@ -35,10 +41,10 @@ class AttrToConstant(BackwardPass):
         orig_node = expr.outputs[0]
         name = orig_node.name
         with graph.insert_exprs(expr):
-            const_node = Constant.make(value, name=name)
+            const_node = _as_const_node(value)
         graph.replace_node({orig_node: const_node})
         graph.compile()
-        name = orig_node.name
+        const_node.name = name
         return const_node.expr
 
 
@@ -53,7 +59,7 @@ class FixInputShape(BackwardPass):
         shape = Tensor(expr.inputs[0].shape, dtype="int32")
         graph = expr.top_graph
         with graph.insert_exprs(expr):
-            const_shape = Constant.make(shape)
+            const_shape = _as_const_node(shape)
         graph.replace_node({expr.outputs[0]: const_shape})
         graph.compile()
         const_shape.name = expr.outputs[0].name
@@ -73,7 +79,7 @@ class FlodConstant(ForwardPass):
         const_var = expr.interpret(*[get_const_value(n.expr) for n in expr.inputs])[0]
         graph = expr.top_graph
         with graph.insert_exprs(expr):
-            const_node = Constant.make(const_var)
+            const_node = _as_const_node(const_var)
         graph.replace_node({expr.outputs[0]: const_node})
         graph.compile()
         const_node.name = expr.outputs[0].name

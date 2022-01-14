@@ -151,6 +151,7 @@ do
     rm -rf staging
     mkdir -p staging
     cp -a imperative/python/{megengine,setup.py,requires.txt,requires-style.txt,requires-test.txt} staging/
+    cp -a ${SRC_DIR}/src/custom/include/megbrain staging/megengine/core/include
 
     cd ${BUILD_DIR}/staging/megengine/core
     mkdir -p lib/ucx

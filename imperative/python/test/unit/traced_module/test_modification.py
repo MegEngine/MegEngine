@@ -377,6 +377,33 @@ def test_set_node_name():
     rename("output")
     np.testing.assert_equal(str(graph.outputs[0]), "output")
 
+    def add_1(x):
+        x = x + 1
+        x.name = "func_add_1"
+        return x
+
+    class ModuleAdd_3(M.Module):
+        def forward(self, x):
+            x = x + 1
+            x.name = "module_add_1"
+            x = x + 2
+            return x
+
+    setattr(traced_module, "add_3", ModuleAdd_3())
+
+    self = graph.inputs[0]
+    with graph.insert_exprs():
+        x = output_node + 1
+        x.name = "_add_1"
+        x = add_1(x)
+        x = self.add_3(x)
+    graph.replace_node({output_node: x})
+    graph.compile()
+
+    assert "_add_1" in graph._namespace.used_names
+    assert "func_add_1" in graph._namespace.used_names
+    assert "module_add_1" in traced_module.add_3.graph._namespace.used_names
+
 
 def test_set_graph_name():
     traced_module, x, expect = _init_module()

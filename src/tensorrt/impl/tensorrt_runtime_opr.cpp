@@ -107,6 +107,7 @@ TensorRTRuntimeOpr::TensorRTRuntimeOpr(
 void TensorRTRuntimeOpr::get_output_var_shape(
         const TensorShapeArray& inp_shape, TensorShapeArray& out_shape) const {
     auto batch = inp_shape.at(0)[0];
+    m_manager.clear_trt_context();
     m_manager.create_trt_context(this->comp_node(), inp_shape, m_engine.get());
     auto get_mgb_shape = [&](int binding_idx) -> TensorShape {
         auto dims = m_engine->getBindingDimensions(binding_idx);
@@ -217,6 +218,12 @@ SymbolVarArray TensorRTRuntimeOpr::make(
         std::shared_ptr<nvinfer1::ICudaEngine> engine,
         std::shared_ptr<GpuAllocator> gpu_allocator, const SymbolVarArray& src,
         const OperatorNodeConfig& config) {
+    mgb_assert(
+            NV_TENSORRT_VERSION == getInferLibVersion(),
+            "TensorRT version mismatch: compiled with %d; detected %d at runtime , may "
+            "caused by customized environment, for example LD_LIBRARY_PATH on LINUX "
+            "and PATH on Windows!!",
+            NV_TENSORRT_VERSION, getInferLibVersion());
     VarNodeArray var_node_array = cg::to_var_node_array(src);
     auto tensor_rt_opr = std::make_unique<TensorRTRuntimeOpr>(
             std::move(engine), std::move(gpu_allocator), var_node_array, config);

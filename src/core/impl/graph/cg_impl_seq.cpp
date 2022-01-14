@@ -539,7 +539,8 @@ void ComputingGraphImpl::ComputingSequence::do_regist() const {
                     auto& mc = mp.chunk();
                     if (mp.valid() && mc.mem_alloc_status.is_from_owner_var()) {
                         auto size = mgb::get_aligned_power2(
-                                mc.size(), j->comp_node().get_mem_addr_alignment());
+                                mp.layout().span().dist_byte(),
+                                j->comp_node().get_mem_addr_alignment());
 
                         recorder.regist_memory_chunk(
                                 {chunk_id++, size, 0, this->m_opr_seq->size(),

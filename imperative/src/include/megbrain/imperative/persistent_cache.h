@@ -20,12 +20,12 @@ class ExtendedPersistentCache : public mgb::PersistentCache {
 public:
     virtual bool valid() const = 0;
     virtual std::optional<size_t> clear() = 0;
+    virtual void flush() = 0;
+
+    static std::shared_ptr<ExtendedPersistentCache> make_from_config(
+            std::string type, std::unordered_map<std::string, std::string> args,
+            std::string& err_msg);
 };
-
-std::shared_ptr<ExtendedPersistentCache> make_redis(
-        std::string ip, size_t port, std::string password, std::string prefix);
-
-std::shared_ptr<ExtendedPersistentCache> make_in_file(std::string path);
 
 }  // namespace mgb::imperative::persistent_cache
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

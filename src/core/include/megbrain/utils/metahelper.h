@@ -495,18 +495,18 @@ private:
 
 }  // namespace mgb
 
-#define _MGB_DEFINE_CLS_WITH_SUPER_IMPL(_tpl, _name, _base, ...) \
-    class _name : public _base, ##__VA_ARGS__ {                  \
-    public:                                                      \
-        using Super = _tpl _base;                                \
-                                                                 \
+#define MGB_DEFINE_CLS_WITH_SUPER_IMPL(_tpl, _name, _base, ...) \
+    class _name : public _base, ##__VA_ARGS__ {                 \
+    public:                                                     \
+        using Super = _tpl _base;                               \
+                                                                \
     private:
 
 /*!
  * \brief define a class which has Super defined to base
  */
 #define MGB_DEFINE_CLS_WITH_SUPER(_name, _base, ...) \
-    _MGB_DEFINE_CLS_WITH_SUPER_IMPL(, _name, _base, ##__VA_ARGS__)
+    MGB_DEFINE_CLS_WITH_SUPER_IMPL(, _name, _base, ##__VA_ARGS__)
 
 /*!
  * \brief define a class which has Super defined to base
@@ -514,5 +514,5 @@ private:
  * Used when this class is a template and base class has template
  */
 #define MGB_DEFINE_CLS_WITH_SUPER_TPL(_name, _base, ...) \
-    _MGB_DEFINE_CLS_WITH_SUPER_IMPL(typename, _name, _base, ##__VA_ARGS__)
+    MGB_DEFINE_CLS_WITH_SUPER_IMPL(typename, _name, _base, ##__VA_ARGS__)
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

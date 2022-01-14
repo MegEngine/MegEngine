@@ -27,7 +27,8 @@ function build() {
             -DMGE_WITH_DISTRIBUTED=${DMGE_WITH_DISTRIBUTED} \
             -DMGE_WITH_CUDA=${DMGE_WITH_CUDA} \
             -DMGE_WITH_TEST=ON \
-            -DCMAKE_BUILD_TYPE=RelWithDebInfo
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+	    -DMGE_WITH_CUSTOM_OP=ON
         make -j$(($(nproc) * 2)) -I ${build_dir}
         make develop
     popd >/dev/null

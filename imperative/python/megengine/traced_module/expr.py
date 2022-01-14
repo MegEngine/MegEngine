@@ -32,6 +32,7 @@ from .module_tracer import active_module_tracer, module_tracer
 from .node import ModuleNode, Node, NodeMixin, TensorNode
 from .pytree import ArgsIndex, TreeDef, _is_const_leaf, _is_leaf, tree_flatten
 from .serialization import _ModuleState
+from .tm_config import _exclude_from_trace, _get_expr_checker
 from .utils import _check_builtin_module_attr, _check_obj_attr, _convert_kwargs_to_args
 
 
@@ -611,6 +612,8 @@ class Apply(Expr):
             inp_nodes = [NodeMixin.get(inputs[0])]
             for i in inputs[1:]:
                 node = Constant.make(i)
+                if _get_expr_checker():
+                    active_module_tracer().checker.record_node2value(node, Tensor(i))
                 inp_nodes.append(node)
             apply_node = cls.make(opdef)
             for n in inp_nodes:
@@ -624,11 +627,17 @@ class Apply(Expr):
 
         unset_module_tracing()
         outputs = apply(opdef, *inputs)
+        outputs = list(map(Tensor, outputs))
         set_module_tracing()
 
         apply_node.add_outputs(outputs)
         for n, v in zip(apply_node.outputs, outputs):
             NodeMixin.wrap_safe(v, n)
+
+        if _get_expr_checker():
+            with _exclude_from_trace():
+                active_module_tracer().checker.check_apply(apply_node, outputs, opdef)
+
         return list(outputs)
 
 
@@ -754,6 +763,7 @@ class Constant(Expr):
         current_graph = active_module_tracer().current_scope()
         current_graph._namespace.auto_naming_for_outputs(expr)
         current_graph._insert(expr)
+        active_module_tracer().current_constant_cache().append(expr.value)
         return expr.outputs[0]
 
     def interpret(self, *inputs):

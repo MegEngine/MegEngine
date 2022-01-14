@@ -8,6 +8,7 @@
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 
 from .base import *
+from .base import version as __version__
 from .global_setting import *
 from .network import *
 from .struct import *

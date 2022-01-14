@@ -12,6 +12,7 @@ from .. import functional as F
 from ..core.tensor.array_method import ArrayMethodMixin
 from ..module import Module
 from ..module.qat import QATModule
+from .checker import TracedModuleChecker
 
 _active_module_tracer = None
 
@@ -92,7 +93,6 @@ BUILTIN_TENSOR_WRAP_METHOD = [
     "dtype",
     "grad",
     "item",
-    "name",
     "ndim",
     "numpy",
     "qparams",
@@ -129,7 +129,9 @@ class module_tracer:
 
     def __init__(self, wrap_fn):
         self._active_scopes = []
+        self.checker = TracedModuleChecker(self)
         self.patcher = Patcher(wrap_fn)
+        self._activate_constant_cache = []
 
     @classmethod
     def register_as_builtin(cls, mod):
@@ -143,13 +145,30 @@ class module_tracer:
 
     def push_scope(self, scope):
         self._active_scopes.append(scope)
+        self.checker.push_scope()
+        self._activate_constant_cache.append([])
 
     def pop_scope(self):
         self._active_scopes.pop()
+        self.checker.pop_scope()
+        cache = self._activate_constant_cache.pop()
+        for obj in cache:
+            if hasattr(obj, "_NodeMixin__node"):
+                delattr(obj, "_NodeMixin__node")
 
     def current_scope(self):
         if self._active_scopes:
             return self._active_scopes[-1]
+        return None
+
+    def current_constant_cache(self):
+        if self._activate_constant_cache:
+            return self._activate_constant_cache[-1]
+        return None
+
+    def top_scope(self):
+        if self._active_scopes:
+            return self._active_scopes[0]
         return None
 
 

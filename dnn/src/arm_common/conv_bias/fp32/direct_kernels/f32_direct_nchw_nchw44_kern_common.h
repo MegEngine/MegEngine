@@ -928,9 +928,11 @@ void fp32_direct_nchw_nchw44::conv_direct_fp32_nchw_nchw44(
     INSTANTIATION(stride, filter, bias, ReluOp<dt_float32>) \
     INSTANTIATION(stride, filter, bias, HSwishOp<dt_float32>)
 
-#define INSTANCE_CONV(filter, stride)                        \
-    FOR_OP(stride, filter, BiasMode::NO_BIAS)                \
-    FOR_OP(stride, filter, BiasMode::BROADCAST_CHANNEL_BIAS) \
-    FOR_OP(stride, filter, BiasMode::BIAS)
+#define INSTANCE_CONV_NO_BIAS(filter, stride) FOR_OP(stride, filter, BiasMode::NO_BIAS)
+
+#define INSTANCE_CONV_BROADCAST_CHANNEL_BIAS(filter, stride) \
+    FOR_OP(stride, filter, BiasMode::BROADCAST_CHANNEL_BIAS)
+
+#define INSTANCE_CONV_BIAS(filter, stride) FOR_OP(stride, filter, BiasMode::BIAS)
 
 // vim: syntax=cpp.doxygen

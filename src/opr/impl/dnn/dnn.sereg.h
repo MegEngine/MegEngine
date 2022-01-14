@@ -16,6 +16,7 @@
 #include "megbrain/opr/dnn/correlation.h"
 #include "megbrain/opr/dnn/fake_quant.h"
 #include "megbrain/opr/dnn/images2neibs.h"
+#include "megbrain/opr/dnn/layer_norm.h"
 #include "megbrain/opr/dnn/local.h"
 #include "megbrain/opr/dnn/lrn.h"
 #include "megbrain/opr/dnn/lsq.h"
@@ -420,6 +421,47 @@ struct OprMaker<opr::BatchNormBackward, 6> {
     }
 };
 
+template <>
+struct OprMaker<opr::LayerNorm, 0> {
+    using Param = opr::LayerNorm::Param;
+    static cg::OperatorNodeBase* make(
+            const Param& param, const cg::VarNodeArray& i, ComputingGraph& graph,
+            const OperatorNodeConfig& config) {
+        MGB_MARK_USED_VAR(graph);
+        if (i.size() == 3) {
+            return opr::LayerNorm::make(i[0], i[1], i[2], param, config)[0]
+                    .node()
+                    ->owner_opr();
+        } else {
+            mgb_assert(i.size() == 1);
+            return opr::LayerNorm::make(i[0], param, config)[0].node()->owner_opr();
+        }
+    }
+};
+
+// OprMaker in MGB_SEREG_OPR only support unique output opr
+template <>
+struct OprMaker<opr::LayerNormBackward, 0> {
+    using Param = opr::LayerNormBackward::Param;
+    static cg::OperatorNodeBase* make(
+            const Param& param, const cg::VarNodeArray& i, ComputingGraph& graph,
+            const OperatorNodeConfig& config) {
+        MGB_MARK_USED_VAR(graph);
+        if (i.size() == 5) {
+            return opr::LayerNormBackward::make(
+                           i[0], i[1], i[2], i[3], i[4], param, config)[0]
+                    .node()
+                    ->owner_opr();
+        } else {
+            mgb_assert(i.size() == 4);
+            return opr::LayerNormBackward::make(
+                           i[0], i[1], i[2], i[3], param, config)[0]
+                    .node()
+                    ->owner_opr();
+        }
+    }
+};
+
 template <class MegDNNConv = megdnn::LocalShare>
 struct MakeLocalShareCaller2 {
     template <typename Opr>
@@ -641,6 +683,8 @@ MGB_SEREG_OPR(TQT, 2);
 MGB_SEREG_OPR(TQTBackward, 3);
 MGB_SEREG_OPR(LSQ, 4);
 MGB_SEREG_OPR(LSQBackward, 5);
+MGB_SEREG_OPR(LayerNorm, 0);
+MGB_SEREG_OPR(LayerNormBackward, 0);
 }  // namespace opr
 
 }  // namespace mgb

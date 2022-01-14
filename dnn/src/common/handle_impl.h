@@ -209,7 +209,11 @@ private:
     cb(LSQBackward) \
     cb(Fill) \
     cb(PaddingForward) \
-    cb(PaddingBackward)
+    cb(PaddingBackward) \
+    cb(LayerNormForward) \
+    cb(LayerNormBackward) \
+    cb(DropoutForward) \
+    cb(DropoutBackward)
 // clang-format on
 
 /*!

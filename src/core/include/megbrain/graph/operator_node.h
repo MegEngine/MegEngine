@@ -1013,13 +1013,13 @@ using OprNodeArray = SmallVector<OperatorNodeBase*>;
  *
  * Note that opening brace is included
  */
-#define MGB_DEFINE_OPR_CLASS(_name, _base, ...)                  \
-    MGB_DEFINE_CLS_WITH_SUPER(_name final, _base, ##__VA_ARGS__) \
-    MGB_DYN_TYPE_OBJ_FINAL_DECL;
+#define MGB_DEFINE_OPR_CLASS(_name, _base, ...)                          \
+    MGB_DEFINE_CLS_WITH_SUPER(_name final, _base, ##__VA_ARGS__)         \
+        MGB_DYN_TYPE_OBJ_FINAL_DECL;
 
-#define MGB_DEFINE_OPR_CLASS_WITH_EXPORT(_name, _base, ...)      \
-    MGB_DEFINE_CLS_WITH_SUPER(_name final, _base, ##__VA_ARGS__) \
-    MGB_DYN_TYPE_OBJ_FINAL_DECL_WITH_EXPORT;
+#define MGB_DEFINE_OPR_CLASS_WITH_EXPORT(_name, _base, ...)              \
+    MGB_DEFINE_CLS_WITH_SUPER(_name final, _base, ##__VA_ARGS__)         \
+        MGB_DYN_TYPE_OBJ_FINAL_DECL_WITH_EXPORT;
 }  // namespace cg
 }  // namespace mgb
 

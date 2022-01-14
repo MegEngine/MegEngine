@@ -16,8 +16,8 @@
 #include "megbrain/opr/collective_comm.h"
 #include "megbrain/opr/group_manager.h"
 
-using namespace mgb;
-using namespace opr;
+namespace mgb {
+namespace opr {
 
 /*!
  * Comm MM Client Proxy.
@@ -55,6 +55,9 @@ private:
 /* ======================== ZmqRpcServerMgr ========================== */
 
 int create_zmqrpc_server(const std::string& server_addr, int port);
+
+}  // namespace opr
+}  // namespace mgb
 
 #endif
 

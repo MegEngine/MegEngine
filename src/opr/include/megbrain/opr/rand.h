@@ -40,25 +40,25 @@ protected:
 };
 
 /* ================= RNG with shape =================  */
-#define _DEFINE_RNG_OPR_WITH_SHAPE_CLASS(RNG)                                       \
-    MGB_DEFINE_OPR_CLASS_WITH_EXPORT(RNG, RNGOprBase<megdnn::RNG>)                  \
-    cg::OperatorNodeBase::NodeProp* do_make_node_prop() const override;             \
-                                                                                    \
-public:                                                                             \
-    RNG(VarNode* shape, const Param& param, const OperatorNodeConfig& config);      \
-    MGE_WIN_DECLSPEC_FUC static SymbolVar make(                                     \
-            SymbolVar shape, const Param& param = {},                               \
-            const OperatorNodeConfig& config = {});                                 \
-    static SymbolVar make(                                                          \
-            ComputingGraph& graph, const TensorShape& shape,                        \
-            const OperatorNodeConfig& config, const Param& param = {}) {            \
-        return make(                                                                \
-                var_from_tensor_shape(graph, config, "rng", shape), param, config); \
-    }                                                                               \
-    void init_output_static_infer_desc() override;                                  \
-    void scn_do_execute() override;                                                 \
-    }                                                                               \
-    ;
+#define _DEFINE_RNG_OPR_WITH_SHAPE_CLASS(RNG)                                      \
+    MGB_DEFINE_OPR_CLASS_WITH_EXPORT(RNG, RNGOprBase<megdnn::RNG>)                 \
+        cg::OperatorNodeBase::NodeProp* do_make_node_prop() const override;        \
+                                                                                   \
+    public:                                                                        \
+        RNG(VarNode* shape, const Param& param, const OperatorNodeConfig& config); \
+        MGE_WIN_DECLSPEC_FUC static SymbolVar make(                                \
+                SymbolVar shape, const Param& param = {},                          \
+                const OperatorNodeConfig& config = {});                            \
+        static SymbolVar make(                                                     \
+                ComputingGraph& graph, const TensorShape& shape,                   \
+                const OperatorNodeConfig& config, const Param& param = {}) {       \
+            return make(                                                           \
+                    var_from_tensor_shape(graph, config, "rng", shape), param,     \
+                    config);                                                       \
+        }                                                                          \
+        void init_output_static_infer_desc() override;                             \
+        void scn_do_execute() override;                                            \
+    };
 
 _DEFINE_RNG_OPR_WITH_SHAPE_CLASS(UniformRNG)
 _DEFINE_RNG_OPR_WITH_SHAPE_CLASS(GaussianRNG)
@@ -66,20 +66,19 @@ _DEFINE_RNG_OPR_WITH_SHAPE_CLASS(PermutationRNG)
 #undef _DEFINE_RNG_OPR_WITH_SHAPE_CLASS
 
 /* ================= RNG with input =================  */
-#define _DEFINE_RNG_OPR_WITH_INPUT_CLASS(RNG)                                     \
-    MGB_DEFINE_OPR_CLASS_WITH_EXPORT(RNG, RNGOprBase<megdnn::RNG>)                \
-    void add_input_layout_constraint() override;                                  \
-    cg::OperatorNodeBase::NodeProp* do_make_node_prop() const override;           \
-                                                                                  \
-public:                                                                           \
-    RNG(_INPUTS(VarNode*), const Param& param, const OperatorNodeConfig& config); \
-    MGE_WIN_DECLSPEC_FUC static _OUTPUTS make(                                    \
-            _INPUTS(SymbolVar), const Param& param = {},                          \
-            const OperatorNodeConfig& config = {});                               \
-    void init_output_static_infer_desc() override;                                \
-    void scn_do_execute() override;                                               \
-    }                                                                             \
-    ;
+#define _DEFINE_RNG_OPR_WITH_INPUT_CLASS(RNG)                                         \
+    MGB_DEFINE_OPR_CLASS_WITH_EXPORT(RNG, RNGOprBase<megdnn::RNG>)                    \
+        void add_input_layout_constraint() override;                                  \
+        cg::OperatorNodeBase::NodeProp* do_make_node_prop() const override;           \
+                                                                                      \
+    public:                                                                           \
+        RNG(_INPUTS(VarNode*), const Param& param, const OperatorNodeConfig& config); \
+        MGE_WIN_DECLSPEC_FUC static _OUTPUTS make(                                    \
+                _INPUTS(SymbolVar), const Param& param = {},                          \
+                const OperatorNodeConfig& config = {});                               \
+        void init_output_static_infer_desc() override;                                \
+        void scn_do_execute() override;                                               \
+    };
 
 /* ================= 1 input =================  */
 #define _INPUTS(preifx) preifx i0
@@ -88,6 +87,7 @@ _DEFINE_RNG_OPR_WITH_INPUT_CLASS(PoissonRNG)
 #undef _OUTPUTS
 #define _OUTPUTS SymbolVarArray
 _DEFINE_RNG_OPR_WITH_INPUT_CLASS(ShuffleRNGForward)
+_DEFINE_RNG_OPR_WITH_INPUT_CLASS(DropoutForward)
 #undef _OUTPUTS
 #undef _INPUTS
 
@@ -100,7 +100,7 @@ _DEFINE_RNG_OPR_WITH_INPUT_CLASS(GammaRNG)
 #undef _INPUTS
 #undef _DEFINE_RNG_OPR_WITH_INPUT_CLASS
 
-}  // intl
+}  // namespace intl
 
 using UniformRNG = intl::UniformRNG;
 using GaussianRNG = intl::GaussianRNG;
@@ -109,18 +109,39 @@ using PermutationRNG = intl::PermutationRNG;
 using PoissonRNG = intl::PoissonRNG;
 using BetaRNG = intl::BetaRNG;
 using ShuffleRNG = intl::ShuffleRNGForward;
+using Dropout = intl::DropoutForward;
+using DropoutForward = intl::DropoutForward;
 
 MGB_DEFINE_OPR_CLASS_WITH_EXPORT(
-        ShuffleRNGBackward,
-        intl::MegDNNOprWrapperBwd<megdnn::ShuffleRNGBackward>)  //{
+        ShuffleRNGBackward, intl::MegDNNOprWrapperBwd<megdnn::ShuffleRNGBackward>) // {
 public:
-ShuffleRNGBackward(
-        VarNode* out_diff, VarNode* indices, VarNode* result_shape, const Param& param,
-        const OperatorNodeConfig& config);
+    ShuffleRNGBackward(
+            VarNode* out_diff, VarNode* indices, VarNode* result_shape,
+            const Param& param, const OperatorNodeConfig& config);
 
-MGE_WIN_DECLSPEC_FUC static SymbolVar make(
-        SymbolVar out_diff, SymbolVar indices, SymbolVar result_shape,
-        const Param& param = {}, const OperatorNodeConfig& config = {});
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
+            SymbolVar out_diff, SymbolVar indices, SymbolVar result_shape,
+            const Param& param = {}, const OperatorNodeConfig& config = {});
+};
+
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(
+        DropoutBackward, intl::MegDNNOprWrapperBwd<megdnn::DropoutBackward>) // {
+public:
+    MGE_WIN_DECLSPEC_FUC DropoutBackward(
+            VarNode* doup, VarNode* mask, const Param& param,
+            const OperatorNodeConfig& config);
+
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
+            SymbolVar doup, SymbolVar mask, const Param& param = {},
+            const OperatorNodeConfig& config = {});
+
+private:
+    void init_output_static_infer_desc() override;
+    void init_output_dtype() override;
+    size_t get_workspace_size_bytes(
+            const TensorShapeArray& input_shapes,
+            const TensorShapeArray& output_shapes) const override;
+    void scn_do_execute() override;
 };
 
 }  // namespace opr

@@ -52,7 +52,9 @@ HandleImpl::HandleImpl(megcoreComputingHandle_t comp_handle)
     // Get stream from MegCore computing handle.
     megdnn_assert(
             CUDNN_VERSION == cudnnGetVersion(),
-            "cudnn version mismatch: compiled with %d; detected %zu at runtime",
+            "cudnn version mismatch: compiled with %d; detected %zu at runtime, may "
+            "caused by customized environment, for example LD_LIBRARY_PATH on LINUX "
+            "and PATH on Windows!!",
             CUDNN_VERSION, cudnnGetVersion());
 #if CUDA_VERSION >= 10010
     megdnn_assert(

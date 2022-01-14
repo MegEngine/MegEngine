@@ -1936,6 +1936,119 @@ protected:
             const TensorLayout& grad_s, size_t workspace_in_bytes);
 };
 
+class LayerNormBase : public OperatorBase {
+    DEF_OPR_IMPL_CTOR(LayerNormBase, OperatorBase);
+    DEF_OPR_PARAM(LayerNorm);
+
+protected:
+    void deduce_layout_fwd(
+            const TensorLayout& data, const TensorLayout& weight,
+            const TensorLayout& bias, TensorLayout& dst, TensorLayout& mean,
+            TensorLayout& rstd);
+    void check_layout_fwd(
+            const TensorLayout& data, const TensorLayout& weight,
+            const TensorLayout& bias, const TensorLayout& dst, const TensorLayout& mean,
+            const TensorLayout& rstd);
+};
+
+class LayerNormForward : public LayerNormBase {
+    DEF_OPR_IMPL(LayerNormForward, LayerNormBase, 3, 3);
+
+public:
+    virtual void exec(
+            _megdnn_tensor_in data, _megdnn_tensor_in weight, _megdnn_tensor_in bias,
+            _megdnn_tensor_out dst, _megdnn_tensor_out mean, _megdnn_tensor_out rstd,
+            _megdnn_workspace workspace) = 0;
+    void deduce_layout(
+            const TensorLayout& data, const TensorLayout& weight,
+            const TensorLayout& bias, TensorLayout& dst, TensorLayout& mean,
+            TensorLayout& rstd);
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& data, const TensorLayout& weight,
+            const TensorLayout& bias, const TensorLayout& dst, const TensorLayout& mean,
+            const TensorLayout& rstd) = 0;
+
+protected:
+    void check_exec(
+            const TensorLayout& data, const TensorLayout& weight,
+            const TensorLayout& bias, const TensorLayout& dst, const TensorLayout& mean,
+            const TensorLayout& rstd, size_t workspace_in_bytes);
+};
+using LayerNorm = LayerNormForward;
+
+class LayerNormBackward : public LayerNormBase {
+    DEF_OPR_IMPL(LayerNormBackward, LayerNormBase, 5, 3);
+
+public:
+    virtual void exec(
+            _megdnn_tensor_in diff, _megdnn_tensor_in data, _megdnn_tensor_in weight,
+            _megdnn_tensor_in mean, _megdnn_tensor_in rstd, _megdnn_tensor_out ddata,
+            _megdnn_tensor_out dweight, _megdnn_tensor_out dbias,
+            _megdnn_workspace workspace) = 0;
+    void deduce_layout(
+            const TensorLayout& diff, const TensorLayout& data,
+            const TensorLayout& weight, const TensorLayout& mean,
+            const TensorLayout& rstd, TensorLayout& ddata, TensorLayout& dweight,
+            TensorLayout& dbias);
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& diff, const TensorLayout& data,
+            const TensorLayout& weight, const TensorLayout& mean,
+            const TensorLayout& rstd, const TensorLayout& ddata,
+            const TensorLayout& dweight, const TensorLayout& dbias) = 0;
+
+protected:
+    void check_exec(
+            const TensorLayout& diff, const TensorLayout& data,
+            const TensorLayout& weight, const TensorLayout& mean,
+            const TensorLayout& rstd, const TensorLayout& ddata,
+            const TensorLayout& dweight, const TensorLayout& dbias,
+            size_t workspace_in_bytes);
+};
+
+class DropoutBase : public OperatorBase {
+    DEF_OPR_IMPL_CTOR(DropoutBase, OperatorBase);
+    DEF_OPR_PARAM(Dropout);
+};
+
+class DropoutForward : public DropoutBase {
+    DEF_OPR_IMPL(DropoutForward, DropoutBase, 1, 2);
+
+public:
+    void deduce_layout(const TensorLayout& inp, TensorLayout& oup, TensorLayout& mask);
+    virtual void exec(
+            _megdnn_tensor_in inp, _megdnn_tensor_out oup, _megdnn_tensor_out mask,
+            _megdnn_workspace workspace) = 0;
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& inp, const TensorLayout& oup,
+            const TensorLayout& mask) = 0;
+    virtual size_t get_mask_size_in_bytes(const TensorLayout& inp) = 0;
+
+protected:
+    void check_exec(
+            const TensorLayout& inp, const TensorLayout& oup, const TensorLayout& mask,
+            size_t workspace_in_bytes);
+};
+using Dropout = DropoutForward;
+
+class DropoutBackward : public DropoutBase {
+    DEF_OPR_IMPL(DropoutBackward, DropoutBase, 2, 1);
+
+public:
+    void deduce_layout(
+            const TensorLayout& doup, const TensorLayout& mask, TensorLayout& dinp);
+    virtual void exec(
+            _megdnn_tensor_in doup, _megdnn_tensor_in mask, _megdnn_tensor_out dinp,
+            _megdnn_workspace workspace) = 0;
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& doup, const TensorLayout& mask,
+            const TensorLayout& dinp) = 0;
+
+protected:
+    void check_exec(
+            const TensorLayout& doup, const TensorLayout& mask,
+            const TensorLayout& dinp, size_t workspace_in_bytes);
+};
+
 }  // namespace megdnn
 #include "megdnn/internal/opr_header_epilogue.h"
 

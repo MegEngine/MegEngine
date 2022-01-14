@@ -3,12 +3,14 @@ set(CMAKE_SYSTEM_PROCESSOR riscv64)
 set(RISCV_CROSS_BUILD_ARCH riscv64)
 
 if(DEFINED ENV{RISCV_TOOLCHAIN_ROOT})
-    file(TO_CMAKE_PATH $ENV{RISCV_TOOLCHAIN_ROOT} RISCV_TOOLCHAIN_ROOT)
+  file(TO_CMAKE_PATH $ENV{RISCV_TOOLCHAIN_ROOT} RISCV_TOOLCHAIN_ROOT)
 else()
-    message(FATAL_ERROR "RISCV_TOOLCHAIN_ROOT env must be defined")
+  message(FATAL_ERROR "RISCV_TOOLCHAIN_ROOT env must be defined")
 endif()
 
-set(RISCV_TOOLCHAIN_ROOT ${RISCV_TOOLCHAIN_ROOT} CACHE STRING "root path to riscv toolchain")
+set(RISCV_TOOLCHAIN_ROOT
+    ${RISCV_TOOLCHAIN_ROOT}
+    CACHE STRING "root path to riscv toolchain")
 
 set(CMAKE_C_COMPILER "${RISCV_TOOLCHAIN_ROOT}/bin/riscv64-unknown-linux-gnu-gcc")
 set(CMAKE_CXX_COMPILER "${RISCV_TOOLCHAIN_ROOT}/bin/riscv64-unknown-linux-gnu-g++")
