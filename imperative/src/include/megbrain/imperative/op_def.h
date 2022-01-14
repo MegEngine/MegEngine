@@ -102,6 +102,11 @@ public:
 
     static void set_allocator(allocator_t allocator);
     DeviceTensorStorage::RawStorage allocate(CompNode, size_t) const;
+
+    std::shared_ptr<OpDef> shared_from_this() const {
+        return const_cast<OpDef&>(*this)
+                .std::enable_shared_from_this<OpDef>::shared_from_this();
+    }
 };
 
 template <typename T>
