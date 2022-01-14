@@ -43,7 +43,6 @@ from ..core._imperative_rt.core2 import (
 )
 from ..core._trace_option import set_symbolic_shape
 from ..core.ops.builtin import Copy
-from ..core.tensor.utils import isscalar, setscalar
 from ..module import Module
 from ..module import external as MExternal
 from ..module.qat import QATModule
@@ -1295,12 +1294,9 @@ def _wrapped_function(orig_func):
                         return orig_func(*args, **kwargs)
                     if isinstance(args[1], RawTensor):
                         node = NodeMixin.get(inputs[1])
-                        is_scalar = isscalar(inputs[1])
                         inputs[1] = apply(
                             Copy(comp_node=inputs[1].device), Tensor(inputs[1])
                         )[0]
-                        if is_scalar:
-                            setscalar(inputs[1])
                         # copy inputs[1] to avoid tensor and Tensor(tensor) share same m_tensor,
                         # which will cause they have same _NodeMixin__node in tracing.
                         NodeMixin.wrap_safe(inputs[1], node)
@@ -2468,8 +2464,8 @@ def trace_module(
     try:
         net_name = mod._name if mod._name else mod.__class__.__name__
         use_sym_shape = set_symbolic_shape(True)
-        set_module_tracing()
         set_active_module_tracer(module_tracer(_wrapped_function))
+        set_module_tracing()
         for cls in [Expr, Node]:
             cls._set_next_id(0)
         with active_module_tracer().patcher:
@@ -2518,9 +2514,9 @@ def trace_module(
             return traced_mod
     finally:
         set_symbolic_shape(use_sym_shape)
-        set_active_module_tracer(None)
         unset_module_tracing()
         for t in mod.tensors(recursive=True):
             NodeMixin.clear_node(t)
         for t in inputs:
             NodeMixin.clear_node(t)
+        set_active_module_tracer(None)

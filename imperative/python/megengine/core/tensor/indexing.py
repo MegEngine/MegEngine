@@ -111,7 +111,6 @@ def unpack_getitem(inp, tuple_val, *, allow_newaxis=True):
     if not isinstance(tuple_val, tuple):
         tuple_val = (tuple_val,)
     ndim_indexed = 0
-    ndim_indexed_scalar = 0
     for i in tuple_val:
         if not i is Ellipsis:
             ndim_indexed += (
@@ -119,14 +118,6 @@ def unpack_getitem(inp, tuple_val, *, allow_newaxis=True):
                 if hasattr(i, "dtype") and i.dtype == np.bool_ and hasattr(i, "ndim")
                 else 1
             )
-            if isscalar(i):
-                ndim_indexed_scalar += 1
-    ret_scalar = False
-    try:
-        ret_scalar = ndim_indexed_scalar == inp.ndim
-    except ValueError:
-        # inp.ndim is unknown
-        pass
     else:
         if ndim_indexed > inp.ndim:
             raise IndexError(
@@ -221,7 +212,7 @@ def unpack_getitem(inp, tuple_val, *, allow_newaxis=True):
         items.append(item)
     if new_axes:
         raise IndexError("newaxis is not allowed here")
-    return inp, tensors, items, use_subtensor, ret_scalar
+    return inp, tensors, items, use_subtensor
 
 
 def try_condtake(tensor, index):
@@ -247,14 +238,12 @@ def getitem(tensor, index):
     try_result = try_condtake(tensor, index)
     if len(try_result) == 2:
         return try_result[0]
-    tensor, tensors, items, use_subtensor, ret_scalar = unpack_getitem(tensor, index)
+    tensor, tensors, items, use_subtensor = unpack_getitem(tensor, index)
     if use_subtensor:
         op = builtin.Subtensor(items=items)
     else:
         op = builtin.IndexingMultiAxisVec(items=items)
     (result,) = apply(op, tensor, *tensors)
-    if ret_scalar:
-        result._setscalar()
     return result
 
 
@@ -266,7 +255,7 @@ def setitem(tensor, index, value):
         tensor = tensor.reshape(-1)
     if not isinstance(value, (Tensor, SymbolVar)):
         (value,) = Const(value, dtype=tensor.dtype, device=tensor.device)(tensor)
-    tensor, tensors, items, use_subtensor, _ = unpack_getitem(tensor, index)
+    tensor, tensors, items, use_subtensor = unpack_getitem(tensor, index)
     if use_subtensor:
         op = builtin.Subtensor(items=items)
     else:

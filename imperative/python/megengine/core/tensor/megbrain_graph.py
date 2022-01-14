@@ -17,6 +17,7 @@ import numpy as np
 
 from .. import _imperative_rt
 from .._imperative_rt import GraphOptimizeOptions, SerializationFormat
+from .._imperative_rt.core2 import apply
 from .._wrap import as_device
 from ..ops.builtin import OpDef
 
@@ -126,9 +127,8 @@ class Graph(_imperative_rt.ComputingGraph):
 
 
 class VarNode:
-    def __init__(self, node: _imperative_rt.VarNode, isscalar=False):
+    def __init__(self, node: _imperative_rt.VarNode):
         self._node = node
-        self._isscalar = isscalar
         if hasattr(self.graph, "_var_cache"):
             self.graph._var_cache[node] = self
 
@@ -530,9 +530,6 @@ def _unwrap(x):
 
 
 def apply_normal_varnode(op: OpDef, *args: VarNode):
-    # for PyOp like RemoteSend/Recv
-    if getattr(op, "op", None):
-        op = op.op
     outputs = _imperative_rt.invoke_op(op, _unwrap(args))
     return _wrap(outputs)
 

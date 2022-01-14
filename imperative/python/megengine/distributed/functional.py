@@ -13,7 +13,7 @@ import numpy as np
 from ..core._imperative_rt.core2 import apply
 from ..core.autodiff.grad import Function, _grad_manager_dict
 from ..core.ops.builtin import CollectiveComm, Copy, RemoteRecv, RemoteSend
-from ..core.tensor.utils import isscalar, setscalar
+from ..core.tensor.utils import isscalar
 from ..device import get_default_device, what_is_xpu
 from ..tensor import Tensor
 from . import group
@@ -72,15 +72,6 @@ def collective_comm(inp, mode, group, device):
     )
     (result,) = apply(op, inp)
     # assume all workers have homogeneous shape
-    if mode in (
-        CollectiveComm.Mode.REDUCE_SUM,
-        CollectiveComm.Mode.BROADCAST,
-        CollectiveComm.Mode.ALL_REDUCE_SUM,
-        CollectiveComm.Mode.ALL_REDUCE_MAX,
-        CollectiveComm.Mode.ALL_REDUCE_MIN,
-    ):
-        if isscalar(inp):
-            setscalar(result)
     return result
 
 
@@ -190,8 +181,7 @@ def reduce_sum(
            # Rank 0 # output: None
            # Rank 1 # output: Tensor([1])
     """
-    op = _ReduceSum(group, device)
-    (out,) = apply(op, inp)
+    out = _ReduceSum(group, device)(inp)
 
     if group.rank == 0:
         return out
@@ -258,8 +248,7 @@ def broadcast(
 
     _bcast_tracer_state(group, inp)
 
-    op = _Broadcast(group, device)
-    (out,) = apply(op, inp)
+    out = _Broadcast(group, device)(inp)
     return out
 
 
@@ -604,8 +593,7 @@ def gather(
         inp.shape
     )
 
-    op = _Gather(group, device)
-    (out,) = apply(op, inp)
+    out = _Gather(group, device)(inp)
 
     if group.rank == 0:
         if axis == 0:
@@ -708,8 +696,7 @@ def scatter(
             + [_ for _ in range(axis + 1, inp.ndim + 1)]
         )
         inp = inp.reshape(new_shape).transpose(index).reshape(k_new_shape)
-    op = _Scatter(group, device)
-    (out,) = apply(op, inp)
+    out = _Scatter(group, device)(inp)
     return out
 
 
@@ -832,7 +819,7 @@ class _RemoteRecv(Function):
         self.op = op
 
     def forward(self, dummy):
-        return apply(self.op, dummy)
+        return apply(self.op, dummy)[0]
 
     def backward(self, grad):
         get_client().bcast_val(grad is not None, self.op.key, 2)
@@ -871,7 +858,7 @@ def remote_send(inp: Tensor, dest_rank: int):
     op.addr, op.port = get_mm_server_addr()
     op.rank_to = dest_rank
     op.backend = _backend()
-    (out,) = apply(_RemoteSend(op), inp)
+    out = _RemoteSend(op)(inp)
 
     _save_output_for_autodiff(inp, out)
 
@@ -912,11 +899,6 @@ def remote_recv(src_rank: int, device: Optional[str] = None, inp=None) -> Tensor
         inp = Tensor(0, device=device)
     _bcast_tracer_state(group, inp)
 
-    _isscalar = False
-    if len(shape) == 0:
-        shape = (1,)
-        _isscalar = True
-
     op = RemoteRecv()
     op.key = group.key
     op.cn = device
@@ -926,7 +908,5 @@ def remote_recv(src_rank: int, device: Optional[str] = None, inp=None) -> Tensor
     op.rank_from = src_rank
     op.backend = _backend()
 
-    (ret,) = apply(_RemoteRecv(op), inp)
-    if _isscalar:
-        setscalar(ret)
+    ret = _RemoteRecv(op)(inp)
     return ret

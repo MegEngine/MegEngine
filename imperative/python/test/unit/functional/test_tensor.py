@@ -351,7 +351,7 @@ def test_expand_dims_for_scalar():
 
     for axis in [1, -2, (1, 2), (-2, -3)]:
         np.testing.assert_raises(np.AxisError, np.expand_dims, x, axis)
-        np.testing.assert_raises(AssertionError, F.expand_dims, xx, axis)
+        np.testing.assert_raises(RuntimeError, F.expand_dims, xx, axis)
 
 
 @pytest.mark.parametrize("is_varnode", [True, False])

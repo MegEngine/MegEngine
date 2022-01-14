@@ -430,9 +430,10 @@ def test_ShuffleRNG():
     n, m = 6, 3
     arr = np.arange(n * m)
     out0 = Tensor(arr, dtype="float32")
-    grad = Grad().wrt(out0, callback=cb)
-    random.shuffle(out0)
-    grad(out0, F.ones_like(out0))
+    with Grad() as grad:
+        grad.wrt(out0, callback=cb)
+        random.shuffle(out0)
+        grad(out0, F.ones_like(out0))
     m1 = RNG(seed=111, device="xpu0")
     m2 = RNG(seed=111, device="xpu1")
     m3 = RNG(seed=222, device="xpu0")

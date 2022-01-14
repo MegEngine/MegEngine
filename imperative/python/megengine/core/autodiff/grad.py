@@ -6,17 +6,9 @@
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-import functools
-import heapq
-import itertools
-import typing
 import weakref
 
-import numpy as np
-
-from .._imperative_rt import core2, ops
-from ..ops.builtin import Elemwise, OpDef, RemoteSend
-from ..ops.special import Const
+from .._imperative_rt import core2
 
 _grad_count = 0
 _grad_manager_dict = weakref.WeakValueDictionary()
@@ -36,6 +28,10 @@ class GradKey(core2.GradKey):
 
 
 class Grad:
+    stack = []
+    grouping = False
+    key2grad = weakref.WeakValueDictionary()
+
     def __init__(self, name=None):
         global _grad_count
         if name is None:
@@ -43,15 +39,9 @@ class Grad:
             _grad_count += 1
         self._refkeeper = []
         self._impl = GradKey(name)
+        Grad.key2grad[self._impl] = self
         _grad_manager_dict[self._name] = self
-
-    @property
-    def _priority(self):
-        return self._impl.priority
-
-    @_priority.setter
-    def _priority(self, priority):
-        self._impl.priority = priority
+        self._group = [weakref.ref(self)]
 
     @property
     def _name(self):
@@ -70,33 +60,80 @@ class Grad:
 
         if not isinstance(ys, Sequence):
             ys = [ys]
+
         if not isinstance(dys, Sequence):
             dys = [dys]
 
+        group = [ref() for ref in self._group]
+
+        for grad in group:
+            if grad is self:
+                continue
+            grad.suppress()
+
         self._impl.backward(ys, dys)
 
+        for grad in group:
+            if grad is self:
+                continue
+            grad.resume()
+
         self._refkeeper = None
+        return None
 
     def __enter__(self):
+        ref = weakref.ref(self)
+        self._impl.enter()
+        if Grad.grouping:
+            group = Grad.stack[-1]
+            self._group = group
+            group.append(ref)
+        else:
+            Grad.stack.append(self._group)
         return self
 
     def __exit__(self, _1, _2, _3):
+        self._impl.exit()
         self._refkeeper = None
-        del self._impl
+        del Grad.key2grad[self._impl]
+        self._impl = None
+        self._group.remove(weakref.ref(self))
+        if len(self._group) == 0:
+            Grad.stack.remove(self._group)
+
+    @staticmethod
+    def begin_group():
+        assert not Grad.grouping
+        Grad.grouping = True
+
+    @staticmethod
+    def end_group():
+        group = Grad.stack[-1]
+        assert len(group) > 0
+        assert Grad.grouping
+        Grad.grouping = False
+
+    def suppress(self):
+        if self._impl is not None:
+            self._impl.suppress()
+
+    def resume(self):
+        if self._impl is not None:
+            self._impl.resume()
 
 
-class Function(ops.PyOpBase):
+class Function:
     r"""Defines a block of operations with customizable differentiation.
-    
+
     The computation should be defined in ``forward`` method, with gradient
     computation defined in ``backward`` method.
-    
+
     Each instance of ``Function`` should be used only once during forwardding.
-    
+
     Examples:
-    
+
         .. code-block::
-    
+
             class Sigmoid(Function):
                 def forward(self, x):
                     y = 1 / (1 + F.exp(-x))
@@ -115,7 +152,7 @@ class Function(ops.PyOpBase):
 
         Returns:
             a tuple of Tensor or a single Tensor.
-          
+
         Note:
             * This method should return a tuple of Tensor or a single Tensor representing the output
               of the function.
@@ -128,7 +165,7 @@ class Function(ops.PyOpBase):
 
         Args:
             output_grads: gradients of outputs that are returned by :meth:`forward`.
-        
+
         Note:
             * In case when some tensors of outputs are not related to loss function, the corresponding
               values in ``output_grads`` would be ``None``.
@@ -148,10 +185,40 @@ class Function(ops.PyOpBase):
         return self._default_rule(*args), self.backward
 
     def __call__(self, *args):
-        ret = core2.apply(self, *args)
+        for arg in args:
+            if not isinstance(arg, core2.Tensor):
+                raise TypeError(
+                    "op Function expect type Tensor as inputs, got {}".format(type(arg))
+                )
+
+        grad_key = core2.get_grad_key(args)
+        if grad_key is None:
+            return self._default_rule(*args)
+
+        grad = Grad.key2grad[grad_key]
+        group = [ref() for ref in grad._group]
+
+        for grad in group:
+            grad.suppress()
+        outputs, backward = self._grad_rule(*args)
+        for grad in reversed(group):
+            grad.resume()
+
+        def normalized_backward(*output_grads):
+            input_grads = backward(*output_grads)
+            if isinstance(input_grads, core2.Tensor) or input_grads is None:
+                input_grads = (input_grads,)
+            return input_grads
+
         if self.__single_output:
-            (ret,) = ret
-        return ret
+            outputs = (outputs,)
+        for grad in reversed(group):
+            if grad._impl is None:
+                continue
+            outputs = core2.set_grad(grad._impl, normalized_backward, args, outputs)
+        if self.__single_output:
+            (outputs,) = outputs
+        return outputs
 
     def __getstate__(self):
         return self.__dict__

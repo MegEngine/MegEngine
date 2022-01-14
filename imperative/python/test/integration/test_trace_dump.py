@@ -146,5 +146,5 @@ def test_dump_bn_train_mode():
 
     data = mge.tensor(np.random.random((10, 10, 10, 10)))
     bn_train(data)
-    with pytest.raises(AssertionError):
+    with pytest.raises(RuntimeError):
         bn_train.dump("test.mge")

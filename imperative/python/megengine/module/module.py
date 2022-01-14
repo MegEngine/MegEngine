@@ -111,6 +111,7 @@ class Module(metaclass=ABCMeta):
 
         # used for profiler and automatic naming
         self._name = None
+        self._short_name = None
 
     @abstractmethod
     def forward(self, inputs):
@@ -137,7 +138,7 @@ class Module(metaclass=ABCMeta):
         return HookHandler(self._forward_hooks, hook)
 
     def __call__(self, *inputs, **kwargs):
-        AutoNaming.push_scope(self.name if self.name is not None else self._name)
+        AutoNaming.push_scope(self.name if self.name is not None else self._short_name)
         for hook in self._forward_pre_hooks.values():
             modified_inputs = hook(self, inputs)
             if modified_inputs is not None:
@@ -641,15 +642,43 @@ class Module(metaclass=ABCMeta):
             else:
                 if modules is not None and name in modules:
                     modules.remove(name)
-        for k, v in _expand_structure(name, value):
-            if not v._name:
-                v._name = k
-            elif v._name != k:
+
+        def append_name(prefix, name):
+            if prefix is None or prefix == "":
+                return name
+            return prefix + "." + name
+
+        def set_name(parent, prefix, name, obj):
+            if isinstance(obj, Tensor):
+                assert obj.name is not None
+                if obj.name != "":
+                    name = obj.name
+            full_name = append_name(prefix, name)
+            if obj._short_name and obj._short_name != name:
                 logger.warning(
                     "try setting the submodule `{}` to `{}`'s new attribute `{}`, its name `{}` will remain unchanged".format(
-                        type(v), type(self), k, v._name
+                        obj._short_name, type(parent), name, obj._short_name
                     )
                 )
+                return
+            if isinstance(obj, Tensor):
+                obj._prefix = prefix
+                obj._name = full_name
+                obj._short_name = name
+                obj._set_name(obj._name)
+                return obj._name
+            elif isinstance(obj, Module):
+                obj._name = full_name
+                obj._short_name = name
+                for k, v in obj._flatten(recursive=False, with_key=True):
+                    set_name(obj, full_name, k, v)
+                return obj._name
+            else:
+                assert False
+
+        for k, v in _expand_structure(name, value):
+            prefix = self._name if self._name else self.name
+            set_name(self, prefix, k, v)
         super().__setattr__(name, value)
 
     def __delattr__(self, name: str):

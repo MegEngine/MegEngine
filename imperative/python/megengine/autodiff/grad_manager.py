@@ -28,9 +28,6 @@ class AttachSpec:
     __slots__ = "tensor", "callbacks"
 
 
-_global_priority = 0
-
-
 class GradManager:
     r"""GradManager computes gradients or more generally, vector-Jacobian product, by reverse mode
     automatic differentiation (a.k.a. back propagation).
@@ -127,7 +124,6 @@ class GradManager:
         self._grad = None
         self._after_backward_callback = []
         self._gradients = {}
-        self._priority = None
 
     def attached_tensors(self):
         r"""Return attached tensor list from :meth:`attach`."""
@@ -299,31 +295,25 @@ class GradManager:
                         tensor.grad = grad
                     else:
                         tensor.grad += grad
-                    if tensor._isscalar() and tensor.grad is not None:
-                        tensor.grad._setscalar()
         finally:
             self.release()
             backwarding_grad_manager = cache
-        set_option("record_computing_path", 1)
-        pop_scope("backward")
+            set_option("record_computing_path", 1)
+            pop_scope("backward")
 
     def record(self):
         r"""Start recording operations
 
         After this call, you will be able to call :meth:`backward`.
         """
-        global _global_priority
         if self._recording:
             raise RuntimeError("already recording")
         grad = Grad()
         self._recording = True
         self._grad = grad
+        grad.__enter__()
         for spec in self._attach_specs.values():
             self._do_record(spec)
-        if self._priority is None:
-            grad._priority = _global_priority
-            _global_priority -= 1
-        grad.__enter__()
 
     def _do_record(self, spec):
         tensor = spec.tensor()
@@ -331,6 +321,8 @@ class GradManager:
             return
 
         def callback(grad, callbacks=spec.callbacks):
+            from ..functional import ones_like
+
             for cb in callbacks:
                 grad = cb(tensor, grad)
             self._gradients[id(tensor)] = grad
@@ -343,14 +335,11 @@ class GradManager:
 
         After this call, you will not be able to call :meth:`backward`.
         """
-        global _global_priority
         if self._grad is not None:
             self._grad.__exit__(None, None, None)
             self._grad = None
         self._recording = False
         self._gradients = dict()
-        if self._priority is None:
-            _global_priority += 1
 
     def __enter__(self):
         self.record()
@@ -382,15 +371,14 @@ class GradManagerGroup:
     __ror__ = merge_with
 
     def __enter__(self):
-        global _global_priority
-        _global_priority += 1
+        Grad.stack.append([])
+        Grad.begin_group()
         for gm in self._gms:
-            gm._priority = _global_priority
             gm.record()
+            assert gm._grad is not None
+        Grad.end_group()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        global _global_priority
-        _global_priority -= 1
-        for gm in self._gms:
+        for gm in reversed(self._gms):
             gm.release()
-            gm._priority = None
+            assert gm._grad is None

@@ -9,6 +9,7 @@
 import inspect
 import io
 import itertools
+import random
 from tempfile import mkstemp
 
 import numpy as np
@@ -25,7 +26,7 @@ from megengine.core.ops import builtin as ops
 from megengine.core.ops.builtin import Elemwise
 from megengine.core.tensor.utils import isscalar
 from megengine.functional import exp, log
-from megengine.jit import GraphOptimizationConfig, exclude_from_trace, trace
+from megengine.jit import GraphOptimizationConfig, TraceError, exclude_from_trace, trace
 from megengine.module import Module
 from megengine.random import normal, uniform
 from megengine.utils.naming import AutoNaming
@@ -464,36 +465,92 @@ def test_trace_warp_perspective():
         f(x, M)
 
 
-def test_raise_on_trace():
-    step_count = 0
-    catch_count = 0
-    bad_step = 10
-
-    class CatchMe(Exception):
-        pass
-
+@pytest.mark.parametrize(
+    "normal_expr, mismatch_expr, reason",
+    [
+        ("a + b + c", "a + b - c", "operator mismatch"),
+        ("a + b + 1", "a + b + 2", "tensors not equals"),
+        ("((a + b), (b + c))[0]", "a + b", "mismature end"),
+        ("a + b + c", "c + (a + b)", "expect internal node, got external"),
+        ("c + (a + b)", "a + b + c", "expect external node, got internal"),
+        ("a + b + c", "a + b + c + c", "too many instructions"),
+        ("((a + b), (b + c))[1]", "((a + b), (b + c))[0]", "data unreadable"),
+        ("((a + b), (b + c))[1] + a", "((a + b), (b + c))[0] + a", "input id mismatch"),
+    ],
+)
+def test_trace_mismatch(normal_expr, mismatch_expr, reason):
     a = tensor([1, 2, 3, 4])
     b = tensor([5, 6, 7, 8])
     c = tensor([9, 0, 1, 2])
 
-    @trace
-    def add_abc(a, b, c):
-        ps = a + b
-        result = ps + c
-        if step_count == bad_step:
-            raise CatchMe("catch me")
+    mismatch = False
+
+    @trace(symbolic=True)
+    def fn(a, b, c):
+        if not mismatch:
+            result = eval(normal_expr)
+        else:
+            result = eval(mismatch_expr)
         return result
 
-    for i in range(100):
+    for i in range(20):
         try:
-            d = add_abc(a, b, c)
-        except CatchMe as e:
-            catch_count += 1
+            d = fn(a, b, c)
+        except TraceError as e:
+            assert mismatch
+            assert str(e) == "trace error because {}".format(reason)
+        except:
+            pytest.fail("unexpected trace error")
         else:
-            np.testing.assert_equal(d.numpy(), (a + b + c).numpy())
-        step_count += 1
+            assert not mismatch
+            np.testing.assert_equal(d.numpy(), eval(normal_expr).numpy())
+        mismatch = random.random() > 0.8
 
-    assert catch_count == 1
+
+def test_exception_in_trace():
+    a = tensor([1, 2, 3, 4])
+    b = tensor([5, 6, 7, 8])
+    c = tensor([9, 0, 1, 2])
+
+    mismatch = False
+
+    exc = Exception()
+
+    @trace(symbolic=True)
+    def fn(a, b, c):
+        result = a + b
+        if not mismatch:
+            result += c
+        else:
+            raise exc
+        return result
+
+    for i in range(20):
+        try:
+            d = fn(a, b, c)
+        except TraceError as e:
+            pytest.fail("unexpected trace error")
+        except Exception as e:
+            assert mismatch
+            assert e is exc
+        else:
+            assert not mismatch
+            np.testing.assert_equal(d.numpy(), (a + b + c).numpy())
+        mismatch = random.random() > 0.8
+
+
+def test_graph_error():
+    a = tensor(np.arange(8).reshape((2, 4)))
+    b = tensor(np.arange(8).reshape((2, 4)))
+
+    @trace(symbolic=True)
+    def fn(a, b):
+        return a + b
+
+    fn(a, b)
+    with pytest.raises(RuntimeError):
+        fn(a, b.transpose())
+    fn(a, b)
 
 
 @pytest.mark.parametrize("trace_mode", [False, True])
@@ -653,9 +710,10 @@ def test_trace_jit_config():
 
         x = tensor(2)
         y = func(x)
-        func._compile()
+        y = func(x)
+        # func._compile()
 
-        options = func._graph.options
+        options = func._trace.options
         mapping = {None: 0, False: 1, True: 2}
         assert options.graph_opt.jit == 0
         assert options.graph_opt.jit_config.fuse_dimshuffle == mapping[fuse_dimshuffle]

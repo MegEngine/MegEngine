@@ -267,25 +267,27 @@ def _gen_roi_inp():
 
 def test_roi_align():
     inp_feat, rois = _gen_roi_inp()
-    grad = Grad().wrt(inp_feat, callback=_save_to(inp_feat))
+    with Grad() as grad:
+        grad.wrt(inp_feat, callback=_save_to(inp_feat))
 
-    output_shape = (7, 7)
-    out_feat = F.vision.roi_align(
-        inp_feat,
-        rois,
-        output_shape=output_shape,
-        mode="average",
-        spatial_scale=1.0 / 4,
-        sample_points=2,
-        aligned=True,
-    )
-    assert make_shape_tuple(out_feat.shape) == (
-        rois.shape[0],
-        inp_feat.shape[1],
-        *output_shape,
-    )
+        output_shape = (7, 7)
+        out_feat = F.vision.roi_align(
+            inp_feat,
+            rois,
+            output_shape=output_shape,
+            mode="average",
+            spatial_scale=1.0 / 4,
+            sample_points=2,
+            aligned=True,
+        )
+        assert make_shape_tuple(out_feat.shape) == (
+            rois.shape[0],
+            inp_feat.shape[1],
+            *output_shape,
+        )
 
-    grad(out_feat, tensor(F.ones_like(out_feat)))
+        grad(out_feat, tensor(F.ones_like(out_feat)))
+
     assert make_shape_tuple(inp_feat.grad.shape) == make_shape_tuple(inp_feat.shape)
 
 
@@ -307,20 +309,23 @@ def _gen_correlation(random=True, constant=1, image_shape=(2, 1, 160, 160)):
 def test_correlation():
     ##test case 0 check the grad shape
     data1, data2 = _gen_correlation()
-    grad = Grad().wrt(data1, callback=_save_to(data1))
 
-    out_feat = F.vision.correlation(
-        data1,
-        data2,
-        kernel_size=5,
-        max_displacement=4,
-        stride1=2,
-        stride2=2,
-        pad_size=2,
-        is_multiply=True,
-    )
+    with Grad() as grad:
+        grad.wrt(data1, callback=_save_to(data1))
 
-    grad(out_feat, tensor(F.ones_like(out_feat)))
+        out_feat = F.vision.correlation(
+            data1,
+            data2,
+            kernel_size=5,
+            max_displacement=4,
+            stride1=2,
+            stride2=2,
+            pad_size=2,
+            is_multiply=True,
+        )
+
+        grad(out_feat, tensor(F.ones_like(out_feat)))
+
     assert make_shape_tuple(data1.grad.shape) == make_shape_tuple(data1.shape)
 
     ##test case 1 from https://github.com/NVIDIA/flownet2-pytorch/issues/194
@@ -391,32 +396,36 @@ def test_correlation():
 
 def test_roi_pooling():
     inp_feat, rois = _gen_roi_inp()
-    grad = Grad().wrt(inp_feat, callback=_save_to(inp_feat))
-    output_shape = (7, 7)
-    out_feat = F.vision.roi_pooling(
-        inp_feat, rois, output_shape=output_shape, mode="max", scale=1.0 / 4,
-    )
-    assert make_shape_tuple(out_feat.shape) == (
-        rois.shape[0],
-        inp_feat.shape[1],
-        *output_shape,
-    )
+    with Grad() as grad:
+        grad.wrt(inp_feat, callback=_save_to(inp_feat))
+        output_shape = (7, 7)
+        out_feat = F.vision.roi_pooling(
+            inp_feat, rois, output_shape=output_shape, mode="max", scale=1.0 / 4,
+        )
+        assert make_shape_tuple(out_feat.shape) == (
+            rois.shape[0],
+            inp_feat.shape[1],
+            *output_shape,
+        )
 
-    grad(out_feat, tensor(F.ones_like(out_feat)))
+        grad(out_feat, tensor(F.ones_like(out_feat)))
+
     assert make_shape_tuple(inp_feat.grad.shape) == make_shape_tuple(inp_feat.shape)
 
 
 def test_adaptive_avg_pool2d():
     inp = tensor(np.arange(0, 16, dtype=np.float32).reshape(1, 1, 4, 4))
     oshp = (2, 2)
-    grad = Grad().wrt(inp, callback=_save_to(inp))
-    outp = F.adaptive_avg_pool2d(inp, oshp,)
-    assert make_shape_tuple(outp.shape) == (inp.shape[0], inp.shape[1], *oshp,)
-    np.testing.assert_equal(
-        outp.numpy(), np.array([[[[2.5, 4.5], [10.5, 12.5]]]], dtype=np.float32)
-    )
+    with Grad() as grad:
+        grad.wrt(inp, callback=_save_to(inp))
+        outp = F.adaptive_avg_pool2d(inp, oshp,)
+        assert make_shape_tuple(outp.shape) == (inp.shape[0], inp.shape[1], *oshp,)
+        np.testing.assert_equal(
+            outp.numpy(), np.array([[[[2.5, 4.5], [10.5, 12.5]]]], dtype=np.float32)
+        )
 
-    grad(outp, tensor(F.ones_like(outp)))
+        grad(outp, tensor(F.ones_like(outp)))
+
     assert make_shape_tuple(inp.grad.shape) == make_shape_tuple(inp.shape)
     np.testing.assert_equal(
         inp.grad.numpy(),
@@ -439,14 +448,16 @@ def test_adaptive_avg_pool2d():
 def test_adaptive_max_pool2d():
     inp = tensor(np.arange(0, 16, dtype=np.float32).reshape(1, 1, 4, 4))
     oshp = (2, 2)
-    grad = Grad().wrt(inp, callback=_save_to(inp))
-    outp = F.adaptive_max_pool2d(inp, oshp,)
-    assert make_shape_tuple(outp.shape) == (inp.shape[0], inp.shape[1], *oshp,)
-    np.testing.assert_equal(
-        outp.numpy(), np.array([[[[5, 7], [13, 15]]]], dtype=np.float32)
-    )
+    with Grad() as grad:
+        grad.wrt(inp, callback=_save_to(inp))
+        outp = F.adaptive_max_pool2d(inp, oshp,)
+        assert make_shape_tuple(outp.shape) == (inp.shape[0], inp.shape[1], *oshp,)
+        np.testing.assert_equal(
+            outp.numpy(), np.array([[[[5, 7], [13, 15]]]], dtype=np.float32)
+        )
 
-    grad(outp, tensor(F.ones_like(outp)))
+        grad(outp, tensor(F.ones_like(outp)))
+
     assert make_shape_tuple(inp.grad.shape) == make_shape_tuple(inp.shape)
     np.testing.assert_equal(
         inp.grad.numpy(),

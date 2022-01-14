@@ -137,6 +137,11 @@ class Profiler(ContextDecorator):
                 get_logger().info("process {} generating {}".format(self._pid, format))
                 self._dump_callback(path, format)
                 get_logger().info("profiling results written to {}".format(path))
+                if os.path.getsize(path) > 64 * 1024 * 1024:
+                    get_logger().warning(
+                        "profiling results too large, maybe you are profiling multi iters,"
+                        "consider attach profiler in each iter separately"
+                    )
             self._dump_callback = None
             _living_profilers.remove(self)
 

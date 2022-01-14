@@ -19,7 +19,7 @@ from ..core.ops import builtin
 from ..core.ops.builtin import BatchNorm, Elemwise, GetVarShape, Reduce, TypeCvt
 from ..core.ops.special import Const
 from ..core.tensor import amp
-from ..core.tensor.utils import _normalize_axis, cast_tensors, setscalar, subgraph
+from ..core.tensor.utils import _normalize_axis, cast_tensors, subgraph
 from ..jit import exclude_from_trace
 from ..tensor import Tensor
 from ..utils.deprecation import deprecated_kwargs_default
@@ -1149,7 +1149,6 @@ def dot(inp1: Tensor, inp2: Tensor) -> Tensor:
         inp1.ndim <= 1 and inp2.ndim <= 1
     ), "Input tensors for dot must be 1-dimensional or scalar"
     (result,) = apply(op, inp1, inp2)
-    setscalar(result)
     return result
 
 
@@ -1200,5 +1199,4 @@ def _check_non_finite(inps: Iterable[Tensor], scale=1.0) -> Tensor:
     for i in range(len(inps)):
         inps[i]._reset(oups[i])
 
-    out._setscalar()
     return out

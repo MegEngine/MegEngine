@@ -82,9 +82,10 @@ def test_tqt():
     x = mge.tensor(x, dtype="float32")
     s = mge.tensor(s, dtype="float32")
     g_y = mge.tensor(g_y, dtype="float32")
-    grad = Grad().wrt(x, s, callback=cb)
-    y = tqt_forward(-127, 127, x, s)
-    grad(y, g_y)
+    with Grad() as grad:
+        grad.wrt(x, s, callback=cb)
+        y = tqt_forward(-127, 127, x, s)
+        grad(y, g_y)
     g_x, g_s = g
 
     np.testing.assert_allclose(y.numpy(), y_np, rtol=1e-5, atol=1e-5)
@@ -131,14 +132,16 @@ def test_fakequant():
 
         # test backward
         x = tensor(inp_data, dtype=np.float32)
-        grad = Grad().wrt(x, callback=_save_to(x))
-        y = fake_quant_tensor(x, qparams)
-        grad(y, tensor(F.ones_like(x)))
+        with Grad() as grad:
+            grad.wrt(x, callback=_save_to(x))
+            y = fake_quant_tensor(x, qparams)
+            grad(y, tensor(F.ones_like(x)))
 
         x1 = tensor(inp_data, dtype=np.float32)
-        grad = Grad().wrt(x1, callback=_save_to(x1))
-        y1 = fake_quant_tensor_gt(x1, scale, zero_point, qmin, qmax)
-        grad(y1, tensor(F.ones_like(x1)))
+        with Grad() as grad:
+            grad.wrt(x1, callback=_save_to(x1))
+            y1 = fake_quant_tensor_gt(x1, scale, zero_point, qmin, qmax)
+            grad(y1, tensor(F.ones_like(x1)))
 
         assert np.allclose(x.grad.numpy(), x1.grad.numpy())
         assert make_shape_tuple(x.grad.shape) == make_shape_tuple(x1.grad.shape)
@@ -237,9 +240,10 @@ def test_lsq():
     grad_s = mge.tensor(grad_s, dtype="float32")
 
     g_y = mge.tensor(g_y, dtype="float32")
-    grad = Grad().wrt(x, s, callback=cb)
-    y = lsq_forward(-127, 127, x, s, zero_point, grad_s)
-    grad(y, g_y)
+    with Grad() as grad:
+        grad.wrt(x, s, callback=cb)
+        y = lsq_forward(-127, 127, x, s, zero_point, grad_s)
+        grad(y, g_y)
     g_x, g_s = g
 
     np.testing.assert_allclose(y.numpy(), y_np, rtol=1e-7, atol=1e-7)

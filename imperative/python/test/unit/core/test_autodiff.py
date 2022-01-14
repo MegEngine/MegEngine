@@ -7,8 +7,6 @@
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 import gc
-import platform
-import weakref
 
 import numpy as np
 import pytest
@@ -60,24 +58,20 @@ def test_dist_grad():
     def worker():
         rank = dist.get_rank()
         if rank == 0:
-            grad = Grad()
-
-            x = as_tensor(x_np)
-            grad.wrt(x, callback=save_to(x))
-            # need a placeholder to trace operator
-            remote_send(x, 1)
-            recv_x = remote_recv(1)
-            y = recv_x * recv_x
-
-            grad([y], [as_tensor(np.ones_like(x_np))])
+            with Grad() as grad:
+                x = as_tensor(x_np)
+                grad.wrt(x, callback=save_to(x))
+                # need a placeholder to trace operator
+                remote_send(x, 1)
+                recv_x = remote_recv(1)
+                y = recv_x * recv_x
+                grad([y], [as_tensor(np.ones_like(x_np))])
             np.testing.assert_almost_equal(x.grad.numpy(), x.numpy() * 2)
         elif rank == 1:
-            grad = Grad()
-
-            recv_x = remote_recv(0)
-            remote_send(recv_x, 0)
-
-            grad([], [])
+            with Grad() as grad:
+                recv_x = remote_recv(0)
+                remote_send(recv_x, 0)
+                grad([], [])
 
     worker()
 
@@ -86,11 +80,11 @@ def test_grad():
     x_np = np.random.rand(10).astype("float32")
     x = as_tensor(x_np)
 
-    grad = Grad().wrt(x, callback=save_to(x))
+    with Grad() as grad:
+        grad.wrt(x, callback=save_to(x))
+        y = cos(x)
+        grad(y, as_tensor(np.ones_like(x_np)))
 
-    y = cos(x)
-
-    grad(y, as_tensor(np.ones_like(x_np)))
     np.testing.assert_almost_equal(x.grad.numpy(), -np.sin(x_np))
 
 
@@ -98,12 +92,12 @@ def test_grad_2():
     x_np = np.random.rand(10).astype("float32")
     x = as_tensor(x_np)
 
-    grad = Grad().wrt(x, callback=save_to(x))
+    with Grad() as grad:
+        grad.wrt(x, callback=save_to(x))
+        y = mul(x, x)
+        y = mul(y, y)
+        grad(y, as_tensor(np.ones_like(x_np)))
 
-    y = mul(x, x)
-    y = mul(y, y)
-
-    grad(y, as_tensor(np.ones_like(x_np)))
     np.testing.assert_almost_equal(x.grad.numpy(), 4 * x_np ** 3, decimal=6)
 
 
@@ -113,32 +107,31 @@ def test_2nd_grad():
     x = as_tensor(x_np)
     ones = as_tensor(np.ones_like(x_np))
 
-    grad = Grad().wrt(x, callback=save_to(x))
-    grad._priority = -1
-    grad2 = Grad().wrt(x, callback=save_to(x))
-    grad2._priority = 0
+    with Grad("grad2") as grad2:
+        with Grad("grad") as grad:
+            grad2.wrt(x, callback=save_to(x))
+            grad.wrt(x, callback=save_to(x))
+            y = cos(x)
+            grad(y, ones)
+            z = x.grad
+            np.testing.assert_almost_equal(x.grad.numpy(), -np.sin(x_np), decimal=5)
 
-    y = cos(x)
+        x.grad = None
+        grad2(z, ones)
 
-    grad(y, ones)
-    z = x.grad
-    np.testing.assert_almost_equal(x.grad.numpy(), -np.sin(x_np), decimal=5)
-
-    x.grad = None
-    grad2(z, ones)
-    np.testing.assert_almost_equal(x.grad.numpy(), -np.cos(x_np), decimal=5)
+        np.testing.assert_almost_equal(x.grad.numpy(), -np.cos(x_np), decimal=5)
 
 
 def test_grad_with_tensor_wrapper():
     x_np = np.random.rand(10).astype("float32")
     x = mge.Tensor(x_np)
 
-    grad = Grad().wrt(x, callback=save_to(x))
+    with Grad() as grad:
+        grad.wrt(x, callback=save_to(x))
+        y = mul(x, x)
+        y = mul(y, y)
+        grad(y, mge.Tensor(np.ones_like(x_np)))
 
-    y = mul(x, x)
-    y = mul(y, y)
-
-    grad(y, mge.Tensor(np.ones_like(x_np)))
     np.testing.assert_almost_equal(x.grad.numpy(), 4 * x_np ** 3, decimal=6)
 
 
@@ -162,18 +155,21 @@ def test_release():
 
     @check
     def _():
-        g = Grad().wrt(x)
-        y = x * x
-        g(y, dy)
+        with Grad() as g:
+            g.wrt(x)
+            y = x * x
+            g(y, dy)
 
     @check
     def _():
-        with Grad().wrt(x):
+        with Grad() as g:
+            g.wrt(x)
             pass
 
     @check
     def _():
-        with Grad().wrt(x):
+        with Grad() as g:
+            g.wrt(x)
             y = x * x
 
 
@@ -181,12 +177,12 @@ def test_grad_inplace():
     x_np = np.random.rand(10).astype("float32")
     x = mge.Tensor(x_np)
 
-    grad = Grad().wrt(x, callback=save_to(x))
+    with Grad() as grad:
+        grad.wrt(x, callback=save_to(x))
+        y = mul(x, x)
+        y *= y
+        grad(y, mge.Tensor(np.ones_like(x_np)))
 
-    y = mul(x, x)
-    y *= y
-
-    grad(y, mge.Tensor(np.ones_like(x_np)))
     np.testing.assert_almost_equal(x.grad.numpy(), 4 * x_np ** 3, decimal=6)
 
 
@@ -196,11 +192,11 @@ def test_identity():
     dy_np = np.random.rand(*x.shape).astype("float32")
     dy = mge.Tensor(dy_np)
 
-    grad = Grad().wrt(x, callback=save_to(x))
+    with Grad() as grad:
+        grad.wrt(x, callback=save_to(x))
+        (y,) = apply(Identity(), x)
+        grad(y, dy)
 
-    (y,) = apply(Identity(), x)
-
-    grad(y, dy)
     np.testing.assert_array_equal(x.grad.numpy(), dy_np)
 
 
@@ -220,15 +216,14 @@ def test_elemwise_add():
         refs["y"] = TensorWeakRef(y)
         return x + y
 
-    grad = Grad().wrt(x, callback=save_to(x))
+    with Grad() as grad:
+        grad.wrt(x, callback=save_to(x))
+        z = f(x, y)
+        del y
+        for k, r in refs.items():
+            assert r() is None
+        grad(z, dz)
 
-    z = f(x, y)
-    del y
-
-    for k, r in refs.items():
-        assert r() is None
-
-    grad(z, dz)
     np.testing.assert_almost_equal(x.grad.numpy(), dz_np.sum(0) * 2, decimal=5)
 
 
@@ -245,13 +240,12 @@ def test_elemwise_relu():
         refs["x"] = TensorWeakRef(x)
         return relu(x)
 
-    grad = Grad().wrt(x, callback=save_to(x))
+    with Grad() as grad:
+        grad.wrt(x, callback=save_to(x))
+        z = f(x)
+        assert refs["x"]() is None
+        grad(z, dz)
 
-    z = f(x)
-
-    assert refs["x"]() is None
-
-    grad(z, dz)
     np.testing.assert_almost_equal(x.grad.numpy(), [2.0, 0])
 
 
@@ -269,21 +263,21 @@ def test_reshape():
     x_np = np.random.rand(2, 5).astype("float32")
     x = mge.Tensor(x_np)
 
-    grad = Grad().wrt(x, callback=save_to(x))
+    with Grad() as grad:
+        grad.wrt(x, callback=save_to(x))
+        refs = {}
 
-    refs = {}
+        def f(x):
+            x = x * 1
+            y = x.reshape(5, 2)
+            refs["x"] = TensorWeakRef(x)
+            return y
 
-    def f(x):
-        x = x * 1
-        y = x.reshape(5, 2)
-        refs["x"] = TensorWeakRef(x)
-        return y
+        y = f(x)
+        for _, r in refs.items():
+            assert r() is None
+        grad(y, F.ones_like(y))
 
-    y = f(x)
-    for _, r in refs.items():
-        assert r() is None
-
-    grad(y, F.ones_like(y))
     np.testing.assert_equal(np.ones((2, 5), dtype=np.float32), x.grad.numpy())
 
 
@@ -291,21 +285,21 @@ def test_subtensor():
     x_np = np.random.rand(3, 3).astype("float32")
     x = mge.Tensor(x_np)
 
-    grad = Grad().wrt(x, callback=save_to(x))
+    with Grad() as grad:
+        grad.wrt(x, callback=save_to(x))
+        refs = {}
 
-    refs = {}
+        def f(x):
+            x = x * 1
+            y = x[1:-1, :2]
+            refs["x"] = TensorWeakRef(x)
+            return y
 
-    def f(x):
-        x = x * 1
-        y = x[1:-1, :2]
-        refs["x"] = TensorWeakRef(x)
-        return y
+        y = f(x)
+        for _, r in refs.items():
+            assert r() is None
+        grad(y, F.ones_like(y))
 
-    y = f(x)
-    for _, r in refs.items():
-        assert r() is None
-
-    grad(y, F.ones_like(y))
     np.testing.assert_equal(
         np.array([[0, 0, 0], [1, 1, 0], [0, 0, 0]], dtype=np.float32), x.grad.numpy()
     )
@@ -315,21 +309,21 @@ def test_IndexingMultiAxisVec():
     x_np = np.random.rand(3, 3).astype("float32")
     x = mge.Tensor(x_np)
 
-    grad = Grad().wrt(x, callback=save_to(x))
+    with Grad() as grad:
+        grad.wrt(x, callback=save_to(x))
+        refs = {}
 
-    refs = {}
+        def f(x):
+            x = x * 1
+            y = x[[0, 2], [0, 2]]
+            refs["x"] = TensorWeakRef(x)
+            return y
 
-    def f(x):
-        x = x * 1
-        y = x[[0, 2], [0, 2]]
-        refs["x"] = TensorWeakRef(x)
-        return y
+        y = f(x)
+        for _, r in refs.items():
+            assert r() is None
+        grad(y, F.ones_like(y))
 
-    y = f(x)
-    for _, r in refs.items():
-        assert r() is None
-
-    grad(y, F.ones_like(y))
     np.testing.assert_equal(
         np.array([[1, 0, 0], [0, 0, 0], [0, 0, 1]], dtype=np.float32), x.grad.numpy()
     )
@@ -339,21 +333,21 @@ def test_AxisAddRemove():
     x_np = np.random.rand(1, 5).astype("float32")
     x = mge.Tensor(x_np)
 
-    grad = Grad().wrt(x, callback=save_to(x))
+    with Grad() as grad:
+        grad.wrt(x, callback=save_to(x))
+        refs = {}
 
-    refs = {}
+        def f(x):
+            x = x * 1
+            y = F.squeeze(F.expand_dims(x, 2), 0)
+            refs["x"] = TensorWeakRef(x)
+            return y
 
-    def f(x):
-        x = x * 1
-        y = F.squeeze(F.expand_dims(x, 2), 0)
-        refs["x"] = TensorWeakRef(x)
-        return y
+        y = f(x)
+        for _, r in refs.items():
+            assert r() is None
+        grad(y, F.ones_like(y))
 
-    y = f(x)
-    for _, r in refs.items():
-        assert r() is None
-
-    grad(y, F.ones_like(y))
     np.testing.assert_equal(
         np.array([[1, 1, 1, 1, 1]], dtype=np.float32), x.grad.numpy()
     )
@@ -363,10 +357,11 @@ def test_Broadcast():
     x_np = np.random.rand(3, 3, 1).astype("float32")
     x = mge.Tensor(x_np)
 
-    grad = Grad().wrt(x, callback=save_to(x))
-    y = F.broadcast_to(x, (3, 3, 10))
+    with Grad() as grad:
+        grad.wrt(x, callback=save_to(x))
+        y = F.broadcast_to(x, (3, 3, 10))
+        grad(y, F.ones_like(y))
 
-    grad(y, F.ones_like(y))
     np.testing.assert_equal(np.ones((3, 3, 1), dtype=np.float32) * 10, x.grad.numpy())
 
 
@@ -374,10 +369,11 @@ def test_interpolate_fastpath():
     x_np = np.random.rand(3, 3, 32, 32).astype("float32")
     x = mge.Tensor(x_np)
 
-    grad = Grad().wrt(x, callback=save_to(x))
-    y = F.vision.interpolate(x, size=(16, 16), mode="bilinear")
+    with Grad() as grad:
+        grad.wrt(x, callback=save_to(x))
+        y = F.vision.interpolate(x, size=(16, 16), mode="bilinear")
+        grad(y, F.ones_like(y))
 
-    grad(y, F.ones_like(y))
     np.testing.assert_equal(np.ones(x_np.shape, dtype=np.float32) / 4, x.grad.numpy())
 
 
@@ -385,10 +381,11 @@ def test_Reduce_sum():
     x_np = np.random.rand(3, 3).astype("float32")
     x = mge.Tensor(x_np)
 
-    grad = Grad().wrt(x, callback=save_to(x))
-    y = x.sum(axis=0)
+    with Grad() as grad:
+        grad.wrt(x, callback=save_to(x))
+        y = x.sum(axis=0)
+        grad(y, F.ones_like(y))
 
-    grad(y, F.ones_like(y))
     np.testing.assert_equal(np.ones((3, 3), dtype=np.float32), x.grad.numpy())
 
 
@@ -396,10 +393,11 @@ def test_Reduce_mean():
     x_np = np.random.rand(3, 3).astype("float32")
     x = mge.Tensor(x_np)
 
-    grad = Grad().wrt(x, callback=save_to(x))
-    y = x.mean(axis=0)
+    with Grad() as grad:
+        grad.wrt(x, callback=save_to(x))
+        y = x.mean(axis=0)
+        grad(y, F.ones_like(y))
 
-    grad(y, F.ones_like(y))
     np.testing.assert_equal(np.ones((3, 3), dtype=np.float32) / 3, x.grad.numpy())
 
 
@@ -407,21 +405,21 @@ def test_addAxis():
     x_np = np.random.rand(3, 3).astype("float32")
     x = mge.Tensor(x_np)
 
-    grad = Grad().wrt(x, callback=save_to(x))
+    with Grad() as grad:
+        grad.wrt(x, callback=save_to(x))
+        refs = {}
 
-    refs = {}
+        def f(x):
+            x = x * 1
+            y = F.expand_dims(x, [2, 3])
+            refs["x"] = TensorWeakRef(x)
+            return y
 
-    def f(x):
-        x = x * 1
-        y = F.expand_dims(x, [2, 3])
-        refs["x"] = TensorWeakRef(x)
-        return y
+        y = f(x)
+        for _, r in refs.items():
+            assert r() is None
+        grad(y, F.ones_like(y))
 
-    y = f(x)
-    for _, r in refs.items():
-        assert r() is None
-
-    grad(y, F.ones_like(y))
     np.testing.assert_equal(np.ones((3, 3), dtype=np.float32), x.grad.numpy())
 
 
@@ -429,21 +427,21 @@ def test_removeAxis():
     x_np = np.random.rand(3, 3, 1, 1).astype("float32")
     x = mge.Tensor(x_np)
 
-    grad = Grad().wrt(x, callback=save_to(x))
+    with Grad() as grad:
+        grad.wrt(x, callback=save_to(x))
+        refs = {}
 
-    refs = {}
+        def f(x):
+            x = x * 1
+            y = F.squeeze(x, [2, 3])
+            refs["x"] = TensorWeakRef(x)
+            return y
 
-    def f(x):
-        x = x * 1
-        y = F.squeeze(x, [2, 3])
-        refs["x"] = TensorWeakRef(x)
-        return y
+        y = f(x)
+        for _, r in refs.items():
+            assert r() is None
+        grad(y, F.ones_like(y))
 
-    y = f(x)
-    for _, r in refs.items():
-        assert r() is None
-
-    grad(y, F.ones_like(y))
     np.testing.assert_equal(np.ones((3, 3, 1, 1), dtype=np.float32), x.grad.numpy())
 
 
@@ -452,11 +450,14 @@ def test_dot():
     x = mge.Tensor(x)
     u = F.ones((2,))
     v = F.ones((2,))
-    grad = Grad().wrt(x, callback=save_to(x))
 
-    def f(x):
-        return F.dot(u, F.matmul(x, v))
+    with Grad() as grad:
+        grad.wrt(x, callback=save_to(x))
 
-    y = f(x)
-    grad(y, F.ones_like(y))
+        def f(x):
+            return F.dot(u, F.matmul(x, v))
+
+        y = f(x)
+        grad(y, F.ones_like(y))
+
     np.testing.assert_equal(np.ones((2, 2), dtype=np.float32), x.grad.numpy())

@@ -26,7 +26,6 @@ from .utils import (
     convert_inputs,
     isscalar,
     make_shape_tuple,
-    setscalar,
 )
 
 _ElwMod = builtin.Elemwise.Mode
@@ -34,14 +33,7 @@ _ElwMod = builtin.Elemwise.Mode
 
 def _elwise_apply(args, mode):
     op = builtin.Elemwise(mode)
-    _isscalar = True
-    for i in args:
-        if isscalar(i) == False:
-            _isscalar = False
-            break
     (result,) = apply(op, *args)
-    if _isscalar:
-        setscalar(result)
     return result
 
 
@@ -203,8 +195,6 @@ def _remove_axis(inp: Tensor, axis) -> Tensor:
 
     op = builtin.RemoveAxis(axis=axis)
     (result,) = apply(op, inp)
-    if len(axis) == inp.ndim:
-        setscalar(result)
     return result
 
 
@@ -221,6 +211,7 @@ def _reduce(mode):
 
             op = builtin.Reduce(mode=mode, axis=0)
             (result,) = apply(op, data)
+            result = _remove_axis(result, 0)
         elif isinstance(axis, collections.abc.Iterable):
             axis = _normalize_axis(self.ndim, axis, reverse=True)
             for ai in axis:
@@ -239,8 +230,6 @@ def _reduce(mode):
         if self.dtype == np.bool_:
             if mode in ["min", "max"]:
                 result = result.astype("bool")
-        if axis is None or self.ndim == 1:
-            setscalar(result)
         return result
 
     return f
@@ -457,7 +446,6 @@ class ArrayMethodMixin(abc.ABC):
                 len(args) == 0
             ), "transpose for scalar does not accept additional args"
             ret = self.to(self.device)
-            setscalar(ret)
             return ret
         if not args:
             args = range(self.ndim)[::-1]

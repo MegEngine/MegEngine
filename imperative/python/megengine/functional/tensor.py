@@ -972,13 +972,6 @@ def expand_dims(inp: Tensor, axis: Union[int, Sequence[int]]) -> Tensor:
             )
         axis = sorted(axis)
     assert axis, "axis could not be empty"
-    if inp._isscalar():
-        assert axis[0] == 0, "invalid axis {} for ndim 0".format(axis[0])
-        if len(axis) == 1:
-            inp = copy(inp, device=None)
-            inp._unsetscalar()
-            return inp
-        axis = axis[1:]
     op = builtin.AddAxis(axis=axis)
     (result,) = apply(op, inp)
     return result
@@ -1164,8 +1157,6 @@ def repeat(inp: Tensor, repeats: int, axis: Optional[int] = None):
     if axis is None:
         inp = inp.reshape(-1)  # flatten
         axis = 0
-    if inp._isscalar():
-        inp._unsetscalar()
     shape = astensor1d(inp.shape, inp, dtype="int32", device=inp.device)
     # assume inp.ndim is not changed during trace
     max_axis = len(shape) - 1

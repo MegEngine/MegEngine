@@ -101,9 +101,7 @@ BUILTIN_TENSOR_WRAP_METHOD = [
     "requires_grad",
     "_reset",
     "_isscalar",
-    "_setscalar",
     "_tuple_shape",
-    "_unsetscalar",
 ]
 
 

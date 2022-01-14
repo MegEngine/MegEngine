@@ -51,10 +51,7 @@ def concatenate(inputs, axis=0, *, device=None):
 def astype(x, dtype):
     dtype = np.dtype(dtype)
     if not is_dtype_equal(x.dtype, dtype):
-        isscalar = x._isscalar()
         (x,) = apply(builtin.TypeCvt(dtype=dtype), x)
-        if isscalar:
-            x._setscalar()
     return x
 
 
@@ -127,13 +124,6 @@ def isscalar(x):
         return x._isscalar()
 
     return np.isscalar(x)
-
-
-def setscalar(x):
-    if isinstance(x, (Tensor, SymbolVar)):
-        x._setscalar()
-    else:
-        raise NotImplementedError("Unsupport type {}".format(type(x)))
 
 
 def astensor1d(x, *reference, dtype=None, device=None):
@@ -237,6 +227,7 @@ for name, mode in [
     ("**", "pow"),
     ("max", "max"),
     ("additive", "add"),
+    ("exp", "EXP"),
 ]:
     _opr_map[(name, 2)] = builtin.Elemwise(mode=mode)
 

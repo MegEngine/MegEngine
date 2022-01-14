@@ -20,6 +20,7 @@ from ..core._imperative_rt.core2 import Tensor as RawTensor
 from ..core._imperative_rt.core2 import (
     apply,
     is_tracing_module,
+    set_module_trace_hook,
     set_module_tracing,
     unset_module_tracing,
 )
@@ -605,8 +606,7 @@ class Apply(Expr):
     def apply_module_trace_hook(cls, opdef, *inputs):
         for i in inputs:
             node = NodeMixin.get(i, None)
-            if node is None:  # capture as constant
-                NodeMixin.wrap_safe(i, Constant.make(i))
+            assert node is not None
 
         if isinstance(opdef, FakeQuant):
             inp_nodes = [NodeMixin.get(inputs[0])]
@@ -805,3 +805,12 @@ class Constant(Expr):
             if isinstance(v, _ModuleState):
                 state[k] = v.to_module()
         self.__dict__.update(state)
+
+
+def _module_trace_capture(value):
+    node = Constant.make(value)
+    NodeMixin.wrap_safe(value, node)
+    return node
+
+
+set_module_trace_hook(Apply.apply_module_trace_hook)

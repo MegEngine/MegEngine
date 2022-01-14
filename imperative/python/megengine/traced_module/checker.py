@@ -13,7 +13,6 @@ import numpy as np
 from ..core._imperative_rt.core2 import apply
 from ..core._imperative_rt.ops import ROIAlign, ROIPooling
 from ..core.ops.builtin import Copy
-from ..core.tensor.utils import isscalar, setscalar
 from ..tensor import Tensor
 from .tm_config import _exclude_from_trace
 
@@ -70,8 +69,6 @@ class TracedModuleChecker:
             self.current_node2values()[node] = apply(
                 Copy(comp_node=value.device), value
             )[0]
-            if isscalar(value):
-                setscalar(self.current_node2values()[node])
 
     def check_apply_special_cases(self, opdef, num_outputs):
         indexs = list(range(num_outputs))

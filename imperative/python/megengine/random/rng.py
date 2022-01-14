@@ -14,6 +14,7 @@ from numpy.random import MT19937
 
 from .. import Tensor
 from ..core._imperative_rt.core2 import apply
+from ..core._imperative_rt.core2 import sync as _sync
 from ..core._imperative_rt.ops import delete_rng_handle as _delete_rng_handle
 from ..core._imperative_rt.ops import get_global_rng_seed as _get_global_rng_seed
 from ..core._imperative_rt.ops import (
@@ -650,6 +651,10 @@ class RNG:
 
     def __del__(self):
         if self._handle != 0:
+            # RNG op might execute after handle released due to async dispatch, so
+            # we need sync before delete a handle to avoid memory leak or
+            # use-after-free
+            _sync()
             _delete_rng_handle(self._handle)
 
 

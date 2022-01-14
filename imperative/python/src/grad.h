@@ -12,165 +12,39 @@
 #pragma once
 
 #include "./tensor.h"
-#include "megbrain/imperative/ops/utility.h"
 
-#include <megbrain/utils/small_vector.h>
+#include "megbrain/imperative/ops/utility.h"
+#include "megbrain/imperative/transformations/grad.h"
+#include "megbrain/utils/small_vector.h"
+
 #include <memory>
 #include <optional>
 
 namespace mgb::imperative::python {
 
-apply_result_t apply_grad(ApplyContext& ctx);
-
-struct GradKey : std::enable_shared_from_this<GradKey>, NonCopyableObj {
-    std::string name;
-    bool active = true;
-    GradInfo::head_t free_vars_head;
-    std::vector<std::weak_ptr<GradFn>> tape;
-    int priority = 0;
-
-    ~GradKey();
-
-    void attach(Tensor* tensor, pybind11::object callback);
-    void backward(std::vector<TensorWrapper*>, std::vector<TensorWrapper*>);
-    void cleanup();
-    bool is_blocked() const { return priority < sm_min_priority; }
-    inline static bool allow_higher_order_directive = false;
-
-private:
-    static int sm_min_priority;
-};
-
-struct GradKeyWrapper {
+struct GradKeyWrapper : NonCopyableObj {
     using wrap_t = pyext17::wrap<GradKeyWrapper>;
     static constexpr auto tp_name = pybind11::detail::_("GradKey");
 
     std::shared_ptr<GradKey> m_key;
+    std::shared_ptr<GradTransformation> m_transformation;
 
-    inline GradKeyWrapper() : m_key(std::make_shared<GradKey>()) {}
+    GradKeyWrapper();
 
     PyObject* get_name();
     void set_name(pybind11::handle name);
-    PyObject* get_priority();
-    void set_priority(pybind11::handle priority);
     void attach(PyObject* const* args, size_t nargs);
-    void backward(std::vector<TensorWrapper*>, std::vector<TensorWrapper*>);
+    static void backward(GradKeyWrapper* self, pybind11::list, pybind11::list);
+    static pybind11::function get_backward_closure(
+            GradKeyWrapper* self, pybind11::list);
     PyObject* is_attached_to(PyObject* const* args, size_t nargs);
+    void enter();
+    void exit();
+    void suppress();
+    void resume();
+    static GradKeyWrapper* get(std::shared_ptr<GradKey> key);
+    ~GradKeyWrapper();
 };
-
-struct BackwardContext {
-    PyTypeObject* pytype = nullptr;
-
-    auto wrap_tensor(std::shared_ptr<Tensor> t) {
-        if (pytype) {
-            return TensorWrapper::make(pytype, std::move(t));
-        }
-        return TensorWrapper::make(std::move(t));
-    }
-
-    auto wrap_tensor(Tensor* t) { return wrap_tensor(t->shared_from_this()); }
-};
-
-struct CustomBackward {
-    using BackwardFn =
-            std::function<apply_result_t(BackwardContext&, Tensor* const*, size_t)>;
-    BackwardFn m_backward;
-    SmallVector<bool, 8> m_input_has_grad;
-    struct OutputAttr {
-        bool requires_grad = true, captured = true;
-    };
-    SmallVector<OutputAttr> m_output_attrs;
-
-public:
-    template <typename T, typename R>
-    void operator()(BackwardContext& ctx, T&& grads, R&& receiver) {
-        size_t nargs = grads.size();
-        Tensor* args[nargs];
-        for (size_t i = 0; i < nargs; ++i) {
-            args[i] = grads[i];
-        }
-        auto ret = m_backward(ctx, args, nargs);
-        for (size_t i = 0; i < ret.size(); ++i) {
-            if (auto&& t = ret[i]) {
-                receiver(i, std::move(t));
-            }
-        }
-    }
-
-    bool input_has_grad(size_t i) { return m_input_has_grad[i]; }
-    bool output_requires_grad(size_t i) { return m_output_attrs[i].requires_grad; }
-    bool output_captured(size_t i) { return m_output_attrs[i].captured; }
-
-    class Maker {
-        bool output_size_set = false, input_has_grad_initialized = false;
-        CustomBackward& target;
-        ApplyContext& ctx;
-
-        void init_input_has_grad() {
-            if (!input_has_grad_initialized) {
-                input_has_grad_initialized = true;
-                target.m_input_has_grad.resize(ctx.nargs, true);
-            }
-        }
-
-    public:
-        Maker(CustomBackward& target_, ApplyContext& ctx_)
-                : target(target_), ctx(ctx_) {}
-
-        template <typename F>
-        Maker& backward(F&& f) {
-            mgb_assert(!target.m_backward);
-            target.m_backward = std::forward<F>(f);
-            return *this;
-        }
-        // mandatory
-        Maker& output_size(size_t sz) {
-            mgb_assert(!output_size_set);
-            output_size_set = true;
-            target.m_output_attrs.resize(sz);
-            return *this;
-        }
-        // optional, defaults to all true
-        Maker& input_has_grad(size_t i, bool v) {
-            init_input_has_grad();
-            target.m_input_has_grad.at(i) = v;
-            return *this;
-        }
-        // optional, defaults to all true
-        Maker& output_requires_grad(size_t i, bool v) {
-            target.m_output_attrs.at(i).requires_grad = v;
-            return *this;
-        }
-        // optional, defaults to all true
-        Maker& output_captured(size_t i, bool v) {
-            target.m_output_attrs.at(i).captured = v;
-            return *this;
-        }
-
-        void finalize() {
-            mgb_assert(output_size_set);
-            init_input_has_grad();
-        }
-    };
-
-    Maker maker(ApplyContext& ctx) { return {*this, ctx}; }
-};
-
-using GradRuleFn = std::function<std::optional<apply_result_t>(
-        ApplyContext&, CustomBackward::Maker&)>;
-
-std::unordered_map<Typeinfo*, GradRuleFn>& grad_rule_registry();
-
-inline bool input_requires_grad(const ApplyContext& ctx, size_t i) {
-    return !ctx.args[i]->m_grad_info_dict.empty();
-}
-
-struct GradRuleFallback : std::exception {};
-
-template <typename T>
-bool register_grad_rule(Typeinfo* typeinfo, T&& rule) {
-    return grad_rule_registry().emplace(typeinfo, std::forward<T>(rule)).second;
-}
 
 }  // namespace mgb::imperative::python
 

@@ -35,7 +35,6 @@ from ..core.tensor.utils import (
     cast_tensors,
     convert_single_value,
     make_shape_tuple,
-    setscalar,
     subgraph,
 )
 from ..device import get_default_device

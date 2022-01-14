@@ -185,7 +185,8 @@ int py_set_scope(PyObject* obj, PyObject* value, void* /* closure */) {
 }
 
 PyGetSetDef PyOp(OpDef)::py_getsetters[] = {
-        {const_cast<char*>("scope"), py_get_scope, py_set_scope, "scope", NULL},
+        {const_cast<char*>("scope"), py_get_scope, py_set_scope,
+         const_cast<char*>("scope"), NULL},
         {NULL}};
 
 Py_hash_t PyOp(OpDef)::tp_hash(PyObject* obj) {
@@ -556,12 +557,6 @@ void init_ops(py::module m) {
     m.def(
             "delete_rng_handle",
             [](size_t handle) {
-                // RNG op might execute after handle released due to async dispatch, so
-                // we need sync before delete a handle to avoid memory leak or
-                // use-after-free
-                if (python::interpreter_for_py->check_available()) {
-                    python::interpreter_for_py->sync();
-                }
                 mgb::CompNode::sync_all();
                 py_task_q.wait_all_task_finish();
                 rng::delete_handle(handle);

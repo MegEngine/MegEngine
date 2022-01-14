@@ -12,7 +12,7 @@ import numpy as np
 
 from .core._imperative_rt import CompNode
 from .core._imperative_rt.core2 import Tensor as _Tensor
-from .core._imperative_rt.core2 import apply
+from .core._imperative_rt.core2 import apply, set_py_tensor_type
 from .core._trace_option import use_symbolic_shape
 from .core._wrap import as_device
 from .core.ops.builtin import Copy, GetVarShape
@@ -20,7 +20,6 @@ from .core.tensor.array_method import ArrayMethodMixin
 from .device import _valid_device, get_default_device
 from .logger import get_logger
 from .utils.deprecation import deprecated
-from .utils.naming import AutoNaming
 
 logger = get_logger(__name__)
 
@@ -40,6 +39,10 @@ class Tensor(_Tensor, ArrayMethodMixin):
     grad = None
     dmap_callback = None
     _qparams = None
+    _custom_name = ""
+    _name = None
+    _short_name = None
+    _prefix = None
 
     def __new__(
         cls,
@@ -81,9 +84,15 @@ class Tensor(_Tensor, ArrayMethodMixin):
         device: str = None,
         is_const: bool = False,
         no_cache: bool = False,
-        name: str = None,
+        name: str = "",
     ):
-        pass
+        if name is None:
+            name = ""
+        self._custom_name = name
+        self._name = name
+        self._short_name = name
+        self._set_name(self._name)
+        self._prefix = None
 
     @property
     def shape(self) -> Union[tuple, "Tensor"]:
@@ -151,12 +160,13 @@ class Tensor(_Tensor, ArrayMethodMixin):
 
     @property
     def name(self):
-        return self.c_name
+        return self._custom_name
 
     @name.setter
     def name(self, name):
-        self.c_name = name
-        AutoNaming.record_var_name(self._mixin_handle, name)
+        self._custom_name = name
+        self._name = self._prefix + "." + name if self._prefix else name
+        self._set_name(self._name)
 
     @deprecated(version="1.0", reason="no need to reuse an existing tensor since 1.0")
     def set_value(self, value):
@@ -222,6 +232,9 @@ class Tensor(_Tensor, ArrayMethodMixin):
         else:
             qparams = None
         self._qparams = qparams
+
+
+set_py_tensor_type(Tensor)
 
 
 tensor = Tensor

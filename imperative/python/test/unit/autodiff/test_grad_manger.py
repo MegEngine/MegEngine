@@ -17,7 +17,7 @@ import megengine.distributed as dist
 import megengine.functional as F
 import megengine.module as M
 import megengine.optimizer as optim
-from megengine.autodiff import GradManager
+from megengine.autodiff import Function, GradManager
 from megengine.jit import trace
 
 
@@ -214,7 +214,7 @@ def test_remote_grad(trace_mode):
                     x = dist.functional.remote_recv(rank - 1)
                 y = m(x)
                 if rank != size - 1:
-                    dist.functional.remote_send(y, dest_rank=rank + 1)
+                    x = dist.functional.remote_send(y, dest_rank=rank + 1)
                     gm.backward()
                 else:
                     y = y.mean()
@@ -224,7 +224,7 @@ def test_remote_grad(trace_mode):
         if trace_mode is not None:
             train_func = trace(symbolic=trace_mode)(train_func)
 
-        for i in range(3):
+        for i in range(1):
             train_func(x)
 
     worker()
@@ -340,7 +340,6 @@ def test_broadcast_grad(trace_mode):
     worker()
 
 
-@pytest.mark.require_higher_order_directive()
 def test_2nd_grad_with_manager():
     x_np = np.random.rand(10).astype("float32")
     x = mge.tensor(x_np)
@@ -359,7 +358,6 @@ def test_2nd_grad_with_manager():
     )
 
 
-@pytest.mark.require_higher_order_directive()
 def test_grad_manager_group():
     x_np = np.random.rand(10).astype("float32")
     x = mge.tensor(x_np)
@@ -376,7 +374,6 @@ def test_grad_manager_group():
     x.grad = None
 
 
-@pytest.mark.require_higher_order_directive()
 def test_grad_manager_group_visibility():
     x_np = np.random.rand(10).astype("float32")
     x = mge.tensor(x_np)
@@ -392,7 +389,6 @@ def test_grad_manager_group_visibility():
         np.testing.assert_almost_equal(x.grad.numpy(), -np.sin(x_np), decimal=5)
 
 
-@pytest.mark.require_higher_order_directive()
 def test_grad_manager_visibility_by_order():
     x_np = np.random.rand(10).astype("float32")
     x = mge.tensor(x_np)
@@ -410,7 +406,6 @@ def test_grad_manager_visibility_by_order():
     np.testing.assert_almost_equal(x.grad.numpy(), -np.sin(x_np), decimal=5)
 
 
-@pytest.mark.require_higher_order_directive()
 @pytest.mark.parametrize("target", [F.cos, F.sin, lambda x: x * 2 + 1])
 def test_emulate_forward_mode_with_reverse_mode(target):
     def jvp(inp, expr):
@@ -434,3 +429,43 @@ def test_emulate_forward_mode_with_reverse_mode(target):
 
     np.testing.assert_almost_equal(y.numpy(), y1.numpy(), decimal=5)
     np.testing.assert_almost_equal(dy.numpy(), dy1.numpy(), decimal=3)
+
+
+def test_2nd_grad_with_custom_gradient():
+    class MySin(Function):
+        def forward(self, x):
+            self.inp = x
+            x = mge.Tensor(x.numpy())
+            y = F.sin(x)
+            return y
+
+        def backward(self, dy):
+            dx = F.cos(self.inp) * dy
+            return dx
+
+    class MyCos(Function):
+        def forward(self, x):
+            self.inp = x
+            x = mge.Tensor(x.numpy())
+            y = F.cos(x)
+            return y
+
+        def backward(self, dy):
+            dx = -MySin()(self.inp) * dy
+            return dx
+
+    x_np = np.random.rand(10).astype("float32")
+    x = mge.tensor(x_np)
+
+    gm = GradManager().attach([x])
+    gm2 = GradManager().attach([x])
+
+    with gm:
+        with gm2:
+            y = MyCos()(x)
+            gm2.backward(y)
+        np.testing.assert_almost_equal(x.grad.numpy(), -np.sin(x_np), decimal=5)
+        gm.backward(x.grad)
+    np.testing.assert_almost_equal(
+        x.grad.numpy(), -np.sin(x_np) - np.cos(x_np), decimal=5
+    )
