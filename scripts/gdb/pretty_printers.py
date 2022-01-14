@@ -3,8 +3,17 @@ import gdb.printing
 import gdb.types
 
 
+def dynamic_cast(val):
+    assert val.type.code == gdb.TYPE_CODE_REF
+    val = val.cast(val.dynamic_type)
+    return val
+
+
 def eval_on_val(val, eval_str):
-    eval_str = "(*({}*)({})).{}".format(val.type, val.address, eval_str)
+    if val.type.code == gdb.TYPE_CODE_REF:
+        val = val.referenced_value()
+    address = val.address
+    eval_str = "(*({}){}){}".format(address.type, int(address), eval_str)
     return gdb.parse_and_eval(eval_str)
 
 
@@ -50,7 +59,7 @@ class ToStringPrinter:
         self.val = val
 
     def to_string(self):
-        return eval_on_val(self.val, "to_string().c_str()").string()
+        return eval_on_val(self.val, ".to_string().c_str()").string()
 
 
 class ReprPrinter:
@@ -58,7 +67,10 @@ class ReprPrinter:
         self.val = val
 
     def to_string(self):
-        return eval_on_val(self.val, "repr().c_str()").string()
+        val = self.val
+        if val.type.code == gdb.TYPE_CODE_REF:
+            val = val.referenced_value()
+        return eval_on_val(val, ".repr().c_str()").string()
 
 
 class HandlePrinter:
@@ -141,6 +153,23 @@ class OpDefPrinter:
             yield field.name, concrete_val[field.name]
 
 
+class SpanPrinter:
+    def __init__(self, val):
+        self.begin = val['m_begin']
+        self.end = val['m_end']
+        self.size = self.end - self.begin
+
+    def to_string(self):
+        return 'Span of Size {}'.format(self.size)
+
+    def display_hint(self):
+        return 'array'
+
+    def children(self):
+        for i in range(self.size):
+            yield "[{}]".format(i), (self.begin+i).dereference()
+
+
 pp = gdb.printing.RegexpCollectionPrettyPrinter("MegEngine")
 # megdnn
 pp.add_printer('megdnn::SmallVectorImpl', '^megdnn::SmallVector(Impl)?<.*>$', SmallVectorPrinter)
@@ -154,6 +183,9 @@ pp.add_printer('mgb::imperative::LogicalTensorDesc', '^mgb::imperative::LogicalT
 pp.add_printer('mgb::imperative::OpDef', '^mgb::imperative::OpDef$', OpDefPrinter)
 pp.add_printer('mgb::imperative::Subgraph', '^mgb::imperative::Subgraph$', ReprPrinter)
 pp.add_printer('mgb::imperative::EncodedSubgraph', '^mgb::imperative::EncodedSubgraph$', ReprPrinter)
+# imperative dispatch
+pp.add_printer('mgb::imperative::ValueRef', '^mgb::imperative::ValueRef$', ToStringPrinter)
+pp.add_printer('mgb::imperative::Span', '^mgb::imperative::Span<.*>$', SpanPrinter)
 gdb.printing.register_pretty_printer(gdb.current_objfile(), pp)
 
 
