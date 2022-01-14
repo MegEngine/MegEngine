@@ -772,13 +772,14 @@ void ElemwiseMultiTypeImpl::on_quantized_mode(
         using dst_ctype = typename DTypeTrait<_dst_dt>::ctype;                       \
         thin_function<void(                                                          \
                 const src_ctype*, const src_ctype*, const src_ctype*, dst_ctype*,    \
-                DType, DType, DType, DType, size_t, size_t, size_t)>                 \
+                DType, DType, DType, DType, size_t, size_t, size_t, size_t)>         \
                 run = OpCallerTernary<                                               \
                         _op<src_ctype, dst_ctype>, BCAST101_VEC_BCAST101>::run;      \
-        MEGDNN_DISPATCH_CPU_KERN_OPR(run(                                            \
-                src0.ptr<src_ctype>(), src1.ptr<src_ctype>(), src2.ptr<src_ctype>(), \
-                dst.ptr<dst_ctype>(), src0.layout.dtype, src1.layout.dtype,          \
-                src2.layout.dtype, dst.layout.dtype, binfo.x, binfo.y, binfo.z));    \
+        MEGDNN_DISPATCH_CPU_KERN_OPR(                                                \
+                run(src0.ptr<src_ctype>(), src1.ptr<src_ctype>(),                    \
+                    src2.ptr<src_ctype>(), dst.ptr<dst_ctype>(), src0.layout.dtype,  \
+                    src1.layout.dtype, src2.layout.dtype, dst.layout.dtype, binfo.x, \
+                    binfo.y, binfo.z, binfo.y* binfo.z));                            \
         return;                                                                      \
     }
 

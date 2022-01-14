@@ -1060,7 +1060,8 @@ struct OpCallerTernary<Op, BCAST101_VEC_BCAST101> {
             const typename Op::src_ctype* src0, const typename Op::src_ctype* src1,
             const typename Op::src_ctype* src2, typename Op::dst_ctype* dst,
             DType src0_dtype, DType src1_dtype, DType src2_dtype, DType dst_dtype,
-            size_t batch_size, size_t channel_size, size_t channel_stride) {
+            size_t batch_size, size_t channel_size, size_t channel_stride,
+            size_t batch_offset) {
         Op op(src0_dtype, src1_dtype, src2_dtype, dst_dtype);
         ParamElemVisitor<typename Op::src_ctype> vis1;
         ParamElemVisitorDup<typename Op::src_ctype> vis0;
@@ -1068,6 +1069,7 @@ struct OpCallerTernary<Op, BCAST101_VEC_BCAST101> {
         for (size_t batch = 0; batch < batch_size; batch++) {
             auto src0_ptr = src0;
             auto src2_ptr = src2;
+            auto b_offset = batch_offset;
             for (size_t channel = 0; channel < channel_size; channel++) {
                 size_t i = 0;
                 auto src0_neon = vis0(src0_ptr);
@@ -1079,6 +1081,7 @@ struct OpCallerTernary<Op, BCAST101_VEC_BCAST101> {
                        {{src2_neon, src2_neon}}, dst);
                     src1 += Op::SIMD_WIDTH * 2;
                     dst += Op::SIMD_WIDTH * 2;
+                    b_offset -= Op::SIMD_WIDTH * 2;
                 }
 #if MEGDNN_FIX_AARCH32_BUG
 // FIXME: as llvm may cause cannot select error if enable vectorize
@@ -1088,10 +1091,13 @@ struct OpCallerTernary<Op, BCAST101_VEC_BCAST101> {
                     op(*src0_ptr, *src1, *src2_ptr, dst);
                     src1++;
                     dst++;
+                    b_offset--;
                 }
                 src0_ptr++;
                 src2_ptr++;
             }
+            src1 += b_offset;
+            dst += b_offset;
         }
     }
 };
@@ -1104,10 +1110,11 @@ struct OpCallerTernary<Op, BCAST111C_VEC_BCAST111C> {
             size_t src1_offset, const typename Op::src_ctype* src2,
             typename Op::dst_ctype* dst, DType src0_dtype, DType src1_dtype,
             DType src2_dtype, DType dst_dtype, size_t batch_size, size_t channel_size,
-            size_t channel_stride) {
+            size_t channel_stride, size_t batch_offset) {
         Op op(src0_dtype, src1_dtype, src2_dtype, dst_dtype);
         ParamElemVisitor<typename Op::src_ctype> vis;
         for (size_t batch = 0; batch < batch_size; batch++) {
+            auto b_offset = batch_offset;
             for (size_t channel = 0; channel < channel_size; channel++) {
                 auto src0_ptr = src0;
                 auto src2_ptr = src2;
@@ -1126,6 +1133,7 @@ struct OpCallerTernary<Op, BCAST111C_VEC_BCAST111C> {
                     src1 += Op::SIMD_WIDTH * 2;
                     src2_ptr += Op::SIMD_WIDTH * 2;
                     dst += Op::SIMD_WIDTH * 2;
+                    b_offset -= Op::SIMD_WIDTH * 2;
                 }
 #if MEGDNN_FIX_AARCH32_BUG
 // FIXME: as llvm may cause cannot select error if enable vectorize
@@ -1137,9 +1145,12 @@ struct OpCallerTernary<Op, BCAST111C_VEC_BCAST111C> {
                     src1++;
                     src2_ptr++;
                     dst++;
+                    b_offset--;
                 }
                 src1 += src1_offset;
             }
+            src1 += b_offset;
+            dst += b_offset;
         }
     }
 };
