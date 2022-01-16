@@ -432,6 +432,13 @@ def Padding: MgbHashableOp<"Padding", [PaddingParam]>;
 def LRN: MgbHashableOp<"LRN", [LRNParam]>;
 
 def LayerNorm: MgbHashableOp<"LayerNorm", [LayerNormParam]>;
+def RNNCell: MgbHashableOp<"RNNCell", [RNNCellParam]>;
+
+def LSTMCell: MgbHashableOp<"LSTMCell", [EmptyParam]>;
+
+def RNN: MgbHashableOp<"RNN", [RNNParam]>;
+
+def LSTM: MgbHashableOp<"LSTM", [LSTMParam]>;
 
 def Dropout: MgbHashableOp<"Dropout", [DropoutParam]> {
   let extraArguments = (ins

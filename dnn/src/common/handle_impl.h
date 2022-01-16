@@ -213,7 +213,13 @@ private:
     cb(LayerNormForward) \
     cb(LayerNormBackward) \
     cb(DropoutForward) \
-    cb(DropoutBackward)
+    cb(DropoutBackward) \
+    cb(RNNCell) \
+    cb(LSTMCell) \
+    cb(RNN) \
+    cb(RNNBackward) \
+    cb(LSTM) \
+    cb(LSTMBackward)
 // clang-format on
 
 /*!

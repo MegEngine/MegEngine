@@ -36,5 +36,6 @@ from .padding import Pad
 from .pixel_shuffle import PixelShuffle
 from .pooling import AvgPool2d, MaxPool2d
 from .quant_dequant import DequantStub, QuantStub
+from .rnn import LSTM, RNN, LSTMCell, RNNCell
 from .sequential import Sequential
 from .sliding_window import SlidingWindow, SlidingWindowTranspose

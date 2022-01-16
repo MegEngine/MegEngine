@@ -118,6 +118,9 @@ union OperatorParam {
     param.CheckNonFinite = 84,
     param.LayerNorm = 85,
     param.Dropout = 86,
+    param.RNNCell = 87,
+    param.RNN = 88,
+    param.LSTM = 89,
 }
 
 table Operator {

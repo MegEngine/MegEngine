@@ -36,13 +36,18 @@ pdef('Axis').add_fields('int32', 'axis', 0)
  add_enum(Doc('Format', 'convolution data/filter/output format; see '
               ':class:`RelayoutFormat` for more details'),
           'NCHW = 0', 'NHWC = 1', 'NHWCD4 = 2', 'NCHW4 = 3', 'NCHW8 = 4', 'NCHW32 = 5', 'NCHW88 = 6',
-          'NCHW44 = 7','NCHW44_DOT = 8', 
+          'NCHW44 = 7', 'NCHW44_DOT = 8',
           Doc('NCHW_WINOGRAD = 9', 'NCHW layout with weights tranformed by winograd'),
-          Doc('NCHW88_WINOGRAD = 10', 'NCHW88 layout with weights tranformed by winograd'),
-          Doc('NCHW44_WINOGRAD = 11', 'NCHW44 layout with weights tranformed by winograd'),
-          Doc('NCHW4_NCHW32 = 12', 'NCHW4_NCHW32 means input tensors are nchw4 layout, output tensor is nchw32 layout'), 
-          Doc('NCHW32_NCHW4 = 13', 'NCHW32_NCHW4 means input tensors are nchw32 layout, output tensor is nchw4 layout'), 
-          Doc('NCHW4_NCHW = 14', 'NCHW4_NCHW means input tensors are nchw4 layout, output tensor is nchw layout'), 
+          Doc('NCHW88_WINOGRAD = 10',
+              'NCHW88 layout with weights tranformed by winograd'),
+          Doc('NCHW44_WINOGRAD = 11',
+              'NCHW44 layout with weights tranformed by winograd'),
+          Doc('NCHW4_NCHW32 = 12',
+              'NCHW4_NCHW32 means input tensors are nchw4 layout, output tensor is nchw32 layout'),
+          Doc('NCHW32_NCHW4 = 13',
+              'NCHW32_NCHW4 means input tensors are nchw32 layout, output tensor is nchw4 layout'),
+          Doc('NCHW4_NCHW = 14',
+              'NCHW4_NCHW means input tensors are nchw4 layout, output tensor is nchw layout'),
           Doc('NHWC_NCHW = 15', 'NHWC_NCHW means input tensors are nhwc layout, '
               'output tensor is nchw layout'),
           Doc('NHWC_NCHW4_IC_SMALL = 16', 'NHWC_NCHW4_IC_SMALL means input tensors are nhwc(c < 4) layout, '
@@ -96,10 +101,13 @@ pdef('Axis').add_fields('int32', 'axis', 0)
  add_enum(Doc('Format', 'convolution data/filter/output format; see '
               ':class:`RelayoutFormat` for more details'),
           'NCHW = 0', 'NHWC = 1', 'NHWCD4 = 2', 'NCHW4 = 3', 'NCHW8 = 4', 'NCHW32 = 5', 'NCHW88 = 6',
-          'NCHW44 = 7','NCHW44_DOT = 8', 
-          Doc('NCHW4_NCHW32 = 9', 'NCHW4_NCHW32 means input tensors are nchw4 layout, output tensor is nchw32 layout'), 
-          Doc('NCHW32_NCHW4 = 10', 'NCHW32_NCHW4 means input tensors are nchw32 layout, output tensor is nchw4 layout'), 
-          Doc('NCHW4_NCHW = 11', 'NCHW4_NCHW means input tensors are nchw4 layout, output tensor is nchw layout'),
+          'NCHW44 = 7', 'NCHW44_DOT = 8',
+          Doc('NCHW4_NCHW32 = 9',
+              'NCHW4_NCHW32 means input tensors are nchw4 layout, output tensor is nchw32 layout'),
+          Doc('NCHW32_NCHW4 = 10',
+              'NCHW32_NCHW4 means input tensors are nchw32 layout, output tensor is nchw4 layout'),
+          Doc('NCHW4_NCHW = 11',
+              'NCHW4_NCHW means input tensors are nchw4 layout, output tensor is nchw layout'),
           Doc('NHWC_NCHW = 12', 'NHWC_NCHW means input tensors are nhwc layout, '
               'output tensor is nchw layout'),
           Doc('NHWC_NCHW4_IC_SMALL = 13', 'NHWC_NCHW4_IC_SMALL means input tensors are nhwc(c < 4) layout, '
@@ -107,11 +115,11 @@ pdef('Axis').add_fields('int32', 'axis', 0)
           Doc('NCHW_NCHW4_IC_SMALL = 14', 'NCHW_NCHW4_IC_SMALL means input tensors are nchw(c < 4) layout, '
               'output tensor is nchw4 layout, padding c=4'),
           Doc('CHWN4 = 15', 'CHWN4 is currently only used on Nvidia platform for fast implementation '
-              'of convolution using CUDA/SASS. The channels are splitted to groups of 4 channels.'), 
+              'of convolution using CUDA/SASS. The channels are splitted to groups of 4 channels.'),
           Doc('NCHW64 = 16', 'NCHW64 is designed for convolution implementation to utilizing TensorCore '
-              'instructions for 4-bit integers on Nvidia platforms'), 
+              'instructions for 4-bit integers on Nvidia platforms'),
           Doc('NCHW4_NHWC = 17', 'NCHW4_NHWC means input tensors are nchw4 layout, output tensor is nhwc layout')).
- add_enum_alias('ComputeMode', 'ConvolutionV1',name_field='compute_mode')
+ add_enum_alias('ComputeMode', 'ConvolutionV1', name_field='compute_mode')
  )
 
 
@@ -133,7 +141,7 @@ pdef('Axis').add_fields('int32', 'axis', 0)
  add_enum_alias('ConvMode', 'ConvolutionV0', 'Mode').
  add_enum('PoolMode', 'AVERAGE = 0', 'MAX = 1').
  add_enum('NonlineMode', 'IDENTITY = 0', 'RELU = 1', 'SIGMOID = 2').
- add_fields('uint32', 'pool_shape_h', 1, 'pool_shape_w', 1, 'pool_stride_h', 1, 'pool_stride_w', 1, \
+ add_fields('uint32', 'pool_shape_h', 1, 'pool_shape_w', 1, 'pool_stride_h', 1, 'pool_stride_w', 1,
   'pool_pad_h', 0, 'pool_pad_w', 0, 'conv_stride_h', 1, 'conv_stride_w', 1, 'conv_pad_h', 0, 'conv_pad_w', 0))
 
 (pdef('ConvBias', 'legacy conv_bias', version=0, is_legacy=True).
@@ -216,8 +224,8 @@ pdef('Axis').add_fields('int32', 'axis', 0)
 (pdef('SeparableConv').
  add_enum_alias('Mode', 'ConvolutionV0').
  add_enum('BorderMode', 'BORDER_REPLICATE = 0', 'BORDER_REFLECT = 1',
-          'BORDER_REFLECT_101 = 2','BORDER_WRAP = 3',
-          'BORDER_CONSTANT = 4', 'BORDER_TRANSPARENT = 5','BORDER_ISOLATED = 6').
+          'BORDER_REFLECT_101 = 2', 'BORDER_WRAP = 3',
+          'BORDER_CONSTANT = 4', 'BORDER_TRANSPARENT = 5', 'BORDER_ISOLATED = 6').
  add_fields('bool', 'is_symm_kernel', 'true').
  add_fields('uint32', 'pad_h', 0, 'pad_w', 0, 'stride_h', 1, 'stride_w', 1,
             'ksize_h', 3, 'ksize_w', 3, 'anchor_h', 1, 'anchor_w', 1))
@@ -247,7 +255,7 @@ pdef('Axis').add_fields('int32', 'axis', 0)
  )
 
 (pdef('Pooling', version=1).
- add_enum_alias('Mode','PoolingV0').
+ add_enum_alias('Mode', 'PoolingV0').
  add_fields('uint32', 'pad_h', 0, 'pad_w', 0, 'stride_h', 2, 'stride_w', 2,
             'window_h', 2, 'window_w', 2).
  add_enum_alias('Format', 'Convolution')
@@ -302,7 +310,8 @@ pdef('Axis').add_fields('int32', 'axis', 0)
  ).
  add_fields('float32', 'scale', '1.f'))
 
-INTERP_MODES = ['NEAREST = 0', 'LINEAR = 1', 'AREA = 2', 'CUBIC = 3', 'LANCZOS4 = 4']
+INTERP_MODES = ['NEAREST = 0', 'LINEAR = 1',
+    'AREA = 2', 'CUBIC = 3', 'LANCZOS4 = 4']
 BORDER_MODES = [Doc('REPLICATE = 0', 'aaaaaa|abcdefgh|hhhhhhh'),
                 Doc('REFLECT = 1', 'fedcba|abcdefgh|hgfedcb'),
                 Doc('REFLECT_101 = 2', 'gfedcb|abcdefgh|gfedcba'),
@@ -323,8 +332,8 @@ BORDER_MODES = [Doc('REPLICATE = 0', 'aaaaaa|abcdefgh|hhhhhhh'),
  add_fields('float32', Doc('border_val', 'used for CONSTANT bmode'), '.0f'))
 
 (pdef('WarpPerspective', version=2).
- add_enum_alias('InterpolationMode','WarpPerspectiveV1',name_field="imode").
- add_enum_alias('BorderMode','WarpPerspectiveV1',name_field="bmode").
+ add_enum_alias('InterpolationMode', 'WarpPerspectiveV1', name_field="imode").
+ add_enum_alias('BorderMode', 'WarpPerspectiveV1', name_field="bmode").
  add_enum_alias('Format', 'Convolution').
  add_fields('float32', Doc('border_val', 'used for CONSTANT bmode'), '.0f'))
 
@@ -399,7 +408,7 @@ pdef('Elemwise').add_enum(
     Doc('RMULH = 43', 'binary: rounded higher l bits of x * y, where l is the bit '
                 'length of x.'),
 
-    Doc('ATAN2 = 44','binary: atan2(y,x)'),
+    Doc('ATAN2 = 44', 'binary: atan2(y,x)'),
     Doc('ERF = 45', 'unary: erf(x)'),
     Doc('ERFINV = 46', 'unary: inverse function of erf(x)'),
     Doc('ERFC = 47', 'unary: erfc(x)'),
@@ -634,7 +643,7 @@ Currently, ```DEFAULT``` mode means:
             Doc('axis',
                 'axis along which reduction is performed; if INT_MAX is given, '
                 'reduce to given target shape (only used in megbrain)'),
-            (1<<31)-1).
+            (1 << 31)-1).
  add_enum('DataType',
           Doc('DEFAULT = 0',
 '''
@@ -689,7 +698,7 @@ Currently, ```DEFAULT``` mode means:
  add_fields('int32',
           Doc('axis',
               'axis along which cumsum is performed, default with INT_MAX'),
-          (1<<31)-1).
+          (1 << 31)-1).
  add_fields('bool',
           Doc('exclusive',
               'whether the current element is taken into account'),
@@ -761,7 +770,8 @@ pdef('Sleep').add_fields('float32', Doc('time', 'time to sleep in seconds'), 0)
 (pdef('UniformRNG', version=1).
  add_fields('uint64', 'seed', 0).
  add_fields(
-     'dtype', Doc('dtype', 'The dtype of output Tensor. Only support Float32.'),
+     'dtype', Doc(
+         'dtype', 'The dtype of output Tensor. Only support Float32.'),
      'DTypeEnum::Float32'))
 
 (pdef('GaussianRNG', version=0, is_legacy=True).
@@ -772,7 +782,8 @@ pdef('Sleep').add_fields('float32', Doc('time', 'time to sleep in seconds'), 0)
  add_fields('uint64', 'seed', 0).
  add_fields('float32', 'mean', 0, 'std', 1).
  add_fields(
-     'dtype', Doc('dtype', 'The dtype of output Tensor. Only support Float32.'),
+     'dtype', Doc(
+         'dtype', 'The dtype of output Tensor. Only support Float32.'),
      'DTypeEnum::Float32'))
 
 (pdef('GammaRNG').
@@ -819,7 +830,7 @@ pdef('Sleep').add_fields('float32', Doc('time', 'time to sleep in seconds'), 0)
                   ('YUV2GRAY_NV12', 'BT601_YUV2GRAY_NV12'),
                   ('YUV2GRAY_YV12', 'BT601_YUV2GRAY_YV12'),
                   ('YUV2GRAY_YU12', 'BT601_YUV2GRAY_YU12')],
-    name_field = 'mode'))
+    name_field='mode'))
 
 (pdef('WarpAffine', version=0, is_legacy=True)
  .add_enum_alias('InterpolationMode', 'WarpPerspectiveV1', name_field='imode')
@@ -842,7 +853,7 @@ pdef('Sleep').add_fields('float32', Doc('time', 'time to sleep in seconds'), 0)
 (pdef('GaussianBlur')
  .add_enum_alias('BorderMode', 'WarpPerspectiveV1', name_field='border_mode')
  .add_fields('uint32', 'kernel_height', 0, 'kernel_width', 0)
- .add_fields('float32','sigma_x', '0.f', 'sigma_y', '0.f'))
+ .add_fields('float32', 'sigma_x', '0.f', 'sigma_y', '0.f'))
 
 (pdef('Resize', version=0, is_legacy=True)
  .add_enum_alias('InterpolationMode', 'WarpPerspectiveV1', name_field='imode'))
@@ -855,7 +866,7 @@ pdef('Sleep').add_fields('float32', Doc('time', 'time to sleep in seconds'), 0)
  .add_enum_alias('InterpolationMode', 'WarpPerspectiveV1', name_field='imode')
  .add_enum_alias('Format', 'Convolution', default=1))
 
-(pdef('Remap', version=0,is_legacy=True)
+(pdef('Remap', version=0, is_legacy=True)
  .add_enum_alias('InterpolationMode', 'WarpPerspectiveV1', name_field='imode')
  .add_enum_alias('BorderMode', 'WarpPerspectiveV1', name_field='border_type')
  .add_enum_alias('Format', 'ConvolutionV0', default=1)
@@ -909,8 +920,8 @@ pdef('Sleep').add_fields('float32', Doc('time', 'time to sleep in seconds'), 0)
 (pdef('SeparableConv3D').
  add_enum_alias('Mode', 'Convolution3D').
  add_enum('BorderMode', 'BORDER_REPLICATE = 0', 'BORDER_REFLECT = 1',
-          'BORDER_REFLECT_101 = 2','BORDER_WRAP = 3',
-          'BORDER_CONSTANT = 4', 'BORDER_TRANSPARENT = 5','BORDER_ISOLATED = 6').
+          'BORDER_REFLECT_101 = 2', 'BORDER_WRAP = 3',
+          'BORDER_CONSTANT = 4', 'BORDER_TRANSPARENT = 5', 'BORDER_ISOLATED = 6').
  add_fields('bool', 'is_symm_kernel', 'true').
  add_fields('uint32', 'pad_d', 0, 'pad_h', 0, 'pad_w', 0,
             'stride_d', 0, 'stride_h', 1, 'stride_w', 1,
@@ -1023,10 +1034,10 @@ Note: NCHW_NCHW4_WEIGHT will auto pad oc and ic, you should remove oc in later o
      'NCHW_NCHW4 = 24',
      'NCHW4_NCHW = 25',
      'NCHW_NCHW4_WEIGHT = 26',
-     'NCHW_NCHW64 = 27', 
-     'NCHW64_NCHW = 28', 
-     'NCHW_NHWC = 29', 
-     'NHWC_NCHW = 30',  
+     'NCHW_NCHW64 = 27',
+     'NCHW64_NCHW = 28',
+     'NCHW_NHWC = 29',
+     'NHWC_NCHW = 30',
     )
  )
 
@@ -1048,7 +1059,7 @@ Note: NCHW_NCHW4_WEIGHT will auto pad oc and ic, you should remove oc in later o
  add_fields('bool', 'is_symm_kernel', 'true').
  add_fields('uint32', 'ksize_h', 3, 'ksize_w', 3, 'anchor_h', 1, 'anchor_w', 1))
 
-(pdef('LocalShare', 'Local share convolution',version=0, is_legacy=True).
+(pdef('LocalShare', 'Local share convolution', version=0, is_legacy=True).
  add_enum_alias('Mode', 'ConvolutionV0').
  add_fields(
      'uint32',
@@ -1089,7 +1100,7 @@ Note: NCHW_NCHW4_WEIGHT will auto pad oc and ic, you should remove oc in later o
  )
 
 
-(pdef('ROIAlign',version=0,is_legacy=True).
+(pdef('ROIAlign', version=0, is_legacy=True).
  add_enum('Mode', 'MAX = 0', 'AVERAGE = 1', name_field='mode').
  add_enum_alias('Format', 'ConvolutionV0').
  add_fields('float32', 'spatial_scale', '1.0').
@@ -1133,7 +1144,7 @@ Note: NCHW_NCHW4_WEIGHT will auto pad oc and ic, you should remove oc in later o
     Doc('part_size', 'size of each deformable part'), 1,
     Doc('sample_per_part', 'sample count of each bbox'), 1))
 
-(pdef('BatchConvBias', 'Batch convolution (unshare weights on the batch dimension)',version=0,is_legacy=True).
+(pdef('BatchConvBias', 'Batch convolution (unshare weights on the batch dimension)', version=0, is_legacy=True).
  add_enum_alias('NonlineMode', 'ConvBiasV0').
  add_enum_alias('Mode', 'ConvolutionV0').
  add_fields(
@@ -1152,7 +1163,7 @@ Note: NCHW_NCHW4_WEIGHT will auto pad oc and ic, you should remove oc in later o
  add_enum_alias('ComputeMode', 'ConvolutionV1', name_field="compute_mode")
  )
 
-(pdef('BatchConvBias', 'Batch convolution (unshare weights on the batch dimension)',version=1).
+(pdef('BatchConvBias', 'Batch convolution (unshare weights on the batch dimension)', version=1).
  add_enum_alias('NonlineMode', 'ConvBiasV0').
  add_enum_alias('Mode', 'ConvolutionV0').
  add_fields(
@@ -1172,8 +1183,8 @@ Note: NCHW_NCHW4_WEIGHT will auto pad oc and ic, you should remove oc in later o
  )
 
 (pdef('FakeQuant').
- add_fields('int32','qmin','-2147483648').
- add_fields('int32','qmax','2147483647')
+ add_fields('int32', 'qmin', '-2147483648').
+ add_fields('int32', 'qmax', '2147483647')
  )
 (pdef('TQT').
  add_fields('int32', 'qmin', '-2147483648').
@@ -1192,13 +1203,13 @@ PADDING_MODES = [Doc('REPLICATE = 0', 'aaaaaa|abcdefgh|hhhhhhh'),
                 Doc('REFLECT = 1', 'fedcba|abcdefgh|hgfedcb'),
                 Doc('CONSTANT = 2', 'iiiiii|abcdefgh|iiiiiii')]
 (pdef('Padding').
- add_fields('uint32', Doc('front_offset_dim0','offset in dim 0'), 0).
- add_fields('uint32', Doc('front_offset_dim1','offset in dim 1'), 0).
- add_fields('uint32', Doc('front_offset_dim2','offset in dim 2'), 0).
- add_fields('uint32', Doc('front_offset_dim3','offset in dim 3'), 0).
- add_fields('uint32', Doc('front_offset_dim4','offset in dim 4'), 0).
- add_fields('uint32', Doc('front_offset_dim5','offset in dim 5'), 0).
- add_fields('uint32', Doc('front_offset_dim6','offset in dim 6'), 0).
+ add_fields('uint32', Doc('front_offset_dim0', 'offset in dim 0'), 0).
+ add_fields('uint32', Doc('front_offset_dim1', 'offset in dim 1'), 0).
+ add_fields('uint32', Doc('front_offset_dim2', 'offset in dim 2'), 0).
+ add_fields('uint32', Doc('front_offset_dim3', 'offset in dim 3'), 0).
+ add_fields('uint32', Doc('front_offset_dim4', 'offset in dim 4'), 0).
+ add_fields('uint32', Doc('front_offset_dim5', 'offset in dim 5'), 0).
+ add_fields('uint32', Doc('front_offset_dim6', 'offset in dim 6'), 0).
  add_fields('uint32', Doc('back_offset_dim0', 'back offset in dim0'), 0).
  add_fields('uint32', Doc('back_offset_dim1', 'back offset in dim1'), 0).
  add_fields('uint32', Doc('back_offset_dim2', 'back offset in dim2'), 0).
@@ -1206,7 +1217,7 @@ PADDING_MODES = [Doc('REPLICATE = 0', 'aaaaaa|abcdefgh|hhhhhhh'),
  add_fields('uint32', Doc('back_offset_dim4', 'back offset in dim4'), 0).
  add_fields('uint32', Doc('back_offset_dim5', 'back offset in dim5'), 0).
  add_fields('uint32', Doc('back_offset_dim6', 'back offset in dim6'), 0).
- add_fields('float32', Doc('padding_val','param of padding opr'), 0).
+ add_fields('float32', Doc('padding_val', 'param of padding opr'), 0).
  add_enum('PaddingMode', *PADDING_MODES,
           name_field='padding_mode', default=2,
           member_alias=[(i, 'PADDING_{}'.format(i)) for i in PADDING_MODES]
@@ -1223,4 +1234,29 @@ PADDING_MODES = [Doc('REPLICATE = 0', 'aaaaaa|abcdefgh|hhhhhhh'),
 (pdef('Dropout')
  .add_fields('float32', 'drop_prob', '0')
  .add_fields('uint64', 'seed', '0')
+)
+
+(pdef('RNNCell').
+ add_enum('NonlineMode', 'IDENTITY = 0', 'RELU = 1', 'TANH = 2')
+ )
+
+(pdef('RNN').
+ add_fields('uint32', 'num_layers', '1').
+ add_fields('bool', 'bidirectional', 'false').
+ add_fields('bool', 'bias', 'true').
+ add_fields('uint32', 'hidden_size', '128').
+ add_fields('uint32', 'proj_size', '0').
+ add_fields('float32', 'dropout', '0.f').
+ add_enum_alias('NonlineMode', 'RNNCell').
+ add_enum_alias('FwdMode', 'BN', name_field='fwd_mode')
+ )
+
+(pdef('LSTM').
+ add_fields('uint32', 'num_layers', '1').
+ add_fields('bool', 'bidirectional', 'false').
+ add_fields('bool', 'bias', 'true').
+ add_fields('uint32', 'hidden_size', '128').
+ add_fields('uint32', 'proj_size', '0').
+ add_fields('float32', 'dropout', '0.f').
+ add_enum_alias('FwdMode', 'BN', name_field='fwd_mode')
  )
