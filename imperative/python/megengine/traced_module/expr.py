@@ -606,7 +606,8 @@ class Apply(Expr):
     def apply_module_trace_hook(cls, opdef, *inputs):
         for i in inputs:
             node = NodeMixin.get(i, None)
-            assert node is not None
+            if node is None:  # capture as constant
+                NodeMixin.wrap_safe(i, Constant.make(i))
 
         if isinstance(opdef, FakeQuant):
             inp_nodes = [NodeMixin.get(inputs[0])]
@@ -627,7 +628,6 @@ class Apply(Expr):
 
         unset_module_tracing()
         outputs = apply(opdef, *inputs)
-        outputs = list(map(Tensor, outputs))
         set_module_tracing()
 
         apply_node.add_outputs(outputs)
@@ -741,12 +741,8 @@ class Constant(Expr):
         assert isinstance(c, (RawTensor, Module))
         if isinstance(c, Module):
             assert module_tracer.is_builtin(c) or c.is_qat
-        if isinstance(c, RawTensor):
-            if is_tracing_module():
-                unset_module_tracing()
-                c = Tensor(c)
-                set_module_tracing()
-            else:
+        if type(c) is RawTensor:
+            with _exclude_from_trace():
                 c = Tensor(c)
         self.value = c
         self.name = name

@@ -219,17 +219,19 @@ TensorWrapper::TensorWrapper(PyObject* args, PyObject* kwargs) {
 
 PyObject* TensorWrapper::module_trace_info() {
     if (auto module_trace_info = module_trace_info_map.try_get(m_tensor->data())) {
-        return module_trace_info->inc_ref().ptr();
-    } else {
-        PyErr_SetString(
-                PyExc_AttributeError,
-                "Has no attribute named \'_NodeMixin__node\', please "
-                "set it first");
-        return nullptr;
+        if (module_trace_info->ptr()) {
+            return module_trace_info->inc_ref().ptr();
+        }
     }
+    PyErr_SetString(
+            PyExc_AttributeError,
+            "Has no attribute named \'_NodeMixin__node\', please "
+            "set it first");
+    return nullptr;
 }
 
 void TensorWrapper::set_module_trace_info(PyObject* obj) {
+    // TODO: erase when obj == nullptr
     module_trace_info_map[m_tensor->data()] = py::reinterpret_borrow<py::object>(obj);
 }
 
@@ -1031,29 +1033,23 @@ void init_tensor(py::module m) {
 
     static py::function module_trace_hook;
 
-    static std::shared_ptr<ModuleTraceTransformation> module_trace_transformation;
-    static int module_tracing = 0;
-
-    m.def("set_module_tracing", [=] {
+    static auto get_module_trace = [] {
+        static std::shared_ptr<ModuleTraceTransformation> module_trace_transformation;
         if (!module_trace_transformation) {
             mgb_assert(module_trace_hook);
             module_trace_transformation =
                     std::make_shared<ModuleTraceTransformation>(module_trace_hook);
-        }
-        if (++module_tracing == 1) {
-            transformations.register_at<TransformationManager::ModuleTrace>(
+            transformations.register_at<Segment::ModuleTrace>(
                     module_trace_transformation);
         }
-    });
+        return module_trace_transformation;
+    };
 
-    m.def("unset_module_tracing", [=] {
-        if (--module_tracing == 0) {
-            transformations.unregister<TransformationManager::ModuleTrace>(
-                    module_trace_transformation);
-        }
-    });
+    m.def("set_module_tracing", [=] { get_module_trace()->enable(); });
 
-    m.def("is_tracing_module", [=] { return module_tracing > 0; });
+    m.def("unset_module_tracing", [=] { get_module_trace()->disable(); });
+
+    m.def("is_tracing_module", [=] { return get_module_trace()->enabled(); });
 
     m.def("set_module_trace_hook",
           [](py::function function) { module_trace_hook = function; });

@@ -52,6 +52,12 @@ public:
         }
     }
 
+    void enable() { m_enabled = 1; }
+
+    void disable() { m_enabled = 0; }
+
+    bool enabled() const { return m_enabled; }
+
     ValueRef unwrap(ValueRef value) override { return value; }
 
     std::string name() const override { return "ModuleTraceTransformation"; }

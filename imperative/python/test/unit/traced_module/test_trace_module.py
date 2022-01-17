@@ -5,9 +5,11 @@ import numpy as np
 import megengine.functional as F
 import megengine.module as M
 from megengine import Tensor
-from megengine.module.module import Module
+from megengine.core._imperative_rt.core2 import apply
+from megengine.core.ops import builtin
+from megengine.module import Module
 from megengine.traced_module import TracedModule, enable_expr_checker, trace_module
-from megengine.traced_module.expr import CallFunction
+from megengine.traced_module.expr import Apply, CallFunction, Constant
 
 
 class MyModule1(M.Module):
@@ -133,3 +135,25 @@ def test_trace_module():
     tm6 = trace_module(MyModule5(), a, b)
     assert tm6.m1.argspec is None
     assert tm6.m1._is_top is False
+
+
+def test_trace_module_2():
+    class Model(M.Module):
+        def __init__(self):
+            super().__init__()
+
+        def forward(self, x):
+            out = x.shape
+            out = apply(builtin.Elemwise(mode="ADD"), out, Tensor(1))
+            return out
+
+    traced_model = trace_module(Model(), Tensor(([1,])))
+
+    assert isinstance(traced_model.graph._exprs[0], Apply) and isinstance(
+        traced_model.graph._exprs[0].opdef, builtin.GetVarShape
+    )
+    assert isinstance(traced_model.graph._exprs[1], Constant)
+    assert isinstance(traced_model.graph._exprs[2], Apply) and isinstance(
+        traced_model.graph._exprs[2].opdef, builtin.Elemwise
+    )
+    assert int(traced_model(Tensor([1, 2]))[0]) == 3
