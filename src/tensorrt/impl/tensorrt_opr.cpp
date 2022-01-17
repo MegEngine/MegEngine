@@ -156,15 +156,20 @@ void TensorRTOpr::GpuAllocator::free(void* memory) {
 void TensorRTManager::create_trt_context(
         mgb::CompNode cn, const TensorShapeArray& inp_shape,
         nvinfer1::ICudaEngine* engine) {
-    if (!m_context) {
+    bool has_no_context = (!m_context);
+    if (has_no_context) {
         m_context = {engine->createExecutionContextWithoutDeviceMemory(), {}};
-        MGB_MARK_USED_VAR(cn);
+    }
+    MGB_MARK_USED_VAR(cn);
 #if NV_TENSOR_RT_VERSION >= 6001
-        auto profile_num = engine->getNbOptimizationProfiles();
-        auto bindings_per_profile = engine->getNbBindings() / profile_num;
-        // choose nearest profile
-        int profile_idx = 0;
+    auto profile_num = engine->getNbOptimizationProfiles();
+    auto bindings_per_profile = engine->getNbBindings() / profile_num;
+    // choose nearest profile
 #if NV_TENSOR_RT_VERSION >= 7200
+    bool has_select_profile = false;
+    if (has_no_context) {
+        has_select_profile = true;
+        int profile_idx = 0;
         if (profile_num > 1) {
             double dist = DBL_MAX;
             for (int i = 0; i < profile_num; i++) {
@@ -207,59 +212,76 @@ void TensorRTManager::create_trt_context(
             auto&& env = mgb::CompNodeEnv::from_comp_node(cn);
             m_context->setOptimizationProfileAsync(profile_idx, env.cuda_env().stream);
         }
-#endif
         m_offset = profile_idx * bindings_per_profile;
-        for (size_t i = m_offset; i < m_offset + inp_shape.size(); ++i) {
-            auto dims = m_context->getBindingDimensions(i);
-            for (int j = 0; j < dims.nbDims; j++) {
-                if (dims.d[j] == -1) {
-                    dims.d[j] = inp_shape.at(i - m_offset)[j];
-                }
+    }
+#endif
+    bool is_set_correct = true;
+    for (size_t i = m_offset; i < m_offset + inp_shape.size(); ++i) {
+        auto dims = m_context->getBindingDimensions(i);
+        auto dims_check = engine->getBindingDimensions(i);
+        for (int j = 0; j < dims.nbDims; j++) {
+            if (dims_check.d[j] == -1) {
+                dims.d[j] = inp_shape.at(i - m_offset)[j];
             }
-            m_context->setBindingDimensions(m_offset, dims);
         }
-        // check if input shape is set correctly
-        for (int i = m_offset + inp_shape.size(); i < m_offset + bindings_per_profile;
-             ++i) {
-            auto dims = m_context->getBindingDimensions(i);
-            if (dims.nbDims == -1) {
-                for (int j = 0; j < profile_num; j++) {
-                    mgb_log_error("TensorRT profile %d:\n", j);
-                    for (size_t k = m_offset; k < m_offset + inp_shape.size(); k++) {
-                        mgb_log_error(
-                                "input[%zu]'s minimum shape is: %s\n", k - m_offset,
-                                TensorRTOpr::dims2shape(
-                                        engine->getProfileDimensions(
-                                                k, j,
-                                                nvinfer1::OptProfileSelector::kMIN))
-                                        .to_string()
-                                        .c_str());
-                        mgb_log_error(
-                                "input[%zu]'s optimum shape is: %s\n", k - m_offset,
-                                TensorRTOpr::dims2shape(
-                                        engine->getProfileDimensions(
-                                                k, j,
-                                                nvinfer1::OptProfileSelector::kOPT))
-                                        .to_string()
-                                        .c_str());
-                        mgb_log_error(
-                                "input[%zu]'s maximum shape is: %s\n", k - m_offset,
-                                TensorRTOpr::dims2shape(
-                                        engine->getProfileDimensions(
-                                                k, j,
-                                                nvinfer1::OptProfileSelector::kMAX))
-                                        .to_string()
-                                        .c_str());
-                    }
-                }
-                mgb_throw(
-                        MegBrainError,
-                        "Invalid network output, this might be caused by inconsistent "
-                        "input shapes.Correct input optimization profiles as above.");
+        is_set_correct &= m_context->setBindingDimensions(i, dims);
+    }
+    // check if input shape is set correctly
+    if (!is_set_correct) {
+#if NV_TENSOR_RT_VERSION >= 7200
+        if (has_select_profile) {
+#endif
+            for (size_t j = 0; j < inp_shape.size(); ++j) {
+                mgb_log_error(
+                        "TensorRT input[%zu]'s shape is %s\n", j,
+                        inp_shape.at(j).to_string().c_str());
             }
+            mgb_log_error(
+                    "The selected profile's idx is %d\n",
+                    m_offset / bindings_per_profile);
+            for (int j = 0; j < profile_num; j++) {
+                mgb_log_error("TensorRT profile %d:\n", j);
+                for (size_t k = m_offset; k < m_offset + inp_shape.size(); k++) {
+                    mgb_log_error(
+                            "input[%zu]'s minimum shape is: %s\n", k - m_offset,
+                            TensorRTOpr::dims2shape(
+                                    engine->getProfileDimensions(
+                                            k, j, nvinfer1::OptProfileSelector::kMIN))
+                                    .to_string()
+                                    .c_str());
+                    mgb_log_error(
+                            "input[%zu]'s optimum shape is: %s\n", k - m_offset,
+                            TensorRTOpr::dims2shape(
+                                    engine->getProfileDimensions(
+                                            k, j, nvinfer1::OptProfileSelector::kOPT))
+                                    .to_string()
+                                    .c_str());
+                    mgb_log_error(
+                            "input[%zu]'s maximum shape is: %s\n", k - m_offset,
+                            TensorRTOpr::dims2shape(
+                                    engine->getProfileDimensions(
+                                            k, j, nvinfer1::OptProfileSelector::kMAX))
+                                    .to_string()
+                                    .c_str());
+                }
+            }
+            mgb_throw(
+                    MegBrainError,
+                    "Invalid network output, this might be caused by "
+                    "inconsistent "
+                    "input shapes.Correct input optimization profiles as "
+                    "above.");
+#if NV_TENSOR_RT_VERSION >= 7200
+        } else {
+            // must clear context before create a new context, because
+            // setOptimizationProfileAsync() must be called before calling
+            // setBindingDimensions()
+            clear_trt_context();
+            create_trt_context(cn, inp_shape, engine);
         }
 #endif
     }
+#endif
 }
 
 #if NV_TENSOR_RT_VERSION >= 6001
@@ -284,12 +306,15 @@ void TensorRTManager::exec(
     }
     auto workspace_ptr = opr->output().back()->dev_tensor().raw_ptr();
     bool should_reinit_device_memory =
-            !m_context || m_device_workspace_memory_ptr != workspace_ptr;
-    TensorShapeArray arr;
-    for (auto&& i : opr->input()) {
-        arr.push_back(i->shape());
+            !m_context || (m_device_workspace_memory_ptr != workspace_ptr) ||
+            (workspace_ptr == nullptr);
+    if (!m_context) {
+        TensorShapeArray arr;
+        for (auto&& i : opr->input()) {
+            arr.push_back(i->shape());
+        }
+        create_trt_context(comp_node, arr, engine);
     }
-    create_trt_context(comp_node, arr, engine);
     m_trt_iobuf.resize(engine->getNbBindings());
     bool is_trt_opr = false;
     if (opr->same_type<TensorRTOpr>()) {

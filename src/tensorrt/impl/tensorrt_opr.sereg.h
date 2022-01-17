@@ -42,6 +42,7 @@ cg::OperatorNodeBase* opr_shallow_copy_tensor_rt_runtime_opr(
         const cg::OperatorNodeBase& opr_, const VarNodeArray& inputs,
         const OperatorNodeConfig& config) {
     auto&& opr = opr_.cast_final_safe<TensorRTRuntimeOpr>();
+    opr.clear_trt_context();
     return TensorRTRuntimeOpr::make(
                    opr.trt_cuda_engine(), opr.trt_gpu_allocator(),
                    cg::to_symbol_var_array(inputs), config)

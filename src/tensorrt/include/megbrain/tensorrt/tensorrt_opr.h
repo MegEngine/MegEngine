@@ -50,7 +50,7 @@ class TensorRTManager {
     std::vector<void*> m_trt_iobuf;
     TensorRTUniquePtr<nvinfer1::IExecutionContext> m_context;
     void* m_device_workspace_memory_ptr;
-    int m_offset;
+    int m_offset = 0;
 
 public:
     void create_trt_context(

@@ -82,6 +82,9 @@ public:
         return m_gpu_allocator;
     }
 
+    //! used in shallow copy to avoid create context twice error
+    void clear_trt_context() const { m_manager.clear_trt_context(); }
+
 private:
     // note: gpu allocator must be released after other trt objects
     std::shared_ptr<TensorRTOpr::GpuAllocator> m_gpu_allocator;
