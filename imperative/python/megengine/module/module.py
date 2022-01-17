@@ -138,7 +138,11 @@ class Module(metaclass=ABCMeta):
         return HookHandler(self._forward_hooks, hook)
 
     def __call__(self, *inputs, **kwargs):
-        AutoNaming.push_scope(self.name if self.name is not None else self._short_name)
+        AutoNaming.push_scope(
+            self.name
+            if self.name is not None
+            else (self._short_name if hasattr(self, "_short_name") else self._name)
+        )
         for hook in self._forward_pre_hooks.values():
             modified_inputs = hook(self, inputs)
             if modified_inputs is not None:

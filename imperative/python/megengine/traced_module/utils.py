@@ -222,7 +222,7 @@ class _ModuleList(Module, MutableSequence):
     def __setattr__(self, key, value):
         # clear mod name to avoid warning in Module's setattr
         if isinstance(value, Module):
-            value._name = None
+            value._short_name = None
         super().__setattr__(key, value)
 
     def __setitem__(self, idx: int, mod: Module):
@@ -291,7 +291,7 @@ class _ModuleDict(Module, MutableMapping):
     def __setattr__(self, key, value):
         # clear mod name to avoid warning in Module's setattr
         if isinstance(value, Module):
-            value._name = None
+            value._short_name = None
         super().__setattr__(key, value)
 
     def __setitem__(self, key, value):
