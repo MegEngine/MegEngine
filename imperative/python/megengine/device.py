@@ -165,7 +165,7 @@ def get_cuda_compute_capability(device: int, device_type=DeviceType.CUDA) -> int
 def get_allocated_memory(device: Optional[str] = None):
     r"""Returns the current memory occupied by tensors on the computing device in bytes.
 
-    Due to the asynchronous execution of MegEngine, please call megengine.sync
+    Due to the asynchronous execution of MegEngine, please call megengine._full_sync
     before calling this function in order to get accurate value.
     """
     if device is None:
@@ -176,7 +176,7 @@ def get_allocated_memory(device: Optional[str] = None):
 def get_reserved_memory(device: Optional[str] = None):
     r"""Returns the current memory managed by the caching allocator on the computing device in bytes.
 
-    Due to the asynchronous execution of MegEngine, please call megengine.sync
+    Due to the asynchronous execution of MegEngine, please call megengine._full_sync
     before calling this function in order to get accurate value.
     """
     if device is None:
@@ -187,7 +187,7 @@ def get_reserved_memory(device: Optional[str] = None):
 def get_max_reserved_memory(device: Optional[str] = None):
     r"""Returns the maximum memory managed by the caching allocator on the computing device in bytes.
 
-    Due to the asynchronous execution of MegEngine, please call megengine.sync
+    Due to the asynchronous execution of MegEngine, please call megengine._full_sync
     before calling this function in order to get accurate value.
     """
     if device is None:
@@ -198,7 +198,7 @@ def get_max_reserved_memory(device: Optional[str] = None):
 def get_max_allocated_memory(device: Optional[str] = None):
     r"""Returns the maximum memory occupied by tensors on the computing device in bytes.
 
-    Due to the asynchronous execution of MegEngine, please call megengine.sync
+    Due to the asynchronous execution of MegEngine, please call megengine._full_sync
     before calling this function in order to get accurate value.
     """
     if device is None:
@@ -209,7 +209,7 @@ def get_max_allocated_memory(device: Optional[str] = None):
 def reset_max_memory_stats(device: Optional[str] = None):
     r"""Resets the maximum stats on the computing device.
 
-    Due to the asynchronous execution of MegEngine, please call megengine.sync
+    Due to the asynchronous execution of MegEngine, please call megengine._full_sync
     before calling this function in order to properly reset memory stats.
     """
     if device is None:
@@ -255,7 +255,7 @@ def coalesce_free_memory():
     small pieces may not be returned.
     
     because of the async processing of megengine, the effect of this func may not be reflected 
-    immediately. if you want to see the effect immediately, you can call megengine.sync after
+    immediately. if you want to see the effect immediately, you can call megengine._full_sync after
     this func was called
 
     .. note::
