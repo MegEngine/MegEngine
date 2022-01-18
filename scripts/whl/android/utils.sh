@@ -3,9 +3,6 @@
 source ${SRC_DIR}/scripts/whl/utils/utils.sh
 
 ALL_PYTHON=${ALL_PYTHON}
-# FIXME: now imperative py code do not support 3.10
-# but megenginelite and megbrain support it, so we
-# config with 3.10.1 now
 FULL_PYTHON_VER="3.8.3 3.9.9 3.10.1"
 if [[ -z ${ALL_PYTHON} ]]
 then

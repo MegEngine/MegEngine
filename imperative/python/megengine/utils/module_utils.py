@@ -6,7 +6,6 @@
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 import contextlib
-from collections import Iterable
 
 from ..module import Sequential
 from ..module.module import Module, _access_structure
