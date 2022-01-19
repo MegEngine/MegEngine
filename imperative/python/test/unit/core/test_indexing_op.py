@@ -751,3 +751,40 @@ def test_subtensor_when_shape_invalid():
         inp = rand.uniform(size=[1, 3, 512, 512])
         net = cgtools.GraphInference(f.name)
         net.run(inp_dict={"data": inp})
+
+
+@pytest.mark.parametrize(
+    "test_varnode", [True, False],
+)
+def test_indexing_error(test_varnode):
+    if test_varnode:
+        network = Network()
+    else:
+        network = None
+    a = np.arange(9).reshape(3, 3).astype(np.float32)
+    b = np.array([1, 2])
+    aa = make_tensor(a, network)
+    bb = make_tensor(b, network)
+
+    with pytest.raises(IndexError):
+        aa[None]  # newaxis is not allowed
+
+    with pytest.raises(IndexError):
+        aa[..., ...]  # only one ellipsis is allowed
+
+    with pytest.raises(IndexError):
+        aa[bb, bb, bb]  # too many indices
+
+    with pytest.raises(ValueError):
+        aa[:] = bb  # shape mismatch
+
+    if test_varnode:
+        cc = aa[aa > 4]
+        with pytest.raises(IndexError):
+            cc[...]  # does not support ellipsis when tensor's ndim is unknown
+
+        dd = aa > 4
+        with pytest.raises(IndexError):
+            cc[
+                ..., dd[dd]
+            ]  # does not support bool index with unknown shape when using ellipsis

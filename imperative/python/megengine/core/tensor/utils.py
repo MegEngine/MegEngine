@@ -12,7 +12,14 @@ from typing import Iterable, Union
 import numpy as np
 
 from .._imperative_rt import make_const
-from .._imperative_rt.core2 import SymbolVar, Tensor, apply, dtype_promotion, get_device
+from .._imperative_rt.core2 import (
+    SymbolVar,
+    Tensor,
+    apply,
+    dtype_promotion,
+    get_device,
+    make_shape_tuple,
+)
 from .._imperative_rt.ops import SubgraphBuilder as _SubgraphBuilder
 from .._wrap import as_device
 from ..ops import builtin
@@ -161,30 +168,6 @@ def astensor1d(x, *reference, dtype=None, device=None):
         return x
     (x,) = Const(x, dtype=dtype, device=device)(*reference)
     return x
-
-
-def _expand_int(s, i):
-    if isinstance(i, (Tensor, SymbolVar)):
-        i_np = i.numpy()
-        if i_np.ndim == 0:
-            s.append(int(i_np))
-        else:
-            s += list(i_np)
-        return
-    if isinstance(i, Iterable):
-        for ii in i:
-            _expand_int(s, ii)
-        return
-    if np.issubdtype(type(i), np.integer):
-        s.append(i)
-        return
-    raise
-
-
-def make_shape_tuple(shape):
-    s = []
-    _expand_int(s, shape)
-    return tuple(s)
 
 
 def _normalize_axis(
