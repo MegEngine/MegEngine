@@ -13,7 +13,7 @@ MegEngine 是一个快速、可拓展、易于使用且支持自动求导的深�
 
 ## 安装说明
 
-**注意:** MegEngine 现在支持在 Linux-64bit/Windows-64bit/macos-10.14 及其以上 (MacOS 只支持 cpu) 等平台上安装 Python 包，支持 Python3.5 到 Python3.8。对于 Windows 10 用户，可以通过安装 [Windows Subsystem for Linux (WSL)](https://docs.microsoft.com/en-us/windows/wsl) 进行体验，同时我们也原生支持 Windows。MegEngine 也支持在很多其它平台上进行推理运算。
+**注意:** MegEngine 现在支持在 Linux-64bit/Windows-64bit/macos-10.14/Android 7+ 及其以上 (MacOS/Android只支持cpu) 等平台上安装 Python 包，支持Python3.5 到 Python3.8。对于 Windows 10 用户，可以通过安装 [Windows Subsystem for Linux (WSL)](https://docs.microsoft.com/en-us/windows/wsl) 进行体验，同时我们也原生支持Windows。MegEngine 也支持在很多其它平台上进行推理运算。
 
 ### 通过包管理器安装
 
