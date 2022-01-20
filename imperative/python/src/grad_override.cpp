@@ -98,7 +98,7 @@ ValueRef make_empty_tensor(
     return res;
 }
 
-std::optional<std::vector<ValueRef>> elemwise_grad_rule(
+std::optional<ValueRefList> elemwise_grad_rule(
         const OpDef& op, Span<ValueRef> inputs, Span<bool> inputs_require_grad,
         CustomBackward& backward) {
     auto& elemwise = op.cast_final_safe<Elemwise>();
@@ -117,7 +117,7 @@ std::optional<std::vector<ValueRef>> elemwise_grad_rule(
     maker.backward([shapes = std::move(input_shapes)](Span<ValueRef> grads) {
         mgb_assert(grads.size() == 1);
         ValueRef grad = grads[0];
-        std::vector<ValueRef> ret(2);
+        ValueRefList ret(2);
         if (!grad) {
             return ret;
         }
@@ -132,7 +132,7 @@ std::optional<std::vector<ValueRef>> elemwise_grad_rule(
     return imperative::apply(ApplyOp(op), inputs);
 }
 
-std::optional<std::vector<ValueRef>> reshape_grad_rule(
+std::optional<ValueRefList> reshape_grad_rule(
         const OpDef& op, Span<ValueRef> inputs, Span<bool> inputs_require_grad,
         CustomBackward& backward) {
     mgb_assert(inputs.size() == 2);
@@ -147,7 +147,7 @@ std::optional<std::vector<ValueRef>> reshape_grad_rule(
     maker.backward([shapes = std::move(input_shapes)](Span<ValueRef> grads) {
         mgb_assert(grads.size() == 1);
         ValueRef grad = grads[0];
-        std::vector<ValueRef> ret(2);
+        ValueRefList ret(2);
         if (!grad) {
             return ret;
         }
@@ -162,7 +162,7 @@ std::optional<std::vector<ValueRef>> reshape_grad_rule(
     return imperative::apply(ApplyOp(op), inputs);
 }
 
-std::optional<std::vector<ValueRef>> subtensor_grad_rule(
+std::optional<ValueRefList> subtensor_grad_rule(
         const OpDef& op, Span<ValueRef> inputs, Span<bool> inputs_require_grad,
         CustomBackward& backward) {
     auto&& subtensor = op.cast_final_safe<Subtensor>();
@@ -180,9 +180,9 @@ std::optional<std::vector<ValueRef>> subtensor_grad_rule(
                     grad_op_ = std::move(grad_op)](Span<ValueRef> grads) {
         mgb_assert(grads.size() == 1);
         ValueRef grad = grads[0];
-        std::vector<ValueRef> ret(1);
+        ValueRefList ret(1);
         if (grad && inputs[0]) {
-            SmallVector<ValueRef> args_(inputs.size() + 1);
+            ValueRefList args_(inputs.size() + 1);
             auto&& zeros = make_empty_tensor(grad.device(), inputs[0], grad.dtype());
             args_[0] = zeros;
             args_[1] = grad;
@@ -197,7 +197,7 @@ std::optional<std::vector<ValueRef>> subtensor_grad_rule(
     return imperative::apply(ApplyOp(op), inputs);
 }
 
-std::optional<std::vector<ValueRef>> indexingMultiAxisVec_grad_rule(
+std::optional<ValueRefList> indexingMultiAxisVec_grad_rule(
         const OpDef& op, Span<ValueRef> inputs, Span<bool> inputs_require_grad,
         CustomBackward& backward) {
     auto&& indexingMultiAxisVec = op.cast_final_safe<IndexingMultiAxisVec>();
@@ -215,9 +215,9 @@ std::optional<std::vector<ValueRef>> indexingMultiAxisVec_grad_rule(
                     grad_op_ = std::move(grad_op)](Span<ValueRef> grads) {
         mgb_assert(grads.size() == 1);
         ValueRef grad = grads[0];
-        std::vector<ValueRef> ret(1);
+        ValueRefList ret(1);
         if (grad && inputs[0]) {
-            SmallVector<ValueRef> args_(inputs.size() + 1);
+            ValueRefList args_(inputs.size() + 1);
             auto&& zeros = make_empty_tensor(grad.device(), inputs[0], grad.dtype());
             args_[0] = zeros;
             args_[1] = grad;
@@ -232,7 +232,7 @@ std::optional<std::vector<ValueRef>> indexingMultiAxisVec_grad_rule(
     return imperative::apply(ApplyOp(op), inputs);
 }
 
-std::optional<std::vector<ValueRef>> reduce_grad_rule(
+std::optional<ValueRefList> reduce_grad_rule(
         const OpDef& op, Span<ValueRef> inputs, Span<bool> inputs_require_grad,
         CustomBackward& backward) {
     auto& reduce = op.cast_final_safe<Reduce>();
@@ -251,7 +251,7 @@ std::optional<std::vector<ValueRef>> reduce_grad_rule(
     maker.backward([shapes = std::move(input_shapes)](Span<ValueRef> grads) {
         mgb_assert(grads.size() == 1);
         ValueRef grad = grads[0];
-        std::vector<ValueRef> ret(1);
+        ValueRefList ret(1);
         if (grad && shapes[0]) {
             ret[0] = broadcast_to(grad, shapes[0]);
         }
@@ -261,7 +261,7 @@ std::optional<std::vector<ValueRef>> reduce_grad_rule(
     return imperative::apply(ApplyOp(op), inputs);
 }
 
-std::optional<std::vector<ValueRef>> addAxis_grad_rule(
+std::optional<ValueRefList> addAxis_grad_rule(
         const OpDef& op, Span<ValueRef> inputs, Span<bool> inputs_require_grad,
         CustomBackward& backward) {
     auto&& addAxis = op.cast_final_safe<AddAxis>();
@@ -274,7 +274,7 @@ std::optional<std::vector<ValueRef>> addAxis_grad_rule(
     maker.backward([grad_op_ = std::move(grad_op), flag_ = flag](Span<ValueRef> grads) {
         mgb_assert(grads.size() == 1);
         ValueRef grad = grads[0];
-        std::vector<ValueRef> ret(1);
+        ValueRefList ret(1);
         if (grad && flag_) {
             ret[0] = imperative::apply(*grad_op_, grad)[0];
         }
@@ -284,7 +284,7 @@ std::optional<std::vector<ValueRef>> addAxis_grad_rule(
     return imperative::apply(op, inputs);
 }
 
-std::optional<std::vector<ValueRef>> removeAxis_grad_rule(
+std::optional<ValueRefList> removeAxis_grad_rule(
         const OpDef& op, Span<ValueRef> inputs, Span<bool> inputs_require_grad,
         CustomBackward& backward) {
     auto&& removeAxis = op.cast_final_safe<RemoveAxis>();
@@ -297,7 +297,7 @@ std::optional<std::vector<ValueRef>> removeAxis_grad_rule(
     maker.backward([grad_op_ = std::move(grad_op), flag_ = flag](Span<ValueRef> grads) {
         mgb_assert(grads.size() == 1);
         ValueRef grad = grads[0];
-        std::vector<ValueRef> ret(1);
+        ValueRefList ret(1);
         if (grad && flag_) {
             ret[0] = imperative::apply(*grad_op_, grad)[0];
         }
@@ -307,7 +307,7 @@ std::optional<std::vector<ValueRef>> removeAxis_grad_rule(
     return imperative::apply(op, inputs);
 }
 
-std::optional<std::vector<ValueRef>> fastpathcopy_grad_rule(
+std::optional<ValueRefList> fastpathcopy_grad_rule(
         const OpDef& op, Span<ValueRef> inputs, Span<bool> inputs_require_grad,
         CustomBackward& backward) {
     mgb_assert(inputs.size() == 1);
@@ -316,7 +316,7 @@ std::optional<std::vector<ValueRef>> fastpathcopy_grad_rule(
     maker.backward([](Span<ValueRef> grads) {
         mgb_assert(grads.size() == 1);
         ValueRef grad = grads[0];
-        std::vector<ValueRef> ret(1);
+        ValueRefList ret(1);
         if (grad) {
             ret[0] = grad;
         }

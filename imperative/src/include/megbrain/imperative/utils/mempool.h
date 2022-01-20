@@ -49,8 +49,8 @@ public:
                 instance = std::make_unique<MemPool<T>>();
                 sm_instance = instance.get();
             }
-            mgb_assert(sm_instance);
         }
+        return *sm_instance;
     }
 };
 
@@ -62,9 +62,9 @@ std::unordered_map<std::thread::id, std::unique_ptr<MemPool<T>>>
         MemPoolUtils<T>::sm_instances;
 
 template <typename T>
-thread_local MemPool<T>* MemPoolUtils<T>::tm_instance;
+thread_local MemPool<T>* MemPoolUtils<T>::tm_instance = nullptr;
 
 template <typename T>
-MemPool<T>* MemPoolUtils<T>::sm_instance;
+MemPool<T>* MemPoolUtils<T>::sm_instance = nullptr;
 
 }  // namespace mgb::imperative

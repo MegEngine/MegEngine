@@ -24,8 +24,6 @@ namespace imperative {
 
 class GradKey;
 
-using GenericFunction = std::function<std::vector<ValueRef>(Span<ValueRef>)>;
-
 /**
  * \brief apply an OpDef to values
  *
@@ -37,7 +35,7 @@ private:
 public:
     ApplyOp(const OpDef& op) : m_op(op) {}
 
-    const OpDef& op() { return m_op; }
+    const OpDef& op() const { return m_op; }
 
     std::string to_string() const override;
 };
@@ -106,7 +104,7 @@ public:
      * \param inputs contains host_storage and device_storage
      * \return Args unpacked args
      */
-    Args parse(Span<ValueRef> inputs);
+    Args parse(Span<ValueRef> inputs) const;
 
     Kind kind() const { return m_kind; }
     CompNode device() const { return m_device; }
@@ -129,11 +127,11 @@ private:
 public:
     DTRCommand(Kind kind) : m_kind(kind) {}
 
-    Kind kind() { return m_kind; }
+    Kind kind() const { return m_kind; }
 
     std::string to_string() const override;
 
-    std::vector<ValueRef> fallback(Span<ValueRef> inputs) const override { return {}; }
+    ValueRefList fallback(Span<ValueRef> inputs) const override { return {}; }
 };
 
 // deprecated
@@ -141,9 +139,7 @@ class GetName final : public OperatorImpl<GetName, Operator::GetAttrLike> {
 public:
     std::string to_string() const override;
 
-    std::vector<ValueRef> fallback(Span<ValueRef> inputs) const override {
-        return {ValueRef()};
-    }
+    ValueRefList fallback(Span<ValueRef> inputs) const override { return {ValueRef()}; }
 };
 
 /**
@@ -161,7 +157,7 @@ public:
 
     std::string to_string() const override;
 
-    std::vector<ValueRef> fallback(Span<ValueRef> inputs) const override {
+    ValueRefList fallback(Span<ValueRef> inputs) const override {
         return {inputs.as_array<1>()[0]};
     }
 };

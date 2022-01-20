@@ -16,6 +16,7 @@ import numpy as np
 from .. import _config
 from .._imperative_rt.common import CompNode
 from .._imperative_rt.core2 import SymbolVar, Tensor, apply, dtype_promotion
+from .._imperative_rt.core2 import reduce_to_scalar as _reduce_to_scalar
 from ..ops import builtin
 from . import amp
 from .indexing import getitem, setitem
@@ -508,12 +509,8 @@ def _reduce(mode):
         elif self.dtype == np.bool_:
             data = data.astype("int32")
         if axis is None:
-            data = data.reshape(-1)
             assert not keepdims, "can not set axis=None and keepdims=True"
-
-            op = builtin.Reduce(mode=mode, axis=0)
-            (result,) = apply(op, data)
-            result = _remove_axis(result, 0)
+            result = _reduce_to_scalar(builtin.Reduce(mode=mode), data)
         elif isinstance(axis, collections.abc.Iterable):
             axis = _normalize_axis(self.ndim, axis, reverse=True)
             for ai in axis:

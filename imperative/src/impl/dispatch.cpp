@@ -16,70 +16,67 @@
 #include "megbrain/imperative/utils/map.h"
 
 namespace mgb {
+
+void imperative_log_profile_begin(const char* message);
+void imperative_log_profile(const char* message);
+void imperative_log_profile_end(const char* message);
+
 namespace imperative {
 
-std::vector<ValueRef> apply(const Operator& op, Span<ValueRef> inputs) {
-    static bool log_dispatch = MGB_GETENV("MGE_LOG_OP_DISPATCH");
-    bool enable_watch = ValueRef::any_watching();
+namespace {
+MGB_NOINLINE void copy_outputs(
+        ForwardAllocator<ValueRef>& allocator, ValueRefList& outputs) {
+    size_t nr_outputs = outputs.size();
+    if (mgb_likely(nr_outputs == 1)) {
+        ValueRef output_copy;
+        output_copy = outputs[0];
+        allocator.clear();
+        outputs = ValueRefList({output_copy});
+    } else if (!outputs.empty()) {
+        SmallVector<ValueRef> outputs_copy(nr_outputs);
+        for (size_t i = 0; i < nr_outputs; ++i) {
+            outputs_copy[i] = outputs[i];
+        }
+        outputs.clear();
+        allocator.clear();
+        outputs = {outputs_copy.begin(), outputs_copy.end()};
+    } else {
+        allocator.clear();
+    }
+}
+}  // namespace
+
+ValueRefList apply(const Operator& op, Span<ValueRef> inputs) {
     auto& context = Transformation::get_context();
     size_t& depth = context.next_transformation;
-    static const char tabs_storage[] = "\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t";
-    const char* tabs = tabs_storage + sizeof(tabs_storage) / sizeof(char) - depth - 1;
-    bool log_current_dispatch = log_dispatch;
-    if (enable_watch) {
-        for (size_t i = 0; i < inputs.size(); ++i) {
-            auto& input = inputs[i];
-            if (input.watching()) {
-                log_current_dispatch = true;
-                mgb_log_debug("%sinput[%zu] is %s", tabs, i, input.to_string().c_str());
-                debug::notify_event("apply");
-            }
+    bool top = depth == 0;
+    auto outputs = ([&] {
+        if (mgb_unlikely(depth >= context.transformations.size())) {
+            return op.fallback(inputs);
+        } else {
+            auto& transformation = *context.transformations[depth++];
+            CleanupGuard _{[&] { --depth; }};
+            return transformation.apply_transformation(op, inputs);
         }
-    }
-    // entrance
-    std::vector<ValueRef> outputs;
-    if (depth >= context.transformations.size()) {
-        // fallback
-        if (log_current_dispatch) {
-            mgb_log_debug(
-                    "%sfallback apply %s in %s", tabs, op.to_string().c_str(),
-                    imperative::to_string(inputs).c_str());
-        }
-        outputs = op.fallback(inputs);
-    } else {
-        // dispatch to stack top
-        auto& transformation = *context.transformations[depth];
-        ++depth;
-        context.frames.push_back({op, inputs});
-        CleanupGuard _{[&] {
-            context.frames.pop_back();
-            --depth;
-        }};
-        if (log_current_dispatch) {
-            mgb_log_debug(
-                    "%s%s apply %s in %s", tabs, transformation.name().c_str(),
-                    op.to_string().c_str(), imperative::to_string(inputs).c_str());
-        }
-        outputs = transformation.apply_transformation(op, inputs);
-    }
-    if (log_current_dispatch) {
-        mgb_log_debug("%sreturn %s", tabs, imperative::to_string(outputs).c_str());
+    })();
+    if (mgb_unlikely(top)) {
+        copy_outputs(context.allocator, outputs);
     }
     return outputs;
 }
 
-std::vector<ValueRef> apply(const OpDef& def, Span<ValueRef> inputs) {
+ValueRefList apply(const OpDef& def, Span<ValueRef> inputs) {
     return imperative::apply(ApplyOp{def}, inputs);
 }
 
-std::vector<ValueRef> apply(Subgraph graph, Span<ValueRef> inputs) {
+ValueRefList apply(const Subgraph& graph, Span<ValueRef> inputs) {
     SmallVector<ValueRef> inputs_storage;
     for (size_t i = 0; i < inputs.size(); ++i) {
         inputs_storage.push_back(inputs[i]);
     }
     auto apply_functor = [](std::shared_ptr<OpDef> op, SmallVector<ValueRef> inputs,
                             size_t) {
-        auto outputs = imperative::apply(ApplyOp(*op), inputs);
+        auto outputs = imperative::apply(*op, inputs);
         return SmallVector<ValueRef>(outputs.begin(), outputs.end());
     };
     auto make_const = [](TensorPtr constant) -> ValueRef {
@@ -101,7 +98,7 @@ std::vector<ValueRef> apply(Subgraph graph, Span<ValueRef> inputs) {
                 DeviceStorage::make(device_value.storage()))[0];
     };
     auto outputs = graph.apply(inputs_storage, apply_functor, make_const);
-    return {outputs.begin(), outputs.end()};
+    return ValueRefList{outputs.begin(), outputs.end()};
 }
 
 }  // namespace imperative

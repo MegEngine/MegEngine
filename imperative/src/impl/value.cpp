@@ -8,50 +8,58 @@ namespace mgb {
 namespace imperative {
 
 namespace {
-static thread_local size_t nr_watched_values = 0;
-static thread_local uint64_t nr_values = 0;
-static thread_local bool recording_values = false;
-static thread_local std::vector<ValueWeakRef> recorded_values;
+static /*thread_local*/ size_t nr_watched_values = 0;
+static /*thread_local*/ uint64_t nr_values = 0;
+static /*thread_local*/ bool recording_values = false;
+static /*thread_local*/ std::vector<ValueWeakRef> recorded_values;
 static WeakValueMap<uint64_t, ValueWeakRef> registered_values;
 }  // namespace
 
 ValueRef::storage_t& ValueRef::storage() const {
-    if (!m_storage) {
+    if (mgb_likely(!m_storage->m_successor.m_storage)) {
         return m_storage;
     }
-    if (auto& storage = m_storage->m_successor.m_storage) {
-        while (storage->m_successor.m_storage) {
-            storage = storage->m_successor.m_storage;
-        }
-        return storage;
-    } else {
-        return m_storage;
+    while (m_storage->m_successor.m_storage) {
+        m_storage = m_storage->m_successor.m_storage;
     }
+    return m_storage;
+}
+
+const Value* ValueRef::as(size_t typecode) const {
+    auto&& storage = this->storage();
+    if (storage->m_typecode != typecode) {
+        return nullptr;
+    }
+    return static_cast<Value*>(storage.get());
+}
+
+bool ValueRef::is(size_t typecode) const {
+    return this->storage()->m_typecode == typecode;
 }
 
 TypedValueRef<DeviceValue> ValueRef::dev_tensor() const {
-    return imperative::apply(GetAttr(GetAttr::Data), *this)[0].as_ref<DeviceValue>();
+    return imperative::apply(GetAttr(GetAttr::Data), *this)[0].cast_ref<DeviceValue>();
 }
 
 TypedValueRef<HostValue> ValueRef::numpy() const {
-    return imperative::apply(GetAttr(GetAttr::Value), *this)[0].as_ref<HostValue>();
+    return imperative::apply(GetAttr(GetAttr::Value), *this)[0].cast_ref<HostValue>();
 }
 
 TypedValueRef<CompNodeValue> ValueRef::device() const {
     return imperative::apply(GetAttr(GetAttr::Device), *this)[0]
-            .as_ref<CompNodeValue>();
+            .cast_ref<CompNodeValue>();
 }
 
 TypedValueRef<ShapeValue> ValueRef::shape() const {
-    return imperative::apply(GetAttr(GetAttr::Shape), *this)[0].as_ref<ShapeValue>();
+    return imperative::apply(GetAttr(GetAttr::Shape), *this)[0].cast_ref<ShapeValue>();
 }
 
 TypedValueRef<DTypeValue> ValueRef::dtype() const {
-    return imperative::apply(GetAttr(GetAttr::DType), *this)[0].as_ref<DTypeValue>();
+    return imperative::apply(GetAttr(GetAttr::DType), *this)[0].cast_ref<DTypeValue>();
 }
 
 TypedValueRef<StringValue> ValueRef::name() const {
-    return imperative::apply(GetName(), *this)[0].as_ref<StringValue>();
+    return imperative::apply(GetName(), *this)[0].cast_ref<StringValue>();
 }
 
 bool ValueRef::is_scalar() const {
@@ -75,13 +83,15 @@ void ValueRef::unwatch() const {
 }
 
 ValueRef ValueRef::unwrap() const {
-    ValueRef value = *this;
     auto& context = Transformation::get_context();
-    for (size_t i = 0; i < context.next_transformation; ++i) {
-        value = context.transformations[i]->unwrap(value);
+    if (mgb_unlikely(context.next_transformation)) {
+        ValueRef value = *this;
+        for (size_t i = 0; i < context.next_transformation; ++i) {
+            value = context.transformations[i]->unwrap(value);
+        }
+        return value;
     }
-    mgb_assert(value);
-    return value;
+    return *this;
 }
 
 std::string ValueRef::to_string() const {
@@ -101,13 +111,11 @@ std::string ValueRef::raw_type() const {
     return types[m_storage->m_typecode].name();
 }
 
-uint64_t ValueRef::id() const {
-    return m_storage ? m_storage->m_id : std::numeric_limits<uint64_t>::max();
-}
-
 bool ValueRef::watching() const {
-    auto storage = this->storage();
-    return storage && storage->m_watching;
+    if (!m_storage) {
+        return false;
+    }
+    return this->storage()->m_watching;
 }
 
 ValueRef ValueRef::make(ValueRef::storage_t storage) {
@@ -184,6 +192,97 @@ void Value::try_rethrow() {
         auto message = static_cast<ErrorValue*>(this)->message();
         mgb_throw(MegBrainError, "invalid value: %s", message.c_str());
     }
+}
+
+inline void ValueRefList::init(size_t nr_elems) {
+    m_size = nr_elems;
+    if (m_size > 0) {
+        if (m_size == 1) {
+            m_data = inline_storage();
+        } else {
+            auto& context = Transformation::get_context();
+            m_data = context.allocator.allocate(m_size);
+        }
+        for (size_t i = 0; i < m_size; ++i) {
+            new (m_data + i) ValueRef();
+        }
+    } else {
+        m_data = nullptr;
+    }
+}
+
+ValueRefList::ValueRefList(size_t nr_elems) {
+    init(nr_elems);
+}
+
+ValueRefList::ValueRefList(std::initializer_list<ValueRef> values)
+        : ValueRefList(values.begin(), values.end()) {}
+
+ValueRefList::ValueRefList(const ValueRefList& rhs)
+        : ValueRefList(rhs.cbegin(), rhs.cend()) {}
+
+ValueRefList::ValueRefList(ValueRefList&& rhs) : ValueRefList() {
+    m_size = rhs.m_size;
+    if (rhs.m_data == rhs.inline_storage()) {
+        m_data = inline_storage();
+        new (m_data) ValueRef();
+        m_data[0] = std::move(rhs.m_data[0]);
+    } else {
+        m_data = rhs.m_data;
+        rhs.m_data = nullptr;
+        rhs.m_size = 0;
+    }
+}
+
+ValueRefList& ValueRefList::operator=(const ValueRefList& rhs) {
+    if (this == &rhs) {
+        return *this;
+    }
+    clear();
+    init(rhs.m_size);
+    for (size_t i = 0; i < m_size; ++i) {
+        m_data[i] = rhs.m_data[i];
+    }
+    return *this;
+}
+
+ValueRefList& ValueRefList::operator=(ValueRefList&& rhs) {
+    if (this == &rhs) {
+        return *this;
+    }
+    clear();
+    if (rhs.m_data == rhs.inline_storage()) {
+        m_data = inline_storage();
+        new (m_data) ValueRef();
+        m_data[0] = rhs.m_data[0];
+        m_size = 1;
+        rhs.clear();
+    } else {
+        m_data = rhs.m_data;
+        m_size = rhs.m_size;
+        rhs.m_data = nullptr;
+        rhs.m_size = 0;
+    }
+    return *this;
+}
+
+ValueRefList::~ValueRefList() {
+    clear();
+}
+
+void ValueRefList::clear() {
+    for (size_t i = 0; i < m_size; ++i) {
+        m_data[i].~ValueRef();
+    }
+    if (m_data) {
+        if (m_size != 1) {
+            Transformation::get_context().allocator.deallocate(m_data, m_size);
+        } else {
+            mgb_assert(m_data == inline_storage());
+        }
+    }
+    m_data = nullptr;
+    m_size = 0;
 }
 
 }  // namespace imperative

@@ -11,7 +11,15 @@
 
 #pragma once
 
+#include <optional>
+#include <string>
+
+#include "pybind11/pybind11.h"
+
+#include "megbrain/imperative/dispatch.h"
 #include "megbrain/imperative/transformation.h"
+#include "megbrain/imperative/value.h"
+#include "megbrain/utils/small_vector.h"
 
 namespace mgb::imperative::python {
 struct TransformationManager {
@@ -58,4 +66,14 @@ struct TransformationManager {
         return sl_instance;
     }
 };
+
+class PyValue final : public MixinValueImpl<PyValue, pybind11::object> {
+public:
+    using MixinValueImpl::MixinValueImpl;
+
+    std::string to_string() const {
+        return pybind11::str((const pybind11::object&)*this).cast<std::string>();
+    }
+};
+
 }  // namespace mgb::imperative::python

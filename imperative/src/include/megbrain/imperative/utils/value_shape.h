@@ -95,6 +95,8 @@ struct ValueShape {
         }
         return true;
     }
+
+    bool operator!=(const ValueShape& rhs) const { return !operator==(rhs); }
 };
 
 static_assert(sizeof(size_t) >= sizeof(int));

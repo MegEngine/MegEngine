@@ -153,7 +153,7 @@ VarNodeArray TraceResult::dump(
     return output_nodes;
 }
 
-std::vector<ValueRef> TracingTransformation::apply_transformation(
+ValueRefList TracingTransformation::apply_transformation(
         const Operator& op, Span<ValueRef> inputs) {
     if (auto* op_value = op.as<ApplyOp>()) {
         SmallVector<ValueRef> unwrapped_inputs;
@@ -180,11 +180,12 @@ std::vector<ValueRef> TracingTransformation::apply_transformation(
         }
         const_cast<OpDef&>(op_value->op()).set_scope(scopes_join);
         auto unwrapped_outputs = imperative::apply(op, unwrapped_inputs);
-        std::vector<ValueRef> wrapped_outputs;
+        ValueRefList wrapped_outputs(unwrapped_outputs.size());
         SmallVector<size_t> output_ids;
-        for (auto&& output : unwrapped_outputs) {
+        for (size_t i = 0; i < unwrapped_outputs.size(); ++i) {
+            auto&& output = unwrapped_outputs[i];
             auto wrapped_output = record_var(output, false, VarKind::Internal);
-            wrapped_outputs.push_back(wrapped_output);
+            wrapped_outputs[i] = wrapped_output;
             output_ids.push_back(wrapped_output->id());
         }
         m_seq.push_back({op_value->op().shared_from_this(), input_ids, output_ids});
@@ -375,6 +376,11 @@ void CompiledTransformation::compile() {
         return accessor;
     };
     std::vector<VarAccessor> var_accessors(m_vars.size());
+    auto exc_setter = std::bind(
+            &CompiledTransformation::set_exception, this, std::placeholders::_1);
+    for (auto&& accessor : var_accessors) {
+        accessor.exc_setter = exc_setter;
+    }
     for (auto&& item : m_seq) {
         bool require_link = bool(item.op) && mm_io_ops.count(item.op->dyn_typeinfo());
         VarNodeArray input_vars;
@@ -509,8 +515,8 @@ void CompiledTransformation::trace_input(size_t id, ValueRef value) {
     }
 }
 
-TracedValue::ref_t CompiledTransformation::trace_output(size_t id) {
-    auto traced_value = TracedValue::make(id);
+auto CompiledTransformation::trace_output(size_t id) -> TracedValue::ref_t {
+    auto traced_value = TracedValue::make(id, &m_vars[id], &m_var_accessors[id]);
     m_weak_values.push_back(traced_value);
     return traced_value;
 }
@@ -520,64 +526,99 @@ TraceResult::SeqItem& CompiledTransformation::next_instruction() {
     return m_seq[m_pc++];
 }
 
-std::vector<ValueRef> CompiledTransformation::apply_transformation(
+ShapeValue::ref_t CompiledTransformation::TracedInfo::shape() const {
+    if (!m_shape) {
+        trace_assert(m_accessor->shape_getter, "shape unreadable");
+        m_shape = ShapeValue::make(ValueShape::from(m_accessor->shape_getter()));
+    }
+    return m_shape;
+}
+
+DTypeValue::ref_t CompiledTransformation::TracedInfo::dtype() const {
+    if (!m_dtype) {
+        m_dtype = DTypeValue::make(m_var->dtype);
+    }
+    return m_dtype;
+}
+
+CompNodeValue::ref_t CompiledTransformation::TracedInfo::comp_node() const {
+    if (!m_comp_node) {
+        m_comp_node = CompNodeValue::make(m_var->device);
+    }
+    return m_comp_node;
+}
+auto CompiledTransformation::TracedInfo::accessor() const -> const VarAccessor& {
+    return *m_accessor;
+}
+
+ValueRefList CompiledTransformation::apply_op(
+        const ApplyOp& apply_op, Span<ValueRef> inputs) {
+    auto& item = next_instruction();
+    trace_assert(inputs.size() == item.inputs.size(), "input size mismatch");
+    trace_assert(apply_op.op().is_same(*item.op), "operator mismatch");
+    for (size_t i = 0; i < inputs.size(); ++i) {
+        trace_input(item.inputs[i], inputs[i]);
+    }
+    ValueRefList outputs(item.outputs.size());
+    for (size_t i = 0; i < item.outputs.size(); ++i) {
+        outputs[i] = trace_output(item.outputs[i]);
+    }
+    return outputs;
+}
+
+ValueRefList CompiledTransformation::apply_get_attr(
+        const GetAttr& get_attr, Span<ValueRef> inputs) {
+    if (auto* traced_value = inputs[0].as<TracedValue>()) {
+        ValueRef output;
+        auto& var_accessor = traced_value->accessor();
+        switch (get_attr.attr()) {
+            case GetAttr::Shape:
+                output = traced_value->shape();
+                break;
+            case GetAttr::Data:
+                trace_assert(var_accessor.data_getter, "data unreadable");
+                output = DeviceValue::make(var_accessor.data_getter());
+                break;
+            case GetAttr::Value:
+                trace_assert(var_accessor.value_getter, "value unreadable");
+                output = HostValue::make(var_accessor.value_getter());
+                break;
+            case GetAttr::DType:
+                output = traced_value->dtype();
+                break;
+            case GetAttr::Device:
+                output = traced_value->comp_node();
+            default:
+                break;
+        }
+        return {output};
+    } else {
+        return imperative::apply(get_attr, inputs);
+    }
+}
+
+ValueRefList CompiledTransformation::apply_create_tensor(
+        const CreateTensor& create_tensor, Span<ValueRef> inputs) {
+    if (create_tensor.kind() == CreateTensor::NoTrace) {
+        return imperative::apply(create_tensor, inputs);
+    }
+    auto& item = next_instruction();
+    trace_assert(item.op == nullptr, "operator mismatch");
+    auto input_id = item.inputs[0];
+    auto output_id = item.outputs[0];
+    auto tensor = imperative::apply(create_tensor, inputs)[0];
+    trace_input(input_id, tensor);
+    return {trace_output(output_id)};
+}
+
+ValueRefList CompiledTransformation::apply_transformation(
         const Operator& op, Span<ValueRef> inputs) {
     if (auto* op_value = op.as<ApplyOp>()) {
-        auto& item = next_instruction();
-        SmallVector<ValueRef> unwrapped_inputs;
-        SmallVector<ValueRef> wrapped_inputs;
-        trace_assert(inputs.size() == item.inputs.size(), "input size mismatch");
-        trace_assert(op_value->op().is_same(*item.op), "operator mismatch");
-        for (size_t i = 0; i < inputs.size(); ++i) {
-            trace_input(item.inputs[i], inputs[i]);
-        }
-        std::vector<ValueRef> outputs;
-        for (auto&& output_id : item.outputs) {
-            outputs.push_back(trace_output(output_id));
-        }
-        return outputs;
+        return apply_op(*op_value, inputs);
     } else if (auto* create_tensor = op.as<CreateTensor>()) {
-        if (create_tensor->kind() == CreateTensor::NoTrace) {
-            return imperative::apply(op, inputs);
-        }
-        auto& item = next_instruction();
-        trace_assert(item.op == nullptr, "operator mismatch");
-        auto input_id = item.inputs[0];
-        auto output_id = item.outputs[0];
-        auto tensor = imperative::apply(op, inputs)[0];
-        trace_input(input_id, tensor);
-        return {trace_output(output_id)};
+        return apply_create_tensor(*create_tensor, inputs);
     } else if (auto* get_attr = op.as<GetAttr>()) {
-        if (auto* traced_value = inputs[0].as<TracedValue>()) {
-            ValueRef output;
-            auto& var = m_vars[traced_value->id()];
-            auto& var_accessor = m_var_accessors[traced_value->id()];
-            switch (get_attr->attr()) {
-                case GetAttr::Shape:
-                    trace_assert(var_accessor.shape_getter, "shape unreadable");
-                    output = ShapeValue::make(
-                            ValueShape::from(var_accessor.shape_getter()));
-                    break;
-                case GetAttr::Data:
-                    trace_assert(var_accessor.data_getter, "data unreadable");
-                    output = DeviceValue::make(var_accessor.data_getter());
-                    break;
-                case GetAttr::Value:
-                    trace_assert(var_accessor.value_getter, "value unreadable");
-                    output = HostValue::make(var_accessor.value_getter());
-                    break;
-                case GetAttr::DType:
-                    output = DTypeValue::make(var.dtype);
-                    break;
-                case GetAttr::Device:
-                    output = CompNodeValue::make(var.device);
-                default:
-                    break;
-            }
-            return {output};
-        } else {
-            return imperative::apply(op, inputs);
-        }
+        return apply_get_attr(*get_attr, inputs);
     } else if (auto* trace_mark_var = op.as<TraceMarkVar>()) {
         auto& item = next_instruction();
         trace_assert(item.op == nullptr, "operator mismatch");

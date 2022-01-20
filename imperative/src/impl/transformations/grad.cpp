@@ -64,12 +64,13 @@ BackwardGraphWithClosure::BackwardGraphWithClosure(
     size_t count = std::count_if(
             save_for_backward.begin(), save_for_backward.end(), ranges::identity{});
     if (!backward_graph->precomp.empty()) {
-        SmallVector<ValueRef> inputs_and_outputs;
+        ValueRefList inputs_and_outputs(inputs.size() + outputs.size());
+        auto it = inputs_and_outputs.begin();
         for (auto&& input : inputs) {
-            inputs_and_outputs.push_back(input);
+            *it++ = input;
         }
         for (auto&& output : outputs) {
-            inputs_and_outputs.push_back(output);
+            *it++ = output;
         }
         auto precomp = imperative::apply(backward_graph->precomp, inputs_and_outputs);
         closure.reserve(precomp.size() + count);
@@ -89,7 +90,7 @@ BackwardGraphWithClosure::BackwardGraphWithClosure(
     }
 }
 void BackwardGraphWithClosure::operator()(
-        std::vector<ValueRef> grads, std::function<void(size_t, ValueRef)> receiver) {
+        ValueRefList grads, std::function<void(size_t, ValueRef)> receiver) {
     ValueRef args[closure.size() + grads.size()];
     size_t nargs = 0;
     for (auto&& value : closure) {
@@ -120,7 +121,7 @@ void BackwardGraphWithClosure::operator()(
 }
 
 void CustomBackward::operator()(
-        std::vector<ValueRef> grads, std::function<void(size_t, ValueRef)> receiver) {
+        ValueRefList grads, std::function<void(size_t, ValueRef)> receiver) {
     size_t nargs = grads.size();
     ValueRef args[nargs];
     for (size_t i = 0; i < nargs; ++i) {
@@ -201,9 +202,10 @@ void GradKey::backward() {
                 mgb_throw(AssertionError, "invalid backward");
             } else {
                 mgb_assert(grad_fn->m_slots.size() > 0);
-                std::vector<ValueRef> grads;
+                ValueRefList grads (grad_fn->m_slots.size());
+                auto iter = grads.begin();
                 for (auto&& slot : grad_fn->m_slots) {
-                    grads.push_back(slot.m_grad);
+                    *iter++ = slot.m_grad;
                 }
                 backward(grads, grad_receiver);
             }
@@ -254,21 +256,28 @@ void GradKey::freeze() {
     m_frozen = true;
 }
 
-std::vector<ValueRef> GradTransformation::apply_transformation(
+ValueRefList GradTransformation::apply_transformation(
         const Operator& op, Span<ValueRef> inputs) {
-    auto unwrap_inputs = [this](Span<ValueRef> inputs) -> SmallVector<ValueRef> {
-        SmallVector<ValueRef> unwrapped_inputs;
-        for (auto&& input : inputs) {
-            if (auto grad_value = as_grad_value(input)) {
-                unwrapped_inputs.push_back(grad_value->m_value);
+    auto fallback = [&] {
+        ValueRefList unwrapped_inputs(inputs.size());
+        for (size_t i = 0; i < inputs.size(); ++i) {
+            if (auto grad_value = as_grad_value(inputs[i])) {
+                unwrapped_inputs[i] = grad_value->m_value;
             } else {
-                unwrapped_inputs.push_back(input);
+                unwrapped_inputs[i] = inputs[i];
             }
         }
-        return unwrapped_inputs;
+        return imperative::apply(op, unwrapped_inputs);
     };
+    if (auto* get_attr = op.as<GetAttr>()) {
+        if (auto grad_value = as_grad_value(inputs.item())) {
+            return imperative::apply(op, grad_value->m_value);
+        } else {
+            return imperative::apply(op, inputs);
+        }
+    }
     if (m_suppressed) {
-        return imperative::apply(op, unwrap_inputs(inputs));
+        return fallback();
     }
     if (auto* op_val = op.as<ApplyOp>()) {
         size_t nr_require_grad = 0;
@@ -284,20 +293,21 @@ std::vector<ValueRef> GradTransformation::apply_transformation(
         if (nr_require_grad == 0) {
             return imperative::apply(op, inputs);
         }
-        SmallVector<ValueRef> captured_inputs;
-        SmallVector<bool> inputs_require_grad;
+        ValueRefList captured_inputs(inputs.size());
+        SmallVector<bool> inputs_require_grad(inputs.size());
         // capture value so that trace could assume input as same
         auto capture_value = [](ValueRef value) {
             // TODO: fastpath copy shouldn't be an OpDef
             return imperative::apply(ApplyOp(*FastpathCopy::make()), {&value, 1})[0];
         };
-        for (auto& input : inputs) {
+        for (size_t i = 0; i < inputs.size(); ++i) {
+            auto& input = inputs[i];
             if (auto grad_value = as_grad_value(input)) {
-                captured_inputs.push_back(capture_value(grad_value->m_value));
-                inputs_require_grad.push_back(true);
+                captured_inputs[i] = capture_value(grad_value->m_value);
+                inputs_require_grad[i] = true;
             } else {
-                captured_inputs.push_back(capture_value(input));
-                inputs_require_grad.push_back(false);
+                captured_inputs[i] = capture_value(input);
+                inputs_require_grad[i] = false;
             }
         }
         decltype(std::declval<GradFn>().m_backward) backward_storage;
@@ -373,9 +383,11 @@ std::vector<ValueRef> GradTransformation::apply_transformation(
         mgb_assert(!grad_fn->m_slots.empty());
         m_key->m_tape.push_back({grad_fn, op_val->op().shared_from_this()});
         return outputs;
+    } else if (op.is<CreateTensor>()) {
+        return imperative::apply(op, inputs);
     } else if (auto* attach_grad = op.as<AttachGrad>()) {
         if (!has_key(attach_grad->key())) {
-            return imperative::apply(op, unwrap_inputs(inputs));
+            return fallback();
         }
         auto tensor = inputs[0];
         GenericFunction callback = (GenericFunction&)inputs[1].cast<FunctionValue>();
@@ -386,7 +398,7 @@ std::vector<ValueRef> GradTransformation::apply_transformation(
         return {record_grad(output)};
     } else if (auto* grad_backward = op.as<GradBackward>()) {
         if (!has_key(grad_backward->key())) {
-            return imperative::apply(op, unwrap_inputs(inputs));
+            return fallback();
         }
         size_t nr_grads = inputs.size() / 2;
         mgb_assert(nr_grads * 2 == inputs.size());
@@ -416,7 +428,7 @@ std::vector<ValueRef> GradTransformation::apply_transformation(
         backward.m_output_attrs =
                 SmallVector(nr_outputs, CustomBackward::OutputAttr{true, true});
         backward.m_backward = set_grad->grad_fn();
-        std::vector<ValueRef> outputs;
+        ValueRefList outputs(nr_outputs);
         grad_fn->m_key = m_key;
         grad_fn->m_slots.resize(nr_outputs);
         grad_fn->m_dests.reserve(nr_inputs);
@@ -439,13 +451,13 @@ std::vector<ValueRef> GradTransformation::apply_transformation(
             } else {
                 grad_value = GradValue::make(output, m_key, GradSlotPtr(grad_fn, i));
             }
-            outputs.push_back(record_grad(grad_value));
+            outputs[i] = record_grad(grad_value);
         }
         m_key->m_tape.push_back({grad_fn, nullptr});
         return outputs;
     } else if (auto* gbc = op.as<GetBackwardColsure>()) {
         if (gbc->key() != m_key) {
-            return imperative::apply(op, unwrap_inputs(inputs));
+            return fallback();
         }
         return {FunctionValue::make(make_backward_closure(inputs))};
     } else if (op.is<DetachGrad>()) {
@@ -471,21 +483,8 @@ std::vector<ValueRef> GradTransformation::apply_transformation(
         } else {
             return imperative::apply(op, inputs);
         }
-    } else if (op.is<CreateTensor>()) {
-        return imperative::apply(op, inputs);
     } else {
-        SmallVector<ValueRef> unwrapped_inputs;
-        for (auto&& input : inputs) {
-            if (auto grad_value = as_grad_value(input)) {
-                unwrapped_inputs.push_back(grad_value->m_value);
-            } else {
-                unwrapped_inputs.push_back(input);
-            }
-        }
-        auto outputs = imperative::apply(
-                op, {unwrapped_inputs.data(), unwrapped_inputs.size()});
-        mgb_assert(op.kind() == Operator::GetAttrLike || outputs.empty());
-        return outputs;
+        return fallback();
     }
 }
 
@@ -500,8 +499,7 @@ GenericFunction GradTransformation::make_backward_closure(Span<ValueRef> ys) {
             y_slots.emplace_back();
         }
     }
-    GenericFunction closure = [grad_key,
-                               y_slots](Span<ValueRef> dys) -> std::vector<ValueRef> {
+    GenericFunction closure = [grad_key, y_slots](Span<ValueRef> dys) -> ValueRefList {
         size_t nr_grads = y_slots.size();
         mgb_assert(dys.size() == nr_grads);
         for (size_t i = 0; i < nr_grads; ++i) {

@@ -25,24 +25,23 @@ private:
     py::function m_hook_fn;
     int m_enabled = 0;
 
-    std::vector<ValueRef> apply_module_trace_hook(
-            const OpDef& op, Span<ValueRef> input_values) {
+    ValueRefList apply_module_trace_hook(const OpDef& op, Span<ValueRef> input_values) {
         py::list input_tws;
         for (auto&& input_value : input_values) {
             input_tws.append(TensorWrapper::make(py_tensor_type, input_value));
         }
         py::list output_tws = m_hook_fn(py::cast(op.shared_from_this()), *input_tws);
-        std::vector<ValueRef> outputs;
+        ValueRefList outputs(output_tws.size());
+        auto it = outputs.begin();
         for (auto&& output_tw : output_tws) {
-            outputs.push_back(
-                    TensorWrapper::try_cast(output_tw.ptr())->m_tensor->data());
+            *(it++) = TensorWrapper::try_cast(output_tw.ptr())->m_tensor->data();
         }
         return outputs;
     }
 
 public:
     ModuleTraceTransformation(py::function hook_fn) : m_hook_fn(hook_fn) {}
-    std::vector<ValueRef> apply_transformation(
+    ValueRefList apply_transformation(
             const Operator& op, Span<ValueRef> inputs) override {
         if (op.is<ApplyOp>() && m_enabled > 0) {
             auto outputs = apply_module_trace_hook(op.cast<ApplyOp>().op(), inputs);

@@ -45,7 +45,7 @@ CreateTensor::CreateTensor(Kind kind, CompNode device, TensorLayout layout)
             layout.is_contiguous() || layout.is_empty(), "layout should be contiguous");
 }
 
-auto CreateTensor::parse(Span<ValueRef> inputs) -> Args {
+auto CreateTensor::parse(Span<ValueRef> inputs) const -> Args {
     Args result;
     for (auto&& input : inputs) {
         if (auto host_storage = input.as_ref<HostStorage>()) {

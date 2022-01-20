@@ -23,7 +23,7 @@ namespace imperative {
 
 class GradKey;
 
-using GenericFunction = std::function<std::vector<ValueRef>(Span<ValueRef>)>;
+using GenericFunction = std::function<ValueRefList(Span<ValueRef>)>;
 
 class ShapeValue final : public MixinValueImpl<ShapeValue, ValueShape> {
 public:
@@ -97,6 +97,10 @@ public:
     ValueShape shape() const { return m_shape; }
     CompNode device() const { return m_storage.comp_node(); }
     HostTensorStorage storage() const { return m_storage; }
+    DTypeScalar item() const {
+        mgb_assert(m_shape.is_scalar());
+        return DTypeScalar::make_from_raw(m_dtype, m_storage.ptr());
+    }
 
     HostTensorND as_nd(bool allow_scalar = false) const;
 };

@@ -69,7 +69,7 @@ class SGD(Optimizer):
         inplace_mode = int(os.getenv("MEGENGINE_INPLACE_UPDATE", "0"))
         if inplace_mode:
             _neg_lr = tensor(-lr, dtype="float32")
-            c1 = tensor([1.0])
+            c1 = tensor(1.0)
 
         for param in param_group["params"]:
             if param.grad is None:

@@ -99,19 +99,22 @@ Tensor::Tensor(
 
 Tensor::Tensor(const HostTensorND& hv) : Tensor(hv.layout(), hv.comp_node()) {
     constexpr int size_threshold = TensorShape::MAX_NDIM;
-    if (hv.layout().total_nr_elems() <= size_threshold) {
+    size_t nr_elems = hv.layout().total_nr_elems();
+    if (nr_elems <= size_threshold) {
         m_value = hv;
     }
-    MGB_RECORD_EVENT(
-            profiler::HostToDeviceEvent, hv.layout(), hv.comp_node(), hv.raw_ptr(),
-            dev_tensor().raw_ptr());
-    dev_tensor().copy_from_fixlayout(hv);
-    // even though hv is saved in m_value, Tensor itself could be
-    // released before copy completes
-    MGB_RECORD_EVENT(
-            profiler::HostToDeviceFinishEvent, hv.layout(), hv.comp_node(),
-            hv.raw_ptr(), dev_tensor().raw_ptr());
-    AsyncReleaser::inst()->add(hv);
+    if (nr_elems) {
+        MGB_RECORD_EVENT(
+                profiler::HostToDeviceEvent, hv.layout(), hv.comp_node(), hv.raw_ptr(),
+                dev_tensor().raw_ptr());
+        dev_tensor().copy_from_fixlayout(hv);
+        // even though hv is saved in m_value, Tensor itself could be
+        // released before copy completes
+        MGB_RECORD_EVENT(
+                profiler::HostToDeviceFinishEvent, hv.layout(), hv.comp_node(),
+                hv.raw_ptr(), dev_tensor().raw_ptr());
+        AsyncReleaser::inst()->add(hv);
+    }
 }
 
 Tensor::Tensor(const DeviceTensorND& dv, const HostTensorND& hv) {

@@ -87,7 +87,7 @@ PyObject* py_apply(
         --nargs;
 
         auto op = py::handle(py_op).cast<std::shared_ptr<OpDef>>();
-        SmallVector<ValueRef, 64> tensors(nargs);
+        SmallVector<ValueRef, 8> tensors(nargs);
 
         if (py::isinstance<PySymbolVar>(py::handle(args[0]))) {
             // swap to a special context to reuse scalar handle
@@ -100,16 +100,15 @@ PyObject* py_apply(
                     Transformation::top());
             std::make_shared<ScalarTransformation>()->register_at(
                     Transformation::top());
-            SmallVector<ValueRef> inputs(nargs);
             for (size_t i = 0; i < nargs; ++i) {
                 auto* py_input = py::handle(args[i]).cast<PySymbolVar*>();
                 ValueRef input = SymbolValue::make(py_input->m_node);
                 if (py_input->is_scalar) {
                     input = ScalarValue::make(input);
                 }
-                inputs[i] = input;
+                tensors[i] = input;
             }
-            auto outputs = imperative::apply(*op, inputs);
+            auto outputs = imperative::apply(*op, tensors);
             auto ret = pybind11::tuple(outputs.size());
             auto typeobj = py::handle(args[0]).get_type();
             for (size_t i = 0; i < outputs.size(); ++i) {
@@ -140,7 +139,7 @@ PyObject* py_apply(
             }
         }
 
-        auto outputs = imperative::apply(ApplyOp(*op), {tensors.data(), nargs});
+        auto outputs = imperative::apply(*op, tensors);
         size_t nout = outputs.size();
         auto ret = py::tuple(nout);
         for (size_t i = 0; i < nout; ++i) {
@@ -214,16 +213,10 @@ TensorWrapper::TensorWrapper(PyObject* args, PyObject* kwargs) {
             if (!name.empty()) {
                 m_tensor->reset(
                         imperative::apply(RenameValue(name), m_tensor->data())[0]);
-                mgb_assert(
-                        ((std::string&)*m_tensor->data().name()) == name,
-                        "result name incorrect");
-            }
-
-            if (data.ndim() == 0) {
-                mgb_assert(m_tensor->is_scalar(), "result should be scalar");
             }
         }
     }
+    mgb_assert(m_tensor->data());
 }
 
 PyObject* TensorWrapper::module_trace_info() {
@@ -1384,15 +1377,20 @@ void init_tensor(py::module m) {
         std::function<bool(py::object, py::object)> array_comparator;
 
         bool compare_value(ValueRef lhs, ValueRef rhs) {
-            if (!lhs.shape()->eq(*rhs.shape())) {
+            auto lvalue = lhs.numpy();
+            auto rvalue = rhs.numpy();
+            if (lvalue->shape() != rvalue->shape()) {
                 return false;
             }
-            HostTensorND lvalue = lhs.numpy()->as_nd(true);
-            HostTensorND rvalue = rhs.numpy()->as_nd(true);
+            if (lvalue->shape().is_scalar()) {
+                return lvalue->item() == rvalue->item();
+            }
+            HostTensorND lnd = lvalue->as_nd(true);
+            HostTensorND rnd = rvalue->as_nd(true);
             auto larr = py::reinterpret_steal<py::array>(
-                    npy::ndarray_from_tensor(lvalue, npy::ShareType::TRY_SHARE));
+                    npy::ndarray_from_tensor(lnd, npy::ShareType::TRY_SHARE));
             auto rarr = py::reinterpret_steal<py::array>(
-                    npy::ndarray_from_tensor(rvalue, npy::ShareType::TRY_SHARE));
+                    npy::ndarray_from_tensor(rnd, npy::ShareType::TRY_SHARE));
             return array_comparator(larr, rarr);
         }
 
@@ -1539,6 +1537,19 @@ void init_tensor(py::module m) {
                 }
             });
 
+    m.def("reduce_to_scalar", [](py::object op, py::object tensor) {
+        auto* tw = TensorWrapper::try_cast(tensor.ptr());
+        auto make_scalar_shape = [&](CompNode device) {
+            return imperative::apply(
+                    CreateTensor(CreateTensor::Const, device, dtype::Int32(), {0}),
+                    HostStorage::make(device))[0];
+        };
+        auto output = imperative::apply(
+                *op.cast<std::shared_ptr<OpDef>>(), tw->m_tensor->data(),
+                make_scalar_shape(tw->m_tensor->comp_node()))[0];
+        return TensorWrapper::make(py_tensor_type, output);
+    });
+
     m.def("name_tensor", [](std::string name, py::object tensor) {
         auto* tw = TensorWrapper::try_cast(tensor.ptr());
         auto output = imperative::apply(TraceMarkVar(name), tw->m_tensor->data())[0];
@@ -1546,9 +1557,9 @@ void init_tensor(py::module m) {
     });
 
     m.def("is_grad_attached", [](std::vector<py::object> tensors) -> bool {
-        SmallVector<ValueRef> values;
-        for (auto&& tensor : tensors) {
-            values.push_back(tensor.cast<TensorWrapper>().m_tensor->data());
+        ValueRefList values(tensors.size());
+        for (size_t i = 0; i < tensors.size(); ++i) {
+            values[i] = tensors[i].cast<TensorWrapper>().m_tensor->data();
         }
         auto outputs = imperative::apply(GetGradKey(), values);
         if (outputs[0].is<GradKeyValue>()) {
@@ -1559,9 +1570,9 @@ void init_tensor(py::module m) {
     });
 
     m.def("get_grad_key", [](std::vector<py::object> tensors) -> py::object {
-        SmallVector<ValueRef> values;
-        for (auto&& tensor : tensors) {
-            values.push_back(tensor.cast<TensorWrapper>().m_tensor->data());
+        ValueRefList values(tensors.size());
+        for (size_t i = 0; i < tensors.size(); ++i) {
+            values[i] = tensors[i].cast<TensorWrapper>().m_tensor->data();
         }
         auto outputs = imperative::apply(GetGradKey(), values);
         if (auto* grad_key_val = outputs[0].as<GradKeyValue>()) {
@@ -1578,7 +1589,7 @@ void init_tensor(py::module m) {
         mgb_assert(GradKeyWrapper::wrap_t::type().isinstance(py_key.ptr()));
         auto* key = reinterpret_cast<GradKeyWrapper::wrap_t*>(py_key.ptr())->inst();
         GenericFunction generic_backward_fn =
-                [backward_fn](Span<ValueRef> output_grads) -> std::vector<ValueRef> {
+                [backward_fn](Span<ValueRef> output_grads) -> ValueRefList {
             py::list output_grad_tws;
             for (auto&& output_grad : output_grads) {
                 if (output_grad) {
@@ -1589,23 +1600,25 @@ void init_tensor(py::module m) {
                 }
             }
             py::tuple input_grad_tws = backward_fn(*output_grad_tws);
-            std::vector<ValueRef> input_grads;
-            for (auto&& input_grad_tw : input_grad_tws) {
+            ValueRefList input_grads(input_grad_tws.size());
+            for (size_t i = 0; i < input_grad_tws.size(); ++i) {
+                auto input_grad_tw = input_grad_tws[i];
                 if (!input_grad_tw.is_none()) {
-                    input_grads.push_back(
-                            py::cast<TensorWrapper>(input_grad_tw).m_tensor->data());
+                    input_grads[i] =
+                            py::cast<TensorWrapper>(input_grad_tw).m_tensor->data();
                 } else {
-                    input_grads.push_back({});
+                    input_grads[i] = {};
                 }
             }
             return input_grads;
         };
-        SmallVector<ValueRef> values;
-        for (auto&& input : inputs) {
-            values.push_back(input.cast<TensorWrapper>().m_tensor->data());
+        ValueRefList values(inputs.size() + outputs.size());
+        for (size_t i = 0; i < inputs.size(); ++i) {
+            values[i] = inputs[i].cast<TensorWrapper>().m_tensor->data();
         }
-        for (auto&& output : outputs) {
-            values.push_back(output.cast<TensorWrapper>().m_tensor->data());
+        for (size_t i = 0; i < outputs.size(); ++i) {
+            values[i + inputs.size()] =
+                    outputs[i].cast<TensorWrapper>().m_tensor->data();
         }
         auto wrapped_output_values = imperative::apply(
                 SetGrad(key->m_key, generic_backward_fn, inputs.size()), values);

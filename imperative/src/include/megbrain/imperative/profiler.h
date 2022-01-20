@@ -123,7 +123,6 @@ public:
     template <typename T, typename... TArgs>
     static uint64_t record(TArgs&&... args) {
         auto& profiler = get_instance();
-        // auto& mem_pool = get_mem_pool<T>();
         if constexpr (sm_debug) {
             Status expected = Running;
             mgb_assert(profiler.m_status.compare_exchange_strong(expected, Recording));

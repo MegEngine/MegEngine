@@ -47,6 +47,17 @@ class StringValue;
 
 class Operator;
 
+class ValueRefList;
+
+template <typename T>
+class Type {
+private:
+    const size_t m_code = T::TYPE_CODE;
+
+public:
+    inline size_t code() const { return m_code; }
+};
+
 /**
  * \brief an smart reference of value
  *
@@ -64,8 +75,9 @@ public:
 
 protected:
     mutable storage_t m_storage;
+    size_t m_id = std::numeric_limits<size_t>::max();
 
-    ValueRef(storage_t storage) { m_storage = storage; }
+    inline ValueRef(storage_t storage);
 
 private:
     /**
@@ -74,6 +86,10 @@ private:
      * \return storage_t dest storage
      */
     storage_t& storage() const;
+
+    const Value* as(size_t typecode) const;
+
+    bool is(size_t typecode) const;
 
 public:
     ValueRef() = default;
@@ -86,7 +102,7 @@ public:
      * \return false if empty or type of value is not TValue
      */
     template <typename TValue>
-    bool is() const;
+    inline bool is(Type<TValue> type = {}) const;
 
     /**
      * \brief try cast value as target type
@@ -95,7 +111,7 @@ public:
      * \return TValue* raw pointer if success, otherwise nullptr
      */
     template <typename TValue>
-    const TValue* as() const;
+    inline const TValue* as(Type<TValue> type = {}) const;
 
     /**
      * \brief cast value to target type
@@ -104,7 +120,7 @@ public:
      * \return TValue& reference of value
      */
     template <typename TValue>
-    const TValue& cast() const;
+    inline const TValue& cast(Type<TValue> type = {}) const;
 
     /**
      * \brief like as(), but returns TypedValueRef instead
@@ -113,7 +129,13 @@ public:
      * \return TypedValueRef<TValue> reference if success, otherwise empty reference
      */
     template <typename TValue>
-    inline TypedValueRef<TValue> as_ref() const;
+    inline TypedValueRef<TValue> as_ref(Type<TValue> type = {}) const;
+
+    template <typename TValue>
+    inline TypedValueRef<TValue> cast_ref(Type<TValue> type = {}) const;
+
+    template <typename TValue>
+    void on_cast_failure() const;
 
     operator bool() const { return bool(m_storage); }
 
@@ -132,7 +154,7 @@ public:
     ValueRef unwrap() const;
     std::string to_string() const;
     std::string raw_type() const;
-    uint64_t id() const;
+    uint64_t id() const { return m_id; }
     size_t hash() const { return id(); }
 
     static ValueRef make(storage_t storage);
@@ -144,7 +166,7 @@ public:
     friend class TypedValueRef;
     template <typename T>
     friend class ValueImpl;
-    friend std::vector<ValueRef> apply(const Operator& op, Span<ValueRef> inputs);
+    friend ValueRefList apply(const Operator& op, Span<ValueRef> inputs);
 };
 
 template <>
@@ -244,7 +266,7 @@ public:
     using ref_t = TypedValueRef<T>;
     using weak_ref_t = TypedValueWeakRef<T>;
 
-    static inline size_t TYPE_CODE = [] { return register_type(typeid(T)); }();
+    static inline const size_t TYPE_CODE = [] { return register_type(typeid(T)); }();
 
     /**
      * \brief helper function for construct a value
@@ -254,7 +276,7 @@ public:
      * \return TypedValueRef<T> reference of value
      */
     template <typename... TArgs>
-    static TypedValueRef<T> make(TArgs&&... args) {
+    static MGB_NOINLINE TypedValueRef<T> make(TArgs&&... args) {
         static_assert(std::is_final_v<T>);
         return ValueRef::make(LocalPtr<Value>::make<T>(std::forward<TArgs&&>(args)...));
     }
@@ -279,44 +301,58 @@ public:
     bool eq(const TMixin& value) const { return ((const TMixin&)*this) == value; }
 };
 
+inline ValueRef::ValueRef(storage_t storage) {
+    // mgb_assert(storage);
+    m_storage = storage;
+    m_id = m_storage->m_id;
+}
+
 template <typename TValue>
-const TValue* ValueRef::as() const {
+inline const TValue* ValueRef::as(Type<TValue> type) const {
     static_assert(std::is_base_of_v<ValueImpl<TValue>, TValue>);
-    auto storage = this->storage();
-    if (!storage) {
-        return nullptr;
-    }
-    if (storage->m_typecode != TValue::TYPE_CODE) {
-        return nullptr;
-    }
-    return static_cast<TValue*>(storage.get());
+    return static_cast<const TValue*>(as(type.code()));
 }
 
 template <typename TValue>
-const TValue& ValueRef::cast() const {
-    auto* ptr = as<TValue>();
-    if (!ptr) {
-        // if this is ErrorValue, rethrow directly
-        storage()->try_rethrow();
-        mgb_assert(
-                ptr, "expect type %s, got %s", typeid(TValue).name(),
-                to_string().c_str());
+inline const TValue& ValueRef::cast(Type<TValue> type) const {
+    auto* ptr = as<TValue>(type);
+    if (mgb_unlikely(!ptr)) {
+        on_cast_failure<TValue>();
     }
-    return *ptr;
+    return static_cast<const TValue&>(*ptr);
 }
 
 template <typename TValue>
-bool ValueRef::is() const {
-    auto* ptr = as<TValue>();
-    return ptr != nullptr;
+inline bool ValueRef::is(Type<TValue> type) const {
+    return is(type.code());
 }
 
 template <typename TValue>
-TypedValueRef<TValue> ValueRef::as_ref() const {
-    if (!is<TValue>()) {
+inline TypedValueRef<TValue> ValueRef::as_ref(Type<TValue> type) const {
+    if (!is<TValue>(type)) {
         return {};
     }
     return TypedValueRef<TValue>(*this);
+}
+
+template <typename TValue>
+inline TypedValueRef<TValue> ValueRef::cast_ref(Type<TValue> type) const {
+    if (!m_storage) {
+        return {};
+    }
+    if (mgb_unlikely(!is<TValue>(type))) {
+        on_cast_failure<TValue>();
+    }
+    return TypedValueRef<TValue>(*this);
+}
+
+template <typename TValue>
+void ValueRef::on_cast_failure() const {
+    // if this is ErrorValue, rethrow directly
+    storage()->try_rethrow();
+    mgb_assert(
+            storage()->m_typecode != TValue::TYPE_CODE, "expect type %s, got %s",
+            typeid(TValue).name(), to_string().c_str());
 }
 
 /**
@@ -361,10 +397,86 @@ private:
 public:
     TypedValueWeakRef(ValueRef value) : ValueWeakRef(value) {}
     TypedValueWeakRef(ValueWeakRef value) : ValueWeakRef(value) {}
-    TypedValueRef<T> lock() { return ValueWeakRef::lock().template as_ref<T>(); }
+    TypedValueRef<T> lock() {
+        auto value = ValueWeakRef::lock();
+        if (value) {
+            return value.template as_ref<T>();
+        } else {
+            return {};
+        }
+    }
 };
 
 // TODO: add proxy value type, which is meant to be reset in the end
+
+class ValueRefList {
+private:
+    ValueRef* m_data = nullptr;
+    size_t m_size = 0;
+    std::aligned_storage_t<sizeof(ValueRef), alignof(ValueRef)> m_storage;
+
+private:
+    void init(size_t nr_elems);
+    ValueRef* inline_storage() { return reinterpret_cast<ValueRef*>(&m_storage); }
+
+public:
+    ValueRefList() = default;
+    ValueRefList(size_t nr_elems);
+    ValueRefList(ValueRef item);
+    ValueRefList(std::initializer_list<ValueRef> values);
+    template <typename TIterator>
+    ValueRefList(TIterator begin, TIterator end);
+    ValueRefList(const ValueRefList& rhs);
+    ValueRefList(ValueRefList&& rhs);
+    ValueRefList& operator=(const ValueRefList& rhs);
+    ValueRefList& operator=(ValueRefList&& rhs);
+    ~ValueRefList();
+    void clear();
+
+    ValueRef* begin() { return m_data; }
+    ValueRef* end() { return m_data + m_size; }
+    const ValueRef* cbegin() const { return m_data; }
+    const ValueRef* cend() const { return m_data + m_size; }
+    size_t size() const { return m_size; }
+    ValueRef& at(size_t idx) {
+        mgb_assert(idx < m_size);
+        return m_data[idx];
+    }
+    const ValueRef& at(size_t idx) const {
+        mgb_assert(idx < m_size);
+        return m_data[idx];
+    }
+    ValueRef& operator[](size_t idx) { return m_data[idx]; }
+    const ValueRef& operator[](size_t idx) const { return m_data[idx]; }
+    ValueRef* data() { return m_data; }
+    const ValueRef* data() const { return m_data; }
+    bool empty() const { return m_size == 0; }
+    ValueRef& front() {
+        mgb_assert(m_size > 1);
+        return m_data[0];
+    }
+    ValueRef& back() {
+        mgb_assert(m_size > 1);
+        return m_data[m_size - 1];
+    }
+};
+
+template <typename TIterator>
+ValueRefList::ValueRefList(TIterator begin, TIterator end) : ValueRefList(end - begin) {
+    for (size_t i = 0; i < m_size; ++i) {
+        m_data[i] = *(begin + i);
+    }
+}
+
+inline ValueRefList::ValueRefList(ValueRef item) : m_data(inline_storage()), m_size(1) {
+    new (m_data) ValueRef();
+    m_data[0] = std::move(item);
+}
+
+/*class ValueRefList : public SmallVector<ValueRef, 1> {
+public:
+    using SmallVector::SmallVector;
+};*/
 
 }  // namespace imperative
 }  // namespace mgb

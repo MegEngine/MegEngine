@@ -126,25 +126,6 @@ public:
     void on_unwatch() override { value().unwatch(); }
 };
 
-class TracedInfo {
-private:
-    size_t m_id = 0;
-
-public:
-    TracedInfo() = default;
-    TracedInfo(size_t id) : m_id(id) {}
-    size_t id() const { return m_id; }
-};
-
-class TracedValue final : public MixinValueImpl<TracedValue, TracedInfo> {
-public:
-    using MixinValueImpl::MixinValueImpl;
-
-    std::string to_string() const override {
-        return ssprintf("TracedValue{\"id\"=%zu}", id());
-    }
-};
-
 /**
  * \brief trace operation sequence to TraceResult
  *
@@ -202,7 +183,7 @@ public:
         return value;
     }
 
-    std::vector<ValueRef> apply_transformation(
+    ValueRefList apply_transformation(
             const Operator& op, Span<ValueRef> inputs) override;
 
     ValueRef unwrap(ValueRef value) override {
@@ -248,6 +229,40 @@ public:
         std::function<DeviceTensorND()> data_getter;
         std::function<HostTensorND()> value_getter;
         std::function<void(DeviceTensorND)> data_setter;
+        std::function<void(std::exception_ptr)> exc_setter;
+    };
+
+    class TracedInfo {
+    private:
+        size_t m_id = 0;
+        VarInfo* m_var = nullptr;
+        VarAccessor* m_accessor = nullptr;
+        mutable ShapeValue::ref_t m_shape;
+        mutable DTypeValue::ref_t m_dtype;
+        mutable CompNodeValue::ref_t m_comp_node;
+
+    public:
+        TracedInfo() = default;
+        TracedInfo(size_t id, VarInfo* var, VarAccessor* accessor)
+                : m_id(id), m_var(var), m_accessor(accessor) {}
+        size_t id() const { return m_id; }
+        ShapeValue::ref_t shape() const;
+        DTypeValue::ref_t dtype() const;
+        CompNodeValue::ref_t comp_node() const;
+        const VarAccessor& accessor() const;
+
+        void set_exception(std::exception_ptr exc) const {
+            m_accessor->exc_setter(exc);
+        }
+    };
+
+    class TracedValue final : public MixinValueImpl<TracedValue, TracedInfo> {
+    public:
+        using MixinValueImpl::MixinValueImpl;
+
+        std::string to_string() const override {
+            return ssprintf("TracedValue{\"id\"=%zu}", id());
+        }
     };
 
 private:
@@ -319,7 +334,14 @@ public:
 
     TraceResult::SeqItem& next_instruction();
 
-    std::vector<ValueRef> apply_transformation(
+    ValueRefList apply_op(const ApplyOp& apply_op, Span<ValueRef> inputs);
+
+    ValueRefList apply_get_attr(const GetAttr& get_attr, Span<ValueRef> inputs);
+
+    ValueRefList apply_create_tensor(
+            const CreateTensor& create_tensor, Span<ValueRef> inputs);
+
+    ValueRefList apply_transformation(
             const Operator& op, Span<ValueRef> inputs) override;
 
     void on_unregister() noexcept override;

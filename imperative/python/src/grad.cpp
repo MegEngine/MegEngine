@@ -46,17 +46,17 @@ void GradKeyWrapper::attach(PyObject* const* args, size_t nargs) {
     if (args[1] != Py_None) {
         callback = py::reinterpret_borrow<py::object>(args[1]);
     }
-    GenericFunction generic_callback =
-            [=](Span<ValueRef> inputs) -> std::vector<ValueRef> {
+    GenericFunction generic_callback = [=](Span<ValueRef> inputs) -> ValueRefList {
         mgb_assert(inputs.size() == 1);
         if (callback) {
             callback(TensorWrapper::make(py_tensor_type, inputs[0]));
         }
         return {};
     };
-    tw->m_tensor->reset(imperative::apply(
+    auto attached_value = imperative::apply(
             AttachGrad(m_key), tw->m_tensor->data(),
-            FunctionValue::make(generic_callback))[0]);
+            FunctionValue::make(generic_callback))[0];
+    tw->m_tensor->reset(attached_value);
 }
 
 void GradKeyWrapper::backward(GradKeyWrapper* self, py::list tensors, py::list grads) {

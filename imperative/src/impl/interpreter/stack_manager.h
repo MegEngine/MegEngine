@@ -126,7 +126,7 @@ public:
             m_frames[m_frames.size() - 1 - i] = {node, node->version()};
             node = node->parent();
         }
-        mgb_assert(node->is_root(), "");
+        mgb_assert(node->is_root());
     }
     Trace() = default;
     std::string to_string() const {

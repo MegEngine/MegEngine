@@ -81,7 +81,7 @@ public:
 
     ComputingGraph::Options& options() { return m_graph->options(); }
 
-    std::vector<ValueRef> apply_transformation(
+    ValueRefList apply_transformation(
             const Operator& op, Span<ValueRef> inputs) override;
 
     ValueRef unwrap(ValueRef value) override {

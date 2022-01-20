@@ -50,7 +50,7 @@ private:
 
 public:
     SymbolTransformation(ComputingGraph* graph) : m_graph(graph) {}
-    std::vector<ValueRef> apply_transformation(
+    ValueRefList apply_transformation(
             const Operator& op, Span<ValueRef> inputs) override {
         if (auto* apply_op = op.as<ApplyOp>()) {
             SmallVector<VarNode*> input_nodes;
@@ -58,9 +58,9 @@ public:
                 input_nodes.push_back(input.cast<SymbolValue>().node());
             }
             auto output_nodes = OpDef::apply_on_var_node(apply_op->op(), input_nodes);
-            std::vector<ValueRef> outputs;
-            for (auto&& output_node : output_nodes) {
-                outputs.push_back(SymbolValue::make(output_node));
+            ValueRefList outputs(output_nodes.size());
+            for (size_t i = 0; i < output_nodes.size(); ++i) {
+                outputs[i] = SymbolValue::make(output_nodes[i]);
             }
             return outputs;
         } else if (auto* create_tensor = op.as<CreateTensor>()) {

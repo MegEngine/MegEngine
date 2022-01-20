@@ -18,6 +18,7 @@
 
 #include "megbrain/common.h"
 #include "megbrain/imperative/subgraph.h"
+#include "megbrain/imperative/utils/allocator.h"
 #include "megbrain/imperative/utils/local_ptr.h"
 #include "megbrain/imperative/utils/span.h"
 
@@ -25,6 +26,7 @@ namespace mgb {
 namespace imperative {
 
 class ValueRef;
+class ValueRefList;
 class Operator;
 class Transformation;
 
@@ -43,6 +45,7 @@ struct TransformationContext {
     // TODO: deprecate TransformationGuard, let next_transformation == frames.size()
     size_t next_transformation = 0;
     std::vector<TransformationFrame> frames;
+    ForwardAllocator<ValueRef> allocator;
 };
 
 /**
@@ -86,9 +89,9 @@ public:
      *
      * \param op
      * \param inputs
-     * \return std::vector<ValueRef>
+     * \return ValueRefList
      */
-    virtual std::vector<ValueRef> apply_transformation(
+    virtual ValueRefList apply_transformation(
             const Operator& op, Span<ValueRef> inputs) = 0;
 
     virtual ValueRef unwrap(ValueRef value) = 0;
@@ -187,11 +190,12 @@ public:
         std::swap(context.transformations, current_context.transformations);
         std::swap(context.scopes, current_context.scopes);
         std::swap(context.next_transformation, current_context.next_transformation);
+        std::swap(context.allocator, current_context.allocator);
     }
 
     static TransformationContext& get_context();
 
-    friend std::vector<ValueRef> apply(const Operator& op, Span<ValueRef> inputs);
+    friend ValueRefList apply(const Operator& op, Span<ValueRef> inputs);
     friend class ValueRef;
 };
 

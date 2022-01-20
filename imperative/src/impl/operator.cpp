@@ -3,7 +3,7 @@
 namespace mgb {
 namespace imperative {
 
-std::vector<ValueRef> Operator::fallback(Span<ValueRef> inputs) const {
+ValueRefList Operator::fallback(Span<ValueRef> inputs) const {
     mgb_throw(MegBrainError, "no fallback implementation for %s", to_string().c_str());
 }
 

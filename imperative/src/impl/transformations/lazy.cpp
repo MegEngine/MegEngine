@@ -21,7 +21,7 @@
 namespace mgb {
 namespace imperative {
 
-std::vector<ValueRef> LazyEvalTransformation::apply_transformation(
+ValueRefList LazyEvalTransformation::apply_transformation(
         const Operator& op, Span<ValueRef> inputs) {
     if (auto* op_val = op.as<ApplyOp>()) {
         static std::unordered_set<Typeinfo*> mm_io_ops = {
@@ -59,9 +59,9 @@ std::vector<ValueRef> LazyEvalTransformation::apply_transformation(
             mgb_assert(!output_nodes.empty());
             m_io_link = SymbolVar(output_nodes[0]);
         }
-        std::vector<ValueRef> outputs;
-        for (auto&& output_node : output_nodes) {
-            outputs.push_back(record_var(output_node));
+        ValueRefList outputs(output_nodes.size());
+        for (size_t i = 0; i < output_nodes.size(); ++i) {
+            outputs[i] = record_var(output_nodes[i]);
         }
         return outputs;
     } else if (auto* create_tensor = op.as<CreateTensor>()) {

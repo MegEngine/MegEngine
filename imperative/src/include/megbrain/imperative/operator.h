@@ -25,6 +25,8 @@
 namespace mgb {
 namespace imperative {
 
+using GenericFunction = std::function<ValueRefList(Span<ValueRef>)>;
+
 /**
  * \brief base class for all operators
  *
@@ -49,25 +51,24 @@ public:
     Kind kind() const { return m_kind; }
 
     template <typename U>
-    U* as() const {
+    const U* as() const {
         if (m_typecode != U::TYPE_CODE) {
             return nullptr;
         }
-        return static_cast<U*>(const_cast<Operator*>(this));
+        return static_cast<const U*>(this);
     }
     template <typename U>
     bool is() const {
-        return as<U>() != nullptr;
+        return m_typecode == U::TYPE_CODE;
     }
     template <Kind kKind>
     bool is() const {
         return kind() == kKind;
     }
     template <typename U>
-    U& cast() const {
-        U* ptr = as<U>();
-        mgb_assert(ptr);
-        return *ptr;
+    const U& cast() const {
+        mgb_assert(m_typecode == U::TYPE_CODE);
+        return static_cast<const U&>(*this);
     }
 
     virtual std::string to_string() const = 0;
@@ -77,9 +78,9 @@ public:
      * implementation.
      *
      * \param inputs
-     * \return std::vector<ValueRef>
+     * \return ValueRefList
      */
-    virtual std::vector<ValueRef> fallback(Span<ValueRef> inputs) const;
+    virtual ValueRefList fallback(Span<ValueRef> inputs) const;
 
     std::type_index type() const { return registered_types()[m_typecode]; }
 

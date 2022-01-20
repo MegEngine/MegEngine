@@ -23,16 +23,38 @@ public:
     using Handle = interpreter::Interpreter::Handle;
     using Channel = interpreter::Interpreter::Channel;
 
+    class RAIIHandle : public NonCopyableObj {
+    private:
+        Handle m_handle = nullptr;
+        Channel* m_channel = nullptr;
+
+    public:
+        RAIIHandle(Handle handle, Channel* channel)
+                : m_handle(handle), m_channel(channel) {}
+        ~RAIIHandle() { m_channel->del(m_handle); }
+
+        Handle handle() const { return m_handle; }
+
+        Channel* channel() const { return m_channel; }
+    };
+
 private:
-    std::shared_ptr<Handle> m_handle = nullptr;
+    LocalPtr<RAIIHandle> m_handle;
     std::string m_name;
+    mutable DTypeValue::ref_t m_dtype;
+    mutable CompNodeValue::ref_t m_comp_node;
+    mutable ShapeValue::ref_t m_shape;
 
 public:
     InterpreterInfo() = default;
-    InterpreterInfo(std::shared_ptr<Handle> handle, std::string name = {})
+    InterpreterInfo(LocalPtr<RAIIHandle> handle, std::string name = {})
             : m_handle(handle), m_name(name) {}
 
-    std::shared_ptr<Handle> handle() const { return m_handle; }
+    const LocalPtr<RAIIHandle>& handle() const { return m_handle; }
+
+    DTypeValue::ref_t dtype() const;
+    CompNodeValue::ref_t comp_node() const;
+    ShapeValue::ref_t shape() const;
 
     std::string name() const { return m_name; }
 };
@@ -60,6 +82,7 @@ class InterpreterTransformation final : public Transformation {
 public:
     using Interpreter = interpreter::Interpreter;
     using Handle = Interpreter::Handle;
+    using SharedHandle = LocalPtr<InterpreterInfo::RAIIHandle>;
     using Channel = Interpreter::Channel;
 
 private:
@@ -71,7 +94,14 @@ public:
 
     Channel* channel() { return m_channel.get(); }
 
-    std::vector<ValueRef> apply_transformation(
+    ValueRefList apply_op(const ApplyOp& apply_op, Span<ValueRef> inputs);
+
+    ValueRefList apply_get_attr(const GetAttr& get_attr, Span<ValueRef> inputs);
+
+    ValueRefList apply_create_tensor(
+            const CreateTensor& create_tensor, Span<ValueRef> inputs);
+
+    ValueRefList apply_transformation(
             const Operator& op, Span<ValueRef> inputs) override;
 
     ValueRef unwrap(ValueRef value) override {
@@ -81,14 +111,8 @@ public:
 
     std::string name() const override { return "InterpreterTransformation"; }
 
-    std::shared_ptr<Handle> share_handle(Handle handle) {
-        return std::shared_ptr<Handle>(
-                new Handle(handle), [channel = m_channel.get()](Handle* ptr) {
-                    if (ptr) {
-                        channel->del(*ptr);
-                        delete ptr;
-                    }
-                });
+    SharedHandle share_handle(Handle handle) {
+        return SharedHandle::make(handle, m_channel.get());
     }
 };
 

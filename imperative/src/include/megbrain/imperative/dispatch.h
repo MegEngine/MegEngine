@@ -36,11 +36,11 @@ namespace imperative {
  *
  * \param op
  * \param inputs
- * \return std::vector<ValueRef>
+ * \return ValueRefList
  */
-std::vector<ValueRef> apply(const Operator& op, Span<ValueRef> inputs);
-std::vector<ValueRef> apply(const OpDef& def, Span<ValueRef> inputs);
-std::vector<ValueRef> apply(Subgraph graph, Span<ValueRef> inputs);
+ValueRefList apply(const Operator& op, Span<ValueRef> inputs);
+ValueRefList apply(const OpDef& def, Span<ValueRef> inputs);
+ValueRefList apply(const Subgraph& graph, Span<ValueRef> inputs);
 
 template <typename... TArgs>
 constexpr bool is_all_value_ref_v =
@@ -49,7 +49,7 @@ constexpr bool is_all_value_ref_v =
 
 template <typename T, typename... TArgs>
 static auto apply(T&& op, TArgs&&... args)
-        -> std::enable_if_t<is_all_value_ref_v<TArgs...>, std::vector<ValueRef>> {
+        -> std::enable_if_t<is_all_value_ref_v<TArgs...>, ValueRefList> {
     ValueRef args_arr[sizeof...(TArgs)] = {std::forward<TArgs&&>(args)...};
     return imperative::apply(
             std::forward<T&&>(op),
@@ -63,7 +63,7 @@ static auto apply(T&& op, TContainer&& container) -> std::enable_if_t<
                 ValueRef> &&
                 std::is_same_v<decltype(container.size()), size_t> &&
                 !std::is_same_v<std::decay_t<TContainer>, Span<ValueRef>>,
-        std::vector<ValueRef>> {
+        ValueRefList> {
     return imperative::apply(
             std::forward<T&&>(op), Span<ValueRef>(container.data(), container.size()));
 }

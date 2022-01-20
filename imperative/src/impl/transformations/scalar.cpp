@@ -19,26 +19,8 @@ namespace imperative {
 
 namespace {
 
-using ScalarRule = std::function<std::vector<ValueRef>(const OpDef&, Span<ValueRef>)>;
-static std::unordered_map<
-        Typeinfo*, std::function<std::vector<ValueRef>(const OpDef&, Span<ValueRef>)>>
-        scalar_rules;
-
-ValueRef unwrap_input(ValueRef input) {
-    if (auto scalar_input = input.as_ref<ScalarValue>()) {
-        return scalar_input->value();
-    } else {
-        return input;
-    }
-}
-
-std::vector<ValueRef> unwrap_inputs(Span<ValueRef> inputs) {
-    std::vector<ValueRef> unwrapped_inputs;
-    for (auto&& input : inputs) {
-        unwrapped_inputs.push_back(unwrap_input(input));
-    }
-    return unwrapped_inputs;
-}
+using ScalarRule = ValueRefList (*)(const OpDef&, Span<ValueRef>, Span<bool>);
+static std::unordered_map<Typeinfo*, ScalarRule> scalar_rules;
 
 ValueRef make_scalar_shape(CompNode device) {
     HostTensorND scalar_shape(device, {1}, dtype::Int32());
@@ -49,9 +31,6 @@ ValueRef make_scalar_shape(CompNode device) {
 }
 
 bool is_scalar_shape(ValueRef shape) {
-    if (shape.is<ScalarValue>()) {
-        return false;
-    }
     // may have performance issue
     auto shape_of_shape = shape.shape();
     if (!shape_of_shape) {
@@ -61,74 +40,65 @@ bool is_scalar_shape(ValueRef shape) {
     return *shape_of_shape == ValueShape{0};
 }
 
-template <typename T>
-void register_scalar_rule(std::vector<ValueRef> (*rule)(const T&, Span<ValueRef>)) {
-    scalar_rules[T::typeinfo()] = [rule](const OpDef& def, Span<ValueRef> inputs) {
-        return (*rule)(def.cast_final_safe<T>(), inputs);
+template <typename T, ValueRefList (*rule)(const T&, Span<ValueRef>, Span<bool>)>
+void register_scalar_rule() {
+    scalar_rules[T::typeinfo()] = [](const OpDef& def, Span<ValueRef> inputs,
+                                     Span<bool> inputs_mask) {
+        return (*rule)(def.cast_final_safe<T>(), inputs, inputs_mask);
     };
 }
 
-std::vector<ValueRef> elemwise_rule(const Elemwise& elem, Span<ValueRef> inputs) {
+template <typename TOpDef, size_t nr_inputs>
+ValueRefList elemwise_rule(
+        const TOpDef& op_def, Span<ValueRef> inputs, Span<bool> inputs_mask) {
+    if constexpr (nr_inputs != 0) {
+        mgb_assert(inputs.size() == inputs.size(), "inputs size mismatch");
+    }
     bool all_scalar = true;
-    for (auto&& input : inputs) {
-        if (!input.is<ScalarValue>()) {
+    for (auto&& input_mask : inputs_mask) {
+        if (!input_mask) {
             all_scalar = false;
-            break;
         }
     }
-    auto output = imperative::apply(elem, unwrap_inputs(inputs))[0];
+    auto outputs = imperative::apply(op_def, inputs);
     if (all_scalar) {
-        return {ScalarValue::make(output)};
-    } else {
-        return {output};
+        outputs[0] = ScalarValue::make(outputs[0]);
     }
+    return outputs;
 }
 
-std::vector<ValueRef> remove_axis_rule(
-        const RemoveAxis& remove_axis, Span<ValueRef> inputs) {
-    mgb_assert(inputs.size() == 1);
-    mgb_assert(!inputs[0].is<ScalarValue>());
-    auto output = imperative::apply(remove_axis, inputs)[0];
-    bool is_scalar = inputs[0].shape()->ndim == remove_axis.axis.size();
+ValueRefList remove_axis_rule(
+        const RemoveAxis& remove_axis, Span<ValueRef> inputs, Span<bool> inputs_mask) {
+    mgb_assert(!inputs_mask.item());
+    bool is_scalar = inputs.item().shape()->ndim == remove_axis.axis.size();
+    if (is_scalar && remove_axis.axis.size() == 1) {
+        return {ScalarValue::make(inputs.item())};
+    }
+    auto outputs = imperative::apply(remove_axis, inputs);
     if (is_scalar) {
-        return {ScalarValue::make(output)};
-    } else {
-        return {output};
+        outputs[0] = ScalarValue::make(outputs[0]);
     }
+    return outputs;
 }
 
-std::vector<ValueRef> reduce_rule(const Reduce& reduce, Span<ValueRef> inputs) {
+ValueRefList reduce_rule(
+        const Reduce& reduce, Span<ValueRef> inputs, Span<bool> inputs_mask) {
     if (inputs.size() == 1) {
-        return imperative::apply(reduce, unwrap_inputs(inputs));
+        return imperative::apply(reduce, inputs);
     }
     mgb_assert(inputs.size() == 2);
     bool is_scalar = is_scalar_shape(inputs[1]);
     if (is_scalar) {
-        auto unwrapped_input = unwrap_input(inputs[0]);
-        CompNode device = *unwrapped_input.device();
-        return {ScalarValue::make(imperative::apply(
-                reduce, unwrapped_input, make_scalar_shape(device))[0])};
-    }
-    auto output = imperative::apply(reduce, unwrap_inputs(inputs))[0];
-    if (is_scalar) {
-        return {ScalarValue::make(output)};
-    } else {
-        return {output};
-    }
-}
-
-std::vector<ValueRef> typecvt_rule(const TypeCvt& typecvt, Span<ValueRef> inputs) {
-    mgb_assert(inputs.size() == 1);
-    if (auto scalar_input = inputs[0].as_ref<ScalarValue>()) {
+        CompNode device = *inputs[0].device();
         return {ScalarValue::make(
-                imperative::apply(typecvt, scalar_input->value())[0])};
-    } else {
-        return imperative::apply(typecvt, inputs);
+                imperative::apply(reduce, inputs[0], make_scalar_shape(device))[0])};
     }
+    return imperative::apply(reduce, inputs);
 }
 
-std::vector<ValueRef> collective_comm_rule(
-        const CollectiveComm& collective_comm, Span<ValueRef> inputs) {
+ValueRefList collective_comm_rule(
+        const CollectiveComm& collective_comm, Span<ValueRef> inputs,
+        Span<bool> inputs_mask) {
     mgb_assert(inputs.size() == 1);
     static std::unordered_set<CollectiveComm::Mode> modes = {
             CollectiveComm::Mode::ALL_REDUCE_MAX, CollectiveComm::Mode::ALL_REDUCE_MIN,
@@ -138,17 +108,17 @@ std::vector<ValueRef> collective_comm_rule(
     if (modes.count(collective_comm.mode) == 0) {
         return imperative::apply(collective_comm, inputs);
     }
-    if (auto scalar_input = inputs[0].as_ref<ScalarValue>()) {
-        return {ScalarValue::make(
-                imperative::apply(collective_comm, scalar_input->value())[0])};
+    if (inputs_mask.item()) {
+        return {ScalarValue::make(imperative::apply(collective_comm, inputs[0])[0])};
     } else {
         return imperative::apply(collective_comm, inputs);
     }
 }
 
-std::vector<ValueRef> param_pack_split_rule(
-        const ParamPackSplit& param_pack_split, Span<ValueRef> inputs) {
-    auto outputs = imperative::apply(param_pack_split, unwrap_inputs(inputs));
+ValueRefList param_pack_split_rule(
+        const ParamPackSplit& param_pack_split, Span<ValueRef> inputs,
+        Span<bool> inputs_mask) {
+    auto outputs = imperative::apply(param_pack_split, inputs);
     size_t nr_outputs = outputs.size();
     mgb_assert(nr_outputs == param_pack_split.shapes.size());
     for (size_t i = 0; i < nr_outputs; ++i) {
@@ -159,29 +129,28 @@ std::vector<ValueRef> param_pack_split_rule(
     return outputs;
 }
 
-std::vector<ValueRef> dot_rule(const Dot& dot, Span<ValueRef> inputs) {
-    return {ScalarValue::make(imperative::apply(dot, unwrap_inputs(inputs))[0])};
+ValueRefList dot_rule(const Dot& dot, Span<ValueRef> inputs, Span<bool> inputs_mask) {
+    return {ScalarValue::make(imperative::apply(dot, inputs)[0])};
 }
 
-std::vector<ValueRef> add_axis_rule(const AddAxis& add_axis, Span<ValueRef> inputs) {
+ValueRefList add_axis_rule(
+        const AddAxis& add_axis, Span<ValueRef> inputs, Span<bool> inputs_mask) {
     mgb_assert(inputs.size() == 1);
-    if (auto scalar_input = inputs[0].as_ref<ScalarValue>()) {
+    if (inputs_mask.item()) {
         mgb_assert(add_axis.axis[0] == 0);
         if (add_axis.axis.size() == 1) {
-            return {scalar_input->value()};
+            return {inputs[0]};
         } else {
             std::vector<int32_t> axis(add_axis.axis.begin() + 1, add_axis.axis.end());
-            return imperative::apply(
-                    ApplyOp(*AddAxis::make(axis, add_axis.scope())),
-                    scalar_input->value());
+            return imperative::apply(*AddAxis::make(axis, add_axis.scope()), inputs[0]);
         }
     } else {
         return imperative::apply(add_axis, inputs);
     }
 }
 
-std::vector<ValueRef> remote_recv_rule(
-        const RemoteRecv& remote_recv, Span<ValueRef> inputs) {
+ValueRefList remote_recv_rule(
+        const RemoteRecv& remote_recv, Span<ValueRef> inputs, Span<bool> inputs_mask) {
     if (remote_recv.shape.empty()) {
         std::vector<int32_t> shape = {1};
         auto remote_recv_no_scalar = RemoteRecv::make(
@@ -189,32 +158,32 @@ std::vector<ValueRef> remote_recv_rule(
                 remote_recv.rank_from, remote_recv.cn, shape, remote_recv.dtype,
                 remote_recv.backend);
         remote_recv_no_scalar->set_scope(remote_recv.scope());
-        return imperative::apply(
-                ApplyOp(*remote_recv_no_scalar), unwrap_inputs(inputs));
+        return imperative::apply(ApplyOp(*remote_recv_no_scalar), inputs);
     } else {
-        return imperative::apply(remote_recv, unwrap_inputs(inputs));
+        return imperative::apply(remote_recv, inputs);
     }
 }
 
-std::vector<ValueRef> check_no_finite_rule(
-        const CheckNonFinite& check_no_finite, Span<ValueRef> inputs) {
-    auto outputs = imperative::apply(check_no_finite, unwrap_inputs(inputs));
+ValueRefList check_no_finite_rule(
+        const CheckNonFinite& check_no_finite, Span<ValueRef> inputs,
+        Span<bool> inputs_mask) {
+    auto outputs = imperative::apply(check_no_finite, inputs);
     mgb_assert(outputs.size() == inputs.size() + 1, "output size mismatch");
     outputs.back() = ScalarValue::make(outputs.back());
     for (size_t i = 0; i < inputs.size(); ++i) {
-        if (inputs[i].is<ScalarValue>()) {
+        if (inputs_mask[i]) {
             outputs[i] = ScalarValue::make(outputs[i]);
         }
     }
     return outputs;
 }
 
-std::vector<ValueRef> subtensor_rule(
-        const Subtensor& subtensor, Span<ValueRef> inputs) {
+ValueRefList subtensor_rule(
+        const Subtensor& subtensor, Span<ValueRef> inputs, Span<bool> inputs_mask) {
     mgb_assert(inputs.size() >= 1);
     auto input = inputs[0];
     bool is_scalar;
-    mgb_assert(!input.is<ScalarValue>(), "subtensor shouldn't have scalar input");
+    mgb_assert(!inputs_mask[0], "subtensor shouldn't have scalar input");
     if (auto shape = input.shape()) {
         size_t ndim = input.shape()->ndim;
         for (auto&& [axis, begin, end, step, idx] : subtensor.items) {
@@ -226,25 +195,25 @@ std::vector<ValueRef> subtensor_rule(
     } else {
         is_scalar = false;
     }
-    auto output = imperative::apply(subtensor, unwrap_inputs(inputs))[0];
+    auto outputs = imperative::apply(subtensor, inputs);
     if (is_scalar) {
-        return {ScalarValue::make(output)};
-    } else {
-        return {output};
+        outputs[0] = ScalarValue::make(outputs[0]);
     }
+    return outputs;
 }
 
-std::vector<ValueRef> get_var_shape_rule(
-        const GetVarShape& get_var_shape, Span<ValueRef> inputs) {
+ValueRefList get_var_shape_rule(
+        const GetVarShape& get_var_shape, Span<ValueRef> inputs,
+        Span<bool> inputs_mask) {
     bool all_scalar = true;
     mgb_assert(inputs.size() >= 1);
-    for (auto&& input : inputs) {
-        if (!input.is<ScalarValue>()) {
+    for (auto&& input_mask : inputs_mask) {
+        if (!input_mask) {
             all_scalar = false;
         }
     }
     if (all_scalar) {
-        auto device = inputs[0].cast<ScalarValue>().value().device();
+        auto device = inputs[0].device();
         auto storage = HostStorage::make(*device);
         // storage->ensure_size(1);
         return imperative::apply(
@@ -252,88 +221,49 @@ std::vector<ValueRef> get_var_shape_rule(
                         CreateTensor::Const, *device, dtype::Int32(), ValueShape{0}),
                 storage);
     } else {
-        return imperative::apply(get_var_shape, unwrap_inputs(inputs));
+        return imperative::apply(get_var_shape, inputs);
     }
 }
 
-std::vector<ValueRef> fastpath_copy_rule(
-        const FastpathCopy& fastpath_copy, Span<ValueRef> inputs) {
-    mgb_assert(inputs.size() == 1);
-    bool is_scalar = inputs[0].is<ScalarValue>();
-    auto output = imperative::apply(fastpath_copy, unwrap_inputs(inputs))[0];
-    if (is_scalar) {
-        return {ScalarValue::make(output)};
-    } else {
-        return {output};
-    }
-}
-
-std::vector<ValueRef> reshape_rule(const Reshape& reshape, Span<ValueRef> inputs) {
+ValueRefList reshape_rule(
+        const Reshape& reshape, Span<ValueRef> inputs, Span<bool> inputs_mask) {
     mgb_assert(inputs.size() == 2);
     bool is_scalar = is_scalar_shape(inputs[1]);
-    auto unwrapped_input = inputs[0].is<ScalarValue>()
-                                 ? inputs[0].cast<ScalarValue>().value()
-                                 : inputs[0];
     if (is_scalar) {
         return {ScalarValue::make(imperative::apply(
-                reshape, unwrapped_input,
-                make_scalar_shape(*unwrapped_input.device()))[0])};
+                reshape, inputs[0], make_scalar_shape(*inputs[0].device()))[0])};
     } else {
-        return imperative::apply(reshape, unwrap_inputs(inputs));
+        return imperative::apply(reshape, inputs);
     }
 }
 
-std::vector<ValueRef> broadcast_rule(
-        const Broadcast& broadcast, Span<ValueRef> inputs) {
+ValueRefList broadcast_rule(
+        const Broadcast& broadcast, Span<ValueRef> inputs, Span<bool> inputs_mask) {
     mgb_assert(inputs.size() == 2);
     bool is_scalar = is_scalar_shape(inputs[1]);
-    auto unwrapped_input = inputs[0].is<ScalarValue>()
-                                 ? inputs[0].cast<ScalarValue>().value()
-                                 : inputs[0];
     if (is_scalar) {
         return {ScalarValue::make(imperative::apply(
-                broadcast, unwrapped_input,
-                make_scalar_shape(*unwrapped_input.device()))[0])};
+                broadcast, inputs[0], make_scalar_shape(*inputs[0].device()))[0])};
     } else {
-        return imperative::apply(broadcast, unwrap_inputs(inputs));
-    }
-}
-
-std::vector<ValueRef> copy_rule(const Copy& copy, Span<ValueRef> inputs) {
-    mgb_assert(inputs.size() == 1);
-    bool is_scalar = inputs[0].is<ScalarValue>();
-    if (is_scalar) {
-        return {ScalarValue::make(imperative::apply(copy, unwrap_inputs(inputs))[0])};
-    } else {
-        return imperative::apply(copy, unwrap_inputs(inputs));
-    }
-}
-
-std::vector<ValueRef> inplace_add_rule(
-        const InplaceAdd& inplace_add, Span<ValueRef> inputs) {
-    mgb_assert(inputs.size() == 4);
-    bool is_scalar = inputs[0].is<ScalarValue>();
-    if (is_scalar) {
-        return {ScalarValue::make(
-                imperative::apply(inplace_add, unwrap_inputs(inputs))[0])};
-    } else {
-        return imperative::apply(inplace_add, unwrap_inputs(inputs));
+        return imperative::apply(broadcast, inputs);
     }
 }
 
 template <typename T>
-std::vector<ValueRef> subgraph_op_rule(const T& op, Span<ValueRef> inputs) {
+ValueRefList subgraph_op_rule(
+        const T& op, Span<ValueRef> inputs, Span<bool> inputs_mask,
+        const Type<ScalarValue>& scalar_type) {
     // TODO: add flag instead of assume
     bool all_scalar = true;
-    for (auto&& input : inputs) {
-        if (!input.is<ScalarValue>()) {
+    for (auto&& input_mask : inputs_mask) {
+        if (!input_mask) {
             all_scalar = false;
         }
     }
-    auto outputs = imperative::apply(op, unwrap_inputs(inputs));
+    auto outputs = imperative::apply(op, inputs);
     if (all_scalar) {
         for (auto& output : outputs) {
-            output = ScalarValue::make(output);
+            output = scalar_type.make(output);
         }
     }
     return outputs;
@@ -341,38 +271,98 @@ std::vector<ValueRef> subgraph_op_rule(const T& op, Span<ValueRef> inputs) {
 
 struct ScalarRuleRegistry {
     ScalarRuleRegistry() {
-        register_scalar_rule(elemwise_rule);
-        register_scalar_rule(remove_axis_rule);
-        register_scalar_rule(reduce_rule);
-        register_scalar_rule(typecvt_rule);
-        register_scalar_rule(collective_comm_rule);
-        register_scalar_rule(param_pack_split_rule);
-        register_scalar_rule(dot_rule);
-        register_scalar_rule(add_axis_rule);
-        register_scalar_rule(remote_recv_rule);
-        register_scalar_rule(check_no_finite_rule);
-        register_scalar_rule(subtensor_rule);
-        register_scalar_rule(get_var_shape_rule);
-        register_scalar_rule(fastpath_copy_rule);
-        register_scalar_rule(reshape_rule);
-        register_scalar_rule(broadcast_rule);
-        register_scalar_rule(copy_rule);
-        register_scalar_rule(inplace_add_rule);
-        register_scalar_rule(subgraph_op_rule<SubgraphOp>);
-        register_scalar_rule(subgraph_op_rule<CompiledOp>);
+        register_scalar_rule<Elemwise, elemwise_rule<Elemwise, 0>>();
+        register_scalar_rule<RemoveAxis, remove_axis_rule>();
+        register_scalar_rule<Reduce, reduce_rule>();
+        register_scalar_rule<TypeCvt, elemwise_rule<TypeCvt, 1>>();
+        register_scalar_rule<CollectiveComm, collective_comm_rule>();
+        register_scalar_rule<ParamPackSplit, param_pack_split_rule>();
+        register_scalar_rule<Dot, dot_rule>();
+        register_scalar_rule<AddAxis, add_axis_rule>();
+        register_scalar_rule<RemoteRecv, remote_recv_rule>();
+        register_scalar_rule<CheckNonFinite, check_no_finite_rule>();
+        register_scalar_rule<Subtensor, subtensor_rule>();
+        register_scalar_rule<GetVarShape, get_var_shape_rule>();
+        register_scalar_rule<FastpathCopy, elemwise_rule<FastpathCopy, 1>>();
+        register_scalar_rule<Reshape, reshape_rule>();
+        register_scalar_rule<Broadcast, broadcast_rule>();
+        register_scalar_rule<Copy, elemwise_rule<Copy, 1>>();
+        register_scalar_rule<InplaceAdd, elemwise_rule<InplaceAdd, 4>>();
+        register_scalar_rule<SubgraphOp, subgraph_op_rule<SubgraphOp>>();
+        register_scalar_rule<CompiledOp, subgraph_op_rule<CompiledOp>>();
     }
 } _;
 }  // namespace
 
-std::vector<ValueRef> ScalarTransformation::apply_transformation(
+ValueRefList ScalarTransformation::apply_get_attr(
+        const GetAttr& get_attr, Span<ValueRef> inputs) {
+    auto&& input = inputs.item();
+    bool is_scalar = input.is<ScalarValue>();
+    if (!is_scalar) {
+        return imperative::apply(get_attr, input);
+    }
+    auto unwrapped_input = input.cast<ScalarValue>().value();
+    if (get_attr.attr() == GetAttr::Shape) {
+        if (!m_empty_shape) {
+            m_empty_shape = ShapeValue::make();
+        }
+        return {m_empty_shape};
+    } else {
+        auto outputs = imperative::apply(get_attr, unwrapped_input);
+        auto& output = outputs[0];
+        switch (get_attr.attr()) {
+            case GetAttr::Value: {
+                auto& hv = output.cast<HostValue>();
+                mgb_assert(
+                        hv.shape() == ValueShape({1}),
+                        "underlying value should has shape {1}, got %s",
+                        hv.shape().to_string().c_str());
+                output = HostValue::make(hv.dtype(), ValueShape(), hv.storage());
+                break;
+            }
+            case GetAttr::Data: {
+                auto& dv = output.cast<DeviceValue>();
+                mgb_assert(
+                        dv.shape() == ValueShape({1}),
+                        "underlying value should has shape {1}, got %s",
+                        dv.shape().to_string().c_str());
+                output = DeviceValue::make(dv.dtype(), ValueShape(), dv.storage());
+                break;
+            }
+            default:
+                break;
+        }
+        return outputs;
+    }
+}
+
+ValueRefList ScalarTransformation::apply_transformation(
         const Operator& op, Span<ValueRef> inputs) {
+    if (auto* get_attr = op.as<GetAttr>()) {
+        // fastpath for GetAttr
+        return apply_get_attr(*get_attr, inputs);
+    }
+    size_t nr_inputs = inputs.size();
+    ValueRefList unwrapped_inputs(nr_inputs);
+    bool inputs_mask[nr_inputs];
+    for (size_t i = 0; i < inputs.size(); ++i) {
+        if (auto scalar_value = inputs[i].as_ref<ScalarValue>()) {
+            unwrapped_inputs[i] = scalar_value->value();
+            inputs_mask[i] = true;
+        } else {
+            unwrapped_inputs[i] = inputs[i];
+            inputs_mask[i] = false;
+        }
+    }
+    auto fallback = [&] { return imperative::apply(op, unwrapped_inputs); };
     if (auto apply_op = op.as<ApplyOp>()) {
         auto iter = scalar_rules.find(apply_op->op().dyn_typeinfo());
         if (iter != scalar_rules.end()) {
-            return iter->second(apply_op->op(), inputs);
+            return iter->second(
+                    apply_op->op(), unwrapped_inputs, {inputs_mask, nr_inputs});
         } else {
             // TODO: repeat op
-            return imperative::apply(op, unwrap_inputs(inputs));
+            return fallback();
         }
     } else if (auto* create_tensor = op.as<CreateTensor>()) {
         if (create_tensor->shape().is_scalar()) {
@@ -384,47 +374,19 @@ std::vector<ValueRef> ScalarTransformation::apply_transformation(
         } else {
             return imperative::apply(op, inputs);
         }
-    } else if (auto* get_attr = op.as<GetAttr>()) {
-        bool is_scalar = inputs.as_array<1>()[0].is<ScalarValue>();
-        auto output = imperative::apply(op, unwrap_inputs(inputs))[0];
-        if (!is_scalar) {
-            return {output};
-        }
-        switch (get_attr->attr()) {
-            case GetAttr::Shape: {
-                // Scalar Shape
-                return {ShapeValue::make()};
-            }
-            case GetAttr::Value: {
-                auto& hv = output.cast<HostValue>();
-                mgb_assert(
-                        hv.shape() == ValueShape({1}),
-                        "underlying value should has shape {1}, got %s",
-                        hv.shape().to_string().c_str());
-                return {HostValue::make(hv.dtype(), ValueShape(), hv.storage())};
-            }
-            case GetAttr::Data: {
-                auto& dv = output.cast<DeviceValue>();
-                mgb_assert(
-                        dv.shape() == ValueShape({1}),
-                        "underlying value should has shape {1}, got %s",
-                        dv.shape().to_string().c_str());
-                return {DeviceValue::make(dv.dtype(), ValueShape(), dv.storage())};
-            }
-            default:
-                return {output};
-        }
     } else if (op.as<IsScalar>()) {
-        return {BoolValue::make(inputs.as_array<1>()[0].is<ScalarValue>())};
+        mgb_assert(nr_inputs == 1);
+        return {BoolValue::make(inputs_mask[0])};
     } else if (op.is<Operator::IdentityLike>()) {
-        bool is_scalar = inputs.as_array<1>()[0].is<ScalarValue>();
+        mgb_assert(nr_inputs == 1);
+        bool is_scalar = inputs_mask[0];
+        auto outputs = fallback();
         if (is_scalar) {
-            return {ScalarValue::make(imperative::apply(op, unwrap_inputs(inputs))[0])};
-        } else {
-            return imperative::apply(op, inputs);
+            outputs[0] = ScalarValue::make(outputs[0]);
         }
+        return outputs;
     } else {
-        return imperative::apply(op, unwrap_inputs(inputs));
+        return fallback();
     }
 };
 

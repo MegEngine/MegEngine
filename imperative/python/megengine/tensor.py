@@ -84,14 +84,15 @@ class Tensor(_Tensor, ArrayMethodMixin):
         device: str = None,
         is_const: bool = False,
         no_cache: bool = False,
-        name: str = "",
+        name: str = None,
     ):
         if name is None:
             name = ""
+        else:
+            self._set_name(name)
         self._custom_name = name
         self._name = name
         self._short_name = name
-        self._set_name(self._name)
         self._prefix = None
 
     @property

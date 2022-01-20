@@ -16,6 +16,8 @@
 #include "megbrain/imperative/utils/mempool.h"
 #include "megbrain/utils/metahelper.h"
 
+#define MGB_FAT_LOCAL_PTR 0
+
 namespace mgb::imperative {
 
 template <typename T>
@@ -51,6 +53,8 @@ private:
             // dead
         }
     }
+
+    size_t ref_count() const { return m_ref_count; }
 
     template <typename U>
     friend class LocalPtr;
@@ -88,14 +92,24 @@ public:
     using storage_t = LocalPtrStorage<T>;
     using pool_t = MemPool<storage_t>;
     using weak_type = LocalWeakPtr<T>;
+    using pointer_t = T*;
 
 private:
     storage_t* m_storage = nullptr;
+
+#if MGB_FAT_LOCAL_PTR
+    pointer_t m_pointer = nullptr;
+#endif
+
+    // (m_storage == nullptr) == (m_pointer == nullptr)
 
     void emplace(storage_t* ptr) {
         if (ptr) {
             ptr->inc_ref();
             m_storage = ptr;
+#if MGB_FAT_LOCAL_PTR
+            m_pointer = ptr->m_pointer;
+#endif
         }
     }
 
@@ -103,8 +117,22 @@ private:
 
 public:
     LocalPtr() = default;
-    LocalPtr(const LocalPtr& rhs) { (*this) = rhs; }
-    LocalPtr(LocalPtr&& rhs) { (*this) = std::move(rhs); }
+    LocalPtr(const LocalPtr& rhs) {
+        auto storage = rhs.m_storage;
+        if (storage) {
+            storage->inc_ref();
+        }
+        m_storage = storage;
+#if MGB_FAT_LOCAL_PTR
+        m_pointer = rhs.m_pointer;
+#endif
+    }
+    LocalPtr(LocalPtr&& rhs) {
+        std::swap(m_storage, rhs.m_storage);
+#if MGB_FAT_LOCAL_PTR
+        std::swap(m_pointer, rhs.m_pointer);
+#endif
+    }
     LocalPtr& operator=(const LocalPtr& rhs) {
         if (this == &rhs) {
             return *this;
@@ -115,9 +143,11 @@ public:
         }
         if (m_storage) {
             m_storage->dec_ref();
-            // rhs.m_storage may be invalid here
         }
         m_storage = storage;
+#if MGB_FAT_LOCAL_PTR
+        m_pointer = rhs.m_pointer;
+#endif
         return *this;
     }
     LocalPtr& operator=(LocalPtr&& rhs) {
@@ -125,6 +155,9 @@ public:
             return *this;
         }
         std::swap(m_storage, rhs.m_storage);
+#if MGB_FAT_LOCAL_PTR
+        std::swap(m_pointer, rhs.m_pointer);
+#endif
         rhs.reset();
         return *this;
     }
@@ -186,10 +219,11 @@ public:
     T& operator*() const { return *get(); }
 
     T* get() const {
-        if ((!m_storage) || !m_storage->m_pointer) {
-            return nullptr;
-        }
-        return m_storage->m_pointer;
+#if MGB_FAT_LOCAL_PTR
+        return m_pointer;
+#else
+        return m_storage ? m_storage->m_pointer : nullptr;
+#endif
     }
 
     T* operator->() const { return get(); }
@@ -202,6 +236,9 @@ public:
         if (m_storage) {
             m_storage->dec_ref();
             m_storage = nullptr;
+#if MGB_FAT_LOCAL_PTR
+            m_pointer = nullptr;
+#endif
         }
     }
 

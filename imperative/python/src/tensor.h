@@ -39,7 +39,7 @@ namespace mgb::imperative::python {
 extern interpreter::Interpreter::Channel* interpreter_for_py;
 extern PyTypeObject* py_tensor_type;
 
-struct Tensor : std::enable_shared_from_this<Tensor>, NonCopyableObj {
+struct Tensor : NonCopyableObj {
 private:
     std::string m_name;
     ValueRef m_data;
@@ -52,7 +52,7 @@ public:
     ~Tensor() = default;
 
     inline std::shared_ptr<Tensor> copy() {
-        auto ret = std::make_shared<Tensor>(m_data.unwrap());
+        auto ret = std::make_shared<Tensor>(m_data);
         ret->m_name = m_name;
         return ret;
     }

@@ -11,6 +11,7 @@
 
 #pragma once
 
+#include "megbrain/imperative/basic_operators.h"
 #include "megbrain/imperative/dispatch.h"
 #include "megbrain/imperative/ops/autogen.h"
 
@@ -45,8 +46,10 @@ public:
  */
 class ScalarTransformation final : public Transformation {
 private:
+    ShapeValue::ref_t m_empty_shape;  // []
 public:
-    std::vector<ValueRef> apply_transformation(
+    ValueRefList apply_get_attr(const GetAttr& get_attr, Span<ValueRef> inputs);
+    ValueRefList apply_transformation(
             const Operator& op, Span<ValueRef> inputs) override;
 
     ValueRef unwrap(ValueRef value) override {

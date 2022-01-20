@@ -34,9 +34,7 @@ struct BackwardGraphWithClosure {
             std::shared_ptr<OptimizedBackwardGraphResult> backward_graph,
             std::shared_ptr<OpDef> op, Span<ValueRef> inputs, Span<ValueRef> outputs);
 
-    void operator()(
-            std::vector<ValueRef> grads,
-            std::function<void(size_t, ValueRef)> receiver);
+    void operator()(ValueRefList grads, std::function<void(size_t, ValueRef)> receiver);
 
     bool input_has_grad(size_t i) { return backward_graph->input_has_grad[i]; }
 
@@ -50,12 +48,11 @@ struct BackwardGraphWithClosure {
 
 struct CustomBackward;
 
-using GradRuleFn =
-        std::function<std::vector<ValueRef>(Span<ValueRef> inputs, CustomBackward&)>;
+using GradRuleFn = std::function<ValueRefList(Span<ValueRef> inputs, CustomBackward&)>;
 
 struct CustomBackward {
-    using BackwardFn = std::function<std::vector<ValueRef>(Span<ValueRef>)>;
-    using BackwardRule = std::function<std::optional<std::vector<ValueRef>>(
+    using BackwardFn = std::function<ValueRefList(Span<ValueRef>)>;
+    using BackwardRule = std::function<std::optional<ValueRefList>(
             const OpDef&, Span<ValueRef>, Span<bool>, CustomBackward&)>;
     BackwardFn m_backward;
     SmallVector<bool, 8> m_input_has_grad;
@@ -65,9 +62,7 @@ struct CustomBackward {
     SmallVector<OutputAttr> m_output_attrs;
 
 public:
-    void operator()(
-            std::vector<ValueRef> grads,
-            std::function<void(size_t, ValueRef)> receiver);
+    void operator()(ValueRefList grads, std::function<void(size_t, ValueRef)> receiver);
 
     bool input_has_grad(size_t i) { return m_input_has_grad[i]; }
     bool output_requires_grad(size_t i) { return m_output_attrs[i].requires_grad; }
@@ -188,7 +183,7 @@ public:
 
     std::string to_string() const override;
 
-    bool has_key(std::shared_ptr<GradKey> key) const { return m_key == key; }
+    bool has_key(const std::shared_ptr<GradKey>& key) const { return m_key == key; }
 
     const GradSlotPtr& slot_for(std::shared_ptr<GradKey> key) const {
         mgb_assert(m_key == key);
@@ -287,7 +282,7 @@ public:
         return false;
     }
 
-    std::vector<ValueRef> apply_transformation(
+    ValueRefList apply_transformation(
             const Operator& op, Span<ValueRef> inputs) override;
 
     ValueRef unwrap(ValueRef value) override {
@@ -314,7 +309,7 @@ private:
 public:
     std::string to_string() const override { return "DetachValue"; }
 
-    std::vector<ValueRef> fallback(Span<ValueRef> inputs) const override {
+    ValueRefList fallback(Span<ValueRef> inputs) const override {
         return {inputs.as_array<1>()[0]};
     }
 };
@@ -325,7 +320,7 @@ private:
 
 public:
     AttachGrad(std::shared_ptr<GradKey> key) : m_key(key) {}
-    std::shared_ptr<GradKey> key() { return m_key; }
+    std::shared_ptr<GradKey> key() const { return m_key; }
 
     std::string to_string() const override {
         return ssprintf("AttachGradValue{key=%s}", m_key->name().c_str());
@@ -339,7 +334,7 @@ private:
 public:
     GradBackward(std::shared_ptr<GradKey> key) : m_key(key) {}
 
-    std::shared_ptr<GradKey> key() { return m_key; }
+    std::shared_ptr<GradKey> key() const { return m_key; }
 
     std::string to_string() const override {
         return ssprintf("GradBackwardValue{key=%s}", m_key->name().c_str());
@@ -352,13 +347,13 @@ private:
 
 public:
     IsAttachedTo(std::shared_ptr<GradKey> key) : m_key(key) {}
-    std::shared_ptr<GradKey> key() { return m_key; }
+    std::shared_ptr<GradKey> key() const { return m_key; }
 
     std::string to_string() const override {
         return ssprintf("IsAttachedToValue{key=%s}", m_key->name().c_str());
     }
 
-    std::vector<ValueRef> fallback(Span<ValueRef> inputs) const override {
+    ValueRefList fallback(Span<ValueRef> inputs) const override {
         return {BoolValue::make(false)};
     }
 };
@@ -373,9 +368,9 @@ public:
     SetGrad(std::shared_ptr<GradKey> key, GenericFunction grad_fn, size_t nr_inputs)
             : m_key(key), m_grad_fn(grad_fn), m_nr_inputs(nr_inputs) {}
 
-    GenericFunction grad_fn() { return m_grad_fn; }
+    GenericFunction grad_fn() const { return m_grad_fn; }
 
-    size_t nr_inputs() { return m_nr_inputs; }
+    size_t nr_inputs() const { return m_nr_inputs; }
 
     std::string to_string() const override {
         return ssprintf("SetGradValue{key=%s}", m_key->name().c_str());
@@ -388,9 +383,7 @@ public:
 
     std::string to_string() const override { return ssprintf("GetGradKeyValue{}"); }
 
-    std::vector<ValueRef> fallback(Span<ValueRef> inputs) const override {
-        return {ValueRef()};
-    }
+    ValueRefList fallback(Span<ValueRef> inputs) const override { return {ValueRef()}; }
 };
 
 class GetBackwardColsure
@@ -401,7 +394,7 @@ private:
 public:
     GetBackwardColsure(std::shared_ptr<GradKey> key) : m_key(key) {}
 
-    std::shared_ptr<GradKey> key() { return m_key; }
+    std::shared_ptr<GradKey> key() const { return m_key; }
 
     std::string to_string() const override {
         return ssprintf("GetBackwardClosure{key=%s}", m_key->name().c_str());
