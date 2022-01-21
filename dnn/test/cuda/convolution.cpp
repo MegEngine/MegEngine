@@ -901,6 +901,43 @@ TEST_F(CUDA, CONVOLUTION_BWD_DATA_BENCHMARK) {
     run(32, 64, 64, 56, 56, 1, 1, 0);
 }
 
+TEST_F(CUDA, BENCHMARK_CONVOLUTION_BWD_DATA_CHANWISE_SMALL_FEAT_LARGE_FILTER) {
+    CUBenchmarker<ConvolutionBackwardData> bench{handle_cuda()};
+    std::unique_ptr<OprProxy<ConvolutionBackwardData>> proxy{
+            new OprProxy<ConvolutionBackwardData>{true}};
+    size_t RUNS = 10;
+    bench.set_proxy(proxy).set_times(RUNS);
+
+    auto run = [&](size_t N, size_t OC, size_t g, size_t IH, size_t IW, size_t FH,
+                   size_t SH, size_t PH) {
+        bench.set_dtype(0, dtype::Float32())
+                .set_dtype(1, dtype::Float32())
+                .set_dtype(2, dtype::Float32());
+        param::Convolution param;
+        param.stride_h = param.stride_w = SH;
+        param.pad_h = param.pad_w = FH / 2;
+        param.sparse = param::Convolution::Sparse::GROUP;
+        bench.set_param(param);
+        bench.proxy()->target_execution_policy.algo.reset();
+        TensorLayout src{{N, g, IH, IW}, dtype::Float32()},
+                filter{{g, 1, 1, FH, FH}, dtype::Float32()};
+        TensorLayout dst;
+        {
+            auto&& opr = handle_cuda()->create_operator<Convolution>();
+            opr->param() = param;
+            opr->deduce_layout(src, filter, dst);
+        }
+        auto time_ms_fp32 = bench.execl({filter, dst, src}) / RUNS;
+        float flo = 2.0 * N * g * dst[2] * dst[3] * FH * FH;
+        printf("inp=%s, kern=%s, dst=%s ", src.to_string().c_str(),
+               filter.to_string().c_str(), dst.to_string().c_str());
+        printf("time_fp32=%.2fms, flops=%.3fTFLOPS\n", time_ms_fp32,
+               (flo / (time_ms_fp32 * 1e9)));
+    };
+
+    run(64, 384, 384, 32, 32, 31, 1, 15);
+}
+
 TEST_F(CUDA, BENCHMARK_CONVOLUTION_BWD_DATA_BF16) {
     CUBenchmarker<ConvolutionBackwardData> bench{handle_cuda()};
     std::unique_ptr<OprProxy<ConvolutionBackwardData>> proxy{
@@ -1065,6 +1102,46 @@ TEST_F(CUDA, CONVOLUTION_BWD_FILTER_BENCHMARK) {
     run(32, 512, 1024, 14, 14, 1, 2, 0);
     run(32, 64, 64, 56, 56, 1, 1, 0);
 }
+
+TEST_F(CUDA, BENCHMARK_CONVOLUTION_BWD_FILTER_CHANWISE_SMALL_FEAT_LARGE_FILTER) {
+    CUBenchmarker<ConvolutionBackwardFilter> bench{handle_cuda()};
+    std::unique_ptr<OprProxy<ConvolutionBackwardFilter>> proxy{
+            new OprProxy<ConvolutionBackwardFilter>{true}};
+    size_t RUNS = 10;
+    bench.set_proxy(proxy).set_times(RUNS);
+
+    bench.set_before_exec_callback(AlgoChecker<ConvolutionBackwardFilter>(
+            "CUDNN_CONVOLUTION_BWD_FILTER_ALGO_FFTv7.6.3"));
+
+    auto run = [&](size_t N, size_t OC, size_t g, size_t IH, size_t IW, size_t FH,
+                   size_t SH, size_t PH) {
+        bench.set_dtype(0, dtype::Float32())
+                .set_dtype(1, dtype::Float32())
+                .set_dtype(2, dtype::Float32());
+        param::Convolution param;
+        param.stride_h = param.stride_w = SH;
+        param.pad_h = param.pad_w = FH / 2;
+        param.sparse = param::Convolution::Sparse::GROUP;
+        bench.set_param(param);
+        bench.proxy()->target_execution_policy.algo.reset();
+        TensorLayout src{{N, g, IH, IW}, dtype::Float32()},
+                filter{{g, 1, 1, FH, FH}, dtype::Float32()};
+        TensorLayout dst;
+        {
+            auto&& opr = handle_cuda()->create_operator<Convolution>();
+            opr->param() = param;
+            opr->deduce_layout(src, filter, dst);
+        }
+        auto time_ms_fp32 = bench.execl({src, dst, filter}) / RUNS;
+        float flo = 2.0 * N * g * dst[2] * dst[3] * FH * FH;
+        printf("inp=%s, kern=%s, dst=%s ", src.to_string().c_str(),
+               filter.to_string().c_str(), dst.to_string().c_str());
+        printf("time_fp32=%.2fms, flops=%.3fTFLOPS\n", time_ms_fp32,
+               (flo / (time_ms_fp32 * 1e9)));
+    };
+    run(64, 384, 384, 32, 32, 31, 1, 15);
+}
+
 #endif
 
 #undef CUDNN_VERSION_STRING
