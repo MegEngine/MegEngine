@@ -50,7 +50,9 @@ _sh = _stream_helper()
 
 
 def _valid_device(inp):
-    if isinstance(inp, str) and re.match("^([cxg]pu|rocm)(\d+|\d+:\d+|x)$", inp):
+    if isinstance(inp, str) and re.match(
+        "^([cxg]pu|rocm|multithread)(\d+|\d+:\d+|x)$", inp
+    ):
         return True
     return False
 
