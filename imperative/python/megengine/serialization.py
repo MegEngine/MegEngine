@@ -13,14 +13,14 @@ from .tensor import Tensor
 from .utils.max_recursion_limit import max_recursion_limit
 
 
-def save(obj, f, pickle_module=pickle, pickle_protocol=pickle.HIGHEST_PROTOCOL):
+def save(obj, f, pickle_module=pickle, pickle_protocol=pickle.DEFAULT_PROTOCOL):
     r"""Save an object to disk file.
 
     Args:
         obj: object to save. Only ``module`` or ``state_dict`` are allowed.
         f: a string of file name or a text file object to which ``obj`` is saved to.
         pickle_module: Default: ``pickle``.
-        pickle_protocol: Default: ``pickle.HIGHEST_PROTOCOL``.
+        pickle_protocol: Default: ``pickle.DEFAULT_PROTOCOL``.
     """
     if isinstance(f, str):
         with open(f, "wb") as fout:
