@@ -22,7 +22,6 @@
 #include "src/cuda/conv_bias/opr_impl.h"
 #include "src/cuda/convolution_helper/parameter.cuh"
 #include "src/cuda/cudnn_wrapper.h"
-#include "src/cuda/handle.h"
 
 #include <cuda.h>
 #include <memory>
@@ -57,6 +56,7 @@ public:
         CUDA_CUDNN_CONVBIAS,
         CUDA_CHANWISE,
         CUDA_CHANWISE_SMALL,
+        CUDA_DEPTHWISE_LARGE_FILTER,
         CUDA_CHANWISE_INT8X8X32,
         CUDA_CUDNN_CONV,
         CUDA_INPLACE_MATMUL,
@@ -251,6 +251,26 @@ public:
         return m_name.c_str();
     }
     MEGDNN_DECL_ALGO_TYPE(CUDA_CHANWISE_SMALL)
+    AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }
+
+private:
+    mutable std::string m_name;
+};
+
+class ConvBiasForwardImpl::AlgoDepthwiseLargeFilter final : public AlgoBase {
+public:
+    bool is_available(const SizeArgs& args) const override;
+    size_t get_workspace_in_bytes(const SizeArgs& args) const override;
+    void exec(const ExecArgs& args) const override;
+
+    const char* name() const override {
+        if (m_name.empty()) {
+            m_name = ConvBiasForward::algo_name<DirectParam>(
+                    "DEPTHWISE_LARGE_FILTER", {});
+        }
+        return m_name.c_str();
+    }
+    MEGDNN_DECL_ALGO_TYPE(CUDA_DEPTHWISE_LARGE_FILTER)
     AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }
 
 private:
@@ -1084,6 +1104,7 @@ public:
     AlgoFallbackNCHWQS8 fallback_nchw_qs8;
     AlgoChanwise chanwise;
     AlgoChanwiseSmall chanwise_small;
+    AlgoDepthwiseLargeFilter depthwise_large_filter;
     AlgoChanwise8x8x32 chanwise8x8x32;
     AlgoInplaceMatmul inplace_matmul;
     AlgoMatmul matmul;

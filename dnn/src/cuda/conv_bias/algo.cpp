@@ -19,6 +19,7 @@ using namespace cuda;
 ConvBiasForwardImpl::AlgoPack::AlgoPack() {
     non_cudnn_algos.push_back(&chanwise);
     non_cudnn_algos.push_back(&chanwise_small);
+    non_cudnn_algos.push_back(&depthwise_large_filter);
 
     non_cudnn_algos.push_back(&inplace_matmul);
     non_cudnn_algos.push_back(&matmul);
@@ -34,6 +35,7 @@ ConvBiasForwardImpl::AlgoPack::AlgoPack() {
     std::vector<AlgoBase*> conv_algos;
     conv_algos.push_back(&chanwise);
     conv_algos.push_back(&chanwise_small);
+    conv_algos.push_back(&depthwise_large_filter);
     conv_algos.push_back(&chanwise8x8x32);
     for (auto&& algo : cudnn_convs) {
         conv_algos.push_back(&algo);

@@ -61,6 +61,10 @@ template <typename T>
 void run_fwd_small(
         T* dst, const T* src, const T* flt, const Param& param, cudaStream_t stream);
 
+template <typename T>
+void run_fwd_depthwise_large_filter(
+        T* dst, const T* src, const T* flt, const Param& param, cudaStream_t stream);
+
 // implemented in fwd_8x8x32.cu
 void run_fwd_8x8x32(
         int32_t* dst, const int8_t* src, const int8_t* flt, const Param& param,

@@ -45,6 +45,7 @@ public:
     class AlgoCUDNNConvBiasActivation;
     class AlgoChanwise;
     class AlgoChanwiseSmall;
+    class AlgoDepthwiseLargeFilter;
     class AlgoChanwise8x8x32;
     class AlgoCUDNNConv;
     class AlgoFallbackNCHWQS8;
