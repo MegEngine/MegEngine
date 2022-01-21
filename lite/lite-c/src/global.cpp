@@ -189,4 +189,19 @@ int LITE_dump_tensor_rt_cache() {
     LITE_CAPI_END();
 }
 
+int LITE_register_memory_pair(
+        void* vir_ptr, void* phy_ptr, size_t length, LiteDeviceType device,
+        LiteBackend backend) {
+    LITE_CAPI_BEGIN();
+    lite::register_memory_pair(vir_ptr, phy_ptr, length, device, backend);
+    LITE_CAPI_END();
+}
+
+int LITE_clear_memory_pair(
+        void* phy_ptr, void* vir_ptr, LiteDeviceType device, LiteBackend backend) {
+    LITE_CAPI_BEGIN();
+    lite::clear_memory_pair(vir_ptr, phy_ptr, device, backend);
+    LITE_CAPI_END();
+}
+
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
