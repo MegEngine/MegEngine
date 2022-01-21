@@ -1385,6 +1385,11 @@ def sync_batch_norm(
             momentum=momentum,
             eps=eps,
         )
+    if amp._enabled:
+        inp, weight, bias, running_mean, running_var = cast_tensors(
+            inp, weight, bias, running_mean, running_var, promote=True
+        )
+
     _channels = make_shape_tuple(inp.shape)[1]
     _ndim = inp.ndim
     _device = inp.device
@@ -1464,7 +1469,8 @@ def sync_batch_norm(
             channel_x2s,
             channel_mean,
         )
-
+    if amp._enabled:
+        outvar = outvar.astype("float16")
     return outvar
 
 
