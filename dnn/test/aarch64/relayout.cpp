@@ -40,6 +40,9 @@ TEST_F(AARCH64, Relayout) {
         TensorLayout dst({1, 54, 112, 256}, {1548288, 28672, 256, 1}, dtype);
         checker.execl({src, dst});
     }
+    TensorLayout src_4_3({1, 3, 112, 256}, {3, 1, 1024, 4}, dtype::Uint16());
+    TensorLayout dst_4_3({1, 3, 112, 256}, {86016, 28672, 256, 1}, dtype::Uint16());
+    checker.execl({src_4_3, dst_4_3});
 }
 
 TEST_F(AARCH64, RelayoutNonContig) {
