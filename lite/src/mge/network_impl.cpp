@@ -929,5 +929,75 @@ void NetworkImplDft::dump_layout_transform_model(std::string optimized_model_pat
                          "enable_global_layout_transform before"));
     }
 }
+
+NetworkIO lite::get_model_io_info_dft(
+        const std::string& model_path, const Config& config) {
+    FILE* fin = fopen(model_path.c_str(), "rb");
+    LITE_ASSERT(fin, "failed to open %s: %s", model_path.c_str(), strerror(errno));
+    fseek(fin, 0, SEEK_END);
+    size_t size = ftell(fin);
+    fseek(fin, 0, SEEK_SET);
+    void* ptr = malloc(size);
+    std::shared_ptr<void> buf{ptr, ::free};
+    auto nr = fread(buf.get(), 1, size, fin);
+    LITE_ASSERT(nr == size);
+    fclose(fin);
+    return get_model_io_info_dft(ptr, size, config);
+}
+
+NetworkIO lite::get_model_io_info_dft(
+        const void* model_mem, size_t size, const Config& config) {
+    std::shared_ptr<void> model{const_cast<void*>(model_mem), [](void*) {}};
+    auto input_file = mgb::serialization::InputFile::make_mem_proxy(model, size, false);
+    auto format =
+            mgb::serialization::GraphLoader::identify_graph_dump_format(*input_file);
+    if (!format.valid()) {
+        LITE_THROW("invalid model format");
+    }
+    auto loader =
+            mgb::serialization::GraphLoader::make(std::move(input_file), format.val());
+
+    mgb::serialization::GraphLoadConfig load_config;
+    load_config.comp_graph = mgb::ComputingGraph::make();
+    if (config.has_compression) {
+        load_config.tensor_value_loader = decompressed_tensor_value_loader;
+    }
+    auto compnode_locator = to_compnode_locator(config.device_type);
+    load_config.comp_node_mapper = [=](mgb::CompNode::Locator& loc) {
+        if (loc.type == mgb::CompNode::DeviceType::UNSPEC) {
+            loc.type = compnode_locator.type;
+        }
+        loc.device = compnode_locator.device;
+    };
+    auto load_result = loader->load(load_config, true);
+    NetworkIO IOs;
+    for (auto&& in_tensor_iter : load_result.tensor_map) {
+        IO in_io;
+        in_io.name = in_tensor_iter.first;
+        in_io.config_layout = to_lite_layout(in_tensor_iter.second->layout());
+        IOs.inputs.push_back(in_io);
+    }
+    auto infer_shape = [=](mgb::cg::SymbolVar var) -> const megdnn::TensorShape* {
+        auto&& static_infer_mgr = load_config.comp_graph->static_infer_manager();
+        using InferType = mgb::cg::static_infer::InferType;
+        if (static_infer_mgr.get_infer_type(var.node()).shape &
+            (InferType::CONST | InferType::RT_STATIC)) {
+            return static_infer_mgr.infer_shape_fallible(var.node());
+        } else {
+            return nullptr;
+        }
+    };
+    for (auto&& out : load_result.output_var_list) {
+        IO out_io;
+        out_io.name = out.node()->name();
+        if (auto shape = infer_shape(out)) {
+            out_io.config_layout = to_lite_layout(TensorLayout{*shape, out.dtype()});
+        } else {
+            out_io.config_layout = to_lite_layout(TensorLayout{{}, out.dtype()});
+        }
+        IOs.outputs.push_back(out_io);
+    }
+    return IOs;
+}
 #endif
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

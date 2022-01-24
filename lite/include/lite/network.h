@@ -373,6 +373,14 @@ public:
     //! dump network after global layout transform optimization
     static void dump_layout_transform_model(
             std::shared_ptr<Network> network, std::string optimized_model_path);
+
+    //! get the model io information before model loaded by model path.
+    static NetworkIO get_model_io_info(
+            const std::string& model_path, const Config& config = {});
+
+    //! get the model io information before model loaded by model memory.
+    static NetworkIO get_model_io_info(
+            const void* model_mem, size_t size, const Config& config = {});
 };
 
 }  // namespace lite

@@ -167,6 +167,31 @@ lite::NetworkIO convert_to_lite_io(const LiteNetworkIO c_network_io) {
     return network_io;
 }
 
+struct InnerIO {
+    std::vector<std::string> names;
+    std::vector<LiteIO> inputs;
+    std::vector<LiteIO> outputs;
+};
+
+InnerIO convert_to_inner_io(const lite::NetworkIO& network_io) {
+    InnerIO innner_io;
+    for (size_t i = 0; i < network_io.inputs.size(); i++) {
+        lite::IO io = network_io.inputs[i];
+        innner_io.names.push_back(io.name);
+        innner_io.inputs.push_back(
+                {innner_io.names.back().c_str(), io.is_host, io.io_type,
+                 convert_to_clayout(io.config_layout)});
+    }
+    for (size_t i = 0; i < network_io.outputs.size(); i++) {
+        lite::IO io = network_io.outputs[i];
+        innner_io.names.push_back(io.name);
+        innner_io.outputs.push_back(
+                {innner_io.names.back().c_str(), io.is_host, io.io_type,
+                 convert_to_clayout(io.config_layout)});
+    }
+    return innner_io;
+}
+
 int LITE_make_default_network(LiteNetwork* network) {
     LITE_CAPI_BEGIN();
     LITE_ASSERT(network, "The network pass to LITE api is null");
@@ -665,4 +690,59 @@ int LITE_dump_layout_transform_model(LiteNetwork network, const char* dump_file_
     lite::Runtime::dump_layout_transform_model(network_shared, dump_file_path);
     LITE_CAPI_END();
 }
+
+namespace {
+static LITE_MUTEX mtx_io;
+static std::unordered_map<const void*, InnerIO>& get_global_io_holder() {
+    static std::unordered_map<const void*, InnerIO> global_holder;
+    return global_holder;
+}
+
+int write_ios_from_cpp_io(
+        const lite::NetworkIO& cpp_io, LiteNetworkIO* ios, const void* key) {
+    LITE_CAPI_BEGIN();
+    LITE_LOCK_GUARD(mtx_io);
+    get_global_io_holder()[key] = convert_to_inner_io(cpp_io);
+    auto&& inner_io = get_global_io_holder()[key];
+    ios->input_size = inner_io.inputs.size();
+    ios->output_size = inner_io.outputs.size();
+    ios->inputs = inner_io.inputs.data();
+    ios->outputs = inner_io.outputs.data();
+    size_t i = 0;
+    for (; i < ios->input_size; i++) {
+        auto io_ptr = ios->inputs + i;
+        io_ptr->name = inner_io.names[i].c_str();
+    }
+    for (; i < ios->output_size; i++) {
+        auto io_ptr = ios->outputs + i;
+        io_ptr->name = inner_io.names[i].c_str();
+    }
+    LITE_CAPI_END();
+}
+
+}  // namespace
+
+int LITE_get_model_io_info_by_path(
+        const char* model_path, const LiteConfig config, LiteNetworkIO* ios) {
+    LITE_CAPI_BEGIN();
+    LITE_ASSERT(model_path, "The model_path pass to LITE api is null");
+    auto&& cpp_ios = lite::Runtime::get_model_io_info(
+            std::string{model_path}, convert_to_lite_config(config));
+    return write_ios_from_cpp_io(
+            cpp_ios, ios, reinterpret_cast<const void*>(model_path));
+    LITE_CAPI_END();
+}
+
+int LITE_get_model_io_info_by_memory(
+        const void* model_mem, size_t size, const LiteConfig config,
+        LiteNetworkIO* ios) {
+    LITE_CAPI_BEGIN();
+    LITE_ASSERT(model_mem, "The model_mem pass to LITE api is null");
+    auto&& cpp_ios = lite::Runtime::get_model_io_info(
+            model_mem, size, convert_to_lite_config(config));
+    return write_ios_from_cpp_io(
+            cpp_ios, ios, reinterpret_cast<const void*>(model_mem));
+    LITE_CAPI_END();
+}
+
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

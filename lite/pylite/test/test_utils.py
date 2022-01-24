@@ -8,6 +8,7 @@
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 
 import functools
+import os
 
 import numpy as np
 
@@ -200,3 +201,20 @@ def test_tensor_collect_batch_device_numpy():
     for i in range(4):
         for j in range(48):
             assert data[i][j // 8][j % 8] == i + 1
+
+
+def test_get_model_io_ahead():
+    source_dir = os.getenv("LITE_TEST_RESOURCE")
+    model_path = os.path.join(source_dir, "shufflenet.mge")
+    ios = get_model_io_info(model_path)
+
+    assert len(ios.inputs) == 1
+    assert ios.inputs[0].name == "data"
+    assert ios.inputs[0].config_layout.shapes[1] == 3
+    assert ios.inputs[0].config_layout.shapes[2] == 224
+    assert ios.inputs[0].config_layout.shapes[3] == 224
+
+    assert len(ios.outputs) == 1
+    assert ios.outputs[0].name == "TRUE_DIV(EXP[12065],reduce0[12067])[12077]"
+    assert ios.outputs[0].config_layout.shapes[0] == 1
+    assert ios.outputs[0].config_layout.shapes[1] == 1000

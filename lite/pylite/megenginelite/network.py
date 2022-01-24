@@ -364,6 +364,14 @@ class _NetworkAPI(_LiteCObjBase):
         ("LITE_get_static_memory_alloc_info", [_Cnetwork, c_char_p]),
         ("LITE_enable_global_layout_transform", [_Cnetwork]),
         ("LITE_dump_layout_transform_model", [_Cnetwork, c_char_p]),
+        (
+            "LITE_get_model_io_info_by_path",
+            [c_char_p, LiteConfig, POINTER(_LiteNetworkIO)],
+        ),
+        (
+            "LITE_get_model_io_info_by_memory",
+            [c_char_p, c_size_t, LiteConfig, POINTER(_LiteNetworkIO)],
+        ),
     ]
 
 
@@ -619,3 +627,27 @@ class LiteNetwork(object):
     def dump_layout_transform_model(self, model_file):
         c_file = model_file.encode("utf-8")
         self._api.LITE_dump_layout_transform_model(self._network, c_file)
+
+
+def get_model_io_info(model_path, config=None):
+    """
+    get the model IO information before create the NetWork, this IO
+    information can be used to configuration the NetWork.
+    """
+    api = _NetworkAPI()._lib
+    c_path = c_char_p(model_path.encode("utf-8"))
+
+    ios = _LiteNetworkIO()
+
+    if config is not None:
+        api.LITE_get_model_io_info_by_path(c_path, config, byref(ios))
+    else:
+        config = LiteConfig()
+        api.LITE_get_model_io_info_by_path(c_path, config, byref(ios))
+
+    ret_ios = LiteNetworkIO()
+    for i in range(ios.input_size):
+        ret_ios.add_input(ios.inputs[i])
+    for i in range(ios.output_size):
+        ret_ios.add_output(ios.outputs[i])
+    return ret_ios

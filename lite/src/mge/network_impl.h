@@ -262,6 +262,13 @@ private:
 #endif
     std::unique_ptr<mgb::OprIODumpBase> m_iodump;
 };
+//! get the model information before model loaded by Network
+NetworkIO get_model_io_info_dft(const std::string& model_path, const Config& config);
+
+//! get the model information before model loaded by Network by model memory and
+//! size
+NetworkIO get_model_io_info_dft(
+        const void* model_mem, size_t size, const Config& config);
 
 }  // namespace lite
 

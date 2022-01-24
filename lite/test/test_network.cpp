@@ -106,6 +106,54 @@ TEST(TestNetWork, GetAllName) {
     ASSERT_TRUE(output_names[0] == "TRUE_DIV(EXP[12065],reduce0[12067])[12077]");
 }
 
+TEST(TestNetWork, GetAllIoInfoAhead) {
+    Config config;
+    std::string model_path = "./shufflenet.mge";
+
+    auto ios = Runtime::get_model_io_info(model_path);
+
+    FILE* fin = fopen(model_path.c_str(), "rb");
+    ASSERT_TRUE(fin);
+    fseek(fin, 0, SEEK_END);
+    size_t size = ftell(fin);
+    fseek(fin, 0, SEEK_SET);
+    void* ptr = malloc(size);
+    std::shared_ptr<void> buf{ptr, ::free};
+    auto nr = fread(buf.get(), 1, size, fin);
+    LITE_ASSERT(nr == size);
+    fclose(fin);
+
+    auto ios_mem = Runtime::get_model_io_info(ptr, size);
+
+    ASSERT_EQ(ios.inputs.size(), ios_mem.inputs.size());
+    ASSERT_EQ(ios.inputs.size(), 1);
+
+    ASSERT_EQ(ios.outputs.size(), ios_mem.outputs.size());
+    ASSERT_EQ(ios.outputs.size(), 1);
+
+    ASSERT_TRUE(ios.inputs[0].name == "data");
+    ASSERT_TRUE(ios.outputs[0].name == "TRUE_DIV(EXP[12065],reduce0[12067])[12077]");
+
+    ASSERT_TRUE(ios_mem.inputs[0].name == "data");
+    ASSERT_TRUE(
+            ios_mem.outputs[0].name == "TRUE_DIV(EXP[12065],reduce0[12067])[12077]");
+    ASSERT_EQ(ios.inputs[0].config_layout.ndim, 4);
+    ASSERT_EQ(ios.inputs[0].config_layout.shapes[1], 3);
+    ASSERT_EQ(ios.inputs[0].config_layout.shapes[2], 224);
+
+    ASSERT_EQ(ios.outputs[0].config_layout.ndim, 2);
+    ASSERT_EQ(ios.outputs[0].config_layout.shapes[0], 1);
+    ASSERT_EQ(ios.outputs[0].config_layout.shapes[1], 1000);
+
+    ASSERT_EQ(ios_mem.inputs[0].config_layout.ndim, 4);
+    ASSERT_EQ(ios_mem.inputs[0].config_layout.shapes[1], 3);
+    ASSERT_EQ(ios_mem.inputs[0].config_layout.shapes[2], 224);
+
+    ASSERT_EQ(ios_mem.outputs[0].config_layout.ndim, 2);
+    ASSERT_EQ(ios_mem.outputs[0].config_layout.shapes[0], 1);
+    ASSERT_EQ(ios_mem.outputs[0].config_layout.shapes[1], 1000);
+}
+
 TEST(TestNetWork, LoadFBSModel) {
     Config config;
     std::string model_path = "./ax.mge";

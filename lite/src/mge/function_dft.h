@@ -206,6 +206,26 @@ inline void call_func<NetworkImplDft, void>(
         THROW_FUNC_ERROR(func_name);
     }
 }
+
+template <>
+inline NetworkIO call_func<NetworkImplDft, NetworkIO>(
+        std::string func_name, std::string model_path, Config config) {
+    if (func_name == "get_model_io_info") {
+        return get_model_io_info_dft(model_path, config);
+    } else {
+        THROW_FUNC_ERROR(func_name);
+    }
+}
+
+template <>
+inline NetworkIO call_func<NetworkImplDft, NetworkIO>(
+        std::string func_name, const void* model_mem, size_t size, Config config) {
+    if (func_name == "get_model_io_info") {
+        return get_model_io_info_dft(model_mem, size, config);
+    } else {
+        THROW_FUNC_ERROR(func_name);
+    }
+}
 #undef THROW_FUNC_ERROR
 
 }  // namespace lite

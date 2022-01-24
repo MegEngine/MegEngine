@@ -534,4 +534,26 @@ void Runtime::dump_layout_transform_model(
     LITE_THROW("dump_layout_transform_model is not aviliable in the backend.");
     LITE_ERROR_HANDLER_END
 }
+
+NetworkIO Runtime::get_model_io_info(
+        const std::string& model_path, const Config& config) {
+    LITE_ERROR_HANDLER_BEGIN
+    if (config.backend == LiteBackend::LITE_DEFAULT) {
+        return call_func<NetworkImplDft, NetworkIO>(
+                "get_model_io_info", model_path, config);
+    }
+    LITE_THROW("get_model_io_info is not aviliable in the backend.");
+    LITE_ERROR_HANDLER_END
+}
+
+NetworkIO Runtime::get_model_io_info(
+        const void* model_mem, size_t size, const Config& config) {
+    LITE_ERROR_HANDLER_BEGIN
+    if (config.backend == LiteBackend::LITE_DEFAULT) {
+        return call_func<NetworkImplDft, NetworkIO>(
+                "get_model_io_info", model_mem, size, config);
+    }
+    LITE_THROW("get_model_io_info is not aviliable in the backend.");
+    LITE_ERROR_HANDLER_END
+}
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

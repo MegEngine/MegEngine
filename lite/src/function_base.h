@@ -34,7 +34,7 @@ ADD_STATEMENT(NetworkImplDft, Dft);
 }  // namespace
 
 // if it can't find the function, ignore
-template <typename tensor_type, typename ret_type, typename... Args>
+template <typename type, typename ret_type, typename... Args>
 ret_type try_call_func(std::string func_name, Args... args) {
     mark_used_variable(func_name);
     mark_used_variable(args...);
@@ -42,10 +42,10 @@ ret_type try_call_func(std::string func_name, Args... args) {
 }
 
 // if it can't find the function, throw error
-template <typename tensor_type, typename ret_type, typename... Args>
+template <typename type, typename ret_type, typename... Args>
 ret_type call_func(std::string func_name, Args... args) {
     mark_used_variable(args...);
-    auto backend_name = class_type_name<tensor_type>()();
+    auto backend_name = class_type_name<type>()();
     auto msg_info = func_name + "  is not aviliable in " + backend_name + " backend.";
     LITE_THROW(msg_info.c_str());
 }

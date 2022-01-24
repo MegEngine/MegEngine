@@ -252,6 +252,55 @@ TEST(TestCapiNetWork, GetAllName) {
     LITE_destroy_network(c_network);
 }
 
+TEST(TestCapiNetWork, GetAllNameAhead) {
+    std::string model_path = "./shufflenet.mge";
+    LiteNetworkIO ios, ios_mem;
+    LITE_CAPI_CHECK(LITE_get_model_io_info_by_path(
+            model_path.c_str(), *default_config(), &ios));
+    FILE* fin = fopen(model_path.c_str(), "rb");
+    ASSERT_TRUE(fin);
+    fseek(fin, 0, SEEK_END);
+    size_t size = ftell(fin);
+    fseek(fin, 0, SEEK_SET);
+    void* ptr = malloc(size);
+    std::shared_ptr<void> buf{ptr, ::free};
+    auto nr = fread(buf.get(), 1, size, fin);
+    LITE_ASSERT(nr == size);
+    fclose(fin);
+
+    LITE_CAPI_CHECK(
+            LITE_get_model_io_info_by_memory(ptr, size, *default_config(), &ios_mem));
+
+    ASSERT_EQ(ios.input_size, 1);
+    ASSERT_EQ(ios.output_size, 1);
+    ASSERT_EQ(ios_mem.input_size, 1);
+    ASSERT_EQ(ios_mem.output_size, 1);
+
+    ASSERT_TRUE(std::string(ios.inputs->name) == "data");
+    ASSERT_TRUE(ios.inputs->config_layout.ndim == 4);
+    ASSERT_TRUE(ios.inputs->config_layout.shapes[1] == 3);
+    ASSERT_TRUE(ios.inputs->config_layout.shapes[2] == 224);
+    ASSERT_TRUE(ios.inputs->config_layout.shapes[3] == 224);
+    ASSERT_TRUE(
+            std::string(ios.outputs->name) ==
+            "TRUE_DIV(EXP[12065],reduce0[12067])[12077]");
+    ASSERT_TRUE(ios.outputs->config_layout.ndim == 2);
+    ASSERT_TRUE(ios.outputs->config_layout.shapes[0] == 1);
+    ASSERT_TRUE(ios.outputs->config_layout.shapes[1] == 1000);
+
+    ASSERT_TRUE(std::string(ios_mem.inputs->name) == "data");
+    ASSERT_TRUE(ios_mem.inputs->config_layout.ndim == 4);
+    ASSERT_TRUE(ios_mem.inputs->config_layout.shapes[1] == 3);
+    ASSERT_TRUE(ios_mem.inputs->config_layout.shapes[2] == 224);
+    ASSERT_TRUE(ios_mem.inputs->config_layout.shapes[3] == 224);
+    ASSERT_TRUE(
+            std::string(ios_mem.outputs->name) ==
+            "TRUE_DIV(EXP[12065],reduce0[12067])[12077]");
+    ASSERT_TRUE(ios_mem.outputs->config_layout.ndim == 2);
+    ASSERT_TRUE(ios_mem.outputs->config_layout.shapes[0] == 1);
+    ASSERT_TRUE(ios_mem.outputs->config_layout.shapes[1] == 1000);
+}
+
 #if LITE_BUILD_WITH_RKNPU
 
 static int GetTop(

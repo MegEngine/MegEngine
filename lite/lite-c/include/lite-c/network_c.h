@@ -588,6 +588,28 @@ LITE_API int LITE_enable_global_layout_transform(LiteNetwork network);
 LITE_API int LITE_dump_layout_transform_model(
         LiteNetwork network, const char* dump_file_path);
 
+/**! get the model io information before model loaded by model path.
+ * \param[in] model_path The model file path
+ * \param[in] config The model config for loading
+ * \param[out] ios The model io infermation
+ * \return int if the return is not zero, error happened, the error message
+ * can get by LITE_get_last_error
+ */
+LITE_API int LITE_get_model_io_info_by_path(
+        const char* model_path, const LiteConfig config, LiteNetworkIO* ios);
+
+/** get the model io information before model loaded by model memory.
+ * \param[in] model_mem The model memory ptr
+ * \param[in] size The model memory ptr length
+ * \param[in] config The model config for loading
+ * \param[out] ios The model io infermation
+ * \return int if the return is not zero, error happened, the error message
+ * can get by LITE_get_last_error
+ */
+LITE_API int LITE_get_model_io_info_by_memory(
+        const void* model_mem, size_t size, const LiteConfig config,
+        LiteNetworkIO* ios);
+
 #ifdef __cplusplus
 }
 #endif
