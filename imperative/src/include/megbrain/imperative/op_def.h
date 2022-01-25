@@ -53,10 +53,6 @@ public:
     static SmallVector<TensorPtr> apply_on_physical_tensor(
             const OpDef& def, SmallVector<TensorPtr> inputs);
 
-    static void execute(
-            const OpDef& def, SmallVector<TensorPtr> inputs,
-            SmallVector<TensorPtr> outputs, SmallVector<TensorPtr> workspace);
-
     /*!
      * \brief Call the corresponding dnn op to calculate results. Output
      * tensors' device memory should be allocated outside.
@@ -70,11 +66,6 @@ public:
 
     static std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
             const OpDef& def, const SmallVector<LogicalTensorDesc>& inputs);
-
-    static std::tuple<SmallVector<MemoryDesc>, SmallVector<MemoryDesc>>
-    infer_output_mem_desc(
-            const OpDef& def, const SmallVector<TensorPtr>& inputs_tensors,
-            const SmallVector<MemoryDesc>& inputs_mems);
 
     static EncodedSubgraph make_backward_graph(
             const OpDef& def, const SmallVector<LogicalTensorDesc>& inputs,

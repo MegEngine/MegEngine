@@ -75,16 +75,11 @@ SmallVector<LogicalTensorDesc> infer_output_attrs(
     dests[size].layout = TensorLayout(TensorShape({1}), dtype::Int32());
     return dests;
 }
-std::tuple<SmallVector<MemoryDesc>, SmallVector<MemoryDesc>> infer_output_mem_desc(
-        const OpDef& def, const SmallVector<TensorPtr>& inputs_tensors,
-        const SmallVector<MemoryDesc>& inputs_mems) {
-    return {{}, {}};
-}
+
 OP_TRAIT_REG(CheckNonFinite, CheckNonFinite)
         .apply_on_var_node(apply_on_var_node)
         .apply_on_physical_tensor(apply_on_physical_tensor)
         .infer_output_attrs_fallible(infer_output_attrs_fallible)
-        .infer_output_mem_desc(infer_output_mem_desc)
         .fallback();
 }  // namespace check_non_finite
 

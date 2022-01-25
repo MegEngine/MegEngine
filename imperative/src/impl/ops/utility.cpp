@@ -445,12 +445,6 @@ auto make_name(const OpDef& def) {
     return ssprintf("CompiledOp[%s]", op.op->make_name().c_str());
 }
 
-std::tuple<SmallVector<MemoryDesc>, SmallVector<MemoryDesc>> infer_output_mem_desc(
-        const OpDef& def, const SmallVector<TensorPtr>& inputs_tensors,
-        const SmallVector<MemoryDesc>& inputs_mems) {
-    return {};
-}
-
 EncodedSubgraph make_backward_graph(
         const OpDef& def, const SmallVector<LogicalTensorDesc>& inputs,
         const SmallVector<bool>& input_requires_grad,
@@ -498,7 +492,6 @@ OP_TRAIT_REG(CompiledOp, CompiledOp)
         .infer_output_attrs_fallible(infer_output_attrs_fallible)
         .make_backward_graph(make_backward_graph)
         .make_name(make_name)
-        .infer_output_mem_desc(infer_output_mem_desc)
         .props(props)
         .hash(hash)
         .is_same_st(is_same_st)

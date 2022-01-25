@@ -15,7 +15,6 @@ import pytest
 from megengine import Parameter
 from megengine import distributed as dist
 from megengine import tensor
-from megengine.core import option
 from megengine.jit import trace
 from megengine.module import Module
 from megengine.utils.profiler import Profiler, scope

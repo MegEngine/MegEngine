@@ -518,20 +518,6 @@ SmallVector<LogicalTensorDesc> infer_output_attrs<Dropout>(
 }
 
 template <typename Op>
-std::tuple<SmallVector<MemoryDesc>, SmallVector<MemoryDesc>> infer_output_mem_desc(
-        const OpDef& def, const SmallVector<TensorPtr>& inputs_tensors,
-        const SmallVector<MemoryDesc>& inputs_mems) {
-    auto&& dests = infer_output_attrs<Op>(def, inputs_tensors);
-    SmallVector<MemoryDesc> outputs;
-    for (size_t i = 0; i < dests.size(); ++i) {
-        outputs.push_back(
-                {dests[i].layout, 0, dests[i].comp_node,
-                 StorageIdentifier::make(i + 1)});
-    }
-    return {outputs, {}};
-}
-
-template <typename Op>
 SmallVector<TensorPtr> apply_on_physical_tensor(
         const OpDef& def, const SmallVector<TensorPtr>& inputs) {
     SmallVector<TensorPtr> outputs;
@@ -541,13 +527,6 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
     }
     exec<Op>(def, inputs, outputs, {});
     return outputs;
-}
-
-template <typename Op>
-void execute(
-        const OpDef& def, SmallVector<TensorPtr> inputs, SmallVector<TensorPtr> outputs,
-        SmallVector<TensorPtr> workspace) {
-    exec<Op>(def, inputs, outputs, {});
 }
 
 template <typename Op, typename Output>
@@ -641,8 +620,6 @@ CompNode get_rng_handle_compnode(Handle handle) {
             .apply_on_var_node(apply_on_var_node<NAME, Output>)             \
             .apply_on_physical_tensor(apply_on_physical_tensor<NAME>)       \
             .infer_output_attrs_fallible(infer_output_attrs_fallible<NAME>) \
-            .infer_output_mem_desc(infer_output_mem_desc<NAME>)             \
-            .execute(execute<NAME>)                                         \
             .fallback();                                                    \
     }
 

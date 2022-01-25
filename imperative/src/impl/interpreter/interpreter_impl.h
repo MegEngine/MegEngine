@@ -105,11 +105,6 @@ private:
     void flush_apply_stack();
     void do_apply_op(const ApplyOp& cmd, std::string reason);
 
-    std::tuple<SmallVector<MemoryDesc>, SmallVector<TensorPtr>, SmallVector<TensorPtr>>
-    init_output_and_workspace(
-            const OpDef& def, SmallVector<TensorPtr> inputs,
-            SmallVector<MemoryDesc> inputs_mem_desc);
-
     void dispatch_default_cpu(
             std::shared_ptr<OpDef> op, const SmallVector<TensorInfo*>& input_infos,
             const SmallVector<LogicalTensorDesc>& input_descs,
@@ -296,6 +291,8 @@ private:
                    op_blacklist.end();
         }
 
+        // operators that cannot be re-computed, including :
+        // distributed operators, inplace operator, random generator operators
         std::vector<std::string> op_blacklist = {
                 "CollectiveComm", "InplaceAdd", "ParamPackSplit", "ParamPackConcat",
                 "GaussianRNG",    "UniformRNG", "GammaRNG",       "PermutationRNG",

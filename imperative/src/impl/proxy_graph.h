@@ -47,10 +47,6 @@ public:
             const SmallVector<bool>& input_requires_grad,
             const SmallVector<bool>& output_has_grad);
 
-    std::tuple<SmallVector<MemoryDesc>, SmallVector<MemoryDesc>> infer_output_mem_desc(
-            const OpDef& def, const SmallVector<Tensor*>& inputs_tensors,
-            const SmallVector<MemoryDesc>& inputs_mems);
-
     /********************** Logical Tensor API **********************/
 
     size_t get_opr_output_size(

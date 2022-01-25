@@ -76,10 +76,11 @@ def test_drop_basic():
 def test_finalize():
     prog = """
 import megengine
-with megengine.core.option("enable_host_compute", 0):
-    x = megengine.tensor(0)
-    y = x + 1
-    y.numpy()
+megengine.core.set_option("enable_host_compute", 0)
+x = megengine.tensor(0)
+y = x + 1
+y.numpy()
+megengine.core.set_option("enable_host_compute", 1)
 """
     subprocess.check_call([sys.executable, "-c", prog])
 

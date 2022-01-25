@@ -59,7 +59,6 @@ struct TensorInfo {
     // Lock interpreter when visiting `ptr`.
     TensorPtr ptr;
     LogicalTensorDesc desc;
-    MemoryDesc mem_desc;
 
     double compute_time;
     size_t memory;

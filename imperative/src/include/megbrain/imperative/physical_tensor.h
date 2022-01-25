@@ -288,36 +288,6 @@ struct LogicalTensorDesc {
     CompNode comp_node;
     DeviceTensorND value;  // cpu:default
 };
-
-struct StorageIdentifier;
-struct MemoryDesc {
-    TensorLayout layout;
-    size_t offset;
-    CompNode cn;
-    std::shared_ptr<StorageIdentifier> id;
-};
-
-struct StorageIdentifier {
-    enum { INVALID, SYS_ALLOC, FROM_OTHER, DEVICE_PTR } tag;
-    union {
-        size_t id;
-        MemoryDesc* desc;
-    };
-    TensorPtr ptr;
-    StorageIdentifier() = default;
-    StorageIdentifier(size_t id) : tag(SYS_ALLOC), id(id) {}
-    StorageIdentifier(const MemoryDesc* desc) : tag(FROM_OTHER), desc(desc->id->desc) {}
-    StorageIdentifier(TensorPtr dev_ptr) : tag(DEVICE_PTR), ptr(dev_ptr) {}
-
-    template <typename... Args>
-    static std::shared_ptr<StorageIdentifier> make(Args&&... args) {
-        return std::make_shared<StorageIdentifier>(std::forward<Args>(args)...);
-    }
-    bool is_sys_alloc() { return tag == SYS_ALLOC; }
-    bool is_from_other() { return tag == FROM_OTHER; }
-    bool is_device_ptr() { return tag == DEVICE_PTR; }
-    bool is_invalid() { return tag == INVALID; }
-};
 }  // namespace imperative
 }  // namespace mgb
 

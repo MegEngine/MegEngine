@@ -12,13 +12,3 @@ from contextlib import contextmanager
 
 from ._imperative_rt.core2 import get_option, set_option
 from .tensor.megbrain_graph import Graph
-
-
-@contextmanager
-def option(key, value):
-    value = int(value)
-    old = get_option(key)
-    set_option(key, value)
-    yield
-    assert get_option(key) == value
-    set_option(key, old)

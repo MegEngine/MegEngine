@@ -155,7 +155,6 @@ TensorInfo* ChannelImpl::put_impl(const HostTensorND& value, bool no_cache) {
         info->h_value = value;
         info->desc.value = value.proxy_to_default_cpu();
     }
-    info->mem_desc.id = StorageIdentifier::make(++m_storage_id);
     m_worker.add_task(
             {Profiler::next_id(), Put{info, value, no_cache},
              get_channel_state().stack_manager.dump()});
@@ -180,7 +179,6 @@ TensorInfo* ChannelImpl::put_impl(
     auto info = alloc();
     MGB_RECORD_EVENT(TensorCommandEvent, info->id, TensorCommandKind::Put);
     init(info, {data.layout(), data.comp_node()});
-    info->mem_desc.id = StorageIdentifier::make(++m_storage_id);
     info->ptr = Tensor::make(data, hvalue);
     MGB_RECORD_EVENT(
             TensorProduceEvent, info->id, info->desc.layout, info->desc.comp_node,
@@ -536,9 +534,6 @@ void ChannelImpl::init(TensorInfo* info, LogicalTensorDesc desc) {
     MGB_RECORD_EVENT(TensorDeclareEvent, info->id, info->name);
     info->status = TensorInfo::Allocated;
     info->desc = std::move(desc);
-    info->mem_desc.layout = info->desc.layout;
-    info->mem_desc.cn = info->desc.comp_node;
-    info->mem_desc.offset = 0;
 }
 
 void ChannelImpl::do_drop(TensorInfo* ptr, bool user = false) {
@@ -667,18 +662,14 @@ void ChannelImpl::do_apply_op(const ApplyOp& cmd, std::string reason) {
     bool profiling_device =
             Profiler::is_profiling() && Profiler::get_option("profile_device", 0);
     uint64_t apply_id = cmd.id;
-    struct TensorWithDesc {
-        TensorPtr tensor;
-        MemoryDesc desc;
-    };
-    SmallVector<TensorWithDesc> inputs;
+    SmallVector<TensorPtr> inputs;
     inputs.reserve(cmd.inputs.size());
     // refcnt == 1, owners: [TensorInfo::ptr]
     for (auto i : cmd.inputs) {
         mgb_assert(i->ptr, "Invalid input tensor ptr!");
         // refcnt ++, owners: [i->ptr, tensor_inputs]
         // tensor_inputs.push_back(i->ptr);
-        inputs.push_back({i->ptr, i->mem_desc});
+        inputs.push_back(i->ptr);
     }
     if (state.options.enable_dtr_auto_drop &&
         state.options.dtr_eviction_threshold > 0) {
@@ -686,56 +677,28 @@ void ChannelImpl::do_apply_op(const ApplyOp& cmd, std::string reason) {
     }
     auto apply_on_physical_tensor =
             [&](auto&& self, const OpDef& def,
-                SmallVector<TensorWithDesc> inputs) -> SmallVector<TensorWithDesc> {
+                SmallVector<TensorPtr> inputs) -> SmallVector<TensorPtr> {
         auto apply_functor = [&](std::shared_ptr<OpDef> op,
-                                 SmallVector<TensorWithDesc> inputs,
-                                 size_t nr_outputs) -> SmallVector<TensorWithDesc> {
+                                 SmallVector<TensorPtr> inputs,
+                                 size_t nr_outputs) -> SmallVector<TensorPtr> {
             auto opname = op->trait()->make_name(*op);
             imperative_log_profile_begin(opname.c_str());
             auto outputs = self(self, *op, inputs);
             imperative_log_profile_end(opname.c_str());
             return outputs;
         };
-        auto const_functor = [&](TensorPtr value) -> TensorWithDesc {
-            return {value, MemoryDesc{
-                                   value->layout(), 0, value->comp_node(),
-                                   StorageIdentifier::make()}};
-        };
+        auto const_functor = [&](TensorPtr value) -> TensorPtr { return value; };
         if (def.trait()->make_forward_graph) {
             // apply recursivily
             SmallVector<LogicalTensorDesc> input_descs;
             for (auto&& input : inputs) {
-                input_descs.push_back(
-                        {{{}, input.tensor->dtype()}, input.tensor->comp_node()});
+                input_descs.push_back({{{}, input->dtype()}, input->comp_node()});
             }
             auto forward_graph = OpDef::make_forward_graph(def, input_descs);
             auto outputs = forward_graph.apply(inputs, apply_functor, const_functor);
             return outputs;
         }
-        SmallVector<TensorPtr> input_tensors;
-        SmallVector<MemoryDesc> input_descs;
-        for (auto&& input : inputs) {
-            input_tensors.push_back(input.tensor);
-            input_descs.push_back(input.desc);
-        }
-        auto [output_descs, output_tensors, workspaces] =
-                init_output_and_workspace(def, input_tensors, input_descs);
-        if (!output_descs.empty()) {
-            OpDef::execute(def, input_tensors, output_tensors, workspaces);
-        } else {
-            output_tensors = OpDef::apply_on_physical_tensor(def, input_tensors);
-            for (auto&& output_tensor : output_tensors) {
-                output_descs.push_back(MemoryDesc{
-                        output_tensor->layout(), 0, output_tensor->comp_node(),
-                        StorageIdentifier::make()});
-            }
-        }
-        SmallVector<TensorWithDesc> outputs;
-        for (auto&& [output_tensor, output_desc] :
-             ranges::zip_view(output_tensors, output_descs)) {
-            outputs.push_back({output_tensor, output_desc});
-        }
-        return outputs;
+        return OpDef::apply_on_physical_tensor(def, inputs);
     };
     MGB_RECORD_EVENT(OpExecuteEvent, apply_id, {}, reason);
     // Begin profiling operator
@@ -787,8 +750,7 @@ void ChannelImpl::do_apply_op(const ApplyOp& cmd, std::string reason) {
             MGB_RECORD_EVENT(OpOutputFinishEvent, output->id);
         } else {
             MGB_RECORD_EVENT(OpOutputEvent, output->id);
-            produce_tensor(output, outputs[i].tensor);
-            output->mem_desc = outputs[i].desc;
+            produce_tensor(output, outputs[i]);
             MGB_RECORD_EVENT(OpOutputFinishEvent, output->id);
             sample_on_device(output->desc.comp_node, false);
         }
@@ -800,7 +762,7 @@ void ChannelImpl::do_apply_op(const ApplyOp& cmd, std::string reason) {
             estimate_compute_time += i->memory;
         }
         for (auto i : outputs) {
-            estimate_compute_time += i.tensor->blob()->size();
+            estimate_compute_time += i->blob()->size();
         }
         m_dtr.estimate_timestamp += estimate_compute_time / 1e8;
         for (auto i : cmd.outputs) {
@@ -1010,52 +972,6 @@ void ChannelImpl::alloc_tensor_with_evict(Blob* x) {
         }
     });
     set_log_level(pre_level);
-}
-
-std::tuple<SmallVector<MemoryDesc>, SmallVector<TensorPtr>, SmallVector<TensorPtr>>
-ChannelImpl::init_output_and_workspace(
-        const OpDef& def, SmallVector<TensorPtr> inputs,
-        SmallVector<MemoryDesc> inputs_mem_desc) {
-    auto [outputs_desc, workspaces_desc] =
-            OpDef::infer_output_mem_desc(def, inputs, inputs_mem_desc);
-    if (!outputs_desc.size()) {
-        // failed to infer memplan
-        return {{}, {}, {}};
-    }
-    // refine storage id to make it unique
-    for (auto&& desc : outputs_desc) {
-        if (desc.id->is_sys_alloc()) {
-            // TODO: there may be some outputs sharing the same storage id
-            desc.id->id = ++m_storage_id;
-        }
-    }
-    auto& state = get_worker_state();
-    auto alloc_storage = [&](SmallVector<MemoryDesc>& desc) {
-        SmallVector<TensorPtr> tensors;
-        for (size_t i = 0; i < desc.size(); i++) {
-            if (desc[i].id->is_sys_alloc()) {
-                tensors.push_back(Tensor::make(desc[i].layout, desc[i].cn));
-                if (state.options.enable_dtr_auto_drop && !desc[i].layout.is_empty()) {
-                    alloc_tensor_with_evict(tensors.back()->blob().get());
-                }
-            } else if (desc[i].id->is_from_other()) {
-                for (size_t j = 0; j < inputs_mem_desc.size(); j++) {
-                    if (inputs_mem_desc[j].id->desc == desc[i].id->desc) {
-                        tensors.push_back(
-                                inputs[j]->sub(desc[i].offset, desc[i].layout));
-                        break;
-                    }
-                }
-            } else if (desc[i].id->is_device_ptr()) {
-                tensors.push_back(desc[i].id->ptr);
-            } else {
-                mgb_assert(0, "not implemented");
-            }
-        }
-        return tensors;
-    };
-
-    return {outputs_desc, alloc_storage(outputs_desc), alloc_storage(workspaces_desc)};
 }
 
 void ChannelImpl::process_one_task(Command& icmd) {

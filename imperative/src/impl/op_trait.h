@@ -64,12 +64,6 @@ OpMethType(DecideDispatchMode,
 OpMethType(ApplyOnPhysicalTensor,
            decltype(OpDef::apply_on_physical_tensor));
 
-OpMethType(InferOutputMemDesc,
-           decltype(OpDef::infer_output_mem_desc));
-
-OpMethType(Execute,
-           decltype(OpDef::execute));
-
 OpMethType(ApplyOnDeviceTensorND,
            decltype(OpDef::apply_on_device_tensornd));
 
@@ -123,8 +117,6 @@ struct OpMethFallback : OpMethImplBase {
 struct OpMethFallbackByProxyGraph : OpMethImplBase {
     using OpMethImplBase::impl;
     static void impl(ApplyOnPhysicalTensor& func, op_meth_tag::ApplyOnPhysicalTensor);
-    static void impl(Execute& func, op_meth_tag::Execute);
-    static void impl(InferOutputMemDesc& func, op_meth_tag::InferOutputMemDesc);
     static void impl(
             InferOutputAttrsFallible& func, op_meth_tag::InferOutputAttrsFallible);
     static void impl(GradMaker& func, op_meth_tag::GradMaker);
@@ -133,7 +125,6 @@ struct OpMethFallbackByProxyGraph : OpMethImplBase {
 struct OpMethFallbackFromSubgraph : OpMethImplBase {
     using OpMethImplBase::impl;
     static void impl(ApplyOnPhysicalTensor& func, op_meth_tag::ApplyOnPhysicalTensor);
-    static void impl(InferOutputMemDesc& func, op_meth_tag::InferOutputMemDesc);
     static void impl(ApplyOnVarNode& func, op_meth_tag::ApplyOnVarNode);
     static void impl(
             InferOutputAttrsFallible& func, op_meth_tag::InferOutputAttrsFallible);
@@ -185,8 +176,6 @@ struct OpTrait {
     OpDefMaker make_from_op_node;
     DecideDispatchMode decide_dispatch_mode;
     ApplyOnPhysicalTensor apply_on_physical_tensor;
-    InferOutputMemDesc infer_output_mem_desc;
-    Execute execute;
     ApplyOnDeviceTensorND apply_on_device_tensornd;
     ApplyOnVarNode apply_on_var_node;
     InferOutputAttrsFallible infer_output_attrs_fallible;
@@ -207,8 +196,6 @@ struct OpTrait {
     cb(make_from_op_node)           \
     cb(decide_dispatch_mode)        \
     cb(apply_on_physical_tensor)    \
-    cb(infer_output_mem_desc)       \
-    cb(execute)                     \
     cb(apply_on_device_tensornd)    \
     cb(apply_on_var_node)           \
     cb(infer_output_attrs_fallible) \

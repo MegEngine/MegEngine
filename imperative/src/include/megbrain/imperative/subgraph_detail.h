@@ -35,10 +35,6 @@ EncodedSubgraph make_backward_graph(
         const SmallVector<bool>& input_requires_grad,
         const SmallVector<bool>& output_has_grad);
 
-std::tuple<SmallVector<MemoryDesc>, SmallVector<MemoryDesc>> infer_output_mem_desc(
-        const OpDef& def, const SmallVector<TensorPtr>& inputs_tensors,
-        const SmallVector<MemoryDesc>& inputs_mems);
-
 }  // namespace subgraph_detail
 }  // namespace imperative
 }  // namespace mgb

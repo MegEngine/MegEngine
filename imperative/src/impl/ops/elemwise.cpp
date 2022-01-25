@@ -110,35 +110,6 @@ void apply_on_device_tensornd(
     opr::Elemwise::perform(op_def.mode, (*outputs)[0], inputs, dnn_opr);
 }
 
-void execute(
-        const OpDef& def, SmallVector<TensorPtr> inputs, SmallVector<TensorPtr> outputs,
-        SmallVector<TensorPtr> workspace) {
-    mgb_assert(outputs.size() == 1);
-    SmallVector<DeviceTensorND> inp_tensornds(inputs.size());
-    for (size_t i = 0; i < inputs.size(); ++i) {
-        inp_tensornds[i] = inputs[i]->dev_tensor();
-    }
-    SmallVector<DeviceTensorND> out_tensornds = {outputs[0]->dev_tensor()};
-    apply_on_device_tensornd(def, inp_tensornds, &out_tensornds);
-}
-
-std::tuple<SmallVector<MemoryDesc>, SmallVector<MemoryDesc>> infer_output_mem_desc(
-        const OpDef& def, const SmallVector<TensorPtr>& inputs_tensors,
-        const SmallVector<MemoryDesc>& inputs_mems) {
-    auto&& op_def = def.cast_final_safe<Elemwise>();
-    TensorShapeArray inp_shapes(inputs_tensors.size());
-    for (size_t i = 0; i < inputs_tensors.size(); ++i) {
-        inp_shapes[i] = inputs_tensors[i]->layout();
-    }
-    TensorShape shape = opr::Elemwise::get_output_var_shape(op_def.mode, inp_shapes);
-    SmallVector<MemoryDesc> outputs = {
-            {{shape, inputs_tensors[0]->dtype()},
-             0,
-             inputs_tensors[0]->comp_node(),
-             StorageIdentifier::make(1)}};
-    return {outputs, {}};
-}
-
 SmallVector<TensorPtr> apply_on_physical_tensor(
         const OpDef& def, const SmallVector<TensorPtr>& inputs) {
     auto&& op_def = def.cast_final_safe<Elemwise>();
@@ -251,7 +222,7 @@ cg::OperatorNodeBase* apply_inplace_add_on_var_node(
 SmallVector<TensorPtr> apply_inplace_add_on_physical_tensor(
         const OpDef& def, const SmallVector<TensorPtr>& inputs) {
     mgb_assert(
-            inputs[0]->blob().use_count() == 2 && inputs[0]->blob()->storage().unique(),
+            inputs[0]->blob().use_count() == 1 && inputs[0]->blob()->storage().unique(),
             "This inplace modification may change the elements of other tensors. "
             "Please set MEGENGINE_INPLACE_UPDATE to 0 to ensure the program runs "
             "correctly.");
@@ -263,23 +234,6 @@ SmallVector<TensorPtr> apply_inplace_add_on_physical_tensor(
     caller.op->param() = {tensor_to_scalar(alpha), tensor_to_scalar(beta)};
     caller.op->exec(dest->dev_tensor().as_megdnn(), delta->dev_tensor().as_megdnn());
     return {std::make_shared<Tensor>(dest->blob(), dest->offset(), dest->layout())};
-}
-
-void execute_inplace(
-        const OpDef& def, SmallVector<TensorPtr> inputs, SmallVector<TensorPtr> outputs,
-        SmallVector<TensorPtr> workspace) {
-    apply_inplace_add_on_physical_tensor(def, inputs);
-}
-
-std::tuple<SmallVector<MemoryDesc>, SmallVector<MemoryDesc>>
-infer_inplace_output_mem_desc(
-        const OpDef& def, const SmallVector<TensorPtr>& inputs_tensors,
-        const SmallVector<MemoryDesc>& inputs_mems) {
-    auto dest = inputs_tensors[0];
-    SmallVector<MemoryDesc> outputs = {
-            {dest->layout(), 0, dest->comp_node(),
-             StorageIdentifier::make(&inputs_mems[0])}};
-    return {outputs, {}};
 }
 
 std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_inplace_add_output_attrs_fallible(
@@ -319,16 +273,12 @@ OP_TRAIT_REG(Elemwise, Elemwise, opr::Elemwise)
         .infer_output_attrs_fallible(infer_output_attrs_fallible)
         .apply_on_device_tensornd(apply_on_device_tensornd)
         .apply_on_physical_tensor(apply_on_physical_tensor)
-        .infer_output_mem_desc(infer_output_mem_desc)
-        .execute(execute)
         .fallback();
 
 OP_TRAIT_REG(InplaceAdd, InplaceAdd, opr::AddUpdate)
         .apply_on_var_node(apply_inplace_add_on_var_node)
         .apply_on_physical_tensor(apply_inplace_add_on_physical_tensor)
         .infer_output_attrs_fallible(infer_inplace_add_output_attrs_fallible)
-        .infer_output_mem_desc(infer_inplace_output_mem_desc)
-        .execute(execute_inplace)
         .fallback();
 }  // anonymous namespace
 

@@ -43,13 +43,6 @@ void OpMethFallbackByProxyGraph::impl(
         ApplyOnPhysicalTensor& func, op_meth_tag::ApplyOnPhysicalTensor) {
     func.Base::operator=(proxy_graph_detail::apply_on_physical_tensor);
 }
-void OpMethFallbackByProxyGraph::impl(Execute& func, op_meth_tag::Execute) {
-    func.Base::operator=(proxy_graph_detail::execute);
-}
-void OpMethFallbackByProxyGraph::impl(
-        InferOutputMemDesc& func, op_meth_tag::InferOutputMemDesc) {
-    func.Base::operator=(proxy_graph_detail::infer_output_mem_desc);
-}
 void OpMethFallbackByProxyGraph::impl(
         InferOutputAttrsFallible& func, op_meth_tag::InferOutputAttrsFallible) {
     func.Base::operator=(proxy_graph_detail::infer_output_attrs_fallible);
@@ -61,10 +54,6 @@ void OpMethFallbackByProxyGraph::impl(GradMaker& func, op_meth_tag::GradMaker) {
 void OpMethFallbackFromSubgraph::impl(
         ApplyOnPhysicalTensor& func, op_meth_tag::ApplyOnPhysicalTensor) {
     func.Base::operator=(subgraph_detail::apply_on_physical_tensor);
-}
-void OpMethFallbackFromSubgraph::impl(
-        InferOutputMemDesc& func, op_meth_tag::InferOutputMemDesc) {
-    func.Base::operator=(subgraph_detail::infer_output_mem_desc);
 }
 void OpMethFallbackFromSubgraph::impl(
         ApplyOnVarNode& func, op_meth_tag::ApplyOnVarNode) {

@@ -83,25 +83,6 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
     return outputs;
 }
 
-std::tuple<SmallVector<MemoryDesc>, SmallVector<MemoryDesc>> infer_output_mem_desc(
-        const OpDef& def, const SmallVector<TensorPtr>& inputs_tensors,
-        const SmallVector<MemoryDesc>& inputs_mems) {
-    auto&& graph = ProxyGraph::get_default_graph();
-    return graph->infer_output_mem_desc(
-            def, to_raw_ptr_array(inputs_tensors), inputs_mems);
-}
-
-void execute(
-        const OpDef& def, SmallVector<TensorPtr> inputs, SmallVector<TensorPtr> outputs,
-        SmallVector<TensorPtr> workspace) {
-    exec(def, inputs, outputs, workspace);
-    auto async_error = ProxyGraph::get_async_error();
-    if (async_error) {
-        throw *async_error;
-    }
-    return;
-}
-
 // std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(const
 // OpDef& def,
 //         const SmallVector<LogicalTensorDesc>& inputs) {

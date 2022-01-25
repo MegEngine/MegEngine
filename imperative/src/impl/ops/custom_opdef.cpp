@@ -234,12 +234,6 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
     return op.infer_output_attrs(inputs);
 }
 
-std::tuple<SmallVector<MemoryDesc>, SmallVector<MemoryDesc>> infer_output_mem_desc(
-        const OpDef& def, const SmallVector<TensorPtr>& inputs_tensors,
-        const SmallVector<MemoryDesc>& inputs_mems) {
-    return {{}, {}};
-}
-
 size_t hash(const OpDef& def) {
     auto&& op = static_cast<const CustomOpDef&>(def);
     const custom::Param& param = op.param();
@@ -279,7 +273,6 @@ OP_TRAIT_REG(CustomOpDef, CustomOpDef)
         .apply_on_var_node(apply_on_var_node)
         .apply_on_device_tensornd(apply_on_device_tensornd)
         .infer_output_attrs_fallible(infer_output_attrs_fallible)
-        .infer_output_mem_desc(infer_output_mem_desc)
         .hash(hash)
         .is_same_st(is_same_st)
         .props(props)

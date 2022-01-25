@@ -36,6 +36,7 @@ std::shared_ptr<OpDef> make_from_op_node(cg::OperatorNodeBase* node_) {
     return Reduce::make(node->param());
 }
 
+// TODO: using this for apply_on_physical_tensor
 bool memory_forward_success(const OpDef& def, SmallVector<TensorPtr> inputs) {
     auto&& reduce = static_cast<const Reduce&>(def);
     if (reduce.mode != Reduce::Mode::SUM_SQR && inputs.size() == 2) {
@@ -49,31 +50,9 @@ bool memory_forward_success(const OpDef& def, SmallVector<TensorPtr> inputs) {
     return false;
 }
 
-std::tuple<SmallVector<MemoryDesc>, SmallVector<MemoryDesc>> infer_output_mem_desc(
-        const OpDef& def, const SmallVector<TensorPtr>& inputs_tensors,
-        const SmallVector<MemoryDesc>& inputs_mems) {
-    if (memory_forward_success(def, inputs_tensors)) {
-        auto& src_desc = inputs_mems[0];
-        return {{{src_desc.layout, 0, src_desc.cn, StorageIdentifier::make(&src_desc)}},
-                {}};
-    }
-    return proxy_graph_detail::infer_output_mem_desc(def, inputs_tensors, inputs_mems);
-}
-
-void execute(
-        const OpDef& def, SmallVector<TensorPtr> inputs, SmallVector<TensorPtr> outputs,
-        SmallVector<TensorPtr> workspace) {
-    if (memory_forward_success(def, inputs)) {
-        return;
-    }
-    return proxy_graph_detail::execute(def, inputs, outputs, workspace);
-}
-
 OP_TRAIT_REG(Reduce, Reduce, opr::Reduce)
         .make_from_op_node(make_from_op_node)
         .apply_on_var_node(apply_on_var_node)
-        .infer_output_mem_desc(infer_output_mem_desc)
-        .execute(execute)
         .fallback();
 }  // namespace reduce
 }  // namespace

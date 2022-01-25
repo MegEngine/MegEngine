@@ -634,36 +634,6 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> ProxyGraph::
     mgb_assert(0);
 }
 
-std::tuple<SmallVector<MemoryDesc>, SmallVector<MemoryDesc>> ProxyGraph::
-        infer_output_mem_desc(
-                const OpDef& def, const SmallVector<Tensor*>& inputs_tensors,
-                const SmallVector<MemoryDesc>& inputs_mems) {
-    auto opr = get_proxy_opr(def, inputs_tensors);
-    CUR_OPR_GUARD(opr);
-    ::mgb::opr::intl::WorkspaceLimitHook::set_impl(
-            m_graph.get(), ProxyGraph::get_workspace_limit);
-    do_shape_infer(true);
-    SmallVector<MemoryDesc> outputs;
-    SmallVector<MemoryDesc> workspaces;
-    size_t cur_id = 0;
-    for (auto&& i : opr->output()) {
-        if (i->contain_flag(VarNode::Flag::VOLATILE_CONTENT)) {
-            workspaces.push_back(
-                    {{i->shape(), i->dtype(), i->format()},
-                     0,
-                     i->comp_node(),
-                     StorageIdentifier::make(++cur_id)});
-        } else {
-            outputs.push_back(
-                    {{i->shape(), i->dtype()},
-                     0,
-                     i->comp_node(),
-                     StorageIdentifier::make(++cur_id)});
-        }
-    }
-    return {outputs, workspaces};
-}
-
 struct ProxyGraph::GradGraph {
     cg::VarNodeArray inputs;
     cg::VarNodeArray outputs;
@@ -811,7 +781,6 @@ EncodedSubgraph ProxyGraph::make_backward_graph(
     mgb_assert(igraph.inputs.size() == nr_backward_graph_inputs);
     return result;
 }
-
 
 VarNodeArray ProxyGraph::make_input_place_holders(
         const SmallVector<LogicalTensorDesc>& inputs) {
