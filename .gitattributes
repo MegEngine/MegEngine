@@ -21,3 +21,6 @@ ci/resource/prof/model_with_err_assert.mdl filter=lfs diff=lfs merge=lfs -text
 ci/resource/prof/test_mge.mge filter=lfs diff=lfs merge=lfs -text
 lite/test/resource/lite/ax_models/64-58063ce2.axe filter=lfs diff=lfs merge=lfs -text
 imperative/python/test/unit/module/MagicMindRuntimeOprTest.GraphShapeMutable.mlu filter=lfs diff=lfs merge=lfs -text
+lite/test/resource/lite/ax_data_input.npy filter=lfs diff=lfs merge=lfs -text
+lite/test/resource/lite/ax_data_output.npy filter=lfs diff=lfs merge=lfs -text
+lite/test/resource/lite/ax_model.mge filter=lfs diff=lfs merge=lfs -text

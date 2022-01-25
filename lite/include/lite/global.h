@@ -154,6 +154,21 @@ LITE_API void set_tensor_rt_cache(std::string tensorrt_cache_path);
  */
 LITE_API void dump_tensor_rt_cache();
 
+/**
+ * register the physical and virtual address pair to the mge, some device
+ * need the map from physical to virtual.
+ */
+LITE_API bool register_memory_pair(
+        void* vir_ptr, void* phy_ptr, size_t length, LiteDeviceType device,
+        LiteBackend backend = LiteBackend::LITE_DEFAULT);
+
+/**
+ * clear the physical and virtual address pair in mge.
+ */
+LITE_API bool clear_memory_pair(
+        void* vir_ptr, void* phy_ptr, LiteDeviceType device,
+        LiteBackend backend = LiteBackend::LITE_DEFAULT);
+
 }  // namespace lite
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

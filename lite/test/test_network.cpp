@@ -1357,5 +1357,6 @@ TEST(TestNetWork, CambriconDeviceID) {
     load_device_id(LiteDeviceType::LITE_CAMBRICON, 0, "./model_magicmind.mgb");
 }
 #endif
+
 #endif
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

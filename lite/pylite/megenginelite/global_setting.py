@@ -42,6 +42,8 @@ class _GlobalAPI(_LiteCObjBase):
         # ('LITE_set_tensor_rt_cache', [c_char_p]),
         ("LITE_dump_persistent_cache", [c_char_p]),
         ("LITE_dump_tensor_rt_cache", [c_char_p]),
+        ("LITE_register_memory_pair", [c_void_p, c_void_p, c_size_t, c_int, c_int]),
+        ("LITE_clear_memory_pair", [c_void_p, c_void_p, c_int, c_int]),
     ]
 
 
@@ -121,3 +123,21 @@ class LiteGlobal(object):
     @staticmethod
     def try_coalesce_all_free_memory():
         LiteGlobal._api.LITE_try_coalesce_all_free_memory()
+
+    @staticmethod
+    def register_memory_pair(
+        vir_ptr, phy_ptr, length, device, backend=LiteBackend.LITE_DEFAULT
+    ):
+        assert isinstance(vir_ptr, c_void_p) and isinstance(
+            phy_ptr, c_void_p
+        ), "clear memory pair only accept c_void_p type."
+        LiteGlobal._api.LITE_register_memory_pair(
+            vir_ptr, phy_ptr, length, device, backend
+        )
+
+    @staticmethod
+    def clear_memory_pair(vir_ptr, phy_ptr, device, backend=LiteBackend.LITE_DEFAULT):
+        assert isinstance(vir_ptr, c_void_p) and isinstance(
+            phy_ptr, c_void_p
+        ), "clear memory pair only accept c_void_p type."
+        LiteGlobal._api.LITE_clear_memory_pair(vir_ptr, phy_ptr, device, backend)

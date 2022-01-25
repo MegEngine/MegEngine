@@ -160,9 +160,24 @@ LITE_API int LITE_dump_persistent_cache(const char* cache_path);
  * \brief dump the tensorrt policy cache to file
  */
 LITE_API int LITE_dump_tensor_rt_cache();
-#endif
+
+/**
+ * register the physical and virtual address pair to the mge, some device
+ * need the map from physical to virtual.
+ */
+LITE_API int LITE_register_memory_pair(
+        void* vir_ptr, void* phy_ptr, size_t length, LiteDeviceType device,
+        LiteBackend backend);
+
+/**
+ * clear the physical and virtual address pair in mge.
+ */
+LITE_API int LITE_clear_memory_pair(
+        void* phy_ptr, void* vir_ptr, LiteDeviceType device, LiteBackend backend);
+
 #ifdef __cplusplus
 }
+#endif
 #endif
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

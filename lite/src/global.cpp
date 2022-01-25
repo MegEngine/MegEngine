@@ -212,6 +212,26 @@ void lite::dump_tensor_rt_cache() {
 #endif
 }
 
+bool lite::register_memory_pair(
+        void* vir_ptr, void* phy_ptr, size_t length, LiteDeviceType device,
+        LiteBackend backend) {
+    LITE_MARK_USED_VAR(vir_ptr);
+    LITE_MARK_USED_VAR(phy_ptr);
+    LITE_MARK_USED_VAR(length);
+    LITE_MARK_USED_VAR(device);
+    LITE_MARK_USED_VAR(backend);
+    LITE_THROW("register_memory_pair is not implement yet!");
+}
+
+bool lite::clear_memory_pair(
+        void* vir_ptr, void* phy_ptr, LiteDeviceType device, LiteBackend backend) {
+    LITE_MARK_USED_VAR(vir_ptr);
+    LITE_MARK_USED_VAR(phy_ptr);
+    LITE_MARK_USED_VAR(device);
+    LITE_MARK_USED_VAR(backend);
+    LITE_THROW("clear_memory_pair is not implement yet!");
+}
+
 #else  // LITE_BUILD_WITH_MGE
 void lite::try_coalesce_all_free_memory() {}
 
@@ -234,6 +254,17 @@ void lite::set_tensor_rt_cache(std::string) {
 
 void lite::dump_tensor_rt_cache() {
     LITE_THROW("mge is disbale at build time, please build with mge");
+}
+
+bool lite::register_memory_pair(
+        void* vir_ptr, void* phy_ptr, size_t length, LiteDeviceType device,
+        LiteBackend beckend) {
+    LITE_THROW("register_memory_pair is not implement yet!");
+}
+
+bool lite::clear_memory_pair(
+        void* vir_ptr, void* phy_ptr, LiteDeviceType device, LiteBackend beckend) {
+    LITE_THROW("clear_memory_pair is not implement yet!");
 }
 #endif
 namespace lite {

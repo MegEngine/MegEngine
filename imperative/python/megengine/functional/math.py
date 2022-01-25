@@ -1153,35 +1153,39 @@ def dot(inp1: Tensor, inp2: Tensor) -> Tensor:
 
 
 def svd(inp: Tensor, full_matrices=False, compute_uv=True) -> Tensor:
-    r"""Computes the singular value decompositions of input matrix.
+    r"""Returns a singular value decomposition ``A = USVh`` of a matrix (or a stack of matrices) ``x`` , where ``U`` is a matrix (or a stack of matrices) with orthonormal columns, ``S`` is a vector of non-negative numbers (or stack of vectors), and ``Vh`` is a matrix (or a stack of matrices) with orthonormal rows.
 
     Args:
-        inp: input matrix, must has shape `[..., M, N]`.
+        x (Tensor): A input real tensor having the shape ``(..., M, N)`` with ``x.ndim >= 2`` .
+        full_matrices (bool, optional): If ``False`` , ``U`` and ``Vh`` have the shapes  ``(..., M, K)`` and ``(..., K, N)`` , respectively, where ``K = min(M, N)`` . If ``True`` , the shapes  are ``(..., M, M)`` and ``(..., N, N)`` , respectively. Default: ``False`` . 
+        compute_uv (bool, optional): Whether or not to compute ``U`` and ``Vh`` in addition to ``S`` . Default: ``True`` .
+
+    Note:
+        * naive does not support ``full_matrices`` and ``compute_uv`` as ``True`` .
 
     Returns:
-        output matrices, `(U, sigma, V)`.
+        Returns a tuple ( ``U`` , ``S`` , ``Vh`` ), which are  SVD factors ``U`` , ``S``, ``Vh`` of  input matrix ``x``. ( ``U`` , ``Vh`` only returned when ``compute_uv`` is True). 
+            ``U`` contains matrices orthonormal columns (i.e., the columns are left singular vectors). If ``full_matrices`` is ``True`` , the array must have shape ``(..., M, M)`` . If ``full_matrices`` is ``False`` , the array must have shape ``(..., M, K)`` , where ``K = min(M, N)`` .
 
     Examples:
 
-        .. testcode::
+        >>> import numpy as np
+        >>> x = Tensor(np.random.randn(9, 6))
+        >>> y = Tensor(np.random.randn(2, 7, 8, 3))
 
-            import numpy as np
-            from megengine import tensor
-            import megengine.functional as F
+        Reconstruction based on reduced SVD, 2D case:
+        >>> U, S, Vh = F.svd(x, full_matrices=False)
+        >>> print(U._tuple_shape, S._tuple_shape, Vh._tuple_shape)
+        (9, 6) (6,) (6, 6)
 
-            x = tensor(np.arange(0, 6, dtype=np.float32).reshape(2,3))
-            _, y, _ = F.svd(x)
-            print(y.numpy().round(decimals=3))
-
-        Outputs:
-
-        .. testoutput::
-
-            [7.348 1.   ]
+        Reconsturction based on reduced SVD, 4D case:
+        >>> u, s, vh = F.svd(y, full_matrices=False)
+        >>> print(u._tuple_shape, s._tuple_shape, vh._tuple_shape)
+        (2, 7, 8, 3) (2, 7, 3) (2, 7, 3, 3)
     """
     op = builtin.SVD(full_matrices=full_matrices, compute_uv=compute_uv)
-    U, sigma, V = apply(op, inp)
-    return U, sigma, V
+    U, S, Vh = apply(op, inp)
+    return U, S, Vh
 
 
 def _check_non_finite(inps: Iterable[Tensor], scale=1.0) -> Tensor:
