@@ -8,7 +8,13 @@ from typing import Union
 
 import numpy as np
 
-from ..core._imperative_rt.core2 import pop_scope, push_scope, set_option
+from ..core._imperative_rt.core2 import (
+    get_auto_format_convert,
+    pop_scope,
+    push_scope,
+    set_auto_format_convert,
+    set_option,
+)
 from ..core.tensor.utils import set_convert_inputs
 from ..tensor import Parameter, Tensor
 from ..utils.deprecation import deprecated
@@ -90,7 +96,7 @@ class Optimizer(metaclass=ABCMeta):
                     "optimizer can only optimize Parameters, but one of the params is "
                     + str(type(param))
                 )
-            param._reset(Tensor(param.numpy(), no_cache=True))
+            param._reset(Tensor(param.numpy(), no_cache=True, format=param.format))
 
         for name, default in self._defaults.items():
             if default is required and name not in param_group:
@@ -139,6 +145,8 @@ class Optimizer(metaclass=ABCMeta):
         # set the globle state `_enable_convert_inputs` to `False` to disable
         # the `convert_inputs` for param updates
         set_option("record_computing_path", 0)
+        _origin_auto_format = get_auto_format_convert()
+        set_auto_format_convert(False)
         if self._disable_type_convert:
             backup = set_convert_inputs(False)
         for group in self.param_groups:
@@ -155,6 +163,7 @@ class Optimizer(metaclass=ABCMeta):
             # restore the globle state `_enable_convert_inputs`
             set_convert_inputs(backup)
         set_option("record_computing_path", 1)
+        set_auto_format_convert(_origin_auto_format)
         return self
 
     @deprecated(version="1.0", reason="use clear_grad instead")

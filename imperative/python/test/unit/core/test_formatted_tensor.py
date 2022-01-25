@@ -8,13 +8,26 @@ from megengine.autodiff import GradManager
 
 
 def test_basic():
-    a = tensor(np.arange(0, 24).reshape((1, 2, 3, 4)), dtype="float32", format="nhwc")
+    data = np.arange(0, 24).reshape((1, 2, 3, 4))
+    # init from numpy
+    a = tensor(data, format="nhwc")
     assert a.format == "nhwc"
+
+    # init from tensor
     b = tensor(a)
     assert b.format == "nhwc"
-    # TODO: fix Tensor init bug for another Tensor
+
+    # TODO: init from tensor with new format
     # c = tensor(a, format="nchw")
     # assert c.format == "nchw"
+
+    # TODO: reset from numpy
+    # b[...] = data
+    # assert b.format == "nhwc"
+
+    # reset from tensor
+    b[...] = tensor(data, format="nchw")
+    assert b.format == "nchw"
 
 
 def _compare_nchw_nhwc(data, func):
@@ -23,7 +36,7 @@ def _compare_nchw_nhwc(data, func):
     out1 = func(x1)
     with mge.config._override(auto_format_convert=True):
         out2 = func(x2)
-    np.testing.assert_equal(out1, out2)
+    np.testing.assert_almost_equal(out1, out2, decimal=5)
 
 
 def test_dimshuffle():
@@ -296,8 +309,10 @@ def test_backward():
     with gm:
         with mge.config._override(auto_format_convert=True, conv_format="NHWC"):
             x = F.conv2d(x, w, b)
+            # TODO: fix manually convert to NHWC, usually used in detection head
+            # x = x.transpose(0, 2, 3, 1).reshape(1, 18, 2)
             gm.backward(x)
-            # TODO: backward grad has no format yet
+            # backward grad has no format
             np.testing.assert_equal(
                 w.grad.numpy(),
                 np.array([66, 210, 66, 210, 66, 210]).reshape((3, 1, 1, 2)),

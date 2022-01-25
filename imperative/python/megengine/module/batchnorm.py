@@ -19,7 +19,6 @@ class _BatchNorm(Module):
         affine=True,
         track_running_stats=True,
         freeze=False,
-        compute_mode="default",
         param_dim="dim_1c11",
         **kwargs
     ):
@@ -31,7 +30,6 @@ class _BatchNorm(Module):
         self.track_running_stats = track_running_stats
         self._track_running_stats_saved = track_running_stats
         self.freeze = freeze
-        self.compute_mode = compute_mode
         self.param_dim = param_dim
         if self.freeze:
             assert (
@@ -106,7 +104,6 @@ class _BatchNorm(Module):
             or ((self.running_mean is None) and (self.running_var is None)),
             momentum=exponential_average_factor,
             eps=self.eps,
-            compute_mode=self.compute_mode,
             param_dim=self.param_dim,
         )
 

@@ -921,12 +921,7 @@ def test_batchnorm2d_autocast():
 
     amp.enabled = False
     expected = F.batch_norm(
-        inp.astype("float16"),
-        weight=weight,
-        bias=bias,
-        training=True,
-        inplace=False,
-        compute_mode="float32",
+        inp.astype("float16"), weight=weight, bias=bias, training=True, inplace=False,
     )
     assert out.dtype == np.float16
     assert expected.dtype == np.float16

@@ -63,6 +63,7 @@ def _matmul(
     assert dim1 > 0 and dim2 > 0
     maxdim = dim1 if dim1 > dim2 else dim2
     compute_mode = _config._get_actual_op_param(compute_mode, _config.__compute_mode)
+
     if dim1 == 1 and dim2 == 1:  # dispatch to Dot
         (result,) = apply(builtin.Dot(), inp1, inp2)
         return result

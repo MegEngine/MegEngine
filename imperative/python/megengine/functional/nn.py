@@ -441,7 +441,6 @@ def deformable_conv2d(
         or conv_mode.name == "CROSS_CORRELATION"
     )
     if amp._enabled:
-        compute_mode = "float32"
         inp, weight, offset, mask, bias = cast_tensors(inp, weight, offset, mask, bias)
     else:
         offset = offset.astype("float32")
@@ -1182,7 +1181,6 @@ def batch_norm(
     momentum: float = 0.9,
     eps: float = 1e-5,
     inplace: bool = True,
-    compute_mode="default",
     param_dim="dim_1c11"
 ):
     r"""Applies batch normalization to the input.

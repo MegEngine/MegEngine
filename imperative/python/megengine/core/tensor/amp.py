@@ -10,13 +10,19 @@ from .._imperative_rt.core2 import (
 _enabled = False
 _set_amp_dtype_autocast(_enabled)
 
+__all__ = [
+    "enabled",
+    "high_prec_dtype",
+    "low_prec_dtype",
+]
+
 
 @property
 def enabled(mod):
     r"""Get or set amp autocast mode enabled or not.
-    
+
     Examples:
-    
+
         .. code-block::
 
            import megengine as mge
@@ -36,9 +42,9 @@ def enabled(mod, enabled: bool):
 def high_prec_dtype(mod):
     r"""Get or set amp autocast mode's higher precision dtype. It will change the
     target dtype in tensor casting for better precision. Default: float32.
-    
+
     Examples:
-    
+
         .. code-block::
 
            import megengine as mge
@@ -56,9 +62,9 @@ def high_prec_dtype(mod, dtype: str):
 def low_prec_dtype(mod):
     r"""Get or set amp autocast mode's lower precision dtype. It will change the
     target dtype in tensor casting for better speed and memory. Default: float16.
-    
+
     Examples:
-    
+
         .. code-block::
 
            import megengine as mge

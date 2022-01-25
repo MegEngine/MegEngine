@@ -10,8 +10,10 @@ from ._imperative_rt.core2 import (
     set_option,
 )
 
+# use "default" to distinguish it from None in _reset_execution_config
 __compute_mode = "default"
 __conv_format = "default"
+__bn_format = "default"
 _benchmark_kernel = False
 _deterministic_kernel = False
 
@@ -22,6 +24,8 @@ __all__ = [
     "disable_memory_forwarding",
     "_compute_mode",
     "_conv_format",
+    "_bn_format",
+    "_auto_format_convert",
     "_override",
 ]
 
@@ -32,6 +36,7 @@ def benchmark_kernel(mod):
     which means use heuristic to choose the fastest algorithm.
 
     Examples:
+
         .. code-block::
 
            import megengine as mge
@@ -55,6 +60,7 @@ def deterministic_kernel(mod):
     which means the algorithm is not reproducible.
 
     Examples:
+
         .. code-block::
 
            import megengine as mge
@@ -75,6 +81,7 @@ def async_level(mod) -> int:
     which means both device and user side errors are async.
 
     Examples:
+
         .. code-block::
 
            import megengine as mge
@@ -110,16 +117,17 @@ def disable_memory_forwarding(mod, disable: bool):
 
 @property
 def _compute_mode(mod):
-    r"""Get or set the precision of intermediate results. The default option is "default",
-    which means that no special requirements will be placed on.  When set to 'float32', it
-    would be used for accumulator and intermediate result, but only effective when input and 
+    r"""Get or set the precision of intermediate results for conv, matmul. The default
+    option is None and will fallback to "default". When set to "float32", it will
+    trigger mixed precision computation on TensorCore, but only effective when input and
     output are of float16 dtype.
 
     Examples:
+
         .. code-block::
 
            import megengine as mge
-           mge.config._compute_mode = "default"
+           mge.config._compute_mode = "float32"
     """
     return __compute_mode
 
@@ -132,7 +140,7 @@ def _compute_mode(mod, _compute_mode: str):
 
 @property
 def _conv_format(mod):
-    r"""Get or set convolution data/filter/output layout format. The default option is "default",
+    r"""Get or set convolution data/filter/output layout format. The default option is None,
     which means that no special format will be placed on. There are all layout definitions
 
     ``NCHW`` layout: ``{N, C, H, W}``
@@ -145,6 +153,7 @@ def _conv_format(mod):
     ``NCHW64`` layout: ``{N, C/64, H, W, 64}``
 
     Examples:
+
         .. code-block::
 
            import megengine as mge
@@ -160,11 +169,34 @@ def _conv_format(mod, format: str):
 
 
 @property
+def _bn_format(mod):
+    r"""Get or set batchnorm param layout format. The default option is None and will
+    fallback to "dim_1c11" which corresponds to NCHW format. When set to "dim_111c",
+    param format of batchnorm will be changed to NHWC.
+
+    Examples:
+
+        .. code-block::
+
+           import megengine as mge
+           mge.config._bn_format = "dim_111c"
+    """
+    return __bn_format
+
+
+@_bn_format.setter
+def _bn_format(mod, format: str):
+    global __bn_format
+    __bn_format = format
+
+
+@property
 def _auto_format_convert(mod):
     r"""Automatically convert indexing params' order for NCHW Tensor to NHWC order.
     The default value is False, which means no convert.
 
     Examples:
+
         .. code-block::
 
            import megengine as mge
@@ -184,15 +216,17 @@ def _reset_execution_config(
     async_level=None,
     compute_mode=None,
     conv_format=None,
+    bn_format=None,
     auto_format_convert=None,
 ):
-    global _benchmark_kernel, _deterministic_kernel, __compute_mode, __conv_format
+    global _benchmark_kernel, _deterministic_kernel, __compute_mode, __conv_format, __bn_format
     orig_flags = (
         _benchmark_kernel,
         _deterministic_kernel,
         get_option("async_level"),
         __compute_mode,
         __conv_format,
+        __bn_format,
         get_auto_format_convert(),
     )
     if benchmark_kernel is not None:
@@ -205,6 +239,8 @@ def _reset_execution_config(
         __compute_mode = compute_mode
     if conv_format is not None:
         __conv_format = conv_format
+    if bn_format is not None:
+        __bn_format = bn_format
     if auto_format_convert is not None:
         set_auto_format_convert(auto_format_convert)
 
@@ -218,12 +254,14 @@ def _override(
     async_level=None,
     compute_mode=None,
     conv_format=None,
+    bn_format=None,
     auto_format_convert=None,
 ):
     r"""A context manager that users can opt in by attaching the decorator to set 
     the config of the global variable.
 
     Examples:
+
         .. code-block::
 
            import megengine as mge
@@ -234,6 +272,7 @@ def _override(
                 async_level=2,
                 compute_mode="float32",
                 conv_format="NHWC",
+                bn_format="dim_111c",
                 auto_format_convert=True,
             )
            def train():
@@ -244,6 +283,7 @@ def _override(
         async_level,
         compute_mode,
         conv_format,
+        bn_format,
         auto_format_convert,
     )
     try:
@@ -254,4 +294,4 @@ def _override(
 
 
 def _get_actual_op_param(function_param, config_param):
-    return function_param if config_param == "default" else config_param
+    return function_param if config_param is "default" else config_param

@@ -1,5 +1,6 @@
 import functools
 
+from ..core import _config
 from ..core.tensor import amp
 
 
@@ -50,24 +51,37 @@ class autocast:
         self._origin_high = None
         self._origin_low = None
 
+        self._origin_configs = None
+
     def __enter__(self):
         self._origin_enabled = amp._enabled
-        self._origin_high = amp._get_amp_high_prec_dtype()
-        self._origin_low = amp._get_amp_low_prec_dtype()
         amp._enabled = self.enabled
         amp._set_amp_dtype_autocast(self.enabled)
+        if not self.enabled:
+            return
+
+        self._origin_high = amp._get_amp_high_prec_dtype()
+        self._origin_low = amp._get_amp_low_prec_dtype()
         amp._set_amp_high_prec_dtype(self.high_prec_dtype)
         amp._set_amp_low_prec_dtype(self.low_prec_dtype)
+
+        self._origin_configs = _config._reset_execution_config(compute_mode="float32")
 
     def __exit__(self, *args):
         amp._enabled = self._origin_enabled
         amp._set_amp_dtype_autocast(self._origin_enabled)
+        if not self.enabled:
+            return
         amp._set_amp_high_prec_dtype(self._origin_high)
         amp._set_amp_low_prec_dtype(self._origin_low)
+
+        _config._reset_execution_config(*self._origin_configs)
 
     def __call__(self, func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
+            if not self.enabled:
+                return func(*args, **kwargs)
             with self:
                 return func(*args, **kwargs)
 
