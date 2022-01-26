@@ -236,11 +236,16 @@ def test_linear():
 
 
 @pytest.mark.parametrize("module", ["Conv2d", "ConvBn2d", "ConvBnRelu2d"])
-def test_conv(module):
-    normal_net = getattr(Float, module)(3, 3, 3, 1, 1, 1, bias=True)
+@pytest.mark.parametrize("padding_mode", ["zeros", "reflect", "replicate"])
+def test_conv(module, padding_mode):
+    normal_net = getattr(Float, module)(
+        3, 3, 3, 1, 1, 1, bias=True, padding_mode=padding_mode
+    )
     normal_net.eval()
 
-    qat_net = getattr(QAT, module)(3, 3, 3, 1, 1, 1, bias=True)
+    qat_net = getattr(QAT, module)(
+        3, 3, 3, 1, 1, 1, bias=True, padding_mode=padding_mode
+    )
     qat_net.eval()
     disable_observer(qat_net)
 

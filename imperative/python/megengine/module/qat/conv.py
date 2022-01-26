@@ -38,6 +38,7 @@ class Conv2d(Float.Conv2d, QATModule):
             float_module.bias is not None,
             float_module.conv_mode,
             float_module.compute_mode,
+            float_module.padding_mode,
             name=float_module.name,
         )
         qat_module.weight = float_module.weight

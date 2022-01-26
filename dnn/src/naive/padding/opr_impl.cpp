@@ -171,7 +171,7 @@ void PaddingForwardImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
     switch (param().padding_mode) {
         case param::Padding::PaddingMode::CONSTANT:
 #define cb(DType)                                                       \
-    if (src.layout.dtype == DType()) {                                  \
+    if (src.layout.dtype.enumv() == DTypeTrait<DType>::enumv) {         \
         using T = typename DTypeTrait<DType>::ctype;                    \
         MEGDNN_DISPATCH_CPU_KERN_OPR(exec_const_internal<T>(            \
                 src.layout.ndim, n, src.ptr<T>(), dst.ptr<T>(), params, \
@@ -179,28 +179,31 @@ void PaddingForwardImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
         return;                                                         \
     }
             MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
+            MEGDNN_FOREACH_QUANTIZED_DTYPE(cb)
 #undef cb
             break;
         case param::Padding::PaddingMode::REPLICATE:
 #define cb(DType)                                                         \
-    if (src.layout.dtype == DType()) {                                    \
+    if (src.layout.dtype.enumv() == DTypeTrait<DType>::enumv) {           \
         using T = typename DTypeTrait<DType>::ctype;                      \
         MEGDNN_DISPATCH_CPU_KERN_OPR(exec_replicate_internal<T>(          \
                 src.layout.ndim, n, src.ptr<T>(), dst.ptr<T>(), params)); \
         return;                                                           \
     }
             MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
+            MEGDNN_FOREACH_QUANTIZED_DTYPE(cb)
 #undef cb
             break;
         case param::Padding::PaddingMode::REFLECT:
 #define cb(DType)                                                         \
-    if (src.layout.dtype == DType()) {                                    \
+    if (src.layout.dtype.enumv() == DTypeTrait<DType>::enumv) {           \
         using T = typename DTypeTrait<DType>::ctype;                      \
         MEGDNN_DISPATCH_CPU_KERN_OPR(exec_reflect_internal<T>(            \
                 src.layout.ndim, n, src.ptr<T>(), dst.ptr<T>(), params)); \
         return;                                                           \
     }
             MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
+            MEGDNN_FOREACH_QUANTIZED_DTYPE(cb)
 #undef cb
             break;
         default:

@@ -31,6 +31,7 @@ class _ConvBnActivation2d(Conv2d):
             qat_module.conv.groups,
             dtype=output_dtype,
             name=qat_module.name,
+            padding_mode=qat_module.conv.padding_mode,
         )
         w_fold, b_fold = qat_module.fold_weight_bias(
             qat_module.bn.running_mean, qat_module.bn.running_var

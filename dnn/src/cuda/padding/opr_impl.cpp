@@ -35,6 +35,7 @@ void PaddingForwardImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
                 param().padding_val, stream);                            \
     }
     MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
+    MEGDNN_FOREACH_QUANTIZED_DTYPE(cb)
 #undef cb
 }
 

@@ -60,7 +60,18 @@ def test_qat_convbn2d():
         )
 
 
-def test_qat_conv():
+@pytest.mark.parametrize(
+    "padding, padding_mode",
+    [
+        (0, "zeros"),
+        ((1, 2), "zeros"),
+        (3, "reflect"),
+        ((1, 2), "reflect"),
+        (4, "replicate"),
+        ((1, 2), "replicate"),
+    ],
+)
+def test_qat_conv(padding, padding_mode):
 
     in_channels = 32
     out_channels = 64
@@ -72,7 +83,13 @@ def test_qat_conv():
             self.quant = QuantStub()
             self.dequant = DequantStub()
             self.conv = Conv2d(
-                in_channels, out_channels, kernel_size, groups=groups, bias=bias
+                in_channels,
+                out_channels,
+                kernel_size,
+                groups=groups,
+                bias=bias,
+                padding=padding,
+                padding_mode=padding_mode,
             )
             self.conv_relu = ConvRelu2d(
                 out_channels, in_channels, kernel_size, groups=groups, bias=bias

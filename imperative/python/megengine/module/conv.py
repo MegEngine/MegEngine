@@ -18,6 +18,7 @@ from ..functional import (
     conv_transpose3d,
     deformable_conv2d,
     local_conv2d,
+    pad,
     relu,
 )
 from ..tensor import Parameter
@@ -126,7 +127,7 @@ class Conv1d(_ConvNd):
         kernel_size: size of weight on spatial dimensions.
         stride: stride of the 1D convolution operation.
         padding: size of the paddings added to the input on both sides of its
-            spatial dimensions. Only zero-padding is supported. Default: 0
+            spatial dimensions. Default: 0
         dilation: dilation of the 1D convolution operation. Default: 1
         groups: number of groups to divide input and output channels into,
             so as to perform a "grouped convolution". When ``groups`` is not 1,
@@ -139,6 +140,8 @@ class Conv1d(_ConvNd):
             placed on the precision of intermediate results. When set to "float32",
             "float32" would be used for accumulator and intermediate result, but only
             effective when input and output are of float16 dtype.
+        padding_mode: "zeros", "reflect" or "replicate". Default: "zeros".
+            Refer to :class:`~.module.padding.Pad` for more information.
 
     Note:
         * ``weight`` usually has shape ``(out_channels, in_channels, kernel_size)`` ,
@@ -177,6 +180,7 @@ class Conv1d(_ConvNd):
         bias: bool = True,
         conv_mode: str = "cross_correlation",
         compute_mode: str = "default",
+        padding_mode: str = "zeros",
         **kwargs
     ):
         kernel_size = kernel_size
@@ -185,6 +189,7 @@ class Conv1d(_ConvNd):
         dilation = dilation
         self.conv_mode = conv_mode
         self.compute_mode = compute_mode
+        self.padding_mode = padding_mode
         super().__init__(
             in_channels,
             out_channels,
@@ -223,7 +228,27 @@ class Conv1d(_ConvNd):
         # Assume format is NCH(W=1)
         return (1, self.out_channels, 1)
 
+    def get_pad_witdth(self):
+        return ((0, 0), (0, 0), (self.padding, self.padding))
+
     def calc_conv(self, inp, weight, bias):
+        assert self.padding_mode in [
+            "zeros",
+            "reflect",
+            "replicate",
+        ]
+        if self.padding_mode != "zeros":
+            return conv1d(
+                pad(inp, self.get_pad_witdth(), self.padding_mode),
+                weight,
+                bias,
+                self.stride,
+                0,
+                self.dilation,
+                self.groups,
+                self.conv_mode,
+                self.compute_mode,
+            )
         return conv1d(
             inp,
             weight,
@@ -287,7 +312,7 @@ class Conv2d(_ConvNd):
             ``(kernel_size, kernel_size)``.
         stride: stride of the 2D convolution operation. Default: 1
         padding: size of the paddings added to the input on both sides of its
-            spatial dimensions. Only zero-padding is supported. Default: 0
+            spatial dimensions. Default: 0
         dilation: dilation of the 2D convolution operation. Default: 1
         groups: number of groups into which the input and output channels are divided,
             so as to perform a ``grouped convolution``. When ``groups`` is not 1,
@@ -300,6 +325,8 @@ class Conv2d(_ConvNd):
             placed on the precision of intermediate results. When set to "float32",
             "float32" would be used for accumulator and intermediate result, but only
             effective when input and output are of float16 dtype.
+        padding_mode: "zeros", "reflect" or "replicate". Default: "zeros".
+            Refer to :class:`~.module.padding.Pad` for more information.
 
     Note:
         * ``weight`` usually has shape ``(out_channels, in_channels, height, width)`` ,
@@ -338,6 +365,7 @@ class Conv2d(_ConvNd):
         bias: bool = True,
         conv_mode: str = "cross_correlation",
         compute_mode: str = "default",
+        padding_mode: str = "zeros",
         **kwargs
     ):
         kernel_size = _pair_nonzero(kernel_size)
@@ -346,6 +374,7 @@ class Conv2d(_ConvNd):
         dilation = _pair_nonzero(dilation)
         self.conv_mode = conv_mode
         self.compute_mode = compute_mode
+        self.padding_mode = padding_mode
         super().__init__(
             in_channels,
             out_channels,
@@ -384,7 +413,32 @@ class Conv2d(_ConvNd):
         # Assume format is NCHW
         return (1, self.out_channels, 1, 1)
 
+    def get_pad_witdth(self):
+        return (
+            (0, 0),
+            (0, 0),
+            (self.padding[0], self.padding[0]),
+            (self.padding[1], self.padding[1]),
+        )
+
     def calc_conv(self, inp, weight, bias):
+        assert self.padding_mode in [
+            "zeros",
+            "reflect",
+            "replicate",
+        ]
+        if self.padding_mode != "zeros":
+            return conv2d(
+                pad(inp, self.get_pad_witdth(), self.padding_mode),
+                weight,
+                bias,
+                self.stride,
+                0,
+                self.dilation,
+                self.groups,
+                self.conv_mode,
+                self.compute_mode,
+            )
         return conv2d(
             inp,
             weight,

@@ -126,6 +126,9 @@ def convbn2d_module_loader(expr):
         module = expr.inputs[0].owner
         if not hasattr(module.bn, "param_dim"):
             module.bn.param_dim = "dim_1c11"
+    module = expr.inputs[0].owner
+    if not hasattr(module.conv, "padding_mode"):
+        module.conv.padding_mode = "zeros"
 
 
 @register_opdef_loader(BatchNorm)
@@ -162,3 +165,36 @@ def tensor_gen_func_loader(expr):
         else:
             device = None
         expr.set_args_kwargs(shape, dtype=dtype, device=device)
+
+
+@register_functional_loader(("megengine.functional.nn", "pad"))
+def pad_func_loader(expr):
+    if "pad_witdth" in expr.kwargs:
+        kwargs = expr.kwargs
+        kwargs["pad_width"] = kwargs.pop("pad_witdth")
+        expr.set_args_kwargs(*expr.args, **kwargs)
+
+
+@register_module_loader(
+    ("megengine.module.conv", "Conv1d"),
+    ("megengine.module.conv", "Conv2d"),
+    ("megengine.module.conv", "ConvRelu2d"),
+    ("megengine.module.qat.conv", "Conv2d"),
+    ("megengine.module.qat.conv", "ConvRelu2d"),
+    ("megengine.module.quantized.conv", "Conv2d"),
+    ("megengine.module.quantized.conv", "ConvRelu2d"),
+)
+def conv2d_module_loader(expr):
+    module = expr.inputs[0].owner
+    if not hasattr(module, "padding_mode"):
+        module.padding_mode = "zeros"
+
+
+@register_module_loader(
+    ("megengine.module.quantized.conv_bn", "ConvBn2d"),
+    ("megengine.module.quantized.conv_bn", "ConvBnRelu2d"),
+)
+def quantized_convbn2d_module_loader(expr):
+    module = expr.inputs[0].owner
+    if not hasattr(module, "padding_mode"):
+        module.padding_mode = "zeros"
