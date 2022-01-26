@@ -97,6 +97,7 @@ public:
     class AlgoMatmul;
     class AlgoChanwise;
     class AlgoChanwiseSmall;
+    class AlgoDepthwiseLargeFilter;
     class AlgoGroupConvGeneral;
     class AlgoBFloat16;
     class AlgoInt8NCHW4DotProdImplicitGemm;

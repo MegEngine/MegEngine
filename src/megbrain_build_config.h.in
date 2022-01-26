@@ -57,6 +57,7 @@
 #cmakedefine01 MEGDNN_64_BIT
 #cmakedefine01 MEGDNN_THREADS_512
 #cmakedefine01 MEGDNN_ENABLE_MULTI_THREADS
+#cmakedefine01 MEGDNN_WITH_BENCHMARK
 
 // whether atlas is available
 #ifndef MGB_ATLAS

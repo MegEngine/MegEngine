@@ -64,6 +64,10 @@ void run_bwd_data(
         cudaStream_t stream);
 
 template <typename T>
+void run_bwd_depthwise_large_filter(
+        T* dst, const T* src, const T* flt, const Param& param, cudaStream_t stream);
+
+template <typename T>
 void run_bwd_filter(
         T* filter_grad, const T* src, const T* dst_grad, const Param& param,
         cudaStream_t stream);

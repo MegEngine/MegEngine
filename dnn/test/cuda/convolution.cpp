@@ -724,6 +724,55 @@ TEST_F(CUDA, CONVOLUTION_BACKWARD_DATA_1) {
             TensorLayoutArray{filter, dst, src});
 }
 
+TEST_F(CUDA, CONVOLUTION_BACKWARD_DEPTHWISE_LARGE_FILTER) {
+    Checker<ConvolutionBackwardData> checker(handle_cuda());
+    checker.set_before_exec_callback(
+            AlgoChecker<ConvolutionBackwardData>("DEPTHWISE_LARGE_FILTER"));
+    for (auto dtype : std::vector<DType>{dtype::Float32()}) {
+        auto run = [&checker, &dtype](size_t n, size_t g, size_t h, size_t fh) {
+            param::Convolution param;
+            param.stride_h = param.stride_w = 1;
+            param.pad_h = param.pad_w = fh / 2;
+            param.mode = Convolution::Mode::CROSS_CORRELATION;
+            param.sparse = param::Convolution::Sparse::GROUP;
+            checker.set_dtype(0, dtype).set_dtype(1, dtype).set_dtype(2, dtype);
+
+            checker.set_param(param).execs(
+                    {{g, 1, 1, fh, fh}, {n, g, h, h}, {n, g, h, h}});
+        };
+        run(4, 8, 32, 5);
+        run(4, 8, 32, 7);
+        run(4, 8, 32, 9);
+        run(4, 8, 32, 11);
+        run(4, 8, 32, 13);
+        run(4, 8, 32, 15);
+        run(4, 8, 32, 17);
+        run(4, 8, 32, 19);
+        run(4, 8, 32, 21);
+        run(4, 8, 32, 23);
+        run(4, 8, 32, 25);
+        run(4, 8, 32, 27);
+        run(4, 8, 32, 29);
+        run(4, 8, 32, 31);
+        run(4, 8, 64, 7);
+        run(4, 8, 64, 5);
+        run(4, 8, 64, 9);
+        run(4, 8, 64, 11);
+        run(4, 8, 64, 13);
+        run(4, 8, 64, 15);
+        run(4, 8, 64, 17);
+        run(4, 8, 64, 19);
+        run(4, 8, 64, 21);
+        run(4, 8, 64, 23);
+        run(4, 8, 64, 25);
+        run(4, 8, 64, 27);
+        run(4, 8, 64, 29);
+        run(4, 8, 64, 31);
+        run(1, 2, 128, 31);
+        run(1, 2, 256, 31);
+    }
+}
+
 #if MEGDNN_WITH_BENCHMARK
 TEST_F(CUDA, CONV_FWD_BENCHMARK) {
     auto run = [&](size_t N, size_t OC, size_t IC, size_t IH, size_t IW, size_t SH = 1,
@@ -901,24 +950,23 @@ TEST_F(CUDA, CONVOLUTION_BWD_DATA_BENCHMARK) {
     run(32, 64, 64, 56, 56, 1, 1, 0);
 }
 
-TEST_F(CUDA, BENCHMARK_CONVOLUTION_BWD_DATA_CHANWISE_SMALL_FEAT_LARGE_FILTER) {
-    CUBenchmarker<ConvolutionBackwardData> bench{handle_cuda()};
-    std::unique_ptr<OprProxy<ConvolutionBackwardData>> proxy{
-            new OprProxy<ConvolutionBackwardData>{true}};
-    size_t RUNS = 10;
-    bench.set_proxy(proxy).set_times(RUNS);
+TEST_F(CUDA, BENCHMARK_CONVOLUTION_BWD_DATA_DEPTHWISE_LARGE_FILTER) {
+    CUBenchmarker<ConvolutionBackwardData> bencher{handle_cuda()};
+    bencher.set_display(false);
+    bencher.set_before_exec_callback(
+            AlgoChecker<ConvolutionBackwardData>("DEPTHWISE_LARGE_FILTER"));
 
     auto run = [&](size_t N, size_t OC, size_t g, size_t IH, size_t IW, size_t FH,
-                   size_t SH, size_t PH) {
-        bench.set_dtype(0, dtype::Float32())
+                   size_t SH, size_t nr_times) {
+        bencher.set_dtype(0, dtype::Float32())
                 .set_dtype(1, dtype::Float32())
                 .set_dtype(2, dtype::Float32());
         param::Convolution param;
         param.stride_h = param.stride_w = SH;
         param.pad_h = param.pad_w = FH / 2;
         param.sparse = param::Convolution::Sparse::GROUP;
-        bench.set_param(param);
-        bench.proxy()->target_execution_policy.algo.reset();
+        bencher.set_param(param);
+        bencher.set_times(nr_times);
         TensorLayout src{{N, g, IH, IW}, dtype::Float32()},
                 filter{{g, 1, 1, FH, FH}, dtype::Float32()};
         TensorLayout dst;
@@ -927,15 +975,28 @@ TEST_F(CUDA, BENCHMARK_CONVOLUTION_BWD_DATA_CHANWISE_SMALL_FEAT_LARGE_FILTER) {
             opr->param() = param;
             opr->deduce_layout(src, filter, dst);
         }
-        auto time_ms_fp32 = bench.execl({filter, dst, src}) / RUNS;
+        auto time_ms_fp32 = bencher.execl({filter, dst, src}) / nr_times;
         float flo = 2.0 * N * g * dst[2] * dst[3] * FH * FH;
         printf("inp=%s, kern=%s, dst=%s ", src.to_string().c_str(),
                filter.to_string().c_str(), dst.to_string().c_str());
         printf("time_fp32=%.2fms, flops=%.3fTFLOPS\n", time_ms_fp32,
                (flo / (time_ms_fp32 * 1e9)));
     };
-
-    run(64, 384, 384, 32, 32, 31, 1, 15);
+    run(64, 384, 384, 32, 32, 3, 1, 10);
+    run(64, 384, 384, 32, 32, 5, 1, 10);
+    run(64, 384, 384, 32, 32, 7, 1, 10);
+    run(64, 384, 384, 32, 32, 9, 1, 10);
+    run(64, 384, 384, 32, 32, 11, 1, 10);
+    run(64, 384, 384, 32, 32, 13, 1, 10);
+    run(64, 384, 384, 32, 32, 15, 1, 10);
+    run(64, 384, 384, 32, 32, 17, 1, 10);
+    run(64, 384, 384, 32, 32, 19, 1, 10);
+    run(64, 384, 384, 32, 32, 21, 1, 10);
+    run(64, 384, 384, 32, 32, 23, 1, 10);
+    run(64, 384, 384, 32, 32, 25, 1, 10);
+    run(64, 384, 384, 32, 32, 27, 1, 10);
+    run(64, 384, 384, 32, 32, 29, 1, 10);
+    run(64, 384, 384, 32, 32, 31, 1, 10);
 }
 
 TEST_F(CUDA, BENCHMARK_CONVOLUTION_BWD_DATA_BF16) {
@@ -1103,7 +1164,7 @@ TEST_F(CUDA, CONVOLUTION_BWD_FILTER_BENCHMARK) {
     run(32, 64, 64, 56, 56, 1, 1, 0);
 }
 
-TEST_F(CUDA, BENCHMARK_CONVOLUTION_BWD_FILTER_CHANWISE_SMALL_FEAT_LARGE_FILTER) {
+TEST_F(CUDA, BENCHMARK_CONVOLUTION_BWD_FILTER_DEPTHWISE_LARGE_FILTER) {
     CUBenchmarker<ConvolutionBackwardFilter> bench{handle_cuda()};
     std::unique_ptr<OprProxy<ConvolutionBackwardFilter>> proxy{
             new OprProxy<ConvolutionBackwardFilter>{true}};

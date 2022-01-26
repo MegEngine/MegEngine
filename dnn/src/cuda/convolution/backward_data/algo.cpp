@@ -19,10 +19,12 @@ using namespace cuda;
 ConvolutionBackwardDataImpl::AlgoPack::AlgoPack() {
     non_cudnn_algos.push_back(&chanwise);
     non_cudnn_algos.push_back(&chanwise_small);
+    non_cudnn_algos.push_back(&depthwise_large_filter);
     non_cudnn_algos.push_back(&matmul);
 
     all_algos.push_back(&chanwise);        // prefer chanwise
     all_algos.push_back(&chanwise_small);  // prefer small chanwise
+    all_algos.push_back(&depthwise_large_filter);
 
     fill_cudnn_algos();
     for (auto&& i : cudnn) {

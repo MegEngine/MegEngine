@@ -37,6 +37,7 @@ public:
         CUDA_MATMUL,
         CUDA_CHANWISE,
         CUDA_CHANWISE_SMALL,
+        CUDA_DEPTHWISE_LARGE_FILTER,
         CUDA_BFLOAT16,
         CUDA_GROUP_CONV_GENERAL,
         CUDA_IMPLICIT_GEMM_NCHW4_DOTPROD_INT8,
@@ -190,6 +191,20 @@ public:
     AlgoAttribute attribute() const override {
         return AlgoAttribute::REPRODUCIBLE | AlgoAttribute::USABLE_DEPEND_ON_SHAPE;
     }
+};
+
+class ConvolutionBackwardDataImpl::AlgoDepthwiseLargeFilter final : public AlgoBase {
+public:
+    bool is_available(const SizeArgs& args) const override;
+    size_t get_workspace_in_bytes(const SizeArgs& args) const override;
+    void exec(const ExecArgs& args) const override;
+
+    const char* name() const override { return "DEPTHWISE_LARGE_FILTER"; }
+    MEGDNN_DECL_ALGO_TYPE(CUDA_DEPTHWISE_LARGE_FILTER)
+    AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }
+
+private:
+    mutable std::string m_name;
 };
 
 class ConvolutionBackwardDataImpl::AlgoBFloat16 final : public AlgoBase {
@@ -411,6 +426,7 @@ public:
     AlgoMatmul matmul;
     AlgoChanwise chanwise;
     AlgoChanwiseSmall chanwise_small;
+    AlgoDepthwiseLargeFilter depthwise_large_filter;
     AlgoBFloat16 bfloat16;
     AlgoGroupConvGeneral group;
     std::vector<AlgoInt8NCHW4DotProdImplicitGemm> int8_nchw4_dotprod;
