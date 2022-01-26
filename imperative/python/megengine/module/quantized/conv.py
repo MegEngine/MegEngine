@@ -11,7 +11,7 @@ import numpy as np
 
 from ... import module as Float
 from ...core.tensor import dtype
-from ...functional.nn import conv_bias_activation
+from ...functional.nn import conv_bias_activation, pad
 from ...functional.quantized import conv_transpose2d
 from ...tensor import Parameter
 from ..qat import conv as QAT
@@ -38,6 +38,7 @@ class Conv2d(Float.Conv2d, QuantizedModule):
         conv_mode: str = "cross_correlation",
         compute_mode: str = "default",
         dtype=None,
+        padding_mode: str = "zeros",
         **kwargs
     ):
         super().__init__(
@@ -51,13 +52,33 @@ class Conv2d(Float.Conv2d, QuantizedModule):
             True,
             conv_mode,
             compute_mode,
+            padding_mode,
         )
         self.output_dtype = dtype
 
     def calc_conv_quantized(self, inp, nonlinear_mode="identity"):
+        assert self.padding_mode in [
+            "zeros",
+            "reflect",
+            "replicate",
+        ]
         inp_scale = dtype.get_scale(inp.dtype)
         w_scale = dtype.get_scale(self.weight.dtype)
         bias_scale = inp_scale * w_scale
+        if self.padding_mode != "zeros":
+            return conv_bias_activation(
+                pad(inp, self.get_pad_witdth(), self.padding_mode),
+                self.weight,
+                self.bias.astype(dtype.qint32(bias_scale)),
+                self.output_dtype,
+                self.stride,
+                0,
+                self.dilation,
+                self.groups,
+                conv_mode=self.conv_mode,
+                compute_mode=self.compute_mode,
+                nonlinear_mode=nonlinear_mode,
+            )
         return conv_bias_activation(
             inp,
             self.weight,
@@ -88,6 +109,7 @@ class Conv2d(Float.Conv2d, QuantizedModule):
             qat_module.dilation,
             qat_module.groups,
             dtype=output_dtype,
+            padding_mode=qat_module.padding_mode,
             name=qat_module.name,
         )
         weight = qat_module.weight.astype(qat_module.get_weight_dtype())

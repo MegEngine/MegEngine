@@ -147,6 +147,7 @@ class _ConvBnActivation2d(Float._ConvBnActivation2d, QATModule):
             float_module.conv.bias is not None,
             float_module.conv.conv_mode,
             float_module.conv.compute_mode,
+            padding_mode=float_module.conv.padding_mode,
             name=float_module.name,
         )
         qat_module.conv.weight = float_module.conv.weight

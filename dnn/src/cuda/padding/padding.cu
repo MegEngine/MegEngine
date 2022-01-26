@@ -60,7 +60,8 @@ __global__ void paddingConst_kernel(
                         params.src_stride[dim].divisor();
             */
         }
-        dst[out_index] = in_src_valid_area ? src[in_index] : padding_val;
+        dst[out_index] =
+                in_src_valid_area ? src[in_index] : static_cast<T>(padding_val);
     }
 }
 
@@ -256,6 +257,7 @@ void padding_backward_proxy(
             const float_t padding_val, cudaStream_t stream);
 #define cb(DType) INST(typename DTypeTrait<DType>::ctype)
 MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
+MEGDNN_FOREACH_QUANTIZED_DTYPE(cb)
 #undef cb
 #undef INST
 

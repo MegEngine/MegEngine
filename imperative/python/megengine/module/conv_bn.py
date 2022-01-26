@@ -30,6 +30,7 @@ class _ConvBnActivation2d(Module):
         momentum=0.9,
         affine=True,
         track_running_stats=True,
+        padding_mode: str = "zeros",
         **kwargs
     ):
         super().__init__(**kwargs)
@@ -44,6 +45,7 @@ class _ConvBnActivation2d(Module):
             bias,
             conv_mode,
             compute_mode,
+            padding_mode,
             **kwargs,
         )
         self.bn = BatchNorm2d(out_channels, eps, momentum, affine, track_running_stats)
