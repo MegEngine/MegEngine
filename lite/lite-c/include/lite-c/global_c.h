@@ -173,7 +173,7 @@ LITE_API int LITE_register_memory_pair(
  * clear the physical and virtual address pair in mge.
  */
 LITE_API int LITE_clear_memory_pair(
-        void* phy_ptr, void* vir_ptr, LiteDeviceType device, LiteBackend backend);
+        void* vir_ptr, void* phy_ptr, LiteDeviceType device, LiteBackend backend);
 
 #ifdef __cplusplus
 }
