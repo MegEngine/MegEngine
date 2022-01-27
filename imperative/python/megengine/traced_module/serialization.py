@@ -50,7 +50,7 @@ class _ModuleState:
         if self.obj is None:
             typem = getattr(import_module(self.module[0]), self.module[1])
             m_obj = typem.__new__(typem)
-            m_obj.__dict__.update(self.state)
+            m_obj.__setstate__(self.state)
             self.obj = m_obj
         return self.obj
 
