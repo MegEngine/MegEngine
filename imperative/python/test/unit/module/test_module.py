@@ -681,3 +681,27 @@ def test_repr_module_reset_attr():
     m1 = ResetAttrModule(False)
     output = [m0.__repr__(), m1.__repr__()]
     assert output == ground_truth
+
+
+def test_module_compatible():
+    class Empty(Module):
+        def forward(self):
+            pass
+
+    empty_module = Empty()
+    old_attributes = set(
+        [
+            "_modules",
+            "name",
+            "training",
+            "quantize_disabled",
+            "_forward_pre_hooks",
+            "_forward_hooks",
+            "_name",
+            "_short_name",
+        ]
+    )
+    current_attributes = set(empty_module.__dict__.keys())
+    assert (
+        old_attributes == current_attributes
+    ), "Add or delete attributes in Module class may break compatibility of pickle serialization"
