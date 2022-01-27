@@ -138,11 +138,7 @@ class Module(metaclass=ABCMeta):
         return HookHandler(self._forward_hooks, hook)
 
     def __call__(self, *inputs, **kwargs):
-        AutoNaming.push_scope(
-            self.name
-            if self.name is not None
-            else (self._short_name if hasattr(self, "_short_name") else self._name)
-        )
+        AutoNaming.push_scope(self.name if self.name is not None else self._short_name)
         for hook in self._forward_pre_hooks.values():
             modified_inputs = hook(self, inputs)
             if modified_inputs is not None:
@@ -684,6 +680,12 @@ class Module(metaclass=ABCMeta):
             prefix = self._name if self._name else self.name
             set_name(self, prefix, k, v)
         super().__setattr__(name, value)
+
+    def __setstate__(self, state):
+        if "_short_name" not in state:
+            state["_short_name"] = state["_name"]
+            state["_name"] = None
+        self.__dict__.update(state)
 
     def __delattr__(self, name: str):
         if name in self.__dict__ and _is_module(self.__dict__[name]):

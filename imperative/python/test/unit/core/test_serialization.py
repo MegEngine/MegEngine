@@ -87,3 +87,17 @@ def test_compatibility():
 
     test_old_tensor("tensor_v1_1.mge")
     test_old_tensor("tensor_v1_2.mge")
+
+    t = mge.tensor([1])
+    getattr(t, "qparams")
+    new_args = t.__getnewargs__()
+    assert (
+        len(new_args) == 3
+        and isinstance(new_args[0], np.ndarray)
+        and new_args[1] == np.int32
+        and isinstance(new_args[2], str)
+    ), "Modify Tensor __getnewargs__ may break pickle serialization compatible"
+    state = t.__getstate__()
+    assert set(state.keys()) == set(
+        ["qparams"]
+    ), "Modify Tensor __getstate__ may break pickle serialization compatible"

@@ -1681,11 +1681,13 @@ class TracedModuleBuilder(NodeMixin):
 
                 if isinstance(wrapped, TracedModuleBuilder):
                     if not isinstance(mod_attr, (List, Dict, QATModule)):
-                        assert mod_attr is wrapped._mod
-                else:
+                        assert (
+                            mod_attr is wrapped._mod
+                        ), "TracedModule do not support modify module attributes, please check your code."
+                if isinstance(wrapped, RawTensor):
                     assert (
                         mod_attr is wrapped
-                    ), "TracedModule do not support modify attributes, please check your code."
+                    ), "TracedModule do not support modify tensor attributes, please check your code."
 
                 if isinstance(wrapped, (NodeMixin, RawTensor)):
                     NodeMixin.wrap(
@@ -2296,7 +2298,7 @@ class TracedModule(Module):
         for k, v in state.items():
             if isinstance(v, _ModuleState):
                 state[k] = v.to_module()
-        self.__dict__.update(state)
+        super().__setstate__(state)
         self._update_ref()
 
         for _, graph in self.argdef_graph_map.items():
