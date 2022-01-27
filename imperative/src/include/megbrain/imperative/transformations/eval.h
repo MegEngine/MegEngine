@@ -60,7 +60,7 @@ public:
 };
 
 class InterpreterValue final
-        : public MixinValueImpl<InterpreterValue, InterpreterInfo> {
+        : public MixinValueImpl<InterpreterValue, ValueKind::Object, InterpreterInfo> {
 public:
     using MixinValueImpl::MixinValueImpl;
 

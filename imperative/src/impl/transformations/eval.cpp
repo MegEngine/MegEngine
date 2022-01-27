@@ -11,6 +11,7 @@
 
 #include "megbrain/imperative/transformations/eval.h"
 #include "megbrain/imperative/transformations/grad.h"
+#include "megbrain/imperative/utils/stats.h"
 
 namespace mgb {
 namespace imperative {
@@ -40,9 +41,6 @@ ShapeValue::ref_t InterpreterInfo::shape() const {
 
 ValueRefList InterpreterTransformation::apply_op(
         const ApplyOp& apply_op, Span<ValueRef> inputs) {
-    if (apply_op.op().same_type<FastpathCopy>()) {
-        return {inputs[0]};
-    }
     SmallVector<Handle> input_handles;
     SmallVector<Handle> output_handles;
     CleanupGuard _{[&] {
@@ -111,7 +109,11 @@ ValueRefList InterpreterTransformation::apply_create_tensor(
 ValueRefList InterpreterTransformation::apply_transformation(
         const Operator& op, Span<ValueRef> inputs) {
     if (auto* op_val = op.as<ApplyOp>()) {
-        return apply_op(*op_val, inputs);
+        if (op_val->op().same_type<FastpathCopy>()) {
+            return inputs[0];
+        } else {
+            return apply_op(*op_val, inputs);
+        }
     } else if (auto* get_attr = op.as<GetAttr>()) {
         return apply_get_attr(*get_attr, inputs);
     } else if (auto* create_tensor = op.as<CreateTensor>()) {

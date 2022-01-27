@@ -1,4 +1,5 @@
 #include "megbrain/imperative/transformation.h"
+#include "megbrain/imperative/utils/stats.h"
 
 namespace mgb {
 namespace imperative {

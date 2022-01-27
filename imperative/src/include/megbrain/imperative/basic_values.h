@@ -25,14 +25,16 @@ class GradKey;
 
 using GenericFunction = std::function<ValueRefList(Span<ValueRef>)>;
 
-class ShapeValue final : public MixinValueImpl<ShapeValue, ValueShape> {
+class ShapeValue final
+        : public MixinValueImpl<ShapeValue, ValueKind::Primitive, ValueShape> {
 public:
     using MixinValueImpl::MixinValueImpl;
 
     std::string to_string() const override;
 };
 
-class CompNodeValue final : public MixinValueImpl<CompNodeValue, CompNode> {
+class CompNodeValue final
+        : public MixinValueImpl<CompNodeValue, ValueKind::Primitive, CompNode> {
 public:
     using MixinValueImpl::MixinValueImpl;
 
@@ -40,7 +42,7 @@ public:
 };
 
 // TODO: override factory method
-class BoolValue final : public ValueImpl<BoolValue> {
+class BoolValue final : public ValueImpl<BoolValue, ValueKind::Primitive> {
 private:
     std::optional<bool> m_value;
 
@@ -53,14 +55,17 @@ public:
     void clear() override { m_value.reset(); }
 };
 
-class HostStorage final : public MixinValueImpl<HostStorage, HostTensorStorage> {
+class HostStorage final
+        : public MixinValueImpl<HostStorage, ValueKind::Primitive, HostTensorStorage> {
 public:
     using MixinValueImpl::MixinValueImpl;
 
     std::string to_string() const override;
 };
 
-class DeviceStorage final : public MixinValueImpl<DeviceStorage, DeviceTensorStorage> {
+class DeviceStorage final
+        : public MixinValueImpl<
+                  DeviceStorage, ValueKind::Primitive, DeviceTensorStorage> {
 public:
     using MixinValueImpl::MixinValueImpl;
 
@@ -71,7 +76,7 @@ public:
  * \brief like HostTensorND mixin, but allow scalar value
  *
  */
-class HostValue final : public ValueImpl<HostValue> {
+class HostValue final : public ValueImpl<HostValue, ValueKind::Primitive> {
 private:
     DType m_dtype;
     ValueShape m_shape;
@@ -94,9 +99,9 @@ public:
     }
 
     DType dtype() const { return m_dtype; }
-    ValueShape shape() const { return m_shape; }
+    const ValueShape& shape() const { return m_shape; }
     CompNode device() const { return m_storage.comp_node(); }
-    HostTensorStorage storage() const { return m_storage; }
+    const HostTensorStorage& storage() const { return m_storage; }
     DTypeScalar item() const {
         mgb_assert(m_shape.is_scalar());
         return DTypeScalar::make_from_raw(m_dtype, m_storage.ptr());
@@ -109,7 +114,7 @@ public:
  * \brief like DeviceTensorND mixin, but allow scalar value
  *
  */
-class DeviceValue final : public ValueImpl<DeviceValue> {
+class DeviceValue final : public ValueImpl<DeviceValue, ValueKind::Primitive> {
 private:
     DType m_dtype;
     ValueShape m_shape;
@@ -117,8 +122,8 @@ private:
 
 public:
     DeviceValue(DType dtype, ValueShape shape, DeviceTensorStorage storage)
-            : m_dtype(dtype), m_shape(shape), m_storage(storage) {}
-    DeviceValue(DeviceTensorND value)
+            : m_dtype(dtype), m_shape(shape), m_storage(std::move(storage)) {}
+    DeviceValue(const DeviceTensorND& value)
             : DeviceValue(
                       value.dtype(), ValueShape::from(value.shape()), value.storage()) {
     }
@@ -132,28 +137,31 @@ public:
     }
 
     DType dtype() const { return m_dtype; }
-    ValueShape shape() const { return m_shape; }
+    const ValueShape& shape() const { return m_shape; }
     CompNode device() const { return m_storage.comp_node(); }
-    DeviceTensorStorage storage() const { return m_storage; }
+    const DeviceTensorStorage& storage() const { return m_storage; }
 
     DeviceTensorND as_nd(bool allow_scalar = false) const;
 };
 
-class FunctionValue final : public MixinValueImpl<FunctionValue, GenericFunction> {
+class FunctionValue final
+        : public MixinValueImpl<FunctionValue, ValueKind::Primitive, GenericFunction> {
 public:
     using MixinValueImpl::MixinValueImpl;
 
     std::string to_string() const override;
 };
 
-class DTypeValue final : public MixinValueImpl<DTypeValue, DType> {
+class DTypeValue final
+        : public MixinValueImpl<DTypeValue, ValueKind::Primitive, DType> {
 public:
     using MixinValueImpl::MixinValueImpl;
 
     std::string to_string() const override;
 };
 
-class StringValue final : public MixinValueImpl<StringValue, std::string> {
+class StringValue final
+        : public MixinValueImpl<StringValue, ValueKind::Primitive, std::string> {
 public:
     using MixinValueImpl::MixinValueImpl;
 
@@ -171,7 +179,8 @@ public:
     std::string message() const { return m_message; }
 };
 
-class ErrorValue final : public MixinValueImpl<ErrorValue, Error> {
+class ErrorValue final
+        : public MixinValueImpl<ErrorValue, ValueKind::Primitive, Error> {
 public:
     using MixinValueImpl::MixinValueImpl;
 

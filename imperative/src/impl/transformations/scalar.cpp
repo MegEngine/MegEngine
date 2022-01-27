@@ -13,6 +13,7 @@
 
 #include "megbrain/imperative/ops/autogen.h"
 #include "megbrain/imperative/ops/utility.h"
+#include "megbrain/imperative/utils/stats.h"
 
 namespace mgb {
 namespace imperative {
@@ -185,7 +186,7 @@ ValueRefList subtensor_rule(
     bool is_scalar;
     mgb_assert(!inputs_mask[0], "subtensor shouldn't have scalar input");
     if (auto shape = input.shape()) {
-        size_t ndim = input.shape()->ndim;
+        size_t ndim = shape->ndim;
         for (auto&& [axis, begin, end, step, idx] : subtensor.items) {
             if (idx) {
                 ndim--;
@@ -193,6 +194,7 @@ ValueRefList subtensor_rule(
         }
         is_scalar = ndim == 0;
     } else {
+        // assume not scalar
         is_scalar = false;
     }
     auto outputs = imperative::apply(subtensor, inputs);
@@ -341,12 +343,16 @@ ValueRefList ScalarTransformation::apply_transformation(
     if (auto* get_attr = op.as<GetAttr>()) {
         // fastpath for GetAttr
         return apply_get_attr(*get_attr, inputs);
+    } else if (auto* apply_op = op.as<ApplyOp>()) {
+        if (apply_op->op().same_type<FastpathCopy>()) {
+            return inputs[0];
+        }
     }
     size_t nr_inputs = inputs.size();
     ValueRefList unwrapped_inputs(nr_inputs);
-    bool inputs_mask[nr_inputs];
+    SmallVector<bool> inputs_mask(nr_inputs);
     for (size_t i = 0; i < inputs.size(); ++i) {
-        if (auto scalar_value = inputs[i].as_ref<ScalarValue>()) {
+        if (auto&& scalar_value = inputs[i].as_ref<ScalarValue>()) {
             unwrapped_inputs[i] = scalar_value->value();
             inputs_mask[i] = true;
         } else {
@@ -358,8 +364,7 @@ ValueRefList ScalarTransformation::apply_transformation(
     if (auto apply_op = op.as<ApplyOp>()) {
         auto iter = scalar_rules.find(apply_op->op().dyn_typeinfo());
         if (iter != scalar_rules.end()) {
-            return iter->second(
-                    apply_op->op(), unwrapped_inputs, {inputs_mask, nr_inputs});
+            return iter->second(apply_op->op(), unwrapped_inputs, inputs_mask);
         } else {
             // TODO: repeat op
             return fallback();

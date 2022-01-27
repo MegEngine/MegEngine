@@ -54,6 +54,11 @@ struct OpMethArgs {
         return extras == rhs.extras;
     }
 
+    template <size_t i>
+    auto& extra() {
+        return std::get<i>(extras);
+    }
+
     struct hash_t {
         size_t operator()(const OpMethArgs& key) const { return key.hash(); }
     };

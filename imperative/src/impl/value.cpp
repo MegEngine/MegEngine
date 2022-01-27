@@ -215,8 +215,8 @@ ValueRefList::ValueRefList(size_t nr_elems) {
     init(nr_elems);
 }
 
-ValueRefList::ValueRefList(std::initializer_list<ValueRef> values)
-        : ValueRefList(values.begin(), values.end()) {}
+/*ValueRefList::ValueRefList(std::initializer_list<ValueRef> values)
+        : ValueRefList(values.begin(), values.end()) {}*/
 
 ValueRefList::ValueRefList(const ValueRefList& rhs)
         : ValueRefList(rhs.cbegin(), rhs.cend()) {}

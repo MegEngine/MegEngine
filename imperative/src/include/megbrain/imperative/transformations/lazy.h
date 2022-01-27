@@ -39,7 +39,8 @@ public:
     std::string name() const { return m_name; }
 };
 
-class LazyEvalValue final : public MixinValueImpl<LazyEvalValue, LazyEvalInfo> {
+class LazyEvalValue final
+        : public MixinValueImpl<LazyEvalValue, ValueKind::Object, LazyEvalInfo> {
 public:
     using MixinValueImpl::MixinValueImpl;
 

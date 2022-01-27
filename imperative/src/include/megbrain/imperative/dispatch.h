@@ -47,9 +47,14 @@ constexpr bool is_all_value_ref_v =
         (... && (std::is_base_of_v<ValueRef, std::decay_t<TArgs>> ||
                  std::is_same_v<ValueRef, std::decay_t<TArgs>>));
 
+template <typename T>
+static ValueRefList apply(T&& op, const ValueRef& arg) {
+    return imperative::apply(std::forward<T&&>(op), Span<ValueRef>{&arg, 1});
+}
+
 template <typename T, typename... TArgs>
-static auto apply(T&& op, TArgs&&... args)
-        -> std::enable_if_t<is_all_value_ref_v<TArgs...>, ValueRefList> {
+static auto apply(T&& op, TArgs&&... args) -> std::enable_if_t<
+        is_all_value_ref_v<TArgs...> && sizeof...(args) != 1, ValueRefList> {
     ValueRef args_arr[sizeof...(TArgs)] = {std::forward<TArgs&&>(args)...};
     return imperative::apply(
             std::forward<T&&>(op),

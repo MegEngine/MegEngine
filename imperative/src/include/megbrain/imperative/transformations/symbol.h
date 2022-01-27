@@ -22,7 +22,7 @@
 
 namespace mgb::imperative {
 
-class SymbolValue final : public ValueImpl<SymbolValue> {
+class SymbolValue final : public ValueImpl<SymbolValue, ValueKind::Object> {
 private:
     VarNode* m_node = nullptr;
 

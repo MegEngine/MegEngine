@@ -14,13 +14,9 @@
 #include "megbrain/imperative/utils/debug.h"
 #include "megbrain/imperative/utils/helper.h"
 #include "megbrain/imperative/utils/map.h"
+#include "megbrain/imperative/utils/stats.h"
 
 namespace mgb {
-
-void imperative_log_profile_begin(const char* message);
-void imperative_log_profile(const char* message);
-void imperative_log_profile_end(const char* message);
-
 namespace imperative {
 
 namespace {

@@ -23,6 +23,7 @@
 #include "megbrain/imperative/utils/debug.h"
 #include "megbrain/imperative/utils/local_ptr.h"
 #include "megbrain/imperative/utils/span.h"
+#include "megbrain/imperative/utils/stats.h"
 
 namespace mgb {
 namespace imperative {
@@ -56,6 +57,11 @@ private:
 
 public:
     inline size_t code() const { return m_code; }
+};
+
+enum class ValueKind {
+    Primitive,
+    Object,
 };
 
 /**
@@ -129,10 +135,10 @@ public:
      * \return TypedValueRef<TValue> reference if success, otherwise empty reference
      */
     template <typename TValue>
-    inline TypedValueRef<TValue> as_ref(Type<TValue> type = {}) const;
+    inline const TypedValueRef<TValue>& as_ref(Type<TValue> type = {}) const;
 
     template <typename TValue>
-    inline TypedValueRef<TValue> cast_ref(Type<TValue> type = {}) const;
+    inline const TypedValueRef<TValue>& cast_ref(Type<TValue> type = {}) const;
 
     template <typename TValue>
     void on_cast_failure() const;
@@ -161,13 +167,17 @@ public:
 
     static bool any_watching();
 
+    static const ValueRef nil;
+
     friend class ValueWeakRef;
-    template <typename T>
+    template <typename>
     friend class TypedValueRef;
-    template <typename T>
+    template <typename, ValueKind>
     friend class ValueImpl;
     friend ValueRefList apply(const Operator& op, Span<ValueRef> inputs);
 };
+
+inline const ValueRef ValueRef::nil;
 
 template <>
 struct ToStringTrait<ValueRef> {
@@ -241,7 +251,7 @@ public:
     friend class ValueRef;
     friend class ValueWeakRef;
 
-    template <typename T>
+    template <typename, ValueKind>
     friend class ValueImpl;
     template <typename T>
     friend class TypedValueRef;
@@ -257,7 +267,7 @@ private:
  *
  * \tparam T type of value
  */
-template <typename T>
+template <typename T, ValueKind Kind>
 class ValueImpl : public Value {
 protected:
     ValueImpl() : Value(TYPE_CODE) {}
@@ -267,6 +277,7 @@ public:
     using weak_ref_t = TypedValueWeakRef<T>;
 
     static inline const size_t TYPE_CODE = [] { return register_type(typeid(T)); }();
+    static constexpr ValueKind KIND = Kind;
 
     /**
      * \brief helper function for construct a value
@@ -288,8 +299,8 @@ public:
  * \tparam T type of value
  * \tparam TMixin type of mixin class
  */
-template <typename T, typename TMixin>
-class MixinValueImpl : public ValueImpl<T>, public TMixin {
+template <typename T, ValueKind Kind, typename TMixin>
+class MixinValueImpl : public ValueImpl<T, Kind>, public TMixin {
 public:
     using TMixin::TMixin;
 
@@ -309,12 +320,14 @@ inline ValueRef::ValueRef(storage_t storage) {
 
 template <typename TValue>
 inline const TValue* ValueRef::as(Type<TValue> type) const {
-    static_assert(std::is_base_of_v<ValueImpl<TValue>, TValue>);
+    // auto _ = Stats::time_value_as.time_scope();
+    static_assert(std::is_base_of_v<Value, TValue>);
     return static_cast<const TValue*>(as(type.code()));
 }
 
 template <typename TValue>
 inline const TValue& ValueRef::cast(Type<TValue> type) const {
+    // auto _ = Stats::time_value_cast.time_scope();
     auto* ptr = as<TValue>(type);
     if (mgb_unlikely(!ptr)) {
         on_cast_failure<TValue>();
@@ -324,26 +337,27 @@ inline const TValue& ValueRef::cast(Type<TValue> type) const {
 
 template <typename TValue>
 inline bool ValueRef::is(Type<TValue> type) const {
+    // auto _ = Stats::time_value_is.time_scope();
     return is(type.code());
 }
 
 template <typename TValue>
-inline TypedValueRef<TValue> ValueRef::as_ref(Type<TValue> type) const {
+inline const TypedValueRef<TValue>& ValueRef::as_ref(Type<TValue> type) const {
     if (!is<TValue>(type)) {
-        return {};
+        return TypedValueRef<TValue>::nil;
     }
-    return TypedValueRef<TValue>(*this);
+    return *reinterpret_cast<const TypedValueRef<TValue>*>(this);
 }
 
 template <typename TValue>
-inline TypedValueRef<TValue> ValueRef::cast_ref(Type<TValue> type) const {
+inline const TypedValueRef<TValue>& ValueRef::cast_ref(Type<TValue> type) const {
     if (!m_storage) {
-        return {};
+        return TypedValueRef<TValue>::nil;
     }
     if (mgb_unlikely(!is<TValue>(type))) {
         on_cast_failure<TValue>();
     }
-    return TypedValueRef<TValue>(*this);
+    return *reinterpret_cast<const TypedValueRef<TValue>*>(this);
 }
 
 template <typename TValue>
@@ -363,12 +377,31 @@ void ValueRef::on_cast_failure() const {
 template <typename T>
 class TypedValueRef : public ValueRef {
 private:
-    TypedValueRef(ValueRef value) : ValueRef(value) {}
+    TypedValueRef(ValueRef value) : ValueRef(std::move(value)) {}
 
 public:
     TypedValueRef() = default;
-    const T& operator*() const { return this->template cast<T>(); }
-    const T* operator->() const { return this->template as<T>(); }
+    const T& operator*() const {
+        if constexpr (T::KIND == ValueKind::Object) {
+            return this->template cast<T>();
+        } else if constexpr (T::KIND == ValueKind::Primitive) {
+            if (!m_storage) {
+                on_cast_failure<T>();
+            }
+            return static_cast<const T&>(*m_storage);
+        } else {
+            static_assert(!std::is_same_v<T, T>);
+        }
+    }
+    const T* operator->() const {
+        if constexpr (T::KIND == ValueKind::Object) {
+            return this->template as<T>();
+        } else if constexpr (T::KIND == ValueKind::Primitive) {
+            return static_cast<const T*>(m_storage.get());
+        } else {
+            static_assert(!std::is_same_v<T, T>);
+        }
+    }
 
     /**
      * \brief reset underlying value to another value
@@ -376,6 +409,7 @@ public:
      * \param successor new value
      */
     inline void reset(ValueRef successor) {
+        static_assert(T::KIND == ValueKind::Object);
         mgb_assert(m_storage);
         mgb_assert(!m_storage->m_successor);
         if (m_storage->m_watching) {
@@ -385,9 +419,11 @@ public:
         m_storage->m_successor = ValueRef(successor.storage());
     }
 
+    static inline const TypedValueRef nil;
+
     friend class ValueRef;
 
-    template <typename U>
+    template <typename, ValueKind>
     friend class ValueImpl;
 };
 
@@ -423,7 +459,7 @@ public:
     ValueRefList() = default;
     ValueRefList(size_t nr_elems);
     ValueRefList(ValueRef item);
-    ValueRefList(std::initializer_list<ValueRef> values);
+    // ValueRefList(std::initializer_list<ValueRef> values);
     template <typename TIterator>
     ValueRefList(TIterator begin, TIterator end);
     ValueRefList(const ValueRefList& rhs);

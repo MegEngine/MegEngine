@@ -19,6 +19,7 @@
 #include "megbrain/imperative/ops/backward_graph.h"
 #include "megbrain/imperative/ops/opr_attr.h"
 #include "megbrain/imperative/ops/utility.h"
+#include "megbrain/imperative/utils/stats.h"
 #include "megbrain/imperative/utils/to_string.h"
 
 #include "../blob_manager_impl.h"

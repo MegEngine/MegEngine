@@ -104,37 +104,15 @@ struct ToStringTrait<GradSlot> {
     std::string operator()(const GradSlot& value) const { return value.to_string(); }
 };
 
-class GradFn {
-private:
-    std::weak_ptr<GradKey> m_key;
-    std::vector<GradSlot> m_slots;
-    std::vector<GradSlotProducerPtr> m_dests;
-    std::variant<std::monostate, BackwardGraphWithClosure, CustomBackward> m_backward;
-
-public:
-    void clear() {
-        m_key.reset();
-        m_slots.clear();
-        m_dests.clear();
-        m_backward.emplace<std::monostate>();
-    }
-
-    std::string to_string() const;
-
-    friend class GradSlotPtr;
-    friend class GradKey;
-    friend class GradTransformation;
-};
-
 class GradSlotPtr {
 private:
-    std::shared_ptr<GradFn> m_fn;
+    LocalPtr<GradFn> m_fn;
     size_t m_index = 0;
 
 public:
-    GradSlotPtr(std::shared_ptr<GradFn> fn, size_t index) : m_fn(fn), m_index(index) {}
+    GradSlotPtr(LocalPtr<GradFn> fn, size_t index) : m_fn(fn), m_index(index) {}
     GradSlotPtr() = default;
-    GradSlot* operator->() const { return &m_fn->m_slots[m_index]; }
+    GradSlot* operator->() const;
 
     operator bool() const { return bool(m_fn); }
 
@@ -171,7 +149,33 @@ struct ToStringTrait<GradSlotProducerPtr> {
     }
 };
 
-class GradValue final : public ValueImpl<GradValue> {
+class GradFn {
+private:
+    std::weak_ptr<GradKey> m_key;
+    SmallVector<GradSlot> m_slots;
+    SmallVector<GradSlotProducerPtr> m_dests;
+    std::variant<std::monostate, BackwardGraphWithClosure, CustomBackward> m_backward;
+
+public:
+    void clear() {
+        m_key.reset();
+        m_slots.clear();
+        m_dests.clear();
+        m_backward.emplace<std::monostate>();
+    }
+
+    std::string to_string() const;
+
+    friend class GradSlotPtr;
+    friend class GradKey;
+    friend class GradTransformation;
+};
+
+inline GradSlot* GradSlotPtr::operator->() const {
+    return &m_fn->m_slots[m_index];
+}
+
+class GradValue final : public ValueImpl<GradValue, ValueKind::Object> {
 private:
     ValueRef m_value;
     std::shared_ptr<GradKey> m_key;
@@ -179,7 +183,7 @@ private:
 
 public:
     GradValue(ValueRef value, std::shared_ptr<GradKey> key, GradSlotPtr slot = {})
-            : m_value(value), m_key(key), m_slot(slot) {}
+            : m_value(std::move(value)), m_key(std::move(key)), m_slot(slot) {}
 
     std::string to_string() const override;
 
@@ -209,12 +213,13 @@ public:
 class GradKey : public std::enable_shared_from_this<GradKey> {
 private:
     std::string m_name;
-    std::vector<std::pair<std::weak_ptr<GradFn>, std::shared_ptr<OpDef>>> m_tape;
-    std::vector<std::pair<std::shared_ptr<GradFn>, std::shared_ptr<OpDef>>>
-            m_frozen_tape;
+    std::vector<std::pair<LocalWeakPtr<GradFn>, std::shared_ptr<OpDef>>> m_tape;
+    std::vector<std::pair<LocalPtr<GradFn>, std::shared_ptr<OpDef>>> m_frozen_tape;
     bool m_frozen = false;
 
 public:
+    GradKey() { m_tape.reserve(4 * 1024); }
+
     void backward();
     GradValue::ref_t attach(ValueRef tensor, std::function<void(ValueRef)> callback);
     const std::string& name() const { return m_name; }
@@ -225,7 +230,8 @@ public:
 };
 
 class GradKeyValue final
-        : public MixinValueImpl<GradKeyValue, std::shared_ptr<GradKey>> {
+        : public MixinValueImpl<
+                  GradKeyValue, ValueKind::Primitive, std::shared_ptr<GradKey>> {
 public:
     using MixinValueImpl::MixinValueImpl;
 
@@ -248,7 +254,7 @@ public:
         return tensor;
     }
 
-    bool is_grad_value(ValueRef value) {
+    bool is_grad_value(const ValueRef& value) {
         if (auto* grad_value = value.as<GradValue>()) {
             if (grad_value->has_key(m_key)) {
                 return true;
@@ -266,13 +272,14 @@ public:
      * \param value
      * \return GradValue::ref_t
      */
-    GradValue::ref_t as_grad_value(ValueRef value) {
-        if (auto grad_value = value.as_ref<GradValue>()) {
+    const GradValue::ref_t& as_grad_value(const ValueRef& value) {
+        auto&& grad_value = value.as_ref<GradValue>();
+        if (grad_value) {
             if (grad_value->has_key(m_key)) {
                 return grad_value;
             }
         }
-        return {};
+        return GradValue::ref_t::nil;
     }
 
     bool has_key(std::shared_ptr<GradKey> key) {

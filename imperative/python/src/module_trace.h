@@ -13,6 +13,7 @@
 
 #include "megbrain/imperative/transformations/trace.h"
 #include "megbrain/imperative/utils/map.h"
+#include "megbrain/imperative/utils/stats.h"
 
 #include "./tensor.h"
 

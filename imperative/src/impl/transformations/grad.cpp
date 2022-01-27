@@ -11,8 +11,11 @@
 
 #include "megbrain/imperative/transformations/grad.h"
 
+#include <variant>
+
 #include "megbrain/imperative/graph_cache.h"
 #include "megbrain/imperative/resource_manager.h"
+#include "megbrain/imperative/utils/stats.h"
 
 #include <range/v3/all.hpp>
 
@@ -20,20 +23,21 @@ namespace mgb {
 namespace imperative {
 
 static std::shared_ptr<OptimizedBackwardGraphResult> make_optimized_backward_graph(
-        std::shared_ptr<OpDef> op, Span<ValueRef> inputs, Span<ValueRef> outputs,
+        const OpDef& op, Span<ValueRef> inputs, Span<ValueRef> outputs,
         Span<bool> inputs_require_grad) {
     // hash
     using OptimizedBackwardGraphCache = OpMethResultCache<
             std::shared_ptr<OptimizedBackwardGraphResult>, SmallVector<bool>>;
     thread_local auto& cache =
             *ResourceManager::create_local<OptimizedBackwardGraphCache>();
-    OptimizedBackwardGraphCache::key_t cache_key{op};
+    OptimizedBackwardGraphCache::key_t cache_key{op.shared_from_this()};
     SmallVector<LogicalTensorDesc>& input_descs = cache_key.inputs;
-    std::get<0>(cache_key.extras) = inputs_require_grad.copy_into<SmallVector<bool>>();
+    cache_key.extra<0>() = inputs_require_grad.copy_into<SmallVector<bool>>();
     input_descs.resize(inputs.size());
+    // some overhead, consider simplify LogicalTensorDesc
     for (size_t i = 0; i < inputs.size(); ++i) {
-        input_descs[i].layout.dtype = inputs[i].dtype().cast<DTypeValue>();
-        input_descs[i].comp_node = inputs[i].device().cast<CompNodeValue>();
+        input_descs[i].layout.dtype = *inputs[i].dtype();
+        input_descs[i].comp_node = *inputs[i].device();
     }
 
     auto iter = cache.find(cache_key);
@@ -45,7 +49,7 @@ static std::shared_ptr<OptimizedBackwardGraphResult> make_optimized_backward_gra
     SmallVector<bool> output_has_grad(outputs.size(), true);
     std::shared_ptr<OptimizedBackwardGraphResult> ret;
     auto bg = OpDef::make_backward_graph(
-            *op, input_descs, std::get<0>(cache_key.extras), output_has_grad);
+            op, input_descs, std::get<0>(cache_key.extras), output_has_grad);
     if (!bg.graph.empty()) {
         ret = std::make_shared<OptimizedBackwardGraphResult>(bg);
     }
@@ -235,7 +239,7 @@ GradValue::ref_t GradKey::attach(
     } else {
         GradSlotPtr grad_slot;
         auto& grad_fn = grad_slot.m_fn;
-        grad_fn = std::make_shared<GradFn>();
+        grad_fn = LocalPtr<GradFn>::make();
         grad_fn->m_key = shared_from_this();
         grad_fn->m_slots.resize(1);
         grad_slot.m_index = 0;
@@ -260,17 +264,21 @@ ValueRefList GradTransformation::apply_transformation(
         const Operator& op, Span<ValueRef> inputs) {
     auto fallback = [&] {
         ValueRefList unwrapped_inputs(inputs.size());
-        for (size_t i = 0; i < inputs.size(); ++i) {
-            if (auto grad_value = as_grad_value(inputs[i])) {
-                unwrapped_inputs[i] = grad_value->m_value;
-            } else {
-                unwrapped_inputs[i] = inputs[i];
+        {
+            // overhead
+            for (size_t i = 0; i < inputs.size(); ++i) {
+                if (auto&& grad_value = as_grad_value(inputs[i])) {
+                    unwrapped_inputs[i] = grad_value->m_value;
+                } else {
+                    unwrapped_inputs[i] = inputs[i];
+                }
             }
         }
         return imperative::apply(op, unwrapped_inputs);
     };
-    if (auto* get_attr = op.as<GetAttr>()) {
-        if (auto grad_value = as_grad_value(inputs.item())) {
+    if (op.is<GetAttr>()) {
+        // overhead
+        if (auto&& grad_value = as_grad_value(inputs.item())) {
             return imperative::apply(op, grad_value->m_value);
         } else {
             return imperative::apply(op, inputs);
@@ -281,28 +289,29 @@ ValueRefList GradTransformation::apply_transformation(
     }
     if (auto* op_val = op.as<ApplyOp>()) {
         size_t nr_require_grad = 0;
-        SmallVector<bool> require_grads;
-        for (auto&& input : inputs) {
-            if (is_grad_value(input)) {
+        SmallVector<bool> require_grads(inputs.size());
+        for (size_t i = 0; i < inputs.size(); ++i) {
+            if (is_grad_value(inputs[i])) {
                 nr_require_grad++;
-                require_grads.push_back(true);
+                require_grads[i] = true;
             } else {
-                require_grads.push_back(false);
+                require_grads[i] = false;
             }
         }
         if (nr_require_grad == 0) {
             return imperative::apply(op, inputs);
         }
-        ValueRefList captured_inputs(inputs.size());
+        SmallVector<ValueRef> captured_inputs(inputs.size());
         SmallVector<bool> inputs_require_grad(inputs.size());
         // capture value so that trace could assume input as same
-        auto capture_value = [](ValueRef value) {
+        auto capture_value = [](const ValueRef& value) {
             // TODO: fastpath copy shouldn't be an OpDef
-            return imperative::apply(ApplyOp(*FastpathCopy::make()), {&value, 1})[0];
+            static auto fastpath_copy = FastpathCopy::make();
+            return imperative::apply(ApplyOp(*fastpath_copy), value)[0];
         };
         for (size_t i = 0; i < inputs.size(); ++i) {
             auto& input = inputs[i];
-            if (auto grad_value = as_grad_value(input)) {
+            if (auto&& grad_value = as_grad_value(input)) {
                 captured_inputs[i] = capture_value(grad_value->m_value);
                 inputs_require_grad[i] = true;
             } else {
@@ -310,32 +319,28 @@ ValueRefList GradTransformation::apply_transformation(
                 inputs_require_grad[i] = false;
             }
         }
-        decltype(std::declval<GradFn>().m_backward) backward_storage;
+        // copy grad_fn->m_backward is expensive
+        auto grad_fn = LocalPtr<GradFn>::make();
+        auto& backward_storage = grad_fn->m_backward;
         auto outputs = [&] {
             auto backward_rule =
                     CustomBackward::lookup_grad_rule(op_val->op().dyn_typeinfo());
             if (backward_rule) {
                 CustomBackward backward;
                 auto optional_outputs = backward_rule(
-                        op_val->op(), {captured_inputs.data(), captured_inputs.size()},
-                        {inputs_require_grad.data(), inputs_require_grad.size()},
-                        backward);
+                        op_val->op(), captured_inputs, inputs_require_grad, backward);
                 if (optional_outputs) {
                     backward_storage = backward;
                     // backward by rule
                     return *optional_outputs;
                 }
             }
-            auto outputs = imperative::apply(
-                    op, {captured_inputs.begin(), captured_inputs.end()});
+            auto outputs = imperative::apply(op, captured_inputs);
             auto backward_graph = make_optimized_backward_graph(
-                    op.cast<ApplyOp>().op().shared_from_this(),
-                    {captured_inputs.begin(), captured_inputs.end()},
-                    {outputs.data(), outputs.size()},
-                    {inputs_require_grad.data(), inputs_require_grad.size()});
+                    op_val->op(), captured_inputs, outputs, inputs_require_grad);
             if (backward_graph) {
                 backward_storage = BackwardGraphWithClosure(
-                        backward_graph, op.cast<ApplyOp>().op().shared_from_this(),
+                        backward_graph, op_val->op().shared_from_this(),
                         {captured_inputs.begin(), captured_inputs.end()},
                         {outputs.data(), outputs.size()});
                 // backward by make_backward_graph
@@ -348,18 +353,17 @@ ValueRefList GradTransformation::apply_transformation(
         if (std::holds_alternative<std::monostate>(backward_storage)) {
             return outputs;
         }
-        auto grad_fn = std::make_shared<GradFn>();
         grad_fn->m_key = m_key;
         grad_fn->m_slots.resize(outputs.size());
-        grad_fn->m_backward = backward_storage;
         mgb_assert(!outputs.empty());
         grad_fn->m_dests.reserve(inputs.size());
         // clang-format off
-        std::visit([&](auto& backward) {
+        auto visitor = [&](auto& backward) {
             using T = std::decay_t<decltype(backward)>;
             if constexpr (std::is_same_v<T, std::monostate>) {
                 mgb_throw(AssertionError, "invalid backward");
             } else {
+                // little overhead
                 for (size_t i = 0; i < inputs.size(); ++i) {
                     if (backward.input_has_grad(i) && require_grads[i]) {
                         auto& input_grad_slot =
@@ -373,19 +377,23 @@ ValueRefList GradTransformation::apply_transformation(
                 }
                 for (size_t i = 0; i < outputs.size(); ++i) {
                     if (backward.output_requires_grad(i)) {
+                        // little overhead: Value::make
                         auto grad_value = GradValue::make(outputs[i], m_key, GradSlotPtr{grad_fn, i});
                         outputs[i] = record_grad(grad_value);
                     }
                 }
             }
-        }, grad_fn->m_backward);
+        };
+        // std::visit may be slightly slower than direct if
+        std::visit(visitor, backward_storage);
         // clang-format on
         mgb_assert(!grad_fn->m_slots.empty());
         m_key->m_tape.push_back({grad_fn, op_val->op().shared_from_this()});
         return outputs;
     } else if (op.is<CreateTensor>()) {
         return imperative::apply(op, inputs);
-    } else if (auto* attach_grad = op.as<AttachGrad>()) {
+    }
+    if (auto* attach_grad = op.as<AttachGrad>()) {
         if (!has_key(attach_grad->key())) {
             return fallback();
         }
@@ -408,7 +416,7 @@ ValueRefList GradTransformation::apply_transformation(
         return {};
     } else if (auto* is_attached_to = op.as<IsAttachedTo>()) {
         if (has_key(is_attached_to->key())) {
-            if (auto grad_value = as_grad_value(inputs[0])) {
+            if (auto&& grad_value = as_grad_value(inputs[0])) {
                 // TODO: assert grad_fn
                 return {BoolValue::make(true)};
             }
@@ -416,7 +424,7 @@ ValueRefList GradTransformation::apply_transformation(
         return {BoolValue::make(false)};
     } else if (auto* set_grad = op.as<SetGrad>()) {
         // TODO: merge SetGrad and ApplyOp
-        auto grad_fn = std::make_shared<GradFn>();
+        auto grad_fn = LocalPtr<GradFn>::make();
         auto& backward =
                 std::get<CustomBackward>(grad_fn->m_backward = CustomBackward());
         size_t nr_inputs = set_grad->nr_inputs();
@@ -433,7 +441,7 @@ ValueRefList GradTransformation::apply_transformation(
         grad_fn->m_slots.resize(nr_outputs);
         grad_fn->m_dests.reserve(nr_inputs);
         for (size_t i = 0; i < nr_inputs; ++i) {
-            if (auto grad_value = as_grad_value(inputs_[i])) {
+            if (auto&& grad_value = as_grad_value(inputs_[i])) {
                 auto& input_grad_slot = grad_value->m_slot;
                 grad_fn->m_dests.emplace_back(grad_value->m_slot);
                 grad_fn->m_dests.back().m_producer_record.insert_after(
@@ -461,21 +469,21 @@ ValueRefList GradTransformation::apply_transformation(
         }
         return {FunctionValue::make(make_backward_closure(inputs))};
     } else if (op.is<DetachGrad>()) {
-        if (auto grad_value = as_grad_value(inputs[0])) {
+        if (auto&& grad_value = as_grad_value(inputs[0])) {
             return {grad_value->m_value};
         } else {
             return {inputs[0]};
         }
     } else if (op.is<GetGradKey>()) {
         for (auto&& input : inputs) {
-            if (auto grad_value = as_grad_value(input)) {
+            if (auto&& grad_value = as_grad_value(input)) {
                 return {GradKeyValue::make(grad_value->m_key)};
             }
         }
         return imperative::apply(op, inputs);
     } else if (op.kind() == Operator::IdentityLike) {
         mgb_assert(inputs.size() == 1);
-        if (auto grad_value = as_grad_value(inputs[0])) {
+        if (auto&& grad_value = as_grad_value(inputs[0])) {
             auto output = imperative::apply(op, grad_value->m_value)[0];
             auto grad_output = GradValue::make(
                     output, grad_value->key(), grad_value->slot_for(m_key));
@@ -493,7 +501,7 @@ GenericFunction GradTransformation::make_backward_closure(Span<ValueRef> ys) {
     auto grad_key = m_key;
     std::vector<GradSlotPtr> y_slots;
     for (auto&& y : ys) {
-        if (auto grad_value = as_grad_value(y)) {
+        if (auto&& grad_value = as_grad_value(y)) {
             y_slots.push_back(grad_value->slot_for(grad_key));
         } else {
             y_slots.emplace_back();

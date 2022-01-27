@@ -17,7 +17,7 @@
 
 namespace mgb::imperative {
 
-class ScalarValue final : public ValueImpl<ScalarValue> {
+class ScalarValue final : public ValueImpl<ScalarValue, ValueKind::Object> {
 private:
     ValueRef m_value;
 

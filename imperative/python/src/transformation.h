@@ -67,7 +67,8 @@ struct TransformationManager {
     }
 };
 
-class PyValue final : public MixinValueImpl<PyValue, pybind11::object> {
+class PyValue final
+        : public MixinValueImpl<PyValue, ValueKind::Object, pybind11::object> {
 public:
     using MixinValueImpl::MixinValueImpl;
 

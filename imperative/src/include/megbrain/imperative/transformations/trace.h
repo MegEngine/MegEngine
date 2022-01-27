@@ -111,7 +111,8 @@ public:
     size_t id() const { return m_id; }
 };
 
-class TracingValue final : public MixinValueImpl<TracingValue, TracingInfo> {
+class TracingValue final
+        : public MixinValueImpl<TracingValue, ValueKind::Object, TracingInfo> {
 public:
     using MixinValueImpl::MixinValueImpl;
 
@@ -256,7 +257,8 @@ public:
         }
     };
 
-    class TracedValue final : public MixinValueImpl<TracedValue, TracedInfo> {
+    class TracedValue final
+            : public MixinValueImpl<TracedValue, ValueKind::Object, TracedInfo> {
     public:
         using MixinValueImpl::MixinValueImpl;
 
