@@ -119,12 +119,16 @@ def unpack_getitem(inp, tuple_val, *, allow_newaxis=True):
                 else 1
             )
     else:
-        if ndim_indexed > inp.ndim:
-            raise IndexError(
-                "too many indices for tensor: tensor is {}-dimensional, but {} were indexed".format(
-                    inp.ndim, len(tuple_val)
+        try:
+            if ndim_indexed > inp.ndim:
+                raise IndexError(
+                    "too many indices for tensor: tensor is {}-dimensional, but {} were indexed".format(
+                        inp.ndim, len(tuple_val)
+                    )
                 )
-            )
+        except ValueError:
+            # ignore
+            pass
 
     tuple_val = remove_ellipsis(inp, tuple_val)
     use_subtensor = True

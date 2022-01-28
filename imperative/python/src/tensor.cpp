@@ -272,16 +272,12 @@ PyObject* TensorWrapper::device() {
 
 PyObject* TensorWrapper::numpy() {
     auto hv = m_tensor->numpy();
-    // if (!hv) {
-    //     PyErr_SetString(PyExc_ValueError, "tensor invalid");
-    //     return nullptr;
-    // }
-    auto arr = py::reinterpret_steal<py::array>(
-            npy::ndarray_from_tensor(hv->as_nd(true), npy::ShareType::TRY_SHARE));
-    if (!arr) {
+    if (!hv) {
         PyErr_SetString(PyExc_ValueError, "tensor invalid");
         return nullptr;
     }
+    auto arr = py::reinterpret_steal<py::array>(
+            npy::ndarray_from_tensor(hv->as_nd(true), npy::ShareType::TRY_SHARE));
     if (hv->shape().is_scalar()) {
         mgb_assert(PyArray_Check(arr.ptr()));
         return PyArray_Squeeze(reinterpret_cast<PyArrayObject*>(arr.ptr()));
