@@ -4,7 +4,7 @@
   <img width="250" height="109" src="logo.png">
 </p>
 
-[English](README.md) | 中文
+[![](https://img.shields.io/badge/English-%E4%B8%AD%E6%96%87-green.svg)](README.md) [![](https://img.shields.io/badge/Website-MegEngine-green.svg)](https://megengine.org.cn/) [![](https://img.shields.io/badge/License-Apache%202.0-green.svg)](LICENSE) [![](https://img.shields.io/badge/Chat-on%20QQ-green.svg?logo=tencentqq)](https://jq.qq.com/?_wv=1027&k=jJcBU1xi) [![](https://img.shields.io/badge/Discuss-on%20Zhihu-8A2BE2.svg?labelColor=00BFFF&logo=zhihu)](https://www.zhihu.com/people/megengine-bot)
 
 MegEngine 是一个快速、可拓展、易于使用且支持自动求导的深度学习框架。
 
