@@ -4,7 +4,7 @@
   <img width="250" height="109" src="logo.png">
 </p>
 
-English | [中文](README_CN.md)
+[![](https://img.shields.io/badge/English-%E4%B8%AD%E6%96%87-green.svg)](README_CN.md) [![](https://img.shields.io/badge/Website-MegEngine-green.svg)](https://megengine.org.cn/) [![](https://img.shields.io/badge/License-Apache%202.0-green.svg)](LICENSE) [![](https://img.shields.io/badge/Chat-on%20QQ-green.svg?logo=tencentqq)](https://jq.qq.com/?_wv=1027&k=jJcBU1xi) [![](https://img.shields.io/badge/Discuss-on%20Zhihu-8A2BE2.svg?labelColor=00BFFF&logo=zhihu)](https://www.zhihu.com/people/megengine-bot)
 
 MegEngine is a fast, scalable and easy-to-use deep learning framework, with auto-differentiation.
 
