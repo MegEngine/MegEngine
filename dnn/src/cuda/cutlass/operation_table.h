@@ -188,6 +188,7 @@ struct ConvolutionKey {
     library::LayoutTypeID layout_dst;
     library::NumericTypeID element_bias;
     library::LayoutTypeID layout_bias;
+    NumericTypeID element_accumulator;
 
     conv::ConvType convolution_type;
 
@@ -206,6 +207,10 @@ struct ConvolutionKey {
     epilogue::EpilogueType epilogue_type;
     int stages;
     conv::SpecialOptimizeDesc special_optimization;
+
+    int alignment_src;
+    int alignment_filter;
+
     bool without_shared_load;
 
     inline bool operator==(ConvolutionKey const& rhs) const {
@@ -215,6 +220,7 @@ struct ConvolutionKey {
                (layout_filter == rhs.layout_filter) &&
                (element_dst == rhs.element_dst) && (layout_dst == rhs.layout_dst) &&
                (element_bias == rhs.element_bias) && (layout_bias == rhs.layout_bias) &&
+               (element_accumulator == rhs.element_accumulator) &&
                (convolution_type == rhs.convolution_type) &&
                (threadblock_shape_m == rhs.threadblock_shape_m) &&
                (threadblock_shape_n == rhs.threadblock_shape_n) &&
@@ -227,6 +233,8 @@ struct ConvolutionKey {
                (instruction_shape_k == rhs.instruction_shape_k) &&
                (epilogue_type == rhs.epilogue_type) && (stages == rhs.stages) &&
                (special_optimization == rhs.special_optimization) &&
+               (alignment_src == rhs.alignment_src) &&
+               (alignment_filter == rhs.alignment_filter) &&
                (without_shared_load == rhs.without_shared_load);
     }
 
@@ -254,6 +262,7 @@ struct ConvolutionKey {
                "\n    layout_dst: " + to_string(layout_dst) +
                "\n    element_bias: " + to_string(element_bias) +
                "\n    layout_bias: " + to_string(layout_bias) +
+               "\n    element_accumulator: " + to_string(element_accumulator) +
                "\n    convolution_type: " + to_string(convolution_type) +
                "\n    threadblock_shape: " + threadblock_shape_str +
                "\n    warp_shape: " + warp_shape_str +
@@ -261,6 +270,8 @@ struct ConvolutionKey {
                "\n    epilogue_type: " + to_string(epilogue_type) +
                "\n    stages: " + std::to_string(stages) +
                "\n    special_optimization: " + to_string(special_optimization) +
+               "\n    alignment_src: " + std::to_string(alignment_src) +
+               "\n    alignment_filter: " + std::to_string(alignment_filter) +
                "\n    without_shared_load: " + to_string(without_shared_load) + "\n}";
     }
 };
@@ -278,6 +289,7 @@ struct ConvolutionKeyHasher {
                 .update(&key.layout_dst, sizeof(key.layout_dst))
                 .update(&key.element_bias, sizeof(key.element_bias))
                 .update(&key.layout_bias, sizeof(key.layout_bias))
+                .update(&key.element_accumulator, sizeof(key.element_accumulator))
                 .update(&key.convolution_type, sizeof(key.convolution_type))
                 .update(&key.threadblock_shape_m, sizeof(key.threadblock_shape_m))
                 .update(&key.threadblock_shape_n, sizeof(key.threadblock_shape_n))
@@ -291,6 +303,8 @@ struct ConvolutionKeyHasher {
                 .update(&key.epilogue_type, sizeof(key.epilogue_type))
                 .update(&key.stages, sizeof(key.stages))
                 .update(&key.special_optimization, sizeof(key.special_optimization))
+                .update(&key.alignment_src, sizeof(key.alignment_src))
+                .update(&key.alignment_filter, sizeof(key.alignment_filter))
                 .update(&key.without_shared_load, sizeof(key.without_shared_load))
                 .digest();
     }

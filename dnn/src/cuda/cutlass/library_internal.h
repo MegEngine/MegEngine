@@ -570,6 +570,27 @@ struct ThreadblockSwizzleMap<
             ThreadblockSwizzleID::kConvolutionDgradTrans;
 };
 
+template <>
+struct ThreadblockSwizzleMap<
+        conv::threadblock::DepthwiseConvolutionFpropThreadblockSwizzle> {
+    static ThreadblockSwizzleID const kId =
+            ThreadblockSwizzleID::kDepthwiseConvolutionFprop;
+};
+
+template <>
+struct ThreadblockSwizzleMap<
+        conv::threadblock::DepthwiseConvolutionDgradThreadblockSwizzle> {
+    static ThreadblockSwizzleID const kId =
+            ThreadblockSwizzleID::kDepthwiseConvolutionDgrad;
+};
+
+template <>
+struct ThreadblockSwizzleMap<
+        conv::threadblock::DepthwiseConvolutionWgradThreadblockSwizzle> {
+    static ThreadblockSwizzleID const kId =
+            ThreadblockSwizzleID::kDepthwiseConvolutionWgrad;
+};
+
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
 template <typename Element, typename Layout>

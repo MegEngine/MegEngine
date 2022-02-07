@@ -39,6 +39,7 @@ const void* ConvolutionBackwardDataImpl::AlgoInt8NCHW4DotProdImplicitGemm::
             LayoutTypeID::kTensorNC4HW4,
             NumericTypeID::kS32,
             LayoutTypeID::kTensorNC4HW4,
+            NumericTypeID::kS32,
             cutlass::conv::ConvType::kConvolution,
             m_algo_param.threadblock_m,
             m_algo_param.threadblock_n,
@@ -52,6 +53,8 @@ const void* ConvolutionBackwardDataImpl::AlgoInt8NCHW4DotProdImplicitGemm::
             cutlass::epilogue::EpilogueType::kBiasAddLinearCombinationClamp,
             m_algo_param.stage,
             special_optimization,
+            4,
+            16,
             false};
     return (void*)Singleton::get().operation_table.find_op(key);
 }

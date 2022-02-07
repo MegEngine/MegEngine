@@ -99,6 +99,8 @@ ConvolutionKey get_convolution_key_from_desc(const ConvolutionDescription& desc)
     key.layout_dst = desc.dst.layout;
     key.element_bias = desc.bias.element;
     key.layout_bias = desc.bias.layout;
+    key.element_accumulator =
+            desc.tile_description.math_instruction.element_accumulator;
 
     key.convolution_type = desc.convolution_type;
 
@@ -124,6 +126,8 @@ ConvolutionKey get_convolution_key_from_desc(const ConvolutionDescription& desc)
 
     key.stages = desc.tile_description.threadblock_stages;
     key.special_optimization = desc.special_optimization;
+    key.alignment_src = desc.src.alignment;
+    key.alignment_filter = desc.filter.alignment;
     key.without_shared_load = desc.without_shared_load;
 
     return key;
