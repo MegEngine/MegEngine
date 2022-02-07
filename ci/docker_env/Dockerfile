@@ -24,17 +24,27 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     swig \
     vim \
     wget \
+    libgl1-mesa-glx \
+    libsm6 \
+    libxext6 \
     zlib1g-dev \
     # GitLab Runner need Git 2.18 or higher to create a local Git repository
     && add-apt-repository ppa:git-core/ppa -y && apt-get install --no-install-recommends -y git \
     && rm -rf /var/lib/apt/lists/*
 
-RUN cd /tmp ; wget https://cmake.org/files/v3.14/cmake-3.14.4.tar.gz;tar -xzvf cmake-3.14.4.tar.gz;cd cmake-3.14.4;./configure; make -j32; make install
+RUN cd /tmp ; wget https://cmake.org/files/v3.15/cmake-3.15.2.tar.gz;tar -xzvf cmake-3.15.2.tar.gz;cd cmake-3.15.2;./configure; make -j32; make install
 
 RUN git lfs install
 
-ENV PATH=${PATH}:/usr/local/cuda/bin \
-  LIBRARY_PATH=${LIBRARY_PATH}:/usr/local/cuda/lib:/usr/local/cuda/lib64:/usr/local/cuda/lib/stubs:/usr/local/cuda/lib64/stubs:/usr/local/cuda-10.1-libs/cudnn-v7.6.0/lib:/usr/local/cuda-10.1-libs/cudnn-v7.6.0/lib64:/usr/local/cuda-10.1-libs/TensorRT-5.1.5.0/lib:/usr/local/cuda-10.1-libs/TensorRT-5.1.5.0/lib64 \
-  LD_LIBRARY_PATH=/usr/local/nvidia/lib:/usr/local/nvidia/lib64:/usr/local/nvidia/lib:/usr/local/nvidia/lib64:/usr/local/cuda-10.1-libs/cudnn-v7.6.0/lib:/usr/local/cuda-10.1-libs/cudnn-v7.6.0/lib64:/usr/local/cuda-10.1-libs/TensorRT-5.1.5.0/lib:/usr/local/cuda-10.1-libs/TensorRT-5.1.5.0/lib64:/tmp/build/cuda/dnn/cuda-stub/libcuda.so \
-  CPATH=${CPATH}:/usr/local/cuda/include:/usr/local/cuda-10.1-libs/cudnn-v7.6.0/include:/usr/local/cuda-10.1-libs/TensorRT-5.1.5.0/include \
-  CUDA_BIN_PATH=/usr/local/cuda
+RUN pip3 install --upgrade pip
+
+# TODO: set following envs in github environment.
+ENV CUDA_ROOT_DIR=/usr/local/cuda-10.1-cudnn-7.6.3-trt-6.0.1.5-libs/cuda-10.1 \
+  TRT_ROOT_DIR=/usr/local/cuda-10.1-cudnn-7.6.3-trt-6.0.1.5-libs/TensorRT-6.0.1.5 \
+  TENSORRT_ROOT_DIR=${TRT_ROOT_DIR} \
+  CUDNN_ROOT_DIR=/usr/local/cuda-10.1-cudnn-7.6.3-trt-6.0.1.5-libs/cudnn-v7.6.3 \
+  PATH=/usr/bin:${CUDA_ROOT_DIR}/bin:${CUDA_ROOT_DIR}/nsight-compute-2019.4.0:$PATH \
+  LIBRARY_PATH=${LIBRARY_PATH}:/usr/local/cuda-10.1-cudnn-7.6.3-trt-6.0.1.5-libs/cuda-10.1/lib:/usr/local/cuda-10.1-cudnn-7.6.3-trt-6.0.1.5-libs/cuda-10.1/lib64:/usr/local/cuda-10.1-cudnn-7.6.3-trt-6.0.1.5-libs/cuda-10.1/lib/stubs:/usr/local/cuda-10.1-cudnn-7.6.3-trt-6.0.1.5-libs/cuda-10.1/lib64/stubs:/usr/local/cuda-10.1-cudnn-7.6.3-trt-6.0.1.5-libs/cudnn-v7.6.3/lib:/usr/local/cuda-10.1-cudnn-7.6.3-trt-6.0.1.5-libs/cudnn-v7.6.3/lib64:/usr/local/cuda-10.1-cudnn-7.6.3-trt-6.0.1.5-libs/TensorRT-6.0.1.5/lib:/usr/local/cuda-10.1-cudnn-7.6.3-trt-6.0.1.5-libs/TensorRT-6.0.1.5/lib64 \
+  LD_LIBRARY_PATH=/usr/local/nvidia/lib:/usr/local/nvidia/lib64:/usr/local/nvidia/lib:/usr/local/nvidia/lib64:/usr/local/cuda-10.1-cudnn-7.6.3-trt-6.0.1.5-libs/cudnn-v7.6.3/lib:/usr/local/cuda-10.1-cudnn-7.6.3-trt-6.0.1.5-libs/cudnn-v7.6.3/lib64:/usr/local/cuda-10.1-cudnn-7.6.3-trt-6.0.1.5-libs/TensorRT-6.0.1.5/lib:/usr/local/cuda-10.1-cudnn-7.6.3-trt-6.0.1.5-libs/TensorRT-6.0.1.5/lib64  \
+  CPATH=${CPATH}:/usr/local/cuda-10.1-cudnn-7.6.3-trt-6.0.1.5-libs/cuda-10.1/include:/usr/local/cuda-10.1-cudnn-7.6.3-trt-6.0.1.5-libs/cudnn-v7.6.3/include:/usr/local/cuda-10.1-cudnn-7.6.3-trt-6.0.1.5-libs/TensorRT-6.0.1.5/include \
+  CUDA_BIN_PATH=/usr/local/cuda-10.1-cudnn-7.6.3-trt-6.0.1.5-libs/cuda-10.1 
