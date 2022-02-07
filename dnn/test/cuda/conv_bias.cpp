@@ -701,51 +701,53 @@ TEST_F(CUDA, CONV_BIAS_FORWARD_DEPTHWISE_LARGE_FILTER) {
             ConvBiasForward::algo_name<ConvBias::DirectParam>(
                     "DEPTHWISE_LARGE_FILTER", {})
                     .c_str()));
-    auto run = [&checker](size_t n, size_t g, size_t h, size_t fh) {
-        param::ConvBias cur_param;
-        cur_param.mode = param::ConvBias::Mode::CROSS_CORRELATION;
-        cur_param.sparse = ConvBias::Param::Sparse::GROUP;
-        checker.set_dtype(0, dtype::Float32())
-                .set_dtype(1, dtype::Float32())
-                .set_dtype(2, dtype::Float32())
-                .set_dtype(3, dtype::Float32())
-                .set_dtype(4, dtype::Float32());
+    for (auto dtype : std::vector<DType>{dtype::Float16()}) {
+        auto run = [&checker, &dtype](size_t n, size_t g, size_t h, size_t fh) {
+            param::ConvBias cur_param;
+            cur_param.mode = param::ConvBias::Mode::CROSS_CORRELATION;
+            cur_param.sparse = ConvBias::Param::Sparse::GROUP;
+            checker.set_dtype(0, dtype)
+                    .set_dtype(1, dtype)
+                    .set_dtype(2, dtype)
+                    .set_dtype(3, dtype)
+                    .set_dtype(4, dtype);
 
-        cur_param.pad_h = cur_param.pad_w = fh / 2;
-        cur_param.stride_h = cur_param.stride_w = 1;
-        checker.set_param(cur_param).execs(
-                {{n, g, h, h}, {g, 1, 1, fh, fh}, {}, {}, {}});
-    };
-    run(4, 8, 32, 5);
-    run(4, 8, 32, 7);
-    run(4, 8, 32, 9);
-    run(4, 8, 32, 11);
-    run(4, 8, 32, 13);
-    run(4, 8, 32, 15);
-    run(4, 8, 32, 17);
-    run(4, 8, 32, 19);
-    run(4, 8, 32, 21);
-    run(4, 8, 32, 23);
-    run(4, 8, 32, 25);
-    run(4, 8, 32, 27);
-    run(4, 8, 32, 29);
-    run(4, 8, 32, 31);
-    run(4, 8, 64, 5);
-    run(4, 8, 64, 7);
-    run(4, 8, 64, 9);
-    run(4, 8, 64, 11);
-    run(4, 8, 64, 13);
-    run(4, 8, 64, 15);
-    run(4, 8, 64, 17);
-    run(4, 8, 64, 19);
-    run(4, 8, 64, 21);
-    run(4, 8, 64, 23);
-    run(4, 8, 64, 25);
-    run(4, 8, 64, 27);
-    run(4, 8, 64, 29);
-    run(4, 8, 64, 31);
-    run(1, 2, 128, 31);
-    run(1, 2, 256, 31);
+            cur_param.pad_h = cur_param.pad_w = fh / 2;
+            cur_param.stride_h = cur_param.stride_w = 1;
+            checker.set_param(cur_param).execs(
+                    {{n, g, h, h}, {g, 1, 1, fh, fh}, {}, {}, {}});
+        };
+        run(4, 8, 32, 5);
+        run(4, 8, 32, 7);
+        run(4, 8, 32, 9);
+        run(4, 8, 32, 11);
+        run(4, 8, 32, 13);
+        run(4, 8, 32, 15);
+        run(4, 8, 32, 17);
+        run(4, 8, 32, 19);
+        run(4, 8, 32, 21);
+        run(4, 8, 32, 23);
+        run(4, 8, 32, 25);
+        run(4, 8, 32, 27);
+        run(4, 8, 32, 29);
+        run(4, 8, 32, 31);
+        run(4, 8, 64, 5);
+        run(4, 8, 64, 7);
+        run(4, 8, 64, 9);
+        run(4, 8, 64, 11);
+        run(4, 8, 64, 13);
+        run(4, 8, 64, 15);
+        run(4, 8, 64, 17);
+        run(4, 8, 64, 19);
+        run(4, 8, 64, 21);
+        run(4, 8, 64, 23);
+        run(4, 8, 64, 25);
+        run(4, 8, 64, 27);
+        run(4, 8, 64, 29);
+        run(4, 8, 64, 31);
+        run(1, 2, 128, 31);
+        run(1, 2, 256, 31);
+    }
 }
 
 TEST_F(CUDA, CONV_BIAS_FORWARD_CHANWISE_8x8x32) {
@@ -1550,11 +1552,81 @@ TEST_F(CUDA, BENCHMARK_CONV_BIAS_FORWARD_DEPTHWISE_LARGE_FILTER) {
         param.stride_h = sh;
         param.stride_w = sw;
 
+        bencher.set_times(nr_times);
+        size_t ho = infer_conv_shape(hi, fh, sh, param.pad_h);
+        size_t wo = infer_conv_shape(wi, fw, sw, param.pad_w);
+        TensorShape inp{batch, g, hi, wi}, kern{g, 1, 1, fh, fw}, out{batch, g, ho, wo};
+
+        float bandwith = static_cast<float>(
+                                 inp.total_nr_elems() + kern.total_nr_elems() +
+                                 out.total_nr_elems()) /
+                         (1024 * 1024 * 1024) * 1e3;
+
         bencher.set_param(param)
                 .set_dtype(0, dtype::Float32())
                 .set_dtype(1, dtype::Float32())
                 .set_dtype(2, dtype::Float32())
                 .set_dtype(4, dtype::Float32());
+        auto fp32_time_in_ms = bencher.execs({inp, kern, {}, {}, out}) / nr_times;
+        bencher.set_param(param)
+                .set_dtype(0, dtype::Float16())
+                .set_dtype(1, dtype::Float16())
+                .set_dtype(2, dtype::Float16())
+                .set_dtype(4, dtype::Float16());
+        auto fp16_time_in_ms = bencher.execs({inp, kern, {}, {}, out}) / nr_times;
+        printf("chanwise_depthwise_large_filter: inp=%s, kern=%s, out=%s, fp32_time: "
+               "%.2fms, fp16_time: %.2fms, speedup: %0.2f (fp16/fp32) "
+               "fp32_bandwidth: %.2fGB/s fp16_bandwidth: %.2fGB/s.\n",
+               inp.to_string().c_str(), kern.to_string().c_str(),
+               out.to_string().c_str(), fp32_time_in_ms, fp16_time_in_ms,
+               fp32_time_in_ms / fp16_time_in_ms, bandwith * 4 / fp32_time_in_ms,
+               bandwith * 2 / fp16_time_in_ms);
+    };
+
+    run_bench(64, 384, 32, 32, 3, 3, 1, 1, 10);
+    run_bench(64, 384, 32, 32, 5, 5, 1, 1, 10);
+    run_bench(64, 384, 32, 32, 7, 7, 1, 1, 10);
+    run_bench(64, 384, 32, 32, 9, 9, 1, 1, 10);
+    run_bench(64, 384, 32, 32, 11, 11, 1, 1, 10);
+    run_bench(64, 384, 32, 32, 13, 13, 1, 1, 10);
+    run_bench(64, 384, 32, 32, 15, 15, 1, 1, 10);
+    run_bench(64, 384, 32, 32, 17, 17, 1, 1, 10);
+    run_bench(64, 384, 32, 32, 19, 19, 1, 1, 10);
+    run_bench(64, 384, 32, 32, 21, 21, 1, 1, 10);
+    run_bench(64, 384, 32, 32, 23, 23, 1, 1, 10);
+    run_bench(64, 384, 32, 32, 25, 25, 1, 1, 10);
+    run_bench(64, 384, 32, 32, 27, 27, 1, 1, 10);
+    run_bench(64, 384, 32, 32, 29, 29, 1, 1, 10);
+    run_bench(64, 384, 32, 32, 31, 31, 1, 1, 10);
+}
+
+TEST_F(CUDA, BENCHMARK_CONV_BIAS_FORWARD_DEPTHWISE_LARGE_FILTER_FP16) {
+    require_compute_capability(7, 5);
+    Benchmarker<ConvBiasForward> bencher(handle_cuda());
+    bencher.set_display(false);
+    bencher.set_before_exec_callback(conv_bias::ConvBiasAlgoChecker<ConvBiasForward>(
+            ConvBiasForward::algo_name<ConvBiasForward::DirectParam>(
+                    "DEPTHWISE_LARGE_FILTER", {})
+                    .c_str()));
+
+    ConvBias::Param param;
+    param.format = ConvBias::Param::Format::NCHW;
+
+    using NonlineMode = ConvBias::Param::NonlineMode;
+    param.nonlineMode = NonlineMode::IDENTITY;
+    param.sparse = ConvBias::Param::Sparse::GROUP;
+    auto run_bench = [&](size_t batch, size_t g, size_t hi, size_t wi, size_t fh,
+                         size_t fw, size_t sh, size_t sw, size_t nr_times) {
+        param.pad_h = fh / 2;
+        param.pad_w = fw / 2;
+        param.stride_h = sh;
+        param.stride_w = sw;
+
+        bencher.set_param(param)
+                .set_dtype(0, dtype::Float16())
+                .set_dtype(1, dtype::Float16())
+                .set_dtype(2, dtype::Float16())
+                .set_dtype(4, dtype::Float16());
         bencher.set_times(nr_times);
         size_t ho = infer_conv_shape(hi, fh, sh, param.pad_h);
         size_t wo = infer_conv_shape(wi, fw, sw, param.pad_w);

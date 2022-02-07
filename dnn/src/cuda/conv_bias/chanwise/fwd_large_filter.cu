@@ -37,8 +37,17 @@ template <>
 void run_fwd_depthwise_large_filter(
         float* dst, const float* src, const float* flt, const Param& param,
         cudaStream_t stream) {
-    INSTANCE(DepthwiseConv2dDirection::DIRECTION_FORWARD)
+    INSTANCE(float, float2, DepthwiseConv2dDirection::DIRECTION_FORWARD)
 }
+
+#if CUDA_VERSION >= 9000
+template <>
+void run_fwd_depthwise_large_filter(
+        __half* dst, const __half* src, const __half* flt, const Param& param,
+        cudaStream_t stream) {
+    INSTANCE(__half, __half2, DepthwiseConv2dDirection::DIRECTION_FORWARD)
+}
+#endif
 
 }  // namespace chanwise
 }  // namespace conv_bias
