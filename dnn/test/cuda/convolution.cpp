@@ -728,7 +728,7 @@ TEST_F(CUDA, CONVOLUTION_BACKWARD_DEPTHWISE_LARGE_FILTER) {
     Checker<ConvolutionBackwardData> checker(handle_cuda());
     checker.set_before_exec_callback(
             AlgoChecker<ConvolutionBackwardData>("DEPTHWISE_LARGE_FILTER"));
-    for (auto dtype : std::vector<DType>{dtype::Float32()}) {
+    for (auto dtype : std::vector<DType>{dtype::Float16()}) {
         auto run = [&checker, &dtype](size_t n, size_t g, size_t h, size_t fh) {
             param::Convolution param;
             param.stride_h = param.stride_w = 1;
@@ -981,6 +981,55 @@ TEST_F(CUDA, BENCHMARK_CONVOLUTION_BWD_DATA_DEPTHWISE_LARGE_FILTER) {
                filter.to_string().c_str(), dst.to_string().c_str());
         printf("time_fp32=%.2fms, flops=%.3fTFLOPS\n", time_ms_fp32,
                (flo / (time_ms_fp32 * 1e9)));
+    };
+    run(64, 384, 384, 32, 32, 3, 1, 10);
+    run(64, 384, 384, 32, 32, 5, 1, 10);
+    run(64, 384, 384, 32, 32, 7, 1, 10);
+    run(64, 384, 384, 32, 32, 9, 1, 10);
+    run(64, 384, 384, 32, 32, 11, 1, 10);
+    run(64, 384, 384, 32, 32, 13, 1, 10);
+    run(64, 384, 384, 32, 32, 15, 1, 10);
+    run(64, 384, 384, 32, 32, 17, 1, 10);
+    run(64, 384, 384, 32, 32, 19, 1, 10);
+    run(64, 384, 384, 32, 32, 21, 1, 10);
+    run(64, 384, 384, 32, 32, 23, 1, 10);
+    run(64, 384, 384, 32, 32, 25, 1, 10);
+    run(64, 384, 384, 32, 32, 27, 1, 10);
+    run(64, 384, 384, 32, 32, 29, 1, 10);
+    run(64, 384, 384, 32, 32, 31, 1, 10);
+}
+
+TEST_F(CUDA, BENCHMARK_CONVOLUTION_BWD_DATA_DEPTHWISE_LARGE_FILTER_FP16) {
+    CUBenchmarker<ConvolutionBackwardData> bencher{handle_cuda()};
+    bencher.set_display(false);
+    bencher.set_before_exec_callback(
+            AlgoChecker<ConvolutionBackwardData>("DEPTHWISE_LARGE_FILTER"));
+
+    auto run = [&](size_t N, size_t OC, size_t g, size_t IH, size_t IW, size_t FH,
+                   size_t SH, size_t nr_times) {
+        bencher.set_dtype(0, dtype::Float16())
+                .set_dtype(1, dtype::Float16())
+                .set_dtype(2, dtype::Float16());
+        param::Convolution param;
+        param.stride_h = param.stride_w = SH;
+        param.pad_h = param.pad_w = FH / 2;
+        param.sparse = param::Convolution::Sparse::GROUP;
+        bencher.set_param(param);
+        bencher.set_times(nr_times);
+        TensorLayout src{{N, g, IH, IW}, dtype::Float16()},
+                filter{{g, 1, 1, FH, FH}, dtype::Float16()};
+        TensorLayout dst;
+        {
+            auto&& opr = handle_cuda()->create_operator<Convolution>();
+            opr->param() = param;
+            opr->deduce_layout(src, filter, dst);
+        }
+        auto time_ms_fp16 = bencher.execl({filter, dst, src}) / nr_times;
+        float flo = 2.0 * N * g * dst[2] * dst[3] * FH * FH;
+        printf("inp=%s, kern=%s, dst=%s ", src.to_string().c_str(),
+               filter.to_string().c_str(), dst.to_string().c_str());
+        printf("time_fp16=%.2fms, flops=%.3fTFLOPS\n", time_ms_fp16,
+               (flo / (time_ms_fp16 * 1e9)));
     };
     run(64, 384, 384, 32, 32, 3, 1, 10);
     run(64, 384, 384, 32, 32, 5, 1, 10);

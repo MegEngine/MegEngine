@@ -50,7 +50,11 @@ bool ConvBiasForwardImpl::AlgoDepthwiseLargeFilter::is_available(
         return false;
     }
     if (args.src_layout->dtype != args.filter_layout->dtype &&
-        args.src_layout->dtype != dtype::Float32()) {
+        (args.src_layout->dtype != dtype::Float32()
+#if CUDA_VERSION >= 9000
+         || args.src_layout->dtype != dtype::Float16()
+#endif
+                 )) {
         return false;
     }
     if (args.z_layout->ndim > 0)
@@ -97,6 +101,15 @@ void ConvBiasForwardImpl::AlgoDepthwiseLargeFilter::exec(const ExecArgs& args) c
                         conv_dst_tensor.ptr<float>(), args.src_tensor->ptr<float>(),
                         args.filter_tensor->ptr<float>(), kparam, stream);
                 break;
+#if CUDA_VERSION >= 9000
+            case DTypeEnum::Float16:
+                chanwise::run_fwd_depthwise_large_filter(
+                        static_cast<half*>(conv_dst_tensor.raw_ptr()),
+                        static_cast<half*>(args.src_tensor->raw_ptr()),
+                        static_cast<half*>(args.filter_tensor->raw_ptr()), kparam,
+                        stream);
+                break;
+#endif
             default:
                 megdnn_assert_internal(0);
         }

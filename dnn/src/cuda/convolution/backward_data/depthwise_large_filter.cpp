@@ -49,7 +49,11 @@ bool ConvolutionBackwardDataImpl::AlgoDepthwiseLargeFilter::is_available(
         return false;
     }
     if (args.diff_layout->dtype != args.filter_layout->dtype &&
-        args.diff_layout->dtype != dtype::Float32()) {
+        (args.diff_layout->dtype != dtype::Float32()
+#if CUDA_VERSION >= 9000
+         || args.diff_layout->dtype != dtype::Float16()
+#endif
+                 )) {
         return false;
     }
 
@@ -78,6 +82,14 @@ void ConvolutionBackwardDataImpl::AlgoDepthwiseLargeFilter::exec(
                     args.grad_tensor->ptr<float>(), args.diff_tensor->ptr<float>(),
                     args.filter_tensor->ptr<float>(), kparam, stream);
             break;
+#if CUDA_VERSION >= 9000
+        case DTypeEnum::Float16:
+            chanwise::run_bwd_depthwise_large_filter(
+                    static_cast<half*>(args.grad_tensor->raw_ptr()),
+                    static_cast<half*>(args.diff_tensor->raw_ptr()),
+                    static_cast<half*>(args.filter_tensor->raw_ptr()), kparam, stream);
+            break;
+#endif
         default:
             megdnn_assert_internal(0);
     }
