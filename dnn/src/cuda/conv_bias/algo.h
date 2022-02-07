@@ -84,7 +84,9 @@ public:
         CUDA_IMPLICIT_GEMM_1X1_SASS_NCHW32_IMMA_INT8,
         CUDA_IMPLICIT_GEMM_SASS_NCHW64_IMMA_INT4_INT4,
         CUDA_IMPLICIT_GEMM_SASS_NCHW64_IMMA_UINT4_INT4,
-        CUDA_FALLBACK_NCHW_INT4
+        CUDA_FALLBACK_NCHW_INT4,
+        CUDA_IMPLICIT_BATCHED_GEMM_FMA_NCHW_F32,
+        CUDA_IMPLICIT_BATCHED_GEMM_HMMA_NCHW_F16,
     };
     using Mapper = std::unordered_map<AlgorithmDesc, AlgoBase*>;
 
@@ -503,6 +505,8 @@ public:
  * +----+--- AlgoInt4Int4NHWCIMMAImplicitGemm
  * +----+--- AlgoUInt4Int4NHWCIMMAImplicitGemm
  * +
+ * +--- AlgoFloat32NCHWImplicitBatchedGemm
+ * +--- AlgoFloat16NCHWHMMAImplicitBatchedGemm
  */
 
 /*
@@ -516,7 +520,13 @@ public:
 
     // corresponds to cutlass::conv::ConvType. we hope that algo.h does not
     // depend on cutlass headers
-    enum class ConvType { kConvolution, kBatchConvolution, kLocal, kLocalShare };
+    enum class ConvType {
+        kConvolution,
+        kBatchConvolution,
+        kLocal,
+        kLocalShare,
+        kDepthwiseConvolution,
+    };
 
     // common parameters for operation selection
     struct AlgoParam {
@@ -558,7 +568,8 @@ public:
             size_t wo, size_t ph, size_t pw, size_t sh, size_t sw, size_t dh, size_t dw,
             const void* alpha, const void* beta, const void* gamma, const void* delta,
             const void* theta, const void* threshold, const void* dst_scale,
-            cudaStream_t stream, const void* extra_param = nullptr) const;
+            cudaStream_t stream, const void* extra_param = nullptr,
+            size_t groups = 1) const;
 
 protected:
     AlgoParam m_algo_param;
@@ -992,6 +1003,54 @@ private:
 };
 #endif
 
+class ConvBiasForwardImpl::AlgoFloat32NCHWFMAImplicitBatchedGemm final
+        : public AlgoCutlassConvolutionBase {
+public:
+    AlgoFloat32NCHWFMAImplicitBatchedGemm(AlgoParam algo_param)
+            : AlgoCutlassConvolutionBase(algo_param) {
+        m_name = ConvBias::algo_name<ConvBias::DirectParam>(
+                ssprintf(
+                        "FLOAT32_NCHW_FMA_IMPLICIT_BATCHED_GEMM%s",
+                        m_algo_param.to_string().c_str()),
+                ConvBias::DirectParam{});
+    }
+    bool is_available(const SizeArgs& args) const override;
+    size_t get_workspace_in_bytes(const SizeArgs& /* args */) const override {
+        return 0;
+    }
+    void exec(const ExecArgs& args) const override;
+    const char* name() const override { return m_name.c_str(); };
+    AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }
+    MEGDNN_DECL_ALGO_TYPE(CUDA_IMPLICIT_BATCHED_GEMM_FMA_NCHW_F32);
+
+private:
+    std::string m_name;
+};
+
+class ConvBiasForwardImpl::AlgoFloat16NCHWHMMAImplicitBatchedGemm final
+        : public AlgoCutlassConvolutionBase {
+public:
+    AlgoFloat16NCHWHMMAImplicitBatchedGemm(AlgoParam algo_param)
+            : AlgoCutlassConvolutionBase(algo_param) {
+        m_name = ConvBias::algo_name<ConvBias::DirectParam>(
+                ssprintf(
+                        "FLOAT16_NCHW_HMMA_IMPLICIT_BATCHED_GEMM%s",
+                        m_algo_param.to_string().c_str()),
+                ConvBias::DirectParam{});
+    }
+    bool is_available(const SizeArgs& args) const override;
+    size_t get_workspace_in_bytes(const SizeArgs& /* args */) const override {
+        return 0;
+    }
+    void exec(const ExecArgs& args) const override;
+    const char* name() const override { return m_name.c_str(); };
+    AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }
+    MEGDNN_DECL_ALGO_TYPE(CUDA_IMPLICIT_BATCHED_GEMM_HMMA_NCHW_F16);
+
+private:
+    std::string m_name;
+};
+
 class ConvBiasForwardImpl::AlgoBFloat16 final : public AlgoBase {
 public:
     bool is_available(const SizeArgs& args) const override;
@@ -1048,6 +1107,8 @@ public:
     std::vector<AlgoInt4Int4NHWCIMMAImplicitGemm> int4_int4_nhwc_imma;
     std::vector<AlgoUInt4Int4NHWCIMMAImplicitGemm> uint4_int4_nhwc_imma;
 #endif
+    std::vector<AlgoFloat32NCHWFMAImplicitBatchedGemm> f32_implicit_bmm;
+    std::vector<AlgoFloat16NCHWHMMAImplicitBatchedGemm> f16_implicit_bmm;
     AlgoGroupConvGeneral group;
     AlgoBFloat16 bfloat16;
 
@@ -1063,6 +1124,7 @@ private:
 #endif
     void fill_cudnn_algos();
     void fill_dp4a_algos();
+    void fill_dwconv_algos();
 };
 
 }  // namespace cuda

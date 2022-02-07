@@ -92,6 +92,7 @@ ConvBiasForwardImpl::AlgoPack::AlgoPack() {
     for (auto&& algo : int8_nchw4_dotprod) {
         all_algos.push_back(&algo);
     }
+    fill_dwconv_algos();
     all_algos.push_back(&int8_chwn4_dotprod);
     all_algos.push_back(&fallback_nchw_qs8);
     for (size_t i = all_algo_size; i < all_algos.size(); ++i) {
@@ -300,6 +301,32 @@ void ConvBiasForwardImpl::AlgoPack::fill_imma_algos() {
 #endif
 }
 #endif
+
+void ConvBiasForwardImpl::AlgoPack::fill_dwconv_algos() {
+    using AlgoParam = AlgoCutlassConvolutionBase::AlgoParam;
+    f32_implicit_bmm.emplace_back(AlgoParam{128, 128, 8, 32, 64, 8, 1, 1, 1, 2});
+    f32_implicit_bmm.emplace_back(AlgoParam{128, 64, 8, 64, 32, 8, 1, 1, 1, 2});
+    f32_implicit_bmm.emplace_back(AlgoParam{128, 32, 8, 64, 32, 8, 1, 1, 1, 2});
+    f32_implicit_bmm.emplace_back(AlgoParam{32, 128, 8, 32, 64, 8, 1, 1, 1, 2});
+    f32_implicit_bmm.emplace_back(AlgoParam{64, 128, 8, 64, 32, 8, 1, 1, 1, 2});
+    f32_implicit_bmm.emplace_back(AlgoParam{64, 64, 8, 64, 32, 8, 1, 1, 1, 2});
+    f32_implicit_bmm.emplace_back(AlgoParam{32, 64, 8, 32, 64, 8, 1, 1, 1, 2});
+    f32_implicit_bmm.emplace_back(AlgoParam{32, 32, 8, 32, 32, 8, 1, 1, 1, 2});
+    f32_implicit_bmm.emplace_back(AlgoParam{64, 32, 8, 64, 32, 8, 1, 1, 1, 2});
+    for (auto&& algo : f32_implicit_bmm) {
+        all_algos.push_back(&algo);
+    }
+#if CUDA_VERSION >= 10020
+    f16_implicit_bmm.emplace_back(AlgoParam{128, 128, 32, 32, 32, 32, 8, 8, 4, 2});
+    f16_implicit_bmm.emplace_back(AlgoParam{128, 256, 32, 64, 64, 32, 8, 8, 4, 2});
+    f16_implicit_bmm.emplace_back(AlgoParam{128, 64, 32, 32, 32, 32, 8, 8, 4, 2});
+    f16_implicit_bmm.emplace_back(AlgoParam{64, 128, 32, 32, 32, 32, 8, 8, 4, 2});
+    f16_implicit_bmm.emplace_back(AlgoParam{64, 64, 32, 32, 32, 32, 8, 8, 4, 2});
+    for (auto&& algo : f16_implicit_bmm) {
+        all_algos.push_back(&algo);
+    }
+#endif
+}
 
 void ConvBiasForwardImpl::AlgoPack::fill_dp4a_algos() {
     using AlgoParam = AlgoInt8NCHW4DotProdImplicitGemm::AlgoParam;

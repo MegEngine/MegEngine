@@ -223,6 +223,9 @@ enum class ThreadblockSwizzleID {
     kConvolutionFpropTrans,
     kConvolutionDgradNCxHWx,
     kConvolutionDgradTrans,
+    kDepthwiseConvolutionFprop,
+    kDepthwiseConvolutionDgrad,
+    kDepthwiseConvolutionWgrad,
     kInvalid
 };
 

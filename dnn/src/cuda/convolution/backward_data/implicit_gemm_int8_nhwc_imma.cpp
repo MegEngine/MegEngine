@@ -50,6 +50,7 @@ const void* ConvolutionBackwardDataImpl::AlgoInt8NHWCIMMAImplicitGemm::get_avail
             LayoutTypeID::kTensorNHWC,
             NumericTypeID::kS32,
             LayoutTypeID::kTensorNHWC,
+            NumericTypeID::kS32,
             cutlass::conv::ConvType::kConvolution,
             m_algo_param.threadblock_m,
             m_algo_param.threadblock_n,
@@ -63,6 +64,8 @@ const void* ConvolutionBackwardDataImpl::AlgoInt8NHWCIMMAImplicitGemm::get_avail
             cutlass::epilogue::EpilogueType::kBiasAddLinearCombinationClamp,
             m_algo_param.stage,
             special_optimization,
+            m_algo_param.access_size,
+            m_algo_param.access_size,
             false};
     return (void*)Singleton::get().operation_table.find_op(key);
 }

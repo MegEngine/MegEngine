@@ -74,13 +74,18 @@ cutlass::conv::ConvType convert_conv_type(Base::ConvType conv_type) {
             return cutlass::conv::ConvType::kLocal;
         case Base::ConvType::kLocalShare:
             return cutlass::conv::ConvType::kLocalShare;
+        case Base::ConvType::kDepthwiseConvolution:
+            return cutlass::conv::ConvType::kDepthwiseConvolution;
         default:
             megdnn_assert(0, "invalid conv type");
     }
 }
 
-NumericTypeID convert_dtype(DTypeEnum dtype) {
-    switch (dtype) {
+NumericTypeID convert_dtype(DType dtype) {
+    // just make convolution with no bias happy
+    if (!dtype.valid())
+        return NumericTypeID::kF32;
+    switch (dtype.enumv()) {
         case DTypeEnum::Float32:
             return NumericTypeID::kF32;
         case DTypeEnum::Float16:
@@ -97,6 +102,21 @@ NumericTypeID convert_dtype(DTypeEnum dtype) {
             return NumericTypeID::kU4;
         default:
             megdnn_assert(0, "invalid dtype");
+    }
+}
+
+NumericTypeID get_accumulator_dtype(
+        DType dtype, const param::ConvBias::ComputeMode comp_mode) {
+    if (dtype.category() == DTypeCategory::QUANTIZED) {
+        return NumericTypeID::kS32;
+    } else {
+        megdnn_assert(dtype.category() == DTypeCategory::FLOAT);
+        if (comp_mode == param::ConvBias::ComputeMode::DEFAULT) {
+            return convert_dtype(dtype);
+        } else {
+            megdnn_assert(comp_mode == param::ConvBias::ComputeMode::FLOAT32);
+            return NumericTypeID::kF32;
+        }
     }
 }
 
@@ -149,6 +169,9 @@ LayoutPack get_layout_pack(const param::ConvBias::Format format, int access_type
                 default:
                     megdnn_assert(0, "invalid access_type");
             }
+        case Format::NCHW:
+            return {LayoutTypeID::kTensorNCHW, LayoutTypeID::kTensorNCHW,
+                    LayoutTypeID::kTensorNCHW, LayoutTypeID::kTensorNCHW};
         default:
             megdnn_assert(0, "invalid format");
     }
@@ -177,6 +200,93 @@ EpilogueType get_epilogue_type(const param::ConvBias::NonlineMode mode, bool cla
     megdnn_assert(0, "invalid nonlinear mode");
 }
 
+std::pair<int, int> get_tensor_alignment(
+        const param::ConvBias::Format format, const TensorLayout& src,
+        const TensorLayout& filter, const Base::AlgoParam& algo_param,
+        bool is_chanwise) {
+    int alignment_src = 0;
+    int alignment_filter = 0;
+
+    using Format = param::ConvBias::Format;
+
+    // get tensor alignment for tensor op operations
+    // for tensor op operations, the alignment is determined by the size of a vector
+    auto get_tensor_alignment_tensor_op = [&]() {
+        switch (format) {
+            /// case int8
+            case Format::NCHW32:
+            case Format::NCHW32_NCHW4:
+                alignment_src = 16;
+                alignment_filter = 16;
+                break;
+            /// case int4 or uint4
+            case Format::NCHW64:
+                alignment_src = 32;
+                alignment_filter = 32;
+                break;
+            case Format::NHWC:
+                alignment_src = alignment_filter = algo_param.access_size;
+                break;
+            default:
+                megdnn_throw("invalid format");
+        };
+    };
+
+    // get tensor alignment for dot product operations
+    // for integer dot product operations, alignment src is always 4
+    // and the alignment filter is determined by the threadblock shape
+    auto get_tensor_alignment_dp4a = [&]() {
+        megdnn_assert(
+                format == Format::NCHW4 || format == Format::NCHW4_NCHW ||
+                format == Format::NCHW4_NHWC || format == Format::NCHW4_NCHW32);
+        alignment_src = 4;
+        // determine alignment filter
+        constexpr int warp_size = 32;
+        int threads = warp_size * algo_param.threadblock_m * algo_param.threadblock_n *
+                      algo_param.threadblock_k /
+                      (algo_param.warp_m * algo_param.warp_n * algo_param.warp_k);
+        int threadblock_loads = filter.dtype.size(
+                algo_param.threadblock_m * algo_param.threadblock_n *
+                algo_param.threadblock_k);
+        int load_per_thread = threadblock_loads / threads;
+        if (load_per_thread >= 16)
+            alignment_filter = 16;
+        else if (load_per_thread >= 8)
+            alignment_filter = 8;
+        else {
+            megdnn_assert(load_per_thread >= 4);
+            alignment_filter = 4;
+        }
+    };
+
+    // get tensor alignment for depthwise convolution
+    auto get_tensor_alignment_dwconv2d_nchw = [&]() {
+        alignment_filter = 1;
+        size_t wi = src.dtype.size(src[3]);  // width extent in bytes
+        for (size_t candidate : {16, 4, 2}) {
+            if (wi % candidate == 0) {
+                alignment_src = candidate;
+                break;
+            }
+        }
+        alignment_src /= src.dtype.size(1);
+    };
+
+    if (format == Format::NCHW32 || format == Format::NCHW32_NCHW4 ||
+        format == Format::NCHW64 || format == Format::NCHW64) {
+        get_tensor_alignment_tensor_op();
+    } else if (
+            format == Format::NCHW4 || format == Format::NCHW4_NCHW ||
+            format == Format::NCHW4_NHWC || format == Format::NCHW4_NCHW32) {
+        get_tensor_alignment_dp4a();
+    } else {
+        /// the following is used for depthwise convolution
+        megdnn_assert(format == Format::NCHW && is_chanwise);
+        get_tensor_alignment_dwconv2d_nchw();
+    }
+    megdnn_assert(alignment_src >= 1 && alignment_filter >= 1);
+    return {alignment_src, alignment_filter};
+}
 }  // namespace
 
 const Operation* ConvBiasForwardImpl::AlgoCutlassConvolutionBase::get_cutlass_conv_op(
@@ -185,23 +295,36 @@ const Operation* ConvBiasForwardImpl::AlgoCutlassConvolutionBase::get_cutlass_co
     auto&& param = args.opr->param();
     auto layouts = get_layout_pack(param.format, m_algo_param.access_size);
     auto epilogue_type = get_epilogue_type(
-            param.nonlineMode, args.dst_layout->dtype.enumv() != DTypeEnum::Float32);
+            param.nonlineMode,
+            args.dst_layout->dtype.category() != DTypeCategory::FLOAT);
 
     cutlass::conv::SpecialOptimizeDesc special_optimization =
             (use_conv_filter_unity_opt)
                     ? cutlass::conv::SpecialOptimizeDesc::CONV_FILTER_UNITY
                     : cutlass::conv::SpecialOptimizeDesc::NONE;
 
+    int alignment_src, alignment_filter;
+    auto&& fm = args.filter_meta;
+    bool is_chanwise = param.sparse == param::ConvBias::Sparse::GROUP && fm.icpg == 1 &&
+                       fm.ocpg == 1;
+    std::tie(alignment_src, alignment_filter) = get_tensor_alignment(
+            param.format, *args.src_layout, *args.filter_layout, m_algo_param,
+            is_chanwise);
+
+    auto accumulator_dtype =
+            get_accumulator_dtype(args.src_layout->dtype, param.compute_mode);
+
     ConvolutionKey key{
             convert_conv_op(conv_op),
-            convert_dtype(args.src_layout->dtype.enumv()),
+            convert_dtype(args.src_layout->dtype),
             layouts.src,
-            convert_dtype(args.filter_layout->dtype.enumv()),
+            convert_dtype(args.filter_layout->dtype),
             layouts.filter,
-            convert_dtype(args.dst_layout->dtype.enumv()),
+            convert_dtype(args.dst_layout->dtype),
             layouts.dst,
-            convert_dtype(args.bias_layout->dtype.enumv()),
+            convert_dtype(args.bias_layout->dtype),
             layouts.bias,
+            accumulator_dtype,
             convert_conv_type(conv_type),
             m_algo_param.threadblock_m,
             m_algo_param.threadblock_n,
@@ -215,6 +338,8 @@ const Operation* ConvBiasForwardImpl::AlgoCutlassConvolutionBase::get_cutlass_co
             epilogue_type,
             m_algo_param.stage,
             special_optimization,
+            alignment_src,
+            alignment_filter,
             without_shared_load};
 
     return Singleton::get().operation_table.find_op(key);
@@ -227,13 +352,16 @@ void ConvBiasForwardImpl::AlgoCutlassConvolutionBase::execute_cutlass_conv_op(
         size_t pw, size_t sh, size_t sw, size_t dh, size_t dw, const void* alpha,
         const void* beta, const void* gamma, const void* delta, const void* theta,
         const void* threshold, const void* dst_scale, cudaStream_t stream,
-        const void* extra_param) const {
+        const void* extra_param, size_t groups) const {
     // gcc prints warnings when size_t values are implicitly narrowed to int
     cutlass::conv::Conv2dProblemSize problem_size{
-            int(n),  int(hi), int(wi), int(ci),
-            int(co), int(fh), int(fw), int(ho),
-            int(wo), int(ph), int(pw), int(sh),
-            int(sw), int(dh), int(dw), cutlass::conv::Mode::kCrossCorrelation};
+            int(n),      int(hi), int(wi), int(ci),
+            int(co),     int(fh), int(fw), int(ho),
+            int(wo),     int(ph), int(pw), int(sh),
+            int(sw),     int(dh), int(dw), cutlass::conv::Mode::kCrossCorrelation,
+            1,            // split k slices, always 1
+            int(groups),  // groups
+    };
 
     ConvolutionArguments conv_args{
             problem_size, src,   filter, bias,  z,         dst,       alpha,
