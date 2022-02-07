@@ -162,3 +162,11 @@ def tensor_gen_func_loader(expr):
         else:
             device = None
         expr.set_args_kwargs(shape, dtype=dtype, device=device)
+
+
+@register_functional_loader(("megengine.functional.nn", "pad"))
+def pad_func_loader(expr):
+    if "pad_witdth" in expr.kwargs:
+        kwargs = expr.kwargs
+        kwargs["pad_width"] = kwargs.pop("pad_witdth")
+        expr.set_args_kwargs(*expr.args, **kwargs)
