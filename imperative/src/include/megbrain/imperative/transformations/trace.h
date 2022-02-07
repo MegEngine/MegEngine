@@ -44,8 +44,8 @@ struct TraceResult {
         };
 
         size_t id;
-        DType dtype;
-        CompNode device;
+        DTypeValue::ref_t dtype;
+        CompNodeValue::ref_t device;
 
         // if exists, assert equal when meet
         ValueRef bound_data;
@@ -162,7 +162,7 @@ public:
     TypedValueRef<TracingValue> record_var(ValueRef value, bool capture, VarKind kind) {
         size_t id = m_vars.size();
         auto wrapped_value = TracingValue::make(value, id);
-        m_vars.push_back({id, *value.dtype(), *value.device()});
+        m_vars.push_back({id, value.dtype(), value.device()});
         auto& var = m_vars.back();
         if (capture) {
             var.bound_data = value;
