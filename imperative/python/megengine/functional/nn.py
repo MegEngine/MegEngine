@@ -1843,7 +1843,7 @@ def pixel_shuffle(inp: Tensor, upscale_factor: int) -> Tensor:
     )
     shape_1 = (
         *high_dim,
-        shape_ori[-3] / square,
+        int(shape_ori[-3] / square),
         shape_ori[-2] * upscale_factor,
         shape_ori[-1] * upscale_factor,
     )
@@ -1852,8 +1852,8 @@ def pixel_shuffle(inp: Tensor, upscale_factor: int) -> Tensor:
 
     layerPixelShuffle = _get_layerPixelShuffle(_device, _dtype, dim_order)
 
-    shape_0 = convert_single_value(shape_0, dtype=inp.dtype, device=inp.device)
-    shape_1 = convert_single_value(shape_1, dtype=inp.dtype, device=inp.device)
+    shape_0 = convert_single_value(shape_0, device=inp.device)
+    shape_1 = convert_single_value(shape_1, device=inp.device)
     outvar, *_ = apply(layerPixelShuffle(), inp, shape_0, shape_1)
 
     return outvar

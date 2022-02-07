@@ -1207,11 +1207,19 @@ def test_pixel_shuffle():
     out = F.pixel_shuffle(tensor(inp), upscale_factor=4)
     golden = pixel_shuffle(inp, 4)
     np.testing.assert_equal(out.numpy(), golden)
+    inp_float = np.float32(inp)
+    out = F.pixel_shuffle(tensor(inp_float), upscale_factor=2)
+    golden = pixel_shuffle(inp_float, 2)
+    np.testing.assert_equal(out.numpy(), golden)
 
     # ndim = 4
     inp = np.arange(3 * 18 * 3 * 3).reshape(3, 18, 3, 3)
     out = F.pixel_shuffle(tensor(inp), upscale_factor=3)
     golden = pixel_shuffle(inp, 3)
+    np.testing.assert_equal(out.numpy(), golden)
+    inp_float = np.float32(inp)
+    out = F.pixel_shuffle(tensor(inp_float), upscale_factor=3)
+    golden = pixel_shuffle(inp_float, 3)
     np.testing.assert_equal(out.numpy(), golden)
 
     # ndim = 5
@@ -1219,11 +1227,18 @@ def test_pixel_shuffle():
     out = F.pixel_shuffle(tensor(inp), upscale_factor=2)
     golden = pixel_shuffle(inp, 2)
     np.testing.assert_equal(out.numpy(), golden)
-
+    inp_float = np.float32(inp)
+    out = F.pixel_shuffle(tensor(inp_float), upscale_factor=2)
+    golden = pixel_shuffle(inp_float, 2)
+    np.testing.assert_equal(out.numpy(), golden)
     # ndim = 6
     inp = np.arange(6 * 5 * 3 * 25 * 3 * 4).reshape(6, 5, 3, 25, 3, 4)
     out = F.pixel_shuffle(tensor(inp), upscale_factor=5)
     golden = pixel_shuffle(inp, 5)
+    np.testing.assert_equal(out.numpy(), golden)
+    inp_float = np.float32(inp)
+    out = F.pixel_shuffle(tensor(inp_float), upscale_factor=5)
+    golden = pixel_shuffle(inp_float, 5)
     np.testing.assert_equal(out.numpy(), golden)
 
     # ndim = 7
@@ -1231,17 +1246,22 @@ def test_pixel_shuffle():
     out = F.pixel_shuffle(tensor(inp), upscale_factor=2)
     golden = pixel_shuffle(inp, 2)
     np.testing.assert_equal(out.numpy(), golden)
+    inp_float = np.float32(inp)
+    out = F.pixel_shuffle(tensor(inp_float), upscale_factor=2)
+    golden = pixel_shuffle(inp_float, 2)
+    np.testing.assert_equal(out.numpy(), golden)
 
 
+@pytest.mark.parametrize("type", ["int32", "float32"])
 @pytest.mark.parametrize("is_symbolic", [False, True])
-def test_pixel_shuffle_symbolic(is_symbolic):
+def test_pixel_shuffle_symbolic(is_symbolic, type):
     def fn(inp, upscale_factor):
         return F.pixel_shuffle(inp, upscale_factor=upscale_factor)
 
     if is_symbolic is not None:
         fn = jit.trace(symbolic=is_symbolic)(fn)
 
-    inp = tensor(np.arange(3 * 4 * 5 * 5).reshape(3, 4, 5, 5))
+    inp = tensor(np.arange(3 * 4 * 5 * 5).reshape(3, 4, 5, 5).astype(type))
     golden = pixel_shuffle(inp, 2)
     for _ in range(3):
         out = fn(inp, 2)
