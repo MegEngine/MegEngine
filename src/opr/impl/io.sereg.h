@@ -218,11 +218,8 @@ struct OprLoadDumpImpl<opr::MultipleDeviceTensorWithFormatHolder, 0> {
             auto handle = MegDNNHandle::get(CompNodeEnv::from_comp_node(i->comp_node()))
                                   .handle();
             auto format = TensorFormat::deserialize(ctx.load_buf_with_len(), handle);
-            DeviceTensorStorage storage(i->comp_node());
             TensorLayout layout_with_format{i->layout(), i->layout().dtype, format};
 
-            auto size = layout_with_format.span().dist_byte();
-            storage.ensure_size(size);
             if (i->storage().comp_node().mem_node() ==
                 CompNode::default_cpu().mem_node()) {
                 mgb_assert(
@@ -233,6 +230,13 @@ struct OprLoadDumpImpl<opr::MultipleDeviceTensorWithFormatHolder, 0> {
                 src.copy_from_fixlayout(*i).sync();
                 *i = DeviceTensorND::make_proxy(src);
             } else {
+                //! actually only layout of this tensor will be used later, see
+                //! src/serialization/impl/batched_device_value_loader.cpp:49. But we
+                //! have no way to reset layout only, so just construct a invalid
+                //! storage instead
+                auto size = layout_with_format.span().dist_byte();
+                DeviceTensorStorage storage;
+                storage.reset(i->comp_node(), size, nullptr);
                 i->reset(storage, layout_with_format);
             }
         }
