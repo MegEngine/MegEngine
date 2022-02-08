@@ -103,7 +103,8 @@ public:
     CompNode device() const { return m_storage.comp_node(); }
     const HostTensorStorage& storage() const { return m_storage; }
     DTypeScalar item() const {
-        mgb_assert(m_shape.is_scalar());
+        // FIXME: check scalar
+        mgb_assert(m_shape.total_nr_elems());
         return DTypeScalar::make_from_raw(m_dtype, m_storage.ptr());
     }
 

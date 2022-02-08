@@ -49,6 +49,7 @@ struct ValueShape {
 
     size_t total_nr_elems() const {
         size_t prod = 1;
+        mgb_assert(ndim >= 0 && ndim < 8);
         for (int i = 0; i < ndim; ++i) {
             prod *= shape[i];
         }

@@ -1399,12 +1399,12 @@ void init_tensor(py::module m) {
         std::function<bool(py::object, py::object)> array_comparator;
 
         bool compare_value(ValueRef lhs, ValueRef rhs) {
-            auto lvalue = lhs.numpy();
-            auto rvalue = rhs.numpy();
+            auto lvalue = lhs.cast_ref<HostValue>();
+            auto rvalue = rhs.cast_ref<HostValue>();
             if (lvalue->shape() != rvalue->shape()) {
                 return false;
             }
-            if (lvalue->shape().is_scalar()) {
+            if (lvalue->shape().total_nr_elems() == 1) {
                 return lvalue->item() == rvalue->item();
             }
             HostTensorND lnd = lvalue->as_nd(true);

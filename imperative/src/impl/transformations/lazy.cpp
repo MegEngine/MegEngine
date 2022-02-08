@@ -50,9 +50,10 @@ ValueRefList LazyEvalTransformation::apply_transformation(
         }
         if (require_link && m_io_link.node()) {
             mgb_assert(!input_nodes.empty());
-            input_nodes[0] =
-                    opr::VirtualDep::make({SymbolVar(input_nodes[0]), m_io_link})
-                            .node();
+            auto comp_node = m_io_link.node()->comp_node();
+            input_nodes[0] = opr::VirtualDep::make(
+                                     {SymbolVar(input_nodes[0]), m_io_link}, comp_node)
+                                     .node();
         }
         VarNodeArray output_nodes = OpDef::apply_on_var_node(op_val->op(), input_nodes);
         if (require_link) {

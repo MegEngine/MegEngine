@@ -47,7 +47,8 @@ struct TraceResult {
         DTypeValue::ref_t dtype;
         CompNodeValue::ref_t device;
 
-        // if exists, assert equal when meet
+        // if exists, for input: assert equal
+        // for output: get_data/shape/value
         ValueRef bound_data;
         std::string mark;
         std::string name;
