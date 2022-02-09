@@ -220,12 +220,22 @@ cg::OperatorNodeBase* apply_inplace_add_on_var_node(
 SmallVector<TensorPtr> apply_inplace_add_on_physical_tensor(
         const OpDef& def, const SmallVector<TensorPtr>& inputs,
         SmallVector<LogicalTensorDesc>& output_descs, const bool& validated) {
-    mgb_assert(
-            inputs[0]->blob().use_count() == 1 && inputs[0]->blob()->storage().unique(),
-            "This inplace modification may change the elements of other tensors. "
-            "Please set MEGENGINE_INPLACE_UPDATE to 0 to ensure the program runs "
-            "correctly.");
     auto dest = inputs[0], delta = inputs[1], alpha = inputs[2], beta = inputs[3];
+    if (!(inputs[0]->blob().unique() && inputs[0]->blob()->storage().unique())) {
+        mgb_log_warn(
+                "This inplace modification may change the elements of other tensors. "
+                "Fallback to non-inplace update.");
+
+        DeviceTensorStorage storage;
+        storage.reset(dest->comp_node(), dest->blob()->size(), dest->blob()->storage());
+        storage = storage.sub(dest->offset());
+        DeviceTensorND dv;
+        dv.reset(storage, dest->layout());
+
+        DeviceTensorND dv_new;
+        dv_new.copy_from(dv);
+        dest = Tensor::make(dv_new);
+    }
     auto tensor_to_scalar = [](const TensorPtr& tensor) -> float {
         return *tensor->get_value().ptr<float>();
     };

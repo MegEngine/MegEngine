@@ -285,7 +285,8 @@ struct TensorLayout : public TensorShape {
      *      stride
      */
     void add_axis_cont_inplace(size_t axis) {
-        add_axis_inplace(axis, 1, stride[axis] * shape[axis]);
+        ptrdiff_t stride_ = axis < ndim ? stride[axis] * shape[axis] : 1;
+        add_axis_inplace(axis, 1, stride_);
     }
 
     /*!

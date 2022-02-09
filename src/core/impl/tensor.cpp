@@ -475,7 +475,7 @@ DEF(CompNode node, const TensorShape& shape, DType dtype, TensorFormat format)
 DEF(CompNode node, const TensorLayout& layout)
         : TensorND(node, layout, layout.dtype, layout.format) {
     mgb_assert(
-            layout.is_contiguous(),
+            layout.is_contiguous() || layout.is_empty(),
             "non-contiguous layout used for initializing a tensor: %s",
             layout.to_string().c_str());
 }

@@ -194,6 +194,10 @@ public:
     MGE_WIN_DECLSPEC_FUC MemAllocPlan& assign_for_forward(
             const MemAllocPlan& src, const SubTensorSpec& sub);
 
+    //! force assign for readonly forward
+    MGE_WIN_DECLSPEC_FUC MemAllocPlan& force_assign_for_forward(
+            const MemAllocPlan& src, const SubTensorSpec& sub);
+
     /*!
      * \brief next readonly-forward reader of this MemAllocPlan
      *
@@ -508,6 +512,9 @@ public:
     //! whether the var is graph output, if it is output, the Flag of
     //! NO_SYS_MEM_ALLOC can be modified.
     MGE_WIN_DECLSPEC_FUC bool is_graph_dest_varnode();
+
+    MGE_WIN_DECLSPEC_FUC void force_assign_dev_tensor_from_tensor(
+            const DeviceTensorND& value);
 
 private:
     //! whether its memory should be allocated by mgb system during graph

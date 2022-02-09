@@ -382,7 +382,7 @@ bool TensorLayout::eq_layout(const TensorLayout& rhs) const {
     MEGDNN_STATIC_ASSERT(MAX_NDIM == 7, "please update the code");
 
     auto ax = [](size_t shape0, size_t shape1, ptrdiff_t stride0, ptrdiff_t stride1) {
-        return (shape0 == shape1) & ((shape0 == 1) | (stride0 == stride1));
+        return (shape0 == shape1) & ((shape0 <= 1) | (stride0 == stride1));
     };
     if (ndim == rhs.ndim) {
         size_t eq = 0;

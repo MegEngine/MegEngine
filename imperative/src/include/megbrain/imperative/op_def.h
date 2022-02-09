@@ -78,6 +78,9 @@ public:
     static EncodedSubgraph make_forward_graph(
             const OpDef& def, const SmallVector<LogicalTensorDesc>& inputs);
 
+    static SmallVector<VarNode::LayoutConstraintCallback> get_input_layout_constraint(
+            const OpDef& def, const SmallVector<TensorPtr>& inputs);
+
     const OpTrait* trait() const;
 
     std::string to_string() const;

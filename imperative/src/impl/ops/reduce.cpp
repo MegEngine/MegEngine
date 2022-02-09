@@ -54,7 +54,8 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
         const OpDef& def, const SmallVector<TensorPtr>& inputs,
         SmallVector<LogicalTensorDesc>& output_descs, const bool& validated) {
     if (memory_forward_success(def, inputs)) {
-        return {Tensor::make(inputs[0]->blob(), 0, inputs[0]->layout())};
+        return {Tensor::make(
+                inputs[0]->blob(), inputs[0]->offset(), inputs[0]->layout())};
     }
     return proxy_graph_detail::apply_on_physical_tensor(
             def, inputs, output_descs, validated);
@@ -73,11 +74,21 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
     return {output_descs, validated};
 }
 
+SmallVector<VarNode::LayoutConstraintCallback> get_input_layout_constraint(
+        const OpDef& def, const SmallVector<TensorPtr>& inputs) {
+    SmallVector<VarNode::LayoutConstraintCallback> layout_checker(inputs.size());
+    layout_checker[0] = [](const TensorLayout& layout) {
+        return layout.is_contiguous();
+    };
+    return layout_checker;
+}
+
 OP_TRAIT_REG(Reduce, Reduce, opr::Reduce)
         .make_from_op_node(make_from_op_node)
         .apply_on_var_node(apply_on_var_node)
         .apply_on_physical_tensor(apply_on_physical_tensor)
         .infer_output_attrs_fallible(infer_output_attrs_fallible)
+        .get_input_layout_constraint(get_input_layout_constraint)
         .fallback();
 }  // namespace reduce
 }  // namespace

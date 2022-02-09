@@ -33,6 +33,9 @@ EncodedSubgraph make_backward_graph(
         const SmallVector<bool>& input_requires_grad,
         const SmallVector<bool>& output_has_grad);
 
+SmallVector<VarNode::LayoutConstraintCallback> get_input_layout_constraint(
+        const OpDef& def, const SmallVector<TensorPtr>& inputs);
+
 }  // namespace proxy_graph_detail
 }  // namespace imperative
 }  // namespace mgb

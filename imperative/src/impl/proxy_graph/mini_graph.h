@@ -314,15 +314,11 @@ public:
         size_t idx = 0;
         for (auto&& input : opr_inputs) {
             mgb_assert(input->owner_opr()->same_type<InputPlaceholder>());
-            input->m_dev_tensor.storage({});
-            auto&& dev_tensor = inputs[input_remap[idx]]->dev_tensor();
+            auto&& dev_tensor = inputs[input_remap[idx]]->dev_tensor(false);
             auto&& layout = dev_tensor.layout();
             input->shape(dev_tensor.shape());
 
-            auto&& chk = input->m_mem_plan.reset_from_owner_var().chunk();
-            input->m_dev_tensor.reset(dev_tensor.storage(), layout);
-            input->m_mem_plan.layout(layout);
-            chk.mem_alloc_status.set_from_owner_var();
+            input->force_assign_dev_tensor_from_tensor(dev_tensor);
 
             mgb_assert(input->comp_node() == dev_tensor.comp_node());
             mgb_assert(input->shape().eq_shape(layout));
@@ -335,9 +331,14 @@ public:
         mgb_assert(m_opr->usable_output().size() == outputs.size());
         ::mgb::opr::intl::WorkspaceLimitHook::set_impl(
                 m_opr->owner_graph(), get_workspace_limit);
-        size_t j = 0;
+
         for (auto&& var : m_opr->output()) {
             auto&& chk = var->m_mem_plan.reset_from_owner_var().chunk();
+            chk.mem_alloc_status.set_from_owner_var();
+        }
+        m_opr->mem_plan_fwd_in2out_readonly();
+        size_t j = 0;
+        for (auto&& var : m_opr->output()) {
             if (var->contain_flag(VarNode::Flag::VOLATILE_CONTENT)) {
                 TensorLayout layout{var->shape(), var->dtype(), var->format()};
                 var->m_dev_tensor = BlobManager::inst()->alloc_workspace_with_defrag(
@@ -349,18 +350,16 @@ public:
                 mgb_assert(var->comp_node() == tensor->comp_node());
                 mgb_assert(var->shape().eq_shape(layout));
                 mgb_assert(var->dtype() == layout.dtype);
-                var->assign_dev_tensor_from_tensor(tensor->dev_tensor());
+                if (var->m_mem_plan.chunk().owner_var != var) {
+                    tensor->assign_from_dev_tensor(
+                            var->m_dev_tensor);  // memory forwarding
+                } else {
+                    var->assign_dev_tensor_from_tensor(tensor->dev_tensor());
+                }
                 ++j;
             }
-            chk.mem_alloc_status.set_from_owner_var();
         }
         mgb_assert(j == outputs.size());
-
-        // Memory forwarding was bypassed in megbrain with graph option
-        // imerative_proxy_graph on, here we call mem_plan_fwd_in2out_readonly
-        // to initialize some opr(e.g. Subtensor)'s internal state
-        // TODO: implement memory forwarding
-        m_opr->mem_plan_fwd_in2out_readonly();
         {
             // some opr (e.g. Reduce) rely on on_mem_status_changed to set
             // input/output tensor corretly, since we bypass var_node_mem_mgr
@@ -840,7 +839,7 @@ public:
                     Tensor::make(output_descs[i].layout, output_descs[i].comp_node);
         }
 
-        auto raw_outputs = to_raw_ptr_array(outputs);
+        auto raw_outputs = to_raw_ptr_array(outputs, false);
         CompNode::UnorderedSet used_cns;
         for (auto&& out : raw_outputs) {
             auto cn = out->comp_node();

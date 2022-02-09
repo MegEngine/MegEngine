@@ -642,7 +642,7 @@ void ChannelImpl::produce_tensor(TensorInfo* dest, TensorPtr ptr) {
     m_dtr.update_used_time(dest);
     MGB_RECORD_EVENT(
             TensorProduceEvent, dest->id, ptr->layout(), ptr->comp_node(),
-            ptr->dev_tensor().raw_ptr());
+            ptr->dev_tensor(false).raw_ptr());
     // update tensor desc for static infer
     if (dest->desc.layout.ndim) {
         mgb_assert(
@@ -730,10 +730,20 @@ void ChannelImpl::do_apply_op(const ApplyOp& cmd, std::string reason) {
                     inputs, apply_functor, const_functor);
             return outputs;
         }
-        return OpDef::apply_on_physical_tensor(def, inputs, output_descs, validated);
+        // Check Input Layout
+        // Get the input layout constraints, and if the constraint is not satisfied
+        // inplace update the layout and blob to make the tensor contiguous
+        auto&& constraints = OpDef::get_input_layout_constraint(def, inputs);
+        for (size_t idx = 0; idx < inputs.size(); ++idx) {
+            auto&& layout_checker = constraints[idx];
+            if (layout_checker) {
+                inputs[idx]->to_contiguous_inplace(layout_checker);
+            }
+        }
+        return OpDef::apply_on_physical_tensor(
+                def, std::move(inputs), output_descs, validated);
     };
     MGB_RECORD_EVENT(OpExecuteEvent, apply_id, {}, reason);
-    // Begin profiling operator
     SmallVector<std::pair<CompNode, uint64_t>> kernels;
     if (profiling_device) {
         // Collecting devices

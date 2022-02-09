@@ -322,7 +322,7 @@ void ComputingGraphImpl::free_varnode_storage(void* ptr) {
     m_var_node_pool.free_raw(ptr);
 };
 
-OperatorNodeBase* ComputingGraphImpl::insert_opr(
+MGE_WIN_DECLSPEC_FUC OperatorNodeBase* ComputingGraphImpl::insert_opr(
         std::unique_ptr<OperatorNodeBase> opr_uniqp) {
     auto opr = opr_uniqp.get();
 

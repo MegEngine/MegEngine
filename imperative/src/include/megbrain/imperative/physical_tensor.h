@@ -14,6 +14,7 @@
 #include <memory>
 #include <mutex>
 
+#include "megbrain/graph.h"
 #include "megbrain/imperative/resource_manager.h"
 #include "megbrain/tensor.h"
 
@@ -90,18 +91,24 @@ public:
 
     CompNode comp_node() const {
         mgb_assert(m_blob, "uninitialized tensor.");
-        return m_blob->comp_node();
+        return m_cn;
     }
 
-    DType dtype() const { return m_layout.dtype; }
+    DType dtype() const { return m_dtype; }
 
     TensorLayout layout() const { return m_layout; }
 
-    const TensorShape& shape() const { return m_layout; }
+    const TensorShape& shape() const { return m_shape; }
 
     size_t offset() const { return m_offset; }
 
-    DeviceTensorND dev_tensor();
+    void to_contiguous_inplace(VarNode::LayoutConstraintCallback&);
+
+    void to_contiguous_inplace();
+
+    DeviceTensorND dev_tensor(bool contiguous = true);
+
+    void assign_from_dev_tensor(DeviceTensorND);
 
     static TensorPtr make_scalar(DTypeScalar value, CompNode cn);
 
@@ -110,7 +117,7 @@ public:
         return make_scalar(value, m_blob->comp_node());
     }
 
-    BlobPtr& blob() { return m_blob; }
+    BlobPtr blob() { return m_blob; }
 
     void fetch_value();
     bool value_fetched();
@@ -131,10 +138,16 @@ public:
     static void static_initialize();
 
 private:
-    TensorLayout m_layout;
-    BlobPtr m_blob;
     size_t m_offset;
-    std::mutex m_mtx;
+    const CompNode m_cn;
+    const TensorShape m_shape;
+    const DType m_dtype;
+
+    std::mutex m_blob_mtx;
+    BlobPtr m_blob;
+    TensorLayout m_layout;
+
+    std::mutex m_value_mtx;
     HostTensorND m_value;
     EventPtr m_value_ready = nullptr;
 };

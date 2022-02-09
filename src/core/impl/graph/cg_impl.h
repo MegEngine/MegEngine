@@ -148,8 +148,8 @@ class ComputingGraphImpl final : public ComputingGraph {
 public:
     class ComputingSequence;
 
-    ComputingGraphImpl();
-    ~ComputingGraphImpl();
+    MGE_WIN_DECLSPEC_FUC ComputingGraphImpl();
+    MGE_WIN_DECLSPEC_FUC ~ComputingGraphImpl();
 
     template <typename T>
     static ComputingGraphImpl* downcast(T* ptr) = delete;
@@ -166,7 +166,8 @@ public:
     SmallVector<std::unique_ptr<AsyncExecutable>> compile_multi_part(
             const SmallVector<OutputSpec>& out_specs) override;
 
-    OperatorNodeBase* insert_opr(std::unique_ptr<OperatorNodeBase> opr) override;
+    MGE_WIN_DECLSPEC_FUC OperatorNodeBase* insert_opr(
+            std::unique_ptr<OperatorNodeBase> opr) override;
 
     void* alloc_varnode_storage() override;
 

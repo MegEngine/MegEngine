@@ -83,28 +83,18 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
 SmallVector<TensorPtr> apply_on_physical_tensor(
         const OpDef& def, const SmallVector<TensorPtr>& inputs,
         SmallVector<LogicalTensorDesc>& output_descs, const bool& validated) {
-    auto& input = inputs[0];
-    TensorShape target_shape;
-    if (validated) {
-        target_shape = output_descs[0].layout;
-    } else {
-        cg::copy_tensor_value_to_shape(
-                target_shape, inputs[1]->get_value().proxy_to_default_cpu());
-    }
-    TensorPtr output = Tensor::make(
-            TensorLayout(target_shape, input->dtype()), input->comp_node());
-    if (output->layout().is_empty()) {
-        return {output};
-    }
-    if (input->shape().eq_shape(output->shape())) {
-        mgb_assert(input->layout().eq_layout(output->layout()));
-        output->dev_tensor().copy_from_fixlayout(input->dev_tensor());
-    } else {
-        TensorLayout input_layout = input->layout().broadcast(output->shape());
-        output->dev_tensor().copy_from_fixlayout(
-                input->dev_tensor().sub(SubTensorSpec::make_from_layout(input_layout)));
-    }
-    return {output};
+    def.cast_final_safe<Broadcast>();
+    size_t nr_inp = inputs.size();
+    mgb_assert(nr_inp == 2, "Broadcast expects 2 inputs; got %lu actually", nr_inp);
+    auto&& src = inputs[0];
+    auto&& tshp_nd = inputs[1];
+    auto slayout = src->layout();
+
+    TensorShape tshp;
+    cg::copy_tensor_value_to_shape(tshp, tshp_nd->get_value().proxy_to_default_cpu());
+    TensorLayout tlayout = slayout.broadcast(tshp);
+    // memory forward
+    return {Tensor::make(src->blob(), src->offset(), tlayout)};
 }
 
 OP_TRAIT_REG(Broadcast, Broadcast, opr::Broadcast)
@@ -184,10 +174,6 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
     auto&& tshp_nd = inputs[1];
     auto slayout = src->layout();
 
-    if (validated) {
-        return {Tensor::make(src->blob(), 0, output_descs[0].layout)};
-    }
-
     TensorShape tshp;
     cg::copy_tensor_value_to_shape(tshp, tshp_nd->get_value().proxy_to_default_cpu());
     if (op_def.axis != opr::Reshape::Param::INVALID_AXIS) {
@@ -195,13 +181,39 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
         tshp[op_def.axis] = 1;
         tshp[op_def.axis] = src->layout().total_nr_elems() / tshp.total_nr_elems();
     }
-    return {Tensor::make(src->blob(), 0, slayout.reshape(tshp))};
+    TensorLayout tlayout;
+    mgb_assert(slayout.try_reshape(tlayout, tshp));
+    return {Tensor::make(src->blob(), src->offset(), tlayout)};
+}
+
+SmallVector<VarNode::LayoutConstraintCallback> get_input_layout_constraint(
+        const OpDef& def, const SmallVector<TensorPtr>& inputs) {
+    auto&& op_def = def.cast_final_safe<Reshape>();
+    SmallVector<VarNode::LayoutConstraintCallback> layout_checker(inputs.size());
+    layout_checker[0] = [&](const TensorLayout& layout) {
+        TensorShape tshp;
+        TensorLayout ret;
+        cg::copy_tensor_value_to_shape(
+                tshp, inputs[1]->get_value().proxy_to_default_cpu());
+        if (op_def.axis != opr::Reshape::Param::INVALID_AXIS) {
+            mgb_assert(tshp[op_def.axis] == -1);
+            tshp[op_def.axis] = 1;
+            tshp[op_def.axis] = layout.total_nr_elems() / tshp.total_nr_elems();
+        }
+        if (layout.try_reshape(ret, tshp)) {
+            return true;
+        } else {
+            return false;
+        }
+    };
+    return layout_checker;
 }
 
 OP_TRAIT_REG(Reshape, Reshape)
         .apply_on_var_node(apply_on_var_node)
         .infer_output_attrs_fallible(infer_output_attrs_fallible)
         .apply_on_physical_tensor(apply_on_physical_tensor)
+        .get_input_layout_constraint(get_input_layout_constraint)
         .fallback();
 }  // namespace reshape
 

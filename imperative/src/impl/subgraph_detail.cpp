@@ -17,6 +17,8 @@
 
 #include "./op_trait.h"
 
+using LayoutConstraintCallback = mgb::VarNode::LayoutConstraintCallback;
+
 namespace mgb {
 namespace imperative {
 namespace subgraph_detail {
@@ -73,12 +75,25 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
                                  const std::shared_ptr<OpDef>& op,
                                  const SmallVector<TensorPtr>& inputs,
                                  size_t nr_outputs) {
+        auto&& constraints = OpDef::get_input_layout_constraint(*op, inputs);
+        for (size_t idx = 0; idx < inputs.size(); ++idx) {
+            auto&& layout_checker = constraints[idx];
+            if (layout_checker) {
+                inputs[idx]->to_contiguous_inplace(layout_checker);
+            }
+        }
         // do not use infered output_desc in subgraph
         return OpDef::apply_on_physical_tensor(*op, inputs, output_descs, false);
     };
     auto const_functor = [&](const TensorPtr& value) { return value; };
     auto outputs = subgraph.apply<TensorPtr>(inputs, apply_functor, const_functor);
     return outputs;
+}
+
+SmallVector<LayoutConstraintCallback> get_input_layout_constraint(
+        const OpDef& def, const SmallVector<TensorPtr>& inputs) {
+    SmallVector<LayoutConstraintCallback> res(inputs.size());
+    return res;
 }
 
 static EncodedSubgraph make_backward_graph_from_forward(

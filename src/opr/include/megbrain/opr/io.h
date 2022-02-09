@@ -24,7 +24,7 @@ namespace intl {
  * \brief base class for IO nodes between device and host
  */
 class HostIONodeBase : public cg::SingleCNOperatorNodeBase {
-    void init_output_static_infer_desc() override final;
+    MGE_WIN_DECLSPEC_FUC void init_output_static_infer_desc() override final;
 
 protected:
     using cg::SingleCNOperatorNodeBase::SingleCNOperatorNodeBase;
@@ -32,9 +32,10 @@ protected:
     /*!
      * \brief src_type for static shape and value infer
      */
-    virtual cg::static_infer::SourceType static_infer_src_type() const;
+    MGE_WIN_DECLSPEC_FUC virtual cg::static_infer::SourceType static_infer_src_type()
+            const;
 
-    virtual const TensorShape& get_output_shape() = 0;
+    MGE_WIN_DECLSPEC_FUC virtual const TensorShape& get_output_shape() = 0;
 
     /*!
      * \brief fill value in *dest* for static inference
@@ -52,10 +53,10 @@ protected:
 class DeviceTensorHolder : public HostIONodeBase {
     class DevValueExecDep;
 
-    void init_output_format() override;
-    void init_output_mem_plan(bool dynamic) override final;
-    void scn_do_execute() override final;
-    void record_execute_deps(ExecDependencyArray& deps) override;
+    MGE_WIN_DECLSPEC_FUC void init_output_format() override;
+    MGE_WIN_DECLSPEC_FUC void init_output_mem_plan(bool dynamic) override final;
+    MGE_WIN_DECLSPEC_FUC void scn_do_execute() override final;
+    MGE_WIN_DECLSPEC_FUC void record_execute_deps(ExecDependencyArray& deps) override;
 
 protected:
     using HostIONodeBase::HostIONodeBase;
@@ -77,20 +78,20 @@ MGB_DEFINE_CLS_WITH_SUPER(SharedDeviceTensorBase, DeviceTensorHolder) // {
     std::shared_ptr<DeviceTensorND> m_dev_data;
     bool m_const_value;
 
-    const TensorShape& get_output_shape() override;
+    MGE_WIN_DECLSPEC_FUC const TensorShape& get_output_shape() override;
 
     bool fill_in_static_infer(DeviceTensorND* dest) override {
         MGB_MARK_USED_VAR(dest);
         return false;
     }
 
-    void init_output_comp_node() override;
+    MGE_WIN_DECLSPEC_FUC void init_output_comp_node() override;
 
 public:
     //! const_value marks whether the device value of this operator should
     //! be treated as constant during graph execution. Should be false in
     //! most cases.
-    SharedDeviceTensorBase(
+    MGE_WIN_DECLSPEC_FUC SharedDeviceTensorBase(
             ComputingGraph& graph, const std::shared_ptr<DeviceTensorND>& dev_data,
             bool const_value, const OperatorNodeConfig& config);
 
@@ -248,7 +249,8 @@ private:
  */
 MGB_DEFINE_OPR_CLASS_WITH_EXPORT(
         SharedDeviceTensor, intl::SharedDeviceTensorBase) // {
-    cg::static_infer::SourceType static_infer_src_type() const override;
+    MGE_WIN_DECLSPEC_FUC cg::static_infer::SourceType static_infer_src_type()
+            const override;
 
 public:
     using Super::Super;

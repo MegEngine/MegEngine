@@ -594,6 +594,13 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible<Dro
     return {dests, true};
 }
 
+template <typename Op>
+SmallVector<VarNode::LayoutConstraintCallback> get_input_layout_constraint(
+        const OpDef& def, const SmallVector<TensorPtr>& inputs) {
+    SmallVector<VarNode::LayoutConstraintCallback> layout_checker(inputs.size());
+    return layout_checker;
+}
+
 }  // anonymous namespace
 
 Handle new_handle(CompNode comp_node, uint64_t seed) {
@@ -622,6 +629,7 @@ CompNode get_rng_handle_compnode(Handle handle) {
             .apply_on_var_node(apply_on_var_node<NAME, Output>)             \
             .apply_on_physical_tensor(apply_on_physical_tensor<NAME>)       \
             .infer_output_attrs_fallible(infer_output_attrs_fallible<NAME>) \
+            .get_input_layout_constraint(get_input_layout_constraint<NAME>) \
             .fallback();                                                    \
     }
 

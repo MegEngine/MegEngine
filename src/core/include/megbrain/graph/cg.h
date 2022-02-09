@@ -241,7 +241,8 @@ public:
      * \return the node in the graph (maybe another node due to
      *      deduplication)
      */
-    virtual OperatorNodeBase* insert_opr(std::unique_ptr<OperatorNodeBase> opr) = 0;
+    MGE_WIN_DECLSPEC_FUC virtual OperatorNodeBase* insert_opr(
+            std::unique_ptr<OperatorNodeBase> opr) = 0;
 
     /*!
      * \brief used by OperatorNodeBase to allocate its outputs

@@ -93,6 +93,23 @@ MemAllocPlan& MemAllocPlan::assign_for_forward(
     return *this;
 }
 
+MemAllocPlan& MemAllocPlan::force_assign_for_forward(
+        const MemAllocPlan& src, const SubTensorSpec& sub) {
+    mgb_assert(valid() && src.valid() && m_layout.eq_shape(sub.layout()));
+    ++(m_chunk = src.m_chunk)->m_refcnt;
+    m_layout = sub.layout();
+    // make layout strong-contig
+    for (int i = static_cast<int>(m_layout.ndim) - 1; i >= 0; --i) {
+        if (m_layout.shape[i] == 1) {
+            m_layout.stride[i] = i + 1 < static_cast<int>(m_layout.ndim)
+                                       ? m_layout.stride[i + 1] * m_layout.shape[i + 1]
+                                       : 1;
+        }
+    }
+    m_layout.dtype = dtype();
+    return *this;
+}
+
 MemAllocPlan& MemAllocPlan::reset_from_owner_var() {
     auto owner_var = m_chunk_storage.owner_var;
     m_layout.dtype = dtype();
@@ -223,7 +240,12 @@ VarNode& VarNode::format(TensorFormat format) {
 
 bool VarNode::set_fwd_in2out_readonly(VarNode* input, const SubTensorSpec& sub) {
     if (owner_graph()->options().imperative_proxy_graph) {
-        return false;
+        if (input->comp_node() != comp_node()) {
+            return false;
+        }
+        m_mem_plan.force_assign_for_forward(input->m_mem_plan, sub);
+        m_dev_tensor = input->dev_tensor().sub(sub);
+        return true;
     }
     return ComputingGraphImpl::downcast(owner_graph())
             ->var_node_mem_manager()
@@ -359,6 +381,13 @@ VarNode& VarNode::reset_dev_tensor_from_tensor(const DeviceTensorND& value) {
     assign_dev_tensor_from_tensor(value);
     chk.mem_alloc_status.set_from_owner_var();
     return *this;
+}
+
+void VarNode::force_assign_dev_tensor_from_tensor(const DeviceTensorND& value) {
+    m_dev_tensor = value;
+    shape(value.shape());
+    m_mem_plan.reset_from_owner_var().chunk().mem_alloc_status.set_from_owner_var();
+    m_mem_plan.layout(value.layout());
 }
 
 void VarNode::assign_dev_tensor_from_tensor(const DeviceTensorND& value) {

@@ -60,9 +60,55 @@ auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
     return opr::Dimshuffle::make(inputs[0], ds.pattern, 0UL, config);
 }
 
+SmallVector<TensorPtr> apply_on_physical_tensor(
+        const OpDef& def, const SmallVector<TensorPtr>& inputs,
+        SmallVector<LogicalTensorDesc>& output_descs, const bool& validated) {
+    auto&& ds = static_cast<const Dimshuffle&>(def);
+    mgb_assert(
+            ds.pattern.size() <= TensorShape::MAX_NDIM,
+            "Dimshuffle pattern exceeds max length of %zd", TensorShape::MAX_NDIM);
+    size_t nr_inp = inputs.size();
+    mgb_assert(nr_inp == 1, "Dimshuffle expects 1 inputs; got %lu actually", nr_inp);
+    auto&& src = inputs[0];
+    auto inp_layout = src->layout();
+    size_t pattern_ndim = *std::max_element(ds.pattern.begin(), ds.pattern.end()) + 1;
+    mgb_assert(
+            inp_layout.ndim == pattern_ndim,
+            "input ndim mismatch for Dimshuffle: expect=%zd actual=%zd", pattern_ndim,
+            inp_layout.ndim);
+    TensorLayout out_layout{inp_layout.dtype};
+    out_layout.ndim = ds.pattern.size();
+
+    size_t idx = 0;
+    bool input_used[TensorLayout::MAX_NDIM] = {0};
+    for (auto i : ds.pattern) {
+        if (i < 0) {
+            out_layout.shape[idx] = 1;
+            out_layout.stride[idx] = 1;
+        } else {
+            input_used[i] = true;
+            out_layout.shape[idx] = inp_layout.shape[i];
+            out_layout.stride[idx] = inp_layout.stride[i];
+        }
+        ++idx;
+    }
+    if (out_layout.is_contiguous()) {
+        out_layout.init_contiguous_stride();
+    }
+    for (size_t i = 0; i < pattern_ndim; ++i) {
+        mgb_assert(
+                input_used[i] || inp_layout.shape[i] == 1,
+                "non-1 dim discarded in Dimshuffle: ishp=%s dim=%zd",
+                inp_layout.megdnn::TensorShape::to_string().c_str(), i);
+    }
+    // memory forward
+    return {Tensor::make(src->blob(), src->offset(), out_layout)};
+}
+
 OP_TRAIT_REG(Dimshuffle, Dimshuffle, opr::Dimshuffle)
         .make_from_op_node(make_from_op_node)
         .apply_on_var_node(apply_on_var_node)
+        .apply_on_physical_tensor(apply_on_physical_tensor)
         .fallback();
 }  // namespace dimshuffle
 }  // namespace
@@ -80,7 +126,25 @@ auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
     return opr::AxisAddRemove::make(inputs[0], param, config);
 }
 
-OP_TRAIT_REG(AddAxis, AddAxis).apply_on_var_node(apply_on_var_node).fallback();
+SmallVector<TensorPtr> apply_on_physical_tensor(
+        const OpDef& def, const SmallVector<TensorPtr>& inputs,
+        SmallVector<LogicalTensorDesc>& output_descs, const bool& validated) {
+    auto&& op_def = def.cast_final_safe<AddAxis>();
+    size_t nr_inp = inputs.size();
+    mgb_assert(nr_inp == 1, "AddAxis expects 1 inputs; got %lu actually", nr_inp);
+    auto&& src = inputs[0];
+    auto tlayout = src->layout();
+    for (auto&& i : op_def.axis) {
+        tlayout.add_axis_cont_inplace(i);
+    }
+    // memory forward
+    return {Tensor::make(src->blob(), src->offset(), tlayout)};
+}
+
+OP_TRAIT_REG(AddAxis, AddAxis)
+        .apply_on_var_node(apply_on_var_node)
+        .apply_on_physical_tensor(apply_on_physical_tensor)
+        .fallback();
 }  // namespace add_axis
 }  // namespace
 
@@ -97,7 +161,36 @@ auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
     return opr::AxisAddRemove::make(inputs[0], param, config);
 }
 
-OP_TRAIT_REG(RemoveAxis, RemoveAxis).apply_on_var_node(apply_on_var_node).fallback();
+SmallVector<TensorPtr> apply_on_physical_tensor(
+        const OpDef& def, const SmallVector<TensorPtr>& inputs,
+        SmallVector<LogicalTensorDesc>& output_descs, const bool& validated) {
+    auto&& op_def = def.cast_final_safe<RemoveAxis>();
+    size_t nr_inp = inputs.size();
+    mgb_assert(nr_inp == 1, "RemoveAxis expects 1 inputs; got %lu actually", nr_inp);
+    auto&& src = inputs[0];
+    auto tlayout = src->layout();
+    for (auto&& i : op_def.axis) {
+        if (tlayout.ndim == 1) {
+            mgb_assert(
+                    tlayout.shape[0] == 1 && i == 0,
+                    "can not remove axis %u from tensor of shape=%s", i,
+                    tlayout.megdnn::TensorShape::to_string().c_str());
+        } else {
+            mgb_assert(
+                    i < tlayout.ndim && tlayout.shape[i] == 1,
+                    "can not remove axis %u from tensor of shape=%s", i,
+                    tlayout.megdnn::TensorShape::to_string().c_str());
+            tlayout.remove_axis_inplace(i);
+        }
+    }
+    // memory forward
+    return {Tensor::make(src->blob(), src->offset(), tlayout)};
+}
+
+OP_TRAIT_REG(RemoveAxis, RemoveAxis)
+        .apply_on_var_node(apply_on_var_node)
+        .apply_on_physical_tensor(apply_on_physical_tensor)
+        .fallback();
 }  // namespace remove_axis
 }  // namespace
 

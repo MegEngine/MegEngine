@@ -60,6 +60,11 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> OpDef::infer_output_attrs_falli
     return def.trait()->infer_output_attrs_fallible(def, inputs);
 }
 
+SmallVector<VarNode::LayoutConstraintCallback> OpDef::get_input_layout_constraint(
+        const OpDef& def, const SmallVector<TensorPtr>& inputs) {
+    return def.trait()->get_input_layout_constraint(def, inputs);
+}
+
 EncodedSubgraph OpDef::make_backward_graph(
         const OpDef& def, const SmallVector<LogicalTensorDesc>& inputs,
         const SmallVector<bool>& input_requires_grad,

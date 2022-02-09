@@ -13,7 +13,8 @@
 
 using namespace megdnn;
 
-const std::shared_ptr<Handle>& megdnn::inplace_cpu_handle(int debug_level) {
+MGE_WIN_DECLSPEC_FUC const std::shared_ptr<Handle>& megdnn::inplace_cpu_handle(
+        int debug_level) {
     auto make = [](int deb_level) {
         megcoreDeviceHandle_t dev_handle;
         megcoreCreateDeviceHandle(&dev_handle, megcorePlatformCPU);

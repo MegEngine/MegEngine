@@ -38,6 +38,8 @@ namespace mgb::imperative::python {
 
 extern interpreter::Interpreter::Channel* interpreter_for_py;
 extern PyTypeObject* py_tensor_type;
+extern PyObject* cpp_use_symbolic_shape;
+extern PyObject* cpp_astensor1d;
 
 struct Tensor : NonCopyableObj {
 private:

@@ -73,6 +73,9 @@ OpMethType(ApplyOnVarNode,
 OpMethType(InferOutputAttrsFallible,
            decltype(OpDef::infer_output_attrs_fallible));
 
+OpMethType(GetInputLayoutConstraint,
+           decltype(OpDef::get_input_layout_constraint));
+
 OpMethType(GradMaker,
            decltype(OpDef::make_backward_graph));
 
@@ -119,6 +122,8 @@ struct OpMethFallbackByProxyGraph : OpMethImplBase {
     static void impl(ApplyOnPhysicalTensor& func, op_meth_tag::ApplyOnPhysicalTensor);
     static void impl(
             InferOutputAttrsFallible& func, op_meth_tag::InferOutputAttrsFallible);
+    static void impl(
+            GetInputLayoutConstraint& func, op_meth_tag::GetInputLayoutConstraint);
     static void impl(GradMaker& func, op_meth_tag::GradMaker);
 };
 
@@ -128,6 +133,8 @@ struct OpMethFallbackFromSubgraph : OpMethImplBase {
     static void impl(ApplyOnVarNode& func, op_meth_tag::ApplyOnVarNode);
     static void impl(
             InferOutputAttrsFallible& func, op_meth_tag::InferOutputAttrsFallible);
+    static void impl(
+            GetInputLayoutConstraint& func, op_meth_tag::GetInputLayoutConstraint);
     static void impl(GradMaker& func, op_meth_tag::GradMaker);
 };
 
@@ -179,6 +186,7 @@ struct OpTrait {
     ApplyOnDeviceTensorND apply_on_device_tensornd;
     ApplyOnVarNode apply_on_var_node;
     InferOutputAttrsFallible infer_output_attrs_fallible;
+    GetInputLayoutConstraint get_input_layout_constraint;
     GradMaker make_backward_graph;
     Props props;
     HashFunc hash;
@@ -199,6 +207,7 @@ struct OpTrait {
     cb(apply_on_device_tensornd)    \
     cb(apply_on_var_node)           \
     cb(infer_output_attrs_fallible) \
+    cb(get_input_layout_constraint) \
     cb(make_backward_graph)         \
     cb(props)                       \
     cb(hash)                        \

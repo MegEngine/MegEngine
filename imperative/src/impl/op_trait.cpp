@@ -47,6 +47,10 @@ void OpMethFallbackByProxyGraph::impl(
         InferOutputAttrsFallible& func, op_meth_tag::InferOutputAttrsFallible) {
     func.Base::operator=(proxy_graph_detail::infer_output_attrs_fallible);
 }
+void OpMethFallbackByProxyGraph::impl(
+        GetInputLayoutConstraint& func, op_meth_tag::GetInputLayoutConstraint) {
+    func.Base::operator=(proxy_graph_detail::get_input_layout_constraint);
+}
 void OpMethFallbackByProxyGraph::impl(GradMaker& func, op_meth_tag::GradMaker) {
     func.Base::operator=(proxy_graph_detail::make_backward_graph);
 }
@@ -62,6 +66,10 @@ void OpMethFallbackFromSubgraph::impl(
 void OpMethFallbackFromSubgraph::impl(
         InferOutputAttrsFallible& func, op_meth_tag::InferOutputAttrsFallible) {
     func.Base::operator=(subgraph_detail::infer_output_attrs_fallible);
+}
+void OpMethFallbackFromSubgraph::impl(
+        GetInputLayoutConstraint& func, op_meth_tag::GetInputLayoutConstraint) {
+    func.Base::operator=(subgraph_detail::get_input_layout_constraint);
 }
 void OpMethFallbackFromSubgraph::impl(GradMaker& func, op_meth_tag::GradMaker) {
     func.Base::operator=(subgraph_detail::make_backward_graph);

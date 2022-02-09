@@ -73,7 +73,7 @@ public:
     static SymbolVar make(ComputingGraph& graph, Tensor& tensor) {
         auto opr = graph.insert_opr(std::make_unique<InputPlaceholder>(graph, &tensor));
         auto var = opr->output(0);
-        auto&& dev_tensor = tensor.dev_tensor();
+        auto&& dev_tensor = tensor.dev_tensor(false);
         var->m_comp_node = dev_tensor.comp_node();
         var->m_shape = dev_tensor.shape();
         if (dev_tensor.empty()) {
@@ -81,10 +81,7 @@ public:
             layout.init_contiguous_stride();
             dev_tensor.reset(dev_tensor.storage(), layout);
         }
-        var->m_dev_tensor = dev_tensor;
-        var->m_mem_plan.reset_from_owner_var()
-                .chunk()
-                .mem_alloc_status.set_from_owner_var();
+        var->force_assign_dev_tensor_from_tensor(dev_tensor);
         return var;
     }
 

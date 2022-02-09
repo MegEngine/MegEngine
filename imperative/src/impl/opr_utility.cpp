@@ -117,7 +117,7 @@ void InputCallback::scn_do_execute() {
         layout.init_contiguous_stride();
         dev_tensor.reset(dev_tensor.storage(), layout);
     }
-    output(0)->reset_dev_tensor_from_tensor(dev_tensor);
+    output(0)->force_assign_dev_tensor_from_tensor(dev_tensor);
 }
 
 cg::OperatorNodeBase* InputCallback::shallow_copy(
@@ -311,7 +311,7 @@ cg::OperatorNodeBase::NodeProp* MutableTensor::do_make_node_prop() const {
 }
 
 void MutableTensor::scn_do_execute() {
-    output(0)->reset_dev_tensor_from_tensor(*m_dev_tensor);
+    output(0)->force_assign_dev_tensor_from_tensor(*m_dev_tensor);
 }
 
 void MutableTensor::init_output_static_infer_desc() {
