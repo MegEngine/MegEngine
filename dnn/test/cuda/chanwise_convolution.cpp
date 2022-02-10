@@ -497,15 +497,15 @@ void check_chanwise(DType io_type, DType comp_type, Handle* handle, const char* 
 }
 }  // namespace
 
-#define MEGDNN_FOREACH_CUTLASS_CHANWISE_CONV_FWD_FMA_KERNEL(cb) \
-    cb(1, 128, 128, 8, 32, 64, 8);                              \
-    cb(2, 128, 64, 8, 64, 32, 8);                               \
-    cb(3, 128, 32, 8, 64, 32, 8);                               \
-    cb(4, 64, 128, 8, 64, 32, 8);                               \
-    cb(5, 32, 128, 8, 32, 64, 8);                               \
-    cb(6, 64, 64, 8, 64, 32, 8);                                \
-    cb(7, 32, 64, 8, 32, 64, 8);                                \
-    cb(8, 32, 32, 8, 32, 32, 8);                                \
+#define MEGDNN_FOREACH_CUTLASS_CHANWISE_CONV_FMA_KERNEL(cb) \
+    cb(1, 128, 128, 8, 32, 64, 8);                          \
+    cb(2, 128, 64, 8, 64, 32, 8);                           \
+    cb(3, 128, 32, 8, 64, 32, 8);                           \
+    cb(4, 64, 128, 8, 32, 64, 8);                           \
+    cb(5, 32, 128, 8, 32, 64, 8);                           \
+    cb(6, 64, 64, 8, 32, 64, 8);                            \
+    cb(7, 32, 64, 8, 32, 64, 8);                            \
+    cb(8, 32, 32, 8, 32, 32, 8);                            \
     cb(9, 64, 32, 8, 64, 32, 8);
 
 #define cb(tag, tbm, tbn, tbk, wm, wn, wk)                                       \
@@ -516,16 +516,29 @@ void check_chanwise(DType io_type, DType comp_type, Handle* handle, const char* 
                 "_" #wm "X" #wn "X" #wk "_2stage");                              \
     }
 
-MEGDNN_FOREACH_CUTLASS_CHANWISE_CONV_FWD_FMA_KERNEL(cb)
+MEGDNN_FOREACH_CUTLASS_CHANWISE_CONV_FMA_KERNEL(cb)
 
 #undef cb
-#undef MEGDNN_FOREACH_CUTLASS_CHANWISE_CONV_FWD_FMA_KERNEL
 
-#define MEGDNN_FOREACH_CUTLASS_CHANWISE_CONV_FWD_HMMA_KERNEL(cb) \
-    cb(1, 128, 128, 32, 32, 32, 32);                             \
-    cb(2, 128, 256, 32, 64, 64, 32);                             \
-    cb(3, 128, 64, 32, 32, 32, 32);                              \
-    cb(4, 64, 128, 32, 32, 32, 32);                              \
+#define cb(tag, tbm, tbn, tbk, wm, wn, wk)                                       \
+    TEST_F(CUDA, CHANWISE_CONVOLUTION_BACKWARD_DATA_CUTLASS_FMA_##tag) {         \
+        check_chanwise<ConvolutionBackwardData>(                                 \
+                dtype::Float32(), dtype::Float32(), handle_cuda(),               \
+                "FLOAT32_NCHW_FMA_IMPLICIT_BATCHED_GEMM_" #tbm "X" #tbn "X" #tbk \
+                "_" #wm "X" #wn "X" #wk "_2stage");                              \
+    }
+
+MEGDNN_FOREACH_CUTLASS_CHANWISE_CONV_FMA_KERNEL(cb)
+
+#undef cb
+
+#undef MEGDNN_FOREACH_CUTLASS_CHANWISE_CONV_FMA_KERNEL
+
+#define MEGDNN_FOREACH_CUTLASS_CHANWISE_CONV_HMMA_KERNEL(cb) \
+    cb(1, 128, 128, 32, 32, 32, 32);                         \
+    cb(2, 128, 256, 32, 64, 64, 32);                         \
+    cb(3, 128, 64, 32, 32, 32, 32);                          \
+    cb(4, 64, 128, 32, 32, 32, 32);                          \
     cb(5, 64, 64, 32, 32, 32, 32);
 
 // check both ioc16 and io16xc32
@@ -541,9 +554,26 @@ MEGDNN_FOREACH_CUTLASS_CHANWISE_CONV_FWD_FMA_KERNEL(cb)
                 "_" #wm "X" #wn "X" #wk "_2stage");                               \
     }
 
-MEGDNN_FOREACH_CUTLASS_CHANWISE_CONV_FWD_HMMA_KERNEL(cb)
+MEGDNN_FOREACH_CUTLASS_CHANWISE_CONV_HMMA_KERNEL(cb)
 
 #undef cb
+
+#define cb(tag, tbm, tbn, tbk, wm, wn, wk)                                        \
+    TEST_F(CUDA, CHANWISE_CONVOLUTION_BACKWARD_DATA_CUTLASS_HMMA_##tag) {         \
+        check_chanwise<ConvolutionBackwardData>(                                  \
+                dtype::Float16(), dtype::Float16(), handle_cuda(),                \
+                "FLOAT16_NCHW_HMMA_IMPLICIT_BATCHED_GEMM_" #tbm "X" #tbn "X" #tbk \
+                "_" #wm "X" #wn "X" #wk "_mma8X8X4_2stage");                      \
+        check_chanwise<ConvolutionBackwardData>(                                  \
+                dtype::Float16(), dtype::Float32(), handle_cuda(),                \
+                "FLOAT16_NCHW_HMMA_IMPLICIT_BATCHED_GEMM_" #tbm "X" #tbn "X" #tbk \
+                "_" #wm "X" #wn "X" #wk "_mma8X8X4_2stage");                      \
+    }
+
+MEGDNN_FOREACH_CUTLASS_CHANWISE_CONV_HMMA_KERNEL(cb)
+
+#undef cb
+
 #undef MEGDNN_FOREACH_CUTLASS_CHANWISE_CONV_FWD_HMMA_KERNEL
 
 #if MEGDNN_WITH_BENCHMARK
@@ -1324,6 +1354,81 @@ TEST_F(CUDA, BENCHMARK_CHANWISE_CONV_FORWARD_LARGE_KERNEL) {
     // clang-format on
 }
 
+TEST_F(CUDA, BENCHMARK_CHANWISE_CONV_BACKWARD_DATA_LARGE_KERNEL) {
+    CUBenchmarker<ConvolutionBackwardData> bencher(handle_cuda());
+    size_t RUNS = 100;
+    bencher.set_display(false).set_times(RUNS);
+    std::unique_ptr<OprProxy<ConvolutionBackwardData>> proxy{
+            new OprProxy<ConvolutionBackwardData>{true}};
+    bencher.set_proxy(proxy);
+
+    Convolution::Param param;
+    param.format = ConvBias::Param::Format::NCHW;
+    param.sparse = Convolution::Param::Sparse::GROUP;
+    NormalRNG rng;
+
+    auto run = [&](size_t batch, size_t c, size_t ih, size_t iw, size_t f, size_t s) {
+        param.pad_h = f / 2;
+        param.pad_w = f / 2;
+        param.stride_h = s;
+        param.stride_w = s;
+        param.compute_mode = param::Convolution::ComputeMode::DEFAULT;
+
+        TensorShape src = {batch, c, ih, iw}, filter = {c, 1, 1, f, f};
+
+        TensorLayout dst_layout;
+        auto opr = handle_cuda()->create_operator<Convolution>();
+        opr->param() = param;
+        opr->deduce_layout(
+                {src, dtype::Float32()}, {filter, dtype::Float32()}, dst_layout);
+        float bandwith = static_cast<float>(
+                                 src.total_nr_elems() + filter.total_nr_elems() +
+                                 dst_layout.total_nr_elems()) /
+                         (1024 * 1024 * 1024) * 1e3;
+
+        bencher.set_param(param)
+                .set_dtype(0, dtype::Float32())
+                .set_dtype(1, dtype::Float32())
+                .set_dtype(2, dtype::Float32())
+                .set_rng(0, &rng)
+                .set_rng(1, &rng);
+        bencher.proxy()->target_execution_policy = {};
+        auto time_in_ms_fp32 = bencher.execs({filter, src, src}) / RUNS;
+
+        bencher.set_param(param)
+                .set_dtype(0, dtype::Float16())
+                .set_dtype(1, dtype::Float16())
+                .set_dtype(2, dtype::Float16())
+                .set_rng(0, &rng)
+                .set_rng(1, &rng);
+        bencher.proxy()->target_execution_policy = {};
+        auto time_in_ms_fp16 = bencher.execs({filter, src, src}) / RUNS;
+
+        bencher.proxy()->target_execution_policy.algo.reset();
+        param.compute_mode = param::Convolution::ComputeMode::FLOAT32;
+        bencher.set_param(param);
+        auto time_in_ms_pseudo_fp16 = bencher.execs({src, filter, {}}) / RUNS;
+
+        printf("stride=%zu src=%s, filter=%s, float32: %.2fms %.2fGB/s "
+               "float16: %.2fms %.2fGB/s "
+               "pseudo float16: %.2fms %.2fGB/s "
+               "speedup: "
+               "%0.2f (fp16/fp32) %.2f (fp16/pseudo fp16)\n",
+               s, src.to_string().c_str(), filter.to_string().c_str(), time_in_ms_fp32,
+               bandwith * 4 / time_in_ms_fp32, time_in_ms_fp16,
+               bandwith * 2 / time_in_ms_fp16, time_in_ms_pseudo_fp16,
+               bandwith * 2 / time_in_ms_pseudo_fp16, time_in_ms_fp32 / time_in_ms_fp16,
+               time_in_ms_pseudo_fp16 / time_in_ms_fp16);
+    };
+
+    // clang-format off
+    for (size_t b : {32, 64})
+    for (size_t f : {3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31}) {
+        run(b, 384, 32, 32, f, 1);
+        run(b, 384, 64, 64, f, 1);
+    }
+    // clang-format on
+}
 #endif
 
 // vim: syntax=cpp.doxygen

@@ -54,7 +54,7 @@ const void* ConvolutionBackwardDataImpl::AlgoInt8NCHW4DotProdImplicitGemm::
             m_algo_param.stage,
             special_optimization,
             4,
-            16,
+            4,
             false};
     return (void*)Singleton::get().operation_table.find_op(key);
 }

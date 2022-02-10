@@ -23,6 +23,7 @@ bool ConvBiasForwardImpl::AlgoFloat16NCHWHMMAImplicitBatchedGemm::is_available(
 #define RETURN_IF_FALSE(stmt_) \
     if (!(stmt_))              \
         return false;
+    RETURN_IF_FALSE(is_compute_capability_required(7, 0));
     RETURN_IF_FALSE(
             args.src_layout->is_contiguous() && args.dst_layout->is_contiguous());
     using Param = param::ConvBias;

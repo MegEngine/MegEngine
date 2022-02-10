@@ -569,6 +569,7 @@ public:
             });
             return ret;
         }
+        megdnn_assert(false, "Expected algo not found: %s\n", policy_name.name.c_str());
         return ret;
     }
 

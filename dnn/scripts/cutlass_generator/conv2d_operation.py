@@ -545,8 +545,9 @@ def GenerateConv2d(
         epilogue: EpilogueFunctor, conv_kind: ConvKind
     ) -> bool:
         return (
-            conv_kind == ConvKind.Dgrad
+            (conv_kind == ConvKind.Dgrad or conv_kind == ConvKind.Wgrad)
             and epilogue != EpilogueFunctor.BiasAddLinearCombinationClamp
+            and epilogue != EpilogueFunctor.BiasAddLinearCombination
         )
 
     # loop over all tile descriptions

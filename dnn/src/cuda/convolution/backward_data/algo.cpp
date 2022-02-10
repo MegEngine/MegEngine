@@ -41,6 +41,7 @@ ConvolutionBackwardDataImpl::AlgoPack::AlgoPack() {
         all_algos.push_back(&algo);
         int8_algos.push_back(&algo);
     }
+    fill_dwconv_algos();
 
     int8_algos.push_back(&int8_nchw_dotprod);
     all_algos.push_back(&int8_nchw_dotprod);
@@ -52,6 +53,39 @@ ConvolutionBackwardDataImpl::AlgoPack::AlgoPack() {
     for (auto&& algo : all_algos) {
         m_all_algos_map.emplace(algo->info().desc, algo);
     }
+}
+
+void ConvolutionBackwardDataImpl::AlgoPack::fill_dwconv_algos() {
+    {
+        using AlgoParam = AlgoFloat32NCHWFMAImplicitBatchedGemm::AlgoParam;
+        /// preferred algo
+        implbmm_nchw_fma.emplace_back(AlgoParam{64, 128, 8, 32, 64, 8, 2});
+        implbmm_nchw_fma.emplace_back(AlgoParam{128, 128, 8, 32, 64, 8, 2});
+        implbmm_nchw_fma.emplace_back(AlgoParam{128, 64, 8, 64, 32, 8, 2});
+        implbmm_nchw_fma.emplace_back(AlgoParam{128, 32, 8, 64, 32, 8, 2});
+        implbmm_nchw_fma.emplace_back(AlgoParam{32, 128, 8, 32, 64, 8, 2});
+        implbmm_nchw_fma.emplace_back(AlgoParam{64, 64, 8, 32, 64, 8, 2});
+        implbmm_nchw_fma.emplace_back(AlgoParam{32, 64, 8, 32, 64, 8, 2});
+        implbmm_nchw_fma.emplace_back(AlgoParam{32, 32, 8, 32, 32, 8, 2});
+        implbmm_nchw_fma.emplace_back(AlgoParam{64, 32, 8, 64, 32, 8, 2});
+        for (auto&& algo : implbmm_nchw_fma) {
+            all_algos.push_back(&algo);
+        }
+    }
+#if CUDA_VERSION >= 10020
+    {
+        using AlgoParam = AlgoFloat16NCHWHMMAImplicitBatchedGemm::AlgoParam;
+        /// preferred algo
+        implbmm_nchw_hmma.emplace_back(AlgoParam{64, 128, 32, 32, 32, 32, 8, 8, 4, 2});
+        implbmm_nchw_hmma.emplace_back(AlgoParam{128, 128, 32, 32, 32, 32, 8, 8, 4, 2});
+        implbmm_nchw_hmma.emplace_back(AlgoParam{128, 256, 32, 64, 64, 32, 8, 8, 4, 2});
+        implbmm_nchw_hmma.emplace_back(AlgoParam{128, 64, 32, 32, 32, 32, 8, 8, 4, 2});
+        implbmm_nchw_hmma.emplace_back(AlgoParam{64, 64, 32, 32, 32, 32, 8, 8, 4, 2});
+        for (auto&& algo : implbmm_nchw_hmma) {
+            all_algos.push_back(&algo);
+        }
+    }
+#endif
 }
 
 MEGDNN_DEF_GET_ALGO_FROM_DESC(ConvolutionBackwardDataImpl)

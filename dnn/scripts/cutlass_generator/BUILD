@@ -13,6 +13,10 @@ genrule(
           CUTLASS_WITH_LONG_PATH=true python3 $$GEN --operations conv2d --type simt $(@D)
           CUTLASS_WITH_LONG_PATH=true python3 $$GEN --operations conv2d --type tensorop8816 $(@D)
           CUTLASS_WITH_LONG_PATH=true python3 $$GEN --operations conv2d --type tensorop8832 $(@D)
+          CUTLASS_WITH_LONG_PATH=true python3 $$GEN --operations dwconv2d_fprop --type simt $(@D)
+          CUTLASS_WITH_LONG_PATH=true python3 $$GEN --operations dwconv2d_fprop --type tensorop884 $(@D)
+          CUTLASS_WITH_LONG_PATH=true python3 $$GEN --operations dwconv2d_dgrad --type simt $(@D)
+          CUTLASS_WITH_LONG_PATH=true python3 $$GEN --operations dwconv2d_dgrad --type tensorop884 $(@D)
           """,
     tools = ["//brain/megbrain/dnn/scripts/cutlass_generator:generator.py"],
     visibility = ["//visibility:public"],
