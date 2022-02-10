@@ -102,6 +102,8 @@ public:
     class AlgoInt8NCHW4DotProdImplicitGemm;
     class AlgoInt8NCHWDotProdImplicitGemm;
     class AlgoInt8NHWCIMMAImplicitGemm;
+    class AlgoFloat32NCHWFMAImplicitBatchedGemm;
+    class AlgoFloat16NCHWHMMAImplicitBatchedGemm;
 
     class AlgoPack;
 

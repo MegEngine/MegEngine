@@ -1056,7 +1056,8 @@ def GenerateGemm_Simt(args):
     return operations
 
 
-def GenerateDwconv2dFprop_Simt(args):
+#
+def GenerateDwconv2d_Simt(args, conv_kind):
     ################################################################################
     # warps per threadblock
     ################################################################################
@@ -1121,10 +1122,10 @@ def GenerateDwconv2dFprop_Simt(args):
         tile_descriptions = [
             TileDescription([128, 128, 8], 2, [4, 2, 1], math_inst, min_cc, max_cc),
             TileDescription([128, 64, 8], 2, [2, 2, 1], math_inst, min_cc, max_cc),
-            TileDescription([64, 128, 8], 2, [1, 4, 1], math_inst, min_cc, max_cc),
+            TileDescription([64, 128, 8], 2, [2, 2, 1], math_inst, min_cc, max_cc),
             TileDescription([128, 32, 8], 2, [2, 1, 1], math_inst, min_cc, max_cc),
             TileDescription([32, 128, 8], 2, [1, 2, 1], math_inst, min_cc, max_cc),
-            TileDescription([64, 64, 8], 2, [1, 2, 1], math_inst, min_cc, max_cc),
+            TileDescription([64, 64, 8], 2, [2, 1, 1], math_inst, min_cc, max_cc),
             TileDescription([32, 64, 8], 2, [1, 1, 1], math_inst, min_cc, max_cc),
             TileDescription([64, 32, 8], 2, [1, 1, 1], math_inst, min_cc, max_cc),
             TileDescription([32, 32, 8], 2, [1, 1, 1], math_inst, min_cc, max_cc),
@@ -1232,7 +1233,7 @@ def GenerateDwconv2dFprop_Simt(args):
                         for alignment_src in alignment_constraints:
                             operations += GenerateConv2d(
                                 ConvType.DepthwiseConvolution,
-                                ConvKind.Fprop,
+                                conv_kind,
                                 [tile],
                                 layout[0],
                                 layout[1],
@@ -1249,7 +1250,7 @@ def GenerateDwconv2dFprop_Simt(args):
 
 
 #
-def GenerateDwconv2dFprop_TensorOp_884(args):
+def GenerateDwconv2d_TensorOp_884(args, conv_kind):
     layouts = [(LayoutType.TensorNCHW, LayoutType.TensorNCHW)]
 
     math_instructions = [
@@ -1296,7 +1297,7 @@ def GenerateDwconv2dFprop_TensorOp_884(args):
                 for alignment_src in alignment_constraints:
                     operations += GenerateConv2d(
                         ConvType.DepthwiseConvolution,
-                        ConvKind.Fprop,
+                        conv_kind,
                         tile_descriptions,
                         layout[0],
                         layout[1],
@@ -1574,13 +1575,24 @@ def GenerateDeconvOperations(args):
 
 def GenerateDwconv2dFpropOperations(args):
     if args.type == "simt":
-        return GenerateDwconv2dFprop_Simt(args)
+        return GenerateDwconv2d_Simt(args, ConvKind.Fprop)
     else:
         assert args.type == "tensorop884", (
             "operation dwconv2d fprop only support"
             "simt, tensorop884. (got:{})".format(args.type)
         )
-        return GenerateDwconv2dFprop_TensorOp_884(args)
+        return GenerateDwconv2d_TensorOp_884(args, ConvKind.Fprop)
+
+
+def GenerateDwconv2dDgradOperations(args):
+    if args.type == "simt":
+        return GenerateDwconv2d_Simt(args, ConvKind.Dgrad)
+    else:
+        assert args.type == "tensorop884", (
+            "operation dwconv2d fprop only support"
+            "simt, tensorop884. (got:{})".format(args.type)
+        )
+        return GenerateDwconv2d_TensorOp_884(args, ConvKind.Dgrad)
 
 
 def GenerateGemmOperations(args):
@@ -1655,7 +1667,7 @@ if __name__ == "__main__":
     elif args.operations == "dwconv2d_fprop":
         operations = GenerateDwconv2dFpropOperations(args)
     elif args.operations == "dwconv2d_dgrad":
-        pass
+        operations = GenerateDwconv2dDgradOperations(args)
     elif args.operations == "dwconv2d_wgrad":
         pass
 

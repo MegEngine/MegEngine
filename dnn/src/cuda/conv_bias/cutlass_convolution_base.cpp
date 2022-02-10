@@ -272,8 +272,10 @@ std::pair<int, int> get_tensor_alignment(
         alignment_src /= src.dtype.size(1);
     };
 
+    /// TODO: need a better way to check whether tensor core instruction is used
     if (format == Format::NCHW32 || format == Format::NCHW32_NCHW4 ||
-        format == Format::NCHW64 || format == Format::NCHW64) {
+        format == Format::NCHW64 || format == Format::NCHW64 ||
+        format == Format::NHWC) {
         get_tensor_alignment_tensor_op();
     } else if (
             format == Format::NCHW4 || format == Format::NCHW4_NCHW ||

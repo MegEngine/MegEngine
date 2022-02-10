@@ -41,7 +41,9 @@ public:
         CUDA_GROUP_CONV_GENERAL,
         CUDA_IMPLICIT_GEMM_NCHW4_DOTPROD_INT8,
         CUDA_IMPLICIT_GEMM_NCHW_DOTPROD_INT8,
-        CUDA_IMPLICIT_GEMM_NHWC_IMMA_INT8
+        CUDA_IMPLICIT_GEMM_NHWC_IMMA_INT8,
+        CUDA_IMPLICIT_BATCHED_GEMM_FMA_NCHW_F32,
+        CUDA_IMPLICIT_BATCHED_GEMM_HMMA_NCHW_F16,
     };
     using Mapper = std::unordered_map<AlgorithmDesc, AlgoBase*>;
 
@@ -315,6 +317,82 @@ private:
     std::string m_name;
 };
 
+class ConvolutionBackwardDataImpl::AlgoFloat32NCHWFMAImplicitBatchedGemm final
+        : public AlgoBase {
+public:
+    struct AlgoParam {
+        int threadblock_m;
+        int threadblock_n;
+        int threadblock_k;
+        int warp_m;
+        int warp_n;
+        int warp_k;
+        int stage;
+        std::string to_string() {
+            return ssprintf(
+                    "_%dX%dX%d_%dX%dX%d_%dstage", threadblock_m, threadblock_n,
+                    threadblock_k, warp_m, warp_n, warp_k, stage);
+        }
+    };
+    AlgoFloat32NCHWFMAImplicitBatchedGemm(AlgoParam algo_param)
+            : m_algo_param{algo_param},
+              m_name{ssprintf(
+                      "FLOAT32_NCHW_FMA_IMPLICIT_BATCHED_GEMM%s",
+                      m_algo_param.to_string().c_str())} {}
+    bool is_available(const SizeArgs& args) const override;
+    size_t get_workspace_in_bytes(const SizeArgs& args) const override { return 0; }
+    void exec(const ExecArgs& args) const override;
+    const char* name() const override { return m_name.c_str(); }
+    AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }
+    MEGDNN_DECL_ALGO_TYPE(CUDA_IMPLICIT_BATCHED_GEMM_FMA_NCHW_F32)
+
+private:
+    const void* get_available_op(const SizeArgs& args) const;
+    AlgoParam m_algo_param;
+    std::string m_name;
+};
+
+class ConvolutionBackwardDataImpl::AlgoFloat16NCHWHMMAImplicitBatchedGemm final
+        : public AlgoBase {
+public:
+    /// add instruction shape as member of algo param, because f16 tensor core has 2
+    /// different matrix shapes (i.e. mma.884 and mma.1688)
+    struct AlgoParam {
+        int threadblock_m;
+        int threadblock_n;
+        int threadblock_k;
+        int warp_m;
+        int warp_n;
+        int warp_k;
+        int instruction_m;
+        int instruction_n;
+        int instruction_k;
+        int stage;
+        std::string to_string() {
+            return ssprintf(
+                    "_%dX%dX%d_%dX%dX%d_mma%dX%dX%d_%dstage", threadblock_m,
+                    threadblock_n, threadblock_k, warp_m, warp_n, warp_k, instruction_m,
+                    instruction_n, instruction_k, stage);
+        }
+    };
+    AlgoFloat16NCHWHMMAImplicitBatchedGemm(AlgoParam algo_param)
+            : m_algo_param{algo_param},
+              m_name{ssprintf(
+                      "FLOAT16_NCHW_HMMA_IMPLICIT_BATCHED_GEMM%s",
+                      m_algo_param.to_string().c_str())} {}
+    bool is_available(const SizeArgs& args) const override;
+    size_t get_workspace_in_bytes(const SizeArgs& args) const override { return 0; }
+    void exec(const ExecArgs& args) const override;
+    const char* name() const override { return m_name.c_str(); }
+    AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }
+    MEGDNN_DECL_ALGO_TYPE(CUDA_IMPLICIT_BATCHED_GEMM_HMMA_NCHW_F16)
+
+private:
+    const void* get_available_op(const SizeArgs& args) const;
+    AlgoParam m_algo_param;
+    std::string m_name;
+};
+
 class ConvolutionBackwardDataImpl::AlgoPack : NonCopyableObj {
     // defined in cudnn.cpp
     void fill_cudnn_algos();
@@ -322,6 +400,7 @@ class ConvolutionBackwardDataImpl::AlgoPack : NonCopyableObj {
     void fill_int8_dp4a_algos();
     // defined in implicit_gemm_int8_nhwc_imma.cpp
     void fill_int8_imma_algos();
+    void fill_dwconv_algos();
 
     AlgoBase::Mapper m_all_algos_map;
 
@@ -337,6 +416,8 @@ public:
     std::vector<AlgoInt8NCHW4DotProdImplicitGemm> int8_nchw4_dotprod;
     AlgoInt8NCHWDotProdImplicitGemm int8_nchw_dotprod;
     std::vector<AlgoInt8NHWCIMMAImplicitGemm> int8_nhwc_imma;
+    std::vector<AlgoFloat32NCHWFMAImplicitBatchedGemm> implbmm_nchw_fma;
+    std::vector<AlgoFloat16NCHWHMMAImplicitBatchedGemm> implbmm_nchw_hmma;
 
     std::vector<AlgoBase*>
             //! all algorithms
