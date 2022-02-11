@@ -6,8 +6,21 @@ namespace megdnn {
 
 param::Pooling AdaptivePoolingBase::deduce_pooling_param(
         const TensorLayout& src, const TensorLayout& dst) {
-    megdnn_assert(param().format == param::AdaptivePooling::Format::NCHW);
-    size_t IH = src.shape[2], IW = src.shape[3], OH = dst.shape[2], OW = dst.shape[3];
+    auto param_format = param().format;
+    size_t IH, IW, OH, OW;
+    if (param_format == param::AdaptivePooling::Format::NCHW) {
+        IH = src.shape[2];
+        IW = src.shape[3];
+        OH = dst.shape[2];
+        OW = dst.shape[3];
+    } else if (param_format == param::AdaptivePooling::Format::NHWC) {
+        IH = src.shape[1];
+        IW = src.shape[2];
+        OH = dst.shape[1];
+        OW = dst.shape[2];
+    } else {
+        megdnn_throw("AdaptivePooling only support NCHW or NHWC format");
+    }
 
     param::Pooling ret;
     ret.mode = param().mode;
