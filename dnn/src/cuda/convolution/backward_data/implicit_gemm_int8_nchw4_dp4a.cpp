@@ -29,6 +29,19 @@ const void* ConvolutionBackwardDataImpl::AlgoInt8NCHW4DotProdImplicitGemm::
             (sh == 2 && sw == 2)
                     ? cutlass::conv::SpecialOptimizeDesc::DECONV_DOUBLE_UPSAMPLING
                     : cutlass::conv::SpecialOptimizeDesc::NONE;
+    int alignment_filter = 4;
+    constexpr int warp_size = 32;
+    int threads = warp_size * m_algo_param.threadblock_m * m_algo_param.threadblock_n *
+                  m_algo_param.threadblock_k /
+                  (m_algo_param.warp_m * m_algo_param.warp_n * m_algo_param.warp_k);
+    int threadblock_loads = args.filter_layout->dtype.size(
+            m_algo_param.threadblock_m * m_algo_param.threadblock_k);
+    int load_per_thread = threadblock_loads / threads;
+    if (load_per_thread >= 16)
+        alignment_filter = 16;
+    else if (load_per_thread >= 8)
+        alignment_filter = 8;
+    megdnn_assert(load_per_thread >= 4);
     ConvolutionKey key{
             cutlass::conv::Operator::kDgrad,
             NumericTypeID::kS8,
@@ -54,7 +67,7 @@ const void* ConvolutionBackwardDataImpl::AlgoInt8NCHW4DotProdImplicitGemm::
             m_algo_param.stage,
             special_optimization,
             4,
-            4,
+            alignment_filter,
             false};
     return (void*)Singleton::get().operation_table.find_op(key);
 }

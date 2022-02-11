@@ -20,6 +20,7 @@
 #include "test/common/workspace_wrapper.h"
 #include "test/cuda/benchmark.h"
 #include "test/cuda/fixture.h"
+#include "test/cuda/utils.h"
 
 #include <cuda_profiler_api.h>
 #include <cuda_runtime_api.h>
@@ -510,6 +511,7 @@ void check_chanwise(DType io_type, DType comp_type, Handle* handle, const char* 
 
 #define cb(tag, tbm, tbn, tbk, wm, wn, wk)                                       \
     TEST_F(CUDA, CHANWISE_CONVOLUTION_FORWARD_CUTLASS_FMA_##tag) {               \
+        require_compute_capability(6, 1);                                        \
         check_chanwise<ConvolutionForward>(                                      \
                 dtype::Float32(), dtype::Float32(), handle_cuda(),               \
                 "FLOAT32_NCHW_FMA_IMPLICIT_BATCHED_GEMM_" #tbm "X" #tbn "X" #tbk \
@@ -522,6 +524,7 @@ MEGDNN_FOREACH_CUTLASS_CHANWISE_CONV_FMA_KERNEL(cb)
 
 #define cb(tag, tbm, tbn, tbk, wm, wn, wk)                                       \
     TEST_F(CUDA, CHANWISE_CONVOLUTION_BACKWARD_DATA_CUTLASS_FMA_##tag) {         \
+        require_compute_capability(6, 1);                                        \
         check_chanwise<ConvolutionBackwardData>(                                 \
                 dtype::Float32(), dtype::Float32(), handle_cuda(),               \
                 "FLOAT32_NCHW_FMA_IMPLICIT_BATCHED_GEMM_" #tbm "X" #tbn "X" #tbk \
@@ -544,6 +547,7 @@ MEGDNN_FOREACH_CUTLASS_CHANWISE_CONV_FMA_KERNEL(cb)
 // check both ioc16 and io16xc32
 #define cb(tag, tbm, tbn, tbk, wm, wn, wk)                                        \
     TEST_F(CUDA, CHANWISE_CONVOLUTION_FORWARD_CUTLASS_HMMA_##tag) {               \
+        require_compute_capability(7, 0);                                         \
         check_chanwise<ConvolutionForward>(                                       \
                 dtype::Float16(), dtype::Float16(), handle_cuda(),                \
                 "FLOAT16_NCHW_HMMA_IMPLICIT_BATCHED_GEMM_" #tbm "X" #tbn "X" #tbk \
@@ -560,6 +564,7 @@ MEGDNN_FOREACH_CUTLASS_CHANWISE_CONV_HMMA_KERNEL(cb)
 
 #define cb(tag, tbm, tbn, tbk, wm, wn, wk)                                        \
     TEST_F(CUDA, CHANWISE_CONVOLUTION_BACKWARD_DATA_CUTLASS_HMMA_##tag) {         \
+        require_compute_capability(7, 0);                                         \
         check_chanwise<ConvolutionBackwardData>(                                  \
                 dtype::Float16(), dtype::Float16(), handle_cuda(),                \
                 "FLOAT16_NCHW_HMMA_IMPLICIT_BATCHED_GEMM_" #tbm "X" #tbn "X" #tbk \
@@ -1407,7 +1412,7 @@ TEST_F(CUDA, BENCHMARK_CHANWISE_CONV_BACKWARD_DATA_LARGE_KERNEL) {
         bencher.proxy()->target_execution_policy.algo.reset();
         param.compute_mode = param::Convolution::ComputeMode::FLOAT32;
         bencher.set_param(param);
-        auto time_in_ms_pseudo_fp16 = bencher.execs({src, filter, {}}) / RUNS;
+        auto time_in_ms_pseudo_fp16 = bencher.execs({filter, src, src}) / RUNS;
 
         printf("stride=%zu src=%s, filter=%s, float32: %.2fms %.2fGB/s "
                "float16: %.2fms %.2fGB/s "
