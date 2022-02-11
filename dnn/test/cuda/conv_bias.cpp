@@ -1033,7 +1033,7 @@ TEST_F(CUDA, CONV_BIAS_FORWARD_GROUP) {
                             ConvBiasForward::algo_name<ConvBiasForward::DirectParam>(
                                     "CUDA:GROUP_CONV", {})
                                     .c_str(),
-                            {{"CUDNN", {}}}}));
+                            {{"DEFAULT:CUDNN", {}}}}));
             ConvBias::Param param;
             param.sparse = ConvBias::Param::Sparse::GROUP;
             param.nonlineMode = mode;

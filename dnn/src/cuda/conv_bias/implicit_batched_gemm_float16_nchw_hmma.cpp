@@ -30,6 +30,7 @@ bool ConvBiasForwardImpl::AlgoFloat16NCHWHMMAImplicitBatchedGemm::is_available(
     using Format = Param::Format;
     using Sparse = Param::Sparse;
     using Mode = Param::Mode;
+    using NonlineMode = Param::NonlineMode;
     auto&& param = args.opr->param();
     auto&& fm = args.filter_meta;
     RETURN_IF_FALSE(
@@ -37,6 +38,7 @@ bool ConvBiasForwardImpl::AlgoFloat16NCHWHMMAImplicitBatchedGemm::is_available(
             args.src_layout->dtype.enumv() == DTypeEnum::Float16 &&
             args.filter_layout->dtype.enumv() == DTypeEnum::Float16 &&
             args.dst_layout->dtype.enumv() == DTypeEnum::Float16);
+    RETURN_IF_FALSE(param.nonlineMode != NonlineMode::SIGMOID);
     RETURN_IF_FALSE(
             args.bias_layout->ndim <= 0 ||
             (args.bias_layout->dtype.enumv() == DTypeEnum::Float16 &&

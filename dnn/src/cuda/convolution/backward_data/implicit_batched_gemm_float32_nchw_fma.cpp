@@ -63,6 +63,7 @@ bool ConvolutionBackwardDataImpl::AlgoFloat32NCHWFMAImplicitBatchedGemm::is_avai
 #define RETURN_IF_FALSE(stmt_) \
     if (!(stmt_))              \
         return false;
+    RETURN_IF_FALSE(is_compute_capability_required(6, 1));
     RETURN_IF_FALSE(
             args.diff_layout->is_contiguous() && args.grad_layout->is_contiguous());
     using Param = param::Convolution;

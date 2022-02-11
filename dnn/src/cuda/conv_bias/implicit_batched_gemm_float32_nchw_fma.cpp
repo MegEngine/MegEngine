@@ -23,12 +23,14 @@ bool ConvBiasForwardImpl::AlgoFloat32NCHWFMAImplicitBatchedGemm::is_available(
 #define RETURN_IF_FALSE(stmt_) \
     if (!(stmt_))              \
         return false;
+    RETURN_IF_FALSE(is_compute_capability_required(6, 1));
     RETURN_IF_FALSE(
             args.src_layout->is_contiguous() && args.dst_layout->is_contiguous());
     using Param = param::ConvBias;
     using Format = Param::Format;
     using Sparse = Param::Sparse;
     using Mode = Param::Mode;
+    using NonlineMode = Param::NonlineMode;
     auto&& param = args.opr->param();
     auto&& fm = args.filter_meta;
     RETURN_IF_FALSE(
@@ -36,6 +38,7 @@ bool ConvBiasForwardImpl::AlgoFloat32NCHWFMAImplicitBatchedGemm::is_available(
             args.src_layout->dtype.enumv() == DTypeEnum::Float32 &&
             args.filter_layout->dtype.enumv() == DTypeEnum::Float32 &&
             args.dst_layout->dtype.enumv() == DTypeEnum::Float32);
+    RETURN_IF_FALSE(param.nonlineMode != NonlineMode::SIGMOID);
     RETURN_IF_FALSE(
             args.bias_layout->ndim <= 0 ||
             (args.bias_layout->dtype.enumv() == DTypeEnum::Float32 &&

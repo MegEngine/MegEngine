@@ -245,9 +245,8 @@ std::pair<int, int> get_tensor_alignment(
         int threads = warp_size * algo_param.threadblock_m * algo_param.threadblock_n *
                       algo_param.threadblock_k /
                       (algo_param.warp_m * algo_param.warp_n * algo_param.warp_k);
-        int threadblock_loads = filter.dtype.size(
-                algo_param.threadblock_m * algo_param.threadblock_n *
-                algo_param.threadblock_k);
+        int threadblock_loads =
+                filter.dtype.size(algo_param.threadblock_m * algo_param.threadblock_k);
         int load_per_thread = threadblock_loads / threads;
         if (load_per_thread >= 16)
             alignment_filter = 16;
