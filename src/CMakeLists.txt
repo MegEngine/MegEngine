@@ -71,7 +71,6 @@ if(MGE_WITH_CUDA AND MGE_WITH_TRT)
   file(GLOB_RECURSE SOURCES_ tensorrt/impl/*.cpp tensorrt/impl/*.inl)
   list(APPEND SOURCES ${SOURCES_})
 endif()
-
 if(MGE_WITH_CAMBRICON)
   list(APPEND MGB_INC ${CMAKE_CURRENT_LIST_DIR}/cambricon/include)
   file(GLOB_RECURSE SOURCES_ cambricon/impl/*.cpp cambricon/impl/*.inl)

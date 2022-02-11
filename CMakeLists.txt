@@ -95,6 +95,7 @@ option(MGE_WITH_ROCM "Enable ROCM support" OFF)
 option(MGE_WITH_LARGE_ARCHIVE "Enable big archive link support" OFF)
 option(MGE_BUILD_WITH_ASAN "Enable build with ASAN, need compiler support" OFF)
 option(MGE_WITH_CUSTOM_OP "Build with Custom op" OFF)
+
 if(MSVC OR WIN32)
   # FIXME: static link Windows vc runtime with some version from Visual Studio have some
   # runtime issue at some call PATH, for example: _imperative_rt.pyd -->
@@ -1088,11 +1089,6 @@ set(MEGDNN_WITH_ROCM ${MGE_WITH_ROCM})
 
 # CAMBRICON
 set(MGB_CAMBRICON ${MGE_WITH_CAMBRICON})
-
-# ENFLAME
-set(MGB_ENFLAME ${MGE_WITH_ENFLAME})
-set(MEGDNN_WITH_ENFLAME ${MGE_WITH_ENFLAME})
-
 # Debug info
 if(${CMAKE_BUILD_TYPE} STREQUAL "Debug" OR ${CMAKE_BUILD_TYPE} STREQUAL
                                            "RelWithDebInfo")
