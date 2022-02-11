@@ -507,7 +507,7 @@ def test_interpolate_fastpath():
         [(1, 1, 10, 10), (5, 5)],
         [(1, 3, 10, 10), (20, 20)],
         [(10, 1, 10, 10), (1, 1)],
-        # [(10, 10, 1, 1), (10, 10)], # FIXME, it causes random CI failure
+        [(10, 10, 1, 1), (10, 10)],
     ]
     for inp_shape, target_shape in test_cases:
         x = tensor(np.random.randn(*inp_shape), dtype=np.float32)

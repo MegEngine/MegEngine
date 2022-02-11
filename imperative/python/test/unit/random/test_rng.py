@@ -39,6 +39,8 @@ from megengine.random import uniform
     get_device_count("xpu") <= 2, reason="xpu counts need > 2",
 )
 def test_gaussian_op():
+    # FIXME: remove this sync
+    mge.core.set_option("async_level", 0)
     set_global_seed(1024)
     shape = (
         8,
@@ -210,12 +212,9 @@ def test_permutation_op():
         assert str(output.device) == str(cn)
         assert output.dtype == dtype
 
-    # FIXME: remove this sync
-    mge.core.set_option("async_level", 0)
     test_permutation_op_dtype(np.float32)
     test_permutation_op_dtype(np.int32)
     test_permutation_op_dtype(np.int16)
-    mge.core.set_option("async_level", 2)
 
 
 @pytest.mark.skipif(
@@ -517,3 +516,4 @@ def test_rng_empty_tensor(is_symbolic):
         np.testing.assert_equal(out.numpy().shape, (0,))
         if is_symbolic is None:
             break
+    mge.core.set_option("async_level", 2)
