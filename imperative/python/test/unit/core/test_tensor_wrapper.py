@@ -46,14 +46,17 @@ def test_literal_arith(is_varnode):
 
 
 @pytest.mark.parametrize("is_varnode", [True, False])
-def test_matmul(is_varnode):
+@pytest.mark.parametrize(
+    "shape_a, shape_b", [((4,), (4,)), ((10, 4), (4, 10)), ((3, 10, 4), (3, 4, 10)),],
+)
+def test_matmul(is_varnode, shape_a, shape_b):
     if is_varnode:
         network = Network()
     else:
         network = None
 
-    A = make_tensor(np.random.rand(5, 7).astype("float32"), network)
-    B = make_tensor(np.random.rand(7, 10).astype("float32"), network)
+    A = make_tensor(np.random.rand(*shape_a).astype("float32"), network)
+    B = make_tensor(np.random.rand(*shape_b).astype("float32"), network)
     C = A @ B
     if is_varnode:
         np.testing.assert_almost_equal(
