@@ -304,7 +304,7 @@ private:
     //! automatically evict an optimal tensor
     bool auto_evict(size_t);
 
-    void alloc_tensor_with_evict(Blob*);
+    void alloc_tensor_with_evict(OwnedBlob*);
 
     // assert thread id when call get_xxx_state to avoid misuse
     ChannelState& get_channel_state();

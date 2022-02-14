@@ -836,8 +836,8 @@ public:
             if (used_cns.insert(cn).second) {
                 for (auto&& in : inputs) {
                     if (in->comp_node() != cn) {
-                        auto&& e = in->get_or_create_event();
-                        e->device_wait_by(cn);
+                        auto e = in->get_ready_event();
+                        device_wait_event(cn, in->comp_node(), e);
                     }
                 }
             }
@@ -847,10 +847,16 @@ public:
         // so we need create inference session here
         minigraph.execute(raw_inputs, raw_outputs, m_env);
         for (auto&& cn : used_cns) {
+            bool should_record = false;
             for (auto&& in : inputs) {
                 if (in->comp_node() != cn) {
-                    in->add_release_callback(cn);
+                    should_record = true;
+                    auto e = record_event(cn);
+                    async_release(cn, e, *in);
                 }
+            }
+            if (should_record) {
+                record_event(cn, true);
             }
         }
 

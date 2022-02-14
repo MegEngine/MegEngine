@@ -32,7 +32,7 @@ bool CompNodeImplHelper::EventImplHelper::finished() {
     mgb_assert(m_recorded);
     if (do_finished()) {
         m_finished = true;
-        m_recorded = false;
+        // m_recorded = false;
         return true;
     }
     return false;

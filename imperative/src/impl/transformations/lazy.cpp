@@ -15,7 +15,6 @@
 
 #include "megbrain/opr/utility.h"
 
-#include "../async_releaser.h"
 #include "../mgb_cg_impl.h"
 
 namespace mgb {
@@ -73,7 +72,7 @@ ValueRefList LazyEvalTransformation::apply_transformation(
                 args.device.emplace();
                 args.device->copy_from(*args.host);
                 // every h2d in imperative runtime should notify AsyncReleaser
-                AsyncReleaser::inst()->add(*args.host);
+                async_release(*args.host);
             }
             return *args.device;
         };
@@ -155,7 +154,7 @@ ValueRefList LazyEvalTransformation::apply_transformation(
                     host_value.copy_from(inferred_value);
                     DeviceTensorND dev_value;
                     dev_value.copy_from(host_value);
-                    AsyncReleaser::inst()->add(host_value);
+                    async_release(host_value);
                     return {DeviceValue::make(dev_value)};
                 }
                 default:

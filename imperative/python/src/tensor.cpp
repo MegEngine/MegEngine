@@ -998,6 +998,9 @@ void init_tensor(py::module m) {
         module_trace_hook.inc_ref();
     });
 
+    auto atexit = py::module::import("atexit");
+    atexit.attr("register")(py::cpp_function([]() { module_trace_hook = {}; }));
+
     m.def("begin_record_values", [] { Value::begin_record_values(); });
 
     m.def("end_record_values", [] {

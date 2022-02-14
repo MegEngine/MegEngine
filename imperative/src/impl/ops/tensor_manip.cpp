@@ -13,7 +13,6 @@
 #include "megbrain/imperative/ops/autogen.h"
 #include "megbrain/imperative/ops/opr_attr.h"
 
-#include "../async_releaser.h"
 #include "../dnn_op_helper.h"
 #include "../op_trait.h"
 
@@ -267,8 +266,7 @@ SmallVector<TensorPtr> param_pack_concat_apply_on_physical_tensor(
             {srcs_raw_ptr, srcs_layout}, inputs.back()->dev_tensor().as_megdnn(),
             output->dev_tensor().as_megdnn(),
             caller.create_workspace({{ws_size}, dtype::Byte()}));
-    AsyncReleaser::inst()->add(
-            HostTensorND{comp_node, srcs_layout}.storage(srcs_storage));
+    async_release(HostTensorND{comp_node, srcs_layout}.storage(srcs_storage));
     return {output};
 }
 

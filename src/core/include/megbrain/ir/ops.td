@@ -120,6 +120,19 @@ def Copy: MgbHashableOp<"Copy"> {
   );
 }
 
+def Borrow: MgbHashableOp<"Borrow"> {
+  let extraArguments = (ins
+    MgbCompNodeAttr:$comp_node
+  );
+}
+
+def Barrier: MgbHashableOp<"Barrier"> {
+  let extraArguments = (ins
+    MgbCompNodeAttr:$comp_node,
+    MgbUI32Attr:$nr_outputs
+  );
+}
+
 def Argsort: MgbHashableOp<"Argsort", [ArgsortParam]>;
 
 def Argmax : MgbHashableOp<"Argmax", [AxisParam]>;

@@ -11,12 +11,16 @@
 
 #pragma once
 
+#include <cstdint>
 #include <memory>
 #include <mutex>
+#include <type_traits>
+#include <variant>
 
 #include "megbrain/graph.h"
 #include "megbrain/imperative/resource_manager.h"
 #include "megbrain/tensor.h"
+#include "megbrain/utils/metahelper.h"
 
 namespace mgb {
 namespace imperative {
@@ -26,33 +30,65 @@ class Blob;
 using BlobPtr = std::shared_ptr<Blob>;
 
 class BlobManagerImpl;
+class OwnedBlob;
 
-class Blob : public NonCopyableObj {
+class Blob : public NonCopyableObj, public std::enable_shared_from_this<Blob> {
+protected:
+    CompNode m_comp_node;
+    size_t m_size;
+
+    Blob(CompNode cn, size_t size) : m_comp_node(cn), m_size(size) {}
+
 public:
-    Blob(const DeviceTensorStorage& s);
-    Blob(CompNode cn, size_t sz);
-    ~Blob();
+    virtual ~Blob() = default;
 
     template <typename... Args>
-    static BlobPtr make(Args&&... args) {
-        return std::make_shared<Blob>(std::forward<Args>(args)...);
+    static std::shared_ptr<OwnedBlob> make(Args&&... args) {
+        return std::make_shared<OwnedBlob>(std::forward<Args>(args)...);
     }
 
-    using RawStorage = DeviceTensorStorage::RawStorage;
-    const RawStorage& storage();
-
     const CompNode& comp_node() const { return m_comp_node; }
-
     size_t size() const { return m_size; }
+    using RawStorage = DeviceTensorStorage::RawStorage;
+    virtual const RawStorage& storage() = 0;
+    virtual BlobPtr borrow_to(CompNode) = 0;
+    virtual bool storage_is_unique() = 0;
+    virtual void* raw_ptr_not_for_readwrite() = 0;
+};
 
-    size_t id() const { return m_id; }
+class OwnedBlob final : public Blob {
+    friend class Blob;
+
+public:
+    OwnedBlob(const DeviceTensorStorage& s);
+    OwnedBlob(CompNode cn, size_t sz);
+    ~OwnedBlob() override;
+
+    const RawStorage& storage() override;
+    BlobPtr borrow_to(CompNode) override;
+    bool storage_is_unique() override;
+    void* raw_ptr_not_for_readwrite() override;
 
 private:
     friend class BlobManagerImpl;
-    CompNode m_comp_node;
-    mutable RawStorage m_storage;
-    size_t m_size = 0;
+    RawStorage m_storage;
     size_t m_id;
+};
+
+class BorrowedBlob final : public Blob {
+    std::mutex m_mtx;
+    std::shared_ptr<OwnedBlob> m_owner;
+    uint64_t m_event;
+    bool m_initialized = false;
+
+public:
+    BorrowedBlob(CompNode, std::shared_ptr<OwnedBlob>);
+    ~BorrowedBlob() override;
+
+    const RawStorage& storage() override;
+    BlobPtr borrow_to(CompNode) override;
+    bool storage_is_unique() override;
+    void* raw_ptr_not_for_readwrite() override;
 };
 
 struct EventDeleter {
@@ -121,6 +157,8 @@ public:
 
     BlobPtr& blob() { return m_blob; }
 
+    void* raw_ptr_not_for_readwrite() { return m_blob->raw_ptr_not_for_readwrite(); }
+
     void fetch_value();
     bool value_fetched();
     TensorPtr sub(size_t offset, TensorShape shape);
@@ -131,8 +169,10 @@ public:
     // return a pointer instead of a reference to ensure thread safety
     const HostTensorND* try_get_value();
 
-    void add_release_callback(CompNode cn);
-    CompNode::Event* get_or_create_event();
+    void set_ready_event(uint64_t event) { m_produced_at = event; }
+    uint64_t get_ready_event();
+
+    bool storage_is_unique();
 
     // Make sure all static objects required to destruct a tensor has completed
     // construction. All static storage duration object that holds tensors must
@@ -152,7 +192,36 @@ private:
     std::mutex m_value_mtx;
     HostTensorND m_value;
     EventPtr m_value_ready = nullptr;
+    uint64_t m_produced_at = 0;
 };
+
+/*!
+ * \brief record a virtual event
+ * \param doitnow also record a real event
+ */
+uint64_t record_event(CompNode cn, bool doitnow = false);
+
+//! make a device wait on a virtual event
+void device_wait_event(CompNode waiter, CompNode waitee, uint64_t event);
+
+//! hold a blob until a virtual event on a device is completed
+void async_release(CompNode cn, uint64_t event, BlobPtr blob);
+
+//! hold a host tensor until a virtual event on a device is completed
+void async_release(CompNode cn, uint64_t event, HostTensorStorage::RawStorage storage);
+
+inline void async_release(CompNode cn, uint64_t event, Tensor& tensor) {
+    async_release(cn, event, tensor.blob());
+}
+
+inline void async_release(CompNode cn, uint64_t event, const HostTensorND& hnd) {
+    async_release(cn, event, hnd.storage().raw_storage());
+}
+
+inline void async_release(const HostTensorND& hnd) {
+    auto cn = hnd.comp_node();
+    async_release(cn, record_event(cn, true), hnd);
+}
 
 // Cache for small blobs
 // 1. A blob has to be seen twice (within a window) to be eligible for cache

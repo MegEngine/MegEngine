@@ -24,18 +24,18 @@ public:
 
     static BlobManager* inst();
 
-    virtual void alloc_direct(Blob* blob, size_t size) = 0;
+    virtual void alloc_direct(OwnedBlob* blob, size_t size) = 0;
 
-    virtual void alloc_with_defrag(Blob* blob, size_t size) = 0;
+    virtual void alloc_with_defrag(OwnedBlob* blob, size_t size) = 0;
 
     virtual void set_allocator(allocator_t allocator) = 0;
 
     virtual DeviceTensorND alloc_workspace_with_defrag(
             CompNode cn, TensorLayout& layout) = 0;
 
-    virtual void register_blob(Blob* blob) = 0;
+    virtual void register_blob(OwnedBlob* blob) = 0;
 
-    virtual void unregister_blob(Blob* blob) = 0;
+    virtual void unregister_blob(OwnedBlob* blob) = 0;
 
     virtual void defrag(const CompNode& cn) = 0;
 };

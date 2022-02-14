@@ -249,7 +249,7 @@ SmallVector<TensorPtr> apply_inplace_add_on_physical_tensor(
         const OpDef& def, const SmallVector<TensorPtr>& inputs,
         SmallVector<LogicalTensorDesc>& output_descs, const bool& validated) {
     auto dest = inputs[0], delta = inputs[1], alpha = inputs[2], beta = inputs[3];
-    if (!(inputs[0]->blob().unique() && inputs[0]->blob()->storage().unique())) {
+    if (!inputs[0]->storage_is_unique()) {
         mgb_log_warn(
                 "This inplace modification may change the elements of other tensors. "
                 "Fallback to non-inplace update.");

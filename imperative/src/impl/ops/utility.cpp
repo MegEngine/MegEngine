@@ -23,6 +23,8 @@
 #include "megbrain/opr/tensor_gen.h"
 #include "megbrain/opr/tensor_manip.h"
 #include "megbrain/opr/utility.h"
+#include "megbrain/tensor.h"
+#include "megdnn/dtype.h"
 
 #if MGB_JIT
 #include "megbrain/jit/executor_opr.h"
@@ -35,6 +37,102 @@ namespace mgb::imperative {
 
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(GenericPyOp);
 OP_TRAIT_REG(GenericPyOp, GenericPyOp).fallback();
+
+namespace {
+namespace borrow {
+
+SmallVector<TensorPtr> apply_on_physical_tensor(
+        const OpDef& def, const SmallVector<TensorPtr>& inputs,
+        SmallVector<LogicalTensorDesc>& output_descs, const bool& validated) {
+    auto& op = def.cast_final_safe<Borrow>();
+    SmallVector<TensorPtr> outputs;
+    outputs.reserve(inputs.size());
+    for (auto& i : inputs) {
+        outputs.push_back(Tensor::make(
+                i->blob()->borrow_to(op.comp_node), i->layout(), i->offset()));
+    }
+    return outputs;
+}
+
+SmallVector<VarNode::LayoutConstraintCallback> get_input_layout_constraint(
+        const OpDef& def, const SmallVector<TensorPtr>& inputs) {
+    return SmallVector<VarNode::LayoutConstraintCallback>(inputs.size());
+}
+
+auto infer_output_attrs_fallible(
+        const OpDef& def, const SmallVector<LogicalTensorDesc>& inputs) {
+    auto& op = def.cast_final_safe<Borrow>();
+    std::tuple<SmallVector<LogicalTensorDesc>, bool> ret(inputs, true);
+    for (auto& i : std::get<0>(ret)) {
+        mgb_assert(
+                i.comp_node.mem_node() == op.comp_node.mem_node(),
+                "cannot borrow memory from %s to %s", i.comp_node.to_string().c_str(),
+                op.comp_node.to_string().c_str());
+        i.comp_node = op.comp_node;
+    }
+    return ret;
+}
+
+OP_TRAIT_REG(Borrow, Borrow)
+        .apply_on_physical_tensor(apply_on_physical_tensor)
+        .infer_output_attrs_fallible(infer_output_attrs_fallible)
+        .get_input_layout_constraint(get_input_layout_constraint)
+        .fallback();
+}  // namespace borrow
+}  // namespace
+
+namespace {
+namespace barrier {
+
+SmallVector<TensorPtr> apply_on_physical_tensor(
+        const OpDef& def, const SmallVector<TensorPtr>& inputs,
+        SmallVector<LogicalTensorDesc>& output_descs, const bool& validated) {
+    auto& op = def.cast_final_safe<imperative::Barrier>();
+    SmallVector<TensorPtr> outputs;
+    for (auto& i : inputs) {
+        if (i->comp_node() != op.comp_node) {
+            device_wait_event(op.comp_node, i->comp_node(), i->get_ready_event());
+        }
+    }
+    if (op.nr_outputs) {
+        outputs.resize(op.nr_outputs);
+        TensorLayout layout(TensorShape({0}), dtype::Int32{});
+        for (auto& i : outputs) {
+            i = Tensor::make(layout, op.comp_node);
+        }
+    }
+    return outputs;
+}
+
+SmallVector<VarNode::LayoutConstraintCallback> get_input_layout_constraint(
+        const OpDef& def, const SmallVector<TensorPtr>& inputs) {
+    return SmallVector<VarNode::LayoutConstraintCallback>(inputs.size());
+}
+
+auto infer_output_attrs_fallible(
+        const OpDef& def, const SmallVector<LogicalTensorDesc>& inputs) {
+    auto& op = def.cast_final_safe<imperative::Barrier>();
+    std::tuple<SmallVector<LogicalTensorDesc>, bool> ret;
+    auto& [descs, checked] = ret;
+    descs.resize(op.nr_outputs);
+    checked = true;
+    for (auto& desc : descs) {
+        desc.comp_node = op.comp_node;
+        desc.layout.dtype = dtype::Int32{};
+        desc.layout.ndim = 1;
+        desc.layout.shape[0] = 0;
+        desc.layout.stride[0] = 1;
+    }
+    return ret;
+}
+
+OP_TRAIT_REG(Barrier, imperative::Barrier)
+        .apply_on_physical_tensor(apply_on_physical_tensor)
+        .infer_output_attrs_fallible(infer_output_attrs_fallible)
+        .get_input_layout_constraint(get_input_layout_constraint)
+        .fallback();
+}  // namespace barrier
+}  // namespace
 
 namespace {
 namespace fastpathcopy {

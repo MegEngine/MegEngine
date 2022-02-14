@@ -704,7 +704,7 @@ void ChannelImpl::produce_tensor(TensorInfo* dest, TensorPtr ptr) {
     m_dtr.update_used_time(dest);
     MGB_RECORD_EVENT(
             TensorProduceEvent, dest->id, ptr->layout(), ptr->comp_node(),
-            ptr->dev_tensor(false).raw_ptr());
+            ptr->raw_ptr_not_for_readwrite());
     // update tensor desc for static infer
     if (dest->desc.layout.ndim) {
         mgb_assert(
@@ -805,8 +805,13 @@ void ChannelImpl::do_apply_op(const ApplyOp& cmd, std::string reason) {
                 inputs[idx]->to_contiguous_inplace(layout_checker);
             }
         }
-        return OpDef::apply_on_physical_tensor(
+        auto outputs = OpDef::apply_on_physical_tensor(
                 def, std::move(inputs), output_descs, validated);
+        for (auto& o : outputs) {
+            o->set_ready_event(
+                    record_event(o->comp_node(), def.same_type<imperative::Barrier>()));
+        }
+        return outputs;
     };
     MGB_RECORD_EVENT(OpExecuteEvent, apply_id, {}, reason);
     SmallVector<std::pair<CompNode, uint64_t>> kernels;
@@ -1059,7 +1064,7 @@ std::unordered_set<TensorInfo*> ChannelImpl::collect_valid_tensors() {
     return valid_tensors;
 }
 
-void ChannelImpl::alloc_tensor_with_evict(Blob* x) {
+void ChannelImpl::alloc_tensor_with_evict(OwnedBlob* x) {
     bool in_worker = (get_worker_tid() == std::this_thread::get_id());
     auto reserve_size = [&](size_t size) {
         if (!m_dtr.comp_node.valid()) {

@@ -51,7 +51,7 @@ _sh = _stream_helper()
 
 def _valid_device(inp):
     if isinstance(inp, str) and re.match(
-        "^([cxg]pu|rocm|multithread)(\d+|\d+:\d+|x)$", inp
+        "^([cxg]pu|rocm|multithread)(x|\d+)(:\d+)?$", inp
     ):
         return True
     return False
@@ -255,8 +255,8 @@ def what_is_xpu():
 def coalesce_free_memory():
     r"""This function will try it best to free all consecutive free chunks back to operating system,
     small pieces may not be returned.
-    
-    because of the async processing of megengine, the effect of this func may not be reflected 
+
+    because of the async processing of megengine, the effect of this func may not be reflected
     immediately. if you want to see the effect immediately, you can call megengine._full_sync after
     this func was called
 

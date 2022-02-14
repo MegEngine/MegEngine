@@ -15,7 +15,7 @@ from .core._imperative_rt.core2 import Tensor as _Tensor
 from .core._imperative_rt.core2 import apply, set_py_tensor_type
 from .core._trace_option import use_symbolic_shape
 from .core._wrap import as_device
-from .core.ops.builtin import Copy, GetVarShape
+from .core.ops.builtin import Borrow, Copy, GetVarShape
 from .core.tensor.array_method import ArrayMethodMixin
 from .device import _valid_device, get_default_device
 from .logger import get_logger
@@ -205,7 +205,7 @@ class Tensor(_Tensor, ArrayMethodMixin):
     def reset_zero(self):
         self *= 0
 
-    def to(self, device):
+    def to(self, device, *, _borrow=False):
         r"""Copy self :class:`~.Tensor` to specified device. See :func:`~.copy`"""
         if isinstance(device, str) and not _valid_device(device):
             raise ValueError(
@@ -214,7 +214,8 @@ class Tensor(_Tensor, ArrayMethodMixin):
                 )
             )
         cn = as_device(device).to_c()
-        return apply(Copy(comp_node=cn), self)[0]
+        op = Borrow(comp_node=cn) if _borrow else Copy(comp_node=cn)
+        return apply(op, self)[0]
 
     @property
     def requires_grad(self):
@@ -232,11 +233,11 @@ class Tensor(_Tensor, ArrayMethodMixin):
         return id(self)
 
     def __getnewargs__(self):
-        r""" __getnewargs__ will be called for pickle serialization or deep copy"""
+        r"""__getnewargs__ will be called for pickle serialization or deep copy"""
         return (self.numpy(), self.dtype, self.device.logical_name)
 
     def __getstate__(self):
-        r""" __getstate__ will be called for pickle serialization or deep copy"""
+        r"""__getstate__ will be called for pickle serialization or deep copy"""
         state = {}
         if self._qparams is not None:
             state["qparams"] = self._qparams
