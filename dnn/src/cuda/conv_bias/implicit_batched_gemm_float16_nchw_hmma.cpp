@@ -50,6 +50,7 @@ bool ConvBiasForwardImpl::AlgoFloat16NCHWHMMAImplicitBatchedGemm::is_available(
     RETURN_IF_FALSE(param.mode == Mode::CROSS_CORRELATION);
     // check if channelwise convolution
     RETURN_IF_FALSE(fm.icpg == 1 && fm.ocpg == 1);
+    RETURN_IF_FALSE(param.dilate_h == 1 && param.dilate_w == 1);
     const auto* op = get_cutlass_conv_op(
             args, ConvOperator::kFprop, ConvType::kDepthwiseConvolution, false, false);
     RETURN_IF_FALSE(op != nullptr);

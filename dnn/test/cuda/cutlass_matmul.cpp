@@ -213,7 +213,7 @@ std::vector<BenchArgs> get_feat_model_args() {
     return args;
 }
 
-#if CUDA_VERSION >= 10020
+#if CUDA_VERSION >= 10010
 std::vector<BenchArgs> get_f16_feat_model_args() {
     std::vector<BenchArgs> args;
     args.emplace_back(BenchArgs{128, 9216, 9216});
@@ -367,7 +367,7 @@ MEGDNN_FOREACH_CUTLASS_KERNEL(cb)
 #undef cb
 #undef MEGDNN_FOREACH_CUTLASS_KERNEL
 
-#if CUDA_VERSION >= 10020
+#if CUDA_VERSION >= 10010
 #define MEGDNN_FOREACH_CUTLASS_KERNEL(cb)     \
     cb(1, 256, 128, 32, 64, 64, 32, 8, 8, 4); \
     cb(2, 128, 256, 32, 64, 64, 32, 8, 8, 4); \
@@ -403,7 +403,9 @@ MEGDNN_FOREACH_CUTLASS_KERNEL(cb)
 #undef cb
 
 #undef MEGDNN_FOREACH_CUTLASS_KERNEL
+#endif
 
+#if CUDA_VERSION >= 10020
 #define MEGDNN_FOREACH_CUTLASS_KERNEL(cb)      \
     cb(1, 256, 128, 32, 64, 64, 32, 16, 8, 8); \
     cb(2, 128, 256, 32, 64, 64, 32, 16, 8, 8); \
@@ -454,7 +456,7 @@ TEST_F(CUDA, BENCHMARK_CUTLASS_MATMUL_FEAT) {
             dtype::Float32(), "CUTLASS_FLOAT32_SIMT");
 }
 
-#if CUDA_VERSION >= 10020
+#if CUDA_VERSION >= 10010
 TEST_F(CUDA, BENCHMARK_CUTLASS_F16_MATMUL_FEAT) {
     benchmark_matrix_mul(
             handle_cuda(), get_f16_feat_model_args(), dtype::Float16(),

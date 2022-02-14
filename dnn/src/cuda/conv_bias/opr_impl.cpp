@@ -146,15 +146,17 @@ ConvBiasForward::Algorithm* ConvBiasForwardImpl::get_algorithm_heuristic(
                                      args.filter_meta.stride[0] != 1 ||
                                      args.filter_meta.stride[1] != 1 || hw_size < 512;
     //! choose for large kernel cases
-    size_t fh = args.filter_meta.spatial[2], fw = args.filter_meta.spatial[3];
+    size_t fh = args.filter_meta.spatial[0], fw = args.filter_meta.spatial[1];
     size_t hi = src[2], wi = src[3];
     const bool prefer_dnn_lk_implbmm = hi <= 2 * fh && wi <= 2 * fw;
     //! avoid bad case in cudnn, check dnn chanwise impl first
     if (is_chanwise) {
         if (prefer_dnn_lk_implbmm) {
+#if CUDA_VERSION >= 10020
             if (sm_algo_pack.f16_implicit_bmm[0].is_available_attribute(
                         args, positive_attr, negative_attr, workspace_limit_in_bytes))
                 return &sm_algo_pack.f16_implicit_bmm[0];
+#endif
             if (sm_algo_pack.f32_implicit_bmm[0].is_available_attribute(
                         args, positive_attr, negative_attr, workspace_limit_in_bytes))
                 return &sm_algo_pack.f32_implicit_bmm[0];

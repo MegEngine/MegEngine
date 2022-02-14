@@ -72,7 +72,7 @@ void ConvolutionBackwardDataImpl::AlgoPack::fill_dwconv_algos() {
             all_algos.push_back(&algo);
         }
     }
-#if CUDA_VERSION >= 10020
+#if CUDA_VERSION >= 10010
     {
         using AlgoParam = AlgoFloat16NCHWHMMAImplicitBatchedGemm::AlgoParam;
         /// preferred algo

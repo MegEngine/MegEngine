@@ -116,15 +116,18 @@ ConvolutionBackwardDataImpl::Algorithm* ConvolutionBackwardDataImpl::
     AlgoBase::SizeArgs args(this, filter, diff, grad);
 
     //! choose for large kernel cases
-    size_t fh = args.filter_meta.spatial[2], fw = args.filter_meta.spatial[3];
+    size_t fh = args.filter_meta.spatial[0], fw = args.filter_meta.spatial[1];
     size_t ho = diff[2], wo = diff[3];
     const bool prefer_dnn_lk_implbmm = args.filter_meta.format == Param::Format::NCHW &&
                                        ho <= 2 * fh && wo <= 2 * fw;
     if (prefer_dnn_lk_implbmm) {
-        if (sm_algo_pack.implbmm_nchw_hmma.is_available_attribute(
+#if CUDA_VERSION >= 10020
+        if (sm_algo_pack.implbmm_nchw_hmma[0].is_available_attribute(
                     args, positive_attr, negative_attr, workspace_limit_in_bytes))
             return &sm_algo_pack.implbmm_nchw_hmma[0];
-        if (sm_algo_pack.implbmm_nchw_fma.is_available_attribute(args, positive_attr, negative_attr, workspace_limit_in_bytes)) 
+#endif
+        if (sm_algo_pack.implbmm_nchw_fma[0].is_available_attribute(
+                    args, positive_attr, negative_attr, workspace_limit_in_bytes))
             return &sm_algo_pack.implbmm_nchw_fma[0];
     }
 
@@ -254,6 +257,23 @@ ConvolutionBackwardFilterImpl::Algorithm* ConvolutionBackwardFilterImpl::
                 const AlgoAttribute& positive_attr,
                 const AlgoAttribute& negative_attr) {
     AlgoBase::SizeArgs args(this, src, diff, grad);
+
+    //! choose for large kernel cases
+    size_t fh = args.grad_filter_meta.spatial[0], fw = args.grad_filter_meta.spatial[1];
+    size_t ho = diff[2], wo = diff[3];
+    const bool prefer_dnn_lk_implbmm =
+            args.grad_filter_meta.format == Param::Format::NCHW && ho <= 2 * fh &&
+            wo <= 2 * fw;
+    if (prefer_dnn_lk_implbmm) {
+#if CUDA_VERSION >= 10020
+        if (sm_algo_pack.implbmm_nchw_hmma[0].is_available_attribute(
+                    args, positive_attr, negative_attr, workspace_limit_in_bytes))
+            return &sm_algo_pack.implbmm_nchw_hmma[0];
+#endif
+        if (sm_algo_pack.implbmm_nchw_fma[0].is_available_attribute(
+                    args, positive_attr, negative_attr, workspace_limit_in_bytes))
+            return &sm_algo_pack.implbmm_nchw_fma[0];
+    }
 
     if (args.grad_filter_meta.group > 1 &&
         sm_algo_pack.chanwise.is_available_attribute(

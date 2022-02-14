@@ -280,7 +280,6 @@ struct ConvolutionKeyHasher {
     inline size_t operator()(ConvolutionKey const& key) const {
         return Hash()
                 .update(&key.conv_op, sizeof(key.conv_op))
-                .update(&key.conv_op, sizeof(key.conv_op))
                 .update(&key.element_src, sizeof(key.element_src))
                 .update(&key.layout_src, sizeof(key.layout_src))
                 .update(&key.element_filter, sizeof(key.element_filter))

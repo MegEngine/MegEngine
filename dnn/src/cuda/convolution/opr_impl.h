@@ -156,6 +156,8 @@ public:
     class AlgoChanwise;
     class AlgoGroupConvGeneral;
     class AlgoBFloat16;
+    class AlgoFloat32NCHWFMAImplicitBatchedGemm;
+    class AlgoFloat16NCHWHMMAImplicitBatchedGemm;
 
     class AlgoPack;
 

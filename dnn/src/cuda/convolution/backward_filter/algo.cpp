@@ -25,6 +25,7 @@ ConvolutionBackwardFilterImpl::AlgoPack::AlgoPack() {
     for (auto&& i : cudnn) {
         all_algos.push_back(&i);
     }
+    fill_dwconv_algos();
     all_algos.push_back(&matmul);
     all_algos.push_back(&group);
 
@@ -46,6 +47,39 @@ ConvolutionBackwardFilterImpl::AlgoCUDNN* ConvolutionBackwardFilterImpl::AlgoPac
     }
     megdnn_throw(ssprintf(
             "can not find cudnn bwd_filter algorithm %d", static_cast<int>(algo)));
+}
+
+void ConvolutionBackwardFilterImpl::AlgoPack::fill_dwconv_algos() {
+    {
+        using AlgoParam = AlgoFloat32NCHWFMAImplicitBatchedGemm::AlgoParam;
+        /// preferred algo
+        implbmm_nchw_fma.emplace_back(AlgoParam{64, 128, 8, 32, 64, 8, 2});
+        implbmm_nchw_fma.emplace_back(AlgoParam{128, 128, 8, 32, 64, 8, 2});
+        implbmm_nchw_fma.emplace_back(AlgoParam{128, 64, 8, 64, 32, 8, 2});
+        implbmm_nchw_fma.emplace_back(AlgoParam{128, 32, 8, 64, 32, 8, 2});
+        implbmm_nchw_fma.emplace_back(AlgoParam{32, 128, 8, 32, 64, 8, 2});
+        implbmm_nchw_fma.emplace_back(AlgoParam{64, 64, 8, 32, 64, 8, 2});
+        implbmm_nchw_fma.emplace_back(AlgoParam{32, 64, 8, 32, 64, 8, 2});
+        implbmm_nchw_fma.emplace_back(AlgoParam{32, 32, 8, 32, 32, 8, 2});
+        implbmm_nchw_fma.emplace_back(AlgoParam{64, 32, 8, 64, 32, 8, 2});
+        for (auto&& algo : implbmm_nchw_fma) {
+            all_algos.push_back(&algo);
+        }
+    }
+#if CUDA_VERSION >= 10010
+    {
+        using AlgoParam = AlgoFloat16NCHWHMMAImplicitBatchedGemm::AlgoParam;
+        /// preferred algo
+        implbmm_nchw_hmma.emplace_back(AlgoParam{64, 128, 32, 32, 32, 32, 8, 8, 4, 2});
+        implbmm_nchw_hmma.emplace_back(AlgoParam{128, 128, 32, 32, 32, 32, 8, 8, 4, 2});
+        implbmm_nchw_hmma.emplace_back(AlgoParam{128, 256, 32, 64, 64, 32, 8, 8, 4, 2});
+        implbmm_nchw_hmma.emplace_back(AlgoParam{128, 64, 32, 32, 32, 32, 8, 8, 4, 2});
+        implbmm_nchw_hmma.emplace_back(AlgoParam{64, 64, 32, 32, 32, 32, 8, 8, 4, 2});
+        for (auto&& algo : implbmm_nchw_hmma) {
+            all_algos.push_back(&algo);
+        }
+    }
+#endif
 }
 
 ConvolutionBackwardFilterImpl::AlgoPack ConvolutionBackwardFilterImpl::sm_algo_pack;

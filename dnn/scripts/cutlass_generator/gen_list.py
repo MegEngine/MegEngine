@@ -3,8 +3,9 @@ from generator import (
     GenerateGemvOperations,
     GenerateConv2dOperations,
     GenerateDeconvOperations,
-    GenerateDwconv2dFpropOperations, 
+    GenerateDwconv2dFpropOperations,
     GenerateDwconv2dDgradOperations,
+    GenerateDwconv2dWgradOperations,
 )
 
 
@@ -28,7 +29,7 @@ def write_op_list(f, gen_op, gen_type):
     elif gen_op == "dwconv2d_dgrad":
         operations = GenerateDwconv2dDgradOperations(GenArg(gen_op, gen_type))
     elif gen_op == "dwconv2d_wgrad":
-        pass
+        operations = GenerateDwconv2dWgradOperations(GenArg(gen_op, gen_type))
     for op in operations:
         f.write('    "%s.cu",\n' % op.procedural_name())
     if gen_op != "gemv":
@@ -52,4 +53,6 @@ if __name__ == "__main__":
         write_op_list(f, "dwconv2d_fprop", "tensorop884")
         write_op_list(f, "dwconv2d_dgrad", "simt")
         write_op_list(f, "dwconv2d_dgrad", "tensorop884")
+        write_op_list(f, "dwconv2d_wgrad", "simt")
+        write_op_list(f, "dwconv2d_wgrad", "tensorop884")
         f.write("]")
