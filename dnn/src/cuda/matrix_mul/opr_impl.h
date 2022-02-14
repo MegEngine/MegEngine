@@ -46,8 +46,10 @@ public:
     class AlgoFloat32SIMT;
     class AlgoFloat32SIMTSplitK;
     class AlgoFloat32SIMTGemvBatchedStrided;
+#if CUDA_VERSION >= 10010
     class AlgoFloat16TensorOp;
     class AlgoFloat16TensorOpSplitK;
+#endif
 #endif
     class AlgoPack;
 

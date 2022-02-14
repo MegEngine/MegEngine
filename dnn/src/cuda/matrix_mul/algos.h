@@ -350,7 +350,7 @@ private:
     std::string m_name;
 };
 
-#if CUDA_VERSION >= 10020
+#if CUDA_VERSION >= 10010
 class MatrixMulForwardImpl::AlgoFloat16TensorOp final
         : public AlgoCutlassMatrixMulBase {
 public:
@@ -418,7 +418,7 @@ public:
     std::vector<AlgoFloat32SIMT> simt_float32;
     std::vector<AlgoFloat32SIMTSplitK> simt_float32_split_k;
     std::vector<AlgoFloat32SIMTGemvBatchedStrided> simt_float32_gemv_batched_strided;
-#if CUDA_VERSION >= 10020
+#if CUDA_VERSION >= 10010
     std::vector<AlgoFloat16TensorOp> tensorop_float16;
     std::vector<AlgoFloat16TensorOpSplitK> tensorop_float16_split_k;
 #endif

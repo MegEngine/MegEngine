@@ -483,6 +483,7 @@ EpilogueFunctorTag = {
 
 #
 ShortEpilogueNames = {
+    EpilogueFunctor.LinearCombination: "id",
     EpilogueFunctor.BiasAddLinearCombinationHSwishClamp: "hswish",
     EpilogueFunctor.BiasAddLinearCombinationReluClamp: "relu",
     EpilogueFunctor.BiasAddLinearCombinationClamp: "id",

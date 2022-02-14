@@ -37,6 +37,8 @@ public:
         CUDA_CHANWISE,
         CUDA_BFLOAT16,
         CUDA_GROUP_CONV_GENERAL,
+        CUDA_IMPLICIT_BATCHED_GEMM_FMA_NCHW_F32,
+        CUDA_IMPLICIT_BATCHED_GEMM_HMMA_NCHW_F16,
     };
     using Mapper = std::unordered_map<AlgorithmDesc, AlgoBase*>;
 
@@ -210,9 +212,86 @@ private:
     WorkspaceBundle get_workspace_bundle(void* ptr, const SizeArgs& args) const;
 };
 
+class ConvolutionBackwardFilterImpl::AlgoFloat32NCHWFMAImplicitBatchedGemm final
+        : public AlgoBase {
+public:
+    struct AlgoParam {
+        int threadblock_m;
+        int threadblock_n;
+        int threadblock_k;
+        int warp_m;
+        int warp_n;
+        int warp_k;
+        int stage;
+        std::string to_string() {
+            return ssprintf(
+                    "_%dX%dX%d_%dX%dX%d_%dstage", threadblock_m, threadblock_n,
+                    threadblock_k, warp_m, warp_n, warp_k, stage);
+        }
+    };
+    AlgoFloat32NCHWFMAImplicitBatchedGemm(AlgoParam algo_param)
+            : m_algo_param{algo_param},
+              m_name{ssprintf(
+                      "FLOAT32_NCHW_FMA_IMPLICIT_BATCHED_GEMM%s",
+                      m_algo_param.to_string().c_str())} {}
+    bool is_available(const SizeArgs& args) const override;
+    size_t get_workspace_in_bytes(const SizeArgs& args) const override { return 0; }
+    void exec(const ExecArgs& args) const override;
+    const char* name() const override { return m_name.c_str(); }
+    AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }
+    MEGDNN_DECL_ALGO_TYPE(CUDA_IMPLICIT_BATCHED_GEMM_FMA_NCHW_F32)
+
+private:
+    const void* get_available_op(const SizeArgs& args) const;
+    AlgoParam m_algo_param;
+    std::string m_name;
+};
+
+class ConvolutionBackwardFilterImpl::AlgoFloat16NCHWHMMAImplicitBatchedGemm final
+        : public AlgoBase {
+public:
+    /// add instruction shape as member of algo param, because f16 tensor core has 2
+    /// different matrix shapes (i.e. mma.884 and mma.1688)
+    struct AlgoParam {
+        int threadblock_m;
+        int threadblock_n;
+        int threadblock_k;
+        int warp_m;
+        int warp_n;
+        int warp_k;
+        int instruction_m;
+        int instruction_n;
+        int instruction_k;
+        int stage;
+        std::string to_string() {
+            return ssprintf(
+                    "_%dX%dX%d_%dX%dX%d_mma%dX%dX%d_%dstage", threadblock_m,
+                    threadblock_n, threadblock_k, warp_m, warp_n, warp_k, instruction_m,
+                    instruction_n, instruction_k, stage);
+        }
+    };
+    AlgoFloat16NCHWHMMAImplicitBatchedGemm(AlgoParam algo_param)
+            : m_algo_param{algo_param},
+              m_name{ssprintf(
+                      "FLOAT16_NCHW_HMMA_IMPLICIT_BATCHED_GEMM%s",
+                      m_algo_param.to_string().c_str())} {}
+    bool is_available(const SizeArgs& args) const override;
+    size_t get_workspace_in_bytes(const SizeArgs& args) const override;
+    void exec(const ExecArgs& args) const override;
+    const char* name() const override { return m_name.c_str(); }
+    AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }
+    MEGDNN_DECL_ALGO_TYPE(CUDA_IMPLICIT_BATCHED_GEMM_HMMA_NCHW_F16)
+
+private:
+    const void* get_available_op(const SizeArgs& args) const;
+    AlgoParam m_algo_param;
+    std::string m_name;
+};
+
 class ConvolutionBackwardFilterImpl::AlgoPack : NonCopyableObj {
     // defined in cudnn.cpp
     void fill_cudnn_algos();
+    void fill_dwconv_algos();
 
     AlgoBase::Mapper m_all_algos_map;
 
@@ -224,6 +303,8 @@ public:
     AlgoChanwise chanwise;
     AlgoGroupConvGeneral group;
     AlgoBFloat16 bfloat16;
+    std::vector<AlgoFloat32NCHWFMAImplicitBatchedGemm> implbmm_nchw_fma;
+    std::vector<AlgoFloat16NCHWHMMAImplicitBatchedGemm> implbmm_nchw_hmma;
 
     std::vector<AlgoBase*>
             //! all algorithms

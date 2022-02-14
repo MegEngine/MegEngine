@@ -1115,7 +1115,10 @@ def GenerateDwconv2d_Simt(args, conv_kind):
 
     dst_types = [DataType.f32]
 
-    alignment_constraints = [128, 32]
+    if conv_kind == ConvKind.Wgrad:
+        alignment_constraints = [32]
+    else:
+        alignment_constraints = [128, 32]
 
     operations = []
     for math_inst in math_instructions:
@@ -1244,7 +1247,9 @@ def GenerateDwconv2d_Simt(args, conv_kind):
                                 32,
                                 32,
                                 SpecialOptimizeDesc.NoneSpecialOpt,
-                                ImplicitGemmMode.GemmTN,
+                                ImplicitGemmMode.GemmNT
+                                if conv_kind == ConvKind.Wgrad
+                                else ImplicitGemmMode.GemmTN,
                             )
     return operations
 
@@ -1277,11 +1282,14 @@ def GenerateDwconv2d_TensorOp_884(args, conv_kind):
 
     dst_layouts = [LayoutType.TensorNCHW]
 
-    dst_types = [DataType.f16]
+    if conv_kind == ConvKind.Wgrad:
+        dst_types = [DataType.f32]
+    else:
+        dst_types = [DataType.f16]
 
     alignment_constraints = [128, 32, 16]
     cuda_major = 10
-    cuda_minor = 2
+    cuda_minor = 1
 
     operations = []
     for math_inst in math_instructions:
@@ -1295,24 +1303,48 @@ def GenerateDwconv2d_TensorOp_884(args, conv_kind):
         for layout in layouts:
             for dst_type, dst_layout in zip(dst_types, dst_layouts):
                 for alignment_src in alignment_constraints:
-                    operations += GenerateConv2d(
-                        ConvType.DepthwiseConvolution,
-                        conv_kind,
-                        tile_descriptions,
-                        layout[0],
-                        layout[1],
-                        dst_layout,
-                        dst_type,
-                        min_cc,
-                        alignment_src,
-                        16,
-                        16,
-                        SpecialOptimizeDesc.NoneSpecialOpt,
-                        ImplicitGemmMode.GemmTN,
-                        False,
-                        cuda_major,
-                        cuda_minor,
-                    )
+                    if conv_kind == ConvKind.Wgrad:
+                        # skip io16xc16 
+                        if math_inst.element_accumulator == DataType.f16:
+                            continue
+                        for alignment_diff in alignment_constraints:
+                            operations += GenerateConv2d(
+                                ConvType.DepthwiseConvolution,
+                                conv_kind,
+                                tile_descriptions,
+                                layout[0],
+                                layout[1],
+                                dst_layout,
+                                dst_type,
+                                min_cc,
+                                alignment_src,
+                                alignment_diff,
+                                32, # always f32 output
+                                SpecialOptimizeDesc.NoneSpecialOpt,
+                                ImplicitGemmMode.GemmNT,
+                                False,
+                                cuda_major,
+                                cuda_minor,
+                            )
+                    else:
+                        operations += GenerateConv2d(
+                            ConvType.DepthwiseConvolution,
+                            conv_kind,
+                            tile_descriptions,
+                            layout[0],
+                            layout[1],
+                            dst_layout,
+                            dst_type,
+                            min_cc,
+                            alignment_src,
+                            16,
+                            16,
+                            SpecialOptimizeDesc.NoneSpecialOpt,
+                            ImplicitGemmMode.GemmTN,
+                            False,
+                            cuda_major,
+                            cuda_minor,
+                        )
 
     return operations
 
@@ -1501,7 +1533,7 @@ def GeneratesGemm_TensorOp_884(args):
         # 1
     ]
     cuda_major = 10
-    cuda_minor = 2
+    cuda_minor = 1
 
     operations = []
     for math_inst in math_instructions:
@@ -1595,6 +1627,17 @@ def GenerateDwconv2dDgradOperations(args):
         return GenerateDwconv2d_TensorOp_884(args, ConvKind.Dgrad)
 
 
+def GenerateDwconv2dWgradOperations(args):
+    if args.type == "simt":
+        return GenerateDwconv2d_Simt(args, ConvKind.Wgrad)
+    else:
+        assert args.type == "tensorop884", (
+            "operation dwconv2d fprop only support"
+            "simt, tensorop884. (got:{})".format(args.type)
+        )
+        return GenerateDwconv2d_TensorOp_884(args, ConvKind.Wgrad)
+
+
 def GenerateGemmOperations(args):
     if args.type == "tensorop884":
         return GeneratesGemm_TensorOp_884(args)
@@ -1668,8 +1711,9 @@ if __name__ == "__main__":
         operations = GenerateDwconv2dFpropOperations(args)
     elif args.operations == "dwconv2d_dgrad":
         operations = GenerateDwconv2dDgradOperations(args)
-    elif args.operations == "dwconv2d_wgrad":
-        pass
+    else:
+        assert args.operations == "dwconv2d_wgrad", "invalid operation"
+        operations = GenerateDwconv2dWgradOperations(args)
 
     if (
         args.operations == "conv2d"

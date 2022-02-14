@@ -317,7 +317,7 @@ void ConvBiasForwardImpl::AlgoPack::fill_dwconv_algos() {
     for (auto&& algo : f32_implicit_bmm) {
         all_algos.push_back(&algo);
     }
-#if CUDA_VERSION >= 10020
+#if CUDA_VERSION >= 10010
     /// preferred algo
     f16_implicit_bmm.emplace_back(AlgoParam{64, 128, 32, 32, 32, 32, 8, 8, 4, 2});
     f16_implicit_bmm.emplace_back(AlgoParam{128, 128, 32, 32, 32, 32, 8, 8, 4, 2});

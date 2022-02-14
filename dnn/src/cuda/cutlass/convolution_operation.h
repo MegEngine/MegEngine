@@ -136,6 +136,15 @@ template <typename EpilogueOp, epilogue::EpilogueType type>
 struct init_epilogue_param_;
 
 template <typename EpilogueOp>
+struct init_epilogue_param_<EpilogueOp, epilogue::EpilogueType::kLinearCombination> {
+    using ElementCompute = typename EpilogueOp::ElementCompute;
+    typename EpilogueOp::Params get(ConvolutionArguments const* conv_args) {
+        return {*static_cast<ElementCompute const*>(conv_args->alpha),
+                *static_cast<ElementCompute const*>(conv_args->beta)};
+    }
+};
+
+template <typename EpilogueOp>
 struct init_epilogue_param_<
         EpilogueOp, epilogue::EpilogueType::kBiasAddLinearCombination> {
     using ElementCompute = typename EpilogueOp::ElementCompute;
@@ -276,6 +285,159 @@ public:
             args.extra_param = *reinterpret_cast<typename Operator::ExtraParam const*>(
                     conv_args->extra_param);
         }
+
+        Operator op;
+        Status status = op.initialize(args, device_workspace);
+
+        if (status != Status::kSuccess) {
+            return status;
+        }
+
+        return op.run(stream);
+    }
+};
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+/// We add a new template class to handle convolution backward filter operation, because
+/// the device-level convolution operator of backward filter is different from the
+/// others (convolution forward and convolution backward data).
+/// But the description object is reused in this wrapper of convolution backward filter.
+/// The reason is that we do not want to introduce an another unnecessary structure.
+/// TODO: Maybe the device-level operator in cutlass for convoluton forward, backward
+/// data and backward filter should be combined.
+template <typename Operator_>
+class ConvolutionBackwardFilterOperationBase : public Operation {
+public:
+    using Operator = Operator_;
+    using ElementSrc = typename Operator::ElementSrc;
+    using LayoutSrc = typename Operator::LayoutSrc;
+    using ElementDiff = typename Operator::ElementDiff;
+    using LayoutDiff = typename Operator::LayoutDiff;
+    using ElementGrad = typename Operator::ElementGrad;
+    using LayoutGrad = typename Operator::LayoutGrad;
+    using ElementAccumulator = typename Operator::ElementAccumulator;
+
+    ConvolutionBackwardFilterOperationBase(char const* name = "unknown_convolution") {
+        m_description.name = name;
+        m_description.provider = Provider::kCUTLASS;
+        m_description.kind = OperationKind::kConvolution;
+        m_description.conv_op = Operator::kConvolutionalOperator;
+
+        m_description.tile_description.threadblock_shape = make_Coord(
+                Operator::ThreadblockShape::kM, Operator::ThreadblockShape::kN,
+                Operator::ThreadblockShape::kK);
+
+        m_description.tile_description.threadblock_stages = Operator::kStages;
+
+        m_description.tile_description.warp_count = make_Coord(
+                Operator::ConvolutionKernel::WarpCount::kM,
+                Operator::ConvolutionKernel::WarpCount::kN,
+                Operator::ConvolutionKernel::WarpCount::kK);
+
+        m_description.tile_description.math_instruction.instruction_shape = make_Coord(
+                Operator::InstructionShape::kM, Operator::InstructionShape::kN,
+                Operator::InstructionShape::kK);
+
+        m_description.tile_description.math_instruction.element_accumulator =
+                NumericTypeMap<ElementAccumulator>::kId;
+
+        m_description.tile_description.math_instruction.opcode_class =
+                OpcodeClassMap<typename Operator::OperatorClass>::kId;
+
+        m_description.tile_description.math_instruction.math_operation =
+                MathOperationMap<typename Operator::Operator>::kId;
+
+        m_description.tile_description.minimum_compute_capability =
+                ArchMap<typename Operator::ArchTag,
+                        typename Operator::OperatorClass>::kMin;
+
+        m_description.tile_description.maximum_compute_capability =
+                ArchMap<typename Operator::ArchTag,
+                        typename Operator::OperatorClass>::kMax;
+
+        /// src in description -> src in C++ template
+        m_description.src =
+                make_TensorDescription<ElementSrc, LayoutSrc>(Operator::kAlignmentSrc);
+        /// filter in description -> diff in C++ template
+        m_description.filter = make_TensorDescription<ElementDiff, LayoutDiff>(
+                Operator::kAlignmentDiff);
+        /// dst in description -> grad in C++ template
+        m_description.dst = make_TensorDescription<ElementGrad, LayoutGrad>(
+                Operator::kAlignmentGrad);
+        /// because bias tensor is not used in ConvolutionBackwardFilter operation, the
+        /// following tensor description is a dummy arguments
+        m_description.bias = make_TensorDescription<ElementGrad, LayoutGrad>(
+                Operator::kAlignmentGrad);
+
+        m_description.convolution_type = Operator::kConvolutionType;
+        m_description.arch_tag = ArchTagMap<typename Operator::ArchTag>::kId;
+
+        m_description.epilogue_type = Operator::EpilogueOutputOp::kType;
+        m_description.epilogue_count = Operator::EpilogueOutputOp::kCount;
+
+        m_description.threadblock_swizzle =
+                ThreadblockSwizzleMap<typename Operator::ThreadblockSwizzle>::kId;
+
+        m_description.special_optimization = Operator::kSpecialOpt;
+        m_description.gemm_mode = Operator::kGemmMode;
+        /// ConvolutionBackwardFilter operation is only used for depthwise convolution,
+        /// so the option without_shared_load is always true
+        m_description.without_shared_load = true;
+    }
+
+    virtual OperationDescription const& description() const { return m_description; }
+
+protected:
+    ConvolutionDescription m_description;
+};
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+template <typename Operator_>
+class ConvolutionBackwardFilterOperation
+        : public ConvolutionBackwardFilterOperationBase<Operator_> {
+public:
+    using Operator = Operator_;
+    using ElementSrc = typename Operator::ElementSrc;
+    using LayoutSrc = typename Operator::LayoutSrc;
+    using ElementDiff = typename Operator::ElementDiff;
+    using LayoutDiff = typename Operator::LayoutDiff;
+    using ElementGrad = typename Operator::ElementGrad;
+    using LayoutGrad = typename Operator::LayoutGrad;
+    using ElementAccumulator = typename Operator::ElementAccumulator;
+    using ElementCompute = typename Operator::EpilogueOutputOp::ElementCompute;
+
+    using OperatorArguments = typename Operator::Arguments;
+
+    ConvolutionBackwardFilterOperation(char const* name = "unknown_gemm")
+            : ConvolutionBackwardFilterOperationBase<Operator_>(name) {}
+
+    virtual Status run(
+            void const* arguments_ptr, void* device_workspace = nullptr,
+            cudaStream_t stream = nullptr) const {
+        cutlass::conv::Operator conv_op = this->m_description.conv_op;
+        ConvolutionArguments const* conv_args =
+                reinterpret_cast<ConvolutionArguments const*>(arguments_ptr);
+        const auto& ps = conv_args->problem_size;
+
+        OperatorArguments args;
+        args.problem_size = ps;
+        /// src in convolution arguments -> ref_src
+        args.ref_src = {
+                static_cast<ElementSrc*>(const_cast<void*>(conv_args->src)),
+                LayoutSrc::packed(implicit_gemm_tensor_b_extent(conv_op, ps))};
+        /// filter in convolution arguments -> ref_diff
+        args.ref_diff = {
+                static_cast<ElementDiff*>(const_cast<void*>(conv_args->filter)),
+                LayoutDiff::packed(implicit_gemm_tensor_a_extent(conv_op, ps))};
+        /// dst in convolution arguments -> ref_grad
+        args.ref_grad = {
+                static_cast<ElementGrad*>(conv_args->dst),
+                LayoutGrad::packed(implicit_gemm_tensor_c_extent(conv_op, ps))};
+
+        args.output_op = init_epilogue_param<typename Operator::EpilogueOutputOp>().get(
+                conv_args);
 
         Operator op;
         Status status = op.initialize(args, device_workspace);

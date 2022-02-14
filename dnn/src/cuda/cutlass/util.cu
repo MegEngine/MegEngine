@@ -1322,6 +1322,8 @@ static struct {
         {"batch_convolution", "BatchConvolution", conv::ConvType::kBatchConvolution},
         {"local", "Local", conv::ConvType::kLocal},
         {"local_share", "LocalShare", conv::ConvType::kLocalShare},
+        {"depthwise_convolution", "DepthwiseConvolution",
+         conv::ConvType::kDepthwiseConvolution},
 };
 
 /// Converts a ConvType enumerant to a string

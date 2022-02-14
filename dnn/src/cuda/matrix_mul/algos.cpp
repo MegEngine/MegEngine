@@ -44,7 +44,7 @@ MatrixMulForwardImpl::AlgoPack::AlgoPack() {
     for (auto&& algo : simt_float32_gemv_batched_strided) {
         all_algos.push_back(&algo);
     }
-#if CUDA_VERSION >= 10020
+#if CUDA_VERSION >= 10010
     for (auto&& algo : tensorop_float16) {
         all_algos.push_back(&algo);
     }
@@ -113,21 +113,26 @@ void MatrixMulForwardImpl::AlgoPack::fill_cutlass_algos() {
     simt_float32_gemv_batched_strided.emplace_back(128);
     simt_float32_gemv_batched_strided.emplace_back(64);
     simt_float32_gemv_batched_strided.emplace_back(32);
-#define FOREACH_CUTLASS_MATMUL_F16_SHAPES(cb) \
-    cb(256, 128, 32, 64, 64, 32, 8, 8, 4);    \
-    cb(128, 256, 32, 64, 64, 32, 8, 8, 4);    \
-    cb(128, 128, 32, 64, 64, 32, 8, 8, 4);    \
-    cb(256, 128, 32, 64, 64, 32, 16, 8, 8);   \
-    cb(128, 256, 32, 64, 64, 32, 16, 8, 8);   \
+#define FOREACH_CUTLASS_MATMUL_MMA_SM70_SHAPES(cb) \
+    cb(256, 128, 32, 64, 64, 32, 8, 8, 4);         \
+    cb(128, 256, 32, 64, 64, 32, 8, 8, 4);         \
+    cb(128, 128, 32, 64, 64, 32, 8, 8, 4);
+#define FOREACH_CUTLASS_MATMUL_MMA_SM75_SHAPES(cb) \
+    cb(256, 128, 32, 64, 64, 32, 16, 8, 8);        \
+    cb(128, 256, 32, 64, 64, 32, 16, 8, 8);        \
     cb(128, 128, 32, 64, 64, 32, 16, 8, 8);
 #define cb(...)                                            \
     tensorop_float16.emplace_back(AlgoParam{__VA_ARGS__}); \
     tensorop_float16_split_k.emplace_back(AlgoParam{__VA_ARGS__});
+#if CUDA_VERSION >= 10010
+    FOREACH_CUTLASS_MATMUL_MMA_SM70_SHAPES(cb)
+#endif
 #if CUDA_VERSION >= 10020
-    FOREACH_CUTLASS_MATMUL_F16_SHAPES(cb)
+    FOREACH_CUTLASS_MATMUL_MMA_SM75_SHAPES(cb)
 #endif
 #undef cb
-#undef FOREACH_CUTLASS_MATMUL_F16_SHAPES
+#undef FOREACH_CUTLASS_MATMUL_MMA_SM70_SHAPES
+#undef FOREACH_CUTLASS_MATMUL_MMA_SM75_SHAPES
 }
 #endif
 

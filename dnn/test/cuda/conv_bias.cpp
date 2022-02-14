@@ -1093,8 +1093,11 @@ TEST_F(CUDA, CONV_BIAS_FORWARD_GROUP) {
         run(2, 32, 7, 7, 3, 3, 64, 1, 1, 1, 1, 1, 1, 4, nlmode);
         // strided case
         run(2, 32, 7, 7, 3, 3, 64, 0, 0, 2, 2, 1, 1, 8, nlmode);
+        // dilate conv is supported in CUDNN since version 7.5.0
+#if CUDNN_VERSION >= 7500
         // dilated case
         run(2, 32, 7, 7, 3, 3, 64, 0, 0, 1, 1, 2, 2, 8, nlmode);
+#endif
     }
 }
 

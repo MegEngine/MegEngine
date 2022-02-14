@@ -15,7 +15,7 @@
 #include "src/cuda/matrix_mul/algos.h"
 #include "src/cuda/utils.h"
 
-#if CUDA_VERSION >= 10020
+#if CUDA_VERSION >= 10010
 using namespace megdnn;
 using namespace cuda;
 
