@@ -45,6 +45,12 @@ fma2(const __half2 a, const __half2 b, const __half2 c) {
 #endif
 }
 
+__device__ __forceinline__ float2
+fma2(const __half2 a, const __half2 b, const float2 c) {
+    return {__half2float(a.x) * __half2float(b.x) + c.x,
+            __half2float(a.y) * __half2float(b.y) + c.y};
+}
+
 #endif  // CUDA_VERSION >= 9000
 
 }  // namespace cuda

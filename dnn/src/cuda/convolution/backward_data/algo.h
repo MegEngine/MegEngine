@@ -68,7 +68,7 @@ public:
                 const TensorLayout& grad);
 
         convolution::ForwardSizeArgs as_fwd_args() const {
-            return {handle, grad_layout, filter_layout, filter_meta, diff_layout};
+            return {handle, diff_layout, filter_layout, filter_meta, grad_layout};
         }
     };
     struct ExecArgs : public SizeArgs {

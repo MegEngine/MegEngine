@@ -32,15 +32,14 @@ inline bool is_available_depthwise_large_filter(const chanwise::Param& param) {
                                               : 1 + (ow + 3) / 4 + flt_smem_w / 4 - 1;
     int out_reg_per_thread = (ow + 3) / 4 * 4;
     if (device_prop.regsPerBlock < 4 * 32 *
-                                           (flt_reg_per_thread + src_reg_per_thread +
-                                            out_reg_per_thread) ||
+                                           (flt_reg_per_thread * 2 +
+                                            src_reg_per_thread + out_reg_per_thread) ||
         device_prop.sharedMemPerBlock <
                 static_cast<size_t>(
-                        flt_smem_w * flt_smem_h + src_smem_w * src_smem_h)) {
+                        flt_smem_w * flt_smem_h * 2 + src_smem_w * src_smem_h)) {
         return false;
     }
-    return param.stride_h == 1 && param.stride_w == 1 && param.src_h == param.out_h &&
-           param.src_w == param.out_w;
+    return true;
 }
 }  // anonymous namespace
 
