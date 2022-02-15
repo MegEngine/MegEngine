@@ -50,9 +50,18 @@ bool memory_forward_success(const OpDef& def, SmallVector<TensorPtr> inputs) {
     return false;
 }
 
+SmallVector<TensorPtr> apply_on_physical_tensor(
+        const OpDef& def, const SmallVector<TensorPtr>& inputs) {
+    if (memory_forward_success(def, inputs)) {
+        return {Tensor::make(inputs[0]->blob(), 0, inputs[0]->layout())};
+    }
+    return proxy_graph_detail::apply_on_physical_tensor(def, inputs);
+}
+
 OP_TRAIT_REG(Reduce, Reduce, opr::Reduce)
         .make_from_op_node(make_from_op_node)
         .apply_on_var_node(apply_on_var_node)
+        .apply_on_physical_tensor(apply_on_physical_tensor)
         .fallback();
 }  // namespace reduce
 }  // namespace
