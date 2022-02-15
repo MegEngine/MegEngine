@@ -10,11 +10,6 @@
  */
 
 #include "./mini_graph.h"
-#if 0
-// ../proxy_graph.h is deprecated, leave here for debug purpose
-// uncomment #if 0 macro to debug
-#include "../proxy_graph.h"
-#endif
 
 namespace mgb::imperative::proxy_graph {
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(ProxyGraph::InputPlaceholder);
@@ -28,18 +23,6 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
         const OpDef& def, const SmallVector<LogicalTensorDesc>& inputs) {
     auto ret = proxy_graph::ProxyGraphTypeI::inst().infer_output_attrs_fallible(
             def, inputs);
-#if 0
-    // delete me after the new implementation is stable
-    auto ref = ProxyGraph::get_default_graph()->infer_output_attrs_fallible(def, inputs);
-    auto& [a, _1] = ret;
-    auto& [b, _2] = ref;
-    if (a.size() != b.size()) mgb_trap();
-    for (size_t i = 0; i < a.size(); ++i) {
-        if (a[i].layout.dtype != b[i].layout.dtype) mgb_trap();
-        if (a[i].comp_node != b[i].comp_node) mgb_trap();
-        if (!a[i].layout.eq_shape(b[i].layout)) mgb_trap();
-    }
-#endif
     return ret;
 }
 

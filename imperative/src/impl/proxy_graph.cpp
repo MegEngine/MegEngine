@@ -121,22 +121,6 @@ private:
 };
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(ProxyGraph::InputPlaceholder);
 
-class ProxyGraph::ExecEnv final : public cg::GraphExecutable::ExecEnv {
-public:
-    void dispatch_on_comp_node(CompNode, Task&& task) override { task(); }
-
-    void dispatch_on_comp_node_with_mask(
-            CompNode, Task&& task, cg::ExecutionMask* mask) override {
-        mgb_throw_if(
-                mask, GraphError, "ExecutionMask not supported in imperative mode");
-        task();
-    }
-
-    void pause_exec() override {}
-
-    void resume_exec() override {}
-};
-
 class ProxyGraph::StaticInferManager : public cg::static_infer::StaticInferManager {
 public:
     using Tag = cg::static_infer::Tag;
@@ -183,25 +167,7 @@ public:
     }
 
     InferType get_infer_type(Tag var) override {
-        // may be called during get_proxy_opr or make_backward_graph
-
         // don't let opr apply any immediate optimization
-        return {InferType::MISSING_INP, InferType::MISSING_INP};
-
-        if (auto opr = var->owner_opr()->try_cast_final<InputPlaceholder>()) {
-            return {var->shape().ndim ? InferType::CONST : InferType::MISSING_INP,
-                    opr->m_tensor ? InferType::CONST : InferType::MISSING_INP};
-        }
-        if (cur_opr) {
-            auto&& outputs = cur_opr->output();
-            auto&& it = std::find(outputs.begin(), outputs.end(), var);
-            if (it != outputs.end()) {
-                return {infer_shape_fallible(var) ? InferType::CONST
-                                                  : InferType::MISSING_INP,
-                        // value inference could be expensive
-                        InferType::MISSING_INP};
-            }
-        }
         return {InferType::MISSING_INP, InferType::MISSING_INP};
     }
 
@@ -471,7 +437,6 @@ std::atomic<size_t> ProxyGraph::ProxyGraphImpl::m_node_id = 0;
 
 ProxyGraph::ProxyGraph()
         : m_graph(ProxyGraphImpl::make(this)),
-          m_env{new ExecEnv},
           m_static_infer_manager(new StaticInferManager(this)),
           m_seq_comp_node_optimizer(new SeqCompNodeOptimizer()) {}
 
@@ -506,32 +471,6 @@ private:
 
 /*********************** Physical Tensor Impl ***********************/
 
-SmallVector<LogicalTensorDesc> ProxyGraph::infer_output_attrs(
-        const OpDef& opdef, const SmallVector<Tensor*>& inputs) {
-    SmallVector<LogicalTensorDesc> ret;
-    CUR_OPR_GUARD(get_proxy_opr(opdef, inputs));
-    ::mgb::opr::intl::WorkspaceLimitHook::set_impl(
-            m_graph.get(), ProxyGraph::get_workspace_limit);
-    do_shape_infer(true);
-    for (auto&& i : m_cur_opr->usable_output()) {
-        mgb_assert(i->dtype().valid() && i->comp_node().valid());
-        mgb_assert(i->shape().ndim || i->contain_flag(VarNode::Flag::NO_SYS_MEM_ALLOC));
-        ret.push_back({{i->shape(), i->dtype()}, i->comp_node()});
-    }
-    return ret;
-}
-
-void ProxyGraph::invoke_op(
-        const OpDef& opdef, const SmallVector<Tensor*>& inputs,
-        const SmallVector<Tensor*>& outputs, const SmallVector<Tensor*>& workspaces) {
-    CUR_OPR_GUARD(get_proxy_opr(opdef, inputs));
-    init_output_tensor(outputs, workspaces);
-    for (auto oup : m_cur_opr->output()) {
-        m_graph->add_used_comp_node(oup->comp_node());
-    }
-    m_cur_opr->execute(*m_env);
-}
-
 void ProxyGraph::cleanup() {
     if (m_cur_opr) {
         for (auto&& i : m_cur_opr->input()) {
@@ -545,101 +484,7 @@ void ProxyGraph::cleanup() {
     m_cur_opr = nullptr;
 }
 
-void ProxyGraph::init_output_tensor(
-        const SmallVector<Tensor*>& outputs, const SmallVector<Tensor*>& workspaces) {
-    // get proxy opr
-    auto proxy = m_cur_opr;
-
-    auto get_workspace_size = [=](CompNode cn, size_t old_limit) {
-        size_t limit = 0;
-        for (auto&& var : workspaces) {
-            limit += var->dtype().size(var->shape().total_nr_elems());
-        }
-        return limit;
-    };
-    ::mgb::opr::intl::WorkspaceLimitHook::set_impl(m_graph.get(), get_workspace_size);
-    do_shape_infer(true);
-
-    size_t j = 0;
-    size_t k = 0;
-    for (auto&& var : proxy->output()) {
-        auto&& chk = var->m_mem_plan.reset_from_owner_var().chunk();
-        if (var->contain_flag(VarNode::Flag::VOLATILE_CONTENT)) {
-            // workspace
-            if (workspaces.size()) {
-                mgb_assert(k < workspaces.size());
-                auto&& layout = workspaces[k]->layout();
-                mgb_assert(
-                        var->comp_node() == workspaces[k]->comp_node() &&
-                        var->shape().eq_shape(layout) && var->dtype() == layout.dtype);
-                var->m_dev_tensor = workspaces[k]->dev_tensor();
-                ++k;
-            } else {
-                TensorLayout layout{var->shape(), var->dtype(), var->format()};
-                var->m_dev_tensor = BlobManager::inst()->alloc_workspace_with_defrag(
-                        var->comp_node(), layout);
-            }
-        } else {
-            mgb_assert(j < outputs.size());
-            auto&& tensor = outputs[j];
-            auto&& layout = tensor->layout();
-            mgb_assert(
-                    var->comp_node() == tensor->comp_node() &&
-                    var->shape().eq_shape(layout) && var->dtype() == layout.dtype);
-            var->assign_dev_tensor_from_tensor(tensor->dev_tensor());
-            ++j;
-        }
-        chk.mem_alloc_status.set_from_owner_var();
-    }
-    mgb_assert(j == outputs.size());
-    mgb_assert(k == workspaces.size());
-
-    // Memory forwarding was bypassed in megbrain with graph option
-    // imerative_proxy_graph on, here we call mem_plan_fwd_in2out_readonly
-    // to initialize some opr(e.g. Subtensor)'s internal state
-    // TODO: implement memory forwarding
-    proxy->mem_plan_fwd_in2out_readonly();
-    {
-        // some opr (e.g. Reduce) rely on on_mem_status_changed to set
-        // input/output tensor corretly, since we bypass var_node_mem_mgr
-        // on_mem_status_changed should be called here
-        auto&& cb = proxy->get_opr_event_callback().on_mem_status_changed;
-        if (cb.valid()) {
-            cb.val()();
-        }
-    }
-}
-
-cg::OperatorNodeBase* ProxyGraph::get_proxy_opr(
-        const OpDef& opdef, const SmallVector<Tensor*>& inputs) {
-    VarNodeArray vinputs(inputs.size());
-    for (size_t i = 0; i < inputs.size(); ++i) {
-        vinputs[i] = InputPlaceholder::make(*m_graph, *inputs[i]).node();
-    }
-    auto opr = OpDef::apply_on_var_node(opdef, vinputs)[0]->owner_opr();
-    mgb_assert(!opr->same_type<InputPlaceholder>());
-    for (auto&& i : opr->input()) {
-        mgb_assert(i->owner_opr()->same_type<InputPlaceholder>());
-    }
-    return opr;
-}
-
 /*********************** Logical Tensor Impl ***********************/
-
-std::tuple<SmallVector<LogicalTensorDesc>, bool> ProxyGraph::
-        infer_output_attrs_fallible(
-                const OpDef& opdef, const SmallVector<LogicalTensorDesc>& inputs) {
-    // this function is just a placeholder
-    // it will be overrided by ProxyGraphTypeI::infer_output_attrs_fallible in minigraph
-    mgb_assert(0);
-}
-
-struct ProxyGraph::GradGraph {
-    cg::VarNodeArray inputs;
-    cg::VarNodeArray outputs;
-    cg::VarNodeArray output_grads;
-    cg::VarNode* grad;
-};
 
 EncodedSubgraph ProxyGraph::make_backward_graph(
         const OpDef& opdef, const SmallVector<LogicalTensorDesc>& input_descs,
@@ -792,22 +637,6 @@ VarNodeArray ProxyGraph::make_input_place_holders(
 }
 
 /*********************** Common Impl ***********************/
-
-bool ProxyGraph::do_shape_infer(bool sync_value) {
-    m_static_infer_manager->update();
-
-    bool validated = true;
-    for (auto* var : m_cur_opr->output()) {
-        if (sync_value) {
-            var->shape(m_static_infer_manager->infer_shape(var));
-        } else if (auto* shape = m_static_infer_manager->infer_shape_fallible(var)) {
-            var->shape(*shape);
-        } else {
-            validated = false;
-        }
-    }
-    return validated;
-}
 
 TensorPtr ProxyGraph::as_tensor(cg::OperatorNodeBase* opr, bool share) {
     // TODO : maybe some tensor should copy value from origin opr rather than

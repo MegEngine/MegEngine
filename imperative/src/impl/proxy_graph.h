@@ -27,44 +27,22 @@ public:
     static std::unique_ptr<MegBrainError> get_async_error() {
         return std::move(tm_async_error);
     }
-    static size_t get_workspace_limit(CompNode cn, size_t old_limit) {
-        size_t free = cn.get_free_mem();
-        size_t lmt = cn.get_max_block_size_available();
-        return std::max(lmt, free);
-    }
 
     /********************** Physical Tensor API **********************/
-
-    SmallVector<LogicalTensorDesc> infer_output_attrs(
-            const OpDef& opdef, const SmallVector<Tensor*>& inputs);
-
-    void invoke_op(
-            const OpDef& opdef, const SmallVector<Tensor*>& inputs,
-            const SmallVector<Tensor*>& outputs, const SmallVector<Tensor*>& workspace);
 
     EncodedSubgraph make_backward_graph(
             const OpDef& opdef, const SmallVector<LogicalTensorDesc>& input_descs,
             const SmallVector<bool>& input_requires_grad,
             const SmallVector<bool>& output_has_grad);
 
-    /********************** Logical Tensor API **********************/
-
-    size_t get_opr_output_size(
-            const OpDef& opdef, const SmallVector<LogicalTensorDesc>& inputs);
-
-    std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
-            const OpDef& opdef, const SmallVector<LogicalTensorDesc>& inputs);
-
 private:
     ProxyGraph();
 
     class ProxyGraphImpl;
-    class ExecEnv;
     class StaticInferManager;
     class SeqCompNodeOptimizer;
     class InputPlaceholder;
     struct ProxyGraphInst;
-    struct GradGraph;
     class CurOprGuard;
 
     void reset();
@@ -73,12 +51,6 @@ private:
 
     void cleanup();
 
-    void init_output_tensor(
-            const SmallVector<Tensor*>& outputs, const SmallVector<Tensor*>& workspace);
-
-    cg::OperatorNodeBase* get_proxy_opr(
-            const OpDef& opdef, const SmallVector<Tensor*>& inputs);
-
     /********************** Logical Tensor Helper **********************/
 
     cg::VarNodeArray make_input_place_holders(
@@ -86,14 +58,11 @@ private:
 
     /********************** Common Helper **********************/
 
-    bool do_shape_infer(bool sync_value);
-
     TensorPtr as_tensor(cg::OperatorNodeBase* opr, bool share = true);
 
     cg::OperatorNodeBase* m_cur_opr = nullptr;
     std::unique_ptr<ProxyGraphImpl> m_graph;
     size_t m_max_op_cnt = 100;
-    std::unique_ptr<ExecEnv> m_env;
     std::unique_ptr<StaticInferManager> m_static_infer_manager;
     std::unique_ptr<SeqCompNodeOptimizer> m_seq_comp_node_optimizer;
 

@@ -801,18 +801,19 @@ public:
         return ret;
     }
 
-    SmallVector<LogicalTensorDesc> infer_output_attrs(
-            const OpDef& def, const SmallVector<Tensor*>& inputs) {
-        SmallVector<LogicalTensorDesc> descs;
-        auto& minigraph = get_cached_minigraph(def, inputs);
+    SmallVector<TensorPtr> apply_on_physical_tensor(
+            const OpDef& def, SmallVector<TensorPtr> inputs) {
+        auto raw_inputs = to_raw_ptr_array(inputs);
+        auto& minigraph = get_cached_minigraph(def, raw_inputs);
         auto _ = scoped_attach(&minigraph);
-        auto sess = minigraph.infer_session(inputs);
+        auto sess = minigraph.infer_session(raw_inputs);
+        ::mgb::opr::intl::WorkspaceLimitHook::set_impl(
+                minigraph.opr()->owner_graph(), get_workspace_limit);
         // some output var in minigraph.opr()->output() may not appears in
         // minigraph.opr()->usable_output() bug execution may use the attrs for those
         // output var, so we infer attrs for all outputs, but only return
         // LogicalTensorDesc for minigraph.opr()->usable_output()
-        ::mgb::opr::intl::WorkspaceLimitHook::set_impl(
-                minigraph.opr()->owner_graph(), get_workspace_limit);
+        SmallVector<LogicalTensorDesc> output_descs;
         for (size_t i = 0; i < minigraph.opr()->output().size(); ++i) {
             auto* shape = sess.infer(sess.output_data[i].shape_infer, true);
             mgb_assert(shape);
@@ -825,15 +826,9 @@ public:
             mgb_assert(
                     ovar->shape().ndim ||
                     ovar->contain_flag(VarNode::Flag::NO_SYS_MEM_ALLOC));
-            descs.push_back({{ovar->shape(), ovar->dtype()}, ovar->comp_node()});
+            output_descs.push_back({{ovar->shape(), ovar->dtype()}, ovar->comp_node()});
         }
-        return descs;
-    }
 
-    SmallVector<TensorPtr> apply_on_physical_tensor(
-            const OpDef& def, SmallVector<TensorPtr> inputs) {
-        auto raw_inputs = to_raw_ptr_array(inputs);
-        auto output_descs = infer_output_attrs(def, raw_inputs);
         SmallVector<TensorPtr> outputs(output_descs.size(), {});
         for (size_t i = 0; i < outputs.size(); i++) {
             outputs[i] =
@@ -853,11 +848,8 @@ public:
                 }
             }
         }
-        auto& minigraph = get_cached_minigraph(def, raw_inputs);
-        auto _ = scoped_attach(&minigraph);
         // some opr (e.g. Subtensor) may invoke infer_value during execution,
         // so we need create inference session here
-        auto sess = minigraph.infer_session(raw_inputs);
         minigraph.execute(raw_inputs, raw_outputs, m_env);
         for (auto&& cn : used_cns) {
             for (auto&& in : inputs) {
