@@ -11,7 +11,6 @@
 
 #include "cuda.h"
 #include "cuda_fp16.h"
-// #include "src/cuda/conv_bias/chanwise/fwd_depthwise_large_filter.cuh"
 #include "src/cuda/conv_bias/chanwise/kern.cuh"
 #include "src/cuda/conv_bias/chanwise/kern_helper.cuh"
 #include "src/cuda/conv_bias/chanwise/launch_config.cuh"

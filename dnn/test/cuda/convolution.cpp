@@ -728,48 +728,58 @@ TEST_F(CUDA, CONVOLUTION_BACKWARD_DEPTHWISE_LARGE_FILTER) {
     Checker<ConvolutionBackwardData> checker(handle_cuda());
     checker.set_before_exec_callback(
             AlgoChecker<ConvolutionBackwardData>("DEPTHWISE_LARGE_FILTER"));
-    for (auto dtype : std::vector<DType>{dtype::Float16()}) {
-        auto run = [&checker, &dtype](size_t n, size_t g, size_t h, size_t fh) {
+    for (auto dtype : std::vector<DType>{dtype::Float32(), dtype::Float16()}) {
+        auto run = [&checker, &dtype](
+                           size_t n, size_t g, size_t h, size_t fh, size_t padding,
+                           size_t stride) {
             param::Convolution param;
-            param.stride_h = param.stride_w = 1;
-            param.pad_h = param.pad_w = fh / 2;
+            param.stride_h = param.stride_w = stride;
+            param.pad_h = param.pad_w = padding;
             param.mode = Convolution::Mode::CROSS_CORRELATION;
             param.sparse = param::Convolution::Sparse::GROUP;
             checker.set_dtype(0, dtype).set_dtype(1, dtype).set_dtype(2, dtype);
+            float scale = 64.f / sqrt(fh * fh);
+            UniformFloatRNG rng(1.0, 1.0);
+            checker.set_rng(0, &rng).set_rng(1, &rng).set_rng(2, &rng);
+            if (dtype.enumv() == DTypeEnum::Float16)
+                checker.set_epsilon(1e-1);
 
             checker.set_param(param).execs(
-                    {{g, 1, 1, fh, fh}, {n, g, h, h}, {n, g, h, h}});
+                    {{g, 1, 1, fh, fh},
+                     {n, g, (h + 2 * padding - fh + 1) / stride,
+                      (h + 2 * padding - fh + 1) / stride},
+                     {n, g, h, h}});
         };
-        run(4, 8, 32, 5);
-        run(4, 8, 32, 7);
-        run(4, 8, 32, 9);
-        run(4, 8, 32, 11);
-        run(4, 8, 32, 13);
-        run(4, 8, 32, 15);
-        run(4, 8, 32, 17);
-        run(4, 8, 32, 19);
-        run(4, 8, 32, 21);
-        run(4, 8, 32, 23);
-        run(4, 8, 32, 25);
-        run(4, 8, 32, 27);
-        run(4, 8, 32, 29);
-        run(4, 8, 32, 31);
-        run(4, 8, 64, 7);
-        run(4, 8, 64, 5);
-        run(4, 8, 64, 9);
-        run(4, 8, 64, 11);
-        run(4, 8, 64, 13);
-        run(4, 8, 64, 15);
-        run(4, 8, 64, 17);
-        run(4, 8, 64, 19);
-        run(4, 8, 64, 21);
-        run(4, 8, 64, 23);
-        run(4, 8, 64, 25);
-        run(4, 8, 64, 27);
-        run(4, 8, 64, 29);
-        run(4, 8, 64, 31);
-        run(1, 2, 128, 31);
-        run(1, 2, 256, 31);
+        run(4, 8, 32, 5, 5 / 2, 1);
+        run(4, 8, 32, 7, 7/2, 1);
+        run(4, 8, 32, 9, 9/2, 1);
+        run(4, 8, 32, 11, 11/2, 1);
+        run(4, 8, 32, 13, 13/2, 1);
+        run(4, 8, 32, 15, 15/2, 1);
+        run(4, 8, 32, 17, 17/2, 1);
+        run(4, 8, 32, 19, 19/2, 1);
+        run(4, 8, 32, 21, 21/2, 1);
+        run(4, 8, 32, 23, 23/2, 1);
+        run(4, 8, 32, 25, 25/2, 1);
+        run(4, 8, 32, 27, 27/2, 1);
+        run(4, 8, 32, 29, 29/2, 1);
+        run(4, 8, 32, 31, 31/2, 1);
+        run(4, 8, 64, 5, 5 / 2, 2);
+        run(4, 8, 64, 7, 7/3, 2);
+        run(4, 8, 64, 9, 9/3, 2);
+        run(4, 8, 64, 11, 11/3, 2);
+        run(4, 8, 64, 13, 13/3, 2);
+        run(4, 8, 64, 15, 15/3, 2);
+        run(4, 8, 64, 17, 17/3, 2);
+        run(4, 8, 64, 19, 19/3, 2);
+        run(4, 8, 64, 21, 21/3, 2);
+        run(4, 8, 64, 23, 23/3, 2);
+        run(4, 8, 64, 25, 25/3, 2);
+        run(4, 8, 64, 27, 27/3, 2);
+        run(4, 8, 64, 29, 29/3, 2);
+        run(4, 8, 64, 31, 31/3, 2);
+        run(1, 2, 128, 31, 31/3, 2);
+        run(1, 2, 256, 31, 31/3, 2);
     }
 }
 
@@ -950,7 +960,7 @@ TEST_F(CUDA, CONVOLUTION_BWD_DATA_BENCHMARK) {
     run(32, 64, 64, 56, 56, 1, 1, 0);
 }
 
-TEST_F(CUDA, BENCHMARK_CONVOLUTION_BWD_DATA_DEPTHWISE_LARGE_FILTER) {
+TEST_F(CUDA, BENCHMARK_CONVOLUTION_BWD_DATA_DEPTHWISE_LARGE_FILTER_FP32) {
     CUBenchmarker<ConvolutionBackwardData> bencher{handle_cuda()};
     bencher.set_display(false);
     bencher.set_before_exec_callback(
