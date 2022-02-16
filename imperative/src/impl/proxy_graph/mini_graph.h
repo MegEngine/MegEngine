@@ -12,6 +12,8 @@
 #include "megbrain/graph/operator_node.h"
 #include "megbrain/imperative/op_def.h"
 #include "megbrain/imperative/ops/autogen.h"
+#include "megbrain/imperative/physical_tensor.h"
+#include "megbrain/opr/internal/megdnn_opr_wrapper.h"
 
 #include "../blob_manager_impl.h"
 #include "./common.h"
@@ -93,6 +95,12 @@ SmallVector<Tensor*> to_raw_ptr_array(
         }
     }
     return ret;
+}
+
+static size_t get_workspace_limit(CompNode cn, size_t old_limit) {
+    size_t free = cn.get_free_mem();
+    size_t lmt = cn.get_max_block_size_available();
+    return std::max(lmt, free);
 }
 
 // single opr graph, for static inference and execution
@@ -327,32 +335,29 @@ public:
     }
 
     void init_output_tensor(const SmallVector<Tensor*>& outputs) {
-        size_t idx = 0;
         mgb_assert(m_opr->usable_output().size() == outputs.size());
+        ::mgb::opr::intl::WorkspaceLimitHook::set_impl(
+                m_opr->owner_graph(), get_workspace_limit);
+        size_t j = 0;
         for (auto&& var : m_opr->output()) {
             auto&& chk = var->m_mem_plan.reset_from_owner_var().chunk();
             if (var->contain_flag(VarNode::Flag::VOLATILE_CONTENT)) {
-                // alloc workspace
                 TensorLayout layout{var->shape(), var->dtype(), var->format()};
                 var->m_dev_tensor = BlobManager::inst()->alloc_workspace_with_defrag(
                         var->comp_node(), layout);
             } else {
-                mgb_assert(idx < outputs.size());
-                auto&& tensor = outputs[idx];
+                mgb_assert(j < outputs.size());
+                auto&& tensor = outputs[j];
                 auto&& layout = tensor->layout();
                 mgb_assert(var->comp_node() == tensor->comp_node());
                 mgb_assert(var->shape().eq_shape(layout));
                 mgb_assert(var->dtype() == layout.dtype);
-                if (!tensor->layout().is_empty()) {
-                    var->assign_dev_tensor_from_tensor(tensor->dev_tensor());
-                } else {
-                    var->m_dev_tensor.storage({var->comp_node()});
-                }
-                ++idx;
+                var->assign_dev_tensor_from_tensor(tensor->dev_tensor());
+                ++j;
             }
             chk.mem_alloc_status.set_from_owner_var();
         }
-        mgb_assert(idx == outputs.size());
+        mgb_assert(j == outputs.size());
 
         // Memory forwarding was bypassed in megbrain with graph option
         // imerative_proxy_graph on, here we call mem_plan_fwd_in2out_readonly
@@ -806,6 +811,8 @@ public:
         // minigraph.opr()->usable_output() bug execution may use the attrs for those
         // output var, so we infer attrs for all outputs, but only return
         // LogicalTensorDesc for minigraph.opr()->usable_output()
+        ::mgb::opr::intl::WorkspaceLimitHook::set_impl(
+                minigraph.opr()->owner_graph(), get_workspace_limit);
         for (size_t i = 0; i < minigraph.opr()->output().size(); ++i) {
             auto* shape = sess.infer(sess.output_data[i].shape_infer, true);
             mgb_assert(shape);
@@ -814,29 +821,25 @@ public:
         descs.reserve(minigraph.output_size());
         for (size_t i = 0; i < minigraph.output_size(); ++i) {
             auto* ovar = minigraph.output_var(i);
-            descs.emplace_back();
-            auto& desc = descs.back();
-            desc.layout.dtype = ovar->dtype();
-            desc.comp_node = ovar->comp_node();
             mgb_assert(ovar->dtype().valid() && ovar->comp_node().valid());
             mgb_assert(
                     ovar->shape().ndim ||
                     ovar->contain_flag(VarNode::Flag::NO_SYS_MEM_ALLOC));
-            desc.layout.init_contiguous_stride(ovar->shape());
+            descs.push_back({{ovar->shape(), ovar->dtype()}, ovar->comp_node()});
         }
         return descs;
     }
 
-    SmallVector<LogicalTensorDesc> infer_output_attrs(
-            const OpDef& def, const SmallVector<TensorPtr>& inputs) {
-        return infer_output_attrs(def, to_raw_ptr_array(inputs));
-    }
-
-    void exec(
-            const OpDef& def, const SmallVector<TensorPtr>& inputs,
-            const SmallVector<TensorPtr>& outputs) {
-        auto raw_inputs = to_raw_ptr_array(inputs),
-             raw_outputs = to_raw_ptr_array(outputs);
+    SmallVector<TensorPtr> apply_on_physical_tensor(
+            const OpDef& def, SmallVector<TensorPtr> inputs) {
+        auto raw_inputs = to_raw_ptr_array(inputs);
+        auto output_descs = infer_output_attrs(def, raw_inputs);
+        SmallVector<TensorPtr> outputs(output_descs.size(), {});
+        for (size_t i = 0; i < outputs.size(); i++) {
+            outputs[i] =
+                    Tensor::make(output_descs[i].layout, output_descs[i].comp_node);
+        }
+        auto raw_outputs = to_raw_ptr_array(outputs);
         CompNode::UnorderedSet used_cns;
         for (auto&& out : raw_outputs) {
             auto cn = out->comp_node();
@@ -863,18 +866,6 @@ public:
                 }
             }
         }
-    }
-
-    SmallVector<TensorPtr> apply_on_physical_tensor(
-            const OpDef& def, SmallVector<TensorPtr> inputs) {
-        auto&& raw_inputs = to_raw_ptr_array(inputs);
-        auto output_descs = infer_output_attrs(def, raw_inputs);
-        SmallVector<TensorPtr> outputs(output_descs.size(), {});
-        for (size_t i = 0; i < outputs.size(); i++) {
-            outputs[i] =
-                    Tensor::make(output_descs[i].layout, output_descs[i].comp_node);
-        }
-        exec(def, inputs, outputs);
         return outputs;
     }
 };
