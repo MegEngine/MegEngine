@@ -26,6 +26,7 @@ struct GradKeyWrapper : NonCopyableObj {
     using wrap_t = pyext17::wrap<GradKeyWrapper>;
     static constexpr auto tp_name = pybind11::detail::_("GradKey");
 
+    std::string m_name;
     std::shared_ptr<GradKey> m_key;
     std::shared_ptr<GradTransformation> m_transformation;
 

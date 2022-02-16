@@ -10,20 +10,19 @@
  */
 
 #include "megbrain/imperative/transformations/eval.h"
-#include "megbrain/imperative/transformations/grad.h"
 #include "megbrain/imperative/utils/stats.h"
 
 namespace mgb {
 namespace imperative {
 
-DTypeValue::ref_t InterpreterInfo::dtype() const {
+DTypeValue::ref_t InterpreterValue::dtype() const {
     if (!m_dtype) {
         m_dtype = DTypeValue::make(handle()->channel()->get_dtype(handle()->handle()));
     }
     return m_dtype;
 }
 
-CompNodeValue::ref_t InterpreterInfo::comp_node() const {
+CompNodeValue::ref_t InterpreterValue::comp_node() const {
     if (!m_comp_node) {
         m_comp_node = CompNodeValue::make(
                 handle()->channel()->get_device(handle()->handle()));
@@ -31,7 +30,7 @@ CompNodeValue::ref_t InterpreterInfo::comp_node() const {
     return m_comp_node;
 }
 
-ShapeValue::ref_t InterpreterInfo::shape() const {
+ShapeValue::ref_t InterpreterValue::shape() const {
     if (!m_shape) {
         m_shape = ShapeValue::make(
                 ValueShape::from(handle()->channel()->get_shape(handle()->handle())));
@@ -51,21 +50,22 @@ ValueRefList InterpreterTransformation::apply_op(
         }
     }};
     for (auto input : inputs) {
-        input_handles.push_back(input.cast<InterpreterValue>().handle()->handle());
+        input_handles.push_back(input.cast(m_value_type).handle()->handle());
     }
     output_handles =
             m_channel->apply_op(apply_op.op().shared_from_this(), input_handles);
     ValueRefList outputs(output_handles.size());
     for (size_t i = 0; i < output_handles.size(); ++i) {
-        outputs[i] = InterpreterValue::make(share_handle(output_handles[i]));
+        outputs[i] = m_value_type.make(share_handle(output_handles[i]));
         output_handles[i] = nullptr;
     }
+    output_handles.clear();
     return outputs;
 }
 
 ValueRefList InterpreterTransformation::apply_get_attr(
         const GetAttr& get_attr, Span<ValueRef> inputs) {
-    auto& input = inputs.item().cast<InterpreterValue>();
+    auto& input = inputs.item().cast(m_value_type);
     ValueRef output;
     switch (get_attr.attr()) {
         case GetAttr::DType:
@@ -98,10 +98,10 @@ ValueRefList InterpreterTransformation::apply_create_tensor(
     if (!args.device) {
         // implies H2D
         mgb_assert(args.host, "neither host and device value is valid");
-        return {InterpreterValue::make(share_handle(
+        return {m_value_type.make(share_handle(
                 m_channel->put(*args.host, args.kind == CreateTensor::Unique)))};
     } else {
-        return {InterpreterValue::make(share_handle(m_channel->put(
+        return {m_value_type.make(share_handle(m_channel->put(
                 *args.device, args.host ? *args.host : HostTensorND())))};
     }
 }
@@ -119,7 +119,7 @@ ValueRefList InterpreterTransformation::apply_transformation(
     } else if (auto* create_tensor = op.as<CreateTensor>()) {
         return apply_create_tensor(*create_tensor, inputs);
     } else if (auto* dtr_command = op.as<DTRCommand>()) {
-        auto handle = inputs[0].cast<InterpreterValue>().handle()->handle();
+        auto handle = inputs[0].cast(m_value_type).handle()->handle();
         switch (dtr_command->kind()) {
             case DTRCommand::Drop:
                 m_channel->drop(handle);
@@ -129,10 +129,10 @@ ValueRefList InterpreterTransformation::apply_transformation(
         }
         return {};
     } else if (auto* rename_value = op.as<RenameValue>()) {
-        auto& input = inputs[0].cast<InterpreterValue>();
-        return {InterpreterValue::make(input.handle(), rename_value->name())};
+        auto& input = inputs[0].cast(m_value_type);
+        return {m_value_type.make(input.handle(), rename_value->name())};
     } else if (op.is<GetName>()) {
-        auto name = inputs[0].cast<InterpreterValue>().name();
+        auto name = inputs[0].cast(m_value_type).name();
         if (!name.empty()) {
             return {StringValue::make(name)};
         } else {

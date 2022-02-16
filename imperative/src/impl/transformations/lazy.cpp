@@ -32,7 +32,7 @@ ValueRefList LazyEvalTransformation::apply_transformation(
         bool require_link = mm_io_ops.count(op_val->op().dyn_typeinfo());
         VarNodeArray input_nodes;
         for (auto&& input : inputs) {
-            if (auto* input_node = input.as<LazyEvalValue>()) {
+            if (auto* input_node = input.as(m_value_type)) {
                 input_nodes.push_back(input_node->node());
             } else {
                 // ImmutableTensor has empty shape issues
@@ -112,7 +112,7 @@ ValueRefList LazyEvalTransformation::apply_transformation(
             return {record_var(node)};
         }
     } else if (auto* get_attr = op.as<GetAttr>()) {
-        if (auto* lazy_val = inputs.item().as<LazyEvalValue>()) {
+        if (auto* lazy_val = inputs.item().as(m_value_type)) {
             switch (get_attr->attr()) {
                 case GetAttr::DType:
                     return {DTypeValue::make(lazy_val->node()->dtype())};
@@ -167,14 +167,14 @@ ValueRefList LazyEvalTransformation::apply_transformation(
             return imperative::apply(op, inputs);
         }
     } else if (auto* rename_value = op.as<RenameValue>()) {
-        if (auto* lazy_val = inputs.item().as<LazyEvalValue>()) {
+        if (auto* lazy_val = inputs.item().as(m_value_type)) {
             return {record_var(
                     lazy_val->node(), lazy_val->bound_data(), rename_value->name())};
         } else {
             return imperative::apply(op, inputs);
         }
     } else if (op.is<GetName>()) {
-        if (auto* lazy_val = inputs.item().as<LazyEvalValue>()) {
+        if (auto* lazy_val = inputs.item().as(m_value_type)) {
             auto name = lazy_val->name();
             if (!name.empty()) {
                 return {StringValue::make(lazy_val->name())};
@@ -255,7 +255,7 @@ void LazyEvalTransformation::on_unregister() noexcept {
                 DeviceStorage::make(data.storage()))[0]);
     }
     for (auto&& lazy_val : lazy_vals) {
-        if (lazy_val.is<LazyEvalValue>()) {
+        if (lazy_val.is(m_value_type)) {
             std::string repr =
                     ssprintf("lazy eval failed for %s", lazy_val->to_string().c_str());
             mgb_log_debug("%s", repr.c_str());

@@ -57,7 +57,7 @@ struct Subgraph {
     SmallVector<expr_t> exprs;
 
     template <typename T, typename F, typename C>
-    SmallVector<T> apply(SmallVector<T> input_vars, F&& f, C&& c) const {
+    SmallVector<T> apply(Span<T> input_vars, F&& f, C&& c) const {
         std::unordered_map<size_t, T> idx2var;
         mgb_assert(inputs.size() == input_vars.size(), "input size mismatch");
         for (size_t i = 0; i < inputs.size(); ++i) {
@@ -71,8 +71,7 @@ struct Subgraph {
             for (auto idx : expr.inputs) {
                 expr_inputs.push_back(idx2var[idx]);
             }
-            SmallVector<T> expr_outputs =
-                    f(expr.op, std::move(expr_inputs), expr.outputs.size());
+            SmallVector<T> expr_outputs = f(expr.op, expr_inputs, expr.outputs.size());
             mgb_assert(
                     expr_outputs.size() == expr.outputs.size(), "output size mismatch");
             for (size_t i = 0; i < expr_outputs.size(); ++i) {
@@ -102,9 +101,9 @@ struct EncodedSubgraph {
     SmallVector<bool> input_mask;
     SmallVector<bool> output_mask;
 
-    template <typename TContainer>
-    TContainer encode_inputs(TContainer inputs) const {
-        TContainer encoded_inputs;
+    template <typename T>
+    SmallVector<T> encode_inputs(Span<T> inputs) const {
+        SmallVector<T> encoded_inputs;
         size_t index = 0;
         for (auto&& input : inputs) {
             mgb_assert(index < input_mask.size(), "index out of range");
@@ -116,9 +115,9 @@ struct EncodedSubgraph {
         return encoded_inputs;
     }
 
-    template <typename TContainer>
-    TContainer encode_outputs(TContainer outputs) const {
-        TContainer encoded_outputs;
+    template <typename T>
+    SmallVector<T> encode_outputs(Span<T> outputs) const {
+        SmallVector<T> encoded_outputs;
         size_t index = 0;
         for (auto&& output : outputs) {
             mgb_assert(index < output_mask.size(), "index out of range");
@@ -130,9 +129,9 @@ struct EncodedSubgraph {
         return encoded_outputs;
     }
 
-    template <typename TContainer>
-    TContainer decode_outputs(TContainer outputs) const {
-        TContainer decoded_outputs;
+    template <typename T>
+    SmallVector<T> decode_outputs(Span<T> outputs) const {
+        SmallVector<T> decoded_outputs;
         size_t index = 0;
         for (size_t i = 0; i < output_mask.size(); i++) {
             mgb_assert(index < output_mask.size(), "index out of range");
@@ -150,8 +149,8 @@ struct EncodedSubgraph {
         EncodedSubgraph result;
         result.input_mask = graph.gen_input_mask();
         result.output_mask = graph.gen_output_mask();
-        graph.inputs = result.encode_inputs(graph.inputs);
-        graph.outputs = result.encode_outputs(graph.outputs);
+        graph.inputs = result.encode_inputs<Subgraph::var_t>(graph.inputs);
+        graph.outputs = result.encode_outputs<Subgraph::var_t>(graph.outputs);
         result.graph = graph;
         return result;
     }
@@ -179,11 +178,11 @@ struct EncodedSubgraph {
     }
 
     template <typename T, typename F, typename C>
-    SmallVector<T> apply(SmallVector<T> input_vars, F&& f, C&& c) const {
-        auto encoded_inputs = encode_inputs(input_vars);
+    SmallVector<T> apply(Span<T> input_vars, F&& f, C&& c) const {
+        auto encoded_inputs = encode_inputs<T>(input_vars);
         auto encoded_outputs =
-                graph.apply(encoded_inputs, std::forward<F>(f), std::forward<C>(c));
-        return decode_outputs(encoded_outputs);
+                graph.apply<T>(encoded_inputs, std::forward<F>(f), std::forward<C>(c));
+        return decode_outputs<T>(encoded_outputs);
     }
 
     std::string repr() const;

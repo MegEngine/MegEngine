@@ -36,7 +36,7 @@ VarNodeArray apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
                 .node();
     };
     auto subgraph = def.trait()->make_forward_graph(def, input_descs);
-    auto outputs = subgraph.apply(inputs, apply_functor, const_functor);
+    auto outputs = subgraph.apply<VarNode*>(inputs, apply_functor, const_functor);
     return outputs;
 }
 
@@ -56,7 +56,8 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
                 value->layout(), value->comp_node(),
                 value->get_value().proxy_to_default_cpu()};
     };
-    auto outputs = subgraph.apply(inputs, apply_functor, const_functor);
+    auto outputs =
+            subgraph.apply<LogicalTensorDesc>(inputs, apply_functor, const_functor);
     return {outputs, all_validated};
 }
 
@@ -72,7 +73,7 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
         return OpDef::apply_on_physical_tensor(*op, inputs);
     };
     auto const_functor = [&](const TensorPtr& value) { return value; };
-    auto outputs = subgraph.apply(inputs, apply_functor, const_functor);
+    auto outputs = subgraph.apply<TensorPtr>(inputs, apply_functor, const_functor);
     return outputs;
 }
 
@@ -94,7 +95,7 @@ static EncodedSubgraph make_backward_graph_from_forward(
     };
     GradContext<var_t> grad_context{accum_grad};
     auto input_vars = builder.write_inputs(inputs);
-    auto outputs = forward_graph.apply(
+    auto outputs = forward_graph.apply<var_t>(
             input_vars, std::bind(&decltype(builder)::write_expr, &builder, _1, _2, _3),
             [&](TensorPtr constant) {
                 return builder.write_constant(
@@ -102,7 +103,7 @@ static EncodedSubgraph make_backward_graph_from_forward(
             });
     size_t nr_outputs = outputs.size();
     auto apply_mask = [](auto&& values, SmallVector<bool> mask) {
-        mgb_assert(mask.size() == values.size(), "");
+        mgb_assert(mask.size() == values.size());
         std::decay_t<decltype(values)> results;
         for (size_t i = 0; i < mask.size(); ++i) {
             if (mask[i]) {
@@ -143,7 +144,7 @@ static EncodedSubgraph make_backward_graph_from_forward(
                     return builder.write_constant(
                             constant, {constant->layout(), constant->comp_node()});
                 };
-                return bg.apply(grad_inputs, apply_functor, const_functor);
+                return bg.apply<var_t>(grad_inputs, apply_functor, const_functor);
             });
     builder.add_outputs(grad_context.get_grads(input_vars));
     for (size_t i = 0; i < nr_outputs; ++i) {

@@ -34,7 +34,7 @@ public:
     Span(const T* begin, const T* end) : m_begin{begin}, m_end{end} {}
     Span(const T* begin, size_t size) : Span(begin, begin + size) {}
     template <typename TContainer>
-    Span(TContainer& container) : Span(container.data(), container.size()) {}
+    Span(const TContainer& container) : Span(container.data(), container.size()) {}
     const T* begin() const { return m_begin; }
     const T* end() const { return m_end; }
     const T* data() const { return m_begin; }

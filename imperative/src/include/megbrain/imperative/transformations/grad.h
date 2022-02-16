@@ -34,7 +34,8 @@ struct BackwardGraphWithClosure {
             std::shared_ptr<OptimizedBackwardGraphResult> backward_graph,
             std::shared_ptr<OpDef> op, Span<ValueRef> inputs, Span<ValueRef> outputs);
 
-    void operator()(ValueRefList grads, std::function<void(size_t, ValueRef)> receiver);
+    void operator()(
+            Span<ValueRef> grads, std::function<void(size_t, ValueRef)> receiver);
 
     bool input_has_grad(size_t i) { return backward_graph->input_has_grad[i]; }
 
@@ -51,7 +52,7 @@ struct CustomBackward;
 using GradRuleFn = std::function<ValueRefList(Span<ValueRef> inputs, CustomBackward&)>;
 
 struct CustomBackward {
-    using BackwardFn = std::function<ValueRefList(Span<ValueRef>)>;
+    using BackwardFn = std::function<SmallVector<ValueRef>(Span<ValueRef>)>;
     using BackwardRule = std::function<std::optional<ValueRefList>(
             const OpDef&, Span<ValueRef>, Span<bool>, CustomBackward&)>;
     BackwardFn m_backward;
@@ -62,7 +63,8 @@ struct CustomBackward {
     SmallVector<OutputAttr> m_output_attrs;
 
 public:
-    void operator()(ValueRefList grads, std::function<void(size_t, ValueRef)> receiver);
+    void operator()(
+            Span<ValueRef> grads, std::function<void(size_t, ValueRef)> receiver);
 
     bool input_has_grad(size_t i) { return m_input_has_grad[i]; }
     bool output_requires_grad(size_t i) { return m_output_attrs[i].requires_grad; }
@@ -175,7 +177,7 @@ inline GradSlot* GradSlotPtr::operator->() const {
     return &m_fn->m_slots[m_index];
 }
 
-class GradValue final : public ValueImpl<GradValue, ValueKind::Object> {
+class GradValue final : public ObjectValue<GradValue> {
 private:
     ValueRef m_value;
     std::shared_ptr<GradKey> m_key;
@@ -187,14 +189,9 @@ public:
 
     std::string to_string() const override;
 
-    bool has_key(const std::shared_ptr<GradKey>& key) const { return m_key == key; }
+    const GradSlotPtr& slot() const { return m_slot; }
 
-    const GradSlotPtr& slot_for(std::shared_ptr<GradKey> key) const {
-        mgb_assert(m_key == key);
-        return m_slot;
-    }
-
-    std::shared_ptr<GradKey> key() const { return m_key; }
+    // std::shared_ptr<GradKey> key() const { return m_key; }
 
     void clear() override {
         m_slot = {};
@@ -216,9 +213,12 @@ private:
     std::vector<std::pair<LocalWeakPtr<GradFn>, std::shared_ptr<OpDef>>> m_tape;
     std::vector<std::pair<LocalPtr<GradFn>, std::shared_ptr<OpDef>>> m_frozen_tape;
     bool m_frozen = false;
+    const Type<GradValue>& m_value_type;
 
 public:
-    GradKey() { m_tape.reserve(4 * 1024); }
+    GradKey(const Type<GradValue>& value_type) : m_value_type(value_type) {
+        m_tape.reserve(4 * 1024);
+    }
 
     void backward();
     GradValue::ref_t attach(ValueRef tensor, std::function<void(ValueRef)> callback);
@@ -230,10 +230,9 @@ public:
 };
 
 class GradKeyValue final
-        : public MixinValueImpl<
-                  GradKeyValue, ValueKind::Primitive, std::shared_ptr<GradKey>> {
+        : public PrimitiveValue<GradKeyValue, std::shared_ptr<GradKey>> {
 public:
-    using MixinValueImpl::MixinValueImpl;
+    using PrimitiveValue::PrimitiveValue;
 
     std::string to_string() const override {
         return ssprintf("GradKey{%s}", (*this)->name().c_str());
@@ -242,26 +241,20 @@ public:
 
 class GradTransformation final : public Transformation {
 private:
+    ObjectType<GradValue> m_value_type{"GradValue"};
     std::shared_ptr<GradKey> m_key;
     std::vector<GradValue::weak_ref_t> m_weak_values;
     size_t m_suppressed = 0;
 
 public:
-    GradTransformation(std::shared_ptr<GradKey> key) : m_key(key) {}
+    GradTransformation() { m_key = std::make_shared<GradKey>(m_value_type); }
 
     auto record_grad(GradValue::ref_t tensor) {
         m_weak_values.push_back(tensor);
         return tensor;
     }
 
-    bool is_grad_value(const ValueRef& value) {
-        if (auto* grad_value = value.as<GradValue>()) {
-            if (grad_value->has_key(m_key)) {
-                return true;
-            }
-        }
-        return false;
-    }
+    bool is_grad_value(const ValueRef& value) { return value.is(m_value_type); }
 
     /**
      * \brief test whether value is related to this GradTransformation
@@ -273,13 +266,7 @@ public:
      * \return GradValue::ref_t
      */
     const GradValue::ref_t& as_grad_value(const ValueRef& value) {
-        auto&& grad_value = value.as_ref<GradValue>();
-        if (grad_value) {
-            if (grad_value->has_key(m_key)) {
-                return grad_value;
-            }
-        }
-        return GradValue::ref_t::nil;
+        return value.as_ref(m_value_type);
     }
 
     bool has_key(std::shared_ptr<GradKey> key) {
@@ -298,6 +285,8 @@ public:
         }
         return value;
     }
+
+    const std::shared_ptr<GradKey>& key() const { return m_key; }
 
     std::string name() const override { return "GradTransformation"; }
 

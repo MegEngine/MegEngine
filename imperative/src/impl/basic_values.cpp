@@ -12,7 +12,7 @@ std::string CompNodeValue::to_string() const {
 }
 
 std::string BoolValue::to_string() const {
-    return (*m_value) ? "true" : "false";
+    return (*this) ? "true" : "false";
 }
 
 std::string HostStorage::to_string() const {
@@ -26,10 +26,10 @@ std::string DeviceStorage::to_string() const {
 std::string HostValue::to_string() const {
     return ssprintf(
             "HostValue{device=%s, dtype=%s, shape=%s}", device().to_string().c_str(),
-            m_dtype.name(), m_shape.to_string().c_str());
+            dtype().name(), shape().to_string().c_str());
 }
 
-HostTensorND HostValue::as_nd(bool allow_scalar) const {
+HostTensorND HostTensor::as_nd(bool allow_scalar) const {
     HostTensorND nd;
     TensorShape tensor_shape;
     if (m_shape.is_scalar()) {
@@ -45,10 +45,10 @@ HostTensorND HostValue::as_nd(bool allow_scalar) const {
 std::string DeviceValue::to_string() const {
     return ssprintf(
             "DeviceValue{device=%s, dtype=%s, shape=%s}", device().to_string().c_str(),
-            m_dtype.name(), m_shape.to_string().c_str());
+            dtype().name(), shape().to_string().c_str());
 }
 
-DeviceTensorND DeviceValue::as_nd(bool allow_scalar) const {
+DeviceTensorND DeviceTensor::as_nd(bool allow_scalar) const {
     DeviceTensorND nd;
     TensorShape tensor_shape;
     if (m_shape.is_scalar()) {

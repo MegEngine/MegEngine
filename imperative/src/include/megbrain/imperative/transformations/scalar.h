@@ -17,7 +17,7 @@
 
 namespace mgb::imperative {
 
-class ScalarValue final : public ValueImpl<ScalarValue, ValueKind::Object> {
+class ScalarValue final : public ObjectValue<ScalarValue> {
 private:
     ValueRef m_value;
 
@@ -47,17 +47,21 @@ public:
 class ScalarTransformation final : public Transformation {
 private:
     ShapeValue::ref_t m_empty_shape;  // []
+    ObjectType<ScalarValue> m_value_type{"ScalarValue"};
+
 public:
     ValueRefList apply_get_attr(const GetAttr& get_attr, Span<ValueRef> inputs);
     ValueRefList apply_transformation(
             const Operator& op, Span<ValueRef> inputs) override;
 
     ValueRef unwrap(ValueRef value) override {
-        mgb_assert(!value.is<ScalarValue>());
+        mgb_assert(!value.is(m_value_type));
         return value;
     }
 
     std::string name() const override { return "ScalarTransformation"; }
+
+    const Type<ScalarValue>& value_type() const { return m_value_type; }
 };
 
 }  // namespace mgb::imperative

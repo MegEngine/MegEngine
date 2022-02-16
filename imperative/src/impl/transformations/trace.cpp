@@ -160,7 +160,7 @@ ValueRefList TracingTransformation::apply_transformation(
         SmallVector<TracingValue::ref_t> wrapped_inputs;
         SmallVector<size_t> input_ids;
         for (auto input : inputs) {
-            auto tracing_value = input.as_ref<TracingValue>();
+            auto tracing_value = input.as_ref(m_value_type);
             if (!tracing_value) {
                 tracing_value =
                         record_var(input, m_capture_as_const, VarKind::External);
@@ -208,7 +208,7 @@ ValueRefList TracingTransformation::apply_transformation(
     } else if (auto* get_attr = op.as<GetAttr>()) {
         auto unwrapped_input = unwrap_var(inputs[0]);
         auto outputs = imperative::apply(op, unwrapped_input);
-        if (auto* tracing_value = inputs[0].as<TracingValue>()) {
+        if (auto* tracing_value = inputs[0].as(m_value_type)) {
             auto& var_info = m_vars[tracing_value->id()];
             switch (get_attr->attr()) {
                 case GetAttr::Shape:
@@ -228,7 +228,7 @@ ValueRefList TracingTransformation::apply_transformation(
     } else if (auto* trace_mark_var = op.as<TraceMarkVar>()) {
         mgb_assert(inputs.size() == 1, "TraceMarkVar expects exactly one input");
         auto input = inputs[0];
-        auto tracing_var = input.as_ref<TracingValue>();
+        auto tracing_var = input.as_ref(m_value_type);
         if (!tracing_var) {
             bool is_input = trace_mark_var->mark().substr(0, 4) == "arg_" ||
                             trace_mark_var->mark().substr(0, 6) == "kwarg_";
@@ -247,7 +247,7 @@ ValueRefList TracingTransformation::apply_transformation(
     } else if (auto* trace_name_var = op.as<RenameValue>()) {
         mgb_assert(inputs.size() == 1, "RenameValue expects exactly one input");
         auto input = inputs[0];
-        auto tracing_var = input.as_ref<TracingValue>();
+        auto tracing_var = input.as_ref(m_value_type);
         if (!tracing_var) {
             tracing_var = record_var(input, m_capture_as_const, VarKind::External);
         } else {
@@ -260,7 +260,7 @@ ValueRefList TracingTransformation::apply_transformation(
     } else if (op.is<GetName>()) {
         mgb_assert(inputs.size() == 1, "GetName expects exactly one input");
         auto input = inputs[0];
-        if (auto tracing_var = input.as_ref<TracingValue>()) {
+        if (auto tracing_var = input.as_ref(m_value_type)) {
             auto name = m_vars[tracing_var->id()].name;
             if (!name.empty()) {
                 return {StringValue::make(name)};
@@ -425,26 +425,12 @@ void CompiledTransformation::compile() {
             }
             auto& node = var_accessors[input].node;
             if (input_vars.empty() && require_link && mm_io_link.node()) {
-                /*mgb_assert(
-                        !input_vars.empty(),
-                        "io-mm operator should have at least one input");*/
                 auto comp_node = mm_io_link.node()->comp_node();
-                // auto comp_node = input_vars[0]->comp_node();
                 node = opr::VirtualDep::make({SymbolVar(node), mm_io_link}, comp_node)
                                .node();
             }
             input_vars.push_back(node);
         }
-        /*if (require_link && mm_io_link.node()) {
-            mgb_assert(
-                    !input_vars.empty(),
-                    "io-mm operator should have at least one input");
-            auto comp_node = mm_io_link.node()->comp_node();
-            // auto comp_node = input_vars[0]->comp_node();
-            input_vars[0] = opr::VirtualDep::make(
-                                    {SymbolVar(input_vars[0]), mm_io_link}, comp_node)
-                                    .node();
-        }*/
         VarNodeArray output_vars;
         if (item.op) {
             output_vars = OpDef::apply_on_var_node(*item.op, input_vars);
@@ -520,7 +506,7 @@ void CompiledTransformation::trace_input(size_t id, ValueRef value) {
         switch (var.kind) {
             case VarKind::External: {
                 trace_assert(
-                        !value.is<TracedValue>(), "expect external node, got internal");
+                        !value.is(m_value_type), "expect external node, got internal");
                 if (var.bound_data) {
                     assert_tensor_equal(var.bound_data, value);
                 } else {
@@ -545,8 +531,8 @@ void CompiledTransformation::trace_input(size_t id, ValueRef value) {
             }
             case VarKind::Internal: {
                 trace_assert(
-                        value.is<TracedValue>(), "expect internal node, got external");
-                auto& traced_value = value.cast<TracedValue>();
+                        value.is(m_value_type), "expect internal node, got external");
+                auto& traced_value = value.cast(m_value_type);
                 trace_assert(traced_value.id() == id, "input id mismatch");
                 break;
             }
@@ -559,7 +545,7 @@ void CompiledTransformation::trace_input(size_t id, ValueRef value) {
 }
 
 auto CompiledTransformation::trace_output(size_t id) -> TracedValue::ref_t {
-    auto traced_value = TracedValue::make(id, &m_vars[id], &m_var_accessors[id]);
+    auto traced_value = m_value_type.make(id, &m_vars[id], &m_var_accessors[id]);
     m_weak_values.push_back(traced_value);
     return traced_value;
 }
@@ -569,7 +555,7 @@ TraceResult::SeqItem& CompiledTransformation::next_instruction() {
     return m_seq[m_pc++];
 }
 
-ShapeValue::ref_t CompiledTransformation::TracedInfo::shape() const {
+ShapeValue::ref_t CompiledTransformation::TracedValue::shape() const {
     if (!m_shape) {
         trace_assert(m_accessor->shape_getter, "shape unreadable");
         m_shape = ShapeValue::make(ValueShape::from(m_accessor->shape_getter()));
@@ -577,14 +563,14 @@ ShapeValue::ref_t CompiledTransformation::TracedInfo::shape() const {
     return m_shape;
 }
 
-DTypeValue::ref_t CompiledTransformation::TracedInfo::dtype() const {
+DTypeValue::ref_t CompiledTransformation::TracedValue::dtype() const {
     return m_var->dtype;
 }
 
-CompNodeValue::ref_t CompiledTransformation::TracedInfo::comp_node() const {
+CompNodeValue::ref_t CompiledTransformation::TracedValue::comp_node() const {
     return m_var->device;
 }
-auto CompiledTransformation::TracedInfo::accessor() const -> const VarAccessor& {
+auto CompiledTransformation::TracedValue::accessor() const -> const VarAccessor& {
     return *m_accessor;
 }
 
@@ -605,7 +591,7 @@ ValueRefList CompiledTransformation::apply_op(
 
 ValueRefList CompiledTransformation::apply_get_attr(
         const GetAttr& get_attr, Span<ValueRef> inputs) {
-    if (auto* traced_value = inputs[0].as<TracedValue>()) {
+    if (auto* traced_value = inputs[0].as(m_value_type)) {
         ValueRef output;
         auto& var_accessor = traced_value->accessor();
         switch (get_attr.attr()) {
@@ -718,15 +704,11 @@ void CompiledTransformation::on_unregister() noexcept {
 
 void CompiledTransformation::execute() {
     mgb_assert(m_executable != nullptr);
-    m_graph_executor = std::thread([&] {
-        try {
-            m_executable->execute();
-            m_executable->wait();
-        } catch (...) {
-            auto exc = std::current_exception();
-            set_exception(exc);
-        }
-    });
+    {
+        MGB_LOCK_GUARD(m_mutex);
+        m_graph_status = 1;
+    }
+    m_cv.notify_all();
 }
 
 void CompiledTransformation::wait() {
@@ -735,8 +717,9 @@ void CompiledTransformation::wait() {
     } catch (...) {
     }
     mgb_assert(m_executable != nullptr);
-    m_graph_executor.join();
-    m_graph_executor = {};
+    std::unique_lock lock{m_mutex};
+    m_cv.wait(lock, [&] { return m_graph_status == 0; });
+    lock.unlock();
     for (auto&& box : m_boxes) {
         box->reset();
     }

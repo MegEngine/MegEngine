@@ -22,7 +22,7 @@
 
 namespace mgb::imperative {
 
-class SymbolValue final : public ValueImpl<SymbolValue, ValueKind::Object> {
+class SymbolValue final : public ObjectValue<SymbolValue> {
 private:
     VarNode* m_node = nullptr;
 
@@ -47,6 +47,7 @@ public:
 class SymbolTransformation final : public Transformation {
 private:
     ComputingGraph* m_graph = nullptr;
+    ObjectType<SymbolValue> m_value_type{"SymbolValue"};
 
 public:
     SymbolTransformation(ComputingGraph* graph) : m_graph(graph) {}
@@ -55,12 +56,12 @@ public:
         if (auto* apply_op = op.as<ApplyOp>()) {
             SmallVector<VarNode*> input_nodes;
             for (auto&& input : inputs) {
-                input_nodes.push_back(input.cast<SymbolValue>().node());
+                input_nodes.push_back(input.cast(m_value_type).node());
             }
             auto output_nodes = OpDef::apply_on_var_node(apply_op->op(), input_nodes);
             ValueRefList outputs(output_nodes.size());
             for (size_t i = 0; i < output_nodes.size(); ++i) {
-                outputs[i] = SymbolValue::make(output_nodes[i]);
+                outputs[i] = m_value_type.make(output_nodes[i]);
             }
             return outputs;
         } else if (auto* create_tensor = op.as<CreateTensor>()) {
@@ -69,9 +70,9 @@ public:
                     args.kind == CreateTensor::Const,
                     "only const value is allowed here");
             auto* node = opr::ImmutableTensor::make(*m_graph, *args.host, {}).node();
-            return {SymbolValue::make(node)};
+            return {m_value_type.make(node)};
         } else if (auto* get_attr = op.as<GetAttr>()) {
-            auto* node = inputs.as_array<1>()[0].cast<SymbolValue>().node();
+            auto* node = inputs.item().cast(m_value_type).node();
             switch (get_attr->attr()) {
                 case GetAttr::DType:
                     return {DTypeValue::make(node->dtype())};
@@ -121,11 +122,13 @@ public:
     }
 
     ValueRef unwrap(ValueRef value) override {
-        mgb_assert(!value.is<SymbolValue>(), "SymbolValue doesn't support unwrap");
+        mgb_assert(!value.is(m_value_type), "SymbolValue doesn't support unwrap");
         return value;
     }
 
     std::string name() const override { return "SymbolTransformation"; }
+
+    const Type<SymbolValue>& value_type() const { return m_value_type; }
 };
 
 }  // namespace mgb::imperative

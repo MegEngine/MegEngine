@@ -67,10 +67,9 @@ struct TransformationManager {
     }
 };
 
-class PyValue final
-        : public MixinValueImpl<PyValue, ValueKind::Object, pybind11::object> {
+class PyValue final : public PrimitiveValue<PyValue, pybind11::object> {
 public:
-    using MixinValueImpl::MixinValueImpl;
+    using PrimitiveValue::PrimitiveValue;
 
     std::string to_string() const {
         return pybind11::str((const pybind11::object&)*this).cast<std::string>();

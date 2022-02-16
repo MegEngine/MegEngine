@@ -123,7 +123,7 @@ TEST(TestImperative, BackwardGraphBasic) {
         }
     }
     inputs.clear();
-    auto input_grads = result.graph.apply(
+    auto input_grads = result.graph.apply<TensorPtr>(
             backward_graph_inputs, apply_shared_on_physical_tensor,
             [&](auto&& x) { return x; });
     mgb_assert(input_grads.size() == input_has_grad.size());
@@ -177,7 +177,7 @@ TEST(TestImperative, BackwardGraphIdentity) {
         }
     }
     inputs.clear();
-    auto input_grads = result.graph.apply(
+    auto input_grads = result.graph.apply<TensorPtr>(
             backward_graph_inputs, apply_shared_on_physical_tensor,
             [&](auto&& x) { return x; });
     mgb_assert(input_grads.size() == input_has_grad.size());
@@ -244,11 +244,11 @@ TEST(TestImperative, OptimizedBackwardGraphBasic) {
             bg, {a_tn, b_tn}, {c_tn}, {dc_tn});
     auto grads = expand_grads(
             bg.output_mask,
-            bg.graph.apply(
+            bg.graph.apply<TensorPtr>(
                     backward_graph_inputs, apply_shared_on_physical_tensor,
                     [&](auto&& x) { return x; }));
 
-    auto precomp = obg.precomp.apply(
+    auto precomp = obg.precomp.apply<TensorPtr>(
             SmallVector<TensorPtr>{a_tn, b_tn, c_tn}, apply_shared_on_physical_tensor,
             [&](auto&& x) { return x; });
     ASSERT_EQ(precomp.size(), 2);
@@ -261,7 +261,7 @@ TEST(TestImperative, OptimizedBackwardGraphBasic) {
             obg, precomp, {a_tn, b_tn}, {c_tn}, {dc_tn});
     auto grads2 = expand_grads(
             obg.input_has_grad,
-            obg.backward.apply(
+            obg.backward.apply<TensorPtr>(
                     backward_inputs, apply_shared_on_physical_tensor,
                     [&](auto&& x) { return x; }));
 

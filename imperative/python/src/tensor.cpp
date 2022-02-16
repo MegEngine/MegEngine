@@ -56,42 +56,44 @@ WeakKeyMap<ValueWeakRef, py::object> module_trace_info_map;
 
 struct SymbolVarContext {
     TransformationContext context;
-    cg::ComputingGraph* graph;
+    std::shared_ptr<SymbolTransformation> symbol_tsf;
+    std::shared_ptr<ScalarTransformation> scalar_tsf;
 
-    SymbolVarContext(cg::ComputingGraph* graph) : graph(graph) {
+    SymbolVarContext(cg::ComputingGraph* graph) {
+        symbol_tsf = std::make_shared<SymbolTransformation>(graph);
+        scalar_tsf = std::make_shared<ScalarTransformation>();
         Transformation::swap_context(context);
     }
 
     void init() {
-        std::make_shared<SymbolTransformation>(graph)->register_at(
-                Transformation::top());
-        std::make_shared<ScalarTransformation>()->register_at(Transformation::top());
+        symbol_tsf->register_at(Transformation::top());
+        scalar_tsf->register_at(Transformation::top());
+    }
+
+    ValueRef symvar2val(py::handle py_symbol_var) {
+        auto* symbol_var = py_symbol_var.cast<PySymbolVar*>();
+        ValueRef value = symbol_tsf->value_type().make(symbol_var->m_node);
+        if (symbol_var->is_scalar) {
+            value = scalar_tsf->value_type().make(value);
+        }
+        return value;
+    }
+
+    py::object val2symvar(py::handle typeobj, ValueRef value) {
+        bool is_scalar = false;
+        if (auto* scalar_value = value.as(scalar_tsf->value_type())) {
+            value = scalar_value->value();
+            is_scalar = true;
+        }
+        auto* node = value.cast(symbol_tsf->value_type()).node();
+        auto py_symbol_var =
+                typeobj(pybind11::cast(node, pybind11::return_value_policy::automatic));
+        py_symbol_var.cast<PySymbolVar*>()->is_scalar = is_scalar;
+        return py_symbol_var;
     }
 
     ~SymbolVarContext() { Transformation::swap_context(context); }
 };
-
-ValueRef symvar2val(py::handle py_symbol_var) {
-    auto* symbol_var = py_symbol_var.cast<PySymbolVar*>();
-    ValueRef value = SymbolValue::make(symbol_var->m_node);
-    if (symbol_var->is_scalar) {
-        value = ScalarValue::make(value);
-    }
-    return value;
-}
-
-py::object val2symvar(py::handle typeobj, ValueRef value) {
-    bool is_scalar = false;
-    if (auto* scalar_value = value.as<ScalarValue>()) {
-        value = scalar_value->value();
-        is_scalar = true;
-    }
-    auto* node = value.cast<SymbolValue>().node();
-    auto py_symbol_var =
-            typeobj(pybind11::cast(node, pybind11::return_value_policy::automatic));
-    py_symbol_var.cast<PySymbolVar*>()->is_scalar = is_scalar;
-    return py_symbol_var;
-}
 
 }  // namespace
 
@@ -130,19 +132,21 @@ PyObject* py_apply(
         auto op = py::handle(py_op).cast<std::shared_ptr<OpDef>>();
         SmallVector<ValueRef, 8> tensors(nargs);
 
-        if (py::isinstance<PySymbolVar>(py::handle(args[0]))) {
+        bool is_symbol_var = (!TensorWrapper::try_cast(args[0])) &&
+                             py::isinstance<PySymbolVar>(py::handle(args[0]));
+        if (is_symbol_var) {
             // swap to a special context to reuse scalar handle
             SymbolVarContext context(
                     py::handle(args[0]).cast<PySymbolVar*>()->m_node->owner_graph());
             context.init();
             for (size_t i = 0; i < nargs; ++i) {
-                tensors[i] = symvar2val(args[i]);
+                tensors[i] = context.symvar2val(args[i]);
             }
             auto outputs = imperative::apply(*op, tensors);
             auto ret = pybind11::tuple(outputs.size());
             auto typeobj = py::handle(args[0]).get_type();
             for (size_t i = 0; i < outputs.size(); ++i) {
-                ret[i] = val2symvar(typeobj, outputs[i]);
+                ret[i] = context.val2symvar(typeobj, outputs[i]);
             }
             return ret.release().ptr();
         }
@@ -161,7 +165,7 @@ PyObject* py_apply(
             }
         }
 
-        auto outputs = imperative::apply(*op, tensors);
+        auto outputs = [&] { return imperative::apply(*op, tensors); }();
         size_t nout = outputs.size();
         auto ret = py::tuple(nout);
         for (size_t i = 0; i < nout; ++i) {
@@ -1573,9 +1577,9 @@ void init_tensor(py::module m) {
             SymbolVarContext context(graph);
             context.init();
             auto output = reduce_to_scalar(
-                    *op.cast<std::shared_ptr<OpDef>>(), symvar2val(tensor));
+                    *op.cast<std::shared_ptr<OpDef>>(), context.symvar2val(tensor));
             auto typeobj = tensor.get_type();
-            return val2symvar(typeobj, output);
+            return context.val2symvar(typeobj, output);
         } else {
             auto* tw = TensorWrapper::try_cast(tensor.ptr());
             auto output = reduce_to_scalar(

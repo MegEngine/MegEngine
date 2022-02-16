@@ -331,6 +331,7 @@ void ChannelImpl::dispatch_kernel(
     cmd.inputs = std::move(input_infos);
     cmd.outputs.reserve(output_descs.size());
     outputs->reserve(output_descs.size());
+
     for (int i = 0; i < output_descs.size(); ++i) {
         auto&& desc = output_descs[i];
         auto info = alloc();
@@ -730,7 +731,8 @@ void ChannelImpl::do_apply_op(const ApplyOp& cmd, std::string reason) {
                 input_descs.push_back({{{}, input->dtype()}, input->comp_node()});
             }
             auto forward_graph = OpDef::make_forward_graph(def, input_descs);
-            auto outputs = forward_graph.apply(inputs, apply_functor, const_functor);
+            auto outputs = forward_graph.apply<TensorPtr>(
+                    inputs, apply_functor, const_functor);
             return outputs;
         }
         return OpDef::apply_on_physical_tensor(def, inputs);

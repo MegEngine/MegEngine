@@ -19,6 +19,7 @@
 
 #include "range/v3/all.hpp"
 
+#include "./helper.h"
 #include "./transformation.h"
 
 namespace py = pybind11;
@@ -30,9 +31,7 @@ namespace {
 std::unordered_map<std::shared_ptr<GradKey>, GradKeyWrapper*> grad_key_map;
 }
 
-GradKeyWrapper::GradKeyWrapper() : m_key(std::make_shared<GradKey>()) {
-    grad_key_map[m_key] = this;
-}
+GradKeyWrapper::GradKeyWrapper() {}
 
 void GradKeyWrapper::attach(PyObject* const* args, size_t nargs) {
     if (nargs != 2) {
@@ -77,8 +76,8 @@ pybind11::function GradKeyWrapper::get_backward_closure(
     for (auto&& tensor : tensors) {
         args.push_back(TensorWrapper::try_cast(tensor.ptr())->m_tensor->data());
     }
-    auto closure = imperative::apply(GetBackwardColsure(self->m_key), args)[0]
-                           .as<FunctionValue>();
+    auto closure_value = imperative::apply(GetBackwardColsure(self->m_key), args)[0];
+    auto closure = closure_value.as_ref<FunctionValue>();
     auto py_function = [closure](std::vector<TensorWrapper*> tensors) {
         std::vector<ValueRef> args;
         for (auto* tw : tensors) {
@@ -90,11 +89,14 @@ pybind11::function GradKeyWrapper::get_backward_closure(
 }
 
 PyObject* GradKeyWrapper::get_name() {
-    return py::cast(m_key->name()).release().ptr();
+    return py::cast(m_name).release().ptr();
 }
 
 void GradKeyWrapper::set_name(py::handle name) {
-    m_key->name(py::cast<std::string>(name));
+    m_name = py::cast<std::string>(name);
+    if (m_key) {
+        m_key->name(m_name);
+    }
 }
 
 PyObject* GradKeyWrapper::is_attached_to(PyObject* const* args, size_t nargs) {
@@ -115,7 +117,10 @@ PyObject* GradKeyWrapper::is_attached_to(PyObject* const* args, size_t nargs) {
 }
 
 void GradKeyWrapper::enter() {
-    m_transformation = std::make_shared<GradTransformation>(m_key);
+    m_transformation = std::make_shared<GradTransformation>();
+    m_key = m_transformation->key();
+    m_key->name(m_name);
+    grad_key_map[m_key] = this;
     TransformationManager::get_instance().register_at<TransformationManager::Grad>(
             m_transformation);
 }
@@ -123,6 +128,8 @@ void GradKeyWrapper::enter() {
 void GradKeyWrapper::exit() {
     TransformationManager::get_instance().unregister<TransformationManager::Grad>(
             m_transformation);
+    grad_key_map.erase(m_key);
+    m_key = {};
     m_transformation.reset();
 }
 
@@ -138,8 +145,6 @@ GradKeyWrapper* GradKeyWrapper::get(std::shared_ptr<GradKey> key) {
     return grad_key_map.at(key);
 }
 
-GradKeyWrapper::~GradKeyWrapper() {
-    grad_key_map.erase(m_key);
-}
+GradKeyWrapper::~GradKeyWrapper() {}
 
 }  // namespace mgb::imperative::python

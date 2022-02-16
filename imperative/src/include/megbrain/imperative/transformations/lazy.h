@@ -22,32 +22,27 @@
 
 namespace mgb::imperative {
 
-class LazyEvalInfo {
+class LazyEvalValue final : public ObjectValue<LazyEvalValue> {
 private:
     VarNode* m_node = nullptr;
     ValueRef m_bound_data;
     std::string m_name;
 
 public:
-    LazyEvalInfo() = default;
-    LazyEvalInfo(VarNode* node, ValueRef bound_data, std::string name)
+    LazyEvalValue(VarNode* node, ValueRef bound_data, std::string name)
             : m_node(node), m_bound_data(bound_data), m_name(name) {}
     VarNode* node() const { return m_node; }
 
     ValueRef bound_data() const { return m_bound_data; }
 
     std::string name() const { return m_name; }
-};
-
-class LazyEvalValue final
-        : public MixinValueImpl<LazyEvalValue, ValueKind::Object, LazyEvalInfo> {
-public:
-    using MixinValueImpl::MixinValueImpl;
 
     std::string to_string() const override {
         return ssprintf(
                 "LazyEvalValue{node=%p, name=%s}", node(), node()->name().c_str());
     }
+
+    void clear() override {}
 };
 
 /**
@@ -67,6 +62,7 @@ private:
     std::vector<LazyEvalValue::weak_ref_t> m_weak_vars;
     SymbolVar m_io_link = nullptr;
     std::exception_ptr m_graph_exc;
+    ObjectType<LazyEvalValue> m_value_type{"LazyEvalValue"};
 
 public:
     LazyEvalTransformation(bool no_exec) : m_no_exec(no_exec) {
@@ -75,7 +71,7 @@ public:
 
     LazyEvalValue::ref_t record_var(
             VarNode* node, ValueRef bound_data = {}, std::string name = {}) {
-        auto lazy_eval_val = LazyEvalValue::make(node, bound_data, name);
+        auto lazy_eval_val = m_value_type.make(node, bound_data, name);
         m_weak_vars.push_back(lazy_eval_val);
         return lazy_eval_val;
     }
@@ -86,7 +82,7 @@ public:
             const Operator& op, Span<ValueRef> inputs) override;
 
     ValueRef unwrap(ValueRef value) override {
-        mgb_assert(!value.is<LazyEvalValue>());
+        mgb_assert(!value.is(m_value_type));
         return value;
     }
 

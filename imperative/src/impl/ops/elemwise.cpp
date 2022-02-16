@@ -11,6 +11,7 @@
 
 #include "megbrain/imperative/opr_utility.h"
 #include "megbrain/imperative/ops/autogen.h"
+#include "megbrain/imperative/utils/stats.h"
 #include "megbrain/opr/basic_arith.h"
 #include "megbrain/opr/utility.h"
 
@@ -101,7 +102,7 @@ void apply_on_device_tensornd(
         const OpDef& def, const SmallVector<DeviceTensorND>& inputs,
         SmallVector<DeviceTensorND>* outputs) {
     auto&& op_def = def.cast_final_safe<Elemwise>();
-    auto trait = megdnn::Elemwise::ModeTrait::from_mode(op_def.mode);
+    auto&& trait = megdnn::Elemwise::ModeTrait::from_mode(op_def.mode);
     mgb_assert(
             inputs.size() == trait.arity, "%s expects %u inputs; got %zu actually",
             trait.name, trait.arity, inputs.size());

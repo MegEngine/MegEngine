@@ -63,7 +63,7 @@ auto CreateTensor::parse(Span<ValueRef> inputs) const -> Args {
                     MegBrainError,
                     "unknown input type, expects HostStorage or DeviceStorage, got "
                     "%s",
-                    input.name()->c_str());
+                    input.to_string().c_str());
         }
     }
     mgb_assert(

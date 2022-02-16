@@ -18,7 +18,7 @@
 
 namespace mgb::imperative {
 
-struct InterpreterInfo {
+class InterpreterValue final : public ObjectValue<InterpreterValue> {
 public:
     using Handle = interpreter::Interpreter::Handle;
     using Channel = interpreter::Interpreter::Channel;
@@ -46,8 +46,7 @@ private:
     mutable ShapeValue::ref_t m_shape;
 
 public:
-    InterpreterInfo() = default;
-    InterpreterInfo(LocalPtr<RAIIHandle> handle, std::string name = {})
+    InterpreterValue(LocalPtr<RAIIHandle> handle, std::string name = {})
             : m_handle(handle), m_name(name) {}
 
     const LocalPtr<RAIIHandle>& handle() const { return m_handle; }
@@ -57,18 +56,14 @@ public:
     ShapeValue::ref_t shape() const;
 
     std::string name() const { return m_name; }
-};
-
-class InterpreterValue final
-        : public MixinValueImpl<InterpreterValue, ValueKind::Object, InterpreterInfo> {
-public:
-    using MixinValueImpl::MixinValueImpl;
 
     std::string to_string() const override {
         return ssprintf(
                 "Handle{ptr=%p, name=%s}", handle().get(),
                 imperative::quoted(name()).c_str());
     }
+
+    void clear() override { m_handle = {}; }
 };
 
 /**
@@ -82,11 +77,12 @@ class InterpreterTransformation final : public Transformation {
 public:
     using Interpreter = interpreter::Interpreter;
     using Handle = Interpreter::Handle;
-    using SharedHandle = LocalPtr<InterpreterInfo::RAIIHandle>;
+    using SharedHandle = LocalPtr<InterpreterValue::RAIIHandle>;
     using Channel = Interpreter::Channel;
 
 private:
     std::shared_ptr<Channel> m_channel;
+    ObjectType<InterpreterValue> m_value_type{"InterpreterValue"};
 
 public:
     explicit InterpreterTransformation(std::shared_ptr<Channel> channel)
@@ -105,7 +101,7 @@ public:
             const Operator& op, Span<ValueRef> inputs) override;
 
     ValueRef unwrap(ValueRef value) override {
-        mgb_assert(!value.is<InterpreterValue>());
+        mgb_assert(!value.is(m_value_type));
         return value;
     }
 

@@ -25,77 +25,66 @@ class GradKey;
 
 using GenericFunction = std::function<ValueRefList(Span<ValueRef>)>;
 
-class ShapeValue final
-        : public MixinValueImpl<ShapeValue, ValueKind::Primitive, ValueShape> {
+class ShapeValue final : public PrimitiveValue<ShapeValue, ValueShape> {
 public:
-    using MixinValueImpl::MixinValueImpl;
+    using PrimitiveValue::PrimitiveValue;
 
     std::string to_string() const override;
 };
 
-class CompNodeValue final
-        : public MixinValueImpl<CompNodeValue, ValueKind::Primitive, CompNode> {
+class CompNodeValue final : public PrimitiveValue<CompNodeValue, CompNode> {
 public:
-    using MixinValueImpl::MixinValueImpl;
+    using PrimitiveValue::PrimitiveValue;
 
     std::string to_string() const override;
+};
+
+class Boolean {
+private:
+    bool m_value;
+
+public:
+    Boolean() = default;
+    Boolean(bool value) : m_value(value) {}
+
+    operator bool() const { return m_value; }
 };
 
 // TODO: override factory method
-class BoolValue final : public ValueImpl<BoolValue, ValueKind::Primitive> {
-private:
-    std::optional<bool> m_value;
-
+class BoolValue final : public PrimitiveValue<BoolValue, Boolean> {
 public:
-    BoolValue(bool value) : m_value{value} {}
-    operator bool() const { return *m_value; }
-
-    std::string to_string() const override;
-
-    void clear() override { m_value.reset(); }
-};
-
-class HostStorage final
-        : public MixinValueImpl<HostStorage, ValueKind::Primitive, HostTensorStorage> {
-public:
-    using MixinValueImpl::MixinValueImpl;
+    using PrimitiveValue::PrimitiveValue;
 
     std::string to_string() const override;
 };
 
-class DeviceStorage final
-        : public MixinValueImpl<
-                  DeviceStorage, ValueKind::Primitive, DeviceTensorStorage> {
+class HostStorage final : public PrimitiveValue<HostStorage, HostTensorStorage> {
 public:
-    using MixinValueImpl::MixinValueImpl;
+    using PrimitiveValue::PrimitiveValue;
 
     std::string to_string() const override;
 };
 
-/**
- * \brief like HostTensorND mixin, but allow scalar value
- *
- */
-class HostValue final : public ValueImpl<HostValue, ValueKind::Primitive> {
+class DeviceStorage final : public PrimitiveValue<DeviceStorage, DeviceTensorStorage> {
+public:
+    using PrimitiveValue::PrimitiveValue;
+
+    std::string to_string() const override;
+};
+
+class HostTensor {
 private:
     DType m_dtype;
     ValueShape m_shape;
     HostTensorStorage m_storage;
 
 public:
-    HostValue(DType dtype, ValueShape shape, HostTensorStorage storage)
+    HostTensor() = default;
+    HostTensor(DType dtype, ValueShape shape, HostTensorStorage storage)
             : m_dtype(dtype), m_shape(shape), m_storage(storage) {}
-    HostValue(HostTensorND value)
-            : HostValue(
+    HostTensor(HostTensorND value)
+            : HostTensor(
                       value.dtype(), ValueShape::from(value.shape()), value.storage()) {
-    }
-
-    std::string to_string() const override;
-
-    void clear() override {
-        m_dtype = {};
-        m_shape = {};
-        m_storage = {};
     }
 
     DType dtype() const { return m_dtype; }
@@ -112,29 +101,29 @@ public:
 };
 
 /**
- * \brief like DeviceTensorND mixin, but allow scalar value
+ * \brief like HostTensorND mixin, but allow scalar value
  *
  */
-class DeviceValue final : public ValueImpl<DeviceValue, ValueKind::Primitive> {
+class HostValue final : public PrimitiveValue<HostValue, HostTensor> {
+public:
+    using PrimitiveValue::PrimitiveValue;
+
+    std::string to_string() const override;
+};
+
+class DeviceTensor {
 private:
     DType m_dtype;
     ValueShape m_shape;
     DeviceTensorStorage m_storage;
 
 public:
-    DeviceValue(DType dtype, ValueShape shape, DeviceTensorStorage storage)
+    DeviceTensor() = default;
+    DeviceTensor(DType dtype, ValueShape shape, DeviceTensorStorage storage)
             : m_dtype(dtype), m_shape(shape), m_storage(std::move(storage)) {}
-    DeviceValue(const DeviceTensorND& value)
-            : DeviceValue(
+    DeviceTensor(const DeviceTensorND& value)
+            : DeviceTensor(
                       value.dtype(), ValueShape::from(value.shape()), value.storage()) {
-    }
-
-    std::string to_string() const override;
-
-    void clear() override {
-        m_dtype = {};
-        m_shape = {};
-        m_storage = {};
     }
 
     DType dtype() const { return m_dtype; }
@@ -145,26 +134,34 @@ public:
     DeviceTensorND as_nd(bool allow_scalar = false) const;
 };
 
-class FunctionValue final
-        : public MixinValueImpl<FunctionValue, ValueKind::Primitive, GenericFunction> {
+/**
+ * \brief like DeviceTensorND mixin, but allow scalar value
+ *
+ */
+class DeviceValue final : public PrimitiveValue<DeviceValue, DeviceTensor> {
 public:
-    using MixinValueImpl::MixinValueImpl;
+    using PrimitiveValue::PrimitiveValue;
 
     std::string to_string() const override;
 };
 
-class DTypeValue final
-        : public MixinValueImpl<DTypeValue, ValueKind::Primitive, DType> {
+class FunctionValue final : public PrimitiveValue<FunctionValue, GenericFunction> {
 public:
-    using MixinValueImpl::MixinValueImpl;
+    using PrimitiveValue::PrimitiveValue;
 
     std::string to_string() const override;
 };
 
-class StringValue final
-        : public MixinValueImpl<StringValue, ValueKind::Primitive, std::string> {
+class DTypeValue final : public PrimitiveValue<DTypeValue, DType> {
 public:
-    using MixinValueImpl::MixinValueImpl;
+    using PrimitiveValue::PrimitiveValue;
+
+    std::string to_string() const override;
+};
+
+class StringValue final : public PrimitiveValue<StringValue, std::string> {
+public:
+    using PrimitiveValue::PrimitiveValue;
 
     std::string to_string() const override;
 };
@@ -180,10 +177,9 @@ public:
     std::string message() const { return m_message; }
 };
 
-class ErrorValue final
-        : public MixinValueImpl<ErrorValue, ValueKind::Primitive, Error> {
+class ErrorValue final : public PrimitiveValue<ErrorValue, Error> {
 public:
-    using MixinValueImpl::MixinValueImpl;
+    using PrimitiveValue::PrimitiveValue;
 
     std::string to_string() const override;
 };

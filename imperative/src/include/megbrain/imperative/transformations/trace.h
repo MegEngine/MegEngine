@@ -100,22 +100,15 @@ public:
     }
 };
 
-class TracingInfo {
+class TracingValue final : public ObjectValue<TracingValue> {
 private:
     ValueRef m_value = {};
     size_t m_id = 0;
 
 public:
-    TracingInfo() = default;
-    TracingInfo(ValueRef value, size_t id) : m_value(value), m_id(id) {}
+    TracingValue(ValueRef value, size_t id) : m_value(value), m_id(id) {}
     ValueRef value() const { return m_value; }
     size_t id() const { return m_id; }
-};
-
-class TracingValue final
-        : public MixinValueImpl<TracingValue, ValueKind::Object, TracingInfo> {
-public:
-    using MixinValueImpl::MixinValueImpl;
 
     std::string to_string() const override {
         return ssprintf(
@@ -126,6 +119,8 @@ public:
     void on_watch() override { value().watch(); }
 
     void on_unwatch() override { value().unwatch(); }
+
+    void clear() override { m_value = {}; }
 };
 
 /**
@@ -146,6 +141,7 @@ private:
     std::vector<TracingValue::weak_ref_t> m_weak_vars;
     bool m_capture_as_const = false;
     bool m_record_input_shapes = false;
+    ObjectType<TracingValue> m_value_type{"TracingValue"};
 
 public:
     TracingTransformation(bool capture_as_const, bool record_input_shapes)
@@ -162,7 +158,7 @@ public:
      */
     TypedValueRef<TracingValue> record_var(ValueRef value, bool capture, VarKind kind) {
         size_t id = m_vars.size();
-        auto wrapped_value = TracingValue::make(value, id);
+        auto wrapped_value = m_value_type.make(value, id);
         m_vars.push_back({id, value.dtype(), value.device()});
         auto& var = m_vars.back();
         if (capture) {
@@ -179,7 +175,7 @@ public:
         return wrapped_value;
     }
     ValueRef unwrap_var(ValueRef value) {
-        if (auto* tracing_value = value.as<TracingValue>()) {
+        if (auto* tracing_value = value.as(m_value_type)) {
             return tracing_value->value();
         }
         return value;
@@ -189,7 +185,7 @@ public:
             const Operator& op, Span<ValueRef> inputs) override;
 
     ValueRef unwrap(ValueRef value) override {
-        if (auto* tracing_value = value.as<TracingValue>()) {
+        if (auto* tracing_value = value.as(m_value_type)) {
             return tracing_value->value();
         }
         return value;
@@ -234,7 +230,7 @@ public:
         std::function<void(std::exception_ptr)> exc_setter;
     };
 
-    class TracedInfo {
+    class TracedValue final : public ObjectValue<TracedValue> {
     private:
         size_t m_id = 0;
         VarInfo* m_var = nullptr;
@@ -244,8 +240,7 @@ public:
         mutable CompNodeValue::ref_t m_comp_node;
 
     public:
-        TracedInfo() = default;
-        TracedInfo(size_t id, VarInfo* var, VarAccessor* accessor)
+        TracedValue(size_t id, VarInfo* var, VarAccessor* accessor)
                 : m_id(id), m_var(var), m_accessor(accessor) {}
         size_t id() const { return m_id; }
         ShapeValue::ref_t shape() const;
@@ -256,16 +251,12 @@ public:
         void set_exception(std::exception_ptr exc) const {
             m_accessor->exc_setter(exc);
         }
-    };
-
-    class TracedValue final
-            : public MixinValueImpl<TracedValue, ValueKind::Object, TracedInfo> {
-    public:
-        using MixinValueImpl::MixinValueImpl;
 
         std::string to_string() const override {
             return ssprintf("TracedValue{\"id\"=%zu}", id());
         }
+
+        void clear() override {}
     };
 
 private:
@@ -280,9 +271,12 @@ private:
     std::function<bool(ValueRef, ValueRef)> m_value_comparator;
     bool m_input_shape_static;
     std::mutex m_mutex;
+    std::condition_variable m_cv;
     std::exception_ptr m_graph_exc;
+    int m_graph_status = 0;  // 0 = stop, 1 = running, 2 = finalizing
     std::vector<std::shared_ptr<BoxBase>> m_boxes;
     ComputingGraph::OutputSpec m_output_spec;
+    ObjectType<TracedValue> m_value_type{"TracedValue"};
 
 public:
     CompiledTransformation(TraceResult result, bool input_shape_static)
@@ -292,6 +286,27 @@ public:
         m_graph = ComputingGraph::make();
         options().no_force_inplace = true;
         options().async_exec_level = 0b100;
+        m_graph_executor = std::thread([&] {
+            while (true) {
+                std::unique_lock lock{m_mutex};
+                m_cv.wait(lock, [&] { return m_graph_status != 0; });
+                lock.unlock();
+                if (m_graph_status == 2) {
+                    break;
+                }
+                try {
+                    m_executable->execute();
+                    m_executable->wait();
+                } catch (...) {
+                    auto exc = std::current_exception();
+                    set_exception(exc);
+                }
+                lock.lock();
+                m_graph_status = 0;
+                lock.unlock();
+                m_cv.notify_all();
+            }
+        });
     }
 
     ComputingGraph& graph() { return *m_graph; }
@@ -350,7 +365,7 @@ public:
     void on_unregister() noexcept override;
 
     ValueRef unwrap(ValueRef value) override {
-        mgb_assert(!value.is<TracedValue>());
+        mgb_assert(!value.is(m_value_type));
         return value;
     }
 
@@ -367,6 +382,15 @@ public:
         auto box = Box<T>::make();
         m_boxes.push_back(box);
         return box;
+    }
+
+    ~CompiledTransformation() {
+        {
+            MGB_LOCK_GUARD(m_mutex);
+            m_graph_status = 2;
+        }
+        m_cv.notify_all();
+        m_graph_executor.join();
     }
 };
 

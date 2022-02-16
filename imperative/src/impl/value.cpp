@@ -25,16 +25,16 @@ ValueRef::storage_t& ValueRef::storage() const {
     return m_storage;
 }
 
-const Value* ValueRef::as(size_t typecode) const {
+const Value* ValueRef::as(const IType& type) const {
     auto&& storage = this->storage();
-    if (storage->m_typecode != typecode) {
+    if (storage->type() != type) {
         return nullptr;
     }
     return static_cast<Value*>(storage.get());
 }
 
-bool ValueRef::is(size_t typecode) const {
-    return this->storage()->m_typecode == typecode;
+bool ValueRef::is(const IType& type) const {
+    return this->storage()->type() == type;
 }
 
 TypedValueRef<DeviceValue> ValueRef::dev_tensor() const {
@@ -106,9 +106,7 @@ std::string ValueRef::raw_type() const {
     if (!m_storage) {
         return "null";
     }
-    auto& types = Value::registered_types();
-    mgb_assert(types.size() > m_storage->m_typecode);
-    return types[m_storage->m_typecode].name();
+    return m_storage->type().name();
 }
 
 bool ValueRef::watching() const {
@@ -137,7 +135,7 @@ ValueRef ValueWeakRef::lock() {
     return {strong_storage};
 }
 
-Value::Value(size_t typecode) : m_typecode{typecode} {
+Value::Value() {
     m_id = nr_values++;
 }
 
@@ -145,17 +143,6 @@ Value::~Value() {
     if (m_watching) {
         debug::notify_event("dtor");
     }
-}
-
-size_t Value::register_type(std::type_index type) {
-    auto& types = const_cast<std::vector<std::type_index>&>(registered_types());
-    types.push_back(type);
-    return types.size() - 1;
-}
-
-const std::vector<std::type_index>& Value::registered_types() {
-    static std::vector<std::type_index> sm_registered_types;
-    return sm_registered_types;
 }
 
 void Value::register_value(ValueRef value) {
@@ -188,7 +175,7 @@ std::vector<ValueRef> Value::end_record_values() {
 }
 
 void Value::try_rethrow() {
-    if (m_typecode == ErrorValue::TYPE_CODE) {
+    if (type() == PrimitiveType<ErrorValue>::instance) {
         auto message = static_cast<ErrorValue*>(this)->message();
         mgb_throw(MegBrainError, "invalid value: %s", message.c_str());
     }
@@ -198,13 +185,9 @@ inline void ValueRefList::init(size_t nr_elems) {
     m_size = nr_elems;
     if (m_size > 0) {
         if (m_size == 1) {
-            m_data = inline_storage();
+            m_data = new (inline_storage()) ValueRef();
         } else {
-            auto& context = Transformation::get_context();
-            m_data = context.allocator.allocate(m_size);
-        }
-        for (size_t i = 0; i < m_size; ++i) {
-            new (m_data + i) ValueRef();
+            m_data = new ValueRef[m_size];
         }
     } else {
         m_data = nullptr;
@@ -214,9 +197,6 @@ inline void ValueRefList::init(size_t nr_elems) {
 ValueRefList::ValueRefList(size_t nr_elems) {
     init(nr_elems);
 }
-
-/*ValueRefList::ValueRefList(std::initializer_list<ValueRef> values)
-        : ValueRefList(values.begin(), values.end()) {}*/
 
 ValueRefList::ValueRefList(const ValueRefList& rhs)
         : ValueRefList(rhs.cbegin(), rhs.cend()) {}
@@ -271,14 +251,12 @@ ValueRefList::~ValueRefList() {
 }
 
 void ValueRefList::clear() {
-    for (size_t i = 0; i < m_size; ++i) {
-        m_data[i].~ValueRef();
-    }
     if (m_data) {
         if (m_size != 1) {
-            Transformation::get_context().allocator.deallocate(m_data, m_size);
+            delete[] m_data;
         } else {
             mgb_assert(m_data == inline_storage());
+            m_data->~ValueRef();
         }
     }
     m_data = nullptr;

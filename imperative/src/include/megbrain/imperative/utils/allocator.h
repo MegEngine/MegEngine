@@ -11,7 +11,9 @@
 
 #pragma once
 
+#include <optional>
 #include <typeindex>
+#include <vector>
 
 #include "megbrain/utils/mempool.h"
 #include "megbrain/utils/metahelper.h"
