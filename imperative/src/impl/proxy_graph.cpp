@@ -232,7 +232,6 @@ public:
 
         // fill args for infer_func
         cg::static_infer::InpVal args{1};
-        args.val.reserve(desc->deps.size());
         auto push_shape = [&args](const TensorShape* shape) {
             args.val.emplace_back();
             args.val.back().m_shape = shape;
@@ -607,8 +606,6 @@ EncodedSubgraph ProxyGraph::make_backward_graph(
     }
 
     // set backward graph inputs
-    igraph.inputs.reserve(nr_backward_graph_inputs);
-    result.input_mask.reserve(nr_backward_graph_inputs);
     auto write_inputs = [&igraph, &var2idx, &result](const VarNodeArray& vars) {
         for (auto&& i : vars) {
             auto&& iter = var2idx.find(i);

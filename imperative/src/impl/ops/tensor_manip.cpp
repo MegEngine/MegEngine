@@ -87,7 +87,6 @@ void apply_on_device_tensornd(
 HostTensorND get_var_shape_host_tensor(
         const OpDef& def, const SmallVector<TensorPtr>& inputs) {
     SmallVector<DeviceTensorND> input_tensornds;
-    input_tensornds.reserve(inputs.size());
     for (auto&& inp : inputs) {
         input_tensornds.push_back(inp->dev_tensor());
     }

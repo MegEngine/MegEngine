@@ -238,7 +238,6 @@ void ChannelImpl::dispatch_default_cpu(
     MGB_RECORD_EVENT(ShapeInferEvent, validated);
 
     SmallVector<DeviceTensorND> input_tensornds;
-    input_tensornds.reserve(input_descs.size());
     CompNode output_cn;
     {
         MGB_LOCK_GUARD(m_mutex);
@@ -261,9 +260,7 @@ void ChannelImpl::dispatch_default_cpu(
         }
     }
 
-    outputs->reserve(output_descs.size());
     SmallVector<DeviceTensorND> output_tensornds;
-    output_tensornds.reserve(output_descs.size());
     for (auto&& desc : output_descs) {
         // TODO: may conflict with condtake, which need alloc inside
         mgb_assert(!desc.layout.is_empty());
@@ -290,7 +287,6 @@ void ChannelImpl::dispatch_default_cpu(
     }
 
     SmallVector<TensorInfo*> output_infos;
-    output_infos.reserve(output_descs.size());
     for (auto&& tensornd : output_tensornds) {
         HostTensorND host_tensornd =
                 HostTensorND::make_proxy(tensornd).proxy_to_comp_node(output_cn);
@@ -329,9 +325,6 @@ void ChannelImpl::dispatch_kernel(
 
     ApplyOp cmd{Profiler::next_id(), std::move(op)};
     cmd.inputs = std::move(input_infos);
-    cmd.outputs.reserve(output_descs.size());
-    outputs->reserve(output_descs.size());
-
     for (int i = 0; i < output_descs.size(); ++i) {
         auto&& desc = output_descs[i];
         auto info = alloc();
@@ -399,9 +392,7 @@ SmallVector<Handle> ChannelImpl::apply_op_impl(
                 i);
     }
     SmallVector<TensorInfo*> input_infos;
-    input_infos.reserve(inputs.size());
     SmallVector<LogicalTensorDesc> input_descs;
-    input_descs.reserve(inputs.size());
     {
         MGB_LOCK_GUARD(m_mutex);
         for (auto i : inputs) {

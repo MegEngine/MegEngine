@@ -132,7 +132,6 @@ protected:
             mgb_assert(!infer_func);
             infer_func = func;
             inp_val.val.resize(dep_val.size());
-            deps.reserve(dep_val.size());
 
             for (auto&& dep : dep_val) {
                 auto [found, i] = find_index(opr->input(), dep.dest);
@@ -253,7 +252,6 @@ public:
 
         // fix permuted input: the order of m_opr->input() and vinputs may be
         // different, input_remap keeps the index map of m_opr->input() and vinputs
-        input_remap.reserve(m_opr->input().size());
         for (auto* v : m_opr->input()) {
             auto [found, i] = find_index(vinputs, v);
             mgb_assert(found);
@@ -272,7 +270,6 @@ public:
         }
 
         // fix permuted output
-        output_remap.reserve(ovars.size());
         for (auto* v : ovars) {
             auto [found, i] = find_index(m_opr->output(), v);
             mgb_assert(found);
@@ -784,7 +781,6 @@ public:
         auto sess = minigraph.infer_session(inputs);
         std::tuple<SmallVector<LogicalTensorDesc>, bool> ret;
         auto& [descs, noerr] = ret;
-        descs.reserve(minigraph.output_size());
         for (size_t i = 0; i < minigraph.output_size(); ++i) {
             descs.emplace_back();
             auto& desc = descs.back();
@@ -819,7 +815,6 @@ public:
             mgb_assert(shape);
             minigraph.opr()->output()[i]->shape(*shape);
         }
-        descs.reserve(minigraph.output_size());
         for (size_t i = 0; i < minigraph.output_size(); ++i) {
             auto* ovar = minigraph.output_var(i);
             mgb_assert(ovar->dtype().valid() && ovar->comp_node().valid());
