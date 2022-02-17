@@ -97,7 +97,7 @@ void GiStoreInt8(int8_t* Buffer, GI_INT8 Vector) {
 #elif defined(GI_SSE2_INTRINSICS)
     _mm_storeu_si128((__m128i*)Buffer, Vector);
 #else
-    for (int i = 0; i < 16; i++) {
+    for (size_t i = 0; i < GI_SIMD_LEN_BYTE / sizeof(int8_t); i++) {
         Buffer[i] = Vector[i];
     }
 #endif
@@ -197,7 +197,8 @@ GiAndNotInt8(GI_INT8 VectorNot, GI_INT8 Vector) {
 #elif defined(GI_SSE2_INTRINSICS)
     return _mm_andnot_si128(VectorNot, Vector);
 #else
-    return (~VectorNot) & Vector;
+    GI_INT8 Not = ~VectorNot;
+    return (Not & Vector);
 #endif
 }
 
@@ -327,11 +328,13 @@ GiMoveHighLongInt8(GI_INT8 Vector) {
     for (int i = 0; i < 8; i++) {
         data[i] = o_data[8 + i];
     }
-    return _mm_loadu_si16(data);
+    return _mm_loadu_si128((__m128i*)data);
 #else
     GI_INT16 ret;
-    for (size_t i = 0; i < GI_SIMD_LEN_BYTE / 2 / sizeof(int8_t); i++) {
-        ret[i] = Vector[GI_SIMD_LEN_BYTE / 2 + i];
+    int8_t* data = (int8_t*)&Vector;
+    size_t half_length = GI_SIMD_LEN_BYTE / 2 / sizeof(int8_t);
+    for (size_t i = 0; i < half_length; i++) {
+        ret[i] = data[i + half_length];
     }
     return ret;
 #endif
@@ -351,10 +354,11 @@ GiMoveLowLongInt8(GI_INT8 Vector) {
     for (int i = 0; i < 8; i++) {
         data[i] = o_data[i];
     }
-    return _mm_loadu_si16(data);
+    return _mm_loadu_si128((__m128i*)data);
 #else
     GI_INT16 ret;
-    for (size_t i = 0; i < GI_SIMD_LEN_BYTE / 2 / sizeof(int8_t); i++) {
+    size_t half_length = GI_SIMD_LEN_BYTE / 2 / sizeof(int8_t);
+    for (size_t i = 0; i < half_length; i++) {
         ret[i] = Vector[i];
     }
     return ret;
@@ -375,11 +379,12 @@ GiMoveHighLongInt16(GI_INT16 Vector) {
     for (int i = 0; i < 4; i++) {
         data[i] = o_data[4 + i];
     }
-    return _mm_loadu_si32(data);
+    return _mm_loadu_si128((__m128i*)data);
 #else
     GI_INT32 ret;
-    for (size_t i = 0; i < GI_SIMD_LEN_BYTE / 2 / sizeof(int16_t); i++) {
-        ret[i] = Vector[GI_SIMD_LEN_BYTE / 2 + i];
+    size_t half_length = GI_SIMD_LEN_BYTE / 2 / sizeof(int16_t);
+    for (size_t i = 0; i < half_length; i++) {
+        ret[i] = Vector[half_length + i];
     }
     return ret;
 #endif
@@ -399,10 +404,11 @@ GiMoveLowLongInt16(GI_INT16 Vector) {
     for (int i = 0; i < 4; i++) {
         data[i] = o_data[i];
     }
-    return _mm_loadu_si32(data);
+    return _mm_loadu_si128((__m128i*)data);
 #else
     GI_INT32 ret;
-    for (size_t i = 0; i < GI_SIMD_LEN_BYTE / 2 / sizeof(int16_t); i++) {
+    size_t half_length = GI_SIMD_LEN_BYTE / 2 / sizeof(int16_t);
+    for (size_t i = 0; i < half_length; i++) {
         ret[i] = Vector[i];
     }
     return ret;
@@ -414,7 +420,7 @@ int16_t GiReduceAddInt8(GI_INT8 Vector) {
 #if defined(GI_NEON64_INTRINSICS)
     return vaddlvq_s8(Vector);
 #elif defined(GI_NEON32_INTRINSICS)
-    int32_t sum = vpaddlq_s16(vpaddlq_s8(Vector));
+    int32x4_t sum = vpaddlq_s16(vpaddlq_s8(Vector));
     return (vgetq_lane_s32(sum, 0) + vgetq_lane_s32(sum, 1) + vgetq_lane_s32(sum, 2) +
             vgetq_lane_s32(sum, 3));
 #elif defined(GI_SSE42_INTRINSICS)
@@ -431,8 +437,8 @@ int16_t GiReduceAddInt8(GI_INT8 Vector) {
     return (int16_t)(ret);
 
 #elif defined(GI_SSE2_INTRINSICS)
-    __m64 low = GiGetLowInt8x16(Vector);
-    __m64 high = GiGetHighInt8x16(Vector);
+    __m64 low = _mm_movepi64_pi64(Vector);
+    __m64 high = _mm_movepi64_pi64(_mm_unpackhi_epi64(Vector, Vector));
     __m128 v0 = _mm_cvtpi8_ps(low);
     __m128 v1 = _mm_cvtpi8_ps(_mm_unpackhi_pi32(low, low));
     __m128 v2 = _mm_cvtpi8_ps(high);
@@ -447,15 +453,12 @@ int16_t GiReduceAddInt8(GI_INT8 Vector) {
     return (int16_t)(ret0 + ret1 + ret2 + ret3);
 #else
     int32_t sum = 0;
-    for (size_t i = 0; i < GI_SIMD_LEN_BYTE / sizeof(int32_t); i++) {
+    for (size_t i = 0; i < GI_SIMD_LEN_BYTE / sizeof(int8_t); i++) {
         sum += Vector[i];
     }
     return sum;
 #endif
 }
-
-#define Max(a, b) (a) > (b) ? (a) : (b)
-#define Min(a, b) (a) < (b) ? (a) : (b)
 
 GI_FORCEINLINE
 int8_t GiReduceMaxInt8(GI_INT8 Vector) {
@@ -480,23 +483,23 @@ int8_t GiReduceMaxInt8(GI_INT8 Vector) {
     ret = Max(_mm_extract_epi32(sum, 3), ret);
     return (int8_t)ret;
 #elif defined(GI_SSE2_INTRINSICS)
-    __m64 low = GiGetLowInt8x16(Vector);
-    __m64 high = GiGetHighInt8x16(Vector);
+    __m64 low = _mm_movepi64_pi64(Vector);
+    __m64 high = _mm_movepi64_pi64(_mm_unpackhi_epi64(Vector, Vector));
     __m128 v0 = _mm_cvtpi8_ps(low);
     __m128 v1 = _mm_cvtpi8_ps(_mm_unpackhi_pi32(low, low));
     __m128 v2 = _mm_cvtpi8_ps(high);
     __m128 v3 = _mm_cvtpi8_ps(_mm_unpackhi_pi32(high, high));
-    __m128 sum0 = _mm_add_ps(v0, v1);
-    __m128 sum1 = _mm_add_ps(v2, v3);
-    __m128 sum = _mm_add_ps(sum0, sum1);
-    float ret0 = _mm_cvtss_f32(sum);
-    float ret1 = _mm_cvtss_f32(_mm_shuffle_ps(sum, sum, _MM_SHUFFLE(1, 1, 1, 1)));
-    float ret2 = _mm_cvtss_f32(_mm_shuffle_ps(sum, sum, _MM_SHUFFLE(2, 2, 2, 2)));
-    float ret3 = _mm_cvtss_f32(_mm_shuffle_ps(sum, sum, _MM_SHUFFLE(3, 3, 3, 3)));
+    __m128 max0 = _mm_max_ps(v0, v1);
+    __m128 max1 = _mm_max_ps(v2, v3);
+    __m128 max = _mm_max_ps(max0, max1);
+    float ret0 = _mm_cvtss_f32(max);
+    float ret1 = _mm_cvtss_f32(_mm_shuffle_ps(max, max, _MM_SHUFFLE(1, 1, 1, 1)));
+    float ret2 = _mm_cvtss_f32(_mm_shuffle_ps(max, max, _MM_SHUFFLE(2, 2, 2, 2)));
+    float ret3 = _mm_cvtss_f32(_mm_shuffle_ps(max, max, _MM_SHUFFLE(3, 3, 3, 3)));
     return (int8_t)(Max(Max(ret0, ret1), Max(ret2, ret3)));
 #else
     int8_t max = Vector[0];
-    for (size_t i = 1; i < GI_SIMD_LEN_BYTE / sizeof(int32_t); i++) {
+    for (size_t i = 1; i < GI_SIMD_LEN_BYTE / sizeof(int8_t); i++) {
         max = Max(max, Vector[i]);
     }
     return max;
@@ -526,23 +529,23 @@ int8_t GiReduceMinInt8(GI_INT8 Vector) {
     ret = Min(_mm_extract_epi32(sum, 3), ret);
     return (int8_t)ret;
 #elif defined(GI_SSE2_INTRINSICS)
-    __m64 low = GiGetLowInt8x16(Vector);
-    __m64 high = GiGetHighInt8x16(Vector);
+    __m64 low = _mm_movepi64_pi64(Vector);
+    __m64 high = _mm_movepi64_pi64(_mm_unpackhi_epi64(Vector, Vector));
     __m128 v0 = _mm_cvtpi8_ps(low);
     __m128 v1 = _mm_cvtpi8_ps(_mm_unpackhi_pi32(low, low));
     __m128 v2 = _mm_cvtpi8_ps(high);
     __m128 v3 = _mm_cvtpi8_ps(_mm_unpackhi_pi32(high, high));
-    __m128 sum0 = _mm_add_ps(v0, v1);
-    __m128 sum1 = _mm_add_ps(v2, v3);
-    __m128 sum = _mm_add_ps(sum0, sum1);
-    float ret0 = _mm_cvtss_f32(sum);
-    float ret1 = _mm_cvtss_f32(_mm_shuffle_ps(sum, sum, _MM_SHUFFLE(1, 1, 1, 1)));
-    float ret2 = _mm_cvtss_f32(_mm_shuffle_ps(sum, sum, _MM_SHUFFLE(2, 2, 2, 2)));
-    float ret3 = _mm_cvtss_f32(_mm_shuffle_ps(sum, sum, _MM_SHUFFLE(3, 3, 3, 3)));
+    __m128 min0 = _mm_min_ps(v0, v1);
+    __m128 min1 = _mm_min_ps(v2, v3);
+    __m128 min = _mm_min_ps(min0, min1);
+    float ret0 = _mm_cvtss_f32(min);
+    float ret1 = _mm_cvtss_f32(_mm_shuffle_ps(min, min, _MM_SHUFFLE(1, 1, 1, 1)));
+    float ret2 = _mm_cvtss_f32(_mm_shuffle_ps(min, min, _MM_SHUFFLE(2, 2, 2, 2)));
+    float ret3 = _mm_cvtss_f32(_mm_shuffle_ps(min, min, _MM_SHUFFLE(3, 3, 3, 3)));
     return (int8_t)(Min(Min(ret0, ret1), Min(ret2, ret3)));
 #else
     int8_t min = Vector[0];
-    for (size_t i = 1; i < GI_SIMD_LEN_BYTE / sizeof(int32_t); i++) {
+    for (size_t i = 1; i < GI_SIMD_LEN_BYTE / sizeof(int8_t); i++) {
         min = Min(min, Vector[i]);
     }
     return min;
@@ -561,8 +564,7 @@ GiCvtFromFloat32ToInt8(GI_FLOAT32 src) {
 #if __ARM_ARCH >= 8
     int32x4_t vres0 = vcvtaq_s32_f32(src);
     int16x8_t mid_s16 = vcombine_s16(vqmovn_s32(vres0), vqmovn_s32(vres0));
-    int8x8_t ret = vqmovn_s16(vcombine_s16(vqmovn_s32(mid_s16), vqmovn_s32(mid_s16)));
-    return vcombine_s16(ret, ret);
+    return vcombine_s8(vqmovn_s16(mid_s16), vqmovn_s16(mid_s16));
 #else
     float32x4_t vzero = vdupq_n_f32(0.f);
     float32x4_t vfhalf = vdupq_n_f32(0.5f);
@@ -570,8 +572,7 @@ GiCvtFromFloat32ToInt8(GI_FLOAT32 src) {
     float32x4_t vinc0 = vbslq_f32(vcgeq_f32(src, vzero), vfhalf, vfneg_half);
     int32x4_t vres0 = vcvtq_s32_f32(vaddq_f32(src, vinc0));
     int16x8_t mid_s16 = vcombine_s16(vqmovn_s32(vres0), vqmovn_s32(vres0));
-    int8x8_t ret = vqmovn_s16(vcombine_s16(vqmovn_s32(mid_s16), vqmovn_s32(mid_s16)));
-    return vcombine_s16(ret, ret);
+    return vcombine_s8(vqmovn_s16(mid_s16), vqmovn_s16(mid_s16));
 #endif
 #elif defined(GI_SSE42_INTRINSICS)
     __m128 vfzero = _mm_set1_ps(0.f);

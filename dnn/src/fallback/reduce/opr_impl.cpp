@@ -14,11 +14,13 @@
 #include "src/naive/handle.h"
 
 #include "midout.h"
+#include "reducer.h"
 #include "src/common/reduce_helper.h"
 
 MIDOUT_DECL(megdnn_fb_reduce_op)
 MIDOUT_DECL(megdnn_fb_reduce_c)
 MIDOUT_DECL(megdnn_fb_reduce_dtype)
+MIDOUT_DECL(megdnn_fallback_reduce_optimized)
 
 namespace {
 
@@ -77,11 +79,20 @@ namespace fallback {
 
 void ReduceImpl::exec(
         _megdnn_tensor_in src, _megdnn_tensor_out dst, _megdnn_workspace workspace) {
+    check_exec(src.layout, dst.layout, workspace.size);
+    if (!exec_optimized(src, dst, workspace)) {
+        return exec_fallback(src, dst, workspace);
+    }
+}
+
+void ReduceImpl::exec_fallback(
+        _megdnn_tensor_in src, _megdnn_tensor_out dst, _megdnn_workspace workspace) {
     using namespace reduce;
     using Mode = Param::Mode;
     check_exec(src.layout, dst.layout, workspace.size);
     size_t A, B, C;
     get_ABC(src.layout, A, B, C, param().axis);
+
 #define cb_by_op(src_type, dst_type, _wtype, mode_, Op_, kern_func)                   \
     if (param().mode == mode_) {                                                      \
         typedef DTypeTrait<src_type>::ctype src_ctype;                                \
@@ -174,6 +185,101 @@ void ReduceImpl::exec(
 #undef cb_by_op
 
     naive::ReduceForwardImpl::exec(src, dst, workspace);
+}
+
+bool ReduceImpl::exec_optimized(
+        _megdnn_tensor_in src, _megdnn_tensor_out dst, _megdnn_workspace) {
+    size_t A, B, C;
+    reduce::get_ABC(src.layout, A, B, C, param().axis);
+    bool execed = false;
+    using Mode = param::Reduce::Mode;
+#define DISPATCH_FUNC(Reducer, dtype, ctype, comp_type)                           \
+    if (C == 1) {                                                                 \
+        using _Reducer = Reducer<dtype, ctype, comp_type, true>;                  \
+        std::function<void(const ctype*, ctype*, DType, size_t, size_t, size_t)>  \
+                do_reduce = Exec<_Reducer, true>::do_reduce;                      \
+        MIDOUT_BEGIN(                                                             \
+                megdnn_fallback_reduce_optimized, ctype, dtype, comp_type,        \
+                midout_iv(0)) {                                                   \
+            MEGDNN_DISPATCH_CPU_KERN_OPR(do_reduce(                               \
+                    reinterpret_cast<ctype*>(src.raw_ptr()),                      \
+                    reinterpret_cast<ctype*>(dst.raw_ptr()), src_type, A, B, C)); \
+            execed = true;                                                        \
+        }                                                                         \
+        MIDOUT_END();                                                             \
+    } else {                                                                      \
+        using _Reducer = Reducer<dtype, ctype, comp_type, false>;                 \
+        std::function<void(const ctype*, ctype*, DType, size_t, size_t, size_t)>  \
+                do_reduce = Exec<_Reducer, false>::do_reduce;                     \
+        MIDOUT_BEGIN(                                                             \
+                megdnn_fallback_reduce_optimized, ctype, dtype, comp_type,        \
+                midout_iv(1)) {                                                   \
+            MEGDNN_DISPATCH_CPU_KERN_OPR(do_reduce(                               \
+                    reinterpret_cast<ctype*>(src.raw_ptr()),                      \
+                    reinterpret_cast<ctype*>(dst.raw_ptr()), src_type, A, B, C)); \
+            execed = true;                                                        \
+        }                                                                         \
+        MIDOUT_END();                                                             \
+    }
+
+#define DISPATCH_MODE_QUANTIZED(dtype, ctype, comp_type)         \
+    switch (param().mode) {                                      \
+        case Mode::MEAN:                                         \
+            DISPATCH_FUNC(MeanReducer, dtype, ctype, comp_type); \
+            break;                                               \
+        case Mode::MAX:                                          \
+            DISPATCH_FUNC(maxReducer, dtype, ctype, ctype);      \
+            break;                                               \
+        case Mode::MIN:                                          \
+            DISPATCH_FUNC(minReducer, dtype, ctype, ctype);      \
+            break;                                               \
+        default:                                                 \
+            break;                                               \
+    }
+
+#define DISPATCH_MODE_FLOAT(dtype, ctype, comp_type)             \
+    switch (param().mode) {                                      \
+        case Mode::MEAN:                                         \
+            DISPATCH_FUNC(MeanReducer, dtype, ctype, comp_type); \
+            break;                                               \
+        case Mode::MAX:                                          \
+            DISPATCH_FUNC(maxReducer, dtype, ctype, ctype);      \
+            break;                                               \
+        case Mode::MIN:                                          \
+            DISPATCH_FUNC(minReducer, dtype, ctype, ctype);      \
+            break;                                               \
+        case Mode::SUM:                                          \
+            DISPATCH_FUNC(SumReducer, dtype, ctype, ctype);      \
+            break;                                               \
+        case Mode::SUM_SQR:                                      \
+            DISPATCH_FUNC(SumSqrReducer, dtype, ctype, ctype);   \
+            break;                                               \
+        case Mode::PRODUCT:                                      \
+            DISPATCH_FUNC(ProductReducer, dtype, ctype, ctype);  \
+            break;                                               \
+        default:                                                 \
+            break;                                               \
+    }
+    if (src.layout.is_contiguous() &&
+        src.layout.dtype.category() == DTypeCategory::QUANTIZED &&
+        param().data_type == param::Reduce::DataType::DEFAULT) {
+        DType src_type = src.layout.dtype;
+        if (src.layout.dtype.enumv() == DTypeEnum::QuantizedS8) {
+            DISPATCH_MODE_QUANTIZED(dt_qint8, int8_t, int32_t)
+        }
+    } else if (
+            src.layout.is_contiguous() &&
+            src.layout.dtype.category() == DTypeCategory::FLOAT &&
+            param().data_type == param::Reduce::DataType::DEFAULT) {
+        DType src_type = src.layout.dtype;
+        if (src.layout.dtype.enumv() == DTypeEnum::Float32) {
+            DISPATCH_MODE_FLOAT(dt_float32, float, float)
+        }
+    }
+    return execed;
+#undef DISPATCH_FUNC
+#undef DISPATCH_MODE_QUANTIZED
+#undef DISPATCH_MODE_FLOAT
 }
 
 }  // namespace fallback

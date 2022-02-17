@@ -181,7 +181,6 @@ TEST_F(ARM_COMMON, LSTM_FORWARD_RECORD) {
 
 TEST_F(ARM_COMMON, BENCHMARK_LSTM_FORWARD) {
     Benchmarker<LSTM> optimized_bench(handle());
-    constexpr size_t RUNS = 20;
     auto run = [&](size_t hidden_size, size_t input_size) {
         optimized_bench.set_times(20).set_display(true);
         size_t gate_hidden_size = 4 * hidden_size;

@@ -95,8 +95,8 @@ typedef __m128i GI_INT16;
 typedef __m128i GI_INT32;
 #else
 typedef float GI_FLOAT32 __attribute__((vector_size(16)));
-typedef uint16_t GI_UINT8 __attribute__((vector_size(16)));
-typedef int16_t GI_INT8 __attribute__((vector_size(16)));
+typedef uint8_t GI_UINT8 __attribute__((vector_size(16)));
+typedef int8_t GI_INT8 __attribute__((vector_size(16)));
 typedef int16_t GI_INT16 __attribute__((vector_size(16)));
 typedef int32_t GI_INT32 __attribute__((vector_size(16)));
 #endif
@@ -118,6 +118,9 @@ typedef int32_t GI_INT32 __attribute__((vector_size(16)));
 #define GI_SIMD_LEN      128
 #define GI_SIMD_LEN_BYTE 16
 #endif
+
+#define Max(a, b) (a) > (b) ? (a) : (b)
+#define Min(a, b) (a) < (b) ? (a) : (b)
 
 typedef struct {
     GI_INT32 val[2];

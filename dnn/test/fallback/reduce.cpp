@@ -18,6 +18,75 @@
 using namespace megdnn;
 using namespace test;
 
+TEST_F(FALLBACK, REDUCE_FULL) {
+    using Param = Reduce::Param;
+    using Mode = Param::Mode;
+    Checker<Reduce> checker(handle());
+    UniformIntRNG rng{INT8_MIN >> 1, INT8_MAX >> 1};
+    checker.set_rng(0, &rng);
+    struct Config {
+        Param param;
+        DType dtype;
+        TensorShape shape;
+        Config(Param param, DType dtype, TensorShape shape)
+                : param(param), dtype(dtype), shape(shape) {}
+    };
+    std::vector<Config> configs;
+    for (auto mode : {Mode::MEAN, Mode::MAX, Mode::MIN})
+        for (auto dtype : std::vector<DType>{
+                     dtype::Float32(), dtype::Float16(), dtype::QuantizedS8(1.3f),
+                     dtype::Quantized8Asymm(1.3f, static_cast<uint8_t>(3))})
+            for (int32_t axis : {0, 1, 2}) {
+                for (size_t A : {1, 3, 5}) {
+                    for (size_t B : {4, 6, 9, 16, 33, 45}) {
+                        for (size_t C : {4, 6, 9, 16, 33, 45}) {
+                            TensorShape shape{A, B, C};
+                            Param param(mode, axis);
+                            Config config(param, dtype, shape);
+                            configs.push_back(config);
+                        }
+                    }
+                }
+            }
+    for (auto&& config : configs) {
+        auto&& dtype = config.dtype;
+        auto&& param = config.param;
+        auto&& shape = config.shape;
+
+        checker.set_dtype(0, dtype).set_param(param).execs({shape, {}});
+    }
+    configs.clear();
+    for (auto mode : {Mode::SUM, Mode::PRODUCT, Mode::SUM_SQR})
+        for (auto dtype : std::vector<DType>{dtype::Float32(), dtype::Float16()})
+            for (int32_t axis : {0, 1, 2}) {
+                for (size_t A : {1, 3, 5}) {
+                    for (size_t B : {4, 6, 9, 16, 33, 45}) {
+                        for (size_t C : {4, 6, 9, 16, 33, 45}) {
+                            TensorShape shape{A, B, C};
+                            Param param(mode, axis);
+                            Config config(param, dtype, shape);
+                            configs.push_back(config);
+                        }
+                    }
+                }
+            }
+
+    UniformFloatRNG rng_float(-2, 2);
+    checker.set_rng(0, &rng_float);
+    checker.set_epsilon(1e-1);
+    for (auto&& config : configs) {
+        auto&& dtype = config.dtype;
+        auto&& param = config.param;
+        auto&& shape = config.shape;
+        if (dtype == dtype::Float16())
+            checker.set_epsilon(1e-1);
+        else
+            checker.set_epsilon(1e-3);
+
+        checker.set_dtype(0, dtype).set_param(param).execs({shape, {}});
+    }
+}
+
 TEST_F(FALLBACK, REDUCE) {
     using Param = Reduce::Param;
     using Mode = Param::Mode;

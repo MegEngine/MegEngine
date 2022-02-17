@@ -223,7 +223,7 @@ GiInterleaveLowFloat32(GI_FLOAT32 Vector1, GI_FLOAT32 Vector2) {
 #if defined(GI_NEON64_INTRINSICS)
     return vzip1q_f32(Vector1, Vector2);
 #elif defined(GI_NEON32_INTRINSICS)
-    float32x2_t zipped = vzipq_f32(Vector1, Vector2);
+    float32x4x2_t zipped = vzipq_f32(Vector1, Vector2);
     return zipped.val[0];
 #elif defined(GI_SSE2_INTRINSICS)
     return _mm_unpacklo_ps(Vector1, Vector2);
@@ -243,7 +243,7 @@ GiInterleaveHighFloat32(GI_FLOAT32 Vector1, GI_FLOAT32 Vector2) {
 #if defined(GI_NEON64_INTRINSICS)
     return vzip2q_f32(Vector1, Vector2);
 #elif defined(GI_NEON32_INTRINSICS)
-    float32x2_t zipped = vzipq_f32(Vector1, Vector2);
+    float32x4x2_t zipped = vzipq_f32(Vector1, Vector2);
     return zipped.val[1];
 #elif defined(GI_SSE2_INTRINSICS)
     return _mm_unpackhi_ps(Vector1, Vector2);
@@ -460,7 +460,14 @@ GiMaximumFloat32(GI_FLOAT32 Vector1, GI_FLOAT32 Vector2) {
 #if defined(GI_NEON_INTRINSICS)
     return vmaxq_f32(Vector1, Vector2);
 #elif defined(GI_SSE2_INTRINSICS)
-    return _mm_max_ps(Vector1, Vector2);
+    //! _mm_max_ps does not fellow the IEEE standard when input is NAN, so
+    //! implement by C code
+#define MAX_NAN(a, b) (std::isnan(a) || (a) > (b)) ? (a) : (b);
+    GI_FLOAT32 max;
+    for (size_t i = 0; i < GI_SIMD_LEN_BYTE / sizeof(float); i++) {
+        max[i] = MAX_NAN(Vector1[i], Vector2[i]);
+    }
+    return max;
 #else
     return GiBlendFloat32(Vector2, Vector1, Vector1 > Vector2);
 #endif
@@ -473,6 +480,14 @@ GiMinimumFloat32(GI_FLOAT32 Vector1, GI_FLOAT32 Vector2) {
     return vminq_f32(Vector1, Vector2);
 #elif defined(GI_SSE2_INTRINSICS)
     return _mm_min_ps(Vector1, Vector2);
+    //! _mm_min_ps does not fellow the IEEE standard when input is NAN, so
+    //! implement by C code
+#define MIN_NAN(a, b) (std::isnan(a) || (a) < (b)) ? (a) : (b);
+    GI_FLOAT32 min;
+    for (size_t i = 0; i < GI_SIMD_LEN_BYTE / sizeof(float); i++) {
+        min[i] = MIN_NAN(Vector1[i], Vector2[i]);
+    }
+    return min;
 #else
     return GiBlendFloat32(Vector2, Vector1, Vector2 > Vector1);
 #endif
