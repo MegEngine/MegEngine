@@ -1,5 +1,5 @@
 /**
- * \file dnn/src/cuda/conv_bias/chanwise/fwd_depthwise_large_filter.inl
+ * \file dnn/src/cuda/conv_bias/chanwise/depthwise_large_filter_algo.cuh
  * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
  *
  * Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
@@ -9,35 +9,10 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 #pragma once
+#include "depthwise_large_filter.cuh"
 #include "src/cuda/cuda_shfl_compat.cuh"
+
 namespace {
-
-enum DepthwiseConv2dDirection { DIRECTION_FORWARD, DIRECTION_BACKWARD };
-
-template <typename ThreadConfig_, int oh_, int ow_>
-struct OutTileConfig {
-    using ThreadConfig = ThreadConfig_;
-    static int const unroll_h = oh_;
-    static int const unroll_w = ThreadConfig::thread_x * ow_;
-    static int const unroll_size = unroll_h * unroll_w;
-    static int const block_h = unroll_h * ThreadConfig::thread_y;
-    static int const block_w = unroll_w;
-};
-
-template <int fh_, int fw_>
-struct FilterTileConfig {
-    static int const unroll_h = fh_;
-    static int const unroll_w = fw_;
-    static int const unroll_size = unroll_h * unroll_w;
-};
-
-template <int x_, int y_>
-struct ThreadConfig {
-    static int const thread_x = x_;
-    static_assert((thread_x & (thread_x - 1)) == 0, "thread_x must be pow of 2!");
-    static int const thread_y = y_;
-    static int const nr_threads = x_ * y_;
-};
 
 template <
         typename T, DepthwiseConv2dDirection kDirection, typename ThreadConfig_,
@@ -87,49 +62,12 @@ struct ConvTrait {
     using FilterTileConfig = FilterTileConfig_;
     using CompType = ldg_dtype;
 
-    struct SrcTileConfig {
-        static int const unroll_h =
-                OutTileConfig::unroll_h + FilterTileConfig::unroll_h - 1;
-        static int const unroll_w =
-                (OutTileConfig::unroll_w - 1) * stride_w + FilterTileConfig::unroll_w;
-        static int const unroll_size = unroll_h * unroll_w;
-    };
-
-    struct SrcTileCount {
-        static int const smem_src_h =
-                (OutTileConfig::block_h - 1) * stride_h + FilterTileConfig::unroll_h;
-        static int const smem_buff_h = FilterTileConfig::unroll_h;
-        static int const smem_load_h = smem_src_h + smem_buff_h;
-        static int const smem_h = smem_load_h + smem_buff_h;
-        static int const smem_w =
-                DIVUP((OutTileConfig::block_w - 1) * stride_w +
-                              FilterTileConfig::unroll_w * ThreadConfig::thread_x,
-                      2) *
-                2;
-        static int const smem_size = smem_h * smem_w;
-        static int const load_w =
-                smem_w > ThreadConfig::nr_threads ? ThreadConfig::nr_threads : smem_w;
-        static int const load_h = 1;
-        static int const reg_h = 1;
-        static int const reg_w = DIVUP(smem_w, load_w);
-        static bool constexpr check_bounds_h = smem_h % load_h != 0;
-        static bool constexpr check_bounds_w = smem_w % load_w != 0;
-    };
-
-    struct FilterTileCount {
-        static int const smem_flt_h = FilterTileConfig::unroll_h;
-        static int const smem_buff_h = FilterTileConfig::unroll_h;
-        static int const smem_load_h = smem_flt_h + smem_buff_h;
-        static int const smem_h = smem_load_h + smem_buff_h;
-        static int const smem_w = FilterTileConfig::unroll_w * ThreadConfig::thread_x;
-        static int const smem_size = smem_h * smem_w;
-        static int const load_w = smem_w > 32 ? 32 : smem_w;
-        static int const load_h = ThreadConfig::nr_threads / load_w;
-        static int const reg_h = 1;
-        static int const reg_w = DIVUP(smem_w, load_w);
-        static bool constexpr check_bounds_h = smem_h % load_h != 0;
-        static bool constexpr check_bounds_w = smem_w % load_w != 0;
-    };
+    using CI = ConvTraitInner<
+            ldg_dtype, ThreadConfig_, OutTileConfig_, FilterTileConfig_, stride_w,
+            stride_h>;
+    using SrcTileConfig = typename CI::SrcTileConfig;
+    using SrcTileCount = typename CI::SrcTileCount;
+    using FilterTileCount = typename CI::FilterTileCount;
 
     using SrcGlobal2ShareVisitor = Global2SharedMem<
             CompType, DepthwiseConv2dDirection::DIRECTION_FORWARD, ThreadConfig,
@@ -272,14 +210,15 @@ __device__ __forceinline__ void Global2SharedMem<
 // CUDA kernel to compute the depthwise convolution forward pass in NCHW format,
 // tailored for small images up to 32x32. Stride and depth multiplier must be 1.
 // Padding must be 'SAME', which allows to reuse the index computation. Only
-// use this kernel if CanLaunchDepthwiseConv2dGPUSmall(args) returns true.
+// use this kernel if CanLaunchDepthwiseConv2dGPU(args) returns true.
 // Tiles of the input and filter tensors are loaded into shared memory before
 // performing the convolution. Each thread handles two elements per iteration,
 // one each in the lower and upper half of a tile.
 // Backprop input direction is the same as forward direction with the filter
 // rotated by 180°.
+#if CUDA_VERSION >= 9000
 template <typename ConvTrait, DepthwiseConv2dDirection kDirection>
-__global__ void DepthwiseConv2dGPUKernelNCHWSmall(
+__global__ void DepthwiseConv2dGPUKernelNCHW(
         const Param param, const __half* input, const __half* filter, __half* output) {
     using T = __half;
     using T2 = __half2;
@@ -380,16 +319,18 @@ __global__ void DepthwiseConv2dGPUKernelNCHWSmall(
                         f_w * 2;
                 reg_flt[0][f_h * t2_flt_unroll_w + f_w] =
                         *reinterpret_cast<T2*>(smem_flt_ptr + flt_offset);
-                reg_flt[1][f_h * t2_flt_unroll_w + f_w] = {
-                        f_w > 0 ? reg_flt[0][f_h * t2_flt_unroll_w + f_w - 1].y
-                                : static_cast<T>(0.0),
-                        reg_flt[0][f_h * t2_flt_unroll_w + f_w].x};
+                if (f_w > 0) {
+                    reg_flt[1][f_h * t2_flt_unroll_w + f_w] = {
+                            reg_flt[0][f_h * t2_flt_unroll_w + f_w - 1].y,
+                            reg_flt[0][f_h * t2_flt_unroll_w + f_w].x};
+                } else {
+                    reg_flt[1][f_h * t2_flt_unroll_w + f_w] = {
+                            0.0, reg_flt[0][f_h * t2_flt_unroll_w + f_w].x};
+                }
             }
-            reg_flt[0][f_h * t2_flt_unroll_w + t2_flt_unroll_w - 1] = {
-                    static_cast<T>(0.0), static_cast<T>(0.0)};
+            reg_flt[0][f_h * t2_flt_unroll_w + t2_flt_unroll_w - 1] = {0.0, 0.0};
             reg_flt[1][f_h * t2_flt_unroll_w + t2_flt_unroll_w - 1] = {
-                    reg_flt[0][f_h * t2_flt_unroll_w + t2_flt_unroll_w - 2].y,
-                    static_cast<T>(0.0)};
+                    reg_flt[0][f_h * t2_flt_unroll_w + t2_flt_unroll_w - 2].y, 0.0};
         }
 
 #pragma unroll
@@ -444,9 +385,10 @@ __global__ void DepthwiseConv2dGPUKernelNCHWSmall(
         }
     }
 }
+#endif
 
 template <typename ConvTrait, DepthwiseConv2dDirection kDirection>
-__global__ void DepthwiseConv2dGPUKernelNCHWSmall(
+__global__ void DepthwiseConv2dGPUKernelNCHW(
         const Param param, const float* input, const float* filter, float* output) {
     using T = float;
     using T2 = float2;
@@ -530,11 +472,6 @@ __global__ void DepthwiseConv2dGPUKernelNCHWSmall(
                         [(off_oh * stride_h + fh + s_h) % SrcTileCount::smem_h *
                                  SrcTileCount::smem_w +
                          s_w];
-                if (off_ochannel == 0 && off_obw == 0 && off_obh == 0 && off_oh == 30 &&
-                    off_ow == 0) {
-                    printf("reg_src[%d] = %f\n", s_h * SrcTileConfig::unroll_w + s_w,
-                           reg_src[s_h * SrcTileConfig::unroll_w + s_w]);
-                }
             }
         }
 
@@ -561,15 +498,6 @@ __global__ void DepthwiseConv2dGPUKernelNCHWSmall(
                                 reg_flt[inner_fh * FilterTileConfig::unroll_w + fw] *
                                 reg_src[(inner_fh + oh) * SrcTileConfig::unroll_w + fw +
                                         ow * stride_w];
-                        if (off_ochannel == 0 && off_obw == 0 && off_obh == 0 &&
-                            off_oh == 30) {
-                            printf("sum[%d] += %f * %f\nsum = %f\n",
-                                   oh * OutTileConfig::unroll_w + ow,
-                                   reg_flt[inner_fh * FilterTileConfig::unroll_w + fw],
-                                   reg_src[(inner_fh + oh) * SrcTileConfig::unroll_w +
-                                           fw + ow * stride_w],
-                                   sum[oh * OutTileConfig::unroll_w + ow]);
-                        }
                     }
                 }
             }
@@ -610,7 +538,7 @@ __global__ void DepthwiseConv2dGPUKernelNCHWSmall(
 template <
         typename T, typename T2, DepthwiseConv2dDirection kDirection, int unroll_fw,
         int unroll_ow, int stride>
-void LaunchDepthwiseConv2dGPUSmall(
+void LaunchDepthwiseConv2dGPU(
         const Param& param, const T* input, const T* filter, T* output,
         cudaStream_t stream) {
     static int const unroll_oh = 1, unroll_fh = 1;
@@ -633,22 +561,21 @@ void LaunchDepthwiseConv2dGPUSmall(
             (SrcTileCount::smem_size + FilterTileCount::smem_size) * sizeof(T);
 
     void (*kernel)(const Param, const T*, const T*, T*);
-    kernel = DepthwiseConv2dGPUKernelNCHWSmall<IConvTrait, kDirection>;
+    kernel = DepthwiseConv2dGPUKernelNCHW<IConvTrait, kDirection>;
     kernel<<<grid, block, shared_storage, stream>>>(param, input, filter, output);
     after_kernel_launch();
 }
 
-#define INSTANCE_AB(type1, type2, a, b, direction)                                   \
-    if (param.out_w > b * 4) {                                                       \
-        printf("param.out_w = %d, b = %d\n", param.out_w, b);                        \
-        if (direction == DepthwiseConv2dDirection::DIRECTION_BACKWARD ||             \
-            (param.stride_h == 1 && param.stride_w == 1)) {                          \
-            LaunchDepthwiseConv2dGPUSmall<type1, type2, direction, a + 2, b + 1, 1>( \
-                    param, src, flt, dst, stream);                                   \
-        } else if (param.stride_h == 2 && param.stride_w == 2) {                     \
-            LaunchDepthwiseConv2dGPUSmall<type1, type2, direction, a + 2, b + 1, 2>( \
-                    param, src, flt, dst, stream);                                   \
-        }                                                                            \
+#define INSTANCE_AB(type1, type2, a, b, direction)                              \
+    if (param.out_w > b * 4) {                                                  \
+        if (direction == DepthwiseConv2dDirection::DIRECTION_BACKWARD ||        \
+            (param.stride_h == 1 && param.stride_w == 1)) {                     \
+            LaunchDepthwiseConv2dGPU<type1, type2, direction, a + 2, b + 1, 1>( \
+                    param, src, flt, dst, stream);                              \
+        } else if (param.stride_h == 2 && param.stride_w == 2) {                \
+            LaunchDepthwiseConv2dGPU<type1, type2, direction, a + 2, b + 1, 2>( \
+                    param, src, flt, dst, stream);                              \
+        }                                                                       \
     }
 
 #define INSTANCE_A(type1, type2, a, direction)                                                                                                                                                                                                                                                                                                                                                                                                                                   \

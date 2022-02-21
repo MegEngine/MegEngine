@@ -21,7 +21,7 @@ using namespace cuda;
 using namespace conv_bias;
 using namespace chanwise;
 
-#include "src/cuda/conv_bias/chanwise/depthwise_large_filter_algo.inl"
+#include "src/cuda/conv_bias/chanwise/depthwise_large_filter_algo.cuh"
 
 namespace megdnn {
 namespace cuda {

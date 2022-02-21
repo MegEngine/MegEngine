@@ -1,5 +1,5 @@
 /**
- * \file dnn/src/cuda/conv_bias/chanwise/fwd_depthwise_large_filter.cu
+ * \file dnn/src/cuda/conv_bias/chanwise/bwd_large_filter.cu
  * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
  *
  * Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
@@ -21,7 +21,7 @@ using namespace cuda;
 using namespace convolution;
 using namespace chanwise;
 
-#include "src/cuda/conv_bias/chanwise/depthwise_large_filter_algo.inl"
+#include "src/cuda/conv_bias/chanwise/depthwise_large_filter_algo.cuh"
 
 namespace megdnn {
 namespace cuda {
