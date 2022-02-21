@@ -9,6 +9,7 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
+#include "src/cuda/conv_bias/chanwise/depthwise_large_filter.cuh"
 #include "src/common/conv_bias.h"
 #include "src/cuda/conv_bias/algo.h"
 #include "src/cuda/conv_bias/chanwise/kern.cuh"
@@ -20,26 +21,13 @@ using namespace conv_bias;
 
 namespace {
 inline bool is_available_depthwise_large_filter(const chanwise::Param& param) {
-    auto&& device_prop = cuda::current_device_prop();
-    int flt_smem_w = (param.flt_w + 3) / 4 * 4;
-    int flt_smem_h = 3;
-    int flt_reg_per_thread =
-            flt_smem_w > 32 ? (flt_smem_w + 31) / 32 : 1 + flt_smem_w / 4;
-    int ow = param.out_w > 64 ? 64 : param.out_w;
-    int src_smem_w = ow + flt_smem_w - 1;
-    int src_smem_h = flt_smem_h + param.flt_h - 1;
-    int src_reg_per_thread = src_smem_w > 128 ? (flt_smem_w + 127) / 128
-                                              : 1 + (ow + 3) / 4 + flt_smem_w / 4 - 1;
-    int out_reg_per_thread = (ow + 3) / 4 * 4;
-    if (device_prop.regsPerBlock < 4 * 32 *
-                                           (flt_reg_per_thread * 2 +
-                                            src_reg_per_thread + out_reg_per_thread) ||
-        device_prop.sharedMemPerBlock <
-                static_cast<size_t>(
-                        flt_smem_w * flt_smem_h * 2 + src_smem_w * src_smem_h)) {
-        return false;
+    if ((param.stride_h == 1 && param.stride_w == 1) ||
+        (param.stride_h == 2 && param.stride_w == 2)) {
+        auto&& device_prop = cuda::current_device_prop();
+        static int const unroll_oh = 1, unroll_fh = 1;
+        CHECK(FWD)
     }
-    return true;
+    return false;
 }
 }  // anonymous namespace
 
@@ -64,8 +52,8 @@ bool ConvBiasForwardImpl::AlgoDepthwiseLargeFilter::is_available(
     return fm.group > 1 && args.filter_meta.format == Param::Format::NCHW &&
            args.src_layout->dtype.category() == DTypeCategory::FLOAT &&
            args.opr->param().compute_mode == Param::ComputeMode::DEFAULT &&
-           fm.spatial_ndim == 2 && fm.icpg == 1 && fm.dilation[0] == 1 &&
-           fm.dilation[1] == 1 && !fm.should_flip &&
+           fm.spatial_ndim == 2 && fm.icpg == 1 && fm.ocpg == 1 &&
+           fm.dilation[0] == 1 && fm.dilation[1] == 1 && !fm.should_flip &&
            is_available_depthwise_large_filter(param);
 }
 
