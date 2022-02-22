@@ -47,7 +47,8 @@ bool ConvBiasForwardImpl::AlgoDepthwiseLargeFilter::is_available(
     if (args.z_layout->ndim > 0)
         return false;
 
-    auto param = chanwise::Param::from_fwd_args(args);
+    auto param = chanwise::Param::from_fwd_args(
+            args, args.opr->param().compute_mode == Param::ComputeMode::DEFAULT);
     auto&& fm = args.filter_meta;
     return fm.group > 1 && args.filter_meta.format == Param::Format::NCHW &&
            args.src_layout->dtype.category() == DTypeCategory::FLOAT &&
@@ -80,7 +81,8 @@ void ConvBiasForwardImpl::AlgoDepthwiseLargeFilter::exec(const ExecArgs& args) c
                 conv_dst_tensor.layout.dtype);
     }
     {
-        auto kparam = chanwise::Param::from_fwd_args(args);
+        auto kparam = chanwise::Param::from_fwd_args(
+                args, args.opr->param().compute_mode == Param::ComputeMode::DEFAULT);
         auto stream = cuda_stream(args.handle);
         switch (args.src_layout->dtype.enumv()) {
             case DTypeEnum::Float32:

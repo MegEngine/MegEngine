@@ -701,7 +701,12 @@ TEST_F(CUDA, CONV_BIAS_FORWARD_DEPTHWISE_LARGE_FILTER) {
             ConvBiasForward::algo_name<ConvBias::DirectParam>(
                     "DEPTHWISE_LARGE_FILTER", {})
                     .c_str()));
-    for (auto dtype : std::vector<DType>{dtype::Float32(), dtype::Float16()}) {
+    for (auto dtype : std::vector<DType> {
+             dtype::Float32(),
+#if CUDA_VERSION >= 9000
+                     dtype::Float16()
+#endif
+         }) {
         auto run = [&checker, &dtype](
                            size_t n, size_t g, size_t h, size_t fh, size_t padding,
                            size_t stride) {
