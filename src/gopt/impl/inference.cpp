@@ -1000,6 +1000,46 @@ void ConvertFormatPass::apply(OptState& state) const {
     };
     state.graph().iter(on_opr);
     rewriter.apply_inplace();
+
+    //! start a second pass that merge consecutive dimshuffle(NHWC->NCHW) +
+    //! relayout_format(NCHW->NHWCD4) to only one relayout_format(NHWC->NHWCD4)
+    auto on_opr_merge = [&rewriter](OperatorNodeBase* opr) {
+        auto opr_is_relayout = [](OperatorNodeBase* opr) {
+            return opr->try_cast_final<opr::RelayoutFormat>();
+        };
+        auto opr_is_dimshuffle = [](OperatorNodeBase* opr) {
+            return opr->try_cast_final<opr::Dimshuffle>();
+        };
+        auto match_pattern = [](const opr::Dimshuffle::Param& param,
+                                const std::vector<int>&& patten) {
+            if (param.pattern_len == patten.size() && param.pattern[0] == patten[0] &&
+                param.pattern[1] == patten[1] && param.pattern[2] == patten[2] &&
+                param.pattern[3] == patten[3]) {
+                return true;
+            }
+            return false;
+        };
+        auto this_opr_is_relayout = opr_is_relayout(opr);
+        auto prev_opr_is_dimshuffle = static_cast<opr::Dimshuffle*>(nullptr);
+        if (this_opr_is_relayout) {
+            prev_opr_is_dimshuffle = opr_is_dimshuffle(opr->input(0)->owner_opr());
+        }
+        if (this_opr_is_relayout && prev_opr_is_dimshuffle) {
+            if (this_opr_is_relayout->param().mode ==
+                        megdnn::param::RelayoutFormat::Mode::NCHW_NHWCD4I &&
+                match_pattern(prev_opr_is_dimshuffle->param(), {0, 3, 1, 2})) {
+                auto inp = rewriter.get_var(prev_opr_is_dimshuffle->input(0));
+                auto new_param = megdnn::param::RelayoutFormat();
+                new_param.mode = megdnn::param::RelayoutFormat::Mode::NHWC_NHWCD4I;
+                auto new_opr = opr::RelayoutFormat::make(inp, new_param);
+                rewriter.replace_var(opr->output(0), new_opr.node(), nullptr);
+            }
+        } else {
+            rewriter.auto_replace_outputs(opr);
+        }
+    };
+    state.graph().iter(on_opr_merge);
+    rewriter.apply_inplace();
     MIDOUT_E
 }
 
