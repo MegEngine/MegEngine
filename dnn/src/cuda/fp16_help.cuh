@@ -45,6 +45,15 @@ fma2(const __half2 a, const __half2 b, const __half2 c) {
 #endif
 }
 
+__device__ __forceinline__ __half2 hadd2(const __half2 a, const __half2 b) {
+#if __CUDA_ARCH__ >= 530
+    return __hadd2(a, b);
+#else
+    return {__float2half(__half2float(a.x) + __half2float(b.x)),
+            __float2half(__half2float(a.y) + __half2float(b.y))};
+#endif
+}
+
 __device__ __forceinline__ float2
 fma2(const __half2 a, const __half2 b, const float2 c) {
     return {__half2float(a.x) * __half2float(b.x) + c.x,
