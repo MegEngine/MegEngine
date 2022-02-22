@@ -232,6 +232,14 @@ bool lite::clear_memory_pair(
     LITE_THROW("clear_memory_pair is not implement yet!");
 }
 
+void* lite::lookup_physic_ptr(
+        void* vir_ptr, LiteDeviceType device, LiteBackend backend) {
+    LITE_MARK_USED_VAR(vir_ptr);
+    LITE_MARK_USED_VAR(device);
+    LITE_MARK_USED_VAR(backend);
+    LITE_THROW("lookup_physic_ptr is not implement yet!");
+}
+
 #else  // LITE_BUILD_WITH_MGE
 void lite::try_coalesce_all_free_memory() {}
 
@@ -265,6 +273,11 @@ bool lite::register_memory_pair(
 bool lite::clear_memory_pair(
         void* vir_ptr, void* phy_ptr, LiteDeviceType device, LiteBackend beckend) {
     LITE_THROW("clear_memory_pair is not implement yet!");
+}
+
+void* lite::lookup_physic_ptr(
+        void* vir_ptr, LiteDeviceType device, LiteBackend beckend) {
+    LITE_THROW("lookup_physic_ptr is not implement yet!");
 }
 #endif
 namespace lite {

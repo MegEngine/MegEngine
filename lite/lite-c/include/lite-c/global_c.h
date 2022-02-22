@@ -175,6 +175,12 @@ LITE_API int LITE_register_memory_pair(
 LITE_API int LITE_clear_memory_pair(
         void* vir_ptr, void* phy_ptr, LiteDeviceType device, LiteBackend backend);
 
+/**
+ * get the physical by the virtual address pair in mge.
+ */
+LITE_API int LITE_lookup_physic_ptr(
+        void* vir_ptr, void** phy_ptr, LiteDeviceType device, LiteBackend backend);
+
 #ifdef __cplusplus
 }
 #endif

@@ -204,4 +204,12 @@ int LITE_clear_memory_pair(
     LITE_CAPI_END();
 }
 
+int LITE_lookup_physic_ptr(
+        void* vir_ptr, void** phy_ptr, LiteDeviceType device, LiteBackend backend) {
+    LITE_CAPI_BEGIN();
+    LITE_ASSERT(vir_ptr && phy_ptr, "The ptr pass to vir and phy is nullptr");
+    *phy_ptr = lite::lookup_physic_ptr(vir_ptr, device, backend);
+    LITE_CAPI_END();
+}
+
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

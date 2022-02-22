@@ -9,6 +9,7 @@
 
 import os
 import unittest
+from ctypes import *
 
 import numpy as np
 
@@ -71,3 +72,16 @@ class TestGlobal(TestShuffleNet):
         network.load(model_path)
 
         self.do_forward(network)
+
+    def test_set_get_memory_pair(self):
+        if LiteGlobal.get_device_count(LiteDeviceType.LITE_AX) > 0:
+            arr1 = np.ones([2, 3])
+            arr2 = np.ones([2, 3])
+            vir_ptr = arr1.ctypes.data_as(c_void_p)
+            phy_ptr = arr2.ctypes.data_as(c_void_p)
+            LiteGlobal.register_memory_pair(
+                vir_ptr, phy_ptr, 10, LiteDeviceType.LITE_AX
+            )
+            phy_ptr2 = LiteGlobal.lookup_physic_ptr(vir_ptr, LiteDeviceType.LITE_AX)
+            assert phy_ptr.value == phy_ptr2.value
+            LiteGlobal.clear_memory_pair(vir_ptr, phy_ptr, LiteDeviceType.LITE_AX)

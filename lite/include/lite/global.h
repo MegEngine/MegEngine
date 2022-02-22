@@ -169,6 +169,11 @@ LITE_API bool clear_memory_pair(
         void* vir_ptr, void* phy_ptr, LiteDeviceType device,
         LiteBackend backend = LiteBackend::LITE_DEFAULT);
 
+/**
+ * get the physic address by the virtual address in mge.
+ */
+void* lookup_physic_ptr(void* vir_ptr, LiteDeviceType device, LiteBackend backend);
+
 }  // namespace lite
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

@@ -44,6 +44,7 @@ class _GlobalAPI(_LiteCObjBase):
         ("LITE_dump_tensor_rt_cache", [c_char_p]),
         ("LITE_register_memory_pair", [c_void_p, c_void_p, c_size_t, c_int, c_int]),
         ("LITE_clear_memory_pair", [c_void_p, c_void_p, c_int, c_int]),
+        ("LITE_lookup_physic_ptr", [c_void_p, POINTER(c_void_p), c_int, c_int]),
     ]
 
 
@@ -141,3 +142,12 @@ class LiteGlobal(object):
             phy_ptr, c_void_p
         ), "clear memory pair only accept c_void_p type."
         LiteGlobal._api.LITE_clear_memory_pair(vir_ptr, phy_ptr, device, backend)
+
+    @staticmethod
+    def lookup_physic_ptr(vir_ptr, device, backend=LiteBackend.LITE_DEFAULT):
+        assert isinstance(
+            vir_ptr, c_void_p
+        ), "lookup physic ptr only accept c_void_p type."
+        mem = c_void_p()
+        LiteGlobal._api.LITE_lookup_physic_ptr(vir_ptr, byref(mem), device, backend)
+        return mem
