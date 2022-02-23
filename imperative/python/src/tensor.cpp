@@ -15,6 +15,7 @@
 #include "megbrain/imperative/ops/backward_graph.h"
 #include "megbrain/imperative/ops/utility.h"
 #include "megbrain/imperative/profiler.h"
+#include "megbrain/imperative/transformations/dtype_promote.h"
 #include "megbrain/imperative/transformations/eval.h"
 #include "megbrain/imperative/transformations/lazy.h"
 #include "megbrain/imperative/transformations/scalar.h"
@@ -59,16 +60,19 @@ struct SymbolVarContext {
     TransformationContext context;
     std::shared_ptr<SymbolTransformation> symbol_tsf;
     std::shared_ptr<ScalarTransformation> scalar_tsf;
+    std::shared_ptr<DTypePromoteTransformation> dtype_promote_tsf;
 
     SymbolVarContext(cg::ComputingGraph* graph) {
         symbol_tsf = std::make_shared<SymbolTransformation>(graph);
         scalar_tsf = std::make_shared<ScalarTransformation>();
+        dtype_promote_tsf = std::make_shared<DTypePromoteTransformation>();
         Transformation::swap_context(context);
     }
 
     void init() {
         symbol_tsf->register_at(Transformation::top());
         scalar_tsf->register_at(Transformation::top());
+        dtype_promote_tsf->register_at(Transformation::top());
     }
 
     ValueRef symvar2val(py::handle py_symbol_var) {
@@ -110,6 +114,9 @@ REGISTE_APPLY_FUNC(cpp_astensor1d)
 
 #undef REGISTE_APPLY_FUNC
 
+PyArray_Descr* _dtype_promotion(PyObject* const* args, size_t nargs);
+CompNode _get_device(PyObject* const* args, size_t nargs);
+
 PyObject* py_apply(
         PyObject* self, PyObject* const* args, size_t nargs /* , PyObject* kwnames */) {
     try {
@@ -133,19 +140,59 @@ PyObject* py_apply(
         auto op = py::handle(py_op).cast<std::shared_ptr<OpDef>>();
         SmallVector<ValueRef, 8> tensors(nargs);
 
-        bool is_symbol_var = (!TensorWrapper::try_cast(args[0])) &&
-                             py::isinstance<PySymbolVar>(py::handle(args[0]));
-        if (is_symbol_var) {
+        SmallVector<bool, 8> is_symbol_var(nargs, false);
+        ComputingGraph* cg = nullptr;
+        for (size_t i = 0; i < nargs; ++i) {
+            if ((!TensorWrapper::try_cast(args[i])) &&
+                py::isinstance<PySymbolVar>(py::handle(args[i]))) {
+                is_symbol_var[i] = true;
+                ComputingGraph* cur_cg =
+                        py::handle(args[i]).cast<PySymbolVar*>()->m_node->owner_graph();
+                if (cg == nullptr) {
+                    cg = cur_cg;
+                } else {
+                    mgb_assert(cg == cur_cg);
+                }
+            }
+        }
+
+        mgb::CompNode target_cn;
+        mgb::DType target_dtype;
+
+        auto convert_pyinput_to_tensor = [&](size_t i) -> ValueRef {
+            if (!target_dtype.valid()) {
+                target_dtype = npy::dtype_np2mgb_descr(_dtype_promotion(args, nargs));
+                target_cn = _get_device(args, nargs);
+            }
+            HostTensorND ht(target_cn);
+            ht = npy::np2tensor(args[i], npy::Meth::copy_into(&ht), target_dtype);
+            if (PyArray_Check(args[i])) {  // non scaler
+                return imperative::apply(
+                        CreateTensor(CreateTensor::Const, target_cn, ht.layout()),
+                        HostStorage::make(ht.storage()))[0];
+            } else {  // scaler
+                return imperative::apply(
+                        CreateTensor(CreateTensor::Const, target_cn, target_dtype, {}),
+                        HostStorage::make(ht.storage()))[0];
+            }
+        };
+
+        if (cg != nullptr) {
             // swap to a special context to reuse scalar handle
-            SymbolVarContext context(
-                    py::handle(args[0]).cast<PySymbolVar*>()->m_node->owner_graph());
+            size_t symbol_var_idx = 8;
+            SymbolVarContext context(cg);
             context.init();
             for (size_t i = 0; i < nargs; ++i) {
-                tensors[i] = context.symvar2val(args[i]);
+                if (is_symbol_var[i]) {
+                    symbol_var_idx = i;
+                    tensors[i] = context.symvar2val(args[i]);
+                } else {
+                    tensors[i] = convert_pyinput_to_tensor(i);
+                }
             }
             auto outputs = imperative::apply(*op, tensors);
             auto ret = pybind11::tuple(outputs.size());
-            auto typeobj = py::handle(args[0]).get_type();
+            auto typeobj = py::handle(args[symbol_var_idx]).get_type();
             for (size_t i = 0; i < outputs.size(); ++i) {
                 ret[i] = context.val2symvar(typeobj, outputs[i]);
             }
@@ -156,13 +203,7 @@ PyObject* py_apply(
             if (TensorWrapper* tw = TensorWrapper::try_cast(args[i])) {
                 tensors[i] = tw->m_tensor->data();
             } else {
-                PyErr_SetString(
-                        PyExc_TypeError,
-                        ssprintf(
-                                "op %s expect type Tensor as inputs, got %s actually",
-                                op->make_name().c_str(), Py_TYPE(args[i])->tp_name)
-                                .c_str());
-                return nullptr;
+                tensors[i] = convert_pyinput_to_tensor(i);
             }
         }
 
@@ -616,6 +657,8 @@ void init_tensor(py::module m) {
                     std::shared_ptr<Channel>(channel, [](Channel*) {})));
     transformations.register_at<Segment::Scalar>(
             std::make_shared<ScalarTransformation>());
+    transformations.register_at<Segment::DTypePromote>(
+            std::make_shared<DTypePromoteTransformation>());
 
     static py::exception<interpreter::AsyncError> py_async_error(
             m, "AsyncError", PyExc_RuntimeError);
@@ -1136,6 +1179,63 @@ void init_tensor(py::module m) {
     m.def("print_stats", [] { imperative::Stats::print(); });
 
     m.def("reset_stats", [] { imperative::Stats::reset(); });
+
+    m.def("_get_convert_inputs",
+          []() -> bool { return DTypePromoteCfg::convert_input_enabled; });
+    m.def("_set_convert_inputs", [](bool flag) -> bool {
+        bool ret = DTypePromoteCfg::convert_input_enabled;
+        DTypePromoteCfg::convert_input_enabled = flag;
+        return ret;
+    });
+    m.def("_get_amp_dtype_autocast",
+          []() -> bool { return DTypePromoteCfg::amp_dtype_autocast_enabled; });
+    m.def("_set_amp_dtype_autocast", [](bool flag) -> bool {
+        bool ret = DTypePromoteCfg::amp_dtype_autocast_enabled;
+        DTypePromoteCfg::amp_dtype_autocast_enabled = flag;
+        return ret;
+    });
+
+    static auto get_amp_prec_dtype = [](bool is_high) -> std::string {
+        DType& target = is_high ? DTypePromoteCfg::amp_high_prec_dtype
+                                : DTypePromoteCfg::amp_low_prec_dtype;
+        mgb_assert(target.category() == DTypeCategory::FLOAT);
+        std::string ret = target.name();
+        transform(ret.begin(), ret.end(), ret.begin(), ::tolower);
+        return ret;
+    };
+
+    static auto set_amp_prec_dtype = [](bool is_high,
+                                        std::string dtype_name) -> std::string {
+        DType& target = is_high ? DTypePromoteCfg::amp_high_prec_dtype
+                                : DTypePromoteCfg::amp_low_prec_dtype;
+        std::string ret = target.name();
+
+        if (dtype_name == "float32") {
+            target = dtype::Float32();
+        } else if (dtype_name == "float16") {
+            target = dtype::Float16();
+        } else if (dtype_name == "bfloat16") {
+            target = dtype::BFloat16();
+        } else {
+            mgb_assert(
+                    false, "casted type of amp should be float, but you give %s\n",
+                    dtype_name.c_str());
+        }
+
+        transform(ret.begin(), ret.end(), ret.begin(), ::tolower);
+        return ret;
+    };
+
+    m.def("_get_amp_high_prec_dtype",
+          []() -> std::string { return get_amp_prec_dtype(true); });
+    m.def("_set_amp_high_prec_dtype", [](std::string dtype_name) -> std::string {
+        return set_amp_prec_dtype(true, dtype_name);
+    });
+    m.def("_get_amp_low_prec_dtype",
+          []() -> std::string { return get_amp_prec_dtype(false); });
+    m.def("_set_amp_low_prec_dtype", [](std::string dtype_name) -> std::string {
+        return set_amp_prec_dtype(false, dtype_name);
+    });
 
     py::register_exception<TraceError>(m, "TraceError");
 }

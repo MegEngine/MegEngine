@@ -16,6 +16,7 @@ from ..core.tensor.array_method import _elwise
 from ..core.tensor.utils import convert_inputs
 from ..tensor import Tensor
 from ..utils.deprecation import deprecated_func
+from .tensor_cache import get_scalar_one
 
 __all__ = [
     "abs",
@@ -359,7 +360,11 @@ def asin(x):
 
 def atan(x):
     r"""Element-wise `inverse tangent`."""
-    return _elwise(x, 1, mode=Elemwise.Mode.ATAN2)
+    return _elwise(
+        x,
+        get_scalar_one("float32", x.device if isinstance(x, Tensor) else None),
+        mode=Elemwise.Mode.ATAN2,
+    )
 
 
 def atan2(y, x):

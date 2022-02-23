@@ -253,15 +253,6 @@ def conv2d(
         conv_mode.lower() == "cross_correlation"
         or conv_mode.name == "CROSS_CORRELATION"
     )
-    if amp._enabled:
-        compute_mode = "float32"
-        inp, weight, bias = cast_tensors(inp, weight, bias)
-    else:
-        dtype = dtype_promotion(inp, weight)
-        if inp.dtype != dtype:
-            inp = inp.astype(dtype)
-        if weight.dtype != dtype:
-            weight = weight.astype(dtype)
 
     stride_h, stride_w = expand_hw(stride)
     pad_h, pad_w = expand_hw(padding)
@@ -1328,29 +1319,32 @@ def batch_norm(
         inplace: whether to update ``running_mean`` and ``running_var``
             inplace or return new tensors. Default: True
     """
-    if inp.ndim != 4:
-        raise NotImplementedError("batch_norm for ndim != 4")
-
-    if param_dim == "dim_1c11":
-        C = inp.shape[1]
-        pshape = (1, C, 1, 1)
-    elif param_dim == "dim_111c":
-        C = inp.shape[3]
-        pshape = (1, 1, 1, C)
-    else:
-        raise ValueError("Invalid param_dim {}".format(param_dim))
 
     def make_full_if_none(x, value):
+        x_ndim = None if x is None else x.ndim
+        # in general case, x will be returned here directly
+        if x_ndim is not None and x_ndim != 1:
+            return x
+
+        if param_dim == "dim_1c11":
+            C = inp.shape[1]
+            pshape = (1, C, 1, 1)
+        elif param_dim == "dim_111c":
+            C = inp.shape[3]
+            pshape = (1, 1, 1, C)
+        else:
+            raise ValueError("Invalid param_dim {}".format(param_dim))
+
         if x is None:
             (x,) = Const(value, dtype=inp.dtype, device=inp.device)()
             shape = astensor1d(pshape, inp, dtype="int32", device=inp.device)
             (result,) = apply(builtin.Broadcast(), x, shape)
             return result
-        elif x.ndim == 1:
+        else:
+            assert x_ndim == 1
             shape = astensor1d(pshape, inp, dtype="int32", device=inp.device)
             (result,) = apply(builtin.Reshape(), x, shape)
             return result
-        return x
 
     has_mean = running_mean is not None
     has_var = running_var is not None
@@ -1359,16 +1353,6 @@ def batch_norm(
         assert has_mean, "running_mean must be provided in inference mode"
         assert has_var, "running_var must be provided in inference mode"
 
-    if has_mean and running_mean.ndim != 4:
-        raise ValueError
-    if has_var and running_var.ndim != 4:
-        raise ValueError
-
-    if amp._enabled:
-        inp = inp.astype("float16")
-        weight, bias, running_mean, running_var = cast_tensors(
-            weight, bias, running_mean, running_var, promote=True
-        )
     weight = make_full_if_none(weight, 1)
     bias = make_full_if_none(bias, 0)
 

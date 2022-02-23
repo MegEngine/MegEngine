@@ -5,9 +5,18 @@
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+
+from .._imperative_rt.core2 import (
+    _get_amp_dtype_autocast,
+    _get_amp_high_prec_dtype,
+    _get_amp_low_prec_dtype,
+    _set_amp_dtype_autocast,
+    _set_amp_high_prec_dtype,
+    _set_amp_low_prec_dtype,
+)
+
 _enabled = False
-_high_prec_dtype = "float32"
-_low_prec_dtype = "float16"
+_set_amp_dtype_autocast(_enabled)
 
 
 @property
@@ -28,6 +37,7 @@ def enabled(mod):
 def enabled(mod, enabled: bool):
     global _enabled
     _enabled = enabled
+    _set_amp_dtype_autocast(_enabled)
 
 
 @property
@@ -42,13 +52,12 @@ def high_prec_dtype(mod):
            import megengine as mge
            mge.amp.high_prec_dtype = "float32"
     """
-    return _high_prec_dtype
+    return _get_amp_high_prec_dtype()
 
 
 @high_prec_dtype.setter
 def high_prec_dtype(mod, dtype: str):
-    global _high_prec_dtype
-    _high_prec_dtype = dtype
+    _set_amp_high_prec_dtype(dtype)
 
 
 @property
@@ -63,10 +72,9 @@ def low_prec_dtype(mod):
            import megengine as mge
            mge.amp.low_prec_dtype = "float16"
     """
-    return _low_prec_dtype
+    return _get_amp_low_prec_dtype()
 
 
 @low_prec_dtype.setter
 def low_prec_dtype(mod, dtype: str):
-    global _low_prec_dtype
-    _low_prec_dtype = dtype
+    _set_amp_low_prec_dtype(dtype)

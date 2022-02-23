@@ -58,16 +58,19 @@ class autocast:
         self._origin_low = None
 
     def __enter__(self):
-        self._origin_enabled, amp._enabled = amp._enabled, self.enabled
-        self._origin_high = amp._high_prec_dtype
-        amp._high_prec_dtype = self.high_prec_dtype
-        self._origin_low = amp._low_prec_dtype
-        amp._low_prec_dtype = self.low_prec_dtype
+        self._origin_enabled = amp._enabled
+        self._origin_high = amp._get_amp_high_prec_dtype()
+        self._origin_low = amp._get_amp_low_prec_dtype()
+        amp._enabled = self.enabled
+        amp._set_amp_dtype_autocast(self.enabled)
+        amp._set_amp_high_prec_dtype(self.high_prec_dtype)
+        amp._set_amp_low_prec_dtype(self.low_prec_dtype)
 
     def __exit__(self, *args):
         amp._enabled = self._origin_enabled
-        amp._high_prec_dtype = self._origin_high
-        amp._low_prec_dtype = self._origin_low
+        amp._set_amp_dtype_autocast(self._origin_enabled)
+        amp._set_amp_high_prec_dtype(self._origin_high)
+        amp._set_amp_low_prec_dtype(self._origin_low)
 
     def __call__(self, func):
         @functools.wraps(func)

@@ -16,6 +16,8 @@ from .._imperative_rt import make_const
 from .._imperative_rt.core2 import (
     SymbolVar,
     Tensor,
+    _get_convert_inputs,
+    _set_convert_inputs,
     apply,
     dtype_promotion,
     get_device,
@@ -27,15 +29,13 @@ from .._wrap import as_device
 from ..autodiff.grad import Function
 from ..ops import builtin
 from ..ops.special import Const
-from .amp import _high_prec_dtype, _low_prec_dtype
+from .amp import _get_amp_high_prec_dtype, _get_amp_low_prec_dtype
 from .dtype import is_dtype_equal, is_quantize
-
-_enable_convert_inputs = True
 
 
 def get_convert_inputs():
     r"""get the curerent state of `_enable_convert_inputs`"""
-    return _enable_convert_inputs
+    return _get_convert_inputs()
 
 
 def set_convert_inputs(flag):
@@ -44,10 +44,7 @@ def set_convert_inputs(flag):
     `_enable_convert_inputs` is set to `False`, otherwise enabled. This function is for
     internal use only, and should be removed when the tensor-like system is refactored.
     """
-    global _enable_convert_inputs
-    backup = _enable_convert_inputs
-    _enable_convert_inputs = flag
-    return backup
+    return _set_convert_inputs(flag)
 
 
 def concatenate(inputs, axis=0, *, device=None):
@@ -75,7 +72,7 @@ def convert_single_value(v, *, dtype=None, device=None):
 
 
 def convert_inputs(*args, device=None):
-    if not _enable_convert_inputs:
+    if not _get_convert_inputs():
         return args
 
     dtype = dtype_promotion(args)
@@ -109,9 +106,9 @@ def convert_inputs(*args, device=None):
 
 def cast_tensors(*args, promote=False):
     if promote:
-        dtype = _high_prec_dtype
+        dtype = _get_amp_high_prec_dtype()
     else:
-        dtype = _low_prec_dtype
+        dtype = _get_amp_low_prec_dtype()
     return tuple(arg.astype(dtype) if arg is not None else None for arg in args)
 
 

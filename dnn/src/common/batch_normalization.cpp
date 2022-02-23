@@ -28,6 +28,16 @@ void BNForward::check_exec(
         const TensorLayout& variance, const TensorLayout& batch_mean,
         const TensorLayout& batch_inv_variance, const TensorLayout& dst,
         size_t workspace_in_bytes, size_t reserve_in_bytes) {
+    // moving some python assert to dnn to decrease the assert overhead
+    megdnn_assert(
+            src.ndim == 4,
+            "ndim of the input tensor for batch_norm should be 4, but you give %zu",
+            src.ndim);
+    megdnn_assert(bn_scale.ndim == 4, "expect 4, get %zu\n", bn_scale.ndim);
+    megdnn_assert(bn_bias.ndim == 4, "expect 4, get %zu\n", bn_bias.ndim);
+    megdnn_assert_eq_layout(bn_scale, bn_bias);
+    megdnn_assert_eq_layout(batch_mean, batch_inv_variance);
+
     megdnn_assert_contiguous(src);
     megdnn_assert_eq_layout(src, dst);
     megdnn_assert_eq_layout(bn_scale, bn_bias);

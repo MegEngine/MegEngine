@@ -25,7 +25,6 @@ from .utils import (
     astensor1d,
     astype,
     cast_tensors,
-    convert_inputs,
     make_shape_tuple,
     subgraph,
 )
@@ -40,38 +39,6 @@ def _elwise_apply(args, mode):
 
 
 def _elwise(*args, mode):
-    args = convert_inputs(*args)
-    if (
-        mode
-        in (
-            _ElwMod.TRUE_DIV,
-            _ElwMod.EXP,
-            _ElwMod.POW,
-            _ElwMod.LOG,
-            _ElwMod.EXPM1,
-            _ElwMod.LOG1P,
-            _ElwMod.ACOS,
-            _ElwMod.ASIN,
-            _ElwMod.ATAN2,
-            _ElwMod.COS,
-            _ElwMod.SIN,
-            _ElwMod.LOG_SUM_EXP,
-        )
-        and (
-            amp._enabled
-            or np.all([np.issubdtype(arg.dtype, np.integer) for arg in args])
-        )
-        or mode in (_ElwMod.TANH,)
-        and np.all([np.issubdtype(arg.dtype, np.integer) for arg in args])
-    ):
-        # autocast to FP32 to maintain precision
-        # or to avoid op's not supporting all int args
-        args = cast_tensors(*args, promote=True)
-
-    if mode in (_ElwMod.CEIL, _ElwMod.FLOOR, _ElwMod.ROUND,) and np.issubdtype(
-        args[0].dtype, np.integer
-    ):
-        return args[0]
     return _elwise_apply(args, mode)
 
 
@@ -504,10 +471,6 @@ def _remove_axis(inp: Tensor, axis) -> Tensor:
 def _reduce(mode):
     def f(self, axis=None, keepdims: bool = False):
         data = self
-        if mode == "mean":
-            data = data.astype("float32")
-        elif self.dtype == np.bool_:
-            data = data.astype("int32")
         if axis is None:
             assert not keepdims, "can not set axis=None and keepdims=True"
             result = _reduce_to_scalar(builtin.Reduce(mode=mode), data)
@@ -526,9 +489,6 @@ def _reduce(mode):
 
             if not keepdims:
                 result = _remove_axis(result, axis)
-        if self.dtype == np.bool_:
-            if mode in ["min", "max"]:
-                result = result.astype("bool")
         return result
 
     return f
