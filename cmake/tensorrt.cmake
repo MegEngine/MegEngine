@@ -18,22 +18,25 @@ if(MGE_CUDA_USE_STATIC)
     PATH_SUFFIXES lib lib64
     DOC "TRT plugin library.")
 else()
+  if(MSVC)
+        SET(CMAKE_FIND_LIBRARY_SUFFIXES ".dll")
+  endif()
   find_library(
     TRT_LIBRARY
-    NAMES libnvinfer.so libnvinfer.dylib nvinfer.dll
+    NAMES libnvinfer.so libnvinfer.dylib nvinfer.dll nvinfer
     PATHS ${ALTER_LD_LIBRARY_PATHS} ${TRT_ROOT_DIR} ${CMAKE_INSTALL_PREFIX}
-    HINTS ${ALTER_LIBRARY_PATHS}
-    PATH_SUFFIXES lib lib64
+    HINTS ${ALTER_LIBRARY_PATHS} 
+    PATH_SUFFIXES lib lib64 
     DOC "TRT library.")
   find_library(
     TRT_PLUGIN_LIBRARY
-    NAMES libnvinfer_plugin.so libnvinfer_plugin.dylib nvinfer_plugin.dll
+    NAMES libnvinfer_plugin.so libnvinfer_plugin.dylib nvinfer_plugin.dll nvinfer_plugin
     PATHS ${ALTER_LD_LIBRARY_PATHS} ${TRT_ROOT_DIR} ${CMAKE_INSTALL_PREFIX}
     HINTS ${ALTER_LIBRARY_PATHS}
     PATH_SUFFIXES lib lib64
     DOC "TRT plugin library.")
 endif()
-
+message("TRT_LIBRARY" ${TRT_LIBRARY})
 if(TRT_LIBRARY STREQUAL "TRT_LIBRARY-NOTFOUND")
   message(
     FATAL_ERROR
@@ -121,7 +124,7 @@ if(TensorRT_VERSION_MAJOR GREATER_EQUAL 7)
   if(MGE_CUDA_USE_STATIC)
     find_library(
       LIBMYELIN_COMPILER
-      NAMES libmyelin_compiler_static.a myelin_compiler_static.lib
+      NAMES libmyelin_compiler_static.a myelin_compiler_static.lib myelin64_1.lib myelin64_1
       PATHS ${__found_trt_root}/lib)
     if(LIBMYELIN_COMPILER STREQUAL "LIBMYELIN_COMPILER-NOTFOUND")
       message(FATAL_ERROR "Can not find LIBMYELIN_COMPILER Library")
@@ -134,7 +137,7 @@ if(TensorRT_VERSION_MAJOR GREATER_EQUAL 7)
 
     find_library(
       LIBMYELIN_EXECUTOR
-      NAMES libmyelin_executor_static.a myelin_executor_static.lib
+      NAMES libmyelin_executor_static.a myelin_executor_static.lib myelin64_1.lib myelin64_1
       PATHS ${__found_trt_root}/lib)
     if(LIBMYELIN_EXECUTOR STREQUAL "LIBMYELIN_EXECUTOR-NOTFOUND")
       message(FATAL_ERROR "Can not find LIBMYELIN_EXECUTOR Library")
@@ -147,7 +150,7 @@ if(TensorRT_VERSION_MAJOR GREATER_EQUAL 7)
 
     find_library(
       LIBMYELIN_PATTERN_RUNTIME
-      NAMES libmyelin_pattern_runtime_static.a myelin_pattern_runtime_static.lib
+      NAMES libmyelin_pattern_runtime_static.a myelin_pattern_runtime_static.lib myelin64_1.lib myelin64_1
       PATHS ${__found_trt_root}/lib)
     if(LIBMYELIN_PATTERN_RUNTIME STREQUAL "LIBMYELIN_PATTERN_RUNTIME-NOTFOUND")
       message(FATAL_ERROR "Can not find LIBMYELIN_PATTERN_RUNTIME Library")
@@ -161,7 +164,7 @@ if(TensorRT_VERSION_MAJOR GREATER_EQUAL 7)
 
     find_library(
       LIBMYELIN_PATTERN_LIBRARY
-      NAMES libmyelin_pattern_library_static.a myelin_pattern_library_static.lib
+      NAMES libmyelin_pattern_library_static.a myelin_pattern_library_static.lib myelin64_1.lib myelin64_1
       PATHS ${__found_trt_root}/lib)
     if(LIBMYELIN_PATTERN_LIBRARY STREQUAL "LIBMYELIN_PATTERN_LIBRARY-NOTFOUND")
       message(FATAL_ERROR "Can not find LIBMYELIN_PATTERN_LIBRARY Library")
@@ -175,7 +178,7 @@ if(TensorRT_VERSION_MAJOR GREATER_EQUAL 7)
   else()
     find_library(
       LIBMYELIN_SHARED
-      NAMES libmyelin.so myelin.dll
+      NAMES libmyelin.so myelin.dll myelin64_1.dll myelin64_1
       PATHS ${__found_trt_root}/lib)
 
     if(LIBMYELIN_SHARED STREQUAL "LIBMYELIN_SHARED-NOTFOUND")

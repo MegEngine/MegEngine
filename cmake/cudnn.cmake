@@ -6,7 +6,7 @@ endif()
 if("${CUDNN_ROOT_DIR}" STREQUAL "" AND NOT "$ENV{CUDNN_ROOT_DIR}" STREQUAL "")
   set(CUDNN_ROOT_DIR $ENV{CUDNN_ROOT_DIR})
 endif()
-
+message("CUDNN ROOT: " ${CUDNN_ROOT_DIR})
 if(MGE_CUDA_USE_STATIC AND NOT MGE_WITH_CUDNN_SHARED)
   find_library(
     CUDNN_LIBRARY
@@ -14,16 +14,19 @@ if(MGE_CUDA_USE_STATIC AND NOT MGE_WITH_CUDNN_SHARED)
     PATHS ${ALTER_LD_LIBRARY_PATHS} ${CUDNN_ROOT_DIR} ${PC_CUDNN_LIBRARY_DIRS}
           ${CMAKE_INSTALL_PREFIX}
     HINTS ${ALTER_LIBRARY_PATHS}
-    PATH_SUFFIXES lib lib64
+    PATH_SUFFIXES lib lib64 lib/x64
     DOC "CUDNN library.")
 else()
+  if(MSVC)
+        SET(CMAKE_FIND_LIBRARY_SUFFIXES ".dll")
+  endif()
   find_library(
     CUDNN_LIBRARY
-    NAMES libcudnn.so libcudnn.dylib cudnn64.dll
+    NAMES libcudnn.so libcudnn.dylib cudnn64_8.dll cudnn.dll cudnn64_8 cudnn
     PATHS ${ALTER_LD_LIBRARY_PATHS} ${CUDNN_ROOT_DIR} ${PC_CUDNN_LIBRARY_DIRS}
           ${CMAKE_INSTALL_PREFIX}
     HINTS ${ALTER_LIBRARY_PATHS}
-    PATH_SUFFIXES lib lib64
+    PATH_SUFFIXES lib lib64 bin
     DOC "CUDNN library.")
 endif()
 
