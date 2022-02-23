@@ -51,7 +51,6 @@ bool valid_broadcast(const TensorShape& src_shape, const TensorShape& tar_shape)
 
 std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
         const OpDef& def, const SmallVector<LogicalTensorDesc>& inputs) {
-    def.cast_final_safe<Broadcast>();
     size_t nr_inp = inputs.size();
     mgb_assert(nr_inp == 2, "Broadcast expects 2 inputs; got %lu actually", nr_inp);
     auto&& src = inputs[0];
@@ -82,11 +81,16 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
 }
 
 SmallVector<TensorPtr> apply_on_physical_tensor(
-        const OpDef& def, const SmallVector<TensorPtr>& inputs) {
+        const OpDef& def, const SmallVector<TensorPtr>& inputs,
+        SmallVector<LogicalTensorDesc>& output_descs, const bool& validated) {
     auto& input = inputs[0];
     TensorShape target_shape;
-    cg::copy_tensor_value_to_shape(
-            target_shape, inputs[1]->get_value().proxy_to_default_cpu());
+    if (validated) {
+        target_shape = output_descs[0].layout;
+    } else {
+        cg::copy_tensor_value_to_shape(
+                target_shape, inputs[1]->get_value().proxy_to_default_cpu());
+    }
     TensorPtr output = Tensor::make(
             TensorLayout(target_shape, input->dtype()), input->comp_node());
     if (output->layout().is_empty()) {
@@ -171,13 +175,18 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
 }
 
 SmallVector<TensorPtr> apply_on_physical_tensor(
-        const OpDef& def, const SmallVector<TensorPtr>& inputs) {
+        const OpDef& def, const SmallVector<TensorPtr>& inputs,
+        SmallVector<LogicalTensorDesc>& output_descs, const bool& validated) {
     auto&& op_def = def.cast_final_safe<Reshape>();
     size_t nr_inp = inputs.size();
     mgb_assert(nr_inp == 2, "Reshape expects 2 inputs; got %lu actually", nr_inp);
     auto&& src = inputs[0];
     auto&& tshp_nd = inputs[1];
     auto slayout = src->layout();
+
+    if (validated) {
+        return {Tensor::make(src->blob(), 0, output_descs[0].layout)};
+    }
 
     TensorShape tshp;
     cg::copy_tensor_value_to_shape(tshp, tshp_nd->get_value().proxy_to_default_cpu());
@@ -186,9 +195,7 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
         tshp[op_def.axis] = 1;
         tshp[op_def.axis] = src->layout().total_nr_elems() / tshp.total_nr_elems();
     }
-    TensorLayout tlayout = slayout.reshape(tshp);
-    // memory forward
-    return {Tensor::make(src->blob(), 0, tlayout)};
+    return {Tensor::make(src->blob(), 0, slayout.reshape(tshp))};
 }
 
 OP_TRAIT_REG(Reshape, Reshape)

@@ -280,7 +280,8 @@ void ChannelImpl::dispatch_default_cpu(
             input_tensors.push_back(Tensor::make(
                     input_tensornd, HostTensorND::make_proxy(input_tensornd)));
         }
-        auto output_tensors = OpDef::apply_on_physical_tensor(*op, input_tensors);
+        auto output_tensors = OpDef::apply_on_physical_tensor(
+                *op, input_tensors, output_descs, validated);
         for (size_t i = 0; i < output_tensors.size(); ++i) {
             output_tensornds[i].copy_from_fixlayout(output_tensors[i]->dev_tensor());
         }
@@ -324,6 +325,7 @@ void ChannelImpl::dispatch_kernel(
     MGB_RECORD_EVENT(ShapeInferEvent, validated);
 
     ApplyOp cmd{Profiler::next_id(), std::move(op)};
+    cmd.validated = validated;
     cmd.inputs = std::move(input_infos);
     for (int i = 0; i < output_descs.size(); ++i) {
         auto&& desc = output_descs[i];
@@ -703,14 +705,16 @@ void ChannelImpl::do_apply_op(const ApplyOp& cmd, std::string reason) {
         auto_evict(0);
     }
     auto apply_on_physical_tensor =
-            [&](auto&& self, const OpDef& def,
-                SmallVector<TensorPtr> inputs) -> SmallVector<TensorPtr> {
+            [&](auto&& self, const OpDef& def, SmallVector<TensorPtr> inputs,
+                SmallVector<LogicalTensorDesc>& output_descs,
+                const bool& validated) -> SmallVector<TensorPtr> {
         auto apply_functor = [&](std::shared_ptr<OpDef> op,
                                  SmallVector<TensorPtr> inputs,
                                  size_t nr_outputs) -> SmallVector<TensorPtr> {
             auto opname = op->trait()->make_name(*op);
             imperative_log_profile_begin(opname.c_str());
-            auto outputs = self(self, *op, inputs);
+            // do not use infered output_desc in subgraph
+            auto outputs = self(self, *op, inputs, output_descs, false);
             imperative_log_profile_end(opname.c_str());
             return outputs;
         };
@@ -726,7 +730,7 @@ void ChannelImpl::do_apply_op(const ApplyOp& cmd, std::string reason) {
                     inputs, apply_functor, const_functor);
             return outputs;
         }
-        return OpDef::apply_on_physical_tensor(def, inputs);
+        return OpDef::apply_on_physical_tensor(def, inputs, output_descs, validated);
     };
     MGB_RECORD_EVENT(OpExecuteEvent, apply_id, {}, reason);
     // Begin profiling operator
@@ -757,8 +761,13 @@ void ChannelImpl::do_apply_op(const ApplyOp& cmd, std::string reason) {
                 Timer::record_device(device));
     }
     // Apply op
+    SmallVector<LogicalTensorDesc> output_descs;
+    for (auto i : cmd.outputs) {
+        output_descs.push_back(i->desc);
+    }
     // Here std::move is REQUIRED for removing duplicated references.
-    auto outputs = apply_on_physical_tensor(apply_on_physical_tensor, *cmd.op, inputs);
+    auto outputs = apply_on_physical_tensor(
+            apply_on_physical_tensor, *cmd.op, inputs, output_descs, cmd.validated);
     // After execute
     for (auto&& [device, kernel_id] : kernels) {
         MGB_RECORD_EVENT_IF(

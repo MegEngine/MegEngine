@@ -718,7 +718,6 @@ def test_assert_equal():
     inp2 = g.make_h2d(dtype=np.float32, device="xpux")
     op = builtin.AssertEqual(maxerr=1e-5)
     out = G.apply_normal_varnode(op, inp1._node, inp2._node)[0]
-    print(out)
     g.compile(out)
     file = io.BytesIO()
     out_model = G.dump_graph([out])

@@ -142,7 +142,8 @@ public:
 
     const TensorLayout& layout() const { return m_layout; }
 
-    MemAllocPlan& layout(const TensorLayout& dest, bool allow_shape_change = false);
+    MGE_WIN_DECLSPEC_FUC MemAllocPlan& layout(
+            const TensorLayout& dest, bool allow_shape_change = false);
 
 #if MGB_ENABLE_JSON
     MGE_WIN_DECLSPEC_FUC std::shared_ptr<json::Value> to_json() const override;

@@ -77,7 +77,9 @@ void TensorSanityCheck::enable() {
                 std::move(trait.apply_on_physical_tensor));
         trait.apply_on_physical_tensor = ApplyOnPhysicalTensor(
                 [this, backup = backup.get()](
-                        const OpDef& def, const SmallVector<TensorPtr>& inputs) {
+                        const OpDef& def, const SmallVector<TensorPtr>& inputs,
+                        SmallVector<LogicalTensorDesc>& output_descs,
+                        const bool& validated) {
                     for (auto&& i : inputs) {
                         if (!m_checker->check(i)) {
                             mgb_throw(
@@ -86,7 +88,7 @@ void TensorSanityCheck::enable() {
                                     print_op(def).c_str());
                         }
                     }
-                    auto output = (*backup)(def, inputs);
+                    auto output = (*backup)(def, inputs, output_descs, validated);
                     for (auto&& i : output) {
                         mgb_assert(m_checker->check(i));
                     }

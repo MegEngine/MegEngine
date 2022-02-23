@@ -135,7 +135,9 @@ void OprChecker::run(std::vector<InputSpec> inp_keys, std::set<size_t> bypass) {
         imp_physical_inp[i] = Tensor::make(host_inp[i]);
     }
 
-    auto imp_oup = OpDef::apply_on_physical_tensor(*m_op, imp_physical_inp);
+    SmallVector<LogicalTensorDesc> output_descs;
+    auto imp_oup = OpDef::apply_on_physical_tensor(
+            *m_op, imp_physical_inp, output_descs, false);
     mgb_assert(imp_oup.size() == nr_oups);
 
     // check input not modified

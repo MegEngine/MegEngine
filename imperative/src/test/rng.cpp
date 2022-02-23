@@ -25,7 +25,14 @@ void check_rng_basic(Args&&... args) {
             DeviceTensorND tshape_dev;
             cg::copy_shape_to_tensor_value(tshape_dev, tshape);
             SmallVector<TensorPtr> inputs = {Tensor::make(tshape_dev)};
-            auto outputs = OpDef::apply_on_physical_tensor(*op, inputs);
+            SmallVector<LogicalTensorDesc> input_descs;
+            input_descs.push_back(
+                    {inputs[0]->layout(), inputs[0]->comp_node(),
+                     inputs[0]->dev_tensor()});
+            auto [output_descs, validated] =
+                    OpDef::infer_output_attrs_fallible(*op, input_descs);
+            auto outputs = OpDef::apply_on_physical_tensor(
+                    *op, inputs, output_descs, validated);
             ASSERT_TRUE(outputs[0]->layout().eq_shape(tshape));
             ASSERT_TRUE(cn == outputs[0]->comp_node());
             // sync before delete handle
@@ -41,7 +48,14 @@ void check_rng_with_input_basic(
         const CompNode& cn, const SmallVector<TensorPtr>& inputs, Args&&... args) {
     Handle h = new_handle(cn, 123);
     auto op = Op::make(std::forward<Args>(args)..., h);
-    auto outputs = OpDef::apply_on_physical_tensor(*op, inputs);
+    SmallVector<LogicalTensorDesc> input_descs;
+    for (auto&& i : inputs) {
+        input_descs.push_back({i->layout(), i->comp_node(), i->dev_tensor()});
+    }
+    auto [output_descs, validated] =
+            OpDef::infer_output_attrs_fallible(*op, input_descs);
+    auto outputs =
+            OpDef::apply_on_physical_tensor(*op, inputs, output_descs, validated);
     ASSERT_TRUE(outputs[0]->layout().eq_shape(inputs[0]->shape()));
     ASSERT_TRUE(cn == outputs[0]->comp_node());
     // sync before delete handle

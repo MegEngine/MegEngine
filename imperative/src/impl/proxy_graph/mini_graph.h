@@ -451,7 +451,14 @@ public:
                     }
                 } else {
                     if (dep.type == cg::static_infer::DepType::SHAPE) {
-                        if (auto* val = infer(output_data[dep.idx].shape_infer, sync)) {
+                        // using opr->output()->shape when it's available
+                        // otherwise infer it
+                        if (!owner.m_opr->output(dep.idx)->shape().is_empty()) {
+                            target.inp_val.val[i].m_shape =
+                                    &owner.m_opr->output(dep.idx)->shape();
+                        } else if (
+                                auto* val =
+                                        infer(output_data[dep.idx].shape_infer, sync)) {
                             target.inp_val.val[i].m_shape = val;
                         } else
                             return false;
@@ -798,7 +805,8 @@ public:
     }
 
     SmallVector<TensorPtr> apply_on_physical_tensor(
-            const OpDef& def, SmallVector<TensorPtr> inputs) {
+            const OpDef& def, SmallVector<TensorPtr> inputs,
+            SmallVector<LogicalTensorDesc>& desc, const bool& validated) {
         auto raw_inputs = to_raw_ptr_array(inputs);
         auto& minigraph = get_cached_minigraph(def, raw_inputs);
         auto _ = scoped_attach(&minigraph);
@@ -811,10 +819,12 @@ public:
         // LogicalTensorDesc for minigraph.opr()->usable_output()
         SmallVector<LogicalTensorDesc> output_descs;
         for (size_t i = 0; i < minigraph.opr()->output().size(); ++i) {
+            auto* var = minigraph.opr()->output()[i];
             auto* shape = sess.infer(sess.output_data[i].shape_infer, true);
             mgb_assert(shape);
-            minigraph.opr()->output()[i]->shape(*shape);
+            var->shape(*shape);
         }
+
         for (size_t i = 0; i < minigraph.output_size(); ++i) {
             auto* ovar = minigraph.output_var(i);
             mgb_assert(ovar->dtype().valid() && ovar->comp_node().valid());
@@ -829,6 +839,7 @@ public:
             outputs[i] =
                     Tensor::make(output_descs[i].layout, output_descs[i].comp_node);
         }
+
         auto raw_outputs = to_raw_ptr_array(outputs);
         CompNode::UnorderedSet used_cns;
         for (auto&& out : raw_outputs) {
@@ -843,6 +854,7 @@ public:
                 }
             }
         }
+
         // some opr (e.g. Subtensor) may invoke infer_value during execution,
         // so we need create inference session here
         minigraph.execute(raw_inputs, raw_outputs, m_env);
@@ -853,6 +865,7 @@ public:
                 }
             }
         }
+
         return outputs;
     }
 };

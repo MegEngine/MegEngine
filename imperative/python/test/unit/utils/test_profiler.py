@@ -51,7 +51,6 @@ def test_profiler(format, trace_mode):
     with Profiler(profile_prefix, format=format):
         infer()
 
-    print(profile_path)
     assert os.path.exists(profile_path), "profiling results not found"
 
     if format == "chrome_timeline.json":

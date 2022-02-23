@@ -111,7 +111,6 @@ def test_xornet_trace_dump():
             _, loss = val_fun(data, label)
             loss = loss.numpy()
             val_loss.append((step, loss))
-            print("Step: {} loss={}".format(step, loss))
         opt.step()
 
     test_data = np.array(

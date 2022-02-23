@@ -99,7 +99,8 @@ HostTensorND get_var_shape_host_tensor(
 }
 
 SmallVector<TensorPtr> apply_on_physical_tensor(
-        const OpDef& def, const SmallVector<TensorPtr>& inputs) {
+        const OpDef& def, const SmallVector<TensorPtr>& inputs,
+        SmallVector<LogicalTensorDesc>& output_descs, const bool& validated) {
     return {Tensor::make(std::move(get_var_shape_host_tensor(def, inputs)))};
 }
 
@@ -180,7 +181,8 @@ cg::OperatorNodeBase* param_pack_split_apply_on_var_node(
 }
 
 SmallVector<TensorPtr> param_pack_split_apply_on_physical_tensor(
-        const OpDef& def, const SmallVector<TensorPtr>& inputs) {
+        const OpDef& def, const SmallVector<TensorPtr>& inputs,
+        SmallVector<LogicalTensorDesc>& output_descs, const bool& validated) {
     auto&& param = def.cast_final_safe<ParamPackSplit>();
     mgb_assert(
             inputs.size() == 1, "ParamPackSplit take 1 input, got %lu", inputs.size());
@@ -217,7 +219,8 @@ cg::OperatorNodeBase* param_pack_concat_apply_on_var_node(
 }
 
 SmallVector<TensorPtr> param_pack_concat_apply_on_physical_tensor(
-        const OpDef& def, const SmallVector<TensorPtr>& inputs) {
+        const OpDef& def, const SmallVector<TensorPtr>& inputs,
+        SmallVector<LogicalTensorDesc>& output_descs, const bool& validated) {
     def.cast_final_safe<ParamPackConcat>();
     mgb_assert(inputs.size() > 1, "param_pack should have at least one input");
     auto comp_node = inputs.front()->comp_node();

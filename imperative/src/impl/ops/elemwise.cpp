@@ -112,17 +112,14 @@ void apply_on_device_tensornd(
 }
 
 SmallVector<TensorPtr> apply_on_physical_tensor(
-        const OpDef& def, const SmallVector<TensorPtr>& inputs) {
-    auto&& op_def = def.cast_final_safe<Elemwise>();
+        const OpDef& def, const SmallVector<TensorPtr>& inputs,
+        SmallVector<LogicalTensorDesc>& output_descs, const bool& validated) {
     SmallVector<DeviceTensorND> inp_tensornds(inputs.size());
-    TensorShapeArray inp_shapes(inputs.size());
     for (unsigned i = 0; i < inputs.size(); ++i) {
         inp_tensornds[i] = inputs[i]->dev_tensor();
-        inp_shapes[i] = inputs[i]->layout();
     }
-    TensorShape shape = opr::Elemwise::get_output_var_shape(op_def.mode, inp_shapes);
     DeviceTensorND out = BlobManager::inst()->alloc_workspace_with_defrag(
-            inp_tensornds[0].comp_node(), {shape, inp_tensornds[0].layout().dtype});
+            inp_tensornds[0].comp_node(), output_descs[0].layout);
     SmallVector<DeviceTensorND> oup_tensornds = {out};
     apply_on_device_tensornd(def, inp_tensornds, &oup_tensornds);
     return {Tensor::make(oup_tensornds[0])};
@@ -221,7 +218,8 @@ cg::OperatorNodeBase* apply_inplace_add_on_var_node(
 }
 
 SmallVector<TensorPtr> apply_inplace_add_on_physical_tensor(
-        const OpDef& def, const SmallVector<TensorPtr>& inputs) {
+        const OpDef& def, const SmallVector<TensorPtr>& inputs,
+        SmallVector<LogicalTensorDesc>& output_descs, const bool& validated) {
     mgb_assert(
             inputs[0]->blob().use_count() == 1 && inputs[0]->blob()->storage().unique(),
             "This inplace modification may change the elements of other tensors. "

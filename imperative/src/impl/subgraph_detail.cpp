@@ -62,15 +62,19 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
 }
 
 SmallVector<TensorPtr> apply_on_physical_tensor(
-        const OpDef& def, SmallVector<TensorPtr> inputs) {
+        const OpDef& def, SmallVector<TensorPtr> inputs,
+        SmallVector<LogicalTensorDesc>& output_descs, const bool& validated) {
     SmallVector<LogicalTensorDesc> input_descs;
     for (auto&& input : inputs) {
         input_descs.push_back({input->layout(), input->comp_node()});
     }
     auto subgraph = def.trait()->make_forward_graph(def, input_descs);
-    auto apply_functor = [](const std::shared_ptr<OpDef>& op,
-                            const SmallVector<TensorPtr>& inputs, size_t nr_outputs) {
-        return OpDef::apply_on_physical_tensor(*op, inputs);
+    auto apply_functor = [&output_descs](
+                                 const std::shared_ptr<OpDef>& op,
+                                 const SmallVector<TensorPtr>& inputs,
+                                 size_t nr_outputs) {
+        // do not use infered output_desc in subgraph
+        return OpDef::apply_on_physical_tensor(*op, inputs, output_descs, false);
     };
     auto const_functor = [&](const TensorPtr& value) { return value; };
     auto outputs = subgraph.apply<TensorPtr>(inputs, apply_functor, const_functor);

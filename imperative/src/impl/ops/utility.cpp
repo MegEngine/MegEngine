@@ -62,25 +62,10 @@ OP_TRAIT_REG(FastpathCopy, FastpathCopy)
 
 namespace {
 namespace shape_infer {
-auto apply_on_physical_tensor(const OpDef& def, const SmallVector<TensorPtr>& inputs) {
-    auto& op = def.cast_final_safe<ShapeInfer>();
-    size_t nr_inputs = inputs.size();
-    mgb_assert(nr_inputs > 0, "no inputs for ShapeInfer");
-    SmallVector<LogicalTensorDesc> input_descs;
-    for (size_t i = 0; i < nr_inputs; ++i) {
-        auto input = inputs[i]->get_value();
-        TensorLayout layout;
-        layout.ndim = input.shape(0);
-        for (size_t i = 0; i < layout.ndim; ++i) {
-            layout[i] = input.ptr<int32_t>()[i];
-        }
-        layout.dtype = op.dtypes[i];
-        layout.init_contiguous_stride();
-        input_descs.push_back({layout, op.devices[i]});
-    }
-    auto [output_descs, valid] =
-            OpDef::infer_output_attrs_fallible(*op.op, input_descs);
-    mgb_assert(valid, "shape inference incomplete");
+auto apply_on_physical_tensor(
+        const OpDef& def, const SmallVector<TensorPtr>& inputs,
+        SmallVector<LogicalTensorDesc>& output_descs, const bool& validated) {
+    mgb_assert(validated, "shape inference incomplete");
     SmallVector<TensorPtr> outputs;
     for (auto&& output_desc : output_descs) {
         HostTensorND shape_tensor{
@@ -189,7 +174,9 @@ auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
     return opr::Identity::make(inputs[0], config);
 }
 
-auto apply_on_physical_tensor(const OpDef& def, const SmallVector<TensorPtr>& inputs) {
+auto apply_on_physical_tensor(
+        const OpDef& def, const SmallVector<TensorPtr>& inputs,
+        SmallVector<LogicalTensorDesc>& output_descs, const bool& validated) {
     return SmallVector<TensorPtr>{inputs[0]};
 }
 OP_TRAIT_REG(Identity, Identity)
@@ -588,7 +575,9 @@ ComputingGraphHolder<Kind>& get_computing_graph(
     return *cg_holder_queue.back();
 }
 
-auto apply_on_physical_tensor(const OpDef& def, const SmallVector<TensorPtr>& inputs) {
+auto apply_on_physical_tensor(
+        const OpDef& def, const SmallVector<TensorPtr>& inputs,
+        SmallVector<LogicalTensorDesc>& output_descs, const bool& validated) {
     SmallVector<LogicalTensorDesc> input_descs;
     for (auto&& input : inputs) {
         input_descs.push_back({input->layout(), input->comp_node()});

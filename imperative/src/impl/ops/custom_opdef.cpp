@@ -196,16 +196,14 @@ void apply_on_device_tensornd(
 }
 
 SmallVector<TensorPtr> apply_on_physical_tensor(
-        const OpDef& def, const SmallVector<TensorPtr>& inputs) {
-    auto&& op = static_cast<const CustomOpDef&>(def);
-    auto [output_descs, success] = op.infer_output_attrs(inputs);
-    mgb_assert(success == true, "infer output attributes fall\n");
+        const OpDef& def, const SmallVector<TensorPtr>& inputs,
+        SmallVector<LogicalTensorDesc>& output_descs, const bool& validated) {
+    mgb_assert(validated == true, "infer output attributes fall\n");
     SmallVector<TensorPtr> outputs(output_descs.size());
 
     for (size_t i = 0; i < outputs.size(); ++i) {
         auto& output = outputs[i];
-        auto& output_desc = output_descs[i];
-        output = Tensor::make(output_desc.layout, output_desc.comp_node);
+        output = Tensor::make(output_descs[i].layout, output_descs[i].comp_node);
     }
 
     SmallVector<DeviceTensorND> inp_tensornds(inputs.size());

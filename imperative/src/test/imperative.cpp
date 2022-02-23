@@ -122,7 +122,10 @@ void run_graph(size_t mem_reserved) {
     Param param{Param::Mode::MUL};
     attr.param.write_pod(param);
 
-    auto out = OpDef::apply_on_physical_tensor(*op, {ptr_a[1], ptr_a[99]}).at(0);
+    SmallVector<LogicalTensorDesc> output_descs;
+    auto out = OpDef::apply_on_physical_tensor(
+                       *op, {ptr_a[1], ptr_a[99]}, output_descs, false)
+                       .at(0);
 
     // value before defrag
     HostTensorND host_out_before;

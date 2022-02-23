@@ -51,11 +51,13 @@ bool memory_forward_success(const OpDef& def, SmallVector<TensorPtr> inputs) {
 }
 
 SmallVector<TensorPtr> apply_on_physical_tensor(
-        const OpDef& def, const SmallVector<TensorPtr>& inputs) {
+        const OpDef& def, const SmallVector<TensorPtr>& inputs,
+        SmallVector<LogicalTensorDesc>& output_descs, const bool& validated) {
     if (memory_forward_success(def, inputs)) {
         return {Tensor::make(inputs[0]->blob(), 0, inputs[0]->layout())};
     }
-    return proxy_graph_detail::apply_on_physical_tensor(def, inputs);
+    return proxy_graph_detail::apply_on_physical_tensor(
+            def, inputs, output_descs, validated);
 }
 
 std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(

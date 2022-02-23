@@ -51,7 +51,8 @@ public:
             const OpDef& def, const SmallVector<LogicalTensorDesc>& inputs);
 
     static SmallVector<TensorPtr> apply_on_physical_tensor(
-            const OpDef& def, SmallVector<TensorPtr> inputs);
+            const OpDef& def, SmallVector<TensorPtr> inputs,
+            SmallVector<LogicalTensorDesc>& output_descs, const bool& validated);
 
     /*!
      * \brief Call the corresponding dnn op to calculate results. Output

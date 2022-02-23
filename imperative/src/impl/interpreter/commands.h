@@ -49,6 +49,7 @@ struct ApplyOp {
     std::shared_ptr<OpDef> op;
     SmallVector<TensorInfo*> inputs;
     SmallVector<TensorInfo*> outputs;
+    bool validated = false;
 
     template <typename TFunctor>
     void get_props(TFunctor&& functor) const {

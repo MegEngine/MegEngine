@@ -81,7 +81,13 @@ T prepare_optimized_backward_inputs(
 
 SmallVector<TensorPtr> apply_shared_on_physical_tensor(
         std::shared_ptr<OpDef> def, SmallVector<TensorPtr> inputs, size_t nr_outputs) {
-    return OpDef::apply_on_physical_tensor(*def, inputs);
+    SmallVector<LogicalTensorDesc> input_descs;
+    for (auto&& i : inputs) {
+        input_descs.push_back({i->layout(), i->comp_node()});
+    }
+    auto [output_descs, validated] =
+            OpDef::infer_output_attrs_fallible(*def, input_descs);
+    return OpDef::apply_on_physical_tensor(*def, inputs, output_descs, validated);
 }
 
 TEST(TestImperative, BackwardGraphBasic) {
@@ -106,7 +112,13 @@ TEST(TestImperative, BackwardGraphBasic) {
     auto&& save_for_backward = result.input_mask;
     auto&& input_has_grad = result.output_mask;
 
-    auto outputs = OpDef::apply_on_physical_tensor(*attr, inputs);
+    for (size_t i = 0; i < inputs.size(); i++) {
+        input_descs[i].value = inputs[i]->dev_tensor();
+    }
+    auto [output_descs, validated] =
+            OpDef::infer_output_attrs_fallible(*attr, input_descs);
+    auto outputs =
+            OpDef::apply_on_physical_tensor(*attr, inputs, output_descs, validated);
     inputs.push_back(outputs[0]);
     hvs.push_back(*gen({42}));
     inputs.push_back(Tensor::make(hvs.back()));
@@ -161,7 +173,10 @@ TEST(TestImperative, BackwardGraphIdentity) {
     auto&& save_for_backward = result.input_mask;
     auto&& input_has_grad = result.output_mask;
 
-    auto outputs = OpDef::apply_on_physical_tensor(*attr, inputs);
+    auto [output_descs, validated] =
+            OpDef::infer_output_attrs_fallible(*attr, input_descs);
+    auto outputs =
+            OpDef::apply_on_physical_tensor(*attr, inputs, output_descs, validated);
     inputs.push_back(outputs[0]);
     inputs.push_back(dc);
     mgb_assert(save_for_backward.size() == inputs.size());
@@ -238,7 +253,13 @@ TEST(TestImperative, OptimizedBackwardGraphBasic) {
     auto a_tn = Tensor::make(*a_hv);
     auto b_tn = Tensor::make(*b_hv);
     auto dc_tn = Tensor::make(*dc_hv);
-    auto c_tn = OpDef::apply_on_physical_tensor(*op, {a_tn, b_tn})[0];
+    SmallVector<LogicalTensorDesc> input_descs;
+    input_descs.push_back({a_tn->layout(), a_tn->comp_node(), a_tn->dev_tensor()});
+    input_descs.push_back({b_tn->layout(), b_tn->comp_node(), b_tn->dev_tensor()});
+    auto [output_descs, validated] =
+            OpDef::infer_output_attrs_fallible(*op, input_descs);
+    auto c_tn = OpDef::apply_on_physical_tensor(
+            *op, {a_tn, b_tn}, output_descs, validated)[0];
 
     auto backward_graph_inputs = prepare_backward_graph_inputs<SmallVector<TensorPtr>>(
             bg, {a_tn, b_tn}, {c_tn}, {dc_tn});

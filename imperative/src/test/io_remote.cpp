@@ -36,7 +36,8 @@ TEST(TestImperative, IORemote) {
         auto def = imperative::RemoteSend::make(
                 "io_remote_test", server_addr, port, 1, "nccl");
         auto inp = Tensor::make(*hnd);
-        auto oup = OpDef::apply_on_physical_tensor(*def, {inp});
+        SmallVector<LogicalTensorDesc> output_descs;
+        auto oup = OpDef::apply_on_physical_tensor(*def, {inp}, output_descs, false);
     };
 
     auto run_recv = [&](std::shared_ptr<HostTensorND> hnd) {
@@ -44,7 +45,8 @@ TEST(TestImperative, IORemote) {
                 "io_remote_test", server_addr, port, 0, CompNode::load("gpu1"),
                 std::vector<int32_t>{(int32_t)vector_size}, dtype::Float32(), "nccl");
         auto inp = Tensor::make(*hnd);
-        auto oup = OpDef::apply_on_physical_tensor(*def, {inp});
+        SmallVector<LogicalTensorDesc> output_descs;
+        auto oup = OpDef::apply_on_physical_tensor(*def, {inp}, output_descs, false);
         HostTensorND host_v;
         host_v.copy_from(oup[0]->dev_tensor()).sync();
         MGB_ASSERT_TENSOR_NEAR(*expect, host_v, 1e-6);

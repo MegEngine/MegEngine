@@ -18,7 +18,8 @@ namespace imperative {
 namespace subgraph_detail {
 
 SmallVector<TensorPtr> apply_on_physical_tensor(
-        const OpDef& def, SmallVector<TensorPtr> inputs);
+        const OpDef& def, SmallVector<TensorPtr> inputs,
+        SmallVector<LogicalTensorDesc>& output_descs, const bool& validated);
 
 std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
         const OpDef& def, const SmallVector<LogicalTensorDesc>& inputs);

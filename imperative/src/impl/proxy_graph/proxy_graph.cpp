@@ -27,9 +27,10 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
 }
 
 SmallVector<TensorPtr> apply_on_physical_tensor(
-        const OpDef& def, SmallVector<TensorPtr> inputs) {
-    auto ret =
-            proxy_graph::ProxyGraphTypeI::inst().apply_on_physical_tensor(def, inputs);
+        const OpDef& def, SmallVector<TensorPtr> inputs,
+        SmallVector<LogicalTensorDesc>& output_descs, const bool& validated) {
+    auto ret = proxy_graph::ProxyGraphTypeI::inst().apply_on_physical_tensor(
+            def, inputs, output_descs, validated);
     return ret;
 }
 

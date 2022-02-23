@@ -24,7 +24,8 @@ SymbolVarArray apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
 }
 
 SmallVector<TensorPtr> apply_on_physical_tensor(
-        const OpDef& def, const SmallVector<TensorPtr>& inputs) {
+        const OpDef& def, const SmallVector<TensorPtr>& inputs,
+        SmallVector<LogicalTensorDesc>& output_descs, const bool& validated) {
     size_t size = inputs.size();
     auto&& op = def.cast_final_safe<CheckNonFinite>();
     SmallVector<TensorPtr> outputs(size + 1);
@@ -62,18 +63,6 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
     dests[size].comp_node = inputs[0].comp_node;
     dests[size].layout = TensorLayout(TensorShape({1}), dtype::Int32());
     return {dests, true};
-}
-SmallVector<LogicalTensorDesc> infer_output_attrs(
-        const OpDef& def, const SmallVector<TensorPtr>& inputs) {
-    size_t size = inputs.size();
-    SmallVector<LogicalTensorDesc> dests(size + 1);
-    for (size_t i = 0; i < size; ++i) {
-        dests[i].comp_node = inputs[i]->comp_node();
-        dests[i].layout = inputs[i]->layout();
-    }
-    dests[size].comp_node = inputs[0]->comp_node();
-    dests[size].layout = TensorLayout(TensorShape({1}), dtype::Int32());
-    return dests;
 }
 
 OP_TRAIT_REG(CheckNonFinite, CheckNonFinite)
