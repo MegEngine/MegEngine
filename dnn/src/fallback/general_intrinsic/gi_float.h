@@ -454,22 +454,22 @@ GiBlendFloat32(GI_FLOAT32 Vector1, GI_FLOAT32 Vector2, GI_FLOAT32 Selection) {
             GiAndFloat32(Vector2, Selection), GiAndNotFloat32(Selection, Vector1));
 }
 
+#define MIN_NAN(a, b) (isnan(a) || (a) < (b)) ? (a) : (b);
+#define MAX_NAN(a, b) (isnan(a) || (a) > (b)) ? (a) : (b);
+
 GI_FORCEINLINE
 GI_FLOAT32
 GiMaximumFloat32(GI_FLOAT32 Vector1, GI_FLOAT32 Vector2) {
 #if defined(GI_NEON_INTRINSICS)
     return vmaxq_f32(Vector1, Vector2);
-#elif defined(GI_SSE2_INTRINSICS)
+#else
     //! _mm_max_ps does not fellow the IEEE standard when input is NAN, so
     //! implement by C code
-#define MAX_NAN(a, b) (std::isnan(a) || (a) > (b)) ? (a) : (b);
     GI_FLOAT32 max;
     for (size_t i = 0; i < GI_SIMD_LEN_BYTE / sizeof(float); i++) {
         max[i] = MAX_NAN(Vector1[i], Vector2[i]);
     }
     return max;
-#else
-    return GiBlendFloat32(Vector2, Vector1, Vector1 > Vector2);
 #endif
 }
 
@@ -478,18 +478,14 @@ GI_FLOAT32
 GiMinimumFloat32(GI_FLOAT32 Vector1, GI_FLOAT32 Vector2) {
 #if defined(GI_NEON_INTRINSICS)
     return vminq_f32(Vector1, Vector2);
-#elif defined(GI_SSE2_INTRINSICS)
-    return _mm_min_ps(Vector1, Vector2);
+#else
     //! _mm_min_ps does not fellow the IEEE standard when input is NAN, so
     //! implement by C code
-#define MIN_NAN(a, b) (std::isnan(a) || (a) < (b)) ? (a) : (b);
     GI_FLOAT32 min;
     for (size_t i = 0; i < GI_SIMD_LEN_BYTE / sizeof(float); i++) {
         min[i] = MIN_NAN(Vector1[i], Vector2[i]);
     }
     return min;
-#else
-    return GiBlendFloat32(Vector2, Vector1, Vector2 > Vector1);
 #endif
 }
 
@@ -563,11 +559,6 @@ float GiReduceMaximumFloat32(GI_FLOAT32 Vector) {
     VectorLow = vpmax_f32(VectorLow, VectorHigh);
     VectorLow = vpmax_f32(VectorLow, VectorHigh);
     return vget_lane_f32(VectorLow, 0);
-#elif defined(GI_VSX_INTRINSICS)
-    Vector = GiMaximumFloat32(
-            Vector, GI_FLOAT32(vec_splat((__vector long long)Vector, 1)));
-    Vector = GiMaximumFloat32(Vector, vec_splat(Vector, 1));
-    return Vector[0];
 #elif defined(GI_SSE2_INTRINSICS)
     Vector = GiMaximumFloat32(
             Vector, _mm_shuffle_ps(Vector, Vector, _MM_SHUFFLE(2, 3, 2, 3)));
@@ -577,7 +568,7 @@ float GiReduceMaximumFloat32(GI_FLOAT32 Vector) {
 #else
     float ret = Vector[0];
     for (size_t i = 1; i < GI_SIMD_LEN_BYTE / sizeof(float); i++) {
-        ret = Max(ret, Vector[i]);
+        ret = MAX_NAN(ret, Vector[i]);
     }
     return ret;
 #endif
@@ -602,7 +593,7 @@ float GiReduceMinimumFloat32(GI_FLOAT32 Vector) {
 #else
     float ret = Vector[0];
     for (size_t i = 1; i < GI_SIMD_LEN_BYTE / sizeof(float); i++) {
-        ret = Min(ret, Vector[i]);
+        ret = MIN_NAN(ret, Vector[i]);
     }
     return ret;
 #endif

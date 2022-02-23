@@ -145,7 +145,7 @@ struct minReducer;
         _mode##Reducer() = default;                                         \
         void feed(const float* val) {                                       \
             auto vval = GiLoadFloat32(val);                                 \
-            res = Gi##_Mode##imumFloat32(vval, res);                        \
+            res = Gi##_Mode##imumFloat32(res, vval);                        \
         }                                                                   \
         void feed_remain(const float* val) {                                \
             auto vval = GiBroadcastFloat32(*val);                           \
@@ -172,7 +172,7 @@ REDUCER_MAX_MIN_C1(min, Min, std::numeric_limits<dt_float32>::max());
         _mode##Reducer() = default;                                         \
         void feed(const float* val) {                                       \
             GI_FLOAT32 vval = GiLoadFloat32(val);                           \
-            res = Gi##_Mode##imumFloat32(vval, res);                        \
+            res = Gi##_Mode##imumFloat32(res, vval);                        \
         }                                                                   \
         void feed_remain(const float* val) {                                \
             using namespace std;                                            \
@@ -200,7 +200,7 @@ REDUCER_MAX_MIN_C(min, Min, std::numeric_limits<dt_float32>::max());
         }                                                                    \
         void feed_remain(const int8_t* val) {                                \
             GI_INT8 vval = GiBroadcastInt8(*val);                            \
-            res = Gi##_Mode##imumInt8(vval, res);                            \
+            res = Gi##_Mode##imumInt8(res, vval);                            \
         }                                                                    \
         void post(int8_t* dst) { *dst = GiReduce##_Mode##Int8(res); }        \
     }
@@ -223,7 +223,7 @@ REDUCER_MAX_MIN_C1(min, Min, 127);
         _mode##Reducer() = default;                                          \
         void feed(const int8_t* val) {                                       \
             GI_INT8 vval = GiLoadInt8(val);                                  \
-            res = Gi##_Mode##imumInt8(vval, res);                            \
+            res = Gi##_Mode##imumInt8(res, vval);                            \
         }                                                                    \
         void feed_remain(const int8_t* val) {                                \
             using namespace std;                                             \

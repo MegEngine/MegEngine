@@ -20,13 +20,19 @@
 #else
 #if defined(__arm__) || defined(__aarch64__)
 #include <arm_neon.h>
-#define GI_TARGET_ARM
 #endif
 #if defined(__x86_64__) || defined(__i386__)
 #include <cpuid.h>
 #include <immintrin.h>
+#endif
+#endif
+
+#if defined(__x86_64__) || defined(__i386__) || defined(_M_IX86) || defined(_M_X64)
 #define GI_TARGET_X86
 #endif
+
+#if defined(__arm__) || defined(__aarch64__)
+#define GI_TARGET_ARM
 #endif
 
 #ifdef _WIN32

@@ -416,7 +416,7 @@ GiMoveLowLongInt16(GI_INT16 Vector) {
 }
 
 GI_FORCEINLINE
-int16_t GiReduceAddInt8(GI_INT8 Vector) {
+int32_t GiReduceAddInt8(GI_INT8 Vector) {
 #if defined(GI_NEON64_INTRINSICS)
     return vaddlvq_s8(Vector);
 #elif defined(GI_NEON32_INTRINSICS)
@@ -467,8 +467,10 @@ int8_t GiReduceMaxInt8(GI_INT8 Vector) {
 #elif defined(GI_NEON32_INTRINSICS)
     int8x8_t VectorLow = vget_low_s8(Vector);
     int8x8_t VectorHigh = vget_high_s8(Vector);
-    VectorLow = vpmin_s8(VectorLow, VectorHigh);
-    VectorLow = vpmin_s8(VectorLow, VectorHigh);
+    VectorLow = vpmax_s8(VectorLow, VectorHigh);
+    VectorLow = vpmax_s8(VectorLow, VectorLow);
+    VectorLow = vpmax_s8(VectorLow, VectorLow);
+    VectorLow = vpmax_s8(VectorLow, VectorLow);
     return vget_lane_s8(VectorLow, 0);
 #elif defined(GI_SSE42_INTRINSICS)
     __m128i v0 = _mm_cvtepi8_epi16(Vector);
@@ -514,7 +516,9 @@ int8_t GiReduceMinInt8(GI_INT8 Vector) {
     int8x8_t VectorLow = vget_low_s8(Vector);
     int8x8_t VectorHigh = vget_high_s8(Vector);
     VectorLow = vpmin_s8(VectorLow, VectorHigh);
-    VectorLow = vpmin_s8(VectorLow, VectorHigh);
+    VectorLow = vpmin_s8(VectorLow, VectorLow);
+    VectorLow = vpmin_s8(VectorLow, VectorLow);
+    VectorLow = vpmin_s8(VectorLow, VectorLow);
     return vget_lane_s8(VectorLow, 0);
 #elif defined(GI_SSE42_INTRINSICS)
     __m128i v0 = _mm_cvtepi8_epi16(Vector);

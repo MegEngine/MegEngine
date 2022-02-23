@@ -40,33 +40,6 @@ template <typename dtype, typename ctype, typename comp_type, bool C1>
 struct MeanReducer;
 
 template <>
-struct MeanReducer<dt_qint8, int8_t, int32_t, true> {
-    using ctype = int8_t;
-    static constexpr int SIMD_WIDTH = 16;
-
-    int32_t res;
-    float coef;
-    MeanReducer(DType, size_t cnt) : res(0), coef(1.0 / cnt) {}
-    MeanReducer() = default;
-    void feed(const int8_t* val) {
-#if MEGDNN_AARCH64
-        res += vaddlvq_s8(vld1q_s8(val));
-#elif MEGDNN_ARMV7
-        auto sum = vpaddlq_s16(vpaddlq_s8(vld1q_s8(val)));
-        res += (vgetq_lane_s32(sum, 0) + vgetq_lane_s32(sum, 1) +
-                vgetq_lane_s32(sum, 2) + vgetq_lane_s32(sum, 3));
-#else
-#error "unsupport android arch"
-#endif
-    }
-    void feed_remain(const int8_t* val) { res += *val; }
-    void post(int8_t* dst) {
-        float sum = res * coef;
-        *dst = std::round(sum);
-    }
-};
-
-template <>
 struct MeanReducer<dt_quint8, uint8_t, int32_t, true> {
     using ctype = uint8_t;
     static constexpr int SIMD_WIDTH = 16;
@@ -94,33 +67,6 @@ struct MeanReducer<dt_quint8, uint8_t, int32_t, true> {
     void post(uint8_t* dst) {
         float sum = (res - zp * cnt) * coef;
         *dst = std::round(sum) + zp;
-    }
-};
-
-template <>
-struct MeanReducer<dt_float32, float, float, true> {
-    using ctype = float;
-    static constexpr int SIMD_WIDTH = 4;
-
-    float32x4_t res;
-    float result;
-    float coef;
-    MeanReducer(DType, size_t cnt) : result(0.0f), coef(1.0 / cnt) {
-        res = vdupq_n_f32(0.0f);
-    }
-    MeanReducer() = default;
-    void feed(const float* val) { res = vaddq_f32(vld1q_f32(val), res); }
-    void feed_remain(const float* val) { result += *val; }
-    void post(float* dst) {
-#if MEGDNN_AARCH64
-        result += vaddvq_f32(res);
-#elif MEGDNN_ARMV7
-        auto sum_temp = vpadd_f32(vget_low_f32(res), vget_high_f32(res));
-        result += (vget_lane_f32(sum_temp, 0) + vget_lane_f32(sum_temp, 1));
-#else
-#error "unsupport android arch"
-#endif
-        *dst = result * coef;
     }
 };
 
@@ -169,73 +115,6 @@ struct MeanReducer<__fp16, __fp16, __fp16, false> {
     void post_remain(ctype* dst) { *dst = remain * coef; }
 };
 #endif
-
-template <>
-struct MeanReducer<dt_float32, float, float, false> {
-    using ctype = float;
-    static constexpr int SIMD_WIDTH = 4;
-
-    float32x4_t res;
-    float remain;
-    float coef;
-    MeanReducer(DType, size_t cnt) : remain(0.0f), coef(1.0 / cnt) {
-        res = vdupq_n_f32(0.0f);
-    }
-    MeanReducer() = default;
-    void feed(const float* val) { res = vaddq_f32(vld1q_f32(val), res); }
-    void feed_remain(const float* val) { remain += *val; }
-    void post(float* dst) {
-        res = vmulq_n_f32(res, coef);
-        vst1q_f32(dst, res);
-    }
-    void post_remain(float* dst) { *dst = remain * coef; }
-};
-
-template <>
-struct MeanReducer<dt_qint8, int8_t, int32_t, false> {
-    using ctype = int8_t;
-    static constexpr int SIMD_WIDTH = 16;
-
-    int32x4_t res[4];
-    int32_t remain;
-    int32_t cnt;
-    float coef;
-    float32x4_t vcoef;
-    MeanReducer(DType, size_t cnt) : remain(0), cnt(cnt), coef(1.0 / cnt) {
-        memset(res, 0, sizeof(res));
-        vcoef = vdupq_n_f32(coef);
-    }
-    MeanReducer() = default;
-    void feed(const int8_t* val) {
-        const int8x16_t vval = vld1q_s8(val);
-        const int16x8_t vval_low = vmovl_s8(vget_low_s8(vval));
-        const int16x8_t vval_high = vmovl_s8(vget_high_s8(vval));
-
-        const int32x4_t vval_low_low = vmovl_s16(vget_low_s16(vval_low));
-        const int32x4_t vval_low_high = vmovl_s16(vget_high_s16(vval_low));
-        const int32x4_t vval_high_low = vmovl_s16(vget_low_s16(vval_high));
-        const int32x4_t vval_high_high = vmovl_s16(vget_high_s16(vval_high));
-
-        res[0] = vaddq_s32(res[0], vval_low_low);
-        res[1] = vaddq_s32(res[1], vval_low_high);
-        res[2] = vaddq_s32(res[2], vval_high_low);
-        res[3] = vaddq_s32(res[3], vval_high_high);
-    }
-    void feed_remain(const int8_t* val) { remain += *val; }
-    void post(int8_t* dst) {
-        for (int i = 0; i < 4; i += 2) {
-            float32x4_t vitem0 = vmulq_f32(vcvtq_f32_s32(res[i]), vcoef);
-            float32x4_t vitem1 = vmulq_f32(vcvtq_f32_s32(res[i + 1]), vcoef);
-            vst1_s8(dst,
-                    (QConverter::convert<int8x8_t, float32x4x2_t>({{vitem0, vitem1}})));
-            dst += 8;
-        }
-    }
-    void post_remain(int8_t* dst) {
-        float sum = remain * coef;
-        *dst = std::round(sum);
-    }
-};
 
 template <>
 struct MeanReducer<dt_quint8, uint8_t, int32_t, false> {
@@ -335,8 +214,6 @@ struct minReducer;
         }                                                                              \
     }
 
-REDUCER_MAX_MIN_C1(max, dt_qint8, int8_t, int8_t, s, int, -128);
-REDUCER_MAX_MIN_C1(min, dt_qint8, int8_t, int8_t, s, int, 127);
 REDUCER_MAX_MIN_C1(max, dt_quint8, uint8_t, uint8_t, u, uint, 0);
 REDUCER_MAX_MIN_C1(min, dt_quint8, uint8_t, uint8_t, u, uint, 255);
 #undef REDUCER_MAX_MIN_C1
@@ -364,44 +241,9 @@ REDUCER_MAX_MIN_C1(min, dt_quint8, uint8_t, uint8_t, u, uint, 255);
         void post_remain(ctype* dst) { vst1q_lane_##_stype(dst, remain, 0); }        \
     }
 
-REDUCER_MAX_MIN_C(max, dt_qint8, int8_t, int8_t, s8, int, -128);
-REDUCER_MAX_MIN_C(min, dt_qint8, int8_t, int8_t, s8, int, 127);
 REDUCER_MAX_MIN_C(max, dt_quint8, uint8_t, uint8_t, u8, uint, 0);
 REDUCER_MAX_MIN_C(min, dt_quint8, uint8_t, uint8_t, u8, uint, 255);
 #undef REDUCER_MAX_MIN_C
-
-#define REDUCER_MAX_MIN_C1(                                                         \
-        _mode, _dtype, _ctype, _comp_type, _stype, __stype, _num, _init)            \
-    template <>                                                                     \
-    struct _mode##Reducer<_dtype, _ctype, _comp_type, true> {                       \
-        using ctype = _ctype;                                                       \
-        static constexpr int SIMD_WIDTH = _num;                                     \
-        __stype res;                                                                \
-        _mode##Reducer(DType, size_t) { res = vdupq_n_##_stype(_init); }            \
-        _mode##Reducer() = default;                                                 \
-        void feed(const ctype* val) {                                               \
-            __stype vval = vld1q_##_stype(val);                                     \
-            res = v##_mode##q_##_stype(vval, res);                                  \
-        }                                                                           \
-        void feed_remain(const ctype* val) {                                        \
-            __stype vval = vdupq_n_##_stype(*val);                                  \
-            res = v##_mode##q_##_stype(vval, res);                                  \
-        }                                                                           \
-        void post(ctype* dst) {                                                     \
-            auto val = v##_mode##_##_stype(                                         \
-                    vget_low_##_stype(res), vget_high_##_stype(res));               \
-            using namespace std;                                                    \
-            *dst = _mode({vget_lane_##_stype(val, 0), vget_lane_##_stype(val, 1)}); \
-        }                                                                           \
-    }
-
-REDUCER_MAX_MIN_C1(
-        max, dt_float32, float, float, f32, float32x4_t, 4,
-        std::numeric_limits<dt_float32>::lowest());
-REDUCER_MAX_MIN_C1(
-        min, dt_float32, float, float, f32, float32x4_t, 4,
-        std::numeric_limits<dt_float32>::max());
-#undef REDUCER_MAX_MIN_C1
 
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
 #define REDUCER_MAX_MIN_C1(                                                          \
@@ -440,38 +282,6 @@ REDUCER_MAX_MIN_C1(
 #undef REDUCER_MAX_MIN_C1
 #endif
 
-#define REDUCER_MAX_MIN_C(                                               \
-        _mode, _dtype, _ctype, _comp_type, _stype, __stype, _num, _init) \
-    template <>                                                          \
-    struct _mode##Reducer<_dtype, _ctype, _comp_type, false> {           \
-        using ctype = _ctype;                                            \
-        static constexpr int SIMD_WIDTH = _num;                          \
-        __stype res;                                                     \
-        ctype remain;                                                    \
-        _mode##Reducer(DType, size_t) {                                  \
-            res = vdupq_n_##_stype(_init);                               \
-            remain = _init;                                              \
-        }                                                                \
-        _mode##Reducer() = default;                                      \
-        void feed(const ctype* val) {                                    \
-            __stype vval = vld1q_##_stype(val);                          \
-            res = v##_mode##q_##_stype(vval, res);                       \
-        }                                                                \
-        void feed_remain(const ctype* val) {                             \
-            using namespace std;                                         \
-            remain = _mode(*val, remain);                                \
-        }                                                                \
-        void post(ctype* dst) { vst1q_##_stype(dst, res); }              \
-        void post_remain(ctype* dst) { *dst = remain; }                  \
-    }
-
-REDUCER_MAX_MIN_C(
-        max, dt_float32, float, float, f32, float32x4_t, 4,
-        std::numeric_limits<dt_float32>::lowest());
-REDUCER_MAX_MIN_C(
-        min, dt_float32, float, float, f32, float32x4_t, 4,
-        std::numeric_limits<dt_float32>::max());
-#undef REDUCER_MAX_MIN_C
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
 #define REDUCER_MAX_MIN_C(                                                   \
         _mode, _dtype, _ctype, _comp_type, _stype, __stype, _num, _init)     \
@@ -513,45 +323,6 @@ struct SumReducer;
 template <typename dtype, typename ctype, typename comp_type, bool C1>
 struct ProductReducer;
 
-#define REDUCER_SUM_PRODUCT_C1(                                                     \
-        _mode, _dtype, _ctype, _comp_type, _stype, __stype, _num, _init, _act, _op) \
-    template <>                                                                     \
-    struct _mode##Reducer<_dtype, _ctype, _comp_type, true> {                       \
-        using ctype = _ctype;                                                       \
-        static constexpr int SIMD_WIDTH = _num;                                     \
-        __stype res;                                                                \
-        ctype remain;                                                               \
-        _mode##Reducer(DType, size_t) {                                             \
-            res = vdupq_n_##_stype(_init);                                          \
-            remain = _init;                                                         \
-        }                                                                           \
-        _mode##Reducer() = default;                                                 \
-        void feed(const ctype* val) {                                               \
-            __stype vval = vld1q_##_stype(val);                                     \
-            res = v##_act##q_##_stype(vval, res);                                   \
-        }                                                                           \
-        void feed_remain(const ctype* val) {                                        \
-            using namespace std;                                                    \
-            auto op = _op<ctype>();                                                 \
-            remain = op(remain, *val);                                              \
-        }                                                                           \
-        void post(ctype* dst) {                                                     \
-            using namespace std;                                                    \
-            auto val = v##_act##_##_stype(                                          \
-                    vget_low_##_stype(res), vget_high_##_stype(res));               \
-            auto op = _op<ctype>();                                                 \
-            *dst =                                                                  \
-                    op(remain,                                                      \
-                       op(vget_lane_##_stype(val, 0), vget_lane_##_stype(val, 1))); \
-        }                                                                           \
-    }
-
-REDUCER_SUM_PRODUCT_C1(
-        Sum, dt_float32, float, float, f32, float32x4_t, 4, 0, add, plus);
-REDUCER_SUM_PRODUCT_C1(
-        Product, dt_float32, float, float, f32, float32x4_t, 4, 1.0f, mul, multiplies);
-#undef REDUCER_SUM_PRODUCT_C1
-
 #define REDUCER_SUM_PRODUCT_C(                                                      \
         _mode, _dtype, _ctype, _comp_type, _stype, __stype, _num, _init, _act, _op) \
     template <>                                                                     \
@@ -578,9 +349,6 @@ REDUCER_SUM_PRODUCT_C1(
         void post_remain(ctype* dst) { *dst = remain; }                             \
     }
 
-REDUCER_SUM_PRODUCT_C(Sum, dt_float32, float, float, f32, float32x4_t, 4, 0, add, plus);
-REDUCER_SUM_PRODUCT_C(
-        Product, dt_float32, float, float, f32, float32x4_t, 4, 1, mul, multiplies);
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
 REDUCER_SUM_PRODUCT_C(Sum, __fp16, __fp16, __fp16, f16, float16x8_t, 8, 0, add, plus);
 REDUCER_SUM_PRODUCT_C(
@@ -632,59 +400,6 @@ REDUCER_SUM_PRODUCT_C1(
 /***************************SumSqr Reducer***************************/
 template <typename dtype, typename ctype, typename comp_type, bool C1>
 struct SumSqrReducer;
-
-template <>
-struct SumSqrReducer<dt_float32, float, float, true> {
-    using ctype = float;
-    static constexpr int SIMD_WIDTH = 4;
-
-    float32x4_t res;
-    float result;
-    SumSqrReducer(DType, size_t cnt) : result(0.0f) {
-        MEGDNN_MARK_USED_VAR(cnt);
-        res = vdupq_n_f32(0.0f);
-    }
-    SumSqrReducer() = default;
-    void feed(const float* val) {
-        float32x4_t vval = vld1q_f32(val);
-        res = vaddq_f32(vmulq_f32(vval, vval), res);
-    }
-    void feed_remain(const float* val) {
-        float vval = *val;
-        result += vval * vval;
-    }
-    void post(float* dst) {
-#if MEGDNN_AARCH64
-        result += vaddvq_f32(res);
-#elif MEGDNN_ARMV7
-        auto sum_temp = vpadd_f32(vget_low_f32(res), vget_high_f32(res));
-        result += (vget_lane_f32(sum_temp, 0) + vget_lane_f32(sum_temp, 1));
-#else
-#error "unsupport android arch"
-#endif
-        *dst = result;
-    }
-};
-template <>
-struct SumSqrReducer<dt_float32, float, float, false> {
-    using ctype = float;
-    static constexpr int SIMD_WIDTH = 4;
-
-    float32x4_t res;
-    float remain;
-    SumSqrReducer(DType, size_t cnt) : remain(0.0f) {
-        MEGDNN_MARK_USED_VAR(cnt);
-        res = vdupq_n_f32(0.0f);
-    }
-    SumSqrReducer() = default;
-    void feed(const float* val) {
-        float32x4_t vval = vld1q_f32(val);
-        res = vaddq_f32(vmulq_f32(vval, vval), res);
-    }
-    void feed_remain(const float* val) { remain += (*val) * (*val); }
-    void post(float* dst) { vst1q_f32(dst, res); }
-    void post_remain(float* dst) { *dst = remain; }
-};
 
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
 template <>
@@ -873,14 +588,12 @@ void ReduceImpl::exec(
         default:                                                 \
             break;                                               \
     }
+
     if (src.layout.is_contiguous() &&
         src.layout.dtype.category() == DTypeCategory::QUANTIZED &&
         param().data_type == param::Reduce::DataType::DEFAULT) {
         DType src_type = src.layout.dtype;
 
-        if (src.layout.dtype.enumv() == DTypeEnum::QuantizedS8) {
-            DISPATCH_MODE_QUANTIZED(dt_qint8, int8_t, int32_t)
-        }
         if (src.layout.dtype.enumv() == DTypeEnum::Quantized8Asymm) {
             DISPATCH_MODE_QUANTIZED(dt_quint8, uint8_t, int32_t)
         }
@@ -889,9 +602,7 @@ void ReduceImpl::exec(
             src.layout.dtype.category() == DTypeCategory::FLOAT &&
             param().data_type == param::Reduce::DataType::DEFAULT) {
         DType src_type = src.layout.dtype;
-        if (src.layout.dtype.enumv() == DTypeEnum::Float32) {
-            DISPATCH_MODE_FLOAT(dt_float32, float, float)
-        }
+        MEGDNN_MARK_USED_VAR(src_type);
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
         if (src.layout.dtype.enumv() == DTypeEnum::Float16) {
             DNN_INC_FLOAT16(DISPATCH_MODE_FLOAT(__fp16, __fp16, __fp16));
