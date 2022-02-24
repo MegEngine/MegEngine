@@ -175,13 +175,13 @@ struct MaxOp<src_ctype, dst_ctype, dt_float32> {
             : INIT(wtype(DTypeTrait<wtype>::min())), src(src), dst(dst), B(B) {}
 };
 
-template <typename src_ctype, typename index_ctype, typename dst_ctype, typename wtype_>
+template <typename src_ctype, typename dst_ctype, typename wtype_>
 struct CheckNonFiniteOp {
     typedef wtype_ wtype;
     const wtype INIT;
 
     src_ctype** srcs;
-    index_ctype* srcs_total_nr_elems;
+    size_t* srcs_total_nr_elems;
     dst_ctype* dst;
     const size_t B;
     const src_ctype scale;
@@ -206,7 +206,7 @@ struct CheckNonFiniteOp {
         return lhs | rhs;
     }
     MEGDNN_HOST MEGDNN_DEVICE CheckNonFiniteOp(
-            src_ctype** srcs, index_ctype* srcs_total_nr_elems, dst_ctype* dst,
+            src_ctype** srcs, size_t* srcs_total_nr_elems, dst_ctype* dst,
             size_t B, src_ctype scale)
             : INIT(wtype(0)),
               srcs(srcs),

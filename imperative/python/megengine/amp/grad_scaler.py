@@ -141,8 +141,10 @@ class GradScaler:
                 tensor.grad = None
         return self
 
-    def _check_gradients(self, grad, scale):
-        return _check_non_finite(grad, scale)
+    def _check_gradients(self, grads, scale):
+        if len(grads) == 0:
+            return False
+        return _check_non_finite(grads, scale)
 
     def update(self, new_scale: float = None):
         r"""Update the scale factor according to whether encountered overflow grad.

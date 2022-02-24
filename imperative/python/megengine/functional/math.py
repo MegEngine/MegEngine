@@ -691,11 +691,13 @@ def _check_non_finite(inps: Iterable[Tensor], scale=1.0) -> Tensor:
     r"""Check whether input contains infinite or nan value.
 
     Args:
-        inp: a tensor to be checked.
+        inps: tensors to be checked.
 
     Returns:
         a int32 scalar tensor, 0 for False and 1 for True.
     """
+    if isinstance(inps, Tensor):
+        inps = [inps]
     op = builtin.CheckNonFinite(scale=scale)
     oups = apply(op, *inps)
     out = oups[-1]

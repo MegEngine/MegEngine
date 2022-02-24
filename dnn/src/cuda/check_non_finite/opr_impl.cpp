@@ -10,11 +10,11 @@ namespace megdnn {
 namespace cuda {
 
 using device_reduce::CheckNonFiniteOp;
-#define total_nr_elems_max 2048
+#define total_nr_elems_max 8192
 template <typename T>
 size_t CheckNonFiniteImpl::_get_workspace_in_bytes() {
     // Call the _get_workspace_in_bytes to reduce the loop fetch workspace bytes
-    typedef CheckNonFiniteOp<T, size_t, dt_int32, dt_int32> Op;
+    typedef CheckNonFiniteOp<T, dt_float32, dt_int32, dt_int32> Op;
     megdnn_assert(m_size > 0);
     WorkspaceBundle bundle(
             nullptr, {
@@ -59,7 +59,7 @@ void CheckNonFiniteImpl::_exec(
         _megdnn_in const TensorNDArray& srcs, _megdnn_tensor_out dst,
         _megdnn_workspace workspace) {
     check_exec(srcs, dst, workspace.size);
-    typedef CheckNonFiniteOp<T, size_t, dt_int32, dt_int32> Op;
+    typedef CheckNonFiniteOp<T, dt_float32, dt_int32, dt_int32> Op;
     auto stream = cuda_stream(this->handle());
     SmallVector<size_t> workspace_sizes{
             sizeof(T*) * m_size,
@@ -102,7 +102,7 @@ void CheckNonFiniteImpl::_exec(
     cuda_check(cudaStreamAddCallback(
             stream, callback_free, static_cast<void*>(workspace_cpu_raw), 0));
 
-    return run_reduce<Op, false>(
+    run_reduce<Op, false>(
             static_cast<dt_int32*>(
                     (void*)((char*)workspace_gpu_raw +
                             workspace_gpu.total_size_in_bytes())),
