@@ -70,8 +70,14 @@ class DataLoader:
             ``True`` means one batch is divided into :attr:`num_workers` pieces, and
             the workers will process these pieces parallelly. ``False`` means
             different sub-process will process different batch. Default: False
-        preload: Defines whether to apply the preloading strategy of dataloader, and parallelize the copy of host2device while kernal is executed to improve the loading speed. default is seted False
-            the output will change from np.ndarry to dtype tensor. the support dtypes for preload are int,float,list[int,float],tuple[int,float],and another type is not supported.
+        preload: whether to enable the preloading strategy of the dataloader. When enabling, the dataloader will preload one batch to the device memory to speed up the whole training process.
+            All values in the map, list, and tuple will be converted to :class:`~.Tensor` by preloading, and you will get :class:`~.Tensor` instead of the original Numpy array or Python number.
+
+
+    .. note::
+
+        By enabling preload, tensors' host2device copy and device kernel execution will be overlapped, which will improve the training speed at the cost of higher device memory usage (due to one more batch data on device memory).
+        This feature saves more time when your NN training time is short or your machine's host PCIe bandwidth for each device is low.
     """
     __initialized = False
 
