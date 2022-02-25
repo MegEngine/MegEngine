@@ -27,13 +27,41 @@ logger = get_logger(__name__)
 class Tensor(_Tensor, ArrayMethodMixin):
     r"""A tensor object represents a multidimensional, homogeneous array of fixed-size items.
 
+    Tensor is the primary MegEngine data structure.
+    Data type(dtype) describes the format of each element, such as ``float32``, ``int8`` and so on,
+    see :ref:`tensor-dtype` for more details.
+    It is similar to :class:`numpy.ndarray` but not the same in the design.
+    For example, GPU devices can be used to store Tensors and execute calculations in MegEngine.
+    The concept of `view <https://numpy.org/doc/stable/reference/generated/numpy.ndarray.view.html>`_
+    does not exist in MegEngine so indexing and other behaviors might be different with NumPy.
+    All manipulations and operations on/between Tensors could be found in the :mod:`~.megengine.functional` module.
+    Keep in mind that they are **not in-place**, a new Tensor will always be returned and
+    the original data will remain constant.
+
+    For more information, refer to the :ref:`tensor-guide` topic.
+
     Args:
-        data(Tensor, :class:`~.numpy.ndarray`, :class:`list` or python number.): The value of returned Tensor.
-        dtype: The dtype of returned Tensor. Uses data's dtype if not specified.
-        device: The desired device of returned Tensor. Uses :func:`get_default_device` if not specified.
-        is_const: Whether make it a ``ImutableTensor`` in tracing mode.
+        data(Tensor, :class:`~.numpy.ndarray`, :class:`list` or Python number): 
+            The data used for construcing Tensor.
+            Tensor could be constructed from a Python :class:`list` / :class:`tuple` or sequence;
+            a NumPy :class:`~.numpy.ndarray` data structure; MegEngine builtin methods and so on.
+            Refer to :ref:`tensor-creation` for more details.
+
+        dtype(:attr:`~.Tensor.dtype`): The data type of returned Tensor. Infer from ``data`` if not specified.
+        device(:attr:`~.Tensor.device`): The desired device of returned Tensor. Uses :func:`get_default_device` if not specified.
+        is_const: Whether make it a ``ImutableTensor`` in tracing mode, refer to :class:`.jit.trace`.
         no_cache: Whether cache it for memory sharing.
         name: Used to improve convenience in graph operation on dumped model.
+
+    .. note::
+
+       There are some methods like :meth:`~.Tensor.reshape` / :meth:`~.Tensor.flatten` / 
+       :meth:`~.Tensor.transpose` / :meth:`~.Tensor.min` / :meth:`~.Tensor.max` /
+       :meth:`~.Tensor.mean` / :meth:`~.Tensor.sum` / :meth:`~.Tensor.prod` implemented
+       in ``Tensor`` class for convenience and historical reasons.
+       But other methods implemented in the :mod:`~.megengine.functional` module will not be added here anymore,
+       it is hard for maintaining and too many candidates will affect code completion experience.
+
     """
 
     grad = None

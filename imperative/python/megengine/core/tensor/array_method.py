@@ -614,166 +614,21 @@ class ArrayMethodMixin(abc.ABC):
         return reshape_cpp(self, (-1,))
 
     def sum(self, axis=None, keepdims: bool = False):
-        r"""Returns the sum of each row of the input tensor in the given dimension ``axis``.
-
-        If ``axis`` is a list of axises, reduce over all of them.
-        If ``keepdims`` is ``True``, the shape of output tensor is the same as the input tensor,
-        except in the dimension(s) ``axis`` where it is of size 1.
-        Otherwise, ``axis`` is squeezed (see :func:`~.squeeze`).
-
-        Args:
-            axis: the dimension or dimensions to reduce.
-            keepdims: whether the output tensor has ndim retained or not.
-
-        Returns:
-            output tensor.
-
-        Examples:
-            .. testcode::
-
-               from megengine import tensor
-               a = tensor([False, True, True, False])
-               b = tensor([1.0, 2.0, 3.0, 4.0])
-               print(a.sum().numpy())
-               print(b.sum().numpy())
-
-            Outputs:
-
-            .. testoutput::
-
-               2
-               10.0
-        """
+        r"""See :func:`~.sum`."""
         return _reduce("sum")(self, axis, keepdims)
 
     def prod(self, axis=None, keepdims: bool = False):
-        r"""Returns the product of each row of the input tensor in the given dimension ``axis``.
-
-        If ``axis`` is a list of axises, reduce over all of them.
-        If ``keepdims`` is ``True``, the shape of output tensor is the same as the input tensor,
-        except in the dimension(s) ``axis`` where it is of size 1.
-        Otherwise, ``axis`` is squeezed (see :func:`~.squeeze`).
-
-        Args:
-            axis: the dimension or dimensions to reduce.
-            keepdims: whether the output tensor has ndim retained or not.
-
-        Returns:
-            output tensor.
-
-        Examples:
-            .. testcode::
-
-               from megengine import tensor
-               a = tensor([False, True, True, False])
-               b = tensor([1.0, 2.0, 3.0, 4.0])
-               print(a.prod().numpy())
-               print(b.prod().numpy())
-
-            Outputs:
-
-            .. testoutput::
-
-               0
-               24.0
-        """
+        r"""See :func:`~.prod`."""
         return _reduce("product")(self, axis, keepdims)
 
     def min(self, axis=None, keepdims: bool = False):
-        r"""Returns the min value of each row of the input tensor in the given dimension ``axis``.
-
-        If ``axis`` is a list of axises, reduce over all of them.
-        If ``keepdims`` is ``True``, the shape of output tensor is the same as the input tensor,
-        except in the dimension(s) ``axis`` where it is of size 1.
-        Otherwise, ``axis`` is squeezed (see :func:`~.squeeze`).
-
-        Args:
-            axis: the dimension or dimensions to reduce.
-            keepdims: whether the output tensor has ndim retained or not.
-
-        Returns:
-            output tensor.
-
-        Examples:
-            .. testcode::
-
-               from megengine import tensor
-               a = tensor([False, True, True, False])
-               b = tensor([1.0, 2.0, 3.0, 4.0])
-               print(a.min().numpy())
-               print(b.min().numpy())
-
-            Outputs:
-
-            .. testoutput::
-
-               False
-               1.0
-        """
+        r"""See :func:`~.min`."""
         return _reduce("min")(self, axis, keepdims)
 
     def max(self, axis=None, keepdims: bool = False):
-        r"""Returns the max value of each row of the input tensor in the given dimension ``axis``.
-
-        If ``axis`` is a list of axises, reduce over all of them.
-        If ``keepdims`` is ``True``, the shape of output tensor is the same as the input tensor,
-        except in the dimension(s) ``axis`` where it is of size 1.
-        Otherwise, ``axis`` is squeezed (see :func:`~.squeeze`).
-
-        Args:
-            axis: the dimension or dimensions to reduce.
-            keepdims: whether the output tensor has ndim retained or not.
-
-        Returns:
-            output tensor.
-
-        Examples:
-            .. testcode::
-
-               from megengine import tensor
-               a = tensor([False, True, True, False])
-               b = tensor([1.0, 2.0, 3.0, 4.0])
-               print(a.max().numpy())
-               print(b.max().numpy())
-
-            Outputs:
-
-            .. testoutput::
-
-               True
-               4.0
-        """
+        r"""See :func:`~.max`."""
         return _reduce("max")(self, axis, keepdims)
 
     def mean(self, axis=None, keepdims: bool = False):
-        r"""Returns the mean value of each row of the input tensor in the given dimension ``axis``.
-
-        If ``axis`` is a list of axises, reduce over all of them.
-        If ``keepdims`` is ``True``, the shape of output tensor is the same as the input tensor,
-        except in the dimension(s) ``axis`` where it is of size 1.
-        Otherwise, ``axis`` is squeezed (see :func:`~.squeeze`).
-
-        Args:
-            axis: the dimension or dimensions to reduce.
-            keepdims: whether the output tensor has ndim retained or not.
-
-        Returns:
-            output tensor.
-
-        Examples:
-            .. testcode::
-
-               from megengine import tensor
-               a = tensor([False, True, True, False])
-               b = tensor([1.0, 2.0, 3.0, 4.0])
-               print(a.mean().numpy())
-               print(b.mean().numpy())
-
-            Outputs:
-
-            .. testoutput::
-
-               0.5
-               2.5
-        """
+        r"""See :func:`~.mean`."""
         return _reduce("mean")(self, axis, keepdims)
