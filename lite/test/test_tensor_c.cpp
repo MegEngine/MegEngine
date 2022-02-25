@@ -56,7 +56,11 @@ TEST(TestCapiTensor, Basic) {
     //! test error
     ASSERT_EQ(LITE_is_pinned_host(c_tensor0, nullptr), -1);
     ASSERT_NE(strlen(LITE_get_last_error()), 0);
+    ASSERT_EQ(LITE_get_last_error_code(), ErrorCode::LITE_INTERNAL_ERROR);
     printf("The last error is: %s\n", LITE_get_last_error());
+    LITE_clear_last_error();
+    ASSERT_EQ(strlen(LITE_get_last_error()), 0);
+    ASSERT_EQ(LITE_get_last_error_code(), ErrorCode::OK);
 
     LITE_destroy_tensor(c_tensor0);
     LITE_destroy_tensor(c_tensor1);

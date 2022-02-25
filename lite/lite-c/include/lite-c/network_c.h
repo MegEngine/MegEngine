@@ -75,7 +75,7 @@ extern "C" {
  * mask 0b10: async if there are multiple comp nodes with
  * mask 0b100: always async
  */
-typedef struct Options {
+typedef struct {
     int weight_preprocess;
     int fuse_preprocess;
     int fake_next_exec;
@@ -128,7 +128,7 @@ LITE_API LiteConfig* default_config();
  * \brief config the network input and output item
  *
  */
-typedef struct LiteIO {
+typedef struct {
     //! the tensor name in the graph corresponding to the IO
     const char* name;
 
@@ -157,7 +157,7 @@ extern LITE_API const LiteIO default_io;
  * \brief the input and output information when load the network
  * the NetworkIO will remain in the network until the network is destroyed
  */
-typedef struct LiteNetworkIO {
+typedef struct {
     LiteIO* inputs;
     LiteIO* outputs;
     size_t input_size;   //! the number IO in inputs

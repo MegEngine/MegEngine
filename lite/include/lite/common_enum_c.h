@@ -22,6 +22,15 @@ typedef enum {
     ERROR = 3, /*!< Print only errors */
 } LiteLogLevel;
 
+/*!
+ * \brief The Error Code
+ */
+typedef enum {
+    OK = 0,
+    LITE_INTERNAL_ERROR = 1,
+    LITE_UNKNOWN_ERROR = 2,
+} ErrorCode;
+
 typedef enum {
     LITE_DEFAULT = 0,  //! default backend is mge
 } LiteBackend;

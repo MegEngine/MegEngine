@@ -17,10 +17,20 @@ namespace {
 class ErrorMsg {
 public:
     std::string& get_error_msg() { return error_msg; }
-    void set_error_msg(const std::string& msg) { error_msg = msg; }
+    ErrorCode get_error_code() { return error_code; }
+    void set_error_msg(const std::string& msg, ErrorCode code) {
+        error_msg = msg + ", Error Code: " + std::to_string(code);
+        error_code = code;
+    }
+
+    void clear_error() {
+        error_code = ErrorCode::OK;
+        error_msg.clear();
+    }
 
 private:
     std::string error_msg;
+    ErrorCode error_code;
 };
 
 static LITE_MUTEX mtx_error;
@@ -32,8 +42,18 @@ ErrorMsg& get_global_error() {
 
 int LiteHandleException(const std::exception& e) {
     LITE_LOCK_GUARD(mtx_error);
-    get_global_error().set_error_msg(e.what());
+    get_global_error().set_error_msg(e.what(), ErrorCode::LITE_INTERNAL_ERROR);
     return -1;
+}
+
+ErrorCode LITE_get_last_error_code() {
+    LITE_LOCK_GUARD(mtx_error);
+    return get_global_error().get_error_code();
+}
+
+void LITE_clear_last_error() {
+    LITE_LOCK_GUARD(mtx_error);
+    get_global_error().clear_error();
 }
 
 const char* LITE_get_last_error() {

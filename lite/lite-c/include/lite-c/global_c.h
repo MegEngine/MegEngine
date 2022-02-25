@@ -23,6 +23,15 @@ extern "C" {
  */
 LITE_API int LITE_get_version(int* major, int* minor, int* patch);
 
+/*! \brief Get the last error code.
+ * \return the current error code
+ */
+LITE_API ErrorCode LITE_get_last_error_code();
+
+/*! \brief Clear the last error code and error message.
+ */
+LITE_API void LITE_clear_last_error();
+
 /*! \brief Get the last error message.
  * \return the message pointer
  */
