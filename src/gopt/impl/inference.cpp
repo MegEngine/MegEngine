@@ -1771,7 +1771,6 @@ void FuseConvBiasNonlinPass::apply(OptState& state) const {
         bool can_be_fused = true;
         can_be_fused &= (elem->input().size() == 1);
         can_be_fused &= (elem->param().mode == Mode::RELU) ||
-                        (elem->param().mode == Mode::TANH) ||
                         (elem->param().mode == Mode::SIGMOID);
 
         return can_be_fused;
@@ -1911,13 +1910,14 @@ void FuseConvBiasNonlinPass::apply(OptState& state) const {
                 }
             } else if (try_fuse_nonlinearity(elem)) {
                 auto inp = rewriter.get_var(elem->input(0));
+                auto elem_noline = get_nonlinearity_mode(elem);
                 {
                     auto conv = try_cast_as_op<opr::Convolution>(inp->owner_opr());
                     if (conv && check_conv(conv) &&
                         m_deps[elem->input(0)].size() == 1) {
                         opr::ConvBiasForward::Param param =
                                 convert_to_conv_bias_param(conv->param());
-                        param.nonlineMode = get_nonlinearity_mode(elem);
+                        param.nonlineMode = elem_noline;
                         auto new_var = opr::ConvBiasForward::make(
                                                conv->input(0), conv->input(1), param,
                                                conv->execution_policy(), conv->config())
@@ -1941,9 +1941,16 @@ void FuseConvBiasNonlinPass::apply(OptState& state) const {
                                 ;
                     };
                     if (conv && check_conv_bias(conv) &&
-                        m_deps[elem->input(0)].size() == 1) {
+                        m_deps[elem->input(0)].size() == 1 &&
+                        conv->input().size() > 2) {
                         auto param = conv->param();
-                        param.nonlineMode = get_nonlinearity_mode(elem);
+                        bool noline_ok = param.nonlineMode == NonlineMode::IDENTITY ||
+                                         (param.nonlineMode == NonlineMode::RELU &&
+                                          elem_noline == NonlineMode::RELU);
+                        if (!noline_ok) {
+                            return;
+                        }
+                        param.nonlineMode = elem_noline;
                         auto new_var =
                                 opr::ConvBiasForward::make(
                                         conv->input(0), conv->input(1), conv->input(2),
