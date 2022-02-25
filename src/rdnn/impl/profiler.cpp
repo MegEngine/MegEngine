@@ -1,6 +1,5 @@
 #include "megbrain/rdnn/profiler.h"
 #include "megbrain/utils/invoke.h"
-
 #include "megdnn/handle.h"
 #include "megdnn/oprs/base.h"
 

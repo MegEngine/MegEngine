@@ -1,6 +1,3 @@
-/**
- * \file dnn/src/fallback/elemwise/fallback_impl/opr_binary_impl.cpp
- */
 #include "src/fallback/elemwise/opr_impl.h"
 
 #include "src/common/elemwise/kern_defs.cuh"

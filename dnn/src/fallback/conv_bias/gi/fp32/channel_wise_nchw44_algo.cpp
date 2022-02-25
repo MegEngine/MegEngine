@@ -1,15 +1,3 @@
-/**
- * \file dnn/src/fallback/conv_bias/gi/fp32/channel_wise_nchw44_algo.cpp
- * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
- *
- * Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
- * implied.
- */
-
 #include "src/fallback/conv_bias/gi/fp32/algos.h"
 #include "src/fallback/conv_bias/gi/fp32/channel_wise_nchw44_kern.h"
 #include "src/fallback/elemwise_helper/elemwise_op.h"

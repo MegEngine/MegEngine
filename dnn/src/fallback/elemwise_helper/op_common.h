@@ -1,6 +1,3 @@
-/**
- * \file dnn/src/fallback/elemwise_helper/op_common.h
- */
 #pragma once
 
 #include "megdnn/dtype.h"

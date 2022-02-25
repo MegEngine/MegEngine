@@ -1,14 +1,3 @@
-/**
- * \file dnn/src/rocm/indexing_one_hot/indexing_one_hot.cpp.hip
- *
- * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
- *
- * Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- */
 #include "hcc_detail/hcc_defs_prologue.h"
 #include "./indexing_one_hot.h.hip"
 #include "src/rocm/elemwise_helper.h.hip"

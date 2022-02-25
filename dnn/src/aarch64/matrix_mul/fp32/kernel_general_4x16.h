@@ -1,14 +1,3 @@
-/**
- * \file dnn/src/aarch64/matrix_mul/fp32/kernel_general_4x16.h
- * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
- *
- * Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- */
-
 #include "src/aarch64/matrix_mul/asm/common.h"
 #include "src/arm_common/simd_macro/marm_neon.h"
 

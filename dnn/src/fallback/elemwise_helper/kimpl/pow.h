@@ -1,6 +1,3 @@
-/**
- * \file dnn/src/fallback/elemwise_helper/kimpl/pow.h
- */
 #pragma once
 
 #include "src/fallback/elemwise_helper/kimpl/op_base.h"

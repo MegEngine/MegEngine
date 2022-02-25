@@ -1,14 +1,3 @@
-/**
- * \file
- * dnn/src/cuda/local_share/forward/local_share_fwd_chwn_f32_batch_size_aware_small_image.cu
- * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
- *
- * Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- */
 #include "./local_share_forward.cuh"
 #include "src/cuda/kernel_common/diagnostic_prologue.cuh"
 

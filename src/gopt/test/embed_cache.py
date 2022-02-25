@@ -1,12 +1,5 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-# MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
-#
-# Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
-#
-# Unless required by applicable law or agreed to in writing,
-# software distributed under the License is distributed on an
-# "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 
 # 为了保证全局图优化里的 profiling 结果不受到 ci 环境的影响，所以把写死的 profiling 数据存到了 cache 里去，
 # 每次跑测试会从内存 cache 里读取 profiling 结果，然后根据 profiling 结果去做全局图优化，这样确保每次运行

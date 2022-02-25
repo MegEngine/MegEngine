@@ -1,14 +1,3 @@
-/**
- * \file src/opr/impl/internal/indexing_helper.cpp
- * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
- *
- * Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- */
-
 #include "megbrain/opr/internal/indexing_helper.h"
 #include "megbrain/opr/internal/indexing_helper_sereg.h"
 #include "megbrain/opr/param_defs.h"
