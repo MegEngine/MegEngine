@@ -4,10 +4,13 @@ include_directories(PUBLIC
 file(GLOB_RECURSE SOURCES ./*.cpp)
 
 add_executable(load_and_run ${SOURCES})
-
 target_link_libraries(load_and_run lite_static)
 target_link_libraries(load_and_run megbrain)
-target_link_libraries(load_and_run gflags)
+if(APPLE)
+  target_link_libraries(load_and_run gflags)
+else()
+  target_link_libraries(load_and_run gflags -Wl,--version-script=${MGE_VERSION_SCRIPT})
+endif()
 
 if(LITE_BUILD_WITH_RKNPU)
   # rknn sdk1.0.0 depend on libc++_shared, use gold to remove NEEDED so symbol check
