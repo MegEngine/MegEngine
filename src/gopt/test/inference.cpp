@@ -1365,6 +1365,71 @@ TEST(TestGoptInference, MergeDimShuffleAndRelayoutFormat) {
     MGB_ASSERT_TENSOR_NEAR(host_y, host_y_opt, 1e-3);
 }
 
+TEST(TestGoptInference, MergeRelayoutFormatAndDimShuffle) {
+    // hwcd4 is only supported in naive handle
+    NaiveMegDNNHandleScope naive_megdnn_handle;
+
+    HostTensorGenerator<> gen;
+    auto cn = CompNode::load("cpu0");
+    auto graph = ComputingGraph::make();
+    graph->options().graph_opt_level = 0;
+    auto mkvar = [&](const char* name, const TensorShape& shp) {
+        return opr::Host2DeviceCopy::make(*graph, gen(shp, cn)).rename(name);
+    };
+
+    auto host_x = gen({2, 8, 16, 32}, cn);
+    auto x = opr::Host2DeviceCopy::make(*graph, host_x);
+
+    auto a = mkvar("a", {1});
+    auto b = mkvar("b", {1});
+    auto z = x * a + b;
+
+    //! to NHWC
+    auto y = opr::Dimshuffle::make(z, {0, 2, 3, 1});
+
+    SymbolVar y_opt;
+    auto options = gopt::OptimizeForInferenceOptions{};
+    options.enable_nhwcd4();
+    unpack_vector(gopt::optimize_for_inference({y}, options), y_opt);
+
+    ASSERT_EQ(0, find_opr_num<opr::Dimshuffle>(y_opt));
+    auto check = [](SymbolVar endpoint) -> bool {
+        bool valid = true;
+        auto cb = [&](cg::OperatorNodeBase* opr) {
+            if (opr->same_type<opr::RelayoutFormat>()) {
+                auto mode = opr->try_cast_final<opr::RelayoutFormat>()->param().mode;
+                //! The first relayout_format opr's mode is NCHW_NHWCD4I. The second is
+                //! NHWCD4I_NHWC
+                if (mode == megdnn::param::RelayoutFormat::Mode::NCHW_NHWCD4I ||
+                    mode == megdnn::param::RelayoutFormat::Mode::NHWCD4I_NHWC) {
+                    valid &= true;
+                } else {
+                    valid &= false;
+                }
+            }
+        };
+        cg::DepOprIter{cb}.add(endpoint.node()->owner_opr());
+        return valid;
+    };
+    ASSERT_EQ(true, check(y_opt));
+
+    graph->compile({{y_opt, {}}})
+            ->to_json()
+            ->writeto_fpath(output_file(
+                    "TestGoptInference.MergeRelayoutFormatAndDimShuffle.json"));
+
+    HostTensorND host_y;
+    HostTensorND host_y_opt;
+    auto func = graph->compile(
+            {make_callback_copy(y, host_y), make_callback_copy(y_opt, host_y_opt)});
+    func->execute();
+    MGB_ASSERT_TENSOR_NEAR(host_y, host_y_opt, 1e-3);
+
+    *host_x = *gen({8, 8, 16, 16}, cn);
+    func->execute();
+    MGB_ASSERT_TENSOR_NEAR(host_y, host_y_opt, 1e-3);
+}
+
 TEST(TestGoptInference, ConvertFormatNHWCD4Elemwise) {
     // hwcd4 is only supported in naive handle
     NaiveMegDNNHandleScope naive_megdnn_handle;

@@ -114,6 +114,7 @@ void RelayoutFormat::deduce_layout_fwd(const TensorLayout& src, TensorLayout& ds
             dst[3] = src[2];
             dst[4] = 4;
             break;
+        case Param::Mode::NHWCD4I_NHWC:
         case Param::Mode::NHWCD4_NHWC:
             megdnn_assert(src.ndim == 5);
             dst.ndim = 4;
@@ -331,6 +332,7 @@ void RelayoutFormat::deduce_format(TensorFormat src, TensorFormat& dst) {
             CHECK_SRC(DefaultTensorFormat::make());
             dst = Image2DPack4TensorFormat::make_raw(2, align, vendor_type);
             break;
+        case Param::Mode::NHWCD4I_NHWC:
         case Param::Mode::NHWCD4I_NCHW:
             CHECK_SRC(Image2DPack4TensorFormat::make_raw(2, align, vendor_type));
             dst = DefaultTensorFormat::make();
@@ -594,6 +596,7 @@ void RelayoutFormat::deduce_exec_layout(
                                .dimshuffle({0, 1, 3, 2, 4});
             exec_dst = dst;
             break;
+        case Param::Mode::NHWCD4I_NHWC:
         case Param::Mode::NHWCD4_NHWC:
             // src is {N, H, CB, W, 4}
             // dst is {N, H, W, C},

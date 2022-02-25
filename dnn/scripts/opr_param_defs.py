@@ -1038,7 +1038,8 @@ Note: NCHW_NCHW4_WEIGHT will auto pad oc and ic, you should remove oc in later o
      'NCHW_NCHW64 = 27', 
      'NCHW64_NCHW = 28', 
      'NCHW_NHWC = 29', 
-     'NHWC_NCHW = 30',  
+     'NHWC_NCHW = 30', 
+     'NHWCD4I_NHWC = 31',
     )
  )
 

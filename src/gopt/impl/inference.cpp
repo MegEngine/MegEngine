@@ -1002,7 +1002,9 @@ void ConvertFormatPass::apply(OptState& state) const {
     rewriter.apply_inplace();
 
     //! start a second pass that merge consecutive dimshuffle(NHWC->NCHW) +
-    //! relayout_format(NCHW->NHWCD4) to only one relayout_format(NHWC->NHWCD4)
+    //! relayout_format(NCHW->NHWCD4) to only one relayout_format(NHWC->NHWCD4). Merge
+    //! consecutive relayout_format(NHWCD4 -> NCHW) + dimshuffle(NCHW -> NHWC) to one
+    //! relayout_format(NHWCD4 -> NHWC).
     auto on_opr_merge = [&rewriter](OperatorNodeBase* opr) {
         auto opr_is_relayout = [](OperatorNodeBase* opr) {
             return opr->try_cast_final<opr::RelayoutFormat>();
@@ -1019,23 +1021,48 @@ void ConvertFormatPass::apply(OptState& state) const {
             }
             return false;
         };
-        auto this_opr_is_relayout = opr_is_relayout(opr);
-        auto prev_opr_is_dimshuffle = static_cast<opr::Dimshuffle*>(nullptr);
-        if (this_opr_is_relayout) {
-            prev_opr_is_dimshuffle = opr_is_dimshuffle(opr->input(0)->owner_opr());
-        }
-        if (this_opr_is_relayout && prev_opr_is_dimshuffle) {
-            if (this_opr_is_relayout->param().mode ==
-                        megdnn::param::RelayoutFormat::Mode::NCHW_NHWCD4I &&
-                match_pattern(prev_opr_is_dimshuffle->param(), {0, 3, 1, 2})) {
-                auto inp = rewriter.get_var(prev_opr_is_dimshuffle->input(0));
-                auto new_param = megdnn::param::RelayoutFormat();
-                new_param.mode = megdnn::param::RelayoutFormat::Mode::NHWC_NHWCD4I;
-                auto new_opr = opr::RelayoutFormat::make(inp, new_param);
-                rewriter.replace_var(opr->output(0), new_opr.node(), nullptr);
+        //! dimshuffle + relayout_format
+        {
+            auto this_opr_is_relayout = opr_is_relayout(opr);
+            auto prev_opr_is_dimshuffle = static_cast<opr::Dimshuffle*>(nullptr);
+            if (this_opr_is_relayout) {
+                prev_opr_is_dimshuffle = opr_is_dimshuffle(opr->input(0)->owner_opr());
             }
-        } else {
-            rewriter.auto_replace_outputs(opr);
+            if (this_opr_is_relayout && prev_opr_is_dimshuffle) {
+                //! megengine only accept NCHW input
+                if (this_opr_is_relayout->param().mode ==
+                            megdnn::param::RelayoutFormat::Mode::NCHW_NHWCD4I &&
+                    match_pattern(prev_opr_is_dimshuffle->param(), {0, 3, 1, 2})) {
+                    auto inp = rewriter.get_var(prev_opr_is_dimshuffle->input(0));
+                    auto new_param = megdnn::param::RelayoutFormat();
+                    new_param.mode = megdnn::param::RelayoutFormat::Mode::NHWC_NHWCD4I;
+                    auto new_opr = opr::RelayoutFormat::make(inp, new_param);
+                    rewriter.replace_var(opr->output(0), new_opr.node(), nullptr);
+                }
+            } else {
+                rewriter.auto_replace_outputs(opr);
+            }
+        }
+        //! relayout_format + dimshuffle
+        {
+            auto this_opr_is_dimshuffle = opr_is_dimshuffle(opr);
+            auto prev_opr_is_relayout = static_cast<opr::RelayoutFormat*>(nullptr);
+            if (this_opr_is_dimshuffle) {
+                prev_opr_is_relayout = opr_is_relayout(opr->input(0)->owner_opr());
+            }
+            if (this_opr_is_dimshuffle && prev_opr_is_relayout) {
+                if (prev_opr_is_relayout->param().mode ==
+                            megdnn::param::RelayoutFormat::Mode::NHWCD4I_NCHW &&
+                    match_pattern(this_opr_is_dimshuffle->param(), {0, 2, 3, 1})) {
+                    auto inp = rewriter.get_var(prev_opr_is_relayout->input(0));
+                    auto new_param = megdnn::param::RelayoutFormat();
+                    new_param.mode = megdnn::param::RelayoutFormat::Mode::NHWCD4I_NHWC;
+                    auto new_opr = opr::RelayoutFormat::make(inp, new_param);
+                    rewriter.replace_var(opr->output(0), new_opr.node(), nullptr);
+                }
+            } else {
+                rewriter.auto_replace_outputs(opr);
+            }
         }
     };
     state.graph().iter(on_opr_merge);
