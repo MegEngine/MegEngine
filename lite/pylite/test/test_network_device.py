@@ -275,14 +275,16 @@ class TestNetwork(TestShuffleNetCuda):
 
     @require_cuda()
     def test_enable_global_layout_transform(self):
-        network = LiteNetwork()
+        config_ = LiteConfig(device_type=LiteDeviceType.LITE_CUDA)
+        network = LiteNetwork(config=config_)
         network.enable_global_layout_transform()
         network.load(self.model_path)
         self.do_forward(network)
 
     @require_cuda()
     def test_dump_layout_transform_model(self):
-        network = LiteNetwork()
+        config_ = LiteConfig(device_type=LiteDeviceType.LITE_CUDA)
+        network = LiteNetwork(config=config_)
         network.enable_global_layout_transform()
         network.load(self.model_path)
         network.dump_layout_transform_model("./model_afer_layoutTrans.mgb")

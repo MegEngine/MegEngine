@@ -365,8 +365,22 @@ void NetworkImplDft::adapt_option_valid() {
 
 void NetworkImplDft::global_layout_transform() {
     if (m_set_layout_transform) {
-        m_load_result.output_var_list = mgb::gopt::layout_transform(
+        mgb::ThinHashMap<mgb::SymbolVar, mgb::SymbolVar> out_var_map;
+        auto output_var_array = mgb::gopt::layout_transform(
                 m_load_result.output_var_list, m_layout_transform_target);
+        // replace symvar in output_var_list
+        for (size_t idx = 0; idx < output_var_array.size(); ++idx) {
+            out_var_map[m_load_result.output_var_list[idx]] = output_var_array[idx];
+            m_load_result.output_var_list[idx] = output_var_array[idx];
+        }
+        // replace symvar in output_var_map_id
+        for (auto&& item : m_load_result.output_var_map_id) {
+            item.second = out_var_map[item.second];
+        }
+        // replace symvar in output_var_map
+        for (auto&& item : m_load_result.output_var_map) {
+            item.second = out_var_map[item.second];
+        }
     }
 }
 
