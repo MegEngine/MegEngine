@@ -149,23 +149,12 @@ class Conv1d(_ConvNd):
         * ``bias`` usually has shape ``(1, out_channels, 1)``
 
     Examples:
-
-        .. testcode::
-
-            import numpy as np
-            import megengine as mge
-            import megengine.module as M
-
-            m = M.Conv1d(in_channels=3, out_channels=1, kernel_size=3)
-            inp = mge.tensor(np.arange(0, 24).astype("float32").reshape(2, 3, 4))
-            oup = m(inp)
-            print(oup.numpy().shape)
-
-        Outputs:
-
-        .. testoutput::
-
-            (2, 1, 2)
+        >>> import numpy as np
+        >>> m = M.Conv1d(in_channels=3, out_channels=1, kernel_size=3)
+        >>> inp = mge.tensor(np.arange(0, 24).astype("float32").reshape(2, 3, 4))
+        >>> oup = m(inp)
+        >>> oup.numpy().shape
+        (2, 1, 2)
     """
 
     def __init__(
@@ -334,23 +323,12 @@ class Conv2d(_ConvNd):
         * ``bias`` usually has shape ``(1, out_channels, *1)``
 
     Examples:
-
-        .. testcode::
-
-            import numpy as np
-            import megengine as mge
-            import megengine.module as M
-
-            m = M.Conv2d(in_channels=3, out_channels=1, kernel_size=3)
-            inp = mge.tensor(np.arange(0, 96).astype("float32").reshape(2, 3, 4, 4))
-            oup = m(inp)
-            print(oup.numpy().shape)
-
-        Outputs:
-
-        .. testoutput::
-
-            (2, 1, 2, 2)
+        >>> import numpy as np
+        >>> m = M.Conv2d(in_channels=3, out_channels=1, kernel_size=3)
+        >>> inp = mge.tensor(np.arange(0, 96).astype("float32").reshape(2, 3, 4, 4))
+        >>> oup = m(inp)
+        >>> oup.numpy().shape
+        (2, 1, 2, 2)
     """
 
     def __init__(
@@ -503,23 +481,12 @@ class Conv3d(_ConvNd):
         * ``bias`` usually has shape ``(1, out_channels, *1)``
 
     Examples:
-
-        .. testcode::
-
-            import numpy as np
-            import megengine as mge
-            import megengine.module as M
-
-            m = M.Conv3d(in_channels=3, out_channels=1, kernel_size=3)
-            inp = mge.tensor(np.arange(0, 384).astype("float32").reshape(2, 3, 4, 4, 4))
-            oup = m(inp)
-            print(oup.numpy().shape)
-
-        Outputs:
-
-        .. testoutput::
-
-            (2, 1, 2, 2, 2)
+        >>> import numpy as np
+        >>> m = M.Conv3d(in_channels=3, out_channels=1, kernel_size=3)
+        >>> inp = mge.tensor(np.arange(0, 384).astype("float32").reshape(2, 3, 4, 4, 4))
+        >>> oup = m(inp)
+        >>> oup.numpy().shape
+        (2, 1, 2, 2, 2)
     """
 
     def __init__(

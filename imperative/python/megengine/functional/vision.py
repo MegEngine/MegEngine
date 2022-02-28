@@ -76,22 +76,11 @@ def cvt_color(inp: Tensor, mode: str = ""):
 
 
     Examples:
-
-        .. testcode::
-
-            import numpy as np
-            import megengine as mge
-            import megengine.functional as F
-
-            x = mge.tensor(np.array([[[[-0.58675045, 1.7526233, 0.10702174]]]]).astype(np.float32))
-            y = F.vision.cvt_color(x, mode="RGB2GRAY")
-            print(y.numpy())
-
-        Outputs:
-
-        .. testoutput::
-
-            [[[[0.86555195]]]]
+        >>> import numpy as np
+        >>> x = mge.tensor(np.array([[[[-0.58675045, 1.7526233, 0.10702174]]]]).astype(np.float32))
+        >>> y = F.vision.cvt_color(x, mode="RGB2GRAY")
+        >>> y.numpy()
+        array([[[[0.86555195]]]], dtype=float32)
     """
     mode = mode.upper() if "YCrCb" not in mode else mode
     assert mode in builtin.CvtColor.Mode.__dict__, "unspport mode for cvt_color"
@@ -122,25 +111,14 @@ def roi_pooling(
         ``K, C, output_shape[0], output_shape[1])`` feature of rois.
 
     Examples:
-
-        .. testcode::
-
-                import numpy as np
-                from megengine import tensor
-                import megengine.functional as F
-
-                np.random.seed(42)
-                inp = tensor(np.random.randn(1, 1, 128, 128))
-                rois = tensor(np.random.random((4, 5)))
-                y = F.vision.roi_pooling(inp, rois, (2, 2))
-                print(y.numpy()[0].round(decimals=4))
-
-        Outputs:
-
-        .. testoutput::
-
-                [[[-0.1383 -0.1383]
-                  [-0.5035 -0.5035]]]
+        >>> import numpy as np
+        >>> np.random.seed(42)
+        >>> inp = Tensor(np.random.randn(1, 1, 128, 128))
+        >>> rois = Tensor(np.random.random((4, 5)))
+        >>> y = F.vision.roi_pooling(inp, rois, (2, 2))
+        >>> y.numpy()[0].round(decimals=4)
+        array([[[-0.1383, -0.1383],
+                [-0.5035, -0.5035]]], dtype=float32)
     """
     assert mode.lower() in ["max", "average"], "only max/average mode is supported"
     if isinstance(output_shape, int):
@@ -218,25 +196,14 @@ def roi_align(
         output tensor.
 
     Examples:
-
-        .. testcode::
-
-                import numpy as np
-                from megengine import tensor
-                import megengine.functional as F
-
-                np.random.seed(42)
-                inp = tensor(np.random.randn(1, 1, 128, 128))
-                rois = tensor(np.random.random((4, 5)))
-                y = F.vision.roi_align(inp, rois, (2, 2))
-                print(y.numpy()[0].round(decimals=4))
-
-        Outputs:
-
-        .. testoutput::
-
-                [[[0.175  0.175 ]
-                  [0.1359 0.1359]]]
+        >>> import numpy as np
+        >>> np.random.seed(42)
+        >>> inp = Tensor(np.random.randn(1, 1, 128, 128))
+        >>> rois = Tensor(np.random.random((4, 5)))
+        >>> y = F.vision.roi_align(inp, rois, (2, 2))
+        >>> y.numpy()[0].round(decimals=4)
+        array([[[0.175 , 0.175 ],
+                [0.1359, 0.1359]]], dtype=float32)
     """
     if inp.dtype != np.float32:
         inp = inp.astype(np.float32)
@@ -285,27 +252,15 @@ def nms(
         max_output should be specified and should have valid positive value under tracing.
 
     Examples:
-
-        .. testcode::
-
-            import numpy as np
-            from megengine import tensor
-            import megengine.functional as F
-
-            x = np.zeros((100,4))
-            np.random.seed(42)
-            x[:,:2] = np.random.rand(100,2)*20
-            x[:,2:] = np.random.rand(100,2)*20 + 100
-            scores = tensor(np.random.rand(100))
-            inp = tensor(x)
-            result = F.vision.nms(inp, scores, iou_thresh=0.7)
-            print(result.numpy())
-
-        Outputs:
-
-        .. testoutput::
-
-            [75 69]
+        >>> import numpy as np
+        >>> x = np.zeros((100,4))
+        >>> np.random.seed(42)
+        >>> x[:,:2] = np.random.rand(100,2)*20
+        >>> x[:,2:] = np.random.rand(100,2)*20 + 100
+        >>> scores = Tensor(np.random.rand(100))
+        >>> inp = Tensor(x)
+        >>> F.vision.nms(inp, scores, iou_thresh=0.7)
+        Tensor([75 69], dtype=int32, device=xpux:0)
     """
     assert (
         boxes.ndim == 2 and boxes.shape[1] == 4
@@ -357,27 +312,17 @@ def remap(
         output tensor.
 
     Examples:
-
-        .. testcode::
-
-            import numpy as np
-            from megengine import tensor
-            import megengine.functional as F
-            inp_shape = (1, 1, 4, 4)
-            inp = tensor(np.arange(16, dtype=np.float32).reshape(inp_shape))
-            map_xy_shape = (1, 2, 2, 2)
-            map_xy = tensor(np.array([[[1., 0.],[0., 1.]],
-                                [[0., 1.],[0., 1.]]],
-                                dtype=np.float32).reshape(map_xy_shape))
-            out = F.vision.remap(inp, map_xy)
-            print(out.numpy())
-
-        Outputs:
-
-        .. testoutput::
-
-            [[[[1. 4.]
-               [4. 4.]]]]
+        >>> import numpy as np
+        >>> inp_shape = (1, 1, 4, 4)
+        >>> inp = Tensor(np.arange(16, dtype=np.float32).reshape(inp_shape))
+        >>> map_xy_shape = (1, 2, 2, 2)
+        >>> map_xy = Tensor(np.array([[[1., 0.],[0., 1.]],
+        ...                     [[0., 1.],[0., 1.]]],
+        ...                     dtype=np.float32).reshape(map_xy_shape))
+        >>> out = F.vision.remap(inp, map_xy)
+        >>> out.numpy()
+        array([[[[1., 4.],
+                 [4., 4.]]]], dtype=float32)
     """
     conv_format = _config._get_actual_op_param("NCHW", _config.__conv_format)
 
@@ -478,29 +423,18 @@ def warp_perspective(
         The transformation matrix is the inverse of that used by `cv2.warpPerspective`.
 
     Examples:
-
-        .. testcode::
-
-            import numpy as np
-            from megengine import tensor
-            import megengine.functional as F
-
-            inp_shape = (1, 1, 4, 4)
-            x = tensor(np.arange(16, dtype=np.float32).reshape(inp_shape))
-            M_shape = (1, 3, 3)
-            # M defines a translation: dst(1, 1, h, w) = rst(1, 1, h+1, w+1)
-            M = tensor(np.array([[1., 0., 1.],
-                                [0., 1., 1.],
-                                [0., 0., 1.]], dtype=np.float32).reshape(M_shape))
-            out = F.vision.warp_perspective(x, M, (2, 2))
-            print(out.numpy())
-
-        Outputs:
-
-        .. testoutput::
-
-            [[[[ 5.  6.]
-               [ 9. 10.]]]]
+        >>> import numpy as np
+        >>> inp_shape = (1, 1, 4, 4)
+        >>> x = Tensor(np.arange(16, dtype=np.float32).reshape(inp_shape))
+        >>> M_shape = (1, 3, 3)
+        >>> # M defines a translation: dst(1, 1, h, w) = rst(1, 1, h+1, w+1)
+        >>> M = Tensor(np.array([[1., 0., 1.],
+        ...                      [0., 1., 1.],
+        ...                      [0., 0., 1.]], dtype=np.float32).reshape(M_shape))
+        >>> out = F.vision.warp_perspective(x, M, (2, 2))
+        >>> out.numpy()
+        array([[[[ 5.,  6.],
+                 [ 9., 10.]]]], dtype=float32)
     """
     if inp.dtype == np.float32:
         mat = mat.astype("float32")
@@ -547,27 +481,16 @@ def interpolate(
         output tensor.
 
     Examples:
-
-        .. testcode::
-
-            import numpy as np
-            from megengine import tensor
-            import megengine.functional as F
-
-            x = tensor(np.arange(1, 5, dtype=np.float32).reshape(1, 1, 2, 2))
-            out = F.vision.interpolate(x, [4, 4], align_corners=False)
-            print(out.numpy())
-            out2 = F.vision.interpolate(x, scale_factor=2.)
-            np.testing.assert_allclose(out.numpy(), out2.numpy())
-
-        Outputs:
-
-        .. testoutput::
-
-            [[[[1.   1.25 1.75 2.  ]
-               [1.5  1.75 2.25 2.5 ]
-               [2.5  2.75 3.25 3.5 ]
-               [3.   3.25 3.75 4.  ]]]]
+        >>> import numpy as np
+        >>> x = Tensor(np.arange(1, 5, dtype=np.float32).reshape(1, 1, 2, 2))
+        >>> out = F.vision.interpolate(x, [4, 4], align_corners=False)
+        >>> out.numpy()
+        array([[[[1.  , 1.25, 1.75, 2.  ],
+                 [1.5 , 1.75, 2.25, 2.5 ],
+                 [2.5 , 2.75, 3.25, 3.5 ],
+                 [3.  , 3.25, 3.75, 4.  ]]]], dtype=float32)
+        >>> out2 = F.vision.interpolate(x, scale_factor=2.)
+        >>> np.testing.assert_allclose(out.numpy(), out2.numpy())
     """
     mode = mode.lower()
     if mode not in ["bilinear", "linear", "bicubic", "nearest"]:
@@ -693,17 +616,6 @@ def nvof(src: Tensor, precision: int = 1) -> Tensor:
     Returns:
         output tensor with shape: ``(n, t-1, (h+out_grid_size-1)//out_grid_size, (w+out_grid_size-1)//out_grid_size, c2)``.
         By default, out_grid_size = 4. dtype: int16.
-
-    .. code-block:: python
-
-        import numpy as np
-        from megengine import tensor
-        import megengine.functional as F
-
-        x = np.random.random_integers(0, 255, (1,2,224,244,4)).astype("uint8")
-        src = tensor(x)
-        result = F.nn.nvof(src, precision=1)
-        print(result.numpy())
     """
     assert src.ndim == 5 and src.shape[4] == 4
 

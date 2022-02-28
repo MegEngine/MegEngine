@@ -45,25 +45,13 @@ class AdaptiveMaxPool2d(_AdaptivePoolNd):
     * kernel_size: (IH - (OH - 1) * stride_h, IW - (OW - 1) * stride_w)
 
     Examples:
-
-        .. testcode::
-
-            import numpy as np
-            import megengine as mge
-            import megengine.module as M
-
-            m = M.AdaptiveMaxPool2d((2, 2))
-            inp = mge.tensor(np.arange(0, 16).astype("float32").reshape(1, 1, 4, 4))
-            oup = m(inp)
-            print(oup.numpy())
-
-        Outputs:
-
-        .. testoutput::
-
-            [[[[ 5.  7.]
-               [13. 15.]]]]
-
+        >>> import numpy as np
+        >>> m = M.AdaptiveMaxPool2d((2, 2))
+        >>> inp = mge.tensor(np.arange(0, 16).astype("float32").reshape(1, 1, 4, 4))
+        >>> oup = m(inp)
+        >>> oup.numpy()
+        array([[[[ 5.,  7.],
+                 [13., 15.]]]], dtype=float32)
     """
 
     def forward(self, inp):
@@ -89,25 +77,13 @@ class AdaptiveAvgPool2d(_AdaptivePoolNd):
     * kernel_size: (IH - (OH - 1) * stride_h, IW - (OW - 1) * stride_w)
 
     Examples:
-
-        .. testcode::
-
-            import numpy as np
-            import megengine as mge
-            import megengine.module as M
-
-            m = M.AdaptiveAvgPool2d((2, 2))
-            inp = mge.tensor(np.arange(0, 16).astype("float32").reshape(1, 1, 4, 4))
-            oup = m(inp)
-            print(oup.numpy())
-
-        Outputs:
-
-        .. testoutput::
-
-            [[[[ 2.5  4.5]
-               [10.5 12.5]]]]
-
+        >>> import numpy as np
+        >>> m = M.AdaptiveAvgPool2d((2, 2))
+        >>> inp = mge.tensor(np.arange(0, 16).astype("float32").reshape(1, 1, 4, 4))
+        >>> oup = m(inp)
+        >>> oup.numpy()
+        array([[[[ 2.5,  4.5],
+                 [10.5, 12.5]]]], dtype=float32)
     """
 
     def forward(self, inp):

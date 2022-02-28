@@ -79,134 +79,371 @@ def _elemwise_multi_type(*args, mode, **kwargs):
 # math operations
 
 
-def add(x, y):
-    r"""Element-wise `addition`.
+def add(x: Tensor, y: Tensor) -> Tensor:
+    r"""Calculates the sum for each element :math:`x_i` of the input tensor :math:`x` with the respective element :math:`y_i` of the input tensor :math:`y`.
+
+    Args:
+        x: first input tensor. Should have a numeric data type.
+        y: second input tensor. Must be compatible with ``x`` (see :ref:`broadcasting-rule` ). Should have a numeric data type.
+
+    Returns:
+        A tensor containing the element-wise sums. The returned tensor must have a data type determined by :ref:`dtype-promotion`.
+
+    .. admonition:: Special cases
+
+       For floating-point operands,
+
+       * If either :math:`x` or :math:`y` is ``NaN``, the result is ``NaN``.
+       * If :math:`x` is ``+infinity`` and :math:`y` is ``-infinity``, the result is ``NaN``.
+       * If :math:`x` is ``-infinity`` and :math:`y` is ``+infinity``, the result is ``NaN``.
+       * If :math:`x` is ``+infinity`` and :math:`y` is ``+infinity``, the result is ``+infinity``.
+       * If :math:`x` is ``-infinity`` and :math:`y` is ``-infinity``, the result is ``-infinity``.
+       * If :math:`x` is ``+infinity`` and :math:`y` is a finite number, the result is ``+infinity``.
+       * If :math:`x` is ``-infinity`` and :math:`y` is a finite number, the result is ``-infinity``.
+       * If :math:`x` is a finite number and :math:`y` is ``+infinity``, the result is ``+infinity``.
+       * If :math:`x` is a finite number and :math:`y` is ``-infinity``, the result is ``-infinity``.
+       * If :math:`x` is ``-0`` and :math:`y` is ``-0``, the result is ``-0``.
+       * If :math:`x` is ``-0`` and :math:`y` is ``+0``, the result is ``+0``.
+       * If :math:`x` is ``+0`` and :math:`y` is ``-0``, the result is ``+0``.
+       * If :math:`x` is ``+0`` and :math:`y` is ``+0``, the result is ``+0``.
+       * If :math:`x` is either ``+0`` or ``-0`` and :math:`y` is a nonzero finite number, the result is :math:`y`.
+       * If :math:`x` is a nonzero finite number and :math:`y` is either ``+0`` or ``-0``, the result is :math:`x`.
+       * If :math:`x` is a nonzero finite number and :math:`y` is :math:`-x`, the result is ``+0``.
+       * In the remaining cases, when neither ``infinity``, ``+0``, ``-0``, nor a ``NaN`` is involved, 
+         and the operands have the same mathematical sign or have different magnitudes, 
+         the sum must be computed and rounded to the nearest representable value according to 
+         IEEE 754-2019 and a supported round mode. If the magnitude is too large to represent, 
+         the operation overflows and the result is an infinity of appropriate mathematical sign.
+
+    .. note::
+
+       * Floating-point addition is a commutative operation, but not always associative.
+       * The ``+`` operator can be used as a shorthand for ``add`` on tensors.
 
     Examples:
-
-        .. testcode::
-
-            import numpy as np
-            from megengine import tensor
-            import megengine.functional as F
-
-            x = tensor(np.arange(0, 6, dtype=np.float32).reshape(2, 3))
-            y = tensor(np.arange(0, 6, dtype=np.float32).reshape(2, 3))
-            out = F.add(x, y)
-            print(out.numpy())
-
-        Outputs:
-
-        .. testoutput::
-
-            [[ 0.  2.  4.]
-             [ 6.  8. 10.]]
+        >>> F.add(1.0, 4.0)
+        Tensor(5.0, device=xpux:0)
+        >>> x = Tensor([[1, 2, 3], [4, 5, 6]])
+        >>> y = Tensor([[1, 1, 1], [2, 2, 2]])
+        >>> F.add(x, y)
+        Tensor([[2 3 4]
+         [6 7 8]], dtype=int32, device=xpux:0)
+        >>> F.add(x, 1)
+        Tensor([[2 3 4]
+         [5 6 7]], dtype=int32, device=xpux:0)
     """
     return _elwise(x, y, mode=Elemwise.Mode.ADD)
 
 
-def sub(x, y):
-    r"""Element-wise `sub`.
+def sub(x: Tensor, y: Tensor) -> Tensor:
+    r"""Calculates the difference for each element :math:`x_i` of the input tensor :math:`x` with the respective element :math:`y` of the input tensor :math:`y`.
+    The result of :math:`x_i - y_i` must be the same as :math:`x_i + (-y_i)` and must be governed by the same floating-point rules as addition.
+    (See :func:`~.functional.add` ).
+
+    Args:
+        x: first input tensor. Should have a numeric data type.
+        y: second input tensor. Must be compatible with ``x`` (see :ref:`broadcasting-rule` ). Should have a numeric data type.
+
+    Returns:
+        A tensor containing the element-wise differences. The returned tensor must have a data type determined by :ref:`dtype-promotion`.
+
+    .. note::
+
+       The ``-`` operator can be used as a shorthand for ``sub`` on Tensors.
 
     Examples:
-
-        .. testcode::
-
-            import numpy as np
-            from megengine import tensor
-            import megengine.functional as F
-
-            x = tensor(np.arange(1, 7, dtype=np.float32).reshape(2, 3))
-            y = tensor(np.arange(0, 6, dtype=np.float32).reshape(2, 3))
-            out = F.sub(x, y)
-            print(out.numpy())
-
-        Outputs:
-
-        .. testoutput::
-
-            [[1. 1. 1.]
-             [1. 1. 1.]]
-
+       >>> F.sub(1.0, 4.0)
+       Tensor(-3.0, device=xpux:0)
+       >>> x = Tensor([[1, 2, 3], [4, 5, 6]])
+       >>> y = Tensor([[1, 1, 1], [2, 2, 2]])
+       >>> F.sub(x, y)
+       Tensor([[0 1 2]
+        [2 3 4]], dtype=int32, device=xpux:0)
+       >>> F.sub(x, 1)
+       Tensor([[0 1 2]
+        [3 4 5]], dtype=int32, device=xpux:0)
     """
     return _elwise(x, y, mode=Elemwise.Mode.SUB)
 
 
 def mul(x: Tensor, y: Tensor) -> Tensor:
-    r"""Calculates the product for each element :math:`x_i` of the input tensor `x` with the respective element :math:`y_i` of the input tensor `y`.
-
-    Note:
-        * If either :math:`x_i` or :math:`y_i` is `NaN`, the result is `NaN`.
-        * If :math:`x_i` is either `+infinity` or `-infinity` and :math:`y_i` is either `+0` or `-0`, the result is `NaN`.
-        * If :math:`x_i` is either `+0` or `-0` and :math:`y_i` is either `+infinity` or `-infinity`, the result is `NaN`.
-        * If :math:`x_i` and :math:`y_i` have different mathematical signs, the result has a negative mathematical sign, unless the result is `NaN`.
-        * If :math:`x_i` is either `+infinity` or `-infinity` and :math:`y_i` is either `+infinity` or `-infinity`,
-          the result is a signed infinity with the mathematical sign determined by the rule already stated above.
-        * If :math:`x_i` is either `+infinity` or `-infinity` and :math:`y_i` is a nonzero finite number,
-          the result is a signed infinity with the mathematical sign determined by the rule already stated above.
-        * If :math:`x_i` is a nonzero finite number and :math:`y_i` is either `+infinity` or `-infinity`,
-          the result is a signed infinity with the mathematical sign determined by the rule already stated above.
-        * In the remaining cases, where neither `infinity` nor `NaN` is involved,
-          the product must be computed and rounded to the nearest representable value according to IEEE 754-2019 and a supported rounding mode.
-          If the magnitude is too large to represent, the result is an `infinity` of appropriate mathematical sign.
-          If the magnitude is too small to represent, the result is a zero of appropriate mathematical sign.
-        * Floating-point multiplication is not always associative due to finite precision.
+    r"""Calculates the product for each element :math:`x_i` of the input tensor `x` with the respective element :math:`y_i` of the input tensor :math:`y`.
 
     Args:
         x: first input tensor. Should have a numeric data type.
-        y: second input tensor. Must be compatible with `x` (see :ref:`broadcasting-rule` ). Should have a numeric data type.
+        y: second input tensor. Must be compatible with ``x`` (see :ref:`broadcasting-rule` ). Should have a numeric data type.
 
     Returns:
-        A tensor containing the element-wise products. The returned array must have a data type determined by :ref:`dtype-promotion`.
+        A tensor containing the element-wise products. The returned tensor must have a data type determined by :ref:`dtype-promotion`.
+
+    .. admonition:: Special cases
+
+       For floating-point operands,
+
+       * If either :math:`x_i` or :math:`y_i` is ``NaN``, the result is ``NaN``.
+       * If :math:`x_i` is either ``+infinity`` or ``-infinity`` and :math:`y_i` is either ``+0`` or ``-0``, the result is ``NaN``.
+       * If :math:`x_i` is either ``+0`` or ``-0`` and :math:`y_i` is either ``+infinity`` or ``-infinity``, the result is ``NaN``.
+       * If :math:`x_i` and :math:`y_i` have different mathematical signs, the result has a negative mathematical sign, unless the result is ``NaN``.
+       * If :math:`x_i` is either ``+infinity`` or ``-infinity`` and :math:`y_i` is either ``+infinity`` or ``-infinity``,
+         the result is a signed infinity with the mathematical sign determined by the rule already stated above.
+       * If :math:`x_i` is either ``+infinity`` or ``-infinity`` and :math:`y_i` is a nonzero finite number,
+         the result is a signed infinity with the mathematical sign determined by the rule already stated above.
+       * If :math:`x_i` is a nonzero finite number and :math:`y_i` is either ``+infinity`` or ``-infinity``,
+         the result is a signed infinity with the mathematical sign determined by the rule already stated above.
+       * In the remaining cases, where neither ``infinity`` nor ``NaN`` is involved,
+         the product must be computed and rounded to the nearest representable value according to IEEE 754-2019 and a supported rounding mode.
+         If the magnitude is too large to represent, the result is an `infinity` of appropriate mathematical sign.
+         If the magnitude is too small to represent, the result is a zero of appropriate mathematical sign.
+
+    .. Note::
+
+       * Floating-point multiplication is not always associative due to finite precision.
+       * The ``*`` operator can be used as a shorthand for ``mul`` on tensors.
 
     Examples:
-
-        >>> F.mul(2, 3)
-        Tensor(6, dtype=int32, device=xpux:0)
-
-        >>> F.mul(2.0, 3.0)
-        Tensor(6.0, device=xpux:0)
-
-        >>> x = F.arange(6.0).reshape(2, 3)
-        >>> y = F.arange(3.0)
+        >>> F.mul(1.0, 4.0)
+        Tensor(4.0, device=xpux:0)
+        >>> x = Tensor([[1, 2, 3], [4, 5, 6]])
+        >>> y = Tensor([[1, 1, 1], [2, 2, 2]])
         >>> F.mul(x, y)
-        Tensor([[ 0.  1.  4.]
-         [ 0.  4. 10.]], device=xpux:0)
-
-        The `*` operator can be used as a shorthand for :func:`~.functional.mul` on tensors.
-
-        >>> x = F.arange(6.0).reshape(2, 3)
-        >>> y = F.arange(3.0)
-        >>> x * y
-        Tensor([[ 0.  1.  4.]
-         [ 0.  4. 10.]], device=xpux:0)
-
+        Tensor([[ 1  2  3]
+         [ 8 10 12]], dtype=int32, device=xpux:0)
+        >>> F.mul(x, 2)
+        Tensor([[ 2  4  6]
+         [ 8 10 12]], dtype=int32, device=xpux:0)
     """
     return _elwise(x, y, mode=Elemwise.Mode.MUL)
 
 
-def div(x, y):
-    r"""Element-wise `(x / y)`."""
+def div(x: Tensor, y: Tensor) -> Tensor:
+    r"""Calculates the division for each element :math:`x_i` of the input tensor :math:`x` with the respective element :math:`y_i` of the input tensor :math:`y`.
+
+    Args:
+        x: dividend input tensor. Should have a numeric data type.
+        y: divisor input tensor. Must be compatible with ``x``` (see :ref:`broadcasting-rule` ). Should have a numeric data type.
+
+    Returns:
+        A tensor containing the element-wise results. The returned tensor must have a data type determined by :ref:`dtype-promotion`.
+
+    .. admonition:: Special cases
+
+       For floating-point operands,
+
+       * If either :math:`x` or :math:`y` is ``NaN``, the result is ``NaN``.
+       * If :math:`x` is either ``+infinity`` or ``-infinity`` and :math:`y` is either ``+infinity`` or ``-infinity``, the result is ``NaN``.
+       * If :math:`x` is either ``+0`` or ``-0`` and :math:`y` is either ``+0`` or ``-0``, the result is ``NaN``.
+       * If :math:`x` is ``+0`` and :math:`y` is greater than ``0``, the result is ``+0``.
+       * If :math:`x` is ``-0`` and :math:`y` is greater than ``0``, the result is ``-0``.
+       * If :math:`x` is ``+0`` and :math:`y` is less than ``0``, the result is ``-0``.
+       * If :math:`x` is ``-0`` and :math:`y` is less than ``0``, the result is ``+0``.
+       * If :math:`x` is greater than ``0`` and :math:`y` is ``+0``, the result is ``+infinity``.
+       * If :math:`x` is greater than ``0`` and :math:`y` is ``-0``, the result is ``-infinity``.
+       * If :math:`x` is less than ``0`` and :math:`y` is ``+0``, the result is ``-infinity``.
+       * If :math:`x` is less than ``0`` and :math:`y` is ``-0``, the result is ``+infinity``.
+       * If :math:`x` is ``+infinity`` and :math:`y` is a positive (i.e., greater than ``0``) finite number, the result is ``+infinity``.
+       * If :math:`x` is ``+infinity`` and :math:`y` is a negative (i.e., less than ``0``) finite number, the result is ``-infinity``.
+       * If :math:`x` is ``-infinity`` and :math:`y` is a positive (i.e., greater than ``0``) finite number, the result is ``-infinity``.
+       * If :math:`x` is ``-infinity`` and :math:`y` is a negative (i.e., less than ``0``) finite number, the result is ``+infinity``.
+       * If :math:`x` is a positive (i.e., greater than ``0``) finite number and :math:`y` is ``+infinity``, the result is ``+0``.
+       * If :math:`x` is a positive (i.e., greater than ``0``) finite number and :math:`y` is ``-infinity``, the result is ``-0``.
+       * If :math:`x` is a negative (i.e., less than ``0``) finite number and :math:`y` is ``+infinity``, the result is ``-0``.
+       * If :math:`x` is a negative (i.e., less than ``0``) finite number and :math:`y` is ``-infinity``, the result is ``+0``.
+       * If :math:`x` and :math:`y` have the same mathematical sign and are both nonzero finite numbers, the result has a positive mathematical sign.
+       * If :math:`x` and :math:`y` have different mathematical signs and are both nonzero finite numbers, the result has a negative mathematical sign.
+       * In the remaining cases, where neither ``-infinity``, ``+0``, ``-0``, nor ``NaN`` is involved, the quotient must be computed and rounded to the nearest representable value according to IEEE 754-2019 and a supported rounding mode. If the magnitude is too large to represent, the operation overflows and the result is an infinity of appropriate mathematical sign. If the magnitude is too small to represent, the operation underflows and the result is a zero of appropriate mathematical sign.
+
+    .. note::
+
+       The ``/`` operator can be used as a shorthand for ``div`` on tensors.
+
+    .. seealso::
+
+       In Python, ``//`` is the floor division operator and ``/`` is the true division operator.
+       See :func:`~.functional.floor_div`
+
+    Examples:
+        >>> F.div(1.0, 4.0)
+        Tensor(0.25, device=xpux:0)
+        >>> x = Tensor([[1, 2, 3], [4, 5, 6]])
+        >>> y = Tensor([[1, 1, 1], [2, 2, 2]])
+        >>> F.div(x, y)
+        Tensor([[1.  2.  3. ]
+         [2.  2.5 3. ]], device=xpux:0)
+        >>> F.div(x, 2)
+        Tensor([[0.5 1.  1.5]
+         [2.  2.5 3. ]], device=xpux:0)
+    """
     return _elwise(x, y, mode=Elemwise.Mode.TRUE_DIV)
 
 
-def floor_div(x, y):
-    r"""Element-wise `floor(x / y)`."""
+def floor_div(x: Tensor, y: Tensor) -> Tensor:
+    r"""Rounds the result of dividing each element :math:`x_i` of the input tensor :math:`x` 
+    by the respective element :math:`y_i` of the input tensor :math:`y` to the greatest 
+    (i.e., closest to ``+infinity``) integer-value number that is not greater than the division result.
+
+    Args:
+        x: dividend input tensor. Should have a numeric data type.
+        y: divisor input tensor. Must be compatible with ``x``` (see :ref:`broadcasting-rule` ). Should have a numeric data type.
+
+    Returns:
+        A tensor containing the element-wise results. The returned tensor must have a data type determined by :ref:`dtype-promotion`.
+
+    .. admonition:: Special cases
+
+       For floating-point operands,
+
+       * If either :math:`x` or :math:`y` is ``NaN``, the result is ``NaN``.
+       * If :math:`x` is either ``+infinity`` or ``-infinity`` and :math:`y` is either ``+infinity`` or ``-infinity``, the result is ``NaN``.
+       * If :math:`x` is either ``+0`` or ``-0`` and :math:`y` is either ``+0`` or ``-0``, the result is ``NaN``.
+       * If :math:`x` is ``+0`` and :math:`y` is greater than ``0``, the result is ``+0``.
+       * If :math:`x` is ``-0`` and :math:`y` is greater than ``0``, the result is ``-0``.
+       * If :math:`x` is ``+0`` and :math:`y` is less than ``0``, the result is ``-0``.
+       * If :math:`x` is ``-0`` and :math:`y` is less than ``0``, the result is ``+0``.
+       * If :math:`x` is greater than ``0`` and :math:`y` is ``+0``, the result is ``+infinity``.
+       * If :math:`x` is greater than ``0`` and :math:`y` is ``-0``, the result is ``-infinity``.
+       * If :math:`x` is less than ``0`` and :math:`y` is ``+0``, the result is ``-infinity``.
+       * If :math:`x` is less than ``0`` and :math:`y` is ``-0``, the result is ``+infinity``.
+       * If :math:`x` is ``+infinity`` and :math:`y` is a positive (i.e., greater than ``0``) finite number, the result is ``+infinity``.
+       * If :math:`x` is ``+infinity`` and :math:`y` is a negative (i.e., less than ``0``) finite number, the result is ``-infinity``.
+       * If :math:`x` is ``-infinity`` and :math:`y` is a positive (i.e., greater than ``0``) finite number, the result is ``-infinity``.
+       * If :math:`x` is ``-infinity`` and :math:`y` is a negative (i.e., less than ``0``) finite number, the result is ``+infinity``.
+       * If :math:`x` is a positive (i.e., greater than ``0``) finite number and :math:`y` is ``+infinity``, the result is ``+0``.
+       * If :math:`x` is a positive (i.e., greater than ``0``) finite number and :math:`y` is ``-infinity``, the result is ``-0``.
+       * If :math:`x` is a negative (i.e., less than ``0``) finite number and :math:`y` is ``+infinity``, the result is ``-0``.
+       * If :math:`x` is a negative (i.e., less than ``0``) finite number and :math:`y` is ``-infinity``, the result is ``+0``.
+       * If :math:`x` and :math:`y` have the same mathematical sign and are both nonzero finite numbers, the result has a positive mathematical sign.
+       * If :math:`x` and :math:`y` have different mathematical signs and are both nonzero finite numbers, the result has a negative mathematical sign.
+       * In the remaining cases, where neither ``-infinity``, ``+0``, ``-0``, nor ``NaN`` is involved, the quotient must be computed and rounded to the nearest representable value according to IEEE 754-2019 and a supported rounding mode. If the magnitude is too large to represent, the operation overflows and the result is an infinity of appropriate mathematical sign. If the magnitude is too small to represent, the operation underflows and the result is a zero of appropriate mathematical sign.
+
+    .. note::
+
+       The ``//`` operator can be used as a shorthand for ``floor_div`` on tensors.
+
+    .. seealso::
+
+       In Python, ``//`` is the floor division operator and ``/`` is the true division operator.
+       See :func:`~.functional.div`
+
+    Examples:
+       >>> F.floor_div(5.0, 4.0)
+       Tensor(1.0, device=xpux:0)
+       >>> x = Tensor([[1, 2, 3], [4, 5, 6]])
+       >>> y = Tensor([[1, 1, 1], [2, 2, 2]])
+       >>> F.floor_div(x, y)
+       Tensor([[1 2 3]
+        [2 2 3]], dtype=int32, device=xpux:0)
+       >>> F.floor_div(x, 2)
+       Tensor([[0 1 1]
+        [2 2 3]], dtype=int32, device=xpux:0)
+    """
     return _elwise(x, y, mode=Elemwise.Mode.FLOOR_DIV)
 
 
-def neg(x):
-    r"""Element-wise `negation`."""
+def neg(x: Tensor) -> Tensor:
+    r"""Computes the numerical negative of each element :math:`x_i` (i.e., :math:`y_i = -x_i` ) of the input tensor :math:`x`.
+
+    Args:
+        x: input tensor. Should have a numeric data type.
+
+    Returns:
+        A tensor containing the evaluated result for each element in :math:`x`.
+        The returned tensor must have a data type determined by :ref:`dtype-promotion`.
+
+    .. note::
+
+       The unary ``-`` operator can be used as a shorthand for ``neg`` on tensors.
+
+    Examples:
+       >>> x = Tensor([1, -1])
+       >>> F.neg(x)
+       Tensor([-1  1], dtype=int32, device=xpux:0)
+    """
     return _elwise(x, mode=Elemwise.Mode.NEGATE)
 
 
-def pow(x, y):
-    r"""Element-wise `power`."""
+def pow(x: Tensor, y: Tensor) -> Tensor:
+    r"""Calculates an implementation-dependent approximation of exponentiation by 
+    raising each element :math:`x_i` (the base) of the input tensor :math:`x` to 
+    the power of :math:`y_i` (the exponent), where :math:`y_i` is the corresponding element of the input tensor :math:`y`.
+
+    Args:
+        x: first input tensor whose elements correspond to the exponentiation base. Should have a numeric data type.
+        y: second input tensor whose elements correspond to the exponentiation exponent. Must be compatible with `x` (see :ref:`broadcasting-rule` ). Should have a numeric data type.
+
+    Returns:
+        A tensor containing the element-wise results. The returned tensor must have a data type determined by :ref:`dtype-promotion`.
+
+    .. note::
+
+       The unary ``**`` operator can be used as a shorthand for ``pow`` on tensors.
+
+    .. admonition:: Special cases
+
+       For floating-point operands,
+
+       * If :math:`x_i` is not equal to ``1`` and :math:`y_i` is ``NaN``, the result is ``NaN``.
+       * If :math:`y_i` is ``+0``, the result is ``1``, even if ``x_i`` is ``NaN``.
+       * If :math:`y_i` is ``-0``, the result is ``1``, even if ``x_i`` is ``NaN``.
+       * If :math:`x_i` is ``NaN`` and ``y_i`` is not equal to ``0``, the result is ``NaN``.
+       * If ``abs(x_i)`` is greater than ``1`` and ``y_i`` is ``+infinity``, the result is ``+infinity``.
+       * If ``abs(x_i)`` is greater than ``1`` and ``y_i`` is ``-infinity``, the result is ``+0``.
+       * If ``abs(x_i)`` is ``1`` and ``y_i`` is ``+infinity``, the result is ``1``.
+       * If ``abs(x_i)`` is ``1`` and ``y_i`` is ``-infinity``, the result is ``1``.
+       * If ``x_i`` is ``1`` and ``y_i`` is not ``NaN``, the result is ``1``.
+       * If ``abs(x_i)`` is less than ``1`` and ``y_i`` is ``+infinity``, the result is ``+0``.
+       * If ``abs(x_i)`` is less than ``1`` and ``y_i`` is ``-infinity``, the result is ``+infinity``.
+       * If ``x_i`` is ``+infinity`` and ``y_i`` is greater than 0, the result is ``+infinity``.
+       * If ``x_i`` is ``+infinity`` and ``y_i`` is less than 0, the result is ``+0``.
+       * If ``x_i`` is ``-infinity``, ``y_i`` is greater than 0, and ``y_i`` is an odd integer value, the result is ``-infinity``.
+       * If ``x_i`` is ``-infinity``, ``y_i`` is greater than 0, and ``y_i`` is not an odd integer value, the result is ``+infinity``.
+       * If ``x_i`` is ``-infinity``, ``y_i`` is less than 0, and ``y_i`` is an odd integer value, the result is ``-0``.
+       * If ``x_i`` is ``-infinity``, ``y_i`` is less than 0, and ``y_i`` is not an odd integer value, the result is ``+0``.
+       * If ``x_i`` is ``+0`` and ``y_i`` is greater than 0, the result is ``+0``.
+       * If ``x_i`` is ``+0`` and ``y_i`` is less than 0, the result is ``+infinity``.
+       * If ``x_i`` is ``-0``, ``y_i`` is greater than 0, and ``y_i`` is an odd integer value, the result is ``-0``.
+       * If ``x_i`` is ``-0``, ``y_i`` is greater than 0, and ``y_i`` is not an odd integer value, the result is ``+0``.
+       * If ``x_i`` is ``-0``, ``y_i`` is less than 0, and ``y_i`` is an odd integer value, the result is ``-infinity``.
+       * If ``x_i`` is ``-0``, ``y_i`` is less than 0, and ``y_i`` is not an odd integer value, the result is ``+infinity``.
+       * If ``x_i`` is less than 0, ``x_i`` is a finite number, ``y_i`` is a finite number, and ``y_i`` is not an integer value, the result is ``NaN``.
+
+    Examples:
+        >>> F.pow(2.0, 3.0)
+        Tensor(8.0, device=xpux:0)
+        >>> x = Tensor([1, 2, 3, 4, 5])
+        >>> y = Tensor([1, 2, 1, 2, 1])
+        >>> F.pow(x, y)
+        Tensor([ 1.  4.  3. 16.  5.], device=xpux:0)
+        >>> F.pow(x, 2)
+        Tensor([ 1.  4.  9. 16. 25.], device=xpux:0)
+    """
     return _elwise(x, y, mode=Elemwise.Mode.POW)
 
 
-def mod(x, y):
-    r"""Element-wise `remainder of division`."""
+def mod(x: Tensor, y: Tensor) -> Tensor:
+    r"""Returns the remainder of division for each element ``x_i`` of the input tensor ``x``
+    and the respective element ``y_i`` of the input tensor ``y``.
+
+    .. note:: ``mod`` is an alias of ``remainder`` in NumPy.
+
+    .. seealso:: :func:`~.div` / :func:`~.floor_div`
+
+    Args:
+        x: dividend input tensor. Should have a numeric data type.
+        y: divisor input tensor. Must be compatible with ``x`` (see :ref:`broadcasting-rule` ). Should have a numeric data type.
+
+    Returns:
+        A tensor containing the element-wise results. The returned tensor must have a data type determined by :ref:`dtype-promotion`.
+
+    Examples:
+        >>> F.mod(8, 3)
+        Tensor(2, dtype=int32, device=xpux:0)
+        >>> x = Tensor([1, 2, 3, 4, 5])
+        >>> y = Tensor([1, 2, 1, 2, 1])
+        >>> F.mod(x, y)
+        Tensor([0 0 0 0 0], dtype=int32, device=xpux:0)
+        >>> F.mod(x, 3)
+        Tensor([1 2 0 1 2], dtype=int32, device=xpux:0)
+    """
     return _elwise(x, y, mode=Elemwise.Mode.MOD)
 
 
@@ -236,52 +473,12 @@ def log1p(x):
 
 
 def sqrt(x: Tensor) -> Tensor:
-    r"""Element-wise `sqrt`.
-
-    Examples:
-
-        .. testcode::
-
-            import numpy as np
-            from megengine import tensor
-            import megengine.functional as F
-
-            x = tensor(np.arange(0, 6, dtype=np.float32).reshape(2, 3))
-            out = F.sqrt(x)
-            print(out.numpy().round(decimals=4))
-
-        Outputs:
-
-        .. testoutput::
-
-            [[0.     1.     1.4142]
-             [1.7321 2.     2.2361]]
-    """
+    r"""Element-wise `sqrt`."""
     return x ** 0.5
 
 
 def square(x: Tensor) -> Tensor:
-    r"""Element-wise `square`.
-
-    Examples:
-
-        .. testcode::
-
-            import numpy as np
-            import megengine as mge
-            import megengine.functional as F
-
-            data = mge.tensor(np.arange(0, 6, dtype=np.float32).reshape(2, 3))
-            out = F.square(data)
-            print(out.numpy().round(decimals=4))
-
-        Outputs:
-
-        .. testoutput::
-
-            [[ 0.  1.  4.]
-             [ 9. 16. 25.]]
-    """
+    r"""Element-wise `square`."""
     return x ** 2
 
 
@@ -314,27 +511,7 @@ def minimum(x, y):
 
 
 def cos(x):
-    r"""Element-wise `cosine`.
-
-    Examples:
-
-        .. testcode::
-
-            import numpy as np
-            from megengine import tensor
-            import megengine.functional as F
-
-            x = tensor(np.arange(0, 6, dtype=np.float32).reshape(2, 3))
-            out = F.cos(x)
-            print(out.numpy().round(decimals=4))
-
-        Outputs:
-
-        .. testoutput::
-
-            [[ 1.      0.5403 -0.4161]
-             [-0.99   -0.6536  0.2837]]
-    """
+    r"""Element-wise `cosine`."""
     return _elwise(x, mode=Elemwise.Mode.COS)
 
 
@@ -407,28 +584,7 @@ def atanh(x):
 
 
 def left_shift(x, y):
-    r"""Element-wise `bitwise binary: x << y`.
-
-        Examples:
-
-        .. testcode::
-
-            import numpy as np
-            from megengine import tensor
-            import megengine.functional as F
-
-            x = tensor(np.arange(0, 6, dtype=np.int32).reshape(2, 3))
-            out = F.left_shift(x, 2)
-            print(out.numpy())
-
-        Outputs:
-
-        .. testoutput::
-
-            [[ 0  4  8]
-             [12 16 20]]
-
-    """
+    r"""Element-wise `bitwise binary: x << y`."""
     return _elwise(x, y, mode=Elemwise.Mode.SHL)
 
 
@@ -461,8 +617,7 @@ def logical_xor(x, y):
 
 
 def logaddexp(x: Tensor, y: Tensor) -> Tensor:
-    r"""Element-wise `numerically stable log(exp(x) + exp(y)`
-    """
+    r"""Element-wise `numerically stable log(exp(x) + exp(y)`."""
     return _elwise(x, y, mode=Elemwise.Mode.LOG_SUM_EXP)
 
 
@@ -470,28 +625,7 @@ def logaddexp(x: Tensor, y: Tensor) -> Tensor:
 
 
 def equal(x, y):
-    r"""Element-wise `(x == y)`.
-
-    Examples:
-
-        .. testcode::
-
-            import numpy as np
-            from megengine import tensor
-            import megengine.functional as F
-
-            x = tensor(np.arange(0, 6, dtype=np.float32).reshape(2, 3))
-            y = tensor(np.arange(0, 6, dtype=np.float32).reshape(2, 3))
-            out = F.equal(x, y)
-            print(out.numpy())
-
-        Outputs:
-
-        .. testoutput::
-
-            [[1. 1. 1.]
-             [1. 1. 1.]]
-    """
+    r"""Element-wise `(x == y)`."""
     return _elwise(x, y, mode=Elemwise.Mode.EQ)
 
 
@@ -539,7 +673,7 @@ def clip(x: Tensor, lower=None, upper=None) -> Tensor:
         x: (Tensor): The input tensor.
         lower: (Numberic，optional): lower-bound of the range to be clamped to.
         upper: (Numberic，optional): upper-bound of the range to be clamped to.        
-    
+
     Note:
         * If both `lower` and `upper` are None, raises an AssertionError.
         * If `lower` is bigger than `upper`, the result is same as `clip(Tensor(), upper, upper)`.
@@ -547,25 +681,6 @@ def clip(x: Tensor, lower=None, upper=None) -> Tensor:
     Returns:
         output clamped tensor. The result must have a data type determined by :ref:`dtype-promotion`.
 
-    Examples:
-
-        >>> import numpy as np
-        >>> x = Tensor([0,1,2,3,4]) 
-        >>> F.clip(x, 2, 4)
-        Tensor([2 2 2 3 4], dtype=int32, device=xpux:0)
-
-        >>> x = Tensor([0,1,2,3,4]) 
-        >>> F.clip(x, 4, 3)
-        Tensor([3 3 3 3 3], dtype=int32, device=xpux:0)
-
-        >>> x = F.arange(5) 
-        >>> F.clip(x, lower=3)
-        Tensor([3. 3. 3. 3. 4.], device=xpux:0)
-
-        >>> x = F.arange(5, dtype=np.int32) 
-        >>> F.clip(x, upper=2.1)
-        Tensor([0.  1.  2.  2.1 2.1], device=xpux:0)
-        
     """
     assert (
         lower is not None or upper is not None

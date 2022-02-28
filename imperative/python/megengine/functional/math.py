@@ -55,20 +55,9 @@ def isnan(inp: Tensor) -> Tensor:
         result tensor.
 
     Examples:
-
-        .. testcode::
-
-            from megengine import tensor
-            import megengine.functional as F
-
-            x = tensor([1, float("nan"), 0])
-            print(F.isnan(x).numpy())
-
-        Outputs:
-
-        .. testoutput::
-
-            [False  True False]
+        >>> x = Tensor([1, float("nan"), 0])
+        >>> F.isnan(x).numpy()
+        array([False,  True, False])
     """
     return inp != inp
 
@@ -83,20 +72,9 @@ def isinf(inp: Tensor) -> Tensor:
         result tensor.
 
     Examples:
-
-        .. testcode::
-
-            from megengine import tensor
-            import megengine.functional as F
-
-            x = tensor([1, float("inf"), 0])
-            print(F.isinf(x).numpy())
-
-        Outputs:
-
-        .. testoutput::
-
-            [False  True False]
+        >>> x = Tensor([1, float("inf"), 0])
+        >>> F.isinf(x).numpy()
+        array([False,  True, False])
     """
     return abs(inp).astype("float32") == float("inf")
 
@@ -111,20 +89,9 @@ def sign(inp: Tensor):
         the sign of input tensor.
 
     Examples:
-
-        .. testcode::
-
-            from megengine import tensor
-            import megengine.functional as F
-
-            x = tensor([1, -1, 0])
-            print(F.sign(x).numpy())
-
-        Outputs:
-
-        .. testoutput::
-
-            [ 1 -1  0]
+        >>> x = Tensor([1, -1, 0])
+        >>> F.sign(x)
+        Tensor([ 1 -1  0], dtype=int32, device=xpux:0)
     """
     return (inp > 0).astype(inp.dtype) - (inp < 0).astype(inp.dtype)
 
@@ -148,22 +115,10 @@ def sum(
         output tensor.
 
     Examples:
-
-        .. testcode::
-
-            import numpy as np
-            from megengine import tensor
-            import megengine.functional as F
-
-            x = tensor(np.arange(1, 7, dtype=np.int32).reshape(2, 3))
-            out = F.sum(x)
-            print(out.numpy())
-
-        Outputs:
-
-        .. testoutput::
-
-            21
+        >>> import numpy as np
+        >>> x = Tensor(np.arange(1, 7, dtype=np.int32).reshape(2, 3))
+        >>> F.sum(x)
+        Tensor(21, dtype=int32, device=xpux:0)
     """
     return inp.sum(axis=axis, keepdims=keepdims)
 
@@ -183,22 +138,10 @@ def prod(
         output tensor.
 
     Examples:
-
-        .. testcode::
-
-            import numpy as np
-            from megengine import tensor
-            import megengine.functional as F
-
-            x = tensor(np.arange(1, 7, dtype=np.int32).reshape(2, 3))
-            out = F.prod(x)
-            print(out.numpy())
-
-        Outputs:
-
-        .. testoutput::
-
-            720
+        >>> import numpy as np
+        >>> x = Tensor(np.arange(1, 7, dtype=np.int32).reshape(2, 3))
+        >>> F.prod(x)
+        Tensor(720, dtype=int32, device=xpux:0)
     """
     return inp.prod(axis=axis, keepdims=keepdims)
 
@@ -221,22 +164,11 @@ def mean(
         output tensor.
 
     Examples:
-
-        .. testcode::
-
-            import numpy as np
-            from megengine import tensor
-            import megengine.functional as F
-
-            x = tensor(np.arange(1, 7, dtype=np.int32).reshape(2, 3))
-            out = F.mean(x)
-            print(out.numpy())
-
-        Outputs:
-
-        .. testoutput::
-
-            3.5
+        >>> import numpy as np
+        >>> x = Tensor(np.arange(1, 7, dtype=np.int32).reshape(2, 3))
+        >>> out = F.mean(x)
+        >>> out.numpy()
+        array(3.5, dtype=float32)
     """
     return inp.mean(axis=axis, keepdims=keepdims)
 
@@ -259,22 +191,11 @@ def var(
         output tensor.
 
     Examples:
-
-        .. testcode::
-
-            import numpy as np
-            from megengine import tensor
-            import megengine.functional as F
-
-            data = tensor(np.arange(1, 7, dtype=np.float32).reshape(2, 3))
-            out = F.var(data)
-            print(out.numpy().round(decimals=4))
-
-        Outputs:
-
-        .. testoutput::
-
-            2.9167
+        >>> import numpy as np
+        >>> data = Tensor(np.arange(1, 7, dtype=np.float32).reshape(2, 3))
+        >>> out = F.var(data)
+        >>> out.numpy().round(decimals=4)
+        2.9167
     """
     if axis is None:
         m = mean(inp, axis=axis, keepdims=False)
@@ -302,22 +223,11 @@ def std(
         output tensor.
 
     Examples:
-
-        .. testcode::
-
-            import numpy as np
-            from megengine import tensor
-            import megengine.functional as F
-
-            data = tensor(np.arange(1, 7, dtype=np.float32).reshape(2, 3))
-            out = F.std(data, axis=1)
-            print(out.numpy().round(decimals=4))
-
-        Outputs:
-
-        .. testoutput::
-
-            [0.8165 0.8165]
+        >>> import numpy as np
+        >>> data = Tensor(np.arange(1, 7, dtype=np.float32).reshape(2, 3))
+        >>> out = F.std(data, axis=1)
+        >>> out.numpy().round(decimals=4)
+        array([0.8165, 0.8165], dtype=float32)
     """
     return var(inp, axis=axis, keepdims=keepdims) ** 0.5
 
@@ -340,22 +250,10 @@ def min(
         output tensor.
 
     Examples:
-
-        .. testcode::
-
-            import numpy as np
-            from megengine import tensor
-            import megengine.functional as F
-
-            x = tensor(np.arange(1, 7, dtype=np.int32).reshape(2,3))
-            out = F.min(x)
-            print(out.numpy())
-
-        Outputs:
-
-        .. testoutput::
-
-            1
+        >>> import numpy as np
+        >>> x = Tensor(np.arange(1, 7, dtype=np.int32).reshape(2,3))
+        >>> F.min(x)
+        Tensor(1, dtype=int32, device=xpux:0)
     """
     return inp.min(axis=axis, keepdims=keepdims)
 
@@ -378,22 +276,10 @@ def max(
         output tensor.
 
     Examples:
-
-        .. testcode::
-
-            import numpy as np
-            from megengine import tensor
-            import megengine.functional as F
-
-            x = tensor(np.arange(1, 7, dtype=np.int32).reshape(2,3))
-            out = F.max(x)
-            print(out.numpy())
-
-        Outputs:
-
-        .. testoutput::
-
-            6
+        >>> import numpy as np
+        >>> x = Tensor(np.arange(1, 7, dtype=np.int32).reshape(2,3))
+        >>> F.max(x)
+        Tensor(6, dtype=int32, device=xpux:0)
     """
     return inp.max(axis=axis, keepdims=keepdims)
 
@@ -414,22 +300,11 @@ def norm(
         output tensor.
 
     Examples:
-
-        .. testcode::
-
-            import numpy as np
-            from megengine import tensor
-            import megengine.functional as F
-
-            x = tensor(np.arange(-3, 3, dtype=np.float32))
-            out = F.norm(x)
-            print(out.numpy().round(decimals=4))
-
-        Outputs:
-
-        .. testoutput::
-
-            4.3589
+        >>> import numpy as np
+        >>> x = Tensor(np.arange(-3, 3, dtype=np.float32))
+        >>> out = F.norm(x)
+        >>> out.numpy().round(decimals=4)
+        4.3589
     """
     if axis is None:
         if inp.ndim != 1:
@@ -463,22 +338,10 @@ def argmin(
         output tensor.
 
     Examples:
-
-        .. testcode::
-
-            import numpy as np
-            from megengine import tensor
-            import megengine.functional as F
-
-            x = tensor(np.arange(1, 7, dtype=np.int32).reshape(2,3))
-            out = F.argmin(x)
-            print(out.numpy())
-
-        Outputs:
-
-        .. testoutput::
-
-            0
+        >>> import numpy as np
+        >>> x = Tensor(np.arange(1, 7, dtype=np.int32).reshape(2,3))
+        >>> F.argmin(x)
+        Tensor(0, dtype=int32, device=xpux:0)
     """
     if axis is None:
         assert not keepdims, "can not set axis=None and keepdims=True"
@@ -522,22 +385,10 @@ def argmax(
         output tensor.
 
     Examples:
-
-        .. testcode::
-
-            import numpy as np
-            from megengine import tensor
-            import megengine.functional as F
-
-            x = tensor(np.arange(1, 7, dtype=np.int32).reshape(2,3))
-            out = F.argmax(x)
-            print(out.numpy())
-
-        Outputs:
-
-        .. testoutput::
-
-            5
+        >>> import numpy as np
+        >>> x = Tensor(np.arange(1, 7, dtype=np.int32).reshape(2,3))
+        >>> F.argmax(x)
+        Tensor(5, dtype=int32, device=xpux:0)
     """
     if axis is None:
         assert not keepdims, "can not set axis=None and keepdims=True"
@@ -603,22 +454,10 @@ def argsort(inp: Tensor, descending: bool = False) -> Tensor:
         indices of int32 indicates how to sort the input.
 
     Examples:
-
-        .. testcode::
-
-            import numpy as np
-            from megengine import tensor
-            import megengine.functional as F
-
-            x = tensor(np.array([1,2], dtype=np.float32))
-            indices = F.argsort(x)
-            print(indices.numpy())
-
-        Outputs:
-
-        .. testoutput::
-
-            [0 1]
+        >>> import numpy as np
+        >>> x = Tensor(np.array([1,2], dtype=np.float32))
+        >>> F.argsort(x)
+        Tensor([0 1], dtype=int32, device=xpux:0)
     """
     assert len(inp.shape) <= 2, "Input should be 1d or 2d"
     if descending:
@@ -646,22 +485,11 @@ def sort(inp: Tensor, descending: bool = False) -> Tuple[Tensor, Tensor]:
         tuple of two tensors `(sorted_tensor, indices_of_int32)`.
 
     Examples:
-
-        .. testcode::
-
-            import numpy as np
-            from megengine import tensor
-            import megengine.functional as F
-
-            x = tensor(np.array([1,2], dtype=np.float32))
-            out, indices = F.sort(x)
-            print(out.numpy())
-
-        Outputs:
-
-        .. testoutput::
-
-            [1. 2.]
+        >>> import numpy as np
+        >>> x = Tensor(np.array([1,2], dtype=np.float32))
+        >>> out, indices = F.sort(x)
+        >>> out.numpy()
+        array([1., 2.], dtype=float32)
     """
     assert len(inp.shape) <= 2, "Input should be 1d or 2d"
     if descending:
@@ -699,22 +527,11 @@ def topk(
         tuple of two tensors ``(topk_tensor, indices_of_int32)``
 
     Examples:
-
-        .. testcode::
-
-            import numpy as np
-            from megengine import tensor
-            import  megengine.functional as F
-
-            x = tensor(np.array([2, 4, 6, 8, 7, 5, 3, 1], dtype=np.float32))
-            top, indices = F.topk(x, 5, descending=False)
-            print(top.numpy(), indices.numpy())
-
-        Outputs:
-
-        .. testoutput::
-
-            [1. 2. 3. 4. 5.] [7 0 6 1 5]
+        >>> import numpy as np
+        >>> x = Tensor(np.array([2, 4, 6, 8, 7, 5, 3, 1], dtype=np.float32))
+        >>> top, indices = F.topk(x, 5, descending=False)
+        >>> print(top.numpy(), indices.numpy())
+        [1. 2. 3. 4. 5.] [7 0 6 1 5]
     """
     if descending:
         k = -k
@@ -764,23 +581,12 @@ def matinv(inp: Tensor) -> Tensor:
 
 
     Examples:
-
-        .. testcode::
-
-            import numpy as np
-            from megengine import tensor
-            import megengine.functional as F
-
-            data = tensor([[1.0, 0.0], [1.0, 1.0]])
-            out = F.matinv(data)
-            print(out.numpy())
-
-        Outputs:
-
-        .. testoutput::
-
-            [[ 1.  0.]
-             [-1.  1.]]
+        >>> import numpy as np
+        >>> data = Tensor([[1.0, 0.0], [1.0, 1.0]])
+        >>> out = F.matinv(data)
+        >>> out.numpy()
+        array([[ 1.,  0.],
+               [-1.,  1.]], dtype=float32)
     """
 
     (result,) = apply(builtin.MatrixInverse(), inp)
@@ -818,24 +624,13 @@ def matmul(
         output tensor.
 
     Examples:
-
-        .. testcode::
-
-            import numpy as np
-            from megengine import tensor
-            import megengine.functional as F
-
-            data1 = tensor(np.arange(0, 6, dtype=np.float32).reshape(2, 3))
-            data2 = tensor(np.arange(0, 6, dtype=np.float32).reshape(3, 2))
-            out = F.matmul(data1, data2)
-            print(out.numpy())
-
-        Outputs:
-
-        .. testoutput::
-
-            [[10. 13.]
-             [28. 40.]]
+        >>> import numpy as np
+        >>> data1 = Tensor(np.arange(0, 6, dtype=np.float32).reshape(2, 3))
+        >>> data2 = Tensor(np.arange(0, 6, dtype=np.float32).reshape(3, 2))
+        >>> out = F.matmul(data1, data2)
+        >>> out.numpy()
+        array([[10., 13.],
+               [28., 40.]], dtype=float32)
     """
     return _matmul(inp1, inp2, transpose_a, transpose_b, compute_mode, format)
 
@@ -853,23 +648,12 @@ def dot(inp1: Tensor, inp2: Tensor) -> Tensor:
         output value.
 
     Examples:
-
-        .. testcode::
-
-            import numpy as np
-            from megengine import tensor
-            import megengine.functional as F
-
-            data1 = tensor(np.arange(0, 6, dtype=np.float32))
-            data2 = tensor(np.arange(0, 6, dtype=np.float32))
-            out = F.dot(data1, data2)
-            print(out.numpy())
-
-        Outputs:
-
-        .. testoutput::
-
-            55.
+        >>> import numpy as np
+        >>> data1 = Tensor(np.arange(0, 6, dtype=np.float32))
+        >>> data2 = Tensor(np.arange(0, 6, dtype=np.float32))
+        >>> out = F.dot(data1, data2)
+        >>> out.numpy()
+        array(55., dtype=float32)
     """
     op = builtin.Dot()
     assert (
@@ -895,17 +679,12 @@ def svd(inp: Tensor, full_matrices=False, compute_uv=True) -> Tensor:
             ``U`` contains matrices orthonormal columns (i.e., the columns are left singular vectors). If ``full_matrices`` is ``True`` , the array must have shape ``(..., M, M)`` . If ``full_matrices`` is ``False`` , the array must have shape ``(..., M, K)`` , where ``K = min(M, N)`` .
 
     Examples:
-
         >>> import numpy as np
         >>> x = Tensor(np.random.randn(9, 6))
         >>> y = Tensor(np.random.randn(2, 7, 8, 3))
-
-        Reconstruction based on reduced SVD, 2D case:
         >>> U, S, Vh = F.svd(x, full_matrices=False)
         >>> print(U._tuple_shape, S._tuple_shape, Vh._tuple_shape)
         (9, 6) (6,) (6, 6)
-
-        Reconsturction based on reduced SVD, 4D case:
         >>> u, s, vh = F.svd(y, full_matrices=False)
         >>> print(u._tuple_shape, s._tuple_shape, vh._tuple_shape)
         (2, 7, 8, 3) (2, 7, 3) (2, 7, 3, 3)

@@ -32,38 +32,28 @@ class SlidingWindow(Module):
         dilation: the dilation of the window. Default: 1
 
     Example:
-
-        .. testcode::
-
-            from megengine import tensor
-            import megengine.module as M
-            import numpy as np
-
-            inp = tensor(np.arange(30).reshape(1,1,5,6))
-            op = M.SlidingWindow(kernel_size=3, padding=1, stride=2, dilation=2)
-            out = op(inp)
-            print(out.numpy())
-
-        Outputs:
-
-        .. testoutput::
-
-            [[[[[[ 0  0  0]
-                 [ 0  7  9]
-                 [ 0 19 21]]
-
-                [[ 0  0  0]
-                 [ 7  9 11]
-                 [19 21 23]]]
-
-
-               [[[ 0  7  9]
-                 [ 0 19 21]
-                 [ 0  0  0]]
-
-                [[ 7  9 11]
-                 [19 21 23]
-                 [ 0  0  0]]]]]]
+        >>> import numpy as np
+        >>> inp = Tensor(np.arange(30).reshape(1,1,5,6))
+        >>> op = M.SlidingWindow(kernel_size=3, padding=1, stride=2, dilation=2)
+        >>> out = op(inp)
+        >>> print(out.numpy())
+        [[[[[[ 0  0  0]
+             [ 0  7  9]
+             [ 0 19 21]]
+        <BLANKLINE>
+            [[ 0  0  0]
+             [ 7  9 11]
+             [19 21 23]]]
+        <BLANKLINE>
+        <BLANKLINE>
+           [[[ 0  7  9]
+             [ 0 19 21]
+             [ 0  0  0]]
+        <BLANKLINE>
+            [[ 7  9 11]
+             [19 21 23]
+             [ 0  0  0]]]]]]
+             
     """
 
     def __init__(

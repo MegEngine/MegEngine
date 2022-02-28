@@ -296,29 +296,18 @@ class BatchNorm2d(_BatchNorm):
             Default: False
 
     Examples:
-
-        .. testcode::
-
-            import numpy as np
-            import megengine as mge
-            import megengine.module as M
-
-            # With Learnable Parameters
-            m = M.BatchNorm2d(4)
-            inp = mge.tensor(np.random.rand(1, 4, 3, 3).astype("float32"))
-            oup = m(inp)
-            print(m.weight.numpy().flatten(), m.bias.numpy().flatten())
-            # Without L`e`arnable Parameters
-            m = M.BatchNorm2d(4, affine=False)
-            oup = m(inp)
-            print(m.weight, m.bias)
-
-        Outputs:
-
-        .. testoutput::
-
-            [1. 1. 1. 1.] [0. 0. 0. 0.]
-            None None
+        >>> import numpy as np
+        >>> # With Learnable Parameters
+        >>> m = M.BatchNorm2d(4)
+        >>> inp = mge.tensor(np.random.rand(1, 4, 3, 3).astype("float32"))
+        >>> oup = m(inp)
+        >>> print(m.weight.numpy().flatten(), m.bias.numpy().flatten())
+        [1. 1. 1. 1.] [0. 0. 0. 0.]
+        >>> # Without L`e`arnable Parameters
+        >>> m = M.BatchNorm2d(4, affine=False)
+        >>> oup = m(inp)
+        >>> print(m.weight, m.bias)
+        None None
     """
 
     def _check_input_ndim(self, inp):

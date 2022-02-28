@@ -241,22 +241,12 @@ class RNG:
 
 
     Examples:
-
-        .. testcode::
-
-            import megengine.random as rand
-            rng = rand.RNG(seed=100)
-            x = rng.uniform(size=(2, 2))
-            print(x.numpy())
-
-        Outputs:
-
-        .. testoutput::
-            :options: +SKIP
-
-            [[0.84811664 0.6147553 ]
-             [0.59429836 0.64727545]]
-
+        >>> import megengine.random as rand
+        >>> rng = rand.RNG(seed=100)
+        >>> x = rng.uniform(size=(2, 2))
+        >>> x.numpy()   # doctest: +SKIP
+        array([[0.84811664, 0.6147553 ],
+               [0.59429836, 0.64727545]], dtype=float32)
     """
 
     def __init__(self, seed: int = None, device: str = None):
@@ -283,22 +273,11 @@ class RNG:
             the output tensor.
 
         Examples:
-
-            .. testcode::
-
-                import megengine as mge
-                import megengine.random as rand
-
-                x = rand.uniform(size=(2, 2))
-                print(x.numpy())
-
-            Outputs:
-
-            .. testoutput::
-                :options: +SKIP
-
-                [[0.91600335 0.6680226 ]
-                 [0.2046729  0.2769141 ]]
+            >>> import megengine.random as rand
+            >>> x = rand.uniform(size=(2, 2))
+            >>> x.numpy()   # doctest: +SKIP
+            array([[0.28603864, 0.3156649 ],
+                   [0.42066026, 0.9805052 ]], dtype=float32)
         """
         _seed = self._seed() if callable(self._seed) else self._seed
         return _uniform(
@@ -325,22 +304,11 @@ class RNG:
             the output tensor.
 
         Examples:
-
-            .. testcode::
-
-                import megengine as mge
-                import megengine.random as rand
-
-                x = rand.normal(mean=0, std=1, size=(2, 2))
-                print(x.numpy())
-
-            Outputs:
-
-            .. testoutput::
-                :options: +SKIP
-
-                [[-1.4010863  -0.9874344 ]
-                 [ 0.56373274  0.79656655]]
+            >>> import megengine.random as rand
+            >>> x = rand.normal(mean=0, std=1, size=(2, 2))
+            >>> x.numpy()   # doctest: +SKIP
+            array([[ 1.5534291 , -0.28356555],
+                   [ 2.2230418 , -0.92425716]], dtype=float32)
         """
         _seed = self._seed() if callable(self._seed) else self._seed
         return _normal(
@@ -386,40 +354,25 @@ class RNG:
             the output tensor.
 
         Examples:
+            >>> import megengine.random as rand
+            >>> x = rand.gamma(shape=2, scale=1, size=(2, 2))
+            >>> x.numpy()   # doctest: +SKIP
+            array([[0.97447544, 1.5668875 ],
+                   [1.0069491 , 0.3078318 ]], dtype=float32)
+            >>> shape = mge.Tensor([[ 1],
+            ...                     [10]], dtype="float32")
+            >>> scale = mge.Tensor([1,5], dtype="float32")
+            >>> x = rand.gamma(shape=shape, scale=scale)
+            >>> x.numpy()   # doctest: +SKIP
+            array([[ 0.11312152,  3.0799196 ],
+                   [10.973469  , 29.596972  ]], dtype=float32)
+            >>> x = rand.gamma(shape=shape, scale=scale, size=2)
+            >>> x.numpy()   # doctest: +SKIP
+            array([[[4.35868073e+00, 1.22415285e+01],
+                    [1.02696848e+01, 4.19773598e+01]],
 
-            .. testcode::
-
-                import megengine as mge
-                import megengine.random as rand
-
-                x = rand.gamma(shape=2, scale=1, size=(2, 2))
-                print(x.numpy())
-
-                shape = mge.Tensor([[ 1],
-                                    [10]], dtype="float32")
-                scale = mge.Tensor([1,5], dtype="float32")
-
-                x = rand.gamma(shape=shape, scale=scale)
-                print(x.numpy())
-
-                x = rand.gamma(shape=shape, scale=scale, size=2)
-                print(x.numpy())
-
-            Outputs:
-
-            .. testoutput::
-                :options: +SKIP
-
-                [[1.5064533  4.0689363 ]
-                 [0.71639484 1.4551026 ]]
-
-                [[ 0.4352188 11.399335 ]
-                 [ 9.1888    52.009277 ]]
-
-                [[[ 1.1726005   3.9654975 ]
-                  [13.656933   36.559006  ]]
-                 [[ 0.25848487  2.5540342 ]
-                  [11.960409   21.031536  ]]]
+                   [[7.73875117e-02, 6.06766164e-01],
+                    [1.22881927e+01, 8.13445740e+01]]], dtype=float32)
         """
         _seed = self._seed() if callable(self._seed) else self._seed
         return _gamma(
@@ -458,40 +411,25 @@ class RNG:
             the output tensor.
 
         Examples:
+            >>> import megengine.random as rand
+            >>> x = rand.beta(alpha=2, beta=1, size=(2, 2))
+            >>> x.numpy()   # doctest: +SKIP
+            array([[0.6172312 , 0.9789006 ],
+                   [0.50004643, 0.9775796 ]], dtype=float32)
+            >>> alpha = mge.Tensor([[0.5],
+            ...                     [  3]], dtype="float32")
+            >>> beta = mge.Tensor([0.5,5], dtype="float32")
+            >>> x = rand.beta(alpha=alpha, beta=beta)
+            >>> x.numpy()   # doctest: +SKIP
+            array([[0.0075407 , 0.1275094 ],
+                   [0.96331763, 0.22299217]], dtype=float32)
+            >>> x = rand.beta(alpha=alpha, beta=beta, size=2)
+            >>> x.numpy()   # doctest: +SKIP
+            array([[[0.46863747, 0.13819647],
+                    [0.8646759 , 0.16014215]],
 
-            .. testcode::
-
-                import megengine as mge
-                import megengine.random as rand
-
-                x = rand.beta(alpha=2, beta=1, size=(2, 2))
-                print(x.numpy())
-
-                alpha = mge.Tensor([[0.5],
-                                    [  3]], dtype="float32")
-                beta = mge.Tensor([0.5,5], dtype="float32")
-
-                x = rand.beta(alpha=alpha, beta=beta)
-                print(x.numpy())
-
-                x = rand.beta(alpha=alpha, beta=beta, size=2)
-                print(x.numpy())
-
-            Outputs:
-
-            .. testoutput::
-                :options: +SKIP
-
-                [[0.582565   0.91763186]
-                 [0.86963767 0.6088103 ]]
-
-                [[0.41503012 0.16438372]
-                 [0.90159506 0.47588003]]
-
-                [[[0.55195075 0.01111084]
-                  [0.95298755 0.25048104]]
-                 [[0.11680304 0.13859665]
-                  [0.997879   0.43259275]]]
+                   [[0.0682759 , 0.04448463],
+                    [0.97733796, 0.19206746]]], dtype=float32)
         """
         _seed = self._seed() if callable(self._seed) else self._seed
         return _beta(alpha=alpha, beta=beta, size=size, seed=_seed, handle=self._handle)
@@ -519,40 +457,26 @@ class RNG:
 
 
         Examples:
+            >>> import megengine.random as rand
+            >>> x = rand.poisson(lam=2., size=(1, 3))
+            >>> x.numpy()   # doctest: +SKIP
+            array([[1., 2., 2.]], dtype=float32)
+            >>> lam = mge.Tensor([[1.,1.],
+            ...                 [10,10]], dtype="float32")
+            >>> x = rand.poisson(lam=lam)
+            >>> x.numpy()   # doctest: +SKIP
+            array([[ 1.,  2.],
+                   [11., 11.]], dtype=float32)
+            >>> x = rand.poisson(lam=lam, size=(1,3))
+            >>> x.numpy()   # doctest: +SKIP
+            array([[[[ 2.,  1.],
+                     [10.,  8.]],
 
-            .. testcode::
+                    [[ 5.,  2.],
+                     [10., 10.]],
 
-                import megengine as mge
-                import megengine.random as rand
-
-                x = rand.poisson(lam=2., size=(1, 3))
-                print(x.numpy())
-
-                lam = mge.Tensor([[1.,1.],
-                                [10,10]], dtype="float32")
-
-                x = rand.poisson(lam=lam)
-                print(x.numpy())
-
-                x = rand.poisson(lam=lam, size=(1,3))
-                print(x.numpy())
-
-            Outputs:
-
-            .. testoutput::
-                :options: +SKIP
-
-                [[3. 1. 3.]]
-
-                [[ 2.  2.]
-                 [12. 11.]]
-
-                [[[[ 1.  1.]
-                   [11.  4.]]
-                  [[ 0.  0.]
-                   [ 9. 13.]]
-                  [[ 0.  1.]
-                   [ 7. 12.]]]]
+                    [[ 1.,  2.],
+                     [ 8., 10.]]]], dtype=float32)
         """
         _seed = self._seed() if callable(self._seed) else self._seed
         return _poisson(lam=lam, size=size, seed=_seed, handle=self._handle)
@@ -571,36 +495,23 @@ class RNG:
             the output tensor.
 
         Examples:
-
-            .. testcode::
-
-                import numpy as np
-                import megengine as mge
-                import megengine.random as rand
-
-                x = rand.permutation(10, dtype="int32")
-                print(x.numpy())
-
-                x = rand.permutation(10, dtype="float32")
-                print(x.numpy())
-
-                x = mge.tensor(np.arange(18)).reshape(6,3)
-                x = rand.permutation(x)
-                print(x.numpy())
-
-            Outputs:
-
-            .. testoutput::
-                :options: +SKIP
-
-                [4 5 0 7 3 8 6 1 9 2]
-                [3. 4. 9. 0. 6. 8. 7. 1. 5. 2.]
-                [[12 13 14]
-                 [ 3  4  5]
-                 [15 16 17]
-                 [ 0  1  2]
-                 [ 9 10 11]
-                 [ 6  7  8]]
+            >>> import numpy as np
+            >>> import megengine.random as rand
+            >>> x = rand.permutation(10, dtype="int32")
+            >>> x.numpy()   # doctest: +SKIP
+            array([8, 4, 0, 3, 5, 6, 2, 1, 7, 9], dtype=int32)
+            >>> x = rand.permutation(10, dtype="float32")
+            >>> x.numpy()   # doctest: +SKIP
+            array([1., 3., 0., 2., 4., 8., 7., 9., 6., 5.], dtype=float32)
+            >>> x = mge.tensor(np.arange(18)).reshape(6,3)
+            >>> x = rand.permutation(x)
+            >>> x.numpy()   # doctest: +SKIP
+            array([[15, 16, 17],
+                   [ 6,  7,  8],
+                   [ 0,  1,  2],
+                   [ 3,  4,  5],
+                   [12, 13, 14],
+                   [ 9, 10, 11]], dtype=int32)
         """
         _seed = self._seed() if callable(self._seed) else self._seed
         if isinstance(n, int):
@@ -619,32 +530,21 @@ class RNG:
             inp: input tensor.
 
         Examples:
-
-            .. testcode::
-
-                import numpy as np
-                import megengine as mge
-                import megengine.random as rand
-
-                x = mge.tensor(np.arange(10))
-                rand.shuffle(x)
-                print(x.numpy())
-                y = mge.tensor(np.arange(18)).reshape(6,3)
-                rand.shuffle(y)
-                print(y.numpy())
-
-            Outputs:
-
-            .. testoutput::
-                :options: +SKIP
-
-                [7 9 3 0 8 2 4 5 6 1]
-                [[12. 13. 14.]
-                 [ 3.  4.  5.]
-                 [15. 16. 17.]
-                 [ 0.  1.  2.]
-                 [ 9. 10. 11.]
-                 [ 6.  7.  8.]]
+            >>> import numpy as np
+            >>> import megengine.random as rand
+            >>> x = mge.tensor(np.arange(10))
+            >>> rand.shuffle(x)
+            >>> x.numpy()   # doctest: +SKIP
+            array([4, 5, 9, 6, 2, 8, 1, 0, 3, 7], dtype=int32)
+            >>> y = mge.tensor(np.arange(18)).reshape(6,3)
+            >>> rand.shuffle(y)
+            >>> y.numpy()   # doctest: +SKIP
+            array([[ 3,  4,  5],
+                   [ 6,  7,  8],
+                   [15, 16, 17],
+                   [ 0,  1,  2],
+                   [12, 13, 14],
+                   [ 9, 10, 11]], dtype=int32)
         """
         _seed = self._seed() if callable(self._seed) else self._seed
         inp._reset(_shuffle(inp=inp, seed=_seed, handle=self._handle))

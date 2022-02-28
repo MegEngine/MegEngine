@@ -32,26 +32,15 @@ class Embedding(Module):
         initial_weight: the learnable weights of the module of shape (num_embeddings, embedding_dim).
 
     Examples:
-
-        .. testcode::
-
-            import numpy as np
-            import megengine as mge
-            import megengine.module as M
-            weight = mge.tensor(np.array([(1.2,2.3,3.4,4.5,5.6)], dtype=np.float32))
-            data = mge.tensor(np.array([(0,0)], dtype=np.int32))
-
-            embedding = M.Embedding(1, 5, initial_weight=weight)
-            output = embedding(data)
-            with np.printoptions(precision=6):
-                print(output.numpy())
-
-        Outputs:
-
-        .. testoutput::
-
-            [[[1.2 2.3 3.4 4.5 5.6]
-              [1.2 2.3 3.4 4.5 5.6]]]
+        >>> import numpy as np
+        >>> weight = mge.tensor(np.array([(1.2,2.3,3.4,4.5,5.6)], dtype=np.float32))
+        >>> data = mge.tensor(np.array([(0,0)], dtype=np.int32))
+        >>> embedding = M.Embedding(1, 5, initial_weight=weight)
+        >>> output = embedding(data)
+        >>> with np.printoptions(precision=6):
+        ...     print(output.numpy())
+        [[[1.2 2.3 3.4 4.5 5.6]
+          [1.2 2.3 3.4 4.5 5.6]]]
     """
 
     def __init__(
@@ -119,25 +108,14 @@ class Embedding(Module):
             norm_type: should be set to None, not support Now.
 
         Examples:
-
-            .. testcode::
-
-                import numpy as np
-                import megengine as mge
-                import megengine.module as M
-                weight = mge.tensor(np.array([(1.2,2.3,3.4,4.5,5.6)], dtype=np.float32))
-                data = mge.tensor(np.array([(0,0)], dtype=np.int32))
-
-                embedding = M.Embedding.from_pretrained(weight, freeze=False)
-                output = embedding(data)
-                print(output.numpy())
-
-            Outputs:
-
-            .. testoutput::
-
-                [[[1.2 2.3 3.4 4.5 5.6]
-                  [1.2 2.3 3.4 4.5 5.6]]]
+            >>> import numpy as np
+            >>> weight = mge.tensor(np.array([(1.2,2.3,3.4,4.5,5.6)], dtype=np.float32))
+            >>> data = mge.tensor(np.array([(0,0)], dtype=np.int32))
+            >>> embedding = M.Embedding.from_pretrained(weight, freeze=False)
+            >>> output = embedding(data)
+            >>> output.numpy()
+            array([[[1.2, 2.3, 3.4, 4.5, 5.6],
+                    [1.2, 2.3, 3.4, 4.5, 5.6]]], dtype=float32)
         """
         embeddings_shape = embeddings.shape
         embeddings_dim = len(embeddings_shape)

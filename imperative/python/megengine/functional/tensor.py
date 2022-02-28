@@ -101,23 +101,13 @@ def eye(N, M=None, *, dtype="float32", device: Optional[CompNode] = None) -> Ten
         eye matrix.
 
     Examples:
-
-        .. testcode::
-
-            import numpy as np
-            import megengine.functional as F
-
-            out = F.eye(4, 6, dtype=np.float32)
-            print(out.numpy())
-
-        Outputs:
-
-        .. testoutput::
-
-            [[1. 0. 0. 0. 0. 0.]
-             [0. 1. 0. 0. 0. 0.]
-             [0. 0. 1. 0. 0. 0.]
-             [0. 0. 0. 1. 0. 0.]]
+        >>> import numpy as np
+        >>> out = F.eye(4, 6, dtype=np.float32)
+        >>> out.numpy()
+        array([[1., 0., 0., 0., 0., 0.],
+               [0., 1., 0., 0., 0., 0.],
+               [0., 0., 1., 0., 0., 0.],
+               [0., 0., 0., 1., 0., 0.]], dtype=float32)
     """
     if M is not None:
         if isinstance(N, Tensor) or isinstance(M, Tensor):
@@ -156,21 +146,11 @@ def full(
         a tensor where every element is equal to ``value``.
 
     Examples:
-
-        .. testcode::
-
-            import numpy as np
-            import megengine.functional as F
-
-            out = F.full([2,3], 1.5)
-            print(out.numpy())
-
-        Outputs:
-
-        .. testoutput::
-
-            [[1.5 1.5 1.5]
-             [1.5 1.5 1.5]]
+        >>> import numpy as np
+        >>> out = F.full([2,3], 1.5)
+        >>> out.numpy()
+        array([[1.5, 1.5, 1.5],
+               [1.5, 1.5, 1.5]], dtype=float32)
     """
 
     if isinstance(shape, int):
@@ -202,30 +182,16 @@ def ones(
         a tensor containing ones.
 
     Examples:
-
-        .. testcode::
-
-            import megengine.functional as F
-
-            out = F.ones(5)
-            print(out.numpy())
-            out = F.ones((5, ), dtype='int32')
-            print(out.numpy())
-            out = F.ones((2, 2))
-            print(out.numpy())
-            out = F.ones([2, 1])
-            print(out.numpy())
-
-        Outputs:
-
-        .. testoutput::
-
-            [1. 1. 1. 1. 1.]
-            [1 1 1 1 1]
-            [[1. 1.]
-             [1. 1.]]
-            [[1.]
-             [1.]]
+        >>> F.ones(5)
+        Tensor([1. 1. 1. 1. 1.], device=xpux:0)
+        >>> F.ones((5, ), dtype='int32')
+        Tensor([1 1 1 1 1], dtype=int32, device=xpux:0)
+        >>> F.ones((2, 2))
+        Tensor([[1. 1.]
+         [1. 1.]], device=xpux:0)
+        >>> F.ones([2, 1])
+        Tensor([[1.]
+         [1.]], device=xpux:0)
     """
     return full(shape, 1.0, dtype=dtype, device=device)
 
@@ -306,24 +272,11 @@ def full_like(
         output tensor.
 
     Examples:
-
-        .. testcode::
-
-            import numpy as np
-            from megengine import tensor
-            import megengine.functional as F
-
-            inp = tensor(np.arange(1, 7, dtype=np.int32).reshape(2,3))
-            out = F.full_like(inp, 2)
-            print(out.numpy())
-
-        Outputs:
-
-        .. testoutput::
-
-            [[2 2 2]
-             [2 2 2]]
-
+        >>> import numpy as np
+        >>> inp = Tensor(np.arange(1, 7, dtype=np.int32).reshape(2,3))
+        >>> F.full_like(inp, 2)
+        Tensor([[2 2 2]
+         [2 2 2]], dtype=int32, device=xpux:0)
     """
     x = Const(value, inp.dtype, inp.device, inp)
     if inp.ndim == 0:
@@ -342,23 +295,12 @@ def broadcast_to(inp: Tensor, shape: Union[int, Iterable[int]]) -> Tensor:
         output tensor.
 
     Examples:
-
-        .. testcode::
-
-            import numpy as np
-            from megengine import tensor
-            import megengine.functional as F
-
-            data = tensor(np.arange(0, 3, dtype=np.float32).reshape(3))
-            out = F.broadcast_to(data, (2, 3))
-            print(out.numpy())
-
-        Outputs:
-
-        .. testoutput::
-
-            [[0. 1. 2.]
-             [0. 1. 2.]]
+        >>> import numpy as np
+        >>> data = Tensor(np.arange(0, 3, dtype=np.float32).reshape(3))
+        >>> out = F.broadcast_to(data, (2, 3))
+        >>> out.numpy()
+        array([[0., 1., 2.],
+               [0., 1., 2.]], dtype=float32)
     """
     return broadcast_cpp(inp, shape)
 
@@ -375,26 +317,15 @@ def concat(inps: Iterable[Tensor], axis: int = 0, device=None) -> Tensor:
         output tensor.
 
     Examples:
-
-        .. testcode::
-
-            import numpy as np
-            from megengine import tensor
-            import megengine.functional as F
-
-            data1 = tensor(np.arange(0, 6, dtype=np.float32).reshape((2, 3)))
-            data2 = tensor(np.arange(6, 12, dtype=np.float32).reshape((2, 3)))
-            out = F.concat([data1, data2])
-            print(out.numpy())
-
-        Outputs:
-
-        .. testoutput::
-
-            [[ 0.  1.  2.]
-             [ 3.  4.  5.]
-             [ 6.  7.  8.]
-             [ 9. 10. 11.]]
+        >>> import numpy as np
+        >>> data1 = Tensor(np.arange(0, 6, dtype=np.float32).reshape((2, 3)))
+        >>> data2 = Tensor(np.arange(6, 12, dtype=np.float32).reshape((2, 3)))
+        >>> out = F.concat([data1, data2])
+        >>> out.numpy()
+        array([[ 0.,  1.,  2.],
+               [ 3.,  4.,  5.],
+               [ 6.,  7.,  8.],
+               [ 9., 10., 11.]], dtype=float32)
     """
     if len(inps) == 1:
         return inps[0]
@@ -419,24 +350,13 @@ def stack(inps, axis=0, device=None):
         output concatenated tensor.
 
     Examples:
-
-        .. testcode::
-
-            import numpy as np
-            from megengine import tensor
-            import megengine.functional as F
-
-            x1 = tensor(np.arange(0, 3, dtype=np.float32).reshape((3)))
-            x2 = tensor(np.arange(6, 9, dtype=np.float32).reshape((3)))
-            out = F.stack([x1, x2], axis=0)
-            print(out.numpy())
-
-        Outputs:
-
-        .. testoutput::
-
-            [[0. 1. 2.]
-             [6. 7. 8.]]
+        >>> import numpy as np
+        >>> x1 = Tensor(np.arange(0, 3, dtype=np.float32).reshape((3)))
+        >>> x2 = Tensor(np.arange(6, 9, dtype=np.float32).reshape((3)))
+        >>> out = F.stack([x1, x2], axis=0)
+        >>> out.numpy()
+        array([[0., 1., 2.],
+               [6., 7., 8.]], dtype=float32)
     """
     if len(inps) > 0 and not isinstance(inps[0].shape, inps[0].__class__):
         shapes = {arr.shape for arr in inps}
@@ -460,27 +380,15 @@ def split(inp, nsplits_or_sections, axis=0):
         output tensor list.
 
     Examples:
-
-        .. testcode::
-
-            import os
-            import numpy as np
-            from megengine import tensor
-            import megengine.functional as F
-
-            x = tensor(np.random.random((10, 20)), dtype=np.float32)
-            y = F.split(x, 3)
-            z = F.split(x, [6, 17], axis=1)
-
-            print([i.numpy().shape for i in y])
-            print([i.numpy().shape for i in z])
-
-        Outputs:
-
-        .. testoutput::
-
-            [(4, 20), (3, 20), (3, 20)]
-            [(10, 6), (10, 11), (10, 3)]
+        >>> import os
+        >>> import numpy as np
+        >>> x = Tensor(np.random.random((10, 20)), dtype=np.float32)
+        >>> y = F.split(x, 3)
+        >>> z = F.split(x, [6, 17], axis=1)
+        >>> print([i.numpy().shape for i in y])
+        [(4, 20), (3, 20), (3, 20)]
+        >>> print([i.numpy().shape for i in z])
+        [(10, 6), (10, 11), (10, 3)]
     """
 
     return split_cpp(inp, nsplits_or_sections, axis)
@@ -535,25 +443,13 @@ def gather(inp: Tensor, axis: int, index: Tensor) -> Tensor:
         output tensor.
 
     Examples:
-
-        .. testcode::
-
-            import megengine.functional as F
-            from megengine import tensor
-
-            inp = tensor([
-                [1,2], [3,4], [5,6],
-            ])
-            index = tensor([[0,2], [1,0]])
-            oup = F.gather(inp, 0, index)
-            print(oup.numpy())
-
-        Outputs:
-
-        .. testoutput::
-
-            [[1 6]
-             [3 2]]
+        >>> inp = Tensor([
+        ...     [1,2], [3,4], [5,6],
+        ... ])
+        >>> index = Tensor([[0,2], [1,0]])
+        >>> F.gather(inp, 0, index)
+        Tensor([[1 6]
+         [3 2]], dtype=int32, device=xpux:0)
     """
     input_shape = inp.shape
     index_shape = index.shape
@@ -628,26 +524,15 @@ def scatter(inp: Tensor, axis: int, index: Tensor, source: Tensor) -> Tensor:
         output tensor.
 
     Examples:
-
-        .. testcode::
-
-            import numpy as np
-            import megengine.functional as F
-            from megengine import tensor
-
-            inp = tensor(np.zeros(shape=(3,5),dtype=np.float32))
-            source = tensor([[0.9935,0.9465,0.2256,0.8926,0.4396],[0.7723,0.0718,0.5939,0.357,0.4576]])
-            index = tensor([[0,2,0,2,1],[2,0,1,1,2]])
-            oup = F.scatter(inp, 0, index,source)
-            print(oup.numpy())
-
-        Outputs:
-
-        .. testoutput::
-
-            [[0.9935 0.0718 0.2256 0.     0.    ]
-             [0.     0.     0.5939 0.357  0.4396]
-             [0.7723 0.9465 0.     0.8926 0.4576]]
+        >>> import numpy as np
+        >>> inp = Tensor(np.zeros(shape=(3,5),dtype=np.float32))
+        >>> source = Tensor([[0.9935,0.9465,0.2256,0.8926,0.4396],[0.7723,0.0718,0.5939,0.357,0.4576]])
+        >>> index = Tensor([[0,2,0,2,1],[2,0,1,1,2]])
+        >>> oup = F.scatter(inp, 0, index,source)
+        >>> oup.numpy()
+        array([[0.9935, 0.0718, 0.2256, 0.    , 0.    ],
+               [0.    , 0.    , 0.5939, 0.357 , 0.4396],
+               [0.7723, 0.9465, 0.    , 0.8926, 0.4576]], dtype=float32)
     """
     input_shape = inp.shape
     index_shape = index.shape
@@ -734,25 +619,15 @@ def where(mask: Tensor, x: Tensor, y: Tensor) -> Tensor:
         output tensor.
 
     Examples:
-
-        .. testcode::
-
-            import numpy as np
-            from megengine import tensor
-            import megengine.functional as F
-            mask = tensor(np.array([[True, False], [False, True]], dtype=np.bool))
-            x = tensor(np.array([[1, np.inf], [np.nan, 4]],
-                dtype=np.float32))
-            y = tensor(np.array([[5, 6], [7, 8]], dtype=np.float32))
-            out = F.where(mask, x, y)
-            print(out.numpy())
-
-        Outputs:
-
-        .. testoutput::
-
-            [[1. 6.]
-             [7. 4.]]
+        >>> import numpy as np
+        >>> mask = Tensor(np.array([[True, False], [False, True]], dtype=np.bool))
+        >>> x = Tensor(np.array([[1, np.inf], [np.nan, 4]],
+        ...     dtype=np.float32))
+        >>> y = Tensor(np.array([[5, 6], [7, 8]], dtype=np.float32))
+        >>> out = F.where(mask, x, y)
+        >>> out.numpy()
+        array([[1., 6.],
+               [7., 4.]], dtype=float32)
     """
 
     if not isinstance(x, Tensor):
@@ -791,23 +666,13 @@ def cond_take(mask: Tensor, x: Tensor) -> Tensor:
         x: input tensor from which to take elements.
 
     Examples:
-
-        .. testcode::
-
-            import numpy as np
-            from megengine import tensor
-            import megengine.functional as F
-            mask = tensor(np.array([[True, False], [False, True]], dtype=np.bool_))
-            x = tensor(np.array([[1, np.inf], [np.nan, 4]],
-                dtype=np.float32))
-            v, index = F.cond_take(mask, x)
-            print(v.numpy(), index.numpy())
-
-        Outputs:
-
-        .. testoutput::
-
-            [1. 4.] [0 3]
+        >>> import numpy as np
+        >>> mask = Tensor(np.array([[True, False], [False, True]], dtype=np.bool_))
+        >>> x = Tensor(np.array([[1, np.inf], [np.nan, 4]],
+        ...     dtype=np.float32))
+        >>> v, index = F.cond_take(mask, x)
+        >>> print(v.numpy(), index.numpy())
+        [1. 4.] [0 3]
     """
     if not isinstance(x, (Tensor, SymbolVar)):
         raise TypeError("input must be a tensor")
@@ -846,22 +711,11 @@ def transpose(inp: Tensor, pattern: Iterable[int]) -> Tensor:
         output tensor.
 
     Examples:
-
-        .. testcode::
-
-            import numpy as np
-            from megengine import tensor
-            import megengine.functional as F
-            x = tensor(np.array([[1, 1], [0, 0]], dtype=np.int32))
-            out = F.transpose(x, (1, 0))
-            print(out.numpy())
-
-        Outputs:
-
-        .. testoutput::
-
-            [[1 0]
-            [1 0]]
+        >>> import numpy as np
+        >>> x = Tensor(np.array([[1, 1], [0, 0]], dtype=np.int32))
+        >>> F.transpose(x, (1, 0))
+        Tensor([[1 0]
+         [1 0]], dtype=int32, device=xpux:0)
     """
     return inp.transpose(pattern)
 
@@ -879,18 +733,16 @@ def reshape(inp: Tensor, target_shape: Iterable[int]) -> Tensor:
         an output tensor having the same data type, elements, and underlying element order as `inp` .
 
     Examples:
-
-            >>> x = F.arange(12)
-            >>> x
-            Tensor([ 0.  1.  2.  3.  4.  5.  6.  7.  8.  9. 10. 11.], device=xpux:0)
-            >>> F.reshape(x, (3, 4))
-            Tensor([[ 0.  1.  2.  3.]
-             [ 4.  5.  6.  7.]
-             [ 8.  9. 10. 11.]], device=xpux:0)
-            >>> F.reshape(x, (2, -1))
-            Tensor([[ 0.  1.  2.  3.  4.  5.]
-             [ 6.  7.  8.  9. 10. 11.]], device=xpux:0)
-            
+        >>> x = F.arange(12)
+        >>> x
+        Tensor([ 0.  1.  2.  3.  4.  5.  6.  7.  8.  9. 10. 11.], device=xpux:0)
+        >>> F.reshape(x, (3, 4))
+        Tensor([[ 0.  1.  2.  3.]
+         [ 4.  5.  6.  7.]
+         [ 8.  9. 10. 11.]], device=xpux:0)
+        >>> F.reshape(x, (2, -1))
+        Tensor([[ 0.  1.  2.  3.  4.  5.]
+         [ 6.  7.  8.  9. 10. 11.]], device=xpux:0)
     """
     return inp.reshape(target_shape)
 
@@ -907,27 +759,16 @@ def flatten(inp: Tensor, start_axis: int = 0, end_axis: int = -1) -> Tensor:
         output tensor.
 
     Examples:
-
-        .. testcode::
-
-            import numpy as np
-            from megengine import tensor
-            import megengine.functional as F
-
-            inp_shape = (2, 2, 3, 3)
-            x = tensor(
-                np.arange(36, dtype=np.int32).reshape(inp_shape),
-            )
-            out = F.flatten(x, 2)
-            print(x.numpy().shape)
-            print(out.numpy().shape)
-
-        Outputs:
-
-        .. testoutput::
-
-            (2, 2, 3, 3)
-            (2, 2, 9)
+        >>> import numpy as np
+        >>> inp_shape = (2, 2, 3, 3)
+        >>> x = Tensor(
+        ...     np.arange(36, dtype=np.int32).reshape(inp_shape),
+        ... )
+        >>> out = F.flatten(x, 2)
+        >>> x.numpy().shape
+        (2, 2, 3, 3)
+        >>> out.numpy().shape
+        (2, 2, 9)
     """
     target_shape = tuple(inp.shape[i] for i in range(start_axis)) + (-1,)
     if end_axis != -1:
@@ -946,22 +787,11 @@ def expand_dims(inp: Tensor, axis: Union[int, Sequence[int]]) -> Tensor:
         output tensor.
 
     Examples:
-
-        .. testcode::
-
-            import numpy as np
-            from megengine import tensor
-            import megengine.functional as F
-
-            x = tensor([1, 2])
-            out = F.expand_dims(x, 0)
-            print(out.numpy().shape)
-
-        Outputs:
-
-        .. testoutput::
-
-            (1, 2)
+        >>> import numpy as np
+        >>> x = Tensor([1, 2])
+        >>> out = F.expand_dims(x, 0)
+        >>> out.numpy().shape
+        (1, 2)
     """
 
     return expand_dims_cpp(inp, axis)
@@ -978,22 +808,11 @@ def squeeze(inp: Tensor, axis: Optional[Union[int, Sequence[int]]] = None) -> Te
         output tensor.
 
     Examples:
-
-        .. testcode::
-
-            import numpy as np
-            from megengine import tensor
-            import megengine.functional as F
-
-            x = tensor(np.array([1, 2], dtype=np.int32).reshape(1, 1, 2, 1))
-            out = F.squeeze(x, 3)
-            print(out.numpy().shape)
-
-        Outputs:
-
-        .. testoutput::
-
-            (1, 1, 2)
+        >>> import numpy as np
+        >>> x = Tensor(np.array([1, 2], dtype=np.int32).reshape(1, 1, 2, 1))
+        >>> out = F.squeeze(x, 3)
+        >>> out.numpy().shape
+        (1, 1, 2)
     """
     return squeeze_cpp(inp, axis)
 
@@ -1017,20 +836,10 @@ def linspace(
         generated tensor.
 
     Examples:
-
-        .. testcode::
-
-            import numpy as np
-            import megengine.functional as F
-
-            a = F.linspace(3, 10, 5)
-            print(a.numpy())
-
-        Outputs:
-
-        .. testoutput::
-
-            [ 3.    4.75  6.5   8.25 10.  ]
+        >>> import numpy as np
+        >>> a = F.linspace(3, 10, 5)
+        >>> a.numpy()
+        array([ 3.  ,  4.75,  6.5 ,  8.25, 10.  ], dtype=float32)
     """
     for item in (start, stop, num):
         cur_device = getattr(item, "device", None)
@@ -1089,7 +898,6 @@ def arange(
         if ``stop - start`` and ``step`` have the same sign, and length 0 otherwise.
 
     Examples:
-
         >>> F.arange(5)
         Tensor([0. 1. 2. 3. 4.], device=xpux:0)
         >>> F.arange(1, 4)
@@ -1124,25 +932,13 @@ def repeat(inp: Tensor, repeats: int, axis: Optional[int] = None):
         output tensor.
 
     Examples:
-
-        .. testcode::
-
-            import numpy as np
-            import megengine.functional as F
-            from megengine import tensor
-
-            x = tensor([[1, 2], [3, 4]], np.int32)
-            y = F.repeat(x, 2, axis=0)
-            print(y.numpy())
-
-        Outputs:
-
-        .. testoutput::
-
-            [[1 2]
-             [1 2]
-             [3 4]
-             [3 4]]
+        >>> import numpy as np
+        >>> x = Tensor([[1, 2], [3, 4]], np.int32)
+        >>> F.repeat(x, 2, axis=0)
+        Tensor([[1 2]
+         [1 2]
+         [3 4]
+         [3 4]], dtype=int32, device=xpux:0)
     """
     if axis is None:
         inp = inp.reshape(-1)  # flatten
@@ -1211,25 +1007,13 @@ def tile(inp: Tensor, reps: Iterable[int]):
 
 
     Examples:
-
-        .. testcode::
-
-            import numpy as np
-            import megengine.functional as F
-            from megengine import tensor
-
-            x = tensor([[1, 2], [3, 4]], np.int32)
-            y = F.tile(x, (2,1))
-            print(y.numpy())
-
-        Outputs:
-
-        .. testoutput::
-
-            [[1 2]
-             [3 4]
-             [1 2]
-             [3 4]]
+        >>> import numpy as np
+        >>> x = Tensor([[1, 2], [3, 4]], np.int32)
+        >>> F.tile(x, (2,1))
+        Tensor([[1 2]
+         [3 4]
+         [1 2]
+         [3 4]], dtype=int32, device=xpux:0)
     """
     shape = astensor1d(inp.shape, inp, dtype="int32", device=inp.device)
     reps = astensor1d(reps, inp, dtype="int32", device=inp.device)
@@ -1263,28 +1047,17 @@ def copy(inp, device=None):
         device: destination device.
 
     Examples:
-
-        .. testcode::
-
-            import numpy as np
-            import platform
-            from megengine import tensor
-            from megengine.device import get_device_count
-            import megengine.functional as F
-
-            x = tensor([1, 2, 3], np.int32)
-            if 1 == get_device_count("gpu"):
-                y = F.copy(x, "cpu1")
-                print(y.numpy())
-            else:
-                y = F.copy(x, "xpu1")
-                print(y.numpy())
-
-        Outputs:
-
-        .. testoutput::
-
-            [1 2 3]
+        >>> import numpy as np
+        >>> import platform
+        >>> from megengine.device import get_device_count
+        >>> x = Tensor([1, 2, 3], np.int32)
+        >>> if 1 == get_device_count("gpu"):
+        ...     y = F.copy(x, "cpu1")
+        ...     print(y.numpy())
+        ... else:
+        ...     y = F.copy(x, "xpu1")
+        ...     print(y.numpy())
+        [1 2 3]
     """
     if device is None:
         return apply(Identity(), inp)[0]
@@ -1309,24 +1082,12 @@ def roll(
             Duplicate axes is allowed if it is a tuple. Default: None.
 
     Examples:
-
-        .. testcode::
-
-            import numpy as np
-            from megengine import tensor
-            import megengine.functional as F
-
-            x = tensor([[1,2],[3,4],[5,6]], np.int32)
-            y = F.roll(x, 1, 0)
-            print(y.numpy())
-
-        Outputs:
-
-        .. testoutput::
-
-            [[5 6]
-            [1 2]
-            [3 4]]
+        >>> import numpy as np
+        >>> x = Tensor([[1,2],[3,4],[5,6]], np.int32)
+        >>> F.roll(x, 1, 0)
+        Tensor([[5 6]
+         [1 2]
+         [3 4]], dtype=int32, device=xpux:0)
     """
     shp_bak = None
     if axis is None:
@@ -1371,22 +1132,10 @@ def cumsum(inp: Tensor, axis: int):
         axis: axis along which cumsum is performed.
 
     Examples:
-
-        .. testcode::
-
-            from megengine import tensor
-            import megengine.functional as F
-
-            x = tensor([[1, 2, 3], [4, 5, 6]], "int32")
-            y = F.cumsum(x, 1)
-            print(y.numpy())
-
-        Outputs:
-
-        .. testoutput::
-
-            [[ 1  3  6]
-            [ 4  9 15]]
+        >>> x = Tensor([[1, 2, 3], [4, 5, 6]], "int32")
+        >>> F.cumsum(x, 1)
+        Tensor([[ 1  3  6]
+         [ 4  9 15]], dtype=int32, device=xpux:0)
     """
     assert isinstance(inp, Tensor), "input of cumsum must be type of Tensor"
     assert axis >= 0 and axis < inp.ndim, "input axis {} out of bound".format(axis)

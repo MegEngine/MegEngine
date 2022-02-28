@@ -767,21 +767,11 @@ def hswish(x):
     r"""Element-wise `x * relu6(x + 3) / 6`.
 
     Example:
-
-        .. testcode::
-
-            import numpy as np
-            from megengine import tensor
-            import megengine.functional as F
-
-            x = tensor(np.arange(5).astype(np.float32))
-            out = F.hswish(x)
-            print(out.numpy().round(decimals=4))
-
-        .. testoutput::
-
-            [0.     0.6667 1.6667 3.     4.    ]
-
+        >>> import numpy as np
+        >>> x = Tensor(np.arange(5).astype(np.float32))
+        >>> out = F.hswish(x)
+        >>> out.numpy().round(decimals=4)
+        array([0.    , 0.6667, 1.6667, 3.    , 4.    ], dtype=float32)
     """
     return _elwise(x, mode=Elemwise.Mode.H_SWISH)
 
@@ -992,22 +982,11 @@ def softplus(inp: Tensor) -> Tensor:
                            = \log1p(\exp(-\text{abs}(x))) + \text{relu}(x)
 
    Examples:
-
-        .. testcode::
-
-            import numpy as np
-            from megengine import tensor
-            import megengine.functional as F
-
-            x = tensor(np.arange(-3, 3, dtype=np.float32))
-            y = F.softplus(x)
-            print(y.numpy().round(decimals=4))
-
-        Outputs:
-
-        .. testoutput::
-
-            [0.0486 0.1269 0.3133 0.6931 1.3133 2.1269]
+        >>> import numpy as np
+        >>> x = Tensor(np.arange(-3, 3, dtype=np.float32))
+        >>> y = F.softplus(x)
+        >>> y.numpy().round(decimals=4)
+        array([0.0486, 0.1269, 0.3133, 0.6931, 1.3133, 2.1269], dtype=float32)
     """
     softplus = _get_softplus_op(inp.dtype, inp.device)
     (oup,) = softplus(inp)
@@ -1030,23 +1009,12 @@ def logsoftmax(inp: Tensor, axis: Union[int, Sequence[int]]) -> Tensor:
         = x - \text{logsumexp}(x)
 
     Examples:
-
-        .. testcode::
-
-            import numpy as np
-            from megengine import tensor
-            import megengine.functional as F
-
-            x = tensor(np.arange(-5, 5, dtype=np.float32)).reshape(2,5)
-            y = F.logsoftmax(x, axis=1)
-            print(y.numpy().round(decimals=4))
-
-        Outputs:
-
-        .. testoutput::
-
-            [[-4.4519 -3.4519 -2.4519 -1.4519 -0.4519]
-             [-4.4519 -3.4519 -2.4519 -1.4519 -0.4519]]
+        >>> import numpy as np
+        >>> x = Tensor(np.arange(-5, 5, dtype=np.float32)).reshape(2,5)
+        >>> y = F.logsoftmax(x, axis=1)
+        >>> y.numpy().round(decimals=4)
+        array([[-4.4519, -3.4519, -2.4519, -1.4519, -0.4519],
+               [-4.4519, -3.4519, -2.4519, -1.4519, -0.4519]], dtype=float32)
     """
     return inp - logsumexp(inp, axis, keepdims=True)
 
@@ -1094,23 +1062,12 @@ def logsigmoid(inp: Tensor) -> Tensor:
         = - \text{softplus}(-x)
 
     Examples:
-
-        .. testcode::
-
-            import numpy as np
-            from megengine import tensor
-            import megengine.functional as F
-
-            x = tensor(np.arange(-5, 5, dtype=np.float32))
-            y = F.logsigmoid(x)
-            print(y.numpy().round(decimals=4))
-
-        Outputs:
-
-        .. testoutput::
-
-            [-5.0067 -4.0182 -3.0486 -2.1269 -1.3133 -0.6931 -0.3133 -0.1269 -0.0486
-            -0.0181]
+        >>> import numpy as np
+        >>> x = Tensor(np.arange(-5, 5, dtype=np.float32))
+        >>> y = F.logsigmoid(x)
+        >>> y.numpy().round(decimals=4)
+        array([-5.0067, -4.0182, -3.0486, -2.1269, -1.3133, -0.6931, -0.3133,
+               -0.1269, -0.0486, -0.0181], dtype=float32)
     """
     logsigmoid = _get_logsigmoid_op(inp.dtype, inp.device)
     (oup,) = logsigmoid(inp)
@@ -1139,22 +1096,11 @@ def logsumexp(
         b = \max(x_j)
 
     Examples:
-
-        .. testcode::
-
-            import numpy as np
-            from megengine import tensor
-            import megengine.functional as F
-
-            x = tensor(np.arange(-5, 5, dtype=np.float32)).reshape(2,5)
-            y = F.logsumexp(x, axis=1, keepdims=False)
-            print(y.numpy().round(decimals=4))
-
-        Outputs:
-
-        .. testoutput::
-
-            [-0.5481  4.4519]
+        >>> import numpy as np
+        >>> x = Tensor(np.arange(-5, 5, dtype=np.float32)).reshape(2,5)
+        >>> y = F.logsumexp(x, axis=1, keepdims=False)
+        >>> y.numpy().round(decimals=4)
+        array([-0.5481,  4.4519], dtype=float32)
     """
     max_value = max(inp.detach(), axis, keepdims=True)
     if keepdims:
@@ -1183,23 +1129,12 @@ def softmax(inp: Tensor, axis: Optional[int] = None) -> Tensor:
     See :class:`~.module.Softmax` for more details.
 
     Examples:
-
-        .. testcode::
-
-            import numpy as np
-            from megengine import tensor
-            import megengine.functional as F
-
-            x = tensor(np.arange(-5, 5, dtype=np.float32)).reshape(2,5)
-            out = F.softmax(x)
-            print(out.numpy().round(decimals=4))
-
-        Outputs:
-
-        .. testoutput::
-
-            [[0.0117 0.0317 0.0861 0.2341 0.6364]
-            [0.0117 0.0317 0.0861 0.2341 0.6364]]
+        >>> import numpy as np
+        >>> x = Tensor(np.arange(-5, 5, dtype=np.float32)).reshape(2,5)
+        >>> out = F.softmax(x)
+        >>> out.numpy().round(decimals=4)
+        array([[0.0117, 0.0317, 0.0861, 0.2341, 0.6364],
+               [0.0117, 0.0317, 0.0861, 0.2341, 0.6364]], dtype=float32)
     """
     if axis is None:
         axis = _get_softmax_axis(len(inp.shape))
@@ -1622,28 +1557,14 @@ def dropout(inp: Tensor, drop_prob: float, training: bool = True) -> Tensor:
         the ouput tensor
 
     Examples:
-
-        .. testcode::
-
-            import numpy as np
-            from megengine import tensor
-            import megengine.functional as F
-
-            # test training mode
-            data = tensor(np.ones(10000000, dtype=np.float32))
-            out = F.nn.dropout(data, 1.0 / 3.0, training=True)
-            assert not out.numpy().all()
-
-            # test eval mode
-            out = F.nn.dropout(data, 1.0 / 3.0, training=False)
-            assert out.numpy().all()
-
-        Outputs:
-
-        .. testoutput::
-            :options: +SKIP
-
-            [1.5 1.5 0.  1.5 1.5 1.5 1.5 1.5 1.5 1.5]
+        >>> import numpy as np
+        >>> data = Tensor(np.ones(10000000, dtype=np.float32))
+        >>> out = F.nn.dropout(data, 1.0 / 3.0, training=True)
+        >>> assert not out.numpy().all()
+        >>> out = F.nn.dropout(data, 1.0 / 3.0, training=False)
+        >>> assert out.numpy().all()
+        >>> out.numpy()
+        array([1., 1., 1., ..., 1., 1., 1.], dtype=float32)
     """
     assert 0 <= drop_prob < 1
     if not training or drop_prob == 0:
@@ -1663,24 +1584,12 @@ def one_hot(inp: Tensor, num_classes: int) -> Tensor:
         num_classes: number of classes denotes the last dimension of the output tensor.
 
     Examples:
-
-        .. testcode::
-
-            import numpy as np
-            from megengine import tensor
-            import megengine.functional as F
-
-            x = tensor(np.arange(1, 4, dtype=np.int32))
-            out = F.one_hot(x, num_classes=4)
-            print(out.numpy())
-
-        Outputs:
-
-        .. testoutput::
-
-            [[0 1 0 0]
-             [0 0 1 0]
-             [0 0 0 1]]
+        >>> import numpy as np
+        >>> x = Tensor(np.arange(1, 4, dtype=np.int32))
+        >>> F.one_hot(x, num_classes=4)
+        Tensor([[0 1 0 0]
+         [0 0 1 0]
+         [0 0 0 1]], dtype=int32, device=xpux:0)
     """
     zeros_tensor = zeros(
         list(inp.shape) + [num_classes], dtype=inp.dtype, device=inp.device
@@ -1731,22 +1640,11 @@ def indexing_one_hot(
         keepdims: whether not to remove the axis in result. Default: False
 
     Examples:
-
-        .. testcode::
-
-            import megengine.functional as F
-            from megengine import tensor
-
-            src = tensor([[1.0, 2.0]])
-            index = tensor([0])
-            val = F.indexing_one_hot(src, index)
-            print(val.numpy())
-
-        Outputs:
-
-        .. testoutput::
-
-            [1.]
+        >>> src = Tensor([[1.0, 2.0]])
+        >>> index = Tensor([0])
+        >>> val = F.indexing_one_hot(src, index)
+        >>> val.numpy()
+        array([1.], dtype=float32)
     """
     assert isinstance(src, Tensor), "src must be of Tensor type"
     op = builtin.IndexingOneHot(axis=axis)
@@ -1866,7 +1764,6 @@ def pad(
         constant_val: Fill value for ``'constant'`` padding. Default: 0
 
     Examples:
-
         >>> import numpy as np
         >>> inp = Tensor([[1., 2., 3.],[4., 5., 6.]])
         >>> inp
@@ -1944,30 +1841,17 @@ def local_response_norm(
         beta: hyperparameter beta. The default value is 0.75.
 
     Example:
-
-    .. testcode::
-
-        from megengine import tensor
-        import megengine.functional as f
-        import numpy as np
-
-        inp = tensor(np.arange(25, dtype=np.float32).reshape(1,1,5,5))
-        GT = np.array([[[[ 0.,         0.999925,   1.9994003,  2.9979765,  3.9952066],
-           [ 4.9906454,  5.983851,   6.974385,   7.961814,   8.945709 ],
-           [ 9.925651,  10.90122,   11.872011,  12.837625,  13.7976675],
-           [14.751757,  15.699524,  16.640602,  17.574642,  18.501305 ],
-           [19.420258,  20.331186,  21.233786,  22.127764,  23.012836 ]]]])
-
-        out = f.local_response_norm(inp, kernel_size=3, k=1.0, alpha=1e-4, beta=0.75)
-        np.testing.assert_allclose(GT, out.numpy(), rtol=1e-6, atol=1e-6)
-        print('pass')
-
-    Outputs:
-
-    .. testoutput::
-
+        >>> import numpy as np
+        >>> inp = Tensor(np.arange(25, dtype=np.float32).reshape(1,1,5,5))
+        >>> GT = np.array([[[[ 0.,         0.999925,   1.9994003,  2.9979765,  3.9952066],
+        ...                  [ 4.9906454,  5.983851,   6.974385,   7.961814,   8.945709 ],
+        ...                  [ 9.925651,  10.90122,   11.872011,  12.837625,  13.7976675],
+        ...                  [14.751757,  15.699524,  16.640602,  17.574642,  18.501305 ],
+        ...                  [19.420258,  20.331186,  21.233786,  22.127764,  23.012836 ]]]])
+        >>> out = F.local_response_norm(inp, kernel_size=3, k=1.0, alpha=1e-4, beta=0.75)
+        >>> np.testing.assert_allclose(GT, out.numpy(), rtol=1e-6, atol=1e-6)
+        >>> print('pass')
         pass
-
     """
     op = builtin.LRN(n=kernel_size, k=k, alpha=alpha, beta=beta,)
     (output,) = apply(op, inp)

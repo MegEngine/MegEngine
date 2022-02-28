@@ -60,24 +60,13 @@ class MaxPool2d(_PoolNd):
         padding: implicit zero padding to be added on both sides.
 
     Examples:
-
-        .. testcode::
-
-            import numpy as np
-            import megengine as mge
-            import megengine.module as M
-
-            m = M.MaxPool2d(kernel_size=3, stride=1, padding=0)
-            inp = mge.tensor(np.arange(0, 16).astype("float32").reshape(1, 1, 4, 4))
-            oup = m(inp)
-            print(oup.numpy())
-
-        Outputs:
-
-        .. testoutput::
-
-            [[[[10. 11.]
-               [14. 15.]]]]
+        >>> import numpy as np
+        >>> m = M.MaxPool2d(kernel_size=3, stride=1, padding=0)
+        >>> inp = mge.tensor(np.arange(0, 16).astype("float32").reshape(1, 1, 4, 4))
+        >>> oup = m(inp)
+        >>> oup.numpy()
+        array([[[[10., 11.],
+                 [14., 15.]]]], dtype=float32)
     """
 
     def forward(self, inp):

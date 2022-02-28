@@ -27,24 +27,13 @@ class Softmax(Module):
             softmax will apply along the highest ranked axis.
 
     Examples:
-
-        .. testcode::
-
-            import numpy as np
-            import megengine as mge
-            import megengine.module as M
-
-            data = mge.tensor(np.array([-2,-1,0,1,2]).astype(np.float32))
-            softmax = M.Softmax()
-            output = softmax(data)
-            with np.printoptions(precision=6):
-                print(output.numpy())
-
-        Outputs:
-
-        .. testoutput::
-
-            [0.011656 0.031685 0.086129 0.234122 0.636409]
+        >>> import numpy as np
+        >>> data = mge.tensor(np.array([-2,-1,0,1,2]).astype(np.float32))
+        >>> softmax = M.Softmax()
+        >>> output = softmax(data)
+        >>> with np.printoptions(precision=6):
+        ...     print(output.numpy())
+        [0.011656 0.031685 0.086129 0.234122 0.636409]
     """
 
     def __init__(self, axis=None, **kwargs):
@@ -66,24 +55,13 @@ class Sigmoid(Module):
         \text{Sigmoid}(x) = \frac{1}{1 + \exp(-x)}
 
     Examples:
-
-        .. testcode::
-
-            import numpy as np
-            import megengine as mge
-            import megengine.module as M
-
-            data = mge.tensor(np.array([-2,-1,0,1,2,]).astype(np.float32))
-            sigmoid = M.Sigmoid()
-            output = sigmoid(data)
-            with np.printoptions(precision=6):
-                print(output.numpy())
-
-        Outputs:
-
-        .. testoutput::
-
-            [0.119203 0.268941 0.5      0.731059 0.880797]
+        >>> import numpy as np
+        >>> data = mge.tensor(np.array([-2,-1,0,1,2,]).astype(np.float32))
+        >>> sigmoid = M.Sigmoid()
+        >>> output = sigmoid(data)
+        >>> with np.printoptions(precision=6):
+        ...     print(output.numpy())
+        [0.119203 0.268941 0.5      0.731059 0.880797]
     """
 
     def forward(self, inputs):
@@ -98,24 +76,13 @@ class SiLU(Module):
         \text{SiLU}(x) = \frac{x}{1 + \exp(-x)}
 
     Examples:
-
-        .. testcode::
-
-            import numpy as np
-            import megengine as mge
-            import megengine.module as M
-
-            data = mge.tensor(np.array([-2,-1,0,1,2,]).astype(np.float32))
-            silu = M.SiLU()
-            output = silu(data)
-            with np.printoptions(precision=6):
-                print(output.numpy())
-
-        Outputs:
-
-        .. testoutput::
-
-            [-0.238406 -0.268941  0.        0.731059  1.761594]
+        >>> import numpy as np
+        >>> data = mge.tensor(np.array([-2,-1,0,1,2,]).astype(np.float32))
+        >>> silu = M.SiLU()
+        >>> output = silu(data)
+        >>> with np.printoptions(precision=6):
+        ...     print(output.numpy())
+        [-0.238406 -0.268941  0.        0.731059  1.761594]
     """
 
     def forward(self, inputs):
@@ -131,24 +98,13 @@ class GELU(Module):
     where :math:`\Phi(x)` is the Cumulative Distribution Function for Gaussian Distribution.
 
     Examples:
-
-        .. testcode::
-
-            import numpy as np
-            import megengine as mge
-            import megengine.module as M
-
-            data = mge.tensor(np.array([-2,-1,0,1,2,]).astype(np.float32))
-            gelu = M.GELU()
-            output = gelu(data)
-            with np.printoptions(precision=4):
-                print(output.numpy())
-
-        Outputs:
-
-        .. testoutput::
-
-            [-0.0455 -0.1587  0.      0.8413  1.9545]
+        >>> import numpy as np
+        >>> data = mge.tensor(np.array([-2,-1,0,1,2,]).astype(np.float32))
+        >>> gelu = M.GELU()
+        >>> output = gelu(data)
+        >>> with np.printoptions(precision=4):
+        ...     print(output.numpy())
+        [-0.0455 -0.1587  0.      0.8413  1.9545]
     """
 
     def forward(self, inputs):
@@ -162,23 +118,13 @@ class ReLU(Module):
         \text{ReLU}(x) = \max(x, 0)
 
     Examples:
-
-        .. testcode::
-
-            import numpy as np
-            import megengine as mge
-            import megengine.module as M
-            data = mge.tensor(np.array([-2,-1,0,1,2,]).astype(np.float32))
-            relu = M.ReLU()
-            output = relu(data)
-            with np.printoptions(precision=6):
-                print(output.numpy())
-
-        Outputs:
-
-        .. testoutput::
-
-            [0. 0. 0. 1. 2.]
+        >>> import numpy as np
+        >>> data = mge.tensor(np.array([-2,-1,0,1,2,]).astype(np.float32))
+        >>> relu = M.ReLU()
+        >>> output = relu(data)
+        >>> with np.printoptions(precision=6):
+        ...     print(output.numpy())
+        [0. 0. 0. 1. 2.]
     """
 
     def forward(self, x):
@@ -209,22 +155,12 @@ class PReLU(Module):
         init: the initial value of :math:`a`. Default: 0.25
 
     Examples:
-
-        .. testcode::
-
-            import numpy as np
-            import megengine as mge
-            import megengine.module as M
-            data = mge.tensor(np.array([-1.2, -3.7, 2.7]).astype(np.float32))
-            prelu = M.PReLU()
-            output = prelu(data)
-            print(output.numpy())
-
-        Outputs:
-
-        .. testoutput::
-
-            [-0.3   -0.925  2.7  ]
+        >>> import numpy as np
+        >>> data = mge.tensor(np.array([-1.2, -3.7, 2.7]).astype(np.float32))
+        >>> prelu = M.PReLU()
+        >>> output = prelu(data)
+        >>> output.numpy()
+        array([-0.3  , -0.925,  2.7  ], dtype=float32)
     """
 
     def __init__(self, num_parameters: int = 1, init: float = 0.25, **kwargs):
@@ -258,23 +194,12 @@ class LeakyReLU(Module):
         \end{cases}
 
     Examples:
-
-        .. testcode::
-
-            import numpy as np
-            import megengine as mge
-            import megengine.module as M
-            data = mge.tensor(np.array([-8, -12, 6, 10]).astype(np.float32))
-
-            leakyrelu = M.LeakyReLU(0.01)
-            output = leakyrelu(data)
-            print(output.numpy())
-
-        Outputs:
-
-        .. testoutput::
-
-            [-0.08 -0.12  6.   10.  ]
+        >>> import numpy as np
+        >>> data = mge.tensor(np.array([-8, -12, 6, 10]).astype(np.float32))
+        >>> leakyrelu = M.LeakyReLU(0.01)
+        >>> output = leakyrelu(data)
+        >>> output.numpy()
+        array([-0.08, -0.12,  6.  , 10.  ], dtype=float32)
     """
 
     def __init__(self, negative_slope: float = 0.01, **kwargs):
