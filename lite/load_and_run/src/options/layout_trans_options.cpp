@@ -16,9 +16,30 @@ namespace lar {
 
 template <>
 void GoptLayoutOption::config_model_internel<ModelLite>(
-        RuntimeParam& runtime_param, std::shared_ptr<ModelLite> /* model */) {
+        RuntimeParam& runtime_param, std::shared_ptr<ModelLite> model) {
     if (runtime_param.stage == RunStage::BEFORE_MODEL_LOAD) {
-        LITE_THROW("lite model don't support global graph optimization");
+        if (m_layout_transform) {
+            if (m_layout_transform_target ==
+                mgb::gopt::GraphTuningOptions::Target::CPU) {
+                model->get_config().device_type = LiteDeviceType::LITE_CPU;
+            }
+#if LITE_WITH_CUDA
+            else if (
+                    m_layout_transform_target ==
+                    mgb::gopt::GraphTuningOptions::Target::CUDA) {
+                model->get_config().device_type = LiteDeviceType::LITE_CUDA;
+            }
+#endif
+            model->set_layout_transform(true);
+        }
+    } else if (runtime_param.stage == RunStage::GLOBAL_OPTIMIZATION) {
+        if (m_layout_transform) {
+            auto&& network = model->get_lite_network();
+            if (!m_layout_transform_dump_file.empty()) {
+                lite::Runtime::dump_layout_transform_model(
+                        network, m_layout_transform_dump_file);
+            }
+        }
     }
 }
 
@@ -26,14 +47,14 @@ template <>
 void GoptLayoutOption::config_model_internel<ModelMdl>(
         RuntimeParam& runtime_param, std::shared_ptr<ModelMdl> model) {
     if (runtime_param.stage == RunStage::GLOBAL_OPTIMIZATION) {
-        if (layout_transform) {
+        if (m_layout_transform) {
             auto&& load_result = model->get_mdl_load_result();
             load_result.output_var_list = mgb::gopt::layout_transform(
-                    load_result.output_var_list, layout_transform_target);
+                    load_result.output_var_list, m_layout_transform_target);
 
-            if (!layout_transform_dump_file.empty()) {
+            if (!m_layout_transform_dump_file.empty()) {
                 auto out_file = mgb::serialization::OutputFile::make_fs(
-                        layout_transform_dump_file.c_str(), 'w');
+                        m_layout_transform_dump_file.c_str(), 'w');
                 auto testcase_num = model->get_testcase_num();
 
                 if (testcase_num) {
@@ -56,7 +77,7 @@ void GoptLayoutOption::config_model_internel<ModelMdl>(
                     mgb::serialization::GraphDumper::DumpConfig config{1, false, false};
                     for (size_t i = 0; i < testcase_num; ++i) {
                         auto casefile = mgb::serialization::OutputFile::make_fs(
-                                layout_transform_dump_file.c_str(), 'a');
+                                m_layout_transform_dump_file.c_str(), 'a');
                         auto casedumper = model->get_dumper(std::move(casefile));
                         casedumper->dump(testcase.output_var_list, config);
                         if (i != testcase_num - 1) {
@@ -80,29 +101,37 @@ using namespace lar;
 
 GoptLayoutOption::GoptLayoutOption() {
     m_option_name = "gopt_layout";
-    if (FLAGS_layout_transform != "cuda" && FLAGS_layout_transform != "cpu" &&
-        FLAGS_layout_transform != "opencl") {
-        layout_transform = false;
-        layout_transform_target = mgb::gopt::GraphTuningOptions::Target::UNSPEC;
+    if (FLAGS_layout_transform != "cpu"
+#if LITE_WITH_CUDA
+        && FLAGS_layout_transform != "cuda"
+#endif
+    ) {
+        m_layout_transform = false;
+        m_layout_transform_target = mgb::gopt::GraphTuningOptions::Target::UNSPEC;
 
     } else {
-        layout_transform = true;
-        if (FLAGS_layout_transform == "cuda") {
-            layout_transform_target = mgb::gopt::GraphTuningOptions::Target::CUDA;
-        } else if (FLAGS_layout_transform == "cpu") {
-            layout_transform_target = mgb::gopt::GraphTuningOptions::Target::CPU;
-        } else if (FLAGS_layout_transform == "opencl") {
-            layout_transform_target = mgb::gopt::GraphTuningOptions::Target::OPENCL;
+        m_layout_transform = true;
+
+        if (FLAGS_layout_transform == "cpu") {
+            m_layout_transform_target = mgb::gopt::GraphTuningOptions::Target::CPU;
         }
+#if LITE_WITH_CUDA
+        else if (FLAGS_layout_transform == "cuda") {
+            m_layout_transform_target = mgb::gopt::GraphTuningOptions::Target::CUDA;
+        }
+#endif
     }
-    layout_transform_dump_file = FLAGS_layout_transform_dump;
+    m_layout_transform_dump_file = FLAGS_layout_transform_dump;
 }
 
 bool GoptLayoutOption::is_valid() {
     bool ret = false;
     if (!FLAGS_layout_transform.empty()) {
-        if (FLAGS_layout_transform != "cuda" && FLAGS_layout_transform != "cpu" &&
-            FLAGS_layout_transform != "opencl") {
+        if (FLAGS_layout_transform != "cpu"
+#if LITE_WITH_CUDA
+            && FLAGS_layout_transform != "cuda"
+#endif
+        ) {
             mgb_assert(
                     false,
                     "unsupported target(got:%s) for global layout "

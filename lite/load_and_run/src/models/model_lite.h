@@ -39,6 +39,10 @@ public:
     //! wait the end of asynchronous function execution
     void wait() override;
 
+    //! enable global layout transform
+
+    void set_layout_transform(bool state) { enable_layout_transform = state; }
+
     //! get the network of lite model
     std::shared_ptr<lite::Network>& get_lite_network() { return m_network; }
 
@@ -59,6 +63,7 @@ public:
 
 private:
     bool share_model_mem;
+    bool enable_layout_transform;
     std::string model_path;
 
     DataParser parser;

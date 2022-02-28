@@ -19,6 +19,9 @@ ModelLite::ModelLite(const std::string& path) : model_path(path) {
 };
 void ModelLite::load_model() {
     m_network = std::make_shared<lite::Network>(config, IO);
+    if (enable_layout_transform) {
+        lite::Runtime::enable_global_layout_transform(m_network);
+    }
     if (share_model_mem) {
         //! WARNNING:maybe not right to share param memmory for this
         LITE_WARN("enable share model memory");

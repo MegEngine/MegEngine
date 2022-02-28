@@ -37,9 +37,9 @@ private:
     //! config template for different model
     template <typename ModelImpl>
     void config_model_internel(RuntimeParam&, std::shared_ptr<ModelImpl>) {}
-    bool layout_transform;
+    bool m_layout_transform;
     std::string m_option_name;
-    std::string layout_transform_dump_file;
-    mgb::gopt::GraphTuningOptions::Target layout_transform_target;
+    std::string m_layout_transform_dump_file;
+    mgb::gopt::GraphTuningOptions::Target m_layout_transform_target;
 };
 }  // namespace lar
