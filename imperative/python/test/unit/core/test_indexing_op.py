@@ -436,6 +436,8 @@ def test_advance_indexing_high_level(test_varnode):
 
     x = np.arange(27).reshape(3, 3, 3).astype("int32")
     xx = make_tensor(x, network)
+    y = np.array([0, 2], dtype=np.int32)
+    z = np.array([[0, 1], [1, 2]], dtype=np.int32)
 
     np.testing.assert_equal(x[1, :, :], get_value(xx[1, :, :]))
     np.testing.assert_equal(x[1, :, 1], get_value(xx[1, :, 1]))
@@ -444,6 +446,21 @@ def test_advance_indexing_high_level(test_varnode):
     np.testing.assert_equal(x[:, 1, 1], get_value(xx[:, 1, 1]))
     np.testing.assert_equal(x[:, 1], get_value(xx[:, 1]))
     np.testing.assert_equal(x[1, 1:2], get_value(xx[1, 1:2]))
+    np.testing.assert_equal(x[:2, y, [0, 1]], get_value(xx[:2, y, [0, 1]]))
+    np.testing.assert_equal(x[None, None], get_value(xx[None, None]))
+    np.testing.assert_equal(x[:, None, ...], get_value(xx[:, None, ...]))
+    np.testing.assert_equal(x[1, None, :, 1], get_value(xx[1, None, :, 1]))
+    np.testing.assert_equal(x[:, None, 1, None], get_value(xx[:, None, 1, None]))
+    np.testing.assert_equal(x[:2, y, None, [0, 1]], get_value(xx[:2, y, None, [0, 1]]))
+    np.testing.assert_equal(
+        x[None, :, None, [0, 2], None, [1, 2]],
+        get_value(xx[None, :, None, [0, 2], None, [1, 2]]),
+    )
+    np.testing.assert_equal(x[z], get_value(xx[z]))
+    np.testing.assert_equal(x[z, None], get_value(xx[z, None]))
+    np.testing.assert_equal(x[None, z], get_value(xx[None, z]))
+    np.testing.assert_equal(x[z, None, z], get_value(xx[z, None, z]))
+    np.testing.assert_equal(x[None, z, None], get_value(xx[None, z, None]))
 
     x_ = x.copy()
     x_[1, 1, 1] = -1
@@ -592,15 +609,23 @@ def test_advance_indexing_with_bool(test_varnode):
     b = (np.random.sample((2, 3, 4)) > 0.5).astype("bool")
     bb = make_tensor(b, network)
     np.testing.assert_equal(a[b, :, 0:4:2], get_value(aa[bb, :, 0:4:2]))
+    np.testing.assert_equal(a[None, b, :, 0:4:2], get_value(aa[None, bb, :, 0:4:2]))
 
     b = (np.random.sample((4, 3, 4)) > 0.5).astype("bool")
     bb = make_tensor(b, network)
     np.testing.assert_equal(a[..., b, 0:2], get_value(aa[..., bb, 0:2]))
+    np.testing.assert_equal(
+        a[None, ..., b, None, 0:2], get_value(aa[None, ..., bb, None, 0:2])
+    )
 
     b = (np.random.sample((3, 4, 3)) > 0.5).astype("bool")
     bb = make_tensor(b, network)
     np.testing.assert_equal(
         a[:, b, 0:2, [True, False]], get_value(aa[:, bb, 0:2, [True, False]])
+    )
+    np.testing.assert_equal(
+        a[:, b, None, 0:2, [True, False]],
+        get_value(aa[:, bb, None, 0:2, [True, False]]),
     )
 
 
@@ -780,9 +805,6 @@ def test_indexing_error(test_varnode):
     b = np.array([1, 2])
     aa = make_tensor(a, network)
     bb = make_tensor(b, network)
-
-    with pytest.raises(IndexError):
-        aa[None]  # newaxis is not allowed
 
     with pytest.raises(IndexError):
         aa[..., ...]  # only one ellipsis is allowed
