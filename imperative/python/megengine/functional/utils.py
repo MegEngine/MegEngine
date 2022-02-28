@@ -35,21 +35,11 @@ def _assert_equal(
 
     Examples:
 
-        .. testcode::
+        >>> x = Tensor([1, 2, 3], dtype="float32")
+        >>> y = Tensor([1, 2, 3], dtype="float32")
+        >>> F.utils._assert_equal(x, y, maxerr=0)
+        Tensor([1. 2. 3.], device=xpux:0)
 
-            import numpy as np
-            from megengine import tensor
-            import megengine.functional as F
-
-            x = tensor([1, 2, 3], np.float32)
-            y = tensor([1, 2, 3], np.float32)
-            print(F.utils._assert_equal(x, y, maxerr=0).numpy())
-
-        Outputs:
-
-        .. testoutput::
-
-            [1. 2. 3.]
     """
     err = (
         abs(expect - actual)
