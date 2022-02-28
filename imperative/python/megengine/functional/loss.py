@@ -66,29 +66,27 @@ def l1_loss(pred: Tensor, label: Tensor, reduction: str = "mean") -> Tensor:
     Args:
         pred: predicted result from model.
         label: ground truth to compare.
-        reduction: the reduction to apply to the output: 'none' | 'mean' | 'sum'. Default: 'mean'
+        reduction: the reduction to apply to the output: 'none' | 'mean' | 'sum'.
 
     Returns:
         loss value.
 
+    Shape:
+      * ``pred``: :math:`(N, *)` where :math:`*` means any number of additional
+        dimensions.
+      * ``label``: :math:`(N, *)`. Same shape as ``pred``.
+
     Examples:
 
-        .. testcode::
+        >>> pred = Tensor([3, 3, 3, 3])
+        >>> label = Tensor([2, 8, 6, 1])
+        >>> F.nn.l1_loss(pred, label)
+        Tensor(2.75, device=xpux:0)
+        >>> F.nn.l1_loss(pred, label, reduction="none")
+        Tensor([1 5 3 2], dtype=int32, device=xpux:0)
+        >>> F.nn.l1_loss(pred, label, reduction="sum")
+        Tensor(11, dtype=int32, device=xpux:0)
 
-            import numpy as np
-            import megengine as mge
-            import megengine.functional as F
-
-            ipt = mge.tensor(np.array([3, 3, 3, 3]).astype(np.float32))
-            tgt = mge.tensor(np.array([2, 8, 6, 1]).astype(np.float32))
-            loss = F.nn.l1_loss(ipt, tgt)
-            print(loss.numpy())
-
-        Outputs:
-
-        .. testoutput::
-
-            2.75
     """
     diff = pred - label
     return abs(diff)
@@ -118,34 +116,27 @@ def square_loss(pred: Tensor, label: Tensor, reduction: str = "mean") -> Tensor:
     Args:
         pred: predicted result from model.
         label: ground truth to compare.
-        reduction: the reduction to apply to the output: 'none' | 'mean' | 'sum'. Default: 'mean'
+        reduction: the reduction to apply to the output: 'none' | 'mean' | 'sum'.
 
     Returns:
         loss value.
 
     Shape:
-      * pred: :math:`(N, *)` where :math:`*` means any number of additional
+      * ``pred``: :math:`(N, *)` where :math:`*` means any number of additional
         dimensions.
-      * label: :math:`(N, *)`. Same shape as ``pred``.
+      * ``label``: :math:`(N, *)`. Same shape as ``pred``.
 
     Examples:
 
-        .. testcode::
+        >>> pred = Tensor([3, 3, 3, 3])
+        >>> label = Tensor([2, 8, 6, 1])
+        >>> F.nn.square_loss(pred, label)
+        Tensor(9.75, device=xpux:0)
+        >>> F.nn.square_loss(pred, label, reduction="none")
+        Tensor([ 1. 25.  9.  4.], device=xpux:0)
+        >>> F.nn.square_loss(pred, label, reduction="sum")
+        Tensor(39.0, device=xpux:0)
 
-            import numpy as np
-            import megengine as mge
-            import megengine.functional as F
-
-            ipt = mge.tensor(np.array([3, 3, 3, 3]).astype(np.float32))
-            tgt = mge.tensor(np.array([2, 8, 6, 1]).astype(np.float32))
-            loss = F.nn.square_loss(ipt, tgt)
-            print(loss.numpy())
-
-        Outputs:
-
-        .. testoutput::
-
-            9.75
     """
     diff = pred - label
     return diff ** 2
@@ -162,11 +153,6 @@ def cross_entropy(
 ) -> Tensor:
     r"""Computes the multi-class cross entropy loss (using logits by default).
 
-    By default(``with_logitis`` is True), ``pred`` is assumed to be logits,
-    class probabilities are given by softmax.
-
-    It has better numerical stability compared with sequential calls to :func:`~.softmax` and :func:`~.cross_entropy`.
-
     When using label smoothing, the label distribution is as follows:
 
     .. math:: y^{LS}_{k}=y_{k}\left(1-\alpha\right)+\alpha/K
@@ -175,36 +161,39 @@ def cross_entropy(
     k is the index of label distribution. :math:`\alpha` is ``label_smooth`` and :math:`K` is the number of classes.
 
     Args:
-        pred: input tensor representing the predicted probability.
+        pred: input tensor representing the predicted value.
         label: input tensor representing the classification label.
         axis: an axis along which softmax will be applied. Default: 1
         with_logits: whether to apply softmax first. Default: True
         label_smooth: a label smoothing of parameter that can re-distribute target distribution. Default: 0
-        reduction: the reduction to apply to the output: 'none' | 'mean' | 'sum'. Default: 'mean'
+        reduction: the reduction to apply to the output: 'none' | 'mean' | 'sum'.
 
     Returns:
         loss value.
 
     Examples:
 
-        .. testcode::
+        By default(``with_logitis`` is True), ``pred`` is assumed to be logits,
+        class probabilities are given by softmax.
+        It has better numerical stability compared with sequential calls to 
+        :func:`~.softmax` and :func:`~.cross_entropy`.
 
-            import numpy as np
-            from megengine import tensor
-            import megengine.functional as F
+        >>> pred = Tensor([[0., 1.], [0.3, 0.7], [0.7, 0.3]])
+        >>> label = Tensor([1., 1., 1.])
+        >>> F.nn.cross_entropy(pred, label)  # doctest: +SKIP
+        Tensor(0.57976407, device=xpux:0)
+        >>> F.nn.cross_entropy(pred, label, reduction="none")
+        Tensor([0.3133 0.513  0.913 ], device=xpux:0)
 
-            data_shape = (1, 2)
-            label_shape = (1, )
-            pred = tensor(np.array([0, 0], dtype=np.float32).reshape(data_shape))
-            label = tensor(np.ones(label_shape, dtype=np.int32))
-            loss = F.nn.cross_entropy(pred, label)
-            print(loss.numpy().round(decimals=4))
+        If the ``pred`` value has been probabilities, set ``with_logits`` to False:
 
-        Outputs:
+        >>> pred = Tensor([[0., 1.], [0.3, 0.7], [0.7, 0.3]])
+        >>> label = Tensor([1., 1., 1.])
+        >>> F.nn.cross_entropy(pred, label, with_logits=False)  # doctest: +SKIP
+        Tensor(0.5202159, device=xpux:0)
+        >>> F.nn.cross_entropy(pred, label, with_logits=False, reduction="none")
+        Tensor([0.     0.3567 1.204 ], device=xpux:0)
 
-        .. testoutput::
-
-            0.6931
     """
     n0 = pred.ndim
     n1 = label.ndim
@@ -234,36 +223,38 @@ def binary_cross_entropy(
 ) -> Tensor:
     r"""Computes the binary cross entropy loss (using logits by default).
 
-    By default(``with_logitis`` is True), ``pred`` is assumed to be logits,
-    class probabilities are given by sigmoid.
-
     Args:
         pred: `(N, *)`, where `*` means any number of additional dimensions.
         label: `(N, *)`, same shape as the input.
         with_logits: bool, whether to apply sigmoid first. Default: True
-        reduction: the reduction to apply to the output: 'none' | 'mean' | 'sum'. Default: 'mean'
+        reduction: the reduction to apply to the output: 'none' | 'mean' | 'sum'.
 
     Returns:
         loss value.
 
     Examples:
 
-        .. testcode::
+        By default(``with_logitis`` is True), ``pred`` is assumed to be logits,
+        class probabilities are given by softmax.
+        It has better numerical stability compared with sequential calls to 
+        :func:`~.sigmoid` and :func:`~.binary_cross_entropy`.
 
-            import numpy as np
-            from megengine import tensor
-            import megengine.functional as F
+        >>> pred = Tensor([0.9, 0.7, 0.3])
+        >>> label = Tensor([1., 1., 1.])
+        >>> F.nn.binary_cross_entropy(pred, label)
+        Tensor(0.4328984, device=xpux:0)
+        >>> F.nn.binary_cross_entropy(pred, label, reduction="none")
+        Tensor([0.3412 0.4032 0.5544], device=xpux:0)
 
-            pred = tensor(np.array([0, 0], dtype=np.float32).reshape(1, 2))
-            label = tensor(np.ones((1, 2), dtype=np.float32))
-            loss = F.nn.binary_cross_entropy(pred, label)
-            print(loss.numpy().round(decimals=4))
+        If the ``pred`` value has been probabilities, set ``with_logits`` to False:
 
-        Outputs:
+        >>> pred = Tensor([0.9, 0.7, 0.3])
+        >>> label = Tensor([1., 1., 1.])
+        >>> F.nn.binary_cross_entropy(pred, label, with_logits=False)
+        Tensor(0.5553361, device=xpux:0)
+        >>> F.nn.binary_cross_entropy(pred, label, with_logits=False, reduction="none")
+        Tensor([0.1054 0.3567 1.204 ], device=xpux:0) 
 
-        .. testoutput::
-
-            0.6931
     """
     if not with_logits:
         return -(label * log(pred) + (1 - label) * log(1 - pred))
@@ -292,22 +283,15 @@ def hinge_loss(
         loss value.
 
     Examples:
+        >>> pred = Tensor([[0.5, -0.5, 0.1], [-0.6, 0.7, 0.8]]) 
+        >>> label = Tensor([[1, -1, -1], [-1, 1, 1]]) 
+        >>> F.nn.hinge_loss(pred, label)
+        Tensor(1.5, device=xpux:0)
+        >>> F.nn.hinge_loss(pred, label, reduction="none")
+        Tensor([2.1 0.9], device=xpux:0)
+        >>> F.nn.hinge_loss(pred, label, reduction="sum")
+        Tensor(3.0, device=xpux:0)
 
-        .. testcode::
-
-            from megengine import tensor
-            import megengine.functional as F
-
-            pred = tensor([[0.5, -0.5, 0.1], [-0.6, 0.7, 0.8]], dtype="float32")
-            label = tensor([[1, -1, -1], [-1, 1, 1]], dtype="float32")
-            loss = F.nn.hinge_loss(pred, label)
-            print(loss.numpy())
-
-        Outputs:
-
-        .. testoutput::
-
-            1.5
     """
     norm = norm.upper()
     assert norm in ["L1", "L2"], "norm must be L1 or L2"
@@ -381,23 +365,12 @@ def ctc_loss(
 
     Examples:
 
-        .. testcode::
-
-            from megengine import tensor
-            import megengine.functional as F
-
-            pred = tensor([[[0.0614, 0.9386],[0.8812, 0.1188]],[[0.699, 0.301 ],[0.2572, 0.7428]]])
-            pred_length = tensor([2,2])
-            label = tensor([1,1])
-            label_lengths = tensor([1,1])
-            loss = F.nn.ctc_loss(pred, pred_length, label, label_lengths)
-            print(loss.numpy())
-
-        Outputs:
-
-        .. testoutput::
-
-            0.1504417
+        >>> pred = Tensor([[[0.0614, 0.9386],[0.8812, 0.1188]],[[0.699, 0.301 ],[0.2572, 0.7428]]])
+        >>> pred_lengths = Tensor([2, 2])
+        >>> label = Tensor([1, 1])
+        >>> label_lengths = Tensor([1, 1])
+        >>> F.nn.ctc_loss(pred, pred_lengths, label, label_lengths)
+        Tensor(0.1504417, device=xpux:0)
 
     """
     T, N, C = pred.shape
