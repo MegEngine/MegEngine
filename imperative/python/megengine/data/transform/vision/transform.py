@@ -8,7 +8,7 @@
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 import collections.abc
 import math
-from typing import Sequence, Tuple
+from typing import List, Sequence, Tuple
 
 import cv2
 import numpy as np
@@ -52,7 +52,7 @@ class VisionTransform(Transform):
             order is used to specify the order of structures. For example, if your input
             is (image, boxes) type, then the ``order`` should be ("image", "boxes").
             Current available strings and data type are describe below:
-    
+
             * "image": input image, with shape of `(H, W, C)`.
             * "coords": coordinates, with shape of `(N, 2)`.
             * "boxes": bounding boxes, with shape of `(N, 4)`, "xyxy" format,
@@ -69,7 +69,7 @@ class VisionTransform(Transform):
               means category of the input image and "boxes_category" means categories of
               bounding boxes.
             * "info": information for images such as image shapes and image path.
-    
+
     You can also customize your data types only if you implement the corresponding
     _apply_*() methods, otherwise ``NotImplementedError`` will be raised.
     """
@@ -183,35 +183,67 @@ class ToMode(VisionTransform):
 
 
 class Compose(VisionTransform):
-    r"""Composes several transforms together.
+    r"""Composes several transfomations together.
 
     Args:
         transforms: list of :class:`VisionTransform` to compose.
-        batch_compose: whether use shuffle_indices for batch data or not.
-            If True, use original input sequence.
-            Otherwise, the shuffle_indices will be used for transforms.
+        batch_compose: whether keep the same transform order in batch data when shuffle.
         shuffle_indices: indices used for random shuffle, start at 1.
-            For example, if shuffle_indices is [(1, 3), (2, 4)], then the 1st and 3rd transform
-            will be random shuffled, the 2nd and 4th transform will also be shuffled.
         order: the same with :class:`VisionTransform`
-    
+
+    .. seealso:: Refer to :mod:`~.data.transform` module for vision transform APIs.
+
     Examples:
-        .. testcode::
-        
-           from megengine.data.transform import RandomHorizontalFlip, RandomVerticalFlip, CenterCrop, ToMode, Compose
-           
-           transform_func = Compose([
-           RandomHorizontalFlip(),
-           RandomVerticalFlip(),
-           CenterCrop(100),
-           ToMode("CHW"),
-           ],
-           shuffle_indices=[(1, 2, 3)]
-           )
+
+        >>> import megengine.data.transform as T
+        >>> T.Compose([  # doctest: +SKIP
+        ...     T.RandomHorizontalFlip(),  # 1st
+        ...     T.RandomVerticalFlip(),    # 2nd
+        ...     T.CenterCrop(100),         # 3rd
+        ...     T.ToMode("CHW"),           # 4th
+        ...     ],
+        ...     shuffle_indices=[(1, 2, 3)]
+        ... )
+
+        In this case, ``shuffle_indices`` is given so each input data will be transformed
+        out of order:
+
+        .. math::
+
+           \begin{array}{cc}
+           [{\color{red}1 \quad 2 \quad 3} \quad 4] & [{\color{red}1 \quad 3 \quad 2} \quad 4] \\
+           [{\color{red}2 \quad 1 \quad 3} \quad 4] & [{\color{red}2 \quad 3 \quad 1} \quad 4] \\
+           [{\color{red}3 \quad 1 \quad 2} \quad 4] & [{\color{red}3 \quad 2 \quad 1} \quad 4]
+           \end{array}
+
+        In another case, if ``[(1, 3), (2, 4)]`` is given, then the 1st and 3rd transfomation
+        will be random shuffled, the 2nd and 4th transfomation will also be shuffled:
+
+        .. math::
+
+           \begin{array}{cc}
+           [{\color{red}1} \quad {\color{blue}2} \quad {\color{red}3} \quad {\color{blue}4}] &
+           [{\color{red}1} \quad {\color{blue}4} \quad {\color{red}3} \quad {\color{blue}2}] \\
+           [{\color{red}3} \quad {\color{blue}2} \quad {\color{red}1} \quad {\color{blue}4}] &
+           [{\color{red}3} \quad {\color{blue}4} \quad {\color{red}1} \quad {\color{blue}2}]
+           \end{array}
+
+        Different colors represent different groups that need to be internally shuffled.
+
+        .. warning::
+
+           Different samples within each batch will also use random transfomation orders,
+           unless ``batch_compose`` is set to ``True``.
+
     """
 
     def __init__(
-        self, transforms=[], batch_compose=False, shuffle_indices=None, *, order=None
+        self,
+        transforms: List[VisionTransform] = [],
+        batch_compose: bool = False,
+        shuffle_indices: List[Tuple] = None,
+        *,
+        order=None
     ):
         super().__init__(order)
         self.transforms = transforms
@@ -354,7 +386,7 @@ class Resize(VisionTransform):
     Args:
         output_size: target size of image, with (height, width) shape.
         interpolation: interpolation method. All methods are listed below:
-    
+
             * cv2.INTER_NEAREST – a nearest-neighbor interpolation.
             * cv2.INTER_LINEAR – a bilinear interpolation (used by default).
             * cv2.INTER_AREA – resampling using pixel area relation.
@@ -1012,9 +1044,9 @@ class ColorJitter(VisionTransform):
 
 class Lighting(VisionTransform):
     r"""Apply AlexNet-Style "lighting" augmentation to input data.
-    
+
     Input images are assumed to have 'RGB' channel order.
-    
+
     The degree of color jittering is randomly sampled via a normal distribution,
     with standard deviation given by the scale parameter.
     """
