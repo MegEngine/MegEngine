@@ -2,6 +2,7 @@
 
 GET_PIP_URL='https://bootstrap.pypa.io/get-pip.py'
 GET_PIP_URL_35='https://bootstrap.pypa.io/pip/3.5/get-pip.py'
+GET_PIP_URL_36='https://bootstrap.pypa.io/pip/3.6/get-pip.py'
 SWIG_URL='https://codeload.github.com/swig/swig/tar.gz/refs/tags/rel-3.0.12'
 LLVM_URL='https://github.com/llvm-mirror/llvm/archive/release_60.tar.gz' 
 CLANG_URL='https://github.com/llvm-mirror/clang/archive/release_60.tar.gz'
@@ -29,6 +30,8 @@ do
     PIP_URL=${GET_PIP_URL}
     if [ ${ver} = "35m" ];then
         PIP_URL=${GET_PIP_URL_35}
+    elif [ ${ver} = "36m" ];then
+        PIP_URL=${GET_PIP_URL_36}
     fi
     echo "use pip url: ${PIP_URL}"
     curl ${PIP_URL} | /opt/python/cp${python_ver}-cp${ver}/bin/python - \
