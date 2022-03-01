@@ -43,6 +43,7 @@ EncodedSubgraph make_backward_graph_from_forward(
         const EncodedSubgraph& forward, const SmallVector<LogicalTensorDesc>& inputs,
         const SmallVector<bool>& input_requires_grad,
         const SmallVector<bool>& output_has_grad);
+
 EncodedSubgraph make_from_computing_graph(
         const VarNodeArray& inputs, const VarNodeArray& outputs);
 

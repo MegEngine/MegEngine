@@ -384,22 +384,18 @@ def _reduce(mode):
         data = self
         if axis is None:
             assert not keepdims, "can not set axis=None and keepdims=True"
-            result = _reduce_to_scalar(builtin.Reduce(mode=mode), data)
+            (result,) = apply(builtin.Reduce(mode=mode), data)
         elif isinstance(axis, collections.abc.Iterable):
             axis = _normalize_axis(self.ndim, axis, reverse=True)
             for ai in axis:
-                op = builtin.Reduce(mode=mode, axis=ai)
+                op = builtin.Reduce(mode=mode, axis=ai, keepdim=keepdims)
                 (data,) = apply(op, data)
-                if not keepdims:
-                    data = squeeze_cpp(data, ai)
             result = data
         else:
             # builtin.Reduce already accept negtive axis
-            op = builtin.Reduce(mode=mode, axis=axis)
+            op = builtin.Reduce(mode=mode, axis=axis, keepdim=keepdims)
             (result,) = apply(op, data)
 
-            if not keepdims:
-                result = squeeze_cpp(result, axis)
         return result
 
     return f

@@ -180,7 +180,7 @@ public:
     virtual void exec(
             _megdnn_tensor_in src, _megdnn_tensor_out dst,
             _megdnn_workspace workspace) = 0;
-    void deduce_layout(const TensorLayout& src, TensorLayout& dst);
+    MGE_WIN_DECLSPEC_FUC void deduce_layout(const TensorLayout& src, TensorLayout& dst);
     virtual size_t get_workspace_in_bytes(
             const TensorLayout& src, const TensorLayout& dst) = 0;
 

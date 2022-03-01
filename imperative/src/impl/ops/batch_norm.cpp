@@ -36,8 +36,8 @@ EncodedSubgraph generate_batchnorm_backward_graph(DType dtype, CompNode device) 
                 op, Subgraph::vars_t({(Subgraph::var_t)args...}), 1)[0];
     };
 
-    auto prod = Reduce::make(megdnn::param::Reduce(Reduce::Mode::PRODUCT, 0));
-    auto sum = Reduce::make(megdnn::param::Reduce(Reduce::Mode::SUM));
+    auto prod = Reduce::make(megdnn::param::Reduce(Reduce::Mode::PRODUCT, 0), true);
+    auto sum = Reduce::make(megdnn::param::Reduce(Reduce::Mode::SUM), true);
     auto sub = Elemwise::make(Elemwise::Mode::SUB);
     auto mul = Elemwise::make(Elemwise::Mode::MUL);
     auto div = Elemwise::make(Elemwise::Mode::TRUE_DIV);

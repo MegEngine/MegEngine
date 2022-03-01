@@ -26,7 +26,11 @@ def Elemwise : MgbHashableOp<"Elemwise", [ElemwiseParam], [NoSideEffect]> {
   }];
 }
 
-def Reduce: MgbHashableOp<"Reduce", [ReduceParam]>;
+def Reduce: MgbHashableOp<"Reduce", [ReduceParam]>{
+  let extraArguments = (ins
+    MgbBoolAttr:$keepdim
+  );
+}
 
 def TypeCvt: MgbHashableOp<"TypeCvt", [], [NoSideEffect]> {
   let inputs = (ins AnyType:$inputs);

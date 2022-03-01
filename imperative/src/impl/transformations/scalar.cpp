@@ -92,7 +92,13 @@ ValueRefList remove_axis_rule(
 ValueRefList reduce_rule(
         const Reduce& reduce, Span<ValueRef> inputs, Span<bool> inputs_mask,
         const Type<ScalarValue>& scalar_type) {
+    bool keepdim = reduce.keepdim;
+    auto axis = reduce.axis;
     if (inputs.size() == 1) {
+        if (axis == INT_MAX || (inputs[0].shape()->ndim == 1 && keepdim == false)) {
+            // CompNode device = *inputs[0].device();
+            return {scalar_type.make(imperative::apply(reduce, inputs)[0])};
+        }
         return imperative::apply(reduce, inputs);
     }
     mgb_assert(inputs.size() == 2);

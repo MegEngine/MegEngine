@@ -271,24 +271,34 @@ std::optional<ValueRefList> reduce_grad_rule(
     if (reduce.mode != Reduce::Mode::SUM) {
         return {};
     }
-    if (inputs.size() != 1) {
+    auto axis = reduce.axis;
+    if (inputs.size() != 1 || axis == INT_MAX) {
         return {};
     }
     std::array<ValueRef, 1> input_shapes;
     if (inputs_require_grad[0]) {
         input_shapes[0] = get_shape(inputs[0]);
     }
+    if (axis < 0) {
+        axis = (*inputs[0].shape()).ndim + axis;
+    }
     auto maker = CustomGradMaker(backward, inputs.size());
+    auto keepdim = reduce.keepdim || axis == INT_MAX;
     maker.output_size(1).output_captured(0, false);
-    maker.backward([shapes = std::move(input_shapes)](Span<ValueRef> grads) {
-        mgb_assert(grads.size() == 1);
-        ValueRef grad = grads[0];
-        SmallVector<ValueRef> ret(1);
-        if (grad && shapes[0]) {
-            ret[0] = broadcast_to(grad, shapes[0]);
-        }
-        return ret;
-    });
+    maker.backward(
+            [shapes = std::move(input_shapes), axis, keepdim](Span<ValueRef> grads) {
+                mgb_assert(grads.size() == 1);
+                ValueRef grad = grads[0];
+                if (!keepdim) {
+                    auto&& grad_op = AddAxis::make(std::vector<int32_t>({axis}));
+                    grad = imperative::apply(*grad_op, grad)[0];
+                }
+                SmallVector<ValueRef> ret(1);
+                if (grad && shapes[0]) {
+                    ret[0] = broadcast_to(grad, shapes[0]);
+                }
+                return ret;
+            });
     maker.finalize();
     return imperative::apply(ApplyOp(op), inputs);
 }
