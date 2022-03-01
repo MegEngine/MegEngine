@@ -118,6 +118,7 @@ endif()
 
 if(MGE_WITH_CUDA)
   file(GLOB_RECURSE SOURCES_ cuda/*.cpp)
+
   list(APPEND SOURCES ${SOURCES_})
 
   file(GLOB_RECURSE CUSOURCES cuda/*.cu)
