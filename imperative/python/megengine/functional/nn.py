@@ -896,7 +896,7 @@ def prelu(inp: Tensor, weight: Tensor) -> Tensor:
 
 
 @lru_cache(maxsize=None)
-def _get_leagk_relu_op(negative_slope, *, dtype=None, device=None):
+def _get_leaky_relu_op(negative_slope, *, dtype=None, device=None):
     @subgraph_fn(
         "LeakyReLU",
         dtype=dtype,
@@ -925,7 +925,7 @@ def leaky_relu(inp: Tensor, negative_slope: float = 0.01) -> Tensor:
 
     Refer to :class:`~.LeakyReLU` for more information.
     """
-    leakyReLU = _get_leagk_relu_op(negative_slope, dtype=inp.dtype, device=inp.device)
+    leakyReLU = _get_leaky_relu_op(negative_slope, dtype=inp.dtype, device=inp.device)
     (oup,) = leakyReLU(inp)
     return oup
 
@@ -1399,7 +1399,7 @@ def _get_sync_bn_ops(device, dtype, eps_mode, ndim, channels):
             f("fma3",  input, inv_var_wt,
                     f("+",  f("*", neg_channel_mean, inv_var_wt),
                             bias))
-        return (outvar, channel_mean, channel_var, inv_var_wt), (True, False, False, False)
+        return (outvar, channel_mean, channel_var), (True, True, True)
 
     @subgraph("SyncBnStage1Inference", dtype, device, 6)
     def syncbn_stage1_inference(inputs, f, c):
@@ -1509,7 +1509,7 @@ def sync_batch_norm(
     """
     _eps_mode = eps_mode.lower()
     assert _eps_mode in {"max", "additive"}, "unknown eps_mode: {}".format(eps_mode)
-    if _eps_mode == "additive" and not (is_distributed() and training):
+    if _eps_mode == "additive" and not (is_distributed() or training):
         return batch_norm(
             inp,
             running_mean,

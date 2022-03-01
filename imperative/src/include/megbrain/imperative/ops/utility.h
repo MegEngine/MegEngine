@@ -38,7 +38,6 @@ struct ShapeInfer final : OpDefImplBase<ShapeInfer> {
     std::shared_ptr<OpDef> op;
     SmallVector<CompNode> devices;
     SmallVector<DType> dtypes;
-    EncodedSubgraph graph;
     ShapeInfer() = default;
     ShapeInfer(
             std::shared_ptr<OpDef> op, SmallVector<CompNode> devices,

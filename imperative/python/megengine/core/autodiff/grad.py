@@ -212,10 +212,7 @@ class Function:
 
         if self.__single_output:
             outputs = (outputs,)
-        for grad in reversed(group):
-            if grad._impl is None:
-                continue
-            outputs = core2.set_grad(grad._impl, normalized_backward, args, outputs)
+        outputs = core2.set_grad(normalized_backward, args, outputs)
         if self.__single_output:
             (outputs,) = outputs
         return outputs

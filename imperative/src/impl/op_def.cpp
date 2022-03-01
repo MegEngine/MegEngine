@@ -106,7 +106,8 @@ EncodedSubgraph OpDef::make_forward_graph(
 }
 
 std::string OpDef::to_string() const {
-    std::string builder = trait()->make_name(*this) + "{";
+    std::string builder = trait()->name;
+    builder += "{";
     for (auto&& [name, value] : props(*this)) {
         builder += name;
         builder += ": ";
@@ -196,7 +197,7 @@ std::string Subgraph::repr() const {
         if (auto* p = op->try_cast_final<OprAttr>()) {
             buf << p->type;
         } else {
-            buf << op->make_name();
+            buf << op->to_string();
         }
         for (size_t i : ins) {
             buf << " ";

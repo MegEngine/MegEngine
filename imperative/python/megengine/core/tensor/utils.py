@@ -209,7 +209,6 @@ def subgraph(
             outputs = gen.send(None)
             nr_outputs = len(outputs)
             forward_fn = build(builder, outputs, [False] * nr_outputs)
-
             output_grads = [builder.input() for _ in range(nr_outputs)]
             input_grads = gen.send(output_grads)
             assert len(input_grads) == nr_inputs
@@ -222,25 +221,49 @@ def subgraph(
             ]
             encoded_input_grads = [grad for grad in input_grads if grad is not None]
             backward_fn = build(
-                builder, encoded_input_grads, [False] * len(encoded_input_grads)
+                builder, encoded_input_grads, [True] * len(encoded_input_grads)
             )
 
             class SubgraphOp(Function):
                 def __init__(self):
                     self.inputs = None
+                    self.output_shapes = None
 
                 def forward(self, *inputs):
                     self.inputs = inputs
-                    return apply(forward_fn(), *inputs)
+                    outputs = apply(forward_fn(), *inputs)
+                    if len(outputs) > 1:
+                        self.output_shapes = [output.shape for output in outputs]
+                    return outputs
 
                 def backward(self, *output_grads):
                     inputs = self.inputs
-                    self.inputs = None
-                    encoded_input_grads = apply(backward_fn(), *inputs, *output_grads)
-                    input_grads = [
-                        encoded_input_grads[i] if i is not None else None
-                        for i in indices
-                    ]
+                    any_valid = False
+                    all_valid = True
+                    for output_grad in output_grads:
+                        if output_grad is None:
+                            all_valid = False
+                        else:
+                            any_valid = True
+                    if not any_valid:
+                        input_grads = [None] * len(indices)
+                    else:
+                        if not all_valid:
+                            assert self.output_shapes is not None
+                            from ...functional import zeros
+
+                            output_grads = [
+                                zeros(self.output_shapes[i]) if grad is None else grad
+                                for i, grad in enumerate(output_grads)
+                            ]
+                        self = None
+                        encoded_input_grads = apply(
+                            backward_fn(), *inputs, *output_grads
+                        )
+                        input_grads = [
+                            encoded_input_grads[i] if i is not None else None
+                            for i in indices
+                        ]
                     return input_grads
 
             gen.close()

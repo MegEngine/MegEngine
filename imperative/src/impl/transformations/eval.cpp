@@ -139,7 +139,7 @@ ValueRefList InterpreterTransformation::apply_transformation(
             return {ValueRef()};
         }
     } else {
-        return imperative::apply(op, inputs);
+        return op.fallback(inputs);
     }
 }
 

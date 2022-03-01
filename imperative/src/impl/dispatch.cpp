@@ -18,18 +18,44 @@
 
 namespace mgb {
 namespace imperative {
+namespace {
 
-ValueRefList apply(const Operator& op, Span<ValueRef> inputs) {
+ValueRefList apply_release(const Operator& op, Span<ValueRef> inputs) {
     auto& context = Transformation::get_context();
     size_t& depth = context.next_transformation;
-    // TODO: add fallback transformation
-    bool fallback = depth >= context.transformations.size();
-    if (mgb_unlikely(fallback)) {
-        return op.fallback(inputs);
+    mgb_assert(depth < context.transformations.size());
+    auto& transformation = *context.transformations[depth++];
+    CleanupGuard _{[&] { --depth; }};
+    return transformation.apply_transformation(op, inputs);
+}
+
+MGB_NOINLINE ValueRefList apply_debug(const Operator& op, Span<ValueRef> inputs) {
+    auto& context = Transformation::get_context();
+    size_t& depth = context.next_transformation;
+    mgb_assert(depth < context.transformations.size());
+    static const char tabs[] = "\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t";
+    const char* prefix = tabs + (sizeof(tabs) / sizeof(char)) - depth - 1;
+    mgb_log_debug(
+            "%s apply %s to %s", prefix, op.to_string().c_str(),
+            imperative::to_string(inputs).c_str());
+    ValueRefList result;
+    auto& transformation = *context.transformations[depth++];
+    CleanupGuard _{[&] { --depth; }};
+    result = transformation.apply_transformation(op, inputs);
+    mgb_log_debug(
+            "%s returns %s", prefix,
+            imperative::to_string(Span<ValueRef>(result)).c_str());
+    return result;
+}
+
+}  // namespace
+
+ValueRefList apply(const Operator& op, Span<ValueRef> inputs) {
+    static bool debug = MGB_GETENV("MGE_LOG_OP_DISPATCH");
+    if (mgb_unlikely(debug)) {
+        return apply_debug(op, inputs);
     } else {
-        auto& transformation = *context.transformations[depth++];
-        CleanupGuard _{[&] { --depth; }};
-        return transformation.apply_transformation(op, inputs);
+        return apply_release(op, inputs);
     }
 }
 

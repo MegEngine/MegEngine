@@ -452,6 +452,8 @@ def test_2nd_grad_with_custom_gradient():
             return y
 
         def backward(self, dy):
+            if dy is None:
+                return None
             dx = -MySin()(self.inp) * dy
             return dx
 

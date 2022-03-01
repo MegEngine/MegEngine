@@ -318,3 +318,41 @@ def test_throw_on_non_tensor_argument():
     func = NonTensorArg()
     with pytest.raises(TypeError, match=r"op .* expect type Tensor as inputs"):
         func(x, 1)
+
+
+def test_multiple_grad():
+    data_shape = (9, 2, 6)
+    av = np.random.random(data_shape).astype(np.float32)
+
+    class MulFunc(Function):
+        def forward(self, a):
+            self.a = a
+            return a * 10
+
+        def backward(self, grad_o):
+            return grad_o * 20
+
+    class Simple(Module):
+        def __init__(self, a):
+            super().__init__()
+            self.a = Parameter(a, dtype=np.float32)
+            self.layer1 = MulFunc()
+
+        def forward(self):
+            x = self.layer1(self.a)
+            return x
+
+    net = Simple(av)
+    gm = ad.GradManager().attach(net.parameters())
+    gm2 = ad.GradManager().attach(net.parameters())
+    opt = optimizer.SGD(net.parameters(), lr=1.0)
+
+    opt.clear_grad()
+    with gm:
+        with gm2:
+            loss = net()
+        gm.backward(loss.sum())
+    opt.step()
+
+    np.testing.assert_almost_equal(loss.numpy(), (av * 10))
+    np.testing.assert_almost_equal(net.a.numpy(), (av - 20))

@@ -18,11 +18,13 @@
 
 #include "megbrain/imperative/dispatch.h"
 #include "megbrain/imperative/transformation.h"
+#include "megbrain/imperative/utils/helper.h"
 #include "megbrain/imperative/value.h"
 #include "megbrain/utils/small_vector.h"
 
 namespace mgb::imperative::python {
 struct TransformationManager {
+public:
     enum Segment {
         ModuleTrace,
         DTypePromote,
@@ -35,8 +37,21 @@ struct TransformationManager {
 
     std::array<std::vector<std::shared_ptr<Transformation>>, 7> segments;
 
+private:
     template <Segment segment>
-    void register_at(std::shared_ptr<Transformation> transformation) {
+    void unregister(std::shared_ptr<Transformation> transformation) noexcept {
+        mgb_assert(segment < segments.size());
+        auto iter = std::find(
+                segments[segment].begin(), segments[segment].end(), transformation);
+        mgb_assert(iter != segments[segment].end());
+        transformation->unregister();
+        segments[segment].erase(iter);
+    }
+
+public:
+    template <Segment segment>
+    [[nodiscard]] std::unique_ptr<CleanupGuard<>> register_at(
+            std::shared_ptr<Transformation> transformation) {
         mgb_assert(segment < segments.size());
         std::shared_ptr<Transformation> next;
         for (size_t i = segment; i < segments.size(); ++i) {
@@ -51,16 +66,8 @@ struct TransformationManager {
             transformation->register_at(next->pos());
         }
         segments[segment].push_back(transformation);
-    }
-
-    template <Segment segment>
-    void unregister(std::shared_ptr<Transformation> transformation) noexcept {
-        mgb_assert(segment < segments.size());
-        auto iter = std::find(
-                segments[segment].begin(), segments[segment].end(), transformation);
-        mgb_assert(iter != segments[segment].end());
-        transformation->unregister();
-        segments[segment].erase(iter);
+        return std::make_unique<CleanupGuard<>>(
+                [this, transformation]() { unregister<segment>(transformation); });
     }
 
     static TransformationManager& get_instance() {

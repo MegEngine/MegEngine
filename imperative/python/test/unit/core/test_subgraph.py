@@ -109,3 +109,46 @@ def test_subgraph(device, batch_size, channels, use_trace, symbolic, gopt_level,
 
         _assert_allclose(out1.numpy(), out2.numpy())
         _assert_allclose(grad1.numpy(), grad2.numpy())
+
+
+@functools.lru_cache(maxsize=None)
+def _get_mul_fn(dtype, device):
+    @subgraph_fn(
+        "Mul",
+        dtype=dtype,
+        device=device,
+        nr_inputs=2,
+        gopt_level=None,
+        jit_fusion=False,
+        custom_grad=True,
+    )
+    def mul(inputs, f, c):
+        x, y = inputs[0:2]
+        z = f("*", x, y)
+        (dz,) = yield (z,)
+        dx = f("*", dz, y)
+        dy = f("*", dz, x)
+        yield (dx, dy)
+
+    return mul
+
+
+def test_subgraph_jit_backward():
+    x_np = np.random.rand(3, 4, 5).astype("float32")
+    x1 = megengine.Tensor(x_np)
+    x2 = megengine.Tensor(x_np)
+    mul = _get_mul_fn(x1.dtype, x1.device)
+    gm = GradManager()
+    gm.attach([x1, x2])
+    with gm:
+        y1 = x1 * x1
+        y2 = mul(x2, x2)
+        gm.backward(y1)
+    with gm:
+        y1 = x1 * x1
+        y2 = mul(x2, x2)
+        gm.backward(y1 + y2)
+    with gm:
+        y1 = x1 * x1
+        y2 = mul(x2, x2)
+        gm.backward(y2)

@@ -62,7 +62,8 @@ BackwardGraphWithClosure::BackwardGraphWithClosure(
         std::shared_ptr<OpDef> op, Span<ValueRef> inputs, Span<ValueRef> outputs)
         : backward_graph(backward_graph),
           output_mask_offset(inputs.size()),
-          grad_mask_offset(inputs.size() + outputs.size()) {
+          grad_mask_offset(inputs.size() + outputs.size()),
+          op(op) {
     auto& save_for_backward = backward_graph->save_for_backward;
     mgb_assert(save_for_backward.size() == inputs.size() + 2 * outputs.size());
     size_t count = std::count_if(
@@ -92,6 +93,13 @@ BackwardGraphWithClosure::BackwardGraphWithClosure(
             closure.push_back(outputs[i]);
         }
     }
+    if (outputs.size() > 1) {
+        output_descs.reserve(outputs.size());
+        for (auto&& output : outputs) {
+            auto symbolic_shape = imperative::apply(*GetVarShape::make(), output)[0];
+            output_descs.push_back({symbolic_shape, output.dtype(), output.device()});
+        }
+    }
 }
 void BackwardGraphWithClosure::operator()(
         Span<ValueRef> grads, std::function<void(size_t, ValueRef)> receiver) {
@@ -100,23 +108,46 @@ void BackwardGraphWithClosure::operator()(
     for (auto&& value : closure) {
         args[nargs++] = value;
     }
-    bool null_grad = false;
+    size_t null_grad = 0;
+    size_t valid_grad = 0;
     for (size_t i = 0; i < grads.size(); ++i) {
         if (backward_graph->save_for_backward[grad_mask_offset + i]) {
             if (grads[i]) {
-                mgb_assert(!null_grad, "null_grad");
+                valid_grad++;
                 args[nargs++] = grads[i];
             } else {
-                null_grad = true;
+                null_grad++;
+                nargs++;
             }
         }
     }
-    if (null_grad) {
+    if (valid_grad == 0) {
         return;
     }
-    auto igrads_ = imperative::apply(backward_graph->backward, Span(args, nargs));
-    SmallVector<ValueRef> igrads = {igrads_.begin(), igrads_.end()};
-    igrads_.clear();
+    if (null_grad > 0) {
+        auto zeros_like = [](const OutputDesc& desc) {
+            HostTensorStorage storage(*desc.device);
+            storage.ensure_size(desc.dtype->size());
+            std::memset(storage.ptr(), 0, desc.dtype->size());
+            auto t = imperative::apply(
+                    CreateTensor(
+                            CreateTensor::Unique, *desc.device, *desc.dtype,
+                            ValueShape()),
+                    HostStorage::make(storage))[0];
+            auto res = imperative::apply(*Broadcast::make(), t, desc.shape)[0];
+            return res;
+        };
+        nargs = closure.size();
+        for (size_t i = 0; i < grads.size(); ++i) {
+            if (backward_graph->save_for_backward[grad_mask_offset + i]) {
+                if (!grads[i]) {
+                    args[nargs] = zeros_like(output_descs[i]);
+                }
+                nargs++;
+            }
+        }
+    }
+    auto igrads = imperative::apply(backward_graph->backward, Span(args, nargs));
     auto&& iter = igrads.begin();
     for (auto [i, p] : ranges::views::enumerate(backward_graph->input_has_grad)) {
         if (p) {
@@ -221,9 +252,11 @@ void GradKey::backward() {
             if (!dest) {
                 continue;
             }
-            if (!dest.m_producer_record.next && dest->callback && dest->m_grad) {
+            if (!dest.m_producer_record.next && dest->callback) {
                 // I'm the last grad producer, invoke callback
-                dest->callback(dest->m_grad);
+                if (dest->m_grad) {
+                    dest->callback(dest->m_grad);
+                }
             }
         }
         grad_fn->clear();
@@ -394,16 +427,22 @@ ValueRefList GradTransformation::apply_transformation(
         return imperative::apply(op, inputs);
     }
     if (auto* attach_grad = op.as<AttachGrad>()) {
-        if (!has_key(attach_grad->key())) {
+        auto& tensor = inputs[0];
+        if (auto&& grad_value = tensor.as_ref(m_value_type)) {
+            mgb_assert(!has_key(attach_grad->key()));
+            auto output = fallback()[0];
+            return record_grad(m_value_type.make(output, m_key, grad_value->slot()));
+        } else if (!has_key(attach_grad->key())) {
             return fallback();
+        } else {
+            GenericFunction callback =
+                    (GenericFunction&)inputs[1].cast<FunctionValue>();
+            auto output = attach_grad->key()->attach(tensor, [callback](ValueRef grad) {
+                auto ret = callback({&grad, 1});
+                assert(ret.empty());
+            });
+            return {record_grad(output)};
         }
-        auto tensor = inputs[0];
-        GenericFunction callback = (GenericFunction&)inputs[1].cast<FunctionValue>();
-        auto output = attach_grad->key()->attach(tensor, [callback](ValueRef grad) {
-            auto ret = callback({&grad, 1});
-            assert(ret.empty());
-        });
-        return {record_grad(output)};
     } else if (auto* grad_backward = op.as<GradBackward>()) {
         if (!has_key(grad_backward->key())) {
             return fallback();
@@ -431,10 +470,10 @@ ValueRefList GradTransformation::apply_transformation(
         mgb_assert(inputs.size() > nr_inputs);
         size_t nr_outputs = inputs.size() - nr_inputs;
         Span<ValueRef> inputs_ = {inputs.data(), nr_inputs};
-        Span<ValueRef> outputs_ = {inputs.data() + nr_inputs, nr_outputs};
-        backward.m_input_has_grad = SmallVector(nr_inputs, true);
-        backward.m_output_attrs =
-                SmallVector(nr_outputs, CustomBackward::OutputAttr{true, true});
+        auto outputs_ = fallback();
+        backward.m_input_has_grad.resize(nr_inputs, true);
+        backward.m_output_attrs.resize(
+                nr_outputs, CustomBackward::OutputAttr{true, true});
         backward.m_backward = [fn = set_grad->grad_fn()](Span<ValueRef> inputs) {
             auto result = fn(inputs);
             return SmallVector<ValueRef>(result.begin(), result.end());

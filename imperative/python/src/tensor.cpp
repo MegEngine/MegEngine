@@ -449,15 +449,24 @@ void init_tensor(py::module m) {
                     interpreter::Interpreter::inst().create_channel())
                     ->get();
     interpreter_for_py = channel;
-    transformations.register_at<Segment::Eval>(
-            std::make_shared<InterpreterTransformation>(
-                    std::shared_ptr<Channel>(channel, [](Channel*) {})));
-    transformations.register_at<Segment::Scalar>(
-            std::make_shared<ScalarTransformation>());
-    transformations.register_at<Segment::DTypePromote>(
-            std::make_shared<DTypePromoteTransformation>());
-    transformations.register_at<Segment::DimExpansion>(
-            std::make_shared<DimExpansionTransformation>());
+    MGB_MARK_USED_VAR(
+            transformations
+                    .register_at<Segment::Eval>(
+                            std::make_shared<InterpreterTransformation>(
+                                    std::shared_ptr<Channel>(channel, [](Channel*) {})))
+                    .release());
+    MGB_MARK_USED_VAR(transformations
+                              .register_at<Segment::Scalar>(
+                                      std::make_shared<ScalarTransformation>())
+                              .release());
+    MGB_MARK_USED_VAR(transformations
+                              .register_at<Segment::DTypePromote>(
+                                      std::make_shared<DTypePromoteTransformation>())
+                              .release());
+    MGB_MARK_USED_VAR(transformations
+                              .register_at<Segment::DimExpansion>(
+                                      std::make_shared<DimExpansionTransformation>())
+                              .release());
 
     static py::exception<interpreter::AsyncError> py_async_error(
             m, "AsyncError", PyExc_RuntimeError);
@@ -681,6 +690,9 @@ void init_tensor(py::module m) {
         std::pair<size_t, std::shared_ptr<GraphProfiler>> profiler;
         std::optional<TraceResult> trace_result;
         std::function<bool(py::object, py::object)> array_comparator;
+        std::unique_ptr<CleanupGuard<>> tracing_guard;
+        std::unique_ptr<CleanupGuard<>> compiled_guard;
+        std::unique_ptr<CleanupGuard<>> lazy_eval_guard;
 
         bool compare_value(ValueRef lhs, ValueRef rhs) {
             auto lvalue = lhs.cast_ref<HostValue>();
@@ -730,13 +742,16 @@ void init_tensor(py::module m) {
                                 std::make_shared<GraphProfiler>(&current_graph));
                     }
                 }
-                transformations.register_at<Segment::Trace>(self.compiled);
+                compiled_guard =
+                        transformations.register_at<Segment::Trace>(self.compiled);
                 // start execute because InputCallback depends
                 self.compiled->execute();
             } else if (self.tracing) {
-                transformations.register_at<Segment::Trace>(self.tracing);
+                tracing_guard =
+                        transformations.register_at<Segment::Trace>(self.tracing);
                 if (self.lazy_eval) {
-                    transformations.register_at<Segment::Eval>(self.lazy_eval);
+                    lazy_eval_guard =
+                            transformations.register_at<Segment::Eval>(self.lazy_eval);
                 }
             } else {
                 mgb_throw(MegBrainError, "invalid state: neither tracing nor compiled");
@@ -746,16 +761,16 @@ void init_tensor(py::module m) {
         void exit() {
             auto& self = *this;
             if (self.tracing) {
-                transformations.unregister<Segment::Trace>(self.tracing);
+                tracing_guard.reset();
                 self.trace_result = self.tracing->get_result();
                 self.tracing.reset();
                 if (self.lazy_eval) {
                     auto lazy_eval = std::move(self.lazy_eval);
-                    transformations.unregister<Segment::Eval>(lazy_eval);
+                    lazy_eval_guard.reset();
                     lazy_eval->check_exception();
                 }
             } else if (self.compiled) {
-                transformations.unregister<Segment::Trace>(self.compiled);
+                compiled_guard.reset();
                 self.compiled->wait();
             } else {
                 mgb_throw(MegBrainError, "invalid state: neither tracing nor compiled");
@@ -829,17 +844,19 @@ void init_tensor(py::module m) {
                  [](Trace& self) {
                      mgb_assert(bool(self.tracing) ^ bool(self.compiled));
                      if (self.tracing) {
-                         transformations.unregister<Segment::Trace>(self.tracing);
+                         self.tracing_guard.reset();
                      } else if (self.compiled) {
-                         transformations.unregister<Segment::Trace>(self.compiled);
+                         self.compiled_guard.reset();
                      }
                  })
             .def("end_excluded_region", [](Trace& self) {
                 mgb_assert(bool(self.tracing) ^ bool(self.compiled));
                 if (self.tracing) {
-                    transformations.register_at<Segment::Trace>(self.tracing);
+                    self.tracing_guard =
+                            transformations.register_at<Segment::Trace>(self.tracing);
                 } else if (self.compiled) {
-                    transformations.register_at<Segment::Trace>(self.compiled);
+                    self.compiled_guard =
+                            transformations.register_at<Segment::Trace>(self.compiled);
                 }
             });
 
@@ -900,11 +917,8 @@ void init_tensor(py::module m) {
                 GradKeyWrapper::get(output.cast<GradKeyValue>())));
     });
 
-    m.def("set_grad", [](py::object py_key, py::function backward_fn,
-                         std::vector<py::object> inputs,
+    m.def("set_grad", [](py::function backward_fn, std::vector<py::object> inputs,
                          std::vector<py::object> outputs) {
-        mgb_assert(GradKeyWrapper::wrap_t::type().isinstance(py_key.ptr()));
-        auto* key = reinterpret_cast<GradKeyWrapper::wrap_t*>(py_key.ptr())->inst();
         GenericFunction generic_backward_fn =
                 [backward_fn](Span<ValueRef> output_grads) -> ValueRefList {
             py::list output_grad_tws;
@@ -937,8 +951,8 @@ void init_tensor(py::module m) {
             values[i + inputs.size()] =
                     outputs[i].cast<TensorWrapper>().m_tensor->data();
         }
-        auto wrapped_output_values = imperative::apply(
-                SetGrad(key->m_key, generic_backward_fn, inputs.size()), values);
+        auto wrapped_output_values =
+                imperative::apply(SetGrad(generic_backward_fn, inputs.size()), values);
         std::vector<py::object> wrapped_outputs;
         mgb_assert(wrapped_output_values.size() == outputs.size());
         for (auto&& output_value : wrapped_output_values) {
@@ -956,8 +970,10 @@ void init_tensor(py::module m) {
             mgb_assert(module_trace_hook);
             module_trace_transformation =
                     std::make_shared<ModuleTraceTransformation>(module_trace_hook);
-            transformations.register_at<Segment::ModuleTrace>(
-                    module_trace_transformation);
+            MGB_MARK_USED_VAR(transformations
+                                      .register_at<Segment::ModuleTrace>(
+                                              module_trace_transformation)
+                                      .release());
         }
         return module_trace_transformation;
     };

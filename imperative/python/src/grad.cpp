@@ -121,13 +121,13 @@ void GradKeyWrapper::enter() {
     m_key = m_transformation->key();
     m_key->name(m_name);
     grad_key_map[m_key] = this;
-    TransformationManager::get_instance().register_at<TransformationManager::Grad>(
-            m_transformation);
+    m_transformation_guard =
+            TransformationManager::get_instance()
+                    .register_at<TransformationManager::Grad>(m_transformation);
 }
 
 void GradKeyWrapper::exit() {
-    TransformationManager::get_instance().unregister<TransformationManager::Grad>(
-            m_transformation);
+    m_transformation_guard.reset();
     grad_key_map.erase(m_key);
     m_key = {};
     m_transformation.reset();

@@ -96,10 +96,11 @@ SmallVector<LayoutConstraintCallback> get_input_layout_constraint(
     return res;
 }
 
-static EncodedSubgraph make_backward_graph_from_forward(
+EncodedSubgraph make_backward_graph_from_forward(
+        const EncodedSubgraph& forward_graph,
         const SmallVector<LogicalTensorDesc>& inputs,
         const SmallVector<bool>& input_requires_grad,
-        const SmallVector<bool>& output_has_grad, EncodedSubgraph forward_graph) {
+        const SmallVector<bool>& output_has_grad) {
     using namespace std::placeholders;
     using var_t = Subgraph::var_t;
     using vars_t = Subgraph::vars_t;
@@ -179,7 +180,7 @@ EncodedSubgraph make_backward_graph(
         const SmallVector<bool>& output_has_grad) {
     auto forward_graph = OpDef::make_forward_graph(def, inputs);
     return make_backward_graph_from_forward(
-            inputs, input_requires_grad, output_has_grad, forward_graph);
+            forward_graph, inputs, input_requires_grad, output_has_grad);
 }
 
 }  // namespace subgraph_detail

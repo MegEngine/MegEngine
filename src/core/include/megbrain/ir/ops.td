@@ -89,6 +89,8 @@ def SlidingWindowTranspose : MgbHashableOp<"SlidingWindowTranspose", [SlidingWin
 
 def BatchNorm : MgbHashableOp<"BatchNorm", [BNParam]>;
 
+def BatchNormBackward : MgbHashableOp<"BatchNormBackward", [BNParam]>;
+
 def ROIAlign: MgbHashableOp<"ROIAlign", [ROIAlignParam]>;
 def Correlation: MgbHashableOp<"Correlation", [CorrelationParam]>;
 

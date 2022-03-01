@@ -762,7 +762,9 @@ EncodedSubgraph make_backward_graph(
         const OpDef& def, const SmallVector<LogicalTensorDesc>& inputs,
         const SmallVector<bool>& input_requires_grad,
         const SmallVector<bool>& output_has_grad) {
-    return {};
+    return OpDef::make_backward_graph(
+            *def.cast_final_safe<JITFusionOp>().op, inputs, input_requires_grad,
+            output_has_grad);
 }
 
 OP_TRAIT_REG(JITFusionOp, JITFusionOp)

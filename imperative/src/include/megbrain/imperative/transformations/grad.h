@@ -29,6 +29,15 @@ struct BackwardGraphWithClosure {
     SmallVector<ValueRef> closure;
     size_t output_mask_offset;
     size_t grad_mask_offset;
+    std::shared_ptr<OpDef> op;
+
+    struct OutputDesc {
+        ValueRef shape;
+        DTypeValue::ref_t dtype;
+        CompNodeValue::ref_t device;
+    };
+
+    SmallVector<OutputDesc> output_descs;
 
     BackwardGraphWithClosure(
             std::shared_ptr<OptimizedBackwardGraphResult> backward_graph,
@@ -356,20 +365,22 @@ public:
 
 class SetGrad : public OperatorImpl<SetGrad> {
 private:
-    std::shared_ptr<GradKey> m_key;
     GenericFunction m_grad_fn;
     size_t m_nr_inputs;
 
 public:
-    SetGrad(std::shared_ptr<GradKey> key, GenericFunction grad_fn, size_t nr_inputs)
-            : m_key(key), m_grad_fn(grad_fn), m_nr_inputs(nr_inputs) {}
+    SetGrad(GenericFunction grad_fn, size_t nr_inputs)
+            : m_grad_fn(grad_fn), m_nr_inputs(nr_inputs) {}
 
     GenericFunction grad_fn() const { return m_grad_fn; }
 
     size_t nr_inputs() const { return m_nr_inputs; }
 
-    std::string to_string() const override {
-        return ssprintf("SetGradValue{key=%s}", m_key->name().c_str());
+    std::string to_string() const override { return ssprintf("SetGradValue{}"); }
+
+    ValueRefList fallback(Span<ValueRef> inputs) const override {
+        auto outputs = inputs.sub(m_nr_inputs, inputs.size() - m_nr_inputs);
+        return {outputs.begin(), outputs.end()};
     }
 };
 

@@ -14,6 +14,7 @@ import pytest
 import megengine as mge
 import megengine.distributed as dist
 import megengine.functional as F
+import megengine.module as M
 from megengine.core._imperative_rt import CompNode, TensorAttr, imperative
 from megengine.core._imperative_rt.core2 import TensorWeakRef, apply, sync
 from megengine.core.autodiff.grad import Grad

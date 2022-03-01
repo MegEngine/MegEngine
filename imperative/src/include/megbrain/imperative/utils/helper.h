@@ -15,12 +15,14 @@
 #include <memory>
 #include <sstream>
 
+#include "megbrain/utils/metahelper.h"
+
 namespace mgb {
 
 namespace imperative {
 
-template <typename T>
-class CleanupGuard {
+template <typename T = std::function<void()>>
+class CleanupGuard : public NonCopyableObj {
 private:
     T m_callback;
 

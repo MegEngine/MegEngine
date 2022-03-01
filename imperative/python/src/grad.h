@@ -29,6 +29,7 @@ struct GradKeyWrapper : NonCopyableObj {
     std::string m_name;
     std::shared_ptr<GradKey> m_key;
     std::shared_ptr<GradTransformation> m_transformation;
+    std::unique_ptr<CleanupGuard<>> m_transformation_guard;
 
     GradKeyWrapper();
 

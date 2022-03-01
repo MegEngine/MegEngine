@@ -31,6 +31,7 @@ class Subgraph::Builder {
     using infer_fn_t = std::function<descs_t(op_t, descs_t, size_t)>;
     using encoded_graph_t = EncodedSubgraph;
     using var_map_t = std::unordered_map<var_t, var_t>;
+    using mask_t = SmallVector<bool>;
     vars_t m_inputs;
     SmallVector<std::pair<var_t, TensorPtr>> m_constants;
     vars_t m_outputs;
@@ -94,6 +95,7 @@ public:
     descs_t get_descs(vars_t vars) {
         descs_t descs;
         for (auto&& var : vars) {
+            mgb_assert(var, "invalid var");
             descs.push_back(get_desc(var));
         }
         return descs;
