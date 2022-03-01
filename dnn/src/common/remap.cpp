@@ -18,21 +18,22 @@ namespace megdnn {
 
 void RemapBase::deduce_layout_fwd(
         const TensorLayout& src, const TensorLayout& map_xy, TensorLayout& dst) {
-    dst.dtype = src.dtype;
-    dst.ndim = src.ndim;
-    dst.shape[0] = src.shape[0];
-    size_t height_index, channel_index;
+    size_t n = src.shape[0];
+    size_t c, oh, ow;
+    oh = map_xy.shape[1];
+    ow = map_xy.shape[2];
     if (param().format == param::Remap::Format::NHWC) {
-        height_index = 1;
-        channel_index = 3;
+        c = src.shape[3];
+        dst = TensorLayout(TensorShape({n, oh, ow, c}), src.dtype);
+    } else if (param().format == param::Remap::Format::NCHW) {
+        c = src.shape[1];
+        dst = TensorLayout(TensorShape{n, c, oh, ow}, src.dtype, src.format);
+    } else if (param().format == param::Remap::Format::NHWCD4) {
+        c = src.shape[2];
+        dst = TensorLayout{{n, oh, c, ow, 4}, src.dtype, src.format};
     } else {
-        megdnn_assert(param().format == param::Remap::Format::NCHW);
-        height_index = 2;
-        channel_index = 1;
+        megdnn_throw("unsupport format");
     }
-    dst.shape[height_index] = map_xy.shape[1];
-    dst.shape[height_index + 1] = map_xy.shape[2];
-    dst.shape[channel_index] = src.shape[channel_index];
 }
 
 void RemapBase::check_layout_fwd(
@@ -42,7 +43,7 @@ void RemapBase::check_layout_fwd(
                megdnn_layout_msg(dst);
     };
     MEGDNN_MARK_USED_VAR(errmsg);
-    megdnn_assert(src.ndim == map_xy.ndim && src.ndim == dst.ndim && src.ndim == 4);
+    megdnn_assert(src.ndim == dst.ndim);
     megdnn_assert(dst.dtype == src.dtype);
     megdnn_assert(dst.shape[0] == src.shape[0], "%s", errmsg().c_str());
     megdnn_assert(map_xy.shape[3] == 2);
@@ -64,10 +65,13 @@ void RemapBase::check_layout_fwd(
         megdnn_assert(
                 dst.shape[2] == map_xy.shape[1] && dst.shape[3] == map_xy.shape[2],
                 "%s", errmsg().c_str());
+    } else if (param().format == param::Remap::Format::NHWCD4) {
+        megdnn_assert(src.shape[2] == dst.shape[2], "%s", errmsg().c_str());
+        megdnn_assert(src.ndim == 5_z, "%s", errmsg().c_str());
+        megdnn_assert(dst.ndim == 5_z, "%s", errmsg().c_str());
+        megdnn_assert(param().format == Param::Format::NHWCD4);
     } else {
-        megdnn_throw(
-                "currently do not support other param.format except NHWC and "
-                "NCHW");
+        megdnn_throw("unsupport format");
     }
 }
 

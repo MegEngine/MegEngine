@@ -351,7 +351,7 @@ def remap(
             "reflect_101", "wrap".
         scalar: value used in case of a constant border. Default: 0
         interp_mode: interpolation methods.
-            Default: "linear". Currently only support "linear" mode.
+            Default: "linear". Currently also support "nearest" mode.
 
     Returns:
         output tensor.

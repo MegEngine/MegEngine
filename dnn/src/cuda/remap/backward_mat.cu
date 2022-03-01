@@ -53,7 +53,7 @@ struct GetSrcData<ctype, format, ::BorderMode::BORDER_CONSTANT> {
 };
 
 template <typename ctype, const uint32_t format, ::BorderMode bmode>
-__global__ void kern_general(
+__global__ void kern_general_linear(
         const ctype* src, const float* map_xy, const ctype* diff,
         float* __restrict grad, int C, int IH, int IW, int OH, int OW, float scalar) {
     int ow = blockIdx.x * blockDim.x + threadIdx.x;
@@ -62,7 +62,6 @@ __global__ void kern_general(
     diff += blockIdx.z * C * OH * OW;
     map_xy += blockIdx.z * 2 * OH * OW;
     grad += blockIdx.z * 2 * OH * OW;
-    RoundingConverter<ctype> round_converter;
 
     if (ow < OW && oh < OH) {
         float index_col = map_xy[oh * OW * 2 + ow * 2 + 0];
@@ -86,23 +85,25 @@ __global__ void kern_general(
             int a11 = GetSrcData<ctype, format, bmode>::get_index(
                     row + 1, col + 1, c, IH, IW, C);
 
-            dv -= ((a00 != -1) ? src[a00] : scalar) * (one - u);
-            dv += ((a01 != -1) ? src[a01] : scalar) * (one - u);
-            dv -= ((a10 != -1) ? src[a10] : scalar) * u;
-            dv += ((a11 != -1) ? src[a11] : scalar) * u;
+            dv -= ((a00 != -1) ? static_cast<float>(src[a00]) : scalar) * (one - u);
+            dv += ((a01 != -1) ? static_cast<float>(src[a01]) : scalar) * (one - u);
+            dv -= ((a10 != -1) ? static_cast<float>(src[a10]) : scalar) * u;
+            dv += ((a11 != -1) ? static_cast<float>(src[a11]) : scalar) * u;
 
-            du -= ((a00 != -1) ? src[a00] : scalar) * (one - v);
-            du -= ((a01 != -1) ? src[a01] : scalar) * v;
-            du += ((a10 != -1) ? src[a10] : scalar) * (one - v);
-            du += ((a11 != -1) ? src[a11] : scalar) * v;
+            du -= ((a00 != -1) ? static_cast<float>(src[a00]) : scalar) * (one - v);
+            du -= ((a01 != -1) ? static_cast<float>(src[a01]) : scalar) * v;
+            du += ((a10 != -1) ? static_cast<float>(src[a10]) : scalar) * (one - v);
+            du += ((a11 != -1) ? static_cast<float>(src[a11]) : scalar) * v;
 
-            grad[oh * OW * 2 + ow * 2 + 0] += round_converter(hidden * dv);
-            grad[oh * OW * 2 + ow * 2 + 1] += round_converter(hidden * du);
+            grad[oh * OW * 2 + ow * 2 + 0] += hidden * dv;
+            grad[oh * OW * 2 + ow * 2 + 1] += hidden * du;
         }
     }
 }
 
-template <typename ctype, const uint32_t format, ::BorderMode bmode>
+template <
+        typename ctype, const uint32_t format, ::BorderMode bmode,
+        ::InterpolationMode imode>
 void dispatch_backwardmat(
         const ctype* src, const float* map_xy, const ctype* diff, float* grad, int N,
         int C, int IH, int IW, int OH, int OW, float scalar, cudaStream_t stream) {
@@ -115,8 +116,11 @@ void dispatch_backwardmat(
 
         cuda_check(cudaMemsetAsync(
                 grad, 0, sizeof(float) * curr_batch_size * OH * OW * 2, stream));
-        kern_general<ctype, format, bmode><<<blocks, threads, 0, stream>>>(
-                src, map_xy, diff, grad, C, IH, IW, OH, OW, scalar);
+
+        if (imode == ::InterpolationMode::INTER_LINEAR) {
+            kern_general_linear<ctype, format, bmode><<<blocks, threads, 0, stream>>>(
+                    src, map_xy, diff, grad, C, IH, IW, OH, OW, scalar);
+        }
 
         N -= curr_batch_size;
         src += curr_batch_size * C * IH * IW;
@@ -132,27 +136,35 @@ namespace megdnn {
 namespace cuda {
 namespace remap {
 
-template <typename ctype, const uint32_t format, ::BorderMode bmode>
+template <
+        typename ctype, const uint32_t format, ::BorderMode bmode,
+        ::InterpolationMode imode>
 void backwardmat_proxy(
         const ctype* src, const float* map_xy, const ctype* diff, float* grad, int N,
         int C, int IH, int IW, int OH, int OW, float scalar, cudaStream_t stream) {
-    dispatch_backwardmat<ctype, format, bmode>(
+    dispatch_backwardmat<ctype, format, bmode, imode>(
             src, map_xy, diff, grad, N, C, IH, IW, OH, OW, scalar, stream);
     after_kernel_launch();
 }
 
-#define INST(ctype, format, bmode)                                                     \
-    template void                                                                      \
-    backwardmat_proxy<ctype, param_enumv::Remap::Format::format, ::BorderMode::bmode>( \
+#define INST(ctype, format, bmode, imode)                                              \
+    template void backwardmat_proxy<                                                   \
+            ctype, param_enumv::Remap::Format::format, ::BorderMode::bmode,            \
+            ::InterpolationMode::imode>(                                               \
             const ctype*, const float*, const ctype*, float*, int, int, int, int, int, \
             int, float, cudaStream_t);
 
-#define FOR_FORMAT_BMODE(ctype)           \
-    INST(ctype, NCHW, BORDER_CONSTANT)    \
-    INST(ctype, NCHW, BORDER_REPLICATE)   \
-    INST(ctype, NCHW, BORDER_REFLECT)     \
-    INST(ctype, NCHW, BORDER_REFLECT_101) \
-    INST(ctype, NCHW, BORDER_WRAP)
+#define FOR_FORMAT_BMODE(ctype)                          \
+    INST(ctype, NCHW, BORDER_CONSTANT, INTER_NEAREST)    \
+    INST(ctype, NCHW, BORDER_REPLICATE, INTER_NEAREST)   \
+    INST(ctype, NCHW, BORDER_REFLECT, INTER_NEAREST)     \
+    INST(ctype, NCHW, BORDER_REFLECT_101, INTER_NEAREST) \
+    INST(ctype, NCHW, BORDER_WRAP, INTER_NEAREST)        \
+    INST(ctype, NCHW, BORDER_CONSTANT, INTER_LINEAR)     \
+    INST(ctype, NCHW, BORDER_REPLICATE, INTER_LINEAR)    \
+    INST(ctype, NCHW, BORDER_REFLECT, INTER_LINEAR)      \
+    INST(ctype, NCHW, BORDER_REFLECT_101, INTER_LINEAR)  \
+    INST(ctype, NCHW, BORDER_WRAP, INTER_LINEAR)
 
 FOR_FORMAT_BMODE(float)
 DNN_INC_FLOAT16(FOR_FORMAT_BMODE(dt_bfloat16))

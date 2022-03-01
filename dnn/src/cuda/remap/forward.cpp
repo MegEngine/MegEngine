@@ -30,8 +30,9 @@ void RemapImpl::exec(
     OW = map_xy.layout.shape[2];
 
     megdnn_assert(
-            param().imode == param::Remap::InterpolationMode::LINEAR,
-            "only support LINEAR interpolationMode");
+            (param().imode == param::Remap::InterpolationMode::NEAREST) ||
+                    (param().imode == param::Remap::InterpolationMode::LINEAR),
+            "only support NEAREST and LINEAR interpolationMode");
 
     if (param().format == param::Remap::Format::NCHW) {
         N = src.layout.shape[0];
@@ -47,13 +48,15 @@ void RemapImpl::exec(
         megdnn_throw("unsupported format, cuda remap");
     }
 
-#define cb(dt, _format, bmode)                                                     \
+#define cb(dt, _format, bmode, inter_mode)                                         \
     if (param().format == param::Remap::Format::_format &&                         \
-        param().border_type == param::Remap::BorderMode::bmode) {                  \
+        param().border_type == param::Remap::BorderMode::bmode &&                  \
+        param().imode == param::Remap::InterpolationMode::inter_mode) {            \
         using ctype = DTypeTrait<dt>::ctype;                                       \
         remap::forward_proxy<                                                      \
                 ctype, param_enumv::Remap::Format::_format,                        \
-                ::BorderMode::BORDER_##bmode>(                                     \
+                ::BorderMode::BORDER_##bmode,                                      \
+                ::InterpolationMode::INTER_##inter_mode>(                          \
                 src.compatible_ptr<ctype>(), map_xy.compatible_ptr<dt_float32>(),  \
                 dst.compatible_ptr<ctype>(), N, C, IH, IW, OH, OW, param().scalar, \
                 stream);                                                           \
@@ -62,16 +65,26 @@ void RemapImpl::exec(
 
 #define support_dtype(dt)                                      \
     case DTypeTrait<dt>::enumv: {                              \
-        cb(dt, NCHW, CONSTANT);                                \
-        cb(dt, NCHW, REPLICATE);                               \
-        cb(dt, NCHW, REFLECT);                                 \
-        cb(dt, NCHW, REFLECT_101);                             \
-        cb(dt, NCHW, WRAP);                                    \
-        cb(dt, NHWC, CONSTANT);                                \
-        cb(dt, NHWC, REPLICATE);                               \
-        cb(dt, NHWC, REFLECT);                                 \
-        cb(dt, NHWC, REFLECT_101);                             \
-        cb(dt, NHWC, WRAP);                                    \
+        cb(dt, NCHW, CONSTANT, NEAREST);                       \
+        cb(dt, NCHW, REPLICATE, NEAREST);                      \
+        cb(dt, NCHW, REFLECT, NEAREST);                        \
+        cb(dt, NCHW, REFLECT_101, NEAREST);                    \
+        cb(dt, NCHW, WRAP, NEAREST);                           \
+        cb(dt, NHWC, CONSTANT, NEAREST);                       \
+        cb(dt, NHWC, REPLICATE, NEAREST);                      \
+        cb(dt, NHWC, REFLECT, NEAREST);                        \
+        cb(dt, NHWC, REFLECT_101, NEAREST);                    \
+        cb(dt, NHWC, WRAP, NEAREST);                           \
+        cb(dt, NCHW, CONSTANT, LINEAR);                        \
+        cb(dt, NCHW, REPLICATE, LINEAR);                       \
+        cb(dt, NCHW, REFLECT, LINEAR);                         \
+        cb(dt, NCHW, REFLECT_101, LINEAR);                     \
+        cb(dt, NCHW, WRAP, LINEAR);                            \
+        cb(dt, NHWC, CONSTANT, LINEAR);                        \
+        cb(dt, NHWC, REPLICATE, LINEAR);                       \
+        cb(dt, NHWC, REFLECT, LINEAR);                         \
+        cb(dt, NHWC, REFLECT_101, LINEAR);                     \
+        cb(dt, NHWC, WRAP, LINEAR);                            \
         megdnn_throw("unsupported border type in remap cuda"); \
     }
 

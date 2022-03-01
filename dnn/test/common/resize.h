@@ -58,6 +58,11 @@ static void set_nchw_args(std::vector<TestArg>& args) {
     args.emplace_back(param, TensorShape{2, 2, 3, 4}, TensorShape{2, 2, 6, 8});
     args.emplace_back(param, TensorShape{1, 2, 2, 2}, TensorShape{1, 2, 4, 3});
     args.emplace_back(param, TensorShape{1, 2, 6, 8}, TensorShape{1, 2, 3, 4});
+
+    param.imode = param::Resize::InterpolationMode::NEAREST;
+    args.emplace_back(param, TensorShape{2, 2, 3, 4}, TensorShape{2, 2, 6, 8});
+    args.emplace_back(param, TensorShape{1, 2, 2, 2}, TensorShape{1, 2, 4, 3});
+    args.emplace_back(param, TensorShape{1, 2, 6, 8}, TensorShape{1, 2, 3, 4});
 }
 
 static inline std::vector<TestArg> get_args(IMode imode = IMode::INTER_LINEAR) {
@@ -75,12 +80,34 @@ static inline std::vector<TestArg> get_args(IMode imode = IMode::INTER_LINEAR) {
     return args;
 }
 
+static inline std::vector<TestArg> get_nhwc_args() {
+    std::vector<TestArg> args;
+
+    param::Resize param;
+    param.format = param::Resize::Format::NHWC;
+    param.imode = param::Resize::InterpolationMode::LINEAR;
+
+    args.emplace_back(param, TensorShape{2, 3, 4, 2}, TensorShape{2, 6, 8, 2});
+    args.emplace_back(param, TensorShape{1, 2, 2, 2}, TensorShape{1, 4, 3, 2});
+    args.emplace_back(param, TensorShape{1, 6, 8, 2}, TensorShape{1, 3, 4, 2});
+
+    param.imode = param::Resize::InterpolationMode::NEAREST;
+    args.emplace_back(param, TensorShape{2, 3, 4, 2}, TensorShape{2, 6, 8, 2});
+    args.emplace_back(param, TensorShape{1, 2, 2, 2}, TensorShape{1, 4, 3, 2});
+    args.emplace_back(param, TensorShape{1, 6, 8, 2}, TensorShape{1, 3, 4, 2});
+
+    return args;
+}
+
 static inline std::vector<TestArg> get_nhwcd4_args() {
     std::vector<TestArg> args;
 
     param::Resize param;
     param.format = param::Resize::Format::NHWCD4;
     param.imode = param::Resize::InterpolationMode::LINEAR;
+    args.emplace_back(param, TensorShape{2, 2, 1, 3, 4}, TensorShape{2, 4, 1, 6, 4});
+    args.emplace_back(param, TensorShape{2, 4, 1, 6, 4}, TensorShape{2, 2, 1, 3, 4});
+    param.imode = param::Resize::InterpolationMode::NEAREST;
     args.emplace_back(param, TensorShape{2, 2, 1, 3, 4}, TensorShape{2, 4, 1, 6, 4});
     args.emplace_back(param, TensorShape{2, 4, 1, 6, 4}, TensorShape{2, 2, 1, 3, 4});
 

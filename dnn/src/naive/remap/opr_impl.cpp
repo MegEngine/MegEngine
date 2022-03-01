@@ -36,6 +36,12 @@ inline int get_offset<param::Remap::Format::NHWC>(
     return height * w * c + width * c + channel;
 }
 
+template <>
+inline int get_offset<param::Remap::Format::NHWCD4>(
+        int height, int width, int channel, int, int w, int c) {
+    return ((height * c + channel) * w + width) * 4;
+}
+
 template <
         typename ctype, param::Remap::Format format,
         param::Remap::BorderMode bordertype>
@@ -80,8 +86,12 @@ void remap_LINEAR(
         const ctype* src, const float* map_xy, ctype* dst, int N, int C, int IH, int IW,
         int OH, int OW, float scalar) {
     RoundingConverter<ctype> round_converter;
-    for (int n = 0; n < N;
-         ++n, src += C * IH * IW, dst += C * OH * OW, map_xy += OH * OW * 2) {
+    size_t c_scale = 1;
+    if (format == param::Remap::Format::NHWCD4) {
+        c_scale = 4;
+    }
+    for (int n = 0; n < N; ++n, src += c_scale * C * IH * IW,
+             dst += c_scale * C * OH * OW, map_xy += OH * OW * 2) {
         for (int h = 0; h < OH; ++h) {
             for (int w = 0; w < OW; ++w) {
                 float index_col = map_xy[h * OW * 2 + w * 2 + 0];
@@ -92,18 +102,102 @@ void remap_LINEAR(
                 float u = index_row - row;  // alphah
                 const float one = 1.f;
                 for (int c = 0; c < C; ++c) {
-                    ctype a00 = GetSrcData<ctype, format, bordertype>::get(
-                            src, row + 0, col + 0, c, IH, IW, C, scalar);
-                    ctype a01 = GetSrcData<ctype, format, bordertype>::get(
-                            src, row + 0, col + 1, c, IH, IW, C, scalar);
-                    ctype a10 = GetSrcData<ctype, format, bordertype>::get(
-                            src, row + 1, col + 0, c, IH, IW, C, scalar);
-                    ctype a11 = GetSrcData<ctype, format, bordertype>::get(
-                            src, row + 1, col + 1, c, IH, IW, C, scalar);
+                    if (format == param::Remap::Format::NHWCD4) {
+                        int idx00 = GetSrcData<ctype, format, bordertype>::get_index(
+                                row + 0, col + 0, c, IH, IW, C);
+                        int idx01 = GetSrcData<ctype, format, bordertype>::get_index(
+                                row + 0, col + 1, c, IH, IW, C);
+                        int idx10 = GetSrcData<ctype, format, bordertype>::get_index(
+                                row + 1, col + 0, c, IH, IW, C);
+                        int idx11 = GetSrcData<ctype, format, bordertype>::get_index(
+                                row + 1, col + 1, c, IH, IW, C);
+                        for (int c_inner = 0; c_inner < 4; ++c_inner) {
+                            ctype a00 = (idx00 != -1) ? src[idx00 + c_inner]
+                                                      : round_converter(scalar);
+                            ctype a01 = (idx01 != -1) ? src[idx01 + c_inner]
+                                                      : round_converter(scalar);
+                            ctype a10 = (idx10 != -1) ? src[idx10 + c_inner]
+                                                      : round_converter(scalar);
+                            ctype a11 = (idx11 != -1) ? src[idx11 + c_inner]
+                                                      : round_converter(scalar);
+                            dst[get_offset<format>(h, w, c, OH, OW, C) + c_inner] =
+                                    round_converter(
+                                            a00 * (one - v) * (one - u) +
+                                            a01 * (one - u) * v + a10 * (one - v) * u +
+                                            a11 * u * v);
+                        }
+                    } else {
+                        ctype a00 = GetSrcData<ctype, format, bordertype>::get(
+                                src, row + 0, col + 0, c, IH, IW, C, scalar);
+                        ctype a01 = GetSrcData<ctype, format, bordertype>::get(
+                                src, row + 0, col + 1, c, IH, IW, C, scalar);
+                        ctype a10 = GetSrcData<ctype, format, bordertype>::get(
+                                src, row + 1, col + 0, c, IH, IW, C, scalar);
+                        ctype a11 = GetSrcData<ctype, format, bordertype>::get(
+                                src, row + 1, col + 1, c, IH, IW, C, scalar);
 
-                    dst[get_offset<format>(h, w, c, OH, OW, C)] = round_converter(
-                            a00 * (one - v) * (one - u) + a01 * (one - u) * v +
-                            a10 * (one - v) * u + a11 * u * v);
+                        dst[get_offset<format>(h, w, c, OH, OW, C)] = round_converter(
+                                a00 * (one - v) * (one - u) + a01 * (one - u) * v +
+                                a10 * (one - v) * u + a11 * u * v);
+                    }
+                }
+            }
+        }
+    }
+}
+
+namespace {
+
+inline float round_half_to_even(float f) {
+    const float round_away_from_zero = std::round(f);
+    const float diff = round_away_from_zero - f;
+
+    if ((diff != 0.5f) && (diff != -0.5f)) {
+        return round_away_from_zero;
+    }
+
+    if (std::fmod(round_away_from_zero, 2.0f) == 0.0f) {
+        return round_away_from_zero;
+    }
+
+    return f - diff;
+}
+
+}  // anonymous namespace
+
+template <
+        typename ctype, param::Remap::Format format,
+        param::Remap::BorderMode bordertype>
+void remap_NEAREST(
+        const ctype* src, const float* map_xy, ctype* dst, int N, int C, int IH, int IW,
+        int OH, int OW, float scalar) {
+    RoundingConverter<ctype> round_converter;
+    size_t c_scale = 1;
+    if (format == param::Remap::Format::NHWCD4) {
+        c_scale = 4;
+    }
+    for (int n = 0; n < N; ++n, src += c_scale * C * IH * IW,
+             dst += c_scale * C * OH * OW, map_xy += OH * OW * 2) {
+        for (int h = 0; h < OH; ++h) {
+            for (int w = 0; w < OW; ++w) {
+                float index_col = map_xy[h * OW * 2 + w * 2 + 0];
+                float index_row = map_xy[h * OW * 2 + w * 2 + 1];
+                int col = static_cast<int>(round_half_to_even(index_col));
+                int row = static_cast<int>(round_half_to_even(index_row));
+                for (int c = 0; c < C; ++c) {
+                    if (format == param::Remap::Format::NHWCD4) {
+                        int idx = GetSrcData<ctype, format, bordertype>::get_index(
+                                row, col, c, IH, IW, C);
+                        for (int c_inner = 0; c_inner < 4; ++c_inner) {
+                            dst[get_offset<format>(h, w, c, OH, OW, C) + c_inner] =
+                                    (idx != -1) ? (src[idx + c_inner])
+                                                : round_converter(scalar);
+                        }
+                    } else {
+                        dst[get_offset<format>(h, w, c, OH, OW, C)] =
+                                GetSrcData<ctype, format, bordertype>::get(
+                                        src, row, col, c, IH, IW, C, scalar);
+                    }
                 }
             }
         }
@@ -164,10 +258,37 @@ void remap_LINEAR_backwarddata(
 template <
         typename ctype, param::Remap::Format format,
         param::Remap::BorderMode bordertype>
+void remap_NEAREST_backwarddata(
+        ctype* grad, const float* map_xy, const ctype* diff, int N, int C, int IH,
+        int IW, int OH, int OW) {
+    std::memset(grad, 0, sizeof(ctype) * N * C * IH * IW);
+    for (int n = 0; n < N;
+         ++n, grad += C * IH * IW, diff += C * OH * OW, map_xy += OH * OW * 2) {
+        for (int h = 0; h < OH; ++h) {
+            for (int w = 0; w < OW; ++w) {
+                float index_col = map_xy[h * OW * 2 + w * 2 + 0];
+                float index_row = map_xy[h * OW * 2 + w * 2 + 1];
+                int col = static_cast<int>(round_half_to_even(index_col));
+                int row = static_cast<int>(round_half_to_even(index_row));
+                for (int c = 0; c < C; ++c) {
+                    ctype hidden = diff[get_offset<format>(h, w, c, OH, OW, C)];
+                    int idx = GetSrcData<ctype, format, bordertype>::get_index(
+                            row, col, c, IH, IW, C);
+                    if (idx != -1) {
+                        grad[idx] += hidden;
+                    }
+                }
+            }
+        }
+    }
+}
+
+template <
+        typename ctype, param::Remap::Format format,
+        param::Remap::BorderMode bordertype>
 void remap_LINEAR_backwardmat(
         const ctype* src, const float* map_xy, const ctype* diff, float* grad, int N,
         int C, int IH, int IW, int OH, int OW, float scalar) {
-    RoundingConverter<ctype> round_converter;
     std::memset(grad, 0, sizeof(float) * N * 2 * OH * OW);
     for (int n = 0; n < N; ++n, src += C * IH * IW, diff += C * OH * OW,
              map_xy += OH * OW * 2, grad += OH * OW * 2) {
@@ -194,22 +315,36 @@ void remap_LINEAR_backwardmat(
                     int a11 = GetSrcData<ctype, format, bordertype>::get_index(
                             row + 1, col + 1, c, IH, IW, C);
 
-                    dv -= ((a00 != -1) ? src[a00] : scalar) * (one - u);
-                    dv += ((a01 != -1) ? src[a01] : scalar) * (one - u);
-                    dv -= ((a10 != -1) ? src[a10] : scalar) * u;
-                    dv += ((a11 != -1) ? src[a11] : scalar) * u;
+                    dv -= ((a00 != -1) ? static_cast<float>(src[a00]) : scalar) *
+                          (one - u);
+                    dv += ((a01 != -1) ? static_cast<float>(src[a01]) : scalar) *
+                          (one - u);
+                    dv -= ((a10 != -1) ? static_cast<float>(src[a10]) : scalar) * u;
+                    dv += ((a11 != -1) ? static_cast<float>(src[a11]) : scalar) * u;
 
-                    du -= ((a00 != -1) ? src[a00] : scalar) * (one - v);
-                    du -= ((a01 != -1) ? src[a01] : scalar) * v;
-                    du += ((a10 != -1) ? src[a10] : scalar) * (one - v);
-                    du += ((a11 != -1) ? src[a11] : scalar) * v;
+                    du -= ((a00 != -1) ? static_cast<float>(src[a00]) : scalar) *
+                          (one - v);
+                    du -= ((a01 != -1) ? static_cast<float>(src[a01]) : scalar) * v;
+                    du += ((a10 != -1) ? static_cast<float>(src[a10]) : scalar) *
+                          (one - v);
+                    du += ((a11 != -1) ? static_cast<float>(src[a11]) : scalar) * v;
 
-                    grad[h * OW * 2 + w * 2 + 0] += round_converter(hidden * dv);
-                    grad[h * OW * 2 + w * 2 + 1] += round_converter(hidden * du);
+                    grad[h * OW * 2 + w * 2 + 0] += hidden * dv;
+                    grad[h * OW * 2 + w * 2 + 1] += hidden * du;
                 }
             }
         }
     }
+}
+
+template <
+        typename ctype, param::Remap::Format format,
+        param::Remap::BorderMode bordertype>
+void remap_NEAREST_backwardmat(
+        const ctype*, const float*, const ctype*, float* grad, int N, int, int, int,
+        int OH, int OW, float) {
+    std::memset(grad, 0, sizeof(float) * N * 2 * OH * OW);
+    return;
 }
 
 }  // namespace
@@ -229,6 +364,11 @@ void RemapImpl::exec(
         C = src.layout.shape[3];
         IH = src.layout.shape[1];
         IW = src.layout.shape[2];
+    } else if (param().format == param::Remap::Format::NHWCD4) {
+        N = src.layout.shape[0];
+        C = src.layout.shape[2];
+        IH = src.layout.shape[1];
+        IW = src.layout.shape[3];
     } else {
         megdnn_throw("unsupported format");
     }
@@ -255,11 +395,31 @@ void RemapImpl::exec(
         cb(dt, NCHW, REFLECT, LINEAR);                                      \
         cb(dt, NCHW, REFLECT_101, LINEAR);                                  \
         cb(dt, NCHW, WRAP, LINEAR);                                         \
+        cb(dt, NHWCD4, CONSTANT, LINEAR);                                   \
+        cb(dt, NHWCD4, REPLICATE, LINEAR);                                  \
+        cb(dt, NHWCD4, REFLECT, LINEAR);                                    \
+        cb(dt, NHWCD4, REFLECT_101, LINEAR);                                \
+        cb(dt, NHWCD4, WRAP, LINEAR);                                       \
         cb(dt, NHWC, CONSTANT, LINEAR);                                     \
         cb(dt, NHWC, REPLICATE, LINEAR);                                    \
         cb(dt, NHWC, REFLECT, LINEAR);                                      \
         cb(dt, NHWC, REFLECT_101, LINEAR);                                  \
         cb(dt, NHWC, WRAP, LINEAR);                                         \
+        cb(dt, NCHW, CONSTANT, NEAREST);                                    \
+        cb(dt, NCHW, REPLICATE, NEAREST);                                   \
+        cb(dt, NCHW, REFLECT, NEAREST);                                     \
+        cb(dt, NCHW, REFLECT_101, NEAREST);                                 \
+        cb(dt, NCHW, WRAP, NEAREST);                                        \
+        cb(dt, NHWCD4, CONSTANT, NEAREST);                                  \
+        cb(dt, NHWCD4, REPLICATE, NEAREST);                                 \
+        cb(dt, NHWCD4, REFLECT, NEAREST);                                   \
+        cb(dt, NHWCD4, REFLECT_101, NEAREST);                               \
+        cb(dt, NHWCD4, WRAP, NEAREST);                                      \
+        cb(dt, NHWC, CONSTANT, NEAREST);                                    \
+        cb(dt, NHWC, REPLICATE, NEAREST);                                   \
+        cb(dt, NHWC, REFLECT, NEAREST);                                     \
+        cb(dt, NHWC, REFLECT_101, NEAREST);                                 \
+        cb(dt, NHWC, WRAP, NEAREST);                                        \
         megdnn_throw(                                                       \
                 "format, border type or imode is incorrect in remap navie " \
                 "with dtype = " #dt);                                       \
@@ -313,6 +473,11 @@ void RemapBackwardDataImpl::exec(
         cb(dt, NCHW, REFLECT, LINEAR);                                      \
         cb(dt, NCHW, REFLECT_101, LINEAR);                                  \
         cb(dt, NCHW, WRAP, LINEAR);                                         \
+        cb(dt, NCHW, CONSTANT, NEAREST);                                    \
+        cb(dt, NCHW, REPLICATE, NEAREST);                                   \
+        cb(dt, NCHW, REFLECT, NEAREST);                                     \
+        cb(dt, NCHW, REFLECT_101, NEAREST);                                 \
+        cb(dt, NCHW, WRAP, NEAREST);                                        \
         megdnn_throw(                                                       \
                 "format, border type or imode is incorrect in remap navie " \
                 "with dtype = " #dt);                                       \
@@ -365,6 +530,11 @@ void RemapBackwardMatImpl::exec(
         cb(dt, NCHW, REFLECT, LINEAR);                                      \
         cb(dt, NCHW, REFLECT_101, LINEAR);                                  \
         cb(dt, NCHW, WRAP, LINEAR);                                         \
+        cb(dt, NCHW, CONSTANT, NEAREST);                                    \
+        cb(dt, NCHW, REPLICATE, NEAREST);                                   \
+        cb(dt, NCHW, REFLECT, NEAREST);                                     \
+        cb(dt, NCHW, REFLECT_101, NEAREST);                                 \
+        cb(dt, NCHW, WRAP, NEAREST);                                        \
         megdnn_throw(                                                       \
                 "format, border type or imode is incorrect in remap navie " \
                 "with dtype = " #dt);                                       \

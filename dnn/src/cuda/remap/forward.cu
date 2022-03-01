@@ -62,46 +62,23 @@ struct GetSrcData<ctype, format, ::BorderMode::BORDER_CONSTANT> {
     }
 };
 
-template <typename ctype, ::BorderMode bmode>
-__global__ void kern_general(
-        const ctype* __restrict sptr, const float* map_xy, ctype* __restrict dst, int C,
-        int IH, int IW, int OH, int OW, float scalar) {
-    int ow = blockIdx.x * blockDim.x + threadIdx.x;
-    int oh = blockIdx.y * blockDim.y + threadIdx.y;
-    sptr += blockIdx.z * C * IH * IW;
-    dst += blockIdx.z * C * OH * OW;
-    map_xy += blockIdx.z * 2 * OH * OW;
-    RoundingConverter<ctype> round_converter;
+__device__ inline float round_half_to_even(float f) {
+    const float round_away_from_zero = round(f);
+    const float diff = round_away_from_zero - f;
 
-    if (ow < OW && oh < OH) {
-        float index_col = map_xy[oh * OW * 2 + ow * 2 + 0];
-        float index_row = map_xy[oh * OW * 2 + ow * 2 + 1];
-        int col = static_cast<int>(floor(index_col));
-        int row = static_cast<int>(floor(index_row));
-        float v = index_col - col;
-        float u = index_row - row;
-        for (int c = 0; c < C; ++c) {
-            ctype a00 = GetSrcData<ctype, param_enumv::Remap::Format::NCHW, bmode>::get(
-                    sptr, row + 0, col + 0, c, IH, IW, C, scalar);
-            ctype a01 = GetSrcData<ctype, param_enumv::Remap::Format::NCHW, bmode>::get(
-                    sptr, row + 0, col + 1, c, IH, IW, C, scalar);
-            ctype a10 = GetSrcData<ctype, param_enumv::Remap::Format::NCHW, bmode>::get(
-                    sptr, row + 1, col + 0, c, IH, IW, C, scalar);
-            ctype a11 = GetSrcData<ctype, param_enumv::Remap::Format::NCHW, bmode>::get(
-                    sptr, row + 1, col + 1, c, IH, IW, C, scalar);
-            /* in remap, we use float as the type of intermediate result */
-            float result = static_cast<float>(a00) * (1.f - u) * (1.f - v) +
-                           static_cast<float>(a01) * (1.f - u) * v +
-                           static_cast<float>(a10) * (1.f - v) * u +
-                           static_cast<float>(a11) * u * v;
-            dst[get_offset<param_enumv::Remap::Format::NCHW>(oh, ow, c, OH, OW, C)] =
-                    round_converter(result);
-        }
+    if ((diff != 0.5f) && (diff != -0.5f)) {
+        return round_away_from_zero;
     }
+
+    if (fmod(round_away_from_zero, 2.0f) == 0.0f) {
+        return round_away_from_zero;
+    }
+
+    return f - diff;
 }
 
-template <typename ctype, ::BorderMode bmode>
-__global__ void kern_general_nhwc(
+template <typename ctype, const uint32_t format, ::BorderMode bmode>
+__global__ void kern_general_nearest(
         const ctype* __restrict sptr, const float* map_xy, ctype* __restrict dst, int C,
         int IH, int IW, int OH, int OW, float scalar) {
     int ow = blockIdx.x * blockDim.x + threadIdx.x;
@@ -109,36 +86,60 @@ __global__ void kern_general_nhwc(
     sptr += blockIdx.z * C * IH * IW;
     dst += blockIdx.z * C * OH * OW;
     map_xy += blockIdx.z * 2 * OH * OW;
-    RoundingConverter<ctype> round_converter;
 
     if (ow < OW && oh < OH) {
         float index_col = map_xy[oh * OW * 2 + ow * 2 + 0];
         float index_row = map_xy[oh * OW * 2 + ow * 2 + 1];
-        int col = static_cast<int>(floor(index_col));
-        int row = static_cast<int>(floor(index_row));
-        float v = index_col - col;
-        float u = index_row - row;
+        int col = static_cast<int>(round_half_to_even(index_col));
+        int row = static_cast<int>(round_half_to_even(index_row));
         for (int c = 0; c < C; ++c) {
-            ctype a00 = GetSrcData<ctype, param_enumv::Remap::Format::NHWC, bmode>::get(
-                    sptr, row + 0, col + 0, c, IH, IW, C, scalar);
-            ctype a01 = GetSrcData<ctype, param_enumv::Remap::Format::NHWC, bmode>::get(
-                    sptr, row + 0, col + 1, c, IH, IW, C, scalar);
-            ctype a10 = GetSrcData<ctype, param_enumv::Remap::Format::NHWC, bmode>::get(
-                    sptr, row + 1, col + 0, c, IH, IW, C, scalar);
-            ctype a11 = GetSrcData<ctype, param_enumv::Remap::Format::NHWC, bmode>::get(
-                    sptr, row + 1, col + 1, c, IH, IW, C, scalar);
-            /* in remap, we use float as the type of intermediate result */
-            float result = static_cast<float>(a00) * (1.f - u) * (1.f - v) +
-                           static_cast<float>(a01) * (1.f - u) * v +
-                           static_cast<float>(a10) * (1.f - v) * u +
-                           static_cast<float>(a11) * u * v;
-            dst[get_offset<param_enumv::Remap::Format::NHWC>(oh, ow, c, OH, OW, C)] =
-                    round_converter(result);
+            dst[get_offset<format>(oh, ow, c, OH, OW, C)] =
+                    GetSrcData<ctype, format, bmode>::get(
+                            sptr, row, col, c, IH, IW, C, scalar);
         }
     }
 }
 
 template <typename ctype, const uint32_t format, ::BorderMode bmode>
+__global__ void kern_general_linear(
+        const ctype* __restrict sptr, const float* map_xy, ctype* __restrict dst, int C,
+        int IH, int IW, int OH, int OW, float scalar) {
+    int ow = blockIdx.x * blockDim.x + threadIdx.x;
+    int oh = blockIdx.y * blockDim.y + threadIdx.y;
+    sptr += blockIdx.z * C * IH * IW;
+    dst += blockIdx.z * C * OH * OW;
+    map_xy += blockIdx.z * 2 * OH * OW;
+    RoundingConverter<ctype> round_converter;
+
+    if (ow < OW && oh < OH) {
+        float index_col = map_xy[oh * OW * 2 + ow * 2 + 0];
+        float index_row = map_xy[oh * OW * 2 + ow * 2 + 1];
+        int col = static_cast<int>(floor(index_col));
+        int row = static_cast<int>(floor(index_row));
+        float v = index_col - col;
+        float u = index_row - row;
+        for (int c = 0; c < C; ++c) {
+            ctype a00 = GetSrcData<ctype, format, bmode>::get(
+                    sptr, row + 0, col + 0, c, IH, IW, C, scalar);
+            ctype a01 = GetSrcData<ctype, format, bmode>::get(
+                    sptr, row + 0, col + 1, c, IH, IW, C, scalar);
+            ctype a10 = GetSrcData<ctype, format, bmode>::get(
+                    sptr, row + 1, col + 0, c, IH, IW, C, scalar);
+            ctype a11 = GetSrcData<ctype, format, bmode>::get(
+                    sptr, row + 1, col + 1, c, IH, IW, C, scalar);
+            /* in remap, we use float as the type of intermediate result */
+            float result = static_cast<float>(a00) * (1.f - u) * (1.f - v) +
+                           static_cast<float>(a01) * (1.f - u) * v +
+                           static_cast<float>(a10) * (1.f - v) * u +
+                           static_cast<float>(a11) * u * v;
+            dst[get_offset<format>(oh, ow, c, OH, OW, C)] = round_converter(result);
+        }
+    }
+}
+
+template <
+        typename ctype, const uint32_t format, ::BorderMode bmode,
+        ::InterpolationMode imode>
 void dispatch_forward(
         const ctype* src, const float* map_xy, ctype* dst, int N, int C, int IH, int IW,
         int OH, int OW, float scalar, cudaStream_t stream) {
@@ -150,11 +151,11 @@ void dispatch_forward(
         dim3 threads(BX, BY);
         dim3 blocks((OW + BX - 1) / BX, (OH + BY - 1) / BY, curr_batch_size);
 
-        if (format == param_enumv::Remap::Format::NCHW) {
-            kern_general<ctype, bmode><<<blocks, threads, 0, stream>>>(
+        if (imode == ::InterpolationMode::INTER_NEAREST) {
+            kern_general_nearest<ctype, format, bmode><<<blocks, threads, 0, stream>>>(
                     src, map_xy, dst, C, IH, IW, OH, OW, scalar);
-        } else if (format == param_enumv::Remap::Format::NHWC) {
-            kern_general_nhwc<ctype, bmode><<<blocks, threads, 0, stream>>>(
+        } else if (imode == ::InterpolationMode::INTER_LINEAR) {
+            kern_general_linear<ctype, format, bmode><<<blocks, threads, 0, stream>>>(
                     src, map_xy, dst, C, IH, IW, OH, OW, scalar);
         }
 
@@ -171,32 +172,45 @@ namespace megdnn {
 namespace cuda {
 namespace remap {
 
-template <typename ctype, const uint32_t format, ::BorderMode bmode>
+template <
+        typename ctype, const uint32_t format, ::BorderMode bmode,
+        ::InterpolationMode imode>
 void forward_proxy(
         const ctype* src, const float* map_xy, ctype* dst, int N, int C, int IH, int IW,
         int OH, int OW, float scalar, cudaStream_t stream) {
-    dispatch_forward<ctype, format, bmode>(
+    dispatch_forward<ctype, format, bmode, imode>(
             src, map_xy, dst, N, C, IH, IW, OH, OW, scalar, stream);
     after_kernel_launch();
 }
 
-#define INST(ctype, format, bmode)                                                   \
-    template void                                                                    \
-    forward_proxy<ctype, param_enumv::Remap::Format::format, ::BorderMode::bmode>(   \
+#define INST(ctype, format, bmode, imode)                                            \
+    template void forward_proxy<                                                     \
+            ctype, param_enumv::Remap::Format::format, ::BorderMode::bmode,          \
+            ::InterpolationMode::imode>(                                             \
             const ctype*, const float*, ctype*, int, int, int, int, int, int, float, \
             cudaStream_t);
 
-#define FOR_FORMAT_BMODE(ctype)           \
-    INST(ctype, NCHW, BORDER_CONSTANT)    \
-    INST(ctype, NCHW, BORDER_REPLICATE)   \
-    INST(ctype, NCHW, BORDER_REFLECT)     \
-    INST(ctype, NCHW, BORDER_REFLECT_101) \
-    INST(ctype, NCHW, BORDER_WRAP)        \
-    INST(ctype, NHWC, BORDER_CONSTANT)    \
-    INST(ctype, NHWC, BORDER_REPLICATE)   \
-    INST(ctype, NHWC, BORDER_REFLECT)     \
-    INST(ctype, NHWC, BORDER_REFLECT_101) \
-    INST(ctype, NHWC, BORDER_WRAP)
+#define FOR_FORMAT_BMODE(ctype)                          \
+    INST(ctype, NCHW, BORDER_CONSTANT, INTER_NEAREST)    \
+    INST(ctype, NCHW, BORDER_REPLICATE, INTER_NEAREST)   \
+    INST(ctype, NCHW, BORDER_REFLECT, INTER_NEAREST)     \
+    INST(ctype, NCHW, BORDER_REFLECT_101, INTER_NEAREST) \
+    INST(ctype, NCHW, BORDER_WRAP, INTER_NEAREST)        \
+    INST(ctype, NHWC, BORDER_CONSTANT, INTER_NEAREST)    \
+    INST(ctype, NHWC, BORDER_REPLICATE, INTER_NEAREST)   \
+    INST(ctype, NHWC, BORDER_REFLECT, INTER_NEAREST)     \
+    INST(ctype, NHWC, BORDER_REFLECT_101, INTER_NEAREST) \
+    INST(ctype, NHWC, BORDER_WRAP, INTER_NEAREST)        \
+    INST(ctype, NCHW, BORDER_CONSTANT, INTER_LINEAR)     \
+    INST(ctype, NCHW, BORDER_REPLICATE, INTER_LINEAR)    \
+    INST(ctype, NCHW, BORDER_REFLECT, INTER_LINEAR)      \
+    INST(ctype, NCHW, BORDER_REFLECT_101, INTER_LINEAR)  \
+    INST(ctype, NCHW, BORDER_WRAP, INTER_LINEAR)         \
+    INST(ctype, NHWC, BORDER_CONSTANT, INTER_LINEAR)     \
+    INST(ctype, NHWC, BORDER_REPLICATE, INTER_LINEAR)    \
+    INST(ctype, NHWC, BORDER_REFLECT, INTER_LINEAR)      \
+    INST(ctype, NHWC, BORDER_REFLECT_101, INTER_LINEAR)  \
+    INST(ctype, NHWC, BORDER_WRAP, INTER_LINEAR)
 
 FOR_FORMAT_BMODE(float)
 DNN_INC_FLOAT16(FOR_FORMAT_BMODE(dt_float16))

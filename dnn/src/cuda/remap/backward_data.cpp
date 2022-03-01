@@ -22,8 +22,9 @@ void RemapBackwardDataImpl::exec(
         _megdnn_workspace workspace) {
     check_exec(map_xy.layout, diff.layout, grad.layout, workspace.size);
     megdnn_assert(
-            param().imode == param::Remap::InterpolationMode::LINEAR,
-            "only support LINEAR interpolationMode");
+            (param().imode == param::Remap::InterpolationMode::NEAREST) ||
+                    (param().imode == param::Remap::InterpolationMode::LINEAR),
+            "only support NEAREST and LINEAR interpolationMode");
     megdnn_assert(
             param().format == param::Remap::Format::NCHW,
             "only support NCHW format for remap backward");
@@ -36,13 +37,15 @@ void RemapBackwardDataImpl::exec(
     OH = map_xy.layout.shape[1];
     OW = map_xy.layout.shape[2];
 
-#define cb(dt, _format, bmode)                                                     \
+#define cb(dt, _format, bmode, inter_mode)                                         \
     if (param().format == param::Remap::Format::_format &&                         \
-        param().border_type == param::Remap::BorderMode::bmode) {                  \
+        param().border_type == param::Remap::BorderMode::bmode &&                  \
+        param().imode == param::Remap::InterpolationMode::inter_mode) {            \
         using ctype = DTypeTrait<dt>::ctype;                                       \
         remap::backwarddata_proxy<                                                 \
                 ctype, param_enumv::Remap::Format::_format,                        \
-                ::BorderMode::BORDER_##bmode>(                                     \
+                ::BorderMode::BORDER_##bmode,                                      \
+                ::InterpolationMode::INTER_##inter_mode>(                          \
                 grad.compatible_ptr<ctype>(), map_xy.compatible_ptr<dt_float32>(), \
                 diff.compatible_ptr<ctype>(), N, C, IH, IW, OH, OW, stream);       \
         break;                                                                     \
@@ -50,11 +53,16 @@ void RemapBackwardDataImpl::exec(
 
 #define support_dtype(dt)                                      \
     case DTypeTrait<dt>::enumv: {                              \
-        cb(dt, NCHW, CONSTANT);                                \
-        cb(dt, NCHW, REPLICATE);                               \
-        cb(dt, NCHW, REFLECT);                                 \
-        cb(dt, NCHW, REFLECT_101);                             \
-        cb(dt, NCHW, WRAP);                                    \
+        cb(dt, NCHW, CONSTANT, NEAREST);                       \
+        cb(dt, NCHW, REPLICATE, NEAREST);                      \
+        cb(dt, NCHW, REFLECT, NEAREST);                        \
+        cb(dt, NCHW, REFLECT_101, NEAREST);                    \
+        cb(dt, NCHW, WRAP, NEAREST);                           \
+        cb(dt, NCHW, CONSTANT, LINEAR);                        \
+        cb(dt, NCHW, REPLICATE, LINEAR);                       \
+        cb(dt, NCHW, REFLECT, LINEAR);                         \
+        cb(dt, NCHW, REFLECT_101, LINEAR);                     \
+        cb(dt, NCHW, WRAP, LINEAR);                            \
         megdnn_throw("unsupported border type in remap cuda"); \
     }
 
