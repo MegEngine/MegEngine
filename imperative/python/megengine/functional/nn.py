@@ -638,16 +638,23 @@ def avg_pool2d(
     Refer to :class:`~.AvgPool2d` for more information.
 
     Args:
-        inp: input tensor.
-        kernel_size: size of the window.
+        inp: input tensor of shape :math:`(N, C, H_{in}, W_{in})`.
+        kernel_size: size of the window used to calculate the average value.
         stride: stride of the window. If not provided, its value is set to ``kernel_size``.
-            Default: None
-        padding: implicit zero padding added on both sides. Default: 0
-        mode: whether to count padding values, set to "average" will do counting.
+            Default: ``None``
+        padding: implicit zero padding added on both sides. Default: :math:`0`
+        mode: whether to include the padding values while calculating the average, set
+            to "average" will do counting.
             Default: "average_count_exclude_padding"
 
     Returns:
-        output tensor.
+        output tensor of shape `(N, C, H_{out}, W_{out})`.
+
+    Examples:
+        >>> input = tensor(np.arange(1 * 1 * 3 * 4).astype(np.float32).reshape(1, 1, 3, 4))
+        >>> F.avg_pool2d(input, kernel_size=2, stride=2, padding=[1,0], mode="average")
+            Tensor([[[[0.25 1.25]
+             [6.5  8.5 ]]]], device=xpux:0)
     """
     if stride is None:
         stride = kernel_size
