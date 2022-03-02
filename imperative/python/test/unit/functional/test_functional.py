@@ -71,7 +71,8 @@ def test_dropout():
         with gm:
             out = F.nn.dropout(data, rate, training=True)
             gm.backward(out, tensor(np.ones(shape, dtype=np.float32)))
-            assert not out.numpy().all()
+            if len(shape) != 0:
+                assert not out.numpy().all()
             np.testing.assert_allclose(out.numpy(), data.grad.numpy(), 1e-7, 1e-7)
 
     def test_multiple_dropout(shape, rate):
@@ -99,6 +100,7 @@ def test_dropout():
         out4 = F.nn.dropout(data, rate, training=True)
         assert not (out1.numpy() == out4.numpy()).all()
 
+    test_dropout_with_shape([], 0.4)
     test_dropout_with_shape([13, 17, 63, 21], 0.4)
     test_dropout_with_shape([16, 32, 64], 0.3)
     test_multiple_dropout([1024], 0.2)
