@@ -1291,7 +1291,8 @@ TEST_F(CUDA, CONV_BIAS_FORWARD_TENSORCORE_INT8) {
     param.format = ConvBias::Param::Format::NCHW32;
 
     using NonlineMode = ConvBias::Param::NonlineMode;
-    for (NonlineMode mode : {NonlineMode::IDENTITY, NonlineMode::RELU}) {
+    for (NonlineMode mode :
+         {NonlineMode::IDENTITY, NonlineMode::RELU, NonlineMode::H_SWISH}) {
         for (size_t batch : {2}) {
             for (size_t ic : {64, 32}) {
                 for (size_t oc : {32}) {

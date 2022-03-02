@@ -392,6 +392,13 @@ struct PostProcess<ctype, dtype, megdnn::PostprocessMode::ADD_BIAS> {
             MIDOUT_END();                                                             \
             break;                                                                    \
         }                                                                             \
+        case param::ConvBias::NonlineMode::H_SWISH: {                                 \
+            MIDOUT_BEGIN(_midout_tag, _bias_id, 1) {                                  \
+                cb(_bmode, HSwishOp<_src_type MEGDNN_COMMA _dst_type>, __VA_ARGS__);  \
+            }                                                                         \
+            MIDOUT_END();                                                             \
+            break;                                                                    \
+        }                                                                             \
         default:                                                                      \
             megdnn_assert(0);                                                         \
             break;                                                                    \

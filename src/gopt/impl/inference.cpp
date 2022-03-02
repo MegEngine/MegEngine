@@ -1827,6 +1827,10 @@ void FuseConvBiasNonlinPass::apply(OptState& state) const {
                 elem->param().mode == Mode::FUSE_ADD_SIGMOID ||
                 elem->param().mode == Mode::SIGMOID) {
             return NonlineMode::SIGMOID;
+        } else if (
+                elem->param().mode == Mode::FUSE_ADD_H_SWISH ||
+                elem->param().mode == Mode::H_SWISH) {
+            return NonlineMode::H_SWISH;
         } else {
             return NonlineMode::IDENTITY;
         }
@@ -1836,8 +1840,8 @@ void FuseConvBiasNonlinPass::apply(OptState& state) const {
         bool can_be_fused = true;
         can_be_fused &= (elem->input().size() == 2);
         can_be_fused &= (elem->param().mode == Mode::FUSE_ADD_RELU) ||
-                        (elem->param().mode == Mode::FUSE_ADD_TANH) ||
-                        (elem->param().mode == Mode::FUSE_ADD_SIGMOID);
+                        (elem->param().mode == Mode::FUSE_ADD_SIGMOID) ||
+                        (elem->param().mode == Mode::FUSE_ADD_H_SWISH);
 
         return can_be_fused;
     };
@@ -1853,7 +1857,8 @@ void FuseConvBiasNonlinPass::apply(OptState& state) const {
         bool can_be_fused = true;
         can_be_fused &= (elem->input().size() == 1);
         can_be_fused &= (elem->param().mode == Mode::RELU) ||
-                        (elem->param().mode == Mode::SIGMOID);
+                        (elem->param().mode == Mode::SIGMOID) ||
+                        (elem->param().mode == Mode::H_SWISH);
 
         return can_be_fused;
     };

@@ -1083,7 +1083,8 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_FP32) {
                 for (size_t p : {0, 2})
                     for (size_t size : {8, 24})
                         for (NonlineMode nonline_mode :
-                             {NonlineMode::IDENTITY, NonlineMode::RELU}) {
+                             {NonlineMode::IDENTITY, NonlineMode::RELU,
+                              NonlineMode::H_SWISH}) {
                             run(oc, ic, size, size, kernel, p, nonline_mode);
                         }
 
@@ -1185,7 +1186,8 @@ TEST_F(X86, CONV_BIAS_IM2COLMATMUL_FP32_RECORD) {
                         1, oc, (h + 2 * p - kernel) / param.stride_h + 1,
                         (w + 2 * p - kernel) / param.stride_w + 1});
     };
-    for (NonlineMode nonline_mode : {NonlineMode::IDENTITY, NonlineMode::RELU}) {
+    for (NonlineMode nonline_mode :
+         {NonlineMode::IDENTITY, NonlineMode::RELU, NonlineMode::H_SWISH}) {
         run(1, 1, 24, 24, 2, 2, nonline_mode);
     }
 
@@ -1230,7 +1232,8 @@ TEST_F(X86, CONV_BIAS_IM2COLMATMUL_FP32_NOPACK_PREPROCESS) {
                 for (size_t p : {0, 2})
                     for (size_t size : {8, 24})
                         for (NonlineMode nonline_mode :
-                             {NonlineMode::IDENTITY, NonlineMode::RELU}) {
+                             {NonlineMode::IDENTITY, NonlineMode::RELU,
+                              NonlineMode::H_SWISH}) {
                             run(oc, ic, size, size, kernel, p, nonline_mode);
                         }
 
@@ -1285,7 +1288,8 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_FP32_6x16) {
                 for (size_t p : {0, 2})
                     for (size_t size : {8, 24})
                         for (NonlineMode nonline_mode :
-                             {NonlineMode::IDENTITY, NonlineMode::RELU}) {
+                             {NonlineMode::IDENTITY, NonlineMode::RELU,
+                              NonlineMode::H_SWISH}) {
                             run(oc, ic, size, size, kernel, p, nonline_mode);
                         }
 
@@ -1351,7 +1355,8 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_FP32_PACKA) {
                 for (size_t p : {0, 1})
                     for (size_t size : {8, 24})
                         for (NonlineMode nonline_mode :
-                             {NonlineMode::IDENTITY, NonlineMode::RELU}) {
+                             {NonlineMode::IDENTITY, NonlineMode::RELU,
+                              NonlineMode::H_SWISH}) {
                             run(oc, ic, size, size, kernel, p, nonline_mode);
                         }
 
@@ -1418,7 +1423,8 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_FP32_PACKA_FILTER_PREPROCESS) {
                 for (size_t p : {0, 1})
                     for (size_t size : {8, 24})
                         for (NonlineMode nonline_mode :
-                             {NonlineMode::IDENTITY, NonlineMode::RELU}) {
+                             {NonlineMode::IDENTITY, NonlineMode::RELU,
+                              NonlineMode::H_SWISH}) {
                             run(oc, ic, size, size, kernel, p, nonline_mode);
                         }
 

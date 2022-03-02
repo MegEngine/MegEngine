@@ -137,6 +137,12 @@ struct HSwishOp<dt_qint32, dt_qint8> : HSwishOpBase<dt_qint32, dt_qint8> {
 
         return QConverter::convert<int8x8_t, float32x4_t>(vitem0);
     }
+    int8x8_t operator()(const float32x4_t& src) const {
+        auto vitem0 = vmulq_f32(src, this->vscale_src);
+        H_SWISH_KERN_N1(f32, vitem0);
+        vitem0 = vmulq_f32(vitem0, this->vscale_dst);
+        return QConverter::convert<int8x8_t, float32x4_t>(vitem0);
+    }
 };
 
 template <>

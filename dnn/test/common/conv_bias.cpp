@@ -421,7 +421,7 @@ std::vector<TestArg> get_int8_nchw44_args(
     using NLMode = param::ConvBias::NonlineMode;
 
     // clang-format off
-    for (auto nlmode : {NLMode::IDENTITY, NLMode::RELU}) {
+    for (auto nlmode : {NLMode::IDENTITY, NLMode::RELU, NLMode::H_SWISH}) {
     for (auto mode : {param::ConvBias::Mode::CROSS_CORRELATION}) {
     for (size_t b : {1,2}) {
     for (size_t ic : {8,16}) {
@@ -542,7 +542,7 @@ std::vector<TestArg> get_int8_nchw4_args_small_batch(size_t kernel_size) {
     using NLMode = param::ConvBias::NonlineMode;
 
     // clang-format off
-    for (auto nlmode : {NLMode::IDENTITY, NLMode::RELU}) {
+    for (auto nlmode : {NLMode::IDENTITY, NLMode::RELU, NLMode::H_SWISH}) {
     for (auto mode : {param::ConvBias::Mode::CROSS_CORRELATION}) {
     for (size_t b : {12, 8, 4}) {
     for (size_t ic : {16, 32}) {
@@ -577,7 +577,7 @@ std::vector<TestArg> get_int8_nchw4_small_channel_args(size_t kernel_size) {
     using NLMode = param::ConvBias::NonlineMode;
 
     // clang-format off
-    for (auto nlmode : {NLMode::IDENTITY, NLMode::RELU}) {
+    for (auto nlmode : {NLMode::IDENTITY, NLMode::RELU, NLMode::H_SWISH}) {
     for (auto mode : {param::ConvBias::Mode::CROSS_CORRELATION}) {
     for (size_t b : {64, 16}) {
     for (size_t ic : {4, 12}) {
@@ -696,7 +696,7 @@ std::vector<TestArg> get_int8_nchw4_tensorcore_args(size_t kernel_size) {
     using NLMode = param::ConvBias::NonlineMode;
 
     // clang-format off
-    for (auto nlmode : {NLMode::IDENTITY, NLMode::RELU}) {
+    for (auto nlmode : {NLMode::IDENTITY, NLMode::RELU, NLMode::H_SWISH}) {
     for (auto mode : {param::ConvBias::Mode::CROSS_CORRELATION}) {
         size_t b = 64, oc = 128;
         for (size_t ic : {32, 64}) {
