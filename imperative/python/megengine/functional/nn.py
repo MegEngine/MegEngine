@@ -596,14 +596,20 @@ def max_pool2d(
     Refer to :class:`~.MaxPool2d` for more information.
 
     Args:
-        inp: input tensor.
-        kernel_size: size of the window.
+        inp: input tensor of shape :math:`(N, C, H_{in}, W_{in})`.
+        kernel_size: size of the window used to calculate the max value.
         stride: stride of the window. If not provided, its value is set to kernel_size.
-            Default: None
-        padding: implicit zero padding added on both sides. Default: 0
+            Default: ``None``
+        padding: implicit zero padding added on both sides. Default: :math:`0`
 
     Returns:
-        output tensor.
+        output tensor of shape `(N, C, H_{out}, W_{out})`.
+
+    Examples:
+        >>> input = tensor(np.arange(1 * 1 * 3 * 4).astype(np.float32).reshape(1, 1, 3, 4))
+        >>> F.nn.max_pool2d(input, 2, 1, 0)
+        Tensor([[[[ 5.  6.  7.]
+           [ 9. 10. 11.]]]], device=xpux:0)
     """
     if stride is None:
         stride = kernel_size
