@@ -12,7 +12,13 @@ from typing import Iterable, Optional, Sequence, Tuple, Union
 import numpy as np
 
 from ..core._imperative_rt import CompNode
-from ..core._imperative_rt.core2 import SymbolVar, apply, dtype_promotion, split_cpp
+from ..core._imperative_rt.core2 import (
+    SymbolVar,
+    apply,
+    dtype_promotion,
+    expand_dims_cpp,
+    split_cpp,
+)
 from ..core._wrap import as_device
 from ..core.ops import builtin
 from ..core.ops.builtin import Copy, Identity
@@ -959,27 +965,7 @@ def expand_dims(inp: Tensor, axis: Union[int, Sequence[int]]) -> Tensor:
             (1, 2)
     """
 
-    def get_axes():
-        try:
-            return [int(axis)]
-        except (TypeError, ValueError):
-            pass
-        return list(map(int, axis))
-
-    axis = get_axes()
-    try:
-        ndim = inp.ndim + len(axis)
-        axis = sorted(i + ndim if i < 0 else i for i in axis)
-    except ValueError:
-        if any([ind < 0 for ind in axis]):
-            raise IndexError(
-                "Does not support negative index when tensor's ndim is unknown"
-            )
-        axis = sorted(axis)
-    assert axis, "axis could not be empty"
-    op = builtin.AddAxis(axis=axis)
-    (result,) = apply(op, inp)
-    return result
+    return expand_dims_cpp(inp, axis)
 
 
 def squeeze(inp: Tensor, axis: Optional[Union[int, Sequence[int]]] = None) -> Tensor:

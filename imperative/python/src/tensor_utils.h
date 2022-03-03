@@ -10,4 +10,6 @@ PyObject* setitem_cpp(PyObject* self, PyObject* const* args, size_t nargs);
 
 PyObject* split_cpp(PyObject* self, PyObject* const* args, size_t nargs);
 
+PyObject* expand_dims_cpp(PyObject* self, PyObject* const* args, size_t nargs);
+
 }  // namespace mgb::imperative::python
