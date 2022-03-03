@@ -422,7 +422,7 @@ public:
         /*!
          * \brief make split option by splitting into average parts
          */
-        static Options make_average(int axis, size_t nr_part);
+        MGE_WIN_DECLSPEC_FUC static Options make_average(int axis, size_t nr_part);
 
         static Options make_partition(int axis, const SymbolVarArray& partition);
         static Options make_partition(

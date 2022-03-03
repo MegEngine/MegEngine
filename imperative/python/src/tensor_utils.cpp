@@ -603,6 +603,86 @@ py::object _setitem_cpp(py::handle inp_hdl, py::handle idx_hdl, py::handle val_h
     return res;
 }
 
+bool is_tensor_or_symbolvar(py::handle arg) {
+    return bool(TensorWrapper::try_cast(arg.ptr())) || py::isinstance<PySymbolVar>(arg);
+}
+
+bool is_py_sequence(py::handle arg) {
+    if (PyArray_Check(arg.ptr()) || TensorWrapper::try_cast(arg.ptr()) ||
+        py::isinstance<PySymbolVar>(arg)) {
+        return false;
+    }
+    return PySequence_Check(arg.ptr());
+}
+
+py::object _split_cpp(
+        py::handle inp_hdl, py::handle nsplits_or_sections_hdl, py::handle axis_hdl) {
+    py::object shape_obj = getattr(inp_hdl, "shape");
+    py::object n_total = shape_obj[axis_hdl];
+    int ndim = shape_obj.attr("__len__")().cast<int>();
+    int axis = axis_hdl.cast<int>();
+    if (axis >= ndim) {
+        throw py::value_error("Invalid axis " + std::to_string(axis));
+    }
+    int n_sections;
+    bool is_array;
+    if (is_py_sequence(nsplits_or_sections_hdl)) {
+        n_sections = PySequence_Length(nsplits_or_sections_hdl.ptr()) + 1;
+        is_array = true;
+    } else {
+        n_sections = getattr(nsplits_or_sections_hdl, "__int__")().cast<int>();
+        is_array = false;
+    }
+    py::list partitions;
+    std::shared_ptr<OpDef> op;
+    std::vector<PyObject*> p;
+    if (is_array) {
+        py::list div_points;
+        py::list sections = py::reinterpret_borrow<py::object>(nsplits_or_sections_hdl);
+        div_points.append(0);
+        for (size_t i = 0; i < sections.size(); ++i) {
+            div_points.append(sections[i]);
+        }
+        div_points.append(n_total);
+        for (size_t i = 1; i < div_points.size(); ++i) {
+            if (div_points[i - 1] > div_points[i]) {
+                throw py::value_error(
+                        "Invalid nsplits_or_secions: " +
+                        repr(nsplits_or_sections_hdl).cast<std::string>());
+            }
+            py::object pos = div_points[i] - div_points[i - 1];
+            if (is_tensor_or_symbolvar(pos)) {
+                partitions.append(pos);
+            } else {
+                partitions.append(
+                        _Const(pos, py::cast((mgb::DType)dtype::Int32()),
+                               getattr(inp_hdl, "device"), inp_hdl));
+            }
+        }
+        op = Split::make(axis, 0);
+        p.resize(partitions.size() + 2);
+        for (size_t i = 0; i < partitions.size(); ++i) {
+            p[i + 2] = partitions[i].ptr();
+        }
+    } else {
+        if (n_sections <= 0) {
+            throw py::value_error("Number sections must be larger than 0");
+        }
+        if (py::int_(n_sections) > n_total) {
+            throw py::value_error(
+                    "The size " + repr(n_total).cast<std::string>() + " at dim " +
+                    std::to_string(axis) + " cannot be split into " +
+                    std::to_string(n_sections) + " sections");
+        }
+        op = Split::make(axis, n_sections);
+        p.resize(2);
+    }
+    py::object Op = py::cast(op);
+    p[0] = Op.ptr();
+    p[1] = inp_hdl.ptr();
+    return py::reinterpret_steal<py::object>(py_apply(NULL, p.data(), p.size()));
+}
+
 PyObject* make_shape_tuple(PyObject* self, PyObject* const* args, size_t nargs) {
     try {
         return _make_shape_tuple(py::handle(args[0])).release().ptr();
@@ -621,6 +701,15 @@ PyObject* setitem_cpp(PyObject* self, PyObject* const* args, size_t nargs) {
     try {
         return _setitem_cpp(
                        py::handle(args[0]), py::handle(args[1]), py::handle(args[2]))
+                .release()
+                .ptr();
+    }
+    PYEXT17_TRANSLATE_EXC_RET(nullptr)
+}
+
+PyObject* split_cpp(PyObject* self, PyObject* const* args, size_t nargs) {
+    try {
+        return _split_cpp(py::handle(args[0]), py::handle(args[1]), py::handle(args[2]))
                 .release()
                 .ptr();
     }

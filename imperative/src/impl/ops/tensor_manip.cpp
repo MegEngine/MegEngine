@@ -285,7 +285,7 @@ std::shared_ptr<OpDef> make_from_op_node(cg::OperatorNodeBase* node_) {
             opt.method == Options::Method::SPECIFY,
             "only Split with SPECIFY output shapes is supported");
     mgb_assert(opt.partition.size() == opt.nr_part);
-    return Split::make(axis);
+    return Split::make(axis, 0);
 }
 
 auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
@@ -293,13 +293,18 @@ auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
     auto&& sp = static_cast<const Split&>(def);
     OperatorNodeConfig config{sp.make_name()};
     opr::Split::Options opt;
-    opt.axis = sp.axis;
-    opt.method = Options::Method::SPECIFY;
-    mgb_assert(inputs.size() > 1);
-    opt.nr_part = inputs.size() - 1;
-    opt.partition.resize(opt.nr_part);
-    for (size_t i = 1; i < inputs.size(); ++i)
-        opt.partition[i - 1] = inputs[i];
+    if (sp.nsections) {
+        opt = Options::make_average(sp.axis, sp.nsections);
+        opt.method = Options::Method::CALL_BACK;
+    } else {
+        opt.axis = sp.axis;
+        opt.method = Options::Method::SPECIFY;
+        mgb_assert(inputs.size() > 1);
+        opt.nr_part = inputs.size() - 1;
+        opt.partition.resize(opt.nr_part);
+        for (size_t i = 1; i < inputs.size(); ++i)
+            opt.partition[i - 1] = inputs[i];
+    }
     return opr::Split::make(inputs[0], opt, config);
 }
 

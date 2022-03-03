@@ -12,7 +12,7 @@ from typing import Iterable, Optional, Sequence, Tuple, Union
 import numpy as np
 
 from ..core._imperative_rt import CompNode
-from ..core._imperative_rt.core2 import SymbolVar, apply, dtype_promotion
+from ..core._imperative_rt.core2 import SymbolVar, apply, dtype_promotion, split_cpp
 from ..core._wrap import as_device
 from ..core.ops import builtin
 from ..core.ops.builtin import Copy, Identity
@@ -477,50 +477,8 @@ def split(inp, nsplits_or_sections, axis=0):
             [(4, 20), (3, 20), (3, 20)]
             [(10, 6), (10, 11), (10, 3)]
     """
-    ndim = len(inp.shape)
-    if axis >= ndim:
-        raise ValueError("Invalid axis {}".format(axis))
 
-    Ntotal = inp.shape[axis]
-
-    if isinstance(nsplits_or_sections, Sequence):
-        Nsections = len(nsplits_or_sections) + 1
-        is_array = True
-    else:
-        Nsections = int(nsplits_or_sections)
-        is_array = False
-
-    if is_array:
-        partitions = []
-        div_points = [0] + list(nsplits_or_sections) + [Ntotal]
-        for i in range(1, len(div_points)):
-            if div_points[i - 1] > div_points[i]:
-                raise ValueError(
-                    "Invalid nsplits_or_secions: {}".format(nsplits_or_sections)
-                )
-            partitions.append(div_points[i] - div_points[i - 1])
-    else:  # scalar
-        if Nsections <= 0:
-            raise ValueError("Number sections must be larger than 0")
-        if Nsections > Ntotal:
-            raise ValueError(
-                "The size {} at dim {} cannot be split into {} sections".format(
-                    Ntotal, axis, Nsections
-                )
-            )
-        partitions = []
-        for i in range(Nsections):
-            section_size = (Ntotal + Nsections - i - 1) // Nsections
-            partitions.append(section_size)
-
-    partitions = [
-        part
-        if isinstance(part, (SymbolVar, Tensor))
-        else Const(part, dtype="int32", device=inp.device)(inp)[0]
-        for part in partitions
-    ]
-    op = builtin.Split(axis=axis)
-    return apply(op, inp, *partitions)
+    return split_cpp(inp, nsplits_or_sections, axis)
 
 
 def _get_idx(index, axis):

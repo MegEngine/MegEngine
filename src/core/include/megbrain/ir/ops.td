@@ -426,7 +426,8 @@ def Cumsum: MgbHashableOp<"Cumsum", [CumsumParam]>;
 
 def Split: MgbHashableOp<"Split", [EmptyParam]> {
   let extraArguments = (ins
-    MgbI32Attr:$axis
+    MgbI32Attr:$axis,
+    MgbI32Attr:$nsections
   );
 }
 
