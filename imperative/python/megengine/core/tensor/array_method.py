@@ -17,6 +17,7 @@ from .. import _config
 from .._imperative_rt.common import CompNode
 from .._imperative_rt.core2 import SymbolVar, Tensor, apply, dtype_promotion
 from .._imperative_rt.core2 import reduce_to_scalar as _reduce_to_scalar
+from .._imperative_rt.core2 import squeeze_cpp
 from ..ops import builtin
 from . import amp
 from .indexing import getitem, setitem
@@ -448,26 +449,6 @@ def _logical_binary_elwise(mode, rev=False):
     return f
 
 
-def _remove_axis(inp: Tensor, axis) -> Tensor:
-    def get_axes():
-        if axis is None:
-            shp = inp.shape
-            return [i for i, s in enumerate(shp) if s == 1]
-        try:
-            return [int(axis)]
-        except (TypeError, ValueError):
-            pass
-        return list(map(int, axis))
-
-    axis = get_axes()
-    axis = _normalize_axis(inp.ndim, axis)
-    axis = [a - i for i, a in enumerate(axis)]
-
-    op = builtin.RemoveAxis(axis=axis)
-    (result,) = apply(op, inp)
-    return result
-
-
 def _reduce(mode):
     def f(self, axis=None, keepdims: bool = False):
         data = self
@@ -480,7 +461,7 @@ def _reduce(mode):
                 op = builtin.Reduce(mode=mode, axis=ai)
                 (data,) = apply(op, data)
                 if not keepdims:
-                    data = _remove_axis(data, ai)
+                    data = squeeze_cpp(data, ai)
             result = data
         else:
             # builtin.Reduce already accept negtive axis
@@ -488,7 +469,7 @@ def _reduce(mode):
             (result,) = apply(op, data)
 
             if not keepdims:
-                result = _remove_axis(result, axis)
+                result = squeeze_cpp(result, axis)
         return result
 
     return f

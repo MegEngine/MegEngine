@@ -18,12 +18,13 @@ from ..core._imperative_rt.core2 import (
     dtype_promotion,
     expand_dims_cpp,
     split_cpp,
+    squeeze_cpp,
 )
 from ..core._wrap import as_device
 from ..core.ops import builtin
 from ..core.ops.builtin import Copy, Identity
 from ..core.ops.special import Const
-from ..core.tensor.array_method import _broadcast, _remove_axis
+from ..core.tensor.array_method import _broadcast
 from ..core.tensor.utils import astensor1d, convert_inputs, get_device, subgraph_fn
 from ..device import get_default_device
 from ..tensor import Tensor
@@ -996,7 +997,7 @@ def squeeze(inp: Tensor, axis: Optional[Union[int, Sequence[int]]] = None) -> Te
 
             (1, 1, 2)
     """
-    return _remove_axis(inp, axis)
+    return squeeze_cpp(inp, axis)
 
 
 def linspace(
