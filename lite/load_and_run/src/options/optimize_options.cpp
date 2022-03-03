@@ -77,12 +77,6 @@ void WeightPreprocessOption::config_model_internel<ModelLite>(
         if (weight_preprocess) {
             LITE_WARN("enable weight-preprocess optimization");
             model->get_config().options.weight_preprocess = true;
-            //! FIXME: algo searcher enable weight preprocess for opencl(
-            //! implement below has some problem);
-            // #if MGB_OPENCL
-            //             megdnn::opencl::algo_searcher::AlgoSearcherBase::
-            //                     enable_weight_preprocess();
-            // #endif
         }
     }
 }
@@ -95,11 +89,6 @@ void WeightPreprocessOption::config_model_internel<ModelMdl>(
         if (weight_preprocess) {
             mgb_log_warn("enable weight-preprocess optimization");
             graph_option.graph_opt.enable_weight_preprocess();
-            //! FIXME: this implemment is not right
-            // #if MGB_OPENCL
-            //             megdnn::opencl::algo_searcher::AlgoSearcherBase::
-            //                     enable_weight_preprocess();
-            // #endif
         }
     }
 }
@@ -570,12 +559,6 @@ DEFINE_bool(
         enable_jit, false,
         " Execute supported operators with JIT(now only support NVRTC). "
         "Can only be used on Nvidia GPUs");
-#if MGB_ENABLE_ANDROID_NN
-DEFINE_bool(
-        android_nn, false,
-        "Execute supported operators with Android NN. Can only be used "
-        "with --cpu.");
-#endif
 #if MGB_ENABLE_TENSOR_RT
 DEFINE_bool(
         tensorrt, false,

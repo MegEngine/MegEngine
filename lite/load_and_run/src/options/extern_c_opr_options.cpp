@@ -126,7 +126,9 @@ void COprLibOption::init_extern_param(std::shared_ptr<ModelBase> model_ptr) {
 
 void COprLibOption::load_lib() {
     auto handle = dlopen(lib_path.c_str(), RTLD_LAZY);
-    mgb_assert(handle, "failed to open c opr lib %s: %s", lib_path.c_str(), dlerror());
+    mgb_assert(
+            handle, "failed to open c opr lib %s:\n errmsg: %s", lib_path.c_str(),
+            dlerror());
 
     const char* entry = MGB_C_OPR_INIT_FUNC_STR;
     auto func = dlsym(handle, entry);

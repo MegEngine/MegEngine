@@ -94,15 +94,16 @@ void NormalStrategy::run_subline() {
             m_runtime_param.stage = RunStage::AFTER_RUNNING_WAIT;
             stage_config_model();
             auto cur = timer.get_msecs();
-            printf("iter %lu/%lu: %.3fms (exec=%.3fms)\n", i, run_num, cur, exec_time);
+            printf("iter %lu/%lu: %.3f ms (exec=%.3f ms)\n", i, run_num, cur,
+                   exec_time);
             time_sum += cur;
             time_sqrsum += cur * cur;
             fflush(stdout);
             min_time = std::min(min_time, cur);
             max_time = std::max(max_time, cur);
         }
-        printf("\n=== finished test #%u: time=%.3fms avg_time=%.3fms "
-               "sexec=%.3fms min=%.3fms max=%.3fms\n\n",
+        printf("\n=== finished test #%u: time=%.3f ms avg_time=%.3f ms "
+               "sexec=%.3f ms min=%.3f ms max=%.3f ms\n\n",
                idx, time_sum, time_sum / run_num,
                std::sqrt(
                        (time_sqrsum * run_num - time_sum * time_sum) /
@@ -121,7 +122,7 @@ void NormalStrategy::run_subline() {
         m_runtime_param.stage = RunStage::MODEL_RUNNING;
         stage_config_model();
 
-        if (!idx) {
+        if (idx == 0) {
             warm_up();
         }
         tot_time += run_iter(idx);

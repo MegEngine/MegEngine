@@ -8,10 +8,10 @@
  */
 
 #include "plugin_options.h"
+#include <map>
 #include "misc.h"
 #include "models/model_lite.h"
 #include "models/model_mdl.h"
-
 ///////////////////// Plugin options///////////////////////////
 namespace lar {
 
@@ -153,7 +153,12 @@ void DebugOption::format_and_print(
     auto table = mgb::TextTable(tablename);
     auto&& network = model->get_lite_network();
     table.padding(1);
-    table.align(mgb::TextTable::Align::Mid).add("type").add("name").add("shape").eor();
+    table.align(mgb::TextTable::Align::Mid)
+            .add("type")
+            .add("name")
+            .add("shape")
+            .add("dtype")
+            .eor();
 
     auto to_string = [&](lite::Layout& layout) {
         std::string shape("{");
@@ -165,6 +170,19 @@ void DebugOption::format_and_print(
         shape.append("}");
         return shape;
     };
+    auto get_dtype = [&](lite::Layout& layout) {
+        std::map<LiteDataType, std::string> type_map = {
+                {LiteDataType::LITE_FLOAT, "float32"},
+                {LiteDataType::LITE_HALF, "float16"},
+                {LiteDataType::LITE_INT64, "int64"},
+                {LiteDataType::LITE_INT, "int32"},
+                {LiteDataType::LITE_UINT, "uint32"},
+                {LiteDataType::LITE_INT16, "int16"},
+                {LiteDataType::LITE_UINT16, "uint16"},
+                {LiteDataType::LITE_INT8, "int8"},
+                {LiteDataType::LITE_UINT8, "uint8"}};
+        return type_map[layout.data_type];
+    };
 
     auto input_name = network->get_all_input_name();
     for (auto& i : input_name) {
@@ -173,6 +191,7 @@ void DebugOption::format_and_print(
                 .add("INPUT")
                 .add(i)
                 .add(to_string(layout))
+                .add(get_dtype(layout))
                 .eor();
     }
 
@@ -183,6 +202,7 @@ void DebugOption::format_and_print(
                 .add("OUTPUT")
                 .add(i)
                 .add(to_string(layout))
+                .add(get_dtype(layout))
                 .eor();
     }
 
@@ -196,13 +216,28 @@ void DebugOption::format_and_print(
         const std::string& tablename, std::shared_ptr<ModelMdl> model) {
     auto table = mgb::TextTable(tablename);
     table.padding(1);
-    table.align(mgb::TextTable::Align::Mid).add("type").add("name").add("shape").eor();
-
+    table.align(mgb::TextTable::Align::Mid)
+            .add("type")
+            .add("name")
+            .add("shape")
+            .add("dtype")
+            .eor();
+    auto get_dtype = [&](megdnn::DType data_type) {
+        std::map<megdnn::DTypeEnum, std::string> type_map = {
+                {mgb::dtype::Float32().enumv(), "float32"},
+                {mgb::dtype::Int32().enumv(), "int32"},
+                {mgb::dtype::Int16().enumv(), "int16"},
+                {mgb::dtype::Uint16().enumv(), "uint16"},
+                {mgb::dtype::Int8().enumv(), "int8"},
+                {mgb::dtype::Uint8().enumv(), "uint8"}};
+        return type_map[data_type.enumv()];
+    };
     for (auto&& i : model->get_mdl_load_result().tensor_map) {
         table.align(mgb::TextTable::Align::Mid)
                 .add("INPUT")
                 .add(i.first)
                 .add(i.second->shape().to_string())
+                .add(get_dtype(i.second->dtype()))
                 .eor();
     }
 
@@ -211,6 +246,7 @@ void DebugOption::format_and_print(
                 .add("OUTPUT")
                 .add(i.node()->name())
                 .add(i.shape().to_string())
+                .add(get_dtype(i.dtype()))
                 .eor();
     }
 
@@ -358,18 +394,22 @@ DEFINE_double(
 
 DEFINE_bool(
         check_dispatch, false,
-        "check whether an operator call dispatch on cpu comp nodes");
+        "check whether an operator call dispatch on cpu comp nodes This is used to "
+        "find potential bugs in MegDNN");
 
 DEFINE_string(
         check_var_value, "",
         "--check-var-value [interval]|[interval:init_idx], Enable "
-        "VarValueChecker plugin. Refer to its doc for more details");
+        "VarValueChecker plugin. check values of all vars in a graph from given var "
+        "ID(init_idx) with step interval");
 #if MGB_ENABLE_JSON
 DEFINE_string(
         profile, "",
         "Write profiling result to given file. The output file is in "
         "JSON format");
-DEFINE_string(profile_host, "", "focus on host time profiling For some backends");
+DEFINE_string(
+        profile_host, "",
+        "focus on host time profiling For some backends(such as openCL)");
 #endif
 
 ///////////////////// Debug gflags///////////////////////////

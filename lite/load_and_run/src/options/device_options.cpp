@@ -148,7 +148,9 @@ XPUDeviceOption::XPUDeviceOption() {
     }
 
     if (!FLAGS_multi_thread_core_ids.empty()) {
-        mgb_assert(enable_multithread, "core ids should be set after --multithread");
+        mgb_assert(
+                enable_multithread || enable_multithread_default,
+                "core ids should be set after --multithread or --multithread-default");
         std::stringstream id_stream(FLAGS_multi_thread_core_ids);
         std::string id;
         size_t thread_cnt = 0;

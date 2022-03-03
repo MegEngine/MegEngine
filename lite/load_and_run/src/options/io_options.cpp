@@ -286,8 +286,13 @@ DEFINE_string(
 DEFINE_string(io_dump, "", "set the io dump file path in text format");
 DEFINE_bool(io_dump_stdout, false, "dump io opr to stdout in text format");
 DEFINE_bool(io_dump_stderr, false, "dump io opr to stderr in text format");
-DEFINE_string(bin_io_dump, "", "set the io dump file path in binary format");
-DEFINE_string(bin_out_dump, "", "set the out dump file path in binary format");
+DEFINE_string(
+        bin_io_dump, "",
+        "set the io dump directory path where variable in binary format located");
+DEFINE_string(
+        bin_out_dump, "",
+        "set the out dump directory path where output variable in binary format "
+        "located");
 DEFINE_bool(copy_to_host, false, "copy device data to host");
 
 REGIST_OPTION_CREATOR(input, lar::InputOption::create_option);
