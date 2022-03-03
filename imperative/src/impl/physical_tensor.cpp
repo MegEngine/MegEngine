@@ -212,6 +212,11 @@ DeviceTensorND Tensor::dev_tensor(bool contiguous) {
     return ret;
 }
 
+megdnn::TensorND Tensor::dnn_tensor() {
+    mgb_assert(m_blob, "uninitialized tensor.");
+    return {m_layout, {m_blob->storage().get(), m_offset}};
+}
+
 void Tensor::fetch_value() {
     MGB_LOCK_GUARD(m_blob_mtx);
     MGB_LOCK_GUARD(m_value_mtx);

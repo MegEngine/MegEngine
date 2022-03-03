@@ -268,6 +268,12 @@ void Elemwise::perform(
     call_megdnn_opr_exec(out_cn, dnn_inputs, dest.as_megdnn(), opr.get(), nullptr);
 }
 
+void Elemwise::perform_dnn(
+        CompNode cn, DeviceTensorND& dest, megdnn::TensorNDArray& inputs,
+        intl::UniqPtrWithCN<megdnn::Elemwise>& opr) {
+    call_megdnn_opr_exec(cn, inputs, dest.as_megdnn(), opr.get(), nullptr);
+}
+
 TensorLayoutArray Elemwise::collective_collapse(const TensorLayoutArray& layouts) {
     TensorLayoutPtrArray inp(layouts.size());
     TensorLayoutArray result(inp.size());

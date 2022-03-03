@@ -110,6 +110,8 @@ public:
 
     void assign_from_dev_tensor(DeviceTensorND);
 
+    megdnn::TensorND dnn_tensor();
+
     static TensorPtr make_scalar(DTypeScalar value, CompNode cn);
 
     TensorPtr make_scalar(DTypeScalar value) const {

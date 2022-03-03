@@ -114,15 +114,44 @@ void apply_on_device_tensornd(
 SmallVector<TensorPtr> apply_on_physical_tensor(
         const OpDef& def, const SmallVector<TensorPtr>& inputs,
         SmallVector<LogicalTensorDesc>& output_descs, const bool& validated) {
-    SmallVector<DeviceTensorND> inp_tensornds(inputs.size());
+    auto comp_node = inputs[0]->comp_node();
+    using Mode = Elemwise::Mode;
+    using TensorND = megdnn::TensorND;
+    auto&& op_def = def.cast_final_safe<Elemwise>();
+    SmallVector<TensorND> inp_tensornds;
+    TensorShapeArray inp_shapes(inputs.size());
+    inp_tensornds.reserve(inputs.size());
+
+    TensorLayout layout{inputs[0]->layout().dtype};
+    bool is_empty = false;
     for (unsigned i = 0; i < inputs.size(); ++i) {
-        inp_tensornds[i] = inputs[i]->dev_tensor();
+        if (inputs[i]->layout().is_empty()) {
+            is_empty = true;
+        }
+        inp_tensornds.push_back(inputs[i]->dnn_tensor());
+        inp_shapes[i] = inputs[i]->layout();
     }
-    DeviceTensorND out = BlobManager::inst()->alloc_workspace_with_defrag(
-            inp_tensornds[0].comp_node(), output_descs[0].layout);
-    SmallVector<DeviceTensorND> oup_tensornds = {out};
-    apply_on_device_tensornd(def, inp_tensornds, &oup_tensornds);
-    return {Tensor::make(oup_tensornds[0])};
+    megdnn::Elemwise::deduce_shape(inp_shapes, layout);
+    layout.init_contiguous_stride();
+
+    DeviceTensorND out =
+            BlobManager::inst()->alloc_workspace_with_defrag(comp_node, layout);
+    if (is_empty) {
+        return {Tensor::make(out)};
+    }
+    auto&& dnn_opr = opr::intl::create_megdnn_opr<megdnn::Elemwise>(comp_node);
+
+    dnn_opr->param() = op_def.param();
+    if (dnn_opr->param().mode == Mode::FUSE_MUL_ADD3 ||
+        dnn_opr->param().mode == Mode::FUSE_MUL_ADD4 ||
+        (inp_tensornds.size() &&
+         inp_tensornds[0].layout.dtype.category() == DTypeCategory::QUANTIZED)) {
+        opr::Elemwise::perform_dnn(comp_node, out, inp_tensornds, dnn_opr);
+    } else {
+        dnn_opr->exec(inp_tensornds, out.as_megdnn());
+    }
+
+    return {Tensor::make(out)};
 }
 
 MGB_DEFINE_OPR_CLASS(

@@ -88,6 +88,10 @@ public:
             Mode mode, DeviceTensorND& dest, const SmallVector<DeviceTensorND>& inputs,
             intl::UniqPtrWithCN<megdnn::Elemwise>& opr);
 
+    MGE_WIN_DECLSPEC_FUC static void perform_dnn(
+            CompNode cn, DeviceTensorND& dest, megdnn::TensorNDArray& inputs,
+            intl::UniqPtrWithCN<megdnn::Elemwise>& opr);
+
     using TensorLayoutPtrArray = SmallVector<TensorLayout*>;
 
     /*!
