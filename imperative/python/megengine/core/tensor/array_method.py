@@ -15,9 +15,15 @@ import numpy as np
 
 from .. import _config
 from .._imperative_rt.common import CompNode
-from .._imperative_rt.core2 import SymbolVar, Tensor, apply, dtype_promotion
+from .._imperative_rt.core2 import (
+    SymbolVar,
+    Tensor,
+    apply,
+    broadcast_cpp,
+    dtype_promotion,
+)
 from .._imperative_rt.core2 import reduce_to_scalar as _reduce_to_scalar
-from .._imperative_rt.core2 import squeeze_cpp, transpose_cpp
+from .._imperative_rt.core2 import reshape_cpp, squeeze_cpp, transpose_cpp
 from ..ops import builtin
 from . import amp
 from .indexing import getitem, setitem
@@ -331,70 +337,6 @@ def _matmul(
         return result
 
 
-def _broadcast(inp, shape):
-    auto_infer = False
-    if isinstance(shape, (list, tuple)):
-        shape_tuple = list(shape)
-        for i, s in enumerate(shape_tuple):
-            if isinstance(s, type(None)):
-                if s is None:
-                    right = i - len(shape_tuple)
-                    inp_shape = inp._tuple_shape
-                    if len(inp_shape) + right >= 0:
-                        shape_tuple[right] = list(inp_shape)[right]
-                        auto_infer = True
-                        continue
-                    else:
-                        raise ValueError("invalided Broadcast shape")
-                else:
-                    raise ValueError(
-                        "expect shape[{}] >= 0 or use `None` or 'x' and 'X' to auto infer, got {}".format(
-                            i, s
-                        )
-                    )
-            if s < 0:
-                raise ValueError(
-                    "expect shape[{}] >= 0 or use `None` or 'x' and 'X' to auto infer, got {}".format(
-                        i, s
-                    )
-                )
-        if auto_infer:
-            shape = tuple(shape_tuple)
-    try:
-        shape_tuple = make_shape_tuple(shape)
-    except ValueError:
-        shape_tuple = shape
-    shape = astensor1d(shape_tuple, inp, dtype="int32", device=inp.device)
-    (result,) = apply(builtin.Broadcast(), inp, shape)
-    return result
-
-
-def _reshape(x, shape):
-    unspec_axis = None
-    try:
-        shape_tuple = make_shape_tuple(shape)
-    except ValueError:
-        pass
-    else:
-        # XXX: assume unspec_axis is not changed in trace
-        for i, s in enumerate(shape_tuple):
-            if s < 0:
-                if s != -1:
-                    raise ValueError("expect shape[{}] >= -1, got {}".format(i, s))
-                if unspec_axis is not None:
-                    raise ValueError(
-                        "multiple -1 in shape: {} & {}".format(unspec_axis, i)
-                    )
-                unspec_axis = i
-    shape = astensor1d(shape, x, dtype="int32", device=x.device)
-    if unspec_axis is None:
-        op = builtin.Reshape()
-    else:
-        op = builtin.Reshape(axis=unspec_axis)
-    (x,) = apply(op, x, shape)
-    return x
-
-
 def _unary_elwise(mode):
     def f(self):
         return _elwise(self, mode=mode)
@@ -667,11 +609,11 @@ class ArrayMethodMixin(abc.ABC):
 
     def reshape(self, *args):
         r"""See :func:`~.reshape`."""
-        return _reshape(self, _expand_args(args))
+        return reshape_cpp(self, args)
 
     # FIXME: remove this method
     def _broadcast(self, *args):
-        return _broadcast(self, _expand_args(args))
+        return broadcast_cpp(self, args)
 
     def transpose(self, *args):
         r"""See :func:`~.transpose`."""
@@ -679,7 +621,7 @@ class ArrayMethodMixin(abc.ABC):
 
     def flatten(self):
         r"""See :func:`~.flatten`."""
-        return self.reshape(-1)
+        return reshape_cpp(self, (-1,))
 
     def sum(self, axis=None, keepdims: bool = False):
         r"""Returns the sum of each row of the input tensor in the given dimension ``axis``.

@@ -250,7 +250,11 @@ def Concat: MgbHashableOp<"Concat", [AxisParam]> {
   );
 }
 
-def Broadcast : MgbHashableOp<"Broadcast", [EmptyParam]>;
+def Broadcast : MgbHashableOp<"Broadcast", [EmptyParam]> {
+  let extraArguments = (ins
+    MgbArrayAttr<MgbI32Attr>:$shape
+  );
+}
 
 def Identity: MgbHashableOp<"Identity">;
 
@@ -318,7 +322,11 @@ def Dimshuffle: MgbHashableOp<"Dimshuffle"> {
   let results = (outs AnyMemRef);
 }
 
-def Reshape: MgbHashableOp<"Reshape", [OptionalAxisV1Param]>;
+def Reshape: MgbHashableOp<"Reshape", [OptionalAxisV1Param]> {
+  let extraArguments = (ins
+    MgbArrayAttr<MgbI32Attr>:$shape
+  );
+}
 
 // TODO: merge Add/Remove Axis into AxisAddRemove as megbrain?
 def AddAxis: MgbHashableOp<"AddAxis"> {

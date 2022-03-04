@@ -15,6 +15,7 @@ from ..core._imperative_rt import CompNode
 from ..core._imperative_rt.core2 import (
     SymbolVar,
     apply,
+    broadcast_cpp,
     dtype_promotion,
     expand_dims_cpp,
     split_cpp,
@@ -24,7 +25,6 @@ from ..core._wrap import as_device
 from ..core.ops import builtin
 from ..core.ops.builtin import Copy, Identity
 from ..core.ops.special import Const
-from ..core.tensor.array_method import _broadcast
 from ..core.tensor.utils import astensor1d, convert_inputs, get_device, subgraph_fn
 from ..device import get_default_device
 from ..tensor import Tensor
@@ -360,7 +360,7 @@ def broadcast_to(inp: Tensor, shape: Union[int, Iterable[int]]) -> Tensor:
             [[0. 1. 2.]
              [0. 1. 2.]]
     """
-    return _broadcast(inp, shape)
+    return broadcast_cpp(inp, shape)
 
 
 def concat(inps: Iterable[Tensor], axis: int = 0, device=None) -> Tensor:

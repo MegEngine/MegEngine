@@ -243,8 +243,10 @@ ValueRefList get_var_shape_rule(
 ValueRefList reshape_rule(
         const Reshape& reshape, Span<ValueRef> inputs, Span<bool> inputs_mask,
         const Type<ScalarValue>& scalar_type) {
-    mgb_assert(inputs.size() == 2);
-    bool is_scalar = is_scalar_shape(inputs[1]);
+    mgb_assert(inputs.size() == 1 || inputs.size() == 2);
+    size_t nr_inp = inputs.size();
+    bool is_scalar = (nr_inp == 2 && is_scalar_shape(inputs[1])) ||
+                     (nr_inp == 1 && reshape.shape.size() == 0);
     if (is_scalar) {
         return {scalar_type.make(imperative::apply(
                 reshape, inputs[0], make_scalar_shape(*inputs[0].device()))[0])};
@@ -256,8 +258,10 @@ ValueRefList reshape_rule(
 ValueRefList broadcast_rule(
         const Broadcast& broadcast, Span<ValueRef> inputs, Span<bool> inputs_mask,
         const Type<ScalarValue>& scalar_type) {
-    mgb_assert(inputs.size() == 2);
-    bool is_scalar = is_scalar_shape(inputs[1]);
+    mgb_assert(inputs.size() == 1 || inputs.size() == 2);
+    size_t nr_inp = inputs.size();
+    bool is_scalar = (nr_inp == 2 && is_scalar_shape(inputs[1])) ||
+                     (nr_inp == 1 && broadcast.shape.size() == 0);
     if (is_scalar) {
         return {scalar_type.make(imperative::apply(
                 broadcast, inputs[0], make_scalar_shape(*inputs[0].device()))[0])};

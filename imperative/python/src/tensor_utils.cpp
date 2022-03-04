@@ -800,29 +800,46 @@ size_t fast_ndim(py::handle tensor) {
     return getattr(tensor, "ndim").cast<size_t>();
 }
 
-py::object _transpose_cpp(py::handle inp_hdl, py::handle args) {
+py::object _expand_args(py::handle args) {
+    if (!PyTuple_Check(args.ptr())) {
+        return py::reinterpret_borrow<py::object>(args);
+    }
     py::tuple args_tup = py::reinterpret_borrow<py::tuple>(args.ptr());
+    if (args_tup.size() == 1 && (PySequence_Check(args_tup[0].ptr()) ||
+                                 is_tensor_or_symbolvar(args_tup[0].ptr()))) {
+        return py::reinterpret_borrow<py::object>(args_tup[0]);
+    } else {
+        return py::reinterpret_steal<py::list>(PySequence_List(args_tup.ptr()));
+    }
+}
+
+py::object _transpose_cpp(py::handle inp_hdl, py::handle args) {
+    py::object obj = _expand_args(args);
+    py::list lis;
+    if (!is_tensor_or_symbolvar(obj.ptr()) && PySequence_Check(obj.ptr())) {
+        lis = py::reinterpret_steal<py::list>(PySequence_List(obj.ptr()));
+    } else {
+        py::object np = getattr(obj, "numpy")();
+        PyArrayObject* arr = (PyArrayObject*)np.ptr();
+        PyObject* maybe_list = PyArray_ToList(arr);
+        if (PyList_Check(maybe_list)) {
+            lis = py::reinterpret_steal<py::list>(maybe_list);
+        }
+    }
     if (fast_ndim(inp_hdl) == 0) {
-        if (args_tup.size() != 0) {
+        if (lis.size() != 0) {
             throw py::index_error(
                     "transpose for scalar does not accept additional args");
         }
         return getattr(inp_hdl, "to")(getattr(inp_hdl, "device"));
     }
     std::vector<int32_t> pattern;
-    if (!args_tup.size()) {
+    if (!lis.size()) {
         size_t ndim = getattr(inp_hdl, "ndim").cast<size_t>();
         for (size_t i = 0; i < ndim; ++i) {
             pattern.push_back(ndim - i - 1);
         }
     } else {
-        py::list lis;
-        if (args_tup.size() == 1 && (PySequence_Check(args_tup[0].ptr()) ||
-                                     is_tensor_or_symbolvar(args_tup[0].ptr()))) {
-            lis = py::reinterpret_steal<py::list>(PySequence_List(args_tup[0].ptr()));
-        } else {
-            lis = py::reinterpret_steal<py::list>(PySequence_List(args_tup.ptr()));
-        }
         for (size_t i = 0; i < lis.size(); ++i) {
             if (PyLong_Check(lis[i].ptr())) {
                 pattern.push_back(lis[i].cast<int32_t>());
@@ -836,6 +853,182 @@ py::object _transpose_cpp(py::handle inp_hdl, py::handle args) {
     std::shared_ptr<OpDef> op = Dimshuffle::make(pattern);
     std::vector<PyObject*> p;
     p.resize(2);
+    py::object Op = py::cast(op);
+    p[0] = Op.ptr();
+    p[1] = inp_hdl.ptr();
+    py::tuple ret =
+            py::reinterpret_steal<py::object>(py_apply(NULL, p.data(), p.size()));
+    return ret[0];
+}
+
+std::tuple<std::vector<int32_t>, bool> tuple2vector(py::object shape) {
+    std::vector<int32_t> shp;
+    if (!PyTuple_Check(shape.ptr())) {
+        return {shp, false};
+    }
+    py::tuple tup = py::reinterpret_borrow<py::tuple>(shape);
+    for (size_t i = 0; i < tup.size(); ++i) {
+        if (!PyLong_Check(tup[i].ptr())) {
+            return {shp, false};
+        } else {
+            shp.push_back(tup[i].cast<int32_t>());
+        }
+    }
+    return {shp, true};
+}
+
+bool enable_fastpath(py::handle inp) {
+    if (!TensorWrapper::try_cast(inp.ptr()) ||
+        TransformationManager::get_instance()
+                        .segments[TransformationManager::Segment::Trace]
+                        .size() > 0 ||
+        TransformationManager::get_instance()
+                        .segments[TransformationManager::Segment::ModuleTrace]
+                        .size() > 0) {
+        return false;
+    }
+    return true;
+}
+
+py::object _broadcast_cpp(py::handle inp_hdl, py::handle args) {
+    py::object shape_hdl = _expand_args(args);
+    bool auto_infer = false;
+    py::list lis;
+    py::list new_shape;
+    if (PyList_Check(shape_hdl.ptr()) || PyTuple_Check(shape_hdl.ptr())) {
+        lis = py::reinterpret_steal<py::list>(PySequence_List(shape_hdl.ptr()));
+        for (size_t i = 0; i < lis.size(); ++i) {
+            if (lis[i].ptr() == Py_None) {
+                auto_infer = true;
+                size_t right = lis.size() - i;
+                py::object tshp = getattr(inp_hdl, "_tuple_shape");
+                if (tshp.ptr() == Py_None) {
+                    throw py::index_error("does not support `None` with unknown shape");
+                }
+                py::tuple inp_shape = py::reinterpret_borrow<py::tuple>(tshp);
+                if (inp_shape.size() >= right) {
+                    if (enable_fastpath(inp_hdl)) {
+                        lis[i] = inp_shape[inp_shape.size() - right];
+                    }
+                    new_shape.append(inp_shape[inp_shape.size() - right]);
+                } else {
+                    throw py::value_error("invalid broadcast shape");
+                }
+            } else {
+                new_shape.append(lis[i]);
+                if (PyLong_Check(lis[i].ptr())) {
+                    int32_t s = lis[i].cast<int32_t>();
+                    if (s < 0) {
+                        throw py::value_error(
+                                "expect shape[" + std::to_string(i) +
+                                "] >= 0 or use `None` to auto infer, got " +
+                                std::to_string(s));
+                    }
+                }
+            }
+        }
+    }
+    if (auto_infer) {
+        if (enable_fastpath(inp_hdl)) {
+            shape_hdl = py::reinterpret_borrow<py::tuple>(lis);
+        } else {
+            py::tuple args = py::make_tuple(new_shape, inp_hdl);
+            py::dict kwargs;
+            kwargs["dtype"] = py::cast((mgb::DType)dtype::Int32());
+            kwargs["device"] = getattr(inp_hdl, "device");
+            shape_hdl = py::reinterpret_steal<py::object>(
+                    PyObject_Call(cpp_astensor1d, args.ptr(), kwargs.ptr()));
+        }
+    }
+    py::object shape_tuple;
+    try {
+        shape_tuple = _make_shape_tuple(shape_hdl);
+    } catch (py::error_already_set& err) {
+        shape_tuple = py::reinterpret_borrow<py::object>(shape_hdl);
+    }
+    auto [shape, fastpath] = tuple2vector(shape_tuple);
+    fastpath &= enable_fastpath(inp_hdl);
+    std::shared_ptr<OpDef> op;
+    std::vector<PyObject*> p;
+    py::object shape_tensor;
+    if (fastpath) {
+        op = Broadcast::make(shape);
+        p.resize(2);
+    } else {
+        op = Broadcast::make();
+        py::tuple args = py::make_tuple(shape_hdl, inp_hdl);
+        py::dict kwargs;
+        kwargs["dtype"] = py::cast((mgb::DType)dtype::Int32());
+        kwargs["device"] = getattr(inp_hdl, "device");
+        shape_tensor = py::reinterpret_steal<py::object>(
+                PyObject_Call(cpp_astensor1d, args.ptr(), kwargs.ptr()));
+        p.resize(3);
+        p[2] = shape_tensor.ptr();
+    }
+    py::object Op = py::cast(op);
+    p[0] = Op.ptr();
+    p[1] = inp_hdl.ptr();
+    py::tuple ret =
+            py::reinterpret_steal<py::object>(py_apply(NULL, p.data(), p.size()));
+    return ret[0];
+}
+
+py::object _reshape_cpp(py::handle inp_hdl, py::handle args) {
+    py::object shape_hdl = _expand_args(args);
+    py::object shape_tuple;
+    try {
+        shape_tuple = _make_shape_tuple(shape_hdl);
+    } catch (py::error_already_set& err) {
+        shape_tuple = py::reinterpret_borrow<py::object>(shape_hdl);
+    }
+    int32_t unspec_axis = -1;
+    if (PyTuple_Check(shape_tuple.ptr())) {
+        py::tuple tup = py::reinterpret_borrow<py::tuple>(shape_tuple);
+        for (size_t i = 0; i < tup.size(); ++i) {
+            py::object obj = py::reinterpret_borrow<py::object>(tup[i]);
+            if (obj < py::int_(0)) {
+                if (obj.not_equal(py::int_(-1))) {
+                    throw py::value_error(
+                            "expect shape [" + std::to_string(i) + "] >= -1, got " +
+                            repr(obj).cast<std::string>());
+                }
+                if (unspec_axis >= 0) {
+                    throw py::value_error(
+                            "multiple -1 in shape: " + std::to_string(unspec_axis) +
+                            " & " + std::to_string(i));
+                }
+                unspec_axis = i;
+            }
+        }
+    }
+    auto [shape, fastpath] = tuple2vector(shape_tuple);
+    fastpath &= enable_fastpath(inp_hdl);
+    std::shared_ptr<OpDef> op;
+    std::vector<PyObject*> p;
+    py::object shape_tensor;
+    if (fastpath) {
+        if (unspec_axis >= 0) {
+            op = Reshape::make(unspec_axis, shape);
+        } else {
+            op = Reshape::make(::megdnn::param::OptionalAxisV1::INVALID_AXIS, shape);
+        }
+        p.resize(2);
+    } else {
+        shape.clear();
+        if (unspec_axis >= 0) {
+            op = Reshape::make(unspec_axis, shape);
+        } else {
+            op = Reshape::make();
+        }
+        py::tuple args = py::make_tuple(shape_hdl, inp_hdl);
+        py::dict kwargs;
+        kwargs["dtype"] = py::cast((mgb::DType)dtype::Int32());
+        kwargs["device"] = getattr(inp_hdl, "device");
+        shape_tensor = py::reinterpret_steal<py::object>(
+                PyObject_Call(cpp_astensor1d, args.ptr(), kwargs.ptr()));
+        p.resize(3);
+        p[2] = shape_tensor.ptr();
+    }
     py::object Op = py::cast(op);
     p[0] = Op.ptr();
     p[1] = inp_hdl.ptr();
@@ -896,6 +1089,20 @@ PyObject* squeeze_cpp(PyObject* self, PyObject* const* args, size_t nargs) {
 PyObject* transpose_cpp(PyObject* self, PyObject* const* args, size_t nargs) {
     try {
         return _transpose_cpp(py::handle(args[0]), py::handle(args[1])).release().ptr();
+    }
+    PYEXT17_TRANSLATE_EXC_RET(nullptr)
+}
+
+PyObject* broadcast_cpp(PyObject* self, PyObject* const* args, size_t nargs) {
+    try {
+        return _broadcast_cpp(py::handle(args[0]), py::handle(args[1])).release().ptr();
+    }
+    PYEXT17_TRANSLATE_EXC_RET(nullptr)
+}
+
+PyObject* reshape_cpp(PyObject* self, PyObject* const* args, size_t nargs) {
+    try {
+        return _reshape_cpp(py::handle(args[0]), py::handle(args[1])).release().ptr();
     }
     PYEXT17_TRANSLATE_EXC_RET(nullptr)
 }

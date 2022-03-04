@@ -135,25 +135,57 @@ std::optional<ValueRefList> elemwise_grad_rule(
 std::optional<ValueRefList> reshape_grad_rule(
         const OpDef& op, Span<ValueRef> inputs, Span<bool> inputs_require_grad,
         CustomBackward& backward) {
-    mgb_assert(inputs.size() == 2);
+    mgb_assert(inputs.size() == 1 || inputs.size() == 2);
+    size_t nr_inp = inputs.size();
     std::array<ValueRef, 2> input_shapes;
-    for (size_t i = 0; i < 2; ++i) {
+    for (size_t i = 0; i < nr_inp; ++i) {
         if (inputs_require_grad[i]) {
             input_shapes[i] = get_shape(inputs[i]);
         }
     }
     auto maker = CustomGradMaker(backward, inputs.size());
     maker.output_size(1).output_captured(0, false);
-    maker.backward([shapes = std::move(input_shapes)](Span<ValueRef> grads) {
+    maker.backward([shapes = std::move(input_shapes), nr_inp](Span<ValueRef> grads) {
         mgb_assert(grads.size() == 1);
         ValueRef grad = grads[0];
-        SmallVector<ValueRef> ret(2);
+        SmallVector<ValueRef> ret(nr_inp);
         if (!grad) {
             return ret;
         }
-        for (size_t i = 0; i < 2; ++i) {
+        for (size_t i = 0; i < nr_inp; ++i) {
             if (shapes[i]) {
                 ret[i] = reshape_to(grad, shapes[i]);
+            }
+        }
+        return ret;
+    });
+    maker.finalize();
+    return imperative::apply(ApplyOp(op), inputs);
+}
+
+std::optional<ValueRefList> broadcast_grad_rule(
+        const OpDef& op, Span<ValueRef> inputs, Span<bool> inputs_require_grad,
+        CustomBackward& backward) {
+    mgb_assert(inputs.size() == 1 || inputs.size() == 2);
+    size_t nr_inp = inputs.size();
+    std::array<ValueRef, 2> input_shapes;
+    for (size_t i = 0; i < nr_inp; ++i) {
+        if (inputs_require_grad[i]) {
+            input_shapes[i] = get_shape(inputs[i]);
+        }
+    }
+    auto maker = CustomGradMaker(backward, inputs.size());
+    maker.output_size(1).output_captured(0, false);
+    maker.backward([shapes = std::move(input_shapes), nr_inp](Span<ValueRef> grads) {
+        mgb_assert(grads.size() == 1);
+        ValueRef grad = grads[0];
+        SmallVector<ValueRef> ret(nr_inp);
+        if (!grad) {
+            return ret;
+        }
+        for (size_t i = 0; i < nr_inp; ++i) {
+            if (shapes[i]) {
+                ret[i] = reduce_to(grad, shapes[i]);
             }
         }
         return ret;
@@ -330,6 +362,7 @@ struct Init {
     Init() {
         CustomBackward::register_grad_rule(Elemwise::typeinfo(), elemwise_grad_rule);
         CustomBackward::register_grad_rule(Reshape::typeinfo(), reshape_grad_rule);
+        CustomBackward::register_grad_rule(Broadcast::typeinfo(), broadcast_grad_rule);
         CustomBackward::register_grad_rule(Subtensor::typeinfo(), subtensor_grad_rule);
         CustomBackward::register_grad_rule(
                 IndexingMultiAxisVec::typeinfo(), indexingMultiAxisVec_grad_rule);

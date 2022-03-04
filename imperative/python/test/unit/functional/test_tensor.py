@@ -267,7 +267,7 @@ def test_broadcast_auto_infer(is_varnode):
         F.broadcast_to(xx, (None, 1, 2, 3))
 
     F.broadcast_to(xx, (1, None, 2, 3))
-    t = tensor(2, dtype=np.int32)
+    t = make_tensor(2, network)
     F.broadcast_to(xx, (t, None, 2, 3))
 
 

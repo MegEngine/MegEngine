@@ -16,4 +16,8 @@ PyObject* squeeze_cpp(PyObject* self, PyObject* const* args, size_t nargs);
 
 PyObject* transpose_cpp(PyObject* self, PyObject* const* args, size_t nargs);
 
+PyObject* broadcast_cpp(PyObject* self, PyObject* const* args, size_t nargs);
+
+PyObject* reshape_cpp(PyObject* self, PyObject* const* args, size_t nargs);
+
 }  // namespace mgb::imperative::python
