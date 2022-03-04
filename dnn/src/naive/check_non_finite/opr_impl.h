@@ -17,7 +17,7 @@ namespace megdnn {
 namespace naive {
 
 class CheckNonFiniteImpl final : public CheckNonFinite {
-    size_t _get_workspace_in_bytes() override { return 0; }
+    size_t _get_workspace_in_bytes() { return 0; }
 
 public:
     using CheckNonFinite::CheckNonFinite;

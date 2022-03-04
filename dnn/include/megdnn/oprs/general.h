@@ -1383,7 +1383,6 @@ public:
 protected:
     void check_exec(
             const TensorNDArray& srcs, const TensorND& dst, size_t workspace_in_bytes);
-    virtual size_t _get_workspace_in_bytes() = 0;
 };
 
 /*!

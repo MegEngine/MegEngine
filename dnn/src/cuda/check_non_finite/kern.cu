@@ -18,11 +18,15 @@ namespace cuda {
 
 #define COMMA ,
 
-INST_REDUCE(
-        device_reduce::CheckNonFiniteOp<
-                dt_float32 COMMA size_t COMMA dt_int32 COMMA dt_int32>,
-        false);
+#define cb(_dtype)                                                      \
+    INST_REDUCE(                                                        \
+            device_reduce::CheckNonFiniteOp<                            \
+                    _dtype COMMA size_t COMMA dt_int32 COMMA dt_int32>, \
+            false);
 
+cb(dt_float32);
+cb(dt_float16);
+#undef cb
 #undef COMMA
 }  // namespace cuda
 }  // namespace megdnn
