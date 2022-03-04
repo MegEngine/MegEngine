@@ -865,7 +865,7 @@ def transpose(inp: Tensor, pattern: Iterable[int]) -> Tensor:
             [[1 0]
             [1 0]]
     """
-    return inp.transpose(list(-1 if _ == "x" else _ for _ in pattern))
+    return inp.transpose(pattern)
 
 
 def reshape(inp: Tensor, target_shape: Iterable[int]) -> Tensor:

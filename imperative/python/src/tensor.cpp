@@ -636,6 +636,7 @@ WRAP_FUNC_PY35(setitem_cpp);
 WRAP_FUNC_PY35(split_cpp);
 WRAP_FUNC_PY35(expand_dims_cpp);
 WRAP_FUNC_PY35(squeeze_cpp);
+WRAP_FUNC_PY35(transpose_cpp);
 #undef WRAP_FUNC_PY35
 #define MGE_PY_INTERFACE(NAME, FUNC) \
     { #NAME, (PyCFunction)py35_##FUNC, METH_VARARGS, nullptr }
@@ -771,6 +772,7 @@ void init_tensor(py::module m) {
             MGE_PY_INTERFACE(split_cpp, split_cpp),
             MGE_PY_INTERFACE(expand_dims_cpp, expand_dims_cpp),
             MGE_PY_INTERFACE(squeeze_cpp, squeeze_cpp),
+            MGE_PY_INTERFACE(transpose_cpp, transpose_cpp),
             {nullptr, nullptr, 0, nullptr}};
     for (auto&& def : method_defs) {
         if (def.ml_meth != nullptr) {

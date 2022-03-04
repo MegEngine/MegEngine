@@ -17,7 +17,7 @@ from .. import _config
 from .._imperative_rt.common import CompNode
 from .._imperative_rt.core2 import SymbolVar, Tensor, apply, dtype_promotion
 from .._imperative_rt.core2 import reduce_to_scalar as _reduce_to_scalar
-from .._imperative_rt.core2 import squeeze_cpp
+from .._imperative_rt.core2 import squeeze_cpp, transpose_cpp
 from ..ops import builtin
 from . import amp
 from .indexing import getitem, setitem
@@ -329,12 +329,6 @@ def _matmul(
         )
         (result,) = apply(extentedBatchedMatrixMulOp(), inp1, inp2)
         return result
-
-
-def _transpose(data, axes):
-    op = builtin.Dimshuffle(axes)
-    (result,) = apply(op, data)
-    return result
 
 
 def _broadcast(inp, shape):
@@ -681,15 +675,7 @@ class ArrayMethodMixin(abc.ABC):
 
     def transpose(self, *args):
         r"""See :func:`~.transpose`."""
-        if self.ndim == 0:
-            assert (
-                len(args) == 0
-            ), "transpose for scalar does not accept additional args"
-            ret = self.to(self.device)
-            return ret
-        if not args:
-            args = range(self.ndim)[::-1]
-        return _transpose(self, _expand_args(args))
+        return transpose_cpp(self, args)
 
     def flatten(self):
         r"""See :func:`~.flatten`."""
