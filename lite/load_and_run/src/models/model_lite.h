@@ -40,7 +40,6 @@ public:
     void wait() override;
 
     //! enable global layout transform
-
     void set_layout_transform(bool state) { enable_layout_transform = state; }
 
     //! get the network of lite model

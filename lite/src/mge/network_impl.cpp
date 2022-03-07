@@ -422,6 +422,8 @@ void NetworkImplDft::load_model(
 
     m_load_result = m_loader->load(m_load_config, true);
 
+    modify_exection_policy();
+
     global_layout_transform();
 
     adapt_option_valid();
@@ -436,7 +438,6 @@ void NetworkImplDft::load_model(
 }
 
 void NetworkImplDft::compile_graph() {
-    modify_exection_policy();
     replace_dev_input_pass();
     make_output_spec();
     m_execute_func = m_load_result.graph_compile(m_output_spec);
@@ -793,7 +794,8 @@ void NetworkImplDft::set_network_algo_policy(
     if (static_cast<uint32_t>(strategy) & LiteAlgoSelectStrategy::LITE_ALGO_OPTIMIZED) {
         dst_strategy = dst_strategy | S::OPTIMIZED;
     }
-    m_execution_policy = dst_strategy;
+    if (static_cast<uint32_t>(dst_strategy) != 0)
+        m_execution_policy = dst_strategy;
 
     auto&& fast_run_config = m_load_config.comp_graph->options().fast_run_config;
     fast_run_config.binary_equal_between_batch = binary_equal_between_batch;
@@ -808,12 +810,10 @@ void NetworkImplDft::set_network_algo_policy(
 }
 
 void NetworkImplDft::modify_exection_policy() {
-    mgb::SymbolVarArray vars;
-    for (auto i : m_output_spec) {
-        vars.push_back(i.first);
-    }
-    if (static_cast<uint32_t>(m_execution_policy) != 0)
+    auto& vars = m_load_result.output_var_list;
+    if (static_cast<uint32_t>(m_execution_policy) != 0) {
         mgb::gopt::modify_opr_algo_strategy_inplace(vars, m_execution_policy);
+    }
 }
 
 //! set opr algorithm selection strategy in the network

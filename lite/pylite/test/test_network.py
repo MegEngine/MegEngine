@@ -468,3 +468,29 @@ class TestNetwork(TestShuffleNet):
         fi = open("./model_afer_layoutTrans.mgb", "r")
         fi.close()
         os.remove("./model_afer_layoutTrans.mgb")
+
+    def test_fast_run_and_global_layout_transform(self):
+
+        config_ = LiteConfig()
+        network = LiteNetwork(config_)
+        fast_run_cache = "./algo_cache"
+        global_layout_transform_model = "./model_afer_layoutTrans.mgb"
+        network.set_network_algo_policy(
+            LiteAlgoSelectStrategy.LITE_ALGO_PROFILE
+            | LiteAlgoSelectStrategy.LITE_ALGO_OPTIMIZED
+        )
+        network.enable_global_layout_transform()
+        network.load(self.model_path)
+        self.do_forward(network)
+        network.dump_layout_transform_model(global_layout_transform_model)
+        LiteGlobal.dump_persistent_cache(fast_run_cache)
+        fi = open(fast_run_cache, "r")
+        fi.close()
+        fi = open(global_layout_transform_model, "r")
+        fi.close()
+
+        LiteGlobal.set_persistent_cache(path=fast_run_cache)
+        self.do_forward(network)
+
+        os.remove(fast_run_cache)
+        os.remove(global_layout_transform_model)

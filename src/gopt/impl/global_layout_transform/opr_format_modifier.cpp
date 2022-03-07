@@ -289,21 +289,21 @@ namespace intl {
 template <typename Opr>
 struct OprFormatModifier;
 
-#define INST(_Opr)                                                   \
-    template <>                                                      \
-    struct OprFormatModifier<_Opr> {                                 \
-        using OprFormat = typename _Opr::Param::Format;              \
-        static VarNode* make(                                        \
-                OprFormat opr_format, const VarNodeArray& i,         \
-                const cg::OperatorNodeBase* opr_) {                  \
-            MIDOUT_B(_Opr)                                           \
-            auto&& opr = opr_->cast_final_safe<_Opr>();              \
-            auto param = opr.param();                                \
-            param.format = opr_format;                               \
-            return OprWithPolicyMaker<_Opr>::make(                   \
-                    i, param, opr.execution_policy(), opr.config()); \
-            MIDOUT_E                                                 \
-        }                                                            \
+#define INST(_Opr)                                                             \
+    template <>                                                                \
+    struct OprFormatModifier<_Opr> {                                           \
+        using OprFormat = typename _Opr::Param::Format;                        \
+        static VarNode* make(                                                  \
+                OprFormat opr_format, const VarNodeArray& i,                   \
+                const cg::OperatorNodeBase* opr_) {                            \
+            MIDOUT_B(_Opr)                                                     \
+            auto&& opr = opr_->cast_final_safe<_Opr>();                        \
+            auto param = opr.param();                                          \
+            param.format = opr_format;                                         \
+            return OprWithPolicyMaker<_Opr>::make(                             \
+                    i, param, opr.execution_policy_transient(), opr.config()); \
+            MIDOUT_E                                                           \
+        }                                                                      \
     };
 INST(Convolution);
 INST(ConvBiasForward);
