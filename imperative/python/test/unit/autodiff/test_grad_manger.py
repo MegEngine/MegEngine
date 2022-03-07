@@ -13,6 +13,7 @@ import numpy as np
 import pytest
 
 import megengine as mge
+import megengine.core.tensor.dtype as dtype
 import megengine.distributed as dist
 import megengine.functional as F
 import megengine.module as M
@@ -469,3 +470,18 @@ def test_2nd_grad_with_custom_gradient():
     np.testing.assert_almost_equal(
         x.grad.numpy(), -np.sin(x_np) - np.cos(x_np), decimal=5
     )
+
+
+@pytest.mark.parametrize("invalid_dtype", [np.uint8, np.int8, np.int32])
+def test_attach_invalid_tensor_dtype(invalid_dtype):
+    gm = GradManager()
+    x = mge.tensor([1], dtype=invalid_dtype)
+    with pytest.raises(AssertionError):
+        gm.attach([x])
+
+
+@pytest.mark.parametrize("differentible_dtype", [np.float32, np.float16])
+def test_attach_differentible_tensor_dtype(differentible_dtype):
+    gm = GradManager()
+    x = mge.tensor([1], dtype=differentible_dtype)
+    gm.attach([x])
