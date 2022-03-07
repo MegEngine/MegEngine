@@ -320,12 +320,6 @@ def conv3d(
     stride = _triple_nonzero(stride)
     dilate = _triple_nonzero(dilation)
 
-    dtype = dtype_promotion(inp, weight)
-    if inp.dtype != dtype:
-        inp = inp.astype(dtype)
-    if weight.dtype != dtype:
-        weight = weight.astype(dtype)
-
     sparse_type = "dense" if groups == 1 else "group"
     op = builtin.Convolution3D(
         pad_d=pad[D],
@@ -389,15 +383,6 @@ def conv_transpose2d(
         conv_mode.lower() == "cross_correlation"
         or conv_mode.name == "CROSS_CORRELATION"
     )
-    if amp._enabled:
-        compute_mode = "float32"
-        inp, weight, bias = cast_tensors(inp, weight, bias)
-    else:
-        dtype = dtype_promotion(inp, weight)
-        if inp.dtype != dtype:
-            inp = inp.astype(dtype)
-        if weight.dtype != dtype:
-            weight = weight.astype(dtype)
 
     stride_h, stride_w = expand_hw(stride)
     pad_h, pad_w = expand_hw(padding)
@@ -418,6 +403,8 @@ def conv_transpose2d(
     )
     (output,) = apply(op, weight, inp)
     if bias is not None:
+        if amp._enabled:
+            bias = cast_tensors(bias)
         output += bias
     return output
 
@@ -590,12 +577,6 @@ def conv_transpose3d(
     pad = _triple(padding)
     stride = _triple_nonzero(stride)
     dilate = _triple_nonzero(dilation)
-
-    dtype = dtype_promotion(inp, weight)
-    if inp.dtype != dtype:
-        inp = inp.astype(dtype)
-    if weight.dtype != dtype:
-        weight = weight.astype(dtype)
 
     sparse_type = "dense" if groups == 1 else "group"
     op = builtin.Convolution3DBackwardData(
