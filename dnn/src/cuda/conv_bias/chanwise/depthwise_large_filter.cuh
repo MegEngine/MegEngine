@@ -142,7 +142,7 @@ struct ConvTraitInner {
     }
 
 #define CHECK_AB_BWD(a, b)                                                             \
-    if (param.out_w > b * 4) {                                                         \
+    if (param.out_w > b * 4 || b == 3) {                                               \
         using FilterTileConfig_ = FilterTileConfig<unroll_fh, a + 2>;                  \
         using ThreadConfig_ = ThreadConfig<4, 32>;                                     \
         using OutTileConfig_ = OutTileConfig<ThreadConfig_, unroll_oh, b + 1>;         \
@@ -165,11 +165,9 @@ struct ConvTraitInner {
         return true;                                                                   \
     }
 
-#define CHECK_A(a, cb)                                                                                                                                                                                                                                                                                                                                                                                          \
-    if (param.flt_w > a * 4) {                                                                                                                                                                                                                                                                                                                                                                                  \
-        CHECK_AB_##cb(                                                                                                                                                                                                                                                                                                                                                                                          \
-                a,                                                                                                                                                                                                                                                                                                                                                                                              \
-                15) else CHECK_AB_##cb(a, 14) else CHECK_AB_##cb(a, 13) else CHECK_AB_##cb(a, 12) else CHECK_AB_##cb(a, 11) else CHECK_AB_##cb(a, 10) else CHECK_AB_##cb(a, 9) else CHECK_AB_##cb(a, 8) else CHECK_AB_##cb(a, 7) else CHECK_AB_##cb(a, 6) else CHECK_AB_##cb(a, 5) else CHECK_AB_##cb(a, 4) else CHECK_AB_##cb(a, 3) else CHECK_AB_##cb(a, 2) else CHECK_AB_##cb(a, 1) else CHECK_AB_##cb(a, 0) \
+#define CHECK_A(a, cb)                                                         \
+    if (param.flt_w > a * 4) {                                                 \
+        CHECK_AB_##cb(a, 15) else CHECK_AB_##cb(a, 7) else CHECK_AB_##cb(a, 3) \
     }
 
 #define CHECK(cb)  \
