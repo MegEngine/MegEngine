@@ -88,7 +88,7 @@ private:
 /*!
  * \brief dot product of two tensors
  */
-MGB_DEFINE_OPR_CLASS(
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(
         Dot, cg::SingleCNOperatorNodeBaseT<mixin::MegDNNOprHolderImpl<megdnn::Dot>>) // {
 public:
     MGE_WIN_DECLSPEC_FUC Dot(

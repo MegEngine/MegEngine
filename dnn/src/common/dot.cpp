@@ -33,7 +33,7 @@ void DotForward::check_exec(
     megdnn_assert(workspace_in_bytes >= required_workspace_in_bytes);
 }
 
-void DotForward::deduce_layout(
+MGE_WIN_DECLSPEC_FUC void DotForward::deduce_layout(
         const TensorLayout& A, const TensorLayout&, TensorLayout& C) {
     C = TensorLayout(TensorShape{1}, A.dtype);
 }
