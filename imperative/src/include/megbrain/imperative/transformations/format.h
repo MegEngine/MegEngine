@@ -7,7 +7,7 @@
 
 namespace mgb::imperative {
 
-class FormattedTensorValue final : public ValueImpl<FormattedTensorValue> {
+class FormattedTensorValue final : public ObjectValue<FormattedTensorValue> {
 private:
     ValueRef m_value;
     Format m_format;
@@ -26,10 +26,6 @@ public:
 
     const Format& format() const { return m_format; }
 
-    TypedValueRef<FormattedTensorValue> as(const Format::Type& target) const;
-    TypedValueRef<FormattedTensorValue> to(
-            const Format::Type& target, const std::string& scope = "") const;
-
     void clear() override {
         m_value = {};
         m_format = {};
@@ -40,23 +36,18 @@ public:
     void on_unwatch() override { m_value.unwatch(); }
 };
 
-/**
- * \brief simulates scalar because megbrain graph system don't support scalar
- *
- * Assume that we has 'a = ScalarValue(b)', thus 'a.shape == []', 'b.shape == [1]'.
- * This transformation simulates scalars with a flag. If a value is ScalarValue, it is
- * scalar, vice versa. So there is not scalar down this layer.
- */
 class FormatTransformation final : public Transformation {
 private:
-    bool m_auto_convert = false;
+    // enable auto_convert by default to be easier to use.
+    bool m_auto_convert = true;
+    ObjectType<FormattedTensorValue> m_value_type{"FormattedTensorValue"};
 
 public:
-    std::vector<ValueRef> apply_transformation(
+    ValueRefList apply_transformation(
             const Operator& op, Span<ValueRef> inputs) override;
 
     ValueRef unwrap(ValueRef value) override {
-        mgb_assert(!value.is<FormattedTensorValue>());
+        mgb_assert(!value.is(m_value_type));
         return value;
     }
 
@@ -65,6 +56,22 @@ public:
     }
     void set_auto_convert(bool enabled) { m_auto_convert = enabled; }
     bool get_auto_convert() const { return m_auto_convert; }
+
+    const Type<FormattedTensorValue>& value_type() const { return m_value_type; }
+
+    inline ValueRef unwrap_input(const ValueRef& input) const;
+    inline ValueRefList unwrap_inputs(const Span<ValueRef>& inputs) const;
+    inline ValueRef wrap_output(
+            const ValueRef& output, Format::Type type = Format::Type::DEFAULT) const;
+    inline ValueRefList wrap_outputs(
+            const ValueRefList& outputs,
+            Format::Type type = Format::Type::DEFAULT) const;
+
+    TypedValueRef<FormattedTensorValue> as(
+            const FormattedTensorValue&, const Format::Type& target) const;
+    TypedValueRef<FormattedTensorValue> to(
+            const FormattedTensorValue&, const Format::Type& target,
+            const std::string& scope = "") const;
 };
 
 }  // namespace mgb::imperative

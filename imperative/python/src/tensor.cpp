@@ -1017,10 +1017,14 @@ void init_tensor(py::module m) {
                 using namespace std::placeholders;
                 self.compiled = std::make_shared<CompiledTransformation>(
                         *self.trace_result, self.record_input_shapes);
-                self.compiled->set_value_comparator(
-                        std::bind(&Trace::compare_value, this, _1, _2));
-                self.options_visitor(py::cast(&self.compiled->options()));
-                self.compiled->compile();
+                    self.compiled->set_value_comparator(
+                            std::bind(&Trace::compare_value, this, _1, _2));
+                    self.options_visitor(py::cast(&self.compiled->options()));
+                try {
+                    self.compiled->compile();
+                } catch (const std::exception& e) {
+                    mgb_log_error(e.what());
+                }
             }
             // register transformations
             if (self.compiled) {
