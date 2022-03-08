@@ -18,22 +18,12 @@ namespace megdnn {
 namespace arm_common {
 class ElemwiseImpl final : public fallback::ElemwiseImpl {
 public:
+    using fallback::ElemwiseImpl::AlgoBase;
     using fallback::ElemwiseImpl::ElemwiseImpl;
     void exec(const TensorNDArray& srcs, _megdnn_tensor_out dst) override;
     const char* get_algorithm_set_name() const { return "ARM COMMON ELEMWISE"; }
 
 private:
-    struct KernParam {
-        BcastType broad_cast_type;
-        Mode mode;
-        const TensorND* m_dst;
-        Handle* handle;
-        ElemwiseOpParamN<3> ternary_elparam;
-        ElemwiseOpParamN<2> binary_elparam;
-        ElemwiseOpParamN<1> unary_elparam;
-    };
-    KernParam make_kern_param(ElemwiseImpl* opr);
-    class AlgoBase;
     class AlgoUnary;
     class AlgoBinaryVecVec;
     class AlgoBinaryVecScalar;
@@ -52,19 +42,6 @@ private:
     class AlgoTernaryFma3VecScalarVec;
     class AlgoTernaryFma3VecScalarScalar;
     class AlgoPack;
-};
-
-/*!
- *
- * \brief base class for Elemwise algo
- *
- */
-class ElemwiseImpl::AlgoBase : public detail::Algorithm {
-public:
-    virtual bool is_available(const KernParam&) const = 0;
-    virtual void exec(const KernParam&) const = 0;
-    virtual ~AlgoBase() = default;
-    uint32_t type() const override { return INVALID_ALGO_TYPE; };
 };
 
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC

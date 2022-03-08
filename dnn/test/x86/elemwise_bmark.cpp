@@ -164,3 +164,148 @@ TEST_F(X86, BENCHMARK_ELEM_EVERY_DTYPE) {
     // B.set_dtype(2, dtype::Int8());
     // BENCHMARK_CASE_INT(1556011)
 }
+
+#if MEGDNN_WITH_BENCHMARK
+namespace {
+void run_elemwise_benchmark(
+        const TensorShapeArray& shapes, param::Elemwise::Mode mode,
+        const char* mode_str, DType type, Handle* handle_bench) {
+    auto handle_fallback = create_cpu_handle(1);
+    Benchmarker<Elemwise> benchmarker_bench(handle_bench);
+    Benchmarker<Elemwise> benchmarker_fallback(handle_fallback.get());
+
+    float throughput = 0;
+    SmallVector<TensorLayout> layouts;
+    std::string src_strs;
+    for (size_t i = 0; i < shapes.size(); i++) {
+        layouts.emplace_back(shapes[i], type);
+        throughput += layouts.back().span().dist_byte();
+        src_strs += layouts.back().to_string();
+        if (i != shapes.size() - 1) {
+            src_strs += ",";
+        }
+    }
+    constexpr size_t RUN = 50;
+    benchmarker_fallback.set_times(RUN).set_display(false);
+    benchmarker_bench.set_times(RUN).set_display(false);
+
+    benchmarker_fallback.set_param(mode);
+    benchmarker_bench.set_param(mode);
+
+    TensorLayout dst_layout;
+    auto opr = handle_bench->create_operator<Elemwise>();
+    opr->param() = mode;
+    opr->deduce_layout(layouts, dst_layout);
+
+    float computations =
+            dst_layout.total_nr_elems() * (std::max<size_t>(shapes.size(), 2) - 1);
+    throughput += dst_layout.span().dist_byte();
+    computations *= (1e3 / (1024.0 * 1024));
+    throughput *= (1e3 / (1024.0 * 1024));
+
+    layouts.emplace_back(dst_layout);
+    auto fallback_time = benchmarker_fallback.execl(layouts) / RUN;
+    auto bench_time = benchmarker_bench.execl(layouts) / RUN;
+
+    float fallback_flops = computations / fallback_time;
+    float bench_flops = computations / bench_time;
+    float fallback_thr = throughput / fallback_time;
+    float bench_thr = throughput / bench_time;
+
+    printf("%s = %s (type: %s, mode: %s) cpu=%fMFLOPS %fMB/s, bench=%fMFLOPS "
+           "%fMB/s "
+           "computations: %fx, throughput: %fx\n",
+           src_strs.c_str(), dst_layout.to_string().c_str(), type.name(), mode_str,
+           fallback_flops, fallback_thr, bench_flops, bench_thr,
+           bench_flops / fallback_flops, bench_thr / fallback_thr);
+}
+}  // namespace
+
+#define INT_RUN(shape, mode)                                              \
+    run_elemwise_benchmark(shape, mode, #mode, dtype::Int8{}, handle());  \
+    run_elemwise_benchmark(shape, mode, #mode, dtype::Int16{}, handle()); \
+    run_elemwise_benchmark(shape, mode, #mode, dtype::Int32{}, handle());
+
+#define FLOAT_RUN(shape, mode)                                              \
+    run_elemwise_benchmark(shape, mode, #mode, dtype::Float32{}, handle()); \
+    run_elemwise_benchmark(shape, mode, #mode, dtype::Float16{}, handle());
+
+#define BENCHMARK_CASES(shape) \
+    INT_BENCHMARK_CASES(shape) \
+    FLOAT_BENCHMARK_CASES(shape)
+
+TEST_F(X86, BENCHMARK_UNARY) {
+#define INT_BENCHMARK_CASES(shape) \
+    INT_RUN(shape, Mode::RELU);    \
+    INT_RUN(shape, Mode::ABS);
+
+#define FLOAT_BENCHMARK_CASES(shape) \
+    FLOAT_RUN(shape, Mode::RELU);    \
+    FLOAT_RUN(shape, Mode::ABS);     \
+    FLOAT_RUN(shape, Mode::SIGMOID); \
+    FLOAT_RUN(shape, Mode::EXP);     \
+    FLOAT_RUN(shape, Mode::TANH);    \
+    FLOAT_RUN(shape, Mode::FAST_TANH);
+
+    using Mode = param::Elemwise::Mode;
+    BENCHMARK_CASES({{10000}});
+    BENCHMARK_CASES({{50000}});
+
+#undef INT_BENCHMARK_CASES
+#undef FLOAT_BENCHMARK_CASES
+}
+
+TEST_F(X86, BENCHMARK_BINARY) {
+#define INT_BENCHMARK_CASES(shape) \
+    INT_RUN(shape, Mode::MIN);     \
+    INT_RUN(shape, Mode::MAX);     \
+    INT_RUN(shape, Mode::ADD);     \
+    INT_RUN(shape, Mode::SUB);     \
+    INT_RUN(shape, Mode::MUL);     \
+    INT_RUN(shape, Mode::RMULH);   \
+    INT_RUN(shape, Mode::FUSE_ADD_RELU);
+
+#define FLOAT_BENCHMARK_CASES(shape)  \
+    FLOAT_RUN(shape, Mode::MIN);      \
+    FLOAT_RUN(shape, Mode::MAX);      \
+    FLOAT_RUN(shape, Mode::ADD);      \
+    FLOAT_RUN(shape, Mode::SUB);      \
+    FLOAT_RUN(shape, Mode::MUL);      \
+    FLOAT_RUN(shape, Mode::POW);      \
+    FLOAT_RUN(shape, Mode::TRUE_DIV); \
+    FLOAT_RUN(shape, Mode::FUSE_ADD_RELU);
+
+    using Mode = param::Elemwise::Mode;
+    TensorShapeArray shapes = {{1, 112, 28, 28}, {1, 112, 28, 28}};
+    BENCHMARK_CASES(shapes);
+    shapes = {{1, 16, 1, 1}, {1, 16, 112, 112}};
+    BENCHMARK_CASES(shapes);
+    shapes = {{1, 448, 7, 7}, {1, 448, 7, 7}};
+    BENCHMARK_CASES(shapes);
+
+#undef INT_BENCHMARK_CASES
+#undef FLOAT_BENCHMARK_CASES
+}
+
+TEST_F(X86, BENCHMARK_TERNARY_FMA3) {
+#define INT_BENCHMARK_CASES(shape) INT_RUN(shape, Mode::FUSE_MUL_ADD3);
+
+#define FLOAT_BENCHMARK_CASES(shape) FLOAT_RUN(shape, Mode::FUSE_MUL_ADD3);
+
+    using Mode = param::Elemwise::Mode;
+    TensorShapeArray shapes = {{30, 40, 70}, {30, 40, 70}, {30, 40, 70}};
+    BENCHMARK_CASES(shapes);
+    shapes = {{1, 4, 1, 1}, {3, 4, 5, 7}, {1, 4, 1, 1}};
+    BENCHMARK_CASES(shapes);
+    shapes = {{3, 4, 5, 7}, {3, 4, 5, 7}, {1, 1, 1, 1}};
+    BENCHMARK_CASES(shapes);
+
+#undef INT_BENCHMARK_CASES
+#undef FLOAT_BENCHMARK_CASES
+}
+
+#undef BENCHMARK_CASES
+#undef INT_RUN
+#undef FLOAT_RUN
+
+#endif

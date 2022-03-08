@@ -19,7 +19,7 @@
 #include <windows.h>
 #else
 #if defined(__arm__) || defined(__aarch64__)
-#include <arm_neon.h>
+#include "src/arm_common/simd_macro/marm_neon.h"
 #endif
 #if defined(__x86_64__) || defined(__i386__)
 #include <cpuid.h>

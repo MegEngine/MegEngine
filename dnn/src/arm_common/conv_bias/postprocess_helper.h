@@ -44,30 +44,29 @@ namespace {
         break;
 
 #define FOR_NONLINEAR_UNARY(_op)                                                  \
-    megdnn::arm_common::OpCallerUnary<_op<ctype>, megdnn::arm_common::VEC>::run(  \
+    megdnn::arm_common::OpCallerUnary<_op<ctype>, megdnn::VEC>::run(              \
             static_cast<ctype*>(conv_dst_ptr), reinterpret_cast<ctype*>(dst_ptr), \
             bias_type, dst_type, N* OC* OH* OW* pack_oc_size);
 
-#define FOR_NONLINEAR_BINARY_BROADCAST(_op)                                            \
-    megdnn::arm_common::OpCallerBinary<_op<ctype>, megdnn::arm_common::VEC_BCAST101>:: \
-            run(static_cast<ctype*>(conv_dst_ptr),                                     \
-                reinterpret_cast<const ctype*>(bias_ptr),                              \
-                reinterpret_cast<ctype*>(dst_ptr), bias_type, bias_type, dst_type, N,  \
-                OC, OH* OW);
-
-#define FOR_NONLINEAR_BINARY_BROADCAST_NCHWXX(_op)                                     \
-    megdnn::arm_common::                                                               \
-            OpCallerBinary<_op<ctype>, megdnn::arm_common::VEC_BCAST101xX>::run(       \
-                    static_cast<ctype*>(conv_dst_ptr),                                 \
-                    reinterpret_cast<const ctype*>(bias_ptr),                          \
-                    reinterpret_cast<ctype*>(dst_ptr), bias_type, bias_type, dst_type, \
-                    N, OC, OH* OW, pack_oc_size);
-
-#define FOR_NONLINEAR_BINARY(_op)                                                     \
-    megdnn::arm_common::OpCallerBinary<_op<ctype>, megdnn::arm_common::VEC_VEC>::run( \
+#define FOR_NONLINEAR_BINARY_BROADCAST(_op)                                           \
+    megdnn::arm_common::OpCallerBinary<_op<ctype>, megdnn::VEC_BCAST101>::run(        \
             static_cast<ctype*>(conv_dst_ptr),                                        \
             reinterpret_cast<const ctype*>(bias_ptr),                                 \
-            reinterpret_cast<ctype*>(dst_ptr), bias_type, bias_type, dst_type,        \
+            reinterpret_cast<ctype*>(dst_ptr), bias_type, bias_type, dst_type, N, OC, \
+            OH* OW);
+
+#define FOR_NONLINEAR_BINARY_BROADCAST_NCHWXX(_op)                                    \
+    megdnn::arm_common::OpCallerBinary<_op<ctype>, megdnn::VEC_BCAST101xX>::run(      \
+            static_cast<ctype*>(conv_dst_ptr),                                        \
+            reinterpret_cast<const ctype*>(bias_ptr),                                 \
+            reinterpret_cast<ctype*>(dst_ptr), bias_type, bias_type, dst_type, N, OC, \
+            OH* OW, pack_oc_size);
+
+#define FOR_NONLINEAR_BINARY(_op)                                              \
+    megdnn::arm_common::OpCallerBinary<_op<ctype>, megdnn::VEC_VEC>::run(      \
+            static_cast<ctype*>(conv_dst_ptr),                                 \
+            reinterpret_cast<const ctype*>(bias_ptr),                          \
+            reinterpret_cast<ctype*>(dst_ptr), bias_type, bias_type, dst_type, \
             N* OC* OH* OW* pack_oc_size);
 
 #define FOR_BIAS(_mode)                                                   \
@@ -168,36 +167,33 @@ struct PostProcess<ctype, dtype, megdnn::PostprocessMode::NO_PROCESS> {
 #undef FOR_BIAS
 #undef HANDLE_IDENTITY
 
-#define FOR_NONLINEAR_UNARY(_op)                                                \
-    megdnn::arm_common::                                                        \
-            OpCallerUnary<_op<opctype, opdtype>, megdnn::arm_common::VEC>::run( \
-                    static_cast<opctype*>(conv_dst_ptr),                        \
-                    reinterpret_cast<opdtype*>(dst_ptr), bias_type, dst_type,   \
-                    N* OC* OH* OW* pack_oc_size);
+#define FOR_NONLINEAR_UNARY(_op)                                                      \
+    megdnn::arm_common::OpCallerUnary<_op<opctype, opdtype>, megdnn::VEC>::run(       \
+            static_cast<opctype*>(conv_dst_ptr), reinterpret_cast<opdtype*>(dst_ptr), \
+            bias_type, dst_type, N* OC* OH* OW* pack_oc_size);
 
-#define FOR_NONLINEAR_BINARY_BROADCAST(_op)                                          \
-    megdnn::arm_common::OpCallerBinary<                                              \
-            _op<opctype, opdtype>, megdnn::arm_common::VEC_BCAST101>::               \
-            run(static_cast<opctype*>(conv_dst_ptr),                                 \
-                reinterpret_cast<const opctype*>(bias_ptr),                          \
-                reinterpret_cast<opdtype*>(dst_ptr), bias_type, bias_type, dst_type, \
+#define FOR_NONLINEAR_BINARY_BROADCAST(_op)                                           \
+    megdnn::arm_common::OpCallerBinary<_op<opctype, opdtype>, megdnn::VEC_BCAST101>:: \
+            run(static_cast<opctype*>(conv_dst_ptr),                                  \
+                reinterpret_cast<const opctype*>(bias_ptr),                           \
+                reinterpret_cast<opdtype*>(dst_ptr), bias_type, bias_type, dst_type,  \
                 N, OC, OH* OW);
 
-#define FOR_NONLINEAR_BINARY_BROADCAST_NCHWXX(_op)                                   \
-    megdnn::arm_common::OpCallerBinary<                                              \
-            _op<opctype, opdtype>, megdnn::arm_common::VEC_BCAST101xX>::             \
-            run(static_cast<opctype*>(conv_dst_ptr),                                 \
-                reinterpret_cast<const opctype*>(bias_ptr),                          \
-                reinterpret_cast<opdtype*>(dst_ptr), bias_type, bias_type, dst_type, \
-                N, OC, OH* OW, pack_oc_size);
+#define FOR_NONLINEAR_BINARY_BROADCAST_NCHWXX(_op)                              \
+    megdnn::arm_common::                                                        \
+            OpCallerBinary<_op<opctype, opdtype>, megdnn::VEC_BCAST101xX>::run( \
+                    static_cast<opctype*>(conv_dst_ptr),                        \
+                    reinterpret_cast<const opctype*>(bias_ptr),                 \
+                    reinterpret_cast<opdtype*>(dst_ptr), bias_type, bias_type,  \
+                    dst_type, N, OC, OH* OW, pack_oc_size);
 
-#define FOR_NONLINEAR_BINARY_BROADCAST_NCHW88(_op)                                   \
-    megdnn::arm_common::OpCallerBinary<                                              \
-            _op<opctype, opdtype>, megdnn::arm_common::VEC_BCAST101xX>::             \
-            run(static_cast<opctype*>(conv_dst_ptr),                                 \
-                reinterpret_cast<const opctype*>(bias_ptr),                          \
-                reinterpret_cast<opdtype*>(dst_ptr), bias_type, bias_type, dst_type, \
-                N, OC, OH* OW, pack_oc_size);
+#define FOR_NONLINEAR_BINARY_BROADCAST_NCHW88(_op)                              \
+    megdnn::arm_common::                                                        \
+            OpCallerBinary<_op<opctype, opdtype>, megdnn::VEC_BCAST101xX>::run( \
+                    static_cast<opctype*>(conv_dst_ptr),                        \
+                    reinterpret_cast<const opctype*>(bias_ptr),                 \
+                    reinterpret_cast<opdtype*>(dst_ptr), bias_type, bias_type,  \
+                    dst_type, N, OC, OH* OW, pack_oc_size);
 
 #define HANDLE_IDENTITY(_caller, _op)   \
     case megdnn::NonlineMode::IDENTITY: \
@@ -271,26 +267,25 @@ struct PostProcess<opctype, opdtype, megdnn::PostprocessMode::QUANTIZED> {
 #undef FOR_NONLINEAR
 #undef FOR_BIAS
 
-#define FOR_BINARY_BROADCAST(_op)                                                      \
-    megdnn::arm_common::OpCallerBinary<_op<ctype>, megdnn::arm_common::VEC_BCAST101>:: \
-            run(static_cast<ctype*>(conv_dst_ptr),                                     \
-                reinterpret_cast<const ctype*>(bias_ptr),                              \
-                reinterpret_cast<ctype*>(dst_ptr), bias_type, bias_type, dst_type, N,  \
-                OC, OH* OW);
-
-#define FOR_BINARY_BROADCAST_NCHWXX(_op)                                               \
-    megdnn::arm_common::                                                               \
-            OpCallerBinary<_op<ctype>, megdnn::arm_common::VEC_BCAST101xX>::run(       \
-                    static_cast<ctype*>(conv_dst_ptr),                                 \
-                    reinterpret_cast<const ctype*>(bias_ptr),                          \
-                    reinterpret_cast<ctype*>(dst_ptr), bias_type, bias_type, dst_type, \
-                    N, OC, OH* OW, pack_oc_size);
-
-#define FOR_BINARY(_op)                                                               \
-    megdnn::arm_common::OpCallerBinary<_op<ctype>, megdnn::arm_common::VEC_VEC>::run( \
+#define FOR_BINARY_BROADCAST(_op)                                                     \
+    megdnn::arm_common::OpCallerBinary<_op<ctype>, megdnn::VEC_BCAST101>::run(        \
             static_cast<ctype*>(conv_dst_ptr),                                        \
             reinterpret_cast<const ctype*>(bias_ptr),                                 \
-            reinterpret_cast<ctype*>(dst_ptr), bias_type, bias_type, dst_type,        \
+            reinterpret_cast<ctype*>(dst_ptr), bias_type, bias_type, dst_type, N, OC, \
+            OH* OW);
+
+#define FOR_BINARY_BROADCAST_NCHWXX(_op)                                              \
+    megdnn::arm_common::OpCallerBinary<_op<ctype>, megdnn::VEC_BCAST101xX>::run(      \
+            static_cast<ctype*>(conv_dst_ptr),                                        \
+            reinterpret_cast<const ctype*>(bias_ptr),                                 \
+            reinterpret_cast<ctype*>(dst_ptr), bias_type, bias_type, dst_type, N, OC, \
+            OH* OW, pack_oc_size);
+
+#define FOR_BINARY(_op)                                                        \
+    megdnn::arm_common::OpCallerBinary<_op<ctype>, megdnn::VEC_VEC>::run(      \
+            static_cast<ctype*>(conv_dst_ptr),                                 \
+            reinterpret_cast<const ctype*>(bias_ptr),                          \
+            reinterpret_cast<ctype*>(dst_ptr), bias_type, bias_type, dst_type, \
             N* OC* OH* OW* pack_oc_size);
 
 #define FOR_BIAS(_bias_mode, OH, OW)                            \

@@ -21,13 +21,13 @@ namespace megdnn {
 namespace fallback {
 
 struct QConverterBase {
-    inline static GI_INT32 vzero() { return GiBroadcastInt32(0); }
+    inline static GI_INT32_t vzero() { return GiBroadcastInt32(0); }
 
-    inline static GI_FLOAT32 vfzero() { return GiBroadcastFloat32(0.f); }
+    inline static GI_FLOAT32_t vfzero() { return GiBroadcastFloat32(0.f); }
 
-    inline static GI_FLOAT32 vfhalf() { return GiBroadcastFloat32(0.5f); }
+    inline static GI_FLOAT32_t vfhalf() { return GiBroadcastFloat32(0.5f); }
 
-    inline static GI_FLOAT32 vfneg_half() { return GiBroadcastFloat32(-0.5f); }
+    inline static GI_FLOAT32_t vfneg_half() { return GiBroadcastFloat32(-0.5f); }
 };
 
 struct QConverter {
@@ -56,23 +56,23 @@ inline dt_qint32 QConverter::convert(const float& src) {
 }
 
 template <>
-inline GI_FLOAT32_V2 QConverter::convert(const GI_INT16& vsrc) {
-    GI_INT32 vhi = GiMoveHighLongInt16(vsrc);
-    GI_INT32 vlo = GiMoveLowLongInt16(vsrc);
+inline GI_FLOAT32_V2_t QConverter::convert(const GI_INT16_t& vsrc) {
+    GI_INT32_t vhi = GiMoveHighLongInt16(vsrc);
+    GI_INT32_t vlo = GiMoveLowLongInt16(vsrc);
     return {{GiCastToFloat32(vlo), GiCastToFloat32(vhi)}};
 }
 
 template <>
-inline GI_INT8 QConverter::convert(const GI_FLOAT32_V2& vsrc) {
+inline GI_INT8_t QConverter::convert(const GI_FLOAT32_V2_t& vsrc) {
     return GiCvtFromFloat32V2ToInt8(vsrc);
 }
 template <>
-inline GI_INT8 QConverter::convert(const GI_FLOAT32& src) {
+inline GI_INT8_t QConverter::convert(const GI_FLOAT32_t& src) {
     return GiCvtFromFloat32ToInt8(src);
 }
 
 template <>
-inline GI_INT32 QConverter::round(const GI_FLOAT32& vsrc) {
+inline GI_INT32_t QConverter::round(const GI_FLOAT32_t& vsrc) {
     return GiRoundAsInt32(vsrc);
 }
 }  // namespace fallback

@@ -1,26 +1,19 @@
 /**
- * \file dnn/src/arm_common/elemwise_op.h
- * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
- *
- * Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
- * implied.
+ * \file dnn/src/fallback/elemwise_op.h
  */
 
 #pragma once
 
-#include "src/arm_common/elemwise_helper/op_binary.h"
-#include "src/arm_common/elemwise_helper/op_ternary.h"
-#include "src/arm_common/elemwise_helper/op_unary.h"
+#include "src/fallback/elemwise_helper/op_binary.h"
 #include "src/fallback/elemwise_helper/op_common.h"
+#include "src/fallback/elemwise_helper/op_ternary.h"
+#include "src/fallback/elemwise_helper/op_unary.h"
+
+#include "src/fallback/general_intrinsic/gi_float.h"
+#include "src/fallback/general_intrinsic/gi_int.h"
 
 namespace megdnn {
-namespace arm_common {
-
-using BcastType = megdnn::BcastType;
+namespace fallback {
 
 ///////////////////////////////// ParamElemVistor ///////////////////////////
 template <typename ctype>
@@ -30,76 +23,53 @@ struct ParamElemVisitor;
 template <typename ctype>
 struct ParamElemVisitorDup;
 
-#define cb(_ctype, _inner_ctype, _neon_type, _fun_suffix)                              \
-    template <>                                                                        \
-    struct ParamElemVisitor<_ctype> {                                                  \
-        _neon_type operator()(const _ctype* src) const {                               \
-            return vld1q_##_fun_suffix(reinterpret_cast<const _inner_ctype*>(src));    \
-        }                                                                              \
-    };                                                                                 \
-    template <>                                                                        \
-    struct ParamElemVisitorDup<_ctype> {                                               \
-        _neon_type operator()(const _ctype* src) const {                               \
-            return vdupq_n_##_fun_suffix(*reinterpret_cast<const _inner_ctype*>(src)); \
-        }                                                                              \
+#define cb(_ctype, _inner_ctype, _simd_type, _fun_suffix)                           \
+    template <>                                                                     \
+    struct ParamElemVisitor<_ctype> {                                               \
+        _simd_type operator()(const _ctype* src) const {                            \
+            return GiLoad##_fun_suffix(reinterpret_cast<const _inner_ctype*>(src)); \
+        }                                                                           \
+    };                                                                              \
+    template <>                                                                     \
+    struct ParamElemVisitorDup<_ctype> {                                            \
+        _simd_type operator()(const _ctype* src) const {                            \
+            return GiBroadcast##_fun_suffix(                                        \
+                    *reinterpret_cast<const _inner_ctype*>(src));                   \
+        }                                                                           \
     }
-cb(dt_qint32, int32_t, int32x4_t, s32);
-cb(dt_qint8, int8_t, int8x16_t, s8);
-cb(dt_quint8, uint8_t, uint8x16_t, u8);
+cb(dt_qint32, int32_t, GI_INT32_t, Int32);
+cb(dt_qint8, int8_t, GI_INT8_t, Int8);
 
-cb(dt_float32, float32_t, float32x4_t, f32);
-#if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
-cb(__fp16, __fp16, float16x8_t, f16);
-#endif
-cb(dt_int32, int32_t, int32x4_t, s32);
-cb(dt_int16, int16_t, int16x8_t, s16);
-cb(dt_int8, int8_t, int8x16_t, s8);
+cb(dt_float32, float, GI_FLOAT32_t, Float32);
+cb(dt_int32, int32_t, GI_INT32_t, Int32);
+cb(dt_int8, int8_t, GI_INT8_t, Int8);
 #undef cb
 
 template <typename ctype>
 struct ParamElemVisitorBcast101x4;
-#define cb(_ctype, _inner_ctype, _neon_type, _fun_suffix, rel_suffix)                 \
-    template <>                                                                       \
-    struct ParamElemVisitorBcast101x4<_ctype> {                                       \
-        _neon_type operator()(const _ctype* src) const {                              \
-            return vreinterpretq_##_fun_suffix##_##rel_suffix(vld1q_dup_##rel_suffix( \
-                    reinterpret_cast<const _inner_ctype*>(src)));                     \
-        }                                                                             \
+#define cb(_ctype, _inner_ctype, _simd_type, _fun_suffix, rel_suffix)              \
+    template <>                                                                    \
+    struct ParamElemVisitorBcast101x4<_ctype> {                                    \
+        _simd_type operator()(const _ctype* src) const {                           \
+            return GiReinter##rel_suffix##To##_fun_suffix(GiBroadcast##rel_suffix( \
+                    *reinterpret_cast<const _inner_ctype*>(src)));                 \
+        }                                                                          \
     }
 
-cb(dt_qint8, int32_t, int8x16_t, s8, s32);
-cb(dt_quint8, uint32_t, uint8x16_t, u8, u32);
-cb(dt_int8, int32_t, int8x16_t, s8, s32);
-cb(dt_int16, int64_t, int16x8_t, s16, s64);
-#if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
-cb(__fp16, uint64_t, float16x8_t, f16, u64);
-#endif
+cb(dt_qint8, int32_t, GI_INT8_t, Int8, Int32);
+cb(dt_int8, int32_t, GI_INT8_t, Int8, Int32);
 #undef cb
-#define cb(_ctype, _inner_ctype, _neon_type, _fun_suffix)                           \
+#define cb(_ctype, _inner_ctype, _simd_type, _fun_suffix)                           \
     template <>                                                                     \
     struct ParamElemVisitorBcast101x4<_ctype> {                                     \
-        _neon_type operator()(const _ctype* src) const {                            \
-            return vld1q_##_fun_suffix(reinterpret_cast<const _inner_ctype*>(src)); \
+        _simd_type operator()(const _ctype* src) const {                            \
+            return GiLoad##_fun_suffix(reinterpret_cast<const _inner_ctype*>(src)); \
         }                                                                           \
     }
 
-cb(dt_qint32, int32_t, int32x4_t, s32);
-cb(dt_float32, float32_t, float32x4_t, f32);
-cb(dt_int32, int32_t, int32x4_t, s32);
-#undef cb
-
-template <typename ctype>
-struct ParamElemVisitorBcast101x8;
-#define cb(_ctype, _inner_ctype, _neon_type, _fun_suffix)                           \
-    template <>                                                                     \
-    struct ParamElemVisitorBcast101x8<_ctype> {                                     \
-        _neon_type operator()(const _ctype* src) const {                            \
-            return vld1q_##_fun_suffix(reinterpret_cast<const _inner_ctype*>(src)); \
-        }                                                                           \
-    }
-#if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
-cb(__fp16, __fp16, float16x8_t, f16);
-#endif
+cb(dt_qint32, int32_t, GI_INT32_t, Int32);
+cb(dt_float32, float, GI_FLOAT32_t, Float32);
+cb(dt_int32, int32_t, GI_INT32_t, Int32);
 #undef cb
 
 ///////////////////////////////// OpCaller /////////////////////////////
@@ -406,11 +376,11 @@ struct OpCallerBinary<Op, VEC_BCAST101> {
             const typename Op::src_ctype* src1_ptr = src1;
             for (size_t c = 0; c < channel; c++) {
                 size_t i = 0;
-                auto src1_neon = vis1(src1_ptr);
+                auto src1_simd = vis1(src1_ptr);
                 for (; i + Op::SIMD_WIDTH * 2 <= channel_stride;
                      i += Op::SIMD_WIDTH * 2) {
                     op({{vis0(src0), vis0(src0 + Op::SIMD_WIDTH)}},
-                       {{src1_neon, src1_neon}}, dst);
+                       {{src1_simd, src1_simd}}, dst);
                     src0 += Op::SIMD_WIDTH * 2;
                     dst += Op::SIMD_WIDTH * 2;
                 }
@@ -444,11 +414,11 @@ struct OpCallerBinary<Op, VEC_BCASTX0X> {
                 auto src1_ptr = src1_ptr_base;
                 for (; i + Op::SIMD_WIDTH * 2 <= channel_stride;
                      i += Op::SIMD_WIDTH * 2) {
-                    auto src0_neon0 = vis(src0);
-                    auto src0_neon1 = vis(src0 + Op::SIMD_WIDTH);
-                    auto src1_neon0 = vis(src1_ptr);
-                    auto src1_neon1 = vis(src1_ptr + Op::SIMD_WIDTH);
-                    op({{src0_neon0, src0_neon1}}, {{src1_neon0, src1_neon1}}, dst);
+                    auto src0_simd0 = vis(src0);
+                    auto src0_simd1 = vis(src0 + Op::SIMD_WIDTH);
+                    auto src1_simd0 = vis(src1_ptr);
+                    auto src1_simd1 = vis(src1_ptr + Op::SIMD_WIDTH);
+                    op({{src0_simd0, src0_simd1}}, {{src1_simd0, src1_simd1}}, dst);
                     src0 += Op::SIMD_WIDTH * 2;
                     src1_ptr += Op::SIMD_WIDTH * 2;
                     dst += Op::SIMD_WIDTH * 2;
@@ -481,13 +451,13 @@ struct OpCallerBinary<Op, VEC_BCAST111C> {
                 size_t rest = channel_stride;
                 const typename Op::src_ctype* src1_ptr = src1;
                 while (rest >= Op::SIMD_WIDTH * 2) {
-                    auto src0_neon0 = vis(src0);
-                    auto src0_neon1 = vis(src0 + Op::SIMD_WIDTH);
-                    auto src1_neon0 = vis(src1_ptr);
-                    auto src1_neon1 = vis(src1_ptr + Op::SIMD_WIDTH);
+                    auto src0_simd0 = vis(src0);
+                    auto src0_simd1 = vis(src0 + Op::SIMD_WIDTH);
+                    auto src1_simd0 = vis(src1_ptr);
+                    auto src1_simd1 = vis(src1_ptr + Op::SIMD_WIDTH);
                     src0 += Op::SIMD_WIDTH * 2;
                     src1_ptr += Op::SIMD_WIDTH * 2;
-                    op({{src0_neon0, src0_neon1}}, {{src1_neon0, src1_neon1}}, dst);
+                    op({{src0_simd0, src0_simd1}}, {{src1_simd0, src1_simd1}}, dst);
                     dst += Op::SIMD_WIDTH * 2;
                     rest -= Op::SIMD_WIDTH * 2;
                 }
@@ -520,13 +490,13 @@ struct OpCallerBinary<Op, BCAST111C_VEC> {
                 size_t rest = channel_stride;
                 const typename Op::src_ctype* src0_ptr = src0;
                 while (rest >= Op::SIMD_WIDTH * 2) {
-                    auto src0_neon0 = vis(src0_ptr);
-                    auto src0_neon1 = vis(src0_ptr + Op::SIMD_WIDTH);
-                    auto src1_neon0 = vis(src1);
-                    auto src1_neon1 = vis(src1 + Op::SIMD_WIDTH);
+                    auto src0_simd0 = vis(src0_ptr);
+                    auto src0_simd1 = vis(src0_ptr + Op::SIMD_WIDTH);
+                    auto src1_simd0 = vis(src1);
+                    auto src1_simd1 = vis(src1 + Op::SIMD_WIDTH);
                     src0_ptr += Op::SIMD_WIDTH * 2;
                     src1 += Op::SIMD_WIDTH * 2;
-                    op({{src0_neon0, src0_neon1}}, {{src1_neon0, src1_neon1}}, dst);
+                    op({{src0_simd0, src0_simd1}}, {{src1_simd0, src1_simd1}}, dst);
                     dst += Op::SIMD_WIDTH * 2;
                     rest -= Op::SIMD_WIDTH * 2;
                 }
@@ -642,25 +612,6 @@ struct OpCallerBinaryBcast101xXVec<src_ctype, 4> {
                 channel_stride);
     }
 };
-
-#if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
-template <>
-struct OpCallerBinaryBcast101xXVec<__fp16, 8> {
-    using src_ctype = __fp16;
-
-    template <typename Op>
-    static void run(
-            const src_ctype* src0, const src_ctype* src1, typename Op::dst_ctype* dst,
-            const Op& op, size_t batch, size_t nr_channel_blocks,
-            size_t channel_stride) {
-        ParamElemVisitorBcast101x8<src_ctype> vis0;
-        ParamElemVisitor<src_ctype> vis1;
-        OpCallerBinaryBcast101xDVec<src_ctype, 8>::run(
-                src0, src1, dst, op, vis0, vis1, batch, nr_channel_blocks,
-                channel_stride);
-    }
-};
-#endif
 
 template <typename Op>
 struct OpCallerBinary<Op, BCAST101xX_VEC> {
@@ -780,24 +731,6 @@ struct OpCallerBinaryVecBcast101xX<src_ctype, 4> {
     }
 };
 
-#if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
-template <>
-struct OpCallerBinaryVecBcast101xX<__fp16, 8> {
-    using src_ctype = __fp16;
-    template <typename Op>
-    static void run(
-            const src_ctype* src0, const src_ctype* src1, typename Op::dst_ctype* dst,
-            const Op& op, size_t batch, size_t nr_channel_blocks,
-            size_t channel_stride) {
-        ParamElemVisitor<src_ctype> vis0;
-        ParamElemVisitorBcast101x8<src_ctype> vis1;
-        OpCallerBinaryVecBcast101xD<src_ctype, 8>::run(
-                src0, src1, dst, op, vis0, vis1, batch, nr_channel_blocks,
-                channel_stride);
-    }
-};
-#endif
-
 template <typename Op>
 struct OpCallerBinary<Op, VEC_BCAST101xX> {
     static void run(
@@ -828,10 +761,10 @@ struct OpCallerBinary<Op, VEC_SCALAR> {
         Op op(src0_dtype, src1_dtype, dst_dtype);
         ParamElemVisitor<typename Op::src_ctype> vis0;
         ParamElemVisitorDup<typename Op::src_ctype> vis1;
-        auto vis1_neon = vis1(&src1);
+        auto vis1_simd = vis1(&src1);
         size_t i = 0;
         for (; i + Op::SIMD_WIDTH * 2 <= nr_elems; i += Op::SIMD_WIDTH * 2) {
-            op({{vis0(src0), vis0(src0 + Op::SIMD_WIDTH)}}, {{vis1_neon, vis1_neon}},
+            op({{vis0(src0), vis0(src0 + Op::SIMD_WIDTH)}}, {{vis1_simd, vis1_simd}},
                dst);
             src0 += Op::SIMD_WIDTH * 2;
             dst += Op::SIMD_WIDTH * 2;
@@ -858,10 +791,10 @@ struct OpCallerBinary<Op, SCALAR_VEC> {
         Op op(src0_dtype, src1_dtype, dst_dtype);
         ParamElemVisitorDup<typename Op::src_ctype> vis0;
         ParamElemVisitor<typename Op::src_ctype> vis1;
-        auto vis0_neon = vis0(&src0);
+        auto vis0_simd = vis0(&src0);
         size_t i = 0;
         for (; i + Op::SIMD_WIDTH * 2 <= nr_elems; i += Op::SIMD_WIDTH * 2) {
-            op({{vis0_neon, vis0_neon}}, {{vis1(src1), vis1(src1 + Op::SIMD_WIDTH)}},
+            op({{vis0_simd, vis0_simd}}, {{vis1(src1), vis1(src1 + Op::SIMD_WIDTH)}},
                dst);
             src1 += Op::SIMD_WIDTH * 2;
             dst += Op::SIMD_WIDTH * 2;
@@ -890,11 +823,11 @@ struct OpCallerBinary<Op, BCAST101_VEC> {
         for (size_t b = 0; b < batch; b++) {
             auto src0_ptr = src0;
             for (size_t c = 0; c < channel; c++) {
-                auto vis0_neon = vis0(src0_ptr);
+                auto vis0_simd = vis0(src0_ptr);
                 size_t i = 0;
                 for (; i + Op::SIMD_WIDTH * 2 <= channel_stride;
                      i += Op::SIMD_WIDTH * 2) {
-                    op({{vis0_neon, vis0_neon}},
+                    op({{vis0_simd, vis0_simd}},
                        {{vis1(src1), vis1(src1 + Op::SIMD_WIDTH)}}, dst);
                     src1 += Op::SIMD_WIDTH * 2;
                     dst += Op::SIMD_WIDTH * 2;
@@ -929,11 +862,11 @@ struct OpCallerBinary<Op, BCASTX0X_VEC> {
                 size_t i = 0;
                 for (; i + Op::SIMD_WIDTH * 2 <= channel_stride;
                      i += Op::SIMD_WIDTH * 2) {
-                    auto src0_neon0 = vis(src0_ptr);
-                    auto src0_neon1 = vis(src0_ptr + Op::SIMD_WIDTH);
-                    auto src1_neon0 = vis(src1);
-                    auto src1_neon1 = vis(src1 + Op::SIMD_WIDTH);
-                    op({{src0_neon0, src0_neon1}}, {{src1_neon0, src1_neon1}}, dst);
+                    auto src0_simd0 = vis(src0_ptr);
+                    auto src0_simd1 = vis(src0_ptr + Op::SIMD_WIDTH);
+                    auto src1_simd0 = vis(src1);
+                    auto src1_simd1 = vis(src1 + Op::SIMD_WIDTH);
+                    op({{src0_simd0, src0_simd1}}, {{src1_simd0, src1_simd1}}, dst);
                     src0_ptr += Op::SIMD_WIDTH * 2;
                     src1 += Op::SIMD_WIDTH * 2;
                     dst += Op::SIMD_WIDTH * 2;
@@ -1003,11 +936,11 @@ struct OpCallerTernary<Op, VEC_VEC_SCALAR> {
         ParamElemVisitor<typename Op::src_ctype> vis0;
         ParamElemVisitor<typename Op::src_ctype> vis1;
         ParamElemVisitorDup<typename Op::src_ctype> vis2;
-        auto vis2_neon = vis2(&src2);
+        auto vis2_simd = vis2(&src2);
         size_t i = 0;
         for (; i + Op::SIMD_WIDTH * 2 <= nr_elems; i += Op::SIMD_WIDTH * 2) {
             op({{vis0(src0), vis0(src0 + Op::SIMD_WIDTH)}},
-               {{vis1(src1), vis1(src1 + Op::SIMD_WIDTH)}}, {{vis2_neon, vis2_neon}},
+               {{vis1(src1), vis1(src1 + Op::SIMD_WIDTH)}}, {{vis2_simd, vis2_simd}},
                dst);
             src0 += Op::SIMD_WIDTH * 2;
             src1 += Op::SIMD_WIDTH * 2;
@@ -1045,13 +978,13 @@ struct OpCallerTernary<Op, BCAST101_VEC_BCAST101> {
             auto b_offset = batch_offset;
             for (size_t channel = 0; channel < channel_size; channel++) {
                 size_t i = 0;
-                auto src0_neon = vis0(src0_ptr);
-                auto src2_neon = vis2(src2_ptr);
+                auto src0_simd = vis0(src0_ptr);
+                auto src2_simd = vis2(src2_ptr);
                 for (; i + Op::SIMD_WIDTH * 2 <= channel_stride;
                      i += Op::SIMD_WIDTH * 2) {
-                    op({{src0_neon, src0_neon}},
+                    op({{src0_simd, src0_simd}},
                        {{vis1(src1), vis1(src1 + Op::SIMD_WIDTH)}},
-                       {{src2_neon, src2_neon}}, dst);
+                       {{src2_simd, src2_simd}}, dst);
                     src1 += Op::SIMD_WIDTH * 2;
                     dst += Op::SIMD_WIDTH * 2;
                     b_offset -= Op::SIMD_WIDTH * 2;
@@ -1094,14 +1027,14 @@ struct OpCallerTernary<Op, BCAST111C_VEC_BCAST111C> {
                 size_t i = 0;
                 for (; i + Op::SIMD_WIDTH * 2 <= channel_stride;
                      i += Op::SIMD_WIDTH * 2) {
-                    auto src0_neon0 = vis(src0_ptr);
-                    auto src0_neon1 = vis(src0_ptr + Op::SIMD_WIDTH);
-                    auto src1_neon0 = vis(src1);
-                    auto src1_neon1 = vis(src1 + Op::SIMD_WIDTH);
-                    auto src2_neon0 = vis(src2_ptr);
-                    auto src2_neon1 = vis(src2_ptr + Op::SIMD_WIDTH);
-                    op({{src0_neon0, src0_neon1}}, {{src1_neon0, src1_neon1}},
-                       {{src2_neon0, src2_neon1}}, dst);
+                    auto src0_simd0 = vis(src0_ptr);
+                    auto src0_simd1 = vis(src0_ptr + Op::SIMD_WIDTH);
+                    auto src1_simd0 = vis(src1);
+                    auto src1_simd1 = vis(src1 + Op::SIMD_WIDTH);
+                    auto src2_simd0 = vis(src2_ptr);
+                    auto src2_simd1 = vis(src2_ptr + Op::SIMD_WIDTH);
+                    op({{src0_simd0, src0_simd1}}, {{src1_simd0, src1_simd1}},
+                       {{src2_simd0, src2_simd1}}, dst);
                     src0_ptr += Op::SIMD_WIDTH * 2;
                     src1 += Op::SIMD_WIDTH * 2;
                     src2_ptr += Op::SIMD_WIDTH * 2;
@@ -1211,25 +1144,6 @@ struct OpCallerTernaryBcast101xXVecBcast101xX<src_ctype, 4> {
     }
 };
 
-#if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
-template <>
-struct OpCallerTernaryBcast101xXVecBcast101xX<__fp16, 8> {
-    using src_ctype = __fp16;
-    template <typename Op>
-    static void run(
-            const src_ctype* src0, const src_ctype* src1, const src_ctype* src2,
-            typename Op::dst_ctype* dst, const Op& op, size_t batch,
-            size_t nr_channel_blocks, size_t channel_stride) {
-        ParamElemVisitorBcast101x8<src_ctype> vis0;
-        ParamElemVisitor<src_ctype> vis1;
-        ParamElemVisitorBcast101x8<src_ctype> vis2;
-        OpCallerTernaryBcast101xDVecBcast101xD<src_ctype, 8>::run(
-                src0, src1, src2, dst, op, vis0, vis1, vis2, batch, nr_channel_blocks,
-                channel_stride);
-    }
-};
-#endif
-
 template <typename Op>
 struct OpCallerTernary<Op, BCAST101xX_VEC_BCAST101xX> {
     static void run(
@@ -1270,11 +1184,11 @@ struct OpCallerTernary<Op, VEC_BCAST101_VEC> {
             auto src1_ptr = src1;
             for (size_t channel = 0; channel < channel_size; channel++) {
                 size_t i = 0;
-                auto src1_neon = vis1(src1_ptr);
+                auto src1_simd = vis1(src1_ptr);
                 for (; i + Op::SIMD_WIDTH * 2 <= channel_stride;
                      i += Op::SIMD_WIDTH * 2) {
                     op({{vis0(src0), vis0(src0 + Op::SIMD_WIDTH)}},
-                       {{src1_neon, src1_neon}},
+                       {{src1_simd, src1_simd}},
                        {{vis2(src2), vis2(src2 + Op::SIMD_WIDTH)}}, dst);
                     src0 += Op::SIMD_WIDTH * 2;
                     src2 += Op::SIMD_WIDTH * 2;
@@ -1420,25 +1334,6 @@ struct OpCallerTernaryVecBcast101xXVec<src_ctype, 4> {
     }
 };
 
-#if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
-template <>
-struct OpCallerTernaryVecBcast101xXVec<__fp16, 8> {
-    using src_ctype = __fp16;
-    template <typename Op>
-    static void run(
-            const src_ctype* src0, const src_ctype* src1, const src_ctype* src2,
-            typename Op::dst_ctype* dst, const Op& op, size_t batch,
-            size_t nr_channel_blocks, size_t channel_stride) {
-        ParamElemVisitor<src_ctype> vis0;
-        ParamElemVisitorBcast101x8<src_ctype> vis1;
-        ParamElemVisitor<src_ctype> vis2;
-        OpCallerTernaryVecBcast101xDVec<src_ctype, 8>::run(
-                src0, src1, src2, dst, op, vis0, vis1, vis2, batch, nr_channel_blocks,
-                channel_stride);
-    }
-};
-#endif
-
 template <typename Op>
 struct OpCallerTernary<Op, VEC_BCAST101xX_VEC> {
     static void run(
@@ -1476,10 +1371,10 @@ struct OpCallerTernary<Op, VEC_SCALAR_VEC> {
         ParamElemVisitor<typename Op::src_ctype> vis0;
         ParamElemVisitorDup<typename Op::src_ctype> vis1;
         ParamElemVisitor<typename Op::src_ctype> vis2;
-        auto vis1_neon = vis1(&src1);
+        auto vis1_simd = vis1(&src1);
         size_t i = 0;
         for (; i + Op::SIMD_WIDTH * 2 <= nr_elems; i += Op::SIMD_WIDTH * 2) {
-            op({{vis0(src0), vis0(src0 + Op::SIMD_WIDTH)}}, {{vis1_neon, vis1_neon}},
+            op({{vis0(src0), vis0(src0 + Op::SIMD_WIDTH)}}, {{vis1_simd, vis1_simd}},
                {{vis2(src2), vis2(src2 + Op::SIMD_WIDTH)}}, dst);
             src0 += Op::SIMD_WIDTH * 2;
             src2 += Op::SIMD_WIDTH * 2;
@@ -1510,12 +1405,12 @@ struct OpCallerTernary<Op, VEC_SCALAR_SCALAR> {
         ParamElemVisitor<typename Op::src_ctype> vis0;
         ParamElemVisitorDup<typename Op::src_ctype> vis1;
         ParamElemVisitorDup<typename Op::src_ctype> vis2;
-        auto vis1_neon = vis1(&src1);
-        auto vis2_neon = vis2(&src2);
+        auto vis1_simd = vis1(&src1);
+        auto vis2_simd = vis2(&src2);
         size_t i = 0;
         for (; i + Op::SIMD_WIDTH * 2 <= nr_elems; i += Op::SIMD_WIDTH * 2) {
-            op({{vis0(src0), vis0(src0 + Op::SIMD_WIDTH)}}, {{vis1_neon, vis1_neon}},
-               {{vis2_neon, vis2_neon}}, dst);
+            op({{vis0(src0), vis0(src0 + Op::SIMD_WIDTH)}}, {{vis1_simd, vis1_simd}},
+               {{vis2_simd, vis2_simd}}, dst);
             src0 += Op::SIMD_WIDTH * 2;
             dst += Op::SIMD_WIDTH * 2;
         }
@@ -1531,7 +1426,7 @@ struct OpCallerTernary<Op, VEC_SCALAR_SCALAR> {
     }
 };
 
-}  // namespace arm_common
+}  // namespace fallback
 }  // namespace megdnn
 
 // vim: syntax=cpp.doxygen
