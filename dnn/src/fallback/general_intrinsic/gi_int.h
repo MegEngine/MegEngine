@@ -14,14 +14,13 @@
 #include "gi_common.h"
 
 GI_FORCEINLINE
-GI_INT32
-GiBroadcastInt32(int32_t Value) {
+GI_INT32_t GiBroadcastInt32(int32_t Value) {
 #if defined(GI_NEON_INTRINSICS)
     return vdupq_n_s32(Value);
 #elif defined(GI_SSE2_INTRINSICS)
     return _mm_set1_epi32(Value);
 #else
-    GI_INT32 ret;
+    GI_INT32_t ret;
     for (size_t i = 0; i < GI_SIMD_LEN_BYTE / sizeof(int32_t); i++) {
         ret[i] = Value;
     }
@@ -30,14 +29,28 @@ GiBroadcastInt32(int32_t Value) {
 }
 
 GI_FORCEINLINE
-GI_INT8
-GiBroadcastInt8(int8_t Value) {
+GI_UINT32_t GiBroadcastUint32(int32_t Value) {
+#if defined(GI_NEON_INTRINSICS)
+    return vdupq_n_u32(Value);
+#elif defined(GI_SSE2_INTRINSICS)
+    return _mm_set1_epi32(Value);
+#else
+    GI_UINT32_t ret;
+    for (size_t i = 0; i < GI_SIMD_LEN_BYTE / sizeof(int32_t); i++) {
+        ret[i] = Value;
+    }
+    return ret;
+#endif
+}
+
+GI_FORCEINLINE
+GI_INT8_t GiBroadcastInt8(int8_t Value) {
 #if defined(GI_NEON_INTRINSICS)
     return vdupq_n_s8(Value);
 #elif defined(GI_SSE2_INTRINSICS)
     return _mm_set1_epi8(Value);
 #else
-    GI_INT8 ret;
+    GI_INT8_t ret;
     for (size_t i = 0; i < GI_SIMD_LEN_BYTE / sizeof(int8_t); i++) {
         ret[i] = Value;
     }
@@ -46,14 +59,13 @@ GiBroadcastInt8(int8_t Value) {
 }
 
 GI_FORCEINLINE
-GI_INT32
-GiLoadInt32(const int32_t* Buffer) {
+GI_INT32_t GiLoadInt32(const int32_t* Buffer) {
 #if defined(GI_NEON_INTRINSICS)
     return vld1q_s32(Buffer);
 #elif defined(GI_SSE2_INTRINSICS)
     return _mm_loadu_si128((const __m128i*)Buffer);
 #else
-    GI_INT32 ret;
+    GI_INT32_t ret;
     for (size_t i = 0; i < GI_SIMD_LEN_BYTE / sizeof(int32_t); i++) {
         ret[i] = Buffer[i];
     }
@@ -62,14 +74,13 @@ GiLoadInt32(const int32_t* Buffer) {
 }
 
 GI_FORCEINLINE
-GI_INT8
-GiLoadInt8(const int8_t* Buffer) {
+GI_INT8_t GiLoadInt8(const int8_t* Buffer) {
 #if defined(GI_NEON_INTRINSICS)
     return vld1q_s8(Buffer);
 #elif defined(GI_SSE2_INTRINSICS)
     return _mm_loadu_si128((const __m128i*)Buffer);
 #else
-    GI_INT8 ret;
+    GI_INT8_t ret;
     for (size_t i = 0; i < GI_SIMD_LEN_BYTE / sizeof(int8_t); i++) {
         ret[i] = Buffer[i];
     }
@@ -78,7 +89,7 @@ GiLoadInt8(const int8_t* Buffer) {
 }
 
 GI_FORCEINLINE
-void GiStoreInt32(int32_t* Buffer, GI_INT32 Vector) {
+void GiStoreInt32(int32_t* Buffer, GI_INT32_t Vector) {
 #if defined(GI_NEON_INTRINSICS)
     vst1q_s32(Buffer, Vector);
 #elif defined(GI_SSE2_INTRINSICS)
@@ -90,8 +101,60 @@ void GiStoreInt32(int32_t* Buffer, GI_INT32 Vector) {
 #endif
 }
 
+#if defined(GI_NEON_INTRINSICS)
+#define GISTORELANEINT32(i)                                                         \
+    GI_FORCEINLINE void GiStoreLane##i##Int32(int32_t* Buffer, GI_INT32_t Vector) { \
+        vst1q_lane_s32(Buffer, Vector, i);                                          \
+    }
+
+#elif defined(GI_SSE2_INTRINSICS)
+
+#define GISTORELANEINT32(i)                                                         \
+    GI_FORCEINLINE void GiStoreLane##i##Int32(int32_t* Buffer, GI_INT32_t Vector) { \
+        GI_FLOAT32_t tmp = _mm_castsi128_ps(Vector);                                \
+        _mm_store_ss(                                                               \
+                (float*)Buffer, _mm_shuffle_ps(tmp, tmp, _MM_SHUFFLE(i, i, i, i))); \
+    }
+#else
+#define GISTORELANEINT32(i)                                                         \
+    GI_FORCEINLINE void GiStoreLane##i##Int32(int32_t* Buffer, GI_INT32_t Vector) { \
+        *Buffer = Vector[i];                                                        \
+    }
+#endif
+
+GISTORELANEINT32(0)
+GISTORELANEINT32(1)
+GISTORELANEINT32(2)
+GISTORELANEINT32(3)
+
+#undef GISTORELANEFLOAT32
+
 GI_FORCEINLINE
-void GiStoreInt8(int8_t* Buffer, GI_INT8 Vector) {
+GI_INT8_t GiReinterInt32ToInt8(GI_INT32_t Vector) {
+#if defined(GI_NEON_INTRINSICS)
+    return vreinterpretq_s8_s32(Vector);
+#elif defined(GI_SSE2_INTRINSICS)
+    return Vector;
+#else
+    return *(GI_INT8_t*)&Vector;
+#endif
+}
+
+GI_FORCEINLINE
+void GiStoreInt16(int16_t* Buffer, GI_INT16_t Vector) {
+#if defined(GI_NEON_INTRINSICS)
+    vst1q_s16(Buffer, Vector);
+#elif defined(GI_SSE2_INTRINSICS)
+    _mm_storeu_si128((__m128i*)Buffer, Vector);
+#else
+    for (size_t i = 0; i < GI_SIMD_LEN_BYTE / sizeof(int16_t); i++) {
+        Buffer[i] = Vector[i];
+    }
+#endif
+}
+
+GI_FORCEINLINE
+void GiStoreInt8(int8_t* Buffer, GI_INT8_t Vector) {
 #if defined(GI_NEON_INTRINSICS)
     vst1q_s8(Buffer, Vector);
 #elif defined(GI_SSE2_INTRINSICS)
@@ -104,7 +167,7 @@ void GiStoreInt8(int8_t* Buffer, GI_INT8 Vector) {
 }
 
 GI_FORCEINLINE
-void GiStoreLowInt8(int8_t* Buffer, GI_INT8 Vector) {
+void GiStoreLowInt8(int8_t* Buffer, GI_INT8_t Vector) {
 #if defined(GI_NEON_INTRINSICS)
     vst1_s8(Buffer, vget_low_s8(Vector));
 #elif defined(GI_SSE2_INTRINSICS)
@@ -117,7 +180,7 @@ void GiStoreLowInt8(int8_t* Buffer, GI_INT8 Vector) {
 }
 
 GI_FORCEINLINE
-void GiStoreHihgInt8(int8_t* Buffer, GI_INT8 Vector) {
+void GiStoreHihgInt8(int8_t* Buffer, GI_INT8_t Vector) {
 #if defined(GI_NEON_INTRINSICS)
     vst1_s8(Buffer, vget_high_s8(Vector));
 #elif defined(GI_SSE2_INTRINSICS)
@@ -130,8 +193,47 @@ void GiStoreHihgInt8(int8_t* Buffer, GI_INT8 Vector) {
 }
 
 GI_FORCEINLINE
-GI_INT32
-GiAddInt32(GI_INT32 Vector1, GI_INT32 Vector2) {
+GI_INT32_t GiNegInt32(GI_INT32_t Vector) {
+#if defined(GI_NEON32_INTRINSICS)
+    return vnegq_s32(Vector);
+#elif defined(GI_SSE2_INTRINSICS)
+    GI_INT32_t zero = _mm_set1_epi32(0);
+    return _mm_sub_epi32(zero, Vector);
+#else
+    return -Vector;
+#endif
+}
+
+GI_FORCEINLINE
+GI_INT8_t GiNegInt8(GI_INT8_t Vector) {
+#if defined(GI_NEON32_INTRINSICS)
+    return vnegq_s8(Vector);
+#elif defined(GI_SSE2_INTRINSICS)
+    GI_INT32_t zero = _mm_set1_epi8(0);
+    return _mm_sub_epi8(zero, Vector);
+#else
+    return -Vector;
+#endif
+}
+
+GI_FORCEINLINE
+GI_UINT32_t GiTestAndSetUint32(GI_UINT32_t Vector1, GI_UINT32_t Vector2) {
+#if defined(GI_NEON_INTRINSICS)
+    return vtstq_u32(Vector1, Vector2);
+#elif defined(GI_SSE2_INTRINSICS)
+    GI_UINT32_t tmp = _mm_and_si128(Vector1, Vector2);
+    return _mm_cmpeq_epi32(tmp, _mm_setzero_si128());
+#else
+    GI_UINT32_t ret;
+    for (size_t i = 0; i < GI_SIMD_LEN_BYTE / sizeof(int32_t); i++) {
+        ret[i] = Vector1[i] & Vector2[i] ? 0xFFFFFFFF : 0;
+    }
+    return ret;
+#endif
+}
+
+GI_FORCEINLINE
+GI_INT32_t GiAddInt32(GI_INT32_t Vector1, GI_INT32_t Vector2) {
 #if defined(GI_NEON_INTRINSICS)
     return vaddq_s32(Vector1, Vector2);
 #elif defined(GI_SSE2_INTRINSICS)
@@ -142,8 +244,40 @@ GiAddInt32(GI_INT32 Vector1, GI_INT32 Vector2) {
 }
 
 GI_FORCEINLINE
-GI_INT32
-GiSubtractInt32(GI_INT32 Vector1, GI_INT32 Vector2) {
+GI_UINT32_t GiAddUint32(GI_UINT32_t Vector1, GI_UINT32_t Vector2) {
+#if defined(GI_NEON_INTRINSICS)
+    return vaddq_u32(Vector1, Vector2);
+#elif defined(GI_SSE2_INTRINSICS)
+    return _mm_add_epi32(Vector1, Vector2);
+#else
+    return Vector1 + Vector2;
+#endif
+}
+
+GI_FORCEINLINE
+GI_INT16_t GiAddInt16(GI_INT16_t Vector1, GI_INT16_t Vector2) {
+#if defined(GI_NEON_INTRINSICS)
+    return vaddq_s16(Vector1, Vector2);
+#elif defined(GI_SSE2_INTRINSICS)
+    return _mm_add_epi16(Vector1, Vector2);
+#else
+    return Vector1 + Vector2;
+#endif
+}
+
+GI_FORCEINLINE
+GI_INT8_t GiAddInt8(GI_INT8_t Vector1, GI_INT8_t Vector2) {
+#if defined(GI_NEON_INTRINSICS)
+    return vaddq_s8(Vector1, Vector2);
+#elif defined(GI_SSE2_INTRINSICS)
+    return _mm_add_epi8(Vector1, Vector2);
+#else
+    return Vector1 + Vector2;
+#endif
+}
+
+GI_FORCEINLINE
+GI_INT32_t GiSubtractInt32(GI_INT32_t Vector1, GI_INT32_t Vector2) {
 #if defined(GI_NEON_INTRINSICS)
     return vsubq_s32(Vector1, Vector2);
 #elif defined(GI_SSE2_INTRINSICS)
@@ -154,20 +288,82 @@ GiSubtractInt32(GI_INT32 Vector1, GI_INT32 Vector2) {
 }
 
 GI_FORCEINLINE
-GI_INT32
-GiMultiplyInt32(GI_INT32 Vector1, GI_INT32 Vector2) {
+GI_UINT32_t GiSubtractUint32(GI_UINT32_t Vector1, GI_UINT32_t Vector2) {
+#if defined(GI_NEON_INTRINSICS)
+    return vsubq_u32(Vector1, Vector2);
+#elif defined(GI_SSE2_INTRINSICS)
+    return _mm_sub_epi32(Vector1, Vector2);
+#else
+    return Vector1 - Vector2;
+#endif
+}
+
+GI_FORCEINLINE
+GI_INT8_t GiSubtractInt8(GI_INT8_t Vector1, GI_INT8_t Vector2) {
+#if defined(GI_NEON_INTRINSICS)
+    return vsubq_s8(Vector1, Vector2);
+#elif defined(GI_SSE2_INTRINSICS)
+    return _mm_sub_epi8(Vector1, Vector2);
+#else
+    return Vector1 - Vector2;
+#endif
+}
+
+GI_FORCEINLINE
+GI_INT32_t GiMultiplyInt32(GI_INT32_t Vector1, GI_INT32_t Vector2) {
 #if defined(GI_NEON_INTRINSICS)
     return vmulq_s32(Vector1, Vector2);
 #elif defined(GI_SSE2_INTRINSICS)
-    return _mm_mul_epi32(Vector1, Vector2);
+    GI_FLOAT32_t v0 = _mm_cvtepi32_ps(Vector1);
+    GI_FLOAT32_t v1 = _mm_cvtepi32_ps(Vector2);
+    return _mm_cvttps_epi32(_mm_mul_ps(v0, v1));
+#else
+    return Vector1 * Vector2;
+#endif
+}
+//! in x86, there is no int multiply, so implement it naive
+GI_FORCEINLINE
+GI_INT8_t GiMultiplyInt8(GI_INT8_t Vector1, GI_INT8_t Vector2) {
+#if defined(GI_NEON_INTRINSICS)
+    return vmulq_s8(Vector1, Vector2);
+#elif defined(GI_SSE2_INTRINSICS)
+    int8_t v1[16], v2[16], res[16];
+    _mm_storeu_si128((__m128i*)v1, Vector1);
+    _mm_storeu_si128((__m128i*)v2, Vector2);
+    for (size_t id = 0; id < 16; id++) {
+        res[id] = v1[id] * v2[id];
+    }
+    return _mm_loadu_si128((__m128i*)res);
 #else
     return Vector1 * Vector2;
 #endif
 }
 
 GI_FORCEINLINE
-GI_INT8
-GiAndInt8(GI_INT8 Vector1, GI_INT8 Vector2) {
+GI_INT32_t GiMultiplyAddInt32(
+        GI_INT32_t Vector1, GI_INT32_t Vector2, GI_INT32_t Vector3) {
+#if defined(GI_NEON_INTRINSICS)
+    return vmlaq_s32(Vector1, Vector2, Vector3);
+#elif defined(GI_SSE2_INTRINSICS)
+    return _mm_add_epi32(Vector1, GiMultiplyInt32(Vector2, Vector3));
+#else
+    return Vector1 + Vector2 * Vector3;
+#endif
+}
+
+GI_FORCEINLINE
+GI_INT8_t GiMultiplyAddInt8(GI_INT8_t Vector1, GI_INT8_t Vector2, GI_INT8_t Vector3) {
+#if defined(GI_NEON_INTRINSICS)
+    return vmlaq_s8(Vector1, Vector2, Vector3);
+#elif defined(GI_SSE2_INTRINSICS)
+    return _mm_add_epi8(Vector1, GiMultiplyInt8(Vector2, Vector3));
+#else
+    return Vector1 + Vector2 * Vector3;
+#endif
+}
+
+GI_FORCEINLINE
+GI_INT8_t GiAndInt8(GI_INT8_t Vector1, GI_INT8_t Vector2) {
 #if defined(GI_NEON_INTRINSICS)
     return vandq_s8(Vector1, Vector2);
 #elif defined(GI_SSE2_INTRINSICS)
@@ -178,8 +374,18 @@ GiAndInt8(GI_INT8 Vector1, GI_INT8 Vector2) {
 }
 
 GI_FORCEINLINE
-GI_INT8
-GiOrInt8(GI_INT8 Vector1, GI_INT8 Vector2) {
+GI_UINT32_t GiEOrUint32(GI_UINT32_t Vector1, GI_UINT32_t Vector2) {
+#if defined(GI_NEON_INTRINSICS)
+    return veorq_u32(Vector1, Vector2);
+#elif defined(GI_SSE2_INTRINSICS)
+    return _mm_xor_si128(Vector1, Vector2);
+#else
+    return Vector1 ^ Vector2;
+#endif
+}
+
+GI_FORCEINLINE
+GI_INT8_t GiOrInt8(GI_INT8_t Vector1, GI_INT8_t Vector2) {
 #if defined(GI_NEON_INTRINSICS)
     return vorrq_s8(Vector1, Vector2);
 #elif defined(GI_SSE2_INTRINSICS)
@@ -190,21 +396,19 @@ GiOrInt8(GI_INT8 Vector1, GI_INT8 Vector2) {
 }
 
 GI_FORCEINLINE
-GI_INT8
-GiAndNotInt8(GI_INT8 VectorNot, GI_INT8 Vector) {
+GI_INT8_t GiAndNotInt8(GI_INT8_t VectorNot, GI_INT8_t Vector) {
 #if defined(GI_NEON_INTRINSICS)
     return vandq_s8(vmvnq_s8(VectorNot), Vector);
 #elif defined(GI_SSE2_INTRINSICS)
     return _mm_andnot_si128(VectorNot, Vector);
 #else
-    GI_INT8 Not = ~VectorNot;
+    GI_INT8_t Not = ~VectorNot;
     return (Not & Vector);
 #endif
 }
 
 GI_FORCEINLINE
-GI_INT8
-GiXorInt8(GI_INT8 Vector1, GI_INT8 Vector2) {
+GI_INT8_t GiXorInt8(GI_INT8_t Vector1, GI_INT8_t Vector2) {
 #if defined(GI_NEON_INTRINSICS)
     return veorq_s8(Vector1, Vector2);
 #elif defined(GI_SSE2_INTRINSICS)
@@ -214,47 +418,85 @@ GiXorInt8(GI_INT8 Vector1, GI_INT8 Vector2) {
 #endif
 }
 
+GI_FORCEINLINE
+GI_INT32_t GiShiftLeft23Int32(GI_INT32_t Vector) {
 #if defined(GI_NEON_INTRINSICS)
-#define GISHIFTLEFTINT32(i)                                          \
-    GI_FORCEINLINE GI_INT32 GiShiftLeft##i##Int32(GI_INT32 Vector) { \
-        return vshlq_n_s32(Vector, i);                               \
-    }
-
+    return vshlq_n_s32(Vector, 23);
 #elif defined(GI_SSE2_INTRINSICS)
-
-#define GISHIFTLEFTINT32(i)                                          \
-    GI_FORCEINLINE GI_INT32 GiShiftLeft##i##Int32(GI_INT32 Vector) { \
-        return _mm_slli_epi32(Vector, i);                            \
-    }
+    return _mm_slli_epi32(Vector, 23);
 #else
-#define GISHIFTLEFTINT32(i)                                          \
-    GI_FORCEINLINE GI_INT32 GiShiftLeft##i##Int32(GI_INT32 Vector) { \
-        return Vector << i;                                          \
-    }
+    return Vector << 23;
 #endif
-
-GISHIFTLEFTINT32(0)
-GISHIFTLEFTINT32(1)
-GISHIFTLEFTINT32(2)
-GISHIFTLEFTINT32(3)
-
-#undef GISHIFTLEFTINT32
+}
 
 GI_FORCEINLINE
-GI_INT32
-GiBlendInt32(GI_INT32 Vector1, GI_INT32 Vector2, GI_INT32 Selection) {
+GI_INT32_t GiShiftRight23Int32(GI_INT32_t Vector) {
+#if defined(GI_NEON_INTRINSICS)
+    return vshrq_n_s32(Vector, 23);
+#elif defined(GI_SSE2_INTRINSICS)
+    return _mm_srai_epi32(Vector, 23);
+#else
+    return Vector >> 23;
+#endif
+}
+
+GI_FORCEINLINE
+GI_INT32_t GiBlendInt32(GI_INT32_t Vector1, GI_INT32_t Vector2, GI_INT32_t Selection) {
     return GiOrInt32(GiAndInt32(Vector2, Selection), GiAndNotInt32(Selection, Vector1));
 }
 
 GI_FORCEINLINE
-GI_INT8
-GiBlendInt8(GI_INT8 Vector1, GI_INT8 Vector2, GI_INT8 Selection) {
+GI_INT8_t GiBlendInt8(GI_INT8_t Vector1, GI_INT8_t Vector2, GI_INT8_t Selection) {
     return GiOrInt8(GiAndInt8(Vector2, Selection), GiAndNotInt8(Selection, Vector1));
 }
 
 GI_FORCEINLINE
-GI_INT32
-GiMaximumInt32(GI_INT32 Vector1, GI_INT32 Vector2) {
+GI_INT32_t GiAbsInt32(GI_INT32_t Vector) {
+#if defined(GI_NEON_INTRINSICS)
+    return vabsq_s32(Vector);
+#elif defined(GI_SSE42_INTRINSICS)
+    return _mm_abs_epi32(Vector);
+#else
+    GI_INT32_t ret;
+    for (size_t i = 0; i < GI_SIMD_LEN_BYTE / sizeof(int32_t); i++) {
+        ret[i] = Vector[i] > 0 ? Vector[i] : -Vector[i];
+    }
+    return ret;
+#endif
+}
+
+GI_FORCEINLINE
+GI_INT16_t GiAbsInt16(GI_INT16_t Vector) {
+#if defined(GI_NEON_INTRINSICS)
+    return vabsq_s16(Vector);
+#elif defined(GI_SSE42_INTRINSICS)
+    return _mm_abs_epi16(Vector);
+#else
+    GI_INT16_t ret;
+    for (size_t i = 0; i < GI_SIMD_LEN_BYTE / sizeof(int16_t); i++) {
+        ret[i] = Vector[i] > 0 ? Vector[i] : -Vector[i];
+    }
+    return ret;
+#endif
+}
+
+GI_FORCEINLINE
+GI_INT8_t GiAbsInt8(GI_INT8_t Vector) {
+#if defined(GI_NEON_INTRINSICS)
+    return vabsq_s8(Vector);
+#elif defined(GI_SSE42_INTRINSICS)
+    return _mm_abs_epi8(Vector);
+#else
+    GI_INT8_t ret;
+    for (size_t i = 0; i < GI_SIMD_LEN_BYTE / sizeof(int8_t); i++) {
+        ret[i] = Vector[i] > 0 ? Vector[i] : -Vector[i];
+    }
+    return ret;
+#endif
+}
+
+GI_FORCEINLINE
+GI_INT32_t GiMaximumInt32(GI_INT32_t Vector1, GI_INT32_t Vector2) {
 #if defined(GI_NEON_INTRINSICS)
     return vmaxq_s32(Vector1, Vector2);
 #elif defined(GI_SSE42_INTRINSICS)
@@ -267,8 +509,7 @@ GiMaximumInt32(GI_INT32 Vector1, GI_INT32 Vector2) {
 }
 
 GI_FORCEINLINE
-GI_INT32
-GiMinimumInt32(GI_INT32 Vector1, GI_INT32 Vector2) {
+GI_INT32_t GiMinimumInt32(GI_INT32_t Vector1, GI_INT32_t Vector2) {
 #if defined(GI_NEON_INTRINSICS)
     return vminq_s32(Vector1, Vector2);
 #elif defined(GI_SSE42_INTRINSICS)
@@ -281,14 +522,12 @@ GiMinimumInt32(GI_INT32 Vector1, GI_INT32 Vector2) {
 }
 
 GI_FORCEINLINE
-GI_INT8
-GiBlendInt8x16(GI_INT8 Vector1, GI_INT8 Vector2, GI_INT8 Selection) {
+GI_INT8_t GiBlendInt8x16(GI_INT8_t Vector1, GI_INT8_t Vector2, GI_INT8_t Selection) {
     return GiOrInt8(GiAndInt8(Vector2, Selection), GiAndNotInt8(Selection, Vector1));
 }
 
 GI_FORCEINLINE
-GI_INT8
-GiMaximumInt8(GI_INT8 Vector1, GI_INT8 Vector2) {
+GI_INT8_t GiMaximumInt8(GI_INT8_t Vector1, GI_INT8_t Vector2) {
 #if defined(GI_NEON_INTRINSICS)
     return vmaxq_s8(Vector1, Vector2);
 #elif defined(GI_SSE42_INTRINSICS)
@@ -301,8 +540,7 @@ GiMaximumInt8(GI_INT8 Vector1, GI_INT8 Vector2) {
 }
 
 GI_FORCEINLINE
-GI_INT8
-GiMinimumInt8(GI_INT8 Vector1, GI_INT8 Vector2) {
+GI_INT8_t GiMinimumInt8(GI_INT8_t Vector1, GI_INT8_t Vector2) {
 #if defined(GI_NEON_INTRINSICS)
     return vminq_s8(Vector1, Vector2);
 #elif defined(GI_SSE42_INTRINSICS)
@@ -315,8 +553,7 @@ GiMinimumInt8(GI_INT8 Vector1, GI_INT8 Vector2) {
 }
 
 GI_FORCEINLINE
-GI_INT16
-GiMoveHighLongInt8(GI_INT8 Vector) {
+GI_INT16_t GiMoveHighLongInt8(GI_INT8_t Vector) {
 #if defined(GI_NEON_INTRINSICS)
     return vmovl_s8(vget_high_s8(Vector));
 #elif defined(GI_SSE42_INTRINSICS)
@@ -330,7 +567,7 @@ GiMoveHighLongInt8(GI_INT8 Vector) {
     }
     return _mm_loadu_si128((__m128i*)data);
 #else
-    GI_INT16 ret;
+    GI_INT16_t ret;
     int8_t* data = (int8_t*)&Vector;
     size_t half_length = GI_SIMD_LEN_BYTE / 2 / sizeof(int8_t);
     for (size_t i = 0; i < half_length; i++) {
@@ -341,8 +578,7 @@ GiMoveHighLongInt8(GI_INT8 Vector) {
 }
 
 GI_FORCEINLINE
-GI_INT16
-GiMoveLowLongInt8(GI_INT8 Vector) {
+GI_INT16_t GiMoveLowLongInt8(GI_INT8_t Vector) {
 #if defined(GI_NEON_INTRINSICS)
     return vmovl_s8(vget_low_s8(Vector));
 #elif defined(GI_SSE42_INTRINSICS)
@@ -356,7 +592,7 @@ GiMoveLowLongInt8(GI_INT8 Vector) {
     }
     return _mm_loadu_si128((__m128i*)data);
 #else
-    GI_INT16 ret;
+    GI_INT16_t ret;
     size_t half_length = GI_SIMD_LEN_BYTE / 2 / sizeof(int8_t);
     for (size_t i = 0; i < half_length; i++) {
         ret[i] = Vector[i];
@@ -366,8 +602,7 @@ GiMoveLowLongInt8(GI_INT8 Vector) {
 }
 
 GI_FORCEINLINE
-GI_INT32
-GiMoveHighLongInt16(GI_INT16 Vector) {
+GI_INT32_t GiMoveHighLongInt16(GI_INT16_t Vector) {
 #if defined(GI_NEON_INTRINSICS)
     return vmovl_s16(vget_high_s16(Vector));
 #elif defined(GI_SSE42_INTRINSICS)
@@ -381,7 +616,7 @@ GiMoveHighLongInt16(GI_INT16 Vector) {
     }
     return _mm_loadu_si128((__m128i*)data);
 #else
-    GI_INT32 ret;
+    GI_INT32_t ret;
     size_t half_length = GI_SIMD_LEN_BYTE / 2 / sizeof(int16_t);
     for (size_t i = 0; i < half_length; i++) {
         ret[i] = Vector[half_length + i];
@@ -391,8 +626,7 @@ GiMoveHighLongInt16(GI_INT16 Vector) {
 }
 
 GI_FORCEINLINE
-GI_INT32
-GiMoveLowLongInt16(GI_INT16 Vector) {
+GI_INT32_t GiMoveLowLongInt16(GI_INT16_t Vector) {
 #if defined(GI_NEON_INTRINSICS)
     return vmovl_s16(vget_low_s16(Vector));
 #elif defined(GI_SSE42_INTRINSICS)
@@ -406,7 +640,7 @@ GiMoveLowLongInt16(GI_INT16 Vector) {
     }
     return _mm_loadu_si128((__m128i*)data);
 #else
-    GI_INT32 ret;
+    GI_INT32_t ret;
     size_t half_length = GI_SIMD_LEN_BYTE / 2 / sizeof(int16_t);
     for (size_t i = 0; i < half_length; i++) {
         ret[i] = Vector[i];
@@ -416,7 +650,7 @@ GiMoveLowLongInt16(GI_INT16 Vector) {
 }
 
 GI_FORCEINLINE
-int32_t GiReduceAddInt8(GI_INT8 Vector) {
+int32_t GiReduceAddInt8(GI_INT8_t Vector) {
 #if defined(GI_NEON64_INTRINSICS)
     return vaddlvq_s8(Vector);
 #elif defined(GI_NEON32_INTRINSICS)
@@ -461,7 +695,7 @@ int32_t GiReduceAddInt8(GI_INT8 Vector) {
 }
 
 GI_FORCEINLINE
-int8_t GiReduceMaxInt8(GI_INT8 Vector) {
+int8_t GiReduceMaxInt8(GI_INT8_t Vector) {
 #if defined(GI_NEON64_INTRINSICS)
     return vmaxvq_s8(Vector);
 #elif defined(GI_NEON32_INTRINSICS)
@@ -509,7 +743,7 @@ int8_t GiReduceMaxInt8(GI_INT8 Vector) {
 }
 
 GI_FORCEINLINE
-int8_t GiReduceMinInt8(GI_INT8 Vector) {
+int8_t GiReduceMinInt8(GI_INT8_t Vector) {
 #if defined(GI_NEON64_INTRINSICS)
     return vminvq_s8(Vector);
 #elif defined(GI_NEON32_INTRINSICS)
@@ -562,8 +796,7 @@ int8_t GiReduceMinInt8(GI_INT8 Vector) {
 //! convert to the short type with the lower bit fill the real data, the high bite
 //! will repeat the lower bit
 GI_FORCEINLINE
-GI_INT8
-GiCvtFromFloat32ToInt8(GI_FLOAT32 src) {
+GI_INT8_t GiCvtFromFloat32ToInt8(GI_FLOAT32_t src) {
 #if defined(GI_NEON_INTRINSICS)
 #if __ARM_ARCH >= 8
     int32x4_t vres0 = vcvtaq_s32_f32(src);
@@ -595,7 +828,7 @@ GiCvtFromFloat32ToInt8(GI_FLOAT32 src) {
     __m128i vepi8 = _mm_packs_epi16(vepi16, vepi16);
     return vepi8;
 #else
-    GI_INT8 ret;
+    GI_INT8_t ret;
     int length = GI_SIMD_LEN_BYTE / sizeof(float);
     for (int i = 0; i < length; i++) {
         int8_t data = Saturate(round(src[i]), -128, 127);
@@ -609,8 +842,7 @@ GiCvtFromFloat32ToInt8(GI_FLOAT32 src) {
 }
 
 GI_FORCEINLINE
-GI_INT8
-GiCvtFromFloat32V2ToInt8(GI_FLOAT32_V2 vsrc) {
+GI_INT8_t GiCvtFromFloat32V2ToInt8(GI_FLOAT32_V2_t vsrc) {
 #if defined(GI_NEON_INTRINSICS)
 #if __ARM_ARCH >= 8
     int32x4_t vres0 = vcvtaq_s32_f32(vsrc.val[0]);
@@ -653,7 +885,7 @@ GiCvtFromFloat32V2ToInt8(GI_FLOAT32_V2 vsrc) {
     __m128i vepi8 = _mm_packs_epi16(vepi16_0, vepi16_0);
     return vepi8;
 #else
-    GI_INT8 ret;
+    GI_INT8_t ret;
     int length = GI_SIMD_LEN_BYTE / sizeof(float);
     for (int i = 0; i < 2 * length; i++) {
         ret[i] = Saturate(round(vsrc.val[i / length][i % length]), -128, 127);
@@ -663,8 +895,7 @@ GiCvtFromFloat32V2ToInt8(GI_FLOAT32_V2 vsrc) {
 }
 
 GI_FORCEINLINE
-GI_INT8
-GiCvtFromFloat32V4ToInt8(GI_FLOAT32_V4 vsrc) {
+GI_INT8_t GiCvtFromFloat32V4ToInt8(GI_FLOAT32_V4_t vsrc) {
 #if defined(GI_NEON_INTRINSICS)
 #if __ARM_ARCH >= 8
     int32x4_t vres0 = vcvtaq_s32_f32(vsrc.val[0]);
@@ -726,7 +957,7 @@ GiCvtFromFloat32V4ToInt8(GI_FLOAT32_V4 vsrc) {
     __m128i vepi8 = _mm_packs_epi16(vepi16_0, vepi16_1);
     return vepi8;
 #else
-    GI_INT8 ret;
+    GI_INT8_t ret;
     int length = GI_SIMD_LEN_BYTE / sizeof(float);
     for (int i = 0; i < 4 * length; i++) {
         ret[i] = Saturate(round(vsrc.val[i / length][i % length]), -128, 127);

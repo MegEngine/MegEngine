@@ -82,29 +82,33 @@
 
 #if defined(GI_AVX_INTRINSICS) || defined(GI_AVX2_INTRINSICS) || \
         defined(GI_FMA_INTRINSICS)
-typedef __m256 GI_FLOAT32;
-typedef __m256i GI_UINT8;
-typedef __m256i GI_INT8;
-typedef __m256i GI_INT16;
-typedef __m256i GI_INT32;
+typedef __m256 GI_FLOAT32_t;
+typedef __m256i GI_UINT8_t;
+typedef __m256i GI_INT8_t;
+typedef __m256i GI_INT16_t;
+typedef __m256i GI_INT32_t;
+typedef __m256i GI_UINT32_t;
 #elif defined(GI_NEON_INTRINSICS)
-typedef float32x4_t GI_FLOAT32;
-typedef uint8x16_t GI_UINT8;
-typedef int8x16_t GI_INT8;
-typedef int16x8_t GI_INT16;
-typedef int32x4_t GI_INT32;
+typedef float32x4_t GI_FLOAT32_t;
+typedef uint8x16_t GI_UINT8_t;
+typedef int8x16_t GI_INT8_t;
+typedef int16x8_t GI_INT16_t;
+typedef int32x4_t GI_INT32_t;
+typedef uint32x4_t GI_UINT32_t;
 #elif defined(GI_SSE2_INTRINSICS) || defined(GI_SSE42_INTRINSICS)
-typedef __m128 GI_FLOAT32;
-typedef __m128i GI_UINT8;
-typedef __m128i GI_INT8;
-typedef __m128i GI_INT16;
-typedef __m128i GI_INT32;
+typedef __m128 GI_FLOAT32_t;
+typedef __m128i GI_UINT8_t;
+typedef __m128i GI_INT8_t;
+typedef __m128i GI_INT16_t;
+typedef __m128i GI_INT32_t;
+typedef __m128i GI_UINT32_t;
 #else
-typedef float GI_FLOAT32 __attribute__((vector_size(16)));
-typedef uint8_t GI_UINT8 __attribute__((vector_size(16)));
-typedef int8_t GI_INT8 __attribute__((vector_size(16)));
-typedef int16_t GI_INT16 __attribute__((vector_size(16)));
-typedef int32_t GI_INT32 __attribute__((vector_size(16)));
+typedef float GI_FLOAT32_t __attribute__((vector_size(16)));
+typedef uint8_t GI_UINT8_t __attribute__((vector_size(16)));
+typedef int8_t GI_INT8_t __attribute__((vector_size(16)));
+typedef int16_t GI_INT16_t __attribute__((vector_size(16)));
+typedef int32_t GI_INT32_t __attribute__((vector_size(16)));
+typedef uint32_t GI_UINT32_t __attribute__((vector_size(16)));
 #endif
 
 //! general intrinsic support dynamic length simd, if avx or avx2 the simd
@@ -129,24 +133,31 @@ typedef int32_t GI_INT32 __attribute__((vector_size(16)));
 #define Min(a, b) (a) < (b) ? (a) : (b)
 
 typedef struct {
-    GI_INT32 val[2];
-} GI_INT32_V2;
+    GI_INT32_t val[2];
+} GI_INT32_V2_t;
 
 typedef struct {
-    GI_INT32 val[4];
-} GI_INT32_V4;
+    GI_INT32_t val[4];
+} GI_INT32_V4_t;
 
 typedef struct {
-    GI_FLOAT32 val[2];
-} GI_FLOAT32_V2;
+    GI_FLOAT32_t val[2];
+} GI_FLOAT32_V2_t;
 
 typedef struct {
-    GI_FLOAT32 val[4];
-} GI_FLOAT32_V4;
+    GI_FLOAT32_t val[4];
+} GI_FLOAT32_V4_t;
+
+typedef struct {
+    GI_INT16_t val[2];
+} GI_INT16_V2_t;
+
+typedef struct {
+    GI_INT8_t val[2];
+} GI_INT8_V2_t;
 
 GI_FORCEINLINE
-GI_INT32
-GiAndInt32(GI_INT32 Vector1, GI_INT32 Vector2) {
+GI_INT32_t GiAndInt32(GI_INT32_t Vector1, GI_INT32_t Vector2) {
 #if defined(GI_NEON_INTRINSICS)
     return vandq_s32(Vector1, Vector2);
 #elif defined(GI_SSE2_INTRINSICS)
@@ -157,8 +168,7 @@ GiAndInt32(GI_INT32 Vector1, GI_INT32 Vector2) {
 }
 
 GI_FORCEINLINE
-GI_INT32
-GiOrInt32(GI_INT32 Vector1, GI_INT32 Vector2) {
+GI_INT32_t GiOrInt32(GI_INT32_t Vector1, GI_INT32_t Vector2) {
 #if defined(GI_NEON_INTRINSICS)
     return vorrq_s32(Vector1, Vector2);
 #elif defined(GI_SSE2_INTRINSICS)
@@ -169,8 +179,7 @@ GiOrInt32(GI_INT32 Vector1, GI_INT32 Vector2) {
 }
 
 GI_FORCEINLINE
-GI_INT32
-GiAndNotInt32(GI_INT32 VectorNot, GI_INT32 Vector) {
+GI_INT32_t GiAndNotInt32(GI_INT32_t VectorNot, GI_INT32_t Vector) {
 #if defined(GI_NEON_INTRINSICS)
     return vandq_s32(vmvnq_s32(VectorNot), Vector);
 #elif defined(GI_SSE2_INTRINSICS)
@@ -181,8 +190,7 @@ GiAndNotInt32(GI_INT32 VectorNot, GI_INT32 Vector) {
 }
 
 GI_FORCEINLINE
-GI_INT32
-GiXorInt32(GI_INT32 Vector1, GI_INT32 Vector2) {
+GI_INT32_t GiXorInt32(GI_INT32_t Vector1, GI_INT32_t Vector2) {
 #if defined(GI_NEON_INTRINSICS)
     return veorq_s32(Vector1, Vector2);
 #elif defined(GI_SSE2_INTRINSICS)
