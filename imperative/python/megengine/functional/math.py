@@ -10,10 +10,9 @@ import collections
 import math
 from typing import Iterable, Optional, Sequence, Tuple, Union
 
-from ..core._imperative_rt.core2 import apply, dtype_promotion
+from ..core._imperative_rt.core2 import Const, apply, dtype_promotion
 from ..core._imperative_rt.ops import SubgraphBuilder as _SubgraphBuilder
 from ..core.ops import builtin
-from ..core.ops.special import Const
 from ..core.tensor.array_method import _matmul
 from ..core.tensor.utils import _normalize_axis
 from ..tensor import Tensor
@@ -729,7 +728,7 @@ def topk(
     op = builtin.TopK(mode=mode)
 
     if not isinstance(k, Tensor):
-        (k,) = Const(k, dtype="int32", device=inp.device)()
+        k = Const(k, "int32", inp.device, None)
 
     if len(inp.shape) == 1:
         if kth_only:

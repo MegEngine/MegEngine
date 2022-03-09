@@ -14,6 +14,7 @@ import numpy as np
 
 from .._imperative_rt import make_const
 from .._imperative_rt.core2 import (
+    Const,
     SymbolVar,
     Tensor,
     _get_convert_inputs,
@@ -28,7 +29,6 @@ from .._imperative_rt.ops import jit_supported
 from .._wrap import as_device
 from ..autodiff.grad import Function
 from ..ops import builtin
-from ..ops.special import Const
 from .amp import _get_amp_high_prec_dtype, _get_amp_low_prec_dtype
 from .dtype import is_dtype_equal, is_quantize
 
@@ -67,7 +67,7 @@ def convert_single_value(v, *, dtype=None, device=None):
         if not is_quantize(v.dtype):
             v = astype(v, dtype)
     else:
-        (v,) = Const(v, dtype=dtype, device=device)()
+        v = Const(v, dtype, device, None)
     return v
 
 
@@ -155,7 +155,7 @@ def astensor1d(x, *reference, dtype=None, device=None):
         if ndim != 0 and ndim != 1:
             raise ValueError("ndim != 1 or 0, get : %d" % ndim)
         if not isinstance(x, (Tensor, SymbolVar)):
-            (x,) = Const(x, dtype=dtype, device=device)(*reference)
+            x = Const(x, dtype, device, reference)
         return x
 
     if not isinstance(x, collections.abc.Sequence):
@@ -166,7 +166,7 @@ def astensor1d(x, *reference, dtype=None, device=None):
         if dtype is not None:
             x = astype(x, dtype)
         return x
-    (x,) = Const(x, dtype=dtype, device=device)(*reference)
+    x = Const(x, dtype, device, reference)
     return x
 
 
@@ -337,7 +337,7 @@ def interpret_subgraph(func, dtype, device):
                 return results
 
         def apply_const(value, dtype=dtype, device=device):
-            return Const(value, dtype=dtype, device=device)()[0]
+            return Const(value, dtype, device, None)
 
         outputs, outputs_has_grad = func(args, apply_expr, apply_const)
         outputs = [

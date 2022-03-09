@@ -94,7 +94,7 @@ bool is_bool_dtype(PyObject* args) {
 }
 
 py::object _Const(
-        py::handle value, py::handle dtype, py::handle device, py::handle ref) {
+        py::handle value, py::handle dtype, py::handle device, py::handle ref_hdl) {
     py::object val = py::reinterpret_borrow<py::object>(value);
     if (PyArray_Check(value.ptr())) {
         py::tuple strides =
@@ -107,21 +107,56 @@ py::object _Const(
         }
         if (need_squeeze) {
             val = py::reinterpret_borrow<py::array>(value);
+            py::object orig_shp = val.attr("shape");
             val = val.attr("squeeze")();
-            val = val.attr("reshape")(val.attr("shape"));
+            val = val.attr("reshape")(orig_shp);
         }
+    }
+    py::object ref;
+    if (py::isinstance<py::tuple>(ref_hdl)) {
+        py::tuple tup = py::reinterpret_borrow<py::tuple>(ref_hdl);
+        if (tup.size()) {
+            ref = tup[0];
+        } else {
+            ref = py::none();
+        }
+    } else {
+        ref = py::reinterpret_borrow<py::object>(ref_hdl);
     }
     if (py::isinstance<PySymbolVar>(ref)) {
         auto ref_var = ref.cast<PySymbolVar*>();
         auto* graph = ref_var->m_node->owner_graph();
-        auto cn = device.cast<CompNode>();
+        CompNode cn;
+        if (device.ptr() == Py_None) {
+            cn = ref_var->m_node->comp_node();
+        } else {
+            cn = device.cast<CompNode>();
+        }
         OperatorNodeConfig config(cn);
         auto hv = npy::np2tensor(
                 val.ptr(), npy::Meth::borrow(cn), dtype.cast<mgb::DType>());
         auto typeobj = ref.get_type();
         return typeobj(opr::ImmutableTensor::make(*graph, hv, config).node());
     }
-    py::tuple tup = py::make_tuple(val, dtype, device, true, false, py::none());
+    py::object device_obj;
+    if (device.ptr() == Py_None) {
+        device_obj = py::cast(CompNode::load(get_default_device()));
+    } else if (py::isinstance<py::str>(device)) {
+        py::object dmap =
+                getattr(py::reinterpret_borrow<py::object>((PyObject*)py_tensor_type),
+                        "dmap_callback");
+        if (dmap.ptr() != Py_None) {
+            device_obj = dmap(device);
+            py::print(device_obj);
+        } else {
+            device_obj = py::cast(CompNode::load(device.cast<std::string>()));
+        }
+    } else if (py::isinstance<CompNode>(device)) {
+        device_obj = py::reinterpret_borrow<py::object>(device);
+    } else {
+        device_obj = getattr(device, "_cn");
+    }
+    py::tuple tup = py::make_tuple(val, dtype, device_obj, true, false, py::none());
     return TensorWrapper::make(py_tensor_type, tup.ptr(), nullptr);
 }
 
@@ -1103,6 +1138,16 @@ PyObject* broadcast_cpp(PyObject* self, PyObject* const* args, size_t nargs) {
 PyObject* reshape_cpp(PyObject* self, PyObject* const* args, size_t nargs) {
     try {
         return _reshape_cpp(py::handle(args[0]), py::handle(args[1])).release().ptr();
+    }
+    PYEXT17_TRANSLATE_EXC_RET(nullptr)
+}
+
+PyObject* Const(PyObject* self, PyObject* const* args, size_t nargs) {
+    try {
+        return _Const(py::handle(args[0]), py::handle(args[1]), py::handle(args[2]),
+                      py::handle(args[3]))
+                .release()
+                .ptr();
     }
     PYEXT17_TRANSLATE_EXC_RET(nullptr)
 }

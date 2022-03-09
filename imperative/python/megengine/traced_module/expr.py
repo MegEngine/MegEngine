@@ -16,6 +16,7 @@ from importlib import import_module
 from typing import Callable, Dict, Iterable, List, Optional, Sequence, Union
 
 from ..core._imperative_rt import OpDef
+from ..core._imperative_rt.core2 import Const
 from ..core._imperative_rt.core2 import Tensor as RawTensor
 from ..core._imperative_rt.core2 import (
     apply,
@@ -25,7 +26,6 @@ from ..core._imperative_rt.core2 import (
     unset_module_tracing,
 )
 from ..core.ops.builtin import FakeQuant
-from ..core.ops.special import Const
 from ..module import Module
 from ..tensor import Parameter, Tensor
 from ..version import __version__
@@ -764,7 +764,7 @@ class Constant(Expr):
 
     def interpret(self, *inputs):
         if isinstance(self.value, RawTensor):
-            return Const(self.value.numpy())()
+            return (Const(self.value.numpy(), None, None, None),)
         return (self.value,)
 
     def __repr__(self):

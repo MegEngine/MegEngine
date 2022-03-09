@@ -13,6 +13,7 @@ import numpy as np
 
 from ..core._imperative_rt import CompNode
 from ..core._imperative_rt.core2 import (
+    Const,
     SymbolVar,
     apply,
     broadcast_cpp,
@@ -24,7 +25,6 @@ from ..core._imperative_rt.core2 import (
 from ..core._wrap import as_device
 from ..core.ops import builtin
 from ..core.ops.builtin import Copy, Identity
-from ..core.ops.special import Const
 from ..core.tensor.utils import astensor1d, convert_inputs, get_device, subgraph_fn
 from ..device import get_default_device
 from ..tensor import Tensor
@@ -177,7 +177,7 @@ def full(
         shape = (shape,)
     if device is None:
         device = get_default_device()
-    (x,) = Const(value, dtype=dtype, device=device)()
+    x = Const(value, dtype, device, None)
     if type(shape) in (list, tuple) and len(shape) == 0:
         return x
     return broadcast_to(x, shape)
@@ -325,7 +325,7 @@ def full_like(
              [2 2 2]]
 
     """
-    (x,) = Const(value, dtype=inp.dtype, device=inp.device)(inp)
+    x = Const(value, inp.dtype, inp.device, inp)
     if inp.ndim == 0:
         return x
     return broadcast_to(x, inp.shape)

@@ -1,4 +1,4 @@
-from ..core.ops.special import Const
+from ..core._imperative_rt.core2 import Const
 from ..jit.tracing import is_tracing
 
 small_tensor_cache = {}
@@ -7,11 +7,11 @@ small_tensor_cache = {}
 def _get_scalar_tensor_with_value(value, dtype=None, device=None):
     global small_tensor_cache
     if is_tracing():
-        (ret,) = Const(value, dtype=dtype, device=device)()
+        ret = Const(value, dtype, device, None)
     else:
         cache_key = (value, dtype, device)
         if cache_key not in small_tensor_cache:
-            (ret,) = Const(value, dtype=dtype, device=device)()
+            ret = Const(value, dtype, device, None)
             small_tensor_cache[cache_key] = ret
         else:
             ret = small_tensor_cache[cache_key]

@@ -11,7 +11,7 @@ from functools import lru_cache
 from typing import NamedTuple, Optional, Sequence, Tuple, Union
 
 from ..core import _config
-from ..core._imperative_rt.core2 import apply, dtype_promotion
+from ..core._imperative_rt.core2 import Const, apply, dtype_promotion
 from ..core._imperative_rt.ops import SubgraphBuilder as _SubgraphBuilder
 from ..core._imperative_rt.ops import get_global_rng_seed as _get_global_rng_seed
 from ..core.ops import builtin
@@ -26,7 +26,6 @@ from ..core.ops.builtin import (
     Reshape,
     TypeCvt,
 )
-from ..core.ops.special import Const
 from ..core.tensor import amp, megbrain_graph
 from ..core.tensor.array_method import _elwise_apply
 from ..core.tensor.utils import (
@@ -1317,7 +1316,7 @@ def batch_norm(
             raise ValueError("Invalid param_dim {}".format(param_dim))
 
         if x is None:
-            (x,) = Const(value, dtype=inp.dtype, device=inp.device)()
+            x = Const(value, inp.dtype, inp.device, None)
             shape = astensor1d(pshape, inp, dtype="int32", device=inp.device)
             (result,) = apply(builtin.Broadcast(), x, shape)
             return result
@@ -1541,7 +1540,7 @@ def sync_batch_norm(
 
     def _make_full_if_none(x, value):
         if x is None:
-            (x,) = Const(value, dtype=inp.dtype, device=_device)()
+            x = Const(value, inp.dtype, _device, None)
             (result,) = apply(builtin.Broadcast(), x, reduce_shape)
             return result
         elif x.ndim == 1:
