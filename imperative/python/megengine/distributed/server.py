@@ -231,7 +231,11 @@ class Client:
 
     def get_mm_server_port(self):
         r"""Get multiple machine server port."""
-        return self.proxy.get_mm_server_port()
+        while True:
+            try:
+                return self.proxy.get_mm_server_port()
+            except:
+                time.sleep(0.5)
 
     def set_is_grad(self, key, is_grad):
         r"""Mark send/recv need gradiants by key.
@@ -274,7 +278,13 @@ class Client:
             key: group key to match each other.
             size: group size.
         """
-        self.proxy.group_barrier(key, size)
+        # FIXME: group_barrier is not idempotent
+        while True:
+            try:
+                self.proxy.group_barrier(key, size)
+                return
+            except:
+                time.sleep(0.5)
 
     def user_set(self, key, val):
         r"""Set user defined key-value pairs across processes."""
