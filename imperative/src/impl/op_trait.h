@@ -160,7 +160,7 @@ struct OpMeth<Tag, RType(Args...)> : public thin_function<RType(Args...)> {
             }
             return false;
         };
-        while (!this->Base::operator bool()) {
+        while (mgb_unlikely(!this->Base::operator bool())) {
             using Mode = OpMethFallbackMode;
             if (match_mode(Mode::FromSubgraph)) {
                 OpMethFallbackFromSubgraph::impl(*const_cast<OpMeth*>(this), Tag{});

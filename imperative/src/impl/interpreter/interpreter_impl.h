@@ -77,7 +77,7 @@ private:
     struct State;
 
     TensorInfo* alloc();
-    void init(TensorInfo*, LogicalTensorDesc desc);
+    void init(TensorInfo*, LogicalTensorDesc&& desc);
     void free(TensorInfo*);
     void real_free(TensorInfo*);
     void recursive_free(TensorInfo*);
@@ -132,6 +132,8 @@ private:
     MemPool<TensorInfo> m_pool;
     std::unordered_set<Handle> m_valid_handle;
     TensorInfo* m_waitee = nullptr;
+    Spinlock m_pool_spin;
+    Spinlock m_info_spin;
     uint64_t m_waitee_id = 0;
     std::exception_ptr m_worker_exc;
     std::function<void(std::string, std::string)> m_profile_dump_callback;

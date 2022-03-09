@@ -51,7 +51,7 @@ public:
     void alloc_with_defrag(Blob* blob, size_t size) override;
 
     DeviceTensorND alloc_workspace_with_defrag(
-            CompNode cn, TensorLayout layout) override;
+            CompNode cn, TensorLayout& layout) override;
 
     void register_blob(Blob* blob) override;
 

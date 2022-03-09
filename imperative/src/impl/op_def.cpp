@@ -39,7 +39,7 @@ DispatchMode OpDef::decide_dispatch_mode(
 }
 
 SmallVector<TensorPtr> OpDef::apply_on_physical_tensor(
-        const OpDef& def, SmallVector<TensorPtr> inputs,
+        const OpDef& def, const SmallVector<TensorPtr>& inputs,
         SmallVector<LogicalTensorDesc>& output_descs, const bool& validated) {
     return def.trait()->apply_on_physical_tensor(
             def, std::move(inputs), output_descs, validated);

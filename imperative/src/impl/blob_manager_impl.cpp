@@ -59,9 +59,9 @@ void BlobManagerImpl::alloc_direct(Blob* blob, size_t size) {
 }
 
 DeviceTensorND BlobManagerImpl::alloc_workspace_with_defrag(
-        CompNode cn, TensorLayout layout) {
+        CompNode cn, TensorLayout& layout) {
     DeviceTensorND dev_tensor;
-    MGB_TRY { dev_tensor = alloc_workspace(cn, layout); }
+    MGB_TRY { return alloc_workspace(cn, layout); }
     MGB_CATCH(MemAllocError&, {
         mgb_log_warn("memory allocation failed for workspace; try defragmenting");
         defrag(cn);
@@ -149,7 +149,7 @@ struct BlobManagerStub : BlobManager {
     void alloc_with_defrag(Blob* blob, size_t size) {
         mgb_assert(0, "prohibited after global variable destruction");
     };
-    DeviceTensorND alloc_workspace_with_defrag(CompNode cn, TensorLayout layout) {
+    DeviceTensorND alloc_workspace_with_defrag(CompNode cn, TensorLayout& layout) {
         mgb_assert(0, "prohibited after global variable destruction");
     };
     void register_blob(Blob* blob) {
