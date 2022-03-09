@@ -213,4 +213,57 @@ GI_INT32_t GiXorInt32(GI_INT32_t Vector1, GI_INT32_t Vector2) {
 #endif
 }
 
+GI_FORCEINLINE
+GI_FLOAT32_t GiBroadcastFloat32(float Value) {
+#if defined(GI_NEON_INTRINSICS)
+    return vdupq_n_f32(Value);
+#elif defined(GI_SSE2_INTRINSICS)
+    return _mm_set1_ps(Value);
+#else
+    GI_FLOAT32_t ret;
+    for (size_t i = 0; i < GI_SIMD_LEN_BYTE / sizeof(float); i++) {
+        ret[i] = Value;
+    }
+    return ret;
+#endif
+}
+
+GI_FORCEINLINE
+GI_INT32_t GiBroadcastInt32(int32_t Value) {
+#if defined(GI_NEON_INTRINSICS)
+    return vdupq_n_s32(Value);
+#elif defined(GI_SSE2_INTRINSICS)
+    return _mm_set1_epi32(Value);
+#else
+    GI_INT32_t ret;
+    for (size_t i = 0; i < GI_SIMD_LEN_BYTE / sizeof(int32_t); i++) {
+        ret[i] = Value;
+    }
+    return ret;
+#endif
+}
+
+GI_FORCEINLINE
+GI_INT8_t GiBroadcastInt8(int8_t Value) {
+#if defined(GI_NEON_INTRINSICS)
+    return vdupq_n_s8(Value);
+#elif defined(GI_SSE2_INTRINSICS)
+    return _mm_set1_epi8(Value);
+#else
+    GI_INT8_t ret;
+    for (size_t i = 0; i < GI_SIMD_LEN_BYTE / sizeof(int8_t); i++) {
+        ret[i] = Value;
+    }
+    return ret;
+#endif
+}
+
+__attribute__((unused)) const GI_INT8_t vzero_int8 = GiBroadcastInt8(0);
+__attribute__((unused)) const GI_INT32_t vzero = GiBroadcastInt32(0);
+__attribute__((unused)) const GI_FLOAT32_t vfzero = GiBroadcastFloat32(0.0f);
+__attribute__((unused)) const GI_FLOAT32_t vfhalf = GiBroadcastFloat32(0.5f);
+__attribute__((unused)) const GI_FLOAT32_t vfneg_half = GiBroadcastFloat32(-0.5f);
+__attribute__((unused)) const GI_FLOAT32_t vfmin_int8 = GiBroadcastFloat32(-128.0f);
+__attribute__((unused)) const GI_FLOAT32_t vfmax_int8 = GiBroadcastFloat32(127.0f);
+
 // vim: syntax=cpp.doxygen

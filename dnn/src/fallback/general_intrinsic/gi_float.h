@@ -71,20 +71,12 @@ GI_INT32_t GiRoundAsInt32(GI_FLOAT32_t Vector) {
 #if __ARM_ARCH >= 8
     return vcvtaq_s32_f32(Vector);
 #else
-    float32x4_t vzero = vdupq_n_f32(0.f);
-    float32x4_t vfhalf = vdupq_n_f32(0.5f);
-    float32x4_t vfneg_half = vdupq_n_f32(-0.5f);
-    float32x4_t vinc0 = vbslq_f32(vcgeq_f32(Vector, vzero), vfhalf, vfneg_half);
+    float32x4_t vinc0 = vbslq_f32(vcgeq_f32(Vector, vfzero), vfhalf, vfneg_half);
     return vcvtq_s32_f32(vaddq_f32(Vector, vinc0));
 #endif
 #elif defined(GI_SSE42_INTRINSICS)
-    __m128 vfzero = _mm_set1_ps(0.f);
-    __m128 vfhalf = _mm_set1_ps(0.5f);
-    __m128 vfneg_half = _mm_set1_ps(-0.5f);
     __m128 vinc0 = _mm_blendv_ps(vfneg_half, vfhalf, _mm_cmpge_ps(Vector, vfzero));
-    __m128 vres0 = _mm_add_ps(Vector, vinc0);
-    return _mm_castps_si128(
-            _mm_round_ps(vres0, _MM_FROUND_TO_ZERO | _MM_FROUND_NO_EXC));
+    return _mm_cvttps_epi32(_mm_add_ps(Vector, vinc0));
 #else
     GI_INT32_t ret;
     for (size_t i = 0; i < GI_SIMD_LEN_BYTE / sizeof(float); i++) {
@@ -118,22 +110,7 @@ GI_FLOAT32_t GiCastToFloat32(GI_INT32_t Vector) {
 #else
     GI_FLOAT32_t ret;
     for (size_t i = 0; i < GI_SIMD_LEN_BYTE / sizeof(int32_t); i++) {
-        ret[i] = float(Vector[i]);
-    }
-    return ret;
-#endif
-}
-
-GI_FORCEINLINE
-GI_FLOAT32_t GiBroadcastFloat32(float Value) {
-#if defined(GI_NEON_INTRINSICS)
-    return vdupq_n_f32(Value);
-#elif defined(GI_SSE2_INTRINSICS)
-    return _mm_set1_ps(Value);
-#else
-    GI_FLOAT32_t ret;
-    for (size_t i = 0; i < GI_SIMD_LEN_BYTE / sizeof(float); i++) {
-        ret[i] = Value;
+        ret[i] = (float)Vector[i];
     }
     return ret;
 #endif

@@ -9,6 +9,7 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 #include "src/fallback/type_cvt/opr_impl.h"
+#include "src/fallback/type_cvt/typecvt_helper.h"
 
 #include "midout.h"
 #include "src/common/utils.h"
@@ -17,6 +18,7 @@
 // MIDOUT_DECL(megdnn_fb_typecvt_src)
 MIDOUT_DECL(megdnn_fb_typecvt_dst_dtype)
 MIDOUT_DECL(megdnn_fb_typecvt_src_dtype)
+MIDOUT_DECL(megdnn_fb_typecvt_optimized)
 
 namespace {
 
@@ -513,10 +515,66 @@ void TypeCvtImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
         !is_quantize_lowbit(dst.layout.dtype) &&
         dst.layout.dtype.enumv() != DTypeEnum::QuantizedS1 &&
         src.layout.dtype.enumv() != DTypeEnum::QuantizedS1) {
-        MEGDNN_DISPATCH_CPU_KERN_OPR(run_contiguous(src, dst));
+        if (!exec_optimized(src, dst)) {
+            MEGDNN_DISPATCH_CPU_KERN_OPR(run_contiguous(src, dst));
+        }
     } else {
         naive::TypeCvtImpl::exec(src, dst);
     }
+}
+
+bool TypeCvtImpl::exec_optimized(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
+    DType src_dtype = src.layout.dtype;
+    DType dst_dtype = dst.layout.dtype;
+    bool execed = false;
+    using namespace dtype;
+    size_t nr_elems = src.layout.total_nr_elems();
+#define DISPATCH_QUANTIZED(_stype_enumv, _stype, _dtype_enumv, _dtype, _midout_iv) \
+    if (src_dtype.enumv() == DTypeTrait<_stype_enumv>::enumv &&                    \
+        dst_dtype.enumv() == DTypeTrait<_dtype_enumv>::enumv) {                    \
+        MIDOUT_BEGIN(megdnn_fb_typecvt_optimized, midout_iv(_midout_iv)) {         \
+            using _TypeCvter = QuantizedTypeCvter<_stype, _dtype>;                 \
+            MEGDNN_DISPATCH_CPU_KERN_OPR(do_typecvt<_TypeCvter>(                   \
+                    src.compatible_ptr<_stype>(), dst.compatible_ptr<_dtype>(),    \
+                    src_dtype, dst_dtype, nr_elems));                              \
+            execed = true;                                                         \
+        }                                                                          \
+        MIDOUT_END();                                                              \
+    }
+    DISPATCH_QUANTIZED(QuantizedS32, int32_t, QuantizedS8, int8_t, 1);
+    DISPATCH_QUANTIZED(QuantizedS8, int8_t, QuantizedS32, int32_t, 2);
+    DISPATCH_QUANTIZED(QuantizedS8, int8_t, QuantizedS8, int8_t, 3);
+    DISPATCH_QUANTIZED(QuantizedS32, int32_t, QuantizedS32, int32_t, 4);
+    DISPATCH_QUANTIZED(float, float, QuantizedS8, int8_t, 5);
+#undef DISPATCH_QUANTIZED
+
+#define DISPATCH_FIX2FLOAT(_stype_enumv, _stype, _dtype_enumv, _dtype, _midout_iv) \
+    if (src_dtype.enumv() == DTypeTrait<_stype_enumv>::enumv &&                    \
+        dst_dtype.enumv() == DTypeTrait<_dtype_enumv>::enumv) {                    \
+        MIDOUT_BEGIN(megdnn_fb_typecvt_optimized, midout_iv(_midout_iv)) {         \
+            using _TypeCvter = Fix2FloatTypeCvter<_stype, _dtype>;                 \
+            MEGDNN_DISPATCH_CPU_KERN_OPR(do_typecvt<_TypeCvter>(                   \
+                    src.compatible_ptr<_stype>(), dst.compatible_ptr<_dtype>(),    \
+                    src_dtype, dst_dtype, src.layout.total_nr_elems()));           \
+            execed = true;                                                         \
+        }                                                                          \
+        MIDOUT_END();                                                              \
+    }
+    DISPATCH_FIX2FLOAT(Int16, int16_t, Float32, float, 6);
+    DISPATCH_FIX2FLOAT(Int8, int8_t, Float32, float, 7);
+
+    if (src_dtype.enumv() == DTypeTrait<QuantizedS8>::enumv &&
+        dst_dtype.enumv() == DTypeTrait<Float32>::enumv) {
+        MIDOUT_BEGIN(megdnn_fb_typecvt_optimized, midout_iv(8)) {
+            using TypeCvter = Quan2FloatTypeCvter<int8_t, float>;
+            MEGDNN_DISPATCH_CPU_KERN_OPR(do_typecvt<TypeCvter>(
+                    src.compatible_ptr<int8_t>(), dst.compatible_ptr<float>(),
+                    src_dtype, dst_dtype, src.layout.total_nr_elems()));
+            execed = true;
+        }
+        MIDOUT_END();
+    }
+    return execed;
 }
 
 }  // namespace fallback

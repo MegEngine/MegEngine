@@ -20,16 +20,6 @@
 namespace megdnn {
 namespace fallback {
 
-struct QConverterBase {
-    inline static GI_INT32_t vzero() { return GiBroadcastInt32(0); }
-
-    inline static GI_FLOAT32_t vfzero() { return GiBroadcastFloat32(0.f); }
-
-    inline static GI_FLOAT32_t vfhalf() { return GiBroadcastFloat32(0.5f); }
-
-    inline static GI_FLOAT32_t vfneg_half() { return GiBroadcastFloat32(-0.5f); }
-};
-
 struct QConverter {
     template <typename dst_type, typename... src_type>
     static inline dst_type convert(const src_type&... src);
@@ -66,6 +56,12 @@ template <>
 inline GI_INT8_t QConverter::convert(const GI_FLOAT32_V2_t& vsrc) {
     return GiCvtFromFloat32V2ToInt8(vsrc);
 }
+
+template <>
+inline GI_INT8_t QConverter::convert(const GI_FLOAT32_V4_t& vsrc) {
+    return GiCvtFromFloat32V4ToInt8(vsrc);
+}
+
 template <>
 inline GI_INT8_t QConverter::convert(const GI_FLOAT32_t& src) {
     return GiCvtFromFloat32ToInt8(src);

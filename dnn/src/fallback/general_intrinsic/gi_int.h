@@ -14,21 +14,6 @@
 #include "gi_common.h"
 
 GI_FORCEINLINE
-GI_INT32_t GiBroadcastInt32(int32_t Value) {
-#if defined(GI_NEON_INTRINSICS)
-    return vdupq_n_s32(Value);
-#elif defined(GI_SSE2_INTRINSICS)
-    return _mm_set1_epi32(Value);
-#else
-    GI_INT32_t ret;
-    for (size_t i = 0; i < GI_SIMD_LEN_BYTE / sizeof(int32_t); i++) {
-        ret[i] = Value;
-    }
-    return ret;
-#endif
-}
-
-GI_FORCEINLINE
 GI_UINT32_t GiBroadcastUint32(int32_t Value) {
 #if defined(GI_NEON_INTRINSICS)
     return vdupq_n_u32(Value);
@@ -37,21 +22,6 @@ GI_UINT32_t GiBroadcastUint32(int32_t Value) {
 #else
     GI_UINT32_t ret;
     for (size_t i = 0; i < GI_SIMD_LEN_BYTE / sizeof(int32_t); i++) {
-        ret[i] = Value;
-    }
-    return ret;
-#endif
-}
-
-GI_FORCEINLINE
-GI_INT8_t GiBroadcastInt8(int8_t Value) {
-#if defined(GI_NEON_INTRINSICS)
-    return vdupq_n_s8(Value);
-#elif defined(GI_SSE2_INTRINSICS)
-    return _mm_set1_epi8(Value);
-#else
-    GI_INT8_t ret;
-    for (size_t i = 0; i < GI_SIMD_LEN_BYTE / sizeof(int8_t); i++) {
         ret[i] = Value;
     }
     return ret;
@@ -68,6 +38,22 @@ GI_INT32_t GiLoadInt32(const void* Buffer) {
     GI_INT32_t ret;
     const int32_t* ptr = (int32_t*)Buffer;
     for (size_t i = 0; i < GI_SIMD_LEN_BYTE / sizeof(int32_t); i++) {
+        ret[i] = ptr[i];
+    }
+    return ret;
+#endif
+}
+
+GI_FORCEINLINE
+GI_INT16_t GiLoadInt16(const void* Buffer) {
+#if defined(GI_NEON_INTRINSICS)
+    return vld1q_s16((int16_t*)Buffer);
+#elif defined(GI_SSE2_INTRINSICS)
+    return _mm_loadu_si128((const __m128i*)Buffer);
+#else
+    GI_INT16_t ret;
+    const int16_t* ptr = (int16_t*)Buffer;
+    for (size_t i = 0; i < GI_SIMD_LEN_BYTE / sizeof(int16_t); i++) {
         ret[i] = ptr[i];
     }
     return ret;
@@ -810,21 +796,12 @@ GI_INT8_t GiCvtFromFloat32ToInt8(GI_FLOAT32_t src) {
     int16x8_t mid_s16 = vcombine_s16(vqmovn_s32(vres0), vqmovn_s32(vres0));
     return vcombine_s8(vqmovn_s16(mid_s16), vqmovn_s16(mid_s16));
 #else
-    float32x4_t vzero = vdupq_n_f32(0.f);
-    float32x4_t vfhalf = vdupq_n_f32(0.5f);
-    float32x4_t vfneg_half = vdupq_n_f32(-0.5f);
-    float32x4_t vinc0 = vbslq_f32(vcgeq_f32(src, vzero), vfhalf, vfneg_half);
+    float32x4_t vinc0 = vbslq_f32(vcgeq_f32(src, vfzero), vfhalf, vfneg_half);
     int32x4_t vres0 = vcvtq_s32_f32(vaddq_f32(src, vinc0));
     int16x8_t mid_s16 = vcombine_s16(vqmovn_s32(vres0), vqmovn_s32(vres0));
     return vcombine_s8(vqmovn_s16(mid_s16), vqmovn_s16(mid_s16));
 #endif
 #elif defined(GI_SSE42_INTRINSICS)
-    __m128 vfzero = _mm_set1_ps(0.f);
-    __m128 vfhalf = _mm_set1_ps(0.5f);
-    __m128 vfneg_half = _mm_set1_ps(-0.5f);
-    __m128 vfmin_int8 = _mm_set1_ps(-128.f);
-    __m128 vfmax_int8 = _mm_set1_ps(127.f);
-
     __m128 vinc0 = _mm_blendv_ps(vfneg_half, vfhalf, _mm_cmpge_ps(src, vfzero));
     __m128 vres0 = _mm_add_ps(src, vinc0);
     vres0 = _mm_round_ps(vres0, _MM_FROUND_TO_ZERO | _MM_FROUND_NO_EXC);
@@ -857,23 +834,14 @@ GI_INT8_t GiCvtFromFloat32V2ToInt8(GI_FLOAT32_V2_t vsrc) {
     int8x8_t mid1 = vqmovn_s16(vcombine_s16(vqmovn_s32(vres0), vqmovn_s32(vres1)));
     return vcombine_s8(mid1, mid1);
 #else
-    float32x4_t vzero = vdupq_n_f32(0.f);
-    float32x4_t vfhalf = vdupq_n_f32(0.5f);
-    float32x4_t vfneg_half = vdupq_n_f32(-0.5f);
-    float32x4_t vinc0 = vbslq_f32(vcgeq_f32(vsrc.val[0], vzero), vfhalf, vfneg_half);
-    float32x4_t vinc1 = vbslq_f32(vcgeq_f32(vsrc.val[1], vzero), vfhalf, vfneg_half);
+    float32x4_t vinc0 = vbslq_f32(vcgeq_f32(vsrc.val[0], vfzero), vfhalf, vfneg_half);
+    float32x4_t vinc1 = vbslq_f32(vcgeq_f32(vsrc.val[1], vfzero), vfhalf, vfneg_half);
     int32x4_t vres0 = vcvtq_s32_f32(vaddq_f32(vsrc.val[0], vinc0));
     int32x4_t vres1 = vcvtq_s32_f32(vaddq_f32(vsrc.val[1], vinc1));
     int8x8_t mid1 = vqmovn_s16(vcombine_s16(vqmovn_s32(vres0), vqmovn_s32(vres1)));
     return vcombine_s8(mid1, mid1);
 #endif
 #elif defined(GI_SSE42_INTRINSICS)
-    __m128 vfzero = _mm_set1_ps(0.f);
-    __m128 vfhalf = _mm_set1_ps(0.5f);
-    __m128 vfneg_half = _mm_set1_ps(-0.5f);
-    __m128 vfmin_int8 = _mm_set1_ps(-128.f);
-    __m128 vfmax_int8 = _mm_set1_ps(127.f);
-
     __m128 vinc0 = _mm_blendv_ps(vfneg_half, vfhalf, _mm_cmpge_ps(vsrc.val[0], vfzero));
     __m128 vinc1 = _mm_blendv_ps(vfneg_half, vfhalf, _mm_cmpge_ps(vsrc.val[1], vfzero));
 
@@ -913,13 +881,13 @@ GI_INT8_t GiCvtFromFloat32V4ToInt8(GI_FLOAT32_V4_t vsrc) {
     int8x8_t mid2 = vqmovn_s16(vcombine_s16(vqmovn_s32(vres2), vqmovn_s32(vres3)));
     return vcombine_s8(mid1, mid2);
 #else
-    float32x4_t vzero = vdupq_n_f32(0.f);
+    float32x4_t vfzero = vdupq_n_f32(0.f);
     float32x4_t vfhalf = vdupq_n_f32(0.5f);
     float32x4_t vfneg_half = vdupq_n_f32(-0.5f);
-    float32x4_t vinc0 = vbslq_f32(vcgeq_f32(vsrc.val[0], vzero), vfhalf, vfneg_half);
-    float32x4_t vinc1 = vbslq_f32(vcgeq_f32(vsrc.val[1], vzero), vfhalf, vfneg_half);
-    float32x4_t vinc2 = vbslq_f32(vcgeq_f32(vsrc.val[2], vzero), vfhalf, vfneg_half);
-    float32x4_t vinc3 = vbslq_f32(vcgeq_f32(vsrc.val[3], vzero), vfhalf, vfneg_half);
+    float32x4_t vinc0 = vbslq_f32(vcgeq_f32(vsrc.val[0], vfzero), vfhalf, vfneg_half);
+    float32x4_t vinc1 = vbslq_f32(vcgeq_f32(vsrc.val[1], vfzero), vfhalf, vfneg_half);
+    float32x4_t vinc2 = vbslq_f32(vcgeq_f32(vsrc.val[2], vfzero), vfhalf, vfneg_half);
+    float32x4_t vinc3 = vbslq_f32(vcgeq_f32(vsrc.val[3], vfzero), vfhalf, vfneg_half);
     int32x4_t vres0 = vcvtq_s32_f32(vaddq_f32(vsrc.val[0], vinc0));
     int32x4_t vres1 = vcvtq_s32_f32(vaddq_f32(vsrc.val[1], vinc1));
     int32x4_t vres2 = vcvtq_s32_f32(vaddq_f32(vsrc.val[2], vinc2));
@@ -929,12 +897,6 @@ GI_INT8_t GiCvtFromFloat32V4ToInt8(GI_FLOAT32_V4_t vsrc) {
     return vcombine_s8(mid1, mid2);
 #endif
 #elif defined(GI_SSE42_INTRINSICS)
-    __m128 vfzero = _mm_set1_ps(0.f);
-    __m128 vfhalf = _mm_set1_ps(0.5f);
-    __m128 vfneg_half = _mm_set1_ps(-0.5f);
-    __m128 vfmin_int8 = _mm_set1_ps(-128.f);
-    __m128 vfmax_int8 = _mm_set1_ps(127.f);
-
     __m128 vinc0 = _mm_blendv_ps(vfneg_half, vfhalf, _mm_cmpge_ps(vsrc.val[0], vfzero));
     __m128 vinc1 = _mm_blendv_ps(vfneg_half, vfhalf, _mm_cmpge_ps(vsrc.val[1], vfzero));
     __m128 vinc2 = _mm_blendv_ps(vfneg_half, vfhalf, _mm_cmpge_ps(vsrc.val[2], vfzero));
