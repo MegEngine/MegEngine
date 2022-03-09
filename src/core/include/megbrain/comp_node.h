@@ -322,6 +322,21 @@ public:
     MGE_WIN_DECLSPEC_FUC static DeviceProperties get_device_prop(
             int dev, DeviceType device_type);
 
+    /*!
+     * \brief get control of host ptr to user
+     */
+    MGE_WIN_DECLSPEC_FUC void map_to_cpu(void* ptr, size_t size, bool blocking = false);
+
+    /*!
+     * \brief release control of host ptr to system
+     */
+    MGE_WIN_DECLSPEC_FUC void unmap_to_gpu(void* ptr, size_t size);
+
+    /*!
+     * \brief get logical address by host ptr
+     */
+    MGE_WIN_DECLSPEC_FUC void* get_logical_addr_by_host_ptr(void* ptr, size_t size);
+
     /* =================== synchronization ======================== */
 
     class Event;
@@ -572,6 +587,12 @@ protected:
                 size_t size) {
             peer_copy_to(dest_impl, dest.get_ptr(), src.get_ptr(), size);
         }
+
+        virtual void map_to_cpu(void* ptr, size_t size, bool blocking = false);
+
+        virtual void unmap_to_gpu(void* ptr, size_t size);
+
+        virtual void* get_logical_addr_by_host_ptr(void* ptr, size_t size);
 
         virtual size_t get_mem_addr_alignment() = 0;
         virtual size_t get_mem_padding();

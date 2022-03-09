@@ -658,4 +658,36 @@ void CompNode::ImplBase::add_callback(megdnn::thin_function<void()>&&) {
             locator().to_string().c_str());
 }
 
+void CompNode::map_to_cpu(void* ptr, size_t size, bool blocking) {
+    m_impl->map_to_cpu(ptr, size, blocking);
+}
+
+void CompNode::unmap_to_gpu(void* ptr, size_t size) {
+    m_impl->unmap_to_gpu(ptr, size);
+}
+
+void* CompNode::get_logical_addr_by_host_ptr(void* ptr, size_t size) {
+    return m_impl->get_logical_addr_by_host_ptr(ptr, size);
+}
+
+void CompNode::ImplBase::map_to_cpu(void* ptr, size_t size, bool blocking) {
+    MGB_MARK_USED_VAR(ptr);
+    MGB_MARK_USED_VAR(size);
+    MGB_MARK_USED_VAR(blocking);
+    mgb_assert(false, "No map_to_cpu Impl");
+}
+
+void CompNode::ImplBase::unmap_to_gpu(void* ptr, size_t size) {
+    MGB_MARK_USED_VAR(ptr);
+    MGB_MARK_USED_VAR(size);
+    mgb_assert(false, "No unmap_to_gpu Impl");
+}
+
+void* CompNode::ImplBase::get_logical_addr_by_host_ptr(void* ptr, size_t size) {
+    MGB_MARK_USED_VAR(ptr);
+    MGB_MARK_USED_VAR(size);
+    mgb_assert(false, "No get_logical_addr_by_host_ptr Impl");
+    return nullptr;
+}
+
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
