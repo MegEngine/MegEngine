@@ -18,6 +18,7 @@ file(
   opr/impl/nvof/*.cpp
   plugin/impl/*.cpp
   serialization/impl/*.cpp
+  rdnn/impl/*.cpp
   core/impl/*.inl
   gopt/impl/*.inl
   opr/impl/*.inl
@@ -53,7 +54,8 @@ set(MGB_INC
     ${CMAKE_CURRENT_LIST_DIR}/gopt/include
     ${CMAKE_CURRENT_LIST_DIR}/opr/include
     ${CMAKE_CURRENT_LIST_DIR}/plugin/include
-    ${CMAKE_CURRENT_LIST_DIR}/serialization/include)
+    ${CMAKE_CURRENT_LIST_DIR}/serialization/include
+    ${CMAKE_CURRENT_LIST_DIR}/rdnn/include)
 
 if(MGE_WITH_JIT)
   list(APPEND MGB_INC ${CMAKE_CURRENT_LIST_DIR}/jit/include)

@@ -183,7 +183,7 @@ struct OprWithPolicyMaker<opr::BatchConvBiasForward>
                   MakeOprWithPolicyCaller4<megdnn::BatchConvBiasForward>,
                   megdnn::param::BatchConvBias> {};
 
-#include "../../opr/impl/internal/invoke.h"
+#include "megbrain/utils/invoke.h"
 template <typename Opr>
 struct MultiAlgoOprTrait;
 

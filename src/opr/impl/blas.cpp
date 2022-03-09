@@ -19,7 +19,6 @@
 #include "megbrain/opr/tensor_manip.h"
 
 #include "megbrain/opr/search_policy/algo_chooser.h"
-#include "megbrain/opr/search_policy/profiler.h"
 
 #include "./internal/megdnn_opr_wrapper.inl"
 #include "./search_policy/workspace_need_limit_getter.inl"

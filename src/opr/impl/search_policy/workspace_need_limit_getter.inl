@@ -12,7 +12,7 @@
 
 #pragma once
 
-#include "megbrain/opr/search_policy/profiler.h"
+#include "megbrain/opr/search_policy/algo_chooser.h"
 
 #include "../internal/megdnn_opr_wrapper.inl"
 
@@ -25,7 +25,7 @@ namespace intl {
     struct AutoAddWorkspaceNeedLimitGetter<megdnn::_Opr> { \
         static constexpr bool val = true;                  \
     };
-MGB_FOREACH_FASTRUN_OPR(cb)
+DNN_FOREACH_FASTRUN_OPR(cb)
 
 #undef cb
 

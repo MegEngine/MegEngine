@@ -18,11 +18,11 @@
 #include "megbrain/graph/grad_impl.h"
 #include "megbrain/system.h"
 #include "megbrain/utils/hash_ct.h"
+#include "megbrain/utils/invoke.h"
 #include "megbrain/utils/timer.h"
 
 #include "megdnn/oprs/utils.h"
 
-#include "../internal/invoke.h"
 #include "../internal/megdnn_opr_wrapper.inl"
 #include "../search_policy/workspace_need_limit_getter.inl"
 
