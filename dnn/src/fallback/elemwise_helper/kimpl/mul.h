@@ -73,7 +73,7 @@ struct MulOpBase<dt_qint8, dt_qint8> : BinaryOpBase<dt_qint8, dt_qint8> {
 template <>
 struct MulOp<dt_qint8, dt_qint8> : MulOpBase<dt_qint8, dt_qint8> {
     using MulOpBase::MulOpBase;
-    constexpr static size_t SIMD_WIDTH = 16;
+    constexpr static size_t SIMD_WIDTH = GI_SIMD_LEN_BYTE / sizeof(int8_t);
     using MulOpBase::operator();
 
     void operator()(

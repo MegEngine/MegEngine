@@ -3,7 +3,7 @@
  */
 
 #include "src/fallback/elemwise/gi_impl/ternary/algo.h"
-#include "src/fallback/elemwise_op.h"
+#include "src/fallback/elemwise_helper/elemwise_op.h"
 
 #include "src/common/utils.h"
 #include "src/naive/handle.h"
@@ -13,6 +13,7 @@
 MIDOUT_DECL(megdnn_fallback_elemwise_ternary)
 
 using namespace megdnn;
+using namespace elemwise;
 using namespace fallback;
 
 #define DISPATCH_MODE_FLOAT(_case, _type, _type_midout_id) \

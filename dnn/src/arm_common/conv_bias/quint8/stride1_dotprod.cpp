@@ -12,7 +12,7 @@
 #if MGB_ENABLE_DOT
 #include "megdnn/oprs.h"
 #include "src/arm_common/conv_bias/quint8/direct_dotprod.h"
-#include "src/arm_common/elemwise_op.h"
+#include "src/arm_common/elemwise_helper/elemwise_op.h"
 #include "src/common/opr_delegate.h"
 
 using namespace megdnn;

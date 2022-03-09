@@ -77,7 +77,7 @@ struct MaxOpBase<dt_qint8, dt_qint8> : BinaryOpBase<dt_qint8, dt_qint8> {
 template <>
 struct MaxOp<dt_qint8, dt_qint8> : MaxOpBase<dt_qint8, dt_qint8> {
     using MaxOpBase::MaxOpBase;
-    constexpr static size_t SIMD_WIDTH = 16;
+    constexpr static size_t SIMD_WIDTH = GI_SIMD_LEN_BYTE / sizeof(int8_t);
     using MaxOpBase::operator();
 
     void operator()(

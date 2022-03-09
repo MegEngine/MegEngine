@@ -14,7 +14,7 @@
 #include "src/aarch64/matrix_mul/quint8_dot/gemv.h"
 #include "src/aarch64/matrix_mul/quint8_dot/strategy.h"
 #include "src/arm_common/convolution/img2col_helper.h"
-#include "src/arm_common/elemwise_op.h"
+#include "src/arm_common/elemwise_helper/elemwise_op.h"
 #include "src/common/opr_delegate.h"
 #include "src/fallback/conv_bias/common.h"
 #include "src/fallback/matrix_mul/gemm_impl.h"

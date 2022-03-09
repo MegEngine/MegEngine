@@ -87,7 +87,7 @@ template <>
 struct FuseAddHSwishOp<dt_qint32, dt_qint8> : FuseAddHSwishOpBase<dt_qint32, dt_qint8> {
     using FuseAddHSwishOpBase::FuseAddHSwishOpBase;
     using FuseAddHSwishOpBase::operator();
-    constexpr static size_t SIMD_WIDTH = 4;
+    constexpr static size_t SIMD_WIDTH = GI_SIMD_LEN_BYTE / sizeof(int8_t);
     void operator()(
             const GI_INT32_V2_t& vsrc0, const GI_INT32_V2_t& vsrc1,
             dt_qint8* dst) const {

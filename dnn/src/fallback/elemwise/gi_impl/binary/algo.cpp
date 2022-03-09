@@ -2,7 +2,7 @@
  * \file dnn/src/fallback/elemwise/gi_impl/binary/algo.cpp
  */
 #include "src/fallback/elemwise/gi_impl/binary/algo.h"
-#include "src/fallback/elemwise_op.h"
+#include "src/fallback/elemwise_helper/elemwise_op.h"
 
 #include "src/common/utils.h"
 #include "src/naive/handle.h"
@@ -12,6 +12,7 @@
 MIDOUT_DECL(megdnn_fallback_elemwise_binary)
 
 using namespace megdnn;
+using namespace elemwise;
 using namespace fallback;
 
 namespace {

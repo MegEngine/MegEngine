@@ -59,66 +59,69 @@ GI_INT8_t GiBroadcastInt8(int8_t Value) {
 }
 
 GI_FORCEINLINE
-GI_INT32_t GiLoadInt32(const int32_t* Buffer) {
+GI_INT32_t GiLoadInt32(const void* Buffer) {
 #if defined(GI_NEON_INTRINSICS)
-    return vld1q_s32(Buffer);
+    return vld1q_s32((int32_t*)Buffer);
 #elif defined(GI_SSE2_INTRINSICS)
     return _mm_loadu_si128((const __m128i*)Buffer);
 #else
     GI_INT32_t ret;
+    const int32_t* ptr = (int32_t*)Buffer;
     for (size_t i = 0; i < GI_SIMD_LEN_BYTE / sizeof(int32_t); i++) {
-        ret[i] = Buffer[i];
+        ret[i] = ptr[i];
     }
     return ret;
 #endif
 }
 
 GI_FORCEINLINE
-GI_INT8_t GiLoadInt8(const int8_t* Buffer) {
+GI_INT8_t GiLoadInt8(const void* Buffer) {
 #if defined(GI_NEON_INTRINSICS)
-    return vld1q_s8(Buffer);
+    return vld1q_s8((int8_t*)Buffer);
 #elif defined(GI_SSE2_INTRINSICS)
     return _mm_loadu_si128((const __m128i*)Buffer);
 #else
     GI_INT8_t ret;
+    const int8_t* ptr = (int8_t*)Buffer;
     for (size_t i = 0; i < GI_SIMD_LEN_BYTE / sizeof(int8_t); i++) {
-        ret[i] = Buffer[i];
+        ret[i] = ptr[i];
     }
     return ret;
 #endif
 }
 
 GI_FORCEINLINE
-void GiStoreInt32(int32_t* Buffer, GI_INT32_t Vector) {
+void GiStoreInt32(void* Buffer, GI_INT32_t Vector) {
 #if defined(GI_NEON_INTRINSICS)
-    vst1q_s32(Buffer, Vector);
+    vst1q_s32((int32_t*)Buffer, Vector);
 #elif defined(GI_SSE2_INTRINSICS)
     _mm_storeu_si128((__m128i*)Buffer, Vector);
 #else
+    int32_t* ptr = (int32_t*)Buffer;
     for (size_t i = 0; i < GI_SIMD_LEN_BYTE / sizeof(int32_t); i++) {
-        Buffer[i] = Vector[i];
+        ptr[i] = Vector[i];
     }
 #endif
 }
 
 #if defined(GI_NEON_INTRINSICS)
-#define GISTORELANEINT32(i)                                                         \
-    GI_FORCEINLINE void GiStoreLane##i##Int32(int32_t* Buffer, GI_INT32_t Vector) { \
-        vst1q_lane_s32(Buffer, Vector, i);                                          \
+#define GISTORELANEINT32(i)                                                      \
+    GI_FORCEINLINE void GiStoreLane##i##Int32(void* Buffer, GI_INT32_t Vector) { \
+        vst1q_lane_s32((int32_t*)Buffer, Vector, i);                             \
     }
 
 #elif defined(GI_SSE2_INTRINSICS)
 
 #define GISTORELANEINT32(i)                                                         \
-    GI_FORCEINLINE void GiStoreLane##i##Int32(int32_t* Buffer, GI_INT32_t Vector) { \
+    GI_FORCEINLINE void GiStoreLane##i##Int32(void* Buffer, GI_INT32_t Vector) {    \
         GI_FLOAT32_t tmp = _mm_castsi128_ps(Vector);                                \
         _mm_store_ss(                                                               \
                 (float*)Buffer, _mm_shuffle_ps(tmp, tmp, _MM_SHUFFLE(i, i, i, i))); \
     }
 #else
-#define GISTORELANEINT32(i)                                                         \
-    GI_FORCEINLINE void GiStoreLane##i##Int32(int32_t* Buffer, GI_INT32_t Vector) { \
-        *Buffer = Vector[i];                                                        \
+#define GISTORELANEINT32(i)                                                      \
+    GI_FORCEINLINE void GiStoreLane##i##Int32(void* Buffer, GI_INT32_t Vector) { \
+        *((int32_t*)Buffer) = Vector[i];                                         \
     }
 #endif
 
@@ -141,53 +144,57 @@ GI_INT8_t GiReinterInt32ToInt8(GI_INT32_t Vector) {
 }
 
 GI_FORCEINLINE
-void GiStoreInt16(int16_t* Buffer, GI_INT16_t Vector) {
+void GiStoreInt16(void* Buffer, GI_INT16_t Vector) {
 #if defined(GI_NEON_INTRINSICS)
-    vst1q_s16(Buffer, Vector);
+    vst1q_s16((int16_t*)Buffer, Vector);
 #elif defined(GI_SSE2_INTRINSICS)
     _mm_storeu_si128((__m128i*)Buffer, Vector);
 #else
+    int16_t* ptr = (int16_t*)Buffer;
     for (size_t i = 0; i < GI_SIMD_LEN_BYTE / sizeof(int16_t); i++) {
-        Buffer[i] = Vector[i];
+        ptr[i] = Vector[i];
     }
 #endif
 }
 
 GI_FORCEINLINE
-void GiStoreInt8(int8_t* Buffer, GI_INT8_t Vector) {
+void GiStoreInt8(void* Buffer, GI_INT8_t Vector) {
 #if defined(GI_NEON_INTRINSICS)
-    vst1q_s8(Buffer, Vector);
+    vst1q_s8((int8_t*)Buffer, Vector);
 #elif defined(GI_SSE2_INTRINSICS)
     _mm_storeu_si128((__m128i*)Buffer, Vector);
 #else
+    int8_t* ptr = (int8_t*)Buffer;
     for (size_t i = 0; i < GI_SIMD_LEN_BYTE / sizeof(int8_t); i++) {
-        Buffer[i] = Vector[i];
+        ptr[i] = Vector[i];
     }
 #endif
 }
 
 GI_FORCEINLINE
-void GiStoreLowInt8(int8_t* Buffer, GI_INT8_t Vector) {
+void GiStoreLowInt8(void* Buffer, GI_INT8_t Vector) {
 #if defined(GI_NEON_INTRINSICS)
-    vst1_s8(Buffer, vget_low_s8(Vector));
+    vst1_s8((int8_t*)Buffer, vget_low_s8(Vector));
 #elif defined(GI_SSE2_INTRINSICS)
     _mm_storel_epi64((__m128i*)Buffer, Vector);
 #else
+    int8_t* ptr = (int8_t*)Buffer;
     for (size_t i = 0; i < GI_SIMD_LEN_BYTE / 2 / sizeof(int8_t); i++) {
-        Buffer[i] = Vector[i];
+        ptr[i] = Vector[i];
     }
 #endif
 }
 
 GI_FORCEINLINE
-void GiStoreHihgInt8(int8_t* Buffer, GI_INT8_t Vector) {
+void GiStoreHihgInt8(void* Buffer, GI_INT8_t Vector) {
 #if defined(GI_NEON_INTRINSICS)
-    vst1_s8(Buffer, vget_high_s8(Vector));
+    vst1_s8((int8_t*)Buffer, vget_high_s8(Vector));
 #elif defined(GI_SSE2_INTRINSICS)
     _mm_storel_epi64((__m128i*)Buffer, _mm_unpackhi_epi64(Vector, Vector));
 #else
+    int8_t* ptr = (int8_t*)Buffer;
     for (size_t i = 0; i < GI_SIMD_LEN_BYTE / 2 / sizeof(int8_t); i++) {
-        Buffer[i] = Vector[GI_SIMD_LEN_BYTE / 2 + i];
+        ptr[i] = Vector[GI_SIMD_LEN_BYTE / 2 + i];
     }
 #endif
 }

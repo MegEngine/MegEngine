@@ -16,7 +16,7 @@
 #include "src/arm_common/conv_bias/int8x8x16/direct_nchw_nchw44_kern.h"
 #include "src/arm_common/conv_bias/intrinsic_helper.h"
 #include "src/arm_common/conv_bias/opr_impl.h"
-#include "src/arm_common/elemwise_op.h"
+#include "src/arm_common/elemwise_helper/elemwise_op.h"
 #include "src/arm_common/simd_macro/marm_neon.h"
 #include "src/common/unroll_macro.h"
 #include "src/common/utils.h"

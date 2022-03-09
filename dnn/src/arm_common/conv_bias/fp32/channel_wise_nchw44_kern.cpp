@@ -13,7 +13,7 @@
 #include "src/arm_common/conv_bias/fp32/channel_wise_nchw44_kern.h"
 #include "src/arm_common/conv_bias/fp32/channel_wise_3x3_s1p1_nchw44_kern.h"
 #include "src/arm_common/conv_bias/fp32/channel_wise_5x5_s1p2_nchw44_kern.h"
-#include "src/arm_common/elemwise_op.h"
+#include "src/arm_common/elemwise_helper/elemwise_op.h"
 #include "src/arm_common/simd_macro/marm_neon.h"
 #include "src/arm_common/utils.h"
 #include "src/common/unroll_macro.h"

@@ -10,7 +10,7 @@
  */
 
 #include "src/arm_common/conv_bias/quint8/direct.h"
-#include "src/arm_common/elemwise_op.h"
+#include "src/arm_common/elemwise_helper/elemwise_op.h"
 #include "src/arm_common/simd_macro/marm_neon.h"
 #include "src/common/utils.h"
 #include "src/fallback/conv_bias/common.h"

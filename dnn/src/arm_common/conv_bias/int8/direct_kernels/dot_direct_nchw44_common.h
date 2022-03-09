@@ -14,7 +14,7 @@
 #include "megdnn/arch.h"
 #include "src/arm_common/conv_bias/intrinsic_helper.h"
 #if MGB_ENABLE_DOT
-#include "src/arm_common/elemwise_op.h"
+#include "src/arm_common/elemwise_helper/elemwise_op.h"
 #include "src/arm_common/intrinsic_helper.h"
 #include "src/arm_common/neon_struct.h"
 #include "src/common/unroll_macro.h"

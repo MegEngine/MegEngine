@@ -15,7 +15,7 @@
 #include "src/arm_common/conv_bias/quint8/stride1_dotprod.h"
 #include "src/arm_common/conv_bias/quint8/stride2.h"
 #include "src/arm_common/conv_bias/quint8/stride2_dotprod.h"
-#include "src/arm_common/elemwise_op.h"
+#include "src/arm_common/elemwise_helper/elemwise_op.h"
 #include "src/fallback/conv_bias/common.h"
 
 #include "midout.h"

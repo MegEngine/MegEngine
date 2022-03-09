@@ -13,7 +13,7 @@
 #include "src/arm_common/elemwise/binary/algo.h"
 #include "src/arm_common/elemwise/ternary/algo.h"
 #include "src/arm_common/elemwise/unary/algo.h"
-#include "src/arm_common/elemwise_op.h"
+#include "src/arm_common/elemwise_helper/elemwise_op.h"
 #include "src/common/metahelper.h"
 
 #include "src/common/utils.h"

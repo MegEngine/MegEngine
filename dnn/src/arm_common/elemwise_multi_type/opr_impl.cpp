@@ -15,7 +15,7 @@
 #include "src/common/elemwise_multi_type/kern_defs.cuh"
 #include "src/naive/handle.h"
 
-#include "src/arm_common/elemwise_op.h"
+#include "src/arm_common/elemwise_helper/elemwise_op.h"
 #include "src/arm_common/simd_macro/marm_neon.h"
 
 namespace {
@@ -45,6 +45,8 @@ void neon_round_shr_saturate_int16_static_k(
 }
 
 }  // namespace
+
+using namespace elemwise;
 
 namespace megdnn {
 namespace arm_common {

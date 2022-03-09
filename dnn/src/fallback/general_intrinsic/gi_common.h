@@ -13,6 +13,7 @@
 
 #include "math.h"
 #include "stdint.h"
+#include "string.h"
 
 #if defined(_WIN32)
 #include <intrin.h>
@@ -131,6 +132,18 @@ typedef uint32_t GI_UINT32_t __attribute__((vector_size(16)));
 
 #define Max(a, b) (a) > (b) ? (a) : (b)
 #define Min(a, b) (a) < (b) ? (a) : (b)
+
+#if defined(GI_NEON_INTRINSICS)
+#if defined(__ARM_FEATURE_FMA) && defined(GI_NEON64_INTRINSICS)
+#define v_fma_ps_f32(c, b, a)         vfmaq_f32((c), (b), (a))
+#define v_fma_n_f32(c, b, a)          vfmaq_n_f32((c), (b), (a))
+#define v_fma_lane_f32(c, b, a, lane) vfmaq_lane_f32((c), (b), (a), (lane))
+#else
+#define v_fma_ps_f32(c, b, a)         vmlaq_f32((c), (b), (a))
+#define v_fma_n_f32(c, b, a)          vmlaq_n_f32((c), (b), (a))
+#define v_fma_lane_f32(c, b, a, lane) vmlaq_lane_f32((c), (b), (a), (lane))
+#endif
+#endif
 
 typedef struct {
     GI_INT32_t val[2];

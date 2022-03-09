@@ -20,7 +20,9 @@ GI_INT32_t GiReinterpretAsInt32(GI_FLOAT32_t In) {
 #elif defined(GI_SSE2_INTRINSICS)
     return _mm_castps_si128(In);
 #else
-    return *(GI_INT32_t*)(&In);
+    GI_INT32_t ret;
+    memcpy(&ret, &In, GI_SIMD_LEN_BYTE);
+    return ret;
 #endif
 }
 
@@ -31,7 +33,9 @@ GI_UINT32_t GiReinterpretAsUint32(GI_FLOAT32_t In) {
 #elif defined(GI_SSE2_INTRINSICS)
     return _mm_castps_si128(In);
 #else
-    return *(GI_UINT32_t*)(&In);
+    GI_UINT32_t ret;
+    memcpy(&ret, &In, GI_SIMD_LEN_BYTE);
+    return ret;
 #endif
 }
 
@@ -42,7 +46,9 @@ GI_FLOAT32_t GiReintInt32ToFloat32(GI_INT32_t Vector) {
 #elif defined(GI_SSE2_INTRINSICS)
     return _mm_castsi128_ps(Vector);
 #else
-    return *(GI_FLOAT32_t*)(&Vector);
+    GI_FLOAT32_t ret;
+    memcpy(&ret, &Vector, GI_SIMD_LEN_BYTE);
+    return ret;
 #endif
 }
 
@@ -53,7 +59,9 @@ GI_FLOAT32_t GiReintUint32ToFloat32(GI_UINT32_t Vector) {
 #elif defined(GI_SSE2_INTRINSICS)
     return _mm_castsi128_ps(Vector);
 #else
-    return *(GI_FLOAT32_t*)(&Vector);
+    GI_FLOAT32_t ret;
+    memcpy(&ret, &Vector, GI_SIMD_LEN_BYTE);
+    return ret;
 #endif
 }
 
@@ -69,7 +77,7 @@ GI_INT32_t GiRoundAsInt32(GI_FLOAT32_t Vector) {
     float32x4_t vinc0 = vbslq_f32(vcgeq_f32(Vector, vzero), vfhalf, vfneg_half);
     return vcvtq_s32_f32(vaddq_f32(Vector, vinc0));
 #endif
-#elif defined(GI_SSE2_INTRINSICS)
+#elif defined(GI_SSE42_INTRINSICS)
     __m128 vfzero = _mm_set1_ps(0.f);
     __m128 vfhalf = _mm_set1_ps(0.5f);
     __m128 vfneg_half = _mm_set1_ps(-0.5f);
@@ -322,11 +330,7 @@ GI_FORCEINLINE
 GI_FLOAT32_t GiMultiplyAddFloat32(
         GI_FLOAT32_t VectorSum, GI_FLOAT32_t Vector1, GI_FLOAT32_t Vector2) {
 #if defined(GI_NEON_INTRINSICS)
-#if defined(__ARM_FEATURE_FMA)
-    return vfmaq_f32(VectorSum, Vector1, Vector2);
-#else
-    return vmlaq_f32(VectorSum, Vector1, Vector2);
-#endif
+    return v_fma_ps_f32(VectorSum, Vector1, Vector2);
 #elif defined(GI_FMA3_INTRINSICS)
     return _mm_fmadd_ps(Vector1, Vector2, VectorSum);
 #elif defined(GI_SSE2_INTRINSICS)
@@ -352,11 +356,7 @@ GI_FORCEINLINE
 GI_FLOAT32_t GiMultiplyAddScalarFloat32(
         GI_FLOAT32_t VectorSum, GI_FLOAT32_t Vector, float Scalar) {
 #if defined(GI_NEON_INTRINSICS)
-#if defined(__ARM_FEATURE_FMA)
-    return vfmaq_n_f32(VectorSum, Vector, Scalar);
-#else
-    return vfmla_n_f32(VectorSum, Vector, Scalar);
-#endif
+    return v_fma_n_f32(VectorSum, Vector, Scalar);
 #elif defined(GI_SSE2_INTRINSICS)
     return GiMultiplyAddFloat32(VectorSum, GiBroadcastFloat32(Scalar), Vector);
 #else
@@ -365,11 +365,10 @@ GI_FLOAT32_t GiMultiplyAddScalarFloat32(
 }
 
 #if defined(GI_NEON_INTRINSICS)
-#if defined(__ARM_FEATURE_FMA)
 #define GIMULTIPLYADDLANFLOAT32(i)                                                \
     GI_FORCEINLINE GI_FLOAT32_t GiMultiplyAddLan##i##Float32(                     \
             GI_FLOAT32_t VectorSum, GI_FLOAT32_t Vector1, GI_FLOAT32_t Vector2) { \
-        return vfmaq_lane_f32(VectorSum, Vector1, vget_low_f32(Vector2), i);      \
+        return v_fma_lane_f32(VectorSum, Vector1, vget_low_f32(Vector2), i);      \
     }
 GIMULTIPLYADDLANFLOAT32(0)
 GIMULTIPLYADDLANFLOAT32(1)
@@ -377,27 +376,10 @@ GIMULTIPLYADDLANFLOAT32(1)
 #define GIMULTIPLYADDLANFLOAT32(i)                                                \
     GI_FORCEINLINE GI_FLOAT32_t GiMultiplyAddLan##i##Float32(                     \
             GI_FLOAT32_t VectorSum, GI_FLOAT32_t Vector1, GI_FLOAT32_t Vector2) { \
-        return vfmaq_lane_f32(VectorSum, Vector1, vget_high_f32(Vector2), i - 2); \
+        return v_fma_lane_f32(VectorSum, Vector1, vget_high_f32(Vector2), i - 2); \
     }
 GIMULTIPLYADDLANFLOAT32(2)
 GIMULTIPLYADDLANFLOAT32(3)
-#else
-#define GIMULTIPLYADDLANFLOAT32(i)                                                \
-    GI_FORCEINLINE GI_FLOAT32_t GiMultiplyAddLan##i##Float32(                     \
-            GI_FLOAT32_t VectorSum, GI_FLOAT32_t Vector1, GI_FLOAT32_t Vector2) { \
-        return vmlaq_lane_f32(VectorSum, Vector1, vget_low_f32(Vector2), i);      \
-    }
-GIMULTIPLYADDLANFLOAT32(0)
-GIMULTIPLYADDLANFLOAT32(1)
-#undef GIMULTIPLYADDLANFLOAT32
-#define GIMULTIPLYADDLANFLOAT32(i)                                                \
-    GI_FORCEINLINE GI_FLOAT32_t GiMultiplyAddLan##i##Float32(                     \
-            GI_FLOAT32_t VectorSum, GI_FLOAT32_t Vector1, GI_FLOAT32_t Vector2) { \
-        return vmlaq_lane_f32(VectorSum, Vector1, vget_high_f32(Vector2), i - 2); \
-    }
-GIMULTIPLYADDLANFLOAT32(2)
-GIMULTIPLYADDLANFLOAT32(3)
-#endif
 #undef GIMULTIPLYADDLANFLOAT32
 #elif defined(GI_SSE2_INTRINSICS)
 

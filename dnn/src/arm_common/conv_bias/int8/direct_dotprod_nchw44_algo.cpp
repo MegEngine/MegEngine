@@ -14,7 +14,7 @@
 #if MGB_ENABLE_DOT
 #include "src/arm_common/conv_bias/int8/algos.h"
 #include "src/arm_common/conv_bias/int8/direct_dotprod_nchw44.h"
-#include "src/arm_common/elemwise_op.h"
+#include "src/arm_common/elemwise_helper/elemwise_op.h"
 
 #include "midout.h"
 

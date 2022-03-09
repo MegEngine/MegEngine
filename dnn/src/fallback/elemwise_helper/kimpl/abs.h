@@ -58,7 +58,7 @@ struct AbsOpBase<dt_qint8, dt_qint8> : UnaryOpBase<dt_qint8, dt_qint8> {
 template <>
 struct AbsOp<dt_qint8, dt_qint8> : AbsOpBase<dt_qint8, dt_qint8> {
     using AbsOpBase::AbsOpBase;
-    constexpr static size_t SIMD_WIDTH = 16;
+    constexpr static size_t SIMD_WIDTH = GI_SIMD_LEN_BYTE / sizeof(int8_t);
     using AbsOpBase::operator();
     void operator()(const GI_INT8_V2_t& vsrc, dt_qint8* dst) const {
         OPERATOR_UNARY_QINT8_FALLBACK;

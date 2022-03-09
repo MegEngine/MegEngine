@@ -18,7 +18,6 @@
 #include "src/arm_common/elemwise_helper/kimpl/max.h"
 #include "src/arm_common/elemwise_helper/kimpl/min.h"
 #include "src/arm_common/elemwise_helper/kimpl/mul.h"
-#include "src/arm_common/elemwise_helper/kimpl/pow.h"
 #include "src/arm_common/elemwise_helper/kimpl/rmulh.h"
 #include "src/arm_common/elemwise_helper/kimpl/sub.h"
 #include "src/arm_common/elemwise_helper/kimpl/true_div.h"

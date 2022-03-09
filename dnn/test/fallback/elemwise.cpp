@@ -39,7 +39,6 @@ TEST_F(FALLBACK, ELEMWISE_RECORD) {
     checker.execs({{10, 10, 32}, {10, 10, 32}, {}});
 }
 
-
 TEST_F(FALLBACK, ELEMWISE_FORWARD_TERNARY) {
     using Mode = ElemwiseForward::Param::Mode;
     Checker<ElemwiseForward> checker(handle());

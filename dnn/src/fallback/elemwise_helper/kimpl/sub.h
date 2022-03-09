@@ -73,7 +73,7 @@ struct SubOpBase<dt_qint8, dt_qint8> : BinaryOpBase<dt_qint8, dt_qint8> {
 template <>
 struct SubOp<dt_qint8, dt_qint8> : SubOpBase<dt_qint8, dt_qint8> {
     using SubOpBase::SubOpBase;
-    constexpr static size_t SIMD_WIDTH = 16;
+    constexpr static size_t SIMD_WIDTH = GI_SIMD_LEN_BYTE / sizeof(int8_t);
     using SubOpBase::operator();
 
     void operator()(

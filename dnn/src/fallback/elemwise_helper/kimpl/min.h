@@ -74,7 +74,7 @@ struct MinOpBase<dt_qint8, dt_qint8> : BinaryOpBase<dt_qint8, dt_qint8> {
 template <>
 struct MinOp<dt_qint8, dt_qint8> : MinOpBase<dt_qint8, dt_qint8> {
     using MinOpBase::MinOpBase;
-    constexpr static size_t SIMD_WIDTH = 16;
+    constexpr static size_t SIMD_WIDTH = GI_SIMD_LEN_BYTE / sizeof(int8_t);
     using MinOpBase::operator();
 
     void operator()(

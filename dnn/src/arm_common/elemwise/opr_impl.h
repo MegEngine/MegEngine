@@ -12,7 +12,7 @@
 #pragma once
 #include "src/fallback/elemwise/opr_impl.h"
 
-#include "src/arm_common/elemwise_op.h"
+#include "src/arm_common/elemwise_helper/elemwise_op.h"
 
 namespace megdnn {
 namespace arm_common {

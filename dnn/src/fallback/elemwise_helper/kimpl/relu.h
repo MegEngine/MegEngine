@@ -112,36 +112,38 @@ struct ReluOp<dt_qint32, dt_qint8> : ReluOpBase<dt_qint32, dt_qint8>, FixupBase 
             : ReluOpBase(src_scale, dst_scale), FixupBase(scale) {}
 
     void operator()(const int32x4x2_t& vsrc, dt_qint8* dst) const {
-        vst1_s8(reinterpret_cast<int8_t*>(dst), operator()(vsrc));
+        vst1_s8(reinterpret_cast<int8_t*>(dst), vget_low_s8(operator()(vsrc)));
     }
 
-    int8x8_t operator()(const int32x4x2_t& vsrc) const {
+    int8x16_t operator()(const int32x4x2_t& vsrc) const {
         int32x4_t vitem0 = vqrdmulhq_s32(vsrc.val[0], vmultiplier);
         int32x4_t vitem1 = vqrdmulhq_s32(vsrc.val[1], vmultiplier);
         vitem0 = vmaxq_s32(vitem0, QConverterBase::vzero());
         vitem1 = vmaxq_s32(vitem1, QConverterBase::vzero());
-        return vqmovn_s16(vcombine_s16(
+        auto tmp = vqmovn_s16(vcombine_s16(
                 vqmovn_s32(vrshlq_s32(vitem0, vshift)),
                 vqmovn_s32(vrshlq_s32(vitem1, vshift))));
+        return vcombine_s8(tmp, tmp);
     }
-    int8x8_t operator()(const float32x4_t& vsrc) const {
+    int8x16_t operator()(const float32x4_t& vsrc) const {
         int32x4_t vitem0 = vqrdmulhq_s32(vcvtq_s32_f32(vsrc), vmultiplier);
         vitem0 = vmaxq_s32(vitem0, QConverterBase::vzero());
         vitem0 = vrshlq_s32(vitem0, vshift);
         int16x4_t vitem = vqmovn_s32(vitem0);
-        return vqmovn_s16(vcombine_s16(vitem, vitem));
+        auto tmp = vqmovn_s16(vcombine_s16(vitem, vitem));
+        return vcombine_s8(tmp, tmp);
     }
     void operator()(const int32x4_t& src, dt_qint8* dst) const {
         auto vitem0 = vmulq_f32(vcvtq_f32_s32(src), this->vscale);
         vitem0 = vmaxq_f32(vitem0, QConverterBase::vfzero());
-        auto result = QConverter::convert<int8x8_t, float32x4_t>(vitem0);
-        vst1_lane_s32(reinterpret_cast<int32_t*>(dst), (int32x2_t)result, 0);
+        auto result = QConverter::convert<int8x16_t, float32x4_t>(vitem0);
+        vst1q_lane_s32(reinterpret_cast<int32_t*>(dst), (int32x4_t)result, 0);
     }
     void operator()(const float32x4_t& src, dt_qint8* dst) const {
         auto vitem0 = vmulq_f32(src, this->vscale);
         vitem0 = vmaxq_f32(vitem0, QConverterBase::vfzero());
-        auto result = QConverter::convert<int8x8_t, float32x4_t>(vitem0);
-        vst1_lane_s32(reinterpret_cast<int32_t*>(dst), (int32x2_t)result, 0);
+        auto result = QConverter::convert<int8x16_t, float32x4_t>(vitem0);
+        vst1q_lane_s32(reinterpret_cast<int32_t*>(dst), (int32x4_t)result, 0);
     }
 };
 

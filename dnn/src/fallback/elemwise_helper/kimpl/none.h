@@ -54,8 +54,6 @@ struct NoneOpBase<dt_qint32, dt_qint8> : UnaryOpBase<dt_qint32, dt_qint8> {
     }
 };
 
-#pragma GCC diagnostic ignored "-Waddress-of-packed-member"
-
 template <>
 struct NoneOp<dt_qint32, dt_qint8> : NoneOpBase<dt_qint32, dt_qint8> {
     using NoneOpBase::NoneOpBase;
@@ -63,11 +61,11 @@ struct NoneOp<dt_qint32, dt_qint8> : NoneOpBase<dt_qint32, dt_qint8> {
     constexpr static size_t SIMD_WIDTH = GI_SIMD_LEN_BYTE / sizeof(int32_t);
 
     void operator()(const GI_INT32_V2_t& vsrc, dt_qint8* dst) const {
-        GiStoreInt32(reinterpret_cast<int32_t*>(dst), vsrc.val[0]);
-        GiStoreInt32(reinterpret_cast<int32_t*>(dst + 16), vsrc.val[1]);
+        GiStoreInt32(dst, vsrc.val[0]);
+        GiStoreInt32(dst + 16, vsrc.val[1]);
     }
     void operator()(const GI_INT32_t& src, dt_qint8* dst) const {
-        GiStoreInt32(reinterpret_cast<int32_t*>(dst), src);
+        GiStoreInt32(dst, src);
     }
 };
 

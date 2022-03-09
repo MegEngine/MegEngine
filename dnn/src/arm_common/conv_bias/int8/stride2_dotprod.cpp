@@ -14,7 +14,7 @@
 #include "megdnn/oprs.h"
 #include "src/arm_common/conv_bias/int8/direct_dotprod.h"
 #include "src/arm_common/conv_bias/int8/strategy.h"
-#include "src/arm_common/elemwise_op.h"
+#include "src/arm_common/elemwise_helper/elemwise_op.h"
 #include "src/common/opr_delegate.h"
 
 using namespace megdnn;

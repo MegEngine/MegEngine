@@ -10,7 +10,7 @@
  * implied.
  */
 #include "src/arm_common/elemwise/unary/algo.h"
-#include "src/arm_common/elemwise_op.h"
+#include "src/arm_common/elemwise_helper/elemwise_op.h"
 
 #include "src/common/utils.h"
 #include "src/naive/handle.h"
@@ -20,6 +20,7 @@
 MIDOUT_DECL(megdnn_arm_common_elemwise_unary)
 
 using namespace megdnn;
+using namespace elemwise;
 using namespace arm_common;
 
 bool ElemwiseImpl::AlgoUnary::is_available(const KernParam& kern_param) const {

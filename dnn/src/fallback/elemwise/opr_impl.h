@@ -9,7 +9,7 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 #pragma once
-#include "src/fallback/elemwise_op.h"
+#include "src/fallback/elemwise_helper/elemwise_op.h"
 #include "src/naive/elemwise/opr_impl.h"
 
 namespace megdnn {
@@ -60,7 +60,7 @@ private:
 public:
     class AlgoBase;
     struct KernParam {
-        BcastType broad_cast_type;
+        elemwise::BcastType broad_cast_type;
         Mode mode;
         const TensorND* m_dst;
         Handle* handle;

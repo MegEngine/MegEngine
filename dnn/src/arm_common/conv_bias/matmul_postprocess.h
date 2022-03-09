@@ -12,7 +12,7 @@
 
 #include "megdnn/dtype.h"
 #include "megdnn/oprs.h"
-#include "src/arm_common/elemwise_op.h"
+#include "src/arm_common/elemwise_helper/elemwise_op.h"
 #include "src/arm_common/simd_macro/marm_neon.h"
 #include "src/common/utils.h"
 #include "src/fallback/conv_bias/common.h"

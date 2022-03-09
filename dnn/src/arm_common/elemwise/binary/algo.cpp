@@ -10,7 +10,7 @@
  * implied.
  */
 #include "src/arm_common/elemwise/binary/algo.h"
-#include "src/arm_common/elemwise_op.h"
+#include "src/arm_common/elemwise_helper/elemwise_op.h"
 
 #include "src/common/utils.h"
 #include "src/naive/handle.h"
@@ -20,6 +20,7 @@
 MIDOUT_DECL(megdnn_arm_common_elemwise_binary)
 
 using namespace megdnn;
+using namespace elemwise;
 using namespace arm_common;
 
 namespace {
@@ -160,7 +161,7 @@ bool ElemwiseImpl::AlgoBinaryVecBcast101xX::is_available(
         DISPATCH_BINARY(ADD, _case, _type, _type_midout_id, AddOp);                   \
         DISPATCH_BINARY(SUB, _case, _type, _type_midout_id, SubOp);                   \
         DISPATCH_BINARY(MUL, _case, _type, _type_midout_id, MulOp);                   \
-        DISPATCH_BINARY(POW, _case, _type, _type_midout_id, PowOp);                   \
+        DISPATCH_BINARY(POW, _case, _type, _type_midout_id, fallback::PowOp);         \
         DISPATCH_BINARY(TRUE_DIV, _case, _type, _type_midout_id, TrueDivOp);          \
         DISPATCH_BINARY(FUSE_ADD_RELU, _case, _type, _type_midout_id, FuseAddReluOp); \
         DISPATCH_BINARY(                                                              \
@@ -178,7 +179,7 @@ bool ElemwiseImpl::AlgoBinaryVecBcast101xX::is_available(
         DISPATCH_BINARY(ADD, _case, _type, _type_midout_id, AddOp);                   \
         DISPATCH_BINARY(SUB, _case, _type, _type_midout_id, SubOp);                   \
         DISPATCH_BINARY(MUL, _case, _type, _type_midout_id, MulOp);                   \
-        DISPATCH_BINARY(POW, _case, _type, _type_midout_id, PowOp);                   \
+        DISPATCH_BINARY(POW, _case, _type, _type_midout_id, fallback::PowOp);         \
         DISPATCH_BINARY(FUSE_ADD_RELU, _case, _type, _type_midout_id, FuseAddReluOp); \
         DISPATCH_BINARY(                                                              \
                 FUSE_ADD_H_SWISH, _case, _type, _type_midout_id, FuseAddHSwishOp);    \

@@ -83,7 +83,7 @@ template <>
 struct HSwishOp<dt_qint32, dt_qint8> : HSwishOpBase<dt_qint32, dt_qint8> {
     using HSwishOpBase::HSwishOpBase;
     using HSwishOpBase::operator();
-    constexpr static size_t SIMD_WIDTH = 4;
+    constexpr static size_t SIMD_WIDTH = GI_SIMD_LEN_BYTE / sizeof(int32_t);
 
     void operator()(const GI_INT32_V2_t& vsrc, dt_qint8* dst) const {
         GiStoreLowInt8(reinterpret_cast<int8_t*>(dst), operator()(vsrc));

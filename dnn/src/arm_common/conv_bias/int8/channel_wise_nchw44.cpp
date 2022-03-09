@@ -12,7 +12,7 @@
 #include "src/arm_common/conv_bias/int8/channel_wise_nchw44.h"
 #include "megdnn/oprs.h"
 #include "src/arm_common/conv_bias/int8/channel_wise_kernel.h"
-#include "src/arm_common/elemwise_op.h"
+#include "src/arm_common/elemwise_helper/elemwise_op.h"
 #include "src/common/opr_delegate.h"
 
 #include "midout.h"

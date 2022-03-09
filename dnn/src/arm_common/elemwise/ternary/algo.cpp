@@ -10,7 +10,7 @@
  * implied.
  */
 #include "src/arm_common/elemwise/ternary/algo.h"
-#include "src/arm_common/elemwise_op.h"
+#include "src/arm_common/elemwise_helper/elemwise_op.h"
 
 #include "src/common/utils.h"
 #include "src/naive/handle.h"
@@ -20,6 +20,7 @@
 MIDOUT_DECL(megdnn_arm_common_elemwise_ternary)
 
 using namespace megdnn;
+using namespace elemwise;
 using namespace arm_common;
 
 #define DISPATCH_MODE_FLOAT(_case, _type, _type_midout_id) \

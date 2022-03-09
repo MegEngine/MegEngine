@@ -12,7 +12,7 @@
 #include "src/aarch64/conv_bias/int8/algos.h"
 #include "src/aarch64/conv_bias/int8/strategy.h"
 #include "src/arm_common/convolution/img2col_helper.h"
-#include "src/arm_common/elemwise_op.h"
+#include "src/arm_common/elemwise_helper/elemwise_op.h"
 #include "src/common/opr_delegate.h"
 #include "src/fallback/conv_bias/common.h"
 #include "src/fallback/matrix_mul/gemm_impl.h"

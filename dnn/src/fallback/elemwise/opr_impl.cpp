@@ -25,6 +25,7 @@ MIDOUT_DECL(megdnn_fallback_elemwise_exec_BINARY_INT)
 MIDOUT_DECL(megdnn_fallback_elemwise_exec_BINARY_FLOAT)
 
 using namespace megdnn;
+using namespace elemwise;
 using namespace fallback;
 
 void ElemwiseImpl::exec(const TensorNDArray& srcs, _megdnn_tensor_out dst) {
