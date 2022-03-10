@@ -400,223 +400,6 @@ struct TensorWeakRef {
     int _use_cnt() { return wptr.use_count(); }
 };
 
-/* ============== convert inputs ============== */
-
-// map numpy.dtype.kind to priority
-inline uint8_t category_priority(char c) {
-    switch (c) {
-        case 'f':
-            return 3;  // floating-point
-        case 'i':
-            return 2;  // signed integer
-        case 'u':
-            return 2;  // unsigned integer
-        case 'b':
-            return 1;  // boolean
-        default:
-            return 0;
-    }
-}
-
-// Returns the maximum value of the priority of each type in the list `types`.
-uint8_t max_priority(SmallVector<PyArray_Descr*> types) {
-    if (types.size() == 0) {
-        return 0;
-    } else {
-        uint8_t max_p = 0;
-        for (auto&& desc : types) {
-            max_p = std::max(max_p, category_priority(desc->kind));
-        }
-        return max_p;
-    }
-}
-
-// Returns the data type with sufficient size to hold all types of
-// category `cat` in the list `types`.
-PyArray_Descr* promote_types(SmallVector<PyArray_Descr*> types, uint8_t cat) {
-    // Return value: New reference
-    SmallVector<PyArray_Descr*> used_types;
-    for (auto&& desc : types) {
-        auto&& v = category_priority(desc->kind);
-        if (v == cat) {
-            used_types.emplace_back(desc);
-        }
-    }
-    mgb_assert(used_types.size() > 0, "size of used_types is 0");
-    PyArray_Descr* res = used_types[0];
-    Py_INCREF(res);
-
-    for (size_t i = 1; i < used_types.size(); ++i) {
-        PyArray_Descr* tmp = PyArray_PromoteTypes(used_types[i], res);
-        Py_DECREF(res);
-        res = tmp;
-    }
-    return res;
-}
-
-PyArray_Descr* scalar2dtype(PyObject* arg) {
-    // Return value: New reference
-    if (PyBool_Check(arg)) {
-        auto&& descr = PyArray_DescrFromType(NPY_BOOL);
-        return descr;
-    }
-    if (PyLong_CheckExact(arg)) {
-        auto&& descr = PyArray_DescrFromType(NPY_INT32);
-        return descr;
-    }
-    if (PyFloat_CheckExact(arg)) {
-        auto&& descr = PyArray_DescrFromType(NPY_FLOAT32);
-        return descr;
-    }
-    return nullptr;
-}
-
-PyArray_Descr* _dtype_promotion(PyObject* const* args, size_t nargs) {
-    // Return value: New reference
-    SmallVector<PyArray_Descr*> tensors;
-    SmallVector<PyArray_Descr*> scalars;
-
-    bool is_tuple = false;
-    PyObject* tuple = nullptr;
-    if (nargs == 1 && (PyTuple_Check(args[0]) || PyList_Check(args[0]))) {
-        if (PyList_Check(args[0])) {
-            tuple = PyList_AsTuple(args[0]);
-        } else {
-            tuple = args[0];
-            Py_INCREF(tuple);
-        }
-        nargs = PyTuple_Size(tuple);
-        is_tuple = true;
-    }
-
-    for (size_t i = 0; i < nargs; ++i) {
-        PyObject* handle = is_tuple ? PyTuple_GetItem(tuple, i) : args[i];
-        if (handle == Py_None)
-            continue;
-        TensorWrapper* tw = TensorWrapper::try_cast(handle);
-        if (tw) {
-            mgb::DType type = tw->m_tensor->dtype();
-            auto&& descr = npy::dtype_mgb2np_descr(type);
-            Py_INCREF(descr.get());
-            tensors.emplace_back(descr.get());
-        } else {
-            if (PyArray_Check(handle) || PyArray_CheckScalar(handle)) {
-                auto&& descr = PyArray_DescrFromObject(handle, nullptr);
-                tensors.emplace_back(descr);
-                continue;
-            }
-
-            if (py::isinstance<PySymbolVar>(py::handle(handle))) {
-                auto var = py::handle(handle).cast<PySymbolVar*>();
-                mgb::DType type = var->m_node->dtype();
-                auto&& descr = npy::dtype_mgb2np_descr(type);
-                Py_INCREF(descr.get());
-                tensors.emplace_back(descr.get());
-                continue;
-            }
-
-            PyArray_Descr* descr = scalar2dtype(handle);
-            if (descr) {
-                scalars.emplace_back(descr);
-                continue;
-            }
-        }
-    }
-
-    auto max_pri_scalars = max_priority(scalars);
-    auto max_pri_tensors = max_priority(tensors);
-
-    if (max_pri_scalars <= 0 && max_pri_tensors <= 0) {
-        throw py::value_error("invalid input, no dtype avaliable");
-    }
-    PyArray_Descr* res;
-    if (max_pri_scalars > max_pri_tensors) {
-        res = promote_types(scalars, max_pri_scalars);
-    } else {
-        res = promote_types(tensors, max_pri_tensors);
-    }
-    for (auto* p : tensors) {
-        Py_DECREF(p);
-    }
-    for (auto* p : scalars) {
-        Py_DECREF(p);
-    }
-    Py_XDECREF(tuple);
-    return res;
-}
-
-CompNode _get_device(PyObject* const* args, size_t nargs) {
-    bool is_tuple = false;
-    PyObject* tuple = nullptr;
-    if (nargs == 1 && (PyTuple_Check(args[0]) || PyList_Check(args[0]))) {
-        if (PyList_Check(args[0])) {
-            tuple = PyList_AsTuple(args[0]);
-        } else {
-            tuple = args[0];
-            Py_INCREF(tuple);
-        }
-        nargs = PyTuple_Size(tuple);
-        is_tuple = true;
-    }
-    bool valid = false;
-    CompNode cn;
-    for (size_t i = 0; i < nargs; ++i) {
-        PyObject* handle = is_tuple ? PyTuple_GetItem(tuple, i) : args[i];
-        TensorWrapper* tw = TensorWrapper::try_cast(handle);
-
-        bool is_symvar = py::isinstance<PySymbolVar>(py::handle(handle));
-        if (tw || is_symvar) {
-            if (!valid) {
-                cn = tw ? tw->m_tensor->comp_node()
-                        : py::handle(handle).cast<PySymbolVar*>()->m_node->comp_node();
-                valid = true;
-            } else {
-                CompNode cn1 = tw ? tw->m_tensor->comp_node()
-                                  : py::handle(handle)
-                                               .cast<PySymbolVar*>()
-                                               ->m_node->comp_node();
-                if (cn1 != cn) {
-                    throw py::value_error(ssprintf(
-                            "ambiguous device: %s (from %s) vs %s (from %s)",
-                            cn.to_string().c_str(), cn.to_string_logical().c_str(),
-                            cn1.to_string().c_str(), cn1.to_string_logical().c_str()));
-                }
-            }
-        }
-    }
-    if (!valid) {
-        return CompNode::load(get_default_device());
-    }
-    Py_XDECREF(tuple);
-    return cn;
-}
-
-// Returns the dtype that would result from performing an arithmetic
-// operation on the provided input tensors and scalars.
-PyObject* dtype_promotion(PyObject* self, PyObject* const* args, size_t nargs) {
-    if (!nargs) {
-        PyErr_SetString(PyExc_TypeError, "empty input is not allowed");
-        return nullptr;
-    }
-    try {
-        PyArray_Descr* res = _dtype_promotion(args, nargs);
-        return py::cast(npy::dtype_np2mgb_descr(res)).release().ptr();
-    }
-    PYEXT17_TRANSLATE_EXC_RET(nullptr)
-}
-
-PyObject* get_device(PyObject* self, PyObject* const* args, size_t nargs) {
-    if (!nargs) {
-        PyErr_SetString(PyExc_TypeError, "empty input is not allowed");
-        return nullptr;
-    }
-    try {
-        CompNode cn = _get_device(args, nargs);
-        return py::cast(cn).release().ptr();
-    }
-    PYEXT17_TRANSLATE_EXC_RET(nullptr)
-}
-
 #ifdef METH_FASTCALL
 #define MGE_PY_INTERFACE(NAME, FUNC) \
     { #NAME, (PyCFunction)FUNC, METH_FASTCALL, nullptr }
@@ -640,6 +423,9 @@ WRAP_FUNC_PY35(transpose_cpp);
 WRAP_FUNC_PY35(broadcast_cpp);
 WRAP_FUNC_PY35(reshape_cpp);
 WRAP_FUNC_PY35(Const);
+WRAP_FUNC_PY35(astype_cpp);
+WRAP_FUNC_PY35(convert_single_value_cpp);
+WRAP_FUNC_PY35(convert_inputs_cpp);
 #undef WRAP_FUNC_PY35
 #define MGE_PY_INTERFACE(NAME, FUNC) \
     { #NAME, (PyCFunction)py35_##FUNC, METH_VARARGS, nullptr }
@@ -779,6 +565,9 @@ void init_tensor(py::module m) {
             MGE_PY_INTERFACE(broadcast_cpp, broadcast_cpp),
             MGE_PY_INTERFACE(reshape_cpp, reshape_cpp),
             MGE_PY_INTERFACE(Const, Const),
+            MGE_PY_INTERFACE(astype_cpp, astype_cpp),
+            MGE_PY_INTERFACE(convert_single_value_cpp, convert_single_value_cpp),
+            MGE_PY_INTERFACE(convert_inputs_cpp, convert_inputs_cpp),
             {nullptr, nullptr, 0, nullptr}};
     for (auto&& def : method_defs) {
         if (def.ml_meth != nullptr) {

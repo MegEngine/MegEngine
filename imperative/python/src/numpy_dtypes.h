@@ -26,6 +26,11 @@
             cb(BFloat16, npy_num_bfloat16())
 
 namespace mgb {
+
+namespace imperative::python {
+bool dtype_equal(PyArray_Descr* dt1, PyArray_Descr* dt2);
+}  // namespace imperative::python
+
 //! numpy type num for intb1/2/4 type
 #define DEFINE_NPY_INTBX(n) int npy_num_intb##n();
 FOREACH_MGB_LOW_BIT(DEFINE_NPY_INTBX)

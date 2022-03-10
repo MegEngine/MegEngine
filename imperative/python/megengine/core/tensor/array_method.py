@@ -19,6 +19,7 @@ from .._imperative_rt.core2 import (
     SymbolVar,
     Tensor,
     apply,
+    astype_cpp,
     broadcast_cpp,
     dtype_promotion,
 )
@@ -27,14 +28,7 @@ from .._imperative_rt.core2 import reshape_cpp, squeeze_cpp, transpose_cpp
 from ..ops import builtin
 from . import amp
 from .indexing import getitem, setitem
-from .utils import (
-    _normalize_axis,
-    astensor1d,
-    astype,
-    cast_tensors,
-    make_shape_tuple,
-    subgraph,
-)
+from .utils import _normalize_axis, astensor1d, cast_tensors, make_shape_tuple, subgraph
 
 _ElwMod = builtin.Elemwise.Mode
 
@@ -605,7 +599,7 @@ class ArrayMethodMixin(abc.ABC):
         r"""Returns a :class:`Tensor` with the same data and number of elements
         with the specified :attr:`~.Tensor.dtype`.
         """
-        return astype(self, dtype)
+        return astype_cpp(self, dtype)
 
     def reshape(self, *args):
         r"""See :func:`~.reshape`."""

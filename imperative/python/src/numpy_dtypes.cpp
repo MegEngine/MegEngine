@@ -170,6 +170,12 @@ struct _wrap {
 
 }  // anonymous namespace
 
+namespace imperative::python {
+bool dtype_equal(PyArray_Descr* dt1, PyArray_Descr* dt2) {
+    return _is_dtype_equal(dt1, dt2);
+}
+}  // namespace imperative::python
+
 #ifdef METH_FASTCALL
 #define MGE_PY_INTERFACE(NAME, FUN) \
     { #NAME, (PyCFunction)_wrap < &(FUN)> ::impl, METH_FASTCALL, nullptr }

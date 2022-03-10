@@ -30,7 +30,6 @@ from ..core.tensor import amp, megbrain_graph
 from ..core.tensor.array_method import _elwise_apply
 from ..core.tensor.utils import (
     astensor1d,
-    astype,
     cast_tensors,
     convert_single_value,
     make_shape_tuple,

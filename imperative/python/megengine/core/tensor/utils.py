@@ -20,6 +20,9 @@ from .._imperative_rt.core2 import (
     _get_convert_inputs,
     _set_convert_inputs,
     apply,
+    astype_cpp,
+    convert_inputs_cpp,
+    convert_single_value_cpp,
     dtype_promotion,
     get_device,
     make_shape_tuple,
@@ -55,53 +58,14 @@ def concatenate(inputs, axis=0, *, device=None):
     return result
 
 
-def astype(x, dtype):
-    dtype = np.dtype(dtype)
-    if not is_dtype_equal(x.dtype, dtype):
-        (x,) = apply(builtin.TypeCvt(dtype=dtype), x)
-    return x
-
-
 def convert_single_value(v, *, dtype=None, device=None):
-    if isinstance(v, (Tensor, SymbolVar)):
-        if not is_quantize(v.dtype):
-            v = astype(v, dtype)
-    else:
-        v = Const(v, dtype, device, None)
-    return v
+    return convert_single_value_cpp(v, dtype, device)
 
 
 def convert_inputs(*args, device=None):
     if not _get_convert_inputs():
         return args
-
-    dtype = dtype_promotion(args)
-    if device is None:
-        device = get_device(args)
-    device = as_device(device)
-
-    graph = None
-    sym_type = None
-    for a in args:
-        if isinstance(a, SymbolVar):
-            if graph is None:
-                graph = a.var.graph
-                sym_type = type(a)
-            else:
-                assert graph == a.var.graph
-    args = list(args)
-    if graph is not None:
-        for i in range(len(args)):
-            if not isinstance(args[i], SymbolVar):
-                rst = make_const(graph, np.array(args[i]), device.to_c(), dtype)
-                args[i] = sym_type(rst)
-
-    def convert(value):
-        if value is None:
-            return value
-        return convert_single_value(value, dtype=dtype, device=device.to_c())
-
-    return tuple(map(convert, args))
+    return convert_inputs_cpp(*args, device)
 
 
 def cast_tensors(*args, promote=False):
@@ -146,7 +110,7 @@ def astensor1d(x, *reference, dtype=None, device=None):
         pass
     except ValueError:
         if dtype is not None and dtype != x.dtype:
-            x = astype(x, dtype)
+            x = astype_cpp(x, dtype)
         if device is not None:
             cn = as_device(device).to_c()
             (x,) = apply(builtin.Copy(comp_node=cn), x)
@@ -164,7 +128,7 @@ def astensor1d(x, *reference, dtype=None, device=None):
     if any(isinstance(i, (Tensor, SymbolVar)) for i in x):
         x = concatenate(x, device=device) if len(x) > 1 else x[0]
         if dtype is not None:
-            x = astype(x, dtype)
+            x = astype_cpp(x, dtype)
         return x
     x = Const(x, dtype, device, reference)
     return x
