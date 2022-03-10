@@ -224,7 +224,7 @@ void padding_backward_proxy(
         params.offsets[i * 2 + 1] = offsets[i * 2 + 1];
     }
 
-    cudaMemset(dst.raw_ptr(), 0, dst.layout.access_bytes());
+    cuda_check(cudaMemsetAsync(dst.raw_ptr(), 0, dst.layout.access_bytes(), stream));
 
     void (*bwd_kern)(const size_t, const size_t, const T* const, T* const, ShapeParams);
 

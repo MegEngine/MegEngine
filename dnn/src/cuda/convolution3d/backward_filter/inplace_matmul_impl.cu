@@ -355,7 +355,8 @@ void convolution3d::exec_inplace_matmul_bwd_filter(
     } else {
         BX = BY = 16;
     }
-    cudaMemset(grad, 0, OC * IC * FD * FH * FW * sizeof(float));
+    cuda_check(
+            cudaMemsetAsync(grad, 0, OC * IC * FD * FH * FW * sizeof(float), stream));
     dim3 blocks(DIVUP(n, 4 * BX), DIVUP(m, 4 * BY), N);
     dim3 threads(BX, BY);
 #define DISPATCH_BX_BY(BX, BY)                                                      \
