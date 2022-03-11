@@ -25,8 +25,8 @@ namespace mgb::imperative::python {
 struct TransformationManager {
     enum Segment {
         ModuleTrace,
-        Grad,
         DTypePromote,
+        Grad,
         Scalar,
         Trace,
         Eval,
