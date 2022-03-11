@@ -50,7 +50,6 @@ def conv_bias_activation(
     dh, dw = _pair_nonzero(dilation)
     sparse_type = "dense" if groups == 1 else "group"
     compute_mode = _config._get_actual_op_param(compute_mode, _config.__compute_mode)
-    conv_format = _config._get_actual_op_param("NCHW", _config.__conv_format)
     op = builtin.ConvBias(
         stride_h=sh,
         stride_w=sw,
@@ -59,7 +58,6 @@ def conv_bias_activation(
         dilate_h=dh,
         dilate_w=dw,
         dtype=dtype,
-        format=conv_format,
         strategy=get_execution_strategy(),
         nonlineMode=nonlinear_mode,
         mode=conv_mode,
@@ -111,7 +109,6 @@ def batch_conv_bias_activation(
     dh, dw = _pair_nonzero(dilation)
     sparse_type = "dense" if groups == 1 else "group"
     compute_mode = _config._get_actual_op_param(compute_mode, _config.__compute_mode)
-    conv_format = _config._get_actual_op_param("NCHW", _config.__conv_format)
     op = builtin.BatchConvBias(
         stride_h=sh,
         stride_w=sw,
@@ -120,7 +117,6 @@ def batch_conv_bias_activation(
         dilate_h=dh,
         dilate_w=dw,
         dtype=dtype,
-        format=conv_format,
         strategy=get_execution_strategy(),
         nonlineMode=nonlinear_mode,
         mode=conv_mode,

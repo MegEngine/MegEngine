@@ -278,10 +278,10 @@ ValueRefList setsubtensor_rule(
 inline FT get_inputs_format(Span<ValueRef>& inputs, const FormatTransformation& t) {
     FT format(FT::DEFAULT);
     for (auto& inp : inputs) {
-        auto& inp_format = inp.cast(t.value_type()).format();
-        if (inp_format != FT::DEFAULT) {
-            mgb_assert(format == FT::DEFAULT || inp_format == format);
-            format = inp_format.type();
+        auto&& inp_ref = inp.as_ref(t.value_type());
+        if (inp_ref && inp_ref->format() != FT::DEFAULT) {
+            mgb_assert(format == FT::DEFAULT || inp_ref->format() == format);
+            format = inp_ref->format().type();
         }
     }
     return format;
@@ -323,30 +323,82 @@ ValueRefList identity_rule_helper(
             imperative::apply(op, t.unwrap_inputs(inputs)), src.format().type());
 }
 
+ValueRefList batchnorm_rule(
+        const BatchNorm& op, Span<ValueRef>& inputs, const bool& auto_convert,
+        const FormatTransformation& t) {
+    auto&& inp_format = inputs[0].cast(t.value_type()).format();
+    if (inp_format == FT::NHWC) {
+        auto&& new_param = op.param();
+        new_param.param_dim = BatchNorm::ParamDim::DIM_111C;
+        auto new_op = BatchNorm::make(new_param);
+        return identity_rule_helper(*new_op, inputs, t);
+    }
+    return identity_rule_helper(op, inputs, t);
+}
+
 // clang-format off
 #define FOREACH_IDENTITY_OP(cb) \
     cb(Copy)                    \
     cb(FastpathCopy)            \
     cb(TypeCvt)                 \
-    cb(Pooling)                 \
-    cb(AdaptivePooling)         \
     cb(Dropout)                 \
-    cb(Convolution)             \
-    cb(BatchNorm)               \
-    cb(Resize)                  \
     cb(Identity)
+
+#define FOREACH_FORMAT_OP(cb)   \
+    cb(AdaptivePooling)         \
+    cb(WarpAffine)              \
+    cb(Resize)
+
+#define FOREACH_FORMAT_POLICY_OP(cb)\
+    cb(Pooling)                     \
+    cb(Convolution)
 // clang-format on
 
-#define CREATE_IDENTITY_OP_RULE(op)                                          \
-    ValueRefList op##_rule(                                                  \
-            const op& _op, Span<ValueRef>& inputs, const bool& auto_convert, \
+// identity op
+#define CREATE_IDENTITY_OP_RULE(Op)                                          \
+    ValueRefList Op##_rule(                                                  \
+            const Op& _op, Span<ValueRef>& inputs, const bool& auto_convert, \
             const FormatTransformation& t) {                                 \
         return identity_rule_helper(_op, inputs, t);                         \
     }
 FOREACH_IDENTITY_OP(CREATE_IDENTITY_OP_RULE)
 #undef CREATE_IDENTITY_OP_RULE
 
-#define REGISTER_IDENTITY_OP_RULE(op) register_format_rule(op##_rule);
+// identity op with Format param
+#define CREATE_FORMAT_OP_RULE(Op)                                            \
+    ValueRefList Op##_rule(                                                  \
+            const Op& _op, Span<ValueRef>& inputs, const bool& auto_convert, \
+            const FormatTransformation& t) {                                 \
+        auto&& inp_format = inputs[0].cast(t.value_type()).format();         \
+        if (inp_format == FT::NHWC) {                                        \
+            auto&& new_param = _op.param();                                  \
+            new_param.format = Op::Format::NHWC;                             \
+            auto new_op = Op::make(new_param);                               \
+            return identity_rule_helper(*new_op, inputs, t);                 \
+        }                                                                    \
+        return identity_rule_helper(_op, inputs, t);                         \
+    }
+FOREACH_FORMAT_OP(CREATE_FORMAT_OP_RULE)
+#undef CREATE_FORMAT_OP_RULE
+
+// identity op with Format and policy param
+#define CREATE_FORMAT_POLICY_OP_RULE(Op)                                     \
+    ValueRefList Op##_rule(                                                  \
+            const Op& _op, Span<ValueRef>& inputs, const bool& auto_convert, \
+            const FormatTransformation& t) {                                 \
+        auto&& inp_format = inputs[0].cast(t.value_type()).format();         \
+        if (inp_format == FT::NHWC) {                                        \
+            auto&& new_param = _op.param();                                  \
+            new_param.format = Op::Format::NHWC;                             \
+            auto new_op = Op::make(new_param, _op.policy());                 \
+            return identity_rule_helper(*new_op, inputs, t);                 \
+        }                                                                    \
+        return identity_rule_helper(_op, inputs, t);                         \
+    }
+FOREACH_FORMAT_POLICY_OP(CREATE_FORMAT_POLICY_OP_RULE)
+
+#undef CREATE_FORMAT_OP_RULE
+#define REGISTER_OP_RULE(op) register_format_rule(op##_rule);
 struct FormatRuleRegistry {
     FormatRuleRegistry() {
         register_format_rule(dimshuffle_rule);
@@ -358,10 +410,13 @@ struct FormatRuleRegistry {
         register_format_rule(setsubtensor_rule<IndexingSetMultiAxisVec>);
         register_format_rule(concat_rule);
         register_format_rule(elemwise_rule);
-        FOREACH_IDENTITY_OP(REGISTER_IDENTITY_OP_RULE)
+        register_format_rule(batchnorm_rule);
+        FOREACH_IDENTITY_OP(REGISTER_OP_RULE)
+        FOREACH_FORMAT_OP(REGISTER_OP_RULE)
+        FOREACH_FORMAT_POLICY_OP(REGISTER_OP_RULE)
     }
 } _;
-#undef REGISTER_IDENTITY_OP_RULE
+#undef REGISTER_OP_RULE
 }  // namespace
 
 ValueRefList FormatTransformation::apply_transformation(

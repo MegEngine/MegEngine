@@ -12,8 +12,6 @@ from ._imperative_rt.core2 import (
 
 # use "default" to distinguish it from None in _reset_execution_config
 __compute_mode = "default"
-__conv_format = "default"
-__bn_format = "default"
 _benchmark_kernel = False
 _deterministic_kernel = False
 
@@ -23,8 +21,6 @@ __all__ = [
     "async_level",
     "disable_memory_forwarding",
     "_compute_mode",
-    "_conv_format",
-    "_bn_format",
     "_auto_format_convert",
     "_override",
 ]
@@ -138,35 +134,6 @@ def _compute_mode(mod, _compute_mode: str):
     __compute_mode = _compute_mode
 
 
-@property
-def _conv_format(mod):
-    r"""Get or set convolution data/filter/output layout format. The default option is None,
-    which means that no special format will be placed on. There are all layout definitions
-
-    ``NCHW`` layout: ``{N, C, H, W}``
-    ``NHWC`` layout: ``{N, H, W, C}``
-    ``NHWCD4`` layout: ``{N, H, (C + 3) / 4, W, 4}``
-    ``NHWCD4I`` layout: with ``align_axis = 2``
-    ``NCHW4`` layout: ``{N, C/4, H, W, 4}``
-    ``NCHW88`` layout: ``{N, C/8, H, W, 8}``
-    ``CHWN4`` layout: ``{C/4, H, W, N, 4}``
-    ``NCHW64`` layout: ``{N, C/64, H, W, 64}``
-
-    Examples:
-
-        .. code-block::
-
-           import megengine as mge
-           mge.config._conv_format = "NHWC"
-    """
-    return __conv_format
-
-
-@_conv_format.setter
-def _conv_format(mod, format: str):
-    global __conv_format
-    __conv_format = format
-
 
 @property
 def _bn_format(mod):
@@ -215,18 +182,15 @@ def _reset_execution_config(
     deterministic_kernel=None,
     async_level=None,
     compute_mode=None,
-    conv_format=None,
     bn_format=None,
     auto_format_convert=None,
 ):
-    global _benchmark_kernel, _deterministic_kernel, __compute_mode, __conv_format, __bn_format
+    global _benchmark_kernel, _deterministic_kernel, __compute_mode
     orig_flags = (
         _benchmark_kernel,
         _deterministic_kernel,
         get_option("async_level"),
         __compute_mode,
-        __conv_format,
-        __bn_format,
         get_auto_format_convert(),
     )
     if benchmark_kernel is not None:
@@ -237,10 +201,6 @@ def _reset_execution_config(
         set_option("async_level", async_level)
     if compute_mode is not None:
         __compute_mode = compute_mode
-    if conv_format is not None:
-        __conv_format = conv_format
-    if bn_format is not None:
-        __bn_format = bn_format
     if auto_format_convert is not None:
         set_auto_format_convert(auto_format_convert)
 
@@ -253,8 +213,6 @@ def _override(
     deterministic_kernel=None,
     async_level=None,
     compute_mode=None,
-    conv_format=None,
-    bn_format=None,
     auto_format_convert=None,
 ):
     r"""A context manager that users can opt in by attaching the decorator to set 
@@ -271,8 +229,6 @@ def _override(
                 deterministic_kernel = Fasle,
                 async_level=2,
                 compute_mode="float32",
-                conv_format="NHWC",
-                bn_format="dim_111c",
                 auto_format_convert=True,
             )
            def train():
@@ -282,8 +238,6 @@ def _override(
         deterministic_kernel,
         async_level,
         compute_mode,
-        conv_format,
-        bn_format,
         auto_format_convert,
     )
     try:

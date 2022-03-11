@@ -1280,21 +1280,6 @@ def test_set_conv2d_config():
     np.testing.assert_allclose(context_out.numpy(), expected.numpy())
 
 
-def test_set_warp_perspective_config():
-    config._conv_format = "NHWC"
-    inp_shape = (1, 1, 4, 4)
-    inp = Tensor(np.arange(16, dtype=np.float32).reshape(inp_shape))
-    M_shape = (1, 3, 3)
-    M = Tensor(np.random.randn(3, 3), dtype=np.float32).reshape(M_shape)
-    config_out = F.vision.warp_perspective(inp, M, (2, 2))
-    config._conv_format = "default"
-    with config._override(conv_format="NHWC"):
-        context_out = F.vision.warp_perspective(inp, M, (2, 2))
-    expected = F.vision.warp_perspective(inp, M, (2, 2), format="NHWC")
-    np.testing.assert_allclose(config_out.numpy(), expected.numpy())
-    np.testing.assert_allclose(context_out.numpy(), expected.numpy())
-
-
 @pytest.mark.parametrize("stride", [(1, 1)])
 @pytest.mark.parametrize("padding", [(1, 1)])
 @pytest.mark.parametrize("dilation", [(1, 1)])

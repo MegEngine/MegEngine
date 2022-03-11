@@ -178,7 +178,6 @@ def conv1d(
     dilate_h = dilation
 
     compute_mode = _config._get_actual_op_param(compute_mode, _config.__compute_mode)
-    conv_format = _config._get_actual_op_param("NCHW", _config.__conv_format)
     sparse_type = "dense" if groups == 1 else "group"
     op = builtin.Convolution(
         stride_h=stride_h,
@@ -191,7 +190,6 @@ def conv1d(
         mode=conv_mode,
         compute_mode=compute_mode,
         sparse=sparse_type,
-        format=conv_format,
     )
     (output,) = apply(op, inp, weight)
     if bias is not None:
@@ -247,7 +245,6 @@ def conv2d(
 
     sparse_type = "dense" if groups == 1 else "group"
     compute_mode = _config._get_actual_op_param(compute_mode, _config.__compute_mode)
-    conv_format = _config._get_actual_op_param("NCHW", _config.__conv_format)
     op = builtin.Convolution(
         stride_h=stride_h,
         stride_w=stride_w,
@@ -259,7 +256,6 @@ def conv2d(
         mode=conv_mode,
         compute_mode=compute_mode,
         sparse=sparse_type,
-        format=conv_format,
     )
     (output,) = apply(op, inp, weight)
     if bias is not None:
@@ -603,7 +599,6 @@ def max_pool2d(
     window_h, window_w = expand_hw(kernel_size)
     stride_h, stride_w = expand_hw(stride)
     padding_h, padding_w = expand_hw(padding)
-    conv_format = _config._get_actual_op_param("NCHW", _config.__conv_format)
 
     op = builtin.Pooling(
         window_h=window_h,
@@ -614,7 +609,6 @@ def max_pool2d(
         pad_w=padding_w,
         mode="max",
         strategy=get_execution_strategy(),
-        format=conv_format,
     )
     (output,) = apply(op, inp)
     return output
@@ -648,7 +642,6 @@ def avg_pool2d(
     window_h, window_w = expand_hw(kernel_size)
     stride_h, stride_w = expand_hw(stride)
     padding_h, padding_w = expand_hw(padding)
-    conv_format = _config._get_actual_op_param("NCHW", _config.__conv_format)
 
     op = builtin.Pooling(
         window_h=window_h,
@@ -659,7 +652,6 @@ def avg_pool2d(
         pad_w=padding_w,
         mode=mode,
         strategy=get_execution_strategy(),
-        format=conv_format,
     )
     (output,) = apply(op, inp)
     return output
@@ -1181,7 +1173,6 @@ def batch_norm(
     momentum: float = 0.9,
     eps: float = 1e-5,
     inplace: bool = True,
-    param_dim="dim_1c11"
 ):
     r"""Applies batch normalization to the input.
 
@@ -1210,14 +1201,8 @@ def batch_norm(
         if x_ndim is not None and x_ndim != 1:
             return x
 
-        if param_dim == "dim_1c11":
-            C = inp.shape[1]
-            pshape = (1, C, 1, 1)
-        elif param_dim == "dim_111c":
-            C = inp.shape[3]
-            pshape = (1, 1, 1, C)
-        else:
-            raise ValueError("Invalid param_dim {}".format(param_dim))
+        C = inp.shape[1]
+        pshape = (1, C, 1, 1)
 
         if x is None:
             x = Const(value, inp.dtype, inp.device)
@@ -1241,16 +1226,12 @@ def batch_norm(
     bias = make_full_if_none(bias, 0)
 
     if not training:
-        op = builtin.BatchNorm(
-            fwd_mode=BatchNorm.FwdMode.INFERENCE, epsilon=eps, param_dim=param_dim
-        )
+        op = builtin.BatchNorm(fwd_mode=BatchNorm.FwdMode.INFERENCE, epsilon=eps)
         ret = apply(op, inp, weight, bias, running_mean, running_var)[-1]
         return ret
 
     else:
-        op = builtin.BatchNorm(
-            avg_factor=1 - momentum, epsilon=eps, param_dim=param_dim
-        )
+        op = builtin.BatchNorm(avg_factor=1 - momentum, epsilon=eps)
         if has_mean or has_var:
             running_mean = make_full_if_none(running_mean, 0)
             running_var = make_full_if_none(running_var, 1)

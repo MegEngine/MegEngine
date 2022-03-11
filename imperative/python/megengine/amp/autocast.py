@@ -75,8 +75,6 @@ class autocast:
         amp._set_amp_high_prec_dtype(self._origin_high)
         amp._set_amp_low_prec_dtype(self._origin_low)
 
-        _config._reset_execution_config(*self._origin_configs)
-
     def __call__(self, func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
