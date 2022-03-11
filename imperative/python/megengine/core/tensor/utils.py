@@ -20,6 +20,7 @@ from .._imperative_rt.core2 import (
     _get_convert_inputs,
     _set_convert_inputs,
     apply,
+    astensor1d_cpp,
     astype_cpp,
     convert_inputs_cpp,
     convert_single_value_cpp,
@@ -48,14 +49,6 @@ def set_convert_inputs(flag):
     internal use only, and should be removed when the tensor-like system is refactored.
     """
     return _set_convert_inputs(flag)
-
-
-def concatenate(inputs, axis=0, *, device=None):
-    inputs = convert_inputs(*inputs)
-    if device is None:
-        device = get_device(inputs)
-    (result,) = apply(builtin.Concat(axis=axis, comp_node=device), *inputs)
-    return result
 
 
 def convert_single_value(v, *, dtype=None, device=None):
@@ -104,34 +97,7 @@ def astensor1d(x, *reference, dtype=None, device=None):
       * numpy array
       * tensor (returned as is, regardless of dtype and device)
     """
-    try:
-        ndim = x.ndim
-    except AttributeError:
-        pass
-    except ValueError:
-        if dtype is not None and dtype != x.dtype:
-            x = astype_cpp(x, dtype)
-        if device is not None:
-            cn = as_device(device).to_c()
-            (x,) = apply(builtin.Copy(comp_node=cn), x)
-        return x
-    else:
-        if ndim != 0 and ndim != 1:
-            raise ValueError("ndim != 1 or 0, get : %d" % ndim)
-        if not isinstance(x, (Tensor, SymbolVar)):
-            x = Const(x, dtype, device, reference)
-        return x
-
-    if not isinstance(x, collections.abc.Sequence):
-        raise TypeError
-
-    if any(isinstance(i, (Tensor, SymbolVar)) for i in x):
-        x = concatenate(x, device=device) if len(x) > 1 else x[0]
-        if dtype is not None:
-            x = astype_cpp(x, dtype)
-        return x
-    x = Const(x, dtype, device, reference)
-    return x
+    return astensor1d_cpp(x, dtype, device, reference)
 
 
 def _normalize_axis(

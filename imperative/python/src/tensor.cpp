@@ -104,13 +104,12 @@ struct SymbolVarContext {
 
 interpreter::Interpreter::Channel* interpreter_for_py = nullptr;
 PyTypeObject* py_tensor_type = nullptr;
-PyObject *cpp_use_symbolic_shape, *cpp_astensor1d;
+PyObject* cpp_use_symbolic_shape;
 
 #define REGISTE_APPLY_FUNC(mode) \
     void set_##mode(py::object pyf) { mode = pyf.ptr(); }
 
 REGISTE_APPLY_FUNC(cpp_use_symbolic_shape)
-REGISTE_APPLY_FUNC(cpp_astensor1d)
 
 #undef REGISTE_APPLY_FUNC
 
@@ -426,6 +425,7 @@ WRAP_FUNC_PY35(Const);
 WRAP_FUNC_PY35(astype_cpp);
 WRAP_FUNC_PY35(convert_single_value_cpp);
 WRAP_FUNC_PY35(convert_inputs_cpp);
+WRAP_FUNC_PY35(astensor1d_cpp);
 #undef WRAP_FUNC_PY35
 #define MGE_PY_INTERFACE(NAME, FUNC) \
     { #NAME, (PyCFunction)py35_##FUNC, METH_VARARGS, nullptr }
@@ -568,6 +568,7 @@ void init_tensor(py::module m) {
             MGE_PY_INTERFACE(astype_cpp, astype_cpp),
             MGE_PY_INTERFACE(convert_single_value_cpp, convert_single_value_cpp),
             MGE_PY_INTERFACE(convert_inputs_cpp, convert_inputs_cpp),
+            MGE_PY_INTERFACE(astensor1d_cpp, astensor1d_cpp),
             {nullptr, nullptr, 0, nullptr}};
     for (auto&& def : method_defs) {
         if (def.ml_meth != nullptr) {
@@ -956,8 +957,6 @@ void init_tensor(py::module m) {
     };
 
     m.def("set_cpp_use_symbolic_shape", &set_cpp_use_symbolic_shape);
-
-    m.def("set_cpp_astensor1d", &set_cpp_astensor1d);
 
     m.def("set_module_tracing", [=] { get_module_trace()->enable(); });
 

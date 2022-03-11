@@ -9,6 +9,8 @@
 
 import os
 
+from ._imperative_rt.core2 import set_cpp_use_symbolic_shape
+
 _use_symbolic_shape = False
 if os.environ.get("MEGENGINE_USE_SYMBOLIC_SHAPE"):
     _use_symbolic_shape = True
@@ -25,3 +27,6 @@ def set_symbolic_shape(option: bool):
     _org = _use_symbolic_shape
     _use_symbolic_shape = option
     return _org
+
+
+set_cpp_use_symbolic_shape(use_symbolic_shape)

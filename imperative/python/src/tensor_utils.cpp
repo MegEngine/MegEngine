@@ -310,6 +310,27 @@ bool is_bool_dtype(PyObject* args) {
     return ret;
 }
 
+py::object device2obj(py::handle device, bool mapping = false) {
+    if (device.ptr() == Py_None) {
+        return py::cast(CompNode::load(get_default_device()));
+    } else if (py::isinstance<py::str>(device)) {
+        if (mapping) {
+            py::object dmap = getattr(
+                    py::reinterpret_borrow<py::object>((PyObject*)py_tensor_type),
+                    "dmap_callback");
+            if (dmap.ptr() != Py_None) {
+                return device2obj(dmap(device), false);
+            }
+        }
+        return py::cast(CompNode::load(device.cast<std::string>()));
+
+    } else if (py::isinstance<CompNode>(device)) {
+        return py::reinterpret_borrow<py::object>(device);
+    } else {
+        return getattr(device, "_cn");
+    }
+}
+
 py::object _Const(
         py::handle value, py::handle dtype, py::handle device, py::handle ref_hdl) {
     py::object val = py::reinterpret_borrow<py::object>(value);
@@ -347,7 +368,7 @@ py::object _Const(
         if (device.ptr() == Py_None) {
             cn = ref_var->m_node->comp_node();
         } else {
-            cn = device.cast<CompNode>();
+            cn = device2obj(device).cast<CompNode>();
         }
         OperatorNodeConfig config(cn);
         auto hv = npy::np2tensor(
@@ -355,23 +376,7 @@ py::object _Const(
         auto typeobj = ref.get_type();
         return typeobj(opr::ImmutableTensor::make(*graph, hv, config).node());
     }
-    py::object device_obj;
-    if (device.ptr() == Py_None) {
-        device_obj = py::cast(CompNode::load(get_default_device()));
-    } else if (py::isinstance<py::str>(device)) {
-        py::object dmap =
-                getattr(py::reinterpret_borrow<py::object>((PyObject*)py_tensor_type),
-                        "dmap_callback");
-        if (dmap.ptr() != Py_None) {
-            device_obj = dmap(device);
-        } else {
-            device_obj = py::cast(CompNode::load(device.cast<std::string>()));
-        }
-    } else if (py::isinstance<CompNode>(device)) {
-        device_obj = py::reinterpret_borrow<py::object>(device);
-    } else {
-        device_obj = getattr(device, "_cn");
-    }
+    py::object device_obj = device2obj(device, true);
     py::tuple tup = py::make_tuple(val, dtype, device_obj, true, false, py::none());
     return TensorWrapper::make(py_tensor_type, tup.ptr(), nullptr);
 }
@@ -420,6 +425,197 @@ py::tuple _make_shape_tuple(py::handle shape) {
         solve_one(shape);
     }
     return py::reinterpret_steal<py::tuple>(PyList_AsTuple(ret.ptr()));
+}
+
+bool is_tensor_or_symbolvar(py::handle arg) {
+    return bool(TensorWrapper::try_cast(arg.ptr())) || py::isinstance<PySymbolVar>(arg);
+}
+
+bool is_py_sequence(py::handle arg) {
+    if (PyArray_Check(arg.ptr()) || TensorWrapper::try_cast(arg.ptr()) ||
+        py::isinstance<PySymbolVar>(arg)) {
+        return false;
+    }
+    return PySequence_Check(arg.ptr());
+}
+
+mgb::DType _get_dtype(py::handle tensor) {
+    if (auto tw = TensorWrapper::try_cast(tensor.ptr())) {
+        return tw->m_tensor->dtype();
+    } else {
+        auto var = tensor.cast<PySymbolVar*>();
+        return var->m_node->dtype();
+    }
+}
+
+py::object _astype_cpp(py::handle tensor, py::handle dtype_hdl) {
+    PyArray_Descr* descr;
+    if (!PyArray_DescrConverter(dtype_hdl.ptr(), &descr)) {
+        throw py::value_error(ssprintf(
+                "can not convert to numpy.dtype from %s",
+                dtype_hdl.ptr()->ob_type->tp_name));
+    }
+    PyArray_Descr* cur = npy::dtype_mgb2np_descr(_get_dtype(tensor)).get();
+    if (!dtype_equal(cur, descr)) {
+        std::shared_ptr<OpDef> op = TypeCvt::make(npy::dtype_np2mgb_descr(descr));
+        py::object Op = py::cast(op);
+        std::vector<PyObject*> p;
+        p.resize(2);
+        p[0] = Op.ptr();
+        p[1] = tensor.ptr();
+        py::tuple ret =
+                py::reinterpret_steal<py::object>(py_apply(NULL, p.data(), p.size()));
+        return ret[0];
+    } else {
+        return py::reinterpret_borrow<py::object>(tensor);
+    }
+}
+
+py::object _convert_single_value_cpp(
+        py::handle value, py::handle dtype, py::handle device) {
+    if (is_tensor_or_symbolvar(value)) {
+        if (_get_dtype(value).category() != DTypeCategory::QUANTIZED) {
+            return _astype_cpp(value, dtype);
+        }
+    } else {
+        return _Const(value, dtype, device, py::none());
+    }
+    return py::reinterpret_borrow<py::object>(value);
+}
+
+py::object _convert_inputs_cpp(
+        PyObject* const* args, size_t nargs, py::object dtype, py::object device) {
+    ComputingGraph* graph = nullptr;
+    py::handle typeobj;
+    py::list lis;
+    for (size_t i = 0; i < nargs; ++i) {
+        py::handle h = py::handle(args[i]);
+        lis.append(h);
+        if (py::isinstance<PySymbolVar>(h)) {
+            auto var = h.cast<PySymbolVar*>();
+            auto g = var->m_node->owner_graph();
+            if (!graph) {
+                graph = g;
+                typeobj = h.get_type();
+            } else {
+                mgb_assert(graph == g);
+            }
+        }
+    }
+    if (graph) {
+        CompNode cn = device2obj(device).cast<CompNode>();
+        for (size_t i = 0; i < nargs; ++i) {
+            OperatorNodeConfig config(cn);
+            auto hv = npy::np2tensor(
+                    lis[i].ptr(), npy::Meth::borrow(cn), dtype.cast<mgb::DType>());
+            if (!py::isinstance<PySymbolVar>(lis[i])) {
+                lis[i] = typeobj(opr::ImmutableTensor::make(*graph, hv, config).node());
+            }
+        }
+    }
+    auto convert = [&](py::object value) {
+        if (value.ptr() == Py_None) {
+            return value;
+        }
+        return _convert_single_value_cpp(value, dtype, device);
+    };
+    for (size_t i = 0; i < lis.size(); ++i) {
+        lis[i] = convert(lis[i]);
+    }
+    return py::reinterpret_steal<py::tuple>(PyList_AsTuple(lis.ptr()));
+}
+
+py::object _astensor1d_cpp(
+        py::handle value, py::handle dtype, py::handle device, py::handle ref) {
+    py::object ret;
+    py::object device_obj = py::none();
+    py::object ndim_obj = py::none();
+    if (device.ptr() != Py_None) {
+        device_obj = device2obj(device);
+    }
+    if (py::isinstance<PySymbolVar>(value)) {
+        try {
+            getattr(value, "ndim");
+        } catch (py::error_already_set& err) {
+            if (dtype.ptr() != Py_None) {
+                ret = _astype_cpp(value, dtype);
+            } else {
+                ret = py::reinterpret_borrow<py::object>(value);
+            }
+            if (device.ptr() != Py_None) {
+                std::shared_ptr<OpDef> op = Copy::make(device_obj.cast<CompNode>());
+                py::object Op = py::cast(op);
+                std::vector<PyObject*> p;
+                p.resize(2);
+                p[0] = Op.ptr();
+                p[1] = ret.ptr();
+                py::tuple copy_ret = py::reinterpret_steal<py::object>(
+                        py_apply(NULL, p.data(), p.size()));
+                return copy_ret[0];
+            }
+            return ret;
+        }
+    }
+    size_t ndim = 999;
+    if (hasattr(value, "ndim")) {
+        ndim = getattr(value, "ndim").cast<size_t>();
+        if (ndim != 0 && ndim != 1) {
+            throw py::value_error("ndim != 1 or 0, get : " + std::to_string(ndim));
+        }
+        if (!is_tensor_or_symbolvar(value)) {
+            return _Const(value, dtype, device, ref);
+        } else {
+            return py::reinterpret_borrow<py::object>(value);
+        }
+    }
+    if (!is_py_sequence(value)) {
+        throw py::type_error();
+    }
+    py::list lis = py::reinterpret_steal<py::list>(PySequence_List(value.ptr()));
+    bool need_concat = false;
+    for (size_t i = 0; i < lis.size(); ++i) {
+        if (is_tensor_or_symbolvar(lis[i])) {
+            need_concat = true;
+            break;
+        }
+    }
+    if (!need_concat) {
+        return _Const(value, dtype, device, ref);
+    }
+    if (lis.size() > 1) {
+        std::vector<PyObject*> c_args(lis.size() + 1);
+        for (size_t i = 0; i < lis.size(); ++i) {
+            c_args[i] = lis[i].ptr();
+        }
+        c_args[lis.size()] = Py_None;
+        py::tuple inp_tup = py::reinterpret_steal<py::tuple>(
+                convert_inputs_cpp(NULL, c_args.data(), c_args.size()));
+        if (device_obj.ptr() == Py_None) {
+            std::vector<PyObject*> inp(inp_tup.size());
+            for (size_t i = 0; i < inp_tup.size(); ++i) {
+                inp[i] = inp_tup[i].ptr();
+            }
+            device_obj = py::cast(_get_device(inp.data(), inp.size()));
+        }
+        std::shared_ptr<OpDef> op = Concat::make(0, device_obj.cast<CompNode>());
+        py::object Op = py::cast(op);
+        std::vector<PyObject*> p;
+        p.resize(inp_tup.size() + 1);
+        p[0] = Op.ptr();
+        for (size_t i = 0; i < inp_tup.size(); ++i) {
+            p[i + 1] = inp_tup[i].ptr();
+        }
+        py::tuple concat_ret =
+                py::reinterpret_steal<py::object>(py_apply(NULL, p.data(), p.size()));
+        ret = concat_ret[0];
+    } else {
+        ret = lis[0];
+    }
+    if (dtype.ptr() != Py_None) {
+        return _astype_cpp(ret, dtype);
+    } else {
+        return ret;
+    }
 }
 
 py::object _get_index(py::object tensor, py::object src) {
@@ -501,7 +697,12 @@ py::tuple _remove_ellipsis(py::object tensor, py::tuple tuple_val) {
             size_t ndim_incr = 1;
             if (hasattr(handle, "dtype") && is_bool_dtype(handle.ptr()) &&
                 hasattr(handle, "ndim")) {
-                py::object ndim = getattr(handle, "ndim");
+                py::object ndim;
+                try {
+                    ndim = getattr(handle, "ndim");
+                } catch (py::error_already_set& err) {
+                    has_unknown_ndim_bool_index = true;
+                }
                 if (PyLong_Check(ndim.ptr())) {
                     ndim_incr = PyLong_AsLong(ndim.ptr());
                 } else {
@@ -540,6 +741,8 @@ py::tuple _remove_ellipsis(py::object tensor, py::tuple tuple_val) {
     }
 }
 
+py::object _reshape_cpp(py::handle inp_hdl, py::handle args);
+
 py::tuple _expand_bool_dim(py::object tensor, py::tuple tuple_val) {
     py::tuple cur_shape = _make_shape_tuple(py::handle(getattr(tensor, "shape")));
     py::list new_tuple_val(0);
@@ -556,7 +759,8 @@ py::tuple _expand_bool_dim(py::object tensor, py::tuple tuple_val) {
                     if (cur_shape[tdim + j - offset].cast<size_t>() !=
                         ishape[j].cast<size_t>()) {
                         std::string msg =
-                                "boolean index did not match tensor along dimension " +
+                                "boolean index did not match tensor along "
+                                "dimension " +
                                 std::to_string(tdim + j) + "; dimension is " +
                                 std::to_string(
                                         cur_shape[tdim + j - offset].cast<size_t>()) +
@@ -580,19 +784,10 @@ py::tuple _expand_bool_dim(py::object tensor, py::tuple tuple_val) {
                     for (size_t j = tdim + ndim - offset; j < cur_shape.size(); ++j) {
                         new_shape.append(cur_shape[j]);
                     }
-                    py::tuple args = py::make_tuple(new_shape);
-                    PyObject* shape_tensor =
-                            PyObject_CallObject(cpp_astensor1d, args.ptr());
-                    py::object reshape_func = getattr(tensor, "reshape");
-                    Py_INCREF(shape_tensor);
-                    PyObject* Args = PyTuple_New(1);
-                    PyTuple_SetItem(Args, 0, shape_tensor);
-                    PyObject* new_tensor =
-                            PyObject_CallObject(reshape_func.ptr(), Args);
-                    Py_XDECREF(Args);
-                    tensor = py::reinterpret_steal<py::object>(new_tensor);
-                    cur_shape = _make_shape_tuple(py::handle(shape_tensor));
-                    Py_XDECREF(shape_tensor);
+                    py::object shape_tensor = _astensor1d_cpp(
+                            new_shape, py::none(), py::none(), py::none());
+                    tensor = _reshape_cpp(tensor, shape_tensor);
+                    cur_shape = _make_shape_tuple(shape_tensor);
                 } else {
                     for (size_t j = 0; j < i; ++j) {
                         new_shape.append(cur_shape[j]);
@@ -602,7 +797,7 @@ py::tuple _expand_bool_dim(py::object tensor, py::tuple tuple_val) {
                         new_shape.append(cur_shape[j]);
                     }
                     cur_shape = new_shape;
-                    tensor = getattr(tensor, "reshape")(cur_shape);
+                    tensor = _reshape_cpp(tensor, cur_shape);
                 }
                 offset++;
                 tdim += ndim;
@@ -614,6 +809,18 @@ py::tuple _expand_bool_dim(py::object tensor, py::tuple tuple_val) {
         }
     }
     return py::make_tuple(tensor, py::reinterpret_borrow<py::tuple>(new_tuple_val));
+}
+
+std::pair<size_t, bool> get_ndim_safe(py::handle tensor) {
+    if (auto p = TensorWrapper::try_cast(tensor.ptr())) {
+        return {p->m_tensor->shape()->ndim, true};
+    }
+
+    try {
+        return {getattr(tensor, "ndim").cast<size_t>(), true};
+    } catch (py::error_already_set& err) {
+        return {0, false};
+    }
 }
 
 py::tuple _unpack_indexes(py::handle inp_hdl, py::handle idx_hdl) {
@@ -637,7 +844,7 @@ py::tuple _unpack_indexes(py::handle inp_hdl, py::handle idx_hdl) {
             need_remove_ellipsis = true;
         } else {
             if (is_bool_dtype(k.ptr()) && hasattr(k, "ndim")) {
-                size_t ndim = getattr(k, "ndim").cast<size_t>();
+                size_t ndim = get_ndim_safe(k).first;
                 idx_ndim += ndim;
                 if (ndim > 1) {
                     need_expand_bool_dim = true;
@@ -710,6 +917,186 @@ py::tuple _unpack_indexes(py::handle inp_hdl, py::handle idx_hdl) {
     }
 
     return py::make_tuple(inp, tensors, items, use_subtensor, need_expand_bool_dim);
+}
+
+py::object _expand_args(py::handle args) {
+    if (!PyTuple_Check(args.ptr())) {
+        return py::reinterpret_borrow<py::object>(args);
+    }
+    py::tuple args_tup = py::reinterpret_borrow<py::tuple>(args.ptr());
+    if (args_tup.size() == 1 && (PySequence_Check(args_tup[0].ptr()) ||
+                                 is_tensor_or_symbolvar(args_tup[0].ptr()))) {
+        return py::reinterpret_borrow<py::object>(args_tup[0]);
+    } else {
+        return py::reinterpret_steal<py::list>(PySequence_List(args_tup.ptr()));
+    }
+}
+
+std::tuple<std::vector<int32_t>, bool> tuple2vector(py::object shape) {
+    std::vector<int32_t> shp;
+    if (!PyTuple_Check(shape.ptr())) {
+        return {shp, false};
+    }
+    py::tuple tup = py::reinterpret_borrow<py::tuple>(shape);
+    for (size_t i = 0; i < tup.size(); ++i) {
+        if (!PyLong_Check(tup[i].ptr())) {
+            return {shp, false};
+        } else {
+            shp.push_back(tup[i].cast<int32_t>());
+        }
+    }
+    return {shp, true};
+}
+
+bool enable_fastpath(py::handle inp) {
+    if (!TensorWrapper::try_cast(inp.ptr()) ||
+        TransformationManager::get_instance()
+                        .segments[TransformationManager::Segment::Trace]
+                        .size() > 0 ||
+        TransformationManager::get_instance()
+                        .segments[TransformationManager::Segment::ModuleTrace]
+                        .size() > 0) {
+        return false;
+    }
+    return true;
+}
+
+py::object _broadcast_cpp(py::handle inp_hdl, py::handle args) {
+    py::object shape_hdl = _expand_args(args);
+    bool auto_infer = false;
+    py::list lis;
+    py::list new_shape;
+    if (PyList_Check(shape_hdl.ptr()) || PyTuple_Check(shape_hdl.ptr())) {
+        lis = py::reinterpret_steal<py::list>(PySequence_List(shape_hdl.ptr()));
+        for (size_t i = 0; i < lis.size(); ++i) {
+            if (lis[i].ptr() == Py_None) {
+                auto_infer = true;
+                size_t right = lis.size() - i;
+                py::object tshp = getattr(inp_hdl, "_tuple_shape");
+                if (tshp.ptr() == Py_None) {
+                    throw py::index_error("does not support `None` with unknown shape");
+                }
+                py::tuple inp_shape = py::reinterpret_borrow<py::tuple>(tshp);
+                if (inp_shape.size() >= right) {
+                    if (enable_fastpath(inp_hdl)) {
+                        lis[i] = inp_shape[inp_shape.size() - right];
+                    }
+                    new_shape.append(inp_shape[inp_shape.size() - right]);
+                } else {
+                    throw py::value_error("invalid broadcast shape");
+                }
+            } else {
+                new_shape.append(lis[i]);
+                if (PyLong_Check(lis[i].ptr())) {
+                    int32_t s = lis[i].cast<int32_t>();
+                    if (s < 0) {
+                        throw py::value_error(
+                                "expect shape[" + std::to_string(i) +
+                                "] >= 0 or use `None` to auto infer, got " +
+                                std::to_string(s));
+                    }
+                }
+            }
+        }
+    }
+    if (auto_infer) {
+        if (enable_fastpath(inp_hdl)) {
+            shape_hdl = py::reinterpret_borrow<py::tuple>(lis);
+        } else {
+            shape_hdl = _astensor1d_cpp(
+                    new_shape, py::cast((mgb::DType)dtype::Int32()),
+                    getattr(inp_hdl, "device"), inp_hdl);
+        }
+    }
+    py::object shape_tuple;
+    try {
+        shape_tuple = _make_shape_tuple(shape_hdl);
+    } catch (py::error_already_set& err) {
+        shape_tuple = py::reinterpret_borrow<py::object>(shape_hdl);
+    }
+    auto [shape, fastpath] = tuple2vector(shape_tuple);
+    fastpath &= enable_fastpath(inp_hdl);
+    std::shared_ptr<OpDef> op;
+    std::vector<PyObject*> p;
+    py::object shape_tensor;
+    if (fastpath) {
+        op = Broadcast::make(shape);
+        p.resize(2);
+    } else {
+        op = Broadcast::make();
+        shape_tensor = _astensor1d_cpp(
+                shape_hdl, py::cast((mgb::DType)dtype::Int32()),
+                getattr(inp_hdl, "device"), inp_hdl);
+        p.resize(3);
+        p[2] = shape_tensor.ptr();
+    }
+    py::object Op = py::cast(op);
+    p[0] = Op.ptr();
+    p[1] = inp_hdl.ptr();
+    py::tuple ret =
+            py::reinterpret_steal<py::object>(py_apply(NULL, p.data(), p.size()));
+    return ret[0];
+}
+
+py::object _reshape_cpp(py::handle inp_hdl, py::handle args) {
+    py::object shape_hdl = _expand_args(args);
+    py::object shape_tuple;
+    try {
+        shape_tuple = _make_shape_tuple(shape_hdl);
+    } catch (py::error_already_set& err) {
+        shape_tuple = py::reinterpret_borrow<py::object>(shape_hdl);
+    }
+    int32_t unspec_axis = -1;
+    if (PyTuple_Check(shape_tuple.ptr())) {
+        py::tuple tup = py::reinterpret_borrow<py::tuple>(shape_tuple);
+        for (size_t i = 0; i < tup.size(); ++i) {
+            py::object obj = py::reinterpret_borrow<py::object>(tup[i]);
+            if (obj < py::int_(0)) {
+                if (obj.not_equal(py::int_(-1))) {
+                    throw py::value_error(
+                            "expect shape [" + std::to_string(i) + "] >= -1, got " +
+                            repr(obj).cast<std::string>());
+                }
+                if (unspec_axis >= 0) {
+                    throw py::value_error(
+                            "multiple -1 in shape: " + std::to_string(unspec_axis) +
+                            " & " + std::to_string(i));
+                }
+                unspec_axis = i;
+            }
+        }
+    }
+    auto [shape, fastpath] = tuple2vector(shape_tuple);
+    fastpath &= enable_fastpath(inp_hdl);
+    std::shared_ptr<OpDef> op;
+    std::vector<PyObject*> p;
+    py::object shape_tensor;
+    if (fastpath) {
+        if (unspec_axis >= 0) {
+            op = Reshape::make(unspec_axis, shape);
+        } else {
+            op = Reshape::make(::megdnn::param::OptionalAxisV1::INVALID_AXIS, shape);
+        }
+        p.resize(2);
+    } else {
+        shape.clear();
+        if (unspec_axis >= 0) {
+            op = Reshape::make(unspec_axis, shape);
+        } else {
+            op = Reshape::make();
+        }
+        shape_tensor = _astensor1d_cpp(
+                shape_hdl, py::cast((mgb::DType)dtype::Int32()),
+                getattr(inp_hdl, "device"), inp_hdl);
+        p.resize(3);
+        p[2] = shape_tensor.ptr();
+    }
+    py::object Op = py::cast(op);
+    p[0] = Op.ptr();
+    p[1] = inp_hdl.ptr();
+    py::tuple ret =
+            py::reinterpret_steal<py::object>(py_apply(NULL, p.data(), p.size()));
+    return ret[0];
 }
 
 py::object _getitem_cpp(py::handle inp_hdl, py::handle idx_hdl) {
@@ -786,11 +1173,10 @@ py::object _setitem_cpp(py::handle inp_hdl, py::handle idx_hdl, py::handle val_h
     py::object tmp_result = ret[0];
 
     try {
-        py::object value_tuple_shape = val.attr("_tuple_shape");
-        py::object tmp_result_tuple_shape = tmp_result.attr("_tuple_shape");
-        py::tuple value_shape = py::reinterpret_borrow<py::tuple>(value_tuple_shape);
+        py::tuple value_shape =
+                py::reinterpret_borrow<py::tuple>(val.attr("_tuple_shape"));
         py::tuple tmp_result_shape =
-                py::reinterpret_borrow<py::tuple>(tmp_result_tuple_shape);
+                py::reinterpret_borrow<py::tuple>(tmp_result.attr("_tuple_shape"));
         for (size_t i = 0; i < value_shape.size() && i < tmp_result_shape.size(); ++i) {
             size_t vs = value_shape[value_shape.size() - i - 1].cast<size_t>();
             size_t ts =
@@ -815,14 +1201,7 @@ py::object _setitem_cpp(py::handle inp_hdl, py::handle idx_hdl, py::handle val_h
     } catch (py::error_already_set& err) {
         ;
     }
-
-    py::object broadcast_func = getattr(val, "_broadcast");
-    PyObject* Args = PyTuple_New(1);
-    PyTuple_SetItem(Args, 0, getattr(tmp_result, "shape").release().ptr());
-    PyObject* new_val = PyObject_CallObject(broadcast_func.ptr(), Args);
-    Py_XDECREF(Args);
-    val = py::reinterpret_steal<py::object>(new_val);
-
+    val = _broadcast_cpp(val, getattr(tmp_result, "shape"));
     if (up[3].cast<bool>()) {
         set_op = SetSubtensor::make(cpp_items);
     } else {
@@ -843,27 +1222,10 @@ py::object _setitem_cpp(py::handle inp_hdl, py::handle idx_hdl, py::handle val_h
     py::object res = result[0];
 
     if (up[4].cast<bool>()) {
-        py::object reshape_func = getattr(res, "reshape");
-        PyObject* Args = PyTuple_New(1);
-        PyTuple_SetItem(Args, 0, org_shape.release().ptr());
-        PyObject* new_tensor = PyObject_CallObject(reshape_func.ptr(), Args);
-        Py_XDECREF(Args);
-        res = py::reinterpret_steal<py::object>(new_tensor);
+        res = _reshape_cpp(res, org_shape);
     }
 
     return res;
-}
-
-bool is_tensor_or_symbolvar(py::handle arg) {
-    return bool(TensorWrapper::try_cast(arg.ptr())) || py::isinstance<PySymbolVar>(arg);
-}
-
-bool is_py_sequence(py::handle arg) {
-    if (PyArray_Check(arg.ptr()) || TensorWrapper::try_cast(arg.ptr()) ||
-        py::isinstance<PySymbolVar>(arg)) {
-        return false;
-    }
-    return PySequence_Check(arg.ptr());
 }
 
 py::object _split_cpp(
@@ -936,7 +1298,7 @@ py::object _split_cpp(
 
 std::vector<int32_t> list2vector(py::handle li) {
     std::vector<int32_t> axis;
-    if (is_py_sequence(li.ptr())) {
+    if (is_py_sequence(li)) {
         py::list tmp_list = py::reinterpret_steal<py::list>(PySequence_List(li.ptr()));
         for (size_t i = 0; i < tmp_list.size(); ++i) {
             axis.push_back(tmp_list[i].attr("__int__")().cast<int32_t>());
@@ -958,13 +1320,9 @@ py::object _expand_dims_cpp(py::handle inp_hdl, py::handle axis_hdl) {
             ndim += shape->ndim;
         }
     } else {
-        auto&& var = inp_hdl.cast<PySymbolVar*>();
-        auto&& mgr = var->m_node->owner_graph()->static_infer_manager();
-        auto&& shape = mgr.infer_shape_fallible(var->m_node);
-        if (shape) {
-            unknown_ndim = false;
-            ndim += shape->ndim;
-        }
+        auto&& inp_ndim = get_ndim_safe(inp_hdl);
+        ndim += inp_ndim.first;
+        unknown_ndim &= ~inp_ndim.second;
     }
     for (size_t i = 0; i < axis.size(); ++i) {
         if (axis[i] < 0) {
@@ -1010,16 +1368,13 @@ py::object _squeeze_cpp(py::handle inp_hdl, py::handle axis_hdl) {
             }
         }
     } else {
-        auto&& var = inp_hdl.cast<PySymbolVar*>();
-        auto&& mgr = var->m_node->owner_graph()->static_infer_manager();
-        auto&& shape = mgr.infer_shape_fallible(var->m_node);
-        if (shape) {
-            ndim = shape->ndim;
-            if (axis_hdl.ptr() == Py_None) {
-                for (size_t i = 0; i < shape->ndim; ++i) {
-                    if (shape->shape[i] == 1) {
-                        axis.push_back(i);
-                    }
+        py::tuple shape =
+                py::reinterpret_borrow<py::tuple>(getattr(inp_hdl, "_tuple_shape"));
+        ndim = shape.size();
+        if (axis_hdl.ptr() == Py_None) {
+            for (size_t i = 0; i < shape.size(); ++i) {
+                if (shape[i].cast<size_t>() == 1) {
+                    axis.push_back(i);
                 }
             }
         }
@@ -1043,27 +1398,6 @@ py::object _squeeze_cpp(py::handle inp_hdl, py::handle axis_hdl) {
             py::reinterpret_steal<py::object>(py_apply(NULL, p.data(), p.size()));
     return ret[0];
 }
-
-size_t fast_ndim(py::handle tensor) {
-    if (auto p = TensorWrapper::try_cast(tensor.ptr())) {
-        return p->m_tensor->shape()->ndim;
-    }
-    return getattr(tensor, "ndim").cast<size_t>();
-}
-
-py::object _expand_args(py::handle args) {
-    if (!PyTuple_Check(args.ptr())) {
-        return py::reinterpret_borrow<py::object>(args);
-    }
-    py::tuple args_tup = py::reinterpret_borrow<py::tuple>(args.ptr());
-    if (args_tup.size() == 1 && (PySequence_Check(args_tup[0].ptr()) ||
-                                 is_tensor_or_symbolvar(args_tup[0].ptr()))) {
-        return py::reinterpret_borrow<py::object>(args_tup[0]);
-    } else {
-        return py::reinterpret_steal<py::list>(PySequence_List(args_tup.ptr()));
-    }
-}
-
 py::object _transpose_cpp(py::handle inp_hdl, py::handle args) {
     py::object obj = _expand_args(args);
     py::list lis;
@@ -1077,7 +1411,7 @@ py::object _transpose_cpp(py::handle inp_hdl, py::handle args) {
             lis = py::reinterpret_steal<py::list>(maybe_list);
         }
     }
-    if (fast_ndim(inp_hdl) == 0) {
+    if (get_ndim_safe(inp_hdl).first == 0) {
         if (lis.size() != 0) {
             throw py::index_error(
                     "transpose for scalar does not accept additional args");
@@ -1112,351 +1446,79 @@ py::object _transpose_cpp(py::handle inp_hdl, py::handle args) {
     return ret[0];
 }
 
-std::tuple<std::vector<int32_t>, bool> tuple2vector(py::object shape) {
-    std::vector<int32_t> shp;
-    if (!PyTuple_Check(shape.ptr())) {
-        return {shp, false};
-    }
-    py::tuple tup = py::reinterpret_borrow<py::tuple>(shape);
-    for (size_t i = 0; i < tup.size(); ++i) {
-        if (!PyLong_Check(tup[i].ptr())) {
-            return {shp, false};
-        } else {
-            shp.push_back(tup[i].cast<int32_t>());
-        }
-    }
-    return {shp, true};
-}
-
-bool enable_fastpath(py::handle inp) {
-    if (!TensorWrapper::try_cast(inp.ptr()) ||
-        TransformationManager::get_instance()
-                        .segments[TransformationManager::Segment::Trace]
-                        .size() > 0 ||
-        TransformationManager::get_instance()
-                        .segments[TransformationManager::Segment::ModuleTrace]
-                        .size() > 0) {
-        return false;
-    }
-    return true;
-}
-
-py::object _broadcast_cpp(py::handle inp_hdl, py::handle args) {
-    py::object shape_hdl = _expand_args(args);
-    bool auto_infer = false;
-    py::list lis;
-    py::list new_shape;
-    if (PyList_Check(shape_hdl.ptr()) || PyTuple_Check(shape_hdl.ptr())) {
-        lis = py::reinterpret_steal<py::list>(PySequence_List(shape_hdl.ptr()));
-        for (size_t i = 0; i < lis.size(); ++i) {
-            if (lis[i].ptr() == Py_None) {
-                auto_infer = true;
-                size_t right = lis.size() - i;
-                py::object tshp = getattr(inp_hdl, "_tuple_shape");
-                if (tshp.ptr() == Py_None) {
-                    throw py::index_error("does not support `None` with unknown shape");
-                }
-                py::tuple inp_shape = py::reinterpret_borrow<py::tuple>(tshp);
-                if (inp_shape.size() >= right) {
-                    if (enable_fastpath(inp_hdl)) {
-                        lis[i] = inp_shape[inp_shape.size() - right];
-                    }
-                    new_shape.append(inp_shape[inp_shape.size() - right]);
-                } else {
-                    throw py::value_error("invalid broadcast shape");
-                }
-            } else {
-                new_shape.append(lis[i]);
-                if (PyLong_Check(lis[i].ptr())) {
-                    int32_t s = lis[i].cast<int32_t>();
-                    if (s < 0) {
-                        throw py::value_error(
-                                "expect shape[" + std::to_string(i) +
-                                "] >= 0 or use `None` to auto infer, got " +
-                                std::to_string(s));
-                    }
-                }
-            }
-        }
-    }
-    if (auto_infer) {
-        if (enable_fastpath(inp_hdl)) {
-            shape_hdl = py::reinterpret_borrow<py::tuple>(lis);
-        } else {
-            py::tuple args = py::make_tuple(new_shape, inp_hdl);
-            py::dict kwargs;
-            kwargs["dtype"] = py::cast((mgb::DType)dtype::Int32());
-            kwargs["device"] = getattr(inp_hdl, "device");
-            shape_hdl = py::reinterpret_steal<py::object>(
-                    PyObject_Call(cpp_astensor1d, args.ptr(), kwargs.ptr()));
-        }
-    }
-    py::object shape_tuple;
-    try {
-        shape_tuple = _make_shape_tuple(shape_hdl);
-    } catch (py::error_already_set& err) {
-        shape_tuple = py::reinterpret_borrow<py::object>(shape_hdl);
-    }
-    auto [shape, fastpath] = tuple2vector(shape_tuple);
-    fastpath &= enable_fastpath(inp_hdl);
-    std::shared_ptr<OpDef> op;
-    std::vector<PyObject*> p;
-    py::object shape_tensor;
-    if (fastpath) {
-        op = Broadcast::make(shape);
-        p.resize(2);
-    } else {
-        op = Broadcast::make();
-        py::tuple args = py::make_tuple(shape_hdl, inp_hdl);
-        py::dict kwargs;
-        kwargs["dtype"] = py::cast((mgb::DType)dtype::Int32());
-        kwargs["device"] = getattr(inp_hdl, "device");
-        shape_tensor = py::reinterpret_steal<py::object>(
-                PyObject_Call(cpp_astensor1d, args.ptr(), kwargs.ptr()));
-        p.resize(3);
-        p[2] = shape_tensor.ptr();
-    }
-    py::object Op = py::cast(op);
-    p[0] = Op.ptr();
-    p[1] = inp_hdl.ptr();
-    py::tuple ret =
-            py::reinterpret_steal<py::object>(py_apply(NULL, p.data(), p.size()));
-    return ret[0];
-}
-
-py::object _reshape_cpp(py::handle inp_hdl, py::handle args) {
-    py::object shape_hdl = _expand_args(args);
-    py::object shape_tuple;
-    try {
-        shape_tuple = _make_shape_tuple(shape_hdl);
-    } catch (py::error_already_set& err) {
-        shape_tuple = py::reinterpret_borrow<py::object>(shape_hdl);
-    }
-    int32_t unspec_axis = -1;
-    if (PyTuple_Check(shape_tuple.ptr())) {
-        py::tuple tup = py::reinterpret_borrow<py::tuple>(shape_tuple);
-        for (size_t i = 0; i < tup.size(); ++i) {
-            py::object obj = py::reinterpret_borrow<py::object>(tup[i]);
-            if (obj < py::int_(0)) {
-                if (obj.not_equal(py::int_(-1))) {
-                    throw py::value_error(
-                            "expect shape [" + std::to_string(i) + "] >= -1, got " +
-                            repr(obj).cast<std::string>());
-                }
-                if (unspec_axis >= 0) {
-                    throw py::value_error(
-                            "multiple -1 in shape: " + std::to_string(unspec_axis) +
-                            " & " + std::to_string(i));
-                }
-                unspec_axis = i;
-            }
-        }
-    }
-    auto [shape, fastpath] = tuple2vector(shape_tuple);
-    fastpath &= enable_fastpath(inp_hdl);
-    std::shared_ptr<OpDef> op;
-    std::vector<PyObject*> p;
-    py::object shape_tensor;
-    if (fastpath) {
-        if (unspec_axis >= 0) {
-            op = Reshape::make(unspec_axis, shape);
-        } else {
-            op = Reshape::make(::megdnn::param::OptionalAxisV1::INVALID_AXIS, shape);
-        }
-        p.resize(2);
-    } else {
-        shape.clear();
-        if (unspec_axis >= 0) {
-            op = Reshape::make(unspec_axis, shape);
-        } else {
-            op = Reshape::make();
-        }
-        py::tuple args = py::make_tuple(shape_hdl, inp_hdl);
-        py::dict kwargs;
-        kwargs["dtype"] = py::cast((mgb::DType)dtype::Int32());
-        kwargs["device"] = getattr(inp_hdl, "device");
-        shape_tensor = py::reinterpret_steal<py::object>(
-                PyObject_Call(cpp_astensor1d, args.ptr(), kwargs.ptr()));
-        p.resize(3);
-        p[2] = shape_tensor.ptr();
-    }
-    py::object Op = py::cast(op);
-    p[0] = Op.ptr();
-    p[1] = inp_hdl.ptr();
-    py::tuple ret =
-            py::reinterpret_steal<py::object>(py_apply(NULL, p.data(), p.size()));
-    return ret[0];
-}
-
-mgb::DType _get_dtype(py::handle tensor) {
-    if (auto tw = TensorWrapper::try_cast(tensor.ptr())) {
-        return tw->m_tensor->dtype();
-    } else {
-        auto var = tensor.cast<PySymbolVar*>();
-        return var->m_node->dtype();
-    }
-}
-
-py::object _astype_cpp(py::handle tensor, py::handle dtype_hdl) {
-    PyArray_Descr* descr;
-    if (!PyArray_DescrConverter(dtype_hdl.ptr(), &descr)) {
-        throw py::value_error(ssprintf(
-                "can not convert to numpy.dtype from %s",
-                dtype_hdl.ptr()->ob_type->tp_name));
-    }
-    PyArray_Descr* cur = npy::dtype_mgb2np_descr(_get_dtype(tensor)).get();
-    if (!dtype_equal(cur, descr)) {
-        std::shared_ptr<OpDef> op = TypeCvt::make(npy::dtype_np2mgb_descr(descr));
-        py::object Op = py::cast(op);
-        std::vector<PyObject*> p;
-        p.resize(2);
-        p[0] = Op.ptr();
-        p[1] = tensor.ptr();
-        py::tuple ret =
-                py::reinterpret_steal<py::object>(py_apply(NULL, p.data(), p.size()));
-        return ret[0];
-    } else {
-        return py::reinterpret_borrow<py::object>(tensor);
-    }
-}
-
-py::object _convert_single_value_cpp(
-        py::handle value, py::handle dtype, py::handle device) {
-    if (is_tensor_or_symbolvar(value)) {
-        if (_get_dtype(value).category() != DTypeCategory::QUANTIZED) {
-            return _astype_cpp(value, dtype);
-        }
-    } else {
-        return _Const(value, dtype, device, py::none());
-    }
-    return py::reinterpret_borrow<py::object>(value);
-}
-
-py::object _convert_inputs_cpp(
-        PyObject* const* args, size_t nargs, py::object dtype, py::object device) {
-    ComputingGraph* graph = nullptr;
-    py::handle typeobj;
-    py::list lis;
-    for (size_t i = 0; i < nargs; ++i) {
-        py::handle h = py::handle(args[i]);
-        lis.append(h);
-        if (py::isinstance<PySymbolVar>(h)) {
-            auto var = h.cast<PySymbolVar*>();
-            auto g = var->m_node->owner_graph();
-            if (!graph) {
-                graph = g;
-                typeobj = h.get_type();
-            } else {
-                mgb_assert(graph == g);
-            }
-        }
-    }
-    if (graph) {
-        CompNode cn = device.cast<CompNode>();
-        for (size_t i = 0; i < nargs; ++i) {
-            OperatorNodeConfig config(cn);
-            auto hv = npy::np2tensor(
-                    lis[i].ptr(), npy::Meth::borrow(cn), dtype.cast<mgb::DType>());
-            if (py::isinstance<PySymbolVar>(lis[i])) {
-                lis[i] = typeobj(opr::ImmutableTensor::make(*graph, hv, config).node());
-            }
-        }
-    }
-    auto convert = [&](py::object value) {
-        if (value.ptr() == Py_None) {
-            return value;
-        }
-        return _convert_single_value_cpp(value, dtype, device);
-    };
-    for (size_t i = 0; i < lis.size(); ++i) {
-        lis[i] = convert(lis[i]);
-    }
-    return py::reinterpret_steal<py::tuple>(PyList_AsTuple(lis.ptr()));
-}
-
 PyObject* make_shape_tuple(PyObject* self, PyObject* const* args, size_t nargs) {
     try {
-        return _make_shape_tuple(py::handle(args[0])).release().ptr();
+        return _make_shape_tuple(args[0]).release().ptr();
     }
     PYEXT17_TRANSLATE_EXC_RET(nullptr)
 }
 
 PyObject* getitem_cpp(PyObject* self, PyObject* const* args, size_t nargs) {
     try {
-        return _getitem_cpp(py::handle(args[0]), py::handle(args[1])).release().ptr();
+        return _getitem_cpp(args[0], args[1]).release().ptr();
     }
     PYEXT17_TRANSLATE_EXC_RET(nullptr)
 }
 
 PyObject* setitem_cpp(PyObject* self, PyObject* const* args, size_t nargs) {
     try {
-        return _setitem_cpp(
-                       py::handle(args[0]), py::handle(args[1]), py::handle(args[2]))
-                .release()
-                .ptr();
+        return _setitem_cpp(args[0], args[1], args[2]).release().ptr();
     }
     PYEXT17_TRANSLATE_EXC_RET(nullptr)
 }
 
 PyObject* split_cpp(PyObject* self, PyObject* const* args, size_t nargs) {
     try {
-        return _split_cpp(py::handle(args[0]), py::handle(args[1]), py::handle(args[2]))
-                .release()
-                .ptr();
+        return _split_cpp(args[0], args[1], args[2]).release().ptr();
     }
     PYEXT17_TRANSLATE_EXC_RET(nullptr)
 }
 
 PyObject* expand_dims_cpp(PyObject* self, PyObject* const* args, size_t nargs) {
     try {
-        return _expand_dims_cpp(py::handle(args[0]), py::handle(args[1]))
-                .release()
-                .ptr();
+        return _expand_dims_cpp(args[0], args[1]).release().ptr();
     }
     PYEXT17_TRANSLATE_EXC_RET(nullptr)
 }
 
 PyObject* squeeze_cpp(PyObject* self, PyObject* const* args, size_t nargs) {
     try {
-        return _squeeze_cpp(py::handle(args[0]), py::handle(args[1])).release().ptr();
+        return _squeeze_cpp(args[0], args[1]).release().ptr();
     }
     PYEXT17_TRANSLATE_EXC_RET(nullptr)
 }
 
 PyObject* transpose_cpp(PyObject* self, PyObject* const* args, size_t nargs) {
     try {
-        return _transpose_cpp(py::handle(args[0]), py::handle(args[1])).release().ptr();
+        return _transpose_cpp(args[0], args[1]).release().ptr();
     }
     PYEXT17_TRANSLATE_EXC_RET(nullptr)
 }
 
 PyObject* broadcast_cpp(PyObject* self, PyObject* const* args, size_t nargs) {
     try {
-        return _broadcast_cpp(py::handle(args[0]), py::handle(args[1])).release().ptr();
+        return _broadcast_cpp(args[0], args[1]).release().ptr();
     }
     PYEXT17_TRANSLATE_EXC_RET(nullptr)
 }
 
 PyObject* reshape_cpp(PyObject* self, PyObject* const* args, size_t nargs) {
     try {
-        return _reshape_cpp(py::handle(args[0]), py::handle(args[1])).release().ptr();
+        return _reshape_cpp(args[0], args[1]).release().ptr();
     }
     PYEXT17_TRANSLATE_EXC_RET(nullptr)
 }
 
 PyObject* Const(PyObject* self, PyObject* const* args, size_t nargs) {
     try {
-        return _Const(py::handle(args[0]), py::handle(args[1]), py::handle(args[2]),
-                      py::handle(args[3]))
-                .release()
-                .ptr();
+        return _Const(args[0], args[1], args[2], args[3]).release().ptr();
     }
     PYEXT17_TRANSLATE_EXC_RET(nullptr)
 }
 
 PyObject* astype_cpp(PyObject* self, PyObject* const* args, size_t nargs) {
     try {
-        return _astype_cpp(py::handle(args[0]), py::handle(args[1])).release().ptr();
+        return _astype_cpp(args[0], args[1]).release().ptr();
     }
     PYEXT17_TRANSLATE_EXC_RET(nullptr)
 }
@@ -1464,10 +1526,7 @@ PyObject* astype_cpp(PyObject* self, PyObject* const* args, size_t nargs) {
 PyObject* convert_single_value_cpp(
         PyObject* self, PyObject* const* args, size_t nargs) {
     try {
-        return _convert_single_value_cpp(
-                       py::handle(args[0]), py::handle(args[1]), py::handle(args[2]))
-                .release()
-                .ptr();
+        return _convert_single_value_cpp(args[0], args[1], args[2]).release().ptr();
     }
     PYEXT17_TRANSLATE_EXC_RET(nullptr)
 }
@@ -1484,6 +1543,13 @@ PyObject* convert_inputs_cpp(PyObject* self, PyObject* const* args, size_t nargs
             device = py::reinterpret_borrow<py::object>(args[nargs - 1]);
         }
         return _convert_inputs_cpp(args, nargs - 1, dtype, device).release().ptr();
+    }
+    PYEXT17_TRANSLATE_EXC_RET(nullptr)
+}
+
+PyObject* astensor1d_cpp(PyObject* self, PyObject* const* args, size_t nargs) {
+    try {
+        return _astensor1d_cpp(args[0], args[1], args[2], args[3]).release().ptr();
     }
     PYEXT17_TRANSLATE_EXC_RET(nullptr)
 }

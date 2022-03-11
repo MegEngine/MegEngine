@@ -32,4 +32,6 @@ PyObject* convert_single_value_cpp(PyObject* self, PyObject* const* args, size_t
 
 PyObject* convert_inputs_cpp(PyObject* self, PyObject* const* args, size_t nargs);
 
+PyObject* astensor1d_cpp(PyObject* self, PyObject* const* args, size_t nargs);
+
 }  // namespace mgb::imperative::python

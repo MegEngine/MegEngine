@@ -22,12 +22,12 @@ from .._imperative_rt.core2 import (
     astype_cpp,
     broadcast_cpp,
     dtype_promotion,
+    getitem_cpp,
 )
 from .._imperative_rt.core2 import reduce_to_scalar as _reduce_to_scalar
-from .._imperative_rt.core2 import reshape_cpp, squeeze_cpp, transpose_cpp
+from .._imperative_rt.core2 import reshape_cpp, setitem_cpp, squeeze_cpp, transpose_cpp
 from ..ops import builtin
 from . import amp
-from .indexing import getitem, setitem
 from .utils import _normalize_axis, astensor1d, cast_tensors, make_shape_tuple, subgraph
 
 _ElwMod = builtin.Elemwise.Mode
@@ -544,11 +544,11 @@ class ArrayMethodMixin(abc.ABC):
             yield self[i]
 
     def __getitem__(self, index):
-        return getitem(self, index)
+        return getitem_cpp(self, index)
 
     def __setitem__(self, index, value):
         if index is not Ellipsis:
-            value = setitem(self, index, value)
+            value = setitem_cpp(self, index, value)
         self._reset(value)
 
     __contains__ = _todo

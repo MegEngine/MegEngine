@@ -511,6 +511,20 @@ def test_advance_indexing_with_bool(test_varnode):
         network = Network()
     else:
         network = None
+
+    a = np.array([[True, False], [False, True]])
+    b = np.array([1])
+    aa = make_tensor(a, network)
+    bb = make_tensor(b, network)
+    np.testing.assert_equal(a[b], get_value(aa[bb]))
+    b = np.array([[True, True], [False, True]])
+    bb = make_tensor(b, network)
+    np.testing.assert_equal(a[b], get_value(aa[bb]))
+    if not test_varnode:
+        a[b] = False
+        aa[bb] = False
+        np.testing.assert_equal(a, get_value(aa))
+
     a = np.arange(9).reshape(3, 3).astype(np.float32)
     b = np.array([1, 2, 3])
     c = np.array([1, 2, 3])
@@ -525,67 +539,68 @@ def test_advance_indexing_with_bool(test_varnode):
     a = np.arange(9).reshape(3, 3).astype(np.float32)
     b = np.array([False, True, True])
     c = np.array([2, 0]).astype(np.int32)
-    aa = Tensor(a)
-    bb = Tensor(b)
-    cc = Tensor(c)
-    np.testing.assert_equal(a[b, c], aa[bb, cc].numpy())
+    aa = make_tensor(a, network)
+    bb = make_tensor(b, network)
+    cc = make_tensor(c, network)
+    np.testing.assert_equal(a[b, c], get_value(aa[bb, cc]))
     a[b, c] = -1.0
     aa[bb, cc] = -1.0
-    np.testing.assert_equal(a, aa.numpy())
+    np.testing.assert_equal(a, get_value(aa))
     d = np.array([-1, -2], dtype=np.float32)
-    dd = Tensor(d)
+    dd = make_tensor(d, network)
     a[b, c] = d
     aa[bb, cc] = dd
-    np.testing.assert_equal(a, aa.numpy())
+    np.testing.assert_equal(a, get_value(aa))
 
     a = np.ones((2, 2))
     b = np.array([[True, False], [False, True]])
-    aa = Tensor(a)
-    bb = Tensor(b)
-    np.testing.assert_equal(a[b], aa[bb].numpy())
+    aa = make_tensor(a, network)
+    bb = make_tensor(b, network)
+    np.testing.assert_equal(a[b], get_value(aa[bb]))
     b[:] = True
     bb[:] = True
-    np.testing.assert_equal(a[b], aa[bb].numpy())
-    np.testing.assert_equal(a[:, [True, False]], aa[:, [True, False]].numpy())
+    np.testing.assert_equal(a[b], get_value(aa[bb]))
+    np.testing.assert_equal(a[:, [True, False]], get_value(aa[:, [True, False]]))
 
     a = np.array([[True, False], [False, True]])
     b = np.array([1])
-    aa = Tensor(a)
-    bb = Tensor(b)
-    np.testing.assert_equal(a[b], aa[bb].numpy())
+    aa = make_tensor(a, network)
+    bb = make_tensor(b, network)
+    np.testing.assert_equal(a[b], get_value(aa[bb]))
     b = np.array([[True, True], [False, True]])
-    bb = Tensor(b)
-    np.testing.assert_equal(a[b], aa[bb].numpy())
-    a[b] = False
-    aa[bb] = False
-    np.testing.assert_equal(a, aa.numpy())
+    bb = make_tensor(b, network)
+    np.testing.assert_equal(a[b], get_value(aa[bb]))
+    if not test_varnode:
+        a[b] = False
+        aa[bb] = False
+        np.testing.assert_equal(a, get_value(aa))
 
     a = np.ones((2, 2), dtype=np.int32)
     b = np.array([[False, False], [False, False]])
-    aa = Tensor(a)
-    bb = Tensor(b)
-    np.testing.assert_equal(a[b], aa[b].numpy())
-    np.testing.assert_equal(a[b], aa[bb].numpy())
+    aa = make_tensor(a, network)
+    bb = make_tensor(b, network)
+    np.testing.assert_equal(a[b], get_value(aa[b]))
+    np.testing.assert_equal(a[b], get_value(aa[bb]))
 
     b = np.array([False, False])
-    bb = Tensor(b)
-    np.testing.assert_equal(a[b], aa[bb].numpy().reshape(a[b].shape))
+    bb = make_tensor(b, network)
+    np.testing.assert_equal(a[b], get_value(aa[bb]).reshape(a[b].shape))
 
     a = np.arange(576).reshape(2, 3, 4, 3, 4, 2).astype("int32")
-    aa = Tensor(a)
+    aa = make_tensor(a, network)
 
     b = (np.random.sample((2, 3, 4)) > 0.5).astype("bool")
-    bb = Tensor(b)
-    np.testing.assert_equal(a[b, :, 0:4:2], aa[bb, :, 0:4:2].numpy())
+    bb = make_tensor(b, network)
+    np.testing.assert_equal(a[b, :, 0:4:2], get_value(aa[bb, :, 0:4:2]))
 
     b = (np.random.sample((4, 3, 4)) > 0.5).astype("bool")
-    bb = Tensor(b)
-    np.testing.assert_equal(a[..., b, 0:2], aa[..., bb, 0:2].numpy())
+    bb = make_tensor(b, network)
+    np.testing.assert_equal(a[..., b, 0:2], get_value(aa[..., bb, 0:2]))
 
     b = (np.random.sample((3, 4, 3)) > 0.5).astype("bool")
-    bb = Tensor(b)
+    bb = make_tensor(b, network)
     np.testing.assert_equal(
-        a[:, b, 0:2, [True, False]], aa[:, bb, 0:2, [True, False]].numpy()
+        a[:, b, 0:2, [True, False]], get_value(aa[:, bb, 0:2, [True, False]])
     )
 
 
