@@ -25,7 +25,7 @@ ConvBiasForwardImpl::AlgoPack::AlgoPack() {
     non_cudnn_algos.push_back(&matmul);
     non_cudnn_algos.push_back(&matmul8x8x32);
     non_cudnn_algos.push_back(&batched_matmul);
-
+    non_cudnn_algos.push_back(&int1_simple);
     fill_cudnn_algos();
     for (auto&& algo : cudnn_conv_bias_activations) {
         all_algos.push_back(&algo);
@@ -45,6 +45,7 @@ ConvBiasForwardImpl::AlgoPack::AlgoPack() {
     conv_algos.push_back(&matmul8x8x32);
     conv_algos.push_back(&batched_matmul);
     conv_algos.push_back(&group);
+    conv_algos.push_back(&int1_simple);
 
     for (auto&& algo : conv_algos) {
         all_algos.push_back(algo);

@@ -44,6 +44,10 @@ std::pair<TensorLayoutArray, ConvBiasForward::Param> sub_opr_config(
                 src.dtype.param<dtype::Quantized4Asymm>().scale *
 
                 filter.dtype.param<dtype::Quantized4Asymm>().scale);
+    } else if (src.dtype.enumv() == DTypeEnum::QuantizedS1) {
+        bias_type = dtype::QuantizedS32(
+                src.dtype.param<dtype::QuantizedS1>().scale *
+                filter.dtype.param<dtype::QuantizedS1>().scale);
     } else {
         megdnn_assert(src.dtype.category() == DTypeCategory::FLOAT);
         bias_type = src.dtype;

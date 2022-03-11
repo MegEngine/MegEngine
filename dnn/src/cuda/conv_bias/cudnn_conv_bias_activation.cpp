@@ -30,6 +30,8 @@ bool ConvBiasForwardImpl::AlgoCUDNNConvBiasActivation::is_available(
             return false;
         }
     }
+    if (args.src_layout->dtype.enumv() == DTypeEnum::QuantizedS1)
+        return false;
     if ((args.src_layout->dtype.enumv() == DTypeEnum::QuantizedS4 ||
          args.src_layout->dtype.enumv() == DTypeEnum::Quantized4Asymm) &&
         args.filter_layout->dtype.enumv() == DTypeEnum::QuantizedS4)

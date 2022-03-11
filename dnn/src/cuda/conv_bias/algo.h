@@ -87,6 +87,7 @@ public:
         CUDA_FALLBACK_NCHW_INT4,
         CUDA_IMPLICIT_BATCHED_GEMM_FMA_NCHW_F32,
         CUDA_IMPLICIT_BATCHED_GEMM_HMMA_NCHW_F16,
+        CUDA_SIMPLE_INT1,
     };
     using Mapper = std::unordered_map<AlgorithmDesc, AlgoBase*>;
 
@@ -1089,6 +1090,24 @@ private:
     WorkspaceBundle get_workspace_bundle(void* ptr, const SizeArgs& args) const;
 };
 
+class ConvBiasForwardImpl::AlgoSimpleInt1 final : public AlgoBase {
+public:
+    bool is_available(const SizeArgs& args) const override;
+    size_t get_workspace_in_bytes(const SizeArgs& args) const override;
+    void exec(const ExecArgs& args) const override;
+
+    std::vector<SearchItem> get_subopr_list(
+            const TensorLayoutArray& layouts, const OperatorBase* opr) const override;
+
+    const char* name() const override { return "CONVBIAS_SIMPLE_INT1"; }
+
+    AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }
+
+    MEGDNN_DECL_ALGO_TYPE(CUDA_SIMPLE_INT1)
+private:
+    WorkspaceBundle get_workspace_bundle(void* ptr, const SizeArgs& args) const;
+};
+
 class ConvBiasForwardImpl::AlgoPack : NonCopyableObj {
 private:
     AlgoBase::Mapper m_all_algos_map;
@@ -1132,6 +1151,7 @@ public:
     std::vector<AlgoFloat16NCHWHMMAImplicitBatchedGemm> f16_implicit_bmm;
     AlgoGroupConvGeneral group;
     AlgoBFloat16 bfloat16;
+    AlgoSimpleInt1 int1_simple;
 
     AlgoBase* cudnn_conv_bias_act_from_enum(cudnnConvolutionFwdAlgo_t algo);
 

@@ -133,6 +133,32 @@ TEST_F(CUDA, CONV_BIAS_FORWARD_BF16) {
     }
 }
 
+TEST_F(CUDA, CONV_BIAS_FORWARD_QS1) {
+    require_compute_capability(6, 1);
+
+    UniformIntRNG int_rng{1, 1};
+    Checker<ConvBiasForward> checker(handle_cuda());
+    checker.set_before_exec_callback(AlgoChecker<ConvBiasForward>(
+            ExecutionPolicyAlgoName{"CONVBIAS_SIMPLE_INT1", {{"MATMUL", {}}}}));
+
+    ConvBias::Param param;
+    param.format = ConvBias::Param::Format::NCHW;
+    param.compute_mode = param::Convolution::ComputeMode::FLOAT32;
+    {
+        auto src_shape = TensorShape{20, 2, 224, 224};
+        auto filter_shape = TensorShape{20, 2, 3, 3};
+        checker.set_dtype(0, dtype::QuantizedS1(1.0f))
+                .set_dtype(1, dtype::QuantizedS1(1.0f))
+                .set_dtype(2, dtype::QuantizedS32(1.0f))
+                .set_dtype(3, dtype::QuantizedS32(1.0f))
+                .set_dtype(4, dtype::QuantizedS32(1.0f))
+                .set_rng(0, &int_rng)
+                .set_rng(1, &int_rng)
+                .set_param(param)
+                .execs({src_shape, filter_shape, {}, {}, {}});
+    }
+}
+
 TEST_F(CUDA, CONV_BIAS_FORWARD_QS8) {
     require_compute_capability(6, 1);
 

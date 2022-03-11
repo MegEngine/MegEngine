@@ -84,6 +84,15 @@ inline void StrategyFwd::on(
     d += cast(s) * cast(f);
 }
 
+template <>
+inline void StrategyFwd::on(
+        dt_qint1& s, dt_qint1& f, dt_qint32& d, DType, DType, DType) {
+    auto cast = [](const dt_qint1& val) {
+        return dt_qint32(static_cast<int32_t>(val.as_int8()));
+    };
+    d += cast(s) * cast(f);
+}
+
 struct StrategyBwdData {
     template <typename st, typename ft, typename dt>
     static void on(st& s, ft& f, dt& d, DType, DType, DType) {
