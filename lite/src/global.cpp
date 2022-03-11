@@ -16,6 +16,7 @@
 #include "decryption/rc4_cryption.h"
 #include "lite/global.h"
 #include "misc.h"
+#include "network_impl_base.h"
 #include "parse_info/default_parse.h"
 #include "parse_info/parse_info_base.h"
 

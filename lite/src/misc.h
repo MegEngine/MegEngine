@@ -51,6 +51,29 @@ LITE_API std::string ssprintf(const char* fmt = 0, ...)
  */
 LITE_API void print_log(LiteLogLevel level, const char* format = 0, ...)
         __attribute__((format(printf, 2, 3)));
+
+/*!
+ * \brief NonCopyableObj base.
+ */
+class NonCopyableObj {
+public:
+    NonCopyableObj() {}
+
+private:
+    NonCopyableObj(const NonCopyableObj&);
+    NonCopyableObj& operator=(const NonCopyableObj&);
+};
+
+template <class T>
+class Singleton : public NonCopyableObj {
+public:
+    Singleton() {}
+    static T& Instance() {
+        static T _;
+        return _;
+    }
+};
+
 }  // namespace lite
 
 #if LITE_ENABLE_LOGGING

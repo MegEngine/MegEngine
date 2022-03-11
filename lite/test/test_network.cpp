@@ -70,6 +70,19 @@ TEST(TestNetWork, Basic) {
     compare_lite_tensor<float>(result_lite, result_mgb);
 }
 
+TEST(TestNetWork, RefCount) {
+    Config config;
+    ASSERT_EQ(NetworkRefCount::Instance().refcount(), 0);
+    std::shared_ptr<Network> network = std::make_shared<Network>(config);
+    ASSERT_EQ(NetworkRefCount::Instance().refcount(), 1);
+    std::shared_ptr<Network> network_s = std::make_shared<Network>(config);
+    ASSERT_EQ(NetworkRefCount::Instance().refcount(), 2);
+    network.reset();
+    ASSERT_EQ(NetworkRefCount::Instance().refcount(), 1);
+    network_s.reset();
+    ASSERT_EQ(NetworkRefCount::Instance().refcount(), 0);
+}
+
 TEST(TestNetWork, SetDeviceId) {
     Config config;
     auto lite_tensor = get_input_data("./input_data.npy");

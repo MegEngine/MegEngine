@@ -16,9 +16,31 @@
 #include "tensor_impl_base.h"
 #include "type_info.h"
 
+#include <atomic>
 #include <unordered_map>
 
 namespace lite {
+
+/*!
+ * \brief network reference count
+ */
+class NetworkRefCount : public Singleton<NetworkRefCount> {
+public:
+    NetworkRefCount() : count(0) {}
+
+    NetworkRefCount& operator++(int) {
+        ++count;
+        return *this;
+    }
+    NetworkRefCount& operator--(int) {
+        --count;
+        return *this;
+    }
+    int refcount() { return count; }
+
+private:
+    std::atomic<int> count;
+};
 
 /*!
  * \brief the Inner IO data struct, add some inner data from IO
@@ -54,7 +76,8 @@ struct NetworkIOInner {
  */
 class Network::NetworkImplBase : public DynTypeObj {
 public:
-    virtual ~NetworkImplBase() = default;
+    virtual ~NetworkImplBase() { NetworkRefCount::Instance()--; };
+    NetworkImplBase() { NetworkRefCount::Instance()++; };
 
     //! set the config of the network, include:
     //! the inference device
