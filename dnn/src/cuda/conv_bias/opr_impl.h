@@ -72,6 +72,7 @@ public:
     class AlgoInt4Int4NHWCIMMAImplicitGemm;
     class AlgoUInt4Int4NHWCIMMAImplicitGemm;
     class AlgoBFloat16;
+    class AlgoSimpleInt1;
     // The following algorithms are suitable for channel wise convolution
     class AlgoFloat32NCHWFMAImplicitBatchedGemm;
     class AlgoFloat16NCHWHMMAImplicitBatchedGemm;

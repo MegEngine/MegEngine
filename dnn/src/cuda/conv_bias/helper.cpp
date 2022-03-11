@@ -134,6 +134,9 @@ void ConvBiasDesc::set_conv(
 namespace conv_bias {
 
 bool is_cudnn_supported(const BiasForwardSizeArgs& args) {
+    if (args.src_layout->dtype.enumv() == DTypeEnum::QuantizedS1)
+        return false;
+
     if ((args.src_layout->dtype.enumv() == DTypeEnum::QuantizedS4 ||
          args.src_layout->dtype.enumv() == DTypeEnum::Quantized4Asymm) &&
         args.filter_layout->dtype.enumv() == DTypeEnum::QuantizedS4)

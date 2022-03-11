@@ -221,6 +221,11 @@ ConvBiasForward::Algorithm* ConvBiasForwardImpl::get_algorithm_heuristic(
         return &sm_algo_pack.fallback_nchw_qs8;
     }
 
+    if (sm_algo_pack.int1_simple.is_available_attribute(
+                args, positive_attr, negative_attr, workspace_limit_in_bytes)) {
+        return &sm_algo_pack.int1_simple;
+    }
+
     if (args.src_layout->dtype.enumv() != DTypeTrait<dtype::BFloat16>::enumv) {
         return megdnn::get_algo_match_attribute<ConvBiasForwardImpl>(
                 sm_algo_pack.non_cudnn_algos, args, workspace_limit_in_bytes,

@@ -278,6 +278,9 @@ void ConvBiasForwardImpl::exec(
         DISPATCH_RAW(
                 Quantized4Asymm, QuantizedS4, QuantizedS32, QuantizedS32, DEFAULT,
                 (convolution::forward_bias<dt_quint4, dt_qint4, dt_qint32, dt_qint32>))
+        DISPATCH_RAW(
+                QuantizedS1, QuantizedS1, QuantizedS32, QuantizedS32, FLOAT32,
+                (convolution::forward_bias<dt_qint1, dt_qint1, dt_qint32, dt_qint32>))
 #if !MEGDNN_DISABLE_FLOAT16
         DISPATCH(Float16, Float16)
         DISPATCH_RAW(
