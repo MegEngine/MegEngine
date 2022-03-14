@@ -224,30 +224,6 @@ OP_TRAIT_REG(AdaptivePooling, AdaptivePooling)
 }  // namespace
 
 namespace {
-namespace conv_bias {
-auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
-    auto&& conv = static_cast<const ConvBias&>(def);
-    cg::OperatorNodeConfig config{conv.dtype};
-    config.name(conv.make_name());
-    if (inputs.size() == 2) {
-        return opr::ConvBias::make(
-                inputs[0], inputs[1], conv.param(), conv.policy(), config);
-    } else if (inputs.size() == 3) {
-        return opr::ConvBias::make(
-                inputs[0], inputs[1], inputs[2], conv.param(), conv.policy(), config);
-    } else if (inputs.size() == 4) {
-        return opr::ConvBias::make(
-                inputs[0], inputs[1], inputs[2], inputs[3], conv.param(), conv.policy(),
-                config);
-    }
-    mgb_assert(0);
-}
-
-OP_TRAIT_REG(ConvBias, ConvBias).apply_on_var_node(apply_on_var_node).fallback();
-}  // namespace conv_bias
-}  // namespace
-
-namespace {
 namespace batch_conv_bias {
 auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
     auto&& conv = static_cast<const BatchConvBias&>(def);

@@ -26,7 +26,7 @@ private:
     HeuristicCache() = default;
 
 public:
-    static HeuristicCache& instance();
+    MGE_WIN_DECLSPEC_FUC static HeuristicCache& instance();
 
     struct KeyStorage {
         std::string category;
@@ -67,9 +67,9 @@ public:
         size_t workspace;
     };
 
-    void put(const Key& key, Result& result);
+    MGE_WIN_DECLSPEC_FUC void put(const Key& key, Result& result);
 
-    Result get(const Key& key);
+    MGE_WIN_DECLSPEC_FUC Result get(const Key& key);
 
     void clear();
 
