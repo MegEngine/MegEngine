@@ -178,6 +178,10 @@ static inline std::vector<TestArg> get_cv_args() {
                 cur_param, TensorShape{1, i, i, 3}, TensorShape{1, i / 2, i / 2, 3});
 
         args.emplace_back(cur_param, TensorShape{1, i, i, 1}, TensorShape{1, 8, 8, 1});
+        args.emplace_back(
+                cur_param, TensorShape{1, i, i, 6}, TensorShape{1, i / 2, i / 2, 6});
+
+        args.emplace_back(cur_param, TensorShape{1, i, i, 6}, TensorShape{1, 8, 8, 6});
 
         cur_param.imode = param::Resize::InterpolationMode::INTER_AREA;
         args.emplace_back(cur_param, TensorShape{1, i, i, 3}, TensorShape{1, 8, 8, 3});
@@ -193,6 +197,9 @@ static inline std::vector<TestArg> get_cv_args() {
     args.emplace_back(cur_param, TensorShape{1, 3, 3, 1}, TensorShape{1, 500, 600, 1});
     cur_param.imode = param::Resize::InterpolationMode::INTER_LANCZOS4;
     args.emplace_back(cur_param, TensorShape{1, 3, 3, 1}, TensorShape{1, 500, 600, 1});
+    cur_param.imode = param::Resize::InterpolationMode::INTER_NEAREST;
+    args.emplace_back(cur_param, TensorShape{1, 3, 3, 1}, TensorShape{1, 500, 600, 1});
+    args.emplace_back(cur_param, TensorShape{1, 3, 3, 4}, TensorShape{1, 500, 600, 4});
     return args;
 }
 

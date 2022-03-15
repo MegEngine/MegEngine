@@ -150,11 +150,11 @@ __global__ void precompute_cubic_coef_u8(short* dst, float scale, size_t size) {
     }
 }
 
-template <typename T, size_t CH>
+template <typename T>
 __global__ void resize_nearest_vector_kernel(
         const T* src, T* dst, const size_t dst_rows, const size_t dst_cols,
         const size_t src_step, const size_t dst_step, const float row_scale,
-        const float col_scale) {
+        const float col_scale, size_t CH) {
     size_t dc = blockIdx.x * blockDim.x + threadIdx.x;
     size_t dr = blockIdx.y * blockDim.y * ELEMENTS_PER_THREADS + threadIdx.y;
 
@@ -178,11 +178,11 @@ __global__ void resize_nearest_vector_kernel(
     }
 }
 
-template <typename T, size_t CH>
+template <typename T>
 __global__ void resize_nearest_kernel(
         const T* __restrict__ src, T* dst, const size_t dst_rows, const size_t dst_cols,
         const size_t src_step, const size_t dst_step, const float row_scale,
-        const float col_scale) {
+        const float col_scale, size_t CH) {
     size_t dc = blockIdx.x * blockDim.x + threadIdx.x;
     size_t dr = blockIdx.y * blockDim.y + threadIdx.y;
     if (dr < dst_rows && dc < dst_cols) {
@@ -196,23 +196,24 @@ __global__ void resize_nearest_kernel(
     }
 }
 
-template <typename T, size_t CH>
+template <typename T>
 void resize_nearest_proxy(
         const T* src, T* dst, const size_t src_rows, const size_t src_cols,
         const size_t dst_rows, const size_t dst_cols, const size_t src_step,
-        const size_t dst_step, void* workspace, cudaStream_t stream) {
+        const size_t dst_step, void* workspace, cudaStream_t stream, size_t CH) {
     MEGDNN_MARK_USED_VAR(workspace);
     float row_scale = (float)src_rows / dst_rows;
     float col_scale = (float)src_cols / dst_cols;
 
-    if (CH == 3 && sizeof(T) == 4 && (dst_cols * dst_rows <= src_cols * src_rows)) {
+    if (CH > 1 && sizeof(T) == 4 && (dst_cols * dst_rows <= src_cols * src_rows)) {
         dim3 THREADS(32, 8, 1);
         dim3 BLOCKS(DIVUP(dst_cols, THREADS.x), DIVUP(dst_rows, THREADS.y));
 
         cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
 
-        resize_nearest_kernel<T, CH><<<BLOCKS, THREADS, 0, stream>>>(
-                src, dst, dst_rows, dst_cols, src_step, dst_step, row_scale, col_scale);
+        resize_nearest_kernel<T><<<BLOCKS, THREADS, 0, stream>>>(
+                src, dst, dst_rows, dst_cols, src_step, dst_step, row_scale, col_scale,
+                CH);
 
     } else {
         dim3 THREADS(32, 8, 1);
@@ -220,11 +221,12 @@ void resize_nearest_proxy(
                 DIVUP(dst_cols, THREADS.x),
                 DIVUP(dst_rows, THREADS.y * ELEMENTS_PER_THREADS));
 
-        if (CH == 3 && sizeof(T) == 1)
+        if (CH > 1 && sizeof(T) == 1)
             cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
 
-        resize_nearest_vector_kernel<T, CH><<<BLOCKS, THREADS, 0, stream>>>(
-                src, dst, dst_rows, dst_cols, src_step, dst_step, row_scale, col_scale);
+        resize_nearest_vector_kernel<T><<<BLOCKS, THREADS, 0, stream>>>(
+                src, dst, dst_rows, dst_cols, src_step, dst_step, row_scale, col_scale,
+                CH);
     }
 }
 
@@ -1594,6 +1596,12 @@ void megdnn::cuda::resize::resize_cv(
         const size_t dst_rows, const size_t dst_cols, const size_t src_step,
         const size_t dst_step, size_t ch, InterpolationMode imode, void* workspace,
         cudaStream_t stream) {
+    if (imode == INTER_NEAREST) {
+        resize_nearest_proxy<T>(
+                src, dst, src_rows, src_cols, dst_rows, dst_cols, src_step, dst_step,
+                workspace, stream, ch);
+        return;
+    }
     megdnn_assert(ch == 1 || ch == 3);
 #define cb(_mode, _MODE)                                                        \
     case INTER_##_MODE: {                                                       \
@@ -1610,7 +1618,6 @@ void megdnn::cuda::resize::resize_cv(
     }
 
     switch (imode) {
-        cb(nearest, NEAREST);
         cb(linear, LINEAR);
         cb(cubic, CUBIC);
         cb(lanczos4, LANCZOS4);
