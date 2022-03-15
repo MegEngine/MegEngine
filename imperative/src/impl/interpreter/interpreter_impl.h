@@ -77,7 +77,7 @@ private:
     struct State;
 
     TensorInfo* alloc();
-    void init(TensorInfo*, LogicalTensorDesc&& desc);
+    void init(TensorInfo*, LogicalTensorDesc desc);
     void free(TensorInfo*);
     void real_free(TensorInfo*);
     void recursive_free(TensorInfo*);

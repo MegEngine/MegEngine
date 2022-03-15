@@ -114,11 +114,13 @@ ChannelImpl::WorkerState& ChannelImpl::get_worker_state() {
 void ChannelImpl::WorkQueue::on_async_queue_worker_thread_start() {
     sys::set_thread_name("worker");
     m_owner->m_worker_state.tid = std::this_thread::get_id();
-    OpDef::set_allocator([&](CompNode device, size_t size) {
+    auto custom_allocator = [&](CompNode device, size_t size) {
         auto blob = Blob::make(device, size);
         m_owner->alloc_tensor_with_evict(blob.get());
         return blob->storage();
-    });
+    };
+    OpDef::set_allocator(custom_allocator);
+    BlobManager::inst()->set_allocator(custom_allocator);
 }
 
 // Do not use m_xxx_state directly
@@ -353,7 +355,7 @@ void ChannelImpl::dispatch_kernel(
     for (int i = 0; i < output_descs.size(); ++i) {
         auto&& desc = output_descs[i];
         auto info = alloc();
-        init(info, std::move(desc));
+        init(info, desc);
         // make sure desc's value is consistent with h_value
         if (!info->desc.value.empty()) {
             info->h_value = HostTensorND::make_proxy(desc.value)
@@ -362,9 +364,9 @@ void ChannelImpl::dispatch_kernel(
         output_infos.push_back(info);
         outputs->push_back(reinterpret_cast<Handle>(info));
     }
-    ApplyOp cmd{
-            Profiler::next_id(), std::move(op), std::move(input_infos),
-            std::move(output_infos), validated};
+    ApplyOp cmd{Profiler::next_id(),     std::move(op),
+                std::move(input_infos),  std::move(output_infos),
+                std::move(output_descs), validated};
     if (Profiler::is_profiling()) {
         auto op_info_getter = [op = cmd.op] {
             std::unordered_map<std::string, std::string> op_info;
@@ -594,7 +596,7 @@ TensorInfo* ChannelImpl::alloc() {
     return info;
 }
 
-void ChannelImpl::init(TensorInfo* info, LogicalTensorDesc&& desc) {
+void ChannelImpl::init(TensorInfo* info, LogicalTensorDesc desc) {
     m_valid_handle.insert(reinterpret_cast<Handle>(info));
     MGB_RECORD_EVENT(TensorDeclareEvent, info->id, info->name);
     info->status = TensorInfo::Allocated;
@@ -692,6 +694,11 @@ void ChannelImpl::produce_tensor(TensorInfo* dest, TensorPtr ptr) {
                 "shape infer error, %s vs %s", dest->desc.layout.to_string().c_str(),
                 ptr->layout().to_string().c_str());
     }
+    // in order to avoid performance impact,
+    // memory forwarding is disabled when DTR is enabled
+    if (state.options.enable_dtr_auto_drop) {
+        ptr->to_contiguous_inplace();
+    }
     dest->desc.layout = ptr->layout();
     dest->desc.comp_node = ptr->comp_node();
     dest->memory = ptr->blob()->size();
@@ -719,8 +726,9 @@ void ChannelImpl::regenerate(TensorInfo* dest) {
     if (dest->evict_type == EvictType::DROP) {
         auto&& path = dest->producer;
         m_apply_stack.push(
-                {ApplyOp{path->id, path->op, path->inputs, path->outputs}, 0, dest,
-                 "dtr"});
+                {ApplyOp{path->id, path->op, path->inputs, path->outputs,
+                         path->outputs_descs},
+                 0, dest, "dtr"});
         if (!m_applying)
             flush_apply_stack();
     }
@@ -812,8 +820,8 @@ void ChannelImpl::do_apply_op(const ApplyOp& cmd, std::string reason) {
     }
     // Apply op
     SmallVector<LogicalTensorDesc> output_descs;
-    for (auto i : cmd.outputs) {
-        output_descs.push_back(i->desc);
+    for (auto i : cmd.outputs_descs) {
+        output_descs.push_back(i);
     }
     // Here std::move is REQUIRED for removing duplicated references.
     auto outputs = apply_on_physical_tensor(
@@ -1031,6 +1039,7 @@ std::unordered_set<TensorInfo*> ChannelImpl::collect_valid_tensors() {
 }
 
 void ChannelImpl::alloc_tensor_with_evict(Blob* x) {
+    bool in_worker = (get_worker_tid() == std::this_thread::get_id());
     auto reserve_size = [&](size_t size) {
         if (!m_dtr.comp_node.valid()) {
             return false;
@@ -1043,17 +1052,21 @@ void ChannelImpl::alloc_tensor_with_evict(Blob* x) {
         return true;
     };
     auto pre_level = set_log_level(LogLevel::NO_LOG);
-    reserve_size(x->size());
+    if (in_worker) {
+        reserve_size(x->size());
+    }
     MGB_TRY { BlobManager::inst()->alloc_direct(x, x->size()); }
     MGB_CATCH(MemAllocError&, {
         bool suc = false;
-        while (!suc) {
-            if (!auto_evict(1)) {
-                break;
+        if (in_worker) {
+            while (!suc) {
+                if (!auto_evict(1)) {
+                    break;
+                }
+                MGB_TRY { BlobManager::inst()->alloc_direct(x, x->size()); }
+                MGB_CATCH(MemAllocError&, { continue; });
+                suc = true;
             }
-            MGB_TRY { BlobManager::inst()->alloc_direct(x, x->size()); }
-            MGB_CATCH(MemAllocError&, { continue; });
-            suc = true;
         }
         if (!suc) {
             set_log_level(pre_level);
@@ -1143,10 +1156,10 @@ void ChannelImpl::process_one_task(Command& icmd) {
 
                 if (!inplace && !cross_cn && !m_dtr.is_bad_op(get_name(*cmd.op))) {
                     TensorInfo::ComputePath::make(
-                            cmd.id, cmd.op, cmd.inputs, cmd.outputs);
+                            cmd.id, cmd.op, cmd.inputs, cmd.outputs, cmd.outputs_descs);
                     size_t detach_cnt = 0;
                     if (!strcmp(get_name(*cmd.op), "BatchNorm") &&
-                        cmd.outputs.size() == 5) {
+                        cmd.outputs.size() == 6) {
                         cmd.outputs[0]->detach_producer();  // detach running_mean
                         cmd.outputs[1]->detach_producer();  // detach running_var
                         for (auto input : cmd.inputs) {

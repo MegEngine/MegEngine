@@ -45,6 +45,8 @@ class BlobManagerImpl final : public BlobManager {
 
     DeviceTensorND alloc_workspace(CompNode cn, TensorLayout layout);
 
+    BlobManager::allocator_t custom_allocator;
+
 public:
     static BlobManager* inst();
 
@@ -56,6 +58,8 @@ public:
     void register_blob(Blob* blob) override;
 
     void unregister_blob(Blob* blob) override;
+
+    void set_allocator(allocator_t allocator) override;
 };
 
 }  // namespace imperative

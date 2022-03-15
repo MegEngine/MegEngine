@@ -87,7 +87,7 @@ Blob::~Blob() {
 }
 
 const Blob::RawStorage& Blob::storage() {
-    if (!m_storage) {
+    if (!m_storage && m_size) {
         BlobManager::inst()->alloc_with_defrag(this, m_size);
     }
     return m_storage;

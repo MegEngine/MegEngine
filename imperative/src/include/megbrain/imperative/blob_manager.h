@@ -18,6 +18,8 @@ namespace imperative {
 
 class BlobManager : public NonCopyableObj {
 public:
+    using allocator_t =
+            std::function<DeviceTensorStorage::RawStorage(CompNode, size_t)>;
     virtual ~BlobManager() = default;
 
     static BlobManager* inst();
@@ -25,6 +27,8 @@ public:
     virtual void alloc_direct(Blob* blob, size_t size) = 0;
 
     virtual void alloc_with_defrag(Blob* blob, size_t size) = 0;
+
+    virtual void set_allocator(allocator_t allocator) = 0;
 
     virtual DeviceTensorND alloc_workspace_with_defrag(
             CompNode cn, TensorLayout& layout) = 0;

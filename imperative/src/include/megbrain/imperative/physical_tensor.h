@@ -119,7 +119,7 @@ public:
         return make_scalar(value, m_blob->comp_node());
     }
 
-    BlobPtr blob() { return m_blob; }
+    BlobPtr& blob() { return m_blob; }
 
     void fetch_value();
     bool value_fetched();
