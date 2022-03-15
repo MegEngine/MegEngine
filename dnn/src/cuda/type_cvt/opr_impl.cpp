@@ -50,6 +50,7 @@ void exec_src_quantized(
         return;                                             \
     }
             MEGDNN_FOREACH_QUANTIZED_DTYPE(cb);
+            cb(::megdnn::dtype::QuantizedS1);
             default:
                 megdnn_assert_internal(0);
 #undef cb
@@ -101,6 +102,7 @@ void exec_src_normal(const TensorND& dst, const TensorND& src, cudaStream_t stre
         return;                                                               \
     }
             MEGDNN_FOREACH_QUANTIZED_DTYPE(cb);
+            cb(::megdnn::dtype::QuantizedS1);
 #undef cb
             default:
                 megdnn_assert_internal(0);
@@ -150,9 +152,9 @@ void TypeCvtImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
     }
             MEGDNN_FOREACH_QUANTIZED_DTYPE(cb)
             MEGDNN_FOREACH_QUANTIZED_LOWBIT_DTYPE(cb)
+            cb(::megdnn::dtype::QuantizedS1)
 #undef cb
-            default:
-                megdnn_assert_internal(0);
+                    default : megdnn_assert_internal(0);
         }
     }
 }

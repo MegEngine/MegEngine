@@ -88,6 +88,7 @@ struct TypeCvtOpToQuantized<
         typename std::enable_if<
                 std::is_same<ctype_src, dt_int8>::value ||
                 std::is_same<ctype_src, dt_uint8>::value ||
+                std::is_same<ctype_src, dt_qint1>::value ||
                 std::is_same<ctype_src, dt_bool>::value>::type> {
     ctype_dest* dest;
     CudaDTypeParam<ctype_dest> param;
@@ -111,6 +112,7 @@ struct TypeCvtOpFromQuantized<
         ctype_dest, ctype_src,
         typename std::enable_if<
                 std::is_same<ctype_src, dt_qint8>::value ||
+                std::is_same<ctype_src, dt_qint1>::value ||
                 std::is_same<ctype_src, dt_quint8>::value>::type> {
     ctype_dest* dest;
     CudaDTypeParam<ctype_src> param;
@@ -134,7 +136,8 @@ struct TypeCvtOpBetweenQuantized<
         ctype_dest, ctype_src,
         typename std::enable_if<
                 (std::is_same<ctype_src, dt_qint8>::value ||
-                 std::is_same<ctype_src, dt_quint8>::value) &&
+                 std::is_same<ctype_src, dt_quint8>::value ||
+                 std::is_same<ctype_src, dt_qint1>::value) &&
                 IsNotTypeQ4<ctype_dest>::value>::type> {
     ctype_dest* dest;
     CudaDTypeParam<ctype_src> src_param;
@@ -306,6 +309,7 @@ void typecvt_kern_n2n(const TensorND& dest, const TensorND& src, cudaStream_t st
     cb(dtype_src, dt_quint8) \
     cb(dtype_src, dt_qint32) \
     cb(dtype_src, dt_qint8)  \
+    cb(dtype_src, dt_qint1)  \
 
 #define INST_SRC_QUANTIZED(dtype_src) \
     MEGDNN_FOREACH_COMPUTING_DTYPE_WITH_DTYPE_SRC(dtype_src, INST_Q2N) \
@@ -330,7 +334,8 @@ void typecvt_kern_n2n(const TensorND& dest, const TensorND& src, cudaStream_t st
     cb(dt_qint32) \
     cb(dt_qint8) \
     cb(dt_qint4)  \
-    cb(dt_quint4)
+    cb(dt_quint4) \
+    cb(dt_qint1)
 
 MEGDNN_FOREACH_QUANTIZED_CTYPE(INST_SRC_QUANTIZED)
 MEGDNN_FOREACH_COMPUTING_CTYPE(INST_SRC_NORMAL)

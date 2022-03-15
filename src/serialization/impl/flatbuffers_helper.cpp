@@ -55,6 +55,8 @@ megdnn::DType load_dtype(const fbs::DType* dtype) {
         return dtype::_dt{};
         MEGDNN_FOREACH_DTYPE_NAME(cb)
 #undef cb
+        case DTypeEnum_QuantizedS1:
+            return dtype::QuantizedS1{param->scale()};
         case DTypeEnum_QuantizedS4:
             return dtype::QuantizedS4{param->scale()};
         case DTypeEnum_QuantizedS8:
@@ -113,6 +115,7 @@ flatbuffers::Offset<fbs::DType> build_dtype(
         break;
             CASE_ASYMMETRIC(Quantized4Asymm)
             CASE_ASYMMETRIC(Quantized8Asymm)
+            CASE_SYMMETRIC(QuantizedS1)
             CASE_SYMMETRIC(QuantizedS4)
             CASE_SYMMETRIC(QuantizedS8)
             CASE_SYMMETRIC(QuantizedS16)

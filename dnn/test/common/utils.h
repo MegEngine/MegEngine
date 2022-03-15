@@ -226,6 +226,10 @@ static inline int diff(dt_qint4 x, dt_qint4 y) {
     return x.as_int8() - y.as_int8();
 }
 
+static inline int diff(dt_qint1 x, dt_qint1 y) {
+    return x.as_int8() - y.as_int8();
+}
+
 static inline int diff(dt_quint4 x, dt_quint4 y) {
     return x.as_uint8() - y.as_uint8();
 }
@@ -339,6 +343,10 @@ static inline bool good_float(dt_qint4) {
     return true;
 }
 
+static inline bool good_float(dt_qint1) {
+    return true;
+}
+
 static inline bool good_float(dt_quint4) {
     return true;
 }
@@ -370,6 +378,11 @@ static inline int operator+(dt_quint4 lhs, int rhs) {
 }
 
 static inline int operator+(dt_qint4 lhs, int rhs) {
+    megdnn_assert(rhs == 0, "unexpected rhs");
+    return lhs.as_int8();
+}
+
+static inline int operator+(dt_qint1 lhs, int rhs) {
     megdnn_assert(rhs == 0, "unexpected rhs");
     return lhs.as_int8();
 }

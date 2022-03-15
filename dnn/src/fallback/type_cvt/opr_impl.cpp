@@ -510,7 +510,9 @@ void TypeCvtImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
     };
     if (src.layout.is_contiguous() && dst.layout.is_contiguous() &&
         !is_quantize_lowbit(src.layout.dtype) &&
-        !is_quantize_lowbit(dst.layout.dtype)) {
+        !is_quantize_lowbit(dst.layout.dtype) &&
+        dst.layout.dtype.enumv() != DTypeEnum::QuantizedS1 &&
+        src.layout.dtype.enumv() != DTypeEnum::QuantizedS1) {
         MEGDNN_DISPATCH_CPU_KERN_OPR(run_contiguous(src, dst));
     } else {
         naive::TypeCvtImpl::exec(src, dst);

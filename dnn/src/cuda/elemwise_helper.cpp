@@ -160,6 +160,9 @@ INST_FOR_CTYPE
 #define ct dt_bool
 INST_FOR_CTYPE
 #undef ct
+#define ct dt_qint1
+INST_FOR_CTYPE
+#undef ct
 
 #undef INST_FOR_CTYPE
 #undef INST
@@ -210,6 +213,9 @@ INST_FOR_CTYPE
 #define ct dt_bool
 INST_FOR_CTYPE
 #undef ct
+#define ct dt_qint1
+INST_FOR_CTYPE
+#undef ct
 
 #undef ndim_cb
 
@@ -221,6 +227,7 @@ INST(dt_int8);
 INST(dt_uint8);
 INST(dt_bool);
 INST(dt_qint8);
+INST(dt_qint1);
 INST(dt_quint8);
 #undef dt_ibyte
 

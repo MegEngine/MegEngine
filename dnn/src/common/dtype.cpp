@@ -142,6 +142,19 @@ inline bool DTypeParam<dt_qint32>::operator==(const DTypeParam<dt_qint32>& rhs) 
     return scale == rhs.scale;
 }
 
+DTypeParam<dt_qint1>::DTypeParamImpl(float scale) : scale{scale} {
+    //! As the nan is not equal to any value
+    megdnn_assert(!std::isnan(scale), "nan number compare is not support");
+}
+
+inline std::size_t DTypeParam<dt_qint1>::hash() const {
+    return std::hash<float>()(scale);
+}
+
+inline bool DTypeParam<dt_qint1>::operator==(const DTypeParam<dt_qint1>& rhs) const {
+    return scale == rhs.scale;
+}
+
 DTypeParam<dt_quint4>::DTypeParamImpl(float scale, uint8_t zero_point)
         : scale{scale}, zero_point{zero_point} {
     //! As the nan is not equal to any value

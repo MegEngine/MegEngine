@@ -94,6 +94,7 @@ _builtin_quant_dtypes = {
     "qint8_narrow": QuantDtypeMeta("qint8_narrow", "QuantizedS8", "int8", -127, 127),
     "quint4": QuantDtypeMeta("quint4", "Quantized4Asymm", "uint8", 0, 15),
     "qint4": QuantDtypeMeta("qint4", "QuantizedS4", "int8", -8, 7),
+    "qint1": QuantDtypeMeta("qint1", "QuantizedS1", "int8", 0, 1),
     "qint32": QuantDtypeMeta(
         "qint32", "QuantizedS32", "int32", -(2 ** 31), 2 ** 31 - 1,
     ),
@@ -190,6 +191,13 @@ def qint4(scale):
     represented by a qint4 data type is float_val = scale * int4_val
     """
     return create_quantized_dtype(_builtin_quant_dtypes["qint4"], scale, None)
+
+
+def qint1(scale):
+    r"""Construct a quantized int1 data type with ``scale`` (float). The real value
+    represented by a qint1 data type is float_val = scale * int1_val
+    """
+    return create_quantized_dtype(_builtin_quant_dtypes["qint1"], scale, None)
 
 
 def _convert_to_quantized_dtype(
@@ -335,3 +343,22 @@ def convert_from_qint4(arr: np.ndarray):
         arr: Input ndarray.
     """
     return _convert_from_quantized_dtype(arr, _builtin_quant_dtypes["qint4"])
+
+
+def convert_to_qint1(arr: np.ndarray, q: np.dtype):
+    r"""Quantize a float NumPy ndarray into a qint1 one with specified params.
+
+    Args:
+        arr: Input ndarray.
+        q: Target data type, should be a qint1.
+    """
+    return _convert_to_quantized_dtype(arr, q, _builtin_quant_dtypes["qint1"])
+
+
+def convert_from_qint1(arr: np.ndarray):
+    r"""Dequantize a qint1 NumPy ndarray into a float one.
+
+    Args:
+        arr: Input ndarray.
+    """
+    return _convert_from_quantized_dtype(arr, _builtin_quant_dtypes["qint1"])

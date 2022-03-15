@@ -42,6 +42,10 @@ double as_double(megdnn::dt_qint4& a) {
     return static_cast<double>(a.as_int8());
 }
 template <>
+double as_double(megdnn::dt_qint1& a) {
+    return static_cast<double>(a.as_int8());
+}
+template <>
 double as_double(megdnn::dt_qint32& a) {
     return static_cast<double>(a.as_int32());
 }
@@ -111,7 +115,7 @@ void print_host_val(
         MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
         MEGDNN_FOREACH_QUANTIZED_DTYPE(cb)
         MEGDNN_FOREACH_QUANTIZED_LOWBIT_DTYPE(cb)
-        cb(dtype::Bool)
+        cb(dtype::Bool) cb(::megdnn::dtype::QuantizedS1)
 #undef cb
                 default : mgb_throw(
                                   MegBrainError,

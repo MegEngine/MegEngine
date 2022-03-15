@@ -149,7 +149,7 @@ void IIDRNG::gen(const TensorND& tensor) {
     MEGDNN_FOREACH_QUANTIZED_DTYPE(cb)
     //! In order to avoid an unnecessary increase in binary size, we just
     //! use QuantizedS16 dtype in winograd_filter_preprocess now.
-    cb(::megdnn::dtype::QuantizedS16)
+    cb(::megdnn::dtype::QuantizedS16) cb(::megdnn::dtype::QuantizedS1)
 #undef cb
             if (tensor.layout.dtype.enumv() == DTypeEnum::Quantized4Asymm) {
         auto ptr = static_cast<uint8_t*>(tensor.raw_ptr());

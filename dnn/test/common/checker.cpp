@@ -79,7 +79,8 @@ template <typename ctype>
         const char* expr0, const char* expr1, const TensorND& v0, const TensorND& v1,
         float maxerr, float maxerr_avg, float maxerr_avg_biased, bool allow_invalid) {
     if (!std::is_same<ctype, dt_qint4>::value &&
-        !std::is_same<ctype, dt_quint4>::value) {
+        !std::is_same<ctype, dt_quint4>::value &&
+        !std::is_same<ctype, dt_qint1>::value) {
         if (v0.layout.is_physical_contiguous() && v1.layout.is_physical_contiguous()) {
             return assert_tensor_eq_with_iter<ctype>(
                     expr0, expr1, v0.ptr<ctype>(), v1.ptr<ctype>(), v0.layout, maxerr,
@@ -158,7 +159,7 @@ void copy_tensors(
         //! In order to avoid an unnecessary increase in binary size, we just
         //! use QuantizedS16 dtype in winograd_filter_preprocess now.
         cb(::megdnn::dtype::QuantizedS16) MEGDNN_FOREACH_QUANTIZED_LOWBIT_DTYPE(cb)
-                cb(::megdnn::dtype::Uint16)
+                cb(::megdnn::dtype::Uint16) cb(::megdnn::dtype::QuantizedS1)
 #undef cb
                         default : megdnn_trap();
     }

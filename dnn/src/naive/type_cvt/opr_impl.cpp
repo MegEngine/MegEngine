@@ -79,8 +79,9 @@ void on_dest_ctype(HandleImpl* handle, const TensorND& dest, const TensorND& src
         MEGDNN_FOREACH_QUANTIZED_DTYPE(cb)
         MEGDNN_FOREACH_QUANTIZED_LOWBIT_DTYPE(cb)
         cb(::megdnn::dtype::Bool) cb(::megdnn::dtype::Uint16)
+                cb(::megdnn::dtype::QuantizedS1)
 #undef cb
-                default : megdnn_throw("bad dtype");
+                        default : megdnn_throw("bad dtype");
     }
 }
 
@@ -100,8 +101,9 @@ void TypeCvtImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
         MEGDNN_FOREACH_QUANTIZED_DTYPE(cb)
         MEGDNN_FOREACH_QUANTIZED_LOWBIT_DTYPE(cb)
         cb(::megdnn::dtype::Bool) cb(::megdnn::dtype::Uint16)
+                cb(::megdnn::dtype::QuantizedS1)
 #undef cb
-                default : megdnn_throw("bad dtype");
+                        default : megdnn_throw("bad dtype");
     }
 }
 

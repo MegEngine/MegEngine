@@ -214,6 +214,14 @@ std::unique_ptr<PyArray_Descr, PyArrayDescrDeleter> dtype_mgb2np_descr(DType dty
     if (dtype.has_param()) {
         PyArray_Descr* type_descr;
         switch (dtype.enumv()) {
+            case DTypeEnum::QuantizedS1: {
+                auto& param = dtype.param<dtype::QuantizedS1>();
+                type_descr = PyArray_DescrNewFromType(NPY_INT8);
+                type_descr->metadata = build_mgb_dtype_dict(
+                        DTypeTrait<dtype::QuantizedS1>::name,
+                        {{"scale", PyFloat_FromDouble(param.scale)}});
+                break;
+            }
             case DTypeEnum::Quantized4Asymm: {
                 auto& param = dtype.param<dtype::Quantized4Asymm>();
                 type_descr = PyArray_DescrNewFromType(NPY_UINT8);
@@ -354,7 +362,7 @@ DType dtype_np2mgb_descr(PyArray_Descr* descr) {
                     static_cast<uint8_t>(zero_point));
         }
         if (dtype_name == "QuantizedS32" || dtype_name == "QuantizedS8" ||
-            dtype_name == "QuantizedS4") {
+            dtype_name == "QuantizedS4" || dtype_name == "QuantizedS1") {
             PyObject* scale_py = PyDict_GetItemString(metadata, "scale");
             mgb_assert(scale_py, "Invalid metadata: missing scale");
             mgb_assert(
@@ -364,8 +372,10 @@ DType dtype_np2mgb_descr(PyArray_Descr* descr) {
                 return dtype::QuantizedS32(scale);
             } else if (dtype_name == "QuantizedS8") {
                 return dtype::QuantizedS8(scale);
-            } else {
+            } else if (dtype_name == "QuantizedS4") {
                 return dtype::QuantizedS4(scale);
+            } else if (dtype_name == "QuantizedS1") {
+                return dtype::QuantizedS1(scale);
             }
         }
         throw ConversionError(

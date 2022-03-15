@@ -77,16 +77,19 @@ TEST_F(CUDA, QUANTIZED_TYPECVT) {
     };
 
     run(dtype::Float32(), dtype::QuantizedS8(3.0f));
+    run(dtype::Float32(), dtype::QuantizedS1(3.0f));
     run(dtype::Float16(), dtype::QuantizedS8(3.0f));
     run(dtype::Int32(), dtype::QuantizedS32(5.0f));
     run(dtype::Int8(), dtype::QuantizedS32(10.0f));
 
     run(dtype::Float32(), dtype::QuantizedS8(2e-3f));
+    run(dtype::Float32(), dtype::QuantizedS1(2e-3f));
     run(dtype::Float16(), dtype::QuantizedS8(1e-3f));
     run(dtype::Int32(), dtype::QuantizedS32(1e-3f));
     run(dtype::Int8(), dtype::QuantizedS32(7e-4f));
 
     run(dtype::QuantizedS8(3.0f), dtype::QuantizedS8(10.0f));
+    run(dtype::QuantizedS1(3.0f), dtype::QuantizedS1(10.0f));
     run(dtype::QuantizedS32(3.0f), dtype::QuantizedS8(10.0f));
     run(dtype::QuantizedS8(3.0f), dtype::QuantizedS32(10.0f));
     run(dtype::QuantizedS32(3.0f), dtype::QuantizedS32(10.0f));
@@ -95,6 +98,7 @@ TEST_F(CUDA, QUANTIZED_TYPECVT) {
     run(dtype::QuantizedS32(2e-3f), dtype::QuantizedS8(9e-4f));
     run(dtype::QuantizedS8(9e-4f), dtype::QuantizedS32(7e-4f));
     run(dtype::QuantizedS32(5e-3f), dtype::QuantizedS32(1e-3f));
+    run(dtype::QuantizedS1(1e-3f), dtype::Float32());
 
     run(dtype::Quantized8Asymm(5.0f, (uint8_t)128), dtype::Float32());
     run(dtype::Quantized8Asymm(5.0f, (uint8_t)124), dtype::Float16());

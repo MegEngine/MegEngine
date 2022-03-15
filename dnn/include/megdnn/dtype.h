@@ -62,7 +62,7 @@ namespace megdnn {
 
 #define MEGDNN_FOREACH_PARAMETERIZED_DTYPE_OTHERS(cb)                    \
     cb(QuantizedS32) cb(QuantizedS8) cb(Quantized4Asymm) cb(QuantizedS4) \
-            cb(QuantizedS16)
+            cb(QuantizedS16) cb(QuantizedS1)
 
 #define MEGDNN_FOREACH_PARAMETERIZED_DTYPE_2(cb_first, cb_others) \
     MEGDNN_FOREACH_PARAMETERIZED_DTYPE_FIRST(cb_first)            \
@@ -112,7 +112,7 @@ namespace megdnn {
 
 #define MEGDNN_FOREACH_QUANTIZED_DTYPE_SYMM(cb)                        \
     cb(::megdnn::dtype::QuantizedS32) cb(::megdnn::dtype::QuantizedS8) \
-            cb(::megdnn::dtype::QuantizedS4)
+            cb(::megdnn::dtype::QuantizedS4) cb(::megdnn::dtype::QuantizedS1)
 
 #define MEGDNN_FOREACH_QUANTIZED_DTYPE_ASYMM(cb) \
     cb(::megdnn::dtype::Quantized8Asymm) cb(::megdnn::dtype::Quantized4Asymm)
@@ -292,10 +292,27 @@ public:
 };
 using dt_qint4 = dt_qlowbit<4>;
 
+class dt_qint1 {
+    int8_t _;
+
+public:
+    MEGDNN_DEVICE int8_t as_int8() const { return _; }
+
+    MEGDNN_HOST MEGDNN_DEVICE explicit dt_qint1(int8_t val) : _(val) {}
+#ifdef MEGDNN_CC_HOST
+    explicit operator int8_t() { return _; }
+#endif
+    bool operator<(const dt_qint1& b) const { return _ < b._; }
+    bool operator>(const dt_qint1& b) const { return _ > b._; }
+    bool operator==(const dt_qint1& b) const { return _ == b._; }
+    bool operator!=(const dt_qint1& b) const { return _ != b._; }
+} MEGDNN_PACKED;
+
 #ifdef __clang__
 #pragma clang diagnostic pop
 #endif
 MEGDNN_STATIC_ASSERT(sizeof(dt_byte) == 1, "bad dt_byte size");
+MEGDNN_STATIC_ASSERT(sizeof(dt_qint1) == 1, "bad dt_qint1 size");
 MEGDNN_STATIC_ASSERT(sizeof(dt_quint8) == 1, "bad dt_quint8 size");
 MEGDNN_STATIC_ASSERT(sizeof(dt_qint16) == 2, "bad dt_qint16 size");
 MEGDNN_STATIC_ASSERT(sizeof(dt_qint32) == 4, "bad dt_qint32 size");
@@ -677,7 +694,7 @@ MEGDNN_FOREACH_LOWBIT_DTYPE(MEGDNN_DEF_FRACTION_DT)
             return static_cast<_itype>(_maxval);                             \
         }                                                                    \
     };
-
+MEGDNN_DEF_PARAMETERIZED_DT(QuantizedS1, dt_qint1, int8_t, QUANTIZED, SIGNED, 0, 1, 0);
 MEGDNN_DEF_PARAMETERIZED_DT(
         Quantized4Asymm, dt_quint4, uint8_t, QUANTIZED, SIGNED, 0, 15, 4);
 MEGDNN_DEF_PARAMETERIZED_DT(QuantizedS4, dt_qint4, int8_t, QUANTIZED, SIGNED, -8, 7, 4);
@@ -874,6 +891,26 @@ struct DTypeParamImpl<dt_quint4> {
     MEGDNN_DEVICE float dequantize(dt_quint4 in) const {
         return (in.as_uint8() - zero_point) * scale;
     }
+};
+
+template <>
+struct DTypeParamImpl<dt_qint1> {
+    float scale;
+
+    DTypeParamImpl<dt_qint1>() = default;
+    MGE_WIN_DECLSPEC_FUC DTypeParamImpl<dt_qint1>(float scale);
+#ifdef MEGDNN_CC_HOST
+    std::size_t hash() const;
+#endif
+    bool operator==(const DTypeParam<dt_qint1>& rhs) const;
+    MEGDNN_DEVICE dt_qint1 quantize(float in) const {
+        float v = in / scale;
+        v = roundf(v);
+        v = fmin(fmax(0.f, v), 1.f);
+        return static_cast<dt_qint1>(v);
+    }
+    MEGDNN_DEVICE float dequantize(int8_t in) const { return in * scale; }
+    MEGDNN_DEVICE float dequantize(dt_qint1 in) const { return in.as_int8() * scale; }
 };
 
 template <>

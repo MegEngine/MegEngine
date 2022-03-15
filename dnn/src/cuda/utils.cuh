@@ -241,6 +241,23 @@ struct CudaDTypeParamImpl<dt_qint4> : DTypeParamImpl<dt_qint4> {
     }
 };
 
+template <>
+struct CudaDTypeParamImpl<dt_qint1> : DTypeParamImpl<dt_qint1> {
+    float inv_scale;
+    CudaDTypeParamImpl() = default;
+    CudaDTypeParamImpl(float scale)
+            : DTypeParamImpl<dt_qint1>(scale), inv_scale(1.0f / scale) {}
+    CudaDTypeParamImpl(const DTypeParamImpl<dt_qint1>& param)
+            : CudaDTypeParamImpl(param.scale) {}
+
+    __device__ dt_qint1 quantize(float in) const {
+        float v = in * inv_scale;
+        v = roundf(v);
+        v = fmin(fmax(0.f, v), 1.f);
+        return static_cast<dt_qint1>(v);
+    }
+};
+
 #if MEGDNN_CC_CUDA
 static inline MEGDNN_DEVICE void dot_prod(int a, int b, int c, int& d) {
 #if __CUDA_ARCH__ >= 610

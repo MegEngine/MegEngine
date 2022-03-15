@@ -96,6 +96,7 @@ INST(dt_bool, uchar4);
 #undef as_raw
 #define as_raw(x) x.as_int8()
 INST(dt_qint8, char4);
+INST(dt_qint1, char4);
 #undef as_raw
 #define as_raw(x) x.as_uint8()
 INST(dt_quint8, uchar4);
@@ -466,6 +467,7 @@ INST_PARAM_VECT_VISITOR;
 INST_DT_IBYTE(dt_int8);
 INST_DT_IBYTE(dt_uint8);
 INST_DT_IBYTE(dt_qint8);
+INST_DT_IBYTE(dt_qint1);
 INST_DT_IBYTE(dt_quint8);
 INST_DT_IBYTE(dt_bool);
 #undef INST_DT_IBYTE
@@ -1299,6 +1301,7 @@ private:
 INST_DT_IBYTE(dt_int8);
 INST_DT_IBYTE(dt_uint8);
 INST_DT_IBYTE(dt_qint8);
+INST_DT_IBYTE(dt_qint1);
 INST_DT_IBYTE(dt_quint8);
 INST_DT_IBYTE(dt_bool);
 #undef INST_DT_IBYTE
@@ -1649,6 +1652,7 @@ public:
 INST_DT_IBYTE(dt_int8);
 INST_DT_IBYTE(dt_uint8);
 INST_DT_IBYTE(dt_qint8);
+INST_DT_IBYTE(dt_qint1);
 INST_DT_IBYTE(dt_quint8);
 INST_DT_IBYTE(dt_bool);
 #undef INST_DT_IBYTE

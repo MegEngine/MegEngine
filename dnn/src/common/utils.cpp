@@ -241,6 +241,7 @@ float megdnn::mul_scale(DType lhs, DType rhs) {
         return lhs.param<dt>().scale * rhs.param<dt>().scale;
     MEGDNN_FOREACH_QUANTIZED_DTYPE(cb)
     MEGDNN_FOREACH_QUANTIZED_LOWBIT_DTYPE(cb)
+    cb(::megdnn::dtype::QuantizedS1)
 #undef cb
     megdnn_assert_internal(0);
 }
@@ -253,8 +254,9 @@ float megdnn::get_scale(DType dt) {
         return dt.param<_dt>().scale;
     MEGDNN_FOREACH_QUANTIZED_DTYPE(cb)
     MEGDNN_FOREACH_QUANTIZED_LOWBIT_DTYPE(cb)
+    cb(::megdnn::dtype::QuantizedS1)
 #undef cb
-    megdnn_assert_internal(0);
+            megdnn_assert_internal(0);
 }
 
 bool megdnn::dtype_almost_equal(DType lhs, DType rhs) {

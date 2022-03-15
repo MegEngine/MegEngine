@@ -15,10 +15,12 @@ import megengine.core.tensor.megbrain_graph as G
 from megengine.core.ops import builtin as ops
 from megengine.core.tensor.dtype import (
     _builtin_quant_dtypes,
+    convert_from_qint1,
     convert_from_qint4,
     convert_from_qint8,
     convert_from_quint4,
     convert_from_quint8,
+    convert_to_qint1,
     convert_to_qint4,
     convert_to_qint8,
     convert_to_quint4,
@@ -26,6 +28,7 @@ from megengine.core.tensor.dtype import (
     get_scale,
     get_zero_point,
     is_quantize,
+    qint1,
     qint4,
     qint8,
     quint4,
@@ -113,9 +116,20 @@ def test_dtype_qint4():
     np.testing.assert_allclose(get_scale(dt), 0.01)
 
 
+def test_dtype_qint1():
+    dt = qint1(0.01)
+    assert isinstance(dt, np.dtype)
+    assert "mgb_dtype" in dt.metadata
+    np.testing.assert_allclose(dt.metadata["mgb_dtype"]["scale"], 0.01)
+
+    assert is_quantize(dt)
+    np.testing.assert_allclose(get_scale(dt), 0.01)
+
+
 @pytest.mark.parametrize(
     "dtype, dtype_name",
     [
+        (qint1(0.01), "qint1"),
         (quint4(0.01, 5), "quint4"),
         (qint4(0.01), "qint4"),
         (quint8(0.01, 135), "quint8"),
@@ -141,6 +155,7 @@ def test_dtype_qint_mgb_ffi_handle(dtype, dtype_name):
 @pytest.mark.parametrize(
     "dtype, dtype_name",
     [
+        (qint1(0.01), "qint1"),
         (quint4(0.01, 5), "quint4"),
         (qint4(0.01), "qint4"),
         (quint8(0.01, 135), "quint8"),
@@ -178,6 +193,7 @@ def test_qint_typecvt(dtype, dtype_name):
 @pytest.mark.parametrize(
     "dtype, dtype_name",
     [
+        (qint1(0.01), "qint1"),
         (quint4(0.01, 5), "quint4"),
         (qint4(0.01), "qint4"),
         (quint8(0.01, 135), "quint8"),
@@ -207,6 +223,7 @@ def test_qint_astype(dtype, dtype_name):
 @pytest.mark.parametrize(
     "dtype, dtype_name",
     [
+        (qint1(0.01), "qint1"),
         (quint4(0.01, 5), "quint4"),
         (qint4(0.01), "qint4"),
         (quint8(0.01, 135), "quint8"),

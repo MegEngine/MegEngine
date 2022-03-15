@@ -71,6 +71,32 @@ TEST(TestDType, TestQuantized8Asymm) {
     EXPECT_ANY_THROW(DType::from_enum(DTypeEnum::Quantized8Asymm));
 }
 
+TEST(TestDType, QuantizedS1) {
+    using namespace megdnn;
+
+    dtype::QuantizedS1 qint1(0.1f);
+    EXPECT_EQ(qint1.size(1), 1u);
+    EXPECT_FLOAT_EQ(qint1.param().scale, 0.1f);
+
+    dtype::QuantizedS1 qint1_copy = qint1;
+    EXPECT_NO_THROW(qint1_copy.assert_is(qint1));
+    EXPECT_FLOAT_EQ(qint1_copy.param().scale, 0.1f);
+
+    dtype::QuantizedS1 qint1_reconstruct_with_same_param(0.1f);
+    EXPECT_NO_THROW(qint1_reconstruct_with_same_param.assert_is(qint1));
+
+    dtype::QuantizedS1 qint1_diff(0.2f);
+    EXPECT_ANY_THROW(qint1_diff.assert_is(qint1));
+
+    DType parent = qint1;
+    ASSERT_NO_THROW(dtype::QuantizedS1::downcast_from(parent));
+    auto param = dtype::QuantizedS1::downcast_from(parent).param();
+    EXPECT_FLOAT_EQ(param.scale, 0.1f);
+
+    EXPECT_ANY_THROW(dtype::QuantizedS1::downcast_from(dtype::IntB1()));
+    EXPECT_ANY_THROW(DType::from_enum(DTypeEnum::QuantizedS1));
+}
+
 TEST(TestDType, TestQuantizedS4) {
     using namespace megdnn;
 
