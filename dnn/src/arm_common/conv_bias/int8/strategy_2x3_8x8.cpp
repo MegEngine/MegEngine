@@ -59,6 +59,13 @@ void transpose_8x4(const int16_t* src, int16_t* dst, int lda, int ldb) {
     vst1_s16(dst + 7 * ldb, c3.val[1]);
 }
 
+#if defined(__GNUC__) && !defined(__llvm__) && !defined(_MSC_VER)
+#define GCC_VERSION (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
+#if GCC_VERSION < 50500
+#pragma GCC push_options
+#pragma GCC optimize("O0")
+#endif
+#endif
 struct FilterTransform2X3_qs8 {
     static void transform(
             const int8_t* filter_ptr, int16_t* filter_transform_buf,
@@ -140,6 +147,12 @@ struct FilterTransform2X3_qs8 {
 #undef get_v_searal
     }
 };
+#if defined(__GNUC__) && !defined(__llvm__) && !defined(_MSC_VER)
+#define GCC_VERSION (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
+#if GCC_VERSION < 50500
+#pragma GCC pop_options
+#endif
+#endif
 
 struct InputTransform2X3_qs8 {
     template <bool inner>
