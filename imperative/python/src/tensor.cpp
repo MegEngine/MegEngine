@@ -15,6 +15,7 @@
 #include "megbrain/imperative/ops/backward_graph.h"
 #include "megbrain/imperative/ops/utility.h"
 #include "megbrain/imperative/profiler.h"
+#include "megbrain/imperative/transformations/dim_expansion.h"
 #include "megbrain/imperative/transformations/dtype_promote.h"
 #include "megbrain/imperative/transformations/eval.h"
 #include "megbrain/imperative/transformations/lazy.h"
@@ -61,11 +62,13 @@ struct SymbolVarContext {
     std::shared_ptr<SymbolTransformation> symbol_tsf;
     std::shared_ptr<ScalarTransformation> scalar_tsf;
     std::shared_ptr<DTypePromoteTransformation> dtype_promote_tsf;
+    std::shared_ptr<DimExpansionTransformation> dim_expansion_tsf;
 
     SymbolVarContext(cg::ComputingGraph* graph) {
         symbol_tsf = std::make_shared<SymbolTransformation>(graph);
         scalar_tsf = std::make_shared<ScalarTransformation>();
         dtype_promote_tsf = std::make_shared<DTypePromoteTransformation>();
+        dim_expansion_tsf = std::make_shared<DimExpansionTransformation>();
         Transformation::swap_context(context);
     }
 
@@ -73,6 +76,7 @@ struct SymbolVarContext {
         symbol_tsf->register_at(Transformation::top());
         scalar_tsf->register_at(Transformation::top());
         dtype_promote_tsf->register_at(Transformation::top());
+        dim_expansion_tsf->register_at(Transformation::top());
     }
 
     ValueRef symvar2val(py::handle py_symbol_var) {
@@ -452,6 +456,8 @@ void init_tensor(py::module m) {
             std::make_shared<ScalarTransformation>());
     transformations.register_at<Segment::DTypePromote>(
             std::make_shared<DTypePromoteTransformation>());
+    transformations.register_at<Segment::DimExpansion>(
+            std::make_shared<DimExpansionTransformation>());
 
     static py::exception<interpreter::AsyncError> py_async_error(
             m, "AsyncError", PyExc_RuntimeError);

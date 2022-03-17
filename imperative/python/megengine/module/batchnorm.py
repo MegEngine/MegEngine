@@ -80,19 +80,6 @@ class _BatchNorm(Module):
                 self.track_running_stats == False
             ), "track_running_stats can not be initilized to False and changed to True later"
 
-        inp_shape = inp.shape
-        _ndims = len(inp_shape)
-        if _ndims != 4:
-            origin_shape = inp_shape
-            if _ndims == 2:
-                n, c = inp_shape[0], inp_shape[1]
-                new_shape = (n, c, 1, 1)
-            elif _ndims == 3:
-                n, c, h = inp_shape[0], inp_shape[1], inp_shape[2]
-                new_shape = (n, c, h, 1)
-
-            inp = inp.reshape(new_shape)
-
         _weight = self.weight
         _bias = self.bias
 
@@ -129,9 +116,6 @@ class _BatchNorm(Module):
             compute_mode=self.compute_mode,
             param_dim=self.param_dim,
         )
-
-        if _ndims != 4:
-            output = output.reshape(origin_shape)
 
         return output
 

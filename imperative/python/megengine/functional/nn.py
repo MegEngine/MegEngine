@@ -41,7 +41,6 @@ from ..distributed import WORLD, is_distributed
 from ..jit import exclude_from_trace
 from ..tensor import Tensor
 from ..utils.deprecation import deprecated_func
-from ..utils.tuple_function import _pair, _pair_nonzero, _triple, _triple_nonzero
 from .debug_param import get_execution_strategy
 from .distributed import all_reduce_sum
 from .elemwise import _elwise, exp, log, log1p, maximum, minimum
@@ -94,14 +93,15 @@ __all__ = [
 
 
 def expand_hw(x):
-    # NOTE: >1d array is accepted, as long as 1 <= size <= 2
-    try:
-        x = int(x)
-        return [x, x]
-    except (TypeError, ValueError):
-        pass
-    h, w = x
-    return int(h), int(w)
+    if isinstance(x, Sequence):
+        return int(x[0]), int(x[1])
+    return int(x), int(x)
+
+
+def expand_dhw(x):
+    if isinstance(x, Sequence):
+        return int(x[0]), int(x[1]), int(x[2])
+    return int(x), int(x), int(x)
 
 
 def linear(
@@ -177,11 +177,8 @@ def conv1d(
         if weight.dtype != dtype:
             weight = weight.astype(dtype)
 
-    inp = expand_dims(inp, 3)
-    weight = expand_dims(weight, 3)
     if bias is not None:
         assert bias.ndim == 3, "the bias dimension of conv1d should be 3"
-        bias = expand_dims(bias, 3)
 
     stride_h = stride
     pad_h = padding
@@ -206,7 +203,6 @@ def conv1d(
     (output,) = apply(op, inp, weight)
     if bias is not None:
         output += bias
-    output = squeeze(output, 3)
     return output
 
 
@@ -314,9 +310,9 @@ def conv3d(
 
     D, H, W = 0, 1, 2
 
-    pad = _triple(padding)
-    stride = _triple_nonzero(stride)
-    dilate = _triple_nonzero(dilation)
+    pad = expand_dhw(padding)
+    stride = expand_dhw(stride)
+    dilate = expand_dhw(dilation)
 
     sparse_type = "dense" if groups == 1 else "group"
     op = builtin.Convolution3D(
@@ -572,9 +568,9 @@ def conv_transpose3d(
         output tensor.
     """
     D, H, W = 0, 1, 2
-    pad = _triple(padding)
-    stride = _triple_nonzero(stride)
-    dilate = _triple_nonzero(dilation)
+    pad = expand_dhw(padding)
+    stride = expand_dhw(stride)
+    dilate = expand_dhw(dilation)
 
     sparse_type = "dense" if groups == 1 else "group"
     op = builtin.Convolution3DBackwardData(
@@ -618,9 +614,9 @@ def max_pool2d(
     """
     if stride is None:
         stride = kernel_size
-    window_h, window_w = _pair_nonzero(kernel_size)
-    stride_h, stride_w = _pair_nonzero(stride)
-    padding_h, padding_w = _pair(padding)
+    window_h, window_w = expand_hw(kernel_size)
+    stride_h, stride_w = expand_hw(stride)
+    padding_h, padding_w = expand_hw(padding)
     conv_format = _config._get_actual_op_param("NCHW", _config.__conv_format)
 
     op = builtin.Pooling(
@@ -662,9 +658,9 @@ def avg_pool2d(
     """
     if stride is None:
         stride = kernel_size
-    window_h, window_w = _pair_nonzero(kernel_size)
-    stride_h, stride_w = _pair_nonzero(stride)
-    padding_h, padding_w = _pair(padding)
+    window_h, window_w = expand_hw(kernel_size)
+    stride_h, stride_w = expand_hw(stride)
+    padding_h, padding_w = expand_hw(padding)
     conv_format = _config._get_actual_op_param("NCHW", _config.__conv_format)
 
     op = builtin.Pooling(
@@ -1779,10 +1775,10 @@ def sliding_window(
         stride: stride of the window. Default: 1
         dilation: dilation of the window. Default: 1
     """
-    padding_h, padding_w = _pair(padding)
-    stride_h, stride_w = _pair_nonzero(stride)
-    dilation_h, dilation_w = _pair_nonzero(dilation)
-    window_h, window_w = _pair_nonzero(kernel_size)
+    padding_h, padding_w = expand_hw(padding)
+    stride_h, stride_w = expand_hw(stride)
+    dilation_h, dilation_w = expand_hw(dilation)
+    window_h, window_w = expand_hw(kernel_size)
 
     op = builtin.Images2Neibs(
         pad_h=padding_h,
@@ -1818,11 +1814,11 @@ def sliding_window_transpose(
         stride: stride of the window. Default: 1
         dilation: dilation of the window. Default: 1
     """
-    output_h, output_w = _pair_nonzero(output_size)
-    padding_h, padding_w = _pair(padding)
-    stride_h, stride_w = _pair_nonzero(stride)
-    dilation_h, dilation_w = _pair_nonzero(dilation)
-    window_h, window_w = _pair_nonzero(kernel_size)
+    output_h, output_w = expand_hw(output_size)
+    padding_h, padding_w = expand_hw(padding)
+    stride_h, stride_w = expand_hw(stride)
+    dilation_h, dilation_w = expand_hw(dilation)
+    window_h, window_w = expand_hw(kernel_size)
 
     expected_h = (
         output_h + 2 * padding_h - dilation_h * (window_h - 1) - 1

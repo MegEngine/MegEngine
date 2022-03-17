@@ -26,13 +26,14 @@ struct TransformationManager {
     enum Segment {
         ModuleTrace,
         DTypePromote,
+        DimExpansion,
         Grad,
         Scalar,
         Trace,
         Eval,
     };
 
-    std::array<std::vector<std::shared_ptr<Transformation>>, 6> segments;
+    std::array<std::vector<std::shared_ptr<Transformation>>, 7> segments;
 
     template <Segment segment>
     void register_at(std::shared_ptr<Transformation> transformation) {
