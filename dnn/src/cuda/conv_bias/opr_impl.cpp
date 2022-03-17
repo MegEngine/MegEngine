@@ -148,9 +148,9 @@ ConvBiasForward::Algorithm* ConvBiasForwardImpl::get_algorithm_heuristic(
     //! choose for large kernel cases
     size_t fh = args.filter_meta.spatial[0], fw = args.filter_meta.spatial[1];
     size_t hi = src[2], wi = src[3];
-    const bool prefer_dnn_lk_implbmm =
-            hi <= 2 * fh && wi <= 2 * fw && wi < 32 && hi <= 32;
-    const bool prefer_direct_lk = fh > 10 && fw > 10;
+    const bool prefer_dnn_lk_implbmm = hi <= 2 * fh && wi <= 2 * fw;
+    //! filter size > 9, choose large kernel cases
+    const bool prefer_direct_lk = fh > 9 && fw > 9;
     //! avoid bad case in cudnn, check dnn chanwise impl first
     if (is_chanwise) {
         if (prefer_dnn_lk_implbmm) {

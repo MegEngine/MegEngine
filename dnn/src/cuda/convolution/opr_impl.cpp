@@ -119,10 +119,10 @@ ConvolutionBackwardDataImpl::Algorithm* ConvolutionBackwardDataImpl::
     size_t fh = args.filter_meta.spatial[0], fw = args.filter_meta.spatial[1];
     size_t ho = diff[2], wo = diff[3];
     const bool prefer_dnn_lk_implbmm = args.filter_meta.format == Param::Format::NCHW &&
-                                       ho <= 2 * fh && wo <= 2 * fw && ho < 32 &&
-                                       wo < 32;
+                                       ho <= 2 * fh && wo <= 2 * fw;
+    //! filter size > 9, choose large kernel cases
     const bool prefer_direct_lk =
-            args.filter_meta.format == Param::Format::NCHW && fh > 10 && fw > 10;
+            args.filter_meta.format == Param::Format::NCHW && fh > 9 && fw > 9;
     if (prefer_dnn_lk_implbmm) {
 #if CUDA_VERSION >= 10020
         if (sm_algo_pack.implbmm_nchw_hmma[0].is_available_attribute(
