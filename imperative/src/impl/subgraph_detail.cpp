@@ -107,13 +107,16 @@ EncodedSubgraph make_backward_graph_from_forward(
     Subgraph::Builder<LogicalTensorDesc> builder(
             [](auto&& op, auto&& input_descs, size_t nr_outputs) {
                 auto [descs, _] = OpDef::infer_output_attrs_fallible(*op, input_descs);
+                mgb_assert(
+                        descs.size() == nr_outputs, "nr_outputs mismatch for %s",
+                        op->to_string().c_str());
                 return descs;
             });
     auto accum_grad = [&](var_t lhs, var_t rhs) {
         return builder.write_expr(
                 Elemwise::make(Elemwise::Mode::ADD), {lhs, rhs}, 1)[0];
     };
-    GradContext<var_t> grad_context{accum_grad};
+    GradContext<std::shared_ptr<OpDef>, var_t> grad_context{accum_grad};
     auto input_vars = builder.write_inputs(inputs);
     auto outputs = forward_graph.apply<var_t>(
             input_vars, std::bind(&decltype(builder)::write_expr, &builder, _1, _2, _3),
@@ -143,19 +146,17 @@ EncodedSubgraph make_backward_graph_from_forward(
     grad_context.backward(
             apply_mask(outputs, output_has_grad),
             apply_mask(output_grads, output_has_grad),
-            [&](Subgraph::expr_t expr, vars_t output_grads) {
+            [&](Subgraph::op_t op, vars_t inputs, vars_t outputs, vars_t output_grads) {
                 auto bg = OpDef::make_backward_graph(
-                        *expr.op, builder.get_descs(expr.inputs),
-                        grad_context.get_require_grads(expr.inputs),
-                        grad_context.get_has_grads(expr.outputs));
+                        *op, builder.get_descs(inputs),
+                        grad_context.get_require_grads(inputs),
+                        grad_context.get_has_grads(outputs));
                 if (bg.graph.empty()) {
-                    return vars_t(expr.inputs.size(), 0);
+                    return vars_t(inputs.size(), 0);
                 }
                 vars_t grad_inputs;
-                grad_inputs.insert(
-                        grad_inputs.end(), expr.inputs.begin(), expr.inputs.end());
-                grad_inputs.insert(
-                        grad_inputs.end(), expr.outputs.begin(), expr.outputs.end());
+                grad_inputs.insert(grad_inputs.end(), inputs.begin(), inputs.end());
+                grad_inputs.insert(grad_inputs.end(), outputs.begin(), outputs.end());
                 grad_inputs.insert(
                         grad_inputs.end(), output_grads.begin(), output_grads.end());
                 auto apply_functor =
@@ -181,6 +182,77 @@ EncodedSubgraph make_backward_graph(
     auto forward_graph = OpDef::make_forward_graph(def, inputs);
     return make_backward_graph_from_forward(
             forward_graph, inputs, input_requires_grad, output_has_grad);
+}
+
+EncodedSubgraph make_from_computing_graph(
+        const VarNodeArray& inputs, const VarNodeArray& outputs) {
+    Subgraph subgraph;
+    std::unordered_map<VarNode*, size_t> var2idx;
+    size_t next_idx = 0;
+    var2idx[nullptr] = next_idx++;
+    for (auto&& input : inputs) {
+        if (input) {
+            var2idx[input] = next_idx++;
+        }
+    }
+    auto is_tensor_holder = [](cg::OperatorNodeBase* op) {
+        return op->input().empty();
+    };
+    auto as_tensor = [](VarNode* var) -> TensorPtr {
+        auto* opr = var->owner_opr();
+        if (auto* imm_tensor = opr->try_cast_final<opr::ImmutableTensor>()) {
+            auto&& dv = imm_tensor->value();
+            HostTensorND hv(dv.comp_node(), dv.shape(), dv.dtype());
+            // get host value
+            auto&& cpu_value = imm_tensor->host_value();
+            mgb_assert(cpu_value.comp_node() == CompNode::default_cpu());
+            // default_cpu is synchronous with respect to caller
+            hv.proxy_to_default_cpu().copy_from_fixlayout(cpu_value);
+            return Tensor::make(dv, hv);
+        } else if (
+                auto* shared_tensor = opr->try_cast_final<opr::SharedDeviceTensor>()) {
+            return Tensor::make(shared_tensor->get_dev_tensor());
+        } else {
+            mgb_assert(
+                    false, "unsupported tensor holder opr %s",
+                    opr->dyn_typeinfo()->name);
+        }
+    };
+    cg::DepOprIter iter{[&](cg::OperatorNodeBase* op) {
+        // TODO: implement make_backward_graph for mm ops
+        // mgb_assert(!op->node_prop().contain(cg::OperatorNodeProp::Flag::IMPURE_FUNC));
+        if (is_tensor_holder(op)) {
+            for (auto&& output : op->usable_output()) {
+                subgraph.constants.push_back(
+                        {var2idx[output] = next_idx++, as_tensor(output)});
+            }
+        } else {
+            Subgraph::vars_t inputs;
+            Subgraph::vars_t outputs;
+            for (auto&& input : op->input()) {
+                inputs.push_back(var2idx.at(input));
+            }
+            // NOTE: use usable_output
+            for (auto&& output : op->usable_output()) {
+                outputs.push_back(var2idx[output] = next_idx++);
+            }
+            auto opdef = OpDef::make_from_op_node(op);
+            subgraph.exprs.push_back({opdef, inputs, outputs});
+        }
+    }};
+    for (auto&& input : inputs) {
+        if (input) {
+            iter.set_visited(input->owner_opr());
+        }
+        subgraph.inputs.push_back(var2idx.at(input));
+    }
+    for (auto&& output : outputs) {
+        if (output) {
+            iter.add(output);
+        }
+        subgraph.outputs.push_back(var2idx.at(output));
+    }
+    return EncodedSubgraph::make(subgraph);
 }
 
 }  // namespace subgraph_detail

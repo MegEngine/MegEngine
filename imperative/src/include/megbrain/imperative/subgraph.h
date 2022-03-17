@@ -189,12 +189,17 @@ struct EncodedSubgraph {
     size_t hash() const;
 };
 
-template <typename T>
+template <typename TOp, typename TVar>
 class GradContext {
 public:
-    using var_t = T;
+    using op_t = TOp;
+    using var_t = TVar;
     using vars_t = SmallVector<var_t>;
-    using expr_t = Expr<T>;
+    struct expr_t {
+        op_t op;
+        vars_t inputs;
+        vars_t outputs;
+    };
 
 private:
     std::unordered_map<var_t, var_t> m_grads;
@@ -219,6 +224,7 @@ public:
         }
         return mask;
     }
+    void mark_require_grad(var_t dest) { m_vars_require_grad.insert(dest); }
     void mark_require_grads(vars_t dests) {
         for (auto&& dest : dests) {
             m_vars_require_grad.insert(dest);
@@ -231,7 +237,7 @@ public:
             return m_grads[dest] = m_accumulator(m_grads[dest], grad);
         }
     }
-    void record_expr(std::shared_ptr<OpDef> op, vars_t inputs, vars_t outputs) {
+    void record_expr(op_t op, vars_t inputs, vars_t outputs) {
         bool require_grad = false;
         for (auto&& input : inputs) {
             if (m_vars_require_grad.count(input)) {
@@ -254,7 +260,8 @@ public:
         std::reverse(exprs.begin(), exprs.end());
         for (const expr_t& expr : exprs) {
             size_t nr_inputs = expr.inputs.size();
-            vars_t input_grads = functor(expr, get_grads(expr.outputs));
+            vars_t input_grads = functor(
+                    expr.op, expr.inputs, expr.outputs, get_grads(expr.outputs));
             mgb_assert(input_grads.size() == nr_inputs, "input size mismatch");
             for (size_t i = 0; i < nr_inputs; ++i) {
                 if (input_grads[i] && m_vars_require_grad.count(expr.inputs[i])) {
