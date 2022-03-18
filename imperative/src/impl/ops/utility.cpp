@@ -411,7 +411,7 @@ struct ComputingGraphHolder {
         executable->wait();
         size_t nr_inputs = inputs.size();
         for (size_t i = 0; i < nr_inputs; ++i) {
-            auto input_dev_tensor = input_tensors[i]->dev_tensor(false);
+            auto input_dev_tensor = input_tensors[i]->dev_tensor(true);
             inputs[i].device_value->reset(
                     input_dev_tensor.storage(), input_dev_tensor.layout());
             if (inputs[i].host_value) {
