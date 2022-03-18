@@ -949,6 +949,7 @@ std::tuple<std::vector<int32_t>, bool> tuple2vector(py::object shape) {
 }
 
 bool enable_fastpath(py::handle inp) {
+    // FIXME: the way to judge whether it is in traced module is inaccurate
     if (!TensorWrapper::try_cast(inp.ptr()) ||
         TransformationManager::get_instance()
                         .segments[TransformationManager::Segment::Trace]

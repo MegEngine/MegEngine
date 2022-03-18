@@ -113,12 +113,7 @@ Tensor::Tensor(const HostTensorND& hv) : Tensor(hv.layout(), hv.comp_node()) {
         MGB_RECORD_EVENT(
                 profiler::HostToDeviceEvent, hv.layout(), hv.comp_node(), hv.raw_ptr(),
                 dev_tensor().raw_ptr());
-        DeviceTensorStorage storage;
-        storage.reset(m_cn, m_blob->size(), m_blob->storage());
-        storage = storage.sub(m_offset);
-        DeviceTensorND dv;
-        dv.reset(storage, m_layout);
-        dv.copy_from_fixlayout(hv);
+        dev_tensor(false).copy_from_fixlayout(hv);
         // even though hv is saved in m_value, Tensor itself could be
         // released before copy completes
         MGB_RECORD_EVENT(
@@ -218,15 +213,9 @@ megdnn::TensorND Tensor::dnn_tensor() {
 }
 
 void Tensor::fetch_value() {
-    MGB_LOCK_GUARD(m_blob_mtx);
     MGB_LOCK_GUARD(m_value_mtx);
     if (m_value.empty()) {
-        DeviceTensorStorage storage;
-        storage.reset(m_cn, m_blob->size(), m_blob->storage());
-        storage = storage.sub(m_offset);
-        DeviceTensorND dv;
-        dv.reset(storage, m_layout);
-        m_value.copy_from(dv);
+        m_value.copy_from(dev_tensor(false));
         m_value_ready.reset(EventPool::without_timer().alloc(comp_node()));
         m_value_ready->record();
     }
