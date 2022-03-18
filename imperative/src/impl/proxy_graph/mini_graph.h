@@ -320,15 +320,12 @@ public:
 
             input->force_assign_dev_tensor_from_tensor(dev_tensor);
 
-            mgb_assert(input->comp_node() == dev_tensor.comp_node());
             mgb_assert(input->shape().eq_shape(layout));
-            mgb_assert(input->dtype() == layout.dtype);
             idx++;
         }
     }
 
     void init_output_tensor(const SmallVector<Tensor*>& outputs) {
-        mgb_assert(m_opr->usable_output().size() == outputs.size());
         ::mgb::opr::intl::WorkspaceLimitHook::set_impl(
                 m_opr->owner_graph(), get_workspace_limit);
 
@@ -347,9 +344,6 @@ public:
                 mgb_assert(j < outputs.size());
                 auto&& tensor = outputs[j];
                 auto&& layout = tensor->layout();
-                mgb_assert(var->comp_node() == tensor->comp_node());
-                mgb_assert(var->shape().eq_shape(layout));
-                mgb_assert(var->dtype() == layout.dtype);
                 if (var->m_mem_plan.chunk().owner_var != var) {
                     tensor->assign_from_dev_tensor(
                             var->m_dev_tensor);  // memory forwarding
@@ -816,7 +810,6 @@ public:
         // minigraph.opr()->usable_output() bug execution may use the attrs for those
         // output var, so we infer attrs for all outputs, but only return
         // LogicalTensorDesc for minigraph.opr()->usable_output()
-        SmallVector<LogicalTensorDesc> output_descs;
         for (size_t i = 0; i < minigraph.opr()->output().size(); ++i) {
             auto* var = minigraph.opr()->output()[i];
             auto* shape = sess.infer(sess.output_data[i].shape_infer, true);
@@ -824,19 +817,15 @@ public:
             var->shape(*shape);
         }
 
-        for (size_t i = 0; i < minigraph.output_size(); ++i) {
+        SmallVector<TensorPtr> outputs(minigraph.output_size(), {});
+        for (size_t i = 0; i < outputs.size(); i++) {
             auto* ovar = minigraph.output_var(i);
             mgb_assert(ovar->dtype().valid() && ovar->comp_node().valid());
             mgb_assert(
                     ovar->shape().ndim ||
                     ovar->contain_flag(VarNode::Flag::NO_SYS_MEM_ALLOC));
-            output_descs.push_back({{ovar->shape(), ovar->dtype()}, ovar->comp_node()});
-        }
-
-        SmallVector<TensorPtr> outputs(output_descs.size(), {});
-        for (size_t i = 0; i < outputs.size(); i++) {
-            outputs[i] =
-                    Tensor::make(output_descs[i].layout, output_descs[i].comp_node);
+            outputs[i] = Tensor::make(
+                    TensorLayout{ovar->shape(), ovar->dtype()}, ovar->comp_node());
         }
 
         auto raw_outputs = to_raw_ptr_array(outputs, false);
