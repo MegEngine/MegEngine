@@ -72,7 +72,7 @@ DeviceTensorND BlobManagerImpl::alloc_workspace_with_defrag(
         dev_tensor.reset(storage, layout);
         return dev_tensor;
     }
-    MGB_TRY { return alloc_workspace(cn, layout); }
+    MGB_TRY { dev_tensor = alloc_workspace(cn, layout); }
     MGB_CATCH(MemAllocError&, {
         mgb_log_warn("memory allocation failed for workspace; try defragmenting");
         defrag(cn);

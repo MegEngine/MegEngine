@@ -583,9 +583,7 @@ TensorInfo* ChannelImpl::alloc() {
     auto& state = get_channel_state();
     auto info = [this] {
         MGB_LOCK_GUARD(m_pool_spin);
-        auto* ptr = m_pool.alloc_raw();
-        new (ptr) TensorInfo();
-        return (TensorInfo*)ptr;
+        return m_pool.alloc();
     }();
     info->id = Profiler::next_id();
     if (Profiler::is_profiling()) {
@@ -816,7 +814,8 @@ void ChannelImpl::do_apply_op(const ApplyOp& cmd, std::string reason) {
     for (auto&& [device, kernel_id] : kernels) {
         MGB_RECORD_EVENT(KernelLaunchEvent, apply_id, kernel_id, device);
         MGB_RECORD_EVENT_IF(
-                profiling_device, RecordDeviceEvent, Timer::record_device(device));
+                (Profiler::get_option("profile_device", 0)), RecordDeviceEvent,
+                Timer::record_device(device));
     }
     // Apply op
     SmallVector<LogicalTensorDesc> output_descs;
@@ -830,7 +829,8 @@ void ChannelImpl::do_apply_op(const ApplyOp& cmd, std::string reason) {
     // After execute
     for (auto&& [device, kernel_id] : kernels) {
         MGB_RECORD_EVENT_IF(
-                profiling_device, RecordDeviceEvent, Timer::record_device(device));
+                (Profiler::get_option("profile_device", 0)), RecordDeviceEvent,
+                Timer::record_device(device));
         MGB_RECORD_EVENT(KernelLaunchFinishEvent, apply_id, kernel_id, device);
     }
     // End profiling operator
@@ -847,9 +847,7 @@ void ChannelImpl::do_apply_op(const ApplyOp& cmd, std::string reason) {
             MGB_RECORD_EVENT(OpOutputEvent, output->id);
             produce_tensor(output, outputs[i]);
             MGB_RECORD_EVENT(OpOutputFinishEvent, output->id);
-            if (Profiler::is_profiling()) {
-                sample_on_device(output->desc.comp_node, false);
-            }
+            sample_on_device(output->desc.comp_node, false);
         }
     }
 
