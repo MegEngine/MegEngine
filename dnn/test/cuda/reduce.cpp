@@ -41,7 +41,7 @@ TEST_F(CUDA, REDUCE) {
     checker.execs({{2, 16 * 16 + 1, 31}, {}});
     checker.execs({{2, 16 * 16 * 16 + 1, 31}, {}});
     checker.execs({{2, 16 * 16 * 16 * 16 + 1, 31}, {}});
-#if MEGDNN_TEGRA_X1
+#if MEGDNN_TEGRA_X1 || MEGDNN_TEGRA_X2
     checker.execs({{2, 8 * 16 * 16 * 16 * 16 + 1, 31}, {}});
 #else
     checker.execs({{2, 16 * 16 * 16 * 16 * 16 + 1, 31}, {}});

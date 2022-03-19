@@ -18,6 +18,13 @@ bool check_compute_capability(int major, int minor) {
     cuda_check(cudaGetDevice(&dev));
     cudaDeviceProp prop;
     cuda_check(cudaGetDeviceProperties(&prop, dev));
+
+    //! we just skip sm_62 here, which means jetson tx2
+    //! unless require sm_62 explicitly
+    if (prop.major == 6 && prop.minor == 2) {
+        return prop.major == major && prop.minor == minor;
+    }
+
     return prop.major > major || (prop.major == major && prop.minor >= minor);
 }
 

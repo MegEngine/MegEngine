@@ -15,13 +15,13 @@
 #include "test/common/convolution.h"
 #include "test/cuda/fixture.h"
 
-#include "src/cuda/utils.h"
+#include "test/cuda/utils.h"
 
 namespace megdnn {
 namespace test {
 
 TEST_F(CUDA, GROUP_CONV_FORWARD) {
-    bool is_int_available = cuda::is_compute_capability_required(6, 1);
+    bool is_int_available = check_compute_capability(6, 1);
     auto run = [&](size_t N, size_t IC, size_t IH, size_t IW, size_t FH, size_t FW,
                    size_t OC, size_t /* OH */, size_t /* OW */, size_t PH, size_t PW,
                    size_t SH, size_t SW, size_t DH, size_t DW, size_t group) {

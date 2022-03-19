@@ -11,11 +11,11 @@
 #include "test/cuda/fixture.h"
 
 #include "megdnn/oprs.h"
-#include "src/cuda/utils.h"
 #include "test/common/benchmarker.h"
 #include "test/common/tensor.h"
 #include "test/common/timer.h"
 #include "test/common/workspace_wrapper.h"
+#include "test/cuda/utils.h"
 
 namespace megdnn {
 namespace test {
@@ -23,11 +23,7 @@ namespace test {
 #if MEGDNN_WITH_BENCHMARK
 
 TEST_F(CUDA, BENCHMARK_CONVOLUTION_8X8X32) {
-    if (!cuda::is_compute_capability_required(6, 1)) {
-        printf("Skip CUDA.BENCHMARK_CONVOLUTION_8X8X32 test as current device"
-               "doesn't support\n");
-        return;
-    }
+    require_compute_capability(6, 1);
     using Param = param::Convolution;
     auto run_1x1 = [&](size_t N, size_t OC, size_t IC, size_t H, size_t W) {
         Benchmarker<Convolution> benchmarker(handle_cuda());

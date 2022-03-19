@@ -15,7 +15,6 @@
 #include "test/common/checker.h"
 #include "test/common/matrix_mul.h"
 
-#include "src/cuda/utils.h"
 #if defined(cuda_check)
 #undef cuda_check
 #endif
@@ -130,10 +129,7 @@ TEST_F(CUDA, PEAK_BENCHMARK_MATRIX_MUL_QUANTIZED4x4x32) {
 #endif
 
 TEST_F(CUDA, MATRIX_MUL_INT8x8x32_WITH_SPETIAL_STRIDES) {
-    if (!cuda::is_compute_capability_required(6, 1)) {
-        printf("Skip CUDA.MATRIX_MUL test as current device doesn't support\n");
-        return;
-    }
+    require_compute_capability(6, 1);
     Checker<MatrixMul> checker(handle_cuda());
     using Param = MatrixMul::Param;
     Param param;
@@ -152,10 +148,7 @@ TEST_F(CUDA, MATRIX_MUL_INT8x8x32_WITH_SPETIAL_STRIDES) {
 }
 
 TEST_F(CUDA, MATRIX_MUL_INT8x8x32_NAIVE) {
-    if (!cuda::is_compute_capability_required(6, 1)) {
-        printf("Skip CUDA.MATRIX_MUL test as current device doesn't support\n");
-        return;
-    }
+    require_compute_capability(6, 1);
 
     using Param = MatrixMul::Param;
     UniformIntRNG rng{-128, 127};
@@ -224,16 +217,12 @@ TEST_F(CUDA, MATRIX_MUL_FLOAT_NAIVE) {
 }
 
 TEST_F(CUDA, MATRIX_MUL) {
-    if (cuda::current_device_prop().major < 6) {
-        printf("Skip CUDA.MATRIX_MUL test as current device doesn't support\n");
-        return;
-    }
     Checker<MatrixMul> checker(handle_cuda());
     using Param = MatrixMul::Param;
 
     size_t m = 12, n = 16, k = 20;
 
-    bool is_int_available = cuda::is_compute_capability_required(6, 1);
+    bool is_int_available = check_compute_capability(6, 1);
     std::vector<DType> dtype_array;
     dtype_array.push_back(dtype::Float32());
     dtype_array.push_back(dtype::Float16());

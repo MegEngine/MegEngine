@@ -96,8 +96,8 @@ TEST_F(CUDA, SHAKE_CONV_BIAS_FORWARD_QS8_NHWC) {
 }
 
 TEST_F(CUDA, SHAKE_CONV_BIAS_FORWARD_QS8_NCHWX) {
-    using Format = ConvBias::Param::Format;
     require_compute_capability(7, 5);
+    using Format = ConvBias::Param::Format;
     AccuracyShakeChecker<ConvBiasForward> checker(handle_cuda());
     UniformIntRNG int_rng{-5, 5};
     UniformFloatRNG float_rng{-50, 50};
@@ -135,6 +135,7 @@ TEST_F(CUDA, SHAKE_CONV_BIAS_FORWARD_QS8_NCHWX) {
 }
 
 TEST_F(CUDA, SHAKE_MATRIX_MUL_FORWARD) {
+    require_compute_capability(6, 1);
     AccuracyShakeChecker<MatrixMul> checker(handle_cuda());
 
     checker.set_dtype(0, dtype::Float32())
@@ -167,6 +168,7 @@ TEST_F(CUDA, SHAKE_BATCH_CONV_BIAS_QS8) {
 }
 
 TEST_F(CUDA, SHAKE_BATCHED_MATRIX_MUL) {
+    require_compute_capability(6, 1);
     AccuracyShakeChecker<BatchedMatrixMul> checker(handle_cuda());
 
     UniformIntRNG int_rng{-127, 127};
@@ -189,6 +191,7 @@ TEST_F(CUDA, SHAKE_BATCHED_MATRIX_MUL) {
 }
 
 TEST_F(CUDA, SHAKE_CONVOLUTION3D_FORWARD) {
+    require_compute_capability(6, 1);
     AccuracyShakeChecker<Convolution3DForward> checker(handle_cuda());
     NormalRNG default_rng;
     float scale = 1.0f / sqrt(5);
@@ -207,6 +210,7 @@ TEST_F(CUDA, SHAKE_CONVOLUTION3D_FORWARD) {
 }
 
 TEST_F(CUDA, SHAKE_LOCAL_SHARE) {
+    require_compute_capability(6, 1);
     AccuracyShakeChecker<LocalShare> checker(handle_cuda());
     using Param = LocalShare::Param;
     Param param;
@@ -216,6 +220,7 @@ TEST_F(CUDA, SHAKE_LOCAL_SHARE) {
 }
 
 TEST_F(CUDA, SHAKE_CONVOLUTION_BACKWARD_DATA) {
+    require_compute_capability(6, 1);
     AccuracyShakeChecker<ConvolutionBackwardData> checker(handle_cuda());
     NormalRNG default_rng;
     checker.set_dtype(0, dtype::Float32())
@@ -229,6 +234,7 @@ TEST_F(CUDA, SHAKE_CONVOLUTION_BACKWARD_DATA) {
 }
 
 TEST_F(CUDA, SHAKE_CONVOLUTION_BACKWARD_FILTER) {
+    require_compute_capability(6, 1);
     AccuracyShakeChecker<ConvolutionBackwardFilter> checker(handle_cuda());
     NormalRNG default_rng;
     checker.set_dtype(0, dtype::Float32())

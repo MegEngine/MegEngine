@@ -11,20 +11,20 @@
 #include "test/common/convolution3d.h"
 #include "megdnn/opr_param_defs.h"
 #include "megdnn/oprs.h"
-#include "src/cuda/utils.h"
 #include "test/common/benchmarker.h"
 #include "test/common/checker.h"
 #include "test/common/rng.h"
 #include "test/common/tensor.h"
 #include "test/common/workspace_wrapper.h"
 #include "test/cuda/fixture.h"
+#include "test/cuda/utils.h"
 
 namespace megdnn {
 namespace test {
 
 #if 0
 TEST_F(CUDA, CONVOLUTION3D_8X8X32) {
-    if (!cuda::is_compute_capability_required(6, 1)) {
+    if (!check_compute_capability(6, 1)) {
         printf("Skip CUDA.CONVOLUTION_8X8X32 test as current device"
                "doesn't support\n");
         return;

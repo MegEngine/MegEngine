@@ -13,7 +13,6 @@
 #include "megdnn/dtype.h"
 #include "megdnn/opr_param_defs.h"
 #include "megdnn/oprs.h"
-#include "src/cuda/utils.h"
 #include "test/common/accuracy_shake_checker.h"
 #include "test/common/checker.h"
 #include "test/common/rng.h"
@@ -21,6 +20,7 @@
 #include "test/common/workspace_wrapper.h"
 #include "test/cuda/benchmark.h"
 #include "test/cuda/fixture.h"
+#include "test/cuda/utils.h"
 
 #define V1(x) #x
 #define V(x)  V1(x)
@@ -31,11 +31,7 @@ namespace megdnn {
 namespace test {
 
 TEST_F(CUDA, CONVOLUTION_8X8X32) {
-    if (!cuda::is_compute_capability_required(6, 1)) {
-        printf("Skip CUDA.CONVOLUTION_8X8X32 test as current device"
-               "doesn't support\n");
-        return;
-    }
+    require_compute_capability(6, 1);
 
     using namespace convolution;
     std::vector<TestArg> args;
@@ -116,8 +112,7 @@ TEST_F(CUDA, CONVOLUTION_FORWARD) {
 }
 
 TEST_F(CUDA, CONV_FORWARD_MATMUL_NCHW4) {
-    if (!cuda::is_compute_capability_required(6, 1))
-        return;
+    require_compute_capability(6, 1);
     using namespace convolution;
     Checker<Convolution> checker(handle_cuda());
     UniformIntRNG int_rng{-127, 127};
@@ -205,7 +200,7 @@ TEST_F(CUDA, CONVOLUTION_BACKWARD_DATA) {
                 .set_epsilon(1e-3)
                 .set_param(arg.param)
                 .exec(TensorLayoutArray{filter, dst, src});
-        if (!cuda::is_compute_capability_required(6, 0)) {
+        if (!check_compute_capability(6, 0)) {
             src.dtype = dst.dtype = filter.dtype = dtype::Float16();
             checker.set_rng(0, &rng)
                     .set_rng(1, &rng)
@@ -315,8 +310,7 @@ TEST_F(CUDA, CONVOLUTION_BACKWARD_DATA_NHWC) {
 }
 
 TEST_F(CUDA, CONVOLUTION_BACKWARD_DATA_CUDNN) {
-    if (cuda::is_compute_capability_required(7, 0))
-        return;
+    require_compute_capability(7, 0);
     using namespace convolution;
     Checker<ConvolutionBackwardData> checker(handle_cuda());
     checker.set_before_exec_callback(
@@ -372,11 +366,7 @@ TEST_F(CUDA, CONVOLUTION_BACKWARD_DATA_MATMUL) {
 }
 
 TEST_F(CUDA, CONVOLUTION_BACKWARD_DATA_INT8_NCHW4_DP4A) {
-    if (!cuda::is_compute_capability_required(6, 1)) {
-        printf("Skip CUDA.CONVOLUTION_BACKWARD_DATA_INT8_NCHW4_DP4A test as "
-               "current device doesn't support\n");
-        return;
-    }
+    require_compute_capability(6, 1);
 
     using namespace convolution;
     std::vector<TestArg> args = get_args_int8_nchw4_conv_bwd_data();
@@ -430,12 +420,7 @@ TEST_F(CUDA, CONVOLUTION_BACKWARD_DATA_INT8_NCHW4_DP4A) {
 }
 
 TEST_F(CUDA, CONVOLUTION_BACKWARD_DATA_INT8_NCHW_DP4A) {
-    if (!cuda::is_compute_capability_required(6, 1)) {
-        printf("Skip CUDA.CONVOLUTION_BACKWARD_DATA_INT8_NCHW_DP4A test as "
-               "current device doesn't support\n");
-        return;
-    }
-
+    require_compute_capability(6, 1);
     using namespace convolution;
     std::vector<TestArg> args = get_args_int8_nchw_conv_bwd_data();
     Checker<ConvolutionBackwardData> checker(handle_cuda());
@@ -463,11 +448,7 @@ TEST_F(CUDA, CONVOLUTION_BACKWARD_DATA_INT8_NCHW_DP4A) {
 
 #if CUDA_VERSION >= 10020
 TEST_F(CUDA, CONVOLUTION_BACKWARD_DATA_INT8_NHWC_IMMA) {
-    if (!cuda::is_compute_capability_required(7, 5)) {
-        printf("Skip CUDA.CONVOLUTION_BACKWARD_DATA_INT8_NHWC_IMMA test as "
-               "current device doesn't support\n");
-        return;
-    }
+    require_compute_capability(7, 5);
 
     using namespace convolution;
     std::vector<TestArg> args = get_args_int8_nhwc_conv_bwd_data();
@@ -527,8 +508,7 @@ TEST_F(CUDA, CONVOLUTION_BACKWARD_DATA_INT8_NHWC_IMMA) {
 TEST_F(CUDA, CONVOLUTION_BACKWARD_DATA_FAILED_CUDNN7_5) {
     // BRAIN-481 failed on architectures 7.0, remove the following if statement,
     // when cudnn fixed the problem.
-    if (cuda::is_compute_capability_required(7, 0))
-        return;
+    require_compute_capability(7, 0);
     using namespace convolution;
     std::vector<TestArg> args = get_args_cudnn_7_5_failures();
     Checker<ConvolutionBackwardData> checker(handle_cuda());
@@ -662,8 +642,7 @@ TEST_F(CUDA, CONVOLUTION_BACKWARD_FILTER_MATMUL) {
 }
 
 TEST_F(CUDA, CONVOLUTION_BACKWARD_FILTER_CUDNN) {
-    if (cuda::is_compute_capability_required(7, 0))
-        return;
+    require_compute_capability(7, 0);
     using namespace convolution;
     Checker<ConvolutionBackwardFilter> checker(handle_cuda());
     checker.set_before_exec_callback(
@@ -697,8 +676,7 @@ TEST_F(CUDA, CONV_CONFIG_COMBINATIONS) {
 }
 
 TEST_F(CUDA, CONVOLUTION_BACKWARD_DATA_1) {
-    if (cuda::is_compute_capability_required(7, 0))
-        return;
+    require_compute_capability(7, 0);
     using namespace convolution;
     Checker<ConvolutionBackwardData> checker(handle_cuda());
     checker.set_before_exec_callback(AlgoChecker<ConvolutionBackwardData>(
