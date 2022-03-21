@@ -182,7 +182,6 @@ def _reset_execution_config(
     deterministic_kernel=None,
     async_level=None,
     compute_mode=None,
-    bn_format=None,
     auto_format_convert=None,
 ):
     global _benchmark_kernel, _deterministic_kernel, __compute_mode
@@ -234,11 +233,11 @@ def _override(
            def train():
     """
     orig_flags = _reset_execution_config(
-        benchmark_kernel,
-        deterministic_kernel,
-        async_level,
-        compute_mode,
-        auto_format_convert,
+        benchmark_kernel=benchmark_kernel,
+        deterministic_kernel=deterministic_kernel,
+        async_level=async_level,
+        compute_mode=compute_mode,
+        auto_format_convert=auto_format_convert,
     )
     try:
         yield

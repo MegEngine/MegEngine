@@ -3,6 +3,7 @@ import pytest
 
 import megengine as mge
 import megengine.functional as F
+import megengine.module as M
 from megengine import tensor
 from megengine.autodiff import GradManager
 from megengine.jit import trace
@@ -36,9 +37,9 @@ def _compare_nchw_nhwc(data, func, is_symbolic=None):
     x2 = tensor(data.transpose(0, 2, 3, 1), format="nhwc")
     if is_symbolic is not None:
         func = trace(func, symbolic=is_symbolic)
-    # out1 = func(x1)
+    out1 = func(x1)
     out2 = func(x2)
-    # np.testing.assert_almost_equal(out1, out2, decimal=5)
+    np.testing.assert_almost_equal(out1, out2, decimal=5)
 
 
 @pytest.mark.parametrize("is_symbolic", [None])
@@ -322,30 +323,91 @@ def test_pooling2d(pooling, is_symbolic):
     _compare_nchw_nhwc(data, func, is_symbolic)
 
 
-@pytest.mark.parametrize("is_symbolic", [None])
-def test_backward(is_symbolic):
-    data = np.arange(0, 24).reshape((1, 2, 3, 4))
-    x = tensor(data.transpose(0, 2, 3, 1), format="nhwc")
-    w = mge.tensor(np.ones((3, 1, 1, 2)), format="nhwc")
-    b = mge.tensor(np.ones((1, 1, 1, 3)), format="nhwc")
-    gm = GradManager().attach([w, b])
+def _compare_backward(inps, model, is_symbolic=None):
+    def func(*inps):
+        return model(*inps)
 
-    def func(x, w, b):
-        return F.conv2d(x, w, b)
+    if is_symbolic is not None:
+        func = trace(func, symbolic=is_symbolic)
 
+    gm = GradManager().attach(model.parameters())
     with gm:
-        if is_symbolic is not None:
-            func = trace(func, symbolic=is_symbolic)
-        x = func(x, w, b)
-        assert x.format == "nhwc"
-        # test manually convert to NHWC, usually used in detection head
-        x = x.transpose(0, 2, 3, 1).reshape(1, 18, 2)
-        gm.backward(x)
-        print("finish backward", x.format)
-        # backward grad has no format
-        np.testing.assert_equal(
-            w.grad.numpy(), np.array([66, 210, 66, 210, 66, 210]).reshape((3, 1, 1, 2)),
-        )
-        np.testing.assert_equal(
-            b.grad.numpy(), np.array([12, 12, 12]).reshape((1, 1, 1, 3))
-        )
+        rst = func(*inps)
+        gm.backward(rst)
+        expected_grads = [param.grad for param in model.parameters()]
+
+    inps = [mge.amp.convert_tensor_format(inp) for inp in inps]
+    model = mge.amp.convert_module_format(model)
+    gm = GradManager().attach(model.parameters())
+    with gm:
+        rst = func(*inps)
+        gm.backward(rst)
+        actual_grads = [param.grad for param in model.parameters()]
+
+    for expected, actual in zip(expected_grads, actual_grads):
+        # print(param.grad)
+        np.testing.assert_equal(expected.numpy(), actual.numpy())
+
+
+@pytest.mark.parametrize("is_symbolic", [None])
+def test_backward_conv2d_dimshuffle(is_symbolic):
+    class Net(M.Module):
+        def __init__(self):
+            super().__init__()
+            self.conv = M.Conv2d(2, 3, 1)
+
+        def forward(self, inp):
+            # test manually convert to NHWC, usually used in detection head
+            return F.transpose(self.conv(inp), (0, 2, 3, 1)).reshape(1, 18, 2)
+
+    inp = mge.tensor(np.arange(0, 24).reshape((1, 2, 3, 4)))
+    # x = tensor(data.transpose(0, 2, 3, 1), format="nhwc")
+    # w = mge.tensor(np.ones((3, 1, 1, 2)), format="nhwc")
+    # b = mge.tensor(np.ones((1, 1, 1, 3)), format="nhwc")
+    # grads = [
+    # np.array([66, 210, 66, 210, 66, 210]).reshape((3, 1, 1, 2)),
+    # np.array([12, 12, 12]).reshape((1, 1, 1, 3)),
+    # ]
+    _compare_backward([inp], Net(), is_symbolic)
+
+
+@pytest.mark.parametrize("is_symbolic", [None])
+def test_backward_groupconv2d_bn(is_symbolic):
+    class Net(M.Module):
+        def __init__(self):
+            super().__init__()
+            self.conv = M.Conv2d(2, 2, 1, groups=2)
+            self.bn = M.BatchNorm2d(2)
+
+        def forward(self, inp):
+            # test manually convert to NHWC, usually used in detection head
+            return self.bn(self.conv(inp))
+
+    inp = mge.tensor(np.arange(0, 24).reshape((1, 2, 3, 4)))
+    _compare_backward([inp], Net(), is_symbolic)
+    # def func(x, w, b, bn_w, bn_b):
+    # x = F.conv2d(x, w, b, groups=2)
+    # x = F.batch_norm(
+    # x,
+    # running_mean=mge.tensor(np.ones((1, 1, 1, 2)), format="nhwc"),
+    # running_var=mge.tensor(np.ones((1, 1, 1, 2)), format="nhwc"),
+    # weight=bn_w,
+    # bias=bn_b,
+    # training=True,
+    # inplace=True,
+    # )
+    # return x
+
+    # data = np.arange(0, 24).reshape((1, 2, 3, 4))
+    # x = tensor(data.transpose(0, 2, 3, 1), format="nhwc")
+    # w = tensor(np.ones((2, 1, 1, 1, 1)), format="nhwc")
+    # b = tensor(np.ones((1, 1, 1, 2)), format="nhwc")
+    # bn_w = tensor(np.ones((1, 1, 1, 2)), format="nhwc")
+    # bn_b = tensor(np.ones((1, 1, 1, 2)), format="nhwc")
+    # grads = [
+    # np.array([66, 210]).reshape((2, 1, 1, 1, 1)),
+    # np.array([12, 12]).reshape((1, 1, 1, 2)),
+    # np.array([12, 12]).reshape((1, 1, 1, 2)),
+    # np.array([12, 12]).reshape((1, 1, 1, 2)),
+    # ]
+    # _compare_backward(x, func, [w, b, bn_w, bn_b], grads, is_symbolic)

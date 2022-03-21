@@ -5,6 +5,7 @@ from typing import Iterable, Union
 from ..functional.inplace import _inplace_add_
 from ..tensor import Parameter, tensor
 from .optimizer import Optimizer
+from ..core import _config
 
 
 class SGD(Optimizer):

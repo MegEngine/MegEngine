@@ -1,6 +1,8 @@
 #include "megbrain/imperative/transformations/format.h"
+#include "megbrain/imperative/transformations/grad.h"
 
 #include "megbrain/imperative/ops/autogen.h"
+#include "megbrain/imperative/ops/utility.h"
 
 namespace mgb {
 namespace imperative {
@@ -17,7 +19,12 @@ TypedValueRef<FormattedTensorValue> FormatTransformation::to(
         const std::string& scope) const {
     std::vector<int32_t> pattern;
     if (tensor.format() == FT::NHWC && target == FT::NCHW) {
-        pattern = {0, 3, 1, 2};
+        // FIXME(czh): temporary fast path for group conv 5D weight.
+        if (tensor.value().shape().cast<ShapeValue>().ndim == 5) {
+            pattern = {0, 1, 4, 2, 3};
+        } else {
+            pattern = {0, 3, 1, 2};
+        }
     } else if (tensor.format() == FT::NCHW && target == FT::NHWC) {
         pattern = {0, 2, 3, 1};
     } else {
@@ -65,12 +72,22 @@ inline ValueRefList FormatTransformation::wrap_outputs(
 namespace {
 
 ValueShape convert_nhwc2nchw_shape(const ValueShape& shape) {
-    mgb_assert(shape.ndim == 4);
     auto out = ValueShape(shape);
-    out[3] = shape[2];
-    out[2] = shape[1];
-    out[1] = shape[3];
-    return out;
+    if (shape.ndim == 4) {
+        out[1] = shape[3];
+        out[2] = shape[1];
+        out[3] = shape[2];
+        return out;
+    } else if (shape.ndim == 5) {
+        out[2] = shape[4];
+        out[3] = shape[2];
+        out[4] = shape[3];
+        return out;
+    } else {
+        mgb_throw(
+                MegBrainError, "Unsupported shape ndim %u in GetAttr(Shape).",
+                shape.ndim);
+    }
 }
 
 using FormatRule = std::function<ValueRefList(
@@ -278,10 +295,10 @@ ValueRefList setsubtensor_rule(
 inline FT get_inputs_format(Span<ValueRef>& inputs, const FormatTransformation& t) {
     FT format(FT::DEFAULT);
     for (auto& inp : inputs) {
-        auto&& inp_ref = inp.as_ref(t.value_type());
-        if (inp_ref && inp_ref->format() != FT::DEFAULT) {
-            mgb_assert(format == FT::DEFAULT || inp_ref->format() == format);
-            format = inp_ref->format().type();
+        auto&& inp_format = inp.cast(t.value_type()).format();
+        if (inp_format != FT::DEFAULT) {
+            mgb_assert(format == FT::DEFAULT || inp_format == format);
+            format = inp_format.type();
         }
     }
     return format;
@@ -308,13 +325,6 @@ ValueRefList concat_rule(
             format);
 }
 
-ValueRefList elemwise_rule(
-        const Elemwise& op, Span<ValueRef>& inputs, const bool& auto_convert,
-        const FormatTransformation& t) {
-    FT format = get_inputs_format(inputs, t);
-    return t.wrap_outputs(imperative::apply(op, t.unwrap_inputs(inputs)), format);
-}
-
 ValueRefList identity_rule_helper(
         const OpDef& op, const Span<ValueRef>& inputs, const FormatTransformation& t) {
     // mgb_assert(inputs.size() == 1);
@@ -336,23 +346,48 @@ ValueRefList batchnorm_rule(
     return identity_rule_helper(op, inputs, t);
 }
 
+ValueRefList checknonfinite_rule(
+        const CheckNonFinite& op, Span<ValueRef>& inputs, const bool& auto_convert,
+        const FormatTransformation& t) {
+    auto&& inputs_ = t.unwrap_inputs(inputs);
+    auto&& outputs_ = imperative::apply(op, inputs_);
+    return t.wrap_outputs(outputs_);
+}
+
 // clang-format off
-#define FOREACH_IDENTITY_OP(cb) \
-    cb(Copy)                    \
-    cb(FastpathCopy)            \
-    cb(TypeCvt)                 \
-    cb(Dropout)                 \
+#define FOREACH_MULTI_INPS_NO_PARAM_OP(cb)  \
+    cb(Elemwise)                            \
+    cb(CompiledOp)                          \
+    cb(SubgraphOp)
+
+#define FOREACH_IDENTITY_OP(cb)             \
+    cb(Copy)                                \
+    cb(FastpathCopy)                        \
+    cb(TypeCvt)                             \
+    cb(Dropout)                             \
     cb(Identity)
 
-#define FOREACH_FORMAT_OP(cb)   \
-    cb(AdaptivePooling)         \
-    cb(WarpAffine)              \
+#define FOREACH_FORMAT_OP(cb)               \
+    cb(AdaptivePooling)                     \
+    cb(WarpAffine)                          \
     cb(Resize)
 
-#define FOREACH_FORMAT_POLICY_OP(cb)\
-    cb(Pooling)                     \
+#define FOREACH_FORMAT_POLICY_OP(cb)        \
+    cb(Pooling)                             \
     cb(Convolution)
 // clang-format on
+
+// multi inputs op without params
+#define CREATE_MULTI_INPS_NO_PARAM_OP_RULE(Op)                               \
+    ValueRefList Op##_rule(                                                  \
+            const Op& _op, Span<ValueRef>& inputs, const bool& auto_convert, \
+            const FormatTransformation& t) {                                 \
+        FT format = get_inputs_format(inputs, t);                            \
+        return t.wrap_outputs(                                               \
+                imperative::apply(_op, t.unwrap_inputs(inputs)), format);    \
+    }
+FOREACH_MULTI_INPS_NO_PARAM_OP(CREATE_MULTI_INPS_NO_PARAM_OP_RULE)
+#undef CREATE_MULTI_INPS_NO_PARAM_OP_RULE
 
 // identity op
 #define CREATE_IDENTITY_OP_RULE(Op)                                          \
@@ -409,8 +444,9 @@ struct FormatRuleRegistry {
         register_format_rule(setsubtensor_rule<SetSubtensor>);
         register_format_rule(setsubtensor_rule<IndexingSetMultiAxisVec>);
         register_format_rule(concat_rule);
-        register_format_rule(elemwise_rule);
         register_format_rule(batchnorm_rule);
+        register_format_rule(checknonfinite_rule);
+        FOREACH_MULTI_INPS_NO_PARAM_OP(REGISTER_OP_RULE)
         FOREACH_IDENTITY_OP(REGISTER_OP_RULE)
         FOREACH_FORMAT_OP(REGISTER_OP_RULE)
         FOREACH_FORMAT_POLICY_OP(REGISTER_OP_RULE)
@@ -455,27 +491,73 @@ ValueRefList FormatTransformation::apply_transformation(
                 return imperative::apply(op, unwrap_inputs(inputs));
         }
     } else if (op.is<GetFormat>()) {
-        bool is_formatted_tensor = inputs.item().is(m_value_type);
-        if (is_formatted_tensor) {
-            return {FormatValue::make(inputs[0].cast(m_value_type).format())};
+        auto&& inp_ref = inputs[0].as_ref(m_value_type);
+        if (inp_ref) {
+            return {FormatValue::make(inp_ref->format())};
         } else {
             mgb_log_warn(
-                    "Not FormattedTensorValue input for GetFormat op: %s",
-                    inputs[0].to_string().c_str());
+                    "Not FormattedTensorValue input for GetFormat op: %s, %s",
+                    op.to_string().c_str(), inputs[0].to_string().c_str());
             return {FormatValue::make(FT::DEFAULT)};
         }
     } else if (op.is<Operator::IdentityLike>()) {
-        bool is_formatted_tensor = inputs.item().is(m_value_type);
-        if (is_formatted_tensor) {
-            auto&& format = inputs[0].cast(m_value_type).format();
+        auto&& inp_ref = inputs[0].as_ref(m_value_type);
+        if (inp_ref) {
+            auto&& format = inp_ref->format();
             return wrap_outputs(
                     imperative::apply(op, unwrap_inputs(inputs)), format.type());
         } else {
             mgb_log_warn(
-                    "Not FormattedTensorValue input for IdentityLike op: %s",
-                    inputs[0].to_string().c_str());
+                    "Not FormattedTensorValue input for IdentityLike op: %s, %s",
+                    op.to_string().c_str(), inputs[0].to_string().c_str());
             return imperative::apply(op, inputs);
         }
+    } else if (op.is<AttachGrad>()) {
+        auto&& inp_ref = inputs[0].as_ref(m_value_type);
+        if (inp_ref) {
+            auto format = inp_ref->format();
+            GenericFunction callback =
+                    (GenericFunction&)inputs[1].cast<FunctionValue>();
+            GenericFunction new_callback =
+                    [this, callback, format](Span<ValueRef> inputs_) -> ValueRefList {
+                auto wrapped_inputs = SmallVector<ValueRef>{
+                        this->value_type().make(inputs_.item(), format.type())};
+                auto ret = callback(wrapped_inputs);
+                return ret;
+            };
+            auto&& outputs = imperative::apply(
+                    op, inp_ref->value(), FunctionValue::make(new_callback));
+            return wrap_outputs(outputs, format.type());
+        } else {
+            mgb_log_warn(
+                    "Not FormattedTensorValue input for AttachGrad op: %s, %s",
+                    op.to_string().c_str(), inputs[0].to_string().c_str());
+            return imperative::apply(op, inputs);
+        }
+    } else if (auto* set_grad = op.as<SetGrad>()) {
+        size_t nr_inputs = set_grad->nr_inputs();
+        size_t nr_outputs = inputs.size() - nr_inputs;
+        Span<ValueRef> inputs_ = {inputs.data(), nr_inputs};
+        Span<ValueRef> outputs_ = {inputs.data() + nr_inputs, nr_outputs};
+
+        // run original apply.
+        // grads needn't to unwrap and wrap, which will be unwrapped in GradTrans
+        auto&& outputs = imperative::apply(op, unwrap_inputs(inputs));
+
+        // handle output's formats
+        auto wrapped_outputs = ValueRefList(nr_outputs);
+        for (size_t i = 0; i < nr_outputs; ++i) {
+            if (auto output_ref = outputs_[i].as_ref(m_value_type)) {
+                wrapped_outputs[i] =
+                        m_value_type.make(outputs[i], output_ref->format().type());
+            } else {
+                mgb_log_warn(
+                        "Not FormattedTensorValue outputs for SetGrad op: %s, %s",
+                        op.to_string().c_str(), inputs_[i].to_string().c_str());
+                wrapped_outputs[i] = m_value_type.make(outputs[i], FT::DEFAULT);
+            }
+        }
+        return wrapped_outputs;
     } else {
         return imperative::apply(op, unwrap_inputs(inputs));
     }

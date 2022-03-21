@@ -47,7 +47,10 @@ public:
             const Operator& op, Span<ValueRef> inputs) override;
 
     ValueRef unwrap(ValueRef value) override {
-        mgb_assert(!value.is(m_value_type));
+        //mgb_assert(!value.is(m_value_type));
+        if (auto format_val = value.as_ref(m_value_type)) {
+            return format_val->value();
+        }
         return value;
     }
 

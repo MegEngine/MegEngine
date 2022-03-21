@@ -10,6 +10,7 @@ from copy import deepcopy
 from .. import functional as F
 from ..module import Module
 from ..tensor import Tensor
+from ..core import _config
 
 
 def _is_nchw_format(param: Tensor):
@@ -26,10 +27,12 @@ def convert_tensor_format(x: Tensor, inplace: bool = True):
     else:
         raise ValueError("Unsupport tensor ndim {}".format(x.ndim))
     # TODO: use initialization from tensor after fixing format setting
-    if inplace:
-        x[...] = Tensor(x.numpy().transpose(*pattern), format="nhwc")
-    else:
-        x = Tensor(x.numpy().transpose(*pattern), format="nhwc")
+    if x.format != "nhwc":
+        if inplace:
+            data = x.numpy().transpose(*pattern)
+            x[...] = Tensor(data, format="nhwc")
+        else:
+            x = Tensor(x.numpy().transpose(*pattern), format="nhwc")
     return x
 
 

@@ -377,6 +377,8 @@ public:
     SetGrad(GenericFunction grad_fn, size_t nr_inputs)
             : m_grad_fn(grad_fn), m_nr_inputs(nr_inputs) {}
 
+    std::shared_ptr<GradKey> key() const { return m_key; }
+
     GenericFunction grad_fn() const { return m_grad_fn; }
 
     size_t nr_inputs() const { return m_nr_inputs; }

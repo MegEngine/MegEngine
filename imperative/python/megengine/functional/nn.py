@@ -1226,12 +1226,16 @@ def batch_norm(
     bias = make_full_if_none(bias, 0)
 
     if not training:
-        op = builtin.BatchNorm(fwd_mode=BatchNorm.FwdMode.INFERENCE, epsilon=eps)
+        op = builtin.BatchNorm(
+            fwd_mode=BatchNorm.FwdMode.INFERENCE, param_dim="dim_1c11", epsilon=eps
+        )
         ret = apply(op, inp, weight, bias, running_mean, running_var)[-1]
         return ret
 
     else:
-        op = builtin.BatchNorm(avg_factor=1 - momentum, epsilon=eps)
+        op = builtin.BatchNorm(
+            avg_factor=1 - momentum, param_dim="dim_1c11", epsilon=eps
+        )
         if has_mean or has_var:
             running_mean = make_full_if_none(running_mean, 0)
             running_var = make_full_if_none(running_var, 1)

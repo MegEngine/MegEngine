@@ -8,6 +8,7 @@ from typing import Union
 
 import numpy as np
 
+from ..core import _config
 from ..core._imperative_rt.core2 import (
     get_auto_format_convert,
     pop_scope,
@@ -96,7 +97,7 @@ class Optimizer(metaclass=ABCMeta):
                     "optimizer can only optimize Parameters, but one of the params is "
                     + str(type(param))
                 )
-            param._reset(Tensor(param.numpy(), no_cache=True, format=param.format))
+            param._reset(Tensor(param, no_cache=True))
 
         for name, default in self._defaults.items():
             if default is required and name not in param_group:
@@ -119,10 +120,11 @@ class Optimizer(metaclass=ABCMeta):
 
     def _add_state(self, param, state_name, initializer=None):
         if initializer is None:
-            initializer = np.zeros(param.shape, dtype=np.float32)
+            with _config._override(auto_format_convert=False):
+                initializer = np.zeros(param.shape, dtype=np.float32)
         state_dict = self._state.setdefault(param, {})
         assert state_name not in state_dict
-        state = Tensor(initializer, no_cache=True)
+        state = Tensor(initializer, no_cache=True, format=param.format)
         state_dict[state_name] = state
 
     @abstractmethod

@@ -10,7 +10,7 @@ import pytest
 
 import megengine.functional as F
 import megengine.module as M
-from megengine import Parameter, Tensor, amp, tensor
+from megengine import Parameter, Tensor, amp, config
 
 
 class MyModule(M.Module):
@@ -39,6 +39,22 @@ class MyModule(M.Module):
 @pytest.mark.parametrize("is_inplace", [False, True])
 def test_convert_module(is_inplace):
     m = MyModule()
+    expected_shape = {
+        "i.bn.weight": (1, 1, 1, 4),
+        "i.bn.bias": (1, 1, 1, 4),
+        "i.bn.running_mean": (1, 1, 1, 4),
+        "i.bn.running_var": (1, 1, 1, 4),
+        "conv.weight": (2, 2, 4, 4, 2),
+        "conv.bias": (1, 1, 1, 4),
+        "bn.weight": (1, 1, 1, 4),
+        "bn.bias": (1, 1, 1, 4),
+        "bn.running_mean": (1, 1, 1, 4),
+        "bn.running_var": (1, 1, 1, 4),
+        "param": (1, 1, 1, 3),
+        "buff": (1, 1, 1, 3),
+    }
     m = amp.convert_module_format(m, is_inplace)
     for name, param in m.named_tensors():
         assert param.format == "nhwc"
+        with config._override(auto_format_convert=False):
+            assert param.shape == expected_shape[name], name

@@ -144,7 +144,9 @@ class GradScaler:
     def _check_gradients(self, grads, scale):
         if len(grads) == 0:
             return False
-        return _check_non_finite(grads, scale)
+        rst = _check_non_finite(grads, scale)
+        rst = rst.numpy()
+        return rst
 
     def update(self, new_scale: float = None):
         r"""Update the scale factor according to whether encountered overflow grad.
