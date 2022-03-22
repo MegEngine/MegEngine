@@ -886,7 +886,7 @@ def _get_prelu_op(dtype=None, device=None):
 
 
 def prelu(inp: Tensor, weight: Tensor) -> Tensor:
-    r"""Elememt-wise PReLU function.
+    r"""Element-wise PReLU function.
 
     Refer to :class:`~.PReLU` for more information.
     """
