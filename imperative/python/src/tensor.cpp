@@ -438,6 +438,7 @@ WRAP_FUNC_PY35(batched_matmul_cpp);
 WRAP_FUNC_PY35(convert_single_value_cpp);
 WRAP_FUNC_PY35(convert_inputs_cpp);
 WRAP_FUNC_PY35(astensor1d_cpp);
+WRAP_FUNC_PY35(pixel_shuffle_cpp);
 #undef WRAP_FUNC_PY35
 #define MGE_PY_INTERFACE(NAME, FUNC) \
     { #NAME, (PyCFunction)py35_##FUNC, METH_VARARGS, nullptr }
@@ -595,6 +596,7 @@ void init_tensor(py::module m) {
             MGE_PY_INTERFACE(convert_single_value_cpp, convert_single_value_cpp),
             MGE_PY_INTERFACE(convert_inputs_cpp, convert_inputs_cpp),
             MGE_PY_INTERFACE(astensor1d_cpp, astensor1d_cpp),
+            MGE_PY_INTERFACE(pixel_shuffle_cpp, pixel_shuffle_cpp),
             {nullptr, nullptr, 0, nullptr}};
     for (auto&& def : method_defs) {
         if (def.ml_meth != nullptr) {

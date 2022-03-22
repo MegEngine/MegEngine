@@ -40,4 +40,6 @@ PyObject* convert_inputs_cpp(PyObject* self, PyObject* const* args, size_t nargs
 
 PyObject* astensor1d_cpp(PyObject* self, PyObject* const* args, size_t nargs);
 
+PyObject* pixel_shuffle_cpp(PyObject* self, PyObject* const* args, size_t nargs);
+
 }  // namespace mgb::imperative::python

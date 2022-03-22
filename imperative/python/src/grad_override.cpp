@@ -349,6 +349,28 @@ std::optional<ValueRefList> removeAxis_grad_rule(
     return imperative::apply(op, inputs);
 }
 
+std::optional<ValueRefList> pixelShuffle_grad_rule(
+        const OpDef& op, Span<ValueRef> inputs, Span<bool> inputs_require_grad,
+        CustomBackward& backward) {
+    auto&& pixelShuffle = op.cast_final_safe<PixelShuffle>();
+    mgb_assert(inputs.size() == 1);
+    bool flag = inputs_require_grad[0];
+    auto&& grad_op = PixelShuffleBackward::make(pixelShuffle.factor);
+    auto maker = CustomGradMaker(backward, inputs.size());
+    maker.output_size(1).output_captured(0, false);
+    maker.backward([grad_op_ = std::move(grad_op), flag_ = flag](Span<ValueRef> grads) {
+        mgb_assert(grads.size() == 1);
+        ValueRef grad = grads[0];
+        SmallVector<ValueRef> ret(1);
+        if (grad && flag_) {
+            ret[0] = imperative::apply(*grad_op_, grad)[0];
+        }
+        return ret;
+    });
+    maker.finalize();
+    return imperative::apply(op, inputs);
+}
+
 std::optional<ValueRefList> fastpathcopy_grad_rule(
         const OpDef& op, Span<ValueRef> inputs, Span<bool> inputs_require_grad,
         CustomBackward& backward) {
@@ -382,6 +404,8 @@ struct Init {
                 RemoveAxis::typeinfo(), removeAxis_grad_rule);
         CustomBackward::register_grad_rule(
                 FastpathCopy::typeinfo(), fastpathcopy_grad_rule);
+        CustomBackward::register_grad_rule(
+                PixelShuffle::typeinfo(), pixelShuffle_grad_rule);
     }
 } _;
 

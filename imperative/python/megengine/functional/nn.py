@@ -16,6 +16,7 @@ from ..core._imperative_rt.core2 import (
     adaptive_pool2d_cpp,
     apply,
     dtype_promotion,
+    pixel_shuffle_cpp,
 )
 from ..core._imperative_rt.ops import get_global_rng_seed as _get_global_rng_seed
 from ..core.ops import builtin
@@ -1849,16 +1850,7 @@ def _get_layerPixelShuffle(device, dtype, dim_order):
     return layerPixelShuffle
 
 
-def pixel_shuffle(inp: Tensor, upscale_factor: int) -> Tensor:
-    """
-    Rearranges elements in a tensor of shape (*, C x r^2, H, W) to a tensor of
-    shape (*, C, H x r, W x r), where r is an upscale factor, where * is zero
-    or more batch dimensions.
-
-    :param inp: input tensor.
-    :param upscale_factor: upscale factor of pixel_shuffle.
-    :return: output tensor.
-    """
+def layerPixelShuffle_traceable(inp, upscale_factor):
     assert upscale_factor > 0, "upscale_factor should larger than 0"
     assert inp.ndim >= 3, "the input dimension of pixel_shuffle should be larger than 3"
     assert (
@@ -1897,6 +1889,19 @@ def pixel_shuffle(inp: Tensor, upscale_factor: int) -> Tensor:
     outvar, *_ = apply(layerPixelShuffle(), inp, shape_0, shape_1)
 
     return outvar
+
+
+def pixel_shuffle(inp: Tensor, upscale_factor: int) -> Tensor:
+    """
+    Rearranges elements in a tensor of shape `(..., C * r^2, H, W)` to a tensor of
+    shape `(..., C, H * r, W * r)`, where `r` is an upscale factor, where `...` is
+    zero or more batch dimensions.
+
+    :param inp: input tensor.
+    :param upscale_factor: upscale factor of pixel_shuffle.
+    :return: output tensor.
+    """
+    return pixel_shuffle_cpp(inp, upscale_factor, layerPixelShuffle_traceable)
 
 
 from .quantized import conv_bias_activation  # isort:skip

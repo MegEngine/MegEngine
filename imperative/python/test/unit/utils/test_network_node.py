@@ -290,6 +290,7 @@ def test_deformable_ps_roi_pooling():
     check_pygraph_dump(fwd, [inp, rois, trans], [result])
 
 
+@pytest.mark.require_ngpu(1)
 @pytest.mark.skipif(
     get_cuda_compute_capability(0) < 61,
     reason="does not support int8 when gpu compute capability less than 6.1",

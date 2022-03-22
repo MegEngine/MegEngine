@@ -435,6 +435,18 @@ def CheckNonFinite: MgbHashableOp<"CheckNonFinite", [CheckNonFiniteParam]>;
 
 def FastpathCopy: MgbHashableOp<"FastpathCopy">;
 
+def PixelShuffle: MgbHashableOp<"PixelShuffle"> {
+  let extraArguments = (ins
+    MgbI32Attr:$factor
+  );
+}
+
+def PixelShuffleBackward: MgbHashableOp<"PixelShuffleBackward"> {
+  let extraArguments = (ins
+    MgbI32Attr:$factor
+  );
+}
+
 def ExternOpr: MgbHashableOp<"ExternOpr"> {
   let extraArguments = (ins
     MgbArrayAttr<MgbArrayAttr<MgbSizeTAddr>>:$output_shapes,

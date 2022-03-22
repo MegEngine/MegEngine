@@ -1378,7 +1378,7 @@ py::object _expand_dims_cpp(py::handle inp_hdl, py::handle axis_hdl) {
     } else {
         auto&& inp_ndim = get_ndim_safe(inp_hdl);
         ndim += inp_ndim.first;
-        unknown_ndim &= ~inp_ndim.second;
+        unknown_ndim &= !inp_ndim.second;
     }
     for (size_t i = 0; i < axis.size(); ++i) {
         if (axis[i] < 0) {
@@ -1446,6 +1446,7 @@ py::object _squeeze_cpp(py::handle inp_hdl, py::handle axis_hdl) {
     py::tuple ret = py::reinterpret_steal<py::object>(py_apply(NULL, p, 2));
     return ret[0];
 }
+
 py::object _transpose_cpp(py::handle inp_hdl, py::handle args) {
     py::object obj = _expand_args(args);
     py::list lis;
@@ -1562,6 +1563,19 @@ py::object _batched_matmul_cpp(
     }
 }
 
+py::object _pixel_shuffle_cpp(py::handle inp, py::handle val, py::handle func) {
+    if (enable_fastpath(inp) && PyLong_Check(val.ptr())) {
+        std::shared_ptr<OpDef> op = PixelShuffle::make(val.cast<int32_t>());
+        py::object Op = py::cast(op);
+        PyObject* p[2] = {Op.ptr(), inp.ptr()};
+        py::tuple ret = py::reinterpret_steal<py::object>(py_apply(NULL, p, 2));
+        return ret[0];
+    } else {
+        // fallback to traceable subgraph implement
+        return func(inp, val);
+    }
+}
+
 PyObject* make_shape_tuple(PyObject* self, PyObject* const* args, size_t nargs) {
     try {
         return _make_shape_tuple(args[0]).release().ptr();
@@ -1628,6 +1642,13 @@ PyObject* reshape_cpp(PyObject* self, PyObject* const* args, size_t nargs) {
 PyObject* adaptive_pool2d_cpp(PyObject* self, PyObject* const* args, size_t nargs) {
     try {
         return _adaptive_pool2d_cpp(args[0], args[1], args[2]).release().ptr();
+    }
+    PYEXT17_TRANSLATE_EXC_RET(nullptr)
+}
+
+PyObject* pixel_shuffle_cpp(PyObject* self, PyObject* const* args, size_t nargs) {
+    try {
+        return _pixel_shuffle_cpp(args[0], args[1], args[2]).release().ptr();
     }
     PYEXT17_TRANSLATE_EXC_RET(nullptr)
 }

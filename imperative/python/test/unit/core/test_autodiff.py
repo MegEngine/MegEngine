@@ -462,3 +462,19 @@ def test_dot():
         grad(y, F.ones_like(y))
 
     np.testing.assert_equal(np.ones((2, 2), dtype=np.float32), x.grad.numpy())
+
+
+def test_pixel_shuffle():
+
+    x = np.random.rand(2, 3, 16, 3, 4).astype("float32")
+    x = mge.Tensor(x)
+    with Grad() as grad:
+        grad.wrt(x, callback=save_to(x))
+
+        def f(x):
+            p = F.pixel_shuffle(x, 2)
+            return p * p
+
+        y = f(x)
+        grad(y, F.ones_like(y))
+    np.testing.assert_equal(2 * x.numpy(), x.grad.numpy())
