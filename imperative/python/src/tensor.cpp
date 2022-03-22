@@ -430,6 +430,7 @@ WRAP_FUNC_PY35(squeeze_cpp);
 WRAP_FUNC_PY35(transpose_cpp);
 WRAP_FUNC_PY35(broadcast_cpp);
 WRAP_FUNC_PY35(reshape_cpp);
+WRAP_FUNC_PY35(adaptive_pool2d_cpp);
 WRAP_FUNC_PY35(Const);
 WRAP_FUNC_PY35(astype_cpp);
 WRAP_FUNC_PY35(convert_single_value_cpp);
@@ -584,6 +585,7 @@ void init_tensor(py::module m) {
             MGE_PY_INTERFACE(transpose_cpp, transpose_cpp),
             MGE_PY_INTERFACE(broadcast_cpp, broadcast_cpp),
             MGE_PY_INTERFACE(reshape_cpp, reshape_cpp),
+            MGE_PY_INTERFACE(adaptive_pool2d_cpp, adaptive_pool2d_cpp),
             MGE_PY_INTERFACE(Const, Const),
             MGE_PY_INTERFACE(astype_cpp, astype_cpp),
             MGE_PY_INTERFACE(convert_single_value_cpp, convert_single_value_cpp),
@@ -991,8 +993,10 @@ void init_tensor(py::module m) {
 
     m.def("is_tracing_module", [=] { return get_module_trace()->enabled(); });
 
-    m.def("set_module_trace_hook",
-          [](py::function function) { module_trace_hook = function; });
+    m.def("set_module_trace_hook", [](py::function function) {
+        module_trace_hook = function;
+        module_trace_hook.inc_ref();
+    });
 
     m.def("begin_record_values", [] { Value::begin_record_values(); });
 

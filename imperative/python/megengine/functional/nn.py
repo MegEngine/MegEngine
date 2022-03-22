@@ -11,7 +11,12 @@ from functools import lru_cache
 from typing import NamedTuple, Optional, Sequence, Tuple, Union
 
 from ..core import _config
-from ..core._imperative_rt.core2 import Const, apply, dtype_promotion
+from ..core._imperative_rt.core2 import (
+    Const,
+    adaptive_pool2d_cpp,
+    apply,
+    dtype_promotion,
+)
 from ..core._imperative_rt.ops import SubgraphBuilder as _SubgraphBuilder
 from ..core._imperative_rt.ops import get_global_rng_seed as _get_global_rng_seed
 from ..core.ops import builtin
@@ -691,19 +696,12 @@ def adaptive_max_pool2d(
 
     Args:
         inp: input tensor.
-        oshp: OH, OW)` size of the output shape.
+        oshp: `(OH, OW)` size of the output shape.
 
     Returns:
         output tensor.
     """
-    if isinstance(oshp, int):
-        oshp = (oshp, oshp)
-    conv_format = _config._get_actual_op_param("NCHW", _config.__conv_format)
-
-    op = builtin.AdaptivePooling(mode="max", format=conv_format,)
-    oshp = astensor1d(oshp, inp, dtype="int32", device=inp.device)
-    (output,) = apply(op, inp, oshp)
-    return output
+    return adaptive_pool2d_cpp(inp, oshp, "MAX")
 
 
 def adaptive_avg_pool2d(
@@ -715,18 +713,12 @@ def adaptive_avg_pool2d(
 
     Args:
         inp: input tensor.
-        oshp: OH, OW)` size of the output shape.
+        oshp: `(OH, OW)` size of the output shape.
 
     Returns:
         output tensor.
     """
-    if isinstance(oshp, int):
-        oshp = (oshp, oshp)
-
-    op = builtin.AdaptivePooling(mode="average", format="NCHW",)
-    oshp = astensor1d(oshp, inp, dtype="int32", device=inp.device)
-    (output,) = apply(op, inp, oshp)
-    return output
+    return adaptive_pool2d_cpp(inp, oshp, "AVERAGE")
 
 
 def deformable_psroi_pooling(

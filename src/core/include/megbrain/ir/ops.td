@@ -69,7 +69,11 @@ def GroupLocal: MgbHashableOp<"GroupLocal", [ConvolutionParam]>;
 
 def Pooling: MgbHashableOp<"Pooling", [PoolingParam, ExecutionPolicyParamBase<"policy">]>;
 
-def AdaptivePooling : MgbHashableOp<"AdaptivePooling", [AdaptivePoolingParam]>;
+def AdaptivePooling : MgbHashableOp<"AdaptivePooling", [AdaptivePoolingParam]> {
+  let extraArguments = (ins
+    MgbArrayAttr<MgbI32Attr>:$shape
+  );
+}
 
 def ROIPooling: MgbHashableOp<"ROIPooling", [ROIPoolingParam]>;
 

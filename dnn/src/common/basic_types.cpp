@@ -191,7 +191,7 @@ bool TensorShape::is_empty() const {
             return true;
         }
     }
-    return false;
+    return ndim == 0;
 }
 
 /* ===================== TensorLayout =====================  */

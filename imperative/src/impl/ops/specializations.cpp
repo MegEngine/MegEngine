@@ -294,20 +294,6 @@ OP_TRAIT_REG(TopK, TopK).apply_on_var_node(apply_on_var_node).fallback();
 }  // namespace
 
 namespace {
-namespace adaptive_pooling {
-auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
-    auto&& pool = static_cast<const AdaptivePooling&>(def);
-    OperatorNodeConfig config{pool.make_name()};
-    return opr::AdaptivePooling::make(inputs[0], inputs[1], pool.param(), config);
-}
-
-OP_TRAIT_REG(AdaptivePooling, AdaptivePooling)
-        .apply_on_var_node(apply_on_var_node)
-        .fallback();
-}  // namespace adaptive_pooling
-}  // namespace
-
-namespace {
 namespace batch_conv_bias {
 auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
     auto&& conv = static_cast<const BatchConvBias&>(def);

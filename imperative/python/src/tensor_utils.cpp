@@ -948,6 +948,7 @@ std::tuple<std::vector<int32_t>, bool> tuple2vector(py::object shape) {
     py::tuple tup = py::reinterpret_borrow<py::tuple>(shape);
     for (size_t i = 0; i < tup.size(); ++i) {
         if (!PyLong_Check(tup[i].ptr())) {
+            shp.clear();
             return {shp, false};
         } else {
             shp.push_back(tup[i].cast<int32_t>());
@@ -1098,6 +1099,52 @@ py::object _reshape_cpp(py::handle inp_hdl, py::handle args) {
                 shape_hdl, py::cast((mgb::DType)dtype::Int32()),
                 getattr(inp_hdl, "device"), inp_hdl);
         p.resize(3);
+        p[2] = shape_tensor.ptr();
+    }
+    py::object Op = py::cast(op);
+    p[0] = Op.ptr();
+    p[1] = inp_hdl.ptr();
+    py::tuple ret =
+            py::reinterpret_steal<py::object>(py_apply(NULL, p.data(), p.size()));
+    return ret[0];
+}
+
+py::object _adaptive_pool2d_cpp(
+        py::handle inp_hdl, py::handle shape_val_hdl, py::handle pool_mode_hdl) {
+    py::object shape_hdl = py::reinterpret_borrow<py::object>(shape_val_hdl);
+    py::list shps(0);
+    if (!PyTuple_Check(shape_val_hdl.ptr())) {
+        shps.append(PyLong_AsLong(shape_val_hdl.ptr()));
+        shps.append(PyLong_AsLong(shape_val_hdl.ptr()));
+
+        shape_hdl = py::reinterpret_borrow<py::object>(shps);
+    }
+    py::object shape_tuple;
+    try {
+        shape_tuple = _make_shape_tuple(shape_hdl);
+    } catch (py::error_already_set& err) {
+        shape_tuple = py::reinterpret_borrow<py::object>(shape_hdl);
+    }
+    auto mode_string = pool_mode_hdl.cast<std::string>();
+    ::megdnn::param::AdaptivePooling::Mode pool_mode =
+            ::megdnn::param::AdaptivePooling::Mode::MAX;
+    if (mode_string.compare(std::string("AVERAGE")) == 0) {
+        pool_mode = ::megdnn::param::AdaptivePooling::Mode::AVERAGE;
+    }
+    auto [shape, fastpath] = tuple2vector(shape_tuple);
+    fastpath &= enable_fastpath(inp_hdl);
+    std::shared_ptr<OpDef> op;
+    std::vector<PyObject*> p;
+    py::object shape_tensor;
+    op = AdaptivePooling::make(
+            pool_mode, ::megdnn::param::AdaptivePooling::Format::NCHW, shape);
+    if (fastpath) {
+        p.resize(2);
+    } else {
+        p.resize(3);
+        shape_tensor = _astensor1d_cpp(
+                shape_hdl, py::cast((mgb::DType)dtype::Int32()),
+                getattr(inp_hdl, "device"), inp_hdl);
         p[2] = shape_tensor.ptr();
     }
     py::object Op = py::cast(op);
@@ -1502,6 +1549,13 @@ PyObject* broadcast_cpp(PyObject* self, PyObject* const* args, size_t nargs) {
 PyObject* reshape_cpp(PyObject* self, PyObject* const* args, size_t nargs) {
     try {
         return _reshape_cpp(args[0], args[1]).release().ptr();
+    }
+    PYEXT17_TRANSLATE_EXC_RET(nullptr)
+}
+
+PyObject* adaptive_pool2d_cpp(PyObject* self, PyObject* const* args, size_t nargs) {
+    try {
+        return _adaptive_pool2d_cpp(args[0], args[1], args[2]).release().ptr();
     }
     PYEXT17_TRANSLATE_EXC_RET(nullptr)
 }
