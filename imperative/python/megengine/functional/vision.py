@@ -300,13 +300,17 @@ def remap(
 
     Args:
         inp: input image
-        map_xy: batch, oh, ow, 2) transformation matrix
-        border_mode: pixel extrapolation method.
-            Default: "replicate". Currently also support "constant", "reflect",
-            "reflect_101", "wrap".
+        map_xy: transformation matrix, its shape represents [batch_size, H, W, 2]. map_xy's H and W are the same as output's H and W. 
+            For each output location output[n, h, w], the vector map_xy[n, h, w] specifies input pixel location x and y, which are 
+            used to interpolate the output value output[n, h, w]. In the case of 2D inputs, map_xy[n, h, w] specifies the x, y pixel 
+            locations for interpolating output[n, h, w], map_xy specifies the sampling pixel locations normalized by the inp spatial 
+            dimensions. Therefore, it should have most values in the range of [0, h - 1) and [0, w - 1).
+        border_mode: pixel extrapolation method. Default: "replicate". Currently also support "constant", "reflect", "reflect_101", "wrap".
+            "replicate": repeatedly fills the edge pixel values of the duplicate image, expanding the new boundary pixel values with 
+            the edge pixel values.
+            "constant": fills the edges of the image with a fixed numeric value.
         scalar: value used in case of a constant border. Default: 0
-        interp_mode: interpolation methods.
-            Default: "linear". Currently also support "nearest" mode.
+        interp_mode: interpolation methods. Default: "linear". Currently also support "nearest" mode.
 
     Returns:
         output tensor.
