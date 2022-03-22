@@ -17,7 +17,6 @@ from ..core._imperative_rt.core2 import (
     apply,
     dtype_promotion,
 )
-from ..core._imperative_rt.ops import SubgraphBuilder as _SubgraphBuilder
 from ..core._imperative_rt.ops import get_global_rng_seed as _get_global_rng_seed
 from ..core.ops import builtin
 from ..core.ops.builtin import (
@@ -177,16 +176,6 @@ def conv1d(
     assert compute_mode.lower() == "default" or compute_mode.name == "DEFAULT"
     assert inp.ndim == 3, "the input dimension of conv1d should be 3"
     assert weight.ndim == 3, "the weight dimension of conv1d should be 3"
-    if amp._enabled:
-        compute_mode = "float32"
-        inp, weight, bias = cast_tensors(inp, weight, bias)
-    else:
-        dtype = dtype_promotion(inp, weight)
-        if inp.dtype != dtype:
-            inp = inp.astype(dtype)
-        if weight.dtype != dtype:
-            weight = weight.astype(dtype)
-
     if bias is not None:
         assert bias.ndim == 3, "the bias dimension of conv1d should be 3"
 
@@ -521,12 +510,6 @@ def local_conv2d(
     stride_h, stride_w = expand_hw(stride)
     pad_h, pad_w = expand_hw(padding)
     dilate_h, dilate_w = expand_hw(dilation)
-
-    dtype = dtype_promotion(inp, weight)
-    if inp.dtype != dtype:
-        inp = inp.astype(dtype)
-    if weight.dtype != dtype:
-        weight = weight.astype(dtype)
 
     # local conv only support "dense" mode, but weight could contain group dimension.
     op = builtin.GroupLocal(

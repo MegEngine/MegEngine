@@ -30,6 +30,10 @@ PyObject* Const(PyObject* self, PyObject* const* args, size_t nargs);
 
 PyObject* astype_cpp(PyObject* self, PyObject* const* args, size_t nargs);
 
+PyObject* matmul_cpp(PyObject* self, PyObject* const* args, size_t nargs);
+
+PyObject* batched_matmul_cpp(PyObject* self, PyObject* const* args, size_t nargs);
+
 PyObject* convert_single_value_cpp(PyObject* self, PyObject* const* args, size_t nargs);
 
 PyObject* convert_inputs_cpp(PyObject* self, PyObject* const* args, size_t nargs);

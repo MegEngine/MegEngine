@@ -10,7 +10,7 @@ import collections
 import math
 from typing import Iterable, Optional, Sequence, Tuple, Union
 
-from ..core._imperative_rt.core2 import Const, apply, dtype_promotion
+from ..core._imperative_rt.core2 import Const, apply
 from ..core._imperative_rt.ops import SubgraphBuilder as _SubgraphBuilder
 from ..core.ops import builtin
 from ..core.tensor.array_method import _matmul

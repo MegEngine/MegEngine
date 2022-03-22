@@ -20,9 +20,10 @@ from .._imperative_rt.core2 import (
     Tensor,
     apply,
     astype_cpp,
+    batched_matmul_cpp,
     broadcast_cpp,
-    dtype_promotion,
     getitem_cpp,
+    matmul_cpp,
 )
 from .._imperative_rt.core2 import reduce_to_scalar as _reduce_to_scalar
 from .._imperative_rt.core2 import reshape_cpp, setitem_cpp, squeeze_cpp, transpose_cpp
@@ -266,6 +267,42 @@ class _Hashable:
         return self.value == o.value
 
 
+def symbolicMatrixMul(
+    inp1, inp2, dim1, dim2, transpose_a, transpose_b, compute_mode, format, strategy
+):
+    extentedMatrixMulOp = _get_extentedMatrixMulOp(
+        inp1.device,
+        inp1.dtype,
+        dim1,
+        dim2,
+        transpose_a,
+        transpose_b,
+        compute_mode,
+        format,
+        strategy=_Hashable(strategy),
+    )
+    (result,) = apply(extentedMatrixMulOp(), inp1, inp2)
+    return result
+
+
+def symbolicBatchedMatrixMul(
+    inp1, inp2, dim1, dim2, transpose_a, transpose_b, compute_mode, format, strategy
+):
+    extentedBatchedMatrixMulOp = _get_extentedBatchedMatrixMulOp(
+        inp1.device,
+        inp1.dtype,
+        dim1,
+        dim2,
+        transpose_a,
+        transpose_b,
+        compute_mode,
+        format,
+        strategy=_Hashable(strategy),
+    )
+    (result,) = apply(extentedBatchedMatrixMulOp(), inp1, inp2)
+    return result
+
+
 def _matmul(
     inp1,
     inp2,
@@ -274,16 +311,6 @@ def _matmul(
     compute_mode="default",
     format="default",
 ):
-    if amp._enabled:
-        compute_mode = "float32"
-        inp1, inp2 = cast_tensors(inp1, inp2)
-    else:
-        dtype = dtype_promotion(inp1, inp2)
-        if inp1.dtype != dtype:
-            inp1 = inp1.astype(dtype)
-        if inp2.dtype != dtype:
-            inp2 = inp2.astype(dtype)
-
     dim1, dim2 = inp1.ndim, inp2.ndim
     assert dim1 > 0 and dim2 > 0
     maxdim = dim1 if dim1 > dim2 else dim2
@@ -301,34 +328,46 @@ def _matmul(
     if dim1 == 1 and dim2 == 1:  # dispatch to Dot
         (result,) = apply(builtin.Dot(), inp1, inp2)
         return result
-    elif maxdim <= 2 or dim2 <= 2:  # dispath to MatrixMul
-        extentedMatrixMulOp = _get_extentedMatrixMulOp(
-            inp1.device,
-            inp1.dtype,
+    elif maxdim <= 2 or (dim2 <= 2 and not transpose_a):  # dispath to MatrixMul
+        # 2x1
+        # 1x2
+        # 2x2
+        # nx1(transpose_a=False), n>=3
+        # nx2(transpose_a=False), n>=3
+        return matmul_cpp(
+            inp1,
+            inp2,
             dim1,
             dim2,
             transpose_a,
             transpose_b,
             compute_mode,
             format,
-            strategy=_Hashable(strategy),
+            _config._benchmark_kernel,
+            _config._deterministic_kernel,
+            strategy,
+            symbolicMatrixMul,
         )
-        (result,) = apply(extentedMatrixMulOp(), inp1, inp2)
-        return result
     else:  # dispath to BatchedMatrixMul
-        extentedBatchedMatrixMulOp = _get_extentedBatchedMatrixMulOp(
-            inp1.device,
-            inp1.dtype,
+        # nx1(transpose_a=True), n>=3
+        # nx2(transpose_a=True), n>=3
+        # nxm,n>=3,m>=3
+        # 1xm,m>=3
+        # 2xm,m>=3
+        return batched_matmul_cpp(
+            inp1,
+            inp2,
             dim1,
             dim2,
             transpose_a,
             transpose_b,
             compute_mode,
             format,
-            strategy=_Hashable(strategy),
+            _config._benchmark_kernel,
+            _config._deterministic_kernel,
+            strategy,
+            symbolicBatchedMatrixMul,
         )
-        (result,) = apply(extentedBatchedMatrixMulOp(), inp1, inp2)
-        return result
 
 
 def _unary_elwise(mode):

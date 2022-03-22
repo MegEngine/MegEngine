@@ -123,7 +123,6 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
         inputs[0]->dev_tensor().reset(inputs[0]->dev_tensor().storage(), src);
 
         auto mode = op_def.param().mode;
-        DnnOprCaller<megdnn::Fill> fill_op(comp_node);
 
         if (!keepdim && src.ndim > 1) {
             layout.remove_axis_inplace(axis);
@@ -135,12 +134,12 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
         switch (mode) {
             case Reduce::Mode::SUM:
                 if (!out.empty()) {
-                    fill_op.op->param() = 0;
-                    fill_op.op->exec(out.as_megdnn(), {});
+                    dev_tensor_memset(out, 0);
                 }
                 break;
             case Reduce::Mode::PRODUCT:
                 if (!out.empty()) {
+                    DnnOprCaller<megdnn::Fill> fill_op(comp_node);
                     fill_op.op->param() = 1;
                     fill_op.op->exec(out.as_megdnn(), {});
                 }

@@ -433,6 +433,8 @@ WRAP_FUNC_PY35(reshape_cpp);
 WRAP_FUNC_PY35(adaptive_pool2d_cpp);
 WRAP_FUNC_PY35(Const);
 WRAP_FUNC_PY35(astype_cpp);
+WRAP_FUNC_PY35(matmul_cpp);
+WRAP_FUNC_PY35(batched_matmul_cpp);
 WRAP_FUNC_PY35(convert_single_value_cpp);
 WRAP_FUNC_PY35(convert_inputs_cpp);
 WRAP_FUNC_PY35(astensor1d_cpp);
@@ -588,6 +590,8 @@ void init_tensor(py::module m) {
             MGE_PY_INTERFACE(adaptive_pool2d_cpp, adaptive_pool2d_cpp),
             MGE_PY_INTERFACE(Const, Const),
             MGE_PY_INTERFACE(astype_cpp, astype_cpp),
+            MGE_PY_INTERFACE(matmul_cpp, matmul_cpp),
+            MGE_PY_INTERFACE(batched_matmul_cpp, batched_matmul_cpp),
             MGE_PY_INTERFACE(convert_single_value_cpp, convert_single_value_cpp),
             MGE_PY_INTERFACE(convert_inputs_cpp, convert_inputs_cpp),
             MGE_PY_INTERFACE(astensor1d_cpp, astensor1d_cpp),

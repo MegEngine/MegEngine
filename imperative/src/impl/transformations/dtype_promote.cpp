@@ -183,6 +183,57 @@ ValueRefList convolution_rule(const OpDef& op, Span<ValueRef> inputs) {
     return imperative::apply(op, converted);
 }
 
+ValueRefList matmul_rule(const OpDef& op, Span<ValueRef> inputs) {
+    auto&& conv_op = const_cast<MatrixMul&>(op.cast_final_safe<MatrixMul>());
+    SmallVector<DType> dtypes = get_value_dtypes(inputs);
+    mgb::DType target_dtype;
+
+    if (DTypePromoteCfg::amp_dtype_autocast_enabled) {
+        conv_op.compute_mode = MatrixMul::ComputeMode::FLOAT32;
+        target_dtype = DTypePromoteCfg::amp_low_prec_dtype;
+    } else {
+        target_dtype = get_promoted_dtype(dtypes);
+    }
+
+    ValueRefList converted(inputs.size());
+    for (size_t i = 0; i < inputs.size(); ++i) {
+        if (dtypes[i] != target_dtype) {
+            converted[i] = imperative::apply(
+                    ApplyOp(*TypeCvt::make(target_dtype)), inputs[i])[0];
+        } else {
+            converted[i] = inputs[i];
+        }
+    }
+
+    return imperative::apply(op, converted);
+}
+
+ValueRefList batch_matmul_rule(const OpDef& op, Span<ValueRef> inputs) {
+    auto&& conv_op =
+            const_cast<BatchedMatrixMul&>(op.cast_final_safe<BatchedMatrixMul>());
+    SmallVector<DType> dtypes = get_value_dtypes(inputs);
+    mgb::DType target_dtype;
+
+    if (DTypePromoteCfg::amp_dtype_autocast_enabled) {
+        conv_op.compute_mode = BatchedMatrixMul::ComputeMode::FLOAT32;
+        target_dtype = DTypePromoteCfg::amp_low_prec_dtype;
+    } else {
+        target_dtype = get_promoted_dtype(dtypes);
+    }
+
+    ValueRefList converted(inputs.size());
+    for (size_t i = 0; i < inputs.size(); ++i) {
+        if (dtypes[i] != target_dtype) {
+            converted[i] = imperative::apply(
+                    ApplyOp(*TypeCvt::make(target_dtype)), inputs[i])[0];
+        } else {
+            converted[i] = inputs[i];
+        }
+    }
+
+    return imperative::apply(op, converted);
+}
+
 // differ from Convolution, ConvolutionBackwardData is used in both
 // functional.conv_transpose2d and quantize.conv_transpose2d
 ValueRefList convolution_backward_rule(const OpDef& op, Span<ValueRef> inputs) {
@@ -259,8 +310,11 @@ struct DTypePromoteRuleRegistry {
     DTypePromoteRuleRegistry() {
         register_dtype_promote_rule<Elemwise>(elemwise_rule);
         register_dtype_promote_rule<Concat>(naive_promote_rule);
+        register_dtype_promote_rule<GroupLocal>(naive_promote_rule);
         register_dtype_promote_rule<Reduce>(reduce_rule);
         register_dtype_promote_rule<Convolution>(convolution_rule);
+        register_dtype_promote_rule<MatrixMul>(matmul_rule);
+        register_dtype_promote_rule<BatchedMatrixMul>(batch_matmul_rule);
         register_dtype_promote_rule<ConvolutionBackwardData>(convolution_backward_rule);
         register_dtype_promote_rule<BatchNorm>(batch_norm_rule);
         register_dtype_promote_rule<Convolution3D>(naive_promote_rule);

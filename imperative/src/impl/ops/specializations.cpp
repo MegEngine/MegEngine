@@ -320,34 +320,6 @@ OP_TRAIT_REG(BatchConvBias, BatchConvBias)
 }  // namespace
 
 namespace {
-namespace matrix_mul {
-auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
-    auto&& matmul = static_cast<const MatrixMul&>(def);
-    mgb_assert(inputs.size() == 2);
-    OperatorNodeConfig config{matmul.make_name()};
-    return opr::MatrixMul::make(
-            inputs[0], inputs[1], matmul.param(), matmul.policy(), config);
-}
-OP_TRAIT_REG(MatrixMul, MatrixMul).apply_on_var_node(apply_on_var_node).fallback();
-}  // namespace matrix_mul
-}  // namespace
-
-namespace {
-namespace batched_matrix_mul {
-auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
-    auto&& matmul = static_cast<const BatchedMatrixMul&>(def);
-    mgb_assert(inputs.size() == 2);
-    OperatorNodeConfig config{matmul.make_name()};
-    return opr::BatchedMatrixMul::make(
-            inputs[0], inputs[1], matmul.param(), matmul.policy(), config);
-}
-OP_TRAIT_REG(BatchedMatrixMul, BatchedMatrixMul)
-        .apply_on_var_node(apply_on_var_node)
-        .fallback();
-}  // namespace batched_matrix_mul
-}  // namespace
-
-namespace {
 namespace argsort {
 auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
     auto&& argsort = static_cast<const Argsort&>(def);
