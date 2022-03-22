@@ -12,6 +12,7 @@
 #include "megbrain/comp_node.h"
 #include "megbrain/comp_node_env.h"
 #include "megbrain/imperative/physical_tensor.h"
+#include "megbrain/rdnn/management.h"
 
 using namespace megdnn;
 
@@ -28,13 +29,12 @@ struct DnnOprCaller {
     CompNode cn;
     DeviceTensorND dev_tensor;
     Workspace workspace;
-    std::unique_ptr<Opr> op;
+    mgb::opr::intl::UniqPtrWithCN<Opr> op;
 
-    DnnOprCaller(CompNode cn) : cn(cn), op(create_operator(cn)) {}
+    DnnOprCaller(CompNode cn) : cn(cn), op(std::move(create_operator(cn))) {}
 
-    static std::unique_ptr<Opr> create_operator(CompNode cn) {
-        auto&& handle = MegDNNHandle::get(CompNodeEnv::from_comp_node(cn)).handle();
-        return handle->create_operator<Opr>();
+    static mgb::opr::intl::UniqPtrWithCN<Opr> create_operator(CompNode cn) {
+        return mgb::opr::intl::create_megdnn_opr<Opr>(cn);
     }
 
     megdnn::Workspace create_workspace(TensorLayout layout) {

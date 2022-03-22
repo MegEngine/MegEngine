@@ -123,8 +123,6 @@ TensorLayout do_shape_infer(
 
 std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
         const OpDef& def, const SmallVector<LogicalTensorDesc>& inputs) {
-    auto&& conv = static_cast<const Convolution&>(def);
-
     using Param = ::megdnn::param::Convolution;
 
     SmallVector<LogicalTensorDesc> dests(1);
@@ -167,34 +165,33 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
         inp_shapes[i] = inputs[i]->layout();
     }
     oup_shapes[0] = out_layout;
-    auto&& dnn_opr = opr::intl::create_megdnn_opr<megdnn::ConvBiasForward>(cn);
-    dnn_opr->param().pad_h = conv.pad_h;
-    dnn_opr->param().pad_w = conv.pad_w;
-    dnn_opr->param().stride_h = conv.stride_h;
-    dnn_opr->param().stride_w = conv.stride_w;
-    dnn_opr->param().dilate_h = conv.dilate_h;
-    dnn_opr->param().dilate_w = conv.dilate_w;
-    dnn_opr->param().sparse = conv.sparse;
-    dnn_opr->param().compute_mode = conv.compute_mode;
-    dnn_opr->param().format = conv.format;
+    DnnOprCaller<megdnn::ConvBiasForward> dnn_opr(cn);
+    dnn_opr.op->param().pad_h = conv.pad_h;
+    dnn_opr.op->param().pad_w = conv.pad_w;
+    dnn_opr.op->param().stride_h = conv.stride_h;
+    dnn_opr.op->param().stride_w = conv.stride_w;
+    dnn_opr.op->param().dilate_h = conv.dilate_h;
+    dnn_opr.op->param().dilate_w = conv.dilate_w;
+    dnn_opr.op->param().sparse = conv.sparse;
+    dnn_opr.op->param().compute_mode = conv.compute_mode;
+    dnn_opr.op->param().format = conv.format;
 
     // shape infer
     TensorLayout shp({0}, inputs[0]->dtype());
     shp.ndim = 0;
 
     size_t sz = setup_algo<megdnn::ConvBiasForward>(
-            {inp_shapes[0], inp_shapes[1], shp, shp, oup_shapes[0]}, dnn_opr.get(), 0,
-            false, false, cn, conv.policy(), false);
+            {inp_shapes[0], inp_shapes[1], shp, shp, oup_shapes[0]}, dnn_opr.op.get(),
+            0, false, false, cn, conv.policy(), false);
 
     // alloc memory
     DeviceTensorND bias = BlobManager::inst()->alloc_workspace_with_defrag(cn, shp);
 
-    auto wk = Blob::make(cn, sz);
-    auto ptr = wk->storage().get();
-    megdnn::Workspace dnn_wk(ptr, sz);
+    TensorLayout w_layout({sz}, dtype::Byte());
+    auto dnn_wk = dnn_opr.create_workspace(w_layout);
 
     // exeucte
-    dnn_opr->exec(
+    dnn_opr.op->exec(
             inp_tensornds[0], inp_tensornds[1], bias.as_megdnn(), bias.as_megdnn(),
             out.as_megdnn(), nullptr, dnn_wk);
     return {Tensor::make(out)};
@@ -359,7 +356,6 @@ TensorLayout do_shape_infer(
 
 std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
         const OpDef& def, const SmallVector<LogicalTensorDesc>& inputs) {
-    auto&& conv = static_cast<const Convolution3D&>(def);
     using Param = ::megdnn::param::Convolution3D;
 
     SmallVector<LogicalTensorDesc> dests(1);
@@ -398,24 +394,23 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
         inp_shapes[i] = inputs[i]->layout();
     }
     oup_shapes[0] = out_layout;
-    auto&& dnn_opr = opr::intl::create_megdnn_opr<megdnn::Convolution3D>(cn);
-    dnn_opr->param() = conv.param();
+    DnnOprCaller<megdnn::Convolution3D> dnn_opr(cn);
+    dnn_opr.op->param() = conv.param();
 
     // shape infer
     size_t sz = setup_algo<megdnn::Convolution3D>(
-            {inp_shapes[0], inp_shapes[1], oup_shapes[0]}, dnn_opr.get(), 0, false,
+            {inp_shapes[0], inp_shapes[1], oup_shapes[0]}, dnn_opr.op.get(), 0, false,
             false, cn, conv.policy(), false);
 
     // alloc memory
     DeviceTensorND out =
             BlobManager::inst()->alloc_workspace_with_defrag(cn, out_layout);
 
-    auto wk = Blob::make(cn, sz);
-    auto ptr = wk->storage().get();
-    megdnn::Workspace dnn_wk(ptr, sz);
+    TensorLayout w_layout({sz}, dtype::Byte());
+    auto dnn_wk = dnn_opr.create_workspace(w_layout);
 
     // exeucte
-    dnn_opr->exec(inp_tensornds[0], inp_tensornds[1], out.as_megdnn(), dnn_wk);
+    dnn_opr.op->exec(inp_tensornds[0], inp_tensornds[1], out.as_megdnn(), dnn_wk);
     return {Tensor::make(out)};
 }
 

@@ -106,9 +106,8 @@ void apply_on_device_tensornd(
     mgb_assert(
             inputs.size() == trait.arity, "%s expects %u inputs; got %zu actually",
             trait.name, trait.arity, inputs.size());
-    auto&& dnn_opr =
-            opr::intl::create_megdnn_opr<megdnn::Elemwise>(inputs[0].comp_node());
-    opr::Elemwise::perform(op_def.mode, (*outputs)[0], inputs, dnn_opr);
+    DnnOprCaller<megdnn::Elemwise> dnn_opr(inputs[0].comp_node());
+    opr::Elemwise::perform(op_def.mode, (*outputs)[0], inputs, dnn_opr.op);
 }
 
 SmallVector<TensorPtr> apply_on_physical_tensor(
@@ -139,16 +138,16 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
     if (is_empty) {
         return {Tensor::make(out)};
     }
-    auto&& dnn_opr = opr::intl::create_megdnn_opr<megdnn::Elemwise>(comp_node);
+    DnnOprCaller<megdnn::Elemwise> dnn_opr(comp_node);
 
-    dnn_opr->param() = op_def.param();
-    if (dnn_opr->param().mode == Mode::FUSE_MUL_ADD3 ||
-        dnn_opr->param().mode == Mode::FUSE_MUL_ADD4 ||
+    dnn_opr.op->param() = op_def.param();
+    if (dnn_opr.op->param().mode == Mode::FUSE_MUL_ADD3 ||
+        dnn_opr.op->param().mode == Mode::FUSE_MUL_ADD4 ||
         (inp_tensornds.size() &&
          inp_tensornds[0].layout.dtype.category() == DTypeCategory::QUANTIZED)) {
-        opr::Elemwise::perform_dnn(comp_node, out, inp_tensornds, dnn_opr);
+        opr::Elemwise::perform_dnn(comp_node, out, inp_tensornds, dnn_opr.op);
     } else {
-        dnn_opr->exec(inp_tensornds, out.as_megdnn());
+        dnn_opr.op->exec(inp_tensornds, out.as_megdnn());
     }
 
     return {Tensor::make(out)};

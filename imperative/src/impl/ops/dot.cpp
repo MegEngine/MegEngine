@@ -29,7 +29,7 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
     using TensorND = megdnn::TensorND;
     SmallVector<TensorND> inp_tensornds;
     inp_tensornds.reserve(inputs.size());
-    auto&& dnn_opr = opr::intl::create_megdnn_opr<megdnn::Dot>(comp_node);
+    DnnOprCaller<megdnn::Dot> dnn_opr(comp_node);
     for (unsigned i = 0; i < inputs.size(); ++i) {
         auto dnn_ten = inputs[i]->dnn_tensor();
         inp_tensornds.push_back(dnn_ten);
@@ -37,28 +37,27 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
     TensorLayout oup_layout{inputs[0]->dtype()};
     auto inp1_tensor = inputs[0]->dnn_tensor();
     auto inp2_tensor = inputs[1]->dnn_tensor();
-    dnn_opr->deduce_layout(inp1_tensor.layout, inp2_tensor.layout, oup_layout);
+    dnn_opr.op->deduce_layout(inp1_tensor.layout, inp2_tensor.layout, oup_layout);
 
     if (inputs[0]->layout().is_empty() || inputs[1]->layout().is_empty()) {
-        auto fill_opr = opr::intl::create_megdnn_opr<megdnn::Fill>(comp_node);
+        DnnOprCaller<megdnn::Fill> fill_opr(comp_node);
         DeviceTensorND out =
                 BlobManager::inst()->alloc_workspace_with_defrag(comp_node, oup_layout);
-        fill_opr->param() = 0;
-        fill_opr->exec(out.as_megdnn(), {});
+        fill_opr.op->param() = 0;
+        fill_opr.op->exec(out.as_megdnn(), {});
         return {Tensor::make(out)};
     }
 
-    auto wk_size = dnn_opr->get_workspace_in_bytes(
+    auto sz = dnn_opr.op->get_workspace_in_bytes(
             inp_tensornds[0].layout, inp_tensornds[1].layout, output_descs[0].layout);
 
     DeviceTensorND out_devtensor =
             BlobManager::inst()->alloc_workspace_with_defrag(comp_node, oup_layout);
-    TensorLayout wk_layout{TensorShape{wk_size}, inputs[0]->dtype()};
-    DeviceTensorND workspace =
-            BlobManager::inst()->alloc_workspace_with_defrag(comp_node, wk_layout);
-    megdnn::Workspace dnn_wk(workspace.raw_ptr(), wk_size);
 
-    dnn_opr->exec(
+    TensorLayout w_layout({sz}, dtype::Byte());
+    auto dnn_wk = dnn_opr.create_workspace(w_layout);
+
+    dnn_opr.op->exec(
             inp_tensornds[0], inp_tensornds[1], out_devtensor.as_megdnn(), dnn_wk);
 
     return {Tensor::make(out_devtensor)};

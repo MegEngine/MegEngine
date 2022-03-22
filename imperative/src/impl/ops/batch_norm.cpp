@@ -171,7 +171,7 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
     bool empty_input = src_layout.is_empty();
     size_t nr_inp = inputs.size();
 
-    DeviceTensorND ws, reserve;
+    DeviceTensorND reserve;
     size_t sz = 0, rsz = 0;
 
     TensorLayout w_layout({sz}, dtype::Byte());
@@ -186,9 +186,7 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
         w_layout = TensorLayout({sz}, dtype::Byte());
         r_layout = TensorLayout({rsz}, dtype::Byte());
     }
-    auto wk = Blob::make(comp_node, sz);
-    auto ptr = wk->storage().get();
-    megdnn::Workspace dnn_wk(ptr, sz);
+    auto dnn_wk = dnn_opr.create_workspace(w_layout);
     reserve = BlobManager::inst()->alloc_workspace_with_defrag(comp_node, r_layout);
 
     // alloc memory

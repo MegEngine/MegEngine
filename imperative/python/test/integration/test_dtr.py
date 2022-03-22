@@ -91,7 +91,7 @@ class ResNet(M.Module):
 
 
 def run_dtr_resnet1202():
-    batch_size = 7
+    batch_size = 6
     resnet1202 = ResNet(BasicBlock, [200, 200, 200])
     opt = optim.SGD(resnet1202.parameters(), lr=0.05, momentum=0.9, weight_decay=1e-4)
     gm = GradManager().attach(resnet1202.parameters())

@@ -8,6 +8,7 @@
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
  * ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
+#include "../dnn_op_helper.h"
 #include "../op_trait.h"
 
 #include "megbrain/imperative/ops/autogen.h"
@@ -34,8 +35,7 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
 
     auto dest = outputs[size];
     auto cn = dest->comp_node();
-    auto&& dnn_opr = opr::intl::create_megdnn_opr<megdnn::CheckNonFinite>(cn);
-    size_t wk_size = 0;
+    DnnOprCaller<megdnn::CheckNonFinite> dnn_opr(cn);
     SmallVector<megdnn::TensorND> srcs(size);
     // copy an outputs to the dnn for inplace
     for (size_t i = 0; i < size; ++i) {
@@ -44,11 +44,11 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
         srcs[i] = outputs[i]->dev_tensor().as_megdnn();
     }
     megdnn::CheckNonFinite::Param param({op.scale});
-    dnn_opr->param() = param;
-    wk_size = dnn_opr->get_workspace_in_bytes(srcs, dest->layout());
-    auto wk = Blob::make(cn, wk_size);
-    megdnn::Workspace dnn_wk(wk->storage().get(), wk_size);
-    dnn_opr->exec(srcs, dest->dev_tensor().as_megdnn(), dnn_wk);
+    dnn_opr.op->param() = param;
+    size_t sz = dnn_opr.op->get_workspace_in_bytes(srcs, dest->layout());
+    TensorLayout w_layout({sz}, dtype::Byte());
+    auto dnn_wk = dnn_opr.create_workspace(w_layout);
+    dnn_opr.op->exec(srcs, dest->dev_tensor().as_megdnn(), dnn_wk);
     return outputs;
 }
 
