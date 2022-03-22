@@ -921,7 +921,7 @@ def _get_leaky_relu_op(negative_slope, *, dtype=None, device=None):
 
 
 def leaky_relu(inp: Tensor, negative_slope: float = 0.01) -> Tensor:
-    r"""Element-wose LeakyReLU function
+    r"""Element-wise LeakyReLU function
 
     Refer to :class:`~.LeakyReLU` for more information.
     """
