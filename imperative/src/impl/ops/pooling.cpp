@@ -11,6 +11,7 @@
 
 #include "megbrain/opr/dnn/pooling.h"
 #include "megbrain/imperative/ops/autogen.h"
+#include "megbrain/imperative/utils/stats.h"
 #include "megbrain/opr/utility.h"
 
 #include "megbrain/opr/internal/megdnn_opr_wrapper.h"
@@ -24,9 +25,6 @@ namespace mgb::imperative {
 
 namespace {
 namespace pooling {
-
-// using OprHandle = opr::intl::UniqPtrWithCN<megdnn::Pooling>;
-// static ThinHashMap<CompNode, OprHandle> dnn_oprs;
 
 auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
     auto&& pool = static_cast<const Pooling&>(def);
@@ -48,11 +46,9 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
         return {{{TensorLayout{inp.layout.dtype}, inp_cn, {}}}, false};
     }
 
-    DnnOprCaller<megdnn::Pooling> caller(inp_cn);
-    auto&& dnn_opr = caller.op;
-    dnn_opr->param() = op_def.param();
     TensorLayout oup_layout;
-    dnn_opr->deduce_layout(inp.layout, oup_layout);
+    megdnn::Pooling::deduce_layout_impl(inp.layout, op_def.param(), oup_layout);
+
     return {{{oup_layout, inp_cn, {}}}, true};
 }
 
@@ -73,7 +69,8 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
 
     TensorLayout& oup_layout = output_descs[0].layout;
     if (!validated) {
-        dnn_opr->deduce_layout(inp_tensornd.layout, oup_layout);
+        megdnn::Pooling::deduce_layout_impl(
+                inp_tensornd.layout, op_def.param(), oup_layout);
     }
     DeviceTensorND out_devtensor =
             BlobManager::inst()->alloc_workspace_with_defrag(cn, oup_layout);

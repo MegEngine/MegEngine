@@ -38,17 +38,18 @@ std::string get_errmsg(
 }
 }  // namespace
 
-Convolution3DBase::CanonizedFilterMeta Convolution3DBase::make_canonized_filter_meta(
-        size_t src_ndim, const TensorLayout& filter) const {
+Convolution3DBase::CanonizedFilterMeta Convolution3DBase::
+        make_canonized_filter_meta_impl(
+                size_t src_ndim, const TensorLayout& filter, const Param& param) {
     megdnn_assert_contiguous(filter);
     auto img_ndim = src_ndim - 2;
     CanonizedFilterMeta ret;
     ret.dtype_enum = filter.dtype.enumv();
-    ret.format = param().format;
-    if (param().mode == Mode::CONVOLUTION) {
+    ret.format = param.format;
+    if (param.mode == Mode::CONVOLUTION) {
         ret.should_flip = true;
     } else {
-        megdnn_assert(param().mode == Mode::CROSS_CORRELATION, "invalid conv mode");
+        megdnn_assert(param.mode == Mode::CROSS_CORRELATION, "invalid conv mode");
         ret.should_flip = false;
     }
     size_t flt_start, flt_spatial_start, ocpg_pos, icpg_pos;
@@ -56,7 +57,7 @@ Convolution3DBase::CanonizedFilterMeta Convolution3DBase::make_canonized_filter_
     MEGDNN_MARK_USED_VAR(ocpg_pos);
     MEGDNN_MARK_USED_VAR(icpg_pos);
 
-    if (param().sparse == Param::Sparse::DENSE) {
+    if (param.sparse == Param::Sparse::DENSE) {
         megdnn_assert(
                 filter.ndim == img_ndim + 2,
                 "bad filter ndim for dense convolution: "
@@ -66,7 +67,7 @@ Convolution3DBase::CanonizedFilterMeta Convolution3DBase::make_canonized_filter_
         flt_start = 0;
     } else {
         megdnn_assert(
-                param().sparse == Param::Sparse::GROUP,
+                param.sparse == Param::Sparse::GROUP,
                 "invalid convolution sparse type");
         megdnn_assert(
                 filter.ndim == img_ndim + 3,
@@ -77,14 +78,14 @@ Convolution3DBase::CanonizedFilterMeta Convolution3DBase::make_canonized_filter_
         flt_start = 1;
     }
 
-    if (param().format == Param::Format::NCDHW) {
+    if (param.format == Param::Format::NCDHW) {
         // filter should be (oc, ic, fd, fh, fw)
         flt_spatial_start = 2;
         ocpg_pos = 0;
         icpg_pos = 1;
     } else {
         megdnn_assert(
-                param().format == Param::Format::NDHWC, "invalid conv tensor format");
+                param.format == Param::Format::NDHWC, "invalid conv tensor format");
         // filter should be (oc, fd, fh, fw, ic)
         flt_spatial_start = 1;
         ocpg_pos = 0;
@@ -96,15 +97,15 @@ Convolution3DBase::CanonizedFilterMeta Convolution3DBase::make_canonized_filter_
             "only 3D convolution is supported, and input should be 5-dim; "
             "got input dim = %zu",
             src_ndim);
-    ret.stride[0] = this->param().stride_d;
-    ret.stride[1] = this->param().stride_h;
-    ret.stride[2] = this->param().stride_w;
-    ret.padding[0] = this->param().pad_d;
-    ret.padding[1] = this->param().pad_h;
-    ret.padding[2] = this->param().pad_w;
-    ret.dilation[0] = param().dilate_d;
-    ret.dilation[1] = param().dilate_h;
-    ret.dilation[2] = param().dilate_w;
+    ret.stride[0] = param.stride_d;
+    ret.stride[1] = param.stride_h;
+    ret.stride[2] = param.stride_w;
+    ret.padding[0] = param.pad_d;
+    ret.padding[1] = param.pad_h;
+    ret.padding[2] = param.pad_w;
+    ret.dilation[0] = param.dilate_d;
+    ret.dilation[1] = param.dilate_h;
+    ret.dilation[2] = param.dilate_w;
     ret.ocpg = filter[flt_start + ocpg_pos];
     ret.icpg = filter[flt_start + icpg_pos];
     for (size_t i = 0; i < ret.spatial_ndim; ++i) {
@@ -115,6 +116,11 @@ Convolution3DBase::CanonizedFilterMeta Convolution3DBase::make_canonized_filter_
         ret.dilated_spatial[i] = (ret.spatial[i] - 1) * ret.dilation[i] + 1;
     }
     return ret;
+}
+
+Convolution3DBase::CanonizedFilterMeta Convolution3DBase::make_canonized_filter_meta(
+        size_t src_ndim, const TensorLayout& filter) const {
+    return make_canonized_filter_meta_impl(src_ndim, filter, param());
 }
 
 Convolution3DBase::CanonizedFilterMeta Convolution3DBase::deduce_layout_fwd(
@@ -213,12 +219,13 @@ Convolution3DBase::CanonizedFilterMeta Convolution3DBackwardData::check_exec(
     return ret;
 }
 
-void Convolution3DBackwardData::deduce_layout(
-        const TensorLayout& filter, const TensorLayout& diff, TensorLayout& grad) {
+void Convolution3DBackwardData::deduce_layout_impl(
+        const TensorLayout& filter, const TensorLayout& diff, const Param& param,
+        TensorLayout& grad) {
     megdnn_assert(
-            param().data_type == Param::DataType::FLOAT,
+            param.data_type == Param::DataType::FLOAT,
             "only float type is supported for conv backward");
-    auto errmsg = [&]() { return get_errmsg(filter, diff, grad, param()); };
+    auto errmsg = [&]() { return get_errmsg(filter, diff, grad, param); };
     MEGDNN_MARK_USED_VAR(errmsg);
     megdnn_assert_contiguous(filter);
     megdnn_assert_contiguous(diff);
@@ -226,7 +233,7 @@ void Convolution3DBackwardData::deduce_layout(
     megdnn_assert(diff.ndim == 5_z, "%s", errmsg().c_str());
     megdnn_assert(filter.dtype == diff.dtype, "%s", errmsg().c_str());
 
-    auto cflt = make_canonized_filter_meta(diff.ndim, filter);
+    auto cflt = make_canonized_filter_meta_impl(diff.ndim, filter, param);
     megdnn_assert(cflt.ocpg * cflt.group == diff[1], "%s", errmsg().c_str());
 
     auto deduce = [&errmsg](size_t out, size_t filter, size_t stride, size_t pad) {
@@ -245,6 +252,11 @@ void Convolution3DBackwardData::deduce_layout(
                 diff[i + 2], cflt.dilated_spatial[i], cflt.stride[i], cflt.padding[i]);
     }
     grad.init_contiguous_stride();
+}
+
+void Convolution3DBackwardData::deduce_layout(
+        const TensorLayout& filter, const TensorLayout& diff, TensorLayout& grad) {
+    deduce_layout_impl(filter, diff, param(), grad);
 }
 
 Convolution3DBase::CanonizedFilterMeta Convolution3DBackwardFilter::check_exec(

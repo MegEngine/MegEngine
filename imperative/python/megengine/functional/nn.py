@@ -93,12 +93,17 @@ __all__ = [
 
 
 def expand_hw(x):
+    # judge int is 5 times faster than judge Sequence
+    if isinstance(x, int):
+        return x, x
     if isinstance(x, Sequence):
         return int(x[0]), int(x[1])
     return int(x), int(x)
 
 
 def expand_dhw(x):
+    if isinstance(x, int):
+        return x, x, x
     if isinstance(x, Sequence):
         return int(x[0]), int(x[1]), int(x[2])
     return int(x), int(x), int(x)

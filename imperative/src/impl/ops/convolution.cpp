@@ -579,6 +579,63 @@ OP_TRAIT_REG(Convolution3D, Convolution3D, opr::Convolution3D)
 
 namespace {
 namespace convolution3d_backward_data {
+
+std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
+        const OpDef& def, const SmallVector<LogicalTensorDesc>& inputs) {
+    mgb_assert(
+            inputs.size() == 2,
+            "inputs num of conv_transpose3d should be 2 but you give %zu",
+            inputs.size());
+
+    auto&& op_def = def.cast_final_safe<Convolution3DBackwardData>();
+    auto&& weight = inputs[0];
+    auto&& diff = inputs[1];
+    auto& cn = weight.comp_node;
+
+    if (weight.layout.ndim == 0) {
+        return {{{TensorLayout{weight.layout.dtype}, cn, {}}}, false};
+    }
+
+    TensorLayout oup_layout;
+    megdnn::Convolution3DBackwardData::deduce_layout_impl(
+            weight.layout, diff.layout, op_def.param(), oup_layout);
+    return {{{oup_layout, cn, {}}}, true};
+}
+
+SmallVector<TensorPtr> apply_on_physical_tensor(
+        const OpDef& def, const SmallVector<TensorPtr>& inputs,
+        SmallVector<LogicalTensorDesc>& output_descs, const bool& validated) {
+    auto&& op_def = def.cast_final_safe<Convolution3DBackwardData>();
+    auto cn = inputs[0]->comp_node();
+    megdnn::TensorND weight = inputs[0]->dnn_tensor();
+    megdnn::TensorND diff = inputs[1]->dnn_tensor();
+
+    DnnOprCaller<megdnn::Convolution3DBackwardData> caller(cn);
+    auto&& dnn_opr = caller.op;
+    dnn_opr->param() = op_def.param();
+
+    TensorLayout& oup_layout = output_descs[0].layout;
+    if (!validated) {
+        megdnn::Convolution3DBackwardData::deduce_layout_impl(
+                weight.layout, diff.layout, op_def.param(), oup_layout);
+    }
+    DeviceTensorND oup =
+            BlobManager::inst()->alloc_workspace_with_defrag(cn, oup_layout);
+
+    size_t wk_size = setup_algo<megdnn::Convolution3DBackwardData>(
+            {weight.layout, diff.layout, oup_layout}, dnn_opr.get(), 0, false, false,
+            cn, op_def.policy(), false);
+    megdnn::Workspace dnn_wk;
+    if (wk_size != 0) {
+        auto wk = Blob::make(cn, wk_size);
+        dnn_wk.raw_ptr = wk->storage().get();
+        dnn_wk.size = wk_size;
+    }
+
+    dnn_opr->exec(weight, diff, oup.as_megdnn(), dnn_wk);
+    return {Tensor::make(oup)};
+}
+
 auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
     auto&& conv = static_cast<const Convolution3DBackwardData&>(def);
     OperatorNodeConfig config{conv.make_name()};
@@ -589,6 +646,8 @@ auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
 
 OP_TRAIT_REG(Convolution3DBackwardData, Convolution3DBackwardData)
         .apply_on_var_node(apply_on_var_node)
+        .infer_output_attrs_fallible(infer_output_attrs_fallible)
+        .apply_on_physical_tensor(apply_on_physical_tensor)
         .fallback();
 }  // namespace convolution3d_backward_data
 }  // namespace

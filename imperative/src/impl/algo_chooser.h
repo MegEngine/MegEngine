@@ -1,3 +1,5 @@
+#pragma once
+
 #include "megbrain/rdnn/algo_chooser.h"
 #include "megdnn/heuristic_cache.h"
 

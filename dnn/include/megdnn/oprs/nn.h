@@ -784,6 +784,10 @@ public:
 protected:
     void deduce_layout_fwd(const TensorLayout& src, TensorLayout& dst);
     void check_layout_fwd(const TensorLayout& src, const TensorLayout& dst);
+
+public:
+    MGE_WIN_DECLSPEC_FUC static void deduce_layout_impl(
+            const TensorLayout& src, const Param& param, TensorLayout& dst);
 };
 
 class PoolingForward : public PoolingBase,
@@ -1241,6 +1245,8 @@ protected:
             const TensorLayout& src, const TensorLayout& filter,
             const TensorLayout& dst) const;
 
+    static CanonizedFilterMeta make_canonized_filter_meta_impl(
+            size_t src_ndim, const TensorLayout& filter, const Param& param);
     CanonizedFilterMeta make_canonized_filter_meta(
             size_t src_ndim, const TensorLayout& filter) const;
 };
@@ -1286,6 +1292,10 @@ public:
      * \param[in] diff (n, oc, od, oh, ow)
      * \param[out] grad (n, ic, id, ih, iw)
      */
+    MGE_WIN_DECLSPEC_FUC static void deduce_layout_impl(
+            const TensorLayout& filter, const TensorLayout& diff, const Param& param,
+            TensorLayout& grad);
+
     virtual void exec(
             _megdnn_tensor_in filter, _megdnn_tensor_in diff, _megdnn_tensor_out grad,
             _megdnn_workspace workspace) = 0;

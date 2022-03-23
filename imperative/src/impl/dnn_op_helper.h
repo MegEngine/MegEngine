@@ -8,6 +8,7 @@
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
+#pragma once
 
 #include "megbrain/comp_node.h"
 #include "megbrain/comp_node_env.h"

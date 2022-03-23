@@ -15,22 +15,22 @@
 
 namespace megdnn {
 
-void PoolingBase::deduce_layout_fwd(const TensorLayout& src, TensorLayout& dst) {
-    auto& p = param();
-    auto pformat = p.format;
+void PoolingBase::deduce_layout_impl(
+        const TensorLayout& src, const Param& param, TensorLayout& dst) {
+    auto pformat = param.format;
 
     // the overhead of generating error message is about 18x of the other part of this
     // function so we use a function to wrap the error message and get it only when need.
     auto get_errmsg = [&](void) -> std::string {
         std::string errmsg =
                 megdnn_layout_msg(src) + ", " + megdnn_layout_msg(dst) + ", " +
-                "pad_h=" + std::to_string(param().pad_h) + ", " +
-                "pad_w=" + std::to_string(param().pad_w) + ", " +
-                "stride_h=" + std::to_string(param().stride_h) + ", " +
-                "stride_w=" + std::to_string(param().stride_w) + ", " +
-                "window_h=" + std::to_string(param().window_h) + ", " +
-                "window_w=" + std::to_string(param().window_w) + ", " +
-                "is_max=" + std::to_string(param().mode == Mode::MAX) + ", " +
+                "pad_h=" + std::to_string(param.pad_h) + ", " +
+                "pad_w=" + std::to_string(param.pad_w) + ", " +
+                "stride_h=" + std::to_string(param.stride_h) + ", " +
+                "stride_w=" + std::to_string(param.stride_w) + ", " +
+                "window_h=" + std::to_string(param.window_h) + ", " +
+                "window_w=" + std::to_string(param.window_w) + ", " +
+                "is_max=" + std::to_string(param.mode == Mode::MAX) + ", " +
                 "is_nhwc=" + std::to_string(pformat == Param::Format::NHWC) + ", " +
                 "is_nhwcd4=" + std::to_string(pformat == Param::Format::NHWCD4);
         return errmsg;
@@ -90,12 +90,12 @@ void PoolingBase::deduce_layout_fwd(const TensorLayout& src, TensorLayout& dst) 
         c *= 64;
     }
     size_t oh, ow;
-    size_t fh = p.window_h;
-    size_t fw = p.window_w;
-    size_t sh = p.stride_h;
-    size_t sw = p.stride_w;
-    size_t ph = p.pad_h;
-    size_t pw = p.pad_w;
+    size_t fh = param.window_h;
+    size_t fw = param.window_w;
+    size_t sh = param.stride_h;
+    size_t sw = param.stride_w;
+    size_t ph = param.pad_h;
+    size_t pw = param.pad_w;
 
     // moving some python assert to here
     // megdnn_assert()
@@ -128,12 +128,15 @@ void PoolingBase::deduce_layout_fwd(const TensorLayout& src, TensorLayout& dst) 
     }
 }
 
+void PoolingBase::deduce_layout_fwd(const TensorLayout& src, TensorLayout& dst) {
+    deduce_layout_impl(src, param(), dst);
+}
+
 void PoolingBase::check_layout_fwd(const TensorLayout& src, const TensorLayout& dst) {
     TensorLayout dst_expected;
     megdnn_assert_eq_dtype(src, dst);
     deduce_layout_fwd(src, dst_expected);
     megdnn_assert_eq_layout(dst_expected, dst);
-    megdnn_assert(src.dtype == dst.dtype);
     megdnn_assert(
             src.dtype.category() == DTypeCategory::FLOAT ||
             src.dtype == dtype::Int8() ||
