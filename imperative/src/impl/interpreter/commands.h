@@ -49,7 +49,6 @@ struct ApplyOp {
     std::shared_ptr<OpDef> op;
     SmallVector<TensorInfo*> inputs;
     SmallVector<TensorInfo*> outputs;
-    SmallVector<LogicalTensorDesc> outputs_descs;
     bool validated = false;
 
     template <typename TFunctor>

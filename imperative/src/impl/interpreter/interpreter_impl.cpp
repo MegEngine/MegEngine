@@ -355,7 +355,7 @@ void ChannelImpl::dispatch_kernel(
     for (int i = 0; i < output_descs.size(); ++i) {
         auto&& desc = output_descs[i];
         auto info = alloc();
-        init(info, desc);
+        init(info, std::move(desc));
         // make sure desc's value is consistent with h_value
         if (!info->desc.value.empty()) {
             info->h_value = HostTensorND::make_proxy(desc.value)
@@ -364,9 +364,9 @@ void ChannelImpl::dispatch_kernel(
         output_infos.push_back(info);
         outputs->push_back(reinterpret_cast<Handle>(info));
     }
-    ApplyOp cmd{Profiler::next_id(),     std::move(op),
-                std::move(input_infos),  std::move(output_infos),
-                std::move(output_descs), validated};
+    ApplyOp cmd{
+            Profiler::next_id(), std::move(op), std::move(input_infos),
+            std::move(output_infos), validated};
     if (Profiler::is_profiling()) {
         auto op_info_getter = [op = cmd.op] {
             std::unordered_map<std::string, std::string> op_info;
@@ -594,7 +594,7 @@ TensorInfo* ChannelImpl::alloc() {
     return info;
 }
 
-void ChannelImpl::init(TensorInfo* info, LogicalTensorDesc desc) {
+void ChannelImpl::init(TensorInfo* info, LogicalTensorDesc&& desc) {
     m_valid_handle.insert(reinterpret_cast<Handle>(info));
     MGB_RECORD_EVENT(TensorDeclareEvent, info->id, info->name);
     info->status = TensorInfo::Allocated;
@@ -724,9 +724,8 @@ void ChannelImpl::regenerate(TensorInfo* dest) {
     if (dest->evict_type == EvictType::DROP) {
         auto&& path = dest->producer;
         m_apply_stack.push(
-                {ApplyOp{path->id, path->op, path->inputs, path->outputs,
-                         path->outputs_descs},
-                 0, dest, "dtr"});
+                {ApplyOp{path->id, path->op, path->inputs, path->outputs}, 0, dest,
+                 "dtr"});
         if (!m_applying)
             flush_apply_stack();
     }
@@ -819,13 +818,18 @@ void ChannelImpl::do_apply_op(const ApplyOp& cmd, std::string reason) {
     }
     // Apply op
     SmallVector<LogicalTensorDesc> output_descs;
-    for (auto i : cmd.outputs_descs) {
-        output_descs.push_back(i);
+    bool validated = cmd.validated;
+    if (!state.options.enable_dtr_auto_drop) {
+        for (auto i : cmd.outputs) {
+            output_descs.push_back(i->desc);
+        }
+    } else {
+        validated = false;
     }
     // Here std::move is REQUIRED for removing duplicated references.
     auto outputs = apply_on_physical_tensor(
             apply_on_physical_tensor, *cmd.op, std::move(inputs), output_descs,
-            cmd.validated);
+            validated);
     // After execute
     for (auto&& [device, kernel_id] : kernels) {
         MGB_RECORD_EVENT_IF(
@@ -1154,7 +1158,7 @@ void ChannelImpl::process_one_task(Command& icmd) {
 
                 if (!inplace && !cross_cn && !m_dtr.is_bad_op(get_name(*cmd.op))) {
                     TensorInfo::ComputePath::make(
-                            cmd.id, cmd.op, cmd.inputs, cmd.outputs, cmd.outputs_descs);
+                            cmd.id, cmd.op, cmd.inputs, cmd.outputs);
                     size_t detach_cnt = 0;
                     if (!strcmp(get_name(*cmd.op), "BatchNorm") &&
                         cmd.outputs.size() == 6) {

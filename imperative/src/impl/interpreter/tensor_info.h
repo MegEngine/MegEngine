@@ -99,14 +99,12 @@ struct TensorInfo {
 
         static ComputePath* make(
                 uint64_t id, std::shared_ptr<OpDef> op, SmallVector<TensorInfo*> inputs,
-                SmallVector<TensorInfo*> outputs,
-                SmallVector<LogicalTensorDesc> outputs_descs) {
+                SmallVector<TensorInfo*> outputs) {
             auto* path = new TensorInfo::ComputePath();
             path->id = id;
             path->op = op;
             path->inputs = inputs;
             path->outputs = outputs;
-            path->outputs_descs = outputs_descs;
             // dedup
             SmallVector<TensorInfo*> unique_inputs = inputs;
             std::sort(unique_inputs.begin(), unique_inputs.end());
