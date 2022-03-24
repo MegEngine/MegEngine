@@ -11,6 +11,8 @@
  */
 
 #include "megdnn/heuristic_cache.h"
+#include "megdnn/tensor_format.h"
+#include "src/common/hash_ct.h"
 #include "src/common/utils.h"
 #include "src/naive/handle.h"
 
@@ -32,38 +34,27 @@ HeuristicCache& HeuristicCache::instance() {
 }
 
 HeuristicCache::KeyStorage HeuristicCache::Key::build_key_storage() const {
-    auto&& ctg = m_category;
-    auto&& inp = m_input;
+    size_t buf_size = 16 * m_inp_layouts_size + 6;
+    size_t buf[buf_size];
 
-    if (!m_category.empty() && !m_input.empty())
-        return {ctg, inp};
-
-    inp.reserve(sizeof(TensorLayout) * 3 * m_inp_layouts_size + m_param_size);
+    size_t pos = 0;
     for (size_t i = 0; i < m_inp_layouts_size; i++) {
-        auto&& ly = m_inp_layouts_ptr[i];
-        for (size_t j = 0; j < ly.ndim; j++) {
-            if (j)
-                inp.push_back(',');
-            inp.append(std::to_string(ly.shape[j]));
+        auto&& layout = m_inp_layouts_ptr[i];
+        if (layout.dtype.valid()) {
+            buf[pos++] = static_cast<size_t>(layout.dtype.enumv());
+        } else {
+            buf[pos++] = static_cast<size_t>(SIZE_MAX);
         }
-        inp.push_back(';');
-        for (size_t j = 0; j < ly.ndim; j++) {
-            if (j)
-                inp.push_back(',');
-            inp.append(std::to_string(ly.stride[j]));
+        buf[pos++] = static_cast<size_t>(layout.format.type());
+        for (size_t j = 0; j < layout.ndim; j++) {
+            buf[pos++] = layout.shape[j];
+            buf[pos++] = layout.stride[j];
         }
-        inp.push_back(';');
-        inp.append(ly.dtype.name());
-        inp.push_back(';');
-        inp.append(ly.format.to_string().c_str());
-        inp.push_back('|');
-    }
-    if (m_param_size) {
-        inp.append(reinterpret_cast<const char*>(m_param_ptr), m_param_size);
     }
 
-    ctg = "plat:";
-    ctg.append(std::to_string(static_cast<uint32_t>(m_handle->type())));
+    buf[pos++] = m_opr_type;
+    buf[pos++] = static_cast<size_t>(m_handle->type());
+
     switch (m_handle->type()) {
 #if MEGDNN_WITH_CUDA
         case Handle::HandleType::CUDA: {
@@ -72,9 +63,9 @@ HeuristicCache::KeyStorage HeuristicCache::Key::build_key_storage() const {
             cuda_rt /= 1000;
             auto&& handle = static_cast<megdnn::cuda::HandleImpl*>(m_handle);
             auto&& prop = handle->device_prop();
-            ctg.append(ssprintf(
-                    ";dev=%s;cap=%d.%d;runtime=%d;", prop.name, prop.major, prop.minor,
-                    cuda_rt));
+            buf[pos++] = prop.major;
+            buf[pos++] = prop.minor;
+            buf[pos++] = cuda_rt;
             break;
         }
 #endif
@@ -85,9 +76,10 @@ HeuristicCache::KeyStorage HeuristicCache::Key::build_key_storage() const {
             int drv = -1, hip_rt = -1;
             hip_check(hipDriverGetVersion(&drv));
             hip_check(hipRuntimeGetVersion(&hip_rt));
-            ctg.append(ssprintf(
-                    ";dev=%s;cap=%d.%d,drv=%d;runtime=%d;", prop.name, prop.major,
-                    prop.minor, drv, hip_rt));
+            buf[pos++] = prop.major;
+            buf[pos++] = prop.minor;
+            buf[pos++] = drv;
+            buf[pos++] = hip_rt;
             break;
         }
 #endif
@@ -108,16 +100,21 @@ HeuristicCache::KeyStorage HeuristicCache::Key::build_key_storage() const {
             size_t nr_threads = static_cast<megdnn::naive::HandleImpl*>(m_handle)
                                         ->megcore_dispatcher()
                                         ->nr_threads();
-            ctg.append(";");
-            ctg.append(std::to_string(nr_threads));
-            ctg.append(";");
+            buf[pos++] = nr_threads;
             break;
         }
         default:
-            ctg.append(";");
+            break;
     }
-    ctg.append(std::to_string(m_opr_type));
-    return {ctg, inp};
+
+    m_buf.resize(pos);
+    SmallVector<size_t> tmp(buf, buf + pos);
+    m_buf = std::move(tmp);
+
+    size_t k1 = XXHash64CT::hash((const char*)buf, pos * sizeof(size_t), 20220328);
+    size_t k2 = XXHash64CT::hash((const char*)m_param_ptr, m_param_size, 20220328);
+
+    return {k1, k2};
 }
 
 void HeuristicCache::put(const Key& key, Result& result) {
@@ -126,15 +123,41 @@ void HeuristicCache::put(const Key& key, Result& result) {
         m_heuristic_cache[key.build_key_storage()] = result;
 }
 
+template <typename T>
+bool is_same_buf(
+        const T hash_buf[], const size_t buf_size, const T hash_buf_[],
+        const size_t buf_size_) {
+    if (buf_size != buf_size_) {
+        return false;
+    }
+    for (size_t i = 0; i < buf_size; i++) {
+        if (hash_buf[i] != hash_buf_[i]) {
+            return false;
+        }
+    }
+    return true;
+}
+
 HeuristicCache::Result HeuristicCache::get(const Key& key) {
     MEGDNN_LOCK_GUARD(m_mtx);
     KeyStorage ks = key.build_key_storage();
     auto iter = m_heuristic_cache.find(ks);
-    if (iter == m_heuristic_cache.end()) {
-        return {};
-    } else {
-        return iter->second;
+    if (iter != m_heuristic_cache.end()) {
+        if (is_same_buf(
+                    key.m_buf.data(), key.m_buf.size(), iter->second.m_buf.data(),
+                    iter->second.m_buf.size()) &&
+            is_same_buf(
+                    (char*)(key.m_param_ptr), key.m_param_size,
+                    iter->second.m_param_buf.data(), iter->second.m_param_buf.size())) {
+            return iter->second;
+        }
+        megdnn_log_warn(
+                "hash collision occurs in heuristic cache with key: (%zu, %zu)", ks.k1,
+                ks.k2);
     }
+    SmallVector<char> param_buf(
+            (char*)key.m_param_ptr, (char*)key.m_param_ptr + key.m_param_size);
+    return Result{{}, 0, key.m_buf, param_buf};
 }
 
 void HeuristicCache::clear() {

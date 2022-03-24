@@ -123,8 +123,6 @@ TensorLayout do_shape_infer(
 
 std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
         const OpDef& def, const SmallVector<LogicalTensorDesc>& inputs) {
-    using Param = ::megdnn::param::Convolution;
-
     SmallVector<LogicalTensorDesc> dests(1);
     auto&& desc = dests[0];
     desc.comp_node = inputs[0].comp_node;
@@ -166,15 +164,16 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
     }
     oup_shapes[0] = out_layout;
     DnnOprCaller<megdnn::ConvBiasForward> dnn_opr(cn);
-    dnn_opr.op->param().pad_h = conv.pad_h;
-    dnn_opr.op->param().pad_w = conv.pad_w;
-    dnn_opr.op->param().stride_h = conv.stride_h;
-    dnn_opr.op->param().stride_w = conv.stride_w;
-    dnn_opr.op->param().dilate_h = conv.dilate_h;
-    dnn_opr.op->param().dilate_w = conv.dilate_w;
-    dnn_opr.op->param().sparse = conv.sparse;
-    dnn_opr.op->param().compute_mode = conv.compute_mode;
-    dnn_opr.op->param().format = conv.format;
+    auto&& param = dnn_opr.op->param();
+    param.pad_h = conv.pad_h;
+    param.pad_w = conv.pad_w;
+    param.stride_h = conv.stride_h;
+    param.stride_w = conv.stride_w;
+    param.dilate_h = conv.dilate_h;
+    param.dilate_w = conv.dilate_w;
+    param.sparse = conv.sparse;
+    param.compute_mode = conv.compute_mode;
+    param.format = conv.format;
 
     // shape infer
     TensorLayout shp({0}, inputs[0]->dtype());
@@ -513,8 +512,6 @@ TensorLayout do_shape_infer(
 
 std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
         const OpDef& def, const SmallVector<LogicalTensorDesc>& inputs) {
-    using Param = ::megdnn::param::Convolution3D;
-
     SmallVector<LogicalTensorDesc> dests(1);
     auto&& desc = dests[0];
     desc.comp_node = inputs[0].comp_node;

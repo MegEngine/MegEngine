@@ -18,6 +18,8 @@ MGE_WIN_DECLSPEC_FUC size_t setup_algo(
         megdnn_opr->execution_policy() = rst.policy;
         return rst.workspace;
     }
+    SmallVector<size_t> buf = rst.m_buf;
+    SmallVector<char> param_buf = rst.m_param_buf;
 
     std::string param_str;
     megdnn::Algorithm::serialize_write_pod(megdnn_opr->param(), param_str);
@@ -40,11 +42,10 @@ MGE_WIN_DECLSPEC_FUC size_t setup_algo(
     megdnn::ExecutionPolicy policy;
     policy = mgb::rdnn::AlgoChooser<Opr>::get_policy(helper);
     size_t workspace = helper.get_workspace_size_bytes(policy, layouts);
-
     megdnn_opr->execution_policy() = policy;
 
     if (execution_policy.strategy & rdnn::ExecutionStrategy::HEURISTIC) {
-        megdnn::HeuristicCache::Result cache_result{policy, workspace};
+        megdnn::HeuristicCache::Result cache_result{policy, workspace, buf, param_buf};
         megdnn::HeuristicCache::instance().put(cache_key, cache_result);
     }
     return workspace;

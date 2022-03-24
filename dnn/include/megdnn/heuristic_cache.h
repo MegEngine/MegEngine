@@ -29,15 +29,12 @@ public:
     MGE_WIN_DECLSPEC_FUC static HeuristicCache& instance();
 
     struct KeyStorage {
-        std::string category;
-        std::string input;
+        size_t k1, k2;
 
-        bool operator==(const KeyStorage& k) const {
-            return category == k.category && input == k.input;
-        }
+        bool operator==(const KeyStorage& k) const { return k1 == k.k1 && k2 == k.k2; }
     };
 
-    class Key {
+    struct Key {
         Handle* m_handle;
         uint32_t m_opr_type;
         const TensorLayout* m_inp_layouts_ptr;
@@ -45,8 +42,7 @@ public:
         const void* m_param_ptr;
         size_t m_param_size;
 
-        mutable std::string m_category;
-        mutable std::string m_input;
+        mutable SmallVector<size_t> m_buf;
 
     public:
         Key(Handle* opr_handle, Algorithm::OprType opr_type,
@@ -65,6 +61,10 @@ public:
     struct Result {
         ExecutionPolicy policy;
         size_t workspace;
+
+        // for cache collision
+        SmallVector<size_t> m_buf;
+        SmallVector<char> m_param_buf;
     };
 
     MGE_WIN_DECLSPEC_FUC void put(const Key& key, Result& result);
@@ -76,8 +76,8 @@ public:
 private:
     struct Hash {
         size_t operator()(const KeyStorage& k) const {
-            size_t h1 = std::hash<std::string>{}(k.category);
-            size_t h2 = std::hash<std::string>{}(k.input);
+            size_t h1 = k.k1;
+            size_t h2 = k.k2;
             h1 ^= h2 + 0x9e3779b9 + (h1 << 6) + (h1 >> 2);
             return h1;
         }

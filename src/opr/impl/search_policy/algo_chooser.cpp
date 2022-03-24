@@ -42,6 +42,8 @@ size_t AlgoChooser<Opr>::setup_algo(
         megdnn_opr->execution_policy() = rst.policy;
         return rst.workspace;
     }
+    SmallVector<size_t> buf = rst.m_buf;
+    SmallVector<char> param_buf = rst.m_param_buf;
 
     if (WorkspaceLimitGetter::is_prealloc_run(mgb_opr->owner_graph())) {
         return 0;
@@ -92,7 +94,7 @@ size_t AlgoChooser<Opr>::setup_algo(
     megdnn_opr->execution_policy() = policy;
 
     if (mgb_opr->execution_policy().strategy & rdnn::ExecutionStrategy::HEURISTIC) {
-        HeuristicCache::Result cache_result{policy, workspace};
+        HeuristicCache::Result cache_result{policy, workspace, buf, param_buf};
         HeuristicCache::instance().put(cache_key, cache_result);
     }
     return workspace;
