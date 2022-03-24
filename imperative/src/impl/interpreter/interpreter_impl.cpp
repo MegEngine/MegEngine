@@ -138,8 +138,11 @@ Interpreter& Interpreter::inst() {
 Handle ChannelImpl::put(const HostTensorND& value, bool no_cache) {
     MGB_LOCK_GUARD(m_spin);
     mgb_assert(check_available(), "Channel already closed");
-    auto& state = get_channel_state();
-    auto _ = StackManager::Guard{"Put", &state.stack_manager};
+    std::optional<StackManager::Guard> guard;
+    if (Profiler::is_profiling()) {
+        auto& state = get_channel_state();
+        guard.emplace("Put", &state.stack_manager);
+    }
     auto info = put_impl(value, no_cache);
     return reinterpret_cast<Handle>(info);
 }
@@ -183,8 +186,11 @@ Handle ChannelImpl::put(const DeviceTensorND& data, const HostTensorND& hvalue) 
 }
 TensorInfo* ChannelImpl::put_impl(
         const DeviceTensorND& data, const HostTensorND& hvalue) {
-    auto& state = get_channel_state();
-    auto _ = StackManager::Guard{"Put", &state.stack_manager};
+    std::optional<StackManager::Guard> guard;
+    if (Profiler::is_profiling()) {
+        auto& state = get_channel_state();
+        guard.emplace("Put", &state.stack_manager);
+    }
     auto info = alloc();
     MGB_RECORD_EVENT(TensorCommandEvent, info->id, TensorCommandKind::Put);
     constexpr int size_threshold = TensorShape::MAX_NDIM;
@@ -253,8 +259,10 @@ void ChannelImpl::dispatch_default_cpu(
         SmallVector<Handle>* outputs) {
     auto& state = get_channel_state();
 
-    auto name = op->trait()->make_name(*op);
-    auto _ = StackManager::Guard(name, &state.stack_manager);
+    std::optional<StackManager::Guard> guard;
+    if (Profiler::is_profiling()) {
+        guard.emplace(op->trait()->make_name(*op), &state.stack_manager);
+    }
 
     auto [output_descs, validated] =
             OpDef::infer_output_attrs_fallible(*op, input_descs);
@@ -329,8 +337,9 @@ void ChannelImpl::dispatch_default_cpu(
         return op_info;
     };
     MGB_RECORD_EVENT(
-            OpDispatchEvent, op_id, name, op_info_getter, tinfo_to_tid(input_infos),
-            tinfo_to_tid(output_infos), state.stack_manager.dump());
+            OpDispatchEvent, op_id, guard.value().name(), op_info_getter,
+            tinfo_to_tid(input_infos), tinfo_to_tid(output_infos),
+            state.stack_manager.dump());
 }
 
 void ChannelImpl::dispatch_kernel(
@@ -340,8 +349,10 @@ void ChannelImpl::dispatch_kernel(
     auto& state = get_channel_state();
     auto& options = state.options;
 
-    auto name = op->trait()->make_name(*op);
-    auto _ = StackManager::Guard{name, &state.stack_manager};
+    std::optional<StackManager::Guard> guard;
+    if (Profiler::is_profiling()) {
+        guard.emplace(op->trait()->make_name(*op), &state.stack_manager);
+    }
 
     auto [output_descs, validated] =
             OpDef::infer_output_attrs_fallible(*op, input_descs);
@@ -376,8 +387,9 @@ void ChannelImpl::dispatch_kernel(
             return op_info;
         };
         MGB_RECORD_EVENT(
-                OpDispatchEvent, cmd.id, name, op_info_getter, tinfo_to_tid(cmd.inputs),
-                tinfo_to_tid(cmd.outputs), state.stack_manager.dump());
+                OpDispatchEvent, cmd.id, guard.value().name(), op_info_getter,
+                tinfo_to_tid(cmd.inputs), tinfo_to_tid(cmd.outputs),
+                state.stack_manager.dump());
         m_worker.add_task(
                 {Profiler::next_id(), std::move(cmd),
                  get_channel_state().stack_manager.dump()});

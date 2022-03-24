@@ -98,6 +98,7 @@ public:
             m_manager->enter(name);
         }
     }
+    std::string name() const { return m_name; }
     ~Guard() { release(); }
     void release() {
         if (m_manager) {

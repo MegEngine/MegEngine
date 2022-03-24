@@ -186,7 +186,7 @@ inline stats::Timer::Timer(std::string name, bool default_enabled)
 }
 
 #if MGE_ENABLE_STATS
-#define MGE_TIMER_SCOPE(name)         auto name = Stats::name.time_scope()
+#define MGE_TIMER_SCOPE(name)         auto name = Stats::name.time_scope_recursive()
 #define MGE_TIMER_SCOPE_RELEASE(name) name.release()
 #define MGE_TIMER_SCOPE_ENABLE(name)  auto name = Stats::name.enable_scope()
 #else
