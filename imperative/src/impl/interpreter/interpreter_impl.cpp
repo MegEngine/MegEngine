@@ -120,7 +120,6 @@ void ChannelImpl::WorkQueue::on_async_queue_worker_thread_start() {
         return blob->storage();
     };
     OpDef::set_allocator(custom_allocator);
-    BlobManager::inst()->set_allocator(custom_allocator);
 }
 
 // Do not use m_xxx_state directly
@@ -358,8 +357,8 @@ void ChannelImpl::dispatch_kernel(
         init(info, std::move(desc));
         // make sure desc's value is consistent with h_value
         if (!info->desc.value.empty()) {
-            info->h_value = HostTensorND::make_proxy(desc.value)
-                                    .proxy_to_comp_node(desc.comp_node);
+            info->h_value = HostTensorND::make_proxy(info->desc.value)
+                                    .proxy_to_comp_node(info->desc.comp_node);
         }
         output_infos.push_back(info);
         outputs->push_back(reinterpret_cast<Handle>(info));
@@ -561,6 +560,15 @@ void ChannelImpl::set_option(std::string name, size_t value) {
     mgb_assert(check_available(), "Channel already closed");
     auto& state = get_channel_state();
     state.options.set_option(name, value);
+    // FIXME
+    if (name == "enable_dtr_auto_drop" && value) {
+        auto custom_allocator = [&](CompNode device, size_t size) {
+            auto blob = Blob::make(device, size);
+            alloc_tensor_with_evict(blob.get());
+            return blob->storage();
+        };
+        BlobManager::inst()->set_allocator(custom_allocator);
+    }
     if (Profiler::is_profiling()) {
         m_worker.add_task(
                 {Profiler::next_id(), SetOption{name, value},
@@ -598,7 +606,7 @@ void ChannelImpl::init(TensorInfo* info, LogicalTensorDesc&& desc) {
     m_valid_handle.insert(reinterpret_cast<Handle>(info));
     MGB_RECORD_EVENT(TensorDeclareEvent, info->id, info->name);
     info->status = TensorInfo::Allocated;
-    info->desc = desc;
+    info->desc = std::move(desc);
 }
 
 void ChannelImpl::do_drop(TensorInfo* ptr, bool user = false) {
@@ -694,7 +702,7 @@ void ChannelImpl::produce_tensor(TensorInfo* dest, TensorPtr ptr) {
     }
     // in order to avoid performance impact,
     // memory forwarding is disabled when DTR is enabled
-    if (state.options.enable_dtr_auto_drop) {
+    if (state.options.enable_dtr_auto_drop || state.options.disable_memory_forwarding) {
         ptr->to_contiguous_inplace();
     }
     dest->desc.layout = ptr->layout();

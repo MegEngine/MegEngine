@@ -20,6 +20,7 @@ __all__ = [
     "benchmark_kernel",
     "deterministic_kernel",
     "async_level",
+    "disable_memory_forwarding",
     "_compute_mode",
     "_conv_format",
     "_override",
@@ -84,6 +85,25 @@ def async_level(mod) -> int:
 def async_level(mod, level: int):
     assert level >= 0 and level <= 2, "async_level should be 0, 1 or 2"
     set_option("async_level", level)
+
+
+@property
+def disable_memory_forwarding(mod) -> bool:
+    r"""Get or set config whether to disable memory forwarding. The default option is false, 
+    which means storage may be shared among tensors.
+    
+    Examples:    
+        .. code-block::
+
+           import megengine as mge
+           mge.config.disable_memory_forwarding = False
+    """
+    return bool(get_option("disable_memory_forwarding"))
+
+
+@disable_memory_forwarding.setter
+def disable_memory_forwarding(mod, disable: bool):
+    set_option("disable_memory_forwarding", disable)
 
 
 @property

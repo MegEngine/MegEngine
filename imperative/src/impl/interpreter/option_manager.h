@@ -44,6 +44,9 @@ public:
             enable_host_compute, "MEGENGINE_HOST_COMPUTE", 1,
             "enable host compute, thus computation may be done in host event if it's "
             "device is gpu.");
+    DEF_OPTION(
+            disable_memory_forwarding, "MEGENGINE_DISABLE_MEMORY_FORWARDING", 0,
+            "disable memory forwarding, thus each tensor has its own storage.");
     DEF_OPTION(enable_dtr_auto_drop, "MEGENGINE_DTR_AUTO_DROP", 0, "");
     DEF_OPTION(enable_dtr_sqrt_sampling, "MEGENGINE_DTR_SQRT_SAMPLING", 0, "");
     DEF_OPTION(
