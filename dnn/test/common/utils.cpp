@@ -142,13 +142,18 @@ std::shared_ptr<void> DynOutMallocPolicyImpl::make_output_refholder(
     return {out.raw_ptr(), deleter};
 }
 
-NaivePitchAlignmentScope::NaivePitchAlignmentScope(size_t alignment)
+NaivePitchAlignmentScope::NaivePitchAlignmentScope(
+        size_t alignment, megdnn::Handle::HandleVendorType vendor)
         : m_orig_val{naive::HandleImpl::exchange_image2d_pitch_alignment(alignment)},
-          m_new_val{alignment} {}
+          m_new_val{alignment},
+          m_orig_vendor{naive::HandleImpl::exchange_image2d_vendor(vendor)},
+          m_new_vendor{vendor} {}
 
 NaivePitchAlignmentScope::~NaivePitchAlignmentScope() {
     auto r = naive::HandleImpl::exchange_image2d_pitch_alignment(m_orig_val);
     megdnn_assert(r == m_new_val);
+    auto v = naive::HandleImpl::exchange_image2d_vendor(m_orig_vendor);
+    megdnn_assert(v == m_new_vendor);
 }
 
 size_t test::get_cpu_count() {

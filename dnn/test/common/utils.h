@@ -399,9 +399,10 @@ static inline std::ostream& operator<<(std::ostream& ostr, const TensorLayout& l
 //! change the image2d_pitch_alignment of naive handle in this scope
 class NaivePitchAlignmentScope {
     size_t m_orig_val, m_new_val;
+    megdnn::Handle::HandleVendorType m_orig_vendor, m_new_vendor;
 
 public:
-    NaivePitchAlignmentScope(size_t alignment);
+    NaivePitchAlignmentScope(size_t alignment, megdnn::Handle::HandleVendorType vendor);
     ~NaivePitchAlignmentScope();
 };
 

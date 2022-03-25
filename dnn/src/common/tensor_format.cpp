@@ -603,8 +603,9 @@ TensorFormat Image2DPack4TensorFormat::make_raw(
             std::max(align_axis, align_size_in_elements) <=
             std::numeric_limits<uint32_t>::max());
     MEGDNN_LOCK_GUARD(mtx);
-    auto&& ptr =
-            cache[(static_cast<uint64_t>(align_axis) << 32) | align_size_in_elements];
+    auto key = (static_cast<uint64_t>(align_axis) << 32) |
+               align_size_in_elements << 16 | (static_cast<size_t>(vendor_type));
+    auto&& ptr = cache[key];
     if (!ptr) {
         ptr.reset(new Image2DPack4TensorFormat{
                 align_axis, align_size_in_elements, vendor_type});

@@ -94,10 +94,12 @@
 #include "src/naive/warp_affine/opr_impl.h"
 #include "src/naive/warp_perspective/opr_impl.h"
 
-static size_t g_image2d_pitch_alignment = 1;
-
 namespace megdnn {
 namespace naive {
+//! always for ci
+static size_t g_image2d_pitch_alignment = 1;
+static HandleImpl::HandleVendorType g_image2d_pitch_vendor =
+        HandleImpl::HandleVendorType::NOT_SPEC;
 
 DefaultConvolutionForwardAlgorithm HandleImpl::m_default_conv_fwd_algo;
 DefaultConvolutionBackwardDataAlgorithm HandleImpl::m_default_conv_bwd_data_algo;
@@ -128,12 +130,19 @@ size_t HandleImpl::image2d_pitch_alignment() const {
 }
 
 HandleImpl::HandleVendorType HandleImpl::vendor_type() const {
-    return HandleVendorType::NOT_SPEC;
+    return g_image2d_pitch_vendor;
 }
 
 size_t HandleImpl::exchange_image2d_pitch_alignment(size_t alignment) {
     auto ret = g_image2d_pitch_alignment;
     g_image2d_pitch_alignment = alignment;
+    return ret;
+}
+
+HandleImpl::HandleVendorType HandleImpl::exchange_image2d_vendor(
+        HandleImpl::HandleVendorType vendor) {
+    auto ret = g_image2d_pitch_vendor;
+    g_image2d_pitch_vendor = vendor;
     return ret;
 }
 

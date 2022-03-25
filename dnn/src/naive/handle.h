@@ -175,6 +175,17 @@ public:
      * \param alignment the new alignment value to set
      */
     static size_t exchange_image2d_pitch_alignment(size_t alignment);
+    /*!
+     * \brief set the value of HandleVendorType and return original
+     *      setting
+     *
+     * This is only used in test cases where we need to use a naive impl on
+     * specific tensor format.
+     *
+     * \param vendor the new vendor type to set
+     */
+    static HandleImpl::HandleVendorType exchange_image2d_vendor(
+            HandleImpl::HandleVendorType vendor);
     HandleVendorType vendor_type() const override;
 };
 
