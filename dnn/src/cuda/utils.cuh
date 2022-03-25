@@ -83,6 +83,12 @@
         cuda_check(cudaGetLastError()); \
     } while (0)
 
+#if MEGDNN_TEGRA_X2
+//! tx2 only have 256 cuda cores
+#define NR_THREADS   256
+#define NR_THREADS_X 32
+#define NR_THREADS_Y 8
+#else
 #if MEGDNN_THREADS_512
 #define NR_THREADS   512
 #define NR_THREADS_X 32
@@ -91,6 +97,7 @@
 #define NR_THREADS   1024
 #define NR_THREADS_X 32
 #define NR_THREADS_Y 32
+#endif
 #endif
 
 #define DIVUP(x, y)   (((x) + (y)-1) / (y))

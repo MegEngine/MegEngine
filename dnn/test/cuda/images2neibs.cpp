@@ -14,6 +14,7 @@
 #include "test/common/images2neibs.h"
 #include "test/common/rng.h"
 #include "test/cuda/benchmark.h"
+#include "test/cuda/utils.h"
 
 namespace megdnn {
 namespace test {
@@ -44,6 +45,7 @@ TEST_F(CUDA, BENCHMARK_IMAGES2NEIBS_FORWARD) {
 #endif
 
 TEST_F(CUDA, IMAGES2NEIBS_BACKWARD) {
+    require_compute_capability(6, 1);
     UniformFloatRNG rng(0, 1);
     auto args = images2neibs::get_args();
     for (auto&& arg : args) {

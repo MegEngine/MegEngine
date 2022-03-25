@@ -14,13 +14,12 @@
 #include "test/common/benchmarker.h"
 #include "test/common/checker.h"
 #include "test/common/matrix_mul.h"
+#include "test/cuda/utils.h"
 
 #if defined(cuda_check)
 #undef cuda_check
 #endif
-#include "test/cuda/utils.h"
-
-#include <cuda.h>
+#include "src/cuda/utils.h"
 
 namespace megdnn {
 namespace test {
@@ -47,13 +46,7 @@ TEST_F(CUDA, MATRIX_MUL_QUANTIZED4x4x32_EXCEPTION) {
 }
 
 TEST_F(CUDA, MATRIX_MUL_QUANTIZED4x4x32) {
-    if (cuda::current_device_prop().major < 7 ||
-        (cuda::current_device_prop().major == 7 &&
-         cuda::current_device_prop().minor < 5)) {
-        printf("Skip CUDA.MATRIX_MUL_QUANTIZED4x4x32 test as current device "
-               "doesn't support\n");
-        return;
-    }
+    require_compute_capability(7, 5);
     Checker<MatrixMul> checker(handle_cuda(), false);
     using Param = MatrixMul::Param;
     Param param;
@@ -65,21 +58,15 @@ TEST_F(CUDA, MATRIX_MUL_QUANTIZED4x4x32) {
     checker.exec({{256, 256}, {256, 256}, {256, 256}});
     auto args = matrix_mul::get_matmul_args();
     for (auto arg : args) {
-        size_t m = DIVUP(arg.m, 8) * 8, n = DIVUP(arg.n, 8) * 8,
-               k = DIVUP(arg.k, 32) * 32;
+        size_t m = (arg.m + 7) / 8 * 8, n = (arg.n + 7) / 8 * 8,
+               k = (arg.k + 31) / 32 * 32;
         checker.exec({{m, k}, {n, k}, {m, n}});
     }
 }
 
 #if MEGDNN_WITH_BENCHMARK
 TEST_F(CUDA, BENCHMARK_MATRIX_MUL_QUANTIZED4x4x32) {
-    if (cuda::current_device_prop().major < 7 ||
-        (cuda::current_device_prop().major == 7 &&
-         cuda::current_device_prop().minor < 5)) {
-        printf("Skip CUDA.BENCHMARK_MATRIX_MUL_QUANTIZED4x4x32 test as current "
-               "device doesn't support\n");
-        return;
-    }
+    require_compute_capability(7, 5);
     Benchmarker<MatrixMul> bencher(handle_cuda());
     using Param = MatrixMul::Param;
     Param param;
@@ -102,14 +89,7 @@ TEST_F(CUDA, BENCHMARK_MATRIX_MUL_QUANTIZED4x4x32) {
 }
 
 TEST_F(CUDA, PEAK_BENCHMARK_MATRIX_MUL_QUANTIZED4x4x32) {
-    if (cuda::current_device_prop().major < 7 ||
-        (cuda::current_device_prop().major == 7 &&
-         cuda::current_device_prop().minor < 5)) {
-        printf("Skip CUDA.PEAK_BENCHMARK_MATRIX_MUL_QUANTIZED4x4x32 test as "
-               "current "
-               "device doesn't support\n");
-        return;
-    }
+    require_compute_capability(7, 5);
     Benchmarker<MatrixMul> bencher(handle_cuda());
     using Param = MatrixMul::Param;
     Param param;

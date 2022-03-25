@@ -42,18 +42,6 @@ TEST_F(CUDA, SLIDINGWINDOWTRANSPOSE_FORWARD) {
     }
 }
 
-#if MEGDNN_WITH_BENCHMARK
-TEST_F(CUDA, BENCHMARK_SLIDINGWINDOWTRANSPOSE_FORWARD) {
-    auto args = sliding_window_transpose::get_benchmark_args();
-    for (auto&& arg : args) {
-        CUBenchmarker<SlidingWindowTransposeForward> bencher(handle_cuda());
-        bencher.set_param(arg.param)
-                .set_dtype(0, dtype::Float32())
-                .exec(TensorShapeArray{arg.ishape, {}});
-    }
-}
-#endif
-
 TEST_F(CUDA, SLIDINGWINDOWTRANSPOSE_BACKWARD) {
     UniformFloatRNG rng(0, 1);
     auto args = sliding_window_transpose::get_args();
@@ -77,6 +65,18 @@ TEST_F(CUDA, SLIDINGWINDOWTRANSPOSE_BACKWARD) {
         checker.set_param(arg.param).exec(TensorShapeArray{olayout, ilayout});
     }
 }
+
+#if MEGDNN_WITH_BENCHMARK
+TEST_F(CUDA, BENCHMARK_SLIDINGWINDOWTRANSPOSE_FORWARD) {
+    auto args = sliding_window_transpose::get_benchmark_args();
+    for (auto&& arg : args) {
+        CUBenchmarker<SlidingWindowTransposeForward> bencher(handle_cuda());
+        bencher.set_param(arg.param)
+                .set_dtype(0, dtype::Float32())
+                .exec(TensorShapeArray{arg.ishape, {}});
+    }
+}
+#endif
 
 }  // namespace test
 }  // namespace megdnn

@@ -33,25 +33,6 @@ TEST_F(CUDA, TYPE_CVT) {
         }
 }
 
-TEST_F(CUDA, BENCHMARK_TYPE_CVT_LAST_NOT_CONTIG) {
-    const size_t RUNS = 3;
-
-    auto run = [&](TensorLayout src, TensorLayout dst) {
-        Benchmarker<TypeCvt> benchmarker(handle_cuda());
-        auto&& layout = src;
-        benchmarker.set_times(RUNS);
-        dst.init_contiguous_stride();
-        auto used = benchmarker.execl({src, dst});
-        printf("layout: %s bandwith: %f gbps/s\n", layout.to_string().c_str(),
-               2 * layout.total_nr_elems() * layout.dtype.size() * RUNS / used * 1000 /
-                       (1024 * 1024 * 1024));
-    };
-
-    TensorLayout src({16, 128, 128}, {49152, 384, 3}, dtype::Float32()),
-            dst({16, 128, 128}, {16384, 128, 1}, dtype::Float32());
-    run(src, dst);
-}
-
 TEST_F(CUDA, QUANTIZED_TYPECVT) {
     UniformIntRNG int_rng{-66, 66};
     Checker<TypeCvt> checker(handle_cuda());
@@ -162,6 +143,25 @@ TEST_F(CUDA, TYPE_CVT_BFLOAT16) {
 }
 
 #if MEGDNN_WITH_BENCHMARK
+TEST_F(CUDA, BENCHMARK_TYPE_CVT_LAST_NOT_CONTIG) {
+    const size_t RUNS = 3;
+
+    auto run = [&](TensorLayout src, TensorLayout dst) {
+        Benchmarker<TypeCvt> benchmarker(handle_cuda());
+        auto&& layout = src;
+        benchmarker.set_times(RUNS);
+        dst.init_contiguous_stride();
+        auto used = benchmarker.execl({src, dst});
+        printf("layout: %s bandwith: %f gbps/s\n", layout.to_string().c_str(),
+               2 * layout.total_nr_elems() * layout.dtype.size() * RUNS / used * 1000 /
+                       (1024 * 1024 * 1024));
+    };
+
+    TensorLayout src({16, 128, 128}, {49152, 384, 3}, dtype::Float32()),
+            dst({16, 128, 128}, {16384, 128, 1}, dtype::Float32());
+    run(src, dst);
+}
+
 TEST_F(CUDA, BENCHMARK_TYPE_CVT) {
     UniformIntRNG rng{-128, 127};
     auto run = [&](TensorLayout src, TensorLayout dst) {

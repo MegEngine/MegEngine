@@ -22,6 +22,8 @@
 #include "test/cuda/fixture.h"
 #include "test/cuda/utils.h"
 
+#include <cudnn.h>
+
 #define V1(x) #x
 #define V(x)  V1(x)
 #define CUDNN_VERSION_STRING \
@@ -156,23 +158,6 @@ TEST_F(CUDA, CONVOLUTION_1X1_FORWARD) {
                 .set_rng(0, &default_rng)
                 .set_rng(1, &default_rng)
                 .set_epsilon(1e-3)
-                .set_param(arg.param)
-                .execs({arg.src, arg.filter, {}});
-    }
-}
-
-TEST_F(CUDA, BENCHMARK_CONVOLUTION_1X1_FORWARD) {
-    using namespace convolution;
-    std::vector<TestArg> args = get_1x1_args();
-    Benchmarker<ConvolutionForward> marker(handle_cuda());
-    NormalRNG default_rng;
-    for (auto&& arg : args) {
-        float scale = 1.0f / sqrt(arg.filter[1] * arg.filter[2] * arg.filter[3]);
-        UniformFloatRNG rng(scale, 2 * scale);
-        marker.set_dtype(0, dtype::Float32())
-                .set_dtype(1, dtype::Float32())
-                .set_rng(0, &default_rng)
-                .set_rng(1, &default_rng)
                 .set_param(arg.param)
                 .execs({arg.src, arg.filter, {}});
     }
@@ -767,6 +752,23 @@ TEST_F(CUDA, CONVOLUTION_BACKWARD_DEPTHWISE_LARGE_FILTER) {
 }
 
 #if MEGDNN_WITH_BENCHMARK
+TEST_F(CUDA, BENCHMARK_CONVOLUTION_1X1_FORWARD) {
+    using namespace convolution;
+    std::vector<TestArg> args = get_1x1_args();
+    Benchmarker<ConvolutionForward> marker(handle_cuda());
+    NormalRNG default_rng;
+    for (auto&& arg : args) {
+        float scale = 1.0f / sqrt(arg.filter[1] * arg.filter[2] * arg.filter[3]);
+        UniformFloatRNG rng(scale, 2 * scale);
+        marker.set_dtype(0, dtype::Float32())
+                .set_dtype(1, dtype::Float32())
+                .set_rng(0, &default_rng)
+                .set_rng(1, &default_rng)
+                .set_param(arg.param)
+                .execs({arg.src, arg.filter, {}});
+    }
+}
+
 TEST_F(CUDA, CONV_FWD_BENCHMARK) {
     auto run = [&](size_t N, size_t OC, size_t IC, size_t IH, size_t IW, size_t SH = 1,
                    size_t SW = 1, size_t FH = 1, size_t FW = 1, size_t PH = 0,

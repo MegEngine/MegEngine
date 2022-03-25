@@ -40,6 +40,7 @@ TEST_F(CUDA, ROTATE) {
     }
 }
 
+#if MEGDNN_WITH_BENCHMARK
 TEST_F(CUDA, BENCHMARK_ROTATE) {
     auto run = [&](const TensorShapeArray& shapes) {
         Benchmarker<Rotate> benchmarker(handle_cuda());
@@ -74,6 +75,7 @@ TEST_F(CUDA, BENCHMARK_ROTATE) {
 
     run(shapes);
 }
+#endif
 
 }  // namespace rotate
 }  // namespace test

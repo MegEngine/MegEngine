@@ -44,6 +44,7 @@ TEST_F(CUDA, FLIP) {
     }
 }
 
+#if MEGDNN_WITH_BENCHMARK
 TEST_F(CUDA, FLIP_BENCHMARK) {
     auto run = [&](const TensorShapeArray& shapes) {
         Benchmarker<Flip> benchmarker(handle_cuda());
@@ -75,6 +76,7 @@ TEST_F(CUDA, FLIP_BENCHMARK) {
 
     run(shapes);
 }
+#endif
 
 }  // namespace test
 }  // namespace megdnn

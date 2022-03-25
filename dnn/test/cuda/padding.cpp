@@ -188,8 +188,7 @@ TEST_F(CUDA, PADDING_REPLICATE2) {
                                                              6, 7, 7, 8, 9, 9, 9, 9})});
 }
 
-// #if MEGDNN_WITH_BENCHMARK
-
+#if MEGDNN_WITH_BENCHMARK
 TEST_F(CUDA, BENCHMARK_PADDING_CONSTANT) {
     using Param = Padding::Param;
 
@@ -240,5 +239,4 @@ TEST_F(CUDA, BENCHMARK_PADDING_CONSTANT) {
         run(shapes, param);
     }
 }
-
-// #endif
+#endif
