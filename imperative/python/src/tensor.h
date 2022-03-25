@@ -59,6 +59,11 @@ public:
         return *shape;
     }
     inline Format format() { return *data().format(); }
+    inline void set_format(std::string format) {
+        if (!format.empty()) {
+            m_data = imperative::apply(SetFormat(format), m_data)[0];
+        }
+    }
     inline HostValue::ref_t numpy() { return data().numpy(); }
     inline void reset(ValueRef value) {
         m_data = value;
@@ -130,6 +135,7 @@ public:
     PyObject* copied();
     PyObject* module_trace_info();
     void set_module_trace_info(PyObject*);
+    void _set_format(PyObject*);
     void _set_name(PyObject*);
     PyObject* _detail();
     PyObject* _var();

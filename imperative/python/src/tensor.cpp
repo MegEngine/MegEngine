@@ -584,6 +584,12 @@ void TensorWrapper::set_module_trace_info(PyObject* obj) {
     module_trace_info_map[m_tensor->data()] = py::reinterpret_borrow<py::object>(obj);
 }
 
+void TensorWrapper::_set_format(PyObject* dest) {
+    auto py_dest = py::reinterpret_borrow<py::object>(dest);
+    auto format = py_dest.cast<std::string>();
+    m_tensor->set_format(format);
+}
+
 void TensorWrapper::_set_name(PyObject* dest) {
     auto py_dest = py::reinterpret_borrow<py::object>(dest);
     auto name = py_dest.cast<std::string>();
@@ -812,7 +818,7 @@ void init_tensor(py::module m) {
                     .def_getset<&TensorWrapper::shape>("shape")
                     .def_getset<&TensorWrapper::dtype>("dtype")
                     .def_getset<&TensorWrapper::device>("device")
-                    .def_getset<&TensorWrapper::format>("format")
+                    .def<&TensorWrapper::format>("format")
                     .def<&TensorWrapper::reset>("_reset")
                     .def<&TensorWrapper::isscalar>("_isscalar")
                     .def<&TensorWrapper::detach>("detach")
@@ -820,6 +826,7 @@ void init_tensor(py::module m) {
                     .def<&TensorWrapper::_dev_tensor>("_dev_tensor")
                     .def<&TensorWrapper::_drop>("_drop")
                     .def<&TensorWrapper::_detail>("_detail")
+                    .def<&TensorWrapper::_set_format>("_set_format")
                     .def<&TensorWrapper::_set_name>("_set_name")
                     .def<&TensorWrapper::_watch>("_watch")
                     .def<&TensorWrapper::_var>("var")

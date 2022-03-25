@@ -1,5 +1,6 @@
 import numpy as np
 
+import megengine as mge
 import megengine.functional as F
 from megengine import Parameter
 
@@ -34,6 +35,7 @@ class GroupNorm(Module):
 
     def forward(self, x):
         N, C, H, W = x.shape
+        format = x.format
         assert C == self.num_channels
 
         x = x.reshape(N, self.num_groups, -1)
@@ -44,7 +46,9 @@ class GroupNorm(Module):
         x = x.reshape(N, C, H, W)
         if self.affine:
             x = self.weight.reshape(1, -1, 1, 1) * x + self.bias.reshape(1, -1, 1, 1)
-
+        # FIXME(czh): remove this after making it a builtin op.
+        if format == "nhwc":
+            x = mge.amp.convert_tensor_format(x, inplace=False)
         return x
 
     def _module_info_string(self) -> str:
@@ -81,6 +85,7 @@ class InstanceNorm(Module):
 
     def forward(self, x):
         N, C, H, W = x.shape
+        format = x.format
         assert C == self.num_channels
         x = x.reshape(N, C, -1)
         mean = x.mean(axis=2, keepdims=True)
@@ -90,7 +95,9 @@ class InstanceNorm(Module):
         x = x.reshape(N, C, H, W)
         if self.affine:
             x = self.weight.reshape(1, -1, 1, 1) * x + self.bias.reshape(1, -1, 1, 1)
-
+        # FIXME(czh): remove this after making it a builtin op.
+        if format == "nhwc":
+            x = mge.amp.convert_tensor_format(x, inplace=False)
         return x
 
     def _module_info_string(self) -> str:

@@ -29,10 +29,13 @@ def convert_tensor_format(x: Tensor, inplace: bool = True):
     # TODO: use initialization from tensor after fixing format setting
     if x.format != "nhwc":
         if inplace:
+            # reset will destroy backward grad
             data = x.numpy().transpose(*pattern)
             x[...] = Tensor(data, format="nhwc")
         else:
-            x = Tensor(x.numpy().transpose(*pattern), format="nhwc")
+            # use mge interface to maintain grad
+            x = F.transpose(x, pattern)
+            x.format="nhwc"
     return x
 
 

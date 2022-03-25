@@ -122,7 +122,11 @@ class Tensor(_Tensor, ArrayMethodMixin):
 
     @property
     def format(self) -> str:
-        return super().format
+        return super().format()
+
+    @format.setter
+    def format(self, format):
+        super()._set_format(format)
 
     @property
     def qparams(self):

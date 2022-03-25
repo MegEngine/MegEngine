@@ -31,6 +31,9 @@ def test_basic():
     b[...] = tensor(data, format="nchw")
     assert b.format == "nchw"
 
+    # set tensor's format
+    b.format = "nhwc"
+    assert b.format == "nhwc"
 
 def _compare_nchw_nhwc(data, func, is_symbolic=None):
     x1 = tensor(data)

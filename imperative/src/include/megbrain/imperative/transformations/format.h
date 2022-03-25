@@ -26,6 +26,8 @@ public:
 
     const Format& format() const { return m_format; }
 
+    void set_format(Format format) { m_format = format; }
+
     void clear() override {
         m_value = {};
         m_format = {};
@@ -65,10 +67,10 @@ public:
     inline ValueRef unwrap_input(const ValueRef& input) const;
     inline ValueRefList unwrap_inputs(const Span<ValueRef>& inputs) const;
     inline ValueRef wrap_output(
-            const ValueRef& output, Format::Type type = Format::Type::DEFAULT) const;
+            const ValueRef& output, Format format = Format::Type::DEFAULT) const;
     inline ValueRefList wrap_outputs(
             const ValueRefList& outputs,
-            Format::Type type = Format::Type::DEFAULT) const;
+            Format format = Format::Type::DEFAULT) const;
 
     TypedValueRef<FormattedTensorValue> as(
             const FormattedTensorValue&, const Format::Type& target) const;

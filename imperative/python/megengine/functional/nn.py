@@ -245,6 +245,8 @@ def conv2d(
 
     sparse_type = "dense" if groups == 1 else "group"
     compute_mode = _config._get_actual_op_param(compute_mode, _config.__compute_mode)
+    with _config._override(auto_format_convert=False):
+        print(compute_mode, inp.shape, inp.format, weight.shape, weight.format)
     op = builtin.Convolution(
         stride_h=stride_h,
         stride_w=stride_w,

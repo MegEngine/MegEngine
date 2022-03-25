@@ -105,9 +105,16 @@ std::string IsScalar::to_string() const {
     return "IsScalar";
 }
 
+std::string GetFormat::to_string() const {
+    return "GetFormat{}";
+}
+
+std::string SetFormat::to_string() const {
+    return ssprintf("SetFormat{format=%s}", m_format.to_string().c_str());
+}
+
 std::string GetVarVal::to_string() const {
     return "GetVarVal";
 }
-
 }  // namespace imperative
 }  // namespace mgb

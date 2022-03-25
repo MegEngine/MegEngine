@@ -164,7 +164,19 @@ public:
 
 class GetFormat final : public OperatorImpl<GetFormat, Operator::GetAttrLike> {
 public:
-    std::string to_string() const override { return "GetFormat{}"; }
+    std::string to_string() const override;
+};
+
+class SetFormat final : public OperatorImpl<SetFormat, Operator::IdentityLike> {
+private:
+    Format m_format;
+
+public:
+    SetFormat(std::string format) : m_format(format) {}
+
+    Format format() const { return m_format; }
+
+    std::string to_string() const override;
 };
 
 class GetVarVal final : public OperatorImpl<GetVarVal, Operator::GetAttrLike> {

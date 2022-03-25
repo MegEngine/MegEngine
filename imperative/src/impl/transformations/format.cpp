@@ -57,15 +57,15 @@ inline ValueRefList FormatTransformation::unwrap_inputs(
 }
 
 inline ValueRef FormatTransformation::wrap_output(
-        const ValueRef& output, FT type) const {
-    return m_value_type.make(output, type);
+        const ValueRef& output, Format format) const {
+    return m_value_type.make(output, format);
 }
 
 inline ValueRefList FormatTransformation::wrap_outputs(
-        const ValueRefList& outputs, FT type) const {
+        const ValueRefList& outputs, Format format) const {
     ValueRefList wrapped_outputs(outputs.size());
     for (size_t i = 0; i < outputs.size(); ++i) {
-        wrapped_outputs[i] = wrap_output(outputs[i], type);
+        wrapped_outputs[i] = wrap_output(outputs[i], format);
     }
     return wrapped_outputs;
 }
@@ -241,7 +241,7 @@ ValueRefList subtensor_rule(
         if (!(auto_convert && src.format() == FT::NHWC)) {
             return {t.wrap_output(
                     imperative::apply(op, t.unwrap_inputs(inputs))[0],
-                    src.format().type())};
+                    src.format())};
         }
         auto nhwc_items = convert_nchw2nhwc_idx_items(op.items);
         auto outputs = imperative::apply(
@@ -264,7 +264,7 @@ ValueRefList setsubtensor_rule(
         if (!(auto_convert && src.format() == FT::NHWC)) {
             return {t.wrap_output(
                     imperative::apply(op, t.unwrap_inputs(inputs))[0],
-                    src.format().type())};
+                    src.format())};
         }
         // value has been broadcasted to src's fake NCHW shape.
         auto& value = inputs[1].cast(t.value_type());
@@ -330,7 +330,7 @@ ValueRefList identity_rule_helper(
     // mgb_assert(inputs.size() == 1);
     auto& src = inputs[0].cast(t.value_type());
     return t.wrap_outputs(
-            imperative::apply(op, t.unwrap_inputs(inputs)), src.format().type());
+            imperative::apply(op, t.unwrap_inputs(inputs)), src.format());
 }
 
 ValueRefList batchnorm_rule(
@@ -467,7 +467,7 @@ ValueRefList FormatTransformation::apply_transformation(
         }
     } else if (auto* create_tensor = op.as<CreateTensor>()) {
         auto format = create_tensor->format();
-        return {wrap_output(imperative::apply(op, inputs)[0], format.type())};
+        return {wrap_output(imperative::apply(op, inputs)[0], format)};
     } else if (auto* get_attr = op.as<GetAttr>()) {
         auto&& input = inputs.item();
         if (!input.is(m_value_type)) {
@@ -500,12 +500,16 @@ ValueRefList FormatTransformation::apply_transformation(
                     op.to_string().c_str(), inputs[0].to_string().c_str());
             return {FormatValue::make(FT::DEFAULT)};
         }
+    } else if (auto* _op = op.as<SetFormat>()) {
+        auto&& inp_ref = inputs[0].as_ref(m_value_type);
+        mgb_assert(inp_ref, "Cannot set format for non-format Tensor.");
+        return {m_value_type.make(inp_ref->value(), _op->format())};
     } else if (op.is<Operator::IdentityLike>()) {
         auto&& inp_ref = inputs[0].as_ref(m_value_type);
         if (inp_ref) {
             auto&& format = inp_ref->format();
             return wrap_outputs(
-                    imperative::apply(op, unwrap_inputs(inputs)), format.type());
+                    imperative::apply(op, unwrap_inputs(inputs)), format);
         } else {
             mgb_log_warn(
                     "Not FormattedTensorValue input for IdentityLike op: %s, %s",
@@ -521,13 +525,13 @@ ValueRefList FormatTransformation::apply_transformation(
             GenericFunction new_callback =
                     [this, callback, format](Span<ValueRef> inputs_) -> ValueRefList {
                 auto wrapped_inputs = SmallVector<ValueRef>{
-                        this->value_type().make(inputs_.item(), format.type())};
+                        this->value_type().make(inputs_.item(), format)};
                 auto ret = callback(wrapped_inputs);
                 return ret;
             };
             auto&& outputs = imperative::apply(
                     op, inp_ref->value(), FunctionValue::make(new_callback));
-            return wrap_outputs(outputs, format.type());
+            return wrap_outputs(outputs, format);
         } else {
             mgb_log_warn(
                     "Not FormattedTensorValue input for AttachGrad op: %s, %s",
@@ -549,7 +553,7 @@ ValueRefList FormatTransformation::apply_transformation(
         for (size_t i = 0; i < nr_outputs; ++i) {
             if (auto output_ref = outputs_[i].as_ref(m_value_type)) {
                 wrapped_outputs[i] =
-                        m_value_type.make(outputs[i], output_ref->format().type());
+                        m_value_type.make(outputs[i], output_ref->format());
             } else {
                 mgb_log_warn(
                         "Not FormattedTensorValue outputs for SetGrad op: %s, %s",
