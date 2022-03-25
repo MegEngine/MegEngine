@@ -69,7 +69,7 @@ struct ReluOpBase<dt_qint8, dt_qint8> : UnaryOpBase<dt_qint8, dt_qint8> {
 template <>
 struct ReluOp<dt_qint8, dt_qint8> : ReluOpBase<dt_qint8, dt_qint8> {
     using ReluOpBase::ReluOpBase;
-    constexpr static size_t SIMD_WIDTH = 16;
+    constexpr static size_t SIMD_WIDTH = GI_SIMD_LEN_BYTE / sizeof(int8_t);
     using ReluOpBase::operator();
 
     void operator()(const GI_INT8_V2_t& vsrc, dt_qint8* dst) const {

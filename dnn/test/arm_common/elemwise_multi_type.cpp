@@ -11,8 +11,10 @@
  */
 
 #include "test/common/elemwise_multi_type.h"
+#include "megdnn/opr_param_defs.h"
 #include "megdnn/oprs.h"
 #include "test/arm_common/fixture.h"
+#include "test/common/benchmarker.h"
 #include "test/common/checker.h"
 #include "test/common/task_record_check.h"
 #include "test/common/timer.h"
@@ -558,5 +560,96 @@ TEST_F(ARM_COMMON, ELEMWISE_FMA3_UINT8xF32xF32xF32_RECORD) {
             .execs({{16, 128, 16, 16}, {1, 128, 1, 1}, {1, 128, 1, 1}, {}})
             .execs({{16, 128, 16, 16}, {1, 1, 1, 1}, {1, 1, 1, 1}, {}});
 }
+
+#if MEGDNN_WITH_BENCHMARK
+namespace {
+void run_elemwise_benchmark(
+        const TensorShapeArray& shapes, ElemwiseMultiType::Param::Mode mode,
+        const char* mode_str, std::vector<DType> types, Handle* handle_bench) {
+    auto handle_fallback = create_cpu_handle(1);
+    Benchmarker<ElemwiseMultiType> benchmarker_bench(handle_bench);
+    Benchmarker<ElemwiseMultiType> benchmarker_fallback(handle_fallback.get());
+
+    float throughput = 0;
+    SmallVector<TensorLayout> layouts;
+    std::string src_strs;
+    for (size_t i = 0; i < shapes.size(); i++) {
+        layouts.emplace_back(shapes[i], types[i]);
+        throughput += layouts.back().span().dist_byte();
+        src_strs += layouts.back().to_string();
+        if (i != shapes.size() - 1) {
+            src_strs += ",";
+        }
+    }
+    constexpr size_t RUN = 50;
+    benchmarker_fallback.set_times(RUN).set_display(false);
+    benchmarker_bench.set_times(RUN).set_display(false);
+
+    benchmarker_fallback.set_param(mode);
+    benchmarker_bench.set_param(mode);
+
+    TensorLayout dst_layout;
+    dst_layout.dtype = types.back();
+    auto opr = handle_bench->create_operator<ElemwiseMultiType>();
+    opr->param() = mode;
+    opr->deduce_layout(layouts, dst_layout);
+
+    float computations =
+            dst_layout.total_nr_elems() * (std::max<size_t>(shapes.size(), 2) - 1);
+    throughput += dst_layout.span().dist_byte();
+    computations *= (1e3 / (1024.0 * 1024));
+    throughput *= (1e3 / (1024.0 * 1024));
+
+    layouts.emplace_back(dst_layout);
+    auto fallback_time = benchmarker_fallback.execl(layouts) / RUN;
+    auto bench_time = benchmarker_bench.execl(layouts) / RUN;
+
+    float fallback_flops = computations / fallback_time;
+    float bench_flops = computations / bench_time;
+    float fallback_thr = throughput / fallback_time;
+    float bench_thr = throughput / bench_time;
+
+    printf("%s = %s (mode: %s) cpu=%fMFLOPS %fMB/s, bench=%fMFLOPS "
+           "%fMB/s "
+           "computations: %fx, throughput: %fx\n",
+           src_strs.c_str(), dst_layout.to_string().c_str(), mode_str, fallback_flops,
+           fallback_thr, bench_flops, bench_thr, bench_flops / fallback_flops,
+           bench_thr / fallback_thr);
+}
+}  // namespace
+
+#define RUN_WITH_MODE(shape, mode, types) \
+    run_elemwise_benchmark(shape, mode, #mode, types, handle());
+
+TEST_F(ARM_COMMON, BENCHMARK_UNARY_MULTI_TYPE) {
+    using Mode = ElemwiseMultiType::Param::Mode;
+    for (auto mode :
+         {Mode::QRELU, Mode::QABS, Mode::QSIGMOID, Mode::QEXP, Mode::QTANH,
+          Mode::QFAST_TANH, Mode::QH_SWISH}) {
+        std::vector<DType> types = {dtype::QuantizedS8(1.4f), dtype::QuantizedS8(3.4f)};
+        TensorShapeArray shapes = {{10000}};
+        RUN_WITH_MODE(shapes, mode, types);
+        std::vector<DType> types2 = {
+                dtype::QuantizedS32(1.4f), dtype::QuantizedS8(3.4f)};
+        RUN_WITH_MODE(shapes, mode, types2);
+    }
+}
+
+TEST_F(ARM_COMMON, BENCHMARK_BINARY_MULTI_TYPE) {
+    using Mode = ElemwiseMultiType::Param::Mode;
+    for (auto mode : {Mode::QADD, Mode::QFUSE_ADD_RELU, Mode::QFUSE_ADD_H_SWISH}) {
+        std::vector<DType> types = {
+                dtype::QuantizedS8(1.4f), dtype::QuantizedS8(3.4f),
+                dtype::QuantizedS8(1.6f)};
+        TensorShapeArray shapes = {{10000}, {10000}};
+        RUN_WITH_MODE(shapes, mode, types);
+        std::vector<DType> types2 = {
+                dtype::QuantizedS32(1.4f), dtype::QuantizedS32(3.4f),
+                dtype::QuantizedS8(1.6f)};
+        RUN_WITH_MODE(shapes, mode, types2);
+    }
+}
+
+#endif
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

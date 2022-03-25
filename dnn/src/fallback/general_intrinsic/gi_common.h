@@ -60,6 +60,7 @@
 #define GI_NEON_INTRINSICS
 #if defined(__aarch64__)
 #define GI_NEON64_INTRINSICS
+#define GI_NEON32_INTRINSICS
 #else
 #define GI_NEON32_INTRINSICS
 #endif

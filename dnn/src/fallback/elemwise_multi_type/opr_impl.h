@@ -50,6 +50,18 @@ protected:
     void on_fuse_mul_add3_uint8xf32xf32xf32(
             const ElemwiseOpParamN<3>& param, const TensorND& dst) override;
 
+    void on_quantized_mode(
+            const ElemwiseOpParamN<1>& param, const TensorND& dst,
+            Elemwise::Mode mode) override;
+
+    void on_quantized_mode(
+            const ElemwiseOpParamN<2>& param, const TensorND& dst,
+            Elemwise::Mode mode) override;
+
+    void on_quantized_mode(
+            const ElemwiseOpParamN<3>& param, const TensorND& dst,
+            Elemwise::Mode mode) override;
+
 public:
     using naive::ElemwiseMultiTypeImpl::ElemwiseMultiTypeImpl;
 };

@@ -15,7 +15,7 @@
 #include "src/arm_common/elemwise_helper/op_binary.h"
 #include "src/arm_common/elemwise_helper/op_ternary.h"
 #include "src/arm_common/elemwise_helper/op_unary.h"
-#include "src/fallback/elemwise_helper/elemwise_op.h"
+#include "src/fallback/elemwise_helper/op_common.h"
 
 namespace megdnn {
 namespace elemwise {

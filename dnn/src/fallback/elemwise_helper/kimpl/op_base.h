@@ -41,7 +41,7 @@ struct UnaryOpBase : OpBase<src_ctype, dst_ctype> {
     GiStoreLowInt8(                                                                    \
             reinterpret_cast<int8_t*>(dst + 8),                                        \
             operator()({{GiMoveLowLongInt16(vsrct1), GiMoveHighLongInt16(vsrct1)}}));  \
-    GI_INT16_t vsrct2 = GiMoveHighLongInt8(vsrc.val[1]);                               \
+    GI_INT16_t vsrct2 = GiMoveLowLongInt8(vsrc.val[1]);                                \
     GiStoreLowInt8(                                                                    \
             reinterpret_cast<int8_t*>(dst + 16),                                       \
             operator()({{GiMoveLowLongInt16(vsrct2), GiMoveHighLongInt16(vsrct2)}}));  \
@@ -330,7 +330,7 @@ struct UnaryQuantizationOp;
 template <typename Op>
 struct UnaryQuantizationOp<dt_qint8, dt_qint8, Op> : UnaryOpBase<dt_qint8, dt_qint8> {
     using UnaryOpBase<dt_qint8, dt_qint8>::UnaryOpBase;
-    constexpr static size_t SIMD_WIDTH = 16;
+    constexpr static size_t SIMD_WIDTH = GI_SIMD_LEN_BYTE / sizeof(int8_t);
     Op op;
 
     void operator()(const dt_qint8& src, dt_qint8* dst) const {
@@ -354,7 +354,7 @@ struct UnaryQuantizationOp<dt_qint8, dt_qint8, Op> : UnaryOpBase<dt_qint8, dt_qi
         auto val = this->op({{vitem0, vitem1}});
         val.val[0] = GiMultiplyFloat32(val.val[0], this->vscale_dst);
         val.val[1] = GiMultiplyFloat32(val.val[1], this->vscale_dst);
-        return QConverter::convert<GI_INT8_t, GI_FLOAT32_V4_t>(val);
+        return QConverter::convert<GI_INT8_t, GI_FLOAT32_V2_t>(val);
     }
 };
 
@@ -364,7 +364,7 @@ struct BinaryQuantizationOp;
 template <typename Op>
 struct BinaryQuantizationOp<dt_qint8, dt_qint8, Op> : BinaryOpBase<dt_qint8, dt_qint8> {
     using BinaryOpBase<dt_qint8, dt_qint8>::BinaryOpBase;
-    constexpr static size_t SIMD_WIDTH = 16;
+    constexpr static size_t SIMD_WIDTH = GI_SIMD_LEN_BYTE / sizeof(int8_t);
     Op op;
 
     void operator()(const dt_qint8& src0, const dt_qint8& src1, dt_qint8* dst) const {
@@ -403,7 +403,7 @@ template <typename Op>
 struct TernaryQuantizationOp<dt_qint8, dt_qint8, Op>
         : TernaryOpBase<dt_qint8, dt_qint8> {
     using TernaryOpBase<dt_qint8, dt_qint8>::TernaryOpBase;
-    constexpr static size_t SIMD_WIDTH = 16;
+    constexpr static size_t SIMD_WIDTH = GI_SIMD_LEN_BYTE / sizeof(int8_t);
     Op op;
 
     void operator()(
