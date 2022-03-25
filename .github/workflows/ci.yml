@@ -24,6 +24,8 @@ jobs:
     needs: [check-commit]
     container:
       image: localhost:5000/megengine-ci:v1
+      env:
+        FTP_URL_PREFIX: ${{ secrets.FTP_URL_PREFIX }}
     steps:
       - name: Checkout MegEngine
         uses: actions/checkout@v2
@@ -53,6 +55,7 @@ jobs:
       options: --gpus all --shm-size 1g
       env:
         NCCL_LAUNCH_MODE: PARALLEL
+        FTP_URL_PREFIX: ${{ secrets.FTP_URL_PREFIX }}
     steps:
       - name: Checkout MegEngine
         uses: actions/checkout@v2
