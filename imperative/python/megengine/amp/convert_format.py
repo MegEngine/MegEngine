@@ -15,11 +15,14 @@ from ..core import _config
 
 def _is_nchw_format(param: Tensor):
     # TODO: use better condition
-    return (len(param.shape) == 4 or len(param.shape) == 5) and param.format != "nhwc"
+    return (param.ndim == 4 or param.ndim == 5) and param.format != "nhwc"
 
 
 def convert_tensor_format(x: Tensor, inplace: bool = True):
     """Convert NCHW Tensor to NHWC Tensor."""
+    if not _is_nchw_format(x):
+        return x
+
     if x.ndim == 4:
         pattern = (0, 2, 3, 1)
     elif x.ndim == 5:
@@ -29,8 +32,9 @@ def convert_tensor_format(x: Tensor, inplace: bool = True):
     # TODO: use initialization from tensor after fixing format setting
     if x.format != "nhwc":
         if inplace:
-            # reset will destroy backward grad
+            # hostvalue should still be valid, so no d2h cost.
             data = x.numpy().transpose(*pattern)
+            # reset will destroy existed backward grad
             x[...] = Tensor(data, format="nhwc")
         else:
             # use mge interface to maintain grad
@@ -45,7 +49,5 @@ def convert_module_format(module: Module, inplace: bool = True):
         module = deepcopy(module)
 
     for name, param in module.named_tensors():
-        if _is_nchw_format(param):
-            # hostvalue should still be valid, so no d2h cost.
-            convert_tensor_format(param, inplace=True)
+        convert_tensor_format(param, inplace=True)
     return module

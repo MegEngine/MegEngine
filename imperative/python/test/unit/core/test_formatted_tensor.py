@@ -35,6 +35,7 @@ def test_basic():
     b.format = "nhwc"
     assert b.format == "nhwc"
 
+
 def _compare_nchw_nhwc(data, func, is_symbolic=None):
     x1 = tensor(data)
     x2 = tensor(data.transpose(0, 2, 3, 1), format="nhwc")
@@ -335,21 +336,42 @@ def _compare_backward(inps, model, is_symbolic=None):
 
     gm = GradManager().attach(model.parameters())
     with gm:
-        rst = func(*inps)
-        gm.backward(rst)
-        expected_grads = [param.grad for param in model.parameters()]
+        with mge.amp.autocast():
+            rst = func(*inps)
+            gm.backward(rst)
+    expected_grads = [param.grad.numpy() for param in gm.attached_tensors()]
+
+    for param in gm.attached_tensors():
+        param.grad = None
 
     inps = [mge.amp.convert_tensor_format(inp) for inp in inps]
     model = mge.amp.convert_module_format(model)
     gm = GradManager().attach(model.parameters())
     with gm:
-        rst = func(*inps)
-        gm.backward(rst)
-        actual_grads = [param.grad for param in model.parameters()]
+        with mge.amp.autocast():
+            rst = func(*inps)
+            gm.backward(rst)
+    actual_grads = [param.grad.numpy() for param in gm.attached_tensors()]
 
     for expected, actual in zip(expected_grads, actual_grads):
-        # print(param.grad)
-        np.testing.assert_equal(expected.numpy(), actual.numpy())
+        assert expected is not None
+        assert actual is not None
+        np.testing.assert_almost_equal(expected, actual, decimal=5)
+
+
+@pytest.mark.parametrize("is_symbolic", [None])
+def test_backward_basic(is_symbolic):
+    class Net(M.Module):
+        def __init__(self):
+            super().__init__()
+            self.w = mge.Parameter([[2.0], [4.0], [6.0]])
+            self.b = mge.Parameter(-1.0)
+
+        def forward(self, inp):
+            return F.matmul(inp, self.w) + self.b
+
+    inp = mge.tensor([1.0, 3.0, 5.0]).reshape(1, 3)
+    _compare_backward([inp], Net(), is_symbolic)
 
 
 @pytest.mark.parametrize("is_symbolic", [None])
@@ -379,14 +401,15 @@ def test_backward_groupconv2d_bn(is_symbolic):
     class Net(M.Module):
         def __init__(self):
             super().__init__()
-            self.conv = M.Conv2d(2, 2, 1, groups=2)
-            self.bn = M.BatchNorm2d(2)
+            self.conv0 = M.Conv2d(32, 256, 3, groups=32, stride=2)
+            self.conv1 = M.Conv2d(256, 2048, 3, groups=32, stride=2)
+            # self.bn = M.BatchNorm2d(2048)
 
         def forward(self, inp):
             # test manually convert to NHWC, usually used in detection head
-            return self.bn(self.conv(inp))
+            return self.conv1(self.conv0(inp))
 
-    inp = mge.tensor(np.arange(0, 24).reshape((1, 2, 3, 4)))
+    inp = mge.tensor(np.ones(shape=(32, 32, 56, 56)).astype("float32"))
     _compare_backward([inp], Net(), is_symbolic)
     # def func(x, w, b, bn_w, bn_b):
     # x = F.conv2d(x, w, b, groups=2)

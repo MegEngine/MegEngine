@@ -64,9 +64,7 @@ class Grad:
                 continue
             grad.suppress()
 
-        print("before backward")
         self._impl.backward(ys, dys)
-        print("after backward")
 
         for grad in group:
             if grad is self:

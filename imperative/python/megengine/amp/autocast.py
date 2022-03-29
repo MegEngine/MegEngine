@@ -50,8 +50,6 @@ class autocast:
         self._origin_enabled = None
         self._origin_high = None
         self._origin_low = None
-        self._origin_compute_mode = None
-
         self._origin_configs = None
 
     def __enter__(self):
@@ -75,7 +73,7 @@ class autocast:
             amp._set_amp_high_prec_dtype(self._origin_high)
             amp._set_amp_low_prec_dtype(self._origin_low)
 
-            _config._reset_execution_config(*self._origin_compute_mode)
+            _config._reset_execution_config(*self._origin_configs)
 
     def __call__(self, func):
         @functools.wraps(func)

@@ -33,9 +33,8 @@ TypedValueRef<FormattedTensorValue> FormatTransformation::to(
                 tensor.format().to_string().c_str(),
                 Format(target).to_string().c_str());
     }
-    auto output = imperative::apply(
-            *Dimshuffle::make(pattern, scope),
-            SmallVector<ValueRef>{tensor.value()})[0];
+    auto output =
+            imperative::apply(*Dimshuffle::make(pattern, scope), {tensor.value()})[0];
     return m_value_type.make(output, target);
 }
 
@@ -87,6 +86,27 @@ ValueShape convert_nhwc2nchw_shape(const ValueShape& shape) {
         mgb_throw(
                 MegBrainError, "Unsupported shape ndim %u in GetAttr(Shape).",
                 shape.ndim);
+    }
+}
+
+std::vector<int32_t> convert_nchw2nhwc_vector(const std::vector<int32_t>& shape) {
+    auto out = std::vector<int32_t>(shape);
+    if (shape.size() == 4) {
+        out[1] = shape[2];
+        out[2] = shape[3];
+        out[3] = shape[1];
+        return out;
+    } else if (shape.size() == 5) {
+        // GIOHW -> GIHWO
+        out[2] = shape[3];
+        out[3] = shape[4];
+        out[4] = shape[2];
+        return out;
+    } else {
+        mgb_throw(
+                MegBrainError,
+                "Unsupported shape ndim %u in convert NCHW shape to NHWC.",
+                shape.size());
     }
 }
 
@@ -156,22 +176,38 @@ ValueRef convert_nchw2nhwc_tensornd(const HostTensorND& shape) {
 ValueRefList reshape_rule(
         const Reshape& op, Span<ValueRef>& inputs, const bool& auto_convert,
         const FormatTransformation& t) {
-    mgb_assert(inputs.size() == 2);
+    mgb_assert(inputs.size() >= 1);
     auto& src = inputs[0].cast(t.value_type());
     if (auto_convert && src.format() == FT::NHWC) {
-        auto shape = t.unwrap_input(inputs[1]).numpy()->as_nd();
-        if (shape.layout().total_nr_elems() == 4) {
-            // output is still NHWC format
-            auto nhwc_shape = convert_nchw2nhwc_tensornd(shape);
-            auto outputs = imperative::apply(
-                    op, SmallVector<ValueRef>{t.unwrap_input(inputs[0]), nhwc_shape});
-            return t.wrap_outputs(outputs, FT::NHWC);
-        } else {
-            // will not maintain src's format
-            auto nchw_src = t.to(src, FT::NCHW, op.scope())->value();
-            auto outputs = imperative::apply(
-                    op, SmallVector<ValueRef>{nchw_src, t.unwrap_input(inputs[1])});
-            return t.wrap_outputs(outputs);
+        if (inputs.size() == 1) {
+            if (op.shape.size() == 4) {
+                // output is still NHWC format
+                auto nhwc_shape = convert_nchw2nhwc_vector(op.shape);
+                auto outputs = imperative::apply(
+                        *Reshape::make(op.axis, nhwc_shape), {t.unwrap_input(inputs[0])});
+                return t.wrap_outputs(outputs, FT::NHWC);
+            } else {
+                // will not maintain src's format
+                auto nchw_src = t.to(src, FT::NCHW, op.scope())->value();
+                auto outputs = imperative::apply(op, {nchw_src});
+                return t.wrap_outputs(outputs);
+            }
+        } else if (inputs.size() == 2) {
+            auto shape = t.unwrap_input(inputs[1]).numpy()->as_nd();
+            if (shape.layout().total_nr_elems() == 4) {
+                // output is still NHWC format
+                auto nhwc_shape = convert_nchw2nhwc_tensornd(shape);
+                auto outputs = imperative::apply(
+                        op,
+                        SmallVector<ValueRef>{t.unwrap_input(inputs[0]), nhwc_shape});
+                return t.wrap_outputs(outputs, FT::NHWC);
+            } else {
+                // will not maintain src's format
+                auto nchw_src = t.to(src, FT::NCHW, op.scope())->value();
+                auto outputs = imperative::apply(
+                        op, SmallVector<ValueRef>{nchw_src, t.unwrap_input(inputs[1])});
+                return t.wrap_outputs(outputs);
+            }
         }
     }
     return t.wrap_outputs(imperative::apply(op, t.unwrap_inputs(inputs)));
@@ -180,22 +216,38 @@ ValueRefList reshape_rule(
 ValueRefList broadcast_rule(
         const Broadcast& op, Span<ValueRef>& inputs, const bool& auto_convert,
         const FormatTransformation& t) {
-    mgb_assert(inputs.size() == 2);
+    mgb_assert(inputs.size() >= 1);
     auto& src = inputs[0].cast(t.value_type());
     if (auto_convert && src.format() == FT::NHWC) {
-        auto shape = t.unwrap_input(inputs[1]).numpy()->as_nd();
-        if (shape.layout().total_nr_elems() == 4) {
-            // output is still NHWC format
-            auto nhwc_shape = convert_nchw2nhwc_tensornd(shape);
-            auto outputs = imperative::apply(
-                    op, SmallVector<ValueRef>{t.unwrap_input(inputs[0]), nhwc_shape});
-            return t.wrap_outputs(outputs, FT::NHWC);
-        } else {
-            // will not maintain src's format
-            auto nchw_src = t.to(src, FT::NCHW, op.scope())->value();
-            auto outputs = imperative::apply(
-                    op, SmallVector<ValueRef>{nchw_src, t.unwrap_input(inputs[1])});
-            return t.wrap_outputs(outputs);
+        if (inputs.size() == 1) {
+            if (op.shape.size() == 4) {
+                // output is still NHWC format
+                auto nhwc_shape = convert_nchw2nhwc_vector(op.shape);
+                auto outputs = imperative::apply(
+                        *Broadcast::make(nhwc_shape), {t.unwrap_input(inputs[0])});
+                return t.wrap_outputs(outputs, FT::NHWC);
+            } else {
+                // will not maintain src's format
+                auto nchw_src = t.to(src, FT::NCHW, op.scope())->value();
+                auto outputs = imperative::apply(op, {nchw_src});
+                return t.wrap_outputs(outputs);
+            }
+        } else if (inputs.size() == 2) {
+            auto shape = t.unwrap_input(inputs[1]).numpy()->as_nd();
+            if (shape.layout().total_nr_elems() == 4) {
+                // output is still NHWC format
+                auto nhwc_shape = convert_nchw2nhwc_tensornd(shape);
+                auto outputs = imperative::apply(
+                        op,
+                        SmallVector<ValueRef>{t.unwrap_input(inputs[0]), nhwc_shape});
+                return t.wrap_outputs(outputs, FT::NHWC);
+            } else {
+                // will not maintain src's format
+                auto nchw_src = t.to(src, FT::NCHW, op.scope())->value();
+                auto outputs = imperative::apply(
+                        op, SmallVector<ValueRef>{nchw_src, t.unwrap_input(inputs[1])});
+                return t.wrap_outputs(outputs);
+            }
         }
     }
     return t.wrap_outputs(imperative::apply(op, t.unwrap_inputs(inputs)));
@@ -240,8 +292,7 @@ ValueRefList subtensor_rule(
         // only support NHWC2NCHW convert, otherwise maintain src's format
         if (!(auto_convert && src.format() == FT::NHWC)) {
             return {t.wrap_output(
-                    imperative::apply(op, t.unwrap_inputs(inputs))[0],
-                    src.format())};
+                    imperative::apply(op, t.unwrap_inputs(inputs))[0], src.format())};
         }
         auto nhwc_items = convert_nchw2nhwc_idx_items(op.items);
         auto outputs = imperative::apply(
@@ -263,8 +314,7 @@ ValueRefList setsubtensor_rule(
         // only support NHWC2NCHW convert, otherwise maintain src's format
         if (!(auto_convert && src.format() == FT::NHWC)) {
             return {t.wrap_output(
-                    imperative::apply(op, t.unwrap_inputs(inputs))[0],
-                    src.format())};
+                    imperative::apply(op, t.unwrap_inputs(inputs))[0], src.format())};
         }
         // value has been broadcasted to src's fake NCHW shape.
         auto& value = inputs[1].cast(t.value_type());
@@ -329,8 +379,7 @@ ValueRefList identity_rule_helper(
         const OpDef& op, const Span<ValueRef>& inputs, const FormatTransformation& t) {
     // mgb_assert(inputs.size() == 1);
     auto& src = inputs[0].cast(t.value_type());
-    return t.wrap_outputs(
-            imperative::apply(op, t.unwrap_inputs(inputs)), src.format());
+    return t.wrap_outputs(imperative::apply(op, t.unwrap_inputs(inputs)), src.format());
 }
 
 ValueRefList batchnorm_rule(
@@ -457,6 +506,7 @@ struct FormatRuleRegistry {
 
 ValueRefList FormatTransformation::apply_transformation(
         const Operator& op, Span<ValueRef> inputs) {
+    //mgb_log_warn("Format::apply_transformation %s", op.to_string().c_str());
     if (auto* apply_op = op.as<ApplyOp>()) {
         // all inputs should be FormattedTensorValue
         auto iter = format_rules.find(apply_op->op().dyn_typeinfo());
@@ -485,7 +535,7 @@ ValueRefList FormatTransformation::apply_transformation(
             }
             case GetAttr::Value: {
                 auto nchw_src = unwrap_input(to(src, FT::NCHW, ""));
-                return imperative::apply(op, SmallVector<ValueRef>{nchw_src});
+                return imperative::apply(op, {nchw_src});
             }
             default:
                 return imperative::apply(op, unwrap_inputs(inputs));
@@ -508,8 +558,7 @@ ValueRefList FormatTransformation::apply_transformation(
         auto&& inp_ref = inputs[0].as_ref(m_value_type);
         if (inp_ref) {
             auto&& format = inp_ref->format();
-            return wrap_outputs(
-                    imperative::apply(op, unwrap_inputs(inputs)), format);
+            return wrap_outputs(imperative::apply(op, unwrap_inputs(inputs)), format);
         } else {
             mgb_log_warn(
                     "Not FormattedTensorValue input for IdentityLike op: %s, %s",
@@ -522,6 +571,7 @@ ValueRefList FormatTransformation::apply_transformation(
             auto format = inp_ref->format();
             GenericFunction callback =
                     (GenericFunction&)inputs[1].cast<FunctionValue>();
+            // make param grads as FormattedTensor
             GenericFunction new_callback =
                     [this, callback, format](Span<ValueRef> inputs_) -> ValueRefList {
                 auto wrapped_inputs = SmallVector<ValueRef>{
@@ -531,6 +581,7 @@ ValueRefList FormatTransformation::apply_transformation(
             };
             auto&& outputs = imperative::apply(
                     op, inp_ref->value(), FunctionValue::make(new_callback));
+            // make params(GradValue) as FormattedTensor
             return wrap_outputs(outputs, format);
         } else {
             mgb_log_warn(
@@ -539,6 +590,7 @@ ValueRefList FormatTransformation::apply_transformation(
             return imperative::apply(op, inputs);
         }
     } else if (auto* set_grad = op.as<SetGrad>()) {
+        // make grads in Function backward as FormattedTensor
         size_t nr_inputs = set_grad->nr_inputs();
         size_t nr_outputs = inputs.size() - nr_inputs;
         Span<ValueRef> inputs_ = {inputs.data(), nr_inputs};
