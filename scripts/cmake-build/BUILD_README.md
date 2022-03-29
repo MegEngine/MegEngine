@@ -3,6 +3,7 @@
 * Windows build (cpu and gpu)
 * Linux build   (cpu and gpu)
 * MacOS build   (cpu only)
+* Android build (cpu only) at [termux](https://termux.com/) env
 
 ## Cross build
 * Windows cross build ARM-Android (ok)
@@ -187,7 +188,7 @@ Now we only support cross build to IOS from MACOS
 ```
 
 
-# Other ARM-Linux-Like board support
+## Other ARM-Linux-Like board support
 It`s easy to support other customized arm-linux-like board, example:
 
 * 1: HISI 3516/3519, infact u can just use toolchains from arm developer or linaro
@@ -196,3 +197,12 @@ binary, or if you get HISI official toolschain, you just need modify CMAKE_CXX_C
 and CMAKE_C_COMPILER in toolchains/arm-linux-gnueabi* to a real name
 
 * 2: about Raspberry, just use scripts/cmake-build/cross_build_linux_arm_inference.sh
+
+## About build args
+
+All `scripts/cmake-build/*.sh`  support `EXTRA_CMAKE_ARGS` to  config more options
+
+* get support options by `-l`,  for example: `scripts/cmake-build/cross_build_android_arm_inference.sh -l`
+* CMake support `Release`, `Debug`, `RelWithDebInfo` build type, all `scripts/cmake-build/*.sh` default build type is `Release`, can build `Debug` type with `-d`, if you want to build with `RelWithDebInfo`, you can config with `EXTRA_CMAKE_ARGS`, for example: `EXTRA_CMAKE_ARGS="-DCMAKE_BUILD_TYPE=RelWithDebInfo" ./scripts/cmake-build/host_build.sh`, Notice: when build with `Release` , we will disable some build components:  `RTTI`, `MGB_ASSERT_LOC`, and `MGB_ENABLE_DEBUG_UTIL`
+* CMake build all targets by default, if you just want build a specified target,  you can build with `-e xxxx `, for example, only build with `lite_shared `: `./scripts/cmake-build/cross_build_android_arm_inference.sh -e lite_shared` ,    Notice: when with `-e`, will do not strip target, always for debug or need strip target manually
+* About others build flag, please run with flag `-h`

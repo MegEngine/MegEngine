@@ -98,3 +98,14 @@ scripts/whl/android/android_build_whl.sh
 ```bash
 ALL_PYTHON="3.10.1" ./scripts/whl/android/android_build_whl.sh
 ```
+
+## Do not create whl file
+
+If you do not want to create whl file when debug Python3 binding, you can call `host_build.sh`  with flag `-t` manually, Python3 binding also need build with `Debug`(O0 build Optimization level: run slowly but friendly for debugger) or `RelWithDebInfo`.
+
+* cuda with `Debug` mode: `scripts/cmake-build/host_build.sh -d -c -t`
+* cpu only with `Debug` mode: `scripts/cmake-build/host_build.sh -d -t`
+* cuda with `RelWithDebInfo` mode: `EXTRA_CMAKE_ARGS="-DCMAKE_BUILD_TYPE=RelWithDebInfo" scripts/cmake-build/host_build.sh -c -t`
+* cpu only with `RelWithDebInfo` mode: `EXTRA_CMAKE_ARGS="-DCMAKE_BUILD_TYPE=RelWithDebInfo" scripts/cmake-build/host_build.sh -t`
+
+Start `Python3 ` with env for support `MegEngine` after build: `PYTHONPATH=imperative/python:$PYTHONPATH python3 `
