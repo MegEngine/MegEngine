@@ -1211,6 +1211,12 @@ set(MGE_VERSION_SCRIPT
     ${PROJECT_SOURCE_DIR}/src/version.ld
     CACHE INTERNAL "Path to linker version script")
 
+execute_process(
+  COMMAND git log -1 --format=%H
+  WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
+  OUTPUT_VARIABLE GIT_FULL_HASH
+  OUTPUT_STRIP_TRAILING_WHITESPACE)
+
 # Write out megbrain_build_config.h It defines macros needed by both megbrain and dnn
 configure_file(src/megbrain_build_config.h.in
                ${CMAKE_CURRENT_BINARY_DIR}/genfiles/megbrain_build_config.h)

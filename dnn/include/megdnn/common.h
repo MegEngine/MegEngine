@@ -13,7 +13,6 @@
 
 #include "megbrain_build_config.h"
 #include "megdnn/oprs/base.h"
-
 #if MGB_ENABLE_GETENV
 #define MGB_GETENV ::std::getenv
 #else

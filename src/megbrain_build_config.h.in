@@ -267,4 +267,6 @@
 #define MGE_WIN_DECLSPEC_DATA
 #endif
 
+#define GIT_FULL_HASH "@GIT_FULL_HASH@"
+
 #endif  // _HEADER_MGB_BUILD_CONFIG
