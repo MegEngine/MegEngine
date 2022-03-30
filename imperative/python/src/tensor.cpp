@@ -169,7 +169,7 @@ PyObject* py_apply(
             }
             HostTensorND ht(target_cn);
             ht = npy::np2tensor(args[i], npy::Meth::copy_into(&ht), target_dtype);
-            if (PyArray_Check(args[i])) {  // non scaler
+            if (PyArray_Check(args[i]) || PyList_Check(args[i])) {  // non scaler
                 return imperative::apply(
                         CreateTensor(CreateTensor::Const, target_cn, ht.layout()),
                         HostStorage::make(ht.storage()))[0];
@@ -205,8 +205,13 @@ PyObject* py_apply(
         for (size_t i = 0; i < nargs; ++i) {
             if (TensorWrapper* tw = TensorWrapper::try_cast(args[i])) {
                 tensors[i] = tw->m_tensor->data();
-            } else {
+            } else if (
+                    DTypePromoteCfg::convert_input_enabled &&
+                    op->same_type<Elemwise>()) {
                 tensors[i] = convert_pyinput_to_tensor(i);
+            } else {
+                PyErr_SetString(PyExc_TypeError, "py_apply expects tensor as inputs");
+                return nullptr;
             }
         }
 

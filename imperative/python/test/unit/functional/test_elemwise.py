@@ -77,6 +77,11 @@ def test_div():
         np.floor_divide(np.array([-5, -7], dtype=np.int32), 2),
     )
 
+    np.testing.assert_allclose(
+        (tensor([[5, 4, 3], [4, 2, 6]]) // [1, 2, 1]).numpy(),
+        np.floor_divide(np.array([[5, 4, 3], [4, 2, 6]], dtype=np.int32), [1, 2, 1]),
+    )
+
 
 def test_clamp():
     """Fix an issue when `lower` or `upper` is 0, it will be recognized as `False` and
