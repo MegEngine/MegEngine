@@ -115,6 +115,9 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
         TensorShapeArray src(inputs.size());
         for (size_t i = 0; i < inputs.size(); ++i) {
             src[i] = inputs[i].layout;
+            if (!src[i].ndim) {
+                return {{{TensorLayout(dtype::Int32()), desc.comp_node}}, false};
+            }
         }
         megdnn::Elemwise::deduce_shape(src, shp);
     }

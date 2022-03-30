@@ -205,6 +205,12 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
     size_t size = inputs.size();
     SmallVector<LogicalTensorDesc> dests(size);
 
+    for (size_t i = 0; i < size; i++) {
+        if (inputs[i].layout.ndim == 0) {
+            return {{{TensorLayout(inputs[0].layout.dtype), inputs[0].comp_node}},
+                    false};
+        }
+    }
     if (size > 1) {
         auto [output_descs, validated] =
                 proxy_graph_detail::infer_output_attrs_fallible(def, inputs);

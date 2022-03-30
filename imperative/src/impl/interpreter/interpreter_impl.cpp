@@ -717,7 +717,6 @@ void ChannelImpl::produce_tensor(TensorInfo* dest, TensorPtr ptr) {
     if (state.options.enable_dtr_auto_drop || state.options.disable_memory_forwarding) {
         ptr->to_contiguous_inplace();
     }
-    dest->desc.layout = ptr->layout();
     dest->desc.comp_node = ptr->comp_node();
     dest->memory = ptr->blob()->size();
     dest->ptr = std::move(ptr);

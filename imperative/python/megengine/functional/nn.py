@@ -1509,7 +1509,7 @@ def sync_batch_norm(
     """
     _eps_mode = eps_mode.lower()
     assert _eps_mode in {"max", "additive"}, "unknown eps_mode: {}".format(eps_mode)
-    if _eps_mode == "additive" and not (is_distributed() or training):
+    if _eps_mode == "additive" and not (is_distributed() and training):
         return batch_norm(
             inp,
             running_mean,
