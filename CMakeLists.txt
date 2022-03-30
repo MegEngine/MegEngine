@@ -95,6 +95,7 @@ option(MGE_WITH_ROCM "Enable ROCM support" OFF)
 option(MGE_WITH_LARGE_ARCHIVE "Enable big archive link support" OFF)
 option(MGE_BUILD_WITH_ASAN "Enable build with ASAN, need compiler support" OFF)
 option(MGE_WITH_CUSTOM_OP "Build with Custom op" OFF)
+option(MGE_SYNC_THIRD_PARTY "help sync third_party submodule" OFF)
 
 if(MSVC OR WIN32)
   # FIXME: static link Windows vc runtime with some version from Visual Studio have some
@@ -631,12 +632,6 @@ if(NOT MGE_ENABLE_EXCEPTIONS)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-exceptions")
 endif()
 
-if(MGE_WITH_TEST)
-  include(cmake/gtest.cmake)
-endif()
-
-include(cmake/gflags.cmake)
-
 if(MGE_BUILD_IMPERATIVE_RT)
   set(CMAKE_CXX_STANDARD 17)
 endif()
@@ -652,6 +647,17 @@ if(MGE_INFERENCE_ONLY)
   message(STATUS "Disable imperative_rt python module for inference only build.")
   set(MGE_BUILD_IMPERATIVE_RT OFF)
 endif()
+
+# please do any include(cmake/* after do this execute_process
+if(MGE_SYNC_THIRD_PARTY)
+  include(cmake/third_party_sync.cmake)
+endif()
+
+if(MGE_WITH_TEST)
+  include(cmake/gtest.cmake)
+endif()
+
+include(cmake/gflags.cmake)
 
 if(MGE_WITH_JIT_MLIR OR MGE_BUILD_IMPERATIVE_RT)
   include(cmake/llvm-project.cmake)

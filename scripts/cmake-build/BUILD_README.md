@@ -36,6 +36,8 @@ if you are use github MegEngine and build for Windows XP, please
 		2b: cp lib file to third_party/mkl/x86_32/lib/
 ```
 
+About `third_party/prepare.sh`, also support to be managed by `CMake`, just config `EXTRA_CMAKE_ARGS="-DMGE_SYNC_THIRD_PARTY=ON` before run `scripts/cmake-build/*.sh`
+
 But some dependencies need to be installed manually:
 
 * [CUDA](https://developer.nvidia.com/cuda-toolkit-archive)(>=10.1), [cuDNN](https://developer.nvidia.com/cudnn)(>=7.6) are required when building MegBrain with CUDA support.
