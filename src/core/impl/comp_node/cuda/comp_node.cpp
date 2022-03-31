@@ -822,8 +822,10 @@ CUresult call_cuda_forksafe(Func func, Val* val, Args... args) {
 const char* cu_get_error_string(CUresult err) {
     const char* ret = nullptr;
     cuGetErrorString(err, &ret);
-    if (!ret)
-        ret = "unknown cuda error";
+    if (!ret) {
+        //! caused by cuda stub do not find driver
+        ret = "invalid_stub_call";
+    }
     return ret;
 }
 
@@ -837,10 +839,12 @@ bool CudaCompNode::available() {
         int ndev = -1;
         auto err = call_cuda_forksafe(cuDeviceGetCount, &ndev);
         result = err == CUDA_SUCCESS && ndev > 0;
-        if (!result) {
+        auto err_s = cu_get_error_string(err);
+        //! only show !CUDA_SUCCESS log when with valid stub call
+        if (!result && (std::string(err_s) != "invalid_stub_call")) {
             mgb_log_warn(
-                    "cuda unavailable: %s(%d) ndev=%d", cu_get_error_string(err),
-                    static_cast<int>(err), ndev);
+                    "cuda unavailable: %s(%d) ndev=%d", err_s, static_cast<int>(err),
+                    ndev);
         }
         if (err == CUDA_ERROR_NOT_INITIALIZED) {
             mgb_throw(std::runtime_error, "cuda initialization error.");
@@ -984,11 +988,11 @@ size_t CudaCompNode::get_device_count(bool warn) {
     MGB_LOCK_GUARD(mtx);
     if (cnt == -1) {
         auto err = call_cuda_forksafe(cuDeviceGetCount, &cnt);
+        auto err_s = cu_get_error_string(err);
         if (err != CUDA_SUCCESS) {
-            if (warn)
+            if (warn && (std::string(err_s) != "invalid_stub_call"))
                 mgb_log_error(
-                        "cudaGetDeviceCount failed: %s (err %d)",
-                        cu_get_error_string(err), int(err));
+                        "cudaGetDeviceCount failed: %s (err %d)", err_s, int(err));
             cnt = 0;
         }
         mgb_assert(cnt >= 0);

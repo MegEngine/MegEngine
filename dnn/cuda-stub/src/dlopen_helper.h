@@ -85,25 +85,33 @@ static void* get_library_handle() {
                                  sizeof(extra_so_paths) / sizeof(char*));
     }
     if (!handle) {
-        LOGE("Failed to load %s API library", g_default_api_name);
+        if (std::string(g_default_api_name) == "cuda") {
+            LOGI("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
+            LOGI("+ Failed to load CUDA driver library, MegEngine works under CPU mode now.      +");
+            LOGI("+ To use CUDA mode, please make sure NVIDIA GPU driver was installed properly. +");
+            LOGI("+ Refer to https://discuss.megengine.org.cn/t/topic/1264 for more information. +");
+            LOGI("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
+        } else {
+            LOGI("Failed to load %s API library", g_default_api_name);
+        }
         return nullptr;
     }
     return handle;
 }
 
 static void log_failed_load(int func_idx) {
-    LOGE("failed to load %s func: %s", g_default_api_name,
+    LOGD("failed to load %s func: %s", g_default_api_name,
          g_func_name[func_idx]);
 }
 
 static void* resolve_library_func(void* handle, const char* func) {
     if (!handle) {
-        LOGE("%s handle should not be nullptr!", g_default_api_name);
+        LOGD("%s handle should not be nullptr!", g_default_api_name);
         return nullptr;
     }
     auto ret = dlsym(handle, func);
     if (!ret) {
-        LOGE("failed to load %s func: %s", g_default_api_name, func);
+        LOGD("failed to load %s func: %s", g_default_api_name, func);
     }
     return ret;
 }

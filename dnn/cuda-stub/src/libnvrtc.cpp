@@ -13,7 +13,8 @@
 #pragma GCC visibility push(default)
 
 #include <cstdio>
-#define LOGE(fmt, v...) fprintf(stderr, "err: " fmt "\n", ##v)
+#define LOGI(fmt, v...) fprintf(stdout, "info: " fmt "\n", ##v)
+#define LOGD(fmt, v...) fprintf(stdout, "debug: " fmt "\n", ##v)
 #include "./nvrtc_type.h"
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 
