@@ -310,7 +310,7 @@ public:
             const TensorLayout& filter, const TensorLayout& diff,
             const TensorLayout& grad) = 0;
 
-    void deduce_dtype(DType filter, DType diff, DType& grad);
+    MGE_WIN_DECLSPEC_FUC void deduce_dtype(DType filter, DType diff, DType& grad);
     void deduce_layout(
             const TensorLayout& filter, const TensorLayout& diff, TensorLayout& grad);
 
