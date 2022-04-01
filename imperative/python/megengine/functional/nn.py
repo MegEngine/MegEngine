@@ -1850,8 +1850,6 @@ def local_response_norm(
         ...                  [19.420258,  20.331186,  21.233786,  22.127764,  23.012836 ]]]])
         >>> out = F.local_response_norm(inp, kernel_size=3, k=1.0, alpha=1e-4, beta=0.75)
         >>> np.testing.assert_allclose(GT, out.numpy(), rtol=1e-6, atol=1e-6)
-        >>> print('pass')
-        pass
     """
     op = builtin.LRN(n=kernel_size, k=k, alpha=alpha, beta=beta,)
     (output,) = apply(op, inp)

@@ -33,8 +33,6 @@ class LocalResponseNorm(Module):
         >>> op = M.LocalResponseNorm(kernel_size=3, k=1.0, alpha=1e-4, beta=0.75)
         >>> out = op(inp)
         >>> np.testing.assert_allclose(GT, out.numpy(), rtol=1e-6, atol=1e-6)
-        >>> print('pass')
-        pass
     """
 
     def __init__(
