@@ -261,7 +261,9 @@ void Image2DPackedTensorFormatBase<PIXEL_SIZE>::assert_valid(
             layout.shape[layout.ndim - 1]);
     megdnn_assert(
             layout.dtype.valid() && !layout.dtype.is_quantized_lowbit() &&
-            layout.ndim > m_align_axis);
+                    layout.ndim > m_align_axis,
+            "dtype=%s ndim=%zu align=%zu is_quantized_lowbit=%d", layout.dtype.name(),
+            layout.ndim, m_align_axis, layout.dtype.is_quantized_lowbit());
     ptrdiff_t first_non_zero_stride = 0;
     for (int i = layout.ndim - 1; i >= 0; --i) {
         megdnn_assert(layout.shape[i]);
