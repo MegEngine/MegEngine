@@ -92,7 +92,8 @@ def eye(N, M=None, *, dtype="float32", device: Optional[CompNode] = None) -> Ten
     r"""Returns a 2D tensor with ones on the diagonal and zeros elsewhere.
 
     Args:
-        shape: a list, tuple or integer defining the shape of the output tensor.
+        N: an integer defining the number of rows.
+        M: an integer defining the number of columns. If ``M`` is not specified, the number of columns is ``N``. Default: ``None``.
         dtype: the desired data type of the output tensor. Default: ``float32``.
         device: the desired device of the output tensor. Default: if ``None``,
             use the default device (see :func:`~.megengine.get_default_device`).
