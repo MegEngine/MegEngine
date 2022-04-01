@@ -19,7 +19,7 @@ class CheckAllocator : public lite::Allocator {
 public:
     //! allocate memory of size in the given device with the given align
     void* allocate(LiteDeviceType, int, size_t size, size_t align) override {
-#ifdef WIN32
+#if defined(WIN32) || defined(_WIN32)
         return _aligned_malloc(size, align);
 #elif defined(__ANDROID__) || defined(ANDROID)
         return memalign(align, size);
@@ -35,7 +35,7 @@ public:
 
     //! free the memory pointed by ptr in the given device
     void free(LiteDeviceType, int, void* ptr) override {
-#ifdef WIN32
+#if defined(WIN32) || defined(_WIN32)
         _aligned_free(ptr);
 #else
         ::free(ptr);

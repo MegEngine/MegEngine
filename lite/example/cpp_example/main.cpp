@@ -109,7 +109,7 @@ std::shared_ptr<Tensor> lite::example::parse_npy(
 }
 
 void lite::example::set_cpu_affinity(const std::vector<int>& cpuset) {
-#if defined(__APPLE__) || defined(WIN32)
+#if defined(__APPLE__) || defined(WIN32) || defined(_WIN32)
 #pragma message("set_cpu_affinity not enabled on apple and windows platform")
 #else
     cpu_set_t mask;

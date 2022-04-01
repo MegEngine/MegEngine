@@ -99,26 +99,32 @@ endif()
 # MegEngine/megbrain ROOT_DIR/CMakeLists.txt, just depends lite_static or lite_shared
 # TODO: need refine lite_static_all_in_one depend objects, but now cmake do not support
 # define a add_library which OBJECTS args is a set or list or string
-if(MGE_ENABLE_CPUINFO AND MGE_WITH_OPENCL)
-  add_library(
-    lite_static_all_in_one STATIC
-    $<TARGET_OBJECTS:flatbuffers> $<TARGET_OBJECTS:cpuinfo> $<TARGET_OBJECTS:clog>
-    $<TARGET_OBJECTS:OpenCL> $<TARGET_OBJECTS:lite_static>)
-elseif(MGE_ENABLE_CPUINFO AND NOT MGE_WITH_OPENCL)
-  add_library(
-    lite_static_all_in_one STATIC
-    $<TARGET_OBJECTS:flatbuffers> $<TARGET_OBJECTS:cpuinfo> $<TARGET_OBJECTS:clog>
-    $<TARGET_OBJECTS:lite_static>)
-elseif(NOT MGE_ENABLE_CPUINFO AND MGE_WITH_OPENCL)
-  add_library(
-    lite_static_all_in_one STATIC
-    $<TARGET_OBJECTS:flatbuffers> $<TARGET_OBJECTS:OpenCL>
-    $<TARGET_OBJECTS:lite_static>)
+if(NOT WIN32)
+  if(MGE_ENABLE_CPUINFO AND MGE_WITH_OPENCL)
+    add_library(
+      lite_static_all_in_one STATIC
+      $<TARGET_OBJECTS:flatbuffers> $<TARGET_OBJECTS:cpuinfo> $<TARGET_OBJECTS:clog>
+      $<TARGET_OBJECTS:OpenCL> $<TARGET_OBJECTS:lite_static>)
+  elseif(MGE_ENABLE_CPUINFO AND NOT MGE_WITH_OPENCL)
+    add_library(
+      lite_static_all_in_one STATIC
+      $<TARGET_OBJECTS:flatbuffers> $<TARGET_OBJECTS:cpuinfo> $<TARGET_OBJECTS:clog>
+      $<TARGET_OBJECTS:lite_static>)
+  elseif(NOT MGE_ENABLE_CPUINFO AND MGE_WITH_OPENCL)
+    add_library(
+      lite_static_all_in_one STATIC
+      $<TARGET_OBJECTS:flatbuffers> $<TARGET_OBJECTS:OpenCL>
+      $<TARGET_OBJECTS:lite_static>)
+  else()
+    add_library(lite_static_all_in_one STATIC $<TARGET_OBJECTS:flatbuffers>
+                                              $<TARGET_OBJECTS:lite_static>)
+  endif()
 else()
-  add_library(lite_static_all_in_one STATIC $<TARGET_OBJECTS:flatbuffers>
-                                            $<TARGET_OBJECTS:lite_static>)
+  message(
+    WARNING "do not support lite_static_all_in_one on Windows, please use lite_shared")
 endif()
-if(LITE_BUILD_WITH_MGE)
+
+if(LITE_BUILD_WITH_MGE AND NOT WIN32)
   target_link_libraries(lite_static_all_in_one PRIVATE megbrain megdnn ${MGE_CUDA_LIBS})
 endif()
 
@@ -157,15 +163,19 @@ install(
 
 install(
   TARGETS lite_shared
+  RUNTIME DESTINATION lite/lib/${MGE_ARCH}
   LIBRARY DESTINATION lite/lib/${MGE_ARCH}
   FRAMEWORK DESTINATION lite/lib/${MGE_ARCH}
   ARCHIVE DESTINATION lite/lib/${MGE_ARCH})
 
-install(
-  TARGETS lite_static_all_in_one
-  LIBRARY DESTINATION lite/lib/${MGE_ARCH}
-  FRAMEWORK DESTINATION lite/lib/${MGE_ARCH}
-  ARCHIVE DESTINATION lite/lib/${MGE_ARCH})
+if(NOT WIN32)
+  install(
+    TARGETS lite_static_all_in_one
+    LIBRARY DESTINATION lite/lib/${MGE_ARCH}
+    FRAMEWORK DESTINATION lite/lib/${MGE_ARCH}
+    ARCHIVE DESTINATION lite/lib/${MGE_ARCH})
+endif()
+
 install(FILES ${PROJECT_SOURCE_DIR}/lite/include/lite/common_enum_c.h
         DESTINATION ${CMAKE_INSTALL_PREFIX}/lite/include/lite-c)
 
