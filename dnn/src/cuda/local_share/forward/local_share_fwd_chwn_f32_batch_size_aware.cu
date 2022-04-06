@@ -9,6 +9,7 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 #include "./local_share_forward.cuh"
+#include "src/cuda/kernel_common/diagnostic_prologue.cuh"
 
 using namespace megdnn;
 using namespace cuda;
@@ -54,7 +55,7 @@ struct FilterTileCount {
 
     MEGDNN_STATIC_ASSERT(
             smem_w % ThreadConfig::nr_thread_x == 0,
-            "col of share memory must be divided by nr_thread_x");
+            "col of share memory must be divided by nr_thread_x")
     static int const reg_h =
             (smem_h + ThreadConfig::nr_thread_y - 1) / ThreadConfig::nr_thread_y;
     static int const reg_w = smem_w / ThreadConfig::nr_thread_x;
@@ -1292,4 +1293,5 @@ void megdnn::cuda::local_share::_do_local_share_convolution_large_batch_size(
     }
 }
 
+#include "src/cuda/kernel_common/diagnostic_epilogue.cuh"
 // vim: syntax=cuda.doxygen

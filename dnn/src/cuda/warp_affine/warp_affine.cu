@@ -12,6 +12,7 @@
 
 #include <cstdio>
 #include "src/common/rounding_converter.cuh"
+#include "src/cuda/kernel_common/diagnostic_prologue.cuh"
 #include "src/cuda/utils.cuh"
 #include "src/cuda/warp_affine/common.cuh"
 
@@ -288,4 +289,5 @@ INST(int8_t)
 }  // namespace cuda
 }  // namespace megdnn
 
+#include "src/cuda/kernel_common/diagnostic_epilogue.cuh"
 // vim: syntax=cpp.doxygen

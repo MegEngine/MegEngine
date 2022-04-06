@@ -108,7 +108,7 @@ struct Global2ShareMemVisitor_CIxHW;
 DEF(true, Layout<NCHW4>)
 
 copy_t reg[TileCount::reg_h][TileCount::reg_w][TileCount::reg_d];
-MEGDNN_STATIC_ASSERT(load_width == 4, "load four element from src tensor per time");
+MEGDNN_STATIC_ASSERT(load_width == 4, "load four element from src tensor per time")
 
 __device__ Global2ShareMemVisitor_CIxHW(
         smem_storage_dtype* smem_, const int* __restrict__ offset_)

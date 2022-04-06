@@ -125,7 +125,7 @@ struct OpCallerBinary<FuseOpWrapper<Op>, PVis0, PVis1> {
     PVis0 par0;
     PVis1 par1;
     MEGDNN_STATIC_ASSERT(
-            PVis0::packed_size == PVis1::packed_size, "vector size mismatch");
+            PVis0::packed_size == PVis1::packed_size, "vector size mismatch")
     static const uint32_t packed_size = PVis0::packed_size;
 
     __device__ __forceinline__ void thread_init(uint32_t idx) {

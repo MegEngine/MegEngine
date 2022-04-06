@@ -12,6 +12,7 @@
 #include "./kern.cuh"
 #include "./kern_helper.cuh"
 #include "./kern_impl.cuinl"
+#include "src/cuda/kernel_common/diagnostic_prologue.cuh"
 
 using namespace megdnn::cuda;
 using namespace cumsum::detail::cubwrap;
@@ -88,4 +89,5 @@ void cumsum::get_BX_BY(
     BY = 512 / BX;
 }
 
+#include "src/cuda/kernel_common/diagnostic_epilogue.cuh"
 // vim: syntax=cpp.doxygen

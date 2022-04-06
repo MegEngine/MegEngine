@@ -10,6 +10,7 @@
  */
 #include "./kern.cuh"
 
+#include "src/cuda/kernel_common/diagnostic_prologue.cuh"
 #include "src/cuda/reduce_helper.cuh"
 #include "src/cuda/utils.cuh"
 
@@ -63,4 +64,5 @@ void megdnn::cuda::checksum::calc(
 size_t megdnn::cuda::checksum::get_workspace_in_bytes(size_t nr_elem) {
     return get_reduce_workspace_in_bytes<ChecksumOp>(1, nr_elem, 1);
 }
+#include "src/cuda/kernel_common/diagnostic_epilogue.cuh"
 // vim: ft=cpp syntax=cpp.doxygen

@@ -10,6 +10,7 @@
  * implied.
  */
 
+#include "src/cuda/kernel_common/diagnostic_prologue.cuh"
 #include "src/cuda/query_blocksize.cuh"
 #include "src/cuda/relayout_format/relayout_format_kern.cuh"
 
@@ -104,7 +105,7 @@ __global__ void kern_nchw_nchwx(
     MEGDNN_STATIC_ASSERT(
             std::is_same<SrcType MEGDNN_COMMA DstType>::value,
             "Currently this kernel only support accessing tensor "
-            "src and dst in same data type.");
+            "src and dst in same data type.")
     n_stride_src /= size_src_type;
     ic_stride /= size_src_type;
     n_stride_dst /= size_dst_type;
@@ -585,3 +586,5 @@ void relayout_format::relayout_format_cuda_nchw_nchw4_weight(
             ic_stride, oc_stride_dst, group_stride_src, group_stride_dst, 0, {});
     after_kernel_launch();
 }
+
+#include "src/cuda/kernel_common/diagnostic_epilogue.cuh"

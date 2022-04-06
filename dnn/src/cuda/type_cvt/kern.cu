@@ -13,6 +13,7 @@
 #include "megdnn/dtype.h"
 #include "src/cuda/elemwise_helper.cuh"
 #include "src/cuda/elemwise_helper_q4.cuh"
+#include "src/cuda/kernel_common/diagnostic_prologue.cuh"
 
 using namespace megdnn;
 using namespace cuda;
@@ -410,4 +411,5 @@ MEGDNN_FOREACH_COMPUTING_CTYPE(INST_SRC_NORMAL_LOWBIT)
 }  // namespace cuda
 }  // namespace megdnn
 
+#include "src/cuda/kernel_common/diagnostic_epilogue.cuh"
 // vim: syntax=cpp.doxygen

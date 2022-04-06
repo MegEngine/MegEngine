@@ -40,6 +40,7 @@
 #include "src/cuda/utils.cuh"
 
 #include "src/cuda/integer_subbyte_utils.cuh"
+#include "src/cuda/kernel_common/diagnostic_prologue.cuh"
 #include "src/cuda/reduce_helper.cuh"
 
 using namespace megdnn;
@@ -163,4 +164,5 @@ size_t megdnn::cuda::do_dispatch_reduce_workspace_in_bytes(
     return get_reduce_workspace_in_bytes<ReduceWithScaleInt4Op<false>>(A, B, C);
 }
 
+#include "src/cuda/kernel_common/diagnostic_epilogue.cuh"
 // vim: ft=cpp syntax=cuda.doxygen

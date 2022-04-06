@@ -57,7 +57,7 @@ namespace convolution {
     using KernLayout = _kern_layout;                                                 \
     using OutputLayout = _output_layout;                                             \
     using Param = _conv_param;                                                       \
-    static constexpr bool check_bounds = check_bounds_;
+    static constexpr bool check_bounds = check_bounds_
 #define MEGDNN_COMMA ,
 
 template <
@@ -80,7 +80,7 @@ struct IBatchConvTrait_f1x1s1x1 {
         static int constexpr block_tile_batch = RegBlockConfig::reg_n;
         MEGDNN_STATIC_ASSERT(
                 block_tile_batch == 1,
-                "this algorithm does not unroll on batch dimension");
+                "this algorithm does not unroll on batch dimension")
         static int constexpr block_tile_out_height_width =
                 RegBlockConfig::reg_width * ThreadConfig::nr_thread_x;
         static int constexpr block_tile_in_channel = RegBlockConfig::reg_k;
@@ -162,7 +162,7 @@ struct IBatchConvTrait {
         static int constexpr block_tile_batch = RegBlockConfig::reg_n;
         MEGDNN_STATIC_ASSERT(
                 block_tile_batch == 1,
-                "this algorithm does not unroll on batch dimension");
+                "this algorithm does not unroll on batch dimension")
         static int constexpr block_tile_out_height_width =
                 RegBlockConfig::reg_width * ThreadConfig::nr_thread_x;
         static int constexpr block_tile_in_channel = RegBlockConfig::reg_k;

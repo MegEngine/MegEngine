@@ -16,6 +16,7 @@
 #include "src/common/rounding_converter.cuh"
 #include "src/cuda/error_info.cuh"
 #include "src/cuda/integer_subbyte_utils.cuh"
+#include "src/cuda/kernel_common/diagnostic_prologue.cuh"
 #include "src/cuda/utils.cuh"
 #include "src/cuda/warp_perspective/common.cuh"
 
@@ -1760,4 +1761,5 @@ INST(dt_quint8, uint8_t, float)
 }  // namespace cuda
 }  // namespace megdnn
 
+#include "src/cuda/kernel_common/diagnostic_epilogue.cuh"
 // vim: syntax=cpp.doxygen

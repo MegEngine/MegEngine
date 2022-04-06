@@ -9,6 +9,7 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
+#include "src/cuda/kernel_common/diagnostic_prologue.cuh"
 #include "src/cuda/query_blocksize.cuh"
 #include "src/cuda/utils.cuh"
 
@@ -51,4 +52,5 @@ LaunchConfig cuda::detail::query_launch_config_for_kernel_uncached(
     return ret;
 }
 
+#include "src/cuda/kernel_common/diagnostic_epilogue.cuh"
 // vim: ft=cpp syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

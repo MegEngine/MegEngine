@@ -11,6 +11,7 @@
  */
 #include "./pooling2d_qint.cuh"
 #include "src/common/opr_param_defs_enumv.cuh"
+#include "src/cuda/kernel_common/diagnostic_prologue.cuh"
 #include "src/cuda/query_blocksize.cuh"
 
 using namespace megdnn;
@@ -350,7 +351,7 @@ __global__ void pooling2d_device_template_nchwc(
     static int constexpr section = pack_byte / sizeof(ldg_type);
     MEGDNN_STATIC_ASSERT(
             ldg_width == ldg_width_assert,
-            "pooling2d (NCHW64) kernel must use 128bit width ldg instruction");
+            "pooling2d (NCHW64) kernel must use 128bit width ldg instruction")
     const int c_packed = param.c / pack_size;
     const int batch = tid / (param.ho * param.wo * c_packed * section);
     const int batch_residual = tid - batch * param.ho * param.wo * c_packed * section;
@@ -402,7 +403,7 @@ __global__ void pooling2d_device_template_nhwc(
     static int constexpr ldg_width_bytes = sizeof(ldg_type);
     MEGDNN_STATIC_ASSERT(
             ldg_width == ldg_width_assert,
-            "pooling2d (NHWC) kernel must ldg_width == ldg_width_assert");
+            "pooling2d (NHWC) kernel must ldg_width == ldg_width_assert")
     const int c_packed = param.c / pack_size;
     const int batch = tid / (param.ho * param.wo * c_packed);
     const int batch_residual = tid - batch * param.ho * param.wo * c_packed;
@@ -691,4 +692,6 @@ void megdnn::cuda::pooling2d::do_pooling2d_int4_nhwc(
     kern<<<nr_blocks, nr_threads, 0, stream>>>(d_src, d_dst, param, zero_point);
     after_kernel_launch();
 }
+
+#include "src/cuda/kernel_common/diagnostic_epilogue.cuh"
 // vim: syntax=cuda.doxygen

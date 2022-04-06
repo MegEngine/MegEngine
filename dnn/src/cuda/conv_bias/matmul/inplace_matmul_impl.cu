@@ -9,6 +9,7 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 #include "src/cuda/conv_bias/matmul/inplace_matmul_impl.cuh"
+#include "src/cuda/kernel_common/diagnostic_prologue.cuh"
 #include "src/cuda/utils.cuh"
 
 using namespace megdnn;
@@ -386,4 +387,5 @@ void conv_bias::exec_inplace_matmul_fwd(
     after_kernel_launch();
 }
 
+#include "src/cuda/kernel_common/diagnostic_epilogue.cuh"
 // vim: syntax=cpp.doxygen

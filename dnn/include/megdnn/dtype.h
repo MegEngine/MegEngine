@@ -311,11 +311,11 @@ public:
 #ifdef __clang__
 #pragma clang diagnostic pop
 #endif
-MEGDNN_STATIC_ASSERT(sizeof(dt_byte) == 1, "bad dt_byte size");
-MEGDNN_STATIC_ASSERT(sizeof(dt_qint1) == 1, "bad dt_qint1 size");
-MEGDNN_STATIC_ASSERT(sizeof(dt_quint8) == 1, "bad dt_quint8 size");
-MEGDNN_STATIC_ASSERT(sizeof(dt_qint16) == 2, "bad dt_qint16 size");
-MEGDNN_STATIC_ASSERT(sizeof(dt_qint32) == 4, "bad dt_qint32 size");
+MEGDNN_STATIC_ASSERT(sizeof(dt_byte) == 1, "bad dt_byte size")
+MEGDNN_STATIC_ASSERT(sizeof(dt_qint1) == 1, "bad dt_qint1 size")
+MEGDNN_STATIC_ASSERT(sizeof(dt_quint8) == 1, "bad dt_quint8 size")
+MEGDNN_STATIC_ASSERT(sizeof(dt_qint16) == 2, "bad dt_qint16 size")
+MEGDNN_STATIC_ASSERT(sizeof(dt_qint32) == 4, "bad dt_qint32 size")
 typedef float dt_float32;
 typedef int32_t dt_int32;
 typedef int16_t dt_int16;
@@ -613,7 +613,7 @@ template <uint16_t n>
 struct log {
     static MEGDNN_CONSTEXPR size_t value = log<(n >> 1)>::value + 1;
 #if MEGDNN_CC_HOST
-    MEGDNN_STATIC_ASSERT((n & (n - 1)) == 0, "only full power number can have log");
+    MEGDNN_STATIC_ASSERT((n & (n - 1)) == 0, "only full power number can have log")
 #endif
 };
 template <>

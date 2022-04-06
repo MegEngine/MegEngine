@@ -51,7 +51,7 @@ void lowbit_recursive_cp(
     MEGDNN_STATIC_ASSERT(
             !(8_z % size_nbits),
             "size in bits of lowbit data type can only be 1, 2, 4 "
-            "or 8");
+            "or 8")
     if (idx < (src.layout.ndim - 1)) {
         for (size_t i = 0; i < src.layout[idx]; ++i) {
             lowbit_recursive_cp<size_nbits>(

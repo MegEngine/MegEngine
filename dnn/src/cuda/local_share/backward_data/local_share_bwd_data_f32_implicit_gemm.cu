@@ -9,6 +9,7 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 #include "./local_share_bwd_data.cuh"
+#include "src/cuda/kernel_common/diagnostic_prologue.cuh"
 
 using namespace megdnn;
 using namespace cuda;
@@ -580,4 +581,5 @@ void megdnn::cuda::local_share_bwd_data::_do_local_share_bwd_data_implicit_gemm(
     }
 }
 
+#include "src/cuda/kernel_common/diagnostic_epilogue.cuh"
 // vim: syntax=cuda.doxygen

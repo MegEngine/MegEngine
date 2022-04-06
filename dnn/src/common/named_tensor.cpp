@@ -185,7 +185,7 @@ NamedTensorShape::NamedTensorShape(std::initializer_list<Dimension> init_shape)
         : NamedTensorShape(SmallVector<Dimension>{init_shape}) {}
 
 bool NamedTensorShape::eq_shape(const NamedTensorShape& rhs) const {
-    MEGDNN_STATIC_ASSERT(MAX_NDIM == 7, "please update the code");
+    MEGDNN_STATIC_ASSERT(MAX_NDIM == 7, "please update the code")
     if (ndim == rhs.ndim) {
         size_t eq = 0;
         switch (ndim) {

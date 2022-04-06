@@ -25,13 +25,13 @@ namespace conv_bias {
 namespace chanwise {
 
 struct Param {
-    uint32_t batch, src_chl, src_h, src_w, chl_mul, flt_h, flt_w, out_h, out_w, pad_h,
-            pad_w, stride_h, stride_w, dilation_h, dilation_w;
+    int batch, src_chl, src_h, src_w, chl_mul, flt_h, flt_w, out_h, out_w, pad_h, pad_w,
+            stride_h, stride_w, dilation_h, dilation_w;
     bool is_compute_deafult;
 #if MEGDNN_CC_HOST
     static Param from_fwd_args(
             const BiasForwardSizeArgs& args, bool is_compute_deafult_ = true) {
-#define U(v) static_cast<uint32_t>(v)
+#define U(v) static_cast<int>(v)
         auto&& src = args.src_layout->shape;
         auto&& dst = args.dst_layout->shape;
         auto&& fm = args.filter_meta;

@@ -16,6 +16,7 @@
 
 #include "src/cuda/cub/device/device_radix_sort.cuh"
 #include "src/cuda/cub/device/device_segmented_radix_sort.cuh"
+#include "src/cuda/kernel_common/diagnostic_prologue.cuh"
 
 using namespace megdnn;
 using namespace cuda;
@@ -175,4 +176,5 @@ INST_CUB_SORT(uint64_t)
 #undef INST_FORWARD
 }  // namespace cuda
 }  // namespace megdnn
+#include "src/cuda/kernel_common/diagnostic_epilogue.cuh"
 // vim: ft=cuda syntax=cuda.doxygen

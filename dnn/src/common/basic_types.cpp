@@ -144,7 +144,7 @@ size_t TensorShape::total_nr_elems() const {
 }
 
 bool TensorShape::eq_shape(const TensorShape& rhs) const {
-    MEGDNN_STATIC_ASSERT(MAX_NDIM == 7, "please update the code");
+    MEGDNN_STATIC_ASSERT(MAX_NDIM == 7, "please update the code")
     if (ndim == rhs.ndim) {
         size_t eq = 0;
         switch (ndim) {
@@ -379,7 +379,7 @@ bool TensorLayout::eq_layout(const TensorLayout& rhs) const {
             dtype == rhs.dtype,
             "could not compare layout on different dtypes: %s vs %s", dtype.name(),
             rhs.dtype.name());
-    MEGDNN_STATIC_ASSERT(MAX_NDIM == 7, "please update the code");
+    MEGDNN_STATIC_ASSERT(MAX_NDIM == 7, "please update the code")
 
     auto ax = [](size_t shape0, size_t shape1, ptrdiff_t stride0, ptrdiff_t stride1) {
         return (shape0 == shape1) & ((shape0 <= 1) | (stride0 == stride1));

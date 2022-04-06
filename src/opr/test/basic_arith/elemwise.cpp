@@ -130,10 +130,10 @@ T do_round_mulh_saturate(T a, T b) {
     MEGDNN_STATIC_ASSERT(
             std::numeric_limits<T>::digits <= 32,
             "Portable RMULH is not supported for integer "
-            "types larger than 32 bits.");
+            "types larger than 32 bits.")
     MEGDNN_STATIC_ASSERT(
             std::numeric_limits<T>::is_integer,
-            "Input types should be integer for RMULH");
+            "Input types should be integer for RMULH")
     bool overflow = a == b && a == DTypeTrait<T>::min();
     // TODO: This really should be
     // rounding_shift_right_away_from_zero, but we haven't yet found a fast

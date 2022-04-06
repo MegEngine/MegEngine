@@ -37,6 +37,7 @@
 #include "./reduce_with_scale_data.cuh"
 #include "./wmma_conv_integer_u4.cuh"
 #include "src/cuda/cub/util_ptx.cuh"
+#include "src/cuda/kernel_common/diagnostic_prologue.cuh"
 
 using namespace megdnn;
 using namespace cuda;
@@ -50,7 +51,7 @@ template <
 struct TileCounter {
     MEGDNN_STATIC_ASSERT(
             thread_blk_x % WARP_SIZE == 0,
-            "thread block size in dim x not divided by warpSize");
+            "thread block size in dim x not divided by warpSize")
     static const size_t spatial_tile_x = thread_blk_x * pixels_per_thread_x;
     static const size_t spatial_tile_y = thread_blk_y * pixels_per_thread_y;
     static const size_t global_load_tile_x =
@@ -678,4 +679,5 @@ void megdnn::cuda::do_dispatch_reduce_with_scale_data_u4(
     after_kernel_launch();
 }
 
+#include "src/cuda/kernel_common/diagnostic_epilogue.cuh"
 // vim: ft=cpp syntax=cuda.doxygen

@@ -169,7 +169,7 @@ const int gl_load_x = tid - gl_load_y * TileCount::load_x;
 copy_t reg[TileCount::reg_h][TileCount::reg_w];
 MEGDNN_STATIC_ASSERT(
         std::is_same<copy_t MEGDNN_COMMA int4>::value == true,
-        "ldg data type must be int4 for this memory visitor");
+        "ldg data type must be int4 for this memory visitor")
 
 __device__ __forceinline__ void init_stride(Layout<Format::CHWN16> layout) {
     stride = layout.channel_stride / TileCount::ldg_load_width;

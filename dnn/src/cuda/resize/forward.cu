@@ -16,6 +16,7 @@
 
 #include "src/common/resize.cuh"
 #include "src/cuda/cv/kernel_common.cuh"
+#include "src/cuda/kernel_common/diagnostic_prologue.cuh"
 
 using namespace megdnn;
 using namespace cuda;
@@ -319,4 +320,5 @@ INST(int8_t);
 }  // namespace cuda
 }  // namespace megdnn
 
+#include "src/cuda/kernel_common/diagnostic_epilogue.cuh"
 // vim: syntax=cpp.doxygen

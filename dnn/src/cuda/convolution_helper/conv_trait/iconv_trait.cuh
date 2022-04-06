@@ -54,7 +54,7 @@ namespace convolution {
     using KernLayout = _kern_layout;                                                 \
     using OutputLayout = _output_layout;                                             \
     using Param = _conv_param;                                                       \
-    static constexpr bool check_bounds = check_bounds_;
+    static constexpr bool check_bounds = check_bounds_
 #define MEGDNN_COMMA ,
 
 template <
@@ -175,7 +175,7 @@ struct IConvTraitUnrollWidth {
                             check_bounds MEGDNN_COMMA ldg_dtype MEGDNN_COMMA
                                     RegBlockConfig MEGDNN_COMMA ThreadConfig>::
                                  filter_dtype MEGDNN_COMMA filter_dtype>::value == true,
-            "data type of filter tensor should be int8_t");
+            "data type of filter tensor should be int8_t")
     using FilterTileCount = typename IConvTrait<
             check_bounds, ldg_dtype, RegBlockConfig, ThreadConfig>::FilterTileCount;
     using BlockTileIterator =

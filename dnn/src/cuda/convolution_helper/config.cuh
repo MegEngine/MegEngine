@@ -54,9 +54,9 @@ struct RegBlockConfig {
     static int constexpr reg_n = reg_n_;
     static int constexpr reg_k = reg_k_;
     MEGDNN_STATIC_ASSERT(
-            reg_m % pack_size == 0, "reg_m must be a multiple of pack_size");
+            reg_m % pack_size == 0, "reg_m must be a multiple of pack_size")
     MEGDNN_STATIC_ASSERT(
-            reg_k % pack_size == 0, "reg_k must be a multiple of pack_size");
+            reg_k % pack_size == 0, "reg_k must be a multiple of pack_size")
     static int constexpr reg_k_packed = reg_k / pack_size;
     static int constexpr reg_m_packed = reg_m / pack_size;
     static int constexpr reg_width = reg_width_;

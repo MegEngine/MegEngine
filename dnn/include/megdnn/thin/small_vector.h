@@ -333,7 +333,7 @@ public:
         } else if (n > this->size()) {
             if (this->capacity() < n)
                 this->grow(n);
-            for (auto it = this->end(), end = this->begin() + n; it != end; ++it)
+            for (iterator it = this->end(), end = this->begin() + n; it != end; ++it)
                 new (&*it) T();
             this->set_end(this->begin() + n);
         }

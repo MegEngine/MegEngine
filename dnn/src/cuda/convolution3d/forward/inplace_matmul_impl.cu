@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <iostream>
 #include "./inplace_matmul_impl.cuh"
+#include "src/cuda/kernel_common/diagnostic_prologue.cuh"
 #include "src/cuda/utils.cuh"
 using namespace megdnn;
 using namespace cuda;
@@ -401,4 +402,5 @@ void convolution3d::exec_inplace_matmul_fwd(
     after_kernel_launch();
 }
 
+#include "src/cuda/kernel_common/diagnostic_epilogue.cuh"
 // vim: syntax=cpp.doxygen

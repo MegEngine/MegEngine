@@ -478,12 +478,12 @@ struct RelayoutProblem {
     using Transpose = Transpose_;
     using CudaPostProcess = CudaPostProcess_;
     MEGDNN_STATIC_ASSERT(
-            SrcIterator::chan_blk == DstIterator::chan_blk, "channel block mismatch");
+            SrcIterator::chan_blk == DstIterator::chan_blk, "channel block mismatch")
     MEGDNN_STATIC_ASSERT(
-            SrcIterator::width == DstIterator::width, "width block mismatch");
+            SrcIterator::width == DstIterator::width, "width block mismatch")
     MEGDNN_STATIC_ASSERT(
             SrcIterator::size_nbits == DstIterator::size_nbits,
-            "size in bits of elements mismatch");
+            "size in bits of elements mismatch")
     static constexpr int pack_chan = SrcIterator::chan_blk;
     static constexpr int pack_width = SrcIterator::width;
     using DnnSrcType = typename CudaPostProcess::SrcType;

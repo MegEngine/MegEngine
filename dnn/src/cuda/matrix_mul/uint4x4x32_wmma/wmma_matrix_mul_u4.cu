@@ -79,7 +79,7 @@ struct GlobalToShareMemStream {
             GlobalToShareMemStreamConfig_::BlockSize ==
                     GlobalToShareMemStreamConfig_::CACHE_SIZE *
                             BlockConfig_::WARPS_PER_BLOCK,
-            "Block size mismatch");
+            "Block size mismatch")
 
     uint8_t* smem;
     const uint8_t* g_ptr;

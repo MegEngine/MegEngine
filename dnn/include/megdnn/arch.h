@@ -36,15 +36,15 @@
 #define MEGDNN_ALWAYS_INLINE inline __attribute__((__always_inline__))
 #endif
 
-#define MEGDNN_DEPRECATED             __attribute__((deprecated))
-#define MEGDNN_PACKED                 __attribute__((packed))
-#define MEGDNN_CONSTEXPR              constexpr
-#define MEGDNN_NOEXCEPT               noexcept
-#define MEGDNN_STATIC_ASSERT          static_assert
-#define MEGDNN_FINAL                  final
-#define MEGDNN_NORETURN               __attribute__((noreturn))
-#define MEGDNN_WARN_UNUSED_RESULT     __attribute__((warn_unused_result))
-#define MEGDNN_ATTRIBUTE_TARGET(simd) __attribute__((target(simd)))
+#define MEGDNN_DEPRECATED               __attribute__((deprecated))
+#define MEGDNN_PACKED                   __attribute__((packed))
+#define MEGDNN_CONSTEXPR                constexpr
+#define MEGDNN_NOEXCEPT                 noexcept
+#define MEGDNN_STATIC_ASSERT(cond, msg) static_assert(cond, msg);
+#define MEGDNN_FINAL                    final
+#define MEGDNN_NORETURN                 __attribute__((noreturn))
+#define MEGDNN_WARN_UNUSED_RESULT       __attribute__((warn_unused_result))
+#define MEGDNN_ATTRIBUTE_TARGET(simd)   __attribute__((target(simd)))
 #if defined(__clang_major__) && (__clang_major__ >= 7)
 #define MEGDNN_LAMBDA_ATTRIBUTE_TARGET(simd) __attribute__((target(simd)))
 #else
@@ -64,10 +64,10 @@
 
 #define MEGDNN_DEPRECATED
 #define MEGDNN_PACKED
-#define MEGDNN_CONSTEXPR     constexpr
-#define MEGDNN_NOEXCEPT      noexcept
-#define MEGDNN_STATIC_ASSERT static_assert
-#define MEGDNN_FINAL         final
+#define MEGDNN_CONSTEXPR                constexpr
+#define MEGDNN_NOEXCEPT                 noexcept
+#define MEGDNN_STATIC_ASSERT(cond, msg) static_assert(cond, msg);
+#define MEGDNN_FINAL                    final
 
 #if defined(_MSC_VER)
 #define MEGDNN_NORETURN __declspec(noreturn)

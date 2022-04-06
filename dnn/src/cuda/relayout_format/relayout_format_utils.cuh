@@ -80,7 +80,7 @@ inline __device__ DstType make_zero_pad(const uint8_t zero_point) {
 
 template <>
 inline __device__ char4 make_zero_pad<char4>(const uint8_t zero_point) {
-    char izp = reinterpret_cast<const char&>(zero_point);
+    signed char izp = reinterpret_cast<const signed char&>(zero_point);
     return {izp, izp, izp, izp};
 }
 
