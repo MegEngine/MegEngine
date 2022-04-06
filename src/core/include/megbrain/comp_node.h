@@ -80,6 +80,20 @@ public:
     static constexpr size_t NR_DEVICE_TYPE =
             static_cast<size_t>(DeviceType::MAX_DEVICE_ID);
 
+    struct DeviceProperties {
+        DeviceProperties() {
+            name = "unspec";
+            total_memory = major = minor = 0;
+        }
+
+        std::string name;
+        size_t total_memory;
+
+        //! for cuda
+        int major;
+        int minor;
+    };
+
     /*!
      * \brief an identifier to specify a computing node
      *
@@ -301,10 +315,11 @@ public:
     MGE_WIN_DECLSPEC_FUC static void set_prealloc_config(
             size_t alignment, size_t min_req, size_t max_overhead, double growth_factor,
             DeviceType device_type);
+
     /*!
-     * \brief get compute capability of the specified device
+     * \brief get device property of the specified device
      */
-    MGE_WIN_DECLSPEC_FUC static size_t get_compute_capability(
+    MGE_WIN_DECLSPEC_FUC static DeviceProperties get_device_prop(
             int dev, DeviceType device_type);
 
     /* =================== synchronization ======================== */

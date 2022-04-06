@@ -268,5 +268,6 @@
 #endif
 
 #define GIT_FULL_HASH "@GIT_FULL_HASH@"
+#define MGE_CUDA_GENCODE "@MGE_CUDA_GENCODE@"
 
 #endif  // _HEADER_MGB_BUILD_CONFIG

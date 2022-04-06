@@ -11,9 +11,7 @@ import re
 from typing import Optional
 
 from .core._imperative_rt.common import CompNode, DeviceType
-from .core._imperative_rt.common import (
-    get_cuda_compute_capability as _get_cuda_compute_capability,
-)
+from .core._imperative_rt.common import get_device_prop as _get_device_prop
 from .core._imperative_rt.common import set_prealloc_config as _set_prealloc_config
 from .core._imperative_rt.common import what_is_xpu as _what_is_xpu
 from .core._imperative_rt.utils import _try_coalesce_all_free_memory
@@ -25,6 +23,7 @@ __all__ = [
     "set_default_device",
     "get_mem_status_bytes",
     "get_cuda_compute_capability",
+    "get_cuda_device_property",
     "get_allocated_memory",
     "get_reserved_memory",
     "get_max_reserved_memory",
@@ -161,7 +160,12 @@ def get_cuda_compute_capability(device: int, device_type=DeviceType.CUDA) -> int
     Returns:
         a version number, or `SM version`.
     """
-    return _get_cuda_compute_capability(device, device_type)
+    prop = _get_device_prop(device, device_type)
+    return prop.major * 10 + prop.minor
+
+
+def get_cuda_device_property(device: int, device_type=DeviceType.CUDA):
+    return _get_device_prop(device, device_type)
 
 
 def get_allocated_memory(device: Optional[str] = None):

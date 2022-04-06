@@ -192,10 +192,10 @@ class CudaCompNode::CompNodeImpl final : public CompNode::Impl {
     //! return whether global finalized, and print warning in such case
     static inline bool check_global_finalized();
 
+    static CompNode::DeviceProperties get_device_prop(int dev);
+
     //! enable peer copy from dev0 to dev1
     static void enable_peer_access(int dev0, int dev1);
-
-    static size_t get_compute_capability(int dev);
 
     static void static_free_device(ImplBase* self, void* ptr) {
         static_cast<CompNodeImpl*>(self)->free_device(ptr);
@@ -207,6 +207,8 @@ class CudaCompNode::CompNodeImpl final : public CompNode::Impl {
 
 public:
     CompNodeImpl() : Impl(static_free_device, static_free_host) {}
+
+    static constexpr int MAX_NR_COMP_NODE = 1024, MAX_NR_DEVICE = 64;
 
     void* alloc_device(size_t size) override;
 
@@ -332,8 +334,6 @@ struct CudaCompNodeImpl::DeviceInfo {
 };
 
 struct CudaCompNodeImpl::StaticData {
-    static constexpr int MAX_NR_COMP_NODE = 1024, MAX_NR_DEVICE = 64;
-
     std::recursive_mutex mtx;
 
     mem_alloc::DevMemAlloc::PreAllocConfig prealloc_config;
@@ -375,6 +375,13 @@ struct CudaCompNodeImpl::StaticData {
 };
 CudaCompNodeImpl::StaticData* CudaCompNodeImpl::sd = nullptr;
 Spinlock CudaCompNodeImpl::sd_mtx;
+
+struct DevicePropRec {
+    bool init = false;
+    CompNode::DeviceProperties prop;
+    Spinlock mtx_com;
+};
+DevicePropRec device_prop_rec[CudaCompNodeImpl::MAX_NR_DEVICE];
 
 void CudaCompNodeImpl::init(const Locator& locator, const Locator& locator_logical) {
     m_locator = locator;
@@ -564,7 +571,7 @@ void CudaCompNodeImpl::sync() {
 }
 
 void CudaCompNodeImpl::enable_peer_access(int dev0, int dev1) {
-    static bool already_enabled[StaticData::MAX_NR_DEVICE][StaticData::MAX_NR_DEVICE];
+    static bool already_enabled[MAX_NR_DEVICE][MAX_NR_DEVICE];
     if (already_enabled[dev0][dev1])
         return;
 
@@ -817,6 +824,52 @@ CUresult call_cuda_forksafe(Func func, Val* val, Args... args) {
         return err;
     return err2;
 }
+template <typename Func, typename... Args>
+CUresult call_cuda_forksafe(Func func, char* val, int len, Args... args) {
+    auto err = func(val, len, args...);
+    if (err != CUDA_ERROR_NOT_INITIALIZED)
+        return err;
+    // cuInit not called, call it in child process
+    int fd[2];
+    mgb_assert(pipe(fd) == 0, "pipe() failed");
+    int fdr = fd[0], fdw = fd[1];
+    RAIICloseFD fdr_guard(fdr);
+    RAIICloseFD fdw_guard(fdw);
+    auto cpid = fork();
+    mgb_assert(cpid != -1, "fork() failed");
+    if (cpid == 0) {
+        fdr_guard.close();
+        do {
+            err = cuInit(0);
+            if (err != CUDA_SUCCESS)
+                break;
+            err = func(val, len, args...);
+        } while (0);
+        auto sz = write(fdw, &err, sizeof(err));
+        if (sz == sizeof(err) && err == CUDA_SUCCESS) {
+            sz = write(fdw, val, sizeof(*val) * len);
+        }
+        fdw_guard.close();
+        std::quick_exit(0);
+    }
+    fdw_guard.close();
+    auto sz = read(fdr, &err, sizeof(err));
+    mgb_assert(sz == sizeof(err), "failed to read error code from child");
+    if (err == CUDA_SUCCESS) {
+        sz = read(fdr, val, sizeof(*val) * len);
+        mgb_assert(
+                static_cast<size_t>(sz) == sizeof(*val) * static_cast<size_t>(len),
+                "failed to read value from child");
+        return err;
+    }
+    // try again, maybe another thread called cuInit while we fork
+    auto err2 = func(val, len, args...);
+    if (err2 == CUDA_SUCCESS)
+        return err2;
+    if (err2 == CUDA_ERROR_NOT_INITIALIZED)
+        return err;
+    return err2;
+}
 #endif
 
 const char* cu_get_error_string(CUresult err) {
@@ -914,10 +967,12 @@ CompNode::Impl* CudaCompNode::load_cuda(
     }
 
     if (!available_node) {
-        mgb_assert(sd.nr_node < sd.MAX_NR_COMP_NODE, "too many CompNode allocated");
+        mgb_assert(
+                sd.nr_node < CompNodeImpl::MAX_NR_COMP_NODE,
+                "too many CompNode allocated");
         available_node = &sd.node[sd.nr_node++];
     }
-    mgb_assert(locator.device < sd.MAX_NR_DEVICE, "device number too large");
+    mgb_assert(locator.device < CompNodeImpl::MAX_NR_DEVICE, "device number too large");
 
     mgb_assert(!available_node->m_initialized);
     available_node->init(locator, locator_logical);
@@ -1023,29 +1078,39 @@ void CudaCompNode::set_prealloc_config(
     }
 }
 
-size_t CudaCompNode::get_compute_capability(int dev) {
-    size_t cnt = get_device_count();
-    if (dev < 0 || dev >= static_cast<int>(cnt)) {
-        mgb_log_error("request gpu %d out of valid range [0, %lu)", dev, cnt);
-        return 0;
+CompNode::DeviceProperties CudaCompNode::get_device_prop(int dev) {
+    int cnt = static_cast<int>(get_device_count());
+    mgb_assert(
+            dev >= 0 && dev < cnt, "request gpu %d out of valid range [0, %d)", dev,
+            cnt);
+
+    auto&& rec = device_prop_rec[dev];
+    if (!rec.init) {
+        MGB_LOCK_GUARD(rec.mtx_com);
+        if (!rec.init) {
+            char pname[256] = {0};
+            mgb_assert(
+                    call_cuda_forksafe(
+                            cuDeviceGetAttribute, &rec.prop.major,
+                            CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR,
+                            dev) == CUDA_SUCCESS);
+            mgb_assert(
+                    call_cuda_forksafe(
+                            cuDeviceGetAttribute, &rec.prop.minor,
+                            CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MINOR,
+                            dev) == CUDA_SUCCESS);
+            mgb_assert(
+                    call_cuda_forksafe(cuDeviceGetName, pname, 255, dev) ==
+                    CUDA_SUCCESS);
+            mgb_assert(
+                    call_cuda_forksafe(cuDeviceTotalMem, &rec.prop.total_memory, dev) ==
+                    CUDA_SUCCESS);
+            rec.prop.name = pname;
+            rec.init = true;
+        }
     }
-    static Spinlock mtx_com;
-    MGB_LOCK_GUARD(mtx_com);
-    int pmajor;
-    int pminor;
-    auto err = call_cuda_forksafe(
-            cuDeviceGetAttribute, &pmajor, CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR,
-            dev);
-    if (err != CUDA_SUCCESS) {
-        return 0;
-    }
-    auto err2 = call_cuda_forksafe(
-            cuDeviceGetAttribute, &pminor, CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MINOR,
-            dev);
-    if (err2 != CUDA_SUCCESS) {
-        return 0;
-    }
-    return pmajor * 10 + pminor;
+
+    return rec.prop;
 }
 
 #else
@@ -1067,8 +1132,8 @@ void CudaCompNode::sync_all() {}
 void CudaCompNode::set_prealloc_config(
         size_t alignment, size_t min_req, size_t max_overhead, double growth_factor) {}
 
-size_t CudaCompNode::get_compute_capability(int dev) {
-    return 0;
+CompNode::DeviceProperties CudaCompNode::get_device_prop(int dev) {
+    return CompNode::DeviceProperties{};
 }
 
 #undef err

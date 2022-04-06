@@ -123,6 +123,23 @@ void init_common(py::module m) {
 
     py::implicitly_convertible<std::string, CompNode>();
 
+    py::class_<CompNode::DeviceProperties>(m, "DeviceProperties")
+            .def(py::init())
+            .def_property_readonly(
+                    "name",
+                    [](const CompNode::DeviceProperties prop) { return prop.name; })
+            .def_property_readonly(
+                    "total_memory",
+                    [](const CompNode::DeviceProperties prop) {
+                        return prop.total_memory;
+                    })
+            .def_property_readonly(
+                    "major",
+                    [](const CompNode::DeviceProperties prop) { return prop.major; })
+            .def_property_readonly("minor", [](const CompNode::DeviceProperties prop) {
+                return prop.minor;
+            });
+
     def_TensorND<DeviceTensorND>(m, "DeviceTensorND")
             .def("numpy", [](const DeviceTensorND& self) {
                 HostTensorND hv;
@@ -223,7 +240,12 @@ void init_common(py::module m) {
     m.def("set_prealloc_config", &CompNode::set_prealloc_config,
           "specifies how to pre-allocate from raw dev allocator");
 
-    m.def("get_cuda_compute_capability", &CompNode::get_compute_capability);
+    m.def("get_device_prop", &CompNode::get_device_prop);
+
+    m.def("get_supported_sm_versions", []() {
+        static const char* mge_gen_code = MGE_CUDA_GENCODE;
+        return mge_gen_code;
+    });
 
     m.def("what_is_xpu",
           [] { return CompNode::Locator::parse("xpux").to_physical().type; });

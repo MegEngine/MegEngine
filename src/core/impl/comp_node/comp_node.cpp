@@ -431,13 +431,12 @@ void CompNode::set_prealloc_config(
     };
 }
 
-size_t CompNode::get_compute_capability(int dev, DeviceType device_type) {
+CompNode::DeviceProperties CompNode::get_device_prop(int dev, DeviceType device_type) {
     switch (device_type) {
         case DeviceType::CUDA:
-            return CudaCompNode::get_compute_capability(dev);
+            return CudaCompNode::get_device_prop(dev);
         default:
-            mgb_log_warn("unsupport device type for get_compute_capability");
-            return 0;
+            mgb_throw(MegBrainError, "unsupport device type for get_device_prop");
     };
 }
 

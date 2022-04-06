@@ -8,6 +8,7 @@
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 import atexit
 import ctypes
+import re
 import os
 import platform
 import sys
@@ -89,6 +90,9 @@ if sys.platform == "win32":
 from .core._imperative_rt.core2 import close as _close
 from .core._imperative_rt.core2 import full_sync as _full_sync
 from .core._imperative_rt.core2 import sync as _sync
+from .core._imperative_rt.common import (
+    get_supported_sm_versions as _get_supported_sm_versions,
+)
 from .core._imperative_rt.utils import _set_fork_exec_path_for_timed_func
 from .config import *
 from .device import *
@@ -98,6 +102,25 @@ from .tensor import Parameter, Tensor, tensor
 from .utils import comp_graph_tools as cgtools
 from .utils.persistent_cache import PersistentCacheOnServer as _PersistentCacheOnServer
 from .version import __version__
+
+
+logger = get_logger(__name__)
+ngpus = get_device_count("gpu")
+supported_sm_versions = re.findall(r"sm_(\d+)", _get_supported_sm_versions())
+for idx in range(ngpus):
+    prop = get_cuda_device_property(idx)
+    cur_sm = str(prop.major * 10 + prop.minor)
+    if not cur_sm in supported_sm_versions:
+        logger.warning(
+            "{} with CUDA capability sm_{} is not compatible with the current MegEngine installation. The current MegEngine install supports CUDA {} {}. If you want to use the {} with MegEngine, please check the instructions at https://github.com/MegEngine/MegEngine/blob/master/scripts/cmake-build/BUILD_README.md".format(
+                prop.name,
+                cur_sm,
+                "capabilities" if len(supported_sm_versions) > 1 else "capability",
+                " ".join(["sm_" + v for v in supported_sm_versions]),
+                prop.name,
+            )
+        )
+
 
 _set_fork_exec_path_for_timed_func(
     sys.executable,
