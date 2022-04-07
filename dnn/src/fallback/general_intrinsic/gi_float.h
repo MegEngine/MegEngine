@@ -20,9 +20,7 @@ GI_INT32_t GiReinterpretAsInt32(GI_FLOAT32_t In) {
 #elif defined(GI_SSE2_INTRINSICS)
     return _mm_castps_si128(In);
 #else
-    GI_INT32_t ret;
-    memcpy(&ret, &In, GI_SIMD_LEN_BYTE);
-    return ret;
+    return (GI_INT32_t)In;
 #endif
 }
 
@@ -33,9 +31,7 @@ GI_UINT32_t GiReinterpretAsUint32(GI_FLOAT32_t In) {
 #elif defined(GI_SSE2_INTRINSICS)
     return _mm_castps_si128(In);
 #else
-    GI_UINT32_t ret;
-    memcpy(&ret, &In, GI_SIMD_LEN_BYTE);
-    return ret;
+    return (GI_UINT32_t)In;
 #endif
 }
 
@@ -46,9 +42,7 @@ GI_FLOAT32_t GiReintInt32ToFloat32(GI_INT32_t Vector) {
 #elif defined(GI_SSE2_INTRINSICS)
     return _mm_castsi128_ps(Vector);
 #else
-    GI_FLOAT32_t ret;
-    memcpy(&ret, &Vector, GI_SIMD_LEN_BYTE);
-    return ret;
+    return (GI_FLOAT32_t)In;
 #endif
 }
 
@@ -59,9 +53,7 @@ GI_FLOAT32_t GiReintUint32ToFloat32(GI_UINT32_t Vector) {
 #elif defined(GI_SSE2_INTRINSICS)
     return _mm_castsi128_ps(Vector);
 #else
-    GI_FLOAT32_t ret;
-    memcpy(&ret, &Vector, GI_SIMD_LEN_BYTE);
-    return ret;
+    return (GI_FLOAT32_t)In;
 #endif
 }
 
