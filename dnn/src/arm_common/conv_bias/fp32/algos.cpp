@@ -11,7 +11,6 @@
  */
 
 #include "src/arm_common/conv_bias/fp32/algos.h"
-#include "src/arm_common/conv_bias/direct/multi_thread_common.h"
 #include "src/arm_common/conv_bias/fp32/direct.h"
 #include "src/arm_common/conv_bias/fp32/do_conv_stride1.h"
 #include "src/arm_common/conv_bias/fp32/do_conv_stride2.h"
@@ -20,6 +19,7 @@
 #include "src/arm_common/conv_bias/postprocess_helper.h"
 #include "src/common/opr_delegate.h"
 #include "src/fallback/conv_bias/common.h"
+#include "src/fallback/conv_bias/direct/multi_thread_common.h"
 
 #include "midout.h"
 
@@ -343,7 +343,7 @@ bool ConvBiasImpl::AlgoF32Direct::usable(
 size_t ConvBiasImpl::AlgoF32Direct::get_workspace(const NCBKernSizeParam& param) const {
     MIDOUT_BEGIN(megdnn_arm_common_conv_bias_f32_kimpl, 0, 1) {
         bool large_group = param.filter_meta.group >= param.nr_threads;
-        auto wbundle = MultithreadDirectConvCommon<float, float>::get_bundle(
+        auto wbundle = fallback::MultithreadDirectConvCommon<float, float>::get_bundle(
                 param, large_group);
         return wbundle.total_size_in_bytes();
     }
@@ -359,7 +359,8 @@ SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoF32Direct::get_kimpls(
     size_t group = fm.group;
     bool large_group = group >= param.nr_threads;
     WorkspaceBundle bundle =
-            MultithreadDirectConvCommon<float, float>::get_bundle(param, large_group);
+            fallback::MultithreadDirectConvCommon<float, float>::get_bundle(
+                    param, large_group);
     SmallVector<NCBKern> ret_kerns;
     //! When group >= nr_threads, treat it as large_group, each thread process
     //! one group for better performance
@@ -374,17 +375,18 @@ SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoF32Direct::get_kimpls(
             bundle.set(kern_param.workspace_ptr);
             if (fm.should_flip) {
                 for (size_t oc = 0; oc < OC; oc++) {
-                    MultithreadDirectConvCommon<float, float>::weight_flip_kern(
-                            bundle, kern_param, ncb_index,
-                            {ncb_index.thread_id, 0, oc});
+                    fallback::MultithreadDirectConvCommon<float, float>::
+                            weight_flip_kern(
+                                    bundle, kern_param, ncb_index,
+                                    {ncb_index.thread_id, 0, oc});
                 }
             }
             for (size_t ic = 0; ic < IC; ic++) {
-                MultithreadDirectConvCommon<float, float>::copy_padding_kern(
+                fallback::MultithreadDirectConvCommon<float, float>::copy_padding_kern(
                         bundle, kern_param, ncb_index, {ncb_index.thread_id, 0, ic});
             }
             for (size_t oc = 0; oc < OC; oc++) {
-                MultithreadDirectConvCommon<float, float>::do_conv_kern(
+                fallback::MultithreadDirectConvCommon<float, float>::do_conv_kern(
                         bundle, kern_param, ncb_index, fp32::conv_bias::kern_direct,
                         {ncb_index.thread_id, 0, oc});
             }
@@ -396,7 +398,7 @@ SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoF32Direct::get_kimpls(
                                        const NCBKernParam& kern_param,
                                        const NCBKernIndex& ncb_index) mutable {
                 bundle.set(kern_param.workspace_ptr);
-                MultithreadDirectConvCommon<float, float>::weight_flip_kern(
+                fallback::MultithreadDirectConvCommon<float, float>::weight_flip_kern(
                         bundle, kern_param, ncb_index, ncb_index.ndrange_id);
             };
             ret_kerns.push_back({weight_flip, {group, 1_z, OC}});
@@ -405,7 +407,7 @@ SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoF32Direct::get_kimpls(
                                     const NCBKernParam& kern_param,
                                     const NCBKernIndex& ncb_index) mutable {
             bundle.set(kern_param.workspace_ptr);
-            MultithreadDirectConvCommon<float, float>::copy_padding_kern(
+            fallback::MultithreadDirectConvCommon<float, float>::copy_padding_kern(
                     bundle, kern_param, ncb_index, ncb_index.ndrange_id);
         };
         ret_kerns.push_back({copy_padding, {group, N, IC}});
@@ -413,7 +415,7 @@ SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoF32Direct::get_kimpls(
                                const NCBKernParam& kern_param,
                                const NCBKernIndex& ncb_index) mutable {
             bundle.set(kern_param.workspace_ptr);
-            MultithreadDirectConvCommon<float, float>::do_conv_kern(
+            fallback::MultithreadDirectConvCommon<float, float>::do_conv_kern(
                     bundle, kern_param, ncb_index, fp32::conv_bias::kern_direct,
                     ncb_index.ndrange_id);
         };
@@ -452,8 +454,9 @@ size_t ConvBiasImpl::AlgoF32DirectStride1::get_workspace(
         const NCBKernSizeParam& param) const {
     MIDOUT_BEGIN(megdnn_arm_common_conv_bias_f32_kimpl, 1, 1) {
         bool large_group = param.filter_meta.group >= param.nr_threads;
-        auto bundle = MultithreadDirectConvCommon<float, float>::get_bundle_stride(
-                param, large_group);
+        auto bundle =
+                fallback::MultithreadDirectConvCommon<float, float>::get_bundle_stride(
+                        param, large_group);
         return bundle.total_size_in_bytes();
     }
     MIDOUT_END();
@@ -492,7 +495,7 @@ SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoF32DirectStride1::get_kimpl
     SWITCH_KERN_STR1();
 
     WorkspaceBundle bundle =
-            MultithreadDirectConvCommon<float, float>::get_bundle_stride(
+            fallback::MultithreadDirectConvCommon<float, float>::get_bundle_stride(
                     param, large_group);
     SmallVector<NCBKern> ret_kerns;
     //! When group >= nr_threads, treat it as large_group, each thread process
@@ -507,13 +510,16 @@ SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoF32DirectStride1::get_kimpl
             size_t OC = fm.ocpg;
             bundle.set(kern_param.workspace_ptr);
             for (size_t ic = 0; ic < IC; ic++) {
-                MultithreadDirectConvCommon<float, float>::copy_padding_kern_stride(
-                        bundle, kern_param, ncb_index, {ncb_index.thread_id, 0, ic});
+                fallback::MultithreadDirectConvCommon<float, float>::
+                        copy_padding_kern_stride(
+                                bundle, kern_param, ncb_index,
+                                {ncb_index.thread_id, 0, ic});
             }
             for (size_t oc = 0; oc < OC; oc++) {
-                MultithreadDirectConvCommon<float, float>::do_conv_kern_stride(
-                        bundle, kern_param, ncb_index, conv_kern_function,
-                        {ncb_index.thread_id, 0, oc});
+                fallback::MultithreadDirectConvCommon<float, float>::
+                        do_conv_kern_stride(
+                                bundle, kern_param, ncb_index, conv_kern_function,
+                                {ncb_index.thread_id, 0, oc});
             }
         };
         ret_kerns.push_back({exec_one_group, {group, N, 1_z}});
@@ -522,15 +528,16 @@ SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoF32DirectStride1::get_kimpl
                                     const NCBKernParam& kern_param,
                                     const NCBKernIndex& ncb_index) mutable {
             bundle.set(kern_param.workspace_ptr);
-            MultithreadDirectConvCommon<float, float>::copy_padding_kern_stride(
-                    bundle, kern_param, ncb_index, ncb_index.ndrange_id);
+            fallback::MultithreadDirectConvCommon<float, float>::
+                    copy_padding_kern_stride(
+                            bundle, kern_param, ncb_index, ncb_index.ndrange_id);
         };
         ret_kerns.push_back({copy_padding, {group, N, IC}});
         auto do_conv = [bundle, conv_kern_function](
                                const NCBKernParam& kern_param,
                                const NCBKernIndex& ncb_index) mutable {
             bundle.set(kern_param.workspace_ptr);
-            MultithreadDirectConvCommon<float, float>::do_conv_kern_stride(
+            fallback::MultithreadDirectConvCommon<float, float>::do_conv_kern_stride(
                     bundle, kern_param, ncb_index, conv_kern_function,
                     ncb_index.ndrange_id);
         };
@@ -570,8 +577,9 @@ size_t ConvBiasImpl::AlgoF32DirectStride2::get_workspace(
         const NCBKernSizeParam& param) const {
     MIDOUT_BEGIN(megdnn_arm_common_conv_bias_f32_kimpl, 2, 1) {
         bool large_group = param.filter_meta.group >= param.nr_threads;
-        auto bundle = MultithreadDirectConvCommon<float, float>::get_bundle_stride(
-                param, large_group);
+        auto bundle =
+                fallback::MultithreadDirectConvCommon<float, float>::get_bundle_stride(
+                        param, large_group);
         return bundle.total_size_in_bytes();
     }
     MIDOUT_END();
@@ -609,7 +617,7 @@ SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoF32DirectStride2::get_kimpl
     SWITCH_KERN_STR2();
 
     WorkspaceBundle bundle =
-            MultithreadDirectConvCommon<float, float>::get_bundle_stride(
+            fallback::MultithreadDirectConvCommon<float, float>::get_bundle_stride(
                     param, large_group);
     SmallVector<NCBKern> ret_kerns;
     //! When group >= nr_threads, treat it as large_group, each thread process
@@ -624,13 +632,16 @@ SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoF32DirectStride2::get_kimpl
             size_t OC = fm.ocpg;
             bundle.set(kern_param.workspace_ptr);
             for (size_t ic = 0; ic < IC; ic++) {
-                MultithreadDirectConvCommon<float, float>::copy_padding_kern_stride(
-                        bundle, kern_param, ncb_index, {ncb_index.thread_id, 0, ic});
+                fallback::MultithreadDirectConvCommon<float, float>::
+                        copy_padding_kern_stride(
+                                bundle, kern_param, ncb_index,
+                                {ncb_index.thread_id, 0, ic});
             }
             for (size_t oc = 0; oc < OC; oc++) {
-                MultithreadDirectConvCommon<float, float>::do_conv_kern_stride(
-                        bundle, kern_param, ncb_index, conv_kern_function,
-                        {ncb_index.thread_id, 0, oc});
+                fallback::MultithreadDirectConvCommon<float, float>::
+                        do_conv_kern_stride(
+                                bundle, kern_param, ncb_index, conv_kern_function,
+                                {ncb_index.thread_id, 0, oc});
             }
         };
         ret_kerns.push_back({exec_one_group, {group, N, 1_z}});
@@ -639,15 +650,16 @@ SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoF32DirectStride2::get_kimpl
                                     const NCBKernParam& kern_param,
                                     const NCBKernIndex& ncb_index) mutable {
             bundle.set(kern_param.workspace_ptr);
-            MultithreadDirectConvCommon<float, float>::copy_padding_kern_stride(
-                    bundle, kern_param, ncb_index, ncb_index.ndrange_id);
+            fallback::MultithreadDirectConvCommon<float, float>::
+                    copy_padding_kern_stride(
+                            bundle, kern_param, ncb_index, ncb_index.ndrange_id);
         };
         ret_kerns.push_back({copy_padding, {group, N, IC}});
         auto do_conv = [bundle, conv_kern_function](
                                const NCBKernParam& kern_param,
                                const NCBKernIndex& ncb_index) mutable {
             bundle.set(kern_param.workspace_ptr);
-            MultithreadDirectConvCommon<float, float>::do_conv_kern_stride(
+            fallback::MultithreadDirectConvCommon<float, float>::do_conv_kern_stride(
                     bundle, kern_param, ncb_index, conv_kern_function,
                     ncb_index.ndrange_id);
         };

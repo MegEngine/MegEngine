@@ -42,7 +42,7 @@ GI_FLOAT32_t GiReintInt32ToFloat32(GI_INT32_t Vector) {
 #elif defined(GI_SSE2_INTRINSICS)
     return _mm_castsi128_ps(Vector);
 #else
-    return (GI_FLOAT32_t)In;
+    return (GI_FLOAT32_t)Vector;
 #endif
 }
 
@@ -53,7 +53,7 @@ GI_FLOAT32_t GiReintUint32ToFloat32(GI_UINT32_t Vector) {
 #elif defined(GI_SSE2_INTRINSICS)
     return _mm_castsi128_ps(Vector);
 #else
-    return (GI_FLOAT32_t)In;
+    return (GI_FLOAT32_t)Vector;
 #endif
 }
 

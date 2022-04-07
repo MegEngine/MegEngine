@@ -1,5 +1,5 @@
 /**
- * \file dnn/src/arm_common/conv_bias/direct/multi_thread_common.cpp
+ * \file dnn/src/fallback/conv_bias/direct/multi_thread_common.cpp
  * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
  *
  * Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
@@ -9,12 +9,14 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-#include "src/arm_common/conv_bias/direct/multi_thread_common.h"
-#include "src/arm_common/conv_bias/postprocess_helper.h"
+#include "multi_thread_common.h"
 #include "src/fallback/matrix_mul/opr_impl.h"
 
 using namespace megdnn;
-using namespace arm_common;
+using namespace fallback;
+#if MEGDNN_X86
+using namespace x86;
+#endif
 
 namespace {
 bool need_dst_copy(const megdnn::fallback::ConvBiasImpl::NCBKernSizeParam& param) {
@@ -354,8 +356,8 @@ void MultithreadDirectConvCommon<io_ctype, compute_ctype>::do_conv_kern_stride(
             kern_param.nonlineMode, kern_param.bias_type, kern_param.dst_type, 1_z, 1_z,
             OH, OW);
 };
-template class megdnn::arm_common::MultithreadDirectConvCommon<float, float>;
+template class megdnn::fallback::MultithreadDirectConvCommon<float, float>;
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
-template class megdnn::arm_common::MultithreadDirectConvCommon<dt_float16, __fp16>;
+template class megdnn::fallback::MultithreadDirectConvCommon<dt_float16, __fp16>;
 #endif
 // vim: syntax=cpp.doxygen

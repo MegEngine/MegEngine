@@ -1,5 +1,5 @@
 /**
- * \file dnn/src/arm_common/conv_bias/direct/multi_thread_common.h
+ * \file dnn/src/fallback/conv_bias/direct/multi_thread_common.h
  * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
  *
  * Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
@@ -10,11 +10,20 @@
  */
 #pragma once
 
-#include "src/arm_common/conv_bias/opr_impl.h"
+#include "src/fallback/conv_bias/opr_impl.h"
 #include "src/fallback/matrix_mul/opr_impl.h"
 
+#if MEGDNN_X86
+#include "src/x86/conv_bias/postprocess_helper.h"
+#elif (MEGDNN_ARMV7 || MEGDNN_AARCH64)
+#include "src/arm_common/conv_bias/postprocess_helper.h"
+#else
+//! TODO: optimize common postprocess_helper with general intrinsic
+#include "src/common/postprocess_helper.h"
+#endif
+
 namespace megdnn {
-namespace arm_common {
+namespace fallback {
 
 template <class io_ctype, class compute_ctype>
 class MultithreadDirectConvCommon {
@@ -53,7 +62,7 @@ public:
             const CpuNDRange& workspace_ids);
 };
 
-}  // namespace arm_common
+}  // namespace fallback
 }  // namespace megdnn
 
 // vim: syntax=cpp.doxygen

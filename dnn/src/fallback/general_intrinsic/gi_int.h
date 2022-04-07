@@ -1,5 +1,5 @@
 /**
- * \file dnn/src/fallback/general_intrinsic/gi_float.h
+ * \file dnn/src/fallback/general_intrinsic/gi_int.h
  * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
  *
  * Copyright (c) 2014-2022 Megvii Inc. All rights reserved.
