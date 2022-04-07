@@ -477,6 +477,9 @@ def Padding: MgbHashableOp<"Padding", [PaddingParam]>;
 def LRN: MgbHashableOp<"LRN", [LRNParam]>;
 
 def LayerNorm: MgbHashableOp<"LayerNorm", [LayerNormParam]>;
+
+def LAMBUpdate: MgbHashableOp<"LAMBUpdate", [LAMBUpdateParam]>;
+
 def RNNCell: MgbHashableOp<"RNNCell", [RNNCellParam]>;
 
 def LSTMCell: MgbHashableOp<"LSTMCell", [EmptyParam]>;

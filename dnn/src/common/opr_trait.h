@@ -127,6 +127,7 @@ DEF(LSQBackward, 7, true, false);
 DEF(Fill, 1, true, false);
 DEF(LayerNormForward, 6, true, true);
 DEF(LayerNormBackward, 8, true, true);
+DEF(LAMBUpdate, 7, true, true);
 DEF(DropoutForward, 3, true, true);
 DEF(DropoutBackward, 3, true, true);
 DEF(RNNCellForward, 7, true, true);

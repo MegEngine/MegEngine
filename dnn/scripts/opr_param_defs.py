@@ -36,13 +36,13 @@ pdef('Axis').add_fields('int32', 'axis', 0)
  add_enum(Doc('Format', 'convolution data/filter/output format; see '
               ':class:`RelayoutFormat` for more details'),
           'NCHW = 0', 'NHWC = 1', 'NHWCD4 = 2', 'NCHW4 = 3', 'NCHW8 = 4', 'NCHW32 = 5', 'NCHW88 = 6',
-          'NCHW44 = 7','NCHW44_DOT = 8', 
+          'NCHW44 = 7','NCHW44_DOT = 8',
           Doc('NCHW_WINOGRAD = 9', 'NCHW layout with weights tranformed by winograd'),
           Doc('NCHW88_WINOGRAD = 10', 'NCHW88 layout with weights tranformed by winograd'),
           Doc('NCHW44_WINOGRAD = 11', 'NCHW44 layout with weights tranformed by winograd'),
-          Doc('NCHW4_NCHW32 = 12', 'NCHW4_NCHW32 means input tensors are nchw4 layout, output tensor is nchw32 layout'), 
-          Doc('NCHW32_NCHW4 = 13', 'NCHW32_NCHW4 means input tensors are nchw32 layout, output tensor is nchw4 layout'), 
-          Doc('NCHW4_NCHW = 14', 'NCHW4_NCHW means input tensors are nchw4 layout, output tensor is nchw layout'), 
+          Doc('NCHW4_NCHW32 = 12', 'NCHW4_NCHW32 means input tensors are nchw4 layout, output tensor is nchw32 layout'),
+          Doc('NCHW32_NCHW4 = 13', 'NCHW32_NCHW4 means input tensors are nchw32 layout, output tensor is nchw4 layout'),
+          Doc('NCHW4_NCHW = 14', 'NCHW4_NCHW means input tensors are nchw4 layout, output tensor is nchw layout'),
           Doc('NHWC_NCHW = 15', 'NHWC_NCHW means input tensors are nhwc layout, '
               'output tensor is nchw layout'),
           Doc('NHWC_NCHW4_IC_SMALL = 16', 'NHWC_NCHW4_IC_SMALL means input tensors are nhwc(c < 4) layout, '
@@ -96,9 +96,9 @@ pdef('Axis').add_fields('int32', 'axis', 0)
  add_enum(Doc('Format', 'convolution data/filter/output format; see '
               ':class:`RelayoutFormat` for more details'),
           'NCHW = 0', 'NHWC = 1', 'NHWCD4 = 2', 'NCHW4 = 3', 'NCHW8 = 4', 'NCHW32 = 5', 'NCHW88 = 6',
-          'NCHW44 = 7','NCHW44_DOT = 8', 
-          Doc('NCHW4_NCHW32 = 9', 'NCHW4_NCHW32 means input tensors are nchw4 layout, output tensor is nchw32 layout'), 
-          Doc('NCHW32_NCHW4 = 10', 'NCHW32_NCHW4 means input tensors are nchw32 layout, output tensor is nchw4 layout'), 
+          'NCHW44 = 7','NCHW44_DOT = 8',
+          Doc('NCHW4_NCHW32 = 9', 'NCHW4_NCHW32 means input tensors are nchw4 layout, output tensor is nchw32 layout'),
+          Doc('NCHW32_NCHW4 = 10', 'NCHW32_NCHW4 means input tensors are nchw32 layout, output tensor is nchw4 layout'),
           Doc('NCHW4_NCHW = 11', 'NCHW4_NCHW means input tensors are nchw4 layout, output tensor is nchw layout'),
           Doc('NHWC_NCHW = 12', 'NHWC_NCHW means input tensors are nhwc layout, '
               'output tensor is nchw layout'),
@@ -107,9 +107,9 @@ pdef('Axis').add_fields('int32', 'axis', 0)
           Doc('NCHW_NCHW4_IC_SMALL = 14', 'NCHW_NCHW4_IC_SMALL means input tensors are nchw(c < 4) layout, '
               'output tensor is nchw4 layout, padding c=4'),
           Doc('CHWN4 = 15', 'CHWN4 is currently only used on Nvidia platform for fast implementation '
-              'of convolution using CUDA/SASS. The channels are splitted to groups of 4 channels.'), 
+              'of convolution using CUDA/SASS. The channels are splitted to groups of 4 channels.'),
           Doc('NCHW64 = 16', 'NCHW64 is designed for convolution implementation to utilizing TensorCore '
-              'instructions for 4-bit integers on Nvidia platforms'), 
+              'instructions for 4-bit integers on Nvidia platforms'),
           Doc('NCHW4_NHWC = 17', 'NCHW4_NHWC means input tensors are nchw4 layout, output tensor is nhwc layout')).
  add_enum_alias('ComputeMode', 'ConvolutionV1',name_field='compute_mode')
  )
@@ -1038,10 +1038,10 @@ Note: NCHW_NCHW4_WEIGHT will auto pad oc and ic, you should remove oc in later o
      'NCHW_NCHW4 = 24',
      'NCHW4_NCHW = 25',
      'NCHW_NCHW4_WEIGHT = 26',
-     'NCHW_NCHW64 = 27', 
-     'NCHW64_NCHW = 28', 
-     'NCHW_NHWC = 29', 
-     'NHWC_NCHW = 30', 
+     'NCHW_NCHW64 = 27',
+     'NCHW64_NCHW = 28',
+     'NCHW_NHWC = 29',
+     'NHWC_NCHW = 30',
      'NHWCD4I_NHWC = 31',
     )
  )
@@ -1264,3 +1264,14 @@ PADDING_MODES = [Doc('REPLICATE = 0', 'aaaaaa|abcdefgh|hhhhhhh'),
  add_fields('float32', Doc('dropout', 'If introduce a Dropout layer on the outputs of each LSTM layer'), '0.f').
  add_enum_alias('FwdMode', 'BN', name_field='fwd_mode')
  )
+
+(pdef('LAMBUpdate').
+ add_fields('float32', Doc('beta_1', 'beta_1 paramter of lamb'), '1.f').
+ add_fields('float32', Doc('beta_2', 'beta_2 paramter of lamb'), '1.f').
+ add_fields('float32', Doc('step', 'training step'), '1.f').
+ add_fields('float32', Doc('lr', 'learning rate'), '1.f').
+ add_fields('float32', Doc('weight_decay', 'weight decay to adjust learning rate'), '1.f').
+ add_fields('float32', Doc('eps', 'eps to multi'), '1.f').
+ add_fields('bool', Doc('bias_correction', 'whether correct bias'), 'true').
+ add_fields('bool', Doc('always_adapt', 'apply adaptive lr to 0.0'), 'false')
+)

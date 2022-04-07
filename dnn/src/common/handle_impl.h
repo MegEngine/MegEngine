@@ -209,6 +209,7 @@ private:
     cb(RNN) \
     cb(RNNBackward) \
     cb(LSTM) \
+    cb(LAMBUpdate) \
     cb(LSTMBackward) \
     cb(SoftmaxForward) \
     cb(SoftmaxBackward)

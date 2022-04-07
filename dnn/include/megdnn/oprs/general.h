@@ -1442,6 +1442,39 @@ protected:
     void backward_check_exec(const TensorLayout& src, const TensorLayout& dst);
 };
 
+class LAMBUpdate : public OperatorBase {
+    DEF_OPR_PARAM(LAMBUpdate);
+    // input=(m_t-1,v_t-1,lamb_param,grad) , output = (m_t,v_t,new_param)
+    DEF_OPR_IMPL(LAMBUpdate, OperatorBase, 4, 3);
+
+public:
+    virtual void exec(
+            _megdnn_tensor_in m_t_1, _megdnn_tensor_in v_t_1,
+            _megdnn_tensor_in lamb_param, _megdnn_tensor_in grad,
+            _megdnn_tensor_out m_t, _megdnn_tensor_out v_t,
+            _megdnn_tensor_out new_param, _megdnn_workspace workspace) = 0;
+
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& m_t_1, const TensorLayout& v_t_1,
+            const TensorLayout& lamb_param, const TensorLayout& grad,
+            const TensorLayout& m_t, const TensorLayout& v_t,
+            const TensorLayout& new_param) = 0;
+
+    void deduce_layout(
+            const TensorLayout& m_t_1, const TensorLayout& v_t_1,
+            const TensorLayout& lamb_param, const TensorLayout& grad, TensorLayout& m_t,
+            TensorLayout& v_t, TensorLayout& new_param);
+
+protected:
+    void check_exec(
+            const TensorLayout& m_t_1, const TensorLayout& v_t_1,
+            const TensorLayout& lamb_param, const TensorLayout& grad,
+            const TensorLayout& m_t, const TensorLayout& v_t,
+            const TensorLayout& new_param, size_t workspace_in_bytes);
+};
+
+using LAMB = LAMBUpdate;
+
 }  // namespace megdnn
 
 #include "megdnn/internal/opr_header_epilogue.h"

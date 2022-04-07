@@ -37,6 +37,7 @@
 #include "src/naive/images2neibs/opr_impl.h"
 #include "src/naive/indexing_multi_axis_vec/opr_impl.h"
 #include "src/naive/indexing_one_hot/opr_impl.h"
+#include "src/naive/lamb/opr_impl.h"
 #include "src/naive/layer_norm/opr_impl.h"
 #include "src/naive/linspace/opr_impl.h"
 #include "src/naive/local/opr_impl.h"
