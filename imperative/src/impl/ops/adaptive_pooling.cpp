@@ -73,6 +73,7 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
     TensorLayout dst_layout = output_descs[0].layout;
     if (!validated) {
         TensorShape tshp;
+        dst_layout.ndim = src_layout.ndim;
         dst_layout[0] = src_layout[0];
         dst_layout[1] = src_layout[1];
         if (inputs.size() == 2) {
