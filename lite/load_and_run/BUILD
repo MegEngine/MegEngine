@@ -1,9 +1,6 @@
-load("//brain/megbrain/lite:flags.bzl","pthread_select")
-
+load("//brain/megbrain/lite:flags.bzl","pthread_select", "lite_opts")
 cc_library(
     name = "mgblar",
-    copts = ["-std=c++14"],
-
     srcs = glob(["src/**/*.cpp"], exclude = ["src/main.cpp"]),
     hdrs = glob(["src/**/*.h"]),
     includes = ["src"],
@@ -11,15 +8,14 @@ cc_library(
         "no_exceptions",
         "no_rtti",
     ]),
-    defines = [
-        "LITE_BUILD_WITH_MGE=1", 
-    ],
 
     deps = ["//brain/megbrain/lite:lite_static_test"]+
         pthread_select(
             ["@com_github_gflags_gflags//:gflags_nothreads"],
             ["//external:gflags"]
         ),
+
+    copts = ["-std=c++14"] + lite_opts,
     alwayslink = 1,
     visibility = ["//visibility:public"],
 )
