@@ -197,7 +197,9 @@ class Tensor(_Tensor, ArrayMethodMixin):
         self._name = self._prefix + "." + name if self._prefix else name
         self._set_name(self._name)
 
-    @deprecated(version="1.0", reason="no need to reuse an existing tensor since 1.0")
+    @deprecated(
+        version="1.0", reason="please use ``tensor_name[...] = value``",
+    )
     def set_value(self, value):
         self._reset(value)
 
