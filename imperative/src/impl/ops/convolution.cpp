@@ -354,8 +354,8 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
     TensorLayout diff = inputs[1].layout;
     size_t filter_ndim = filter.ndim;
     size_t diff_ndim = diff.ndim;
-    if (filter_ndim == 0) {
-        desc.layout = filter;
+    if (diff_ndim == 0) {
+        desc.layout = diff;
         return {dests, false};
     }
 
