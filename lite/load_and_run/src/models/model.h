@@ -43,6 +43,8 @@ public:
     virtual void wait() = 0;
 
     virtual ~ModelBase() = default;
+
+    virtual const std::string& get_model_path() const = 0;
 };
 }  // namespace lar
 

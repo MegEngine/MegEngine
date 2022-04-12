@@ -107,6 +107,8 @@ public:
                 std::move(out_file), m_format.val());
     }
 
+    const std::string& get_model_path() const override { return model_path; }
+
 private:
     bool share_model_mem;
     std::string model_path;

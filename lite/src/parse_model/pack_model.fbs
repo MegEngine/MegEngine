@@ -5,10 +5,14 @@ table ModelHeader {
     info_decryption_method:string;
     info_parse_method:string;
     model_decryption_method:string;
+    info_cache_parse_method:string;
+    is_fast_run_cache:bool;
 }
 
 table ModelInfo {
     data:[ubyte];
+    algo_policy:[ubyte];
+    binary_cache:[ubyte];
 }
 
 table ModelData {

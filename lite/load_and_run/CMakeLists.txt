@@ -1,7 +1,7 @@
 # BUILD the load and run for lite
 include_directories(PUBLIC
                     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/lite/load_and_run/src>)
-file(GLOB_RECURSE SOURCES ./*.cpp)
+file(GLOB_RECURSE SOURCES ./*.cpp ${PROJECT_SOURCE_DIR}/lite/src/pack_model/*.cpp)
 
 add_executable(load_and_run ${SOURCES})
 target_link_libraries(load_and_run lite_static)

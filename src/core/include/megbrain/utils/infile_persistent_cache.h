@@ -71,6 +71,7 @@ public:
      */
     MGE_WIN_DECLSPEC_FUC void dump_cache(const char* path);
     MGE_WIN_DECLSPEC_FUC void dump_cache(OutputFile* out_file);
+    MGE_WIN_DECLSPEC_FUC std::vector<uint8_t> dump_cache();
 
     MGE_WIN_DECLSPEC_FUC Maybe<Blob> get(
             const std::string& category, const Blob& key) override;

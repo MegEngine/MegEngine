@@ -970,6 +970,25 @@ TEST(TestNetWork, LoadPackedModel) {
     network->wait();
 }
 
+TEST(TestNetWork, LoadPackedCacheModel) {
+    auto tensor = get_input_data("./input_data.npy");
+    std::string model_path = "./test_pack_cache_to_model.lite";
+    std::string input_name = "data";
+
+    NetworkIO IO;
+    Config config;
+    std::shared_ptr<Network> network = std::make_shared<Network>(config, IO);
+    network->load_model(model_path);
+    std::shared_ptr<Tensor> input_tensor = network->get_io_tensor(input_name);
+
+    auto src_ptr = tensor->get_memory_ptr();
+    auto src_layout = tensor->get_layout();
+    input_tensor->reset(src_ptr, src_layout);
+
+    network->forward();
+    network->wait();
+}
+
 TEST(TestNetWork, GlabalLayoutTransform) {
     auto tensor = get_input_data("./input_data.npy");
     std::string model_path = "./shufflenet.mge";

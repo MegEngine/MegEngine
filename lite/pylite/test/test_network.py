@@ -119,6 +119,12 @@ class TestNetwork(TestShuffleNet):
         network.load(model_path)
         self.do_forward(network)
 
+    def test_pack_cache_to_model(self):
+        model_path = os.path.join(self.source_dir, "test_pack_cache_to_model.lite")
+        network = LiteNetwork()
+        network.load(model_path)
+        self.do_forward(network)
+
     def test_network_basic(self):
         network = LiteNetwork()
         network.load(self.model_path)

@@ -60,6 +60,8 @@ public:
     //! get algo strategy
     Strategy& get_lite_strategy() { return m_strategy; }
 
+    const std::string& get_model_path() const override { return model_path; }
+
 private:
     bool share_model_mem;
     bool enable_layout_transform;

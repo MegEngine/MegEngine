@@ -216,6 +216,46 @@ void InFilePersistentCache::dump_cache(OutputFile* out_file) {
         }
     }
 }
+
+std::vector<uint8_t> InFilePersistentCache::dump_cache() {
+    std::vector<uint8_t> ret;
+
+    uint32_t nr_category = m_cache.size();
+    ret.resize(sizeof(nr_category));
+    memcpy(ret.data(), &nr_category, sizeof(nr_category));
+
+    auto write_to_buffer = [&ret](uint32_t val) {
+        std::vector<uint8_t> vec(sizeof(val));
+        memcpy(vec.data(), &val, sizeof(val));
+        ret.insert(ret.end(), vec.begin(), vec.end());
+    };
+
+    for (const auto& cached_category : m_cache) {
+        uint32_t category_size = cached_category.first.size();
+        write_to_buffer(category_size);
+        std::vector<uint8_t> category(
+                cached_category.first.begin(), cached_category.first.end());
+        ret.insert(ret.end(), category.begin(), category.end());
+
+        uint32_t nr_bobs = cached_category.second.size();
+        write_to_buffer(nr_bobs);
+        for (const auto& item : cached_category.second) {
+            uint32_t size_first = item.first.size;
+            write_to_buffer(size_first);
+            ret.insert(
+                    ret.end(), item.first.data_refhold.get(),
+                    item.first.data_refhold.get() + size_first);
+
+            uint32_t size_second = item.second.size;
+            write_to_buffer(size_second);
+            ret.insert(
+                    ret.end(), item.second.data_refhold.get(),
+                    item.second.data_refhold.get() + size_second);
+        }
+    }
+    return ret;
+}
+
 Maybe<InFilePersistentCache::Blob> InFilePersistentCache::get(
         const std::string& category, const Blob& key) {
     decltype(m_cache.begin()) iter0;

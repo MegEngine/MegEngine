@@ -60,6 +60,8 @@ private:
     std::string m_model_decryption_name;
     //! the function name to parse the model info
     std::string m_info_parse_func_name;
+    std::string m_info_cache_parse_func_name;
+    bool m_is_fast_run_cache;
     //! if a model is not added json info to the model is not crypted, the
     //! model is a bare model
     bool m_is_bare_model = true;

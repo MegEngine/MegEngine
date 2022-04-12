@@ -11,6 +11,7 @@
 
 #include "model_parser.h"
 #include "decryption/decrypt_base.h"
+#include "parse_info/cache_parse.h"
 #include "parse_info/parse_info_base.h"
 
 using namespace lite;
@@ -41,6 +42,10 @@ void ModelParser::parse_header() {
     m_model_decryption_name = model->header()->model_decryption_method()->c_str();
     m_info_decryption_name = model->header()->info_decryption_method()->c_str();
     m_info_parse_func_name = model->header()->info_parse_method()->c_str();
+    if (model->header()->info_cache_parse_method())
+        m_info_cache_parse_func_name =
+                model->header()->info_cache_parse_method()->c_str();
+    m_is_fast_run_cache = model->header()->is_fast_run_cache();
 
     m_info = model->info();
     m_model_data = model->data();
@@ -54,31 +59,52 @@ bool ModelParser::parse_model_info(
     if (m_is_bare_model || !m_info) {
         return false;
     }
-    size_t info_length = m_info->data()->size();
-    const uint8_t* info_data = m_info->data()->Data();
-    //! decryption the info
-    auto info_ptr =
-            decrypt_memory(info_data, info_length, m_info_decryption_name, info_length);
-    //! parse the info
-    LITE_LOCK_GUARD(parse_info_static_data().map_mutex);
-    auto it_parse =
-            parse_info_static_data().parse_info_methods.find(m_info_parse_func_name);
-    if (it_parse == parse_info_static_data().parse_info_methods.end()) {
-        LITE_THROW(ssprintf(
-                "can't find model info parse function %s.",
-                m_info_parse_func_name.c_str()));
+    //! parse ModelInfo::data
+    if (m_info->data()) {
+        size_t info_length = m_info->data()->size();
+        const uint8_t* info_data = m_info->data()->Data();
+        //! decryption the info
+        auto info_ptr = decrypt_memory(
+                info_data, info_length, m_info_decryption_name, info_length);
+        //! parse the info
+        LITE_LOCK_GUARD(parse_info_static_data().map_mutex);
+        auto it_parse = parse_info_static_data().parse_info_methods.find(
+                m_info_parse_func_name);
+        if (it_parse == parse_info_static_data().parse_info_methods.end()) {
+            LITE_THROW(ssprintf(
+                    "can't find model info parse function %s.",
+                    m_info_parse_func_name.c_str()));
+        }
+        auto model_info_parse_func =
+                parse_info_static_data().parse_info_methods[m_info_parse_func_name];
+        //! convert for NetworkIOInner to NetworkIO
+        if (model_info_parse_func) {
+            model_info_parse_func(
+                    info_ptr.get(), info_length, m_model_name, network_config,
+                    network_io, isolated_config_map, extra_info);
+        } else {
+            LITE_THROW(ssprintf(
+                    "model info parse function of  %s is empty",
+                    m_info_parse_func_name.c_str()));
+        }
     }
-    auto model_info_parse_func =
-            parse_info_static_data().parse_info_methods[m_info_parse_func_name];
-    //! convert for NetworkIOInner to NetworkIO
-    if (model_info_parse_func) {
-        model_info_parse_func(
-                info_ptr.get(), info_length, m_model_name, network_config, network_io,
-                isolated_config_map, extra_info);
-    } else {
-        LITE_THROW(ssprintf(
-                "model info parse function of  %s is empty",
-                m_info_parse_func_name.c_str()));
+    //! parse ModelInfo::algo_policy
+    if (m_info->algo_policy()) {
+        size_t cache_length = m_info->algo_policy()->size();
+        const uint8_t* cache = m_info->algo_policy()->Data();
+        if (m_info_cache_parse_func_name == "LITE_parse_cache") {
+            if (m_is_fast_run_cache) {
+                parse_info_cache(cache, cache_length);
+            } else if (m_info->binary_cache()) {
+                size_t binary_cache_length = m_info->binary_cache()->size();
+                const uint8_t* binary_cache = m_info->binary_cache()->Data();
+                parse_info_cache(
+                        cache, cache_length, m_is_fast_run_cache, binary_cache,
+                        binary_cache_length);
+            } else {
+                LITE_THROW("opencl binary cache is not given");
+            }
+        }
     }
     return true;
 }
