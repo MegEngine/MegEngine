@@ -13,7 +13,6 @@
 
 #include "megbrain/imperative/ops/autogen.h"
 #include "megbrain/imperative/ops/utility.h"
-#include "megbrain/imperative/utils/stats.h"
 
 namespace mgb {
 namespace imperative {

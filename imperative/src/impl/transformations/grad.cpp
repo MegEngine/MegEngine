@@ -15,7 +15,6 @@
 
 #include "megbrain/imperative/graph_cache.h"
 #include "megbrain/imperative/resource_manager.h"
-#include "megbrain/imperative/utils/stats.h"
 
 #include <range/v3/all.hpp>
 

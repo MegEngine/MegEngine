@@ -11,7 +11,6 @@
 
 #include "megbrain/imperative/opr_utility.h"
 #include "megbrain/imperative/ops/autogen.h"
-#include "megbrain/imperative/utils/stats.h"
 #include "megbrain/opr/basic_arith.h"
 #include "megbrain/opr/utility.h"
 

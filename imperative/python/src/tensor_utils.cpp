@@ -21,7 +21,6 @@
 #include "megbrain/imperative/transformations/symbol.h"
 #include "megbrain/imperative/transformations/trace.h"
 #include "megbrain/imperative/utils/map.h"
-#include "megbrain/imperative/utils/stats.h"
 #include "megbrain/opr/io.h"
 #include "megbrain/plugin/profiler.h"
 

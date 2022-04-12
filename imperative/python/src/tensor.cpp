@@ -23,9 +23,9 @@
 #include "megbrain/imperative/transformations/symbol.h"
 #include "megbrain/imperative/transformations/trace.h"
 #include "megbrain/imperative/utils/map.h"
-#include "megbrain/imperative/utils/stats.h"
 #include "megbrain/opr/io.h"
 #include "megbrain/plugin/profiler.h"
+#include "megbrain/utils/stats.h"
 
 #include "./common.h"
 #include "./grad.h"
@@ -1367,9 +1367,9 @@ void init_tensor(py::module m) {
         return reprs;
     });
 
-    m.def("print_stats", [] { imperative::Stats::print(); });
+    m.def("print_stats", [] { Stats::print(); });
 
-    m.def("reset_stats", [] { imperative::Stats::reset(); });
+    m.def("reset_stats", [] { Stats::reset(); });
 
     m.def("_get_convert_inputs",
           []() -> bool { return DTypePromoteCfg::convert_input_enabled; });

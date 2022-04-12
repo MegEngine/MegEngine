@@ -23,7 +23,6 @@
 #include "megbrain/imperative/utils/debug.h"
 #include "megbrain/imperative/utils/local_ptr.h"
 #include "megbrain/imperative/utils/span.h"
-#include "megbrain/imperative/utils/stats.h"
 
 namespace mgb {
 namespace imperative {

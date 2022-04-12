@@ -11,7 +11,6 @@
 
 #include "megbrain/opr/dnn/pooling.h"
 #include "megbrain/imperative/ops/autogen.h"
-#include "megbrain/imperative/utils/stats.h"
 #include "megbrain/opr/utility.h"
 
 #include "megbrain/opr/internal/megdnn_opr_wrapper.h"
