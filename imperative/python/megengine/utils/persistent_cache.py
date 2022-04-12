@@ -84,7 +84,7 @@ class PersistentCacheOnServer(_PersistentCache):
         if url is None:
             return None
         assert sys.platform != "win32", "redis cache on windows not tested"
-        prefix = "mgbcache:{}:MGB{}:GIT:{}".format(
+        prefix = "mgbcache:{}:MGB{}:GIT:{}::".format(
             getpass.getuser(), __version__, git_version
         )
         parse_result = urllib.parse.urlparse(url)

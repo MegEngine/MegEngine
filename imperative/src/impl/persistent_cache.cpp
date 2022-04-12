@@ -71,21 +71,21 @@ public:
     mgb::Maybe<Blob> get(const std::string& category, const Blob& key) override {
         MGB_LOCK_GUARD(m_mtx);
         auto mem_result = m_local->get(category, key);
-        if (mem_result.valid())
+        if (mem_result.valid()) {
             return mem_result;
-
+        }
         std::string key_str(static_cast<const char*>(key.ptr), key.size);
         std::string redis_key_str;
         encode(category + '@' + key_str, redis_key_str, 24);
-        auto result = m_client.get(redis_key_str);
+        auto result = m_client.get(m_prefix + redis_key_str);
         sync();
         auto content = result.get();
-        if (content.is_null())
-            return mgb::None;
+        if (content.is_null()) {
+            return None;
+        }
         std::string decode_content;
         decode(content.as_string(), decode_content);
         m_local->put(category, key, {decode_content.data(), decode_content.length()});
-
         return m_local->get(category, key);
     }
 
@@ -97,8 +97,7 @@ public:
         std::string value_str(static_cast<const char*>(value.ptr), value.size);
         std::string redis_value_str;
         encode(value_str, redis_value_str);
-
-        auto result = m_client.set(redis_key_str, redis_value_str);
+        auto result = m_client.set(m_prefix + redis_key_str, redis_value_str);
         m_local->put(category, key, value);
         sync();
     }
