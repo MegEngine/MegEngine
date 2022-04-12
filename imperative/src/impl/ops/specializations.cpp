@@ -81,6 +81,7 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
             src.layout.ndim);
     size_t idx = 0;
     bool input_used[TensorLayout::MAX_NDIM] = {0};
+    out_shape.ndim = ds.pattern.size();
     for (auto i : ds.pattern) {
         if (i < 0) {
             out_shape[idx] = 1;
