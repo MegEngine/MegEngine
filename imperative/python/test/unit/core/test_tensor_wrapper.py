@@ -220,3 +220,10 @@ def test_tensor_type():
     y1 = x1 + x2
     y2 = x2 + x1
     assert type(y1) == type(y2)
+
+
+def test_tensor_from_bool():
+    x = Tensor(True)
+    assert x.dtype == np.bool_
+    x = Tensor([True, False])
+    assert x.dtype == np.bool_

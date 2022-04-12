@@ -72,39 +72,6 @@ class Tensor(_Tensor, ArrayMethodMixin):
     _short_name = None
     _prefix = None
 
-    def __new__(
-        cls,
-        data: Union["Tensor", np.ndarray, list, int, float] = None,
-        dtype: np.dtype = None,
-        device: str = None,
-        is_const: bool = False,
-        no_cache: bool = False,
-        name: str = None,
-    ):
-        if data is None:
-            data = []
-        if device is None:
-            cn = get_default_device()
-        elif isinstance(device, str):
-            if cls.dmap_callback is not None:
-                cn = CompNode(cls.dmap_callback(device))
-            else:
-                cn = CompNode(device)
-        else:
-            if isinstance(device, CompNode):
-                cn = device
-            else:
-                cn = device._cn
-
-        if isinstance(data, _Tensor):
-            obj = _Tensor.__new__(cls, data)
-        else:
-            if isinstance(data, np.ndarray):
-                if 0 in data.strides:
-                    data = data.squeeze().reshape(data.shape)
-            obj = _Tensor.__new__(cls, data, dtype, cn, is_const, no_cache, name)
-        return obj
-
     def __init__(
         self,
         data: Union["Tensor", np.ndarray, list, int, float],

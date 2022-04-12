@@ -38,13 +38,14 @@ namespace mgb::imperative::python {
 
 extern interpreter::Interpreter::Channel* interpreter_for_py;
 extern PyTypeObject* py_tensor_type;
+extern pybind11::handle py_device_type;
 extern PyObject* cpp_use_symbolic_shape;
 extern PyObject* cpp_astensor1d;
 
-struct Tensor : NonCopyableObj {
+struct Tensor {
 private:
-    std::string m_name;
     ValueRef m_data;
+    std::string m_name;
 
 public:
     using Handle = interpreter::Interpreter::Handle;
@@ -53,11 +54,7 @@ public:
 
     ~Tensor() = default;
 
-    inline std::shared_ptr<Tensor> copy() {
-        auto ret = std::make_shared<Tensor>(m_data);
-        ret->m_name = m_name;
-        return ret;
-    }
+    inline Tensor copy() { return *this; }
 
     inline DType dtype() { return *data().dtype(); }
     inline CompNode comp_node() { return *data().device(); }
@@ -75,7 +72,7 @@ public:
             set_name(m_name);
         }
     }
-    inline ValueRef data() { return m_data.unwrap(); }
+    inline ValueRef data() const { return m_data.unwrap(); }
     bool is_scalar() { return data().is_scalar(); }
     inline std::string name() { return m_name; }
     inline void set_name(std::string name) {
@@ -89,14 +86,9 @@ public:
 
 struct TensorWrapper {
 public:
-    std::shared_ptr<Tensor> m_tensor;
+    std::optional<Tensor> m_tensor;
 
-    inline TensorWrapper(std::shared_ptr<Tensor> tensor = {})
-            : m_tensor(std::move(tensor)) {
-        mgb_assert(tensor, "empty storage");
-    }
-
-    inline TensorWrapper(ValueRef value) : m_tensor(std::make_shared<Tensor>(value)) {}
+    inline TensorWrapper(ValueRef value) { m_tensor.emplace(value); }
     TensorWrapper(PyObject* args, PyObject* kwargs);
     ~TensorWrapper() = default;
 
@@ -144,7 +136,6 @@ public:
     PyObject* module_trace_info();
     void set_module_trace_info(PyObject*);
     void _set_name(PyObject*);
-    PyObject* _use_cnt() { return PyLong_FromSize_t(m_tensor.use_count()); };
     PyObject* _detail();
     void _watch();
 };

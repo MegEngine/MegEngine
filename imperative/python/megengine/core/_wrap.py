@@ -9,6 +9,7 @@
 import numpy as np
 
 from ._imperative_rt import CompNode
+from ._imperative_rt.core2 import set_py_device_type
 
 
 class Device:
@@ -53,3 +54,6 @@ def as_device(obj):
     if isinstance(obj, Device):
         return obj
     return Device(obj)
+
+
+set_py_device_type(Device)

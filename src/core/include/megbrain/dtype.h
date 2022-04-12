@@ -46,7 +46,7 @@ namespace dtype = ::megdnn::dtype;
  * \param nr_elem number of elements to write in *dest*
  */
 template <typename T>
-void static_cast_dtype(
+MGE_WIN_DECLSPEC_FUC void static_cast_dtype(
         T* dest, DType src_type, const void* storage, size_t nr_elem = 1);
 
 /*!

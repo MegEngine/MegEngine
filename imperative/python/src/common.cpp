@@ -12,6 +12,7 @@
 #include "./common.h"
 
 #include <pybind11/operators.h>
+#include <pybind11/pytypes.h>
 
 #include "./helper.h"
 #include "./numpy_dtypes.h"
@@ -55,6 +56,8 @@ void set_default_device(const std::string& device) {
 std::string get_default_device() {
     return default_device;
 }
+
+py::handle py_comp_node_type;
 
 void init_common(py::module m) {
     auto PyCompNode =
@@ -116,6 +119,8 @@ void init_common(py::module m) {
                                 return py::str(cn.to_string_logical());
                             },
                             [](py::str cn) { return CompNode::load(cn); }));
+
+    py_comp_node_type = PyCompNode.inc_ref();
 
     py::class_<CompNode::Event, std::shared_ptr<CompNode::Event>>(PyCompNode, "Event")
             .def("record", &CompNode::Event::record)
