@@ -12,7 +12,9 @@
 #include "megbrain/imperative/profiler.h"
 
 #include <chrono>
+#include <unordered_map>
 
+#include "megbrain/imperative/cpp_cupti.h"
 #include "megbrain/imperative/ops/opr_attr.h"
 #include "megbrain/imperative/physical_tensor.h"
 
@@ -47,6 +49,21 @@ std::atomic_uint64_t Profiler::sm_last_id = 0;
 bool Profiler::sm_profiling = false;
 thread_local Profiler* Profiler::tm_profiler = nullptr;
 std::atomic_size_t Profiler::sm_preferred_capacity;
+
+void Profiler::start_profile() {
+    mgb_assert(!sm_profiling);
+    sm_start_at = Timer::record_host();
+    sm_profiling = true;
+    if (cupti::enabled()) {
+        MGB_RECORD_EVENT(profiler::CUPTITimestampEvent, cupti::clock::now());
+    }
+}
+
+void Profiler::stop_profile() {
+    mgb_assert(sm_profiling);
+    cupti::flush();
+    sm_profiling = false;
+}
 
 auto Profiler::get_thread_dict() -> thread_dict_t {
     thread_dict_t thread_dict;

@@ -16,6 +16,7 @@
 
 #include "../interpreter/stack_manager.h"
 #include "../op_trait.h"
+#include "megbrain/imperative/cpp_cupti.h"
 
 namespace mgb::imperative::profiler {
 
@@ -179,6 +180,60 @@ DEF_DUR_EVENT(HostToDevice, {
     CompNode device;
     void* host_ptr;
     void* device_ptr;
+});
+
+// cupti events
+DEF_EVENT(CUPTITimestamp, { cupti::clock::time_point timestamp; });
+
+DEF_DUR_EVENT(CUPTIKernelLaunch, {
+    uint32_t correlation_id;
+    const char* name;
+});
+
+DEF_EVENT(CUPTIKernelExecute, {
+    uint32_t correlation_id;
+    const char* name;
+    cupti::stream_t stream;
+    cupti::time_point start;
+    cupti::time_point end;
+});
+
+DEF_DUR_EVENT(CUPTIMemcpyLaunch, { uint32_t correlation_id; });
+
+DEF_EVENT(CUPTIMemcpy, {
+    uint32_t correlation_id;
+    uint8_t src_kind;
+    uint8_t dst_kind;
+    uint64_t bytes;
+    cupti::stream_t stream;
+    cupti::time_point start;
+    cupti::time_point end;
+});
+
+DEF_EVENT(CUPTIMemset, {
+    uint32_t correlation_id;
+    uint32_t value;
+    uint64_t bytes;
+    cupti::stream_t stream;
+    cupti::time_point start;
+    cupti::time_point end;
+});
+
+DEF_EVENT(CUPTIUnknownDevice, {});
+
+DEF_DUR_EVENT(CUPTIRuntime, {
+    uint32_t correlation_id;
+    const char* name;
+});
+
+DEF_DUR_EVENT(CUPTIDriver, {
+    uint32_t correlation_id;
+    const char* name;
+});
+
+DEF_EVENT(CUPTIIdentifyStream, {
+    cupti::stream_t stream;
+    CompNode device;
 });
 
 #undef DEF_EVENT

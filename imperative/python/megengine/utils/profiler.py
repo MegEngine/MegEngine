@@ -16,6 +16,10 @@ from weakref import WeakSet
 
 from .. import _atexit
 from ..core._imperative_rt.core2 import (
+    cupti_available,
+    disable_cupti,
+    enable_cupti,
+    full_sync,
     pop_scope,
     push_scope,
     start_profile,
@@ -50,13 +54,18 @@ class Profiler(ContextDecorator):
 
               with profiler:
                  # your code here
-    
+
            # Then open the profile file in chrome timeline window
     """
 
     CHROME_TIMELINE = "chrome_timeline.json"
 
-    valid_options = {"sample_rate": 0, "profile_device": 1, "num_tensor_watch": 10}
+    valid_options = {
+        "sample_rate": 0,
+        "profile_device": 1,
+        "num_tensor_watch": 10,
+        "enable_cupti": 0,
+    }
     valid_formats = {"chrome_timeline.json", "memory_flow.svg"}
 
     def __init__(
@@ -83,6 +92,11 @@ class Profiler(ContextDecorator):
             self._options[opt] = int(kwargs.pop(opt, optval))
         self._pid = "<PID>"
         self._dump_callback = None
+        if self._options.get("enable_cupti", 0):
+            if cupti_available():
+                enable_cupti()
+            else:
+                get_logger().warning("CuPTI unavailable")
 
     @property
     def path(self):
@@ -116,7 +130,7 @@ class Profiler(ContextDecorator):
 
         assert _running_profiler is self
         _running_profiler = None
-        sync()
+        full_sync()
         self._dump_callback = stop_profile()
         self._pid = os.getpid()
         _living_profilers.add(self)
@@ -160,6 +174,9 @@ class Profiler(ContextDecorator):
         return func
 
     def __del__(self):
+        if self._options.get("enable_cupti", 0):
+            if cupti_available():
+                disable_cupti()
         self.dump()
 
 

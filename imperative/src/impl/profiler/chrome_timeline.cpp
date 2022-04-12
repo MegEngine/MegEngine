@@ -19,6 +19,7 @@
 
 #include "nlohmann/json.hpp"
 
+#include "megbrain/imperative/utils/platform.h"
 #include "megbrain/utils/debug.h"
 
 #include "./formats.h"
@@ -198,6 +199,8 @@ struct ChromeTimelineEventVisitor : EventVisitor<ChromeTimelineEventVisitor> {
     decltype(getpid()) pid = getpid();
     std::string pid_str = std::to_string(pid);
 
+    ChromeTimelineEventVisitor() {}
+
     ChromeTraceEvent& new_event(
             std::string name, char ph, size_t tid, profiler::HostTime time) {
         return trace_events.new_event().name(name).ph(ph).pid(pid).tid(tid).ts(
@@ -213,8 +216,13 @@ struct ChromeTimelineEventVisitor : EventVisitor<ChromeTimelineEventVisitor> {
                 .ts(since_start(current->time));
     }
 
+    ChromeTraceEvent& new_cupti_event(
+            std::string name, char ph, cupti::stream_t stream,
+            cupti::time_point timestamp) {
+        return new_event(name, ph, to_tid(stream), time_from_cupti(timestamp));
+    }
+
     ChromeTraceEvent& new_device_event(std::string name, char ph, CompNode device) {
-        using namespace std::literals::chrono_literals;
         auto time = since_start(to_device_time(current->time, device));
         return trace_events.new_event()
                 .name(name)
@@ -391,6 +399,80 @@ struct ChromeTimelineEventVisitor : EventVisitor<ChromeTimelineEventVisitor> {
             auto device_ahead = std::chrono::duration_cast<std::chrono::milliseconds>(
                     current_device_time - current_host_time);
             new_host_event("device_ahead_ms", 'C').arg("value", device_ahead.count());
+        } else if constexpr (std::is_same_v<TEvent, CUPTIKernelLaunchEvent>) {
+            new_host_event(demangle(event.name), 'B');
+            new_host_event(pid_str, 's')
+                    .id(event.correlation_id)
+                    .cat("KernelLink")
+                    .scope(pid_str);
+        } else if constexpr (std::is_same_v<TEvent, CUPTIKernelLaunchFinishEvent>) {
+            new_host_event(demangle(event.name), 'E');
+        } else if constexpr (std::is_same_v<TEvent, CUPTIKernelExecuteEvent>) {
+            new_cupti_event(demangle(event.name), 'B', event.stream, event.start)
+                    .arg("execution_time", (event.end - event.start).count());
+            new_cupti_event(pid_str, 'f', event.stream, event.end)
+                    .id(event.correlation_id)
+                    .bp('e')
+                    .cat("KernelLink")
+                    .scope(pid_str);
+            new_cupti_event(demangle(event.name), 'E', event.stream, event.end)
+                    .arg("execution_time", (event.end - event.start).count());
+        } else if constexpr (std::is_same_v<TEvent, CUPTIMemcpyLaunchEvent>) {
+            new_host_event("Memcpy", 'B');
+            new_host_event(pid_str, 's')
+                    .id(event.correlation_id)
+                    .cat("CUPTILink")
+                    .scope(pid_str);
+        } else if constexpr (std::is_same_v<TEvent, CUPTIMemcpyLaunchFinishEvent>) {
+            new_host_event("Memcpy", 'E');
+        } else if constexpr (std::is_same_v<TEvent, CUPTIMemcpyEvent>) {
+            auto memkind2str = [](uint8_t kind) {
+                const char* const valid_kinds[] = {
+                        "CUPTI_ACTIVITY_MEMORY_KIND_UNKNOWN",
+                        "CUPTI_ACTIVITY_MEMORY_KIND_PAGEABLE",
+                        "CUPTI_ACTIVITY_MEMORY_KIND_PINNED",
+                        "CUPTI_ACTIVITY_MEMORY_KIND_DEVICE",
+                        "CUPTI_ACTIVITY_MEMORY_KIND_ARRAY",
+                        "CUPTI_ACTIVITY_MEMORY_KIND_MANAGED",
+                        "CUPTI_ACTIVITY_MEMORY_KIND_DEVICE_STATIC",
+                        "CUPTI_ACTIVITY_MEMORY_KIND_MANAGED_STATIC"};
+                if (kind > (sizeof(valid_kinds) / sizeof(const char*))) {
+                    return "invalid";
+                }
+                return valid_kinds[kind];
+            };
+            new_cupti_event("Memcpy", 'B', event.stream, event.start)
+                    .arg("bytes", imperative::to_string(event.bytes))
+                    .arg("src_kind", memkind2str(event.src_kind))
+                    .arg("dst_kind", memkind2str(event.dst_kind));
+            new_cupti_event(pid_str, 'f', event.stream, event.start)
+                    .id(event.correlation_id)
+                    .bp('e')
+                    .cat("CUPTILink")
+                    .scope(pid_str);
+            new_cupti_event("Memcpy", 'E', event.stream, event.end)
+                    .arg("bytes", imperative::to_string(event.bytes))
+                    .arg("src_kind", memkind2str(event.src_kind))
+                    .arg("dst_kind", memkind2str(event.dst_kind));
+        } else if constexpr (std::is_same_v<TEvent, CUPTIMemsetEvent>) {
+            new_cupti_event("Memset", 'B', event.stream, event.start)
+                    .arg("value", imperative::to_string(event.value))
+                    .arg("bytes", imperative::to_string(event.bytes));
+            new_cupti_event("Memset", 'E', event.stream, event.start)
+                    .arg("value", imperative::to_string(event.value))
+                    .arg("bytes", imperative::to_string(event.bytes));
+        } else if constexpr (std::is_same_v<TEvent, CUPTIRuntimeEvent>) {
+            new_host_event(event.name, 'B');
+        } else if constexpr (std::is_same_v<TEvent, CUPTIRuntimeFinishEvent>) {
+            new_host_event(event.name, 'E');
+        } else if constexpr (std::is_same_v<TEvent, CUPTIDriverEvent>) {
+            new_host_event(event.name, 'B');
+            new_host_event(pid_str, 's')
+                    .id(event.correlation_id)
+                    .cat("CUPTILink")
+                    .scope(pid_str);
+        } else if constexpr (std::is_same_v<TEvent, CUPTIDriverFinishEvent>) {
+            new_host_event(event.name, 'E');
         }
     }
 
@@ -403,7 +485,8 @@ struct ChromeTimelineEventVisitor : EventVisitor<ChromeTimelineEventVisitor> {
             if (thread_dict.count(host)) {
                 trace_events.new_event()
                         .name("thread_name")
-                        .pid('M')
+                        .ph('M')
+                        .pid(pid)
                         .tid(to_tid(host))
                         .arg("name", thread_dict.at(host));
             }
@@ -411,7 +494,8 @@ struct ChromeTimelineEventVisitor : EventVisitor<ChromeTimelineEventVisitor> {
         for (auto&& device : devices()) {
             trace_events.new_event()
                     .name("thread_name")
-                    .pid('M')
+                    .ph('M')
+                    .pid(pid)
                     .tid(to_tid(device))
                     .arg("name", device.to_string_logical());
         }
@@ -419,7 +503,7 @@ struct ChromeTimelineEventVisitor : EventVisitor<ChromeTimelineEventVisitor> {
 };
 
 void dump_chrome_timeline(std::string filename, Profiler::bundle_t result) {
-    ChromeTimelineEventVisitor visitor;
+    ChromeTimelineEventVisitor visitor{};
     visitor.process_events(result);
     visitor.name_threads(result.thread_dict);
     auto trace_events = std::move(visitor.trace_events);

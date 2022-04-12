@@ -36,7 +36,7 @@ else()
     PATH_SUFFIXES lib lib64
     DOC "TRT plugin library.")
 endif()
-message("TRT_LIBRARY" ${TRT_LIBRARY})
+message(STATUS "TRT_LIBRARY: ${TRT_LIBRARY}")
 if(TRT_LIBRARY STREQUAL "TRT_LIBRARY-NOTFOUND")
   message(
     FATAL_ERROR

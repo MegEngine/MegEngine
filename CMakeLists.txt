@@ -29,6 +29,7 @@ endif()
 include(GNUInstallDirs)
 include(CheckCXXCompilerFlag)
 include(CheckIPOSupported)
+include(CMakeDependentOption)
 
 check_cxx_compiler_flag(-Wclass-memaccess CXX_SUPPORT_WCLASS_MEMACCESS)
 
@@ -96,6 +97,12 @@ option(MGE_WITH_LARGE_ARCHIVE "Enable big archive link support" OFF)
 option(MGE_BUILD_WITH_ASAN "Enable build with ASAN, need compiler support" OFF)
 option(MGE_WITH_CUSTOM_OP "Build with Custom op" OFF)
 option(MGE_SYNC_THIRD_PARTY "help sync third_party submodule" OFF)
+
+# TODO: add windows support
+cmake_dependent_option(MGE_WITH_CUPTI "Build with CUPTI" ON
+                       "MGE_WITH_CUDA;MGE_BUILD_IMPERATIVE_RT;NOT MSVC;NOT WIN32" OFF)
+
+set(MGB_CUPTI ${MGE_WITH_CUPTI})
 
 if(MSVC OR WIN32)
   # FIXME: static link Windows vc runtime with some version from Visual Studio have some
@@ -684,6 +691,10 @@ endif()
 
 if(MGB_WITH_FLATBUFFERS)
   include(cmake/flatbuffers.cmake)
+endif()
+
+if(MGE_WITH_CUPTI)
+  include(cmake/cupti.cmake)
 endif()
 
 if(MGE_WITH_CUDA)

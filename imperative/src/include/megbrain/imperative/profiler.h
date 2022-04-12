@@ -194,16 +194,9 @@ public:
 
     static bool is_profiling() { return sm_profiling; }
 
-    static void start_profile() {
-        mgb_assert(!sm_profiling);
-        sm_start_at = Timer::record_host();
-        sm_profiling = true;
-    }
+    static void start_profile();
 
-    static void stop_profile() {
-        mgb_assert(sm_profiling);
-        sm_profiling = false;
-    }
+    static void stop_profile();
 
     static thread_dict_t get_thread_dict();
 

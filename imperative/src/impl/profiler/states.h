@@ -180,10 +180,13 @@ private:
     HostTime m_start_time;
     CompNode::UnorderedMap<size_t> m_device_tid_table;
     std::unordered_map<std::thread::id, size_t> m_host_tid_table;
+    std::unordered_map<cupti::stream_t, size_t> m_cupti_tid_table;
     CompNode::UnorderedMap<std::map<profiler::HostTime, profiler::RealDuration>>
             m_device_timeline;
     std::unordered_map<std::thread::id, std::vector<Trace>> m_trace_stack;
     std::unordered_map<std::string, int64_t> m_counter_table;
+    std::optional<std::pair<profiler::HostTime, cupti::time_point>> m_cupti_timestamp =
+            {};
 
 protected:
     Profiler::Record* current;
@@ -191,6 +194,11 @@ protected:
     ProfileTensorState* current_tensor;
 
 protected:
+    size_t next_tid() {
+        return m_host_tid_table.size() + m_device_tid_table.size() +
+               m_cupti_tid_table.size();
+    }
+
     profiler::Duration since_start(profiler::HostTime time) {
         return time - m_start_time;
     }
@@ -229,6 +237,10 @@ protected:
 
     size_t to_tid(CompNode device) { return m_device_tid_table.at(device); }
 
+    size_t to_tid(cupti::stream_t cupti_stream) {
+        return m_cupti_tid_table.at(cupti_stream);
+    }
+
     SmallVector<std::thread::id> host_threads() {
         SmallVector<std::thread::id> host_threads;
         for (auto&& [host, _] : m_host_tid_table) {
@@ -254,6 +266,13 @@ protected:
         value += delta;
     }
 
+    profiler::HostTime time_from_cupti(cupti::time_point timestamp) {
+        mgb_assert(m_cupti_timestamp.has_value());
+        return m_cupti_timestamp->first +
+               std::chrono::duration_cast<profiler::HostTime::duration>(
+                       timestamp - m_cupti_timestamp->second);
+    }
+
 public:
     void process_events(Profiler::bundle_t& bundle) {
         m_start_time = bundle.start_at;
@@ -272,7 +291,11 @@ public:
                 TensorCommandEvent, TensorCommandFinishEvent, AutoEvictEvent,
                 AutoEvictFinishEvent, CustomEvent, CustomFinishEvent, RecordDeviceEvent,
                 ScopeEvent, ScopeFinishEvent, HostToDeviceEvent,
-                HostToDeviceFinishEvent>
+                HostToDeviceFinishEvent, CUPTITimestampEvent, CUPTIKernelLaunchEvent,
+                CUPTIKernelLaunchFinishEvent, CUPTIKernelExecuteEvent,
+                CUPTIMemcpyLaunchEvent, CUPTIMemcpyLaunchFinishEvent, CUPTIMemcpyEvent,
+                CUPTIRuntimeEvent, CUPTIRuntimeFinishEvent, CUPTIDriverEvent,
+                CUPTIDriverFinishEvent, CUPTIMemsetEvent>
                 converter;
 
         auto for_each_entry = [&](auto&& handler) {
@@ -289,7 +312,9 @@ public:
             std::shared_ptr<CompNode::Event> device;
         };
         CompNode::UnorderedMap<DeviceStartPair> device_start_table;
+        std::unordered_map<cupti::stream_t, CompNode> cupti_stream_table;
 
+        // record device time
         for_each_entry([&](auto&& event) {
             using T = std::decay_t<decltype(event)>;
             if constexpr (std::is_same_v<T, RecordDeviceEvent>) {
@@ -313,8 +338,7 @@ public:
         // register host threads
         for_each_entry([&](auto&& event) {
             if (!m_host_tid_table.count(current->tid)) {
-                m_host_tid_table[current->tid] = {
-                        m_device_tid_table.size() + m_host_tid_table.size()};
+                m_host_tid_table[current->tid] = next_tid();
             }
         });
 
@@ -340,11 +364,36 @@ public:
             } else if constexpr (std::is_same_v<T, TensorProduceEvent>) {
                 auto& tensor = m_tensors[event.tensor_id];
                 if (!m_device_tid_table.count(event.device)) {
-                    m_device_tid_table[event.device] = {
-                            m_device_tid_table.size() + m_host_tid_table.size()};
+                    m_device_tid_table[event.device] = next_tid();
                 }
                 tensor.device = event.device;
                 tensor.layout = event.layout;
+            }
+        });
+
+        for_each_entry([&](auto&& event) {
+            using T = std::decay_t<decltype(event)>;
+            if constexpr (std::is_same_v<T, CUPTIIdentifyStreamEvent>) {
+                if (!m_cupti_tid_table.count(event.stream)) {
+                    m_cupti_tid_table[event.stream] =
+                            m_device_tid_table.at(event.device);
+                }
+            }
+        });
+
+        // record cupti streams
+        for_each_entry([&](auto&& event) {
+            using T = std::decay_t<decltype(event)>;
+            if constexpr (
+                    std::is_same_v<T, CUPTIKernelExecuteEvent> ||
+                    std::is_same_v<T, CUPTIMemcpyEvent> ||
+                    std::is_same_v<T, CUPTIMemsetEvent>) {
+                if (!m_cupti_tid_table.count(event.stream)) {
+                    m_cupti_tid_table[event.stream] = next_tid();
+                }
+            } else if constexpr (std::is_same_v<T, CUPTITimestampEvent>) {
+                mgb_assert(!m_cupti_timestamp.has_value());
+                m_cupti_timestamp.emplace(current->time, event.timestamp);
             }
         });
 

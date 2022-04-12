@@ -51,6 +51,10 @@ if(ANDROID)
   target_link_libraries(${MODULE_NAME} PRIVATE ${PYTHON_LIBRARIES})
 endif()
 
+if(MGE_WITH_CUPTI)
+  target_link_libraries(${MODULE_NAME} PRIVATE libcupti)
+endif()
+
 add_subdirectory(${PROJECT_SOURCE_DIR}/third_party/range-v3
                  ${PROJECT_BINARY_DIR}/third_party/range-v3)
 target_link_libraries(${MODULE_NAME} PRIVATE range-v3)

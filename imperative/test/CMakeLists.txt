@@ -37,6 +37,10 @@ if(MGE_WITH_CUDA)
   list(APPEND LINK_LIBS cudart)
 endif()
 
+if(MGE_WITH_CUPTI)
+  list(APPEND LINK_LIBS libcupti)
+endif()
+
 if(MGE_WITH_DISTRIBUTED)
   list(APPEND LINK_LIBS megray)
 endif()

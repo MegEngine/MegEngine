@@ -61,11 +61,11 @@ echo "Build with ${SDK_NAME}"
 
 if [ $SDK_NAME == "cu101" ];then
     CUDA_COPY_LIB_LIST="${CUDA_LIB_DIR}/libnvrtc.so.10.1"
-    EXTRA_CMAKE_FLAG=" -DMGE_WITH_CUDNN_SHARED=OFF -DMGE_WITH_CUBLAS_SHARED=OFF" 
-    BUILD_GCC8="ON"  
-    REQUIR_CUDA_VERSION="10010" 
-    REQUIR_CUDNN_VERSION="7.6.3" 
-    REQUIR_TENSORRT_VERSION="6.0.1.5" 
+    EXTRA_CMAKE_FLAG=" -DMGE_WITH_CUDNN_SHARED=OFF -DMGE_WITH_CUBLAS_SHARED=OFF"
+    BUILD_GCC8="ON"
+    REQUIR_CUDA_VERSION="10010"
+    REQUIR_CUDNN_VERSION="7.6.3"
+    REQUIR_TENSORRT_VERSION="6.0.1.5"
     REQUIR_CUBLAS_VERSION="10.2.1.243"
 
 elif [ $SDK_NAME == "cu102_JetsonNano" ];then
@@ -86,6 +86,12 @@ elif [ $SDK_NAME == "cu102_JetsonNano" ];then
         ${CUDNN_LIB_DIR}/libcudnn_ops_infer.so.8:\
         ${CUDNN_LIB_DIR}/libcudnn_ops_train.so.8:\
         ${CUDNN_LIB_DIR}/libcudnn.so.8"
+
+    if [ ${machine} == "aarch64" ];then
+        CUDA_COPY_LIB_LIST="\
+        ${CUDA_LIB_DIR}/libcupti.so.10.2:\
+        ${CUDA_COPY_LIB_LIST}"
+    fi
 
     EXTRA_CMAKE_FLAG="-DMGE_WITH_CUDNN_SHARED=ON -DMGE_WITH_CUBLAS_SHARED=ON -DMGE_CUDA_GENCODE=\"-gencode arch=compute_53,code=sm_53\" "
 
@@ -117,6 +123,12 @@ elif [ $SDK_NAME == "cu111" ];then
         ${CUDNN_LIB_DIR}/libcudnn_ops_infer.so.8:\
         ${CUDNN_LIB_DIR}/libcudnn_ops_train.so.8:\
         ${CUDNN_LIB_DIR}/libcudnn.so.8"
+
+    if [ ${machine} == "aarch64" ];then
+        CUDA_COPY_LIB_LIST="\
+        ${CUDA_LIB_DIR}/libcupti.so.11.1:\
+        ${CUDA_COPY_LIB_LIST}"
+    fi
 
     if [ ${IN_CI} = "true" ] && [ ${machine} == "aarch64" ]; then
         EXTRA_CMAKE_FLAG=" -DMGE_WITH_CUDNN_SHARED=ON -DMGE_WITH_CUBLAS_SHARED=ON -DMGE_CUDA_GENCODE=\"-gencode arch=compute_75,code=sm_75\" "
@@ -152,9 +164,9 @@ elif [ $SDK_NAME == "cu112" ];then
         -gencode arch=compute_86,code=sm_86 \
         -gencode arch=compute_86,code=compute_86\" "
 
-    REQUIR_CUDA_VERSION="11020" 
-    REQUIR_CUDNN_VERSION="8.0.4" 
-    REQUIR_TENSORRT_VERSION="7.2.2.3" 
+    REQUIR_CUDA_VERSION="11020"
+    REQUIR_CUDNN_VERSION="8.0.4"
+    REQUIR_TENSORRT_VERSION="7.2.2.3"
     REQUIR_CUBLAS_VERSION="11.3.1.68"
 
 elif [ $SDK_NAME == "cpu" ];then

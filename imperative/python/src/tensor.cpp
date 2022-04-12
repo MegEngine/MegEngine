@@ -11,6 +11,7 @@
 
 #include "megbrain/common.h"
 #include "megbrain/dtype.h"
+#include "megbrain/imperative/cpp_cupti.h"
 #include "megbrain/imperative/ops/autogen.h"
 #include "megbrain/imperative/ops/backward_graph.h"
 #include "megbrain/imperative/ops/utility.h"
@@ -982,6 +983,7 @@ void init_tensor(py::module m) {
     m.def("stop_profile", [channel]() -> std::function<void(std::string, std::string)> {
         channel->stop_profile();
         channel->sync();
+        CompNode::sync_all();
         imperative::Profiler::stop_profile();
         auto results = std::make_shared<imperative::Profiler::bundle_t>(
                 imperative::Profiler::collect());
@@ -990,6 +992,9 @@ void init_tensor(py::module m) {
             results = nullptr;
         };
     });
+    m.def("enable_cupti", &cupti::enable);
+    m.def("disable_cupti", &cupti::disable);
+    m.def("cupti_available", &cupti::available);
     m.def("sync", [channel]() {
         if (channel->check_available()) {
             channel->sync();
