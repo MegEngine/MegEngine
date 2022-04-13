@@ -323,3 +323,27 @@ def test_tensor_get_memory_by_share():
     tensor.set_data_by_copy(arr)
     assert test_data[1][18] == 5
     assert test_data[3][7] == 345
+
+
+@require_cuda
+def test_tensor_set_data_device():
+    layout = LiteLayout([2, 16], "int8")
+    tensor = LiteTensor(layout, device_type=LiteDeviceType.LITE_CUDA)
+    assert tensor.nbytes == 2 * 16
+
+    data = [i for i in range(32)]
+    tensor.set_data_by_copy(data)
+    real_data = tensor.to_numpy()
+    for i in range(32):
+        assert real_data[i // 16][i % 16] == i
+
+    arr = np.ones([2, 16], "int8")
+    tensor.set_data_by_copy(arr)
+    real_data = tensor.to_numpy()
+    for i in range(32):
+        assert real_data[i // 16][i % 16] == 1
+
+    tensor.set_data_by_copy(list(range(32)))
+    real_data = tensor.to_numpy()
+    for i in range(32):
+        assert real_data[i // 16][i % 16] == i
