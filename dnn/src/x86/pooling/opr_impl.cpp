@@ -46,10 +46,10 @@ WorkspaceBundle megdnn::x86::get_bundle(
 size_t PoolingImpl::get_workspace_in_bytes(
         const TensorLayout& src, const TensorLayout& dst) {
     TensorLayoutArray layouts{src, dst};
-    HeuristicCache::Key key{this->handle(), this->get_opr_type(),
+    AlgorithmCache::Key key{this->handle(), this->get_opr_type(),
                             layouts.data(), layouts.size(),
                             &this->param(), sizeof(this->param())};
-    auto rst = HeuristicCache::instance().get(key);
+    auto rst = AlgorithmCache::instance().get(key);
     if (rst.policy.algo.valid()) {
         return rst.workspace;
     }

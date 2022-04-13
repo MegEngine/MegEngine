@@ -580,8 +580,6 @@ typename AlgoChooser<Opr>::ImplExecutionPolicy AlgoChooser<Opr>::AlgoChooserHelp
         }
     }
 
-    // if update enabled, do profiling and update cache
-    // enable_update = false only when using HEURISRIC_PROFILE strategy
     typename AlgoChooser<Opr>::ImplExecutionPolicy tmp_policy;
     bool retrive_from_cache = true;
     bool allow_log = false;
@@ -592,6 +590,8 @@ typename AlgoChooser<Opr>::ImplExecutionPolicy AlgoChooser<Opr>::AlgoChooserHelp
         return tmp_policy;
     }
 
+    // if update enabled, do profiling and update cache
+    // enable_update = false only when using HEURISRIC_PROFILE strategy
     if (enable_update) {
         CircularDepsChecker circular_deps_checker;
         auto&& search_items = flatten_search_space<Opr>(*this, circular_deps_checker);

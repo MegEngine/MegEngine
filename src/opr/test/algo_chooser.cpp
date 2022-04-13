@@ -22,8 +22,8 @@
 #include "megbrain/test/autocheck.h"
 #include "megbrain/test/helper.h"
 #include "megbrain/test/megdnn_helper.h"
+#include "megdnn/algorithm_cache.h"
 #include "megdnn/dtype.h"
-#include "megdnn/heuristic_cache.h"
 #include "megdnn/oprs/base.h"
 
 #include <cmath>

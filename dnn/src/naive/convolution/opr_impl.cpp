@@ -11,8 +11,8 @@
 #include "./opr_impl.h"
 #include "./helper.h"
 
+#include "megdnn/algorithm_cache.h"
 #include "megdnn/dtype.h"
-#include "megdnn/heuristic_cache.h"
 #include "megdnn/tensor_iter.h"
 #include "src/common/utils.h"
 #include "src/naive/handle.h"
@@ -77,10 +77,10 @@ size_t ConvolutionBackwardDataImpl::get_workspace_in_bytes(
         const TensorLayout& filter, const TensorLayout& diff,
         const TensorLayout& grad) {
     TensorLayoutArray layouts{filter, diff, grad};
-    HeuristicCache::Key key{this->handle(), this->get_opr_type(),
+    AlgorithmCache::Key key{this->handle(), this->get_opr_type(),
                             layouts.data(), layouts.size(),
                             &this->param(), sizeof(this->param())};
-    auto rst = HeuristicCache::instance().get(key);
+    auto rst = AlgorithmCache::instance().get(key);
     if (rst.policy.algo.valid()) {
         return rst.workspace;
     }
@@ -189,10 +189,10 @@ size_t ConvolutionBackwardFilterImpl::get_workspace_in_bytes(
     size_t workspace_size = 0;
 #if !MEGDNN_DISABLE_FLOAT16
     TensorLayoutArray layouts{src, diff, grad};
-    HeuristicCache::Key key{this->handle(), this->get_opr_type(),
+    AlgorithmCache::Key key{this->handle(), this->get_opr_type(),
                             layouts.data(), layouts.size(),
                             &this->param(), sizeof(this->param())};
-    auto rst = HeuristicCache::instance().get(key);
+    auto rst = AlgorithmCache::instance().get(key);
     if (rst.policy.algo.valid()) {
         return rst.workspace;
     }

@@ -13,8 +13,8 @@
 #include "src/naive/convolution/helper.h"
 
 #include <cstring>
+#include "megdnn/algorithm_cache.h"
 #include "megdnn/dtype.h"
-#include "megdnn/heuristic_cache.h"
 #include "src/common/conv_bias.h"
 #include "src/common/opr_delegate.h"
 #include "src/common/utils.h"
@@ -199,10 +199,10 @@ size_t ConvBiasForwardImpl::get_workspace_in_bytes(
         const TensorLayout& src, const TensorLayout& flt, const TensorLayout& bias,
         const TensorLayout& z, const TensorLayout& dst, const PreprocessedFilter*) {
     TensorLayoutArray layouts{src, flt, bias, z, dst};
-    HeuristicCache::Key key{this->handle(), this->get_opr_type(),
+    AlgorithmCache::Key key{this->handle(), this->get_opr_type(),
                             layouts.data(), layouts.size(),
                             &this->param(), sizeof(this->param())};
-    auto rst = HeuristicCache::instance().get(key);
+    auto rst = AlgorithmCache::instance().get(key);
     if (rst.policy.algo.valid()) {
         return rst.workspace;
     }

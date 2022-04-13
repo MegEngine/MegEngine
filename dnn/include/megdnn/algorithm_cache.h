@@ -21,12 +21,12 @@
 
 namespace megdnn {
 
-class HeuristicCache {
+class AlgorithmCache {
 private:
-    HeuristicCache() = default;
+    AlgorithmCache() = default;
 
 public:
-    MGE_WIN_DECLSPEC_FUC static HeuristicCache& instance();
+    MGE_WIN_DECLSPEC_FUC static AlgorithmCache& instance();
 
     struct KeyStorage {
         size_t k1, k2;

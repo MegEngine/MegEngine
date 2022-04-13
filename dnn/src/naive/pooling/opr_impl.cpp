@@ -12,8 +12,8 @@
 #include "src/naive/pooling/opr_impl.h"
 
 #include <cstring>
+#include "megdnn/algorithm_cache.h"
 #include "megdnn/dtype.h"
-#include "megdnn/heuristic_cache.h"
 #include "src/common/utils.h"
 #include "src/naive/handle.h"
 #include "src/naive/lowbit_utils.h"
@@ -409,10 +409,10 @@ WorkspaceBundle PoolingForwardImpl::get_workspace_bundle(
 size_t PoolingForwardImpl::get_workspace_in_bytes(
         const TensorLayout& src, const TensorLayout& dst) {
     TensorLayoutArray layouts{src, dst};
-    HeuristicCache::Key key{this->handle(), this->get_opr_type(),
+    AlgorithmCache::Key key{this->handle(), this->get_opr_type(),
                             layouts.data(), layouts.size(),
                             &this->param(), sizeof(this->param())};
-    auto rst = HeuristicCache::instance().get(key);
+    auto rst = AlgorithmCache::instance().get(key);
     if (rst.policy.algo.valid()) {
         return rst.workspace;
     }
@@ -661,10 +661,10 @@ size_t PoolingBackwardImpl::get_workspace_in_bytes(
         const TensorLayout& src, const TensorLayout& dst, const TensorLayout& diff,
         const TensorLayout& grad) {
     TensorLayoutArray layouts{src, dst, diff, grad};
-    HeuristicCache::Key key{this->handle(), this->get_opr_type(),
+    AlgorithmCache::Key key{this->handle(), this->get_opr_type(),
                             layouts.data(), layouts.size(),
                             &this->param(), sizeof(this->param())};
-    auto rst = HeuristicCache::instance().get(key);
+    auto rst = AlgorithmCache::instance().get(key);
     if (rst.policy.algo.valid()) {
         return rst.workspace;
     }

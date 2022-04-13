@@ -18,7 +18,7 @@
 #include "megbrain/opr/search_policy/algo_chooser.h"
 #include "megbrain/opr/search_policy/algo_chooser_helper.h"
 #include "megbrain/utils/invoke.h"
-#include "megdnn/heuristic_cache.h"
+#include "megdnn/algorithm_cache.h"
 
 #include "../internal/megdnn_opr_wrapper.inl"
 #include "./workspace_need_limit_getter.inl"
@@ -34,10 +34,10 @@ template <typename Opr>
 size_t AlgoChooser<Opr>::setup_algo(
         const FixedTensorLayouts& layouts, Opr* megdnn_opr, const MGBOpr* mgb_opr,
         bool allow_weight_preprocess) {
-    HeuristicCache::Key cache_key(
+    AlgorithmCache::Key cache_key(
             megdnn_opr->handle(), megdnn_opr->get_opr_type(), layouts.data(),
             layouts.size(), &megdnn_opr->param(), sizeof(megdnn_opr->param()));
-    auto rst = HeuristicCache::instance().get(cache_key);
+    auto rst = AlgorithmCache::instance().get(cache_key);
     if (rst.policy.algo.valid()) {
         megdnn_opr->execution_policy() = rst.policy;
         return rst.workspace;
@@ -93,10 +93,8 @@ size_t AlgoChooser<Opr>::setup_algo(
 
     megdnn_opr->execution_policy() = policy;
 
-    if (mgb_opr->execution_policy().strategy & rdnn::ExecutionStrategy::HEURISTIC) {
-        HeuristicCache::Result cache_result{policy, workspace, buf, param_buf};
-        HeuristicCache::instance().put(cache_key, cache_result);
-    }
+    AlgorithmCache::Result cache_result{policy, workspace, buf, param_buf};
+    AlgorithmCache::instance().put(cache_key, cache_result);
     return workspace;
 }
 

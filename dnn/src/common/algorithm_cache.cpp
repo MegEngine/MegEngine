@@ -10,7 +10,7 @@
  * implied.
  */
 
-#include "megdnn/heuristic_cache.h"
+#include "megdnn/algorithm_cache.h"
 #include "megdnn/tensor_format.h"
 #include "src/common/hash_ct.h"
 #include "src/common/utils.h"
@@ -28,12 +28,12 @@
 
 using namespace megdnn;
 
-HeuristicCache& HeuristicCache::instance() {
-    static HeuristicCache ins;
+AlgorithmCache& AlgorithmCache::instance() {
+    static AlgorithmCache ins;
     return ins;
 }
 
-HeuristicCache::KeyStorage HeuristicCache::Key::build_key_storage() const {
+AlgorithmCache::KeyStorage AlgorithmCache::Key::build_key_storage() const {
     size_t buf_size = 16 * m_inp_layouts_size + 6;
     size_t buf[buf_size];
 
@@ -117,7 +117,7 @@ HeuristicCache::KeyStorage HeuristicCache::Key::build_key_storage() const {
     return {k1, k2};
 }
 
-void HeuristicCache::put(const Key& key, Result& result) {
+void AlgorithmCache::put(const Key& key, Result& result) {
     MEGDNN_LOCK_GUARD(m_mtx);
     if (result.policy.algo.valid())
         m_heuristic_cache[key.build_key_storage()] = result;
@@ -138,7 +138,7 @@ bool is_same_buf(
     return true;
 }
 
-HeuristicCache::Result HeuristicCache::get(const Key& key) {
+AlgorithmCache::Result AlgorithmCache::get(const Key& key) {
     MEGDNN_LOCK_GUARD(m_mtx);
     KeyStorage ks = key.build_key_storage();
     auto iter = m_heuristic_cache.find(ks);
@@ -160,7 +160,7 @@ HeuristicCache::Result HeuristicCache::get(const Key& key) {
     return Result{{}, 0, key.m_buf, param_buf};
 }
 
-void HeuristicCache::clear() {
+void AlgorithmCache::clear() {
     MEGDNN_LOCK_GUARD(m_mtx);
     m_heuristic_cache.clear();
 }

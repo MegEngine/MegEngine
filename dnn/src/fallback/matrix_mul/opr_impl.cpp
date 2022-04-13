@@ -226,10 +226,10 @@ MatrixMulImpl::KernParam MatrixMulImpl::make_kern_param(
 size_t MatrixMulImpl::get_workspace_in_bytes(
         const TensorLayout& A, const TensorLayout& B, const TensorLayout& C) {
     TensorLayoutArray layouts{A, B, C};
-    HeuristicCache::Key key{this->handle(), this->get_opr_type(),
+    AlgorithmCache::Key key{this->handle(), this->get_opr_type(),
                             layouts.data(), layouts.size(),
                             &this->param(), sizeof(this->param())};
-    auto rst = HeuristicCache::instance().get(key);
+    auto rst = AlgorithmCache::instance().get(key);
     if (rst.policy.algo.valid()) {
         return rst.workspace;
     }

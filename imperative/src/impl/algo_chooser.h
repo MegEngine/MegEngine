@@ -1,7 +1,7 @@
 #pragma once
 
 #include "megbrain/rdnn/algo_chooser.h"
-#include "megdnn/heuristic_cache.h"
+#include "megdnn/algorithm_cache.h"
 
 namespace mgb {
 namespace imperative {
@@ -12,10 +12,10 @@ MGE_WIN_DECLSPEC_FUC size_t setup_algo(
         Opr* megdnn_opr, uint32_t shared_batch_size, bool binary_equal_between_batch,
         bool no_profiling_on_shape_change, CompNode comp_node,
         megdnn::param::ExecutionPolicy execution_policy, bool allow_weight_preprocess) {
-    megdnn::HeuristicCache::Key cache_key(
+    megdnn::AlgorithmCache::Key cache_key(
             megdnn_opr->handle(), megdnn_opr->get_opr_type(), layouts.data(),
             layouts.size(), &megdnn_opr->param(), sizeof(megdnn_opr->param()));
-    auto rst = megdnn::HeuristicCache::instance().get(cache_key);
+    auto rst = megdnn::AlgorithmCache::instance().get(cache_key);
     if (rst.policy.algo.valid()) {
         megdnn_opr->execution_policy() = rst.policy;
         return rst.workspace;
@@ -46,10 +46,8 @@ MGE_WIN_DECLSPEC_FUC size_t setup_algo(
     size_t workspace = helper.get_workspace_size_bytes(policy, layouts);
     megdnn_opr->execution_policy() = policy;
 
-    if (execution_policy.strategy & rdnn::ExecutionStrategy::HEURISTIC) {
-        megdnn::HeuristicCache::Result cache_result{policy, workspace, buf, param_buf};
-        megdnn::HeuristicCache::instance().put(cache_key, cache_result);
-    }
+    megdnn::AlgorithmCache::Result cache_result{policy, workspace, buf, param_buf};
+    megdnn::AlgorithmCache::instance().put(cache_key, cache_result);
     return workspace;
 }
 

@@ -216,10 +216,10 @@ size_t ConvBiasImpl::get_workspace_in_bytes(
         const TensorLayout& z, const TensorLayout& dst,
         const PreprocessedFilter* preprocessed_filter) {
     TensorLayoutArray layouts{src, filter, bias, z, dst};
-    HeuristicCache::Key key{this->handle(), this->get_opr_type(),
+    AlgorithmCache::Key key{this->handle(), this->get_opr_type(),
                             layouts.data(), layouts.size(),
                             &this->param(), sizeof(this->param())};
-    auto rst = HeuristicCache::instance().get(key);
+    auto rst = AlgorithmCache::instance().get(key);
     if (rst.policy.algo.valid()) {
         return rst.workspace;
     }

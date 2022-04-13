@@ -17,8 +17,8 @@
 #include <utility>
 #include <vector>
 
+#include "megdnn/algorithm_cache.h"
 #include "megdnn/common.h"
-#include "megdnn/heuristic_cache.h"
 #include "utils.h"
 
 namespace megdnn {
@@ -26,9 +26,9 @@ namespace megdnn {
 template <class Opr, typename... Args>
 size_t get_dnn_workspace(Opr* opr, Args&&... args) {
     TensorLayoutArray layouts{{args...}};
-    HeuristicCache::Key key{opr->handle(),  opr->get_opr_type(), layouts.data(),
+    AlgorithmCache::Key key{opr->handle(),  opr->get_opr_type(), layouts.data(),
                             layouts.size(), &opr->param(),       sizeof(opr->param())};
-    auto rst = HeuristicCache::instance().get(key);
+    auto rst = AlgorithmCache::instance().get(key);
     if (rst.policy.algo.valid()) {
         return rst.workspace;
     }
@@ -49,10 +49,10 @@ typename Opr::AlgoBase* get_algorithm(Opr* opr, Args&&... args) {
         ret = set;
     } else {
         TensorLayoutArray layouts{{args...}};
-        HeuristicCache::Key key{opr->handle(),  opr->get_opr_type(),
+        AlgorithmCache::Key key{opr->handle(),  opr->get_opr_type(),
                                 layouts.data(), layouts.size(),
                                 &opr->param(),  sizeof(opr->param())};
-        auto rst = HeuristicCache::instance().get(key);
+        auto rst = AlgorithmCache::instance().get(key);
         if (rst.policy.algo.valid()) {
             ret = rst.policy.algo;
         } else {

@@ -20,6 +20,7 @@
 #include "megbrain/test/autocheck.h"
 #include "megbrain/test/helper.h"
 #include "megbrain/test/megdnn_helper.h"
+#include "megdnn/algorithm_cache.h"
 
 using namespace mgb;
 
@@ -901,6 +902,7 @@ TEST(TestOprBlas, MatrixMulExePolicy) {
     auto func = graph->compile({make_callback_copy(matmul, host_y)});
     func->execute();
     ASSERT_EQ(nr_get, 0);
+    megdnn::AlgorithmCache::instance().clear();
     graph->options().no_profiling_on_shape_change = false;
     func = graph->compile({make_callback_copy(matmul, host_y)});
     func->execute();
