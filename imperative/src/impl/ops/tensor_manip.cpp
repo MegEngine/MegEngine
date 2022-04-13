@@ -87,7 +87,7 @@ HostTensorND get_var_shape_host_tensor(
         const OpDef& def, const SmallVector<TensorPtr>& inputs) {
     SmallVector<DeviceTensorND> input_tensornds;
     for (auto&& inp : inputs) {
-        input_tensornds.push_back(inp->dev_tensor());
+        input_tensornds.push_back(inp->dev_tensor(false));
     }
     SmallVector<DeviceTensorND> output_tensornds = {
             {CompNode::default_cpu(), dtype::Int32()}};
@@ -100,7 +100,7 @@ HostTensorND get_var_shape_host_tensor(
 SmallVector<TensorPtr> apply_on_physical_tensor(
         const OpDef& def, const SmallVector<TensorPtr>& inputs,
         SmallVector<LogicalTensorDesc>& output_descs, const bool& validated) {
-    return {Tensor::make(std::move(get_var_shape_host_tensor(def, inputs)))};
+    return {Tensor::make(get_var_shape_host_tensor(def, inputs))};
 }
 
 std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(

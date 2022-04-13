@@ -125,6 +125,11 @@ OP_TRAIT_REG(Broadcast, Broadcast, opr::Broadcast)
 
 namespace reshape {
 
+auto make_from_op_node(const cg::OperatorNodeBase* node) {
+    auto& opr = node->cast_final_safe<opr::Reshape>();
+    return Reshape::make(opr.param(), std::vector<int32_t>());
+}
+
 auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
     auto&& op = static_cast<const Reshape&>(def);
     mgb_assert(inputs.size() == 2);
@@ -261,6 +266,7 @@ OP_TRAIT_REG(Reshape, Reshape)
         .infer_output_attrs_fallible(infer_output_attrs_fallible)
         .apply_on_physical_tensor(apply_on_physical_tensor)
         .get_input_layout_constraint(get_input_layout_constraint)
+        .make_from_op_node(make_from_op_node)
         .fallback();
 }  // namespace reshape
 
