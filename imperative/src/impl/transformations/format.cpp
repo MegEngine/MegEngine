@@ -105,7 +105,7 @@ std::vector<int32_t> convert_nchw2nhwc_vector(const std::vector<int32_t>& shape)
     } else {
         mgb_throw(
                 MegBrainError,
-                "Unsupported shape ndim %u in convert NCHW shape to NHWC.",
+                "Unsupported shape ndim %lu in convert NCHW shape to NHWC.",
                 shape.size());
     }
 }
@@ -184,7 +184,8 @@ ValueRefList reshape_rule(
                 // output is still NHWC format
                 auto nhwc_shape = convert_nchw2nhwc_vector(op.shape);
                 auto outputs = imperative::apply(
-                        *Reshape::make(op.axis, nhwc_shape), {t.unwrap_input(inputs[0])});
+                        *Reshape::make(op.axis, nhwc_shape),
+                        {t.unwrap_input(inputs[0])});
                 return t.wrap_outputs(outputs, FT::NHWC);
             } else {
                 // will not maintain src's format
@@ -395,12 +396,17 @@ ValueRefList batchnorm_rule(
     return identity_rule_helper(op, inputs, t);
 }
 
-ValueRefList checknonfinite_rule(
-        const CheckNonFinite& op, Span<ValueRef>& inputs, const bool& auto_convert,
+ValueRefList adaptive_pooling_rule(
+        const AdaptivePooling& op, Span<ValueRef>& inputs, const bool& auto_convert,
         const FormatTransformation& t) {
-    auto&& inputs_ = t.unwrap_inputs(inputs);
-    auto&& outputs_ = imperative::apply(op, inputs_);
-    return t.wrap_outputs(outputs_);
+    auto&& inp_format = inputs[0].cast(t.value_type()).format();
+    if (inp_format == FT::NHWC) {
+        auto&& new_param = op.param();
+        new_param.format = AdaptivePooling::Format::NHWC;
+        auto new_op = AdaptivePooling::make(new_param, op.shape);
+        return identity_rule_helper(*new_op, inputs, t);
+    }
+    return identity_rule_helper(op, inputs, t);
 }
 
 // clang-format off
@@ -417,7 +423,6 @@ ValueRefList checknonfinite_rule(
     cb(Identity)
 
 #define FOREACH_FORMAT_OP(cb)               \
-    cb(AdaptivePooling)                     \
     cb(WarpAffine)                          \
     cb(Resize)
 
@@ -494,7 +499,7 @@ struct FormatRuleRegistry {
         register_format_rule(setsubtensor_rule<IndexingSetMultiAxisVec>);
         register_format_rule(concat_rule);
         register_format_rule(batchnorm_rule);
-        register_format_rule(checknonfinite_rule);
+        register_format_rule(adaptive_pooling_rule);
         FOREACH_MULTI_INPS_NO_PARAM_OP(REGISTER_OP_RULE)
         FOREACH_IDENTITY_OP(REGISTER_OP_RULE)
         FOREACH_FORMAT_OP(REGISTER_OP_RULE)
@@ -506,7 +511,7 @@ struct FormatRuleRegistry {
 
 ValueRefList FormatTransformation::apply_transformation(
         const Operator& op, Span<ValueRef> inputs) {
-    //mgb_log_warn("Format::apply_transformation %s", op.to_string().c_str());
+    // mgb_log_warn("Format::apply_transformation %s", op.to_string().c_str());
     if (auto* apply_op = op.as<ApplyOp>()) {
         // all inputs should be FormattedTensorValue
         auto iter = format_rules.find(apply_op->op().dyn_typeinfo());
