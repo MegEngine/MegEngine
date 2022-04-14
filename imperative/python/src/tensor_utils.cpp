@@ -1494,73 +1494,61 @@ py::object _transpose_cpp(py::handle inp_hdl, py::handle args) {
 py::object _matmul_cpp(
         py::handle inp1, py::handle inp2, py::handle dim1, py::handle dim2,
         py::handle transpose_a, py::handle transpose_b, py::handle compute_mode,
-        py::handle format, py::handle profile, py::handle determistic,
-        py::handle strategy, py::handle func) {
-    if (enable_fastpath(inp1)) {
-        ::megdnn::param::MatrixMul::ComputeMode mode =
-                ::megdnn::param::MatrixMul::ComputeMode::DEFAULT;
-        if (compute_mode.cast<std::string>().compare(std::string("float32")) == 0) {
-            mode = ::megdnn::param::MatrixMul::ComputeMode::FLOAT32;
-        }
-        ::megdnn::param::ExecutionPolicy::Strategy cstrategy;
-        if (profile.cast<bool>()) {
-            cstrategy |= ::megdnn::param::ExecutionPolicy::Strategy::PROFILE;
-        } else {
-            cstrategy |= ::megdnn::param::ExecutionPolicy::Strategy::HEURISTIC;
-        }
-        if (determistic.cast<bool>()) {
-            cstrategy |= ::megdnn::param::ExecutionPolicy::Strategy::REPRODUCIBLE;
-        }
-        std::shared_ptr<OpDef> op = MatrixMul::make(
-                transpose_a.cast<bool>(), transpose_b.cast<bool>(), mode,
-                ::megdnn::param::MatrixMul::Format::DEFAULT, cstrategy, UINT64_MAX);
-
-        py::object Op = py::cast(op);
-        PyObject* p[3] = {Op.ptr(), inp1.ptr(), inp2.ptr()};
-        py::tuple ret = py::reinterpret_steal<py::object>(py_apply(NULL, p, 3));
-        return ret[0];
-    } else {
-        // fallback to traceable implementation
-        return func(
-                inp1, inp2, dim1, dim2, transpose_a, transpose_b, compute_mode, format,
-                strategy);
+        py::handle profile, py::handle determistic) {
+    ::megdnn::param::MatrixMul::ComputeMode mode =
+            ::megdnn::param::MatrixMul::ComputeMode::DEFAULT;
+    if (compute_mode.cast<std::string>().compare(std::string("float32")) == 0) {
+        mode = ::megdnn::param::MatrixMul::ComputeMode::FLOAT32;
     }
+    ::megdnn::param::ExecutionPolicy::Strategy cstrategy =
+            static_cast<::megdnn::param::ExecutionPolicy::Strategy>(0);
+    if (profile.cast<bool>()) {
+        cstrategy |= ::megdnn::param::ExecutionPolicy::Strategy::PROFILE;
+    } else {
+        cstrategy |= ::megdnn::param::ExecutionPolicy::Strategy::HEURISTIC;
+    }
+    if (determistic.cast<bool>()) {
+        cstrategy |= ::megdnn::param::ExecutionPolicy::Strategy::REPRODUCIBLE;
+    }
+    std::shared_ptr<OpDef> op = MatrixMul::make(
+            transpose_a.cast<bool>(), transpose_b.cast<bool>(), mode,
+            ::megdnn::param::MatrixMul::Format::DEFAULT, cstrategy, UINT64_MAX,
+            dim1.cast<uint32_t>(), dim2.cast<uint32_t>());
+
+    py::object Op = py::cast(op);
+    PyObject* p[3] = {Op.ptr(), inp1.ptr(), inp2.ptr()};
+    py::tuple ret = py::reinterpret_steal<py::object>(py_apply(NULL, p, 3));
+    return ret[0];
 }
 
 py::object _batched_matmul_cpp(
         py::handle inp1, py::handle inp2, py::handle dim1, py::handle dim2,
         py::handle transpose_a, py::handle transpose_b, py::handle compute_mode,
-        py::handle format, py::handle profile, py::handle determistic,
-        py::handle strategy, py::handle func) {
-    if (enable_fastpath(inp1)) {
-        ::megdnn::param::MatrixMul::ComputeMode mode =
-                ::megdnn::param::MatrixMul::ComputeMode::DEFAULT;
-        if (compute_mode.cast<std::string>().compare(std::string("float32")) == 0) {
-            mode = ::megdnn::param::MatrixMul::ComputeMode::FLOAT32;
-        }
-        ::megdnn::param::ExecutionPolicy::Strategy cstrategy;
-        if (profile.cast<bool>()) {
-            cstrategy |= ::megdnn::param::ExecutionPolicy::Strategy::PROFILE;
-        } else {
-            cstrategy |= ::megdnn::param::ExecutionPolicy::Strategy::HEURISTIC;
-        }
-        if (determistic.cast<bool>()) {
-            cstrategy |= ::megdnn::param::ExecutionPolicy::Strategy::REPRODUCIBLE;
-        }
-        std::shared_ptr<OpDef> op = BatchedMatrixMul::make(
-                transpose_a.cast<bool>(), transpose_b.cast<bool>(), mode,
-                ::megdnn::param::MatrixMul::Format::DEFAULT, cstrategy, UINT64_MAX);
-
-        py::object Op = py::cast(op);
-        PyObject* p[3] = {Op.ptr(), inp1.ptr(), inp2.ptr()};
-        py::tuple ret = py::reinterpret_steal<py::object>(py_apply(NULL, p, 3));
-        return ret[0];
-    } else {
-        // fallback to traceable implementation
-        return func(
-                inp1, inp2, dim1, dim2, transpose_a, transpose_b, compute_mode, format,
-                strategy);
+        py::handle profile, py::handle determistic) {
+    ::megdnn::param::MatrixMul::ComputeMode mode =
+            ::megdnn::param::MatrixMul::ComputeMode::DEFAULT;
+    if (compute_mode.cast<std::string>().compare(std::string("float32")) == 0) {
+        mode = ::megdnn::param::MatrixMul::ComputeMode::FLOAT32;
     }
+    ::megdnn::param::ExecutionPolicy::Strategy cstrategy =
+            static_cast<::megdnn::param::ExecutionPolicy::Strategy>(0);
+    if (profile.cast<bool>()) {
+        cstrategy |= ::megdnn::param::ExecutionPolicy::Strategy::PROFILE;
+    } else {
+        cstrategy |= ::megdnn::param::ExecutionPolicy::Strategy::HEURISTIC;
+    }
+    if (determistic.cast<bool>()) {
+        cstrategy |= ::megdnn::param::ExecutionPolicy::Strategy::REPRODUCIBLE;
+    }
+    std::shared_ptr<OpDef> op = BatchedMatrixMul::make(
+            transpose_a.cast<bool>(), transpose_b.cast<bool>(), mode,
+            ::megdnn::param::MatrixMul::Format::DEFAULT, cstrategy, UINT64_MAX,
+            dim1.cast<uint32_t>(), dim2.cast<uint32_t>());
+
+    py::object Op = py::cast(op);
+    PyObject* p[3] = {Op.ptr(), inp1.ptr(), inp2.ptr()};
+    py::tuple ret = py::reinterpret_steal<py::object>(py_apply(NULL, p, 3));
+    return ret[0];
 }
 
 py::object _pixel_shuffle_cpp(py::handle inp, py::handle val, py::handle func) {
@@ -1671,7 +1659,7 @@ PyObject* matmul_cpp(PyObject* self, PyObject* const* args, size_t nargs) {
     try {
         return _matmul_cpp(
                        args[0], args[1], args[2], args[3], args[4], args[5], args[6],
-                       args[7], args[8], args[9], args[10], args[11])
+                       args[7], args[8])
                 .release()
                 .ptr();
     }
@@ -1682,7 +1670,7 @@ PyObject* batched_matmul_cpp(PyObject* self, PyObject* const* args, size_t nargs
     try {
         return _batched_matmul_cpp(
                        args[0], args[1], args[2], args[3], args[4], args[5], args[6],
-                       args[7], args[8], args[9], args[10], args[11])
+                       args[7], args[8])
                 .release()
                 .ptr();
     }

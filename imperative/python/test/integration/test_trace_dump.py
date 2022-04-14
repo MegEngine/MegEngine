@@ -20,7 +20,6 @@ import megengine.optimizer as optim
 from megengine import tensor
 from megengine.autodiff import GradManager
 from megengine.jit import trace
-from megengine.traced_module import trace_module
 
 
 @contextlib.contextmanager

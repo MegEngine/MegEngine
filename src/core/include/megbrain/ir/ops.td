@@ -43,9 +43,19 @@ def TypeCvt: MgbHashableOp<"TypeCvt", [], [NoSideEffect]> {
 
 def MatrixInverse: MgbHashableOp<"MatrixInverse", [EmptyParam]>;
 
-def MatrixMul: MgbHashableOp<"MatrixMul", [MatrixMulParam, ExecutionPolicyParamBase<"policy">]>;
+def MatrixMul: MgbHashableOp<"MatrixMul", [MatrixMulParam, ExecutionPolicyParamBase<"policy">]> {
+  let extraArguments = (ins
+    MgbUI32Attr:$dimA,
+    MgbUI32Attr:$dimB
+  );
+}
 
-def BatchedMatrixMul: MgbHashableOp<"BatchedMatmul", [MatrixMulParam, ExecutionPolicyParamBase<"policy">]>;
+def BatchedMatrixMul: MgbHashableOp<"BatchedMatmul", [MatrixMulParam, ExecutionPolicyParamBase<"policy">]> {
+  let extraArguments = (ins
+    MgbUI32Attr:$dimA,
+    MgbUI32Attr:$dimB
+  );
+}
 
 def Dot: MgbHashableOp<"Dot", [EmptyParam]>;
 

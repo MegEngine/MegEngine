@@ -32,7 +32,7 @@ from ..core.ops.builtin import (
     TypeCvt,
 )
 from ..core.tensor import amp, megbrain_graph
-from ..core.tensor.array_method import _elwise_apply
+from ..core.tensor.array_method import _matmul
 from ..core.tensor.utils import (
     astensor1d,
     cast_tensors,
@@ -49,7 +49,7 @@ from ..utils.deprecation import deprecated_func
 from .debug_param import get_execution_strategy
 from .distributed import all_reduce_sum
 from .elemwise import _elwise, exp, log, log1p, maximum, minimum
-from .math import matmul, max, sum
+from .math import max, sum
 from .tensor import broadcast_to, concat, expand_dims, ones, squeeze, zeros
 
 __all__ = [
@@ -127,7 +127,7 @@ def linear(
         bias: bias with shape `(out_features,)`. Default: None
     """
     compute_mode = _config._get_actual_op_param(compute_mode, _config.__compute_mode)
-    ret = matmul(inp, weight, transpose_b=True, compute_mode=compute_mode)
+    ret = _matmul(inp, weight, transpose_b=True, compute_mode=compute_mode)
     if bias is not None:
         if amp._enabled:
             bias = bias.astype("float16")

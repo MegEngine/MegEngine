@@ -89,19 +89,35 @@ void OpDefEmitter::emit_header() {
     gen_ctor("", "", " = default;");
 
     if (!op.getMgbAttributes().empty()) {
+        std::string strategy_val = "";
         std::vector<std::string> paramList, initList;
         for (auto&& i : op.getMgbAttributes()) {
+            if (attr_to_ctype(i.attr).compare("Strategy") == 0) {
+                strategy_val = i.name;
+            }
             paramList.push_back(formatv("{0} {1}_", attr_to_ctype(i.attr), i.name));
             initList.push_back(formatv("{0}({0}_)", i.name));
         }
         paramList.push_back("std::string scope_ = {}");
-        gen_ctor(
-                llvm::join(paramList, ", "), ": " + llvm::join(initList, ", "),
-                " { set_scope(scope_); }");
+        if (!strategy_val.empty()) {
+            gen_ctor(
+                    llvm::join(paramList, ", "), ": " + llvm::join(initList, ", "),
+                    formatv(" {"
+                            "\n        set_scope(scope_);"
+                            "\n        mgb_assert(static_cast<uint32_t>({0}) <= "
+                            "uint32_t(8));"
+                            "\n    }",
+                            strategy_val));
+        } else {
+            gen_ctor(
+                    llvm::join(paramList, ", "), ": " + llvm::join(initList, ", "),
+                    " { set_scope(scope_); }");
+        }
     }
 
     auto packedParams = op.getPackedParams();
     if (!packedParams.empty()) {
+        std::string strategy_val = "";
         std::vector<std::string> paramList, initList;
         for (auto&& p : packedParams) {
             auto&& paramFields = p.getFields();
@@ -111,6 +127,9 @@ void OpDefEmitter::emit_header() {
                     paramFields.empty() ? paramType.str()
                                         : formatv("{0} {1}", paramType, paramName));
             for (auto&& i : paramFields) {
+                if (i.name.compare("strategy") == 0) {
+                    strategy_val = i.name;
+                }
                 initList.push_back(formatv("{0}({1}.{0})", i.name, paramName));
             }
         }
@@ -118,9 +137,20 @@ void OpDefEmitter::emit_header() {
             paramList.push_back(formatv("{0} {1}_", attr_to_ctype(i.attr), i.name));
             initList.push_back(formatv("{0}({0}_)", i.name));
         }
-        gen_ctor(
-                llvm::join(paramList, ", "),
-                initList.empty() ? "" : ": " + llvm::join(initList, ", "), " {}");
+        if (!strategy_val.empty()) {
+            gen_ctor(
+                    llvm::join(paramList, ", "),
+                    initList.empty() ? "" : ": " + llvm::join(initList, ", "),
+                    formatv(" {"
+                            "\n        mgb_assert(static_cast<uint32_t>({0}) <= "
+                            "uint32_t(8));"
+                            "\n    }",
+                            strategy_val));
+        } else {
+            gen_ctor(
+                    llvm::join(paramList, ", "),
+                    initList.empty() ? "" : ": " + llvm::join(initList, ", "), " {}");
+        }
     }
 
     if (!packedParams.empty()) {

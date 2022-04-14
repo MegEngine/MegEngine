@@ -36,7 +36,7 @@ public:
     virtual void exec(
             _megdnn_tensor_in A, _megdnn_tensor_in B, _megdnn_tensor_out C,
             _megdnn_workspace workspace) = 0;
-    void deduce_dtype(DType A, DType B, DType& C);
+    MGE_WIN_DECLSPEC_FUC void deduce_dtype(DType A, DType B, DType& C);
     void deduce_layout(const TensorLayout& A, const TensorLayout& B, TensorLayout& C);
     virtual size_t get_workspace_in_bytes(
             const TensorLayout& A, const TensorLayout& B, const TensorLayout& C) = 0;
@@ -73,7 +73,7 @@ public:
     virtual void exec(
             _megdnn_tensor_in A, _megdnn_tensor_in B, _megdnn_tensor_out C,
             _megdnn_workspace workspace) = 0;
-    void deduce_dtype(DType A, DType B, DType& C);
+    MGE_WIN_DECLSPEC_FUC void deduce_dtype(DType A, DType B, DType& C);
     void deduce_layout(const TensorLayout& A, const TensorLayout& B, TensorLayout& C);
     virtual size_t get_workspace_in_bytes(
             const TensorLayout& A, const TensorLayout& B, const TensorLayout& C) = 0;

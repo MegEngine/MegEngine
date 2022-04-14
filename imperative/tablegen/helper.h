@@ -246,7 +246,12 @@ private:
                                         it.name, enumMember.substr(0, d));
                         body += "        break;\n";
                     }
-                    body += "    default: break;\n";
+                    body += "    default:\n";
+                    body +=
+                            formatv("        props_.emplace_back(\"{0}\", "
+                                    "\"INVALID\");\n",
+                                    it.name);
+                    body += "        break;\n";
                     body += "    }\n";
                 } else {
                     auto&& attr = llvm::cast<MgbHashableAttrMixin>(it.attr);

@@ -44,216 +44,6 @@ def _elwise(*args, mode):
     return _elwise_apply(args, mode)
 
 
-@lru_cache(maxsize=None)
-def _get_extentedMatrixMulOp(
-    device, dtype, dim1, dim2, transpose_a, transpose_b, compute_mode, format, strategy,
-):
-    @subgraph("extentedMatrixMulOp", dtype, device, 2, gopt_level=2)
-    def extentedMatrixMulOp(inputs, f, c):
-        assert len(inputs) == 2
-        inp1, inp2 = inputs
-        _dim1, _dim2 = dim1, dim2
-
-        def build_shape_head(shape, idx=-1):
-            # shape[:idx]
-            return f(
-                builtin.Subtensor(items=[[0, False, True, False, False]]),
-                shape,
-                c(idx, "int32"),
-            )
-
-        def build_shape_tail(shape, idx=-1):
-            # shape[idx:]
-            return f(
-                builtin.Subtensor(items=[[0, True, False, False, False]]),
-                shape,
-                c(idx, "int32"),
-            )
-
-        remove_row, remove_col = False, False
-        if _dim1 == 1:
-            _dim1 = 2
-            remove_row = True
-        if _dim2 == 1:
-            _dim2 = 2
-            remove_col = True
-
-        if remove_row:
-            inp1 = f(builtin.AddAxis(axis=[0,]), inp1)
-        if remove_col:
-            inp2 = f(builtin.AddAxis(axis=[1,]), inp2)
-
-        shape1 = f(builtin.GetVarShape(), inp1)
-        shape2 = f(builtin.GetVarShape(), inp2)
-        if _dim1 > 2:
-            inp1 = f(
-                builtin.Reshape(),
-                inp1,
-                f(
-                    builtin.Concat(axis=0, comp_node=device),
-                    f(builtin.Reduce(mode="product", axis=0), build_shape_head(shape1)),
-                    build_shape_tail(shape1),
-                ),
-            )
-        if _dim2 > 2:
-            inp2 = f(
-                builtin.Reshape(),
-                inp2,
-                f(
-                    builtin.Concat(axis=0, comp_node=device),
-                    f(builtin.Reduce(mode="product", axis=0), build_shape_head(shape2)),
-                    build_shape_tail(shape2),
-                ),
-            )
-        op = builtin.MatrixMul(
-            transposeA=transpose_a,
-            transposeB=transpose_b,
-            compute_mode=compute_mode,
-            format=format,
-            strategy=strategy.value,
-        )
-        result = f(op, inp1, inp2)
-        result_shape = f(builtin.GetVarShape(), result)
-        if _dim1 > 2:
-            result = f(
-                builtin.Reshape(),
-                result,
-                f(
-                    builtin.Concat(axis=0, comp_node=device),
-                    build_shape_head(shape1),
-                    build_shape_tail(result_shape),
-                ),
-            )
-        if _dim2 > 2:
-            result = f(
-                builtin.Reshape(),
-                result,
-                f(
-                    builtin.Concat(axis=0, comp_node=device),
-                    build_shape_head(shape2),
-                    build_shape_tail(result_shape),
-                ),
-            )
-        maxdim = _dim1 if _dim1 > _dim2 else _dim2
-        if remove_row:
-            result = f(builtin.RemoveAxis(axis=[maxdim - 2]), result)
-        if remove_col:
-            result = f(builtin.RemoveAxis(axis=[maxdim - 1]), result)
-        return (result,), (True,)
-
-    return extentedMatrixMulOp
-
-
-@lru_cache(maxsize=None)
-def _get_extentedBatchedMatrixMulOp(
-    device, dtype, dim1, dim2, transpose_a, transpose_b, compute_mode, format, strategy,
-):
-    @subgraph("extentedBatchedMatrixMulOp", dtype, device, 2, gopt_level=2)
-    def extentedBatchedMatrixMulOp(inputs, f, c):
-        assert len(inputs) == 2
-        inp1, inp2 = inputs
-        _dim1, _dim2 = dim1, dim2
-
-        def build_shape_head(shape, idx=-2):
-            # shape[:idx]
-            return f(
-                builtin.Subtensor(items=[[0, False, True, False, False]]),
-                shape,
-                c(idx, "int32"),
-            )
-
-        def build_shape_tail(shape, idx=-2):
-            # shape[idx:]
-            return f(
-                builtin.Subtensor(items=[[0, True, False, False, False]]),
-                shape,
-                c(idx, "int32"),
-            )
-
-        remove_row, remove_col = False, False
-        if _dim1 == 1:
-            _dim1 = 2
-            remove_row = True
-        if _dim2 == 1:
-            _dim2 = 2
-            remove_col = True
-
-        if remove_row:
-            inp1 = f(builtin.AddAxis(axis=[0,]), inp1)
-        if remove_col:
-            inp2 = f(builtin.AddAxis(axis=[1,]), inp2)
-        shape1 = f(builtin.GetVarShape(), inp1)
-        shape2 = f(builtin.GetVarShape(), inp2)
-        maxdim = _dim1 if _dim1 > _dim2 else _dim2
-        if _dim1 > _dim2:
-            # broadcast
-            shape2 = f(
-                builtin.Concat(axis=0, comp_node=device),
-                build_shape_head(shape1, idx=-_dim2),  # shape1[:-_dim2]
-                shape2,
-            )
-            inp2 = f(builtin.Broadcast(), inp2, shape2)
-            batch_shape = build_shape_head(shape1)
-        if _dim2 > _dim1:
-            # broadcast
-            shape1 = f(
-                builtin.Concat(axis=0, comp_node=device),
-                build_shape_head(shape2, idx=-_dim1),  # shape2[:-_dim1]
-                shape1,
-            )
-            inp1 = f(builtin.Broadcast(), inp1, shape1)
-            batch_shape = build_shape_head(shape2)
-        if _dim1 == _dim2:
-            batch_shape = build_shape_head(shape1)
-
-        # compress inputs to 3d
-        if maxdim > 3:
-            inp1 = f(
-                builtin.Reshape(),
-                inp1,
-                f(
-                    builtin.Concat(axis=0, comp_node=device),
-                    f(builtin.Reduce(mode="product", axis=0), batch_shape),
-                    build_shape_tail(shape1),
-                ),
-            )
-            inp2 = f(
-                builtin.Reshape(),
-                inp2,
-                f(
-                    builtin.Concat(axis=0, comp_node=device),
-                    f(builtin.Reduce(mode="product", axis=0), batch_shape),
-                    build_shape_tail(shape2),
-                ),
-            )
-        op = builtin.BatchedMatrixMul(
-            transposeA=transpose_a,
-            transposeB=transpose_b,
-            compute_mode=compute_mode,
-            format=format,
-            strategy=strategy.value,
-        )
-        result = f(op, inp1, inp2)
-
-        if maxdim > 3:
-            result = f(
-                builtin.Reshape(),
-                result,
-                f(
-                    builtin.Concat(axis=0, comp_node=device),
-                    batch_shape,
-                    build_shape_tail(f(builtin.GetVarShape(), result)),
-                ),
-            )
-        if remove_row:
-            result = f(builtin.RemoveAxis(axis=[maxdim - 2]), result)
-        if remove_col:
-            result = f(builtin.RemoveAxis(axis=[maxdim - 1]), result)
-        return (result,), (True,)
-
-    return extentedBatchedMatrixMulOp
-
-
 class _Hashable:
     def __init__(self, value) -> None:
         self.value = value
@@ -265,42 +55,6 @@ class _Hashable:
         if not isinstance(o, _Hashable):
             return False
         return self.value == o.value
-
-
-def symbolicMatrixMul(
-    inp1, inp2, dim1, dim2, transpose_a, transpose_b, compute_mode, format, strategy
-):
-    extentedMatrixMulOp = _get_extentedMatrixMulOp(
-        inp1.device,
-        inp1.dtype,
-        dim1,
-        dim2,
-        transpose_a,
-        transpose_b,
-        compute_mode,
-        format,
-        strategy=_Hashable(strategy),
-    )
-    (result,) = apply(extentedMatrixMulOp(), inp1, inp2)
-    return result
-
-
-def symbolicBatchedMatrixMul(
-    inp1, inp2, dim1, dim2, transpose_a, transpose_b, compute_mode, format, strategy
-):
-    extentedBatchedMatrixMulOp = _get_extentedBatchedMatrixMulOp(
-        inp1.device,
-        inp1.dtype,
-        dim1,
-        dim2,
-        transpose_a,
-        transpose_b,
-        compute_mode,
-        format,
-        strategy=_Hashable(strategy),
-    )
-    (result,) = apply(extentedBatchedMatrixMulOp(), inp1, inp2)
-    return result
 
 
 def _matmul(
@@ -342,11 +96,8 @@ def _matmul(
             transpose_a,
             transpose_b,
             compute_mode,
-            format,
             _config._benchmark_kernel,
             _config._deterministic_kernel,
-            strategy,
-            symbolicMatrixMul,
         )
     else:  # dispath to BatchedMatrixMul
         # nx1(transpose_a=True), n>=3
@@ -362,11 +113,8 @@ def _matmul(
             transpose_a,
             transpose_b,
             compute_mode,
-            format,
             _config._benchmark_kernel,
             _config._deterministic_kernel,
-            strategy,
-            symbolicBatchedMatrixMul,
         )
 
 
