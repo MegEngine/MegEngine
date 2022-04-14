@@ -36,7 +36,7 @@ if you are use github MegEngine and build for Windows XP, please
 		2b: cp lib file to third_party/mkl/x86_32/lib/
 ```
 
-About `third_party/prepare.sh`, also support to be managed by `CMake`, just config `EXTRA_CMAKE_ARGS="-DMGE_SYNC_THIRD_PARTY=ON` before run `scripts/cmake-build/*.sh`
+About `third_party/prepare.sh`, also support to be managed by `CMake`, just config `EXTRA_CMAKE_ARGS="-DMGE_SYNC_THIRD_PARTY=ON"` before run `scripts/cmake-build/*.sh`
 
 But some dependencies need to be installed manually:
 
