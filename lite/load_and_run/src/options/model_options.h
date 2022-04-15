@@ -9,6 +9,7 @@
 
 #pragma once
 #include <gflags/gflags.h>
+#include "megbrain/graph/operator_node.h"
 #include "models/model.h"
 #include "option_base.h"
 

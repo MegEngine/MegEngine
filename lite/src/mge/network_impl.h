@@ -176,6 +176,10 @@ public:
     //! dump network after global layout transform optimization
     void dump_layout_transform_model(std::string optimized_model_path);
 
+    mgb::serialization::GraphLoader::LoadResult get_load_result() {
+        return m_load_result;
+    }
+
 private:
     //! construct the outputspec according to the m_network_io, and set the
     //! call_back to the outputspec

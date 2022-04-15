@@ -30,11 +30,24 @@ if(UNIX)
   endif()
 endif()
 
+if(LITE_BUILD_WITH_MGE
+   AND LITE_WITH_CUDA
+   AND NOT WIN32)
+  # FXIME third_party cpp redis do not support build with clang-cl
+  target_include_directories(load_and_run PRIVATE ${CPP_REDIS_INCLUDES})
+endif()
+
 install(
   TARGETS load_and_run
   EXPORT ${LITE_EXPORT_TARGETS}
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 if(BUILD_SHARED_LIBS)
+  if(LITE_BUILD_WITH_MGE
+     AND LITE_WITH_CUDA
+     AND NOT WIN32)
+    # FXIME third_party cpp redis do not support build with clang-cl
+    list(APPEND SOURCES ${CPP_REDIS_SRCS})
+  endif()
   add_executable(load_and_run_depends_shared ${SOURCES})
   target_link_libraries(load_and_run_depends_shared lite_shared)
   target_link_libraries(load_and_run_depends_shared gflags)
@@ -56,6 +69,14 @@ if(BUILD_SHARED_LIBS)
     else()
       target_link_libraries(load_and_run_depends_shared dl rt)
     endif()
+  endif()
+
+  if(LITE_BUILD_WITH_MGE
+     AND LITE_WITH_CUDA
+     AND NOT WIN32)
+    # FXIME third_party cpp redis do not support build with clang-cl
+    target_include_directories(load_and_run_depends_shared
+                               PRIVATE ${CPP_REDIS_INCLUDES})
   endif()
 
   install(

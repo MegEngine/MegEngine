@@ -28,8 +28,6 @@ using namespace mgb;
 // timeout delta to be added with fastest known algorithm for new algos
 constexpr double TIMEOUT_TOLERANCE = 2;
 
-#define CACHE_KEY_VERSION "v5"
-
 namespace {
 
 template <class MegDNNOpr>

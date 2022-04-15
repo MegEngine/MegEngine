@@ -6,6 +6,7 @@
 #include "megbrain/utils/persistent_cache.h"
 #include "megdnn/oprs/base.h"
 
+#define CACHE_KEY_VERSION "v5"
 namespace mgb {
 namespace rdnn {
 

@@ -10,9 +10,12 @@
 #include "model_options.h"
 #include "device_options.h"
 #include "lite/pack_model.h"
+#include "megbrain/opr/search_policy/algo_chooser.h"
+#include "megbrain/utils/infile_persistent_cache.h"
 #include "misc.h"
 #include "models/model_lite.h"
 #include "models/model_mdl.h"
+#include "network_impl_base.h"
 
 namespace lar {
 template <typename ModelImpl>

@@ -78,6 +78,13 @@ public:
     MGE_WIN_DECLSPEC_FUC void put(
             const std::string& category, const Blob& key, const Blob& value) override;
     bool support_dump_cache() override { return true; }
+
+    std::unordered_map<
+            std::string,
+            std::unordered_map<BlobStorage, BlobStorage, BlobStorage::Hash>>
+    get_cache() {
+        return std::move(m_cache);
+    }
 };
 }  // namespace mgb
 
