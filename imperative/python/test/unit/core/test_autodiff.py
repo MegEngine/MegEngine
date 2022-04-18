@@ -316,7 +316,7 @@ def test_IndexingMultiAxisVec():
 
         def f(x):
             x = x * 1
-            y = x[[0, 2], [0, 2]]
+            y = x[[0, 0, 2, 1], [2, 2, 1, 0]]
             refs["x"] = TensorWeakRef(x)
             return y
 
@@ -326,7 +326,7 @@ def test_IndexingMultiAxisVec():
         grad(y, F.ones_like(y))
 
     np.testing.assert_equal(
-        np.array([[1, 0, 0], [0, 0, 0], [0, 0, 1]], dtype=np.float32), x.grad.numpy()
+        np.array([[0, 0, 2], [1, 0, 0], [0, 1, 0]], dtype=np.float32), x.grad.numpy()
     )
 
 

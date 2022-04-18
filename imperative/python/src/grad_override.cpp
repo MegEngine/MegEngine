@@ -233,7 +233,7 @@ std::optional<ValueRefList> indexingMultiAxisVec_grad_rule(
         const OpDef& op, Span<ValueRef> inputs, Span<bool> inputs_require_grad,
         CustomBackward& backward) {
     auto&& indexingMultiAxisVec = op.cast_final_safe<IndexingMultiAxisVec>();
-    auto&& grad_op = IndexingSetMultiAxisVec::make(indexingMultiAxisVec.items);
+    auto&& grad_op = IndexingIncrMultiAxisVec::make(indexingMultiAxisVec.items);
     SmallVector<ValueRef> inputs2;
     if (inputs_require_grad[0]) {
         inputs2.push_back(get_shape(inputs[0]));
