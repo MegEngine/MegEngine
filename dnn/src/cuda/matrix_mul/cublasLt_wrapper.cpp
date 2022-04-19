@@ -28,7 +28,7 @@ static cublasComputeType_t to_cublas_compute_type(DType tp) {
         case DTypeEnum::Float16:
             return CUBLAS_COMPUTE_16F;
         case DTypeEnum::Float32:
-            return CUBLAS_COMPUTE_32F;
+            return CUBLAS_COMPUTE_32F_FAST_TF32;
         case DTypeEnum::Int32:
         case DTypeEnum::QuantizedS32:
             return CUBLAS_COMPUTE_32I;

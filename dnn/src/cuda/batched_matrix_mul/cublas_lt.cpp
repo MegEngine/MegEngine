@@ -124,7 +124,7 @@ void BatchedMatrixMulForwardImpl::AlgoCublasLt::exec(const ExecArgs& args) const
         batched_igemm();
     } else if (desc.dt_compute == CUBLAS_COMPUTE_16F) {
         batched_hgemm();
-    } else if (desc.dt_compute == CUBLAS_COMPUTE_32F) {
+    } else if (desc.dt_compute == CUBLAS_COMPUTE_32F_FAST_TF32) {
         batched_sgemm();
     } else {
         megdnn_throw("compute_type must be int32/float16/float32");

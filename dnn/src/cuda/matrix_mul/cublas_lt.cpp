@@ -107,7 +107,7 @@ void MatrixMulForwardImpl::AlgoCuBlasLt::exec(const ExecArgs& args) const {
         case CUBLAS_COMPUTE_16F:
             hgemm();
             break;
-        case CUBLAS_COMPUTE_32F:
+        case CUBLAS_COMPUTE_32F_FAST_TF32:
             sgemm();
             break;
         case CUBLAS_COMPUTE_32I:

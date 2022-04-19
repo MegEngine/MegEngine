@@ -88,7 +88,11 @@ void BatchedMatrixMulForwardImpl::AlgoCublas::exec(const ExecArgs& args) const {
 
 #if CUDART_VERSION >= 9010
     auto io16_c32 = [&]() {
+#if CUDART_VERSION >= 11000
+        cublas_check(cublasSetMathMode(cublas_handle, CUBLAS_TF32_TENSOR_OP_MATH));
+#else
         cublas_check(cublasSetMathMode(cublas_handle, CUBLAS_TENSOR_OP_MATH));
+#endif
         auto zero = handle->zero_device();
         auto one = handle->one_device();
         cublas_check(cublasGemmBatchedEx(
@@ -104,7 +108,11 @@ void BatchedMatrixMulForwardImpl::AlgoCublas::exec(const ExecArgs& args) const {
 
 #if CUDART_VERSION >= 9000
     auto io16_c16 = [&]() {
+#if CUDART_VERSION >= 11000
+        cublas_check(cublasSetMathMode(cublas_handle, CUBLAS_TF32_TENSOR_OP_MATH));
+#else
         cublas_check(cublasSetMathMode(cublas_handle, CUBLAS_TENSOR_OP_MATH));
+#endif
         auto zero = handle->zero_device_h();
         auto one = handle->one_device_h();
         cublas_check(cublasHgemmBatched(
