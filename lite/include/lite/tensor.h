@@ -28,19 +28,27 @@ struct LITE_API Layout {
 /*!
  * \brief warpper of the MegEngine Tensor
  *
- * The memory is not alloc directly, when call get_memory_ptr() the memory
- * will be allocated in tensor implement, which will be deleted automatically
+ * \verbatim embed:rst:leading-asterisk
  *
- * Note: if the tensor memory is set through reset() interface, the memory is
- * managed by the user, it will not be freed by the tensor
+ * Some more things here.
  *
- * If the device or layout is not set, when copy form other source tensor, its
- * device and layout will be copy form the source tensor
+ * .. note::
  *
- * if is_pinned_host is set, the storage memory of the tensor is pinned memory,
- * this is used to Optimize the H2D or D2H memory copy, if the device or layout
- * is not set, when copy form other device(CUDA) tensor, this tensor
- * will be automatically set to pinned tensor
+ *    * If the tensor memory is set through :cpp:func:`~reset()` interface, the memory
+ *      is managed by the user, it will not be freed by the tensor;
+ *    * If the ``device_type`` or ``layout`` is not set, when copy form other source
+ *      tensor, its device and layout will be copy form the source tensor;
+ *    * If ``is_pinned_host`` is set, the storage memory of the tensor is pinned memory,
+ *      this is used to Optimize the H2D or D2H memory copy, if the device or layout
+ *      is not set, when copy form other device(CUDA) tensor, this tensor
+ *      will be automatically set to pinned tensor.
+ *
+ * .. warning::
+ *
+ *    The memory is not alloc directly, when call :cpp:func:`get_memory_ptr()` the
+ *    memory will be allocated in tensor implement, which will be deleted automatically.
+ *
+ * \endverbatim
  */
 class LITE_API Tensor {
     class TensorImpl;
@@ -48,6 +56,16 @@ class LITE_API Tensor {
 public:
     class TensorImplBase;
 
+    /*!
+     * @name Constructor
+     *
+     * @param device_type  The desired device type of created Tensor.
+     * @param device_id The desired device id of created Tensor.
+     * @param is_pinned_host Whether to use pinned memory.
+     * @param layout The desired layout of created Tensor.
+     *
+     */
+    //@{
     Tensor();
     Tensor(LiteDeviceType device_type, bool is_pinned_host = false);
     Tensor(LiteDeviceType device_type, const Layout& layout,
@@ -58,8 +76,13 @@ public:
            bool is_pinned_host = false);
     Tensor(LiteBackend backend, LiteDeviceType device_type = LiteDeviceType::LITE_CPU,
            int device_id = 0, const Layout& layout = {}, bool is_pinned_host = false);
+    //@}
     ~Tensor();
 
+    /*!
+     * @name Getter
+     */
+    //@{
     LiteDeviceType get_device_type() const { return m_device_type; };
 
     int get_device_id() const { return m_device_id; };
@@ -67,9 +90,6 @@ public:
     Layout get_layout() const { return m_layout; };
 
     bool is_pinned_host() const { return m_is_pinned_host; };
-
-    //! set layout will change the layout and reallocate memory of the tensor
-    void set_layout(const Layout& layout);
 
     //! which will trigger memory alloc in tensor implement
     void* get_memory_ptr() const;
@@ -79,6 +99,13 @@ public:
 
     //! get the tensor capacity in byte
     size_t get_tensor_total_size_in_byte() const;
+
+    //! whether the memory of tensor is continue
+    bool is_continue_memory() const;
+    //@}
+
+    //! set layout will change the layout and reallocate memory of the tensor
+    void set_layout(const Layout& layout);
 
     //! use the user allocated data to reset the memory of the tensor, the
     //! memory will not be managed by the lite, later, the user should delete
@@ -102,16 +129,13 @@ public:
     void fill_zero();
 
     //! copy tensor form other tensor
-    //! Note: the best way for tensor copy is just set the dst device, left
+    //! @note the best way for tensor copy is just set the dst device, left
     //! layout empty, when copying the dst layout will be set the same with
     //! src
     void copy_from(const Tensor& src);
 
     //! share memory with other tensor
     void share_memory_with(const Tensor& src_tensor);
-
-    //! whether the memory of tensor is continue
-    bool is_continue_memory() const;
 
     //! update the menbers from the implement
     void update_from_implement();
