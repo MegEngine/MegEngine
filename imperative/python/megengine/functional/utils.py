@@ -43,7 +43,10 @@ def _assert_equal(
     """
     err = (
         abs(expect - actual)
-        / maximum(minimum(abs(expect), abs(actual)), Tensor(1.0, dtype="float32"))
+        / maximum(
+            minimum(abs(expect), abs(actual)),
+            Tensor(1.0, dtype="float32", device=expect.device),
+        )
     ).max()
     result = apply(AssertEqual(maxerr=maxerr, verbose=verbose), expect, actual, err)[0]
     _sync()  # sync interpreter to get exception

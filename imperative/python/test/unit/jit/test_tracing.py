@@ -21,7 +21,6 @@ import megengine.optimizer as optim
 import megengine.utils.comp_graph_tools as cgtools
 from megengine import Parameter, tensor
 from megengine.autodiff import GradManager
-from megengine.core._trace_option import set_symbolic_shape
 from megengine.core.ops import builtin as ops
 from megengine.core.ops.builtin import Elemwise
 from megengine.core.tensor.utils import isscalar

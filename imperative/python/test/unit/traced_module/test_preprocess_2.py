@@ -11,8 +11,6 @@ from megengine.core._trace_option import set_symbolic_shape
 from megengine.jit import trace
 from megengine.traced_module import trace_module
 
-set_symbolic_shape(True)
-
 
 class Main(M.Module):
     def forward(self, x):
@@ -64,6 +62,7 @@ class Net(M.Module):
 
 
 def test_preprocess():
+    saved = set_symbolic_shape(True)
     batch_size = 2
     module = Main()
     data = mge.tensor(
@@ -92,3 +91,5 @@ def test_preprocess():
         infer_cg.run(inp_dict={"data": data.numpy(), "quad": quad.numpy()}).values()
     )[0]
     np.testing.assert_allclose(expect, actual)
+
+    set_symbolic_shape(saved)

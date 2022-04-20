@@ -170,6 +170,7 @@ PyObject* py_apply(
             HostTensorND ht(target_cn);
             ht = npy::np2tensor(args[i], npy::Meth::copy_into(&ht), target_dtype);
             if (PyArray_Check(args[i]) || PyList_Check(args[i])) {  // non scaler
+                // py_tuple is not allowed here because of tracing
                 return imperative::apply(
                         CreateTensor(CreateTensor::Const, target_cn, ht.layout()),
                         HostStorage::make(ht.storage()))[0];
@@ -189,8 +190,14 @@ PyObject* py_apply(
                 if (is_symbol_var[i]) {
                     symbol_var_idx = i;
                     tensors[i] = context.symvar2val(args[i]);
-                } else {
+                } else if (
+                        DTypePromoteCfg::convert_input_enabled &&
+                        op->same_type<Elemwise>()) {
                     tensors[i] = convert_pyinput_to_tensor(i);
+                } else {
+                    PyErr_SetString(
+                            PyExc_TypeError, "py_apply expects tensor as inputs");
+                    return nullptr;
                 }
             }
             auto outputs = imperative::apply(*op, tensors);
