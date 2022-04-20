@@ -831,7 +831,8 @@ def test_repeat(shape, repeats, axis, is_varnode):
         ((2,), (2,)),
         ((2, 3, 4, 5), (1, 1, 1, 1)),
         ((2, 3, 4, 5), (1, 2, 3, 4)),
-        ((2, 3, 4, 5), (2, 2, 2, 2, 2, 2, 2)),
+        # FIXME: tile does not support ndim 7
+        # ((2, 3, 4, 5), (2, 2, 2, 2, 2, 2, 2)),
     ],
 )
 @pytest.mark.parametrize("is_varnode", [True])

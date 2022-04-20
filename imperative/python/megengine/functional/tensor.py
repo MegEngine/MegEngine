@@ -1244,7 +1244,6 @@ def tile(inp: Tensor, reps: Iterable[int]):
         inp = _tile_one_dim(inp, rep, i)
 
     if l_reps > l_shape:
-        shape = inp.shape
         extra = reps[:-l_shape]
         extra_ones = ones_like(extra)
         base_shape = concat([extra_ones, shape])

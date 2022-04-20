@@ -660,15 +660,15 @@ def interpolate(
         if mode != "linear":
             wscale = (iw - 1.0) / (ow - 1.0)
         row0 = concat(
-            [wscale, Tensor([0, 0], dtype="float32", device=inp.device)], axis=0
-        ).reshape(1, 3)
-        row1 = concat(
             [
-                Tensor(0, dtype="float32", device=inp.device),
-                hscale,
-                Tensor(0, dtype="float32", device=inp.device),
+                Tensor(wscale, dtype="float32", device=inp.device),
+                Tensor([0, 0], dtype="float32", device=inp.device),
             ],
             axis=0,
+        ).reshape(1, 3)
+        zeros = Tensor([0], dtype="float32", device=inp.device)
+        row1 = concat(
+            [zeros, Tensor(hscale, dtype="float32", device=inp.device), zeros], axis=0,
         ).reshape(1, 3)
         weight = concat(
             [row0, row1, Tensor([[0, 0, 1]], dtype="float32", device=inp.device)],

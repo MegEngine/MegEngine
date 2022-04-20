@@ -10,8 +10,6 @@ from megengine.core._trace_option import set_symbolic_shape
 from megengine.jit import trace
 from megengine.traced_module import trace_module
 
-set_symbolic_shape(True)
-
 
 class Main(M.Module):
     def forward(self, x):
@@ -61,6 +59,7 @@ class Net(M.Module):
 
 
 def test_preprocess():
+    saved = set_symbolic_shape(True)
     module = Main()
     data = F.ones((1, 14, 8, 8), dtype=np.uint8)
     traced_module = trace_module(module, data)
@@ -88,3 +87,5 @@ def test_preprocess():
         y,
         atol=1e-6,
     )
+
+    set_symbolic_shape(saved)
