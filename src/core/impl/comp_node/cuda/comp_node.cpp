@@ -761,10 +761,10 @@ void CudaCompNode::EventImpl::do_device_wait_by(Impl* cn_impl) {
 namespace {
 
 #ifndef __unix__
-template <typename Func, typename... Args>
-CUresult call_cuda_forksafe(Func func, Args... args) {
+template <typename Func, typename Val>
+CUresult call_cuda_forksafe(Func func, Val* val, size_t len) {
     cuInit(0);
-    return func(args...);
+    return func();
 }
 #else
 struct RAIICloseFD : NonCopyableObj {
@@ -780,11 +780,13 @@ struct RAIICloseFD : NonCopyableObj {
     }
 };
 // an implementation that does not call cuInit
-template <typename Func, typename Val, typename... Args>
-CUresult call_cuda_forksafe(Func func, Val* val, Args... args) {
-    auto err = func(val, args...);
+template <typename Func, typename Val>
+CUresult call_cuda_forksafe(Func func, Val* val, size_t len) {
+    int t_ndev;
+    // use cuDeviceGetCount to detect cuda initialization to avoid abnormal behavior
+    auto err = cuDeviceGetCount(&t_ndev);
     if (err != CUDA_ERROR_NOT_INITIALIZED)
-        return err;
+        return func();
     // cuInit not called, call it in child process
     int fd[2];
     mgb_assert(pipe(fd) == 0, "pipe() failed");
@@ -799,51 +801,7 @@ CUresult call_cuda_forksafe(Func func, Val* val, Args... args) {
             err = cuInit(0);
             if (err != CUDA_SUCCESS)
                 break;
-            err = func(val, args...);
-        } while (0);
-        auto sz = write(fdw, &err, sizeof(err));
-        if (sz == sizeof(err) && err == CUDA_SUCCESS) {
-            sz = write(fdw, val, sizeof(*val));
-        }
-        fdw_guard.close();
-        std::quick_exit(0);
-    }
-    fdw_guard.close();
-    auto sz = read(fdr, &err, sizeof(err));
-    mgb_assert(sz == sizeof(err), "failed to read error code from child");
-    if (err == CUDA_SUCCESS) {
-        sz = read(fdr, val, sizeof(*val));
-        mgb_assert(sz == sizeof(*val), "failed to read value from child");
-        return err;
-    }
-    // try again, maybe another thread called cuInit while we fork
-    auto err2 = func(val, args...);
-    if (err2 == CUDA_SUCCESS)
-        return err2;
-    if (err2 == CUDA_ERROR_NOT_INITIALIZED)
-        return err;
-    return err2;
-}
-template <typename Func, typename... Args>
-CUresult call_cuda_forksafe(Func func, char* val, int len, Args... args) {
-    auto err = func(val, len, args...);
-    if (err != CUDA_ERROR_NOT_INITIALIZED)
-        return err;
-    // cuInit not called, call it in child process
-    int fd[2];
-    mgb_assert(pipe(fd) == 0, "pipe() failed");
-    int fdr = fd[0], fdw = fd[1];
-    RAIICloseFD fdr_guard(fdr);
-    RAIICloseFD fdw_guard(fdw);
-    auto cpid = fork();
-    mgb_assert(cpid != -1, "fork() failed");
-    if (cpid == 0) {
-        fdr_guard.close();
-        do {
-            err = cuInit(0);
-            if (err != CUDA_SUCCESS)
-                break;
-            err = func(val, len, args...);
+            err = func();
         } while (0);
         auto sz = write(fdw, &err, sizeof(err));
         if (sz == sizeof(err) && err == CUDA_SUCCESS) {
@@ -858,12 +816,12 @@ CUresult call_cuda_forksafe(Func func, char* val, int len, Args... args) {
     if (err == CUDA_SUCCESS) {
         sz = read(fdr, val, sizeof(*val) * len);
         mgb_assert(
-                static_cast<size_t>(sz) == sizeof(*val) * static_cast<size_t>(len),
+                static_cast<size_t>(sz) == sizeof(*val) * len,
                 "failed to read value from child");
         return err;
     }
     // try again, maybe another thread called cuInit while we fork
-    auto err2 = func(val, len, args...);
+    auto err2 = func();
     if (err2 == CUDA_SUCCESS)
         return err2;
     if (err2 == CUDA_ERROR_NOT_INITIALIZED)
@@ -882,6 +840,17 @@ const char* cu_get_error_string(CUresult err) {
     return ret;
 }
 
+#define MGB_CALL_CUDA_FORKSAFE_NOASSERT(func, ptr, len, ...) \
+    call_cuda_forksafe([&]() { return func(ptr, ##__VA_ARGS__); }, ptr, len)
+
+#define MGB_CALL_CUDA_FORKSAFE(func, ptr, len, ...)                                \
+    {                                                                              \
+        auto err = MGB_CALL_CUDA_FORKSAFE_NOASSERT(func, ptr, len, ##__VA_ARGS__); \
+        if (err != CUDA_SUCCESS) {                                                 \
+            auto err_s = cu_get_error_string(err);                                 \
+            mgb_log_error(#func " failed: %s (err %d)", err_s, int(err));          \
+        }                                                                          \
+    }
 }  // namespace
 
 bool CudaCompNode::available() {
@@ -890,7 +859,7 @@ bool CudaCompNode::available() {
     MGB_LOCK_GUARD(mtx);
     if (result == -1) {
         int ndev = -1;
-        auto err = call_cuda_forksafe(cuDeviceGetCount, &ndev);
+        auto err = MGB_CALL_CUDA_FORKSAFE_NOASSERT(cuDeviceGetCount, &ndev, 1);
         result = err == CUDA_SUCCESS && ndev > 0;
         auto err_s = cu_get_error_string(err);
         //! only show !CUDA_SUCCESS log when with valid stub call
@@ -1042,12 +1011,11 @@ size_t CudaCompNode::get_device_count(bool warn) {
     static Spinlock mtx;
     MGB_LOCK_GUARD(mtx);
     if (cnt == -1) {
-        auto err = call_cuda_forksafe(cuDeviceGetCount, &cnt);
+        auto err = MGB_CALL_CUDA_FORKSAFE_NOASSERT(cuDeviceGetCount, &cnt, 1);
         auto err_s = cu_get_error_string(err);
         if (err != CUDA_SUCCESS) {
             if (warn && (std::string(err_s) != "invalid_stub_call"))
-                mgb_log_error(
-                        "cudaGetDeviceCount failed: %s (err %d)", err_s, int(err));
+                mgb_log_error("cuDeviceGetCount failed: %s (err %d)", err_s, int(err));
             cnt = 0;
         }
         mgb_assert(cnt >= 0);
@@ -1088,23 +1056,15 @@ CompNode::DeviceProperties CudaCompNode::get_device_prop(int dev) {
     if (!rec.init) {
         MGB_LOCK_GUARD(rec.mtx_com);
         if (!rec.init) {
+            MGB_CALL_CUDA_FORKSAFE(
+                    cuDeviceGetAttribute, &rec.prop.major, 1,
+                    CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR, dev);
+            MGB_CALL_CUDA_FORKSAFE(
+                    cuDeviceGetAttribute, &rec.prop.minor, 1,
+                    CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MINOR, dev);
+            MGB_CALL_CUDA_FORKSAFE(cuDeviceTotalMem, &rec.prop.total_memory, 1, dev);
             char pname[256] = {0};
-            mgb_assert(
-                    call_cuda_forksafe(
-                            cuDeviceGetAttribute, &rec.prop.major,
-                            CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR,
-                            dev) == CUDA_SUCCESS);
-            mgb_assert(
-                    call_cuda_forksafe(
-                            cuDeviceGetAttribute, &rec.prop.minor,
-                            CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MINOR,
-                            dev) == CUDA_SUCCESS);
-            mgb_assert(
-                    call_cuda_forksafe(cuDeviceGetName, pname, 255, dev) ==
-                    CUDA_SUCCESS);
-            mgb_assert(
-                    call_cuda_forksafe(cuDeviceTotalMem, &rec.prop.total_memory, dev) ==
-                    CUDA_SUCCESS);
+            MGB_CALL_CUDA_FORKSAFE(cuDeviceGetName, pname, 255, 255, dev);
             rec.prop.name = pname;
             rec.init = true;
         }
