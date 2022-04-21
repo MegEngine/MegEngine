@@ -557,7 +557,14 @@ void init_ops(py::module m) {
     m.def(
             "delete_rng_handle",
             [](size_t handle) {
+                if (mgb::imperative::python::interpreter_for_py->check_available()) {
+                    mgb::imperative::python::interpreter_for_py->sync();
+                }
                 mgb::CompNode::sync_all();
+                mgb::CompNode::foreach ([](mgb::CompNode cn) {
+                    auto err = cn.check_async_error();
+                    mgb_assert(!err, "%s", err->what());
+                });
                 py_task_q.wait_all_task_finish();
                 rng::delete_handle(handle);
             },

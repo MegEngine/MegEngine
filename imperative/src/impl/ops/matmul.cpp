@@ -227,6 +227,11 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
     TensorLayout dst_layout = TensorLayout({layout_a[0], layout_b[1]}, dst_dtype);
     dst_layout.init_contiguous_stride();
 
+    if (matmul.transposeA)
+        std::swap(layout_a.shape[0], layout_a.shape[1]);
+    if (matmul.transposeB)
+        std::swap(layout_b.shape[0], layout_b.shape[1]);
+
     DeviceTensorND out =
             BlobManager::inst()->alloc_workspace_with_defrag(cn, dst_layout);
     size_t sz = setup_algo<megdnn::MatrixMul>(

@@ -80,13 +80,12 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
             op_def.policy(), false);
 
     megdnn::Workspace dnn_wk;
-    if (wk_size != 0) {
-        auto wk = Blob::make(cn, wk_size);
-        dnn_wk.raw_ptr = wk->storage().get();
-        dnn_wk.size = wk_size;
+    if (wk_size) {
+        TensorLayout w_layout({wk_size}, dtype::Byte());
+        dnn_wk = caller.create_workspace(w_layout);
     }
 
-    dnn_opr->exec(inp_tensornd, out_devtensor.as_megdnn(), {});
+    dnn_opr->exec(inp_tensornd, out_devtensor.as_megdnn(), dnn_wk);
     return {Tensor::make(out_devtensor)};
 }
 

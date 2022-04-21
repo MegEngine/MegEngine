@@ -174,10 +174,9 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
     megdnn::Workspace dnn_wk;
 
     auto wk_size = dnn_op.op->get_workspace_in_bytes(src, layout);
-    if (wk_size != 0) {
-        auto wk = Blob::make(comp_node, wk_size);
-        dnn_wk.raw_ptr = wk->storage().get();
-        dnn_wk.size = wk_size;
+    if (wk_size) {
+        TensorLayout w_layout({wk_size}, dtype::Byte());
+        dnn_wk = dnn_op.create_workspace(w_layout);
     }
 
     DeviceTensorND out =
