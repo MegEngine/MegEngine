@@ -67,7 +67,6 @@ template <typename T>
 class Type : public IType {
 protected:
     Type(std::string name) : IType(std::move(name)) {}
-    Type(IType&& type) : IType(std::move(type)) {}
     // TODO: each type owns an allocator
 
 public:
@@ -105,7 +104,6 @@ template <typename T>
 class ObjectType : public Type<T> {
 public:
     ObjectType(std::string name) : Type<T>(name) {}
-    ObjectType(IType&& type) : Type<T>(std::move(type)) {}
 };
 
 /**

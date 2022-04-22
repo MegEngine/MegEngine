@@ -581,9 +581,9 @@ ValueRefList FormatTransformation::apply_transformation(
                     (GenericFunction&)inputs[1].cast<FunctionValue>();
             // make param grads as FormattedTensor
             GenericFunction new_callback =
-                    [this, callback, format](Span<ValueRef> inputs_) -> ValueRefList {
+                    [&, callback, format](Span<ValueRef> inputs_) -> ValueRefList {
                 auto wrapped_inputs = SmallVector<ValueRef>{
-                        this->value_type().make(inputs_.item(), format)};
+                        m_value_type.make(inputs_.item(), format)};
                 auto ret = callback(wrapped_inputs);
                 return ret;
             };

@@ -97,7 +97,7 @@ class Optimizer(metaclass=ABCMeta):
                     "optimizer can only optimize Parameters, but one of the params is "
                     + str(type(param))
                 )
-            param._reset(Tensor(param, no_cache=True))
+            param._reset(Tensor(param.numpy(), no_cache=True, format=param.format))
 
         for name, default in self._defaults.items():
             if default is required and name not in param_group:

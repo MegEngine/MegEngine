@@ -8,10 +8,9 @@ namespace cuda {
 
 #define COMMA ,
 
-#define cb(_dtype)                                                          \
-    INST_REDUCE(                                                            \
-            device_reduce::CheckNonFiniteOp<                                \
-                    _dtype COMMA dt_float32 COMMA dt_int32 COMMA dt_int32>, \
+#define cb(_dtype)                                                                 \
+    INST_REDUCE(                                                                   \
+            device_reduce::CheckNonFiniteOp<_dtype COMMA dt_int32 COMMA dt_int32>, \
             false);
 
 cb(dt_float32);

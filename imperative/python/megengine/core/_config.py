@@ -247,4 +247,4 @@ def _override(
 
 
 def _get_actual_op_param(function_param, config_param):
-    return function_param if config_param is "default" else config_param
+    return function_param if config_param == "default" else config_param
