@@ -8,11 +8,15 @@ import megengine as mge
 import megengine.distributed as dist
 import megengine.functional as F
 import megengine.module as M
+from megengine import Tensor
+from megengine.core import _imperative_rt
 from megengine.core._imperative_rt import CompNode, TensorAttr, imperative
 from megengine.core._imperative_rt.core2 import TensorWeakRef, apply, sync
 from megengine.core.autodiff.grad import Grad
+from megengine.core.ops import builtin
 from megengine.core.ops.builtin import Elemwise, Identity
 from megengine.functional.distributed import remote_recv, remote_send
+from megengine.functional.tensor import ones, zeros
 
 
 def _elwise(mode):
@@ -553,3 +557,46 @@ def test_matmul():
                     if ydim == 1 and transposeB == True:
                         continue
                     test_one(xdim, ydim, transposeA, transposeB)
+
+
+def test_indexing():
+    x = np.array([[1.0, 2.0]]).astype("float32")
+    x = mge.Tensor(x)
+    index = mge.Tensor([0])
+
+    with Grad() as grad:
+        grad.wrt(x, callback=save_to(x))
+
+        def f(x):
+            return F.indexing_one_hot(x, index, -1)
+
+        y = f(x)
+        grad(y, F.ones_like(y))
+
+    np.testing.assert_equal(np.array([[1, 0]], dtype=np.float32), x.grad.numpy())
+
+
+def test_indexing_set_one_hot():
+    x = mge.tensor(np.arange(1, 4, dtype=np.int32))
+
+    with Grad() as grad:
+        zeros_tensor = zeros((3, 4), dtype=x.dtype, device=x.device)
+        ones_tensor = ones((3, 1), dtype=x.dtype, device=x.device)
+
+        grad.wrt(zeros_tensor, callback=save_to(zeros_tensor))
+        grad.wrt(ones_tensor, callback=save_to(ones_tensor))
+
+        def f(x):
+            op = builtin.IndexingSetOneHot(axis=x.ndim, ndim=x.ndim)
+            (result,) = apply(op, zeros_tensor, x, ones_tensor)
+            return result
+
+        y = f(x)
+        grad(y, F.ones_like(y))
+        np.testing.assert_equal(
+            np.array([[1, 0, 1, 1], [1, 1, 0, 1], [1, 1, 1, 0]], dtype=np.int32),
+            zeros_tensor.grad.numpy(),
+        )
+        np.testing.assert_equal(
+            np.array([[1], [1], [1]], dtype=np.int32), ones_tensor.grad.numpy(),
+        )

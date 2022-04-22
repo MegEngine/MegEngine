@@ -1015,7 +1015,7 @@ class IndexingOneHotBase : public OperatorBase {
     DEF_OPR_PARAM(Axis);
 
 protected:
-    void deduce_layout_fwd(
+    MGE_WIN_DECLSPEC_FUC void deduce_layout_fwd(
             const TensorLayout& src, const TensorLayout& index, TensorLayout& dst);
     void check_layout_fwd(
             const TensorLayout& src, const TensorLayout& index,

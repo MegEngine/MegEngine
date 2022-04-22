@@ -3,15 +3,15 @@ import numpy as np
 import pytest
 
 import megengine.functional as F
-from megengine import tensor
+import megengine.tensor as Tensor
 
 
 def test_cross_entropy_with_logits():
-    data = tensor([[0, 50], [0, -150]]).astype(np.float32)
-    label = tensor([1, 0]).astype(np.int32)
+    data = Tensor([[0, 50], [0, -150]]).astype(np.float32)
+    label = Tensor([1, 0]).astype(np.int32)
     loss = F.nn.cross_entropy(data, label)
     np.testing.assert_allclose(loss.numpy(), 0.0)
-    label = tensor([0, 1]).astype(np.int32)
+    label = Tensor([0, 1]).astype(np.int32)
     loss = F.nn.cross_entropy(data, label)
     np.testing.assert_allclose(loss.numpy(), 100)
 
@@ -35,19 +35,24 @@ def test_cross_entropy():
         x[i, y[i]] += np.random.rand() * 2
     x = softmax(x)
     l_ref = ref(x, y)
-    l = F.nn.cross_entropy(tensor(x, "float32"), tensor(y, "int32"), with_logits=False)
+    l = F.nn.cross_entropy(Tensor(x, "float32"), Tensor(y, "int32"), with_logits=False)
     np.testing.assert_allclose(l.numpy(), l_ref, 1e-6, 1e-6)
+
+    l1 = F.nn.cross_entropy(
+        Tensor(x, "float32"), Tensor(y, "int32"), axis=-1, with_logits=False
+    )
+    np.testing.assert_allclose(l1.numpy(), l_ref, 1e-6, 1e-6)
 
 
 def test_cross_entropy_reduction():
     logits = np.random.randn(16, 10)
     label = np.random.randint(10, size=[16])
-    logits = tensor(logits, dtype="float32")
-    label = tensor(label, dtype="int32")
+    logits = Tensor(logits, dtype="float32")
+    label = Tensor(label, dtype="int32")
 
     perm = np.random.permutation(16)
-    logits_perm = tensor(logits[perm], dtype="float32")
-    label_perm = tensor(label[perm], dtype="int32")
+    logits_perm = Tensor(logits[perm], dtype="float32")
+    label_perm = Tensor(label[perm], dtype="int32")
 
     loss = F.nn.cross_entropy(logits, label, reduction="none")
     loss_perm = F.nn.cross_entropy(logits_perm, label_perm, reduction="none")
@@ -160,18 +165,18 @@ def _ctc_npy_single_seq(pred, label, blank):
 def test_ctc_loss():
     def test_func(T, C, N):
         input = np.random.randn(T, N, C)
-        input = F.softmax(tensor(input), axis=-1).numpy()
+        input = F.softmax(Tensor(input), axis=-1).numpy()
         input_lengths = np.ones(N, dtype=np.int32) * T
         target_lengths = np.random.randint(low=1, high=T + 1, size=(N,), dtype=np.int32)
         target = np.random.randint(
             low=1, high=C, size=(sum(target_lengths)), dtype=np.int32
         )
 
-        input_mge = tensor(input)
-        input_lengths_mge = tensor(input_lengths)
+        input_mge = Tensor(input)
+        input_lengths_mge = Tensor(input_lengths)
 
-        target_mge = tensor(target)
-        target_lengths_mge = tensor(target_lengths)
+        target_mge = Tensor(target)
+        target_lengths_mge = Tensor(target_lengths)
 
         blank = np.random.randint(C)
         for method in ["mean", "sum", "none"]:

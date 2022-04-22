@@ -490,6 +490,84 @@ std::optional<ValueRefList> pixelShuffle_grad_rule(
     return imperative::apply(op, inputs);
 }
 
+std::optional<ValueRefList> indexing_grad_rule(
+        const OpDef& op, Span<ValueRef> inputs, Span<bool> inputs_require_grad,
+        CustomBackward& backward) {
+    auto&& indexing = op.cast_final_safe<IndexingOneHot>();
+    mgb_assert(inputs.size() == 2);
+    bool flag = inputs_require_grad[0];
+    auto&& grad_op = IndexingSetOneHot::make(indexing.axis, indexing.ndim);
+    SmallVector<ValueRef> inputs2;
+    if (flag) {
+        inputs2.push_back(get_shape(inputs[0]));
+        for (size_t i = 1; i < inputs.size(); ++i) {
+            inputs2.push_back(inputs[i]);
+        }
+    }
+    auto maker = CustomGradMaker(backward, inputs.size());
+    maker.output_size(1).output_captured(0, false);
+    maker.backward([inputs = std::move(inputs2),
+                    grad_op_ = std::move(grad_op)](Span<ValueRef> grads) {
+        mgb_assert(grads.size() == 1);
+        ValueRef grad = grads[0];
+        SmallVector<ValueRef> ret(1);
+        if (grad && inputs[0]) {
+            ValueRefList args_(inputs.size() + 1);
+            auto&& zeros = make_empty_tensor(grad.device(), inputs[0], grad.dtype());
+            args_[0] = zeros;
+            args_[1] = inputs[1];
+            args_[2] = grads[0];
+            ret[0] = imperative::apply(*grad_op_, args_)[0];
+        }
+        return ret;
+    });
+    maker.finalize();
+    return imperative::apply(op, inputs);
+}
+
+std::optional<ValueRefList> indexing_set_one_hot_grad_rule(
+        const OpDef& op, Span<ValueRef> inputs, Span<bool> inputs_require_grad,
+        CustomBackward& backward) {
+    auto&& indexingSetOneHot = op.cast_final_safe<IndexingSetOneHot>();
+    mgb_assert(inputs.size() == 3);
+    SmallVector<ValueRef> inputs2;
+    inputs2.push_back(get_shape(inputs[0]));
+    inputs2.push_back(inputs[1]);
+    inputs2.push_back(get_shape(inputs[2]));
+    auto maker = CustomGradMaker(backward, inputs.size());
+    maker.output_size(1).output_captured(0, false);
+    maker.backward([inputs = std::move(inputs2),
+                    &indexingSetOneHot](Span<ValueRef> grads) {
+        mgb_assert(grads.size() == 1);
+        ValueRef grad = grads[0];
+        SmallVector<ValueRef> ret(3);
+        if (!grad) {
+            return ret;
+        }
+        if (inputs[0]) {
+            auto&& grad_op = IndexingSetOneHot::make(
+                    indexingSetOneHot.axis, indexingSetOneHot.ndim);
+            ValueRefList args_(inputs.size());
+            auto&& zeros = make_empty_tensor(grad.device(), inputs[2], grad.dtype());
+            args_[0] = grads[0];
+            args_[1] = inputs[1];
+            args_[2] = zeros;
+            ret[0] = imperative::apply(*grad_op, args_)[0];
+        }
+        if (inputs[2]) {
+            auto&& grad_op = IndexingOneHot::make(
+                    indexingSetOneHot.axis, indexingSetOneHot.ndim);
+            ValueRefList args_(inputs.size() - 1);
+            args_[0] = grads[0];
+            args_[1] = inputs[1];
+            ret[2] = imperative::apply(*grad_op, args_)[0];
+        }
+        return ret;
+    });
+    maker.finalize();
+    return imperative::apply(op, inputs);
+}
+
 std::optional<ValueRefList> fastpathcopy_grad_rule(
         const OpDef& op, Span<ValueRef> inputs, Span<bool> inputs_require_grad,
         CustomBackward& backward) {
@@ -521,6 +599,10 @@ struct Init {
         CustomBackward::register_grad_rule(AddAxis::typeinfo(), addAxis_grad_rule);
         CustomBackward::register_grad_rule(
                 RemoveAxis::typeinfo(), removeAxis_grad_rule);
+        CustomBackward::register_grad_rule(
+                IndexingOneHot::typeinfo(), indexing_grad_rule);
+        CustomBackward::register_grad_rule(
+                IndexingSetOneHot::typeinfo(), indexing_set_one_hot_grad_rule);
         CustomBackward::register_grad_rule(
                 FastpathCopy::typeinfo(), fastpathcopy_grad_rule);
         CustomBackward::register_grad_rule(

@@ -6,9 +6,7 @@ import pytest
 import megengine.autodiff as ad
 import megengine.functional as F
 import megengine.optimizer as optimizer
-from megengine import Parameter
-from megengine import Tensor as tensor
-from megengine import tensor
+from megengine import Parameter, Tensor, tensor
 from megengine.autodiff import Function
 from megengine.module import Module
 

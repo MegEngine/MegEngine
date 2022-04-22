@@ -108,9 +108,17 @@ def Remap: MgbHashableOp<"Remap", [RemapParam]>;
 
 def Resize: MgbHashableOp<"Resize", [ResizeParam]>;
 
-def IndexingOneHot: MgbHashableOp<"IndexingOneHot", [AxisParam]>;
+def IndexingOneHot: MgbHashableOp<"IndexingOneHot", [AxisParam]> {
+  let extraArguments = (ins
+    MgbI32Attr:$ndim
+  );
+}
 
-def IndexingSetOneHot: MgbHashableOp<"IndexingSetOneHot", [AxisParam]>;
+def IndexingSetOneHot: MgbHashableOp<"IndexingSetOneHot", [AxisParam]> {
+  let extraArguments = (ins
+    MgbI32Attr:$ndim
+  );
+}
 
 def Copy: MgbHashableOp<"Copy"> {
   let extraArguments = (ins

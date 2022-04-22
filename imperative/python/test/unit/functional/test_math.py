@@ -6,7 +6,7 @@ import pytest
 from utils import opr_test
 
 import megengine.functional as F
-from megengine import jit, tensor
+from megengine import Tensor, jit, tensor
 from megengine.core._imperative_rt.core2 import apply
 from megengine.core.ops import builtin
 
@@ -61,37 +61,84 @@ def common_test_reduce(opr, ref_opr):
 def test_sum():
     common_test_reduce(opr=F.sum, ref_opr=np.sum)
 
+    x = Tensor(np.arange(1, 7, dtype=np.int32).reshape(2, 3))
+    y = F.sum(x, axis=-1)
+    np.testing.assert_equal(y.numpy(), np.array([6, 15]).astype(np.int32))
+
 
 def test_prod():
     common_test_reduce(opr=F.prod, ref_opr=np.prod)
+
+    x = Tensor(np.arange(1, 7, dtype=np.int32).reshape(2, 3))
+    y = F.prod(x, axis=-2)
+    np.testing.assert_equal(y.numpy(), np.array([4, 10, 18]).astype(np.int32))
 
 
 def test_mean():
     common_test_reduce(opr=F.mean, ref_opr=np.mean)
 
+    x = Tensor(np.arange(1, 7, dtype=np.int32).reshape(2, 3))
+    y = F.mean(x, axis=-2)
+    np.testing.assert_equal(y.numpy(), np.array([2.5, 3.5, 4.5]).astype(np.float32))
+
 
 def test_var():
     common_test_reduce(opr=F.var, ref_opr=np.var)
+
+    x = Tensor(np.arange(1, 7, dtype=np.int32).reshape(2, 3))
+    y = F.var(x, axis=-2)
+    np.testing.assert_equal(y.numpy(), np.array([2.25, 2.25, 2.25]).astype(np.float32))
 
 
 def test_std():
     common_test_reduce(opr=F.std, ref_opr=np.std)
 
+    x = Tensor(np.arange(1, 7, dtype=np.int32).reshape(2, 3))
+    y = F.std(x, axis=-2)
+    np.testing.assert_equal(y.numpy(), np.array([1.5, 1.5, 1.5]).astype(np.float32))
+
+    x = Tensor(np.arange(1, 7, dtype=np.int32).reshape(2, 3))
+    y = F.std(x, axis=-2)
+    np.testing.assert_equal(y.numpy(), np.array([1.5, 1.5, 1.5]).astype(np.float32))
+
 
 def test_min():
     common_test_reduce(opr=F.min, ref_opr=np.min)
+
+    x = Tensor(np.arange(1, 7, dtype=np.int32).reshape(2, 3))
+    y = F.min(x, axis=-1)
+    np.testing.assert_equal(y.numpy(), np.array([1, 4]).astype(np.int32))
 
 
 def test_max():
     common_test_reduce(opr=F.max, ref_opr=np.max)
 
+    x = Tensor(np.arange(1, 7, dtype=np.int32).reshape(2, 3))
+    y = F.max(x, axis=-1)
+    np.testing.assert_equal(y.numpy(), np.array([3, 6]).astype(np.int32))
+
 
 def test_argmin():
     common_test_reduce(opr=F.argmin, ref_opr=np.argmin)
 
+    x = Tensor(np.arange(1, 7, dtype=np.int32).reshape(2, 3))
+    y = F.argmin(x, axis=-1)
+    np.testing.assert_equal(y.numpy(), np.array([0, 0]).astype(np.int32))
+
 
 def test_argmax():
     common_test_reduce(opr=F.argmax, ref_opr=np.argmax)
+    x = Tensor(np.arange(1, 7, dtype=np.int32).reshape(2, 3))
+    y = F.argmax(x, axis=-2)
+    np.testing.assert_equal(y.numpy(), np.array([1, 1, 1]).astype(np.int32))
+
+
+def test_norm():
+    x = Tensor(np.arange(1, 7, dtype=np.int32).reshape(2, 3))
+    y = F.norm(x, axis=-1)
+    np.testing.assert_equal(
+        y.numpy().round(decimals=3), np.array([3.742, 8.775]).astype(np.float32)
+    )
 
 
 def test_sqrt():
@@ -136,7 +183,7 @@ def test_sort_empty(is_symbolic):
             fn_ = fn
         data = np.random.random(shape).astype(np.float32)
         for _ in range(3):
-            outs = fn_(tensor(data))
+            outs = fn_(Tensor(data))
             ref_outs = (np.sort(data), np.argsort(data))
             assert len(ref_outs) == len(outs)
             for i in range(len(outs)):
@@ -146,6 +193,12 @@ def test_sort_empty(is_symbolic):
 
 
 def test_normalize():
+    x = Tensor(np.arange(1, 7, dtype=np.int32).reshape(2, 3))
+    y = F.normalize(x, axis=-1)
+    np.testing.assert_equal(
+        y.numpy().round(decimals=1),
+        np.array([[0.3, 0.5, 0.8], [0.5, 0.6, 0.7]]).astype(np.float32),
+    )
 
     cases = [
         {"input": np.random.random((2, 3, 12, 12)).astype(np.float32)} for i in range(2)
@@ -177,11 +230,11 @@ def test_sum_neg_axis():
     shape = (2, 3)
     data = np.random.random(shape).astype(np.float32)
     for axis in (-1, -2, (-2, 1), (-1, 0)):
-        get = F.sum(tensor(data), axis=axis)
+        get = F.sum(Tensor(data), axis=axis)
         ref = np.sum(data, axis=axis)
         np.testing.assert_allclose(get.numpy(), ref, rtol=1e-6)
     with pytest.raises(AssertionError):
-        F.sum(tensor(data), axis=(-1, 1))
+        F.sum(Tensor(data), axis=(-1, 1))
 
 
 def test_builtin_reduce():
@@ -204,18 +257,18 @@ def test_non_finite():
     data = []
     for i in range(2):
         data.append(np.random.random(shape).astype(np.float32))
-    tensorList = [tensor(x) for x in data]
+    tensorList = [Tensor(x) for x in data]
     rst = F.math._check_non_finite(tensorList, 0.7)
     np.testing.assert_equal(rst.numpy(), [0])
     for i in range(len(tensorList)):
         np.testing.assert_allclose(tensorList[i].numpy() / 0.7, data[i], rtol=1e-6)
 
     data[1][0][0][0][0] = float("inf")
-    rst = F.math._check_non_finite([tensor(x) for x in data], 0.7)
+    rst = F.math._check_non_finite([Tensor(x) for x in data], 0.7)
     np.testing.assert_equal(rst.numpy(), [1])
 
     data[1][0][0][0][0] = float("nan")
-    rst = F.math._check_non_finite([tensor(x) for x in data], 0.7)
+    rst = F.math._check_non_finite([Tensor(x) for x in data], 0.7)
     np.testing.assert_equal(rst.numpy(), [1])
 
 
@@ -237,7 +290,7 @@ def test_topk(descending, sorted, inp1d, kth_only):
         return np.sort(x)
 
     res = F.topk(
-        tensor(data), k, descending=descending, no_sort=(not sorted), kth_only=kth_only
+        Tensor(data), k, descending=descending, no_sort=(not sorted), kth_only=kth_only
     )
 
     values, indices = res
@@ -268,7 +321,7 @@ def test_reduce_on_empty_tensor(is_trace):
         if is_trace:
             fn = jit.trace(symbolic=symbolic)(fn)
         for i in range(3):
-            out = fn(tensor(input, dtype=dtype), axis=axis).numpy()
+            out = fn(Tensor(input, dtype=dtype), axis=axis).numpy()
             out_ref = ref_fn(input.astype(dtype), axis=axis)
             np.testing.assert_equal(out, out_ref)
 

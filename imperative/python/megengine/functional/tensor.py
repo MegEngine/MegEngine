@@ -393,6 +393,8 @@ def split(inp, nsplits_or_sections, axis=0):
 def _get_idx(index, axis):
     index_dims = len(index.shape)
     idx = []
+    if axis < 0:
+        axis += index_dims
     for i in range(index_dims):
         if i != axis:
             shape = [1] * index_dims
@@ -457,21 +459,6 @@ def gather(inp: Tensor, axis: int, index: Tensor) -> Tensor:
             "But the input dims:{}, the index dims:{}".format(input_dims, index_dims)
         )
 
-    if axis < 0 or axis >= input_dims:
-        raise ValueError(
-            "Index axis {} is output of bounds, should in range [0 {})".format(
-                axis, input_dims
-            )
-        )
-
-    for i in range(input_dims):
-        if i != axis and input_shape[i] != index_shape[i]:
-            raise ValueError(
-                "The input {} and index {} must have the same size apart from axis {}".format(
-                    input_shape, index_shape, axis
-                )
-            )
-
     idx = _get_idx(index, axis)
     return inp[idx].reshape(index.shape)  # pylint: disable=no-member
 
@@ -524,7 +511,7 @@ def scatter(inp: Tensor, axis: int, index: Tensor, source: Tensor) -> Tensor:
         >>> inp = Tensor(np.zeros(shape=(3,5),dtype=np.float32))
         >>> source = Tensor([[0.9935,0.9465,0.2256,0.8926,0.4396],[0.7723,0.0718,0.5939,0.357,0.4576]])
         >>> index = Tensor([[0,2,0,2,1],[2,0,1,1,2]])
-        >>> oup = F.scatter(inp, 0, index,source)
+        >>> oup = F.scatter(inp, 0, index, source)
         >>> oup.numpy()
         array([[0.9935, 0.0718, 0.2256, 0.    , 0.    ],
                [0.    , 0.    , 0.5939, 0.357 , 0.4396],
@@ -539,13 +526,6 @@ def scatter(inp: Tensor, axis: int, index: Tensor, source: Tensor) -> Tensor:
 
     if input_dims != index_dims or input_dims != source_dims:
         raise ValueError("The input, source and index tensor must have same dimensions")
-
-    if axis < 0 or axis >= input_dims:
-        raise ValueError(
-            "Index axis {} is output of bounds, should in range [0 {})".format(
-                axis, input_dims
-            )
-        )
 
     for i in range(source_dims):
         if source_shape[i] > input_shape[i]:
@@ -792,6 +772,8 @@ def flatten(inp: Tensor, start_axis: int = 0, end_axis: int = -1) -> Tensor:
         >>> out.numpy().shape
         (2, 2, 9)
     """
+    if start_axis < 0:
+        start_axis += len(inp.shape)
     target_shape = tuple(inp.shape[i] for i in range(start_axis)) + (-1,)
     if end_axis != -1:
         target_shape += (*inp.shape[end_axis + 1 :],)
@@ -1158,6 +1140,5 @@ def cumsum(inp: Tensor, axis: int):
          [ 4  9 15]], dtype=int32, device=xpux:0)
     """
     assert isinstance(inp, Tensor), "input of cumsum must be type of Tensor"
-    assert axis >= 0 and axis < inp.ndim, "input axis {} out of bound".format(axis)
     op = builtin.Cumsum(axis=axis, exclusive=False, reverse=False)
     return apply(op, inp)[0]

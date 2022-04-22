@@ -1558,7 +1558,7 @@ def one_hot(inp: Tensor, num_classes: int) -> Tensor:
     )
     ones_tensor = ones(list(inp.shape) + [1], dtype=inp.dtype, device=inp.device)
 
-    op = builtin.IndexingSetOneHot(axis=inp.ndim)
+    op = builtin.IndexingSetOneHot(axis=inp.ndim, ndim=inp.ndim)
     (result,) = apply(op, zeros_tensor, inp, ones_tensor)
     return result
 
@@ -1609,7 +1609,7 @@ def indexing_one_hot(
         array([1.], dtype=float32)
     """
     assert isinstance(src, Tensor), "src must be of Tensor type"
-    op = builtin.IndexingOneHot(axis=axis)
+    op = builtin.IndexingOneHot(axis=axis, ndim=src.ndim)
     index = convert_single_value(index, dtype="int32", device=src.device)
     (result,) = apply(op, src, index)
     if not keepdims:
