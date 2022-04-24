@@ -92,6 +92,7 @@ INST(dt_float16, half4);
 INST(dt_bfloat16, bhalf4);
 INST(dt_int32, int4);
 INST(dt_int16, short4);
+INST(dt_uint16, ushort4);
 INST(dt_bool, uchar4);
 #undef as_raw
 #define as_raw(x) x.as_int8()

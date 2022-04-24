@@ -210,6 +210,7 @@ typename ctype_enable_if<ctype>::type DTypeScalar::set_retain_dtype(ctype val) {
         MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
         MEGDNN_FOREACH_QUANTIZED_DTYPE(cb)
         cb(dt_bool);
+        cb(dt_uint16);
 #undef cb
         default:
             mgb_throw(ConversionError, "can not assign to dtype %s", m_dtype.name());

@@ -19,7 +19,8 @@ using namespace test;
 TEST_F(CUDA, TYPE_CVT) {
     UniformFloatRNG init(0, 20);
     std::vector<DType> dtypes = {dtype::Float32(), dtype::Float16(), dtype::Int32(),
-                                 dtype::Int16(),   dtype::Int8(),    dtype::Uint8()};
+                                 dtype::Int16(),   dtype::Int8(),    dtype::Uint8(),
+                                 dtype::Uint16()};
     for (auto sdtype : dtypes)
         for (auto ddtype : dtypes) {
             TensorLayout src({10, 10}, sdtype), dst({10, 10}, ddtype);

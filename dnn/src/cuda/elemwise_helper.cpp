@@ -148,6 +148,9 @@ INST_FOR_CTYPE
 #define ct dt_int16
 INST_FOR_CTYPE
 #undef ct
+#define ct dt_uint16
+INST_FOR_CTYPE
+#undef ct
 #define ct dt_quint8
 INST_FOR_CTYPE
 #undef ct
@@ -199,6 +202,9 @@ INST_FOR_CTYPE
 INST_FOR_CTYPE
 #undef ct
 #define ct dt_int16
+INST_FOR_CTYPE
+#undef ct
+#define ct dt_uint16
 INST_FOR_CTYPE
 #undef ct
 #define ct dt_quint8

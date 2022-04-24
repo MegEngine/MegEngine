@@ -12,6 +12,8 @@
 #include "./opr_impl.h"
 #include "./kern.cuh"
 
+#include "megdnn/dtype.h"
+#include "src/common/utils.cuh"
 #include "src/cuda/utils.cuh"
 #include "src/cuda/utils.h"
 
@@ -87,10 +89,9 @@ void exec_src_normal(const TensorND& dst, const TensorND& src, cudaStream_t stre
         return;                                                    \
     }
             MEGDNN_FOREACH_COMPUTING_DTYPE(cb);
-            cb(::megdnn::dtype::Bool);
+            cb(::megdnn::dtype::Bool) cb(::megdnn::dtype::Uint16)
 #undef cb
-            default:
-                megdnn_assert_internal(0);
+                    default : megdnn_assert_internal(0);
         }
     } else if (!is_dst_lowbit) {
         switch (dst.layout.dtype.enumv()) {
@@ -138,7 +139,7 @@ void TypeCvtImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
         return;                                 \
     }
             MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
-            cb(::megdnn::dtype::Bool)
+            cb(::megdnn::dtype::Bool) cb(::megdnn::dtype::Uint16)
 #undef cb
                     default : megdnn_assert_internal(0);
         }
