@@ -20,6 +20,10 @@
 #include "megbrain/graph.h"
 #include "megbrain/imperative/physical_tensor.h"
 
+#if MEGDNN_WITH_CUDA
+#include "cuda_sm_gen.h"
+#endif
+
 namespace py = pybind11;
 using namespace mgb;
 using namespace imperative;
@@ -248,7 +252,11 @@ void init_common(py::module m) {
     m.def("get_device_prop", &CompNode::get_device_prop);
 
     m.def("get_supported_sm_versions", []() {
+#if MEGDNN_WITH_CUDA
         static const char* mge_gen_code = MGE_CUDA_GENCODE;
+#else
+        static const char* mge_gen_code = "-1";
+#endif
         return mge_gen_code;
     });
 

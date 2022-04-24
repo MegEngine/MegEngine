@@ -1224,9 +1224,23 @@ execute_process(
   OUTPUT_STRIP_TRAILING_WHITESPACE)
 
 # Write out megbrain_build_config.h It defines macros needed by both megbrain and dnn
+# please don't put the configuration that is easy to change at
+# megbrain_build_config.h.in for example cuda_sm_gen.h.in and git_full_hash_header.h.in,
+# which will lead to CMake build dirty file issue
 configure_file(src/megbrain_build_config.h.in
                ${CMAKE_CURRENT_BINARY_DIR}/genfiles/megbrain_build_config.h)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/genfiles/megbrain_build_config.h
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+if(MGE_WITH_CUDA)
+  configure_file(src/cuda_sm_gen.h.in
+                 ${CMAKE_CURRENT_BINARY_DIR}/genfiles/cuda_sm_gen.h)
+  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/genfiles/cuda_sm_gen.h
+          DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+endif()
+
+configure_file(src/git_full_hash_header.h.in
+               ${CMAKE_CURRENT_BINARY_DIR}/genfiles/git_full_hash_header.h)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/genfiles/git_full_hash_header.h
         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
 add_subdirectory(dnn)
