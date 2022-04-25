@@ -119,6 +119,75 @@ MGB_IMPL_OPR_GRAD(ArgsortForward) {
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(ArgsortBackward);
 MEGDNN_OPR_INIT3(ArgsortBackward, "argsort_bwd", 2, false)
 
+/* ================= Cumprod =================  */
+
+MGB_DYN_TYPE_OBJ_FINAL_IMPL(Cumprod);
+
+Cumprod::Cumprod(VarNode* opr, const Param& param, const OperatorNodeConfig& config)
+        : Super{opr->owner_graph(), config, "Cumprod", {opr}} {
+    init_megdnn_opr(*this, param);
+    add_input({opr}, AddInputSortType::CUR_ADDED);
+}
+
+#if MGB_ENABLE_GRAD
+MGB_IMPL_OPR_GRAD(Cumprod) {
+    mgb_assert(out_grad[0] && !out_grad[1]);
+    auto x = SymbolVar{opr.input(0)}, y = SymbolVar{opr.output(0)},
+         grad = SymbolVar{out_grad[0]};
+    auto prod_param = opr.param();
+    Cumsum::Param reversed_param;
+    reversed_param.axis = prod_param.axis;
+    reversed_param.exclusive = prod_param.exclusive;
+    reversed_param.reverse = !prod_param.reverse;
+
+    auto w = y * grad;
+    return Elemwise::make(
+                   {Cumsum::make(w, reversed_param), x}, Elemwise::Mode::SAFE_DIV)
+            .node();
+}
+#endif
+
+SymbolVar Cumprod::make(
+        SymbolVar opr, const Param& param, const OperatorNodeConfig& config) {
+    return opr.insert_single_output_opr<Cumprod>(opr.node(), param, config);
+}
+
+void Cumprod::scn_do_execute() {
+    megdnn_opr()->exec(
+            input(0)->dev_tensor().as_megdnn(), output(0)->dev_tensor().as_megdnn(),
+            intl::get_megdnn_workspace_from_var(output().back()));
+}
+
+void Cumprod::add_input_layout_constraint() {
+    input(0)->add_layout_constraint_contiguous();
+}
+
+void Cumprod::init_output_static_infer_desc() {
+    using namespace cg::static_infer;
+    auto infer_shape = [](TensorShape& dest, const InpVal& iv) {
+        auto ishp = iv.val.at(0).shape();
+        dest = ishp;
+        return true;
+    };
+    owner_graph()->static_infer_manager().register_shape_infer(
+            output(0), {SourceType::DEP, {{input(0), DepType::SHAPE}}, infer_shape});
+    auto infer_workspace = [this](TensorShape& dest, const InpVal& iv) {
+        auto dtype = input(0)->dtype();
+        auto ishp = iv.val.at(0).shape();
+        TensorLayout ily(ishp, dtype);
+        Param real_param = param();
+        if (real_param.axis < 0)
+            real_param.axis += ishp.ndim;
+        megdnn_opr()->param() = real_param;
+        dest.ndim = 1;
+        dest[0] = megdnn_opr()->get_workspace_in_bytes(ily, ily);
+        return true;
+    };
+    owner_graph()->static_infer_manager().register_shape_infer(
+            output(1),
+            {SourceType::DEP, {{input(0), DepType::SHAPE}}, infer_workspace});
+}
+
 /* ================= Cumsum =================  */
 
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(Cumsum);

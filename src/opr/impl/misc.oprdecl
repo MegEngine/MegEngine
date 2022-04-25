@@ -42,6 +42,16 @@ decl_opr('Argsort',
          'performed. Two vars are returned: the sorted array, and the '
          'indices. ')
 
+decl_opr('Cumprod',
+         inputs=['src'], params='Cumprod',
+         body=[
+             'if param.axis == (1<<31)-1:',
+             '    all_inputs[0] = all_inputs[0].flatten()',
+             '    param.axis = 0'
+         ],
+         desc='Return the cumulative product of the elements along a given axis.'
+         '  If axis is INT_MAX, compute on flattened input.', version=1)
+
 decl_opr('Cumsum',
          inputs=['src'], params='Cumsum',
          body=[

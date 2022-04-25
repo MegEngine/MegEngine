@@ -123,6 +123,7 @@ union OperatorParam {
     param.LSTM = 89,
     param.Softmax = 90,
     param.Diag = 91,
+    param.Cumprod = 92,
 }
 
 table Operator {

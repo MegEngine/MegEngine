@@ -5,6 +5,8 @@
 #include "src/naive/elemwise/kern_caller.h"
 #include "src/naive/handle.h"
 
+#include <iostream>
+
 #include "midout.h"
 MIDOUT_DECL(megdnn_naive_elemwise)
 

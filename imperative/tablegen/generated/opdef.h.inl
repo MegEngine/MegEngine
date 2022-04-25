@@ -567,6 +567,21 @@ public:
     }
 };
 
+class Cumprod : public OpDefImplBase<Cumprod> {
+    MGB_DYN_TYPE_OBJ_FINAL_DECL;
+
+public:
+    int32_t axis = 2147483647;
+    bool exclusive = true;
+    bool reverse = false;
+    Cumprod() = default;
+    Cumprod(int32_t axis_, bool exclusive_, bool reverse_, std::string scope_ = {}): axis(axis_), exclusive(exclusive_), reverse(reverse_) { set_scope(scope_); }
+    Cumprod(::megdnn::param::Cumprod packed_param_0): axis(packed_param_0.axis), exclusive(packed_param_0.exclusive), reverse(packed_param_0.reverse) {}
+    ::megdnn::param::Cumprod param() const {
+        return {axis, exclusive, reverse};
+    }
+};
+
 class Cumsum : public OpDefImplBase<Cumsum> {
     MGB_DYN_TYPE_OBJ_FINAL_DECL;
 
@@ -780,6 +795,29 @@ case Elemwise::Mode::SILU_GRAD: return "SILU_GRAD";
 case Elemwise::Mode::GELU: return "GELU";
 case Elemwise::Mode::GELU_GRAD: return "GELU_GRAD";
 case Elemwise::Mode::COND_LT_MOV: return "COND_LT_MOV";
+case Elemwise::Mode::SINH: return "SINH";
+case Elemwise::Mode::COSH: return "COSH";
+case Elemwise::Mode::ASINH: return "ASINH";
+case Elemwise::Mode::ACOSH: return "ACOSH";
+case Elemwise::Mode::ATANH: return "ATANH";
+case Elemwise::Mode::TAN: return "TAN";
+case Elemwise::Mode::ASINH_GRAD: return "ASINH_GRAD";
+case Elemwise::Mode::ACOSH_GRAD: return "ACOSH_GRAD";
+case Elemwise::Mode::ATANH_GRAD: return "ATANH_GRAD";
+case Elemwise::Mode::PRELU: return "PRELU";
+case Elemwise::Mode::CLIP: return "CLIP";
+case Elemwise::Mode::PRELU_GRAD: return "PRELU_GRAD";
+case Elemwise::Mode::SOFTPLUS: return "SOFTPLUS";
+case Elemwise::Mode::SOFTPLUS_GRAD: return "SOFTPLUS_GRAD";
+case Elemwise::Mode::RELU6: return "RELU6";
+case Elemwise::Mode::RELU6_GRAD: return "RELU6_GRAD";
+case Elemwise::Mode::HSIGMOID: return "HSIGMOID";
+case Elemwise::Mode::HSIGMOID_GRAD: return "HSIGMOID_GRAD";
+case Elemwise::Mode::LOGSIGMOID: return "LOGSIGMOID";
+case Elemwise::Mode::SQRT: return "SQRT";
+case Elemwise::Mode::SQUARE: return "SQUARE";
+case Elemwise::Mode::SIGN: return "SIGN";
+case Elemwise::Mode::SAFE_DIV: return "SAFE_DIV";
 case Elemwise::Mode::NEQ: return "NEQ";
 case Elemwise::Mode::ISNAN: return "ISNAN";
 case Elemwise::Mode::ISINF: return "ISINF";

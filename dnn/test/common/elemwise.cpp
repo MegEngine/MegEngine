@@ -815,7 +815,7 @@ DEF_TEST(all_modes) {
                 checker.set_rng(0, &abslt1_rng_f32);
             } else if (
                     mode == Mode::MOD || mode == Mode::TRUE_DIV ||
-                    mode == Mode::FLOOR_DIV) {
+                    mode == Mode::FLOOR_DIV || mode == Mode::SAFE_DIV) {
                 if (dtype.category() == DTypeCategory::INT) {
                     checker.set_rng(0, &default_rng_i32);
                     checker.set_rng(1, &nonzero_rng_i32);

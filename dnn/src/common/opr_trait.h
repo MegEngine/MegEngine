@@ -62,6 +62,7 @@ DEF(BatchedMatrixMulForward, 3, true, true);
 DEF(MatrixInverse, 2, true, true);
 DEF(SVDForward, 4, true, true);
 DEF(ReduceForward, 2, true, true);
+DEF(CumprodForward, 2, true, true);
 DEF(CumsumForward, 2, true, true);
 DEF(ArgmaxForward, 2, true, true);
 DEF(ArgminForward, 2, true, true);

@@ -47,6 +47,7 @@ DEF_TRAIT(PRELU, (x > 0) ? x : (x* y))
 #define _ALLOW_INT false
 DEF_TRAIT(POW, std::pow(x, y))
 DEF_TRAIT(TRUE_DIV, x / y)
+DEF_TRAIT(SAFE_DIV, y != 0 ? x / y : 0)
 DEF_TRAIT(LOG_SUM_EXP, do_log_sum_exp(x, y))
 DEF_TRAIT(FUSE_ADD_SIGMOID, 1 / (1 + std::exp(-(x + y))))
 DEF_TRAIT(FUSE_ADD_TANH, std::tanh(x + y))

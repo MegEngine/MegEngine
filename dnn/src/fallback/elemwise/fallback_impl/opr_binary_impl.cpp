@@ -266,6 +266,7 @@ INST(Mode::ATANH_GRAD);
 INST(Mode::SOFTPLUS_GRAD);
 INST(Mode::RELU6_GRAD);
 INST(Mode::HSIGMOID_GRAD);
+INST(Mode::SAFE_DIV);
 #undef INST
 }  // namespace fallback
 }  // namespace megdnn

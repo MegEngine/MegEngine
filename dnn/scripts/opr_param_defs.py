@@ -443,9 +443,10 @@ pdef('Elemwise').add_enum(
     Doc('SQRT = 80', 'unary: x^(1/2)'),
     Doc('SQUARE = 81', 'unary: x^2'),
     Doc('SIGN = 82', 'unary: sgn(x)'),
-    Doc('NEQ = 83', 'binary: x != y'),
-    Doc('ISNAN = 84', 'unary: isnan(x)'),
-    Doc('ISINF = 85', 'unary: isinf(x)'),
+    Doc('SAFE_DIV = 83', 'safe div: x / y'),
+    Doc('NEQ = 84', 'binary: x != y'),
+    Doc('ISNAN = 85', 'unary: isnan(x)'),
+    Doc('ISINF = 86', 'unary: isinf(x)'),
 )
 
 pdef('ElemwiseMultiType').add_enum(
@@ -737,6 +738,20 @@ Currently, ```DEFAULT``` mode means:
  add_fields('bool',
           Doc('reverse',
               'whether the cumsum is forward or backward'),
+          'false'))
+
+(pdef('Cumprod', 'calculate accumulated product along given axis').
+ add_fields('int32',
+          Doc('axis',
+              'axis along which cumprod is performed, default with INT_MAX'),
+          (1<<31)-1).
+ add_fields('bool',
+          Doc('exclusive',
+              'whether the current element is taken into account'),
+          'true').
+ add_fields('bool',
+          Doc('reverse',
+              'whether the cumprod is forward or backward'),
           'false'))
 
 (pdef('CondTake').

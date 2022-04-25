@@ -242,6 +242,7 @@ const ModeTrait& ModeTrait::from_mode(Mode mode) {
         CB_MODE(Mode::SQRT);
         CB_MODE(Mode::SQUARE);
         CB_MODE(Mode::SIGN);
+        CB_MODE(Mode::SAFE_DIV);
         default:
             megdnn_assert(
                     0,

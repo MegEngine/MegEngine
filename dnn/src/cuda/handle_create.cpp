@@ -16,6 +16,7 @@
 #include "src/cuda/convolution3d/opr_impl.h"
 #include "src/cuda/convpooling/opr_impl.h"
 #include "src/cuda/correlation/opr_impl.h"
+#include "src/cuda/cumprod/opr_impl.h"
 #include "src/cuda/cumsum/opr_impl.h"
 #include "src/cuda/cvt_color/opr_impl.h"
 #include "src/cuda/dct/opr_impl.h"
@@ -116,6 +117,7 @@ MEGDNN_SPECIALIZE_CREATE_OPERATOR(BatchedMatrixMulForward);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(SVDForward);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(ReduceForward);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(CondTake);
+MEGDNN_SPECIALIZE_CREATE_OPERATOR(CumprodForward);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(CumsumForward);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(ArgmaxForward);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(ArgminForward);

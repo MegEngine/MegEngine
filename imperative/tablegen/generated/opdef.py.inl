@@ -678,6 +678,14 @@ CorrelationInst
     .def_readwrite("pad_size", &Correlation::pad_size)
     .def_readwrite("is_multiply", &Correlation::is_multiply);
 
+py::class_<Cumprod, std::shared_ptr<Cumprod>, OpDef> CumprodInst(m, "Cumprod");
+
+CumprodInst
+    .def(py::init<int32_t, bool, bool, std::string>(), py::arg("axis") = 2147483647, py::arg("exclusive") = true, py::arg("reverse") = false, py::arg("scope") = {})
+    .def_readwrite("axis", &Cumprod::axis)
+    .def_readwrite("exclusive", &Cumprod::exclusive)
+    .def_readwrite("reverse", &Cumprod::reverse);
+
 py::class_<Cumsum, std::shared_ptr<Cumsum>, OpDef> CumsumInst(m, "Cumsum");
 
 CumsumInst
@@ -893,6 +901,29 @@ py::enum_<Elemwise::Mode>(ElemwiseInst, "Mode")
     .value("GELU", Elemwise::Mode::GELU)
     .value("GELU_GRAD", Elemwise::Mode::GELU_GRAD)
     .value("COND_LT_MOV", Elemwise::Mode::COND_LT_MOV)
+    .value("SINH", Elemwise::Mode::SINH)
+    .value("COSH", Elemwise::Mode::COSH)
+    .value("ASINH", Elemwise::Mode::ASINH)
+    .value("ACOSH", Elemwise::Mode::ACOSH)
+    .value("ATANH", Elemwise::Mode::ATANH)
+    .value("TAN", Elemwise::Mode::TAN)
+    .value("ASINH_GRAD", Elemwise::Mode::ASINH_GRAD)
+    .value("ACOSH_GRAD", Elemwise::Mode::ACOSH_GRAD)
+    .value("ATANH_GRAD", Elemwise::Mode::ATANH_GRAD)
+    .value("PRELU", Elemwise::Mode::PRELU)
+    .value("CLIP", Elemwise::Mode::CLIP)
+    .value("PRELU_GRAD", Elemwise::Mode::PRELU_GRAD)
+    .value("SOFTPLUS", Elemwise::Mode::SOFTPLUS)
+    .value("SOFTPLUS_GRAD", Elemwise::Mode::SOFTPLUS_GRAD)
+    .value("RELU6", Elemwise::Mode::RELU6)
+    .value("RELU6_GRAD", Elemwise::Mode::RELU6_GRAD)
+    .value("HSIGMOID", Elemwise::Mode::HSIGMOID)
+    .value("HSIGMOID_GRAD", Elemwise::Mode::HSIGMOID_GRAD)
+    .value("LOGSIGMOID", Elemwise::Mode::LOGSIGMOID)
+    .value("SQRT", Elemwise::Mode::SQRT)
+    .value("SQUARE", Elemwise::Mode::SQUARE)
+    .value("SIGN", Elemwise::Mode::SIGN)
+    .value("SAFE_DIV", Elemwise::Mode::SAFE_DIV)
     .value("NEQ", Elemwise::Mode::NEQ)
     .value("ISNAN", Elemwise::Mode::ISNAN)
     .value("ISINF", Elemwise::Mode::ISINF)
@@ -959,6 +990,29 @@ py::enum_<Elemwise::Mode>(ElemwiseInst, "Mode")
         if (str == "GELU") return Elemwise::Mode::GELU;
         if (str == "GELU_GRAD") return Elemwise::Mode::GELU_GRAD;
         if (str == "COND_LT_MOV") return Elemwise::Mode::COND_LT_MOV;
+        if (str == "SINH") return Elemwise::Mode::SINH;
+        if (str == "COSH") return Elemwise::Mode::COSH;
+        if (str == "ASINH") return Elemwise::Mode::ASINH;
+        if (str == "ACOSH") return Elemwise::Mode::ACOSH;
+        if (str == "ATANH") return Elemwise::Mode::ATANH;
+        if (str == "TAN") return Elemwise::Mode::TAN;
+        if (str == "ASINH_GRAD") return Elemwise::Mode::ASINH_GRAD;
+        if (str == "ACOSH_GRAD") return Elemwise::Mode::ACOSH_GRAD;
+        if (str == "ATANH_GRAD") return Elemwise::Mode::ATANH_GRAD;
+        if (str == "PRELU") return Elemwise::Mode::PRELU;
+        if (str == "CLIP") return Elemwise::Mode::CLIP;
+        if (str == "PRELU_GRAD") return Elemwise::Mode::PRELU_GRAD;
+        if (str == "SOFTPLUS") return Elemwise::Mode::SOFTPLUS;
+        if (str == "SOFTPLUS_GRAD") return Elemwise::Mode::SOFTPLUS_GRAD;
+        if (str == "RELU6") return Elemwise::Mode::RELU6;
+        if (str == "RELU6_GRAD") return Elemwise::Mode::RELU6_GRAD;
+        if (str == "HSIGMOID") return Elemwise::Mode::HSIGMOID;
+        if (str == "HSIGMOID_GRAD") return Elemwise::Mode::HSIGMOID_GRAD;
+        if (str == "LOGSIGMOID") return Elemwise::Mode::LOGSIGMOID;
+        if (str == "SQRT") return Elemwise::Mode::SQRT;
+        if (str == "SQUARE") return Elemwise::Mode::SQUARE;
+        if (str == "SIGN") return Elemwise::Mode::SIGN;
+        if (str == "SAFE_DIV") return Elemwise::Mode::SAFE_DIV;
         if (str == "NEQ") return Elemwise::Mode::NEQ;
         if (str == "ISNAN") return Elemwise::Mode::ISNAN;
         if (str == "ISINF") return Elemwise::Mode::ISINF;

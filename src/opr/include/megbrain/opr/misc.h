@@ -76,6 +76,25 @@ public:
     }
 };
 
+//! cumulative product along given axis
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(
+        Cumprod,
+        cg::SingleCNOperatorNodeBaseT<mixin::MegDNNOprHolderImpl<megdnn::Cumprod>>) // {
+    void add_input_layout_constraint() override;
+
+public:
+    MGE_WIN_DECLSPEC_FUC Cumprod(
+            VarNode* src, const Param& param, const OperatorNodeConfig& config);
+
+    // for serialization
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
+            SymbolVar opr, const Param& param, const OperatorNodeConfig& config = {});
+
+protected:
+    void scn_do_execute() override;
+    void init_output_static_infer_desc() override;
+};
+
 //! cumulative sum along given axis
 MGB_DEFINE_OPR_CLASS_WITH_EXPORT(
         Cumsum,
