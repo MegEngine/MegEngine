@@ -105,6 +105,62 @@ TEST_F(CUDA, BATCHED_MATRIX_MUL_F32_BRUTE_FORCE_PART4) {
             matrix_mul::get_batched_matmul_args_mask(3));
 }
 
+TEST_F(CUDA, BATCHED_MATRIX_MUL_F32_NAIVE_PART0) {
+    matrix_mul::check_batched_matrix_mul(
+            dtype::Float32{}, dtype::Float32{}, {}, handle_cuda(),
+            ExecutionPolicyAlgoName{"NAIVE_BMM"}, 1e-5,
+            matrix_mul::get_batched_matmul_args_mask(0));
+}
+
+TEST_F(CUDA, BATCHED_MATRIX_MUL_F32_NAIVE_PART1) {
+    matrix_mul::check_batched_matrix_mul(
+            dtype::Float32{}, dtype::Float32{}, {}, handle_cuda(),
+            ExecutionPolicyAlgoName{"NAIVE_BMM"}, 1e-5,
+            matrix_mul::get_batched_matmul_args_mask(1));
+}
+
+TEST_F(CUDA, BATCHED_MATRIX_MUL_F32_NAIVE_PART2) {
+    matrix_mul::check_batched_matrix_mul(
+            dtype::Float32{}, dtype::Float32{}, {}, handle_cuda(),
+            ExecutionPolicyAlgoName{"NAIVE_BMM"}, 1e-5,
+            matrix_mul::get_batched_matmul_args_mask(2));
+}
+
+TEST_F(CUDA, BATCHED_MATRIX_MUL_F32_NAIVE_PART3) {
+    matrix_mul::check_batched_matrix_mul(
+            dtype::Float32{}, dtype::Float32{}, {}, handle_cuda(),
+            ExecutionPolicyAlgoName{"NAIVE_BMM"}, 1e-5,
+            matrix_mul::get_batched_matmul_args_mask(3));
+}
+
+TEST_F(CUDA, BATCHED_MATRIX_MUL_F16_NAIVE_PART0) {
+    matrix_mul::check_batched_matrix_mul(
+            dtype::Float16{}, dtype::Float16{}, {}, handle_cuda(),
+            ExecutionPolicyAlgoName{"NAIVE_BMM"}, 1e-5,
+            matrix_mul::get_batched_matmul_args_mask(0));
+}
+
+TEST_F(CUDA, BATCHED_MATRIX_MUL_F16_NAIVE_PART1) {
+    matrix_mul::check_batched_matrix_mul(
+            dtype::Float16{}, dtype::Float16{}, {}, handle_cuda(),
+            ExecutionPolicyAlgoName{"NAIVE_BMM"}, 1e-5,
+            matrix_mul::get_batched_matmul_args_mask(1));
+}
+
+TEST_F(CUDA, BATCHED_MATRIX_MUL_F16_NAIVE_PART2) {
+    matrix_mul::check_batched_matrix_mul(
+            dtype::Float16{}, dtype::Float16{}, {}, handle_cuda(),
+            ExecutionPolicyAlgoName{"NAIVE_BMM"}, 1e-5,
+            matrix_mul::get_batched_matmul_args_mask(2));
+}
+
+TEST_F(CUDA, BATCHED_MATRIX_MUL_F16_NAIVE_PART3) {
+    matrix_mul::check_batched_matrix_mul(
+            dtype::Float16{}, dtype::Float16{}, {}, handle_cuda(),
+            ExecutionPolicyAlgoName{"NAIVE_BMM"}, 1e-5,
+            matrix_mul::get_batched_matmul_args_mask(3));
+}
+
 TEST_F(CUDA, BATCHED_MATRIX_MUL_F16_PART1) {
     require_compute_capability(6, 0);
     matrix_mul::check_batched_matrix_mul(

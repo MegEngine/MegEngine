@@ -24,6 +24,7 @@ public:
         CUDA_CUBLAS,
         CUDA_CUBLASLT,
         CUDA_INT8X8X32,
+        CUDA_NAIVE_BMM,
     };
     using Mapper = std::unordered_map<AlgorithmDesc, AlgoBase*>;
 
@@ -94,6 +95,27 @@ public:
     std::vector<SearchItem> get_subopr_list(
             const TensorLayoutArray& layouts, const OperatorBase* opr) const override;
 };
+
+class BatchedMatrixMulForwardImpl::AlgoNaive final
+        : public BatchedMatrixMulForwardImpl::AlgoBase {
+    using Param = MatrixMulForward::Param;
+
+private:
+    WorkspaceBundle get_workspace_bundle();
+
+public:
+    bool is_available(const SizeArgs& args) const override;
+    size_t get_workspace_in_bytes(const SizeArgs& /*args*/) const override {
+        return 0;
+    };
+    void exec(const ExecArgs& args) const final;
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE | AlgoAttribute::NAIVE;
+    }
+    const char* name() const override { return "NAIVE_BMM"; }
+    MEGDNN_DECL_ALGO_TYPE(CUDA_NAIVE_BMM)
+};
+
 class BatchedMatrixMulForwardImpl::AlgoCublas final
         : public BatchedMatrixMulForwardImpl::AlgoBase {
 public:
@@ -148,6 +170,7 @@ public:
     AlgoInt8x8x32 int8x8x32;
     std::vector<AlgoBase*> all_algos;
     AlgoBruteForce brute_force;
+    AlgoNaive naive_bmm;
 
     const AlgoBase::Mapper& all_algos_map() const { return m_all_algos_map; }
 };

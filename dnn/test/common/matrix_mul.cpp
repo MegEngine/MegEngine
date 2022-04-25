@@ -266,19 +266,14 @@ void matrix_mul::check_matrix_mul(
         checker.set_param(param);
         if (format == param::MatrixMul::Format::DEFAULT) {
             if (batched) {
-                checker.execl(
-                        {TensorLayout{
-                                 {arg.b, A0, A1},
-                                 {A_batch_stride, A_stride, 1},
-                                 A_dtype},
-                         TensorLayout{
-                                 {arg.b, B0, B1},
-                                 {B_batch_stride, B_stride, 1},
-                                 B_dtype},
-                         TensorLayout{
-                                 {arg.b, m, n},
-                                 {C_batch_stride, C_stride, 1},
-                                 C_dtype}});
+                auto a_layout = TensorLayout{
+                        {arg.b, A0, A1}, {A_batch_stride, A_stride, 1}, A_dtype};
+                auto b_layout = TensorLayout{
+                        {arg.b, B0, B1}, {B_batch_stride, B_stride, 1}, B_dtype};
+                auto c_layout = TensorLayout{
+                        {arg.b, m, n}, {C_batch_stride, C_stride, 1}, C_dtype};
+                checker.execl({a_layout, b_layout, c_layout});
+
             } else {
                 checker.execl(
                         {TensorLayout{{A0, A1}, {A_stride, 1}, A_dtype},

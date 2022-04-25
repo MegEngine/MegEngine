@@ -10,6 +10,7 @@ public:
     BatchedMatrixMulForwardImpl(Handle* handle) : BatchedMatrixMul(handle) {}
 
     class AlgoBase;
+    class AlgoNaive;
     class AlgoBruteForce;
     class AlgoCublas;
 #if CUDA_VERSION >= 10010

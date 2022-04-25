@@ -45,6 +45,7 @@ BatchedMatrixMulForwardImpl::AlgoPack::AlgoPack() {
 #endif
     all_algos.push_back(&int8x8x32);
     all_algos.push_back(&brute_force);
+    all_algos.push_back(&naive_bmm);
 
     for (auto&& algo : all_algos) {
         m_all_algos_map.emplace(algo->info().desc, algo);
