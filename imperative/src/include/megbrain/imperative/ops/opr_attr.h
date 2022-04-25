@@ -12,6 +12,7 @@
 #pragma once
 
 #include "megbrain/imperative/op_def.h"
+#include "megbrain/opr/param_defs.h"
 
 namespace mgb {
 namespace imperative {
@@ -38,12 +39,16 @@ public:
 
     Type type;
     Param param;
+    megdnn::param::ExecutionPolicy policy;
     cg::OperatorNodeConfig config;
 
     OprAttr() = default;
     OprAttr(const Type& t) : type(t) {}
     OprAttr(const Type& t, const Param& p, const cg::OperatorNodeConfig& c)
             : type(t), param(p), config(c) {}
+    OprAttr(const Type& t, const Param& p, const megdnn::param::ExecutionPolicy ps,
+            const cg::OperatorNodeConfig& c)
+            : type(t), param(p), policy(ps), config(c) {}
 
     std::string repr() const;
 

@@ -59,7 +59,8 @@ size_t PoolingForward::get_workspace_size_bytes(
 MGB_IMPL_OPR_GRAD(PoolingForward) {
     mgb_assert(wrt_idx == 0);
     SymbolVar grad = PoolingBackward::make(
-            opr.input(0), opr.output(0), out_grad[0], opr.param());
+            opr.input(0), opr.output(0), out_grad[0], opr.param(),
+            opr.execution_policy());
     return grad.node();
 }
 #endif

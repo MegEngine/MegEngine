@@ -185,17 +185,21 @@ MGB_IMPL_OPR_GRAD(MatrixMul) {
     if (wrt_idx == 0) {
         // A * B = C, A' = C' * Bt
         if (opr.param().transposeA) {
-            grad = MatrixMul::make(i1, og, {opr.param().transposeB, true});
+            grad = MatrixMul::make(
+                    i1, og, {opr.param().transposeB, true}, opr.execution_policy());
         } else {
-            grad = MatrixMul::make(og, i1, {false, !opr.param().transposeB});
+            grad = MatrixMul::make(
+                    og, i1, {false, !opr.param().transposeB}, opr.execution_policy());
         }
     } else {
         mgb_assert(wrt_idx == 1);
         // A * B = C, B' = At * C'
         if (opr.param().transposeB) {
-            grad = MatrixMul::make(og, i0, {true, opr.param().transposeA});
+            grad = MatrixMul::make(
+                    og, i0, {true, opr.param().transposeA}, opr.execution_policy());
         } else {
-            grad = MatrixMul::make(i0, og, {!opr.param().transposeA, false});
+            grad = MatrixMul::make(
+                    i0, og, {!opr.param().transposeA, false}, opr.execution_policy());
         }
     }
     return grad.node();
@@ -358,17 +362,21 @@ MGB_IMPL_OPR_GRAD(BatchedMatrixMul) {
     if (wrt_idx == 0) {
         // A * B = C, A' = C' * Bt
         if (opr.param().transposeA) {
-            grad = BatchedMatrixMul::make(i1, og, {opr.param().transposeB, true});
+            grad = BatchedMatrixMul::make(
+                    i1, og, {opr.param().transposeB, true}, opr.execution_policy());
         } else {
-            grad = BatchedMatrixMul::make(og, i1, {false, !opr.param().transposeB});
+            grad = BatchedMatrixMul::make(
+                    og, i1, {false, !opr.param().transposeB}, opr.execution_policy());
         }
     } else {
         mgb_assert(wrt_idx == 1);
         // A * B = C, B' = At * C'
         if (opr.param().transposeB) {
-            grad = BatchedMatrixMul::make(og, i0, {true, opr.param().transposeA});
+            grad = BatchedMatrixMul::make(
+                    og, i0, {true, opr.param().transposeA}, opr.execution_policy());
         } else {
-            grad = BatchedMatrixMul::make(i0, og, {!opr.param().transposeA, false});
+            grad = BatchedMatrixMul::make(
+                    i0, og, {!opr.param().transposeA, false}, opr.execution_policy());
         }
     }
     return grad.node();

@@ -10,6 +10,10 @@
  */
 
 #include "megbrain/imperative/ops/opr_attr.h"
+#include "megbrain/opr/blas.h"
+#include "megbrain/opr/dnn/convolution.h"
+#include "megbrain/opr/dnn/pooling.h"
+#include "megbrain/rdnn/profiler.h"
 #include "megbrain/serialization/opr_load_dump.h"
 
 #include "../op_trait.h"
@@ -65,6 +69,42 @@ public:
     const serialization::GraphDumpConfig& config() const { mgb_assert(0); }
 };
 
+#define cb(FASTRUN_OPR)                                                           \
+    megdnn::param::ExecutionPolicy get_strategy_##FASTRUN_OPR(                    \
+            cg::OperatorNodeBase* opr) {                                          \
+        auto policy =                                                             \
+                opr->cast_final<opr::FASTRUN_OPR>().execution_policy_transient(); \
+        return policy;                                                            \
+    }                                                                             \
+    void set_strategy_##FASTRUN_OPR(                                              \
+            cg::OperatorNodeBase* opr, megdnn::param::ExecutionPolicy policy) {   \
+        auto&& p = opr->cast_final<opr::FASTRUN_OPR>();                           \
+        p.set_execution_policy(policy);                                           \
+    }
+
+DNN_FOREACH_FASTRUN_OPR(cb)
+#undef cb
+
+typedef thin_function<megdnn::param::ExecutionPolicy(cg::OperatorNodeBase*)> get_func;
+typedef thin_function<void(cg::OperatorNodeBase*, megdnn::param::ExecutionPolicy)>
+        set_func;
+
+static const mgb::thin_hash_table::ThinHashMap<
+        mgb::Typeinfo*, std::pair<get_func, set_func>>&
+get_type2policy() {
+    static mgb::thin_hash_table::ThinHashMap<
+            mgb::Typeinfo*, std::pair<get_func, set_func>>
+            sl_type2policy;
+    static std::once_flag flag;
+    std::call_once(flag, [&]() {
+#define cb(FASTRUN_OPR)                            \
+    sl_type2policy[opr::FASTRUN_OPR::typeinfo()] = \
+            std::make_pair(get_strategy_##FASTRUN_OPR, set_strategy_##FASTRUN_OPR);
+        DNN_FOREACH_FASTRUN_OPR(cb)
+    });
+    return std::as_const(sl_type2policy);
+}
+
 VarNodeArray apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
     auto&& attr = def.cast_final_safe<OprAttr>();
     auto config = attr.config;
@@ -73,7 +113,12 @@ VarNodeArray apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
     auto registry = serialization::OprRegistry::find_by_name(attr.type);
     mgb_assert(registry, "operator %s not found", attr.type.c_str());
     OprParamsLoadContext ctx{attr.param, inputs[0]->owner_graph()};
-    return registry->loader(ctx, inputs, config).usable_output();
+    auto opr_with_accessor = registry->loader(ctx, inputs, config);
+    auto&& opr = opr_with_accessor.opr();
+    if (get_type2policy().find(opr->dyn_typeinfo()) != get_type2policy().end()) {
+        get_type2policy().at(opr->dyn_typeinfo()).second(opr, attr.policy);
+    }
+    return opr_with_accessor.usable_output();
 }
 
 std::shared_ptr<OpDef> make_from_op_node(cg::OperatorNodeBase* opr) {
@@ -84,7 +129,11 @@ std::shared_ptr<OpDef> make_from_op_node(cg::OperatorNodeBase* opr) {
             registry->dumper, "operator %s cannot be serialized",
             opr->dyn_typeinfo()->name);
     registry->dumper(ctx, *opr);
-    return OprAttr::make(registry->name, std::move(ctx.m_param), opr->config());
+    megdnn::param::ExecutionPolicy policy;
+    if (get_type2policy().find(opr->dyn_typeinfo()) != get_type2policy().end()) {
+        policy = get_type2policy().at(opr->dyn_typeinfo()).first(opr);
+    }
+    return OprAttr::make(registry->name, std::move(ctx.m_param), policy, opr->config());
 }
 
 std::vector<std::pair<const char*, std::string>> props(const OpDef& def) {
@@ -108,6 +157,8 @@ OP_TRAIT_REG(OprAttr, OprAttr)
 bool OprAttr::is_same_st(const Hashable& rhs_) const {
     auto&& rhs = static_cast<const OprAttr&>(rhs_);
     return type == rhs.type && param == rhs.param &&
+           policy.strategy == rhs.policy.strategy &&
+           policy.workspace_limit == rhs.policy.workspace_limit &&
            config.comp_node() == rhs.config.comp_node() &&
            config.output_dtype() == rhs.config.output_dtype();
 }
@@ -115,7 +166,12 @@ bool OprAttr::is_same_st(const Hashable& rhs_) const {
 size_t OprAttr::hash() const {
     return hash_pair_combine(
             hash_pair_combine(
-                    mgb::hash(type), mgb::hash(static_cast<std::vector<char>>(param))),
+                    hash_pair_combine(
+                            mgb::hash(type),
+                            mgb::hash(static_cast<std::vector<char>>(param))),
+                    hash_pair_combine(
+                            static_cast<size_t>(policy.strategy),
+                            policy.workspace_limit)),
             config.hash());
 }
 

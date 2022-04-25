@@ -157,6 +157,51 @@ TEST(TestImperative, BackwardGraphBasic) {
     }
 }
 
+TEST(TestImperative, ProfileBackward) {
+    auto cn = CompNode::load("xpux");
+    using Policy = megdnn::param::ExecutionPolicy;
+    using S = Policy::Strategy;
+    Policy policy;
+    policy.strategy = S::PROFILE;
+    {
+        megdnn::param::Convolution param;
+        auto op = std::shared_ptr<OpDef>(Convolution::make(param, policy));
+        LogicalTensorDesc inp_desc = {
+                TensorLayout({16, 3, 16, 16}, dtype::Float32()), cn};
+        LogicalTensorDesc weight_desc = {
+                TensorLayout({16, 3, 5, 5}, dtype::Float32()), cn};
+        auto bg = OpDef::make_backward_graph(
+                *op, {inp_desc, weight_desc}, {true, false}, {true});
+        auto&& bop = (bg.graph.exprs.at(0)).op;
+        auto&& attr = bop->cast_final_safe<OprAttr>();
+        // attr.type = ConvolutionBackwardDataV2
+        mgb_assert(attr.policy.strategy == S::PROFILE);
+    }
+    {
+        megdnn::param::Pooling param;
+        auto op = std::shared_ptr<OpDef>(Pooling::make(param, policy));
+        LogicalTensorDesc inp_desc = {
+                TensorLayout({16, 3, 16, 16}, dtype::Float32()), cn};
+        auto bg = OpDef::make_backward_graph(*op, {inp_desc}, {true}, {true});
+        auto&& bop = (bg.graph.exprs.at(0)).op;
+        auto&& attr = bop->cast_final_safe<OprAttr>();
+        // attr.type = PoolingBackwardV1
+        mgb_assert(attr.policy.strategy == S::PROFILE);
+    }
+    {
+        megdnn::param::MatrixMul param;
+        auto op = std::shared_ptr<OpDef>(MatrixMul::make(param, policy, 2, 2));
+        LogicalTensorDesc inp1_desc = {TensorLayout({12, 16}, dtype::Float32()), cn};
+        LogicalTensorDesc inp2_desc = {TensorLayout({16, 20}, dtype::Float32()), cn};
+        auto bg = OpDef::make_backward_graph(
+                *op, {inp1_desc, inp2_desc}, {true, false}, {true});
+        auto&& bop = (bg.graph.exprs.at(0)).op;
+        auto&& attr = bop->cast_final_safe<OprAttr>();
+        // attr.type = MatrixMulV2
+        mgb_assert(attr.policy.strategy == S::PROFILE);
+    }
+}
+
 TEST(TestImperative, BackwardGraphIdentity) {
     HostTensorGenerator<> gen;
     auto host_a = gen({42}), host_dc = gen({42});

@@ -621,6 +621,7 @@ def max_pool2d(
         pad_h=padding_h,
         pad_w=padding_w,
         mode="max",
+        strategy=get_execution_strategy(),
         format=conv_format,
     )
     (output,) = apply(op, inp)
@@ -665,6 +666,7 @@ def avg_pool2d(
         pad_h=padding_h,
         pad_w=padding_w,
         mode=mode,
+        strategy=get_execution_strategy(),
         format=conv_format,
     )
     (output,) = apply(op, inp)

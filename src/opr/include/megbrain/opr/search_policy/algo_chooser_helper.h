@@ -51,7 +51,7 @@ public:
      * Exception would be thrown if execution_policy() has been accessed,
      * since it would influence cache and many other decisions.
      */
-    void set_execution_policy(const ExecutionPolicy& policy);
+    MGE_WIN_DECLSPEC_FUC void set_execution_policy(const ExecutionPolicy& policy);
 
     /*!
      * \brief register a hook to implement custom algo chooser

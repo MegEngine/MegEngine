@@ -1493,7 +1493,7 @@ py::object _transpose_cpp(py::handle inp_hdl, py::handle args) {
 py::object _matmul_cpp(
         py::handle inp1, py::handle inp2, py::handle dim1, py::handle dim2,
         py::handle transpose_a, py::handle transpose_b, py::handle compute_mode,
-        py::handle profile, py::handle determistic) {
+        py::handle profile, py::handle deterministic) {
     ::megdnn::param::MatrixMul::ComputeMode mode =
             ::megdnn::param::MatrixMul::ComputeMode::DEFAULT;
     if (compute_mode.cast<std::string>().compare(std::string("float32")) == 0) {
@@ -1506,7 +1506,7 @@ py::object _matmul_cpp(
     } else {
         cstrategy |= ::megdnn::param::ExecutionPolicy::Strategy::HEURISTIC;
     }
-    if (determistic.cast<bool>()) {
+    if (deterministic.cast<bool>()) {
         cstrategy |= ::megdnn::param::ExecutionPolicy::Strategy::REPRODUCIBLE;
     }
     std::shared_ptr<OpDef> op = MatrixMul::make(
@@ -1523,7 +1523,7 @@ py::object _matmul_cpp(
 py::object _batched_matmul_cpp(
         py::handle inp1, py::handle inp2, py::handle dim1, py::handle dim2,
         py::handle transpose_a, py::handle transpose_b, py::handle compute_mode,
-        py::handle profile, py::handle determistic) {
+        py::handle profile, py::handle deterministic) {
     ::megdnn::param::MatrixMul::ComputeMode mode =
             ::megdnn::param::MatrixMul::ComputeMode::DEFAULT;
     if (compute_mode.cast<std::string>().compare(std::string("float32")) == 0) {
@@ -1536,7 +1536,7 @@ py::object _batched_matmul_cpp(
     } else {
         cstrategy |= ::megdnn::param::ExecutionPolicy::Strategy::HEURISTIC;
     }
-    if (determistic.cast<bool>()) {
+    if (deterministic.cast<bool>()) {
         cstrategy |= ::megdnn::param::ExecutionPolicy::Strategy::REPRODUCIBLE;
     }
     std::shared_ptr<OpDef> op = BatchedMatrixMul::make(

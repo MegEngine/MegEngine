@@ -26,7 +26,7 @@ namespace opr {
 /*!
  * \brief matrix_mul(trans0(opr0), trans1(opr1))
  */
-MGB_DEFINE_OPR_CLASS(
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(
         MatrixMul, intl::MegDNNOprWrapperFwd<megdnn::MatrixMul>,
         public mixin::AlgoChooserHelper) // {
 public:
@@ -57,7 +57,7 @@ private:
 /*!
  * \brief batched matrix multiplication on 3D inputs
  */
-MGB_DEFINE_OPR_CLASS(
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(
         BatchedMatrixMul, intl::MegDNNOprWrapperFwd<megdnn::BatchedMatrixMul>,
         public mixin::AlgoChooserHelper) // {
 public:

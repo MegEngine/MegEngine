@@ -70,15 +70,6 @@ def _matmul(
     maxdim = dim1 if dim1 > dim2 else dim2
     compute_mode = _config._get_actual_op_param(compute_mode, _config.__compute_mode)
 
-    Strategy = builtin.ops.MatrixMul.Strategy
-    strategy = Strategy(0)
-    if _config._benchmark_kernel:
-        strategy |= Strategy.PROFILE
-    else:
-        strategy |= Strategy.HEURISTIC
-    if _config._deterministic_kernel:
-        strategy |= Strategy.REPRODUCIBLE
-
     if dim1 == 1 and dim2 == 1:  # dispatch to Dot
         (result,) = apply(builtin.Dot(), inp1, inp2)
         return result

@@ -18,7 +18,7 @@
 namespace mgb {
 namespace opr {
 
-MGB_DEFINE_OPR_CLASS(
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(
         PoolingForward, intl::MegDNNOprWrapperFwd<megdnn::PoolingForward>,
         public mixin::AlgoChooserHelper) // {
 public:
@@ -37,7 +37,7 @@ public:
 };
 using Pooling = PoolingForward;
 
-MGB_DEFINE_OPR_CLASS(
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(
         PoolingBackward, intl::MegDNNOprWrapperBwd<megdnn::PoolingBackward>,
         public mixin::AlgoChooserHelper) // {
 public:
