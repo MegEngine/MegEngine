@@ -9,6 +9,7 @@
 import os
 
 from ..core import _config
+from ..core._imperative_rt.core2 import _clear_algorithm_cache
 from ..core.ops import builtin
 from ..logger import get_logger
 from ..utils.deprecation import deprecated
@@ -52,7 +53,6 @@ def set_execution_strategy(option):
             * "HEURISTIC": uses heuristic to choose the fastest algorithm.
             * "PROFILE": runs possible algorithms on a real device to find the best one.
             * "REPRODUCIBLE": uses algorithms that are reproducible.
-            * "OPTIMIZED": uses algorithms that are optimized.
 
     The default strategy is "HEURISTIC", these options can be combined to
     form a combination option, e.g. PROFILE_REPRODUCIBLE is a combination
@@ -70,22 +70,25 @@ def set_execution_strategy(option):
 
     It can also be set through the environment variable ``MEGENGINE_EXECUTION_STRATEGY``.
     """
-
+    _benchmark_kernel = False
+    _deterministic_kernel = False
     if isinstance(option, Strategy):
-        _config._benchmark_kernel = (
+        _benchmark_kernel = (
             True if option & _valid_string_option["PROFILE"] != Strategy(0) else False
         )
-        _config._deterministic_kernel = (
+        _deterministic_kernel = (
             True
             if option & _valid_string_option["REPRODUCIBLE"] != Strategy(0)
             else False
         )
+        if _benchmark_kernel != _config._benchmark_kernel:
+            _clear_algorithm_cache()
+        _config._benchmark_kernel = _benchmark_kernel
+        _config._deterministic_kernel = _deterministic_kernel
         return
 
     assert isinstance(option, str)
 
-    _config._benchmark_kernel = False
-    _config._deterministic_kernel = False
     for opt in option.split("_"):
         if not opt in _valid_string_option:
             raise ValueError(
@@ -93,10 +96,12 @@ def set_execution_strategy(option):
                     _valid_string_option.keys()
                 )
             )
-        _config._benchmark_kernel |= _valid_string_option[opt] == Strategy.PROFILE
-        _config._deterministic_kernel |= (
-            _valid_string_option[opt] == Strategy.REPRODUCIBLE
-        )
+        _benchmark_kernel |= _valid_string_option[opt] == Strategy.PROFILE
+        _deterministic_kernel |= _valid_string_option[opt] == Strategy.REPRODUCIBLE
+    if _benchmark_kernel != _config._benchmark_kernel:
+        _clear_algorithm_cache()
+    _config._benchmark_kernel = _benchmark_kernel
+    _config._deterministic_kernel = _deterministic_kernel
 
 
 @deprecated(version="1.3", reason="use get_execution_strategy() instead")
@@ -107,6 +112,3 @@ def get_conv_execution_strategy() -> str:
 @deprecated(version="1.3", reason="use set_execution_strategy() instead")
 def set_conv_execution_strategy(option: str):
     return set_execution_strategy(option)
-
-
-set_execution_strategy(os.getenv("MEGENGINE_EXECUTION_STRATEGY", "HEURISTIC"))

@@ -255,9 +255,8 @@ def test_conv_bias_int4():
     run(10, 36, 8, 46, 26, 2, 2, 2, 1, 1, 2, True, "relu")
 
 
-@pytest.mark.require_ngpu(1)
 @pytest.mark.skipif(
-    get_cuda_compute_capability(0) < 61,
+    get_device_count("gpu") > 0 and get_cuda_compute_capability(0) < 61,
     reason="does not support int8 when gpu compute capability less than 6.1",
 )
 def test_conv_transpose2d():

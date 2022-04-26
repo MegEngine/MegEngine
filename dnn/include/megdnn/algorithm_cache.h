@@ -71,7 +71,7 @@ public:
 
     MGE_WIN_DECLSPEC_FUC Result get(const Key& key);
 
-    void clear();
+    MGE_WIN_DECLSPEC_FUC void clear();
 
 private:
     struct Hash {

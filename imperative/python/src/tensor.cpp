@@ -26,6 +26,7 @@
 #include "megbrain/opr/io.h"
 #include "megbrain/plugin/profiler.h"
 #include "megbrain/utils/stats.h"
+#include "megdnn/algorithm_cache.h"
 
 #include "./common.h"
 #include "./grad.h"
@@ -1427,6 +1428,8 @@ void init_tensor(py::module m) {
     m.def("_set_amp_low_prec_dtype", [](std::string dtype_name) -> std::string {
         return set_amp_prec_dtype(false, dtype_name);
     });
+
+    m.def("_clear_algorithm_cache", [] { megdnn::AlgorithmCache::instance().clear(); });
 
     py::register_exception<TraceError>(m, "TraceError");
 }

@@ -5,6 +5,7 @@ import platform
 import numpy as np
 import pytest
 
+import megengine as mge
 import megengine.core.tensor.dtype as dtype
 import megengine.core.tensor.megbrain_graph as G
 import megengine.functional as F
@@ -17,10 +18,6 @@ from megengine.device import (
     get_cuda_compute_capability,
     get_device_count,
     is_cuda_available,
-)
-from megengine.functional.debug_param import (
-    get_execution_strategy,
-    set_execution_strategy,
 )
 from megengine.functional.external import tensorrt_runtime_opr
 from megengine.jit.tracing import trace
@@ -110,25 +107,30 @@ def test_matinv():
 
 
 @pytest.mark.parametrize(
-    "execution_strategy", ["HEURISTIC_REPRODUCIBLE", "PROFILE_REPRODUCIBLE"]
+    "benchmark_kernel, max_err", [(False, None), (True, 1e-5)],
 )
-def test_matmul(execution_strategy):
+def test_matmul(monkeypatch, benchmark_kernel, max_err):
+    if get_device_count("gpu") == 0 and benchmark_kernel:
+        return
+    monkeypatch.setenv("MGE_FASTRUN_CACHE_TYPE", "MEMORY")
+    old1, old2 = (
+        mge.config.benchmark_kernel,
+        mge.config.deterministic_kernel,
+    )
+    mge.config.benchmark_kernel = benchmark_kernel
+    mge.config.deterministic_kernel = True
+
     @trace(symbolic=True, capture_as_const=True)
     def fwd(data1, data2):
         return F.matmul(data1, data2)
-
-    old = get_execution_strategy()
-    set_execution_strategy(execution_strategy)
-
-    max_err = None
-    if execution_strategy == "PROFILE_REPRODUCIBLE":
-        max_err = 1e-5
 
     data1 = Tensor(np.random.random((32, 64)))
     data2 = Tensor(np.random.random((64, 16)))
     result = fwd(data1, data2)
     check_pygraph_dump(fwd, [data1, data2], [result], max_err=max_err)
-    set_execution_strategy(old)
+    mge.config.benchmark_kernel = old1
+    mge.config.deterministic_kernel = old2
+    monkeypatch.delenv("MGE_FASTRUN_CACHE_TYPE", raising=False)
 
 
 def test_batchmatmul():
@@ -290,9 +292,8 @@ def test_deformable_ps_roi_pooling():
     check_pygraph_dump(fwd, [inp, rois, trans], [result])
 
 
-@pytest.mark.require_ngpu(1)
 @pytest.mark.skipif(
-    get_cuda_compute_capability(0) < 61,
+    get_device_count("gpu") > 0 and get_cuda_compute_capability(0) < 61,
     reason="does not support int8 when gpu compute capability less than 6.1",
 )
 def test_convbias():

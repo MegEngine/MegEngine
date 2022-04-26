@@ -9,7 +9,7 @@
 import os
 from contextlib import contextmanager
 
-from ._imperative_rt.core2 import get_option, set_option
+from ._imperative_rt.core2 import _clear_algorithm_cache, get_option, set_option
 
 __compute_mode = "default"
 __conv_format = "default"
@@ -44,6 +44,9 @@ def benchmark_kernel(mod):
 @benchmark_kernel.setter
 def benchmark_kernel(mod, option: bool):
     global _benchmark_kernel
+    # try different strategy, then clear algorithm cache
+    if option != _benchmark_kernel:
+        _clear_algorithm_cache()
     _benchmark_kernel = option
 
 
