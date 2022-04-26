@@ -216,6 +216,57 @@ TEST(TestNetWork, BasicInplaceAndSingleThreadAffinity) {
     compare_lite_tensor<float>(output_tensor, result_mgb);
 }
 
+namespace {
+void test_multi_thread(bool multi_thread_compnode) {
+    Config config;
+    auto lite_tensor = get_input_data("./input_data.npy");
+    std::string model_path = "./shufflenet.mge";
+
+    size_t nr_threads = 2;
+    std::vector<std::thread::id> thread_ids(nr_threads);
+    auto runner = [&](size_t i) {
+        std::shared_ptr<Network> network = std::make_shared<Network>(config);
+        Runtime::set_cpu_inplace_mode(network);
+        if (multi_thread_compnode) {
+            Runtime::set_cpu_threads_number(network, 2);
+        }
+
+        network->load_model(model_path);
+        Runtime::set_runtime_thread_affinity(network, [&thread_ids, i](int id) {
+            if (id == 0) {
+                thread_ids[i] = std::this_thread::get_id();
+            }
+        });
+
+        std::shared_ptr<Tensor> input_tensor = network->get_input_tensor(0);
+        auto src_ptr = lite_tensor->get_memory_ptr();
+        auto src_layout = lite_tensor->get_layout();
+        input_tensor->reset(src_ptr, src_layout);
+
+        network->forward();
+        network->wait();
+        std::shared_ptr<Tensor> output_tensor = network->get_output_tensor(0);
+    };
+    std::vector<std::thread> threads;
+    for (size_t i = 0; i < nr_threads; i++) {
+        threads.emplace_back(runner, i);
+    }
+    for (size_t i = 0; i < nr_threads; i++) {
+        threads[i].join();
+    }
+    ASSERT_NE(thread_ids[0], thread_ids[1]);
+}
+
+}  // namespace
+
+TEST(TestNetWork, InplaceAndUserMultithreadThread) {
+    test_multi_thread(false);
+}
+
+TEST(TestNetWork, InplaceAndMultithread) {
+    test_multi_thread(true);
+}
+
 TEST(TestNetWork, NetworkShareWeights) {
     Config config;
     auto lite_tensor = get_input_data("./input_data.npy");
