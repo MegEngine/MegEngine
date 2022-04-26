@@ -626,7 +626,7 @@ def logaddexp(x: Tensor, y: Tensor) -> Tensor:
 
 def equal(x, y):
     r"""Element-wise `(x == y)`."""
-    return _elwise(x, y, mode=Elemwise.Mode.EQ)
+    return x == y
 
 
 def not_equal(x, y):
@@ -636,22 +636,22 @@ def not_equal(x, y):
 
 def less(x, y):
     r"""Element-wise `(x < y)`."""
-    return _elwise(x, y, mode=Elemwise.Mode.LT)
+    return x < y
 
 
 def less_equal(x, y):
     r"""Element-wise `(x <= y)`."""
-    return _elwise(x, y, mode=Elemwise.Mode.LEQ)
+    return x <= y
 
 
 def greater(x, y):
     r"""Element-wise `(x > y)`."""
-    return _elwise(y, x, mode=Elemwise.Mode.LT)
+    return x > y
 
 
 def greater_equal(x, y):
     r"""Element-wise `(x >= y)`."""
-    return _elwise(y, x, mode=Elemwise.Mode.LEQ)
+    return x >= y
 
 
 # other functions
