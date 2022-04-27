@@ -304,6 +304,21 @@ typename TimedProfiler<Opr>::TResult TimedProfiler<Opr>::prof_impl(
     RealTimer timer;
     auto ev_start = cn.create_event(CompNode::Event::NEED_TIMER),
          ev_end = cn.create_event(CompNode::Event::NEED_TIMER);
+    for (int i = 0; i < 5; ++i) {
+        if_constexpr<opr_supports_preprocess<Opr>()>(
+                [&](auto _) {
+                    auto&& opr = _(megdnn_opr);
+                    PreprocessFilter<Opr>* pf =
+                            preprocessed_layout.empty() ? nullptr : &prep_flt;
+                    APPLY(opr->exec(args.as_megdnn()..., pf, mdn_workspace), inp_val,
+                          out_val);
+                },
+                /* else */
+                [&](auto _) {
+                    APPLY(_(megdnn_opr)->exec(args.as_megdnn()..., mdn_workspace),
+                          inp_val, out_val);
+                });
+    }
     ev_start->record();
     if_constexpr<opr_supports_preprocess<Opr>()>(
             [&](auto _) {
@@ -327,12 +342,12 @@ typename TimedProfiler<Opr>::TResult TimedProfiler<Opr>::prof_impl(
     while (!ev_end->finished()) {
         if (timer.get_secs() >= next_report_time) {
 #if MGB_ENABLE_GETENV
-            mgb_log_warn(
+            mgb_log_debug(
                     "profiling conv algo %s already took %.3f/%.3f secs"
                     " (limit can be set by MGB_CONV_PROFILING_TIMEOUT) ",
                     algo->name(), timer.get_secs(), param.actual_timeout);
 #else
-            mgb_log_warn(
+            mgb_log_debug(
                     "profiling conv algo %s already took %.3f/%.3f secs", algo->name(),
                     timer.get_secs(), param.actual_timeout);
 #endif

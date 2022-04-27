@@ -961,7 +961,7 @@ void AlgoChooser<Opr>::AlgoChooserHelper::profile(
             continue;
         })
         if (!cur_rst.valid()) {
-            mgb_log_warn(
+            mgb_log_debug(
                     "timeout when %s; timeout setting: %.3fsec", msg.c_str(),
                     cur_timeout);
             continue;
