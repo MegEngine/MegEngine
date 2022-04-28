@@ -157,14 +157,14 @@ TensorLayout DefaultTensorFormat::collapse_contiguous_spec(
 TensorLayout::Span DefaultTensorFormat::span_spec(const TensorLayout& layout) const {
     assert_valid(layout);
     if (layout.ndim == 0)
-        return {0, 0, 0, 0};
+        return {0, 0, 0, 0, 0, 0};
 
     ptrdiff_t low_elem = 0;
     size_t high_elem = 0;
     for (size_t i = 0; i < layout.ndim; ++i) {
         auto shape_val = layout.shape[i];
         if (!shape_val) {
-            return {0, 0, 0, 0};
+            return {0, 0, 0, 0, 0, 0};
         }
         auto stride_val = layout.stride[i];
         if (stride_val > 0) {
@@ -181,7 +181,8 @@ TensorLayout::Span DefaultTensorFormat::span_spec(const TensorLayout& layout) co
         low_byte = 0;
     }
     size_t high_byte = layout.dtype.size(high_elem);
-    return TensorLayout::Span(low_elem, low_byte, high_elem, high_byte);
+    return TensorLayout::Span(
+            low_elem, low_byte, high_elem, high_byte, high_elem, high_byte);
 }
 
 std::string DefaultTensorFormat::to_string() const {
@@ -274,7 +275,12 @@ void Image2DPackedTensorFormatBase<PIXEL_SIZE>::assert_valid(
             layout.ndim > m_align_axis);
     ptrdiff_t first_non_zero_stride = 0;
     for (int i = layout.ndim - 1; i >= 0; --i) {
-        megdnn_assert(layout.shape[i] && layout.stride[i] >= 0);
+        megdnn_assert(layout.shape[i]);
+        megdnn_assert(
+                layout.stride[i] >= 0,
+                "stride in Image2D format does not support negative stride {%s}. Use "
+                "NCHW format instead.",
+                layout.to_string().c_str());
         if (i < static_cast<int>(m_align_axis) && !first_non_zero_stride) {
             first_non_zero_stride = layout.stride[i];
         }
@@ -322,7 +328,14 @@ TensorLayout::Span Image2DPackedTensorFormatBase<PIXEL_SIZE>::span_spec(
     size_t size = image_height(layout) * image_row_pitch(layout);
     auto mask = (1 << layout.dtype.size_log()) - 1;
     megdnn_assert(!(size & mask), "unaligned size: %zu", size);
-    return {0, 0, size >> layout.dtype.size_log(), size};
+    auto collapse_layout = layout.collapse_contiguous();
+    size_t last_elem = 0;
+    for (size_t i = 0; i < 2; ++i) {
+        last_elem += (collapse_layout.shape[i] - 1) * collapse_layout.stride[i];
+    }
+    last_elem++;
+    size_t last_byte = last_elem * layout.dtype.size();
+    return {0, 0, size >> layout.dtype.size_log(), size, last_elem, last_byte};
 }
 
 template <size_t PIXEL_SIZE>
@@ -507,13 +520,13 @@ TensorLayout::Span LowbitsAlignedTensorFormatBase::span_spec(
         const TensorLayout& layout) const {
     assert_valid(layout);
     if (layout.ndim == 0)
-        return {0, 0, 0, 0};
+        return {0, 0, 0, 0, 0, 0};
 
     size_t high_elem = 0;
     for (size_t i = 0; i < layout.ndim; ++i) {
         auto shape_val = layout.shape[i];
         if (!shape_val) {
-            return {0, 0, 0, 0};
+            return {0, 0, 0, 0, 0, 0};
         }
         auto stride_val = layout.stride[i];
         megdnn_assert(
@@ -522,7 +535,7 @@ TensorLayout::Span LowbitsAlignedTensorFormatBase::span_spec(
     }
     ++high_elem;
     size_t high_byte = layout.dtype.size(high_elem);
-    return TensorLayout::Span(0, 0, high_elem, high_byte);
+    return TensorLayout::Span(0, 0, high_elem, high_byte, high_elem, high_byte);
 }
 
 size_t LowbitsAlignedTensorFormatBase::init_contiguous_stride(

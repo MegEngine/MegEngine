@@ -500,7 +500,23 @@ DEF(reset, &)(TensorStorage storage, const TensorLayout& layout) {
     //! The storage to be reset is either satisfy the layout or empty.
     //! Empty storage is used after weight preprocess for saving memory and
     //! checking layout when running
-    mgb_assert(!layout.ndim || storage.valid_span(layout.span()) || storage.empty());
+
+    auto span = layout.span();
+    if (span.last_elem == span.high_elem) {
+        mgb_assert(!layout.ndim || storage.valid_span(span) || storage.empty());
+    } else {
+        size_t start_pos = span.low_byte + static_cast<ptrdiff_t>(storage.offset());
+        bool enough_size = span.last_byte <= storage.size();
+        bool valid_size = storage.comp_node().valid() && start_pos >= 0 && enough_size;
+        mgb_assert(!layout.ndim || valid_size || storage.empty());
+        if (valid_size && !storage.valid_span(span)) {
+            mgb_log_warn(
+                    "storage size %zu can not hold the whole layout %s, but holds all "
+                    "elements. Only accepted when copying one CD4 Tensor into another "
+                    "CD4 Tensor\n",
+                    storage.size(), layout.to_string().c_str());
+        }
+    }
     m_storage = std::move(storage);
     m_layout = layout;
     return static_cast<ChainReturnType&>(*this);
@@ -686,8 +702,8 @@ const typename TensorND<TensorStorage>::ChainReturnType& TensorND<
     if (should_check_overlap(*this, src)) {
         check_overlapped(
                 this->raw_ptr() + dst_span.low_byte,
-                this->raw_ptr() + dst_span.high_byte, src.raw_ptr() + src_span.low_byte,
-                src.raw_ptr() + src_span.high_byte);
+                this->raw_ptr() + dst_span.last_byte, src.raw_ptr() + src_span.low_byte,
+                src.raw_ptr() + src_span.last_byte);
     }
 
     bool self_contig =
@@ -702,12 +718,12 @@ const typename TensorND<TensorStorage>::ChainReturnType& TensorND<
              src.layout().format.is_lowbit_aligned())) {
             mgb_assert(
                     src_span.low_byte == 0 && dst_span.low_byte == 0 &&
-                    src_span.high_byte == dst_span.high_byte);
-            m_storage.copy_from(src.storage(), src_span.high_byte);
+                    src_span.last_byte == dst_span.last_byte);
+            m_storage.copy_from(src.storage(), src_span.last_byte);
         } else {
             mgb_assert(src_span.low_byte == 0 && dst_span.low_byte == 0);
             m_storage.copy_from(
-                    src.storage(), std::min(src_span.high_byte, dst_span.high_byte));
+                    src.storage(), std::min(src_span.last_byte, dst_span.last_byte));
         }
         return static_cast<const ChainReturnType&>(*this);
     }

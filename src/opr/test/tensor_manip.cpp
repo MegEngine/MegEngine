@@ -1446,6 +1446,48 @@ TEST(TestTensorManip, ConcatEmpty2) {
     ASSERT_EQ(TensorShape({2, 0, 11}), host_z.shape());
 }
 
+#if MGB_OPENCL
+#include "megcore_opencl.h"
+
+#define REQUIRE_OPENCL()                                                 \
+    do {                                                                 \
+        if (!CompNode::get_device_count(CompNode::DeviceType::OPENCL)) { \
+            return;                                                      \
+        }                                                                \
+    } while (0)
+
+TEST(TestTensorManip, ConcatCD4) {
+    REQUIRE_OPENCL();
+    auto cn = CompNode::load("openclx");
+    HostTensorGenerator<> gen;
+    auto host_x = gen({1, 4, 2, 2}, cn), host_y = gen({1, 4, 2, 2}, cn);
+
+    auto graph0 = ComputingGraph::make();
+    auto x = opr::Host2DeviceCopy::make(*graph0, host_x);
+    auto y = opr::Host2DeviceCopy::make(*graph0, host_y);
+    x = opr::RelayoutFormat::make(x, {opr::RelayoutFormat::Param::Mode::NCHW_NHWCD4I});
+    y = opr::RelayoutFormat::make(y, {opr::RelayoutFormat::Param::Mode::NCHW_NHWCD4I});
+    auto z = opr::Concat::make({x, y}, 2);
+
+    HostTensorND host_z0;
+    auto func = graph0->compile({make_callback_copy(z, host_z0)});
+    func->execute();
+    ASSERT_EQ(TensorShape({1, 2, 2, 2, 4}), host_z0.shape());
+
+    auto graph1 = ComputingGraph::make();
+    x = opr::Host2DeviceCopy::make(*graph1, host_x);
+    y = opr::Host2DeviceCopy::make(*graph1, host_y);
+    z = opr::RelayoutFormat::make(
+            opr::Concat::make({x, y}, 1),
+            {opr::RelayoutFormat::Param::Mode::NCHW_NHWCD4I});
+
+    HostTensorND host_z1;
+    func = graph1->compile({make_callback_copy(z, host_z1)});
+    func->execute();
+    MGB_ASSERT_TENSOR_EQ(host_z0, host_z1);
+}
+#endif
+
 TEST(TestTensorManip, AxisAddRemove) {
     HostTensorGenerator<> gen;
     for (bool dyn_shape : {false, true}) {

@@ -140,20 +140,30 @@ struct TensorLayout : public TensorShape {
     /*!
      * \brief Describes min and max offsets of tensor elements with respect to
      *      its first element, so all tensor elements are guaranteed to be in
-     *      the range [elem[0]+low, elem[0]+high).
+     *      the range [elem[0]+low, elem[0]+last). Besides, we have a high to
+     *      describe the range including row pitch when using image2D
      */
     struct Span {
         ptrdiff_t low_elem, low_byte;
         size_t high_elem, high_byte;
+        //! The differece between high_elem and last elem is that last_elem describes
+        //! the last element of a tensor regardless of the row pitch at the last row. It
+        //! will be useful when copying into a part of image.
+        size_t last_elem, last_byte;
 
-        Span(ptrdiff_t low_elem, ptrdiff_t low_byte, size_t high_elem, size_t high_byte)
+        Span(ptrdiff_t low_elem, ptrdiff_t low_byte, size_t high_elem, size_t high_byte,
+             size_t last_elem, size_t last_byte)
                 : low_elem(low_elem),
                   low_byte(low_byte),
                   high_elem(high_elem),
-                  high_byte(high_byte) {}
+                  high_byte(high_byte),
+                  last_elem(last_elem),
+                  last_byte(last_byte) {}
         size_t dist_elem() const { return high_elem - low_elem; }
 
         size_t dist_byte() const { return high_byte - low_byte; }
+
+        size_t dist_last_byte() const { return last_byte - low_byte; }
     };
 
     /*!
