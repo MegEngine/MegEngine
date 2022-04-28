@@ -756,6 +756,8 @@ DEF_TEST(all_modes) {
         for (size_t i = 0; i < shapes.size() - 1; ++i) {
             shapes[i] = {3, 9, 7};
         }
+        //! NOTE: force set output layout to  empty to trigger layout deduce
+        shapes[shapes.size() - 1] = {};
         auto do_run = [&](DType dtype, float eps = 1e-3) {
             // limit value ranges for some modes
             if (mode == Mode::LOG || mode == Mode::LOG1P) {

@@ -22,16 +22,17 @@ TEST_F(CUDA, CHECK_NON_FINITE_BASIC) {
     const auto nan = std::numeric_limits<float>::quiet_NaN();
     UniformFloatWithValueRNG rng(-1.0f, 1.0f, 0.1f, inf);
     checker.set_rng(0, &rng);
-    checker.execs({{512 * 4}, {4}, {1}});
+    //! while deduce layout, dst tensor dtype will be set to Int32
+    checker.execs({{512 * 4}, {4}, {}});
     rng = UniformFloatWithValueRNG(-1.0f, 1.0f, 1.f, inf);
     checker.set_rng(0, &rng);
-    checker.execs({{4}, {512 * 4}, {1}});
+    checker.execs({{4}, {512 * 4}, {}});
     rng = UniformFloatWithValueRNG(-1.0f, 1.0f, 1.f, nan);
     checker.set_rng(0, &rng);
-    checker.execs({{32}, {256}, {1}});
+    checker.execs({{32}, {256}, {}});
     rng = UniformFloatWithValueRNG(-1.0f, 1.0f, 0.f, nan);
     checker.set_rng(0, &rng);
-    checker.execs({{16}, {16}, {2}, {1}});
+    checker.execs({{16}, {16}, {2}, {}});
 }
 
 }  // namespace test

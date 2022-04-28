@@ -16,7 +16,7 @@
 namespace megdnn {
 
 void TQTBase::deduce_layout_fwd(const TensorLayout& input, TensorLayout& output) {
-    output = TensorLayout(input, input.dtype);
+    output = TensorLayout(input);
 }
 
 void TQTBase::check_layout_fwd(

@@ -84,7 +84,7 @@ protected:
     TensorsConstriant m_tensor_constraint;
     bool m_no_naive_and_check = false;
     bool m_stable_check = false;
-    bool m_force_deduce_dst = true;
+    bool m_force_deduce_dst = false;
     bool m_allow_invalid_check = false;
     /**
      * the offset from the start of malloc memory

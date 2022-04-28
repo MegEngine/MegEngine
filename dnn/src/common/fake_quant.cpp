@@ -16,7 +16,7 @@
 namespace megdnn {
 
 void FakeQuantBase::deduce_layout_fwd(const TensorLayout& input, TensorLayout& output) {
-    output = TensorLayout(input, input.dtype);
+    output = TensorLayout(input);
 }
 
 void FakeQuantBase::check_layout_fwd(
