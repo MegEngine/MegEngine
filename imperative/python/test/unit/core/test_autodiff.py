@@ -136,6 +136,46 @@ def test_grad_with_tensor_wrapper():
     np.testing.assert_almost_equal(x.grad.numpy(), 4 * x_np ** 3, decimal=6)
 
 
+def test_wrt_intermediate_var():
+    x_np = np.random.rand(10).astype("float32")
+    x = mge.Tensor(x_np)
+
+    result = {}
+
+    with Grad() as grad:
+        grad.wrt(x, callback=lambda dx: result.update(dx=dx))
+        y = mul(x, x)
+        grad.wrt(y, callback=lambda dy: result.update(dy=dy))
+        z = mul(y, y)
+        grad(z, mge.Tensor(np.ones_like(x_np)))
+
+    np.testing.assert_almost_equal(result["dx"].numpy(), 4 * x_np ** 3, decimal=6)
+    np.testing.assert_almost_equal(result["dy"].numpy(), 2 * (x_np ** 2), decimal=6)
+
+
+@pytest.mark.parametrize("in_path", [False, True])
+def test_wrt_visibility(in_path):
+    x_np = np.random.rand(10).astype("float32")
+    x = mge.Tensor(x_np)
+
+    def copy(x):
+        xx = mge.Tensor(x)
+        xx._reset(x)
+        return xx
+
+    result = {}
+
+    with Grad() as grad:
+        if in_path:
+            grad.wrt(x, callback=lambda _: None)
+        y = mul(x, x)
+        grad.wrt(copy(y), callback=lambda dy: result.update(dy=dy))
+        z = mul(y, y)
+        grad(z, mge.Tensor(np.ones_like(x_np)))
+
+    assert not result
+
+
 def test_release():
     def check(f):
         n = 0

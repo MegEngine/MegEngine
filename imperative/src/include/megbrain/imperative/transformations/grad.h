@@ -83,6 +83,20 @@ public:
     static BackwardRule lookup_grad_rule(Typeinfo* typeinfo);
 };
 
+struct IdentityBackward {
+    bool input_has_grad(size_t i) { mgb_assert(0); }
+    bool output_requires_grad(size_t i) { mgb_assert(0); }
+
+    template <typename F>
+    void operator()(Span<ValueRef> grads, F&& receiver) {
+        for (size_t i = 0; i < grads.size(); ++i) {
+            if (grads[i]) {
+                receiver(i, grads[i]);
+            }
+        }
+    }
+};
+
 class GradSlot;
 class GradSlotPtr;
 class GradSlotProducerPtr;
@@ -165,7 +179,9 @@ private:
     std::weak_ptr<GradKey> m_key;
     SmallVector<GradSlot> m_slots;
     SmallVector<GradSlotProducerPtr> m_dests;
-    std::variant<std::monostate, BackwardGraphWithClosure, CustomBackward> m_backward;
+    std::variant<
+            std::monostate, BackwardGraphWithClosure, CustomBackward, IdentityBackward>
+            m_backward;
 
 public:
     void clear() {
