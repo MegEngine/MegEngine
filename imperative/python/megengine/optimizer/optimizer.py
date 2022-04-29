@@ -91,13 +91,14 @@ class Optimizer(metaclass=ABCMeta):
         else:
             param_group["params"] = list(param_group["params"])
 
-        for param in param_group["params"]:
-            if not isinstance(param, Parameter):
-                raise TypeError(
-                    "optimizer can only optimize Parameters, but one of the params is "
-                    + str(type(param))
-                )
-            param._reset(Tensor(param.numpy(), no_cache=True, format=param.format))
+        with _config._override(auto_format_convert=False):
+            for param in param_group["params"]:
+                if not isinstance(param, Parameter):
+                    raise TypeError(
+                        "optimizer can only optimize Parameters, but one of the params is "
+                        + str(type(param))
+                    )
+                param._reset(Tensor(param.numpy(), no_cache=True, format=param.format))
 
         for name, default in self._defaults.items():
             if default is required and name not in param_group:

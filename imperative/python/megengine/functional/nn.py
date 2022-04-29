@@ -1206,6 +1206,7 @@ def batch_norm(
 
         if x is None:
             x = Const(value, inp.dtype, inp.device)
+            x.format = inp.format
             shape = astensor1d(pshape, inp, dtype="int32", device=inp.device)
             (result,) = apply(builtin.Broadcast(), x, shape)
             return result
@@ -1227,14 +1228,14 @@ def batch_norm(
 
     if not training:
         op = builtin.BatchNorm(
-            fwd_mode=BatchNorm.FwdMode.INFERENCE, param_dim="dim_1c11", epsilon=eps
+            fwd_mode=BatchNorm.FwdMode.INFERENCE, epsilon=eps, param_dim="dim_1c11"
         )
         ret = apply(op, inp, weight, bias, running_mean, running_var)[-1]
         return ret
 
     else:
         op = builtin.BatchNorm(
-            avg_factor=1 - momentum, param_dim="dim_1c11", epsilon=eps
+            avg_factor=1 - momentum, epsilon=eps, param_dim="dim_1c11"
         )
         if has_mean or has_var:
             running_mean = make_full_if_none(running_mean, 0)

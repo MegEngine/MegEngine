@@ -272,6 +272,9 @@ def full_like(inp: Tensor, value: Union[int, float]) -> Tensor:
     x = Const(value, inp.dtype, inp.device)
     if inp.ndim == 0:
         return x
+
+    # set x's format to use FormatTransformation rule for Broadcast.
+    x.format = inp.format
     return broadcast_to(x, inp.shape)
 
 

@@ -51,14 +51,7 @@ class _Hashable:
         return self.value == o.value
 
 
-def _matmul(
-    inp1,
-    inp2,
-    transpose_a=False,
-    transpose_b=False,
-    compute_mode="default",
-    format="default",
-):
+def _matmul(inp1, inp2, transpose_a=False, transpose_b=False, compute_mode="default"):
     dim1, dim2 = inp1.ndim, inp2.ndim
     assert dim1 > 0 and dim2 > 0
     maxdim = dim1 if dim1 > dim2 else dim2

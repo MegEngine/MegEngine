@@ -386,13 +386,6 @@ def test_backward_conv2d_dimshuffle(is_symbolic):
             return F.transpose(self.conv(inp), (0, 2, 3, 1)).reshape(1, 18, 2)
 
     inp = mge.tensor(np.arange(0, 24).reshape((1, 2, 3, 4)))
-    # x = tensor(data.transpose(0, 2, 3, 1), format="nhwc")
-    # w = mge.tensor(np.ones((3, 1, 1, 2)), format="nhwc")
-    # b = mge.tensor(np.ones((1, 1, 1, 3)), format="nhwc")
-    # grads = [
-    # np.array([66, 210, 66, 210, 66, 210]).reshape((3, 1, 1, 2)),
-    # np.array([12, 12, 12]).reshape((1, 1, 1, 3)),
-    # ]
     _compare_backward([inp], Net(), is_symbolic)
 
 
@@ -403,37 +396,10 @@ def test_backward_groupconv2d_bn(is_symbolic):
             super().__init__()
             self.conv0 = M.Conv2d(32, 256, 3, groups=32, stride=2)
             self.conv1 = M.Conv2d(256, 2048, 3, groups=32, stride=2)
-            # self.bn = M.BatchNorm2d(2048)
+            self.bn = M.BatchNorm2d(2048)
 
         def forward(self, inp):
-            # test manually convert to NHWC, usually used in detection head
-            return self.conv1(self.conv0(inp))
+            return self.bn(self.conv1(self.conv0(inp)))
 
     inp = mge.tensor(np.ones(shape=(32, 32, 56, 56)).astype("float32"))
     _compare_backward([inp], Net(), is_symbolic)
-    # def func(x, w, b, bn_w, bn_b):
-    # x = F.conv2d(x, w, b, groups=2)
-    # x = F.batch_norm(
-    # x,
-    # running_mean=mge.tensor(np.ones((1, 1, 1, 2)), format="nhwc"),
-    # running_var=mge.tensor(np.ones((1, 1, 1, 2)), format="nhwc"),
-    # weight=bn_w,
-    # bias=bn_b,
-    # training=True,
-    # inplace=True,
-    # )
-    # return x
-
-    # data = np.arange(0, 24).reshape((1, 2, 3, 4))
-    # x = tensor(data.transpose(0, 2, 3, 1), format="nhwc")
-    # w = tensor(np.ones((2, 1, 1, 1, 1)), format="nhwc")
-    # b = tensor(np.ones((1, 1, 1, 2)), format="nhwc")
-    # bn_w = tensor(np.ones((1, 1, 1, 2)), format="nhwc")
-    # bn_b = tensor(np.ones((1, 1, 1, 2)), format="nhwc")
-    # grads = [
-    # np.array([66, 210]).reshape((2, 1, 1, 1, 1)),
-    # np.array([12, 12]).reshape((1, 1, 1, 2)),
-    # np.array([12, 12]).reshape((1, 1, 1, 2)),
-    # np.array([12, 12]).reshape((1, 1, 1, 2)),
-    # ]
-    # _compare_backward(x, func, [w, b, bn_w, bn_b], grads, is_symbolic)
