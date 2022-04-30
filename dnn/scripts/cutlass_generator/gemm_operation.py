@@ -1347,19 +1347,6 @@ void initialize_${operation_name}(Manifest &manifest) {
                 self.kernel_path, "%s.cu" % self.operation.procedural_name()
             )
         self.kernel_file = open(self.kernel_path, "w")
-        self.kernel_file.write(
-            SubstituteTemplate(
-                self.header_template,
-                {
-                    "required_cuda_ver_major": str(
-                        self.operation.required_cuda_ver_major
-                    ),
-                    "required_cuda_ver_minor": str(
-                        self.operation.required_cuda_ver_minor
-                    ),
-                },
-            )
-        )
         return self
 
     #
@@ -1379,7 +1366,6 @@ void initialize_${operation_name}(Manifest &manifest) {
 
     #
     def __exit__(self, exception_type, exception_value, traceback):
-        self.kernel_file.write(self.epilogue_template)
         self.kernel_file.close()
 
 
@@ -1435,20 +1421,6 @@ ${operation_instance}
                 self.kernel_path, "%s.cu" % self.operation.procedural_name()
             )
         self.kernel_file = open(self.kernel_path, "w")
-        self.kernel_file.write(
-            SubstituteTemplate(
-                self.header_template,
-                {
-                    "wrapper_path": self.wrapper_path,
-                    "required_cuda_ver_major": str(
-                        self.operation.required_cuda_ver_major
-                    ),
-                    "required_cuda_ver_minor": str(
-                        self.operation.required_cuda_ver_minor
-                    ),
-                },
-            )
-        )
         return self
 
     #
@@ -1468,7 +1440,6 @@ ${operation_instance}
 
     #
     def __exit__(self, exception_type, exception_value, traceback):
-        self.kernel_file.write(self.epilogue_template)
         self.kernel_file.close()
 
 

@@ -9,7 +9,7 @@ import os.path
 import shutil
 import argparse
 import platform
-
+import string
 from library import *
 from manifest import *
 
@@ -1657,6 +1657,108 @@ def GenerateGemvOperations(args):
     return GenerateGemv_Simt(args)
 
 
+def concat_file(file_path:str,file_name_first:str,file_name_last:str,head:str,required_cuda_ver_major:str, required_cuda_ver_minor:str, epilogue:str, wrapper_path = None):
+    import os
+    meragefiledir = file_path
+    filenames=os.listdir(meragefiledir)  
+    file1=open(file_path + '/{}_{}_1.cu'.format(file_name_first,file_name_last),'w')
+    file2=open(file_path + '/{}_{}_2.cu'.format(file_name_first,file_name_last),'w')
+    if wrapper_path is None:
+        file1.write(
+            SubstituteTemplate(
+                head,
+                {
+                    "required_cuda_ver_major": str(
+                        required_cuda_ver_major
+                    ),
+                    "required_cuda_ver_minor": str(
+                        required_cuda_ver_minor
+                    ),
+                },
+            )
+        )
+        file2.write(
+            SubstituteTemplate(
+                head,
+                {
+                    "required_cuda_ver_major": str(
+                        required_cuda_ver_major
+                    ),
+                    "required_cuda_ver_minor": str(
+                        required_cuda_ver_minor
+                    ),
+                },
+            )
+        )
+    else:
+        file1.write(
+                SubstituteTemplate(
+                    head,
+                    {
+                        "wrapper_path": wrapper_path,
+                        "required_cuda_ver_major": str(
+                            required_cuda_ver_major
+                        ),
+                        "required_cuda_ver_minor": str(
+                            required_cuda_ver_minor
+                        ),
+                    },
+                )
+            )
+        file2.write(
+            SubstituteTemplate(
+                head,
+                {
+                    "wrapper_path": wrapper_path,
+                    "required_cuda_ver_major": str(
+                        required_cuda_ver_major
+                    ),
+                    "required_cuda_ver_minor": str(
+                        required_cuda_ver_minor
+                    ),
+                },
+            )
+        )
+    flag = 0
+    if "tensorop" in file_name_last:
+        sub_string_1 = "tensorop"
+        sub_string_2 = file_name_last[8:]
+    else:
+        sub_string_1 = sub_string_2 = "simt"
+    if "dwconv2d_" in file_name_first:
+        file_name_first = file_name_first[:2]+file_name_first[9:]
+    elif ("conv2d" in file_name_first) or ("deconv" in file_name_first):
+        file_name_first = "cutlass"
+    for filename in filenames:
+        if (file_name_first in filename) and (sub_string_1 in filename) and (sub_string_2 in filename) and ("all_" not in filename):
+            flag += 1
+            filepath=meragefiledir+'/'+filename
+            if flag <= len(filenames)/2:
+                for line in open(filepath):
+                    file1.writelines(line)
+            else:
+                for line in open(filepath):
+                    file2.writelines(line)
+            os.remove(filepath)
+            file1.write('\n')
+            file2.write('\n')
+        elif filename[0].isdigit() and ("all_" not in filename):
+            flag += 1
+            filepath=meragefiledir+'/'+filename
+            if flag <= len(filenames)/2:
+                for line in open(filepath):
+                    file1.writelines(line)
+            else:
+                for line in open(filepath):
+                    file2.writelines(line)
+            os.remove(filepath)
+            file1.write('\n')
+            file2.write('\n')
+    file1.write(epilogue)
+    file2.write(epilogue)
+    file1.close()
+    file2.close()
+
 ###################################################################################################
 ###################################################################################################
 
@@ -1727,18 +1829,33 @@ if __name__ == "__main__":
                 args.output, operation, short_path
             ) as emitter:
                 emitter.emit()
+        head = EmitConvSingleKernelWrapper(args.output, operations[0], short_path).header_template
+        required_cuda_ver_major = operations[0].required_cuda_ver_major
+        required_cuda_ver_minor = operations[0].required_cuda_ver_minor
+        epilogue = EmitConvSingleKernelWrapper(args.output, operations[0], short_path).epilogue_template
+        concat_file(args.output,args.operations, args.type, head,required_cuda_ver_major, required_cuda_ver_minor, epilogue)
     elif args.operations == "gemm":
         for operation in operations:
             with EmitGemmSingleKernelWrapper(
                 args.output, operation, short_path
             ) as emitter:
                 emitter.emit()
+        head = EmitGemmSingleKernelWrapper(args.output, operations[0], short_path).header_template
+        required_cuda_ver_major = operations[0].required_cuda_ver_major
+        required_cuda_ver_minor = operations[0].required_cuda_ver_minor
+        epilogue = EmitGemmSingleKernelWrapper(args.output, operations[0], short_path).epilogue_template
+        concat_file(args.output, args.operations, args.type, head,required_cuda_ver_major, required_cuda_ver_minor, epilogue)
     elif args.operations == "gemv":
         for operation in operations:
             with EmitGemvSingleKernelWrapper(
                 args.output, operation, gemv_wrapper_path, short_path
             ) as emitter:
                 emitter.emit()
+        head = EmitGemvSingleKernelWrapper(args.output, operations[0], gemv_wrapper_path, short_path).header_template
+        required_cuda_ver_major = operations[0].required_cuda_ver_major
+        required_cuda_ver_minor = operations[0].required_cuda_ver_minor
+        epilogue = EmitGemvSingleKernelWrapper(args.output, operations[0], gemv_wrapper_path, short_path).epilogue_template
+        concat_file(args.output,args.operations, args.type, head,required_cuda_ver_major, required_cuda_ver_minor, epilogue, wrapper_path = gemv_wrapper_path)
 
     if args.operations != "gemv":
         GenerateManifest(args, operations, args.output)

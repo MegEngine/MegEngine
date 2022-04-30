@@ -1,3 +1,5 @@
+#pragma once
+
 #include "cutlass/gemm/kernel/default_gemv.h"
 #include "cutlass/gemm/kernel/gemv_batched_strided.h"
 #include "src/cuda/matrix_mul/cutlass_matrix_mul_wrapper.cuh"
