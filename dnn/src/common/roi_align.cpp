@@ -7,8 +7,10 @@ namespace megdnn {
 void ROIAlignBase::deduce_layout_fwd(
         const TensorLayout& src, const TensorLayout& rois, TensorLayout& dst,
         TensorLayout& index) {
-    megdnn_assert_contiguous(src);
-    megdnn_assert_contiguous(rois);
+    if (!src.is_empty())
+        megdnn_assert_contiguous(src);
+    if (!rois.is_empty())
+        megdnn_assert_contiguous(rois);
     megdnn_assert_contiguous(dst);
     megdnn_assert_contiguous(index);
     auto errmsg = [&]() {

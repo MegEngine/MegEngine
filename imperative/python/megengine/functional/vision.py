@@ -16,14 +16,14 @@ from .tensor import broadcast_to, concat, expand_dims, reshape, transpose
 __all__ = [
     "correlation",
     "cvt_color",
-    "roi_pooling",
-    "roi_align",
+    "interpolate",
     "nms",
+    "nvof",
     "remap",
+    "roi_align",
+    "roi_pooling",
     "warp_affine",
     "warp_perspective",
-    "interpolate",
-    "nvof",
 ]
 
 
@@ -95,9 +95,9 @@ def roi_pooling(
 
     Args:
         inp: tensor that represents the input feature, `(N, C, H, W)` images.
-        rois: K, 5)` boxes. First column is the index into N. The other 4 columns are xyxy.
-        output_shape: height, width)` of output rois feature.
-        mode: max" or "average", use max/average align just like max/average pooling. Default: "max"
+        rois: `(K, 5)` boxes. First column is the index into N. The other 4 columns are xyxy.
+        output_shape: `(height, width)` of output rois feature.
+        mode: "max" or "average", use max/average align just like max/average pooling. Default: "max"
         scale: scale the input boxes by this number. Default: 1.0
 
     Returns:
@@ -176,9 +176,9 @@ def roi_align(
 
     Args:
         inp: tensor that represents the input feature, shape is `(N, C, H, W)`.
-        rois: N, 5)` boxes. First column is the box index. The other 4 columns are ``xyxy``.
-        output_shape: height, width)` shape of output rois feature.
-        mode: max" or "average", use max/average align just like max/average pooling. Default: "average"
+        rois: `(N, 5)` boxes. First column is the box index. The other 4 columns are ``xyxy``.
+        output_shape: `(height, width)` shape of output rois feature.
+        mode: "max" or "average", use max/average align just like max/average pooling. Default: "average"
         spatial_scale: scale the input boxes by this number. Default: 1.0
         sample_points: number of inputs samples to take for each output sample.
             0 to take samples densely. Default: 2
@@ -345,7 +345,7 @@ def warp_affine(
 
     Args:
         inp: input image.
-        mat: batch, 2, 3)` transformation matrix.
+        mat: `(batch, 2, 3)` transformation matrix.
         out_shape: output tensor shape.
         border_mode: pixel extrapolation method.
             Default: "wrap". Currently "constant", "reflect",

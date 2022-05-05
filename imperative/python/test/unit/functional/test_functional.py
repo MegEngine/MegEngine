@@ -289,6 +289,37 @@ def test_roi_align():
     assert make_shape_tuple(inp_feat.grad.shape) == make_shape_tuple(inp_feat.shape)
 
 
+@pytest.mark.parametrize("shapes", [((2, 0, 26, 26), (4, 5)), ((2, 3, 26, 26), (0, 5))])
+@pytest.mark.parametrize("is_tracing", [False, True])
+def test_roi_align_empty(shapes, is_tracing):
+    inp_feat = tensor(np.random.randn(*(shapes[0])))
+    rois = tensor(np.random.random(shapes[1]))
+    output_shape = (7, 7)
+
+    def func(inp, rois):
+        out_feat = F.vision.roi_align(
+            inp_feat,
+            rois,
+            output_shape=output_shape,
+            mode="average",
+            spatial_scale=1.0 / 4,
+            sample_points=2,
+            aligned=True,
+        )
+        return out_feat
+
+    if is_tracing:
+        func = jit.trace(func)
+
+    for _ in range(3):
+        out_feat = func(inp_feat, rois)
+    assert make_shape_tuple(out_feat.shape) == (
+        rois.shape[0],
+        inp_feat.shape[1],
+        *output_shape,
+    )
+
+
 def _gen_correlation(random=True, constant=1, image_shape=(2, 1, 160, 160)):
     if random:
         inp_feat1 = np.random.randn(

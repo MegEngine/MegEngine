@@ -442,21 +442,6 @@ OP_TRAIT_REG(AssertEqual, AssertEqual).apply_on_var_node(apply_on_var_node).fall
 }  // namespace
 
 namespace {
-namespace roi_align {
-VarNodeArray apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
-    auto&& op = static_cast<const ROIAlign&>(def);
-    mgb_assert(inputs.size() == 2);
-    OperatorNodeConfig config{op.make_name()};
-    auto* opr = opr::ROIAlign::make(inputs[0], inputs[1], op.param(), config)
-                        .node()
-                        ->owner_opr();
-    return {opr->output(0), opr->output(1)};
-}
-OP_TRAIT_REG(ROIAlign, ROIAlign).apply_on_var_node(apply_on_var_node).fallback();
-}  // namespace roi_align
-}  // namespace
-
-namespace {
 namespace correlation {
 auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
     auto&& op = static_cast<const Correlation&>(def);
@@ -520,22 +505,6 @@ auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
 }
 OP_TRAIT_REG(Diag, Diag).apply_on_var_node(apply_on_var_node).fallback();
 }  // namespace diag
-}  // namespace
-
-namespace {
-namespace roi_pooling {
-VarNodeArray apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
-    auto&& op = static_cast<const ROIPooling&>(def);
-    mgb_assert(inputs.size() == 3);
-    OperatorNodeConfig config{op.make_name()};
-    auto* opr =
-            opr::ROIPooling::make(inputs[0], inputs[1], inputs[2], op.param(), config)
-                    .node()
-                    ->owner_opr();
-    return {opr->output(0), opr->output(1)};
-}
-OP_TRAIT_REG(ROIPooling, ROIPooling).apply_on_var_node(apply_on_var_node).fallback();
-}  // namespace roi_pooling
 }  // namespace
 
 namespace {
