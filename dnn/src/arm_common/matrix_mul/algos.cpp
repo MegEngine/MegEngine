@@ -239,46 +239,6 @@ MatrixMulImpl::kern_t MatrixMulImpl::AlgoF32Gemv::get_kern(const KernSizeParam&)
     return f32_gemv_kern;
 }
 
-/* ================== F32 Gemv MK4 algo ================== */
-namespace {
-void f32_gemv_mk4_kern(const MatrixMulImpl::KernParam& kern_param) {
-    MIDOUT_BEGIN(megdnn_arm_exec_fp32, midout_iv("f32_gemv_mk4_kern"_hash)) {
-        auto M = kern_param.M, N = kern_param.N, K = kern_param.K;
-        auto LDA = kern_param.LDA, LDB = kern_param.LDB, LDC = kern_param.LDC;
-        const auto Aptr = kern_param.A<dt_float32>(), Bptr = kern_param.B<dt_float32>();
-        auto Cptr = kern_param.C<dt_float32>();
-        gemv_like_mk4(Aptr, Bptr, Cptr, M, N, K, LDA, LDB, LDC);
-    }
-    MIDOUT_END();
-}
-}  // anonymous namespace
-
-bool MatrixMulImpl::AlgoF32GemvMK4::usable(const KernSizeParam& kern_size_param) const {
-    // enumerate the M, N, K, only usable when preferred
-    auto M = kern_size_param.M;
-    auto N = kern_size_param.N;
-    auto K = kern_size_param.K;
-    auto LDB = kern_size_param.LDB;
-
-    return kern_size_param.compute_mode == Param::ComputeMode::DEFAULT &&
-           kern_size_param.format == param::MatrixMul::Format::MK4 &&
-           kern_size_param.B_type == kern_size_param.A_type &&
-           kern_size_param.C_type == kern_size_param.A_type &&
-           kern_size_param.A_type == dtype::Float32() && !kern_size_param.trA &&
-           !kern_size_param.trB && M % 4 == 0 && K % 4 == 0 && N == 1 && LDB == 4;
-}
-
-bool MatrixMulImpl::AlgoF32GemvMK4::preferred(
-        const KernSizeParam& kern_size_param) const {
-    MEGDNN_MARK_USED_VAR(kern_size_param);
-    return true;
-}
-
-MatrixMulImpl::kern_t MatrixMulImpl::AlgoF32GemvMK4::get_kern(
-        const KernSizeParam&) const {
-    return f32_gemv_mk4_kern;
-}
-
 /* ===================== F32 Gevm algo ===================== */
 namespace {
 template <typename stype, typename dtype>

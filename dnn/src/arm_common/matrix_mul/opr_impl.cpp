@@ -26,7 +26,6 @@ class MatrixMulImpl::AlgoPack : NonCopyableObj {
     AlgoInt8x8x32GemvMK4Dot int8x8x32_gemv_mk4_dot;
 #endif
     AlgoGevm gevm;
-    AlgoF32GemvMK4 f32_gemv_mk4;
 
     SmallVector<fallback::MatrixMulImpl::AlgoBase*> m_all_algos;
     fallback::MatrixMulImpl::AlgoBase::Mapper m_all_algos_map;
@@ -42,7 +41,6 @@ public:
 #endif
         m_all_algos.emplace_back(&int8x8x32_gemv);
         m_all_algos.emplace_back(&int8x8x32_gemv_mk4);
-        m_all_algos.emplace_back(&f32_gemv_mk4);
         m_all_algos.emplace_back(&gevm);
 
         for (auto&& algo : m_all_algos) {

@@ -80,6 +80,34 @@ public:
             DEFAULT)
 };
 
+class MatrixMulImpl::AlgoF32GiGemvMK4 : public AlgoBase {
+public:
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE | AlgoAttribute::USABLE_DEPEND_ON_SHAPE;
+    }
+    const char* name() const override { return "FB_GI_F32_GEMV_MK4"; }
+    bool usable(const KernSizeParam&) const override;
+    bool preferred(const KernSizeParam&) const override;
+    size_t get_workspace(const KernSizeParam&) const override { return 0; }
+    kern_t get_kern(const KernSizeParam&) const override;
+    AlgoSet algoset() const override { return AlgoSet::ALGO_TYPE_GEMV; }
+    PackMode packmode() const override { return PackMode::NO_PACK; }
+    MEGDNN_OVERRIDE_MATMUL_DESC(4, 1, 1, 4, AlgoDataType::FLOAT32, MK4)
+    MEGDNN_DECL_ALGO_TYPE(FB_GI_F32_GEMV_MK4)
+};
+
+class MatrixMulImpl::AlgoF32GiMK4_4x8 final : public AlgoBase {
+public:
+    AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }
+    const char* name() const override { return "FB_GI_F32_MK4_4x8"; }
+    bool usable(const KernSizeParam&) const override;
+    size_t get_workspace(const KernSizeParam&) const override;
+    kern_t get_kern(const KernSizeParam&) const override;
+    PackMode packmode() const override { return PackMode::NO_PACK; }
+    MEGDNN_OVERRIDE_MATMUL_DESC(4, 8, 4, 4, AlgoDataType::FLOAT32, MK4)
+    MEGDNN_DECL_ALGO_TYPE(FB_GI_F32_MK4_4x8)
+};
+
 }  // namespace fallback
 }  // namespace megdnn
 

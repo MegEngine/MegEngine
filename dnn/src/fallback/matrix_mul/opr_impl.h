@@ -112,6 +112,8 @@ public:
             FB_F32K8x12x1 = 1 << 0,
             FB_GEMV,
             FB_NAIVE,
+            FB_GI_F32_GEMV_MK4,
+            FB_GI_F32_MK4_4x8,
 
 #if MEGDNN_X86
             //! x86
@@ -131,7 +133,6 @@ public:
             ARM_COMMON_INT8X8X32_GEMV,
             ARM_COMMON_INT8X8X32_GEMV_MK4,
             ARM_COMMON_INT8X8X32_GEMV_MK4_DOT,
-            ARM_COMMON_F32_GEMV_MK4,
             ARM_COMMON_F16_GEMV,
             ARM_COMMON_GEVM,
 #if MEGDNN_AARCH64
@@ -236,7 +237,9 @@ public:
     };
 
 private:
-    class AlgoF32K8x12x1;  // Fallback F32 Kernel 8x12x1
+    class AlgoF32K8x12x1;    // Fallback F32 Kernel 8x12x1
+    class AlgoF32GiGemvMK4;  // fallback F32 gi Gemv NCHW44
+    class AlgoF32GiMK4_4x8;  // fallback F32 gi Gemm NCHW44
     class AlgoGemv;
     class AlgoNaive;
     class AlgoPack;

@@ -95,22 +95,6 @@ public:
     MEGDNN_OVERRIDE_MATMUL_DESC(8, 16, 1, 4, AlgoDataType::FLOAT32, DEFAULT)
 };
 
-class MatrixMulImpl::AlgoF32GemvMK4 : public AlgoBase {
-public:
-    AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE | AlgoAttribute::USABLE_DEPEND_ON_SHAPE;
-    }
-    const char* name() const override { return "ARM_COMMON_F32_GEMV_MK4"; }
-    bool usable(const KernSizeParam&) const override;
-    bool preferred(const KernSizeParam&) const override;
-    size_t get_workspace(const KernSizeParam&) const override { return 0; }
-    kern_t get_kern(const KernSizeParam&) const override;
-    AlgoSet algoset() const override { return AlgoSet::ALGO_TYPE_GEMV; }
-    PackMode packmode() const override { return PackMode::NO_PACK; }
-    MEGDNN_OVERRIDE_MATMUL_DESC(4, 1, 1, 4, AlgoDataType::FLOAT32, MK4)
-    MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_F32_GEMV_MK4)
-};
-
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
 class MatrixMulImpl::AlgoF16Gemv : public AlgoBase {
 public:

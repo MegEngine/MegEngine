@@ -34,7 +34,6 @@ public:
 
 protected:
     class AlgoF32Gemv;           // Arm_common F32 Gemv
-    class AlgoF32GemvMK4;        // Arm_common F32 Gemv NCHW44
     class AlgoInt8x8x32Gemv;     // Arm_common Int8x8x32 Gemv
     class AlgoInt8x8x32GemvMK4;  // Arm_common Int8x8x32 Gemv NCHW44
     class AlgoGevm;              // Arm_common Gevm(support int8 and fp32)
