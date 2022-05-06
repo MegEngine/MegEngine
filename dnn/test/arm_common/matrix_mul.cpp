@@ -286,30 +286,6 @@ TEST_F(ARM_COMMON, FP32_GEVM) {
                 run(M, K, N);
 }
 
-TEST_F(ARM_COMMON, FP32_GEMV_MK4) {
-    Checker<MatrixMul> checker(handle());
-    using Param = MatrixMul::Param;
-
-    checker.set_before_exec_callback(AlgoChecker<MatrixMul>("ARM_COMMON_F32_GEMV_MK4"));
-
-    checker.set_epsilon(1e-2);
-    auto run = [&](size_t M, size_t K) {
-        Param param;
-        param.format = param::MatrixMul::Format::MK4;
-        param.transposeA = false;
-        param.transposeB = false;
-        TensorShape A, B;
-        A = TensorShape{M / 4, K / 4, 4, 4};
-        B = TensorShape{K / 4, 1, 4};
-        checker.set_param(param).execs({A, B, {}});
-    };
-
-    // N = 1
-    for (size_t M : {4, 16, 128, 1024})
-        for (size_t K : {4, 8, 12, 128, 256, 4096})
-            run(M, K);
-}
-
 TEST_F(ARM_COMMON, MATRIX_MUL_RECORD) {
     TaskRecordChecker<MatrixMul> checker(0);
     checker.set_epsilon(1e-2);

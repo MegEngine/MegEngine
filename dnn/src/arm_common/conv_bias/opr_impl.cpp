@@ -28,7 +28,6 @@
 
 #include "include/megdnn/oprs/nn.h"
 #include "src/arm_common/conv_bias/f16/algos.h"
-#include "src/arm_common/conv_bias/fp32/algos.h"
 #include "src/arm_common/conv_bias/int8/stride1.h"
 #include "src/arm_common/conv_bias/int8/stride2.h"
 #include "src/arm_common/conv_bias/quint8/stride1.h"
@@ -68,14 +67,6 @@ class ConvBiasImpl::AlgoPack : NonCopyableObj {
     AlgoDotS8Direct_NCHW44 ds8_direct_nchw44;
     AlgoDotS8DirectNCHWNCHW44 ds8_direct_nchw_nchw44;
 #endif
-
-    AlgoF32DirectNCHWNCHW44 f32_direct_stride2_nchw_nchw44;
-    AlgoF32ChannelWiseNCHW44 f32_chanel_wise_nchw44;
-    AlgoF32DirectNCHW44 f32_direct_nchw44;
-
-    AlgoF32Direct f32_direct;
-    AlgoF32DirectStride2 f32_direct_stride2;
-    AlgoF32DirectStride1 f32_direct_stride1;
 
     AlgoI8x8x16Direct i8x8x16_direct;
     AlgoI8x8x16Stride2 i8x8x16_stride2;
@@ -127,14 +118,6 @@ public:
         m_direct_algos.emplace_back(&i8x8x16_stride2);
         m_direct_algos.emplace_back(&i8x8x16_nchw_nchw44);
 
-        m_direct_algos.emplace_back(&f32_direct_stride2_nchw_nchw44);
-        m_direct_algos.emplace_back(&f32_chanel_wise_nchw44);
-        m_direct_algos.emplace_back(&f32_direct_nchw44);
-
-        m_direct_algos.emplace_back(&f32_direct_stride1);
-        m_direct_algos.emplace_back(&f32_direct_stride2);
-        m_direct_algos.emplace_back(&f32_direct);
-
         static CpuOprDelegationStorage<2> storage;
         auto matmul_opr = storage.get<MatrixMul, 0>();
         using MatmulFormat = param::MatrixMul::Format;
@@ -145,22 +128,6 @@ public:
             if (is_fallback_or_naive(algo))
                 continue;
             for (uint32_t tile_size : {16, 8, 24, 32}) {
-                refhold.emplace_back(new AlgoFP32WinogradF23_4x4(
-                        static_cast<fallback::MatrixMulImpl::AlgoBase*>(algo),
-                        tile_size));
-                m_winograd_algos.emplace_back(refhold.back().get());
-                refhold.emplace_back(new AlgoFP32WinogradF63_4x4(
-                        static_cast<fallback::MatrixMulImpl::AlgoBase*>(algo),
-                        tile_size));
-                m_winograd_algos.emplace_back(refhold.back().get());
-                refhold.emplace_back(new AlgoFP32WinogradF63_4x4_NCHW44(
-                        static_cast<fallback::MatrixMulImpl::AlgoBase*>(algo),
-                        tile_size));
-                m_winograd_algos.emplace_back(refhold.back().get());
-                refhold.emplace_back(new AlgoFP32WinogradF23_4x4_NCHW44(
-                        static_cast<fallback::MatrixMulImpl::AlgoBase*>(algo),
-                        tile_size));
-                m_winograd_algos.emplace_back(refhold.back().get());
 //! uncomment this when low precision mode is done
 #if 0
                 refhold.emplace_back(new AlgoFP32WinogradF73_4x4_NCHW44(
@@ -170,27 +137,6 @@ public:
 #endif
                 //! Qint8x8x32 winograd compute with fp32
                 refhold.emplace_back(new AlgoS8CF32WinogradF23_4x4_NCHW44(
-                        static_cast<fallback::MatrixMulImpl::AlgoBase*>(algo),
-                        tile_size));
-                m_winograd_algos.emplace_back(refhold.back().get());
-            }
-        }
-        matmul_algos = static_cast<arm_common::MatrixMulImpl*>(matmul_opr)
-                               ->select_algo_type(
-                                       {AlgoDataType::FLOAT32, MatmulFormat::DEFAULT});
-        for (auto&& algo : matmul_algos) {
-            if (is_fallback_or_naive(algo))
-                continue;
-            for (uint32_t tile_size : {16, 8, 24, 32}) {
-                refhold.emplace_back(new AlgoFP32WinogradF63(
-                        static_cast<fallback::MatrixMulImpl::AlgoBase*>(algo),
-                        tile_size));
-                m_winograd_algos.emplace_back(refhold.back().get());
-                refhold.emplace_back(new AlgoFP32WinogradF54(
-                        static_cast<fallback::MatrixMulImpl::AlgoBase*>(algo),
-                        tile_size));
-                m_winograd_algos.emplace_back(refhold.back().get());
-                refhold.emplace_back(new AlgoFP32WinogradF45(
                         static_cast<fallback::MatrixMulImpl::AlgoBase*>(algo),
                         tile_size));
                 m_winograd_algos.emplace_back(refhold.back().get());

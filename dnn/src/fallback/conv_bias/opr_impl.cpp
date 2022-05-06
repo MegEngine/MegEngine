@@ -16,6 +16,7 @@
 #include "src/fallback/conv_bias/algos.h"
 #include "src/fallback/conv_bias/conv1x1/algos.h"
 #include "src/fallback/conv_bias/conv1x1/algos_conv1x1_gemv.h"
+#include "src/fallback/conv_bias/gi/fp32/algos.h"
 #include "src/fallback/conv_bias/im2col/algos.h"
 #include "src/fallback/convolution/opr_impl.h"
 #include "src/naive/convolution/algorithms.h"
@@ -33,6 +34,14 @@
 
 using namespace megdnn;
 using namespace fallback;
+
+namespace {
+
+//! TODO: imp is_fallback_exclude_gi_or_naive
+bool is_naive(const detail::Algorithm* algo) {
+    return algo->handle_type() == Handle::HandleType::NAIVE;
+}
+}  // anonymous namespace
 
 size_t megdnn::fallback::pack_size(param::ConvBias::Format format) {
     switch (format) {
@@ -73,16 +82,95 @@ class ConvBiasImpl::AlgoPack : NonCopyableObj {
     SmallVector<std::unique_ptr<AlgoBase>> refhold;
     SmallVector<AlgoBase*> m_all_algos;
     AlgoBase::Mapper m_all_algos_map;
+    SmallVector<fallback::ConvBiasImpl::AlgoBase*> m_gi_winograd_algos;
+
+    AlgoF32DirectNCHWNCHW44 f32_direct_stride2_nchw_nchw44;
+    AlgoF32ChannelWiseNCHW44 f32_chanel_wise_nchw44;
+    AlgoF32DirectNCHW44 f32_direct_nchw44;
+
+    AlgoF32Direct f32_direct;
+    AlgoF32DirectStride2 f32_direct_stride2;
+    AlgoF32DirectStride1 f32_direct_stride1;
 
 public:
     AlgoPack() {
+        // fallback gi fp32 algo
+        m_all_algos.emplace_back(&f32_direct_stride2_nchw_nchw44);
+        m_all_algos.emplace_back(&f32_chanel_wise_nchw44);
+        m_all_algos.emplace_back(&f32_direct_nchw44);
+        m_all_algos.emplace_back(&f32_direct_stride1);
+        m_all_algos.emplace_back(&f32_direct_stride2);
+        m_all_algos.emplace_back(&f32_direct);
+
+        static CpuOprDelegationStorage<2> storage;
+        auto matmul_opr = storage.get<MatrixMul, 0>();
+        using MatmulFormat = param::MatrixMul::Format;
+        auto&& matmul_algos =
+                static_cast<fallback::MatrixMulImpl*>(matmul_opr)
+                        ->select_algo_type({AlgoDataType::FLOAT32, MatmulFormat::MK4});
+        for (auto&& algo : matmul_algos) {
+            if (is_naive(algo))
+                continue;
+            for (uint32_t tile_size : {16, 8, 24, 32}) {
+                refhold.emplace_back(new AlgoFP32WinogradF23_4x4(
+                        static_cast<fallback::MatrixMulImpl::AlgoBase*>(algo),
+                        tile_size));
+                m_gi_winograd_algos.emplace_back(refhold.back().get());
+                refhold.emplace_back(new AlgoFP32WinogradF63_4x4(
+                        static_cast<fallback::MatrixMulImpl::AlgoBase*>(algo),
+                        tile_size));
+                m_gi_winograd_algos.emplace_back(refhold.back().get());
+                refhold.emplace_back(new AlgoFP32WinogradF63_4x4_NCHW44(
+                        static_cast<fallback::MatrixMulImpl::AlgoBase*>(algo),
+                        tile_size));
+                m_gi_winograd_algos.emplace_back(refhold.back().get());
+                refhold.emplace_back(new AlgoFP32WinogradF23_4x4_NCHW44(
+                        static_cast<fallback::MatrixMulImpl::AlgoBase*>(algo),
+                        tile_size));
+                m_gi_winograd_algos.emplace_back(refhold.back().get());
+//! uncomment this when low precision mode is done
+#if 0
+                refhold.emplace_back(new AlgoFP32WinogradF73_4x4_NCHW44(
+                        static_cast<fallback::MatrixMulImpl::AlgoBase*>(algo),
+                        tile_size));
+                m_gi_winograd_algos.emplace_back(refhold.back().get());
+#endif
+            }
+        }
+
+        //! TODO: move arm_v7 MatrixMulImpl::AlgoF32 matmul to gi fallback, for nchw
+        //! prefetch algo, also need update dnn/test/common/conv_bias.cpp:check_winograd
+        matmul_algos = static_cast<fallback::MatrixMulImpl*>(matmul_opr)
+                               ->select_algo_type(
+                                       {AlgoDataType::FLOAT32, MatmulFormat::DEFAULT});
+        for (auto&& algo : matmul_algos) {
+            if (is_naive(algo))
+                continue;
+            for (uint32_t tile_size : {16, 8, 24, 32}) {
+                refhold.emplace_back(new AlgoFP32WinogradF63(
+                        static_cast<fallback::MatrixMulImpl::AlgoBase*>(algo),
+                        tile_size));
+                m_gi_winograd_algos.emplace_back(refhold.back().get());
+                refhold.emplace_back(new AlgoFP32WinogradF54(
+                        static_cast<fallback::MatrixMulImpl::AlgoBase*>(algo),
+                        tile_size));
+                m_gi_winograd_algos.emplace_back(refhold.back().get());
+                refhold.emplace_back(new AlgoFP32WinogradF45(
+                        static_cast<fallback::MatrixMulImpl::AlgoBase*>(algo),
+                        tile_size));
+                m_gi_winograd_algos.emplace_back(refhold.back().get());
+            }
+        }
+        for (auto&& algo : m_gi_winograd_algos) {
+            m_all_algos.emplace_back(algo);
+        }
+        // end fallback gi fp32 algo
+
         refhold.emplace_back(new AlgoConv1x1Gemv());
         m_all_algos.emplace_back(refhold.back().get());
 
-        static CpuOprDelegationStorage<> storage;
-        auto matmul_opr = storage.get<MatrixMul>();
-        auto&& matmul_algos = static_cast<fallback::MatrixMulImpl*>(matmul_opr)
-                                      ->get_all_packed_algo();
+        matmul_algos = static_cast<fallback::MatrixMulImpl*>(matmul_opr)
+                               ->get_all_packed_algo();
         for (auto&& algo : matmul_algos) {
 #if MEGDNN_X86
 //! As we haven't direct conv for int8x8x16 yet, if we disable gemv here, it may

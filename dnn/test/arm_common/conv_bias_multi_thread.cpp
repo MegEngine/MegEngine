@@ -303,84 +303,6 @@ void checker_conv_bias_int8x8x32_multi(
     }
 }
 
-/**********************************F32 direct************************/
-TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_DIRECT_FP32) {
-    check_conv_bias(
-            get_conv_bias_args({1, 2, 3, 4, 5, 6, 7}, 1, false, false, false), handle(),
-            "F32DIRECT");
-}
-
-TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_DIRECT_FP32_NCHW44_S1_K7) {
-    //! k=7 s=1
-    check_conv_bias(
-            get_nchw44_conv_bias_args({7}, ONLY_IDENTITY_NLMODE, BR_AND_NO_BIASMODE, 1),
-            handle(), "F32_CONV_NCHW44_DIRECT");
-}
-
-TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_DIRECT_FP32_NCHW44_S1_K2K3) {
-    check_conv_bias(
-            get_nchw44_conv_bias_args({2, 3}, FULL_NLMODE, ONLY_BR_BIASMODE, 1),
-            handle(), "F32_CONV_NCHW44_DIRECT");
-}
-
-TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_DIRECT_FP32_NCHW44_S1_K5) {
-    check_conv_bias(
-            get_nchw44_conv_bias_args({5}, FULL_NLMODE, ONLY_BR_BIASMODE, 1), handle(),
-            "F32_CONV_NCHW44_DIRECT");
-}
-
-TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_DIRECT_FP32_NCHW44_S2) {
-    check_conv_bias(
-            get_nchw44_conv_bias_args({2, 3, 5, 7}, FULL_NLMODE, ONLY_BR_BIASMODE, 2),
-            handle(), "F32_CONV_NCHW44_DIRECT");
-}
-
-TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_DIRECT_FP32_STR1) {
-    check_conv_bias(
-            get_conv_bias_args({2, 3, 5, 7}, 1, false, false, false), handle(),
-            "F32STRD1");
-}
-
-TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_DIRECT_FP32_STR2) {
-    check_conv_bias(
-            get_conv_bias_args({2, 3, 5, 7}, 2, false, false, false), handle(),
-            "F32STRD2");
-}
-
-TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_NCHW_NCHW44_F32_S2) {
-    check_conv_bias(
-            get_nchw44_conv_bias_args(
-                    {2, 3, 5, 7}, ONLY_IDENTITY_NLMODE, ONLY_BR_BIASMODE, 2, false,
-                    true),
-            handle(), "F32_CONV_NCHW_NCHW44");
-}
-
-TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_NCHW_NCHW44_F32_S1) {
-    check_conv_bias(
-            get_nchw44_conv_bias_args(
-                    {2, 3, 5, 7}, ONLY_IDENTITY_NLMODE, ONLY_BR_BIASMODE, 1, false,
-                    true),
-            handle(), "F32_CONV_NCHW_NCHW44");
-}
-
-TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_CHANNEL_WISE_STRIDE1_FP32_NCHW44_1) {
-    check_conv_bias(
-            get_nchw44_channel_wise_args({2, 3}, 1, false, false, false), handle(),
-            "F32_CHANNEL_WISE_NCHW44");
-}
-
-TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_CHANNEL_WISE_STRIDE1_FP32_NCHW44_2) {
-    check_conv_bias(
-            get_nchw44_channel_wise_args({5}, 1, false, false, false), handle(),
-            "F32_CHANNEL_WISE_NCHW44");
-}
-
-TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_CHANNEL_WISE_STRIDE2_FP32_NCHW44) {
-    check_conv_bias(
-            get_nchw44_channel_wise_args({2, 3, 5}, 2, false, false, false), handle(),
-            "F32_CHANNEL_WISE_NCHW44");
-}
-
 /**********************************F16 direct************************/
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
 TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_DIRECT_FP16) {
@@ -787,50 +709,6 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_WINOGRAD) {
 #endif
 }
 
-TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_WINOGRAD_F23_4) {
-    using namespace conv_bias;
-    std::vector<TestArg> args = get_winograd_mk_packed_args();
-    Checker<ConvBiasForward> checker(handle());
-
-    check_winograd("4:2:32", checker, args, param::MatrixMul::Format::MK4);
-}
-
-TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_WINOGRAD_F23_4_NCHW44) {
-    using namespace conv_bias;
-    std::vector<TestArg> args =
-            get_nchw44_conv_bias_args({3}, QUAN_NLMODE, BR_AND_NO_BIASMODE, 1);
-    Checker<ConvBiasForward> checker(handle());
-    check_winograd(
-            "4:2:32", checker, args, param::MatrixMul::Format::MK4,
-            param::ConvBias::Format::NCHW44);
-}
-
-TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_WINOGRAD_F63) {
-    using namespace conv_bias;
-    std::vector<TestArg> args = get_winograd_args(3);
-    Checker<ConvBiasForward> checker(handle());
-
-    check_winograd("1:6:32", checker, args);
-}
-
-TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_WINOGRAD_F63_4) {
-    using namespace conv_bias;
-    std::vector<TestArg> args = get_winograd_mk_packed_args();
-    Checker<ConvBiasForward> checker(handle());
-
-    check_winograd("4:6:16", checker, args, param::MatrixMul::Format::MK4);
-}
-
-TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_WINOGRAD_F63_4_NCHW44) {
-    using namespace conv_bias;
-    std::vector<TestArg> args =
-            get_nchw44_conv_bias_args({3}, QUAN_NLMODE, BR_AND_NO_BIASMODE, 1);
-    Checker<ConvBiasForward> checker(handle());
-    check_winograd(
-            "4:6:16", checker, args, param::MatrixMul::Format::MK4,
-            param::ConvBias::Format::NCHW44);
-}
-
 //! uncomment it when low precision mode is ok
 #if 0
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_WINOGRAD_F73_4_NCHW44) {
@@ -852,22 +730,6 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_WINOGRAD_F73_4_NCHW44_WEIGHT_PREPROCE
                    param::ConvBias::Format::NCHW44);
 }
 #endif
-
-TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_WINOGRAD_F54) {
-    using namespace conv_bias;
-    std::vector<TestArg> args = get_winograd_args(4);
-    Checker<ConvBiasForward> checker(handle());
-
-    check_winograd("1:5:32", checker, args);
-}
-
-TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_WINOGRAD_F45) {
-    using namespace conv_bias;
-    std::vector<TestArg> args = get_winograd_args(5);
-    Checker<ConvBiasForward> checker(handle());
-
-    check_winograd("1:4:32", checker, args);
-}
 
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_WINOGRAD_MK_PACKED_F32_1) {
     using namespace conv_bias;

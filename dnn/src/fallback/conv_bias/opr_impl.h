@@ -226,6 +226,20 @@ public:
             FB_CONV1x1,
             FB_CONV1x1_GEMV,
             FB_IM2COL,
+            GI_COMMON_WINOGRAD_F23_4X4_FP32,
+            GI_COMMON_WINOGRAD_F63_FP32,
+            GI_COMMON_WINOGRAD_F63_4X4_FP32,
+            GI_COMMON_WINOGRAD_F54_FP32,
+            GI_COMMON_WINOGRAD_F45_FP32,
+            GI_COMMON_WINOGRAD_F23_4X4_NCHW44_F32,
+            GI_COMMON_WINOGRAD_F63_4X4_NCHW44_F32,
+            GI_COMMON_WINOGRAD_F73_4X4_NCHW44_F32,
+            GI_COMMON_DIRECT_FP32,
+            GI_COMMON_DIRECT_STRD1_FP32,
+            GI_COMMON_DIRECT_STRD2_FP32,
+            GI_COMMON_DIRECT_NCHW44_FP32,
+            GI_COMMON_DIRECT_NCHW_NCHW44_FP32,
+            GI_COMMON_CHWNWISE_NCHW44_F32,
 
 #if MEGDNN_X86
             X86_DIRECT = 1 << 8,
@@ -248,20 +262,6 @@ public:
             ARM_COMMON_DIRECT_STRD1_FP16,
             ARM_COMMON_CHWNWISE_NCHW88_F16,
             ARM_COMMON_DIRECT_NCHW88_FP16,
-            ARM_COMMON_WINOGRAD_F23_4X4_FP32,
-            ARM_COMMON_WINOGRAD_F63_FP32,
-            ARM_COMMON_WINOGRAD_F63_4X4_FP32,
-            ARM_COMMON_WINOGRAD_F54_FP32,
-            ARM_COMMON_WINOGRAD_F45_FP32,
-            ARM_COMMON_WINOGRAD_F23_4X4_NCHW44_F32,
-            ARM_COMMON_WINOGRAD_F63_4X4_NCHW44_F32,
-            ARM_COMMON_WINOGRAD_F73_4X4_NCHW44_F32,
-            ARM_COMMON_DIRECT_FP32,
-            ARM_COMMON_DIRECT_STRD1_FP32,
-            ARM_COMMON_DIRECT_STRD2_FP32,
-            ARM_COMMON_DIRECT_NCHW44_FP32,
-            ARM_COMMON_DIRECT_NCHW_NCHW44_FP32,
-            ARM_COMMON_CHWNWISE_NCHW44_F32,
             ARM_COMMON_DIRECT_STRD1_S8,
             ARM_COMMON_DIRECT_STRD2_S8,
             ARM_COMMON_DIRECT_NCHW44,
@@ -383,6 +383,23 @@ private:
     class AlgoWinogradF32_4x4;
     class AlgoWinogradQS8;
     class AlgoWinogradQS8_8x8;
+
+    class AlgoFP32WinogradF23_4x4;
+    class AlgoFP32WinogradF63;
+    class AlgoFP32WinogradF63_4x4;
+    class AlgoFP32WinogradF54;
+    class AlgoFP32WinogradF45;
+    class AlgoFP32WinogradF23_4x4_NCHW44;
+    class AlgoFP32WinogradF63_4x4_NCHW44;
+    class AlgoFP32WinogradF73_4x4_NCHW44;
+
+    class AlgoF32Direct;
+    class AlgoF32DirectStride1;
+    class AlgoF32DirectStride2;
+    class AlgoF32DirectNCHWNCHW44;
+    class AlgoF32ChannelWiseNCHW44;
+    class AlgoF32DirectNCHW44;
+
     class AlgoPack;
 
     NCBKernSizeParam m_prev_selected_algo_sizep;

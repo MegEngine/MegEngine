@@ -49,15 +49,6 @@ private:
     class AlgoS8DirectNCHWNCHW44;
     class AlgoQU8DirectStride1;
     class AlgoQU8DirectStride2;
-    class AlgoFP32WinogradF23_4x4;
-    class AlgoFP32WinogradF63;
-    class AlgoFP32WinogradF63_4x4;
-    class AlgoFP32WinogradF54;
-    class AlgoFP32WinogradF45;
-
-    class AlgoFP32WinogradF23_4x4_NCHW44;
-    class AlgoFP32WinogradF63_4x4_NCHW44;
-    class AlgoFP32WinogradF73_4x4_NCHW44;
 
     class AlgoS8ChanWiseStride1NCHW44;
     class AlgoS8ChanWiseStride2NCHW44;
@@ -78,12 +69,6 @@ private:
 
     class AlgoDotS8Direct_NCHW44;
 #endif
-    class AlgoF32Direct;
-    class AlgoF32DirectStride1;
-    class AlgoF32DirectStride2;
-    class AlgoF32DirectNCHWNCHW44;
-    class AlgoF32ChannelWiseNCHW44;
-    class AlgoF32DirectNCHW44;
 
     class AlgoI8x8x16Direct;
     class AlgoI8x8x16Stride2;

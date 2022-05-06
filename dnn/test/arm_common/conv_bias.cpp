@@ -81,23 +81,6 @@ TEST_F(ARM_COMMON, CONV_BIAS_RECORD) {
     }
 }
 
-TEST_F(ARM_COMMON, CONV_BIAS_WINOGRAD_F63_4) {
-    using namespace conv_bias;
-    std::vector<TestArg> args = get_winograd_mk_packed_args();
-    Checker<ConvBiasForward> checker(handle());
-
-    check_winograd("4:6:16", checker, args, param::MatrixMul::Format::MK4);
-}
-
-TEST_F(ARM_COMMON, CONV_BIAS_WINOGRAD_F63_4_WEIGHT_PREPROCESS) {
-    using namespace conv_bias;
-    std::vector<TestArg> args = get_winograd_mk_packed_args();
-    Checker<ConvBiasForward, OprWeightPreprocessProxy<ConvBiasForward>> checker(
-            handle());
-
-    check_winograd("4:6:16", checker, args, param::MatrixMul::Format::MK4);
-}
-
 #define CONV_BIAS_MATMUL_QU8_MODE(MODE)                                                \
     using namespace conv_bias;                                                         \
     std::vector<TestArg> args = get_quantized_args_with_nlmode(MODE);                  \
@@ -1015,27 +998,11 @@ TEST_F(ARM_COMMON, BENCHMARK_CONVBIAS_WINOGRAD_F23) {
 #endif
 }
 
-TEST_F(ARM_COMMON, BENCHMARK_CONVBIAS_WINOGRAD_F23_4x4) {
-#if MEGDNN_AARCH64
-    benchmark_winograd("WINOGRAD:AARCH64_F32_MK4_4x16:4:2", handle(), 3, 4);
-#else
-    benchmark_winograd("WINOGRAD:ARMV7_F32_MK4_4x8:4:2", handle(), 3, 4);
-#endif
-}
-
 TEST_F(ARM_COMMON, BENCHMARK_CONVBIAS_WINOGRAD_F63) {
 #if MEGDNN_AARCH64
     benchmark_winograd("WINOGRAD:AARCH64_F32K8X12X1:1:6", handle(), 3);
 #else
     benchmark_winograd("WINOGRAD:ARMV7_F32:1:6", handle(), 3);
-#endif
-}
-
-TEST_F(ARM_COMMON, BENCHMARK_CONVBIAS_WINOGRAD_F63_4x4) {
-#if MEGDNN_AARCH64
-    benchmark_winograd("WINOGRAD:AARCH64_F32_MK4_4x16:4:6", handle(), 3, 4);
-#else
-    benchmark_winograd("WINOGRAD:ARMV7_F32_MK4_4x8:4:6", handle(), 3, 4);
 #endif
 }
 
@@ -1212,30 +1179,10 @@ void benchmark_winograd_nchw_vs_nchw44(
     }
 }
 
-TEST_F(ARM_COMMON, BENCHMARK_CONVBIAS_WINOGRAD_F23_MK4_NCHW_VS_NCHW44) {
-#if MEGDNN_AARCH64
-    benchmark_winograd_nchw_vs_nchw44(
-            "AARCH64_F32_MK4_4x16:4:2", "AARCH64_F32_MK4_4x16:4:2", handle());
-#else
-    benchmark_winograd_nchw_vs_nchw44(
-            "ARMV7_F32_MK4_4x8:4:2", "ARMV7_F32_MK4_4x8:4:2", handle());
-#endif
-}
-
-TEST_F(ARM_COMMON, BENCHMARK_CONVBIAS_WINOGRAD_F63_MK4_NCHW_VS_NCHW44) {
-#if MEGDNN_AARCH64
-    benchmark_winograd_nchw_vs_nchw44(
-            "AARCH64_F32_MK4_4x16:4:6", "AARCH64_F32_MK4_4x16:4:6", handle());
-#else
-    benchmark_winograd_nchw_vs_nchw44(
-            "ARMV7_F32_MK4_4x8:4:6", "ARMV7_F32_MK4_4x8:4:6", handle());
-#endif
-}
-
 TEST_F(ARM_COMMON, BENCHMARK_CONVBIAS_WINOGRAD_F73_MK4_NCHW_VS_NCHW44) {
 #if MEGDNN_AARCH64
     benchmark_winograd_nchw_vs_nchw44(
-            "AARCH64_F32_MK4_4x16:4:6", "ARM_COMMON_F32_GEMV_MK4:4:7", handle());
+            "AARCH64_F32_MK4_4x16:4:6", "FB_GI_F32_GEMV_MK4:4:7", handle());
 #else
     benchmark_winograd_nchw_vs_nchw44(
             "ARMV7_F32_MK4_4x8:4:6", "ARMV7_F32_MK4_4x8:4:7", handle());
@@ -1609,156 +1556,6 @@ TEST_F(ARM_COMMON, BENCHMARK_CONV_BIAS_QUINT8_STRIDE2) {
                computations / used0, used1, computations / used1, used1 / used0);
     }
 }
-TEST_F(ARM_COMMON, BENCHMARK_CHANNEL_WISE_F32_STRIDE1_NCHW44) {
-    // have to remove preferred restrict in usable func before run the benchmark
-    using namespace conv_bias;
-    param::ConvBias param;
-    param.stride_h = 1;
-    param.stride_w = 1;
-    param.pad_h = 1;
-    param.pad_w = 1;
-    param.nonlineMode = NonlineMode::RELU;
-    param.sparse = param::ConvBias::Sparse::GROUP;
-
-    constexpr size_t RUN = 50;
-    Benchmarker<ConvBias> benchmark0(handle());
-    benchmark0.set_display(false);
-    benchmark0.set_param(param);
-    benchmark0.set_times(RUN);
-    benchmark0.set_before_exec_callback(
-            conv_bias::ConvBiasAlgoChecker<ConvBiasForward>("F32STRD1"));
-
-    auto opr = handle()->create_operator<ConvBias>();
-    opr->param() = param;
-
-    param.format = param::ConvBias::Format::NCHW44;
-    Benchmarker<ConvBias> benchmark1(handle());
-    benchmark1.set_display(false);
-    benchmark1.set_param(param);
-    benchmark1.set_times(RUN);
-    benchmark1.set_before_exec_callback(
-            conv_bias::ConvBiasAlgoChecker<ConvBiasForward>("F32_CHANNEL_WISE_NCHW44"));
-    auto run = [&](size_t group, size_t w, size_t h, size_t kernel) {
-        TensorLayout dst_layout;
-        opr->deduce_layout(
-                {{1, group * 4, h, w}, dtype::Int8()},
-                {{group * 4, 1, 1, kernel, kernel}, dtype::Int8()},
-                {{1, group * 4, 1, 1}, dtype::Int32()}, {}, dst_layout);
-        //! dst.nr_elems * IC * FH * FW * 2
-        float computations = dst_layout.total_nr_elems() * kernel * kernel * 2.0 /
-                             (1024 * 1024 * 1024) * 1e3;
-
-        auto used0 = benchmark0.exec(
-                             {{1, group * 4, h, w},
-                              {group * 4, 1, 1, kernel, kernel},
-                              {1, group * 4, 1, 1},
-                              {},
-                              {}}) /
-                     RUN;
-        auto used1 = benchmark1.exec(
-                             {{1, group, h, w, 4},
-                              {group, 1, 1, kernel, kernel, 4},
-                              {1, group, 1, 1, 4},
-                              {},
-                              {}}) /
-                     RUN;
-        printf("group/h/w/kernel:%zu,%zu,%zu,%zu: nchw: %f ms %f Gflops "
-               "nchw44: "
-               "%f ms %f GFlops "
-               "speedup: %f\n",
-               group, h, w, kernel, used0, computations / used0, used1,
-               computations / used1, used0 / used1);
-    };
-    for (size_t group : {8, 16, 32, 64}) {
-        for (size_t kerenl : {2, 3, 5}) {
-            run(group, 112, 112, kerenl);
-            run(group, 56, 56, kerenl);
-            run(group, 48, 48, kerenl);
-            run(group, 28, 28, kerenl);
-            run(group, 14, 14, kerenl);
-        }
-    }
-    run(8, 112, 112, 3);
-    run(32, 56, 56, 3);
-    run(64, 28, 28, 3);
-    run(128, 14, 14, 3);
-}
-
-TEST_F(ARM_COMMON, BENCHMARK_CHANNEL_WISE_F32_STRIDE2_NCHW44) {
-    // have to remove preferred restrict in usable func before run the benchmark
-    using namespace conv_bias;
-    param::ConvBias param;
-    param.stride_h = 2;
-    param.stride_w = 2;
-    param.pad_h = 1;
-    param.pad_w = 1;
-    param.nonlineMode = NonlineMode::RELU;
-    param.sparse = param::ConvBias::Sparse::GROUP;
-
-    constexpr size_t RUN = 50;
-    Benchmarker<ConvBias> benchmark0(handle());
-    benchmark0.set_display(false);
-    benchmark0.set_param(param);
-    benchmark0.set_times(RUN);
-    benchmark0.set_before_exec_callback(
-            conv_bias::ConvBiasAlgoChecker<ConvBiasForward>("F32STRD2"));
-
-    auto opr = handle()->create_operator<ConvBias>();
-    opr->param() = param;
-
-    param.format = param::ConvBias::Format::NCHW44;
-    Benchmarker<ConvBias> benchmark1(handle());
-    benchmark1.set_display(false);
-    benchmark1.set_param(param);
-    benchmark1.set_times(RUN);
-    benchmark1.set_before_exec_callback(
-            conv_bias::ConvBiasAlgoChecker<ConvBiasForward>("F32_CHANNEL_WISE_NCHW44"));
-    auto run = [&](size_t group, size_t w, size_t h, size_t kernel) {
-        TensorLayout dst_layout;
-        opr->deduce_layout(
-                {{1, group * 4, h, w}, dtype::Int8()},
-                {{group * 4, 1, 1, kernel, kernel}, dtype::Int8()},
-                {{1, group * 4, 1, 1}, dtype::Int32()}, {}, dst_layout);
-        //! dst.nr_elems * IC * FH * FW * 2
-        float computations = dst_layout.total_nr_elems() * kernel * kernel * 2.0 /
-                             (1024 * 1024 * 1024) * 1e3;
-
-        auto used0 = benchmark0.exec(
-                             {{1, group * 4, h, w},
-                              {group * 4, 1, 1, kernel, kernel},
-                              {1, group * 4, 1, 1},
-                              {},
-                              {}}) /
-                     RUN;
-        auto used1 = benchmark1.exec(
-                             {{1, group, h, w, 4},
-                              {group, 1, 1, kernel, kernel, 4},
-                              {1, group, 1, 1, 4},
-                              {},
-                              {}}) /
-                     RUN;
-        printf("group/h/w/kernel:%zu,%zu,%zu,%zu: nchw: %f ms %f Gflops "
-               "nchw44: "
-               "%f ms %f GFlops "
-               "speedup: %f\n",
-               group, h, w, kernel, used0, computations / used0, used1,
-               computations / used1, used0 / used1);
-    };
-    for (size_t group : {8, 16, 32, 64}) {
-        for (size_t kerenl : {2, 3, 5}) {
-            run(group, 112, 112, kerenl);
-            run(group, 56, 56, kerenl);
-            run(group, 48, 48, kerenl);
-            run(group, 28, 28, kerenl);
-            run(group, 14, 14, kerenl);
-        }
-    }
-    run(8, 112, 112, 3);
-    run(32, 56, 56, 3);
-    run(64, 28, 28, 3);
-    run(128, 14, 14, 3);
-}
-
 TEST_F(ARM_COMMON, BENCHMARK_CONV_BIAS_QINT8_STRIDE1_NCHW44) {
     // have to remove preferred restrict in usable func before run the benchmark
     using namespace conv_bias;

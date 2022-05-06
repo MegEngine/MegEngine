@@ -10,6 +10,8 @@
  */
 #pragma once
 
+#include "megbrain_build_config.h"
+
 #include "src/fallback/conv_bias/opr_impl.h"
 #include "src/fallback/matrix_mul/opr_impl.h"
 
