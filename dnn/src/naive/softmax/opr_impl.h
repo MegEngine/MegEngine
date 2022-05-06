@@ -4,7 +4,7 @@
 namespace megdnn {
 namespace naive {
 
-class SoftmaxForwardImpl final : public SoftmaxForward {
+class SoftmaxForwardImpl : public SoftmaxForward {
 public:
     using SoftmaxForward::SoftmaxForward;
     void exec(
@@ -16,7 +16,7 @@ public:
     }
 };
 
-class SoftmaxBackwardImpl final : public SoftmaxBackward {
+class SoftmaxBackwardImpl : public SoftmaxBackward {
 public:
     using SoftmaxBackward::SoftmaxBackward;
     void exec(
