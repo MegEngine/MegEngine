@@ -71,9 +71,13 @@ GI_INT32_t GiRoundAsInt32(GI_FLOAT32_t Vector) {
     return _mm_cvttps_epi32(_mm_add_ps(Vector, vinc0));
 #else
     GI_INT32_t ret;
+    GI_INT32_NAIVE_t tmp_ret;
+    GI_FLOAT32_NAIVE_t s0;
+    memcpy(&s0, &Vector, sizeof(GI_FLOAT32_NAIVE_t));
     for (size_t i = 0; i < GI_SIMD_LEN_BYTE / sizeof(float); i++) {
-        ret[i] = (int32_t)round(Vector[i]);
+        tmp_ret[i] = (int32_t)round(s0[i]);
     }
+    memcpy(&ret, &tmp_ret, sizeof(GI_INT32_t));
     return ret;
 #endif
 }
@@ -139,7 +143,10 @@ GI_FLOAT32_t GiLoadFloat32(const float* Buffer) {
 #if defined(GI_NEON_INTRINSICS)
     return vld1q_f32(Buffer);
 #elif defined(GI_SSE2_INTRINSICS)
-    return _mm_loadu_ps(Buffer);
+    if ((((uintptr_t)(Buffer)) & 15) == 0)
+        return _mm_load_ps(Buffer);
+    else
+        return _mm_loadu_ps(Buffer);
 #else
     GI_FLOAT32_t ret;
     for (size_t i = 0; i < GI_SIMD_LEN_BYTE / sizeof(float); i++) {
@@ -148,6 +155,356 @@ GI_FLOAT32_t GiLoadFloat32(const float* Buffer) {
     return ret;
 #endif
 }
+
+GI_FORCEINLINE
+GI_FLOAT32_t GiLoadFloat32LowHalf(const float* Buffer) {
+#if defined(GI_NEON_INTRINSICS)
+    return vcombine_f32(vld1_f32(Buffer), vdup_n_f32(0.f));
+#elif defined(GI_SSE2_INTRINSICS)
+    typedef __m64_128 float32x2_t;
+    float32x2_t low, high;
+    low.m64_f32[0] = Buffer[0];
+    low.m64_f32[1] = Buffer[1];
+    high.m64_f32[0] = 0;
+    high.m64_f32[1] = 0;
+    __m128i res = _mm_unpacklo_epi64(_pM128i(low), _pM128i(high));
+    return _M128(res);
+#else
+    GI_FLOAT32_t ret;
+    memset(&ret, 0, sizeof(GI_FLOAT32_t));
+    for (size_t i = 0; i < GI_SIMD_LEN_BYTE / sizeof(float) / 2; i++) {
+        ret[i] = Buffer[i];
+    }
+    return ret;
+#endif
+}
+
+GI_FORCEINLINE
+GI_FLOAT32_t GiMlaqFloat32(GI_FLOAT32_t a, GI_FLOAT32_t b, GI_FLOAT32_t c) {
+#if defined(GI_NEON_INTRINSICS)
+#if defined(__ARM_FEATURE_FMA)
+    return vfmaq_f32(a, b, c);
+#else
+    return vmlaq_f32(a, b, c);
+#endif
+#elif defined(GI_SSE2_INTRINSICS)
+    // fma is coming soon, but right now:
+    __m128 res;
+    res = _mm_mul_ps(c, b);
+    return _mm_add_ps(a, res);
+#else
+    GI_FLOAT32_t ret;
+    for (size_t i = 0; i < GI_SIMD_LEN_BYTE / sizeof(float); i++) {
+        ret[i] = a[i] + (b[i] * c[i]);
+    }
+    return ret;
+#endif
+}
+
+GI_FORCEINLINE GI_FLOAT32_V2_t GiUzpqFloat32(GI_FLOAT32_t a, GI_FLOAT32_t b) {
+#if defined(GI_NEON_INTRINSICS)
+    return vuzpq_f32(a, b);
+#elif defined(GI_SSE2_INTRINSICS)
+    GI_FLOAT32_V2_t v32x4;
+    v32x4.val[0] = _mm_shuffle_ps(a, b, _MM_SHUFFLE(2, 0, 2, 0));
+    v32x4.val[1] = _mm_shuffle_ps(a, b, _MM_SHUFFLE(3, 1, 3, 1));
+    return v32x4;
+#else
+    GI_FLOAT32_V2_t ret;
+    ret.val[0][0] = a[0];
+    ret.val[0][1] = a[2];
+    ret.val[0][2] = b[0];
+    ret.val[0][3] = b[2];
+    ret.val[1][0] = a[1];
+    ret.val[1][1] = a[3];
+    ret.val[1][2] = b[1];
+    ret.val[1][3] = b[3];
+    return ret;
+#endif
+}
+
+GI_FORCEINLINE float32x2_t GiDupFloat32(float a) {
+#if defined(GI_NEON_INTRINSICS)
+    return vdup_n_f32(a);
+#elif defined(GI_SSE2_INTRINSICS)
+    float32x2_t res;
+    res.m64_f32[0] = a;
+    res.m64_f32[1] = a;
+    return res;
+#else
+    float32x2_t res;
+    res[0] = a;
+    res[1] = a;
+    return res;
+#endif
+}
+
+GI_FORCEINLINE float32x2_t GiLdFloat32(float const* ptr) {
+#if defined(GI_NEON_INTRINSICS)
+    return vld1_f32(ptr);
+#elif defined(GI_SSE2_INTRINSICS)
+    float32x2_t res;
+    res.m64_f32[0] = *(ptr);
+    res.m64_f32[1] = *(ptr + 1);
+    return res;
+#else
+    float32x2_t res;
+    res[0] = *(ptr);
+    res[1] = *(ptr + 1);
+    return res;
+#endif
+}
+
+GI_FORCEINLINE float32x2_t GiAddDFloat32(float32x2_t a, float32x2_t b) {
+#if defined(GI_NEON_INTRINSICS)
+    return vadd_f32(a, b);
+#elif defined(GI_SSE2_INTRINSICS)
+    __m128 res;
+    __m64_128 res64;
+    res = _mm_add_ps(_pM128(a), _pM128(b));  // SSE, use only low 64 bits
+    _M64f(res64, res);
+    return res64;
+#else
+    float32x2_t res;
+    res[0] = a[0] + b[0];
+    res[1] = a[1] + b[1];
+    return res;
+#endif
+}
+
+#if defined(GI_NEON_INTRINSICS)
+#define GiGetLaneFloat32(v, lane) vget_lane_f32(v, lane)
+#else
+GI_FORCEINLINE float __gi_vget_lane_f32(float32x2_t v, const int lane) {
+#if defined(GI_SSE2_INTRINSICS)
+    return _sse_vget_lane_f32(v, lane);
+#else
+    return v[lane];
+#endif
+}
+#define GiGetLaneFloat32(v, lane) __gi_vget_lane_f32(v, lane)
+#endif
+
+#if defined(GI_NEON_INTRINSICS)
+#define GiSetLaneFloat32(value, vec, lane) vset_lane_f32(value, vec, lane)
+#else
+GI_FORCEINLINE float32x2_t
+__gi_vset_lane_f32(float32_t value, float32x2_t vec, int lane) {
+#if defined(GI_SSE2_INTRINSICS)
+    float32x2_t res;
+    res = vec;
+    res.m64_f32[lane] = value;
+    return res;
+#else
+    float32x2_t res;
+    res = vec;
+    res[lane] = value;
+    return res;
+#endif
+}
+#define GiSetLaneFloat32(value, vec, lane) __gi_vset_lane_f32(value, vec, lane)
+#endif
+
+GI_FORCEINLINE void GiSt1Float32(float* ptr, float32x2_t val) {
+#if defined(GI_NEON_INTRINSICS)
+    return vst1_f32(ptr, val);
+#elif defined(GI_SSE2_INTRINSICS)
+    *(ptr) = val.m64_f32[0];
+    *(ptr + 1) = val.m64_f32[1];
+    return;
+#else
+    *(ptr) = val[0];
+    *(ptr + 1) = val[1];
+    return;
+#endif
+}
+
+GI_FORCEINLINE GI_FLOAT32_V2_t GiLd2qFloat32(const float* Buffer) {
+#if defined(GI_NEON_INTRINSICS)
+    return vld2q_f32(Buffer);
+#elif defined(GI_SSE2_INTRINSICS)
+    GI_FLOAT32_V2_t v;
+    v.val[0] = GiLoadFloat32(Buffer);
+    v.val[1] = GiLoadFloat32((Buffer + 4));
+    v = GiUzpqFloat32(v.val[0], v.val[1]);
+    return v;
+#else
+    GI_FLOAT32_V2_t ret;
+    ret.val[0][0] = Buffer[0];
+    ret.val[0][1] = Buffer[2];
+    ret.val[0][2] = Buffer[4];
+    ret.val[0][3] = Buffer[6];
+    ret.val[1][0] = Buffer[1];
+    ret.val[1][1] = Buffer[3];
+    ret.val[1][2] = Buffer[5];
+    ret.val[1][3] = Buffer[7];
+    return ret;
+#endif
+}
+
+#if defined(GI_NEON_INTRINSICS)
+#define GiExtqFloat32(a, b, n) vextq_f32(a, b, n)
+#elif defined(GI_SSE2_INTRINSICS)
+#define GiExtqFloat32(a, b, n) _M128(_sse_vextq_s32(_M128i(a), _M128i(b), n));
+#else
+GI_FORCEINLINE GI_FLOAT32_t
+__naive_gi_vextq_f32(GI_FLOAT32_t a, GI_FLOAT32_t b, const int n) {
+    GI_FLOAT32_t ret;
+    int t_count = GI_SIMD_LEN_BYTE / sizeof(float);
+    int a_count = t_count - n;
+    for (int i = 0; i < a_count; i++) {
+        ret[i] = a[i + n];
+    }
+    for (int i = 0; i < n; i++) {
+        ret[i + a_count] = b[i];
+    }
+    return ret;
+}
+#define GiExtqFloat32(a, b, n) __naive_gi_vextq_f32(a, b, n)
+#endif
+
+GI_FORCEINLINE
+GI_FLOAT32_t GiMultiplySubFloat32(
+        GI_FLOAT32_t VectorSum, GI_FLOAT32_t Vector1, GI_FLOAT32_t Vector2) {
+#if defined(GI_NEON_INTRINSICS)
+    return vmlsq_f32(VectorSum, Vector1, Vector2);
+#elif defined(GI_SSE2_INTRINSICS)
+    return _mm_sub_ps(VectorSum, _mm_mul_ps(Vector1, Vector2));
+#else
+    GI_FLOAT32_t ret;
+    for (size_t i = 0; i < GI_SIMD_LEN_BYTE / sizeof(float); i++) {
+        ret[i] = VectorSum[i] - Vector1[i] * Vector2[i];
+    }
+
+    return ret;
+#endif
+}
+
+#if defined(GI_SSE2_INTRINSICS)
+GI_FORCEINLINE GI_FLOAT32_t
+_MM_INSERT_PS(GI_FLOAT32_t vec, GI_FLOAT32_t p, const int LANE) {
+    _GI_ALIGN_16 uint32_t mask[4] = {0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff};
+    __m128 tmp, vec_masked, p_masked;
+    mask[LANE >> 4] = 0x0;
+    vec_masked = _mm_and_ps(*(__m128*)mask, vec);
+    p_masked = _mm_andnot_ps(*(__m128*)mask, p);
+    tmp = _mm_or_ps(vec_masked, p_masked);
+    return tmp;
+}
+
+GI_FORCEINLINE float32x2_t sse_vget_high_f32(GI_FLOAT32_t a) {
+    __m128i res;
+    __m64_128 res64;
+    res = _mm_unpackhi_epi64(_M128i(a), _M128i(a));
+    return64(res);
+}
+
+GI_FORCEINLINE float32x2_t sse_vget_low_f32(GI_FLOAT32_t a) {
+    float32x2_t res64;
+    _M64f(res64, a);
+    return res64;
+}
+
+GI_FORCEINLINE GI_FLOAT32_t
+sse_vmlaq_lane_f32(GI_FLOAT32_t a, GI_FLOAT32_t b, float32x2_t v, int l) {
+    float32_t vlane;
+    GI_FLOAT32_t c;
+    vlane = _sse_vget_lane_f32(v, l);
+    c = _mm_set1_ps(vlane);
+    return GiMlaqFloat32(a, b, c);
+}
+
+GI_FORCEINLINE int _MM_EXTRACT_PS(__m128 vec, const int LANE) {
+    _GI_ALIGN_16 int32_t tmp[4];
+    _mm_store_si128((__m128i*)tmp, _M128i(vec));
+    return tmp[LANE];
+}
+
+GI_FORCEINLINE float32_t sse_vgetq_lane_f32(GI_FLOAT32_t vec, int lane) {
+    float32_t floatVal;
+    char* const floatVal_c = (char*)&floatVal;
+    *((int32_t*)floatVal_c) = _MM_EXTRACT_PS(vec, lane);
+    return floatVal;
+}
+
+GI_FORCEINLINE GI_FLOAT32_t
+sse_vmlsq_lane_f32(GI_FLOAT32_t a, GI_FLOAT32_t b, float32x2_t v, int l) {
+    float32_t vlane;
+    GI_FLOAT32_t c;
+    vlane = (float)GiGetLaneFloat32(v, l);
+    c = GiBroadcastFloat32(vlane);
+    return GiMultiplySubFloat32(a, b, c);
+}
+
+#endif
+
+#if defined(GI_NEON_INTRINSICS)
+#define GiLd1qLaneFloat32(Buffer, src, n) vld1q_lane_f32(Buffer, src, n)
+#else
+GI_FORCEINLINE GI_FLOAT32_t
+__gi_vld1q_lane_f32(const float* Buffer, GI_FLOAT32_t src, const int n) {
+#if defined(GI_SSE2_INTRINSICS)
+    GI_FLOAT32_t p;
+    p = _mm_set1_ps(*(Buffer));
+    return _MM_INSERT_PS(src, p, _INSERTPS_NDX(0, n));
+#else
+    GI_FLOAT32_t ret;
+    memcpy(&ret, &src, sizeof(GI_FLOAT32_t));
+    ret[n] = *Buffer;
+    return ret;
+#endif
+}
+#define GiLd1qLaneFloat32(Buffer, src, n) __gi_vld1q_lane_f32(Buffer, src, n)
+#endif
+
+#if defined(GI_NEON_INTRINSICS)
+#define GiSetqLaneFloat32(value, vec, lane) vsetq_lane_f32(value, vec, lane)
+#else
+GI_FORCEINLINE GI_FLOAT32_t
+__gi_vsetq_lane_f32(float value, GI_FLOAT32_t vec, const int lane) {
+    float val = value;
+    return GiLd1qLaneFloat32(&val, vec, lane);
+}
+#define GiSetqLaneFloat32(value, vec, lane) __gi_vsetq_lane_f32(value, vec, lane)
+#endif
+
+#if defined(GI_NEON_INTRINSICS)
+#define GiMlaqLaneFloat32HighHalf(a, b, v, lane) \
+    vmlaq_lane_f32(a, b, vget_high_f32(v), lane)
+#elif defined(GI_SSE2_INTRINSICS)
+#define GiMlaqLaneFloat32HighHalf(a, b, v, lane) \
+    sse_vmlaq_lane_f32(a, b, sse_vget_high_f32(v), lane)
+#else
+GI_FORCEINLINE GI_FLOAT32_t __naive_gi_vmlaq_lane_f32_high_half(
+        GI_FLOAT32_t a, GI_FLOAT32_t b, GI_FLOAT32_t v, const int lane) {
+    GI_FLOAT32_t ret;
+    for (size_t i = 0; i < GI_SIMD_LEN_BYTE / sizeof(float); i++) {
+        ret[i] = a[i] + (b[i] * v[lane + 2]);
+    }
+    return ret;
+}
+#define GiMlaqLaneFloat32HighHalf(a, b, v, lane) \
+    __naive_gi_vmlaq_lane_f32_high_half(a, b, v, lane)
+#endif
+
+#if defined(GI_NEON_INTRINSICS)
+#define GiVmlaqLaneFloat32LowHalf(a, b, v, lane) \
+    vmlaq_lane_f32(a, b, vget_low_f32(v), lane)
+#elif defined(GI_SSE2_INTRINSICS)
+#define GiVmlaqLaneFloat32LowHalf(a, b, v, lane) \
+    sse_vmlaq_lane_f32(a, b, sse_vget_low_f32(v), lane)
+#else
+GI_FORCEINLINE GI_FLOAT32_t __naive_gi_vmlaq_lane_f32_low_half(
+        GI_FLOAT32_t a, GI_FLOAT32_t b, GI_FLOAT32_t v, const int lane) {
+    GI_FLOAT32_t ret;
+    for (size_t i = 0; i < GI_SIMD_LEN_BYTE / sizeof(float); i++) {
+        ret[i] = a[i] + (b[i] * v[lane]);
+    }
+    return ret;
+}
+#define GiVmlaqLaneFloat32LowHalf(a, b, v, lane) \
+    __naive_gi_vmlaq_lane_f32_low_half(a, b, v, lane)
+#endif
 
 GI_FORCEINLINE
 void GiStoreFloat32(float* Buffer, GI_FLOAT32_t Vector) {
@@ -213,6 +570,29 @@ GIEXTRACTLANEFLOAT32(3)
 #undef GIEXTRACTLANEFLOAT32
 
 GI_FORCEINLINE
+GI_FLOAT32_V2_t GiZipqFloat32(GI_FLOAT32_t Vector1, GI_FLOAT32_t Vector2) {
+#if defined(GI_NEON_INTRINSICS)
+    return vzipq_f32(Vector1, Vector2);
+#elif defined(GI_SSE2_INTRINSICS)
+    GI_FLOAT32_V2_t f32x4;
+    f32x4.val[0] = _mm_unpacklo_ps(Vector1, Vector2);
+    f32x4.val[1] = _mm_unpackhi_ps(Vector1, Vector2);
+    return f32x4;
+#else
+    GI_FLOAT32_V2_t ret;
+    ret.val[0][0] = Vector1[0];
+    ret.val[0][1] = Vector2[0];
+    ret.val[0][2] = Vector1[1];
+    ret.val[0][3] = Vector2[1];
+    ret.val[1][0] = Vector1[2];
+    ret.val[1][1] = Vector2[2];
+    ret.val[1][2] = Vector1[3];
+    ret.val[1][3] = Vector2[3];
+    return ret;
+#endif
+}
+
+GI_FORCEINLINE
 GI_FLOAT32_t GiInterleaveLowFloat32(GI_FLOAT32_t Vector1, GI_FLOAT32_t Vector2) {
 #if defined(GI_NEON64_INTRINSICS)
     return vzip1q_f32(Vector1, Vector2);
@@ -243,8 +623,8 @@ GI_FLOAT32_t GiInterleaveHighFloat32(GI_FLOAT32_t Vector1, GI_FLOAT32_t Vector2)
 #else
     GI_FLOAT32_t ret;
     for (size_t i = 0; i < GI_SIMD_LEN_BYTE / 2 / sizeof(float); i++) {
-        ret[2 * i] = Vector1[GI_SIMD_LEN_BYTE / 2 + i];
-        ret[2 * i + 1] = Vector2[GI_SIMD_LEN_BYTE / 2 + i];
+        ret[2 * i] = Vector1[GI_SIMD_LEN_BYTE / 2 / sizeof(float) + i];
+        ret[2 * i + 1] = Vector2[GI_SIMD_LEN_BYTE / 2 / sizeof(float) + i];
     }
     return ret;
 #endif
@@ -310,18 +690,6 @@ GI_FLOAT32_t GiMultiplyAddFloat32(
 }
 
 GI_FORCEINLINE
-GI_FLOAT32_t GiMultiplySubFloat32(
-        GI_FLOAT32_t VectorSum, GI_FLOAT32_t Vector1, GI_FLOAT32_t Vector2) {
-#if defined(GI_NEON_INTRINSICS)
-    return vmlsq_f32(VectorSum, Vector1, Vector2);
-#elif defined(GI_SSE2_INTRINSICS)
-    return _mm_sub_ps(VectorSum, _mm_mul_ps(Vector1, Vector2));
-#else
-    return VectorSum - Vector1 * Vector2;
-#endif
-}
-
-GI_FORCEINLINE
 GI_FLOAT32_t GiMultiplyAddScalarFloat32(
         GI_FLOAT32_t VectorSum, GI_FLOAT32_t Vector, float Scalar) {
 #if defined(GI_NEON_INTRINSICS)
@@ -350,24 +718,13 @@ GIMULTIPLYADDLANFLOAT32(1)
 GIMULTIPLYADDLANFLOAT32(2)
 GIMULTIPLYADDLANFLOAT32(3)
 #undef GIMULTIPLYADDLANFLOAT32
-#elif defined(GI_SSE2_INTRINSICS)
+#else
 
 #define GIMULTIPLYADDLANFLOAT32(i)                                                \
     GI_FORCEINLINE GI_FLOAT32_t GiMultiplyAddLan##i##Float32(                     \
             GI_FLOAT32_t VectorSum, GI_FLOAT32_t Vector1, GI_FLOAT32_t Vector2) { \
         return GiMultiplyAddScalarFloat32(                                        \
                 VectorSum, Vector1, GiExtractLane##i##Float32(Vector2));          \
-    }
-GIMULTIPLYADDLANFLOAT32(0)
-GIMULTIPLYADDLANFLOAT32(1)
-GIMULTIPLYADDLANFLOAT32(2)
-GIMULTIPLYADDLANFLOAT32(3)
-#undef GIMULTIPLYADDLANFLOAT32
-#else
-#define GIMULTIPLYADDLANFLOAT32(i)                                                \
-    GI_FORCEINLINE GI_FLOAT32_t GiMultiplyAddLan##i##Float32(                     \
-            GI_FLOAT32_t VectorSum, GI_FLOAT32_t Vector1, GI_FLOAT32_t Vector2) { \
-        return VectorSum + Vector1 * Vector2[i];                                  \
     }
 GIMULTIPLYADDLANFLOAT32(0)
 GIMULTIPLYADDLANFLOAT32(1)
@@ -411,6 +768,7 @@ GI_FLOAT32_t GiRecpeFloat32(GI_FLOAT32_t Vector) {
     GI_FLOAT32_t ones = _mm_set1_ps(1.0f);
     return _mm_div_ps(ones, Vector);
 #else
+    //! FIXME: neon or sse always have low accuracy than 1/x
     return 1 / Vector;
 #endif
 }
@@ -516,7 +874,7 @@ GI_FORCEINLINE
 GI_FLOAT32_t GiBlendFloat32(
         GI_FLOAT32_t Vector1, GI_FLOAT32_t Vector2, GI_FLOAT32_t Selection) {
     return GiOrFloat32(
-            GiAndFloat32(Vector2, Selection), GiAndNotFloat32(Selection, Vector1));
+            GiAndFloat32(Vector1, Selection), GiAndNotFloat32(Selection, Vector2));
 }
 
 #define MIN_NAN(a, b) (isnan(a) || (a) < (b)) ? (a) : (b);
@@ -569,7 +927,6 @@ GI_FLOAT32_t GiMaxNanFloat32(GI_FLOAT32_t Vector1, GI_FLOAT32_t Vector2) {
 #else
     //! _mm_max_ps does not fellow the IEEE standard when input is NAN, so
     //! implement by C code
-#define MAX_NAN(a, b) (isnan(a) || (a) > (b)) ? (a) : (b);
     GI_FLOAT32_t max;
     for (size_t i = 0; i < GI_SIMD_LEN_BYTE / sizeof(float); i++) {
         max[i] = MAX_NAN(Vector1[i], Vector2[i]);
@@ -585,7 +942,6 @@ GI_FLOAT32_t GiMinNanFloat32(GI_FLOAT32_t Vector1, GI_FLOAT32_t Vector2) {
 #else
     //! _mm_min_ps does not fellow the IEEE standard when input is NAN, so
     //! implement by C code
-#define MIN_NAN(a, b) (isnan(a) || (a) < (b)) ? (a) : (b);
     GI_FLOAT32_t min;
     for (size_t i = 0; i < GI_SIMD_LEN_BYTE / sizeof(float); i++) {
         min[i] = MIN_NAN(Vector1[i], Vector2[i]);
@@ -723,4 +1079,249 @@ GI_FLOAT32_t GiAbsFloat32(GI_FLOAT32_t Vector1) {
 #endif
 }
 
-// vim: syntax=cpp.doxygen
+#if defined(GI_SSE2_INTRINSICS)
+typedef __m128i int8x16_t;
+typedef __m64_128 int8x8_t;
+GI_FORCEINLINE int8x16_t vcombine_s8(int8x8_t low, int8x8_t high) {
+    return _mm_unpacklo_epi64(_pM128i(low), _pM128i(high));
+}
+
+typedef __m64_128 int64x1_t;
+GI_FORCEINLINE int64x1_t vget_low_s64(GI_INT64_t a) {
+    int64x1_t res64;
+    return64(a);
+}
+GI_FORCEINLINE int64x1_t vget_high_s64(GI_INT64_t a) {
+    int64x1_t res64;
+    __m128i res;
+    res = _mm_unpackhi_epi64(a, a);
+    return64(res);
+}
+#endif
+
+GI_FORCEINLINE GI_INT64_t GiZip1qS64(GI_INT64_t __p0, GI_INT64_t __p1) {
+#if defined(GI_NEON_INTRINSICS)
+    return vzip1q_s64(__p0, __p1);
+#elif defined(GI_SSE2_INTRINSICS)
+#define vcombine_s64 vcombine_s8
+    return vcombine_s64(vget_low_s64(__p0), vget_low_s64(__p1));
+#else
+    GI_INT64_t ret;
+    ret[0] = __p0[0];
+    ret[1] = __p1[0];
+    return ret;
+#endif
+}
+
+GI_FORCEINLINE GI_INT64_t GiZip2qS64(GI_INT64_t __p0, GI_INT64_t __p1) {
+#if defined(GI_NEON_INTRINSICS)
+    return vzip2q_s64(__p0, __p1);
+#elif defined(GI_SSE2_INTRINSICS)
+#define vcombine_s64 vcombine_s8
+    return vcombine_s64(vget_high_s64(__p0), vget_high_s64(__p1));
+#else
+    GI_INT64_t ret;
+    ret[0] = __p0[1];
+    ret[1] = __p1[1];
+    return ret;
+#endif
+}
+
+GI_FORCEINLINE GI_FLOAT32_t GiReinterpretqS64ToFloat32(GI_INT64_t a) {
+#if defined(GI_NEON_INTRINSICS)
+    return vreinterpretq_f32_s64(a);
+#elif defined(GI_SSE2_INTRINSICS)
+    return _M128(a);
+#else
+    GI_FLOAT32_t ret;
+    memcpy(&ret, &a, sizeof(GI_FLOAT32_t));
+    return ret;
+#endif
+}
+
+GI_FORCEINLINE GI_INT64_t GiReinterpretqFloat32ToS64(GI_FLOAT32_t a) {
+#if defined(GI_NEON_INTRINSICS)
+    return vreinterpretq_s64_f32(a);
+#elif defined(GI_SSE2_INTRINSICS)
+    return _M128i(a);
+#else
+    GI_INT64_t ret;
+    memcpy(&ret, &a, sizeof(GI_INT64_t));
+    return ret;
+#endif
+}
+
+#if defined(GI_NEON_INTRINSICS)
+#define GiSimdFmaLane(a, b, c, d) vfmaq_laneq_f32(a, b, c, d)
+#else
+GI_FORCEINLINE GI_FLOAT32_t
+___gi_vmlaq_lane_f32(GI_FLOAT32_t a, GI_FLOAT32_t b, float32x2_t v, int l) {
+    float vlane;
+    GI_FLOAT32_t c;
+    vlane = (float)GiGetLaneFloat32(v, l);
+    c = GiBroadcastFloat32(vlane);
+    return GiMlaqFloat32(a, b, c);
+}
+GI_FORCEINLINE float32x2_t ___gi_vget_low_f32(GI_FLOAT32_t a) {
+#if defined(GI_SSE2_INTRINSICS)
+    float32x2_t res64;
+    _M64f(res64, a);
+    return res64;
+#else
+    float32x2_t ret;
+    ret[0] = a[0];
+    ret[1] = a[1];
+    return ret;
+#endif
+}
+GI_FORCEINLINE float32x2_t ___gi_vget_high_f32(GI_FLOAT32_t a) {
+#if defined(GI_SSE2_INTRINSICS)
+    __m128i res;
+    __m64_128 res64;
+    res = _mm_unpackhi_epi64(_M128i(a), _M128i(a));
+    return64(res);
+#else
+    float32x2_t ret;
+    ret[0] = a[2];
+    ret[1] = a[3];
+    return ret;
+#endif
+}
+GI_FORCEINLINE GI_FLOAT32_t
+___gi_vfmaq_laneq_f32(GI_FLOAT32_t a, GI_FLOAT32_t b, GI_FLOAT32_t v, int l) {
+    if (l < 2) {
+        return ___gi_vmlaq_lane_f32(a, b, ___gi_vget_low_f32(v), l);
+    } else {
+        return ___gi_vmlaq_lane_f32(a, b, ___gi_vget_high_f32(v), l - 2);
+    }
+}
+#define GiSimdFmaLane(a, b, c, d) ___gi_vfmaq_laneq_f32(a, b, c, d)
+#endif
+
+#if defined(GI_NEON_INTRINSICS)
+#if MEGDNN_AARCH64
+#define GiMlaqLowLaneFloat32(__a, __b, __v, __lane) \
+    vmlaq_laneq_f32(__a, __b, __v, __lane)
+
+#define GiMlaqHighLaneFloat32(__a, __b, __v, __lane) \
+    vmlaq_laneq_f32(__a, __b, __v, __lane)
+
+#else
+#define GiMlaqLowLaneFloat32(__a, __b, __v, __lane)               \
+    __extension__({                                               \
+        float32x2_t c = vget_low_f32(__v);                        \
+        GI_FLOAT32_t __ret = vmlaq_lane_f32(__a, __b, c, __lane); \
+        __ret;                                                    \
+    })
+
+#define GiMlaqHighLaneFloat32(__a, __b, __v, __lane)                    \
+    __extension__({                                                     \
+        float32x2_t c = vget_high_f32(__v);                             \
+        GI_FLOAT32_t __ret = vmlaq_lane_f32(__a, __b, c, (__lane - 2)); \
+        __ret;                                                          \
+    })
+
+#endif
+
+#elif defined(GI_SSE2_INTRINSICS)
+#define GiMlaqLowLaneFloat32(__a, __b, __v, __lane)                   \
+    __extension__({                                                   \
+        float32x2_t c = sse_vget_low_f32(__v);                        \
+        GI_FLOAT32_t __ret = sse_vmlaq_lane_f32(__a, __b, c, __lane); \
+        __ret;                                                        \
+    })
+
+#define GiMlaqHighLaneFloat32(__a, __b, __v, __lane)                        \
+    __extension__({                                                         \
+        float32x2_t c = sse_vget_high_f32(__v);                             \
+        GI_FLOAT32_t __ret = sse_vmlaq_lane_f32(__a, __b, c, (__lane - 2)); \
+        __ret;                                                              \
+    })
+
+#else
+//! naive
+#define GiMlaqLowLaneFloat32(__a, __b, __v, __lane)                     \
+    __extension__({                                                     \
+        GI_FLOAT32_t __ret;                                             \
+        for (size_t i = 0; i < GI_SIMD_LEN_BYTE / sizeof(float); i++) { \
+            __ret[i] = __a[i] + (__b[i] * __v[__lane]);                 \
+        }                                                               \
+        __ret;                                                          \
+    })
+
+#define GiMlaqHighLaneFloat32(__a, __b, __v, __lane)                    \
+    __extension__({                                                     \
+        GI_FLOAT32_t __ret;                                             \
+        for (size_t i = 0; i < GI_SIMD_LEN_BYTE / sizeof(float); i++) { \
+            __ret[i] = __a[i] + (__b[i] * __v[__lane]);                 \
+        }                                                               \
+        __ret;                                                          \
+    })
+#endif
+
+#if defined(GI_NEON_INTRINSICS)
+#define GiFmsqLaneQFloat32(a, b, v, lane) vfmsq_laneq_f32(a, b, v, lane)
+#elif defined(GI_SSE2_INTRINSICS)
+#define SSE_VFMSQ_LANEQ_F32(lane)                                   \
+    GI_FORCEINLINE GI_FLOAT32_t sse_vfmsq_lane_##lane##_q_f32(      \
+            GI_FLOAT32_t a, GI_FLOAT32_t b, GI_FLOAT32_t v) {       \
+        return sse_vmlsq_lane_f32(a, b, sse_vget_low_f32(v), lane); \
+    }
+SSE_VFMSQ_LANEQ_F32(0)
+SSE_VFMSQ_LANEQ_F32(1)
+#undef SSE_VFMSQ_LANEQ_F32
+#define SSE_VFMSQ_LANEQ_F32(lane)                                        \
+    GI_FORCEINLINE GI_FLOAT32_t sse_vfmsq_lane_##lane##_q_f32(           \
+            GI_FLOAT32_t a, GI_FLOAT32_t b, GI_FLOAT32_t v) {            \
+        return sse_vmlsq_lane_f32(a, b, sse_vget_high_f32(v), lane - 2); \
+    }
+SSE_VFMSQ_LANEQ_F32(2)
+SSE_VFMSQ_LANEQ_F32(3)
+#undef SSE_VFMSQ_LANEQ_F32
+#define GiFmsqLaneQFloat32(a, b, v, lane) sse_vfmsq_lane_##lane##_q_f32(a, b, v)
+#else
+//! naive
+GI_FORCEINLINE GI_FLOAT32_t __naive_GiFmsqLaneQFloat32(
+        GI_FLOAT32_t a, GI_FLOAT32_t b, GI_FLOAT32_t v, const int lane) {
+    GI_FLOAT32_t ret;
+    for (size_t i = 0; i < GI_SIMD_LEN_BYTE / sizeof(float); i++) {
+        ret[i] = a[i] - (b[i] * v[lane]);
+    }
+
+    return ret;
+}
+#define GiFmsqLaneQFloat32(a, b, v, lane) __naive_GiFmsqLaneQFloat32(a, b, v, lane)
+#endif
+
+GI_FORCEINLINE GI_FLOAT32_t GiCombineFloat32(float32x2_t a, float32x2_t b) {
+#if defined(GI_NEON_INTRINSICS)
+    return vcombine_f32(a, b);
+#elif defined(GI_SSE2_INTRINSICS)
+    __m128i res;
+    res = _mm_unpacklo_epi64(_pM128i(a), _pM128i(b));
+    return _M128(res);
+#else
+    GI_FLOAT32_t res;
+    res[0] = a[0];
+    res[1] = a[1];
+    res[2] = b[0];
+    res[3] = b[1];
+    return res;
+#endif
+}
+
+GI_FORCEINLINE float32x2_t GiGetLowFloat32(GI_FLOAT32_t a) {
+#if defined(GI_NEON_INTRINSICS)
+    return vget_low_f32(a);
+#else
+    return ___gi_vget_low_f32(a);
+#endif
+}
+
+GI_FORCEINLINE float32x2_t GiGetHighFloat32(GI_FLOAT32_t a) {
+#if defined(GI_NEON_INTRINSICS)
+    return vget_high_f32(a);
+#else
+    return ___gi_vget_high_f32(a);
+#endif
+}

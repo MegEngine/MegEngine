@@ -214,8 +214,12 @@ GI_UINT32_t GiTestAndSetUint32(GI_UINT32_t Vector1, GI_UINT32_t Vector2) {
 #if defined(GI_NEON_INTRINSICS)
     return vtstq_u32(Vector1, Vector2);
 #elif defined(GI_SSE2_INTRINSICS)
-    GI_UINT32_t tmp = _mm_and_si128(Vector1, Vector2);
-    return _mm_cmpeq_epi32(tmp, _mm_setzero_si128());
+    __m128i zero, one, res;
+    zero = _mm_setzero_si128();
+    one = _mm_cmpeq_epi8(zero, zero);
+    res = _mm_and_si128(Vector1, Vector2);
+    res = _mm_cmpeq_epi32(res, zero);
+    return _mm_xor_si128(res, one);
 #else
     GI_UINT32_t ret;
     for (size_t i = 0; i < GI_SIMD_LEN_BYTE / sizeof(int32_t); i++) {
@@ -451,9 +455,15 @@ GI_INT32_t GiAbsInt32(GI_INT32_t Vector) {
     return _mm_abs_epi32(Vector);
 #else
     GI_INT32_t ret;
+    GI_INT32_NAIVE_t tmp_ret;
+    GI_INT32_NAIVE_t s0;
+
+    memcpy(&s0, &Vector, sizeof(GI_INT32_t));
     for (size_t i = 0; i < GI_SIMD_LEN_BYTE / sizeof(int32_t); i++) {
-        ret[i] = Vector[i] > 0 ? Vector[i] : -Vector[i];
+        tmp_ret[i] = s0[i] > 0 ? s0[i] : -s0[i];
     }
+
+    memcpy(&ret, &tmp_ret, sizeof(GI_INT32_t));
     return ret;
 #endif
 }
@@ -466,9 +476,14 @@ GI_INT16_t GiAbsInt16(GI_INT16_t Vector) {
     return _mm_abs_epi16(Vector);
 #else
     GI_INT16_t ret;
+    GI_INT16_NAIVE_t tmp_ret;
+    GI_INT16_NAIVE_t s0;
+
+    memcpy(&s0, &Vector, sizeof(GI_INT16_t));
     for (size_t i = 0; i < GI_SIMD_LEN_BYTE / sizeof(int16_t); i++) {
-        ret[i] = Vector[i] > 0 ? Vector[i] : -Vector[i];
+        tmp_ret[i] = s0[i] > 0 ? s0[i] : -s0[i];
     }
+    memcpy(&ret, &tmp_ret, sizeof(GI_INT16_t));
     return ret;
 #endif
 }
@@ -481,9 +496,14 @@ GI_INT8_t GiAbsInt8(GI_INT8_t Vector) {
     return _mm_abs_epi8(Vector);
 #else
     GI_INT8_t ret;
+    GI_INT8_NAIVE_t tmp_ret;
+    GI_INT8_NAIVE_t s0;
+
+    memcpy(&s0, &Vector, sizeof(GI_INT8_t));
     for (size_t i = 0; i < GI_SIMD_LEN_BYTE / sizeof(int8_t); i++) {
-        ret[i] = Vector[i] > 0 ? Vector[i] : -Vector[i];
+        tmp_ret[i] = s0[i] > 0 ? s0[i] : -s0[i];
     }
+    memcpy(&ret, &tmp_ret, sizeof(GI_INT8_t));
     return ret;
 #endif
 }
@@ -497,7 +517,11 @@ GI_INT32_t GiMaximumInt32(GI_INT32_t Vector1, GI_INT32_t Vector2) {
 #elif defined(GI_SSE2_INTRINSICS)
     return GiBlendInt32(Vector2, Vector1, _mm_cmpgt_epi32(Vector1, Vector2));
 #else
-    return GiBlendInt32(Vector2, Vector1, Vector1 > Vector2);
+    GI_INT32_t tmp;
+    for (size_t i = 0; i < GI_SIMD_LEN_BYTE / sizeof(int32_t); i++) {
+        tmp[i] = Vector1[i] > Vector2[i] ? 0xFFFFFFFF : 0;
+    }
+    return GiBlendInt32(Vector2, Vector1, tmp);
 #endif
 }
 
@@ -510,7 +534,11 @@ GI_INT32_t GiMinimumInt32(GI_INT32_t Vector1, GI_INT32_t Vector2) {
 #elif defined(GI_SSE2_INTRINSICS)
     return GiBlendInt32(Vector2, Vector1, _mm_cmpgt_epi32(Vector2, Vector1));
 #else
-    return GiBlendInt32(Vector2, Vector1, Vector2 > Vector1);
+    GI_INT32_t tmp;
+    for (size_t i = 0; i < GI_SIMD_LEN_BYTE / sizeof(int32_t); i++) {
+        tmp[i] = Vector2[i] > Vector1[i] ? 0xFFFFFFFF : 0;
+    }
+    return GiBlendInt32(Vector2, Vector1, tmp);
 #endif
 }
 
@@ -528,7 +556,11 @@ GI_INT8_t GiMaximumInt8(GI_INT8_t Vector1, GI_INT8_t Vector2) {
 #elif defined(GI_SSE2_INTRINSICS)
     return GiBlendInt8(Vector2, Vector1, _mm_cmpgt_epi8(Vector1, Vector2));
 #else
-    return GiBlendInt8(Vector2, Vector1, Vector1 > Vector2);
+    GI_INT8_t tmp;
+    for (size_t i = 0; i < GI_SIMD_LEN_BYTE / sizeof(int8_t); i++) {
+        tmp[i] = Vector1[i] > Vector2[i] ? 0xFF : 0;
+    }
+    return GiBlendInt8(Vector2, Vector1, tmp);
 #endif
 }
 
@@ -541,7 +573,11 @@ GI_INT8_t GiMinimumInt8(GI_INT8_t Vector1, GI_INT8_t Vector2) {
 #elif defined(GI_SSE2_INTRINSICS)
     return GiBlendInt8(Vector2, Vector1, _mm_cmpgt_epi8(Vector2, Vector1));
 #else
-    return GiBlendInt8(Vector2, Vector1, Vector2 > Vector1);
+    GI_INT8_t tmp;
+    for (size_t i = 0; i < GI_SIMD_LEN_BYTE / sizeof(int8_t); i++) {
+        tmp[i] = Vector2[i] > Vector1[i] ? 0xFF : 0;
+    }
+    return GiBlendInt8(Vector2, Vector1, tmp);
 #endif
 }
 
@@ -813,14 +849,18 @@ GI_INT8_t GiCvtFromFloat32ToInt8(GI_FLOAT32_t src) {
     return vepi8;
 #else
     GI_INT8_t ret;
+    GI_INT8_NAIVE_t tmp_ret;
+    GI_FLOAT32_NAIVE_t s0;
+    memcpy(&s0, &src, sizeof(GI_INT32_t));
     int length = GI_SIMD_LEN_BYTE / sizeof(float);
     for (int i = 0; i < length; i++) {
-        int8_t data = Saturate(round(src[i]), -128, 127);
-        ret[i] = data;
-        ret[length + i] = data;
-        ret[2 * length + i] = data;
-        ret[3 * length + i] = data;
+        int8_t data = Saturate(round(s0[i]), -128, 127);
+        tmp_ret[i] = data;
+        tmp_ret[length + i] = data;
+        tmp_ret[2 * length + i] = data;
+        tmp_ret[3 * length + i] = data;
     }
+    memcpy(&ret, &tmp_ret, sizeof(GI_INT8_t));
     return ret;
 #endif
 }
@@ -861,10 +901,16 @@ GI_INT8_t GiCvtFromFloat32V2ToInt8(GI_FLOAT32_V2_t vsrc) {
     return vepi8;
 #else
     GI_INT8_t ret;
+    GI_INT8_NAIVE_t tmp_ret;
+    GI_FLOAT32_V2_NAIVE_t s0;
+    memcpy(&s0, &vsrc, sizeof(GI_FLOAT32_V2_NAIVE_t));
     int length = GI_SIMD_LEN_BYTE / sizeof(float);
     for (int i = 0; i < 2 * length; i++) {
-        ret[i] = Saturate(round(vsrc.val[i / length][i % length]), -128, 127);
+        int8_t data = Saturate(round(s0.val[i / length][i % length]), -128, 127);
+        tmp_ret[i] = data;
+        tmp_ret[i + length * 2] = data;
     }
+    memcpy(&ret, &tmp_ret, sizeof(GI_INT8_t));
     return ret;
 #endif
 }
@@ -875,8 +921,8 @@ GI_INT8_t GiCvtFromFloat32V4ToInt8(GI_FLOAT32_V4_t vsrc) {
 #if __ARM_ARCH >= 8
     int32x4_t vres0 = vcvtaq_s32_f32(vsrc.val[0]);
     int32x4_t vres1 = vcvtaq_s32_f32(vsrc.val[1]);
-    int32x4_t vres2 = vcvtaq_s32_f32(vsrc.val[1]);
-    int32x4_t vres3 = vcvtaq_s32_f32(vsrc.val[1]);
+    int32x4_t vres2 = vcvtaq_s32_f32(vsrc.val[2]);
+    int32x4_t vres3 = vcvtaq_s32_f32(vsrc.val[3]);
     int8x8_t mid1 = vqmovn_s16(vcombine_s16(vqmovn_s32(vres0), vqmovn_s32(vres1)));
     int8x8_t mid2 = vqmovn_s16(vcombine_s16(vqmovn_s32(vres2), vqmovn_s32(vres3)));
     return vcombine_s8(mid1, mid2);
@@ -910,7 +956,7 @@ GI_INT8_t GiCvtFromFloat32V4ToInt8(GI_FLOAT32_V4_t vsrc) {
     vres0 = _mm_round_ps(vres0, _MM_FROUND_TO_ZERO | _MM_FROUND_NO_EXC);
     vres1 = _mm_round_ps(vres1, _MM_FROUND_TO_ZERO | _MM_FROUND_NO_EXC);
     vres2 = _mm_round_ps(vres2, _MM_FROUND_TO_ZERO | _MM_FROUND_NO_EXC);
-    vres3 = _mm_round_ps(vres1, _MM_FROUND_TO_ZERO | _MM_FROUND_NO_EXC);
+    vres3 = _mm_round_ps(vres3, _MM_FROUND_TO_ZERO | _MM_FROUND_NO_EXC);
 
     vres0 = _mm_min_ps(_mm_max_ps(vres0, vfmin_int8), vfmax_int8);
     vres1 = _mm_min_ps(_mm_max_ps(vres1, vfmin_int8), vfmax_int8);
@@ -927,10 +973,14 @@ GI_INT8_t GiCvtFromFloat32V4ToInt8(GI_FLOAT32_V4_t vsrc) {
     return vepi8;
 #else
     GI_INT8_t ret;
+    GI_INT8_NAIVE_t tmp_ret;
+    GI_FLOAT32_V4_NAIVE_t s0;
+    memcpy(&s0, &vsrc, sizeof(GI_FLOAT32_V4_NAIVE_t));
     int length = GI_SIMD_LEN_BYTE / sizeof(float);
     for (int i = 0; i < 4 * length; i++) {
-        ret[i] = Saturate(round(vsrc.val[i / length][i % length]), -128, 127);
+        tmp_ret[i] = Saturate(round(s0.val[i / length][i % length]), -128, 127);
     }
+    memcpy(&ret, &tmp_ret, sizeof(GI_INT8_t));
     return ret;
 #endif
 }
