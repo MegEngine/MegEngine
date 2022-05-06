@@ -5,6 +5,7 @@ from typing import Iterable, Union
 
 import numpy as np
 
+from .. import _config
 from .._imperative_rt import make_const
 from .._imperative_rt.core2 import (
     Const,
@@ -24,7 +25,6 @@ from .._imperative_rt.ops import SubgraphBuilder as _SubgraphBuilder
 from .._imperative_rt.ops import jit_supported
 from .._wrap import as_device
 from ..autodiff.grad import Function
-from .. import _config
 from ..ops import builtin
 from .amp import _get_amp_high_prec_dtype, _get_amp_low_prec_dtype
 from .dtype import is_dtype_equal, is_quantize

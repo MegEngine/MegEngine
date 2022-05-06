@@ -47,6 +47,10 @@ def test_grad_scaler(is_trace):
         return loss
 
     for data in [np.random.random((1, 2, 3, 4)), 1.0]:
-        for calc in [double_variables, single_variable, double_variables_with_same_grad]:
+        for calc in [
+            double_variables,
+            single_variable,
+            double_variables_with_same_grad,
+        ]:
             for idx in range(3):
                 f(idx, data, calc)

@@ -134,7 +134,6 @@ def _compute_mode(mod, _compute_mode: str):
     __compute_mode = _compute_mode
 
 
-
 @property
 def _bn_format(mod):
     r"""Get or set batchnorm param layout format. The default option is None and will

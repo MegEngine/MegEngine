@@ -206,8 +206,8 @@ struct CheckNonFiniteOp {
         return lhs | rhs;
     }
     MEGDNN_HOST MEGDNN_DEVICE CheckNonFiniteOp(
-            src_ctype** srcs, size_t* srcs_total_nr_elems, dst_ctype* dst,
-            size_t B, src_ctype scale)
+            src_ctype** srcs, size_t* srcs_total_nr_elems, dst_ctype* dst, size_t B,
+            src_ctype scale)
             : INIT(wtype(0)),
               srcs(srcs),
               srcs_total_nr_elems(srcs_total_nr_elems),

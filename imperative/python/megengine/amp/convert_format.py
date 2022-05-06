@@ -8,9 +8,9 @@
 from copy import deepcopy
 
 from .. import functional as F
+from ..core import _config
 from ..module import Module
 from ..tensor import Tensor
-from ..core import _config
 
 
 def _is_nchw_format(param: Tensor):
@@ -39,7 +39,7 @@ def convert_tensor_format(x: Tensor, inplace: bool = True):
         else:
             # use mge interface to maintain grad
             x = F.transpose(x, pattern)
-            x.format="nhwc"
+            x.format = "nhwc"
     return x
 
 

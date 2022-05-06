@@ -320,7 +320,8 @@ py::object _Const(py::handle value, py::handle dtype, py::handle device) {
         }
     }
     py::object device_obj = device2obj(device, true);
-    py::tuple tup = py::make_tuple(val, dtype, device_obj, true, false, py::none(), py::none());
+    py::tuple tup =
+            py::make_tuple(val, dtype, device_obj, true, false, py::none(), py::none());
     return TensorWrapper::make(py_tensor_type, tup.ptr(), nullptr);
 }
 

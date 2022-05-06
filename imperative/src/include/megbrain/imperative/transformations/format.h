@@ -49,7 +49,7 @@ public:
             const Operator& op, Span<ValueRef> inputs) override;
 
     ValueRef unwrap(ValueRef value) override {
-        //mgb_assert(!value.is(m_value_type));
+        // mgb_assert(!value.is(m_value_type));
         if (auto format_val = value.as_ref(m_value_type)) {
             return format_val->value();
         }
@@ -69,8 +69,7 @@ public:
     inline ValueRef wrap_output(
             const ValueRef& output, Format format = Format::Type::DEFAULT) const;
     inline ValueRefList wrap_outputs(
-            const ValueRefList& outputs,
-            Format format = Format::Type::DEFAULT) const;
+            const ValueRefList& outputs, Format format = Format::Type::DEFAULT) const;
 
     TypedValueRef<FormattedTensorValue> as(
             const FormattedTensorValue&, const Format::Type& target) const;
