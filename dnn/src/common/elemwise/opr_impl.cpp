@@ -17,6 +17,9 @@
 
 #include "midout.h"
 MIDOUT_DECL(megdnn_common_elemwise)
+//! this tag will be used at tools/gen_header_for_bin_reduce.py
+//! please do not modify it
+MIDOUT_DECL(megdnn_common_elemwise_mode)
 
 #include <mutex>
 #include <vector>
@@ -154,6 +157,88 @@ const ModeTrait& ModeTrait::from_mode(Mode mode) {
 #if !MEGDNN_ELEMWISE_MODE_ENABLE_ALL
     megdnn_assert(ret.arity);
 #endif
+
+    //! Some DNN backend OPRS will use proxy OPRS. For example, softmax@cpu Naive imp
+    //! will call elemwise OPR. In the model dump stage, we have no information about
+    //! this logic, which will lead to the loss of elemwise mode. As a solution, we
+    //! record the elemwise mode information by adding the 'midout' case flag in the run
+    //! stage.
+#define CB_MODE(mode)                                                              \
+    case mode:                                                                     \
+        MIDOUT_BEGIN(megdnn_common_elemwise_mode, midout_iv(mode)) { return ret; } \
+        MIDOUT_END();                                                              \
+        break;
+
+    switch (mode) {
+        CB_MODE(Mode::RELU);
+        CB_MODE(Mode::ABS);
+        CB_MODE(Mode::ACOS);
+        CB_MODE(Mode::ASIN);
+        CB_MODE(Mode::CEIL);
+        CB_MODE(Mode::COS);
+        CB_MODE(Mode::EXP);
+        CB_MODE(Mode::EXPM1);
+        CB_MODE(Mode::FLOOR);
+        CB_MODE(Mode::LOG);
+        CB_MODE(Mode::LOG1P);
+        CB_MODE(Mode::NEGATE);
+        CB_MODE(Mode::SIGMOID);
+        CB_MODE(Mode::SIN);
+        CB_MODE(Mode::TANH);
+        CB_MODE(Mode::ABS_GRAD);
+        CB_MODE(Mode::ADD);
+        CB_MODE(Mode::FLOOR_DIV);
+        CB_MODE(Mode::MAX);
+        CB_MODE(Mode::MIN);
+        CB_MODE(Mode::MOD);
+        CB_MODE(Mode::MUL);
+        CB_MODE(Mode::POW);
+        CB_MODE(Mode::SIGMOID_GRAD);
+        CB_MODE(Mode::SUB);
+        CB_MODE(Mode::SWITCH_GT0);
+        CB_MODE(Mode::TANH_GRAD);
+        CB_MODE(Mode::TRUE_DIV);
+        CB_MODE(Mode::LOG_SUM_EXP);
+        CB_MODE(Mode::LT);
+        CB_MODE(Mode::LEQ);
+        CB_MODE(Mode::EQ);
+        CB_MODE(Mode::SHL);
+        CB_MODE(Mode::SHR);
+        CB_MODE(Mode::COND_LEQ_MOV);
+        CB_MODE(Mode::FUSE_MUL_ADD3);
+        CB_MODE(Mode::FUSE_MUL_ADD4);
+        CB_MODE(Mode::FUSE_ADD_RELU);
+        CB_MODE(Mode::FUSE_ADD_SIGMOID);
+        CB_MODE(Mode::FUSE_ADD_TANH);
+        CB_MODE(Mode::FAST_TANH);
+        CB_MODE(Mode::FAST_TANH_GRAD);
+        CB_MODE(Mode::ROUND);
+        CB_MODE(Mode::RMULH);
+        CB_MODE(Mode::ATAN2);
+        CB_MODE(Mode::ERF);
+        CB_MODE(Mode::ERFINV);
+        CB_MODE(Mode::ERFC);
+        CB_MODE(Mode::ERFCINV);
+        CB_MODE(Mode::H_SWISH);
+        CB_MODE(Mode::H_SWISH_GRAD);
+        CB_MODE(Mode::FUSE_ADD_H_SWISH);
+        CB_MODE(Mode::NOT);
+        CB_MODE(Mode::AND);
+        CB_MODE(Mode::OR);
+        CB_MODE(Mode::XOR);
+        CB_MODE(Mode::SILU);
+        CB_MODE(Mode::SILU_GRAD);
+        CB_MODE(Mode::GELU);
+        CB_MODE(Mode::GELU_GRAD);
+        default:
+            megdnn_assert(
+                    0,
+                    "code issue happened!!, please add new elemwise to switch mode.");
+            return ret;
+
+#undef CB_MODE
+    }
+
     return ret;
 }
 
