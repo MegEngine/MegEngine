@@ -290,6 +290,13 @@ struct InputTransform5X4 {
         CONCAT(s, 4).mla(m1addm2, 0.0625f).add(m3addm4).mla(m5addm6, 16.0f); \
     } while (0)
 
+#if defined(__GNUC__) && !defined(__llvm__) && !defined(_MSC_VER)
+#define GCC_VERSION (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
+#if GCC_VERSION < 80000
+#pragma GCC push_options
+#pragma GCC optimize("O0")
+#endif
+#endif
 template <BiasMode bmode, typename Op>
 struct OutputTransform5X4 {
     static void transform(
@@ -393,6 +400,12 @@ struct OutputTransform5X4 {
         }
     }
 };
+#if defined(__GNUC__) && !defined(__llvm__) && !defined(_MSC_VER)
+#define GCC_VERSION (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
+#if GCC_VERSION < 80000
+#pragma GCC pop_options
+#endif
+#endif
 #undef OUTPUT_TRANSFORM
 #undef GET_VECTOR_HIGH_ELEM
 #undef GET_VECTOR_LOW_ELEM

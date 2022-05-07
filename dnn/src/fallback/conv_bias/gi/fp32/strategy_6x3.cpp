@@ -207,6 +207,13 @@ struct InputTransform6X3 {
         CONCAT(s, 5).mla(m3subm4, 32.f).add(m5subm6).add(m##7);    \
     } while (0);
 
+#if defined(__GNUC__) && !defined(__llvm__) && !defined(_MSC_VER)
+#define GCC_VERSION (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
+#if GCC_VERSION < 80000
+#pragma GCC push_options
+#pragma GCC optimize("O0")
+#endif
+#endif
 template <BiasMode bmode, typename Op>
 struct OutputTransform6X3 {
     static void transform(
@@ -318,6 +325,12 @@ struct OutputTransform6X3 {
         }
     }
 };
+#if defined(__GNUC__) && !defined(__llvm__) && !defined(_MSC_VER)
+#define GCC_VERSION (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
+#if GCC_VERSION < 80000
+#pragma GCC pop_options
+#endif
+#endif
 
 #undef GET_VECTOR_HIGH_ELEM
 #undef GET_VECTOR_LOW_ELEM

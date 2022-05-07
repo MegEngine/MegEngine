@@ -905,7 +905,7 @@ TEST_F(FALLBACK, GiMultiplyAddFloat32) {
         naive.push_back(s1[i] * s2[i] + s0[i]);
     }
 
-    assert_eq((float*)&ret, naive);
+    assert_lt((float*)&ret, naive, 1e-3);
 }
 
 TEST_F(FALLBACK, GiMultiplyAddScalarFloat32) {
@@ -2793,7 +2793,7 @@ TEST_F(FALLBACK, GiMaximumInt8) {
     for (size_t i = 0; i < SIMD_LEN_8; i++) {
         s2.push_back(s1[i] < s0[i] ? 0xFF : 0);
     }
-    s2.resize(SIMD_LEN);
+    s2.resize(SIMD_LEN_8);
     init((int8_t*)&src2, s2, SIMD_LEN_8);
     ret = GiMaximumInt8(src0, src1);
 
@@ -2853,7 +2853,7 @@ TEST_F(FALLBACK, GiMinimumInt8) {
     for (size_t i = 0; i < SIMD_LEN_8; i++) {
         s2.push_back(s1[i] > s0[i] ? 0xFF : 0);
     }
-    s2.resize(SIMD_LEN);
+    s2.resize(SIMD_LEN_8);
     init((int8_t*)&src2, s2, SIMD_LEN_8);
     ret = GiMinimumInt8(src0, src1);
 

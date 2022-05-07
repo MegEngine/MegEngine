@@ -453,6 +453,16 @@ if(MSVC OR WIN32)
   # FIXME: fix MegRay on windows
   message(STATUS "Disable distributed build on windows host build...")
   set(MGE_WITH_DISTRIBUTED OFF)
+  if(${MGE_ARCH} STREQUAL "i386" AND ${CMAKE_BUILD_TYPE} STREQUAL "Debug")
+    # https://docs.microsoft.com/en-us/cpp/build/reference/z7-zi-zi-debug-information-format?view=msvc-170
+    # Workround for error LNK1318
+    message(
+      STATUS
+        "force use full symbolic debugging with build for 32bit for Windows with Debug mode"
+    )
+    set(CMAKE_C_FLAGS_DEBUG "/Z7")
+    set(CMAKE_CXX_FLAGS_DEBUG "/Z7")
+  endif()
 else()
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra")
 
