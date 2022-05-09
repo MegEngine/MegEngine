@@ -3,7 +3,6 @@
 #include "megdnn/tensor_iter.h"
 #include "src/common/elemwise_multi_type/opr_impl_helper.h"
 #include "src/naive/handle.h"
-
 namespace megdnn {
 namespace naive {
 
@@ -68,6 +67,25 @@ class ElemwiseMultiTypeImpl : public ElemwiseMultiTypeImplHelper {
     }
 
     template <typename KernImpl, typename src_ctype, typename dst_ctype>
+    void dispatch_dst_bool_op(
+            const ElemwiseOpParamN<1>& param, const TensorND& dst_tensor) {
+        auto size = param.size;
+        auto src0 = param[0];
+        auto work = [src0, size, dst_tensor]() {
+            // This is needed as these iterators are captured as const value.
+            auto iA = tensor_iter_valonly<src_ctype>(src0).begin();
+            auto pD = tensor_iter_valonly<dst_ctype>(dst_tensor).begin();
+            for (size_t i = 0; i < size; i++) {
+                src_ctype a = *iA;
+                *pD = KernImpl::apply(a);
+                ++iA;
+                ++pD;
+            }
+        };
+        MEGDNN_DISPATCH_CPU_KERN_OPR(work());
+    }
+
+    template <typename KernImpl, typename src_ctype, typename dst_ctype>
     void dispatch_add_qint_op(
             const ElemwiseOpParamN<2>& param, const TensorND& dst_tensor) {
         auto size = param.size;
@@ -89,6 +107,29 @@ class ElemwiseMultiTypeImpl : public ElemwiseMultiTypeImplHelper {
                 src_ctype b = *iB;
                 *pD = dst_param.quantize(
                         KernImpl::apply(param0.dequantize(a), param1.dequantize(b)));
+                ++iA;
+                ++iB;
+                ++pD;
+            }
+        };
+        MEGDNN_DISPATCH_CPU_KERN_OPR(work());
+    }
+
+    template <typename KernImpl, typename src_ctype, typename dst_ctype>
+    void dispatch_dst_bool_op(
+            const ElemwiseOpParamN<2>& param, const TensorND& dst_tensor) {
+        auto size = param.size;
+        auto src0 = param[0];
+        auto src1 = param[1];
+        auto work = [src0, src1, size, dst_tensor]() {
+            // This is needed as these iterators are captured as const value.
+            auto iA = tensor_iter_valonly<src_ctype>(src0).begin();
+            auto iB = tensor_iter_valonly<src_ctype>(src1).begin();
+            auto pD = tensor_iter_valonly<dst_ctype>(dst_tensor).begin();
+            for (size_t i = 0; i < size; i++) {
+                src_ctype a = *iA;
+                src_ctype b = *iB;
+                *pD = KernImpl::apply(a, b);
                 ++iA;
                 ++iB;
                 ++pD;
@@ -176,6 +217,14 @@ protected:
 
     void on_quantized_mode(
             const ElemwiseOpParamN<3>& param, const TensorND& dst,
+            Elemwise::Mode mode) override;
+
+    void dest_type_bool_mode(
+            const ElemwiseOpParamN<1>& param, const TensorND& dst,
+            Elemwise::Mode mode) override;
+
+    void dest_type_bool_mode(
+            const ElemwiseOpParamN<2>& param, const TensorND& dst,
             Elemwise::Mode mode) override;
 
 public:

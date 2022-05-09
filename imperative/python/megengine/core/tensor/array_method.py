@@ -23,9 +23,23 @@ from .._imperative_rt.core2 import (
 )
 from ..ops import builtin
 from . import amp
-from .utils import _normalize_axis, astensor1d, cast_tensors, make_shape_tuple, subgraph
+from .utils import (
+    _normalize_axis,
+    astensor1d,
+    cast_tensors,
+    convert_inputs,
+    make_shape_tuple,
+    subgraph,
+)
 
 _ElwMod = builtin.Elemwise.Mode
+
+
+def _elemwise_multi_type(*args, mode, **kwargs):
+    op = builtin.ElemwiseMultiType(mode=mode, **kwargs)
+    args = convert_inputs(*args)
+    (result,) = apply(op, *args)
+    return result
 
 
 def _elwise_apply(args, mode):
@@ -234,13 +248,23 @@ class ArrayMethodMixin(abc.ABC):
 
     __hash__ = None  # due to __eq__ diviates from python convention
 
-    __lt__ = lambda self, value: _elwise(self, value, mode=_ElwMod.LT).astype("bool")
-    __le__ = lambda self, value: _elwise(self, value, mode=_ElwMod.LEQ).astype("bool")
-    __gt__ = lambda self, value: _elwise(value, self, mode=_ElwMod.LT).astype("bool")
-    __ge__ = lambda self, value: _elwise(value, self, mode=_ElwMod.LEQ).astype("bool")
-    __eq__ = lambda self, value: _elwise(self, value, mode=_ElwMod.EQ).astype("bool")
-    __ne__ = lambda self, value: _elwise(
-        _elwise(self, value, mode=_ElwMod.EQ).astype("bool"), mode=_ElwMod.NOT,
+    __lt__ = lambda self, value: _elemwise_multi_type(
+        self, value, mode="lt", dtype="Bool"
+    )
+    __le__ = lambda self, value: _elemwise_multi_type(
+        self, value, mode="leq", dtype="Bool"
+    )
+    __gt__ = lambda self, value: _elemwise_multi_type(
+        value, self, mode="lt", dtype="Bool"
+    )
+    __ge__ = lambda self, value: _elemwise_multi_type(
+        value, self, mode="leq", dtype="Bool"
+    )
+    __eq__ = lambda self, value: _elemwise_multi_type(
+        self, value, mode="eq", dtype="Bool"
+    )
+    __ne__ = lambda self, value: _elemwise_multi_type(
+        self, value, mode="neq", dtype="Bool"
     )
 
     __neg__ = _unary_elwise(_ElwMod.NEGATE)

@@ -36,6 +36,14 @@ class ElemwiseMultiTypeImpl final : public ElemwiseMultiTypeImplHelper {
             const ElemwiseOpParamN<3>& param, const TensorND& dst,
             Elemwise::Mode mode) override;
 
+    void dest_type_bool_mode(
+            const ElemwiseOpParamN<1>& param, const TensorND& dst,
+            Elemwise::Mode mode) override;
+
+    void dest_type_bool_mode(
+            const ElemwiseOpParamN<2>& param, const TensorND& dst,
+            Elemwise::Mode mode) override;
+
 public:
     using ElemwiseMultiTypeImplHelper::ElemwiseMultiTypeImplHelper;
 };

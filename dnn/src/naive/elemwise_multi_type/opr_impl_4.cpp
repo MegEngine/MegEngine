@@ -54,4 +54,121 @@ void ElemwiseMultiTypeImpl::on_quantized_mode(
     }
 }
 
+void ElemwiseMultiTypeImpl::dest_type_bool_mode(
+        const ElemwiseOpParamN<1>& param, const TensorND& dst, Elemwise::Mode mode) {
+    switch (mode) {
+        case Elemwise::Mode::ISINF: {
+            switch (param[0].layout.dtype.enumv()) {
+#define DISPATCH(_dt, _mode)                                                \
+    case DTypeTrait<_dt>::enumv: {                                          \
+        typedef ElemwiseBoolKern<                                           \
+                megcorePlatformCPU, param_enumv::Elemwise::Mode::_mode,     \
+                typename DTypeTrait<_dt>::ctype, dt_bool>                   \
+                KernImpl##_mode;                                            \
+        dispatch_dst_bool_op<                                               \
+                KernImpl##_mode, typename DTypeTrait<_dt>::ctype, dt_bool>( \
+                param, dst);                                                \
+        break;                                                              \
+    }
+#define DISPATCH_MODE(_mode)                                  \
+    DISPATCH(megdnn::dtype::Float32, _mode);                  \
+    DNN_INC_FLOAT16(DISPATCH(megdnn::dtype::Float16, _mode);) \
+    DNN_INC_FLOAT16(DISPATCH(megdnn::dtype::BFloat16, _mode);)
+                DISPATCH_MODE(ISINF);
+                default:
+                    megdnn_throw(ssprintf(
+                            "Unsupported input dtype %s for ElemwiseMultiType",
+                            param[0].layout.dtype.name()));
+            };
+            break;
+        };
+        case Elemwise::Mode::ISNAN: {
+            switch (param[0].layout.dtype.enumv()) {
+                DISPATCH_MODE(ISNAN);
+                default:
+                    megdnn_throw(ssprintf(
+                            "Unsupported input dtype %s for ElemwiseMultiType",
+                            param[0].layout.dtype.name()));
+            };
+            break;
+        };
+        default:
+            megdnn_assert_internal(0);
+    }
+#undef DISPATCH_MODE
+#undef DISPATCH
+}
+
+void ElemwiseMultiTypeImpl::dest_type_bool_mode(
+        const ElemwiseOpParamN<2>& param, const TensorND& dst, Elemwise::Mode mode) {
+    megdnn_assert(param[0].layout.dtype.enumv() == param[1].layout.dtype.enumv());
+    switch (mode) {
+        case Elemwise::Mode::EQ: {
+            switch (param[0].layout.dtype.enumv()) {
+#define DISPATCH(_dt, _mode)                                                \
+    case DTypeTrait<_dt>::enumv: {                                          \
+        typedef ElemwiseBoolKern<                                           \
+                megcorePlatformCPU, param_enumv::Elemwise::Mode::_mode,     \
+                typename DTypeTrait<_dt>::ctype, dt_bool>                   \
+                KernImpl##_mode;                                            \
+        dispatch_dst_bool_op<                                               \
+                KernImpl##_mode, typename DTypeTrait<_dt>::ctype, dt_bool>( \
+                param, dst);                                                \
+        break;                                                              \
+    };
+#define DISPATCH_MODE(_mode)                                   \
+    DISPATCH(megdnn::dtype::Float32, _mode);                   \
+    DNN_INC_FLOAT16(DISPATCH(megdnn::dtype::Float16, _mode);)  \
+    DNN_INC_FLOAT16(DISPATCH(megdnn::dtype::BFloat16, _mode);) \
+    DISPATCH(megdnn::dtype::Int32, _mode);                     \
+    DISPATCH(megdnn::dtype::Int16, _mode);                     \
+    DISPATCH(megdnn::dtype::Int8, _mode);                      \
+    DISPATCH(megdnn::dtype::Uint8, _mode);                     \
+    DISPATCH(megdnn::dtype::Bool, _mode);
+                DISPATCH_MODE(EQ);
+                break;
+                default:
+                    megdnn_throw(ssprintf(
+                            "Unsupported input dtype %s for ElemwiseMultiType",
+                            param[0].layout.dtype.name()));
+            };
+            break;
+        };
+        case Elemwise::Mode::NEQ: {
+            switch (param[0].layout.dtype.enumv()) {
+                DISPATCH_MODE(NEQ);
+                default:
+                    megdnn_throw(ssprintf(
+                            "Unsupported input dtype %s for ElemwiseMultiType",
+                            param[0].layout.dtype.name()));
+            };
+            break;
+        };
+        case Elemwise::Mode::LT: {
+            switch (param[0].layout.dtype.enumv()) {
+                DISPATCH_MODE(LT);
+                default:
+                    megdnn_throw(ssprintf(
+                            "Unsupported input dtype %s for ElemwiseMultiType",
+                            param[0].layout.dtype.name()));
+            };
+            break;
+        };
+        case Elemwise::Mode::LEQ: {
+            switch (param[0].layout.dtype.enumv()) {
+                DISPATCH_MODE(LEQ);
+                default:
+                    megdnn_throw(ssprintf(
+                            "Unsupported input dtype %s for ElemwiseMultiType",
+                            param[0].layout.dtype.name()));
+            };
+            break;
+        };
+        default:
+            megdnn_assert_internal(0);
+    }
+#undef DISPATCH_MODE
+#undef DISPATCH
+}
+
 // vim: syntax=cpp.doxygen

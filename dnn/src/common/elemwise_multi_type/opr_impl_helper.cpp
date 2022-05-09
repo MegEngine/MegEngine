@@ -9,6 +9,12 @@ using namespace megdnn;
                 make_elemwise_op_param<_n>(src, dst), dst, Elemwise::Mode::_MODE); \
         break
 
+#define ON_BOOL_MODE(_MODE, _n)                                                    \
+    case Mode::_MODE:                                                              \
+        dest_type_bool_mode(                                                       \
+                make_elemwise_op_param<_n>(src, dst), dst, Elemwise::Mode::_MODE); \
+        break
+
 void ElemwiseMultiTypeImplHelper::exec(
         _megdnn_in const TensorNDArray& src, _megdnn_tensor_out dst) {
     switch (m_param.mode) {
@@ -96,6 +102,13 @@ void ElemwiseMultiTypeImplHelper::exec(
             ON_QUANTIZED_MODE(FUSE_MUL_ADD3, 3);
             ON_QUANTIZED_MODE(COND_LEQ_MOV, 3);
             ON_QUANTIZED_MODE(COND_LT_MOV, 3);
+
+            ON_BOOL_MODE(LT, 2);
+            ON_BOOL_MODE(LEQ, 2);
+            ON_BOOL_MODE(EQ, 2);
+            ON_BOOL_MODE(NEQ, 2);
+            ON_BOOL_MODE(ISNAN, 1);
+            ON_BOOL_MODE(ISINF, 1);
         default:
             megdnn_throw("invalid mode");
     }

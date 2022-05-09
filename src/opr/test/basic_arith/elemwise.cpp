@@ -756,8 +756,8 @@ TYPED_TEST(TestOprBasicArithTernaryElemwise, Float32) {
 
 TEST(TestOprBasicArithElemwise, CheckAllModeTested) {
     size_t nr_member = opr::Elemwise::Param::MODE_NR_MEMBER;
-    ASSERT_EQ(nr_member, tested_mode.size() + 4);
-    // Not using TestRunner: NOT, AND, OR, XOR
+    ASSERT_EQ(nr_member, tested_mode.size() + 7);
+    // Not using TestRunner: NOT, AND, OR, XOR, NEQ, ISNAN, ISINF
 }
 #define TEST_OPR_BASIC_ARITH_UNARY_BOOL(_mode, _op)                  \
     TEST(TestOprBasicArithElemwise, _mode) {                         \

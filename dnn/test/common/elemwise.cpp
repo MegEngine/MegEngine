@@ -756,6 +756,14 @@ DEF_TEST(all_modes) {
 
     auto should_ignore = [handle](Mode mode) {
         MEGDNN_MARK_USED_VAR(mode);
+        switch (mode) {
+            case Mode::NEQ:
+            case Mode::ISNAN:
+            case Mode::ISINF:
+                return true;
+            default:
+                break;
+        }
         return false;
     };
 

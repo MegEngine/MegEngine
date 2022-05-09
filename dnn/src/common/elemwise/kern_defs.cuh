@@ -10,6 +10,7 @@
 
 #include <cmath>
 #include <cstdlib>
+#include "math.h"
 
 #if MEGDNN_CC_HOST
 #include <algorithm>
@@ -272,6 +273,57 @@ DEF_KERN_ALL(FUSE_MUL_ADD3, x* y + z);
 
 #undef DEF_KERN_AD
 #undef DEF_KERN
+#undef DEF_KERN_FLOAT
+#undef DEF_KERN_INT
+#undef DEF_KERN_ALL
+
+/* ================== bool kernels ================== */
+//! define kernel
+template <megcorePlatform_t plat, uint32_t mode, typename stype, typename dtype>
+struct ElemwiseBoolKern;
+
+#define DEF_KERN(_ctype, _dtype, _mode, _imp)                                      \
+    template <megcorePlatform_t plat>                                              \
+    struct ElemwiseBoolKern<                                                       \
+            plat, param_enumv::Elemwise::Mode::_mode, _ctype, _dtype> {            \
+        typedef _ctype ctype;                                                      \
+        static __host__ __device__ _dtype apply(KERN_SIG) { return _dtype(_imp); } \
+    }
+
+//! define kernel for all float types
+#define DEF_KERN_FLOAT(_mode, _imp)                              \
+    DEF_KERN(dt_float32, dt_bool, _mode, _imp);                  \
+    DNN_INC_FLOAT16(DEF_KERN(dt_float16, dt_bool, _mode, _imp);) \
+    DNN_INC_FLOAT16(DEF_KERN(dt_bfloat16, dt_bool, _mode, _imp);)
+
+//! define kernel for all int types
+#define DEF_KERN_INT(_mode, _imp)             \
+    DEF_KERN(dt_int32, dt_bool, _mode, _imp); \
+    DEF_KERN(dt_int16, dt_bool, _mode, _imp); \
+    DEF_KERN(dt_int8, dt_bool, _mode, _imp);  \
+    DEF_KERN(dt_uint8, dt_bool, _mode, _imp);
+
+//! define kernel for all ctypes
+#define DEF_KERN_ALL(_mode, _imp) \
+    DEF_KERN_INT(_mode, _imp);    \
+    DEF_KERN_FLOAT(_mode, _imp);  \
+    DEF_KERN(dt_bool, dt_bool, _mode, _imp);
+#define KERN_SIG ctype x
+DEF_KERN_FLOAT(ISNAN, isnan(float(x)));
+DEF_KERN_FLOAT(ISINF, isinf(float(x)));
+#undef KERN_SIG
+#define KERN_SIG ctype x, ctype y
+DEF_KERN_ALL(LT, x < y);
+DEF_KERN_ALL(LEQ, x <= y);
+DEF_KERN_ALL(EQ, x == y);
+DEF_KERN_ALL(NEQ, x != y);
+#undef KERN_SIG
+
+#undef DEF_KERN_AD
+#undef DEF_KERN
+#undef DEF_KERN_FLOAT
+#undef DEF_KERN_INT
+#undef DEF_KERN_ALL
 
 }  // namespace megdnn
 

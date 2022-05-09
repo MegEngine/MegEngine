@@ -295,6 +295,60 @@ IMPL_MODE_DISPATCHER(2, dt_qint32, dt_quint4);
 #undef _cb_dispatch_mode
 #undef IMPL_MODE_DISPATCHER
 
+#define _cb_dispatch_mode(_m)                                                        \
+    case param::Elemwise::Mode::_m:                                                  \
+        do {                                                                         \
+            using KernImpl = ElemwiseBoolKern<                                       \
+                    megcorePlatformCUDA, param_enumv::Elemwise::Mode::_m, src_ctype, \
+                    dt_bool>;                                                        \
+            using Op = kern_ops_quantized::QuantizedMultiTypeOp<                     \
+                    arity, src_ctype, bool, KernImpl>;                               \
+            dst_ctype* dst = dst_tensor.ptr<dst_ctype>();                            \
+            Op op(dst);                                                              \
+            return run_elemwise<Op, src_ctype, arity>(src, stream, op);              \
+        } while (0);
+
+#define IMPL_MODE_DISPATCHER_BOOL(_arity, _src_ctype, _dst_ctype)                \
+    template <>                                                                  \
+    struct ModeDispatcher<_arity, _src_ctype, _dst_ctype> {                      \
+        static constexpr int arity = _arity;                                     \
+        using src_ctype = _src_ctype;                                            \
+        using dst_ctype = _dst_ctype;                                            \
+        static void run(                                                         \
+                const ElemwiseOpParamN<_arity>& src, const TensorND& dst_tensor, \
+                param::Elemwise::Mode mode, cudaStream_t stream) {               \
+            switch (mode) {                                                      \
+                FOREACH(_cb_dispatch_mode)                                       \
+                default:                                                         \
+                    megdnn_throw("bad mode");                                    \
+            }                                                                    \
+        }                                                                        \
+    }
+
+#define FOREACH(cb)                      \
+    MEGDNN_ELEMWISE_MODE_ENABLE(LT, cb)  \
+    MEGDNN_ELEMWISE_MODE_ENABLE(LEQ, cb) \
+    MEGDNN_ELEMWISE_MODE_ENABLE(EQ, cb)  \
+    MEGDNN_ELEMWISE_MODE_ENABLE(NEQ, cb)
+IMPL_MODE_DISPATCHER_BOOL(2, dt_int8, dt_bool);
+IMPL_MODE_DISPATCHER_BOOL(2, dt_float32, dt_bool);
+IMPL_MODE_DISPATCHER_BOOL(2, dt_bfloat16, dt_bool);
+IMPL_MODE_DISPATCHER_BOOL(2, dt_float16, dt_bool);
+IMPL_MODE_DISPATCHER_BOOL(2, dt_int16, dt_bool);
+IMPL_MODE_DISPATCHER_BOOL(2, dt_int32, dt_bool);
+IMPL_MODE_DISPATCHER_BOOL(2, dt_bool, dt_bool);
+IMPL_MODE_DISPATCHER_BOOL(2, dt_uint8, dt_bool);
+#undef FOREACH
+#define FOREACH(cb)                        \
+    MEGDNN_ELEMWISE_MODE_ENABLE(ISNAN, cb) \
+    MEGDNN_ELEMWISE_MODE_ENABLE(ISINF, cb)
+IMPL_MODE_DISPATCHER_BOOL(1, dt_float16, dt_bool);
+IMPL_MODE_DISPATCHER_BOOL(1, dt_float32, dt_bool);
+IMPL_MODE_DISPATCHER_BOOL(1, dt_bfloat16, dt_bool);
+#undef FOREACH
+#undef _cb_dispatch_mode
+#undef IMPL_MODE_DISPATCHER_BOOL
+
 template <typename ctype_src>
 void dispatch_src_ctype(
         const ElemwiseOpParamN<1>&, const TensorND& dst_tensor, Elemwise::Mode,
@@ -568,6 +622,62 @@ void ElemwiseMultiTypeImpl::on_quantized_mode(
         DISPATCH(dtype::QuantizedS32);
         DISPATCH(dtype::QuantizedS4);
         DISPATCH(dtype::Quantized4Asymm);
+
+        default:
+            megdnn_throw(ssprintf(
+                    "Unsupported input dtype %s for ElemwiseMultiType",
+                    param[0].layout.dtype.name()));
+    }
+
+#undef DISPATCH
+}
+
+void ElemwiseMultiTypeImpl::dest_type_bool_mode(
+        const ElemwiseOpParamN<1>& param, const TensorND& dst_tensor,
+        Elemwise::Mode mode) {
+    auto stream = cuda_stream(this->handle());
+    switch (param[0].layout.dtype.enumv()) {
+#define DISPATCH(_dt)                                                  \
+    case DTypeTrait<_dt>::enumv: {                                     \
+        ModeDispatcher<1, typename DTypeTrait<_dt>::ctype, bool>::run( \
+                param, dst_tensor, mode, stream);                      \
+        break;                                                         \
+    }
+
+        DISPATCH(dtype::Float32);
+        DISPATCH(dtype::Float16);
+        DISPATCH(dtype::BFloat16);
+
+        default:
+            megdnn_throw(ssprintf(
+                    "Unsupported input dtype %s for ElemwiseMultiType",
+                    param[0].layout.dtype.name()));
+    }
+
+#undef DISPATCH
+}
+
+void ElemwiseMultiTypeImpl::dest_type_bool_mode(
+        const ElemwiseOpParamN<2>& param, const TensorND& dst_tensor,
+        Elemwise::Mode mode) {
+    megdnn_assert(param[0].layout.dtype.enumv() == param[1].layout.dtype.enumv());
+    auto stream = cuda_stream(this->handle());
+    switch (param[0].layout.dtype.enumv()) {
+#define DISPATCH(_dt)                                                  \
+    case DTypeTrait<_dt>::enumv: {                                     \
+        ModeDispatcher<2, typename DTypeTrait<_dt>::ctype, bool>::run( \
+                param, dst_tensor, mode, stream);                      \
+        break;                                                         \
+    }
+
+        DISPATCH(dtype::Int8);
+        DISPATCH(dtype::Float32);
+        DISPATCH(dtype::BFloat16);
+        DISPATCH(dtype::Bool);
+        DISPATCH(dtype::Float16);
+        DISPATCH(dtype::Int16);
+        DISPATCH(dtype::Int32);
+        DISPATCH(dtype::Uint8);
 
         default:
             megdnn_throw(ssprintf(

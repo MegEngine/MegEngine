@@ -421,6 +421,9 @@ pdef('Elemwise').add_enum(
     Doc('GELU = 58', 'unary: x Phi(x)'),
     Doc('GELU_GRAD = 59', 'binary: grad(x Phi(x))'),
     Doc('COND_LT_MOV = 60', 'ternary: x < y ? z : 0'),
+    Doc('NEQ = 61', 'binary: x != y'),
+    Doc('ISNAN = 62', 'unary: isnan(x)'),
+    Doc('ISINF = 63', 'unary: isinf(x)'),
 )
 
 pdef('ElemwiseMultiType').add_enum(
@@ -513,6 +516,12 @@ pdef('ElemwiseMultiType').add_enum(
         'compute ``a * b + c`` requiring that ``a`` be uint8 and ``b`` and '
         '``c``  float32, and the result is float32.'),
     Doc('QCOND_LT_MOV = 57', 'quantized cond_lt_mov'),
+    Doc('EQ = 58', 'eq'),
+    Doc('NEQ = 59', 'eq'),
+    Doc('LT = 60', 'lt'),
+    Doc('LEQ = 61', 'leq'),
+    Doc('ISNAN = 62', 'isnan'),
+    Doc('ISINF = 63', 'isinf')
 )
 
 pdef('PowC', 'power with constant exponent').add_fields('float32', 'exp', 0)

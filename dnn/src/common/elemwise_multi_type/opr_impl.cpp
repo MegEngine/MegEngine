@@ -31,6 +31,14 @@ const ModeTrait& ModeTrait::from_mode(Mode mode) {
         return func;
     };
 
+    auto make_not_check_dtype_func = []() {
+        auto func = [](DType dtype) {
+            megdnn_assert(
+                    true, "This function is to not check the dtype %s", dtype.name());
+        };
+        return func;
+    };
+
     auto make_check_category = [](DTypeCategory expected) {
         auto func = [expected](DType dtype) {
             megdnn_assert(expected == dtype.category());
@@ -122,6 +130,23 @@ const ModeTrait& ModeTrait::from_mode(Mode mode) {
             dst.arity = 1;
             dst.check_inp[0] = make_check_category(DTypeCategory::QUANTIZED);
             dst.check_out = make_out_category_func(DTypeCategory::QUANTIZED);
+            dst.name = name;
+            dst.need_specify_out_dtype = true;
+        };
+
+        auto init_bool_unary_op = [&](ModeTrait& dst, const char* name) {
+            dst.arity = 1;
+            dst.check_inp[0] = make_check_category(DTypeCategory::FLOAT);
+            dst.check_out = make_out_dtype_func(dtype::Bool());
+            dst.name = name;
+            dst.need_specify_out_dtype = true;
+        };
+
+        auto init_bool_binary_op = [&](ModeTrait& dst, const char* name) {
+            dst.arity = 2;
+            dst.check_inp[0] = make_not_check_dtype_func();
+            dst.check_inp[1] = make_not_check_dtype_func();
+            dst.check_out = make_out_dtype_func(dtype::Bool());
             dst.name = name;
             dst.need_specify_out_dtype = true;
         };
@@ -240,6 +265,13 @@ const ModeTrait& ModeTrait::from_mode(Mode mode) {
         SET(init_quantized_ternary_op, QFUSE_MUL_ADD3);
         SET(init_quantized_ternary_op, QCOND_LEQ_MOV);
         SET(init_quantized_ternary_op, QCOND_LT_MOV);
+
+        SET(init_bool_binary_op, LT);
+        SET(init_bool_binary_op, LEQ);
+        SET(init_bool_binary_op, EQ);
+        SET(init_bool_binary_op, NEQ);
+        SET(init_bool_unary_op, ISNAN);
+        SET(init_bool_unary_op, ISINF);
 #undef SET
     }
 

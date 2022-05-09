@@ -10,7 +10,7 @@ from ..core.tensor.array_method import _matmul
 from ..core.tensor.utils import _normalize_axis
 from ..tensor import Tensor
 from ..utils.deprecation import deprecated_kwargs_default
-from .elemwise import clip
+from .elemwise import _elemwise_multi_type, clip
 from .tensor import expand_dims, squeeze
 
 __all__ = [
@@ -52,7 +52,7 @@ def isnan(inp: Tensor) -> Tensor:
         >>> F.isnan(x).numpy()
         array([False,  True, False])
     """
-    return inp != inp
+    return _elemwise_multi_type(inp, mode="isnan", dtype="Bool")
 
 
 def isinf(inp: Tensor) -> Tensor:
@@ -69,7 +69,7 @@ def isinf(inp: Tensor) -> Tensor:
         >>> F.isinf(x).numpy()
         array([False,  True, False])
     """
-    return abs(inp).astype("float32") == float("inf")
+    return _elemwise_multi_type(inp, mode="isinf", dtype="Bool")
 
 
 def sign(inp: Tensor):

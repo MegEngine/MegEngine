@@ -73,6 +73,24 @@ protected:
             const ElemwiseOpParamN<2>& param, const TensorND& dst,
             Elemwise::Mode mode) = 0;
 
+    virtual void dest_type_bool_mode(
+            const ElemwiseOpParamN<1>& param, const TensorND& dst,
+            Elemwise::Mode mode) {
+        MEGDNN_MARK_USED_VAR(param);
+        MEGDNN_MARK_USED_VAR(dst);
+        MEGDNN_MARK_USED_VAR(mode);
+        megdnn_throw("Unrealized except arm_common");
+    }
+
+    virtual void dest_type_bool_mode(
+            const ElemwiseOpParamN<2>& param, const TensorND& dst,
+            Elemwise::Mode mode) {
+        MEGDNN_MARK_USED_VAR(param);
+        MEGDNN_MARK_USED_VAR(dst);
+        MEGDNN_MARK_USED_VAR(mode);
+        megdnn_throw("Unrealized except arm_common");
+    }
+
     virtual void on_quantized_mode(
             const ElemwiseOpParamN<3>& param, const TensorND& dst,
             Elemwise::Mode mode) {

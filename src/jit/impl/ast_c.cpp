@@ -133,9 +133,9 @@ const ElemGeneratorMap& ast_c::elem_opr_generator() {
                                    0.f}) /
                           6.f),
     };
-    mgb_assert(map.size() + 16 == opr::Elemwise::Param::MODE_NR_MEMBER);
+    mgb_assert(map.size() + 19 == opr::Elemwise::Param::MODE_NR_MEMBER);
     // unimplemented modes: SHL, SHR, FAST_TANH, FAST_TANH_GRAD, ROUND, RMULH,
-    // ERFINV, ERFCINV, NOT, AND, OR, XOR
+    // ERFINV, ERFCINV, NOT, AND, OR, XOR, NEQ, ISNAN, ISINF
     return map;
 #undef ADD_OPR
 }

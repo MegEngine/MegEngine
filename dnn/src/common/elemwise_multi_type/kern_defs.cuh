@@ -28,7 +28,6 @@ MEGDNN_HOST MEGDNN_DEVICE dtype round_shr_saturate(stype x, int k) {
     }
     return static_cast<dtype>(result);
 }
-
 }  // namespace elemwise_multi_type
 }  // namespace megdnn
 

@@ -149,8 +149,9 @@ void copy_tensors(
         //! use QuantizedS16 dtype in winograd_filter_preprocess now.
         cb(::megdnn::dtype::QuantizedS16) MEGDNN_FOREACH_QUANTIZED_LOWBIT_DTYPE(cb)
                 cb(::megdnn::dtype::Uint16) cb(::megdnn::dtype::QuantizedS1)
+                        cb(::megdnn::dtype::Bool)
 #undef cb
-                        default : megdnn_trap();
+                                default : megdnn_trap();
     }
 }
 
@@ -325,6 +326,7 @@ void CheckerHelper::do_exec(
         m_output_canonizer(tensors_cur_host);
         m_output_canonizer(tensors_naive);
     }
+
     check_tensors(tensors_naive, tensors_cur_host);
     if (m_extra_opr_impl) {
         check_tensors(tensors_naive, *tensors_extra_opr_impl);

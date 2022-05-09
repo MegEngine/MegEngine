@@ -195,6 +195,9 @@ void IIDRNG::gen(const TensorND& tensor) {
     if (tensor.layout.dtype.enumv() == DTypeEnum::Uint16) {
         return;
     }
+    if (tensor.layout.dtype.enumv() == DTypeEnum::Bool) {
+        return;
+    }
     megdnn_assert(
             0, "IIDRNG does not know how to generate value for DType %s",
             tensor.layout.dtype.name());

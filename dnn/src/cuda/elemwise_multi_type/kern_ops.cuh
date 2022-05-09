@@ -4,7 +4,6 @@
 #include "src/cuda/elemwise_multi_type/kern.cuh"
 #include "src/cuda/integer_subbyte_utils.cuh"
 #include "src/cuda/utils.cuh"
-
 namespace megdnn {
 namespace cuda {
 using namespace elemwise_intl;
@@ -122,6 +121,7 @@ struct QuantizedMultiTypeOp<
                 (std::is_same<ctype_src, dt_qint8>::value ||
                  std::is_same<ctype_src, dt_qint32>::value ||
                  std::is_same<ctype_src, dt_quint8>::value) &&
+                !std::is_same<ctype_dst, dt_bool>::value &&
                 IsNotTypeQ4<ctype_dst>::value>::type> {
     ctype_dst* dst;
     CudaDTypeParam<ctype_dst> dst_param;
@@ -160,11 +160,43 @@ struct QuantizedMultiTypeOp<
 
 template <typename ctype_src, typename ctype_dst, typename KernImpl>
 struct QuantizedMultiTypeOp<
+        1, ctype_src, ctype_dst, KernImpl,
+        typename std::enable_if<std::is_same<ctype_dst, dt_bool>::value>::type> {
+    ctype_dst* dst;
+    typedef typename elemwise_intl::VectTypeTrait<ctype_src>::vect_type src_vect_type;
+    typedef typename elemwise_intl::VectTypeTrait<ctype_dst>::vect_type dst_vect_type;
+
+#if !MEGDNN_CC_CUDA
+    QuantizedMultiTypeOp(ctype_dst* m_dst) : dst{m_dst} {}
+#endif
+
+#if MEGDNN_CC_CUDA
+    __device__ __forceinline__ ctype_dst apply(ctype_src v1) {
+        ctype_dst rv = KernImpl::apply(v1);
+        return rv;
+    }
+
+    __device__ __forceinline__ void operator()(uint32_t idx, ctype_src a) {
+        dst[idx] = KernImpl::apply(a);
+    }
+
+    __device__ __forceinline__ void operator()(uint32_t idx, src_vect_type a) {
+        ctype_src a_x(a.x), a_y(a.y), a_z(a.z), a_w(a.w);
+        ctype_dst x = apply(a_x), y = apply(a_y), z = apply(a_z), w = apply(a_w);
+        *(dst_vect_type*)(&dst[idx]) =
+                elemwise_intl::VectTypeTrait<ctype_dst>::make_vector(x, y, z, w);
+    }
+#endif
+};
+
+template <typename ctype_src, typename ctype_dst, typename KernImpl>
+struct QuantizedMultiTypeOp<
         2, ctype_src, ctype_dst, KernImpl,
         typename std::enable_if<
                 (std::is_same<ctype_src, dt_qint8>::value ||
                  std::is_same<ctype_src, dt_qint32>::value ||
                  std::is_same<ctype_src, dt_quint8>::value) &&
+                !std::is_same<ctype_dst, dt_bool>::value &&
                 IsNotTypeQ4<ctype_dst>::value>::type> {
     ctype_dst* dst;
     CudaDTypeParam<ctype_dst> dst_param;
@@ -192,6 +224,40 @@ struct QuantizedMultiTypeOp<
     __device__ __forceinline__ void operator()(uint32_t idx, ctype_src a, ctype_src b) {
         dst[idx] = dst_param.quantize(
                 KernImpl::apply(param_a.dequantize(a), param_b.dequantize(b)));
+    }
+
+    __device__ __forceinline__ void operator()(
+            uint32_t idx, src_vect_type a, src_vect_type b) {
+        ctype_src a_x(a.x), a_y(a.y), a_z(a.z), a_w(a.w), b_x(b.x), b_y(b.y), b_z(b.z),
+                b_w(b.w);
+        ctype_dst x = apply(a_x, b_x), y = apply(a_y, b_y), z = apply(a_z, b_z),
+                  w = apply(a_w, b_w);
+        *(dst_vect_type*)(&dst[idx]) =
+                elemwise_intl::VectTypeTrait<ctype_dst>::make_vector(x, y, z, w);
+    }
+#endif
+};
+
+template <typename ctype_src, typename ctype_dst, typename KernImpl>
+struct QuantizedMultiTypeOp<
+        2, ctype_src, ctype_dst, KernImpl,
+        typename std::enable_if<(std::is_same<ctype_dst, dt_bool>::value)>::type> {
+    ctype_dst* dst;
+    typedef typename elemwise_intl::VectTypeTrait<ctype_src>::vect_type src_vect_type;
+    typedef typename elemwise_intl::VectTypeTrait<ctype_dst>::vect_type dst_vect_type;
+
+#if !MEGDNN_CC_CUDA
+    QuantizedMultiTypeOp(ctype_dst* m_dst) : dst{m_dst} {}
+#endif
+
+#if MEGDNN_CC_CUDA
+    __device__ __forceinline__ ctype_dst apply(ctype_src v1, ctype_src v2) {
+        ctype_dst rv = KernImpl::apply(v1, v2);
+        return rv;
+    }
+
+    __device__ __forceinline__ void operator()(uint32_t idx, ctype_src a, ctype_src b) {
+        dst[idx] = KernImpl::apply(a, b);
     }
 
     __device__ __forceinline__ void operator()(
@@ -262,7 +328,8 @@ template <typename ctype_src, typename ctype_dst, typename KernImpl>
 struct QuantizedMultiTypeOp<
         1, ctype_src, ctype_dst, KernImpl,
         typename std::enable_if<
-                IsTypeQ4<ctype_src>::value && IsNotTypeQ4<ctype_dst>::value>::type> {
+                IsTypeQ4<ctype_src>::value && IsNotTypeQ4<ctype_dst>::value &&
+                !std::is_same<ctype_dst, dt_bool>::value>::type> {
     ctype_dst* dst;
     CudaDTypeParam<ctype_dst> dst_param;
     CudaDTypeParam<ctype_src> param_a;
@@ -293,7 +360,8 @@ template <typename ctype_src, typename ctype_dst, typename KernImpl>
 struct QuantizedMultiTypeOp<
         2, ctype_src, ctype_dst, KernImpl,
         typename std::enable_if<
-                IsTypeQ4<ctype_src>::value && IsNotTypeQ4<ctype_dst>::value>::type> {
+                IsTypeQ4<ctype_src>::value && IsNotTypeQ4<ctype_dst>::value &&
+                !std::is_same<ctype_dst, dt_bool>::value>::type> {
     ctype_dst* dst;
     CudaDTypeParam<ctype_dst> dst_param;
     CudaDTypeParam<ctype_src> param_a, param_b;
@@ -326,7 +394,8 @@ template <typename ctype_src, typename ctype_dst, typename KernImpl>
 struct QuantizedMultiTypeOp<
         1, ctype_src, ctype_dst, KernImpl,
         typename std::enable_if<
-                IsTypeQ4<ctype_src>::value && IsTypeQ4<ctype_dst>::value>::type> {
+                IsTypeQ4<ctype_src>::value && IsTypeQ4<ctype_dst>::value &&
+                !std::is_same<ctype_dst, dt_bool>::value>::type> {
     using src_storage = typename elemwise_intl::VectTypeTrait<ctype_src>::Storage;
     using dst_storage = typename elemwise_intl::VectTypeTrait<ctype_dst>::Storage;
     dst_storage* dst;
@@ -371,6 +440,7 @@ struct QuantizedMultiTypeOp<
                 (std::is_same<ctype_src, dt_qint8>::value ||
                  std::is_same<ctype_src, dt_qint32>::value ||
                  std::is_same<ctype_src, dt_quint8>::value) &&
+                !std::is_same<ctype_dst, dt_bool>::value &&
                 IsTypeQ4<ctype_dst>::value>::type> {
     using dst_storage = typename elemwise_intl::VectTypeTrait<ctype_dst>::Storage;
     dst_storage* dst;
@@ -407,7 +477,8 @@ template <typename ctype_src, typename ctype_dst, typename KernImpl>
 struct QuantizedMultiTypeOp<
         2, ctype_src, ctype_dst, KernImpl,
         typename std::enable_if<
-                IsTypeQ4<ctype_src>::value && IsTypeQ4<ctype_dst>::value>::type> {
+                IsTypeQ4<ctype_src>::value && IsTypeQ4<ctype_dst>::value &&
+                !std::is_same<ctype_dst, dt_bool>::value>::type> {
     using src_storage = typename elemwise_intl::VectTypeTrait<ctype_src>::Storage;
     using dst_storage = typename elemwise_intl::VectTypeTrait<ctype_dst>::Storage;
     dst_storage* dst;
@@ -460,6 +531,7 @@ struct QuantizedMultiTypeOp<
                 (std::is_same<ctype_src, dt_qint8>::value ||
                  std::is_same<ctype_src, dt_qint32>::value ||
                  std::is_same<ctype_src, dt_quint8>::value) &&
+                !std::is_same<ctype_dst, dt_bool>::value &&
                 IsTypeQ4<ctype_dst>::value>::type> {
     using dst_storage = typename elemwise_intl::VectTypeTrait<ctype_dst>::Storage;
     dst_storage* dst;
