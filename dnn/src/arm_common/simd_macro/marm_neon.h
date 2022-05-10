@@ -469,7 +469,7 @@ __ai float64x2_t vbitq_f64(float64x2_t dst, float64x2_t v1, uint64x2_t mask) {
 #endif
 
 #if MEGDNN_ARMV7
-__ai int8x16_t vqtbl1q_s8(int8x16_t& a, uint8x16_t& idx) {
+__ai int8x16_t vqtbl1q_s8(int8x16_t a, uint8x16_t idx) {
     int8x8_t src_low = vget_low_s8(a);
     int8x8_t src_high = vget_high_s8(a);
     return vcombine_s8(
@@ -726,6 +726,13 @@ __ai float32x4_t Vfmsq_f32(float32x4_t& a, float32x4_t& b, float32x4_t& v) {
     asm volatile("fmls %0.4s, %1.4s, %2.4s\n" : "+w"(a) : "w"(b), "w"(v) :);
     return a;
 }
+#if __ARM_ARCH < 8
+__ai int32x4_t vcvtaq_s32_f32(float32x4_t val) {
+    float32x4_t vinc0 = vbslq_f32(
+            vcgeq_f32(val, vdupq_n_f32(0.f)), vdupq_n_f32(0.5f), vdupq_n_f32(-0.5f));
+    return vcvtq_s32_f32(vaddq_f32(val, vinc0));
+}
+#endif
 #if MGB_ENABLE_DOT
 #undef __ARM_FEATURE_DOTPROD
 #endif

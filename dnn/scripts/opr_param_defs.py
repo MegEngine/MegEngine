@@ -557,7 +557,10 @@ pdef('PowC', 'power with constant exponent').add_fields('float32', 'exp', 0)
               'layout is (K/8, M/8, 8(k), 8(m)) x (K/8, N, 8(k))'),
           Doc('MK4_DOT = 3', 'Split 4 from M and K, better for neon dotprod:'
               'M/4, K/4, 4(m), 4(k)) x (K/4, N, 4(k)). if transposeA the '
-              'layout is (K/4, M/4, 4(m), 4(k)) x (K/4, N, 4(k))'))
+              'layout is (K/4, M/4, 4(m), 4(k)) x (K/4, N, 4(k))'),
+          Doc('N32K4_DOT = 4', 'Split 32 from N and 4 from K, better for neon gevm dotprod:'
+              'N/32, K/4, 32(n), 4(k)')
+              )
  )
 
 (pdef('SVD').

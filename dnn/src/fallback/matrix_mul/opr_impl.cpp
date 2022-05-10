@@ -195,11 +195,11 @@ MatrixMulImpl::KernSizeParam MatrixMulImpl::make_kern_size_param(
     kern_size_param.trB = param().transposeB;
     kern_size_param.compute_mode = param().compute_mode;
     kern_size_param.format = param().format;
-
-    size_t pack_size = MatrixMulForward::pack_size(param().format);
-    kern_size_param.K *= pack_size;
-    kern_size_param.M *= pack_size;
-
+    if (param().format != Param::Format::N32K4_DOT) {
+        size_t pack_size = MatrixMulForward::pack_size(param().format);
+        kern_size_param.K *= pack_size;
+        kern_size_param.M *= pack_size;
+    }
     return kern_size_param;
 }
 

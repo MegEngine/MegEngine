@@ -127,6 +127,37 @@ public:
     MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_DIRECT_NCHW_NCHW44_DOT_S8)
 };
 
+class ConvBiasImpl::AlgoDotS8DirectChanWiseLarge final : public AlgoBase {
+public:
+    AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }
+    const char* name() const override { return "ARMDOTS8_DIRECT_CHANWISE_LARGE"; }
+    bool usable(const NCBKernSizeParam&, AlgoSelectionStrategy algo_selection_strategy)
+            const override;
+
+    size_t get_workspace(const NCBKernSizeParam&) const override;
+    virtual SmallVector<NCBKern> dispatch_kerns(
+            const NCBKernSizeParam& param) const override;
+    ConvAlgoTypePack get_algo_type() const override {
+        return {AlgoDataType::QINT8X8X32, AlgoCategory::DIRECT};
+    }
+    MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_DOT_DIRECT_CHANWISE_LARGE_S8)
+};
+
+class ConvBiasImpl::AlgoDotS8Im2colChanWiseLarge final : public AlgoBase {
+public:
+    AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }
+    const char* name() const override { return "ARMDOTS8_IM2COL_CHANWISE_LARGE"; }
+    bool usable(const NCBKernSizeParam&, AlgoSelectionStrategy algo_selection_strategy)
+            const override;
+
+    size_t get_workspace(const NCBKernSizeParam&) const override;
+    virtual SmallVector<NCBKern> dispatch_kerns(
+            const NCBKernSizeParam& param) const override;
+    ConvAlgoTypePack get_algo_type() const override {
+        return {AlgoDataType::QINT8X8X32, AlgoCategory::IM2COL};
+    }
+    MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_DOT_IM2COL_CHANWISE_LARGE_S8)
+};
 class ConvBiasImpl::AlgoDotS8DirectStride1 final : public AlgoBase {
 public:
     AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }

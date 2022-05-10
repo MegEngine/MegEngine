@@ -51,6 +51,8 @@ private:
 #endif
 #if MGB_ENABLE_DOT
     class AlgoDotS8DirectNCHWNCHW44;
+    class AlgoDotS8DirectChanWiseLarge;
+    class AlgoDotS8Im2colChanWiseLarge;
     class AlgoDotS8DirectStride1;
     class AlgoDotS8DirectStride2;
     class AlgoDotU8DirectStride1;

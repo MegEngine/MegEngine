@@ -49,8 +49,69 @@ public:
     MEGDNN_OVERRIDE_MATMUL_DESC(8, 16, 1, 2, AlgoDataType::QINT8X8X32, MK4)
     MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_INT8X8X32_GEMV_MK4)
 };
-
 #if MGB_ENABLE_DOT
+class MatrixMulImpl::AlgoInt8x8x32GevmDot : public AlgoBase {
+public:
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE | AlgoAttribute::USABLE_DEPEND_ON_SHAPE;
+    }
+    const char* name() const override { return "ARM_COMMON_INT8X8X32_GEVM_DOT"; }
+    bool usable(const KernSizeParam&) const override;
+    bool preferred(const KernSizeParam&) const override;
+    size_t get_workspace(const KernSizeParam&) const override { return 0; }
+    kern_t get_kern(const KernSizeParam&) const override;
+    AlgoSet algoset() const override { return AlgoSet::ALGO_TYPE_GEVM; }
+    PackMode packmode() const override { return PackMode::NO_PACK; }
+    MEGDNN_OVERRIDE_MATMUL_DESC(1, 32, 4, 2, AlgoDataType::QINT8X8X32, DEFAULT)
+    WorkspaceBundle get_bundle(const KernSizeParam&) const override {
+        return WorkspaceBundle{nullptr, {}};
+    }
+    kern_naked_t get_kern_naked(const KernSizeParam&) const override {
+        megdnn_assert(0, "naked kern no impl");
+    }
+    void pack_A(const KernParam& kern_param, void* out, size_t index, size_t stride)
+            const override {
+        megdnn_assert(0, "pack_A no impl");
+    }
+    void pack_B(const KernParam& kern_param, void* out, size_t x0, size_t xmax)
+            const override {
+        megdnn_assert(0, "pack_B no impl");
+    }
+    InnerBlockSize get_inner_block_size() const override { return {1, 32, 4}; };
+    MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_INT8X8X32_GEVM_DOT)
+};
+
+class MatrixMulImpl::AlgoInt8x8x32GevmN32K4Dot : public AlgoBase {
+public:
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE | AlgoAttribute::USABLE_DEPEND_ON_SHAPE;
+    }
+    const char* name() const override { return "ARM_COMMON_INT8X8X32_GEVM_N32K4_DOT"; }
+    bool usable(const KernSizeParam&) const override;
+    bool preferred(const KernSizeParam&) const override;
+    size_t get_workspace(const KernSizeParam&) const override { return 0; }
+    kern_t get_kern(const KernSizeParam&) const override;
+    AlgoSet algoset() const override { return AlgoSet::ALGO_TYPE_GEVM; }
+    PackMode packmode() const override { return PackMode::NO_PACK; }
+    MEGDNN_OVERRIDE_MATMUL_DESC(1, 32, 4, 2, AlgoDataType::QINT8X8X32, N32K4_DOT)
+    WorkspaceBundle get_bundle(const KernSizeParam&) const override {
+        return WorkspaceBundle{nullptr, {}};
+    }
+    kern_naked_t get_kern_naked(const KernSizeParam&) const override {
+        megdnn_assert(0, "naked kern no impl");
+    }
+    void pack_A(const KernParam& kern_param, void* out, size_t index, size_t stride)
+            const override {
+        megdnn_assert(0, "pack_A no impl");
+    }
+    void pack_B(const KernParam& kern_param, void* out, size_t x0, size_t xmax)
+            const override {
+        megdnn_assert(0, "pack_B no impl");
+    }
+    InnerBlockSize get_inner_block_size() const override { return {1, 32, 4}; };
+    MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_INT8X8X32_GEVM_N32K4_DOT)
+};
+
 class MatrixMulImpl::AlgoInt8x8x32GemvMK4Dot : public AlgoBase {
 public:
     AlgoAttribute attribute() const override {

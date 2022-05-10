@@ -31,7 +31,9 @@ protected:
     class AlgoF16Gemv;
 #endif
 #if MGB_ENABLE_DOT
-    class AlgoInt8x8x32GemvMK4Dot;  // Arm_common Int8x8x32 Gemv NCHW44_DOT
+    class AlgoInt8x8x32GemvMK4Dot;    // Arm_common Int8x8x32 Gemv NCHW44_DOT
+    class AlgoInt8x8x32GevmDot;       // Arm_common Int8x8x32 Gevm NCHW DOT
+    class AlgoInt8x8x32GevmN32K4Dot;  // Arm_common Int8x8x32 Gevm NK4
 #endif
     class AlgoInt8x8x16;  // Arm_common Int 8x8x16
     class AlgoPack;

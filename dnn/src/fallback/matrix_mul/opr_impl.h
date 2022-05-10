@@ -122,6 +122,8 @@ public:
             ARM_COMMON_INT8X8X32_GEMV,
             ARM_COMMON_INT8X8X32_GEMV_MK4,
             ARM_COMMON_INT8X8X32_GEMV_MK4_DOT,
+            ARM_COMMON_INT8X8X32_GEVM_DOT,
+            ARM_COMMON_INT8X8X32_GEVM_N32K4_DOT,
             ARM_COMMON_F16_GEMV,
             ARM_COMMON_GEVM,
 #if MEGDNN_AARCH64
@@ -175,6 +177,7 @@ public:
         enum class AlgoSet : uint32_t {
             ALGO_TYPE_GEMM = 0,
             ALGO_TYPE_GEMV = 1,
+            ALGO_TYPE_GEVM = 2,
         };
 
         enum class PackMode : uint32_t {

@@ -61,6 +61,15 @@ void MatrixMulForward::deduce_layout(
                 "(transposed) B is (%zu,%zu)",
                 A0, A1, B0, B1);
         C = TensorLayout(TensorShape({A0, B1}), C.dtype);
+    } else if (param().format == param::MatrixMul::Format::N32K4_DOT) {
+        A0 = A.shape[0];
+        A1 = A.shape[1];
+        B0 = B.shape[0];
+        B1 = B.shape[1];
+        megdnn_assert(!m_param.transposeA && !m_param.transposeB);
+        megdnn_assert(A0 == 1 && A1 % 4 == 0);
+        megdnn_assert(B.ndim == 4);
+        C = TensorLayout(TensorShape({A0, B0 * 32}), C.dtype);
     } else {
         auto do_deduce = [&](size_t pack_size) {
             megdnn_assert(
@@ -132,6 +141,18 @@ void MatrixMulForward::check_exec(
         megdnn_assert(A0 == C0, "%s", errmsg().c_str());
         megdnn_assert(B1 == C1, "%s", errmsg().c_str());
         megdnn_assert(A1 == B0, "%s", errmsg().c_str());
+    } else if (param().format == param::MatrixMul::Format::N32K4_DOT) {
+        size_t A0 = A.shape[0];
+        size_t A1 = A.shape[1];
+        size_t B2 = B.shape[2];
+        size_t B3 = B.shape[3];
+        megdnn_assert(!m_param.transposeA && !m_param.transposeB);
+        megdnn_assert(A0 == 1 && A1 % 4 == 0);
+        megdnn_assert(B.ndim == 4);
+        megdnn_assert(B2 == 32 && B3 == 4);
+        megdnn_assert_contiguous(A);
+        megdnn_assert_contiguous(B);
+        megdnn_assert_contiguous(C);
     } else {
         megdnn_assert_eq_size_t(A.ndim, 4_z);
         megdnn_assert_eq_size_t(B.ndim, 3_z);

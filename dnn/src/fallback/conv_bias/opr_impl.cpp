@@ -442,9 +442,11 @@ ConvBiasImpl::NCBKernSizeParam ConvBiasImpl::make_ncb_kern_size_param(
         megdnn_assert(0, "invalid conv format %d", static_cast<int>(param().format));
     }
     BiasMode bias_mode;
+    //! dst only channel BIAS is viewed as BROADCAST_CHANNEL_BIAS
+    bool dst_only_c = dst[0] == 1 && dst[spatial_pos] == 1 && dst[spatial_pos + 1] == 1;
     if (bias.ndim == 0) {
         bias_mode = BiasMode::NO_BIAS;
-    } else if (bias.eq_shape(dst)) {
+    } else if (bias.eq_shape(dst) && !dst_only_c) {
         bias_mode = BiasMode::BIAS;
     } else {
         //! just check the ndim, the detail shape check is in check_exec

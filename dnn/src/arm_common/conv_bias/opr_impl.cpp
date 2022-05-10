@@ -54,6 +54,8 @@ class ConvBiasImpl::AlgoPack : NonCopyableObj {
 
     AlgoDotS8Direct_NCHW44 ds8_direct_nchw44;
     AlgoDotS8DirectNCHWNCHW44 ds8_direct_nchw_nchw44;
+    AlgoDotS8Im2colChanWiseLarge ds8_im2col_large_chanwise;
+    AlgoDotS8DirectChanWiseLarge ds8_direct_large_chanwise;
 #endif
 
     AlgoI8x8x16Direct i8x8x16_direct;
@@ -75,6 +77,8 @@ class ConvBiasImpl::AlgoPack : NonCopyableObj {
 public:
     AlgoPack() {
 #if MGB_ENABLE_DOT
+        m_direct_algos.emplace_back(&ds8_direct_large_chanwise);
+        m_direct_algos.emplace_back(&ds8_im2col_large_chanwise);
         m_direct_algos.emplace_back(&ds8_direct_stride1);
         m_direct_algos.emplace_back(&ds8_direct_stride2);
         m_direct_algos.emplace_back(&du8_direct_stride1);

@@ -143,8 +143,89 @@ MatrixMulImpl::kern_t MatrixMulImpl::AlgoInt8x8x32GemvMK4::get_kern(
         const KernSizeParam&) const {
     return int8x8x32_gemv_mk4_kern;
 }
-
 #if MGB_ENABLE_DOT
+namespace {
+void int8x8x32_gevm_dot_kern(const MatrixMulImpl::KernParam& kern_param) {
+    MIDOUT_BEGIN(megdnn_arm_exec_int8832, midout_iv("int8x8x32_gevm_dot_kern"_hash)) {
+        auto M = kern_param.M, N = kern_param.N, K = kern_param.K;
+        auto LDA = kern_param.LDA, LDB = kern_param.LDB, LDC = kern_param.LDC;
+        const auto Aptr = kern_param.A<dt_int8>(), Bptr = kern_param.B<dt_int8>();
+        auto Cptr = kern_param.C<dt_int32>();
+        gevm_naive_dot(Aptr, Bptr, Cptr, M, N, K, LDA, LDB, LDC);
+    }
+    MIDOUT_END();
+}
+}  // anonymous namespace
+
+bool MatrixMulImpl::AlgoInt8x8x32GevmDot::usable(
+        const KernSizeParam& kern_size_param) const {
+    if (!cpuinfo_has_arm_neon_dot()) {
+        return false;
+    }
+    auto M = kern_size_param.M;
+    bool is_dtype_ok =
+            kern_size_param.A_type.enumv() == kern_size_param.B_type.enumv() &&
+            (kern_size_param.A_type.enumv() == DTypeEnum::Int8 ||
+             kern_size_param.A_type.enumv() == DTypeEnum::QuantizedS8) &&
+            (kern_size_param.C_type.enumv() == DTypeEnum::Int32 ||
+             kern_size_param.C_type.enumv() == DTypeEnum::QuantizedS32);
+
+    return kern_size_param.compute_mode == Param::ComputeMode::DEFAULT &&
+           kern_size_param.format == param::MatrixMul::Format::DEFAULT && is_dtype_ok &&
+           !kern_size_param.trA && !kern_size_param.trB && M == 1;
+}
+
+bool MatrixMulImpl::AlgoInt8x8x32GevmDot::preferred(
+        const KernSizeParam& kern_size_param) const {
+    return true;
+}
+
+MatrixMulImpl::kern_t MatrixMulImpl::AlgoInt8x8x32GevmDot::get_kern(
+        const KernSizeParam&) const {
+    return int8x8x32_gevm_dot_kern;
+}
+
+namespace {
+void int8x8x32_gevm_n32k4_dot_kern(const MatrixMulImpl::KernParam& kern_param) {
+    MIDOUT_BEGIN(megdnn_arm_exec_int8832, midout_iv("int8x8x32_gevm_dot_kern"_hash)) {
+        auto M = kern_param.M, N = kern_param.N, K = kern_param.K;
+        auto LDA = kern_param.LDA, LDB = kern_param.LDB, LDC = kern_param.LDC;
+        const auto Aptr = kern_param.A<dt_int8>(), Bptr = kern_param.B<dt_int8>();
+        auto Cptr = kern_param.C<dt_int32>();
+        gevm_naive_n32k4_dot(Aptr, Bptr, Cptr, M, N, K, LDA, LDB, LDC);
+    }
+    MIDOUT_END();
+}
+}  // anonymous namespace
+
+bool MatrixMulImpl::AlgoInt8x8x32GevmN32K4Dot::usable(
+        const KernSizeParam& kern_size_param) const {
+    if (!cpuinfo_has_arm_neon_dot()) {
+        return false;
+    }
+    auto M = kern_size_param.M;
+
+    bool is_dtype_ok =
+            kern_size_param.A_type.enumv() == kern_size_param.B_type.enumv() &&
+            (kern_size_param.A_type.enumv() == DTypeEnum::Int8 ||
+             kern_size_param.A_type.enumv() == DTypeEnum::QuantizedS8) &&
+            (kern_size_param.C_type.enumv() == DTypeEnum::Int32 ||
+             kern_size_param.C_type.enumv() == DTypeEnum::QuantizedS32);
+    return kern_size_param.compute_mode == Param::ComputeMode::DEFAULT &&
+           kern_size_param.format == param::MatrixMul::Format::N32K4_DOT &&
+           is_dtype_ok && !kern_size_param.trA && !kern_size_param.trB && M == 1;
+}
+
+bool MatrixMulImpl::AlgoInt8x8x32GevmN32K4Dot::preferred(
+        const KernSizeParam& kern_size_param) const {
+    return true;
+}
+
+MatrixMulImpl::kern_t MatrixMulImpl::AlgoInt8x8x32GevmN32K4Dot::get_kern(
+        const KernSizeParam&) const {
+    return int8x8x32_gevm_n32k4_dot_kern;
+}
+
 /* =================== Int8x8x32 Gemv MK4_DOT algo ==================== */
 namespace {
 void int8x8x32_gemv_mk4_dot_kern(const MatrixMulImpl::KernParam& kern_param) {

@@ -160,7 +160,7 @@ static void benchmark_convbias(
                 .set_display(false);
     }
     auto nchw44_algo_regx = ".*(DIRECT|NCHW_NCHW44).*";
-#if MGB_ENBALE_DOT
+#if MGB_ENABLE_DOT
     if (!is_fp32) {
         nchw44_algo_regx = ".*DOT.*";
     }
@@ -1626,7 +1626,7 @@ TEST_F(ARM_COMMON, BENCHMARK_CONV_BIAS_QINT8_STRIDE1_NCHW44) {
 
 #endif
 
-#if MGB_ENBALE_DOT
+#if MGB_ENABLE_DOT
 #if MEGDNN_WITH_BENCHMARK
 TEST_F(ARM_COMMON, BENCHMARK_CONV_BIAS_INT8_STRIDE1_WITHDOTPROD) {
     // have to remove preferred restrict in usable func before run the benchmark
@@ -2011,6 +2011,80 @@ TEST_F(ARM_COMMON, BENCHMARK_CONV_BIAS_INT8_STRIDE1_WITHDOTPROD_NCHW44_DOT) {
     }
 }
 
+TEST_F(ARM_COMMON, BENCHMARK_CONV_BIAS_INT8_LARGE_KERN_NCHW_DOT) {
+    using namespace conv_bias;
+
+    std::vector<TestArg> args;
+    auto run = [&](size_t group, size_t w, size_t h, size_t kernel, size_t stride,
+                   NonlineMode nonline_mode) {
+        size_t p = kernel / 2;
+        if (w + 2 * p < kernel || h + 2 * p < kernel)
+            return;
+        param::ConvBias param;
+        param.stride_h = stride;
+        param.stride_w = stride;
+        param.pad_h = p;
+        param.pad_w = p;
+        param.nonlineMode = nonline_mode;
+        param.format = param::ConvBias::Format::NCHW;
+        param.sparse = ConvBiasForward::Param::Sparse::GROUP;
+
+        //! channel bias
+        args.emplace_back(
+                param, TensorShape{1, group, h, w},
+                TensorShape{group, 1, 1, kernel, kernel}, TensorShape{1, group, 1, 1});
+    };
+
+    run(64, 64, 64, 9, 1, NonlineMode::RELU);
+    run(64, 40, 40, 9, 2, NonlineMode::RELU);
+    run(64, 20, 20, 9, 1, NonlineMode::RELU);
+
+    constexpr size_t RUN = 120;
+    Benchmarker<ConvBias> benchmark0(handle());
+    benchmark0.set_dtype(0, dtype::QuantizedS8(2.5f))
+            .set_dtype(1, dtype::QuantizedS8(2.5f))
+            .set_dtype(2, dtype::QuantizedS32(6.25f))
+            .set_dtype(4, dtype::QuantizedS8(60.25f));
+    benchmark0.set_display(false);
+    benchmark0.set_times(RUN);
+    benchmark0.set_before_exec_callback(conv_bias::ConvBiasAlgoChecker<ConvBiasForward>(
+            "ARMDOTS8_DIRECT_CHANWISE_LARGE"));
+
+    Benchmarker<ConvBias> benchmark1(handle());
+    benchmark1.set_dtype(0, dtype::QuantizedS8(2.5f))
+            .set_dtype(1, dtype::QuantizedS8(2.5f))
+            .set_dtype(2, dtype::QuantizedS32(6.25f))
+            .set_dtype(4, dtype::QuantizedS8(60.25f));
+    benchmark1.set_before_exec_callback(conv_bias::ConvBiasAlgoChecker<ConvBiasForward>(
+            "ARMDOTS8_IM2COL_CHANWISE_LARGE"));
+    benchmark1.set_display(false);
+    benchmark1.set_times(RUN);
+
+    for (auto&& arg : args) {
+        TensorLayout dst_layout;
+        auto opr = handle()->create_operator<ConvBias>();
+        opr->param() = arg.param;
+        opr->deduce_layout(
+                {arg.src, dtype::Int8()}, {arg.filter, dtype::Int8()},
+                {arg.bias, dtype::Int32()}, {}, dst_layout);
+        //! dst.nr_elems * FH * FW * 2
+        float computations =
+                dst_layout.total_nr_elems() * arg.filter[3] * arg.filter[4] * 2.0 / 1e6;
+
+        auto used0 = benchmark0.set_param(arg.param).exec(
+                             {arg.src, arg.filter, arg.bias, {}, {}}) /
+                     RUN;
+        auto used1 = benchmark1.set_param(arg.param).exec(
+                             {arg.src, arg.filter, arg.bias, {}, {}}) /
+                     RUN;
+
+        printf("%s %s: Direct use: %f ms %f Gflops im2col: %f ms %f GFlops "
+               "speedup: %f\n",
+               arg.src.to_string().c_str(), arg.filter.to_string().c_str(), used0,
+               computations / used0, used1, computations / used1, used1 / used0);
+    }
+}
+
 #endif
 #endif
 
@@ -2194,7 +2268,7 @@ TEST_F(ARM_COMMON, BENCHMARK_CONV_BIAS_CONV1X1_S1_QUANTIZEDSYM) {
     dtype::QuantizedS8 stype(2.5f);
     dtype::QuantizedS32 dtype(6.25f);
 #if MEGDNN_AARCH64
-#if MGB_ENBALE_DOT
+#if MGB_ENABLE_DOT
     benchmark_conv1x1(
             "AARCH64_INT8X8X32_K8X12X4_DOTPROD", handle(), stype, dtype, dtype, dtype);
 #else
@@ -2212,7 +2286,7 @@ TEST_F(ARM_COMMON, BENCHMARK_CONV_BIAS_CONV1X1_S1_QUANTIZEDASYM) {
     dtype::QuantizedS32 dtype(1.2 * 1.2);
 
 #if MEGDNN_AARCH64
-#if MGB_ENBALE_DOT
+#if MGB_ENABLE_DOT
     benchmark_conv1x1(
             "AARCH64_QUINT8_K8X8X4_DOTPROD", handle(), stype, dtype, dtype, dtype);
 #else

@@ -105,6 +105,34 @@ void run_matrix_mul_mk4_dot_tpl(
 template <
         typename itype, typename otype, bool transA, bool transB,
         typename comp_type = otype>
+void run_matrix_mul_n32k4_dot_tpl(
+        const itype* A, const itype* B, otype* C, size_t M, size_t N, size_t K,
+        size_t LDA, size_t, size_t, const DType& A_type, const DType& B_type) {
+    Getter<itype, comp_type> getterA(A_type), getterB(B_type);
+    megdnn_assert(!transA && !transB);
+    for (size_t m = 0; m < M; ++m) {
+        for (size_t n = 0; n < N; n += 32) {
+            comp_type res[32] = {comp_type(0)};
+            for (size_t k = 0; k < K; k += 4) {
+                for (size_t i = 0; i < 32; i++) {
+                    comp_type av, bv;
+                    for (size_t j = 0; j < 4; j++) {
+                        av = getterA(A[m * LDA + k + j]);
+                        bv = getterA(B[n * K + k * 32 + i * 4 + j]);
+                        res[i] += av * bv;
+                    }
+                }
+            }
+            for (size_t i = 0; i < 32; i++) {
+                C[n + i] = res[i];
+            }
+        }
+    }
+}
+
+template <
+        typename itype, typename otype, bool transA, bool transB,
+        typename comp_type = otype>
 void run_matrix_mul_mk8_tpl(
         const itype* A, const itype* B, otype* C, size_t M, size_t N, size_t K,
         size_t LDA, size_t LDB, size_t LDC, const DType& A_type, const DType& B_type) {
@@ -249,6 +277,10 @@ void dispatch_ta_tb(
                 static_cast<_otype*>(C), M, N, K, LDA, LDB, LDC, A_type, B_type); \
     } else if (format == param::MatrixMul::Format::MK4_DOT) {                     \
         return run_matrix_mul_mk4_dot_tpl<_itype, _otype, TA, TB, _comp_type>(    \
+                static_cast<const _itype*>(A), static_cast<const _itype*>(B),     \
+                static_cast<_otype*>(C), M, N, K, LDA, LDB, LDC, A_type, B_type); \
+    } else if (format == param::MatrixMul::Format::N32K4_DOT) {                   \
+        return run_matrix_mul_n32k4_dot_tpl<_itype, _otype, TA, TB, _comp_type>(  \
                 static_cast<const _itype*>(A), static_cast<const _itype*>(B),     \
                 static_cast<_otype*>(C), M, N, K, LDA, LDB, LDC, A_type, B_type); \
     } else if (format == param::MatrixMul::Format::MK8) {                         \

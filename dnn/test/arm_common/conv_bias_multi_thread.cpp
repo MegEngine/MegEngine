@@ -136,6 +136,84 @@ std::vector<conv_bias::TestArg> get_nchw44_channel_wise_args(
     return args;
 }
 
+std::vector<conv_bias::TestArg> get_channel_wise_args(
+        std::vector<size_t> kernel, size_t stride, bool no_bias, bool no_nonlinemode,
+        bool no_full_bias, bool support_relu) {
+    using namespace conv_bias;
+    using Param = param::ConvBias;
+    using NLMode = param::ConvBias::NonlineMode;
+    std::vector<TestArg> args;
+
+    auto pack = [&](size_t n, size_t group, size_t w, size_t h, size_t kernel,
+                    size_t stride, NLMode nlmode, bool pad) {
+        Param param;
+        param.stride_h = stride;
+        param.stride_w = stride;
+        if (pad) {
+            param.pad_h = kernel / 2;
+            param.pad_w = kernel / 2;
+        } else {
+            param.pad_h = 0;
+            param.pad_w = 0;
+        }
+        param.nonlineMode = nlmode;
+        param.format = param::ConvBias::Format::NCHW;
+        param.sparse = param::ConvBias::Sparse::GROUP;
+
+        args.emplace_back(
+                param, TensorShape{n, group, h, w},
+                TensorShape{group, 1, 1, kernel, kernel}, TensorShape{});
+        if (!no_bias) {
+            args.emplace_back(
+                    param, TensorShape{n, group, h, w},
+                    TensorShape{group, 1, 1, kernel, kernel},
+                    TensorShape{1, group, 1, 1});
+        }
+        if (!no_full_bias) {
+            args.emplace_back(
+                    param, TensorShape{n, group, h, w},
+                    TensorShape{group, 1, 1, kernel, kernel},
+                    TensorShape{
+                            n, group, (h + 2 * param.pad_w - kernel) / stride + 1,
+                            (w + 2 * param.pad_w - kernel) / stride + 1});
+        }
+    };
+
+    std::vector<NLMode> nonlinemode = {NLMode::IDENTITY};
+    if (!no_nonlinemode) {
+        nonlinemode.emplace_back(NLMode::RELU);
+        nonlinemode.emplace_back(NLMode::H_SWISH);
+    } else if (support_relu) {
+        nonlinemode.emplace_back(NLMode::RELU);
+    }
+
+    for (size_t n : {1, 2}) {
+        for (auto nlmode : nonlinemode) {
+            for (bool pad : {true}) {
+                for (size_t group : {1, 3, 7}) {
+                    for (size_t size : {4, 6, 7, 9, 16, 20, 32, 55}) {
+                        for (size_t kern : kernel) {
+                            pack(n, group, size, size, kern, stride, nlmode, pad);
+                        }
+                    }
+                }
+            }
+            for (bool pad : {false}) {
+                for (size_t group : {7}) {
+                    for (size_t size : {37}) {
+                        for (size_t kern : kernel) {
+                            if (size < kern)
+                                continue;
+                            pack(n, group, size, size, kern, stride, nlmode, pad);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return args;
+}
+
 std::vector<conv_bias::TestArg> get_nchw88_channel_wise_args(
         std::vector<size_t> kernel, size_t stride, bool no_bias, bool no_nonlinemode,
         bool no_full_bias) {
@@ -226,7 +304,7 @@ void checker_conv_bias_qint8x8x8(
             .set_rng(1, &rng)
             .set_rng(2, &rng);
     for (auto&& arg : args) {
-        checker.set_param(arg.param).execs({arg.src, arg.filter, {}, {}, {}});
+        checker.set_param(arg.param).execs({arg.src, arg.filter, arg.bias, {}, {}});
     }
 }
 void checker_conv_bias_qint8x8x32(
@@ -532,6 +610,30 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_QUINT8_STRIDE2) {
 
 /****************************dot qint8 direct*************************/
 #if MGB_ENABLE_DOT
+TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_DOT_DIRECT_LARGE_S1) {
+    checker_conv_bias_qint8x8x8(
+            get_channel_wise_args({9}, 1, false, true, true, true), handle(),
+            "ARMDOTS8_DIRECT_CHANWISE_LARGE");
+}
+
+TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_DOT_DIRECT_LARGE_S2) {
+    checker_conv_bias_qint8x8x8(
+            get_channel_wise_args({9}, 2, false, true, true, true), handle(),
+            "ARMDOTS8_DIRECT_CHANWISE_LARGE");
+}
+
+TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_DOT_IM2COL_LARGE_S1) {
+    checker_conv_bias_qint8x8x8(
+            get_channel_wise_args({9}, 1, false, true, true, true), handle(),
+            "ARMDOTS8_IM2COL_CHANWISE_LARGE");
+}
+
+TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_DOT_IM2COL_LARGE_S2) {
+    checker_conv_bias_qint8x8x8(
+            get_channel_wise_args({9}, 2, false, true, true, true), handle(),
+            "ARMDOTS8_IM2COL_CHANWISE_LARGE");
+}
+
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_DOT_NCHW_NCHW44) {
     auto args = get_nchw44_conv_bias_args(
             {2, 3, 5, 7}, QUAN_NLMODE, BR_AND_NO_BIASMODE, 2, false, true);
