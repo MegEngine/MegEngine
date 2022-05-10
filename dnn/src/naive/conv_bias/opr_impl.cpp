@@ -187,15 +187,6 @@ void forward_bias<dt_quint4, dt_qint4, dt_qint32, dt_qint32>(
 size_t ConvBiasForwardImpl::get_workspace_in_bytes(
         const TensorLayout& src, const TensorLayout& flt, const TensorLayout& bias,
         const TensorLayout& z, const TensorLayout& dst, const PreprocessedFilter*) {
-    TensorLayoutArray layouts{src, flt, bias, z, dst};
-    AlgorithmCache::Key key{this->handle(), this->get_opr_type(),
-                            layouts.data(), layouts.size(),
-                            &this->param(), sizeof(this->param())};
-    auto rst = AlgorithmCache::instance().get(key);
-    if (rst.policy.algo.valid()) {
-        return rst.workspace;
-    }
-
     size_t float_workspace_size = 0;
 
     if (z.ndim > 0 && z.dtype.category() != DTypeCategory::FLOAT) {

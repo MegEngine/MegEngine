@@ -66,15 +66,6 @@ void ConvolutionForwardImpl::exec(
 size_t ConvolutionBackwardDataImpl::get_workspace_in_bytes(
         const TensorLayout& filter, const TensorLayout& diff,
         const TensorLayout& grad) {
-    TensorLayoutArray layouts{filter, diff, grad};
-    AlgorithmCache::Key key{this->handle(), this->get_opr_type(),
-                            layouts.data(), layouts.size(),
-                            &this->param(), sizeof(this->param())};
-    auto rst = AlgorithmCache::instance().get(key);
-    if (rst.policy.algo.valid()) {
-        return rst.workspace;
-    }
-
     size_t workspace_size = 0;
     auto flt_dt = filter.dtype.enumv();
     auto grad_dt = grad.dtype.enumv();
@@ -178,15 +169,6 @@ size_t ConvolutionBackwardFilterImpl::get_workspace_in_bytes(
         const TensorLayout& src, const TensorLayout& diff, const TensorLayout& grad) {
     size_t workspace_size = 0;
 #if !MEGDNN_DISABLE_FLOAT16
-    TensorLayoutArray layouts{src, diff, grad};
-    AlgorithmCache::Key key{this->handle(), this->get_opr_type(),
-                            layouts.data(), layouts.size(),
-                            &this->param(), sizeof(this->param())};
-    auto rst = AlgorithmCache::instance().get(key);
-    if (rst.policy.algo.valid()) {
-        return rst.workspace;
-    }
-
     auto src_dt = src.dtype.enumv();
     auto grad_dt = grad.dtype.enumv();
     auto diff_dt = diff.dtype.enumv();

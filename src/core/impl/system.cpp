@@ -351,7 +351,7 @@ class TimedFuncInvokerImpl final : public TimedFuncInvoker {
             } else {
                 CHECK_SYS_ERR(cur_recv);
             }
-            mgb_assert(cur_recv > 0);
+            mgb_assert(cur_recv >= 0);
             dest += cur_recv;
             size -= cur_recv;
         }

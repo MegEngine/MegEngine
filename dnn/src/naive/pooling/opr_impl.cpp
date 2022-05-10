@@ -397,14 +397,6 @@ WorkspaceBundle PoolingForwardImpl::get_workspace_bundle(
 
 size_t PoolingForwardImpl::get_workspace_in_bytes(
         const TensorLayout& src, const TensorLayout& dst) {
-    TensorLayoutArray layouts{src, dst};
-    AlgorithmCache::Key key{this->handle(), this->get_opr_type(),
-                            layouts.data(), layouts.size(),
-                            &this->param(), sizeof(this->param())};
-    auto rst = AlgorithmCache::instance().get(key);
-    if (rst.policy.algo.valid()) {
-        return rst.workspace;
-    }
     return get_workspace_bundle(nullptr, src, dst).total_size_in_bytes();
 }
 namespace {
@@ -649,14 +641,6 @@ WorkspaceBundle PoolingBackwardImpl::get_workspace_bundle(
 size_t PoolingBackwardImpl::get_workspace_in_bytes(
         const TensorLayout& src, const TensorLayout& dst, const TensorLayout& diff,
         const TensorLayout& grad) {
-    TensorLayoutArray layouts{src, dst, diff, grad};
-    AlgorithmCache::Key key{this->handle(), this->get_opr_type(),
-                            layouts.data(), layouts.size(),
-                            &this->param(), sizeof(this->param())};
-    auto rst = AlgorithmCache::instance().get(key);
-    if (rst.policy.algo.valid()) {
-        return rst.workspace;
-    }
     return get_workspace_bundle(nullptr, src, dst, diff, grad).total_size_in_bytes();
 }
 

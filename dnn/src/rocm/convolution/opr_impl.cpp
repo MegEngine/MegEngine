@@ -104,15 +104,6 @@ std::vector<ConvolutionForwardImpl::Algorithm*> ConvolutionForwardImpl::
 size_t ConvolutionForwardImpl::get_workspace_in_bytes(
         const TensorLayout& src, const TensorLayout& filter, const TensorLayout& dst,
         const PreprocessedFilter*) {
-    TensorLayoutArray layouts{src, filter, dst};
-    AlgorithmCache::Key key{this->handle(), this->get_opr_type(),
-                            layouts.data(), layouts.size(),
-                            &this->param(), sizeof(this->param())};
-    auto rst = AlgorithmCache::instance().get(key);
-    if (rst.policy.algo.valid()) {
-        return rst.workspace;
-    }
-
     AlgoBase::SizeArgs args(this, src, filter, dst);
     return get_algorithm(this, src, filter, dst)->get_workspace_in_bytes(args);
 }
@@ -198,15 +189,6 @@ ConvolutionBackwardDataImpl::Algorithm* ConvolutionBackwardDataImpl::
 size_t ConvolutionBackwardDataImpl::get_workspace_in_bytes(
         const TensorLayout& filter, const TensorLayout& diff,
         const TensorLayout& grad) {
-    TensorLayoutArray layouts{filter, diff, grad};
-    AlgorithmCache::Key key{this->handle(), this->get_opr_type(),
-                            layouts.data(), layouts.size(),
-                            &this->param(), sizeof(this->param())};
-    auto rst = AlgorithmCache::instance().get(key);
-    if (rst.policy.algo.valid()) {
-        return rst.workspace;
-    }
-
     AlgoBase::SizeArgs args(this, filter, diff, grad);
     return get_algorithm(this, filter, diff, grad)->get_workspace_in_bytes(args);
 }
@@ -282,15 +264,6 @@ ConvolutionBackwardFilterImpl::Algorithm* ConvolutionBackwardFilterImpl::
 
 size_t ConvolutionBackwardFilterImpl::get_workspace_in_bytes(
         const TensorLayout& src, const TensorLayout& diff, const TensorLayout& grad) {
-    TensorLayoutArray layouts{src, diff, grad};
-    AlgorithmCache::Key key{this->handle(), this->get_opr_type(),
-                            layouts.data(), layouts.size(),
-                            &this->param(), sizeof(this->param())};
-    auto rst = AlgorithmCache::instance().get(key);
-    if (rst.policy.algo.valid()) {
-        return rst.workspace;
-    }
-
     AlgoBase::SizeArgs args(this, src, diff, grad);
     return get_algorithm(this, src, diff, grad)->get_workspace_in_bytes(args);
 }

@@ -44,14 +44,6 @@ WorkspaceBundle BatchConvBiasForwardImpl::get_workspace_bundle(
 size_t BatchConvBiasForwardImpl::get_workspace_in_bytes(
         const TensorLayout& src, const TensorLayout& flt, const TensorLayout& bias,
         const TensorLayout& z, const TensorLayout& dst) {
-    TensorLayoutArray layouts{src, flt, bias, z, dst};
-    AlgorithmCache::Key key{this->handle(), this->get_opr_type(),
-                            layouts.data(), layouts.size(),
-                            &this->param(), sizeof(this->param())};
-    auto rst = AlgorithmCache::instance().get(key);
-    if (rst.policy.algo.valid()) {
-        return rst.workspace;
-    }
     return get_workspace_bundle(nullptr, src, flt, bias, z, dst).total_size_in_bytes();
 }
 

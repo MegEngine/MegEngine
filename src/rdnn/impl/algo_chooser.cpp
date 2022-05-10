@@ -950,10 +950,12 @@ void AlgoChooser<Opr>::AlgoChooserHelper::profile(
                 algo.desc.name.c_str(), layouts_str.c_str());
         timer.reset();
         MGB_TRY { cur_rst = profile_single_algo(policy, cur_timeout); }
+        // megbrain catched exception
         MGB_CATCH(std::exception & exc, {
-            mgb_log_warn("caught exception during %s: %s", msg.c_str(), exc.what());
+            mgb_log_debug("caught exception during %s: %s", msg.c_str(), exc.what());
             continue;
         })
+        // megbrain uncatched exception
         MGB_CATCH(..., {
             mgb_log_warn("caught exception during %s", msg.c_str());
             continue;

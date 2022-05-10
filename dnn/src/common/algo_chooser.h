@@ -13,14 +13,6 @@ namespace megdnn {
 
 template <class Opr, typename... Args>
 size_t get_dnn_workspace(Opr* opr, Args&&... args) {
-    TensorLayoutArray layouts{{args...}};
-    AlgorithmCache::Key key{opr->handle(),  opr->get_opr_type(), layouts.data(),
-                            layouts.size(), &opr->param(),       sizeof(opr->param())};
-    auto rst = AlgorithmCache::instance().get(key);
-    if (rst.policy.algo.valid()) {
-        return rst.workspace;
-    }
-
     typename Opr::AlgoBase::SizeArgs size_args(opr, std::forward<Args>(args)...);
     return get_algorithm(opr, std::forward<Args>(args)...)
             ->get_workspace_in_bytes(size_args);
@@ -32,6 +24,7 @@ size_t get_dnn_workspace(Opr* opr, Args&&... args) {
 template <class Opr, typename... Args>
 typename Opr::AlgoBase* get_algorithm(Opr* opr, Args&&... args) {
     typename Opr::AlgorithmDesc ret;
+    // first check self configured algorithm
     auto set = opr->execution_policy().algo;
     if (set.valid()) {
         ret = set;
@@ -40,10 +33,12 @@ typename Opr::AlgoBase* get_algorithm(Opr* opr, Args&&... args) {
         AlgorithmCache::Key key{opr->handle(),  opr->get_opr_type(),
                                 layouts.data(), layouts.size(),
                                 &opr->param(),  sizeof(opr->param())};
+        // then get from global algorithm cache
         auto rst = AlgorithmCache::instance().get(key);
         if (rst.policy.algo.valid()) {
             ret = rst.policy.algo;
         } else {
+            // finally get pre-defined heuristic algorithm
             ret = opr->get_algorithm_info_heuristic(
                              std::forward<Args>(args)...,
                              std::numeric_limits<size_t>::max(), AlgoAttribute::DEFAULT,
