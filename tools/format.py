@@ -20,8 +20,12 @@ failed_files = Manager().list()
 def process_file(file, clang_format, write):
     original_source = open(file, "r").read()
     source = original_source
-    source = re.sub(r"MGB_DEFINE(?P<r>([^\\]|\n)*?)// *{", r"class MGB_DEFINE\g<r>{", source)
-    source, count = re.subn(r"(?<!#define )MGB_DEFINE(.*) +\\", r"class MGB_DEFINE\1{\\", source)
+    source = re.sub(
+        r"MGB_DEFINE(?P<r>([^\\]|\n)*?)// *{", r"class MGB_DEFINE\g<r>{", source
+    )
+    source, count = re.subn(
+        r"(?<!#define )MGB_DEFINE(.*) +\\", r"class MGB_DEFINE\1{\\", source
+    )
 
     result = subprocess.check_output(
         [
@@ -36,7 +40,9 @@ def process_file(file, clang_format, write):
 
     result = result.decode("utf-8")
     if count:
-        result = re.sub(r"class MGB_DEFINE(.*){( *)\\", r"MGB_DEFINE\1\2       \\", result)
+        result = re.sub(
+            r"class MGB_DEFINE(.*){( *)\\", r"MGB_DEFINE\1\2       \\", result
+        )
     result = re.sub(r"class MGB_DEFINE((.|\n)*?){", r"MGB_DEFINE\1// {", result)
 
     if write and original_source != result:
@@ -109,19 +115,17 @@ def main():
             raise ValueError("Invalid path {}".format(path))
 
     # check version, we only support 12.0.1 now
-    version = subprocess.check_output(
-        [
-            args.clang_format,
-            "--version",
-        ],
-    )
+    version = subprocess.check_output([args.clang_format, "--version",],)
     version = version.decode("utf-8")
 
-    need_version = '12.0.1'
+    need_version = "12.0.1"
     if version.find(need_version) < 0:
-        print('We only support {} now, please install {} version, find version: {}'
-                .format(need_version, need_version, version))
-        raise RuntimeError('clang-format version not equal {}'.format(need_version))
+        print(
+            "We only support {} now, please install {} version, find version: {}".format(
+                need_version, need_version, version
+            )
+        )
+        raise RuntimeError("clang-format version not equal {}".format(need_version))
 
     process_map(
         partial(process_file, clang_format=args.clang_format, write=args.write,),

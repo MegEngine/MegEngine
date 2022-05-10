@@ -19,6 +19,7 @@ device = {
     "thread_number": 3,
 }
 
+
 class SshConnector:
     """imp ssh control master connector"""
 
@@ -83,17 +84,17 @@ def main():
     model_file = args.model_file
     # copy model file
     ssh.copy([args.model_file], workspace)
-    m = model_file.split('\\')[-1]
+    m = model_file.split("\\")[-1]
     # run single thread
     result = []
     thread_number = [1, 2, 4]
-    for b in thread_number :
+    for b in thread_number:
         cmd = []
         cmd1 = "cd {} && ./load_and_run {} -multithread {} --fast-run --fast_run_algo_policy fastrun.cache --iter 1 --warmup-iter 1 --no-sanity-check --weight-preprocess".format(
-                workspace, m, b
+            workspace, m, b
         )
         cmd2 = "cd {} && ./load_and_run {} -multithread {} --fast_run_algo_policy fastrun.cache --iter 20 --warmup-iter 5 --no-sanity-check --weight-preprocess ".format(
-                workspace, m, b
+            workspace, m, b
         )
         cmd.append(cmd1)
         cmd.append(cmd2)
@@ -103,12 +104,20 @@ def main():
         logging.debug("model: {} with backend: {} result is: {}".format(m, b, ret))
         result.append(ret)
 
-    thread_2 = result[0]/result[1]
-    thread_4 = result[0]/result[2]
+    thread_2 = result[0] / result[1]
+    thread_4 = result[0] / result[2]
     if thread_2 > 1.6 or thread_4 > 3.0:
-        print("model: {} can has good parallelism. 2 thread is {}, 4 thread is {}".format(m, thread_2, thread_4))
+        print(
+            "model: {} can has good parallelism. 2 thread is {}, 4 thread is {}".format(
+                m, thread_2, thread_4
+            )
+        )
     else:
-        print("model: {} can has bad parallelism. 2 thread is {}, 4 thread is {}".format(m, thread_2, thread_4))
+        print(
+            "model: {} can has bad parallelism. 2 thread is {}, 4 thread is {}".format(
+                m, thread_2, thread_4
+            )
+        )
 
 
 if __name__ == "__main__":

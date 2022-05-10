@@ -20,6 +20,7 @@ device = {
     "thread_number": 3,
 }
 
+
 class SshConnector:
     """imp ssh control master connector"""
 
@@ -54,6 +55,7 @@ class SshConnector:
         except:
             raise
 
+
 def main():
     parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument("--model_file", help="megengine model", required=True)
@@ -78,10 +80,10 @@ def main():
     model_file = args.model_file
     # copy model file
     ssh.copy([model_file], workspace)
-    m = model_file.split('\\')[-1]
+    m = model_file.split("\\")[-1]
     # run single thread
     cmd = "cd {} && ./load_and_run {} --fast-run --record-comp-seq --iter 1 --warmup-iter 1".format(
-            workspace, m
+        workspace, m
     )
     try:
         raw_log = ssh.cmd([cmd])
@@ -90,6 +92,7 @@ def main():
         raise
 
     print("model: {} is static model.".format(m))
+
 
 if __name__ == "__main__":
     LOG_FORMAT = "%(asctime)s - %(levelname)s - %(message)s"

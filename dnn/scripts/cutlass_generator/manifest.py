@@ -8,9 +8,9 @@ import enum
 import os.path
 import shutil
 
-from library import *
-from gemm_operation import *
 from conv2d_operation import *
+from gemm_operation import *
+from library import *
 
 ###################################################################################################
 

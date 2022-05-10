@@ -1,11 +1,11 @@
-from generator import (
-    GenerateGemmOperations,
-    GenerateGemvOperations,
+from generator import (  # isort: skip; isort: skip
     GenerateConv2dOperations,
     GenerateDeconvOperations,
-    GenerateDwconv2dFpropOperations,
     GenerateDwconv2dDgradOperations,
+    GenerateDwconv2dFpropOperations,
     GenerateDwconv2dWgradOperations,
+    GenerateGemmOperations,
+    GenerateGemvOperations,
 )
 
 
@@ -35,12 +35,14 @@ def write_op_list(f, gen_op, gen_type):
     if gen_op != "gemv":
         f.write('    "all_%s_%s_operations.cu",\n' % (gen_op, gen_type))
 
+
 # Write down a list of merged filenames
 def write_merge_file_name(f, gen_op, gen_type, split_number):
     for i in range(0, split_number):
-        f.write('    "{}_{}_{}.cu",\n'.format(gen_op,gen_type,i))
+        f.write('    "{}_{}_{}.cu",\n'.format(gen_op, gen_type, i))
     if gen_op != "gemv":
-        f.write('    "all_{}_{}_operations.cu",\n'.format(gen_op,gen_type))
+        f.write('    "all_{}_{}_operations.cu",\n'.format(gen_op, gen_type))
+
 
 if __name__ == "__main__":
     with open("list.bzl", "w") as f:

@@ -5,13 +5,12 @@
 #
 
 import enum
-import os.path
-import shutil
 import functools
 import operator
+import os.path
+import shutil
 
 from library import *
-
 
 ###################################################################################################
 #

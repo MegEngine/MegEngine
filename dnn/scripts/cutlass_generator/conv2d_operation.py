@@ -8,7 +8,7 @@
 import enum
 import os.path
 import shutil
-from typing import Tuple, List
+from typing import List, Tuple
 
 from library import *
 

@@ -4,11 +4,11 @@
 # \brief Generates the CUTLASS Library's instances
 #
 
+import enum
 import re
 
 ###################################################################################################
 
-import enum
 
 # The following block implements enum.auto() for Python 3.5 variants that don't include it such
 # as the default 3.5.2 on Ubuntu 16.04.

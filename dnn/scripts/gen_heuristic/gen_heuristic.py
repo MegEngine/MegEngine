@@ -1,14 +1,16 @@
 #! /usr/local/env python3
 
-import pickle
-import numpy as np
-import os
 import argparse
-import re
 import collections
+import os
+import pickle
+import re
+
+import numpy as np
+
 
 def define_template(**kwargs):
-    template = '''
+    template = """
     float cuda{cuda_arch}_{conv_type}_time_pred[{out_dim}] = {{0.0f}};
     float cuda{cuda_arch}_{conv_type}_mask[{out_dim}] = {{0.0f}};
     float cuda{cuda_arch}_{conv_type}_hidden_units[{hidden_num}] = {{0.0f}};
@@ -17,21 +19,23 @@ def define_template(**kwargs):
     const static float cuda{cuda_arch}_{conv_type}_biases[{biases_dim}] = {{{biases}}};
     const static float cuda{cuda_arch}_{conv_type}_alpha[{out_dim}] = {{{alpha}}};
     const static float cuda{cuda_arch}_{conv_type}_beta[{out_dim}] = {{{beta}}};
-    '''
+    """
     return template.format(**kwargs)
+
 
 def cudnn_slt_template(**kwargs):
-    template = ("#if CUDNN_MAJOR == {cudnn_major} && CUDNN_MINOR == {cudnn_minor}\n" +
-                "    {define_cmd}\n" +
-                "    {select_cmd}\n" +
-                "    return true;\n" +
-                "#endif\n"
-                )
+    template = (
+        "#if CUDNN_MAJOR == {cudnn_major} && CUDNN_MINOR == {cudnn_minor}\n"
+        + "    {define_cmd}\n"
+        + "    {select_cmd}\n"
+        + "    return true;\n"
+        + "#endif\n"
+    )
     return template.format(**kwargs)
 
+
 def select_template(**kwargs):
-    template = \
-        '''if (conv_type == ConvolutionType::{conv_type} && cuda_major == {cuda_major} &&
+    template = """if (conv_type == ConvolutionType::{conv_type} && cuda_major == {cuda_major} &&
                cuda_minor == {cuda_minor}) {{
         *layer_num_p = {layer_num};
         *hidden_units_p = cuda{cuda_arch}_{conv_type}_hidden_units;
@@ -42,7 +46,7 @@ def select_template(**kwargs):
         *beta_p = cuda{cuda_arch}_{conv_type}_beta;
         *time_pred_p = cuda{cuda_arch}_{conv_type}_time_pred;
         *mask_p = cuda{cuda_arch}_{conv_type}_mask;
-    }} else '''
+    }} else """
     return template.format(**kwargs)
 
 
@@ -58,48 +62,48 @@ def fill_src():
     if len(matrix_files) == 0:
         print("Warning: no param files detected.")
     for fpath in matrix_files:
-        cudnn_version = re.findall('cudnn([\d.]+)',fpath)[0]
+        cudnn_version = re.findall("cudnn([\d.]+)", fpath)[0]
         gen_list[cudnn_version].append(fpath)
     for cudnn in gen_list:
-        select_cmd = ("{\n" +
-                      " " * 8 + "return false;\n" +
-                      " " * 4 + "}")
+        select_cmd = "{\n" + " " * 8 + "return false;\n" + " " * 4 + "}"
         define_cmd = ""
-        cudnn_major, cudnn_minor = cudnn.split('.')
+        cudnn_major, cudnn_minor = cudnn.split(".")
         for fpath in gen_list[cudnn]:
             cuda_arch = fpath.split("-")[1].replace(".", "_")
-            print('cudnn_version: {}, cuda_arch: {}'.format(cudnn,cuda_arch))
+            print("cudnn_version: {}, cuda_arch: {}".format(cudnn, cuda_arch))
             conv_type = fpath.split("-")[2].split(".")[0]
             with open(os.path.join(home, "params/{}".format(fpath)), "rb") as pobj:
                 params = pickle.load(pobj)
-                crt_define_cmd, crt_select_cmd = gen_cmds(
-                    cuda_arch, conv_type, params)
+                crt_define_cmd, crt_select_cmd = gen_cmds(cuda_arch, conv_type, params)
                 select_cmd = crt_select_cmd + select_cmd
                 define_cmd = crt_define_cmd + define_cmd
 
-        cudnn_slt_cmd += cudnn_slt_template(cudnn_major=cudnn_major, 
-                                              cudnn_minor=cudnn_minor,
-                                              select_cmd=select_cmd,
-                                              define_cmd=define_cmd)
+        cudnn_slt_cmd += cudnn_slt_template(
+            cudnn_major=cudnn_major,
+            cudnn_minor=cudnn_minor,
+            select_cmd=select_cmd,
+            define_cmd=define_cmd,
+        )
 
-    #select_cmd = select_cmd
+    # select_cmd = select_cmd
     with open(os.path.join(home, "get_params.template"), "r") as srcf:
         src = srcf.read()
     dst = src.replace("{cudnn_select}", cudnn_slt_cmd)
     MegDNN_path = os.path.join(home, "../..")
-    with open(os.path.join(MegDNN_path,
-                           "src/cuda/convolution/get_params.cpp"), "w") as dstf:
+    with open(
+        os.path.join(MegDNN_path, "src/cuda/convolution/get_params.cpp"), "w"
+    ) as dstf:
         dstf.write(dst)
 
 
 def gen_cmds(cuda_arch, conv_type, params):
     cuda_major, cuda_minor = cuda_arch.split("_")
-    alphastr = format_array(params['alpha']).rstrip()[:-1]
-    betastr = format_array(params['beta']).rstrip()[:-1]
-    W_list = params['W']
-    b_list = params['b']
-    Wstr = ''
-    bstr = ''
+    alphastr = format_array(params["alpha"]).rstrip()[:-1]
+    betastr = format_array(params["beta"]).rstrip()[:-1]
+    W_list = params["W"]
+    b_list = params["b"]
+    Wstr = ""
+    bstr = ""
     layer_num = str(len(b_list) + 1)
     layers_dim = [W_list[0].shape[1]]
     matrices_dim = 0
@@ -118,16 +122,27 @@ def gen_cmds(cuda_arch, conv_type, params):
     out_dim = layers_dim[-1]
     layers_dim_str = format_array(np.array(layers_dim)).rstrip()[:-1]
 
-    select_cmd = select_template(conv_type=conv_type.upper(), cuda_major=cuda_major,
-                                 cuda_minor=cuda_minor, layer_num=layer_num,
-                                 cuda_arch=cuda_arch)
-    define_cmd = define_template(cuda_arch=cuda_arch, conv_type=conv_type.upper(),
-                                 hidden_num=hidden_num,
-                                 layer_num=layer_num, out_dim=out_dim,
-                                 layers_dim=layers_dim_str,
-                                 matrices_dim=matrices_dim, matrices=Wstr,
-                                 biases_dim=biases_dim, biases=bstr,
-                                 alpha=alphastr, beta=betastr)
+    select_cmd = select_template(
+        conv_type=conv_type.upper(),
+        cuda_major=cuda_major,
+        cuda_minor=cuda_minor,
+        layer_num=layer_num,
+        cuda_arch=cuda_arch,
+    )
+    define_cmd = define_template(
+        cuda_arch=cuda_arch,
+        conv_type=conv_type.upper(),
+        hidden_num=hidden_num,
+        layer_num=layer_num,
+        out_dim=out_dim,
+        layers_dim=layers_dim_str,
+        matrices_dim=matrices_dim,
+        matrices=Wstr,
+        biases_dim=biases_dim,
+        biases=bstr,
+        alpha=alphastr,
+        beta=betastr,
+    )
     return (define_cmd, select_cmd)
 
 
@@ -153,8 +168,9 @@ def format_array(array):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Generate cuDNN heuristic code by neural network into"
-                    " {MEGDNN_ROOT}/src/cuda/convolution/get_params.cpp,"
-                    " using parameter value from pickle files in"
-                    " {MEGDNN_ROOT}/scripts/gen_heuristic/params/")
+        " {MEGDNN_ROOT}/src/cuda/convolution/get_params.cpp,"
+        " using parameter value from pickle files in"
+        " {MEGDNN_ROOT}/scripts/gen_heuristic/params/"
+    )
     args = parser.parse_args()
     main()

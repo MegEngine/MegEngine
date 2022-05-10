@@ -4,12 +4,12 @@
 # \brief Generates the CUTLASS Library's instances
 #
 
+import argparse
 import enum
 import os.path
-import shutil
-import argparse
 import platform
 import string
+
 from library import *
 from manifest import *
 
@@ -899,9 +899,12 @@ def GenerateGemm_Simt(args):
                 warpShapes.append([warp0, warp1])
 
     # sgemm
-    precisionType, precisionBits, threadblockMaxElements, threadblockTilesL0 = precisions[
-        "s"
-    ]
+    (
+        precisionType,
+        precisionBits,
+        threadblockMaxElements,
+        threadblockTilesL0,
+    ) = precisions["s"]
 
     layouts = [
         (LayoutType.ColumnMajor, LayoutType.ColumnMajor, LayoutType.RowMajor),  # nn
@@ -1091,9 +1094,12 @@ def GenerateDwconv2d_Simt(args, conv_kind):
                 warpShapes.append([warp0, warp1])
 
     # sgemm
-    precisionType, precisionBits, threadblockMaxElements, threadblockTilesL0 = precisions[
-        "s"
-    ]
+    (
+        precisionType,
+        precisionBits,
+        threadblockMaxElements,
+        threadblockTilesL0,
+    ) = precisions["s"]
 
     layouts = [(LayoutType.TensorNCHW, LayoutType.TensorNCHW)]
 
@@ -1304,7 +1310,7 @@ def GenerateDwconv2d_TensorOp_884(args, conv_kind):
             for dst_type, dst_layout in zip(dst_types, dst_layouts):
                 for alignment_src in alignment_constraints:
                     if conv_kind == ConvKind.Wgrad:
-                        # skip io16xc16 
+                        # skip io16xc16
                         if math_inst.element_accumulator == DataType.f16:
                             continue
                         for alignment_diff in alignment_constraints:
@@ -1319,7 +1325,7 @@ def GenerateDwconv2d_TensorOp_884(args, conv_kind):
                                 min_cc,
                                 alignment_src,
                                 alignment_diff,
-                                32, # always f32 output
+                                32,  # always f32 output
                                 SpecialOptimizeDesc.NoneSpecialOpt,
                                 ImplicitGemmMode.GemmNT,
                                 False,
@@ -1656,6 +1662,7 @@ def GenerateGemvOperations(args):
     )
     return GenerateGemv_Simt(args)
 
+
 ################################################################################
 # parameters
 # split_number - the concated file will be divided into split_number parts
@@ -1668,10 +1675,21 @@ def GenerateGemvOperations(args):
 # epilogue - the epilogue in the file
 # wrapper_path - wrapper path
 ################################################################################
-def ConcatFile(split_number:int, file_path:str,operations:str,type:str,head:str,required_cuda_ver_major:str, required_cuda_ver_minor:str, epilogue:str, wrapper_path = None):
+def ConcatFile(
+    split_number: int,
+    file_path: str,
+    operations: str,
+    type: str,
+    head: str,
+    required_cuda_ver_major: str,
+    required_cuda_ver_minor: str,
+    epilogue: str,
+    wrapper_path=None,
+):
     import os
+
     meragefiledir = file_path
-    filenames=os.listdir(meragefiledir)
+    filenames = os.listdir(meragefiledir)
     # filter file
     if "tensorop" in type:
         sub_string_1 = "tensorop"
@@ -1679,196 +1697,182 @@ def ConcatFile(split_number:int, file_path:str,operations:str,type:str,head:str,
     else:
         sub_string_1 = sub_string_2 = "simt"
     if "dwconv2d_" in operations:
-        filtered_operations = operations[:2]+operations[9:]
+        filtered_operations = operations[:2] + operations[9:]
     elif ("conv2d" in operations) or ("deconv" in operations):
         filtered_operations = "cutlass"
     else:
         filtered_operations = operations
-    #get the file list number
+    # get the file list number
     file_list = {}
     file_list[operations + type] = 0
     for filename in filenames:
-        if (filtered_operations in filename) and (sub_string_1 in filename) and (sub_string_2 in filename) and ("all_" not in filename):
+        if (
+            (filtered_operations in filename)
+            and (sub_string_1 in filename)
+            and (sub_string_2 in filename)
+            and ("all_" not in filename)
+        ):
             file_list[operations + type] += 1
-    #concat file for linux
+    # concat file for linux
     flag_1 = 0
     flag_2 = 0
     for filename in filenames:
-        if (filtered_operations in filename) and (sub_string_1 in filename) and (sub_string_2 in filename) and ("all_" not in filename):
+        if (
+            (filtered_operations in filename)
+            and (sub_string_1 in filename)
+            and (sub_string_2 in filename)
+            and ("all_" not in filename)
+        ):
             flag_1 += 1
-            filepath=meragefiledir+'/'+filename
-            if (flag_1 >= flag_2 * (file_list[operations + type]/split_number)) and (flag_1 <= (flag_2 + 1) * (file_list[operations + type]/split_number)):
-                file =open(file_path + '/{}_{}_{}.cu'.format(operations,type, flag_2),'a')
-                #write Template at the head
+            filepath = meragefiledir + "/" + filename
+            if (flag_1 >= flag_2 * (file_list[operations + type] / split_number)) and (
+                flag_1 <= (flag_2 + 1) * (file_list[operations + type] / split_number)
+            ):
+                file = open(
+                    file_path + "/{}_{}_{}.cu".format(operations, type, flag_2), "a"
+                )
+                # write Template at the head
                 if wrapper_path is None:
                     file.write(
                         SubstituteTemplate(
                             head,
                             {
-                                "required_cuda_ver_major": str(
-                                    required_cuda_ver_major
-                                ),
-                                "required_cuda_ver_minor": str(
-                                    required_cuda_ver_minor
-                                ),
+                                "required_cuda_ver_major": str(required_cuda_ver_major),
+                                "required_cuda_ver_minor": str(required_cuda_ver_minor),
                             },
                         )
                     )
                 else:
                     file.write(
-                            SubstituteTemplate(
-                                head,
-                                {
-                                    "wrapper_path": wrapper_path,
-                                    "required_cuda_ver_major": str(
-                                        required_cuda_ver_major
-                                    ),
-                                    "required_cuda_ver_minor": str(
-                                        required_cuda_ver_minor
-                                    ),
-                                },
-                            )
+                        SubstituteTemplate(
+                            head,
+                            {
+                                "wrapper_path": wrapper_path,
+                                "required_cuda_ver_major": str(required_cuda_ver_major),
+                                "required_cuda_ver_minor": str(required_cuda_ver_minor),
+                            },
                         )
+                    )
                 # concat all the remaining files
                 if flag_2 == (split_number - 1):
                     for line in open(filepath):
                         file.writelines(line)
                     os.remove(filepath)
-                    file.write('\n')
+                    file.write("\n")
                     file.write(epilogue)
                     continue
                 for line in open(filepath):
                     file.writelines(line)
                 os.remove(filepath)
-                file.write('\n')
+                file.write("\n")
                 file.write(epilogue)
             else:
-                #write Template at the head
+                # write Template at the head
                 if wrapper_path is None:
                     file.write(
                         SubstituteTemplate(
                             head,
                             {
-                                "required_cuda_ver_major": str(
-                                    required_cuda_ver_major
-                                ),
-                                "required_cuda_ver_minor": str(
-                                    required_cuda_ver_minor
-                                ),
+                                "required_cuda_ver_major": str(required_cuda_ver_major),
+                                "required_cuda_ver_minor": str(required_cuda_ver_minor),
                             },
                         )
                     )
                 else:
                     file.write(
-                            SubstituteTemplate(
-                                head,
-                                {
-                                    "wrapper_path": wrapper_path,
-                                    "required_cuda_ver_major": str(
-                                        required_cuda_ver_major
-                                    ),
-                                    "required_cuda_ver_minor": str(
-                                        required_cuda_ver_minor
-                                    ),
-                                },
-                            )
+                        SubstituteTemplate(
+                            head,
+                            {
+                                "wrapper_path": wrapper_path,
+                                "required_cuda_ver_major": str(required_cuda_ver_major),
+                                "required_cuda_ver_minor": str(required_cuda_ver_minor),
+                            },
                         )
+                    )
                 for line in open(filepath):
                     file.writelines(line)
                 os.remove(filepath)
-                file.write('\n')
+                file.write("\n")
                 file.write(epilogue)
                 file.close()
                 flag_2 += 1
 
-
-        #concat file for windows
+        # concat file for windows
         elif filename[0].isdigit() and ("all_" not in filename):
             flag_1 += 1
-            filepath=meragefiledir+'/'+filename
-            if (flag_1 >= flag_2 * (len(filenames)/split_number)) and (flag_1 <= (flag_2 + 1) * (len(filenames)/split_number)):
-                file =open(file_path + '/{}_{}_{}.cu'.format(operations,type, flag_2),'a')
-                #write Template at the head
+            filepath = meragefiledir + "/" + filename
+            if (flag_1 >= flag_2 * (len(filenames) / split_number)) and (
+                flag_1 <= (flag_2 + 1) * (len(filenames) / split_number)
+            ):
+                file = open(
+                    file_path + "/{}_{}_{}.cu".format(operations, type, flag_2), "a"
+                )
+                # write Template at the head
                 if wrapper_path is None:
                     file.write(
                         SubstituteTemplate(
                             head,
                             {
-                                "required_cuda_ver_major": str(
-                                    required_cuda_ver_major
-                                ),
-                                "required_cuda_ver_minor": str(
-                                    required_cuda_ver_minor
-                                ),
+                                "required_cuda_ver_major": str(required_cuda_ver_major),
+                                "required_cuda_ver_minor": str(required_cuda_ver_minor),
                             },
                         )
                     )
                 else:
                     file.write(
-                            SubstituteTemplate(
-                                head,
-                                {
-                                    "wrapper_path": wrapper_path,
-                                    "required_cuda_ver_major": str(
-                                        required_cuda_ver_major
-                                    ),
-                                    "required_cuda_ver_minor": str(
-                                        required_cuda_ver_minor
-                                    ),
-                                },
-                            )
+                        SubstituteTemplate(
+                            head,
+                            {
+                                "wrapper_path": wrapper_path,
+                                "required_cuda_ver_major": str(required_cuda_ver_major),
+                                "required_cuda_ver_minor": str(required_cuda_ver_minor),
+                            },
                         )
+                    )
                 # concat all the remaining files
                 if flag_2 == (split_number - 1):
                     for line in open(filepath):
                         file.writelines(line)
                     os.remove(filepath)
-                    file.write('\n')
+                    file.write("\n")
                     file.write(epilogue)
                     continue
                 for line in open(filepath):
                     file.writelines(line)
                 os.remove(filepath)
-                file.write('\n')
+                file.write("\n")
                 file.write(epilogue)
             else:
-                #write Template at the head
+                # write Template at the head
                 if wrapper_path is None:
                     file.write(
                         SubstituteTemplate(
                             head,
                             {
-                                "required_cuda_ver_major": str(
-                                    required_cuda_ver_major
-                                ),
-                                "required_cuda_ver_minor": str(
-                                    required_cuda_ver_minor
-                                ),
+                                "required_cuda_ver_major": str(required_cuda_ver_major),
+                                "required_cuda_ver_minor": str(required_cuda_ver_minor),
                             },
                         )
                     )
                 else:
                     file.write(
-                            SubstituteTemplate(
-                                head,
-                                {
-                                    "wrapper_path": wrapper_path,
-                                    "required_cuda_ver_major": str(
-                                        required_cuda_ver_major
-                                    ),
-                                    "required_cuda_ver_minor": str(
-                                        required_cuda_ver_minor
-                                    ),
-                                },
-                            )
+                        SubstituteTemplate(
+                            head,
+                            {
+                                "wrapper_path": wrapper_path,
+                                "required_cuda_ver_major": str(required_cuda_ver_major),
+                                "required_cuda_ver_minor": str(required_cuda_ver_minor),
+                            },
                         )
+                    )
                 for line in open(filepath):
                     file.writelines(line)
                 os.remove(filepath)
-                file.write('\n')
+                file.write("\n")
                 file.write(epilogue)
                 file.close()
                 flag_2 += 1
+
 
 ###################################################################################################
 ###################################################################################################
@@ -1940,39 +1944,97 @@ if __name__ == "__main__":
                 args.output, operation, short_path
             ) as emitter:
                 emitter.emit()
-        head = EmitConvSingleKernelWrapper(args.output, operations[0], short_path).header_template
+        head = EmitConvSingleKernelWrapper(
+            args.output, operations[0], short_path
+        ).header_template
         required_cuda_ver_major = operations[0].required_cuda_ver_major
         required_cuda_ver_minor = operations[0].required_cuda_ver_minor
-        epilogue = EmitConvSingleKernelWrapper(args.output, operations[0], short_path).epilogue_template
+        epilogue = EmitConvSingleKernelWrapper(
+            args.output, operations[0], short_path
+        ).epilogue_template
         if "tensorop" in args.type:
-            ConcatFile(4, args.output,args.operations, args.type, head,required_cuda_ver_major, required_cuda_ver_minor, epilogue)
+            ConcatFile(
+                4,
+                args.output,
+                args.operations,
+                args.type,
+                head,
+                required_cuda_ver_major,
+                required_cuda_ver_minor,
+                epilogue,
+            )
         else:
-            ConcatFile(2, args.output,args.operations, args.type, head,required_cuda_ver_major, required_cuda_ver_minor, epilogue)
+            ConcatFile(
+                2,
+                args.output,
+                args.operations,
+                args.type,
+                head,
+                required_cuda_ver_major,
+                required_cuda_ver_minor,
+                epilogue,
+            )
     elif args.operations == "gemm":
         for operation in operations:
             with EmitGemmSingleKernelWrapper(
                 args.output, operation, short_path
             ) as emitter:
                 emitter.emit()
-        head = EmitGemmSingleKernelWrapper(args.output, operations[0], short_path).header_template
+        head = EmitGemmSingleKernelWrapper(
+            args.output, operations[0], short_path
+        ).header_template
         required_cuda_ver_major = operations[0].required_cuda_ver_major
         required_cuda_ver_minor = operations[0].required_cuda_ver_minor
-        epilogue = EmitGemmSingleKernelWrapper(args.output, operations[0], short_path).epilogue_template
+        epilogue = EmitGemmSingleKernelWrapper(
+            args.output, operations[0], short_path
+        ).epilogue_template
         if args.type == "tensorop884":
-            ConcatFile(30, args.output, args.operations, args.type, head,required_cuda_ver_major, required_cuda_ver_minor, epilogue)
+            ConcatFile(
+                30,
+                args.output,
+                args.operations,
+                args.type,
+                head,
+                required_cuda_ver_major,
+                required_cuda_ver_minor,
+                epilogue,
+            )
         else:
-            ConcatFile(2, args.output, args.operations, args.type, head,required_cuda_ver_major, required_cuda_ver_minor, epilogue)
+            ConcatFile(
+                2,
+                args.output,
+                args.operations,
+                args.type,
+                head,
+                required_cuda_ver_major,
+                required_cuda_ver_minor,
+                epilogue,
+            )
     elif args.operations == "gemv":
         for operation in operations:
             with EmitGemvSingleKernelWrapper(
                 args.output, operation, gemv_wrapper_path, short_path
             ) as emitter:
                 emitter.emit()
-        head = EmitGemvSingleKernelWrapper(args.output, operations[0], gemv_wrapper_path, short_path).header_template
+        head = EmitGemvSingleKernelWrapper(
+            args.output, operations[0], gemv_wrapper_path, short_path
+        ).header_template
         required_cuda_ver_major = operations[0].required_cuda_ver_major
         required_cuda_ver_minor = operations[0].required_cuda_ver_minor
-        epilogue = EmitGemvSingleKernelWrapper(args.output, operations[0], gemv_wrapper_path, short_path).epilogue_template
-        ConcatFile(2, args.output,args.operations, args.type, head,required_cuda_ver_major, required_cuda_ver_minor, epilogue, wrapper_path = gemv_wrapper_path)
+        epilogue = EmitGemvSingleKernelWrapper(
+            args.output, operations[0], gemv_wrapper_path, short_path
+        ).epilogue_template
+        ConcatFile(
+            2,
+            args.output,
+            args.operations,
+            args.type,
+            head,
+            required_cuda_ver_major,
+            required_cuda_ver_minor,
+            epilogue,
+            wrapper_path=gemv_wrapper_path,
+        )
 
     if args.operations != "gemv":
         GenerateManifest(args, operations, args.output)
