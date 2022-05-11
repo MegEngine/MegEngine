@@ -137,8 +137,7 @@ void LoopSerializer::reg_all() {
             CounterProvider, dump_counter_provider, load_counter_provider);
 
     MGB_SEREG_OPR_INTL_CALL_ADD_V2(
-            opr::Loop, dump_loop, load_loop, nullptr, 2,
-            CURRENT_VERSION);
+            opr::Loop, dump_loop, load_loop, nullptr, 2, CURRENT_VERSION);
     MGB_SEREG_OPR_INTL_CALL_ADD_V2(
             InputMaker, dump_input_maker, load_input_maker, nullptr, 2,
             CURRENT_VERSION);

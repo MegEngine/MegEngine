@@ -2,6 +2,7 @@
 
 #include "megbrain/opr/basic_arith_wrapper.h"
 #include "megbrain/opr/dnn/convolution.h"
+#include "megbrain/opr/dnn/softmax.h"
 #include "megbrain/opr/io.h"
 #include "megbrain/opr/tensor_manip.h"
 #include "megbrain/opr/utility.h"
@@ -11,10 +12,12 @@
 using namespace mgb;
 using namespace serialization;
 
-#define GET_OUTPUT_FILE() output_file(ssprintf("TestSerializer2.%d", __LINE__))
+#define GET_OUTPUT_FILE(format) \
+    output_file(ssprintf("TestSerializer2.line%d.V%d", __LINE__, (int)format))
 
-TEST(TestSerializer2, GraphDumpLoad) {
-    auto fname = GET_OUTPUT_FILE();
+namespace {
+void test_graph_load_dump(GraphDumpFormat format) {
+    auto fname = GET_OUTPUT_FILE(format);
 
     auto orig_id = -1;
     auto dump = [&]() {
@@ -22,8 +25,7 @@ TEST(TestSerializer2, GraphDumpLoad) {
         auto graph = ComputingGraph::make();
         auto x = opr::ImmutableTensor::make(*graph, 1926.0817f, {cn});
         x.rename("varz");
-        auto dumper = GraphDumper::make(
-                OutputFile::make_fs(fname.c_str()), GraphDumpFormat::FLATBUFFERS);
+        auto dumper = GraphDumper::make(OutputFile::make_fs(fname.c_str()), format);
         auto rst = dumper->dump({x});
         ASSERT_EQ(rst.nr_opr, 1);
         ASSERT_EQ(rst.inputs.size(), 0);
@@ -33,8 +35,7 @@ TEST(TestSerializer2, GraphDumpLoad) {
         mgb_log("%zu of %zu", rst.tensor_value_bytes, rst.tot_bytes);
     };
     auto load = [&]() {
-        auto loader = GraphLoader::make(
-                InputFile::make_fs(fname.c_str()), GraphDumpFormat::FLATBUFFERS);
+        auto loader = GraphLoader::make(InputFile::make_fs(fname.c_str()), format);
         auto rst = loader->load();
         ASSERT_EQ(rst.tensor_map.size(), 0);
         ASSERT_EQ(rst.output_var_list.size(), 1);
@@ -54,24 +55,22 @@ TEST(TestSerializer2, GraphDumpLoad) {
     load();
 }
 
-TEST(TestSerializer2, MultiGraphDumpLoad) {
-    auto fname = GET_OUTPUT_FILE();
+void test_multi_graph_dump_load(GraphDumpFormat format) {
+    auto fname = GET_OUTPUT_FILE(format);
 
     auto dump = [&]() {
         auto cn = CompNode::load("cpu0");
         auto graph = ComputingGraph::make();
         auto x = opr::ImmutableTensor::make(*graph, 1926.0817f, {cn});
         x.rename("varz");
-        auto dumper = GraphDumper::make(
-                OutputFile::make_fs(fname.c_str()), GraphDumpFormat::FLATBUFFERS);
+        auto dumper = GraphDumper::make(OutputFile::make_fs(fname.c_str()), format);
         // dump twice
         dumper->dump({x});
         dumper->dump({x});
     };
     auto load = [&]() {
         GraphLoader::LoadConfig load_config = {};
-        auto loader = GraphLoader::make(
-                InputFile::make_fs(fname.c_str()), GraphDumpFormat::FLATBUFFERS);
+        auto loader = GraphLoader::make(InputFile::make_fs(fname.c_str()), format);
         // load twice
         loader->load(load_config, false);
         loader = GraphLoader::make(loader->reset_file(), loader->format());
@@ -82,8 +81,8 @@ TEST(TestSerializer2, MultiGraphDumpLoad) {
     load();
 }
 
-TEST(TestSerializer2, Metadata) {
-    auto fname = GET_OUTPUT_FILE();
+void test_metadata(GraphDumpFormat format) {
+    auto fname = GET_OUTPUT_FILE(format);
     TensorShape shape{2, 3};
 
     auto dump = [&]() {
@@ -100,15 +99,13 @@ TEST(TestSerializer2, Metadata) {
         metadata.user_info = "TEST_METADATA";
         metadata.has_user_info = true;
 
-        auto dumper = GraphDumper::make(
-                OutputFile::make_fs(fname.c_str()), GraphDumpFormat::FLATBUFFERS);
+        auto dumper = GraphDumper::make(OutputFile::make_fs(fname.c_str()), format);
         auto rst = dumper->dump({z.rename("z")}, {}, metadata);
     };
 
     auto load = [&]() {
         HostTensorGenerator<> gen;
-        auto loader = GraphLoader::make(
-                InputFile::make_fs(fname.c_str()), GraphDumpFormat::FLATBUFFERS);
+        auto loader = GraphLoader::make(InputFile::make_fs(fname.c_str()), format);
         auto rst = loader->load();
         auto metadata = rst.metadata;
         int cmp = strcmp(metadata.user_info.c_str(), "TEST_METADATA");
@@ -119,8 +116,8 @@ TEST(TestSerializer2, Metadata) {
     load();
 }
 
-TEST(TestSerializer2, APlusB) {
-    auto fname = GET_OUTPUT_FILE();
+void test_serializer_APlusB(GraphDumpFormat format) {
+    auto fname = GET_OUTPUT_FILE(format);
     TensorShape shape{2, 3};
 
     auto dump = [&]() {
@@ -131,8 +128,7 @@ TEST(TestSerializer2, APlusB) {
         auto x = opr::Host2DeviceCopy::make(*graph, host_x, {"x"}),
              y = opr::Host2DeviceCopy::make(*graph, host_y, {"y"});
 
-        auto dumper = GraphDumper::make(
-                OutputFile::make_fs(fname.c_str()), GraphDumpFormat::FLATBUFFERS);
+        auto dumper = GraphDumper::make(OutputFile::make_fs(fname.c_str()), format);
         // test dump duplicated
         auto rst = dumper->dump({(x + y).rename("z"), x + y});
         ASSERT_EQ(2u, rst.outputs.size());
@@ -140,8 +136,7 @@ TEST(TestSerializer2, APlusB) {
 
     auto load = [&]() {
         HostTensorGenerator<> gen;
-        auto loader = GraphLoader::make(
-                InputFile::make_fs(fname.c_str()), GraphDumpFormat::FLATBUFFERS);
+        auto loader = GraphLoader::make(InputFile::make_fs(fname.c_str()), format);
         auto rst = loader->load();
         auto xv = rst.tensor_map.at("x");
         auto yv = rst.tensor_map.at("y");
@@ -163,9 +158,9 @@ TEST(TestSerializer2, APlusB) {
     load();
 }
 
-TEST(TestSerializer2, APlusBParam) {
+void test_serializer_APlusB_param(GraphDumpFormat format) {
     auto cns = load_multiple_xpus(2);
-    auto fname = GET_OUTPUT_FILE();
+    auto fname = GET_OUTPUT_FILE(format);
     TensorShape shape{2, 3};
 
     HostTensorGenerator<> gen;
@@ -180,14 +175,12 @@ TEST(TestSerializer2, APlusBParam) {
         auto x = opr::Host2DeviceCopy::make(*graph, host_x, {"x"}),
              y = opr::SharedDeviceTensor::make(*graph, bias, {"y"});
 
-        auto dumper = GraphDumper::make(
-                OutputFile::make_fs(fname.c_str()), GraphDumpFormat::FLATBUFFERS);
+        auto dumper = GraphDumper::make(OutputFile::make_fs(fname.c_str()), format);
         GraphDumper::DumpConfig config;
         config.keep_param_name = true;
         dumper->dump({(x + y).rename("z")}, config);
     }
-    auto loader = GraphLoader::make(
-            InputFile::make_fs(fname.c_str()), GraphDumpFormat::FLATBUFFERS);
+    auto loader = GraphLoader::make(InputFile::make_fs(fname.c_str()), format);
 
     auto load = [&](CompNode dest_cn) {
         auto dest_cn_loc = dest_cn.locator_logical();
@@ -215,8 +208,8 @@ TEST(TestSerializer2, APlusBParam) {
     ASSERT_EQ(1u + (cns[1].mem_node() != cns[0].mem_node()), shmap.at("y")->size());
 }
 
-TEST(TestSerializer2, Immutable) {
-    auto fname = GET_OUTPUT_FILE();
+void test_serializer_immutable(GraphDumpFormat format) {
+    auto fname = GET_OUTPUT_FILE(format);
     TensorShape shape{2, 3};
 
     auto dump = [&]() {
@@ -224,15 +217,13 @@ TEST(TestSerializer2, Immutable) {
         auto host_x = std::make_shared<HostTensorND>(cn, shape);
         auto graph = ComputingGraph::make();
         auto x = opr::Host2DeviceCopy::make(*graph, host_x, {"x"});
-        auto dumper = GraphDumper::make(
-                OutputFile::make_fs(fname.c_str()), GraphDumpFormat::FLATBUFFERS);
+        auto dumper = GraphDumper::make(OutputFile::make_fs(fname.c_str()), format);
         dumper->dump({(x + 1.f).rename("y")});
     };
 
     auto load = [&]() {
         HostTensorGenerator<> gen;
-        auto loader = GraphLoader::make(
-                InputFile::make_fs(fname.c_str()), GraphDumpFormat::FLATBUFFERS);
+        auto loader = GraphLoader::make(InputFile::make_fs(fname.c_str()), format);
         auto rst = loader->load();
         auto xv = rst.tensor_map.at("x");
         ASSERT_EQ(shape, xv->shape());
@@ -251,8 +242,8 @@ TEST(TestSerializer2, Immutable) {
     load();
 }
 
-TEST(TestSerializer2, CustomLoader) {
-    auto fname = GET_OUTPUT_FILE();
+void test_serializer_custom_loader(GraphDumpFormat format) {
+    auto fname = GET_OUTPUT_FILE(format);
     TensorShape shape{2, 3};
 
     int load_nr_null_ptr = 0, load_nr_call = 0;
@@ -292,8 +283,7 @@ TEST(TestSerializer2, CustomLoader) {
         auto x = opr::Host2DeviceCopy::make(*graph, host_x, {"x"}),
              y = opr::SharedDeviceTensor::make(*graph, y_val),
              z = ((x + 1.f) * y).rename("z");
-        auto dumper = GraphDumper::make(
-                OutputFile::make_fs(fname.c_str()), GraphDumpFormat::FLATBUFFERS);
+        auto dumper = GraphDumper::make(OutputFile::make_fs(fname.c_str()), format);
         GraphDumpConfig config;
         config.tensor_value_dumper = tensor_value_dumper;
         dumper->dump({z}, config);
@@ -302,8 +292,7 @@ TEST(TestSerializer2, CustomLoader) {
 
     GraphLoadConfig config;
     config.tensor_value_loader = tensor_value_loader;
-    auto loader = GraphLoader::make(
-            InputFile::make_fs(fname.c_str()), GraphDumpFormat::FLATBUFFERS);
+    auto loader = GraphLoader::make(InputFile::make_fs(fname.c_str()), format);
     auto load = [&]() {
         HostTensorGenerator<> gen;
         auto rst = loader->load(config);
@@ -329,8 +318,8 @@ TEST(TestSerializer2, CustomLoader) {
     ASSERT_EQ(4, load_nr_call);
 }
 
-TEST(TestSerializer2, ManyIOVars) {
-    auto fname = GET_OUTPUT_FILE();
+void test_serializer_many_io_var(GraphDumpFormat format) {
+    auto fname = GET_OUTPUT_FILE(format);
     constexpr size_t NR_VARS = 32;
     auto dump = [&]() {
         auto graph = ComputingGraph::make();
@@ -355,15 +344,13 @@ TEST(TestSerializer2, ManyIOVars) {
                         con, 0, std::vector<size_t>(NR_VARS, 1)),
                 OperatorNodeConfig{}.comp_node_arr(y_comp_nodes));
 
-        auto dumper = GraphDumper::make(
-                OutputFile::make_fs(fname.c_str()), GraphDumpFormat::FLATBUFFERS);
+        auto dumper = GraphDumper::make(OutputFile::make_fs(fname.c_str()), format);
         auto rst = dumper->dump(ys);
     };
 
     auto load = [&]() {
         HostTensorGenerator<> gen;
-        auto loader = GraphLoader::make(
-                InputFile::make_fs(fname.c_str()), GraphDumpFormat::FLATBUFFERS);
+        auto loader = GraphLoader::make(InputFile::make_fs(fname.c_str()), format);
         auto rst = loader->load();
         ASSERT_EQ(NR_VARS, rst.output_var_list.size());
         ComputingGraph::OutputSpec out_spec(NR_VARS);
@@ -391,8 +378,8 @@ TEST(TestSerializer2, ManyIOVars) {
     load();
 }
 
-TEST(TestSerializer2, RemoveSetGrad) {
-    auto fname = GET_OUTPUT_FILE();
+void test_serializer_remove_set_grad(GraphDumpFormat format) {
+    auto fname = GET_OUTPUT_FILE(format);
     TensorShape shape{2, 3};
 
     auto dump = [&]() {
@@ -412,15 +399,13 @@ TEST(TestSerializer2, RemoveSetGrad) {
         // SetGrad as internal
         auto z1 = sg(x) + sg(sg(y));
 
-        auto dumper = GraphDumper::make(
-                OutputFile::make_fs(fname.c_str()), GraphDumpFormat::FLATBUFFERS);
+        auto dumper = GraphDumper::make(OutputFile::make_fs(fname.c_str()), format);
         dumper->dump({z0, z1});
     };
 
     auto load = [&]() {
         HostTensorGenerator<> gen;
-        auto loader = GraphLoader::make(
-                InputFile::make_fs(fname.c_str()), GraphDumpFormat::FLATBUFFERS);
+        auto loader = GraphLoader::make(InputFile::make_fs(fname.c_str()), format);
         auto rst = loader->load();
         auto xv = rst.tensor_map.at("x");
         auto yv = rst.tensor_map.at("y");
@@ -445,8 +430,8 @@ TEST(TestSerializer2, RemoveSetGrad) {
     load();
 }
 
-TEST(TestSerializer2, MultipleParamNDIMDTypeCompNode) {
-    auto fname = GET_OUTPUT_FILE();
+void test_serializer_multiple_param(GraphDumpFormat format) {
+    auto fname = GET_OUTPUT_FILE(format);
     std::vector<std::shared_ptr<DeviceTensorND>> values;
     auto add_value = [&](int stream, int ndim, DType dtype) {
         CompNode::Locator loc;
@@ -487,14 +472,12 @@ TEST(TestSerializer2, MultipleParamNDIMDTypeCompNode) {
 #undef cb
         }
         ASSERT_GT(values.size(), 8u);
-        auto dumper = GraphDumper::make(
-                OutputFile::make_fs(fname.c_str()), GraphDumpFormat::FLATBUFFERS);
+        auto dumper = GraphDumper::make(OutputFile::make_fs(fname.c_str()), format);
         dumper->dump({x});
     };
 
     auto load = [&]() {
-        auto loader = GraphLoader::make(
-                InputFile::make_fs(fname.c_str()), GraphDumpFormat::FLATBUFFERS);
+        auto loader = GraphLoader::make(InputFile::make_fs(fname.c_str()), format);
         ASSERT_THROW(loader->shared_tensor_id_map(), MegBrainError);
         loader->load();
         auto&& got = loader->shared_tensor_id_map();
@@ -515,8 +498,8 @@ TEST(TestSerializer2, MultipleParamNDIMDTypeCompNode) {
     load();
 }
 
-TEST(TestSerializer2, ConstVarShape) {
-    auto fname = GET_OUTPUT_FILE();
+void test_serializer_const_var_shape(GraphDumpFormat format) {
+    auto fname = GET_OUTPUT_FILE(format);
     TensorShape shape{2, 3};
     HostTensorGenerator<> gen;
     auto host_x = gen({2, 3});
@@ -525,14 +508,12 @@ TEST(TestSerializer2, ConstVarShape) {
         // dump
         auto graph = ComputingGraph::make();
         auto x = opr::Host2DeviceCopy::make(*graph, host_x, {"x"});
-        auto dumper = GraphDumper::make(
-                OutputFile::make_fs(fname.c_str()), GraphDumpFormat::FLATBUFFERS);
+        auto dumper = GraphDumper::make(OutputFile::make_fs(fname.c_str()), format);
         dumper->dump({x + 1.f});
     }
 
     auto run_and_check = [&](const GraphLoadConfig& config) {
-        auto loader = GraphLoader::make(
-                InputFile::make_fs(fname.c_str()), GraphDumpFormat::FLATBUFFERS);
+        auto loader = GraphLoader::make(InputFile::make_fs(fname.c_str()), format);
         auto rst = loader->load(config);
         rst.tensor_map.at("x")->copy_from(*host_x);
         auto y = rst.output_var_list[0];
@@ -588,8 +569,8 @@ TEST(TestSerializer2, ConstVarShape) {
     }
 }
 
-TEST(TestSerializer2, ConstVarShapeOutputName) {
-    auto fname = GET_OUTPUT_FILE();
+void test_serializer_const_var_shape_output_name(GraphDumpFormat format) {
+    auto fname = GET_OUTPUT_FILE(format);
     TensorShape shape{2, 3};
     HostTensorGenerator<> gen;
     auto host_x = gen({2, 3});
@@ -600,15 +581,13 @@ TEST(TestSerializer2, ConstVarShapeOutputName) {
         auto x = opr::Host2DeviceCopy::make(*graph, host_x, {"x"}),
              y = opr::GetVarShape::make(x) + 1;
         y.rename("out");
-        auto dumper = GraphDumper::make(
-                OutputFile::make_fs(fname.c_str()), GraphDumpFormat::FLATBUFFERS);
+        auto dumper = GraphDumper::make(OutputFile::make_fs(fname.c_str()), format);
         dumper->dump({y});
     }
 
     {
         // load
-        auto loader = GraphLoader::make(
-                InputFile::make_fs(fname.c_str()), GraphDumpFormat::FLATBUFFERS);
+        auto loader = GraphLoader::make(InputFile::make_fs(fname.c_str()), format);
         GraphLoadConfig config;
         config.const_var_shape = true;
         auto rst = loader->load(config);
@@ -618,8 +597,8 @@ TEST(TestSerializer2, ConstVarShapeOutputName) {
     }
 }
 
-TEST(TestSerializer2, Priority) {
-    auto fname = GET_OUTPUT_FILE();
+void test_serializer_priority(GraphDumpFormat format) {
+    auto fname = GET_OUTPUT_FILE(format);
     TensorShape shape{2, 3};
 
     auto dump = [&](bool keep_pri) {
@@ -633,8 +612,7 @@ TEST(TestSerializer2, Priority) {
         set_priority(x, 1);
         set_priority(y, 2);
 
-        auto dumper = GraphDumper::make(
-                OutputFile::make_fs(fname.c_str()), GraphDumpFormat::FLATBUFFERS);
+        auto dumper = GraphDumper::make(OutputFile::make_fs(fname.c_str()), format);
         GraphDumper::DumpConfig config;
         if (keep_pri) {
             config.keep_opr_priority = true;
@@ -643,8 +621,7 @@ TEST(TestSerializer2, Priority) {
     };
 
     auto load = [&](bool has_pri) {
-        auto loader = GraphLoader::make(
-                InputFile::make_fs(fname.c_str()), GraphDumpFormat::FLATBUFFERS);
+        auto loader = GraphLoader::make(InputFile::make_fs(fname.c_str()), format);
         auto rst = loader->load();
         VarNode *x, *y;
         unpack_vector(rst.output_var_list.front().node()->owner_opr()->input(), x, y);
@@ -668,8 +645,8 @@ TEST(TestSerializer2, Priority) {
     load(true);
 }
 
-TEST(TestSerializer2, MultipleParams) {
-    auto fname = GET_OUTPUT_FILE();
+void test_serializer_multiple_params(GraphDumpFormat format) {
+    auto fname = GET_OUTPUT_FILE(format);
     HostTensorGenerator<> gen;
     std::vector<std::shared_ptr<HostTensorND>> tensors{
             gen({2, 3}), gen({1}), gen({3, 2}), gen({1, 1})};
@@ -680,14 +657,11 @@ TEST(TestSerializer2, MultipleParams) {
         for (auto&& i : tensors) {
             outputs.push_back(opr::SharedDeviceTensor::make(*graph, *i));
         }
-        GraphDumper::make(
-                OutputFile::make_fs(fname.c_str()), GraphDumpFormat::FLATBUFFERS)
-                ->dump(outputs);
+        GraphDumper::make(OutputFile::make_fs(fname.c_str()), format)->dump(outputs);
     };
 
     auto load = [&]() {
-        auto loader = GraphLoader::make(
-                InputFile::make_fs(fname.c_str()), GraphDumpFormat::FLATBUFFERS);
+        auto loader = GraphLoader::make(InputFile::make_fs(fname.c_str()), format);
         auto rst = loader->load();
         ASSERT_EQ(tensors.size(), rst.output_var_list.size());
         for (size_t i = 0; i < tensors.size(); ++i) {
@@ -706,8 +680,8 @@ TEST(TestSerializer2, MultipleParams) {
     load();
 }
 
-TEST(TestSerializer2, ParamerizedDType) {
-    auto fname = GET_OUTPUT_FILE();
+void test_serializer_paramerized_dtype(GraphDumpFormat format) {
+    auto fname = GET_OUTPUT_FILE(format);
     TensorShape shape{2, 3, 3};
     dtype::Quantized8Asymm dtype(0.01f, (uint8_t)123);
 
@@ -720,14 +694,12 @@ TEST(TestSerializer2, ParamerizedDType) {
         auto graph = ComputingGraph::make();
         auto x = opr::Host2DeviceCopy::make(*graph, host_x, {"x"});
         auto rst = opr::Dimshuffle::make(x, {1, 2, 0});
-        auto dumper = GraphDumper::make(
-                OutputFile::make_fs(fname.c_str()), GraphDumpFormat::FLATBUFFERS);
+        auto dumper = GraphDumper::make(OutputFile::make_fs(fname.c_str()), format);
         dumper->dump({rst});
     };
 
     auto load = [&]() {
-        auto loader = GraphLoader::make(
-                InputFile::make_fs(fname.c_str()), GraphDumpFormat::FLATBUFFERS);
+        auto loader = GraphLoader::make(InputFile::make_fs(fname.c_str()), format);
         auto rst = loader->load();
         ASSERT_EQ(rst.output_var_list.size(), 1u);
         EXPECT_EQ(rst.output_var_list.front().node()->dtype(), dtype);
@@ -737,8 +709,8 @@ TEST(TestSerializer2, ParamerizedDType) {
     load();
 }
 
-TEST(TestSerializer2, OperatorName) {
-    auto fname = GET_OUTPUT_FILE();
+void test_serializer_operator_name(GraphDumpFormat format) {
+    auto fname = GET_OUTPUT_FILE(format);
     TensorShape shape{2, 3};
 
     auto dump = [&]() {
@@ -751,15 +723,13 @@ TEST(TestSerializer2, OperatorName) {
         using Mode = opr::Elemwise::Mode;
         auto z = opr::Elemwise::make({x, y}, Mode::ADD, {"add(x, y)"});
 
-        auto dumper = GraphDumper::make(
-                OutputFile::make_fs(fname.c_str()), GraphDumpFormat::FLATBUFFERS);
+        auto dumper = GraphDumper::make(OutputFile::make_fs(fname.c_str()), format);
         auto rst = dumper->dump({z.rename("z")});
     };
 
     auto load = [&]() {
         HostTensorGenerator<> gen;
-        auto loader = GraphLoader::make(
-                InputFile::make_fs(fname.c_str()), GraphDumpFormat::FLATBUFFERS);
+        auto loader = GraphLoader::make(InputFile::make_fs(fname.c_str()), format);
         auto rst = loader->load();
         auto z = rst.output_var_map.at("z");
         auto op_name = z.node()->owner_opr()->cname();
@@ -771,8 +741,8 @@ TEST(TestSerializer2, OperatorName) {
     load();
 }
 
-TEST(TestSerializer2, HasOutputDtype) {
-    auto fname = GET_OUTPUT_FILE();
+void test_serializer_has_output_dtype(GraphDumpFormat format) {
+    auto fname = GET_OUTPUT_FILE(format);
 
     HostTensorGenerator<> gen;
 
@@ -792,8 +762,7 @@ TEST(TestSerializer2, HasOutputDtype) {
                 x, w, b, param, {}, OperatorNodeConfig{dtype::QuantizedS32(0.05f)});
         auto y1 = opr::ConvBias::make(
                 x, w, b, param, {}, OperatorNodeConfig{dtype::QuantizedS8(0.3f)});
-        auto dumper = GraphDumper::make(
-                OutputFile::make_fs(fname.c_str()), GraphDumpFormat::FLATBUFFERS);
+        auto dumper = GraphDumper::make(OutputFile::make_fs(fname.c_str()), format);
         dumper->dump({y0, y1});
     };
 
@@ -806,8 +775,7 @@ TEST(TestSerializer2, HasOutputDtype) {
     };
 
     auto load = [&]() {
-        auto loader = GraphLoader::make(
-                InputFile::make_fs(fname.c_str()), GraphDumpFormat::FLATBUFFERS);
+        auto loader = GraphLoader::make(InputFile::make_fs(fname.c_str()), format);
         auto rst = loader->load();
         ASSERT_EQ(rst.output_var_list.size(), 2u);
         check(rst, 0, dtype::QuantizedS32(0.05f));
@@ -818,8 +786,8 @@ TEST(TestSerializer2, HasOutputDtype) {
     load();
 }
 
-TEST(TestSerializer2, LOGEXP) {
-    auto fname = GET_OUTPUT_FILE();
+void test_serializer_log_exp(GraphDumpFormat format) {
+    auto fname = GET_OUTPUT_FILE(format);
     TensorShape shape{2, 3};
     using Mode = opr::Elemwise::Mode;
     bool inplace_opt = true;
@@ -835,16 +803,14 @@ TEST(TestSerializer2, LOGEXP) {
         auto y = opr::Elemwise::make({x}, Mode::EXP);
         auto z = opr::Elemwise::make({y}, Mode::LOG);
 
-        auto dumper = GraphDumper::make(
-                OutputFile::make_fs(fname.c_str()), GraphDumpFormat::FLATBUFFERS);
+        auto dumper = GraphDumper::make(OutputFile::make_fs(fname.c_str()), format);
         auto rst = dumper->dump({z.rename("z"), z});
         size_t expected_nr_opr = inplace_opt ? 1 : 3;
         ASSERT_EQ(expected_nr_opr, rst.nr_opr);
     };
 
     auto load = [&]() {
-        auto loader = GraphLoader::make(
-                InputFile::make_fs(fname.c_str()), GraphDumpFormat::FLATBUFFERS);
+        auto loader = GraphLoader::make(InputFile::make_fs(fname.c_str()), format);
         auto rst = loader->load();
     };
 
@@ -855,4 +821,197 @@ TEST(TestSerializer2, LOGEXP) {
     dump();
     load();
 }
+
+}  // namespace
+
+TEST(TestSerializer2, GraphDumpLoad) {
+    test_graph_load_dump(GraphDumpFormat::FLATBUFFERS);
+}
+
+TEST(TestSerializer2, MultiGraphDumpLoad) {
+    test_multi_graph_dump_load(GraphDumpFormat::FLATBUFFERS);
+}
+
+TEST(TestSerializer2, Metadata) {
+    test_metadata(GraphDumpFormat::FLATBUFFERS);
+}
+
+TEST(TestSerializer2, APlusB) {
+    test_serializer_APlusB(GraphDumpFormat::FLATBUFFERS);
+}
+
+TEST(TestSerializer2, APlusBParam) {
+    test_serializer_APlusB_param(GraphDumpFormat::FLATBUFFERS);
+}
+
+TEST(TestSerializer2, Immutable) {
+    test_serializer_immutable(GraphDumpFormat::FLATBUFFERS);
+}
+
+TEST(TestSerializer2, CustomLoader) {
+    test_serializer_custom_loader(GraphDumpFormat::FLATBUFFERS);
+}
+
+TEST(TestSerializer2, ManyIOVars) {
+    test_serializer_many_io_var(GraphDumpFormat::FLATBUFFERS);
+}
+
+TEST(TestSerializer2, RemoveSetGrad) {
+    test_serializer_remove_set_grad(GraphDumpFormat::FLATBUFFERS);
+}
+
+TEST(TestSerializer2, MultipleParamNDIMDTypeCompNode) {
+    test_serializer_multiple_param(GraphDumpFormat::FLATBUFFERS);
+}
+
+TEST(TestSerializer2, ConstVarShape) {
+    test_serializer_const_var_shape(GraphDumpFormat::FLATBUFFERS);
+}
+
+TEST(TestSerializer2, ConstVarShapeOutputName) {
+    test_serializer_const_var_shape_output_name(GraphDumpFormat::FLATBUFFERS);
+}
+
+TEST(TestSerializer2, Priority) {
+    test_serializer_priority(GraphDumpFormat::FLATBUFFERS);
+}
+
+TEST(TestSerializer2, MultipleParams) {
+    test_serializer_multiple_params(GraphDumpFormat::FLATBUFFERS);
+}
+
+TEST(TestSerializer2, ParamerizedDType) {
+    test_serializer_paramerized_dtype(GraphDumpFormat::FLATBUFFERS);
+}
+
+TEST(TestSerializer2, OperatorName) {
+    test_serializer_operator_name(GraphDumpFormat::FLATBUFFERS);
+}
+
+TEST(TestSerializer2, HasOutputDtype) {
+    test_serializer_has_output_dtype(GraphDumpFormat::FLATBUFFERS);
+}
+
+TEST(TestSerializer2, LOGEXP) {
+    test_serializer_log_exp(GraphDumpFormat::FLATBUFFERS);
+}
+
+/******************** Flatbuffer V2 Test **********************/
+
+TEST(TestSerializer2, GraphDumpLoadV2) {
+    test_graph_load_dump(GraphDumpFormat::FLATBUFFERS_V2);
+}
+
+TEST(TestSerializer2, MultiGraphDumpLoadV2) {
+    test_multi_graph_dump_load(GraphDumpFormat::FLATBUFFERS_V2);
+}
+
+TEST(TestSerializer2, MetadataV2) {
+    test_metadata(GraphDumpFormat::FLATBUFFERS_V2);
+}
+
+TEST(TestSerializer2, APlusBV2) {
+    test_serializer_APlusB(GraphDumpFormat::FLATBUFFERS_V2);
+}
+
+TEST(TestSerializer2, APlusBParamV2) {
+    test_serializer_APlusB_param(GraphDumpFormat::FLATBUFFERS_V2);
+}
+
+TEST(TestSerializer2, ImmutableV2) {
+    test_serializer_immutable(GraphDumpFormat::FLATBUFFERS_V2);
+}
+
+TEST(TestSerializer2, ManyIOVarsV2) {
+    test_serializer_many_io_var(GraphDumpFormat::FLATBUFFERS_V2);
+}
+
+TEST(TestSerializer2, RemoveSetGradV2) {
+    test_serializer_remove_set_grad(GraphDumpFormat::FLATBUFFERS_V2);
+}
+
+TEST(TestSerializer2, MultipleParamNDIMDTypeCompNodeV2) {
+    test_serializer_multiple_param(GraphDumpFormat::FLATBUFFERS_V2);
+}
+
+TEST(TestSerializer2, ConstVarShapeV2) {
+    test_serializer_const_var_shape(GraphDumpFormat::FLATBUFFERS_V2);
+}
+
+TEST(TestSerializer2, ConstVarShapeOutputNameV2) {
+    test_serializer_const_var_shape_output_name(GraphDumpFormat::FLATBUFFERS_V2);
+}
+
+TEST(TestSerializer2, MultipleParamsV2) {
+    test_serializer_multiple_params(GraphDumpFormat::FLATBUFFERS_V2);
+}
+
+TEST(TestSerializer2, ParamerizedDTypeV2) {
+    test_serializer_paramerized_dtype(GraphDumpFormat::FLATBUFFERS_V2);
+}
+
+TEST(TestSerializer2, PriorityV2) {
+    test_serializer_priority(GraphDumpFormat::FLATBUFFERS_V2);
+}
+
+TEST(TestSerializer2, OperatorNameV2) {
+    test_serializer_operator_name(GraphDumpFormat::FLATBUFFERS_V2);
+}
+
+TEST(TestSerializer2, HasOutputDtypeV2) {
+    test_serializer_has_output_dtype(GraphDumpFormat::FLATBUFFERS_V2);
+}
+
+TEST(TestSerializer2, LOGEXPV2) {
+    test_serializer_log_exp(GraphDumpFormat::FLATBUFFERS_V2);
+}
+
+TEST(TestSerializer2, TestSoftMaxLoadDump) {
+    auto fname = GET_OUTPUT_FILE(GraphDumpFormat::FLATBUFFERS_V2);
+    TensorShape shape{2, 3};
+
+    auto cn = CompNode::load("xpu0");
+    std::shared_ptr<HostTensorND> host =
+            std::make_shared<HostTensorND>(cn, shape, dtype::Float32{});
+    HostTensorND dst_truth;
+    for (int i = 0; i < 6; i++) {
+        host->ptr<float>()[i] = i;
+    }
+    auto dump = [&]() {
+        auto graph = ComputingGraph::make();
+        auto h2d = opr::Host2DeviceCopy::make(*graph, host);
+        auto x = opr::Softmax::make(h2d, {1}, {});
+        x.rename("softmax_out");
+        auto func = graph->compile({make_callback_copy(x, dst_truth)});
+        auto dumper = GraphDumper::make(
+                OutputFile::make_fs(fname.c_str()), GraphDumpFormat::FLATBUFFERS_V2);
+        auto rst = dumper->dump({x});
+        func->execute().wait();
+        ASSERT_EQ(rst.nr_opr, 6);
+        ASSERT_EQ(rst.inputs.size(), 1);
+        ASSERT_EQ(rst.outputs.size(), 1);
+        ASSERT_EQ(rst.params.size(), 0);
+    };
+    auto load = [&]() {
+        auto loader = GraphLoader::make(
+                InputFile::make_fs(fname.c_str()), GraphDumpFormat::FLATBUFFERS_V2);
+        auto rst = loader->load();
+        ASSERT_EQ(rst.tensor_map.size(), 1);
+        ASSERT_EQ(rst.output_var_list.size(), 1);
+        ASSERT_EQ(rst.output_var_map.size(), 1);
+        ASSERT_EQ(rst.output_var_map.count("softmax_out"), 1);
+
+        HostTensorND host_x;
+        auto func =
+                rst.graph_compile({make_callback_copy(rst.output_var_list[0], host_x)});
+        rst.tensor_map.begin()->second->copy_from(*host).sync();
+        func->execute().wait();
+        for (int i = 0; i < 6; i++) {
+            EXPECT_NEAR(host_x.ptr<float>()[i], dst_truth.ptr<float>()[i], 1e-6);
+        }
+    };
+    dump();
+    load();
+}
+
 #endif

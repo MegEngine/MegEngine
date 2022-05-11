@@ -184,9 +184,11 @@ void OprRegistryV2::versioned_add(
     auto id = record.type_id;
     uint64_t type_id = id;
     //! record.type->name is nullptr when MGB_VERBOSE_TYPEINFO_NAME==0
+#if MGB_VERBOSE_TYPEINFO_NAME
     if (record.type && record.type->name) {
         type_id = MGB_HASH_RUNTIME(std::string(record.type->name));
     }
+#endif
     for (uint8_t version = min_version; version <= max_version; version++) {
         auto&& registry_map = sd.version_id_reg_map[version];
         auto versioned_record = record;
@@ -206,7 +208,7 @@ void OprRegistryV2::versioned_add(
         if (id != type_id) {
             mgb_assert(
                     registry_map.find(type_id) == registry_map.end(),
-                    "dduplicated OprRegistryV2 of %s\n", record.name.c_str());
+                    "duplicated OprRegistryV2 of %s\n", record.name.c_str());
             registry_map.emplace(type_id, versioned_record);
         }
         auto&& registry_type_map = sd.version_type_reg_map[version];
