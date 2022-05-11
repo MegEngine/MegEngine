@@ -3,6 +3,7 @@
 #include "megbrain/serialization/opr_load_dump.h"
 #include "megbrain/serialization/opr_registry.h"
 #include "megbrain/serialization/opr_shallow_copy.h"
+#include "megbrain/serialization/oss_opr_load_dump.h"
 #include "megbrain/utils/hash_ct.h"
 
 namespace mgb {
@@ -66,6 +67,9 @@ struct OprLoadDumpImpl {
     }
 };
 
+template <class Opr, size_t arity>
+struct OprLoadDumpImplV2 : public OprLoadDumpImpl<Opr, arity> {};
+
 #define IMPL_OPR_MAKER(_arity, _args...)                                              \
     template <class Opr>                                                              \
     struct OprMaker<Opr, _arity> {                                                    \
@@ -124,6 +128,12 @@ struct OprRegistryCaller : public OprRegistryCallerDefaultImpl<Callee> {};
             __caller_OprReg##_cls##_ins;                                 \
     }
 
+#define MGB_SEREG_OPR_INTL_CALL_ENTRY_V2(_cls, _impl)                    \
+    namespace {                                                          \
+    [[gnu::unused]] ::mgb::serialization::OprRegistryCaller<_cls, _impl> \
+            __caller_V2_OprReg##_cls##_ins;                              \
+    }
+
 // Trim the terminating null character and a "V0" like suffix from the string
 // then hash it.
 // TODO: Get rid of this.
@@ -138,17 +148,35 @@ struct OprRegistryCaller : public OprRegistryCallerDefaultImpl<Callee> {};
                              : 0),                               \
             20160701)>::val
 
-//! call OprRegistry::add
-#define MGB_SEREG_OPR_INTL_CALL_ADD(_cls, _dump, _load)            \
-    do {                                                           \
-        ::mgb::serialization::OprRegistry::add(                    \
-                {_cls::typeinfo(),                                 \
-                 MGB_HASH_STR(#_cls),                              \
-                 _MGB_SEREG_OPR_NAME_FROM_CLS(_cls),               \
-                 _dump,                                            \
-                 _load,                                            \
-                 {},                                               \
-                 MGB_HASH_STR_WITHOUT_TAIL_0_AND_VERSION(#_cls)}); \
+//! call OprRegistry::add for old serialization
+//! call OprRegistryV2::versioned_add for new serialization which is compatiable
+//! with old serialization, convert is nullptr, this registry is just only for
+//! varsion 1
+#define MGB_SEREG_OPR_INTL_CALL_ADD(_cls, _dump, _load)                            \
+    do {                                                                           \
+        ::mgb::serialization::OprRegistry::add(                                    \
+                {_cls::typeinfo(),                                                 \
+                 MGB_HASH_STR(#_cls),                                              \
+                 _MGB_SEREG_OPR_NAME_FROM_CLS(_cls),                               \
+                 _dump,                                                            \
+                 _load,                                                            \
+                 {},                                                               \
+                 MGB_HASH_STR_WITHOUT_TAIL_0_AND_VERSION(#_cls)});                 \
+        ::mgb::serialization::OprRegistryV2::versioned_add(                        \
+                {_cls::typeinfo(), MGB_HASH_STR_WITHOUT_TAIL_0_AND_VERSION(#_cls), \
+                 _MGB_SEREG_OPR_NAME_FROM_CLS(_cls), _dump, _load, nullptr},       \
+                ::mgb::VERSION_1, ::mgb::VERSION_1);                               \
+    } while (0)
+
+//! call OprRegistryV2::versioned_add for new serialization, in which convert the
+//! function converter the Operator to the compatiable
+#define MGB_SEREG_OPR_INTL_CALL_ADD_V2(                                       \
+        _cls, _dump, _load, _convert, _version_min, _version_max)             \
+    do {                                                                      \
+        ::mgb::serialization::OprRegistryV2::versioned_add(                   \
+                {_cls::typeinfo(), MGB_HASH_STR(#_cls),                       \
+                 _MGB_SEREG_OPR_NAME_FROM_CLS(_cls), _dump, _load, _convert}, \
+                _version_min, _version_max);                                  \
     } while (0)
 
 /*!
@@ -170,6 +198,27 @@ struct OprRegistryCaller : public OprRegistryCallerDefaultImpl<Callee> {};
     };                                                                          \
     }                                                                           \
     MGB_SEREG_OPR_INTL_CALL_ENTRY(_cls, _OprReg##_cls)
+
+//! new dump/load function should implement in OprLoadDumpImplV2, _converter is
+//! optional , if not implement pass nullptr
+#define MGB_SEREG_OPR_V2(_cls, _arity, _converter, _version_min, _version_max)  \
+    namespace {                                                                 \
+    namespace ser = ::mgb::serialization;                                       \
+    struct _OprRegV2##_cls {                                                    \
+        using Impl = ser::OprLoadDumpImplV2<_cls, _arity>;                      \
+        static ser::OprWithOutputAccessor wrap_loader(                          \
+                ser::OprLoadContext& ctx, const mgb::cg::VarNodeArray& inputs,  \
+                const mgb::cg::OperatorNodeConfig& config) {                    \
+            return ser::OprWithOutputAccessor(Impl::load(ctx, inputs, config)); \
+        }                                                                       \
+        static void entry() {                                                   \
+            MGB_SEREG_OPR_INTL_CALL_ADD_V2(                                     \
+                    _cls, Impl::dump, wrap_loader, _converter, _version_min,    \
+                    _version_max);                                              \
+        }                                                                       \
+    };                                                                          \
+    }                                                                           \
+    MGB_SEREG_OPR_INTL_CALL_ENTRY_V2(_cls, _OprRegV2##_cls)
 
 //! use to check type is complete or not, midout need a complete type
 template <class T, class = void>

@@ -135,6 +135,16 @@ void LoopSerializer::reg_all() {
     MGB_SEREG_OPR_INTL_CALL_ADD(InputMaker, dump_input_maker, load_input_maker);
     MGB_SEREG_OPR_INTL_CALL_ADD(
             CounterProvider, dump_counter_provider, load_counter_provider);
+
+    MGB_SEREG_OPR_INTL_CALL_ADD_V2(
+            opr::Loop, dump_loop, load_loop, nullptr, 2,
+            CURRENT_VERSION);
+    MGB_SEREG_OPR_INTL_CALL_ADD_V2(
+            InputMaker, dump_input_maker, load_input_maker, nullptr, 2,
+            CURRENT_VERSION);
+    MGB_SEREG_OPR_INTL_CALL_ADD_V2(
+            CounterProvider, dump_counter_provider, load_counter_provider, nullptr, 2,
+            CURRENT_VERSION);
 }
 
 void LoopSerializer::dump_loop(OprDumpContext& ctx, const cg::OperatorNodeBase& opr) {

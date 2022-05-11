@@ -52,6 +52,21 @@ mgb::cg::OperatorNodeBase* custom_loader(
     }                                                         \
     MGB_SEREG_OPR_INTL_CALL_ENTRY(cls, _OprReg##cls)
 
+#define CUSTOM_OP_SEREG_REG_V2(cls, _version_min, _version_max)                 \
+    namespace {                                                                 \
+    struct _OprRegV2##cls {                                                     \
+        static void entry() {                                                   \
+            MGB_SEREG_OPR_INTL_CALL_ADD_V2(                                     \
+                    cls, ::mgb::serialization::custom_dumper,                   \
+                    ::mgb::serialization::custom_loader, nullptr, _version_min, \
+                    _version_max);                                              \
+        }                                                                       \
+    };                                                                          \
+    }                                                                           \
+    MGB_SEREG_OPR_INTL_CALL_ENTRY_V2(cls, _OprRegV2##cls)
+
 using namespace mgb;
 using CustomOpNode = opr::CustomOpNode;
 CUSTOM_OP_SEREG_REG(CustomOpNode);
+
+CUSTOM_OP_SEREG_REG_V2(CustomOpNode, 2, CURRENT_VERSION);

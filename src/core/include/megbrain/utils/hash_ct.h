@@ -153,4 +153,6 @@ struct EnsureHashConstexpr {
 #define MGB_HASH_STR(v) \
     ::mgb::EnsureHashConstexpr<::mgb::XXHash64CT::hash(v, sizeof(v), 20160701)>::val
 
+#define MGB_HASH_RUNTIME(v) XXHash64CT::hash((v).c_str(), (v).size() + 1, 20160701)
+
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

@@ -20,6 +20,11 @@ struct StaticData {
     ThinHashMap<Typeinfo*, OprRegistry*> type2reg;
     std::unordered_map<std::string, OprRegistry*> name2reg;
     ThinHashMap<size_t, OprRegistry*> unversioned_id2reg;
+
+    //! versioned OprRegistryV2, version_id_reg_map is used for Operator
+    //! load/shallow copy and version_type_reg_map is used for Operator dump
+    ThinHashMap<uint8_t, ThinHashMap<size_t, OprRegistryV2>> version_id_reg_map;
+    ThinHashMap<uint8_t, ThinHashMap<Typeinfo*, OprRegistryV2*>> version_type_reg_map;
 };
 
 StaticData& static_data() {
@@ -47,6 +52,20 @@ const OprRegistry* dynamic_registry() {
     return ret;
 }
 
+const OprRegistryV2* dynamic_registry_v2() {
+    static const OprRegistryV2* ret = nullptr;
+    if (ret)
+        return ret;
+
+    auto id = MGB_HASH_STR("dynamic");
+    OprRegistryV2::versioned_add(
+            {nullptr, id, {}, {}, dynamic_loader, {}}, CURRENT_VERSION,
+            CURRENT_VERSION);
+    ret = OprRegistryV2::versioned_find_by_id(id, CURRENT_VERSION);
+    mgb_assert(ret);
+    return ret;
+}
+
 class _Init {
 public:
     _Init() {
@@ -63,8 +82,7 @@ void OprRegistry::add(const OprRegistry& record) {
     auto registry_ins = sd.id2reg.emplace(persist_id, record);
     mgb_assert(
             registry_ins.second || persist_id == dynamic_registry()->persist_type_id,
-            "duplicated operator persist_type_id: %s",
-            std::to_string(persist_id).c_str());
+            "duplicated operator name : %s", record.name.c_str());
 
     OprRegistry* persis_record_ptr;
     if (registry_ins.second) {
@@ -129,6 +147,73 @@ const OprRegistry* OprRegistry::find_by_unversioned_id(size_t unversioned_id) {
     return iter == uid2reg.end() ? nullptr : iter->second;
 }
 
+//! find the registry equal to the giving version
+const OprRegistryV2* OprRegistryV2::versioned_find_by_id(
+        const size_t id, uint8_t version) {
+    auto&& id_reg_map = static_data().version_id_reg_map;
+    auto iter_version = id_reg_map.find(version);
+    if (iter_version != id_reg_map.end()) {
+        auto iter = iter_version->second.find(id);
+        return iter == iter_version->second.end() ? nullptr : &iter->second;
+    }
+    return nullptr;
+}
+//! find the registry equal or below the giving version
+const OprRegistryV2* OprRegistryV2::versioned_find_by_typeinfo(
+        Typeinfo* type, uint8_t version) {
+    const auto& type_reg_map = static_data().version_type_reg_map;
+    for (int version_id = version; version_id > 0; version_id--) {
+        auto iter_version = type_reg_map.find(version_id);
+        if (iter_version != type_reg_map.end()) {
+            auto iter = iter_version->second.find(type);
+            if (iter == iter_version->second.end()) {
+                continue;
+            } else {
+                return iter->second;
+            }
+        }
+    }
+    return nullptr;
+}
+
+void OprRegistryV2::versioned_add(
+        const OprRegistryV2& record, uint8_t min_version, uint8_t max_version) {
+    mgb_assert(max_version >= min_version);
+
+    auto&& sd = static_data();
+    auto id = record.type_id;
+    uint64_t type_id = id;
+    //! record.type->name is nullptr when MGB_VERBOSE_TYPEINFO_NAME==0
+    if (record.type && record.type->name) {
+        type_id = MGB_HASH_RUNTIME(std::string(record.type->name));
+    }
+    for (uint8_t version = min_version; version <= max_version; version++) {
+        auto&& registry_map = sd.version_id_reg_map[version];
+        auto versioned_record = record;
+        versioned_record.version = version;
+        mgb_assert(
+                registry_map.find(id) == registry_map.end() ||
+                        id == dynamic_registry_v2()->type_id,
+                "dduplicated OprRegistryV2 of %s\n", record.name.c_str());
+        auto registry_ins = registry_map.emplace(id, versioned_record);
+        if (!registry_ins.second) {
+            //! the registry is dynamic
+            mgb_assert(!record.converter);
+            registry_map[id] = versioned_record;
+        }
+        //! sometimes the register id and the hash typeinfo is not same, just as
+        //! dynamic Operator
+        if (id != type_id) {
+            mgb_assert(
+                    registry_map.find(type_id) == registry_map.end(),
+                    "dduplicated OprRegistryV2 of %s\n", record.name.c_str());
+            registry_map.emplace(type_id, versioned_record);
+        }
+        auto&& registry_type_map = sd.version_type_reg_map[version];
+        registry_type_map.emplace(record.type, &registry_map[id]);
+    }
+}
+
 void OprRegistry::add_using_dynamic_loader(
         Typeinfo* type, const std::string& name, const OprDumper& dumper) {
     // dynamic oprs are implemented by mapping different opr types to the same
@@ -140,6 +225,11 @@ void OprRegistry::add_using_dynamic_loader(
          {},
          {},
          dynamic_registry()->unversioned_type_id});
+    mgb_assert(type, "type must be not nullptr");
+    OprRegistryV2::versioned_add(
+            {type, dynamic_registry_v2()->type_id, type->name, dumper,
+             dynamic_registry_v2()->loader, nullptr},
+            CURRENT_VERSION, CURRENT_VERSION);
 }
 
 #if MGB_ENABLE_DEBUG_UTIL

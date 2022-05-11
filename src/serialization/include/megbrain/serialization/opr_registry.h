@@ -53,7 +53,6 @@ struct OprRegistry {
     uint64_t unversioned_type_id;
 
     MGE_WIN_DECLSPEC_FUC static void add(const OprRegistry& record);
-
     /*!
      * \brief register an operator to use dynamic loader
      *
@@ -81,6 +80,39 @@ struct OprRegistry {
     //! Find registry by unversioned id; return nullptr if not found
     MGE_WIN_DECLSPEC_FUC static const OprRegistry* find_by_unversioned_id(
             size_t unversioned_id);
+
+#if MGB_ENABLE_DEBUG_UTIL
+    //! dump registered oprs
+    MGE_WIN_DECLSPEC_FUC static std::vector<std::pair<size_t, std::string>>
+    dump_registries();
+#endif
+};
+
+//! Convert some modified Opr to compatible Opr
+using OprConvertToCompatible = thin_function<cg::OperatorNodeBase*(
+        cg::OperatorNodeBase*, const VarNodeArray&)>;
+
+//! record of a single operator
+struct OprRegistryV2 {
+    Typeinfo* type;
+    uint64_t type_id;
+    std::string name;
+    OprDumper dumper;
+    OprLoaderWrapper loader;
+    OprConvertToCompatible converter;
+    uint8_t version = 2;
+
+    MGE_WIN_DECLSPEC_FUC uint8_t get_version() const { return version; }
+
+    //! register opr load/dump to version2regmap
+    MGE_WIN_DECLSPEC_FUC static void versioned_add(
+            const OprRegistryV2& record, uint8_t min_version, uint8_t max_version);
+
+    MGE_WIN_DECLSPEC_FUC static const OprRegistryV2* versioned_find_by_id(
+            const size_t id, uint8_t version);
+
+    MGE_WIN_DECLSPEC_FUC static const OprRegistryV2* versioned_find_by_typeinfo(
+            Typeinfo* type, uint8_t version);
 
 #if MGB_ENABLE_DEBUG_UTIL
     //! dump registered oprs
