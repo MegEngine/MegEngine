@@ -20,8 +20,12 @@ class FlatBufferBuilder;
 }  // namespace flatbuffers
 
 namespace mgb {
-namespace serialization {
+constexpr uint8_t CURRENT_VERSION = 2u;
+constexpr uint8_t BEGIN_VERSION = 0u;
+constexpr uint8_t VERSION_1 = 1u;
+constexpr uint8_t VERSION_2 = 2u;
 
+namespace serialization {
 namespace fbs {
 template <typename T>
 struct OperatorParamTraits;
@@ -187,6 +191,9 @@ class OprLoadContext : public UserDataContainer::UserData {
     friend class OprLoadContextRawPOD;
     friend class OprLoadContextFlatBuffers;
 
+protected:
+    virtual ~OprLoadContext() = default;
+
 public:
     //! get current computing graph
     virtual ComputingGraph& graph() = 0;
@@ -223,6 +230,12 @@ public:
      * Note that there is not alignment gurantee.
      */
     virtual SharedBuffer load_shared_buf_with_len() = 0;
+
+    /*!
+     * \brief get the serialization data of the current opr
+     *
+     */
+    virtual const void* get_current_opr_data() { return nullptr; };
 
     /*!
      * \brief read a param and check that tag matches

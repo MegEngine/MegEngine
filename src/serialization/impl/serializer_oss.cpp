@@ -11,17 +11,16 @@
  */
 #if MGB_ENABLE_FBS_SERIALIZATION
 
-#include "batched_device_value_loader.h"
-
 #include "megbrain/graph/exc_extra_info.h"
 #include "megbrain/opr/io.h"
+#include "megbrain/serialization/batched_device_value_loader.h"
 #include "megbrain/serialization/helper.h"
 #include "megbrain/serialization/internal/flatbuffers_helper.h"
 #include "megbrain/serialization/internal/schema_generated.h"
 #include "megbrain/serialization/metadata.h"
 #include "megbrain/serialization/opr_load_dump.h"
 #include "megbrain/serialization/serializer.h"
-#include "megbrain/version.h"
+#include "serializer_oss_common.h"
 
 #include <flatbuffers/flatbuffers.h>
 
@@ -33,46 +32,7 @@ using namespace mgb;
 using namespace mgb::serialization;
 
 namespace {
-
-constexpr uint32_t MGB_VERSION = (MGE_MAJOR * 1000 + MGE_MINOR) * 100 + MGE_PATCH;
-
-constexpr uint32_t MGB_MAGIC = 0x4342474D;
-// In order to maintain compatibility and to allow old models to be loaded, we keep
-// the old magic(MAGIC_V0) value and creat a new magic(MGB_MAGIC)
-constexpr uint32_t MAGIC_V0 = 0x5342474D;
-// Used to judge whether Magic is old or new, the new magic(MGB_MAGIC) is true and the
-// old magic(MAGIC_V0) is false.
 bool magic_compare = true;
-
-template <typename T>
-bool contains_any_in_set(const SmallVector<T>& list, const ThinHashSet<T>& set) {
-    for (const auto& x : list) {
-        if (set.count(x)) {
-            return true;
-        }
-    }
-    return false;
-}
-
-void check_tensor_value_valid(const std::string& name, const HostTensorND& tensor) {
-    bool cond_normal = tensor.layout().format.is_default() &&
-                       tensor.layout().is_physical_contiguous();
-    bool cond_lowbit = tensor.layout().dtype.is_quantized_lowbit() &&
-                       tensor.layout().format.is_lowbit_aligned() &&
-                       tensor.layout().is_contiguous();
-    mgb_assert(
-            cond_normal || cond_lowbit, "non-contiguous tensor: name=%s layout=%s",
-            name.c_str(), tensor.layout().to_string().c_str());
-    if (tensor.dtype() == dtype::Float32()) {
-        auto ptr = tensor.ptr<float>();
-        for (size_t i = 0, it = tensor.shape().total_nr_elems(); i < it; ++i) {
-            if (!std::isfinite(ptr[i])) {
-                mgb_log_warn("invalid tensor value in %s: %g", name.c_str(), ptr[i]);
-                break;
-            }
-        }
-    }
-}
 
 //! feature bits for backward compatibility; default value should be 0
 struct FeatureBits64 {
@@ -945,13 +905,6 @@ std::unique_ptr<GraphDumper> make_fbs_dumper(std::unique_ptr<OutputFile> file) {
 
 std::unique_ptr<GraphLoader> make_fbs_loader(std::unique_ptr<InputFile> file) {
     return std::make_unique<GraphLoaderOSS>(std::move(file));
-}
-
-bool is_fbs_file(InputFile& file) {
-    uint64_t magic_with_reserved = 0;
-    file.read(&magic_with_reserved, sizeof(magic_with_reserved));
-    file.skip(-sizeof(magic_with_reserved));
-    return (magic_with_reserved == MGB_MAGIC) || (magic_with_reserved == MAGIC_V0);
 }
 
 }  // namespace serialization

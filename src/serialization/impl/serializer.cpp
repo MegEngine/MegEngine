@@ -57,7 +57,11 @@ GraphLoader::SharedTensorNameMap GraphLoader::shared_tensor_name_map() {
 }
 std::unique_ptr<GraphLoader> make_fbs_loader(std::unique_ptr<InputFile> file);
 std::unique_ptr<GraphDumper> make_fbs_dumper(std::unique_ptr<OutputFile> file);
+
+std::unique_ptr<GraphLoader> make_fbs_v2_loader(std::unique_ptr<InputFile> file);
+std::unique_ptr<GraphDumper> make_fbs_v2_dumper(std::unique_ptr<OutputFile> file);
 bool is_fbs_file(InputFile& file);
+bool is_fbs_v2_file(InputFile& file);
 
 bool GraphDumper::should_remove_in_dump(cg::OperatorNodeBase* opr) {
 #if MGB_ENABLE_GRAD
@@ -75,6 +79,11 @@ std::unique_ptr<GraphDumper> GraphDumper::make(
             return make_fbs_dumper(std::move(file));
 #endif
             MGB_FALLTHRU
+        case GraphDumpFormat::FLATBUFFERS_V2:
+#if MGB_ENABLE_FBS_SERIALIZATION
+            return make_fbs_v2_dumper(std::move(file));
+#endif
+            MGB_FALLTHRU
         default:
             mgb_throw(SerializationError, "unsupported serialization format requested");
     }
@@ -89,6 +98,11 @@ std::unique_ptr<GraphLoader> GraphLoader::make(
             return make_fbs_loader(std::move(file));
 #endif
             MGB_FALLTHRU
+        case GraphDumpFormat::FLATBUFFERS_V2:
+#if MGB_ENABLE_FBS_SERIALIZATION
+            return make_fbs_v2_loader(std::move(file));
+#endif
+            MGB_FALLTHRU
         default:
             mgb_throw(SerializationError, "unsupported serialization format requested");
     }
@@ -99,6 +113,9 @@ Maybe<GraphDumpFormat> GraphLoader::identify_graph_dump_format(InputFile& file) 
 #if MGB_ENABLE_FBS_SERIALIZATION
     if (is_fbs_file(file)) {
         return GraphDumpFormat::FLATBUFFERS;
+    }
+    if (is_fbs_v2_file(file)) {
+        return GraphDumpFormat::FLATBUFFERS_V2;
     }
 #endif
     return {};

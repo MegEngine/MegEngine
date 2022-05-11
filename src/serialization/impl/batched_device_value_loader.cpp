@@ -1,5 +1,4 @@
-#include "batched_device_value_loader.h"
-
+#include "megbrain/serialization/batched_device_value_loader.h"
 #include "megbrain/utils/arith_helper.h"
 
 namespace mgb {
