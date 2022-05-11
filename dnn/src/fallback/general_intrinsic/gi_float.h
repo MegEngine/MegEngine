@@ -1325,3 +1325,35 @@ GI_FORCEINLINE float32x2_t GiGetHighFloat32(GI_FLOAT32_t a) {
     return ___gi_vget_high_f32(a);
 #endif
 }
+
+GI_FORCEINLINE float32x2_t GiPaddFloat32(float32x2_t a, float32x2_t b) {
+#if defined(GI_NEON_INTRINSICS)
+    return vpadd_f32(a, b);
+#elif defined(GI_SSE2_INTRINSICS)
+    float32x2_t res;
+    res.m64_f32[0] = a.m64_f32[0] + a.m64_f32[1];
+    res.m64_f32[1] = b.m64_f32[0] + b.m64_f32[1];
+    return res;
+#else
+    float32x2_t res;
+    res[0] = a[0] + a[1];
+    res[1] = b[0] + b[1];
+    return res;
+#endif
+}
+
+GI_FORCEINLINE float32x2_t GiPmaxFloat32(float32x2_t a, float32x2_t b) {
+#if defined(GI_NEON_INTRINSICS)
+    return vpmax_f32(a, b);
+#elif defined(GI_SSE2_INTRINSICS)
+    float32x2_t res;
+    res.m64_f32[0] = MAX_NAN(a.m64_f32[0], a.m64_f32[1]);
+    res.m64_f32[1] = MAX_NAN(b.m64_f32[0], b.m64_f32[1]);
+    return res;
+#else
+    float32x2_t res;
+    res[0] = MAX_NAN(a[0], a[1]);
+    res[1] = MAX_NAN(b[0], b[1]);
+    return res;
+#endif
+}

@@ -12,7 +12,7 @@
 #pragma once
 #include "src/arm_common/pooling/opr_impl.h"
 #include "src/arm_common/pooling/pooling_helper.h"
-#include "src/common//utils.h"
+#include "src/common/utils.h"
 #include "src/naive/handle.h"
 
 namespace megdnn {
@@ -134,22 +134,15 @@ public:
     void exec(const PoolingKernParam& param) const override;
     MEGDNN_DECL_ALGO_TYPE(ARM_Filter5ModexStridexNCHW44)
 };
-class PoolingImpl::AlgoFp32ModexStridexNCHW44 final : public AlgoBase {
-public:
-    AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; };
-    const char* name() const override {
-        return "ARM_POOLING_FP32_MODEX_STRIDEX_NCHW44";
-    }
-    bool usable(const PoolingKernSizeParam& param) const override;
-    void exec(const PoolingKernParam& param) const override;
-    MEGDNN_DECL_ALGO_TYPE(ARM_Fp32ModexStridexNCHW44)
-};
+
 class PoolingImpl::AlgoFallback final : public AlgoBase {
 public:
     AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; };
     const char* name() const override { return "FALLBACK_POOLING"; }
     bool usable(const PoolingKernSizeParam&) const override { return true; }
-    void exec(const PoolingKernParam&) const override {}
+    void exec(const PoolingKernParam&) const override {
+        megdnn_assert(false, "code issue happened!!");
+    }
     MEGDNN_DECL_ALGO_TYPE(ARM_Fallback)
 };
 WorkspaceBundle get_bundle(const PoolingImpl::PoolingKernSizeParam& param);

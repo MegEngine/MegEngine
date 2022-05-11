@@ -1,5 +1,5 @@
 /**
- * \file dnn/src/arm_common/pooling/algo_fp32_pooling_nchw44.cpp
+ * \file dnn/src/fallback/pooling/gi/algo_fp32_pooling_nchw44.cpp
  * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
  *
  * Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
@@ -10,17 +10,17 @@
  * implied.
  */
 
+#include "algo.h"
+#include "kern_fp32_pooling_nchw44.h"
 #include "megdnn/opr_param_defs.h"
-#include "src/arm_common/pooling/algo.h"
-#include "src/arm_common/pooling/kern_fp32_pooling_nchw44.h"
 
 #include "midout.h"
 
-MIDOUT_DECL(megdnn_arm_common_fp32_pooling_nchw44)
+MIDOUT_DECL(megdnn_fallback_fp32_pooling_nchw44)
 
 namespace megdnn {
-namespace arm_common {
-bool PoolingImpl::AlgoFp32ModexStridexNCHW44::usable(
+namespace fallback {
+bool PoolingImpl::AlgoGiFp32ModexStridexNCHW44::usable(
         const PoolingKernSizeParam& param) const {
     uint32_t sh = param.stride[0];
     uint32_t sw = param.stride[1];
@@ -37,7 +37,7 @@ bool PoolingImpl::AlgoFp32ModexStridexNCHW44::usable(
     return avaible && size_ok;
 }
 
-void PoolingImpl::AlgoFp32ModexStridexNCHW44::exec(
+void PoolingImpl::AlgoGiFp32ModexStridexNCHW44::exec(
         const PoolingKernParam& param) const {
     int ih = param.isz[0];
     int iw = param.isz[1];
@@ -55,7 +55,7 @@ void PoolingImpl::AlgoFp32ModexStridexNCHW44::exec(
 
 #define DISPATCH_FUNC(filter, stride, mode)                                           \
     MIDOUT_BEGIN(                                                                     \
-            megdnn_arm_common_fp32_pooling_nchw44, midout_iv(0),                      \
+            megdnn_fallback_fp32_pooling_nchw44, midout_iv(0),                        \
             midout_iv(#filter #stride #mode##_hash)) {                                \
         auto run = [ih, iw, oh, ow, ph, pw, src_ptr, dst_ptr](size_t index, size_t) { \
             const int c_idx = index;                                                  \
@@ -135,7 +135,7 @@ void PoolingImpl::AlgoFp32ModexStridexNCHW44::exec(
 #undef DISPATCH_FUNC
 }
 
-}  // namespace arm_common
+}  // namespace fallback
 }  // namespace megdnn
 
 // vim: syntax=cpp.doxygen

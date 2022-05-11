@@ -3161,6 +3161,44 @@ TEST_F(FALLBACK, GiGetHighFloat32) {
     ASSERT_EQ(*(r + 1), s0[3]);
 }
 
+TEST_F(FALLBACK, GiPaddFloat32) {
+    float32x2_t src0, src1, ret;
+    std::vector<float> s0{1.1f, -3.1415f};
+    std::vector<float> s1{2.3f, 3.14777f};
+    memcpy(&src0, s0.data(), sizeof(float32x2_t));
+    memcpy(&src1, s1.data(), sizeof(float32x2_t));
+
+    ret = GiPaddFloat32(src0, src1);
+
+    std::vector<float> naive;
+    naive.push_back(s0[0] + s0[1]);
+    naive.push_back(s1[0] + s1[1]);
+
+    auto r = (float*)&ret;
+    ASSERT_LT(std::abs(naive[0] - r[0]), 1e-3);
+    ASSERT_LT(std::abs(naive[1] - r[1]), 1e-3);
+}
+
+TEST_F(FALLBACK, GiPmaxFloat32) {
+    float32x2_t src0, src1, ret;
+    std::vector<float> s0{1.1f, -3.1415f};
+    std::vector<float> s1{2.3f, 3.14777f};
+    memcpy(&src0, s0.data(), sizeof(float32x2_t));
+    memcpy(&src1, s1.data(), sizeof(float32x2_t));
+
+    ret = GiPmaxFloat32(src0, src1);
+
+    std::vector<float> naive;
+    auto t0 = MAX_NAN(s0[0], s0[1]);
+    auto t1 = MAX_NAN(s1[0], s1[1]);
+    naive.push_back(t0);
+    naive.push_back(t1);
+
+    auto r = (float*)&ret;
+    ASSERT_LT(std::abs(naive[0] - r[0]), 1e-3);
+    ASSERT_LT(std::abs(naive[1] - r[1]), 1e-3);
+}
+
 }  // namespace test
 }  // namespace megdnn
 

@@ -103,7 +103,9 @@ public:
     AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; };
     const char* name() const override { return m_algo_name.c_str(); }
     bool is_available(const SizeArgs&) const override { return true; }
-    void exec(const ExecArgs&) const override {}
+    void exec(const ExecArgs&) const override {
+        megdnn_assert(false, "code issue happened!!");
+    }
     MEGDNN_DECL_ALGO_TYPE(X86_Fallback)
 };
 
