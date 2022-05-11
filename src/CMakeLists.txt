@@ -185,7 +185,8 @@ if(MGB_WITH_FLATBUFFERS)
     ${CMAKE_CURRENT_BINARY_DIR}/serialization/impl/opr_param_defs.fbs
     ${CMAKE_CURRENT_BINARY_DIR}/serialization/impl/mgb_opr_param_defs.fbs
     ${CMAKE_CURRENT_SOURCE_DIR}/opr/impl/mgb_cpp_opr.fbs
-    ${CMAKE_CURRENT_SOURCE_DIR}/serialization/impl/schema.fbs)
+    ${CMAKE_CURRENT_SOURCE_DIR}/serialization/impl/schema.fbs
+    ${CMAKE_CURRENT_SOURCE_DIR}/serialization/impl/schema_v2.fbs)
   list(
     APPEND FLATBUFFERS_SCHEMA_INCLUDE_DIR
     ${CMAKE_CURRENT_SOURCE_DIR}/serialization/impl
