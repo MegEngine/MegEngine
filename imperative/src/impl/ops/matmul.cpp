@@ -31,18 +31,6 @@ auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
     DTypeScalar vi{-1};
     auto graph = inputs[0]->owner_graph();
 
-    bool remove_row = false, remove_col = false;
-    if (dim1 == 1) {
-        dim1 = 2;
-        remove_row = true;
-        inp1 = inp1.add_axis(0);
-    }
-    if (dim2 == 1) {
-        dim2 = 2;
-        remove_col = true;
-        inp2 = inp2.add_axis(1);
-    }
-
     SymbolVar shp1_head, shp1_tail, shp2_head, shp2_tail;
     if (dim1 > 2) {
         auto idx = opr::ImmutableTensor::make(*graph, vi, config);
@@ -91,17 +79,6 @@ auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
         result = result.reshape(tshp);
     }
 
-    auto maxdim = dim1 > dim2 ? dim1 : dim2;
-    if (remove_row) {
-        std::vector<Desc> remove_param;
-        remove_param.push_back(Desc::make_remove(maxdim - 2));
-        result = opr::AxisAddRemove::make(result, remove_param);
-    }
-    if (remove_col) {
-        std::vector<Desc> remove_param;
-        remove_param.push_back(Desc::make_remove(maxdim - 1));
-        result = opr::AxisAddRemove::make(result, remove_param);
-    }
     return result;
 }
 
@@ -113,6 +90,19 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
     size_t dim1 = layout1.ndim, dim2 = layout2.ndim;
 
     DType dst_dtype;
+    if (dim1 == dim2 && dim2 >= 3) {  // only happens in backward
+        for (size_t i = 1; i + 1 < layout1.ndim; ++i) {
+            layout1[0] *= layout1[i];
+            layout2[0] *= layout2[i];
+        }
+        layout1[1] = layout1[layout1.ndim - 1];
+        layout1.ndim = 2;
+        layout1.init_contiguous_stride();
+        layout2[1] = layout2[layout2.ndim - 1];
+        layout2.ndim = 2;
+        layout2.init_contiguous_stride();
+        dim1 = dim2 = 2;
+    }
 
     DnnOprCaller<megdnn::MatrixMul> dnn_opr(inputs[0].comp_node);
     dnn_opr.op->param() = matmul.param();
@@ -156,6 +146,19 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
     DnnOprCaller<megdnn::MatrixMul> dnn_opr(cn);
     dnn_opr.op->param() = matmul.param();
 
+    if (matmul.dimA == matmul.dimB && matmul.dimB >= 3) {  // only happens in backward
+        for (size_t i = 1; i + 1 < layout1.ndim; ++i) {
+            layout1[0] *= layout1[i];
+            layout2[0] *= layout2[i];
+        }
+        layout1[1] = layout1[layout1.ndim - 1];
+        layout1.ndim = 2;
+        layout1.init_contiguous_stride();
+        layout2[1] = layout2[layout2.ndim - 1];
+        layout2.ndim = 2;
+        layout2.init_contiguous_stride();
+    }
+
     DType dst_dtype;
     dnn_opr.op->deduce_dtype(layout1.dtype, layout1.dtype, dst_dtype);
 
@@ -191,11 +194,7 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
     }
 
     TensorLayout layout_a = layout1, layout_b = layout2;
-    if (dim1 == 1) {
-        layout_a.add_axis_cont_inplace(0);
-        inp_tensornds[0] = inputs[0]->dnn_tensor();
-        inp_tensornds[0].layout = layout_a;
-    } else if (dim1 > 2) {
+    if (dim1 > 2) {
         size_t batch = std::accumulate(
                 layout1.shape, layout1.shape + dim1 - 1, (size_t)1,
                 std::multiplies<size_t>());
@@ -216,13 +215,7 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
         inp_tensornds[0] = inputs[0]->dnn_tensor();
     }
 
-    if (dim2 == 1) {
-        layout_b.add_axis_inplace(1, 1, 1);
-        inp_tensornds[1] = inputs[1]->dnn_tensor();
-        inp_tensornds[1].layout = layout_b;
-    } else {
-        inp_tensornds[1] = inputs[1]->dnn_tensor();
-    }
+    inp_tensornds[1] = inputs[1]->dnn_tensor();
 
     TensorLayout dst_layout = TensorLayout({layout_a[0], layout_b[1]}, dst_dtype);
     dst_layout.init_contiguous_stride();
@@ -231,6 +224,11 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
         std::swap(layout_a.shape[0], layout_a.shape[1]);
     if (matmul.transposeB)
         std::swap(layout_b.shape[0], layout_b.shape[1]);
+
+    if (matmul.dimA == matmul.dimB && matmul.dimB >= 3) {  // only happens in backward
+        inp_tensornds[0].layout = layout_a;
+        inp_tensornds[1].layout = layout_b;
+    }
 
     DeviceTensorND out =
             BlobManager::inst()->alloc_workspace_with_defrag(cn, dst_layout);
@@ -278,18 +276,6 @@ auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
     DTypeScalar vi{-2};
     auto graph = inputs[0]->owner_graph();
     auto idx = opr::ImmutableTensor::make(*graph, vi, config);
-
-    bool remove_row = false, remove_col = false;
-    if (dim1 == 1) {
-        dim1 = 2;
-        remove_row = true;
-        inp1 = inp1.add_axis(0);
-    }
-    if (dim2 == 1) {
-        dim2 = 2;
-        remove_col = true;
-        inp2 = inp2.add_axis(1);
-    }
 
     auto shp1 = inp1.symshape();
     auto shp2 = inp2.symshape();
@@ -349,16 +335,6 @@ auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
         result_shp = opr::Concat::make({batch_shape, shp_tail}, 0, cn);
         result = result.reshape(result_shp);
     }
-    if (remove_row) {
-        std::vector<Desc> remove_param;
-        remove_param.push_back(Desc::make_remove(maxdim - 2));
-        result = opr::AxisAddRemove::make(result, remove_param);
-    }
-    if (remove_col) {
-        std::vector<Desc> remove_param;
-        remove_param.push_back(Desc::make_remove(maxdim - 1));
-        result = opr::AxisAddRemove::make(result, remove_param);
-    }
     return result;
 }
 
@@ -417,21 +393,6 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
     dnn_opr.op->param() = matmul.param();
     DType dst_dtype;
     dnn_opr.op->deduce_dtype(layout1.dtype, layout1.dtype, dst_dtype);
-
-    bool remove_row = false, remove_col = false;
-    if (dim1 == 1) {
-        dim1 = 2;
-        remove_row = true;
-    }
-    if (dim2 == 1) {
-        dim2 = 2;
-        remove_col = true;
-    }
-
-    if (remove_row)
-        layout1.add_axis_cont_inplace(0);
-    if (remove_col)
-        layout2.add_axis_inplace(1, 1, 1);
 
     TensorShape tshp, batch_shp;
     size_t j = 0;
@@ -529,12 +490,6 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
     shp1[shp1.ndim - 1] = dst_layout[dst_layout.ndim - 1];
     if (maxdim > 3) {
         dst_layout = dst_layout.reshape(shp1);
-    }
-    if (remove_row) {
-        dst_layout = dst_layout.remove_axis(maxdim - 2);
-    }
-    if (remove_col) {
-        dst_layout = dst_layout.remove_axis(maxdim - 1);
     }
     return {Tensor::make(out.sub(SubTensorSpec::make_from_layout(dst_layout)))};
 }

@@ -13,6 +13,7 @@ from .._imperative_rt.core2 import (
     astype_cpp,
     batched_matmul_cpp,
     broadcast_cpp,
+    expand_dims_cpp,
     getitem_cpp,
     matmul_cpp,
     reshape_cpp,
@@ -62,7 +63,6 @@ def _matmul(
     assert dim1 > 0 and dim2 > 0
     maxdim = dim1 if dim1 > dim2 else dim2
     compute_mode = _config._get_actual_op_param(compute_mode, _config.__compute_mode)
-
     if dim1 == 1 and dim2 == 1:  # dispatch to Dot
         (result,) = apply(builtin.Dot(), inp1, inp2)
         return result
@@ -72,34 +72,44 @@ def _matmul(
         # 2x2
         # nx1(transpose_a=False), n>=3
         # nx2(transpose_a=False), n>=3
-        return matmul_cpp(
-            inp1,
-            inp2,
-            dim1,
-            dim2,
+        ret = matmul_cpp(
+            inp1 if dim1 > 1 else expand_dims_cpp(inp1, 0),
+            inp2 if dim2 > 1 else expand_dims_cpp(inp2, -1),
+            max(dim1, 2),
+            max(dim2, 2),
             transpose_a,
             transpose_b,
             compute_mode,
             _config._benchmark_kernel,
             _config._deterministic_kernel,
         )
+        if dim1 == 1:
+            ret = squeeze_cpp(ret, -2)
+        elif dim2 == 1:
+            ret = squeeze_cpp(ret, -1)
+        return ret
     else:  # dispath to BatchedMatrixMul
         # nx1(transpose_a=True), n>=3
         # nx2(transpose_a=True), n>=3
         # nxm,n>=3,m>=3
         # 1xm,m>=3
         # 2xm,m>=3
-        return batched_matmul_cpp(
-            inp1,
-            inp2,
-            dim1,
-            dim2,
+        ret = batched_matmul_cpp(
+            inp1 if dim1 > 1 else expand_dims_cpp(inp1, 0),
+            inp2 if dim2 > 1 else expand_dims_cpp(inp2, -1),
+            max(dim1, 2),
+            max(dim2, 2),
             transpose_a,
             transpose_b,
             compute_mode,
             _config._benchmark_kernel,
             _config._deterministic_kernel,
         )
+        if dim1 == 1:
+            ret = squeeze_cpp(ret, -2)
+        elif dim2 == 1:
+            ret = squeeze_cpp(ret, -1)
+        return ret
 
 
 def _unary_elwise(mode):

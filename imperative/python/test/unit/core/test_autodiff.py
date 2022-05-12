@@ -511,3 +511,45 @@ def test_pixel_shuffle():
         y = f(x)
         grad(y, F.ones_like(y))
     np.testing.assert_equal(2 * x.numpy(), x.grad.numpy())
+
+
+def test_matmul():
+    def test_one(xdim, ydim, transposeA, transposeB):
+        xshape = (1, 4) if xdim == 1 else (2,) * (xdim - 2) + (3, 4)
+        yshape = (4, 1) if ydim == 1 else (2,) * (ydim - 2) + (4, 5)
+        x = np.random.rand(*xshape).astype("float32")
+        y = np.random.rand(*yshape).astype("float32")
+        gshape = (x @ y).shape
+        g = np.random.rand(*gshape).astype("float32")
+        dx = g @ np.swapaxes(y, -1, -2)
+        dy = np.swapaxes(x, -1, -2) @ g
+        while dx.shape != x.shape:
+            dx = dx.sum(0)
+        while dy.shape != y.shape:
+            dy = dy.sum(0)
+        if transposeA:
+            x = np.swapaxes(x, -1, -2)
+            dx = np.swapaxes(dx, -1, -2)
+        if transposeB:
+            y = np.swapaxes(y, -1, -2)
+            dy = np.swapaxes(dy, -1, -2)
+        x = mge.Tensor(x.squeeze())
+        y = mge.Tensor(y.squeeze())
+        g = mge.Tensor(g.squeeze())
+        with Grad() as grad:
+            grad.wrt(x, callback=save_to(x))
+            grad.wrt(y, callback=save_to(y))
+            z = F.matmul(x, y, transpose_a=transposeA, transpose_b=transposeB)
+            grad(z, g)
+        np.testing.assert_almost_equal(dx.squeeze(), x.grad.numpy(), decimal=5)
+        np.testing.assert_almost_equal(dy.squeeze(), y.grad.numpy(), decimal=5)
+
+    for xdim in [1, 2, 3, 4]:
+        for ydim in [1, 2, 3, 4]:
+            for transposeA in [False, True]:
+                if xdim == 1 and transposeA == True:
+                    continue
+                for transposeB in [False, True]:
+                    if ydim == 1 and transposeB == True:
+                        continue
+                    test_one(xdim, ydim, transposeA, transposeB)

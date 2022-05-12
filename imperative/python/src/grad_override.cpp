@@ -87,6 +87,136 @@ ValueRef make_empty_tensor(
     return res;
 }
 
+std::optional<ValueRefList> matrix_mul_grad_rule(
+        const OpDef& op, Span<ValueRef> inputs, Span<bool> inputs_require_grad,
+        CustomBackward& backward) {
+    auto&& matmul = op.cast_final_safe<MatrixMul>();
+    size_t dimA = matmul.dimA;
+    size_t dimB = matmul.dimB;
+    auto&& param = matmul.param();
+    auto&& policy = matmul.policy();
+    mgb_assert(inputs.size() == 2);
+    std::array<ValueRef, 2> inps, input_shapes;
+    for (size_t i = 0; i < 2; ++i) {
+        if (inputs_require_grad[i ^ 1]) {
+            inps[i] = inputs[i];
+            input_shapes[i] = get_shape(inputs[i]);
+        }
+    }
+    auto maker = CustomGradMaker(backward, inputs.size());
+    maker.output_size(1).output_captured(0, false);
+    maker.backward([inps_ = std::move(inps), input_shapes_ = std::move(input_shapes),
+                    param, policy, dimA, dimB](Span<ValueRef> grads) {
+        mgb_assert(grads.size() == 1);
+        ValueRef grad = grads[0];
+        SmallVector<ValueRef> ret(2);
+        if (!grad) {
+            return ret;
+        }
+        size_t dimG = std::max(dimA, dimB);
+        if (inps_[1]) {
+            if (param.transposeA) {
+                // A^T(2) @ B(2) = G(2), A'(2) = B'(2) @ G'^T(2) -> MatrixMul
+                auto&& grad_op = MatrixMul::make(
+                        param.transposeB, true, param.compute_mode, param.format,
+                        policy.strategy, policy.workspace_limit, dimB, dimG);
+                ret[0] = imperative::apply(*grad_op, inps_[1], grad)[0];
+            } else {
+                // A(>=2) @ B(2) = G(>=2), A'(>=2) = G'(>=2) @ B(2) -> MatrixMul
+                auto&& grad_op = MatrixMul::make(
+                        false, !param.transposeB, param.compute_mode, param.format,
+                        policy.strategy, policy.workspace_limit, dimG, dimB);
+                ret[0] = imperative::apply(*grad_op, grad, inps_[1])[0];
+            }
+        }
+        if (inps_[0]) {
+            if (param.transposeB) {
+                // A(>=2) @ B^T(2) = G(>=2), B'(2) = G'^T(>=2) @ A(>=2) -> MatrixMul
+                // (specialized)
+                auto&& grad_op = MatrixMul::make(
+                        true, param.transposeA, param.compute_mode, param.format,
+                        policy.strategy, policy.workspace_limit, dimG, dimA);
+                ret[1] = imperative::apply(*grad_op, grad, inps_[0])[0];
+            } else {
+                // A(>=2) @ B(2) = G(>=2), B'(2) = G'(>=2) @ A(>=2) -> MatrixMul
+                // (specialized)
+                auto&& grad_op = MatrixMul::make(
+                        !param.transposeA, false, param.compute_mode, param.format,
+                        policy.strategy, policy.workspace_limit, dimA, dimG);
+                ret[1] = imperative::apply(*grad_op, inps_[0], grad)[0];
+            }
+        }
+        return ret;
+    });
+    maker.finalize();
+    return imperative::apply(ApplyOp(op), inputs);
+}
+
+std::optional<ValueRefList> batched_matrix_mul_grad_rule(
+        const OpDef& op, Span<ValueRef> inputs, Span<bool> inputs_require_grad,
+        CustomBackward& backward) {
+    auto&& bmm = op.cast_final_safe<BatchedMatrixMul>();
+    size_t dimA = bmm.dimA;
+    size_t dimB = bmm.dimB;
+    auto&& param = bmm.param();
+    auto&& policy = bmm.policy();
+    mgb_assert(inputs.size() == 2);
+    std::array<ValueRef, 2> inps, input_shapes;
+    for (size_t i = 0; i < 2; ++i) {
+        if (inputs_require_grad[i ^ 1]) {
+            inps[i] = inputs[i];
+            input_shapes[i] = get_shape(inputs[i]);
+        }
+    }
+    auto maker = CustomGradMaker(backward, inputs.size());
+    maker.output_size(1).output_captured(0, false);
+    maker.backward([inps_ = std::move(inps), input_shapes_ = std::move(input_shapes),
+                    param, policy, dimA, dimB](Span<ValueRef> grads) {
+        mgb_assert(grads.size() == 1);
+        ValueRef grad = grads[0];
+        SmallVector<ValueRef> ret(2);
+        if (!grad) {
+            return ret;
+        }
+        size_t dimG = std::max(dimA, dimB);
+        if (inps_[1]) {
+            if (param.transposeA) {
+                auto&& grad_op = BatchedMatrixMul::make(
+                        param.transposeB, true, param.compute_mode, param.format,
+                        policy.strategy, policy.workspace_limit, dimB, dimG);
+                ret[0] = imperative::apply(*grad_op, inps_[1], grad)[0];
+            } else {
+                auto&& grad_op = BatchedMatrixMul::make(
+                        false, !param.transposeB, param.compute_mode, param.format,
+                        policy.strategy, policy.workspace_limit, dimG, dimB);
+                ret[0] = imperative::apply(*grad_op, grad, inps_[1])[0];
+            }
+            if (dimG != dimA) {
+                ret[0] = reduce_to(ret[0], input_shapes_[0]);
+            }
+        }
+        if (inps_[0]) {
+            if (param.transposeB) {
+                auto&& grad_op = BatchedMatrixMul::make(
+                        true, param.transposeA, param.compute_mode, param.format,
+                        policy.strategy, policy.workspace_limit, dimG, dimA);
+                ret[1] = imperative::apply(*grad_op, grad, inps_[0])[0];
+            } else {
+                auto&& grad_op = BatchedMatrixMul::make(
+                        !param.transposeA, false, param.compute_mode, param.format,
+                        policy.strategy, policy.workspace_limit, dimA, dimG);
+                ret[1] = imperative::apply(*grad_op, inps_[0], grad)[0];
+            }
+            if (dimG != dimB) {
+                ret[1] = reduce_to(ret[1], input_shapes_[1]);
+            }
+        }
+        return ret;
+    });
+    maker.finalize();
+    return imperative::apply(ApplyOp(op), inputs);
+}
+
 std::optional<ValueRefList> elemwise_grad_rule(
         const OpDef& op, Span<ValueRef> inputs, Span<bool> inputs_require_grad,
         CustomBackward& backward) {
@@ -395,6 +525,9 @@ struct Init {
                 FastpathCopy::typeinfo(), fastpathcopy_grad_rule);
         CustomBackward::register_grad_rule(
                 PixelShuffle::typeinfo(), pixelShuffle_grad_rule);
+        CustomBackward::register_grad_rule(MatrixMul::typeinfo(), matrix_mul_grad_rule);
+        CustomBackward::register_grad_rule(
+                BatchedMatrixMul::typeinfo(), batched_matrix_mul_grad_rule);
     }
 } _;
 
