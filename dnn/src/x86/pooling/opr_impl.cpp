@@ -109,7 +109,7 @@ void PoolingImpl::exec(
     if (!is_fallback_algo(algo)) {
         algo->exec(args);
     } else {
-        fallback::PoolingImpl::exec(src, dst, Workspace());
+        fallback::PoolingImpl::exec(src, dst, workspace);
     }
 }
 
