@@ -1,3 +1,4 @@
+#pragma once
 #if MGB_ENABLE_FBS_SERIALIZATION
 #include "megbrain/comp_node_env.h"
 #include "megbrain/opr/dnn/softmax.h"

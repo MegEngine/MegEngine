@@ -5,7 +5,7 @@ include "mgb_cpp_opr.fbs";
 
 namespace mgb.serialization.fbs.v2;
 
-file_identifier "mge2";
+file_identifier "mgv2";
 
 table CompNode {
     logical_locator:string;
@@ -105,7 +105,7 @@ union OperatorParam {
     param.OptionalAxisV1 = 54,
     param.ExecutionPolicy = 55,
     param.AssertEqual = 56,
-    param.FpgaConv = 57,
+    Reserved0 = 57,
     param.CollectiveComm = 58,
     param.CondExecPred = 59,
     param.CondExecPredLogical = 60,
@@ -197,6 +197,11 @@ table OutputVar {
     original_id:uint;
 }
 
+table OutputAlias {
+    id:uint;
+    name:string;
+}
+
 table Model {
     /// the megengine version when serialize the model
     mge_version:uint;
@@ -213,6 +218,7 @@ table Model {
     middle_tensors:[MiddleTensor];
 
     output_vars_idx:[OutputVar];
+    output_alias:[OutputAlias];
 
     nr_shared_tensor:uint;
     /// the Metadata to storage the custom data or some flags

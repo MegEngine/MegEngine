@@ -233,9 +233,8 @@ public:
             int addition_index = index - 1;
             if (addition_index >=
                 static_cast<int>(m_current_opr->additional_params()->size())) {
-                mgb_log_warn(
-                        "Model has no addition param of index %d, just construct a "
-                        "default one.",
+                mgb_throw(
+                        SerializationError, "Model has no addition param of index %d.",
                         addition_index);
             } else {
                 mgb_assert(

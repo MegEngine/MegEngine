@@ -1,3 +1,5 @@
+#pragma once
+
 #include "megbrain/graph/symbol_var.h"
 #include "megdnn/oprs/general.h"
 #if MGB_ENABLE_FBS_SERIALIZATION
