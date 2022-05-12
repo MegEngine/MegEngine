@@ -3,7 +3,6 @@
 #include "megbrain/serialization/opr_load_dump.h"
 #include "megbrain/serialization/opr_registry.h"
 #include "megbrain/serialization/opr_shallow_copy.h"
-#include "megbrain/serialization/oss_opr_load_dump.h"
 #include "megbrain/utils/hash_ct.h"
 
 namespace mgb {

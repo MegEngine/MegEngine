@@ -308,6 +308,7 @@ void init_graph_rt(py::module m) {
 
     py::enum_<_SerializationFormat>(m, "SerializationFormat")
             .value("FBS", _SerializationFormat::FLATBUFFERS)
+            .value("FBS_V2", _SerializationFormat::FLATBUFFERS_V2)
             .export_values();
 
     m.def("optimize_for_inference",
@@ -384,11 +385,9 @@ void init_graph_rt(py::module m) {
              std::optional<_SerializationFormat> dump_format, py::list& stat,
              py::list& inputs, py::list& outputs, py::list& params) {
               std::vector<uint8_t> buf;
-              ser::GraphDumpFormat format;
+              ser::GraphDumpFormat format = ser::GraphDumpFormat::FLATBUFFERS_V2;
               if (dump_format.has_value()) {
                   format = dump_format.value();
-              } else {
-                  format = {};
               }
               auto dumper = ser::GraphDumper::make(
                       ser::OutputFile::make_vector_proxy(&buf), format);

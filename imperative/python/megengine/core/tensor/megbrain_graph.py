@@ -430,6 +430,7 @@ def dump_graph(
 
     dump_format_map = {
         None: None,
+        "FBS_V2": SerializationFormat.FBS_V2,
         "FBS": SerializationFormat.FBS,
     }
     dump_format = dump_format_map[dump_format]
