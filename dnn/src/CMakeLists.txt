@@ -188,8 +188,21 @@ if(MGE_WITH_CUDA)
   gen_cutlass_kimpl(dwconv2d_dgrad tensorop884 CUTLASS_SOURCES)
   gen_cutlass_kimpl(dwconv2d_wgrad simt CUTLASS_SOURCES)
   gen_cutlass_kimpl(dwconv2d_wgrad tensorop884 CUTLASS_SOURCES)
-  list(APPEND SOURCES ${CUTLASS_SOURCES})
-  list(APPEND SOURCES ${CUSOURCES})
+  # Compile the following opr first
+  file(
+    GLOB_RECURSE
+    PRIORITY_DIRS
+    cuda/type_cvt/*cu
+    cuda/conv_bias/*cu
+    cuda/reduce/*cu
+    cuda/relayout/*cu
+    cuda/relayout_format/*cu
+    cuda/powc/*cu
+    cuda/warp_perspective/*cu)
+  list(PREPEND PRIORITY_DIRS ${CUTLASS_SOURCES})
+  list(PREPEND CUSOURCES ${PRIORITY_DIRS})
+  list(REMOVE_DUPLICATES CUSOURCES)
+  list(PREPEND SOURCES ${CUSOURCES})
 endif()
 
 if(MGE_WITH_ATLAS)

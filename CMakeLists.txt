@@ -97,6 +97,11 @@ option(MGE_WITH_LARGE_ARCHIVE "Enable big archive link support" OFF)
 option(MGE_BUILD_WITH_ASAN "Enable build with ASAN, need compiler support" OFF)
 option(MGE_WITH_CUSTOM_OP "Build with Custom op" OFF)
 option(MGE_SYNC_THIRD_PARTY "help sync third_party submodule" OFF)
+option(MGE_PROFILE_COMPILE_TIME "help profile compile time per file" OFF)
+
+if(MGE_PROFILE_COMPILE_TIME)
+  set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "cmake -E time")
+endif()
 
 # TODO: add windows support
 cmake_dependent_option(MGE_WITH_CUPTI "Build with CUPTI" ON
