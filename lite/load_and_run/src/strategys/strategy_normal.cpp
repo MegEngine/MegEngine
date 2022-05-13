@@ -91,10 +91,10 @@ void NormalStrategy::run_subline() {
             model->run_model();
             auto exec_time = timer.get_msecs();
             model->wait();
+            auto cur = timer.get_msecs();
             m_runtime_param.stage = RunStage::AFTER_RUNNING_WAIT;
             stage_config_model();
-            auto cur = timer.get_msecs();
-            printf("iter %lu/%lu: %.3f ms (exec=%.3f ms)\n", i, run_num, cur,
+            printf("iter %lu/%lu: e2e=%.3f ms (host=%.3f ms)\n", i, run_num, cur,
                    exec_time);
             time_sum += cur;
             time_sqrsum += cur * cur;
@@ -103,7 +103,7 @@ void NormalStrategy::run_subline() {
             max_time = std::max(max_time, cur);
         }
         printf("\n=== finished test #%u: time=%.3f ms avg_time=%.3f ms "
-               "sexec=%.3f ms min=%.3f ms max=%.3f ms\n\n",
+               "standard_deviation=%.3f ms min=%.3f ms max=%.3f ms\n\n",
                idx, time_sum, time_sum / run_num,
                std::sqrt(
                        (time_sqrsum * run_num - time_sum * time_sum) /
