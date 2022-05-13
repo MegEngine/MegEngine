@@ -1,0 +1,7 @@
+0df57b38e71a4d1882ed6c24f3a26b57  ../../dnn/scripts/opr_param_defs.py
+759bfbf27fd3f0dd6b6edf06377e1d6b  ../../src/core/include/megbrain/ir/ops.td
+c613316001b5f0294ede198f5563f041  generated/opdef.h.inl
+a1f7f13c909f9d4c173277f4ed28fb61  generated/opdef.cpp.inl
+cf48f9ca352fabaeb6c846c11c6b1662  generated/opdef.py.inl
+12365b938f564e5b3639d309f7c83414  generated/opdef.cpy.inl
+71e1462bf4d882e2615c3c632cb671cc  generated/enum_macro.h

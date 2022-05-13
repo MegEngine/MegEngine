@@ -3,8 +3,9 @@
 #include "./targets/pybind11.h"
 #include "./targets/python_c_extension.h"
 
-using llvm::raw_ostream;
-using llvm::RecordKeeper;
+namespace {
+
+using namespace mlir::tblgen;
 
 enum ActionType { None, CppHeader, CppBody, Pybind, CPython, EnumListMacro };
 
@@ -24,25 +25,35 @@ llvm::cl::opt<ActionType> action(
                         EnumListMacro, "gen-enum-list-macro",
                         "Generate enum param list macro")));
 
-using namespace mlir::tblgen;
+template <llvm::TableGenMainFn* MainFn>
+llvm::TableGenMainFn* WrapMain() {
+    return [](llvm::raw_ostream& os, llvm::RecordKeeper& records) -> bool {
+        os << "// clang-format off\n";
+        auto ret = MainFn(os, records);
+        os << "// clang-format on\n";
+        return ret;
+    };
+}
+
+}  // namespace
 
 int main(int argc, char** argv) {
     llvm::InitLLVM y(argc, argv);
     llvm::cl::ParseCommandLineOptions(argc, argv);
     if (action == ActionType::CppHeader) {
-        return TableGenMain(argv[0], &gen_op_def_c_header);
+        return TableGenMain(argv[0], WrapMain<&gen_op_def_c_header>());
     }
     if (action == ActionType::CppBody) {
-        return TableGenMain(argv[0], &gen_op_def_c_body);
+        return TableGenMain(argv[0], WrapMain<&gen_op_def_c_body>());
     }
     if (action == ActionType::Pybind) {
-        return TableGenMain(argv[0], &gen_op_def_pybind11);
+        return TableGenMain(argv[0], WrapMain<&gen_op_def_pybind11>());
     }
     if (action == ActionType::CPython) {
-        return TableGenMain(argv[0], &gen_op_def_python_c_extension);
+        return TableGenMain(argv[0], WrapMain<&gen_op_def_python_c_extension>());
     }
     if (action == ActionType::EnumListMacro) {
-        return TableGenMain(argv[0], &gen_enum_param_list_macro);
+        return TableGenMain(argv[0], WrapMain<&gen_enum_param_list_macro>());
     }
     return -1;
 }
