@@ -7,7 +7,9 @@ import pytest
 import megengine as mge
 import megengine.autodiff as ad
 import megengine.functional as F
+import megengine.optimizer as optim
 from megengine import Tensor
+from megengine.core import set_option
 from megengine.module import Linear, Module
 from megengine.optimizer import SGD
 from megengine.traced_module import trace_module
@@ -66,8 +68,13 @@ class XORNet(Module):
         return x
 
 
-@pytest.mark.parametrize("test_traced_module", [True, False])
-def test_training_converge(test_traced_module):
+@pytest.mark.parametrize(
+    "test_traced_module, with_drop, grad_clip",
+    [(False, False, False), (True, True, True)],
+)
+def test_training_converge(test_traced_module, with_drop, grad_clip):
+    if with_drop:
+        set_option("enable_drop", 1)
     net = XORNet()
     if test_traced_module:
         inp = Tensor(np.random.random((14, 2)))
@@ -81,6 +88,8 @@ def test_training_converge(test_traced_module):
             pred = net(data)
             loss = F.nn.cross_entropy(pred, label)
             gm.backward(loss)
+            if grad_clip:
+                optim.clip_grad_norm(net.parameters(), max_norm=0.2, ord=2.0)
         return loss
 
     def infer(data):
@@ -89,11 +98,13 @@ def test_training_converge(test_traced_module):
     train_dataset = minibatch_generator()
     losses = []
 
-    for data, label in itertools.islice(train_dataset, 2000):
+    for data, label in itertools.islice(train_dataset, 1500):
         data = Tensor(data, dtype=np.float32)
         label = Tensor(label, dtype=np.int32)
         opt.clear_grad()
         loss = train(data, label)
+        if grad_clip:
+            optim.clip_grad_value(net.parameters(), lower=-0.1, upper=0.1)
         opt.step()
         losses.append(loss.numpy())
 
@@ -110,3 +121,6 @@ def test_training_converge(test_traced_module):
     assert precision == 1.0, "Test precision must be high enough, get {}".format(
         precision
     )
+
+    if with_drop:
+        set_option("enable_drop", 0)
