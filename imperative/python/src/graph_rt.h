@@ -8,6 +8,9 @@
 #include "megbrain/graph.h"
 #include "megbrain/plugin/opr_footprint.h"
 
+namespace py = pybind11;
+extern py::object Py_Varnode;
+
 template <typename T>
 class GraphNodePtr {
     std::shared_ptr<mgb::cg::ComputingGraph> m_graph;

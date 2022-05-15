@@ -395,7 +395,7 @@ class Network:
                 for ind, var in enumerate(opr.outputs):
                     var.owner = repl_dict[opr]
                     var.__dict__.update(repl_dict[opr].outputs[ind].__dict__)
-                    var.var = repl_dict[opr].outputs[ind].var
+                    var._reset_var(repl_dict[opr].outputs[ind].var)
                 repl_dict[opr].outputs = opr.outputs
         self._compile()
 

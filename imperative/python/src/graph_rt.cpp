@@ -114,6 +114,8 @@ void _set_priority_to_id(const std::vector<mgb::cg::VarNode*>& dest_vars) {
     }
 }
 
+py::object Py_Varnode = py::none();
+
 void init_graph_rt(py::module m) {
     static const std::unique_ptr<mgb::OprFootprint> _imperative_sm_opr_footprint_ptr{
             std::make_unique<mgb::OprFootprint>()};
@@ -124,40 +126,44 @@ void init_graph_rt(py::module m) {
 
     def_rendezvous<TensorAttr>(m, "TensorAttrRendezvous");
 
-    py::class_<cg::VarNode, GraphNodePtr<cg::VarNode>>(m, "VarNode")
-            .def_property_readonly(
-                    "owner", [](cg::VarNode* v) { return v->owner_opr(); })
-            .def_property_readonly(
-                    "graph", [](cg::VarNode* v) { return v->owner_graph(); })
-            .def_property(
-                    "name", py::overload_cast<>(&VarNode::name, py::const_),
-                    py::overload_cast<std::string>(&VarNode::name))
-            .def_property_readonly("dtype", [](cg::VarNode* v) { return v->dtype(); })
-            .def_property_readonly(
-                    "comp_node", [](cg::VarNode* v) { return v->comp_node(); })
-            .def_property_readonly(
-                    "shape",
-                    [](cg::VarNode* v) -> const TensorShape* {
-                        auto&& mgr = v->owner_graph()->static_infer_manager();
-                        return mgr.infer_shape_fallible(v);
-                    })
-            .def_property_readonly(
-                    "value",
-                    [](cg::VarNode* v) -> py::object {
-                        auto&& mgr = v->owner_graph()->static_infer_manager();
-                        auto&& type = mgr.get_infer_type(v);
-                        using InferType = cg::static_infer::InferType;
-                        if (!(type.value & (InferType::CONST | InferType::RT_STATIC))) {
-                            return py::none();
-                        }
-                        auto* val = mgr.infer_value_fallible(v);
-                        if (!val) {
-                            return py::none();
-                        }
-                        return py::cast(*val).attr("numpy")();
-                    })
-            .def_property_readonly("id", [](cg::VarNode* v) { return (v->id()); })
-            .def("__repr__", [](cg::VarNode* v) { return "Var:" + v->name(); });
+    Py_Varnode =
+            py::class_<cg::VarNode, GraphNodePtr<cg::VarNode>>(m, "VarNode")
+                    .def_property_readonly(
+                            "owner", [](cg::VarNode* v) { return v->owner_opr(); })
+                    .def_property_readonly(
+                            "graph", [](cg::VarNode* v) { return v->owner_graph(); })
+                    .def_property(
+                            "name", py::overload_cast<>(&VarNode::name, py::const_),
+                            py::overload_cast<std::string>(&VarNode::name))
+                    .def_property_readonly(
+                            "dtype", [](cg::VarNode* v) { return v->dtype(); })
+                    .def_property_readonly(
+                            "comp_node", [](cg::VarNode* v) { return v->comp_node(); })
+                    .def_property_readonly(
+                            "shape",
+                            [](cg::VarNode* v) -> const TensorShape* {
+                                auto&& mgr = v->owner_graph()->static_infer_manager();
+                                return mgr.infer_shape_fallible(v);
+                            })
+                    .def_property_readonly(
+                            "value",
+                            [](cg::VarNode* v) -> py::object {
+                                auto&& mgr = v->owner_graph()->static_infer_manager();
+                                auto&& type = mgr.get_infer_type(v);
+                                using InferType = cg::static_infer::InferType;
+                                if (!(type.value &
+                                      (InferType::CONST | InferType::RT_STATIC))) {
+                                    return py::none();
+                                }
+                                auto* val = mgr.infer_value_fallible(v);
+                                if (!val) {
+                                    return py::none();
+                                }
+                                return py::cast(*val).attr("numpy")();
+                            })
+                    .def_property_readonly(
+                            "id", [](cg::VarNode* v) { return (v->id()); })
+                    .def("__repr__", [](cg::VarNode* v) { return "Var:" + v->name(); });
 
     py::class_<cg::OperatorNodeBase, GraphNodePtr<cg::OperatorNodeBase>>(
             m, "OperatorNode")

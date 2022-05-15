@@ -146,15 +146,6 @@ PyArray_Descr* _dtype_promotion(PyObject* const* args, size_t nargs) {
                 continue;
             }
 
-            if (py::isinstance<PySymbolVar>(py::handle(handle))) {
-                auto var = py::handle(handle).cast<PySymbolVar*>();
-                mgb::DType type = var->m_node->dtype();
-                auto&& descr = npy::dtype_mgb2np_descr(type);
-                Py_INCREF(descr.get());
-                tensors.emplace_back(descr.get());
-                continue;
-            }
-
             PyArray_Descr* descr = scalar2dtype(handle);
             if (descr) {
                 scalars.emplace_back(descr);
@@ -204,17 +195,12 @@ CompNode _get_device(PyObject* const* args, size_t nargs) {
         PyObject* handle = is_tuple ? PyTuple_GetItem(tuple, i) : args[i];
         TensorWrapper* tw = TensorWrapper::try_cast(handle);
 
-        bool is_symvar = py::isinstance<PySymbolVar>(py::handle(handle));
-        if (tw || is_symvar) {
+        if (tw) {
             if (!valid) {
-                cn = tw ? tw->m_tensor->comp_node()
-                        : py::handle(handle).cast<PySymbolVar*>()->m_node->comp_node();
+                cn = tw->m_tensor->comp_node();
                 valid = true;
             } else {
-                CompNode cn1 = tw ? tw->m_tensor->comp_node()
-                                  : py::handle(handle)
-                                               .cast<PySymbolVar*>()
-                                               ->m_node->comp_node();
+                CompNode cn1 = tw->m_tensor->comp_node();
                 if (cn1 != cn) {
                     throw py::value_error(ssprintf(
                             "ambiguous device: %s (from %s) vs %s (from %s)",
@@ -258,10 +244,6 @@ PyObject* get_device(PyObject* self, PyObject* const* args, size_t nargs) {
 }
 
 bool is_scalar(PyObject* tensor) {
-    if (py::isinstance<PySymbolVar>(py::handle(tensor))) {
-        auto var = py::handle(tensor).cast<PySymbolVar*>();
-        return var->is_scalar;
-    }
     auto* tw = TensorWrapper::try_cast(tensor);
     if (tw) {
         return tw->m_tensor->is_scalar();
@@ -319,8 +301,7 @@ py::object device2obj(py::handle device, bool mapping = false) {
     }
 }
 
-py::object _Const(
-        py::handle value, py::handle dtype, py::handle device, py::handle ref_hdl) {
+py::object _Const(py::handle value, py::handle dtype, py::handle device) {
     py::object val = py::reinterpret_borrow<py::object>(value);
     if (PyArray_Check(value.ptr())) {
         py::tuple strides =
@@ -338,32 +319,6 @@ py::object _Const(
             val = val.attr("reshape")(orig_shp);
         }
     }
-    py::object ref;
-    if (py::isinstance<py::tuple>(ref_hdl)) {
-        py::tuple tup = py::reinterpret_borrow<py::tuple>(ref_hdl);
-        if (tup.size()) {
-            ref = tup[0];
-        } else {
-            ref = py::none();
-        }
-    } else {
-        ref = py::reinterpret_borrow<py::object>(ref_hdl);
-    }
-    if (py::isinstance<PySymbolVar>(ref)) {
-        auto ref_var = ref.cast<PySymbolVar*>();
-        auto* graph = ref_var->m_node->owner_graph();
-        CompNode cn;
-        if (device.ptr() == Py_None) {
-            cn = ref_var->m_node->comp_node();
-        } else {
-            cn = device2obj(device).cast<CompNode>();
-        }
-        OperatorNodeConfig config(cn);
-        auto hv = npy::np2tensor(
-                val.ptr(), npy::Meth::borrow(cn), dtype.cast<mgb::DType>());
-        auto typeobj = ref.get_type();
-        return typeobj(opr::ImmutableTensor::make(*graph, hv, config).node());
-    }
     py::object device_obj = device2obj(device, true);
     py::tuple tup = py::make_tuple(val, dtype, device_obj, true, false, py::none());
     return TensorWrapper::make(py_tensor_type, tup.ptr(), nullptr);
@@ -373,7 +328,7 @@ py::tuple _make_shape_tuple(py::handle shape) {
     py::list orig;
     py::list ret(0);
     auto solve_one = [&](py::handle val) {
-        if (TensorWrapper::try_cast(val.ptr()) || py::isinstance<PySymbolVar>(val)) {
+        if (TensorWrapper::try_cast(val.ptr())) {
             py::object np = getattr(val, "numpy")();
             PyArrayObject* arr = (PyArrayObject*)np.ptr();
             PyObject* maybe_list = PyArray_ToList(arr);
@@ -415,25 +370,53 @@ py::tuple _make_shape_tuple(py::handle shape) {
     return py::reinterpret_steal<py::tuple>(PyList_AsTuple(ret.ptr()));
 }
 
-bool is_tensor_or_symbolvar(py::handle arg) {
-    return bool(TensorWrapper::try_cast(arg.ptr())) || py::isinstance<PySymbolVar>(arg);
+bool is_tensor(py::handle arg) {
+    return bool(TensorWrapper::try_cast(arg.ptr()));
 }
 
 bool is_py_sequence(py::handle arg) {
-    if (PyArray_Check(arg.ptr()) || TensorWrapper::try_cast(arg.ptr()) ||
-        py::isinstance<PySymbolVar>(arg)) {
+    if (PyArray_Check(arg.ptr()) || TensorWrapper::try_cast(arg.ptr())) {
         return false;
     }
     return PySequence_Check(arg.ptr());
 }
 
-mgb::DType _get_dtype(py::handle tensor) {
-    if (auto tw = TensorWrapper::try_cast(tensor.ptr())) {
-        return tw->m_tensor->dtype();
+py::object get_res_by_refhdl(
+        py::handle value, py::handle dtype, py::handle device, py::handle ref_hdl) {
+    py::object res = _Const(value, dtype, device);
+    py::object ref;
+    if (py::isinstance<py::tuple>(ref_hdl)) {
+        py::tuple tup = py::reinterpret_borrow<py::tuple>(ref_hdl);
+        if (tup.size()) {
+            ref = tup[0];
+        } else {
+            ref = py::none();
+        }
     } else {
-        auto var = tensor.cast<PySymbolVar*>();
-        return var->m_node->dtype();
+        ref = py::reinterpret_borrow<py::object>(ref_hdl);
     }
+    if (PyObject_TypeCheck(ref.ptr(), py_varnode_type)) {
+        auto temp = dtype.cast<mgb::DType>();
+        ComputingGraph* graph = getattr(ref, "graph").cast<ComputingGraph*>();
+        cg::VarNode* node = getattr(ref, "var").cast<cg::VarNode*>();
+        CompNode cn;
+        if (device.ptr() == Py_None) {
+            cn = node->comp_node();
+        } else {
+            cn = device2obj(device).cast<CompNode>();
+        }
+        OperatorNodeConfig config(cn);
+        auto hv = npy::np2tensor(
+                value.ptr(), npy::Meth::borrow(cn), dtype.cast<mgb::DType>());
+        auto typeobj = ref.get_type();
+        return typeobj(opr::ImmutableTensor::make(*graph, hv, config).node());
+    }
+    return res;
+}
+
+mgb::DType _get_dtype(py::handle tensor) {
+    auto tw = TensorWrapper::try_cast(tensor.ptr());
+    return tw->m_tensor->dtype();
 }
 
 py::object _astype_cpp(py::handle tensor, py::handle dtype_hdl) {
@@ -457,12 +440,12 @@ py::object _astype_cpp(py::handle tensor, py::handle dtype_hdl) {
 
 py::object _convert_single_value_cpp(
         py::handle value, py::handle dtype, py::handle device) {
-    if (is_tensor_or_symbolvar(value)) {
+    if (is_tensor(value)) {
         if (_get_dtype(value).category() != DTypeCategory::QUANTIZED) {
             return _astype_cpp(value, dtype);
         }
     } else {
-        return _Const(value, dtype, device, py::none());
+        return _Const(value, dtype, device);
     }
     return py::reinterpret_borrow<py::object>(value);
 }
@@ -475,28 +458,8 @@ py::object _convert_inputs_cpp(
     for (size_t i = 0; i < nargs; ++i) {
         py::handle h = py::handle(args[i]);
         lis.append(h);
-        if (py::isinstance<PySymbolVar>(h)) {
-            auto var = h.cast<PySymbolVar*>();
-            auto g = var->m_node->owner_graph();
-            if (!graph) {
-                graph = g;
-                typeobj = h.get_type();
-            } else {
-                mgb_assert(graph == g);
-            }
-        }
     }
-    if (graph) {
-        CompNode cn = device2obj(device).cast<CompNode>();
-        for (size_t i = 0; i < nargs; ++i) {
-            OperatorNodeConfig config(cn);
-            auto hv = npy::np2tensor(
-                    lis[i].ptr(), npy::Meth::borrow(cn), dtype.cast<mgb::DType>());
-            if (!py::isinstance<PySymbolVar>(lis[i])) {
-                lis[i] = typeobj(opr::ImmutableTensor::make(*graph, hv, config).node());
-            }
-        }
-    }
+
     auto convert = [&](py::object value) {
         if (value.is_none()) {
             return value;
@@ -517,7 +480,8 @@ py::object _astensor1d_cpp(
     if (device.ptr() != Py_None) {
         device_obj = device2obj(device);
     }
-    if (py::isinstance<PySymbolVar>(value)) {
+
+    if (PyObject_TypeCheck(value.ptr(), py_varnode_type)) {
         try {
             getattr(value, "ndim");
         } catch (py::error_already_set& err) {
@@ -537,14 +501,15 @@ py::object _astensor1d_cpp(
             return ret;
         }
     }
+
     size_t ndim = 999;
     if (hasattr(value, "ndim")) {
         ndim = getattr(value, "ndim").cast<size_t>();
         if (ndim != 0 && ndim != 1) {
             throw py::value_error("ndim != 1 or 0, get : " + std::to_string(ndim));
         }
-        if (!is_tensor_or_symbolvar(value)) {
-            return _Const(value, dtype, device, ref);
+        if (!is_tensor(value)) {
+            return get_res_by_refhdl(value, dtype, device, ref);
         } else {
             return py::reinterpret_borrow<py::object>(value);
         }
@@ -555,13 +520,13 @@ py::object _astensor1d_cpp(
     py::list lis = py::reinterpret_steal<py::list>(PySequence_List(value.ptr()));
     bool need_concat = false;
     for (size_t i = 0; i < lis.size(); ++i) {
-        if (is_tensor_or_symbolvar(lis[i])) {
+        if (is_tensor(lis[i])) {
             need_concat = true;
             break;
         }
     }
     if (!need_concat) {
-        return _Const(value, dtype, device, ref);
+        return get_res_by_refhdl(value, dtype, device, ref);
     }
     if (lis.size() > 1) {
         std::vector<PyObject*> c_args(lis.size() + 1);
@@ -600,10 +565,9 @@ py::object _astensor1d_cpp(
 }
 
 py::object _get_index(py::object tensor, py::object src) {
-    if (!TensorWrapper::try_cast(tensor.ptr()) &&
-        !py::isinstance<PySymbolVar>(tensor)) {
+    if (!TensorWrapper::try_cast(tensor.ptr())) {
         auto get_const = [&](mgb::DType dtype) -> py::object {
-            return _Const(tensor, py::cast(dtype), src.attr("device"), src);
+            return _Const(tensor, py::cast(dtype), src.attr("device"));
         };
         if (is_bool_list(tensor.ptr()) || is_bool_dtype(tensor.ptr())) {
             tensor = get_const(dtype::Bool());
@@ -636,9 +600,8 @@ py::tuple _try_cond_take(py::handle tensor, py::handle index) {
     }
     py::object iobj;
     if (PyArray_Check(index.ptr())) {
-        iobj =
-                _Const(index, py::cast((mgb::DType)dtype::Bool()),
-                       getattr(tensor, "device"), tensor);
+        iobj = _Const(
+                index, py::cast((mgb::DType)dtype::Bool()), getattr(tensor, "device"));
     } else {
         iobj = py::reinterpret_borrow<py::object>(index);
     }
@@ -920,8 +883,8 @@ py::object _expand_args(py::handle args) {
         return py::reinterpret_borrow<py::object>(args);
     }
     py::tuple args_tup = py::reinterpret_borrow<py::tuple>(args.ptr());
-    if (args_tup.size() == 1 && (PySequence_Check(args_tup[0].ptr()) ||
-                                 is_tensor_or_symbolvar(args_tup[0].ptr()))) {
+    if (args_tup.size() == 1 &&
+        (PySequence_Check(args_tup[0].ptr()) || is_tensor(args_tup[0].ptr()))) {
         return py::reinterpret_borrow<py::object>(args_tup[0]);
     } else {
         return py::reinterpret_steal<py::list>(PySequence_List(args_tup.ptr()));
@@ -948,7 +911,8 @@ std::tuple<std::vector<int32_t>, bool> tuple2vector(py::object shape) {
 bool enable_fastpath(py::handle inp) {
     auto&& tm_tr = TransformationManager::get_instance()
                            .segments[TransformationManager::Segment::ModuleTrace];
-    if (!TensorWrapper::try_cast(inp.ptr()) ||
+    bool is_varnode = PyObject_TypeCheck(inp.ptr(), py_varnode_type);
+    if (is_varnode ||
         TransformationManager::get_instance()
                         .segments[TransformationManager::Segment::Trace]
                         .size() > 0 ||
@@ -1181,10 +1145,8 @@ py::object _getitem_cpp(py::handle inp_hdl, py::handle idx_hdl) {
 py::object _setitem_cpp(py::handle inp_hdl, py::handle idx_hdl, py::handle val_hdl) {
     py::object org_shape = getattr(inp_hdl, "shape");
     py::object val = py::reinterpret_borrow<py::object>(val_hdl);
-    if (!TensorWrapper::try_cast(val.ptr()) && !py::isinstance<PySymbolVar>(val)) {
-        val =
-                _Const(val_hdl, getattr(inp_hdl, "dtype"), getattr(inp_hdl, "device"),
-                       inp_hdl);
+    if (!TensorWrapper::try_cast(val.ptr())) {
+        val = _Const(val_hdl, getattr(inp_hdl, "dtype"), getattr(inp_hdl, "device"));
     }
 
     py::tuple up = _unpack_indexes(inp_hdl, idx_hdl);
@@ -1308,12 +1270,12 @@ py::object _split_cpp(
                         repr(nsplits_or_sections_hdl).cast<std::string>());
             }
             py::object pos = div_points[i] - div_points[i - 1];
-            if (is_tensor_or_symbolvar(pos)) {
+            if (is_tensor(pos)) {
                 partitions.append(pos);
             } else {
                 partitions.append(
                         _Const(pos, py::cast((mgb::DType)dtype::Int32()),
-                               getattr(inp_hdl, "device"), inp_hdl));
+                               getattr(inp_hdl, "device")));
             }
         }
         op = Split::make(axis, 0);
@@ -1438,7 +1400,7 @@ py::object _squeeze_cpp(py::handle inp_hdl, py::handle axis_hdl) {
 py::object _transpose_cpp(py::handle inp_hdl, py::handle args) {
     py::object obj = _expand_args(args);
     py::list lis;
-    if (!is_tensor_or_symbolvar(obj.ptr()) && PySequence_Check(obj.ptr())) {
+    if (!is_tensor(obj.ptr()) && PySequence_Check(obj.ptr())) {
         lis = py::reinterpret_steal<py::list>(PySequence_List(obj.ptr()));
     } else {
         py::object np = getattr(obj, "numpy")();
@@ -1631,7 +1593,7 @@ PyObject* pixel_shuffle_cpp(PyObject* self, PyObject* const* args, size_t nargs)
 
 PyObject* Const(PyObject* self, PyObject* const* args, size_t nargs) {
     try {
-        return _Const(args[0], args[1], args[2], args[3]).release().ptr();
+        return _Const(args[0], args[1], args[2]).release().ptr();
     }
     PYEXT17_TRANSLATE_EXC_RET(nullptr)
 }

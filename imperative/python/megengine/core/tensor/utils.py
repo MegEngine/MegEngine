@@ -8,7 +8,6 @@ import numpy as np
 from .._imperative_rt import make_const
 from .._imperative_rt.core2 import (
     Const,
-    SymbolVar,
     Tensor,
     _get_convert_inputs,
     _set_convert_inputs,
@@ -77,7 +76,7 @@ def result_type(*args):
 
 def isscalar(x):
 
-    if isinstance(x, (Tensor, SymbolVar)):
+    if isinstance(x, Tensor):
         return x._isscalar()
 
     return np.isscalar(x)
@@ -283,7 +282,7 @@ def interpret_subgraph(func, dtype, device):
                 return results
 
         def apply_const(value, dtype=dtype, device=device):
-            return Const(value, dtype, device, None)
+            return Const(value, dtype, device)
 
         outputs, outputs_has_grad = func(args, apply_expr, apply_const)
         outputs = [

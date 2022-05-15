@@ -1222,7 +1222,7 @@ def batch_norm(
             raise ValueError("Invalid param_dim {}".format(param_dim))
 
         if x is None:
-            x = Const(value, inp.dtype, inp.device, None)
+            x = Const(value, inp.dtype, inp.device)
             shape = astensor1d(pshape, inp, dtype="int32", device=inp.device)
             (result,) = apply(builtin.Broadcast(), x, shape)
             return result
@@ -1446,7 +1446,7 @@ def sync_batch_norm(
 
     def _make_full_if_none(x, value):
         if x is None:
-            x = Const(value, inp.dtype, _device, None)
+            x = Const(value, inp.dtype, _device)
             (result,) = apply(builtin.Broadcast(), x, reduce_shape)
             return result
         elif x.ndim == 1:

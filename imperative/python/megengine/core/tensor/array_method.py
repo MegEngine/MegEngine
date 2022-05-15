@@ -7,9 +7,7 @@ from typing import Union
 import numpy as np
 
 from .. import _config
-from .._imperative_rt.common import CompNode
 from .._imperative_rt.core2 import (
-    SymbolVar,
     Tensor,
     apply,
     astype_cpp,
@@ -17,9 +15,11 @@ from .._imperative_rt.core2 import (
     broadcast_cpp,
     getitem_cpp,
     matmul_cpp,
+    reshape_cpp,
+    setitem_cpp,
+    squeeze_cpp,
+    transpose_cpp,
 )
-from .._imperative_rt.core2 import reduce_to_scalar as _reduce_to_scalar
-from .._imperative_rt.core2 import reshape_cpp, setitem_cpp, squeeze_cpp, transpose_cpp
 from ..ops import builtin
 from . import amp
 from .utils import _normalize_axis, astensor1d, cast_tensors, make_shape_tuple, subgraph
@@ -189,9 +189,7 @@ def _todo(*_):
 
 def _expand_args(args):
     if len(args) == 1:
-        if isinstance(
-            args[0], (collections.abc.Sequence, Tensor, SymbolVar, np.ndarray),
-        ):
+        if isinstance(args[0], (collections.abc.Sequence, Tensor, np.ndarray),):
             args = args[0]
     return args
 

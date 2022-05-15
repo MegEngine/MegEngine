@@ -48,58 +48,11 @@ namespace mgb::imperative::python {
 
 namespace {
 WeakKeyMap<ValueWeakRef, py::object> module_trace_info_map;
-
-struct SymbolVarContext {
-    TransformationContext context;
-    std::shared_ptr<SymbolTransformation> symbol_tsf;
-    std::shared_ptr<ScalarTransformation> scalar_tsf;
-    std::shared_ptr<DTypePromoteTransformation> dtype_promote_tsf;
-    std::shared_ptr<DimExpansionTransformation> dim_expansion_tsf;
-
-    SymbolVarContext(cg::ComputingGraph* graph) {
-        symbol_tsf = std::make_shared<SymbolTransformation>(graph);
-        scalar_tsf = std::make_shared<ScalarTransformation>();
-        dtype_promote_tsf = std::make_shared<DTypePromoteTransformation>();
-        dim_expansion_tsf = std::make_shared<DimExpansionTransformation>();
-        Transformation::swap_context(context);
-    }
-
-    void init() {
-        symbol_tsf->register_at(Transformation::top());
-        scalar_tsf->register_at(Transformation::top());
-        dtype_promote_tsf->register_at(Transformation::top());
-        dim_expansion_tsf->register_at(Transformation::top());
-    }
-
-    ValueRef symvar2val(py::handle py_symbol_var) {
-        auto* symbol_var = py_symbol_var.cast<PySymbolVar*>();
-        ValueRef value = symbol_tsf->value_type().make(symbol_var->m_node);
-        if (symbol_var->is_scalar) {
-            value = scalar_tsf->value_type().make(value);
-        }
-        return value;
-    }
-
-    py::object val2symvar(py::handle typeobj, ValueRef value) {
-        bool is_scalar = false;
-        if (auto* scalar_value = value.as(scalar_tsf->value_type())) {
-            value = scalar_value->value();
-            is_scalar = true;
-        }
-        auto* node = value.cast(symbol_tsf->value_type()).node();
-        auto py_symbol_var =
-                typeobj(pybind11::cast(node, pybind11::return_value_policy::automatic));
-        py_symbol_var.cast<PySymbolVar*>()->is_scalar = is_scalar;
-        return py_symbol_var;
-    }
-
-    ~SymbolVarContext() { Transformation::swap_context(context); }
-};
-
 }  // namespace
 
 interpreter::Interpreter::Channel* interpreter_for_py = nullptr;
 PyTypeObject* py_tensor_type = nullptr;
+PyTypeObject* py_varnode_type = nullptr;
 pybind11::handle py_device_type = nullptr;
 PyObject* cpp_use_symbolic_shape;
 
@@ -136,22 +89,6 @@ PyObject* py_apply(
         auto op = py::handle(py_op).cast<std::shared_ptr<OpDef>>();
         SmallVector<ValueRef, 8> tensors(nargs);
 
-        SmallVector<bool, 8> is_symbol_var(nargs, false);
-        ComputingGraph* cg = nullptr;
-        for (size_t i = 0; i < nargs; ++i) {
-            if ((!TensorWrapper::try_cast(args[i])) &&
-                py::isinstance<PySymbolVar>(py::handle(args[i]))) {
-                is_symbol_var[i] = true;
-                ComputingGraph* cur_cg =
-                        py::handle(args[i]).cast<PySymbolVar*>()->m_node->owner_graph();
-                if (cg == nullptr) {
-                    cg = cur_cg;
-                } else {
-                    mgb_assert(cg == cur_cg);
-                }
-            }
-        }
-
         mgb::CompNode target_cn;
         mgb::DType target_dtype;
 
@@ -174,35 +111,11 @@ PyObject* py_apply(
             }
         };
 
-        if (cg != nullptr) {
-            // swap to a special context to reuse scalar handle
-            size_t symbol_var_idx = 8;
-            SymbolVarContext context(cg);
-            context.init();
-            for (size_t i = 0; i < nargs; ++i) {
-                if (is_symbol_var[i]) {
-                    symbol_var_idx = i;
-                    tensors[i] = context.symvar2val(args[i]);
-                } else if (
-                        DTypePromoteCfg::convert_input_enabled &&
-                        op->same_type<Elemwise>()) {
-                    tensors[i] = convert_pyinput_to_tensor(i);
-                } else {
-                    PyErr_SetString(
-                            PyExc_TypeError, "py_apply expects tensor as inputs");
-                    return nullptr;
-                }
-            }
-            auto outputs = imperative::apply(*op, tensors);
-            auto ret = pybind11::tuple(outputs.size());
-            auto typeobj = py::handle(args[symbol_var_idx]).get_type();
-            for (size_t i = 0; i < outputs.size(); ++i) {
-                ret[i] = context.val2symvar(typeobj, outputs[i]);
-            }
-            return ret.release().ptr();
-        }
-
+        bool is_varnode_apply = false;
         for (size_t i = 0; i < nargs; ++i) {
+            if (PyObject_TypeCheck(args[i], py_varnode_type)) {
+                is_varnode_apply = true;
+            }
             if (TensorWrapper* tw = TensorWrapper::try_cast(args[i])) {
                 tensors[i] = tw->m_tensor->data();
             } else if (
@@ -218,8 +131,9 @@ PyObject* py_apply(
         auto outputs = [&] { return imperative::apply(*op, tensors); }();
         size_t nout = outputs.size();
         auto ret = py::tuple(nout);
+        PyTypeObject* py_type = is_varnode_apply ? py_varnode_type : py_tensor_type;
         for (size_t i = 0; i < nout; ++i) {
-            ret[i] = TensorWrapper::make(py_tensor_type, std::move(outputs[i]));
+            ret[i] = TensorWrapper::make(py_type, std::move(outputs[i]));
         }
         return ret.release().ptr();
     }
@@ -622,9 +536,17 @@ TensorWrapper::TensorWrapper(PyObject* args, PyObject* kwargs) {
             CreateTensor::Kind kind = is_const ? CreateTensor::Const
                                     : no_cache ? CreateTensor::Unique
                                                : CreateTensor::Common;
-            auto&& hval = pyobj2hval(data, cn, dtype);
-            auto val = imperative::apply(
-                    CreateTensor(kind, cn, hval.dtype, hval.shape), hval.storage)[0];
+            ValueRef val;
+            if (py::isinstance(data, Py_Varnode)) {
+                cg::VarNode* m_node = py::handle(data).cast<cg::VarNode*>();
+                val = imperative::apply(
+                        CreateNode(m_node), Span<ValueRef>(nullptr, nullptr))[0];
+            } else {
+                auto&& hval = pyobj2hval(data, cn, dtype);
+                val = imperative::apply(
+                        CreateTensor(kind, cn, hval.dtype, hval.shape),
+                        hval.storage)[0];
+            }
             m_tensor.emplace(val);
         }
 
@@ -734,6 +656,20 @@ PyObject* TensorWrapper::isscalar() {
     }
 }
 
+PyObject* TensorWrapper::_var() {
+    TypedValueRef<NodeValue> value =
+            imperative::apply(GetVarVal(), m_tensor->data())[0].as_ref<NodeValue>();
+    auto* node = value->node();
+    return py::cast(node).release().ptr();
+}
+
+PyObject* TensorWrapper::_graph() {
+    TypedValueRef<NodeValue> value =
+            imperative::apply(GetVarVal(), m_tensor->data())[0].as_ref<NodeValue>();
+    auto* graph = value->graph();
+    return py::cast(graph).release().ptr();
+}
+
 struct TensorWeakRef {
     ValueWeakRef data;
 
@@ -808,6 +744,10 @@ void init_tensor(py::module m) {
                                       std::make_shared<ScalarTransformation>())
                               .release());
     MGB_MARK_USED_VAR(transformations
+                              .register_at<Segment::Symbol>(
+                                      std::make_shared<SymbolTransformation>())
+                              .release());
+    MGB_MARK_USED_VAR(transformations
                               .register_at<Segment::DTypePromote>(
                                       std::make_shared<DTypePromoteTransformation>())
                               .release());
@@ -863,6 +803,8 @@ void init_tensor(py::module m) {
                     .def<&TensorWrapper::_detail>("_detail")
                     .def<&TensorWrapper::_set_name>("_set_name")
                     .def<&TensorWrapper::_watch>("_watch")
+                    .def<&TensorWrapper::_var>("var")
+                    .def<&TensorWrapper::_graph>("graph")
                     .def_getset<
                             &TensorWrapper::module_trace_info,
                             &TensorWrapper::set_module_trace_info>("_NodeMixin__node")
@@ -874,43 +816,6 @@ void init_tensor(py::module m) {
     py::class_<TensorWeakRef>(m, "TensorWeakRef")
             .def(py::init<const TensorWrapper&>())
             .def("__call__", &TensorWeakRef::operator());
-
-    py::class_<PySymbolVar, std::shared_ptr<PySymbolVar>>(m, "SymbolVar")
-            .def_property_readonly(
-                    "dtype", [](PySymbolVar* v) { return v->m_node->dtype(); })
-            .def_property(
-                    "var", [](PySymbolVar* v) { return v->m_node; },
-                    [](PySymbolVar* s, cg::VarNode* v) { s->m_node = v; })
-            .def_property_readonly(
-                    "device", [](PySymbolVar* v) { return v->m_node->comp_node(); })
-            .def_property_readonly(
-                    "graph", [](PySymbolVar* v) { return v->m_node->owner_graph(); })
-            .def_property_readonly(
-                    "shape",
-                    [](PySymbolVar* v) -> const TensorShape* {
-                        auto&& mgr = v->m_node->owner_graph()->static_infer_manager();
-                        return mgr.infer_shape_fallible(v->m_node);
-                    })
-            .def("numpy",
-                 [](PySymbolVar* v) {
-                     auto&& mgr = v->m_node->owner_graph()->static_infer_manager();
-                     auto&& type = mgr.get_infer_type(v->m_node);
-                     using InferType = cg::static_infer::InferType;
-                     if (!(type.value & (InferType::CONST | InferType::RT_STATIC))) {
-                         throw py::value_error("value invalid!");
-                     }
-                     auto* val = mgr.infer_value_fallible(v->m_node);
-                     if (!val) {
-                         throw py::value_error("value invalid!");
-                     }
-                     auto np_val = py::cast(*val).attr("numpy")();
-                     return np_val;
-                 })
-            .def("_isscalar", [](PySymbolVar* v) { return v->is_scalar; })
-            .def(py::init([](cg::VarNode* node) {
-                     return std::make_shared<PySymbolVar>(node);
-                 }),
-                 py::arg() = nullptr);
 
     static PyMethodDef method_defs[] = {
             MGE_PY_INTERFACE(apply, py_apply),
@@ -1025,6 +930,10 @@ void init_tensor(py::module m) {
 
     m.def("set_py_tensor_type", [](py::object type_obj) {
         py_tensor_type = reinterpret_cast<PyTypeObject*>(type_obj.inc_ref().ptr());
+    });
+
+    m.def("set_py_varnode_type", [](py::object type_obj) {
+        py_varnode_type = reinterpret_cast<PyTypeObject*>(type_obj.inc_ref().ptr());
     });
 
     m.def("set_py_device_type",
@@ -1216,31 +1125,6 @@ void init_tensor(py::module m) {
                             transformations.register_at<Segment::Trace>(self.compiled);
                 }
             });
-
-    m.def("reduce_to_scalar", [](py::object op, py::object tensor) -> py::object {
-        auto reduce_to_scalar = [](const OpDef& op, const ValueRef& input) {
-            auto make_scalar_shape = [&](CompNode device) {
-                return imperative::apply(
-                        CreateTensor(CreateTensor::Const, device, dtype::Int32(), {0}),
-                        HostStorage::make(device))[0];
-            };
-            return imperative::apply(op, input, make_scalar_shape(*input.device()))[0];
-        };
-        if (py::isinstance<PySymbolVar>(tensor)) {
-            auto* graph = tensor.cast<PySymbolVar*>()->m_node->owner_graph();
-            SymbolVarContext context(graph);
-            context.init();
-            auto output = reduce_to_scalar(
-                    *op.cast<std::shared_ptr<OpDef>>(), context.symvar2val(tensor));
-            auto typeobj = tensor.get_type();
-            return context.val2symvar(typeobj, output);
-        } else {
-            auto* tw = TensorWrapper::try_cast(tensor.ptr());
-            auto output = reduce_to_scalar(
-                    *op.cast<std::shared_ptr<OpDef>>(), tw->m_tensor->data());
-            return TensorWrapper::make(py_tensor_type, output);
-        }
-    });
 
     m.def("name_tensor", [](std::string name, py::object tensor) {
         auto* tw = TensorWrapper::try_cast(tensor.ptr());

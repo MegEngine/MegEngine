@@ -20,11 +20,12 @@ public:
         DimExpansion,
         Grad,
         Scalar,
+        Symbol,
         Trace,
         Eval,
     };
 
-    std::array<std::vector<std::shared_ptr<Transformation>>, 7> segments;
+    std::array<std::vector<std::shared_ptr<Transformation>>, 8> segments;
 
 private:
     template <Segment segment>

@@ -679,6 +679,18 @@ def test_utils_astensor1d(is_varnode):
         assert isinstance(xx, type(reference))
         np.testing.assert_equal(xx.numpy(), [1, 2, 3])
 
+    # varnode
+    if is_varnode:
+        a = np.array([[1, 2, 3], [4, 5, 6]]).astype("float32")
+        b = np.array([[True, False, True], [False, True, True]])
+        aa = make_tensor(a, network)
+        bb = make_tensor(b, network)
+        x, y = F.cond_take(bb, aa)
+        for dtype in [None, "float32"]:
+            xx = astensor1d(x, reference, dtype=dtype)
+            assert isinstance(xx, type(reference))
+            np.testing.assert_equal(get_var_value(xx), get_var_value(x))
+
 
 def test_device():
     x = tensor([1, 2, 3], dtype="float32")

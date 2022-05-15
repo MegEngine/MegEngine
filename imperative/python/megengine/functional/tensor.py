@@ -7,7 +7,6 @@ import numpy as np
 from ..core._imperative_rt import CompNode
 from ..core._imperative_rt.core2 import (
     Const,
-    SymbolVar,
     apply,
     broadcast_cpp,
     dtype_promotion,
@@ -151,7 +150,7 @@ def full(
         shape = (shape,)
     if device is None:
         device = get_default_device()
-    x = Const(value, dtype, device, None)
+    x = Const(value, dtype, device)
     if type(shape) in (list, tuple) and len(shape) == 0:
         return x
     return broadcast_to(x, shape)
@@ -216,7 +215,7 @@ def zeros(
     return full(shape, 0.0, dtype=dtype, device=device)
 
 
-def zeros_like(inp: Union[Tensor, SymbolVar]) -> Union[Tensor, SymbolVar]:
+def zeros_like(inp: Tensor) -> Tensor:
     r"""Returns a tensor filled with zeros with the same shape and data type as input tensor.
 
     Args:
@@ -235,7 +234,7 @@ def zeros_like(inp: Union[Tensor, SymbolVar]) -> Union[Tensor, SymbolVar]:
     return full_like(inp, 0.0)
 
 
-def ones_like(inp: Union[Tensor, SymbolVar]) -> Union[Tensor, SymbolVar]:
+def ones_like(inp: Tensor) -> Tensor:
     r"""Returns a tensor filled with ones with the same shape and data type as input tensor.
 
     Args:
@@ -253,9 +252,7 @@ def ones_like(inp: Union[Tensor, SymbolVar]) -> Union[Tensor, SymbolVar]:
     return full_like(inp, 1.0)
 
 
-def full_like(
-    inp: Union[Tensor, SymbolVar], value: Union[int, float]
-) -> Union[Tensor, SymbolVar]:
+def full_like(inp: Tensor, value: Union[int, float]) -> Tensor:
     r"""Returns a tensor filled with given value with the same shape as input tensor.
 
     Args:
@@ -272,7 +269,7 @@ def full_like(
         Tensor([[2 2 2]
          [2 2 2]], dtype=int32, device=xpux:0)
     """
-    x = Const(value, inp.dtype, inp.device, inp)
+    x = Const(value, inp.dtype, inp.device)
     if inp.ndim == 0:
         return x
     return broadcast_to(x, inp.shape)
@@ -668,9 +665,9 @@ def cond_take(mask: Tensor, x: Tensor) -> Tensor:
         >>> print(v.numpy(), index.numpy())
         [1. 4.] [0 3]
     """
-    if not isinstance(x, (Tensor, SymbolVar)):
+    if not isinstance(x, Tensor):
         raise TypeError("input must be a tensor")
-    if not isinstance(mask, (Tensor, SymbolVar)):
+    if not isinstance(mask, Tensor):
         raise TypeError("mask must be a tensor")
     if mask.dtype != np.bool_:
         raise ValueError("mask must be bool")
@@ -843,15 +840,11 @@ def linspace(
             if not (cur_device is None or device == cur_device):
                 raise ("ambiguous device for linspace opr")
 
-    is_symbolvar = list(isinstance(x, SymbolVar) for x in [start, stop, num])
-    if any(is_symbolvar) and not all(is_symbolvar):
-        raise TypeError("start, stop and num should all be VarNode or none of them")
-
-    if not isinstance(start, (Tensor, SymbolVar)):
+    if not isinstance(start, Tensor):
         start = Tensor(start, device=device)
-    if not isinstance(stop, (Tensor, SymbolVar)):
+    if not isinstance(stop, Tensor):
         stop = Tensor(stop, device=device)
-    if not isinstance(num, (Tensor, SymbolVar)):
+    if not isinstance(num, Tensor):
         num = Tensor(num, device=device)
 
     op = builtin.Linspace(comp_node=device)
@@ -901,9 +894,12 @@ def arange(
     if stop is None:
         start, stop = 0, start
 
-    start = Tensor(start, dtype="float32")
-    stop = Tensor(stop, dtype="float32")
-    step = Tensor(step, dtype="float32")
+    if not isinstance(start, Tensor):
+        start = Tensor(start, dtype="float32")
+    if not isinstance(stop, Tensor):
+        stop = Tensor(stop, dtype="float32")
+    if not isinstance(step, Tensor):
+        step = Tensor(step, dtype="float32")
 
     num = ceil((stop - start) / step)
     stop = start + step * (num - 1)

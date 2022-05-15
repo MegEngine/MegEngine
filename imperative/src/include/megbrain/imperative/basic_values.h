@@ -173,5 +173,24 @@ public:
     std::string to_string() const override;
 };
 
+class NodeStorage {
+private:
+    cg::VarNode* m_node;
+
+public:
+    NodeStorage() = default;
+    NodeStorage(VarNode* node) : m_node(node) {}
+    VarNode* node() const { return m_node; }
+    ComputingGraph* graph() const { return m_node->owner_graph(); }
+    std::string to_string() const { return m_node->name(); }
+};
+
+class NodeValue final : public PrimitiveValue<NodeValue, NodeStorage> {
+public:
+    using PrimitiveValue::PrimitiveValue;
+
+    std::string to_string() const override { return NodeStorage::to_string(); }
+};
+
 }  // namespace imperative
 }  // namespace mgb

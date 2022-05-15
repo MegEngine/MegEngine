@@ -114,8 +114,10 @@ def test_replace_opr():
     vara = graph.var_filter.name("a").as_unique()
     varb = graph.var_filter.name("b").as_unique()
 
-    out1 = F.sub(vara, varb)
+    out1 = F.mul(vara, varb)
     out1 = F.relu(out1)
+    out1 += 2
+    out1 *= 3
     out1 = graph.add_dep_oprs(out1)
     orig_opr = graph.opr_filter.has_input(vara).as_unique()
 
@@ -135,7 +137,7 @@ def test_replace_opr():
 
     load_graph = GraphInference(modified_model1)
     out = load_graph.run(a, b)
-    np.testing.assert_equal(out["o"], [0, 0])
+    np.testing.assert_equal(out["o"], [30, 60])
 
 
 def test_splice_network():

@@ -10,6 +10,8 @@
 
 #include "./pyext17.h"
 #include "megbrain/imperative/dispatch.h"
+#include "megbrain/imperative/transformations/scalar.h"
+#include "megbrain/imperative/transformations/symbol.h"
 #include "megbrain/imperative/utils/span.h"
 
 namespace mgb::imperative::python {
@@ -27,6 +29,7 @@ namespace mgb::imperative::python {
 
 extern interpreter::Interpreter::Channel* interpreter_for_py;
 extern PyTypeObject* py_tensor_type;
+extern PyTypeObject* py_varnode_type;
 extern pybind11::handle py_device_type;
 extern PyObject* cpp_use_symbolic_shape;
 extern PyObject* cpp_astensor1d;
@@ -126,14 +129,9 @@ public:
     void set_module_trace_info(PyObject*);
     void _set_name(PyObject*);
     PyObject* _detail();
+    PyObject* _var();
+    PyObject* _graph();
     void _watch();
-};
-
-struct PySymbolVar {
-    cg::VarNode* m_node = nullptr;
-    bool is_scalar = false;
-    PySymbolVar() = default;
-    PySymbolVar(VarNode* m) : m_node(m) {}
 };
 
 PyObject* py_apply(

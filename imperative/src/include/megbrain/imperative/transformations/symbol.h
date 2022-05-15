@@ -39,13 +39,39 @@ private:
     ObjectType<SymbolValue> m_value_type{"SymbolValue"};
 
 public:
-    SymbolTransformation(ComputingGraph* graph) : m_graph(graph) {}
+    SymbolTransformation() {}
     ValueRefList apply_transformation(
             const Operator& op, Span<ValueRef> inputs) override {
+        ComputingGraph* cg = nullptr;
+        if (auto* node_value = op.as<CreateNode>()) {
+            return {m_value_type.make(node_value->node())};
+        }
+        for (auto&& input : inputs) {
+            if (auto* val = input.as(m_value_type)) {
+                auto* node = val->node();
+                ComputingGraph* cur_cg = node->owner_graph();
+                if (cg == nullptr) {
+                    cg = cur_cg;
+                } else {
+                    mgb_assert(cg == cur_cg, "input varnode gragh should be the same");
+                }
+            }
+        }
+        if (!cg) {
+            return imperative::apply(op, inputs);
+        }
+
         if (auto* apply_op = op.as<ApplyOp>()) {
             SmallVector<VarNode*> input_nodes;
             for (auto&& input : inputs) {
-                input_nodes.push_back(input.cast(m_value_type).node());
+                if (!input.is(m_value_type)) {
+                    auto* node = opr::ImmutableTensor::make(
+                                         *cg, input.numpy()->as_nd(true), {})
+                                         .node();
+                    input_nodes.push_back(node);
+                } else {
+                    input_nodes.push_back(input.cast(m_value_type).node());
+                }
             }
             auto output_nodes = OpDef::apply_on_var_node(apply_op->op(), input_nodes);
             ValueRefList outputs(output_nodes.size());
@@ -53,15 +79,9 @@ public:
                 outputs[i] = m_value_type.make(output_nodes[i]);
             }
             return outputs;
-        } else if (auto* create_tensor = op.as<CreateTensor>()) {
-            auto&& args = create_tensor->parse(inputs);
-            mgb_assert(
-                    args.kind == CreateTensor::Const,
-                    "only const value is allowed here");
-            auto* node = opr::ImmutableTensor::make(*m_graph, *args.host, {}).node();
-            return {m_value_type.make(node)};
         } else if (auto* get_attr = op.as<GetAttr>()) {
             auto* node = inputs.item().cast(m_value_type).node();
+            auto* m_graph = node->owner_graph();
             switch (get_attr->attr()) {
                 case GetAttr::DType:
                     return {DTypeValue::make(node->dtype())};
@@ -105,6 +125,10 @@ public:
                             MegBrainError, "Symbol: malformed GetAttr: %s",
                             op.to_string().c_str());
             }
+        } else if (auto* get_attr = op.as<GetVarVal>()) {
+            cg::VarNode* node = inputs.item().cast(m_value_type).node();
+            NodeStorage inp_var = NodeStorage(node);
+            return {NodeValue::make(inp_var)};
         } else {
             return op.fallback(inputs);
         }

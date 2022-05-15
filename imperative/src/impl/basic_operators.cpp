@@ -82,6 +82,10 @@ std::string DTRCommand::to_string() const {
     return ssprintf("DTRCommandValue{kind=%d}", (int)m_kind);
 }
 
+std::string CreateNode::to_string() const {
+    return "CreateNode";
+}
+
 std::string GetName::to_string() const {
     return "GetName{}";
 }
@@ -92,6 +96,10 @@ std::string RenameValue::to_string() const {
 
 std::string IsScalar::to_string() const {
     return "IsScalar";
+}
+
+std::string GetVarVal::to_string() const {
+    return "GetVarVal";
 }
 
 }  // namespace imperative

@@ -7,11 +7,11 @@ small_tensor_cache = {}
 def _get_scalar_tensor_with_value(value, dtype=None, device=None):
     global small_tensor_cache
     if is_tracing():
-        ret = Const(value, dtype, device, None)
+        ret = Const(value, dtype, device)
     else:
         cache_key = (value, dtype, device)
         if cache_key not in small_tensor_cache:
-            ret = Const(value, dtype, device, None)
+            ret = Const(value, dtype, device)
             small_tensor_cache[cache_key] = ret
         else:
             ret = small_tensor_cache[cache_key]

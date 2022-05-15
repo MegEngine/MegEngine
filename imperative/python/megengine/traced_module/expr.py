@@ -756,7 +756,7 @@ class Constant(Expr):
 
     def interpret(self, *inputs):
         if isinstance(self.value, RawTensor):
-            return (Const(self.value.numpy(), None, None, None),)
+            return (Const(self.value.numpy(), None, None),)
         return (self.value,)
 
     def __repr__(self):

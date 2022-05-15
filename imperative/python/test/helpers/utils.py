@@ -11,7 +11,7 @@ from megengine.utils.network_node import VarNode
 
 
 def _default_compare_fn(x, y):
-    if isinstance(x, tensor):
+    if isinstance(x, tensor) and not isinstance(x, VarNode):
         x = x.numpy()
     elif not isinstance(x, np.ndarray):
         x = get_var_value(x)

@@ -6,11 +6,11 @@ from typing import Sequence
 import numpy as np
 
 from ..core import _imperative_rt as rt
-from ..core._imperative_rt.core2 import SymbolVar, apply
+from ..core._imperative_rt.core2 import apply, set_py_varnode_type
 from ..core._trace_option import use_symbolic_shape
 from ..core._wrap import Device
 from ..core.ops import builtin
-from ..core.tensor.array_method import ArrayMethodMixin
+from ..tensor import Tensor
 from .comp_graph_tools import replace_vars
 from .module_stats import (
     preprocess_receptive_field,
@@ -23,25 +23,71 @@ class NetworkNode:
     pass
 
 
-class VarNodeMeta(type(SymbolVar), type(ArrayMethodMixin)):
-    pass
+class VarNode(NetworkNode, Tensor):
+    _users = None
+    _owner = None
+    _name = None
+    _id = None
 
+    def __new__(cls, var, *, owner_opr=None, name=None):
+        obj = Tensor.__new__(cls, var)
+        return obj
 
-class VarNode(NetworkNode, SymbolVar, ArrayMethodMixin, metaclass=VarNodeMeta):
-    def __init__(self, var=None, *, owner_opr=None, name=None):
-        SymbolVar.__init__(self, var)
-        self.users = []  # List[OpNode]
-        self.owner = owner_opr
+    def __init__(self, var, *, owner_opr=None, name=None):
+        self._owner = owner_opr
         self.name = name
-        self.id = id(self)
 
     @classmethod
     def load(cls, sym_var, owner_opr):
-        obj = cls()
+        obj = cls(sym_var)
         obj.var = sym_var  # mgb varnode
         obj.name = sym_var.name
         obj.owner = owner_opr
         return obj
+
+    @property
+    def users(self):
+        if self._users is None:
+            self._users = []
+        return self._users
+
+    @property
+    def owner(self):
+        return self._owner
+
+    @owner.setter
+    def owner(self, owner):
+        self._owner = owner
+
+    @property
+    def id(self):
+        if self._id is None:
+            self._id = id(self)
+        return self._id
+
+    @property
+    def var(self):
+        return super().var()
+
+    @var.setter
+    def var(self, var):
+        self._reset(var)
+
+    def _reset(self, other):
+        if not isinstance(other, Tensor):
+            other = VarNode(other)
+        super()._reset(other)
+        self.owner = None
+
+    def _reset_var(self, var):
+        origin_owner = self.owner
+        self.var = var
+        self.var.name = self.name
+        self.owner = origin_owner
+
+    @property
+    def graph(self):
+        return super().graph()
 
     def _get_var_shape(self, axis=None):
         opdef = (
@@ -77,14 +123,6 @@ class VarNode(NetworkNode, SymbolVar, ArrayMethodMixin, metaclass=VarNodeMeta):
             return rst
         return self._get_var_shape() if self.var else None
 
-    @property
-    def dtype(self):
-        return self.var.dtype if self.var else None
-
-    @property
-    def ndim(self):
-        return super().ndim
-
     def __bool__(self):
         return False
 
@@ -92,26 +130,10 @@ class VarNode(NetworkNode, SymbolVar, ArrayMethodMixin, metaclass=VarNodeMeta):
     __int__ = None
     __float__ = None
     __complex__ = None
+    __repr__ = lambda self: "VarNode:" + self.name
 
     def __hash__(self):
         return id(self)
-
-    def numpy(self):
-        return super().numpy()
-
-    def _reset(self, other):
-        if not isinstance(other, VarNode):
-            assert self.graph, "VarNode _reset must have graph"
-            node = ImmutableTensor(other, graph=self.graph)
-            node.compile(self.graph)
-            other = node.outputs[0]
-        if self.owner is not None:
-            idx = self.owner.outputs.index(self)
-            self.owner.outputs[idx] = VarNode(
-                self.var, owner_opr=self.owner, name=self.var.name
-            )
-        self.var = other.var
-        self.owner = None
 
     def set_owner_opr(self, owner_opr):
         self.owner = owner_opr
@@ -158,8 +180,7 @@ class OpNode(NetworkNode):
             assert len(outputs) == len(self.outputs)
             self._opr = outputs[0].owner
             for i in range(len(self.outputs)):
-                self.outputs[i].var = outputs[i]
-                self.outputs[i].var.name = self.outputs[i].name
+                self.outputs[i]._reset_var(outputs[i])
                 assert self.outputs[i].owner is self
 
     def add_inp_var(self, x):
@@ -214,8 +235,9 @@ class Host2DeviceCopy(OpNode):
             outputs = rt.make_h2d(graph, self.device, self.dtype, self.shape, self.name)
             self._opr = outputs.owner
             if len(self.outputs) == 0:
-                self.outputs.append(VarNode(owner_opr=self, name=self.name))
-            self.outputs[0].var = outputs
+                self.outputs.append(VarNode(outputs, owner_opr=self, name=self.name))
+            else:
+                self.outputs[0]._reset_var(outputs)
         assert self.outputs[0].owner is self
 
 
@@ -262,8 +284,9 @@ class ConstOpBase(OpNode):
             data = data.astype(np.int32)
         varnode = type(self).rt_fun(self.graph, data, cn, data.dtype, self.name)
         if len(self.outputs) == 0:
-            self.outputs.append(VarNode(owner_opr=self, name=self.name))
-        self.outputs[0].var = varnode
+            self.outputs.append(VarNode(varnode, owner_opr=self, name=self.name))
+        else:
+            self.outputs[0]._reset_var(varnode)
         self._opr = varnode.owner
 
     @classmethod
@@ -313,7 +336,7 @@ class ReadOnlyOpNode(OpNode):
         if bool(repl_dict):
             out_vars = replace_vars(self._opr.outputs, repl_dict)
             for ind, o in enumerate(self.outputs):
-                o.var = out_vars[ind]
+                o._reset_var(out_vars[ind])
 
 
 class Elemwise(OpNode):
@@ -785,3 +808,6 @@ class AssertEqual(OpNode):
 class CvtColorForward(OpNode):
     type = "CvtColor"
     opdef = builtin.CvtColor
+
+
+set_py_varnode_type(VarNode)

@@ -538,7 +538,7 @@ def topk(
     op = builtin.TopK(mode=mode)
 
     if not isinstance(k, Tensor):
-        k = Const(k, "int32", inp.device, None)
+        k = Const(k, "int32", inp.device)
 
     if len(inp.shape) == 1:
         if kth_only:

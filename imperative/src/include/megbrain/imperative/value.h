@@ -33,6 +33,7 @@ class ShapeValue;
 class DTypeValue;
 class CompNodeValue;
 class StringValue;
+class NodeValue;
 
 class Operator;
 

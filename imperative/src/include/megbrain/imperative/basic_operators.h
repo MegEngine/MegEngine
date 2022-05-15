@@ -157,5 +157,22 @@ public:
     std::string to_string() const override;
 };
 
+class GetVarVal final : public OperatorImpl<GetVarVal, Operator::GetAttrLike> {
+public:
+    std::string to_string() const override;
+};
+
+class CreateNode final : public OperatorImpl<CreateNode> {
+private:
+    cg::VarNode* m_node;
+
+public:
+    CreateNode(cg::VarNode* node) : m_node(node) {}
+
+    cg::VarNode* node() const { return m_node; }
+
+    std::string to_string() const override;
+};
+
 }  // namespace imperative
 }  // namespace mgb

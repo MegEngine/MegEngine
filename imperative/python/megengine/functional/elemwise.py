@@ -2,7 +2,7 @@
 # pylint: disable=unused-argument,invalid-name,redefined-builtin,arguments-out-of-order
 import numpy as np
 
-from ..core._imperative_rt.core2 import SymbolVar, apply
+from ..core._imperative_rt.core2 import apply
 from ..core.ops import builtin
 from ..core.ops.builtin import Elemwise
 from ..core.tensor.array_method import _elwise

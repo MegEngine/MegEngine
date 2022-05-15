@@ -154,6 +154,8 @@ class Tensor(_Tensor, ArrayMethodMixin):
     @name.setter
     def name(self, name):
         self._custom_name = name
+        if name == None:
+            name = ""
         self._name = self._prefix + "." + name if self._prefix else name
         self._set_name(self._name)
 
