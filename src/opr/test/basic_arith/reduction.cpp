@@ -416,6 +416,31 @@ TEST(TestBasicArithReduction, NonContFwd) {
     }
 }
 
+TEST(TestBasicArithReduction, ResetMemory) {
+    HostTensorGenerator<> gen;
+    auto graph = ComputingGraph::make();
+    auto host_x = gen({3, 2});
+    auto host_tshp =
+            std::make_shared<HostTensorND>(host_x->comp_node(), dtype::Int32());
+    host_tshp->resize({1});
+    host_tshp->ptr<int>()[0] = 1;
+
+    auto tshp = opr::Host2DeviceCopy::make(*graph, host_tshp, {"tshp"});
+    auto x = opr::Host2DeviceCopy::make(*graph, host_x);
+    auto y = opr::reduce_max(x, tshp);
+
+    HostTensorND host_y;
+    auto func = graph->compile({make_callback_copy(y, host_y)});
+    func->execute();
+    func->wait();
+
+    //! only reset the host x memory, make sure the case can run normal
+    auto host_x_tmp = gen({3, 2});
+    host_x->reset(host_x_tmp->storage(), host_x_tmp->layout());
+    func->execute();
+    func->wait();
+}
+
 TEST(TestBasicArithReduction, NonContPerform) {
     DeviceTensorND x{CompNode::default_cpu(), dtype::Float32()},
             y{x.comp_node(), x.dtype()}, workspace;

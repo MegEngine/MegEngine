@@ -1648,6 +1648,9 @@ void Reduce::scn_do_execute() {
     m_kern_scheduler->check_shapes(inp.shape(), out_ptr->shape());
 
     if (m_kern_scheduler->has_actual_computing()) {
+        m_kern_scheduler->update_ptr(
+                inp, *out_ptr,
+                output(1)->shape()[0] ? output(1)->dev_tensor() : DeviceTensorND{});
         m_kern_scheduler->execute(
                 static_cast<megdnn::Reduce*>(megdnn_opr()), inp, *out_ptr);
     } else {
