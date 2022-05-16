@@ -193,7 +193,10 @@ def test_typecvt(is_symbolic):
 @pytest.mark.parametrize("is_symbolic", [None])
 def test_elemwise(is_symbolic):
     def elemwise(x):
-        return (x * 2 + x / 2).numpy()
+        tmp = F.ones((1, 2, 3, 4))
+        oup = x * tmp + x / 2
+        assert oup.format == x.format
+        return oup.numpy()
 
     data = np.arange(0, 24).reshape((1, 2, 3, 4))
     _compare_nchw_nhwc(data, elemwise, is_symbolic)
@@ -202,7 +205,8 @@ def test_elemwise(is_symbolic):
 @pytest.mark.parametrize("is_symbolic", [None])
 def test_concat(is_symbolic):
     def func(x):
-        rst = F.concat([x / 2, x * 2], axis=1)
+        tmp = F.ones((1, 2, 3, 4))
+        rst = F.concat([x / 2, tmp], axis=1)
         assert rst.format == x.format
         return rst.numpy()
 
