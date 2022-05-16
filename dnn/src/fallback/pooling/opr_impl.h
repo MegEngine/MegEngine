@@ -34,6 +34,8 @@ private:
             _megdnn_tensor_in src, _megdnn_tensor_out dst, const Param& param);
     void exec_w2x2_s2x2_int8(_megdnn_tensor_in src, _megdnn_tensor_out dst);
     void exec_w2x2_s2x2_avg_int8(_megdnn_tensor_in src, _megdnn_tensor_out dst);
+    void exec_fallback(
+            _megdnn_tensor_in src, _megdnn_tensor_out dst, _megdnn_workspace workspace);
 
 public:
     using naive::PoolingForwardImpl::PoolingForwardImpl;
@@ -42,9 +44,6 @@ public:
     void exec(
             _megdnn_tensor_in src, _megdnn_tensor_out dst,
             _megdnn_workspace workspace) override;
-
-    void exec_fallback(
-            _megdnn_tensor_in src, _megdnn_tensor_out dst, _megdnn_workspace workspace);
 
     size_t get_workspace_in_bytes(const TensorLayout&, const TensorLayout&) override;
 

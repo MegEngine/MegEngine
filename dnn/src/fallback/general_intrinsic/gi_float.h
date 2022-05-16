@@ -157,6 +157,19 @@ GI_FLOAT32_t GiLoadFloat32(const float* Buffer) {
 }
 
 GI_FORCEINLINE
+GI_FLOAT32_V2_t GiLoadFloat32V2(const float* Buffer) {
+#if defined(GI_NEON_INTRINSICS)
+    return vld1q_f32_x2(Buffer);
+#else
+    GI_FLOAT32_V2_t v;
+    v.val[0] = GiLoadFloat32(Buffer);
+    v.val[1] = GiLoadFloat32(Buffer + GI_SIMD_LEN_BYTE / sizeof(float));
+
+    return v;
+#endif
+}
+
+GI_FORCEINLINE
 GI_FLOAT32_t GiLoadFloat32LowHalf(const float* Buffer) {
 #if defined(GI_NEON_INTRINSICS)
     return vcombine_f32(vld1_f32(Buffer), vdup_n_f32(0.f));
@@ -519,6 +532,16 @@ void GiStoreFloat32(float* Buffer, GI_FLOAT32_t Vector) {
 #endif
 }
 
+GI_FORCEINLINE
+void GiStoreFloat32V2(float* Buffer, GI_FLOAT32_V2_t Vector) {
+#if defined(GI_NEON_INTRINSICS)
+    vst1q_f32_x2(Buffer, Vector);
+#else
+    GiStoreFloat32(Buffer, Vector.val[0]);
+    GiStoreFloat32(Buffer + GI_SIMD_LEN_BYTE / sizeof(float), Vector.val[1]);
+#endif
+}
+
 #if defined(GI_NEON_INTRINSICS)
 #define GISTORELANEFLOAT32(i)                                                         \
     GI_FORCEINLINE void GiStoreLane##i##Float32(float* Buffer, GI_FLOAT32_t Vector) { \
@@ -589,6 +612,18 @@ GI_FLOAT32_V2_t GiZipqFloat32(GI_FLOAT32_t Vector1, GI_FLOAT32_t Vector2) {
     ret.val[1][2] = Vector1[3];
     ret.val[1][3] = Vector2[3];
     return ret;
+#endif
+}
+
+GI_FORCEINLINE
+void GiStoreZipFloat32V2(float* Buffer, GI_FLOAT32_V2_t Vector) {
+#if defined(GI_NEON_INTRINSICS)
+    vst2q_f32(Buffer, Vector);
+#else
+    GI_FLOAT32_V2_t tmp;
+    tmp = GiZipqFloat32(Vector.val[0], Vector.val[1]);
+    GiStoreFloat32(Buffer, tmp.val[0]);
+    GiStoreFloat32(Buffer + GI_SIMD_LEN_BYTE / sizeof(float), tmp.val[1]);
 #endif
 }
 
@@ -1355,5 +1390,72 @@ GI_FORCEINLINE float32x2_t GiPmaxFloat32(float32x2_t a, float32x2_t b) {
     res[0] = MAX_NAN(a[0], a[1]);
     res[1] = MAX_NAN(b[0], b[1]);
     return res;
+#endif
+}
+
+GI_FORCEINLINE
+GI_FLOAT32_V3_t GiLoadUzipFloat32V3(const float* ptr) {
+#if defined(GI_NEON_INTRINSICS)
+    return vld3q_f32(ptr);
+#elif defined(GI_SSE2_INTRINSICS)
+    GI_FLOAT32_V3_t v;
+    __m128 tmp0, tmp1, tmp2, tmp3;
+    v.val[0] = GiLoadFloat32(ptr);
+    v.val[1] = GiLoadFloat32((ptr + 4));
+    v.val[2] = GiLoadFloat32((ptr + 8));
+
+    tmp0 = _mm_castsi128_ps(_mm_shuffle_epi32(
+            _mm_castps_si128(v.val[0]), 0 | (3 << 2) | (1 << 4) | (2 << 6)));
+    tmp1 = _mm_castsi128_ps(
+            _mm_shuffle_epi32(_mm_castps_si128(v.val[1]), _SWAP_HI_LOW32));
+    tmp2 = _mm_castsi128_ps(_mm_shuffle_epi32(
+            _mm_castps_si128(v.val[2]), 1 | (2 << 2) | (0 << 4) | (3 << 6)));
+    tmp3 = _mm_unpacklo_ps(tmp1, tmp2);
+
+    v.val[0] = _mm_movelh_ps(tmp0, tmp3);
+    tmp0 = _mm_unpackhi_ps(tmp0, tmp1);
+    v.val[1] =
+            _mm_castsi128_ps(_mm_shuffle_epi32(_mm_castps_si128(tmp0), _SWAP_HI_LOW32));
+    v.val[1] = _mm_movehl_ps(tmp3, v.val[1]);
+    v.val[2] = _mm_movehl_ps(tmp2, tmp0);
+    return v;
+#else
+    GI_FLOAT32_V3_t ret;
+    for (size_t i = 0; i < 3; i++) {
+        ret.val[i][0] = ptr[0 + i];
+        ret.val[i][1] = ptr[3 + i];
+        ret.val[i][2] = ptr[6 + i];
+        ret.val[i][3] = ptr[9 + i];
+    }
+
+    return ret;
+#endif
+}
+
+GI_FORCEINLINE
+void GiStoreZipFloat32V3(float* ptr, GI_FLOAT32_V3_t val) {
+#if defined(GI_NEON_INTRINSICS)
+    vst3q_f32(ptr, val);
+#elif defined(GI_SSE2_INTRINSICS)
+    GI_FLOAT32_V3_t v;
+    __m128 tmp0, tmp1, tmp2;
+    tmp0 = _mm_unpacklo_ps(val.val[0], val.val[1]);
+    tmp1 = _mm_unpackhi_ps(val.val[0], val.val[1]);
+    tmp2 = _mm_unpacklo_ps(val.val[1], val.val[2]);
+    v.val[1] = _mm_shuffle_ps(tmp2, tmp1, _MM_SHUFFLE(1, 0, 3, 2));
+    v.val[2] = _mm_movehl_ps(val.val[2], tmp1);
+    v.val[2] = _mm_shuffle_ps(v.val[2], v.val[2], _MM_SHUFFLE(3, 1, 0, 2));
+    tmp1 = _mm_unpacklo_ps(tmp2, val.val[0]);
+    v.val[0] = _mm_shuffle_ps(tmp0, tmp1, _MM_SHUFFLE(3, 2, 1, 0));
+
+    GiStoreFloat32(ptr, v.val[0]);
+    GiStoreFloat32((ptr + 4), v.val[1]);
+    GiStoreFloat32((ptr + 8), v.val[2]);
+#else
+    for (size_t i = 0; i < GI_SIMD_LEN_BYTE / sizeof(float); i++) {
+        *ptr++ = val.val[0][i];
+        *ptr++ = val.val[1][i];
+        *ptr++ = val.val[2][i];
+    }
 #endif
 }

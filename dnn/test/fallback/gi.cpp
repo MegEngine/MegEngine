@@ -358,6 +358,21 @@ TEST_F(FALLBACK, GiLoadFloat32) {
     assert_eq((float*)&ret, naive);
 }
 
+TEST_F(FALLBACK, GiLoadFloat32V2) {
+    GI_FLOAT32_V2_t ret;
+    std::vector<float> s0{2.3f, 4.7f, -1.4f, 1223.6f, 1.1f, 4.0f, 99.7f, 1234.9f};
+    s0.resize(SIMD_LEN * 2);
+
+    ret = GiLoadFloat32V2(s0.data());
+
+    std::vector<float> naive;
+    for (size_t i = 0; i < SIMD_LEN * 2; i++) {
+        naive.push_back(s0[i]);
+    }
+
+    assert_eq((float*)&ret, naive, SIMD_LEN * 2);
+}
+
 TEST_F(FALLBACK, GiLoadFloat32LowHalf) {
     GI_FLOAT32_t ret;
     std::vector<float> s0{2.3f, 4.7f, -1.4f, 1223.6f};
@@ -699,6 +714,18 @@ TEST_F(FALLBACK, GiStoreFloat32) {
 
     GiStoreFloat32(ret.data(), src0);
     assert_eq(ret.data(), s0);
+}
+
+TEST_F(FALLBACK, GiStoreFloat32V2) {
+    GI_FLOAT32_V2_t src0;
+    std::vector<float> s0{1.1f, 2.2f, 3.5f, 4.9f, -1.1f, -2.2f, -3.5f, -4.9};
+    s0.resize(SIMD_LEN * 2);
+    init((float*)&src0, s0, SIMD_LEN * 2);
+    std::vector<float> ret{0};
+    ret.resize(SIMD_LEN * 2);
+
+    GiStoreFloat32V2(ret.data(), src0);
+    assert_eq(ret.data(), s0, SIMD_LEN * 2);
 }
 
 TEST_F(FALLBACK, GiStoreLaneXXFloat32) {
@@ -1226,7 +1253,7 @@ TEST_F(FALLBACK, GiBSLFloat32) {
         naive.resize(SIMD_LEN);
         memcpy(naive.data(), &na, sizeof(GI_FLOAT32_t));
 
-        assert_eq((float*)&ret, naive);
+        assert_eq_and_nan((float*)&ret, naive);
     }
 }
 
@@ -3197,6 +3224,65 @@ TEST_F(FALLBACK, GiPmaxFloat32) {
     auto r = (float*)&ret;
     ASSERT_LT(std::abs(naive[0] - r[0]), 1e-3);
     ASSERT_LT(std::abs(naive[1] - r[1]), 1e-3);
+}
+
+TEST_F(FALLBACK, GiStoreZipFloat32V2) {
+    GI_FLOAT32_V2_t src0;
+    std::vector<float> s0{1.1f, 2.2f, 3.5f, 4.9f, 2312.1f, 345.244f, 3.59f, -12.8f};
+    s0.resize(SIMD_LEN * 2);
+    init((float*)&src0, s0, SIMD_LEN * 2);
+    std::vector<float> ret;
+    ret.resize(SIMD_LEN * 2);
+    std::vector<float> ret_cmp;
+    ret_cmp.resize(SIMD_LEN * 2);
+
+    GiStoreZipFloat32V2(ret.data(), src0);
+
+    GI_FLOAT32_V2_t tmp;
+    tmp = GiZipqFloat32(src0.val[0], src0.val[1]);
+    GiStoreFloat32(ret_cmp.data(), tmp.val[0]);
+    GiStoreFloat32(ret_cmp.data() + SIMD_LEN, tmp.val[1]);
+
+    assert_eq(ret.data(), ret_cmp, SIMD_LEN * 2);
+}
+
+TEST_F(FALLBACK, GiLoadUzipFloat32V3) {
+    GI_FLOAT32_V3_t ret;
+    std::vector<float> s0{1.1f,  2.2f,   3.5f, 4.9f, 2312.1f, 345.244f,
+                          3.59f, -12.8f, 2.2f, 6.0f, 90.0f,   89.3f};
+    s0.resize(SIMD_LEN * 3);
+
+    ret = GiLoadUzipFloat32V3(s0.data());
+    std::vector<float> naive;
+    for (size_t i = 0; i < 3; i++) {
+        naive.push_back(s0[0 + i]);
+        naive.push_back(s0[3 + i]);
+        naive.push_back(s0[6 + i]);
+        naive.push_back(s0[9 + i]);
+    }
+
+    assert_eq((float*)&ret, naive);
+}
+
+TEST_F(FALLBACK, GiStoreZipFloat32V3) {
+    GI_FLOAT32_V3_t src0;
+    std::vector<float> s0{1.1f,  2.2f,   3.5f,  4.9f,   2312.1f, 345.244f,
+                          3.59f, -12.8f, 3.59f, -12.8f, 2.2f,    6.0};
+    s0.resize(SIMD_LEN * 3);
+    init((float*)&src0, s0, SIMD_LEN * 3);
+    std::vector<float> ret;
+    ret.resize(SIMD_LEN * 3);
+
+    GiStoreZipFloat32V3(ret.data(), src0);
+
+    std::vector<float> ret_cmp;
+    for (size_t i = 0; i < SIMD_LEN; i++) {
+        ret_cmp.push_back(s0[0 + i]);
+        ret_cmp.push_back(s0[4 + i]);
+        ret_cmp.push_back(s0[8 + i]);
+    }
+
+    assert_eq(ret.data(), ret_cmp, SIMD_LEN * 3);
 }
 
 }  // namespace test

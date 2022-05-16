@@ -15,6 +15,14 @@
 #include "src/common/rounding_converter.cuh"
 #include "src/fallback/handle.h"
 
+#include "src/fallback/resize/gi/direct_nchwxx.h"
+#include "src/fallback/resize/gi/resize_cv.h"
+#include "src/fallback/resize/gi/upsample2_nchw.h"
+#include "src/fallback/resize/gi/upsample2_nchwxx.h"
+
+#include "midout.h"
+MIDOUT_DECL(megdnn_fallback_resize)
+
 using namespace megdnn;
 using namespace fallback;
 
@@ -108,6 +116,11 @@ void ResizeImpl::kern_fallback_nhwc(const KernParam<ctype>& kern_param) {
 void ResizeImpl::exec(
         _megdnn_tensor_in src, _megdnn_tensor_in dst, _megdnn_workspace workspace) {
     check_exec(src.layout, dst.layout, workspace.size);
+    exec_gi(src, dst, workspace);
+}
+
+void ResizeImpl::exec_fallback(
+        _megdnn_tensor_in src, _megdnn_tensor_in dst, _megdnn_workspace workspace) {
     if (param().format == param::Resize::Format::NCHW4 ||
         param().format == param::Resize::Format::NCHW44 ||
         param().format == param::Resize::Format::NCHW88 ||
@@ -148,4 +161,92 @@ void ResizeImpl::exec(
     naive::ResizeImpl::exec(src, dst, workspace);
 }
 
+void ResizeImpl::exec_gi(
+        _megdnn_tensor_in src, _megdnn_tensor_in dst, _megdnn_workspace workspace) {
+    bool is_contiguous = src.layout.is_contiguous() && dst.layout.is_contiguous();
+    bool is_dtype_same = src.layout.dtype == dst.layout.dtype;
+    bool is_dtype_fp32 = src.layout.dtype == dtype::Float32();
+    bool is_dtype_supported = is_dtype_same && is_dtype_fp32;
+
+    bool is_nchw_fp32 = param().format == param::Resize::Format::NCHW && is_dtype_fp32;
+    bool is_nchw44_fp32 =
+            param().format == param::Resize::Format::NCHW44 && is_dtype_fp32;
+    bool is_imode_nearest =
+            param().imode == param::Resize::InterpolationMode::INTER_NEAREST;
+    bool is_imode_linear =
+            param().imode == param::Resize::InterpolationMode::INTER_LINEAR;
+    bool is_imode_supported = is_imode_nearest || is_imode_linear;
+
+    bool is_upsample2 = src.layout.shape[2] * 2 == dst.layout.shape[2] &&
+                        src.layout.shape[3] * 2 == dst.layout.shape[3];
+    bool usable = is_contiguous && is_dtype_supported && is_imode_supported;
+
+    if (param().format == param::Resize::Format::NHWC &&
+        (src.layout[3] == 1 || src.layout[3] == 3) && is_nhwc_contig_wc(src.layout) &&
+        is_dtype_fp32) {
+        MEGDNN_DISPATCH_CPU_KERN_OPR(resize_cv_gi_exec(src, dst, param().imode));
+    } else if (!usable) {
+        exec_fallback(src, dst, workspace);
+    } else if (is_dtype_fp32) {
+        auto kern_param = KernParam<float>::from_tensors(
+                param().format, param().imode, src, dst, workspace);
+        if (is_nchw44_fp32) {
+            if (is_upsample2) {
+                if (is_imode_nearest) {
+                    MIDOUT_BEGIN(megdnn_fallback_resize, midout_iv(0)) {
+                        MEGDNN_DISPATCH_CPU_KERN_OPR(
+                                resize_nearest_upsample2_nchw44_gi_fp32(kern_param));
+                    }
+                    MIDOUT_END();
+                } else {
+                    megdnn_assert(is_imode_linear, "invalid imode");
+                    MIDOUT_BEGIN(megdnn_fallback_resize, midout_iv(1)) {
+                        MEGDNN_DISPATCH_CPU_KERN_OPR(
+                                resize_linear_upsample2_nchw44_gi_fp32(kern_param));
+                    }
+                    MIDOUT_END();
+                }
+            } else {
+                if (is_imode_nearest) {
+                    MIDOUT_BEGIN(megdnn_fallback_resize, midout_iv(2)) {
+                        MEGDNN_DISPATCH_CPU_KERN_OPR(
+                                resize_direct_nearest_nchw44_gi_fp32(kern_param));
+                    }
+                    MIDOUT_END();
+                } else {
+                    megdnn_assert(is_imode_linear, "invalid imode");
+                    MIDOUT_BEGIN(megdnn_fallback_resize, midout_iv(3)) {
+                        MEGDNN_DISPATCH_CPU_KERN_OPR(
+                                resize_direct_linear_nchw44_gi_fp32(kern_param));
+                    }
+                    MIDOUT_END();
+                }
+            }
+        } else if (is_nchw_fp32) {
+            if (is_upsample2) {
+                if (is_imode_nearest) {
+                    MIDOUT_BEGIN(megdnn_fallback_resize, midout_iv(4)) {
+                        MEGDNN_DISPATCH_CPU_KERN_OPR(
+                                resize_nearest_upsample2_nchw_gi_fp32(kern_param));
+                    }
+                    MIDOUT_END();
+                } else {
+                    megdnn_assert(is_imode_linear, "invalid imode");
+                    MIDOUT_BEGIN(megdnn_fallback_resize, midout_iv(5)) {
+                        MEGDNN_DISPATCH_CPU_KERN_OPR(
+                                resize_linear_upsample2_nchw_gi_fp32(kern_param));
+                    }
+                    MIDOUT_END();
+                }
+            } else {
+                exec_fallback(src, dst, workspace);
+            }
+        } else {
+            exec_fallback(src, dst, workspace);
+        }
+    } else {
+        exec_fallback(src, dst, workspace);
+    }
+}
+// vim: syntax=cpp.doxygen
 // vim: syntax=cpp.doxygen

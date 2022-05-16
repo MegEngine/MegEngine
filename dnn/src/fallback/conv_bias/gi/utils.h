@@ -96,28 +96,10 @@ struct Vector<float, 8> {
     Vector(const GI_FLOAT32_V2_t& v) { value = v; }
     static Vector load(const float* addr) {
         Vector v;
-#if defined(GI_TEST_NAIVE)
-        v.value.val[0] = GiLoadFloat32(addr);
-        v.value.val[1] = GiLoadFloat32(addr + 4);
-#elif defined(__arm__) || defined(__aarch64__)
-        v.value = vld1q_f32_x2(addr);
-#else
-        v.value.val[0] = GiLoadFloat32(addr);
-        v.value.val[1] = GiLoadFloat32(addr + 4);
-#endif
+        v.value = GiLoadFloat32V2(addr);
         return v;
     }
-    static void save(float* addr, const Vector& v) {
-#if defined(GI_TEST_NAIVE)
-        GiStoreFloat32(addr, v.value.val[0]);
-        GiStoreFloat32(addr + 4, v.value.val[1]);
-#elif defined(__arm__) || defined(__aarch64__)
-        vst1q_f32_x2(addr, v.value);
-#else
-        GiStoreFloat32(addr, v.value.val[0]);
-        GiStoreFloat32(addr + 4, v.value.val[1]);
-#endif
-    }
+    static void save(float* addr, const Vector& v) { GiStoreFloat32V2(addr, v.value); }
 
     void save(float* addr) { save(addr, *this); }
     Vector operator+(const Vector& lr) {

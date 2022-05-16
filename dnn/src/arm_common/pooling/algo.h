@@ -140,6 +140,8 @@ public:
     AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; };
     const char* name() const override { return "FALLBACK_POOLING"; }
     bool usable(const PoolingKernSizeParam&) const override { return true; }
+    //! use to fallback to algo define at:
+    //! dnn/src/fallback/pooling/gi/algo.h
     void exec(const PoolingKernParam&) const override {
         megdnn_assert(false, "code issue happened!!");
     }

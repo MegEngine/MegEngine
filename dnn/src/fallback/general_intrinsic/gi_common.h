@@ -143,6 +143,7 @@ typedef int16x8_t GI_INT16_t;
 typedef int32x4_t GI_INT32_t;
 typedef uint32x4_t GI_UINT32_t;
 typedef float32x4x2_t GI_FLOAT32_V2_t;
+typedef float32x4x3_t GI_FLOAT32_V3_t;
 typedef float32x4x4_t GI_FLOAT32_V4_t;
 typedef int32x4x2_t GI_INT32_V2_t;
 typedef int32x4x4_t GI_INT32_V4_t;
@@ -167,6 +168,7 @@ typedef __m128i GI_INT16_t;
 typedef __m128i GI_INT32_t;
 typedef __m128i GI_UINT32_t;
 typedef __m128i GI_INT64_t;
+#define _SWAP_HI_LOW32                    (2 | (3 << 2) | (0 << 4) | (1 << 6))
 #define _INSERTPS_NDX(srcField, dstField) (((srcField) << 6) | ((dstField) << 4))
 #define _M64(out, inp)                    _mm_storel_epi64((__m128i*)&(out), inp)
 #define _pM128i(a)                        _mm_loadl_epi64((__m128i*)&(a))
@@ -295,6 +297,10 @@ typedef struct {
 } GI_FLOAT32_V2_NAIVE_t;
 
 typedef struct {
+    GI_FLOAT32_NAIVE_t val[3];
+} GI_FLOAT32_V3_NAIVE_t;
+
+typedef struct {
     GI_FLOAT32_NAIVE_t val[4];
 } GI_FLOAT32_V4_NAIVE_t;
 
@@ -333,6 +339,10 @@ typedef struct {
 typedef struct {
     GI_FLOAT32_t val[2];
 } GI_FLOAT32_V2_t;
+
+typedef struct {
+    GI_FLOAT32_t val[3];
+} GI_FLOAT32_V3_t;
 
 typedef struct {
     GI_FLOAT32_t val[4];

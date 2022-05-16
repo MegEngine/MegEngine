@@ -35,6 +35,11 @@ private:
     template <typename ctype>
     void kern_fallback_nhwc(const KernParam<ctype>& kern_param);
 
+    void exec_fallback(
+            _megdnn_tensor_in src, _megdnn_tensor_out dst, _megdnn_workspace workspace);
+
+    void exec_gi(
+            _megdnn_tensor_in src, _megdnn_tensor_out dst, _megdnn_workspace workspace);
 };  // class ResizeImpl
 
 }  // namespace fallback

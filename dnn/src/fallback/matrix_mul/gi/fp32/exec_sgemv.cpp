@@ -45,17 +45,7 @@ void sgemv_gi_naive_n_mk4(
         while (k < K) {
             GI_FLOAT32_t b = GiLoadFloat32(Bptr);
             GI_FLOAT32_V2_t a[2];
-#if defined(GI_TEST_NAIVE)
-#define LOAD_A(step)                                  \
-    a[step].val[0] = GiLoadFloat32(Aptr0 + step * 8); \
-    a[step].val[1] = GiLoadFloat32(Aptr0 + step * 8 + 4);
-#elif defined(__arm__) || defined(__aarch64__)
-#define LOAD_A(step) a[step] = vld1q_f32_x2(Aptr0 + step * 8);
-#else
-#define LOAD_A(step)                                  \
-    a[step].val[0] = GiLoadFloat32(Aptr0 + step * 8); \
-    a[step].val[1] = GiLoadFloat32(Aptr0 + step * 8 + 4);
-#endif
+#define LOAD_A(step) a[step] = GiLoadFloat32V2(Aptr0 + step * 8);
             UNROLL_CALL_RAW(2, LOAD_A)
 #undef LOAD_A
 
