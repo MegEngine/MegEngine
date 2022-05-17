@@ -437,8 +437,10 @@ void conv_bias::conv_direct_stride1_3x3_int8_dot(
 
             _tmp = vtranslq_s8(vld1_s8(r2));
             CALC_2(678, 345, 0);
-
-            _tmp = vtranslq_s8(vld1_s8(r3));
+            int8x8_t tmp_last = vreinterpret_s8_s32(vld1_dup_s32(r3));
+            tmp_last = vreinterpret_s8_s16(
+                    vld1_lane_s16(r3 + 4, vreinterpret_s16_s8(tmp_last), 2));
+            _tmp = vtranslq_s8(tmp_last);
             CALC_1(678, 0);
 
             POSTPROCESS_2X4(_sum00, _sum10, outptr, outptr2, dstptr, dstptr2);

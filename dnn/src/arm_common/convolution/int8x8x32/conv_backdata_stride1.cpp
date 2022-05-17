@@ -297,7 +297,9 @@ void deconv_direct_2x2(
                 _tmp = vtranslq_s8(vld1_s8(r0));
                 CALC_0(1, 0);
 
-                _tmp = vtranslq_s8(vld1_s8(r1));
+                int8x8_t temp_x = vld1_dup_s32(r1);
+                temp_x = vld1_lane_s8(r1 + 4, temp_x, 4);
+                _tmp = vtranslq_s8(temp_x);
                 CALC_0(23, 0);
 
                 vst1q_s32(outptr, _sum00);

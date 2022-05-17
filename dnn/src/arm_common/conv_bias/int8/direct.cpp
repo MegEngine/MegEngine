@@ -389,7 +389,8 @@ void conv_bias::conv_direct_stride1_3x3_int8_nchw(
             ACC_S16_S32(sum10, sum11, d1);
 
             int8x8_t _r30 = vld1_s8(sptr + 3 * IW);
-            int8x8_t _r3n = vld1_s8(sptr + 3 * IW + 8);
+            int8x8_t _r3n =
+                    vreinterpret_s8_s16(vld1_dup_s16((int16_t*)(sptr + 3 * IW + 8)));
             int8x8_t _r31 = vext_s8(_r30, _r3n, 1);
             int8x8_t _r32 = vext_s8(_r30, _r3n, 2);
             d1 = vmull_s8(_r30, k20);
@@ -444,7 +445,8 @@ void conv_bias::conv_direct_stride1_3x3_int8_nchw(
             ACC_S16_S32(sum00, sum01, d0);
 
             int8x8_t _r20 = vld1_s8(sptr + 2 * IW);
-            int8x8_t _r2n = vld1_s8(sptr + 2 * IW + 8);
+            int8x8_t _r2n =
+                    vreinterpret_s8_s16(vld1_dup_s16((int16_t*)(sptr + 2 * IW + 8)));
             int8x8_t _r21 = vext_s8(_r20, _r2n, 1);
             int8x8_t _r22 = vext_s8(_r20, _r2n, 2);
             d0 = vmull_s8(_r20, k20);
