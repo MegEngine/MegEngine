@@ -28,16 +28,18 @@ class MatrixMulImpl::AlgoPack : NonCopyableObj {
     AlgoNaive naive;
     AlgoF32GiGemvMK4 f32_gemv_mk4;
     AlgoF32GiMK4_4x8 f32_mk4_4x8;
+    AlgoF32Gi4x12 f32_4x8;
     SmallVector<AlgoBase*> m_all_algos;
     AlgoBase::Mapper m_all_algos_map;
 
 public:
     AlgoPack() {
+        m_all_algos.emplace_back(&f32_gemv_mk4);
+        m_all_algos.emplace_back(&f32_mk4_4x8);
+        m_all_algos.emplace_back(&f32_4x8);
         m_all_algos.emplace_back(&gemv);
         m_all_algos.emplace_back(&f32_k8x12x1);
         m_all_algos.emplace_back(&naive);
-        m_all_algos.emplace_back(&f32_gemv_mk4);
-        m_all_algos.emplace_back(&f32_mk4_4x8);
         for (auto&& algo : m_all_algos) {
             m_all_algos_map.emplace(algo->info().desc, algo);
         }

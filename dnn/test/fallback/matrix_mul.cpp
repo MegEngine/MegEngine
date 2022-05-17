@@ -42,6 +42,12 @@ TEST_F(FALLBACK, MATRIX_MUL_MK4_GI) {
             "FB_GI_F32_MK4_4x8", param::MatrixMul::Format::MK4, 1);
 }
 
+TEST_F(FALLBACK, MATRIX_MULF_GI_F32_4x12) {
+    matrix_mul::check_matrix_mul(
+            dtype::Float32{}, dtype::Float32{}, dtype::Float32{}, handle(),
+            "FB_GI_F32_4x12");
+}
+
 TEST_F(FALLBACK, MATRIX_MUL_RECORD) {
     TaskRecordChecker<MatrixMul> checker(1);
     using Param = MatrixMul::Param;

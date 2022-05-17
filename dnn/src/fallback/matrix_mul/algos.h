@@ -97,6 +97,17 @@ public:
     MEGDNN_DECL_ALGO_TYPE(FB_GI_F32_MK4_4x8)
 };
 
+class MatrixMulImpl::AlgoF32Gi4x12 final : public AlgoBase {
+public:
+    AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }
+    const char* name() const override { return "FB_GI_F32_4x12"; }
+    bool usable(const KernSizeParam&) const override;
+    size_t get_workspace(const KernSizeParam&) const override;
+    kern_t get_kern(const KernSizeParam&) const override;
+    MEGDNN_REG_GEMM_FUNC_FOR_IM2COL();
+    MEGDNN_DECL_ALGO_TYPE(FB_GI_F32_4x12)
+};
+
 }  // namespace fallback
 }  // namespace megdnn
 

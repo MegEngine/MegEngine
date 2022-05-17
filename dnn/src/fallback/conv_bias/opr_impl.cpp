@@ -138,8 +138,6 @@ public:
             }
         }
 
-        //! TODO: move arm_v7 MatrixMulImpl::AlgoF32 matmul to gi fallback, for nchw
-        //! prefetch algo, also need update dnn/test/common/conv_bias.cpp:check_winograd
         matmul_algos = static_cast<fallback::MatrixMulImpl*>(matmul_opr)
                                ->select_algo_type(
                                        {AlgoDataType::FLOAT32, MatmulFormat::DEFAULT});
