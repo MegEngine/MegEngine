@@ -25,6 +25,7 @@ class FbsHelper {
 public:
     FbsHelper() = default;
     FbsHelper(ModelPacker* packer, std::string model_path);
+    FbsHelper(ModelPacker* packer, std::vector<uint8_t>& model_data);
     flatbuffers::Offset<model_parse::ModelHeader> build_header();
     flatbuffers::Offset<model_parse::ModelInfo> build_info();
     flatbuffers::Offset<model_parse::ModelData> build_data();
@@ -57,6 +58,19 @@ std::vector<uint8_t> read_file(std::string path) {
     LITE_ASSERT(nr == 1);
     fclose(fin);
     return buf;
+}
+FbsHelper::FbsHelper(ModelPacker* packer, std::vector<uint8_t>& model_data)
+        : m_packer(packer), m_model_buffer(model_data) {
+    const char* model_ptr =
+            static_cast<const char*>(static_cast<void*>(m_model_buffer.data()));
+    std::string tag(model_ptr, 12);
+    if (tag == "packed_model") {
+        uint8_t* buffer = m_model_buffer.data() + 12;
+        auto model = GetPackModel(buffer)->models()->Get(0);
+        m_model_header = model->header();
+        m_model_info = model->info();
+        m_model_data = model->data();
+    }
 }
 
 FbsHelper::FbsHelper(ModelPacker* packer, std::string model_path) : m_packer(packer) {
@@ -118,21 +132,20 @@ flatbuffers::Offset<ModelData> FbsHelper::build_data() {
 
 flatbuffers::Offset<ModelInfo> FbsHelper::build_info() {
     flatbuffers::Offset<flatbuffers::Vector<uint8_t>> fb_data;
-    if (m_model_info && m_model_info->data() && m_packer->m_info_data_path.empty()) {
+    if (m_model_info && m_model_info->data() && m_packer->m_info_data.empty()) {
         auto data = m_model_info->data()->Data();
         auto size = m_model_info->data()->size();
         fb_data = m_builder.CreateVector(data, size);
-    } else if (!m_packer->m_info_data_path.empty()) {
-        auto info_data = read_file(m_packer->m_info_data_path);
-        fb_data = m_builder.CreateVector(info_data);
+    } else if (!m_packer->m_info_data.empty()) {
+        fb_data = m_builder.CreateVector(m_packer->m_info_data);
     }
 
     flatbuffers::Offset<flatbuffers::Vector<uint8_t>> fb_algo_policy;
     flatbuffers::Offset<flatbuffers::Vector<uint8_t>> fb_binary_cache;
     if (m_packer->m_header.fb32.is_fast_run_cache) {
         std::vector<uint8_t> info_algo_policy;
-        if (!m_packer->m_info_algo_policy_path.empty()) {
-            info_algo_policy = read_file(m_packer->m_info_algo_policy_path);
+        if (!m_packer->m_algo_policy_data.empty()) {
+            info_algo_policy = m_packer->m_algo_policy_data;
             if (m_model_info && m_model_info->algo_policy()) {
                 auto cache = m_model_info->algo_policy()->Data();
                 auto size = m_model_info->algo_policy()->size();
@@ -178,11 +191,27 @@ ModelPacker::ModelPacker(
         std::string model_path, std::string packed_model_path,
         std::string info_data_path, std::string info_algo_policy_path,
         std::string info_binary_cache_path)
-        : m_packed_model_path(packed_model_path),
-          m_info_data_path(info_data_path),
-          m_info_algo_policy_path(info_algo_policy_path),
-          m_info_binary_cache_path(info_binary_cache_path) {
+        : m_packed_model_path(packed_model_path) {
     m_fbs_helper = new FbsHelper(this, model_path);
+    std::vector<uint8_t> empty_vec;
+    m_info_data = info_data_path.empty() ? empty_vec : read_file(info_data_path);
+    m_algo_policy_data = info_algo_policy_path.empty()
+                               ? empty_vec
+                               : read_file(info_algo_policy_path);
+    m_binary_cache_data = info_binary_cache_path.empty()
+                                ? empty_vec
+                                : read_file(info_binary_cache_path);
+}
+
+ModelPacker::ModelPacker(
+        std::vector<uint8_t> model_data, std::string packed_model_path,
+        std::vector<uint8_t> info_data, std::vector<uint8_t> info_algo_policy_data,
+        std::vector<uint8_t> info_binary_cache_data) {
+    m_fbs_helper = new FbsHelper(this, model_data);
+    m_packed_model_path = packed_model_path;
+    m_info_data = info_data;
+    m_algo_policy_data = info_algo_policy_data;
+    m_binary_cache_data = info_binary_cache_data;
 }
 
 void ModelPacker::set_header(
@@ -192,10 +221,10 @@ void ModelPacker::set_header(
     m_header.info_decryption_method = info_decryption_method;
     memset(&m_header.fb32, 0, sizeof(m_header.fb32));
     m_header.fb32.is_fast_run_cache = is_fast_run_cache;
-    if (!m_info_data_path.empty()) {
-        auto buf = read_file(m_info_data_path);
+    if (!m_info_data.empty()) {
         std::string json_string(
-                static_cast<const char*>(static_cast<void*>(buf.data())), buf.size());
+                static_cast<const char*>(static_cast<void*>(m_info_data.data())),
+                m_info_data.size());
         auto info = nlohmann::json::parse(json_string);
         m_header.name = info["name"];
     }
@@ -221,6 +250,9 @@ void ModelPacker::pack_model() {
     m_fbs_helper->builder().Finish(pack_model_builder.Finish());
 
     FILE* fptr = fopen(m_packed_model_path.c_str(), "wb");
+    LITE_ASSERT(
+            fptr, "failed to open %s: %s", m_packed_model_path.c_str(),
+            strerror(errno));
     std::string packed_model_tag = "packed_model";
     auto nr_tag = fwrite(packed_model_tag.c_str(), 1, packed_model_tag.size(), fptr);
     LITE_ASSERT(nr_tag == packed_model_tag.size());

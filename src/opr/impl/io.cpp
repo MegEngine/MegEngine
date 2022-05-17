@@ -398,7 +398,7 @@ void ImmutableTensor::Value::setup(CompNode cn, const HostTensorND& val) {
         return true;
     };
 
-    if (one_elem(val.shape())) {
+    if (!val.empty() && one_elem(val.shape())) {
         float v;
         static_cast_dtype(&v, val.dtype(), val.raw_ptr());
         m_summary = ssprintf("const<%.3g>", v);

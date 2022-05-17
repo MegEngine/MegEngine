@@ -11,7 +11,7 @@
 
 #pragma once
 #include <string>
-
+#include <vector>
 namespace lite {
 
 struct FeatureBits32 {
@@ -45,6 +45,11 @@ public:
             std::string model_path, std::string packed_model_path,
             std::string info_data_path = "", std::string info_algo_policy_path = "",
             std::string info_binary_cache_path = "");
+    ModelPacker(
+            std::vector<uint8_t> model_data, std::string packed_model_path,
+            std::vector<uint8_t> info_data = {},
+            std::vector<uint8_t> info_algo_policy_data = {},
+            std::vector<uint8_t> info_binary_cache_data = {});
 
     void set_header(
             std::string model_decryption_method = "NONE",
@@ -53,13 +58,12 @@ public:
     void pack_model();
 
 private:
-    std::string m_packed_model_path;
-    std::string m_info_data_path;
+    std::vector<uint8_t> m_info_data;
     //! fastrun cache / algo policy
-    std::string m_info_algo_policy_path;
+    std::vector<uint8_t> m_algo_policy_data;
     //! binary cache
-    std::string m_info_binary_cache_path;
-
+    std::vector<uint8_t> m_binary_cache_data;
+    std::string m_packed_model_path;
     Header m_header;
 
     friend class FbsHelper;

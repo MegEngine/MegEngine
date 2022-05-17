@@ -524,9 +524,14 @@ void ParamFusePass::apply(OptState& state) const {
 
         {
             auto orig_level = cg->options().log_level;
+            auto orig_record_level = cg->options().comp_node_seq_record_level;
+            cg->options().comp_node_seq_record_level = 0;
             cg->options().log_level = 0;
             MGB_TRY { cg->compile({{var, cb}})->execute(); }
-            MGB_FINALLY(cg->options().log_level = orig_level);
+            MGB_FINALLY({
+                cg->options().comp_node_seq_record_level = orig_record_level;
+                cg->options().log_level = orig_level;
+            });
         }
 
         SymbolVar new_var;
