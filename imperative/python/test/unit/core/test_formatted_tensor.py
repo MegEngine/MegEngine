@@ -224,7 +224,6 @@ def test_interpolate(mode, is_symbolic):
         assert rst.format == x.format
         return rst.numpy()
 
-    # NHWC interpolate only suppoted channel is 1 or 3
     data = np.arange(0, 48).reshape((1, 3, 4, 4)).astype("float32")
     _compare_nchw_nhwc(data, func, is_symbolic)
 
@@ -329,6 +328,35 @@ def test_pooling2d(pooling, is_symbolic):
 
     data = np.arange(0, 24).reshape((1, 2, 3, 4))
     _compare_nchw_nhwc(data, func, is_symbolic)
+
+
+@pytest.mark.skip("not implemented")
+def test_where():
+    def func(x):
+        mask = tensor(
+            np.array([True, False, False, True] * 6, dtype=np.bool).reshape(
+                (1, 2, 3, 4)
+            )
+        )
+        y = tensor(
+            np.array([1, np.inf, np.nan, 4] * 6, dtype=np.float32).reshape((1, 2, 3, 4))
+        )
+        out = F.where(mask, x, y)
+        assert out.format == "default"
+        return out.numpy()
+
+    data = np.arange(0, 24).reshape((1, 2, 3, 4))
+    _compare_nchw_nhwc(data, func)
+
+
+def test_unsupported_op():
+    def func(x):
+        rst = F.nn.pad(x, pad_width=((1, 1),), mode="constant")
+        assert rst.format == "default"
+        return rst.numpy()
+
+    data = np.arange(0, 24).reshape((1, 2, 3, 4))
+    _compare_nchw_nhwc(data, func)
 
 
 def _compare_backward(inps, model, is_symbolic=None):
