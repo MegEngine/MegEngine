@@ -474,6 +474,8 @@ void RelayoutFormatImpl::exec(
             src.layout.dtype.enumv() == DTypeEnum::Int32 ||
             (src.layout.dtype.enumv() == DTypeEnum::Uint8 &&
              dst.layout.dtype.enumv() == DTypeEnum::QuantizedS8) ||
+            (src.layout.dtype.enumv() == DTypeEnum::Uint8 &&
+             dst.layout.dtype.enumv() == DTypeEnum::Uint8) ||
             src.layout.dtype.category() == DTypeCategory::QUANTIZED);
     check_exec(src.layout, dst.layout, workspace.size);
     HandleImpl* m_handle = static_cast<HandleImpl*>(handle());
@@ -516,6 +518,7 @@ void RelayoutFormatImpl::exec(
                 DNN_INC_FLOAT16(cb(Float16, dt_float16));
                 cb(Quantized8Asymm, dt_uint8);
                 cb(QuantizedS8, dt_int8);
+                cb(Uint8, dt_uint8);
 #undef cb
                 default:
                     megdnn_assert(0);
