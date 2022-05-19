@@ -1,11 +1,3 @@
-#include "src/fallback/matrix_mul/generic_strategy.h"
-#include "src/fallback/matrix_mul/gi/fp32/common.h"
-
-using namespace megdnn;
-using namespace matmul::fallback;
-
-namespace {
-
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wuninitialized"
 
@@ -18,6 +10,15 @@ namespace {
 #endif
 #endif
 #endif
+
+#include "src/fallback/matrix_mul/generic_strategy.h"
+#include "src/fallback/matrix_mul/gi/fp32/common.h"
+
+using namespace megdnn;
+using namespace matmul::fallback;
+
+namespace {
+
 void kern_4x12(
         const float* packA, const float* packB, int K, float* output, int LDC,
         bool is_first_k, int m_remain) {
@@ -615,7 +616,6 @@ void kern_4x4(
         }
     }
 }
-#pragma GCC diagnostic pop
 
 void gi_sgemm_4x12_pack_A_n(
         float* outptr, const float* inptr, int ldin, int y0, int ymax, int k0,

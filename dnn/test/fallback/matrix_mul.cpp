@@ -154,6 +154,16 @@ TEST_F(FALLBACK, BATCHED_MATRIX_MUL) {
         checker.execs({AL, BL, {}});
     }
 }
+
+#if MEGDNN_WITH_BENCHMARK
+TEST_F(FALLBACK, BENCHMARK_MATRIX_MUL_FB_GI_F32_4x12) {
+    auto args = matrix_mul::get_benchmark_matmul_args();
+    matrix_mul::benchmark_single_algo(
+            handle(), args, dtype::Float32{}, dtype::Float32{}, dtype::Float32{},
+            "FB_GI_F32_4x12", param::MatrixMul::Format::DEFAULT);
+}
+
+#endif
 }  // namespace test
 }  // namespace megdnn
 

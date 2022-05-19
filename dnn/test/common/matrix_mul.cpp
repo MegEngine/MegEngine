@@ -429,6 +429,68 @@ void matrix_mul::benchmark_with_contrast(
     }
 }
 
+void matrix_mul::benchmark_single_algo(
+        Handle* handle, const std::vector<TestArg>& args, DType A_dtype, DType B_dtype,
+        DType C_dtype, const char* algo, param::MatrixMul::Format format) {
+    using Param = MatrixMul::Param;
+
+    megdnn_assert(A_dtype.enumv() == B_dtype.enumv());
+    Benchmarker<MatrixMul> benchmark(handle);
+    constexpr size_t RUNS = 50;
+    if (algo) {
+        benchmark.set_before_exec_callback(AlgoChecker<MatrixMul>(algo));
+    }
+    benchmark.set_dtype(0, A_dtype).set_dtype(1, B_dtype).set_dtype(2, C_dtype);
+    benchmark.set_times(RUNS);
+
+    auto bench = [](Benchmarker<MatrixMul>& benchmark, Param param,
+                    param::MatrixMul::Format format, size_t m, size_t n, size_t k,
+                    size_t pack_size) -> float {
+        param.format = format;
+        benchmark.set_param(param);
+        float used_algo = 1.0;
+        if (format == param::MatrixMul::Format::DEFAULT) {
+            size_t A0 = m * pack_size, A1 = k * pack_size, B0 = k * pack_size, B1 = n;
+            TensorShape A, B;
+            if (param.transposeA) {
+                std::swap(A0, A1);
+            }
+            if (param.transposeB) {
+                std::swap(B0, B1);
+            }
+            used_algo = benchmark.execs({{A0, A1}, {B0, B1}, {}}) / RUNS;
+        } else {
+            size_t A0 = m, A1 = k, B0 = k, B1 = n;
+            if (param.transposeA) {
+                std::swap(A0, A1);
+            }
+            if (param.transposeB) {
+                std::swap(B0, B1);
+            }
+
+            used_algo =
+                    benchmark.execs(
+                            {{A0, A1, pack_size, pack_size}, {B0, B1, pack_size}, {}}) /
+                    RUNS;
+        }
+        return used_algo;
+    };
+
+    size_t pack_size = MatrixMulForward::pack_size(format);
+    for (auto& arg : args) {
+        Param param;
+        param.transposeA = arg.mask & 0x1;
+        param.transposeB = arg.mask & 0x2;
+
+        auto used_algo =
+                bench(benchmark, param, format, arg.m, arg.n, arg.k, pack_size);
+
+        float computations = 2.f * arg.m * pack_size * arg.k * pack_size * arg.n * 1e-6;
+        printf("run: {(%zu, %zu) x (%zu, %zu)} %f ms %f Gflops\n", arg.m * pack_size,
+               arg.k * pack_size, arg.k * pack_size, arg.n, used_algo,
+               computations / used_algo);
+    }
+}
 #endif
 
 // vim: syntax=cpp.doxygen

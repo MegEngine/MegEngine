@@ -85,6 +85,10 @@ void benchmark_with_contrast(
         DType contrast_B_dtype = dtype::Float32{},
         DType contrast_C_dtype = dtype::Float32{}, const char* contrast_algo = nullptr,
         param::MatrixMul::Format contrast_format = param::MatrixMul::Format::DEFAULT);
+void benchmark_single_algo(
+        Handle* handle, const std::vector<TestArg>& args, DType A_dtype, DType B_dtype,
+        DType C_dtype, const char* algo = nullptr,
+        param::MatrixMul::Format format = param::MatrixMul::Format::DEFAULT);
 #endif
 
 }  // namespace matrix_mul

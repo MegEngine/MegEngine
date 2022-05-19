@@ -571,6 +571,12 @@ TEST_F(ARMV7, BENCHMARK_MATRIX_MUL_INT32_MK_4X2X16) {
     }
 }
 
+TEST_F(ARMV7, BENCHMARK_MATRIX_MUL_ARMV7_F32) {
+    auto args = matrix_mul::get_benchmark_matmul_args();
+    matrix_mul::benchmark_single_algo(
+            handle(), args, dtype::Float32{}, dtype::Float32{}, dtype::Float32{},
+            "ARMV7_F32", param::MatrixMul::Format::DEFAULT);
+}
 #endif
 
 // vim: syntax=cpp.doxygen
