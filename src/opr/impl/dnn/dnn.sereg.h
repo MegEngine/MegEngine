@@ -285,6 +285,34 @@ struct OprMaker<opr::LSQBackward, 5> {
 };
 
 template <>
+struct OprMaker<opr::RNNCellForward, 6> {
+    using Param = opr::RNNCellForward::Param;
+    static cg::OperatorNodeBase* make(
+            const Param& param, const cg::VarNodeArray& i, ComputingGraph& graph,
+            const OperatorNodeConfig& config) {
+        MGB_MARK_USED_VAR(graph);
+        return opr::RNNCellForward::make(
+                       i[0], i[1], i[2], i[3], i[4], i[5], param, config)
+                .node()
+                ->owner_opr();
+    }
+};
+
+template <>
+struct OprMaker<opr::LSTMCellForward, 7> {
+    using Param = opr::LSTMCellForward::Param;
+    static cg::OperatorNodeBase* make(
+            const Param& param, const cg::VarNodeArray& i, ComputingGraph& graph,
+            const OperatorNodeConfig& config) {
+        MGB_MARK_USED_VAR(graph);
+        return opr::LSTMCellForward::make(
+                       i[0], i[1], i[2], i[3], i[4], i[5], i[6], param, config)
+                .node()
+                ->owner_opr();
+    }
+};
+
+template <>
 struct OprMaker<opr::RNNBackward, 7> {
     using Param = opr::RNNBackward::Param;
     static cg::OperatorNodeBase* make(
@@ -718,6 +746,8 @@ MGB_SEREG_OPR(LSQ, 4);
 MGB_SEREG_OPR(LSQBackward, 5);
 MGB_SEREG_OPR(LayerNorm, 0);
 MGB_SEREG_OPR(LayerNormBackward, 0);
+MGB_SEREG_OPR(RNNCellForward, 6);
+MGB_SEREG_OPR(LSTMCellForward, 7);
 MGB_SEREG_OPR(RNNForward, 3);
 MGB_SEREG_OPR(RNNBackward, 7);
 MGB_SEREG_OPR(LSTMForward, 4);
