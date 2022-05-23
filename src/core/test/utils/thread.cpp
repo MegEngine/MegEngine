@@ -169,9 +169,16 @@ TEST(TestAsyncQueue, SynchronizerMultiProducer3) {
     test_scq_sync_multi_producer<100, 100>();
 }
 
+//! asan error report stack-use-after-scope when
+//! only have one physics cpu or bind to one core
+//! with taskset 01 xxx, move processed to global
+//! var as a workaround.
+namespace {
+std::atomic_size_t processed{0};
+}
 TEST(TestAsyncQueue, SynchronizerWaiterStarving) {
     SCQueueSynchronizer sync(0);
-    std::atomic_size_t processed{0};
+    processed = 0;
     auto worker = [&]() {
         while (sync.consumer_fetch(1)) {
             for (int volatile i = 0; i < 1000; ++i)
