@@ -53,7 +53,25 @@ _lite_dtypes_to_ctype = {
 
 class LiteLayout(Structure):
     """
-    the simple layout description
+    Description of layout using in Lite. A Lite layout will be totally defined
+        by shape and data type.
+
+    Args:
+        shape: the shape of data.
+        dtype: data type.
+
+    Note:
+        Dims of shape should be less than 8. The supported data type defines at
+        LiteDataType
+
+    Examples:
+
+        .. code-block:: python
+
+            import numpy as np
+            layout = LiteLayout([1, 4, 8, 8], LiteDataType.LITE_FLOAT)
+            assert(layout.shape()) == [1, 4, 8, 8]
+            assert(layout.dtype()) == LiteDataType.LITE_FLOAT
     """
 
     _fields_ = [
@@ -113,10 +131,14 @@ class _LiteTensorDesc(Structure):
     """
     warpper of the MegEngine Tensor
 
-    :is_pinned_host: when set, the storage memory of the tensor is pinned memory,
-    this is used to Optimize the H2D or D2H memory copy, if the device or layout
-    is not set, when copy form other device(CUDA) tensor, this tensor
-    will be automatically set to pinned tensor
+    Args:
+        is_pinned_host: when set, the storage memory of the tensor is pinned
+            memory. This is used to Optimize the H2D or D2H memory copy, if the
+            device or layout is not set, when copy form other device(CUDA)
+            tensor, this tensor will be automatically set to pinned tensor
+        layout(LiteLayout): layout of this tensor
+        device_type: type of device
+        device_id: id of device
     """
 
     _fields_ = [
@@ -144,7 +166,7 @@ class _LiteTensorDesc(Structure):
 
 class _TensorAPI(_LiteCObjBase):
     """
-    get the api from the lib
+    Get the API from the lib
     """
 
     _api_ = [
@@ -183,7 +205,22 @@ class _TensorAPI(_LiteCObjBase):
 
 class LiteTensor(object):
     """
-    the tensor to hold a block of data
+    Description of a block of data with neccessary information.
+
+    Args:
+        layout: layout of Tensor
+        device_type: device type of Tensor
+        device_id: device id of Tensor
+        is_pinned_host: when set, the storage memory of the tensor is pinned
+            memory. This is used to Optimize the H2D or D2H memory copy, if the
+            device or layout is not set, when copy form other device(CUDA)
+            tensor, this tensor will be automatically set to pinned tensor
+        shapes: the shape of data
+        dtype: data type
+
+    Note:
+        Dims of shape should be less than 8. The supported data type defines at
+        LiteDataType
     """
 
     _api = _TensorAPI()._lib
@@ -197,10 +234,6 @@ class LiteTensor(object):
         shapes=None,
         dtype=None,
     ):
-        """
-        create a Tensor with layout, device, is_pinned_host or shapes, dtype,
-        device_type, device_id, is_pinned_host param
-        """
         self._tensor = _Ctensor()
         self._layout = LiteLayout()
         if layout is not None:
@@ -232,7 +265,11 @@ class LiteTensor(object):
 
     def share_memory_with(self, src_tensor):
         """
-        share the same memory with the src_tensor, the self memory will be freed
+        share the same memory with the ``src_tensor``, the self memory will be
+            freed
+
+        Args:
+            src_tensor: the source tensor that will share memory with this tensor
         """
         assert isinstance(src_tensor, LiteTensor)
         self._api.LITE_tensor_share_memory_with(self._tensor, src_tensor._tensor)
@@ -265,7 +302,7 @@ class LiteTensor(object):
     @property
     def device_type(self):
         """
-        get device of the tensor
+        get device type of the tensor
         """
         device_type = c_int()
         self._api.LITE_get_tensor_device_type(self._tensor, byref(device_type))
@@ -320,6 +357,9 @@ class LiteTensor(object):
     def copy_from(self, src_tensor):
         """
         copy memory form the src_tensor
+
+        Args:
+            src_tensor: source tensor
         """
         assert isinstance(src_tensor, LiteTensor)
         self._api.LITE_tensor_copy(self._tensor, src_tensor._tensor)
@@ -327,8 +367,10 @@ class LiteTensor(object):
 
     def reshape(self, shape):
         """
-        reshape the tensor with data not change, only change the shape
-        :param shape: int arrary of dst_shape
+        reshape the tensor with data not change.
+
+        Args:
+            shape: target shape
         """
         shape = list(shape)
         length = len(shape)
@@ -339,9 +381,11 @@ class LiteTensor(object):
     def slice(self, start, end, step=None):
         """
         slice the tensor with gaven start, end, step
-        :param start: silce begin index of each dim
-        :param end: silce end index of each dim
-        :param step: silce step of each dim
+
+        Args:
+            start: silce begin index of each dim
+            end: silce end index of each dim
+            step: silce step of each dim
         """
         start = list(start)
         end = list(end)
@@ -357,7 +401,7 @@ class LiteTensor(object):
         c_step = (c_size_t * length)(*step)
         slice_tensor = LiteTensor()
         self._api.LITE_tensor_slice(
-            self._tensor, c_start, c_end, c_step, length, byref(slice_tensor._tensor)
+            self._tensor, c_start, c_end, c_step, length, byref(slice_tensor._tensor),
         )
         slice_tensor.update()
         return slice_tensor
@@ -373,8 +417,10 @@ class LiteTensor(object):
     def set_data_by_share(self, data, length=0, layout=None):
         """
         share the data to the tensor
-        param data: the data will shared to the tensor, it should be a
-        numpy.ndarray or ctypes data
+
+        Args:
+            data: the data will shared to the tensor, it should be a
+                numpy.ndarray or ctypes data
         """
         if isinstance(data, np.ndarray):
             assert (
@@ -400,9 +446,13 @@ class LiteTensor(object):
 
     def set_data_by_copy(self, data, data_length=0, layout=None):
         """
-        copy the data to the tensor, the memory of the tensor must be continue
-        param data: the data to copy to tensor, it should be list,
-        numpy.ndarraya or ctypes with length
+        copy the data to the tensor
+
+        Args:
+            data: the data to copy to tensor, it should be list, numpy.ndarraya
+                or ctypes with length
+            data_length: length of data in bytes
+            layout: layout of data
         """
         if layout is not None:
             self.layout = layout
@@ -440,8 +490,11 @@ class LiteTensor(object):
     def get_data_by_share(self):
         """
         get the data in the tensor, add share the data with a new numpy, and
-        return the numpy arrray, be careful, the data in numpy is valid before
-        the tensor memory is write again, such as LiteNetwok forward next time.
+            return the numpy arrray
+
+        Note:
+            Be careful, the data in numpy is valid before the tensor memory is
+                write again, such as LiteNetwok forward next time.
         """
 
         self.update()
@@ -490,10 +543,12 @@ def LiteTensorConcat(
     tensors, dim, device_type=LiteDeviceType.LITE_DEVICE_DEFAULT, device_id=-1
 ):
     """
-    concat tensor in input dim to one tensor
-    dim : the dim to act concat
-    device_type: the result tensor device type
-    device_id: the result tensor device id
+    concat tensors at expected dim to one tensor
+
+    Args:
+        dim : the dim to act concat
+        device_type: the result tensor device type
+        device_id: the result tensor device id
     """
     api = _TensorAPI()._lib
     length = len(tensors)
@@ -515,6 +570,9 @@ def LiteTensorConcat(
 def lite_dtype_2_numpy(dtype):
     """
     convert lite dtype to corresponding numpy dtype
+
+    Args:
+        dtype(LiteDataType): source dtype
     """
     assert isinstance(
         dtype, LiteDataType

@@ -135,7 +135,6 @@ struct LITE_API ExtraConfig {
     bool disable_configure_by_model_info = false;
 };
 
-
 /**
  * @brief config the network input and output item, the input and output tensor
  * information will describe there
