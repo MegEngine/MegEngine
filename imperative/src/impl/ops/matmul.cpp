@@ -229,12 +229,11 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
         inp_tensornds[0].layout = layout_a;
         inp_tensornds[1].layout = layout_b;
     }
-
-    DeviceTensorND out =
-            BlobManager::inst()->alloc_workspace_with_defrag(cn, dst_layout);
     size_t sz = setup_algo<megdnn::MatrixMul>(
             {layout_a, layout_b, dst_layout}, dnn_opr.op.get(), 0, false, false, cn,
-            matmul.policy(), false);
+            matmul.policy(), false, &inp_tensornds);
+    DeviceTensorND out =
+            BlobManager::inst()->alloc_workspace_with_defrag(cn, dst_layout);
     TensorLayout w_layout({sz}, dtype::Byte());
     auto dnn_wk = dnn_opr.create_workspace(w_layout);
 
@@ -470,21 +469,22 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
         return {Tensor::make(out)};
     }
 
-    using TensorND = megdnn::TensorND;
-    TensorND inp_nd1 = inp1->dnn_tensor();
-    inp_nd1.layout = layout1;
-    TensorND inp_nd2 = inp2->dnn_tensor();
-    inp_nd2.layout = layout2;
+    SmallVector<megdnn::TensorND> inp_tensornds(2u);
+    inp_tensornds[0] = inp1->dnn_tensor();
+    inp_tensornds[0].layout = layout1;
+    inp_tensornds[1] = inp2->dnn_tensor();
+    inp_tensornds[1].layout = layout2;
+
+    size_t sz = setup_algo<megdnn::BatchedMatrixMul>(
+            {layout1, layout2, dst_layout}, dnn_opr.op.get(), 0, false, false, cn,
+            matmul.policy(), false, &inp_tensornds);
 
     DeviceTensorND out =
             BlobManager::inst()->alloc_workspace_with_defrag(cn, dst_layout);
 
-    size_t sz = setup_algo<megdnn::BatchedMatrixMul>(
-            {layout1, layout2, dst_layout}, dnn_opr.op.get(), 0, false, false, cn,
-            matmul.policy(), false);
     TensorLayout w_layout({sz}, dtype::Byte());
     auto dnn_wk = dnn_opr.create_workspace(w_layout);
-    dnn_opr.op->exec(inp_nd1, inp_nd2, out.as_megdnn(), dnn_wk);
+    dnn_opr.op->exec(inp_tensornds[0], inp_tensornds[1], out.as_megdnn(), dnn_wk);
 
     shp1[shp1.ndim - 2] = dst_layout[dst_layout.ndim - 2];
     shp1[shp1.ndim - 1] = dst_layout[dst_layout.ndim - 1];

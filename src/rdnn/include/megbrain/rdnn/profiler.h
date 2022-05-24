@@ -122,6 +122,8 @@ public:
 
         //! filled by profile()
         mutable double actual_timeout;
+        // input
+        SmallVector<megdnn::TensorND>* inp_tensornds;
     };
 
     struct Result {
@@ -141,7 +143,7 @@ private:
             const megdnn::TensorLayoutArray& preprocessed_layout,
             const SmallVector<DeviceTensorND>& flt_val, UniqPtrWithCN<Opr>& megdnn_opr,
             megdnn::Workspace& mdn_workspace, std::array<TensorLayout, arity>& layouts,
-            std::array<DeviceTensorND, arity_in>& inp_val,
+            std::array<megdnn::TensorND, arity_in>& inp_val,
             PreprocessFilter<Opr>& prep_flt);
     static TResult prof_impl(const TParam& raw_param);
     static void prof_init_device(const TParam& raw_param);

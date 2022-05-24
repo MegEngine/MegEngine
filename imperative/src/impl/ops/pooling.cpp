@@ -49,23 +49,25 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
 
     auto&& op_def = def.cast_final_safe<Pooling>();
     auto cn = inputs[0]->comp_node();
-    megdnn::TensorND inp_tensornd = inputs[0]->dnn_tensor();
-
     DnnOprCaller<megdnn::Pooling> caller(cn);
     auto&& dnn_opr = caller.op;
     dnn_opr->param() = op_def.param();
 
+    SmallVector<megdnn::TensorND> inp_tensornds(inputs.size());
+    inp_tensornds[0] = inputs[0]->dnn_tensor();
+
     TensorLayout& oup_layout = output_descs[0].layout;
     if (!validated) {
         megdnn::Pooling::deduce_layout_impl(
-                inp_tensornd.layout, op_def.param(), oup_layout);
+                inp_tensornds[0].layout, op_def.param(), oup_layout);
     }
-    DeviceTensorND out_devtensor =
-            BlobManager::inst()->alloc_workspace_with_defrag(cn, oup_layout);
 
     size_t wk_size = setup_algo<megdnn::Pooling>(
-            {inp_tensornd.layout, oup_layout}, dnn_opr.get(), 0, false, false, cn,
-            op_def.policy(), false);
+            {inp_tensornds[0].layout, oup_layout}, dnn_opr.get(), 0, false, false, cn,
+            op_def.policy(), false, &inp_tensornds);
+
+    DeviceTensorND out_devtensor =
+            BlobManager::inst()->alloc_workspace_with_defrag(cn, oup_layout);
 
     megdnn::Workspace dnn_wk;
     if (wk_size) {
@@ -73,7 +75,7 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
         dnn_wk = caller.create_workspace(w_layout);
     }
 
-    dnn_opr->exec(inp_tensornd, out_devtensor.as_megdnn(), dnn_wk);
+    dnn_opr->exec(inp_tensornds[0], out_devtensor.as_megdnn(), dnn_wk);
     return {Tensor::make(out_devtensor)};
 }
 

@@ -265,7 +265,8 @@ std::vector<megdnn::Algorithm::SearchItem> flatten_search_space(
             typename rdnn::AlgoChooser<_Opr>::AlgoChooserHelper sub_helper(
                     to_fixed_layouts<_Opr>(_item.layouts), megdnn_opr.get(),
                     _item.param, helper.comp_node(), helper.execution_policy(),
-                    helper.allow_weight_preprocess(), helper.desc());
+                    helper.allow_weight_preprocess(), helper.desc(),
+                    helper.get_input());
             auto space = flatten_search_space<_Opr>(sub_helper, checker);
             ret.insert(ret.end(), space.begin(), space.end());
         });
@@ -488,7 +489,8 @@ AlgoChooser<Opr>::AlgoChooserHelper::AlgoChooserHelper(
         const FixedTensorLayouts& layouts, Opr* megdnn_opr,
         const std::string& param_str, const CompNode& cn,
         const megdnn::param::ExecutionPolicy& execution_policy,
-        bool allow_weight_preprocess, const AlgoChooserDesc& desc)
+        bool allow_weight_preprocess, const AlgoChooserDesc& desc,
+        SmallVector<megdnn::TensorND>* inputs)
         : m_fastrun_layouts{layouts},
           m_incache_layouts{layouts},
           m_dnn_opr{megdnn_opr},
@@ -496,7 +498,8 @@ AlgoChooser<Opr>::AlgoChooserHelper::AlgoChooserHelper(
           m_cn{cn},
           m_execution_policy{execution_policy},
           m_allow_weight_preprocess{allow_weight_preprocess},
-          m_desc{desc} {
+          m_desc{desc},
+          m_inputs{inputs} {
     auto fastrun_batch_size = desc.shared_batch_size;
 
     if (fastrun_batch_size) {
@@ -604,7 +607,7 @@ typename AlgoChooser<Opr>::ImplExecutionPolicy AlgoChooser<Opr>::AlgoChooserHelp
             typename AlgoChooser<_Opr>::AlgoChooserHelper sub_helper(
                     to_fixed_layouts<_Opr>(_item.layouts), megdnn_opr.get(),
                     _item.param, m_cn, m_execution_policy, m_allow_weight_preprocess,
-                    m_desc);
+                    m_desc, m_inputs);
             sub_helper.profile(selected_strategy);
         });
     }
@@ -868,6 +871,7 @@ Maybe<AlgoChooserProfileCache::ResultEntry> AlgoChooser<Opr>::AlgoChooserHelper:
         param.shapes[i] = m_fastrun_layouts[i];
     param.opr_param = m_dnn_opr->param();
     param.allow_weight_preprocess = m_allow_weight_preprocess;
+    param.inp_tensornds = m_inputs;
 
     Algorithm* palgo = m_dnn_opr->get_algorithm_from_desc(policy.algo);
     mgb_assert(palgo, "can not find algo when profile single algo");
@@ -964,7 +968,9 @@ void AlgoChooser<Opr>::AlgoChooserHelper::profile(
         if (!policy.algo.valid())
             continue;
         size_t workspace_needed = get_workspace_size_bytes(policy);
-        if (data_size + workspace_needed >
+        if (m_inputs != nullptr)
+            workspace_needed += data_size;
+        if (workspace_needed >
             m_desc.get_workspace_limit(m_cn, m_execution_policy.workspace_limit)) {
             continue;
         }
@@ -1101,7 +1107,8 @@ std::pair<AlgoAttribute, AlgoAttribute> AlgoChooser<Opr>::AlgoChooserHelper::
             const FixedTensorLayouts& layouts, megdnn::Opr* megdnn_opr,           \
             const std::string& param_str, const CompNode& cn,                     \
             const megdnn::param::ExecutionPolicy& execution_policy,               \
-            bool allow_weight_preprocess, const AlgoChooserDesc& desc);           \
+            bool allow_weight_preprocess, const AlgoChooserDesc& desc,            \
+            SmallVector<megdnn::TensorND>* inputs);                               \
     template typename AlgoChooser<megdnn::Opr>::ImplExecutionPolicy               \
     AlgoChooser<megdnn::Opr>::AlgoChooserHelper::choose_by_heuristic(             \
             const ExecutionStrategy& select_strategy) const;                      \

@@ -143,7 +143,7 @@ template <typename Opr>
 void TimedProfiler<Opr>::preprocess(
         const TensorLayoutArray&, const megdnn::SmallVector<DeviceTensorND>&,
         UniqPtrWithCN<Opr>&, megdnn::Workspace&, std::array<TensorLayout, arity>&,
-        std::array<DeviceTensorND, arity_in>&, PreprocessFilter<Opr>&) {
+        std::array<megdnn::TensorND, arity_in>&, PreprocessFilter<Opr>&) {
     // Opr is neither convbias nor convolution.This function do nothing.
 }
 
@@ -154,7 +154,7 @@ void TimedProfiler<megdnn::ConvBias>::preprocess(
         const SmallVector<DeviceTensorND>& flt_val,
         UniqPtrWithCN<megdnn::ConvBias>& megdnn_opr, megdnn::Workspace& mdn_workspace,
         std::array<TensorLayout, arity>& layouts,
-        std::array<DeviceTensorND, arity_in>& inp_val,
+        std::array<megdnn::TensorND, arity_in>& inp_val,
         PreprocessFilter<megdnn::ConvBias>& prep_flt) {
     if (!preprocessed_layout.empty()) {
         auto&& pf = prep_flt;
@@ -164,8 +164,7 @@ void TimedProfiler<megdnn::ConvBias>::preprocess(
             pf.tensors[i] = flt_val[i].as_megdnn();
         }
         APPLY(megdnn_opr->exec_preprocess(args..., &pf, mdn_workspace),
-              std::forward_as_tuple(
-                      layouts[0], inp_val[1].as_megdnn(), inp_val[2].as_megdnn()),
+              std::forward_as_tuple(layouts[0], inp_val[1], inp_val[2]),
               array_skip<arity_in - 1>(layouts));
     }
 }
@@ -177,7 +176,7 @@ void TimedProfiler<megdnn::ConvolutionForward>::preprocess(
         const megdnn::SmallVector<DeviceTensorND>& flt_val,
         UniqPtrWithCN<megdnn::ConvolutionForward>& megdnn_opr,
         megdnn::Workspace& mdn_workspace, std::array<TensorLayout, arity>& layouts,
-        std::array<DeviceTensorND, arity_in>& inp_val,
+        std::array<megdnn::TensorND, arity_in>& inp_val,
         PreprocessFilter<megdnn::ConvolutionForward>& prep_flt) {
     if (!preprocessed_layout.empty()) {
         auto&& pf = prep_flt;
@@ -187,8 +186,7 @@ void TimedProfiler<megdnn::ConvolutionForward>::preprocess(
             pf.tensors[i] = flt_val[i].as_megdnn();
         }
         APPLY(megdnn_opr->exec_preprocess(args..., &pf, mdn_workspace),
-              std::forward_as_tuple(layouts[0], inp_val[1].as_megdnn()),
-              array_skip<2>(layouts));
+              std::forward_as_tuple(layouts[0], inp_val[1]), array_skip<2>(layouts));
     }
 }
 
@@ -259,8 +257,12 @@ typename TimedProfiler<Opr>::TResult TimedProfiler<Opr>::prof_impl(
             std::max(cn.get_free_mem(), cn.get_max_block_size_available());
     auto align = cn.get_mem_addr_alignment();
     size_t tot_size = align;
-    for (int i = 0; i < arity; ++i) {
-        tot_size += layouts[i].span().high_byte + align;
+    for (size_t i = 0; i < arity; ++i) {
+        // if input tensornds are given, only consider output tensornds
+        if (param.inp_tensornds != nullptr) {
+            if (i >= (*param.inp_tensornds).size())
+                tot_size += layouts[i].span().high_byte + align;
+        }
     }
     for (const auto& layout : preprocessed_layout) {
         tot_size += layout.span().high_byte + align;
@@ -275,20 +277,34 @@ typename TimedProfiler<Opr>::TResult TimedProfiler<Opr>::prof_impl(
 #endif
 
     // allocate input and output memory
-    std::array<DeviceTensorND, arity_in> inp_val;
-    std::array<DeviceTensorND, arity_out> out_val;
+    std::array<DeviceTensorND, arity_in> inp_dev;
+    std::array<DeviceTensorND, arity_out> out_dev;
+    std::array<megdnn::TensorND, arity_in> inp_val;
+    std::array<megdnn::TensorND, arity_out> out_val;
     DeviceTensorND workspace;
-    for (int i = 0; i < arity_in; ++i) {
-        inp_val[i].comp_node(cn).dtype(layouts[i].dtype).resize(layouts[i]);
+
+    if (param.inp_tensornds != nullptr) {
+        // if inp_tensornds exists, then reusing it
+        for (int i = 0; i < arity_in; ++i) {
+            inp_val[i] = (*param.inp_tensornds)[i];
+        }
+    } else {
+        // inp_tensornds does not exist, create zero tensor with the same layout
+        for (int i = 0; i < arity_in; ++i) {
+            inp_dev[i].comp_node(cn).dtype(layouts[i].dtype).resize(layouts[i]);
+            fill_zero_dev_tensor(inp_dev[i]);
+            inp_val[i] = inp_dev[i].as_megdnn();
+        }
     }
     for (int i = 0; i < arity_out; ++i) {
-        out_val[i]
+        out_dev[i]
                 .comp_node(cn)
                 .dtype(layouts[arity_in + i].dtype)
                 .resize(layouts[arity_in + i]);
+        out_val[i] = out_dev[i].as_megdnn();
     }
-    megdnn::Workspace mdn_workspace;
 
+    megdnn::Workspace mdn_workspace;
     // allocate workspace
     if (param.workspace) {
         workspace.comp_node(cn).dtype(dtype::Byte()).resize({param.workspace});
@@ -302,10 +318,6 @@ typename TimedProfiler<Opr>::TResult TimedProfiler<Opr>::prof_impl(
         flt_val[i] = {
                 cn, preprocessed_layout[i], preprocessed_layout[i].dtype,
                 preprocessed_layout[i].format};
-    }
-
-    for (int i = 0; i < arity_in; ++i) {
-        fill_zero_dev_tensor(inp_val[i]);
     }
 
     PreprocessFilter<Opr> prep_flt;
@@ -322,13 +334,12 @@ typename TimedProfiler<Opr>::TResult TimedProfiler<Opr>::prof_impl(
                     auto&& opr = _(megdnn_opr);
                     PreprocessFilter<Opr>* pf =
                             preprocessed_layout.empty() ? nullptr : &prep_flt;
-                    APPLY(opr->exec(args.as_megdnn()..., pf, mdn_workspace), inp_val,
-                          out_val);
+                    APPLY(opr->exec(args..., pf, mdn_workspace), inp_val, out_val);
                 },
                 /* else */
                 [&](auto _) {
-                    APPLY(_(megdnn_opr)->exec(args.as_megdnn()..., mdn_workspace),
-                          inp_val, out_val);
+                    APPLY(_(megdnn_opr)->exec(args..., mdn_workspace), inp_val,
+                          out_val);
                 });
     }
     ev_start->record();
@@ -337,13 +348,11 @@ typename TimedProfiler<Opr>::TResult TimedProfiler<Opr>::prof_impl(
                 auto&& opr = _(megdnn_opr);
                 PreprocessFilter<Opr>* pf =
                         preprocessed_layout.empty() ? nullptr : &prep_flt;
-                APPLY(opr->exec(args.as_megdnn()..., pf, mdn_workspace), inp_val,
-                      out_val);
+                APPLY(opr->exec(args..., pf, mdn_workspace), inp_val, out_val);
             },
             /* else */
             [&](auto _) {
-                APPLY(_(megdnn_opr)->exec(args.as_megdnn()..., mdn_workspace), inp_val,
-                      out_val);
+                APPLY(_(megdnn_opr)->exec(args..., mdn_workspace), inp_val, out_val);
             });
     ev_end->record();
 
@@ -370,10 +379,10 @@ typename TimedProfiler<Opr>::TResult TimedProfiler<Opr>::prof_impl(
 
     DeviceTensorStorage storage;
     for (int i = 0; i < arity_in; ++i) {
-        inp_val[i].reset(storage, TensorLayout{});
+        inp_dev[i].reset(storage, TensorLayout{});
     }
     for (int i = 0; i < arity_out; ++i) {
-        out_val[i].reset(storage, TensorLayout{});
+        out_dev[i].reset(storage, TensorLayout{});
     }
     for (size_t i = 0; i < preprocessed_layout.size(); i++) {
         flt_val[i].reset(storage, TensorLayout{});

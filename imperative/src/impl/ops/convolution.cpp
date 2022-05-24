@@ -141,11 +141,8 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
                 def, inputs[0]->layout().ndim, inputs[0]->layout(),
                 inputs[1]->layout());
 
-    DeviceTensorND out =
-            BlobManager::inst()->alloc_workspace_with_defrag(cn, out_layout);
-
     using TensorND = megdnn::TensorND;
-    SmallVector<TensorND> inp_tensornds(inputs.size());
+    SmallVector<TensorND> inp_tensornds(inputs.size() + 2);
     TensorLayoutArray inp_shapes(inputs.size()), oup_shapes(output_descs.size());
     for (unsigned i = 0; i < inputs.size(); ++i) {
         inp_tensornds[i] = inputs[i]->dnn_tensor();
@@ -168,13 +165,20 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
     TensorLayout empty_shp({0}, inputs[0]->dtype());
     empty_shp.ndim = 0;
 
-    size_t sz = setup_algo<megdnn::ConvBiasForward>(
-            {inp_shapes[0], inp_shapes[1], empty_shp, empty_shp, oup_shapes[0]},
-            dnn_opr.op.get(), 0, false, false, cn, conv.policy(), false);
-
-    // alloc memory
     DeviceTensorND empty_bias =
             BlobManager::inst()->alloc_workspace_with_defrag(cn, empty_shp);
+
+    inp_tensornds[2] = empty_bias.as_megdnn();
+    inp_tensornds[3] = empty_bias.as_megdnn();
+
+    size_t sz = setup_algo<megdnn::ConvBiasForward>(
+            {inp_shapes[0], inp_shapes[1], empty_shp, empty_shp, oup_shapes[0]},
+            dnn_opr.op.get(), 0, false, false, cn, conv.policy(), false,
+            &inp_tensornds);
+
+    // alloc memory
+    DeviceTensorND out =
+            BlobManager::inst()->alloc_workspace_with_defrag(cn, out_layout);
 
     TensorLayout w_layout({sz}, dtype::Byte());
     auto dnn_wk = dnn_opr.create_workspace(w_layout);
@@ -364,9 +368,6 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
                 def, inputs[1]->layout().ndim, inputs[0]->layout(), inputs[1]->layout(),
                 cn);
 
-    DeviceTensorND out =
-            BlobManager::inst()->alloc_workspace_with_defrag(cn, out_layout);
-
     using TensorND = megdnn::TensorND;
     SmallVector<TensorND> inp_tensornds(inputs.size());
     TensorLayoutArray inp_shapes(inputs.size()), oup_shapes(output_descs.size());
@@ -380,7 +381,10 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
 
     size_t sz = setup_algo<megdnn::ConvolutionBackwardData>(
             {inp_shapes[0], inp_shapes[1], oup_shapes[0]}, dnn_opr.op.get(), 0, false,
-            false, cn, convbwd.policy(), false);
+            false, cn, convbwd.policy(), false, &inp_tensornds);
+
+    DeviceTensorND out =
+            BlobManager::inst()->alloc_workspace_with_defrag(cn, out_layout);
 
     auto wk = Blob::make(cn, sz);
     auto ptr = wk->storage().get();
@@ -542,7 +546,7 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
     // shape infer
     size_t sz = setup_algo<megdnn::Convolution3D>(
             {inp_shapes[0], inp_shapes[1], oup_shapes[0]}, dnn_opr.op.get(), 0, false,
-            false, cn, conv.policy(), false);
+            false, cn, conv.policy(), false, &inp_tensornds);
 
     // alloc memory
     DeviceTensorND out =
@@ -598,8 +602,9 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
         SmallVector<LogicalTensorDesc>& output_descs, const bool& validated) {
     auto&& op_def = def.cast_final_safe<Convolution3DBackwardData>();
     auto cn = inputs[0]->comp_node();
-    megdnn::TensorND weight = inputs[0]->dnn_tensor();
-    megdnn::TensorND diff = inputs[1]->dnn_tensor();
+
+    auto&& wlayout = inputs[0]->layout();
+    auto&& dlayout = inputs[1]->layout();
 
     DnnOprCaller<megdnn::Convolution3DBackwardData> caller(cn);
     auto&& dnn_opr = caller.op;
@@ -608,21 +613,24 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
     TensorLayout& oup_layout = output_descs[0].layout;
     if (!validated) {
         megdnn::Convolution3DBackwardData::deduce_layout_impl(
-                weight.layout, diff.layout, op_def.param(), oup_layout);
+                wlayout, dlayout, op_def.param(), oup_layout);
     }
     DeviceTensorND oup =
             BlobManager::inst()->alloc_workspace_with_defrag(cn, oup_layout);
 
+    SmallVector<megdnn::TensorND> inp_tensornds(inputs.size());
+    inp_tensornds[0] = inputs[0]->dnn_tensor();
+    inp_tensornds[1] = inputs[1]->dnn_tensor();
     size_t wk_size = setup_algo<megdnn::Convolution3DBackwardData>(
-            {weight.layout, diff.layout, oup_layout}, dnn_opr.get(), 0, false, false,
-            cn, op_def.policy(), false);
+            {wlayout, dlayout, oup_layout}, dnn_opr.get(), 0, false, false, cn,
+            op_def.policy(), false, &inp_tensornds);
     megdnn::Workspace dnn_wk;
     if (wk_size != 0) {
         TensorLayout w_layout({wk_size}, dtype::Byte());
         dnn_wk = caller.create_workspace(w_layout);
     }
 
-    dnn_opr->exec(weight, diff, oup.as_megdnn(), dnn_wk);
+    dnn_opr->exec(inp_tensornds[0], inp_tensornds[1], oup.as_megdnn(), dnn_wk);
     return {Tensor::make(oup)};
 }
 

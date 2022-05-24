@@ -60,13 +60,15 @@ public:
         megdnn::param::ExecutionPolicy m_execution_policy;
         bool m_allow_weight_preprocess;
         const AlgoChooserDesc& m_desc;
+        SmallVector<megdnn::TensorND>* m_inputs;
 
     public:
         MGE_WIN_DECLSPEC_FUC AlgoChooserHelper(
                 const FixedTensorLayouts& layouts, Opr* megdnn_opr,
                 const std::string& param_str, const CompNode& cn,
                 const megdnn::param::ExecutionPolicy& execution_policy,
-                bool allow_weight_preprocess, const AlgoChooserDesc& desc);
+                bool allow_weight_preprocess, const AlgoChooserDesc& desc,
+                SmallVector<megdnn::TensorND>* inputs = nullptr);
 
         Opr* megdnn_opr() const { return m_dnn_opr; }
 
@@ -92,6 +94,8 @@ public:
         const FixedTensorLayouts& incache_layouts() const { return m_incache_layouts; }
 
         const AlgoChooserDesc& desc() const { return m_desc; }
+
+        SmallVector<megdnn::TensorND>* get_input() const { return m_inputs; }
 
         //! construct algo chain by heuristic
         ImplExecutionPolicy choose_by_heuristic(

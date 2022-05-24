@@ -11,7 +11,8 @@ MGE_WIN_DECLSPEC_FUC size_t setup_algo(
         const typename mgb::rdnn::AlgoChooser<Opr>::FixedTensorLayouts& layouts,
         Opr* megdnn_opr, uint32_t shared_batch_size, bool binary_equal_between_batch,
         bool no_profiling_on_shape_change, CompNode comp_node,
-        megdnn::param::ExecutionPolicy execution_policy, bool allow_weight_preprocess) {
+        megdnn::param::ExecutionPolicy execution_policy, bool allow_weight_preprocess,
+        SmallVector<megdnn::TensorND>* inp_tensornds = nullptr) {
     megdnn::AlgorithmCache::Key cache_key(
             megdnn_opr->handle(), megdnn_opr->get_opr_type(), layouts.data(),
             layouts.size(), &megdnn_opr->param(), sizeof(megdnn_opr->param()));
@@ -39,7 +40,7 @@ MGE_WIN_DECLSPEC_FUC size_t setup_algo(
     using AlgoChooserHelper = typename mgb::rdnn::AlgoChooser<Opr>::AlgoChooserHelper;
     AlgoChooserHelper helper(
             layouts, megdnn_opr, param_str, comp_node, execution_policy,
-            allow_weight_preprocess, desc);
+            allow_weight_preprocess, desc, inp_tensornds);
 
     megdnn::ExecutionPolicy policy;
     policy = mgb::rdnn::AlgoChooser<Opr>::get_policy(helper);
