@@ -1,12 +1,3 @@
-
-/**
- * \file lite/load_and_run/src/models/model.cpp
- *
- * This file is part of MegEngine, a deep learning framework developed by
- * Megvii.
- *
- * \copyright Copyright (c) 2020-2021 Megvii Inc. All rights reserved.
- */
 #include "model.h"
 #include <iostream>
 #include <memory>
@@ -56,5 +47,5 @@ std::shared_ptr<ModelBase> ModelBase::create_model(std::string model_path) {
         return nullptr;
     }
 }
-DEFINE_bool(lite, false, "using lite model to run mdl model");
+DEFINE_bool(lite, false, "use megengine lite interface to run model");
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

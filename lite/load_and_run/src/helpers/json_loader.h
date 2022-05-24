@@ -18,7 +18,7 @@ public:
     // base class for different value format
     class Value {
     protected:
-        enum struct Type : uint8_t { UNKNOWN, NUMBER, STRING, OBJECT, ARRAY };
+        enum struct Type : uint8_t { UNKNOWN, NUMBER, STRING, OBJECT, ARRAY, BOOL };
         Type m_type;
 
     public:
@@ -39,11 +39,15 @@ public:
 
         bool is_str() { return Type::STRING == m_type; }
 
+        bool is_bool() { return Type::BOOL == m_type; }
+
         std::unique_ptr<Value>& operator[](const std::string& key);
 
         std::unique_ptr<Value>& operator[](const size_t index);
 
         std::map<std::string, std::unique_ptr<Value>>& objects();
+
+        std::vector<std::string>& keys();
 
         size_t len();
 
@@ -52,6 +56,8 @@ public:
         double number();
 
         std::string str();
+
+        bool Bool();
     };
 
     void expect(char c);
@@ -67,6 +73,8 @@ public:
     std::unique_ptr<Value> parse_number();
 
     std::unique_ptr<Value> parse_value();
+
+    std::unique_ptr<Value> parse_bool();
 
     enum struct State : uint8_t {
         OK = 0,
@@ -137,21 +145,26 @@ public:
 
     class ObjectValue final : public Value {
         std::map<std::string, std::unique_ptr<Value>> m_obj;
+        std::vector<std::string> m_keys;
 
     public:
         ObjectValue() : Value(Type::OBJECT) {}
 
         ObjectValue(ObjectValue& arr) : Value(arr) {
             m_obj.clear();
+            m_keys.clear();
             for (auto itra = arr.m_obj.begin(); itra != arr.m_obj.end(); ++itra) {
                 m_obj.emplace(std::make_pair(itra->first, std::move(itra->second)));
+                m_keys.push_back(itra->first);
             }
         }
 
         ObjectValue(ObjectValue&& arr) : Value(arr) {
             m_obj.clear();
+            m_keys.clear();
             for (auto itra = arr.m_obj.begin(); itra != arr.m_obj.end(); ++itra) {
                 m_obj.emplace(std::make_pair(itra->first, std::move(itra->second)));
+                m_keys.push_back(itra->first);
             }
         }
 
@@ -160,7 +173,17 @@ public:
                 const std::string&);
         friend std::map<std::string, std::unique_ptr<JsonLoader::Value>>& JsonLoader::
                 Value::objects();
+        friend std::vector<std::string>& JsonLoader::Value::keys();
         friend size_t JsonLoader::Value::len();
+    };
+
+    class BoolValue final : public Value {
+        bool m_value;
+
+    public:
+        BoolValue() : Value(Type::BOOL) {}
+        bool value() { return m_value; }
+        friend std::unique_ptr<Value> JsonLoader::parse_bool();
     };
 
 private:

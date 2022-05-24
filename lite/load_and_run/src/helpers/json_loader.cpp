@@ -5,9 +5,7 @@ using namespace mgb;
 template <typename T>
 T* JsonLoader::Value::safe_cast() {
     T* ptr = (T*)(this);
-    if (nullptr == ptr) {
-        fprintf(stderr, "cast ptr is null\n");
-    }
+    mgb_assert(nullptr != ptr, "cast ptr is null\n");
     return ptr;
 }
 
@@ -29,6 +27,12 @@ std::map<std::string, std::unique_ptr<JsonLoader::Value>>& JsonLoader::Value::
     mgb_assert(Type::OBJECT == m_type);
     auto t = safe_cast<JsonLoader::ObjectValue>();
     return t->m_obj;
+}
+
+std::vector<std::string>& JsonLoader::Value::keys() {
+    mgb_assert(Type::OBJECT == m_type);
+    auto t = safe_cast<JsonLoader::ObjectValue>();
+    return t->m_keys;
 }
 
 size_t JsonLoader::Value::len() {
@@ -54,6 +58,12 @@ double JsonLoader::Value::number() {
     return t->value();
 }
 
+bool JsonLoader::Value::Bool() {
+    mgb_assert(Type::BOOL == m_type);
+    auto t = safe_cast<JsonLoader::BoolValue>();
+    return t->value();
+}
+
 std::string JsonLoader::Value::str() {
     if (Type::STRING == m_type) {
         auto t = safe_cast<StringValue>();
@@ -69,7 +79,7 @@ void JsonLoader::expect(char c) {
 
 void JsonLoader::skip_whitespace() {
     const char* p = m_buf;
-    while (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r') {
+    while (' ' == *p || '\t' == *p || '\n' == *p || '\r' == *p) {
         ++p;
     }
     m_buf = p;
@@ -80,11 +90,12 @@ std::unique_ptr<JsonLoader::Value> JsonLoader::parse_object() {
     skip_whitespace();
 
     std::unique_ptr<JsonLoader::Value> ret;
-    JsonLoader::ObjectValue* pObject = new JsonLoader::ObjectValue();
+    std::unique_ptr<JsonLoader::ObjectValue> pObject =
+            std::make_unique<JsonLoader::ObjectValue>();
 
     if ('}' == *m_buf) {
         m_buf = m_buf + 1;
-        ret.reset((JsonLoader::Value*)(pObject));
+        ret = std::move(pObject);
         return ret;
     }
 
@@ -113,6 +124,7 @@ std::unique_ptr<JsonLoader::Value> JsonLoader::parse_object() {
         }
 
         pObject->m_obj.insert(std::make_pair(key->str(), std::move(pVal)));
+        pObject->m_keys.push_back(key->str());
 
         skip_whitespace();
         if (',' == (*m_buf)) {
@@ -126,22 +138,21 @@ std::unique_ptr<JsonLoader::Value> JsonLoader::parse_object() {
             break;
         }
     }
-
-    ret.reset((JsonLoader::Value*)(pObject));
+    ret = std::move(pObject);
     return ret;
 }
 
 std::unique_ptr<JsonLoader::Value> JsonLoader::parse_array() {
     expect('[');
     skip_whitespace();
-
     std::unique_ptr<JsonLoader::Value> ret;
-    JsonLoader::ArrayValue* pArray = new JsonLoader::ArrayValue();
+    std::unique_ptr<JsonLoader::ArrayValue> pArray =
+            std::make_unique<JsonLoader::ArrayValue>();
 
     if (']' == *m_buf) {
         m_buf = m_buf + 1;
 
-        ret.reset((JsonLoader::Value*)(pArray));
+        ret = std::move(pArray);
         return ret;
     }
 
@@ -168,15 +179,14 @@ std::unique_ptr<JsonLoader::Value> JsonLoader::parse_array() {
         }
     }
 
-    ret.reset((JsonLoader::Value*)(pArray));
+    ret = std::move(pArray);
     return ret;
 }
 
 std::unique_ptr<JsonLoader::Value> JsonLoader::parse_string() {
     expect('\"');
-
-    std::unique_ptr<JsonLoader::Value> ret;
-    JsonLoader::StringValue* pStr = new JsonLoader::StringValue();
+    std::unique_ptr<JsonLoader::StringValue> pStr =
+            std::make_unique<JsonLoader::StringValue>();
 
     const char* p = m_buf;
     while (true) {
@@ -189,7 +199,7 @@ std::unique_ptr<JsonLoader::Value> JsonLoader::parse_string() {
         }
     }
     m_buf = p;
-    ret.reset((JsonLoader::Value*)(pStr));
+    std::unique_ptr<JsonLoader::Value> ret = std::move(pStr);
     return ret;
 }
 
@@ -207,31 +217,31 @@ std::unique_ptr<JsonLoader::Value> JsonLoader::parse_number() {
         return;
     };
 
-    if (*p == '-')
+    if ('-' == *p)
         p++;
-    if (*p == '0')
+    if ('0' == *p)
         p++;
     else {
         loop_digit(std::ref(p));
     }
-    if (*p == '.') {
+    if ('.' == *p) {
         p++;
         loop_digit(std::ref(p));
     }
 
-    if (*p == 'e' || *p == 'E') {
+    if ('e' == *p || 'E' == *p) {
         p++;
-        if (*p == '+' || *p == '-')
+        if ('+' == *p || '-' == *p)
             p++;
         loop_digit(std::ref(p));
     }
-    JsonLoader::NumberValue* pNum = new JsonLoader::NumberValue();
+    std::unique_ptr<JsonLoader::NumberValue> pNum =
+            std::make_unique<JsonLoader::NumberValue>();
     pNum->m_value = strtod(m_buf, nullptr);
 
     m_buf = p;
 
-    std::unique_ptr<JsonLoader::Value> ret;
-    ret.reset((JsonLoader::Value*)(pNum));
+    std::unique_ptr<JsonLoader::Value> ret = std::move(pNum);
     return ret;
 }
 
@@ -243,6 +253,10 @@ std::unique_ptr<JsonLoader::Value> JsonLoader::parse_value() {
             return parse_object();
         case '\"':
             return parse_string();
+        case 't':
+            return parse_bool();
+        case 'f':
+            return parse_bool();
         case '\0':
             m_state = State::BAD_TYPE;
             break;
@@ -250,6 +264,37 @@ std::unique_ptr<JsonLoader::Value> JsonLoader::parse_value() {
             return parse_number();
     }
     return nullptr;
+}
+
+std::unique_ptr<JsonLoader::Value> JsonLoader::parse_bool() {
+    const char* p = m_buf;
+    std::string value;
+    if ('t' == *p) {
+        value = "";
+        for (size_t idx = 0; idx < 4; ++idx) {
+            value += *p++;
+        }
+    } else if ('f' == *p) {
+        value = "";
+        for (size_t idx = 0; idx < 5; ++idx) {
+            value += *p++;
+        }
+    }
+    bool val = false;
+    if ("true" == value) {
+        val = true;
+    } else if ("false" == value) {
+        val = false;
+    } else {
+        mgb_log_error("invalid value: %s for possible bool value", value.c_str());
+    }
+
+    std::unique_ptr<JsonLoader::BoolValue> pBool =
+            std::make_unique<JsonLoader::BoolValue>();
+    pBool->m_value = val;
+    m_buf = p;
+    std::unique_ptr<JsonLoader::Value> ret = std::move(pBool);
+    return ret;
 }
 
 std::unique_ptr<JsonLoader::Value> JsonLoader::load(

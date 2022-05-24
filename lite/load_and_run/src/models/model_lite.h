@@ -1,12 +1,3 @@
-/**
- * \file lite/load_and_run/src/models/model_lite.h
- *
- * This file is part of MegEngine, a deep learning framework developed by
- * Megvii.
- *
- * \copyright Copyright (c) 2020-2021 Megvii Inc. All rights reserved.
- */
-
 #pragma once
 
 #include <string>
@@ -39,6 +30,10 @@ public:
     //! wait the end of asynchronous function execution
     void wait() override;
 
+#if MGB_ENABLE_JSON
+    std::shared_ptr<mgb::json::Object> get_io_info() override;
+#endif
+
     //! enable global layout transform
     void set_layout_transform(bool state) { enable_layout_transform = state; }
 
@@ -61,6 +56,8 @@ public:
     Strategy& get_lite_strategy() { return m_strategy; }
 
     const std::string& get_model_path() const override { return model_path; }
+
+    std::vector<uint8_t> get_model_data() override;
 
 private:
     bool share_model_mem;

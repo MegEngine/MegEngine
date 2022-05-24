@@ -1,12 +1,3 @@
-/**
- * \file lite/load_and_run/src/options/device_options.cpp
- *
- * This file is part of MegEngine, a deep learning framework developed by
- * Megvii.
- *
- * \copyright Copyright (c) 2020-2021 Megvii Inc. All rights reserved.
- */
-
 #include <iostream>
 #include <sstream>
 #include "lite/global.h"
@@ -76,7 +67,7 @@ void XPUDeviceOption::config_model_internel<ModelMdl>(
                 loc.type = mgb::CompNode::DeviceType::CPU;
             };
         }
-#if MGB_CUDA
+#if LITE_WITH_CUDA
         if (enable_cuda) {
             mgb_log_warn("using cuda device\n");
             model->get_mdl_config().comp_node_mapper = [](mgb::CompNode::Locator& loc) {
@@ -134,7 +125,7 @@ void XPUDeviceOption::config_model_internel<ModelMdl>(
 XPUDeviceOption::XPUDeviceOption() {
     m_option_name = "xpu_device";
     enable_cpu = FLAGS_cpu;
-#if MGB_CUDA
+#if LITE_WITH_CUDA
     enable_cuda = FLAGS_cuda;
 #endif
     enable_cpu_default = FLAGS_cpu_default;
@@ -165,18 +156,41 @@ XPUDeviceOption::XPUDeviceOption() {
                 "core ids number should be same with thread number set before");
         enable_set_core_ids = true;
     }
-}
 
+    m_option = {
+        {"cpu", lar::Bool::make(false)},
+#if LITE_WITH_CUDA
+        {"cuda", lar::Bool::make(false)},
+#endif
+        {"cpu_default", lar::Bool::make(false)},
+        {"multithread", lar::NumberInt32::make(-1)},
+        {"multithread_default", lar::NumberInt32::make(-1)},
+        {"multi_thread_core_ids", lar::String::make("")},
+    };
+    std::static_pointer_cast<lar::Bool>(m_option["cpu"])->set_value(FLAGS_cpu);
+#if LITE_WITH_CUDA
+    std::static_pointer_cast<lar::Bool>(m_option["cuda"])->set_value(FLAGS_cuda);
+#endif
+    std::static_pointer_cast<lar::Bool>(m_option["cpu_default"])
+            ->set_value(FLAGS_cpu_default);
+    std::static_pointer_cast<lar::NumberInt32>(m_option["multithread"])
+            ->set_value(FLAGS_multithread);
+    std::static_pointer_cast<lar::NumberInt32>(m_option["multithread_default"])
+            ->set_value(FLAGS_multithread_default);
+    std::static_pointer_cast<lar::String>(m_option["multi_thread_core_ids"])
+            ->set_value(FLAGS_multi_thread_core_ids);
+}
+bool XPUDeviceOption::m_valid;
 bool XPUDeviceOption::is_valid() {
     bool ret = FLAGS_cpu || FLAGS_cpu_default;
-#if MGB_CUDA
+#if LITE_WITH_CUDA
     ret = ret || FLAGS_cuda;
 #endif
     ret = ret || FLAGS_multithread >= 0;
     ret = ret || FLAGS_multithread_default >= 0;
     ret = ret || !FLAGS_multi_thread_core_ids.empty();
 
-    return ret;
+    return ret || m_valid;
 }
 
 std::shared_ptr<OptionBase> XPUDeviceOption::create_option() {
@@ -190,11 +204,46 @@ std::shared_ptr<OptionBase> XPUDeviceOption::create_option() {
 
 void XPUDeviceOption::config_model(
         RuntimeParam& runtime_param, std::shared_ptr<ModelBase> model) {
+    enable_cpu = std::static_pointer_cast<lar::Bool>(m_option["cpu"])->get_value();
+#if LITE_WITH_CUDA
+    enable_cuda = std::static_pointer_cast<lar::Bool>(m_option["cuda"])->get_value();
+#endif
+    enable_cpu_default =
+            std::static_pointer_cast<lar::Bool>(m_option["cpu_default"])->get_value();
+    int32_t num_of_thread =
+            std::static_pointer_cast<lar::NumberInt32>(m_option["multithread"])
+                    ->get_value();
+    enable_multithread = num_of_thread >= 0;
+    num_of_thread =
+            std::static_pointer_cast<lar::NumberInt32>(m_option["multithread_default"])
+                    ->get_value();
+    enable_multithread_default = num_of_thread >= 0;
+    thread_num = num_of_thread >= 0 ? num_of_thread : 0;
+    std::string core_id_str =
+            std::static_pointer_cast<lar::String>(m_option["multi_thread_core_ids"])
+                    ->get_value();
+    if (!core_id_str.empty()) {
+        mgb_assert(
+                enable_multithread || enable_multithread_default,
+                "core ids should be set after --multithread or --multithread-default");
+        std::stringstream id_stream(core_id_str);
+        std::string id;
+        size_t thread_cnt = 0;
+        while (getline(id_stream, id, ',')) {
+            thread_cnt++;
+            core_ids.push_back(atoi(id.c_str()));
+        }
+        mgb_assert(
+                thread_cnt == thread_num,
+                "core ids number should be same with thread number set before");
+        enable_set_core_ids = true;
+    }
+
     CONFIG_MODEL_FUN;
 }
 ///////////////////////// xpu gflags ////////////////////////////
 DEFINE_bool(cpu, false, "set CPU device as running device");
-#if MGB_CUDA || LITE_WITH_CUDA
+#if LITE_WITH_CUDA
 DEFINE_bool(cuda, false, "set CUDA device as running device ");
 #endif
 DEFINE_bool(cpu_default, false, "set running device as CPU device with inplace mode");
@@ -204,3 +253,4 @@ DEFINE_int32(
         "set multithread device as running device with inplace mode");
 DEFINE_string(multi_thread_core_ids, "", "set multithread core id");
 REGIST_OPTION_CREATOR(xpu_device, lar::XPUDeviceOption::create_option);
+REGIST_OPTION_VALIDATER(xpu_device, lar::XPUDeviceOption::set_valid);

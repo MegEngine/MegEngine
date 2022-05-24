@@ -1,12 +1,3 @@
-/**
- * \file lite/load_and_run/src/options/optimize_options.cpp
- *
- * This file is part of MegEngine, a deep learning framework developed by
- * Megvii.
- *
- * \copyright Copyright (c) 2020-2021 Megvii Inc. All rights reserved.
- */
-
 #include "megbrain/gopt/inference.h"
 #if MGB_ENABLE_TENSOR_RT
 #include "megbrain/tensorrt/tensorrt_engine_cache.h"
@@ -43,15 +34,18 @@ void FusePreprocessOption::config_model_internel<ModelMdl>(
 }
 }  // namespace lar
 using namespace lar;
-
+bool FusePreprocessOption::m_valid;
 FusePreprocessOption::FusePreprocessOption() {
     m_option_name = "fuse_preprocess";
     enable_fuse_preprocess = FLAGS_enable_fuse_preprocess;
+    m_option = {{"enable_fuse_preprocess", lar::Bool::make(false)}};
+    std::static_pointer_cast<lar::Bool>(m_option["enable_fuse_preprocess"])
+            ->set_value(FLAGS_enable_fuse_preprocess);
 }
 
 bool FusePreprocessOption::is_valid() {
     bool ret = FLAGS_enable_fuse_preprocess;
-    return ret;
+    return ret || m_valid;
 }
 
 std::shared_ptr<OptionBase> FusePreprocessOption::create_option() {
@@ -65,10 +59,14 @@ std::shared_ptr<OptionBase> FusePreprocessOption::create_option() {
 
 void FusePreprocessOption::config_model(
         RuntimeParam& runtime_param, std::shared_ptr<ModelBase> model) {
+    enable_fuse_preprocess =
+            std::static_pointer_cast<lar::Bool>(m_option["enable_fuse_preprocess"])
+                    ->get_value();
     CONFIG_MODEL_FUN;
 }
 
 ///////////////////////// weight preprocess optimize options ///////////////
+bool WeightPreprocessOption::m_valid;
 namespace lar {
 template <>
 void WeightPreprocessOption::config_model_internel<ModelLite>(
@@ -97,11 +95,14 @@ void WeightPreprocessOption::config_model_internel<ModelMdl>(
 WeightPreprocessOption::WeightPreprocessOption() {
     m_option_name = "weight_preprocess";
     weight_preprocess = FLAGS_weight_preprocess;
+    m_option = {{"weight_preprocess", lar::Bool::make(false)}};
+    std::static_pointer_cast<lar::Bool>(m_option["weight_preprocess"])
+            ->set_value(FLAGS_weight_preprocess);
 }
 
 bool WeightPreprocessOption::is_valid() {
     bool ret = FLAGS_weight_preprocess;
-    return ret;
+    return ret || m_valid;
 }
 
 std::shared_ptr<OptionBase> WeightPreprocessOption::create_option() {
@@ -115,10 +116,14 @@ std::shared_ptr<OptionBase> WeightPreprocessOption::create_option() {
 
 void WeightPreprocessOption::config_model(
         RuntimeParam& runtime_param, std::shared_ptr<ModelBase> model) {
+    weight_preprocess =
+            std::static_pointer_cast<lar::Bool>(m_option["weight_preprocess"])
+                    ->get_value();
     CONFIG_MODEL_FUN;
 }
 
 ///// fuse conv bias and nonlinear activation opr optimize options ////////
+bool FuseConvBiasNonlinearOption::m_valid;
 namespace lar {
 template <>
 void FuseConvBiasNonlinearOption::config_model_internel<ModelLite>(
@@ -145,13 +150,16 @@ void FuseConvBiasNonlinearOption::config_model_internel<ModelMdl>(
 }  // namespace lar
 
 FuseConvBiasNonlinearOption::FuseConvBiasNonlinearOption() {
-    m_option_name = "fuse_conv_bias_nonlinear";
+    m_option_name = "fuse_conv_bias_nonlinearity";
     enable_fuse_conv_bias_nonlinearity = FLAGS_enable_fuse_conv_bias_nonlinearity;
+    m_option = {{"enable_fuse_conv_bias_nonlinearity", lar::Bool::make(false)}};
+    std::static_pointer_cast<lar::Bool>(m_option["enable_fuse_conv_bias_nonlinearity"])
+            ->set_value(FLAGS_enable_fuse_conv_bias_nonlinearity);
 }
 
 bool FuseConvBiasNonlinearOption::is_valid() {
     bool ret = FLAGS_enable_fuse_conv_bias_nonlinearity;
-    return ret;
+    return ret || m_valid;
 }
 
 std::shared_ptr<OptionBase> FuseConvBiasNonlinearOption::create_option() {
@@ -166,10 +174,15 @@ std::shared_ptr<OptionBase> FuseConvBiasNonlinearOption::create_option() {
 
 void FuseConvBiasNonlinearOption::config_model(
         RuntimeParam& runtime_param, std::shared_ptr<ModelBase> model) {
+    enable_fuse_conv_bias_nonlinearity =
+            std::static_pointer_cast<lar::Bool>(
+                    m_option["enable_fuse_conv_bias_nonlinearity"])
+                    ->get_value();
     CONFIG_MODEL_FUN;
 }
 
 ///////////////////////// fuse and preprocess optimize options ///////////////
+bool FuseConvBiasElemwiseAddOption::m_valid;
 namespace lar {
 template <>
 void FuseConvBiasElemwiseAddOption::config_model_internel<ModelLite>(
@@ -198,13 +211,16 @@ void FuseConvBiasElemwiseAddOption::config_model_internel<ModelMdl>(
 }  // namespace lar
 
 FuseConvBiasElemwiseAddOption::FuseConvBiasElemwiseAddOption() {
-    m_option_name = "fuse_conv_bias_z";
+    m_option_name = "fuse_conv_bias_with_z";
     enable_fuse_conv_bias_with_z = FLAGS_enable_fuse_conv_bias_with_z;
+    m_option = {{"enable_fuse_conv_bias_with_z", lar::Bool::make(false)}};
+    std::static_pointer_cast<lar::Bool>(m_option["enable_fuse_conv_bias_with_z"])
+            ->set_value(FLAGS_enable_fuse_conv_bias_with_z);
 }
 
 bool FuseConvBiasElemwiseAddOption::is_valid() {
     bool ret = FLAGS_enable_fuse_conv_bias_with_z;
-    return ret;
+    return ret || m_valid;
 }
 
 std::shared_ptr<OptionBase> FuseConvBiasElemwiseAddOption::create_option() {
@@ -219,10 +235,14 @@ std::shared_ptr<OptionBase> FuseConvBiasElemwiseAddOption::create_option() {
 
 void FuseConvBiasElemwiseAddOption::config_model(
         RuntimeParam& runtime_param, std::shared_ptr<ModelBase> model) {
+    enable_fuse_conv_bias_with_z = std::static_pointer_cast<lar::Bool>(
+                                           m_option["enable_fuse_conv_bias_with_z"])
+                                           ->get_value();
     CONFIG_MODEL_FUN;
 }
 
 ///////////////////////// graph retrict options /////////////////////////
+bool GraphRecordOption::m_valid;
 namespace lar {
 template <>
 void GraphRecordOption::config_model_internel<ModelLite>(
@@ -299,6 +319,23 @@ GraphRecordOption::GraphRecordOption() {
     if (FLAGS_record_comp_seq2) {
         m_record_comp_seq = 2;
     }
+
+    m_option = {
+            {"record_comp_seq", lar::Bool::make(false)},
+            {"record_comp_seq2", lar::Bool::make(false)},
+            {"const_shape", lar::Bool::make(false)},
+            {"fake_first", lar::Bool::make(false)},
+            {"no_sanity_check", lar::Bool::make(false)}};
+    std::static_pointer_cast<lar::Bool>(m_option["const_shape"])
+            ->set_value(FLAGS_const_shape);
+    std::static_pointer_cast<lar::Bool>(m_option["fake_first"])
+            ->set_value(FLAGS_fake_first);
+    std::static_pointer_cast<lar::Bool>(m_option["no_sanity_check"])
+            ->set_value(FLAGS_no_sanity_check);
+    std::static_pointer_cast<lar::Bool>(m_option["record_comp_seq"])
+            ->set_value(FLAGS_record_comp_seq);
+    std::static_pointer_cast<lar::Bool>(m_option["record_comp_seq2"])
+            ->set_value(FLAGS_record_comp_seq2);
 }
 
 bool GraphRecordOption::is_valid() {
@@ -307,7 +344,7 @@ bool GraphRecordOption::is_valid() {
     ret = ret || FLAGS_no_sanity_check;
     ret = ret || FLAGS_record_comp_seq;
     ret = ret || FLAGS_record_comp_seq2;
-    return ret;
+    return ret || m_valid;
 }
 
 std::shared_ptr<OptionBase> GraphRecordOption::create_option() {
@@ -321,6 +358,22 @@ std::shared_ptr<OptionBase> GraphRecordOption::create_option() {
 
 void GraphRecordOption::config_model(
         RuntimeParam& runtime_param, std::shared_ptr<ModelBase> model) {
+    const_shape =
+            std::static_pointer_cast<lar::Bool>(m_option["const_shape"])->get_value();
+    fake_first =
+            std::static_pointer_cast<lar::Bool>(m_option["fake_first"])->get_value();
+    no_sanity_check = std::static_pointer_cast<lar::Bool>(m_option["no_sanity_check"])
+                              ->get_value();
+    m_record_comp_seq = std::static_pointer_cast<lar::Bool>(m_option["record_comp_seq"])
+                                        ->get_value()
+                              ? 1
+                              : 0;
+    m_record_comp_seq =
+            std::static_pointer_cast<lar::Bool>(m_option["record_comp_seq2"])
+                            ->get_value()
+                    ? 2
+                    : 0;
+
     CONFIG_MODEL_FUN;
 }
 ///////////////////////// graph retrict options /////////////////////////
@@ -569,13 +622,26 @@ DEFINE_string(
         "Set the TensorRT engine cache path for serialized prebuilt "
         "ICudaEngine");
 #endif
+
 REGIST_OPTION_CREATOR(fuse_preprocess, lar::FusePreprocessOption::create_option);
+REGIST_OPTION_VALIDATER(fuse_preprocess, lar::FusePreprocessOption::set_valid);
+
 REGIST_OPTION_CREATOR(weight_preprocess, lar::WeightPreprocessOption::create_option);
+REGIST_OPTION_VALIDATER(weight_preprocess, lar::WeightPreprocessOption::set_valid);
+
 REGIST_OPTION_CREATOR(
-        fuse_conv_bias_nonlinear, lar::FuseConvBiasNonlinearOption::create_option);
+        fuse_conv_bias_nonlinearity, lar::FuseConvBiasNonlinearOption::create_option);
+REGIST_OPTION_VALIDATER(
+        fuse_conv_bias_nonlinearity, lar::FuseConvBiasNonlinearOption::set_valid);
+
 REGIST_OPTION_CREATOR(
-        fuse_conv_bias_z, lar::FuseConvBiasElemwiseAddOption::create_option);
+        fuse_conv_bias_with_z, lar::FuseConvBiasElemwiseAddOption::create_option);
+REGIST_OPTION_VALIDATER(
+        fuse_conv_bias_with_z, lar::FuseConvBiasElemwiseAddOption::set_valid);
+
 REGIST_OPTION_CREATOR(graph_record, lar::GraphRecordOption::create_option);
+REGIST_OPTION_VALIDATER(graph_record, lar::GraphRecordOption::set_valid);
+
 REGIST_OPTION_CREATOR(memory_optimize, lar::MemoryOptimizeOption::create_option);
 REGIST_OPTION_CREATOR(JIT, lar::JITOption::create_option);
 #if MGB_ENABLE_TENSOR_RT

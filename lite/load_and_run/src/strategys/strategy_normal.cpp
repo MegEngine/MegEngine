@@ -1,11 +1,4 @@
-/**
- * \file lite/load_and_run/src/strategys/strategy_normal.cpp
- *
- * This file is part of MegEngine, a deep learning framework developed by
- * Megvii.
- *
- * \copyright Copyright (c) 2020-2021 Megvii Inc. All rights reserved.
- */
+#include "strategy_normal.h"
 #include <iostream>
 #include <thread>
 #include "megbrain/common.h"
@@ -13,13 +6,13 @@
 #include "megbrain/version.h"
 #include "megdnn/version.h"
 #include "misc.h"
-#include "strategy.h"
 
 using namespace lar;
 
 NormalStrategy::NormalStrategy(std::string model_path) {
     mgb::set_log_level(mgb::LogLevel::WARN);
     lite::set_log_level(LiteLogLevel::WARN);
+    m_options = std::make_shared<OptionMap>();
     m_model_path = model_path;
     auto option_creator_map = OptionFactory::get_Instance().get_option_creator_map();
     mgb_log_debug("option map size: %lu", option_creator_map->size());
@@ -27,13 +20,13 @@ NormalStrategy::NormalStrategy(std::string model_path) {
         auto& creator = (*option_creator_map)[name];
         auto option = creator();
         if (option) {
-            m_options.insert({name, option});
+            m_options->insert({name, option});
         }
     };
 
     for (auto& creator : *option_creator_map) {
         auto name = creator.first;
-        if (m_options.count(name) == 0) {
+        if (m_options->count(name) == 0) {
             construct_option(name);
         }
     }
@@ -44,7 +37,7 @@ void NormalStrategy::run_subline() {
     mgb_assert(model != nullptr, "create model failed!!");
 
     auto stage_config_model = [&]() {
-        for (auto& option : m_options) {
+        for (auto& option : *m_options) {
             option.second->config_model(m_runtime_param, model);
         }
     };
@@ -57,18 +50,14 @@ void NormalStrategy::run_subline() {
     printf("load model: %.3fms\n", timer.get_msecs_reset());
 
     //! after load configure
-    m_runtime_param.stage = RunStage::AFTER_MODEL_LOAD;
-    stage_config_model();
-
-    m_runtime_param.stage = RunStage::GLOBAL_OPTIMIZATION;
-    stage_config_model();
-
-    m_runtime_param.stage = RunStage::BEFORE_OUTSPEC_SET;
-    stage_config_model();
-
-    // for get static memmory information options
-    m_runtime_param.stage = RunStage::AFTER_OUTSPEC_SET;
-    stage_config_model();
+    auto config_after_load = [&]() {
+        for (auto stage :
+             {RunStage::AFTER_MODEL_LOAD, RunStage::GLOBAL_OPTIMIZATION,
+              RunStage::BEFORE_OUTSPEC_SET, RunStage::AFTER_OUTSPEC_SET}) {
+            m_runtime_param.stage = stage;
+            stage_config_model();
+        }
+    };
 
     auto warm_up = [&]() {
         auto warmup_num = m_runtime_param.warmup_iter;
@@ -117,6 +106,8 @@ void NormalStrategy::run_subline() {
 
     double tot_time = 0;
     for (size_t idx = 0; idx < iter_num; idx++) {
+        //! config model
+        config_after_load();
         //! config when running model
         mgb_log_warn("run testcase: %zu ", idx);
         m_runtime_param.stage = RunStage::MODEL_RUNNING;

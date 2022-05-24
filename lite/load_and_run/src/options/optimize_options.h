@@ -1,12 +1,3 @@
-/**
- * \file lite/load_and_run/src/options/optimize_options.h
- *
- * This file is part of MegEngine, a deep learning framework developed by
- * Megvii.
- *
- * \copyright Copyright (c) 2020-2021 Megvii Inc. All rights reserved.
- */
-
 #pragma once
 #include <gflags/gflags.h>
 #include "helpers/common.h"
@@ -44,6 +35,10 @@ public:
 
     std::string option_name() const override { return m_option_name; };
 
+    static void set_valid(bool val) { m_valid = val; }
+
+    OptionValMap* get_option() override { return &m_option; }
+
 private:
     FusePreprocessOption();
     template <typename ModelImpl>
@@ -51,6 +46,8 @@ private:
 
     std::string m_option_name;
     bool enable_fuse_preprocess;
+    static bool m_valid;
+    OptionValMap m_option;
 };
 
 ///////////////////////// weight preprocess optimize options //////////////
@@ -64,6 +61,9 @@ public:
             RuntimeParam& runtime_param, std::shared_ptr<ModelBase> model) override;
 
     std::string option_name() const override { return m_option_name; };
+    static void set_valid(bool val) { m_valid = val; };
+
+    OptionValMap* get_option() override { return &m_option; }
 
 private:
     WeightPreprocessOption();
@@ -72,6 +72,8 @@ private:
 
     std::string m_option_name;
     bool weight_preprocess;
+    static bool m_valid;
+    OptionValMap m_option;
 };
 
 /////////////// fuse_conv_bias_nonlinearity optimize options ///////////////
@@ -85,6 +87,9 @@ public:
             RuntimeParam& runtime_param, std::shared_ptr<ModelBase> model) override;
 
     std::string option_name() const override { return m_option_name; };
+    static void set_valid(bool val) { m_valid = val; }
+
+    OptionValMap* get_option() override { return &m_option; }
 
 private:
     FuseConvBiasNonlinearOption();
@@ -93,6 +98,8 @@ private:
 
     std::string m_option_name;
     bool enable_fuse_conv_bias_nonlinearity;
+    static bool m_valid;
+    OptionValMap m_option;
 };
 
 ///////////////////////// fuse_conv_bias_with_z optimize options //////////////
@@ -106,6 +113,9 @@ public:
             RuntimeParam& runtime_param, std::shared_ptr<ModelBase> model) override;
 
     std::string option_name() const override { return m_option_name; };
+    static void set_valid(bool val) { m_valid = val; }
+
+    OptionValMap* get_option() override { return &m_option; }
 
 private:
     FuseConvBiasElemwiseAddOption();
@@ -113,6 +123,8 @@ private:
     void config_model_internel(RuntimeParam&, std::shared_ptr<ModelImpl>){};
     std::string m_option_name;
     bool enable_fuse_conv_bias_with_z;
+    static bool m_valid;
+    OptionValMap m_option;
 };
 
 ///////////////////////// graph record options ///////////////////////////
@@ -127,6 +139,10 @@ public:
 
     std::string option_name() const override { return m_option_name; };
 
+    static void set_valid(bool val) { m_valid = val; }
+
+    OptionValMap* get_option() override { return &m_option; }
+
 private:
     GraphRecordOption();
     template <typename ModelImpl>
@@ -137,6 +153,8 @@ private:
     bool const_shape;
     bool fake_first;
     bool no_sanity_check;
+    static bool m_valid;
+    OptionValMap m_option;
 };
 
 ///////////////////////// memory optimize options /////////////////////////

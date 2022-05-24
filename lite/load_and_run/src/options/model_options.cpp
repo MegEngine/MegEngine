@@ -1,12 +1,3 @@
-/**
- * \file lite/load_and_run/src/options/model_options.cpp
- *
- * This file is part of MegEngine, a deep learning framework developed by
- * Megvii.
- *
- * \copyright Copyright (c) 2020-2021 Megvii Inc. All rights reserved.
- */
-
 #include "model_options.h"
 #include "device_options.h"
 #include "lite/pack_model.h"

@@ -1,12 +1,3 @@
-/**
- * \file lite/load_and_run/src/options/fastrun_options.cpp
- *
- * This file is part of MegEngine, a deep learning framework developed by
- * Megvii.
- *
- * \copyright Copyright (c) 2020-2021 Megvii Inc. All rights reserved.
- */
-
 #include <gflags/gflags.h>
 
 #if defined(_WIN32)
@@ -153,7 +144,7 @@ void FastRunOption::config_model_internel<ModelMdl>(
 }  // namespace lar
 
 using namespace lar;
-
+bool FastRunOption::m_valid;
 FastRunOption::FastRunOption() {
     m_option_name = "fastrun";
 #if MGB_ENABLE_FASTRUN
@@ -164,6 +155,25 @@ FastRunOption::FastRunOption() {
     enable_reproducible = FLAGS_reproducible;
     m_fast_run_cache = FLAGS_fast_run_algo_policy;
     share_batch_size = FLAGS_fast_run_shared_batch_size;
+    m_option = {
+#if MGB_ENABLE_FASTRUN
+        {"fast_run", lar::Bool::make(false)},
+        {"full_run", lar::Bool::make(false)},
+#endif
+        {"binary_equal_between_batch", lar::Bool::make(false)},
+        {"reproducible", lar::Bool::make(false)}
+    };
+#if MGB_ENABLE_FASTRUN
+    std::static_pointer_cast<lar::Bool>(m_option["fast_run"])
+            ->set_value(FLAGS_fast_run);
+    std::static_pointer_cast<lar::Bool>(m_option["full_run"])
+            ->set_value(FLAGS_full_run);
+#endif
+    std::static_pointer_cast<lar::Bool>(m_option["binary_equal_between_batch"])
+            ->set_value(FLAGS_binary_equal_between_batch);
+    std::static_pointer_cast<lar::Bool>(m_option["reproducible"])
+            ->set_value(FLAGS_reproducible);
+
 #if MGB_ENABLE_FASTRUN
     //! while fastrun cache file path is not empty and can't be accessed
     if (!m_fast_run_cache.empty() && access(m_fast_run_cache.c_str(), F_OK)) {
@@ -191,7 +201,7 @@ bool FastRunOption::is_valid() {
     ret = ret || FLAGS_reproducible;
     ret = ret || FLAGS_fast_run_algo_policy.size() > 0;
 
-    return ret;
+    return ret || m_valid;
 }
 
 std::shared_ptr<OptionBase> FastRunOption::create_option() {
@@ -205,6 +215,21 @@ std::shared_ptr<OptionBase> FastRunOption::create_option() {
 
 void FastRunOption::config_model(
         RuntimeParam& runtime_param, std::shared_ptr<ModelBase> model) {
+#if MGB_ENABLE_FASTRUN
+    enable_fast_run =
+            std::static_pointer_cast<lar::Bool>(m_option["fast_run"])->get_value();
+    enable_full_run =
+            std::static_pointer_cast<lar::Bool>(m_option["full_run"])->get_value();
+    mgb_throw_if(
+            enable_fast_run && enable_full_run, mgb::AssertionError,
+            "invalid options of both fast-run and full-run");
+#endif
+    batch_binary_equal =
+            std::static_pointer_cast<lar::Bool>(m_option["binary_equal_between_batch"])
+                    ->get_value();
+    enable_reproducible =
+            std::static_pointer_cast<lar::Bool>(m_option["reproducible"])->get_value();
+
     CONFIG_MODEL_FUN;
 }
 
@@ -229,3 +254,4 @@ DEFINE_uint32(fast_run_shared_batch_size, 0, "Set the batch size used during fas
 DEFINE_string(fast_run_algo_policy, "", "fast-run cache path.");
 
 REGIST_OPTION_CREATOR(fastrun, lar::FastRunOption::create_option);
+REGIST_OPTION_VALIDATER(fastrun, lar::FastRunOption::set_valid);

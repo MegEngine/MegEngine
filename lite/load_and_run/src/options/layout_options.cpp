@@ -1,12 +1,3 @@
-/**
- * \file lite/load_and_run/src/options/layout_options.cpp
- *
- * This file is part of MegEngine, a deep learning framework developed by
- * Megvii.
- *
- * \copyright Copyright (c) 2020-2021 Megvii Inc. All rights reserved.
- */
-
 #include <gflags/gflags.h>
 
 #include "misc.h"
@@ -24,7 +15,7 @@ void LayoutOption::config_model_internel<ModelLite>(
     model->get_config().options.enable_##layout = true; \
     break;
 
-        switch (option_flag) {
+        switch (m_option_flag) {
             case OptLayoutType::NCHW4:
                 ENABLE_LAYOUT(nchw4)
 
@@ -59,13 +50,12 @@ template <>
 void lar::LayoutOption::config_model_internel<ModelMdl>(
         RuntimeParam& runtime_param, std::shared_ptr<ModelMdl> model) {
     if (runtime_param.stage == RunStage::BEFORE_MODEL_LOAD) {
-        mgb_log_debug("mdl  layout config start");
 #define ENABLE_LAYOUT(layout)                                                  \
     mgb_log_warn("enable " #layout " optimization");                           \
     model->get_mdl_config().comp_graph->options().graph_opt.enable_##layout(); \
     break;
 
-        switch (option_flag) {
+        switch (m_option_flag) {
             case OptLayoutType::NCHW4:
                 ENABLE_LAYOUT(nchw4)
 
@@ -93,7 +83,6 @@ void lar::LayoutOption::config_model_internel<ModelMdl>(
             default:
                 break;
         }
-        mgb_log_debug("mdl layout config end");
 
 #undef ENABLE_LAYOUT
     }
@@ -101,48 +90,68 @@ void lar::LayoutOption::config_model_internel<ModelMdl>(
 }  // namespace lar
 
 using namespace lar;
-
-OptLayoutType LayoutOption::option_flag;
-
+bool LayoutOption::m_valid;
 LayoutOption::LayoutOption() {
     m_option_name = "layout";
+    m_option_flag = static_cast<OptLayoutType>(0);
+    m_option = {
+            {"enable_nchw4", lar::Bool::make(false)},
+            {"enable_chwn4", lar::Bool::make(false)},
+            {"enable_nchw44", lar::Bool::make(false)},
+            {"enable_nchw88", lar::Bool::make(false)},
+            {"enable_nchw32", lar::Bool::make(false)},
+            {"enable_nchw64", lar::Bool::make(false)},
+            {"enable_nhwcd4", lar::Bool::make(false)},
+            {"enable_nchw44_dot", lar::Bool::make(false)},
+    };
+    std::static_pointer_cast<lar::Bool>(m_option["enable_nchw4"])
+            ->set_value(FLAGS_enable_nchw4);
+    std::static_pointer_cast<lar::Bool>(m_option["enable_chwn4"])
+            ->set_value(FLAGS_enable_chwn4);
+    std::static_pointer_cast<lar::Bool>(m_option["enable_nchw44"])
+            ->set_value(FLAGS_enable_nchw44);
+    std::static_pointer_cast<lar::Bool>(m_option["enable_nchw88"])
+            ->set_value(FLAGS_enable_nchw88);
+    std::static_pointer_cast<lar::Bool>(m_option["enable_nchw32"])
+            ->set_value(FLAGS_enable_nchw32);
+    std::static_pointer_cast<lar::Bool>(m_option["enable_nchw64"])
+            ->set_value(FLAGS_enable_nchw64);
+    std::static_pointer_cast<lar::Bool>(m_option["enable_nhwcd4"])
+            ->set_value(FLAGS_enable_nhwcd4);
+    std::static_pointer_cast<lar::Bool>(m_option["enable_nchw44_dot"])
+            ->set_value(FLAGS_enable_nchw44_dot);
 }
 
 bool LayoutOption::is_valid() {
     size_t valid_flag = 0;
     if (FLAGS_enable_nchw4) {
-        valid_flag = valid_flag | (1 << 0);
+        valid_flag |= static_cast<size_t>(OptLayoutType::NCHW4);
     }
     if (FLAGS_enable_chwn4) {
-        valid_flag = valid_flag | (1 << 1);
+        valid_flag |= static_cast<size_t>(OptLayoutType::CHWN4);
     }
     if (FLAGS_enable_nchw44) {
-        valid_flag = valid_flag | (1 << 2);
+        valid_flag |= static_cast<size_t>(OptLayoutType::NCHW44);
     }
     if (FLAGS_enable_nchw88) {
-        valid_flag = valid_flag | (1 << 3);
+        valid_flag |= static_cast<size_t>(OptLayoutType::NCHW88);
     }
     if (FLAGS_enable_nchw32) {
-        valid_flag = valid_flag | (1 << 4);
+        valid_flag |= static_cast<size_t>(OptLayoutType::NCHW32);
     }
     if (FLAGS_enable_nchw64) {
-        valid_flag = valid_flag | (1 << 5);
+        valid_flag |= static_cast<size_t>(OptLayoutType::NCHW64);
     }
     if (FLAGS_enable_nhwcd4) {
-        valid_flag = valid_flag | (1 << 6);
+        valid_flag |= static_cast<size_t>(OptLayoutType::NHWCD4);
     }
     if (FLAGS_enable_nchw44_dot) {
-        valid_flag = valid_flag | (1 << 7);
+        valid_flag |= static_cast<size_t>(OptLayoutType::NCHW44_DOT);
     }
-
+    //! only one flag is valid
     bool ret = valid_flag && !(valid_flag & (valid_flag - 1));
-    if (ret) {
-        option_flag = static_cast<OptLayoutType>(valid_flag);
-    } else {
-        option_flag = static_cast<OptLayoutType>(0);
-    }
 
-    return ret;
+    return ret | m_valid;
 };
 
 std::shared_ptr<OptionBase> LayoutOption::create_option() {
@@ -156,6 +165,37 @@ std::shared_ptr<OptionBase> LayoutOption::create_option() {
 
 void LayoutOption::config_model(
         RuntimeParam& runtime_param, std::shared_ptr<ModelBase> model) {
+    size_t valid_flag = 0;
+    if (std::static_pointer_cast<lar::Bool>(m_option["enable_nchw4"])->get_value()) {
+        valid_flag |= static_cast<size_t>(OptLayoutType::NCHW4);
+    }
+    if (std::static_pointer_cast<lar::Bool>(m_option["enable_chwn4"])->get_value()) {
+        valid_flag |= static_cast<size_t>(OptLayoutType::CHWN4);
+    }
+    if (std::static_pointer_cast<lar::Bool>(m_option["enable_nchw44"])->get_value()) {
+        valid_flag |= static_cast<size_t>(OptLayoutType::NCHW44);
+    }
+    if (std::static_pointer_cast<lar::Bool>(m_option["enable_nchw88"])->get_value()) {
+        valid_flag |= static_cast<size_t>(OptLayoutType::NCHW88);
+    }
+    if (std::static_pointer_cast<lar::Bool>(m_option["enable_nchw32"])->get_value()) {
+        valid_flag |= static_cast<size_t>(OptLayoutType::NCHW32);
+    }
+    if (std::static_pointer_cast<lar::Bool>(m_option["enable_nchw64"])->get_value()) {
+        valid_flag |= static_cast<size_t>(OptLayoutType::NCHW64);
+    }
+    if (std::static_pointer_cast<lar::Bool>(m_option["enable_nhwcd4"])->get_value()) {
+        valid_flag |= static_cast<size_t>(OptLayoutType::NHWCD4);
+    }
+    if (std::static_pointer_cast<lar::Bool>(m_option["enable_nchw44_dot"])
+                ->get_value()) {
+        valid_flag |= static_cast<size_t>(OptLayoutType::NCHW44_DOT);
+    }
+
+    mgb_throw_if(
+            valid_flag && (valid_flag & (valid_flag - 1)), mgb::AssertionError,
+            "invalid options of layout transform 0x%lx", valid_flag);
+    m_option_flag = static_cast<OptLayoutType>(valid_flag);
     CONFIG_MODEL_FUN;
 }
 
@@ -169,3 +209,4 @@ DEFINE_bool(enable_nhwcd4, false, "enable nhwcd4 layout optimization!!");
 DEFINE_bool(enable_nchw44_dot, false, "enable nchw444-dot layout optimization!!");
 
 REGIST_OPTION_CREATOR(layout, lar::LayoutOption::create_option);
+REGIST_OPTION_VALIDATER(layout, lar::LayoutOption::set_valid);

@@ -1,12 +1,3 @@
-/**
- * \file lite/load_and_run/src/options/strategy_options.h
- *
- * This file is part of MegEngine, a deep learning framework developed by
- * Megvii.
- *
- * \copyright Copyright (c) 2020-2021 Megvii Inc. All rights reserved.
- */
-
 #include <gflags/gflags.h>
 #include "models/model.h"
 #include "option_base.h"
@@ -32,6 +23,8 @@ public:
     //! get option name
     std::string option_name() const override { return m_option_name; };
 
+    OptionValMap* get_option() override { return &m_option; }
+
 private:
     //! Constructor
     StrategyOption();
@@ -43,6 +36,7 @@ private:
     size_t run_iter;     //! iteration number for running model
     size_t threads;      //! thread number for running model (NOTE:it's different
                          //! from multithread device )
+    OptionValMap m_option;
 };
 
 class TestcaseOption final : public OptionBase {

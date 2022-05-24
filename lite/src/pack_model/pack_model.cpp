@@ -1,14 +1,3 @@
-/**
- * \file src/pack_model/pack_model.cpp
- * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
- *
- * Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- */
-
 #include "lite/pack_model.h"
 #include "../misc.h"
 #if LITE_BUILD_WITH_MGE
@@ -192,7 +181,7 @@ ModelPacker::ModelPacker(
         std::string info_data_path, std::string info_algo_policy_path,
         std::string info_binary_cache_path)
         : m_packed_model_path(packed_model_path) {
-    m_fbs_helper = new FbsHelper(this, model_path);
+    m_fbs_helper = std::make_shared<FbsHelper>(this, model_path);
     std::vector<uint8_t> empty_vec;
     m_info_data = info_data_path.empty() ? empty_vec : read_file(info_data_path);
     m_algo_policy_data = info_algo_policy_path.empty()
@@ -207,7 +196,7 @@ ModelPacker::ModelPacker(
         std::vector<uint8_t> model_data, std::string packed_model_path,
         std::vector<uint8_t> info_data, std::vector<uint8_t> info_algo_policy_data,
         std::vector<uint8_t> info_binary_cache_data) {
-    m_fbs_helper = new FbsHelper(this, model_data);
+    m_fbs_helper = std::make_shared<FbsHelper>(this, model_data);
     m_packed_model_path = packed_model_path;
     m_info_data = info_data;
     m_algo_policy_data = info_algo_policy_data;

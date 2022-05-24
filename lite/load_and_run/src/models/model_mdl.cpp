@@ -1,12 +1,3 @@
-/**
- * \file lite/load_and_run/src/models/model_mdl.cpp
- *
- * This file is part of MegEngine, a deep learning framework developed by
- * Megvii.
- *
- * \copyright Copyright (c) 2020-2021 Megvii Inc. All rights reserved.
- */
-
 #include "model_mdl.h"
 #include <gflags/gflags.h>
 #include <iostream>
@@ -108,4 +99,77 @@ void ModelMdl::run_model() {
 
 void ModelMdl::wait() {
     m_asyc_exec->wait();
+}
+
+#if MGB_ENABLE_JSON
+std::shared_ptr<mgb::json::Object> ModelMdl::get_io_info() {
+    std::shared_ptr<mgb::json::Array> inputs = mgb::json::Array::make();
+    std::shared_ptr<mgb::json::Array> outputs = mgb::json::Array::make();
+    auto get_dtype = [&](megdnn::DType data_type) {
+        std::map<megdnn::DTypeEnum, std::string> type_map = {
+                {mgb::dtype::Float32().enumv(), "float32"},
+                {mgb::dtype::Int32().enumv(), "int32"},
+                {mgb::dtype::Int16().enumv(), "int16"},
+                {mgb::dtype::Uint16().enumv(), "uint16"},
+                {mgb::dtype::Int8().enumv(), "int8"},
+                {mgb::dtype::Uint8().enumv(), "uint8"}};
+        return type_map[data_type.enumv()];
+    };
+    auto make_shape = [](mgb::TensorShape& shape_) {
+        std::vector<std::pair<mgb::json::String, std::shared_ptr<mgb::json::Value>>>
+                shape;
+        for (size_t i = 0; i < shape_.ndim; ++i) {
+            std::string lable = "dim";
+            lable += std::to_string(shape_.ndim - i - 1);
+            shape.push_back(
+                    {mgb::json::String(lable),
+                     mgb::json::NumberInt::make(shape_[shape_.ndim - i - 1])});
+        }
+        return shape;
+    };
+    for (auto&& i : m_load_result.tensor_map) {
+        std::vector<std::pair<mgb::json::String, std::shared_ptr<mgb::json::Value>>>
+                json_inp;
+        auto shape_ = i.second->shape();
+        json_inp.push_back(
+                {mgb::json::String("shape"),
+                 mgb::json::Object::make(make_shape(shape_))});
+        json_inp.push_back(
+                {mgb::json::String("dtype"),
+                 mgb::json::String::make(get_dtype(i.second->dtype()))});
+        json_inp.push_back(
+                {mgb::json::String("name"), mgb::json::String::make(i.first)});
+        inputs->add(mgb::json::Object::make(json_inp));
+    }
+
+    for (auto&& i : m_load_result.output_var_list) {
+        std::vector<std::pair<mgb::json::String, std::shared_ptr<mgb::json::Value>>>
+                json_out;
+        auto shape_ = i.shape();
+        json_out.push_back(
+                {mgb::json::String("shape"),
+                 mgb::json::Object::make(make_shape(shape_))});
+        json_out.push_back(
+                {mgb::json::String("dtype"),
+                 mgb::json::String::make(get_dtype(i.dtype()))});
+
+        json_out.push_back(
+                {mgb::json::String("name"), mgb::json::String::make(i.node()->name())});
+        outputs->add(mgb::json::Object::make(json_out));
+    }
+    return mgb::json::Object::make(
+            {{"IO",
+              mgb::json::Object::make({{"outputs", outputs}, {"inputs", inputs}})}});
+}
+#endif
+
+std::vector<uint8_t> ModelMdl::get_model_data() {
+    std::vector<uint8_t> out_data;
+    auto out_file = mgb::serialization::OutputFile::make_vector_proxy(&out_data);
+    using DumpConfig = mgb::serialization::GraphDumper::DumpConfig;
+    DumpConfig config{1, false, false};
+    auto dumper =
+            mgb::serialization::GraphDumper::make(std::move(out_file), m_format.val());
+    dumper->dump(m_load_result.output_var_list, config);
+    return out_data;
 }

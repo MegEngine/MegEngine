@@ -1,12 +1,3 @@
-/**
- * \file lite/load_and_run/src/models/model_mdl.h
- *
- * This file is part of MegEngine, a deep learning framework developed by
- * Megvii.
- *
- * \copyright Copyright (c) 2020-2021 Megvii Inc. All rights reserved.
- */
-
 #pragma once
 #include <string>
 #include "megbrain/opr/search_policy/algo_chooser_helper.h"
@@ -41,6 +32,10 @@ public:
     void run_model() override;
 
     void wait() override;
+
+#if MGB_ENABLE_JSON
+    std::shared_ptr<mgb::json::Object> get_io_info() override;
+#endif
 
     //! get load result for megDL model
     mgb::serialization::GraphLoader::LoadResult& get_mdl_load_result() {
@@ -108,6 +103,8 @@ public:
     }
 
     const std::string& get_model_path() const override { return model_path; }
+
+    std::vector<uint8_t> get_model_data() override;
 
 private:
     bool share_model_mem;

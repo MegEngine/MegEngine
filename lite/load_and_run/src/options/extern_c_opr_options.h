@@ -1,12 +1,3 @@
-/**
- * \file lite/load_and_run/src/options/extern_c_opr_options.h
- *
- * This file is part of MegEngine, a deep learning framework developed by
- * Megvii.
- *
- * \copyright Copyright (c) 2020-2021 Megvii Inc. All rights reserved.
- */
-
 #pragma once
 #include <gflags/gflags.h>
 #include "megbrain/graph/extern_copr_api.h"

@@ -1,12 +1,3 @@
-/**
- * \file lite/load_and_run/src/options/fastrun_options.h
- *
- * This file is part of MegEngine, a deep learning framework developed by
- * Megvii.
- *
- * \copyright Copyright (c) 2020-2021 Megvii Inc. All rights reserved.
- */
-
 #pragma once
 
 #include <gflags/gflags.h>
@@ -38,6 +29,10 @@ public:
     //! get options name for quickly search
     std::string option_name() const override { return m_option_name; }
 
+    static void set_valid(bool val) { m_valid = val; }
+
+    OptionValMap* get_option() override { return &m_option; }
+
 private:
     FastRunOption();
     //! config template for different model
@@ -53,5 +48,8 @@ private:
     size_t share_batch_size;       //! fast run strategy share batch size setting
     std::string m_fast_run_cache;  //! fast run cache file path
     std::string m_option_name;     //! option name
+
+    static bool m_valid;
+    OptionValMap m_option;
 };
 }  // namespace lar

@@ -1,24 +1,21 @@
-/**
- * \file lite/load_and_run/src/options/strategy_options.cpp
- *
- * This file is part of MegEngine, a deep learning framework developed by
- * Megvii.
- *
- * \copyright Copyright (c) 2020-2021 Megvii Inc. All rights reserved.
- */
-
 #include "strategy_options.h"
 #include "models/model_mdl.h"
 
 using namespace lar;
 
 DECLARE_bool(c_opr_lib_with_param);
-
+DECLARE_bool(fitting);
 StrategyOption::StrategyOption() {
     m_option_name = "run_strategy";
-    warmup_iter = FLAGS_warmup_iter;
-    run_iter = FLAGS_iter;
-    threads = FLAGS_thread;
+    warmup_iter = FLAGS_fitting ? 3 : FLAGS_warmup_iter;
+    run_iter = FLAGS_fitting ? 10 : FLAGS_iter;
+    threads = FLAGS_fitting ? 1 : FLAGS_thread;
+    m_option = {
+            {"iter", lar::NumberInt32::make(run_iter)},
+            {"warmup_iter", lar::NumberInt32::make(warmup_iter)},
+            {"thread", lar::NumberInt32::make(threads)},
+
+    };
 }
 
 std::shared_ptr<OptionBase> StrategyOption::create_option() {
@@ -60,8 +57,7 @@ void TestcaseOption::config_model(
     if (model->type() == ModelType::MEGDL_MODEL) {
         auto model_ptr = std::static_pointer_cast<ModelMdl>(model);
         if (model_ptr->get_testcase_num() && !FLAGS_c_opr_lib_with_param) {
-            if (runtime_param.stage == RunStage::MODEL_RUNNING) {
-                auto load_result = model_ptr->get_mdl_load_result();
+            if (runtime_param.stage == RunStage::AFTER_MODEL_LOAD) {
                 auto input_tensor = model_ptr->get_test_input();
                 auto loader = model_ptr->reset_loader();
                 auto testcase = loader->load(model_ptr->get_mdl_config(), false);

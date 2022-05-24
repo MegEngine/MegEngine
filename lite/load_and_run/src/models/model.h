@@ -1,17 +1,8 @@
-/**
- * \file lite/load_and_run/src/models/model.h
- *
- * This file is part of MegEngine, a deep learning framework developed by
- * Megvii.
- *
- * \copyright Copyright (c) 2020-2021 Megvii Inc. All rights reserved.
- */
-
 #pragma once
 #include <gflags/gflags.h>
 #include <string>
 #include "helpers/common.h"
-
+#include "megbrain/utils/json.h"
 DECLARE_bool(lite);
 
 namespace lar {
@@ -45,6 +36,12 @@ public:
     virtual ~ModelBase() = default;
 
     virtual const std::string& get_model_path() const = 0;
+
+    virtual std::vector<uint8_t> get_model_data() = 0;
+#if MGB_ENABLE_JSON
+    //! get model io information
+    virtual std::shared_ptr<mgb::json::Object> get_io_info() = 0;
+#endif
 };
 }  // namespace lar
 

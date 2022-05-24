@@ -1,22 +1,13 @@
-/**
- * \file lite/load_and_run/src/options/option_base.h
- *
- * This file is part of MegEngine, a deep learning framework developed by
- * Megvii.
- *
- * \copyright Copyright (c) 2020-2021 Megvii Inc. All rights reserved.
- */
-
 #pragma once
 #include <functional>
 #include <iostream>
 #include <memory>
 #include <string>
-#include <unordered_map>
 #include <vector>
 #include "megbrain/common.h"
 
 #include "helpers/common.h"
+#include "helpers/utils.h"
 #include "models/model.h"
 
 namespace lar {
@@ -34,6 +25,9 @@ public:
     //! get option name
     virtual std::string option_name() const = 0;
 
+    //! get option map
+    virtual OptionValMap* get_option() { return nullptr; }
+
     virtual ~OptionBase() = default;
 };
 
@@ -43,7 +37,10 @@ public:
 class OptionFactory {
 public:
     using OptionCreator = std::function<std::shared_ptr<OptionBase>()>;
-    using OptionMap = std::unordered_map<std::string, OptionCreator>;
+    using OptionValidater = std::function<void(bool)>;
+
+    using OptionCreatorMap = std::unordered_map<std::string, OptionCreator>;
+    using OptionValidaterMap = std::unordered_map<std::string, OptionValidater>;
 
     //! get Singleton option factory
     static OptionFactory& get_Instance() {
@@ -52,29 +49,49 @@ public:
     }
 
     //! registe option creator into option map
-    void registe_options(std::string name, OptionCreator creator) {
-        if (option_creator_map.count(name) == 0) {
-            option_creator_map[name] = creator;
+    void registe_options_creator(std::string name, OptionCreator creator) {
+        if (m_option_creator_map.count(name) == 0) {
+            m_option_creator_map[name] = creator;
+        }
+    }
+    //! registe option validater into option map
+    void registe_options_validater(std::string name, OptionValidater validater) {
+        if (m_option_validater_map.count(name) == 0) {
+            m_option_validater_map[name] = validater;
         }
     }
 
     //! get creator map
-    OptionMap* get_option_creator_map() { return &option_creator_map; }
+    OptionCreatorMap* get_option_creator_map() { return &m_option_creator_map; }
+
+    //! get validater map
+    OptionValidaterMap* get_option_validater_map() { return &m_option_validater_map; }
 
 private:
     OptionFactory(){};
-    OptionMap option_creator_map;
+    OptionCreatorMap m_option_creator_map;
+    OptionValidaterMap m_option_validater_map;
 };
 
 }  // namespace lar
 
-#define REGIST_OPTION_CREATOR(name_, creator_)                                    \
-    struct OptionRegister_##name_ {                                               \
-        OptionRegister_##name_() {                                                \
-            lar::OptionFactory::get_Instance().registe_options(#name_, creator_); \
-        }                                                                         \
-    };                                                                            \
-    OptionRegister_##name_ name_;
+#define REGIST_OPTION_CREATOR(_name, _creator)                          \
+    struct CreatorRegister_##_name {                                    \
+        CreatorRegister_##_name() {                                     \
+            lar::OptionFactory::get_Instance().registe_options_creator( \
+                    #_name, _creator);                                  \
+        }                                                               \
+    };                                                                  \
+    CreatorRegister_##_name creator_##_name;
+
+#define REGIST_OPTION_VALIDATER(_name, _validater)                        \
+    struct ValitaterRegister_##_name {                                    \
+        ValitaterRegister_##_name() {                                     \
+            lar::OptionFactory::get_Instance().registe_options_validater( \
+                    #_name, _validater);                                  \
+        }                                                                 \
+    };                                                                    \
+    ValitaterRegister_##_name validater_##_name;
 
 #define CONFIG_MODEL_FUN                                                    \
     if (model->type() == ModelType::LITE_MODEL) {                           \
