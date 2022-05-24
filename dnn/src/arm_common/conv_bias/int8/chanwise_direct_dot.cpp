@@ -21,9 +21,13 @@ public:
     DirectConvRunner(size_t flt_size, size_t stride) {
         if (flt_size == 9 && stride == 1) {
             m_func = megdnn_dot_nchw_large_chanwise_direct_conv_9x9s1_oh4_ow16;
-        } else {
-            megdnn_assert(flt_size == 9 && stride == 2);
+        } else if (flt_size == 9 && stride == 2) {
             m_func = megdnn_dot_nchw_large_chanwise_direct_conv_9x9s2_oh4_ow16;
+        } else if (flt_size == 11 && stride == 1) {
+            m_func = megdnn_dot_nchw_large_chanwise_direct_conv_11x11s1_oh4_ow16;
+        } else {
+            megdnn_assert(flt_size == 11 && stride == 2);
+            m_func = megdnn_dot_nchw_large_chanwise_direct_conv_11x11s2_oh4_ow16;
         }
     }
     size_t get_round_fw(const ConvBiasImpl::NCBKernSizeParam& param) const {
@@ -208,8 +212,8 @@ bool ConvBiasImpl::AlgoDotS8DirectChanWiseLarge::usable(
             (bias_mode == BiasMode::NO_BIAS ||
              bias_mode == BiasMode::BROADCAST_CHANNEL_BIAS) &&
             fm.spatial_ndim == 2 && fm.dilation[0] == 1 && fm.dilation[1] == 1 &&
-            SH == SW && (SH == 1 || SH == 2) && FH == FW && (FH == 9) && fm.icpg == 1 &&
-            fm.ocpg == 1;
+            SH == SW && (SH == 1 || SH == 2) && FH == FW && (FH == 9 || FH == 11) &&
+            fm.icpg == 1 && fm.ocpg == 1;
     return avaible;
 }
 

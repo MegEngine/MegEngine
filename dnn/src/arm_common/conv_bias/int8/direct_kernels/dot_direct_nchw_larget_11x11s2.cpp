@@ -7,7 +7,7 @@
 #include "src/common/unroll_macro.h"
 
 MEGDNN_ATTRIBUTE_TARGET("dotprod")
-void megdnn_dot_nchw_large_chanwise_direct_conv_9x9s2_oh4_ow16(
+void megdnn_dot_nchw_large_chanwise_direct_conv_11x11s2_oh4_ow16(
         const int8_t* src, const int8_t* weight, int32_t bias, int8_t* dst, size_t oh,
         size_t ow, size_t OH, size_t OW, size_t pad_iw, const float scale,
         int8_t relu_val) {
@@ -36,7 +36,7 @@ void megdnn_dot_nchw_large_chanwise_direct_conv_9x9s2_oh4_ow16(
     UNROLL_CALL_RAW(4, cb);
 #undef cb
 
-#define flt_reg     7
+#define flt_reg     9
 #define flt_per_reg 4
 
     int8x16_t flt[flt_reg];
@@ -176,33 +176,47 @@ void megdnn_dot_nchw_large_chanwise_direct_conv_9x9s2_oh4_ow16(
 
     //! row 9
     LOAD_SRC(9);
+    CAL_C(0, 3 * 9);
     CAL_C(1, 3 * 7);
     CAL_C(2, 3 * 5);
     CAL_C(3, 3 * 3);
 
     //! row 10
     LOAD_SRC(10);
+    CAL_C(0, 3 * 10);
     CAL_C(1, 3 * 8);
     CAL_C(2, 3 * 6);
     CAL_C(3, 3 * 4);
 
     //! row 11
     LOAD_SRC(11);
+    CAL_C(1, 3 * 9);
     CAL_C(2, 3 * 7);
     CAL_C(3, 3 * 5);
 
     //! row 12
     LOAD_SRC(12);
+    CAL_C(1, 3 * 10);
     CAL_C(2, 3 * 8);
     CAL_C(3, 3 * 6);
 
     //! row 13
     LOAD_SRC(13);
+    CAL_C(2, 3 * 9);
     CAL_C(3, 3 * 7);
 
     //! row 14
     LOAD_SRC(14);
+    CAL_C(2, 3 * 10);
     CAL_C(3, 3 * 8);
+
+    //! row 15
+    LOAD_SRC(15);
+    CAL_C(3, 3 * 9);
+
+    //! row 16
+    LOAD_SRC(16);
+    CAL_C(3, 3 * 10);
 
     float32x4_t dst_reg[4][4];
 #define cb(step)                                  \

@@ -612,13 +612,13 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_QUINT8_STRIDE2) {
 #if MGB_ENABLE_DOT
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_DOT_DIRECT_LARGE_S1) {
     checker_conv_bias_qint8x8x8(
-            get_channel_wise_args({9}, 1, false, true, true, true), handle(),
+            get_channel_wise_args({9, 11}, 1, false, true, true, true), handle(),
             "ARMDOTS8_DIRECT_CHANWISE_LARGE");
 }
 
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_DOT_DIRECT_LARGE_S2) {
     checker_conv_bias_qint8x8x8(
-            get_channel_wise_args({9}, 2, false, true, true, true), handle(),
+            get_channel_wise_args({9, 11}, 2, false, true, true, true), handle(),
             "ARMDOTS8_DIRECT_CHANWISE_LARGE");
 }
 

@@ -2060,6 +2060,16 @@ TEST_F(ARM_COMMON, BENCHMARK_CONV_BIAS_INT8_LARGE_KERN_NCHW_DOT) {
     benchmark1.set_display(false);
     benchmark1.set_times(RUN);
 
+    Benchmarker<ConvBias> benchmark2(handle());
+    benchmark2.set_dtype(0, dtype::QuantizedS8(2.5f))
+            .set_dtype(1, dtype::QuantizedS8(2.5f))
+            .set_dtype(2, dtype::QuantizedS32(6.25f))
+            .set_dtype(4, dtype::QuantizedS8(60.25f));
+    benchmark2.set_before_exec_callback(
+            conv_bias::ConvBiasAlgoChecker<ConvBiasForward>("ARMDOTS8"));
+    benchmark2.set_display(false);
+    benchmark2.set_times(RUN);
+
     for (auto&& arg : args) {
         TensorLayout dst_layout;
         auto opr = handle()->create_operator<ConvBias>();
@@ -2070,6 +2080,12 @@ TEST_F(ARM_COMMON, BENCHMARK_CONV_BIAS_INT8_LARGE_KERN_NCHW_DOT) {
         //! dst.nr_elems * FH * FW * 2
         float computations =
                 dst_layout.total_nr_elems() * arg.filter[3] * arg.filter[4] * 2.0 / 1e6;
+        float computations_5x5 = dst_layout.total_nr_elems() * 5 * 5 * 2.0 / 1e6;
+        float computations_11x11 = dst_layout.total_nr_elems() * 11 * 11 * 2.0 / 1e6;
+        param::ConvBias param_5x5 = arg.param;
+        param_5x5.pad_h = param_5x5.pad_w = 5 / 2;
+        param::ConvBias param_11x11 = arg.param;
+        param_11x11.pad_h = param_11x11.pad_w = 11 / 2;
 
         auto used0 = benchmark0.set_param(arg.param).exec(
                              {arg.src, arg.filter, arg.bias, {}, {}}) /
@@ -2077,11 +2093,26 @@ TEST_F(ARM_COMMON, BENCHMARK_CONV_BIAS_INT8_LARGE_KERN_NCHW_DOT) {
         auto used1 = benchmark1.set_param(arg.param).exec(
                              {arg.src, arg.filter, arg.bias, {}, {}}) /
                      RUN;
+        TensorShape flt_5x5_shape = arg.filter;
+        flt_5x5_shape[3] = flt_5x5_shape[4] = 5;
 
-        printf("%s %s: Direct use: %f ms %f Gflops im2col: %f ms %f GFlops "
-               "speedup: %f\n",
-               arg.src.to_string().c_str(), arg.filter.to_string().c_str(), used0,
-               computations / used0, used1, computations / used1, used1 / used0);
+        auto used5x5 = benchmark2.set_param(param_5x5).exec(
+                               {arg.src, flt_5x5_shape, arg.bias, {}, {}}) /
+                       RUN;
+        TensorShape flt_11x11_shape = arg.filter;
+        flt_11x11_shape[3] = flt_11x11_shape[4] = 11;
+        auto used11x11 = benchmark0.set_param(param_11x11)
+                                 .exec({arg.src, flt_11x11_shape, arg.bias, {}, {}}) /
+                         RUN;
+
+        printf("%s %s s %u: Direct use: %f ms %f Gflops im2col: %f ms %f GFlops "
+               "speedup: %f, compare 5x5 %f ms %f GFlops speedup %f, compare 11x11 %f "
+               "ms %f GFops speedup %f\n",
+               arg.src.to_string().c_str(), arg.filter.to_string().c_str(),
+               arg.param.stride_h, used0, computations / used0, used1,
+               computations / used1, used1 / used0, used5x5, computations_5x5 / used5x5,
+               used5x5 / used0, used11x11, computations_11x11 / used11x11,
+               used11x11 / used0);
     }
 }
 
