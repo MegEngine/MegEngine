@@ -4,12 +4,11 @@
 
 namespace megdnn {
 
-void LayerNormBase::deduce_layout_fwd(
-        const TensorLayout& data, const TensorLayout& weight, const TensorLayout& bias,
-        TensorLayout& dst, TensorLayout& mean, TensorLayout& rstd) {
-    MEGDNN_MARK_USED_VAR(weight);
-    MEGDNN_MARK_USED_VAR(bias);
-    auto p = param();
+using Param = LayerNormBase::Param;
+
+void LayerNormBase::deduce_layout_fwd_impl(
+        const TensorLayout& data, const Param& p, TensorLayout& dst, TensorLayout& mean,
+        TensorLayout& rstd) {
     TensorShape unnormalized_shape;
     unnormalized_shape.ndim = data.ndim - p.normalized_dim;
     for (size_t i = 0; i < unnormalized_shape.ndim; ++i) {
@@ -20,6 +19,14 @@ void LayerNormBase::deduce_layout_fwd(
     dst = data;
     mean = unnormalized_layout;
     rstd = unnormalized_layout;
+}
+
+void LayerNormBase::deduce_layout_fwd(
+        const TensorLayout& data, const TensorLayout& weight, const TensorLayout& bias,
+        TensorLayout& dst, TensorLayout& mean, TensorLayout& rstd) {
+    MEGDNN_MARK_USED_VAR(weight);
+    MEGDNN_MARK_USED_VAR(bias);
+    deduce_layout_fwd_impl(data, param(), dst, mean, rstd);
 }
 
 void LayerNormBase::check_layout_fwd(

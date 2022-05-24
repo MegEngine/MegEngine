@@ -63,6 +63,7 @@ __all__ = [
     "hsigmoid",
     "hswish",
     "indexing_one_hot",
+    "layer_norm",
     "leaky_relu",
     "linear",
     "local_conv2d",
@@ -1135,9 +1136,6 @@ def layer_norm(
         bias: must not be None when the affine is true
         eps: a value added to the denominator for numerical stability. Default: 1e-5
     """
-    if amp._enabled:
-        inp, weight, bias = cast_tensors(inp, weight, bias, promote=True)
-
     if isinstance(normalized_shape, int):
         normalized_shape = [normalized_shape]
 

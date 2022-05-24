@@ -289,6 +289,28 @@ ValueRefList batch_norm_rule(const OpDef& op, Span<ValueRef> inputs) {
     return imperative::apply(op, inputs);
 }
 
+ValueRefList layer_norm_rule(const OpDef& op, Span<ValueRef> inputs) {
+    // avoid the amp_dtype_autocast
+    if (DTypePromoteCfg::amp_dtype_autocast_enabled) {
+        SmallVector<DType> dtypes = get_value_dtypes(inputs);
+        ValueRefList converted(inputs.size());
+
+        for (size_t i = 0; i < inputs.size(); ++i) {
+            mgb::DType target_dtype = DTypePromoteCfg::amp_high_prec_dtype;
+            if (dtypes[i] != target_dtype) {
+                converted[i] = imperative::apply(
+                        ApplyOp(*TypeCvt::make(target_dtype)), inputs[i])[0];
+            } else {
+                converted[i] = inputs[i];
+            }
+        }
+
+        return imperative::apply(op, converted);
+    }
+
+    return imperative::apply(op, inputs);
+}
+
 ValueRefList naive_promote_rule(const OpDef& op, Span<ValueRef> inputs) {
     SmallVector<DType> dtypes = get_value_dtypes(inputs);
     mgb::DType target_dtype = get_promoted_dtype(dtypes);
@@ -319,6 +341,7 @@ struct DTypePromoteRuleRegistry {
         register_dtype_promote_rule<BatchNorm>(batch_norm_rule);
         register_dtype_promote_rule<Convolution3D>(naive_promote_rule);
         register_dtype_promote_rule<Convolution3DBackwardData>(naive_promote_rule);
+        register_dtype_promote_rule<LayerNorm>(layer_norm_rule);
     }
 } register_helper;
 

@@ -8,7 +8,6 @@
 #include "megbrain/opr/dnn/correlation.h"
 #include "megbrain/opr/dnn/fake_quant.h"
 #include "megbrain/opr/dnn/images2neibs.h"
-#include "megbrain/opr/dnn/layer_norm.h"
 #include "megbrain/opr/dnn/local.h"
 #include "megbrain/opr/dnn/lrn.h"
 #include "megbrain/opr/dnn/lsq.h"
@@ -728,29 +727,5 @@ auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
 }
 OP_TRAIT_REG(LRN, LRN).apply_on_var_node(apply_on_var_node).fallback();
 }  // namespace lrn
-
-namespace layer_norm {
-
-cg::OperatorNodeBase* apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
-    auto&& op = static_cast<const LayerNorm&>(def);
-    size_t nr_inp = inputs.size();
-    auto p = op.param();
-    mgb_assert((nr_inp == 3 && p.affine) || (nr_inp == 1 && !p.affine));
-    OperatorNodeConfig config{op.make_name()};
-    if (nr_inp == 3) {
-        return opr::LayerNorm::make(
-                       inputs[0], inputs[1], inputs[2], op.param(), config)[0]
-                .node()
-                ->owner_opr();
-    } else {
-        return opr::LayerNorm::make(inputs[0], op.param(), config)[0]
-                .node()
-                ->owner_opr();
-    }
-}
-
-OP_TRAIT_REG(LayerNorm, LayerNorm).apply_on_var_node(apply_on_var_node).fallback();
-
-}  // namespace layer_norm
 
 }  // namespace mgb::imperative

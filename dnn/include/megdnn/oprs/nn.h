@@ -1939,6 +1939,11 @@ class LayerNormBase : public OperatorBase {
     DEF_OPR_IMPL_CTOR(LayerNormBase, OperatorBase);
     DEF_OPR_PARAM(LayerNorm);
 
+public:
+    MGE_WIN_DECLSPEC_FUC static void deduce_layout_fwd_impl(
+            const TensorLayout& data, const Param& p, TensorLayout& dst,
+            TensorLayout& mean, TensorLayout& rstd);
+
 protected:
     void deduce_layout_fwd(
             const TensorLayout& data, const TensorLayout& weight,
