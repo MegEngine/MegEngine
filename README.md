@@ -3,6 +3,7 @@
 <p align="center">
   <img width="128" height="128" src="logo.png">
 </p>
+<h3> <a href="https://www.megengine.org.cn/doc/stable/en/user-guide/index.html"> Documentation </a> | <a href="https://www.megengine.org.cn/doc/stable/zh/user-guide/index.html"> 中文文档 </a> </h3>
 
 [![](https://img.shields.io/badge/English-%E4%B8%AD%E6%96%87-green.svg)](README_CN.md) [![](https://img.shields.io/badge/Website-MegEngine-green.svg)](https://megengine.org.cn/) [![](https://img.shields.io/badge/License-Apache%202.0-green.svg)](LICENSE) [![](https://img.shields.io/badge/Chat-on%20QQ-green.svg?logo=tencentqq)](https://jq.qq.com/?_wv=1027&k=jJcBU1xi) [![](https://img.shields.io/badge/Discuss-on%20Zhihu-8A2BE2.svg?labelColor=00BFFF&logo=zhihu)](https://www.zhihu.com/people/megengine-bot)
 
