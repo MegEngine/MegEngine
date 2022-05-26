@@ -33,7 +33,7 @@ def convert_tensor_format(x: Tensor, inplace: bool = True):
     if x.format != "nhwc":
         if inplace:
             # hostvalue should still be valid, so no d2h cost.
-            data = x.numpy().transpose(*pattern)
+            data = x.numpy()
             # reset will destroy existed backward grad
             x[...] = Tensor(data, format="nhwc")
         else:

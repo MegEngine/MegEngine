@@ -27,7 +27,11 @@ TypedValueRef<FormattedTensorValue> FormatTransformation::to(
             pattern = {0, 3, 1, 2};
         }
     } else if ((format == FT::NCHW || format == FT::DEFAULT) && target == FT::NHWC) {
-        pattern = {0, 2, 3, 1};
+        if (tensor.value().shape().cast<ShapeValue>().ndim == 5) {
+            pattern = {0, 1, 3, 4, 2};
+        } else {
+            pattern = {0, 2, 3, 1};
+        }
     } else {
         mgb_throw(
                 MegBrainError, "Unsupport format conversion from %s to %s",
@@ -572,8 +576,13 @@ ValueRefList FormatTransformation::apply_transformation(
         }
     } else if (auto* create_tensor = op.as<CreateTensor>()) {
         auto format = create_tensor->format();
-        // TODO: add dimshuffle for nhwc format
-        return {wrap_output(imperative::apply(op, inputs)[0], format)};
+        if (format == FT::NHWC) {
+            auto output = wrap_output(imperative::apply(op, inputs)[0]);
+            output = to(output.cast(m_value_type), FT::NHWC, "");
+            return {output};
+        } else {
+            return {wrap_output(imperative::apply(op, inputs)[0], format)};
+        }
     } else if (auto* get_attr = op.as<GetAttr>()) {
         auto&& input = inputs.item();
         if (!input.is(m_value_type)) {
