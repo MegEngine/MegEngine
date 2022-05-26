@@ -7,6 +7,7 @@
 namespace megdnn {
 
 using padding_param = megdnn::param_enumv::Padding;
+using Param = PaddingBase::Param;
 
 void PaddingForward::forward_check_exec(
         const TensorLayout& src, const TensorLayout& dst) {
@@ -19,8 +20,9 @@ void PaddingForward::forward_check_exec(
             "unsupported %s dtype for forward padding opr", src.dtype.name());
 }
 
-void PaddingForward::deduce_layout(const TensorLayout& src, TensorLayout& dst) {
-    SmallVector<size_t> offsets(get_offsets());
+void PaddingForward::deduce_layout_impl(
+        const TensorLayout& src, TensorLayout& dst, const Param& p) {
+    SmallVector<size_t> offsets(get_offsets_impl(p));
     TensorShape dst_shape;
     switch (src.ndim) {
         case 1:
@@ -76,6 +78,10 @@ void PaddingForward::deduce_layout(const TensorLayout& src, TensorLayout& dst) {
     dst = TensorLayout(dst_shape, src.dtype);
 }
 
+void PaddingForward::deduce_layout(const TensorLayout& src, TensorLayout& dst) {
+    return deduce_layout_impl(src, dst, param());
+}
+
 void PaddingBackward::backward_check_exec(
         const TensorLayout& src, const TensorLayout& dst) {
     check_exec(dst, src);
@@ -86,15 +92,18 @@ void PaddingBackward::backward_check_exec(
             "unsupported %s dtype for forward padding opr", src.dtype.name());
 }
 
-SmallVector<size_t> PaddingBase::get_offsets() {
-    SmallVector<size_t> offsets = {param().front_offset_dim0, param().back_offset_dim0,
-                                   param().front_offset_dim1, param().back_offset_dim1,
-                                   param().front_offset_dim2, param().back_offset_dim2,
-                                   param().front_offset_dim3, param().back_offset_dim3,
-                                   param().front_offset_dim4, param().back_offset_dim4,
-                                   param().front_offset_dim5, param().back_offset_dim5,
-                                   param().front_offset_dim6, param().back_offset_dim6};
+SmallVector<size_t> PaddingBase::get_offsets_impl(const Param& p) {
+    SmallVector<size_t> offsets = {
+            p.front_offset_dim0, p.back_offset_dim0,  p.front_offset_dim1,
+            p.back_offset_dim1,  p.front_offset_dim2, p.back_offset_dim2,
+            p.front_offset_dim3, p.back_offset_dim3,  p.front_offset_dim4,
+            p.back_offset_dim4,  p.front_offset_dim5, p.back_offset_dim5,
+            p.front_offset_dim6, p.back_offset_dim6};
     return offsets;
+}
+
+SmallVector<size_t> PaddingBase::get_offsets() {
+    return get_offsets_impl(param());
 }
 
 void PaddingBase::check_exec(const TensorLayout& src, const TensorLayout& dst) {

@@ -1406,6 +1406,7 @@ public:
 
 protected:
     SmallVector<size_t> get_offsets();
+    MGE_WIN_DECLSPEC_FUC static SmallVector<size_t> get_offsets_impl(const Param& p);
     void check_exec(const TensorLayout& src, const TensorLayout& dst);
 };
 
@@ -1420,6 +1421,9 @@ public:
     virtual size_t get_workspace_in_bytes(
             const TensorLayout& src, const TensorLayout& dst) = 0;
     void deduce_layout(const TensorLayout& src, TensorLayout& dst);
+
+    MGE_WIN_DECLSPEC_FUC static void deduce_layout_impl(
+            const TensorLayout& src, TensorLayout& dst, const Param& p);
 
 protected:
     void forward_check_exec(const TensorLayout& src, const TensorLayout& dst);
