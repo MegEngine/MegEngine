@@ -180,7 +180,13 @@ void DataParser::parse_npy(const std::string& name, const std::string& path) {
     inputs.insert(std::make_pair(name, std::move(hv)));
 }
 
-void DataParser::parse_string(const std::string name, const std::string& str) {
+void DataParser::parse_string(const std::string& name, const std::string& str) {
+    //! parse shape
+    if ('{' == str[0]) {
+        parse_shape(name, str);
+        return;
+    }
+
     // data type
     megdnn::DType data_type = mgb::dtype::Int32();
     if (str.find(".") != std::string::npos or str.find(".") != std::string::npos) {
@@ -255,5 +261,33 @@ void DataParser::parse_string(const std::string name, const std::string& str) {
                 break;
         }
     }
+    inputs.insert(std::make_pair(name, std::move(hv)));
+}
+
+void DataParser::parse_shape(const std::string& name, const std::string& str) {
+    //! {d0,d1,..,dn}
+    mgb_assert(
+            "{" == str.substr(0, 1),
+            "invalid value: %s for parse_shape, valid format: {d0,d1,..,dn}\n",
+            str.c_str());
+    megdnn::SmallVector<size_t> shape;
+    std::string shape_size = "";
+    for (size_t i = 0; i < str.size(); ++i) {
+        char c = str[i];
+        if ('{' == c || ' ' == c) {
+            continue;
+        } else if (',' == c || '}' == c) {
+            shape.push_back(std::stoul(shape_size));
+            shape_size = "";
+            if ('}' == c) {
+                break;
+            }
+        } else {
+            shape_size += c;
+        }
+    }
+    mgb::HostTensorND hv(mgb::CompNode::default_cpu(), shape);
+    mgb::HostTensorStorage storage(mgb::CompNode::default_cpu());
+    hv.only_reset_raw_storage(storage);
     inputs.insert(std::make_pair(name, std::move(hv)));
 }

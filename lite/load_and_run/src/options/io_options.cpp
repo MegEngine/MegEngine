@@ -73,7 +73,17 @@ void InputOption::config_model_internel<ModelMdl>(
                     tensormap.find(i.first) != tensormap.end(),
                     "can't find tesnor named %s", i.first.c_str());
             auto& in = tensormap.find(i.first)->second;
-            in->copy_from(i.second);
+            if (i.second.storage().empty()) {
+                mgb::HostTensorND hv;
+                hv.comp_node(mgb::CompNode::default_cpu(), true)
+                        .dtype(in->dtype())
+                        .resize(i.second.shape());
+                mgb::dt_byte* raw_ptr = hv.raw_ptr();
+                memset((char*)raw_ptr, 1, hv.layout().total_nr_elems());
+                in->copy_from(hv);
+            } else {
+                in->copy_from(i.second);
+            }
         }
     }
 }

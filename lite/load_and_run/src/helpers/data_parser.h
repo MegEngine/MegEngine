@@ -30,7 +30,10 @@ private:
     //! parser for .npy data
     void parse_npy(const std::string& name, const std::string& path);
 
-    //! parser for user define string
-    void parse_string(const std::string name, const std::string& str);
+    //! parser for user defined string
+    void parse_string(const std::string& name, const std::string& str);
+
+    //! parser for user defined shape
+    void parse_shape(const std::string& name, const std::string& str);
 };
 }  // namespace lar
