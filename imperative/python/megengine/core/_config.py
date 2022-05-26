@@ -181,7 +181,6 @@ def _reset_execution_config(
     deterministic_kernel=None,
     async_level=None,
     compute_mode=None,
-    auto_format_convert=None,
 ):
     global _benchmark_kernel, _deterministic_kernel, __compute_mode
     orig_flags = (
@@ -189,7 +188,6 @@ def _reset_execution_config(
         _deterministic_kernel,
         get_option("async_level"),
         __compute_mode,
-        get_auto_format_convert(),
     )
     if benchmark_kernel is not None:
         _benchmark_kernel = benchmark_kernel
@@ -199,8 +197,6 @@ def _reset_execution_config(
         set_option("async_level", async_level)
     if compute_mode is not None:
         __compute_mode = compute_mode
-    if auto_format_convert is not None:
-        set_auto_format_convert(auto_format_convert)
 
     return orig_flags
 
@@ -211,7 +207,6 @@ def _override(
     deterministic_kernel=None,
     async_level=None,
     compute_mode=None,
-    auto_format_convert=None,
 ):
     r"""A context manager that users can opt in by attaching the decorator to set 
     the config of the global variable.
@@ -227,7 +222,6 @@ def _override(
                 deterministic_kernel = Fasle,
                 async_level=2,
                 compute_mode="float32",
-                auto_format_convert=True,
             )
            def train():
     """
@@ -236,7 +230,6 @@ def _override(
         deterministic_kernel=deterministic_kernel,
         async_level=async_level,
         compute_mode=compute_mode,
-        auto_format_convert=auto_format_convert,
     )
     try:
         yield

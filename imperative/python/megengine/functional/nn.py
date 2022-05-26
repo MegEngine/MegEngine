@@ -1206,9 +1206,9 @@ def batch_norm(
 
         if x is None:
             x = Const(value, inp.dtype, inp.device)
-            x.format = inp.format
             shape = astensor1d(pshape, inp, dtype="int32", device=inp.device)
             (result,) = apply(builtin.Broadcast(), x, shape)
+            result.format = inp.format
             return result
         else:
             assert x_ndim == 1

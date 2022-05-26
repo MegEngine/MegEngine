@@ -19,6 +19,9 @@ TypedValueRef<FormattedTensorValue> FormatTransformation::to(
         const std::string& scope) const {
     std::vector<int32_t> pattern;
     Format format = tensor.format();
+    if (format == target)
+        return as(tensor, target);
+
     if (format == FT::NHWC && (target == FT::NCHW || target == FT::DEFAULT)) {
         // FIXME(czh): temporary fast path for group conv 5D weight.
         if (tensor.value().shape().cast<ShapeValue>().ndim == 5) {
@@ -618,7 +621,7 @@ ValueRefList FormatTransformation::apply_transformation(
     } else if (auto* _op = op.as<SetFormat>()) {
         auto&& inp_ref = inputs[0].as_ref(m_value_type);
         mgb_assert(inp_ref, "Cannot set format for non-format Tensor.");
-        return {m_value_type.make(inp_ref->value(), _op->format())};
+        return {to(*inp_ref, _op->format().type(), "")};
     } else if (op.is<Operator::IdentityLike>()) {
         auto&& inp_ref = inputs[0].as_ref(m_value_type);
         if (inp_ref) {

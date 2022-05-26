@@ -23,23 +23,17 @@ def convert_tensor_format(x: Tensor, inplace: bool = True):
     if not _is_nchw_format(x):
         return x
 
-    if x.ndim == 4:
-        pattern = (0, 2, 3, 1)
-    elif x.ndim == 5:
-        pattern = (0, 1, 3, 4, 2)
-    else:
+    if x.ndim != 4 and x.ndim != 5:
         raise ValueError("Unsupport tensor ndim {}".format(x.ndim))
-    # TODO: use initialization from tensor after fixing format setting
     if x.format != "nhwc":
+        # hostvalue should still be valid, so no d2h cost.
+        data = x.numpy()
         if inplace:
-            # hostvalue should still be valid, so no d2h cost.
-            data = x.numpy()
             # reset will destroy existed backward grad
             x[...] = Tensor(data, format="nhwc")
         else:
             # use mge interface to maintain grad
-            x = F.transpose(x, pattern)
-            x.format = "nhwc"
+            x = Tensor(data, format="nhwc")
     return x
 
 

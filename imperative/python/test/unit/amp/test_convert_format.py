@@ -10,7 +10,8 @@ import pytest
 
 import megengine.functional as F
 import megengine.module as M
-from megengine import Parameter, Tensor, amp, config
+from megengine import Parameter, Tensor, amp
+from megengine.core._config import set_auto_format_convert
 
 
 class MyModule(M.Module):
@@ -56,5 +57,6 @@ def test_convert_module(is_inplace):
     m = amp.convert_module_format(m, is_inplace)
     for name, param in m.named_tensors():
         assert param.format == "nhwc"
-        with config._override(auto_format_convert=False):
-            assert param.shape == expected_shape[name], name
+        set_auto_format_convert(False)
+        assert param.shape == expected_shape[name], name
+        set_auto_format_convert(True)
