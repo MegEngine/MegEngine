@@ -260,7 +260,6 @@ class GradManager:
         push_scope("backward")
         set_option("record_computing_path", 0)
         _origin_auto_format = get_auto_format_convert()
-        set_auto_format_convert(False)
         from ..functional import ones_like
 
         global backwarding_grad_manager
@@ -304,7 +303,6 @@ class GradManager:
             self.release()
             backwarding_grad_manager = cache
             set_option("record_computing_path", 1)
-            set_auto_format_convert(_origin_auto_format)
             pop_scope("backward")
 
     def record(self):

@@ -6,6 +6,7 @@ import megengine.functional as F
 import megengine.module as M
 from megengine import tensor
 from megengine.autodiff import GradManager
+from megengine.core._trace_option import use_symbolic_shape
 from megengine.jit import trace
 
 
@@ -121,7 +122,10 @@ def test_repeat(is_symbolic):
 @pytest.mark.parametrize("is_symbolic", [None])
 def test_getshape(is_symbolic):
     def func(x):
-        return x.shape
+        if use_symbolic_shape():
+            return x.shape.numpy()
+        else:
+            return x.shape
 
     data = np.arange(0, 24).reshape((1, 2, 3, 4))
     _compare_nchw_nhwc(data, func, is_symbolic)

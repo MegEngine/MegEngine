@@ -1,5 +1,6 @@
 #include "megbrain/imperative/transformations/format.h"
 #include "megbrain/imperative/transformations/grad.h"
+#include "megbrain/imperative/transformations/symbol.h"
 
 #include "megbrain/imperative/ops/autogen.h"
 #include "megbrain/imperative/ops/utility.h"
@@ -75,6 +76,17 @@ inline ValueRefList FormatTransformation::wrap_outputs(
     }
     return wrapped_outputs;
 }
+
+inline bool FormatTransformation::check_all_format_value(
+        const Span<ValueRef>& inputs) const {
+    for (size_t i = 0; i < inputs.size(); ++i) {
+        if (!inputs[i].as_ref(m_value_type)) {
+            return false;
+        }
+    }
+    return true;
+}
+
 namespace {
 
 ValueShape convert_nhwc2nchw_shape(const ValueShape& shape) {
@@ -369,7 +381,8 @@ inline ValueRefList unify_inputs_format(
     for (size_t i = 0; i < inputs.size(); ++i) {
         auto&& inp = inputs[i].cast(t.value_type());
         if (inp.format() != dst_fmt &&
-            inp.value().shape().cast<ShapeValue>().ndim == 4) {
+            (inp.value().shape().cast<ShapeValue>().ndim == 4 ||
+             inp.value().shape().cast<ShapeValue>().ndim == 5)) {
             unified_inputs[i] = t.to(inp, dst_fmt, scope);
         } else {
             unified_inputs[i] = inputs[i];
@@ -568,6 +581,10 @@ struct FormatRuleRegistry {
 ValueRefList FormatTransformation::apply_transformation(
         const Operator& op, Span<ValueRef> inputs) {
     if (auto* apply_op = op.as<ApplyOp>()) {
+        // bypass SymbolValue
+        if (!check_all_format_value(inputs)) {
+            return imperative::apply(op, unwrap_inputs(inputs));
+        }
         // all inputs should be FormattedTensorValue
         auto iter = format_rules.find(apply_op->op().dyn_typeinfo());
         if (iter != format_rules.end()) {
@@ -628,9 +645,6 @@ ValueRefList FormatTransformation::apply_transformation(
             auto&& format = inp_ref->format();
             return wrap_outputs(imperative::apply(op, unwrap_inputs(inputs)), format);
         } else {
-            mgb_log_warn(
-                    "Not FormattedTensorValue input for IdentityLike op: %s, %s",
-                    op.to_string().c_str(), inputs[0].to_string().c_str());
             return imperative::apply(op, inputs);
         }
     } else if (op.is<AttachGrad>()) {

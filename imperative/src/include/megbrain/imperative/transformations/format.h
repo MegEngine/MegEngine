@@ -70,6 +70,7 @@ public:
             const ValueRef& output, Format format = Format::Type::DEFAULT) const;
     inline ValueRefList wrap_outputs(
             const ValueRefList& outputs, Format format = Format::Type::DEFAULT) const;
+    inline bool check_all_format_value(const Span<ValueRef>& inputs) const;
 
     TypedValueRef<FormattedTensorValue> as(
             const FormattedTensorValue&, const Format::Type& target) const;

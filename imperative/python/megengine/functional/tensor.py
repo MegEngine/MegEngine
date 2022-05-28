@@ -274,7 +274,9 @@ def full_like(inp: Tensor, value: Union[int, float]) -> Tensor:
         return x
 
     # set x's format to use FormatTransformation rule for Broadcast.
-    return broadcast_to(x, inp.shape)
+    rst = broadcast_to(x, inp.shape)
+    rst.format = inp.format
+    return rst
 
 
 def broadcast_to(inp: Tensor, shape: Union[int, Iterable[int]]) -> Tensor:

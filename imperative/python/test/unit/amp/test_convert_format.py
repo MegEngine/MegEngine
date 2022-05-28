@@ -12,6 +12,7 @@ import megengine.functional as F
 import megengine.module as M
 from megengine import Parameter, Tensor, amp
 from megengine.core._config import set_auto_format_convert
+from megengine.core._trace_option import use_symbolic_shape
 
 
 class MyModule(M.Module):
@@ -41,22 +42,25 @@ class MyModule(M.Module):
 def test_convert_module(is_inplace):
     m = MyModule()
     expected_shape = {
-        "i.bn.weight": (1, 1, 1, 4),
-        "i.bn.bias": (1, 1, 1, 4),
-        "i.bn.running_mean": (1, 1, 1, 4),
-        "i.bn.running_var": (1, 1, 1, 4),
-        "conv.weight": (2, 2, 4, 4, 2),
-        "conv.bias": (1, 1, 1, 4),
-        "bn.weight": (1, 1, 1, 4),
-        "bn.bias": (1, 1, 1, 4),
-        "bn.running_mean": (1, 1, 1, 4),
-        "bn.running_var": (1, 1, 1, 4),
-        "param": (1, 1, 1, 3),
-        "buff": (1, 1, 1, 3),
+        "i.bn.weight": (1, 4, 1, 1),
+        "i.bn.bias": (1, 4, 1, 1),
+        "i.bn.running_mean": (1, 4, 1, 1),
+        "i.bn.running_var": (1, 4, 1, 1),
+        "conv.weight": (2, 2, 2, 4, 4),
+        "conv.bias": (1, 4, 1, 1),
+        "bn.weight": (1, 4, 1, 1),
+        "bn.bias": (1, 4, 1, 1),
+        "bn.running_mean": (1, 4, 1, 1),
+        "bn.running_var": (1, 4, 1, 1),
+        "param": (1, 3, 1, 1),
+        "buff": (1, 3, 1, 1),
     }
     m = amp.convert_module_format(m, is_inplace)
     for name, param in m.named_tensors():
         assert param.format == "nhwc"
-        set_auto_format_convert(False)
-        assert param.shape == expected_shape[name], name
-        set_auto_format_convert(True)
+        if use_symbolic_shape():
+            np.testing.assert_array_equal(
+                param.shape.numpy(), expected_shape[name], name
+            )
+        else:
+            assert param.shape == expected_shape[name], name

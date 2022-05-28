@@ -26,7 +26,7 @@ public:
         Eval,
     };
 
-    std::array<std::vector<std::shared_ptr<Transformation>>, 8> segments;
+    std::array<std::vector<std::shared_ptr<Transformation>>, 9> segments;
 
 private:
     template <Segment segment>
