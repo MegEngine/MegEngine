@@ -7,6 +7,10 @@
 namespace megdnn {
 namespace cuda {
 
+bool is_conv_pad(size_t offsets[MEGDNN_MAX_NDIM * 2]) {
+    return (offsets[0] == offsets[2] && offsets[0] == 0);
+}
+
 void PaddingForwardImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
     forward_check_exec(src.layout, dst.layout);
     SmallVector<size_t> offsets(get_offsets());
@@ -16,6 +20,18 @@ void PaddingForwardImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
             offsets[5],  offsets[6],  offsets[7],  offsets[8], offsets[9],
             offsets[10], offsets[11], offsets[12], offsets[13]};
     auto stream = cuda_stream(this->handle());
+    if (src.layout.ndim == 4 && is_conv_pad(param_offsets)) {
+#define cb(DType)                                                        \
+    if (src.layout.dtype.enumv() == DTypeTrait<DType>::enumv) {          \
+        using ctype = typename DTypeTrait<DType>::ctype;                 \
+        padding::pad4d_forward_proxy<ctype>(                             \
+                src, dst, param_offsets, uint32_t(param().padding_mode), \
+                param().padding_val, stream);                            \
+    }
+        MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
+        MEGDNN_FOREACH_QUANTIZED_DTYPE(cb)
+#undef cb
+    } else {
 #define cb(DType)                                                        \
     if (src.layout.dtype.enumv() == DTypeTrait<DType>::enumv) {          \
         using ctype = typename DTypeTrait<DType>::ctype;                 \
@@ -23,9 +39,10 @@ void PaddingForwardImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
                 src, dst, param_offsets, uint32_t(param().padding_mode), \
                 param().padding_val, stream);                            \
     }
-    MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
-    MEGDNN_FOREACH_QUANTIZED_DTYPE(cb)
+        MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
+        MEGDNN_FOREACH_QUANTIZED_DTYPE(cb)
 #undef cb
+    }
 }
 
 void PaddingBackwardImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
