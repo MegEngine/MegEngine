@@ -592,7 +592,6 @@ def matmul(
     transpose_a=False,
     transpose_b=False,
     compute_mode="default",
-    format="default",
 ) -> Tensor:
     r"""Performs a matrix multiplication of the matrices ``inp1`` and ``inp2``.
 
@@ -625,7 +624,7 @@ def matmul(
         array([[10., 13.],
                [28., 40.]], dtype=float32)
     """
-    return _matmul(inp1, inp2, transpose_a, transpose_b, compute_mode, format)
+    return _matmul(inp1, inp2, transpose_a, transpose_b, compute_mode)
 
 
 def dot(inp1: Tensor, inp2: Tensor) -> Tensor:
