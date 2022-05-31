@@ -23,7 +23,7 @@ typedef struct aclopKernelDesc aclopKernelDesc;
 
 typedef void (*aclDataDeallocator)(void *data, size_t length);
 
-const int ACL_COMPILE_FLAG_BIN_SELECTOR = 1;
+static const int ACL_COMPILE_FLAG_BIN_SELECTOR = 1;
 
 typedef enum aclEngineType {
     ACL_ENGINE_SYS,
@@ -38,7 +38,8 @@ typedef enum aclEngineType {
  * @par Restriction
  * The aclopSetModelDir interface can be called only once in a process.
  * @param  modelDir [IN]   path of the directory
- * @retval ACL_ERROR_NONE The function is successfully executed.
+ *
+ * @retval ACL_SUCCESS The function is successfully executed.
  * @retval OtherValues Failure
  */
 ACL_FUNC_VISIBILITY aclError aclopSetModelDir(const char *modelDir);
@@ -51,10 +52,11 @@ ACL_FUNC_VISIBILITY aclError aclopSetModelDir(const char *modelDir);
  * The aclopLoad interface can be called more than one times in a process.
  * @param model [IN]        address of single op models
  * @param modelSize [IN]    size of single op models
- * @retval ACL_ERROR_NONE The function is successfully executed.
+ *
+ * @retval ACL_SUCCESS The function is successfully executed.
  * @retval OtherValues Failure
  */
-ACL_FUNC_VISIBILITY aclError aclopLoad(const void *model,  size_t modelSize);
+ACL_FUNC_VISIBILITY aclError aclopLoad(const void *model, size_t modelSize);
 
 /**
  * @ingroup AscendCL
@@ -77,11 +79,12 @@ ACL_FUNC_VISIBILITY void aclopDestroyAttr(const aclopAttr *attr);
  * @ingroup AscendCL
  * @brief set an attribute. the type of the attribute is bool
  *
- * @param attr [IN]        pointer to the instance of aclopAttr
+ * @param attr [OUT]       pointer to the instance of aclopAttr
  * @param attrName [IN]    attribute name
  * @param attrValue [IN]   attribute value
  *                         false if attrValue is 0, true otherwise.
- * @retval ACL_ERROR_NONE The function is successfully executed.
+ *
+ * @retval ACL_SUCCESS The function is successfully executed.
  * @retval OtherValues Failure
  */
 ACL_FUNC_VISIBILITY aclError aclopSetAttrBool(aclopAttr *attr, const char *attrName, uint8_t attrValue);
@@ -90,10 +93,11 @@ ACL_FUNC_VISIBILITY aclError aclopSetAttrBool(aclopAttr *attr, const char *attrN
  * @ingroup AscendCL
  * @brief set an attribute. the type of the attribute is int64_t
  *
- * @param attr [IN]        pointer to the instance of aclopAttr
+ * @param attr [OUT]       pointer to the instance of aclopAttr
  * @param attrName [IN]    attribute name
  * @param attrValue [IN]   attribute value
- * @retval ACL_ERROR_NONE The function is successfully executed.
+ *
+ * @retval ACL_SUCCESS The function is successfully executed.
  * @retval OtherValues Failure
  */
 ACL_FUNC_VISIBILITY aclError aclopSetAttrInt(aclopAttr *attr, const char *attrName, int64_t attrValue);
@@ -102,10 +106,11 @@ ACL_FUNC_VISIBILITY aclError aclopSetAttrInt(aclopAttr *attr, const char *attrNa
  * @ingroup AscendCL
  * @brief set an attribute. the type of the attribute is float
  *
- * @param attr [IN]        pointer to the instance of aclopAttr
+ * @param attr [OUT]       pointer to the instance of aclopAttr
  * @param attrName [IN]    attribute name
  * @param attrValue [IN]   attribute value
- * @retval ACL_ERROR_NONE The function is successfully executed.
+ *
+ * @retval ACL_SUCCESS The function is successfully executed.
  * @retval OtherValues Failure
  */
 ACL_FUNC_VISIBILITY aclError aclopSetAttrFloat(aclopAttr *attr, const char *attrName, float attrValue);
@@ -114,23 +119,53 @@ ACL_FUNC_VISIBILITY aclError aclopSetAttrFloat(aclopAttr *attr, const char *attr
  * @ingroup AscendCL
  * @brief set an attribute. the type of the attribute is string
  *
- * @param attr [IN]        pointer to the instance of aclopAttr
+ * @param attr [OUT]       pointer to the instance of aclopAttr
  * @param attrName [IN]    attribute name
  * @param attrValue [IN]   attribute value
- * @retval ACL_ERROR_NONE The function is successfully executed.
+ *
+ * @retval ACL_SUCCESS The function is successfully executed.
  * @retval OtherValues Failure
  */
 ACL_FUNC_VISIBILITY aclError aclopSetAttrString(aclopAttr *attr, const char *attrName, const char *attrValue);
 
 /**
  * @ingroup AscendCL
- * @brief set an attribute. the type of the attribute is list of bools
+ * @brief set an attribute. the type of the attribute is aclDataType
  *
- * @param attr [IN]        pointer to the instance of aclopAttr
+ * @param attr [OUT]       pointer to the instance of aclopAttr
+ * @param attrName [IN]    attribute name
+ * @param attrValue [IN]   attribute value
+ *
+ * @retval ACL_SUCCESS The function is successfully executed.
+ * @retval OtherValues Failure
+ */
+ACL_FUNC_VISIBILITY aclError aclopSetAttrDataType(aclopAttr *attr, const char *attrName, aclDataType attrValue);
+
+/**
+ * @ingroup AscendCL
+ * @brief set an attribute. the type of the attribute is list of aclDataType
+ *
+ * @param attr [OUT]       pointer to the instance of aclopAttr
  * @param attrName [IN]    attribute name
  * @param numValues [IN]   number of values. false if attrValue is 0, true otherwise.
  * @param values [IN]      pointer to values
- * @retval ACL_ERROR_NONE The function is successfully executed.
+ *
+ * @retval ACL_SUCCESS The function is successfully executed.
+ * @retval OtherValues Failure
+ */
+ACL_FUNC_VISIBILITY aclError aclopSetAttrListDataType(aclopAttr *attr, const char *attrName, int numValues,
+    const aclDataType values[]);
+
+/**
+ * @ingroup AscendCL
+ * @brief set an attribute. the type of the attribute is list of bools
+ *
+ * @param attr [OUT]       pointer to the instance of aclopAttr
+ * @param attrName [IN]    attribute name
+ * @param numValues [IN]   number of values. false if attrValue is 0, true otherwise.
+ * @param values [IN]      pointer to values
+ *
+ * @retval ACL_SUCCESS The function is successfully executed.
  * @retval OtherValues Failure
  */
 ACL_FUNC_VISIBILITY aclError aclopSetAttrListBool(aclopAttr *attr, const char *attrName, int numValues,
@@ -140,11 +175,12 @@ ACL_FUNC_VISIBILITY aclError aclopSetAttrListBool(aclopAttr *attr, const char *a
  * @ingroup AscendCL
  * @brief set an attribute. the type of the attribute is list of ints
  *
- * @param attr [IN]        pointer to the instance of aclopAttr
+ * @param attr [OUT]       pointer to the instance of aclopAttr
  * @param attrName [IN]    attribute name
  * @param numValues [IN]   number of values
  * @param values [IN]      pointer to values
- * @retval ACL_ERROR_NONE The function is successfully executed.
+ *
+ * @retval ACL_SUCCESS The function is successfully executed.
  * @retval OtherValues Failure
  */
 ACL_FUNC_VISIBILITY aclError aclopSetAttrListInt(aclopAttr *attr, const char *attrName, int numValues,
@@ -154,11 +190,12 @@ ACL_FUNC_VISIBILITY aclError aclopSetAttrListInt(aclopAttr *attr, const char *at
  * @ingroup AscendCL
  * @brief set an attribute. the type of the attribute is list of floats
  *
- * @param attr [IN]        pointer to the instance of aclopAttr
+ * @param attr [OUT]       pointer to the instance of aclopAttr
  * @param attrName [IN]    attribute name
  * @param numValues [IN]   number of values
  * @param values [IN]      pointer to values
- * @retval ACL_ERROR_NONE The function is successfully executed.
+ *
+ * @retval ACL_SUCCESS The function is successfully executed.
  * @retval OtherValues Failure
  */
 ACL_FUNC_VISIBILITY aclError aclopSetAttrListFloat(aclopAttr *attr, const char *attrName, int numValues,
@@ -168,11 +205,12 @@ ACL_FUNC_VISIBILITY aclError aclopSetAttrListFloat(aclopAttr *attr, const char *
  * @ingroup AscendCL
  * @brief set an attribute. the type of the attribute is list of strings
  *
- * @param attr [IN]        pointer to the instance of aclopAttr
+ * @param attr [OUT]       pointer to the instance of aclopAttr
  * @param attrName [IN]    attribute name
  * @param numValues [IN]   number of values
  * @param values [IN]      pointer to values
- * @retval ACL_ERROR_NONE The function is successfully executed.
+ *
+ * @retval ACL_SUCCESS The function is successfully executed.
  * @retval OtherValues Failure
  */
 ACL_FUNC_VISIBILITY aclError aclopSetAttrListString(aclopAttr *attr, const char *attrName, int numValues,
@@ -182,12 +220,13 @@ ACL_FUNC_VISIBILITY aclError aclopSetAttrListString(aclopAttr *attr, const char 
  * @ingroup AscendCL
  * @brief set an attribute. the type of the attribute is list of list of ints
  *
- * @param attr [IN]        pointer to the instance of aclopAttr
+ * @param attr [OUT]       pointer to the instance of aclopAttr
  * @param attrName [IN]    attribute name
  * @param numLists [IN]    number of lists
  * @param numValues [IN]   pointer to number of values of each list
  * @param values [IN]      pointer to values
- * @retval ACL_ERROR_NONE The function is successfully executed.
+ *
+ * @retval ACL_SUCCESS The function is successfully executed.
  * @retval OtherValues Failure
  */
 ACL_FUNC_VISIBILITY aclError aclopSetAttrListListInt(aclopAttr *attr,
@@ -208,6 +247,7 @@ ACL_FUNC_VISIBILITY aclError aclopSetAttrListListInt(aclopAttr *attr,
  * the ACL finds the corresponding task according to the optype,
  * the description of the input tesnsor,
  * the description of the output tesnsor, and attr, and issues the execution.
+ *
  * @param opType [IN]      type of op
  * @param numInputs [IN]   number of inputs
  * @param inputDesc [IN]   pointer to array of input tensor descriptions
@@ -218,9 +258,11 @@ ACL_FUNC_VISIBILITY aclError aclopSetAttrListListInt(aclopAttr *attr,
  * @param attr [IN]        pointer to instance of aclopAttr.
  *                         may pass nullptr if the op has no attribute
  * @param stream [IN]      stream
- * @retval ACL_ERROR_NONE The function is successfully executed.
+ *
+ * @retval ACL_SUCCESS The function is successfully executed.
  * @retval OtherValues Failure
  */
+// ACL_DEPRECATED_MESSAGE("aclopExecute is deprecated, use aclopExecuteV2 instead")
 ACL_FUNC_VISIBILITY aclError aclopExecute(const char *opType,
                                           int numInputs,
                                           const aclTensorDesc *const inputDesc[],
@@ -230,6 +272,44 @@ ACL_FUNC_VISIBILITY aclError aclopExecute(const char *opType,
                                           aclDataBuffer *const outputs[],
                                           const aclopAttr *attr,
                                           aclrtStream stream);
+
+/**
+ * @ingroup AscendCL
+ * @brief Load and execute the specified operator
+ *        The difference with aclopExecute is that aclopExecuteV2 will refresh outputDesc
+ *
+ * @par Restriction
+ * @li The input and output organization of each operator is different,
+ * and the application needs to organize the operator strictly
+ * according to the operator input and output parameters when calling.
+ * @li When the user calls aclopExecuteV2,
+ * the ACL finds the corresponding task according to the optype,
+ * the description of the input tesnsor,
+ * the description of the output tesnsor, and attr, and issues the execution.
+ *
+ * @param opType [IN]      type of op
+ * @param numInputs [IN]   number of inputs
+ * @param inputDesc [IN]   pointer to array of input tensor descriptions
+ * @param inputs [IN]      pointer to array of input buffers
+ * @param numOutputs [IN]  number of outputs
+ * @param outputDesc [IN|OUT]  pointer to array of output tensor descriptions
+ * @param outputs [OUT]    pointer to array of output buffers
+ * @param attr [IN]        pointer to instance of aclopAttr.
+ *                         may pass nullptr if the op has no attribute
+ * @param stream [IN]      stream
+ *
+ * @retval ACL_SUCCESS The function is successfully executed.
+ * @retval OtherValues Failure
+ */
+ACL_FUNC_VISIBILITY aclError aclopExecuteV2(const char *opType,
+                                            int numInputs,
+                                            aclTensorDesc *inputDesc[],
+                                            aclDataBuffer *inputs[],
+                                            int numOutputs,
+                                            aclTensorDesc *outputDesc[],
+                                            aclDataBuffer *outputs[],
+                                            aclopAttr *attr,
+                                            aclrtStream stream);
 
 /**
  * @ingroup AscendCL
@@ -243,7 +323,8 @@ ACL_FUNC_VISIBILITY aclError aclopExecute(const char *opType,
  * @param opAttr [IN]      pointer to instance of aclopAttr.
  *                         may pass nullptr if the op has no attribute
  * @param handle [OUT]     pointer to the pointer to the handle
- * @retval ACL_ERROR_NONE The function is successfully executed.
+ *
+ * @retval ACL_SUCCESS The function is successfully executed.
  * @retval OtherValues Failure
  */
 ACL_FUNC_VISIBILITY aclError aclopCreateHandle(const char *opType,
@@ -275,9 +356,10 @@ ACL_FUNC_VISIBILITY void aclopDestroyHandle(aclopHandle *handle);
  *                         The aclCreateDataBuffer interface has been called
  *                         in advance to create aclDataBuffer type data.
  * @param numOutputs [IN]  number of outputs
- * @param outputs [IN]     pointer to array of output buffers
+ * @param outputs [OUT]    pointer to array of output buffers
  * @param stream [IN]      stream
- * @retval ACL_ERROR_NONE The function is successfully executed.
+ *
+ * @retval ACL_SUCCESS The function is successfully executed.
  * @retval OtherValues Failure
  *
  * @see aclopCreateHandle | aclCreateDataBuffer
@@ -299,7 +381,8 @@ ACL_FUNC_VISIBILITY aclError aclopExecWithHandle(aclopHandle *handle,
  * @param dstBuffer [OUT]  destination tensor buffer
  * @param truncate [IN]    do not truncate if value is 0, truncate otherwise
  * @param stream [IN]      stream
- * @retval ACL_ERROR_NONE The function is successfully executed.
+ *
+ * @retval ACL_SUCCESS The function is successfully executed.
  * @retval OtherValues Failure
  */
 ACL_FUNC_VISIBILITY aclError aclopCast(const aclTensorDesc *srcDesc,
@@ -313,11 +396,12 @@ ACL_FUNC_VISIBILITY aclError aclopCast(const aclTensorDesc *srcDesc,
  * @ingroup AscendCL
  * @brief create a handle for casting datatype
  *
- * @param srcDesc [IN]     source tensor desc
- * @param dstDesc [IN]     destination tensor desc
- * @param truncate [IN]    do not truncate if value is 0, truncate otherwise
- * @param handle [IN]     pointer to the pointer to the handle
- * @retval ACL_ERROR_NONE The function is successfully executed.
+ * @param srcDesc [IN]    source tensor desc
+ * @param dstDesc [IN]    destination tensor desc
+ * @param truncate [IN]   do not truncate if value is 0, truncate otherwise
+ * @param handle [OUT]    pointer to the pointer to the handle
+ *
+ * @retval ACL_SUCCESS The function is successfully executed.
  * @retval OtherValues Failure
  */
 ACL_FUNC_VISIBILITY aclError aclopCreateHandleForCast(aclTensorDesc *srcDesc,
@@ -338,7 +422,8 @@ ACL_FUNC_VISIBILITY aclError aclopCreateHandleForCast(aclTensorDesc *srcDesc,
  * @param enginetype [IN]       enigne type
  * @param deallocator [IN]      callback function for deallocating bin data,
  *                              null if bin data to be deallocated by caller
- * @retval ACL_ERROR_NONE The function is successfully executed.
+ *
+ * @retval ACL_SUCCESS The function is successfully executed.
  * @retval OtherValues Failure
  *
  * @see aclopCompile
@@ -362,7 +447,8 @@ ACL_FUNC_VISIBILITY aclError aclopCreateKernel(const char *opType,
  * @param outputDesc [IN]           pointer to array of output tensor descriptions
  * @param opAttr [IN]               pointer to instance of aclopAttr
  * @param aclopKernelDesc [IN]      pointer to instance of aclopKernelDesc
- * @retval ACL_ERROR_NONE The function is successfully executed.
+ *
+ * @retval ACL_SUCCESS The function is successfully executed.
  * @retval OtherValues Failure
  */
 typedef aclError (*aclopCompileFunc)(int numInputs,
@@ -378,7 +464,8 @@ typedef aclError (*aclopCompileFunc)(int numInputs,
  *
  * @param opType [IN]         op type
  * @param func [IN]           compile function
- * @retval ACL_ERROR_NONE The function is successfully executed.
+ *
+ * @retval ACL_SUCCESS The function is successfully executed.
  * @retval OtherValues Failure
  *
  * @see aclopUnregisterCompileFunc
@@ -390,7 +477,8 @@ ACL_FUNC_VISIBILITY aclError aclopRegisterCompileFunc(const char *opType, aclopC
  * @brief unregister compile function
  *
  * @param opType [IN]         op type
- * @retval ACL_ERROR_NONE The function is successfully executed.
+ *
+ * @retval ACL_SUCCESS The function is successfully executed.
  * @retval OtherValues Failure
  */
 ACL_FUNC_VISIBILITY aclError aclopUnregisterCompileFunc(const char *opType);
@@ -404,7 +492,8 @@ ACL_FUNC_VISIBILITY aclError aclopUnregisterCompileFunc(const char *opType);
  * @param blockDim [IN]                 block dim
  * @param args [IN]                     args
  * @param argSize [IN]                  size in bytes of args
- * @retval ACL_ERROR_NONE The function is successfully executed.
+ *
+ * @retval ACL_SUCCESS The function is successfully executed.
  * @retval OtherValues Failure
  */
 ACL_FUNC_VISIBILITY aclError aclopSetKernelArgs(aclopKernelDesc *kernelDesc,
@@ -420,24 +509,26 @@ ACL_FUNC_VISIBILITY aclError aclopSetKernelArgs(aclopKernelDesc *kernelDesc,
  * @param kernelDesc [IN]               pointer to instance of aclopKernelDesc
  * @param numWorkspaces [IN]            number of workspaces
  * @param workspaceSizes [IN]           pointer to array of sizes of workspaces
- * @retval ACL_ERROR_NONE The function is successfully executed.
+ *
+ * @retval ACL_SUCCESS The function is successfully executed.
  * @retval OtherValues Failure
  */
 ACL_FUNC_VISIBILITY aclError aclopSetKernelWorkspaceSizes(aclopKernelDesc *kernelDesc, int numWorkspaces,
-    size_t *workspaceSizes);
+                                                          size_t *workspaceSizes);
 
 /**
  * @ingroup AscendCL
  * @brief compile op with dynamic shape
  *
- * @param opType [IN]           op type
- * @param numInputs [IN]        number of inputs
- * @param inputDesc [IN]        pointer to array of input tensor descriptions
- * @param numOutputs [IN]       number of outputs
- * @param outputDesc [IN]       pointer to array of output tensor descriptions
- * @param attr [IN]             pointer to instance of aclopAttr.
- *                              may pass nullptr if the op has no attribute
- * @retval ACL_ERROR_NONE The function is successfully executed.
+ * @param opType [IN]       op type
+ * @param numInputs [IN]    number of inputs
+ * @param inputDesc [IN]    pointer to array of input tensor descriptions
+ * @param numOutputs [IN]   number of outputs
+ * @param outputDesc [IN]   pointer to array of output tensor descriptions
+ * @param attr [IN]         pointer to instance of aclopAttr.
+ *                          may pass nullptr if the op has no attribute
+ *
+ * @retval ACL_SUCCESS The function is successfully executed.
  * @retval OtherValues Failure
  */
 ACL_FUNC_VISIBILITY aclError aclopUpdateParams(const char *opType,
@@ -446,6 +537,31 @@ ACL_FUNC_VISIBILITY aclError aclopUpdateParams(const char *opType,
                                                int numOutputs,
                                                const aclTensorDesc *const outputDesc[],
                                                const aclopAttr *attr);
+
+/**
+ * @ingroup AscendCL
+ * @brief inferShape the specified operator synchronously
+ *
+ * @param opType [IN]       type of op
+ * @param numInputs [IN]    number of inputs
+ * @param inputDesc [IN]    pointer to array of input tensor descriptions
+ * @param inputs [IN]       pointer to array of input buffers
+ * @param numOutputs [IN]   number of outputs
+ * @param outputDesc [OUT]  pointer to array of output tensor descriptions
+ * @param attr [IN]         pointer to instance of aclopAttr.
+ *                          may pass nullptr if the op has no attribute
+ *
+ * @retval ACL_SUCCESS The function is successfully executed.
+ * @retval OtherValues Failure
+ */
+ACL_FUNC_VISIBILITY aclError aclopInferShape(const char *opType,
+                                             int numInputs,
+                                             aclTensorDesc *inputDesc[],
+                                             aclDataBuffer *inputs[],
+                                             int numOutputs,
+                                             aclTensorDesc *outputDesc[],
+                                             aclopAttr *attr);
+
 
 #ifdef __cplusplus
 }

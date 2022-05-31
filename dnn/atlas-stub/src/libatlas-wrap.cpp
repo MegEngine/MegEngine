@@ -118,9 +118,25 @@ aclmdlAIPP* on_init_failed(int func_idx) {
     log_failed_load(func_idx);
     return nullptr;
 }
+template <>
+aclmdlConfigHandle* on_init_failed(int func_idx) {
+    log_failed_load(func_idx);
+    return nullptr;
+}
+template <>
+tagRtGroupInfo* on_init_failed(int func_idx) {
+    log_failed_load(func_idx);
+    return nullptr;
+}
 }  // namespace
 
+//! atlas310
+#if !defined(ACL_MAJOR_VERSION)
 #include "./libatlas-wrap.h"
+//! atlas710
+#elif (ACL_MAJOR_VERSION == 1 && ACL_MINOR_VERSION == 1 && ACL_PATCH_VERSION == 0)
+#include "./libatlas-wrap_1.1.0.h"
+#endif
 
 static const char* default_so_paths[] = {
         "/usr/local/Ascend/acllib/lib64/libascendcl.so",
@@ -153,8 +169,5 @@ static void* resolve_library_func(void* handle, const char* func) {
         return nullptr;
     }
     auto ret = dlsym(handle, func);
-    if (!ret) {
-        LOGE("failed to load atlas func: %s", func);
-    }
     return ret;
 }

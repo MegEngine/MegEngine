@@ -390,7 +390,8 @@ public:
             init();
             int32_t device_id = -1;
             auto err = aclrtGetDevice(&device_id);
-            if (err == ACL_ERROR_INVALID_DEVICE || device != device_id) {
+            if (err == ACL_ERROR_INVALID_DEVICE || err == ACL_ERROR_RT_CONTEXT_NULL ||
+                device != device_id) {
                 MGB_ATLAS_CHECK(aclrtSetDevice(device));
             } else {
                 MGB_ATLAS_CHECK(err);

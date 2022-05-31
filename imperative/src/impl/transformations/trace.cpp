@@ -30,13 +30,23 @@ VarNodeArray TraceResult::dump(
         std::vector<std::pair<size_t, std::string>> outputs, bool prefer_input_names) {
     // var -> VarNode
     std::vector<VarNode*> nodes(vars.size(), nullptr);
+    auto get_compnode = [](const VarInfo& info) -> CompNode {
+        auto& orig_cn = *(info.device);
+        std::string device_name_prefix =
+                orig_cn.locator_logical().to_string().substr(0, 3);
+        if (device_name_prefix == "cpu" || device_name_prefix == "gpu" ||
+            device_name_prefix == "xpu") {
+            return CompNode::load("xpux");
+        }
+        return orig_cn;
+    };
     // make h2d node for each input
     for (auto&& [input, name, shape] : inputs) {
         auto& var = vars[input];
         auto& node = nodes[input];
-        // TODO: cambricon CompNode
-        auto host = std::make_shared<HostTensorND>(
-                CompNode::load("xpux"), shape, *var.dtype);
+
+        auto host =
+                std::make_shared<HostTensorND>(get_compnode(var), shape, *var.dtype);
         OperatorNodeConfig config;
         // if prefer_input_names, prefer names from dump args
         // else prefer names got from trace procedure

@@ -191,7 +191,9 @@ AtlasRuntimeOpr::AtlasRuntimeOpr(
                             MegBrainError,
                             "Unsupported aclAippInputFormat for input %zu. ", i);
             }
-        } else if (ACL_ERROR_NOT_STATIC_AIPP == acl_err) {
+        } else if (
+                ACL_ERROR_NOT_STATIC_AIPP == acl_err ||
+                ACL_ERROR_GE_AIPP_NOT_EXIST == acl_err) {
             m_aipp_input_format[i] = AippInputFormat::NO_AIPP;
         } else {
             MGB_ATLAS_CHECK(acl_err);
