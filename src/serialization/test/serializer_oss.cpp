@@ -987,7 +987,9 @@ TEST(TestSerializer2, TestSoftMaxLoadDump) {
                 OutputFile::make_fs(fname.c_str()), GraphDumpFormat::FLATBUFFERS_V2);
         auto rst = dumper->dump({x});
         func->execute().wait();
-        ASSERT_EQ(rst.nr_opr, 6);
+        //! if convert to reduce and elemwise, nr_opr is 6
+        // ASSERT_EQ(rst.nr_opr, 6);
+        ASSERT_EQ(rst.nr_opr, 2);
         ASSERT_EQ(rst.inputs.size(), 1);
         ASSERT_EQ(rst.outputs.size(), 1);
         ASSERT_EQ(rst.params.size(), 0);

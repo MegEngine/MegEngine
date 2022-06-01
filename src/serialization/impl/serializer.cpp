@@ -59,7 +59,8 @@ std::unique_ptr<GraphLoader> make_fbs_loader(std::unique_ptr<InputFile> file);
 std::unique_ptr<GraphDumper> make_fbs_dumper(std::unique_ptr<OutputFile> file);
 
 std::unique_ptr<GraphLoader> make_fbs_v2_loader(std::unique_ptr<InputFile> file);
-std::unique_ptr<GraphDumper> make_fbs_v2_dumper(std::unique_ptr<OutputFile> file);
+std::unique_ptr<GraphDumper> make_fbs_v2_dumper(
+        std::unique_ptr<OutputFile> file, int version);
 bool is_fbs_file(InputFile& file);
 bool is_fbs_v2_file(InputFile& file);
 
@@ -72,7 +73,7 @@ bool GraphDumper::should_remove_in_dump(cg::OperatorNodeBase* opr) {
 }
 
 std::unique_ptr<GraphDumper> GraphDumper::make(
-        std::unique_ptr<OutputFile> file, GraphDumpFormat format) {
+        std::unique_ptr<OutputFile> file, GraphDumpFormat format, int version) {
     switch (format) {
         case GraphDumpFormat::FLATBUFFERS:
 #if MGB_ENABLE_FBS_SERIALIZATION
@@ -81,7 +82,7 @@ std::unique_ptr<GraphDumper> GraphDumper::make(
             MGB_FALLTHRU
         case GraphDumpFormat::FLATBUFFERS_V2:
 #if MGB_ENABLE_FBS_SERIALIZATION
-            return make_fbs_v2_dumper(std::move(file));
+            return make_fbs_v2_dumper(std::move(file), version);
 #endif
             MGB_FALLTHRU
         default:

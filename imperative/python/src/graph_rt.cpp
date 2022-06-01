@@ -381,20 +381,26 @@ void init_graph_rt(py::module m) {
     m.def("dump_graph",
           [](const std::vector<VarNode*>& dest_vars, int keep_var_name,
              bool keep_opr_name, bool keep_param_name, bool keep_opr_priority,
-             std::optional<_SerializationMetadata> metadata,
-             std::optional<_SerializationFormat> dump_format, py::list& stat,
-             py::list& inputs, py::list& outputs, py::list& params) {
+             bool no_change_graph, std::optional<_SerializationMetadata> metadata,
+             std::optional<_SerializationFormat> dump_format,
+             std::optional<int> model_version, py::list& stat, py::list& inputs,
+             py::list& outputs, py::list& params) {
               std::vector<uint8_t> buf;
               ser::GraphDumpFormat format = ser::GraphDumpFormat::FLATBUFFERS_V2;
+              int version = 2;
               if (dump_format.has_value()) {
                   format = dump_format.value();
               }
+              if (model_version.has_value()) {
+                  version = model_version.value();
+              }
               auto dumper = ser::GraphDumper::make(
-                      ser::OutputFile::make_vector_proxy(&buf), format);
+                      ser::OutputFile::make_vector_proxy(&buf), format, version);
               SymbolVarArray symvars(dest_vars.begin(), dest_vars.end());
 
               ser::GraphDumper::DumpConfig config{
                       keep_var_name, keep_param_name, keep_opr_priority, keep_opr_name};
+              config.no_change_graph = no_change_graph;
 
               ser::GraphDumper::DumpResult rst;
               if (metadata)

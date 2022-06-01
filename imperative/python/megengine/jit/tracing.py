@@ -549,6 +549,7 @@ class trace:
         keep_opr_name: bool = False,
         keep_param_name: bool = False,
         keep_opr_priority: bool = False,
+        no_change_graph: bool = False,
         strip_info_file=None,
         append_json=False,
         optimize_for_inference=True,
@@ -562,6 +563,7 @@ class trace:
         resize_input=False,
         input_transform=None,
         dump_format: str = None,
+        model_version: int = 2,
         **kwargs
     ):
         r"""Serializes trace to file system.
@@ -583,6 +585,14 @@ class trace:
             keep_param_name: whether to keep param names, so param values can be
                 easily manipulated after loading model
             keep_opr_priority: whether to keep priority setting for operators
+            no_change_graph: whether to change the compute graph when dump, for
+                model compatibility, some operators will convert to its compatible
+                format in this version.
+
+                * if set False, some operators maybe convert to other operator for
+                  compatibility, all operators will ensure compatibility.
+                * if set True, no operator will change in the graph when dump.
+
             strip_info_file: a string for path or a file handler. if is not None,
                 then the dump information for code strip would be written to ``strip_info_file``
             append_json: will be check when `strip_info_file` is not None. if set
@@ -616,6 +626,9 @@ class trace:
             dump_format: using different dump formats. the open source MegEngine
                 defaults to the FBS_V2 format, there are two format FBS_V2 and FBS to choose,
                 internal MegEngine have an other choice of internal proprietary formats
+            model_version: the model version of FBS_V2, begin with version 2, this
+                works only when dump format is FBS_V2.
+
 
         Keyword Arguments:
 
@@ -762,10 +775,12 @@ class trace:
             keep_opr_name=keep_opr_name,
             keep_param_name=keep_param_name,
             keep_opr_priority=keep_opr_priority,
+            no_change_graph=no_change_graph,
             strip_info_file=strip_info_file,
             append_json=append_json,
             metadata=metadata,
             dump_format=dump_format,
+            model_version=model_version,
         )
         file.write(dump_content)
 

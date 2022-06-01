@@ -5,6 +5,7 @@
 #include "megbrain/serialization/file.h"
 #include "megbrain/serialization/load_dump_config.h"
 #include "megbrain/serialization/metadata.h"
+#include "megbrain/serialization/opr_load_dump.h"
 
 namespace mgb {
 namespace serialization {
@@ -160,7 +161,8 @@ public:
     };
 
     MGE_WIN_DECLSPEC_FUC static std::unique_ptr<GraphDumper> make(
-            std::unique_ptr<OutputFile> file, GraphDumpFormat format = {});
+            std::unique_ptr<OutputFile> file, GraphDumpFormat format = {},
+            int version = VERSION_2);
 
     virtual ~GraphDumper() = default;
 

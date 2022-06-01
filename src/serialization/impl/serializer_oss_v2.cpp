@@ -194,7 +194,7 @@ void GraphDumperOSSV2::init_oprs_to_dump(const SymbolVarArray& endpoints) {
             }
         } else {
             auto registry = OprRegistryV2::versioned_find_by_typeinfo(
-                    opr->dyn_typeinfo(), CURRENT_VERSION);
+                    opr->dyn_typeinfo(), m_version);
             if (!registry || !registry->dumper) {
                 mgb_throw(
                         cg::OperatorNodeExcExtraInfo::ExcMaker{opr}.make<MegBrainError>,
@@ -202,6 +202,9 @@ void GraphDumperOSSV2::init_oprs_to_dump(const SymbolVarArray& endpoints) {
                         "operator %s",
                         opr->dyn_typeinfo()->name);
             }
+            mgb_assert(
+                    registry->version <= m_version,
+                    "The Operator version should less than model version");
             m_oprs_to_dump.emplace_back(opr, registry);
         }
     };
@@ -352,7 +355,10 @@ GraphDumper::DumpResult GraphDumperOSSV2::dump(
         const Metadata& metadata) {
     mgb_throw_if(output_vars.empty(), SerializationError, "Can't dump empty graph");
 
-    auto&& new_output_vars = converter_all_opr_to_compatiable(output_vars);
+    auto new_output_vars = output_vars;
+    if (!config.no_change_graph) {
+        new_output_vars = converter_all_opr_to_compatiable(output_vars);
+    }
 
     auto begin_pos = m_file->tell();
     m_config = config;
@@ -416,6 +422,7 @@ GraphDumper::DumpResult GraphDumperOSSV2::dump(
 
     fbs::v2::ModelBuilder model(m_builder);
     model.add_mge_version(MGB_VERSION);
+    model.add_model_version(m_version);
     model.add_oprs(fb_oprs);
     model.add_middle_tensors(fb_mid_tensor);
     model.add_output_vars_idx(fb_output_vars);
@@ -694,10 +701,8 @@ void GraphLoaderOSSV2::OprLoadContextImpl::load_single_opr(
             OprRegistryV2::versioned_find_by_id(type_id, opr_version);
     mgb_throw_if(
             !registry, SerializationError,
-            "failed to find opr with type %s , use python env "
-            "config.dump_registered_oprs() to get a dict that maps from "
-            "opr id to opr name",
-            fbopr->type()->str().c_str());
+            "failed to find opr with type %s and version %d.",
+            fbopr->type()->str().c_str(), opr_version);
 
     // load inputs
     VarNodeArray inputs;
@@ -811,11 +816,18 @@ GraphLoader::LoadResult GraphLoaderOSSV2::load(const LoadConfig& config, bool re
 
     m_model = fbs::v2::GetModel(m_model_buf.data());
     m_mgb_version = m_model->mge_version();
+    m_model_version = m_model->model_version();
     if (m_model->mge_version() > MGB_VERSION) {
         mgb_log_warn(
                 "loading model from future runtime: version=%u "
                 "model_version=%u",
                 MGB_VERSION, m_model->mge_version());
+    }
+    if (m_model_version > CURRENT_VERSION) {
+        mgb_log_warn(
+                "The model dump in the future version %d, try to load it, maybe case "
+                "load error in %d version.",
+                m_model_version, CURRENT_VERSION);
     }
 
     if (m_shared_tensor_map.empty()) {
@@ -845,8 +857,9 @@ GraphLoader::LoadResult GraphLoaderOSSV2::load(const LoadConfig& config, bool re
     return result;
 }
 
-std::unique_ptr<GraphDumper> make_fbs_v2_dumper(std::unique_ptr<OutputFile> file) {
-    return std::make_unique<GraphDumperOSSV2>(std::move(file));
+std::unique_ptr<GraphDumper> make_fbs_v2_dumper(
+        std::unique_ptr<OutputFile> file, int version) {
+    return std::make_unique<GraphDumperOSSV2>(std::move(file), version);
 }
 
 std::unique_ptr<GraphLoader> make_fbs_v2_loader(std::unique_ptr<InputFile> file) {

@@ -21,6 +21,13 @@ struct OprLoadDumpImplV2<opr::Softmax, 1> {
         ctx.write_param<PersisParam>(opr.cast_final_safe<Opr>().param());
     }
 
+    /** This converter is just a example for Operator serialization compatible,
+     * Just in this situation: when optimize the softmax Operator by
+     * fusing the elemwise and reduce to a big Operator, but the whole softmax
+     * Operator can't be recognized by old version, in order to model
+     * compatibility the softmax Operator should be covert to elemwise and
+     * reduce Operators when dump the model
+     */
     static cg::OperatorNodeBase* replace_opr(
             cg::OperatorNodeBase* opr, const VarNodeArray& inputs) {
         int32_t axis = opr->cast_final_safe<Opr>().param().axis;
@@ -196,9 +203,11 @@ namespace opr {
 #define SERGE_OPR_V2_NO_CONVERTER(_cls, _arity) \
     MGB_SEREG_OPR_V2(_cls, _arity, nullptr, VERSION_2, CURRENT_VERSION);
 
-SERGE_OPR_V2_CONVERTER(
+//! this is just a example for Operator compatibility
+/*SERGE_OPR_V2_CONVERTER(
         Softmax, 1,
-        (mgb::serialization::OprLoadDumpImplV2<opr::Softmax, 1>::replace_opr));
+        (mgb::serialization::OprLoadDumpImplV2<opr::Softmax, 1>::replace_opr));*/
+SERGE_OPR_V2_NO_CONVERTER(Softmax, 1)
 
 SERGE_OPR_V2_NO_CONVERTER(ConvBiasForward, 0)
 SERGE_OPR_V2_NO_CONVERTER(BatchConvBiasForward, 0);

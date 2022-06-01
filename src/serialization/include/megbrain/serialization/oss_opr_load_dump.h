@@ -15,6 +15,7 @@ namespace serialization {
 
 class GraphDumperOSSV2 final : public GraphDumper, OprDumpContextFlatBuffers {
     const std::unique_ptr<OutputFile> m_file;
+    int m_version;
     flatbuffers::FlatBufferBuilder m_builder;
 
     DumpConfig m_config;
@@ -51,7 +52,8 @@ class GraphDumperOSSV2 final : public GraphDumper, OprDumpContextFlatBuffers {
     flatbuffers::Offset<fbs::DType> build_dtype(DType dtype);
 
 public:
-    GraphDumperOSSV2(std::unique_ptr<OutputFile> file) : m_file{std::move(file)} {}
+    GraphDumperOSSV2(std::unique_ptr<OutputFile> file, int version)
+            : m_file{std::move(file)}, m_version{version} {}
 
     DumpResult dump(
             const SymbolVarArray& output_vars, const DumpConfig& config = {},
@@ -95,6 +97,7 @@ class GraphLoaderOSSV2 final : public GraphLoader {
     const fbs::v2::Model* m_model;
     SharedTensorIDMap m_shared_tensor_map;
     uint32_t m_mgb_version = 0;
+    uint32_t m_model_version = CURRENT_VERSION;
     bool m_model_loaded = false;
 
     void verify();
