@@ -21,6 +21,7 @@
 #include "src/fallback/resize/opr_impl.h"
 #include "src/fallback/roi_copy/opr_impl.h"
 #include "src/fallback/rotate/opr_impl.h"
+#include "src/fallback/softmax/opr_impl.h"
 #include "src/fallback/split/opr_impl.h"
 #include "src/fallback/tile/opr_impl.h"
 #include "src/fallback/type_cvt/opr_impl.h"
@@ -50,6 +51,7 @@ MEGDNN_SPECIALIZE_CREATE_OPERATOR(TypeCvt)
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(GroupLocal)
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(Flip)
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(GaussianBlur)
+MEGDNN_SPECIALIZE_CREATE_OPERATOR(SoftmaxForward)
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(ROICopy)
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(Rotate)
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(ElemwiseMultiType)
