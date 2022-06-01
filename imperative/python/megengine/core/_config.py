@@ -14,9 +14,11 @@ from ._imperative_rt.core2 import (
 __compute_mode = "default"
 _benchmark_kernel = False
 _deterministic_kernel = False
+_benchmark_with_subprocess = False
 
 __all__ = [
     "benchmark_kernel",
+    "benchmark_with_subprocess",
     "deterministic_kernel",
     "async_level",
     "disable_memory_forwarding",
@@ -69,6 +71,34 @@ def deterministic_kernel(mod):
 def deterministic_kernel(mod, option: bool):
     global _deterministic_kernel
     _deterministic_kernel = option
+
+
+@property
+def benchmark_with_subprocess(mod):
+    r"""Whether or not run possible algorithms on real device to find the best one. The default option is false,
+    which means use heuristic to choose the fastest algorithm.
+    
+    Examples:    
+        .. code-block::
+
+           import megengine as mge
+           mge.config.benchmark_with_subprocess = True
+    """
+    return _benchmark_with_subprocess
+
+
+@benchmark_with_subprocess.setter
+def benchmark_with_subprocess(mod, option: bool):
+    if option:
+        import sys
+        from ._imperative_rt.utils import _set_fork_exec_path_for_timed_func
+
+        _set_fork_exec_path_for_timed_func(
+            sys.executable,
+            os.path.join(
+                os.path.dirname(__file__), "../utils", "_timed_func_fork_exec_entry.py"
+            ),
+        )
 
 
 @property

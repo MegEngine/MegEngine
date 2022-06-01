@@ -481,7 +481,7 @@ class TimedFuncInvokerImpl final : public TimedFuncInvoker {
             return iter->second.direct_call(param);
 
         if (!m_fork_exec_impl) {
-            mgb_log_warn(
+            mgb_log_debug(
                     "timeout is set, but no fork_exec_impl not given; "
                     "timeout would be ignored");
             return iter->second.direct_call(param);

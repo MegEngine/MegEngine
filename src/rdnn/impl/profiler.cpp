@@ -245,21 +245,34 @@ typename TimedProfiler<Opr>::TResult TimedProfiler<Opr>::prof_impl(
         }
     });
 
-    {
-        // first allocate a whole chunk to avoid memory fragmentation (here we
-        // rely on memory allocator to reuse memory)
-        auto align = cn.get_mem_addr_alignment();
-        size_t tot_size = align;
-        for (int i = 0; i < arity; ++i) {
-            tot_size += layouts[i].span().high_byte + align;
-        }
-        for (const auto& layout : preprocessed_layout) {
-            tot_size += layout.span().high_byte + align;
-        }
-        tot_size += param.workspace;
-        DeviceTensorStorage storage{cn};
-        storage.ensure_size(tot_size);
+    megdnn::Algorithm* algo =
+            megdnn_opr->get_algorithm_from_desc(megdnn_opr->execution_policy().algo);
+    mgb_assert(algo);
+
+#if !MGB_BUILD_SLIM_SERVING
+#if MGB_CUDA || MGB_ROCM
+    // if tot_size > workspace_limit, then skip current algo, return double_max
+    // this assertion is needed because when profiling algo with subprocess,
+    // child process would occupy some cuda memory for initialization
+    // this assertion is the most accurate than before
+    size_t workspace_limit =
+            std::max(cn.get_free_mem(), cn.get_max_block_size_available());
+    auto align = cn.get_mem_addr_alignment();
+    size_t tot_size = align;
+    for (int i = 0; i < arity; ++i) {
+        tot_size += layouts[i].span().high_byte + align;
     }
+    for (const auto& layout : preprocessed_layout) {
+        tot_size += layout.span().high_byte + align;
+    }
+    tot_size += param.workspace;
+    if (tot_size > workspace_limit) {
+        mgb_log_debug(
+                "current memory is not enouugh when profiling algo %s\n", algo->name());
+        return TResult::from_pod(Result{std::numeric_limits<double>::max()});
+    }
+#endif
+#endif
 
     // allocate input and output memory
     std::array<DeviceTensorND, arity_in> inp_val;
@@ -334,20 +347,17 @@ typename TimedProfiler<Opr>::TResult TimedProfiler<Opr>::prof_impl(
             });
     ev_end->record();
 
-    megdnn::Algorithm* algo =
-            megdnn_opr->get_algorithm_from_desc(megdnn_opr->execution_policy().algo);
-    mgb_assert(algo);
     double next_report_time = 0.5;
     while (!ev_end->finished()) {
         if (timer.get_secs() >= next_report_time) {
 #if MGB_ENABLE_GETENV
             mgb_log_debug(
-                    "profiling conv algo %s already took %.3f/%.3f secs"
+                    "profiling algo %s already took %.3f/%.3f secs"
                     " (limit can be set by MGB_CONV_PROFILING_TIMEOUT) ",
                     algo->name(), timer.get_secs(), param.actual_timeout);
 #else
             mgb_log_debug(
-                    "profiling conv algo %s already took %.3f/%.3f secs", algo->name(),
+                    "profiling algo %s already took %.3f/%.3f secs", algo->name(),
                     timer.get_secs(), param.actual_timeout);
 #endif
             next_report_time = timer.get_secs() + 1;
@@ -357,6 +367,19 @@ typename TimedProfiler<Opr>::TResult TimedProfiler<Opr>::prof_impl(
         std::this_thread::sleep_for(1000us);
 #endif
     }
+
+    DeviceTensorStorage storage;
+    for (int i = 0; i < arity_in; ++i) {
+        inp_val[i].reset(storage, TensorLayout{});
+    }
+    for (int i = 0; i < arity_out; ++i) {
+        out_val[i].reset(storage, TensorLayout{});
+    }
+    for (size_t i = 0; i < preprocessed_layout.size(); i++) {
+        flt_val[i].reset(storage, TensorLayout{});
+    }
+    mdn_workspace = megdnn::Workspace{};
+    workspace.reset(storage, TensorLayout{});
     // release all free blocks owned by child process,
     // in order to avoid main process running out of memory
     cn.try_coalesce_all_free_memory();

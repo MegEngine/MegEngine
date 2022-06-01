@@ -595,6 +595,10 @@ typename AlgoChooser<Opr>::ImplExecutionPolicy AlgoChooser<Opr>::AlgoChooserHelp
         auto&& search_items = flatten_search_space<Opr>(*this, circular_deps_checker);
         FOREACH_OPR_TYPE_DISPATCH(search_items, {
             auto&& megdnn_opr = opr::intl::create_megdnn_opr<_Opr>(m_cn);
+            // skip different sub opr, for example:
+            // skip matmul algo when profiling convolution
+            if (m_dnn_opr->get_opr_type() != megdnn_opr->get_opr_type())
+                continue;
             megdnn_opr->param() =
                     Algorithm::deserialize_read_pod<typename _Opr::Param>(_item.param);
             typename AlgoChooser<_Opr>::AlgoChooserHelper sub_helper(
@@ -609,7 +613,9 @@ typename AlgoChooser<Opr>::ImplExecutionPolicy AlgoChooser<Opr>::AlgoChooserHelp
     // result, retrive_from_cache = true, allow_log = true
     typename AlgoChooser<Opr>::ImplExecutionPolicy policy;
     construct_execution_policy(selected_strategy, policy);
-    return policy;
+    if (policy.algo.valid())
+        return policy;
+    return choose_by_heuristic(selected_strategy);
     MIDOUT_E
 }
 
@@ -712,7 +718,7 @@ void AlgoChooser<Opr>::AlgoChooserHelper::construct_execution_policy(
                             ::MegDNNOpr2Typename<Opr>::name, layouts_str.c_str(),
                             Algorithm::attribute_str(target_attr.first).c_str(),
                             Algorithm::attribute_str(target_attr.second).c_str());
-                    mgb_log_warn(
+                    mgb_log_debug(
                             "No algo get from cache for %s. This may caused by "
                             "mismatch with model and cache file or imcomplete "
                             "cache file. ex. profiling with version1, but "
@@ -876,6 +882,10 @@ Maybe<AlgoChooserProfileCache::ResultEntry> AlgoChooser<Opr>::AlgoChooserHelper:
     if (!rst.valid())
         return None;
 
+    // subprocess will return dbl_max when meomry limit is not satisfied
+    if (rst.val().time == std::numeric_limits<double>::max())
+        return None;
+
     std::string algo_desc;
     serialize_write_pod(policy.algo, algo_desc);
     return AlgoChooserProfileCache::ResultEntry{
@@ -893,6 +903,7 @@ void AlgoChooser<Opr>::AlgoChooserHelper::profile(
     auto&& rst = get_profile_result_from_cache(selected_strategy);
     // rst.first.valid means there exists valid algorithms for current opr, just return
     // otherwise need to profile
+    // in order to avoid reprofile in fastrun
     if (rst.first.valid())
         return;
     AlgoChooserProfileCache::Result prof_rst;
@@ -900,6 +911,10 @@ void AlgoChooser<Opr>::AlgoChooserHelper::profile(
     auto target_attr = extract_algo_attribute(selected_strategy);
     std::string layouts_str = AlgoChooser::format_fixlayouts(m_fastrun_layouts);
     double cur_timeout = 0;
+
+    size_t data_size = 0;
+    for (auto ly : m_fastrun_layouts)
+        data_size += ly.span().dist_byte();
 
     auto workspace_limit =
             m_desc.get_workspace_limit(m_cn, m_execution_policy.workspace_limit);
@@ -925,6 +940,12 @@ void AlgoChooser<Opr>::AlgoChooserHelper::profile(
         ImplExecutionPolicy policy;
         policy.algo = algo.desc;
 
+        // skip naive algo, can not using attribute to determine naive algo, thus using
+        // strcmp
+        if (algo.desc.name.compare("NAIVE") == 0) {
+            continue;
+        }
+
         //! check negative attribute : skip negative attribute
         auto palgo = m_dnn_opr->get_algorithm_from_desc(policy.algo);
         if (palgo->contain_attribute_any(target_attr.second)) {
@@ -938,10 +959,13 @@ void AlgoChooser<Opr>::AlgoChooserHelper::profile(
 
         //! check workspace limit
         construct_execution_policy(selected_strategy, policy);
-        mgb_assert(
-                policy.algo.valid(),
-                "construct execution policy must success when profiling");
-        if (get_workspace_size_bytes(policy) > workspace_limit) {
+        // this will failed
+        // when construct matmul algorithm for convolution opr
+        if (!policy.algo.valid())
+            continue;
+        size_t workspace_needed = get_workspace_size_bytes(policy);
+        if (data_size + workspace_needed >
+            m_desc.get_workspace_limit(m_cn, m_execution_policy.workspace_limit)) {
             continue;
         }
 
@@ -957,7 +981,7 @@ void AlgoChooser<Opr>::AlgoChooserHelper::profile(
         })
         // megbrain uncatched exception
         MGB_CATCH(..., {
-            mgb_log_warn("caught exception during %s", msg.c_str());
+            mgb_log_debug("caught exception during %s", msg.c_str());
             continue;
         })
         if (!cur_rst.valid()) {
@@ -982,20 +1006,22 @@ void AlgoChooser<Opr>::AlgoChooserHelper::profile(
             "workspace limite requirement(%zu)",
             ::MegDNNOpr2Typename<Opr>::name, layouts_str.c_str(),
             Algorithm::attribute_str(target_attr.second).c_str(), workspace_limit);
-    mgb_assert(!prof_rst.empty(), "%s", msg.c_str());
+    // allowed to have empty profile result for current opr
 
     // append some previous profiled results
     if (rst.second.valid())
         prof_rst.insert(
                 prof_rst.end(), rst.second.val().begin(), rst.second.val().end());
-    FixedTensorLayouts incache_layouts = m_incache_layouts;
-    typename Opr::Param origin_param = m_dnn_opr->param();
-    AlgoChooserProfileCache::Key cache_key{
-            incache_layouts.data(), incache_layouts.size(), &origin_param,
-            sizeof(origin_param)};
+    if (!prof_rst.empty()) {
+        FixedTensorLayouts incache_layouts = m_incache_layouts;
+        typename Opr::Param origin_param = m_dnn_opr->param();
+        AlgoChooserProfileCache::Key cache_key{
+                incache_layouts.data(), incache_layouts.size(), &origin_param,
+                sizeof(origin_param)};
 
-    AlgoChooserProfileCache cache(m_cn, profile_name(m_dnn_opr).c_str());
-    cache.put(cache_key, prof_rst);
+        AlgoChooserProfileCache cache(m_cn, profile_name(m_dnn_opr).c_str());
+        cache.put(cache_key, prof_rst);
+    }
     MIDOUT_E
 }
 

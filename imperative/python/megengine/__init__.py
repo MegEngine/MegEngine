@@ -86,7 +86,6 @@ from .core._imperative_rt.core2 import sync as _sync
 from .core._imperative_rt.common import (
     get_supported_sm_versions as _get_supported_sm_versions,
 )
-from .core._imperative_rt.utils import _set_fork_exec_path_for_timed_func
 from .config import *
 from .device import *
 from .logger import enable_debug_log, get_logger, set_log_file, set_log_level
@@ -117,13 +116,6 @@ def _check_sm_version():
 
 
 _check_sm_version()
-
-_set_fork_exec_path_for_timed_func(
-    sys.executable,
-    os.path.join(os.path.dirname(__file__), "utils", "_timed_func_fork_exec_entry.py"),
-)
-
-del _set_fork_exec_path_for_timed_func
 
 _exit_handlers = []
 
