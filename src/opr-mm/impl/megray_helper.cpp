@@ -67,6 +67,15 @@ void MegRayCommBuilder::emplace(
     m_megray_comms.emplace(hash, comm);
 }
 
+void MegRayCommBuilder::remove(
+        uint64_t hash, std::shared_ptr<MegRay::Communicator> comm) {
+    std::unique_lock<std::mutex> lk(m_map_mtx);
+    auto it = m_megray_comms.find(hash);
+    if (it != m_megray_comms.end()) {
+        m_megray_comms.erase(hash);
+    }
+}
+
 std::shared_ptr<MegRay::Communicator> MegRayCommBuilder::get_megray_comm(
         uint64_t hash, std::string key, uint32_t size, uint32_t rank,
         MegRay::Backend backend, std::shared_ptr<mgb::opr::GroupClient> group_client) {
@@ -104,5 +113,3 @@ std::shared_ptr<MegRay::Communicator> MegRayCommBuilder::get_megray_comm(
 MegRayCommBuilder* MegRayCommBuilder::sm_instance = nullptr;
 
 std::mutex MegRayCommBuilder::sm_instance_mtx;
-
-// vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

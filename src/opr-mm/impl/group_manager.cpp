@@ -151,6 +151,28 @@ void GroupManager::bcast_addr(
     }
 }
 
+void GroupManager::bcast_nccluniqueid(
+        const std::string& key, std::string& id, uint32_t size, uint32_t rank,
+        uint32_t root) {
+    std::unique_lock<std::mutex> lk{m_key2nccl_id_mtx};
+    if (rank == root) {
+        m_key2nccl_id[key] = id;
+    }
+    m_key2nccl_id_size[key]++;
+    if (m_key2nccl_id_size[key] == size) {
+        m_key2nccl_id_flag[key] = true;
+        m_bcast_cv.notify_all();
+    } else {
+        m_bcast_cv.wait(lk, [&] { return m_key2nccl_id_flag.count(key) > 0; });
+    }
+    id = m_key2nccl_id[key];
+    m_key2nccl_id_size[key]--;
+    if (m_key2nccl_id_size[key] == 0) {
+        m_key2nccl_id.erase(key);
+        m_key2nccl_id_flag.erase(key);
+    }
+}
+
 void GroupManager::set_output_shape(const std::string& key, const TensorShape& shape) {
     auto&& group = get_group(key);
     group.set_output_shape(key, shape);

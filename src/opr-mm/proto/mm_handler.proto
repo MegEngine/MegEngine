@@ -30,6 +30,18 @@ message BcastAddrResponse {
     int32 port = 2;
 }
 
+message BcastNcclUniqueIdRequest{
+    string key = 1;
+    bytes id = 2;
+    uint32 size =3 ;
+    uint32 rank = 4;
+    uint32 root =5;
+}
+
+message BcastNcclUniqueIdResponse{
+    bytes id = 1;
+}
+
 message SetOutputShapeRequest {
     string key = 1;
     TensorShape shape = 2;

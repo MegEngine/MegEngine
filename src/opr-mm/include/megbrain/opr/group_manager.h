@@ -77,6 +77,11 @@ public:
             std::string& master_ip, int& port, const std::string& key, uint32_t size,
             uint32_t rank, uint32_t root);
 
+    //! bcast uid
+    void bcast_nccluniqueid(
+            const std::string& key, std::string& id, uint32_t size, uint32_t rank,
+            uint32_t root);
+
     //! Set output shape of this key
     void set_output_shape(const std::string& key, const TensorShape& shape);
 
@@ -100,6 +105,12 @@ private:
     std::unordered_map<std::string, bool> m_key2addr_flag;
     std::mutex m_key2addr_mtx;
     std::condition_variable m_bcast_cv;
+
+    //! key -> ncclid
+    std::unordered_map<std::string, std::string> m_key2nccl_id;
+    std::unordered_map<std::string, uint32_t> m_key2nccl_id_size;
+    std::unordered_map<std::string, bool> m_key2nccl_id_flag;
+    std::mutex m_key2nccl_id_mtx;
 
     //! barrier
     uint32_t m_barrier_size;
@@ -127,6 +138,10 @@ public:
     virtual void bcast_addr(
             std::string& master_ip, int& port, const std::string& key, uint32_t size,
             uint32_t rank, uint32_t root) = 0;
+
+    virtual void bcast_nccluniqueid(
+            const std::string& key, std::string& id, uint32_t size, uint32_t rank,
+            uint32_t root) = 0;
 
     virtual void set_output_shape(const std::string& key, const TensorShape& shape) = 0;
 

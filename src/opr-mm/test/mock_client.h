@@ -26,6 +26,12 @@ public:
         return m_mgr.bcast_addr(master_ip, port, key, size, rank, root);
     }
 
+    void bcast_nccluniqueid(
+            const std::string& key, std::string& id, uint32_t size, uint32_t rank,
+            uint32_t root) override {
+        return m_mgr.bcast_nccluniqueid(key, id, size, rank, root);
+    }
+
     void set_output_shape(const std::string& key, const TensorShape& shape) override {
         m_mgr.set_output_shape(key, shape);
     }

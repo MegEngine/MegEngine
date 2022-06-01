@@ -160,6 +160,13 @@ def init_process_group(
     set_default_device("{}{}".format(device_type, device))
     seed(int(time.time()) + rank)
 
+    if backend == "nccl":
+        # init nccl env
+        from ..core._imperative_rt.common import init_nccl_env
+
+        group_barrier()
+        init_nccl_env(master_ip, _sd.mm_server_port, world_size, rank, 0)
+
 
 def _set_machine_ranks(ranks) -> None:
     global _sd

@@ -8,6 +8,9 @@
 #include "megbrain/comp_node.h"
 #include "megbrain/graph.h"
 #include "megbrain/imperative/physical_tensor.h"
+#if MGB_ENABLE_OPR_MM
+#include "megbrain/opr/mm_handler.h"
+#endif
 
 #if MEGDNN_WITH_CUDA
 #include "cuda_sm_gen.h"
@@ -44,6 +47,18 @@ std::string default_device = "xpux";
 
 void set_default_device(const std::string& device) {
     default_device = device;
+}
+
+void init_nccl_env(const std::string& ip, int port, int nranks, int rank, int root) {
+#if MGB_ENABLE_OPR_MM
+    auto&& help = mgb::opr::BatchSendRecvHelper::getInstance();
+    bool res = help->init(nranks, rank, ip, port, root);
+    auto p = help->get(std::string("init_all_cards"));
+#else
+    mgb_throw(
+            MegBrainError,
+            "MegEngine compiled without MM opr, doesn't support init_nccl_env");
+#endif
 }
 
 std::string get_default_device() {
@@ -251,6 +266,8 @@ void init_common(py::module m) {
 
     m.def("what_is_xpu",
           [] { return CompNode::Locator::parse("xpux").to_physical().type; });
+
+    m.def("init_nccl_env", &init_nccl_env);
 
     init_npy_num_bfloat16(m);
     init_npy_num_intbx(m);

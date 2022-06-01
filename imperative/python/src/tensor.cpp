@@ -9,6 +9,7 @@
 #include "megbrain/imperative/transformations/dtype_promote.h"
 #include "megbrain/imperative/transformations/eval.h"
 #include "megbrain/imperative/transformations/format.h"
+#include "megbrain/imperative/transformations/group_comm.h"
 #include "megbrain/imperative/transformations/lazy.h"
 #include "megbrain/imperative/transformations/scalar.h"
 #include "megbrain/imperative/transformations/symbol.h"
@@ -947,6 +948,13 @@ void init_tensor(py::module m) {
     m.def("enable_cupti", &cupti::enable);
     m.def("disable_cupti", &cupti::disable);
     m.def("cupti_available", &cupti::available);
+
+    static std::unique_ptr<CleanupGuard<>> group_comm_guard;
+    m.def("group_start", []() {
+        auto commtrans = std::make_shared<GroupCommTransformation>();
+        group_comm_guard = transformations.register_at<Segment::GroupComm>(commtrans);
+    });
+    m.def("group_end", []() { group_comm_guard.reset(); });
     m.def("sync", [channel]() {
         if (channel->check_available()) {
             channel->sync();

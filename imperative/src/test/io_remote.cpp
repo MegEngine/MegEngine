@@ -1,4 +1,5 @@
 #include "./helper.h"
+#include "megbrain/comp_node_env.h"
 #include "megbrain/imperative/ops/autogen.h"
 #include "megbrain/opr/mm_handler.h"
 
@@ -47,7 +48,4 @@ TEST(TestImperative, IORemote) {
     t0.join();
     t1.join();
 }
-
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
-
-// ./imperative_test --gtest_filter TestIORemote

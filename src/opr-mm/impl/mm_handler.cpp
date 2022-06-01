@@ -45,6 +45,7 @@ public:
         RUNSERVER(get_output_shape);
         RUNSERVER(bcast_addr);
         RUNSERVER(group_barrier);
+        RUNSERVER(bcast_nccluniqueid);
         mgb_assert(false, "invalid rpc request");
     }
 
@@ -53,6 +54,7 @@ private:
     void set_output_shape(void* input_ptr, size_t input_len, std::string* output);
     void get_output_shape(void* input_ptr, size_t input_len, std::string* output);
     void bcast_addr(void* input_ptr, size_t input_len, std::string* output);
+    void bcast_nccluniqueid(void* input_ptr, size_t input_len, std::string* output);
     void group_barrier(void* input_ptr, size_t input_len, std::string* output);
 
 private:
@@ -113,6 +115,15 @@ void GroupServerProxy::bcast_addr(
     m_mgr.bcast_addr(master_ip, port, req.key(), req.size(), req.rank(), req.root());
     rsp.set_master_ip(master_ip);
     rsp.set_port(port);
+    rsp.SerializeToString(output);
+}
+
+void GroupServerProxy::bcast_nccluniqueid(
+        void* input_ptr, size_t input_len, std::string* output) {
+    INFO_INIT(mm_handler, BcastNcclUniqueId);
+    std::string id = req.id();
+    m_mgr.bcast_nccluniqueid(req.key(), id, req.size(), req.rank(), req.root());
+    rsp.set_id(id);
     rsp.SerializeToString(output);
 }
 
@@ -201,12 +212,59 @@ void GroupClientProxy::bcast_addr(
     port = rsp.port();
 }
 
+void GroupClientProxy::bcast_nccluniqueid(
+        const std::string& key, std::string& id, uint32_t size, uint32_t rank,
+        uint32_t root) {
+    INFO_INIT(mm_handler, bcast_nccluniqueid, BcastNcclUniqueId);
+    req.set_id(id.data(), id.size());
+    req.set_key(key.data(), key.size());
+    req.set_size(size);
+    req.set_rank(rank);
+    req.set_root(root);
+    SOLVE_REQUEST(func_name, req, rsp);
+    id = rsp.id();
+}
+
 uint32_t GroupClientProxy::group_barrier(uint32_t size, uint32_t rank) {
     INFO_INIT(mm_handler, group_barrier, GroupBarrier);
     req.set_size(size);
     req.set_rank(rank);
     SOLVE_REQUEST(func_name, req, rsp);
     return rsp.size();
+}
+
+std::shared_ptr<MegRay::Communicator> BatchSendRecvHelper::get(std::string&& key) {
+    auto ptr = megray_comm_cache.find(key);
+    if (ptr != megray_comm_cache.end()) {
+        return megray_comm_cache[key];
+    } else {
+        return nullptr;
+    }
+}
+
+std::unordered_map<std::string, std::shared_ptr<MegRay::Communicator>>
+        BatchSendRecvHelper::megray_comm_cache{};
+
+bool BatchSendRecvHelper::init(
+        int nranks, int rank, std::string ip, int port, int root) {
+    auto megray_comm =
+            MegRay::get_communicator(nranks, rank, MegRay::Backend::MEGRAY_NCCL);
+    auto group_client =
+            std::make_shared<opr::GroupClientProxy>(ssprintf("%s:%d", ip.data(), port));
+    auto cb = [=](char* nccl_buffer, size_t len) {
+        std::string id;
+        id.resize(128);
+        if (rank == root) {
+            memcpy(id.data(), nccl_buffer, len);
+        }
+        group_client->bcast_nccluniqueid("init_all_cards", id, nranks, rank, root);
+        if (rank != root) {
+            memcpy(nccl_buffer, id.data(), len);
+        }
+    };
+    megray_comm->init(cb);
+    return megray_comm_cache.insert({std::string("init_all_cards"), megray_comm})
+            .second;
 }
 
 #undef INFO_INIT

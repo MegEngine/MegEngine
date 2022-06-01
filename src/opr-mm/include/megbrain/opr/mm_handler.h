@@ -39,6 +39,10 @@ public:
             std::string& master_ip, int& port, const std::string& key, uint32_t size,
             uint32_t rank, uint32_t root) override;
 
+    void bcast_nccluniqueid(
+            const std::string& key, std::string& id, uint32_t size, uint32_t rank,
+            uint32_t root) override;
+
     void set_output_shape(const std::string& key, const TensorShape& shape) override;
 
     TensorShape get_output_shape(const std::string& key) override;
@@ -52,6 +56,34 @@ private:
     void* m_stub;
 };
 
+template <typename T>
+class ProcessGlobal {  // thread safe
+public:
+    template <class... Args>
+    static std::shared_ptr<T>& getInstance(Args&&... args) {
+        static auto instance = std::make_shared<T>(std::forward<Args>(args)...);
+        return instance;
+    }
+
+protected:
+    template <class... Args>
+    ProcessGlobal(Args&&... args);
+    ProcessGlobal() = default;
+
+public:
+    ProcessGlobal(ProcessGlobal const&) = delete;
+    void operator=(ProcessGlobal const&) = delete;
+};
+
+class BatchSendRecvHelper : public ProcessGlobal<BatchSendRecvHelper> {
+    static std::unordered_map<std::string, std::shared_ptr<MegRay::Communicator>>
+            megray_comm_cache;
+
+public:
+    std::shared_ptr<MegRay::Communicator> get(std::string&&);
+    bool init(int nranks, int rank, std::string ip, int port, int root);
+};
+
 /* ======================== ZmqRpcServerMgr ========================== */
 
 int create_zmqrpc_server(const std::string& server_addr, int port);
@@ -60,5 +92,3 @@ int create_zmqrpc_server(const std::string& server_addr, int port);
 }  // namespace mgb
 
 #endif
-
-// vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

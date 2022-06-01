@@ -237,3 +237,32 @@ def test_get_cuda_compute_capability():
         assert mge.device.get_cuda_compute_capability(dist.get_rank()) > 0
 
     worker()
+
+
+@pytest.mark.require_ngpu(3)
+@pytest.mark.isolated_distributed
+def test_batch_send_recv():
+    import megengine.distributed.functional as DF
+
+    @dist.launcher(n_gpus=3)
+    def worker():
+        rank = dist.get_rank()
+        dist.group_start()
+        for i in range(3):
+            tensor = mge.tensor(np.ones(10000)) * rank
+            if i == 2:
+                tensor *= i
+            DF._remote_send_nobackward(tensor, (rank + 1) % 3)
+            DF._remote_recv_nobackward(
+                src_rank=(rank + 1) % 3, dtype="float32", shape=(10000,)
+            )
+            DF._remote_send_nobackward(tensor, (rank - 1) % 3)
+            recv = DF._remote_recv_nobackward(
+                src_rank=(rank - 1) % 3, dtype="float32", shape=(10000,)
+            )
+            if i == 2:
+                recv2 = recv
+        dist.group_end()
+        np.testing.assert_equal(recv2.numpy(), (rank - 1) % 3 * 2 * np.ones(10000))
+
+    worker()

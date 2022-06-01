@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from mprop import mproperty
 
+from ..core._imperative_rt.core2 import group_end, group_start
 from . import group
 from .group import (
     WORLD,

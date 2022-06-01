@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
-from typing import Optional, Tuple
+from typing import Optional
 
 import numpy as np
 
 from ..core._imperative_rt.core2 import apply
 from ..core.autodiff.grad import Function, _grad_manager_dict
-from ..core.ops.builtin import CollectiveComm, Copy, RemoteRecv, RemoteSend
-from ..core.tensor.utils import isscalar
+from ..core.ops.builtin import CollectiveComm, RemoteRecv, RemoteSend
 from ..device import get_default_device, what_is_xpu
 from ..tensor import Tensor
 from . import group
@@ -843,16 +842,13 @@ def remote_send(inp: Tensor, dest_rank: int):
     """
     group = _SendRecvGroup(get_rank(), dest_rank)
     _bcast_shape_dtype(group, inp)
-
     _bcast_tracer_state(group, inp)
-
     op = RemoteSend()
     op.key = group.key
     op.addr, op.port = get_mm_server_addr()
     op.rank_to = dest_rank
     op.backend = _backend()
     out = _RemoteSend(op)(inp)
-
     _save_output_for_autodiff(inp, out)
 
 
@@ -900,6 +896,34 @@ def remote_recv(src_rank: int, device: Optional[str] = None, inp=None) -> Tensor
     op.addr, op.port = get_mm_server_addr()
     op.rank_from = src_rank
     op.backend = _backend()
-
     ret = _RemoteRecv(op)(inp)
+    return ret
+
+
+def _remote_send_nobackward(inp: Tensor, dest_rank: int):
+    op = RemoteSend()
+    op.key = "b{}->{}".format(get_rank(), dest_rank)
+    op.addr, op.port = get_mm_server_addr()
+    op.rank_to = dest_rank
+    op.backend = _backend()
+    apply(op, inp)
+
+
+def _remote_recv_nobackward(
+    src_rank: int, device: Optional[str] = None, inp=None, shape=None, dtype=None,
+):
+    op = RemoteRecv()
+    op.key = "b{}->{}".format(src_rank, get_rank())
+    if device is None:
+        device = get_default_device()
+    op.cn = device
+    if inp is None:
+        inp = Tensor(0, device=device)
+    assert shape is not None and dtype is not None
+    op.shape = shape
+    op.dtype = dtype
+    op.addr, op.port = get_mm_server_addr()
+    op.rank_from = src_rank
+    op.backend = _backend()
+    ret = apply(op, inp)[0]
     return ret

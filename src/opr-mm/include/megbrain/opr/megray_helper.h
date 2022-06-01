@@ -23,6 +23,7 @@ class MegRayCommBuilder {
 private:
     bool find(uint64_t hash, std::shared_ptr<MegRay::Communicator>& comm);
     void emplace(uint64_t hash, std::shared_ptr<MegRay::Communicator> comm);
+    void remove(uint64_t hash, std::shared_ptr<MegRay::Communicator> comm);
 
     std::unordered_map<uint64_t, std::shared_ptr<MegRay::Communicator>> m_megray_comms;
     std::mutex m_map_mtx;
