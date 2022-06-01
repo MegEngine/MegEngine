@@ -98,7 +98,7 @@ template <typename Impl>
 void copy_tensors(
         const CheckerHelper::TensorValueArray& dest,
         const CheckerHelper::TensorValueArray& src, const Impl& copy_impl) {
-    megdnn_assert(dest.size() == src.size());
+    megdnn_assert(dest.size() == src.size(), "%zu != %zu", dest.size(), src.size());
     for (size_t i = 0; i < src.size(); i++) {
         auto&& tensor = src[i];
         if (tensor.layout.ndim == 0)
