@@ -7,6 +7,8 @@ from utils import opr_test
 
 import megengine.functional as F
 from megengine import jit, tensor
+from megengine.core._imperative_rt.core2 import apply
+from megengine.core.ops import builtin
 
 
 def common_test_reduce(opr, ref_opr):
@@ -180,6 +182,21 @@ def test_sum_neg_axis():
         np.testing.assert_allclose(get.numpy(), ref, rtol=1e-6)
     with pytest.raises(AssertionError):
         F.sum(tensor(data), axis=(-1, 1))
+
+
+def test_builtin_reduce():
+    shape = (2, 3, 3, 2)
+    data = np.random.random(shape).astype(np.float32)
+    for axis in (-1, -2, 0, 1):
+        for keepdims in (True, False):
+            op = builtin.Reduce(mode="sum", axis=axis, keepdim=keepdims)
+            get = apply(op, tensor(data))[0]
+            def_op = builtin.Reduce(mode="sum", axis=axis)
+            def_get = apply(def_op, tensor(data))[0]
+            ref = np.sum(data, axis=axis, keepdims=keepdims)
+            np.testing.assert_allclose(get.numpy(), ref, rtol=1e-6)
+            if keepdims == True:
+                np.testing.assert_allclose(def_get.numpy(), ref, rtol=1e-6)
 
 
 def test_non_finite():

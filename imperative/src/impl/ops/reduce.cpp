@@ -222,7 +222,7 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
         for (size_t i = 0; i < size; ++i) {
             dests[i].comp_node = inputs[i].comp_node;
             dests[i].layout = inputs[i].layout;
-            if (not keepdim && dests[i].layout.ndim > 1) {
+            if (!keepdim && dests[i].layout.ndim > 1) {
                 dests[i].layout.remove_axis_inplace(axis);
             } else {
                 dests[i].layout.shape[axis] = 1;

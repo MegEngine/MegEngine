@@ -16,7 +16,7 @@ def Elemwise : MgbHashableOp<"Elemwise", [ElemwiseParam], [NoSideEffect]> {
 
 def Reduce: MgbHashableOp<"Reduce", [ReduceParam]>{
   let extraArguments = (ins
-    MgbBoolAttr:$keepdim
+    MgbDefaultValuedAttr<MgbBoolAttr, "true">:$keepdim
   );
 }
 
