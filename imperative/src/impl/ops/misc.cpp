@@ -36,9 +36,8 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
     megdnn::CheckNonFinite::Param param({op.scale});
     dnn_opr.op->param() = param;
     size_t sz = dnn_opr.op->get_workspace_in_bytes(srcs, dest->layout());
-    TensorLayout w_layout({sz}, dtype::Byte());
-    auto dnn_wk = dnn_opr.create_workspace(w_layout);
-    dnn_opr.op->exec(srcs, dest->dev_tensor().as_megdnn(), dnn_wk);
+    auto dnn_wk = dnn_opr.create_workspace(sz);
+    dnn_opr.op->exec(srcs, dest->dnn_tensor(), dnn_wk);
     return outputs;
 }
 

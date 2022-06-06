@@ -566,9 +566,13 @@ DeviceTensorND Tensor::dev_tensor(bool contiguous) {
     return ret;
 }
 
+bool Tensor::empty() {
+    return !m_blob->size();
+}
+
 megdnn::TensorND Tensor::dnn_tensor() {
     mgb_assert(m_blob, "uninitialized tensor.");
-    return {m_layout, {m_blob->storage().get(), m_offset}};
+    return DnnTensorND{m_layout, m_blob->storage(), m_offset};
 }
 
 void Tensor::fetch_value() {

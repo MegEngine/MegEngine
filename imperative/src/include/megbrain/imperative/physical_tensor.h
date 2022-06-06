@@ -10,6 +10,7 @@
 #include "megbrain/imperative/resource_manager.h"
 #include "megbrain/tensor.h"
 #include "megbrain/utils/metahelper.h"
+#include "megdnn/basic_types.h"
 
 namespace mgb {
 namespace imperative {
@@ -87,6 +88,22 @@ using EventPtr = std::unique_ptr<CompNode::Event, EventDeleter>;
 
 class Tensor;
 using TensorPtr = std::shared_ptr<Tensor>;
+
+/*
+    using DnnTensorND to save the reference count of workspace
+    allocted by blobmanager to prevent invalidation
+*/
+struct DnnTensorND : megdnn::TensorND {
+private:
+    std::shared_ptr<dt_byte> m_reference;
+
+public:
+    DnnTensorND(TensorLayout& layout_, std::shared_ptr<dt_byte> ref_ptr, size_t offset)
+            : megdnn::TensorND(layout_, {ref_ptr.get(), offset}) {
+        m_reference = ref_ptr;
+    }
+};
+
 class Tensor : public NonCopyableObj {
 public:
     Tensor() = default;
@@ -130,6 +147,8 @@ public:
     void to_contiguous_inplace(VarNode::LayoutConstraintCallback&);
 
     void to_contiguous_inplace();
+
+    bool empty();
 
     DeviceTensorND dev_tensor(bool contiguous = true);
 

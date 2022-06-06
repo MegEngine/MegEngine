@@ -185,12 +185,12 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
     }
 
     if (dim1 == 0 || dim2 == 0 || layout1[layout1.ndim - 1] == 0) {
-        DeviceTensorND out =
-                BlobManager::inst()->alloc_workspace_with_defrag(cn, real_dst_layout);
-        if (!out.empty()) {
-            dev_tensor_memset(out, 0);
+        auto out = Tensor::make(real_dst_layout, cn);
+
+        if (!out->empty()) {
+            dev_tensor_memset(out->dev_tensor(), 0);
         }
-        return {Tensor::make(out)};
+        return {out};
     }
 
     TensorLayout layout_a = layout1, layout_b = layout2;
@@ -232,13 +232,11 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
     size_t sz = setup_algo<megdnn::MatrixMul>(
             {layout_a, layout_b, dst_layout}, dnn_opr.op.get(), 0, false, false, cn,
             matmul.policy(), false, &inp_tensornds);
-    DeviceTensorND out =
-            BlobManager::inst()->alloc_workspace_with_defrag(cn, dst_layout);
-    TensorLayout w_layout({sz}, dtype::Byte());
-    auto dnn_wk = dnn_opr.create_workspace(w_layout);
+    auto out = Tensor::make(dst_layout, cn);
+    auto dnn_wk = dnn_opr.create_workspace(sz);
 
-    dnn_opr.op->exec(inp_tensornds[0], inp_tensornds[1], out.as_megdnn(), dnn_wk);
-    return {Tensor::make(out.sub(SubTensorSpec::make_from_layout(real_dst_layout)))};
+    dnn_opr.op->exec(inp_tensornds[0], inp_tensornds[1], out->dnn_tensor(), dnn_wk);
+    return {out->sub(0, real_dst_layout)};
 }
 
 SmallVector<VarNode::LayoutConstraintCallback> get_input_layout_constraint(
@@ -461,12 +459,12 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
     dst_layout.init_contiguous_stride();
 
     if (dim1 == 0 || dim2 == 0 || layout1[layout1.ndim - 1] == 0) {
-        DeviceTensorND out =
-                BlobManager::inst()->alloc_workspace_with_defrag(cn, dst_layout);
-        if (!out.empty()) {
-            dev_tensor_memset(out, 0);
+        auto out = Tensor::make(dst_layout, cn);
+
+        if (!out->empty()) {
+            dev_tensor_memset(out->dev_tensor(), 0);
         }
-        return {Tensor::make(out)};
+        return {out};
     }
 
     SmallVector<megdnn::TensorND> inp_tensornds(2u);
@@ -479,19 +477,17 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
             {layout1, layout2, dst_layout}, dnn_opr.op.get(), 0, false, false, cn,
             matmul.policy(), false, &inp_tensornds);
 
-    DeviceTensorND out =
-            BlobManager::inst()->alloc_workspace_with_defrag(cn, dst_layout);
+    auto out = Tensor::make(dst_layout, cn);
 
-    TensorLayout w_layout({sz}, dtype::Byte());
-    auto dnn_wk = dnn_opr.create_workspace(w_layout);
-    dnn_opr.op->exec(inp_tensornds[0], inp_tensornds[1], out.as_megdnn(), dnn_wk);
+    auto dnn_wk = dnn_opr.create_workspace(sz);
+    dnn_opr.op->exec(inp_tensornds[0], inp_tensornds[1], out->dnn_tensor(), dnn_wk);
 
     shp1[shp1.ndim - 2] = dst_layout[dst_layout.ndim - 2];
     shp1[shp1.ndim - 1] = dst_layout[dst_layout.ndim - 1];
     if (maxdim > 3) {
         dst_layout = dst_layout.reshape(shp1);
     }
-    return {Tensor::make(out.sub(SubTensorSpec::make_from_layout(dst_layout)))};
+    return {out->sub(0, dst_layout)};
 }
 
 SmallVector<VarNode::LayoutConstraintCallback> get_input_layout_constraint(
@@ -540,27 +536,23 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
     dnn_opr.op->deduce_layout(inp1_tensor.layout, inp2_tensor.layout, oup_layout);
 
     if (inputs[0]->layout().is_empty() || inputs[1]->layout().is_empty()) {
-        DeviceTensorND out =
-                BlobManager::inst()->alloc_workspace_with_defrag(comp_node, oup_layout);
-        if (!out.empty()) {
-            dev_tensor_memset(out, 0);
+        auto out = Tensor::make(oup_layout, comp_node);
+        if (!out->empty()) {
+            dev_tensor_memset(out->dev_tensor(), 0);
         }
-        return {Tensor::make(out)};
+        return {out};
     }
 
     auto sz = dnn_opr.op->get_workspace_in_bytes(
             inp_tensornds[0].layout, inp_tensornds[1].layout, output_descs[0].layout);
 
-    DeviceTensorND out_devtensor =
-            BlobManager::inst()->alloc_workspace_with_defrag(comp_node, oup_layout);
+    auto out = Tensor::make(oup_layout, comp_node);
 
-    TensorLayout w_layout({sz}, dtype::Byte());
-    auto dnn_wk = dnn_opr.create_workspace(w_layout);
+    auto dnn_wk = dnn_opr.create_workspace(sz);
 
-    dnn_opr.op->exec(
-            inp_tensornds[0], inp_tensornds[1], out_devtensor.as_megdnn(), dnn_wk);
+    dnn_opr.op->exec(inp_tensornds[0], inp_tensornds[1], out->dnn_tensor(), dnn_wk);
 
-    return {Tensor::make(out_devtensor)};
+    return {out};
 }
 
 std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(

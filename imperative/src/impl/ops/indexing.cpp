@@ -85,10 +85,9 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
     TensorPtr out = Tensor::make(tlayout, inp->comp_node());
     megdnn::TensorND in = inp->dnn_tensor();
     megdnn::TensorND ind = index->dnn_tensor();
-    TensorLayout m_layout(
-            {dnn_op.op->get_workspace_in_bytes(layout, index_layout, tlayout)},
-            dtype::Byte());
-    auto dnn_workspace = dnn_op.create_workspace(m_layout);
+    size_t sz = dnn_op.op->get_workspace_in_bytes(layout, index_layout, tlayout);
+
+    auto dnn_workspace = dnn_op.create_workspace(sz);
     dnn_op.op->exec(in, ind, out->dnn_tensor(), dnn_workspace);
     return {out};
 }
@@ -152,10 +151,9 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
     megdnn::TensorND in = inp->dnn_tensor();
     megdnn::TensorND ind = index->dnn_tensor();
     megdnn::TensorND su = sub->dnn_tensor();
-    TensorLayout m_layout(
-            {dnn_op.op->get_workspace_in_bytes(layout, index_layout, tlayout)},
-            dtype::Byte());
-    auto dnn_workspace = dnn_op.create_workspace(m_layout);
+
+    size_t sz = dnn_op.op->get_workspace_in_bytes(layout, index_layout, tlayout);
+    auto dnn_workspace = dnn_op.create_workspace(sz);
     dnn_op.op->exec(out->dnn_tensor(), ind, su, dnn_workspace);
     return {out};
 }

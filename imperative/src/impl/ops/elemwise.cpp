@@ -121,10 +121,10 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
     megdnn::Elemwise::deduce_shape(inp_shapes, layout);
     layout.init_contiguous_stride();
 
-    DeviceTensorND out =
-            BlobManager::inst()->alloc_workspace_with_defrag(comp_node, layout);
+    auto out = Tensor::make(layout, comp_node);
+
     if (is_empty) {
-        return {Tensor::make(out)};
+        return {out};
     }
     DnnOprCaller<megdnn::Elemwise> dnn_opr(comp_node);
 
@@ -133,12 +133,13 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
         dnn_opr.op->param().mode == Mode::FUSE_MUL_ADD4 ||
         (inp_tensornds.size() &&
          inp_tensornds[0].layout.dtype.category() == DTypeCategory::QUANTIZED)) {
-        opr::Elemwise::perform_dnn(comp_node, out, inp_tensornds, dnn_opr.op);
+        opr::Elemwise::perform_dnn(
+                comp_node, out->dnn_tensor(), inp_tensornds, dnn_opr.op);
     } else {
-        dnn_opr.op->exec(inp_tensornds, out.as_megdnn());
+        dnn_opr.op->exec(inp_tensornds, out->dnn_tensor());
     }
 
-    return {Tensor::make(out)};
+    return {out};
 }
 
 MGB_DEFINE_OPR_CLASS(

@@ -45,29 +45,25 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
     TensorLayout v_t_1_layout{v_t_1->layout()};
     TensorLayout lamb_param_layout{lamb_param->layout()};
 
-    DeviceTensorND m_t = BlobManager::inst()->alloc_workspace_with_defrag(
-            m_t_1->comp_node(), m_t_1_layout);
+    auto m_t = Tensor::make(m_t_1_layout, m_t_1->comp_node());
 
-    DeviceTensorND v_t = BlobManager::inst()->alloc_workspace_with_defrag(
-            v_t_1->comp_node(), v_t_1_layout);
+    auto v_t = Tensor::make(v_t_1_layout, v_t_1->comp_node());
 
-    DeviceTensorND new_param = BlobManager::inst()->alloc_workspace_with_defrag(
-            lamb_param->comp_node(), lamb_param_layout);
+    auto new_param = Tensor::make(lamb_param_layout, lamb_param->comp_node());
 
     DnnOprCaller<megdnn::LAMBUpdate> caller{lamb_param->comp_node()};
-    TensorLayout m_layout(
-            {caller.op->get_workspace_in_bytes(
-                    m_t_1->layout(), v_t_1->layout(), lamb_param->layout(),
-                    grad->layout(), m_t.layout(), v_t.layout(), new_param.layout())},
-            dtype::Byte());
+    size_t sz = caller.op->get_workspace_in_bytes(
+            m_t_1->layout(), v_t_1->layout(), lamb_param->layout(), grad->layout(),
+            m_t->layout(), v_t->layout(), new_param->layout());
 
-    auto dnn_workspace = caller.create_workspace(m_layout);
+    auto dnn_workspace = caller.create_workspace(sz);
     caller.op->param() = op.param();
     caller.op->exec(
             m_t_1->dev_tensor().as_megdnn(), v_t_1->dev_tensor().as_megdnn(),
             lamb_param->dev_tensor().as_megdnn(), grad->dev_tensor().as_megdnn(),
-            m_t.as_megdnn(), v_t.as_megdnn(), new_param.as_megdnn(), dnn_workspace);
-    return {Tensor::make(m_t), Tensor::make(v_t), Tensor::make(new_param)};
+            m_t->dnn_tensor(), v_t->dnn_tensor(), new_param->dnn_tensor(),
+            dnn_workspace);
+    return {m_t, v_t, new_param};
 }
 
 OP_TRAIT_REG(LAMBUpdate, LAMBUpdate)

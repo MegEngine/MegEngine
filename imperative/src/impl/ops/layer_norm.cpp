@@ -77,32 +77,25 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
     megdnn::LayerNorm::deduce_layout_fwd_impl(
             inputs[0]->dnn_tensor().layout, p, oup_layout, mean_layout, rstd_layout);
 
-    DeviceTensorND out_devtensor =
-            BlobManager::inst()->alloc_workspace_with_defrag(cn, oup_layout);
-    DeviceTensorND mean_devtensor =
-            BlobManager::inst()->alloc_workspace_with_defrag(cn, mean_layout);
-    DeviceTensorND rstd_devtensor =
-            BlobManager::inst()->alloc_workspace_with_defrag(cn, rstd_layout);
+    auto out = Tensor::make(oup_layout, cn);
 
-    megdnn::Workspace dnn_wk;
+    auto mean = Tensor::make(mean_layout, cn);
+
+    auto rstd = Tensor::make(rstd_layout, cn);
+
     auto wk_size = caller.op->get_workspace_in_bytes(
             inputs[0]->dnn_tensor().layout,
             p.affine ? inputs[1]->dnn_tensor().layout : TensorLayout(),
             p.affine ? inputs[2]->dnn_tensor().layout : TensorLayout(), oup_layout,
             mean_layout, rstd_layout);
-    if (wk_size != 0) {
-        TensorLayout w_layout({wk_size}, dtype::Byte());
-        dnn_wk = caller.create_workspace(w_layout);
-    }
+    auto dnn_wk = caller.create_workspace(wk_size);
 
-    dnn_opr->exec(
+    caller.op->exec(
             inputs[0]->dnn_tensor(),
             p.affine ? inputs[1]->dnn_tensor() : megdnn::TensorND(),
-            p.affine ? inputs[2]->dnn_tensor() : megdnn::TensorND(),
-            out_devtensor.as_megdnn(), mean_devtensor.as_megdnn(),
-            rstd_devtensor.as_megdnn(), dnn_wk);
-    return {Tensor::make(out_devtensor), Tensor::make(mean_devtensor),
-            Tensor::make(rstd_devtensor)};
+            p.affine ? inputs[2]->dnn_tensor() : megdnn::TensorND(), out->dnn_tensor(),
+            mean->dnn_tensor(), rstd->dnn_tensor(), dnn_wk);
+    return {out, mean, rstd};
 }
 
 OP_TRAIT_REG(LayerNorm, LayerNorm)

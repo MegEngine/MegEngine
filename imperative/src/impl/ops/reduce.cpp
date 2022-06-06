@@ -117,20 +117,20 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
             layout.remove_axis_inplace(axis);
             layout.init_contiguous_stride();
         }
-        DeviceTensorND out =
-                BlobManager::inst()->alloc_workspace_with_defrag(comp_node, layout);
+        auto out = Tensor::make(layout, comp_node);
+
         std::string err_msg;
         switch (mode) {
             case Reduce::Mode::SUM:
-                if (!out.empty()) {
-                    dev_tensor_memset(out, 0);
+                if (!out->empty()) {
+                    dev_tensor_memset(out->dev_tensor(), 0);
                 }
                 break;
             case Reduce::Mode::PRODUCT:
-                if (!out.empty()) {
+                if (!out->empty()) {
                     DnnOprCaller<megdnn::Fill> fill_op(comp_node);
                     fill_op.op->param() = 1;
-                    fill_op.op->exec(out.as_megdnn(), {});
+                    fill_op.op->exec(out->dnn_tensor(), {});
                 }
                 break;
             case Reduce::Mode::MEAN:
@@ -153,34 +153,29 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
                     MegBrainError, "empty input is not allowed for reduce mode: %s",
                     err_msg.c_str());
         }
-        return {Tensor::make(out)};
+        return {out};
     }
 
     auto dnn_ten = inputs[0]->dnn_tensor();
     dnn_ten.layout = src;
     inp_tensornds.push_back(dnn_ten);
 
-    megdnn::Workspace dnn_wk;
-
     auto wk_size = dnn_op.op->get_workspace_in_bytes(src, layout);
-    if (wk_size) {
-        TensorLayout w_layout({wk_size}, dtype::Byte());
-        dnn_wk = dnn_op.create_workspace(w_layout);
-    }
-
-    DeviceTensorND out =
-            BlobManager::inst()->alloc_workspace_with_defrag(comp_node, layout);
-
-    dnn_op.op->exec(inp_tensornds[0], out.as_megdnn(), dnn_wk);
+    auto dnn_wk = dnn_op.create_workspace(wk_size);
+    TensorLayout ori_layout = layout;
 
     if (!keepdim && src.ndim > 1) {
-        auto out_layout = out.layout();
-        out_layout.remove_axis_inplace(axis);
-        out_layout.init_contiguous_stride();
-        out.resize(out_layout);
+        layout.remove_axis_inplace(axis);
+        layout.init_contiguous_stride();
     }
 
-    return {Tensor::make(out)};
+    auto out = Tensor::make(layout, comp_node);
+    auto dnn_out = out->dnn_tensor();
+    dnn_out.layout = ori_layout;
+
+    dnn_op.op->exec(inp_tensornds[0], dnn_out, dnn_wk);
+
+    return {out};
 }
 
 std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(

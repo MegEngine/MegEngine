@@ -27,10 +27,16 @@ struct DnnOprCaller {
         return mgb::opr::intl::create_megdnn_opr<Opr>(cn);
     }
 
-    megdnn::Workspace create_workspace(TensorLayout layout) {
-        dev_tensor = Tensor::make(layout, cn)->dev_tensor();
-        workspace =
-                megdnn::Workspace(dev_tensor.raw_ptr(), dev_tensor.storage().size());
+    Workspace create_workspace(size_t sz) {
+        if (workspace.raw_ptr) {
+            mgb_throw(MegBrainError, "workspace should not be applicated many times");
+        }
+        if (sz) {
+            TensorLayout layout({sz}, dtype::Byte());
+            dev_tensor = Tensor::make(layout, cn)->dev_tensor();
+            workspace = megdnn::Workspace(
+                    dev_tensor.raw_ptr(), dev_tensor.storage().size());
+        }
         return workspace;
     }
 

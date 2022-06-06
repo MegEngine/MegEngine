@@ -44,10 +44,9 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
         DnnOprCaller<megdnn::CondTake> dnn_op(inp->comp_node());
         dnn_op.op->param().val = 1;
 
-        TensorLayout m_layout(
-                {dnn_op.op->get_workspace_in_bytes(inp->layout())}, dtype::Byte());
+        size_t sz = dnn_op.op->get_workspace_in_bytes(inp->layout());
 
-        auto dnn_workspace = dnn_op.create_workspace(m_layout);
+        auto dnn_workspace = dnn_op.create_workspace(sz);
 
         dnn_op.op->exec(
                 inp->dev_tensor().as_megdnn(), msk->dev_tensor().as_megdnn(),

@@ -66,17 +66,12 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
             {inp_tensornds[0].layout, oup_layout}, dnn_opr.get(), 0, false, false, cn,
             op_def.policy(), false, &inp_tensornds);
 
-    DeviceTensorND out_devtensor =
-            BlobManager::inst()->alloc_workspace_with_defrag(cn, oup_layout);
+    auto out = Tensor::make(oup_layout, cn);
 
-    megdnn::Workspace dnn_wk;
-    if (wk_size) {
-        TensorLayout w_layout({wk_size}, dtype::Byte());
-        dnn_wk = caller.create_workspace(w_layout);
-    }
+    auto dnn_wk = caller.create_workspace(wk_size);
 
-    dnn_opr->exec(inp_tensornds[0], out_devtensor.as_megdnn(), dnn_wk);
-    return {Tensor::make(out_devtensor)};
+    caller.op->exec(inp_tensornds[0], out->dnn_tensor(), dnn_wk);
+    return {out};
 }
 
 OP_TRAIT_REG(Pooling, Pooling)

@@ -135,21 +135,16 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
     param.window_w = IW - (OW - 1) * param.stride_w;
 
     TensorND src = inputs[0]->dnn_tensor();
-    DeviceTensorND dst =
-            BlobManager::inst()->alloc_workspace_with_defrag(cn, dst_layout);
+    auto dst = Tensor::make(dst_layout, cn);
 
     size_t sz = setup_algo<megdnn::Pooling>(
             {src_layout, dst_layout}, dnn_opr.op.get(), 0, false, false, cn,
             ::megdnn::param::ExecutionPolicy{}, false);
 
-    megdnn::Workspace dnn_wk;
-    if (sz) {
-        TensorLayout w_layout({sz}, dtype::Byte());
-        dnn_wk = dnn_opr.create_workspace(w_layout);
-    }
-    dnn_opr.op->exec(src, dst.as_megdnn(), dnn_wk);
+    auto dnn_wk = dnn_opr.create_workspace(sz);
+    dnn_opr.op->exec(src, dst->dnn_tensor(), dnn_wk);
 
-    return {Tensor::make(dst)};
+    return {dst};
 }
 
 OP_TRAIT_REG(AdaptivePooling, AdaptivePooling)

@@ -252,9 +252,8 @@ SmallVector<TensorPtr> param_pack_concat_apply_on_physical_tensor(
     HostTensorStorage srcs_storage;
     srcs_storage.reset(comp_node, srcs_size, srcs_ptr);
     caller.op->exec(
-            {srcs_raw_ptr, srcs_layout}, inputs.back()->dev_tensor().as_megdnn(),
-            output->dev_tensor().as_megdnn(),
-            caller.create_workspace({{ws_size}, dtype::Byte()}));
+            {srcs_raw_ptr, srcs_layout}, inputs.back()->dnn_tensor(),
+            output->dnn_tensor(), caller.create_workspace(ws_size));
     async_release(HostTensorND{comp_node, srcs_layout}.storage(srcs_storage));
     return {output};
 }

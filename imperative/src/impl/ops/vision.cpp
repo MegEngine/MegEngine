@@ -89,8 +89,8 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
 
     size_t sz = dnn_opr.op->get_workspace_in_bytes(
             inputs[0]->layout(), inputs[1]->layout(), out_layout, ind_layout);
-    TensorLayout w_layout({sz}, dtype::Byte());
-    auto dnn_wk = dnn_opr.create_workspace(w_layout);
+
+    auto dnn_wk = dnn_opr.create_workspace(sz);
 
     dnn_opr.op->exec(
             inputs[0]->dnn_tensor(), inputs[1]->dnn_tensor(), out.as_megdnn(),
