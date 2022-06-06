@@ -1475,6 +1475,35 @@ protected:
 
 using LAMB = LAMBUpdate;
 
+class NormBase : public OperatorBase {
+    DEF_OPR_PARAM(Norm);  // package norm params in Norm keyword from py declaration
+    DEF_OPR_IMPL(NormBase, OperatorBase, 1, 1);  // constructor and static members
+
+public:
+    virtual void deduce_layout(const TensorLayout& src, TensorLayout& dst) = 0;
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& src, const TensorLayout& dst) = 0;
+
+protected:
+    void check_exec(
+            const TensorLayout& src, const TensorLayout& dst,
+            size_t workspace_in_bytes);
+};
+
+class NormForward : public NormBase {
+    DEF_OPR_IMPL(NormForward, NormBase, 1, 1);
+    using Mode = Param::Mode;
+
+public:
+    virtual void exec(
+            _megdnn_tensor_in src, _megdnn_tensor_out dst,
+            _megdnn_workspace workspace) = 0;
+    virtual void deduce_layout(const TensorLayout& src, TensorLayout& dst);
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& src, const TensorLayout& dst) = 0;
+};
+using Norm = NormForward;
+
 }  // namespace megdnn
 
 #include "megdnn/internal/opr_header_epilogue.h"

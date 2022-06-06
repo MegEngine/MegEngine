@@ -1277,3 +1277,11 @@ PADDING_MODES = [Doc('REPLICATE = 0', 'aaaaaa|abcdefgh|hhhhhhh'),
  add_fields('bool', Doc('bias_correction', 'whether correct bias'), 'true').
  add_fields('bool', Doc('always_adapt', 'apply adaptive lr to 0.0'), 'false')
 )
+(pdef("Norm").
+ add_enum('Mode',
+            Doc('P_NORM=0', 'calculate p-norm, parameter p would be ignored in other mode'),
+            Doc('INF_NORM=1', 'infinite norm'),
+            Doc('NEG_INF_NORM=2', 'negative infinite norm'), name_field="mode").
+ add_fields('float32', Doc('p', 'the order of norm'), '2').
+ add_fields('int32', Doc('dim', 'which dim the norm performed along'), '-1'),
+ )

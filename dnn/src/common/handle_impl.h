@@ -212,7 +212,8 @@ private:
     cb(LAMBUpdate) \
     cb(LSTMBackward) \
     cb(SoftmaxForward) \
-    cb(SoftmaxBackward)
+    cb(SoftmaxBackward) \
+    cb(NormForward)
 // clang-format on
 
 /*!

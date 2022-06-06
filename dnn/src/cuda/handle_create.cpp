@@ -47,6 +47,7 @@
 #include "src/cuda/matrix_mul/opr_impl.h"
 #include "src/cuda/max_tensor_diff/opr_impl.h"
 #include "src/cuda/mesh_indexing/opr_impl.h"
+#include "src/cuda/norm/opr_impl.h"
 #include "src/cuda/padding/opr_impl.h"
 #include "src/cuda/param_pack/opr_impl.h"
 #include "src/cuda/pooling/opr_impl.h"
@@ -216,6 +217,7 @@ MEGDNN_SPECIALIZE_CREATE_OPERATOR(DropoutForward);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(DropoutBackward);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(SoftmaxForward);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(SoftmaxBackward);
+MEGDNN_SPECIALIZE_CREATE_OPERATOR(NormForward);
 
 template <typename Opr>
 std::unique_ptr<Opr> HandleImpl::create_operator() {
