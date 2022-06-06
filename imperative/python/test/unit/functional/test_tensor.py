@@ -215,6 +215,18 @@ def test_split(symbolic):
 
 
 @pytest.mark.parametrize("is_varnode", [True, False])
+def test_swapaxes(is_varnode):
+    if is_varnode:
+        network = Network()
+    else:
+        network = None
+
+    x = tensor(np.array([[1, 2, 3]], dtype=np.int32))
+    y = F.swapaxes(x, 0, 1)
+    np.testing.assert_equal(y.numpy(), np.array([[1], [2], [3]]).astype(np.int32))
+
+
+@pytest.mark.parametrize("is_varnode", [True, False])
 def test_reshape(is_varnode):
     if is_varnode:
         network = Network()
