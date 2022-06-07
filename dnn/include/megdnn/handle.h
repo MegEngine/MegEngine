@@ -26,6 +26,27 @@ public:
         ATLAS = 13,
         CAMBRICON = 12,
     };
+    static std::string handle_type_name(HandleType handle) {
+#define INSTANCE_HANDLE(name) \
+    case HandleType::name:    \
+        return #name
+
+        switch (handle) {
+            INSTANCE_HANDLE(NAIVE);
+            INSTANCE_HANDLE(FALLBACK);
+            INSTANCE_HANDLE(X86);
+            INSTANCE_HANDLE(ARM_COMMON);
+            INSTANCE_HANDLE(ARMV7);
+            INSTANCE_HANDLE(AARCH64);
+            INSTANCE_HANDLE(CUDA);
+            INSTANCE_HANDLE(ROCM);
+            INSTANCE_HANDLE(ATLAS);
+            INSTANCE_HANDLE(CAMBRICON);
+            default:
+                return "Unknown";
+        }
+#undef INSTANCE_HANDLE
+    }
 
     //! Device vendor
     enum class HandleVendorType : uint32_t {

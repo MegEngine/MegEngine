@@ -395,9 +395,19 @@ void RelayoutFormat::deduce_format(TensorFormat src, TensorFormat& dst) {
         (
                 handle()->type() != Handle::HandleType::NAIVE &&
                 handle()->type() != Handle::HandleType::X86)) {
-        megdnn_throw(
-                "Dump with Image2DPack4TensorFormat is not available on CUDA compnode, "
-                "try export CUDA_VISIBLE_DEVICES=\'\'");
+        if (Handle::HandleType::CUDA == handle()->type()) {
+            megdnn_throw(
+                    "Dump with Image2DPack4TensorFormat is not available on CUDA "
+                    "compnode, "
+                    "try export CUDA_VISIBLE_DEVICES=\'\'");
+
+        } else {
+            auto handle_number = handle()->type();
+            megdnn_throw(ssprintf(
+                    "Dump with Image2DPack4TensorFormat is not available on %s "
+                    "compnode, try export %cGB_USE_%cEGDNN_DBG=2 ",
+                    Handle::handle_type_name(handle_number).c_str(), 'M', 'M'));
+        }
     }
 #undef CHECK_SRC
 }
