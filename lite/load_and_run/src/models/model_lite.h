@@ -60,8 +60,8 @@ public:
     std::vector<uint8_t> get_model_data() override;
 
 private:
-    bool share_model_mem;
-    bool enable_layout_transform;
+    bool share_model_mem = false;
+    bool enable_layout_transform = false;
     std::string model_path;
 
     DataParser parser;
