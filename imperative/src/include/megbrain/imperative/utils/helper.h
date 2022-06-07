@@ -2,6 +2,7 @@
 
 #include <iomanip>
 #include <memory>
+#include <mutex>
 #include <sstream>
 
 #include "megbrain/utils/metahelper.h"
@@ -25,6 +26,12 @@ inline std::string quoted(std::string str) {
     ss << std::quoted(str);
     return ss.str();
 }
+
+#define MGE_CALL_ONCE(...)                                \
+    do {                                                  \
+        static std::once_flag _once_flag;                 \
+        std::call_once(_once_flag, [&] { __VA_ARGS__; }); \
+    } while (false)
 
 }  // namespace imperative
 
