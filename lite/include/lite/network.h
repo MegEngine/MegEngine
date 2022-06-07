@@ -118,6 +118,17 @@ struct LITE_API Config {
 };
 
 /*!
+ * \brief Extra Configuration for a network
+ *
+ * \param disable_configure_by_model_info disable the configuration dumped with model,
+ * if set true, all configuration in the model will not apply, users should configure
+ * the network.
+ */
+struct LITE_API ExtraConfig {
+    bool disable_configure_by_model_info = false;
+};
+
+/*!
  * \brief config the network input and output item
  *
  */
@@ -275,6 +286,12 @@ public:
     //! get static peak memory info showed by Graph visualization
     void get_static_memory_alloc_info(const std::string& log_dir = "logs/test") const;
 
+    /** @brief the extra configuration
+     *
+     * @param extra_config the extra configuration to set into the network
+     */
+    void extra_configure(const ExtraConfig& extra_config);
+
 public:
     friend class NetworkHelper;
 
@@ -288,6 +305,7 @@ private:
 private:
     bool m_loaded = false;
     Config m_config;
+    ExtraConfig m_extra_config;
     NetworkIO m_network_io;
     std::unique_ptr<NetworkImplBase> m_impl;
     std::string m_extra_info;

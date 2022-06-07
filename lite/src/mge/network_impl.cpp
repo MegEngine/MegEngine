@@ -31,7 +31,6 @@ using namespace mgb;
 LITE_DYN_TYPE_OBJ_FINAL_IMPL(NetworkImplDft);
 
 void NetworkImplDft::set_config(const Config& config) {
-    m_user_config = std::make_unique<Config>();
     *m_user_config = config;
     m_compnode_locator = to_compnode_locator(m_user_config->device_type);
     m_compnode_locator.device = config.device_id;
@@ -428,8 +427,11 @@ void NetworkImplDft::load_model(
 
     global_layout_transform();
 
+    //! some optimization option maybe invalid in some case, so here just
+    //! auto determine whether some options will apply.
     adapt_option_valid();
 
+    //! find how many compnode the model has, this should call before update_io
     cross_compnode_model_detect();
 
     //! update the IO of the network
@@ -496,7 +498,6 @@ void NetworkImplDft::finish() const {
 }
 
 void NetworkImplDft::set_io(const NetworkIO& network_io) {
-    m_network_io = std::make_unique<NetworkIOInner>();
     for (auto&& in : network_io.inputs) {
         m_network_io->inputs.emplace_back(in);
     }

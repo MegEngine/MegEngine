@@ -112,6 +112,13 @@ class TestNetwork(TestShuffleNet):
         network.load(model_path)
         self.do_forward(network)
 
+    def test_disable_model_config(self):
+        model_path = os.path.join(self.source_dir, "test_packed_model_rc4.lite")
+        network = LiteNetwork()
+        network.extra_configure(LiteExtraConfig(True))
+        network.load(model_path)
+        self.do_forward(network)
+
     def test_pack_cache_to_model(self):
         model_path = os.path.join(self.source_dir, "test_pack_cache_to_model.lite")
         network = LiteNetwork()

@@ -25,7 +25,7 @@ public:
     bool parse_model_info(
             Config& network_config, NetworkIO& network_io,
             std::unordered_map<std::string, LiteAny>& isolated_config_map,
-            std::string& extra_info) const;
+            std::string& extra_info, bool configure_valid) const;
 
     //! parse the model and decrypt the model
     std::shared_ptr<void> parse_model(size_t& model_length, const Config& config) const;

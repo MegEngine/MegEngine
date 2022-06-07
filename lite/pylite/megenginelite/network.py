@@ -134,6 +134,31 @@ class LiteConfig(Structure):
         return data.__repr__()
 
 
+class LiteExtraConfig(Structure):
+    """
+    Extra configuration when load and compile the graph
+
+    disable_configure_by_model_info: disable the configuration dumped with
+    model, if set true, all configuration in the model will not apply, users
+    should configure the network.
+    """
+
+    _fields_ = [
+        ("disable_configure_by_model_info", c_int),
+    ]
+
+    def __init__(self, disable_model_config=False):
+        self.disable_configure_by_model_info = disable_model_config
+
+    def __repr__(self):
+        data = {
+            "disable_configure_by_model_info": bool(
+                self.disable_configure_by_model_info
+            ),
+        }
+        return data.__repr__()
+
+
 class LiteIO(Structure):
     """
     config the network input and output item
@@ -365,6 +390,7 @@ class _NetworkAPI(_LiteCObjBase):
             "LITE_get_model_io_info_by_memory",
             [c_char_p, c_size_t, LiteConfig, POINTER(_LiteNetworkIO)],
         ),
+        ("LITE_extra_configure", [_Cnetwork, LiteExtraConfig]),
     ]
 
 
@@ -540,6 +566,12 @@ class LiteNetwork(object):
             self._api.LITE_get_all_output_name(self._network, None, names)
             ret_name = [names[i].decode("utf-8") for i in range(nr_output.value)]
             return ret_name
+
+    def extra_configure(self, extra_config):
+        """
+        Extra Configuration to the network.
+        """
+        self._api.LITE_extra_configure(self._network, extra_config)
 
     def share_weights_with(self, src_network):
         """

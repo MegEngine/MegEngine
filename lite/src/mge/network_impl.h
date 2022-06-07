@@ -29,7 +29,11 @@ class NetworkImplDft final : public Network::NetworkImplBase {
     LITE_DYN_TYPE_OBJ_FINAL_DECL;
 
 public:
-    NetworkImplDft() { m_load_config.comp_graph = mgb::ComputingGraph::make(); }
+    NetworkImplDft() {
+        m_load_config.comp_graph = mgb::ComputingGraph::make();
+        m_user_config = std::make_unique<Config>();
+        m_network_io = std::make_unique<NetworkIOInner>();
+    }
     using S = megdnn::param::ExecutionPolicy::Strategy;
     using Var = mgb::cg::SymbolVar;
     //! set the config of the network, include:

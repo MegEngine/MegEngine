@@ -114,6 +114,17 @@ typedef struct LiteConfig {
 LITE_API LiteConfig* default_config();
 
 /*!
+ * \brief Exetra Configuration for a network
+ *
+ * \param disable_configure_by_model_info disable the configuration dumped with model,
+ * if set true, all configuration in the model will not apply, users should configure
+ * the network.
+ */
+typedef struct LiteExtraConfig {
+    int disable_configure_by_model_info;
+} LiteExtraConfig;
+
+/*!
  * \brief config the network input and output item
  *
  */
@@ -598,6 +609,12 @@ LITE_API int LITE_get_model_io_info_by_path(
 LITE_API int LITE_get_model_io_info_by_memory(
         const void* model_mem, size_t size, const LiteConfig config,
         LiteNetworkIO* ios);
+
+/** @brief the extra configuration
+ *
+ * @param extra_config the extra configuration to set into the network
+ */
+LITE_API int LITE_extra_configure(LiteNetwork network, LiteExtraConfig extra_config);
 
 #ifdef __cplusplus
 }

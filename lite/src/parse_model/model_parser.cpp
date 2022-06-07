@@ -43,7 +43,7 @@ void ModelParser::parse_header() {
 bool ModelParser::parse_model_info(
         Config& network_config, NetworkIO& network_io,
         std::unordered_map<std::string, LiteAny>& isolated_config_map,
-        std::string& extra_info) const {
+        std::string& extra_info, bool configure_valid) const {
     //! no model info, no parse, direct return
     if (m_is_bare_model || !m_info) {
         return false;
@@ -78,7 +78,7 @@ bool ModelParser::parse_model_info(
         }
     }
     //! parse ModelInfo::algo_policy
-    if (m_info->algo_policy()) {
+    if (m_info->algo_policy() && configure_valid) {
         size_t cache_length = m_info->algo_policy()->size();
         const uint8_t* cache = m_info->algo_policy()->Data();
         if (m_info_cache_parse_func_name == "LITE_parse_cache") {
@@ -93,6 +93,10 @@ bool ModelParser::parse_model_info(
             } else {
                 LITE_THROW("opencl binary cache is not given");
             }
+        } else {
+            LITE_THROW(ssprintf(
+                    "model cache parse function of  %s is not defined.",
+                    m_info_cache_parse_func_name.c_str()));
         }
     }
     return true;

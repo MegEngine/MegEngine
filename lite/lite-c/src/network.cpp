@@ -181,6 +181,12 @@ InnerIO convert_to_inner_io(const lite::NetworkIO& network_io) {
     return innner_io;
 }
 
+lite::ExtraConfig convert_extra_config(const LiteExtraConfig& extra_config) {
+    lite::ExtraConfig ret;
+    ret.disable_configure_by_model_info = extra_config.disable_configure_by_model_info;
+    return ret;
+}
+
 int LITE_make_default_network(LiteNetwork* network) {
     LITE_CAPI_BEGIN();
     LITE_ASSERT(network, "The network pass to LITE api is null");
@@ -731,6 +737,14 @@ int LITE_get_model_io_info_by_memory(
             model_mem, size, convert_to_lite_config(config));
     return write_ios_from_cpp_io(
             cpp_ios, ios, reinterpret_cast<const void*>(model_mem));
+    LITE_CAPI_END();
+}
+
+LITE_API int LITE_extra_configure(LiteNetwork network, LiteExtraConfig extra_config) {
+    LITE_CAPI_BEGIN();
+    LITE_ASSERT(network, "The network pass to LITE api is null");
+    static_cast<lite::Network*>(network)->extra_configure(
+            convert_extra_config(extra_config));
     LITE_CAPI_END();
 }
 

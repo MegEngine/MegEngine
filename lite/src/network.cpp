@@ -80,14 +80,17 @@ void Network::prase_model(std::shared_ptr<void> model_data, size_t size) {
     ModelParser model_parser(model_data, size);
     //! parse the model info
     if (model_parser.parse_model_info(
-                m_config, m_network_io, separate_config_map, m_extra_info)) {
+                m_config, m_network_io, separate_config_map, m_extra_info,
+                !m_extra_config.disable_configure_by_model_info)) {
         if (m_config.backend == LiteBackend::LITE_DEFAULT &&
             m_impl->get_backend_type() != LiteBackend::LITE_DEFAULT) {
             m_impl.reset(try_call_func<NetworkImplDft, lite::Network::NetworkImplBase*>(
                     "parse_model"));
         }
-        m_impl->set_config(m_config);
-        m_impl->set_io(m_network_io);
+        if (!m_extra_config.disable_configure_by_model_info) {
+            m_impl->set_config(m_config);
+            m_impl->set_io(m_network_io);
+        }
     }
     //! decryption the model
     size_t model_length;
@@ -287,6 +290,18 @@ void Network::get_static_memory_alloc_info(const std::string& log_dir) const {
 #endif
     LITE_MARK_USED_VAR(log_dir);
     LITE_THROW("Doesn't support get_static_memory_alloc_info().Please check macro.");
+    LITE_ERROR_HANDLER_END
+}
+
+void Network::extra_configure(const ExtraConfig& extra_config) {
+    LITE_ERROR_HANDLER_BEGIN
+    if (!extra_config.disable_configure_by_model_info) {
+        LITE_ASSERT(
+                !m_loaded,
+                "disable_configure_by_model_info should be configured before model "
+                "loaded.");
+    }
+    m_extra_config = extra_config;
     LITE_ERROR_HANDLER_END
 }
 

@@ -7,6 +7,8 @@
 #include "lite/global.h"
 
 #include "megbrain/tensor.h"
+#include "megbrain/utils/infile_persistent_cache.h"
+#include "megbrain/utils/persistent_cache.h"
 #include "test_common.h"
 
 #include <string.h>
@@ -171,6 +173,29 @@ TEST(TestNetWorkOptions, test_cache) {
     network->forward();
     network->wait();
     compare_lite_tensor<float>(output_tensor, result_mgb);
+}
+
+TEST(TestNetWorkOptions, DisableModelInfo) {
+    //! clear the cache set by other test
+    mgb::PersistentCache::inst().set_impl(
+            std::make_shared<mgb::InMemoryPersistentCache>());
+    Config config;
+    auto tensor = get_input_data("./input_data.npy");
+    std::string model_path = "./test_pack_cache_to_model.lite";
+    std::string model_path2 = "./test_pack_cache_to_model.lite";
+    std::string input_name = "data";
+    std::shared_ptr<Network> network = std::make_shared<Network>(config);
+    network->extra_configure({true});
+    Runtime::set_cpu_inplace_mode(network);
+    network->load_model(model_path);
+    //! the fast-run cache will not configure, so it is not support dump
+    ASSERT_EQ(mgb::PersistentCache::inst().support_dump_cache(), false);
+    ASSERT_EQ(Runtime::is_cpu_inplace_mode(network), true);
+
+    std::shared_ptr<Network> network2 = std::make_shared<Network>(config);
+    network2->load_model(model_path2);
+    //! the fast-run cache is configured by the model information
+    ASSERT_EQ(mgb::PersistentCache::inst().support_dump_cache(), true);
 }
 
 TEST(TestNetWorkOptions, FastRunIgnorBatch) {
