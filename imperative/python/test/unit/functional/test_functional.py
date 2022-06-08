@@ -896,13 +896,17 @@ def test_conv3d_zero_stride_numpy_array():
     out.numpy()
 
 
-def test_conv1d():
+@pytest.mark.parametrize("bias", [True, False])
+def test_conv1d(bias):
     inp = tensor(np.ones((2, 2, 4), dtype=np.float32))
     weight = tensor(np.ones((3, 2, 2), dtype=np.float32))
-    out = F.conv1d(inp, weight, None, 2, 0, 1, 1)
+    bias = tensor(np.ones((1, 3, 1), dtype=np.float32)) if bias else None
+    out = F.conv1d(inp, weight, bias, 2, 0, 1, 1)
     np.testing.assert_equal(
         out.numpy(),
-        np.array(
+        np.array([[[5, 5], [5, 5], [5, 5]], [[5, 5], [5, 5], [5, 5]]], dtype=np.float32)
+        if bias is not None
+        else np.array(
             [[[4, 4], [4, 4], [4, 4]], [[4, 4], [4, 4], [4, 4]]], dtype=np.float32
         ),
     )
@@ -928,13 +932,15 @@ def test_batchnorm2d_autocast():
     np.testing.assert_allclose(out.numpy(), expected.numpy())
 
 
-def test_conv3d():
+@pytest.mark.parametrize("bias", [True, False])
+def test_conv3d(bias):
     inp = tensor(np.ones((2, 2, 4, 4, 4), dtype=np.float32))
     weight = tensor(np.ones((3, 2, 2, 2, 2), dtype=np.float32))
-    out = F.conv3d(inp, weight, None, 2, 0, 1, 1)
-    np.testing.assert_equal(
-        out.numpy(), np.ones((2, 3, 2, 2, 2), dtype=np.float32) * 16
-    )
+    bias = tensor(np.ones((1, 3, 1, 1, 1), dtype=np.float32)) if bias else None
+    out = F.conv3d(inp, weight, bias, 2, 0, 1, 1)
+    target = np.ones((2, 3, 2, 2, 2), dtype=np.float32) * 16
+    target = target + 1 if bias is not None else target
+    np.testing.assert_equal(out.numpy(), target)
 
 
 def test_condtake():

@@ -194,6 +194,8 @@ def conv1d(
     )
     (output,) = apply(op, inp, weight)
     if bias is not None:
+        if amp._enabled:
+            (bias,) = cast_tensors(bias)
         output += bias
     return output
 
@@ -260,6 +262,8 @@ def conv2d(
     )
     (output,) = apply(op, inp, weight)
     if bias is not None:
+        if amp._enabled:
+            (bias,) = cast_tensors(bias)
         output += bias
     return output
 

@@ -117,13 +117,13 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
     desc.comp_node = inputs[0].comp_node;
 
     TensorLayout src = inputs[0].layout;
+    TensorLayout filter = inputs[1].layout;
     size_t src_ndim = src.ndim;
-    if (src_ndim == 0) {
-        desc.layout = src;
+    if (src_ndim == 0 || filter.ndim == 0) {
+        desc.layout = TensorLayout{{}, src.dtype};
         return {dests, false};
     }
 
-    TensorLayout filter = inputs[1].layout;
     desc.layout = do_shape_infer(def, src_ndim, src, filter);
     return {dests, true};
 }
@@ -165,23 +165,24 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
     param.format = conv.format;
 
     // shape infer
-    TensorLayout shp({0}, inputs[0]->dtype());
-    shp.ndim = 0;
+    TensorLayout empty_shp({0}, inputs[0]->dtype());
+    empty_shp.ndim = 0;
 
     size_t sz = setup_algo<megdnn::ConvBiasForward>(
-            {inp_shapes[0], inp_shapes[1], shp, shp, oup_shapes[0]}, dnn_opr.op.get(),
-            0, false, false, cn, conv.policy(), false);
+            {inp_shapes[0], inp_shapes[1], empty_shp, empty_shp, oup_shapes[0]},
+            dnn_opr.op.get(), 0, false, false, cn, conv.policy(), false);
 
     // alloc memory
-    DeviceTensorND bias = BlobManager::inst()->alloc_workspace_with_defrag(cn, shp);
+    DeviceTensorND empty_bias =
+            BlobManager::inst()->alloc_workspace_with_defrag(cn, empty_shp);
 
     TensorLayout w_layout({sz}, dtype::Byte());
     auto dnn_wk = dnn_opr.create_workspace(w_layout);
 
     // exeucte
     dnn_opr.op->exec(
-            inp_tensornds[0], inp_tensornds[1], bias.as_megdnn(), bias.as_megdnn(),
-            out.as_megdnn(), nullptr, dnn_wk);
+            inp_tensornds[0], inp_tensornds[1], empty_bias.as_megdnn(),
+            empty_bias.as_megdnn(), out.as_megdnn(), nullptr, dnn_wk);
     return {Tensor::make(out)};
 }
 
@@ -333,18 +334,15 @@ TensorLayout convbwd_do_shape_infer(
 
 std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
         const OpDef& def, const SmallVector<LogicalTensorDesc>& inputs) {
-    auto&& conv = static_cast<const ConvolutionBackwardData&>(def);
-
     SmallVector<LogicalTensorDesc> dests(1);
     auto&& desc = dests[0];
     desc.comp_node = inputs[0].comp_node;
 
     TensorLayout filter = inputs[0].layout;
     TensorLayout diff = inputs[1].layout;
-    size_t filter_ndim = filter.ndim;
     size_t diff_ndim = diff.ndim;
-    if (diff_ndim == 0) {
-        desc.layout = diff;
+    if (diff_ndim == 0 || filter.ndim == 0) {
+        desc.layout = TensorLayout{{}, diff.dtype};
         return {dests, false};
     }
 
@@ -506,12 +504,13 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
     desc.comp_node = inputs[0].comp_node;
 
     TensorLayout src = inputs[0].layout;
+    TensorLayout filter = inputs[1].layout;
     size_t src_ndim = src.ndim;
-    if (src_ndim == 0) {
+    if (src_ndim == 0 || filter.ndim == 0) {
+        desc.layout = TensorLayout{{}, src.dtype};
         return {dests, false};
     }
 
-    TensorLayout filter = inputs[1].layout;
     desc.layout = do_shape_infer(def, src_ndim, src, filter);
     return {dests, true};
 }
@@ -549,8 +548,11 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
     DeviceTensorND out =
             BlobManager::inst()->alloc_workspace_with_defrag(cn, out_layout);
 
-    TensorLayout w_layout({sz}, dtype::Byte());
-    auto dnn_wk = dnn_opr.create_workspace(w_layout);
+    megdnn::Workspace dnn_wk;
+    if (sz != 0) {
+        TensorLayout w_layout({sz}, dtype::Byte());
+        dnn_wk = dnn_opr.create_workspace(w_layout);
+    }
 
     // exeucte
     dnn_opr.op->exec(inp_tensornds[0], inp_tensornds[1], out.as_megdnn(), dnn_wk);
@@ -581,7 +583,7 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
     auto&& diff = inputs[1];
     auto& cn = weight.comp_node;
 
-    if (weight.layout.ndim == 0) {
+    if (weight.layout.ndim == 0 || diff.layout.ndim == 0) {
         return {{{TensorLayout{weight.layout.dtype}, cn, {}}}, false};
     }
 
@@ -616,9 +618,8 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
             cn, op_def.policy(), false);
     megdnn::Workspace dnn_wk;
     if (wk_size != 0) {
-        auto wk = Blob::make(cn, wk_size);
-        dnn_wk.raw_ptr = wk->storage().get();
-        dnn_wk.size = wk_size;
+        TensorLayout w_layout({wk_size}, dtype::Byte());
+        dnn_wk = caller.create_workspace(w_layout);
     }
 
     dnn_opr->exec(weight, diff, oup.as_megdnn(), dnn_wk);
