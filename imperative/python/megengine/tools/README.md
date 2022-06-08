@@ -75,16 +75,6 @@ python3 -m megengine.tools.draw_graph -i dump.json -o dump.dot
 dot -Tpng dump.dot -o dump.png
 ```
 
-### dump_with_testcase_mge
-
-将待测数据提前注入模型文件，并在本地运行得到期望结果，可与实际运行的结果进行比对以检查是否出错。
-
-输入: 一个 MegEngine 模型文件，可选一些 npy 文件作为模型输入(也可以随机生成输入，如下面的命令示例)
-
-输出: 一个带输入的 MegEngine 模型文件
-
-执行命令: `python3 -m megengine.tools.dump_with_testcase_mge model.mge -d "#rand(0,255,14,2)"`
-
 ### graph_info_analyze
 
 将图和内存信息的 json 文件的文件夹 logs 转换为 TensorBoard 的输入文件夹 logs_p。以便 TensorBoard 对图结构以及内存信息进行可视化。
