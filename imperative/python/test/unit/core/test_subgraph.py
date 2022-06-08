@@ -1,4 +1,8 @@
 import functools
+import os
+import platform
+import subprocess
+import sys
 
 import numpy as np
 import pytest
@@ -152,3 +156,56 @@ def test_subgraph_jit_backward():
         y1 = x1 * x1
         y2 = mul(x2, x2)
         gm.backward(y2)
+
+
+@pytest.mark.skipif(
+    platform.system() != "Linux", reason="jit fusion is only available on Linux",
+)
+def test_subgraph_jit():
+    prog = """
+import megengine
+import numpy as np
+from megengine.core.tensor.utils import subgraph_fn
+
+# 3 * 4 * 5 > MEGDNN_MAX_NDIM
+x_np = np.random.rand(3, 4, 5).astype("float32")
+x1 = megengine.Tensor(x_np)
+x2 = megengine.Tensor(x_np)
+
+@subgraph_fn(
+    "Mul",
+    dtype=x1.dtype,
+    device=x1.device,
+    nr_inputs=2,
+    gopt_level=None,
+    jit_fusion=True,
+    custom_grad=True,
+)
+def mul(inputs, f, c):
+    x, y = inputs[0:2]
+    z = f("*", x, y)
+    (dz,) = yield (z,)
+    dx = f("*", dz, y)
+    dy = f("*", dz, x)
+    yield (dx, dy)
+
+y, = mul(x1, x2)
+
+# ensure execution
+y.numpy()
+"""
+    env = dict(os.environ)
+    if "PATH" in env:
+        # remove nvcc from environ["PATH"]
+        path = env["PATH"]
+        paths = path.split(os.pathsep)
+        paths = [
+            path
+            for path in paths
+            if not (os.path.isdir(path) and "nvcc" in os.listdir(path))
+        ]
+        path = os.pathsep.join(paths)
+        env["PATH"] = path
+    # previous program may be stored in persistent cache
+    env["MGE_FASTRUN_CACHE_TYPE"] = "MEMORY"
+    subprocess.check_call([sys.executable, "-c", prog], env=env)

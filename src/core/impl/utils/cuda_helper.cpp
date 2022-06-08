@@ -17,6 +17,8 @@ using namespace mgb;
 #include <unistd.h>
 #endif
 
+namespace {
+
 #ifndef PATH_MAX
 #define PATH_MAX 4096
 #endif
@@ -32,6 +34,7 @@ using namespace mgb;
 #define PATH_SPLITER   '\\'
 #define ENV_PATH       "Path"
 #define NVCC_EXE       "nvcc.exe"
+
 void* dlopen(const char* file, int) {
     return static_cast<void*>(LoadLibrary(file));
 }
@@ -108,14 +111,14 @@ std::string find_file_in_envs_with_intmd(
 std::string get_nvcc_root_path() {
     auto nvcc_root_path = find_file_in_envs_with_intmd({ENV_PATH}, NVCC_EXE);
     if (nvcc_root_path.empty()) {
-        mgb_throw(
-                MegBrainError,
-                "nvcc not found. Add your nvcc to your environment Path");
+        return {};
     } else {
         auto idx = nvcc_root_path.rfind(PATH_SPLITER);
         return nvcc_root_path.substr(0, idx + 1);
     }
 }
+
+}  // namespace
 
 std::vector<std::string> mgb::get_cuda_include_path() {
 #if MGB_CUDA
@@ -131,13 +134,15 @@ std::vector<std::string> mgb::get_cuda_include_path() {
 
     // 2. use nvcc path
     auto nvcc_path = get_nvcc_root_path();
-    auto cudart_header_path = nvcc_path + ".." + PATH_SPLITER + "include" +
-                              PATH_SPLITER + "cuda_runtime.h";
-    //! double check path_to_nvcc/../include/cuda_runtime.h exists
-    auto ret = check_file_exist(cudart_header_path.c_str(), F_OK);
-    if (ret == 0) {
-        paths.emplace_back(nvcc_path + "..");
-        paths.emplace_back(nvcc_path + ".." + PATH_SPLITER + "include");
+    if (!nvcc_path.empty()) {
+        auto cudart_header_path = nvcc_path + ".." + PATH_SPLITER + "include" +
+                                  PATH_SPLITER + "cuda_runtime.h";
+        //! double check path_to_nvcc/../include/cuda_runtime.h exists
+        auto ret = check_file_exist(cudart_header_path.c_str(), F_OK);
+        if (ret == 0) {
+            paths.emplace_back(nvcc_path + "..");
+            paths.emplace_back(nvcc_path + ".." + PATH_SPLITER + "include");
+        }
     }
 
     // 3. use libcudart.so library path
