@@ -634,6 +634,28 @@ TEST(TestOprBlas, Dot) {
             .run({TensorShape{0}, TensorShape{0}});
 }
 
+TEST(TestOprBlas, Cross) {
+    using Checker = AutoOprChecker<2, 1>;
+    auto nopr = megdnn_naive_handle()->create_operator<megdnn::Cross>();
+    nopr->param() = {-1, -1, -1};
+
+    auto make_graph = [&](const Checker::SymInpArray& inputs) -> Checker::SymOutArray {
+        return {opr::Cross::make(inputs[0], inputs[1], {-1, -1, -1})};
+    };
+
+    auto fwd = [&](Checker::NumOutArray& dest, Checker::NumInpArray inp) {
+        auto &&a = *inp[0], &&b = *inp[1];
+        dest[0].resize(a.shape());
+        nopr->exec(a.as_megdnn(), b.as_megdnn(), dest[0].as_megdnn(), {});
+    };
+
+    Checker(make_graph, fwd)
+            .run({TensorShape{3}, TensorShape{3}})
+            .run({TensorShape{6, 3}, TensorShape{6, 3}})
+            .run({TensorShape{2, 4, 3}, TensorShape{2, 4, 3}})
+            .run({TensorShape{2, 5, 2, 3}, TensorShape{2, 5, 2, 3}});
+}
+
 TEST(TestOprBlas, TransMatMul) {
     run_trans_inp_test<float, float>();
 }

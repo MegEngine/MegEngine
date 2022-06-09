@@ -122,6 +122,19 @@ public:
             const OperatorNodeConfig& config = {});
 };
 
+MGB_DEFINE_OPR_CLASS(Cross, intl::MegDNNOprWrapperFwd<megdnn::Cross>) // {
+public:
+    MGE_WIN_DECLSPEC_FUC Cross(
+            VarNode* A, VarNode* B, const Param& param,
+            const OperatorNodeConfig& config);
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
+            SymbolVar A, SymbolVar B, const Param& param,
+            const OperatorNodeConfig& config = {});
+
+private:
+    void add_input_layout_constraint() override;
+};
+
 }  // namespace opr
 }  // namespace mgb
 

@@ -678,6 +678,14 @@ CorrelationInst
     .def_readwrite("pad_size", &Correlation::pad_size)
     .def_readwrite("is_multiply", &Correlation::is_multiply);
 
+py::class_<Cross, std::shared_ptr<Cross>, OpDef> CrossInst(m, "Cross");
+
+CrossInst
+    .def(py::init<int32_t, int32_t, int32_t, std::string>(), py::arg("axisa") = -1, py::arg("axisb") = -1, py::arg("axisc") = -1, py::arg("scope") = {})
+    .def_readwrite("axisa", &Cross::axisa)
+    .def_readwrite("axisb", &Cross::axisb)
+    .def_readwrite("axisc", &Cross::axisc);
+
 py::class_<Cumsum, std::shared_ptr<Cumsum>, OpDef> CumsumInst(m, "Cumsum");
 
 CumsumInst

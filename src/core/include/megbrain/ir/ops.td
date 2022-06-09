@@ -548,7 +548,6 @@ def Dropout: MgbHashableOp<"Dropout", [DropoutParam]> {
       );
   }];
   let cmpFunction = [{return $0.handle == $1.handle && $0.drop_prob == $1.drop_prob;}];
-
 }
 def MeshGrid: MgbHashableOp<"MeshGrid"> {
   let extraArguments = (ins
@@ -639,4 +638,6 @@ def MultiHeadAttn: MgbHashableOp<"MultiHeadAttn", [MultiHeadAttnParam]> {
 
 }
 
+
+def Cross: MgbHashableOp<"Cross", [CrossParam]>;
 #endif // MGB_OPS

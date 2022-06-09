@@ -48,4 +48,9 @@ decl_opr('SVD',
          desc='Computes the singular value decompositions of matrices. '
               'The input must has shape ``[..., M, N]``.')
 
+decl_opr('Cross',
+         inputs=['A', 'B'],
+         params='Cross',
+         desc='computes the cross product of two (arrays of) vectors.')
+
 # vim: ft=python

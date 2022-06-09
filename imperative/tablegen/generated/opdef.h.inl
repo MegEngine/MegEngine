@@ -567,6 +567,21 @@ public:
     }
 };
 
+class Cross : public OpDefImplBase<Cross> {
+    MGB_DYN_TYPE_OBJ_FINAL_DECL;
+
+public:
+    int32_t axisa = -1;
+    int32_t axisb = -1;
+    int32_t axisc = -1;
+    Cross() = default;
+    Cross(int32_t axisa_, int32_t axisb_, int32_t axisc_, std::string scope_ = {}): axisa(axisa_), axisb(axisb_), axisc(axisc_) { set_scope(scope_); }
+    Cross(::megdnn::param::Cross packed_param_0): axisa(packed_param_0.axisa), axisb(packed_param_0.axisb), axisc(packed_param_0.axisc) {}
+    ::megdnn::param::Cross param() const {
+        return {axisa, axisb, axisc};
+    }
+};
+
 class Cumsum : public OpDefImplBase<Cumsum> {
     MGB_DYN_TYPE_OBJ_FINAL_DECL;
 

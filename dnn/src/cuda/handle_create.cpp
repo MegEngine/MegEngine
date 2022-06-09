@@ -16,6 +16,7 @@
 #include "src/cuda/convolution3d/opr_impl.h"
 #include "src/cuda/convpooling/opr_impl.h"
 #include "src/cuda/correlation/opr_impl.h"
+#include "src/cuda/cross/opr_impl.h"
 #include "src/cuda/cumsum/opr_impl.h"
 #include "src/cuda/cvt_color/opr_impl.h"
 #include "src/cuda/dct/opr_impl.h"
@@ -234,6 +235,7 @@ MEGDNN_SPECIALIZE_CREATE_OPERATOR(RegionRestrictedConvolutionBackwardData);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(RegionRestrictedConvolutionBackwardFilter);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(MultiHeadAttnForward);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(MultiHeadAttnBackward);
+MEGDNN_SPECIALIZE_CREATE_OPERATOR(Cross);
 
 template <typename Opr>
 std::unique_ptr<Opr> HandleImpl::create_operator() {

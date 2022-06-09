@@ -7274,6 +7274,151 @@ void _init_py_Correlation(py::module m) {
     mgb_assert(PyOp(OpDef)::ctype2pytype.emplace(Correlation::typeinfo(), &py_type).second);
 }
 
+PyOpDefBegin(Cross) // {
+    static PyGetSetDef py_getsetters[];
+    static PyMethodDef tp_methods[];
+    
+    static PyObject* getstate(PyObject* self, PyObject*) {
+        auto& opdef = reinterpret_cast<PyOp(Cross)*>(self)->inst();
+        static_cast<void>(opdef);
+        std::unordered_map<std::string, py::object> state {
+            
+            {"axisa", serialization<decltype(opdef.axisa)>::dump(opdef.axisa)},
+            {"axisb", serialization<decltype(opdef.axisb)>::dump(opdef.axisb)},
+            {"axisc", serialization<decltype(opdef.axisc)>::dump(opdef.axisc)}
+        };
+        return py::cast(state).release().ptr();
+    }
+    static PyObject* setstate(PyObject* self, PyObject* args) {
+        PyObject* dict = PyTuple_GetItem(args, 0);
+        if (!dict) return NULL;
+        auto state = py::cast<std::unordered_map<std::string, py::object>>(dict);
+        auto& opdef = reinterpret_cast<PyOp(Cross)*>(self)->inst();
+        static_cast<void>(opdef);
+        
+        {
+        auto&& iter = state.find("axisa");
+        if (iter != state.end()) {
+            opdef.axisa = serialization<decltype(opdef.axisa)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("axisb");
+        if (iter != state.end()) {
+            opdef.axisb = serialization<decltype(opdef.axisb)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("axisc");
+        if (iter != state.end()) {
+            opdef.axisc = serialization<decltype(opdef.axisc)>::load(iter->second);
+        }
+        }
+        Py_RETURN_NONE;
+    }
+    static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
+// };
+PyOpDefEnd(Cross)
+
+int PyOp(Cross)::py_init(PyObject *self, PyObject *args, PyObject *kwds) {
+    static const char* kwlist[] = {"axisa", "axisb", "axisc", "scope", NULL};
+    PyObject *axisa = NULL, *axisb = NULL, *axisc = NULL, *scope = NULL;
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|OOOO", const_cast<char**>(kwlist), &axisa, &axisb, &axisc, &scope))
+    return -1;
+
+    if (axisa) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(Cross)*>(self)->inst().axisa =
+                    py::cast<decltype(Cross::axisa)>(py::handle(axisa));
+        } CATCH_ALL(-1)
+    }
+
+    if (axisb) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(Cross)*>(self)->inst().axisb =
+                    py::cast<decltype(Cross::axisb)>(py::handle(axisb));
+        } CATCH_ALL(-1)
+    }
+
+    if (axisc) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(Cross)*>(self)->inst().axisc =
+                    py::cast<decltype(Cross::axisc)>(py::handle(axisc));
+        } CATCH_ALL(-1)
+    }
+
+    if (scope) {
+        try {
+            reinterpret_cast<PyOp(OpDef)*>(self)->op
+                ->set_scope(py::cast<std::string>(py::handle(scope)));
+        } CATCH_ALL(-1)
+    }
+
+    return 0;
+}
+
+PyGetSetDef PyOp(Cross)::py_getsetters[] = {
+    {const_cast<char*>("axisa"), py_get_generic(Cross, axisa), py_set_generic(Cross, axisa), const_cast<char*>("axisa"), NULL},
+    {const_cast<char*>("axisb"), py_get_generic(Cross, axisb), py_set_generic(Cross, axisb), const_cast<char*>("axisb"), NULL},
+    {const_cast<char*>("axisc"), py_get_generic(Cross, axisc), py_set_generic(Cross, axisc), const_cast<char*>("axisc"), NULL},
+    {NULL}  /* Sentinel */
+};
+
+    PyMethodDef PyOp(Cross)::tp_methods[] = {
+        {const_cast<char*>("__getstate__"), PyOp(Cross)::getstate, METH_NOARGS, "Cross getstate"},
+    {const_cast<char*>("__setstate__"), PyOp(Cross)::setstate, METH_VARARGS, "Cross setstate"},
+        {NULL}  /* Sentinel */
+    };
+    
+PyObject *PyOp(Cross)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(Cross)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(Cross)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(Cross)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, axisa: int = ..., axisb: int = ..., axisc: int = ...) -> None\n"
+};
+
+void _init_py_Cross(py::module m) {
+    using py_op = PyOp(Cross);
+    auto& py_type = PyOpType(Cross);
+    py_type = {PyVarObject_HEAD_INIT(NULL, 0)};
+    py_type.tp_name = "megengine.core._imperative_rt.ops.Cross";
+    py_type.tp_basicsize = sizeof(PyOp(Cross));
+    py_type.tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE;
+    py_type.tp_doc = "Cross";
+    py_type.tp_base = &PyOpType(OpDef);
+    py_type.tp_dealloc = py_dealloc_generic<py_op>;
+    py_type.tp_new = py_new_generic<py_op>;
+    py_type.tp_init = py_op::py_init;
+    py_type.tp_methods = py_op::tp_methods;
+    py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(Cross), &PyOp(Cross)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
+    mgb_assert(PyType_Ready(&py_type) >= 0);
+    
+    PyType_Modified(&py_type);
+    m.add_object("Cross", reinterpret_cast<PyObject*>(&py_type));
+    mgb_assert(PyOp(OpDef)::ctype2pytype.emplace(Cross::typeinfo(), &py_type).second);
+}
+
 PyOpDefBegin(Cumsum) // {
     static PyGetSetDef py_getsetters[];
     static PyMethodDef tp_methods[];
@@ -23420,6 +23565,7 @@ void _init_py_WarpPerspectiveBackwardMat(py::module m) {
     _init_py_ConvolutionBackwardData(m); \
     _init_py_Copy(m); \
     _init_py_Correlation(m); \
+    _init_py_Cross(m); \
     _init_py_Cumsum(m); \
     _init_py_CvtColor(m); \
     _init_py_DeformableConv(m); \

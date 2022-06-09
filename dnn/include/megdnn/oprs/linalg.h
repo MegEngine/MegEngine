@@ -208,6 +208,31 @@ protected:
 
 using SVD = SVDForward;
 
+//! return the cross product of two (arrays of) vectors.
+class Cross : public OperatorBase {
+    DEF_OPR_IMPL(Cross, OperatorBase, 2, 1);
+    DEF_OPR_PARAM(Cross);
+
+public:
+    /**
+     * \see https://numpy.org/doc/stable/reference/generated/numpy.cross.html
+     */
+    virtual void exec(
+            _megdnn_tensor_in A, _megdnn_tensor_in B, _megdnn_tensor_out C,
+            _megdnn_workspace) = 0;
+    MGE_WIN_DECLSPEC_FUC void deduce_layout(
+            const TensorLayout& A, const TensorLayout& B, TensorLayout& C);
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& A, const TensorLayout& B, const TensorLayout& C) = 0;
+    void get_ABC(
+            const TensorShape& shape, size_t& A, size_t& B, size_t& C, int32_t axis);
+
+protected:
+    void check_exec(
+            const TensorLayout& A, const TensorLayout& B, const TensorLayout& C,
+            size_t workspace_in_bytes);
+};
+
 }  // namespace megdnn
 
 #include "megdnn/internal/opr_header_epilogue.h"

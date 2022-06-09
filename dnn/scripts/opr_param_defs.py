@@ -803,6 +803,23 @@ pdef('Sleep').add_fields('float32', Doc('time', 'time to sleep in seconds'), 0)
          'negative value to a lower diagonal.'),
      0))
 
+(pdef('Cross').
+ add_fields(
+     'int32',
+     Doc('axisa', 'axis of a that defines the vector(s). By default, the last axis.'),
+         '-1').
+ add_fields(
+     'int32',
+     Doc('axisb', 'axis of b that defines the vector(s). By default, the last axis.'),
+         '-1').
+ add_fields(
+     'int32',
+     Doc('axisc', 'axis of c containing the cross product vector(s). Ignored if both '
+         'input vectors have dimension 2, as the return is scalar. By default, the '
+         'last axis.'),
+         '-1')
+)
+
 (pdef('UniformRNG', version=0, is_legacy=True).
  add_fields('uint64', 'seed', 0))
 

@@ -224,7 +224,8 @@ private:
     cb(GroupNormBackward) \
     cb(MaskedFill) \
     cb(MultiHeadAttnForward)\
-    cb(MultiHeadAttnBackward)
+    cb(MultiHeadAttnBackward) \
+    cb(Cross)
 // clang-format on
 
 /*!

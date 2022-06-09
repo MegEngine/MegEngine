@@ -13,12 +13,13 @@ from ..core.tensor.utils import _normalize_axis
 from ..tensor import Tensor
 from ..utils.deprecation import deprecated_kwargs_default
 from .elemwise import _elemwise_multi_type, clip
-from .tensor import broadcast_to, expand_dims, squeeze
+from .tensor import broadcast_to, concat, expand_dims, squeeze, zeros
 
 __all__ = [
     "argmax",
     "argmin",
     "argsort",
+    "cross",
     "dot",
     "isinf",
     "isnan",
@@ -717,6 +718,50 @@ def matinv(inp: Tensor) -> Tensor:
     """
 
     (result,) = apply(builtin.MatrixInverse(), inp)
+    return result
+
+
+def cross(
+    a: Tensor,
+    b: Tensor,
+    axisa: int = -1,
+    axisb: int = -1,
+    axisc: int = -1,
+    axis: int = None,
+) -> Tensor:
+    r"""Return the cross product of two (arrays of) vectors.
+
+    The cross product of ``a`` and ``b`` in `R^3` is a vector perpendicular to both ``a`` and ``b``. If ``a`` and ``b`` are arrays of vectors, the vectors are defined by the last axis of ``a`` and ``b`` by default, and these axes can have dimensions 2 or 3. 
+    Where the dimension of either ``a`` or ``b`` is 2, the third component of the input vector is assumed to be zero and the cross product calculated accordingly.
+
+    Args:
+        a: components of the first vector(s).
+        b: components of the first vector(s).
+        axisa: axis of a that defines the vector(s). By default, the last axis.
+        axisb: axis of b that defines the vector(s). By default, the last axis.
+        axisc: axis of c containing the cross product vector(s). By default, the last axis.
+        axis: if defined, the axis of a, b and c that defines the vector(s) and cross product(s). Overrides axisa, axisb and axisc.
+
+    Returns:
+        vector cross product(s).
+
+    Examples:
+        >>> a = Tensor([1.0, 2.0, 3.0])
+        >>> b = Tensor([4.0, 5.0, 6.0])
+        >>> out = F.cross(a, b)
+        >>> out.numpy()
+        array([-3.,  6., -3.], dtype=float32)
+    """
+    if axis is not None:
+        axisa = axisb = axisc = axis
+
+    if a.ndim == 1 and len(a) == 2:
+        a = Tensor(np.append(a, 0))
+    if b.ndim == 1 and len(b) == 2:
+        b = Tensor(np.append(b, 0))
+
+    op = builtin.Cross(axisa, axisb, axisc)
+    (result,) = apply(op, a, b)
     return result
 
 

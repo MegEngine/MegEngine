@@ -1680,3 +1680,49 @@ def test_softmax():
     actual = F.softmax(data)
 
     np.testing.assert_allclose(actual.numpy(), desired, rtol=1e-5)
+
+
+def test_cross():
+    shape1 = 3
+    shape2 = 3
+    shape3 = (4, 2, 3)
+    shape4 = (4, 2, 3)
+    data1 = np.random.random(shape1).astype("float32")
+    data2 = np.random.random(shape2).astype("float32")
+    data3 = np.random.random(shape3).astype("float32")
+    data4 = np.random.random(shape4).astype("float32")
+
+    cases = [
+        {"input": [data1, data2]},
+        {"input": [data3, data4]},
+    ]
+    opr_test(
+        cases,
+        F.cross,
+        compare_fn=lambda x, y: np.testing.assert_allclose(x, y, rtol=1e-4),
+        ref_fn=np.cross,
+    )
+
+    data5 = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
+    data6 = np.array([[7, 8, 9], [4, 5, 6], [1, 2, 3]])
+    res = F.cross(mge.tensor(data5), mge.tensor(data6), axisa=0, axisb=0)
+    dst = np.cross(data5, data6, axisa=0, axisb=0)
+    np.testing.assert_allclose(res.numpy(), dst, rtol=1e-4)
+
+    data7 = np.array([1, 2, 3])
+    data8 = np.array([4, 5, 6])
+    res = F.cross(mge.tensor(data7), mge.tensor(data8), axisa=0, axisb=0)
+    dst = np.cross(data7, data8, axisa=0, axisb=0)
+    np.testing.assert_allclose(res.numpy(), dst, rtol=1e-4)
+
+    data9 = np.array([[6, 7, 4], [15, 2, 8], [9, 40, 39]])
+    data10 = np.array([[5, 8, 9], [14, 21, 17], [10, 3, 47]])
+    res = F.cross(mge.tensor(data9), mge.tensor(data10), axisa=1, axisb=-1)
+    dst = np.cross(data9, data10, axisa=1, axisb=-1)
+    np.testing.assert_allclose(res.numpy(), dst, rtol=1e-4)
+
+    data11 = np.array([1, 2])
+    data12 = np.array([4, 5, 6])
+    res = F.cross(mge.tensor(data11), mge.tensor(data12))
+    dst = np.cross(data11, data12)
+    np.testing.assert_allclose(res.numpy(), dst, rtol=1e-4)

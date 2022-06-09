@@ -736,4 +736,29 @@ SymbolVarArray SVD::make(
     return ret;
 }
 
+/* ================= Cross =================  */
+
+MGB_DYN_TYPE_OBJ_FINAL_IMPL(Cross);
+MEGDNN_OPR_INIT2(Cross, "cross")
+
+void Cross::add_input_layout_constraint() {
+    input(0)->add_layout_constraint_contiguous();
+    input(1)->add_layout_constraint_contiguous();
+}
+
+#if MGB_ENABLE_GRAD
+MGB_IMPL_OPR_GRAD(Cross) {
+    SymbolVar grad, i0{opr.input(0)}, i1{opr.input(1)}, og{out_grad[0]};
+    if (wrt_idx == 0) {
+        grad = Cross::make(
+                i1, og, {opr.param().axisb, opr.param().axisc, opr.param().axisa});
+    } else {
+        mgb_assert(wrt_idx == 1);
+        grad = Cross::make(
+                og, i0, {opr.param().axisc, opr.param().axisa, opr.param().axisb});
+    }
+    return grad.node();
+}
+#endif
+
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

@@ -92,7 +92,7 @@ MGB_SEREG_OPR_AND_REG_SHALLOW_COPY(BatchedMatrixMulV2, 2, opr_shallow_copy_matmu
 MGB_SEREG_OPR(Dot, 2);
 MGB_SEREG_OPR(MatrixInverse, 1);
 MGB_SEREG_OPR(SVD, 1);
-
+MGB_SEREG_OPR(Cross, 2);
 }  // namespace opr
 
 }  // namespace mgb

@@ -2303,6 +2303,49 @@ OP_TRAIT_REG(Correlation, Correlation)
     .props(Correlation_props_impl)
     .make_name(Correlation_make_name_impl);
 
+MGB_DYN_TYPE_OBJ_FINAL_IMPL(Cross);
+
+namespace {
+size_t Cross_hash_impl(const OpDef& def_) {
+    auto&& op_ = def_.cast_final_safe<Cross>();
+    static_cast<void>(op_);
+    size_t val = mgb::hash(op_.dyn_typeinfo());
+    val = mgb::hash_pair_combine(val, mgb::hash(op_.axisa));
+    val = mgb::hash_pair_combine(val, mgb::hash(op_.axisb));
+    val = mgb::hash_pair_combine(val, mgb::hash(op_.axisc));
+    return val;
+}
+bool Cross_is_same_st_impl(const OpDef& lhs_, const OpDef& rhs_) {
+    auto &&a_ = lhs_.cast_final_safe<Cross>(),
+         &&b_ = rhs_.cast_final_safe<Cross>();
+    static_cast<void>(a_);
+    static_cast<void>(b_);
+    if (a_.axisa != b_.axisa) return false;
+    if (a_.axisb != b_.axisb) return false;
+    if (a_.axisc != b_.axisc) return false;
+    return true;
+}
+std::vector<std::pair<const char*, std::string>> Cross_props_impl(const OpDef& def_) {
+    auto&& op_ = def_.cast_final_safe<Cross>();
+    static_cast<void>(op_);
+    std::vector<std::pair<const char*, std::string>> props_;
+    props_.emplace_back("axisa", std::to_string(op_.axisa));
+    props_.emplace_back("axisb", std::to_string(op_.axisb));
+    props_.emplace_back("axisc", std::to_string(op_.axisc));
+    return props_;
+}
+std::string Cross_make_name_impl(const OpDef& def_) {
+    auto&& op_ = def_.cast_final_safe<Cross>();
+    static_cast<void>(op_);
+    return "Cross";
+}
+} // anonymous namespace
+OP_TRAIT_REG(Cross, Cross)
+    .hash(Cross_hash_impl)
+    .is_same_st(Cross_is_same_st_impl)
+    .props(Cross_props_impl)
+    .make_name(Cross_make_name_impl);
+
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(Cumsum);
 
 namespace {
