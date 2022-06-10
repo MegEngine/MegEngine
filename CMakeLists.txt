@@ -88,6 +88,7 @@ option(MGE_ENABLE_LOGGING "Build with logging" ON)
 option(MGE_DEBUG_UTIL "Enable debug utility" ON)
 option(MGE_ENABLE_EXCEPTIONS "Build with exceptions" ON)
 option(MGE_WITH_TEST "Enable test for MegEngine." OFF)
+option(MGE_WITH_BENCHMARK "Enable DNN BENCHMARK" OFF)
 option(MGE_WITH_DISTRIBUTED "Build with distributed support" ON)
 option(MGE_BUILD_IMPERATIVE_RT "Build _imperative_rt Python Module " ON)
 option(MGE_INFERENCE_ONLY "Build inference only library." OFF)
@@ -1121,6 +1122,11 @@ endif()
 if(MGE_WITH_TEST)
   # use intra-op multi threads
   set(MEGDNN_ENABLE_MULTI_THREADS 1)
+endif()
+
+# benchmark
+if(MGE_WITH_BENCHMARK)
+  set(MEGDNN_WITH_BENCHMARK ${MGE_WITH_BENCHMARK})
 endif()
 
 # CUDA

@@ -257,4 +257,8 @@
 #define MGE_WIN_DECLSPEC_DATA
 #endif
 
+#ifndef MEGDNN_WITH_BENCHMARK
+#define MEGDNN_WITH_BENCHMARK 0
+#endif
+
 #endif  // _HEADER_MGB_BUILD_CONFIG
