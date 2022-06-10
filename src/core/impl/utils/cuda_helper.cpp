@@ -7,8 +7,6 @@
 #include <sstream>
 #include <string>
 
-using namespace mgb;
-
 #ifdef WIN32
 #include <io.h>
 #include <windows.h>
@@ -16,6 +14,8 @@ using namespace mgb;
 #include <dlfcn.h>
 #include <unistd.h>
 #endif
+
+#if MGB_CUDA
 
 namespace {
 
@@ -49,11 +49,6 @@ int dlinfo(void* handle, int request, char* path) {
 void* dlerror() {
     const char* errmsg = "dlerror not aviable in windows";
     return const_cast<char*>(errmsg);
-}
-
-void* dlsym(void* handle, char* name) {
-    FARPROC symbol = GetProcAddress((HMODULE)handle, name);
-    return reinterpret_cast<void*>(symbol);
 }
 
 int check_file_exist(const char* path, int mode) {
@@ -121,7 +116,6 @@ std::string get_nvcc_root_path() {
 }  // namespace
 
 std::vector<std::string> mgb::get_cuda_include_path() {
-#if MGB_CUDA
     std::vector<std::string> paths;
     // 1. use CUDA_BIN_PATH
     auto cuda_path = getenv("CUDA_BIN_PATH");
@@ -163,7 +157,12 @@ std::vector<std::string> mgb::get_cuda_include_path() {
             "2. add nvcc path in PATH "
             "3. add libcudart.so path in LD_LIBRARY_PATH");
     return paths;
-#else
-    mgb_throw(MegBrainError, "cuda disabled at compile time");
-#endif
 }
+
+#else
+
+std::vector<std::string> mgb::get_cuda_include_path() {
+    mgb_throw(MegBrainError, "cuda disabled at compile time");
+}
+
+#endif
