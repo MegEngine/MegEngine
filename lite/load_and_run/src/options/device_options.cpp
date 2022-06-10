@@ -155,6 +155,8 @@ XPUDeviceOption::XPUDeviceOption() {
                 thread_cnt == thread_num,
                 "core ids number should be same with thread number set before");
         enable_set_core_ids = true;
+    } else {
+        enable_set_core_ids = false;
     }
 
     m_option = {
@@ -237,6 +239,8 @@ void XPUDeviceOption::config_model(
                 thread_cnt == thread_num,
                 "core ids number should be same with thread number set before");
         enable_set_core_ids = true;
+    } else {
+        enable_set_core_ids = false;
     }
 
     CONFIG_MODEL_FUN;

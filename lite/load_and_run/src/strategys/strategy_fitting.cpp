@@ -160,6 +160,7 @@ void OptionsTimeProfiler::profile_with_given_options(
     mgb::RealTimer timer;
     auto stage_config_model = [&]() {
         for (auto& option : *given_options) {
+            mgb_assert(option.second, "invalid option %s\n", option.first.c_str());
             option.second->config_model(runtime_param, model);
         }
     };
@@ -456,7 +457,6 @@ void FittingStrategy::dump_best_options_with_model() {
     }
     model->run_model();
     model->wait();
-
     std::vector<uint8_t> model_data = model->get_model_data();
     mgb_log_warn("model_data size=%zu", model_data.size());
     mgb_log_warn("json_info size=%zu", json_info.size());
@@ -465,7 +465,7 @@ void FittingStrategy::dump_best_options_with_model() {
     lite::ModelPacker packer(
             model_data, m_dumped_model, json_info, info_algo_policy_data,
             info_binary_cache_data);
-    packer.set_header();
+    packer.set_header("NONE", "NONE", info_binary_cache_data.empty());
     packer.pack_model();
 }
 ///////////////////////// AutoCleanFile///////////////////////////

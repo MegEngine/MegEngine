@@ -17,8 +17,7 @@ class XPUDeviceOption final : public OptionBase {
 public:
     static bool is_valid();
     static std::shared_ptr<OptionBase> create_option();
-    void config_model(
-            RuntimeParam& runtime_param, std::shared_ptr<ModelBase> model) override;
+    void config_model(RuntimeParam&, std::shared_ptr<ModelBase>) override;
     std::string option_name() const override { return m_option_name; };
 
     static void set_valid(bool val) { m_valid = val; }
