@@ -17,11 +17,12 @@ def deprecated_func(version, origin, name, tbd):
         tbd: to be discussed, if true, ignore warnings
     """
     should_warning = not tbd
+    module = importlib.import_module(origin)
+    func = module.__getattribute__(name)
 
+    @wraps(func)
     def wrapper(*args, **kwargs):
         nonlocal should_warning
-        module = importlib.import_module(origin)
-        func = module.__getattribute__(name)
         if should_warning:
             warnings.warn(
                 "Call to deprecated function {}. (use {}.{} instead) -- Deprecated since version {}.".format(
