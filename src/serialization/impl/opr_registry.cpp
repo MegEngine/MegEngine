@@ -25,6 +25,11 @@ struct StaticData {
     //! load/shallow copy and version_type_reg_map is used for Operator dump
     ThinHashMap<uint8_t, ThinHashMap<size_t, OprRegistryV2>> version_id_reg_map;
     ThinHashMap<uint8_t, ThinHashMap<Typeinfo*, OprRegistryV2*>> version_type_reg_map;
+#if MGB_ENABLE_DEBUG_UTIL
+    std::unordered_map<size_t, std::unordered_map<size_t, std::string>> dumped_opr;
+    MGB_MUTEX g_record_map_mtx;
+    bool recorded = false;
+#endif
 };
 
 StaticData& static_data() {
@@ -235,17 +240,78 @@ void OprRegistry::add_using_dynamic_loader(
 }
 
 #if MGB_ENABLE_DEBUG_UTIL
-std::vector<std::pair<size_t, std::string>> OprRegistry::dump_registries() {
+std::vector<std::vector<std::pair<size_t, std::string>>> OprRegistry::
+        dump_registries() {
     auto&& id2reg = static_data().id2reg;
-    std::vector<std::pair<size_t, std::string>> result;
+    std::vector<std::vector<std::pair<size_t, std::string>>> result;
+    //! version 1 is old register, version 2 is registerV2
+    result.resize(CURRENT_VERSION + 1);
+    std::vector<std::pair<size_t, std::string>> old_version;
     for (auto iter = id2reg.begin(); iter != id2reg.end(); ++iter) {
         if (iter->second.name.size() == 0)
-            result.push_back({iter->first, "<special>"});
+            old_version.push_back(std::make_pair(iter->first, "<special>"));
         else
-            result.push_back({iter->first, iter->second.name});
+            old_version.push_back(std::make_pair(iter->first, iter->second.name));
+    }
+    result[VERSION_1] = old_version;
+    auto&& version_id_reg_map = static_data().version_id_reg_map;
+    for (int version_id = CURRENT_VERSION; version_id > 1; version_id--) {
+        std::vector<std::pair<size_t, std::string>> version_opr;
+        auto&& version_map = version_id_reg_map[version_id];
+        for (auto&& it : version_map) {
+            if (it.second.name.size() == 0)
+                version_opr.push_back(std::make_pair(it.first, "<special>"));
+            else
+                version_opr.push_back(std::make_pair(it.first, it.second.name));
+        }
+        result[version_id] = version_opr;
     }
     return result;
 }
+
+std::vector<std::vector<std::pair<size_t, std::string>>> OprRegistry::
+        recorded_serialized_oprs(bool begin_record, bool end_record) {
+    MGB_LOCK_GUARD(static_data().g_record_map_mtx);
+    if (begin_record) {
+        static_data().recorded = true;
+        return {};
+    }
+    if (end_record) {
+        static_data().recorded = false;
+        std::vector<std::vector<std::pair<size_t, std::string>>> result;
+        result.resize(CURRENT_VERSION + 1);
+        auto& recorded = static_data().dumped_opr;
+        for (int version_id = CURRENT_VERSION; version_id > 0; version_id--) {
+            std::vector<std::pair<size_t, std::string>> version_opr;
+            auto&& version_map = recorded[version_id];
+            for (auto&& it : version_map) {
+                if (it.second.size() == 0)
+                    version_opr.push_back(std::make_pair(it.first, "<special>"));
+                else
+                    version_opr.push_back(std::make_pair(it.first, it.second));
+            }
+            result[version_id] = version_opr;
+        }
+        static_data().dumped_opr.clear();
+        return result;
+    }
+    return {};
+}
+
+void mgb::serialization::record_opr_dumped(
+        const size_t id, std::string name, int version) {
+    if (static_data().recorded) {
+        MGB_LOCK_GUARD(static_data().g_record_map_mtx);
+        auto& opr_dumped = static_data().dumped_opr;
+        if (name.size() == 0)
+            opr_dumped[version][id] = "<special>";
+        else
+            opr_dumped[version][id] = name;
+    }
+}
+#else
+
+void mgb::serialization::record_opr_dumped(const size_t, std::string, int) {}
 #endif
 
 namespace {

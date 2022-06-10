@@ -22,6 +22,8 @@ public:
     cg::OperatorNodeBase* opr() { return m_opr; }
 };
 
+void record_opr_dumped(const size_t id, std::string name, int version);
+
 //! dump opr internal params to OprDumpContext
 using OprDumper =
         thin_function<void(OprDumpContext& ctx, const cg::OperatorNodeBase& opr)>;
@@ -83,8 +85,11 @@ struct OprRegistry {
 
 #if MGB_ENABLE_DEBUG_UTIL
     //! dump registered oprs
-    MGE_WIN_DECLSPEC_FUC static std::vector<std::pair<size_t, std::string>>
+    MGE_WIN_DECLSPEC_FUC static std::vector<std::vector<std::pair<size_t, std::string>>>
     dump_registries();
+    //! record all dumped/loaded oprs (hash_id --> type)
+    MGE_WIN_DECLSPEC_FUC static std::vector<std::vector<std::pair<size_t, std::string>>>
+    recorded_serialized_oprs(bool begin_record, bool end_record);
 #endif
 };
 
@@ -113,12 +118,6 @@ struct OprRegistryV2 {
 
     MGE_WIN_DECLSPEC_FUC static const OprRegistryV2* versioned_find_by_typeinfo(
             Typeinfo* type, uint8_t version);
-
-#if MGB_ENABLE_DEBUG_UTIL
-    //! dump registered oprs
-    MGE_WIN_DECLSPEC_FUC static std::vector<std::pair<size_t, std::string>>
-    dump_registries();
-#endif
 };
 
 }  // namespace serialization

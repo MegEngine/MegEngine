@@ -394,6 +394,7 @@ GraphDumper::DumpResult GraphDumperOSSV2::dump(
     init_oprs_to_dump(new_output_vars);
     std::vector<flatbuffers::Offset<fbs::v2::Operator>> oprs;
     for (auto&& i : m_oprs_to_dump) {
+        record_opr_dumped(i.second->type_id, i.second->name, i.second->version);
         oprs.emplace_back(build_single_opr(i.first, i.second));
     }
     auto fb_oprs = m_builder.CreateVector(oprs);
