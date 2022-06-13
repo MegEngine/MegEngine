@@ -221,10 +221,33 @@ typedef __m128i GI_INT64_t;
             return NAME(a b, 0);        \
     }
 #if !defined(__SSE3__)
-GI_FORCEINLINE __m128i _sse2_mm_alignr_epi8(__m128i b, __m128i a, int imm8) {
-    int imm2 = sizeof(__m128i) - imm8;
-    return _mm_or_si128(_mm_srli_si128(a, imm8), _mm_slli_si128(b, imm2));
-}
+#ifdef __cplusplus
+#define _sse2_mm_alignr_epi8(b, a, imm8)                                    \
+    __extension__({                                                         \
+        __m128i d;                                                          \
+        const int imm2 = sizeof(__m128i) - imm8;                            \
+        d = _mm_or_si128(_mm_srli_si128(a, imm8), _mm_slli_si128(b, imm2)); \
+        d;                                                                  \
+    })
+#else
+#define _sse2_mm_alignr_epi8(b, a, imm8)                                   \
+    __extension__({                                                        \
+        __m128i d;                                                         \
+        const int imm2 = sizeof(__m128i) - imm8;                           \
+        if (16 == imm2) {                                                  \
+            d = _mm_or_si128(_mm_srli_si128(a, 0), _mm_slli_si128(b, 16)); \
+        } else if (12 == imm2) {                                           \
+            d = _mm_or_si128(_mm_srli_si128(a, 4), _mm_slli_si128(b, 12)); \
+        } else if (8 == imm2) {                                            \
+            d = _mm_or_si128(_mm_srli_si128(a, 8), _mm_slli_si128(b, 8));  \
+        } else if (4 == imm2) {                                            \
+            d = _mm_or_si128(_mm_srli_si128(a, 12), _mm_slli_si128(b, 4)); \
+        } else {                                                           \
+            gi_trap();                                                     \
+        }                                                                  \
+        d;                                                                 \
+    })
+#endif
 #endif
 
 #define _SSE_COMMA ,
