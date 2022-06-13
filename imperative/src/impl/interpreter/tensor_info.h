@@ -48,6 +48,7 @@ struct TensorInfo {
     // Lock interpreter when visiting `ptr`.
     TensorPtr ptr;
     LogicalTensorDesc desc;
+    Spinlock lock;
 
     double compute_time;
     size_t memory;
@@ -158,6 +159,26 @@ struct TensorInfo {
 
     // UINT_MAX as a magic default value
     size_t cand_index = UINT_MAX;
+
+    bool shape_valid() {
+        MGB_LOCK_GUARD(lock);
+        return desc.layout.ndim;
+    }
+
+    void update_layout(const TensorLayout& layout) {
+        MGB_LOCK_GUARD(lock);
+        mgb_assert(desc.layout.dtype == layout.dtype, "dtype mismatch");
+        mgb_assert(desc.layout.format == layout.format, "format mismatch");
+        if (desc.layout.ndim) {
+            mgb_assert(
+                    desc.layout.eq_shape(layout), "shape infer error, %s vs %s",
+                    desc.layout.to_string().c_str(), layout.to_string().c_str());
+            // ignore strides
+        } else {
+            static_cast<TensorShape&>(desc.layout) = layout;
+            desc.layout.init_contiguous_stride();
+        }
+    }
 };
 }  // namespace interpreter::intl
 
