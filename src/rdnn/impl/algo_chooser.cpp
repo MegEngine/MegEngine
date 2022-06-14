@@ -600,7 +600,9 @@ typename AlgoChooser<Opr>::ImplExecutionPolicy AlgoChooser<Opr>::AlgoChooserHelp
             auto&& megdnn_opr = opr::intl::create_megdnn_opr<_Opr>(m_cn);
             // skip different sub opr, for example:
             // skip matmul algo when profiling convolution
-            if (m_dnn_opr->get_opr_type() != megdnn_opr->get_opr_type())
+            if ((m_cn.device_type() == mgb::CompNode::DeviceType::CUDA ||
+                 m_cn.device_type() == mgb::CompNode::DeviceType::ROCM) &&
+                m_dnn_opr->get_opr_type() != megdnn_opr->get_opr_type())
                 continue;
             megdnn_opr->param() =
                     Algorithm::deserialize_read_pod<typename _Opr::Param>(_item.param);
