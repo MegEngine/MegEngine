@@ -375,17 +375,24 @@ void resize_linear_32f_gi(const Mat32f& src, Mat32f& dst) {
             int dy = 0;
             GI_FLOAT32_t v_rx = GiBroadcastFloat32(rx);
             GI_FLOAT32_t v_irx = GiBroadcastFloat32(irx);
-#define EXPAND(x)                                                              \
-    v_cache0 = GiLoadUzipFloat32V3(cache0_ptr + dy + (x)*3);                   \
-    v_cache1 = GiLoadUzipFloat32V3(cache1_ptr + dy + (x)*3);                   \
-    v_dst.val[0] = GiMlaqFloat32(                                              \
-            GiMultiplyFloat32(v_rx, v_cache1.val[0]), v_irx, v_cache0.val[0]); \
-    v_dst.val[1] = GiMlaqFloat32(                                              \
-            GiMultiplyFloat32(v_rx, v_cache1.val[1]), v_irx, v_cache0.val[1]); \
-    v_dst.val[2] = GiMlaqFloat32(                                              \
-            GiMultiplyFloat32(v_rx, v_cache1.val[2]), v_irx, v_cache0.val[2]); \
+#define EXPAND(x)                                                                 \
+    v_cache0 = GiLoadUzipFloat32V3(cache0_ptr + dy + (x)*3);                      \
+    v_cache1 = GiLoadUzipFloat32V3(cache1_ptr + dy + (x)*3);                      \
+    a0 = GiMlaqFloat32(                                                           \
+            GiMultiplyFloat32(v_rx, GiGetSubVectorFloat32V3(v_cache1, 0)), v_irx, \
+            GiGetSubVectorFloat32V3(v_cache0, 0));                                \
+    GiSetSubVectorFloat32V3(v_dst, 0, a0);                                        \
+    a1 = GiMlaqFloat32(                                                           \
+            GiMultiplyFloat32(v_rx, GiGetSubVectorFloat32V3(v_cache1, 1)), v_irx, \
+            GiGetSubVectorFloat32V3(v_cache0, 1));                                \
+    GiSetSubVectorFloat32V3(v_dst, 1, a1);                                        \
+    a2 = GiMlaqFloat32(                                                           \
+            GiMultiplyFloat32(v_rx, GiGetSubVectorFloat32V3(v_cache1, 2)), v_irx, \
+            GiGetSubVectorFloat32V3(v_cache0, 2));                                \
+    GiSetSubVectorFloat32V3(v_dst, 2, a2);                                        \
     GiStoreZipFloat32V3(pdst + dy + (x)*3, v_dst);
 
+            GI_FLOAT32_t a0, a1, a2;
             for (; dy + 8 * 3 <= dstcols; dy += 8 * 3) {
                 GI_FLOAT32_V3_t v_cache0;
                 GI_FLOAT32_V3_t v_cache1;
@@ -560,8 +567,12 @@ struct ResizeAreaFastVec_SIMD_32f {
             for (; dx <= w - 4; dx += 4, S0 += 8, S1 += 8, D += 4) {
                 GI_FLOAT32_V2_t v_row0 = GiLd2qFloat32(S0), v_row1 = GiLd2qFloat32(S1);
 
-                GI_FLOAT32_t v_dst0 = GiAddFloat32(v_row0.val[0], v_row0.val[1]);
-                GI_FLOAT32_t v_dst1 = GiAddFloat32(v_row1.val[0], v_row1.val[1]);
+                GI_FLOAT32_t v_dst0 = GiAddFloat32(
+                        GiGetSubVectorFloat32V2(v_row0, 0),
+                        GiGetSubVectorFloat32V2(v_row0, 1));
+                GI_FLOAT32_t v_dst1 = GiAddFloat32(
+                        GiGetSubVectorFloat32V2(v_row1, 0),
+                        GiGetSubVectorFloat32V2(v_row1, 1));
 
                 GiStoreFloat32(
                         D, GiMultiplyFloat32(GiAddFloat32(v_dst0, v_dst1), v_025));

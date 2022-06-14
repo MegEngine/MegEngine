@@ -17,13 +17,21 @@ compute_linear_element(const ctype src[4], const ctype alpha[2]) {
 
 template <typename simd_helper, size_t fh, size_t fw>
 static GI_FORCEINLINE typename simd_helper::simd_type compute_linear_element_simd(
-        const typename simd_helper::simd_type src[4],
-        const typename simd_helper::simd_type alpha[2][2]) {
+        const typename simd_helper::simd_type_x4 src,
+        const typename simd_helper::simd_fixlen_type alpha[2][2]) {
     typename simd_helper::simd_type c = simd_helper::dup(0);
-    c = simd_helper::fma(c, src[0], alpha[0 ^ fh][0 ^ fw]);
-    c = simd_helper::fma(c, src[1], alpha[0 ^ fh][1 ^ fw]);
-    c = simd_helper::fma(c, src[2], alpha[1 ^ fh][0 ^ fw]);
-    c = simd_helper::fma(c, src[3], alpha[1 ^ fh][1 ^ fw]);
+    c = simd_helper::fma(
+            c, GiGetSubVectorFloat32V4(src, 0),
+            GiFixLenType2GiFloat32Type(alpha[0 ^ fh][0 ^ fw]));
+    c = simd_helper::fma(
+            c, GiGetSubVectorFloat32V4(src, 1),
+            GiFixLenType2GiFloat32Type(alpha[0 ^ fh][1 ^ fw]));
+    c = simd_helper::fma(
+            c, GiGetSubVectorFloat32V4(src, 2),
+            GiFixLenType2GiFloat32Type(alpha[1 ^ fh][0 ^ fw]));
+    c = simd_helper::fma(
+            c, GiGetSubVectorFloat32V4(src, 3),
+            GiFixLenType2GiFloat32Type(alpha[1 ^ fh][1 ^ fw]));
     return c;
 }
 
@@ -62,23 +70,37 @@ static GI_FORCEINLINE void compute_linear_2x2_element(
 template <typename simd_helper>
 static GI_FORCEINLINE void compute_linear_2x2_element_simd(
         const typename simd_helper::ctype* src, typename simd_helper::ctype* dst,
-        size_t IW, size_t OW, const typename simd_helper::simd_type alpha[2][2]) {
+        size_t IW, size_t OW,
+        const typename simd_helper::simd_fixlen_type alpha[2][2]) {
+    using simd_type_x4 = typename simd_helper::simd_type_x4;
     using simd_type = typename simd_helper::simd_type;
 
-    simd_type rsrc[4];
-    rsrc[0] = simd_helper::load(src);
-    rsrc[1] = simd_helper::load(src + 1);
-    rsrc[2] = simd_helper::load(src + IW);
-    rsrc[3] = simd_helper::load(src + IW + 1);
+    simd_type_x4 rsrc;
+    simd_type tmp;
+    tmp = simd_helper::load(src);
+    GiSetSubVectorFloat32V4(rsrc, 0, tmp);
+    tmp = simd_helper::load(src + 1);
+    GiSetSubVectorFloat32V4(rsrc, 1, tmp);
+    tmp = simd_helper::load(src + IW);
+    GiSetSubVectorFloat32V4(rsrc, 2, tmp);
+    tmp = simd_helper::load(src + IW + 1);
+    GiSetSubVectorFloat32V4(rsrc, 3, tmp);
 
-    simd_type rdst[4];
-    rdst[0] = compute_linear_element_simd<simd_helper, 0, 0>(rsrc, alpha);
-    rdst[1] = compute_linear_element_simd<simd_helper, 0, 1>(rsrc, alpha);
-    rdst[2] = compute_linear_element_simd<simd_helper, 1, 0>(rsrc, alpha);
-    rdst[3] = compute_linear_element_simd<simd_helper, 1, 1>(rsrc, alpha);
+    simd_type_x4 rdst;
+    tmp = compute_linear_element_simd<simd_helper, 0, 0>(rsrc, alpha);
+    GiSetSubVectorFloat32V4(rdst, 0, tmp);
+    tmp = compute_linear_element_simd<simd_helper, 0, 1>(rsrc, alpha);
+    GiSetSubVectorFloat32V4(rdst, 1, tmp);
+    tmp = compute_linear_element_simd<simd_helper, 1, 0>(rsrc, alpha);
+    GiSetSubVectorFloat32V4(rdst, 2, tmp);
+    tmp = compute_linear_element_simd<simd_helper, 1, 1>(rsrc, alpha);
+    GiSetSubVectorFloat32V4(rdst, 3, tmp);
 
-    simd_helper::store2_interleave(dst, rdst[0], rdst[1]);
-    simd_helper::store2_interleave(dst + OW, rdst[2], rdst[3]);
+    simd_helper::store2_interleave(
+            dst, GiGetSubVectorFloat32V4(rdst, 0), GiGetSubVectorFloat32V4(rdst, 1));
+    simd_helper::store2_interleave(
+            dst + OW, GiGetSubVectorFloat32V4(rdst, 2),
+            GiGetSubVectorFloat32V4(rdst, 3));
 }
 
 template <typename ctype>
@@ -90,11 +112,11 @@ void linear_upsample2_nchw(
 
     ctype alpha[2] = {0.75, 0.25};
 
-    typename simd_helper::simd_type simd_alpha[2][2];
-    simd_alpha[0][0] = simd_helper::dup(0.75 * 0.75);
-    simd_alpha[0][1] = simd_helper::dup(0.75 * 0.25);
-    simd_alpha[1][0] = simd_helper::dup(0.25 * 0.75);
-    simd_alpha[1][1] = simd_helper::dup(0.25 * 0.25);
+    typename simd_helper::simd_fixlen_type simd_alpha[2][2];
+    simd_alpha[0][0] = GiFloat32Type2FixLenType(simd_helper::dup(0.75 * 0.75));
+    simd_alpha[0][1] = GiFloat32Type2FixLenType(simd_helper::dup(0.75 * 0.25));
+    simd_alpha[1][0] = GiFloat32Type2FixLenType(simd_helper::dup(0.25 * 0.75));
+    simd_alpha[1][1] = GiFloat32Type2FixLenType(simd_helper::dup(0.25 * 0.25));
 
     for (size_t i = 0; i < N; ++i) {
         compute_linear_2x2_element<ctype, false, false>(

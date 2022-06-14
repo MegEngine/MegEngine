@@ -14,7 +14,9 @@ struct SIMDHelper {};
 template <>
 struct SIMDHelper<float> {
     using simd_type = GI_FLOAT32_t;
+    using simd_fixlen_type = GI_FLOAT32_FIXLEN_t;
     using simd_type_x2 = GI_FLOAT32_V2_t;
+    using simd_type_x4 = GI_FLOAT32_V4_t;
     using ctype = float;
     static constexpr size_t simd_width = 4;
 
@@ -27,8 +29,8 @@ struct SIMDHelper<float> {
     static GI_FORCEINLINE void store2_interleave(
             ctype* dst_ptr, const simd_type& rdst1, const simd_type& rdst2) {
         simd_type_x2 rdst;
-        rdst.val[0] = rdst1;
-        rdst.val[1] = rdst2;
+        GiSetSubVectorFloat32V2(rdst, 0, rdst1);
+        GiSetSubVectorFloat32V2(rdst, 1, rdst2);
         GiStoreZipFloat32V2(dst_ptr, rdst);
     }
     static GI_FORCEINLINE simd_type
