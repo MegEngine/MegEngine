@@ -46,9 +46,9 @@ namespace {
     } while (0);
 
 #define GET_VECTOR_HIGH_ELEM(s, i, idx) \
-    GiExtractLane##idx##Float32(CONCAT(s, i).value.val[1])
+    GiExtractLane##idx##Float32(GiFixLenType2GiFloat32Type(CONCAT(s, i).value.val[1]))
 #define GET_VECTOR_LOW_ELEM(s, i, idx) \
-    GiExtractLane##idx##Float32(CONCAT(s, i).value.val[0])
+    GiExtractLane##idx##Float32(GiFixLenType2GiFloat32Type(CONCAT(s, i).value.val[0]))
 struct InputTransform6X3 {
     template <bool inner>
     static void transform(

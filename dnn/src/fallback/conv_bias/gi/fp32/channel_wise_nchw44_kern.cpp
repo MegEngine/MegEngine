@@ -12,14 +12,30 @@ using namespace fallback;
 
 namespace {
 
-template <int size>
-void load_vec(GI_FLOAT32_t* dst, const float* src);
+#define cb(_simd_fixlen_type, _fun_suffix, _simd_type_v2)                         \
+    struct ParamElemFixLenVisitorV2None {                                         \
+        _simd_type_v2 operator()(                                                 \
+                const _simd_fixlen_type& s0, const _simd_fixlen_type& s1) const { \
+            _simd_type_v2 ret;                                                    \
+            GiSetSubVector##_fun_suffix##V2(                                      \
+                    ret, 0, GiFixLenType2Gi##_fun_suffix##Type(s0));              \
+            GiSetSubVector##_fun_suffix##V2(                                      \
+                    ret, 1, GiFixLenType2Gi##_fun_suffix##Type(s1));              \
+            return ret;                                                           \
+        }                                                                         \
+    };
 
-#define cb(i) dst[i] = GiLoadFloat32(src + i * 4);
-#define LOAD_MACRO(n)                                               \
-    template <>                                                     \
-    inline void load_vec<n>(GI_FLOAT32_t * dst, const float* src) { \
-        UNROLL_CALL_NOWRAPPER(n, cb);                               \
+cb(GI_FLOAT32_FIXLEN_t, Float32, GI_FLOAT32_V2_t);
+#undef cb
+
+template <int size>
+void load_vec(GI_FLOAT32_FIXLEN_t* dst, const float* src);
+
+#define cb(i) dst[i] = GiFloat32Type2FixLenType(GiLoadFloat32(src + i * 4));
+#define LOAD_MACRO(n)                                                      \
+    template <>                                                            \
+    inline void load_vec<n>(GI_FLOAT32_FIXLEN_t * dst, const float* src) { \
+        UNROLL_CALL_NOWRAPPER(n, cb);                                      \
     }
 LOAD_MACRO(2);
 LOAD_MACRO(3);
@@ -33,14 +49,20 @@ LOAD_MACRO(9);
 #undef LOAD_MACRO
 
 template <int size>
-void compute_vec(GI_FLOAT32_t& dst, GI_FLOAT32_t* src, GI_FLOAT32_t* filter);
+void compute_vec(
+        GI_FLOAT32_FIXLEN_t& dst, GI_FLOAT32_FIXLEN_t* src,
+        GI_FLOAT32_FIXLEN_t* filter);
 
-#define cb(i) dst = GiMlaqFloat32(dst, src[i], filter[i]);
-#define COMPUTE_MACRO(n)                                                     \
-    template <>                                                              \
-    inline void compute_vec<n>(                                              \
-            GI_FLOAT32_t & dst, GI_FLOAT32_t * src, GI_FLOAT32_t * filter) { \
-        UNROLL_CALL_NOWRAPPER(n, cb);                                        \
+#define cb(i)                                                                    \
+    dst = GiFloat32Type2FixLenType(GiMlaqFloat32(                                \
+            GiFixLenType2GiFloat32Type(dst), GiFixLenType2GiFloat32Type(src[i]), \
+            GiFixLenType2GiFloat32Type(filter[i])));
+#define COMPUTE_MACRO(n)                                          \
+    template <>                                                   \
+    inline void compute_vec<n>(                                   \
+            GI_FLOAT32_FIXLEN_t & dst, GI_FLOAT32_FIXLEN_t * src, \
+            GI_FLOAT32_FIXLEN_t * filter) {                       \
+        UNROLL_CALL_NOWRAPPER(n, cb);                             \
     }
 COMPUTE_MACRO(2);
 COMPUTE_MACRO(3);
@@ -51,20 +73,21 @@ COMPUTE_MACRO(5);
 template <BiasMode bias_mode, int size>
 struct load_bias_vec;
 
-#define cb_bias(i) dst[i] = GiLoadFloat32((bptr) + i * 4);
-#define cb_init(i) dst[i] = init;
+#define cb_bias(i) dst[i] = GiFloat32Type2FixLenType(GiLoadFloat32((bptr) + i * 4));
+#define cb_init(i) dst[i] = GiFloat32Type2FixLenType(init);
 
-#define INIT_BIAS_MACRO(n)                                                        \
-    template <BiasMode bias_mode>                                                 \
-    struct load_bias_vec<bias_mode, n> {                                          \
-        static void impl(                                                         \
-                GI_FLOAT32_t* dst, const GI_FLOAT32_t& init, const float* bptr) { \
-            if (bias_mode == BiasMode::BIAS) {                                    \
-                UNROLL_CALL_NOWRAPPER(n, cb_bias);                                \
-            } else {                                                              \
-                UNROLL_CALL_NOWRAPPER(n, cb_init);                                \
-            }                                                                     \
-        }                                                                         \
+#define INIT_BIAS_MACRO(n)                                          \
+    template <BiasMode bias_mode>                                   \
+    struct load_bias_vec<bias_mode, n> {                            \
+        static void impl(                                           \
+                GI_FLOAT32_FIXLEN_t* dst, const GI_FLOAT32_t& init, \
+                const float* bptr) {                                \
+            if (bias_mode == BiasMode::BIAS) {                      \
+                UNROLL_CALL_NOWRAPPER(n, cb_bias);                  \
+            } else {                                                \
+                UNROLL_CALL_NOWRAPPER(n, cb_init);                  \
+            }                                                       \
+        }                                                           \
     };
 
 INIT_BIAS_MACRO(1);
@@ -78,7 +101,7 @@ INIT_BIAS_MACRO(4);
 #define COMPUTE_PADDING_KERNEL()                                                       \
     do {                                                                               \
         int iw = ow * stride - PW;                                                     \
-        GI_FLOAT32_t result;                                                           \
+        GI_FLOAT32_FIXLEN_t result;                                                    \
         load_bias_vec<bias_mode, 1>::impl(&result, init, bias + oh * OW * 4 + ow * 4); \
         for (int kh = 0; kh < fh; kh++) {                                              \
             if (kh + ih < 0 || kh + ih >= static_cast<int>(IH))                        \
@@ -87,12 +110,14 @@ INIT_BIAS_MACRO(4);
                 if (kw + iw < 0 || kw + iw >= static_cast<int>(IW))                    \
                     continue;                                                          \
                 const float* sptr = src + (kh + ih) * IW * 4 + (kw + iw) * 4;          \
-                result = GiMlaqFloat32(                                                \
-                        result, kernel[kh * fh + kw], GiLoadFloat32(sptr));            \
+                result = GiFloat32Type2FixLenType(GiMlaqFloat32(                       \
+                        GiFixLenType2GiFloat32Type(result),                            \
+                        GiFixLenType2GiFloat32Type(kernel[kh * fh + kw]),              \
+                        GiLoadFloat32(sptr)));                                         \
             }                                                                          \
         }                                                                              \
         float* output = dst + oh * OW * 4 + ow * 4;                                    \
-        op(result, output);                                                            \
+        op(GiFixLenType2GiFloat32Type(result), output);                                \
     } while (0)
 
 template <BiasMode bias_mode, typename Op>
@@ -101,7 +126,7 @@ struct PaddingCompute {
             const float* src, const float* bias, float* dst, const int fh,
             const int stride, const size_t IH, const size_t IW, const size_t OH,
             const size_t OW, const size_t PH, const size_t PW,
-            const GI_FLOAT32_t* kernel, const GI_FLOAT32_t& init) {
+            const GI_FLOAT32_FIXLEN_t* kernel, const GI_FLOAT32_t& init) {
         size_t oh_start = (PH + stride - 1) / stride;
         size_t ow_start = (PW + stride - 1) / stride;
         size_t oh_end = (IH + PH - fh) / stride + 1;
@@ -136,7 +161,7 @@ struct PaddingComputeK3P1 {
     static void compute(
             const float* src, const float* bias, float* dst, const size_t stride,
             const size_t IH, const size_t IW, const size_t OH, const size_t OW,
-            const GI_FLOAT32_t* kernel, const GI_FLOAT32_t& init) {
+            const GI_FLOAT32_FIXLEN_t* kernel, const GI_FLOAT32_t& init) {
         constexpr size_t PH = 1, PW = 1, FH = 3;
         size_t oh_start = (PH + stride - 1) / stride;
         size_t ow_start = (PW + stride - 1) / stride;
@@ -150,128 +175,226 @@ struct PaddingComputeK3P1 {
         Op op;
         // line one left
         {
-            GI_FLOAT32_t result;
+            GI_FLOAT32_FIXLEN_t result;
             load_bias_vec<bias_mode, 1>::impl(&result, init, bias);
-            result = GiMlaqFloat32(result, kernel[4], GiLoadFloat32(src));
-            result = GiMlaqFloat32(result, kernel[5], GiLoadFloat32(src + 4));
-            result = GiMlaqFloat32(result, kernel[7], GiLoadFloat32(src + IW * 4));
-            result = GiMlaqFloat32(result, kernel[8], GiLoadFloat32(src + IW * 4 + 4));
+            result = GiFloat32Type2FixLenType(GiMlaqFloat32(
+                    GiFixLenType2GiFloat32Type(result),
+                    GiFixLenType2GiFloat32Type(kernel[4]), GiLoadFloat32(src)));
+            result = GiFloat32Type2FixLenType(GiMlaqFloat32(
+                    GiFixLenType2GiFloat32Type(result),
+                    GiFixLenType2GiFloat32Type(kernel[5]), GiLoadFloat32(src + 4)));
+            result = GiFloat32Type2FixLenType(GiMlaqFloat32(
+                    GiFixLenType2GiFloat32Type(result),
+                    GiFixLenType2GiFloat32Type(kernel[7]),
+                    GiLoadFloat32(src + IW * 4)));
+            result = GiFloat32Type2FixLenType(GiMlaqFloat32(
+                    GiFixLenType2GiFloat32Type(result),
+                    GiFixLenType2GiFloat32Type(kernel[8]),
+                    GiLoadFloat32(src + IW * 4 + 4)));
             float* output = dst;
-            op(result, output);
+            op(GiFixLenType2GiFloat32Type(result), output);
         }
         // line one mid
         for (size_t ow = ow_start; ow < ow_end; ow++) {
             int iw = ow * stride - PW;
-            GI_FLOAT32_t result;
+            GI_FLOAT32_FIXLEN_t result;
             load_bias_vec<bias_mode, 1>::impl(&result, init, bias + ow * 4);
             const float* sptr = src + iw * 4;
-            result = GiMlaqFloat32(result, kernel[3], GiLoadFloat32(sptr));
-            result = GiMlaqFloat32(result, kernel[4], GiLoadFloat32(sptr + 4));
-            result = GiMlaqFloat32(result, kernel[5], GiLoadFloat32(sptr + 8));
-            result = GiMlaqFloat32(result, kernel[6], GiLoadFloat32(sptr + IW * 4));
-            result = GiMlaqFloat32(result, kernel[7], GiLoadFloat32(sptr + IW * 4 + 4));
-            result = GiMlaqFloat32(result, kernel[8], GiLoadFloat32(sptr + IW * 4 + 8));
+            result = GiFloat32Type2FixLenType(GiMlaqFloat32(
+                    GiFixLenType2GiFloat32Type(result),
+                    GiFixLenType2GiFloat32Type(kernel[3]), GiLoadFloat32(sptr)));
+            result = GiFloat32Type2FixLenType(GiMlaqFloat32(
+                    GiFixLenType2GiFloat32Type(result),
+                    GiFixLenType2GiFloat32Type(kernel[4]), GiLoadFloat32(sptr + 4)));
+            result = GiFloat32Type2FixLenType(GiMlaqFloat32(
+                    GiFixLenType2GiFloat32Type(result),
+                    GiFixLenType2GiFloat32Type(kernel[5]), GiLoadFloat32(sptr + 8)));
+            result = GiFloat32Type2FixLenType(GiMlaqFloat32(
+                    GiFixLenType2GiFloat32Type(result),
+                    GiFixLenType2GiFloat32Type(kernel[6]),
+                    GiLoadFloat32(sptr + IW * 4)));
+            result = GiFloat32Type2FixLenType(GiMlaqFloat32(
+                    GiFixLenType2GiFloat32Type(result),
+                    GiFixLenType2GiFloat32Type(kernel[7]),
+                    GiLoadFloat32(sptr + IW * 4 + 4)));
+            result = GiFloat32Type2FixLenType(GiMlaqFloat32(
+                    GiFixLenType2GiFloat32Type(result),
+                    GiFixLenType2GiFloat32Type(kernel[8]),
+                    GiLoadFloat32(sptr + IW * 4 + 8)));
             float* output = dst + ow * 4;
-            op(result, output);
+            op(GiFixLenType2GiFloat32Type(result), output);
         }
         // line one right
         if (OW != ow_end) {
-            GI_FLOAT32_t result;
+            GI_FLOAT32_FIXLEN_t result;
             load_bias_vec<bias_mode, 1>::impl(&result, init, bias + (OW - 1) * 4);
             const float* sptr = src + (ow_end * stride - PW) * 4;
-            result = GiMlaqFloat32(result, kernel[3], GiLoadFloat32(sptr));
-            result = GiMlaqFloat32(result, kernel[4], GiLoadFloat32(sptr + 4));
-            result = GiMlaqFloat32(result, kernel[6], GiLoadFloat32(sptr + IW * 4));
-            result = GiMlaqFloat32(result, kernel[7], GiLoadFloat32(sptr + IW * 4 + 4));
+            result = GiFloat32Type2FixLenType(GiMlaqFloat32(
+                    GiFixLenType2GiFloat32Type(result),
+                    GiFixLenType2GiFloat32Type(kernel[3]), GiLoadFloat32(sptr)));
+            result = GiFloat32Type2FixLenType(GiMlaqFloat32(
+                    GiFixLenType2GiFloat32Type(result),
+                    GiFixLenType2GiFloat32Type(kernel[4]), GiLoadFloat32(sptr + 4)));
+            result = GiFloat32Type2FixLenType(GiMlaqFloat32(
+                    GiFixLenType2GiFloat32Type(result),
+                    GiFixLenType2GiFloat32Type(kernel[6]),
+                    GiLoadFloat32(sptr + IW * 4)));
+            result = GiFloat32Type2FixLenType(GiMlaqFloat32(
+                    GiFixLenType2GiFloat32Type(result),
+                    GiFixLenType2GiFloat32Type(kernel[7]),
+                    GiLoadFloat32(sptr + IW * 4 + 4)));
             float* output = dst + ow_end * 4;
-            op(result, output);
+            op(GiFixLenType2GiFloat32Type(result), output);
         }
         // mid line
         for (size_t oh = oh_start; oh < oh_end; oh++) {
             int ih = oh * stride - PH;
             // left
             {
-                GI_FLOAT32_t result;
+                GI_FLOAT32_FIXLEN_t result;
                 load_bias_vec<bias_mode, 1>::impl(&result, init, bias + oh * OW * 4);
                 const float* sptr = src + ih * IW * 4;
-                result = GiMlaqFloat32(result, kernel[1], GiLoadFloat32(sptr));
-                result = GiMlaqFloat32(result, kernel[2], GiLoadFloat32(sptr + 4));
-                result = GiMlaqFloat32(result, kernel[4], GiLoadFloat32(sptr + IW * 4));
-                result = GiMlaqFloat32(
-                        result, kernel[5], GiLoadFloat32(sptr + IW * 4 + 4));
-                result = GiMlaqFloat32(
-                        result, kernel[7], GiLoadFloat32(sptr + 2 * IW * 4));
-                result = GiMlaqFloat32(
-                        result, kernel[8], GiLoadFloat32(sptr + 2 * IW * 4 + 4));
+                result = GiFloat32Type2FixLenType(GiMlaqFloat32(
+                        GiFixLenType2GiFloat32Type(result),
+                        GiFixLenType2GiFloat32Type(kernel[1]), GiLoadFloat32(sptr)));
+                result = GiFloat32Type2FixLenType(GiMlaqFloat32(
+                        GiFixLenType2GiFloat32Type(result),
+                        GiFixLenType2GiFloat32Type(kernel[2]),
+                        GiLoadFloat32(sptr + 4)));
+                result = GiFloat32Type2FixLenType(GiMlaqFloat32(
+                        GiFixLenType2GiFloat32Type(result),
+                        GiFixLenType2GiFloat32Type(kernel[4]),
+                        GiLoadFloat32(sptr + IW * 4)));
+                result = GiFloat32Type2FixLenType(GiMlaqFloat32(
+                        GiFixLenType2GiFloat32Type(result),
+                        GiFixLenType2GiFloat32Type(kernel[5]),
+                        GiLoadFloat32(sptr + IW * 4 + 4)));
+                result = GiFloat32Type2FixLenType(GiMlaqFloat32(
+                        GiFixLenType2GiFloat32Type(result),
+                        GiFixLenType2GiFloat32Type(kernel[7]),
+                        GiLoadFloat32(sptr + 2 * IW * 4)));
+                result = GiFloat32Type2FixLenType(GiMlaqFloat32(
+                        GiFixLenType2GiFloat32Type(result),
+                        GiFixLenType2GiFloat32Type(kernel[8]),
+                        GiLoadFloat32(sptr + 2 * IW * 4 + 4)));
                 float* output = dst + oh * OW * 4;
-                op(result, output);
+                op(GiFixLenType2GiFloat32Type(result), output);
             }
             // right
             if (OW != ow_end) {
-                GI_FLOAT32_t result;
+                GI_FLOAT32_FIXLEN_t result;
                 load_bias_vec<bias_mode, 1>::impl(
                         &result, init, bias + oh * OW * 4 + (OW - 1) * 4);
                 const float* sptr = src + ih * IW * 4 + (ow_end * stride - PW) * 4;
-                result = GiMlaqFloat32(result, kernel[0], GiLoadFloat32(sptr));
-                result = GiMlaqFloat32(result, kernel[1], GiLoadFloat32(sptr + 4));
-                result = GiMlaqFloat32(result, kernel[3], GiLoadFloat32(sptr + IW * 4));
-                result = GiMlaqFloat32(
-                        result, kernel[4], GiLoadFloat32(sptr + IW * 4 + 4));
-                result = GiMlaqFloat32(
-                        result, kernel[6], GiLoadFloat32(sptr + 2 * IW * 4));
-                result = GiMlaqFloat32(
-                        result, kernel[7], GiLoadFloat32(sptr + 2 * IW * 4 + 4));
+                result = GiFloat32Type2FixLenType(GiMlaqFloat32(
+                        GiFixLenType2GiFloat32Type(result),
+                        GiFixLenType2GiFloat32Type(kernel[0]), GiLoadFloat32(sptr)));
+                result = GiFloat32Type2FixLenType(GiMlaqFloat32(
+                        GiFixLenType2GiFloat32Type(result),
+                        GiFixLenType2GiFloat32Type(kernel[1]),
+                        GiLoadFloat32(sptr + 4)));
+                result = GiFloat32Type2FixLenType(GiMlaqFloat32(
+                        GiFixLenType2GiFloat32Type(result),
+                        GiFixLenType2GiFloat32Type(kernel[3]),
+                        GiLoadFloat32(sptr + IW * 4)));
+                result = GiFloat32Type2FixLenType(GiMlaqFloat32(
+                        GiFixLenType2GiFloat32Type(result),
+                        GiFixLenType2GiFloat32Type(kernel[4]),
+                        GiLoadFloat32(sptr + IW * 4 + 4)));
+                result = GiFloat32Type2FixLenType(GiMlaqFloat32(
+                        GiFixLenType2GiFloat32Type(result),
+                        GiFixLenType2GiFloat32Type(kernel[6]),
+                        GiLoadFloat32(sptr + 2 * IW * 4)));
+                result = GiFloat32Type2FixLenType(GiMlaqFloat32(
+                        GiFixLenType2GiFloat32Type(result),
+                        GiFixLenType2GiFloat32Type(kernel[7]),
+                        GiLoadFloat32(sptr + 2 * IW * 4 + 4)));
                 float* output = dst + oh * OW * 4 + ow_end * 4;
-                op(result, output);
+                op(GiFixLenType2GiFloat32Type(result), output);
             }
         }
         // last line left
         if (OH != oh_end) {
             size_t oh = OH - 1;
             {
-                GI_FLOAT32_t result;
+                GI_FLOAT32_FIXLEN_t result;
                 load_bias_vec<bias_mode, 1>::impl(&result, init, bias + oh * OW * 4);
                 const float* sptr = src + (oh_end * stride - PH) * IW * 4;
-                result = GiMlaqFloat32(result, kernel[1], GiLoadFloat32(sptr));
-                result = GiMlaqFloat32(result, kernel[2], GiLoadFloat32(sptr + 4));
-                result = GiMlaqFloat32(result, kernel[4], GiLoadFloat32(sptr + IW * 4));
-                result = GiMlaqFloat32(
-                        result, kernel[5], GiLoadFloat32(sptr + IW * 4 + 4));
+                result = GiFloat32Type2FixLenType(GiMlaqFloat32(
+                        GiFixLenType2GiFloat32Type(result),
+                        GiFixLenType2GiFloat32Type(kernel[1]), GiLoadFloat32(sptr)));
+                result = GiFloat32Type2FixLenType(GiMlaqFloat32(
+                        GiFixLenType2GiFloat32Type(result),
+                        GiFixLenType2GiFloat32Type(kernel[2]),
+                        GiLoadFloat32(sptr + 4)));
+                result = GiFloat32Type2FixLenType(GiMlaqFloat32(
+                        GiFixLenType2GiFloat32Type(result),
+                        GiFixLenType2GiFloat32Type(kernel[4]),
+                        GiLoadFloat32(sptr + IW * 4)));
+                result = GiFloat32Type2FixLenType(GiMlaqFloat32(
+                        GiFixLenType2GiFloat32Type(result),
+                        GiFixLenType2GiFloat32Type(kernel[5]),
+                        GiLoadFloat32(sptr + IW * 4 + 4)));
                 float* output = dst + oh_end * OW * 4;
-                op(result, output);
+                op(GiFixLenType2GiFloat32Type(result), output);
             }
             // last line mid
             for (size_t ow = ow_start; ow < ow_end; ow++) {
                 int iw = ow * stride - PW;
-                GI_FLOAT32_t result;
+                GI_FLOAT32_FIXLEN_t result;
                 load_bias_vec<bias_mode, 1>::impl(
                         &result, init, bias + oh * OW * 4 + ow * 4);
                 const float* sptr = src + (oh_end * stride - PH) * IW * 4 + iw * 4;
-                result = GiMlaqFloat32(result, kernel[0], GiLoadFloat32(sptr));
-                result = GiMlaqFloat32(result, kernel[1], GiLoadFloat32(sptr + 4));
-                result = GiMlaqFloat32(result, kernel[2], GiLoadFloat32(sptr + 8));
-                result = GiMlaqFloat32(result, kernel[3], GiLoadFloat32(sptr + IW * 4));
-                result = GiMlaqFloat32(
-                        result, kernel[4], GiLoadFloat32(sptr + IW * 4 + 4));
-                result = GiMlaqFloat32(
-                        result, kernel[5], GiLoadFloat32(sptr + IW * 4 + 8));
+                result = GiFloat32Type2FixLenType(GiMlaqFloat32(
+                        GiFixLenType2GiFloat32Type(result),
+                        GiFixLenType2GiFloat32Type(kernel[0]), GiLoadFloat32(sptr)));
+                result = GiFloat32Type2FixLenType(GiMlaqFloat32(
+                        GiFixLenType2GiFloat32Type(result),
+                        GiFixLenType2GiFloat32Type(kernel[1]),
+                        GiLoadFloat32(sptr + 4)));
+                result = GiFloat32Type2FixLenType(GiMlaqFloat32(
+                        GiFixLenType2GiFloat32Type(result),
+                        GiFixLenType2GiFloat32Type(kernel[2]),
+                        GiLoadFloat32(sptr + 8)));
+                result = GiFloat32Type2FixLenType(GiMlaqFloat32(
+                        GiFixLenType2GiFloat32Type(result),
+                        GiFixLenType2GiFloat32Type(kernel[3]),
+                        GiLoadFloat32(sptr + IW * 4)));
+                result = GiFloat32Type2FixLenType(GiMlaqFloat32(
+                        GiFixLenType2GiFloat32Type(result),
+                        GiFixLenType2GiFloat32Type(kernel[4]),
+                        GiLoadFloat32(sptr + IW * 4 + 4)));
+                result = GiFloat32Type2FixLenType(GiMlaqFloat32(
+                        GiFixLenType2GiFloat32Type(result),
+                        GiFixLenType2GiFloat32Type(kernel[5]),
+                        GiLoadFloat32(sptr + IW * 4 + 8)));
                 float* output = dst + oh_end * OW * 4 + ow * 4;
-                op(result, output);
+                op(GiFixLenType2GiFloat32Type(result), output);
             }
             // last line right
             if (OW != ow_end) {
-                GI_FLOAT32_t result;
+                GI_FLOAT32_FIXLEN_t result;
                 load_bias_vec<bias_mode, 1>::impl(
                         &result, init, bias + oh * OW * 4 + (OW - 1) * 4);
                 const float* sptr = src + (oh_end * stride - PH) * IW * 4 +
                                     (ow_end * stride - PW) * 4;
-                result = GiMlaqFloat32(result, kernel[0], GiLoadFloat32(sptr));
-                result = GiMlaqFloat32(result, kernel[1], GiLoadFloat32(sptr + 4));
-                result = GiMlaqFloat32(result, kernel[3], GiLoadFloat32(sptr + IW * 4));
-                result = GiMlaqFloat32(
-                        result, kernel[4], GiLoadFloat32(sptr + IW * 4 + 4));
+                result = GiFloat32Type2FixLenType(GiMlaqFloat32(
+                        GiFixLenType2GiFloat32Type(result),
+                        GiFixLenType2GiFloat32Type(kernel[0]), GiLoadFloat32(sptr)));
+                result = GiFloat32Type2FixLenType(GiMlaqFloat32(
+                        GiFixLenType2GiFloat32Type(result),
+                        GiFixLenType2GiFloat32Type(kernel[1]),
+                        GiLoadFloat32(sptr + 4)));
+                result = GiFloat32Type2FixLenType(GiMlaqFloat32(
+                        GiFixLenType2GiFloat32Type(result),
+                        GiFixLenType2GiFloat32Type(kernel[3]),
+                        GiLoadFloat32(sptr + IW * 4)));
+                result = GiFloat32Type2FixLenType(GiMlaqFloat32(
+                        GiFixLenType2GiFloat32Type(result),
+                        GiFixLenType2GiFloat32Type(kernel[4]),
+                        GiLoadFloat32(sptr + IW * 4 + 4)));
                 float* output = dst + oh_end * OW * 4 + ow_end * 4;
-                op(result, output);
+                op(GiFixLenType2GiFloat32Type(result), output);
             }
         }
     }
@@ -284,7 +407,7 @@ void channel_wise_nchw44_float::do_conv_kern_stride1_2x2(
         const float* src, const float* filter, const float* bias, float* dst,
         const size_t IH, const size_t IW, const size_t OH, const size_t OW,
         const size_t PH, const size_t PW) {
-    GI_FLOAT32_t kernel[4];
+    GI_FLOAT32_FIXLEN_t kernel[4];
     load_vec<4>(kernel, filter);
     Op op;
     GI_FLOAT32_t init = GiZeroFloat32();
@@ -313,12 +436,12 @@ void channel_wise_nchw44_float::do_conv_kern_stride1_2x2(
             size_t iw = ow - ow_start;
             const float* input = src + ih * IW * 4 + iw * 4;
             float* output = dst + oh * OW * 4 + ow * 4;
-            GI_FLOAT32_t dst_v[2][4];
+            GI_FLOAT32_FIXLEN_t dst_v[2][4];
             load_bias_vec<bias_mode, 4>::impl(
                     dst_v[0], init, bias + oh * OW * 4 + ow * 4);
             load_bias_vec<bias_mode, 4>::impl(
                     dst_v[1], init, bias + (oh + 1) * OW * 4 + ow * 4);
-            GI_FLOAT32_t src_v[3][5];
+            GI_FLOAT32_FIXLEN_t src_v[3][5];
             load_vec<5>(src_v[0], input);
             COMPUTE_2X2(dst_v[0], src_v[0], &kernel[0]);
             load_vec<5>(src_v[1], input + IW * 4);
@@ -327,21 +450,22 @@ void channel_wise_nchw44_float::do_conv_kern_stride1_2x2(
             load_vec<5>(src_v[2], input + 2 * IW * 4);
             COMPUTE_2X2(dst_v[1], src_v[2], &kernel[2]);
 
-            op({{dst_v[0][0], dst_v[0][1]}}, output);
-            op({{dst_v[0][2], dst_v[0][3]}}, output + 8);
-            op({{dst_v[1][0], dst_v[1][1]}}, output + OW * 4);
-            op({{dst_v[1][2], dst_v[1][3]}}, output + OW * 4 + 8);
+            ParamElemFixLenVisitorV2None vis;
+            op(vis(dst_v[0][0], dst_v[0][1]), output);
+            op(vis(dst_v[0][2], dst_v[0][3]), output + 8);
+            op(vis(dst_v[1][0], dst_v[1][1]), output + OW * 4);
+            op(vis(dst_v[1][2], dst_v[1][3]), output + OW * 4 + 8);
         }
         for (; ow < ow_end; ow++) {
             size_t iw = ow - ow_start;
             const float* input = src + ih * IW * 4 + iw * 4;
             float* output = dst + oh * OW * 4 + ow * 4;
-            GI_FLOAT32_t dst_v[2];
+            GI_FLOAT32_FIXLEN_t dst_v[2];
             load_bias_vec<bias_mode, 1>::impl(
                     &dst_v[0], init, bias + oh * OW * 4 + ow * 4);
             load_bias_vec<bias_mode, 1>::impl(
                     &dst_v[1], init, bias + (oh + 1) * OW * 4 + ow * 4);
-            GI_FLOAT32_t src_v[3][2];
+            GI_FLOAT32_FIXLEN_t src_v[3][2];
             load_vec<2>(src_v[0], input);
             compute_vec<2>(dst_v[0], &src_v[0][0], &kernel[0]);
             load_vec<2>(src_v[1], input + IW * 4);
@@ -350,8 +474,8 @@ void channel_wise_nchw44_float::do_conv_kern_stride1_2x2(
             load_vec<2>(src_v[2], input + 2 * IW * 4);
             compute_vec<2>(dst_v[1], &src_v[2][0], &kernel[2]);
 
-            op(dst_v[0], output);
-            op(dst_v[1], output + OW * 4);
+            op(GiFixLenType2GiFloat32Type(dst_v[0]), output);
+            op(GiFixLenType2GiFloat32Type(dst_v[1]), output + OW * 4);
         }
     }
     for (; oh < oh_end; oh++) {
@@ -361,32 +485,33 @@ void channel_wise_nchw44_float::do_conv_kern_stride1_2x2(
             size_t iw = ow - ow_start;
             const float* input = src + ih * IW * 4 + iw * 4;
             float* output = dst + oh * OW * 4 + ow * 4;
-            GI_FLOAT32_t dst_v[1][4];
+            GI_FLOAT32_FIXLEN_t dst_v[1][4];
             load_bias_vec<bias_mode, 4>::impl(
                     dst_v[0], init, bias + oh * OW * 4 + ow * 4);
-            GI_FLOAT32_t src_v[2][5];
+            GI_FLOAT32_FIXLEN_t src_v[2][5];
             load_vec<5>(src_v[0], input);
             COMPUTE_2X2(dst_v[0], src_v[0], &kernel[0]);
             load_vec<5>(src_v[1], input + IW * 4);
             COMPUTE_2X2(dst_v[0], src_v[1], &kernel[2]);
 
-            op({{dst_v[0][0], dst_v[0][1]}}, output);
-            op({{dst_v[0][2], dst_v[0][3]}}, output + 8);
+            ParamElemFixLenVisitorV2None vis;
+            op(vis(dst_v[0][0], dst_v[0][1]), output);
+            op(vis(dst_v[0][2], dst_v[0][3]), output + 8);
         }
         for (; ow < ow_end; ow++) {
             size_t iw = ow - ow_start;
             const float* input = src + ih * IW * 4 + iw * 4;
             float* output = dst + oh * OW * 4 + ow * 4;
-            GI_FLOAT32_t dst_v;
+            GI_FLOAT32_FIXLEN_t dst_v;
             load_bias_vec<bias_mode, 1>::impl(
                     &dst_v, init, bias + oh * OW * 4 + ow * 4);
-            GI_FLOAT32_t src_v[2][2];
+            GI_FLOAT32_FIXLEN_t src_v[2][2];
             load_vec<2>(src_v[0], input);
             compute_vec<2>(dst_v, &src_v[0][0], &kernel[0]);
             load_vec<2>(src_v[1], input + IW * 4);
             compute_vec<2>(dst_v, &src_v[1][0], &kernel[2]);
 
-            op(dst_v, output);
+            op(GiFixLenType2GiFloat32Type(dst_v), output);
         }
     }
 #undef COMPUTE_2X2
@@ -403,7 +528,7 @@ void channel_wise_nchw44_float::do_conv_kern_stride1_3x3(
         return;
     }
 
-    GI_FLOAT32_t kernel[9];
+    GI_FLOAT32_FIXLEN_t kernel[9];
     load_vec<9>(kernel, filter);
     Op op;
     GI_FLOAT32_t init = GiZeroFloat32();
@@ -426,12 +551,12 @@ void channel_wise_nchw44_float::do_conv_kern_stride1_3x3(
             size_t iw = ow - PW;
             const float* input = src + ih * IW * 4 + iw * 4;
             float* output = dst + oh * OW * 4 + ow * 4;
-            GI_FLOAT32_t dst_v[2][4];
+            GI_FLOAT32_FIXLEN_t dst_v[2][4];
             load_bias_vec<bias_mode, 4>::impl(
                     dst_v[0], init, bias + oh * OW * 4 + ow * 4);
             load_bias_vec<bias_mode, 4>::impl(
                     dst_v[1], init, bias + (oh + 1) * OW * 4 + ow * 4);
-            GI_FLOAT32_t src_v[2][6];
+            GI_FLOAT32_FIXLEN_t src_v[2][6];
             load_vec<6>(src_v[0], input);
             compute_vec<3>(dst_v[0][0], &src_v[0][0], &kernel[0]);
             compute_vec<3>(dst_v[0][1], &src_v[0][1], &kernel[0]);
@@ -461,21 +586,22 @@ void channel_wise_nchw44_float::do_conv_kern_stride1_3x3(
             compute_vec<3>(dst_v[1][2], &src_v[1][2], &kernel[6]);
             compute_vec<3>(dst_v[1][3], &src_v[1][3], &kernel[6]);
 
-            op({{dst_v[0][0], dst_v[0][1]}}, output);
-            op({{dst_v[0][2], dst_v[0][3]}}, output + 8);
-            op({{dst_v[1][0], dst_v[1][1]}}, output + OW * 4);
-            op({{dst_v[1][2], dst_v[1][3]}}, output + OW * 4 + 8);
+            ParamElemFixLenVisitorV2None vis;
+            op(vis(dst_v[0][0], dst_v[0][1]), output);
+            op(vis(dst_v[0][2], dst_v[0][3]), output + 8);
+            op(vis(dst_v[1][0], dst_v[1][1]), output + OW * 4);
+            op(vis(dst_v[1][2], dst_v[1][3]), output + OW * 4 + 8);
         }
         for (; ow < ow_end; ow++) {
             size_t iw = ow - PW;
             const float* input = src + ih * IW * 4 + iw * 4;
             float* output = dst + oh * OW * 4 + ow * 4;
-            GI_FLOAT32_t dst_v[2];
+            GI_FLOAT32_FIXLEN_t dst_v[2];
             load_bias_vec<bias_mode, 1>::impl(
                     &dst_v[0], init, bias + oh * OW * 4 + ow * 4);
             load_bias_vec<bias_mode, 1>::impl(
                     &dst_v[1], init, bias + (oh + 1) * OW * 4 + ow * 4);
-            GI_FLOAT32_t src_v[2][3];
+            GI_FLOAT32_FIXLEN_t src_v[2][3];
             load_vec<3>(src_v[0], input);
             compute_vec<3>(dst_v[0], &src_v[0][0], &kernel[0]);
             load_vec<3>(src_v[1], input + IW * 4);
@@ -487,8 +613,8 @@ void channel_wise_nchw44_float::do_conv_kern_stride1_3x3(
             load_vec<3>(src_v[1], input + 3 * IW * 4);
             compute_vec<3>(dst_v[1], &src_v[1][0], &kernel[6]);
 
-            op(dst_v[0], output);
-            op(dst_v[1], output + OW * 4);
+            op(GiFixLenType2GiFloat32Type(dst_v[0]), output);
+            op(GiFixLenType2GiFloat32Type(dst_v[1]), output + OW * 4);
         }
     }
     for (; oh < oh_end; oh++) {
@@ -498,10 +624,10 @@ void channel_wise_nchw44_float::do_conv_kern_stride1_3x3(
             size_t iw = ow - PW;
             const float* input = src + ih * IW * 4 + iw * 4;
             float* output = dst + oh * OW * 4 + ow * 4;
-            GI_FLOAT32_t dst_v[4];
+            GI_FLOAT32_FIXLEN_t dst_v[4];
             load_bias_vec<bias_mode, 4>::impl(
                     &dst_v[0], init, bias + oh * OW * 4 + ow * 4);
-            GI_FLOAT32_t src_v[2][6];
+            GI_FLOAT32_FIXLEN_t src_v[2][6];
             load_vec<6>(src_v[0], input);
             compute_vec<3>(dst_v[0], &src_v[0][0], &kernel[0]);
             compute_vec<3>(dst_v[1], &src_v[0][1], &kernel[0]);
@@ -517,24 +643,25 @@ void channel_wise_nchw44_float::do_conv_kern_stride1_3x3(
             compute_vec<3>(dst_v[1], &src_v[0][1], &kernel[6]);
             compute_vec<3>(dst_v[2], &src_v[0][2], &kernel[6]);
             compute_vec<3>(dst_v[3], &src_v[0][3], &kernel[6]);
-            op({{dst_v[0], dst_v[1]}}, output);
-            op({{dst_v[2], dst_v[3]}}, output + 8);
+            ParamElemFixLenVisitorV2None vis;
+            op(vis(dst_v[0], dst_v[1]), output);
+            op(vis(dst_v[2], dst_v[3]), output + 8);
         }
         for (; ow < ow_end; ow++) {
             size_t iw = ow - PW;
             const float* input = src + ih * IW * 4 + iw * 4;
             float* output = dst + oh * OW * 4 + ow * 4;
-            GI_FLOAT32_t dst_v;
+            GI_FLOAT32_FIXLEN_t dst_v;
             load_bias_vec<bias_mode, 1>::impl(
                     &dst_v, init, bias + oh * OW * 4 + ow * 4);
-            GI_FLOAT32_t src_v[3][3];
+            GI_FLOAT32_FIXLEN_t src_v[3][3];
             load_vec<3>(src_v[0], input);
             compute_vec<3>(dst_v, &src_v[0][0], &kernel[0]);
             load_vec<3>(src_v[1], input + IW * 4);
             compute_vec<3>(dst_v, &src_v[1][0], &kernel[3]);
             load_vec<3>(src_v[2], input + 2 * IW * 4);
             compute_vec<3>(dst_v, &src_v[2][0], &kernel[6]);
-            op(dst_v, output);
+            op(GiFixLenType2GiFloat32Type(dst_v), output);
         }
     }
 }
@@ -562,7 +689,7 @@ void channel_wise_nchw44_float::do_conv_kern_stride1_5x5(
     if (PH || PW) {
         PaddingCompute<bias_mode, Op>::compute(
                 src, bias, dst, 5, 1, IH, IW, OH, OW, PH, PW,
-                reinterpret_cast<const GI_FLOAT32_t*>(filter), init);
+                reinterpret_cast<const GI_FLOAT32_FIXLEN_t*>(filter), init);
     }
     size_t oh = oh_start;
     for (; oh + 1 < oh_end; oh += 2) {
@@ -572,13 +699,13 @@ void channel_wise_nchw44_float::do_conv_kern_stride1_5x5(
             size_t iw = ow - PW;
             const float* input = src + ih * IW * 4 + iw * 4;
             float* output = dst + oh * OW * 4 + ow * 4;
-            GI_FLOAT32_t dst_v[2][2];
+            GI_FLOAT32_FIXLEN_t dst_v[2][2];
             load_bias_vec<bias_mode, 2>::impl(
                     dst_v[0], init, bias + oh * OW * 4 + ow * 4);
             load_bias_vec<bias_mode, 2>::impl(
                     dst_v[1], init, bias + (oh + 1) * OW * 4 + ow * 4);
-            GI_FLOAT32_t kernel[2][5];
-            GI_FLOAT32_t src_v[2][6];
+            GI_FLOAT32_FIXLEN_t kernel[2][5];
+            GI_FLOAT32_FIXLEN_t src_v[2][6];
 #define COMPUTE_5X5_4(i, dst, src, kernel0, kernel1) \
     load_vec<5>(kernel0, filter + i * 5 * 4);        \
     load_vec<6>(src, input + i * IW * 4);            \
@@ -604,20 +731,21 @@ void channel_wise_nchw44_float::do_conv_kern_stride1_5x5(
             compute_vec<5>(dst_v[1][0], &src_v[1][0], kernel[0]);
             compute_vec<5>(dst_v[1][1], &src_v[1][1], kernel[0]);
 #undef COMPUTE_5X5_4
-            op({{dst_v[0][0], dst_v[0][1]}}, output);
-            op({{dst_v[1][0], dst_v[1][1]}}, output + OW * 4);
+            ParamElemFixLenVisitorV2None vis;
+            op(vis(dst_v[0][0], dst_v[0][1]), output);
+            op(vis(dst_v[1][0], dst_v[1][1]), output + OW * 4);
         }
         for (; ow < ow_end; ow++) {
             size_t iw = ow - PW;
             const float* input = src + ih * IW * 4 + iw * 4;
             float* output = dst + oh * OW * 4 + ow * 4;
-            GI_FLOAT32_t dst_v[2][1];
+            GI_FLOAT32_FIXLEN_t dst_v[2][1];
             load_bias_vec<bias_mode, 1>::impl(
                     dst_v[0], init, bias + oh * OW * 4 + ow * 4);
             load_bias_vec<bias_mode, 1>::impl(
                     dst_v[1], init, bias + (oh + 1) * OW * 4 + ow * 4);
-            GI_FLOAT32_t kernel[2][5];
-            GI_FLOAT32_t src_v[2][5];
+            GI_FLOAT32_FIXLEN_t kernel[2][5];
+            GI_FLOAT32_FIXLEN_t src_v[2][5];
 #define COMPUTE_5X5_2(i, dst, src, kernel0, kernel1) \
     load_vec<5>(kernel0, filter + i * 5 * 4);        \
     load_vec<6>(src, input + i * IW * 4);            \
@@ -639,8 +767,8 @@ void channel_wise_nchw44_float::do_conv_kern_stride1_5x5(
             load_vec<5>(src_v[1], input + 5 * IW * 4);
             compute_vec<5>(dst_v[1][0], &src_v[1][0], kernel[0]);
 #undef COMPUTE_5X5_2
-            op(dst_v[0][0], output);
-            op(dst_v[1][0], output + OW * 4);
+            op(GiFixLenType2GiFloat32Type(dst_v[0][0]), output);
+            op(GiFixLenType2GiFloat32Type(dst_v[1][0]), output + OW * 4);
         }
     }
     for (; oh < oh_end; oh++) {
@@ -650,11 +778,11 @@ void channel_wise_nchw44_float::do_conv_kern_stride1_5x5(
             size_t iw = ow - PW;
             const float* input = src + ih * IW * 4 + iw * 4;
             float* output = dst + oh * OW * 4 + ow * 4;
-            GI_FLOAT32_t dst_v[1][2];
+            GI_FLOAT32_FIXLEN_t dst_v[1][2];
             load_bias_vec<bias_mode, 2>::impl(
                     dst_v[0], init, bias + oh * OW * 4 + ow * 4);
-            GI_FLOAT32_t kernel[2][5];
-            GI_FLOAT32_t src_v[2][6];
+            GI_FLOAT32_FIXLEN_t kernel[2][5];
+            GI_FLOAT32_FIXLEN_t src_v[2][6];
 #define COMPUTE_5X5_2(i, dst, src, kernel)      \
     load_vec<5>(kernel, filter + i * 5 * 4);    \
     load_vec<6>(src, input + i * IW * 4);       \
@@ -671,17 +799,18 @@ void channel_wise_nchw44_float::do_conv_kern_stride1_5x5(
             // line 4
             COMPUTE_5X5_2(4, dst_v, src_v[0], kernel[0]);
 #undef COMPUTE_5X5_2
-            op({{dst_v[0][0], dst_v[0][1]}}, output);
+            ParamElemFixLenVisitorV2None vis;
+            op(vis(dst_v[0][0], dst_v[0][1]), output);
         }
         for (; ow < ow_end; ow++) {
             size_t iw = ow - PW;
             const float* input = src + ih * IW * 4 + iw * 4;
             float* output = dst + oh * OW * 4 + ow * 4;
-            GI_FLOAT32_t dst_v;
+            GI_FLOAT32_FIXLEN_t dst_v;
             load_bias_vec<bias_mode, 1>::impl(
                     &dst_v, init, bias + oh * OW * 4 + ow * 4);
-            GI_FLOAT32_t kernel[2][5];
-            GI_FLOAT32_t src_v[2][5];
+            GI_FLOAT32_FIXLEN_t kernel[2][5];
+            GI_FLOAT32_FIXLEN_t src_v[2][5];
 #define COMPUTE_5X5_1(i, dst, src, kernel)   \
     load_vec<5>(kernel, filter + i * 5 * 4); \
     load_vec<6>(src, input + i * IW * 4);    \
@@ -697,7 +826,7 @@ void channel_wise_nchw44_float::do_conv_kern_stride1_5x5(
             // line 4
             COMPUTE_5X5_1(4, dst_v, src_v[0], kernel[0]);
 #undef COMPUTE_5X5_1
-            op(dst_v, output);
+            op(GiFixLenType2GiFloat32Type(dst_v), output);
         }
     }
 }
@@ -707,7 +836,7 @@ void channel_wise_nchw44_float::do_conv_kern_stride2_2x2(
         const float* src, const float* filter, const float* bias, float* dst,
         const size_t IH, const size_t IW, const size_t OH, const size_t OW,
         const size_t PH, const size_t PW) {
-    GI_FLOAT32_t kernel[4];
+    GI_FLOAT32_FIXLEN_t kernel[4];
     load_vec<4>(kernel, filter);
     Op op;
     GI_FLOAT32_t init = GiZeroFloat32();
@@ -735,32 +864,33 @@ void channel_wise_nchw44_float::do_conv_kern_stride2_2x2(
             size_t iw = ow * 2 - PW;
             const float* input = src + ih * IW * 4 + iw * 4;
             float* output = dst + oh * OW * 4 + ow * 4;
-            GI_FLOAT32_t dst_v[4];
+            GI_FLOAT32_FIXLEN_t dst_v[4];
             load_bias_vec<bias_mode, 4>::impl(
                     &dst_v[0], init, bias + oh * OW * 4 + ow * 4);
-            GI_FLOAT32_t src_v[2][8];
+            GI_FLOAT32_FIXLEN_t src_v[2][8];
             load_vec<8>(src_v[0], input);
             COMPUTE_2X2(dst_v, src_v[0], &kernel[0]);
             load_vec<8>(src_v[1], input + IW * 4);
             COMPUTE_2X2(dst_v, src_v[1], &kernel[2]);
 #undef COMPUTE_2X2
-            op({{dst_v[0], dst_v[1]}}, output);
-            op({{dst_v[2], dst_v[3]}}, output + 8);
+            ParamElemFixLenVisitorV2None vis;
+            op(vis(dst_v[0], dst_v[1]), output);
+            op(vis(dst_v[2], dst_v[3]), output + 8);
         }
         for (; ow < ow_end; ow++) {
             size_t iw = ow * 2 - PW;
             const float* input = src + ih * IW * 4 + iw * 4;
             float* output = dst + oh * OW * 4 + ow * 4;
-            GI_FLOAT32_t dst_v;
+            GI_FLOAT32_FIXLEN_t dst_v;
             load_bias_vec<bias_mode, 1>::impl(
                     &dst_v, init, bias + oh * OW * 4 + ow * 4);
-            GI_FLOAT32_t src_v[2][2];
+            GI_FLOAT32_FIXLEN_t src_v[2][2];
             load_vec<2>(src_v[0], input);
             compute_vec<2>(dst_v, &src_v[0][0], &kernel[0]);
             load_vec<2>(src_v[1], input + IW * 4);
             compute_vec<2>(dst_v, &src_v[1][0], &kernel[2]);
 
-            op(dst_v, output);
+            op(GiFixLenType2GiFloat32Type(dst_v), output);
         }
     }
 #undef COMPUTE_2X2
@@ -771,7 +901,7 @@ void channel_wise_nchw44_float::do_conv_kern_stride2_3x3(
         const float* src, const float* filter, const float* bias, float* dst,
         const size_t IH, const size_t IW, const size_t OH, const size_t OW,
         const size_t PH, const size_t PW) {
-    GI_FLOAT32_t kernel[9];
+    GI_FLOAT32_FIXLEN_t kernel[9];
     load_vec<9>(kernel, filter);
     Op op;
     GI_FLOAT32_t init = GiZeroFloat32();
@@ -797,12 +927,12 @@ void channel_wise_nchw44_float::do_conv_kern_stride2_3x3(
             size_t iw = ow * 2 - PW;
             const float* input = src + ih * IW * 4 + iw * 4;
             float* output = dst + oh * OW * 4 + ow * 4;
-            GI_FLOAT32_t dst_v[2][2];
+            GI_FLOAT32_FIXLEN_t dst_v[2][2];
             load_bias_vec<bias_mode, 2>::impl(
                     dst_v[0], init, bias + oh * OW * 4 + ow * 4);
             load_bias_vec<bias_mode, 2>::impl(
                     dst_v[1], init, bias + (oh + 1) * OW * 4 + ow * 4);
-            GI_FLOAT32_t src_v[2][5];
+            GI_FLOAT32_FIXLEN_t src_v[2][5];
             load_vec<5>(src_v[0], input);
             compute_vec<3>(dst_v[0][0], &src_v[0][0], &kernel[0]);
             compute_vec<3>(dst_v[0][1], &src_v[0][2], &kernel[0]);
@@ -821,19 +951,20 @@ void channel_wise_nchw44_float::do_conv_kern_stride2_3x3(
             compute_vec<3>(dst_v[1][0], &src_v[0][0], &kernel[6]);
             compute_vec<3>(dst_v[1][1], &src_v[0][2], &kernel[6]);
 
-            op({{dst_v[0][0], dst_v[0][1]}}, output);
-            op({{dst_v[1][0], dst_v[1][1]}}, output + OW * 4);
+            ParamElemFixLenVisitorV2None vis;
+            op(vis(dst_v[0][0], dst_v[0][1]), output);
+            op(vis(dst_v[1][0], dst_v[1][1]), output + OW * 4);
         }
         for (; ow < ow_end; ow++) {
             size_t iw = ow * 2 - PW;
             const float* input = src + ih * IW * 4 + iw * 4;
             float* output = dst + oh * OW * 4 + ow * 4;
-            GI_FLOAT32_t dst_v[2];
+            GI_FLOAT32_FIXLEN_t dst_v[2];
             load_bias_vec<bias_mode, 1>::impl(
                     &dst_v[0], init, bias + oh * OW * 4 + ow * 4);
             load_bias_vec<bias_mode, 1>::impl(
                     &dst_v[1], init, bias + (oh + 1) * OW * 4 + ow * 4);
-            GI_FLOAT32_t src_v[2][3];
+            GI_FLOAT32_FIXLEN_t src_v[2][3];
             load_vec<3>(src_v[0], input);
             compute_vec<3>(dst_v[0], &src_v[0][0], &kernel[0]);
             load_vec<3>(src_v[1], input + IW * 4);
@@ -846,8 +977,8 @@ void channel_wise_nchw44_float::do_conv_kern_stride2_3x3(
             load_vec<3>(src_v[0], input + 4 * IW * 4);
             compute_vec<3>(dst_v[1], &src_v[0][0], &kernel[6]);
 
-            op(dst_v[0], output);
-            op(dst_v[1], output + OW * 4);
+            op(GiFixLenType2GiFloat32Type(dst_v[0]), output);
+            op(GiFixLenType2GiFloat32Type(dst_v[1]), output + OW * 4);
         }
     }
     for (; oh < oh_end; oh++) {
@@ -857,10 +988,10 @@ void channel_wise_nchw44_float::do_conv_kern_stride2_3x3(
             size_t iw = ow * 2 - PW;
             const float* input = src + ih * IW * 4 + iw * 4;
             float* output = dst + oh * OW * 4 + ow * 4;
-            GI_FLOAT32_t dst_v[2];
+            GI_FLOAT32_FIXLEN_t dst_v[2];
             load_bias_vec<bias_mode, 2>::impl(
                     &dst_v[0], init, bias + oh * OW * 4 + ow * 4);
-            GI_FLOAT32_t src_v[3][5];
+            GI_FLOAT32_FIXLEN_t src_v[3][5];
             load_vec<5>(src_v[0], input);
             compute_vec<3>(dst_v[0], &src_v[0][0], &kernel[0]);
             compute_vec<3>(dst_v[1], &src_v[0][2], &kernel[0]);
@@ -870,23 +1001,24 @@ void channel_wise_nchw44_float::do_conv_kern_stride2_3x3(
             load_vec<5>(src_v[2], input + 2 * IW * 4);
             compute_vec<3>(dst_v[0], &src_v[2][0], &kernel[6]);
             compute_vec<3>(dst_v[1], &src_v[2][2], &kernel[6]);
-            op({{dst_v[0], dst_v[1]}}, output);
+            ParamElemFixLenVisitorV2None vis;
+            op(vis(dst_v[0], dst_v[1]), output);
         }
         for (; ow < ow_end; ow++) {
             size_t iw = ow * 2 - PW;
             const float* input = src + ih * IW * 4 + iw * 4;
             float* output = dst + oh * OW * 4 + ow * 4;
-            GI_FLOAT32_t dst_v;
+            GI_FLOAT32_FIXLEN_t dst_v;
             load_bias_vec<bias_mode, 1>::impl(
                     &dst_v, init, bias + oh * OW * 4 + ow * 4);
-            GI_FLOAT32_t src_v[3][3];
+            GI_FLOAT32_FIXLEN_t src_v[3][3];
             load_vec<3>(src_v[0], input);
             compute_vec<3>(dst_v, &src_v[0][0], &kernel[0]);
             load_vec<3>(src_v[1], input + IW * 4);
             compute_vec<3>(dst_v, &src_v[1][0], &kernel[3]);
             load_vec<3>(src_v[2], input + 2 * IW * 4);
             compute_vec<3>(dst_v, &src_v[2][0], &kernel[6]);
-            op(dst_v, output);
+            op(GiFixLenType2GiFloat32Type(dst_v), output);
         }
     }
 }
@@ -909,7 +1041,7 @@ void channel_wise_nchw44_float::do_conv_kern_stride2_5x5(
     if (PH || PW) {
         PaddingCompute<bias_mode, Op>::compute(
                 src, bias, dst, 5, stride, IH, IW, OH, OW, PH, PW,
-                reinterpret_cast<const GI_FLOAT32_t*>(filter), init);
+                reinterpret_cast<const GI_FLOAT32_FIXLEN_t*>(filter), init);
     }
     size_t oh = oh_start;
     for (; oh + 1 < oh_end; oh += 2) {
@@ -919,13 +1051,13 @@ void channel_wise_nchw44_float::do_conv_kern_stride2_5x5(
             size_t iw = ow * stride - PW;
             const float* input = src + ih * IW * 4 + iw * 4;
             float* output = dst + oh * OW * 4 + ow * 4;
-            GI_FLOAT32_t dst_v[2][2];
+            GI_FLOAT32_FIXLEN_t dst_v[2][2];
             load_bias_vec<bias_mode, 2>::impl(
                     dst_v[0], init, bias + oh * OW * 4 + ow * 4);
             load_bias_vec<bias_mode, 2>::impl(
                     dst_v[1], init, bias + (oh + 1) * OW * 4 + ow * 4);
-            GI_FLOAT32_t kernel[3][5];
-            GI_FLOAT32_t src_v[2][7];
+            GI_FLOAT32_FIXLEN_t kernel[3][5];
+            GI_FLOAT32_FIXLEN_t src_v[2][7];
 #define COMPUTE_5X5_4(i, dst, src, kernel0, kernel1) \
     load_vec<5>(kernel0, filter + i * 5 * 4);        \
     load_vec<7>(src, input + i * IW * 4);            \
@@ -956,20 +1088,21 @@ void channel_wise_nchw44_float::do_conv_kern_stride2_5x5(
             COMPUTE_5X5_2(6, dst_v[1], src_v[0], kernel[1]);
 #undef COMPUTE_5X5_4
 #undef COMPUTE_5X5_2
-            op({{dst_v[0][0], dst_v[0][1]}}, output);
-            op({{dst_v[1][0], dst_v[1][1]}}, output + OW * 4);
+            ParamElemFixLenVisitorV2None vis;
+            op(vis(dst_v[0][0], dst_v[0][1]), output);
+            op(vis(dst_v[1][0], dst_v[1][1]), output + OW * 4);
         }
         for (; ow < ow_end; ow++) {
             size_t iw = ow * stride - PW;
             const float* input = src + ih * IW * 4 + iw * 4;
             float* output = dst + oh * OW * 4 + ow * 4;
-            GI_FLOAT32_t dst_v[2];
+            GI_FLOAT32_FIXLEN_t dst_v[2];
             load_bias_vec<bias_mode, 1>::impl(
                     &dst_v[0], init, bias + oh * OW * 4 + ow * 4);
             load_bias_vec<bias_mode, 1>::impl(
                     &dst_v[1], init, bias + (oh + 1) * OW * 4 + ow * 4);
-            GI_FLOAT32_t kernel[3][5];
-            GI_FLOAT32_t src_v[2][5];
+            GI_FLOAT32_FIXLEN_t kernel[3][5];
+            GI_FLOAT32_FIXLEN_t src_v[2][5];
 #define COMPUTE_5X5_2(i, dst, src, kernel0, kernel1) \
     load_vec<5>(kernel0, filter + i * 5 * 4);        \
     load_vec<5>(src, input + i * IW * 4);            \
@@ -997,8 +1130,8 @@ void channel_wise_nchw44_float::do_conv_kern_stride2_5x5(
             COMPUTE_5X5_1(6, dst_v[1], src_v[0], kernel[1]);
 #undef COMPUTE_5X5_2
 #undef COMPUTE_5X5_1
-            op(dst_v[0], output);
-            op(dst_v[1], output + OW * 4);
+            op(GiFixLenType2GiFloat32Type(dst_v[0]), output);
+            op(GiFixLenType2GiFloat32Type(dst_v[1]), output + OW * 4);
         }
     }
     for (; oh < oh_end; oh++) {
@@ -1008,11 +1141,11 @@ void channel_wise_nchw44_float::do_conv_kern_stride2_5x5(
             size_t iw = ow * stride - PW;
             const float* input = src + ih * IW * 4 + iw * 4;
             float* output = dst + oh * OW * 4 + ow * 4;
-            GI_FLOAT32_t dst_v;
+            GI_FLOAT32_FIXLEN_t dst_v;
             load_bias_vec<bias_mode, 1>::impl(
                     &dst_v, init, bias + oh * OW * 4 + ow * 4);
-            GI_FLOAT32_t kernel[2][5];
-            GI_FLOAT32_t src_v[2][5];
+            GI_FLOAT32_FIXLEN_t kernel[2][5];
+            GI_FLOAT32_FIXLEN_t src_v[2][5];
 #define COMPUTE_5X5_1(i, dst, src, kernel)   \
     load_vec<5>(kernel, filter + i * 5 * 4); \
     load_vec<6>(src, input + i * IW * 4);    \
@@ -1028,7 +1161,7 @@ void channel_wise_nchw44_float::do_conv_kern_stride2_5x5(
             // line 4
             COMPUTE_5X5_1(4, dst_v, src_v[0], kernel[0]);
 #undef COMPUTE_5X5_1
-            op(dst_v, output);
+            op(GiFixLenType2GiFloat32Type(dst_v), output);
         }
     }
 }

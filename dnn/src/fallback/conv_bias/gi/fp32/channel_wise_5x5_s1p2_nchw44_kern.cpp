@@ -12,8 +12,8 @@ using namespace fallback;
 namespace {
 
 template <int shift>
-static inline void shift_src(GI_FLOAT32_t rsrc[6]) {
-    GI_FLOAT32_t t[6];
+static inline void shift_src(GI_FLOAT32_FIXLEN_t rsrc[6]) {
+    GI_FLOAT32_FIXLEN_t t[6];
 
     t[0] = rsrc[(shift + 0) % 6];
     t[1] = rsrc[(shift + 1) % 6];
@@ -29,12 +29,12 @@ static inline void shift_src(GI_FLOAT32_t rsrc[6]) {
     rsrc[5] = t[5];
 }
 
-static inline void load_filter(const float* filter, GI_FLOAT32_t rfilter[5]) {
-    rfilter[0] = GiLoadFloat32(filter + 0);
-    rfilter[1] = GiLoadFloat32(filter + 4);
-    rfilter[2] = GiLoadFloat32(filter + 8);
-    rfilter[3] = GiLoadFloat32(filter + 12);
-    rfilter[4] = GiLoadFloat32(filter + 16);
+static inline void load_filter(const float* filter, GI_FLOAT32_FIXLEN_t rfilter[5]) {
+    rfilter[0] = GiFloat32Type2FixLenType(GiLoadFloat32(filter + 0));
+    rfilter[1] = GiFloat32Type2FixLenType(GiLoadFloat32(filter + 4));
+    rfilter[2] = GiFloat32Type2FixLenType(GiLoadFloat32(filter + 8));
+    rfilter[3] = GiFloat32Type2FixLenType(GiLoadFloat32(filter + 12));
+    rfilter[4] = GiFloat32Type2FixLenType(GiLoadFloat32(filter + 16));
 }
 
 template <BiasMode bias_mode>
@@ -51,8 +51,8 @@ struct compute_element {
     template <typename Op>
     static inline void call(
             const float*& src, float*& dst, const float*& bias,
-            const GI_FLOAT32_t& init, GI_FLOAT32_t rsrc[6], GI_FLOAT32_t rfilter[5],
-            const Op& op) {
+            const GI_FLOAT32_t& init, GI_FLOAT32_FIXLEN_t rsrc[6],
+            GI_FLOAT32_FIXLEN_t rfilter[5], const Op& op) {
 #define RSRC(i) rsrc[((i) + bw) % 6]
         GI_FLOAT32_t rdst;
         if (need_load_bias) {
@@ -60,13 +60,23 @@ struct compute_element {
         } else {
             rdst = GiLoadFloat32(dst);
         }
-        RSRC(5) = GiLoadFloat32(src + 12);
+        RSRC(5) = GiFloat32Type2FixLenType(GiLoadFloat32(src + 12));
 
-        rdst = GiMlaqFloat32(rdst, RSRC(0), rfilter[0]);
-        rdst = GiMlaqFloat32(rdst, RSRC(1), rfilter[1]);
-        rdst = GiMlaqFloat32(rdst, RSRC(2), rfilter[2]);
-        rdst = GiMlaqFloat32(rdst, RSRC(3), rfilter[3]);
-        rdst = GiMlaqFloat32(rdst, RSRC(4), rfilter[4]);
+        rdst = GiMlaqFloat32(
+                rdst, GiFixLenType2GiFloat32Type(RSRC(0)),
+                GiFixLenType2GiFloat32Type(rfilter[0]));
+        rdst = GiMlaqFloat32(
+                rdst, GiFixLenType2GiFloat32Type(RSRC(1)),
+                GiFixLenType2GiFloat32Type(rfilter[1]));
+        rdst = GiMlaqFloat32(
+                rdst, GiFixLenType2GiFloat32Type(RSRC(2)),
+                GiFixLenType2GiFloat32Type(rfilter[2]));
+        rdst = GiMlaqFloat32(
+                rdst, GiFixLenType2GiFloat32Type(RSRC(3)),
+                GiFixLenType2GiFloat32Type(rfilter[3]));
+        rdst = GiMlaqFloat32(
+                rdst, GiFixLenType2GiFloat32Type(RSRC(4)),
+                GiFixLenType2GiFloat32Type(rfilter[4]));
 
         if (need_do_op) {
             rdst = op(rdst);
@@ -93,7 +103,7 @@ struct compute_element_right {
     template <typename Op>
     static inline void call(
             float*& dst, const float*& bias, const GI_FLOAT32_t& init,
-            GI_FLOAT32_t rsrc[6], GI_FLOAT32_t rfilter[5], const Op& op) {
+            GI_FLOAT32_FIXLEN_t rsrc[6], GI_FLOAT32_FIXLEN_t rfilter[5], const Op& op) {
         GI_FLOAT32_t rdst;
         if (need_load_bias) {
             rdst = load_bias<bias_mode>(bias, init);
@@ -101,14 +111,24 @@ struct compute_element_right {
             rdst = GiLoadFloat32(dst);
         }
 
-        rdst = GiMlaqFloat32(rdst, rsrc[0 + padding], rfilter[0]);
-        rdst = GiMlaqFloat32(rdst, rsrc[1 + padding], rfilter[1]);
-        rdst = GiMlaqFloat32(rdst, rsrc[2 + padding], rfilter[2]);
+        rdst = GiMlaqFloat32(
+                rdst, GiFixLenType2GiFloat32Type(rsrc[0 + padding]),
+                GiFixLenType2GiFloat32Type(rfilter[0]));
+        rdst = GiMlaqFloat32(
+                rdst, GiFixLenType2GiFloat32Type(rsrc[1 + padding]),
+                GiFixLenType2GiFloat32Type(rfilter[1]));
+        rdst = GiMlaqFloat32(
+                rdst, GiFixLenType2GiFloat32Type(rsrc[2 + padding]),
+                GiFixLenType2GiFloat32Type(rfilter[2]));
         if (padding < 2) {
-            rdst = GiMlaqFloat32(rdst, rsrc[3 + padding], rfilter[3]);
+            rdst = GiMlaqFloat32(
+                    rdst, GiFixLenType2GiFloat32Type(rsrc[3 + padding]),
+                    GiFixLenType2GiFloat32Type(rfilter[3]));
         }
         if (padding < 1) {
-            rdst = GiMlaqFloat32(rdst, rsrc[4 + padding], rfilter[4]);
+            rdst = GiMlaqFloat32(
+                    rdst, GiFixLenType2GiFloat32Type(rsrc[4 + padding]),
+                    GiFixLenType2GiFloat32Type(rfilter[4]));
         }
 
         if (need_do_op) {
@@ -126,12 +146,13 @@ struct compute_row_src_1x5 {
     template <typename Op>
     static inline void call(
             const float* src, float* dst, const float* bias, const GI_FLOAT32_t& init,
-            GI_FLOAT32_t rsrc[6], GI_FLOAT32_t rfilter[5], int W, const Op& op) {
-        rsrc[0] = GiZeroFloat32();
-        rsrc[1] = GiZeroFloat32();
-        rsrc[2] = GiLoadFloat32(src + 0);
-        rsrc[3] = GiLoadFloat32(src + 4);
-        rsrc[4] = GiLoadFloat32(src + 8);
+            GI_FLOAT32_FIXLEN_t rsrc[6], GI_FLOAT32_FIXLEN_t rfilter[5], int W,
+            const Op& op) {
+        rsrc[0] = GiFloat32Type2FixLenType(GiZeroFloat32());
+        rsrc[1] = GiFloat32Type2FixLenType(GiZeroFloat32());
+        rsrc[2] = GiFloat32Type2FixLenType(GiLoadFloat32(src + 0));
+        rsrc[3] = GiFloat32Type2FixLenType(GiLoadFloat32(src + 4));
+        rsrc[4] = GiFloat32Type2FixLenType(GiLoadFloat32(src + 8));
 
         int w = 0;
 
@@ -172,8 +193,8 @@ struct compute_row {
     template <typename Op>
     static inline void call(
             const float*& src, float*& dst, const float* filter, const float*& bias,
-            const GI_FLOAT32_t& init, GI_FLOAT32_t rsrc[6], GI_FLOAT32_t rfilter[5],
-            int W, const Op& op) {
+            const GI_FLOAT32_t& init, GI_FLOAT32_FIXLEN_t rsrc[6],
+            GI_FLOAT32_FIXLEN_t rfilter[5], int W, const Op& op) {
         if (top_padding < 1) {
             load_filter(filter + 0, rfilter);
             compute_row_src_1x5<bias_mode, top_padding == 0, false>::call(
@@ -222,8 +243,8 @@ void channel_wise_nchw44_float::do_conv_kern_5x5_stride1_padding2(
         init = GiLoadFloat32(bias);
     }
 
-    GI_FLOAT32_t rsrc[6];
-    GI_FLOAT32_t rfilter[5];
+    GI_FLOAT32_FIXLEN_t rsrc[6];
+    GI_FLOAT32_FIXLEN_t rfilter[5];
 
     compute_row<2, 0, bias_mode>::call(
             src, dst, filter, bias, init, rsrc, rfilter, W, op);

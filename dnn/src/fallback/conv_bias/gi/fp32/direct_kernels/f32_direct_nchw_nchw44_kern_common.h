@@ -37,18 +37,24 @@ struct ShiftCalHelper<src_idx, weight_idx, c_dim, stride, 0, T, T2, T3> {
     static MEGDNN_ALWAYS_INLINE void impl(T&, T2&, T3&) {}
 };
 
-#define cb(step)                                                                   \
-    c[0][step] = GiSimdFmaLane(                                                    \
-            c[0][step], weight[0][weight_idx], src[(step * stride + src_idx) / 4], \
-            (step * stride + src_idx) % 4);                                        \
-    c[1][step] = GiSimdFmaLane(                                                    \
-            c[1][step], weight[1][weight_idx], src[(step * stride + src_idx) / 4], \
-            (step * stride + src_idx) % 4);
+#define cb(step)                                                            \
+    c[0][step] = GiFloat32Type2FixLenType(GiSimdFmaLane(                    \
+            GiFixLenType2GiFloat32Type(c[0][step]),                         \
+            GiFixLenType2GiFloat32Type(weight[0][weight_idx]),              \
+            GiFixLenType2GiFloat32Type(src[(step * stride + src_idx) / 4]), \
+            (step * stride + src_idx) % 4));                                \
+    c[1][step] = GiFloat32Type2FixLenType(GiSimdFmaLane(                    \
+            GiFixLenType2GiFloat32Type(c[1][step]),                         \
+            GiFixLenType2GiFloat32Type(weight[1][weight_idx]),              \
+            GiFixLenType2GiFloat32Type(src[(step * stride + src_idx) / 4]), \
+            (step * stride + src_idx) % 4));
 
-#define cb2(step)                                                                  \
-    c[0][step] = GiSimdFmaLane(                                                    \
-            c[0][step], weight[0][weight_idx], src[(step * stride + src_idx) / 4], \
-            (step * stride + src_idx) % 4);
+#define cb2(step)                                                           \
+    c[0][step] = GiFloat32Type2FixLenType(GiSimdFmaLane(                    \
+            GiFixLenType2GiFloat32Type(c[0][step]),                         \
+            GiFixLenType2GiFloat32Type(weight[0][weight_idx]),              \
+            GiFixLenType2GiFloat32Type(src[(step * stride + src_idx) / 4]), \
+            (step * stride + src_idx) % 4));
 
 #define SHIFT_CAL_HELPER(ow_remain)                                               \
     template <                                                                    \
@@ -141,12 +147,12 @@ struct KerGiXXs2NchwNchw44FP32<bias_mode, Op, remain_w, 7, oc_block, stride, ow_
         const int ld_weight_ic = oc_step * filter_size * filter_size;
         const int ld_src_ic = ih * iw;
         constexpr int c_dim = OCHelper<oc_block>::val;
-        GI_FLOAT32_t c[c_dim][8];
+        GI_FLOAT32_FIXLEN_t c[c_dim][8];
         init_ocx_ow8<c_dim, bias_mode, remain_w>(c, bias_ptr, oc_step);
 
         for (int ic_idx = 0; ic_idx < ic; ic_idx += loop_ic_step) {
-            GI_FLOAT32_t src[src_reg_size];
-            GI_FLOAT32_t weight[c_dim][filter_size];
+            GI_FLOAT32_FIXLEN_t src[src_reg_size];
+            GI_FLOAT32_FIXLEN_t weight[c_dim][filter_size];
 
 #define KERNEL_CB(step)                                                                \
     load_helper<src_reg_size, 0, simd_len, 0, Vld1qF32S>(src, src_ptr + step * iw, 0); \
@@ -190,12 +196,12 @@ struct KerGiXXs2NchwNchw44FP32<bias_mode, Op, remain_w, 5, oc_block, stride, ow_
         const int ld_weight_ic = oc_step * filter_size * filter_size;
         const int ld_src_ic = ih * iw;
         constexpr int c_dim = OCHelper<oc_block>::val;
-        GI_FLOAT32_t c[c_dim][8];
+        GI_FLOAT32_FIXLEN_t c[c_dim][8];
         init_ocx_ow8<c_dim, bias_mode, remain_w>(c, bias_ptr, oc_step);
 
         for (int ic_idx = 0; ic_idx < ic; ic_idx += loop_ic_step) {
-            GI_FLOAT32_t src[src_reg_size];
-            GI_FLOAT32_t weight[c_dim][filter_size];
+            GI_FLOAT32_FIXLEN_t src[src_reg_size];
+            GI_FLOAT32_FIXLEN_t weight[c_dim][filter_size];
 
 #define KERNEL_CB(step)                                                                \
     load_helper<src_reg_size, 0, simd_len, 0, Vld1qF32S>(src, src_ptr + step * iw, 0); \
@@ -236,12 +242,12 @@ struct KerGiXXs2NchwNchw44FP32<bias_mode, Op, remain_w, 3, oc_block, stride, ow_
         const int ld_weight_ic = oc_step * filter_size * filter_size;
         const int ld_src_ic = ih * iw;
         constexpr int c_dim = OCHelper<oc_block>::val;
-        GI_FLOAT32_t c[c_dim][8];
+        GI_FLOAT32_FIXLEN_t c[c_dim][8];
         init_ocx_ow8<c_dim, bias_mode, remain_w>(c, bias_ptr, oc_step);
 
         for (int ic_idx = 0; ic_idx < ic; ic_idx += loop_ic_step) {
-            GI_FLOAT32_t src[src_reg_size];
-            GI_FLOAT32_t weight[c_dim][filter_size];
+            GI_FLOAT32_FIXLEN_t src[src_reg_size];
+            GI_FLOAT32_FIXLEN_t weight[c_dim][filter_size];
             // row 0
             load_helper<src_reg_size, 0, simd_len, 0, Vld1qF32S>(src, src_ptr, 0);
             load_helper<filter_size, 0, oc_step, c_dim, Vld1qF32S>(
@@ -295,7 +301,7 @@ struct KerGiXXs2NchwNchw44FP32<bias_mode, Op, 8, 3, 4, 2, 8, CpuTag::A7_TAG> {
         const int ld_src_ic_skip_bytes =
                 iw * (ih - filter_size) * sizeof(float) + iw_skip_bytes;
         constexpr int c_dim = OCHelper<oc_block>::val;
-        GI_FLOAT32_t c[1][8];
+        GI_FLOAT32_FIXLEN_t c[1][8];
         init_ocx_ow8<c_dim, bias_mode, 8>(c, bias_ptr, oc_step);
         const int img_stride = ih * iw;
         constexpr int filter_stride = filter_size * filter_size * oc_step;
@@ -467,7 +473,7 @@ struct KerGiXXs2NchwNchw44FP32<bias_mode, Op, 8, 3, 4, 2, 8, CpuTag::DEFAULT_CPU
         const int ld_src_ic_skip_bytes =
                 iw * (ih - filter_size) * sizeof(float) + iw_skip_bytes;
         constexpr int c_dim = OCHelper<oc_block>::val;
-        GI_FLOAT32_t c[1][8];
+        GI_FLOAT32_FIXLEN_t c[1][8];
         init_ocx_ow8<c_dim, bias_mode, 8>(c, bias_ptr, oc_step);
         /**
          * c q8-q15
@@ -627,12 +633,12 @@ struct KerGiXXs2NchwNchw44FP32<bias_mode, Op, remain_w, 2, oc_block, stride, ow_
         const int ld_weight_ic = oc_step * filter_size * filter_size;
         const int ld_src_ic = ih * iw;
         constexpr int c_dim = OCHelper<oc_block>::val;
-        GI_FLOAT32_t c[c_dim][8];
+        GI_FLOAT32_FIXLEN_t c[c_dim][8];
         init_ocx_ow8<c_dim, bias_mode, remain_w>(c, bias_ptr, oc_step);
 
         for (int ic_idx = 0; ic_idx < ic; ic_idx += loop_ic_step) {
-            GI_FLOAT32_t src[src_reg_size];
-            GI_FLOAT32_t weight[c_dim][filter_size];
+            GI_FLOAT32_FIXLEN_t src[src_reg_size];
+            GI_FLOAT32_FIXLEN_t weight[c_dim][filter_size];
             // row 0
             load_helper<src_reg_size, 0, simd_len, 0, Vld1qF32S>(src, src_ptr, 0);
             load_helper<filter_size, 0, oc_step, c_dim, Vld1qF32S>(

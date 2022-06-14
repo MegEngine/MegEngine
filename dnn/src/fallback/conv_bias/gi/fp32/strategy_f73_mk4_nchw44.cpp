@@ -121,14 +121,14 @@ struct InputTransformF73_NCHW44 {
     auto t##i##6 = d7;                                                            \
     auto t##i##7 = d7;                                                            \
     t##i##8 = GiFmsqLaneQFloat32(t##i##8, d7, v0, 0);                             \
-    t##i##0 = t##i##0 - d1;                                                       \
+    t##i##0 = GiSubtractFloat32(t##i##0, d1);                                     \
     t##i##1 = GiFmsqLaneQFloat32(t##i##1, d1, v0, 0);                             \
     t##i##2 = GiSimdFmaLane(t##i##2, d1, v0, 0);                                  \
     t##i##3 = GiFmsqLaneQFloat32(t##i##3, d1, v0, 1);                             \
     t##i##4 = GiSimdFmaLane(t##i##4, d1, v0, 1);                                  \
     t##i##5 = GiFmsqLaneQFloat32(t##i##5, d1, v0, 2);                             \
     t##i##6 = GiSimdFmaLane(t##i##6, d1, v0, 2);                                  \
-    t##i##7 = t##i##7 - d1;                                                       \
+    t##i##7 = GiSubtractFloat32(t##i##7, d1);                                     \
     t##i##8 = GiSimdFmaLane(t##i##8, d1, v0, 0);                                  \
     t##i##0 = GiFmsqLaneQFloat32(t##i##0, d2, v0, 3);                             \
     t##i##1 = GiFmsqLaneQFloat32(t##i##1, d2, v1, 0);                             \
@@ -137,7 +137,7 @@ struct InputTransformF73_NCHW44 {
     t##i##4 = GiFmsqLaneQFloat32(t##i##4, d2, v1, 3);                             \
     t##i##5 = GiFmsqLaneQFloat32(t##i##5, d2, v2, 0);                             \
     t##i##6 = GiFmsqLaneQFloat32(t##i##6, d2, v2, 1);                             \
-    t##i##8 = t##i##8 - d2;                                                       \
+    t##i##8 = GiSubtractFloat32(t##i##8, d2);                                     \
     t##i##0 = GiSimdFmaLane(t##i##0, d3, v2, 2);                                  \
     t##i##1 = GiSimdFmaLane(t##i##1, d3, v2, 3);                                  \
     t##i##2 = GiFmsqLaneQFloat32(t##i##2, d3, v3, 0);                             \
@@ -169,7 +169,7 @@ struct InputTransformF73_NCHW44 {
     t##i##2 = GiFmsqLaneQFloat32(t##i##2, d6, v1, 1);                             \
     t##i##3 = GiSimdFmaLane(t##i##3, d6, v1, 0);                                  \
     t##i##4 = GiFmsqLaneQFloat32(t##i##4, d6, v3, 1);                             \
-    t##i##5 = t##i##5 - d6;                                                       \
+    t##i##5 = GiSubtractFloat32(t##i##5, d6);                                     \
     t##i##6 = GiFmsqLaneQFloat32(t##i##6, d6, v6, 2);                             \
     t##i##8 = GiFmsqLaneQFloat32(t##i##8, d6, v2, 2);                             \
     t##i##0 = GiSimdFmaLane(t##i##0, d0, v0, 0);
@@ -188,14 +188,14 @@ struct InputTransformF73_NCHW44 {
     d6 = t7##i;                                                                \
     d7 = t7##i;                                                                \
     d8 = GiFmsqLaneQFloat32(d8, t7##i, v0, 0);                                 \
-    d0 = d0 - t1##i;                                                           \
+    d0 = GiSubtractFloat32(d0, t1##i);                                         \
     d1 = GiFmsqLaneQFloat32(d1, t1##i, v0, 0);                                 \
     d2 = GiSimdFmaLane(d2, t1##i, v0, 0);                                      \
     d3 = GiFmsqLaneQFloat32(d3, t1##i, v0, 1);                                 \
     d4 = GiSimdFmaLane(d4, t1##i, v0, 1);                                      \
     d5 = GiFmsqLaneQFloat32(d5, t1##i, v0, 2);                                 \
     d6 = GiSimdFmaLane(d6, t1##i, v0, 2);                                      \
-    d7 = d7 - t1##i;                                                           \
+    d7 = GiSubtractFloat32(d7, t1##i);                                         \
     d8 = GiSimdFmaLane(d8, t1##i, v0, 0);                                      \
     d0 = GiFmsqLaneQFloat32(d0, t2##i, v0, 3);                                 \
     d1 = GiFmsqLaneQFloat32(d1, t2##i, v1, 0);                                 \
@@ -204,7 +204,7 @@ struct InputTransformF73_NCHW44 {
     d4 = GiFmsqLaneQFloat32(d4, t2##i, v1, 3);                                 \
     d5 = GiFmsqLaneQFloat32(d5, t2##i, v2, 0);                                 \
     d6 = GiFmsqLaneQFloat32(d6, t2##i, v2, 1);                                 \
-    d8 = d8 - t2##i;                                                           \
+    d8 = GiSubtractFloat32(d8, t2##i);                                         \
     d0 = GiSimdFmaLane(d0, t3##i, v2, 2);                                      \
     d1 = GiSimdFmaLane(d1, t3##i, v2, 3);                                      \
     d2 = GiFmsqLaneQFloat32(d2, t3##i, v3, 0);                                 \
@@ -236,7 +236,7 @@ struct InputTransformF73_NCHW44 {
     d2 = GiFmsqLaneQFloat32(d2, t6##i, v1, 1);                                 \
     d3 = GiSimdFmaLane(d3, t6##i, v1, 0);                                      \
     d4 = GiFmsqLaneQFloat32(d4, t6##i, v3, 1);                                 \
-    d5 = d5 - t6##i;                                                           \
+    d5 = GiSubtractFloat32(d5, t6##i);                                         \
     d6 = GiFmsqLaneQFloat32(d6, t6##i, v6, 2);                                 \
     d8 = GiFmsqLaneQFloat32(d8, t6##i, v2, 2);                                 \
     d0 = GiSimdFmaLane(d0, t0##i, v0, 0);                                      \
@@ -377,7 +377,7 @@ struct OutputTransformF73_NCHW44 {
 #undef cb
         }
         if (bmode != BiasMode::BIAS) {
-#define cb(m, n) v##m##n = op(CONCAT(v##m, n).value);
+#define cb(m, n) v##m##n = op(GiFixLenType2GiFloat32Type(CONCAT(v##m, n).value));
             UNROLL_CALL_RAW_D2(7, 7, cb);
 #undef cb
         }
@@ -389,7 +389,7 @@ struct OutputTransformF73_NCHW44 {
             if (bmode == BiasMode::BIAS) {                                           \
                 v##oho##owo += Vector<float, 4>::load(                               \
                         bias + oc * OH * OW + oh * OW * pack_size + ow * pack_size); \
-                v##oho##owo = op(v##oho##owo.value);                                 \
+                v##oho##owo = op(GiFixLenType2GiFloat32Type(v##oho##owo.value));     \
             }                                                                        \
             v##oho##owo.save(                                                        \
                     output + oc * OH * OW + oh * OW * pack_size + ow * pack_size);   \

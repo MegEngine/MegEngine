@@ -38,23 +38,23 @@ static inline void odd_even_split_iw8_even(
     const int src_offset = src_idx * ic_step;
     const int even_offset = iw_idx / 2 * ic_step;
     const int odd_offset = (odd_start + iw_idx / 2) * ic_step;
-    GI_FLOAT32_t temp[8];
-    temp[0] = GiLoadFloat32(sptr + src_offset + 0 * ic_step);
-    temp[1] = GiLoadFloat32(sptr + src_offset + 1 * ic_step);
-    temp[2] = GiLoadFloat32(sptr + src_offset + 2 * ic_step);
-    temp[3] = GiLoadFloat32(sptr + src_offset + 3 * ic_step);
-    temp[4] = GiLoadFloat32(sptr + src_offset + 4 * ic_step);
-    temp[5] = GiLoadFloat32(sptr + src_offset + 5 * ic_step);
-    temp[6] = GiLoadFloat32(sptr + src_offset + 6 * ic_step);
-    temp[7] = GiLoadFloat32(sptr + src_offset + 7 * ic_step);
-    GiStoreFloat32(sptr_base + even_offset + 0 * ic_step, temp[0]);
-    GiStoreFloat32(sptr_base + even_offset + 1 * ic_step, temp[2]);
-    GiStoreFloat32(sptr_base + even_offset + 2 * ic_step, temp[4]);
-    GiStoreFloat32(sptr_base + even_offset + 3 * ic_step, temp[6]);
-    GiStoreFloat32(sptr_base + odd_offset + 0 * ic_step, temp[1]);
-    GiStoreFloat32(sptr_base + odd_offset + 1 * ic_step, temp[3]);
-    GiStoreFloat32(sptr_base + odd_offset + 2 * ic_step, temp[5]);
-    GiStoreFloat32(sptr_base + odd_offset + 3 * ic_step, temp[7]);
+    GI_FLOAT32_t a0, a1, a2, a3, a4, a5, a6, a7;
+    a0 = GiLoadFloat32(sptr + src_offset + 0 * ic_step);
+    a1 = GiLoadFloat32(sptr + src_offset + 1 * ic_step);
+    a2 = GiLoadFloat32(sptr + src_offset + 2 * ic_step);
+    a3 = GiLoadFloat32(sptr + src_offset + 3 * ic_step);
+    a4 = GiLoadFloat32(sptr + src_offset + 4 * ic_step);
+    a5 = GiLoadFloat32(sptr + src_offset + 5 * ic_step);
+    a6 = GiLoadFloat32(sptr + src_offset + 6 * ic_step);
+    a7 = GiLoadFloat32(sptr + src_offset + 7 * ic_step);
+    GiStoreFloat32(sptr_base + even_offset + 0 * ic_step, a0);
+    GiStoreFloat32(sptr_base + even_offset + 1 * ic_step, a2);
+    GiStoreFloat32(sptr_base + even_offset + 2 * ic_step, a4);
+    GiStoreFloat32(sptr_base + even_offset + 3 * ic_step, a6);
+    GiStoreFloat32(sptr_base + odd_offset + 0 * ic_step, a1);
+    GiStoreFloat32(sptr_base + odd_offset + 1 * ic_step, a3);
+    GiStoreFloat32(sptr_base + odd_offset + 2 * ic_step, a5);
+    GiStoreFloat32(sptr_base + odd_offset + 3 * ic_step, a7);
 }
 
 static inline void odd_even_split_iw8_odd(
@@ -64,23 +64,23 @@ static inline void odd_even_split_iw8_odd(
     const int src_offset = src_idx * ic_step;
     const int even_offset = (iw_idx + 1) / 2 * ic_step;
     const int odd_offset = (odd_start + iw_idx / 2) * ic_step;
-    GI_FLOAT32_t temp[8];
-    temp[0] = GiLoadFloat32(sptr + src_offset + 0 * ic_step);
-    temp[1] = GiLoadFloat32(sptr + src_offset + 1 * ic_step);
-    temp[2] = GiLoadFloat32(sptr + src_offset + 2 * ic_step);
-    temp[3] = GiLoadFloat32(sptr + src_offset + 3 * ic_step);
-    temp[4] = GiLoadFloat32(sptr + src_offset + 4 * ic_step);
-    temp[5] = GiLoadFloat32(sptr + src_offset + 5 * ic_step);
-    temp[6] = GiLoadFloat32(sptr + src_offset + 6 * ic_step);
-    temp[7] = GiLoadFloat32(sptr + src_offset + 7 * ic_step);
-    GiStoreFloat32(sptr_base + odd_offset + 0 * ic_step, temp[0]);
-    GiStoreFloat32(sptr_base + odd_offset + 1 * ic_step, temp[2]);
-    GiStoreFloat32(sptr_base + odd_offset + 2 * ic_step, temp[4]);
-    GiStoreFloat32(sptr_base + odd_offset + 3 * ic_step, temp[6]);
-    GiStoreFloat32(sptr_base + even_offset + 0 * ic_step, temp[1]);
-    GiStoreFloat32(sptr_base + even_offset + 1 * ic_step, temp[3]);
-    GiStoreFloat32(sptr_base + even_offset + 2 * ic_step, temp[5]);
-    GiStoreFloat32(sptr_base + even_offset + 3 * ic_step, temp[7]);
+    GI_FLOAT32_t a0, a1, a2, a3, a4, a5, a6, a7;
+    a0 = GiLoadFloat32(sptr + src_offset + 0 * ic_step);
+    a1 = GiLoadFloat32(sptr + src_offset + 1 * ic_step);
+    a2 = GiLoadFloat32(sptr + src_offset + 2 * ic_step);
+    a3 = GiLoadFloat32(sptr + src_offset + 3 * ic_step);
+    a4 = GiLoadFloat32(sptr + src_offset + 4 * ic_step);
+    a5 = GiLoadFloat32(sptr + src_offset + 5 * ic_step);
+    a6 = GiLoadFloat32(sptr + src_offset + 6 * ic_step);
+    a7 = GiLoadFloat32(sptr + src_offset + 7 * ic_step);
+    GiStoreFloat32(sptr_base + odd_offset + 0 * ic_step, a0);
+    GiStoreFloat32(sptr_base + odd_offset + 1 * ic_step, a2);
+    GiStoreFloat32(sptr_base + odd_offset + 2 * ic_step, a4);
+    GiStoreFloat32(sptr_base + odd_offset + 3 * ic_step, a6);
+    GiStoreFloat32(sptr_base + even_offset + 0 * ic_step, a1);
+    GiStoreFloat32(sptr_base + even_offset + 1 * ic_step, a3);
+    GiStoreFloat32(sptr_base + even_offset + 2 * ic_step, a5);
+    GiStoreFloat32(sptr_base + even_offset + 3 * ic_step, a7);
 }
 }  // namespace
 

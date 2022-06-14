@@ -26,6 +26,35 @@ struct Vld1qF32S {
 #endif
 #endif
 
+template <typename ctype>
+struct ParamElemFixLenVisitor;
+
+template <typename ctype>
+struct ParamElemFixLenVisitorV2;
+
+#define cb(_ctype, _simd_type, _simd_fixlen_type, _fun_suffix, _simd_type_v2)     \
+    template <>                                                                   \
+    struct ParamElemFixLenVisitor<_ctype> {                                       \
+        _simd_type operator()(const _simd_fixlen_type& s0) const {                \
+            return GiFixLenType2Gi##_fun_suffix##Type(s0);                        \
+        }                                                                         \
+    };                                                                            \
+    template <>                                                                   \
+    struct ParamElemFixLenVisitorV2<_ctype> {                                     \
+        _simd_type_v2 operator()(                                                 \
+                const _simd_fixlen_type& s0, const _simd_fixlen_type& s1) const { \
+            _simd_type_v2 ret;                                                    \
+            GiSetSubVector##_fun_suffix##V2(                                      \
+                    ret, 0, GiFixLenType2Gi##_fun_suffix##Type(s0));              \
+            GiSetSubVector##_fun_suffix##V2(                                      \
+                    ret, 1, GiFixLenType2Gi##_fun_suffix##Type(s1));              \
+            return ret;                                                           \
+        }                                                                         \
+    };
+
+cb(dt_float32, GI_FLOAT32_t, GI_FLOAT32_FIXLEN_t, Float32, GI_FLOAT32_V2_t);
+#undef cb
+
 template <
         int weight_number, int base_offset, int ptr_step, int oc_block, typename Func,
         typename T, typename T2, typename... XT>
@@ -33,8 +62,9 @@ struct LoadHelper {
     static GI_FORCEINLINE void impl(T& weight, T2 ptr, int oc_offset, XT... args);
 };
 
-#define WEIGHT_CB(step) \
-    src[step] = Func::impl(ptr + base_offset + step * ptr_step, args...);
+#define WEIGHT_CB(step)                   \
+    src[step] = GiFloat32Type2FixLenType( \
+            Func::impl(ptr + base_offset + step * ptr_step, args...));
 
 #define LOAD_HELPER(step)                                                          \
     template <                                                                     \
@@ -67,7 +97,9 @@ LOAD_HELPER(16);
 #undef WEIGHT_CB
 
 ///////////////////////////c_dim = 1/////////////////////////
-#define WEIGHT_CB(step) src[0][step] = Func::impl(ptr + base_offset + step * ptr_step);
+#define WEIGHT_CB(step) \
+    src[0][step] =      \
+            GiFloat32Type2FixLenType(Func::impl(ptr + base_offset + step * ptr_step));
 
 #define LOAD_HELPER(step)                                                            \
     template <int base_offset, int ptr_step, typename Func, typename T, typename T2> \
@@ -91,9 +123,11 @@ LOAD_HELPER(9);
 #undef WEIGHT_CB
 
 /////////////////////////c_dim = 2///////////////////////////////
-#define WEIGHT_CB(step)                                             \
-    src[0][step] = Func::impl(ptr + base_offset + step * ptr_step); \
-    src[1][step] = Func::impl(ptr + base_offset + step * ptr_step + oc_offset);
+#define WEIGHT_CB(step)                                                                \
+    src[0][step] =                                                                     \
+            GiFloat32Type2FixLenType(Func::impl(ptr + base_offset + step * ptr_step)); \
+    src[1][step] = GiFloat32Type2FixLenType(                                           \
+            Func::impl(ptr + base_offset + step * ptr_step + oc_offset));
 
 #define LOAD_HELPER(step)                                                            \
     template <int base_offset, int ptr_step, typename Func, typename T, typename T2> \
@@ -132,172 +166,196 @@ struct StoreOcxOw8Remain {
 template <typename Op, typename T, typename T2, typename T3>
 struct StoreOcxOw8Remain<2, 0, Op, T, T2, T3> {
     static GI_FORCEINLINE void impl(T& c, const Op& op, T2 dst_ptr, int ld_dst_oc) {
-        op({{c[0][0], c[0][1]}}, reinterpret_cast<T3>(dst_ptr));
-        op({{c[0][2], c[0][3]}}, reinterpret_cast<T3>(dst_ptr + 8));
-        op({{c[0][4], c[0][5]}}, reinterpret_cast<T3>(dst_ptr + 16));
-        op({{c[0][6], c[0][7]}}, reinterpret_cast<T3>(dst_ptr + 24));
+        ParamElemFixLenVisitorV2<typename Op::src_ctype> vis;
+        op(vis(c[0][0], c[0][1]), reinterpret_cast<T3>(dst_ptr));
+        op(vis(c[0][2], c[0][3]), reinterpret_cast<T3>(dst_ptr + 8));
+        op(vis(c[0][4], c[0][5]), reinterpret_cast<T3>(dst_ptr + 16));
+        op(vis(c[0][6], c[0][7]), reinterpret_cast<T3>(dst_ptr + 24));
 
-        op({{c[1][0], c[1][1]}}, reinterpret_cast<T3>(dst_ptr + ld_dst_oc));
-        op({{c[1][2], c[1][3]}}, reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 8));
-        op({{c[1][4], c[1][5]}}, reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 16));
-        op({{c[1][6], c[1][7]}}, reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 24));
+        op(vis(c[1][0], c[1][1]), reinterpret_cast<T3>(dst_ptr + ld_dst_oc));
+        op(vis(c[1][2], c[1][3]), reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 8));
+        op(vis(c[1][4], c[1][5]), reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 16));
+        op(vis(c[1][6], c[1][7]), reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 24));
     }
 };
 template <typename Op, typename T, typename T2, typename T3>
 struct StoreOcxOw8Remain<2, 8, Op, T, T2, T3> {
     static GI_FORCEINLINE void impl(T& c, const Op& op, T2 dst_ptr, int ld_dst_oc) {
-        op({{c[0][0], c[0][1]}}, reinterpret_cast<T3>(dst_ptr));
-        op({{c[0][2], c[0][3]}}, reinterpret_cast<T3>(dst_ptr + 8));
-        op({{c[0][4], c[0][5]}}, reinterpret_cast<T3>(dst_ptr + 16));
-        op({{c[0][6], c[0][7]}}, reinterpret_cast<T3>(dst_ptr + 24));
+        ParamElemFixLenVisitorV2<typename Op::src_ctype> vis;
+        op(vis(c[0][0], c[0][1]), reinterpret_cast<T3>(dst_ptr));
+        op(vis(c[0][2], c[0][3]), reinterpret_cast<T3>(dst_ptr + 8));
+        op(vis(c[0][4], c[0][5]), reinterpret_cast<T3>(dst_ptr + 16));
+        op(vis(c[0][6], c[0][7]), reinterpret_cast<T3>(dst_ptr + 24));
 
-        op({{c[1][0], c[1][1]}}, reinterpret_cast<T3>(dst_ptr + ld_dst_oc));
-        op({{c[1][2], c[1][3]}}, reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 8));
-        op({{c[1][4], c[1][5]}}, reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 16));
-        op({{c[1][6], c[1][7]}}, reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 24));
+        op(vis(c[1][0], c[1][1]), reinterpret_cast<T3>(dst_ptr + ld_dst_oc));
+        op(vis(c[1][2], c[1][3]), reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 8));
+        op(vis(c[1][4], c[1][5]), reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 16));
+        op(vis(c[1][6], c[1][7]), reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 24));
     }
 };
 template <typename Op, typename T, typename T2, typename T3>
 struct StoreOcxOw8Remain<2, 7, Op, T, T2, T3> {
     static GI_FORCEINLINE void impl(T& c, const Op& op, T2 dst_ptr, int ld_dst_oc) {
-        op({{c[0][0], c[0][1]}}, reinterpret_cast<T3>(dst_ptr));
-        op({{c[0][2], c[0][3]}}, reinterpret_cast<T3>(dst_ptr + 8));
-        op({{c[0][4], c[0][5]}}, reinterpret_cast<T3>(dst_ptr + 16));
-        op(c[0][6], reinterpret_cast<T3>(dst_ptr + 24));
+        ParamElemFixLenVisitor<typename Op::src_ctype> vis0;
+        ParamElemFixLenVisitorV2<typename Op::src_ctype> vis;
+        op(vis(c[0][0], c[0][1]), reinterpret_cast<T3>(dst_ptr));
+        op(vis(c[0][2], c[0][3]), reinterpret_cast<T3>(dst_ptr + 8));
+        op(vis(c[0][4], c[0][5]), reinterpret_cast<T3>(dst_ptr + 16));
+        op(vis0(c[0][6]), reinterpret_cast<T3>(dst_ptr + 24));
 
-        op({{c[1][0], c[1][1]}}, reinterpret_cast<T3>(dst_ptr + ld_dst_oc));
-        op({{c[1][2], c[1][3]}}, reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 8));
-        op({{c[1][4], c[1][5]}}, reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 16));
-        op(c[1][6], reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 24));
+        op(vis(c[1][0], c[1][1]), reinterpret_cast<T3>(dst_ptr + ld_dst_oc));
+        op(vis(c[1][2], c[1][3]), reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 8));
+        op(vis(c[1][4], c[1][5]), reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 16));
+        op(vis0(c[1][6]), reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 24));
     }
 };
 template <typename Op, typename T, typename T2, typename T3>
 struct StoreOcxOw8Remain<2, 6, Op, T, T2, T3> {
     static GI_FORCEINLINE void impl(T& c, const Op& op, T2 dst_ptr, int ld_dst_oc) {
-        op({{c[0][0], c[0][1]}}, reinterpret_cast<T3>(dst_ptr));
-        op({{c[0][2], c[0][3]}}, reinterpret_cast<T3>(dst_ptr + 8));
-        op({{c[0][4], c[0][5]}}, reinterpret_cast<T3>(dst_ptr + 16));
+        ParamElemFixLenVisitorV2<typename Op::src_ctype> vis;
+        op(vis(c[0][0], c[0][1]), reinterpret_cast<T3>(dst_ptr));
+        op(vis(c[0][2], c[0][3]), reinterpret_cast<T3>(dst_ptr + 8));
+        op(vis(c[0][4], c[0][5]), reinterpret_cast<T3>(dst_ptr + 16));
 
-        op({{c[1][0], c[1][1]}}, reinterpret_cast<T3>(dst_ptr + ld_dst_oc));
-        op({{c[1][2], c[1][3]}}, reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 8));
-        op({{c[1][4], c[1][5]}}, reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 16));
+        op(vis(c[1][0], c[1][1]), reinterpret_cast<T3>(dst_ptr + ld_dst_oc));
+        op(vis(c[1][2], c[1][3]), reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 8));
+        op(vis(c[1][4], c[1][5]), reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 16));
     }
 };
 template <typename Op, typename T, typename T2, typename T3>
 struct StoreOcxOw8Remain<2, 5, Op, T, T2, T3> {
     static GI_FORCEINLINE void impl(T& c, const Op& op, T2 dst_ptr, int ld_dst_oc) {
-        op({{c[0][0], c[0][1]}}, reinterpret_cast<T3>(dst_ptr));
-        op({{c[0][2], c[0][3]}}, reinterpret_cast<T3>(dst_ptr + 8));
-        op(c[0][4], reinterpret_cast<T3>(dst_ptr + 16));
+        ParamElemFixLenVisitor<typename Op::src_ctype> vis0;
+        ParamElemFixLenVisitorV2<typename Op::src_ctype> vis;
+        op(vis(c[0][0], c[0][1]), reinterpret_cast<T3>(dst_ptr));
+        op(vis(c[0][2], c[0][3]), reinterpret_cast<T3>(dst_ptr + 8));
+        op(vis0(c[0][4]), reinterpret_cast<T3>(dst_ptr + 16));
 
-        op({{c[1][0], c[1][1]}}, reinterpret_cast<T3>(dst_ptr + ld_dst_oc));
-        op({{c[1][2], c[1][3]}}, reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 8));
-        op(c[1][4], reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 16));
+        op(vis(c[1][0], c[1][1]), reinterpret_cast<T3>(dst_ptr + ld_dst_oc));
+        op(vis(c[1][2], c[1][3]), reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 8));
+        op(vis0(c[1][4]), reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 16));
     }
 };
 template <typename Op, typename T, typename T2, typename T3>
 struct StoreOcxOw8Remain<2, 4, Op, T, T2, T3> {
     static GI_FORCEINLINE void impl(T& c, const Op& op, T2 dst_ptr, int ld_dst_oc) {
-        op({{c[0][0], c[0][1]}}, reinterpret_cast<T3>(dst_ptr));
-        op({{c[0][2], c[0][3]}}, reinterpret_cast<T3>(dst_ptr + 8));
+        ParamElemFixLenVisitorV2<typename Op::src_ctype> vis;
+        op(vis(c[0][0], c[0][1]), reinterpret_cast<T3>(dst_ptr));
+        op(vis(c[0][2], c[0][3]), reinterpret_cast<T3>(dst_ptr + 8));
 
-        op({{c[1][0], c[1][1]}}, reinterpret_cast<T3>(dst_ptr + ld_dst_oc));
-        op({{c[1][2], c[1][3]}}, reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 8));
+        op(vis(c[1][0], c[1][1]), reinterpret_cast<T3>(dst_ptr + ld_dst_oc));
+        op(vis(c[1][2], c[1][3]), reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 8));
     }
 };
 template <typename Op, typename T, typename T2, typename T3>
 struct StoreOcxOw8Remain<2, 3, Op, T, T2, T3> {
     static GI_FORCEINLINE void impl(T& c, const Op& op, T2 dst_ptr, int ld_dst_oc) {
-        op({{c[0][0], c[0][1]}}, reinterpret_cast<T3>(dst_ptr));
-        op(c[0][2], reinterpret_cast<T3>(dst_ptr + 8));
+        ParamElemFixLenVisitor<typename Op::src_ctype> vis0;
+        ParamElemFixLenVisitorV2<typename Op::src_ctype> vis;
+        op(vis(c[0][0], c[0][1]), reinterpret_cast<T3>(dst_ptr));
+        op(vis0(c[0][2]), reinterpret_cast<T3>(dst_ptr + 8));
 
-        op({{c[1][0], c[1][1]}}, reinterpret_cast<T3>(dst_ptr + ld_dst_oc));
-        op(c[1][2], reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 8));
+        op(vis(c[1][0], c[1][1]), reinterpret_cast<T3>(dst_ptr + ld_dst_oc));
+        op(vis0(c[1][2]), reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 8));
     }
 };
 template <typename Op, typename T, typename T2, typename T3>
 struct StoreOcxOw8Remain<2, 2, Op, T, T2, T3> {
     static GI_FORCEINLINE void impl(T& c, const Op& op, T2 dst_ptr, int ld_dst_oc) {
-        op({{c[0][0], c[0][1]}}, reinterpret_cast<T3>(dst_ptr));
-        op({{c[1][0], c[1][1]}}, reinterpret_cast<T3>(dst_ptr + ld_dst_oc));
+        ParamElemFixLenVisitorV2<typename Op::src_ctype> vis;
+        op(vis(c[0][0], c[0][1]), reinterpret_cast<T3>(dst_ptr));
+        op(vis(c[1][0], c[1][1]), reinterpret_cast<T3>(dst_ptr + ld_dst_oc));
     }
 };
 template <typename Op, typename T, typename T2, typename T3>
 struct StoreOcxOw8Remain<2, 1, Op, T, T2, T3> {
     static GI_FORCEINLINE void impl(T& c, const Op& op, T2 dst_ptr, int ld_dst_oc) {
-        op(c[0][0], reinterpret_cast<T3>(dst_ptr));
-        op(c[1][0], reinterpret_cast<T3>(dst_ptr + ld_dst_oc));
+        ParamElemFixLenVisitor<typename Op::src_ctype> vis0;
+        op(vis0(c[0][0]), reinterpret_cast<T3>(dst_ptr));
+        op(vis0(c[1][0]), reinterpret_cast<T3>(dst_ptr + ld_dst_oc));
     }
 };
 
 template <typename Op, typename T, typename T2, typename T3>
 struct StoreOcxOw8Remain<1, 0, Op, T, T2, T3> {
     static GI_FORCEINLINE void impl(T& c, const Op& op, T2 dst_ptr, int) {
-        op({{c[0][0], c[0][1]}}, reinterpret_cast<T3>(dst_ptr));
-        op({{c[0][2], c[0][3]}}, reinterpret_cast<T3>(dst_ptr + 8));
-        op({{c[0][4], c[0][5]}}, reinterpret_cast<T3>(dst_ptr + 16));
-        op({{c[0][6], c[0][7]}}, reinterpret_cast<T3>(dst_ptr + 24));
+        ParamElemFixLenVisitorV2<typename Op::src_ctype> vis;
+        op(vis(c[0][0], c[0][1]), reinterpret_cast<T3>(dst_ptr));
+        op(vis(c[0][2], c[0][3]), reinterpret_cast<T3>(dst_ptr + 8));
+        op(vis(c[0][4], c[0][5]), reinterpret_cast<T3>(dst_ptr + 16));
+        op(vis(c[0][6], c[0][7]), reinterpret_cast<T3>(dst_ptr + 24));
     }
 };
 template <typename Op, typename T, typename T2, typename T3>
 struct StoreOcxOw8Remain<1, 8, Op, T, T2, T3> {
     static GI_FORCEINLINE void impl(T& c, const Op& op, T2 dst_ptr, int) {
-        op({{c[0][0], c[0][1]}}, reinterpret_cast<T3>(dst_ptr));
-        op({{c[0][2], c[0][3]}}, reinterpret_cast<T3>(dst_ptr + 8));
-        op({{c[0][4], c[0][5]}}, reinterpret_cast<T3>(dst_ptr + 16));
-        op({{c[0][6], c[0][7]}}, reinterpret_cast<T3>(dst_ptr + 24));
+        ParamElemFixLenVisitorV2<typename Op::src_ctype> vis;
+        op(vis(c[0][0], c[0][1]), reinterpret_cast<T3>(dst_ptr));
+        op(vis(c[0][2], c[0][3]), reinterpret_cast<T3>(dst_ptr + 8));
+        op(vis(c[0][4], c[0][5]), reinterpret_cast<T3>(dst_ptr + 16));
+        op(vis(c[0][6], c[0][7]), reinterpret_cast<T3>(dst_ptr + 24));
     }
 };
 
 template <typename Op, typename T, typename T2, typename T3>
 struct StoreOcxOw8Remain<1, 7, Op, T, T2, T3> {
     static GI_FORCEINLINE void impl(T& c, const Op& op, T2 dst_ptr, int) {
-        op({{c[0][0], c[0][1]}}, reinterpret_cast<T3>(dst_ptr));
-        op({{c[0][2], c[0][3]}}, reinterpret_cast<T3>(dst_ptr + 8));
-        op({{c[0][4], c[0][5]}}, reinterpret_cast<T3>(dst_ptr + 16));
-        op(c[0][6], reinterpret_cast<T3>(dst_ptr + 24));
+        ParamElemFixLenVisitor<typename Op::src_ctype> vis0;
+        ParamElemFixLenVisitorV2<typename Op::src_ctype> vis;
+        op(vis(c[0][0], c[0][1]), reinterpret_cast<T3>(dst_ptr));
+        op(vis(c[0][2], c[0][3]), reinterpret_cast<T3>(dst_ptr + 8));
+        op(vis(c[0][4], c[0][5]), reinterpret_cast<T3>(dst_ptr + 16));
+        op(vis0(c[0][6]), reinterpret_cast<T3>(dst_ptr + 24));
     }
 };
 template <typename Op, typename T, typename T2, typename T3>
 struct StoreOcxOw8Remain<1, 6, Op, T, T2, T3> {
     static GI_FORCEINLINE void impl(T& c, const Op& op, T2 dst_ptr, int) {
-        op({{c[0][0], c[0][1]}}, reinterpret_cast<T3>(dst_ptr));
-        op({{c[0][2], c[0][3]}}, reinterpret_cast<T3>(dst_ptr + 8));
-        op({{c[0][4], c[0][5]}}, reinterpret_cast<T3>(dst_ptr + 16));
+        ParamElemFixLenVisitorV2<typename Op::src_ctype> vis;
+        op(vis(c[0][0], c[0][1]), reinterpret_cast<T3>(dst_ptr));
+        op(vis(c[0][2], c[0][3]), reinterpret_cast<T3>(dst_ptr + 8));
+        op(vis(c[0][4], c[0][5]), reinterpret_cast<T3>(dst_ptr + 16));
     }
 };
 template <typename Op, typename T, typename T2, typename T3>
 struct StoreOcxOw8Remain<1, 5, Op, T, T2, T3> {
     static GI_FORCEINLINE void impl(T& c, const Op& op, T2 dst_ptr, int) {
-        op({{c[0][0], c[0][1]}}, reinterpret_cast<T3>(dst_ptr));
-        op({{c[0][2], c[0][3]}}, reinterpret_cast<T3>(dst_ptr + 8));
-        op(c[0][4], reinterpret_cast<T3>(dst_ptr + 16));
+        ParamElemFixLenVisitor<typename Op::src_ctype> vis0;
+        ParamElemFixLenVisitorV2<typename Op::src_ctype> vis;
+        op(vis(c[0][0], c[0][1]), reinterpret_cast<T3>(dst_ptr));
+        op(vis(c[0][2], c[0][3]), reinterpret_cast<T3>(dst_ptr + 8));
+        op(vis0(c[0][4]), reinterpret_cast<T3>(dst_ptr + 16));
     }
 };
 template <typename Op, typename T, typename T2, typename T3>
 struct StoreOcxOw8Remain<1, 4, Op, T, T2, T3> {
     static GI_FORCEINLINE void impl(T& c, const Op& op, T2 dst_ptr, int) {
-        op({{c[0][0], c[0][1]}}, reinterpret_cast<T3>(dst_ptr));
-        op({{c[0][2], c[0][3]}}, reinterpret_cast<T3>(dst_ptr + 8));
+        ParamElemFixLenVisitorV2<typename Op::src_ctype> vis;
+        op(vis(c[0][0], c[0][1]), reinterpret_cast<T3>(dst_ptr));
+        op(vis(c[0][2], c[0][3]), reinterpret_cast<T3>(dst_ptr + 8));
     }
 };
 template <typename Op, typename T, typename T2, typename T3>
 struct StoreOcxOw8Remain<1, 3, Op, T, T2, T3> {
     static GI_FORCEINLINE void impl(T& c, const Op& op, T2 dst_ptr, int) {
-        op({{c[0][0], c[0][1]}}, reinterpret_cast<T3>(dst_ptr));
-        op(c[0][2], reinterpret_cast<T3>(dst_ptr + 8));
+        ParamElemFixLenVisitor<typename Op::src_ctype> vis0;
+        ParamElemFixLenVisitorV2<typename Op::src_ctype> vis;
+        op(vis(c[0][0], c[0][1]), reinterpret_cast<T3>(dst_ptr));
+        op(vis0(c[0][2]), reinterpret_cast<T3>(dst_ptr + 8));
     }
 };
 template <typename Op, typename T, typename T2, typename T3>
 struct StoreOcxOw8Remain<1, 2, Op, T, T2, T3> {
     static GI_FORCEINLINE void impl(T& c, const Op& op, T2 dst_ptr, int) {
-        op({{c[0][0], c[0][1]}}, reinterpret_cast<T3>(dst_ptr));
+        ParamElemFixLenVisitorV2<typename Op::src_ctype> vis;
+        op(vis(c[0][0], c[0][1]), reinterpret_cast<T3>(dst_ptr));
     }
 };
 template <typename Op, typename T, typename T2, typename T3>
 struct StoreOcxOw8Remain<1, 1, Op, T, T2, T3> {
     static GI_FORCEINLINE void impl(T& c, const Op& op, T2 dst_ptr, int) {
-        op(c[0][0], reinterpret_cast<T3>(dst_ptr));
+        ParamElemFixLenVisitor<typename Op::src_ctype> vis0;
+        op(vis0(c[0][0]), reinterpret_cast<T3>(dst_ptr));
     }
 };
 
@@ -331,21 +389,25 @@ struct InitOcxOw8<c_dim, bias_mode, 0, T, T2> {
     static GI_FORCEINLINE void impl(T&, const T2*, int) {}
 };
 
-#define BAIS_INIT_NO_BIAS_C2(step)                       \
-    c[0][step] = GiBroadcastFloat32(static_cast<T2>(0)); \
-    c[1][step] = GiBroadcastFloat32(static_cast<T2>(0));
-#define BAIS_INIT_NO_BIAS_C1(step) c[0][step] = GiBroadcastFloat32(static_cast<T2>(0));
+#define BAIS_INIT_NO_BIAS_C2(step)                                                 \
+    c[0][step] = GiFloat32Type2FixLenType(GiBroadcastFloat32(static_cast<T2>(0))); \
+    c[1][step] = GiFloat32Type2FixLenType(GiBroadcastFloat32(static_cast<T2>(0)));
+#define BAIS_INIT_NO_BIAS_C1(step) \
+    c[0][step] = GiFloat32Type2FixLenType(GiBroadcastFloat32(static_cast<T2>(0)));
 
-#define BAIS_INIT_BROADCAST_C2(step)      \
-    c[0][step] = GiLoadFloat32(bias_ptr); \
-    c[1][step] = GiLoadFloat32(bias_ptr + oc_step);
-#define BAIS_INIT_BROADCAST_C1(step) c[0][step] = GiLoadFloat32(bias_ptr);
+#define BAIS_INIT_BROADCAST_C2(step)                                \
+    c[0][step] = GiFloat32Type2FixLenType(GiLoadFloat32(bias_ptr)); \
+    c[1][step] = GiFloat32Type2FixLenType(GiLoadFloat32(bias_ptr + oc_step));
+#define BAIS_INIT_BROADCAST_C1(step) \
+    c[0][step] = GiFloat32Type2FixLenType(GiLoadFloat32(bias_ptr));
 
-#define BAIS_INIT_BIAS_C2(step)                             \
-    c[0][step] = GiLoadFloat32(bias_ptr + step * simd_len); \
-    c[1][step] = GiLoadFloat32(bias_ptr + oc_step + step * simd_len);
+#define BAIS_INIT_BIAS_C2(step)                                                       \
+    c[0][step] = GiFloat32Type2FixLenType(GiLoadFloat32(bias_ptr + step * simd_len)); \
+    c[1][step] = GiFloat32Type2FixLenType(                                            \
+            GiLoadFloat32(bias_ptr + oc_step + step * simd_len));
 
-#define BAIS_INIT_BIAS_C1(step) c[0][step] = GiLoadFloat32(bias_ptr + step * simd_len);
+#define BAIS_INIT_BIAS_C1(step) \
+    c[0][step] = GiFloat32Type2FixLenType(GiLoadFloat32(bias_ptr + step * simd_len));
 
 #define INSTANCE_InitOcxOw8(ow_remain, cdim)                                      \
     template <typename T, typename T2>                                            \

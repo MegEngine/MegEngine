@@ -6,18 +6,22 @@ namespace megdnn {
 namespace fallback {
 inline void transpose_4x4(const float* src, float* dst, int lda, int ldb) {
     GI_FLOAT32_V2_t a0, a1;
-    a0.val[0] = GiLoadFloat32(src + 0 * lda);
-    a0.val[1] = GiLoadFloat32(src + 1 * lda);
-    a1.val[0] = GiLoadFloat32(src + 2 * lda);
-    a1.val[1] = GiLoadFloat32(src + 3 * lda);
-    GI_FLOAT32_V2_t b0 = GiZipqFloat32(a0.val[0], a1.val[0]);
-    GI_FLOAT32_V2_t b1 = GiZipqFloat32(a0.val[1], a1.val[1]);
-    GI_FLOAT32_V2_t c0 = GiZipqFloat32(b0.val[0], b1.val[0]);
-    GI_FLOAT32_V2_t c1 = GiZipqFloat32(b0.val[1], b1.val[1]);
-    GiStoreFloat32(dst + 0 * ldb, c0.val[0]);
-    GiStoreFloat32(dst + 1 * ldb, c0.val[1]);
-    GiStoreFloat32(dst + 2 * ldb, c1.val[0]);
-    GiStoreFloat32(dst + 3 * ldb, c1.val[1]);
+    GiSetSubVectorFloat32V2(a0, 0, GiLoadFloat32(src + 0 * lda));
+    GiSetSubVectorFloat32V2(a0, 1, GiLoadFloat32(src + 1 * lda));
+    GiSetSubVectorFloat32V2(a1, 0, GiLoadFloat32(src + 2 * lda));
+    GiSetSubVectorFloat32V2(a1, 1, GiLoadFloat32(src + 3 * lda));
+    GI_FLOAT32_V2_t b0 = GiZipqFloat32(
+            GiGetSubVectorFloat32V2(a0, 0), GiGetSubVectorFloat32V2(a1, 0));
+    GI_FLOAT32_V2_t b1 = GiZipqFloat32(
+            GiGetSubVectorFloat32V2(a0, 1), GiGetSubVectorFloat32V2(a1, 1));
+    GI_FLOAT32_V2_t c0 = GiZipqFloat32(
+            GiGetSubVectorFloat32V2(b0, 0), GiGetSubVectorFloat32V2(b1, 0));
+    GI_FLOAT32_V2_t c1 = GiZipqFloat32(
+            GiGetSubVectorFloat32V2(b0, 1), GiGetSubVectorFloat32V2(b1, 1));
+    GiStoreFloat32(dst + 0 * ldb, GiGetSubVectorFloat32V2(c0, 0));
+    GiStoreFloat32(dst + 1 * ldb, GiGetSubVectorFloat32V2(c0, 1));
+    GiStoreFloat32(dst + 2 * ldb, GiGetSubVectorFloat32V2(c1, 0));
+    GiStoreFloat32(dst + 3 * ldb, GiGetSubVectorFloat32V2(c1, 1));
 }
 }  // namespace fallback
 }  // namespace megdnn
@@ -159,27 +163,43 @@ inline void transpose_4x4(const float* src, float* dst, int lda, int ldb) {
             GiReinterpretqFloat32ToS64(b3.val[1])));
 
 #else
-#define TRANSPOSE_8x4(a, ret)                                                         \
-    auto b0 = GiZipqFloat32(CONCAT(a, 0).value, CONCAT(a, 1).value);                  \
-    auto b1 = GiZipqFloat32(CONCAT(a, 2).value, CONCAT(a, 3).value);                  \
-    auto b2 = GiZipqFloat32(CONCAT(a, 4).value, CONCAT(a, 5).value);                  \
-    auto b3 = GiZipqFloat32(CONCAT(a, 6).value, CONCAT(a, 7).value);                  \
-    CONCAT(ret, 0).value.val[0] =                                                     \
-            GiCombineFloat32(GiGetLowFloat32(b0.val[0]), GiGetLowFloat32(b1.val[0])); \
-    CONCAT(ret, 1).value.val[0] = GiCombineFloat32(                                   \
-            GiGetHighFloat32(b0.val[0]), GiGetHighFloat32(b1.val[0]));                \
-    CONCAT(ret, 2).value.val[0] =                                                     \
-            GiCombineFloat32(GiGetLowFloat32(b0.val[1]), GiGetLowFloat32(b1.val[1])); \
-    CONCAT(ret, 3).value.val[0] = GiCombineFloat32(                                   \
-            GiGetHighFloat32(b0.val[1]), GiGetHighFloat32(b1.val[1]));                \
-    CONCAT(ret, 0).value.val[1] =                                                     \
-            GiCombineFloat32(GiGetLowFloat32(b2.val[0]), GiGetLowFloat32(b3.val[0])); \
-    CONCAT(ret, 1).value.val[1] = GiCombineFloat32(                                   \
-            GiGetHighFloat32(b2.val[0]), GiGetHighFloat32(b3.val[0]));                \
-    CONCAT(ret, 2).value.val[1] =                                                     \
-            GiCombineFloat32(GiGetLowFloat32(b2.val[1]), GiGetLowFloat32(b3.val[1])); \
-    CONCAT(ret, 3).value.val[1] = GiCombineFloat32(                                   \
-            GiGetHighFloat32(b2.val[1]), GiGetHighFloat32(b3.val[1]));
+#define TRANSPOSE_8x4(a, ret)                                                \
+    auto b0 = GiZipqFloat32(                                                 \
+            GiFixLenType2GiFloat32Type(CONCAT(a, 0).value),                  \
+            GiFixLenType2GiFloat32Type(CONCAT(a, 1).value));                 \
+    auto b1 = GiZipqFloat32(                                                 \
+            GiFixLenType2GiFloat32Type(CONCAT(a, 2).value),                  \
+            GiFixLenType2GiFloat32Type(CONCAT(a, 3).value));                 \
+    auto b2 = GiZipqFloat32(                                                 \
+            GiFixLenType2GiFloat32Type(CONCAT(a, 4).value),                  \
+            GiFixLenType2GiFloat32Type(CONCAT(a, 5).value));                 \
+    auto b3 = GiZipqFloat32(                                                 \
+            GiFixLenType2GiFloat32Type(CONCAT(a, 6).value),                  \
+            GiFixLenType2GiFloat32Type(CONCAT(a, 7).value));                 \
+    CONCAT(ret, 0).value.val[0] = GiFloat32Type2FixLenType(GiCombineFloat32( \
+            GiGetLowFloat32(GiGetSubVectorFloat32V2(b0, 0)),                 \
+            GiGetLowFloat32(GiGetSubVectorFloat32V2(b1, 0))));               \
+    CONCAT(ret, 1).value.val[0] = GiFloat32Type2FixLenType(GiCombineFloat32( \
+            GiGetHighFloat32(GiGetSubVectorFloat32V2(b0, 0)),                \
+            GiGetHighFloat32(GiGetSubVectorFloat32V2(b1, 0))));              \
+    CONCAT(ret, 2).value.val[0] = GiFloat32Type2FixLenType(GiCombineFloat32( \
+            GiGetLowFloat32(GiGetSubVectorFloat32V2(b0, 1)),                 \
+            GiGetLowFloat32(GiGetSubVectorFloat32V2(b1, 1))));               \
+    CONCAT(ret, 3).value.val[0] = GiFloat32Type2FixLenType(GiCombineFloat32( \
+            GiGetHighFloat32(GiGetSubVectorFloat32V2(b0, 1)),                \
+            GiGetHighFloat32(GiGetSubVectorFloat32V2(b1, 1))));              \
+    CONCAT(ret, 0).value.val[1] = GiFloat32Type2FixLenType(GiCombineFloat32( \
+            GiGetLowFloat32(GiGetSubVectorFloat32V2(b2, 0)),                 \
+            GiGetLowFloat32(GiGetSubVectorFloat32V2(b3, 0))));               \
+    CONCAT(ret, 1).value.val[1] = GiFloat32Type2FixLenType(GiCombineFloat32( \
+            GiGetHighFloat32(GiGetSubVectorFloat32V2(b2, 0)),                \
+            GiGetHighFloat32(GiGetSubVectorFloat32V2(b3, 0))));              \
+    CONCAT(ret, 2).value.val[1] = GiFloat32Type2FixLenType(GiCombineFloat32( \
+            GiGetLowFloat32(GiGetSubVectorFloat32V2(b2, 1)),                 \
+            GiGetLowFloat32(GiGetSubVectorFloat32V2(b3, 1))));               \
+    CONCAT(ret, 3).value.val[1] = GiFloat32Type2FixLenType(GiCombineFloat32( \
+            GiGetHighFloat32(GiGetSubVectorFloat32V2(b2, 1)),                \
+            GiGetHighFloat32(GiGetSubVectorFloat32V2(b3, 1))));
 
 #endif
 // vim: syntax=cpp.doxygen

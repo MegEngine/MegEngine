@@ -153,7 +153,7 @@ struct OutputTransformF23_NCHW44 {
 #undef cb
         }
         if (bmode != BiasMode::BIAS) {
-#define cb(m, n) v##m##n = op(CONCAT(v##m, n).value);
+#define cb(m, n) v##m##n = op(GiFixLenType2GiFloat32Type(CONCAT(v##m, n).value));
             UNROLL_CALL_RAW_D2(2, 2, cb);
 #undef cb
         }
@@ -165,7 +165,7 @@ struct OutputTransformF23_NCHW44 {
             if (bmode == BiasMode::BIAS) {                                           \
                 v##oho##owo += Vector<float, 4>::load(                               \
                         bias + oc * OH * OW + oh * OW * pack_size + ow * pack_size); \
-                v##oho##owo = op(v##oho##owo.value);                                 \
+                v##oho##owo = op(GiFixLenType2GiFloat32Type(v##oho##owo.value));     \
             }                                                                        \
             v##oho##owo.save(                                                        \
                     output + oc * OH * OW + oh * OW * pack_size + ow * pack_size);   \

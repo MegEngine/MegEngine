@@ -25,14 +25,20 @@ struct ShiftCalHelper<src_idx, weight_idx, c_dim, ow_block, 0, T, T2, T3, T4> {
 };
 
 #define cb2(step, lane, ow_block)                                                 \
-    c[0][step] = GiSimdFmaLane(                                                   \
-            c[0][step], weight[0][lane], src[(step + src_idx) % ow_block], lane); \
-    c[1][step] = GiSimdFmaLane(                                                   \
-            c[1][step], weight[1][lane], src[(step + src_idx) % ow_block], lane);
+    c[0][step] = GiFloat32Type2FixLenType(GiSimdFmaLane(                          \
+            GiFixLenType2GiFloat32Type(c[0][step]),                               \
+            GiFixLenType2GiFloat32Type(weight[0][lane]),                          \
+            GiFixLenType2GiFloat32Type(src[(step + src_idx) % ow_block]), lane)); \
+    c[1][step] = GiFloat32Type2FixLenType(GiSimdFmaLane(                          \
+            GiFixLenType2GiFloat32Type(c[1][step]),                               \
+            GiFixLenType2GiFloat32Type(weight[1][lane]),                          \
+            GiFixLenType2GiFloat32Type(src[(step + src_idx) % ow_block]), lane));
 
-#define cb(step, lane, ow_block) \
-    c[0][step] = GiSimdFmaLane(  \
-            c[0][step], weight[0][lane], src[(step + src_idx) % ow_block], lane);
+#define cb(step, lane, ow_block)                         \
+    c[0][step] = GiFloat32Type2FixLenType(GiSimdFmaLane( \
+            GiFixLenType2GiFloat32Type(c[0][step]),      \
+            GiFixLenType2GiFloat32Type(weight[0][lane]), \
+            GiFixLenType2GiFloat32Type(src[(step + src_idx) % ow_block]), lane));
 
 #define SHIFT_CAL_HELPER(ow_block, remain_w)                                           \
     template <                                                                         \
@@ -133,15 +139,15 @@ struct KerGiXXs2Nchw44FP32<bias_mode, Op, remain_w, 2, oc_block, ow_block> {
         const int ld_src_ic = ih * iw;
         const int ld_src_iw = iw * oc_step;
         constexpr int c_dim = OCHelper<oc_block>::val;
-        GI_FLOAT32_t c[c_dim][ow_block];
+        GI_FLOAT32_FIXLEN_t c[c_dim][ow_block];
         init_ocx_ow8<c_dim, bias_mode, remain_w>(c, bias_ptr, ld_bias);
 
         for (int ic_idx = 0; ic_idx < ic; ic_idx += loop_ic_step) {
             const float* src_ptr = src_ptr_origin + ic_idx * ld_src_ic;
             const float* src_ptr_odd = src_ptr_odd_origin + ic_idx * ld_src_ic;
 
-            GI_FLOAT32_t src[ow_block];
-            GI_FLOAT32_t weight[c_dim][4];
+            GI_FLOAT32_FIXLEN_t src[ow_block];
+            GI_FLOAT32_FIXLEN_t weight[c_dim][4];
             /////////row 0/////////////
             load_helper<ow_block, 0, simd_len, 0, Vld1qF32S>(src, src_ptr, 0);
             load_helper<4, 0, oc_step, c_dim, Vld1qF32S>(
@@ -191,21 +197,22 @@ struct KerGiXXs2Nchw44FP32<bias_mode, Op, remain_w, 3, oc_block, ow_block> {
         const int ld_src_ic = ih * iw;
         const int ld_src_iw = iw * oc_step;
         constexpr int c_dim = OCHelper<oc_block>::val;
-        GI_FLOAT32_t c[c_dim][ow_block];
+        GI_FLOAT32_FIXLEN_t c[c_dim][ow_block];
         init_ocx_ow8<c_dim, bias_mode, remain_w>(c, bias_ptr, ld_bias);
         for (int ic_idx = 0; ic_idx < ic; ic_idx += loop_ic_step) {
             const float* src_ptr = src_ptr_origin + ic_idx * ld_src_ic;
             const float* src_ptr_odd = src_ptr_odd_origin + ic_idx * ld_src_ic;
 
-            GI_FLOAT32_t src[ow_block];
-            GI_FLOAT32_t weight[c_dim][4];
+            GI_FLOAT32_FIXLEN_t src[ow_block];
+            GI_FLOAT32_FIXLEN_t weight[c_dim][4];
             /////////row 0/////////////
             load_helper<ow_block, 0, simd_len, 0, Vld1qF32S>(src, src_ptr, 0);
             load_helper<4, 0, oc_step, c_dim, Vld1qF32S>(
                     weight, weight_ptr, ld_weight_oc);
             cal_helper<0, 0, c_dim, ow_block, remain_w>(c, src, weight);
 
-            src[0] = GiLoadFloat32(src_ptr + ow_block * simd_len);
+            src[0] = GiFloat32Type2FixLenType(
+                    GiLoadFloat32(src_ptr + ow_block * simd_len));
             load_helper<4, 2 * ld_weight, oc_step, c_dim, Vld1qF32S>(
                     weight, weight_ptr, ld_weight_oc);
             cal_helper<1, 0, c_dim, ow_block, remain_w>(c, src, weight);
@@ -222,7 +229,8 @@ struct KerGiXXs2Nchw44FP32<bias_mode, Op, remain_w, 3, oc_block, ow_block> {
             load_helper<4, 0, oc_step, c_dim, Vld1qF32S>(
                     weight, weight_ptr, ld_weight_oc);
             cal_helper<0, 0, c_dim, ow_block, remain_w>(c, src, weight);
-            src[0] = GiLoadFloat32(src_ptr + ow_block * simd_len);
+            src[0] = GiFloat32Type2FixLenType(
+                    GiLoadFloat32(src_ptr + ow_block * simd_len));
             load_helper<4, 2 * ld_weight, oc_step, c_dim, Vld1qF32S>(
                     weight, weight_ptr, ld_weight_oc);
             cal_helper<1, 0, c_dim, ow_block, remain_w>(c, src, weight);
@@ -239,7 +247,8 @@ struct KerGiXXs2Nchw44FP32<bias_mode, Op, remain_w, 3, oc_block, ow_block> {
             load_helper<4, 0, oc_step, c_dim, Vld1qF32S>(
                     weight, weight_ptr, ld_weight_oc);
             cal_helper<0, 0, c_dim, ow_block, remain_w>(c, src, weight);
-            src[0] = GiLoadFloat32(src_ptr + ow_block * simd_len);
+            src[0] = GiFloat32Type2FixLenType(
+                    GiLoadFloat32(src_ptr + ow_block * simd_len));
 
             load_helper<4, 2 * ld_weight, oc_step, c_dim, Vld1qF32S>(
                     weight, weight_ptr, ld_weight_oc);
@@ -275,7 +284,7 @@ struct KerGiXXs2Nchw44FP32<bias_mode, Op, remain_w, 5, oc_block, ow_block> {
         const int ld_src_ic = ih * iw;
         const int ld_src_iw = iw * oc_step;
         constexpr int c_dim = OCHelper<oc_block>::val;
-        GI_FLOAT32_t c[c_dim][ow_block];
+        GI_FLOAT32_FIXLEN_t c[c_dim][ow_block];
         init_ocx_ow8<c_dim, bias_mode, remain_w>(c, bias_ptr, ld_bias);
 
         for (int ic_idx = 0; ic_idx < ic; ic_idx += loop_ic_step) {
@@ -283,18 +292,20 @@ struct KerGiXXs2Nchw44FP32<bias_mode, Op, remain_w, 5, oc_block, ow_block> {
             const float* src_ptr_odd = src_ptr_odd_origin + ic_idx * ld_src_ic;
 
             for (int fh_idx = 0; fh_idx < filter_size; ++fh_idx) {
-                GI_FLOAT32_t src[ow_block];
-                GI_FLOAT32_t weight[c_dim][4];
+                GI_FLOAT32_FIXLEN_t src[ow_block];
+                GI_FLOAT32_FIXLEN_t weight[c_dim][4];
                 // even element
                 load_helper<ow_block, 0, simd_len, 0, Vld1qF32S>(src, src_ptr, 0);
                 load_helper<4, 0, oc_step, c_dim, Vld1qF32S>(
                         weight, weight_ptr, ld_weight_oc);
                 cal_helper<0, 0, c_dim, ow_block, remain_w>(c, src, weight);
-                src[0] = GiLoadFloat32(src_ptr + ow_block * simd_len);
+                src[0] = GiFloat32Type2FixLenType(
+                        GiLoadFloat32(src_ptr + ow_block * simd_len));
                 load_helper<4, 2 * ld_weight, oc_step, c_dim, Vld1qF32S>(
                         weight, weight_ptr, ld_weight_oc);
                 cal_helper<1, 0, c_dim, ow_block, remain_w>(c, src, weight);
-                src[1] = GiLoadFloat32(src_ptr + (ow_block + 1) * simd_len);
+                src[1] = GiFloat32Type2FixLenType(
+                        GiLoadFloat32(src_ptr + (ow_block + 1) * simd_len));
                 load_helper<4, 4 * ld_weight, oc_step, c_dim, Vld1qF32S>(
                         weight, weight_ptr, ld_weight_oc);
                 cal_helper<2, 0, c_dim, ow_block, remain_w>(c, src, weight);
@@ -303,7 +314,8 @@ struct KerGiXXs2Nchw44FP32<bias_mode, Op, remain_w, 5, oc_block, ow_block> {
                 load_helper<4, 1 * ld_weight, oc_step, c_dim, Vld1qF32S>(
                         weight, weight_ptr, ld_weight_oc);
                 cal_helper<0, 0, c_dim, ow_block, remain_w>(c, src, weight);
-                src[0] = GiLoadFloat32(src_ptr_odd + ow_block * simd_len);
+                src[0] = GiFloat32Type2FixLenType(
+                        GiLoadFloat32(src_ptr_odd + ow_block * simd_len));
                 load_helper<4, 3 * ld_weight, oc_step, c_dim, Vld1qF32S>(
                         weight, weight_ptr, ld_weight_oc);
                 cal_helper<1, 0, c_dim, ow_block, remain_w>(c, src, weight);
@@ -340,7 +352,7 @@ struct KerGiXXs2Nchw44FP32<bias_mode, Op, remain_w, 7, oc_block, ow_block> {
         const int ld_src_ic = ih * iw;
         const int ld_src_iw = iw * oc_step;
         constexpr int c_dim = OCHelper<oc_block>::val;
-        GI_FLOAT32_t c[c_dim][ow_block];
+        GI_FLOAT32_FIXLEN_t c[c_dim][ow_block];
         init_ocx_ow8<c_dim, bias_mode, remain_w>(c, bias_ptr, ld_bias);
 
         for (int ic_idx = 0; ic_idx < ic; ic_idx += loop_ic_step) {
@@ -348,22 +360,25 @@ struct KerGiXXs2Nchw44FP32<bias_mode, Op, remain_w, 7, oc_block, ow_block> {
             const float* src_ptr_odd = src_ptr_odd_origin + ic_idx * ld_src_ic;
 
             for (int fh_idx = 0; fh_idx < filter_size; ++fh_idx) {
-                GI_FLOAT32_t src[ow_block];
-                GI_FLOAT32_t weight[c_dim][4];
+                GI_FLOAT32_FIXLEN_t src[ow_block];
+                GI_FLOAT32_FIXLEN_t weight[c_dim][4];
                 // even element
                 load_helper<ow_block, 0, simd_len, 0, Vld1qF32S>(src, src_ptr, 0);
                 load_helper<4, 0, oc_step, c_dim, Vld1qF32S>(
                         weight, weight_ptr, ld_weight_oc);
                 cal_helper<0, 0, c_dim, ow_block, remain_w>(c, src, weight);
-                src[0] = GiLoadFloat32(src_ptr + ow_block * simd_len);
+                src[0] = GiFloat32Type2FixLenType(
+                        GiLoadFloat32(src_ptr + ow_block * simd_len));
                 load_helper<4, 2 * ld_weight, oc_step, c_dim, Vld1qF32S>(
                         weight, weight_ptr, ld_weight_oc);
                 cal_helper<1, 0, c_dim, ow_block, remain_w>(c, src, weight);
-                src[1] = GiLoadFloat32(src_ptr + (ow_block + 1) * simd_len);
+                src[1] = GiFloat32Type2FixLenType(
+                        GiLoadFloat32(src_ptr + (ow_block + 1) * simd_len));
                 load_helper<4, 4 * ld_weight, oc_step, c_dim, Vld1qF32S>(
                         weight, weight_ptr, ld_weight_oc);
                 cal_helper<2, 0, c_dim, ow_block, remain_w>(c, src, weight);
-                src[2] = GiLoadFloat32(src_ptr + (ow_block + 2) * simd_len);
+                src[2] = GiFloat32Type2FixLenType(
+                        GiLoadFloat32(src_ptr + (ow_block + 2) * simd_len));
                 load_helper<4, 6 * ld_weight, oc_step, c_dim, Vld1qF32S>(
                         weight, weight_ptr, ld_weight_oc);
                 cal_helper<3, 0, c_dim, ow_block, remain_w>(c, src, weight);
@@ -372,11 +387,13 @@ struct KerGiXXs2Nchw44FP32<bias_mode, Op, remain_w, 7, oc_block, ow_block> {
                 load_helper<4, 1 * ld_weight, oc_step, c_dim, Vld1qF32S>(
                         weight, weight_ptr, ld_weight_oc);
                 cal_helper<0, 0, c_dim, ow_block, remain_w>(c, src, weight);
-                src[0] = GiLoadFloat32(src_ptr_odd + ow_block * simd_len);
+                src[0] = GiFloat32Type2FixLenType(
+                        GiLoadFloat32(src_ptr_odd + ow_block * simd_len));
                 load_helper<4, 3 * ld_weight, oc_step, c_dim, Vld1qF32S>(
                         weight, weight_ptr, ld_weight_oc);
                 cal_helper<1, 0, c_dim, ow_block, remain_w>(c, src, weight);
-                src[1] = GiLoadFloat32(src_ptr_odd + (ow_block + 1) * simd_len);
+                src[1] = GiFloat32Type2FixLenType(
+                        GiLoadFloat32(src_ptr_odd + (ow_block + 1) * simd_len));
                 load_helper<4, 5 * ld_weight, oc_step, c_dim, Vld1qF32S>(
                         weight, weight_ptr, ld_weight_oc);
                 cal_helper<2, 0, c_dim, ow_block, remain_w>(c, src, weight);

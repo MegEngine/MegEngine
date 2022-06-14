@@ -155,10 +155,10 @@ struct OutputTransform2X3 {
             v11 += vbias;
         }
         if (bmode != BiasMode::BIAS) {
-            v00 = op(v00.value);
-            v01 = op(v01.value);
-            v10 = op(v10.value);
-            v11 = op(v11.value);
+            v00 = op(GiFixLenType2GiFloat32Type(v00.value));
+            v01 = op(GiFixLenType2GiFloat32Type(v01.value));
+            v10 = op(GiFixLenType2GiFloat32Type(v10.value));
+            v11 = op(GiFixLenType2GiFloat32Type(v11.value));
         }
 
         v00.save(transform_mid_buf + (0 * 2 + 0) * 4);
@@ -194,10 +194,28 @@ void winograd_gi_2x3_4x4_f::filter(
         size_t OC, size_t IC, size_t oc_start, size_t oc_end) {
     constexpr int alpha = 2 + 3 - 1;
     //! G * g * GT
-    GI_FLOAT32_t g0{1.f, 0, 0, 0}, g1{0.5, 0.5, 0.5, 0}, g2{0.5, -0.5, 0.5, 0},
-            g3{0, 0, 1, 0};
-    GI_FLOAT32_t gt0{1, 0.5, 0.5, 0}, gt1{0, 0.5, -0.5, 0}, gt2{0, 0.5, 0.5, 1},
-            gt3{0, 0, 0, 0};
+    float tmp[4];
+    auto init_g = [&](float a0, float a1, float a2, float a3) {
+        tmp[0] = a0;
+        tmp[1] = a1;
+        tmp[2] = a2;
+        tmp[3] = a3;
+    };
+    init_g(1.f, 0, 0, 0);
+    GI_FLOAT32_t g0 = GiLoadFloat32(tmp);
+    init_g(0.5, 0.5, 0.5, 0);
+    GI_FLOAT32_t g1 = GiLoadFloat32(tmp);
+    init_g(0.5, -0.5, 0.5, 0);
+    GI_FLOAT32_t g2 = GiLoadFloat32(tmp);
+    init_g(0, 0, 1, 0);
+    GI_FLOAT32_t g3 = GiLoadFloat32(tmp);
+    init_g(1, 0.5, 0.5, 0);
+    GI_FLOAT32_t gt0 = GiLoadFloat32(tmp);
+    init_g(0, 0.5, -0.5, 0);
+    GI_FLOAT32_t gt1 = GiLoadFloat32(tmp);
+    init_g(0, 0.5, 0.5, 1);
+    GI_FLOAT32_t gt2 = GiLoadFloat32(tmp);
+    GI_FLOAT32_t gt3 = GiZeroFloat32();
     size_t OCB = OC / 4;
     size_t ICB = IC / 4;
 
@@ -217,15 +235,15 @@ void winograd_gi_2x3_4x4_f::filter(
             GI_FLOAT32_t vf1 = GiLoadFloat32(filter_ptr + 4);
             GI_FLOAT32_t vf2 = GiBroadcastFloat32(filter_ptr[8]);
 
-            GI_FLOAT32_t v3(GiBroadcastFloat32(0));
+            GI_FLOAT32_t v3 = GiBroadcastFloat32(0);
             auto vtmp = GiExtqFloat32(vf1, vf2, 2);
             vtmp = GiSetqLaneFloat32(0, vtmp, 3);
-            GI_FLOAT32_t v2(vtmp);
+            GI_FLOAT32_t v2 = vtmp;
             vtmp = GiExtqFloat32(vf0, vf1, 3);
             vtmp = GiSetqLaneFloat32(0, vtmp, 3);
-            GI_FLOAT32_t v1(vtmp);
+            GI_FLOAT32_t v1 = vtmp;
             vtmp = GiSetqLaneFloat32(0, vf0, 3);
-            GI_FLOAT32_t v0(vtmp);
+            GI_FLOAT32_t v0 = vtmp;
 
             GI_FLOAT32_t vsum0 = GiBroadcastFloat32(0), vsum1 = GiBroadcastFloat32(0),
                          vsum2 = GiBroadcastFloat32(0), vsum3 = GiBroadcastFloat32(0);

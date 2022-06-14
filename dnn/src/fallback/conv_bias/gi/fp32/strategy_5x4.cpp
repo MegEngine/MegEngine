@@ -104,7 +104,8 @@ struct FilterTransform5X4 {
         mid_buf1[7] = GET_VECTOR_ELEM(wd, i, 3);                                      \
         mid_buf1 += 8;                                                                \
     } while (0);
-#define GET_VECTOR_ELEM(s, i, idx) GiExtractLane##idx##Float32(CONCAT(s, i).value)
+#define GET_VECTOR_ELEM(s, i, idx) \
+    GiExtractLane##idx##Float32(GiFixLenType2GiFloat32Type(CONCAT(s, i).value))
 
                 float* mid_buf1 = transform_mid_buf;
                 UNROLL_CALL_NOWRAPPER(8, cb);
@@ -142,9 +143,9 @@ struct InputTransform5X4 {
     } while (0)
 
 #define GET_VECTOR_HIGH_ELEM(s, i, idx) \
-    GiExtractLane##idx##Float32(CONCAT(s, i).value.val[1])
+    GiExtractLane##idx##Float32(GiFixLenType2GiFloat32Type(CONCAT(s, i).value.val[1]))
 #define GET_VECTOR_LOW_ELEM(s, i, idx) \
-    GiExtractLane##idx##Float32(CONCAT(s, i).value.val[0])
+    GiExtractLane##idx##Float32(GiFixLenType2GiFloat32Type(CONCAT(s, i).value.val[0]))
 
     template <bool inner>
     static void transform(

@@ -215,7 +215,7 @@ struct OutputTransform6X3 {
 #undef cb
         }
         if (bmode != BiasMode::BIAS) {
-#define cb(m, n) v##m##n = op(CONCAT(v##m, n).value);
+#define cb(m, n) v##m##n = op(GiFixLenType2GiFloat32Type(CONCAT(v##m, n).value));
             UNROLL_CALL_RAW_D2(6, 6, cb);
 #undef cb
         }

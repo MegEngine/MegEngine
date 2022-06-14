@@ -54,7 +54,8 @@ struct FilterTransform6X3 {
 
                 Vector<float, 4> g2 = Vector<float, 4>::load(fptr + 6 - 1);
                 GI_FLOAT32_t zeros = GiZeroFloat32();
-                g2.value = GiExtqFloat32(g2.value, zeros, 1);
+                g2.value = GiFloat32Type2FixLenType(
+                        GiExtqFloat32(GiFixLenType2GiFloat32Type(g2.value), zeros, 1));
 
 #define cb(i) Vector<float, 4> wd##i;
                 UNROLL_CALL_NOWRAPPER(8, cb);
@@ -115,7 +116,8 @@ struct FilterTransform6X3 {
         mid_buf1[7] = GET_VECTOR_ELEM(wd, i, 2);                                       \
         mid_buf1 += 8;                                                                 \
     } while (0);
-#define GET_VECTOR_ELEM(s, i, idx) GiExtractLane##idx##Float32(CONCAT(s, i).value)
+#define GET_VECTOR_ELEM(s, i, idx) \
+    GiExtractLane##idx##Float32(GiFixLenType2GiFloat32Type(CONCAT(s, i).value))
 
                 float* mid_buf1 = transform_mid_buf;
                 UNROLL_CALL_NOWRAPPER(8, cb);

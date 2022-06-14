@@ -515,26 +515,26 @@ typedef GI_INT8_t GI_INT8_FIXLEN_t;
 typedef GI_INT16_t GI_INT16_FIXLEN_t;
 typedef GI_INT32_t GI_INT32_FIXLEN_t;
 typedef GI_UINT32_t GI_UINT32_FIXLEN_t;
-#define GiFloat32Type2FixLenType(s)   (s)
-#define GiFixLenType2GiFloat32Type(s) (s)
+#define GiFloat32Type2FixLenType(s)   s
+#define GiFixLenType2GiFloat32Type(s) s
 
-#define GiFloat32Type2FixLenV2Type(s)   (s)
-#define GiFixLenType2GiFloat32V2Type(s) (s)
+#define GiFloat32Type2FixLenV2Type(s)   s
+#define GiFixLenType2GiFloat32V2Type(s) s
 
-#define GiUint8Type2FixLenType(s)   (s)
-#define GiFixLenType2GiUint8Type(s) (s)
+#define GiUint8Type2FixLenType(s)   s
+#define GiFixLenType2GiUint8Type(s) s
 
-#define GiInt8Type2FixLenType(s)   (s)
-#define GiFixLenType2GiInt8Type(s) (s)
+#define GiInt8Type2FixLenType(s)   s
+#define GiFixLenType2GiInt8Type(s) s
 
-#define GiInt16Type2FixLenType(s)   (s)
-#define GiFixLenType2GiInt16Type(s) (s)
+#define GiInt16Type2FixLenType(s)   s
+#define GiFixLenType2GiInt16Type(s) s
 
-#define GiInt32Type2FixLenType(s)   (s)
-#define GiFixLenType2GiInt32Type(s) (s)
+#define GiInt32Type2FixLenType(s)   s
+#define GiFixLenType2GiInt32Type(s) s
 
-#define GiUint32Type2FixLenType(s)        (s)
-#define GiFixLenType2GiUint32Type(s)      (s)
+#define GiUint32Type2FixLenType(s)        s
+#define GiFixLenType2GiUint32Type(s)      s
 
 //! get subvector
 #define GiGetSubVectorFloat32V2(s, index) s.val[index]

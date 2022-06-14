@@ -115,10 +115,19 @@ struct FilterTransform4X5 {
 
                 FILTER_TRANSFORM(g, Gg)
                 GI_FLOAT32_V2_t vgr;
-                GI_FLOAT32_t vgr0 = {Ggr0, Ggr1, Ggr2, Ggr3};
-                GI_FLOAT32_t vgr1 = {Ggr4, Ggr5, Ggr6, Ggr7};
-                vgr.val[0] = vgr0;  //{Ggr0, Ggr1, Ggr2, Ggr3};
-                vgr.val[1] = vgr1;  //{Ggr4, Ggr5, Ggr6, Ggr7};
+                float tmp[4];
+                tmp[0] = Ggr0;
+                tmp[1] = Ggr1;
+                tmp[2] = Ggr2;
+                tmp[3] = Ggr3;
+                GI_FLOAT32_t vgr0 = GiLoadFloat32(tmp);
+                tmp[0] = Ggr4;
+                tmp[1] = Ggr5;
+                tmp[2] = Ggr6;
+                tmp[3] = Ggr7;
+                GI_FLOAT32_t vgr1 = GiLoadFloat32(tmp);
+                GiSetSubVectorFloat32V2(vgr, 0, vgr0);  //{Ggr0, Ggr1, Ggr2, Ggr3};
+                GiSetSubVectorFloat32V2(vgr, 1, vgr1);  //{Ggr4, Ggr5, Ggr6, Ggr7};
                 Vector<float, 8> Ggt4(vgr);
                 TRANSPOSE_8x4(Gg, Ggt);
                 FILTER_TRANSFORM_FINAL(Ggt, result);
@@ -155,10 +164,12 @@ struct InputTransform4X5 {
         wd##7 = (d##7 - d##1) + (d##3 - d##5) * 5.25f;  \
     } while (0)
 
-#define GET_VECTOR_HIGH_ELEM(s, i, idx) \
-    GiExtractLane##idx##Float32(CONCAT(s, i).value.val[1])
-#define GET_VECTOR_LOW_ELEM(s, i, idx) \
-    GiExtractLane##idx##Float32(CONCAT(s, i).value.val[0])
+#define GET_VECTOR_HIGH_ELEM(s, i, idx)                  \
+    GiExtractLane##idx##Float32(GiGetSubVectorFloat32V2( \
+            GiFixLenType2GiFloat32V2Type(CONCAT(s, i).value), 1))
+#define GET_VECTOR_LOW_ELEM(s, i, idx)                   \
+    GiExtractLane##idx##Float32(GiGetSubVectorFloat32V2( \
+            GiFixLenType2GiFloat32V2Type(CONCAT(s, i).value), 0))
 
     template <bool inner>
     static void transform(
