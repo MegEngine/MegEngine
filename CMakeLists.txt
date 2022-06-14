@@ -531,7 +531,8 @@ elseif(
   AND NOT APPLE
   AND NOT MSVC
   AND NOT WIN32
-  AND NOT MGE_WITH_LARGE_ARCHIVE)
+  AND NOT MGE_WITH_LARGE_ARCHIVE
+  AND NOT ${MGE_ARCH} STREQUAL "riscv64")
   message(STATUS "Using GNU gold linker.")
   set(MGE_COMMON_LINKER_FLAGS "-fuse-ld=gold")
 endif()
@@ -1068,6 +1069,16 @@ if(APPLE)
   set(MGE_WITH_HALIDE OFF)
   set(MGE_WITH_JIT OFF)
   set(MGE_WITH_JIT_MLIR OFF)
+endif()
+
+# riscv64
+if(${MGE_ARCH} STREQUAL "riscv64")
+  set(CMAKE_THREAD_LIBS_INIT "-lpthread")
+  set(CMAKE_HAVE_THREADS_LIBRARY 1)
+  set(CMAKE_USE_WIN32_THREADS_INIT 0)
+  set(CMAKE_USE_PTHREADS_INIT 1)
+  set(THREADS_PREFER_PTHREAD_FLAG ON)
+  message(STATUS "force config thread when build riscv64, as CMAKE detect failed")
 endif()
 
 set(MGB_JIT ${MGE_WITH_JIT})

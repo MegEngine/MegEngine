@@ -10,6 +10,7 @@
 * Windows cross build ARM-Linux   (ok)
 * Linux cross build ARM-Android   (ok)
 * Linux cross build ARM-Linux     (ok)
+* Linux cross build RISCV(support [rvv](https://github.com/riscv/riscv-v-spec))-Linux     (ok)
 * MacOS cross build ARM-Android   (ok)
 * MacOS cross build ARM-Linux     (ok but experimental)
 * MacOS cross build IOS           (ok)
@@ -139,6 +140,14 @@ Now we support ARM-Linux on Linux and Windows fully, also experimental on MacOS
 2: download toolchains from https://github.com/thinkski/osx-arm-linux-toolchains if use MacOS
 ```
 
+### Cross build for RISCV-Linux
+Now we support RISCV-Linux
+
+* commands:
+```
+1: download toolchains from https://github.com/riscv-collab/riscv-gnu-toolchain
+```
+
 ### Cross build for IOS
 Now we only support cross build to IOS from MACOS
 
@@ -173,9 +182,20 @@ Now we only support cross build to IOS from MACOS
   ```
   scripts/cmake-build/cross_build_linux_arm_inference.sh -h
   ```
+* cross build to RISCV-Linux:   scripts/cmake-build/cross_build_linux_riscv_inference.sh
+  builds MegBrain(MegEngine) for inference on Linux-RISCV platforms.
+  The following command displays the usage:
+  
+  ```
+  scripts/cmake-build/cross_build_linux_riscv_inference.sh -h
+  ```
+  
+  * if board support RVV(at least 0.7), for  example: nezha D1 , use -a rv64gcv0p7
+  * if board do not support RVV, use -a rv64norvv
 * cross build to IOS:         scripts/cmake-build/cross_build_ios_arm_inference.sh
   builds MegBrain(MegEngine) for inference on iOS (iPhone/iPad) platforms.
   The following command displays the usage:
+  
   ```
   scripts/cmake-build/cross_build_ios_arm_inference.sh -h
   ```
