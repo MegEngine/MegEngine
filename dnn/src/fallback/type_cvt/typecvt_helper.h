@@ -18,22 +18,26 @@ struct QuantizedTypeCvter<int32_t, int8_t> {
     static constexpr size_t SIMD_WIDTH = GI_SIMD_LEN_BYTE / sizeof(int32_t) * 2;
     static constexpr size_t SIMD_STEP = GI_SIMD_LEN_BYTE / sizeof(int32_t);
     float scale;
-    GI_FLOAT32_t vscale;
+    GI_FLOAT32_FIXLEN_t vscale;
 
     QuantizedTypeCvter(DType src_dtype, DType dst_dtype) {
         float src_scale = src_dtype.param<dtype::QuantizedS32>().scale;
         float dst_scale = dst_dtype.param<dtype::QuantizedS8>().scale;
         scale = src_scale / dst_scale;
-        vscale = GiBroadcastFloat32(scale);
+        vscale = GiFloat32Type2FixLenType(GiBroadcastFloat32(scale));
     }
 
     void cvt(const int32_t* src, int8_t* dst) {
-        GI_FLOAT32_t vitem0 =
-                GiMultiplyFloat32(GiCastToFloat32(GiLoadInt32(src)), vscale);
-        GI_FLOAT32_t vitem1 = GiMultiplyFloat32(
-                GiCastToFloat32(GiLoadInt32(src + SIMD_STEP)), vscale);
+        GI_FLOAT32_t t;
+        t = GiFixLenType2GiFloat32Type(vscale);
+        GI_FLOAT32_t vitem0 = GiMultiplyFloat32(GiCastToFloat32(GiLoadInt32(src)), t);
+        GI_FLOAT32_t vitem1 =
+                GiMultiplyFloat32(GiCastToFloat32(GiLoadInt32(src + SIMD_STEP)), t);
 
-        auto vres = QConverter::convert<GI_INT8_t, GI_FLOAT32_V2_t>({{vitem0, vitem1}});
+        GI_FLOAT32_V2_t v2;
+        GiSetSubVectorFloat32V2(v2, 0, vitem0);
+        GiSetSubVectorFloat32V2(v2, 1, vitem1);
+        auto vres = QConverter::convert<GI_INT8_t, GI_FLOAT32_V2_t>(v2);
         GiStoreLowInt8(dst, vres);
     }
 
@@ -48,27 +52,29 @@ struct QuantizedTypeCvter<int8_t, int32_t> {
     using dst_type = int32_t;
     static constexpr size_t SIMD_WIDTH = GI_SIMD_LEN_BYTE / sizeof(int8_t);
     float scale;
-    GI_FLOAT32_t vscale;
+    GI_FLOAT32_FIXLEN_t vscale;
 
     QuantizedTypeCvter(DType src_dtype, DType dst_dtype) {
         float src_scale = src_dtype.param<dtype::QuantizedS8>().scale;
         float dst_scale = dst_dtype.param<dtype::QuantizedS32>().scale;
         scale = src_scale / dst_scale;
-        vscale = GiBroadcastFloat32(scale);
+        vscale = GiFloat32Type2FixLenType(GiBroadcastFloat32(scale));
     }
 
     void cvt(const int8_t* src, int32_t* dst) {
+        GI_FLOAT32_t t;
+        t = GiFixLenType2GiFloat32Type(vscale);
         GI_INT8_t data = GiLoadInt8(src);
         GI_INT16_t vitem0 = GiMoveLowLongInt8(data);
         GI_INT16_t vitem1 = GiMoveHighLongInt8(data);
         auto vret0 = QConverter::round<GI_INT32_t, GI_FLOAT32_t>(
-                GiMultiplyFloat32(GiCastToFloat32(GiMoveLowLongInt16(vitem0)), vscale));
-        auto vret1 = QConverter::round<GI_INT32_t, GI_FLOAT32_t>(GiMultiplyFloat32(
-                GiCastToFloat32(GiMoveHighLongInt16(vitem0)), vscale));
+                GiMultiplyFloat32(GiCastToFloat32(GiMoveLowLongInt16(vitem0)), t));
+        auto vret1 = QConverter::round<GI_INT32_t, GI_FLOAT32_t>(
+                GiMultiplyFloat32(GiCastToFloat32(GiMoveHighLongInt16(vitem0)), t));
         auto vret2 = QConverter::round<GI_INT32_t, GI_FLOAT32_t>(
-                GiMultiplyFloat32(GiCastToFloat32(GiMoveLowLongInt16(vitem1)), vscale));
-        auto vret3 = QConverter::round<GI_INT32_t, GI_FLOAT32_t>(GiMultiplyFloat32(
-                GiCastToFloat32(GiMoveHighLongInt16(vitem1)), vscale));
+                GiMultiplyFloat32(GiCastToFloat32(GiMoveLowLongInt16(vitem1)), t));
+        auto vret3 = QConverter::round<GI_INT32_t, GI_FLOAT32_t>(
+                GiMultiplyFloat32(GiCastToFloat32(GiMoveHighLongInt16(vitem1)), t));
 
         constexpr size_t step = GI_SIMD_LEN_BYTE / sizeof(int32_t);
         GiStoreInt32(dst, vret0);
@@ -90,21 +96,26 @@ struct QuantizedTypeCvter<float, int8_t> {
     static constexpr size_t SIMD_WIDTH = GI_SIMD_LEN_BYTE / sizeof(float) * 2;
     static constexpr size_t SIMD_STEP = GI_SIMD_LEN_BYTE / sizeof(float);
     float scale;
-    GI_FLOAT32_t vscale;
+    GI_FLOAT32_FIXLEN_t vscale;
 
     QuantizedTypeCvter(DType src_dtype, DType dst_dtype) {
         MEGDNN_MARK_USED_VAR(src_dtype);
         float src_scale = 1;
         float dst_scale = dst_dtype.param<dtype::QuantizedS8>().scale;
         scale = src_scale / dst_scale;
-        vscale = GiBroadcastFloat32(scale);
+        vscale = GiFloat32Type2FixLenType(GiBroadcastFloat32(scale));
     }
 
     void cvt(const float* src, int8_t* dst) {
-        GI_FLOAT32_t vitem0 = GiMultiplyFloat32(GiLoadFloat32(src), vscale);
-        GI_FLOAT32_t vitem1 = GiMultiplyFloat32(GiLoadFloat32(src + SIMD_STEP), vscale);
+        GI_FLOAT32_t t;
+        t = GiFixLenType2GiFloat32Type(vscale);
+        GI_FLOAT32_t vitem0 = GiMultiplyFloat32(GiLoadFloat32(src), t);
+        GI_FLOAT32_t vitem1 = GiMultiplyFloat32(GiLoadFloat32(src + SIMD_STEP), t);
 
-        auto vres = QConverter::convert<GI_INT8_t, GI_FLOAT32_V2_t>({{vitem0, vitem1}});
+        GI_FLOAT32_V2_t v2;
+        GiSetSubVectorFloat32V2(v2, 0, vitem0);
+        GiSetSubVectorFloat32V2(v2, 1, vitem1);
+        auto vres = QConverter::convert<GI_INT8_t, GI_FLOAT32_V2_t>(v2);
         GiStoreLowInt8(dst, vres);
     }
 
@@ -119,18 +130,19 @@ struct QuantizedTypeCvter<int32_t, int32_t> {
     using dst_type = int32_t;
     static constexpr size_t SIMD_WIDTH = GI_SIMD_LEN_BYTE / sizeof(int32_t);
     float scale;
-    GI_FLOAT32_t vscale;
+    GI_FLOAT32_FIXLEN_t vscale;
 
     QuantizedTypeCvter(DType src_dtype, DType dst_dtype) {
         float src_scale = src_dtype.param<dtype::QuantizedS32>().scale;
         float dst_scale = dst_dtype.param<dtype::QuantizedS32>().scale;
         scale = src_scale / dst_scale;
-        vscale = GiBroadcastFloat32(scale);
+        vscale = GiFloat32Type2FixLenType(GiBroadcastFloat32(scale));
     }
 
     void cvt(const int32_t* src, int32_t* dst) {
-        GI_FLOAT32_t vitem =
-                GiMultiplyFloat32(GiCastToFloat32(GiLoadInt32(src)), vscale);
+        GI_FLOAT32_t t;
+        t = GiFixLenType2GiFloat32Type(vscale);
+        GI_FLOAT32_t vitem = GiMultiplyFloat32(GiCastToFloat32(GiLoadInt32(src)), t);
 
         auto vres = QConverter::round<GI_INT32_t, GI_FLOAT32_t>(vitem);
         GiStoreInt32(dst, vres);
@@ -148,30 +160,32 @@ struct QuantizedTypeCvter<int8_t, int8_t> {
     using dst_type = int8_t;
     static constexpr size_t SIMD_WIDTH = GI_SIMD_LEN_BYTE / sizeof(int8_t);
     float scale;
-    GI_FLOAT32_t vscale;
+    GI_FLOAT32_FIXLEN_t vscale;
 
     QuantizedTypeCvter(DType src_dtype, DType dst_dtype) {
         float src_scale = src_dtype.param<dtype::QuantizedS8>().scale;
         float dst_scale = dst_dtype.param<dtype::QuantizedS8>().scale;
         scale = src_scale / dst_scale;
-        vscale = GiBroadcastFloat32(scale);
+        vscale = GiFloat32Type2FixLenType(GiBroadcastFloat32(scale));
     }
 
     void cvt(const int8_t* src, int8_t* dst) {
+        GI_FLOAT32_t t;
+        t = GiFixLenType2GiFloat32Type(vscale);
         GI_INT8_t data = GiLoadInt8(src);
         GI_INT16_t vitem0 = GiMoveLowLongInt8(data);
         GI_INT16_t vitem1 = GiMoveHighLongInt8(data);
-        auto vret0 =
-                GiMultiplyFloat32(GiCastToFloat32(GiMoveLowLongInt16(vitem0)), vscale);
-        auto vret1 =
-                GiMultiplyFloat32(GiCastToFloat32(GiMoveHighLongInt16(vitem0)), vscale);
-        auto vret2 =
-                GiMultiplyFloat32(GiCastToFloat32(GiMoveLowLongInt16(vitem1)), vscale);
-        auto vret3 =
-                GiMultiplyFloat32(GiCastToFloat32(GiMoveHighLongInt16(vitem1)), vscale);
+        auto vret0 = GiMultiplyFloat32(GiCastToFloat32(GiMoveLowLongInt16(vitem0)), t);
+        auto vret1 = GiMultiplyFloat32(GiCastToFloat32(GiMoveHighLongInt16(vitem0)), t);
+        auto vret2 = GiMultiplyFloat32(GiCastToFloat32(GiMoveLowLongInt16(vitem1)), t);
+        auto vret3 = GiMultiplyFloat32(GiCastToFloat32(GiMoveHighLongInt16(vitem1)), t);
 
-        auto vres = QConverter::convert<GI_INT8_t, GI_FLOAT32_V4_t>(
-                {{vret0, vret1, vret2, vret3}});
+        GI_FLOAT32_V4_t v4;
+        GiSetSubVectorFloat32V4(v4, 0, vret0);
+        GiSetSubVectorFloat32V4(v4, 1, vret1);
+        GiSetSubVectorFloat32V4(v4, 2, vret2);
+        GiSetSubVectorFloat32V4(v4, 3, vret3);
+        auto vres = QConverter::convert<GI_INT8_t, GI_FLOAT32_V4_t>(v4);
         GiStoreInt8(dst, vres);
     }
 
@@ -245,26 +259,24 @@ struct Quan2FloatTypeCvter<int8_t, float> {
     static constexpr size_t SIMD_WIDTH = GI_SIMD_LEN_BYTE / sizeof(int8_t);
     static constexpr size_t SIMD_STEP = GI_SIMD_LEN_BYTE / sizeof(float);
     float _scale = 0.0f;
-    GI_FLOAT32_t vscale;
+    GI_FLOAT32_FIXLEN_t vscale;
 
     Quan2FloatTypeCvter(DType src_dtype, DType dst_dtype) {
         _scale = src_dtype.param<dtype::QuantizedS8>().scale;
-        vscale = GiBroadcastFloat32(_scale);
+        vscale = GiFloat32Type2FixLenType(GiBroadcastFloat32(_scale));
         MEGDNN_MARK_USED_VAR(dst_dtype);
     }
 
     void cvt(const int8_t* src, float* dst) {
+        GI_FLOAT32_t t;
+        t = GiFixLenType2GiFloat32Type(vscale);
         GI_INT8_t data = GiLoadInt8(src);
         GI_INT16_t vitem0 = GiMoveLowLongInt8(data);
         GI_INT16_t vitem1 = GiMoveHighLongInt8(data);
-        auto vret0 =
-                GiMultiplyFloat32(GiCastToFloat32(GiMoveLowLongInt16(vitem0)), vscale);
-        auto vret1 =
-                GiMultiplyFloat32(GiCastToFloat32(GiMoveHighLongInt16(vitem0)), vscale);
-        auto vret2 =
-                GiMultiplyFloat32(GiCastToFloat32(GiMoveLowLongInt16(vitem1)), vscale);
-        auto vret3 =
-                GiMultiplyFloat32(GiCastToFloat32(GiMoveHighLongInt16(vitem1)), vscale);
+        auto vret0 = GiMultiplyFloat32(GiCastToFloat32(GiMoveLowLongInt16(vitem0)), t);
+        auto vret1 = GiMultiplyFloat32(GiCastToFloat32(GiMoveHighLongInt16(vitem0)), t);
+        auto vret2 = GiMultiplyFloat32(GiCastToFloat32(GiMoveLowLongInt16(vitem1)), t);
+        auto vret3 = GiMultiplyFloat32(GiCastToFloat32(GiMoveHighLongInt16(vitem1)), t);
 
         GiStoreFloat32(dst, vret0);
         GiStoreFloat32(dst + SIMD_STEP, vret1);

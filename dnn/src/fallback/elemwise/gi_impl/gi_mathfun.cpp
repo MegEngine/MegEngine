@@ -283,7 +283,7 @@ v4sf GiCosPsFloat32(v4sf x) {
 v4sf GiTanPsFloat32(v4sf x) {
     v4sf ysin, ycos;
     GiSinCosPsFloat32(x, &ysin, &ycos);
-    return ysin / ycos;
+    return GiDivFloat32(ysin, ycos);
 }
 
 #undef c_exp_hi

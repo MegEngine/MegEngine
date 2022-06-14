@@ -38,7 +38,13 @@ template <>
 inline GI_FLOAT32_V2_t QConverter::convert(const GI_INT16_t& vsrc) {
     GI_INT32_t vhi = GiMoveHighLongInt16(vsrc);
     GI_INT32_t vlo = GiMoveLowLongInt16(vsrc);
-    return {{GiCastToFloat32(vlo), GiCastToFloat32(vhi)}};
+    GI_FLOAT32_t fhi = GiCastToFloat32(vhi);
+    GI_FLOAT32_t flo = GiCastToFloat32(vlo);
+    GI_FLOAT32_V2_t ret;
+    GiSetSubVectorFloat32V2(ret, 0, flo);
+    GiSetSubVectorFloat32V2(ret, 1, fhi);
+
+    return ret;
 }
 
 template <>

@@ -20,37 +20,43 @@ struct ReluOpBase : UnaryOpBase<src_ctype, dst_ctype> {
 template <typename src_ctype, typename dst_type = src_ctype>
 struct ReluOp;
 
-#define OP(_ctype, _simd_type, _simd_type2, _func_suffix, _simd_width, zero) \
-    template <>                                                              \
-    struct ReluOp<_ctype> : ReluOpBase<_ctype> {                             \
-        using ReluOpBase::ReluOpBase;                                        \
-        using ReluOpBase::operator();                                        \
-        constexpr static size_t SIMD_WIDTH = _simd_width;                    \
-        void operator()(const _simd_type2& src, _ctype* dst) const {         \
-            auto vitem = operator()(src);                                    \
-            GiStore##_func_suffix(dst, vitem.val[0]);                        \
-            GiStore##_func_suffix(dst + SIMD_WIDTH, vitem.val[1]);           \
-        }                                                                    \
-        _simd_type2 operator()(const _simd_type2& src) const {               \
-            auto vitem0 = GiMaximum##_func_suffix(src.val[0], zero);         \
-            auto vitem1 = GiMaximum##_func_suffix(src.val[1], zero);         \
-            return {{vitem0, vitem1}};                                       \
-        }                                                                    \
-        void operator()(const _simd_type& src, _ctype* dst) const {          \
-            auto vitem = operator()(src);                                    \
-            GiStore##_func_suffix(dst, vitem);                               \
-        }                                                                    \
-        _simd_type operator()(const _simd_type& src) const {                 \
-            return GiMaximum##_func_suffix(src, zero);                       \
-        }                                                                    \
+#define OP(_ctype, _simd_type, _simd_type2, _func_suffix, _simd_width, zero_num)    \
+    template <>                                                                     \
+    struct ReluOp<_ctype> : ReluOpBase<_ctype> {                                    \
+        using ReluOpBase::ReluOpBase;                                               \
+        using ReluOpBase::operator();                                               \
+        constexpr static size_t SIMD_WIDTH = _simd_width;                           \
+        void operator()(const _simd_type2& src, _ctype* dst) const {                \
+            auto vitem = operator()(src);                                           \
+            GiStore##_func_suffix(dst, GiGetSubVector##_func_suffix##V2(vitem, 0)); \
+            GiStore##_func_suffix(                                                  \
+                    dst + SIMD_WIDTH, GiGetSubVector##_func_suffix##V2(vitem, 1));  \
+        }                                                                           \
+        _simd_type2 operator()(const _simd_type2& src) const {                      \
+            _simd_type zero = GiBroadcast##_func_suffix(zero_num);                  \
+            auto vitem0 = GiMaximum##_func_suffix(                                  \
+                    GiGetSubVector##_func_suffix##V2(src, 0), zero);                \
+            auto vitem1 = GiMaximum##_func_suffix(                                  \
+                    GiGetSubVector##_func_suffix##V2(src, 1), zero);                \
+            _simd_type2 ret;                                                        \
+            GiSetSubVector##_func_suffix##V2(ret, 0, vitem0);                       \
+            GiSetSubVector##_func_suffix##V2(ret, 1, vitem1);                       \
+            return ret;                                                             \
+        }                                                                           \
+        void operator()(const _simd_type& src, _ctype* dst) const {                 \
+            auto vitem = operator()(src);                                           \
+            GiStore##_func_suffix(dst, vitem);                                      \
+        }                                                                           \
+        _simd_type operator()(const _simd_type& src) const {                        \
+            _simd_type zero = GiBroadcast##_func_suffix(zero_num);                  \
+            return GiMaximum##_func_suffix(src, zero);                              \
+        }                                                                           \
     };
 
 OP(dt_float32, GI_FLOAT32_t, GI_FLOAT32_V2_t, Float32, GI_SIMD_LEN_BYTE / sizeof(float),
-   vfzero)
-OP(dt_int32, GI_INT32_t, GI_INT32_V2_t, Int32, GI_SIMD_LEN_BYTE / sizeof(int32_t),
-   vzero)
-OP(dt_int8, GI_INT8_t, GI_INT8_V2_t, Int8, GI_SIMD_LEN_BYTE / sizeof(int8_t),
-   vzero_int8)
+   0.0f)
+OP(dt_int32, GI_INT32_t, GI_INT32_V2_t, Int32, GI_SIMD_LEN_BYTE / sizeof(int32_t), 0)
+OP(dt_int8, GI_INT8_t, GI_INT8_V2_t, Int8, GI_SIMD_LEN_BYTE / sizeof(int8_t), 0)
 #undef OP
 
 template <>
@@ -76,11 +82,19 @@ struct ReluOp<dt_qint8, dt_qint8> : ReluOpBase<dt_qint8, dt_qint8> {
         OPERATOR_UNARY_QINT8_FALLBACK;
     }
     GI_INT8_t operator()(const GI_INT32_V2_t& vsrc) const {
-        auto vitem0 = GiMultiplyFloat32(GiCastToFloat32(vsrc.val[0]), this->vscale);
-        auto vitem1 = GiMultiplyFloat32(GiCastToFloat32(vsrc.val[1]), this->vscale);
+        GI_FLOAT32_t vfzero = GiBroadcastFloat32(0.0f);
+        auto vitem0 = GiMultiplyFloat32(
+                GiCastToFloat32(GiGetSubVectorInt32V2(vsrc, 0)),
+                GiFixLenType2GiFloat32Type(this->vscale));
+        auto vitem1 = GiMultiplyFloat32(
+                GiCastToFloat32(GiGetSubVectorInt32V2(vsrc, 1)),
+                GiFixLenType2GiFloat32Type(this->vscale));
         vitem0 = GiMaximumFloat32(vitem0, vfzero);
         vitem1 = GiMaximumFloat32(vitem1, vfzero);
-        return QConverter::convert<GI_INT8_t, GI_FLOAT32_V2_t>({{vitem0, vitem1}});
+        GI_FLOAT32_V2_t tmp;
+        GiSetSubVectorFloat32V2(tmp, 0, vitem0);
+        GiSetSubVectorFloat32V2(tmp, 1, vitem1);
+        return QConverter::convert<GI_INT8_t, GI_FLOAT32_V2_t>(tmp);
     }
 };
 
@@ -104,6 +118,8 @@ template <>
 struct ReluOp<dt_qint32, dt_qint8> : ReluOpBase<dt_qint32, dt_qint8>, FixupBase {
     using ReluOpBase::operator();
     constexpr static size_t SIMD_WIDTH = 4;
+    GI_INT32_t vzero = GiBroadcastInt32(0);
+    GI_FLOAT32_t vfzero = GiBroadcastFloat32(0.0f);
 
     ReluOp(DType src_dtype, DType dst_dtype)
             : ReluOpBase(src_dtype, dst_dtype), FixupBase(scale) {}
@@ -115,8 +131,8 @@ struct ReluOp<dt_qint32, dt_qint8> : ReluOpBase<dt_qint32, dt_qint8>, FixupBase 
         vst1_s8(reinterpret_cast<int8_t*>(dst), vget_low_s8(operator()(vsrc)));
     }
     int8x16_t operator()(const int32x4x2_t& vsrc) const {
-        int32x4_t vitem0 = vqrdmulhq_s32(vsrc.val[0], vmultiplier);
-        int32x4_t vitem1 = vqrdmulhq_s32(vsrc.val[1], vmultiplier);
+        int32x4_t vitem0 = vqrdmulhq_s32(GiGetSubVectorInt32V2(vsrc, 0), vmultiplier);
+        int32x4_t vitem1 = vqrdmulhq_s32(GiGetSubVectorInt32V2(vsrc, 1), vmultiplier);
         vitem0 = vmaxq_s32(vitem0, vzero);
         vitem1 = vmaxq_s32(vitem1, vzero);
         auto tmp = vqmovn_s16(vcombine_s16(
@@ -158,24 +174,36 @@ struct ReluOp<dt_qint32, dt_qint8> : ReluOpBase<dt_qint32, dt_qint8> {
     }
     void operator()(const GI_INT32_t& src, dt_qint8* dst) const {
         GiStoreLane0Int32(
-                reinterpret_cast<int32_t*>(dst), (GI_INT32_t)(operator()(src)));
+                reinterpret_cast<int32_t*>(dst),
+                GiReinterpretInt8AsInt32(operator()(src)));
     }
 
     GI_INT8_t operator()(const GI_INT32_V2_t& vsrc) const {
-        auto vitem0 = GiMultiplyFloat32(GiCastToFloat32(vsrc.val[0]), this->vscale);
-        auto vitem1 = GiMultiplyFloat32(GiCastToFloat32(vsrc.val[1]), this->vscale);
+        auto vitem0 = GiMultiplyFloat32(
+                GiCastToFloat32(GiGetSubVectorInt32V2(vsrc, 0)),
+                GiFixLenType2GiFloat32Type(this->vscale));
+        auto vitem1 = GiMultiplyFloat32(
+                GiCastToFloat32(GiGetSubVectorInt32V2(vsrc, 1)),
+                GiFixLenType2GiFloat32Type(this->vscale));
+        GI_FLOAT32_t vfzero = GiBroadcastFloat32(0.0f);
         vitem0 = GiMaximumFloat32(vitem0, vfzero);
         vitem1 = GiMaximumFloat32(vitem1, vfzero);
 
-        return QConverter::convert<GI_INT8_t, GI_FLOAT32_V2_t>({{vitem0, vitem1}});
+        GI_FLOAT32_V2_t tmp;
+        GiSetSubVectorFloat32V2(tmp, 0, vitem0);
+        GiSetSubVectorFloat32V2(tmp, 1, vitem1);
+        return QConverter::convert<GI_INT8_t, GI_FLOAT32_V2_t>(tmp);
     }
     GI_INT8_t operator()(const GI_INT32_t& src) const {
-        auto vitem0 = GiMultiplyFloat32(GiCastToFloat32(src), this->vscale);
+        auto vitem0 = GiMultiplyFloat32(
+                GiCastToFloat32(src), GiFixLenType2GiFloat32Type(this->vscale));
+        GI_FLOAT32_t vfzero = GiBroadcastFloat32(0.0f);
         vitem0 = GiMaximumFloat32(vitem0, vfzero);
         return QConverter::convert<GI_INT8_t, GI_FLOAT32_t>(vitem0);
     }
     GI_INT8_t operator()(const GI_FLOAT32_t& src) const {
-        auto vitem0 = GiMultiplyFloat32(src, this->vscale);
+        auto vitem0 = GiMultiplyFloat32(src, GiFixLenType2GiFloat32Type(this->vscale));
+        GI_FLOAT32_t vfzero = GiBroadcastFloat32(0.0f);
         vitem0 = GiMaximumFloat32(vitem0, vfzero);
         return QConverter::convert<GI_INT8_t, GI_FLOAT32_t>(vitem0);
     }

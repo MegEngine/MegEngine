@@ -32,14 +32,22 @@ struct MaxOp;
                 const _simd_type2& src0, const _simd_type2& src1,                     \
                 dst_ctype* dst) const {                                               \
             auto vitem = operator()(src0, src1);                                      \
-            GiStore##_func_suffix(dst, vitem.val[0]);                                 \
-            GiStore##_func_suffix(dst + SIMD_WIDTH, vitem.val[1]);                    \
+            GiStore##_func_suffix(dst, GiGetSubVector##_func_suffix##V2(vitem, 0));   \
+            GiStore##_func_suffix(                                                    \
+                    dst + SIMD_WIDTH, GiGetSubVector##_func_suffix##V2(vitem, 1));    \
         }                                                                             \
         _simd_type2 operator()(                                                       \
                 const _simd_type2& src0, const _simd_type2& src1) const {             \
-            auto vitem0 = GiMaximum##_func_suffix(src0.val[0], src1.val[0]);          \
-            auto vitem1 = GiMaximum##_func_suffix(src0.val[1], src1.val[1]);          \
-            return {{vitem0, vitem1}};                                                \
+            auto vitem0 = GiMaximum##_func_suffix(                                    \
+                    GiGetSubVector##_func_suffix##V2(src0, 0),                        \
+                    GiGetSubVector##_func_suffix##V2(src1, 0));                       \
+            auto vitem1 = GiMaximum##_func_suffix(                                    \
+                    GiGetSubVector##_func_suffix##V2(src0, 1),                        \
+                    GiGetSubVector##_func_suffix##V2(src1, 1));                       \
+            _simd_type2 ret;                                                          \
+            GiSetSubVector##_func_suffix##V2(ret, 0, vitem0);                         \
+            GiSetSubVector##_func_suffix##V2(ret, 1, vitem1);                         \
+            return ret;                                                               \
         }                                                                             \
         void operator()(                                                              \
                 const _simd_type& src0, const _simd_type& src1,                       \
@@ -87,12 +95,23 @@ struct MaxOp<dt_qint8, dt_qint8> : MaxOpBase<dt_qint8, dt_qint8> {
 
     GI_INT8_t operator()(const GI_INT32_V2_t& vsrc0, const GI_INT32_V2_t& vsrc1) const {
         auto vitem0 = GiMaximumFloat32(
-                GiMultiplyFloat32(GiCastToFloat32(vsrc0.val[0]), this->vscale0),
-                GiMultiplyFloat32(GiCastToFloat32(vsrc1.val[0]), this->vscale1));
+                GiMultiplyFloat32(
+                        GiCastToFloat32(GiGetSubVectorInt32V2(vsrc0, 0)),
+                        GiFixLenType2GiFloat32Type(this->vscale0)),
+                GiMultiplyFloat32(
+                        GiCastToFloat32(GiGetSubVectorInt32V2(vsrc1, 0)),
+                        GiFixLenType2GiFloat32Type(this->vscale1)));
         auto vitem1 = GiMaximumFloat32(
-                GiMultiplyFloat32(GiCastToFloat32(vsrc0.val[1]), this->vscale0),
-                GiMultiplyFloat32(GiCastToFloat32(vsrc1.val[1]), this->vscale1));
-        return QConverter::convert<GI_INT8_t, GI_FLOAT32_V2_t>({{vitem0, vitem1}});
+                GiMultiplyFloat32(
+                        GiCastToFloat32(GiGetSubVectorInt32V2(vsrc0, 1)),
+                        GiFixLenType2GiFloat32Type(this->vscale0)),
+                GiMultiplyFloat32(
+                        GiCastToFloat32(GiGetSubVectorInt32V2(vsrc1, 1)),
+                        GiFixLenType2GiFloat32Type(this->vscale1)));
+        GI_FLOAT32_V2_t tmp;
+        GiSetSubVectorFloat32V2(tmp, 0, vitem0);
+        GiSetSubVectorFloat32V2(tmp, 1, vitem1);
+        return QConverter::convert<GI_INT8_t, GI_FLOAT32_V2_t>(tmp);
     }
 };
 

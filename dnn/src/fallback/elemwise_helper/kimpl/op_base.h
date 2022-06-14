@@ -31,24 +31,24 @@ struct UnaryOpBase : OpBase<src_ctype, dst_ctype> {
     UnaryOpBase(DType /*src_dtype*/, DType /*dst_dtype*/) {}
 };
 
-#define OPERATOR_UNARY_QINT8_FALLBACK                                                  \
-    GI_INT16_t vsrct0 = GiMoveLowLongInt8(vsrc.val[0]);                                \
-    GiStoreLowInt8(                                                                    \
-            reinterpret_cast<int8_t*>(dst), operator()(                                \
-                                                    {{GiMoveLowLongInt16(vsrct0),      \
-                                                      GiMoveHighLongInt16(vsrct0)}})); \
-    GI_INT16_t vsrct1 = GiMoveHighLongInt8(vsrc.val[0]);                               \
-    GiStoreLowInt8(                                                                    \
-            reinterpret_cast<int8_t*>(dst + 8),                                        \
-            operator()({{GiMoveLowLongInt16(vsrct1), GiMoveHighLongInt16(vsrct1)}}));  \
-    GI_INT16_t vsrct2 = GiMoveLowLongInt8(vsrc.val[1]);                                \
-    GiStoreLowInt8(                                                                    \
-            reinterpret_cast<int8_t*>(dst + 16),                                       \
-            operator()({{GiMoveLowLongInt16(vsrct2), GiMoveHighLongInt16(vsrct2)}}));  \
-    GI_INT16_t vsrct3 = GiMoveHighLongInt8(vsrc.val[1]);                               \
-    GiStoreLowInt8(                                                                    \
-            reinterpret_cast<int8_t*>(dst + 24),                                       \
-            operator()({{GiMoveLowLongInt16(vsrct3), GiMoveHighLongInt16(vsrct3)}}))
+#define OPERATOR_UNARY_QINT8_FALLBACK                                      \
+    GI_INT16_t vsrct0 = GiMoveLowLongInt8(GiGetSubVectorInt8V2(vsrc, 0));  \
+    GI_INT32_V2_t tmp;                                                     \
+    GiSetSubVectorInt32V2(tmp, 0, GiMoveLowLongInt16(vsrct0));             \
+    GiSetSubVectorInt32V2(tmp, 1, GiMoveHighLongInt16(vsrct0));            \
+    GiStoreLowInt8(reinterpret_cast<int8_t*>(dst), operator()(tmp));       \
+    GI_INT16_t vsrct1 = GiMoveHighLongInt8(GiGetSubVectorInt8V2(vsrc, 0)); \
+    GiSetSubVectorInt32V2(tmp, 0, GiMoveLowLongInt16(vsrct1));             \
+    GiSetSubVectorInt32V2(tmp, 1, GiMoveHighLongInt16(vsrct1));            \
+    GiStoreLowInt8(reinterpret_cast<int8_t*>(dst + 8), operator()(tmp));   \
+    GI_INT16_t vsrct2 = GiMoveLowLongInt8(GiGetSubVectorInt8V2(vsrc, 1));  \
+    GiSetSubVectorInt32V2(tmp, 0, GiMoveLowLongInt16(vsrct2));             \
+    GiSetSubVectorInt32V2(tmp, 1, GiMoveHighLongInt16(vsrct2));            \
+    GiStoreLowInt8(reinterpret_cast<int8_t*>(dst + 16), operator()(tmp));  \
+    GI_INT16_t vsrct3 = GiMoveHighLongInt8(GiGetSubVectorInt8V2(vsrc, 1)); \
+    GiSetSubVectorInt32V2(tmp, 0, GiMoveLowLongInt16(vsrct3));             \
+    GiSetSubVectorInt32V2(tmp, 1, GiMoveHighLongInt16(vsrct3));            \
+    GiStoreLowInt8(reinterpret_cast<int8_t*>(dst + 24), operator()(tmp))
 
 //! scale_src = src.scale; scale_dst = 1.f / dst.scale (div -> mul)
 //! scale = src.scale / dst.scale
@@ -56,17 +56,17 @@ template <>
 struct UnaryOpBase<dt_qint8, dt_qint8> : OpBase<dt_qint8, dt_qint8> {
     using OpBase::OpBase;
     float scale_src, scale_dst;
-    GI_FLOAT32_t vscale_src, vscale_dst;
+    GI_FLOAT32_FIXLEN_t vscale_src, vscale_dst;
     float scale;
-    GI_FLOAT32_t vscale;
+    GI_FLOAT32_FIXLEN_t vscale;
 
     void init(float src_scale, float dst_scale) {
         scale_src = src_scale;
-        vscale_src = GiBroadcastFloat32(scale_src);
+        vscale_src = GiFloat32Type2FixLenType(GiBroadcastFloat32(scale_src));
         scale_dst = 1.f / dst_scale;
-        vscale_dst = GiBroadcastFloat32(scale_dst);
+        vscale_dst = GiFloat32Type2FixLenType(GiBroadcastFloat32(scale_dst));
         scale = src_scale / dst_scale;
-        vscale = GiBroadcastFloat32(scale);
+        vscale = GiFloat32Type2FixLenType(GiBroadcastFloat32(scale));
     }
 
     UnaryOpBase(DType src_dtype, DType dst_dtype) {
@@ -83,17 +83,17 @@ struct UnaryOpBase<dt_qint32, dt_qint8> : OpBase<dt_qint32, dt_qint8> {
     using src_ctype = dt_qint32;
     using dst_ctype = dt_qint8;
     float scale;
-    GI_FLOAT32_t vscale;
+    GI_FLOAT32_FIXLEN_t vscale;
     float scale_src, scale_dst;
-    GI_FLOAT32_t vscale_src, vscale_dst;
+    GI_FLOAT32_FIXLEN_t vscale_src, vscale_dst;
 
     void init(float src_scale, float dst_scale) {
         scale_src = src_scale;
-        vscale_src = GiBroadcastFloat32(src_scale);
+        vscale_src = GiFloat32Type2FixLenType(GiBroadcastFloat32(src_scale));
         scale_dst = 1 / dst_scale;
-        vscale_dst = GiBroadcastFloat32(scale_dst);
+        vscale_dst = GiFloat32Type2FixLenType(GiBroadcastFloat32(scale_dst));
         scale = src_scale / dst_scale;
-        vscale = GiBroadcastFloat32(scale);
+        vscale = GiFloat32Type2FixLenType(GiBroadcastFloat32(scale));
     }
 
     UnaryOpBase(DType src_dtype, DType dst_dtype) {
@@ -115,35 +115,36 @@ struct BinaryOpBase : OpBase<src_ctype, dst_ctype> {
 
 /* ================= binary op for quantized types ================== */
 
-#define OPERATOR_BINARY_QINT8_FALLBACK                                                 \
-    GI_INT16_t vsrct0_0 = GiMoveLowLongInt8(vsrc0.val[0]);                             \
-    GI_INT16_t vsrct1_0 = GiMoveLowLongInt8(vsrc1.val[0]);                             \
-    GiStoreLowInt8(                                                                    \
-            reinterpret_cast<int8_t*>(dst),                                            \
-            operator()(                                                                \
-                    {{GiMoveLowLongInt16(vsrct0_0), GiMoveHighLongInt16(vsrct0_0)}},   \
-                    {{GiMoveLowLongInt16(vsrct1_0), GiMoveHighLongInt16(vsrct1_0)}})); \
-    GI_INT16_t vsrct0_1 = GiMoveHighLongInt8(vsrc0.val[0]);                            \
-    GI_INT16_t vsrct1_1 = GiMoveHighLongInt8(vsrc1.val[0]);                            \
-    GiStoreLowInt8(                                                                    \
-            reinterpret_cast<int8_t*>(dst + 8),                                        \
-            operator()(                                                                \
-                    {{GiMoveLowLongInt16(vsrct0_1), GiMoveHighLongInt16(vsrct0_1)}},   \
-                    {{GiMoveLowLongInt16(vsrct1_1), GiMoveHighLongInt16(vsrct1_1)}})); \
-    GI_INT16_t vsrct0_2 = GiMoveLowLongInt8(vsrc0.val[1]);                             \
-    GI_INT16_t vsrct1_2 = GiMoveLowLongInt8(vsrc1.val[1]);                             \
-    GiStoreLowInt8(                                                                    \
-            reinterpret_cast<int8_t*>(dst + 16),                                       \
-            operator()(                                                                \
-                    {{GiMoveLowLongInt16(vsrct0_2), GiMoveHighLongInt16(vsrct0_2)}},   \
-                    {{GiMoveLowLongInt16(vsrct1_2), GiMoveHighLongInt16(vsrct1_2)}})); \
-    GI_INT16_t vsrct0_3 = GiMoveHighLongInt8(vsrc0.val[1]);                            \
-    GI_INT16_t vsrct1_3 = GiMoveHighLongInt8(vsrc1.val[1]);                            \
-    GiStoreLowInt8(                                                                    \
-            reinterpret_cast<int8_t*>(dst + 24),                                       \
-            operator()(                                                                \
-                    {{GiMoveLowLongInt16(vsrct0_3), GiMoveHighLongInt16(vsrct0_3)}},   \
-                    {{GiMoveLowLongInt16(vsrct1_3), GiMoveHighLongInt16(vsrct1_3)}}))
+#define OPERATOR_BINARY_QINT8_FALLBACK                                           \
+    GI_INT16_t vsrct0_0 = GiMoveLowLongInt8(GiGetSubVectorInt8V2(vsrc0, 0));     \
+    GI_INT16_t vsrct1_0 = GiMoveLowLongInt8(GiGetSubVectorInt8V2(vsrc1, 0));     \
+    GI_INT32_V2_t tmp0, tmp1;                                                    \
+    GiSetSubVectorInt32V2(tmp0, 0, GiMoveLowLongInt16(vsrct0_0));                \
+    GiSetSubVectorInt32V2(tmp0, 1, GiMoveHighLongInt16(vsrct0_0));               \
+    GiSetSubVectorInt32V2(tmp1, 0, GiMoveLowLongInt16(vsrct1_0));                \
+    GiSetSubVectorInt32V2(tmp1, 1, GiMoveHighLongInt16(vsrct1_0));               \
+    GiStoreLowInt8(reinterpret_cast<int8_t*>(dst), operator()(tmp0, tmp1));      \
+    GI_INT16_t vsrct0_1 = GiMoveHighLongInt8(GiGetSubVectorInt8V2(vsrc0, 0));    \
+    GI_INT16_t vsrct1_1 = GiMoveHighLongInt8(GiGetSubVectorInt8V2(vsrc1, 0));    \
+    GiSetSubVectorInt32V2(tmp0, 0, GiMoveLowLongInt16(vsrct0_1));                \
+    GiSetSubVectorInt32V2(tmp0, 1, GiMoveHighLongInt16(vsrct0_1));               \
+    GiSetSubVectorInt32V2(tmp1, 0, GiMoveLowLongInt16(vsrct1_1));                \
+    GiSetSubVectorInt32V2(tmp1, 1, GiMoveHighLongInt16(vsrct1_1));               \
+    GiStoreLowInt8(reinterpret_cast<int8_t*>(dst + 8), operator()(tmp0, tmp1));  \
+    GI_INT16_t vsrct0_2 = GiMoveLowLongInt8(GiGetSubVectorInt8V2(vsrc0, 1));     \
+    GI_INT16_t vsrct1_2 = GiMoveLowLongInt8(GiGetSubVectorInt8V2(vsrc1, 1));     \
+    GiSetSubVectorInt32V2(tmp0, 0, GiMoveLowLongInt16(vsrct0_2));                \
+    GiSetSubVectorInt32V2(tmp0, 1, GiMoveHighLongInt16(vsrct0_2));               \
+    GiSetSubVectorInt32V2(tmp1, 0, GiMoveLowLongInt16(vsrct1_2));                \
+    GiSetSubVectorInt32V2(tmp1, 1, GiMoveHighLongInt16(vsrct1_2));               \
+    GiStoreLowInt8(reinterpret_cast<int8_t*>(dst + 16), operator()(tmp0, tmp1)); \
+    GI_INT16_t vsrct0_3 = GiMoveHighLongInt8(GiGetSubVectorInt8V2(vsrc0, 1));    \
+    GI_INT16_t vsrct1_3 = GiMoveHighLongInt8(GiGetSubVectorInt8V2(vsrc1, 1));    \
+    GiSetSubVectorInt32V2(tmp0, 0, GiMoveLowLongInt16(vsrct0_3));                \
+    GiSetSubVectorInt32V2(tmp0, 1, GiMoveHighLongInt16(vsrct0_3));               \
+    GiSetSubVectorInt32V2(tmp1, 0, GiMoveLowLongInt16(vsrct1_3));                \
+    GiSetSubVectorInt32V2(tmp1, 1, GiMoveHighLongInt16(vsrct1_3));               \
+    GiStoreLowInt8(reinterpret_cast<int8_t*>(dst + 24), operator()(tmp0, tmp1));
 
 //! scale_src0 = src0.scale; scale_src1 = src1.scale; scale_dst = 1.f /
 //! dst.scale scale0 = src0.scale / dst.scale; scale1 = src1.scale / dst.scale
@@ -153,21 +154,21 @@ struct BinaryOpBase<dt_qint8, dt_qint8> : OpBase<dt_qint8, dt_qint8> {
     using src_ctype = dt_qint8;
     using dst_ctype = dt_qint8;
     float scale_src0, scale_src1, scale_dst;
-    GI_FLOAT32_t vscale_src0, vscale_src1, vscale_dst;
+    GI_FLOAT32_FIXLEN_t vscale_src0, vscale_src1, vscale_dst;
     float scale0, scale1;
-    GI_FLOAT32_t vscale0, vscale1;
+    GI_FLOAT32_FIXLEN_t vscale0, vscale1;
 
     void init(float src0_scale, float src1_scale, float dst_scale) {
         scale_src0 = src0_scale;
-        vscale_src0 = GiBroadcastFloat32(scale_src0);
+        vscale_src0 = GiFloat32Type2FixLenType(GiBroadcastFloat32(scale_src0));
         scale_src1 = src1_scale;
-        vscale_src1 = GiBroadcastFloat32(scale_src1);
+        vscale_src1 = GiFloat32Type2FixLenType(GiBroadcastFloat32(scale_src1));
         scale_dst = 1.f / dst_scale;
-        vscale_dst = GiBroadcastFloat32(scale_dst);
+        vscale_dst = GiFloat32Type2FixLenType(GiBroadcastFloat32(scale_dst));
         scale0 = src0_scale / dst_scale;
-        vscale0 = GiBroadcastFloat32(scale0);
+        vscale0 = GiFloat32Type2FixLenType(GiBroadcastFloat32(scale0));
         scale1 = src1_scale / dst_scale;
-        vscale1 = GiBroadcastFloat32(scale1);
+        vscale1 = GiFloat32Type2FixLenType(GiBroadcastFloat32(scale1));
     }
 
     BinaryOpBase(DType src0_dtype, DType src1_dtype, DType dst_dtype) {
@@ -188,21 +189,21 @@ struct BinaryOpBase<dt_qint32, dt_qint8> : OpBase<dt_qint32, dt_qint8> {
     using src_ctype = dt_qint32;
     using dst_ctype = dt_qint8;
     float scale0, scale1;
-    GI_FLOAT32_t vscale0, vscale1;
+    GI_FLOAT32_FIXLEN_t vscale0, vscale1;
     float scale_src0, scale_src1, scale_dst;
-    GI_FLOAT32_t vscale_src0, vscale_src1, vscale_dst;
+    GI_FLOAT32_FIXLEN_t vscale_src0, vscale_src1, vscale_dst;
 
     void init(float src0_scale, float src1_scale, float dst_scale) {
         scale_src0 = src0_scale;
-        vscale_src0 = GiBroadcastFloat32(src0_scale);
+        vscale_src0 = GiFloat32Type2FixLenType(GiBroadcastFloat32(src0_scale));
         scale_src1 = src1_scale;
-        vscale_src1 = GiBroadcastFloat32(src1_scale);
+        vscale_src1 = GiFloat32Type2FixLenType(GiBroadcastFloat32(src1_scale));
         scale_dst = 1 / dst_scale;
-        vscale_dst = GiBroadcastFloat32(scale_dst);
+        vscale_dst = GiFloat32Type2FixLenType(GiBroadcastFloat32(scale_dst));
         scale0 = src0_scale / dst_scale;
-        vscale0 = GiBroadcastFloat32(scale0);
+        vscale0 = GiFloat32Type2FixLenType(GiBroadcastFloat32(scale0));
         scale1 = src1_scale / dst_scale;
-        vscale1 = GiBroadcastFloat32(scale1);
+        vscale1 = GiFloat32Type2FixLenType(GiBroadcastFloat32(scale1));
     }
 
     BinaryOpBase(DType src0_dtype, DType src1_dtype, DType dst_dtype) {
@@ -227,43 +228,48 @@ struct TernaryOpBase : OpBase<src_ctype, dst_ctype> {
             DType /*dst_dtype*/) {}
 };
 
-#define OPERATOR_TERNARY_QINT8_FALLBACK                                            \
-    GI_INT16_t vsrct0 = GiMoveLowLongInt8(vsrc0.val[0]);                           \
-    GI_INT16_t vsrct1 = GiMoveLowLongInt8(vsrc1.val[0]);                           \
-    GI_INT16_t vsrct2 = GiMoveLowLongInt8(vsrc2.val[0]);                           \
-    GiStoreLowInt8(                                                                \
-            reinterpret_cast<int8_t*>(dst),                                        \
-            operator()(                                                            \
-                    {{GiMoveLowLongInt16(vsrct0), GiMoveHighLongInt16(vsrct0)}},   \
-                    {{GiMoveLowLongInt16(vsrct1), GiMoveHighLongInt16(vsrct1)}},   \
-                    {{GiMoveLowLongInt16(vsrct2), GiMoveHighLongInt16(vsrct2)}})); \
-    vsrct0 = GiMoveHighLongInt8(vsrc0.val[0]);                                     \
-    vsrct1 = GiMoveHighLongInt8(vsrc1.val[0]);                                     \
-    vsrct2 = GiMoveHighLongInt8(vsrc2.val[0]);                                     \
-    GiStoreLowInt8(                                                                \
-            reinterpret_cast<int8_t*>(dst + 8),                                    \
-            operator()(                                                            \
-                    {{GiMoveLowLongInt16(vsrct0), GiMoveHighLongInt16(vsrct0)}},   \
-                    {{GiMoveLowLongInt16(vsrct1), GiMoveHighLongInt16(vsrct1)}},   \
-                    {{GiMoveLowLongInt16(vsrct2), GiMoveHighLongInt16(vsrct2)}})); \
-    vsrct0 = GiMoveLowLongInt8(vsrc0.val[1]);                                      \
-    vsrct1 = GiMoveLowLongInt8(vsrc1.val[1]);                                      \
-    vsrct2 = GiMoveLowLongInt8(vsrc2.val[1]);                                      \
-    GiStoreLowInt8(                                                                \
-            reinterpret_cast<int8_t*>(dst + 16),                                   \
-            operator()(                                                            \
-                    {{GiMoveLowLongInt16(vsrct0), GiMoveHighLongInt16(vsrct0)}},   \
-                    {{GiMoveLowLongInt16(vsrct1), GiMoveHighLongInt16(vsrct1)}},   \
-                    {{GiMoveLowLongInt16(vsrct2), GiMoveHighLongInt16(vsrct2)}})); \
-    vsrct0 = GiMoveHighLongInt8(vsrc0.val[1]);                                     \
-    vsrct1 = GiMoveHighLongInt8(vsrc1.val[1]);                                     \
-    vsrct2 = GiMoveHighLongInt8(vsrc2.val[1]);                                     \
-    GiStoreLowInt8(                                                                \
-            reinterpret_cast<int8_t*>(dst + 24),                                   \
-            operator()(                                                            \
-                    {{GiMoveLowLongInt16(vsrct0), GiMoveHighLongInt16(vsrct0)}},   \
-                    {{GiMoveLowLongInt16(vsrct1), GiMoveHighLongInt16(vsrct1)}},   \
-                    {{GiMoveLowLongInt16(vsrct2), GiMoveHighLongInt16(vsrct2)}}))
+#define OPERATOR_TERNARY_QINT8_FALLBACK                                                \
+    GI_INT16_t vsrct0 = GiMoveLowLongInt8(GiGetSubVectorInt8V2(vsrc0, 0));             \
+    GI_INT16_t vsrct1 = GiMoveLowLongInt8(GiGetSubVectorInt8V2(vsrc1, 0));             \
+    GI_INT16_t vsrct2 = GiMoveLowLongInt8(GiGetSubVectorInt8V2(vsrc2, 0));             \
+    GI_INT32_V2_t tmp0, tmp1, tmp2;                                                    \
+    GiSetSubVectorInt32V2(tmp0, 0, GiMoveLowLongInt16(vsrct0));                        \
+    GiSetSubVectorInt32V2(tmp0, 1, GiMoveHighLongInt16(vsrct0));                       \
+    GiSetSubVectorInt32V2(tmp1, 0, GiMoveLowLongInt16(vsrct1));                        \
+    GiSetSubVectorInt32V2(tmp1, 1, GiMoveHighLongInt16(vsrct1));                       \
+    GiSetSubVectorInt32V2(tmp2, 0, GiMoveLowLongInt16(vsrct2));                        \
+    GiSetSubVectorInt32V2(tmp2, 1, GiMoveHighLongInt16(vsrct2));                       \
+    GiStoreLowInt8(reinterpret_cast<int8_t*>(dst), operator()(tmp0, tmp1, tmp2));      \
+    vsrct0 = GiMoveHighLongInt8(GiGetSubVectorInt8V2(vsrc0, 0));                       \
+    vsrct1 = GiMoveHighLongInt8(GiGetSubVectorInt8V2(vsrc1, 0));                       \
+    vsrct2 = GiMoveHighLongInt8(GiGetSubVectorInt8V2(vsrc2, 0));                       \
+    GiSetSubVectorInt32V2(tmp0, 0, GiMoveLowLongInt16(vsrct0));                        \
+    GiSetSubVectorInt32V2(tmp0, 1, GiMoveHighLongInt16(vsrct0));                       \
+    GiSetSubVectorInt32V2(tmp1, 0, GiMoveLowLongInt16(vsrct1));                        \
+    GiSetSubVectorInt32V2(tmp1, 1, GiMoveHighLongInt16(vsrct1));                       \
+    GiSetSubVectorInt32V2(tmp2, 0, GiMoveLowLongInt16(vsrct2));                        \
+    GiSetSubVectorInt32V2(tmp2, 1, GiMoveHighLongInt16(vsrct2));                       \
+    GiStoreLowInt8(reinterpret_cast<int8_t*>(dst + 8), operator()(tmp0, tmp1, tmp2));  \
+    vsrct0 = GiMoveLowLongInt8(GiGetSubVectorInt8V2(vsrc0, 1));                        \
+    vsrct1 = GiMoveLowLongInt8(GiGetSubVectorInt8V2(vsrc1, 1));                        \
+    vsrct2 = GiMoveLowLongInt8(GiGetSubVectorInt8V2(vsrc2, 1));                        \
+    GiSetSubVectorInt32V2(tmp0, 0, GiMoveLowLongInt16(vsrct0));                        \
+    GiSetSubVectorInt32V2(tmp0, 1, GiMoveHighLongInt16(vsrct0));                       \
+    GiSetSubVectorInt32V2(tmp1, 0, GiMoveLowLongInt16(vsrct1));                        \
+    GiSetSubVectorInt32V2(tmp1, 1, GiMoveHighLongInt16(vsrct1));                       \
+    GiSetSubVectorInt32V2(tmp2, 0, GiMoveLowLongInt16(vsrct2));                        \
+    GiSetSubVectorInt32V2(tmp2, 1, GiMoveHighLongInt16(vsrct2));                       \
+    GiStoreLowInt8(reinterpret_cast<int8_t*>(dst + 16), operator()(tmp0, tmp1, tmp2)); \
+    vsrct0 = GiMoveHighLongInt8(GiGetSubVectorInt8V2(vsrc0, 1));                       \
+    vsrct1 = GiMoveHighLongInt8(GiGetSubVectorInt8V2(vsrc1, 1));                       \
+    vsrct2 = GiMoveHighLongInt8(GiGetSubVectorInt8V2(vsrc2, 1));                       \
+    GiSetSubVectorInt32V2(tmp0, 0, GiMoveLowLongInt16(vsrct0));                        \
+    GiSetSubVectorInt32V2(tmp0, 1, GiMoveHighLongInt16(vsrct0));                       \
+    GiSetSubVectorInt32V2(tmp1, 0, GiMoveLowLongInt16(vsrct1));                        \
+    GiSetSubVectorInt32V2(tmp1, 1, GiMoveHighLongInt16(vsrct1));                       \
+    GiSetSubVectorInt32V2(tmp2, 0, GiMoveLowLongInt16(vsrct2));                        \
+    GiSetSubVectorInt32V2(tmp2, 1, GiMoveHighLongInt16(vsrct2));                       \
+    GiStoreLowInt8(reinterpret_cast<int8_t*>(dst + 24), operator()(tmp0, tmp1, tmp2));
 
 /*========================= ternaty op for quanzited ====================*/
 template <>
@@ -272,24 +278,24 @@ struct TernaryOpBase<dt_qint8, dt_qint8> : OpBase<dt_qint8, dt_qint8> {
     using src_ctype = dt_qint8;
     using dst_ctype = dt_qint8;
     float scale_src0, scale_src1, scale_src2, scale_dst;
-    GI_FLOAT32_t vscale_src0, vscale_src1, vscale_src2, vscale_dst;
+    GI_FLOAT32_FIXLEN_t vscale_src0, vscale_src1, vscale_src2, vscale_dst;
     float scale0, scale1, scale2;
-    GI_FLOAT32_t vscale0, vscale1, vscale2;
+    GI_FLOAT32_FIXLEN_t vscale0, vscale1, vscale2;
     void init(float src0_scale, float src1_scale, float src2_scale, float dst_scale) {
         scale_src0 = src0_scale;
         scale_src1 = src1_scale;
         scale_src2 = src2_scale;
         scale_dst = 1.f / dst_scale;
-        vscale_src0 = GiBroadcastFloat32(scale_src0);
-        vscale_src1 = GiBroadcastFloat32(scale_src1);
-        vscale_src2 = GiBroadcastFloat32(scale_src2);
-        vscale_dst = GiBroadcastFloat32(scale_dst);
+        vscale_src0 = GiFloat32Type2FixLenType(GiBroadcastFloat32(scale_src0));
+        vscale_src1 = GiFloat32Type2FixLenType(GiBroadcastFloat32(scale_src1));
+        vscale_src2 = GiFloat32Type2FixLenType(GiBroadcastFloat32(scale_src2));
+        vscale_dst = GiFloat32Type2FixLenType(GiBroadcastFloat32(scale_dst));
         scale0 = src0_scale / dst_scale;
         scale1 = src1_scale / dst_scale;
         scale2 = src2_scale / dst_scale;
-        vscale0 = GiBroadcastFloat32(scale0);
-        vscale1 = GiBroadcastFloat32(scale1);
-        vscale2 = GiBroadcastFloat32(scale2);
+        vscale0 = GiFloat32Type2FixLenType(GiBroadcastFloat32(scale0));
+        vscale1 = GiFloat32Type2FixLenType(GiBroadcastFloat32(scale1));
+        vscale2 = GiFloat32Type2FixLenType(GiBroadcastFloat32(scale2));
     }
     TernaryOpBase(
             DType src0_dtype, DType src1_dtype, DType src2_dtype, DType dst_dtype) {
@@ -307,7 +313,7 @@ struct TernaryOpBase<dt_qint8, dt_qint8> : OpBase<dt_qint8, dt_qint8> {
 
 ////////////////////////// fixup //////////////////////////
 struct FixupBase {
-    GI_INT32_t vmultiplier, vshift;
+    GI_INT32_FIXLEN_t vmultiplier, vshift;
     FixupBase(float scale) {
         //! ignore Fixup if scale >= 0.5, using typecvt instead of shift &
         //! multiplier, as it may introduce errors.
@@ -317,9 +323,9 @@ struct FixupBase {
         int shift = static_cast<int>(::ceilf(::log2f(0.5 / scale)));
         scale *= ::powf(2, shift);
         //! Using double can get full precision here, but it can be ignored.
-        vmultiplier = GiBroadcastInt32(
-                std::round(static_cast<double>(scale) * ((2LL) << 30)));
-        vshift = GiBroadcastInt32(-shift);
+        vmultiplier = GiInt32Type2FixLenType(GiBroadcastInt32(
+                std::round(static_cast<double>(scale) * ((2LL) << 30))));
+        vshift = GiInt32Type2FixLenType(GiBroadcastInt32(-shift));
     }
 };
 
@@ -349,11 +355,25 @@ struct UnaryQuantizationOp<dt_qint8, dt_qint8, Op> : UnaryOpBase<dt_qint8, dt_qi
     }
 
     GI_INT8_t operator()(const GI_INT32_V2_t& vsrc) const {
-        auto vitem0 = GiMultiplyFloat32(GiCastToFloat32(vsrc.val[0]), this->vscale_src);
-        auto vitem1 = GiMultiplyFloat32(GiCastToFloat32(vsrc.val[1]), this->vscale_src);
-        auto val = this->op({{vitem0, vitem1}});
-        val.val[0] = GiMultiplyFloat32(val.val[0], this->vscale_dst);
-        val.val[1] = GiMultiplyFloat32(val.val[1], this->vscale_dst);
+        auto vitem0 = GiMultiplyFloat32(
+                GiCastToFloat32(GiGetSubVectorInt32V2(vsrc, 0)),
+                GiFixLenType2GiFloat32Type(this->vscale_src));
+        auto vitem1 = GiMultiplyFloat32(
+                GiCastToFloat32(GiGetSubVectorInt32V2(vsrc, 1)),
+                GiFixLenType2GiFloat32Type(this->vscale_src));
+        GI_FLOAT32_V2_t tmp;
+        GiSetSubVectorFloat32V2(tmp, 0, vitem0);
+        GiSetSubVectorFloat32V2(tmp, 1, vitem1);
+
+        auto val = this->op(tmp);
+        GI_FLOAT32_t a = GiMultiplyFloat32(
+                GiGetSubVectorFloat32V2(val, 0),
+                GiFixLenType2GiFloat32Type(this->vscale_dst));
+        GI_FLOAT32_t b = GiMultiplyFloat32(
+                GiGetSubVectorFloat32V2(val, 1),
+                GiFixLenType2GiFloat32Type(this->vscale_dst));
+        GiSetSubVectorFloat32V2(val, 0, a);
+        GiSetSubVectorFloat32V2(val, 1, b);
         return QConverter::convert<GI_INT8_t, GI_FLOAT32_V2_t>(val);
     }
 };
@@ -385,13 +405,32 @@ struct BinaryQuantizationOp<dt_qint8, dt_qint8, Op> : BinaryOpBase<dt_qint8, dt_
     }
 
     GI_INT8_t operator()(const GI_INT32_V2_t& vsrc0, const GI_INT32_V2_t& vsrc1) const {
-        auto val0 = GiMultiplyFloat32(GiCastToFloat32(vsrc0.val[0]), this->vscale_src0);
-        auto val1 = GiMultiplyFloat32(GiCastToFloat32(vsrc0.val[1]), this->vscale_src0);
-        auto val2 = GiMultiplyFloat32(GiCastToFloat32(vsrc1.val[0]), this->vscale_src1);
-        auto val3 = GiMultiplyFloat32(GiCastToFloat32(vsrc1.val[1]), this->vscale_src1);
-        auto val = op({{val0, val1}}, {{val2, val3}});
-        val.val[0] = GiMultiplyFloat32(val.val[0], this->vscale_dst);
-        val.val[1] = GiMultiplyFloat32(val.val[1], this->vscale_dst);
+        auto val0 = GiMultiplyFloat32(
+                GiCastToFloat32(GiGetSubVectorInt32V2(vsrc0, 0)),
+                GiFixLenType2GiFloat32Type(this->vscale_src0));
+        auto val1 = GiMultiplyFloat32(
+                GiCastToFloat32(GiGetSubVectorInt32V2(vsrc0, 1)),
+                GiFixLenType2GiFloat32Type(this->vscale_src0));
+        auto val2 = GiMultiplyFloat32(
+                GiCastToFloat32(GiGetSubVectorInt32V2(vsrc1, 0)),
+                GiFixLenType2GiFloat32Type(this->vscale_src1));
+        auto val3 = GiMultiplyFloat32(
+                GiCastToFloat32(GiGetSubVectorInt32V2(vsrc1, 1)),
+                GiFixLenType2GiFloat32Type(this->vscale_src1));
+        GI_FLOAT32_V2_t tmp0, tmp1;
+        GiSetSubVectorFloat32V2(tmp0, 0, val0);
+        GiSetSubVectorFloat32V2(tmp0, 1, val1);
+        GiSetSubVectorFloat32V2(tmp1, 0, val2);
+        GiSetSubVectorFloat32V2(tmp1, 1, val3);
+        auto val = op(tmp0, tmp1);
+        GI_FLOAT32_t a = GiMultiplyFloat32(
+                GiGetSubVectorFloat32V2(val, 0),
+                GiFixLenType2GiFloat32Type(this->vscale_dst));
+        GI_FLOAT32_t b = GiMultiplyFloat32(
+                GiGetSubVectorFloat32V2(val, 1),
+                GiFixLenType2GiFloat32Type(this->vscale_dst));
+        GiSetSubVectorFloat32V2(val, 0, a);
+        GiSetSubVectorFloat32V2(val, 1, b);
         return QConverter::convert<GI_INT8_t, GI_FLOAT32_V2_t>(val);
     }
 };
@@ -431,15 +470,40 @@ struct TernaryQuantizationOp<dt_qint8, dt_qint8, Op>
     GI_INT8_t operator()(
             const GI_INT32_V2_t& vsrc0, const GI_INT32_V2_t& vsrc1,
             const GI_INT32_V2_t& vsrc2) const {
-        auto val0 = GiMultiplyFloat32(GiCastToFloat32(vsrc0.val[0]), this->vscale_src0);
-        auto val1 = GiMultiplyFloat32(GiCastToFloat32(vsrc0.val[1]), this->vscale_src0);
-        auto val2 = GiMultiplyFloat32(GiCastToFloat32(vsrc1.val[0]), this->vscale_src1);
-        auto val3 = GiMultiplyFloat32(GiCastToFloat32(vsrc1.val[1]), this->vscale_src1);
-        auto val4 = GiMultiplyFloat32(GiCastToFloat32(vsrc2.val[0]), this->vscale_src2);
-        auto val5 = GiMultiplyFloat32(GiCastToFloat32(vsrc2.val[1]), this->vscale_src2);
-        auto val = op({{val0, val1}}, {{val2, val3}}, {{val4, val5}});
-        val.val[0] = GiMultiplyFloat32(val.val[0], this->vscale_dst);
-        val.val[1] = GiMultiplyFloat32(val.val[1], this->vscale_dst);
+        auto val0 = GiMultiplyFloat32(
+                GiCastToFloat32(GiGetSubVectorInt32V2(vsrc0, 0)),
+                GiFixLenType2GiFloat32Type(this->vscale_src0));
+        auto val1 = GiMultiplyFloat32(
+                GiCastToFloat32(GiGetSubVectorInt32V2(vsrc0, 1)),
+                GiFixLenType2GiFloat32Type(this->vscale_src0));
+        auto val2 = GiMultiplyFloat32(
+                GiCastToFloat32(GiGetSubVectorInt32V2(vsrc1, 0)),
+                GiFixLenType2GiFloat32Type(this->vscale_src1));
+        auto val3 = GiMultiplyFloat32(
+                GiCastToFloat32(GiGetSubVectorInt32V2(vsrc1, 1)),
+                GiFixLenType2GiFloat32Type(this->vscale_src1));
+        auto val4 = GiMultiplyFloat32(
+                GiCastToFloat32(GiGetSubVectorInt32V2(vsrc2, 0)),
+                GiFixLenType2GiFloat32Type(this->vscale_src2));
+        auto val5 = GiMultiplyFloat32(
+                GiCastToFloat32(GiGetSubVectorInt32V2(vsrc2, 1)),
+                GiFixLenType2GiFloat32Type(this->vscale_src2));
+        GI_FLOAT32_V2_t tmp0, tmp1, tmp2;
+        GiSetSubVectorFloat32V2(tmp0, 0, val0);
+        GiSetSubVectorFloat32V2(tmp0, 1, val1);
+        GiSetSubVectorFloat32V2(tmp1, 0, val2);
+        GiSetSubVectorFloat32V2(tmp1, 1, val3);
+        GiSetSubVectorFloat32V2(tmp2, 0, val4);
+        GiSetSubVectorFloat32V2(tmp2, 1, val5);
+        auto val = op(tmp0, tmp1, tmp2);
+        GI_FLOAT32_t a = GiMultiplyFloat32(
+                GiGetSubVectorFloat32V2(val, 0),
+                GiFixLenType2GiFloat32Type(this->vscale_dst));
+        GI_FLOAT32_t b = GiMultiplyFloat32(
+                GiGetSubVectorFloat32V2(val, 1),
+                GiFixLenType2GiFloat32Type(this->vscale_dst));
+        GiSetSubVectorFloat32V2(val, 0, a);
+        GiSetSubVectorFloat32V2(val, 1, b);
         return QConverter::convert<GI_INT8_t, GI_FLOAT32_V2_t>(val);
     }
 };

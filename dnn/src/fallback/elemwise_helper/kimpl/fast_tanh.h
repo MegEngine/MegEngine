@@ -32,14 +32,15 @@ struct FastTanhOp;
         constexpr static size_t SIMD_WIDTH = _simd_width;                           \
         void operator()(const _simd_type& src, _ctype* dst) const {                 \
             auto vitem = operator()(src);                                           \
-            GiStore##_func_suffix(dst, vitem.val[0]);                               \
-            GiStore##_func_suffix(dst + SIMD_WIDTH, vitem.val[1]);                  \
+            GiStore##_func_suffix(dst, GiGetSubVector##_func_suffix##V2(vitem, 0)); \
+            GiStore##_func_suffix(                                                  \
+                    dst + SIMD_WIDTH, GiGetSubVector##_func_suffix##V2(vitem, 1));  \
         }                                                                           \
         _simd_type operator()(const _simd_type& src) const {                        \
             auto val_27 = GiBroadcast##_func_suffix(27.f);                          \
             auto val_9 = GiBroadcast##_func_suffix(9.f);                            \
-            auto valx = src.val[0];                                                 \
-            auto valx1 = src.val[1];                                                \
+            auto valx = GiGetSubVector##_func_suffix##V2(src, 0);                   \
+            auto valx1 = GiGetSubVector##_func_suffix##V2(src, 1);                  \
             auto valxp2 = GiMultiply##_fix_func_suffix(valx, valx);                 \
             auto valx1p2 = GiMultiply##_fix_func_suffix(valx1, valx1);              \
             auto denominator = GiAdd##_fix_func_suffix(valxp2, val_27);             \
@@ -58,7 +59,10 @@ struct FastTanhOp;
                     r_denominator1);                                                \
             valx = GiMultiply##_fix_func_suffix(valx, r_denominator);               \
             valx1 = GiMultiply##_fix_func_suffix(valx1, r_denominator1);            \
-            return {{valx, valx1}};                                                 \
+            _simd_type ret;                                                         \
+            GiSetSubVector##_func_suffix##V2(ret, 0, valx);                         \
+            GiSetSubVector##_func_suffix##V2(ret, 1, valx1);                        \
+            return ret;                                                             \
         }                                                                           \
     };
 OP(dt_float32, GI_FLOAT32_V2_t, Float32, Float32, GI_SIMD_LEN_BYTE / sizeof(float))

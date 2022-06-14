@@ -21,7 +21,8 @@ struct TypeCvtOp<dt_qint32, dt_qint8> : UnaryOpBase<dt_qint32, dt_qint8> {
     }
     void operator()(const GI_INT32_t& vsrc, dt_qint8* dst) const {
         GiStoreLane0Int32(
-                reinterpret_cast<int32_t*>(dst), (GI_INT32_t)(operator()(vsrc)));
+                reinterpret_cast<int32_t*>(dst),
+                GiReinterpretInt8AsInt32(operator()(vsrc)));
     }
     void operator()(const src_ctype& src, dst_ctype* dst) const {
         *dst = operator()(src);
@@ -32,17 +33,25 @@ struct TypeCvtOp<dt_qint32, dt_qint8> : UnaryOpBase<dt_qint32, dt_qint8> {
     }
 
     GI_INT8_t operator()(const GI_INT32_V2_t& vsrc) const {
-        auto vitem0 = GiMultiplyFloat32(GiCastToFloat32(vsrc.val[0]), this->vscale);
-        auto vitem1 = GiMultiplyFloat32(GiCastToFloat32(vsrc.val[1]), this->vscale);
+        auto vitem0 = GiMultiplyFloat32(
+                GiCastToFloat32(GiGetSubVectorInt32V2(vsrc, 0)),
+                GiFixLenType2GiFloat32Type(this->vscale));
+        auto vitem1 = GiMultiplyFloat32(
+                GiCastToFloat32(GiGetSubVectorInt32V2(vsrc, 1)),
+                GiFixLenType2GiFloat32Type(this->vscale));
 
-        return QConverter::convert<GI_INT8_t, GI_FLOAT32_V2_t>({{vitem0, vitem1}});
+        GI_FLOAT32_V2_t tmp;
+        GiSetSubVectorFloat32V2(tmp, 0, vitem0);
+        GiSetSubVectorFloat32V2(tmp, 1, vitem1);
+        return QConverter::convert<GI_INT8_t, GI_FLOAT32_V2_t>(tmp);
     }
     GI_INT8_t operator()(const GI_INT32_t& src) const {
-        auto vitem0 = GiMultiplyFloat32(GiCastToFloat32(src), this->vscale);
+        auto vitem0 = GiMultiplyFloat32(
+                GiCastToFloat32(src), GiFixLenType2GiFloat32Type(this->vscale));
         return QConverter::convert<GI_INT8_t, GI_FLOAT32_t>(vitem0);
     }
     GI_INT8_t operator()(const GI_FLOAT32_t& src) const {
-        auto vitem0 = GiMultiplyFloat32(src, this->vscale);
+        auto vitem0 = GiMultiplyFloat32(src, GiFixLenType2GiFloat32Type(this->vscale));
         return QConverter::convert<GI_INT8_t, GI_FLOAT32_t>(vitem0);
     }
 };

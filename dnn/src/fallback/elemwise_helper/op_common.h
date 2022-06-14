@@ -96,6 +96,82 @@ cb(dt_float32, float, GI_FLOAT32_t, Float32);
 cb(dt_int32, int32_t, GI_INT32_t, Int32);
 #undef cb
 
+///////////////////////////////// ParamElemVistor v2///////////////////////////
+template <typename ctype>
+struct ParamElemVisitorV2;
+
+//! visitor single elemwise, and dup to vector
+template <typename ctype>
+struct ParamElemVisitorDupV2;
+
+template <typename ctype>
+struct ParamElemVisitorBcast101x4V2;
+
+#define cb(_ctype, _inner_ctype, _simd_type, _fun_suffix, _simd_type_v2)         \
+    template <>                                                                  \
+    struct ParamElemVisitorV2<_ctype> {                                          \
+        _simd_type_v2 operator()(const _ctype* src, const _ctype* src_1) const { \
+            _simd_type_v2 ret;                                                   \
+            GiSetSubVector##_fun_suffix##V2(ret, 0, GiLoad##_fun_suffix(src));   \
+            GiSetSubVector##_fun_suffix##V2(ret, 1, GiLoad##_fun_suffix(src_1)); \
+            return ret;                                                          \
+        }                                                                        \
+    };                                                                           \
+    template <>                                                                  \
+    struct ParamElemVisitorDupV2<_ctype> {                                       \
+        _simd_type_v2 operator()(const _ctype* src) const {                      \
+            _simd_type_v2 ret;                                                   \
+            _simd_type tmp = GiBroadcast##_fun_suffix(                           \
+                    *reinterpret_cast<const _inner_ctype*>(src));                \
+            GiSetSubVector##_fun_suffix##V2(ret, 0, tmp);                        \
+            GiSetSubVector##_fun_suffix##V2(ret, 1, tmp);                        \
+            return ret;                                                          \
+        }                                                                        \
+    }
+cb(dt_qint32, int32_t, GI_INT32_t, Int32, GI_INT32_V2_t);
+cb(dt_qint8, int8_t, GI_INT8_t, Int8, GI_INT8_V2_t);
+
+cb(dt_float32, float, GI_FLOAT32_t, Float32, GI_FLOAT32_V2_t);
+cb(dt_int32, int32_t, GI_INT32_t, Int32, GI_INT32_V2_t);
+cb(dt_int8, int8_t, GI_INT8_t, Int8, GI_INT8_V2_t);
+#undef cb
+
+template <typename ctype>
+struct ParamElemVisitorBcast101x4V2;
+#define cb(_ctype, _inner_ctype, _simd_type, _fun_suffix, rel_suffix, _simd_type_v2) \
+    template <>                                                                      \
+    struct ParamElemVisitorBcast101x4V2<_ctype> {                                    \
+        _simd_type_v2 operator()(const _ctype* src) const {                          \
+            _simd_type_v2 ret;                                                       \
+            _simd_type tmp =                                                         \
+                    GiReinter##rel_suffix##To##_fun_suffix(GiBroadcast##rel_suffix(  \
+                            *reinterpret_cast<const _inner_ctype*>(src)));           \
+            GiSetSubVector##_fun_suffix##V2(ret, 0, tmp);                            \
+            GiSetSubVector##_fun_suffix##V2(ret, 1, tmp);                            \
+            return ret;                                                              \
+        }                                                                            \
+    }
+
+cb(dt_qint8, int32_t, GI_INT8_t, Int8, Int32, GI_INT8_V2_t);
+cb(dt_int8, int32_t, GI_INT8_t, Int8, Int32, GI_INT8_V2_t);
+#undef cb
+#define cb(_ctype, _inner_ctype, _simd_type, _fun_suffix, _simd_type_v2) \
+    template <>                                                          \
+    struct ParamElemVisitorBcast101x4V2<_ctype> {                        \
+        _simd_type_v2 operator()(const _ctype* src) const {              \
+            _simd_type_v2 ret;                                           \
+            _simd_type tmp = GiLoad##_fun_suffix(src);                   \
+            GiSetSubVector##_fun_suffix##V2(ret, 0, tmp);                \
+            GiSetSubVector##_fun_suffix##V2(ret, 1, tmp);                \
+            return ret;                                                  \
+        }                                                                \
+    }
+
+cb(dt_qint32, int32_t, GI_INT32_t, Int32, GI_INT32_V2_t);
+cb(dt_float32, float, GI_FLOAT32_t, Float32, GI_FLOAT32_V2_t);
+cb(dt_int32, int32_t, GI_INT32_t, Int32, GI_INT32_V2_t);
+#undef cb
+
 ///////////////////////////////// OpCaller /////////////////////////////
 template <typename Op, BcastType bcast_type>
 struct OpCallerUnary;
@@ -106,10 +182,10 @@ struct OpCallerUnary<Op, VEC> {
             const typename Op::src_ctype* src, typename Op::dst_ctype* dst,
             DType src_dtype, DType dst_dtype, size_t nr_elems) {
         Op op(src_dtype, dst_dtype);
-        ParamElemVisitor<typename Op::src_ctype> vis;
+        ParamElemVisitorV2<typename Op::src_ctype> vis;
         size_t i = 0;
         for (; i + Op::SIMD_WIDTH * 2 <= nr_elems; i += Op::SIMD_WIDTH * 2) {
-            op({{vis(src), vis(src + Op::SIMD_WIDTH)}}, dst);
+            op(vis(src, src + Op::SIMD_WIDTH), dst);
             src += Op::SIMD_WIDTH * 2;
             dst += Op::SIMD_WIDTH * 2;
         }
@@ -364,12 +440,12 @@ struct OpCallerBinary<Op, VEC_VEC> {
             typename Op::dst_ctype* dst, DType src0_dtype, DType src1_dtype,
             DType dst_dtype, size_t nr_elems) {
         Op op(src0_dtype, src1_dtype, dst_dtype);
-        ParamElemVisitor<typename Op::src_ctype> vis0;
-        ParamElemVisitor<typename Op::src_ctype> vis1;
+        ParamElemVisitorV2<typename Op::src_ctype> vis0;
+        ParamElemVisitorV2<typename Op::src_ctype> vis1;
         size_t i = 0;
         for (; i + Op::SIMD_WIDTH * 2 <= nr_elems; i += Op::SIMD_WIDTH * 2) {
-            op({{vis0(src0), vis0(src0 + Op::SIMD_WIDTH)}},
-               {{vis1(src1), vis1(src1 + Op::SIMD_WIDTH)}}, dst);
+            op(vis0(src0, src0 + Op::SIMD_WIDTH), vis1(src1, src1 + Op::SIMD_WIDTH),
+               dst);
             src0 += Op::SIMD_WIDTH * 2;
             src1 += Op::SIMD_WIDTH * 2;
             dst += Op::SIMD_WIDTH * 2;
@@ -394,17 +470,16 @@ struct OpCallerBinary<Op, VEC_BCAST101> {
             typename Op::dst_ctype* dst, DType src0_dtype, DType src1_dtype,
             DType dst_dtype, size_t batch, size_t channel, size_t channel_stride) {
         Op op(src0_dtype, src1_dtype, dst_dtype);
-        ParamElemVisitor<typename Op::src_ctype> vis0;
-        ParamElemVisitorDup<typename Op::src_ctype> vis1;
+        ParamElemVisitorV2<typename Op::src_ctype> vis0;
+        ParamElemVisitorDupV2<typename Op::src_ctype> vis1;
         for (size_t b = 0; b < batch; b++) {
             const typename Op::src_ctype* src1_ptr = src1;
             for (size_t c = 0; c < channel; c++) {
                 size_t i = 0;
-                auto src1_simd = vis1(src1_ptr);
+                auto src1_simd_v2 = vis1(src1_ptr);
                 for (; i + Op::SIMD_WIDTH * 2 <= channel_stride;
                      i += Op::SIMD_WIDTH * 2) {
-                    op({{vis0(src0), vis0(src0 + Op::SIMD_WIDTH)}},
-                       {{src1_simd, src1_simd}}, dst);
+                    op(vis0(src0, src0 + Op::SIMD_WIDTH), src1_simd_v2, dst);
                     src0 += Op::SIMD_WIDTH * 2;
                     dst += Op::SIMD_WIDTH * 2;
                 }
@@ -430,7 +505,7 @@ struct OpCallerBinary<Op, VEC_BCASTX0X> {
             typename Op::dst_ctype* dst, DType src0_dtype, DType src1_dtype,
             DType dst_dtype, size_t batch, size_t channel, size_t channel_stride) {
         Op op(src0_dtype, src1_dtype, dst_dtype);
-        ParamElemVisitor<typename Op::src_ctype> vis;
+        ParamElemVisitorV2<typename Op::src_ctype> vis;
         for (size_t b = 0; b < batch; b++) {
             const typename Op::src_ctype* src1_ptr_base = src1 + b * channel_stride;
             for (size_t c = 0; c < channel; c++) {
@@ -438,11 +513,9 @@ struct OpCallerBinary<Op, VEC_BCASTX0X> {
                 auto src1_ptr = src1_ptr_base;
                 for (; i + Op::SIMD_WIDTH * 2 <= channel_stride;
                      i += Op::SIMD_WIDTH * 2) {
-                    auto src0_simd0 = vis(src0);
-                    auto src0_simd1 = vis(src0 + Op::SIMD_WIDTH);
-                    auto src1_simd0 = vis(src1_ptr);
-                    auto src1_simd1 = vis(src1_ptr + Op::SIMD_WIDTH);
-                    op({{src0_simd0, src0_simd1}}, {{src1_simd0, src1_simd1}}, dst);
+                    auto src0_simd01 = vis(src0, src0 + Op::SIMD_WIDTH);
+                    auto src1_simd01 = vis(src1_ptr, src1_ptr + Op::SIMD_WIDTH);
+                    op(src0_simd01, src1_simd01, dst);
                     src0 += Op::SIMD_WIDTH * 2;
                     src1_ptr += Op::SIMD_WIDTH * 2;
                     dst += Op::SIMD_WIDTH * 2;
@@ -469,19 +542,17 @@ struct OpCallerBinary<Op, VEC_BCAST111C> {
             typename Op::dst_ctype* dst, DType src0_dtype, DType src1_dtype,
             DType dst_dtype, size_t batch, size_t channel, size_t channel_stride) {
         Op op(src0_dtype, src1_dtype, dst_dtype);
-        ParamElemVisitor<typename Op::src_ctype> vis;
+        ParamElemVisitorV2<typename Op::src_ctype> vis;
         for (size_t b = 0; b < batch; b++) {
             for (size_t c = 0; c < channel; c++) {
                 size_t rest = channel_stride;
                 const typename Op::src_ctype* src1_ptr = src1;
                 while (rest >= Op::SIMD_WIDTH * 2) {
-                    auto src0_simd0 = vis(src0);
-                    auto src0_simd1 = vis(src0 + Op::SIMD_WIDTH);
-                    auto src1_simd0 = vis(src1_ptr);
-                    auto src1_simd1 = vis(src1_ptr + Op::SIMD_WIDTH);
+                    auto src0_simd01 = vis(src0, src0 + Op::SIMD_WIDTH);
+                    auto src1_simd01 = vis(src1_ptr, src1_ptr + Op::SIMD_WIDTH);
                     src0 += Op::SIMD_WIDTH * 2;
                     src1_ptr += Op::SIMD_WIDTH * 2;
-                    op({{src0_simd0, src0_simd1}}, {{src1_simd0, src1_simd1}}, dst);
+                    op(src0_simd01, src1_simd01, dst);
                     dst += Op::SIMD_WIDTH * 2;
                     rest -= Op::SIMD_WIDTH * 2;
                 }
@@ -508,19 +579,17 @@ struct OpCallerBinary<Op, BCAST111C_VEC> {
             typename Op::dst_ctype* dst, DType src0_dtype, DType src1_dtype,
             DType dst_dtype, size_t batch, size_t channel, size_t channel_stride) {
         Op op(src0_dtype, src1_dtype, dst_dtype);
-        ParamElemVisitor<typename Op::src_ctype> vis;
+        ParamElemVisitorV2<typename Op::src_ctype> vis;
         for (size_t b = 0; b < batch; b++) {
             for (size_t c = 0; c < channel; c++) {
                 size_t rest = channel_stride;
                 const typename Op::src_ctype* src0_ptr = src0;
                 while (rest >= Op::SIMD_WIDTH * 2) {
-                    auto src0_simd0 = vis(src0_ptr);
-                    auto src0_simd1 = vis(src0_ptr + Op::SIMD_WIDTH);
-                    auto src1_simd0 = vis(src1);
-                    auto src1_simd1 = vis(src1 + Op::SIMD_WIDTH);
+                    auto src0_simd01 = vis(src0_ptr, src0_ptr + Op::SIMD_WIDTH);
+                    auto src1_simd01 = vis(src1, src1 + Op::SIMD_WIDTH);
                     src0_ptr += Op::SIMD_WIDTH * 2;
                     src1 += Op::SIMD_WIDTH * 2;
-                    op({{src0_simd0, src0_simd1}}, {{src1_simd0, src1_simd1}}, dst);
+                    op(src0_simd01, src1_simd01, dst);
                     dst += Op::SIMD_WIDTH * 2;
                     rest -= Op::SIMD_WIDTH * 2;
                 }
@@ -599,13 +668,12 @@ struct OpCallerBinaryBcast101xDVec {
             auto src0_ptr = src0;
             for (size_t cb = 0; cb < nr_channel_blocks; cb++) {
                 auto src0_block_ptr = src0_ptr + cb * channel_block_dim;
-                auto channel_block_vec = vis0(src0_block_ptr);
+                auto channel_block_vec_v2 = vis0(src0_block_ptr);
                 size_t img_index = 0;
                 auto src1_offset = Op::SIMD_WIDTH / channel_block_dim;
                 for (; img_index + 2 * src1_offset <= channel_stride;
                      img_index += 2 * src1_offset) {
-                    op({{channel_block_vec, channel_block_vec}},
-                       {{vis1(src1), vis1(src1 + Op::SIMD_WIDTH)}}, dst);
+                    op(channel_block_vec_v2, vis1(src1, src1 + Op::SIMD_WIDTH), dst);
                     src1 += Op::SIMD_WIDTH * 2;
                     dst += Op::SIMD_WIDTH * 2;
                 }
@@ -629,8 +697,8 @@ struct OpCallerBinaryBcast101xXVec<src_ctype, 4> {
             const src_ctype* src0, const src_ctype* src1, typename Op::dst_ctype* dst,
             const Op& op, size_t batch, size_t nr_channel_blocks,
             size_t channel_stride) {
-        ParamElemVisitorBcast101x4<typename Op::src_ctype> vis0;
-        ParamElemVisitor<typename Op::src_ctype> vis1;
+        ParamElemVisitorBcast101x4V2<typename Op::src_ctype> vis0;
+        ParamElemVisitorV2<typename Op::src_ctype> vis1;
         OpCallerBinaryBcast101xDVec<src_ctype, 4>::run(
                 src0, src1, dst, op, vis0, vis1, batch, nr_channel_blocks,
                 channel_stride);
@@ -717,13 +785,12 @@ struct OpCallerBinaryVecBcast101xD {
             auto src1_ptr = src1;
             for (size_t cb = 0; cb < nr_channel_blocks; cb++) {
                 auto src1_block_ptr = src1_ptr + cb * channel_block_dim;
-                auto channel_block_vec = vis1(src1_block_ptr);
+                auto channel_block_vec_v2 = vis1(src1_block_ptr);
                 size_t img_index = 0;
                 auto src0_offset = Op::SIMD_WIDTH / channel_block_dim;
                 for (; img_index + 2 * src0_offset <= channel_stride;
                      img_index += 2 * src0_offset) {
-                    op({{vis0(src0), vis0(src0 + Op::SIMD_WIDTH)}},
-                       {{channel_block_vec, channel_block_vec}}, dst);
+                    op(vis0(src0, src0 + Op::SIMD_WIDTH), channel_block_vec_v2, dst);
                     src0 += Op::SIMD_WIDTH * 2;
                     dst += Op::SIMD_WIDTH * 2;
                 }
@@ -747,8 +814,8 @@ struct OpCallerBinaryVecBcast101xX<src_ctype, 4> {
             const src_ctype* src0, const src_ctype* src1, typename Op::dst_ctype* dst,
             const Op& op, size_t batch, size_t nr_channel_blocks,
             size_t channel_stride) {
-        ParamElemVisitor<src_ctype> vis0;
-        ParamElemVisitorBcast101x4<src_ctype> vis1;
+        ParamElemVisitorV2<src_ctype> vis0;
+        ParamElemVisitorBcast101x4V2<src_ctype> vis1;
         OpCallerBinaryVecBcast101xD<src_ctype, 4>::run(
                 src0, src1, dst, op, vis0, vis1, batch, nr_channel_blocks,
                 channel_stride);
@@ -783,13 +850,12 @@ struct OpCallerBinary<Op, VEC_SCALAR> {
             typename Op::dst_ctype* dst, DType src0_dtype, DType src1_dtype,
             DType dst_dtype, size_t nr_elems) {
         Op op(src0_dtype, src1_dtype, dst_dtype);
-        ParamElemVisitor<typename Op::src_ctype> vis0;
-        ParamElemVisitorDup<typename Op::src_ctype> vis1;
-        auto vis1_simd = vis1(&src1);
+        ParamElemVisitorV2<typename Op::src_ctype> vis0;
+        ParamElemVisitorDupV2<typename Op::src_ctype> vis1;
+        auto vis1_simd_v2 = vis1(&src1);
         size_t i = 0;
         for (; i + Op::SIMD_WIDTH * 2 <= nr_elems; i += Op::SIMD_WIDTH * 2) {
-            op({{vis0(src0), vis0(src0 + Op::SIMD_WIDTH)}}, {{vis1_simd, vis1_simd}},
-               dst);
+            op(vis0(src0, src0 + Op::SIMD_WIDTH), vis1_simd_v2, dst);
             src0 += Op::SIMD_WIDTH * 2;
             dst += Op::SIMD_WIDTH * 2;
         }
@@ -813,13 +879,12 @@ struct OpCallerBinary<Op, SCALAR_VEC> {
             typename Op::dst_ctype* dst, DType src0_dtype, DType src1_dtype,
             DType dst_dtype, size_t nr_elems) {
         Op op(src0_dtype, src1_dtype, dst_dtype);
-        ParamElemVisitorDup<typename Op::src_ctype> vis0;
-        ParamElemVisitor<typename Op::src_ctype> vis1;
-        auto vis0_simd = vis0(&src0);
+        ParamElemVisitorDupV2<typename Op::src_ctype> vis0;
+        ParamElemVisitorV2<typename Op::src_ctype> vis1;
+        auto vis0_simd_v2 = vis0(&src0);
         size_t i = 0;
         for (; i + Op::SIMD_WIDTH * 2 <= nr_elems; i += Op::SIMD_WIDTH * 2) {
-            op({{vis0_simd, vis0_simd}}, {{vis1(src1), vis1(src1 + Op::SIMD_WIDTH)}},
-               dst);
+            op(vis0_simd_v2, vis1(src1, src1 + Op::SIMD_WIDTH), dst);
             src1 += Op::SIMD_WIDTH * 2;
             dst += Op::SIMD_WIDTH * 2;
         }
@@ -842,17 +907,16 @@ struct OpCallerBinary<Op, BCAST101_VEC> {
             typename Op::dst_ctype* dst, DType src0_dtype, DType src1_dtype,
             DType dst_dtype, size_t batch, size_t channel, size_t channel_stride) {
         Op op(src0_dtype, src1_dtype, dst_dtype);
-        ParamElemVisitorDup<typename Op::src_ctype> vis0;
-        ParamElemVisitor<typename Op::src_ctype> vis1;
+        ParamElemVisitorDupV2<typename Op::src_ctype> vis0;
+        ParamElemVisitorV2<typename Op::src_ctype> vis1;
         for (size_t b = 0; b < batch; b++) {
             auto src0_ptr = src0;
             for (size_t c = 0; c < channel; c++) {
-                auto vis0_simd = vis0(src0_ptr);
+                auto vis0_simd_v2 = vis0(src0_ptr);
                 size_t i = 0;
                 for (; i + Op::SIMD_WIDTH * 2 <= channel_stride;
                      i += Op::SIMD_WIDTH * 2) {
-                    op({{vis0_simd, vis0_simd}},
-                       {{vis1(src1), vis1(src1 + Op::SIMD_WIDTH)}}, dst);
+                    op(vis0_simd_v2, vis1(src1, src1 + Op::SIMD_WIDTH), dst);
                     src1 += Op::SIMD_WIDTH * 2;
                     dst += Op::SIMD_WIDTH * 2;
                 }
@@ -878,7 +942,7 @@ struct OpCallerBinary<Op, BCASTX0X_VEC> {
             typename Op::dst_ctype* dst, DType src0_dtype, DType src1_dtype,
             DType dst_dtype, size_t batch, size_t channel, size_t channel_stride) {
         Op op(src0_dtype, src1_dtype, dst_dtype);
-        ParamElemVisitor<typename Op::src_ctype> vis;
+        ParamElemVisitorV2<typename Op::src_ctype> vis;
         for (size_t b = 0; b < batch; b++) {
             auto src0_ptr_base = src0 + b * channel_stride;
             for (size_t c = 0; c < channel; c++) {
@@ -886,11 +950,9 @@ struct OpCallerBinary<Op, BCASTX0X_VEC> {
                 size_t i = 0;
                 for (; i + Op::SIMD_WIDTH * 2 <= channel_stride;
                      i += Op::SIMD_WIDTH * 2) {
-                    auto src0_simd0 = vis(src0_ptr);
-                    auto src0_simd1 = vis(src0_ptr + Op::SIMD_WIDTH);
-                    auto src1_simd0 = vis(src1);
-                    auto src1_simd1 = vis(src1 + Op::SIMD_WIDTH);
-                    op({{src0_simd0, src0_simd1}}, {{src1_simd0, src1_simd1}}, dst);
+                    auto src0_simd01 = vis(src0_ptr, src0_ptr + Op::SIMD_WIDTH);
+                    auto src1_simd01 = vis(src1, src1 + Op::SIMD_WIDTH);
+                    op(src0_simd01, src1_simd01, dst);
                     src0_ptr += Op::SIMD_WIDTH * 2;
                     src1 += Op::SIMD_WIDTH * 2;
                     dst += Op::SIMD_WIDTH * 2;
@@ -921,14 +983,13 @@ struct OpCallerTernary<Op, VEC_VEC_VEC> {
             DType src0_dtype, DType src1_dtype, DType src2_dtype, DType dst_dtype,
             size_t nr_elems) {
         Op op(src0_dtype, src1_dtype, src2_dtype, dst_dtype);
-        ParamElemVisitor<typename Op::src_ctype> vis0;
-        ParamElemVisitor<typename Op::src_ctype> vis1;
-        ParamElemVisitor<typename Op::src_ctype> vis2;
+        ParamElemVisitorV2<typename Op::src_ctype> vis0;
+        ParamElemVisitorV2<typename Op::src_ctype> vis1;
+        ParamElemVisitorV2<typename Op::src_ctype> vis2;
         size_t i = 0;
         for (; i + Op::SIMD_WIDTH * 2 <= nr_elems; i += Op::SIMD_WIDTH * 2) {
-            op({{vis0(src0), vis0(src0 + Op::SIMD_WIDTH)}},
-               {{vis1(src1), vis1(src1 + Op::SIMD_WIDTH)}},
-               {{vis2(src2), vis2(src2 + Op::SIMD_WIDTH)}}, dst);
+            op(vis0(src0, src0 + Op::SIMD_WIDTH), vis1(src1, src1 + Op::SIMD_WIDTH),
+               vis2(src2, src2 + Op::SIMD_WIDTH), dst);
             src0 += Op::SIMD_WIDTH * 2;
             src1 += Op::SIMD_WIDTH * 2;
             src2 += Op::SIMD_WIDTH * 2;
@@ -957,15 +1018,14 @@ struct OpCallerTernary<Op, VEC_VEC_SCALAR> {
             DType src0_dtype, DType src1_dtype, DType src2_dtype, DType dst_dtype,
             size_t nr_elems) {
         Op op(src0_dtype, src1_dtype, src2_dtype, dst_dtype);
-        ParamElemVisitor<typename Op::src_ctype> vis0;
-        ParamElemVisitor<typename Op::src_ctype> vis1;
-        ParamElemVisitorDup<typename Op::src_ctype> vis2;
-        auto vis2_simd = vis2(&src2);
+        ParamElemVisitorV2<typename Op::src_ctype> vis0;
+        ParamElemVisitorV2<typename Op::src_ctype> vis1;
+        ParamElemVisitorDupV2<typename Op::src_ctype> vis2;
+        auto vis2_simd_v2 = vis2(&src2);
         size_t i = 0;
         for (; i + Op::SIMD_WIDTH * 2 <= nr_elems; i += Op::SIMD_WIDTH * 2) {
-            op({{vis0(src0), vis0(src0 + Op::SIMD_WIDTH)}},
-               {{vis1(src1), vis1(src1 + Op::SIMD_WIDTH)}}, {{vis2_simd, vis2_simd}},
-               dst);
+            op(vis0(src0, src0 + Op::SIMD_WIDTH), vis1(src1, src1 + Op::SIMD_WIDTH),
+               vis2_simd_v2, dst);
             src0 += Op::SIMD_WIDTH * 2;
             src1 += Op::SIMD_WIDTH * 2;
             dst += Op::SIMD_WIDTH * 2;
@@ -993,22 +1053,21 @@ struct OpCallerTernary<Op, BCAST101_VEC_BCAST101> {
             size_t batch_size, size_t channel_size, size_t channel_stride,
             size_t batch_offset) {
         Op op(src0_dtype, src1_dtype, src2_dtype, dst_dtype);
-        ParamElemVisitor<typename Op::src_ctype> vis1;
-        ParamElemVisitorDup<typename Op::src_ctype> vis0;
-        ParamElemVisitorDup<typename Op::src_ctype> vis2;
+        ParamElemVisitorV2<typename Op::src_ctype> vis1;
+        ParamElemVisitorDupV2<typename Op::src_ctype> vis0;
+        ParamElemVisitorDupV2<typename Op::src_ctype> vis2;
         for (size_t batch = 0; batch < batch_size; batch++) {
             auto src0_ptr = src0;
             auto src2_ptr = src2;
             auto b_offset = batch_offset;
             for (size_t channel = 0; channel < channel_size; channel++) {
                 size_t i = 0;
-                auto src0_simd = vis0(src0_ptr);
-                auto src2_simd = vis2(src2_ptr);
+                auto src0_simd_v2 = vis0(src0_ptr);
+                auto src2_simd_v2 = vis2(src2_ptr);
                 for (; i + Op::SIMD_WIDTH * 2 <= channel_stride;
                      i += Op::SIMD_WIDTH * 2) {
-                    op({{src0_simd, src0_simd}},
-                       {{vis1(src1), vis1(src1 + Op::SIMD_WIDTH)}},
-                       {{src2_simd, src2_simd}}, dst);
+                    op(src0_simd_v2, vis1(src1, src1 + Op::SIMD_WIDTH), src2_simd_v2,
+                       dst);
                     src1 += Op::SIMD_WIDTH * 2;
                     dst += Op::SIMD_WIDTH * 2;
                     b_offset -= Op::SIMD_WIDTH * 2;
@@ -1042,7 +1101,7 @@ struct OpCallerTernary<Op, BCAST111C_VEC_BCAST111C> {
             DType src2_dtype, DType dst_dtype, size_t batch_size, size_t channel_size,
             size_t channel_stride, size_t batch_offset) {
         Op op(src0_dtype, src1_dtype, src2_dtype, dst_dtype);
-        ParamElemVisitor<typename Op::src_ctype> vis;
+        ParamElemVisitorV2<typename Op::src_ctype> vis;
         for (size_t batch = 0; batch < batch_size; batch++) {
             auto b_offset = batch_offset;
             for (size_t channel = 0; channel < channel_size; channel++) {
@@ -1051,14 +1110,10 @@ struct OpCallerTernary<Op, BCAST111C_VEC_BCAST111C> {
                 size_t i = 0;
                 for (; i + Op::SIMD_WIDTH * 2 <= channel_stride;
                      i += Op::SIMD_WIDTH * 2) {
-                    auto src0_simd0 = vis(src0_ptr);
-                    auto src0_simd1 = vis(src0_ptr + Op::SIMD_WIDTH);
-                    auto src1_simd0 = vis(src1);
-                    auto src1_simd1 = vis(src1 + Op::SIMD_WIDTH);
-                    auto src2_simd0 = vis(src2_ptr);
-                    auto src2_simd1 = vis(src2_ptr + Op::SIMD_WIDTH);
-                    op({{src0_simd0, src0_simd1}}, {{src1_simd0, src1_simd1}},
-                       {{src2_simd0, src2_simd1}}, dst);
+                    auto src0_simd01 = vis(src0_ptr, src0_ptr + Op::SIMD_WIDTH);
+                    auto src1_simd01 = vis(src1, src1 + Op::SIMD_WIDTH);
+                    auto src2_simd01 = vis(src2_ptr, src2_ptr + Op::SIMD_WIDTH);
+                    op(src0_simd01, src1_simd01, src2_simd01, dst);
                     src0_ptr += Op::SIMD_WIDTH * 2;
                     src1 += Op::SIMD_WIDTH * 2;
                     src2_ptr += Op::SIMD_WIDTH * 2;
@@ -1125,15 +1180,14 @@ struct OpCallerTernaryBcast101xDVecBcast101xD {
             for (size_t cb = 0; cb < nr_channel_blocks; cb++) {
                 auto src0_block_ptr = src0_ptr + cb * channel_block_dim;
                 auto src2_block_ptr = src2_ptr + cb * channel_block_dim;
-                auto channel_block_vec0 = vis0(src0_block_ptr);
-                auto channel_block_vec2 = vis2(src2_block_ptr);
+                auto channel_block_vec0_v2 = vis0(src0_block_ptr);
+                auto channel_block_vec2_v2 = vis2(src2_block_ptr);
                 size_t img_index = 0;
                 auto src1_offset = Op::SIMD_WIDTH / channel_block_dim;
                 for (; img_index + 2 * src1_offset <= channel_stride;
                      img_index += 2 * src1_offset) {
-                    op({{channel_block_vec0, channel_block_vec0}},
-                       {{vis1(src1), vis1(src1 + Op::SIMD_WIDTH)}},
-                       {{channel_block_vec2, channel_block_vec2}}, dst);
+                    op(channel_block_vec0_v2, vis1(src1, src1 + Op::SIMD_WIDTH),
+                       channel_block_vec2_v2, dst);
                     src1 += Op::SIMD_WIDTH * 2;
                     dst += Op::SIMD_WIDTH * 2;
                 }
@@ -1159,9 +1213,9 @@ struct OpCallerTernaryBcast101xXVecBcast101xX<src_ctype, 4> {
             const src_ctype* src0, const src_ctype* src1, const src_ctype* src2,
             typename Op::dst_ctype* dst, const Op& op, size_t batch,
             size_t nr_channel_blocks, size_t channel_stride) {
-        ParamElemVisitorBcast101x4<src_ctype> vis0;
-        ParamElemVisitor<src_ctype> vis1;
-        ParamElemVisitorBcast101x4<src_ctype> vis2;
+        ParamElemVisitorBcast101x4V2<src_ctype> vis0;
+        ParamElemVisitorV2<src_ctype> vis1;
+        ParamElemVisitorBcast101x4V2<src_ctype> vis2;
         OpCallerTernaryBcast101xDVecBcast101xD<src_ctype, 4>::run(
                 src0, src1, src2, dst, op, vis0, vis1, vis2, batch, nr_channel_blocks,
                 channel_stride);
@@ -1201,19 +1255,18 @@ struct OpCallerTernary<Op, VEC_BCAST101_VEC> {
             DType src0_dtype, DType src1_dtype, DType src2_dtype, DType dst_dtype,
             size_t batch_size, size_t channel_size, size_t channel_stride) {
         Op op(src0_dtype, src1_dtype, src2_dtype, dst_dtype);
-        ParamElemVisitor<typename Op::src_ctype> vis0;
-        ParamElemVisitorDup<typename Op::src_ctype> vis1;
-        ParamElemVisitor<typename Op::src_ctype> vis2;
+        ParamElemVisitorV2<typename Op::src_ctype> vis0;
+        ParamElemVisitorDupV2<typename Op::src_ctype> vis1;
+        ParamElemVisitorV2<typename Op::src_ctype> vis2;
         for (size_t batch = 0; batch < batch_size; batch++) {
             auto src1_ptr = src1;
             for (size_t channel = 0; channel < channel_size; channel++) {
                 size_t i = 0;
-                auto src1_simd = vis1(src1_ptr);
+                auto src1_simd_v2 = vis1(src1_ptr);
                 for (; i + Op::SIMD_WIDTH * 2 <= channel_stride;
                      i += Op::SIMD_WIDTH * 2) {
-                    op({{vis0(src0), vis0(src0 + Op::SIMD_WIDTH)}},
-                       {{src1_simd, src1_simd}},
-                       {{vis2(src2), vis2(src2 + Op::SIMD_WIDTH)}}, dst);
+                    op(vis0(src0, src0 + Op::SIMD_WIDTH), src1_simd_v2,
+                       vis2(src2, src2 + Op::SIMD_WIDTH), dst);
                     src0 += Op::SIMD_WIDTH * 2;
                     src2 += Op::SIMD_WIDTH * 2;
                     dst += Op::SIMD_WIDTH * 2;
@@ -1244,18 +1297,18 @@ struct OpCallerTernary<Op, VEC_BCAST111C_VEC> {
             DType src1_dtype, DType src2_dtype, DType dst_dtype, size_t batch_size,
             size_t channel_size, size_t channel_stride) {
         Op op(src0_dtype, src1_dtype, src2_dtype, dst_dtype);
-        ParamElemVisitor<typename Op::src_ctype> vis0;
-        ParamElemVisitor<typename Op::src_ctype> vis1;
-        ParamElemVisitor<typename Op::src_ctype> vis2;
+        ParamElemVisitorV2<typename Op::src_ctype> vis0;
+        ParamElemVisitorV2<typename Op::src_ctype> vis1;
+        ParamElemVisitorV2<typename Op::src_ctype> vis2;
         for (size_t batch = 0; batch < batch_size; batch++) {
             for (size_t channel = 0; channel < channel_size; channel++) {
                 auto src1_ptr = src1;
                 size_t i = 0;
                 for (; i + Op::SIMD_WIDTH * 2 <= channel_stride;
                      i += Op::SIMD_WIDTH * 2) {
-                    op({{vis0(src0), vis0(src0 + Op::SIMD_WIDTH)}},
-                       {{vis1(src1_ptr), vis1(src1_ptr + Op::SIMD_WIDTH)}},
-                       {{vis2(src2), vis2(src2 + Op::SIMD_WIDTH)}}, dst);
+                    op(vis0(src0, src0 + Op::SIMD_WIDTH),
+                       vis1(src1_ptr, src1_ptr + Op::SIMD_WIDTH),
+                       vis2(src2, src2 + Op::SIMD_WIDTH), dst);
                     src0 += Op::SIMD_WIDTH * 2;
                     src1_ptr += Op::SIMD_WIDTH * 2;
                     src2 += Op::SIMD_WIDTH * 2;
@@ -1316,14 +1369,13 @@ struct OpCallerTernaryVecBcast101xDVec {
             auto src1_ptr = src1;
             for (size_t cb = 0; cb < nr_channel_blocks; cb++) {
                 auto src1_block_ptr = src1_ptr + cb * channel_block_dim;
-                auto channel_block_vec = vis1(src1_block_ptr);
+                auto channel_block_vec_v2 = vis1(src1_block_ptr);
                 size_t img_index = 0;
                 auto offset = Op::SIMD_WIDTH / channel_block_dim;
                 for (; img_index + 2 * offset <= channel_stride;
                      img_index += 2 * offset) {
-                    op({{vis0(src0), vis0(src0 + Op::SIMD_WIDTH)}},
-                       {{channel_block_vec, channel_block_vec}},
-                       {{vis2(src2), vis2(src2 + Op::SIMD_WIDTH)}}, dst);
+                    op(vis0(src0, src0 + Op::SIMD_WIDTH), channel_block_vec_v2,
+                       vis2(src2, src2 + Op::SIMD_WIDTH), dst);
                     src0 += Op::SIMD_WIDTH * 2;
                     src2 += Op::SIMD_WIDTH * 2;
                     dst += Op::SIMD_WIDTH * 2;
@@ -1349,9 +1401,9 @@ struct OpCallerTernaryVecBcast101xXVec<src_ctype, 4> {
             const src_ctype* src0, const src_ctype* src1, const src_ctype* src2,
             typename Op::dst_ctype* dst, const Op& op, size_t batch,
             size_t nr_channel_blocks, size_t channel_stride) {
-        ParamElemVisitor<src_ctype> vis0;
-        ParamElemVisitorBcast101x4<src_ctype> vis1;
-        ParamElemVisitor<src_ctype> vis2;
+        ParamElemVisitorV2<src_ctype> vis0;
+        ParamElemVisitorBcast101x4V2<src_ctype> vis1;
+        ParamElemVisitorV2<src_ctype> vis2;
         OpCallerTernaryVecBcast101xDVec<src_ctype, 4>::run(
                 src0, src1, src2, dst, op, vis0, vis1, vis2, batch, nr_channel_blocks,
                 channel_stride);
@@ -1392,14 +1444,14 @@ struct OpCallerTernary<Op, VEC_SCALAR_VEC> {
             DType src0_dtype, DType src1_dtype, DType src2_dtype, DType dst_dtype,
             size_t nr_elems) {
         Op op(src0_dtype, src1_dtype, src2_dtype, dst_dtype);
-        ParamElemVisitor<typename Op::src_ctype> vis0;
-        ParamElemVisitorDup<typename Op::src_ctype> vis1;
-        ParamElemVisitor<typename Op::src_ctype> vis2;
-        auto vis1_simd = vis1(&src1);
+        ParamElemVisitorV2<typename Op::src_ctype> vis0;
+        ParamElemVisitorDupV2<typename Op::src_ctype> vis1;
+        ParamElemVisitorV2<typename Op::src_ctype> vis2;
+        auto vis1_simd_v2 = vis1(&src1);
         size_t i = 0;
         for (; i + Op::SIMD_WIDTH * 2 <= nr_elems; i += Op::SIMD_WIDTH * 2) {
-            op({{vis0(src0), vis0(src0 + Op::SIMD_WIDTH)}}, {{vis1_simd, vis1_simd}},
-               {{vis2(src2), vis2(src2 + Op::SIMD_WIDTH)}}, dst);
+            op(vis0(src0, src0 + Op::SIMD_WIDTH), vis1_simd_v2,
+               vis2(src2, src2 + Op::SIMD_WIDTH), dst);
             src0 += Op::SIMD_WIDTH * 2;
             src2 += Op::SIMD_WIDTH * 2;
             dst += Op::SIMD_WIDTH * 2;
@@ -1426,15 +1478,14 @@ struct OpCallerTernary<Op, VEC_SCALAR_SCALAR> {
             DType src0_dtype, DType src1_dtype, DType src2_dtype, DType dst_dtype,
             size_t nr_elems) {
         Op op(src0_dtype, src1_dtype, src2_dtype, dst_dtype);
-        ParamElemVisitor<typename Op::src_ctype> vis0;
-        ParamElemVisitorDup<typename Op::src_ctype> vis1;
-        ParamElemVisitorDup<typename Op::src_ctype> vis2;
-        auto vis1_simd = vis1(&src1);
-        auto vis2_simd = vis2(&src2);
+        ParamElemVisitorV2<typename Op::src_ctype> vis0;
+        ParamElemVisitorDupV2<typename Op::src_ctype> vis1;
+        ParamElemVisitorDupV2<typename Op::src_ctype> vis2;
+        auto vis1_simd_v2 = vis1(&src1);
+        auto vis2_simd_v2 = vis2(&src2);
         size_t i = 0;
         for (; i + Op::SIMD_WIDTH * 2 <= nr_elems; i += Op::SIMD_WIDTH * 2) {
-            op({{vis0(src0), vis0(src0 + Op::SIMD_WIDTH)}}, {{vis1_simd, vis1_simd}},
-               {{vis2_simd, vis2_simd}}, dst);
+            op(vis0(src0, src0 + Op::SIMD_WIDTH), vis1_simd_v2, vis2_simd_v2, dst);
             src0 += Op::SIMD_WIDTH * 2;
             dst += Op::SIMD_WIDTH * 2;
         }

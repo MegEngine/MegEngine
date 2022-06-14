@@ -35,17 +35,21 @@ struct FuseAddReluOp;
                 const _simd_type2& src0, const _simd_type2& src1,                     \
                 dst_ctype* dst) const {                                               \
             auto vitem = operator()(src0, src1);                                      \
-            GiStore##_func_suffix(dst, vitem.val[0]);                                 \
-            GiStore##_func_suffix(dst + SIMD_WIDTH, vitem.val[1]);                    \
+            GiStore##_func_suffix(dst, GiGetSubVector##_func_suffix##V2(vitem, 0));   \
+            GiStore##_func_suffix(                                                    \
+                    dst + SIMD_WIDTH, GiGetSubVector##_func_suffix##V2(vitem, 1));    \
         }                                                                             \
         _simd_type2 operator()(                                                       \
                 const _simd_type2& src0, const _simd_type2& src1) const {             \
-            auto val1 = src0.val[0];                                                  \
-            auto val2 = src0.val[1];                                                  \
-            auto val3 = src1.val[0];                                                  \
-            auto val4 = src1.val[1];                                                  \
+            auto val1 = GiGetSubVector##_func_suffix##V2(src0, 0);                    \
+            auto val2 = GiGetSubVector##_func_suffix##V2(src0, 1);                    \
+            auto val3 = GiGetSubVector##_func_suffix##V2(src1, 0);                    \
+            auto val4 = GiGetSubVector##_func_suffix##V2(src1, 1);                    \
             FUSE_ADD_RELU_SIMD_PACK2_FALLBACK(val1, val2, val3, val4, _func_suffix);  \
-            return {{val1, val2}};                                                    \
+            _simd_type2 ret;                                                          \
+            GiSetSubVector##_func_suffix##V2(ret, 0, val1);                           \
+            GiSetSubVector##_func_suffix##V2(ret, 1, val2);                           \
+            return ret;                                                               \
         }                                                                             \
         void operator()(                                                              \
                 const _simd_type& src0, const _simd_type& src1,                       \
@@ -105,15 +109,26 @@ struct FuseAddReluOp<dt_qint8, dt_qint8> : FuseAddReluOpBase<dt_qint8, dt_qint8>
 
     GI_INT8_t operator()(const GI_INT32_V2_t& vsrc0, const GI_INT32_V2_t& vsrc1) const {
         auto vitem0 = GiAddFloat32(
-                GiMultiplyFloat32(GiCastToFloat32(vsrc0.val[0]), this->vscale0),
-                GiMultiplyFloat32(GiCastToFloat32(vsrc1.val[0]), this->vscale1));
+                GiMultiplyFloat32(
+                        GiCastToFloat32(GiGetSubVectorInt32V2(vsrc0, 0)),
+                        GiFixLenType2GiFloat32Type(this->vscale0)),
+                GiMultiplyFloat32(
+                        GiCastToFloat32(GiGetSubVectorInt32V2(vsrc1, 0)),
+                        GiFixLenType2GiFloat32Type(this->vscale1)));
         auto vitem1 = GiAddFloat32(
-                GiMultiplyFloat32(GiCastToFloat32(vsrc0.val[1]), this->vscale0),
-                GiMultiplyFloat32(GiCastToFloat32(vsrc1.val[1]), this->vscale1));
+                GiMultiplyFloat32(
+                        GiCastToFloat32(GiGetSubVectorInt32V2(vsrc0, 1)),
+                        GiFixLenType2GiFloat32Type(this->vscale0)),
+                GiMultiplyFloat32(
+                        GiCastToFloat32(GiGetSubVectorInt32V2(vsrc1, 1)),
+                        GiFixLenType2GiFloat32Type(this->vscale1)));
 
         vitem0 = GiMaximumFloat32(vitem0, this->vzero());
         vitem1 = GiMaximumFloat32(vitem1, this->vzero());
-        return QConverter::convert<GI_INT8_t, GI_FLOAT32_V2_t>({{vitem0, vitem1}});
+        GI_FLOAT32_V2_t ret;
+        GiSetSubVectorFloat32V2(ret, 0, vitem0);
+        GiSetSubVectorFloat32V2(ret, 1, vitem1);
+        return QConverter::convert<GI_INT8_t, GI_FLOAT32_V2_t>(ret);
     }
 };
 
@@ -144,15 +159,26 @@ struct FuseAddReluOp<dt_qint32, dt_qint8> : FuseAddReluOpBase<dt_qint32, dt_qint
 
     GI_INT8_t operator()(const GI_INT32_V2_t& vsrc0, const GI_INT32_V2_t& vsrc1) const {
         auto vitem0 = GiAddFloat32(
-                GiMultiplyFloat32(GiCastToFloat32(vsrc0.val[0]), this->vscale0),
-                GiMultiplyFloat32(GiCastToFloat32(vsrc1.val[0]), this->vscale1));
+                GiMultiplyFloat32(
+                        GiCastToFloat32(GiGetSubVectorInt32V2(vsrc0, 0)),
+                        GiFixLenType2GiFloat32Type(this->vscale0)),
+                GiMultiplyFloat32(
+                        GiCastToFloat32(GiGetSubVectorInt32V2(vsrc1, 0)),
+                        GiFixLenType2GiFloat32Type(this->vscale1)));
         auto vitem1 = GiAddFloat32(
-                GiMultiplyFloat32(GiCastToFloat32(vsrc0.val[1]), this->vscale0),
-                GiMultiplyFloat32(GiCastToFloat32(vsrc1.val[1]), this->vscale1));
+                GiMultiplyFloat32(
+                        GiCastToFloat32(GiGetSubVectorInt32V2(vsrc0, 1)),
+                        GiFixLenType2GiFloat32Type(this->vscale0)),
+                GiMultiplyFloat32(
+                        GiCastToFloat32(GiGetSubVectorInt32V2(vsrc1, 1)),
+                        GiFixLenType2GiFloat32Type(this->vscale1)));
 
         vitem0 = GiMaximumFloat32(vitem0, this->vzero());
         vitem1 = GiMaximumFloat32(vitem1, this->vzero());
-        return QConverter::convert<GI_INT8_t, GI_FLOAT32_V2_t>({{vitem0, vitem1}});
+        GI_FLOAT32_V2_t ret;
+        GiSetSubVectorFloat32V2(ret, 0, vitem0);
+        GiSetSubVectorFloat32V2(ret, 1, vitem1);
+        return QConverter::convert<GI_INT8_t, GI_FLOAT32_V2_t>(ret);
     }
 };
 

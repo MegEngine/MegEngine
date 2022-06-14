@@ -20,22 +20,28 @@ struct AbsOpBase : UnaryOpBase<src_ctype, dst_ctype> {
 template <typename src_ctype, typename dst_ctype = src_ctype>
 struct AbsOp;
 
-#define OP(_ctype, _gi_type, _func_suffix, _simd_width)            \
-    template <>                                                    \
-    struct AbsOp<_ctype> : AbsOpBase<_ctype> {                     \
-        using AbsOpBase::AbsOpBase;                                \
-        using AbsOpBase::operator();                               \
-        constexpr static size_t SIMD_WIDTH = _simd_width;          \
-        void operator()(const _gi_type& src, _ctype* dst) const {  \
-            auto vitem = operator()(src);                          \
-            GiStore##_func_suffix(dst, vitem.val[0]);              \
-            GiStore##_func_suffix(dst + SIMD_WIDTH, vitem.val[1]); \
-        }                                                          \
-        _gi_type operator()(const _gi_type& src) const {           \
-            auto vitem0 = GiAbs##_func_suffix(src.val[0]);         \
-            auto vitem1 = GiAbs##_func_suffix(src.val[1]);         \
-            return {{vitem0, vitem1}};                             \
-        }                                                          \
+#define OP(_ctype, _gi_type, _func_suffix, _simd_width)                             \
+    template <>                                                                     \
+    struct AbsOp<_ctype> : AbsOpBase<_ctype> {                                      \
+        using AbsOpBase::AbsOpBase;                                                 \
+        using AbsOpBase::operator();                                                \
+        constexpr static size_t SIMD_WIDTH = _simd_width;                           \
+        void operator()(const _gi_type& src, _ctype* dst) const {                   \
+            auto vitem = operator()(src);                                           \
+            GiStore##_func_suffix(dst, GiGetSubVector##_func_suffix##V2(vitem, 0)); \
+            GiStore##_func_suffix(                                                  \
+                    dst + SIMD_WIDTH, GiGetSubVector##_func_suffix##V2(vitem, 1));  \
+        }                                                                           \
+        _gi_type operator()(const _gi_type& src) const {                            \
+            auto vitem0 =                                                           \
+                    GiAbs##_func_suffix(GiGetSubVector##_func_suffix##V2(src, 0));  \
+            auto vitem1 =                                                           \
+                    GiAbs##_func_suffix(GiGetSubVector##_func_suffix##V2(src, 1));  \
+            _gi_type ret;                                                           \
+            GiSetSubVector##_func_suffix##V2(ret, 0, vitem0);                       \
+            GiSetSubVector##_func_suffix##V2(ret, 1, vitem1);                       \
+            return ret;                                                             \
+        }                                                                           \
     };
 OP(dt_float32, GI_FLOAT32_V2_t, Float32, GI_SIMD_LEN_BYTE / sizeof(dt_float32))
 OP(dt_int32, GI_INT32_V2_t, Int32, GI_SIMD_LEN_BYTE / sizeof(dt_int32))
@@ -64,11 +70,18 @@ struct AbsOp<dt_qint8, dt_qint8> : AbsOpBase<dt_qint8, dt_qint8> {
         OPERATOR_UNARY_QINT8_FALLBACK;
     }
     GI_INT8_t operator()(const GI_INT32_V2_t& vsrc) const {
-        auto vitem0 = GiMultiplyFloat32(GiCastToFloat32(vsrc.val[0]), this->vscale);
-        auto vitem1 = GiMultiplyFloat32(GiCastToFloat32(vsrc.val[1]), this->vscale);
+        auto vitem0 = GiMultiplyFloat32(
+                GiCastToFloat32(GiGetSubVectorInt32V2(vsrc, 0)),
+                GiFixLenType2GiFloat32Type(this->vscale));
+        auto vitem1 = GiMultiplyFloat32(
+                GiCastToFloat32(GiGetSubVectorInt32V2(vsrc, 1)),
+                GiFixLenType2GiFloat32Type(this->vscale));
         vitem0 = GiAbsFloat32(vitem0);
         vitem1 = GiAbsFloat32(vitem1);
-        return QConverter::convert<GI_INT8_t, GI_FLOAT32_V2_t>({{vitem0, vitem1}});
+        GI_FLOAT32_V2_t tmp;
+        GiSetSubVectorFloat32V2(tmp, 0, vitem0);
+        GiSetSubVectorFloat32V2(tmp, 1, vitem1);
+        return QConverter::convert<GI_INT8_t, GI_FLOAT32_V2_t>(tmp);
     }
 };
 

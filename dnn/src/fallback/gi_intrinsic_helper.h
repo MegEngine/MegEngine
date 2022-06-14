@@ -11,8 +11,9 @@ struct LoadHelper {
     static GI_FORCEINLINE void impl(T& weight, T2 ptr, int oc_offset, XT... args);
 };
 
-#define WEIGHT_CB(step) \
-    src[step] = Func::impl(ptr + base_offset + step * ptr_step, args...);
+#define WEIGHT_CB(step)                   \
+    src[step] = GiFloat32Type2FixLenType( \
+            Func::impl(ptr + base_offset + step * ptr_step, args...));
 
 #define LOAD_HELPER(step)                                                          \
     template <                                                                     \

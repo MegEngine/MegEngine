@@ -36,18 +36,22 @@ struct TrueDivOp;
                 const _simd_type2& src0, const _simd_type2& src1,                     \
                 dst_ctype* dst) const {                                               \
             auto vitem = operator()(src0, src1);                                      \
-            GiStore##_func_suffix(dst, vitem.val[0]);                                 \
-            GiStore##_func_suffix(dst + SIMD_WIDTH, vitem.val[1]);                    \
+            GiStore##_func_suffix(dst, GiGetSubVector##_func_suffix##V2(vitem, 0));   \
+            GiStore##_func_suffix(                                                    \
+                    dst + SIMD_WIDTH, GiGetSubVector##_func_suffix##V2(vitem, 1));    \
         }                                                                             \
         _simd_type2 operator()(                                                       \
                 const _simd_type2& src0, const _simd_type2& src1) const {             \
-            auto val1 = src0.val[0];                                                  \
-            auto val2 = src0.val[1];                                                  \
-            auto val3 = src1.val[0];                                                  \
-            auto val4 = src1.val[1];                                                  \
+            auto val1 = GiGetSubVector##_func_suffix##V2(src0, 0);                    \
+            auto val2 = GiGetSubVector##_func_suffix##V2(src0, 1);                    \
+            auto val3 = GiGetSubVector##_func_suffix##V2(src1, 0);                    \
+            auto val4 = GiGetSubVector##_func_suffix##V2(src1, 1);                    \
             val1 = GiDivide##_func_suffix(val1, val3);                                \
             val2 = GiDivide##_func_suffix(val2, val4);                                \
-            return {{val1, val2}};                                                    \
+            _simd_type2 ret;                                                          \
+            GiSetSubVector##_func_suffix##V2(ret, 0, val1);                           \
+            GiSetSubVector##_func_suffix##V2(ret, 1, val2);                           \
+            return ret;                                                               \
         }                                                                             \
         void operator()(                                                              \
                 const _simd_type& src0, const _simd_type& src1,                       \
