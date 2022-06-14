@@ -494,7 +494,7 @@ DEF(reset, &)(TensorStorage storage, const TensorLayout& layout) {
     if (span.last_elem == span.high_elem) {
         mgb_assert(!layout.ndim || storage.valid_span(span) || storage.empty());
     } else {
-        size_t start_pos = span.low_byte + static_cast<ptrdiff_t>(storage.offset());
+        int64_t start_pos = span.low_byte + static_cast<ptrdiff_t>(storage.offset());
         bool enough_size = span.last_byte <= storage.size();
         bool valid_size = storage.comp_node().valid() && start_pos >= 0 && enough_size;
         mgb_assert(!layout.ndim || valid_size || storage.empty());

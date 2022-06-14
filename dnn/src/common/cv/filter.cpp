@@ -85,9 +85,7 @@ FilterEngine<ST, FT>::FilterEngine(
     m_buf_step = 0;
 
     //! the anchor must be in the kernerl
-    megdnn_assert(
-            0 <= m_anchor.x && m_anchor.x < m_ksize.cols() && 0 <= m_anchor.y &&
-            m_anchor.y < m_ksize.rows());
+    megdnn_assert(m_anchor.x < m_ksize.cols() && m_anchor.y < m_ksize.rows());
 
     int src_elem_size = (int)sizeof(ST) * m_ch;
     m_border_elem_size = src_elem_size / ((sizeof(ST) >= 4) ? sizeof(int) : 1);
