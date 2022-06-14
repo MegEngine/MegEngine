@@ -24,21 +24,26 @@ void sgemv_gi_naive_n_mk4(
     while (m < M) {
         auto Aptr0 = Aptr;
         auto Cptr0 = Cptr;
-        GI_FLOAT32_t c[4];
-#define INIT(step) c[step] = GiBroadcastFloat32(0.0f);
+        GI_FLOAT32_V4_t c;
+#define INIT(step) GiSetSubVectorFloat32V4(c, step, GiBroadcastFloat32(0.0f));
         UNROLL_CALL_RAW(4, INIT)
 #undef INIT
         auto Bptr = B;
         size_t k = 0;
         while (k < K) {
             GI_FLOAT32_t b = GiLoadFloat32(Bptr);
-            GI_FLOAT32_V2_t a[2];
-#define LOAD_A(step) a[step] = GiLoadFloat32V2(Aptr0 + step * 8);
-            UNROLL_CALL_RAW(2, LOAD_A)
+            GI_FLOAT32_V4_t a;
+#define LOAD_A(step) GiSetSubVectorFloat32V4(a, step, GiLoadFloat32(Aptr0 + step * 4));
+            UNROLL_CALL_RAW(4, LOAD_A)
 #undef LOAD_A
 
-#define COMPT(step) \
-    c[step] = GiSimdFmaLane(c[step], a[step / 2].val[step % 2], b, step % 4);
+#define COMPT(step)                                                                \
+    t = GiSimdFmaLane(                                                             \
+            GiGetSubVectorFloat32V4(c, step), GiGetSubVectorFloat32V4(a, step), b, \
+            step % 4);                                                             \
+    GiSetSubVectorFloat32V4(c, step, t);
+
+            GI_FLOAT32_t t;
             UNROLL_CALL_RAW(4, COMPT)
 #undef COMPT
             Bptr += Bstride;
@@ -46,11 +51,16 @@ void sgemv_gi_naive_n_mk4(
             k += PACK_SIZE;
         }
 
-#define ADD_C(step, stride) c[step] = GiAddFloat32(c[step], c[step + stride]);
+#define ADD_C(step, stride)                             \
+    t = GiAddFloat32(                                   \
+            GiGetSubVectorFloat32V4(c, step),           \
+            GiGetSubVectorFloat32V4(c, step + stride)); \
+    GiSetSubVectorFloat32V4(c, step, t);
+        GI_FLOAT32_t t;
         UNROLL_CALL_RAW(2, ADD_C, 2)
         UNROLL_CALL_RAW(1, ADD_C, 1)
 #undef ADD_C
-        GiStoreFloat32(Cptr0, c[0]);
+        GiStoreFloat32(Cptr0, GiGetSubVectorFloat32V4(c, 0));
 
         Aptr += Astride;
         Cptr += Cstride;

@@ -193,24 +193,24 @@ static GI_FORCEINLINE void transpose_4x4_1_s(
     GI_FLOAT32_V2_t q0q1 = GiZipqFloat32(d0d1, d2d3);
     GI_FLOAT32_V2_t q2q3 = GiZipqFloat32(d4d5, d6d7);
 
-    GiSt1Float32(outptr, GiGetLowFloat32(q0q1.val[0]));
+    GiSt1Float32(outptr, GiGetLowFloat32(GiGetSubVectorFloat32V2(q0q1, 0)));
     outptr += 2;
-    GiSt1Float32(outptr, GiGetLowFloat32(q2q3.val[0]));
+    GiSt1Float32(outptr, GiGetLowFloat32(GiGetSubVectorFloat32V2(q2q3, 0)));
     outptr += stride;
 
-    GiSt1Float32(outptr, GiGetHighFloat32(q0q1.val[0]));
+    GiSt1Float32(outptr, GiGetHighFloat32(GiGetSubVectorFloat32V2(q0q1, 0)));
     outptr += 2;
-    GiSt1Float32(outptr, GiGetHighFloat32(q2q3.val[0]));
+    GiSt1Float32(outptr, GiGetHighFloat32(GiGetSubVectorFloat32V2(q2q3, 0)));
     outptr += stride;
 
-    GiSt1Float32(outptr, GiGetLowFloat32(q0q1.val[1]));
+    GiSt1Float32(outptr, GiGetLowFloat32(GiGetSubVectorFloat32V2(q0q1, 1)));
     outptr += 2;
-    GiSt1Float32(outptr, GiGetLowFloat32(q2q3.val[1]));
+    GiSt1Float32(outptr, GiGetLowFloat32(GiGetSubVectorFloat32V2(q2q3, 1)));
     outptr += stride;
 
-    GiSt1Float32(outptr, GiGetHighFloat32(q0q1.val[1]));
+    GiSt1Float32(outptr, GiGetHighFloat32(GiGetSubVectorFloat32V2(q0q1, 1)));
     outptr += 2;
-    GiSt1Float32(outptr, GiGetHighFloat32(q2q3.val[1]));
+    GiSt1Float32(outptr, GiGetHighFloat32(GiGetSubVectorFloat32V2(q2q3, 1)));
     outptr += stride;
 }
 

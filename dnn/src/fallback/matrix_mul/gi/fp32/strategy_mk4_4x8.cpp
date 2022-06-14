@@ -82,6 +82,7 @@ void kern_4x4(const float* A, const float* B, size_t LDB, size_t K, float* C) {
     GI_FLOAT32_t d6d7 = GiLoadFloat32(B);
     B = B + 4;
 
+    GI_FLOAT32_t vfzero = GiBroadcastFloat32(0.0f);
     GI_FLOAT32_t d16d17 = GiSimdFmaLane(vfzero, d8d9, d0d1, 0);
     GI_FLOAT32_t d18d19 = GiSimdFmaLane(vfzero, d8d9, d2d3, 0);
     GI_FLOAT32_t d20d21 = GiSimdFmaLane(vfzero, d8d9, d4d5, 0);
@@ -173,6 +174,7 @@ void kern_4x8(const float* A, const float* B, size_t LDB, size_t K, float* C) {
     B = B + 4;
     GI_FLOAT32_t d6d7 = GiLoadFloat32(B);
     B = B + 4;
+    GI_FLOAT32_t vfzero = GiBroadcastFloat32(0.0f);
     GI_FLOAT32_t d16d17 = GiSimdFmaLane(vfzero, d8d9, d0d1, 0);
     d16d17 = GiSimdFmaLane(d16d17, d10d11, d0d1, 1);
     GI_FLOAT32_t d18d19 = GiSimdFmaLane(vfzero, d8d9, d2d3, 0);
