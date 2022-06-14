@@ -17,6 +17,10 @@
 #endif
 #endif
 
+#if defined(__riscv_vector)
+#include <riscv_vector.h>
+#endif
+
 #if defined(__x86_64__) || defined(__i386__) || defined(_M_IX86) || defined(_M_X64)
 #define GI_TARGET_X86
 #endif
@@ -47,7 +51,7 @@
 #define GI_INTERNAL_DATA extern "C" __attribute((visibility("hidden")))
 #endif
 
-#if defined(GI_TARGET_ARM)
+#if defined(GI_TARGET_ARM) && defined(__ARM_NEON)
 #define GI_NEON_INTRINSICS
 #if defined(__aarch64__)
 #define GI_NEON64_INTRINSICS
@@ -72,6 +76,9 @@
 #define GI_SSE2_INTRINSICS
 #endif
 #endif
+#if defined(__riscv_vector)
+#define GI_RVV_INTRINSICS
+#endif
 
 #if defined(GI_TEST_NAIVE)
 #undef GI_NEON_INTRINSICS
@@ -82,6 +89,7 @@
 #undef GI_AVX_INTRINSICS
 #undef GI_SSE42_INTRINSICS
 #undef GI_SSE2_INTRINSICS
+#undef GI_RVV_INTRINSICS
 #endif
 
 //! general intrinsic support dynamic length simd, if avx or avx2 the simd
@@ -93,6 +101,10 @@
 #define GI_SIMD_LEN_BYTE 32
 #elif defined(GI_NEON_INTRINSICS) || defined(GI_SSE2_INTRINSICS) || \
         defined(GI_SSE42_INTRINSICS)
+#define GI_SIMD_LEN      128
+#define GI_SIMD_LEN_BYTE 16
+#elif defined(GI_RVV_INTRINSICS)
+//! TODO: make gi algo usable for other GI_SIMD_LEN/GI_SIMD_LEN_BYTE
 #define GI_SIMD_LEN      128
 #define GI_SIMD_LEN_BYTE 16
 #else
@@ -112,6 +124,7 @@ enum GiSimdType {
     GI_SSE42,
     GI_SSE2,
     GI_NEON,
+    GI_RVV,
 };
 
 #if defined(GI_AVX_INTRINSICS) || defined(GI_AVX2_INTRINSICS) || \
@@ -246,17 +259,41 @@ typedef __m64_128 float32x2_t;
     return res64;
 #define _sse_vextq_s32(a, b, c)       _MM_ALIGNR_EPI8(b, a, c * 4)
 #define _sse_vget_lane_f32(vec, lane) vec.m64_f32[lane]
+#elif defined(GI_RVV_INTRINSICS)
+#define __gi_simd_type GI_RVV
+typedef vfloat32m1_t GI_FLOAT32_t;
+typedef vuint8m1_t GI_UINT8_t;
+typedef vint8m1_t GI_INT8_t;
+typedef vint16m1_t GI_INT16_t;
+typedef vint32m1_t GI_INT32_t;
+typedef vuint32m1_t GI_UINT32_t;
+//! FIXME: nezha D1 do not support vmv.x.s instruct
+//! as a workaround, define GI_INT64_t to naive
+typedef int64_t GI_INT64_RVV_WORKAROUND_t
+        __attribute__((vector_size(GI_SIMD_LEN_BYTE)));
+typedef GI_INT64_RVV_WORKAROUND_t GI_INT64_t;
+typedef vfloat32m1x2_t GI_FLOAT32_V2_t;
+typedef vfloat32m1x3_t GI_FLOAT32_V3_t;
+typedef vfloat32m1x4_t GI_FLOAT32_V4_t;
+typedef vint32m1x2_t GI_INT32_V2_t;
+typedef vint32m1x4_t GI_INT32_V4_t;
+typedef vint16m1x2_t GI_INT16_V2_t;
+typedef vint8m1x2_t GI_INT8_V2_t;
+//! vfloat32mf2_t usable at RVV1.0, now we support 0.7, as
+//! a workaround, we use vfloat32m1_t instead
+typedef vfloat32m1_t float32x2_t;
+
 #else
 #define __gi_simd_type GI_NAIVE
-typedef float GI_FLOAT32_t __attribute__((vector_size(16)));
-typedef uint8_t GI_UINT8_t __attribute__((vector_size(16)));
-typedef int8_t GI_INT8_t __attribute__((vector_size(16)));
-typedef int16_t GI_INT16_t __attribute__((vector_size(16)));
-typedef int32_t GI_INT32_t __attribute__((vector_size(16)));
-typedef uint32_t GI_UINT32_t __attribute__((vector_size(16)));
-typedef int64_t GI_INT64_t __attribute__((vector_size(16)));
-#if !defined(__arm__) && !defined(__aarch64__)
-typedef float float32x2_t __attribute__((vector_size(8)));
+typedef float GI_FLOAT32_t __attribute__((vector_size(GI_SIMD_LEN_BYTE)));
+typedef uint8_t GI_UINT8_t __attribute__((vector_size(GI_SIMD_LEN_BYTE)));
+typedef int8_t GI_INT8_t __attribute__((vector_size(GI_SIMD_LEN_BYTE)));
+typedef int16_t GI_INT16_t __attribute__((vector_size(GI_SIMD_LEN_BYTE)));
+typedef int32_t GI_INT32_t __attribute__((vector_size(GI_SIMD_LEN_BYTE)));
+typedef uint32_t GI_UINT32_t __attribute__((vector_size(GI_SIMD_LEN_BYTE)));
+typedef int64_t GI_INT64_t __attribute__((vector_size(GI_SIMD_LEN_BYTE)));
+#if !defined(__arm__) && !defined(__aarch64__) || !defined(__ARM_NEON)
+typedef float float32x2_t __attribute__((vector_size(GI_SIMD_LEN_BYTE / 2)));
 #endif
 typedef float float32_t;
 #endif
@@ -265,14 +302,14 @@ typedef float float32_t;
 //! for example: GiAbsInt32 do not imp SSE2 case
 //! when *_t will define as _m128*(may be long long)
 //! vector index do not have same logic as naive vector
-typedef float GI_FLOAT32_NAIVE_t __attribute__((vector_size(16)));
-typedef uint8_t GI_UINT8_NAIVE_t __attribute__((vector_size(16)));
-typedef int8_t GI_INT8_NAIVE_t __attribute__((vector_size(16)));
-typedef int16_t GI_INT16_NAIVE_t __attribute__((vector_size(16)));
-typedef int32_t GI_INT32_NAIVE_t __attribute__((vector_size(16)));
-typedef uint32_t GI_UINT32_NAIVE_t __attribute__((vector_size(16)));
-typedef int64_t GI_INT64_NAIVE_t __attribute__((vector_size(16)));
-typedef float float32x2_NAIVE_t __attribute__((vector_size(8)));
+typedef float GI_FLOAT32_NAIVE_t __attribute__((vector_size(GI_SIMD_LEN_BYTE)));
+typedef uint8_t GI_UINT8_NAIVE_t __attribute__((vector_size(GI_SIMD_LEN_BYTE)));
+typedef int8_t GI_INT8_NAIVE_t __attribute__((vector_size(GI_SIMD_LEN_BYTE)));
+typedef int16_t GI_INT16_NAIVE_t __attribute__((vector_size(GI_SIMD_LEN_BYTE)));
+typedef int32_t GI_INT32_NAIVE_t __attribute__((vector_size(GI_SIMD_LEN_BYTE)));
+typedef uint32_t GI_UINT32_NAIVE_t __attribute__((vector_size(GI_SIMD_LEN_BYTE)));
+typedef int64_t GI_INT64_NAIVE_t __attribute__((vector_size(GI_SIMD_LEN_BYTE)));
+typedef float float32x2_NAIVE_t __attribute__((vector_size(GI_SIMD_LEN_BYTE / 2)));
 typedef struct {
     GI_INT32_NAIVE_t val[2];
 } GI_INT32_V2_NAIVE_t;
@@ -301,22 +338,7 @@ typedef struct {
     GI_INT8_NAIVE_t val[2];
 } GI_INT8_V2_NAIVE_t;
 
-#define Max(a, b) (a) > (b) ? (a) : (b)
-#define Min(a, b) (a) < (b) ? (a) : (b)
-
-#if defined(GI_NEON_INTRINSICS)
-#if defined(__ARM_FEATURE_FMA) && defined(GI_NEON64_INTRINSICS)
-#define v_fma_ps_f32(c, b, a)         vfmaq_f32((c), (b), (a))
-#define v_fma_n_f32(c, b, a)          vfmaq_n_f32((c), (b), (a))
-#define v_fma_lane_f32(c, b, a, lane) vfmaq_lane_f32((c), (b), (a), (lane))
-#else
-#define v_fma_ps_f32(c, b, a)         vmlaq_f32((c), (b), (a))
-#define v_fma_n_f32(c, b, a)          vmlaq_n_f32((c), (b), (a))
-#define v_fma_lane_f32(c, b, a, lane) vmlaq_lane_f32((c), (b), (a), (lane))
-#endif
-#endif
-
-#if !defined(GI_NEON_INTRINSICS)
+#if !defined(GI_NEON_INTRINSICS) && !defined(GI_RVV_INTRINSICS)
 typedef struct {
     GI_INT32_t val[2];
 } GI_INT32_V2_t;
@@ -344,99 +366,218 @@ typedef struct {
 typedef struct {
     GI_INT8_t val[2];
 } GI_INT8_V2_t;
-#endif
 
-GI_FORCEINLINE
-GI_INT32_t GiAndInt32(GI_INT32_t Vector1, GI_INT32_t Vector2) {
-#if defined(GI_NEON_INTRINSICS)
-    return vandq_s32(Vector1, Vector2);
-#elif defined(GI_SSE2_INTRINSICS)
-    return _mm_and_si128(Vector1, Vector2);
+#endif
+//! variable length type intrinsic can not be a member of c++ class
+//! caused by can not do sizeof at build stage, for example RVV and SVE
+//! so we define a type_CLASS to solve this case
+//! some variable length type intrinsic can not do array subscript, for
+//! example RVV, so we define a GiGetSubVector_xx function to solve this
+//! case. when fix-len type in fact will do nothing
+#if defined(GI_RVV_INTRINSICS)
+typedef GI_FLOAT32_NAIVE_t GI_FLOAT32_FIXLEN_t;
+typedef GI_FLOAT32_V2_NAIVE_t GI_FLOAT32_FIXLEN_V2_t;
+typedef GI_UINT8_NAIVE_t GI_UINT8_FIXLEN_t;
+typedef GI_INT8_NAIVE_t GI_INT8_FIXLEN_t;
+typedef GI_INT16_NAIVE_t GI_INT16_FIXLEN_t;
+typedef GI_INT32_NAIVE_t GI_INT32_FIXLEN_t;
+typedef GI_UINT32_NAIVE_t GI_UINT32_FIXLEN_t;
+
+//! get subvector
+#define GiGetSubVectorFloat32V2(s, index) vget_f32m1x2_f32m1(s, index)
+#define GiGetSubVectorFloat32V3(s, index) vget_f32m1x3_f32m1(s, index)
+#define GiGetSubVectorFloat32V4(s, index) vget_f32m1x4_f32m1(s, index)
+
+#define GiGetSubVectorInt32V2(s, index) vget_i32m1x2_i32m1(s, index)
+#define GiGetSubVectorInt32V4(s, index) vget_i32m1x4_i32m1(s, index)
+
+#define GiGetSubVectorInt16V2(s, index) vget_i16m1x2_i16m1(s, index)
+
+#define GiGetSubVectorInt8V2(s, index) vget_i8m1x2_i8m1(s, index)
+
+//! insert subvector
+#define GiSetSubVectorFloat32V2(d, index, s) d = vset_f32m1x2(d, index, s)
+#define GiSetSubVectorFloat32V3(d, index, s) d = vset_f32m1x3(d, index, s)
+#define GiSetSubVectorFloat32V4(d, index, s) d = vset_f32m1x4(d, index, s)
+
+#define GiSetSubVectorInt32V2(d, index, s) d = vset_i32m1x2(d, index, s)
+#define GiSetSubVectorInt32V4(d, index, s) d = vset_i32m1x4(d, index, s)
+
+#define GiSetSubVectorInt16V2(d, index, s) d = vset_i16m1x2(d, index, s)
+
+#define GiSetSubVectorInt8V2(d, index, s) d = vset_i8m1x2(d, index, s)
+
+//! convert
+#define GiFloat32Type2FixLenType(s)                                     \
+    __extension__({                                                     \
+        GI_FLOAT32_FIXLEN_t d;                                          \
+        vse32_v_f32m1((float*)&d, s, GI_SIMD_LEN_BYTE / sizeof(float)); \
+        d;                                                              \
+    })
+
+#define GiFixLenType2GiFloat32Type(s)                                    \
+    __extension__({                                                      \
+        GI_FLOAT32_t d;                                                  \
+        d = vle32_v_f32m1((float*)&s, GI_SIMD_LEN_BYTE / sizeof(float)); \
+        d;                                                               \
+    })
+
+#define GiFloat32Type2FixLenV2Type(s)                                       \
+    __extension__({                                                         \
+        GI_FLOAT32_FIXLEN_V2_t d;                                           \
+        d.val[0] = GiFloat32Type2FixLenType(GiGetSubVectorFloat32V2(s, 0)); \
+        d.val[1] = GiFloat32Type2FixLenType(GiGetSubVectorFloat32V2(s, 1)); \
+        d;                                                                  \
+    })
+
+#define GiFixLenType2GiFloat32V2Type(s)                                      \
+    __extension__({                                                          \
+        GI_FLOAT32_V2_t d;                                                   \
+        GiSetSubVectorFloat32V2(d, 0, GiFixLenType2GiFloat32Type(s.val[0])); \
+        GiSetSubVectorFloat32V2(d, 1, GiFixLenType2GiFloat32Type(s.val[1])); \
+        d;                                                                   \
+    })
+
+#define GiUint8Type2FixLenType(s)                                         \
+    __extension__({                                                       \
+        GI_UINT8_FIXLEN_t d;                                              \
+        vse8_v_u8m1((uint8_t*)&d, s, GI_SIMD_LEN_BYTE / sizeof(uint8_t)); \
+        d;                                                                \
+    })
+
+#define GiFixLenType2GiUint8Type(s)                                        \
+    __extension__({                                                        \
+        GI_UINT8_t d;                                                      \
+        d = vle8_v_u8m1((uint8_t*)&s, GI_SIMD_LEN_BYTE / sizeof(uint8_t)); \
+        d;                                                                 \
+    })
+
+#define GiInt8Type2FixLenType(s)                                        \
+    __extension__({                                                     \
+        GI_INT8_FIXLEN_t d;                                             \
+        vse8_v_i8m1((int8_t*)&d, s, GI_SIMD_LEN_BYTE / sizeof(int8_t)); \
+        d;                                                              \
+    })
+
+#define GiFixLenType2GiInt8Type(s)                                       \
+    __extension__({                                                      \
+        GI_INT8_t d;                                                     \
+        d = vle8_v_i8m1((int8_t*)&s, GI_SIMD_LEN_BYTE / sizeof(int8_t)); \
+        d;                                                               \
+    })
+
+#define GiInt16Type2FixLenType(s)                                           \
+    __extension__({                                                         \
+        GI_INT16_FIXLEN_t d;                                                \
+        vse16_v_i16m1((int16_t*)&d, s, GI_SIMD_LEN_BYTE / sizeof(int16_t)); \
+        d;                                                                  \
+    })
+
+#define GiFixLenType2GiInt16Type(s)                                          \
+    __extension__({                                                          \
+        GI_INT16_t d;                                                        \
+        d = vle16_v_i16m1((int16_t*)&s, GI_SIMD_LEN_BYTE / sizeof(int16_t)); \
+        d;                                                                   \
+    })
+
+#define GiInt32Type2FixLenType(s)                                           \
+    __extension__({                                                         \
+        GI_INT32_FIXLEN_t d;                                                \
+        vse32_v_i32m1((int32_t*)&d, s, GI_SIMD_LEN_BYTE / sizeof(int32_t)); \
+        d;                                                                  \
+    })
+
+#define GiFixLenType2GiInt32Type(s)                                          \
+    __extension__({                                                          \
+        GI_INT32_t d;                                                        \
+        d = vle32_v_i32m1((int32_t*)&s, GI_SIMD_LEN_BYTE / sizeof(int32_t)); \
+        d;                                                                   \
+    })
+
+#define GiUint32Type2FixLenType(s)                                            \
+    __extension__({                                                           \
+        GI_UINT32_FIXLEN_t d;                                                 \
+        vse32_v_u32m1((uint32_t*)&d, s, GI_SIMD_LEN_BYTE / sizeof(uint32_t)); \
+        d;                                                                    \
+    })
+
+#define GiFixLenType2GiUint32Type(s)                                           \
+    __extension__({                                                            \
+        GI_UINT32_t d;                                                         \
+        d = vle32_v_u32m1((uint32_t*)&s, GI_SIMD_LEN_BYTE / sizeof(uint32_t)); \
+        d;                                                                     \
+    })
 #else
-    return Vector1 & Vector2;
-#endif
-}
+typedef GI_FLOAT32_t GI_FLOAT32_FIXLEN_t;
+typedef GI_FLOAT32_V2_t GI_FLOAT32_FIXLEN_V2_t;
+typedef GI_UINT8_t GI_UINT8_FIXLEN_t;
+typedef GI_INT8_t GI_INT8_FIXLEN_t;
+typedef GI_INT16_t GI_INT16_FIXLEN_t;
+typedef GI_INT32_t GI_INT32_FIXLEN_t;
+typedef GI_UINT32_t GI_UINT32_FIXLEN_t;
+#define GiFloat32Type2FixLenType(s)   (s)
+#define GiFixLenType2GiFloat32Type(s) (s)
 
-GI_FORCEINLINE
-GI_INT32_t GiOrInt32(GI_INT32_t Vector1, GI_INT32_t Vector2) {
+#define GiFloat32Type2FixLenV2Type(s)   (s)
+#define GiFixLenType2GiFloat32V2Type(s) (s)
+
+#define GiUint8Type2FixLenType(s)   (s)
+#define GiFixLenType2GiUint8Type(s) (s)
+
+#define GiInt8Type2FixLenType(s)   (s)
+#define GiFixLenType2GiInt8Type(s) (s)
+
+#define GiInt16Type2FixLenType(s)   (s)
+#define GiFixLenType2GiInt16Type(s) (s)
+
+#define GiInt32Type2FixLenType(s)   (s)
+#define GiFixLenType2GiInt32Type(s) (s)
+
+#define GiUint32Type2FixLenType(s)        (s)
+#define GiFixLenType2GiUint32Type(s)      (s)
+
+//! get subvector
+#define GiGetSubVectorFloat32V2(s, index) s.val[index]
+#define GiGetSubVectorFloat32V3(s, index) s.val[index]
+#define GiGetSubVectorFloat32V4(s, index) s.val[index]
+
+#define GiGetSubVectorInt32V2(s, index) s.val[index]
+#define GiGetSubVectorInt32V4(s, index) s.val[index]
+
+#define GiGetSubVectorInt16V2(s, index) s.val[index]
+
+#define GiGetSubVectorInt8V2(s, index)       s.val[index]
+
+//! insert subvector
+#define GiSetSubVectorFloat32V2(d, index, s) d.val[index] = s
+#define GiSetSubVectorFloat32V3(d, index, s) d.val[index] = s
+#define GiSetSubVectorFloat32V4(d, index, s) d.val[index] = s
+
+#define GiSetSubVectorInt32V2(d, index, s) d.val[index] = s
+#define GiSetSubVectorInt32V4(d, index, s) d.val[index] = s
+
+#define GiSetSubVectorInt16V2(d, index, s) d.val[index] = s
+
+#define GiSetSubVectorInt8V2(d, index, s) d.val[index] = s
+#endif
+
+#define Max(a, b) (a) > (b) ? (a) : (b)
+#define Min(a, b) (a) < (b) ? (a) : (b)
+
 #if defined(GI_NEON_INTRINSICS)
-    return vorrq_s32(Vector1, Vector2);
-#elif defined(GI_SSE2_INTRINSICS)
-    return _mm_or_si128(Vector1, Vector2);
+#if defined(__ARM_FEATURE_FMA) && defined(GI_NEON64_INTRINSICS)
+#define v_fma_ps_f32(c, b, a)         vfmaq_f32((c), (b), (a))
+#define v_fma_n_f32(c, b, a)          vfmaq_n_f32((c), (b), (a))
+#define v_fma_lane_f32(c, b, a, lane) vfmaq_lane_f32((c), (b), (a), (lane))
 #else
-    return Vector1 | Vector2;
+#define v_fma_ps_f32(c, b, a)         vmlaq_f32((c), (b), (a))
+#define v_fma_n_f32(c, b, a)          vmlaq_n_f32((c), (b), (a))
+#define v_fma_lane_f32(c, b, a, lane) vmlaq_lane_f32((c), (b), (a), (lane))
 #endif
-}
+#endif
 
 GI_FORCEINLINE
-GI_INT32_t GiAndNotInt32(GI_INT32_t VectorNot, GI_INT32_t Vector) {
-#if defined(GI_NEON_INTRINSICS)
-    return vandq_s32(vmvnq_s32(VectorNot), Vector);
-#elif defined(GI_SSE2_INTRINSICS)
-    return _mm_andnot_si128(VectorNot, Vector);
-#else
-    return (~VectorNot) & Vector;
-#endif
-}
-
-GI_FORCEINLINE
-GI_INT32_t GiXorInt32(GI_INT32_t Vector1, GI_INT32_t Vector2) {
-#if defined(GI_NEON_INTRINSICS)
-    return veorq_s32(Vector1, Vector2);
-#elif defined(GI_SSE2_INTRINSICS)
-    return _mm_xor_si128(Vector1, Vector2);
-#else
-    return Vector1 ^ Vector2;
-#endif
-}
-
-GI_FORCEINLINE
-GI_FLOAT32_t GiBroadcastFloat32(float Value) {
-#if defined(GI_NEON_INTRINSICS)
-    return vdupq_n_f32(Value);
-#elif defined(GI_SSE2_INTRINSICS)
-    return _mm_set1_ps(Value);
-#else
-    GI_FLOAT32_t ret;
-    for (size_t i = 0; i < GI_SIMD_LEN_BYTE / sizeof(float); i++) {
-        ret[i] = Value;
-    }
-    return ret;
-#endif
-}
-
-GI_FORCEINLINE
-GI_INT32_t GiBroadcastInt32(int32_t Value) {
-#if defined(GI_NEON_INTRINSICS)
-    return vdupq_n_s32(Value);
-#elif defined(GI_SSE2_INTRINSICS)
-    return _mm_set1_epi32(Value);
-#else
-    GI_INT32_t ret;
-    for (size_t i = 0; i < GI_SIMD_LEN_BYTE / sizeof(int32_t); i++) {
-        ret[i] = Value;
-    }
-    return ret;
-#endif
-}
-
-GI_FORCEINLINE
-GI_INT8_t GiBroadcastInt8(int8_t Value) {
-#if defined(GI_NEON_INTRINSICS)
-    return vdupq_n_s8(Value);
-#elif defined(GI_SSE2_INTRINSICS)
-    return _mm_set1_epi8(Value);
-#else
-    GI_INT8_t ret;
-    for (size_t i = 0; i < GI_SIMD_LEN_BYTE / sizeof(int8_t); i++) {
-        ret[i] = Value;
-    }
-    return ret;
-#endif
-}
-
-GI_FORCEINLINE
-GiSimdType GiGetSimdType() {
+enum GiSimdType GiGetSimdType() {
     //! override by special macro to insure ci have test naive and sse2
     //! now we do not imp GI_AVX to now and x64 ci device will test GI_SSE42
     //! now arm ci device will test GI_NEON
@@ -463,12 +604,107 @@ GiSimdType GiGetSimdType() {
     return __gi_simd_type;
 }
 
-__attribute__((unused)) const GI_INT8_t vzero_int8 = GiBroadcastInt8(0);
-__attribute__((unused)) const GI_INT32_t vzero = GiBroadcastInt32(0);
-__attribute__((unused)) const GI_FLOAT32_t vfzero = GiBroadcastFloat32(0.0f);
-__attribute__((unused)) const GI_FLOAT32_t vfhalf = GiBroadcastFloat32(0.5f);
-__attribute__((unused)) const GI_FLOAT32_t vfneg_half = GiBroadcastFloat32(-0.5f);
-__attribute__((unused)) const GI_FLOAT32_t vfmin_int8 = GiBroadcastFloat32(-128.0f);
-__attribute__((unused)) const GI_FLOAT32_t vfmax_int8 = GiBroadcastFloat32(127.0f);
+GI_FORCEINLINE
+GI_FLOAT32_t GiBroadcastFloat32(float Value) {
+#if defined(GI_NEON_INTRINSICS)
+    return vdupq_n_f32(Value);
+#elif defined(GI_SSE2_INTRINSICS)
+    return _mm_set1_ps(Value);
+#elif defined(GI_RVV_INTRINSICS)
+    return vfmv_v_f_f32m1(Value, GI_SIMD_LEN_BYTE / sizeof(float));
+#else
+    GI_FLOAT32_t ret;
+    for (size_t i = 0; i < GI_SIMD_LEN_BYTE / sizeof(float); i++) {
+        ret[i] = Value;
+    }
+    return ret;
+#endif
+}
 
+GI_FORCEINLINE
+GI_INT8_t GiBroadcastInt8(int8_t Value) {
+#if defined(GI_NEON_INTRINSICS)
+    return vdupq_n_s8(Value);
+#elif defined(GI_SSE2_INTRINSICS)
+    return _mm_set1_epi8(Value);
+#elif defined(GI_RVV_INTRINSICS)
+    return vmv_v_x_i8m1(Value, GI_SIMD_LEN_BYTE / sizeof(int8_t));
+#else
+    GI_INT8_t ret;
+    for (size_t i = 0; i < GI_SIMD_LEN_BYTE / sizeof(int8_t); i++) {
+        ret[i] = Value;
+    }
+    return ret;
+#endif
+}
+
+GI_FORCEINLINE
+GI_INT32_t GiBroadcastInt32(int32_t Value) {
+#if defined(GI_NEON_INTRINSICS)
+    return vdupq_n_s32(Value);
+#elif defined(GI_SSE2_INTRINSICS)
+    return _mm_set1_epi32(Value);
+#elif defined(GI_RVV_INTRINSICS)
+    return vmv_v_x_i32m1(Value, GI_SIMD_LEN_BYTE / sizeof(int32_t));
+#else
+    GI_INT32_t ret;
+    for (size_t i = 0; i < GI_SIMD_LEN_BYTE / sizeof(int32_t); i++) {
+        ret[i] = Value;
+    }
+    return ret;
+#endif
+}
+
+GI_FORCEINLINE
+GI_INT32_t GiAndInt32(GI_INT32_t Vector1, GI_INT32_t Vector2) {
+#if defined(GI_NEON_INTRINSICS)
+    return vandq_s32(Vector1, Vector2);
+#elif defined(GI_SSE2_INTRINSICS)
+    return _mm_and_si128(Vector1, Vector2);
+#elif defined(GI_RVV_INTRINSICS)
+    return vand_vv_i32m1(Vector1, Vector2, GI_SIMD_LEN_BYTE / sizeof(int32_t));
+#else
+    return Vector1 & Vector2;
+#endif
+}
+
+GI_FORCEINLINE
+GI_INT32_t GiOrInt32(GI_INT32_t Vector1, GI_INT32_t Vector2) {
+#if defined(GI_NEON_INTRINSICS)
+    return vorrq_s32(Vector1, Vector2);
+#elif defined(GI_SSE2_INTRINSICS)
+    return _mm_or_si128(Vector1, Vector2);
+#elif defined(GI_RVV_INTRINSICS)
+    return vor_vv_i32m1(Vector1, Vector2, GI_SIMD_LEN_BYTE / sizeof(int32_t));
+#else
+    return Vector1 | Vector2;
+#endif
+}
+
+GI_FORCEINLINE
+GI_INT32_t GiAndNotInt32(GI_INT32_t VectorNot, GI_INT32_t Vector) {
+#if defined(GI_NEON_INTRINSICS)
+    return vandq_s32(vmvnq_s32(VectorNot), Vector);
+#elif defined(GI_SSE2_INTRINSICS)
+    return _mm_andnot_si128(VectorNot, Vector);
+#elif defined(GI_RVV_INTRINSICS)
+    GI_INT32_t not_v = vnot_v_i32m1(VectorNot, GI_SIMD_LEN_BYTE / sizeof(int32_t));
+    return vand_vv_i32m1(not_v, Vector, GI_SIMD_LEN_BYTE / sizeof(int32_t));
+#else
+    return (~VectorNot) & Vector;
+#endif
+}
+
+GI_FORCEINLINE
+GI_INT32_t GiXorInt32(GI_INT32_t Vector1, GI_INT32_t Vector2) {
+#if defined(GI_NEON_INTRINSICS)
+    return veorq_s32(Vector1, Vector2);
+#elif defined(GI_SSE2_INTRINSICS)
+    return _mm_xor_si128(Vector1, Vector2);
+#elif defined(GI_RVV_INTRINSICS)
+    return vxor_vv_i32m1(Vector1, Vector2, GI_SIMD_LEN_BYTE / sizeof(int32_t));
+#else
+    return Vector1 ^ Vector2;
+#endif
+}
 // vim: syntax=cpp.doxygen
