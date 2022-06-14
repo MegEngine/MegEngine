@@ -773,7 +773,7 @@ def sqrt(x: Tensor) -> Tensor:
         Tensor([1. 2. 3. 4.], device=xpux:0)
 
     """
-    return pow(x, 0.5)
+    return _elwise(x, mode=Elemwise.Mode.SQRT)
 
 
 def square(x: Tensor) -> Tensor:
@@ -790,16 +790,16 @@ def square(x: Tensor) -> Tensor:
 
     Examples:
         >>> F.square(2)
-        Tensor(4.0, device=xpux:0)
+        Tensor(4, dtype=int32, device=xpux:0)
 
         Element-wise square:
 
         >>> x = Tensor([1, -2, -3, 4])
         >>> F.square(x)
-        Tensor([ 1.  4.  9. 16.], device=xpux:0)
+        Tensor([ 1  4  9 16], dtype=int32, device=xpux:0)
 
     """
-    return pow(x, 2)
+    return _elwise(x, mode=Elemwise.Mode.SQUARE)
 
 
 def logaddexp(x: Tensor, y: Tensor) -> Tensor:
@@ -1053,7 +1053,7 @@ def clip(x: Tensor, lower=None, upper=None) -> Tensor:
     ), "At least one of 'lower' or 'upper' must not be None"
     if lower is not None:
         if upper is not None:
-            return minimum(maximum(x, lower), upper)
+            return _elwise(x, lower, upper, mode=Elemwise.Mode.CLIP)
         else:
             return maximum(x, lower)
     else:
@@ -1157,7 +1157,7 @@ def tan(x):
         Tensor([0. 1. 0.], device=xpux:0)
 
     """
-    return sin(x) / cos(x)
+    return _elwise(x, mode=Elemwise.Mode.TAN)
 
 
 def acos(x):
@@ -1373,7 +1373,7 @@ def cosh(x):
         Tensor([1.     1.5431 1.5431], device=xpux:0)
     
     """
-    return 0.5 * (exp(x) + exp(-x))
+    return _elwise(x, mode=Elemwise.Mode.COSH)
 
 
 def sinh(x):
@@ -1416,8 +1416,7 @@ def sinh(x):
         Tensor([ 0.      1.1752 -1.1752], device=xpux:0)
     
     """
-    u = expm1(x)
-    return 0.5 * u / (u + 1) * (u + 2)
+    return _elwise(x, mode=Elemwise.Mode.SINH)
 
 
 def tanh(x):
@@ -1498,7 +1497,7 @@ def asinh(x):
         Tensor([ 0.      0.8814 -0.8814], device=xpux:0)
 
     """
-    return log(x + (x ** 2 + 1) ** 0.5)
+    return _elwise(x, mode=Elemwise.Mode.ASINH)
 
 
 def acosh(x):
@@ -1534,7 +1533,7 @@ def acosh(x):
         >>> F.acosh(x)
         Tensor([0.     1.317  1.7627], device=xpux:0)
     """
-    return log(x + (x ** 2 - 1) ** 0.5)
+    return _elwise(x, mode=Elemwise.Mode.ACOSH)
 
 
 def atanh(x):
@@ -1572,7 +1571,7 @@ def atanh(x):
         Tensor([ 0.      0.5493 -0.5493], device=xpux:0)
 
     """
-    return log1p(2 * x / (1 - x)) / 2
+    return _elwise(x, mode=Elemwise.Mode.ATANH)
 
 
 # bit-twiddling functions

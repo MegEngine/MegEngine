@@ -313,7 +313,6 @@ protected:
             size_t workspace_in_bytes);
 };
 using Cumsum = CumsumForward;
-
 // mxx can be max or min
 class ArgmxxBase : public OperatorBase {
     DEF_OPR_IMPL_CTOR(ArgmxxBase, OperatorBase);

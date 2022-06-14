@@ -663,7 +663,6 @@ auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
 OP_TRAIT_REG(Cumsum, Cumsum).apply_on_var_node(apply_on_var_node).fallback();
 }  // namespace cumsum
 }  // namespace
-
 namespace lrn {
 auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
     auto&& op = static_cast<const LRN&>(def);

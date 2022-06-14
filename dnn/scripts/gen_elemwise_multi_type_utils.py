@@ -48,6 +48,19 @@ MODES = {
         "H_SWISH",
         "SILU",
         "GELU",
+        "SINH",
+        "COSH",
+        "ASINH",
+        "ACOSH",
+        "ATANH",
+        "TAN",
+        "SOFTPLUS",
+        "RELU6",
+        "HSIGMOID",
+        "LOGSIGMOID",
+        "SQRT",
+        "SQUARE",
+        "SIGN",
     ],
     2: [
         "ABS_GRAD",
@@ -76,8 +89,15 @@ MODES = {
         "FUSE_ADD_H_SWISH",
         "SILU_GRAD",
         "GELU_GRAD",
+        "PRELU",
+        "ASINH_GRAD",
+        "ACOSH_GRAD",
+        "ATANH_GRAD",
+        "SOFTPLUS_GRAD",
+        "RELU6_GRAD",
+        "HSIGMOID_GRAD",
     ],
-    3: ["COND_LEQ_MOV", "COND_LT_MOV", "FUSE_MUL_ADD3"],
+    3: ["COND_LEQ_MOV", "COND_LT_MOV", "FUSE_MUL_ADD3", "CLIP", "PRELU_GRAD"],
 }
 
 QINT4_MODES = {
@@ -107,8 +127,9 @@ QINT4_MODES = {
         "FUSE_ADD_TANH",
         "FUSE_ADD_SIGMOID",
         "FUSE_ADD_H_SWISH",
+        "PRELU",
     ],
-    3: ["COND_LEQ_MOV", "COND_LT_MOV", "FUSE_MUL_ADD3"],
+    3: ["COND_LEQ_MOV", "COND_LT_MOV", "FUSE_MUL_ADD3", "CLIP"],
 }
 
 QINT32_MODES = {

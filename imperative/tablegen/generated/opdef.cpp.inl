@@ -3076,6 +3076,72 @@ std::vector<std::pair<const char*, std::string>> Elemwise_props_impl(const OpDef
     case Elemwise::Mode::ISINF:
         props_.emplace_back("mode", "ISINF");
         break;
+    case Elemwise::Mode::SINH:
+        props_.emplace_back("mode", "SINH");
+        break;
+    case Elemwise::Mode::COSH:
+        props_.emplace_back("mode", "COSH");
+        break;
+    case Elemwise::Mode::ASINH:
+        props_.emplace_back("mode", "ASINH");
+        break;
+    case Elemwise::Mode::ACOSH:
+        props_.emplace_back("mode", "ACOSH");
+        break;
+    case Elemwise::Mode::ATANH:
+        props_.emplace_back("mode", "ATANH");
+        break;
+    case Elemwise::Mode::TAN:
+        props_.emplace_back("mode", "TAN");
+        break;
+    case Elemwise::Mode::ASINH_GRAD:
+        props_.emplace_back("mode", "ASINH_GRAD");
+        break;
+    case Elemwise::Mode::ACOSH_GRAD:
+        props_.emplace_back("mode", "ACOSH_GRAD");
+        break;
+    case Elemwise::Mode::ATANH_GRAD:
+        props_.emplace_back("mode", "ATANH_GRAD");
+        break;
+    case Elemwise::Mode::PRELU:
+        props_.emplace_back("mode", "PRELU");
+        break;
+    case Elemwise::Mode::CLIP:
+        props_.emplace_back("mode", "CLIP");
+        break;
+    case Elemwise::Mode::PRELU_GRAD:
+        props_.emplace_back("mode", "PRELU_GRAD");
+        break;
+    case Elemwise::Mode::SOFTPLUS:
+        props_.emplace_back("mode", "SOFTPLUS");
+        break;
+    case Elemwise::Mode::SOFTPLUS_GRAD:
+        props_.emplace_back("mode", "SOFTPLUS_GRAD");
+        break;
+    case Elemwise::Mode::RELU6:
+        props_.emplace_back("mode", "RELU6");
+        break;
+    case Elemwise::Mode::RELU6_GRAD:
+        props_.emplace_back("mode", "RELU6_GRAD");
+        break;
+    case Elemwise::Mode::HSIGMOID:
+        props_.emplace_back("mode", "HSIGMOID");
+        break;
+    case Elemwise::Mode::HSIGMOID_GRAD:
+        props_.emplace_back("mode", "HSIGMOID_GRAD");
+        break;
+    case Elemwise::Mode::LOGSIGMOID:
+        props_.emplace_back("mode", "LOGSIGMOID");
+        break;
+    case Elemwise::Mode::SQRT:
+        props_.emplace_back("mode", "SQRT");
+        break;
+    case Elemwise::Mode::SQUARE:
+        props_.emplace_back("mode", "SQUARE");
+        break;
+    case Elemwise::Mode::SIGN:
+        props_.emplace_back("mode", "SIGN");
+        break;
     default:
         props_.emplace_back("mode", "INVALID");
         break;

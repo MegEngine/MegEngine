@@ -1,11 +1,13 @@
 import pickle
 from collections import defaultdict
+from functools import wraps
 from tempfile import TemporaryFile
 
 import numpy as np
 
 import megengine.functional as F
 import megengine.module as M
+import megengine.traced_module.expr as Expr
 import megengine.traced_module.serialization as S
 from megengine import Tensor
 from megengine.core._imperative_rt.core2 import apply
@@ -357,3 +359,35 @@ def test_opdef_serialization():
         load_x = pickle.load(f)
         assert x.strategy == load_x.strategy
         assert x == load_x
+
+
+def test_square_function_compat():
+    @wraps(F.elemwise.square)
+    def origin_square(x):
+        return F.pow(x, 2)
+
+    new_square = F.elemwise.square
+    F.elemwise.square = origin_square
+    current_version = Expr.__version__
+    Expr.__version__ = "1.11.1"
+
+    class old_square(M.Module):
+        def forward(self, x):
+            x = F.relu(x)
+            x = F.elemwise.square(x)
+            return x * 2
+
+    m = trace_module(old_square(), Tensor([1, 2, 4, 6]))
+    float_m = trace_module(old_square(), Tensor([1.0, 2.0, 4.0, 6.0]))
+
+    # dump old version square
+    obj = pickle.dumps(m)
+    f_obj = pickle.dumps(float_m)
+
+    # load in new version
+    F.elemwise.square = new_square
+    Expr.__version__ = current_version
+    new_m = pickle.loads(obj)
+    new_float_m = pickle.loads(f_obj)
+    assert len(new_m.graph._exprs) == 4 and len(new_float_m.graph._exprs) == 3
+    assert new_m(Tensor([1, 2, 4, 6])).dtype == np.float32

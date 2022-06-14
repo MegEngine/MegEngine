@@ -783,6 +783,28 @@ case Elemwise::Mode::COND_LT_MOV: return "COND_LT_MOV";
 case Elemwise::Mode::NEQ: return "NEQ";
 case Elemwise::Mode::ISNAN: return "ISNAN";
 case Elemwise::Mode::ISINF: return "ISINF";
+case Elemwise::Mode::SINH: return "SINH";
+case Elemwise::Mode::COSH: return "COSH";
+case Elemwise::Mode::ASINH: return "ASINH";
+case Elemwise::Mode::ACOSH: return "ACOSH";
+case Elemwise::Mode::ATANH: return "ATANH";
+case Elemwise::Mode::TAN: return "TAN";
+case Elemwise::Mode::ASINH_GRAD: return "ASINH_GRAD";
+case Elemwise::Mode::ACOSH_GRAD: return "ACOSH_GRAD";
+case Elemwise::Mode::ATANH_GRAD: return "ATANH_GRAD";
+case Elemwise::Mode::PRELU: return "PRELU";
+case Elemwise::Mode::CLIP: return "CLIP";
+case Elemwise::Mode::PRELU_GRAD: return "PRELU_GRAD";
+case Elemwise::Mode::SOFTPLUS: return "SOFTPLUS";
+case Elemwise::Mode::SOFTPLUS_GRAD: return "SOFTPLUS_GRAD";
+case Elemwise::Mode::RELU6: return "RELU6";
+case Elemwise::Mode::RELU6_GRAD: return "RELU6_GRAD";
+case Elemwise::Mode::HSIGMOID: return "HSIGMOID";
+case Elemwise::Mode::HSIGMOID_GRAD: return "HSIGMOID_GRAD";
+case Elemwise::Mode::LOGSIGMOID: return "LOGSIGMOID";
+case Elemwise::Mode::SQRT: return "SQRT";
+case Elemwise::Mode::SQUARE: return "SQUARE";
+case Elemwise::Mode::SIGN: return "SIGN";
             default:
                 return "Elemwise::Mode::Unknown";
         }

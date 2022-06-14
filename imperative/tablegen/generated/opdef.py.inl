@@ -896,6 +896,28 @@ py::enum_<Elemwise::Mode>(ElemwiseInst, "Mode")
     .value("NEQ", Elemwise::Mode::NEQ)
     .value("ISNAN", Elemwise::Mode::ISNAN)
     .value("ISINF", Elemwise::Mode::ISINF)
+    .value("SINH", Elemwise::Mode::SINH)
+    .value("COSH", Elemwise::Mode::COSH)
+    .value("ASINH", Elemwise::Mode::ASINH)
+    .value("ACOSH", Elemwise::Mode::ACOSH)
+    .value("ATANH", Elemwise::Mode::ATANH)
+    .value("TAN", Elemwise::Mode::TAN)
+    .value("ASINH_GRAD", Elemwise::Mode::ASINH_GRAD)
+    .value("ACOSH_GRAD", Elemwise::Mode::ACOSH_GRAD)
+    .value("ATANH_GRAD", Elemwise::Mode::ATANH_GRAD)
+    .value("PRELU", Elemwise::Mode::PRELU)
+    .value("CLIP", Elemwise::Mode::CLIP)
+    .value("PRELU_GRAD", Elemwise::Mode::PRELU_GRAD)
+    .value("SOFTPLUS", Elemwise::Mode::SOFTPLUS)
+    .value("SOFTPLUS_GRAD", Elemwise::Mode::SOFTPLUS_GRAD)
+    .value("RELU6", Elemwise::Mode::RELU6)
+    .value("RELU6_GRAD", Elemwise::Mode::RELU6_GRAD)
+    .value("HSIGMOID", Elemwise::Mode::HSIGMOID)
+    .value("HSIGMOID_GRAD", Elemwise::Mode::HSIGMOID_GRAD)
+    .value("LOGSIGMOID", Elemwise::Mode::LOGSIGMOID)
+    .value("SQRT", Elemwise::Mode::SQRT)
+    .value("SQUARE", Elemwise::Mode::SQUARE)
+    .value("SIGN", Elemwise::Mode::SIGN)
     .def(py::init([](const std::string& in) {
         auto&& str = normalize_enum(in);
         if (str == "RELU") return Elemwise::Mode::RELU;
@@ -962,6 +984,28 @@ py::enum_<Elemwise::Mode>(ElemwiseInst, "Mode")
         if (str == "NEQ") return Elemwise::Mode::NEQ;
         if (str == "ISNAN") return Elemwise::Mode::ISNAN;
         if (str == "ISINF") return Elemwise::Mode::ISINF;
+        if (str == "SINH") return Elemwise::Mode::SINH;
+        if (str == "COSH") return Elemwise::Mode::COSH;
+        if (str == "ASINH") return Elemwise::Mode::ASINH;
+        if (str == "ACOSH") return Elemwise::Mode::ACOSH;
+        if (str == "ATANH") return Elemwise::Mode::ATANH;
+        if (str == "TAN") return Elemwise::Mode::TAN;
+        if (str == "ASINH_GRAD") return Elemwise::Mode::ASINH_GRAD;
+        if (str == "ACOSH_GRAD") return Elemwise::Mode::ACOSH_GRAD;
+        if (str == "ATANH_GRAD") return Elemwise::Mode::ATANH_GRAD;
+        if (str == "PRELU") return Elemwise::Mode::PRELU;
+        if (str == "CLIP") return Elemwise::Mode::CLIP;
+        if (str == "PRELU_GRAD") return Elemwise::Mode::PRELU_GRAD;
+        if (str == "SOFTPLUS") return Elemwise::Mode::SOFTPLUS;
+        if (str == "SOFTPLUS_GRAD") return Elemwise::Mode::SOFTPLUS_GRAD;
+        if (str == "RELU6") return Elemwise::Mode::RELU6;
+        if (str == "RELU6_GRAD") return Elemwise::Mode::RELU6_GRAD;
+        if (str == "HSIGMOID") return Elemwise::Mode::HSIGMOID;
+        if (str == "HSIGMOID_GRAD") return Elemwise::Mode::HSIGMOID_GRAD;
+        if (str == "LOGSIGMOID") return Elemwise::Mode::LOGSIGMOID;
+        if (str == "SQRT") return Elemwise::Mode::SQRT;
+        if (str == "SQUARE") return Elemwise::Mode::SQUARE;
+        if (str == "SIGN") return Elemwise::Mode::SIGN;
         throw py::cast_error("invalid enum value " + in);
     }));
 py::implicitly_convertible<std::string, Elemwise::Mode>();

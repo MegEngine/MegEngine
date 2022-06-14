@@ -8,7 +8,7 @@ import numpy as np
 from ..core._imperative_rt.core2 import Const, apply
 from ..core._imperative_rt.ops import SubgraphBuilder as _SubgraphBuilder
 from ..core.ops import builtin
-from ..core.tensor.array_method import _matmul
+from ..core.tensor.array_method import _elwise, _matmul
 from ..core.tensor.utils import _normalize_axis
 from ..tensor import Tensor
 from ..utils.deprecation import deprecated_kwargs_default
@@ -133,10 +133,7 @@ def sign(x: Tensor):
         >>> F.sign(x)
         Tensor([ 1 -1  0], dtype=int32, device=xpux:0)
     """
-    return (x > 0).astype(x.dtype) - (x < 0).astype(x.dtype)
-
-
-# statistical functions
+    return _elwise(x, mode=builtin.Elemwise.Mode.SIGN)
 
 
 def sum(

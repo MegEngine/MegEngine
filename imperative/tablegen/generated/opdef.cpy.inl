@@ -8770,16 +8770,16 @@ void _init_py_Dropout(py::module m) {
 
 template<> struct EnumTrait<Elemwise::Mode> {
     static constexpr const char *name = "Elemwise.Mode";
-    static constexpr std::underlying_type_t<Elemwise::Mode> max = 64 - 1;
+    static constexpr std::underlying_type_t<Elemwise::Mode> max = 86 - 1;
 };
 template<> PyTypeObject* EnumWrapper<Elemwise::Mode>::type = nullptr;
 
 template<> const char*
-EnumWrapper<Elemwise::Mode>::members[] = {"RELU", "ABS", "ACOS", "ASIN", "CEIL", "COS", "EXP", "EXPM1", "FLOOR", "LOG", "LOG1P", "NEGATE", "SIGMOID", "SIN", "TANH", "ABS_GRAD", "ADD", "FLOOR_DIV", "MAX", "MIN", "MOD", "MUL", "POW", "SIGMOID_GRAD", "SUB", "SWITCH_GT0", "TANH_GRAD", "TRUE_DIV", "LOG_SUM_EXP", "LT", "LEQ", "EQ", "SHL", "SHR", "COND_LEQ_MOV", "FUSE_MUL_ADD3", "FUSE_MUL_ADD4", "FUSE_ADD_RELU", "FUSE_ADD_SIGMOID", "FUSE_ADD_TANH", "FAST_TANH", "FAST_TANH_GRAD", "ROUND", "RMULH", "ATAN2", "ERF", "ERFINV", "ERFC", "ERFCINV", "H_SWISH", "H_SWISH_GRAD", "FUSE_ADD_H_SWISH", "NOT", "AND", "OR", "XOR", "SILU", "SILU_GRAD", "GELU", "GELU_GRAD", "COND_LT_MOV", "NEQ", "ISNAN", "ISINF"};
+EnumWrapper<Elemwise::Mode>::members[] = {"RELU", "ABS", "ACOS", "ASIN", "CEIL", "COS", "EXP", "EXPM1", "FLOOR", "LOG", "LOG1P", "NEGATE", "SIGMOID", "SIN", "TANH", "ABS_GRAD", "ADD", "FLOOR_DIV", "MAX", "MIN", "MOD", "MUL", "POW", "SIGMOID_GRAD", "SUB", "SWITCH_GT0", "TANH_GRAD", "TRUE_DIV", "LOG_SUM_EXP", "LT", "LEQ", "EQ", "SHL", "SHR", "COND_LEQ_MOV", "FUSE_MUL_ADD3", "FUSE_MUL_ADD4", "FUSE_ADD_RELU", "FUSE_ADD_SIGMOID", "FUSE_ADD_TANH", "FAST_TANH", "FAST_TANH_GRAD", "ROUND", "RMULH", "ATAN2", "ERF", "ERFINV", "ERFC", "ERFCINV", "H_SWISH", "H_SWISH_GRAD", "FUSE_ADD_H_SWISH", "NOT", "AND", "OR", "XOR", "SILU", "SILU_GRAD", "GELU", "GELU_GRAD", "COND_LT_MOV", "NEQ", "ISNAN", "ISINF", "SINH", "COSH", "ASINH", "ACOSH", "ATANH", "TAN", "ASINH_GRAD", "ACOSH_GRAD", "ATANH_GRAD", "PRELU", "CLIP", "PRELU_GRAD", "SOFTPLUS", "SOFTPLUS_GRAD", "RELU6", "RELU6_GRAD", "HSIGMOID", "HSIGMOID_GRAD", "LOGSIGMOID", "SQRT", "SQUARE", "SIGN"};
 
 template<> std::unordered_map<std::string, Elemwise::Mode>
-EnumWrapper<Elemwise::Mode>::mem2value = {{normalize_enum("RELU"), Elemwise::Mode::RELU}, {normalize_enum("ABS"), Elemwise::Mode::ABS}, {normalize_enum("ACOS"), Elemwise::Mode::ACOS}, {normalize_enum("ASIN"), Elemwise::Mode::ASIN}, {normalize_enum("CEIL"), Elemwise::Mode::CEIL}, {normalize_enum("COS"), Elemwise::Mode::COS}, {normalize_enum("EXP"), Elemwise::Mode::EXP}, {normalize_enum("EXPM1"), Elemwise::Mode::EXPM1}, {normalize_enum("FLOOR"), Elemwise::Mode::FLOOR}, {normalize_enum("LOG"), Elemwise::Mode::LOG}, {normalize_enum("LOG1P"), Elemwise::Mode::LOG1P}, {normalize_enum("NEGATE"), Elemwise::Mode::NEGATE}, {normalize_enum("SIGMOID"), Elemwise::Mode::SIGMOID}, {normalize_enum("SIN"), Elemwise::Mode::SIN}, {normalize_enum("TANH"), Elemwise::Mode::TANH}, {normalize_enum("ABS_GRAD"), Elemwise::Mode::ABS_GRAD}, {normalize_enum("ADD"), Elemwise::Mode::ADD}, {normalize_enum("FLOOR_DIV"), Elemwise::Mode::FLOOR_DIV}, {normalize_enum("MAX"), Elemwise::Mode::MAX}, {normalize_enum("MIN"), Elemwise::Mode::MIN}, {normalize_enum("MOD"), Elemwise::Mode::MOD}, {normalize_enum("MUL"), Elemwise::Mode::MUL}, {normalize_enum("POW"), Elemwise::Mode::POW}, {normalize_enum("SIGMOID_GRAD"), Elemwise::Mode::SIGMOID_GRAD}, {normalize_enum("SUB"), Elemwise::Mode::SUB}, {normalize_enum("SWITCH_GT0"), Elemwise::Mode::SWITCH_GT0}, {normalize_enum("TANH_GRAD"), Elemwise::Mode::TANH_GRAD}, {normalize_enum("TRUE_DIV"), Elemwise::Mode::TRUE_DIV}, {normalize_enum("LOG_SUM_EXP"), Elemwise::Mode::LOG_SUM_EXP}, {normalize_enum("LT"), Elemwise::Mode::LT}, {normalize_enum("LEQ"), Elemwise::Mode::LEQ}, {normalize_enum("EQ"), Elemwise::Mode::EQ}, {normalize_enum("SHL"), Elemwise::Mode::SHL}, {normalize_enum("SHR"), Elemwise::Mode::SHR}, {normalize_enum("COND_LEQ_MOV"), Elemwise::Mode::COND_LEQ_MOV}, {normalize_enum("FUSE_MUL_ADD3"), Elemwise::Mode::FUSE_MUL_ADD3}, {normalize_enum("FUSE_MUL_ADD4"), Elemwise::Mode::FUSE_MUL_ADD4}, {normalize_enum("FUSE_ADD_RELU"), Elemwise::Mode::FUSE_ADD_RELU}, {normalize_enum("FUSE_ADD_SIGMOID"), Elemwise::Mode::FUSE_ADD_SIGMOID}, {normalize_enum("FUSE_ADD_TANH"), Elemwise::Mode::FUSE_ADD_TANH}, {normalize_enum("FAST_TANH"), Elemwise::Mode::FAST_TANH}, {normalize_enum("FAST_TANH_GRAD"), Elemwise::Mode::FAST_TANH_GRAD}, {normalize_enum("ROUND"), Elemwise::Mode::ROUND}, {normalize_enum("RMULH"), Elemwise::Mode::RMULH}, {normalize_enum("ATAN2"), Elemwise::Mode::ATAN2}, {normalize_enum("ERF"), Elemwise::Mode::ERF}, {normalize_enum("ERFINV"), Elemwise::Mode::ERFINV}, {normalize_enum("ERFC"), Elemwise::Mode::ERFC}, {normalize_enum("ERFCINV"), Elemwise::Mode::ERFCINV}, {normalize_enum("H_SWISH"), Elemwise::Mode::H_SWISH}, {normalize_enum("H_SWISH_GRAD"), Elemwise::Mode::H_SWISH_GRAD}, {normalize_enum("FUSE_ADD_H_SWISH"), Elemwise::Mode::FUSE_ADD_H_SWISH}, {normalize_enum("NOT"), Elemwise::Mode::NOT}, {normalize_enum("AND"), Elemwise::Mode::AND}, {normalize_enum("OR"), Elemwise::Mode::OR}, {normalize_enum("XOR"), Elemwise::Mode::XOR}, {normalize_enum("SILU"), Elemwise::Mode::SILU}, {normalize_enum("SILU_GRAD"), Elemwise::Mode::SILU_GRAD}, {normalize_enum("GELU"), Elemwise::Mode::GELU}, {normalize_enum("GELU_GRAD"), Elemwise::Mode::GELU_GRAD}, {normalize_enum("COND_LT_MOV"), Elemwise::Mode::COND_LT_MOV}, {normalize_enum("NEQ"), Elemwise::Mode::NEQ}, {normalize_enum("ISNAN"), Elemwise::Mode::ISNAN}, {normalize_enum("ISINF"), Elemwise::Mode::ISINF}};
-template<> PyObject* EnumWrapper<Elemwise::Mode>::pyobj_insts[64] = {nullptr};
+EnumWrapper<Elemwise::Mode>::mem2value = {{normalize_enum("RELU"), Elemwise::Mode::RELU}, {normalize_enum("ABS"), Elemwise::Mode::ABS}, {normalize_enum("ACOS"), Elemwise::Mode::ACOS}, {normalize_enum("ASIN"), Elemwise::Mode::ASIN}, {normalize_enum("CEIL"), Elemwise::Mode::CEIL}, {normalize_enum("COS"), Elemwise::Mode::COS}, {normalize_enum("EXP"), Elemwise::Mode::EXP}, {normalize_enum("EXPM1"), Elemwise::Mode::EXPM1}, {normalize_enum("FLOOR"), Elemwise::Mode::FLOOR}, {normalize_enum("LOG"), Elemwise::Mode::LOG}, {normalize_enum("LOG1P"), Elemwise::Mode::LOG1P}, {normalize_enum("NEGATE"), Elemwise::Mode::NEGATE}, {normalize_enum("SIGMOID"), Elemwise::Mode::SIGMOID}, {normalize_enum("SIN"), Elemwise::Mode::SIN}, {normalize_enum("TANH"), Elemwise::Mode::TANH}, {normalize_enum("ABS_GRAD"), Elemwise::Mode::ABS_GRAD}, {normalize_enum("ADD"), Elemwise::Mode::ADD}, {normalize_enum("FLOOR_DIV"), Elemwise::Mode::FLOOR_DIV}, {normalize_enum("MAX"), Elemwise::Mode::MAX}, {normalize_enum("MIN"), Elemwise::Mode::MIN}, {normalize_enum("MOD"), Elemwise::Mode::MOD}, {normalize_enum("MUL"), Elemwise::Mode::MUL}, {normalize_enum("POW"), Elemwise::Mode::POW}, {normalize_enum("SIGMOID_GRAD"), Elemwise::Mode::SIGMOID_GRAD}, {normalize_enum("SUB"), Elemwise::Mode::SUB}, {normalize_enum("SWITCH_GT0"), Elemwise::Mode::SWITCH_GT0}, {normalize_enum("TANH_GRAD"), Elemwise::Mode::TANH_GRAD}, {normalize_enum("TRUE_DIV"), Elemwise::Mode::TRUE_DIV}, {normalize_enum("LOG_SUM_EXP"), Elemwise::Mode::LOG_SUM_EXP}, {normalize_enum("LT"), Elemwise::Mode::LT}, {normalize_enum("LEQ"), Elemwise::Mode::LEQ}, {normalize_enum("EQ"), Elemwise::Mode::EQ}, {normalize_enum("SHL"), Elemwise::Mode::SHL}, {normalize_enum("SHR"), Elemwise::Mode::SHR}, {normalize_enum("COND_LEQ_MOV"), Elemwise::Mode::COND_LEQ_MOV}, {normalize_enum("FUSE_MUL_ADD3"), Elemwise::Mode::FUSE_MUL_ADD3}, {normalize_enum("FUSE_MUL_ADD4"), Elemwise::Mode::FUSE_MUL_ADD4}, {normalize_enum("FUSE_ADD_RELU"), Elemwise::Mode::FUSE_ADD_RELU}, {normalize_enum("FUSE_ADD_SIGMOID"), Elemwise::Mode::FUSE_ADD_SIGMOID}, {normalize_enum("FUSE_ADD_TANH"), Elemwise::Mode::FUSE_ADD_TANH}, {normalize_enum("FAST_TANH"), Elemwise::Mode::FAST_TANH}, {normalize_enum("FAST_TANH_GRAD"), Elemwise::Mode::FAST_TANH_GRAD}, {normalize_enum("ROUND"), Elemwise::Mode::ROUND}, {normalize_enum("RMULH"), Elemwise::Mode::RMULH}, {normalize_enum("ATAN2"), Elemwise::Mode::ATAN2}, {normalize_enum("ERF"), Elemwise::Mode::ERF}, {normalize_enum("ERFINV"), Elemwise::Mode::ERFINV}, {normalize_enum("ERFC"), Elemwise::Mode::ERFC}, {normalize_enum("ERFCINV"), Elemwise::Mode::ERFCINV}, {normalize_enum("H_SWISH"), Elemwise::Mode::H_SWISH}, {normalize_enum("H_SWISH_GRAD"), Elemwise::Mode::H_SWISH_GRAD}, {normalize_enum("FUSE_ADD_H_SWISH"), Elemwise::Mode::FUSE_ADD_H_SWISH}, {normalize_enum("NOT"), Elemwise::Mode::NOT}, {normalize_enum("AND"), Elemwise::Mode::AND}, {normalize_enum("OR"), Elemwise::Mode::OR}, {normalize_enum("XOR"), Elemwise::Mode::XOR}, {normalize_enum("SILU"), Elemwise::Mode::SILU}, {normalize_enum("SILU_GRAD"), Elemwise::Mode::SILU_GRAD}, {normalize_enum("GELU"), Elemwise::Mode::GELU}, {normalize_enum("GELU_GRAD"), Elemwise::Mode::GELU_GRAD}, {normalize_enum("COND_LT_MOV"), Elemwise::Mode::COND_LT_MOV}, {normalize_enum("NEQ"), Elemwise::Mode::NEQ}, {normalize_enum("ISNAN"), Elemwise::Mode::ISNAN}, {normalize_enum("ISINF"), Elemwise::Mode::ISINF}, {normalize_enum("SINH"), Elemwise::Mode::SINH}, {normalize_enum("COSH"), Elemwise::Mode::COSH}, {normalize_enum("ASINH"), Elemwise::Mode::ASINH}, {normalize_enum("ACOSH"), Elemwise::Mode::ACOSH}, {normalize_enum("ATANH"), Elemwise::Mode::ATANH}, {normalize_enum("TAN"), Elemwise::Mode::TAN}, {normalize_enum("ASINH_GRAD"), Elemwise::Mode::ASINH_GRAD}, {normalize_enum("ACOSH_GRAD"), Elemwise::Mode::ACOSH_GRAD}, {normalize_enum("ATANH_GRAD"), Elemwise::Mode::ATANH_GRAD}, {normalize_enum("PRELU"), Elemwise::Mode::PRELU}, {normalize_enum("CLIP"), Elemwise::Mode::CLIP}, {normalize_enum("PRELU_GRAD"), Elemwise::Mode::PRELU_GRAD}, {normalize_enum("SOFTPLUS"), Elemwise::Mode::SOFTPLUS}, {normalize_enum("SOFTPLUS_GRAD"), Elemwise::Mode::SOFTPLUS_GRAD}, {normalize_enum("RELU6"), Elemwise::Mode::RELU6}, {normalize_enum("RELU6_GRAD"), Elemwise::Mode::RELU6_GRAD}, {normalize_enum("HSIGMOID"), Elemwise::Mode::HSIGMOID}, {normalize_enum("HSIGMOID_GRAD"), Elemwise::Mode::HSIGMOID_GRAD}, {normalize_enum("LOGSIGMOID"), Elemwise::Mode::LOGSIGMOID}, {normalize_enum("SQRT"), Elemwise::Mode::SQRT}, {normalize_enum("SQUARE"), Elemwise::Mode::SQUARE}, {normalize_enum("SIGN"), Elemwise::Mode::SIGN}};
+template<> PyObject* EnumWrapper<Elemwise::Mode>::pyobj_insts[86] = {nullptr};
 
 void _init_py_Elemwise_Mode(PyTypeObject& py_type) {
     auto& e_type = EnumWrapper<Elemwise::Mode>::type;
@@ -9147,6 +9147,116 @@ void _init_py_Elemwise_Mode(PyTypeObject& py_type) {
     reinterpret_cast<EnumWrapper<Elemwise::Mode>*>(inst)->value = Elemwise::Mode::ISINF;
     mgb_assert(PyDict_SetItemString(e_type->tp_dict, "ISINF", inst) >= 0);
     EnumWrapper<Elemwise::Mode>::pyobj_insts[63] = inst;
+}{
+    PyObject* inst = e_type->tp_alloc(e_type, 0);
+    reinterpret_cast<EnumWrapper<Elemwise::Mode>*>(inst)->value = Elemwise::Mode::SINH;
+    mgb_assert(PyDict_SetItemString(e_type->tp_dict, "SINH", inst) >= 0);
+    EnumWrapper<Elemwise::Mode>::pyobj_insts[64] = inst;
+}{
+    PyObject* inst = e_type->tp_alloc(e_type, 0);
+    reinterpret_cast<EnumWrapper<Elemwise::Mode>*>(inst)->value = Elemwise::Mode::COSH;
+    mgb_assert(PyDict_SetItemString(e_type->tp_dict, "COSH", inst) >= 0);
+    EnumWrapper<Elemwise::Mode>::pyobj_insts[65] = inst;
+}{
+    PyObject* inst = e_type->tp_alloc(e_type, 0);
+    reinterpret_cast<EnumWrapper<Elemwise::Mode>*>(inst)->value = Elemwise::Mode::ASINH;
+    mgb_assert(PyDict_SetItemString(e_type->tp_dict, "ASINH", inst) >= 0);
+    EnumWrapper<Elemwise::Mode>::pyobj_insts[66] = inst;
+}{
+    PyObject* inst = e_type->tp_alloc(e_type, 0);
+    reinterpret_cast<EnumWrapper<Elemwise::Mode>*>(inst)->value = Elemwise::Mode::ACOSH;
+    mgb_assert(PyDict_SetItemString(e_type->tp_dict, "ACOSH", inst) >= 0);
+    EnumWrapper<Elemwise::Mode>::pyobj_insts[67] = inst;
+}{
+    PyObject* inst = e_type->tp_alloc(e_type, 0);
+    reinterpret_cast<EnumWrapper<Elemwise::Mode>*>(inst)->value = Elemwise::Mode::ATANH;
+    mgb_assert(PyDict_SetItemString(e_type->tp_dict, "ATANH", inst) >= 0);
+    EnumWrapper<Elemwise::Mode>::pyobj_insts[68] = inst;
+}{
+    PyObject* inst = e_type->tp_alloc(e_type, 0);
+    reinterpret_cast<EnumWrapper<Elemwise::Mode>*>(inst)->value = Elemwise::Mode::TAN;
+    mgb_assert(PyDict_SetItemString(e_type->tp_dict, "TAN", inst) >= 0);
+    EnumWrapper<Elemwise::Mode>::pyobj_insts[69] = inst;
+}{
+    PyObject* inst = e_type->tp_alloc(e_type, 0);
+    reinterpret_cast<EnumWrapper<Elemwise::Mode>*>(inst)->value = Elemwise::Mode::ASINH_GRAD;
+    mgb_assert(PyDict_SetItemString(e_type->tp_dict, "ASINH_GRAD", inst) >= 0);
+    EnumWrapper<Elemwise::Mode>::pyobj_insts[70] = inst;
+}{
+    PyObject* inst = e_type->tp_alloc(e_type, 0);
+    reinterpret_cast<EnumWrapper<Elemwise::Mode>*>(inst)->value = Elemwise::Mode::ACOSH_GRAD;
+    mgb_assert(PyDict_SetItemString(e_type->tp_dict, "ACOSH_GRAD", inst) >= 0);
+    EnumWrapper<Elemwise::Mode>::pyobj_insts[71] = inst;
+}{
+    PyObject* inst = e_type->tp_alloc(e_type, 0);
+    reinterpret_cast<EnumWrapper<Elemwise::Mode>*>(inst)->value = Elemwise::Mode::ATANH_GRAD;
+    mgb_assert(PyDict_SetItemString(e_type->tp_dict, "ATANH_GRAD", inst) >= 0);
+    EnumWrapper<Elemwise::Mode>::pyobj_insts[72] = inst;
+}{
+    PyObject* inst = e_type->tp_alloc(e_type, 0);
+    reinterpret_cast<EnumWrapper<Elemwise::Mode>*>(inst)->value = Elemwise::Mode::PRELU;
+    mgb_assert(PyDict_SetItemString(e_type->tp_dict, "PRELU", inst) >= 0);
+    EnumWrapper<Elemwise::Mode>::pyobj_insts[73] = inst;
+}{
+    PyObject* inst = e_type->tp_alloc(e_type, 0);
+    reinterpret_cast<EnumWrapper<Elemwise::Mode>*>(inst)->value = Elemwise::Mode::CLIP;
+    mgb_assert(PyDict_SetItemString(e_type->tp_dict, "CLIP", inst) >= 0);
+    EnumWrapper<Elemwise::Mode>::pyobj_insts[74] = inst;
+}{
+    PyObject* inst = e_type->tp_alloc(e_type, 0);
+    reinterpret_cast<EnumWrapper<Elemwise::Mode>*>(inst)->value = Elemwise::Mode::PRELU_GRAD;
+    mgb_assert(PyDict_SetItemString(e_type->tp_dict, "PRELU_GRAD", inst) >= 0);
+    EnumWrapper<Elemwise::Mode>::pyobj_insts[75] = inst;
+}{
+    PyObject* inst = e_type->tp_alloc(e_type, 0);
+    reinterpret_cast<EnumWrapper<Elemwise::Mode>*>(inst)->value = Elemwise::Mode::SOFTPLUS;
+    mgb_assert(PyDict_SetItemString(e_type->tp_dict, "SOFTPLUS", inst) >= 0);
+    EnumWrapper<Elemwise::Mode>::pyobj_insts[76] = inst;
+}{
+    PyObject* inst = e_type->tp_alloc(e_type, 0);
+    reinterpret_cast<EnumWrapper<Elemwise::Mode>*>(inst)->value = Elemwise::Mode::SOFTPLUS_GRAD;
+    mgb_assert(PyDict_SetItemString(e_type->tp_dict, "SOFTPLUS_GRAD", inst) >= 0);
+    EnumWrapper<Elemwise::Mode>::pyobj_insts[77] = inst;
+}{
+    PyObject* inst = e_type->tp_alloc(e_type, 0);
+    reinterpret_cast<EnumWrapper<Elemwise::Mode>*>(inst)->value = Elemwise::Mode::RELU6;
+    mgb_assert(PyDict_SetItemString(e_type->tp_dict, "RELU6", inst) >= 0);
+    EnumWrapper<Elemwise::Mode>::pyobj_insts[78] = inst;
+}{
+    PyObject* inst = e_type->tp_alloc(e_type, 0);
+    reinterpret_cast<EnumWrapper<Elemwise::Mode>*>(inst)->value = Elemwise::Mode::RELU6_GRAD;
+    mgb_assert(PyDict_SetItemString(e_type->tp_dict, "RELU6_GRAD", inst) >= 0);
+    EnumWrapper<Elemwise::Mode>::pyobj_insts[79] = inst;
+}{
+    PyObject* inst = e_type->tp_alloc(e_type, 0);
+    reinterpret_cast<EnumWrapper<Elemwise::Mode>*>(inst)->value = Elemwise::Mode::HSIGMOID;
+    mgb_assert(PyDict_SetItemString(e_type->tp_dict, "HSIGMOID", inst) >= 0);
+    EnumWrapper<Elemwise::Mode>::pyobj_insts[80] = inst;
+}{
+    PyObject* inst = e_type->tp_alloc(e_type, 0);
+    reinterpret_cast<EnumWrapper<Elemwise::Mode>*>(inst)->value = Elemwise::Mode::HSIGMOID_GRAD;
+    mgb_assert(PyDict_SetItemString(e_type->tp_dict, "HSIGMOID_GRAD", inst) >= 0);
+    EnumWrapper<Elemwise::Mode>::pyobj_insts[81] = inst;
+}{
+    PyObject* inst = e_type->tp_alloc(e_type, 0);
+    reinterpret_cast<EnumWrapper<Elemwise::Mode>*>(inst)->value = Elemwise::Mode::LOGSIGMOID;
+    mgb_assert(PyDict_SetItemString(e_type->tp_dict, "LOGSIGMOID", inst) >= 0);
+    EnumWrapper<Elemwise::Mode>::pyobj_insts[82] = inst;
+}{
+    PyObject* inst = e_type->tp_alloc(e_type, 0);
+    reinterpret_cast<EnumWrapper<Elemwise::Mode>*>(inst)->value = Elemwise::Mode::SQRT;
+    mgb_assert(PyDict_SetItemString(e_type->tp_dict, "SQRT", inst) >= 0);
+    EnumWrapper<Elemwise::Mode>::pyobj_insts[83] = inst;
+}{
+    PyObject* inst = e_type->tp_alloc(e_type, 0);
+    reinterpret_cast<EnumWrapper<Elemwise::Mode>*>(inst)->value = Elemwise::Mode::SQUARE;
+    mgb_assert(PyDict_SetItemString(e_type->tp_dict, "SQUARE", inst) >= 0);
+    EnumWrapper<Elemwise::Mode>::pyobj_insts[84] = inst;
+}{
+    PyObject* inst = e_type->tp_alloc(e_type, 0);
+    reinterpret_cast<EnumWrapper<Elemwise::Mode>*>(inst)->value = Elemwise::Mode::SIGN;
+    mgb_assert(PyDict_SetItemString(e_type->tp_dict, "SIGN", inst) >= 0);
+    EnumWrapper<Elemwise::Mode>::pyobj_insts[85] = inst;
 }
     Py_INCREF(e_type);
     mgb_assert(PyDict_SetItemString(

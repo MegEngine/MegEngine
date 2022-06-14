@@ -54,9 +54,13 @@ public:
                 auto new_opr = (it->second)(opr, new_inp);
 
                 auto &&origin_out = opr->output(), &&cur_out = new_opr->output();
-                for (size_t i = 0; i < std::min(origin_out.size(), cur_out.size());
-                     i++) {
-                    rewriter.replace_var(origin_out[i], cur_out[i], nullptr);
+                if (opr == new_opr) {
+                    rewriter.auto_replace_outputs(opr);
+                } else {
+                    for (size_t i = 0; i < std::min(origin_out.size(), cur_out.size());
+                         i++) {
+                        rewriter.replace_var(origin_out[i], cur_out[i], nullptr);
+                    }
                 }
             } else {
                 rewriter.auto_replace_outputs(opr);

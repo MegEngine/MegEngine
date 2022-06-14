@@ -119,6 +119,8 @@ MGB_IMPL_OPR_GRAD(ArgsortForward) {
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(ArgsortBackward);
 MEGDNN_OPR_INIT3(ArgsortBackward, "argsort_bwd", 2, false)
 
+/* ================= Cumprod =================  */
+
 /* ================= Cumsum =================  */
 
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(Cumsum);

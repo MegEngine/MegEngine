@@ -224,6 +224,7 @@ DEF_IMPL(void)::do_run(const ShapeInpArray& shapes, const RunOptions& opt) {
         m_inputs_generator[i](*m_inputs[i]);
         mgb_assert(m_inputs[i]->shape().eq_shape(shapes[i]));
     }
+
     if (MGB_GETENV("MGB_AUTOCHECK_DUMP_INPUT")) {
         static size_t run_id;
         auto fname = output_file(ssprintf("autocheck-inp-%zu.bin", run_id++));

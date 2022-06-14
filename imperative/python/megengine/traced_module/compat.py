@@ -207,3 +207,20 @@ def quantized_convbn2d_module_loader(expr):
     module = expr.inputs[0].owner
     if not hasattr(module, "padding_mode"):
         module.padding_mode = "zeros"
+
+
+@register_functional_loader(("megengine.functional.elemwise", "square"))
+def square_func_loader(expr):
+    import pkg_resources as pkg
+
+    if not hasattr(expr, "version") or pkg.parse_version(
+        expr.version
+    ) <= pkg.parse_version("1.11.1"):
+        if expr.inputs[0].dtype != np.float32:
+            orig_oup = expr.outputs[0]
+            oup = TensorNode(expr, shape=orig_oup.shape, dtype=expr.inputs[0].dtype,)
+            expr.return_val = (oup,)
+            astype_expr = CallMethod(oup, "astype")
+            astype_expr.set_args_kwargs(oup, "float32")
+            orig_oup.expr = astype_expr
+            astype_expr.return_val = (orig_oup,)

@@ -1203,7 +1203,6 @@ def cumsum(inp: Tensor, axis: int):
          [ 4  9 15]], dtype=int32, device=xpux:0)
 
     """
-    assert isinstance(inp, Tensor), "input of cumsum must be type of Tensor"
     op = builtin.Cumsum(axis=axis, exclusive=False, reverse=False)
     return apply(op, inp)[0]
 
