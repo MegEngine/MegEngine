@@ -228,6 +228,7 @@ INST(Mode::SHL);
 INST(Mode::SHR);
 INST(Mode::FUSE_ADD_RELU);
 INST(Mode::RMULH);
+INST(Mode::PRELU);
 #undef INST
 
 #define INST(mode) \
@@ -258,6 +259,13 @@ INST(Mode::H_SWISH_GRAD);
 INST(Mode::FUSE_ADD_H_SWISH);
 INST(Mode::SILU_GRAD);
 INST(Mode::GELU_GRAD);
+INST(Mode::PRELU);
+INST(Mode::ASINH_GRAD);
+INST(Mode::ACOSH_GRAD);
+INST(Mode::ATANH_GRAD);
+INST(Mode::SOFTPLUS_GRAD);
+INST(Mode::RELU6_GRAD);
+INST(Mode::HSIGMOID_GRAD);
 #undef INST
 }  // namespace fallback
 }  // namespace megdnn

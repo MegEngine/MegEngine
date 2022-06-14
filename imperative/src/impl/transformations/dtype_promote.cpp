@@ -116,12 +116,17 @@ ValueRefList elemwise_rule(const OpDef& op, Span<ValueRef> inputs) {
     }
 
     static std::unordered_set<Elemwise::Mode> cast_case1 = {
-            Elemwise::Mode::TRUE_DIV, Elemwise::Mode::EXP,
-            Elemwise::Mode::POW,      Elemwise::Mode::LOG,
-            Elemwise::Mode::EXPM1,    Elemwise::Mode::LOG1P,
-            Elemwise::Mode::ACOS,     Elemwise::Mode::ASIN,
-            Elemwise::Mode::ATAN2,    Elemwise::Mode::COS,
-            Elemwise::Mode::SIN,      Elemwise::Mode::LOG_SUM_EXP,
+            Elemwise::Mode::TRUE_DIV,   Elemwise::Mode::EXP,
+            Elemwise::Mode::POW,        Elemwise::Mode::LOG,
+            Elemwise::Mode::EXPM1,      Elemwise::Mode::LOG1P,
+            Elemwise::Mode::ACOS,       Elemwise::Mode::ASIN,
+            Elemwise::Mode::ATAN2,      Elemwise::Mode::COS,
+            Elemwise::Mode::SIN,        Elemwise::Mode::LOG_SUM_EXP,
+            Elemwise::Mode::TAN,        Elemwise::Mode::ASINH,
+            Elemwise::Mode::ACOSH,      Elemwise::Mode::ATANH,
+            Elemwise::Mode::SINH,       Elemwise::Mode::COSH,
+            Elemwise::Mode::SOFTPLUS,   Elemwise::Mode::HSIGMOID,
+            Elemwise::Mode::LOGSIGMOID, Elemwise::Mode::SQRT,
     };
 
     static std::unordered_set<Elemwise::Mode> cast_case2 = {

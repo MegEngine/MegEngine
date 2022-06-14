@@ -753,37 +753,9 @@ def sigmoid(x):
     return _elwise(x, mode=Elemwise.Mode.SIGMOID)
 
 
-@lru_cache(maxsize=None)
-def _get_hsigmoid_op(dtype=None, device=None):
-    @subgraph_fn(
-        "Hsigmoid",
-        dtype=dtype,
-        device=device,
-        nr_inputs=1,
-        jit_fusion=True,
-        custom_grad=True,
-    )
-    def hsigmoid(inputs, f, c):
-        (inp,) = inputs[0:1]
-        inp = f("+", inp, c(3))
-        max_0 = f("max", inp, c(0))
-        min_6 = f("min", max_0, c(6))
-        oup = f("/", min_6, c(6))
-        (oup_grad,) = yield (oup,)
-        inp_grad = f("/", oup_grad, c(6))
-        inp_grad = f("cond_leq_mov", max_0, c(6), inp_grad)
-        inp_grad = f("cond_leq_mov", c(0), inp, inp_grad)
-        yield (inp_grad,)
-
-    return hsigmoid
-
-
 def hsigmoid(x):
     r"""Element-wise `relu6(x + 3) / 6`."""
-    hsigmoid = _get_hsigmoid_op(x.dtype, x.device)
-    (x,) = hsigmoid(x)
-    return x
-    # return relu6(x + 3) / 6
+    return _elwise(x, mode=Elemwise.Mode.HSIGMOID)
 
 
 def relu(x):
@@ -791,95 +763,14 @@ def relu(x):
     return _elwise(x, mode=Elemwise.Mode.RELU)
 
 
-@lru_cache(maxsize=None)
-def _get_relu6_op(dtype=None, device=None):
-    @subgraph_fn(
-        "ReLU6",
-        dtype=dtype,
-        device=device,
-        nr_inputs=1,
-        jit_fusion=True,
-        custom_grad=True,
-    )
-    def relu6(inputs, f, c):
-        (inp,) = inputs[0:1]
-        max_0 = f("max", inp, c(0))
-        min_6 = f("min", max_0, c(6))
-        oup = min_6
-        (oup_grad,) = yield (oup,)
-        inp_grad = f("cond_leq_mov", max_0, c(6), oup_grad)
-        inp_grad = f("cond_leq_mov", c(0), inp, inp_grad)
-        yield (inp_grad,)
-
-    return relu6
-
-
 def relu6(x):
     r"""Element-wise `min(max(x, 0), 6)`."""
-    relu6 = _get_relu6_op(x.dtype, x.device)
-    (x,) = relu6(x)
-    return x
+    return _elwise(x, mode=Elemwise.Mode.RELU6)
 
 
-@lru_cache(maxsize=None)
-def _get_prelu_op(dtype=None, device=None):
-    @subgraph_fn(
-        "PReLU",
-        dtype=dtype,
-        device=device,
-        nr_inputs=2,
-        jit_fusion=True,
-        custom_grad=True,
-    )
-    def prelu(inputs, f, c):
-        (inp, weight) = inputs[0:2]
-        max_0 = f("max", inp, c(0))
-        min_0 = f("min", inp, c(0))
-        oup = f("fma3", min_0, weight, max_0)
-        (oup_grad,) = yield (oup,)
-        inp_grad_0 = f("cond_leq_mov", c(0), inp, oup_grad)
-        inp_grad_1 = f("*", oup_grad, weight)
-        inp_grad_1 = f("cond_leq_mov", inp, c(0), inp_grad_1)
-        inp_grad = f("+", inp_grad_0, inp_grad_1)
-        weight_grad = f("*", oup_grad, min_0)
-        yield (inp_grad, weight_grad)
-
-    return prelu
-
-
-def prelu(inp: Tensor, weight: Tensor) -> Tensor:
-    r"""Element-wise PReLU function.
-
-    Refer to :class:`~.PReLU` for more information.
-    """
-    prelu = _get_prelu_op(dtype=inp.dtype, device=inp.device)
-    (oup,) = prelu(inp, broadcast_to(weight, inp.shape))
-    return oup
-
-
-@lru_cache(maxsize=None)
-def _get_leaky_relu_op(negative_slope, *, dtype=None, device=None):
-    @subgraph_fn(
-        "LeakyReLU",
-        dtype=dtype,
-        device=device,
-        nr_inputs=1,
-        jit_fusion=True,
-        custom_grad=True,
-    )
-    def leakyReLU(inputs, f, c):
-        (inp,) = inputs[0:1]
-        max_0 = f("max", inp, c(0))
-        min_0 = f("min", inp, c(0))
-        oup = f("+", max_0, f("*", min_0, c(negative_slope)))
-        (oup_grad,) = yield (oup,)
-        inp_grad_0 = f("cond_leq_mov", c(0), inp, oup_grad)
-        inp_grad_1 = f("*", oup_grad, c(negative_slope))
-        inp_grad_1 = f("cond_leq_mov", inp, c(0), inp_grad_1)
-        inp_grad = f("+", inp_grad_0, inp_grad_1)
-        yield (inp_grad,)
-
-    return leakyReLU
+def prelu(x, y):
+    r"""Element-wise `max(x, 0) + y * min(x, 0)`."""
+    return _elwise(x, y, mode=Elemwise.Mode.PRELU)
 
 
 def leaky_relu(inp: Tensor, negative_slope: float = 0.01) -> Tensor:
@@ -887,9 +778,7 @@ def leaky_relu(inp: Tensor, negative_slope: float = 0.01) -> Tensor:
 
     Refer to :class:`~.LeakyReLU` for more information.
     """
-    leakyReLU = _get_leaky_relu_op(negative_slope, dtype=inp.dtype, device=inp.device)
-    (oup,) = leakyReLU(inp)
-    return oup
+    return _elwise(inp, negative_slope, mode=Elemwise.Mode.PRELU)
 
 
 def silu(x):
@@ -906,36 +795,6 @@ def gelu(x):
     where :math:`\Phi(x)` is the Cumulative Distribution Function for Gaussian Distribution.
     """
     return _elwise(x, mode=Elemwise.Mode.GELU)
-
-
-@lru_cache(maxsize=None)
-def _get_softplus_op(dtype=None, device=None):
-    @subgraph_fn(
-        "Softplus",
-        dtype=dtype,
-        device=device,
-        nr_inputs=1,
-        jit_fusion=True,
-        custom_grad=True,
-    )
-    def softplus(inputs, f, c):
-        (inp,) = inputs[0:1]
-        neg_abs = f("-", f("abs", inp))
-        exp = f("exp", neg_abs)
-        oup0 = f("log1p", exp)
-        oup1 = f("relu", inp)
-        oup = f("+", oup0, oup1)
-        (oup_grad,) = yield (oup,)
-        inp_grad_0 = f("switch_gt0", oup1, oup_grad)
-        inp_grad_1 = oup_grad
-        inp_grad_1 = f("/", oup_grad, f("+", exp, c(1)))
-        inp_grad_1 = f("*", inp_grad_1, exp)
-        inp_grad_1 = f("-", inp_grad_1)
-        inp_grad_1 = f("abs_grad", inp, inp_grad_1)
-        inp_grad = f("+", inp_grad_0, inp_grad_1)
-        yield (inp_grad,)
-
-    return softplus
 
 
 def softplus(inp: Tensor) -> Tensor:
@@ -960,9 +819,7 @@ def softplus(inp: Tensor) -> Tensor:
         >>> y.numpy().round(decimals=4)
         array([0.0486, 0.1269, 0.3133, 0.6931, 1.3133, 2.1269], dtype=float32)
     """
-    softplus = _get_softplus_op(inp.dtype, inp.device)
-    (oup,) = softplus(inp)
-    return oup
+    return _elwise(inp, mode=Elemwise.Mode.SOFTPLUS)
 
 
 def logsoftmax(inp: Tensor, axis: Union[int, Sequence[int]]) -> Tensor:
@@ -991,39 +848,6 @@ def logsoftmax(inp: Tensor, axis: Union[int, Sequence[int]]) -> Tensor:
     return inp - logsumexp(inp, axis, keepdims=True)
 
 
-@lru_cache(maxsize=None)
-def _get_logsigmoid_op(dtype=None, device=None):
-    @subgraph_fn(
-        "LogSigmoid",
-        dtype=dtype,
-        device=device,
-        nr_inputs=1,
-        jit_fusion=True,
-        custom_grad=True,
-    )
-    def logsigmoid(inputs, f, c):
-        (inp,) = inputs[0:1]
-        neg_abs = f("-", f("abs", inp))
-        exp = f("exp", neg_abs)
-        oup0 = f("log1p", exp)
-        oup1 = f("relu", f("-", inp))
-        oup = f("+", oup0, oup1)
-        oup = f("-", oup)
-        (oup_grad,) = yield (oup,)
-        oup_grad = f("-", oup_grad)
-        inp_grad_0 = f("switch_gt0", oup1, oup_grad)
-        inp_grad_0 = f("-", inp_grad_0)
-        inp_grad_1 = oup_grad
-        inp_grad_1 = f("/", inp_grad_1, f("+", exp, c(1)))
-        inp_grad_1 = f("*", inp_grad_1, exp)
-        inp_grad_1 = f("-", inp_grad_1)
-        inp_grad_1 = f("abs_grad", inp, inp_grad_1)
-        inp_grad = f("+", inp_grad_0, inp_grad_1)
-        yield (inp_grad,)
-
-    return logsigmoid
-
-
 def logsigmoid(inp: Tensor) -> Tensor:
     r"""Applies the element-wise function:
 
@@ -1041,9 +865,7 @@ def logsigmoid(inp: Tensor) -> Tensor:
         array([-5.0067, -4.0182, -3.0486, -2.1269, -1.3133, -0.6931, -0.3133,
                -0.1269, -0.0486, -0.0181], dtype=float32)
     """
-    logsigmoid = _get_logsigmoid_op(inp.dtype, inp.device)
-    (oup,) = logsigmoid(inp)
-    return oup
+    return _elwise(inp, mode=Elemwise.Mode.LOGSIGMOID)
 
 
 def logsumexp(

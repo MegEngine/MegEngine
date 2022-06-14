@@ -349,6 +349,99 @@ struct CheckerConfig<H_SWISH> : public CheckerConfig<void> {};
 template <>
 struct CheckerConfig<H_SWISH_GRAD> : public NoGradCheckerConfig {};
 
+template <>
+struct CheckerConfig<TAN> : public NoGradCheckerConfig {
+    template <typename ctype>
+    static InputGenerator get_inp_gen(size_t) {
+        return get_inp_gen_f32_range<ctype>(-1.2, 1.2);
+    }
+};
+template <>
+struct CheckerConfig<SINH> : public CheckerConfig<void> {
+    template <typename ctype>
+    static InputGenerator get_inp_gen(size_t) {
+        return get_inp_gen_f32_range<ctype>(-5, 5);
+    }
+    template <class Opt>
+    static void update_opt(Opt& opt) {
+        opt.numdiff_eps = 1e-2;
+        opt.numdiff_max_err = 0.1;
+    }
+};
+template <>
+struct CheckerConfig<COSH> : public CheckerConfig<SINH> {};
+template <>
+struct CheckerConfig<ASINH> : public CheckerConfig<void> {
+    template <class Opt>
+    static void update_opt(Opt& opt) {
+        opt.numdiff_eps = 1e-2;
+        opt.numdiff_max_err = 0.1;
+    }
+};
+template <>
+struct CheckerConfig<ACOSH> : public CheckerConfig<ASINH> {
+    template <typename ctype>
+    static InputGenerator get_inp_gen(size_t) {
+        return get_inp_gen_f32_range<ctype>(1.05, 5);
+    }
+};
+template <>
+struct CheckerConfig<ATANH> : public CheckerConfig<ASINH> {
+    template <typename ctype>
+    static InputGenerator get_inp_gen(size_t) {
+        return get_inp_gen_f32_range<ctype>(-0.95, 0.95);
+    }
+};
+template <>
+struct CheckerConfig<SOFTPLUS> : public CheckerConfig<void> {};
+template <>
+struct CheckerConfig<LOGSIGMOID> : public CheckerConfig<void> {};
+template <>
+struct CheckerConfig<SQUARE> : public CheckerConfig<void> {};
+template <>
+struct CheckerConfig<SQRT> : public CheckerConfig<void> {
+    template <typename ctype>
+    static InputGenerator get_inp_gen(size_t) {
+        return get_inp_gen_f32_range<ctype>(0.05, 5);
+    }
+    template <class Opt>
+    static void update_opt(Opt& opt) {
+        opt.numdiff_eps = 1e-2;
+        opt.numdiff_max_err = 0.1;
+    }
+};
+template <>
+struct CheckerConfig<RELU6> : public CheckerConfig<void> {
+    template <typename ctype, class Checker>
+    static void do_update_checker(Checker& checker) {
+        auto icoord = [](const typename Checker::NumInpArray& inp) {
+            auto p0 = inp[0]->template ptr<ctype>();
+            for (size_t i = 0, it = inp[0]->shape().total_nr_elems(); i < it; ++i) {
+                if (std::abs(p0[i]) < 1) {
+                    p0[i] += 2;
+                } else if (std::abs(p0[i] - 6) < 1) {
+                    p0[i] += 2;
+                }
+            }
+        };
+        checker.set_input_coordinator(icoord);
+    }
+    template <class Checker>
+    static void update_checker(Checker& checker) {
+        using ctype = typename Checker::ctype;
+        return do_update_checker<ctype>(checker);
+    }
+};
+template <>
+struct CheckerConfig<HSIGMOID> : public CheckerConfig<void> {
+    template <typename ctype>
+    static InputGenerator get_inp_gen(size_t) {
+        return get_inp_gen_f32_range<ctype>(-2.95, 2.95);
+    }
+};
+template <>
+struct CheckerConfig<SIGN> : public NoZeroCheckerConfig<0> {};
+
 /* ======================= binary config ======================= */
 template <bool for_mod>
 struct BinaryInputMinGap : public CheckerConfig<void> {
@@ -567,13 +660,85 @@ template <>
 struct CheckerConfig<SILU_GRAD> : public NoGradCheckerConfig {};
 template <>
 struct CheckerConfig<GELU_GRAD> : public NoGradCheckerConfig {};
+template <>
+struct CheckerConfig<PRELU> : public NoZeroCheckerConfig<0> {};
 
+template <>
+struct CheckerConfig<ASINH_GRAD> : public NoGradCheckerConfig {};
+template <>
+struct CheckerConfig<ACOSH_GRAD> : public NoGradCheckerConfig {
+    template <typename ctype>
+    static InputGenerator get_inp_gen(size_t) {
+        return get_inp_gen_f32_range<ctype>(1.05, 5);
+    }
+};
+template <>
+struct CheckerConfig<ATANH_GRAD> : public NoGradCheckerConfig {
+    template <typename ctype>
+    static InputGenerator get_inp_gen(size_t) {
+        return get_inp_gen_f32_range<ctype>(-0.95, 0.95);
+    }
+};
+template <>
+struct CheckerConfig<RELU6_GRAD> : public NoGradCheckerConfig {};
+template <>
+struct CheckerConfig<SOFTPLUS_GRAD> : public NoGradCheckerConfig {};
+template <>
+struct CheckerConfig<HSIGMOID_GRAD> : public NoGradCheckerConfig {
+    template <typename ctype>
+    static InputGenerator get_inp_gen(size_t) {
+        return get_inp_gen_f32_range<ctype>(-2.95, 2.95);
+    }
+};
 /* ======================= ternary config ======================= */
 template <>
 struct CheckerConfig<COND_LEQ_MOV> : public BinaryInputMinGap<false> {};
 template <>
 struct CheckerConfig<COND_LT_MOV> : public BinaryInputMinGap<false> {};
+struct CheckerConfig<PRELU_GRAD> : public NoGradCheckerConfig {};
+template <>
+struct CheckerConfig<CLIP> : public CheckerConfig<void> {
+    template <typename ctype, class Checker>
+    static void do_update_checker(Checker& checker) {
+        auto icoord = [](const typename Checker::NumInpArray& inp) {
+            auto p0 = inp[0]->template ptr<ctype>(), p1 = inp[1]->template ptr<ctype>(),
+                 p2 = inp[2]->template ptr<ctype>();
+            for (size_t i = 0, it = inp[0]->shape().total_nr_elems(); i < it; ++i) {
+                if (p1[i] > p2[i]) {
+                    std::swap(p1[i], p2[i]);
+                }
+                if (p1[i] + 1 > p2[i]) {
+                    p2[i] = p1[i] + 1;
+                }
+                if (std::abs(p1[i] - p0[i]) < 1) {
+                    if (p1[i] < p0[i])
+                        p0[i] += 1;
+                    else
+                        p0[i] -= 1;
+                }
+                if (std::abs(p2[i] - p0[i]) < 1) {
+                    if (p2[i] < p0[i])
+                        p0[i] += 1;
+                    else
+                        p0[i] -= 1;
+                }
+            }
+        };
+        checker.set_input_coordinator(icoord);
+    }
 
+    template <class Checker>
+    static void update_checker(Checker& checker) {
+        using ctype = typename Checker::ctype;
+        return do_update_checker<ctype>(checker);
+    }
+
+    template <class Opt>
+    static void update_opt(Opt& opt) {
+        opt.numdiff_eps = 1e-3;
+        opt.numdiff_max_err = 0.1;
+    }
+};
 /* ======================= test runner ======================= */
 namespace detail {
 template <typename dtype, class Trait>
