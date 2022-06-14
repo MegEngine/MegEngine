@@ -39,6 +39,7 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
 
     const dt_int32* oshp2d = nullptr;
     dst_layout.ndim = 4u;
+    bool tshp1n = false;
     if (nr_inp == 1) {
         oshp2d = pool.shape.data();
     } else {
@@ -51,17 +52,18 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
                 "target shape of AdaptivePooling expects ndim=1; got ndim=%lu actually",
                 tshp.layout.ndim);
         oshp2d = tshp.value.ptr<dt_int32>();
+        tshp1n = tshp.layout.total_nr_elems() == 1;
     }
     auto param_format = pool.param().format;
     if (param_format == opr::AdaptivePooling::Param::Format::NCHW) {
         dst_layout[0] = src.layout[0];
         dst_layout[1] = src.layout[1];
         dst_layout[2] = oshp2d[0];
-        dst_layout[3] = oshp2d[1];
+        dst_layout[3] = tshp1n ? oshp2d[0] : oshp2d[1];
     } else if (param_format == opr::AdaptivePooling::Param::Format::NHWC) {
         dst_layout[0] = src.layout[0];
         dst_layout[1] = oshp2d[0];
-        dst_layout[2] = oshp2d[1];
+        dst_layout[2] = tshp1n ? oshp2d[0] : oshp2d[1];
         dst_layout[3] = src.layout[3];
     } else {
         mgb_throw(MegBrainError, "AdaptivePooling only support NCHW or NHWC format");
@@ -83,8 +85,10 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
     if (!validated) {
         dst_layout.ndim = src_layout.ndim;
         const dt_int32* oshp2d = nullptr;
+        bool tshp1n = false;
         if (inputs.size() == 2) {
             auto&& tshp_nd = inputs[1];
+            tshp1n = inputs[1]->layout().total_nr_elems() == 1;
             oshp2d = tshp_nd->get_value().proxy_to_default_cpu().ptr<dt_int32>();
         } else {
             oshp2d = pool.shape.data();
@@ -93,11 +97,11 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
             dst_layout[0] = src_layout[0];
             dst_layout[1] = src_layout[1];
             dst_layout[2] = oshp2d[0];
-            dst_layout[3] = oshp2d[1];
+            dst_layout[3] = tshp1n ? oshp2d[0] : oshp2d[1];
         } else if (param_format == opr::AdaptivePooling::Param::Format::NHWC) {
             dst_layout[0] = src_layout[0];
             dst_layout[1] = oshp2d[0];
-            dst_layout[2] = oshp2d[1];
+            dst_layout[2] = tshp1n ? oshp2d[0] : oshp2d[1];
             dst_layout[3] = src_layout[3];
         } else {
             mgb_throw(

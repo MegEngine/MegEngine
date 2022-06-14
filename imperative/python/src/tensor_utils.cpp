@@ -1066,7 +1066,31 @@ py::object _adaptive_pool2d_cpp(
         py::handle inp_hdl, py::handle shape_val_hdl, py::handle pool_mode_hdl) {
     py::object shape_hdl = py::reinterpret_borrow<py::object>(shape_val_hdl);
     py::list shps(0);
-    if (!PyTuple_Check(shape_val_hdl.ptr())) {
+    auto mode_string = pool_mode_hdl.cast<std::string>();
+    ::megdnn::param::AdaptivePooling::Mode pool_mode =
+            ::megdnn::param::AdaptivePooling::Mode::MAX;
+    if (mode_string.compare(std::string("AVERAGE")) == 0) {
+        pool_mode = ::megdnn::param::AdaptivePooling::Mode::AVERAGE;
+    }
+    std::shared_ptr<OpDef> op;
+    std::vector<PyObject*> p;
+    auto pool_format = ::megdnn::param::AdaptivePooling::Format::NCHW;
+    auto inp_format = getattr(inp_hdl, "format").cast<std::string>();
+    if (inp_format == "nhwc") {
+        pool_format = ::megdnn::param::AdaptivePooling::Format::NHWC;
+    }
+    if (TensorWrapper::try_cast(shape_val_hdl.ptr())) {
+        std::vector<int32_t> shp;
+        op = AdaptivePooling::make(pool_mode, pool_format, shp);
+        py::object Op = py::cast(op);
+        p.resize(3);
+        p[0] = Op.ptr();
+        p[1] = inp_hdl.ptr();
+        p[2] = shape_val_hdl.ptr();
+        py::tuple ret =
+                py::reinterpret_steal<py::object>(py_apply(NULL, p.data(), p.size()));
+        return ret[0];
+    } else if (!PyTuple_Check(shape_val_hdl.ptr())) {
         shps.append(PyLong_AsLong(shape_val_hdl.ptr()));
         shps.append(PyLong_AsLong(shape_val_hdl.ptr()));
 
@@ -1078,19 +1102,11 @@ py::object _adaptive_pool2d_cpp(
     } catch (py::error_already_set& err) {
         shape_tuple = py::reinterpret_borrow<py::object>(shape_hdl);
     }
-    auto mode_string = pool_mode_hdl.cast<std::string>();
-    ::megdnn::param::AdaptivePooling::Mode pool_mode =
-            ::megdnn::param::AdaptivePooling::Mode::MAX;
-    if (mode_string.compare(std::string("AVERAGE")) == 0) {
-        pool_mode = ::megdnn::param::AdaptivePooling::Mode::AVERAGE;
-    }
+
     auto [shape, fastpath] = tuple2vector(shape_tuple);
     fastpath &= enable_fastpath(inp_hdl);
-    std::shared_ptr<OpDef> op;
-    std::vector<PyObject*> p;
     py::object shape_tensor;
-    op = AdaptivePooling::make(
-            pool_mode, ::megdnn::param::AdaptivePooling::Format::NCHW, shape);
+    op = AdaptivePooling::make(pool_mode, pool_format, shape);
     if (fastpath) {
         p.resize(2);
     } else {
