@@ -31,8 +31,8 @@ if(UNIX)
 endif()
 
 if(LITE_BUILD_WITH_MGE
-   AND LITE_WITH_CUDA
-   AND NOT WIN32)
+   AND NOT WIN32
+   AND NOT APPLE)
   # FXIME third_party cpp redis do not support build with clang-cl
   target_include_directories(load_and_run PRIVATE ${CPP_REDIS_INCLUDES})
 endif()
@@ -43,8 +43,8 @@ install(
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 if(BUILD_SHARED_LIBS)
   if(LITE_BUILD_WITH_MGE
-     AND LITE_WITH_CUDA
-     AND NOT WIN32)
+     AND NOT WIN32
+     AND NOT APPLE)
     # FXIME third_party cpp redis do not support build with clang-cl
     list(APPEND SOURCES ${CPP_REDIS_SRCS})
   endif()
@@ -72,8 +72,8 @@ if(BUILD_SHARED_LIBS)
   endif()
 
   if(LITE_BUILD_WITH_MGE
-     AND LITE_WITH_CUDA
-     AND NOT WIN32)
+     AND NOT WIN32
+     AND NOT APPLE)
     # FXIME third_party cpp redis do not support build with clang-cl
     target_include_directories(load_and_run_depends_shared
                                PRIVATE ${CPP_REDIS_INCLUDES})

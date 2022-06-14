@@ -2,6 +2,7 @@
 #include "../misc.h"
 #if LITE_BUILD_WITH_MGE
 #include "megbrain/utils/infile_persistent_cache.h"
+#include "megbrain/utils/json.h"
 #endif
 
 #include <flatbuffers/flatbuffers.h>
@@ -127,6 +128,19 @@ flatbuffers::Offset<ModelInfo> FbsHelper::build_info() {
         fb_data = m_builder.CreateVector(data, size);
     } else if (!m_packer->m_info_data.empty()) {
         fb_data = m_builder.CreateVector(m_packer->m_info_data);
+    } else {
+        //! set info->data() to non-null to avoid load_and_run parse model compatibility
+        //! issue
+        std::string default_data;
+#if MGB_ENABLE_JSON
+        std::vector<std::pair<mgb::json::String, std::shared_ptr<mgb::json::Value>>>
+                info;
+        info.push_back({mgb::json::String("valid"), mgb::json::Bool::make(false)});
+        auto obj = mgb::json::Object::make(info);
+        default_data = obj->to_string();
+#endif
+        std::vector<uint8_t> json_info(default_data.begin(), default_data.end());
+        fb_data = m_builder.CreateVector(json_info);
     }
 
     flatbuffers::Offset<flatbuffers::Vector<uint8_t>> fb_algo_policy;

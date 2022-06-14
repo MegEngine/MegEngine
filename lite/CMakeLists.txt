@@ -36,8 +36,8 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/genfiles/lite_build_config.h
 
 # begin config lite
 if(LITE_BUILD_WITH_MGE
-   AND LITE_WITH_CUDA
-   AND NOT WIN32)
+   AND NOT WIN32
+   AND NOT APPLE)
   # FXIME third_party cpp redis do not support build with clang-cl
   list(APPEND SOURCES_LITE ${CPP_REDIS_SRCS})
 endif()
@@ -129,8 +129,8 @@ if(LITE_BUILD_WITH_MGE AND NOT WIN32)
 endif()
 
 if(LITE_BUILD_WITH_MGE
-   AND LITE_WITH_CUDA
-   AND NOT WIN32)
+   AND NOT WIN32
+   AND NOT APPLE)
   # FXIME third_party cpp redis do not support build with clang-cl
   target_include_directories(lite_static PRIVATE ${CPP_REDIS_INCLUDES})
   target_include_directories(lite_shared PRIVATE ${CPP_REDIS_INCLUDES})
