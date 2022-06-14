@@ -29,17 +29,33 @@ void calculate_xsx_nchw44(T1 result, T2 src) {
     CalXsXNchw44<filter, stride, ow_step, mode, T1, T2>::impl(result, src);
 };
 
-#define CALCULATE_MAX_CB(step)                                       \
-    result[0] = GiMaximumFloat32(result[0], src[0 * stride + step]); \
-    result[1] = GiMaximumFloat32(result[1], src[1 * stride + step]); \
-    result[2] = GiMaximumFloat32(result[2], src[2 * stride + step]); \
-    result[3] = GiMaximumFloat32(result[3], src[3 * stride + step]);
+#define CALCULATE_MAX_CB(step)                                    \
+    result[0] = GiFloat32Type2FixLenType(GiMaximumFloat32(        \
+            GiFixLenType2GiFloat32Type(result[0]),                \
+            GiFixLenType2GiFloat32Type(src[0 * stride + step]))); \
+    result[1] = GiFloat32Type2FixLenType(GiMaximumFloat32(        \
+            GiFixLenType2GiFloat32Type(result[1]),                \
+            GiFixLenType2GiFloat32Type(src[1 * stride + step]))); \
+    result[2] = GiFloat32Type2FixLenType(GiMaximumFloat32(        \
+            GiFixLenType2GiFloat32Type(result[2]),                \
+            GiFixLenType2GiFloat32Type(src[2 * stride + step]))); \
+    result[3] = GiFloat32Type2FixLenType(GiMaximumFloat32(        \
+            GiFixLenType2GiFloat32Type(result[3]),                \
+            GiFixLenType2GiFloat32Type(src[3 * stride + step])));
 
-#define CALCULATE_AVG_CB(step)                                   \
-    result[0] = GiAddFloat32(result[0], src[0 * stride + step]); \
-    result[1] = GiAddFloat32(result[1], src[1 * stride + step]); \
-    result[2] = GiAddFloat32(result[2], src[2 * stride + step]); \
-    result[3] = GiAddFloat32(result[3], src[3 * stride + step]);
+#define CALCULATE_AVG_CB(step)                                    \
+    result[0] = GiFloat32Type2FixLenType(GiAddFloat32(            \
+            GiFixLenType2GiFloat32Type(result[0]),                \
+            GiFixLenType2GiFloat32Type(src[0 * stride + step]))); \
+    result[1] = GiFloat32Type2FixLenType(GiAddFloat32(            \
+            GiFixLenType2GiFloat32Type(result[1]),                \
+            GiFixLenType2GiFloat32Type(src[1 * stride + step]))); \
+    result[2] = GiFloat32Type2FixLenType(GiAddFloat32(            \
+            GiFixLenType2GiFloat32Type(result[2]),                \
+            GiFixLenType2GiFloat32Type(src[2 * stride + step]))); \
+    result[3] = GiFloat32Type2FixLenType(GiAddFloat32(            \
+            GiFixLenType2GiFloat32Type(result[3]),                \
+            GiFixLenType2GiFloat32Type(src[3 * stride + step])));
 
 #define INSTANCE_CAL(filter)                                                     \
     template <int stride, typename T1, typename T2>                              \
@@ -78,13 +94,13 @@ struct KerPoolingFilterXStrideXNchw44<filter, stride, ow_step, PoolingBase::Mode
         constexpr int packed_ic = 4;
         constexpr int simd_len = 4;
         constexpr float default_float = std::numeric_limits<float>::lowest();
-        GI_FLOAT32_t result[ow_step];
-        GI_FLOAT32_t src[src_reg_size];
+        GI_FLOAT32_FIXLEN_t result[ow_step];
+        GI_FLOAT32_FIXLEN_t src[src_reg_size];
 
-        result[0] = GiBroadcastFloat32(default_float);
-        result[1] = GiBroadcastFloat32(default_float);
-        result[2] = GiBroadcastFloat32(default_float);
-        result[3] = GiBroadcastFloat32(default_float);
+        result[0] = GiFloat32Type2FixLenType(GiBroadcastFloat32(default_float));
+        result[1] = GiFloat32Type2FixLenType(GiBroadcastFloat32(default_float));
+        result[2] = GiFloat32Type2FixLenType(GiBroadcastFloat32(default_float));
+        result[3] = GiFloat32Type2FixLenType(GiBroadcastFloat32(default_float));
 
         for (int fh_idx = 0; fh_idx < filter; ++fh_idx) {
             load_helper<src_reg_size, 0, simd_len, 0, GiD1Qf32>(
@@ -93,10 +109,10 @@ struct KerPoolingFilterXStrideXNchw44<filter, stride, ow_step, PoolingBase::Mode
                     result, src);
         }
 
-        GiStoreFloat32(dst_ptr + 0 * packed_ic, result[0]);
-        GiStoreFloat32(dst_ptr + 1 * packed_ic, result[1]);
-        GiStoreFloat32(dst_ptr + 2 * packed_ic, result[2]);
-        GiStoreFloat32(dst_ptr + 3 * packed_ic, result[3]);
+        GiStoreFloat32(dst_ptr + 0 * packed_ic, GiFixLenType2GiFloat32Type(result[0]));
+        GiStoreFloat32(dst_ptr + 1 * packed_ic, GiFixLenType2GiFloat32Type(result[1]));
+        GiStoreFloat32(dst_ptr + 2 * packed_ic, GiFixLenType2GiFloat32Type(result[2]));
+        GiStoreFloat32(dst_ptr + 3 * packed_ic, GiFixLenType2GiFloat32Type(result[3]));
     }
 };
 
@@ -110,28 +126,36 @@ struct KerPoolingFilterXStrideXNchw44<
         constexpr float default_float = 0;
         constexpr float div_filter_size = 1.f / (filter * filter);
         const GI_FLOAT32_t div_filter_size_vec = GiBroadcastFloat32(div_filter_size);
-        GI_FLOAT32_t result[ow_step];
-        GI_FLOAT32_t src[src_reg_size];
+        GI_FLOAT32_FIXLEN_t result[ow_step];
+        GI_FLOAT32_FIXLEN_t src[src_reg_size];
 
-        result[0] = GiBroadcastFloat32(default_float);
-        result[1] = GiBroadcastFloat32(default_float);
-        result[2] = GiBroadcastFloat32(default_float);
-        result[3] = GiBroadcastFloat32(default_float);
+        result[0] = GiFloat32Type2FixLenType(GiBroadcastFloat32(default_float));
+        result[1] = GiFloat32Type2FixLenType(GiBroadcastFloat32(default_float));
+        result[2] = GiFloat32Type2FixLenType(GiBroadcastFloat32(default_float));
+        result[3] = GiFloat32Type2FixLenType(GiBroadcastFloat32(default_float));
 
         for (int fh_idx = 0; fh_idx < filter; ++fh_idx) {
             load_helper<src_reg_size, 0, simd_len, 0, GiD1Qf32>(
                     src, src_ptr + fh_idx * iw * packed_ic, 0);
             calculate_xsx_nchw44<filter, stride, ow_step, PoolingBase::Mode::AVERAGE>(
                     result, src);
-        }
-        result[0] = GiMultiplyFloat32(result[0], div_filter_size_vec);
-        result[1] = GiMultiplyFloat32(result[1], div_filter_size_vec);
-        result[2] = GiMultiplyFloat32(result[2], div_filter_size_vec);
-        result[3] = GiMultiplyFloat32(result[3], div_filter_size_vec);
-        GiStoreFloat32(dst_ptr + 0 * packed_ic, result[0]);
-        GiStoreFloat32(dst_ptr + 1 * packed_ic, result[1]);
-        GiStoreFloat32(dst_ptr + 2 * packed_ic, result[2]);
-        GiStoreFloat32(dst_ptr + 3 * packed_ic, result[3]);
+        };
+        GiStoreFloat32(
+                dst_ptr + 0 * packed_ic,
+                GiMultiplyFloat32(
+                        GiFixLenType2GiFloat32Type(result[0]), div_filter_size_vec));
+        GiStoreFloat32(
+                dst_ptr + 1 * packed_ic,
+                GiMultiplyFloat32(
+                        GiFixLenType2GiFloat32Type(result[1]), div_filter_size_vec));
+        GiStoreFloat32(
+                dst_ptr + 2 * packed_ic,
+                GiMultiplyFloat32(
+                        GiFixLenType2GiFloat32Type(result[2]), div_filter_size_vec));
+        GiStoreFloat32(
+                dst_ptr + 3 * packed_ic,
+                GiMultiplyFloat32(
+                        GiFixLenType2GiFloat32Type(result[3]), div_filter_size_vec));
     }
 };
 

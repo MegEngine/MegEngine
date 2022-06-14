@@ -56,18 +56,20 @@ struct GiMeanPooler<area, dt_float32, float, float> {
     static constexpr int MIDOUT_CASE_NUM = 1;
     static constexpr int SIMD_WIDTH = 4;
 
-    static const GI_FLOAT32_t coef;
-    GI_FLOAT32_t res;
-    GiMeanPooler(DType) : res(GiBroadcastFloat32(0.0f)) {}
-    void feed(const float* val) { res = GiAddFloat32(res, GiLoadFloat32(val)); }
+    GI_FLOAT32_FIXLEN_t res, coef;
+    GiMeanPooler(DType)
+            : res(GiFloat32Type2FixLenType(GiBroadcastFloat32(0.0f))),
+              coef(GiFloat32Type2FixLenType(GiBroadcastFloat32(1.0f / area))) {}
+    void feed(const float* val) {
+        res = GiFloat32Type2FixLenType(
+                GiAddFloat32(GiFixLenType2GiFloat32Type(res), GiLoadFloat32(val)));
+    }
     void post(float* dst) {
-        res = GiMultiplyFloat32(res, coef);
-        GiStoreFloat32(dst, res);
+        res = GiFloat32Type2FixLenType(GiMultiplyFloat32(
+                GiFixLenType2GiFloat32Type(res), GiFixLenType2GiFloat32Type(coef)));
+        GiStoreFloat32(dst, GiFixLenType2GiFloat32Type(res));
     }
 };
-template <int area>
-const GI_FLOAT32_t GiMeanPooler<area, dt_float32, float, float>::coef =
-        GiBroadcastFloat32(1.0f / area);
 
 /* ======================= MaxPooler ======================== */
 
@@ -96,10 +98,15 @@ struct GiMaxPooler<area, dt_float32, float, float> {
     static constexpr int MIDOUT_CASE_NUM = 11;
     static constexpr int SIMD_WIDTH = 4;
 
-    GI_FLOAT32_t res;
-    GiMaxPooler(DType) : res(GiBroadcastFloat32(DTypeTrait<dt_float32>::min())) {}
-    void feed(const float* val) { res = GiMaximumFloat32(res, GiLoadFloat32(val)); }
-    void post(float* dst) { GiStoreFloat32(dst, res); }
+    GI_FLOAT32_FIXLEN_t res;
+    GiMaxPooler(DType)
+            : res(GiFloat32Type2FixLenType(
+                      GiBroadcastFloat32(DTypeTrait<dt_float32>::min()))) {}
+    void feed(const float* val) {
+        res = GiFloat32Type2FixLenType(
+                GiMaximumFloat32(GiFixLenType2GiFloat32Type(res), GiLoadFloat32(val)));
+    }
+    void post(float* dst) { GiStoreFloat32(dst, GiFixLenType2GiFloat32Type(res)); }
 };
 
 template <typename Pooler, int window>
@@ -137,7 +144,8 @@ struct do_pxl_2x2_pack_proxy<
             const int IW, const int OH, const int OW, const int PH, const int PW) {
         MEGDNN_MARK_USED_VAR(IH);
         MEGDNN_MARK_USED_VAR(OH);
-        static const auto avg_coef = GiBroadcastFloat32(0.25f);
+        static const auto avg_coef =
+                GiFloat32Type2FixLenType(GiBroadcastFloat32(0.25f));
         int ih = -PH + 2 * oh;
         int iw = -PW + 2 * ow;
         auto i00 = GiLoadFloat32(src + (ih + 0) * IW + (iw + 0)),
@@ -148,7 +156,7 @@ struct do_pxl_2x2_pack_proxy<
         auto vlow = GiPaddFloat32(GiGetLowFloat32(sum0), GiGetHighFloat32(sum0));
         auto vhigh = GiPaddFloat32(GiGetLowFloat32(sum1), GiGetHighFloat32(sum1));
         auto comb = GiCombineFloat32(vlow, vhigh);
-        auto result = GiMultiplyFloat32(comb, avg_coef);
+        auto result = GiMultiplyFloat32(comb, GiFixLenType2GiFloat32Type(avg_coef));
         GiStoreFloat32(dst + oh * OW + ow, result);
     }
 };
@@ -327,8 +335,8 @@ void do_max_pooling_w5x5_s2x2_gi(
             auto s0 = GiLoadFloat32(sptr + iw + 0);
             auto s1 = GiLoadFloat32(sptr + iw + MEGDNN_SIMD_WIDTH);
             auto d = GiUzpqFloat32(s0, s1);
-            GiStoreFloat32(even + even_offset, d.val[0]);
-            GiStoreFloat32(odd + odd_offset, d.val[1]);
+            GiStoreFloat32(even + even_offset, GiGetSubVectorFloat32V2(d, 0));
+            GiStoreFloat32(odd + odd_offset, GiGetSubVectorFloat32V2(d, 1));
             even_offset += MEGDNN_SIMD_WIDTH;
             odd_offset += MEGDNN_SIMD_WIDTH;
         }
@@ -464,8 +472,8 @@ void do_average_pooling_3x3_s2x2_gi(
 
         for (; iw + 2 * MEGDNN_SIMD_WIDTH <= IW; iw += 2 * MEGDNN_SIMD_WIDTH) {
             auto s0 = GiLd2qFloat32(sptr + iw);
-            GiStoreFloat32(even + even_offset, s0.val[0]);
-            GiStoreFloat32(odd + odd_offset, s0.val[1]);
+            GiStoreFloat32(even + even_offset, GiGetSubVectorFloat32V2(s0, 0));
+            GiStoreFloat32(odd + odd_offset, GiGetSubVectorFloat32V2(s0, 1));
             even_offset += MEGDNN_SIMD_WIDTH;
             odd_offset += MEGDNN_SIMD_WIDTH;
         }

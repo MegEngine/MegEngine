@@ -8,11 +8,11 @@
 namespace megdnn {
 namespace fallback {
 
-#define GI_UZP(s0, s1, d0, d1)              \
-    do {                                    \
-        auto tmp__ = GiUzpqFloat32(s0, s1); \
-        d0 = tmp__.val[0];                  \
-        d1 = tmp__.val[1];                  \
+#define GI_UZP(s0, s1, d0, d1)                  \
+    do {                                        \
+        auto tmp__ = GiUzpqFloat32(s0, s1);     \
+        d0 = GiGetSubVectorFloat32V2(tmp__, 0); \
+        d1 = GiGetSubVectorFloat32V2(tmp__, 1); \
     } while (0)
 
 void do_max_pooling_3x3_s2x2_float_gi(
