@@ -142,7 +142,7 @@ void init_common(py::module m) {
             .def("numpy", [](const DeviceTensorND& self) {
                 HostTensorND hv;
                 hv.copy_from(self).sync();
-                return py::handle(
+                return py::reinterpret_steal<py::object>(
                         npy::ndarray_from_tensor(hv, npy::ShareType::TRY_SHARE));
             });
 
