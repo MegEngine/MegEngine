@@ -33,7 +33,7 @@ public:
     virtual void rewind() = 0;
 
     //! skip given number of bytes
-    virtual void skip(size_t bytes) = 0;
+    virtual void skip(int64_t bytes) = 0;
 
     //! read data into buffer
     virtual void read(void* dst, size_t size) = 0;

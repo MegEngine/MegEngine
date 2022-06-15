@@ -801,21 +801,18 @@ GraphLoader::LoadResult GraphLoaderOSSV2::load(const LoadConfig& config, bool re
     // Read fbs::Graph
     uint32_t size;
     m_file->read(&size, sizeof(size));
-    m_model_buf = m_file->read_shared(size);
-
-    mgb_throw_if(
-            !fbs::v2::ModelBufferHasIdentifier(m_model_buf.data()), SerializationError,
-            "invalid fbs model");
+    m_file->skip(-sizeof(size));
+    m_model_buf = m_file->read_shared(size + sizeof(size));
 
     {
         flatbuffers::Verifier verifier(
                 static_cast<const uint8_t*>(m_model_buf.data()), m_model_buf.size());
         mgb_throw_if(
-                !fbs::v2::VerifyModelBuffer(verifier), SerializationError,
+                !fbs::v2::VerifySizePrefixedModelBuffer(verifier), SerializationError,
                 "model verification failed (invalid or corrupted model?)");
     }
 
-    m_model = fbs::v2::GetModel(m_model_buf.data());
+    m_model = fbs::v2::GetSizePrefixedModel(m_model_buf.data());
     m_mgb_version = m_model->mge_version();
     m_model_version = m_model->model_version();
     if (m_model->mge_version() > MGB_VERSION) {

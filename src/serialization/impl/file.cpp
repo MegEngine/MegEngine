@@ -33,7 +33,7 @@ public:
 
     void rewind() override { std::rewind(m_fptr); }
 
-    void skip(size_t bytes) override {
+    void skip(int64_t bytes) override {
         auto err = fseek(m_fptr, bytes, SEEK_CUR);
         mgb_assert(!err);
     }
@@ -104,7 +104,7 @@ public:
 
     void rewind() override { m_offset = 0; }
 
-    void skip(size_t bytes) override {
+    void skip(int64_t bytes) override {
         m_offset += bytes;
         mgb_assert(m_offset <= m_size);
     }
@@ -146,7 +146,7 @@ public:
         m_offset = 0;
     }
 
-    void skip(size_t bytes) override {
+    void skip(int64_t bytes) override {
         m_offset += bytes;
         mgb_assert(m_offset <= m_size);
     }

@@ -838,25 +838,22 @@ GraphLoader::LoadResult GraphLoaderOSS::load(const LoadConfig& config, bool rewi
     // Read fbs::Graph
     uint32_t size;
     m_file->read(&size, sizeof(size));
-    m_graph_buf = m_file->read_shared(size);
+    m_file->skip(-sizeof(size));
+    m_graph_buf = m_file->read_shared(size + sizeof(size));
 
     // Rewind back to tensor data
     m_file->rewind();
     m_file->skip(tensor_begin);
 
-    mgb_throw_if(
-            !fbs::GraphBufferHasIdentifier(m_graph_buf.data()), SerializationError,
-            "invalid fbs model");
-
     {
         flatbuffers::Verifier verifier(
                 static_cast<const uint8_t*>(m_graph_buf.data()), m_graph_buf.size());
         mgb_throw_if(
-                !fbs::VerifyGraphBuffer(verifier), SerializationError,
+                !fbs::VerifySizePrefixedGraphBuffer(verifier), SerializationError,
                 "model verification failed (invalid or corrupted model?)");
     }
 
-    m_graph = fbs::GetGraph(m_graph_buf.data());
+    m_graph = fbs::GetSizePrefixedGraph(m_graph_buf.data());
     m_mgb_version = m_graph->mgb_version();
     if (m_graph->mgb_version() > MGB_VERSION) {
         mgb_log_warn(

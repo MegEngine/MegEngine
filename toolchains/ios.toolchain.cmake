@@ -217,10 +217,10 @@ if(NOT DEFINED IOS_DEPLOYMENT_TARGET)
         "2.0"
         CACHE STRING "Minimum iOS version to build for.")
   else()
-    # Unless specified, SDK version 10.0 is used by default as minimum target version
+    # Unless specified, SDK version 11.0 is used by default as minimum target version
     # (iOS, tvOS).
     set(IOS_DEPLOYMENT_TARGET
-        "10.0"
+        "11.0"
         CACHE STRING "Minimum iOS version to build for.")
   endif()
   message(
