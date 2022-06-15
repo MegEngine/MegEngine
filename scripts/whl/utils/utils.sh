@@ -76,7 +76,7 @@ function check_build_ninja_python_api() {
         echo "org args: ${ver}"
         if [[ $OS =~ "NT" ]]; then
             INCLUDE_KEYWORD="${ver}\\\\include"
-            PYTHON_API_INCLUDES="3.5.4\\\\include 3.6.8\\\\include 3.7.7\\\\include 3.8.3\\\\include"
+            PYTHON_API_INCLUDES="3.6.8\\\\include 3.7.7\\\\include 3.8.3\\\\include 3.9.4\\\\include 3.10.1\\\\include"
         elif [[ $OS =~ "Linux" ]]; then
             INCLUDE_KEYWORD="include/python3.${ver:1:1}"
             info=`command -v termux-info || true`

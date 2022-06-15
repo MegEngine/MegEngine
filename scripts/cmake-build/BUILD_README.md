@@ -44,7 +44,7 @@ But some dependencies need to be installed manually:
 * [CUDA](https://developer.nvidia.com/cuda-toolkit-archive)(>=10.1), [cuDNN](https://developer.nvidia.com/cudnn)(>=7.6) are required when building MegBrain with CUDA support.
 * [TensorRT](https://docs.nvidia.com/deeplearning/sdk/tensorrt-archived/index.html)(>=5.1.5) is required when building with TensorRT support.
 * LLVM/Clang(>=6.0) is required when building with Halide JIT support.
-* Python(>=3.5) and numpy are required to build Python modules.
+* Python(>=3.6) and numpy are required to build Python modules.
 ## Package install
 ### Windows host build
 * commands:
@@ -65,15 +65,17 @@ But some dependencies need to be installed manually:
 	* our ci use LLVM 12.0.1, if u install other version, please modify LLVM_PATH
     * install 12.0.1 to /c/Program\ Files/LLVM_12_0_1
 4: install python3 (Windows GUI)
-	* download python 64-bit install exe (we support python3.5-python3.8 now)
-	     https://www.python.org/ftp/python/3.5.4/python-3.5.4-amd64.exe
+	* download python 64-bit install exe (we support python3.6-python3.9 now)
 	     https://www.python.org/ftp/python/3.6.8/python-3.6.8-amd64.exe
 	     https://www.python.org/ftp/python/3.7.7/python-3.7.7-amd64.exe
 	     https://www.python.org/ftp/python/3.8.3/python-3.8.3-amd64.exe
-	* install 3.5.4 to /c/Users/${USER}/mge_whl_python_env/3.5.4
+	     https://www.python.org/ftp/python/3.9.4/python-3.9.4-amd64.exe
+	     https://www.python.org/ftp/python/3.10.1/python-3.10.1-amd64.exe
 	* install 3.6.8 to /c/Users/${USER}/mge_whl_python_env/3.6.8
 	* install 3.7.7 to /c/Users/${USER}/mge_whl_python_env/3.7.7
 	* install 3.8.3 to /c/Users/${USER}/mge_whl_python_env/3.8.3
+	* install 3.9.4 to /c/Users/${USER}/mge_whl_python_env/3.9.4
+	* install 3.10.1 to /c/Users/${USER}/mge_whl_python_env/3.10.1
 	* cp python.exe to python3.exe
 		loop cd /c/Users/${USER}/mge_whl_python_env/*
 		copy python.exe to python3.exe

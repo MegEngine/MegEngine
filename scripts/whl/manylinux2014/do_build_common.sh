@@ -74,7 +74,7 @@ function patch_elf_depend_lib_megenginelite() {
 SRC_DIR=$(readlink -f "`dirname $0`/../../../")
 source ${SRC_DIR}/scripts/whl/utils/utils.sh
 
-SUPPORT_ALL_VERSION="35m 36m 37m 38"
+SUPPORT_ALL_VERSION="36m 37m 38 39 310"
 ALL_PYTHON=${ALL_PYTHON}
 if [[ -z ${ALL_PYTHON} ]]
 then
@@ -109,15 +109,21 @@ do
         rm -rf ${BUILD_DIR}
     fi
 
-    python_ver=${ver:0:2}
+    python_ver=`echo $ver | tr -d m`
     MAJOR=${python_ver:0:1}
-    MINOR=${ver:1}
-    PYTHON_DIR=/opt/python/cp${python_ver}-cp${ver}/
+    MINOR=${python_ver:1}
+    PYTHON_DIR=/opt/python/cp${python_ver}-cp${ver}
+
+    SUFFIX=
+    if [[ $MINOR -lt 8 ]];then
+        SUFFIX="m"
+    fi
+
     export EXTRA_CMAKE_ARGS="${ORG_EXTRA_CMAKE_FLAG} -DCMAKE_BUILD_TYPE=RelWithDebInfo"
     export EXTRA_CMAKE_ARGS="${EXTRA_CMAKE_ARGS} -DMGE_WITH_CUSTOM_OP=ON"
     export EXTRA_CMAKE_ARGS="${EXTRA_CMAKE_ARGS} -DPYTHON_EXECUTABLE=${PYTHON_DIR}/bin/python3"
-    export EXTRA_CMAKE_ARGS="${EXTRA_CMAKE_ARGS} -DPYTHON_LIBRARY=${PYTHON_DIR}lib/"
-    export EXTRA_CMAKE_ARGS="${EXTRA_CMAKE_ARGS} -DPYTHON_INCLUDE_DIR=${PYTHON_DIR}include/python${MAJOR}.${MINOR}"
+    export EXTRA_CMAKE_ARGS="${EXTRA_CMAKE_ARGS} -DPYTHON_LIBRARY=${PYTHON_DIR}/lib/"
+    export EXTRA_CMAKE_ARGS="${EXTRA_CMAKE_ARGS} -DPYTHON_INCLUDE_DIR=${PYTHON_DIR}/include/python${MAJOR}.${MINOR}${SUFFIX}"
     export EXTRA_CMAKE_ARGS="${EXTRA_CMAKE_ARGS} -DMGE_WITH_ATLAS=ON"
 
     if [ -d "${BUILD_DIR}" ]; then

@@ -38,7 +38,7 @@ SRC_DIR=$($READLINK -f "`dirname $0`/../../../")
 source ${SRC_DIR}/scripts/whl/utils/utils.sh
 
 ALL_PYTHON=${ALL_PYTHON}
-FULL_PYTHON_VER="3.5.9 3.6.10 3.7.7 3.8.3"
+FULL_PYTHON_VER="3.6.10 3.7.7 3.8.3 3.9.4 3.10.1"
 if [[ -z ${ALL_PYTHON} ]]
 then
     ALL_PYTHON=${FULL_PYTHON_VER}
@@ -70,10 +70,7 @@ function config_python_env() {
     fi
     echo ${ver}
 
-    if [ "$1" = "3.5.9" ]; then
-        PYTHON_INCLUDE_DIR=${PYTHON_DIR}include/python3.5m
-        PYTHON_LIBRARY=${PYTHON_DIR}/lib/libpython3.5m.dylib
-    elif [ "$1" = "3.6.10" ]; then
+    if [ "$1" = "3.6.10" ]; then
         PYTHON_INCLUDE_DIR=${PYTHON_DIR}include/python3.6m
         PYTHON_LIBRARY=${PYTHON_DIR}/lib/libpython3.6m.dylib
     elif [ "$1" = "3.7.7" ]; then
@@ -82,6 +79,12 @@ function config_python_env() {
     elif [ "$1" = "3.8.3" ]; then
         PYTHON_INCLUDE_DIR=${PYTHON_DIR}include/python3.8
         PYTHON_LIBRARY=${PYTHON_DIR}/lib/libpython3.8.dylib
+    elif [ "$1" = "3.9.4" ]; then
+        PYTHON_INCLUDE_DIR=${PYTHON_DIR}include/python3.9
+        PYTHON_LIBRARY=${PYTHON_DIR}/lib/libpython3.9.dylib
+    elif [ "$1" = "3.10.1" ]; then
+        PYTHON_INCLUDE_DIR=${PYTHON_DIR}include/python3.10
+        PYTHON_LIBRARY=${PYTHON_DIR}/lib/libpython3.10.dylib
     else
         echo "ERR: DO NOT SUPPORT PYTHON VERSION"
         echo "now support list: ${FULL_PYTHON_VER}"

@@ -1,7 +1,6 @@
 #!/bin/bash -e
 
 GET_PIP_URL='https://bootstrap.pypa.io/get-pip.py'
-GET_PIP_URL_35='https://bootstrap.pypa.io/pip/3.5/get-pip.py'
 GET_PIP_URL_36='https://bootstrap.pypa.io/pip/3.6/get-pip.py'
 SWIG_URL='https://codeload.github.com/swig/swig/tar.gz/refs/tags/rel-3.0.12'
 LLVM_URL='https://github.com/llvm-mirror/llvm/archive/release_60.tar.gz' 
@@ -15,35 +14,26 @@ yum install -y pcre-devel devtoolset-9-libatomic-devel.${ARCH}
 yum install -y devtoolset-8 devtoolset-8-libatomic-devel.${ARCH}
 # install a default python3 for cmake PYTHON3_EXECUTABLE_WITHOUT_VERSION
 yum install -y python3 python3-devel
-python3 -m pip install cython
-python3 -m pip install numpy
+python3 -m pip install cython -i https://mirrors.aliyun.com/pypi/simple
+python3 -m pip install numpy -i https://mirrors.aliyun.com/pypi/simple
 
-ALL_PYTHON="35m 36m 37m 38"
-numpy_version="1.18.1"
-if [ ${ARCH} = "aarch64" ];then
-    # numpy do not have 1.18.1 on aarch64 linux, so we use another fix version
-    numpy_version="1.19.5"
-fi
+# FIXME: failed when install pip with python3.10 because python3.10
+# is not installed on aarch64, so we remove 310 from ALL_PYTHON version now
+ALL_PYTHON="36m 37m 38 39"
+numpy_version="1.19.5"
 for ver in ${ALL_PYTHON}
 do
-    python_ver=${ver:0:2}
+    python_ver=`echo $ver | tr -d m`
     PIP_URL=${GET_PIP_URL}
-    if [ ${ver} = "35m" ];then
-        PIP_URL=${GET_PIP_URL_35}
-    else if [ ${ver} = "36m" ];then
+    if [ ${ver} = "36m" ];then
     	PIP_URL=${GET_PIP_URL_36}
-      fi
     fi
     echo "use pip url: ${PIP_URL}"
     curl ${PIP_URL} | /opt/python/cp${python_ver}-cp${ver}/bin/python - \
 	--no-cache-dir --only-binary :all:
-    if [ ${ARCH} = "aarch64" ] && [ ${ver} = "35m" ];then
-        # aarch64 linux python3.5 pip do not provide binary package
-        /opt/python/cp${python_ver}-cp${ver}/bin/pip install --no-cache-dir numpy setuptools==46.1.3
-    else
-        /opt/python/cp${python_ver}-cp${ver}/bin/pip install \
-        --no-cache-dir --only-binary :all: numpy==${numpy_version} setuptools==46.1.3
-    fi
+    /opt/python/cp${python_ver}-cp${ver}/bin/pip install \
+    --no-cache-dir --only-binary :all: numpy==${numpy_version} setuptools==46.1.3 \
+    -i https://mirrors.aliyun.com/pypi/simple
 done
 
 pushd /home >/dev/null

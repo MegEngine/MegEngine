@@ -45,7 +45,7 @@ fi
 SRC_DIR=$($READLINK -f "`dirname $0`/../../../")
 
 echo ${SRC_DIR}
-ALL_PYTHON="3.5.9 3.6.10 3.7.7 3.8.3"
+ALL_PYTHON="3.6.10 3.7.7 3.8.3 3.9.4 3.10.1"
 USER=$(whoami)
 
 function install_python_package() {
@@ -56,7 +56,7 @@ function install_python_package() {
             echo "FOUND install /Users/${USER}/.pyenv/versions/${pak} strip it..."
         else
             os_ver=$(sw_vers -productVersion | awk '{print int($0)}')
-            if [ $a -lt 11 ];then
+            if [ $os_ver -lt 11 ];then
                 env PYTHON_CONFIGURE_OPTS="--enable-shared" pyenv install ${pak}
             else
                 PYTHON_CONFIGURE_OPTS="--enable-shared" \
