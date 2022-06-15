@@ -2095,7 +2095,12 @@ TEST_F(FALLBACK, GiXorFloat32) {
 
 TEST_F(FALLBACK, GiBSLFloat32) {
     GI_FLOAT32_t src0, src1, ret, na;
+
+#if defined(GI_RVV_INTRINSICS)
+    vuint32m1_t mask = vundefined_u32m1();
+#else
     GI_UINT32_t mask;
+#endif
     std::vector<float> s0{1.1f, 2.2f, 4.5f, 4.9f};
     std::vector<float> s1{2312.1f, 345.244f, 3.59f, -12.8f};
     std::vector<std::vector<uint32_t>> s2s = {
