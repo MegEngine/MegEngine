@@ -157,6 +157,12 @@ std::shared_ptr<json::Object> GraphProfiler::to_json() const {
         auto&& event = kern_ev.second;
         auto&& start = m_start_of_time->at(comp_node);
         event.end->host_wait();
+        //! every event needs to be synchronized on the atlas to ensure that the event
+        //! completes ???
+#if MGB_ATLAS
+        event.kern->host_wait();
+        event.start->host_wait();
+#endif
         opr_prof[comp_node.to_string()] = Object::make({
                 {"start", Number::make(start->elapsed_time_until(*event.start))},
                 {"kern", Number::make(start->elapsed_time_until(*event.kern))},
