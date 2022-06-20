@@ -347,3 +347,37 @@ def test_multiple_grad():
 
     np.testing.assert_almost_equal(loss.numpy(), (av * 10))
     np.testing.assert_almost_equal(net.a.numpy(), (av - 20))
+
+
+def test_inplace_forward():
+    data_shape = (9, 2, 6)
+    av = np.random.random(data_shape).astype(np.float32)
+
+    class MulFunc(Function):
+        def forward(self, a):
+            self.a = a
+            a *= 10
+            return a
+
+        def backward(self, grad_o):
+            return grad_o * 10
+
+    class Simple(Module):
+        def __init__(self, a):
+            super().__init__()
+            self.a = Parameter(a, dtype=np.float32)
+            self.layer1 = MulFunc()
+
+        def forward(self):
+            x = self.layer1(self.a)
+            return x
+
+    net = Simple(av)
+    gm = ad.GradManager().attach(net.parameters())
+    opt = optimizer.SGD(net.parameters(), lr=1.0)
+
+    opt.clear_grad()
+    with gm:
+        loss = net()
+        gm.backward(loss.sum())
+    opt.step()
