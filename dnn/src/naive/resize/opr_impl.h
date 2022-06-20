@@ -75,6 +75,12 @@ public:
     size_t get_workspace_in_bytes(const TensorLayout&, const TensorLayout&) override {
         return 0;
     }
+
+private:
+    template <typename ctype>
+    void kern_naive(
+            bool is_nhwc, InterpolationMode imode, const ctype* diff, ctype* grad,
+            int N, int C, int IH, int IW, int OH, int OW);
 };
 
 }  // namespace naive

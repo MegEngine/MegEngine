@@ -148,6 +148,11 @@ void ResizeImpl::exec(
                 is_nhwc, resize::get_imode((param().imode)), src.ptr<dt_float32>(),
                 dst.ptr<dt_float32>(), src.layout[0], C, IH, IW, OH, OW, S_IN, S_IC,
                 S_IH, S_IW, stream);
+    } else if (src.layout.dtype == dtype::Float16{}) {
+        resize::forward_proxy(
+                is_nhwc, resize::get_imode((param().imode)), src.ptr<dt_float16>(),
+                dst.ptr<dt_float16>(), src.layout[0], C, IH, IW, OH, OW, S_IN, S_IC,
+                S_IH, S_IW, stream);
     } else if (src.layout.dtype == dtype::Uint8()) {
         resize::forward_proxy(
                 is_nhwc, resize::get_imode((param().imode)), src.ptr<dt_uint8>(),

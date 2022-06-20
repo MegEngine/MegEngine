@@ -298,6 +298,7 @@ void forward_proxy_nchw4(
 INST(float)
 INST(uint8_t)
 INST(int8_t)
+DNN_INC_FLOAT16(INST(dt_float16))
 #undef INST
 
 #define INST(ctype)                    \

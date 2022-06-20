@@ -387,40 +387,53 @@ void ResizeImpl::exec(
     }
 }
 
-void ResizeBackwardImpl::exec(
-        _megdnn_tensor_in diff, _megdnn_tensor_out grad, _megdnn_workspace workspace) {
-    check_exec(diff.layout, grad.layout, workspace.size);
-    megdnn_assert(
-            param().format == param::Resize::Format::NCHW, "invalid resize format");
-    const int N = grad.layout.shape[0], C = grad.layout.shape[1],
-              IH = grad.layout.shape[2], IW = grad.layout.shape[3];
-    const int OH = diff.layout.shape[2], OW = diff.layout.shape[3];
-    const float* hptr_ = diff.ptr<dt_float32>();
-    float* sptr_ = grad.ptr<dt_float32>();
+// ***************************Backward*************************** //
+template <typename ctype>
+void ResizeBackwardImpl::kern_naive(
+        bool is_nhwc, InterpolationMode imode, const ctype* diff, ctype* grad, int N,
+        int C, int IH, int IW, int OH, int OW) {
     float scale_h = static_cast<float>(OH) / IH;
     float scale_w = static_cast<float>(OW) / IW;
+    rounding::RoundingConverter<ctype> output_converter;
     auto kern = [=]() {
-        auto hptr = hptr_;
-        auto sptr = sptr_;
-        std::memset(sptr, 0, sizeof(float) * N * C * IH * IW);
+        auto hptr = diff;
+        auto sptr = grad;
+        std::memset(sptr, 0, sizeof(ctype) * N * C * IH * IW);
         rep(n, N) {
             rep(oh, OH) rep(ow, OW) {
-                switch (param().imode) {
+                switch (imode) {
                     case InterpolationMode::INTER_LINEAR: {
                         int ih0, ih1, iw0, iw1;
                         float ah0, ah1, aw0, aw1;
 
-                        std::tie(ah0, ih0, ah1, ih1) = get_nearest_linear_coord(
-                                param().imode, scale_h, IH, oh);
-                        std::tie(aw0, iw0, aw1, iw1) = get_nearest_linear_coord(
-                                param().imode, scale_w, IW, ow);
+                        std::tie(ah0, ih0, ah1, ih1) =
+                                get_nearest_linear_coord(imode, scale_h, IH, oh);
+                        std::tie(aw0, iw0, aw1, iw1) =
+                                get_nearest_linear_coord(imode, scale_w, IW, ow);
 
-                        rep(c, C) {
-                            float hidden = hptr[c * OH * OW + oh * OW + ow];
-                            sptr[c * IH * IW + ih0 * IW + iw0] += ah0 * aw0 * hidden;
-                            sptr[c * IH * IW + ih1 * IW + iw0] += ah1 * aw0 * hidden;
-                            sptr[c * IH * IW + ih0 * IW + iw1] += ah0 * aw1 * hidden;
-                            sptr[c * IH * IW + ih1 * IW + iw1] += ah1 * aw1 * hidden;
+                        if (is_nhwc) {
+                            rep(c, C) {
+                                sptr[(ih0 * IW + iw0) * C + c] += output_converter(
+                                        hptr[(oh * OW + ow) * C + c] * ah0 * aw0);
+                                sptr[(ih0 * IW + iw1) * C + c] += output_converter(
+                                        hptr[(oh * OW + ow) * C + c] * ah0 * aw1);
+                                sptr[(ih1 * IW + iw0) * C + c] += output_converter(
+                                        hptr[(oh * OW + ow) * C + c] * ah1 * aw0);
+                                sptr[(ih1 * IW + iw1) * C + c] += output_converter(
+                                        hptr[(oh * OW + ow) * C + c] * ah1 * aw1);
+                            }
+                        } else {
+                            rep(c, C) {
+                                float hidden = hptr[c * OH * OW + oh * OW + ow];
+                                sptr[c * IH * IW + ih0 * IW + iw0] +=
+                                        output_converter(ah0 * aw0 * hidden);
+                                sptr[c * IH * IW + ih1 * IW + iw0] +=
+                                        output_converter(ah1 * aw0 * hidden);
+                                sptr[c * IH * IW + ih0 * IW + iw1] +=
+                                        output_converter(ah0 * aw1 * hidden);
+                                sptr[c * IH * IW + ih1 * IW + iw1] +=
+                                        output_converter(ah1 * aw1 * hidden);
+                            }
                         }
                         break;
                     }
@@ -429,7 +442,7 @@ void ResizeBackwardImpl::exec(
                         auto iw = get_nearest_src(scale_w, IW, ow);
                         rep(c, static_cast<int>(C)) {
                             sptr[c * IH * IW + ih * IW + iw] +=
-                                    hptr[c * OH * OW + oh * OW + ow];
+                                    output_converter(hptr[c * OH * OW + oh * OW + ow]);
                         }
                         break;
                     }
@@ -452,9 +465,9 @@ void ResizeBackwardImpl::exec(
                                 int h = saturate<int, int>(ih0 + kh, 0, IH - 1);
                                 rep(kw, ksize) {
                                     int w = saturate<int, int>(iw0 + kw, 0, IW - 1);
-                                    sptr[c * IH * IW + h * IW + w] +=
+                                    sptr[c * IH * IW + h * IW + w] += output_converter(
                                             hptr[c * OH * OW + oh * OW + ow] *
-                                            h_coeff[kh] * w_coeff[kw];
+                                            h_coeff[kh] * w_coeff[kw]);
                                 }
                             }
                         }
@@ -471,6 +484,61 @@ void ResizeBackwardImpl::exec(
         }
     };
     MEGDNN_DISPATCH_CPU_KERN_OPR(kern());
+}
+
+#define INST(ctype)                                                                 \
+    template void ResizeBackwardImpl::kern_naive(                                   \
+            bool, InterpolationMode, const ctype*, ctype*, int, int, int, int, int, \
+            int);
+INST(dt_float32);
+DNN_INC_FLOAT16(INST(dt_float16));
+#undef INST
+
+void ResizeBackwardImpl::exec(
+        _megdnn_tensor_in diff, _megdnn_tensor_out grad, _megdnn_workspace workspace) {
+    check_exec(diff.layout, grad.layout, workspace.size);
+    megdnn_assert(
+            param().format == param::Resize::Format::NCHW ||
+                    param().format == param::Resize::Format::NHWC,
+            "invalid resize format");
+    size_t N, C, IH, IW, OH, OW;
+    bool is_nhwc = param().format == param::Resize::Format::NHWC;
+    if (is_nhwc) {
+        if (param().imode != Param::InterpolationMode::LINEAR &&
+            is_nhwc_contig_wc(grad.layout)) {
+            megdnn_assert(
+                    0,
+                    "unsupport mode in resizeBackward, only support param().imode = "
+                    "LINEAR");
+        }
+        N = grad.layout.shape[0];
+        C = grad.layout.shape[3];
+        IH = grad.layout.shape[1];
+        IW = grad.layout.shape[2];
+        OH = diff.layout.shape[1];
+        OW = diff.layout.shape[2];
+    } else {
+        N = grad.layout.shape[0], C = grad.layout.shape[1], IH = grad.layout.shape[2],
+        IW = grad.layout.shape[3];
+        OH = diff.layout.shape[2], OW = diff.layout.shape[3];
+    }
+    switch (grad.layout.dtype.enumv()) {
+#define cb(_t)                                                                     \
+    case DTypeTrait<_t>::enumv: {                                                  \
+        typedef DTypeTrait<_t>::ctype ct;                                          \
+        ct* diff_ptr = diff.ptr<ct>();                                             \
+        ct* grad_ptr = grad.ptr<ct>();                                             \
+        ResizeBackwardImpl::kern_naive(                                            \
+                is_nhwc, param().imode, diff_ptr, grad_ptr, N, C, IH, IW, OH, OW); \
+        break;                                                                     \
+    }
+        cb(megdnn::dtype::Float32);
+        DNN_INC_FLOAT16(cb(megdnn::dtype::Float16));
+        default:
+            megdnn_throw(ssprintf(
+                    "unsupported dtype: %s in resize backward",
+                    grad.layout.dtype.name()));
+    }
 }
 
 // vim: syntax=cpp.doxygen

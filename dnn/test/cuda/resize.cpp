@@ -61,13 +61,67 @@ TEST_F(CUDA, RESIZE_FORWARD) {
                     .set_epsilon(1)
                     .execs({arg.src, arg.dst});
         }
+
+        for (auto&& arg : args) {
+            checker.set_param(arg.param)
+                    .set_dtype(0, dtype::Float16())
+                    .set_dtype(1, dtype::Float16())
+                    .set_epsilon(1e-3)
+                    .execs({arg.src, arg.dst});
+        }
+    }
+}
+
+TEST_F(CUDA, RESIZE_NHWC) {
+    using namespace resize;
+    std::vector<TestArg> args;
+
+    param::Resize param;
+    param.format = param::Resize::Format::NHWC;
+    param.imode = param::Resize::InterpolationMode::LINEAR;
+
+    args.emplace_back(param, TensorShape{1, 1, 4, 5}, TensorShape{1, 1, 8, 5});
+    args.emplace_back(param, TensorShape{2, 6, 4, 5}, TensorShape{2, 3, 8, 5});
+    args.emplace_back(param, TensorShape{1, 2, 2, 2}, TensorShape{1, 4, 3, 2});
+
+    Checker<ResizeBackward> checkerBackward(handle_cuda());
+
+    for (auto&& arg : args) {
+        checkerBackward.set_param(arg.param)
+                .set_dtype(0, dtype::Float32())
+                .set_dtype(1, dtype::Float32())
+                .set_epsilon(1e-3)
+                .execs({arg.src, arg.dst});
+    }
+
+    for (auto&& arg : args) {
+        checkerBackward.set_param(arg.param)
+                .set_dtype(0, dtype::Float16())
+                .set_dtype(1, dtype::Float16())
+                .set_epsilon(1e-3)
+                .execs({arg.src, arg.dst});
+    }
+
+    Checker<ResizeForward> checkerForward(handle_cuda());
+    for (auto&& arg : args) {
+        checkerForward.set_param(arg.param)
+                .set_dtype(0, dtype::Float16())
+                .set_dtype(1, dtype::Float16())
+                .set_epsilon(1e-3)
+                .execs({arg.src, arg.dst});
+    }
+    for (auto&& arg : args) {
+        checkerForward.set_param(arg.param)
+                .set_dtype(0, dtype::Float32())
+                .set_dtype(1, dtype::Float32())
+                .set_epsilon(1e-3)
+                .execs({arg.src, arg.dst});
     }
 }
 
 TEST_F(CUDA, RESIZE_NCHW4) {
     using namespace resize;
     Checker<Resize> checker(handle_cuda());
-
     auto args = get_nchw4_args();
     for (auto&& arg : args) {
         checker.set_param(arg.param)
@@ -113,6 +167,24 @@ TEST_F(CUDA, RESIZE_BACKWARD) {
         param.format = param::Resize::Format::NCHW;
         param.imode = imode;
         checker.set_param(param);
+        checker.set_dtype(0, dtype::Float16());
+        checker.set_dtype(1, dtype::Float16());
+        checker.set_epsilon(1 + 1e-3);
+
+        checker.execs({{2, 3, 4, 5}, {2, 3, 8, 9}});
+        checker.execs({{2, 5, 8, 9}, {2, 5, 4, 5}});
+        checker.execs({{2, 5, 8, 5}, {2, 5, 4, 9}});
+        checker.execs({{2, 5, 4, 9}, {2, 5, 8, 5}});
+    }
+
+    for (auto imode : modes) {
+        Checker<ResizeBackward> checker(handle_cuda());
+        param::Resize param;
+        param.format = param::Resize::Format::NCHW;
+        param.imode = imode;
+        checker.set_param(param);
+        checker.set_dtype(0, dtype::Float32());
+        checker.set_dtype(1, dtype::Float32());
 
         checker.execs({{2, 3, 4, 5}, {2, 3, 8, 9}});
         checker.execs({{2, 5, 8, 9}, {2, 5, 4, 5}});

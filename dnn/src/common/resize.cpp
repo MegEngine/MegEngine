@@ -67,8 +67,12 @@ void ResizeBackward::check_exec(
     auto required_workspace_in_bytes = get_workspace_in_bytes(diff, grad);
     megdnn_assert(workspace_in_bytes >= required_workspace_in_bytes);
     megdnn_assert(
-            param().format == Param::Format::NCHW && grad.dtype == dtype::Float32(),
-            "Backward resize only supports Float32 and NCHW.");
+            (param().format == Param::Format::NCHW ||
+             param().format == Param::Format::NHWC) &&
+                    (grad.dtype == dtype::Float32() DNN_INC_FLOAT16(
+                                           || grad.dtype == dtype::Float16())),
+            "Backward resize only supports NCHW and NHWC, the dtype only supports "
+            "Float32 and Float16.");
 }
 
 std::pair<float, int> ResizeBase::get_cubic_coord(float scale, int idx) {

@@ -20,9 +20,10 @@ void forward_proxy_nchw4(
         const ctype* src, ctype* dst, int N, int C, int IH, int IW, int OH, int OW,
         cudaStream_t stream);
 
+template <typename ctype>
 void backward_data_proxy(
-        InterpolationMode imode, const float* diff, float* grad, int N, int C, int IH,
-        int IW, int OH, int OW, cudaStream_t stream);
+        bool is_nhwc, InterpolationMode imode, const ctype* diff, ctype* grad, int N,
+        int C, int IH, int IW, int OH, int OW, cudaStream_t stream);
 
 }  // namespace resize
 }  // namespace cuda
