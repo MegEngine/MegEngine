@@ -59,6 +59,7 @@ Elemwise::Mode get_elem_mode(ElemwiseMultiType::Mode mode) {
         MODE(FAST_TANH_GRAD);
         MODE(ATAN2);
         MODE(COND_LEQ_MOV);
+        MODE(COND_LT_MOV);
 
         MODE(H_SWISH_GRAD);
         MODE(FUSE_ADD_H_SWISH);
@@ -231,7 +232,9 @@ TEST_F(NAIVE, ELEMWISE_QUANTIZED_MODE_TERNARY) {
             .set_dtype(1, dtype::QuantizedS8(0.2f))
             .set_dtype(2, dtype::QuantizedS8(0.3f));
 
-    for (auto mode : {Param::Mode::QFUSE_MUL_ADD3, Param::Mode::QCOND_LEQ_MOV}) {
+    for (auto mode :
+         {Param::Mode::QFUSE_MUL_ADD3, Param::Mode::QCOND_LEQ_MOV,
+          Param::Mode::QCOND_LT_MOV}) {
         Param param{mode};
         checker.set_param(param);
 

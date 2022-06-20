@@ -179,6 +179,35 @@ DEF_TEST(ternary_non_contig) {
     checker.execl({ly, ly, ly, {{2, 3}, dtype::Float32()}});
 }
 
+DEF_TEST(ternary_lt) {
+    using Mode = ElemwiseForward::Param::Mode;
+    Checker<ElemwiseForward> checker(handle);
+    checker.set_param(Mode::COND_LT_MOV);
+    checker.execs({{1, 3, 4}, {2, 1, 4}, {2, 3, 1}, {2, 3, 4}});
+    checker.set_dtype(0, dtype::Float32())
+            .set_dtype(1, dtype::Float32())
+            .set_dtype(2, dtype::Float32())
+            .execs({{1, 3, 4}, {2, 1, 4}, {2, 3, 1}, {2, 3, 4}});
+    checker.set_dtype(0, dtype::Float16())
+            .set_dtype(1, dtype::Float16())
+            .set_dtype(2, dtype::Float16())
+            .set_dtype(3, dtype::Float16())
+            .execs({{1, 3, 4}, {2, 1, 4}, {2, 3, 1}, {2, 3, 4}});
+    checker.execs({{2, 1, 1, 5}, {4, 5}, {3, 1, 1}, {2, 3, 4, 5}});
+    checker.execs({{3, 1, 1}, {5}, {4, 1}, {3, 4, 5}});
+    ASSERT_THROW(checker.execs({{2, 3, 4}, {4, 1}, {1}, {2, 3, 4}}), MegDNNError);
+    ASSERT_THROW(checker.execs({{2, 4, 4}, {4, 1}, {3, 1, 1}, {2, 3, 4}}), MegDNNError);
+}
+
+DEF_TEST(ternary_lt_non_contig) {
+    using Mode = ElemwiseForward::Param::Mode;
+    Checker<ElemwiseForward> checker(handle);
+    checker.set_param(Mode::COND_LT_MOV);
+    TensorLayout ly{{2, 3}, dtype::Float32()};
+    ly.stride[0] = 4;
+    checker.execl({ly, ly, ly, {{2, 3}, dtype::Float32()}});
+}
+
 DEF_TEST(fuse_mul_add3) {
     using Mode = ElemwiseForward::Param::Mode;
     Checker<ElemwiseForward> checker(handle);

@@ -207,7 +207,7 @@ TEST_F(CUDA, ELEMWISE_QUANTIZED_MODE_TENARY) {
     using Mode = ElemwiseMultiType::Param::Mode;
     Checker<ElemwiseMultiType> checker(handle_cuda());
 
-    for (auto mode : {Mode::QFUSE_MUL_ADD3, Mode::QCOND_LEQ_MOV}) {
+    for (auto mode : {Mode::QFUSE_MUL_ADD3, Mode::QCOND_LEQ_MOV, Mode::QCOND_LT_MOV}) {
         UniformIntRNG rng_int8{-127, 127};
         UniformIntRNG rng_uint8{0, 225};
         checker.set_param({mode})
@@ -368,7 +368,7 @@ TEST_F(CUDA, BENCHMARK_ELEMWISE_QUANTIZED_MODE_TENARY) {
     CUBenchmarker<ElemwiseMultiType> bencher(handle_cuda());
     UniformIntRNG rng{-128, 127};
 
-    for (auto mode : {Mode::QFUSE_MUL_ADD3, Mode::QCOND_LEQ_MOV}) {
+    for (auto mode : {Mode::QFUSE_MUL_ADD3, Mode::QCOND_LEQ_MOV, Mode::QCOND_LT_MOV}) {
         printf("Benchmark mode: %d\n", (int)mode);
         bencher.set_param({mode})
                 .set_rng(0, &rng)

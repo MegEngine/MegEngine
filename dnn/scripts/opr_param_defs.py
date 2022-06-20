@@ -420,6 +420,7 @@ pdef('Elemwise').add_enum(
     Doc('SILU_GRAD = 57', 'binary: grad(x / (1 + exp(-x))'),
     Doc('GELU = 58', 'unary: x Phi(x)'),
     Doc('GELU_GRAD = 59', 'binary: grad(x Phi(x))'),
+    Doc('COND_LT_MOV = 60', 'ternary: x < y ? z : 0'),
 )
 
 pdef('ElemwiseMultiType').add_enum(
@@ -510,7 +511,8 @@ pdef('ElemwiseMultiType').add_enum(
         'and the result is float32.'),
     Doc('FUSE_MUL_ADD3_UINT8xF32xF32xF32 = 56',
         'compute ``a * b + c`` requiring that ``a`` be uint8 and ``b`` and '
-        '``c``  float32, and the result is float32.')
+        '``c``  float32, and the result is float32.'),
+    Doc('QCOND_LT_MOV = 57', 'quantized cond_lt_mov'),
 )
 
 pdef('PowC', 'power with constant exponent').add_fields('float32', 'exp', 0)

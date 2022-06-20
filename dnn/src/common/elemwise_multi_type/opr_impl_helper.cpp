@@ -95,6 +95,7 @@ void ElemwiseMultiTypeImplHelper::exec(
 
             ON_QUANTIZED_MODE(FUSE_MUL_ADD3, 3);
             ON_QUANTIZED_MODE(COND_LEQ_MOV, 3);
+            ON_QUANTIZED_MODE(COND_LT_MOV, 3);
         default:
             megdnn_throw("invalid mode");
     }

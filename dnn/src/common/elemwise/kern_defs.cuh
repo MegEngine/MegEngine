@@ -265,6 +265,7 @@ DEF_KERN_FLOAT(GELU_GRAD, gelu_grad(x, y));
 
 // int and float
 DEF_KERN_ALL(COND_LEQ_MOV, x <= y ? z : ctype(0));
+DEF_KERN_ALL(COND_LT_MOV, x < y ? z : ctype(0));
 DEF_KERN_ALL(FUSE_MUL_ADD3, x* y + z);
 
 #undef KERN_SIG

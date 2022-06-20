@@ -16,7 +16,7 @@ MODES = {
     (2, 'INT'): ['ABS_GRAD', 'ADD', 'FLOOR_DIV', 'MAX', 'MIN', 'MOD', 'MUL',
                  'SIGMOID_GRAD', 'SUB', 'SWITCH_GT0', 'TANH_GRAD', 'LT', 'LEQ',
                  'EQ', 'FUSE_ADD_RELU', 'SHL', 'SHR', 'RMULH'],
-    (3, 'INT'): ['COND_LEQ_MOV'],
+    (3, 'INT'): ['COND_LEQ_MOV', 'COND_LT_MOV'],
 
     (1, 'FLOAT'): ['RELU', 'ABS', 'NEGATE', 'ACOS', 'ASIN', 'CEIL', 'COS',
                    'EXP', 'EXPM1', 'FLOOR', 'LOG', 'LOG1P', 'SIGMOID', 'SIN',
@@ -28,7 +28,7 @@ MODES = {
                    'LOG_SUM_EXP', 'FUSE_ADD_TANH', 'FAST_TANH_GRAD',
                    'FUSE_ADD_SIGMOID', 'ATAN2', 'H_SWISH_GRAD',
                    'FUSE_ADD_H_SWISH', 'SILU_GRAD', 'GELU_GRAD'],
-    (3, 'FLOAT'): ['COND_LEQ_MOV', 'FUSE_MUL_ADD3'],
+    (3, 'FLOAT'): ['COND_LEQ_MOV', 'COND_LT_MOV', 'FUSE_MUL_ADD3'],
     (1, 'BOOL'): ['NOT'],
     (2, 'BOOL'): ['AND', 'OR', 'XOR', 'LT', 'LEQ', 'EQ'],
     (3, 'BOOL'): []

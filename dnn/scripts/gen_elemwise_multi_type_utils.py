@@ -17,16 +17,16 @@ MODES = {
         'LOG_SUM_EXP', 'FUSE_ADD_TANH', 'FAST_TANH_GRAD',
         'FUSE_ADD_SIGMOID', 'ATAN2', 'H_SWISH_GRAD',
         'FUSE_ADD_H_SWISH', 'SILU_GRAD', 'GELU_GRAD'],
-    3: ['COND_LEQ_MOV', 'FUSE_MUL_ADD3'],
+    3: ['COND_LEQ_MOV', 'COND_LT_MOV', 'FUSE_MUL_ADD3'],
 }
 
 QINT4_MODES = {
     1: ['RELU', 'ABS', 'NEGATE', 'CEIL', 'FLOOR', 'SIGMOID',
         'TANH', 'FAST_TANH', 'ROUND', 'H_SWISH'],
-    2: ['ADD', 'MAX', 'MIN', 'MUL', 'SUB', 'SWITCH_GT0', 
-        'LT', 'LEQ', 'EQ', 'FUSE_ADD_RELU', 'FUSE_ADD_TANH', 
+    2: ['ADD', 'MAX', 'MIN', 'MUL', 'SUB', 'SWITCH_GT0',
+        'LT', 'LEQ', 'EQ', 'FUSE_ADD_RELU', 'FUSE_ADD_TANH',
         'FUSE_ADD_SIGMOID', 'FUSE_ADD_H_SWISH'],
-    3: ['COND_LEQ_MOV', 'FUSE_MUL_ADD3'],
+    3: ['COND_LEQ_MOV', 'COND_LT_MOV', 'FUSE_MUL_ADD3'],
 }
 
 QINT32_MODES = {

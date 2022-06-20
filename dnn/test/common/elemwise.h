@@ -16,6 +16,8 @@ namespace elemwise {
     cb(binary_non_contig) \
     cb(ternary) \
     cb(ternary_non_contig) \
+    cb(ternary_lt) \
+    cb(ternary_lt_non_contig) \
     cb(fuse_mul_add3) \
     cb(fuse_mul_add3_non_contig) \
     cb(fuse_mul_add4) \

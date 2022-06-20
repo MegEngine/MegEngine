@@ -239,6 +239,7 @@ const ModeTrait& ModeTrait::from_mode(Mode mode) {
 
         SET(init_quantized_ternary_op, QFUSE_MUL_ADD3);
         SET(init_quantized_ternary_op, QCOND_LEQ_MOV);
+        SET(init_quantized_ternary_op, QCOND_LT_MOV);
 #undef SET
     }
 

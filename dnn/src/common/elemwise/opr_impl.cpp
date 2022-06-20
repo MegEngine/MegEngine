@@ -219,6 +219,7 @@ const ModeTrait& ModeTrait::from_mode(Mode mode) {
         CB_MODE(Mode::SILU_GRAD);
         CB_MODE(Mode::GELU);
         CB_MODE(Mode::GELU_GRAD);
+        CB_MODE(Mode::COND_LT_MOV);
         default:
             megdnn_assert(
                     0,

@@ -25,6 +25,7 @@ void ElemwiseMultiTypeImpl::on_quantized_mode(
 
         DISPATCH(FUSE_MUL_ADD3);
         DISPATCH(COND_LEQ_MOV);
+        DISPATCH(COND_LT_MOV);
 #undef DISPATCH
         default:
             megdnn_assert_internal(0);
