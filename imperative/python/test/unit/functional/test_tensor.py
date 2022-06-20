@@ -753,6 +753,40 @@ def test_broadcast_on_empty_tensor(is_trace):
             test(func, inp, comp, target_shp)
 
 
+@pytest.mark.parametrize(
+    "input_shape, target_shapes",
+    [
+        ((3,), [(2, 1, 3), (1, 2, 3), (2, 2, 3)]),
+        ((1, 3, 1), [(2, None, 3), (3, None, 3), (1, None, 1)]),
+    ],
+)
+@pytest.mark.parametrize("is_symbolic", [True, False])
+def test_broadcast_on_trace(is_symbolic, input_shape, target_shapes):
+    x = F.ones(input_shape)
+
+    @trace(symbolic=is_symbolic)
+    def broadcast(inp, shape):
+        return F.broadcast_to(inp, shape)
+
+    for target_shape in target_shapes:
+        if None in target_shape:
+            symbolic_target_shape = tuple(
+                map(lambda x: None if x is None else Tensor(x), target_shape)
+            )
+            output = broadcast(x, symbolic_target_shape)
+            for i in range(len(target_shape)):
+                if target_shape[i] is not None:
+                    assert output._tuple_shape[i] == target_shape[i]
+                else:
+                    assert (
+                        output._tuple_shape[i] == x._tuple_shape[i - len(target_shape)]
+                    )
+        else:
+            symbolic_target_shape = Tensor(target_shape)
+            output = broadcast(x, symbolic_target_shape)
+            assert output._tuple_shape == target_shape
+
+
 @pytest.mark.parametrize("is_varnode", [True, False])
 def test_utils_astensor1d(is_varnode):
     if is_varnode:
