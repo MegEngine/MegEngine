@@ -6,10 +6,21 @@ from enum import Enum, IntEnum
 
 
 class LiteBackend(IntEnum):
+    """
+    The backend type enum, default only
+    """
+
     LITE_DEFAULT = 0
 
 
 class LiteDeviceType(IntEnum):
+    """
+    The backend device type enum
+
+    Note:
+        compute and storage will base on the device
+    """
+
     LITE_CPU = 0
     LITE_CUDA = 1
     LITE_ATLAS = 3
@@ -19,6 +30,13 @@ class LiteDeviceType(IntEnum):
 
 
 class LiteDataType(IntEnum):
+    """
+    The tensor data type enum
+
+    Note:
+        half for float16, int for int32
+    """
+
     LITE_FLOAT = 0
     LITE_HALF = 1
     LITE_INT = 2
@@ -29,6 +47,12 @@ class LiteDataType(IntEnum):
 
 
 class LiteTensorPhase(IntEnum):
+    """
+    The tensor type enum
+    Note:
+        LITE_IO for both LITE_INPUT and LITE_OUTPUT
+    """
+
     LITE_IO = 0
     LITE_INPUT = 1
     LITE_OUTPUT = 2
@@ -36,7 +60,7 @@ class LiteTensorPhase(IntEnum):
 
 class LiteIOType(IntEnum):
     """
-    the input and output type, include SHAPE and VALUE
+    The input and output type enum, include SHAPE and VALUE
     sometimes user only need the shape of the output tensor
     """
 
@@ -46,26 +70,26 @@ class LiteIOType(IntEnum):
 
 class LiteAlgoSelectStrategy(IntEnum):
     """
-    operation algorithm seletion strategy type, some operations have
+    Operation algorithm seletion strategy type enum, some operations have
     multi algorithms, different algorithm has different attribute, according to
     the strategy, the best algorithm will be selected.
 
-    Note: These strategies can be combined
+    Note:
+        These strategies can be combined
+        LITE_ALGO_HEURISTIC | LITE_ALGO_PROFILE means: if profile cache not valid,
+        use heuristic instead
 
-    LITE_ALGO_HEURISTIC | LITE_ALGO_PROFILE means: if profile cache not valid,
-    use heuristic instead
+        LITE_ALGO_HEURISTIC | LITE_ALGO_REPRODUCIBLE means: heuristic choice the
+        reproducible algo
 
-    LITE_ALGO_HEURISTIC | LITE_ALGO_REPRODUCIBLE means: heuristic choice the
-    reproducible algo
+        LITE_ALGO_PROFILE | LITE_ALGO_REPRODUCIBLE means: profile the best
+        algorithm from the reproducible algorithms set
 
-    LITE_ALGO_PROFILE | LITE_ALGO_REPRODUCIBLE means: profile the best
-    algorithm from the reproducible algorithms set
+        LITE_ALGO_PROFILE | LITE_ALGO_OPTIMIZED means: profile the best
+        algorithm form the optimzed algorithms, thus profile will process fast
 
-    LITE_ALGO_PROFILE | LITE_ALGO_OPTIMIZED means: profile the best
-    algorithm form the optimzed algorithms, thus profile will process fast
-
-    LITE_ALGO_PROFILE | LITE_ALGO_OPTIMIZED | LITE_ALGO_REPRODUCIBLE means:
-    profile the best algorithm form the optimzed and reproducible algorithms
+        LITE_ALGO_PROFILE | LITE_ALGO_OPTIMIZED | LITE_ALGO_REPRODUCIBLE means:
+        profile the best algorithm form the optimzed and reproducible algorithms
     """
 
     LITE_ALGO_HEURISTIC = 1
@@ -76,10 +100,16 @@ class LiteAlgoSelectStrategy(IntEnum):
 
 class LiteLogLevel(IntEnum):
     """
-    DEBUG: The most verbose level, printing debugging info
-    INFO: The default level
-    WARN: Printing warnings
-    ERROR: The least verbose level, printing errors only
+    Log level enum  
+
+    Note:
+        DEBUG: The most verbose level, printing debugging info  
+
+        INFO: The default level  
+
+        WARN: Printing warnings  
+
+        ERROR: The least verbose level, printing errors only  
     """
 
     DEBUG = 0
