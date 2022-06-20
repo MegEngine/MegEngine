@@ -13,6 +13,7 @@
 #define _ALLOW_FLOAT true
 #define _ALLOW_INT   true
 DEF_TRAIT(COND_LEQ_MOV, x <= y ? z : 0)
+DEF_TRAIT(COND_LT_MOV, x < y ? z : 0)
 DEF_TRAIT(FUSE_MUL_ADD3, x* y + z)
 #undef _ALLOW_INT
 #undef _ALLOW_FLOAT

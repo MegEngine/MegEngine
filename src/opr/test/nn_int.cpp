@@ -589,6 +589,7 @@ TEST(TestOprElemwiseMultiType, QuantizedModeTernary_IS8_OS8) {
             switch (mode) {
                 MAKE_TERNARY(FUSE_MUL_ADD3);
                 MAKE_TERNARY(COND_LEQ_MOV);
+                MAKE_TERNARY(COND_LT_MOV);
                 default:
                     mgb_throw(InternalError, "Unknown ElemwiseMultiType Mode\n");
                     break;
@@ -646,6 +647,7 @@ TEST(TestOprElemwiseMultiType, QuantizedModeTernary_I8Asymm_O8Asymm) {
             switch (mode) {
                 MAKE_TERNARY(FUSE_MUL_ADD3);
                 MAKE_TERNARY(COND_LEQ_MOV);
+                MAKE_TERNARY(COND_LT_MOV);
                 default:
                     mgb_throw(InternalError, "Unknown ElemwiseMultiType Mode\n");
                     break;

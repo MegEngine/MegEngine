@@ -601,9 +601,17 @@ MGB_IMPL_OPR_GRAD(Elemwise) {
         case Mode::FLOOR_DIV:
             return nullptr;
         case Mode::MAX:
-            RET(EL3(COND_LEQ_MOV, i[!wrt_idx], i[wrt_idx], og));
+            if (wrt_idx) {
+                RET(EL3(COND_LT_MOV, i[0], i[1], og));
+            } else {
+                RET(EL3(COND_LEQ_MOV, i[1], i[0], og));
+            }
         case Mode::MIN:
-            RET(EL3(COND_LEQ_MOV, i[wrt_idx], i[!wrt_idx], og));
+            if (wrt_idx) {
+                RET(EL3(COND_LT_MOV, i[1], i[0], og));
+            } else {
+                RET(EL3(COND_LEQ_MOV, i[0], i[1], og));
+            }
         case Mode::MOD:
             if (wrt_idx == 0) {
                 RET(og);
@@ -661,7 +669,10 @@ MGB_IMPL_OPR_GRAD(Elemwise) {
             if (wrt_idx <= 1)
                 return nullptr;
             RET(EL3(COND_LEQ_MOV, i0, i1, og));
-
+        case Mode::COND_LT_MOV:
+            if (wrt_idx <= 1)
+                return nullptr;
+            RET(EL3(COND_LT_MOV, i0, i1, og));
         // fuse oprs
         case Mode::FUSE_MUL_ADD3:
             if (wrt_idx < 2) {

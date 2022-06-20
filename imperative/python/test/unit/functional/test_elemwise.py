@@ -2,6 +2,7 @@
 import numpy as np
 import pytest
 
+import megengine.autodiff as ad
 import megengine.functional as F
 import megengine.functional.elemwise as elemwise
 from megengine import tensor
@@ -293,3 +294,25 @@ def test_empty_tensor(is_trace):
             run_test(op, [inps[1], inps[1]], (inps[1] + inps[1]).shape, False)
             run_test(op, [inps[0], inps[2]], (inps[0] + inps[2]).shape, False)
             run_test(op, [inps[1], inps[2]], (inps[1] + inps[2]).shape, False)
+
+
+@pytest.mark.parametrize("is_trace", [True, False])
+def test_maximum_grad_consistency(is_trace):
+    def f(x):
+        with ad.GradManager() as gm:
+            gm.attach(x)
+            gm.backward(F.maximum(x, x))
+        dx = x.grad
+        x.grad = None
+        return dx
+
+    def run(f):
+        x = F.arange(10)
+        for i in range(3):
+            np.testing.assert_equal(f(x).numpy(), np.ones(10))
+
+    if is_trace:
+        for symbolic in [False, True]:
+            run(trace(symbolic=symbolic)(f))
+    else:
+        run(f)

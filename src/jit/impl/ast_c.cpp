@@ -117,6 +117,8 @@ const ElemGeneratorMap& ast_c::elem_opr_generator() {
             // misc
             ENTRY(COND_LEQ_MOV,
                   ASTPtr::make<BinaryAST>("<=", inps[0], inps[1]) * inps[2]),
+            ENTRY(COND_LT_MOV,
+                  ASTPtr::make<BinaryAST>("<", inps[0], inps[1]) * inps[2]),
             ENTRY(FUSE_MUL_ADD3, inps[0] * inps[1] + inps[2]),
             ENTRY(FUSE_MUL_ADD4, inps[0] * inps[1] + inps[2] * inps[3]),
             ENTRY(FUSE_ADD_RELU, make_call("fmaxf", {inps[0] + inps[1], 0})),

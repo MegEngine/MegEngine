@@ -147,6 +147,8 @@ Halide::Expr dispatch_elemwise_mode(
         // ternary
         case Mode::COND_LEQ_MOV:
             return Halide::select(inp(0) <= inp(1), inp(2), cv(0));
+        case Mode::COND_LT_MOV:
+            return Halide::select(inp(0) < inp(1), inp(2), cv(0));
         case Mode::FUSE_MUL_ADD3:
             return inp(0) * inp(1) + inp(2);
         case Mode::FUSE_MUL_ADD4:

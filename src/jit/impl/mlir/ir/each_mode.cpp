@@ -388,6 +388,15 @@ mlir::Value lower_mode<Mode::COND_LEQ_MOV>(
             helper.le(operands[0], operands[1]), operands[2], helper.const_f32(0.f));
 }
 
+//! COND_LT_MOV: x < y ? z : ctype(0)
+template <>
+mlir::Value lower_mode<Mode::COND_LT_MOV>(
+        mlir::OpBuilder& builder, mlir::Location loc, ValueRange operands) {
+    ValueBuilderHelper helper(builder, loc);
+    return helper.select(
+            helper.lt(operands[0], operands[1]), operands[2], helper.const_f32(0.f));
+}
+
 //! FUSE_MUL_ADD3: x * y + z
 template <>
 mlir::Value lower_mode<Mode::FUSE_MUL_ADD3>(

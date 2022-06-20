@@ -452,6 +452,7 @@ void run<all_oprs>(Backend backend, CompNode cn) {
     CHECK_ELEM2(ATAN2, true, gt0);
 
     CHECK_ELEM3(COND_LEQ_MOV, false, none);
+    CHECK_ELEM3(COND_LT_MOV, false, none);
     CHECK_ELEM3(FUSE_MUL_ADD3, true, none);
 
     CHECK_ELEM4(FUSE_MUL_ADD4, true, none);

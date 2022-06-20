@@ -449,6 +449,7 @@ TYPED_TEST(TestJITMlirBinaryElemwise, runGpu) {
 // clang-format off
 #define FOREACH_TERNARY_MODE(cb) \
     cb(COND_LEQ_MOV) \
+    cb(COND_LT_MOV) \
     cb(FUSE_MUL_ADD3) \
 // clang-format on
 template <typename tag>

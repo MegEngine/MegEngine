@@ -571,6 +571,8 @@ struct CheckerConfig<GELU_GRAD> : public NoGradCheckerConfig {};
 /* ======================= ternary config ======================= */
 template <>
 struct CheckerConfig<COND_LEQ_MOV> : public BinaryInputMinGap<false> {};
+template <>
+struct CheckerConfig<COND_LT_MOV> : public BinaryInputMinGap<false> {};
 
 /* ======================= test runner ======================= */
 namespace detail {

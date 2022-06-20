@@ -60,6 +60,7 @@
 
 #define MLIR_MGB_FOREACH_ELEMWISE_MODE_TERNARY(cb) \
     cb(CondLeqMovOp, COND_LEQ_MOV) \
+    cb(CondLtMovOp, COND_LT_MOV) \
     cb(FuseMulAdd3Op, FUSE_MUL_ADD3)
 // clang-format on
 
