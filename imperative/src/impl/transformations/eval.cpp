@@ -126,6 +126,11 @@ ValueRefList InterpreterTransformation::apply_transformation(
         } else {
             return {ValueRef()};
         }
+    } else if (op.is<DupTensor>()) {
+        auto& input = inputs[0].cast(m_value_type);
+        DeviceTensorND dev_tensor;
+        dev_tensor.copy_from(m_channel->get_dev_tensor(input.handle()->handle()));
+        return m_value_type.make(share_handle(m_channel->put(dev_tensor, {})));
     } else {
         return op.fallback(inputs);
     }

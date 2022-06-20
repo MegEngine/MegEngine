@@ -5,7 +5,9 @@ import numpy as np
 import pytest
 from utils import get_var_value, make_tensor
 
+from megengine import _full_sync
 from megengine.core.tensor.dtype import get_scale, get_zero_point, qint8, quint8
+from megengine.device import get_default_device
 from megengine.tensor import Parameter, Tensor
 from megengine.utils.network import Network
 
@@ -220,3 +222,16 @@ def test_tensor_from_bool():
     assert x.dtype == np.bool_
     x = Tensor([True, False])
     assert x.dtype == np.bool_
+
+
+def test_tensor_construct_tensor():
+    x = Tensor(0, dtype=np.float32, device="xpu0:1", name="MyName")
+    assert Tensor(x.astype(np.int32)).dtype == np.int32
+    with pytest.raises(RuntimeError):
+        Tensor(x.astype(np.int32), dtype=np.float32)
+    assert Tensor(x).name == ""
+    assert Tensor(x, name="MyName2").name == "MyName2"
+    with pytest.raises(RuntimeError):
+        assert Tensor(x.to("xpu0:2"), device="xpu0:1").device == "xpu0:1"
+    assert Tensor(x.to("xpu0:2")).device == x.to("xpu0:2").device
+    _full_sync()

@@ -47,7 +47,7 @@ public:
 
     ~Tensor() = default;
 
-    inline Tensor copy() { return *this; }
+    inline Tensor copy() { return Tensor(imperative::apply(DupTensor(), data())[0]); }
 
     inline DType dtype() { return *data().dtype(); }
     inline CompNode comp_node() { return *data().device(); }

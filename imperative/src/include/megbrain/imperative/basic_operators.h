@@ -196,5 +196,10 @@ public:
     std::string to_string() const override;
 };
 
+class DupTensor final : public OperatorImpl<DupTensor, Operator::IdentityLike> {
+public:
+    std::string to_string() const override { return "DupTensor"; }
+};
+
 }  // namespace imperative
 }  // namespace mgb
