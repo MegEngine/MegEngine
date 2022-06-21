@@ -216,10 +216,9 @@ public:
                     cb1(NCHW, DEFAULT, dt_float32, dt_float32, PostprocessMode::FLOAT,
                         "DefaultStrategyType::FLOAT"_hash);
                 } else if (format == param::ConvBias::Format::NCHW44) {
-#if MEGDNN_AARCH64 || MEGDNN_ARMV7
                     auto matmul_block = matmul_algo->get_inner_block_size();
-                    //! Optimize NCHW44 3x3s2 aarch64 8X12X1 and armv7 4x12x1
-                    //! im2col+pack fuse
+                    //! Optimize NCHW44 3x3s2 on aarch64 8X12X4 and fallback/armv7
+                    //! 4x12x4 im2col+pack fuse
                     if ((matmul_block.m == 8 || matmul_block.m == 4) &&
                         matmul_block.n == 12 && matmul_block.k == 1 &&
                         param.filter_meta.spatial[0] == 3 &&
@@ -236,7 +235,6 @@ public:
                         MIDOUT_END();
                         return {};
                     }
-#endif
 
                     cb1(NCHW44, DEFAULT, dt_float32, dt_float32, PostprocessMode::FLOAT,
                         "DefaultStrategyTypeNCHW44::FLOAT"_hash);

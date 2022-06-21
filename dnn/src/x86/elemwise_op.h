@@ -59,6 +59,11 @@ cb(dt_float32, float, "avx2", float, __m256, mm256, ps, ps, SIMDType::AVX2);
 template <typename ctype, SIMDType simd_type = SIMDType::AVX2>
 struct ParamElemVisitorHalfBoardCast;
 
+//! some compiler do not define _mm256_set_m128
+#define _mm256_set_m128ff(xmm1, xmm2) \
+    _mm256_permute2f128_ps(           \
+            _mm256_castps128_ps256(xmm1), _mm256_castps128_ps256(xmm2), 2)
+
 #define cb(                                                                            \
         _ctype, _simd_ptr_type, load_half_fuc, half_type, _simd_type, board_cast_func) \
     template <>                                                                        \
@@ -78,9 +83,10 @@ cb(dt_int32, __m128i, _mm_loadu_si128, __m128i, __m256i, _mm256_set_m128i);
 cb(dt_int16, __m128i, _mm_loadu_si128, __m128i, __m256i, _mm256_set_m128i);
 cb(dt_int8, __m128i, _mm_loadu_si128, __m128i, __m256i, _mm256_set_m128i);
 cb(dt_uint8, __m128i, _mm_loadu_si128, __m128i, __m256i, _mm256_set_m128i);
-cb(dt_float32, float, _mm_load_ps, __m128, __m256, _mm256_set_m128);
+cb(dt_float32, float, _mm_load_ps, __m128, __m256, _mm256_set_m128ff);
 
 #undef cb
+#undef _mm256_set_m128ff
 /*!
  * \brief broadcast type
  * BCAST_x[0]x[1]...: x[i] == !stride[i]

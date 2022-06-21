@@ -197,9 +197,16 @@ bool ConvBiasImpl::AlgoConv1x1::usable(
                 return false;
             }
         }
-#else  //! x86 only support nchw mode
-        if (format != param::ConvBias::Format::NCHW) {
+#else  //! x86 and RISC-V do not support NCHW44_DOT
+        if (format != param::ConvBias::Format::NCHW &&
+            format != param::ConvBias::Format::NCHW44) {
             return false;
+        }
+        //! hybird mode is not support
+        if (param.filter_meta.format == param::ConvBias::Format::NCHW44) {
+            if (param.filter_meta.icpg < 4_z || param.filter_meta.ocpg == 1) {
+                return false;
+            }
         }
 #endif
         //! param

@@ -1,7 +1,6 @@
 #include "src/fallback/conv_bias/im2col/strategy_base.h"
 
-#if MEGDNN_AARCH64 || MEGDNN_ARMV7
-#include <arm_neon.h>
+#include "src/fallback/general_intrinsic/gi_float.h"
 
 using namespace megdnn;
 
@@ -11,32 +10,32 @@ namespace {
     int out_index = 0;                                                       \
     outptr = output_base;                                                    \
     for (; out_index + 11 < block_size; out_index += 12) {                   \
-        float32x4x4_t v0 = vld4q_f32(tmp_output);                            \
-        float32x4x4_t v1 = vld4q_f32(tmp_output + 16);                       \
-        float32x4x4_t v2 = vld4q_f32(tmp_output + 32);                       \
-        vst1q_f32(outptr, v0.val[0]);                                        \
-        vst1q_f32(outptr + 4, v1.val[0]);                                    \
-        vst1q_f32(outptr + 8, v2.val[0]);                                    \
-        vst1q_f32(outptr + 12, v0.val[1]);                                   \
-        vst1q_f32(outptr + 16, v1.val[1]);                                   \
-        vst1q_f32(outptr + 20, v2.val[1]);                                   \
-        vst1q_f32(outptr + 24, v0.val[2]);                                   \
-        vst1q_f32(outptr + 28, v1.val[2]);                                   \
-        vst1q_f32(outptr + 32, v2.val[2]);                                   \
-        vst1q_f32(outptr + 36, v0.val[3]);                                   \
-        vst1q_f32(outptr + 40, v1.val[3]);                                   \
-        vst1q_f32(outptr + 44, v2.val[3]);                                   \
+        GI_FLOAT32_V4_t v0 = GiLoadUzipFloat32V4(tmp_output);                \
+        GI_FLOAT32_V4_t v1 = GiLoadUzipFloat32V4(tmp_output + 16);           \
+        GI_FLOAT32_V4_t v2 = GiLoadUzipFloat32V4(tmp_output + 32);           \
+        GiStoreFloat32(outptr, GiGetSubVectorFloat32V4(v0, 0));              \
+        GiStoreFloat32(outptr + 4, GiGetSubVectorFloat32V4(v1, 0));          \
+        GiStoreFloat32(outptr + 8, GiGetSubVectorFloat32V4(v2, 0));          \
+        GiStoreFloat32(outptr + 12, GiGetSubVectorFloat32V4(v0, 1));         \
+        GiStoreFloat32(outptr + 16, GiGetSubVectorFloat32V4(v1, 1));         \
+        GiStoreFloat32(outptr + 20, GiGetSubVectorFloat32V4(v2, 1));         \
+        GiStoreFloat32(outptr + 24, GiGetSubVectorFloat32V4(v0, 2));         \
+        GiStoreFloat32(outptr + 28, GiGetSubVectorFloat32V4(v1, 2));         \
+        GiStoreFloat32(outptr + 32, GiGetSubVectorFloat32V4(v2, 2));         \
+        GiStoreFloat32(outptr + 36, GiGetSubVectorFloat32V4(v0, 3));         \
+        GiStoreFloat32(outptr + 40, GiGetSubVectorFloat32V4(v1, 3));         \
+        GiStoreFloat32(outptr + 44, GiGetSubVectorFloat32V4(v2, 3));         \
         outptr += ksize12;                                                   \
         tmp_output += 48;                                                    \
     }                                                                        \
                                                                              \
     outptr = output_base4;                                                   \
     for (; out_index + 3 < block_size; out_index += 4) {                     \
-        float32x4x4_t v0 = vld4q_f32(tmp_output);                            \
-        vst1q_f32(outptr, v0.val[0]);                                        \
-        vst1q_f32(outptr + 4, v0.val[1]);                                    \
-        vst1q_f32(outptr + 8, v0.val[2]);                                    \
-        vst1q_f32(outptr + 12, v0.val[3]);                                   \
+        GI_FLOAT32_V4_t v0 = GiLoadUzipFloat32V4(tmp_output);                \
+        GiStoreFloat32(outptr, GiGetSubVectorFloat32V4(v0, 0));              \
+        GiStoreFloat32(outptr + 4, GiGetSubVectorFloat32V4(v0, 1));          \
+        GiStoreFloat32(outptr + 8, GiGetSubVectorFloat32V4(v0, 2));          \
+        GiStoreFloat32(outptr + 12, GiGetSubVectorFloat32V4(v0, 3));         \
         outptr += ksize4;                                                    \
         tmp_output += 16;                                                    \
     }                                                                        \
@@ -45,23 +44,23 @@ namespace {
         float zerobuffer[16] = {0};                                          \
         size_t out_remain = std::min(block_size - out_index, 4);             \
         std::memcpy(zerobuffer, tmp_output, out_remain * sizeof(float) * 4); \
-        float32x4x4_t v0 = vld4q_f32(zerobuffer);                            \
-        vst1q_f32(outptr, v0.val[0]);                                        \
-        vst1q_f32(outptr + 4, v0.val[1]);                                    \
-        vst1q_f32(outptr + 8, v0.val[2]);                                    \
-        vst1q_f32(outptr + 12, v0.val[3]);                                   \
+        GI_FLOAT32_V4_t v0 = GiLoadUzipFloat32V4(zerobuffer);                \
+        GiStoreFloat32(outptr, GiGetSubVectorFloat32V4(v0, 0));              \
+        GiStoreFloat32(outptr + 4, GiGetSubVectorFloat32V4(v0, 1));          \
+        GiStoreFloat32(outptr + 8, GiGetSubVectorFloat32V4(v0, 2));          \
+        GiStoreFloat32(outptr + 12, GiGetSubVectorFloat32V4(v0, 3));         \
     }                                                                        \
     output_base += 48;                                                       \
     output_base4 += 16;
 
-#define LOAD_AND_STOR_IM2COL_DST()               \
-    float32x4_t v1 = vld1q_f32(&src[index + 4]); \
-    float32x4_t v2 = vld1q_f32(&src[index + 8]); \
-    vst1q_f32(&output0[i], v0);                  \
-    vst1q_f32(&output1[i], v1);                  \
-    vst1q_f32(&output2[i], v2);                  \
-    i += 4;                                      \
-    index += 8;                                  \
+#define LOAD_AND_STOR_IM2COL_DST()                    \
+    GI_FLOAT32_t v1 = GiLoadFloat32(&src[index + 4]); \
+    GI_FLOAT32_t v2 = GiLoadFloat32(&src[index + 8]); \
+    GiStoreFloat32(&output0[i], v0);                  \
+    GiStoreFloat32(&output1[i], v1);                  \
+    GiStoreFloat32(&output2[i], v2);                  \
+    i += 4;                                           \
+    index += 8;                                       \
     v0 = v2;
 
 void fuse_packb(
@@ -94,12 +93,12 @@ void fuse_packb(
                 size_t index = 4 * (ic * IH * IW + (start_h * SH + fh) * IW +
                                     cur_remain_w * SW);
                 for (int w = cur_remain_w; w < end_remain_w; w++) {
-                    vst1q_f32(&output02[i], vld1q_f32(&src[index]));
-                    vst1q_f32(&output1[i], vld1q_f32(&src[index + 4]));
+                    GiStoreFloat32(&output02[i], GiLoadFloat32(&src[index]));
+                    GiStoreFloat32(&output1[i], GiLoadFloat32(&src[index + 4]));
                     i += 4;
                     index += 8;
                 }
-                vst1q_f32(&output02[i], vld1q_f32(&src[index]));
+                GiStoreFloat32(&output02[i], GiLoadFloat32(&src[index]));
                 float* output[3];
                 output[0] = output02;
                 output[1] = output1;
@@ -120,19 +119,19 @@ void fuse_packb(
 
                 size_t index = 4 * (ic * IH * IW + (start_h * SH + fh) * IW +
                                     (cur_remain_w * SW));
-                float32x4_t v0 = vld1q_f32(&src[index]);
+                GI_FLOAT32_t v0 = GiLoadFloat32(&src[index]);
                 for (int w = cur_remain_w; w < OW; w++) {
                     LOAD_AND_STOR_IM2COL_DST();
                 }
 
                 for (int h = start_h + 1; h < end_h; h++) {
                     size_t index = 4 * (ic * IH * IW + (h * SH + fh) * IW);
-                    v0 = vld1q_f32(&src[index]);
+                    v0 = GiLoadFloat32(&src[index]);
                     rep(ow, OW) { LOAD_AND_STOR_IM2COL_DST(); }
                 }
 
                 index = 4 * (ic * IH * IW + (end_h * SH + fh) * IW);
-                v0 = vld1q_f32(&src[index]);
+                v0 = GiLoadFloat32(&src[index]);
                 for (int w = 0; w < end_remain_w; w++) {
                     LOAD_AND_STOR_IM2COL_DST();
                 }
@@ -189,7 +188,5 @@ namespace megdnn {
 template class StrategyFuseXx12x1Nchw44K3x3S2<
         float, float, megdnn::PostprocessMode::FLOAT>;
 }  // namespace megdnn
-
-#endif
 
 // vim: syntax=cpp.doxygen

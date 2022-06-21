@@ -530,7 +530,6 @@ public:
 };
 #endif
 
-#if MEGDNN_AARCH64 || MEGDNN_ARMV7
 template <
         typename op_ctype, typename op_dtype, megdnn::PostprocessMode postprocess_mode>
 class StrategyFuseXx12x1Nchw44K3x3S2
@@ -553,7 +552,6 @@ public:
             fallback::MatrixMulImpl::KernParam matmul_param,
             const fallback::MatrixMulImpl::AlgoBase* matmul_algo) override;
 };
-#endif
 }  // namespace megdnn
 
 // vim: syntax=cpp.doxygen

@@ -364,7 +364,9 @@ struct PostProcess<ctype, dtype, megdnn::PostprocessMode::ADD_BIAS> {
             DType dst_type, size_t N, size_t OC, size_t OH, size_t OW,
             size_t pack_oc_size = 1) {
         MEGDNN_MARK_USED_VAR(pack_oc_size);
-        megdnn_assert(pack_oc_size == 1, "PostProcess only support nchw in x86");
+        megdnn_assert(
+                pack_oc_size == 1 || pack_oc_size == 4,
+                "PostProcess only support nchw/44 in x86");
         megdnn_assert(
                 nonlineMode == megdnn::param::ConvBiasV0::NonlineMode::IDENTITY,
                 "Add bias PostProcess only support IDENTITY");

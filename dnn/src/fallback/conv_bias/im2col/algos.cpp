@@ -345,8 +345,20 @@ bool ConvBiasImpl::AlgoIm2col::usable(
             }
         }
 #else
-        if (format != param::ConvBias::Format::NCHW) {
+        if (format != param::ConvBias::Format::NCHW &&
+            format != param::ConvBias::Format::NCHW44) {
             return false;
+        }
+        if (format == param::ConvBias::Format::NCHW44) {
+            //! current NCHW44 im2col only support DEFAULT mode matmul
+            if (matmul_desc.packmode != Pack_Mode::DEFAULT) {
+                return false;
+                //! nchw44 hybird mode and channel wise is not support
+            } else if (
+                    param.filter_meta.icpg < 4_z || param.filter_meta.icpg == 1 ||
+                    param.filter_meta.ocpg == 1) {
+                return false;
+            }
         }
 #endif
         if (param.src_type.enumv() != param.filter_type.enumv() ||

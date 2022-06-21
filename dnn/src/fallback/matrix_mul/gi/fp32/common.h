@@ -214,6 +214,113 @@ static GI_FORCEINLINE void transpose_4x4_1_s(
     outptr += stride;
 }
 
+template <typename T>
+static inline void transpose_1x12_4_s(const T*& inptr0, T* outptr) {
+    static_assert(sizeof(T) == 4, "transpose_1x12_4_s only support sizeof(T) == 4");
+    GI_FLOAT32_t tmp_a, tmp_b;
+#define LOAD()                     \
+    tmp_a = GiLoadFloat32(inptr0); \
+    inptr0 += 4;                   \
+    tmp_b = GiLoadFloat32(inptr0); \
+    inptr0 += 4;
+
+    LOAD();
+    GI_FLOAT32_V2_t d0d1d2d3 = GiZipqFloat32(tmp_a, tmp_b);
+    LOAD();
+    GI_FLOAT32_V2_t d4d5d6d7 = GiZipqFloat32(tmp_a, tmp_b);
+    LOAD();
+    GI_FLOAT32_V2_t d8d9d10d11 = GiZipqFloat32(tmp_a, tmp_b);
+    LOAD();
+    GI_FLOAT32_V2_t d12d13d14d15 = GiZipqFloat32(tmp_a, tmp_b);
+    LOAD();
+    GI_FLOAT32_V2_t d16d17d18d19 = GiZipqFloat32(tmp_a, tmp_b);
+    LOAD();
+    GI_FLOAT32_V2_t d20d21d22d23 = GiZipqFloat32(tmp_a, tmp_b);
+#undef LOAD
+    GiSt1Float32(outptr, GiGetLowFloat32(GiGetSubVectorFloat32V2(d0d1d2d3, 0)));
+    GiSt1Float32(outptr + 1 * 2, GiGetLowFloat32(GiGetSubVectorFloat32V2(d4d5d6d7, 0)));
+    GiSt1Float32(
+            outptr + 2 * 2, GiGetLowFloat32(GiGetSubVectorFloat32V2(d8d9d10d11, 0)));
+    GiSt1Float32(
+            outptr + 3 * 2, GiGetLowFloat32(GiGetSubVectorFloat32V2(d12d13d14d15, 0)));
+    GiSt1Float32(
+            outptr + 4 * 2, GiGetLowFloat32(GiGetSubVectorFloat32V2(d16d17d18d19, 0)));
+    GiSt1Float32(
+            outptr + 5 * 2, GiGetLowFloat32(GiGetSubVectorFloat32V2(d20d21d22d23, 0)));
+    GiSt1Float32(
+            outptr + 6 * 2, GiGetHighFloat32(GiGetSubVectorFloat32V2(d0d1d2d3, 0)));
+    GiSt1Float32(
+            outptr + 7 * 2, GiGetHighFloat32(GiGetSubVectorFloat32V2(d4d5d6d7, 0)));
+    GiSt1Float32(
+            outptr + 8 * 2, GiGetHighFloat32(GiGetSubVectorFloat32V2(d8d9d10d11, 0)));
+    GiSt1Float32(
+            outptr + 9 * 2, GiGetHighFloat32(GiGetSubVectorFloat32V2(d12d13d14d15, 0)));
+    GiSt1Float32(
+            outptr + 10 * 2,
+            GiGetHighFloat32(GiGetSubVectorFloat32V2(d16d17d18d19, 0)));
+    GiSt1Float32(
+            outptr + 11 * 2,
+            GiGetHighFloat32(GiGetSubVectorFloat32V2(d20d21d22d23, 0)));
+    GiSt1Float32(
+            outptr + 12 * 2, GiGetLowFloat32(GiGetSubVectorFloat32V2(d0d1d2d3, 1)));
+    GiSt1Float32(
+            outptr + 13 * 2, GiGetLowFloat32(GiGetSubVectorFloat32V2(d4d5d6d7, 1)));
+    GiSt1Float32(
+            outptr + 14 * 2, GiGetLowFloat32(GiGetSubVectorFloat32V2(d8d9d10d11, 1)));
+    GiSt1Float32(
+            outptr + 15 * 2, GiGetLowFloat32(GiGetSubVectorFloat32V2(d12d13d14d15, 1)));
+    GiSt1Float32(
+            outptr + 16 * 2, GiGetLowFloat32(GiGetSubVectorFloat32V2(d16d17d18d19, 1)));
+    GiSt1Float32(
+            outptr + 17 * 2, GiGetLowFloat32(GiGetSubVectorFloat32V2(d20d21d22d23, 1)));
+    GiSt1Float32(
+            outptr + 18 * 2, GiGetHighFloat32(GiGetSubVectorFloat32V2(d0d1d2d3, 1)));
+    GiSt1Float32(
+            outptr + 19 * 2, GiGetHighFloat32(GiGetSubVectorFloat32V2(d4d5d6d7, 1)));
+    GiSt1Float32(
+            outptr + 20 * 2, GiGetHighFloat32(GiGetSubVectorFloat32V2(d8d9d10d11, 1)));
+    GiSt1Float32(
+            outptr + 21 * 2,
+            GiGetHighFloat32(GiGetSubVectorFloat32V2(d12d13d14d15, 1)));
+    GiSt1Float32(
+            outptr + 22 * 2,
+            GiGetHighFloat32(GiGetSubVectorFloat32V2(d16d17d18d19, 1)));
+    GiSt1Float32(
+            outptr + 23 * 2,
+            GiGetHighFloat32(GiGetSubVectorFloat32V2(d20d21d22d23, 1)));
+    outptr += 23 * 2;
+}
+
+template <typename T>
+static inline void transpose_1x4_4_s(const T*& inptr0, T* outptr) {
+    static_assert(sizeof(T) == 4, "transpose_1x4_4_s only support sizeof(T) == 4");
+    GI_FLOAT32_t tmp_a, tmp_b;
+#define LOAD()                     \
+    tmp_a = GiLoadFloat32(inptr0); \
+    inptr0 += 4;                   \
+    tmp_b = GiLoadFloat32(inptr0); \
+    inptr0 += 4;
+
+    LOAD();
+    GI_FLOAT32_V2_t d0d1d2d3 = GiZipqFloat32(tmp_a, tmp_b);
+    LOAD();
+    GI_FLOAT32_V2_t d4d5d6d7 = GiZipqFloat32(tmp_a, tmp_b);
+#undef LOAD
+    GiSt1Float32(outptr, GiGetLowFloat32(GiGetSubVectorFloat32V2(d0d1d2d3, 0)));
+    GiSt1Float32(outptr + 1 * 2, GiGetLowFloat32(GiGetSubVectorFloat32V2(d4d5d6d7, 0)));
+    GiSt1Float32(
+            outptr + 2 * 2, GiGetHighFloat32(GiGetSubVectorFloat32V2(d0d1d2d3, 0)));
+    GiSt1Float32(
+            outptr + 3 * 2, GiGetHighFloat32(GiGetSubVectorFloat32V2(d4d5d6d7, 0)));
+    GiSt1Float32(outptr + 4 * 2, GiGetLowFloat32(GiGetSubVectorFloat32V2(d0d1d2d3, 1)));
+    GiSt1Float32(outptr + 5 * 2, GiGetLowFloat32(GiGetSubVectorFloat32V2(d4d5d6d7, 1)));
+    GiSt1Float32(
+            outptr + 6 * 2, GiGetHighFloat32(GiGetSubVectorFloat32V2(d0d1d2d3, 1)));
+    GiSt1Float32(
+            outptr + 7 * 2, GiGetHighFloat32(GiGetSubVectorFloat32V2(d4d5d6d7, 1)));
+    outptr += 7 * 2;
+}
+
 }  // namespace fallback
 }  // namespace matmul
 }  // namespace megdnn

@@ -42,10 +42,16 @@ TEST_F(FALLBACK, MATRIX_MUL_MK4_GI) {
             "FB_GI_F32_MK4_4x8", param::MatrixMul::Format::MK4, 1);
 }
 
-TEST_F(FALLBACK, MATRIX_MULF_GI_F32_4x12) {
+TEST_F(FALLBACK, MATRIX_MUL_GI_F32_4x12) {
     matrix_mul::check_matrix_mul(
             dtype::Float32{}, dtype::Float32{}, dtype::Float32{}, handle(),
             "FB_GI_F32_4x12");
+}
+
+TEST_F(FALLBACK, MATRIX_MUL_GI_PACK_MK4) {
+    matrix_mul::check_matrix_mul(
+            dtype::Float32{}, dtype::Float32{}, dtype::Float32{}, handle(),
+            "FB_GI_F32_MK4_PACK_4x12", param::MatrixMul::Format::MK4, 1);
 }
 
 TEST_F(FALLBACK, MATRIX_MUL_RECORD) {
@@ -161,6 +167,13 @@ TEST_F(FALLBACK, BENCHMARK_MATRIX_MUL_FB_GI_F32_4x12) {
     matrix_mul::benchmark_single_algo(
             handle(), args, dtype::Float32{}, dtype::Float32{}, dtype::Float32{},
             "FB_GI_F32_4x12", param::MatrixMul::Format::DEFAULT);
+}
+
+TEST_F(FALLBACK, BENCHMARK_MATRIX_MUL_GI_PACK_MK4) {
+    auto args = matrix_mul::get_benchmark_matmul_args();
+    matrix_mul::benchmark_single_algo(
+            handle(), args, dtype::Float32{}, dtype::Float32{}, dtype::Float32{},
+            "FB_GI_F32_MK4_PACK_4x12", param::MatrixMul::Format::MK4);
 }
 
 #endif
