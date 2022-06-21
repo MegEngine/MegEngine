@@ -32,7 +32,7 @@ namespace x86 {
     thin_function<void(const ctype*, ctype*, DType, DType, size_t)> run =     \
             OpCallerUnary<_op<_simd_type, ctype, ctype>, _simd_type>::run;    \
     run(static_cast<ctype*>(conv_dst_ptr), reinterpret_cast<ctype*>(dst_ptr), \
-        bias_type, dst_type, N* OC* OH* OW);
+        bias_type, dst_type, N* OC* OH* OW* pack_oc_size);
 
 #define CALL_BINARY_BROADCAST(_op, _simd_type)                                       \
     thin_function<void(                                                              \
@@ -45,6 +45,17 @@ namespace x86 {
         reinterpret_cast<ctype*>(dst_ptr), bias_type, bias_type, dst_type, N, OC,    \
         OH* OW);
 
+#define CALL_BINARY_BROADCAST_NCHWXX(_op, _simd_type)                                \
+    thin_function<void(                                                              \
+            const ctype*, const ctype*, ctype*, DType, DType, DType, size_t, size_t, \
+            size_t, size_t)>                                                         \
+            run = OpCallerBinary<                                                    \
+                    _op<_simd_type, ctype, ctype>, _simd_type,                       \
+                    megdnn::x86::BcastType::VEC_BCAST101xX>::run;                    \
+    run(static_cast<ctype*>(conv_dst_ptr), static_cast<ctype*>(bias_ptr),            \
+        reinterpret_cast<ctype*>(dst_ptr), bias_type, bias_type, dst_type, N, OC,    \
+        OH* OW, pack_oc_size);
+
 #define CALL_BINARY(_op, _simd_type)                                          \
     thin_function<void(                                                       \
             const ctype*, const ctype*, ctype*, DType, DType, DType, size_t)> \
@@ -53,7 +64,7 @@ namespace x86 {
                     megdnn::x86::BcastType::VEC_VEC>::run;                    \
     run(static_cast<ctype*>(conv_dst_ptr), static_cast<ctype*>(bias_ptr),     \
         reinterpret_cast<ctype*>(dst_ptr), bias_type, bias_type, dst_type,    \
-        N* OC* OH* OW);
+        N* OC* OH* OW* pack_oc_size);
 
 #define cb_unary(_simd_type)                                          \
     if (elem_mode == megdnn::param::Elemwise::Mode::RELU) {           \
@@ -93,19 +104,24 @@ namespace x86 {
         cb_binary(CALLER, SIMDType::NONE)        \
     }
 
-#define FOR_BIAS(bias_mode)                       \
-    switch (bias_mode) {                          \
-        case BiasMode::NO_BIAS:                   \
-            FOR_NONLINEAR_NOBIAS();               \
-            break;                                \
-        case BiasMode::BROADCAST_CHANNEL_BIAS:    \
-            FOR_NONLINEAR(CALL_BINARY_BROADCAST); \
-            break;                                \
-        case BiasMode::BIAS:                      \
-            FOR_NONLINEAR(CALL_BINARY);           \
-            break;                                \
-        default:                                  \
-            break;                                \
+#define FOR_BIAS(bias_mode)                                                     \
+    switch (bias_mode) {                                                        \
+        case BiasMode::NO_BIAS:                                                 \
+            FOR_NONLINEAR_NOBIAS();                                             \
+            break;                                                              \
+        case BiasMode::BROADCAST_CHANNEL_BIAS:                                  \
+            if (pack_oc_size == 1) {                                            \
+                FOR_NONLINEAR(CALL_BINARY_BROADCAST);                           \
+            } else {                                                            \
+                megdnn_assert(pack_oc_size == 4, "Only support nchw44 in x86"); \
+                FOR_NONLINEAR(CALL_BINARY_BROADCAST_NCHWXX);                    \
+            }                                                                   \
+            break;                                                              \
+        case BiasMode::BIAS:                                                    \
+            FOR_NONLINEAR(CALL_BINARY);                                         \
+            break;                                                              \
+        default:                                                                \
+            break;                                                              \
     }
 
 template <
@@ -119,7 +135,9 @@ struct PostProcess {
             DType dst_type, size_t N, size_t OC, size_t OH, size_t OW,
             size_t pack_oc_size = 1) {
         MEGDNN_MARK_USED_VAR(pack_oc_size);
-        megdnn_assert(pack_oc_size == 1, "PostProcess only support nchw in x86");
+        megdnn_assert(
+                pack_oc_size == 1 || pack_oc_size == 4,
+                "PostProcess only support nchw/44 in x86");
         megdnn::param::Elemwise::Mode elem_mode = megdnn::param::Elemwise::Mode::ADD;
         if (bias_mode != megdnn::ConvBiasForward::BiasMode::NO_BIAS) {
             switch (nonlineMode) {
@@ -320,16 +338,21 @@ struct PostProcess<ctype, dtype, megdnn::PostprocessMode::QUANTIZED> {
         CALLER(AddOp, SIMDType::NONE)            \
     }
 
-#define FOR_BIAS(bias_mode)                    \
-    switch (bias_mode) {                       \
-        case BiasMode::BIAS:                   \
-            FOR_SIMD(CALL_BINARY);             \
-            break;                             \
-        case BiasMode::BROADCAST_CHANNEL_BIAS: \
-            FOR_SIMD(CALL_BINARY_BROADCAST);   \
-            break;                             \
-        default:                               \
-            break;                             \
+#define FOR_BIAS(bias_mode)                                                     \
+    switch (bias_mode) {                                                        \
+        case BiasMode::BIAS:                                                    \
+            FOR_SIMD(CALL_BINARY);                                              \
+            break;                                                              \
+        case BiasMode::BROADCAST_CHANNEL_BIAS:                                  \
+            if (pack_oc_size == 1) {                                            \
+                FOR_SIMD(CALL_BINARY_BROADCAST);                                \
+            } else {                                                            \
+                megdnn_assert(pack_oc_size == 4, "Only support nchw44 in x86"); \
+                FOR_SIMD(CALL_BINARY_BROADCAST_NCHWXX);                         \
+            }                                                                   \
+            break;                                                              \
+        default:                                                                \
+            break;                                                              \
     }
 
 template <typename ctype, typename dtype>
