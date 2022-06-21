@@ -4208,7 +4208,26 @@ TEST_F(FALLBACK, GiLoadUzipFloat32V3) {
         naive.push_back(s0[9 + i]);
     }
 
-    assert_eq((float*)&ret, naive);
+    assert_eq((float*)&ret, naive, SIMD_LEN * 3);
+}
+
+TEST_F(FALLBACK, GiLoadUzipFloat32V4) {
+    GI_FLOAT32_V4_t ret;
+    std::vector<float> s0{1.1f, 2.2f, 3.5f,  4.9f,  2312.1f, 345.244f, 3.59f, -12.8f,
+                          2.2f, 6.0f, 90.0f, 89.3f, 2.1f,    -3.5f,    4.9f,  -2312.1f};
+    s0.resize(SIMD_LEN * 4);
+
+    force_memset_ret((void*)&ret, GI_SIMD_LEN_BYTE * 4);
+    ret = GiLoadUzipFloat32V4(s0.data());
+    std::vector<float> naive;
+    for (size_t i = 0; i < 4; i++) {
+        naive.push_back(s0[0 + i]);
+        naive.push_back(s0[4 + i]);
+        naive.push_back(s0[8 + i]);
+        naive.push_back(s0[12 + i]);
+    }
+
+    assert_eq((float*)&ret, naive, SIMD_LEN * 4);
 }
 
 TEST_F(FALLBACK, GiStoreZipFloat32V3) {

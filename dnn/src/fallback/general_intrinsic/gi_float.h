@@ -1751,6 +1751,42 @@ GI_FLOAT32_V3_t GiLoadUzipFloat32V3(const float* ptr) {
 }
 
 GI_FORCEINLINE
+GI_FLOAT32_V4_t GiLoadUzipFloat32V4(const float* ptr) {
+#if defined(GI_NEON_INTRINSICS)
+    return vld4q_f32(ptr);
+#elif defined(GI_SSE2_INTRINSICS)
+    GI_FLOAT32_V4_t v;
+    __m128 tmp0, tmp1, tmp2, tmp3;
+    v.val[0] = GiLoadFloat32(ptr);
+    v.val[1] = GiLoadFloat32((ptr + 4));
+    v.val[2] = GiLoadFloat32((ptr + 8));
+    v.val[3] = GiLoadFloat32((ptr + 12));
+
+    tmp0 = _mm_unpacklo_ps(v.val[0], v.val[1]);
+    tmp2 = _mm_unpacklo_ps(v.val[2], v.val[3]);
+    tmp1 = _mm_unpackhi_ps(v.val[0], v.val[1]);
+    tmp3 = _mm_unpackhi_ps(v.val[2], v.val[3]);
+    v.val[0] = _mm_movelh_ps(tmp0, tmp2);
+    v.val[1] = _mm_movehl_ps(tmp2, tmp0);
+    v.val[2] = _mm_movelh_ps(tmp1, tmp3);
+    v.val[3] = _mm_movehl_ps(tmp3, tmp1);
+    return v;
+#elif defined(GI_RVV_INTRINSICS)
+    return vlseg4e32_v_f32m1x4(ptr, GI_SIMD_LEN_BYTE / sizeof(float));
+#else
+    GI_FLOAT32_V4_t ret;
+    for (size_t i = 0; i < 4; i++) {
+        ret.val[i][0] = ptr[0 + i];
+        ret.val[i][1] = ptr[4 + i];
+        ret.val[i][2] = ptr[8 + i];
+        ret.val[i][3] = ptr[12 + i];
+    }
+
+    return ret;
+#endif
+}
+
+GI_FORCEINLINE
 void GiStoreZipFloat32V3(float* ptr, GI_FLOAT32_V3_t val) {
 #if defined(GI_NEON_INTRINSICS)
     vst3q_f32(ptr, val);
