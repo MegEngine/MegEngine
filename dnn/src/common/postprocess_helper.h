@@ -25,14 +25,27 @@ void to_handle_bias_and_nonlinear(
         void* conv_dst_ptr, const void* bias_ptr, void* dst_ptr,
         megdnn::ConvBiasForward::BiasMode bias_mode,
         megdnn::param::ConvBias::NonlineMode nonlineMode, megdnn::DType bias_type,
-        megdnn::DType dst_type, size_t N, size_t OC, size_t OH, size_t OW) {
+        megdnn::DType dst_type, size_t N, size_t OC, size_t OH, size_t OW,
+        size_t pack_oc_size) {
     auto handle = megdnn::inplace_cpu_handle();
-    auto conv_dst_tensor_layout = megdnn::TensorLayout({N, OC, OH, OW}, dst_type);
-    auto conv_dst_tensor = megdnn::TensorND{conv_dst_ptr, conv_dst_tensor_layout};
+    megdnn::TensorLayout conv_dst_tensor_layout, bias_tensor_layout;
+    megdnn::TensorND conv_dst_tensor;
+    if (1 == pack_oc_size) {
+        conv_dst_tensor_layout = megdnn::TensorLayout({N, OC, OH, OW}, dst_type);
+    } else {
+        conv_dst_tensor_layout =
+                megdnn::TensorLayout({N, OC, OH, OW, pack_oc_size}, dst_type);
+    }
+    conv_dst_tensor = megdnn::TensorND{conv_dst_ptr, conv_dst_tensor_layout};
     auto dst_tensor = megdnn::TensorND{dst_ptr, conv_dst_tensor_layout};
-    auto bias_tensor_layout = conv_dst_tensor_layout;
+    bias_tensor_layout = conv_dst_tensor_layout;
     if (megdnn::ConvBiasForward::BiasMode::BROADCAST_CHANNEL_BIAS == bias_mode) {
-        bias_tensor_layout = megdnn::TensorLayout({1, OC, 1, 1}, bias_type);
+        if (1 == pack_oc_size) {
+            bias_tensor_layout = megdnn::TensorLayout({1, OC, 1, 1}, bias_type);
+        } else {
+            bias_tensor_layout =
+                    megdnn::TensorLayout({1, OC, 1, 1, pack_oc_size}, bias_type);
+        }
     } else if (megdnn::ConvBiasForward::BiasMode::NO_BIAS == bias_mode) {
         bias_tensor_layout = megdnn::TensorLayout({}, bias_type);
     }
@@ -52,10 +65,9 @@ struct PostProcess {
             megdnn::param::ConvBias::NonlineMode nonlineMode, megdnn::DType bias_type,
             megdnn::DType dst_type, size_t N, size_t OC, size_t OH, size_t OW,
             size_t pack_oc_size = 1) {
-        MEGDNN_MARK_USED_VAR(pack_oc_size);
         to_handle_bias_and_nonlinear(
                 conv_dst_ptr, bias_ptr, dst_ptr, bias_mode, nonlineMode, bias_type,
-                dst_type, N, OC, OH, OW);
+                dst_type, N, OC, OH, OW, pack_oc_size);
     }
 };
 
@@ -79,10 +91,9 @@ struct PostProcess<opctype, opdtype, megdnn::PostprocessMode::QUANTIZED> {
             megdnn::param::ConvBias::NonlineMode nonlineMode, megdnn::DType bias_type,
             megdnn::DType dst_type, size_t N, size_t OC, size_t OH, size_t OW,
             size_t pack_oc_size = 1) {
-        MEGDNN_MARK_USED_VAR(pack_oc_size);
         to_handle_bias_and_nonlinear(
                 conv_dst_ptr, bias_ptr, dst_ptr, bias_mode, nonlineMode, bias_type,
-                dst_type, N, OC, OH, OW);
+                dst_type, N, OC, OH, OW, pack_oc_size);
     }
 };
 
@@ -94,13 +105,12 @@ struct PostProcess<ctype, dtype, megdnn::PostprocessMode::ADD_BIAS> {
             megdnn::param::ConvBias::NonlineMode nonlineMode, megdnn::DType bias_type,
             megdnn::DType dst_type, size_t N, size_t OC, size_t OH, size_t OW,
             size_t pack_oc_size = 1) {
-        MEGDNN_MARK_USED_VAR(pack_oc_size);
         if (bias_mode == megdnn::ConvBiasForward::BiasMode::NO_BIAS) {
             return;
         }
         to_handle_bias_and_nonlinear(
                 conv_dst_ptr, bias_ptr, dst_ptr, bias_mode, nonlineMode, bias_type,
-                dst_type, N, OC, OH, OW);
+                dst_type, N, OC, OH, OW, pack_oc_size);
     }
 };
 
