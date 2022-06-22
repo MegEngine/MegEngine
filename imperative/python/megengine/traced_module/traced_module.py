@@ -34,7 +34,7 @@ from ..core._imperative_rt.core2 import (
     set_module_tracing,
     unset_module_tracing,
 )
-from ..core._trace_option import set_symbolic_shape
+from ..core._trace_option import set_symbolic_shape, use_symbolic_shape
 from ..core.ops.builtin import Copy
 from ..module import Module
 from ..module import external as MExternal
@@ -2451,6 +2451,8 @@ def trace_module(
     """
     assert active_module_tracer() is None
     assert isinstance(mod, Module)
+    use_sym_shape = use_symbolic_shape()
+    inputs = []
     try:
         net_name = mod._name if mod._name else mod.__class__.__name__
         use_sym_shape = set_symbolic_shape(True)
