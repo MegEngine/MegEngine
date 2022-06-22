@@ -97,6 +97,7 @@ struct MeanReducer<__fp16, __fp16, __fp16, false> {
     }
     MeanReducer() = default;
     void feed(const ctype* val) { res = vaddq_f16(vld1q_f16(val), res); }
+    void feed_vector(const float16x8_t& vval) { res = vaddq_f16(vval, res); }
     void feed_remain(const ctype* val) { remain += *val; }
     void post(ctype* dst) {
         res = vmulq_n_f16(res, coef);
@@ -127,8 +128,8 @@ struct MeanReducer<dt_quint8, uint8_t, int32_t, false> {
         vcoef = vdupq_n_f32(coef);
     }
     MeanReducer() = default;
-    void feed(const uint8_t* val) {
-        const uint8x16_t vval = vld1q_u8(val);
+    void feed(const uint8_t* val) { feed_vector(vld1q_u8(val)); }
+    void feed_vector(const uint8x16_t& vval) {
         const uint16x8_t vval_low = vmovl_u8(vget_low_u8(vval));
         const uint16x8_t vval_high = vmovl_u8(vget_high_u8(vval));
 
@@ -219,8 +220,8 @@ REDUCER_MAX_MIN_C1(min, dt_quint8, uint8_t, uint8_t, u, uint, 255);
             remain = vdupq_n_##_stype(_init);                                        \
         }                                                                            \
         _mode##Reducer() = default;                                                  \
-        void feed(const ctype* val) {                                                \
-            __stype##8x16_t vval = vld1q_##_stype(val);                              \
+        void feed(const ctype* val) { feed_vector(vld1q_##_stype(val)); }            \
+        void inline feed_vector(const __stype##8x16_t & vval) {                      \
             res = v##_mode##q_##_stype(vval, res);                                   \
         }                                                                            \
         void feed_remain(const ctype* val) {                                         \
@@ -286,8 +287,8 @@ REDUCER_MAX_MIN_C1(
             remain = _init;                                                  \
         }                                                                    \
         _mode##Reducer() = default;                                          \
-        void feed(const ctype* val) {                                        \
-            __stype vval = vld1q_##_stype(val);                              \
+        void feed(const ctype* val) { feed_vector(vld1q_##_stype(val)); }    \
+        void inline feed_vector(const __stype& vval) {                       \
             res = v##_mode##q_##_stype(vval, res);                           \
         }                                                                    \
         void feed_remain(const ctype* val) {                                 \
@@ -326,8 +327,8 @@ struct ProductReducer;
             remain = _init;                                                         \
         }                                                                           \
         _mode##Reducer() = default;                                                 \
-        void feed(const ctype* val) {                                               \
-            __stype vval = vld1q_##_stype(val);                                     \
+        void feed(const ctype* val) { feed_vector(vld1q_##_stype(val)); }           \
+        void feed_vector(const __stype& vval) {                                     \
             res = v##_act##q_##_stype(vval, res);                                   \
         }                                                                           \
         void feed_remain(const ctype* val) {                                        \
@@ -435,8 +436,8 @@ struct SumSqrReducer<__fp16, __fp16, __fp16, false> {
     fp16_fix_t remain;
     SumSqrReducer(DType, size_t cnt) : remain(0.0f) { res = vdupq_n_f16(0.0f); }
     SumSqrReducer() = default;
-    void feed(const __fp16* val) {
-        float16x8_t vval = vld1q_f16(val);
+    void feed(const __fp16* val) { feed_vector(vld1q_f16(val)); }
+    void inline feed_vector(const float16x8_t& vval) {
         res = vaddq_f16(vmulq_f16(vval, vval), res);
     }
     void feed_remain(const __fp16* val) { remain += (*val) * (*val); }
@@ -504,6 +505,60 @@ struct Exec<Reducer, false> {
     }
 };
 
+template <typename Reducer, typename dtype, size_t B>
+struct ExecC1SmallB {
+    static void do_reduce(
+            const dtype* src, dtype* dst, DType src_dtype, size_t A, size_t, size_t C);
+};
+
+#define ImplementC1SmallB(_ctype, _simd_prefix, _simd_suffix)                      \
+    template <typename Reducer, size_t B>                                          \
+    struct ExecC1SmallB<Reducer, _ctype, B> {                                      \
+        static void do_reduce(                                                     \
+                const _ctype* src, _ctype* dst, DType src_dtype, size_t A, size_t, \
+                size_t) {                                                          \
+            size_t a = 0;                                                          \
+            for (; a + Reducer::SIMD_WIDTH < A; a += Reducer::SIMD_WIDTH) {        \
+                Reducer reducer(src_dtype, B);                                     \
+                auto src_ptr = src + a * B;                                        \
+                if (B == 4) {                                                      \
+                    _simd_prefix##x4_t data_v4 = vld4q_##_simd_suffix(src_ptr);    \
+                    reducer.feed_vector(data_v4.val[0]);                           \
+                    reducer.feed_vector(data_v4.val[1]);                           \
+                    reducer.feed_vector(data_v4.val[2]);                           \
+                    reducer.feed_vector(data_v4.val[3]);                           \
+                }                                                                  \
+                if (B == 3) {                                                      \
+                    _simd_prefix##x3_t data_v3 = vld3q_##_simd_suffix(src_ptr);    \
+                    reducer.feed_vector(data_v3.val[0]);                           \
+                    reducer.feed_vector(data_v3.val[1]);                           \
+                    reducer.feed_vector(data_v3.val[2]);                           \
+                }                                                                  \
+                if (B == 2) {                                                      \
+                    _simd_prefix##x2_t data_v2 = vld2q_##_simd_suffix(src_ptr);    \
+                    reducer.feed_vector(data_v2.val[0]);                           \
+                    reducer.feed_vector(data_v2.val[1]);                           \
+                }                                                                  \
+                reducer.post(dst);                                                 \
+                dst += Reducer::SIMD_WIDTH;                                        \
+            }                                                                      \
+            for (; a < A; a++) {                                                   \
+                Reducer reducer(src_dtype, B);                                     \
+                auto src_ptr = src + a * B;                                        \
+                for (size_t i = 0; i < B; i++)                                     \
+                    reducer.feed_remain(src_ptr + i);                              \
+                reducer.post_remain(dst);                                          \
+                dst++;                                                             \
+            }                                                                      \
+        }                                                                          \
+    }
+
+ImplementC1SmallB(uint8_t, uint8x16, u8);
+
+#if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
+ImplementC1SmallB(__fp16, float16x8, f16);
+#endif
+
 }  // anonymous namespace
 
 void ReduceImpl::exec(
@@ -513,31 +568,40 @@ void ReduceImpl::exec(
     reduce::get_ABC(src.layout, A, B, C, param().axis);
     bool execed = false;
     using Mode = param::Reduce::Mode;
-#define DISPATCH_FUNC(Reducer, dtype, ctype, comp_type)                            \
-    if (C == 1) {                                                                  \
-        using _Reducer = Reducer<dtype, ctype, comp_type, true>;                   \
-        std::function<void(const ctype*, ctype*, DType, size_t, size_t, size_t)>   \
-                do_reduce = Exec<_Reducer, true>::do_reduce;                       \
-        MIDOUT_BEGIN(                                                              \
-                megdnn_arm_common_reduce, ctype, dtype, comp_type, midout_iv(1)) { \
-            MEGDNN_DISPATCH_CPU_KERN_OPR(do_reduce(                                \
-                    reinterpret_cast<ctype*>(src.raw_ptr()),                       \
-                    reinterpret_cast<ctype*>(dst.raw_ptr()), src_type, A, B, C));  \
-            execed = true;                                                         \
-        }                                                                          \
-        MIDOUT_END();                                                              \
-    } else {                                                                       \
-        using _Reducer = Reducer<dtype, ctype, comp_type, false>;                  \
-        std::function<void(const ctype*, ctype*, DType, size_t, size_t, size_t)>   \
-                do_reduce = Exec<_Reducer, false>::do_reduce;                      \
-        MIDOUT_BEGIN(                                                              \
-                megdnn_arm_common_reduce, ctype, dtype, comp_type, midout_iv(1)) { \
-            MEGDNN_DISPATCH_CPU_KERN_OPR(do_reduce(                                \
-                    reinterpret_cast<ctype*>(src.raw_ptr()),                       \
-                    reinterpret_cast<ctype*>(dst.raw_ptr()), src_type, A, B, C));  \
-            execed = true;                                                         \
-        }                                                                          \
-        MIDOUT_END();                                                              \
+#define DISPATCH_FUNC(Reducer, _dtype, ctype, comp_type)                            \
+    if (C == 1) {                                                                   \
+        using _Reducer = Reducer<_dtype, ctype, comp_type, true>;                   \
+        using _ReducerC1SmallB = Reducer<_dtype, ctype, comp_type, false>;          \
+        std::function<void(const ctype*, ctype*, DType, size_t, size_t, size_t)>    \
+                do_reduce = Exec<_Reducer, true>::do_reduce;                        \
+        if (src.layout.dtype.category() != DTypeCategory::FLOAT) {                  \
+            if (B == 2)                                                             \
+                do_reduce = ExecC1SmallB<_ReducerC1SmallB, ctype, 2>::do_reduce;    \
+            if (B == 3)                                                             \
+                do_reduce = ExecC1SmallB<_ReducerC1SmallB, ctype, 3>::do_reduce;    \
+            if (B == 4)                                                             \
+                do_reduce = ExecC1SmallB<_ReducerC1SmallB, ctype, 4>::do_reduce;    \
+        }                                                                           \
+        MIDOUT_BEGIN(                                                               \
+                megdnn_arm_common_reduce, ctype, _dtype, comp_type, midout_iv(1)) { \
+            MEGDNN_DISPATCH_CPU_KERN_OPR(do_reduce(                                 \
+                    reinterpret_cast<ctype*>(src.raw_ptr()),                        \
+                    reinterpret_cast<ctype*>(dst.raw_ptr()), src_type, A, B, C));   \
+            execed = true;                                                          \
+        }                                                                           \
+        MIDOUT_END();                                                               \
+    } else {                                                                        \
+        using _Reducer = Reducer<_dtype, ctype, comp_type, false>;                  \
+        std::function<void(const ctype*, ctype*, DType, size_t, size_t, size_t)>    \
+                do_reduce = Exec<_Reducer, false>::do_reduce;                       \
+        MIDOUT_BEGIN(                                                               \
+                megdnn_arm_common_reduce, ctype, _dtype, comp_type, midout_iv(1)) { \
+            MEGDNN_DISPATCH_CPU_KERN_OPR(do_reduce(                                 \
+                    reinterpret_cast<ctype*>(src.raw_ptr()),                        \
+                    reinterpret_cast<ctype*>(dst.raw_ptr()), src_type, A, B, C));   \
+            execed = true;                                                          \
+        }                                                                           \
+        MIDOUT_END();                                                               \
     }
 
 #define DISPATCH_MODE_QUANTIZED(dtype, ctype, comp_type)         \

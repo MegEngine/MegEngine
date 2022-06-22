@@ -1356,12 +1356,12 @@ TEST_F(FALLBACK, GiSt1Float32) {
     ASSERT_EQ(ret[1], s0[1]);
 }
 
-TEST_F(FALLBACK, GiLd2qFloat32) {
+TEST_F(FALLBACK, GiLoadUzipFloat32) {
     GI_FLOAT32_V2_t ret;
     std::vector<float> s0{1.1f, 2.2f, 3.5f, 4.9f, 2312.1f, 345.244f, 3.59f, -12.8f};
 
     force_memset_ret((void*)&ret, GI_SIMD_LEN_BYTE * 2);
-    ret = GiLd2qFloat32(s0.data());
+    ret = GiLoadUzipFloat32V2(s0.data());
 
     std::vector<float> naive0;
     std::vector<float> naive1;
@@ -2587,6 +2587,61 @@ TEST_F(FALLBACK, GiLoadInt8) {
     auto p = (int8_t*)&ret;
     for (size_t i = 0; i < SIMD_LEN_8; i++) {
         ASSERT_EQ(p[i], s0[i]);
+    }
+}
+
+TEST_F(FALLBACK, GiLoadUzipInt8V2) {
+    std::vector<int8_t> s0{9,   2, -128, 127, 2,    45, 3,  0,   11, 2,  -128,
+                           127, 2, 55,   3,   -1,   7,  8,  -18, 17, 12, 35,
+                           7,   8, 10,   22,  -108, 27, 21, 45,  13, -11};
+    GI_INT8_V2_t ret;
+
+    force_memset_ret((void*)&ret, 2 * GI_SIMD_LEN_BYTE);
+    ret = GiLoadUzipInt8V2(s0.data());
+
+    auto p = (int8_t*)&ret;
+    for (size_t i = 0; i < SIMD_LEN_8; i++) {
+        ASSERT_EQ(p[i], s0[2 * i]);
+        ASSERT_EQ(p[SIMD_LEN_8 + i], s0[2 * i + 1]);
+    }
+}
+
+TEST_F(FALLBACK, GiLoadUzipInt8V3) {
+    std::vector<int8_t> s0{9,   2,  -128, 127, 2,  45, 3,    0,   11, 2,  -128, 127,
+                           2,   55, 3,    -1,  7,  8,  -18,  17,  12, 35, 7,    8,
+                           10,  22, -108, 27,  21, 45, 13,   -11, 11, 14, -11,  12,
+                           111, 32, 6,    9,   16, 29, -118, 67,  28, 15, 19,   -10};
+    GI_INT8_V3_t ret;
+
+    force_memset_ret((void*)&ret, 3 * GI_SIMD_LEN_BYTE);
+    ret = GiLoadUzipInt8V3(s0.data());
+
+    auto p = (int8_t*)&ret;
+    for (size_t i = 0; i < SIMD_LEN_8; i++) {
+        ASSERT_EQ(p[i], s0[3 * i]);
+        ASSERT_EQ(p[SIMD_LEN_8 + i], s0[3 * i + 1]);
+        ASSERT_EQ(p[2 * SIMD_LEN_8 + i], s0[3 * i + 2]);
+    }
+}
+
+TEST_F(FALLBACK, GiLoadUzipInt8V4) {
+    std::vector<int8_t> s0{
+            9,  2,  -128, 127, 2,   45, 3,  0,  11, 2,  -128, 127, 2,  55, 3,  -1,
+            7,  8,  -18,  17,  12,  35, 7,  8,  10, 22, -108, 27,  21, 45, 13, -11,
+            11, 14, -11,  12,  111, 32, 6,  9,  16, 29, -118, 67,  28, 15, 19, -10,
+            9,  4,  -108, 27,  22,  43, 13, 10, 31, 12, -108, 117, 22, 25, 31, -10,
+    };
+    GI_INT8_V4_t ret;
+
+    force_memset_ret((void*)&ret, 4 * GI_SIMD_LEN_BYTE);
+    ret = GiLoadUzipInt8V4(s0.data());
+
+    auto p = (int8_t*)&ret;
+    for (size_t i = 0; i < SIMD_LEN_8; i++) {
+        ASSERT_EQ(p[i], s0[4 * i]);
+        ASSERT_EQ(p[SIMD_LEN_8 + i], s0[4 * i + 1]);
+        ASSERT_EQ(p[2 * SIMD_LEN_8 + i], s0[4 * i + 2]);
+        ASSERT_EQ(p[3 * SIMD_LEN_8 + i], s0[4 * i + 3]);
     }
 }
 

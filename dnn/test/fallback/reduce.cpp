@@ -1,6 +1,7 @@
 #include "test/fallback/fixture.h"
 
 #include "megdnn/oprs.h"
+#include "test/common/benchmarker.h"
 #include "test/common/checker.h"
 #include "test/common/task_record_check.h"
 #include "test/common/tensor.h"
@@ -27,9 +28,9 @@ TEST_F(FALLBACK, REDUCE_FULL) {
                      dtype::Float32(), dtype::Float16(), dtype::QuantizedS8(1.3f),
                      dtype::Quantized8Asymm(1.3f, static_cast<uint8_t>(3))})
             for (int32_t axis : {0, 1, 2}) {
-                for (size_t A : {1, 3, 5}) {
+                for (size_t A : {1, 3, 5, 20}) {
                     for (size_t B : {4, 6, 9, 16, 33, 45}) {
-                        for (size_t C : {4, 6, 9, 16, 33, 45}) {
+                        for (size_t C : {2, 3, 4, 6, 9, 16, 33, 45}) {
                             TensorShape shape{A, B, C};
                             Param param(mode, axis);
                             Config config(param, dtype, shape);
@@ -49,9 +50,9 @@ TEST_F(FALLBACK, REDUCE_FULL) {
     for (auto mode : {Mode::SUM, Mode::PRODUCT, Mode::SUM_SQR})
         for (auto dtype : std::vector<DType>{dtype::Float32(), dtype::Float16()})
             for (int32_t axis : {0, 1, 2}) {
-                for (size_t A : {1, 3, 5}) {
+                for (size_t A : {1, 3, 5, 20}) {
                     for (size_t B : {4, 6, 9, 16, 33, 45}) {
-                        for (size_t C : {4, 6, 9, 16, 33, 45}) {
+                        for (size_t C : {2, 3, 4, 6, 9, 16, 33, 45}) {
                             TensorShape shape{A, B, C};
                             Param param(mode, axis);
                             Config config(param, dtype, shape);
@@ -300,5 +301,57 @@ TEST_F(FALLBACK, REDUCE_RECORD) {
         }
     }
 }
+
+#if MEGDNN_WITH_BENCHMARK
+TEST_F(FALLBACK, BENCHMARK_REDUCE_VS_CONV) {
+    auto run = [&]() {
+        Benchmarker<Reduce> benchmarker_reduce(handle());
+        Benchmarker<Convolution> benchmarker_conv(handle());
+        benchmarker_reduce.set_display(false);
+        benchmarker_conv.set_display(false);
+        constexpr size_t RUNS = 50;
+        benchmarker_reduce.set_times(RUNS);
+        benchmarker_conv.set_times(RUNS);
+        param::Reduce param;
+        param.axis = 3;
+        param.mode = param::Reduce::Mode::SUM;
+        benchmarker_reduce.set_param(param);
+        param::Convolution param_conv;
+        benchmarker_conv.set_param(param_conv);
+
+        {
+            TensorLayout src({24, 240, 128, 2}, dtype::Float32());
+            auto reduce = benchmarker_reduce.execs({src, {}}) / RUNS;
+            TensorLayout conv_src({24, 2, 240, 128}, dtype::Float32());
+            TensorLayout conv_weight({1, 2, 1, 1}, dtype::Float32());
+            auto conv = benchmarker_conv.execs({conv_src, conv_weight, {}}) / RUNS;
+
+            printf("case 1: reduce use time %fms, convolution use time %fms\n", reduce,
+                   conv);
+        }
+        {
+            TensorLayout src({24, 240, 128, 3}, dtype::Float32());
+            auto reduce = benchmarker_reduce.execs({src, {}}) / RUNS;
+            TensorLayout conv_src({24, 3, 240, 128}, dtype::Float32());
+            TensorLayout conv_weight({1, 3, 1, 1}, dtype::Float32());
+            auto conv = benchmarker_conv.execs({conv_src, conv_weight, {}}) / RUNS;
+
+            printf("case 2: reduce use time %fms, convolution use time %fms\n", reduce,
+                   conv);
+        }
+        {
+            TensorLayout src({24, 240, 128, 4}, dtype::Float32());
+            auto reduce = benchmarker_reduce.execs({src, {}}) / RUNS;
+            TensorLayout conv_src({24, 4, 240, 128}, dtype::Float32());
+            TensorLayout conv_weight({1, 4, 1, 1}, dtype::Float32());
+            auto conv = benchmarker_conv.execs({conv_src, conv_weight, {}}) / RUNS;
+
+            printf("case 3: reduce use time %fms, convolution use time %fms\n", reduce,
+                   conv);
+        }
+    };
+    run();
+}
+#endif
 
 // vim: syntax=cpp.doxygen

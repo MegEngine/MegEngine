@@ -471,7 +471,7 @@ void do_average_pooling_3x3_s2x2_gi(
         int odd_offset = 0, even_offset = 0;
 
         for (; iw + 2 * MEGDNN_SIMD_WIDTH <= IW; iw += 2 * MEGDNN_SIMD_WIDTH) {
-            auto s0 = GiLd2qFloat32(sptr + iw);
+            auto s0 = GiLoadUzipFloat32V2(sptr + iw);
             GiStoreFloat32(even + even_offset, GiGetSubVectorFloat32V2(s0, 0));
             GiStoreFloat32(odd + odd_offset, GiGetSubVectorFloat32V2(s0, 1));
             even_offset += MEGDNN_SIMD_WIDTH;

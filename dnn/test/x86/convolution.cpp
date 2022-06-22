@@ -467,6 +467,33 @@ TEST_F(X86, BENCHMARK_CONVOLUTION_I8x8x32_MKLDNN) {
 }
 #endif
 
+TEST_F(X86, BENCHMARK_REDUCE_VS_CONV) {
+    auto run = [&]() {
+        Benchmarker<Reduce> benchmarker_reduce(handle());
+        Benchmarker<Convolution> benchmarker_conv(handle());
+        benchmarker_reduce.set_display(false);
+        benchmarker_conv.set_display(false);
+        constexpr size_t RUNS = 50;
+        benchmarker_reduce.set_times(RUNS);
+        benchmarker_conv.set_times(RUNS);
+        param::Reduce param;
+        param.axis = 3;
+        param.mode = param::Reduce::Mode::SUM;
+        benchmarker_reduce.set_param(param);
+        param::Convolution param_conv;
+        benchmarker_conv.set_param(param_conv);
+
+        TensorLayout src({24, 240, 128, 3}, dtype::Float32());
+        auto reduce = benchmarker_reduce.execs({src, {}}) / RUNS;
+        TensorLayout conv_src({24, 3, 240, 128}, dtype::Float32());
+        TensorLayout conv_weight({1, 3, 1, 1}, dtype::Float32());
+        auto conv = benchmarker_conv.execs({conv_src, conv_weight, {}}) / RUNS;
+
+        printf("reduce use time %fms, convolution use time %fms\n", reduce, conv);
+    };
+    run();
+}
+
 #endif
 
 }  // namespace test

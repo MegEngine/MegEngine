@@ -29,7 +29,7 @@ TEST_F(ARM_COMMON, REDUCE) {
             for (int32_t axis : {0, 1, 2}) {
                 for (size_t A : {1, 3, 5}) {
                     for (size_t B : {4, 6, 9, 16, 33, 45}) {
-                        for (size_t C : {4, 6, 9, 16, 33, 45}) {
+                        for (size_t C : {2, 3, 4, 6, 9, 16, 33, 45}) {
                             TensorShape shape{A, B, C};
                             Param param(mode, axis);
                             Config config(param, dtype, shape);
@@ -51,7 +51,7 @@ TEST_F(ARM_COMMON, REDUCE) {
             for (int32_t axis : {0, 1, 2}) {
                 for (size_t A : {1, 3, 5}) {
                     for (size_t B : {4, 6, 9, 16, 33, 45}) {
-                        for (size_t C : {4, 6, 9, 16, 33, 45}) {
+                        for (size_t C : {2, 3, 4, 6, 9, 16, 33, 45}) {
                             TensorShape shape{A, B, C};
                             Param param(mode, axis);
                             Config config(param, dtype, shape);

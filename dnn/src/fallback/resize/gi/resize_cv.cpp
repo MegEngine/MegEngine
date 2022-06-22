@@ -565,7 +565,8 @@ struct ResizeAreaFastVec_SIMD_32f {
 
         if (cn == 1) {
             for (; dx <= w - 4; dx += 4, S0 += 8, S1 += 8, D += 4) {
-                GI_FLOAT32_V2_t v_row0 = GiLd2qFloat32(S0), v_row1 = GiLd2qFloat32(S1);
+                GI_FLOAT32_V2_t v_row0 = GiLoadUzipFloat32V2(S0),
+                                v_row1 = GiLoadUzipFloat32V2(S1);
 
                 GI_FLOAT32_t v_dst0 = GiAddFloat32(
                         GiGetSubVectorFloat32V2(v_row0, 0),

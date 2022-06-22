@@ -36,7 +36,7 @@ void conv_stride2::do_conv_2x2_stride2(
             rep(i, nn) {
                 GI_FLOAT32_t _outp = GiLoadFloat32(outptr);
 
-                GI_FLOAT32_V2_t _r0 = GiLd2qFloat32(r0);
+                GI_FLOAT32_V2_t _r0 = GiLoadUzipFloat32V2(r0);
 
                 GI_FLOAT32_t _r00 = GiGetSubVectorFloat32V2(_r0, 0);  // 0 2 4 6
                 GI_FLOAT32_t _r01 = GiGetSubVectorFloat32V2(_r0, 1);  // 1 3 5 7
@@ -44,7 +44,7 @@ void conv_stride2::do_conv_2x2_stride2(
                 _outp = GiSimdFmaLane(_outp, _r00, _k0123, 0);
                 _outp = GiSimdFmaLane(_outp, _r01, _k0123, 1);
 
-                GI_FLOAT32_V2_t _r1 = GiLd2qFloat32(r1);
+                GI_FLOAT32_V2_t _r1 = GiLoadUzipFloat32V2(r1);
 
                 GI_FLOAT32_t _r10 = GiGetSubVectorFloat32V2(_r1, 0);
                 GI_FLOAT32_t _r11 = GiGetSubVectorFloat32V2(_r1, 1);
@@ -94,8 +94,8 @@ void conv_stride2::do_conv_3x3_stride2(
             rep(i, nn) {
                 GI_FLOAT32_t _outp = GiLoadFloat32(outptr);
 
-                GI_FLOAT32_V2_t _r0 = GiLd2qFloat32(r0);
-                GI_FLOAT32_V2_t _r0n = GiLd2qFloat32(r0 + 8);
+                GI_FLOAT32_V2_t _r0 = GiLoadUzipFloat32V2(r0);
+                GI_FLOAT32_V2_t _r0n = GiLoadUzipFloat32V2(r0 + 8);
 
                 GI_FLOAT32_t _r00 = GiGetSubVectorFloat32V2(_r0, 0);  // 0 2 4 6
                 GI_FLOAT32_t _r01 = GiGetSubVectorFloat32V2(_r0, 1);  // 1 3 5 7
@@ -106,8 +106,8 @@ void conv_stride2::do_conv_3x3_stride2(
                 _outp = GiSimdFmaLane(_outp, _r01, _k0123, 1);
                 _outp = GiSimdFmaLane(_outp, _r02, _k0123, 2);
 
-                GI_FLOAT32_V2_t _r1 = GiLd2qFloat32(r1);
-                GI_FLOAT32_V2_t _r1n = GiLd2qFloat32(r1 + 8);
+                GI_FLOAT32_V2_t _r1 = GiLoadUzipFloat32V2(r1);
+                GI_FLOAT32_V2_t _r1n = GiLoadUzipFloat32V2(r1 + 8);
 
                 GI_FLOAT32_t _r10 = GiGetSubVectorFloat32V2(_r1, 0);
                 GI_FLOAT32_t _r11 = GiGetSubVectorFloat32V2(_r1, 1);
@@ -118,8 +118,8 @@ void conv_stride2::do_conv_3x3_stride2(
                 _outp = GiSimdFmaLane(_outp, _r11, _k3456, 1);
                 _outp = GiSimdFmaLane(_outp, _r12, _k3456, 2);
 
-                GI_FLOAT32_V2_t _r2 = GiLd2qFloat32(r2);
-                GI_FLOAT32_V2_t _r2n = GiLd2qFloat32(r2 + 8);
+                GI_FLOAT32_V2_t _r2 = GiLoadUzipFloat32V2(r2);
+                GI_FLOAT32_V2_t _r2n = GiLoadUzipFloat32V2(r2 + 8);
 
                 GI_FLOAT32_t _r20 = GiGetSubVectorFloat32V2(_r2, 0);
                 GI_FLOAT32_t _r21 = GiGetSubVectorFloat32V2(_r2, 1);
@@ -176,8 +176,8 @@ void conv_stride2::do_conv_5x5_stride2(
             rep(i, nn) {
                 GI_FLOAT32_t _sum = GiLoadFloat32(outptr);
 
-                GI_FLOAT32_V2_t _r00_02461357 = GiLd2qFloat32(r0);
-                GI_FLOAT32_V2_t _r00nx2 = GiLd2qFloat32(r0 + 8);
+                GI_FLOAT32_V2_t _r00_02461357 = GiLoadUzipFloat32V2(r0);
+                GI_FLOAT32_V2_t _r00nx2 = GiLoadUzipFloat32V2(r0 + 8);
                 GI_FLOAT32_t _r0_8101214 =
                         GiGetSubVectorFloat32V2(_r00nx2, 0);  // 8 10 12 14
                 GI_FLOAT32_t _r0_9111315 =
@@ -190,8 +190,8 @@ void conv_stride2::do_conv_5x5_stride2(
                 GI_FLOAT32_t _r03 = GiExtqFloat32(_r01, _r0_9111315, 1);  // 3 5 7 9
                 GI_FLOAT32_t _r04 = GiExtqFloat32(_r00, _r0_8101214, 2);  // 4 6 8 10
 
-                GI_FLOAT32_V2_t _r10_02461357 = GiLd2qFloat32(r1);
-                GI_FLOAT32_V2_t _r10nx2 = GiLd2qFloat32(r1 + 8);
+                GI_FLOAT32_V2_t _r10_02461357 = GiLoadUzipFloat32V2(r1);
+                GI_FLOAT32_V2_t _r10nx2 = GiLoadUzipFloat32V2(r1 + 8);
                 GI_FLOAT32_t _r1_8101214 = GiGetSubVectorFloat32V2(_r10nx2, 0);
                 GI_FLOAT32_t _r1_9111315 = GiGetSubVectorFloat32V2(_r10nx2, 1);
                 GI_FLOAT32_t _r10 = GiGetSubVectorFloat32V2(_r10_02461357, 0);
@@ -200,8 +200,8 @@ void conv_stride2::do_conv_5x5_stride2(
                 GI_FLOAT32_t _r13 = GiExtqFloat32(_r11, _r1_9111315, 1);
                 GI_FLOAT32_t _r14 = GiExtqFloat32(_r10, _r1_8101214, 2);
 
-                GI_FLOAT32_V2_t _r20_02461357 = GiLd2qFloat32(r2);
-                GI_FLOAT32_V2_t _r20nx2 = GiLd2qFloat32(r2 + 8);
+                GI_FLOAT32_V2_t _r20_02461357 = GiLoadUzipFloat32V2(r2);
+                GI_FLOAT32_V2_t _r20nx2 = GiLoadUzipFloat32V2(r2 + 8);
                 GI_FLOAT32_t _r2_8101214 = GiGetSubVectorFloat32V2(_r20nx2, 0);
                 GI_FLOAT32_t _r2_9111315 = GiGetSubVectorFloat32V2(_r20nx2, 1);
                 GI_FLOAT32_t _r20 = GiGetSubVectorFloat32V2(_r20_02461357, 0);
@@ -210,8 +210,8 @@ void conv_stride2::do_conv_5x5_stride2(
                 GI_FLOAT32_t _r23 = GiExtqFloat32(_r21, _r2_9111315, 1);
                 GI_FLOAT32_t _r24 = GiExtqFloat32(_r20, _r2_8101214, 2);
 
-                GI_FLOAT32_V2_t _r30_02461357 = GiLd2qFloat32(r3);
-                GI_FLOAT32_V2_t _r30nx2 = GiLd2qFloat32(r3 + 8);
+                GI_FLOAT32_V2_t _r30_02461357 = GiLoadUzipFloat32V2(r3);
+                GI_FLOAT32_V2_t _r30nx2 = GiLoadUzipFloat32V2(r3 + 8);
                 GI_FLOAT32_t _r3_8101214 = GiGetSubVectorFloat32V2(_r30nx2, 0);
                 GI_FLOAT32_t _r3_9111315 = GiGetSubVectorFloat32V2(_r30nx2, 1);
                 GI_FLOAT32_t _r30 = GiGetSubVectorFloat32V2(_r30_02461357, 0);
@@ -220,8 +220,8 @@ void conv_stride2::do_conv_5x5_stride2(
                 GI_FLOAT32_t _r33 = GiExtqFloat32(_r31, _r3_9111315, 1);
                 GI_FLOAT32_t _r34 = GiExtqFloat32(_r30, _r3_8101214, 2);
 
-                GI_FLOAT32_V2_t _r40_02461357 = GiLd2qFloat32(r4);
-                GI_FLOAT32_V2_t _r40nx2 = GiLd2qFloat32(r4 + 8);
+                GI_FLOAT32_V2_t _r40_02461357 = GiLoadUzipFloat32V2(r4);
+                GI_FLOAT32_V2_t _r40nx2 = GiLoadUzipFloat32V2(r4 + 8);
                 GI_FLOAT32_t _r4_8101214 = GiGetSubVectorFloat32V2(_r40nx2, 0);
                 GI_FLOAT32_t _r4_9111315 = GiGetSubVectorFloat32V2(_r40nx2, 1);
                 GI_FLOAT32_t _r40 = GiGetSubVectorFloat32V2(_r40_02461357, 0);
@@ -315,8 +315,8 @@ void conv_stride2::do_conv_7x7_stride2(
                 GI_FLOAT32_t _k0123 = GiLoadFloat32(k0);
                 GI_FLOAT32_t _k4567 = GiLoadFloat32(k0 + 4);
 
-                GI_FLOAT32_V2_t _r00_02461357 = GiLd2qFloat32(r0);
-                GI_FLOAT32_V2_t _r00nx2 = GiLd2qFloat32(r0 + 8);
+                GI_FLOAT32_V2_t _r00_02461357 = GiLoadUzipFloat32V2(r0);
+                GI_FLOAT32_V2_t _r00nx2 = GiLoadUzipFloat32V2(r0 + 8);
                 GI_FLOAT32_t _r0_8101214 =
                         GiGetSubVectorFloat32V2(_r00nx2, 0);  // 8 10 12 14
                 GI_FLOAT32_t _r0_9111315 =
@@ -342,8 +342,8 @@ void conv_stride2::do_conv_7x7_stride2(
                 GI_FLOAT32_t _k78910 = GiLoadFloat32(k1);
                 GI_FLOAT32_t _k11121314 = GiLoadFloat32(k1 + 4);
 
-                GI_FLOAT32_V2_t _r10_02461357 = GiLd2qFloat32(r1);
-                GI_FLOAT32_V2_t _r10nx2 = GiLd2qFloat32(r1 + 8);
+                GI_FLOAT32_V2_t _r10_02461357 = GiLoadUzipFloat32V2(r1);
+                GI_FLOAT32_V2_t _r10nx2 = GiLoadUzipFloat32V2(r1 + 8);
                 GI_FLOAT32_t _r1_8101214 = GiGetSubVectorFloat32V2(_r10nx2, 0);
                 GI_FLOAT32_t _r1_9111315 = GiGetSubVectorFloat32V2(_r10nx2, 1);
                 GI_FLOAT32_t _r10 = GiGetSubVectorFloat32V2(_r10_02461357, 0);
@@ -365,8 +365,8 @@ void conv_stride2::do_conv_7x7_stride2(
                 GI_FLOAT32_t _k14151617 = GiLoadFloat32(k2);
                 GI_FLOAT32_t _k18192021 = GiLoadFloat32(k2 + 4);
 
-                GI_FLOAT32_V2_t _r20_02461357 = GiLd2qFloat32(r2);
-                GI_FLOAT32_V2_t _r20nx2 = GiLd2qFloat32(r2 + 8);
+                GI_FLOAT32_V2_t _r20_02461357 = GiLoadUzipFloat32V2(r2);
+                GI_FLOAT32_V2_t _r20nx2 = GiLoadUzipFloat32V2(r2 + 8);
                 GI_FLOAT32_t _r2_8101214 = GiGetSubVectorFloat32V2(_r20nx2, 0);
                 GI_FLOAT32_t _r2_9111315 = GiGetSubVectorFloat32V2(_r20nx2, 1);
                 GI_FLOAT32_t _r20 = GiGetSubVectorFloat32V2(_r20_02461357, 0);
@@ -388,8 +388,8 @@ void conv_stride2::do_conv_7x7_stride2(
                 GI_FLOAT32_t _k21222324 = GiLoadFloat32(k3);
                 GI_FLOAT32_t _k25262728 = GiLoadFloat32(k3 + 4);
 
-                GI_FLOAT32_V2_t _r30_02461357 = GiLd2qFloat32(r3);
-                GI_FLOAT32_V2_t _r30nx2 = GiLd2qFloat32(r3 + 8);
+                GI_FLOAT32_V2_t _r30_02461357 = GiLoadUzipFloat32V2(r3);
+                GI_FLOAT32_V2_t _r30nx2 = GiLoadUzipFloat32V2(r3 + 8);
                 GI_FLOAT32_t _r3_8101214 = GiGetSubVectorFloat32V2(_r30nx2, 0);
                 GI_FLOAT32_t _r3_9111315 = GiGetSubVectorFloat32V2(_r30nx2, 1);
                 GI_FLOAT32_t _r30 = GiGetSubVectorFloat32V2(_r30_02461357, 0);
@@ -411,8 +411,8 @@ void conv_stride2::do_conv_7x7_stride2(
                 GI_FLOAT32_t _k28293031 = GiLoadFloat32(k4);
                 GI_FLOAT32_t _k32333435 = GiLoadFloat32(k4 + 4);
 
-                GI_FLOAT32_V2_t _r40_02461357 = GiLd2qFloat32(r4);
-                GI_FLOAT32_V2_t _r40nx2 = GiLd2qFloat32(r4 + 8);
+                GI_FLOAT32_V2_t _r40_02461357 = GiLoadUzipFloat32V2(r4);
+                GI_FLOAT32_V2_t _r40nx2 = GiLoadUzipFloat32V2(r4 + 8);
                 GI_FLOAT32_t _r4_8101214 = GiGetSubVectorFloat32V2(_r40nx2, 0);
                 GI_FLOAT32_t _r4_9111315 = GiGetSubVectorFloat32V2(_r40nx2, 1);
                 GI_FLOAT32_t _r40 = GiGetSubVectorFloat32V2(_r40_02461357, 0);
@@ -434,8 +434,8 @@ void conv_stride2::do_conv_7x7_stride2(
                 GI_FLOAT32_t _k35363738 = GiLoadFloat32(k5);
                 GI_FLOAT32_t _k39404142 = GiLoadFloat32(k5 + 4);
 
-                GI_FLOAT32_V2_t _r50_02461357 = GiLd2qFloat32(r5);
-                GI_FLOAT32_V2_t _r50nx2 = GiLd2qFloat32(r5 + 8);
+                GI_FLOAT32_V2_t _r50_02461357 = GiLoadUzipFloat32V2(r5);
+                GI_FLOAT32_V2_t _r50nx2 = GiLoadUzipFloat32V2(r5 + 8);
                 GI_FLOAT32_t _r5_8101214 = GiGetSubVectorFloat32V2(_r50nx2, 0);
                 GI_FLOAT32_t _r5_9111315 = GiGetSubVectorFloat32V2(_r50nx2, 1);
                 GI_FLOAT32_t _r50 = GiGetSubVectorFloat32V2(_r50_02461357, 0);
@@ -457,8 +457,8 @@ void conv_stride2::do_conv_7x7_stride2(
                 GI_FLOAT32_t _k42434445 = GiLoadFloat32(k6);
                 GI_FLOAT32_t _k45464748 = GiLoadFloat32(k6 + 3);
 
-                GI_FLOAT32_V2_t _r60_02461357 = GiLd2qFloat32(r6);
-                GI_FLOAT32_V2_t _r60nx2 = GiLd2qFloat32(r6 + 8);
+                GI_FLOAT32_V2_t _r60_02461357 = GiLoadUzipFloat32V2(r6);
+                GI_FLOAT32_V2_t _r60nx2 = GiLoadUzipFloat32V2(r6 + 8);
                 GI_FLOAT32_t _r6_8101214 = GiGetSubVectorFloat32V2(_r60nx2, 0);
                 GI_FLOAT32_t _r6_9111315 = GiGetSubVectorFloat32V2(_r60nx2, 1);
                 GI_FLOAT32_t _r60 = GiGetSubVectorFloat32V2(_r60_02461357, 0);

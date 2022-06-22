@@ -381,31 +381,6 @@ GI_FORCEINLINE void GiSt1Float32(float* ptr, float32x2_t val) {
 #endif
 }
 
-GI_FORCEINLINE GI_FLOAT32_V2_t GiLd2qFloat32(const float* Buffer) {
-#if defined(GI_NEON_INTRINSICS)
-    return vld2q_f32(Buffer);
-#elif defined(GI_SSE2_INTRINSICS)
-    GI_FLOAT32_V2_t v;
-    v.val[0] = GiLoadFloat32(Buffer);
-    v.val[1] = GiLoadFloat32((Buffer + 4));
-    v = GiUzpqFloat32(v.val[0], v.val[1]);
-    return v;
-#elif defined(GI_RVV_INTRINSICS)
-    return vlseg2e32_v_f32m1x2(Buffer, GI_SIMD_LEN_BYTE / sizeof(float));
-#else
-    GI_FLOAT32_V2_t ret;
-    ret.val[0][0] = Buffer[0];
-    ret.val[0][1] = Buffer[2];
-    ret.val[0][2] = Buffer[4];
-    ret.val[0][3] = Buffer[6];
-    ret.val[1][0] = Buffer[1];
-    ret.val[1][1] = Buffer[3];
-    ret.val[1][2] = Buffer[5];
-    ret.val[1][3] = Buffer[7];
-    return ret;
-#endif
-}
-
 #if defined(GI_NEON_INTRINSICS)
 #define GiExtqFloat32(a, b, n) vextq_f32(a, b, n)
 #elif defined(GI_SSE2_INTRINSICS)
@@ -1706,6 +1681,31 @@ GI_FORCEINLINE float32x2_t GiPmaxFloat32(float32x2_t a, float32x2_t b) {
     res[0] = MAX_NAN(a[0], a[1]);
     res[1] = MAX_NAN(b[0], b[1]);
     return res;
+#endif
+}
+
+GI_FORCEINLINE GI_FLOAT32_V2_t GiLoadUzipFloat32V2(const float* Buffer) {
+#if defined(GI_NEON_INTRINSICS)
+    return vld2q_f32(Buffer);
+#elif defined(GI_SSE2_INTRINSICS)
+    GI_FLOAT32_V2_t v;
+    v.val[0] = GiLoadFloat32(Buffer);
+    v.val[1] = GiLoadFloat32((Buffer + 4));
+    v = GiUzpqFloat32(v.val[0], v.val[1]);
+    return v;
+#elif defined(GI_RVV_INTRINSICS)
+    return vlseg2e32_v_f32m1x2(Buffer, GI_SIMD_LEN_BYTE / sizeof(float));
+#else
+    GI_FLOAT32_V2_t ret;
+    ret.val[0][0] = Buffer[0];
+    ret.val[0][1] = Buffer[2];
+    ret.val[0][2] = Buffer[4];
+    ret.val[0][3] = Buffer[6];
+    ret.val[1][0] = Buffer[1];
+    ret.val[1][1] = Buffer[3];
+    ret.val[1][2] = Buffer[5];
+    ret.val[1][3] = Buffer[7];
+    return ret;
 #endif
 }
 

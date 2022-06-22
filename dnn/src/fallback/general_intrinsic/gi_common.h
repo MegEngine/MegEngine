@@ -151,6 +151,8 @@ typedef int32x4x2_t GI_INT32_V2_t;
 typedef int32x4x4_t GI_INT32_V4_t;
 typedef int16x8x2_t GI_INT16_V2_t;
 typedef int8x16x2_t GI_INT8_V2_t;
+typedef int8x16x3_t GI_INT8_V3_t;
+typedef int8x16x4_t GI_INT8_V4_t;
 typedef int64x2_t GI_INT64_t;
 #elif defined(GI_SSE2_INTRINSICS) || defined(GI_SSE42_INTRINSICS)
 
@@ -302,6 +304,8 @@ typedef vint32m1x2_t GI_INT32_V2_t;
 typedef vint32m1x4_t GI_INT32_V4_t;
 typedef vint16m1x2_t GI_INT16_V2_t;
 typedef vint8m1x2_t GI_INT8_V2_t;
+typedef vint8m1x3_t GI_INT8_V3_t;
+typedef vint8m1x4_t GI_INT8_V4_t;
 //! vfloat32mf2_t usable at RVV1.0, now we support 0.7, as
 //! a workaround, we use vfloat32m1_t instead
 typedef vfloat32m1_t float32x2_t;
@@ -390,6 +394,14 @@ typedef struct {
     GI_INT8_t val[2];
 } GI_INT8_V2_t;
 
+typedef struct {
+    GI_INT8_t val[3];
+} GI_INT8_V3_t;
+
+typedef struct {
+    GI_INT8_t val[4];
+} GI_INT8_V4_t;
+
 #endif
 //! variable length type intrinsic can not be a member of c++ class
 //! caused by can not do sizeof at build stage, for example RVV and SVE
@@ -417,6 +429,8 @@ typedef GI_UINT32_NAIVE_t GI_UINT32_FIXLEN_t;
 #define GiGetSubVectorInt16V2(s, index) vget_i16m1x2_i16m1(s, index)
 
 #define GiGetSubVectorInt8V2(s, index) vget_i8m1x2_i8m1(s, index)
+#define GiGetSubVectorInt8V3(s, index) vget_i8m1x3_i8m1(s, index)
+#define GiGetSubVectorInt8V4(s, index) vget_i8m1x4_i8m1(s, index)
 
 //! insert subvector
 #define GiSetSubVectorFloat32V2(d, index, s) d = vset_f32m1x2(d, index, s)
@@ -570,6 +584,8 @@ typedef GI_UINT32_t GI_UINT32_FIXLEN_t;
 #define GiGetSubVectorInt16V2(s, index) s.val[index]
 
 #define GiGetSubVectorInt8V2(s, index)       s.val[index]
+#define GiGetSubVectorInt8V3(s, index)       s.val[index]
+#define GiGetSubVectorInt8V4(s, index)       s.val[index]
 
 //! insert subvector
 #define GiSetSubVectorFloat32V2(d, index, s) d.val[index] = s

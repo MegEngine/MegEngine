@@ -186,8 +186,15 @@ bool ReduceImpl::exec_optimized(
 #define DISPATCH_FUNC(Reducer, dtype, ctype, comp_type)                           \
     if (C == 1) {                                                                 \
         using _Reducer = Reducer<dtype, ctype, comp_type, true>;                  \
+        using _ReducerC1SmallB = Reducer<dtype, ctype, comp_type, false>;         \
         std::function<void(const ctype*, ctype*, DType, size_t, size_t, size_t)>  \
                 do_reduce = Exec<_Reducer, true>::do_reduce;                      \
+        if (B == 2)                                                               \
+            do_reduce = ExecC1SmallB<_ReducerC1SmallB, ctype, 2>::do_reduce;      \
+        if (B == 3)                                                               \
+            do_reduce = ExecC1SmallB<_ReducerC1SmallB, ctype, 3>::do_reduce;      \
+        if (B == 4)                                                               \
+            do_reduce = ExecC1SmallB<_ReducerC1SmallB, ctype, 4>::do_reduce;      \
         MIDOUT_BEGIN(                                                             \
                 megdnn_fallback_reduce_optimized, ctype, dtype, comp_type,        \
                 midout_iv(0)) {                                                   \

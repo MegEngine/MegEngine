@@ -46,8 +46,8 @@ struct MeanReducer<dt_qint8, int8_t, int32_t, false> {
         vcoef = GiFloat32Type2FixLenType(GiBroadcastFloat32(coef));
     }
     MeanReducer() = default;
-    void feed(const int8_t* val) {
-        const GI_INT8_t vval = GiLoadInt8(val);
+    void feed(const int8_t* val) { feed_vector(GiLoadInt8(val)); }
+    void feed_vector(const GI_INT8_t vval) {
         const GI_INT16_t vval_low = GiMoveLowLongInt8(vval);
         const GI_INT16_t vval_high = GiMoveHighLongInt8(vval);
 
@@ -121,9 +121,10 @@ struct MeanReducer<dt_float32, float, float, false> {
         res = GiFloat32Type2FixLenType(GiBroadcastFloat32(0.0f));
     }
     MeanReducer() = default;
-    void feed(const float* val) {
+    void feed(const float* val) { feed_vector(GiLoadFloat32(val)); }
+    void inline feed_vector(const GI_FLOAT32_t& val) {
         res = GiFloat32Type2FixLenType(
-                GiAddFloat32(GiLoadFloat32(val), GiFixLenType2GiFloat32Type(res)));
+                GiAddFloat32(val, GiFixLenType2GiFloat32Type(res)));
     }
     void feed_remain(const float* val) { remain += *val; }
     void post(float* dst) {
@@ -172,31 +173,31 @@ REDUCER_MAX_MIN_C1(min, Min, std::numeric_limits<dt_float32>::max());
 #define Max_NAN(a, b) (isnan(a) || (a) > (b)) ? (a) : (b);
 #define Min_NAN(a, b) (isnan(a) || (a) < (b)) ? (a) : (b);
 
-#define REDUCER_MAX_MIN_C(_mode, _Mode, _init)                                     \
-    template <>                                                                    \
-    struct _mode##Reducer<dt_float32, float, float, false> {                       \
-        using ctype = float;                                                       \
-        static constexpr int SIMD_WIDTH = GI_SIMD_LEN_BYTE / sizeof(float);        \
-        GI_FLOAT32_FIXLEN_t res;                                                   \
-        float remain;                                                              \
-        _mode##Reducer(DType, size_t) {                                            \
-            res = GiFloat32Type2FixLenType(GiBroadcastFloat32(_init));             \
-            remain = _init;                                                        \
-        }                                                                          \
-        _mode##Reducer() = default;                                                \
-        void feed(const float* val) {                                              \
-            GI_FLOAT32_t vval = GiLoadFloat32(val);                                \
-            res = GiFloat32Type2FixLenType(                                        \
-                    Gi##_Mode##NanFloat32(GiFixLenType2GiFloat32Type(res), vval)); \
-        }                                                                          \
-        void feed_remain(const float* val) {                                       \
-            using namespace std;                                                   \
-            remain = _Mode##_NAN(*val, remain);                                    \
-        }                                                                          \
-        void post(float* dst) {                                                    \
-            GiStoreFloat32(dst, GiFixLenType2GiFloat32Type(res));                  \
-        }                                                                          \
-        void post_remain(float* dst) { *dst = remain; }                            \
+#define REDUCER_MAX_MIN_C(_mode, _Mode, _init)                                    \
+    template <>                                                                   \
+    struct _mode##Reducer<dt_float32, float, float, false> {                      \
+        using ctype = float;                                                      \
+        static constexpr int SIMD_WIDTH = GI_SIMD_LEN_BYTE / sizeof(float);       \
+        GI_FLOAT32_FIXLEN_t res;                                                  \
+        float remain;                                                             \
+        _mode##Reducer(DType, size_t) {                                           \
+            res = GiFloat32Type2FixLenType(GiBroadcastFloat32(_init));            \
+            remain = _init;                                                       \
+        }                                                                         \
+        _mode##Reducer() = default;                                               \
+        void feed(const float* val) { feed_vector(GiLoadFloat32(val)); }          \
+        void inline feed_vector(const GI_FLOAT32_t& val) {                        \
+            res = GiFloat32Type2FixLenType(                                       \
+                    Gi##_Mode##NanFloat32(GiFixLenType2GiFloat32Type(res), val)); \
+        }                                                                         \
+        void feed_remain(const float* val) {                                      \
+            using namespace std;                                                  \
+            remain = _Mode##_NAN(*val, remain);                                   \
+        }                                                                         \
+        void post(float* dst) {                                                   \
+            GiStoreFloat32(dst, GiFixLenType2GiFloat32Type(res));                 \
+        }                                                                         \
+        void post_remain(float* dst) { *dst = remain; }                           \
     }
 
 REDUCER_MAX_MIN_C(max, Max, std::numeric_limits<dt_float32>::lowest());
@@ -246,10 +247,10 @@ REDUCER_MAX_MIN_C1(min, Min, 127);
             remain = _init;                                                        \
         }                                                                          \
         _mode##Reducer() = default;                                                \
-        void feed(const int8_t* val) {                                             \
-            GI_INT8_t vval = GiLoadInt8(val);                                      \
+        void feed(const int8_t* val) { feed_vector(GiLoadInt8(val)); }             \
+        void inline feed_vector(GI_INT8_t val) {                                   \
             res = GiInt8Type2FixLenType(                                           \
-                    Gi##_Mode##imumInt8(GiFixLenType2GiInt8Type(res), vval));      \
+                    Gi##_Mode##imumInt8(GiFixLenType2GiInt8Type(res), val));       \
         }                                                                          \
         void feed_remain(const int8_t* val) {                                      \
             using namespace std;                                                   \
@@ -304,32 +305,32 @@ REDUCER_SUM_PRODUCT_C1(Sum, Add, plus, 0.0f);
 REDUCER_SUM_PRODUCT_C1(Product, Multiply, multiplies, 1.0f);
 #undef REDUCER_SUM_PRODUCT_C1
 
-#define REDUCER_SUM_PRODUCT_C(_mode, _Mode, _op, _init)                         \
-    template <>                                                                 \
-    struct _mode##Reducer<dt_float32, float, float, false> {                    \
-        using ctype = float;                                                    \
-        static constexpr int SIMD_WIDTH = GI_SIMD_LEN_BYTE / sizeof(float);     \
-        GI_FLOAT32_FIXLEN_t res;                                                \
-        float remain;                                                           \
-        _mode##Reducer(DType, size_t) {                                         \
-            res = GiFloat32Type2FixLenType(GiBroadcastFloat32(_init));          \
-            remain = _init;                                                     \
-        }                                                                       \
-        _mode##Reducer() = default;                                             \
-        void feed(const float* val) {                                           \
-            GI_FLOAT32_t vval = GiLoadFloat32(val);                             \
-            res = GiFloat32Type2FixLenType(                                     \
-                    Gi##_Mode##Float32(vval, GiFixLenType2GiFloat32Type(res))); \
-        }                                                                       \
-        void feed_remain(const float* val) {                                    \
-            using namespace std;                                                \
-            auto op = _op<float>();                                             \
-            remain = op(remain, (*val));                                        \
-        }                                                                       \
-        void post(float* dst) {                                                 \
-            GiStoreFloat32(dst, GiFixLenType2GiFloat32Type(res));               \
-        }                                                                       \
-        void post_remain(float* dst) { *dst = remain; }                         \
+#define REDUCER_SUM_PRODUCT_C(_mode, _Mode, _op, _init)                        \
+    template <>                                                                \
+    struct _mode##Reducer<dt_float32, float, float, false> {                   \
+        using ctype = float;                                                   \
+        static constexpr int SIMD_WIDTH = GI_SIMD_LEN_BYTE / sizeof(float);    \
+        GI_FLOAT32_FIXLEN_t res;                                               \
+        float remain;                                                          \
+        _mode##Reducer(DType, size_t) {                                        \
+            res = GiFloat32Type2FixLenType(GiBroadcastFloat32(_init));         \
+            remain = _init;                                                    \
+        }                                                                      \
+        _mode##Reducer() = default;                                            \
+        void feed(const float* val) { feed_vector(GiLoadFloat32(val)); }       \
+        void inline feed_vector(GI_FLOAT32_t val) {                            \
+            res = GiFloat32Type2FixLenType(                                    \
+                    Gi##_Mode##Float32(val, GiFixLenType2GiFloat32Type(res))); \
+        }                                                                      \
+        void feed_remain(const float* val) {                                   \
+            using namespace std;                                               \
+            auto op = _op<float>();                                            \
+            remain = op(remain, (*val));                                       \
+        }                                                                      \
+        void post(float* dst) {                                                \
+            GiStoreFloat32(dst, GiFixLenType2GiFloat32Type(res));              \
+        }                                                                      \
+        void post_remain(float* dst) { *dst = remain; }                        \
     }
 
 REDUCER_SUM_PRODUCT_C(Sum, Add, plus, 0.0f);
@@ -378,15 +379,16 @@ struct SumSqrReducer<dt_float32, float, float, false> {
         res = GiFloat32Type2FixLenType(GiBroadcastFloat32(0.0f));
     }
     SumSqrReducer() = default;
-    void feed(const float* val) {
-        GI_FLOAT32_t vval = GiLoadFloat32(val);
+    void feed(const float* val) { feed_vector(GiLoadFloat32(val)); }
+    void inline feed_vector(GI_FLOAT32_t src) {
         res = GiFloat32Type2FixLenType(GiAddFloat32(
-                GiMultiplyFloat32(vval, vval), GiFixLenType2GiFloat32Type(res)));
+                GiMultiplyFloat32(src, src), GiFixLenType2GiFloat32Type(res)));
     }
     void feed_remain(const float* val) { remain += (*val) * (*val); }
     void post(float* dst) { GiStoreFloat32(dst, GiFixLenType2GiFloat32Type(res)); }
     void post_remain(float* dst) { *dst = remain; }
 };
+
 /**************************************do reduce*************************/
 
 template <typename Reducer, bool C1>
@@ -445,6 +447,57 @@ struct Exec<Reducer, false> {
         }
     }
 };
+
+template <typename Reducer, typename dtype, size_t B>
+struct ExecC1SmallB {
+    static void do_reduce(
+            const dtype* src, dtype* dst, DType src_dtype, size_t A, size_t, size_t C);
+};
+
+#define ImplementC1SmallB(_ctype, _gi_type, _gi_ins)                                 \
+    template <typename Reducer, size_t B>                                            \
+    struct ExecC1SmallB<Reducer, _ctype, B> {                                        \
+        static void do_reduce(                                                       \
+                const _ctype* src, _ctype* dst, DType src_dtype, size_t A, size_t,   \
+                size_t) {                                                            \
+            size_t a = 0;                                                            \
+            for (; a + Reducer::SIMD_WIDTH < A; a += Reducer::SIMD_WIDTH) {          \
+                Reducer reducer(src_dtype, B);                                       \
+                auto src_ptr = src + a * B;                                          \
+                if (B == 4) {                                                        \
+                    GI_##_gi_type##_V4_t data_v4 = GiLoadUzip##_gi_ins##V4(src_ptr); \
+                    reducer.feed_vector(GiGetSubVector##_gi_ins##V4(data_v4, 0));    \
+                    reducer.feed_vector(GiGetSubVector##_gi_ins##V4(data_v4, 1));    \
+                    reducer.feed_vector(GiGetSubVector##_gi_ins##V4(data_v4, 2));    \
+                    reducer.feed_vector(GiGetSubVector##_gi_ins##V4(data_v4, 3));    \
+                }                                                                    \
+                if (B == 3) {                                                        \
+                    GI_##_gi_type##_V3_t data_v3 = GiLoadUzip##_gi_ins##V3(src_ptr); \
+                    reducer.feed_vector(GiGetSubVector##_gi_ins##V3(data_v3, 0));    \
+                    reducer.feed_vector(GiGetSubVector##_gi_ins##V3(data_v3, 1));    \
+                    reducer.feed_vector(GiGetSubVector##_gi_ins##V3(data_v3, 2));    \
+                }                                                                    \
+                if (B == 2) {                                                        \
+                    GI_##_gi_type##_V2_t data_v2 = GiLoadUzip##_gi_ins##V2(src_ptr); \
+                    reducer.feed_vector(GiGetSubVector##_gi_ins##V2(data_v2, 0));    \
+                    reducer.feed_vector(GiGetSubVector##_gi_ins##V2(data_v2, 1));    \
+                }                                                                    \
+                reducer.post(dst);                                                   \
+                dst += Reducer::SIMD_WIDTH;                                          \
+            }                                                                        \
+            for (; a < A; a++) {                                                     \
+                Reducer reducer(src_dtype, B);                                       \
+                auto src_ptr = src + a * B;                                          \
+                for (size_t i = 0; i < B; i++)                                       \
+                    reducer.feed_remain(src_ptr + i);                                \
+                reducer.post_remain(dst);                                            \
+                dst++;                                                               \
+            }                                                                        \
+        }                                                                            \
+    }
+
+ImplementC1SmallB(float, FLOAT32, Float32);
+ImplementC1SmallB(int8_t, INT8, Int8);
 
 }  // namespace
 

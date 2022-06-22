@@ -87,6 +87,152 @@ GI_INT8_t GiLoadInt8(const void* Buffer) {
 }
 
 GI_FORCEINLINE
+GI_INT8_V2_t GiLoadUzipInt8V2(const void* Buffer) {
+#if defined(GI_NEON_INTRINSICS)
+    return vld2q_s8((int8_t*)Buffer);
+#elif defined(GI_SSE42_INTRINSICS)
+    GI_INT8_t v0, v1;
+    v0 = _mm_loadu_si128((const __m128i*)Buffer);
+    v1 = _mm_loadu_si128((const __m128i*)((int8_t*)Buffer + 16));
+    GI_INT8_V2_t ret;
+    v0 = _mm_shuffle_epi8(
+            v0, _mm_setr_epi8(0, 2, 4, 6, 8, 10, 12, 14, 1, 3, 5, 7, 9, 11, 13, 15));
+    v1 = _mm_shuffle_epi8(
+            v1, _mm_setr_epi8(0, 2, 4, 6, 8, 10, 12, 14, 1, 3, 5, 7, 9, 11, 13, 15));
+    ret.val[0] = _mm_unpacklo_epi64(v0, v1);
+    ret.val[1] = _mm_unpackhi_epi64(v0, v1);
+    return ret;
+#elif defined(GI_RVV_INTRINSICS)
+    return vlseg2e8_v_i8m1x2((int8_t*)Buffer, GI_SIMD_LEN_BYTE / sizeof(int8_t));
+#else
+    int8_t data[2 * GI_SIMD_LEN_BYTE];
+    const int8_t* ptr = (int8_t*)Buffer;
+    for (size_t i = 0; i < GI_SIMD_LEN_BYTE / sizeof(int8_t); i++) {
+        data[i] = ptr[2 * i];
+        data[GI_SIMD_LEN_BYTE + i] = ptr[2 * i + 1];
+    }
+    GI_INT8_V2_t ret;
+    ret.val[0] = GiLoadInt8(data);
+    ret.val[1] = GiLoadInt8(data + GI_SIMD_LEN_BYTE);
+    return ret;
+#endif
+}
+
+GI_FORCEINLINE
+GI_INT8_V3_t GiLoadUzipInt8V3(const void* Buffer) {
+#if defined(GI_NEON_INTRINSICS)
+    return vld3q_s8((int8_t*)Buffer);
+#elif defined(GI_SSE42_INTRINSICS)
+    GI_INT8_V3_t v;
+    __m128i tmp0, tmp1, tmp2, tmp3;
+    static const int8_t mask8_0[16] = {0, 3,  6,  9, 12, 15, 1,  4,
+                                       7, 10, 13, 2, 5,  8,  11, 14};
+    static const int8_t mask8_1[16] = {2, 5,  8,  11, 14, 0, 3,  6,
+                                       9, 12, 15, 1,  4,  7, 10, 13};
+    static const int8_t mask8_2[16] = {1,  4,  7, 10, 13, 2, 5,  8,
+                                       11, 14, 0, 3,  6,  9, 12, 15};
+
+    v.val[0] = _mm_loadu_si128((const __m128i*)Buffer);
+    v.val[1] = _mm_loadu_si128((const __m128i*)((int8_t*)Buffer + 16));
+    v.val[2] = _mm_loadu_si128((const __m128i*)((int8_t*)Buffer + 32));
+
+    tmp0 = _mm_shuffle_epi8(v.val[0], *(__m128i*)mask8_0);
+    tmp1 = _mm_shuffle_epi8(v.val[1], *(__m128i*)mask8_1);
+    tmp2 = _mm_shuffle_epi8(v.val[2], *(__m128i*)mask8_2);
+
+    tmp3 = _mm_slli_si128(tmp0, 10);
+    tmp3 = _mm_alignr_epi8(tmp1, tmp3, 10);  // a:0,3,6,9,12,15,b:2,5,8,11,14,x,x,x,x,x
+    tmp3 = _mm_slli_si128(tmp3, 5);          // 0,0,0,0,0,a:0,3,6,9,12,15,b:2,5,8,11,14,
+    tmp3 = _mm_srli_si128(tmp3, 5);          // a:0,3,6,9,12,15,b:2,5,8,11,14,:0,0,0,0,0
+    v.val[0] = _mm_slli_si128(tmp2, 11);     // 0,0,0,0,0,0,0,0,0,0,0,0, 1,4,7,10,13,
+    v.val[0] = _mm_or_si128(v.val[0], tmp3);
+
+    tmp3 = _mm_slli_si128(tmp0, 5);          // 0,0,0,0,0,a:0,3,6,9,12,15,1,4,7,10,13,
+    tmp3 = _mm_srli_si128(tmp3, 11);         // a:1,4,7,10,13, 0,0,0,0,0,0,0,0,0,0,0
+    v.val[1] = _mm_srli_si128(tmp1, 5);      // b:0,3,6,9,12,15,C:1,4,7,10,13, 0,0,0,0,0
+    v.val[1] = _mm_slli_si128(v.val[1], 5);  // 0,0,0,0,0,b:0,3,6,9,12,15,C:1,4,7,10,13,
+    v.val[1] = _mm_or_si128(v.val[1], tmp3);
+    v.val[1] = _mm_slli_si128(v.val[1], 5);  // 0,0,0,0,0,a:1,4,7,10,13,b:0,3,6,9,12,15,
+    v.val[1] = _mm_srli_si128(v.val[1], 5);  // a:1,4,7,10,13,b:0,3,6,9,12,15,0,0,0,0,0
+    tmp3 = _mm_srli_si128(tmp2, 5);          // c:2,5,8,11,14,0,3,6,9,12,15,0,0,0,0,0
+    tmp3 = _mm_slli_si128(tmp3, 11);         // 0,0,0,0,0,0,0,0,0,0,0,c:2,5,8,11,14,
+    v.val[1] = _mm_or_si128(v.val[1], tmp3);
+    tmp3 = _mm_srli_si128(tmp2, 10);         // c:0,3,6,9,12,15, 0,0,0,0,0,0,0,0,0,0,
+    tmp3 = _mm_slli_si128(tmp3, 10);         // 0,0,0,0,0,0,0,0,0,0, c:0,3,6,9,12,15,
+    v.val[2] = _mm_srli_si128(tmp1, 11);     // b:1,4,7,10,13,0,0,0,0,0,0,0,0,0,0,0
+    v.val[2] = _mm_slli_si128(v.val[2], 5);  // 0,0,0,0,0,b:1,4,7,10,13, 0,0,0,0,0,0
+    v.val[2] =
+            _mm_or_si128(v.val[2], tmp3);  // 0,0,0,0,0,b:1,4,7,10,13,c:0,3,6,9,12,15,
+    tmp0 = _mm_srli_si128(tmp0, 11);       // a:2,5,8,11,14, 0,0,0,0,0,0,0,0,0,0,0,
+    v.val[2] = _mm_or_si128(v.val[2], tmp0);
+    return v;
+#elif defined(GI_RVV_INTRINSICS)
+    return vlseg3e8_v_i8m1x3((int8_t*)Buffer, GI_SIMD_LEN_BYTE / sizeof(int8_t));
+#else
+    int8_t data[3 * GI_SIMD_LEN_BYTE];
+    const int8_t* ptr = (int8_t*)Buffer;
+    for (size_t i = 0; i < GI_SIMD_LEN_BYTE / sizeof(int8_t); i++) {
+        data[i] = ptr[3 * i];
+        data[GI_SIMD_LEN_BYTE + i] = ptr[3 * i + 1];
+        data[2 * GI_SIMD_LEN_BYTE + i] = ptr[3 * i + 2];
+    }
+    GI_INT8_V3_t ret;
+    ret.val[0] = GiLoadInt8(data);
+    ret.val[1] = GiLoadInt8(data + GI_SIMD_LEN_BYTE);
+    ret.val[2] = GiLoadInt8(data + 2 * GI_SIMD_LEN_BYTE);
+    return ret;
+#endif
+}
+
+GI_FORCEINLINE
+GI_INT8_V4_t GiLoadUzipInt8V4(const void* Buffer) {
+#if defined(GI_NEON_INTRINSICS)
+    return vld4q_s8((int8_t*)Buffer);
+#elif defined(GI_SSE2_INTRINSICS)
+    GI_INT8_V4_t v;
+    __m128i tmp3, tmp2, tmp1, tmp0;
+
+    v.val[0] = _mm_loadu_si128((const __m128i*)Buffer);
+    v.val[1] = _mm_loadu_si128((const __m128i*)((int8_t*)Buffer + 16));
+    v.val[2] = _mm_loadu_si128((const __m128i*)((int8_t*)Buffer + 32));
+    v.val[3] = _mm_loadu_si128((const __m128i*)((int8_t*)Buffer + 48));
+
+    tmp0 = _mm_unpacklo_epi8(v.val[0], v.val[1]);
+    tmp1 = _mm_unpacklo_epi8(v.val[2], v.val[3]);
+    tmp2 = _mm_unpackhi_epi8(v.val[0], v.val[1]);
+    tmp3 = _mm_unpackhi_epi8(v.val[2], v.val[3]);
+
+    v.val[0] = _mm_unpacklo_epi8(tmp0, tmp2);
+    v.val[1] = _mm_unpackhi_epi8(tmp0, tmp2);
+    v.val[2] = _mm_unpacklo_epi8(tmp1, tmp3);
+    v.val[3] = _mm_unpackhi_epi8(tmp1, tmp3);
+
+    tmp0 = _mm_unpacklo_epi32(v.val[0], v.val[2]);
+    tmp1 = _mm_unpackhi_epi32(v.val[0], v.val[2]);
+    tmp2 = _mm_unpacklo_epi32(v.val[1], v.val[3]);
+    tmp3 = _mm_unpackhi_epi32(v.val[1], v.val[3]);
+
+    v.val[0] = _mm_unpacklo_epi8(tmp0, tmp2);
+    v.val[1] = _mm_unpackhi_epi8(tmp0, tmp2);
+    v.val[2] = _mm_unpacklo_epi8(tmp1, tmp3);
+    v.val[3] = _mm_unpackhi_epi8(tmp1, tmp3);
+    return v;
+#elif defined(GI_RVV_INTRINSICS)
+    return vlseg4e8_v_i8m1x4((int8_t*)Buffer, GI_SIMD_LEN_BYTE / sizeof(int8_t));
+#else
+    GI_INT8_V4_t ret;
+    const int8_t* ptr = (int8_t*)Buffer;
+    for (size_t i = 0; i < GI_SIMD_LEN_BYTE / sizeof(int8_t); i++) {
+        ret.val[0][i] = ptr[4 * i];
+        ret.val[1][i] = ptr[4 * i + 1];
+        ret.val[2][i] = ptr[4 * i + 2];
+        ret.val[3][i] = ptr[4 * i + 3];
+    }
+    return ret;
+#endif
+}
+
+GI_FORCEINLINE
 void GiStoreInt32(void* Buffer, GI_INT32_t Vector) {
 #if defined(GI_NEON_INTRINSICS)
     vst1q_s32((int32_t*)Buffer, Vector);
