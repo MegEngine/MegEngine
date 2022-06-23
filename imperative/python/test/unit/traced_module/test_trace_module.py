@@ -9,7 +9,7 @@ from megengine.core._imperative_rt.core2 import apply
 from megengine.core.ops import builtin
 from megengine.module import Module
 from megengine.traced_module import TracedModule, enable_expr_checker, trace_module
-from megengine.traced_module.expr import Apply, CallFunction, Constant
+from megengine.traced_module.expr import Apply, CallFunction, CallMethod, Constant
 
 
 class MyModule1(M.Module):
@@ -57,6 +57,14 @@ class MyModule4(M.Module):
 
     def forward(self, x, y):
         return self.add(x, y)
+
+
+class MyModule5(M.Module):
+    def forward(self, x):
+        a = x + x
+        b = x * a
+        b.name = "result"
+        return b
 
 
 def test_trace_module():
@@ -157,3 +165,9 @@ def test_trace_module_2():
         traced_model.graph._exprs[2].opdef, builtin.Elemwise
     )
     assert int(traced_model(Tensor([1, 2]))[0]) == 3
+
+
+def test_rename():
+    model = MyModule5()
+    tm_model = trace_module(model, Tensor(1))
+    assert isinstance(tm_model.graph.outputs[0].expr, CallMethod)

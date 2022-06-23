@@ -30,11 +30,21 @@ private:
     }
 
 public:
+    inline static WeakKeyMap<ValueWeakRef, py::object> module_trace_info_map;
     ModuleTraceTransformation(py::function hook_fn) : m_hook_fn(hook_fn) {}
     ValueRefList apply_transformation(
             const Operator& op, Span<ValueRef> inputs) override {
         if (op.is<ApplyOp>() && m_enabled > 0) {
             auto outputs = apply_module_trace_hook(op.cast<ApplyOp>().op(), inputs);
+            return outputs;
+        } else if (op.is<RenameValue>()) {
+            auto outputs = imperative::apply(op, inputs);
+            if (auto module_trace_info = module_trace_info_map.try_get(inputs[0])) {
+                if (module_trace_info->ptr()) {
+                    auto node = module_trace_info.value();
+                    module_trace_info_map[outputs[0]] = module_trace_info.value();
+                }
+            }
             return outputs;
         } else {
             return imperative::apply(op, inputs);
