@@ -364,15 +364,14 @@ void GraphRecordOption::config_model(
             std::static_pointer_cast<lar::Bool>(m_option["fake_first"])->get_value();
     no_sanity_check = std::static_pointer_cast<lar::Bool>(m_option["no_sanity_check"])
                               ->get_value();
-    m_record_comp_seq = std::static_pointer_cast<lar::Bool>(m_option["record_comp_seq"])
-                                        ->get_value()
-                              ? 1
-                              : 0;
-    m_record_comp_seq =
-            std::static_pointer_cast<lar::Bool>(m_option["record_comp_seq2"])
-                            ->get_value()
-                    ? 2
-                    : 0;
+    if (std::static_pointer_cast<lar::Bool>(m_option["record_comp_seq"])->get_value()) {
+        m_record_comp_seq = 1;
+    } else if (std::static_pointer_cast<lar::Bool>(m_option["record_comp_seq2"])
+                       ->get_value()) {
+        m_record_comp_seq = 2;
+    } else {
+        m_record_comp_seq = 0;
+    }
 
     CONFIG_MODEL_FUN;
 }
