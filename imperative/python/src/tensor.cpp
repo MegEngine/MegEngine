@@ -118,7 +118,7 @@ PyObject* py_apply(
                 tensors[i] = tw->m_tensor->data();
             } else if (
                     DTypePromoteCfg::convert_input_enabled &&
-                    op->same_type<Elemwise>()) {
+                    (op->same_type<Elemwise>() || op->same_type<ElemwiseMultiType>())) {
                 tensors[i] = convert_pyinput_to_tensor(i);
             } else {
                 PyErr_SetString(PyExc_TypeError, "py_apply expects tensor as inputs");

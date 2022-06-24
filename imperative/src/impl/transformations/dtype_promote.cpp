@@ -53,6 +53,41 @@ mgb::DType get_promoted_dtype(const SmallVector<DType>& dtypes) {
     return ret;
 }
 
+ValueRefList elemwise_multi_type_rule(const OpDef& op, Span<ValueRef> inputs) {
+    auto&& elem_op = op.cast_final_safe<ElemwiseMultiType>();
+    static std::unordered_set<ElemwiseMultiType::Mode> cast_case = {
+            ElemwiseMultiType::Mode::EQ,
+            ElemwiseMultiType::Mode::NEQ,
+            ElemwiseMultiType::Mode::LT,
+            ElemwiseMultiType::Mode::LEQ,
+    };
+
+    if (cast_case.find(elem_op.mode) == cast_case.end()) {
+        return imperative::apply(op, inputs);
+    }
+
+    SmallVector<DType> dtypes(inputs.size());
+    for (size_t i = 0; i < inputs.size(); ++i) {
+        dtypes[i] = *(inputs[i].dtype());
+    }
+
+    ValueRefList converted(inputs.size());
+    mgb::DType target_dtype = get_promoted_dtype(dtypes);
+
+    for (size_t i = 0; i < inputs.size(); ++i) {
+        if (!is_quantized_dtype(dtypes[i]) && dtypes[i] != target_dtype &&
+            DTypePromoteCfg::convert_input_enabled) {
+            converted[i] = imperative::apply(
+                    ApplyOp(*TypeCvt::make(target_dtype)), inputs[i])[0];
+            dtypes[i] = target_dtype;
+        } else {
+            converted[i] = inputs[i];
+        }
+    }
+
+    return imperative::apply(op, converted);
+}
+
 ValueRefList elemwise_rule(const OpDef& op, Span<ValueRef> inputs) {
     auto&& elem_op = op.cast_final_safe<Elemwise>();
 
@@ -349,6 +384,7 @@ ValueRefList naive_promote_rule(const OpDef& op, Span<ValueRef> inputs) {
 struct DTypePromoteRuleRegistry {
     DTypePromoteRuleRegistry() {
         register_dtype_promote_rule<Elemwise>(elemwise_rule);
+        register_dtype_promote_rule<ElemwiseMultiType>(elemwise_multi_type_rule);
         register_dtype_promote_rule<Concat>(naive_promote_rule);
         register_dtype_promote_rule<GroupLocal>(naive_promote_rule);
         register_dtype_promote_rule<Reduce>(reduce_rule);

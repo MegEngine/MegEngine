@@ -52,7 +52,7 @@ def isnan(inp: Tensor) -> Tensor:
         >>> F.isnan(x).numpy()
         array([False,  True, False])
     """
-    return _elemwise_multi_type(inp, mode="isnan", dtype="Bool")
+    return _elemwise_multi_type(inp, mode="isnan", dtype="bool")
 
 
 def isinf(inp: Tensor) -> Tensor:
@@ -69,7 +69,7 @@ def isinf(inp: Tensor) -> Tensor:
         >>> F.isinf(x).numpy()
         array([False,  True, False])
     """
-    return _elemwise_multi_type(inp, mode="isinf", dtype="Bool")
+    return _elemwise_multi_type(inp, mode="isinf", dtype="bool")
 
 
 def sign(inp: Tensor):

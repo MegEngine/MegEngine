@@ -26,6 +26,14 @@ public:
             const VarNodeArrayView& inputs, Param param,
             const OperatorNodeConfig& config = {});
 
+    MGE_WIN_DECLSPEC_FUC static TensorShape get_output_var_shape(
+            Mode mode, const TensorShapeArray& input_shapes);
+
+    MGE_WIN_DECLSPEC_FUC static void perform(
+            Mode mode, DType out_dt, DeviceTensorND& dest,
+            const SmallVector<DeviceTensorND>& inputs,
+            intl::UniqPtrWithCN<megdnn::ElemwiseMultiType>& opr);
+
 private:
     using ModeTrait = megdnn::ElemwiseMultiType::ModeTrait;
 
@@ -40,6 +48,14 @@ private:
     void record_execute_deps(ExecDependencyArray& deps) override;
 
     void add_input_layout_constraint() override;
+
+    NodeProp* do_make_node_prop() const override;
+
+    void init_output_static_infer_desc() override;
+
+    static void call_megdnn_opr_exec(
+            CompNode comp_node, megdnn::TensorNDArray& inp, const megdnn::TensorND& out,
+            megdnn::ElemwiseMultiType* opr, ElemwiseMultiType* caller);
 };
 
 //! deprecated; TODO: remove in megbrain 8

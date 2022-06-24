@@ -37,7 +37,6 @@ _ElwMod = builtin.Elemwise.Mode
 
 def _elemwise_multi_type(*args, mode, **kwargs):
     op = builtin.ElemwiseMultiType(mode=mode, **kwargs)
-    args = convert_inputs(*args)
     (result,) = apply(op, *args)
     return result
 
@@ -249,22 +248,22 @@ class ArrayMethodMixin(abc.ABC):
     __hash__ = None  # due to __eq__ diviates from python convention
 
     __lt__ = lambda self, value: _elemwise_multi_type(
-        self, value, mode="lt", dtype="Bool"
+        self, value, mode="lt", dtype="bool"
     )
     __le__ = lambda self, value: _elemwise_multi_type(
-        self, value, mode="leq", dtype="Bool"
+        self, value, mode="leq", dtype="bool"
     )
     __gt__ = lambda self, value: _elemwise_multi_type(
-        value, self, mode="lt", dtype="Bool"
+        value, self, mode="lt", dtype="bool"
     )
     __ge__ = lambda self, value: _elemwise_multi_type(
-        value, self, mode="leq", dtype="Bool"
+        value, self, mode="leq", dtype="bool"
     )
     __eq__ = lambda self, value: _elemwise_multi_type(
-        self, value, mode="eq", dtype="Bool"
+        self, value, mode="eq", dtype="bool"
     )
     __ne__ = lambda self, value: _elemwise_multi_type(
-        self, value, mode="neq", dtype="Bool"
+        self, value, mode="neq", dtype="bool"
     )
 
     __neg__ = _unary_elwise(_ElwMod.NEGATE)

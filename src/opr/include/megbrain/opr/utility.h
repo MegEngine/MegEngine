@@ -509,6 +509,49 @@ public:
     bool is_const() const { return m_is_const; }
 };
 
+//! global operator instance for static inference
+template <class Opr>
+class StaticInferOpr {
+    intl::UniqPtrWithCN<Opr> m_opr;
+    MGB_MUTEX m_mtx;
+
+public:
+    class Lock {
+        friend class StaticInferOpr;
+        StaticInferOpr* m_owner;
+
+        explicit Lock(StaticInferOpr* owner) : m_owner{owner} {
+#if !__DEPLOY_ON_XP_SP2__
+            m_owner->m_mtx.lock();
+#endif
+        }
+
+    public:
+        Lock(Lock&& rhs) : m_owner{rhs.m_owner} { rhs.m_owner = nullptr; }
+
+        ~Lock() {
+#if !__DEPLOY_ON_XP_SP2__
+            if (m_owner)
+                m_owner->m_mtx.unlock();
+#endif
+        }
+
+        Lock& operator=(const Lock&) = delete;
+        Lock& operator=(Lock&&) = delete;
+
+        intl::UniqPtrWithCN<Opr>& operator()() { return m_owner->m_opr; }
+    };
+
+    //! lock and acquire the operator
+    Lock lock() {
+        Lock ret{this};
+        if (!m_opr) {
+            m_opr = intl::create_megdnn_opr<Opr>(CompNode::default_cpu());
+        }
+        return ret;
+    }
+};
+
 }  // namespace opr
 }  // namespace mgb
 
