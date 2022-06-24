@@ -141,11 +141,11 @@ TEST(TestSystem, TimedFuncInvokerInitFunc) {
     sleep_param.init_time = 0.1;
     sleep_param.sleep_time = 0.1;
     RealTimer timer;
-    auto ret = ins->invoke(0, Param::from_pod(sleep_param), 0.15);
+    auto ret = ins->invoke(0, Param::from_pod(sleep_param), 0.17);
     ASSERT_GT(timer.get_secs(), 0.2);
     ASSERT_EQ(ret.val().as_single_pod<double>(), 0.2);
     timer.reset();
-    ret = ins->invoke(0, Param::from_pod(sleep_param), 0.05);
+    ret = ins->invoke(0, Param::from_pod(sleep_param), 0.07);
     ASSERT_FALSE(ret.valid());
 }
 
