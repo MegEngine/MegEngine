@@ -492,6 +492,146 @@ TEST_F(FALLBACK_MULTI_THREADS, CONVBIAS_GI_DIRECT_FP32_STR1) {
             handle(), "F32STRD1");
 }
 
+TEST_F(FALLBACK_MULTI_THREADS, CONVBIAS_GI_WINOGRAD_F23_4) {
+    using namespace conv_bias;
+    std::vector<TestArg> args = get_winograd_mk_packed_args();
+    Checker<ConvBiasForward> checker(handle());
+
+    check_winograd("4:2:32", checker, args, param::MatrixMul::Format::MK4);
+}
+
+TEST_F(FALLBACK_MULTI_THREADS, CONVBIAS_GI_WINOGRAD_F23_4_NCHW44) {
+    using namespace conv_bias;
+    std::vector<TestArg> args =
+            get_nchw44_conv_bias_args({3}, QUAN_NLMODE, BR_AND_NO_BIASMODE, 1);
+    Checker<ConvBiasForward> checker(handle());
+    check_winograd(
+            "4:2:32", checker, args, param::MatrixMul::Format::MK4,
+            param::ConvBias::Format::NCHW44);
+}
+
+TEST_F(FALLBACK_MULTI_THREADS, CONVBIAS_GI_WINOGRAD_F23_4_WEIGHT_PREPROCESS) {
+    using namespace conv_bias;
+    std::vector<TestArg> args = get_winograd_mk_packed_args();
+    Checker<ConvBiasForward, OprWeightPreprocessProxy<ConvBiasForward>> checker(
+            handle());
+    check_winograd("4:2:32", checker, args, param::MatrixMul::Format::MK4);
+}
+
+TEST_F(FALLBACK_MULTI_THREADS, CONVBIAS_GI_WINOGRAD_F23_4_NCHW44_WEIGHT_PREPROCESS) {
+    using namespace conv_bias;
+    std::vector<TestArg> args =
+            get_nchw44_conv_bias_args({3}, QUAN_NLMODE, BR_AND_NO_BIASMODE, 1);
+    Checker<ConvBiasForward, OprWeightPreprocessProxy<ConvBiasForward>> checker(
+            handle());
+    check_winograd(
+            "4:2:32", checker, args, param::MatrixMul::Format::MK4,
+            param::ConvBias::Format::NCHW44);
+}
+
+TEST_F(FALLBACK, CONVBIAS_GI_WINOGRAD_F63_4) {
+    using namespace conv_bias;
+    std::vector<TestArg> args = get_winograd_mk_packed_args();
+    Checker<ConvBiasForward> checker(handle());
+
+    check_winograd("4:6:16", checker, args, param::MatrixMul::Format::MK4);
+}
+
+TEST_F(FALLBACK, CONVBIAS_GI_WINOGRAD_F63_4_WEIGHT_PREPROCESS) {
+    using namespace conv_bias;
+    std::vector<TestArg> args = get_winograd_mk_packed_args();
+    Checker<ConvBiasForward, OprWeightPreprocessProxy<ConvBiasForward>> checker(
+            handle());
+
+    check_winograd("4:6:16", checker, args, param::MatrixMul::Format::MK4);
+}
+
+TEST_F(FALLBACK_MULTI_THREADS, CONVBIAS_GI_WINOGRAD_F63) {
+    using namespace conv_bias;
+    std::vector<TestArg> args = get_winograd_args(3);
+    Checker<ConvBiasForward> checker(handle());
+
+    check_winograd("1:6:32", checker, args);
+}
+
+TEST_F(FALLBACK_MULTI_THREADS, CONVBIAS_GI_WINOGRAD_F63_4) {
+    using namespace conv_bias;
+    std::vector<TestArg> args = get_winograd_mk_packed_args();
+    Checker<ConvBiasForward> checker(handle());
+
+    check_winograd("4:6:16", checker, args, param::MatrixMul::Format::MK4);
+}
+
+TEST_F(FALLBACK_MULTI_THREADS, CONVBIAS_GI_WINOGRAD_F63_4_NCHW44) {
+    using namespace conv_bias;
+    std::vector<TestArg> args =
+            get_nchw44_conv_bias_args({3}, QUAN_NLMODE, BR_AND_NO_BIASMODE, 1);
+    Checker<ConvBiasForward> checker(handle());
+    check_winograd(
+            "4:6:16", checker, args, param::MatrixMul::Format::MK4,
+            param::ConvBias::Format::NCHW44);
+}
+
+TEST_F(FALLBACK_MULTI_THREADS, CONVBIAS_GI_WINOGRAD_F54) {
+    using namespace conv_bias;
+    std::vector<TestArg> args = get_winograd_args(4);
+    Checker<ConvBiasForward> checker(handle());
+
+    check_winograd("1:5:32", checker, args);
+}
+
+TEST_F(FALLBACK_MULTI_THREADS, CONVBIAS_GI_WINOGRAD_F45) {
+    using namespace conv_bias;
+    std::vector<TestArg> args = get_winograd_args(5);
+    Checker<ConvBiasForward> checker(handle());
+
+    check_winograd("1:4:32", checker, args);
+}
+
+TEST_F(FALLBACK_MULTI_THREADS, CONVBIAS_GI_WINOGRAD_F63_WEIGHT_PREPROCESS) {
+    using namespace conv_bias;
+    std::vector<TestArg> args = get_winograd_args(3);
+    Checker<ConvBiasForward, OprWeightPreprocessProxy<ConvBiasForward>> checker(
+            handle());
+    check_winograd("1:6:32", checker, args);
+}
+
+TEST_F(FALLBACK_MULTI_THREADS, CONVBIAS_GI_WINOGRAD_F63_4_WEIGHT_PREPROCESS) {
+    using namespace conv_bias;
+    std::vector<TestArg> args = get_winograd_mk_packed_args();
+    Checker<ConvBiasForward, OprWeightPreprocessProxy<ConvBiasForward>> checker(
+            handle());
+
+    check_winograd("4:6:16", checker, args, param::MatrixMul::Format::MK4);
+}
+
+TEST_F(FALLBACK_MULTI_THREADS, CONVBIAS_GI_WINOGRAD_F63_4_NCHW44_WEIGHT_PREPROCESS) {
+    using namespace conv_bias;
+    std::vector<TestArg> args =
+            get_nchw44_conv_bias_args({3}, QUAN_NLMODE, BR_AND_NO_BIASMODE, 1);
+    Checker<ConvBiasForward, OprWeightPreprocessProxy<ConvBiasForward>> checker(
+            handle());
+    check_winograd(
+            "4:6:16", checker, args, param::MatrixMul::Format::MK4,
+            param::ConvBias::Format::NCHW44);
+}
+
+TEST_F(FALLBACK_MULTI_THREADS, CONVBIAS_GI_WINOGRAD_F54_WEIGHT_PREPROCESS) {
+    using namespace conv_bias;
+    std::vector<TestArg> args = get_winograd_args(4);
+    Checker<ConvBiasForward, OprWeightPreprocessProxy<ConvBiasForward>> checker(
+            handle());
+    check_winograd("1:5:32", checker, args);
+}
+
+TEST_F(FALLBACK_MULTI_THREADS, CONVBIAS_GI_WINOGRAD_F45_WEIGHT_PREPROCESS) {
+    using namespace conv_bias;
+    std::vector<TestArg> args = get_winograd_args(5);
+    Checker<ConvBiasForward, OprWeightPreprocessProxy<ConvBiasForward>> checker(
+            handle());
+    check_winograd("1:4:32", checker, args);
+}
+
 TEST_F(FALLBACK_MULTI_THREADS, CONVBIAS_GI_WINOGRAD_PREPROCESS_NCHW44) {
     using namespace conv_bias;
     std::vector<TestArg> nchw44_args = conv_bias::get_nchw44_conv_bias_args(

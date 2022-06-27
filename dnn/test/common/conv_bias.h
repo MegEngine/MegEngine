@@ -66,6 +66,13 @@ void benchmark_winograd(
         const char* algo_name, megdnn::Handle* handle, size_t kernel,
         size_t pack_size = 1);
 #endif  // MEGDNN_WITH_BENCHMARK
+template <class Checker>
+void check_winograd(
+        const char* algo_name, Checker& checker,
+        const std::vector<megdnn::test::conv_bias::TestArg>& args,
+        megdnn::param::MatrixMul::Format format =
+                megdnn::param::MatrixMul::Format::DEFAULT,
+        megdnn::param::ConvBias::Format layout = megdnn::param::ConvBias::Format::NCHW);
 
 std::vector<megdnn::test::conv_bias::TestArg> get_conv_bias_args(
         std::vector<size_t> kernel, size_t stride, bool no_pad, bool no_bias,

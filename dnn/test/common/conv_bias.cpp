@@ -961,6 +961,64 @@ void benchmark_winograd(
 }
 #endif  // MEGDNN_WITH_BENCHMARK
 
+template <class Checker>
+void check_winograd(
+        const char* algo_name, Checker& checker,
+        const std::vector<conv_bias::TestArg>& args, param::MatrixMul::Format format,
+        param::ConvBias::Format layout) {
+    const char* matmul_name;
+#if MEGDNN_AARCH64
+    if (format == param::MatrixMul::Format::MK4) {
+        matmul_name = "AARCH64_F32_MK4_4x16";
+    } else if (format == param::MatrixMul::Format::MK8) {
+        matmul_name = "AARCH64_INT16X16X32_MK8_8X8";
+    } else {
+        matmul_name = "AARCH64_F32K8X12X1";
+    }
+#elif MEGDNN_ARMV7
+    if (format == param::MatrixMul::Format::MK4) {
+        matmul_name = "ARMV7_F32_MK4_4x8";
+    } else if (format == param::MatrixMul::Format::MK8) {
+        matmul_name = "ARMV7_INT16X16X32_MK8_4X8";
+    } else {
+        matmul_name = "ARMV7_F32";
+    }
+#else
+    if (format == param::MatrixMul::Format::MK4) {
+        matmul_name = "FB_GI_F32_MK4_4x8";
+    } else {
+        matmul_name = "FB_GI_F32_4x12";
+    }
+#endif
+    std::string winograd_algo_name;
+    if (layout == megdnn::param::ConvBias::Format::NCHW) {
+        winograd_algo_name = ssprintf("WINOGRAD:%s:%s", matmul_name, algo_name);
+    } else if (layout == megdnn::param::ConvBias::Format::NCHW44) {
+        winograd_algo_name = ssprintf("WINOGRAD_NCHW44:%s:%s", matmul_name, algo_name);
+    } else {
+        megdnn_throw("Invalid layout");
+    }
+
+    checker.set_before_exec_callback(
+            conv_bias::ConvBiasAlgoChecker<ConvBias>(winograd_algo_name.c_str()));
+
+    for (auto&& arg : args) {
+        checker.set_param(arg.param).execs({arg.src, arg.filter, arg.bias, {}, {}});
+    }
+}
+
+template void check_winograd<megdnn::test::Checker<megdnn::ConvBias>>(
+        const char* algo_name, megdnn::test::Checker<megdnn::ConvBias>& checker,
+        const std::vector<conv_bias::TestArg>& args, param::MatrixMul::Format format,
+        param::ConvBias::Format layout);
+
+using WeightPreprocessChecker = megdnn::test::Checker<
+        megdnn::ConvBias, megdnn::test::OprWeightPreprocessProxy<megdnn::ConvBias>>;
+template void check_winograd<WeightPreprocessChecker>(
+        const char* algo_name, WeightPreprocessChecker& checker,
+        const std::vector<conv_bias::TestArg>& args, param::MatrixMul::Format format,
+        param::ConvBias::Format layout);
+
 std::vector<conv_bias::TestArg> get_conv_bias_args(
         std::vector<size_t> kernel, size_t stride, bool no_pad, bool no_bias,
         bool no_nonlinemode, bool quantized_nlmod, bool only_broadcast_bias) {
