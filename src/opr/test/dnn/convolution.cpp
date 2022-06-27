@@ -9,6 +9,7 @@
 #include "megbrain/test/autocheck.h"
 #include "megbrain/test/helper.h"
 #include "megbrain/test/megdnn_helper.h"
+#include "megbrain/utils/infile_persistent_cache.h"
 #include "megdnn/algorithm_cache.h"
 #include "megdnn/dtype.h"
 #include "megdnn/oprs/base.h"
@@ -354,6 +355,10 @@ TEST(TestOprDNN, ConvBiasExePolicy) {
         HostTensorND host_y;
         auto func = graph->compile({make_callback_copy(conv_bias, host_y)});
         func->execute();
+        //! force clear all PersistentCache by get_cache
+        PersistentCache::inst().clear_cache();
+        size_t old_size = PersistentCache::inst().get_cache().size();
+        ASSERT_EQ(old_size, 0);
         //! set a new cache
         PersistentCache::set_impl(std::make_shared<InMemoryPersistentCache>());
     };
@@ -370,6 +375,64 @@ TEST(TestOprDNN, ConvBiasExePolicy) {
     megdnn::AlgorithmCache::instance().clear();
     ASSERT_THROW(run(S::OPTIMIZED | S::PROFILE), MegBrainError);
     PersistentCache::set_impl(orig_impl);
+}
+
+TEST(TestOprDNN, PersistentCacheAppend) {
+    PersistentCache::inst().clear_cache();
+    auto orig_impl =
+            PersistentCache::set_impl(std::make_shared<InMemoryPersistentCache>());
+
+    auto orig_impl_size = orig_impl->get_cache().size();
+
+    auto category_a = "test_category_a";
+    std::vector<int8_t> blob_key{1, 2, 3, 4, 5, 6, 7, 8};
+    std::vector<int8_t> blob_value{-1, -2, -3, -4, -5, -6, -7, -8};
+    PersistentCache::Blob key = {.ptr = blob_key.data(), .size = blob_key.size()};
+    PersistentCache::Blob value = {.ptr = blob_value.data(), .size = blob_value.size()};
+
+    //! trigger call InMemoryPersistentCache put
+    PersistentCache::inst().put(category_a, key, value);
+
+    auto now_size = PersistentCache::inst().get_cache().size();
+
+    //! assert new key not in InMemoryPersistentCache imp
+    ASSERT_EQ(orig_impl_size + 1, now_size);
+
+    //! trigger append call InFilePersistentCache init
+    PersistentCache::set_impl(std::make_shared<InFilePersistentCache>());
+    auto size_after_restore = PersistentCache::inst().get_cache().size();
+
+    //! assert key not in InFilePersistentCache imp
+    //! as memory instance do cache do not sync cache to file
+    ASSERT_EQ(size_after_restore, orig_impl_size);
+
+    auto t_file_imp = std::make_shared<InFilePersistentCache>();
+    auto category_b = "test_category_b";
+    //! trigger call InFilePersistentCache put
+    t_file_imp->put(category_b, key, value);
+    //! set new file imp
+    PersistentCache::set_impl(t_file_imp);
+
+    //! trigger InFilePersistentCache append init
+    auto old_cache =
+            PersistentCache::set_impl(std::make_shared<InFilePersistentCache>());
+    //! assert set_impl return old cache exactly
+    ASSERT_EQ(old_cache->m_cache.size(), now_size);
+    //! test key get
+    auto get_value = PersistentCache::inst().get(category_b, key);
+    ASSERT_TRUE(
+            !memcmp(get_value.val().ptr, blob_value.data(),
+                    blob_value.size() * sizeof(int8_t)));
+
+    size_after_restore = PersistentCache::inst().get_cache().size();
+    //! assert key still in orig_impl imp
+    ASSERT_EQ(size_after_restore, now_size);
+
+    //! restore old impl, may memory or file, trigger may memory append init
+    PersistentCache::set_impl(orig_impl);
+    size_after_restore = PersistentCache::inst().get_cache().size();
+    //! assert key not in orig_impl imp, caused by get_cache will clear m_cache
+    ASSERT_EQ(size_after_restore + 1, now_size);
 }
 
 TEST(TestOprDNN, ConvBiasExePolicy_Quantized8Asym) {

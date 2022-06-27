@@ -23,6 +23,41 @@ public:
         size_t size;
     };
 
+    struct BlobStorage : public Blob {
+        std::unique_ptr<uint8_t[]> data_refhold;
+        size_t hash = 0;
+
+        BlobStorage& init_data_ref(const Blob& b);
+
+        BlobStorage& init_hash();
+
+        bool operator==(const BlobStorage& rhs) const;
+
+        struct Hash {
+            size_t operator()(const BlobStorage& b) const { return b.hash; }
+        };
+
+        template <typename Input>
+        BlobStorage& init_from_input(Input& inp);
+
+        template <typename OutputFile>
+        void write_to_file(OutputFile& out_file) const;
+    };
+
+    typedef std::unordered_map<
+            std::string,
+            std::unordered_map<BlobStorage, BlobStorage, BlobStorage::Hash>>
+            CacheMap;
+    CacheMap m_cache;
+
+    MGB_MUTEX m_mtx;
+
+    //! will make m_cache empty
+    CacheMap get_cache() { return std::move(m_cache); }
+
+    //! clear cache
+    MGE_WIN_DECLSPEC_FUC void clear_cache() { m_cache.clear(); }
+
     virtual Maybe<Blob> get(const std::string& category, const Blob& key) = 0;
 
     virtual void put(
@@ -33,6 +68,9 @@ public:
     //! set an implementation; return the original implementation
     MGE_WIN_DECLSPEC_FUC static std::shared_ptr<PersistentCache> set_impl(
             std::shared_ptr<PersistentCache> impl);
+
+    //! merge sm_impl m_cache, use to append insert cache
+    MGE_WIN_DECLSPEC_FUC static void merge_old_cache(std::shared_ptr<PersistentCache>);
 
     //! get the instance; the default implementation just caches in
     //! memory
@@ -48,31 +86,10 @@ public:
  * The implementation is thread safe.
  */
 class InMemoryPersistentCache final : public PersistentCache {
-    struct BlobStorage : public PersistentCache::Blob {
-        std::unique_ptr<uint8_t[]> data_refhold;
-        size_t hash = 0;
-
-        BlobStorage& init_data_ref(const Blob& b);
-
-        BlobStorage& init_hash();
-
-        bool operator==(const BlobStorage& rhs) const;
-
-        struct Hash {
-            size_t operator()(const BlobStorage& b) const { return b.hash; }
-        };
-    };
-
     MGE_WIN_DECLSPEC_FUC Maybe<Blob> get(
             const std::string& category, const Blob& key) override;
     MGE_WIN_DECLSPEC_FUC void put(
             const std::string& category, const Blob& key, const Blob& value) override;
-
-    std::unordered_map<
-            std::string,
-            std::unordered_map<BlobStorage, BlobStorage, BlobStorage::Hash>>
-            m_cache;
-    MGB_MUTEX m_mtx;
 
 public:
     MGE_WIN_DECLSPEC_FUC InMemoryPersistentCache() = default;

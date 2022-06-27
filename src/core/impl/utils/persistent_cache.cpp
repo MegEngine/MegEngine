@@ -21,8 +21,60 @@ std::shared_ptr<PersistentCache> PersistentCache::sm_impl =
 std::shared_ptr<PersistentCache> PersistentCache::set_impl(
         std::shared_ptr<PersistentCache> impl) {
     mgb_assert(impl);
+    merge_old_cache(impl);
     sm_impl.swap(impl);
     return impl;
+}
+
+void PersistentCache::merge_old_cache(std::shared_ptr<PersistentCache> impl) {
+    MGB_LOCK_GUARD(PersistentCache::inst().m_mtx);
+    if (sm_impl) {
+        auto& old_cache = sm_impl->m_cache;
+        if (old_cache.size() > 0) {
+            mgb_log_debug("find old persistent cache, now append to it!!");
+            auto& new_cache = impl->m_cache;
+            CacheMap tmp_cache;
+
+            //! CacheMap do not imp deepcopy and = operator, so we insert manually
+            auto insert = [](CacheMap& dst, CacheMap& in) {
+                for (auto& x : in) {
+                    auto category = x.first;
+                    for (auto& y : x.second) {
+                        auto& key = y.first;
+                        auto& value = y.second;
+                        BlobStorage key_storage;
+                        key_storage.init_data_ref(key).init_hash();
+                        dst[category][std::move(key_storage)].init_data_ref(value);
+                    }
+                }
+            };
+            insert(tmp_cache, old_cache);
+            insert(tmp_cache, new_cache);
+
+            impl->m_cache = std::move(tmp_cache);
+        } else {
+            mgb_log_debug("do not find any old persistent cache");
+        }
+    }
+}
+
+PersistentCache::BlobStorage& PersistentCache::BlobStorage::init_data_ref(
+        const Blob& b) {
+    data_refhold = std::make_unique<uint8_t[]>(b.size + 1);
+    memcpy(data_refhold.get(), b.ptr, b.size);
+    data_refhold.get()[b.size] = 0;  // for C-string safety
+    ptr = data_refhold.get();
+    size = b.size;
+    return *this;
+}
+
+PersistentCache::BlobStorage& PersistentCache::BlobStorage::init_hash() {
+    hash = XXHash{}.update(ptr, size).digest();
+    return *this;
+}
+
+bool PersistentCache::BlobStorage::operator==(const BlobStorage& rhs) const {
+    return size == rhs.size && !memcmp(ptr, rhs.ptr, size);
 }
 
 std::string PersistentCache::make_category_from_comp_node(CompNode comp_node) {
@@ -65,26 +117,6 @@ std::string PersistentCache::make_category_from_comp_node(CompNode comp_node) {
 
 // ================= InMemoryPersistentCache ==================
 using Blob = PersistentCache::Blob;
-InMemoryPersistentCache::BlobStorage& InMemoryPersistentCache::BlobStorage::
-        init_data_ref(const Blob& b) {
-    data_refhold = std::make_unique<uint8_t[]>(b.size + 1);
-    memcpy(data_refhold.get(), b.ptr, b.size);
-    data_refhold.get()[b.size] = 0;  // for C-string safety
-    ptr = data_refhold.get();
-    size = b.size;
-    return *this;
-}
-
-InMemoryPersistentCache::BlobStorage& InMemoryPersistentCache::BlobStorage::
-        init_hash() {
-    hash = XXHash{}.update(ptr, size).digest();
-    return *this;
-}
-
-bool InMemoryPersistentCache::BlobStorage::operator==(const BlobStorage& rhs) const {
-    return size == rhs.size && !memcmp(ptr, rhs.ptr, size);
-}
-
 Maybe<Blob> InMemoryPersistentCache::get(const std::string& category, const Blob& key) {
     decltype(m_cache.begin()) iter0;
     {

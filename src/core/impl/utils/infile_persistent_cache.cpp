@@ -120,20 +120,11 @@ InFilePersistentCache::BlobStorage& InFilePersistentCache::BlobStorage::init_fro
     return *this;
 }
 
+template <typename OutputFile>
 void InFilePersistentCache::BlobStorage::write_to_file(OutputFile& out_file) const {
     uint32_t u_size = size;
     out_file.write(u_size);
     out_file.write(data_refhold.get(), u_size);
-}
-
-InFilePersistentCache::BlobStorage& InFilePersistentCache::BlobStorage::init_data_ref(
-        const Blob& b) {
-    data_refhold = std::make_unique<uint8_t[]>(b.size + 1);
-    memcpy(data_refhold.get(), b.ptr, b.size);
-    data_refhold.get()[b.size] = 0;  // for C-string safety
-    ptr = data_refhold.get();
-    size = b.size;
-    return *this;
 }
 
 //////////////////////// InFilePersistentCache //////////////////////

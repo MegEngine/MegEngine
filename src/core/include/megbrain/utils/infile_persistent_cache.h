@@ -17,33 +17,6 @@ class InFilePersistentCache final : public PersistentCache {
     class InputFile;
     class InputMemory;
     class OutputFile;
-    struct BlobStorage : public Blob {
-        std::unique_ptr<uint8_t[]> data_refhold;
-        size_t hash = 0;
-
-        template <typename Input>
-        BlobStorage& init_from_input(Input& inp);
-        void write_to_file(OutputFile& out_file) const;
-        BlobStorage& init_data_ref(const Blob& b);
-
-        BlobStorage& init_hash() {
-            hash = XXHash{}.update(ptr, size).digest();
-            return *this;
-        }
-
-        bool operator==(const BlobStorage& rhs) const {
-            return size == rhs.size && !memcmp(ptr, rhs.ptr, size);
-        }
-
-        struct Hash {
-            size_t operator()(const BlobStorage& b) const { return b.hash; }
-        };
-    };
-    std::unordered_map<
-            std::string,
-            std::unordered_map<BlobStorage, BlobStorage, BlobStorage::Hash>>
-            m_cache;
-    MGB_MUTEX m_mtx;
     std::shared_ptr<OutputFile> m_always_open_file;
 
     template <typename Input>
@@ -68,13 +41,6 @@ public:
     MGE_WIN_DECLSPEC_FUC void put(
             const std::string& category, const Blob& key, const Blob& value) override;
     bool support_dump_cache() override { return true; }
-
-    std::unordered_map<
-            std::string,
-            std::unordered_map<BlobStorage, BlobStorage, BlobStorage::Hash>>
-    get_cache() {
-        return std::move(m_cache);
-    }
 };
 }  // namespace mgb
 
