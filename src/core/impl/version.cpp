@@ -26,4 +26,29 @@ Version mgb::get_version() {
 #endif
 }
 
+#if MGB_CUDA
+#include "NvInfer.h"
+#include "cuda.h"
+#include "cudnn.h"
+int mgb::get_cuda_version() {
+    return CUDA_VERSION;
+}
+int mgb::get_cudnn_version() {
+    return CUDNN_VERSION;
+}
+int mgb::get_tensorrt_version() {
+    return NV_TENSORRT_VERSION;
+}
+#else
+int mgb::get_cuda_version() {
+    return -1;
+}
+int mgb::get_cudnn_version() {
+    return -1;
+}
+int mgb::get_tensorrt_version() {
+    return -1;
+}
+#endif
+
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

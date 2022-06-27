@@ -8,6 +8,7 @@
 #include "megbrain/comp_node.h"
 #include "megbrain/graph.h"
 #include "megbrain/imperative/physical_tensor.h"
+#include "megbrain/version.h"
 #if MGB_ENABLE_OPR_MM
 #include "megbrain/opr/mm_handler.h"
 #endif
@@ -263,6 +264,10 @@ void init_common(py::module m) {
 #endif
         return mge_gen_code;
     });
+
+    m.def("get_cuda_version", []() { return mgb::get_cuda_version(); });
+    m.def("get_cudnn_version", []() { return mgb::get_cudnn_version(); });
+    m.def("get_tensorrt_version", []() { return mgb::get_tensorrt_version(); });
 
     m.def("what_is_xpu",
           [] { return CompNode::Locator::parse("xpux").to_physical().type; });

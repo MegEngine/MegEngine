@@ -4,7 +4,10 @@ import re
 from typing import Optional
 
 from .core._imperative_rt.common import CompNode, DeviceType
+from .core._imperative_rt.common import get_cuda_version as _get_cuda_version
+from .core._imperative_rt.common import get_cudnn_version as _get_cudnn_version
 from .core._imperative_rt.common import get_device_prop as _get_device_prop
+from .core._imperative_rt.common import get_tensorrt_version as _get_tensorrt_version
 from .core._imperative_rt.common import set_prealloc_config as _set_prealloc_config
 from .core._imperative_rt.common import what_is_xpu as _what_is_xpu
 from .core._imperative_rt.utils import _try_coalesce_all_free_memory
@@ -17,6 +20,9 @@ __all__ = [
     "get_mem_status_bytes",
     "get_cuda_compute_capability",
     "get_cuda_device_property",
+    "get_cuda_version",
+    "get_cudnn_version",
+    "get_tensorrt_version",
     "get_allocated_memory",
     "get_reserved_memory",
     "get_max_reserved_memory",
@@ -263,3 +269,30 @@ def coalesce_free_memory():
        * This function may do nothing if there are no chunks that can be freed.
     """
     return _try_coalesce_all_free_memory()
+
+
+def get_cuda_version():
+    r"""Gets the CUDA version used when compiling MegEngine.
+
+    Returns:
+        a version number, indicating `CUDA_VERSION_MAJOR * 1000 + CUDA_VERSION_MINOR * 10`.
+    """
+    return _get_cuda_version()
+
+
+def get_cudnn_version():
+    r"""Get the Cudnn version used when compiling MegEngine.
+
+    Returns:
+        a version number, indicating `CUDNN_MAJOR * 1000 + CUDNN_MINOR * 100 + CUDNN_PATCHLEVEL`.
+    """
+    return _get_cudnn_version()
+
+
+def get_tensorrt_version():
+    r"""Get the TensorRT version used when compiling MegEngine.
+
+    Returns:
+        a version number, indicating `NV_TENSORRT_MAJOR * 1000 + NV_TENSORRT_MINOR * 100 + NV_TENSORRT_PATCH`.
+    """
+    return _get_tensorrt_version()
