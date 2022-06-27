@@ -38,7 +38,7 @@ SRC_DIR=$($READLINK -f "`dirname $0`/../../../")
 source ${SRC_DIR}/scripts/whl/utils/utils.sh
 
 ALL_PYTHON=${ALL_PYTHON}
-FULL_PYTHON_VER="3.6.10 3.7.7 3.8.3 3.9.4 3.10.1"
+FULL_PYTHON_VER="3.6.10 3.7.7 3.8.3 3.9.4"
 if [[ -z ${ALL_PYTHON} ]]
 then
     ALL_PYTHON=${FULL_PYTHON_VER}
