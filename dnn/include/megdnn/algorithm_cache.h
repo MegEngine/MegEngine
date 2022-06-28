@@ -31,7 +31,7 @@ public:
         }
     };
 
-    class Key {
+    struct Key {
         Handle* m_handle;
         uint32_t m_opr_type;
         const TensorLayout* m_inp_layouts_ptr;

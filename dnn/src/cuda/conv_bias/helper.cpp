@@ -239,7 +239,8 @@ std::pair<float, float> cudnn_get_conv_bias_act_scale_param(
     return {alpha, beta};
 }
 
-void cudnn_reorder_filer_and_bias_nchw32(
+#if CUDNN_VERSION >= 7500
+void cudnn_reorder_filter_and_bias_nchw32(
         const cudnnHandle_t& handle, const void* filter_ptr,
         const CanonizedFilterMeta& fm, const void* bias_ptr, void* reordered_filter_ptr,
         void* reordered_bias_ptr) {
@@ -250,6 +251,8 @@ void cudnn_reorder_filer_and_bias_nchw32(
             handle, filter_desc.desc, CUDNN_DEFAULT_REORDER, filter_ptr,
             reordered_filter_ptr, reorder_bias, bias_ptr, reordered_bias_ptr));
 }
+#endif
+
 }  // namespace conv_bias
 }  // namespace cuda
 }  // namespace megdnn

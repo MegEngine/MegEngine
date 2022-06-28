@@ -32,12 +32,10 @@ public:
     const char* get_algorithm_set_name() const override;
 
     class AlgoBase;
-    class AlgoCUDNNConvBiasActivation;
     class AlgoChanwise;
     class AlgoChanwiseSmall;
     class AlgoDepthwiseLargeFilter;
     class AlgoChanwise8x8x32;
-    class AlgoCUDNNConv;
     class AlgoFallbackNCHWQS8;
     class AlgoInplaceMatmul;
     class AlgoMatmul;
@@ -67,8 +65,10 @@ public:
     class AlgoFloat32NCHWFMAImplicitBatchedGemm;
     class AlgoFloat16NCHWHMMAImplicitBatchedGemm;
     class AlgoCUDNNConvBase;
+    class AlgoCUDNNConv;
     class AlgoCUDNNConvBiasActivationBase;
-#if CUDNN_VERSION > 8004
+    class AlgoCUDNNConvBiasActivation;
+#if CUDNN_VERSION >= 8020
     class AlgoCUDNNConvV8;
     class AlgoCUDNNConvBiasActivationV8;
 #endif

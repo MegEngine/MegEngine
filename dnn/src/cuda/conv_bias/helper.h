@@ -117,11 +117,12 @@ std::pair<float, float> cudnn_get_conv_bias_act_scale_param(
         const TensorLayout& x, const TensorLayout& y, const TensorLayout& w,
         const TensorLayout& b, const TensorLayout& z);
 
-void cudnn_reorder_filer_and_bias_nchw32(
+#if CUDNN_VERSION >= 7500
+void cudnn_reorder_filter_and_bias_nchw32(
         const cudnnHandle_t& handle, const void* filter_ptr,
         const CanonizedFilterMeta& fm, const void* bias_ptr, void* reordered_filter_ptr,
         void* reordered_bias_ptr);
-
+#endif
 }  // namespace conv_bias
 }  // namespace cuda
 }  // namespace megdnn

@@ -1,13 +1,4 @@
-/**
- * \file dnn/src/cuda/cudnn_wrapper_v8.cpp
- * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
- *
- * Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- */
+#if CUDNN_VERSION >= 8020
 
 #include "src/cuda/cudnn_wrapper_v8.h"
 #include "src/cuda/cudnn_wrapper.h"
@@ -19,7 +10,7 @@
 
 #include "cudnn_frontend_EngineConfigGenerator.h"
 
-#include "megdnn/heuristic_cache.h"
+#include "megdnn/algorithm_cache.h"
 
 using namespace megdnn;
 using namespace cuda;
@@ -240,9 +231,9 @@ auto make_activation_descriptor(
 
 // high-level api for convolution execution
 struct StaticData {
-    using Key = megdnn::HeuristicCache::Key;
-    using KeyStorage = megdnn::HeuristicCache::KeyStorage;
-    using KeyHash = megdnn::HeuristicCache::Hash;
+    using Key = megdnn::AlgorithmCache::Key;
+    using KeyStorage = megdnn::AlgorithmCache::KeyStorage;
+    using KeyHash = megdnn::AlgorithmCache::Hash;
     using Result = cudnn_frontend::ExecutionPlan;
     using CudnnFrontendExecutionPlanCache =
             std::unordered_map<KeyStorage, Result, KeyHash>;
@@ -682,4 +673,5 @@ void megdnn::cuda::run_conv_bias_act_with_plan(
             handle, plan.get_raw_desc(), variant_pack.get_raw_desc()));
 }
 
+#endif
 // vim: syntax=cpp.doxygen

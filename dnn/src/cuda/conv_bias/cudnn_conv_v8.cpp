@@ -1,20 +1,9 @@
-/**
- * \file dnn/src/cuda/conv_bias/cudnn_conv_v8.cpp
- * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
- *
- * Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- */
-
 #include "src/common/conv_bias.h"
 #include "src/cuda/conv_bias/algo.h"
 #include "src/cuda/cudnn_wrapper_v8.h"
 #include "src/cuda/utils.h"
 
-#if CUDNN_VERSION >= 8004
+#if CUDNN_VERSION >= 8020
 using namespace megdnn;
 using namespace cuda;
 using namespace conv_bias;

@@ -1,13 +1,3 @@
-/**
- * \file dnn/test/cuda/conv_bias.cpp
- * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
- *
- * Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- */
 #include "megdnn/dtype.h"
 #include "test/cuda/fixture.h"
 
@@ -26,7 +16,7 @@ using namespace megdnn;
 using namespace test;
 using namespace conv_bias;
 
-#if CUDNN_VERSION >= 8004
+#if CUDNN_VERSION >= 8020
 TEST_F(CUDA, CONV_V8_FLOAT) {
     Checker<ConvBiasForward> checker(handle_cuda());
     checker.set_before_exec_callback(

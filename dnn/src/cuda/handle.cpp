@@ -58,11 +58,6 @@ HandleImpl::HandleImpl(megcoreComputingHandle_t comp_handle)
             For example `export CUDA_CACHE_MAXSIZE=2147483647` and `export CUDA_CACHE_PATH=/data/.cuda_cache`)");
     }
 #endif
-    size_t free, tot;
-    cudaMemGetInfo(&free, &tot);
-    printf("before cudnn create, free: %.2f MB, tot: %.2f MB, allocated: %.2f MB\n",
-           free / 1024.0 / 1024.0, tot / 1024.0 / 1024.0,
-           (tot - free) / 1024.0 / 1024.0);
     cudnn_check(cudnnCreate(&m_cudnn_handle));
     cublas_check(cublasCreate(&m_cublas_handle));
 #if CUDA_VERSION >= 10010
@@ -73,11 +68,6 @@ HandleImpl::HandleImpl(megcoreComputingHandle_t comp_handle)
     // Set stream for cuDNN and cublas handles.
     cudnn_check(cudnnSetStream(m_cudnn_handle, stream()));
     cublas_check(cublasSetStream(m_cublas_handle, stream()));
-
-#if CUDNN_VERSION >= 8004
-//    cudnn_check(cudnnOpsInferVersionCheck());
-//    cudnn_check(cudnnCnnInferVersionCheck());
-#endif
 
     // Note that all cublas scalars (alpha, beta) and scalar results such as dot
     // output resides at device side.
@@ -91,11 +81,6 @@ HandleImpl::HandleImpl(megcoreComputingHandle_t comp_handle)
             m_const_scalars, &const_scalars_val, sizeof(ConstScalars),
             cudaMemcpyHostToDevice, stream()));
     cuda_check(cudaStreamSynchronize(stream()));
-
-    cudaMemGetInfo(&free, &tot);
-    printf("after cudnn create, free: %.2f MB, tot: %.2f MB, allocated: %.2f MB\n",
-           free / 1024.0 / 1024.0, tot / 1024.0 / 1024.0,
-           (tot - free) / 1024.0 / 1024.0);
 
     // check tk1
     m_is_tegra_k1 = (strcmp(m_device_prop->name, "GK20A") == 0);

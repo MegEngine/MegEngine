@@ -15,7 +15,7 @@ ConvBiasForwardImpl::AlgoPack::AlgoPack() {
     non_cudnn_algos.push_back(&batched_matmul);
     non_cudnn_algos.push_back(&int1_simple);
 
-#if CUDNN_VERSION > 8004
+#if CUDNN_VERSION >= 8020
     all_algos.push_back(&cudnn_conv_v8);
     all_algos.push_back(&cudnn_conv_bias_activation_v8);
 #endif

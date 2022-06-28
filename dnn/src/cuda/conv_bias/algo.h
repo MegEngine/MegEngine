@@ -173,10 +173,10 @@ public:
 
     bool is_cudnn() const override { return true; }
 
-    size_t get_preprocess_workspace_in_bytes(const SizeArgs& args) const override;
-    SmallVector<TensorLayout> deduce_preprocessed_filter_layout(
-            const SizeArgs& args) const override;
-    void exec_preprocess(const ExecArgs& args) const override;
+    // size_t get_preprocess_workspace_in_bytes(const SizeArgs& args) const override;
+    // SmallVector<TensorLayout> deduce_preprocessed_filter_layout(
+    //         const SizeArgs& args) const override;
+    // void exec_preprocess(const ExecArgs& args) const override;
 
 protected:
     virtual size_t cudnn_get_workspace_in_bytes(const SizeArgs& args) const = 0;
@@ -237,7 +237,7 @@ private:
     CudnnAlgoPack::Attr m_attr;
 };
 
-#if CUDNN_VERSION > 8004
+#if CUDNN_VERSION >= 8020
 class ConvBiasForwardImpl::AlgoCUDNNConvBiasActivationV8 final
         : public AlgoCUDNNConvBiasActivationBase {
 public:
@@ -414,7 +414,7 @@ private:
     CudnnAlgoPack::Attr m_attr;
 };
 
-#if CUDNN_VERSION > 8004
+#if CUDNN_VERSION >= 8020
 class ConvBiasForwardImpl::AlgoCUDNNConvV8 final : public AlgoCUDNNConvBase {
 public:
     AlgoCUDNNConvV8() : AlgoCUDNNConvBase() {
@@ -1247,7 +1247,7 @@ public:
     AlgoGroupConvGeneral group;
     AlgoBFloat16 bfloat16;
     AlgoSimpleInt1 int1_simple;
-#if CUDNN_VERSION > 8004
+#if CUDNN_VERSION >= 8020
     AlgoCUDNNConvV8 cudnn_conv_v8;
     AlgoCUDNNConvBiasActivationV8 cudnn_conv_bias_activation_v8;
 #endif
