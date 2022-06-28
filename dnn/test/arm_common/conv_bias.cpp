@@ -764,8 +764,8 @@ std::vector<conv_bias::TestArg> get_nchw44_channel_wise_benchmark_args(
 }
 
 void BENCHMARK_GROUPCONV_NCHW44_int8x8x16VS_int8x8x32(
-        const char* algo_name0, const char* algo_name1, Handle* handle, size_t kernel,
-        size_t stride = 1, size_t pack_size = 1) {
+        const char* algo_name0, const char* algo_name1, Handle* handle,
+        size_t /*kernel*/, size_t stride = 1, size_t pack_size = 1) {
     auto args = get_nchw44_channel_wise_benchmark_args(
             {2, 3, 5}, stride, false, true, true);
 

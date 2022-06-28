@@ -77,3 +77,8 @@ if(UNIX)
     target_link_libraries(megdnn_test dl rt)
   endif()
 endif()
+
+install(
+  TARGETS megdnn_test
+  EXPORT ${MGE_EXPORT_TARGETS}
+  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})

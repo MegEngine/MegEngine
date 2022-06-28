@@ -61,3 +61,8 @@ if(MGE_WITH_JIT)
                      ${CMAKE_CURRENT_BINARY_DIR}/../src/jit/test/mlir)
   endif()
 endif()
+
+install(
+  TARGETS megbrain_test
+  EXPORT ${MGE_EXPORT_TARGETS}
+  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
