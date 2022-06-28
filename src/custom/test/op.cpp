@@ -119,6 +119,34 @@ void gpu_kernel(
     ASSERT_TRUE(params["device"] == "cuda");
 }
 
+void cpu_kernel_with_runtime_args(
+        const std::vector<Tensor>& inputs, const Param& params,
+        std::vector<Tensor>& outputs, const RuntimeArgs& args) {
+    (void)inputs;
+    (void)params;
+    (void)outputs;
+    (void)args;
+#if OP_TEST_LOG
+    std::cout << "Checking CPU Forward - " << params["device"].as<std::string>()
+              << std::endl;
+#endif
+    ASSERT_TRUE(params["device"] == "x86");
+}
+
+void gpu_kernel_with_runtime_args(
+        const std::vector<Tensor>& inputs, const Param& params,
+        std::vector<Tensor>& outputs, const RuntimeArgs& args) {
+    (void)inputs;
+    (void)params;
+    (void)outputs;
+    (void)args;
+#if OP_TEST_LOG
+    std::cout << "Checking GPU Forward - " << params["device"].as<std::string>()
+              << std::endl;
+#endif
+    ASSERT_TRUE(params["device"] == "cuda");
+}
+
 TEST(TestCustomOp, TestCustomOpFuncSetter) {
 #if MGB_CUDA
     CustomOp test("TestOp", CUSTOM_OP_VERSION);
@@ -179,6 +207,7 @@ TEST(TestCustomOp, TestCustomOpFuncSetter) {
     ASSERT_TRUE(iformats[0].is_default());
     ASSERT_TRUE(iformats[1].is_default());
 
+    test.set_compute(cpu_kernel_with_runtime_args);
     test.set_compute(cpu_kernel);
     DeviceTensorND cdev_itensor0(CompNode::load("cpux"), {3, 2}, dtype::Int32{});
     DeviceTensorND cdev_itensor1(CompNode::load("cpux"), {3, 2}, dtype::Float32{});
@@ -192,6 +221,7 @@ TEST(TestCustomOp, TestCustomOpFuncSetter) {
     param["device"] = "x86";
     test.compute(cinputs, param, coutputs);
 
+    test.set_compute("cuda", gpu_kernel_with_runtime_args);
     test.set_compute("cuda", gpu_kernel);
     DeviceTensorND gdev_itensor0(CompNode::load("gpux"), {3, 2}, dtype::Int32{});
     DeviceTensorND gdev_itensor1(CompNode::load("gpux"), {3, 2}, dtype::Float32{});

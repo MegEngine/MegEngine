@@ -36,6 +36,18 @@ class MGE_WIN_DECLSPEC_FUC ArgInfo {
     std::string str() const;
 };
 
+class CudaRuntimeArgs;
+
+class MGE_WIN_DECLSPEC_FUC RuntimeArgs {
+    Device m_device;
+
+public:
+    RuntimeArgs() = default;
+    RuntimeArgs(Device device) : m_device(device){};
+
+    const Device& device() const { return m_device; }
+};
+
 class MGE_WIN_DECLSPEC_FUC CustomOp {
     std::unique_ptr<void, void_deleter> m_impl;
 
@@ -51,11 +63,10 @@ public:
             void (*)(const std::vector<DType>&, const Param&, std::vector<DType>&);
     using FormatInferFuncPtr =
             void (*)(const std::vector<Format>&, const Param&, std::vector<Format>&);
-    using PreprocessFuncPtr =
-            void (*)(const std::vector<Tensor>&, const Param&, std::vector<Tensor>&);
-    using PostprocessFuncPtr =
-            void (*)(const std::vector<Tensor>&, const Param&, std::vector<Tensor>&);
-    using ComputeFuncPtr =
+    using ProcessFuncPtr = void (*)(
+            const std::vector<Tensor>&, const Param&, std::vector<Tensor>&,
+            const RuntimeArgs&);
+    using ProcessFuncPtrWithoutRuntimeArgs =
             void (*)(const std::vector<Tensor>&, const Param&, std::vector<Tensor>&);
 
     // write for forward
@@ -63,12 +74,24 @@ public:
     CustomOp& set_shape_infer(ShapeInferFuncPtr func);
     CustomOp& set_dtype_infer(DTypeInferFuncPtr func);
     CustomOp& set_format_infer(FormatInferFuncPtr func);
-    CustomOp& set_preprocess(PreprocessFuncPtr func);
-    CustomOp& set_preprocess(const std::string& device, PreprocessFuncPtr func);
-    CustomOp& set_postprocess(PostprocessFuncPtr func);
-    CustomOp& set_postprocess(const std::string& device, PostprocessFuncPtr func);
-    CustomOp& set_compute(ComputeFuncPtr func);
-    CustomOp& set_compute(const std::string& device, ComputeFuncPtr func);
+    //! set process function with RuntimeArgs e.g. cuda
+    CustomOp& set_preprocess(ProcessFuncPtr func);
+    CustomOp& set_preprocess(const std::string& device, ProcessFuncPtr func);
+    CustomOp& set_postprocess(ProcessFuncPtr func);
+    CustomOp& set_postprocess(const std::string& device, ProcessFuncPtr func);
+    CustomOp& set_compute(ProcessFuncPtr func);
+    CustomOp& set_compute(const std::string& device, ProcessFuncPtr func);
+
+    //! set process function without RuntimeArgs e.g. cpu
+    CustomOp& set_preprocess(ProcessFuncPtrWithoutRuntimeArgs func);
+    CustomOp& set_preprocess(
+            const std::string& device, ProcessFuncPtrWithoutRuntimeArgs func);
+    CustomOp& set_postprocess(ProcessFuncPtrWithoutRuntimeArgs func);
+    CustomOp& set_postprocess(
+            const std::string& device, ProcessFuncPtrWithoutRuntimeArgs func);
+    CustomOp& set_compute(ProcessFuncPtrWithoutRuntimeArgs func);
+    CustomOp& set_compute(
+            const std::string& device, ProcessFuncPtrWithoutRuntimeArgs func);
 
     CustomOp& set_description(const std::string& op_desc);
     CustomOp& add_input(

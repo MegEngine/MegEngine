@@ -90,6 +90,15 @@ endif()
 if(MGE_WITH_CUSTOM_OP)
   list(APPEND MGB_INC ${CMAKE_CURRENT_LIST_DIR}/custom/include)
   file(GLOB_RECURSE SOURCES_ custom/impl/*.cpp)
+
+  set(EXCLUDE_PLATFORM_DIR "custom/impl/platform")
+  foreach(CUSOURCE ${SOURCES_})
+    string(FIND ${CUSOURCE} ${EXCLUDE_PLATFORM_DIR} EXCLUDE_DIR_FOUND)
+    if(NOT ${EXCLUDE_DIR_FOUND} EQUAL -1)
+      list(REMOVE_ITEM SOURCES_ ${CUSOURCE})
+    endif()
+  endforeach(CUSOURCE)
+
   list(APPEND SOURCES ${SOURCES_})
 endif()
 
