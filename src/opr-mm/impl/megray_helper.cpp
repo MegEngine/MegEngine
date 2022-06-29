@@ -15,7 +15,7 @@ MegRay::DType mgb::opr::get_megray_dtype(megdnn::DType dtype) {
             return MegRay::DType::MEGRAY_INT32;
         case DTypeEnum::Float32:
             return MegRay::DType::MEGRAY_FLOAT32;
-#ifndef MEGDNN_DISABLE_FLOAT16
+#if !MEGDNN_DISABLE_FLOAT16
         case DTypeEnum::Float16:
             return MegRay::DType::MEGRAY_FLOAT16;
 #endif

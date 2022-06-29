@@ -84,7 +84,7 @@ ResizeImpl::KernParam<ctype> ResizeImpl::KernParam<ctype>::from_tensors(
 #define INST(_dtype) template struct ResizeImpl::KernParam<_dtype>;
 
 INST(dt_float32);
-#ifndef MEGDNN_DISABLE_FLOAT16
+#if !MEGDNN_DISABLE_FLOAT16
 INST(dt_float16);
 #endif
 INST(dt_int8);

@@ -15,6 +15,7 @@ using conv_fun = std::function<void(
         const WorkspaceBundle& bundle, const ConvBiasImpl::NCBKernParam& kern_param,
         const ConvBiasImpl::NCBKernIndex& ncb_index, const CpuNDRange& workspace_ids)>;
 MIDOUT_DECL(megdnn_arm_common_conv_bias_fp16_nchw88)
+MIDOUT_DECL(megdnn_arm_common_conv_bias_fp16_nchw88_stride1)
 namespace {
 
 static WorkspaceBundle get_bundle(const ConvBiasImpl::NCBKernSizeParam& param) {

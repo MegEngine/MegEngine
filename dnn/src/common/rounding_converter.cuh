@@ -14,7 +14,7 @@ struct RoundingConverter<float> {
     }
 };
 
-#ifndef MEGDNN_DISABLE_FLOAT16
+#if !MEGDNN_DISABLE_FLOAT16
 
 template <>
 struct RoundingConverter<half_float::half> {
@@ -32,7 +32,7 @@ struct RoundingConverter<half_bfloat16::bfloat16> {
     }
 };
 
-#endif  // #ifdef MEGDNN_DISABLE_FLOAT16
+#endif  // #if !MEGDNN_DISABLE_FLOAT16
 
 template <>
 struct RoundingConverter<int8_t> {
