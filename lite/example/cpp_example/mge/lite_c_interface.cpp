@@ -1,5 +1,5 @@
 #include "example.h"
-#include "misc.h"
+#include "helper.h"
 #if LITE_BUILD_WITH_MGE
 #include "lite-c/global_c.h"
 #include "lite-c/network_c.h"
@@ -7,12 +7,12 @@
 
 #include <thread>
 
-#define LITE_CAPI_CHECK(_expr)                 \
-    do {                                       \
-        int _ret = (_expr);                    \
-        if (_ret) {                            \
-            LITE_THROW(LITE_get_last_error()); \
-        }                                      \
+#define LITE_CAPI_CHECK(_expr)                         \
+    do {                                               \
+        int _ret = (_expr);                            \
+        if (_ret) {                                    \
+            LITE_EXAMPLE_THROW(LITE_get_last_error()); \
+        }                                              \
     } while (0)
 
 bool basic_c_interface(const lite::example::Args& args) {
@@ -95,7 +95,7 @@ bool device_io_c_interface(const lite::example::Args& args) {
     LITE_CAPI_CHECK(
             LITE_get_tensor_total_size_in_byte(c_input_tensor, &length_tensor_in));
     if (length_read_in != length_tensor_in) {
-        LITE_THROW(
+        LITE_EXAMPLE_THROW(
                 "The input data size is not match the network input tensro "
                 "size,\n");
     }

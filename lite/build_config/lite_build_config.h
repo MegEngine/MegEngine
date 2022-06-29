@@ -1,11 +1,5 @@
-/**
- * \file lite/build_config/lite_build_config.h
- *
- * This file is part of MegEngine, a deep learning framework developed by
- * Megvii.
- *
- * \copyright Copyright (c) 2020-2021 Megvii Inc. All rights reserved.
- */
+//! this file always for bazel
+
 #ifndef _HEADER_LITE_BUILD_CONFIG
 #define _HEADER_LITE_BUILD_CONFIG
 
@@ -27,5 +21,13 @@
 
 #ifndef LITE_ASSERT_LOC
 #define LITE_ASSERT_LOC 1
+#endif
+
+#ifndef LITE_BUILD_WITH_MGE
+#define LITE_BUILD_WITH_MGE 1
+#endif
+
+#ifndef LITE_BUILD_WITH_RKNPU
+#define LITE_BUILD_WITH_RKNPU 0
 #endif
 #endif  // _HEADER_LITE_BUILD_CONFIG

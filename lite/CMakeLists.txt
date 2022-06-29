@@ -28,11 +28,13 @@ if(MGE_WITH_MINIMUM_SIZE)
   set(LITE_ENABLE_EXCEPTION OFF)
 endif()
 
+if(LITE_BUILD_WITH_MGE)
+  set(LITE_BUILD_WITH_MGE ON)
+endif()
+
 # Write out lite_build_config.h It defines macros needed by lite
-configure_file(src/lite_build_config.h.in
+configure_file(build_config/lite_build_config.h.in
                ${CMAKE_CURRENT_BINARY_DIR}/genfiles/lite_build_config.h)
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/genfiles/lite_build_config.h
-        DESTINATION ${CMAKE_INSTALL_PREFIX}/lite/include)
 
 # begin config lite
 if(LITE_BUILD_WITH_MGE
@@ -47,7 +49,6 @@ include_directories($<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/genfiles>)
 
 if(LITE_BUILD_WITH_MGE)
   target_link_libraries(lite_static PRIVATE megbrain megdnn ${MGE_CUDA_LIBS})
-  add_compile_definitions(LITE_BUILD_WITH_MGE=1)
   message(STATUS "build lite with MegEngine.")
 else()
   target_link_libraries(lite_static PUBLIC flatbuffers)
@@ -154,7 +155,10 @@ if(UNIX AND NOT APPLE)
   set_target_properties(lite_shared_whl PROPERTIES LINK_DEPENDS ${LITE_VERSION_SCRIPT})
 endif()
 
-# config install
+# config install, please keep all install file with lite/BUILD:hdrs_public
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/genfiles/lite_build_config.h
+        DESTINATION ${CMAKE_INSTALL_PREFIX}/lite/build_config)
+
 install(
   TARGETS lite_static
   LIBRARY DESTINATION lite/lib/${MGE_ARCH}
@@ -176,9 +180,6 @@ if(NOT WIN32)
     ARCHIVE DESTINATION lite/lib/${MGE_ARCH})
 endif()
 
-install(FILES ${PROJECT_SOURCE_DIR}/lite/include/lite/common_enum_c.h
-        DESTINATION ${CMAKE_INSTALL_PREFIX}/lite/include/lite-c)
-
 install(
   DIRECTORY ${PROJECT_SOURCE_DIR}/lite/include
   DESTINATION ${CMAKE_INSTALL_PREFIX}/lite
@@ -187,7 +188,7 @@ install(
 
 install(
   DIRECTORY ${PROJECT_SOURCE_DIR}/lite/lite-c/include
-  DESTINATION ${CMAKE_INSTALL_PREFIX}/lite
+  DESTINATION ${CMAKE_INSTALL_PREFIX}/lite/lite-c
   FILES_MATCHING
   PATTERN "*.h")
 

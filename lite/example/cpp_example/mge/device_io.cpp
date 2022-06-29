@@ -1,7 +1,6 @@
 #include <thread>
 #include "example.h"
 #if LITE_BUILD_WITH_MGE
-#include "misc.h"
 
 using namespace lite;
 using namespace example;

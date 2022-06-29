@@ -3,7 +3,7 @@
 #if LITE_BUILD_WITH_MGE
 #include <cstdio>
 
-#include "misc.h"
+#include "helper.h"
 
 using namespace lite;
 using namespace example;
@@ -96,12 +96,12 @@ bool basic_load_from_path(const Args& args) {
 
     //! forward
     {
-        lite::Timer ltimer("warmup");
+        lite_example_helper::Timer ltimer("warmup");
         network->forward();
         network->wait();
         ltimer.print_used_time(0);
     }
-    lite::Timer ltimer("forward_iter");
+    lite_example_helper::Timer ltimer("forward_iter");
     for (int i = 0; i < 10; i++) {
         network->forward();
         network->wait();
@@ -110,7 +110,7 @@ bool basic_load_from_path(const Args& args) {
 
     //! forward
     {
-        lite::Timer ltimer("warmup");
+        lite_example_helper::Timer ltimer("warmup");
         network->forward();
         network->wait();
         ltimer.print_used_time(0);
@@ -167,12 +167,12 @@ bool basic_load_from_path_with_loader(const Args& args) {
 
     //! forward
     {
-        lite::Timer ltimer("warmup");
+        lite_example_helper::Timer ltimer("warmup");
         network->forward();
         network->wait();
         ltimer.print_used_time(0);
     }
-    lite::Timer ltimer("forward_iter");
+    lite_example_helper::Timer ltimer("forward_iter");
     for (int i = 0; i < 10; i++) {
         ltimer.reset_start();
         network->forward();
@@ -481,12 +481,12 @@ bool load_from_path_run_cuda(const Args& args) {
 
     //! forward
     {
-        lite::Timer ltimer("warmup");
+        lite_example_helper::Timer ltimer("warmup");
         network->forward();
         network->wait();
         ltimer.print_used_time(0);
     }
-    lite::Timer ltimer("forward_iter");
+    lite_example_helper::Timer ltimer("forward_iter");
     for (int i = 0; i < 10; i++) {
         ltimer.reset_start();
         network->forward();
