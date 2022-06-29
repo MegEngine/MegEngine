@@ -1924,7 +1924,7 @@ void forward_proxy_nchw64(
             cudaStream_t);
 INST(float)
 INST(uint8_t)
-#ifndef MEGDNN_DISABLE_FLOAT16
+#if !MEGDNN_DISABLE_FLOAT16
 INST(dt_float16)
 #endif
 INST(int8_t)
@@ -1936,7 +1936,7 @@ INST(int8_t)
             int, int, int, ctype, BorderMode, megcore::AsyncErrorInfo*, void*,         \
             cudaStream_t);
 INST(float)
-#ifndef MEGDNN_DISABLE_FLOAT16
+#if !MEGDNN_DISABLE_FLOAT16
 INST(dt_float16)
 #endif
 #undef INST

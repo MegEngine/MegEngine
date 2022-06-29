@@ -73,7 +73,7 @@ struct powci_general_even {
 template <size_t size>
 struct float_itype;
 
-#ifndef MEGDNN_DISABLE_FLOAT16
+#if !MEGDNN_DISABLE_FLOAT16
 template <>
 struct float_itype<2> {
     using type = uint16_t;

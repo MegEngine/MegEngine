@@ -295,7 +295,7 @@ void WarpPerspectiveForwardImpl::exec(
                             m_error_tracker, stream);
                 } else if (DNN_FLOAT16_SELECT(
                                    src.layout.dtype == dtype::Float16(), false)) {
-#ifndef MEGDNN_DISABLE_FLOAT16
+#if !MEGDNN_DISABLE_FLOAT16
                     warp_perspective::forward_proxy(
                             is_nhwc, src.ptr<dt_float16>(), mat.ptr<dt_float32>(),
                             mat_idx.raw_ptr() ? mat_idx.ptr<int>() : nullptr,
@@ -563,7 +563,7 @@ void WarpPerspectiveForwardImpl::exec(
                         m_error_tracker, stream);
             } else if (DNN_FLOAT16_SELECT(
                                src.layout.dtype == dtype::Float16(), false)) {
-#ifndef MEGDNN_DISABLE_FLOAT16
+#if !MEGDNN_DISABLE_FLOAT16
                 SmallVector<size_t> workspace_sizes{sizeof(dt_float16*) * srcs.size()};
                 WorkspaceBundle workspace_cpu(nullptr, workspace_sizes);
                 auto total_workspace_size = workspace_cpu.total_size_in_bytes();
