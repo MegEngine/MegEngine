@@ -121,9 +121,13 @@ void COprLibOption::load_lib() {
             handle, "failed to open c opr lib %s:\n errmsg: %s", lib_path.c_str(),
             dlerror());
 
-    const char* entry = MGB_C_OPR_INIT_FUNC_STR;
+    const char* entry = m_c_opr_init_func.c_str();
     auto func = dlsym(handle, entry);
-    mgb_assert(func, "can not resolve %s: %s", entry, dlerror());
+    mgb_assert(
+            func,
+            "can not resolve %s: %s, please use '--c-opr-init-interface' to set the "
+            "init API of your loader",
+            entry, dlerror());
     typedef void (*entry_f_t)(void*);
     reinterpret_cast<entry_f_t>(func)(
             reinterpret_cast<void*>(&mgb_get_extern_c_opr_api_versioned));
@@ -177,6 +181,7 @@ COprLibOption::COprLibOption() {
     lib_path = FLAGS_c_opr_lib;
     c_opr_args.is_run_c_opr = !lib_path.empty();
     c_opr_args.is_run_c_opr_with_param = FLAGS_c_opr_lib_with_param;
+    m_c_opr_init_func = FLAGS_c_opr_init_interface;
 }
 
 bool COprLibOption::is_valid() {
@@ -205,5 +210,7 @@ DEFINE_bool(
         "Run c opr lib with param, use to benchmark speed and check result, "
         "need c opr loader implemente `copr_param_device_ptr_malloc, "
         "copr_param_device_ptr_free and copr_param_device_ptr_h2d' symbols");
-
+DEFINE_string(
+        c_opr_init_interface, MGB_C_OPR_INIT_FUNC_STR,
+        "set the C_OPR_INIT_FUNC interface when running");
 REGIST_OPTION_CREATOR(c_opr_lib, lar::COprLibOption::create_option);

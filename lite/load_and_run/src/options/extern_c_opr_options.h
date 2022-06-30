@@ -6,7 +6,7 @@
 
 DECLARE_bool(c_opr_lib_with_param);
 DECLARE_string(c_opr_lib);
-
+DECLARE_string(c_opr_init_interface);
 namespace lar {
 
 struct COprArgs {
@@ -51,5 +51,6 @@ private:
     COprArgs c_opr_args;
     std::string lib_path;
     std::shared_ptr<ExternCOprParam> c_opr_param;
+    std::string m_c_opr_init_func;
 };
 }  // namespace lar
