@@ -178,8 +178,10 @@ private:
     //! call_back to the outputspec
     void make_output_spec();
 
-    //! do the global layout transform for the given platform target
-    void global_layout_transform();
+    //! do layout transform for the given platform target, maybe the global
+    //! layout optimization or heuristically choose the best layout according to
+    //! the device information
+    void layout_transform_optimization();
 
     //! modify the execution policy
     void modify_exection_policy();
@@ -222,6 +224,9 @@ private:
 
     //! adapt option valid, it should call after update_io
     void adapt_option_valid();
+
+    //! configure and optimize network after loaded
+    void configure_after_loaded();
 
 private:
     bool m_async = false;

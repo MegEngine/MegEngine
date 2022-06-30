@@ -114,6 +114,9 @@ struct LITE_API Options {
  * model is not pack json information data inside
  *
  * @param options configuration of Options
+ *
+ * @param auto_optimize_inference lite will detect the device information add
+ * set the options heuristically
  */
 struct LITE_API Config {
     bool has_compression = false;
@@ -122,6 +125,7 @@ struct LITE_API Config {
     LiteBackend backend = LiteBackend::LITE_DEFAULT;
     std::string bare_model_cryption_name = {};
     Options options = {};
+    bool auto_optimize_inference = false;
 };
 
 /*!

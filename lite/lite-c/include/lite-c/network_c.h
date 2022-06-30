@@ -100,6 +100,9 @@ extern LITE_API const LiteOptions default_option;
  *
  *\param has_compression flag whether the model is compressed, the compress
  *method will read form the model
+
+ *\param auto_optimize_inference lite will detect the device information add
+ * set the options heuristically
  */
 typedef struct LiteConfig {
     int has_compression;
@@ -108,6 +111,7 @@ typedef struct LiteConfig {
     LiteBackend backend;
     const char* bare_model_cryption_name;
     LiteOptions options;
+    int auto_optimize_inference;
 } LiteConfig;
 
 //! get default config

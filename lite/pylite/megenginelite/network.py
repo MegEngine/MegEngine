@@ -171,15 +171,18 @@ class LiteConfig(Structure):
 
         options: configuration of Options
 
+        auto_optimize_inference: lite will detect the device information add set the options heuristically
+
     Examples:
         .. code-block::
 
             from megenginelite import *
             config = LiteConfig()
-            config.has_compression = false
+            config.has_compression = False
             config.device_type = LiteDeviceType.LITE_CPU
             config.backend = LiteBackend.LITE_DEFAULT
             config.bare_model_cryption_name = "AES_default".encode("utf-8")
+            config.auto_optimize_inference = False
     """
 
     _fields_ = [
@@ -189,6 +192,7 @@ class LiteConfig(Structure):
         ("backend", c_int),
         ("_bare_model_cryption_name", c_char_p),
         ("options", LiteOptions),
+        ("auto_optimize_inference", c_int),
     ]
 
     def __init__(self, device_type=LiteDeviceType.LITE_CPU, option=None):
@@ -202,6 +206,7 @@ class LiteConfig(Structure):
         self.use_loader_dynamic_param = 0
         self.has_compression = 0
         self.backend = LiteBackend.LITE_DEFAULT
+        self.auto_optimize_inference = 0
 
     @property
     def bare_model_cryption_name(self):
@@ -223,6 +228,7 @@ class LiteConfig(Structure):
             "backend": LiteBackend(self.backend),
             "bare_model_cryption_name": self.bare_model_cryption_name,
             "options": self.options,
+            "auto_optimize_inference": self.auto_optimize_inference,
         }
         return data.__repr__()
 

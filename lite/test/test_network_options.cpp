@@ -48,6 +48,35 @@ TEST(TestNetWorkOptions, no_var_sanity_check_and_record) {
     compare_lite_tensor<float>(output_tensor, result_mgb);
 }
 
+TEST(TestNetWorkOptions, auto_optimize_inference_layout) {
+    Config config;
+    auto tensor = get_input_data("./input_data.npy");
+    std::string model_path = "./shufflenet.mge";
+    std::string input_name = "data";
+    auto result_mgb = mgb_lar(model_path, config, input_name, tensor);
+
+    config.auto_optimize_inference = true;
+
+    std::shared_ptr<Network> network = std::make_shared<Network>(config);
+    network->load_model(model_path);
+    std::shared_ptr<Tensor> input_tensor = network->get_io_tensor(input_name);
+
+    auto src_ptr = tensor->get_memory_ptr();
+    auto src_layout = tensor->get_layout();
+    input_tensor->reset(src_ptr, src_layout);
+    std::shared_ptr<Tensor> output_tensor = network->get_output_tensor(0);
+    auto result_tensor = std::make_shared<Tensor>(
+            LiteDeviceType::LITE_CPU, Layout{{1, 1000}, 2, LiteDataType::LITE_FLOAT});
+
+    void* out_data = result_tensor->get_memory_ptr();
+    output_tensor->reset(out_data, result_tensor->get_layout());
+
+    network->forward();
+    network->wait();
+
+    compare_lite_tensor<float>(output_tensor, result_mgb);
+}
+
 TEST(TestNetWorkOptions, const_shape) {
     Config config;
     auto tensor = get_input_data("./input_data.npy");

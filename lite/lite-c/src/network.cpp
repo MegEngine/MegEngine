@@ -42,7 +42,8 @@ LiteConfig default_config_t = {
         .device_type = LiteDeviceType::LITE_CPU,
         .backend = LiteBackend::LITE_DEFAULT,
         .bare_model_cryption_name = nullptr,
-        .options = default_option};
+        .options = default_option,
+        .auto_optimize_inference = false};
 LiteConfig* default_config() {
     return &default_config_t;
 }
@@ -132,6 +133,8 @@ lite::Config convert_to_lite_config(const LiteConfig c_config) {
     lite_config.options.enable_nhwcd4 = c_config.options.enable_nhwcd4;
     lite_config.options.enable_nchw32 = c_config.options.enable_nchw32;
     lite_config.options.enable_nchw64 = c_config.options.enable_nchw64;
+
+    lite_config.auto_optimize_inference = c_config.auto_optimize_inference;
 
     return lite_config;
 }
