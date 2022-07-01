@@ -109,7 +109,7 @@ void NormalStrategy::run_subline() {
         //! config model
         config_after_load();
         //! config when running model
-        mgb_log_warn("run testcase: %zu ", idx);
+        mgb_log("run testcase: %zu ", idx);
         m_runtime_param.stage = RunStage::MODEL_RUNNING;
         stage_config_model();
 

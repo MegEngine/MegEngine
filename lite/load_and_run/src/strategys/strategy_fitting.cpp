@@ -170,7 +170,7 @@ void OptionsTimeProfiler::profile_with_given_options(
             auto start = timer.get_msecs();
             model->run_model();
             model->wait();
-            mgb_log_warn("warm up %ld time %f ms", i, timer.get_msecs() - start);
+            mgb_log("warm up %ld time %f ms", i, timer.get_msecs() - start);
         }
     };
     double inference_time = 0.0;
@@ -180,7 +180,7 @@ void OptionsTimeProfiler::profile_with_given_options(
             model->run_model();
             model->wait();
             auto end = timer.get_msecs();
-            mgb_log_warn("run iter %ld time %f ms", i, end - start);
+            mgb_log("run iter %ld time %f ms", i, end - start);
             inference_time += end - start;
             mgb_throw_if(
                     inference_time > TIME_OUT, mgb::TimeoutError,
@@ -213,7 +213,7 @@ void OptionsTimeProfiler::profile_with_given_options(
             auto start = timer.get_msecs();
             config_model_before_runing();
             auto end = timer.get_msecs();
-            mgb_log_warn("config model time %f ms", end - start);
+            mgb_log("config model time %f ms", end - start);
             warm_up();
             run_iter();
         }
@@ -228,9 +228,10 @@ void OptionsTimeProfiler::profile_with_given_options(
     auto average = inference_time / runtime_param.run_iter;
     if (exception_state) {
         average = TIME_OUT;
-        printf("out of time (this may be caused by some exception, please checkout the "
-               "log) when profile option:\n%s\n",
-               option_code.c_str());
+        mgb_log_error(
+                "out of time (this may be caused by some exception, please checkout "
+                "the log) when profile option:\n%s\n",
+                option_code.c_str());
     } else {
         printf("profile option:\n%s\naverage time = %.2f\n", option_code.c_str(),
                average);
@@ -369,7 +370,7 @@ void UserInfoParser::parse_info(std::shared_ptr<OptionsFastManager>& manager) {
 FittingStrategy::FittingStrategy(std::string model_path) {
     m_manager = std::make_shared<OptionsFastManager>();
     m_dumped_model = FLAGS_dump_fitting_model;
-    mgb::set_log_level(mgb::LogLevel::WARN);
+    mgb::set_log_level(mgb::LogLevel::INFO);
     m_options = std::make_shared<OptionMap>();
     m_model_path = model_path;
     auto option_creator_map = OptionFactory::get_Instance().get_option_creator_map();
@@ -458,10 +459,10 @@ void FittingStrategy::dump_best_options_with_model() {
     model->run_model();
     model->wait();
     std::vector<uint8_t> model_data = model->get_model_data();
-    mgb_log_warn("model_data size=%zu", model_data.size());
-    mgb_log_warn("json_info size=%zu", json_info.size());
-    mgb_log_warn("info_algo_policy_data size=%zu", info_algo_policy_data.size());
-    mgb_log_warn("info_binary_cache_data size=%zu", info_binary_cache_data.size());
+    mgb_log("model_data size=%zu", model_data.size());
+    mgb_log("json_info size=%zu", json_info.size());
+    mgb_log("info_algo_policy_data size=%zu", info_algo_policy_data.size());
+    mgb_log("info_binary_cache_data size=%zu", info_binary_cache_data.size());
     lite::ModelPacker packer(
             model_data, m_dumped_model, json_info, info_algo_policy_data,
             info_binary_cache_data);
@@ -508,7 +509,7 @@ void FittingStrategy::AutoCleanFile::dump_model() {
     model->wait();
 
     std::vector<uint8_t> model_data = model->get_model_data();
-    mgb_log_warn("dumped model_data size=%zu\n", model_data.size());
+    mgb_log("dumped model_data size=%zu\n", model_data.size());
     auto fp = fopen(m_filename.c_str(), "wb");
     fwrite(model_data.data(), 1, model_data.size(), fp);
     fclose(fp);

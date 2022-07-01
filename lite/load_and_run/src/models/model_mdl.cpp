@@ -7,7 +7,7 @@ DECLARE_bool(share_param_mem);
 using namespace lar;
 
 ModelMdl::ModelMdl(const std::string& path) : model_path(path) {
-    mgb_log_warn("creat mdl model use XPU as default comp node");
+    mgb_log("creat mdl model use XPU as default comp node");
     m_load_config.comp_graph = mgb::ComputingGraph::make();
     m_load_config.comp_graph->options().graph_opt_level = 0;
     testcase_num = 0;
@@ -16,7 +16,7 @@ ModelMdl::ModelMdl(const std::string& path) : model_path(path) {
 void ModelMdl::load_model() {
     //! read dump file
     if (share_model_mem) {
-        mgb_log_warn("enable share model memory");
+        mgb_log("enable share model memory");
         FILE* fin = fopen(model_path.c_str(), "rb");
         mgb_assert(fin, "failed to open %s: %s", model_path.c_str(), strerror(errno));
         fseek(fin, 0, SEEK_END);

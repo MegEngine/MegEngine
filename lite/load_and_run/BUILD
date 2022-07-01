@@ -5,6 +5,7 @@ cc_library(
     hdrs = glob(["src/**/*.h"]),
     includes = ["src"],
     features = if_opt([
+        "no_exceptions",
         "no_rtti",
     ]),
 
