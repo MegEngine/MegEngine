@@ -90,7 +90,7 @@ def flops_convNd(module: M.Conv2d, inputs, outputs):
     bias = 1 if module.bias is not None else 0
     # N x Cout x H x W x  (Cin x Kw x Kh + bias)
     return np.prod(outputs[0].shape) * (
-        module.in_channels // module.groups * np.prod(module.kernel_size) + bias
+        float(module.in_channels // module.groups) * np.prod(module.kernel_size) + bias
     )
 
 

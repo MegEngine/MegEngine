@@ -487,7 +487,7 @@ def flops_conv(opnode: ConvolutionForward, inputs, outputs):
     NCHW = np.prod(outputs[0].shape)
     bias = 1 if isinstance(opnode, ConvBiasForward) else 0
     # N x Cout x H x W x  (Cin x Kw x Kh)
-    return NCHW * (num_input * kw * kh + bias)
+    return NCHW * (float(num_input * kw * kh) + bias)
 
 
 @register_receptive_field(ConvolutionForward, ConvBiasForward)
