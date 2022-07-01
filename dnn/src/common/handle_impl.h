@@ -213,7 +213,10 @@ private:
     cb(LSTMBackward) \
     cb(SoftmaxForward) \
     cb(SoftmaxBackward) \
-    cb(NormForward)
+    cb(NormForward) \
+    cb(RegionRestrictedConvolutionForward) \
+    cb(RegionRestrictedConvolutionBackwardData) \
+    cb(RegionRestrictedConvolutionBackwardFilter)
 // clang-format on
 
 /*!

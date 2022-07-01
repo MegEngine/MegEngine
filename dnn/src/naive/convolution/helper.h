@@ -877,6 +877,141 @@ void forward_bias(
     }
 }
 
+template <
+        typename stype, typename ftype, typename dtype, typename comp_type,
+        class Strategy, typename FilterMeta, typename FilterVisitor = ConvFilterVisitor>
+void region_restricted_compute(
+        _megdnn_tensor_in src, ftype* __restrict fptr, _megdnn_tensor_in rin,
+        _megdnn_tensor_in rout, _megdnn_tensor_out dst, const FilterMeta& filter_meta) {
+    size_t spatial_start = 2, channel_pos = 1, batch_pos = 0;
+    auto N = src.layout.shape[batch_pos], IH = src.layout.shape[spatial_start],
+         IW = src.layout.shape[spatial_start + 1];
+    auto FH = filter_meta.spatial[0], FW = filter_meta.spatial[1];
+    size_t OC = dst.layout.shape[channel_pos], OH = dst.layout.shape[spatial_start],
+           OW = dst.layout.shape[spatial_start + 1];
+
+    size_t FS_SPATIAL = 1, FS_IC = FH * FW, FS_OC = FS_IC * filter_meta.icpg,
+           FS_G = FS_OC * filter_meta.ocpg;
+    int ph = filter_meta.padding[0], pw = filter_meta.padding[1];
+    size_t sh = filter_meta.stride[0], sw = filter_meta.stride[1];
+    int dh = filter_meta.dilation[0], dw = filter_meta.dilation[1];
+    stype* __restrict sptr = src.compatible_ptr<stype>();
+    dtype* __restrict dptr = dst.compatible_ptr<dtype>();
+    int32_t* __restrict rinptr = rin.ptr<int32_t>();
+    int32_t* __restrict routptr = rout.ptr<int32_t>();
+
+    int h_offset = -ph, w_offset = -pw;
+    if (filter_meta.should_flip) {
+        h_offset += filter_meta.dilated_spatial[0] - 1;
+        w_offset += filter_meta.dilated_spatial[1] - 1;
+        dh = -dh;
+        dw = -dw;
+    }
+
+    auto get_linear_addr = [](ptrdiff_t n, ptrdiff_t c, ptrdiff_t h, ptrdiff_t w,
+                              const TensorLayout& layout) -> ptrdiff_t {
+        return n * layout.stride[0] + c * layout.stride[1] + h * layout.stride[2] +
+               w * layout.stride[3];
+    };
+
+    auto get_region_addr = [](ptrdiff_t n, ptrdiff_t h, ptrdiff_t w,
+                              const TensorLayout& layout) -> ptrdiff_t {
+        return n * layout.stride[0] + h * layout.stride[1] + w * layout.stride[2];
+    };
+
+    auto get_filter_addr = [&](GroupCounter& gc_out, size_t ic, size_t ic0, size_t fh,
+                               size_t fw) {
+        return gc_out.cur_grp * FS_G + gc_out.cur_off * FS_OC + (ic - ic0) * FS_IC +
+               (fh * FW + fw) * FS_SPATIAL;
+    };
+    size_t filter_sizes = filter_meta.ocpg * filter_meta.icpg * FH * FW;
+    for (size_t n = 0; n < N; ++n) {
+        GroupCounter gc_out{filter_meta.ocpg};
+        for (size_t oc = 0; oc < OC; ++oc, gc_out.next())
+            for (size_t oh = 0; oh < OH; ++oh)
+                for (size_t ow = 0; ow < OW; ++ow) {
+                    comp_type dval = dptr[get_linear_addr(n, oc, oh, ow, dst.layout)];
+                    ftype* fptr_cur = FilterVisitor::template get_current_ptr(
+                            fptr, n, oc, oh, ow, filter_sizes);
+                    Strategy::init_dval(dval);
+                    int32_t routval = routptr[get_region_addr(n, oh, ow, rout.layout)];
+
+                    for (size_t fh = 0; fh < FH; ++fh)
+                        for (size_t fw = 0; fw < FW; ++fw) {
+                            size_t ih = sh * oh + fh * dh + h_offset,
+                                   iw = sw * ow + fw * dw + w_offset;
+                            // here ih and iw are represented in unsigned int
+                            // they will become very large if underflow occurs
+                            if (ih < IH && iw < IW) {
+                                size_t ic0 = gc_out.cur_grp * filter_meta.icpg,
+                                       ic1 = ic0 + filter_meta.icpg;
+                                for (size_t ic = ic0; ic < ic1; ++ic) {
+                                    stype& sval = sptr[get_linear_addr(
+                                            n, ic, ih, iw, src.layout)];
+                                    ftype& fval = fptr_cur[get_filter_addr(
+                                            gc_out, ic, ic0, fh, fw)];
+                                    int32_t rinval = rinptr[get_region_addr(
+                                            n, ih, iw, rin.layout)];
+                                    if (routval == rinval) {
+                                        Strategy::on(
+                                                sval, fval, dval, src.layout.dtype,
+                                                filter_meta.dtype, dst.layout.dtype);
+                                    }
+                                }
+                            }
+                        }
+                    Strategy::write(
+                            dval, dptr[get_linear_addr(n, oc, oh, ow, dst.layout)]);
+                }
+    }
+}
+
+//! forward with only filter ptr
+template <typename stype, typename ftype, typename dtype, typename comp_type>
+void region_restricted_forward(
+        _megdnn_tensor_in src, const ftype* fptr, _megdnn_tensor_in rin,
+        _megdnn_tensor_in rout, _megdnn_tensor_out dst,
+        const RegionRestrictedConvolution::CanonizedFilterMeta& filter_meta) {
+    megdnn_assert(filter_meta.spatial_ndim == 2);
+    megdnn_assert(filter_meta.format == param::Convolution::Format::NCHW);
+    region_restricted_compute<stype, ftype, dtype, comp_type, StrategyFwd>(
+            src, const_cast<ftype*>(fptr), rin, rout, dst, filter_meta);
+}
+
+//! forward with full filter (for API compatibility)
+template <typename stype, typename ftype, typename dtype, typename comp_type>
+void region_restricted_forward(
+        _megdnn_tensor_in src, _megdnn_tensor_in filter, _megdnn_tensor_in rin,
+        _megdnn_tensor_in rout, _megdnn_tensor_out dst,
+        const RegionRestrictedConvolution::CanonizedFilterMeta& filter_meta) {
+    return region_restricted_forward<stype, ftype, dtype, comp_type>(
+            src, filter.compatible_ptr<ftype>(), rin, rout, dst, filter_meta);
+}
+
+template <typename ftype, typename dtype, typename gtype>
+void region_restricted_backward_data(
+        _megdnn_tensor_in filter, _megdnn_tensor_in diff, _megdnn_tensor_in rin,
+        _megdnn_tensor_in rout, _megdnn_tensor_out grad,
+        const Convolution::CanonizedFilterMeta& filter_meta) {
+    megdnn_assert(filter_meta.format == param::Convolution::Format::NCHW);
+    memset(grad.raw_ptr(), 0, grad.layout.span().dist_byte());
+    megdnn_assert(filter_meta.spatial_ndim == 2);
+    region_restricted_compute<gtype, ftype, dtype, dtype, StrategyBwdData>(
+            grad, filter.compatible_ptr<ftype>(), rin, rout, diff, filter_meta);
+}
+
+template <typename stype, typename dtype, typename gtype>
+void region_restricted_backward_filter(
+        _megdnn_tensor_in src, _megdnn_tensor_in diff, _megdnn_tensor_in rin,
+        _megdnn_tensor_in rout, _megdnn_tensor_out grad,
+        const Convolution::CanonizedFilterMeta& filter_meta) {
+    megdnn_assert(filter_meta.format == param::Convolution::Format::NCHW);
+    memset(grad.raw_ptr(), 0, grad.layout.span().dist_byte());
+    megdnn_assert(filter_meta.spatial_ndim == 2);
+    region_restricted_compute<stype, gtype, dtype, dtype, StrategyBwdFlt>(
+            src, grad.compatible_ptr<gtype>(), rin, rout, diff, filter_meta);
+}
+
 }  // namespace convolution
 }  // namespace naive
 }  // namespace megdnn

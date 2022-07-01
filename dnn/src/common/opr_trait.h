@@ -139,6 +139,9 @@ DEF(LSTMForward, 8, true, true);
 DEF(LSTMBackward, 13, true, true);
 DEF(SoftmaxForward, 2, true, true);
 DEF(SoftmaxBackward, 3, true, false);
+DEF(RegionRestrictedConvolutionForward, 5, true, true);
+DEF(RegionRestrictedConvolutionBackwardData, 5, true, false);
+DEF(RegionRestrictedConvolutionBackwardFilter, 5, true, false);
 }  // namespace megdnn
 
 // vim: syntax=cpp.doxygen

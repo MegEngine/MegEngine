@@ -536,6 +536,131 @@ protected:
 using ConvBias = ConvBiasForward;
 
 /**
+ * \brief RegionRestrictedConvolutionForward operator.
+ */
+class RegionRestrictedConvolutionForward : public ConvolutionBase<param::Convolution> {
+    DEF_OPR_IMPL(RegionRestrictedConvolutionForward, ConvolutionBase, 4, 1);
+
+public:
+    /**
+     * \param[in] src (n, ic, ih, iw)
+     * \param[in] filter (oc, ic, fh, fw)
+     * \param[in] rin (n, ih, iw)
+     * \param[in] rout (n, oh, ow)
+     * \param[out] dst (n, oc, oh, ow)
+     */
+    virtual void exec(
+            _megdnn_tensor_in src, _megdnn_tensor_in filter, _megdnn_tensor_in rin,
+            _megdnn_tensor_in rout, _megdnn_tensor_out dst,
+            _megdnn_workspace workspace) = 0;
+
+    void deduce_dtype(DType src, DType filter, DType rin, DType rout, DType& dst);
+
+    MGE_WIN_DECLSPEC_FUC void deduce_layout(
+            const TensorLayout& src, const TensorLayout& filter,
+            const TensorLayout& rin, const TensorLayout& rout, TensorLayout& dst);
+
+    /**
+     * \brief query the workspace needed when executing the opr
+     * \return the size of workspace needed when executing
+     */
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& src, const TensorLayout& filter,
+            const TensorLayout& rin, const TensorLayout& rout,
+            const TensorLayout& dst) = 0;
+
+    static Algorithm::OprType get_opr_type() {
+        return Algorithm::OprType::REGIONRESTRICTEDCONVOLUTION_FORWARD;
+    }
+
+protected:
+    CanonizedFilterMeta check_exec(
+            const TensorLayout& src, const TensorLayout& filter,
+            const TensorLayout& rin, const TensorLayout& rout, const TensorLayout& dst,
+            size_t workspace_in_bytes);
+};
+using RegionRestrictedConvolution = RegionRestrictedConvolutionForward;
+
+/**
+ * \brief RegionRestrictedConvolutionBackwardData operator.
+ *
+ * Calculating the gradient wrt. convolution input data.
+ */
+class RegionRestrictedConvolutionBackwardData
+        : public ConvolutionBase<param::Convolution> {
+    DEF_OPR_IMPL(RegionRestrictedConvolutionBackwardData, ConvolutionBase, 4, 1);
+
+public:
+    /**
+     * \param[in] filter (oc, ic, fh, fw)
+     * \param[in] diff (n, oc, oh, ow)
+     * \param[in] rin (n, ih, iw)
+     * \param[in] rout (n, oh, ow)
+     * \param[out] grad (n, ic, ih, iw)
+     */
+    virtual void exec(
+            _megdnn_tensor_in filter, _megdnn_tensor_in diff, _megdnn_tensor_in rin,
+            _megdnn_tensor_in rout, _megdnn_tensor_out grad,
+            _megdnn_workspace workspace) = 0;
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& filter, const TensorLayout& diff,
+            const TensorLayout& rin, const TensorLayout& rout,
+            const TensorLayout& grad) = 0;
+
+    MGE_WIN_DECLSPEC_FUC void deduce_dtype(
+            DType filter, DType diff, DType rin, DType rout, DType& grad);
+    MGE_WIN_DECLSPEC_FUC void deduce_layout(
+            const TensorLayout& filter, const TensorLayout& diff,
+            const TensorLayout& rin, const TensorLayout& rout, TensorLayout& grad);
+
+    static Algorithm::OprType get_opr_type() {
+        return Algorithm::OprType::REGIONRESTRICTEDCONVOLUTION_BACKWARD_DATA;
+    }
+
+protected:
+    CanonizedFilterMeta check_exec(
+            const TensorLayout& filter, const TensorLayout& diff,
+            const TensorLayout& rin, const TensorLayout& rout, const TensorLayout& grad,
+            size_t workspace_in_bytes);
+};
+
+/**
+ * \brief RegionRestrictedConvolutionBackwardFilter operator.
+ *
+ * Calculating the gradient wrt. convolution filter.
+ */
+class RegionRestrictedConvolutionBackwardFilter
+        : public ConvolutionBase<param::Convolution> {
+    DEF_OPR_IMPL(RegionRestrictedConvolutionBackwardFilter, ConvolutionBase, 4, 1);
+
+public:
+    /**
+     * \param[in] src (n, ic, ih, iw)
+     * \param[in] diff (n, oc, oh, ow)
+     * \param[in] rin (n, ih, iw)
+     * \param[in] rout (n, oh, ow)
+     * \param[out] grad (oc, ic, fh, fw)
+     */
+    virtual void exec(
+            _megdnn_tensor_in src, _megdnn_tensor_in diff, _megdnn_tensor_in rin,
+            _megdnn_tensor_in rout, _megdnn_tensor_out grad,
+            _megdnn_workspace workspace) = 0;
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& src, const TensorLayout& diff, const TensorLayout& rin,
+            const TensorLayout& rout, const TensorLayout& grad) = 0;
+
+    static Algorithm::OprType get_opr_type() {
+        return Algorithm::OprType::REGIONRESTRICTEDCONVOLUTION_BACKWARD_FILTER;
+    }
+
+protected:
+    CanonizedFilterMeta check_exec(
+            const TensorLayout& src, const TensorLayout& diff, const TensorLayout& rin,
+            const TensorLayout& rout, const TensorLayout& grad,
+            size_t workspace_in_bytes);
+};
+
+/**
  * \brief base class for Conv - Nonline - Pooling
  */
 class ConvPoolingBase : public OperatorBase {

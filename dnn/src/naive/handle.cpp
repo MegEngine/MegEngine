@@ -57,6 +57,7 @@
 #include "src/naive/pooling/opr_impl.h"
 #include "src/naive/powc/opr_impl.h"
 #include "src/naive/reduce/opr_impl.h"
+#include "src/naive/region_restricted_convolution/opr_impl.h"
 #include "src/naive/relayout/opr_impl.h"
 #include "src/naive/relayout_format/opr_impl.h"
 #include "src/naive/remap/opr_impl.h"
