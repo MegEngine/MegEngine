@@ -95,7 +95,7 @@ void test_param_pack_concat(
 
     test::WorkspaceWrapper workspace(
             handle,
-            concat->get_workspace_in_bytes(shapes, offsets_layout, {pack_size}));
+            concat->get_workspace_in_bytes({nr_params}, offsets_layout, {pack_size}));
     TensorND src_tensor(param_ptrs.data(), TensorLayout({nr_params}, dtype::Int32()));
 
     concat->exec(src_tensor, offsets_tensor, dst_tensor, workspace.workspace());

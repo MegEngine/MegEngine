@@ -7,7 +7,11 @@ void CheckNonFinite::check_exec(
         const TensorNDArray& srcs, const TensorND& dst, size_t workspace_in_bytes) {
     megdnn_assert_contiguous(dst.layout);
     megdnn_assert(srcs.size() > 0);
-    auto required_workspace_in_bytes = get_workspace_in_bytes(srcs, dst.layout);
+    TensorLayoutArray src_layouts;
+    for (auto&& src : srcs) {
+        src_layouts.push_back(src.layout);
+    }
+    auto required_workspace_in_bytes = get_workspace_in_bytes(src_layouts, dst.layout);
     megdnn_assert(workspace_in_bytes >= required_workspace_in_bytes);
 }
 

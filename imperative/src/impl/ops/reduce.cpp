@@ -18,33 +18,31 @@ namespace reduce {
 auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
     auto&& reduce = static_cast<const Reduce&>(def);
     auto comp_node = inputs[0]->comp_node();
-    OperatorNodeConfig config{reduce.make_name(), comp_node, inputs[0]->dtype()};
+    auto name = reduce.make_name();
 
-    if (inputs.size() > 1) {
-        return opr::Reduce::make(inputs[0], reduce.param(), inputs[1], config);
-    }
-
-    using Param = megdnn::param::Reduce;
     auto param = reduce.param();
-    if (param.axis < 0) {
-        param.axis = inputs[0]->shape().ndim + param.axis;
-    }
+    auto axis = param.axis;
+    auto keepdim = reduce.keepdim;
 
-    SymbolVar target_shape = (cg::VarNode*)nullptr;
-    if (param.axis == INT_MAX) {
-        DTypeScalar vi{1};
-        // auto graph = ComputingGraph::make();
-        auto graph = inputs[0]->owner_graph();
-        target_shape = opr::ImmutableTensor::make(*graph, vi, config);
+    if (inputs.size() == 2) {
+        return opr::Reduce::make(inputs[0], param, inputs[1], {name});
     }
-    auto res = opr::Reduce::make(inputs[0], param, target_shape, config);
-    if (!reduce.keepdim && param.axis != INT_MAX) {
+    mgb_assert(inputs.size() == 1);
+
+    if (axis == INT_MAX) {
+        // keepdim could be ignored when ndim == 1
+        auto graph = inputs[0]->owner_graph();
+        auto scalar_shape =
+                opr::ImmutableTensor::make(*graph, DTypeScalar(1), {name, comp_node});
+        return opr::Reduce::make(inputs[0], param, scalar_shape, {name});
+    }
+    // mgb::opr::Reduce supports negative axis
+    auto res = opr::Reduce::make(inputs[0], param, {}, {name});
+    if (!keepdim) {
         using Desc = opr::AxisAddRemove::AxisDesc;
-        std::vector<Desc> remove_param;
-        remove_param.push_back(Desc::make_remove(param.axis));
-        OperatorNodeConfig remove_config{
-                def.make_name(), comp_node, inputs[0]->dtype()};
-        return opr::AxisAddRemove::make(res, remove_param, remove_config);
+        std::vector<Desc> remove_axis_param;
+        remove_axis_param.push_back(Desc::make_remove(axis));
+        res = opr::AxisAddRemove::make(res, remove_axis_param, {name});
     }
     return res;
 }
@@ -71,111 +69,104 @@ bool memory_forward_success(const OpDef& def, SmallVector<TensorPtr> inputs) {
 SmallVector<TensorPtr> apply_on_physical_tensor(
         const OpDef& def, const SmallVector<TensorPtr>& inputs,
         SmallVector<LogicalTensorDesc>& output_descs, const bool& validated) {
+    // memory forward
     if (memory_forward_success(def, inputs)) {
+        // maybe returns inputs[0] directly
         return {Tensor::make(
                 inputs[0]->blob(), inputs[0]->offset(), inputs[0]->layout())};
     }
 
-    auto size = inputs.size();
-    if (size > 1) {
+    if (inputs.size() == 2) {
+        // reduce to target shape, fallback to proxy_graph
         return proxy_graph_detail::apply_on_physical_tensor(
                 def, inputs, output_descs, validated);
     }
+    mgb_assert(inputs.size() == 1);
 
     auto comp_node = inputs[0]->comp_node();
-    using TensorND = megdnn::TensorND;
     auto&& op_def = def.cast_final_safe<Reduce>();
-    SmallVector<TensorND> inp_tensornds;
-    inp_tensornds.reserve(inputs.size());
-    auto src = inputs[0]->layout();
-
-    DnnOprCaller<megdnn::Reduce> dnn_op(comp_node);
-    dnn_op.op->param() = op_def.param();
-    auto axis = op_def.param().axis;
+    DnnOprCaller<megdnn::Reduce> dnn_op(comp_node, op_def.param());
+    auto&& mode = dnn_op.param().mode;
+    auto& axis = dnn_op.param().axis;
     auto keepdim = op_def.keepdim;
 
-    if (axis < 0) {
-        axis = inputs[0]->layout().ndim + axis;
-    }
-
-    dnn_op.op->param().axis = axis == INT_MAX ? 0 : axis;
-
-    if (axis == INT_MAX) {
-        src.shape[0] = src.total_nr_elems();
-        src.ndim = 1;
-        src.init_contiguous_stride();
-    }
-    TensorLayout layout{src.dtype};
-    dnn_op.op->deduce_layout(src, layout);
-
-    if (inputs[0]->layout().is_empty()) {
-        inputs[0]->dev_tensor().reset(inputs[0]->dev_tensor().storage(), src);
-
-        auto mode = op_def.param().mode;
-
-        if (!keepdim && src.ndim > 1) {
-            layout.remove_axis_inplace(axis);
-            layout.init_contiguous_stride();
+    DnnTensorND dnn_input = [&] {
+        if (axis == INT_MAX) {  // reduce to scalar
+            axis = 0;
+            // flatten input
+            return inputs[0]->dnn_tensor({inputs[0]->shape().total_nr_elems()});
+        } else {
+            if (axis < 0) {
+                axis = inputs[0]->layout().ndim + axis;
+            }
+            mgb_assert(axis >= 0 && axis < inputs[0]->layout().ndim);
+            return inputs[0]->dnn_tensor();
         }
-        auto out = Tensor::make(layout, comp_node);
+    }();
+    auto output_layout = dnn_op.deduce_layout(dnn_input.layout);
+    auto resolve_keepdim = [&] {
+        if (!keepdim) {
+            if (output_layout.ndim > 1) {
+                mgb_assert(output_layout.shape[axis] == 1);
+                output_layout.remove_axis_inplace(axis);
+            }
+        }
+    };
 
-        std::string err_msg;
+    TensorPtr output;
+    if (output_layout.is_empty()) {
+        // output empty, no computation
+        resolve_keepdim();
+        output = Tensor::make(output_layout, comp_node);
+    } else if (dnn_input.layout.is_empty()) {
+        // input empty but output not, do fill
+        resolve_keepdim();
+        output = Tensor::make(output_layout, comp_node);
+        auto on_bad_empty_reduce = [](const char* name) {
+            mgb_throw(
+                    MegBrainError, "empty input is not allowed for reduce mode: %s",
+                    name);
+        };
         switch (mode) {
             case Reduce::Mode::SUM:
-                if (!out->empty()) {
-                    dev_tensor_memset(out->dev_tensor(), 0);
-                }
+                // fill 0
+                dev_tensor_memset(output->dev_tensor(), 0);
                 break;
-            case Reduce::Mode::PRODUCT:
-                if (!out->empty()) {
-                    DnnOprCaller<megdnn::Fill> fill_op(comp_node);
-                    fill_op.op->param() = 1;
-                    fill_op.op->exec(out->dnn_tensor(), {});
-                }
+            case Reduce::Mode::PRODUCT: {
+                // fill 1
+                DnnOprCaller<megdnn::Fill> fill_op(comp_node, {1});
+                fill_op.exec_with_ws(output);
                 break;
+            }
             case Reduce::Mode::MEAN:
-                err_msg = "mean";
+                on_bad_empty_reduce("mean");
                 break;
             case Reduce::Mode::MIN:
-                err_msg = "min";
+                on_bad_empty_reduce("min");
                 break;
             case Reduce::Mode::MAX:
-                err_msg = "max";
+                on_bad_empty_reduce("max");
                 break;
             case Reduce::Mode::SUM_SQR:
-                err_msg = "sum_sqr";
+                on_bad_empty_reduce("sum_sqr");
                 break;
             default:
                 mgb_throw(MegBrainError, "bad reduce mode");
         }
-        if (!err_msg.empty()) {
-            mgb_throw(
-                    MegBrainError, "empty input is not allowed for reduce mode: %s",
-                    err_msg.c_str());
+    } else {
+        // common reduction
+        if (keepdim) {
+            output = Tensor::make(output_layout, comp_node);
+            dnn_op.exec_with_ws(dnn_input, output);
+        } else {
+            // used by megdnn::exec
+            auto output_layout_keepdim = output_layout;
+            resolve_keepdim();
+            output = Tensor::make(output_layout, comp_node);
+            dnn_op.exec_with_ws(dnn_input, output->dnn_tensor(output_layout_keepdim));
         }
-        return {out};
     }
-
-    auto dnn_ten = inputs[0]->dnn_tensor();
-    dnn_ten.layout = src;
-    inp_tensornds.push_back(dnn_ten);
-
-    auto wk_size = dnn_op.op->get_workspace_in_bytes(src, layout);
-    auto dnn_wk = dnn_op.create_workspace(wk_size);
-    TensorLayout ori_layout = layout;
-
-    if (!keepdim && src.ndim > 1) {
-        layout.remove_axis_inplace(axis);
-        layout.init_contiguous_stride();
-    }
-
-    auto out = Tensor::make(layout, comp_node);
-    auto dnn_out = out->dnn_tensor();
-    dnn_out.layout = ori_layout;
-
-    dnn_op.op->exec(inp_tensornds[0], dnn_out, dnn_wk);
-
-    return {out};
+    return {output};
 }
 
 std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
@@ -184,16 +175,12 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
     auto axis = op_def.param().axis;
     auto keepdim = op_def.keepdim;
 
-    size_t size = inputs.size();
-    SmallVector<LogicalTensorDesc> dests(size);
+    mgb_assert(inputs.size() > 0);
+    auto&& comp_node = inputs[0].comp_node;
+    auto&& input_layout = inputs[0].layout;
 
-    for (size_t i = 0; i < size; i++) {
-        if (inputs[i].layout.ndim == 0) {
-            return {{{TensorLayout(inputs[0].layout.dtype), inputs[0].comp_node}},
-                    false};
-        }
-    }
-    if (size > 1) {
+    if (inputs.size() == 2) {
+        // fallback to proxy_graph, matters on backward
         auto [output_descs, validated] =
                 proxy_graph_detail::infer_output_attrs_fallible(def, inputs);
         if (!inputs[1].value.empty()) {
@@ -203,30 +190,37 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
         return {output_descs, validated};
     }
 
+    mgb_assert(inputs.size() == 1);
+
+    if (axis == INT_MAX) {
+        // reduce to scalar
+        // ignore keepdim because ndim is 1
+        auto&& dtype = input_layout.dtype;
+        auto&& format = input_layout.format;
+        auto output_layout = TensorLayout{{1}, dtype, format};
+        return {{{output_layout, comp_node}}, true};
+    }
+
+    if (input_layout.ndim == 0) {
+        // shape incomplete
+        return {{{TensorLayout(input_layout.dtype, input_layout.format), comp_node}},
+                false};
+    }
+
     if (axis < 0) {
-        axis = inputs[0].layout.ndim + axis;
+        axis = input_layout.ndim + axis;
     }
+    mgb_assert(axis >= 0 && axis < input_layout.ndim);
 
-    if (axis == INT_MAX || inputs[0].layout.ndim == 1) {
-        TensorLayout layout{inputs[0].layout.dtype};
-        layout.shape[0] = 1;
-        layout.ndim = 1;
-        dests[0].layout = layout;
-        dests[0].comp_node = inputs[0].comp_node;
+    TensorLayout output_layout = input_layout;
+    bool remove_axis = (!keepdim) && input_layout.ndim > 1;
+    if (remove_axis) {
+        output_layout.remove_axis_inplace(axis);
     } else {
-        for (size_t i = 0; i < size; ++i) {
-            dests[i].comp_node = inputs[i].comp_node;
-            dests[i].layout = inputs[i].layout;
-            if (!keepdim && dests[i].layout.ndim > 1) {
-                dests[i].layout.remove_axis_inplace(axis);
-            } else {
-                dests[i].layout.shape[axis] = 1;
-            }
-            dests[i].layout.init_contiguous_stride();
-        }
+        output_layout.shape[axis] = 1;
     }
-
-    return {dests, true};
+    output_layout.init_contiguous_stride();
+    return {{{output_layout, comp_node}}, true};
 }
 
 SmallVector<VarNode::LayoutConstraintCallback> get_input_layout_constraint(

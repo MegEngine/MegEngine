@@ -397,7 +397,8 @@ public:
 
     OutputDType infer_dtype(DType data, DType mask);
 
-    virtual size_t get_workspace_in_bytes(const TensorLayout& data) = 0;
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& data, const TensorLayout& mask) = 0;
 
     virtual Output exec(
             _megdnn_tensor_in data, _megdnn_tensor_in mask, _megdnn_workspace workspace,
@@ -512,7 +513,8 @@ public:
     virtual void exec(
             _megdnn_in const TensorNDArray& srcs, _megdnn_tensor_out dst,
             _megdnn_workspace workspace) = 0;
-    void deduce_layout(const TensorLayoutArray& srcs, TensorLayout& dst);
+    MGE_WIN_DECLSPEC_FUC void deduce_layout(
+            const TensorLayoutArray& srcs, TensorLayout& dst);
     virtual size_t get_workspace_in_bytes(
             const TensorLayoutArray& srcs, const TensorLayout& dst) = 0;
 
@@ -596,7 +598,7 @@ public:
             _megdnn_workspace workspace) = 0;
 
     virtual size_t get_workspace_in_bytes(
-            const TensorShapeArray& srcs, const TensorShape& offsets,
+            const TensorShape& srcs, const TensorShape& offsets,
             const TensorShape& dst) = 0;
 };
 
@@ -1145,7 +1147,7 @@ protected:
     /*!
      * \return axis on dst used by indexer (i.e. ExecInfo::idx_axis)
      */
-    static size_t deduce_layout_fwd(
+    MGE_WIN_DECLSPEC_FUC static size_t deduce_layout_fwd(
             const TensorLayout& data, const IndexDescLayoutOnly& index,
             TensorLayout& dst);
 
@@ -1362,9 +1364,10 @@ class CheckNonFinite : public OperatorBase {
 
 public:
     virtual size_t get_workspace_in_bytes(
-            const TensorNDArray& srcs, const TensorLayout& dst) = 0;
+            const TensorLayoutArray& srcs, const TensorLayout& dst) = 0;
 
-    void deduce_layout(const TensorLayoutArray& srcs, TensorLayout& dst);
+    MGE_WIN_DECLSPEC_FUC void deduce_layout(
+            const TensorLayoutArray& srcs, TensorLayout& dst);
 
     virtual void exec(
             _megdnn_in const TensorNDArray& srcs, _megdnn_tensor_out dst,
@@ -1420,7 +1423,7 @@ public:
     }
     virtual size_t get_workspace_in_bytes(
             const TensorLayout& src, const TensorLayout& dst) = 0;
-    void deduce_layout(const TensorLayout& src, TensorLayout& dst);
+    MGE_WIN_DECLSPEC_FUC void deduce_layout(const TensorLayout& src, TensorLayout& dst);
 
     MGE_WIN_DECLSPEC_FUC static void deduce_layout_impl(
             const TensorLayout& src, TensorLayout& dst, const Param& p);
@@ -1464,7 +1467,7 @@ public:
             const TensorLayout& m_t, const TensorLayout& v_t,
             const TensorLayout& new_param) = 0;
 
-    void deduce_layout(
+    MGE_WIN_DECLSPEC_FUC void deduce_layout(
             const TensorLayout& m_t_1, const TensorLayout& v_t_1,
             const TensorLayout& lamb_param, const TensorLayout& grad, TensorLayout& m_t,
             TensorLayout& v_t, TensorLayout& new_param);

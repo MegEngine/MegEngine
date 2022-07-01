@@ -21,14 +21,17 @@ SmallVector<VarNode::LayoutConstraintCallback> get_input_layout_constraint(
 std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
         const OpDef& def, const SmallVector<LogicalTensorDesc>& input_descs) {
     mgb_assert(input_descs.size() == 4, "IndexingOneHot expects 4inputs");
-
     auto comp_node = input_descs[0].comp_node;
     auto comp_node1 = input_descs[1].comp_node;
     auto comp_node2 = input_descs[2].comp_node;
-    TensorLayout m_t_1 = input_descs[0].layout, v_t_1 = input_descs[1].layout,
-                 lamb_param = input_descs[2].layout, grad = input_descs[3].layout;
-
-    TensorLayout new_param = lamb_param, m_t = m_t_1, v_t = v_t_1;
+    auto&& m_t_1 = input_descs[0].layout;
+    auto&& v_t_1 = input_descs[1].layout;
+    auto&& lamb_param = input_descs[2].layout;
+    auto&& grad = input_descs[3].layout;
+    MGB_MARK_USED_VAR(grad);
+    auto&& new_param = lamb_param;
+    auto&& m_t = m_t_1;
+    auto&& v_t = v_t_1;
     return {{{m_t, comp_node}, {v_t, comp_node1}, {new_param, comp_node2}}, true};
 }
 
@@ -46,23 +49,11 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
     TensorLayout lamb_param_layout{lamb_param->layout()};
 
     auto m_t = Tensor::make(m_t_1_layout, m_t_1->comp_node());
-
     auto v_t = Tensor::make(v_t_1_layout, v_t_1->comp_node());
-
     auto new_param = Tensor::make(lamb_param_layout, lamb_param->comp_node());
 
-    DnnOprCaller<megdnn::LAMBUpdate> caller{lamb_param->comp_node()};
-    size_t sz = caller.op->get_workspace_in_bytes(
-            m_t_1->layout(), v_t_1->layout(), lamb_param->layout(), grad->layout(),
-            m_t->layout(), v_t->layout(), new_param->layout());
-
-    auto dnn_workspace = caller.create_workspace(sz);
-    caller.op->param() = op.param();
-    caller.op->exec(
-            m_t_1->dev_tensor().as_megdnn(), v_t_1->dev_tensor().as_megdnn(),
-            lamb_param->dev_tensor().as_megdnn(), grad->dev_tensor().as_megdnn(),
-            m_t->dnn_tensor(), v_t->dnn_tensor(), new_param->dnn_tensor(),
-            dnn_workspace);
+    DnnOprCaller<megdnn::LAMBUpdate> dnn_opr{lamb_param->comp_node(), op.param()};
+    dnn_opr.exec_with_ws(m_t_1, v_t_1, lamb_param, grad, m_t, v_t, new_param);
     return {m_t, v_t, new_param};
 }
 

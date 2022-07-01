@@ -570,9 +570,15 @@ bool Tensor::empty() {
     return !m_blob->size();
 }
 
-megdnn::TensorND Tensor::dnn_tensor() {
+DnnTensorND Tensor::dnn_tensor() {
     mgb_assert(m_blob, "uninitialized tensor.");
+    mgb_assert(m_layout.ndim, "dnn don't support scalar");
     return DnnTensorND{m_layout, m_blob->storage(), m_offset};
+}
+
+DnnTensorND Tensor::dnn_tensor(TensorShape new_shape) {
+    mgb_assert(m_blob, "uninitialized tensor.");
+    return DnnTensorND{m_layout.reshape(new_shape), m_blob->storage(), m_offset};
 }
 
 void Tensor::fetch_value() {

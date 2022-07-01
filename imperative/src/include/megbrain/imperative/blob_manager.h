@@ -1,6 +1,7 @@
 #pragma once
 
 #include "megbrain/imperative/physical_tensor.h"
+#include "megbrain/imperative/utils/helper.h"
 
 namespace mgb {
 namespace imperative {
@@ -15,12 +16,18 @@ public:
 
     virtual void alloc_direct(OwnedBlob* blob, size_t size) = 0;
 
+    virtual bool try_alloc_direct(OwnedBlob* blob, size_t size) {
+        try {
+            alloc_direct(blob, size);
+            return true;
+        } catch (MemAllocError&) {
+            return false;
+        }
+    }
+
     virtual void alloc_with_defrag(OwnedBlob* blob, size_t size) = 0;
 
     virtual void set_allocator(allocator_t allocator) = 0;
-
-    virtual DeviceTensorND alloc_workspace_with_defrag(
-            CompNode cn, TensorLayout& layout) = 0;
 
     virtual void register_blob(OwnedBlob* blob) = 0;
 

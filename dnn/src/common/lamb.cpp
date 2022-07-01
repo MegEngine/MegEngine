@@ -7,9 +7,9 @@ void LAMBUpdate::deduce_layout(
         const TensorLayout& m_t_1, const TensorLayout& v_t_1,
         const TensorLayout& lamb_param, const TensorLayout& grad, TensorLayout& m_t,
         TensorLayout& v_t, TensorLayout& new_param) {
-    m_t = TensorLayout(m_t_1);
-    v_t = TensorLayout(v_t_1);
-    new_param = TensorLayout(lamb_param);
+    m_t = m_t_1;
+    v_t = v_t_1;
+    new_param = lamb_param;
     MEGDNN_MARK_USED_VAR(grad);
 }
 

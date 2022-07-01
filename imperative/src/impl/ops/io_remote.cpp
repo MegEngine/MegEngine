@@ -54,14 +54,15 @@ cg::OperatorNodeBase* apply_on_var_node_remote_recv(
 TensorPtr megray_recv_tensor(
         std::shared_ptr<MegRay::Communicator> megray_comm, TensorLayout& layout,
         CompNode cn, uint32_t rank_from) {
-    DeviceTensorND out = BlobManager::inst()->alloc_workspace_with_defrag(cn, layout);
+    auto out = Tensor::make(layout, cn);
+    auto dnn_out = out->dnn_tensor();
     auto megray_ctx = mgb::opr::get_megray_context(cn);
     size_t data_size = layout.total_nr_elems();
     auto status = megray_comm->recv(
-            out.raw_ptr(), data_size, mgb::opr::get_megray_dtype(layout.dtype),
+            dnn_out.raw_ptr(), data_size, mgb::opr::get_megray_dtype(layout.dtype),
             rank_from, megray_ctx);
     mgb_assert(status == MegRay::MEGRAY_OK, "MegRay recv failed");
-    return Tensor::make(out);
+    return out;
 }
 
 void megray_send_tensor(
@@ -105,9 +106,7 @@ SmallVector<TensorPtr> apply_on_physical_tensor_remote_send(
     mgb_assert(megray_comm != nullptr);
     megray_send_tensor(megray_comm, inputs[0], op.rank_to);
     TensorLayout layout({0}, inputs[0]->dtype());
-    DeviceTensorND out = BlobManager::inst()->alloc_workspace_with_defrag(
-            inputs[0]->comp_node(), layout);
-    return {Tensor::make(out)};
+    return {Tensor::make(layout, inputs[0]->comp_node())};
 }
 
 std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible_remote_recv(

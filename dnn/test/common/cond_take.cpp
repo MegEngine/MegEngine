@@ -71,7 +71,7 @@ CondTakeTestcase::Result CondTakeTestcase::run(CondTake* opr) {
     opr->param() = m_param;
 
     DynOutMallocPolicyImpl malloc_policy(handle);
-    auto workspace_size = opr->get_workspace_in_bytes(data->layout);
+    auto workspace_size = opr->get_workspace_in_bytes(data->layout, mask->layout);
     auto workspace_ptr = malloc_policy.alloc_workspace(workspace_size, nullptr);
     auto result = opr->exec(
             *data, *mask, {(dt_byte*)workspace_ptr, workspace_size}, &malloc_policy);

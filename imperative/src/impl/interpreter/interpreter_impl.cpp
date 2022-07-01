@@ -605,6 +605,7 @@ TensorInfo* ChannelImpl::alloc() {
 void ChannelImpl::init(TensorInfo* info, LogicalTensorDesc&& desc) {
     m_valid_handle.insert(reinterpret_cast<Handle>(info));
     MGB_RECORD_EVENT(TensorDeclareEvent, info->id, info->name);
+    mgb_assert(desc.comp_node.valid(), "comp_node invalid");
     info->status = TensorInfo::Allocated;
     info->desc = std::move(desc);
 }
@@ -831,6 +832,7 @@ void ChannelImpl::do_apply_op(const ApplyOp& cmd, std::string reason) {
             output_descs.push_back(i->desc);
         }
     } else {
+        // i may be null
         validated = false;
     }
     // Here std::move is REQUIRED for removing duplicated references.
@@ -1064,17 +1066,16 @@ void ChannelImpl::alloc_tensor_with_evict(OwnedBlob* x) {
     if (in_worker) {
         reserve_size(x->size());
     }
-    MGB_TRY { BlobManager::inst()->alloc_direct(x, x->size()); }
-    MGB_CATCH(MemAllocError&, {
+    if (!BlobManager::inst()->try_alloc_direct(x, x->size())) {
         bool suc = false;
         if (in_worker) {
             while (!suc) {
                 if (!auto_evict(1)) {
                     break;
                 }
-                MGB_TRY { BlobManager::inst()->alloc_direct(x, x->size()); }
-                MGB_CATCH(MemAllocError&, { continue; });
-                suc = true;
+                if (BlobManager::inst()->try_alloc_direct(x, x->size())) {
+                    suc = true;
+                }
             }
         }
         if (!suc) {
@@ -1086,9 +1087,11 @@ void ChannelImpl::alloc_tensor_with_evict(OwnedBlob* x) {
             imperative_log_profile_begin("defrag");
             BlobManager::inst()->defrag(x->comp_node());
             imperative_log_profile_end("defrag");
-            BlobManager::inst()->alloc_direct(x, x->size());
+            mgb_assert(
+                    BlobManager::inst()->try_alloc_direct(x, x->size()),
+                    "allocation failed after defrag");
         }
-    });
+    }
     set_log_level(pre_level);
 }
 

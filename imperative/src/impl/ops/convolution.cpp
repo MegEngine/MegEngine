@@ -8,14 +8,7 @@
 
 namespace mgb {
 namespace imperative {
-
 namespace {
-
-size_t infer_conv_shape(size_t inp, size_t flt, size_t stride, size_t pad) {
-    mgb_assert(inp + 2 * pad >= flt, "input=%zu padding=%zu filter=%zu", inp, pad, flt);
-    return (inp + 2 * pad - flt) / stride + 1;
-}
-
 namespace convolution {
 std::shared_ptr<OpDef> make_from_op_node(cg::OperatorNodeBase* node_) {
     auto* node = &node_->cast_final_safe<opr::Convolution>();
@@ -29,131 +22,23 @@ auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
             inputs[0], inputs[1], conv.param(), conv.policy(), config);
 }
 
-TensorLayout do_shape_infer(
-        const OpDef& def, size_t src_ndim, TensorLayout src, TensorLayout filter) {
-    auto&& conv = static_cast<const Convolution&>(def);
-    using Param = ::megdnn::param::Convolution;
-
-    auto img_ndim = src_ndim - 2;
-    mgb_assert(
-            img_ndim == 2,
-            "only 2D convolution is supported, and input should be 4-dim; "
-            "got input dim = %zu",
-            src_ndim);
-    size_t group = 1;
-    size_t flt_start, flt_spatial_start, ocpg_pos, icpg_pos;
-    if (conv.sparse == Param::Sparse::DENSE) {
-        mgb_assert(
-                filter.ndim == img_ndim + 2 || filter.ndim == img_ndim + 4,
-                "bad filter ndim for dense convolution: "
-                "spatial_ndim=%zu filter_ndim=%zu",
-                img_ndim, filter.ndim);
-        group = 1;
-        flt_start = 0;
-    } else {  // Param::Sparse::GROUP
-        mgb_assert(
-                filter.ndim == img_ndim + 3 || filter.ndim == img_ndim + 5,
-                "bad filter ndim for group convolution: "
-                "spatial_ndim=%zu filter_ndim=%zu",
-                img_ndim, filter.ndim);
-        // grp, oc, ic, dims[]
-        group = filter[0];
-        flt_start = 1;
-    }
-
-    uint32_t ic_block_size = 1, oc_block_size = 1;
-    size_t src_or_dst_c_pos = 0;
-    size_t src_or_dst_spatial_start = 0;
-    if (conv.format == Param::Format::NCHW) {
-        // filter should be (oc, ic, fh, fw)
-        flt_spatial_start = 2;
-        ocpg_pos = 0;
-        icpg_pos = 1;
-        src_or_dst_c_pos = 1;
-        src_or_dst_spatial_start = 2;
-    } else {  // Param::Format::NHWC
-        // filter should be (oc, fh, fw, ic)
-        flt_spatial_start = 1;
-        ocpg_pos = 0;
-        icpg_pos = 3;
-        src_or_dst_c_pos = 3;
-        src_or_dst_spatial_start = 1;
-    }
-    size_t ocpg = filter[flt_start + ocpg_pos] * oc_block_size;
-    size_t icpg = filter[flt_start + icpg_pos] * ic_block_size;
-    uint32_t dilation[2], dilated_spatial[2], stride[2], padding[2];
-    dilation[0] = conv.dilate_h;
-    dilation[1] = conv.dilate_w;
-    stride[0] = conv.stride_h;
-    stride[1] = conv.stride_w;
-    padding[0] = conv.pad_h;
-    padding[1] = conv.pad_w;
-    for (size_t i = 0; i < img_ndim; ++i) {
-        mgb_assert(
-                dilation[i] > 0, "invalid dilation on spatial dim %zu: %u", i,
-                dilation[i]);
-        dilated_spatial[i] =
-                (filter[i + flt_start + flt_spatial_start] - 1) * dilation[i] + 1;
-    }
-    mgb_assert(
-            icpg * group == src[src_or_dst_c_pos],
-            "group conv invalid: input channel of Conv expect %zu, but got %zu\n"
-            "hint: weight may be changed by mistake\n",
-            icpg * group, src[src_or_dst_c_pos]);
-    TensorLayout dst{src.dtype};
-    dst.ndim = src_ndim;
-    dst[0] = src[0];
-    dst[src_or_dst_c_pos] = ocpg * group;
-    for (size_t i = 0; i < img_ndim; ++i) {
-        dst[i + src_or_dst_spatial_start] = infer_conv_shape(
-                src[i + src_or_dst_spatial_start], dilated_spatial[i], stride[i],
-                padding[i]);
-    }
-    dst.init_contiguous_stride();
-    return dst;
-}
-
 std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
         const OpDef& def, const SmallVector<LogicalTensorDesc>& inputs) {
-    SmallVector<LogicalTensorDesc> dests(1);
-    auto&& desc = dests[0];
-    desc.comp_node = inputs[0].comp_node;
-
-    TensorLayout src = inputs[0].layout;
-    TensorLayout filter = inputs[1].layout;
-    size_t src_ndim = src.ndim;
-    if (src_ndim == 0 || filter.ndim == 0) {
-        desc.layout = TensorLayout{{}, src.dtype};
-        return {dests, false};
+    auto&& conv = def.cast_final_safe<Convolution>();
+    DnnOprHelper<megdnn::ConvolutionForward> dnn_opr(conv.param());
+    auto&& data = inputs[0].layout;
+    auto&& filter = inputs[1].layout;
+    TensorLayout output_layout{data.dtype};
+    if (data.ndim && filter.ndim) {
+        // deduce_layout won't override existing dtype
+        dnn_opr.opr().deduce_layout(data, filter, output_layout);
     }
-
-    desc.layout = do_shape_infer(def, src_ndim, src, filter);
-    return {dests, true};
+    return {{{output_layout, inputs[0].comp_node}}, output_layout.ndim != 0};
 }
 
-SmallVector<TensorPtr> apply_on_physical_tensor(
-        const OpDef& def, const SmallVector<TensorPtr>& inputs,
-        SmallVector<LogicalTensorDesc>& output_descs, const bool& validated) {
-    // create megdnn opr
-    auto&& conv = static_cast<const Convolution&>(def);
-    CompNode cn = inputs[0]->comp_node();
-
-    TensorLayout out_layout = output_descs[0].layout;
-    if (!validated)
-        out_layout = do_shape_infer(
-                def, inputs[0]->layout().ndim, inputs[0]->layout(),
-                inputs[1]->layout());
-
-    using TensorND = megdnn::TensorND;
-    SmallVector<TensorND> inp_tensornds(inputs.size() + 2);
-    TensorLayoutArray inp_shapes(inputs.size()), oup_shapes(output_descs.size());
-    for (unsigned i = 0; i < inputs.size(); ++i) {
-        inp_tensornds[i] = inputs[i]->dnn_tensor();
-        inp_shapes[i] = inputs[i]->layout();
-    }
-    oup_shapes[0] = out_layout;
-    DnnOprCaller<megdnn::ConvBiasForward> dnn_opr(cn);
-    auto&& param = dnn_opr.op->param();
+// Convolution::Param -> ConvBias::Param
+auto conv_bias_param_from_convolution(const Convolution& conv) {
+    megdnn::ConvBias::Param param;
     param.pad_h = conv.pad_h;
     param.pad_w = conv.pad_w;
     param.stride_h = conv.stride_h;
@@ -163,30 +48,37 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
     param.sparse = conv.sparse;
     param.compute_mode = conv.compute_mode;
     param.format = conv.format;
+    return param;
+}
 
-    // shape infer
-    TensorLayout empty_shp({0}, inputs[0]->dtype());
-    empty_shp.ndim = 0;
+SmallVector<TensorPtr> apply_on_physical_tensor(
+        const OpDef& def, const SmallVector<TensorPtr>& inputs,
+        SmallVector<LogicalTensorDesc>& output_descs, const bool& validated) {
+    // create megdnn opr
+    auto&& conv = def.cast_final_safe<Convolution>();
+    CompNode cn = inputs[0]->comp_node();
+    auto&& param = conv_bias_param_from_convolution(conv);
+    DnnOprCaller<megdnn::ConvBiasForward> dnn_opr(cn, param, conv.policy());
 
-    auto empty_bias = Tensor::make(empty_shp, cn);
+    megdnn::TensorND empty_bias;
+    empty_bias.layout.dtype = inputs[0]->dtype();
+    empty_bias.layout.ndim = 0;
 
-    inp_tensornds[2] = empty_bias->dnn_tensor();
-    inp_tensornds[3] = empty_bias->dnn_tensor();
-
-    size_t sz = setup_algo<megdnn::ConvBiasForward>(
-            {inp_shapes[0], inp_shapes[1], empty_shp, empty_shp, oup_shapes[0]},
-            dnn_opr.op.get(), 0, false, false, cn, conv.policy(), false,
-            &inp_tensornds);
+    auto out_layout = [&] {
+        if (validated) {
+            return output_descs[0].layout;
+        } else {
+            TensorLayout out_layout{inputs[0]->dtype()};
+            dnn_opr.op()->deduce_layout(
+                    inputs[0]->layout(), inputs[1]->layout(), empty_bias.layout,
+                    empty_bias.layout, out_layout);
+            return out_layout;
+        }
+    }();
 
     // alloc memory
     auto out = Tensor::make(out_layout, cn);
-
-    auto dnn_wk = dnn_opr.create_workspace(sz);
-
-    // exeucte
-    dnn_opr.op->exec(
-            inp_tensornds[0], inp_tensornds[1], inp_tensornds[2], inp_tensornds[3],
-            out->dnn_tensor(), nullptr, dnn_wk);
+    dnn_opr.exec_fastrun(inputs[0], inputs[1], empty_bias, empty_bias, out);
     return {out};
 }
 
@@ -243,155 +135,41 @@ auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
     }
 }
 
-TensorLayout convbwd_do_shape_infer(
-        const OpDef& def, size_t diff_ndim, TensorLayout filter, TensorLayout diff,
-        CompNode cn) {
-    auto&& bwd_conv = static_cast<const ConvolutionBackwardData&>(def);
-    DnnOprCaller<megdnn::ConvolutionBackwardData> caller(cn);
-    auto&& dnn_opr = caller.op;
-    using Param = ::megdnn::param::Convolution;
-    // using Param1 = ::megdnn::param::ConvolutionBackwardData;
-
-    auto img_ndim = diff_ndim - 2;
-    mgb_assert(
-            img_ndim == 2,
-            "only 2D convolution is supported, and input should be 4-dim; "
-            "got input dim = %zu",
-            diff_ndim);
-    size_t group = 1;
-    size_t flt_start, flt_spatial_start, ocpg_pos, icpg_pos;
-    if (bwd_conv.sparse == Param::Sparse::DENSE) {
-        mgb_assert(
-                filter.ndim == img_ndim + 2 || filter.ndim == img_ndim + 4,
-                "bad filter ndim for dense convolution: "
-                "spatial_ndim=%zu filter_ndim=%zu",
-                img_ndim, filter.ndim);
-        group = 1;
-        flt_start = 0;
-    } else {  // Param::Sparse::GROUP
-        mgb_assert(
-                filter.ndim == img_ndim + 3 || filter.ndim == img_ndim + 5,
-                "bad filter ndim for group convolution: "
-                "spatial_ndim=%zu filter_ndim=%zu",
-                img_ndim, filter.ndim);
-        // grp, oc, ic, dims[]
-        group = filter[0];
-        flt_start = 1;
-    }
-
-    uint32_t ic_block_size = 1, oc_block_size = 1;
-    size_t src_or_dst_c_pos = 0;
-    size_t src_or_dst_spatial_start = 0;
-    if (bwd_conv.format == Param::Format::NCHW) {
-        // filter should be (oc, ic, fh, fw)
-        flt_spatial_start = 2;
-        ocpg_pos = 0;
-        icpg_pos = 1;
-        src_or_dst_c_pos = 1;
-        src_or_dst_spatial_start = 2;
-    } else {  // Param::Format::NHWC
-        // filter should be (oc, fh, fw, ic)
-        flt_spatial_start = 1;
-        ocpg_pos = 0;
-        icpg_pos = 3;
-        src_or_dst_c_pos = 3;
-        src_or_dst_spatial_start = 1;
-    }
-    size_t ocpg = filter[flt_start + ocpg_pos] * oc_block_size;
-    size_t icpg = filter[flt_start + icpg_pos] * ic_block_size;
-    uint32_t dilation[2], dilated_spatial[2], stride[2], padding[2];
-    dilation[0] = bwd_conv.dilate_h;
-    dilation[1] = bwd_conv.dilate_w;
-    stride[0] = bwd_conv.stride_h;
-    stride[1] = bwd_conv.stride_w;
-    padding[0] = bwd_conv.pad_h;
-    padding[1] = bwd_conv.pad_w;
-    for (size_t i = 0; i < img_ndim; ++i) {
-        mgb_assert(
-                dilation[i] > 0, "invalid dilation on spatial dim %zu: %u", i,
-                dilation[i]);
-        dilated_spatial[i] =
-                (filter[i + flt_start + flt_spatial_start] - 1) * dilation[i] + 1;
-    }
-    mgb_assert(
-            ocpg * group == diff[src_or_dst_c_pos],
-            "group conv invalid: input channel of Conv expect %zu, but got %zu\n"
-            "hint: weight may be changed by mistake\n",
-            ocpg * group, diff[src_or_dst_c_pos]);
-    auto deduce = [](size_t out, size_t filter, size_t stride, size_t pad) {
-        auto i = (out - 1) * stride + filter;
-        mgb_assert(i > pad * 2);
-        return i - pad * 2;
-    };
-
-    DType dst_dtype = bwd_conv.dtype;
-    dnn_opr->deduce_dtype(filter.dtype, diff.dtype, dst_dtype);
-    TensorLayout dst{dst_dtype};
-    dst.ndim = diff_ndim;
-    dst[0] = diff[0];
-    dst[src_or_dst_c_pos] = icpg * group;
-    for (size_t i = 0; i < img_ndim; ++i) {
-        dst[i + src_or_dst_spatial_start] =
-                deduce(diff[i + src_or_dst_spatial_start], dilated_spatial[i],
-                       stride[i], padding[i]);
-    }
-    dst.init_contiguous_stride();
-    return dst;
-}
-
 std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
         const OpDef& def, const SmallVector<LogicalTensorDesc>& inputs) {
-    SmallVector<LogicalTensorDesc> dests(1);
-    auto&& desc = dests[0];
-    desc.comp_node = inputs[0].comp_node;
-
-    TensorLayout filter = inputs[0].layout;
-    TensorLayout diff = inputs[1].layout;
-    size_t diff_ndim = diff.ndim;
-    if (diff_ndim == 0 || filter.ndim == 0) {
-        desc.layout = TensorLayout{{}, diff.dtype};
-        return {dests, false};
+    auto&& convbwd = def.cast_final_safe<ConvolutionBackwardData>();
+    DnnOprHelper<megdnn::ConvolutionBackwardData> dnn_opr(convbwd.param());
+    // force set dtype
+    auto&& filter = inputs[0].layout;
+    auto&& diff = inputs[1].layout;
+    TensorLayout output_layout{convbwd.dtype};
+    if (filter.ndim && diff.ndim) {
+        // deduce_layout won't override existing dtype
+        dnn_opr.opr().deduce_layout(filter, diff, output_layout);
     }
-
-    desc.layout =
-            convbwd_do_shape_infer(def, diff_ndim, filter, diff, inputs[0].comp_node);
-    return {dests, true};
+    return {{{output_layout, inputs[0].comp_node}}, output_layout.ndim != 0};
 }
 
 SmallVector<TensorPtr> apply_on_physical_tensor(
         const OpDef& def, const SmallVector<TensorPtr>& inputs,
         SmallVector<LogicalTensorDesc>& output_descs, const bool& validated) {
     // create megdnn opr
-    auto&& convbwd = static_cast<const ConvolutionBackwardData&>(def);
+    auto&& convbwd = def.cast_final_safe<ConvolutionBackwardData>();
     CompNode cn = inputs[0]->comp_node();
-
-    TensorLayout out_layout = output_descs[0].layout;
-    if (!validated)
-        out_layout = convbwd_do_shape_infer(
-                def, inputs[1]->layout().ndim, inputs[0]->layout(), inputs[1]->layout(),
-                cn);
-
+    DnnOprCaller<megdnn::ConvolutionBackwardData> dnn_opr(
+            cn, convbwd.param(), convbwd.policy());
+    auto out_layout = [&] {
+        if (validated) {
+            return output_descs[0].layout;
+        } else {
+            TensorLayout out_layout{inputs[0]->dtype()};
+            dnn_opr.op()->deduce_layout(
+                    inputs[0]->layout(), inputs[1]->layout(), out_layout);
+            return out_layout;
+        }
+    }();
     auto out = Tensor::make(out_layout, cn);
-
-    using TensorND = megdnn::TensorND;
-    SmallVector<TensorND> inp_tensornds(inputs.size());
-    TensorLayoutArray inp_shapes(inputs.size()), oup_shapes(output_descs.size());
-    for (unsigned i = 0; i < inputs.size(); ++i) {
-        inp_tensornds[i] = inputs[i]->dnn_tensor();
-        inp_shapes[i] = inputs[i]->layout();
-    }
-    oup_shapes[0] = out_layout;
-    DnnOprCaller<megdnn::ConvolutionBackwardData> dnn_opr(cn);
-    dnn_opr.op->param() = convbwd.param();
-
-    size_t sz = setup_algo<megdnn::ConvolutionBackwardData>(
-            {inp_shapes[0], inp_shapes[1], oup_shapes[0]}, dnn_opr.op.get(), 0, false,
-            false, cn, convbwd.policy(), false, &inp_tensornds);
-
-    auto dnn_wk = dnn_opr.create_workspace(sz);
-
-    // exeucte
-    dnn_opr.op->exec(inp_tensornds[0], inp_tensornds[1], out->dnn_tensor(), dnn_wk);
+    dnn_opr.exec_fastrun(inputs[0], inputs[1], out);
     return {out};
 }
 
@@ -415,149 +193,36 @@ auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
     return opr::Convolution3D::make(inputs[0], inputs[1], conv.param(), conv.policy());
 }
 
-TensorLayout do_shape_infer(
-        const OpDef& def, size_t src_ndim, TensorLayout src, TensorLayout filter) {
-    auto&& conv = static_cast<const Convolution3D&>(def);
-    using Param = ::megdnn::param::Convolution3D;
-    auto img_ndim = src_ndim - 2;
-    mgb_assert(
-            img_ndim == 3,
-            "only 3D convolution is supported, and input should be 5-dim; "
-            "got input dim = %zu",
-            src_ndim);
-
-    size_t group = 1;
-    size_t flt_start, flt_spatial_start, ocpg_pos, icpg_pos;
-    if (conv.sparse == Param::Sparse::DENSE) {
-        mgb_assert(
-                filter.ndim == img_ndim + 2 || filter.ndim == img_ndim + 4,
-                "bad filter ndim for dense convolution: "
-                "spatial_ndim=%zu filter_ndim=%zu",
-                img_ndim, filter.ndim);
-        group = 1;
-        flt_start = 0;
-    } else {  // Param::Sparse::GROUP
-        mgb_assert(
-                filter.ndim == img_ndim + 3 || filter.ndim == img_ndim + 5,
-                "bad filter ndim for group convolution: "
-                "spatial_ndim=%zu filter_ndim=%zu",
-                img_ndim, filter.ndim);
-
-        // grp, oc, ic, dims[]
-        group = filter[0];
-        flt_start = 1;
-    }
-
-    uint32_t ic_block_size = 1, oc_block_size = 1;
-    size_t src_or_dst_c_pos = 0;
-    size_t src_or_dst_spatial_start = 0;
-    if (conv.format == Param::Format::NCDHW) {
-        // filter should be (oc, ic, fd, fh, fw)
-        flt_spatial_start = 2;
-        ocpg_pos = 0;
-        icpg_pos = 1;
-        src_or_dst_c_pos = 1;
-        src_or_dst_spatial_start = 2;
-    } else {  // Param::Format::NDHWC
-        // filter should be (oc, fd, fh, fw, ic)
-        flt_spatial_start = 1;
-        ocpg_pos = 0;
-        icpg_pos = 4;
-        src_or_dst_c_pos = 4;
-        src_or_dst_spatial_start = 1;
-    }
-    size_t ocpg = filter[flt_start + ocpg_pos] * oc_block_size;
-    size_t icpg = filter[flt_start + icpg_pos] * ic_block_size;
-    uint32_t dilation[3], dilated_spatial[3], stride[3], padding[3];
-    dilation[0] = conv.dilate_d;
-    dilation[1] = conv.dilate_h;
-    dilation[2] = conv.dilate_w;
-    stride[0] = conv.stride_d;
-    stride[1] = conv.stride_h;
-    stride[2] = conv.stride_w;
-    padding[0] = conv.pad_d;
-    padding[1] = conv.pad_h;
-    padding[2] = conv.pad_w;
-    for (size_t i = 0; i < img_ndim; ++i) {
-        mgb_assert(
-                dilation[i] > 0, "invalid dilation on spatial dim %zu: %u", i,
-                dilation[i]);
-        dilated_spatial[i] =
-                (filter[i + flt_start + flt_spatial_start] - 1) * dilation[i] + 1;
-    }
-    mgb_assert(
-            icpg * group == src[src_or_dst_c_pos],
-            "group conv invalid: input channel of Conv expect %zu, but got %zu\n"
-            "hint: weight may be changed by mistake\n",
-            icpg * group, src[src_or_dst_c_pos]);
-    TensorLayout dst{src.dtype};
-    dst.ndim = src_ndim;
-    dst[0] = src[0];
-    dst[src_or_dst_c_pos] = ocpg * group;
-    for (size_t i = 0; i < img_ndim; ++i) {
-        dst[i + src_or_dst_spatial_start] = infer_conv_shape(
-                src[i + src_or_dst_spatial_start], dilated_spatial[i], stride[i],
-                padding[i]);
-    }
-    dst.init_contiguous_stride();
-
-    return dst;
-}
-
 std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
         const OpDef& def, const SmallVector<LogicalTensorDesc>& inputs) {
-    SmallVector<LogicalTensorDesc> dests(1);
-    auto&& desc = dests[0];
-    desc.comp_node = inputs[0].comp_node;
-
+    auto&& conv = def.cast_final_safe<Convolution3D>();
     TensorLayout src = inputs[0].layout;
     TensorLayout filter = inputs[1].layout;
-    size_t src_ndim = src.ndim;
-    if (src_ndim == 0 || filter.ndim == 0) {
-        desc.layout = TensorLayout{{}, src.dtype};
-        return {dests, false};
+    if (src.ndim == 0 || filter.ndim == 0) {
+        return {{{TensorLayout{src.dtype}, inputs[0].comp_node}}, false};
     }
-
-    desc.layout = do_shape_infer(def, src_ndim, src, filter);
-    return {dests, true};
+    DnnOprHelper<megdnn::Convolution3DForward> dnn_opr(conv.param());
+    auto output = dnn_opr.deduce_layout(src, filter);
+    return {{{output, inputs[0].comp_node}}, false};
 }
 
 SmallVector<TensorPtr> apply_on_physical_tensor(
         const OpDef& def, const SmallVector<TensorPtr>& inputs,
         SmallVector<LogicalTensorDesc>& output_descs, const bool& validated) {
     // create megdnn opr
-    auto&& conv = static_cast<const Convolution3D&>(def);
-
-    TensorLayout out_layout = output_descs[0].layout;
-    if (!validated)
-        out_layout = do_shape_infer(
-                def, inputs[0]->layout().ndim, inputs[0]->layout(),
-                inputs[1]->layout());
-
-    using TensorND = megdnn::TensorND;
+    auto&& conv = def.cast_final_safe<Convolution3D>();
     CompNode cn = inputs[0]->comp_node();
-    SmallVector<TensorND> inp_tensornds(inputs.size());
-    TensorLayoutArray inp_shapes(inputs.size()), oup_shapes(output_descs.size());
-    for (unsigned i = 0; i < inputs.size(); ++i) {
-        inp_tensornds[i] = inputs[i]->dnn_tensor();
-        inp_shapes[i] = inputs[i]->layout();
-    }
-    oup_shapes[0] = out_layout;
-    DnnOprCaller<megdnn::Convolution3D> dnn_opr(cn);
-    dnn_opr.op->param() = conv.param();
-
-    // shape infer
-    size_t sz = setup_algo<megdnn::Convolution3D>(
-            {inp_shapes[0], inp_shapes[1], oup_shapes[0]}, dnn_opr.op.get(), 0, false,
-            false, cn, conv.policy(), false, &inp_tensornds);
-
+    DnnOprCaller<megdnn::Convolution3D> dnn_opr(cn, conv.param(), conv.policy());
+    auto out_layout = [&] {
+        if (validated) {
+            return output_descs[0].layout;
+        } else {
+            return dnn_opr.deduce_layout(inputs[0]->layout(), inputs[1]->layout());
+        }
+    }();
     // alloc memory
     auto out = Tensor::make(out_layout, cn);
-
-    auto dnn_wk = dnn_opr.create_workspace(sz);
-
-    // exeucte
-    dnn_opr.op->exec(inp_tensornds[0], inp_tensornds[1], out->dnn_tensor(), dnn_wk);
+    dnn_opr.exec_fastrun(inputs[0], inputs[1], out);
     return {out};
 }
 
@@ -579,51 +244,38 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
             inputs.size() == 2,
             "inputs num of conv_transpose3d should be 2 but you give %zu",
             inputs.size());
-
     auto&& op_def = def.cast_final_safe<Convolution3DBackwardData>();
     auto&& weight = inputs[0];
     auto&& diff = inputs[1];
-    auto& cn = weight.comp_node;
-
-    if (weight.layout.ndim == 0 || diff.layout.ndim == 0) {
-        return {{{TensorLayout{weight.layout.dtype}, cn, {}}}, false};
+    if (!(weight.layout.ndim && diff.layout.ndim)) {
+        return {{{TensorLayout{weight.layout.dtype}, weight.comp_node}}, false};
     }
-
-    TensorLayout oup_layout;
-    megdnn::Convolution3DBackwardData::deduce_layout_impl(
-            weight.layout, diff.layout, op_def.param(), oup_layout);
-    return {{{oup_layout, cn, {}}}, true};
+    DnnOprHelper<megdnn::Convolution3DBackwardData> dnn_opr(op_def.param());
+    auto oup_layout = dnn_opr.deduce_layout(weight.layout, diff.layout);
+    return {{{oup_layout, weight.comp_node}}, true};
 }
 
 SmallVector<TensorPtr> apply_on_physical_tensor(
         const OpDef& def, const SmallVector<TensorPtr>& inputs,
         SmallVector<LogicalTensorDesc>& output_descs, const bool& validated) {
-    auto&& op_def = def.cast_final_safe<Convolution3DBackwardData>();
+    auto&& conv = def.cast_final_safe<Convolution3DBackwardData>();
     auto cn = inputs[0]->comp_node();
 
     auto&& wlayout = inputs[0]->layout();
     auto&& dlayout = inputs[1]->layout();
 
-    DnnOprCaller<megdnn::Convolution3DBackwardData> caller(cn);
-    auto&& dnn_opr = caller.op;
-    dnn_opr->param() = op_def.param();
+    DnnOprCaller<megdnn::Convolution3DBackwardData> dnn_op(
+            cn, conv.param(), conv.policy());
 
-    TensorLayout& oup_layout = output_descs[0].layout;
-    if (!validated) {
-        megdnn::Convolution3DBackwardData::deduce_layout_impl(
-                wlayout, dlayout, op_def.param(), oup_layout);
-    }
+    auto oup_layout = [&] {
+        if (validated) {
+            return output_descs[0].layout;
+        } else {
+            return dnn_op.deduce_layout(wlayout, dlayout);
+        }
+    }();
     auto oup = Tensor::make(oup_layout, cn);
-
-    SmallVector<megdnn::TensorND> inp_tensornds(inputs.size());
-    inp_tensornds[0] = inputs[0]->dnn_tensor();
-    inp_tensornds[1] = inputs[1]->dnn_tensor();
-    size_t wk_size = setup_algo<megdnn::Convolution3DBackwardData>(
-            {wlayout, dlayout, oup_layout}, dnn_opr.get(), 0, false, false, cn,
-            op_def.policy(), false, &inp_tensornds);
-    auto dnn_wk = caller.create_workspace(wk_size);
-
-    dnn_opr->exec(inp_tensornds[0], inp_tensornds[1], oup->dnn_tensor(), dnn_wk);
+    dnn_op.exec_fastrun(inputs[0], inputs[1], oup);
     return {oup};
 }
 

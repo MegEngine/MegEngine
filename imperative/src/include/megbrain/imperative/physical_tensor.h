@@ -89,24 +89,19 @@ using EventPtr = std::unique_ptr<CompNode::Event, EventDeleter>;
 class Tensor;
 using TensorPtr = std::shared_ptr<Tensor>;
 
-/*
-    using DnnTensorND to save the reference count of workspace
-    allocted by blobmanager to prevent invalidation
-*/
 struct DnnTensorND : megdnn::TensorND {
-private:
-    std::shared_ptr<dt_byte> m_reference;
+    // hold extra reference to repvent defrag-in-use
+    std::shared_ptr<dt_byte> reference;
 
-public:
-    DnnTensorND(TensorLayout& layout_, std::shared_ptr<dt_byte> ref_ptr, size_t offset)
-            : megdnn::TensorND(layout_, {ref_ptr.get(), offset}) {
-        m_reference = ref_ptr;
+    DnnTensorND(
+            const TensorLayout& layout_, std::shared_ptr<dt_byte> ptr, size_t offset)
+            : megdnn::TensorND(layout_, {ptr.get(), offset}) {
+        reference = std::move(ptr);
     }
 };
 
 class Tensor : public NonCopyableObj {
 public:
-    Tensor() = default;
     Tensor(BlobPtr blob, const TensorLayout& layout, size_t offset = 0,
            const HostTensorND& hv = {});
     Tensor(BlobPtr blob, const TensorLayout& layout, const HostTensorND& hv = {})
@@ -154,7 +149,9 @@ public:
 
     void assign_from_dev_tensor(DeviceTensorND);
 
-    megdnn::TensorND dnn_tensor();
+    DnnTensorND dnn_tensor();
+
+    DnnTensorND dnn_tensor(TensorShape new_shape);
 
     static TensorPtr make_scalar(DTypeScalar value, CompNode cn);
 

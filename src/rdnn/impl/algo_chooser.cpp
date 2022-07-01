@@ -970,8 +970,9 @@ void AlgoChooser<Opr>::AlgoChooserHelper::profile(
         if (!policy.algo.valid())
             continue;
         size_t workspace_needed = get_workspace_size_bytes(policy);
-        if (m_inputs != nullptr)
+        if (m_inputs == nullptr) {
             workspace_needed += data_size;
+        }
         if (workspace_needed >
             m_desc.get_workspace_limit(m_cn, m_execution_policy.workspace_limit)) {
             continue;

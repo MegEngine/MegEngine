@@ -13,7 +13,8 @@ public:
 
     bool is_thread_safe() const override { return true; }
 
-    size_t get_workspace_in_bytes(const TensorNDArray&, const TensorLayout&) override {
+    size_t get_workspace_in_bytes(
+            const TensorLayoutArray&, const TensorLayout&) override {
         m_size = 0;
         return _get_workspace_in_bytes();
     }

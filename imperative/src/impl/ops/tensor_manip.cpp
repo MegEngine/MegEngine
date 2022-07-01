@@ -230,31 +230,19 @@ SmallVector<TensorPtr> param_pack_concat_apply_on_physical_tensor(
     }
     auto dest_layout = TensorLayout({nr_elems}, dtype);
     auto output = Tensor::make(dest_layout, comp_node);
-    auto caller = DnnOprCaller<megdnn::ParamPackConcat>(comp_node);
-    size_t srcs_size = sizeof(void*) * nr_inputs;
-    void** srcs_raw_ptr = (void**)comp_node.alloc_host(srcs_size);
-    std::shared_ptr<dt_byte> srcs_ptr = {
-            (dt_byte*)srcs_raw_ptr,
-            [comp_node](dt_byte* ptr) { comp_node.free_host(ptr); }};
+    // FIXME: add param to ParamPackConcat
+    DnnOprCaller<megdnn::ParamPackConcat> caller{comp_node};
+    HostTensorStorage srcs_storage{comp_node};
+    srcs_storage.ensure_size(sizeof(void*) * nr_inputs);
     TensorLayout srcs_layout = TensorLayout{{nr_inputs}, dtype::Int32()};
-    size_t ws_size;
-    {
-        TensorShapeArray src_shapes;
-        for (size_t i = 0; i < nr_inputs; ++i) {
-            src_shapes.push_back(inputs[i]->shape());
-        }
-        ws_size = caller.op->get_workspace_in_bytes(
-                src_shapes, inputs.back()->shape(), TensorShape{});
-    }
+    HostTensorND srcs_tensornd;
+    srcs_tensornd.reset(srcs_storage, srcs_layout);
+    auto* srcs_raw_ptr = reinterpret_cast<void**>(srcs_storage.ptr());
     for (size_t i = 0; i < nr_inputs; ++i) {
-        srcs_raw_ptr[i] = inputs[i]->dev_tensor().as_megdnn().raw_ptr();
+        srcs_raw_ptr[i] = inputs[i]->dnn_tensor().raw_ptr();
     }
-    HostTensorStorage srcs_storage;
-    srcs_storage.reset(comp_node, srcs_size, srcs_ptr);
-    caller.op->exec(
-            {srcs_raw_ptr, srcs_layout}, inputs.back()->dnn_tensor(),
-            output->dnn_tensor(), caller.create_workspace(ws_size));
-    async_release(HostTensorND{comp_node, srcs_layout}.storage(srcs_storage));
+    caller.exec_with_ws(srcs_tensornd.as_megdnn(), inputs.back(), output);
+    async_release(srcs_tensornd);
     return {output};
 }
 

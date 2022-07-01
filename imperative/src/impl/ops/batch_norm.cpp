@@ -145,79 +145,44 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
     auto&& op_def = def.cast_final_safe<BatchNorm>();
     auto&& comp_node = inputs[0]->comp_node();
 
-    using TensorND = megdnn::TensorND;
+    DnnOprCaller<megdnn::BN> dnn_opr(comp_node, op_def.param());
 
-    SmallVector<TensorND> inp_tensornds(inputs.size());
-    for (size_t i = 0; i < inputs.size(); ++i) {
-        inp_tensornds[i] = inputs[i]->dnn_tensor();
-    }
-
-    DnnOprCaller<megdnn::BN> dnn_opr(comp_node);
-    dnn_opr.op->param() = op_def.param();
-
-    TensorLayout src_layout = inputs[0]->layout();
-    TensorLayout scale_layout = inputs[1]->layout();
+    auto src_layout = inputs[0]->layout();
+    auto scale_layout = inputs[1]->layout();
     bool empty_input = src_layout.is_empty();
     size_t nr_inp = inputs.size();
 
-    size_t sz = 0, rsz = 0;
+    // size_t ws_size = 0, reserve_size = 0;
+    size_t reserve_size =
+            empty_input ? (size_t)0 : dnn_opr.op()->get_reserve_in_bytes(src_layout);
 
-    TensorLayout r_layout({rsz}, dtype::Byte());
-
-    if (!empty_input) {
-        sz = dnn_opr.op->get_workspace_in_bytes(
-                src_layout, src_layout, src_layout, src_layout, src_layout, src_layout,
-                src_layout, src_layout, src_layout);
-        rsz = dnn_opr.op->get_reserve_in_bytes(src_layout);
-
-        r_layout = TensorLayout({rsz}, dtype::Byte());
-    }
-    auto dnn_wk = dnn_opr.create_workspace(sz);
-    auto reserve = Tensor::make(r_layout, comp_node);
-
-    // alloc memory
+    // alloc outputs
     auto y = Tensor::make(src_layout, comp_node);
-
     auto save_mean = Tensor::make(scale_layout, comp_node);
-
     auto save_variance = Tensor::make(scale_layout, comp_node);
+    auto reserve = Tensor::make(TensorLayout{{reserve_size}, dtype::Byte()}, comp_node);
 
     if (op_def.fwd_mode == ::megdnn::param::BN::FwdMode::INFERENCE) {
-        if (!empty_input)
-            dnn_opr.op->exec(
-                    inp_tensornds[0], inp_tensornds[1], inp_tensornds[2],
-                    inp_tensornds[3], inp_tensornds[4], save_mean->dnn_tensor(),
-                    save_variance->dnn_tensor(), reserve->dnn_tensor(), y->dnn_tensor(),
-                    dnn_wk);
+        if (!empty_input) {
+            dnn_opr.exec_with_ws(
+                    inputs[0], inputs[1], inputs[2], inputs[3], inputs[4], save_mean,
+                    save_variance, reserve, y);
+        }
         return {inputs[3], inputs[4], reserve, y};
     } else {
         if (nr_inp == 5) {
             auto mean = Tensor::make(scale_layout, comp_node);
-
             auto variance = Tensor::make(scale_layout, comp_node);
 
-            megdnn::RefPtr src_ptr1(
-                    inp_tensornds[3].get_ref_ptr().get_ptr(), inputs[3]->offset());
-            megdnn::RefPtr dst_ptr1(
-                    mean->dev_tensor().storage().get_ref_ptr(),
-                    mean->dev_tensor().storage().offset(), false);
-            comp_node.peer_copy_to_ref(
-                    comp_node, dst_ptr1, src_ptr1, scale_layout.span().high_byte);
+            // FIXME
+            mean->dev_tensor().copy_from(inputs[3]->dev_tensor());
+            variance->dev_tensor().copy_from(inputs[4]->dev_tensor());
 
-            megdnn::RefPtr src_ptr2(
-                    inp_tensornds[4].get_ref_ptr().get_ptr(), inputs[4]->offset());
-            megdnn::RefPtr dst_ptr2(
-                    variance->dev_tensor().storage().get_ref_ptr(),
-                    variance->dev_tensor().storage().offset(), false);
-            comp_node.peer_copy_to_ref(
-                    comp_node, dst_ptr2, src_ptr2, scale_layout.span().high_byte);
-
-            if (!empty_input)
-                dnn_opr.op->exec(
-                        inp_tensornds[0], inp_tensornds[1], inp_tensornds[2],
-                        mean->dnn_tensor(), variance->dnn_tensor(),
-                        save_mean->dnn_tensor(), save_variance->dnn_tensor(),
-                        reserve->dnn_tensor(), y->dnn_tensor(), dnn_wk);
+            if (!empty_input) {
+                dnn_opr.exec_with_ws(
+                        inputs[0], inputs[1], inputs[2], mean, variance, save_mean,
+                        save_variance, reserve, y);
+            }
 
             return {mean, variance, save_mean, save_variance, reserve, y};
         }
@@ -227,11 +192,9 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
         auto variance = Tensor::make(m_layout, comp_node);
 
         if (!empty_input) {
-            dnn_opr.op->exec(
-                    inp_tensornds[0], inp_tensornds[1], inp_tensornds[2],
-                    mean->dnn_tensor(), variance->dnn_tensor(), save_mean->dnn_tensor(),
-                    save_variance->dnn_tensor(), reserve->dnn_tensor(), y->dnn_tensor(),
-                    dnn_wk);
+            dnn_opr.exec_with_ws(
+                    inputs[0], inputs[1], inputs[2], mean, variance, save_mean,
+                    save_variance, reserve, y);
         }
 
         return {save_mean, save_variance, reserve, y};

@@ -205,9 +205,14 @@ struct OprProxy<CheckNonFinite> {
         auto inps = tensors;
         inps.pop_back();
 
+        TensorLayoutArray inp_layouts(inps.size());
+        std::transform(
+                inps.begin(), inps.end(), inp_layouts.begin(),
+                [](const TensorND& tensor) { return tensor.layout; });
+
         WorkspaceWrapper W(
                 opr->handle(),
-                opr->get_workspace_in_bytes(inps, tensors.back().layout));
+                opr->get_workspace_in_bytes(inp_layouts, tensors.back().layout));
         opr->exec(inps, tensors.back(), W.workspace());
     }
 };

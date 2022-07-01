@@ -12,7 +12,7 @@ public:
             _megdnn_workspace workspace) override;
 
     size_t get_workspace_in_bytes(
-            const TensorShapeArray& srcs, const TensorShape& table,
+            const TensorShape& srcs, const TensorShape& table,
             const TensorShape& dst) override;
 
 private:

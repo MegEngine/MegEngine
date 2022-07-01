@@ -11,7 +11,7 @@ public:
             _megdnn_workspace workspace) override;
 
     size_t get_workspace_in_bytes(
-            const TensorShapeArray&, const TensorShape&, const TensorShape&) override {
+            const TensorShape&, const TensorShape&, const TensorShape&) override {
         return 0;
     }
 };

@@ -33,69 +33,39 @@ VarNodeArray apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
 
 std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
         const OpDef& def, const SmallVector<LogicalTensorDesc>& inputs) {
-    auto&& op = static_cast<const ROIAlign&>(def);
-    if (inputs[0].layout.is_empty() || inputs[1].layout.is_empty()) {
-        return {{{TensorLayout(inputs[0].layout.dtype), inputs[0].comp_node},
-                 {TensorLayout(dtype::Int32()), inputs[1].comp_node}},
-                false};
-    }
-
-    SmallVector<LogicalTensorDesc> descs(2u);
-    size_t n = inputs[1].layout[0];
-    size_t c = inputs[0].layout[1];
-    descs[0].layout = TensorLayout(
-            {n, c, op.pooled_height, op.pooled_width}, inputs[0].layout.dtype);
-    descs[0].layout.init_contiguous_stride();
-    descs[0].comp_node = inputs[0].comp_node;
-
-    descs[1].layout =
-            TensorLayout({n, c, op.pooled_height, op.pooled_width}, dtype::Int32());
-    descs[1].layout.init_contiguous_stride();
-    descs[1].comp_node = descs[0].comp_node;
-
-    return {descs, true};
+    auto&& op = def.cast_final_safe<ROIAlign>();
+    DnnOprHelper<megdnn::ROIAlign> dnn_opr(op.param());
+    auto cn = inputs[0].comp_node;
+    auto&& [out_layout, ind_layout] =
+            dnn_opr.deduce_layouts<2>(inputs[0].layout, inputs[1].layout);
+    bool validated = out_layout.ndim == 0 && ind_layout.ndim == 0;
+    return {{{out_layout, cn}, {ind_layout, cn}}, validated};
 }
 
 SmallVector<TensorPtr> apply_on_physical_tensor(
         const OpDef& def, const SmallVector<TensorPtr>& inputs,
         SmallVector<LogicalTensorDesc>& output_descs, const bool& validated) {
-    auto&& op = static_cast<const ROIAlign&>(def);
-    CompNode cn = inputs[0]->comp_node();
+    auto&& op = def.cast_final_safe<ROIAlign>();
+    auto cn = inputs[0]->comp_node();
 
-    TensorLayout out_layout = output_descs[0].layout;
-    TensorLayout ind_layout = output_descs[1].layout;
-    if (!validated) {
-        size_t n = inputs[1]->layout()[0];
-        size_t c = inputs[0]->layout()[1];
-        out_layout = TensorLayout(
-                {n, c, op.pooled_height, op.pooled_width}, inputs[0]->layout().dtype);
-        out_layout.init_contiguous_stride();
-        ind_layout =
-                TensorLayout({n, c, op.pooled_height, op.pooled_width}, dtype::Int32());
-        ind_layout.init_contiguous_stride();
-    }
+    DnnOprCaller<megdnn::ROIAlign> dnn_opr(cn, op.param());
+    auto&& [out_layout, ind_layout] = [&]() -> std::array<TensorLayout, 2> {
+        if (validated) {
+            return {output_descs[0].layout, output_descs[1].layout};
+        } else {
+            return dnn_opr.deduce_layouts<2>(inputs[0]->layout(), inputs[1]->layout());
+        }
+    }();
 
-    DeviceTensorND out =
-            BlobManager::inst()->alloc_workspace_with_defrag(cn, out_layout);
-    DeviceTensorND inds =
-            BlobManager::inst()->alloc_workspace_with_defrag(cn, ind_layout);
+    auto out = Tensor::make(out_layout, cn);
+    auto ind = Tensor::make(ind_layout, cn);
 
     if (out_layout.is_empty() || ind_layout.is_empty()) {
-        return {Tensor::make(out), Tensor::make(inds)};
+        return {out, ind};
     }
 
-    DnnOprCaller<megdnn::ROIAlign> dnn_opr(cn);
-    dnn_opr.op->param() = op.param();
-
-    size_t sz = dnn_opr.op->get_workspace_in_bytes(
-            inputs[0]->layout(), inputs[1]->layout(), out_layout, ind_layout);
-
-    auto dnn_wk = dnn_opr.create_workspace(sz);
-
-    dnn_opr.op->exec(
-            inputs[0]->dnn_tensor(), inputs[1]->dnn_tensor(), out.as_megdnn(),
-            inds.as_megdnn(), dnn_wk);
-    return {Tensor::make(out), Tensor::make(inds)};
+    dnn_opr.exec_with_ws(inputs[0], inputs[1], out, ind);
+    return {out, ind};
 }
 
 SmallVector<VarNode::LayoutConstraintCallback> get_input_layout_constraint(

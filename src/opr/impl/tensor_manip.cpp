@@ -1447,11 +1447,8 @@ void ParamPackConcat::init_output_static_infer_desc() {
     auto infer_wk = [this](TensorShape& dest, const InpVal& inp) {
         TensorShapeArray shapes;
         auto vals = inp.val;
-        shapes.reserve(vals.size() - 1);
-        for (size_t i = 0; i < vals.size() - 1; i++) {
-            shapes.push_back(vals[i].shape());
-        }
-        dest = {m_opr->get_workspace_in_bytes(shapes, vals.back().shape(), dest)};
+        size_t nr_params = vals.size() - 1;
+        dest = {m_opr->get_workspace_in_bytes({nr_params}, vals.back().shape(), dest)};
         return true;
     };
     mgr.register_shape_infer(output(0), {SourceType::DEP, shp_deps, infer_out});

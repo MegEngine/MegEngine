@@ -26,14 +26,14 @@ size_t CheckNonFiniteImpl::_get_workspace_in_bytes() {
 }
 
 size_t CheckNonFiniteImpl::get_workspace_in_bytes(
-        const TensorNDArray& srcs, const TensorLayout&) {
+        const TensorLayoutArray& srcs, const TensorLayout&) {
     m_size = 0;
     for (const auto& src : srcs) {
-        m_size += DIVUP(src.layout.total_nr_elems(), total_nr_elems_max);
+        m_size += DIVUP(src.total_nr_elems(), total_nr_elems_max);
     }
-    if (srcs.begin()->layout.dtype == dtype::Float32()) {
+    if (srcs.begin()->dtype == dtype::Float32()) {
         return _get_workspace_in_bytes<dt_float32>();
-    } else if (srcs.begin()->layout.dtype == dtype::Float16()) {
+    } else if (srcs.begin()->dtype == dtype::Float16()) {
         return _get_workspace_in_bytes<dt_float16>();
     } else {
         megdnn_log_warn("only support fp16 and fp32, fallback to fp32");

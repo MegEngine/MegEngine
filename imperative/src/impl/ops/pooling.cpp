@@ -25,19 +25,13 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
     mgb_assert(
             inputs.size() == 1, "num of inputs of pooling should be 1 but you give %zu",
             inputs.size());
-
     auto&& op_def = def.cast_final_safe<Pooling>();
-    auto&& inp = inputs[0];
-    auto& inp_cn = inp.comp_node;
-
-    if (inp.layout.ndim == 0) {
-        return {{{TensorLayout{inp.layout.dtype}, inp_cn, {}}}, false};
+    if (!inputs[0].layout.ndim) {
+        return {{{inputs[0].layout, inputs[0].comp_node}}, false};
     }
-
-    TensorLayout oup_layout;
-    megdnn::Pooling::deduce_layout_impl(inp.layout, op_def.param(), oup_layout);
-
-    return {{{oup_layout, inp_cn, {}}}, true};
+    DnnOprHelper<megdnn::Pooling> dnn_opr(op_def.param());
+    auto oup_layout = dnn_opr.deduce_layout(inputs[0].layout);
+    return {{{oup_layout, inputs[0].comp_node}}, true};
 }
 
 SmallVector<TensorPtr> apply_on_physical_tensor(
@@ -47,30 +41,18 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
             inputs.size() == 1, "num of inputs of pooling should be 1 but you give %zu",
             inputs.size());
 
-    auto&& op_def = def.cast_final_safe<Pooling>();
+    auto&& pooling = def.cast_final_safe<Pooling>();
     auto cn = inputs[0]->comp_node();
-    DnnOprCaller<megdnn::Pooling> caller(cn);
-    auto&& dnn_opr = caller.op;
-    dnn_opr->param() = op_def.param();
-
-    SmallVector<megdnn::TensorND> inp_tensornds(inputs.size());
-    inp_tensornds[0] = inputs[0]->dnn_tensor();
-
-    TensorLayout& oup_layout = output_descs[0].layout;
-    if (!validated) {
-        megdnn::Pooling::deduce_layout_impl(
-                inp_tensornds[0].layout, op_def.param(), oup_layout);
-    }
-
-    size_t wk_size = setup_algo<megdnn::Pooling>(
-            {inp_tensornds[0].layout, oup_layout}, dnn_opr.get(), 0, false, false, cn,
-            op_def.policy(), false, &inp_tensornds);
-
+    DnnOprCaller<megdnn::Pooling> dnn_opr(cn, pooling.param(), pooling.policy());
+    auto oup_layout = [&] {
+        if (validated) {
+            return output_descs[0].layout;
+        } else {
+            return dnn_opr.deduce_layout(inputs[0]->layout());
+        }
+    }();
     auto out = Tensor::make(oup_layout, cn);
-
-    auto dnn_wk = caller.create_workspace(wk_size);
-
-    caller.op->exec(inp_tensornds[0], out->dnn_tensor(), dnn_wk);
+    dnn_opr.exec_fastrun(inputs[0], out);
     return {out};
 }
 

@@ -6,8 +6,8 @@ namespace megdnn {
 namespace cuda {
 
 size_t ParamPackConcatImpl::get_workspace_in_bytes(
-        const TensorShapeArray& srcs, const TensorShape&, const TensorShape&) {
-    return sizeof(size_t) * srcs.size();
+        const TensorShape&, const TensorShape& offsets, const TensorShape&) {
+    return sizeof(size_t) * (offsets.shape[0] / 2);
 }
 
 template <typename T>

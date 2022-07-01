@@ -94,52 +94,44 @@ void apply_on_device_tensornd(
     mgb_assert(
             inputs.size() == trait.arity, "%s expects %u inputs; got %zu actually",
             trait.name, trait.arity, inputs.size());
-    DnnOprCaller<megdnn::Elemwise> dnn_opr(inputs[0].comp_node());
-    opr::Elemwise::perform(op_def.mode, (*outputs)[0], inputs, dnn_opr.op);
+    DnnOprCaller<megdnn::Elemwise> dnn_opr(inputs[0].comp_node(), {op_def.mode});
+    opr::Elemwise::perform(op_def.mode, (*outputs)[0], inputs, dnn_opr.op());
 }
 
 SmallVector<TensorPtr> apply_on_physical_tensor(
         const OpDef& def, const SmallVector<TensorPtr>& inputs,
         SmallVector<LogicalTensorDesc>& output_descs, const bool& validated) {
     auto comp_node = inputs[0]->comp_node();
+    auto dtype = inputs[0]->dtype();
     using Mode = Elemwise::Mode;
-    using TensorND = megdnn::TensorND;
     auto&& op_def = def.cast_final_safe<Elemwise>();
-    SmallVector<TensorND> inp_tensornds;
-    TensorShapeArray inp_shapes(inputs.size());
-    inp_tensornds.reserve(inputs.size());
-
-    TensorLayout layout{inputs[0]->layout().dtype};
-    bool is_empty = false;
-    for (unsigned i = 0; i < inputs.size(); ++i) {
-        if (inputs[i]->layout().is_empty()) {
-            is_empty = true;
-        }
-        inp_tensornds.push_back(inputs[i]->dnn_tensor());
-        inp_shapes[i] = inputs[i]->layout();
+    auto mode = op_def.mode;
+    TensorShapeArray input_shapes;
+    input_shapes.reserve(inputs.size());
+    for (auto&& input : inputs) {
+        input_shapes.push_back(input->shape());
     }
-    megdnn::Elemwise::deduce_shape(inp_shapes, layout);
-    layout.init_contiguous_stride();
-
-    auto out = Tensor::make(layout, comp_node);
-
-    if (is_empty) {
-        return {out};
+    // deduce_shape is static and fast
+    TensorLayout output_layout{dtype};
+    // TODO: deduce_layout directly
+    megdnn::Elemwise::deduce_shape(input_shapes, output_layout);
+    output_layout.init_contiguous_stride();
+    auto output = Tensor::make(output_layout, comp_node);
+    if (output_layout.is_empty()) {
+        return {output};
     }
-    DnnOprCaller<megdnn::Elemwise> dnn_opr(comp_node);
-
-    dnn_opr.op->param() = op_def.param();
-    if (dnn_opr.op->param().mode == Mode::FUSE_MUL_ADD3 ||
-        dnn_opr.op->param().mode == Mode::FUSE_MUL_ADD4 ||
-        (inp_tensornds.size() &&
-         inp_tensornds[0].layout.dtype.category() == DTypeCategory::QUANTIZED)) {
-        opr::Elemwise::perform_dnn(
-                comp_node, out->dnn_tensor(), inp_tensornds, dnn_opr.op);
+    DnnOprCaller<megdnn::Elemwise> dnn_opr(comp_node, op_def.param());
+    if (mode == Mode::FUSE_MUL_ADD3 || mode == Mode::FUSE_MUL_ADD4 ||
+        dtype.category() == DTypeCategory::QUANTIZED) {
+        dnn_opr.call_dnn(
+                [&](auto&& inputs, auto&& output) {
+                    opr::Elemwise::perform_dnn(comp_node, output, inputs, dnn_opr.op());
+                },
+                inputs, output);
     } else {
-        dnn_opr.op->exec(inp_tensornds, out->dnn_tensor());
+        dnn_opr.exec(inputs, output);
     }
-
-    return {out};
+    return {output};
 }
 
 MGB_DEFINE_OPR_CLASS(
@@ -179,7 +171,7 @@ protected:
         return ret;
     }
     void create_megdnn_opr() override {
-        auto opr = DnnOprCaller<megdnn::Elemwise>::create_operator(comp_node());
+        auto opr = mgb::opr::intl::create_megdnn_opr<megdnn::Elemwise>(comp_node());
         opr->param().mode = m_param.mode;
         set_megdnn_opr(std::move(opr));
     }
@@ -243,22 +235,19 @@ SmallVector<TensorPtr> apply_inplace_add_on_physical_tensor(
                 "This inplace modification may change the elements of other tensors. "
                 "Fallback to non-inplace update.");
 
-        DeviceTensorStorage storage;
-        storage.reset(dest->comp_node(), dest->blob()->size(), dest->blob()->storage());
-        storage = storage.sub(dest->offset());
-        DeviceTensorND dv;
-        dv.reset(storage, dest->layout());
-
-        DeviceTensorND dv_new;
-        dv_new.copy_from(dv);
-        dest = Tensor::make(dv_new);
+        auto dest_layout = inputs[0]->layout();
+        dest_layout.init_contiguous_stride();
+        auto new_dest = Tensor::make(dest_layout, inputs[0]->comp_node());
+        new_dest->dev_tensor().copy_from(dest->dev_tensor());
+        dest = new_dest;
     }
     auto tensor_to_scalar = [](const TensorPtr& tensor) -> float {
         return *tensor->get_value().ptr<float>();
     };
-    DnnOprCaller<megdnn::AddUpdate> caller{dest->comp_node()};
-    caller.op->param() = {tensor_to_scalar(alpha), tensor_to_scalar(beta)};
-    caller.op->exec(dest->dev_tensor().as_megdnn(), delta->dev_tensor().as_megdnn());
+    DnnOprCaller<megdnn::AddUpdate> caller{
+            dest->comp_node(), {tensor_to_scalar(alpha), tensor_to_scalar(beta)}};
+    caller.exec(dest, delta);
+    // FIXME: inplace update host value
     return {std::make_shared<Tensor>(dest->blob(), dest->offset(), dest->layout())};
 }
 

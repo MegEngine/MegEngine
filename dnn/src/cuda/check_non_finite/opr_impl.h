@@ -19,7 +19,7 @@ public:
     using CheckNonFinite::CheckNonFinite;
 
     size_t get_workspace_in_bytes(
-            const TensorNDArray& srcs, const TensorLayout& dst) override;
+            const TensorLayoutArray& srcs, const TensorLayout& dst) override;
 
     bool is_thread_safe() const override { return true; }
 

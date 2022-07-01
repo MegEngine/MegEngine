@@ -334,9 +334,16 @@ public:
         size_t j = 0;
         for (auto&& var : m_opr->output()) {
             if (var->contain_flag(VarNode::Flag::VOLATILE_CONTENT)) {
-                TensorLayout layout{var->shape(), var->dtype(), var->format()};
-                var->m_dev_tensor = BlobManager::inst()->alloc_workspace_with_defrag(
-                        var->comp_node(), layout);
+                auto comp_node = var->comp_node();
+                auto dtype = var->dtype();
+                auto&& shape = var->shape();
+                size_t size = dtype.size(shape.total_nr_elems());
+                mgb_assert(
+                        var->format().is_default(), "non default format for workspace");
+                auto raw_storage = Blob::make(comp_node, size)->storage();
+                DeviceTensorStorage storage;
+                storage.reset(comp_node, size, raw_storage);
+                var->m_dev_tensor.reset(storage, {shape, dtype});
             } else {
                 mgb_assert(j < outputs.size());
                 auto&& tensor = outputs[j];

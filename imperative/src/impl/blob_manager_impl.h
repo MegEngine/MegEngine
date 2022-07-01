@@ -27,26 +27,20 @@ class BlobManagerImpl final : public BlobManager {
 
     std::mutex m_mtx;
     CompNode::UnorderedMap<BlobSetWithMux> m_comp2blobs_map;
-
-    void defrag(const CompNode& cn) override;
+    BlobManager::allocator_t m_custom_allocator;
 
     void alloc_direct(OwnedBlob* blob, size_t size) override;
-
-    DeviceTensorND alloc_workspace(CompNode cn, TensorLayout layout);
-
-    BlobManager::allocator_t custom_allocator;
 
 public:
     static BlobManager* inst();
 
     void alloc_with_defrag(OwnedBlob* blob, size_t size) override;
 
-    DeviceTensorND alloc_workspace_with_defrag(
-            CompNode cn, TensorLayout& layout) override;
-
     void register_blob(OwnedBlob* blob) override;
 
     void unregister_blob(OwnedBlob* blob) override;
+
+    void defrag(const CompNode& cn) override;
 
     void set_allocator(allocator_t allocator) override;
 };

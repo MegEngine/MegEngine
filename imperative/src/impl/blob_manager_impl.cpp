@@ -9,11 +9,8 @@ BlobManagerImpl::BlobData::BlobData(OwnedBlob* in_blob) {
     blob = in_blob;
     DeviceTensorStorage d_storage;
     d_storage.reset(blob->m_comp_node, blob->m_size, blob->m_storage);
-
     h_storage = HostTensorStorage(blob->m_comp_node);
-
     h_storage.ensure_size(blob->m_size);
-
     h_storage.copy_from(const_cast<DeviceTensorStorage&>(d_storage), blob->m_size);
 }
 
@@ -30,65 +27,36 @@ void BlobManagerImpl::unregister_blob(OwnedBlob* blob) {
 }
 
 void BlobManagerImpl::alloc_with_defrag(OwnedBlob* blob, size_t size) {
-    if (custom_allocator) {
-        blob->m_storage = custom_allocator(blob->m_comp_node, size);
+    if (m_custom_allocator) {
+        blob->m_storage = m_custom_allocator(blob->m_comp_node, size);
         return;
     }
     // try alloc
-    MGB_TRY { alloc_direct(blob, size); }
     // if fail, try defrag, alloc again
-    MGB_CATCH(MemAllocError&, {
+    if (!try_alloc_direct(blob, size)) {
         mgb_log_warn("memory allocation failed for blob; try defragmenting");
         defrag(blob->m_comp_node);
         alloc_direct(blob, size);
-    });
+    }
 }
 
 void BlobManagerImpl::alloc_direct(OwnedBlob* blob, size_t size) {
-    DeviceTensorStorage storage(blob->m_comp_node);
     mgb_assert(blob->m_comp_node.valid());
+    DeviceTensorStorage storage(blob->m_comp_node);
     storage.ensure_size(size);
     blob->m_storage = storage.raw_storage();
 }
 
-DeviceTensorND BlobManagerImpl::alloc_workspace_with_defrag(
-        CompNode cn, TensorLayout& layout) {
-    DeviceTensorND dev_tensor;
-    if (custom_allocator) {
-        DeviceTensorStorage storage(cn);
-        size_t sz = layout.dtype.size(layout.total_nr_elems());
-        storage.reset(cn, sz, custom_allocator(cn, sz));
-        dev_tensor.reset(storage, layout);
-        return dev_tensor;
-    }
-    MGB_TRY { dev_tensor = alloc_workspace(cn, layout); }
-    MGB_CATCH(MemAllocError&, {
-        mgb_log_warn("memory allocation failed for workspace; try defragmenting");
-        defrag(cn);
-        dev_tensor = alloc_workspace(cn, layout);
-    });
-    return dev_tensor;
-};
-
-DeviceTensorND BlobManagerImpl::alloc_workspace(CompNode cn, TensorLayout layout) {
-    DeviceTensorStorage storage(cn);
-    storage.ensure_size(layout.dtype.size(layout.total_nr_elems()));
-    DeviceTensorND dev_tensor;
-    dev_tensor.reset(storage, layout);
-    return dev_tensor;
-}
-
 void BlobManagerImpl::set_allocator(allocator_t allocator) {
-    custom_allocator = allocator;
+    m_custom_allocator = allocator;
 }
 
 void BlobManagerImpl::defrag(const CompNode& cn) {
-    BlobSetWithMux* blobs_set_ptr;
-    {
+    auto& blobs_set_ptr = ([&]() -> auto& {
         MGB_LOCK_GUARD(m_mtx);
-        blobs_set_ptr = &m_comp2blobs_map[cn];
-    }
-    MGB_LOCK_GUARD(blobs_set_ptr->mtx);
+        return m_comp2blobs_map[cn];
+    })();
+    MGB_LOCK_GUARD(blobs_set_ptr.mtx);
     std::vector<BlobData> blob_data_arrary;
     std::set<Blob::RawStorage> storage_set;
 
@@ -96,7 +64,7 @@ void BlobManagerImpl::defrag(const CompNode& cn) {
     size_t tot_sz = 0;
 
     // copy to HostTensorStorage, and release
-    for (auto i : blobs_set_ptr->blobs_set) {
+    for (auto i : blobs_set_ptr.blobs_set) {
         // skip if blob do not have m_storage
         if (!i->m_storage)
             continue;
@@ -153,9 +121,6 @@ struct BlobManagerStub : BlobManager {
     void alloc_with_defrag(OwnedBlob* blob, size_t size) {
         mgb_assert(0, "prohibited after global variable destruction");
     };
-    DeviceTensorND alloc_workspace_with_defrag(CompNode cn, TensorLayout& layout) {
-        mgb_assert(0, "prohibited after global variable destruction");
-    };
     void register_blob(OwnedBlob* blob) {
         mgb_assert(0, "prohibited after global variable destruction");
     };
@@ -163,7 +128,7 @@ struct BlobManagerStub : BlobManager {
     void defrag(const CompNode& cn) {
         mgb_assert(0, "prohibited after global variable destruction");
     };
-    virtual void set_allocator(allocator_t allocator) {
+    void set_allocator(allocator_t allocator) {
         mgb_assert(0, "prohibited after global variable destruction");
     };
 };

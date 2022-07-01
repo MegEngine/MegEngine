@@ -24,7 +24,6 @@ auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
     auto dim1 = matmul.dimA, dim2 = matmul.dimB;
 
     auto cn = inputs[0]->comp_node();
-    using Desc = opr::AxisAddRemove::AxisDesc;
     using IndexDesc = opr::Subtensor::IndexDesc;
     OperatorNodeConfig config{matmul.make_name(), cn};
 
@@ -104,9 +103,8 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
         dim1 = dim2 = 2;
     }
 
-    DnnOprCaller<megdnn::MatrixMul> dnn_opr(inputs[0].comp_node);
-    dnn_opr.op->param() = matmul.param();
-    dnn_opr.op->deduce_dtype(layout1.dtype, layout1.dtype, dst_dtype);
+    DnnOprHelper<megdnn::MatrixMul> dnn_opr(matmul.param());
+    dnn_opr.opr().deduce_dtype(layout1.dtype, layout1.dtype, dst_dtype);
 
     if (dim1 == 0 || dim2 == 0) {
         return {{{TensorLayout(dst_dtype), inputs[0].comp_node}}, false};
@@ -143,8 +141,7 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
     SmallVector<TensorND> inp_tensornds(inputs.size());
     TensorLayout layout1 = inputs[0]->layout(), layout2 = inputs[1]->layout();
 
-    DnnOprCaller<megdnn::MatrixMul> dnn_opr(cn);
-    dnn_opr.op->param() = matmul.param();
+    DnnOprCaller<megdnn::MatrixMul> dnn_opr(cn, matmul.param(), matmul.policy());
 
     if (matmul.dimA == matmul.dimB && matmul.dimB >= 3) {  // only happens in backward
         for (size_t i = 1; i + 1 < layout1.ndim; ++i) {
@@ -160,7 +157,7 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
     }
 
     DType dst_dtype;
-    dnn_opr.op->deduce_dtype(layout1.dtype, layout1.dtype, dst_dtype);
+    dnn_opr.op()->deduce_dtype(layout1.dtype, layout1.dtype, dst_dtype);
 
     // only matters when layout1 has dim 2
     if (matmul.transposeA)
@@ -229,13 +226,8 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
         inp_tensornds[0].layout = layout_a;
         inp_tensornds[1].layout = layout_b;
     }
-    size_t sz = setup_algo<megdnn::MatrixMul>(
-            {layout_a, layout_b, dst_layout}, dnn_opr.op.get(), 0, false, false, cn,
-            matmul.policy(), false, &inp_tensornds);
     auto out = Tensor::make(dst_layout, cn);
-    auto dnn_wk = dnn_opr.create_workspace(sz);
-
-    dnn_opr.op->exec(inp_tensornds[0], inp_tensornds[1], out->dnn_tensor(), dnn_wk);
+    dnn_opr.exec_fastrun(inp_tensornds[0], inp_tensornds[1], out);
     return {out->sub(0, real_dst_layout)};
 }
 
@@ -266,7 +258,6 @@ auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
     auto dim1 = matmul.dimA, dim2 = matmul.dimB;
 
     auto cn = inputs[0]->comp_node();
-    using Desc = opr::AxisAddRemove::AxisDesc;
     using IndexDesc = opr::Subtensor::IndexDesc;
     OperatorNodeConfig config{matmul.make_name(), cn};
 
@@ -343,9 +334,8 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
 
     DType dst_dtype;
 
-    DnnOprCaller<megdnn::MatrixMul> dnn_opr(inputs[0].comp_node);
-    dnn_opr.op->param() = matmul.param();
-    dnn_opr.op->deduce_dtype(layout1.dtype, layout1.dtype, dst_dtype);
+    DnnOprHelper<megdnn::MatrixMul> dnn_opr(matmul.param());
+    dnn_opr.opr().deduce_dtype(layout1.dtype, layout1.dtype, dst_dtype);
 
     if (dim1 == 0 || dim2 == 0) {
         return {{{TensorLayout(dst_dtype), inputs[0].comp_node}}, false};
@@ -386,10 +376,9 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
     TensorLayout layout1 = inputs[0]->layout(), layout2 = inputs[1]->layout();
     size_t dim1 = layout1.ndim, dim2 = layout2.ndim;
 
-    DnnOprCaller<megdnn::BatchedMatrixMul> dnn_opr(cn);
-    dnn_opr.op->param() = matmul.param();
+    DnnOprCaller<megdnn::BatchedMatrixMul> dnn_opr(cn, matmul.param(), matmul.policy());
     DType dst_dtype;
-    dnn_opr.op->deduce_dtype(layout1.dtype, layout1.dtype, dst_dtype);
+    dnn_opr.op()->deduce_dtype(layout1.dtype, layout1.dtype, dst_dtype);
 
     TensorShape tshp, batch_shp;
     size_t j = 0;
@@ -473,14 +462,9 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
     inp_tensornds[1] = inp2->dnn_tensor();
     inp_tensornds[1].layout = layout2;
 
-    size_t sz = setup_algo<megdnn::BatchedMatrixMul>(
-            {layout1, layout2, dst_layout}, dnn_opr.op.get(), 0, false, false, cn,
-            matmul.policy(), false, &inp_tensornds);
-
     auto out = Tensor::make(dst_layout, cn);
 
-    auto dnn_wk = dnn_opr.create_workspace(sz);
-    dnn_opr.op->exec(inp_tensornds[0], inp_tensornds[1], out->dnn_tensor(), dnn_wk);
+    dnn_opr.exec_fastrun(inp_tensornds[0], inp_tensornds[1], out);
 
     shp1[shp1.ndim - 2] = dst_layout[dst_layout.ndim - 2];
     shp1[shp1.ndim - 1] = dst_layout[dst_layout.ndim - 1];
@@ -533,7 +517,7 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
     TensorLayout oup_layout{inputs[0]->dtype()};
     auto inp1_tensor = inputs[0]->dnn_tensor();
     auto inp2_tensor = inputs[1]->dnn_tensor();
-    dnn_opr.op->deduce_layout(inp1_tensor.layout, inp2_tensor.layout, oup_layout);
+    oup_layout = dnn_opr.deduce_layout(inp1_tensor.layout, inp2_tensor.layout);
 
     if (inputs[0]->layout().is_empty() || inputs[1]->layout().is_empty()) {
         auto out = Tensor::make(oup_layout, comp_node);
@@ -543,14 +527,8 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
         return {out};
     }
 
-    auto sz = dnn_opr.op->get_workspace_in_bytes(
-            inp_tensornds[0].layout, inp_tensornds[1].layout, output_descs[0].layout);
-
     auto out = Tensor::make(oup_layout, comp_node);
-
-    auto dnn_wk = dnn_opr.create_workspace(sz);
-
-    dnn_opr.op->exec(inp_tensornds[0], inp_tensornds[1], out->dnn_tensor(), dnn_wk);
+    dnn_opr.exec_with_ws(inp_tensornds[0], inp_tensornds[1], out);
 
     return {out};
 }

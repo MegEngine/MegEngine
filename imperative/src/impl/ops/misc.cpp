@@ -17,27 +17,18 @@ SymbolVarArray apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
 SmallVector<TensorPtr> apply_on_physical_tensor(
         const OpDef& def, const SmallVector<TensorPtr>& inputs,
         SmallVector<LogicalTensorDesc>& output_descs, const bool& validated) {
-    size_t size = inputs.size();
     auto&& op = def.cast_final_safe<CheckNonFinite>();
-    SmallVector<TensorPtr> outputs(size + 1);
-    outputs[size] = Tensor::make(
-            TensorLayout(TensorShape({1}), dtype::Int32()), inputs[0]->comp_node());
-
-    auto dest = outputs[size];
-    auto cn = dest->comp_node();
-    DnnOprCaller<megdnn::CheckNonFinite> dnn_opr(cn);
-    SmallVector<megdnn::TensorND> srcs(size);
-    // copy an outputs to the dnn for inplace
-    for (size_t i = 0; i < size; ++i) {
-        outputs[i] = Tensor::make(inputs[i]->layout(), inputs[0]->comp_node());
-        outputs[i]->dev_tensor().copy_from_fixlayout(inputs[i]->dev_tensor());
-        srcs[i] = outputs[i]->dev_tensor().as_megdnn();
+    auto comp_node = inputs[0]->comp_node();
+    auto dest = Tensor::make(TensorLayout({1}, dtype::Int32()), comp_node);
+    SmallVector<TensorPtr> outputs;
+    outputs.reserve(inputs.size() + 1);
+    for (auto&& input : inputs) {
+        outputs.push_back(Tensor::make(input->layout(), comp_node));
+        outputs.back()->dev_tensor().copy_from_fixlayout(input->dev_tensor());
     }
-    megdnn::CheckNonFinite::Param param({op.scale});
-    dnn_opr.op->param() = param;
-    size_t sz = dnn_opr.op->get_workspace_in_bytes(srcs, dest->layout());
-    auto dnn_wk = dnn_opr.create_workspace(sz);
-    dnn_opr.op->exec(srcs, dest->dnn_tensor(), dnn_wk);
+    DnnOprCaller<megdnn::CheckNonFinite> dnn_opr(comp_node, {op.scale});
+    dnn_opr.exec_with_ws(outputs, dest);
+    outputs.push_back(dest);
     return outputs;
 }
 
@@ -45,13 +36,15 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
         const OpDef& def, const SmallVector<LogicalTensorDesc>& inputs) {
     size_t size = inputs.size();
     SmallVector<LogicalTensorDesc> dests(size + 1);
+    bool validated = true;
     for (size_t i = 0; i < size; ++i) {
         dests[i].comp_node = inputs[i].comp_node;
         dests[i].layout = inputs[i].layout;
+        validated &= bool(dests[i].layout.ndim);
     }
     dests[size].comp_node = inputs[0].comp_node;
-    dests[size].layout = TensorLayout(TensorShape({1}), dtype::Int32());
-    return {dests, true};
+    dests[size].layout = TensorLayout({1}, dtype::Int32());
+    return {dests, validated};
 }
 
 OP_TRAIT_REG(CheckNonFinite, CheckNonFinite)

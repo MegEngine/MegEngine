@@ -38,7 +38,8 @@ void copy_data(
 
 }  // anonymous namespace
 
-size_t CondTakeImpl::get_workspace_in_bytes(const TensorLayout& data) {
+size_t CondTakeImpl::get_workspace_in_bytes(
+        const TensorLayout& data, const TensorLayout&) {
     return (data.total_nr_elems() + 1) * sizeof(dt_int32);
 }
 

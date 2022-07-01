@@ -75,13 +75,12 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
 SmallVector<TensorPtr> apply_on_physical_tensor(
         const OpDef& def, const SmallVector<TensorPtr>& inputs,
         SmallVector<LogicalTensorDesc>& output_descs, const bool& validated) {
-    auto&& pool = static_cast<const AdaptivePooling&>(def);
+    auto&& pooling = def.cast_final_safe<AdaptivePooling>();
     auto&& cn = inputs[0]->comp_node();
 
-    using TensorND = megdnn::TensorND;
     auto&& src_layout = inputs[0]->layout();
-    TensorLayout dst_layout = output_descs[0].layout;
-    auto param_format = pool.format;
+    TensorLayout dst_layout{inputs[0]->dtype()};
+    auto param_format = pooling.format;
     if (!validated) {
         dst_layout.ndim = src_layout.ndim;
         const dt_int32* oshp2d = nullptr;
@@ -91,7 +90,7 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
             tshp1n = inputs[1]->layout().total_nr_elems() == 1;
             oshp2d = tshp_nd->get_value().proxy_to_default_cpu().ptr<dt_int32>();
         } else {
-            oshp2d = pool.shape.data();
+            oshp2d = pooling.shape.data();
         }
         if (param_format == opr::AdaptivePooling::Param::Format::NCHW) {
             dst_layout[0] = src_layout[0];
@@ -108,15 +107,17 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
                     MegBrainError, "AdaptivePooling only support NCHW or NHWC format");
         }
         dst_layout.init_contiguous_stride();
+    } else {
+        dst_layout = output_descs[0].layout;
     }
 
     size_t IH, IW, OH, OW;
-    if (param_format == param::AdaptivePooling::Format::NCHW) {
+    if (param_format == megdnn::param::AdaptivePooling::Format::NCHW) {
         IH = src_layout[2];
         IW = src_layout[3];
         OH = dst_layout[2];
         OW = dst_layout[3];
-    } else if (param_format == param::AdaptivePooling::Format::NHWC) {
+    } else if (param_format == megdnn::param::AdaptivePooling::Format::NHWC) {
         IH = src_layout[1];
         IW = src_layout[2];
         OH = dst_layout[1];
@@ -124,26 +125,21 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
     } else {
         mgb_throw(MegBrainError, "AdaptivePooling only support NCHW or NHWC format");
     }
-    DnnOprCaller<megdnn::Pooling> dnn_opr(cn);
-    auto&& param = dnn_opr.op->param();
-    param.mode = pool.mode;
-    param.format = pool.format;
+
+    // adaptive_pooling param to pooling
+    auto&& param = megdnn::Pooling::Param();
+    param.mode = pooling.mode;
+    param.format = pooling.format;
     param.pad_h = param.pad_w = 0;
-    param.stride_h = floor(IH / OH);
-    param.stride_w = floor(IW / OW);
+    param.stride_h = IH / OH;
+    param.stride_w = IW / OW;
     param.window_h = IH - (OH - 1) * param.stride_h;
     param.window_w = IW - (OW - 1) * param.stride_w;
 
-    TensorND src = inputs[0]->dnn_tensor();
+    DnnOprCaller<megdnn::Pooling> dnn_opr(cn, param, megdnn::param::ExecutionPolicy{});
+    auto src = inputs[0];
     auto dst = Tensor::make(dst_layout, cn);
-
-    size_t sz = setup_algo<megdnn::Pooling>(
-            {src_layout, dst_layout}, dnn_opr.op.get(), 0, false, false, cn,
-            ::megdnn::param::ExecutionPolicy{}, false);
-
-    auto dnn_wk = dnn_opr.create_workspace(sz);
-    dnn_opr.op->exec(src, dst->dnn_tensor(), dnn_wk);
-
+    dnn_opr.exec_fastrun(inputs[0], dst);
     return {dst};
 }
 

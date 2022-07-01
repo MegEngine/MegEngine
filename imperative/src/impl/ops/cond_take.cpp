@@ -28,33 +28,26 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
 
     auto&& inp = inputs[0];
     auto&& msk = inputs[1];
-    SmallVector<TensorPtr> out;
     mgb_assert(
             inp->layout().eq_shape(msk->layout()),
             "input shape does not match mask shape");
     mgb_assert(
             msk->get_value().dtype().enumv() == DTypeEnum::Bool,
             "mask dtype must be bool");
-    MegDNNDynOutMallocImpl<2> policy{inp->comp_node()};
     if (inp->layout().is_empty()) {
         // empty tensor
-        policy.alloc_output(0, inp->layout().dtype, {0}, nullptr);
-        policy.alloc_output(1, dtype::Int32(), {0}, nullptr);
+        return {
+                Tensor::make(TensorLayout{{0}, inp->dtype()}, inp->comp_node()),
+                Tensor::make(TensorLayout{{0}, dtype::Int32()}, inp->comp_node()),
+        };
     } else {
-        DnnOprCaller<megdnn::CondTake> dnn_op(inp->comp_node());
-        dnn_op.op->param().val = 1;
-
-        size_t sz = dnn_op.op->get_workspace_in_bytes(inp->layout());
-
-        auto dnn_workspace = dnn_op.create_workspace(sz);
-
-        dnn_op.op->exec(
-                inp->dev_tensor().as_megdnn(), msk->dev_tensor().as_megdnn(),
-                dnn_workspace, &policy);
+        // maybe we need to split CondTake
+        megdnn::CondTake::Param param;
+        param.val = 1;
+        DnnOprCaller<megdnn::CondTake> dnn_op(inp->comp_node(), param);
+        auto&& [out0, out1] = dnn_op.exec_dynout<2>(inp, msk);
+        return {out0, out1};
     }
-    out.push_back(policy.at(0));
-    out.push_back(policy.at(1));
-    return out;
 }
 
 std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(

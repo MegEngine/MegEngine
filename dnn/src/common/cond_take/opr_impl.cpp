@@ -11,7 +11,7 @@ size_t CondTake::check_exec_get_size(
             mask.TensorShape::to_string().c_str());
     megdnn_assert(data.is_physical_contiguous() && mask.is_physical_contiguous());
     megdnn_assert(m_param.eps > 0, "eps must be non-negative; got: %g", m_param.eps);
-    megdnn_assert(workspace_in_bytes >= get_workspace_in_bytes(data));
+    megdnn_assert(workspace_in_bytes >= get_workspace_in_bytes(data, mask));
     return data.total_nr_elems();
 }
 

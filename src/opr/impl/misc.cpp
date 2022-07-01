@@ -314,7 +314,8 @@ void CondTake::init_output_static_infer_desc() {
         auto dtype = input(0)->dtype();
         TensorLayout ily(iv.val[0].shape(), dtype);
         dest.ndim = 1;
-        dest.shape[0] = megdnn_opr()->get_workspace_in_bytes(ily);
+        TensorLayout mly(iv.val[0].shape(), dtype::Int32());
+        dest.shape[0] = megdnn_opr()->get_workspace_in_bytes(ily, mly);
         return true;
     };
     owner_graph()->static_infer_manager().register_shape_infer(
@@ -548,9 +549,9 @@ void CheckNonFinite::init_output_static_infer_desc() {
 
     auto infer_wk = [this](TensorShape& dest, const InpVal& inp) {
         dest.ndim = 1;
-        megdnn::TensorNDArray inp_arr(input().size());
+        SmallVector<megdnn::TensorLayout> inp_arr(input().size());
         for (size_t i = 0; i < input().size(); ++i) {
-            inp_arr[i] = {NULL, {inp.val.at(i).shape(), input(0)->dtype()}};
+            inp_arr[i] = {inp.val.at(i).shape(), input(0)->dtype()};
         }
         dest.shape[0] = megdnn_opr()->get_workspace_in_bytes(
                 inp_arr, {output(input().size() + 1)->shape(),

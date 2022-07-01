@@ -67,10 +67,8 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
     auto&& op = def.cast_final_safe<IndexingOneHot>();
     auto&& inp = inputs[0];
     auto&& index = inputs[1];
-    TensorLayout layout = inp->layout();
-    TensorLayout index_layout = index->layout();
-    DnnOprCaller<megdnn::IndexingOneHot> dnn_op(inp->comp_node());
-    auto&& indexing_one_hot_param = dnn_op.op->param();
+    auto&& layout = inp->layout();
+    auto&& index_layout = index->layout();
     int real_axis = static_cast<int>(op.axis);
     if (real_axis < 0) {
         real_axis += static_cast<int>(layout.ndim);
@@ -79,16 +77,10 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
             0 <= real_axis && real_axis < static_cast<int>(layout.ndim),
             "Dimension out of range (expected to be in range of [%d, %d], but got %d)",
             0, static_cast<int>(layout.ndim) - 1, op.axis);
-    indexing_one_hot_param = real_axis;
-    TensorLayout tlayout;
-    dnn_op.op->deduce_layout(layout, index_layout, tlayout);
-    TensorPtr out = Tensor::make(tlayout, inp->comp_node());
-    megdnn::TensorND in = inp->dnn_tensor();
-    megdnn::TensorND ind = index->dnn_tensor();
-    size_t sz = dnn_op.op->get_workspace_in_bytes(layout, index_layout, tlayout);
-
-    auto dnn_workspace = dnn_op.create_workspace(sz);
-    dnn_op.op->exec(in, ind, out->dnn_tensor(), dnn_workspace);
+    DnnOprCaller<megdnn::IndexingOneHot> dnn_op(inp->comp_node(), real_axis);
+    auto tlayout = dnn_op.deduce_layout(layout, index_layout);
+    auto out = Tensor::make(tlayout, inp->comp_node());
+    dnn_op.exec_with_ws(inp, index, out);
     return {out};
 }
 
@@ -105,15 +97,14 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
         const OpDef& def, const SmallVector<LogicalTensorDesc>& input_descs) {
     mgb_assert(input_descs.size() == 3, "IndexingSetOneHot expects three inputs");
     auto comp_node = input_descs[0].comp_node;
-    TensorLayout src = input_descs[0].layout, index = input_descs[1].layout;
-
+    auto&& src = input_descs[0].layout;
+    auto&& index = input_descs[1].layout;
     mgb_assert(index.dtype == dtype::Int32(), "index dtype must be int32");
-
     if (!src.ndim) {
         return {{{{{}, src.dtype}, comp_node}}, false};
     }
     mgb_assert(src.is_contiguous(), "src should be contiguous");
-    return {{input_descs[0]}, true};
+    return {{{src, comp_node}}, true};
 }
 
 auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
@@ -136,25 +127,15 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
     auto&& index = inputs[1];
     auto&& sub = inputs[2];
     TensorLayout layout = inp->layout();
-    TensorLayout index_layout = index->layout();
-    TensorLayout tlayout = sub->layout();
     mgb_assert(layout.is_contiguous());
-    DnnOprCaller<megdnn::IndexingSetOneHot> dnn_op(inp->comp_node());
-    auto&& indexing_one_hot_param = dnn_op.op->param();
     int real_axis = static_cast<int>(op.axis);
     if (real_axis < 0) {
         real_axis += static_cast<int>(layout.ndim);
     }
-    indexing_one_hot_param = real_axis;
+    DnnOprCaller<megdnn::IndexingSetOneHot> dnn_op(inp->comp_node(), real_axis);
     TensorPtr out = Tensor::make(layout, inp->comp_node());
     out->dev_tensor().copy_from_fixlayout(inp->dev_tensor());
-    megdnn::TensorND in = inp->dnn_tensor();
-    megdnn::TensorND ind = index->dnn_tensor();
-    megdnn::TensorND su = sub->dnn_tensor();
-
-    size_t sz = dnn_op.op->get_workspace_in_bytes(layout, index_layout, tlayout);
-    auto dnn_workspace = dnn_op.create_workspace(sz);
-    dnn_op.op->exec(out->dnn_tensor(), ind, su, dnn_workspace);
+    dnn_op.exec_with_ws(out, index, sub);
     return {out};
 }
 

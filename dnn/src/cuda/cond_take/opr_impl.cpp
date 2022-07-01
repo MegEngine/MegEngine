@@ -20,7 +20,8 @@ WorkspaceBundle CondTakeImpl::make_bundle(size_t nr_item) {
             handle()->alignment_requirement()};
 }
 
-size_t CondTakeImpl::get_workspace_in_bytes(const TensorLayout& data) {
+size_t CondTakeImpl::get_workspace_in_bytes(
+        const TensorLayout& data, const TensorLayout&) {
     return make_bundle(data.total_nr_elems()).total_size_in_bytes();
 }
 

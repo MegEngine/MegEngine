@@ -15,7 +15,8 @@ public:
             _megdnn_tensor_in data, _megdnn_tensor_in mask, _megdnn_workspace workspace,
             DynOutMallocPolicyCall malloc_policy) override;
 
-    size_t get_workspace_in_bytes(const TensorLayout& data) override;
+    size_t get_workspace_in_bytes(
+            const TensorLayout& data, const TensorLayout& mask) override;
 };
 
 }  // namespace cuda

@@ -224,9 +224,9 @@ public:
             const TensorLayout& src_layout, _megdnn_tensor_in filter,
             const TensorLayout& dst_layout, PreprocessedFilter* preprocessed_filter,
             _megdnn_workspace workspace) = 0;
-    void deduce_dtype(DType src, DType filter, DType& dst);
+    MGE_WIN_DECLSPEC_FUC void deduce_dtype(DType src, DType filter, DType& dst);
 
-    void deduce_layout(
+    MGE_WIN_DECLSPEC_FUC void deduce_layout(
             const TensorLayout& src, const TensorLayout& filter, TensorLayout& dst);
 
     /**
@@ -300,7 +300,7 @@ public:
             const TensorLayout& grad) = 0;
 
     MGE_WIN_DECLSPEC_FUC void deduce_dtype(DType filter, DType diff, DType& grad);
-    void deduce_layout(
+    MGE_WIN_DECLSPEC_FUC void deduce_layout(
             const TensorLayout& filter, const TensorLayout& diff, TensorLayout& grad);
 
     static Algorithm::OprType get_opr_type() {
@@ -378,6 +378,12 @@ public:
             const PreprocessedFilter* preprocessed_filter,
             _megdnn_workspace workspace) = 0;
 
+    MGE_WIN_DECLSPEC_FUC void exec(
+            _megdnn_tensor_in src, _megdnn_tensor_in filter, _megdnn_tensor_in bias,
+            _megdnn_tensor_in z, _megdnn_tensor_out dst, _megdnn_workspace workspace) {
+        exec(src, filter, bias, z, dst, nullptr, workspace);
+    }
+
     /**
      * \brief execute weight preprocessing, read weights form filter and bias,
      * write to preprocessed_filter after preprocessed.
@@ -390,8 +396,9 @@ public:
             _megdnn_tensor_in bias, const TensorLayout& z_layout,
             const TensorLayout& dst_layout, PreprocessedFilter* preprocessed_filter,
             _megdnn_workspace workspace) = 0;
-    void deduce_dtype(DType src, DType filter, DType bias, DType z, DType& dst);
-    void deduce_layout(
+    MGE_WIN_DECLSPEC_FUC void deduce_dtype(
+            DType src, DType filter, DType bias, DType z, DType& dst);
+    MGE_WIN_DECLSPEC_FUC void deduce_layout(
             const TensorLayout& src, const TensorLayout& filter,
             const TensorLayout& bias, const TensorLayout& z, TensorLayout& dst);
 
@@ -775,7 +782,7 @@ protected:
     void check_layout_fwd(const TensorLayout& src, const TensorLayout& dst);
 
 public:
-    MGE_WIN_DECLSPEC_FUC static void deduce_layout_impl(
+    static void deduce_layout_impl(
             const TensorLayout& src, const Param& param, TensorLayout& dst);
 };
 
@@ -791,7 +798,7 @@ public:
     virtual void exec(
             _megdnn_tensor_in src, _megdnn_tensor_out dst,
             _megdnn_workspace workspace) = 0;
-    void deduce_layout(const TensorLayout& src, TensorLayout& dst);
+    MGE_WIN_DECLSPEC_FUC void deduce_layout(const TensorLayout& src, TensorLayout& dst);
     virtual size_t get_workspace_in_bytes(
             const TensorLayout& src, const TensorLayout& dst) = 0;
 
@@ -1253,7 +1260,7 @@ public:
     virtual void exec(
             _megdnn_tensor_in src, _megdnn_tensor_in filter, _megdnn_tensor_out dst,
             _megdnn_workspace workspace) = 0;
-    void deduce_layout(
+    MGE_WIN_DECLSPEC_FUC void deduce_layout(
             const TensorLayout& src, const TensorLayout& filter, TensorLayout& dst);
     virtual size_t get_workspace_in_bytes(
             const TensorLayout& src, const TensorLayout& filter,
@@ -1281,18 +1288,16 @@ public:
      * \param[in] diff (n, oc, od, oh, ow)
      * \param[out] grad (n, ic, id, ih, iw)
      */
-    MGE_WIN_DECLSPEC_FUC static void deduce_layout_impl(
+    static void deduce_layout_impl(
             const TensorLayout& filter, const TensorLayout& diff, const Param& param,
             TensorLayout& grad);
-
     virtual void exec(
             _megdnn_tensor_in filter, _megdnn_tensor_in diff, _megdnn_tensor_out grad,
             _megdnn_workspace workspace) = 0;
     virtual size_t get_workspace_in_bytes(
             const TensorLayout& filter, const TensorLayout& diff,
             const TensorLayout& grad) = 0;
-
-    void deduce_layout(
+    MGE_WIN_DECLSPEC_FUC void deduce_layout(
             const TensorLayout& filter, const TensorLayout& diff, TensorLayout& grad);
 
     static Algorithm::OprType get_opr_type() {
@@ -1472,7 +1477,7 @@ public:
     virtual void exec(
             _megdnn_tensor_in src, _megdnn_tensor_in rois, _megdnn_tensor_out dst,
             _megdnn_tensor_out index, _megdnn_workspace workspace) = 0;
-    void deduce_layout(
+    MGE_WIN_DECLSPEC_FUC void deduce_layout(
             const TensorLayout& src, const TensorLayout& rois, TensorLayout& dst,
             TensorLayout& index);
     virtual size_t get_workspace_in_bytes(
@@ -1963,7 +1968,7 @@ public:
             _megdnn_tensor_in data, _megdnn_tensor_in weight, _megdnn_tensor_in bias,
             _megdnn_tensor_out dst, _megdnn_tensor_out mean, _megdnn_tensor_out rstd,
             _megdnn_workspace workspace) = 0;
-    void deduce_layout(
+    MGE_WIN_DECLSPEC_FUC void deduce_layout(
             const TensorLayout& data, const TensorLayout& weight,
             const TensorLayout& bias, TensorLayout& dst, TensorLayout& mean,
             TensorLayout& rstd);
