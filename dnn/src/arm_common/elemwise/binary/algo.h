@@ -11,7 +11,7 @@ namespace arm_common {
         }                                                                        \
         const char* name() const override {                                      \
             if (m_name.empty()) {                                                \
-                m_name = ssprintf("Elemwise::AlgoBinaryCase" #case);             \
+                m_name = ssprintf("Elemwise::AlgoBinaryCaseArmCommon" #case);    \
             }                                                                    \
             return m_name.c_str();                                               \
         }                                                                        \

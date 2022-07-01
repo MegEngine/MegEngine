@@ -267,16 +267,6 @@ ElemwiseImpl::KernParam ElemwiseImpl::make_kern_param(ElemwiseImpl* opr) {
             return kern_param;
         }
 
-        if (is_vector(src0.layout) && is_broadcasted_3dim_like(src1.layout, binfo)) {
-            kern_param.broad_cast_type = BcastType::VEC_BCASTX0X;
-            return kern_param;
-        }
-
-        if (is_vector(src1.layout) && is_broadcasted_3dim_like(src0.layout, binfo)) {
-            kern_param.broad_cast_type = BcastType::BCASTX0X_VEC;
-            return kern_param;
-        }
-
         if (is_legal_layout_for_nhwc(src1.layout) &&
             is_NHWC_broadcasted_channel_like(src0.layout, binfo)) {
             kern_param.broad_cast_type = BcastType::BCAST111C_VEC;
@@ -300,6 +290,16 @@ ElemwiseImpl::KernParam ElemwiseImpl::make_kern_param(ElemwiseImpl* opr) {
             (is_broadcastedx_channel_like<4>(src0.layout, binfo) ||
              is_broadcastedx_channel_like<8>(src0.layout, binfo))) {
             kern_param.broad_cast_type = BcastType::BCAST101xX_VEC;
+            return kern_param;
+        }
+
+        if (is_vector(src0.layout) && is_broadcasted_3dim_like(src1.layout, binfo)) {
+            kern_param.broad_cast_type = BcastType::VEC_BCASTX0X;
+            return kern_param;
+        }
+
+        if (is_vector(src1.layout) && is_broadcasted_3dim_like(src0.layout, binfo)) {
+            kern_param.broad_cast_type = BcastType::BCASTX0X_VEC;
             return kern_param;
         }
     } else if (opr->m_src->size() == 1) {
