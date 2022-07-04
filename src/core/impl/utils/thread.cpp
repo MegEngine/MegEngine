@@ -112,6 +112,16 @@ SCQueueSynchronizer::SCQueueSynchronizer(size_t max_spin) {
 }
 
 SCQueueSynchronizer::~SCQueueSynchronizer() noexcept {
+#if defined(WIN32) && defined(__i386__)
+    if (SCQueueSynchronizer::is_into_atexit) {
+        mgb_log_warn("windows 32bit issue happened!!, resource recovery by OS!!");
+        m_wait_finish_called = true;
+        //! need detach, if not, thread dtor will crash, OS will recovery thread
+        //! resource by call std::terminate.
+        m_worker_thread.detach();
+        return;
+    }
+#endif
     if (!m_worker_started)
         return;
     if (!m_wait_finish_called) {

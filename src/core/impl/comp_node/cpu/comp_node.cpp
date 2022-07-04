@@ -620,6 +620,16 @@ class CpuCompNode::CompNodeRecorderImpl final : public CompNodeBaseImpl {
 
 public:
     static void static_free_device(ImplBase* self, void* ptr) {
+//! FIXME: Windows 7 + 32bit have shared_ptr dtor issue when progress exit
+//! as a workaround, skip any task at atexit stage.
+#if MGB_HAVE_THREAD
+#if defined(WIN32) && defined(__i386__)
+        if (SCQueueSynchronizer::is_into_atexit) {
+            mgb_log_warn("windows 32bit issue happened!!, resource recovery by OS!!");
+            return;
+        }
+#endif
+#endif
         static_cast<CompNodeRecorderImpl*>(self)->free_device(ptr);
     }
 
