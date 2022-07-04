@@ -22,28 +22,37 @@ void RegionRestrictedConvolutionForwardImpl::exec(
                 src.layout, filter.layout, rin.layout, rout.layout, dst.layout,
                 workspace.size);
         using ComputeMode = Param::ComputeMode;
-#define DISPATCH_CMODE(in_dt, out_dt, in_ct, out_ct, comp_ct, cmode)              \
+#define DISPATCH_CMODE(in_dt, r_dt, out_dt, in_ct, r_ct, out_ct, comp_ct, cmode)  \
     do {                                                                          \
         using namespace dtype;                                                    \
         if (src.layout.dtype.enumv() == DTypeTrait<in_dt>::enumv &&               \
             dst.layout.dtype.enumv() == DTypeTrait<out_dt>::enumv &&              \
+            rin.layout.dtype.enumv() == DTypeTrait<r_dt>::enumv &&                \
+            rout.layout.dtype.enumv() == DTypeTrait<r_dt>::enumv &&               \
             param().compute_mode == cmode) {                                      \
             MEGDNN_DISPATCH_CPU_KERN_OPR((convolution::region_restricted_forward< \
-                                          in_ct, in_ct, out_ct, comp_ct>(         \
+                                          in_ct, in_ct, r_ct, out_ct, comp_ct>(   \
                     src, filter, rin, rout, dst, filter_meta)););                 \
             return;                                                               \
         }                                                                         \
     } while (0);
-#define DISPATCH(in_dt, out_dt, in_ct, out_ct, comp_ct) \
-    DISPATCH_CMODE(in_dt, out_dt, in_ct, out_ct, comp_ct, ComputeMode::DEFAULT)
-#define cb(dt)                                                    \
-    DISPATCH(                                                     \
-            dt, dt, DTypeTrait<dt>::ctype, DTypeTrait<dt>::ctype, \
+#define DISPATCH(in_dt, r_dt, out_dt, in_ct, r_ct, out_ct, comp_ct) \
+    DISPATCH_CMODE(                                                 \
+            in_dt, r_dt, out_dt, in_ct, r_ct, out_ct, comp_ct, ComputeMode::DEFAULT)
+#define cb(dt)                                                                     \
+    DISPATCH(                                                                      \
+            dt, Int32, dt, DTypeTrait<dt>::ctype, dt_int32, DTypeTrait<dt>::ctype, \
+            DTypeTrait<dt>::ctype)                                                 \
+    DISPATCH(                                                                      \
+            dt, Uint8, dt, DTypeTrait<dt>::ctype, dt_uint8, DTypeTrait<dt>::ctype, \
             DTypeTrait<dt>::ctype)
         MEGDNN_FOREACH_COMPUTING_DTYPE_FLOAT(cb);
 #undef cb
         DNN_INC_FLOAT16(DISPATCH_CMODE(
-                Float16, Float16, dt_float16, dt_float16, dt_float32,
+                Float16, Int32, Float16, dt_float16, dt_int32, dt_float16, dt_float32,
+                ComputeMode::FLOAT32));
+        DNN_INC_FLOAT16(DISPATCH_CMODE(
+                Float16, Uint8, Float16, dt_float16, dt_uint8, dt_float16, dt_float32,
                 ComputeMode::FLOAT32));
 #undef DISPATCH
         megdnn_throw(ssprintf(
@@ -87,28 +96,53 @@ void RegionRestrictedConvolutionBackwardDataImpl::exec(
             workspace.size);
     using ComputeMode = Param::ComputeMode;
     auto cmode = param().compute_mode;
-#define cb(dt)                                                              \
-    do {                                                                    \
-        if (filter.layout.dtype == dt() && cmode == ComputeMode::DEFAULT) { \
-            using ctype = DTypeTrait<dt>::ctype;                            \
-            MEGDNN_DISPATCH_CPU_KERN_OPR(                                   \
-                    (convolution::region_restricted_backward_data<          \
-                            ctype, ctype, ctype>(                           \
-                            filter, diff, rin, rout, grad, filter_meta));); \
-            return;                                                         \
-        }                                                                   \
+#define cb(dt)                                                                  \
+    do {                                                                        \
+        if (filter.layout.dtype == dt() && cmode == ComputeMode::DEFAULT &&     \
+            rin.layout.dtype == dtype::Int32() &&                               \
+            rout.layout.dtype == dtype::Int32()) {                              \
+            using ctype = DTypeTrait<dt>::ctype;                                \
+            MEGDNN_DISPATCH_CPU_KERN_OPR(                                       \
+                    (convolution::region_restricted_backward_data<              \
+                            ctype, ctype, dt_int32, ctype>(                     \
+                            filter, diff, rin, rout, grad, filter_meta)));      \
+            return;                                                             \
+        } else if (                                                             \
+                filter.layout.dtype == dt() && cmode == ComputeMode::DEFAULT && \
+                rin.layout.dtype == dtype::Uint8() &&                           \
+                rout.layout.dtype == dtype::Uint8()) {                          \
+            using ctype = DTypeTrait<dt>::ctype;                                \
+            MEGDNN_DISPATCH_CPU_KERN_OPR(                                       \
+                    (convolution::region_restricted_backward_data<              \
+                            ctype, ctype, dt_uint8, ctype>(                     \
+                            filter, diff, rin, rout, grad, filter_meta)));      \
+            return;                                                             \
+        }                                                                       \
     } while (0);
     MEGDNN_FOREACH_COMPUTING_DTYPE_FLOAT(cb);
 #undef cb
 #if !MEGDNN_DISABLE_FLOAT16
-    if (filter.layout.dtype == dtype::Float16() && cmode == ComputeMode::FLOAT32) {
+    if (filter.layout.dtype == dtype::Float16() && cmode == ComputeMode::FLOAT32 &&
+        rin.layout.dtype == dtype::Int32() && rout.layout.dtype == dtype::Int32()) {
         TensorND grad_fp32{
                 workspace.raw_ptr, TensorLayout{grad.layout, dtype::Float32()}};
         auto&& type_cvt = handle()->create_operator<TypeCvt>();
         type_cvt->exec(grad, grad_fp32);
         MEGDNN_DISPATCH_CPU_KERN_OPR((convolution::region_restricted_backward_data<
-                                      dt_float16, dt_float16, dt_float32>(
-                filter, diff, rin, rout, grad_fp32, filter_meta)););
+                                      dt_float16, dt_float16, dt_int32, dt_float32>(
+                filter, diff, rin, rout, grad_fp32, filter_meta)));
+        type_cvt->exec(grad_fp32, grad);
+        return;
+    } else if (
+            filter.layout.dtype == dtype::Float16() && cmode == ComputeMode::FLOAT32 &&
+            rin.layout.dtype == dtype::Uint8() && rout.layout.dtype == dtype::Uint8()) {
+        TensorND grad_fp32{
+                workspace.raw_ptr, TensorLayout{grad.layout, dtype::Float32()}};
+        auto&& type_cvt = handle()->create_operator<TypeCvt>();
+        type_cvt->exec(grad, grad_fp32);
+        MEGDNN_DISPATCH_CPU_KERN_OPR((convolution::region_restricted_backward_data<
+                                      dt_float16, dt_float16, dt_uint8, dt_float32>(
+                filter, diff, rin, rout, grad_fp32, filter_meta)));
         type_cvt->exec(grad_fp32, grad);
         return;
     }
@@ -146,28 +180,56 @@ void RegionRestrictedConvolutionBackwardFilterImpl::exec(
             workspace.size);
     using ComputeMode = Param::ComputeMode;
     auto cmode = param().compute_mode;
-#define cb(dt)                                                            \
-    do {                                                                  \
-        if (src.layout.dtype == dt() && cmode == ComputeMode::DEFAULT) {  \
-            using ctype = DTypeTrait<dt>::ctype;                          \
-            MEGDNN_DISPATCH_CPU_KERN(                                     \
-                    static_cast<HandleImpl*>(handle()),                   \
-                    convolution::region_restricted_backward_filter<       \
-                            ctype MEGDNN_COMMA ctype MEGDNN_COMMA ctype>( \
-                            src, diff, rin, rout, grad, filter_meta););   \
-            return;                                                       \
-        }                                                                 \
+#define cb(dt)                                                               \
+    do {                                                                     \
+        if (src.layout.dtype == dt() && cmode == ComputeMode::DEFAULT &&     \
+            rin.layout.dtype == dtype::Int32() &&                            \
+            rout.layout.dtype == dtype::Int32()) {                           \
+            using ctype = DTypeTrait<dt>::ctype;                             \
+            MEGDNN_DISPATCH_CPU_KERN(                                        \
+                    static_cast<HandleImpl*>(handle()),                      \
+                    convolution::region_restricted_backward_filter<          \
+                            ctype MEGDNN_COMMA ctype MEGDNN_COMMA dt_int32   \
+                                    MEGDNN_COMMA ctype>(                     \
+                            src, diff, rin, rout, grad, filter_meta););      \
+            return;                                                          \
+        } else if (                                                          \
+                src.layout.dtype == dt() && cmode == ComputeMode::DEFAULT && \
+                rin.layout.dtype == dtype::Uint8() &&                        \
+                rout.layout.dtype == dtype::Uint8()) {                       \
+            using ctype = DTypeTrait<dt>::ctype;                             \
+            MEGDNN_DISPATCH_CPU_KERN(                                        \
+                    static_cast<HandleImpl*>(handle()),                      \
+                    convolution::region_restricted_backward_filter<          \
+                            ctype MEGDNN_COMMA ctype MEGDNN_COMMA dt_uint8   \
+                                    MEGDNN_COMMA ctype>(                     \
+                            src, diff, rin, rout, grad, filter_meta););      \
+            return;                                                          \
+        }                                                                    \
     } while (0);
     MEGDNN_FOREACH_COMPUTING_DTYPE_FLOAT(cb);
 #undef cb
 #if !MEGDNN_DISABLE_FLOAT16
-    if (src.layout.dtype == dtype::Float16() && cmode == ComputeMode::FLOAT32) {
+    if (src.layout.dtype == dtype::Float16() && cmode == ComputeMode::FLOAT32 &&
+        rin.layout.dtype == dtype::Int32() && rout.layout.dtype == dtype::Int32()) {
         TensorND grad_fp32{
                 workspace.raw_ptr, TensorLayout{grad.layout, dtype::Float32()}};
         auto&& type_cvt = handle()->create_operator<TypeCvt>();
         type_cvt->exec(grad, grad_fp32);
         MEGDNN_DISPATCH_CPU_KERN_OPR((convolution::region_restricted_backward_filter<
-                                      dt_float16, dt_float16, dt_float32>(
+                                      dt_float16, dt_float16, dt_int32, dt_float32>(
+                src, diff, rin, rout, grad_fp32, filter_meta)););
+        type_cvt->exec(grad_fp32, grad);
+        return;
+    } else if (
+            src.layout.dtype == dtype::Float16() && cmode == ComputeMode::FLOAT32 &&
+            rin.layout.dtype == dtype::Uint8() && rout.layout.dtype == dtype::Uint8()) {
+        TensorND grad_fp32{
+                workspace.raw_ptr, TensorLayout{grad.layout, dtype::Float32()}};
+        auto&& type_cvt = handle()->create_operator<TypeCvt>();
+        type_cvt->exec(grad, grad_fp32);
+        MEGDNN_DISPATCH_CPU_KERN_OPR((convolution::region_restricted_backward_filter<
+                                      dt_float16, dt_float16, dt_uint8, dt_float32>(
                 src, diff, rin, rout, grad_fp32, filter_meta)););
         type_cvt->exec(grad_fp32, grad);
         return;

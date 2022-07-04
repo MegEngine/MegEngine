@@ -878,8 +878,9 @@ void forward_bias(
 }
 
 template <
-        typename stype, typename ftype, typename dtype, typename comp_type,
-        class Strategy, typename FilterMeta, typename FilterVisitor = ConvFilterVisitor>
+        typename stype, typename ftype, typename rtype, typename dtype,
+        typename comp_type, class Strategy, typename FilterMeta,
+        typename FilterVisitor = ConvFilterVisitor>
 void region_restricted_compute(
         _megdnn_tensor_in src, ftype* __restrict fptr, _megdnn_tensor_in rin,
         _megdnn_tensor_in rout, _megdnn_tensor_out dst, const FilterMeta& filter_meta) {
@@ -897,8 +898,8 @@ void region_restricted_compute(
     int dh = filter_meta.dilation[0], dw = filter_meta.dilation[1];
     stype* __restrict sptr = src.compatible_ptr<stype>();
     dtype* __restrict dptr = dst.compatible_ptr<dtype>();
-    int32_t* __restrict rinptr = rin.ptr<int32_t>();
-    int32_t* __restrict routptr = rout.ptr<int32_t>();
+    rtype* __restrict rinptr = rin.compatible_ptr<rtype>();
+    rtype* __restrict routptr = rout.compatible_ptr<rtype>();
 
     int h_offset = -ph, w_offset = -pw;
     if (filter_meta.should_flip) {
@@ -934,7 +935,7 @@ void region_restricted_compute(
                     ftype* fptr_cur = FilterVisitor::template get_current_ptr(
                             fptr, n, oc, oh, ow, filter_sizes);
                     Strategy::init_dval(dval);
-                    int32_t routval = routptr[get_region_addr(n, oh, ow, rout.layout)];
+                    rtype& routval = routptr[get_region_addr(n, oh, ow, rout.layout)];
 
                     for (size_t fh = 0; fh < FH; ++fh)
                         for (size_t fw = 0; fw < FW; ++fw) {
@@ -950,7 +951,7 @@ void region_restricted_compute(
                                             n, ic, ih, iw, src.layout)];
                                     ftype& fval = fptr_cur[get_filter_addr(
                                             gc_out, ic, ic0, fh, fw)];
-                                    int32_t rinval = rinptr[get_region_addr(
+                                    rtype& rinval = rinptr[get_region_addr(
                                             n, ih, iw, rin.layout)];
                                     if (routval == rinval) {
                                         Strategy::on(
@@ -967,28 +968,32 @@ void region_restricted_compute(
 }
 
 //! forward with only filter ptr
-template <typename stype, typename ftype, typename dtype, typename comp_type>
+template <
+        typename stype, typename ftype, typename rtype, typename dtype,
+        typename comp_type>
 void region_restricted_forward(
         _megdnn_tensor_in src, const ftype* fptr, _megdnn_tensor_in rin,
         _megdnn_tensor_in rout, _megdnn_tensor_out dst,
         const RegionRestrictedConvolution::CanonizedFilterMeta& filter_meta) {
     megdnn_assert(filter_meta.spatial_ndim == 2);
     megdnn_assert(filter_meta.format == param::Convolution::Format::NCHW);
-    region_restricted_compute<stype, ftype, dtype, comp_type, StrategyFwd>(
+    region_restricted_compute<stype, ftype, rtype, dtype, comp_type, StrategyFwd>(
             src, const_cast<ftype*>(fptr), rin, rout, dst, filter_meta);
 }
 
 //! forward with full filter (for API compatibility)
-template <typename stype, typename ftype, typename dtype, typename comp_type>
+template <
+        typename stype, typename ftype, typename rtype, typename dtype,
+        typename comp_type>
 void region_restricted_forward(
         _megdnn_tensor_in src, _megdnn_tensor_in filter, _megdnn_tensor_in rin,
         _megdnn_tensor_in rout, _megdnn_tensor_out dst,
         const RegionRestrictedConvolution::CanonizedFilterMeta& filter_meta) {
-    return region_restricted_forward<stype, ftype, dtype, comp_type>(
+    return region_restricted_forward<stype, ftype, rtype, dtype, comp_type>(
             src, filter.compatible_ptr<ftype>(), rin, rout, dst, filter_meta);
 }
 
-template <typename ftype, typename dtype, typename gtype>
+template <typename ftype, typename dtype, typename rtype, typename gtype>
 void region_restricted_backward_data(
         _megdnn_tensor_in filter, _megdnn_tensor_in diff, _megdnn_tensor_in rin,
         _megdnn_tensor_in rout, _megdnn_tensor_out grad,
@@ -996,11 +1001,11 @@ void region_restricted_backward_data(
     megdnn_assert(filter_meta.format == param::Convolution::Format::NCHW);
     memset(grad.raw_ptr(), 0, grad.layout.span().dist_byte());
     megdnn_assert(filter_meta.spatial_ndim == 2);
-    region_restricted_compute<gtype, ftype, dtype, dtype, StrategyBwdData>(
+    region_restricted_compute<gtype, ftype, rtype, dtype, dtype, StrategyBwdData>(
             grad, filter.compatible_ptr<ftype>(), rin, rout, diff, filter_meta);
 }
 
-template <typename stype, typename dtype, typename gtype>
+template <typename stype, typename dtype, typename rtype, typename gtype>
 void region_restricted_backward_filter(
         _megdnn_tensor_in src, _megdnn_tensor_in diff, _megdnn_tensor_in rin,
         _megdnn_tensor_in rout, _megdnn_tensor_out grad,
@@ -1008,7 +1013,7 @@ void region_restricted_backward_filter(
     megdnn_assert(filter_meta.format == param::Convolution::Format::NCHW);
     memset(grad.raw_ptr(), 0, grad.layout.span().dist_byte());
     megdnn_assert(filter_meta.spatial_ndim == 2);
-    region_restricted_compute<stype, gtype, dtype, dtype, StrategyBwdFlt>(
+    region_restricted_compute<stype, gtype, rtype, dtype, dtype, StrategyBwdFlt>(
             src, grad.compatible_ptr<gtype>(), rin, rout, diff, filter_meta);
 }
 

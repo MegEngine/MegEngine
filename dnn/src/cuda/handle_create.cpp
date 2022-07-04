@@ -53,6 +53,7 @@
 #include "src/cuda/pooling/opr_impl.h"
 #include "src/cuda/powc/opr_impl.h"
 #include "src/cuda/reduce/opr_impl.h"
+#include "src/cuda/region_restricted_convolution/opr_impl.h"
 #include "src/cuda/relayout/opr_impl.h"
 #include "src/cuda/relayout_format/opr_impl.h"
 #include "src/cuda/remap/opr_impl.h"
@@ -218,6 +219,9 @@ MEGDNN_SPECIALIZE_CREATE_OPERATOR(DropoutBackward);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(SoftmaxForward);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(SoftmaxBackward);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(NormForward);
+MEGDNN_SPECIALIZE_CREATE_OPERATOR(RegionRestrictedConvolutionForward);
+MEGDNN_SPECIALIZE_CREATE_OPERATOR(RegionRestrictedConvolutionBackwardData);
+MEGDNN_SPECIALIZE_CREATE_OPERATOR(RegionRestrictedConvolutionBackwardFilter);
 
 template <typename Opr>
 std::unique_ptr<Opr> HandleImpl::create_operator() {

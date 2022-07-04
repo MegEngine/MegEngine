@@ -23,6 +23,7 @@ std::string get_errmsg(
            "dilate_h=" + std::to_string(param.dilate_h) + ", " +
            "dilate_w=" + std::to_string(param.dilate_w);
 }
+
 }  // namespace
 
 namespace megdnn {
@@ -31,7 +32,12 @@ void RegionRestrictedConvolutionForward::deduce_dtype(
         DType src, DType filter, DType rin, DType rout, DType& dst) {
     check_or_deduce_dtype_fwd(src, filter, dst);
     megdnn_assert(
-            rin == rout && rin == dtype::Int32(),
+            src.category() == DTypeCategory::FLOAT &&
+                    filter.category() == DTypeCategory::FLOAT &&
+                    dst.category() == DTypeCategory::FLOAT,
+            "only float type is supported for region_restricted_conv forward");
+    megdnn_assert(
+            rin == rout && (rin == dtype::Int32() || rin == dtype::Uint8()),
             "the dtype of rin/rout should be Int32, got %s.", rin.name());
 }
 
@@ -51,6 +57,9 @@ RegionRestrictedConvolutionForward::check_exec(
     megdnn_assert(
             param().format == Param::Format::NCHW,
             "RegionRestrictedConv only support NCHW format mow.");
+    megdnn_assert(
+            param().stride_h == 1 && param().stride_w == 1,
+            "RegionRestrictedConv only support stride 1.");
 #define err_msg(lhs, rhs) \
     megdnn_assert(lhs == rhs, "shape mismatch, #lhs:%zu, #rhs:%zu", lhs, rhs);
 
