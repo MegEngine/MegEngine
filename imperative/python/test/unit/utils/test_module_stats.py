@@ -42,6 +42,65 @@ def test_other_input_module_state():
     net(_nt)
 
 
+@pytest.mark.skipif(
+    use_symbolic_shape(), reason="This test do not support symbolic shape.",
+)
+def test_duplicated_module():
+    input_shape = (1, 3, 224, 224)
+
+    net0 = TestNet0()
+    net0_stats, _ = module_stats(net0, input_shapes=input_shape)
+
+    net1 = TestNet1()
+    net1_stats, _ = module_stats(net1, input_shapes=input_shape)
+
+    net2 = TestNet2()
+    net2_stats, _ = module_stats(net2, input_shapes=input_shape)
+
+    assert net0_stats.param_dims == net1_stats.param_dims
+    assert net0_stats.param_size == net1_stats.param_size
+
+    assert net0_stats.param_dims == net2_stats.param_dims
+    assert net0_stats.param_size == net2_stats.param_size
+
+
+class TestNet0(M.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv = M.Conv2d(3, 3, 3, padding=(1, 1))
+        self.conv.bias = mge.Parameter(
+            np.random.random(self.conv.bias.shape).astype(np.float32)
+        )
+
+    def forward(self, x):
+        x = self.conv(x)
+        return x
+
+
+class TestNet1(TestNet0):
+    def __init__(self):
+        super().__init__()
+        self.conv1 = self.conv
+
+    def forward(self, x):
+        x = self.conv(x)
+        x = self.conv1(x)
+        return x
+
+
+class TestNet2(TestNet0):
+    def __init__(self):
+        super().__init__()
+        self.conv1 = M.Conv2d(3, 3, 3, padding=(1, 1))
+        self.conv1.weight = self.conv.weight
+        self.conv1.bias = self.conv.bias
+
+    def forward(self, x):
+        x = self.conv(x)
+        x = self.conv1(x)
+        return x
+
+
 class FakeNet(M.Module):
     def __init__(self):
         super().__init__()
