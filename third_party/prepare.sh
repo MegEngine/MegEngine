@@ -99,6 +99,7 @@ function git_submodule_update() {
     git submodule update -f --init cpuinfo
     git submodule update -f --init cpp_redis
     git submodule update -f --init tacopie
+    git submodule update -f --init cudnn-frontend
 
     if [ ${SYNC_DNNL_PROJECT} = "True" ];then
         git submodule update -f --init intel-mkl-dnn
