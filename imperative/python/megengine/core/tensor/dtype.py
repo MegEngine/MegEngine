@@ -17,6 +17,9 @@ from .._imperative_rt.common import (
 
 
 def get_dtype_bit(dtype_name: str):
+    special_cases = {"bool": 1}
+    if dtype_name in special_cases:
+        return special_cases[dtype_name]
     numbers = re.findall(r"\d+", dtype_name)
     assert len(numbers) == 1, "Unsupport dtype name with more than one number."
     return int(numbers[0])
