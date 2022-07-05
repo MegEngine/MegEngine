@@ -596,18 +596,6 @@ bool VarNode::is_graph_dest_varnode() {
     return ComputingGraphImpl::downcast(owner_graph())->var_receiver(this).size() == 0;
 }
 
-bool VarNode::capable_shape_infer() {
-    auto&& mgr =
-            ComputingGraphImpl::downcast(owner_graph())->static_infer_manager_impl();
-    return mgr.has_shape_infer(this);
-}
-
-bool VarNode::capable_value_infer() {
-    auto&& mgr =
-            ComputingGraphImpl::downcast(owner_graph())->static_infer_manager_impl();
-    return mgr.has_value_infer(this);
-}
-
 VarNode& VarNode::add_flag(Flag flag) {
     modify_flag(flag, m_flag | flag);
     return *this;

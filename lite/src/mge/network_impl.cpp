@@ -660,8 +660,10 @@ void NetworkImplDft::set_io(const NetworkIO& network_io) {
 }
 
 void NetworkImplDft::try_infer_tensor_layout(std::shared_ptr<Tensor> tensor, Var var) {
-    if (var.node()->capable_shape_infer()) {
-        auto&& static_infer_mgr = m_load_config.comp_graph->static_infer_manager();
+    using InferType = mgb::cg::static_infer::InferType;
+    auto&& static_infer_mgr = m_load_config.comp_graph->static_infer_manager();
+    if (static_infer_mgr.get_infer_type(var.node()).shape &
+        (InferType::CONST | InferType::RT_STATIC)) {
         auto shape = static_infer_mgr.infer_shape_fallible(var.node());
         if (!shape) {
             LITE_WARN(

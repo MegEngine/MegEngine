@@ -488,16 +488,6 @@ public:
     MGE_WIN_DECLSPEC_FUC MemAllocPlan& init_mem_plan(
             const DeviceTensorND* fixed_alloc = nullptr);
 
-    /*!
-     * \brief check infer shape capablity by check m_static_infer_trait's shape infer
-     */
-    MGE_WIN_DECLSPEC_FUC bool capable_shape_infer();
-
-    /*!
-     * \brief check infer shape capablity by check m_static_infer_trait's value infer
-     */
-    MGE_WIN_DECLSPEC_FUC bool capable_value_infer();
-
     //! whether the var is graph output, if it is output, the Flag of
     //! NO_SYS_MEM_ALLOC can be modified.
     MGE_WIN_DECLSPEC_FUC bool is_graph_dest_varnode();
