@@ -91,17 +91,23 @@ def roi_pooling(
     mode: str = "max",
     scale: float = 1.0,
 ) -> Tensor:
-    r"""Applies roi pooling on input feature.
+    r"""Applies RoI (Region of Interest) pooling on input feature, as described in Faster RCNN.
+
+    .. seealso::
+
+        * `Region of interest pooling explained <https://deepsense.ai/region-of-interest-pooling-explained/>`_
+        * `Faster R-CNN <https://arxiv.org/abs/1506.01497>`_
 
     Args:
-        inp: tensor that represents the input feature, `(N, C, H, W)` images.
-        rois: `(K, 5)` boxes. First column is the index into N. The other 4 columns are xyxy.
-        output_shape: `(height, width)` of output rois feature.
-        mode: "max" or "average", use max/average align just like max/average pooling. Default: "max"
-        scale: scale the input boxes by this number. Default: 1.0
+        inp: the input tensor that represents the input feature with ``(n, c, h, w)`` shape.
+        rois: a tensor represents Regions of Interest with shape ``(K, 5)``, which means total ``K`` box coordinates in ``(idx, x1, y1, x2, y2)`` format where the regions will be taken from.
+            The coordinate including ``(x1, y1)`` and ``(x2, y2)`` must satisfy ``0 <= x1 < x2`` and ``0 <= y1 < y2``.
+            The first column ``idx`` should contain the index of the corresponding element in the input batch, i.e. a number in ``[0, n - 1]``.
+        mode: "max" or "average", the pooling mode to be used. Default: "max"
+        scale: It is a scale that maps output rois feature to input feature. For example, if the output is 224 * 224 image, and the input is a 112 * 112 feature map, then the scale should be set to 0.5. The default value is 1.0
 
     Returns:
-        ``K, C, output_shape[0], output_shape[1])`` feature of rois.
+        output tensor. ``(K, C, output_shape[0], output_shape[1])`` feature of rois.
 
     Examples:
         >>> import numpy as np
@@ -172,17 +178,24 @@ def roi_align(
     sample_points: Union[int, tuple, list] = 2,
     aligned: bool = True,
 ) -> Tensor:
-    r"""Applies roi align on input feature.
+    r"""Applies RoI (Region of Interest) align on input feature, as described in Mask R-CNN.
+
+    .. seealso::
+
+        * `RoIAlign <https://paperswithcode.com/method/roi-align>`_
+        * `Mask R-CNN <https://arxiv.org/abs/1703.06870v3>`_
 
     Args:
-        inp: tensor that represents the input feature, shape is `(N, C, H, W)`.
-        rois: `(N, 5)` boxes. First column is the box index. The other 4 columns are ``xyxy``.
-        output_shape: `(height, width)` shape of output rois feature.
+        inp: the input tensor that represents the input feature with ``(n, c, h, w)`` shape.
+        rois: a tensor represents Regions of Interest with shape ``(K, 5)``, which means total ``K`` box coordinates in ``(idx, x1, y1, x2, y2)`` format where the regions will be taken from.
+            The coordinate including ``(x1, y1)`` and ``(x2, y2)`` must satisfy ``0 <= x1 < x2`` and ``0 <= y1 < y2``.
+            The first column ``idx`` should contain the index of the corresponding element in the input batch, i.e. a number in ``[0, n - 1]``.
+        output_shape: ``(height, width)`` shape of output rois feature.
         mode: "max" or "average", use max/average align just like max/average pooling. Default: "average"
         spatial_scale: scale the input boxes by this number. Default: 1.0
         sample_points: number of inputs samples to take for each output sample.
             0 to take samples densely. Default: 2
-        aligned: wheather to align the input feature, with `aligned=True`,
+        aligned: wheather to align the input feature, with ``aligned=True``,
             we first appropriately scale the ROI and then shift it by -0.5. Default: True
 
     Returns:
@@ -233,9 +246,9 @@ def nms(
     r"""Performs non-maximum suppression (NMS) on the boxes according to their intersection-over-union(IoU).
 
     Args:
-        boxes: tensor of shape `(N, 4)`; the boxes to perform nms on; each box is expected to be in `(x1, y1, x2, y2)` format.
+        boxes: tensor of shape ``(N, 4)``; the boxes to perform nms on; each box is expected to be in ``(x1, y1, x2, y2)`` format.
         iou_thresh: IoU threshold for overlapping.
-        scores: tensor of shape `(N,)`, the score of boxes.
+        scores: tensor of shape ``(N,)``, the score of boxes.
         max_output: the maximum number of boxes to keep; it is optional if this operator is not traced
             otherwise it required to be specified; if it is not specified, all boxes are kept.
 
@@ -287,27 +300,26 @@ def remap(
     scalar: float = 0.0,
     interp_mode: str = "linear",
 ) -> Tensor:
-    r"""Applies remap transformation to batched 2D images.
+    r"""Applies remap transformation to batched 2D images. Remap is an operation that relocates pixels in a image to another location in a new image.
 
-    The input images are transformed to the output images by the tensor map_xy.
-    The output's H and W are same as map_xy's H and W.
+    The input images are transformed to the output images by the tensor ``map_xy``.
+    The output's H and W are same as ``map_xy``'s H and W.
 
     Args:
-        inp: input image
-        map_xy: transformation matrix, its shape represents [batch_size, H, W, 2]. map_xy's H and W are the same as output's H and W. 
-            For each output location output[n, h, w], the vector map_xy[n, h, w] specifies input pixel location x and y, which are 
-            used to interpolate the output value output[n, h, w]. In the case of 2D inputs, map_xy[n, h, w] specifies the x, y pixel 
-            locations for interpolating output[n, h, w], map_xy specifies the sampling pixel locations normalized by the inp spatial 
-            dimensions. Therefore, it should have most values in the range of [0, h - 1) and [0, w - 1).
+        inp: input image, its shape represents ``[b, c, in_h, in_w]``.
+        map_xy: transformation matrix, its shape shoule be ``[b, o_h, o_w, 2]``. The shape of output is determined by o_h and o_w.
+            For each element in output, its value is determined by inp and ``map_xy``.
+            ``map_xy[..., 0]`` and ``map_xy[..., 1]`` are the positions of
+            the current element in inp, respectively. Therefore, their ranges are ``[0, in_w - 1]`` and ``[0, in_h - 1]``.
         border_mode: pixel extrapolation method. Default: "replicate". Currently also support "constant", "reflect", "reflect_101", "wrap".
-            "replicate": repeatedly fills the edge pixel values of the duplicate image, expanding the new boundary pixel values with 
+            "replicate": repeatedly fills the edge pixel values of the duplicate image, expanding the new boundary pixel values with
             the edge pixel values.
             "constant": fills the edges of the image with a fixed numeric value.
         scalar: value used in case of a constant border. Default: 0
         interp_mode: interpolation methods. Default: "linear". Currently also support "nearest" mode.
 
     Returns:
-        output tensor.
+        output tensor. [b, c, o_h, o_w]
 
     Examples:
         >>> import numpy as np
@@ -341,7 +353,7 @@ def warp_affine(
     format: str = "NHWC",
     interp_mode: str = "linear",
 ) -> Tensor:
-    r"""Batched affine transform on 2D images.
+    r"""Batched affine transformation on 2D images. Affine transformation is a linear transformation between two-dimensional coordinates.
 
     Args:
         inp: input image.
@@ -386,7 +398,7 @@ def warp_perspective(
     format: str = "NCHW",
     interp_mode: str = "linear",
 ) -> Tensor:
-    r"""Applies perspective transformation to batched 2D images.
+    r"""Applies perspective transformation to batched 2D images. A perspective transformation is a projection of a image onto a new view plane.
 
     The input images are transformed to the output images by the transformation matrix:
 
@@ -396,14 +408,14 @@ def warp_perspective(
                 \frac{M_{10}w + M_{11}h + M_{12}}{M_{20}w + M_{21}h + M_{22}}
                 \right)
 
-    Optionally, we can set `mat_idx` to assign different transformations to the same image,
+    Optionally, we can set ``mat_idx`` to assign different transformations to the same image,
     otherwise the input images and transformations should be one-to-one correnspondence.
 
     Args:
         inp: input image.
-        mat: batch, 3, 3)` transformation matrix.
-        out_shape: h, w)` size of the output image.
-        mat_idx: batch, )` image batch idx assigned to each matrix. Default: None
+        mat: ``(batch, 3, 3)`` transformation matrix.
+        out_shape: ``(h, w)`` size of the output image.
+        mat_idx: image batch idx assigned to each matrix. Default: None
         border_mode: pixel extrapolation method.
             Default: "replicate". Currently also support "constant", "reflect",
             "reflect_101", "wrap".
@@ -416,7 +428,7 @@ def warp_perspective(
         output tensor.
 
     Note:
-        The transformation matrix is the inverse of that used by `cv2.warpPerspective`.
+        The transformation matrix is the inverse of that used by ``cv2.warpPerspective``.
 
     Examples:
         >>> import numpy as np
@@ -459,11 +471,11 @@ def interpolate(
 
     Args:
         inp: input tensor.
-        size: size of the output tensor. Default: None
+        size: the size of the output tensor. Default: None
         scale_factor: scaling factor of the output tensor. Default: None
         mode: interpolation methods, acceptable values are:
             "bilinear", "linear", "bicubic" and "nearest". Default: "bilinear"
-        align_corners: This only has an effect when `mode`
+        align_corners: This only has an effect when ``mode``
             is "bilinear" or "linear". Geometrically, we consider the pixels of the input
             and output as squares rather than points. If set to ``True``, the input
             and output tensors are aligned by the center points of their corner
@@ -473,7 +485,7 @@ def interpolate(
             out-of-boundary values, making this operation *independent* of input size
 
     Returns:
-        output tensor.
+        output tensor
 
     Examples:
         >>> import numpy as np
