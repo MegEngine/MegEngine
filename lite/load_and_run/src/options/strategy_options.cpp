@@ -59,7 +59,9 @@ void TestcaseOption::config_model(
         if (model_ptr->get_testcase_num() && !FLAGS_c_opr_lib_with_param) {
             if (runtime_param.stage == RunStage::AFTER_MODEL_LOAD) {
                 auto input_tensor = model_ptr->get_test_input();
-                auto loader = model_ptr->reset_loader();
+                auto input_file = model_ptr->get_loader()->reset_file();
+                auto current_offset = input_file->tell();
+                auto loader = model_ptr->reset_loader(std::move(input_file));
                 auto testcase = loader->load(model_ptr->get_mdl_config(), false);
                 mgb_assert(testcase.output_var_list.size() == input_tensor.size());
                 for (size_t i = 0; i < input_tensor.size(); ++i) {
@@ -71,6 +73,10 @@ void TestcaseOption::config_model(
                     input_tensor[i].second->copy_from(
                             mgb::HostTensorND::make_proxy(*opr.dev_data()));
                 }
+                input_file = model_ptr->get_loader()->reset_file();
+                input_file->rewind();
+                input_file->skip(current_offset);
+                model_ptr->reset_loader(std::move(input_file));
             }
         }
     }
