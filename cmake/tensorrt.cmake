@@ -120,7 +120,7 @@ set_target_properties(
 message(
   STATUS "Found TensorRT: ${__found_trt_root} (found version: ${TRT_VERSION_STRING})")
 
-if(TensorRT_VERSION_MAJOR GREATER_EQUAL 7)
+if(TensorRT_VERSION_MAJOR STREQUAL 7)
   if(MGE_CUDA_USE_STATIC)
     find_library(
       LIBMYELIN_COMPILER

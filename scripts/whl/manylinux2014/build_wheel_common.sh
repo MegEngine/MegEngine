@@ -9,9 +9,10 @@ TMPFS_ARGS="--tmpfs /tmp:exec"
 local_path=$(dirname $(readlink -f $0))
 CUDNN_LIB_DIR="/opt/cudnn/lib64/"
 CUDA_LIB_DIR="/usr/local/cuda/lib64/"
+TensorRT_LIB_DIR="/opt/tensorrt/lib/"
 
 SDK_NAME="unknown"
-x86_64_support_version="cu101 cu111 cu112 cpu"
+x86_64_support_version="cu101 cu111 cu112 cpu cu111_cudnn821_tensorRT825"
 aarch64_support_version="cu102_JetsonNano cu111 cpu"
 if [[ -z ${IN_CI} ]]
 then
@@ -86,7 +87,10 @@ elif [ $SDK_NAME == "cu102_JetsonNano" ];then
         ${CUDNN_LIB_DIR}/libcudnn_cnn_train.so.8:\
         ${CUDNN_LIB_DIR}/libcudnn_ops_infer.so.8:\
         ${CUDNN_LIB_DIR}/libcudnn_ops_train.so.8:\
-        ${CUDNN_LIB_DIR}/libcudnn.so.8"
+        ${CUDNN_LIB_DIR}/libcudnn.so.8:\
+        ${TensorRT_LIB_DIR}/libnvinfer_plugin.so.8:\
+        ${TensorRT_LIB_DIR}/libnvinfer.so.8"
+
 
     EXTRA_CMAKE_FLAG="-DMGE_WITH_CUDNN_SHARED=ON -DMGE_WITH_CUBLAS_SHARED=ON -DMGE_CUDA_GENCODE=\"-gencode arch=compute_53,code=sm_53\" "
 
@@ -130,6 +134,37 @@ elif [ $SDK_NAME == "cu111" ];then
             -gencode arch=compute_86,code=sm_86 \
             -gencode arch=compute_86,code=compute_86\" "
     fi
+
+elif [ $SDK_NAME == "cu111_cudnn821_tensorRT825" ];then
+    BUILD_GCC8="ON"
+    REQUIR_CUDA_VERSION="11010"
+    REQUIR_CUDNN_VERSION="8.2.1"
+    REQUIR_TENSORRT_VERSION="8.2.5.1"
+    REQUIR_CUBLAS_VERSION="11.2.1.74"
+   
+
+    CUDA_COPY_LIB_LIST="\
+        ${CUDA_LIB_DIR}/libnvrtc.so.11.1:\
+        ${CUDA_LIB_DIR}/libcublasLt.so.11:\
+        ${CUDA_LIB_DIR}/libcublas.so.11:\
+        ${CUDNN_LIB_DIR}/libcudnn_adv_infer.so.8:\
+        ${CUDNN_LIB_DIR}/libcudnn_adv_train.so.8:\
+        ${CUDNN_LIB_DIR}/libcudnn_cnn_infer.so.8:\
+        ${CUDNN_LIB_DIR}/libcudnn_cnn_train.so.8:\
+        ${CUDNN_LIB_DIR}/libcudnn_ops_infer.so.8:\
+        ${CUDNN_LIB_DIR}/libcudnn_ops_train.so.8:\
+        ${CUDNN_LIB_DIR}/libcudnn.so.8:\
+        ${TensorRT_LIB_DIR}/libnvinfer_plugin.so.8:\
+        ${TensorRT_LIB_DIR}/libnvinfer.so.8"
+
+    EXTRA_CMAKE_FLAG=" -DMGE_WITH_CUDNN_SHARED=ON -DMGE_WITH_CUBLAS_SHARED=ON \
+        -DMGE_CUDA_GENCODE=\"-gencode arch=compute_61,code=sm_61 \
+        -gencode arch=compute_70,code=sm_70 \
+        -gencode arch=compute_75,code=sm_75 \
+        -gencode arch=compute_80,code=sm_80 \
+        -gencode arch=compute_86,code=sm_86 \
+        -gencode arch=compute_86,code=compute_86\" "
+
 
 elif [ $SDK_NAME == "cu112" ];then
     BUILD_GCC8="ON"

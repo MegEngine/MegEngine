@@ -25,7 +25,6 @@ using namespace cg;
 
 template <typename T>
 using TensorRTUniquePtr = opr::intl::TensorRTUniquePtr<T>;
-
 namespace {
 nvinfer1::DataType mgb_dtype_to_trt_dtype(DType dtype) {
     switch (dtype.enumv()) {
@@ -125,7 +124,8 @@ class TensorRTReplacePass::Impl final {
     // True if var is encountered for the first time.
     bool check_input(
             VarNode* var, OperatorNodeBase* opr,
-            mgb::SmallVector<nvinfer1::DimensionType> dimtypes = {});
+            mgb::SmallVector<TENSORRT_NO_DIMENSIONTYPE(nvinfer1::DimensionType)>
+                    dimtypes = {});
     HostTensorND get_value(VarNode* var, ConvFormat format = ConvFormat::NCHW);
     void set_itensor_dynamic_range(VarNode* var, OperatorNodeBase* opr);
     float get_scale(DType data_type);
@@ -652,9 +652,11 @@ public:
             using Mode = opr::Elemwise::Mode;
             auto mode = opr->cast_final_safe<opr::Elemwise>().param().mode;
             auto get_dimtype = [&](int ndim) {
-                SmallVector<nvinfer1::DimensionType> dimtypes(ndim);
+                SmallVector<TENSORRT_NO_DIMENSIONTYPE(nvinfer1::DimensionType)>
+                        dimtypes(ndim);
                 for (int i = 0; i < ndim; i++) {
-                    dimtypes[i] = nvinfer1::DimensionType::kSPATIAL;
+                    dimtypes[i] = TENSORRT_NO_DIMENSIONTYPE_VALUE(
+                            nvinfer1::DimensionType::kSPATIAL);
                 }
                 return dimtypes;
             };
@@ -839,81 +841,86 @@ public:
                 set_itensor_dynamic_range(opr->output(0), opr);
         };
 
-        m_opr_trait[opr::ElemwiseMultiType::typeinfo()].add_to_nvinfer =
-                [this](nvinfer1::INetworkDefinition* net, OperatorNodeBase* opr) {
-                    auto&& varnode2itensor =
-                            m_tensorrt_graphs[m_graph_map[opr] - 1]->varnode2itensor;
-                    size_t ndim0 = opr->input(0)->shape().ndim,
-                           ndim1 = opr->input(1)->shape().ndim;
-                    mgb_assert(ndim0 == ndim1);
-                    size_t tensor_ndim = ndim0;
-                    using Mode = opr::ElemwiseMultiType::Mode;
-                    SmallVector<nvinfer1::DimensionType> dimtypes(tensor_ndim);
-                    for (size_t i = 0; i < tensor_ndim; i++) {
-                        dimtypes[i] = nvinfer1::DimensionType::kSPATIAL;
-                    }
-                    auto mode =
-                            opr->cast_final_safe<opr::ElemwiseMultiType>().param().mode;
-                    mgb_assert(
-                            mode == Mode::QADD || mode == Mode::QFUSE_ADD_RELU,
-                            "Only QADD and QFUSE_ADD_RELU are supported on CUDA.");
-                    mgb_assert(
-                            opr->output(0)->dtype().enumv() == DTypeEnum::QuantizedS8,
-                            "output data type %s is not supported",
-                            opr->output(0)->dtype().name());
-                    check_input(opr->input(0), opr, dimtypes);
-                    check_input(opr->input(1), opr, dimtypes);
-                    auto dims0 = varnode2itensor[opr->input(0)]->getDimensions(),
-                         dims1 = varnode2itensor[opr->input(1)]->getDimensions();
-                    mgb_throw_if(
-                            dims0.nbDims != dims1.nbDims, AssertionError,
-                            "Input dimensions of two input tensors must be "
-                            "equal (got: %d, %d).",
-                            dims0.nbDims, dims1.nbDims);
-                    auto elem = net->addElementWise(
-                            *varnode2itensor[opr->input(0)],
-                            *varnode2itensor[opr->input(1)],
-                            nvinfer1::ElementWiseOperation::kSUM);
-                    mgb_assert(elem, "construct network failed");
-                    std::string layer_name = "TRT_ELEM:" + opr->name();
-                    elem->setName(layer_name.c_str());
-                    std::string output_name = "TRT_O:" + opr->output()[0]->name();
-                    elem->getOutput(0)->setName(output_name.c_str());
-                    varnode2itensor[opr->output(0)] = elem->getOutput(0);
-                    set_itensor_dynamic_range(opr->output(0), opr);
-                    if (mode == Mode::QFUSE_ADD_RELU) {
-                        auto act = net->addActivation(
-                                *varnode2itensor[opr->output(0)],
-                                nvinfer1::ActivationType::kRELU);
-                        mgb_assert(act, "construct network failed");
-                        std::string layer_name = "TRT_ACTV:" + opr->name();
-                        act->setName(layer_name.c_str());
-                        std::string output_name =
-                                "TRT_O:" + opr->output()[0]->name() + "_act";
-                        act->getOutput(0)->setName(output_name.c_str());
-                        varnode2itensor[opr->output(0)] = act->getOutput(0);
-                        set_itensor_dynamic_range(opr->output(0), opr);
-                    }
-                };
+        m_opr_trait[opr::ElemwiseMultiType::typeinfo()]
+                .add_to_nvinfer = [this](nvinfer1::INetworkDefinition* net,
+                                         OperatorNodeBase* opr) {
+            auto&& varnode2itensor =
+                    m_tensorrt_graphs[m_graph_map[opr] - 1]->varnode2itensor;
+            size_t ndim0 = opr->input(0)->shape().ndim,
+                   ndim1 = opr->input(1)->shape().ndim;
+            mgb_assert(ndim0 == ndim1);
+            size_t tensor_ndim = ndim0;
+            using Mode = opr::ElemwiseMultiType::Mode;
+            SmallVector<TENSORRT_NO_DIMENSIONTYPE(nvinfer1::DimensionType)> dimtypes(
+                    tensor_ndim);
+            for (size_t i = 0; i < tensor_ndim; i++) {
+                dimtypes[i] = TENSORRT_NO_DIMENSIONTYPE_VALUE(
+                        nvinfer1::DimensionType::kSPATIAL);
+            }
+            auto mode = opr->cast_final_safe<opr::ElemwiseMultiType>().param().mode;
+            mgb_assert(
+                    mode == Mode::QADD || mode == Mode::QFUSE_ADD_RELU,
+                    "Only QADD and QFUSE_ADD_RELU are supported on CUDA.");
+            mgb_assert(
+                    opr->output(0)->dtype().enumv() == DTypeEnum::QuantizedS8,
+                    "output data type %s is not supported",
+                    opr->output(0)->dtype().name());
+            check_input(opr->input(0), opr, dimtypes);
+            check_input(opr->input(1), opr, dimtypes);
+            auto dims0 = varnode2itensor[opr->input(0)]->getDimensions(),
+                 dims1 = varnode2itensor[opr->input(1)]->getDimensions();
+            mgb_throw_if(
+                    dims0.nbDims != dims1.nbDims, AssertionError,
+                    "Input dimensions of two input tensors must be "
+                    "equal (got: %d, %d).",
+                    dims0.nbDims, dims1.nbDims);
+            auto elem = net->addElementWise(
+                    *varnode2itensor[opr->input(0)], *varnode2itensor[opr->input(1)],
+                    nvinfer1::ElementWiseOperation::kSUM);
+            mgb_assert(elem, "construct network failed");
+            std::string layer_name = "TRT_ELEM:" + opr->name();
+            elem->setName(layer_name.c_str());
+            std::string output_name = "TRT_O:" + opr->output()[0]->name();
+            elem->getOutput(0)->setName(output_name.c_str());
+            varnode2itensor[opr->output(0)] = elem->getOutput(0);
+            set_itensor_dynamic_range(opr->output(0), opr);
+            if (mode == Mode::QFUSE_ADD_RELU) {
+                auto act = net->addActivation(
+                        *varnode2itensor[opr->output(0)],
+                        nvinfer1::ActivationType::kRELU);
+                mgb_assert(act, "construct network failed");
+                std::string layer_name = "TRT_ACTV:" + opr->name();
+                act->setName(layer_name.c_str());
+                std::string output_name = "TRT_O:" + opr->output()[0]->name() + "_act";
+                act->getOutput(0)->setName(output_name.c_str());
+                varnode2itensor[opr->output(0)] = act->getOutput(0);
+                set_itensor_dynamic_range(opr->output(0), opr);
+            }
+        };
 
         auto replace_matmul_opr = [this](nvinfer1::INetworkDefinition* net,
                                          OperatorNodeBase* opr) {
             auto&& varnode2itensor =
                     m_tensorrt_graphs[m_graph_map[opr] - 1]->varnode2itensor;
-            SmallVector<nvinfer1::DimensionType> dimtypes;
+            SmallVector<TENSORRT_NO_DIMENSIONTYPE(nvinfer1::DimensionType)> dimtypes;
             bool transposeA = false, transposeB = false;
             if (opr->same_type<opr::MatrixMul>()) {
                 dimtypes = {
-                        nvinfer1::DimensionType::kSPATIAL,
-                        nvinfer1::DimensionType::kSPATIAL};
+                        TENSORRT_NO_DIMENSIONTYPE_VALUE(
+                                nvinfer1::DimensionType::kSPATIAL),
+                        TENSORRT_NO_DIMENSIONTYPE_VALUE(
+                                nvinfer1::DimensionType::kSPATIAL)};
                 transposeA = opr->cast_final_safe<opr::MatrixMul>().param().transposeA;
                 transposeB = opr->cast_final_safe<opr::MatrixMul>().param().transposeB;
             } else {
                 mgb_assert(opr->same_type<opr::BatchedMatrixMul>());
                 dimtypes = {
-                        nvinfer1::DimensionType::kINDEX,
-                        nvinfer1::DimensionType::kSPATIAL,
-                        nvinfer1::DimensionType::kSPATIAL};
+                        TENSORRT_NO_DIMENSIONTYPE_VALUE(
+                                nvinfer1::DimensionType::kINDEX),
+                        TENSORRT_NO_DIMENSIONTYPE_VALUE(
+                                nvinfer1::DimensionType::kSPATIAL),
+                        TENSORRT_NO_DIMENSIONTYPE_VALUE(
+                                nvinfer1::DimensionType::kSPATIAL)};
                 transposeA = opr->cast_final_safe<opr::BatchedMatrixMul>()
                                      .param()
                                      .transposeA;
@@ -957,9 +964,11 @@ public:
             auto&& varnode2itensor =
                     m_tensorrt_graphs[m_graph_map[opr] - 1]->varnode2itensor;
             size_t tensor_ndim = opr->input(0)->shape().ndim;
-            SmallVector<nvinfer1::DimensionType> dimtypes(tensor_ndim);
+            SmallVector<TENSORRT_NO_DIMENSIONTYPE(nvinfer1::DimensionType)> dimtypes(
+                    tensor_ndim);
             for (size_t i = 0; i < tensor_ndim; i++) {
-                dimtypes[i] = nvinfer1::DimensionType::kSPATIAL;
+                dimtypes[i] = TENSORRT_NO_DIMENSIONTYPE_VALUE(
+                        nvinfer1::DimensionType::kSPATIAL);
             }
             check_input(opr->input(0), opr, dimtypes);
             auto host_one = HostTensorND(
@@ -1094,7 +1103,7 @@ VarNodeArray TensorRTReplacePass::Impl::find_parent_conv(OperatorNodeBase* inp_o
 
 bool TensorRTReplacePass::Impl::check_input(
         VarNode* var, OperatorNodeBase* opr,
-        SmallVector<nvinfer1::DimensionType> dimtypes) {
+        SmallVector<TENSORRT_NO_DIMENSIONTYPE(nvinfer1::DimensionType)> dimtypes) {
     auto trt_graph = m_tensorrt_graphs[m_graph_map[opr] - 1];
     auto&& varnode2itensor = trt_graph->varnode2itensor;
     auto iter = trt_graph->inputs.find(var);

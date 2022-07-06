@@ -21,12 +21,14 @@ public:
     typedef std::pair<std::string, float> Record;
     std::vector<Record> profile;
 
-    void reportLayerTime(const char* layerName, float ms) override;
+    void reportLayerTime(const char* layerName, float ms)
+            TENSORRT_NO_EXCEPT(noexcept) override;
     void print_layer_times();
     std::shared_ptr<json::Value> to_json();
 };
 
-void TensorRTProfiler::reportLayerTime(const char* layerName, float ms) {
+void TensorRTProfiler::reportLayerTime(const char* layerName, float ms)
+        TENSORRT_NO_EXCEPT(noexcept) {
     profile.push_back(std::make_pair(layerName, ms));
 }
 
@@ -45,7 +47,8 @@ void TensorRTProfiler::print_layer_times() {
 
 /* ========================== Logger ========================== */
 
-void TensorRTOpr::Logger::log(nvinfer1::ILogger::Severity severity, const char* msg) {
+void TensorRTOpr::Logger::log(nvinfer1::ILogger::Severity severity, const char* msg)
+        TENSORRT_NO_EXCEPT(noexcept) {
     switch (severity) {
         case Severity::kINTERNAL_ERROR:
             mgb_log("TRT_INTERNAL_ERROR: %s", msg);
@@ -112,7 +115,8 @@ TensorRTOpr::GpuAllocator::~GpuAllocator() noexcept {
 }
 
 void* TensorRTOpr::GpuAllocator::allocate(
-        uint64_t size, uint64_t alignment, uint32_t flags) {
+        uint64_t size, uint64_t alignment, uint32_t flags)
+        TENSORRT_NO_EXCEPT(noexcept) {
     static bool enable_log = getenv("MGB_LOG_TRT_MEM_ALLOC");
     mgb_assert(
             !flags && !(alignment & (alignment - 1)), "flags=%u alignment=%" PRIu64,
@@ -132,7 +136,7 @@ void* TensorRTOpr::GpuAllocator::allocate(
     return ret;
 }
 
-void TensorRTOpr::GpuAllocator::free(void* memory) {
+void TensorRTOpr::GpuAllocator::free(void* memory) TENSORRT_NO_EXCEPT(noexcept) {
     {
         auto iter = m_ptr2size.find(memory);
         mgb_assert(iter != m_ptr2size.end(), "ptr %p not found", memory);

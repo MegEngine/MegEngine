@@ -15,6 +15,19 @@
     ((NV_TENSORRT_MAJOR * 1000) + (NV_TENSORRT_MINOR * 100) + \
      NV_TENSORRT_PATCH)  // major, minor, patch
 
+// some api has been changed in TentorRT8
+#if (NV_TENSOR_RT_VERSION >= 8001)
+enum class Empty : int32_t {};
+#define TENSORRT_NO_DIMENSIONTYPE(api) Empty
+#define TENSORRT_NO_DIMENSIONTYPE_VALUE(api) \
+    {}
+#define TENSORRT_NO_EXCEPT(api) api
+#else
+#define TENSORRT_NO_DIMENSIONTYPE(api)       api
+#define TENSORRT_NO_DIMENSIONTYPE_VALUE(api) api
+#define TENSORRT_NO_EXCEPT(api)
+#endif
+
 namespace mgb {
 namespace opr {
 
@@ -171,7 +184,8 @@ class TensorRTOpr::Logger final : public nvinfer1::ILogger, NonCopyableObj {
     Logger();
 
 public:
-    void log(nvinfer1::ILogger::Severity severity, const char* msg) override;
+    void log(nvinfer1::ILogger::Severity severity, const char* msg)
+            TENSORRT_NO_EXCEPT(noexcept) override;
     static Logger& instance();
 };
 
@@ -184,8 +198,9 @@ public:
     explicit GpuAllocator(CompNode cn);
     ~GpuAllocator() noexcept;
 
-    void* allocate(uint64_t size, uint64_t alignment, uint32_t flags) override;
-    void free(void* memory) override;
+    void* allocate(uint64_t size, uint64_t alignment, uint32_t flags)
+            TENSORRT_NO_EXCEPT(noexcept) override;
+    void free(void* memory) TENSORRT_NO_EXCEPT(noexcept) override;
 
     CompNode comp_node() const { return m_cn; }
 };
