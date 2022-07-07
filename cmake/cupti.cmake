@@ -7,12 +7,8 @@ endif()
 if("${CUDA_ROOT_DIR}" STREQUAL "" AND NOT "$ENV{CUDA_BIN_PATH}" STREQUAL "")
   set(CUDA_ROOT_DIR $ENV{CUDA_BIN_PATH})
 endif()
-if("${CUDA_ROOT_DIR}" STREQUAL "")
-  message(
-    FATAL_ERROR
-      "Can not find CUDA, please export cuda sdk path to CUDA_ROOT_DIR or CUDA_PATH or CUDA_BIN_PATH"
-  )
-endif()
+# ${CUDA_ROOT_DIR} check removed here because users may not always keep env variable
+
 # TODO: find_library(CUDA_ROOT_DIR) in cmake/cuda.cmake
 
 set(MGE_CUPTI_USE_STATIC ${MGE_CUDA_USE_STATIC})
