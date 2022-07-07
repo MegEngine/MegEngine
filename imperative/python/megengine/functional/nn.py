@@ -1721,8 +1721,8 @@ def pad(
         mode: One of the following string values. Default: ``'constant'``
 
             * ``'constant'``: Pads with a constant value.
-            * ``'reflect'``: Pads with the edge values of tensor.
-            * ``'replicate'``: Pads with the reflection of the tensor mirrored on the first and last values of the tensor along each axis.
+            * ``'reflect'``: Pads with the reflection of the tensor mirrored on the first and last values of the tensor along each axis.
+            * ``'replicate'``: Pads with the edge values of tensor.
         constant_val: Fill value for ``'constant'`` padding. Default: 0
 
     Examples:
