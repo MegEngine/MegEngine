@@ -10,7 +10,7 @@ DECLARE_bool(full_run);
 #endif
 DECLARE_bool(reproducible);
 DECLARE_bool(binary_equal_between_batch);
-DECLARE_uint32(fast_run_shared_batch_size);
+DECLARE_int32(fast_run_shared_batch_size);
 DECLARE_string(fast_run_algo_policy);
 
 namespace lar {
@@ -33,8 +33,10 @@ public:
 
     OptionValMap* get_option() override { return &m_option; }
 
+    void update() override;
+
 private:
-    FastRunOption();
+    FastRunOption() = default;
     //! config template for different model
     template <typename ModelImpl>
     void config_model_internel(RuntimeParam&, std::shared_ptr<ModelImpl>) {}

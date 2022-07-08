@@ -233,8 +233,8 @@ void OptionsTimeProfiler::profile_with_given_options(
                 "the log) when profile option:\n%s\n",
                 option_code.c_str());
     } else {
-        printf("profile option:\n%s\naverage time = %.2f\n", option_code.c_str(),
-               average);
+        mgb_log("profile option:\n%s\naverage time = %.2f\n", option_code.c_str(),
+                average);
         //! record profile result
         m_options_profile_result.insert({option_code, average});
 
@@ -370,7 +370,6 @@ void UserInfoParser::parse_info(std::shared_ptr<OptionsFastManager>& manager) {
 FittingStrategy::FittingStrategy(std::string model_path) {
     m_manager = std::make_shared<OptionsFastManager>();
     m_dumped_model = FLAGS_dump_fitting_model;
-    mgb::set_log_level(mgb::LogLevel::INFO);
     m_options = std::make_shared<OptionMap>();
     m_model_path = model_path;
     auto option_creator_map = OptionFactory::get_Instance().get_option_creator_map();
@@ -518,10 +517,10 @@ void FittingStrategy::AutoCleanFile::dump_model() {
 void FittingStrategy::run() {
     auto mgb_version = mgb::get_version();
     auto dnn_version = megdnn::get_version();
-    printf("megbrain/lite/load_and_run:\nusing MegBrain "
-           "%d.%d.%d(%d) and MegDNN %d.%d.%d\n",
-           mgb_version.major, mgb_version.minor, mgb_version.patch, mgb_version.is_dev,
-           dnn_version.major, dnn_version.minor, dnn_version.patch);
+    mgb_log("megbrain/lite/load_and_run:\nusing MegBrain "
+            "%d.%d.%d(%d) and MegDNN %d.%d.%d\n",
+            mgb_version.major, mgb_version.minor, mgb_version.patch, mgb_version.is_dev,
+            dnn_version.major, dnn_version.minor, dnn_version.patch);
     // ! create profiler with given user info
     m_info_parser.get_user_info();
     m_info_parser.parse_info(m_manager);

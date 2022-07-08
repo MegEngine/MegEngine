@@ -30,6 +30,8 @@ enum class RunStage {
     AFTER_MODEL_RUNNING = 7,
 
     GLOBAL_OPTIMIZATION = 8,
+
+    UPDATE_IO = 9,
 };
 /*!
  * \brief: type of different model

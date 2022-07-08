@@ -1,6 +1,6 @@
 load("//brain/megbrain/lite:flags.bzl","pthread_select", "lite_opts")
 cc_library(
-    name = "mgblar",
+    name = "lar_object",
     srcs = glob(["src/**/*.cpp"], exclude = ["src/main.cpp"]),
     hdrs = glob(["src/**/*.h"]),
     includes = ["src"],
@@ -28,7 +28,8 @@ cc_megvii_binary(
         "no_exceptions",
         "no_rtti",
     ]),
-    internal_deps = [":mgblar"],
+    internal_deps = [":lar_object"],
     visibility = ["//visibility:public"],
 )
+
 

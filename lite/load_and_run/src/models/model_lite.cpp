@@ -8,17 +8,17 @@ DECLARE_bool(share_param_mem);
 
 using namespace lar;
 ModelLite::ModelLite(const std::string& path) : model_path(path) {
-    LITE_WARN("creat lite model use CPU as default comp node");
+    LITE_LOG("creat lite model use CPU as default comp node");
 };
 void ModelLite::load_model() {
     m_network = std::make_shared<lite::Network>(config, IO);
     if (enable_layout_transform) {
-        LITE_WARN("enable layout transform while load model for lite");
+        LITE_LOG("enable layout transform while load model for lite");
         lite::Runtime::enable_global_layout_transform(m_network);
     }
     if (share_model_mem) {
         //! WARNNING:maybe not right to share param memmory for this
-        LITE_WARN("enable share model memory");
+        LITE_LOG("enable share model memory");
 
         FILE* fin = fopen(model_path.c_str(), "rb");
         LITE_ASSERT(fin, "failed to open %s: %s", model_path.c_str(), strerror(errno));

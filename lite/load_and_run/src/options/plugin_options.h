@@ -44,8 +44,10 @@ public:
 
     std::string option_name() const override { return m_option_name; };
 
+    void update() override;
+
 private:
-    PluginOption();
+    PluginOption() = default;
     template <typename ModelImpl>
     void config_model_internel(RuntimeParam&, std::shared_ptr<ModelImpl>){};
     double range;
@@ -74,8 +76,10 @@ public:
 
     std::string option_name() const override { return m_option_name; };
 
+    void update() override;
+
 private:
-    DebugOption();
+    DebugOption() = default;
     template <typename ModelImpl>
     void format_and_print(const std::string&, std::shared_ptr<ModelImpl>){};
     template <typename ModelImpl>

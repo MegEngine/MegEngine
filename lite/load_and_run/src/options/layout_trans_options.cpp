@@ -11,7 +11,7 @@ void GoptLayoutOption::config_model_internel<ModelLite>(
         RuntimeParam& runtime_param, std::shared_ptr<ModelLite> model) {
     if (runtime_param.stage == RunStage::BEFORE_MODEL_LOAD) {
         if (m_layout_transform) {
-            LITE_WARN("using global layout transform optimization\n");
+            LITE_LOG("using global layout transform optimization\n");
             if (m_layout_transform_target ==
                 mgb::gopt::GraphTuningOptions::Target::CPU) {
                 model->get_config().device_type = LiteDeviceType::LITE_CPU;
@@ -98,7 +98,7 @@ void GoptLayoutOption::config_model_internel<ModelMdl>(
         }
     } else if (runtime_param.stage == RunStage::GLOBAL_OPTIMIZATION) {
         if (m_layout_transform) {
-            mgb_log_warn("using global layout transform optimization\n");
+            mgb_log("using global layout transform optimization\n");
             auto&& load_result = model->get_mdl_load_result();
             load_result.output_var_list = mgb::gopt::layout_transform(
                     load_result.output_var_list, m_layout_transform_target);
@@ -150,7 +150,7 @@ void GoptLayoutOption::config_model_internel<ModelMdl>(
 
 using namespace lar;
 bool GoptLayoutOption::m_valid;
-GoptLayoutOption::GoptLayoutOption() {
+void GoptLayoutOption::update() {
     m_option_name = "gopt_layout";
     if (FLAGS_layout_transform != "cpu"
 #if LITE_WITH_CUDA
@@ -216,6 +216,7 @@ bool GoptLayoutOption::is_valid() {
 std::shared_ptr<OptionBase> GoptLayoutOption::create_option() {
     static std::shared_ptr<GoptLayoutOption> option(new GoptLayoutOption);
     if (GoptLayoutOption::is_valid()) {
+        option->update();
         return std::static_pointer_cast<OptionBase>(option);
     } else {
         return nullptr;

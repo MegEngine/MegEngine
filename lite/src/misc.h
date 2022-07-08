@@ -73,7 +73,7 @@ public:
 #define LITE_LOG_(level, msg...) (void)0
 #endif
 
-#define LITE_LOG(fmt...)   LITE_LOG_(DEBUG, fmt);
+#define LITE_LOG(fmt...)   LITE_LOG_(INFO, fmt);
 #define LITE_DEBUG(fmt...) LITE_LOG_(DEBUG, fmt);
 #define LITE_WARN(fmt...)  LITE_LOG_(WARN, fmt);
 #define LITE_ERROR(fmt...) LITE_LOG_(ERROR, fmt);

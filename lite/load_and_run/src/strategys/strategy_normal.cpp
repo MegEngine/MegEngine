@@ -5,13 +5,10 @@
 #include "megbrain/utils/timer.h"
 #include "megbrain/version.h"
 #include "megdnn/version.h"
-#include "misc.h"
 
 using namespace lar;
 
 NormalStrategy::NormalStrategy(std::string model_path) {
-    mgb::set_log_level(mgb::LogLevel::WARN);
-    lite::set_log_level(LiteLogLevel::WARN);
     m_options = std::make_shared<OptionMap>();
     m_model_path = model_path;
     auto option_creator_map = OptionFactory::get_Instance().get_option_creator_map();
@@ -47,7 +44,7 @@ void NormalStrategy::run_subline() {
 
     mgb::RealTimer timer;
     model->load_model();
-    printf("load model: %.3fms\n", timer.get_msecs_reset());
+    mgb_log("load model: %.3fms\n", timer.get_msecs_reset());
 
     //! after load configure
     auto config_after_load = [&]() {
@@ -62,10 +59,10 @@ void NormalStrategy::run_subline() {
     auto warm_up = [&]() {
         auto warmup_num = m_runtime_param.warmup_iter;
         for (size_t i = 0; i < warmup_num; i++) {
-            printf("=== prepare: %.3fms; going to warmup\n\n", timer.get_msecs_reset());
+            mgb_log("=== prepare: %.3fms; going to warmup", timer.get_msecs_reset());
             model->run_model();
             model->wait();
-            printf("warm up %lu  %.3fms\n", i, timer.get_msecs_reset());
+            mgb_log("warm up %lu  %.3fms", i, timer.get_msecs_reset());
             m_runtime_param.stage = RunStage::AFTER_RUNNING_WAIT;
             stage_config_model();
         }
@@ -83,21 +80,21 @@ void NormalStrategy::run_subline() {
             auto cur = timer.get_msecs();
             m_runtime_param.stage = RunStage::AFTER_RUNNING_WAIT;
             stage_config_model();
-            printf("iter %lu/%lu: e2e=%.3f ms (host=%.3f ms)\n", i, run_num, cur,
-                   exec_time);
+            mgb_log("iter %lu/%lu: e2e=%.3f ms (host=%.3f ms)", i, run_num, cur,
+                    exec_time);
             time_sum += cur;
             time_sqrsum += cur * cur;
             fflush(stdout);
             min_time = std::min(min_time, cur);
             max_time = std::max(max_time, cur);
         }
-        printf("\n=== finished test #%u: time=%.3f ms avg_time=%.3f ms "
-               "standard_deviation=%.3f ms min=%.3f ms max=%.3f ms\n\n",
-               idx, time_sum, time_sum / run_num,
-               std::sqrt(
-                       (time_sqrsum * run_num - time_sum * time_sum) /
-                       (run_num * (run_num - 1))),
-               min_time, max_time);
+        mgb_log("=== finished test #%u: time=%.3f ms avg_time=%.3f ms "
+                "standard_deviation=%.3f ms min=%.3f ms max=%.3f ms",
+                idx, time_sum, time_sum / run_num,
+                std::sqrt(
+                        (time_sqrsum * run_num - time_sum * time_sum) /
+                        (run_num * (run_num - 1))),
+                min_time, max_time);
         return time_sum;
     };
 
@@ -122,7 +119,7 @@ void NormalStrategy::run_subline() {
         stage_config_model();
     }
 
-    printf("=== total time: %.3fms\n", tot_time);
+    mgb_log("=== total time: %.3fms\n", tot_time);
     //! execute after run
     m_runtime_param.stage = RunStage::AFTER_MODEL_RUNNING;
     stage_config_model();
@@ -131,9 +128,9 @@ void NormalStrategy::run_subline() {
 void NormalStrategy::run() {
     auto v0 = mgb::get_version();
     auto v1 = megdnn::get_version();
-    printf("megbrain/lite/load_and_run:\nusing MegBrain "
-           "%d.%d.%d(%d) and MegDNN %d.%d.%d\n",
-           v0.major, v0.minor, v0.patch, v0.is_dev, v1.major, v1.minor, v1.patch);
+    mgb_log("megbrain/lite/load_and_run:\nusing MegBrain "
+            "%d.%d.%d(%d) and MegDNN %d.%d.%d\n",
+            v0.major, v0.minor, v0.patch, v0.is_dev, v1.major, v1.minor, v1.patch);
 
     size_t thread_num = m_runtime_param.threads;
     auto run_sub = [&]() { run_subline(); };

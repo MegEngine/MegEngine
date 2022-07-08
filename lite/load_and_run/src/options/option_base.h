@@ -28,6 +28,10 @@ public:
     //! get option map
     virtual OptionValMap* get_option() { return nullptr; }
 
+    //! update option value
+
+    virtual void update(){};
+
     virtual ~OptionBase() = default;
 };
 

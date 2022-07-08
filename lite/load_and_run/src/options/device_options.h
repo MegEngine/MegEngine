@@ -24,8 +24,10 @@ public:
 
     OptionValMap* get_option() override { return &m_option; }
 
+    void update() override;
+
 private:
-    XPUDeviceOption();
+    XPUDeviceOption() = default;
     template <typename ModelImpl>
     void config_model_internel(RuntimeParam&, std::shared_ptr<ModelImpl>){};
     bool enable_cpu;

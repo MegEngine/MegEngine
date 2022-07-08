@@ -93,11 +93,11 @@ void IOdumpOption::config_model_internel<ModelLite>(
         RuntimeParam& runtime_param, std::shared_ptr<ModelLite> model) {
     if (runtime_param.stage == RunStage::AFTER_MODEL_LOAD) {
         if (enable_io_dump) {
-            LITE_WARN("enable text io dump");
+            LITE_LOG("enable text io dump");
             lite::Runtime::enable_io_txt_dump(model->get_lite_network(), dump_path);
         }
         if (enable_bin_io_dump) {
-            LITE_WARN("enable binary io dump");
+            LITE_LOG("enable binary io dump");
             lite::Runtime::enable_io_bin_dump(model->get_lite_network(), dump_path);
         }
         //! FIX:when add API in lite complate this
@@ -108,7 +108,7 @@ void IOdumpOption::config_model_internel<ModelLite>(
             LITE_THROW("lite model don't support the binary output dump");
         }
         if (enable_copy_to_host) {
-            LITE_WARN("lite model set copy to host defaultly");
+            LITE_LOG("lite model set copy to host defaultly");
         }
     }
 }
@@ -118,7 +118,7 @@ void IOdumpOption::config_model_internel<ModelMdl>(
         RuntimeParam& runtime_param, std::shared_ptr<ModelMdl> model) {
     if (runtime_param.stage == RunStage::BEFORE_MODEL_LOAD) {
         if (enable_io_dump) {
-            mgb_log_warn("enable text io dump");
+            mgb_log("enable text io dump");
             auto iodump = std::make_unique<mgb::TextOprIODump>(
                     model->get_mdl_config().comp_graph.get(), dump_path.c_str());
             iodump->print_addr(false);
@@ -126,7 +126,7 @@ void IOdumpOption::config_model_internel<ModelMdl>(
         }
 
         if (enable_io_dump_stdout) {
-            mgb_log_warn("enable text io dump to stdout");
+            mgb_log("enable text io dump to stdout");
             std::shared_ptr<FILE> std_out(stdout, [](FILE*) {});
             auto iodump = std::make_unique<mgb::TextOprIODump>(
                     model->get_mdl_config().comp_graph.get(), std_out);
@@ -135,7 +135,7 @@ void IOdumpOption::config_model_internel<ModelMdl>(
         }
 
         if (enable_io_dump_stderr) {
-            mgb_log_warn("enable text io dump to stderr");
+            mgb_log("enable text io dump to stderr");
             std::shared_ptr<FILE> std_err(stderr, [](FILE*) {});
             auto iodump = std::make_unique<mgb::TextOprIODump>(
                     model->get_mdl_config().comp_graph.get(), std_err);
@@ -144,14 +144,14 @@ void IOdumpOption::config_model_internel<ModelMdl>(
         }
 
         if (enable_bin_io_dump) {
-            mgb_log_warn("enable binary io dump");
+            mgb_log("enable binary io dump");
             auto iodump = std::make_unique<mgb::BinaryOprIODump>(
                     model->get_mdl_config().comp_graph.get(), dump_path);
             io_dumper = std::move(iodump);
         }
 
         if (enable_bin_out_dump) {
-            mgb_log_warn("enable binary output dump");
+            mgb_log("enable binary output dump");
             out_dumper = std::make_unique<OutputDumper>(dump_path.c_str());
         }
     } else if (runtime_param.stage == RunStage::AFTER_MODEL_LOAD) {
@@ -190,7 +190,7 @@ void IOdumpOption::config_model_internel<ModelMdl>(
 ////////////////////// Input options ////////////////////////
 using namespace lar;
 
-InputOption::InputOption() {
+void InputOption::update() {
     m_option_name = "input";
     size_t start = 0;
     auto end = FLAGS_input.find(";", start);
@@ -204,9 +204,10 @@ InputOption::InputOption() {
 }
 
 std::shared_ptr<lar::OptionBase> lar::InputOption::create_option() {
-    static std::shared_ptr<InputOption> m_option(new InputOption);
+    static std::shared_ptr<InputOption> option(new InputOption);
     if (InputOption::is_valid()) {
-        return std::static_pointer_cast<OptionBase>(m_option);
+        option->update();
+        return std::static_pointer_cast<OptionBase>(option);
     } else {
         return nullptr;
     }
@@ -219,7 +220,7 @@ void InputOption::config_model(
 
 ////////////////////// OprIOdump options ////////////////////////
 
-IOdumpOption::IOdumpOption() {
+void IOdumpOption::update() {
     m_option_name = "iodump";
     size_t valid_flag = 0;
     if (!FLAGS_io_dump.empty()) {
@@ -268,6 +269,7 @@ bool IOdumpOption::is_valid() {
 std::shared_ptr<OptionBase> IOdumpOption::create_option() {
     static std::shared_ptr<IOdumpOption> option(new IOdumpOption);
     if (IOdumpOption::is_valid()) {
+        option->update();
         return std::static_pointer_cast<OptionBase>(option);
     } else {
         return nullptr;

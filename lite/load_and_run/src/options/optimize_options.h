@@ -39,8 +39,10 @@ public:
 
     OptionValMap* get_option() override { return &m_option; }
 
+    void update() override;
+
 private:
-    FusePreprocessOption();
+    FusePreprocessOption() = default;
     template <typename ModelImpl>
     void config_model_internel(RuntimeParam&, std::shared_ptr<ModelImpl>){};
 
@@ -65,8 +67,10 @@ public:
 
     OptionValMap* get_option() override { return &m_option; }
 
+    void update() override;
+
 private:
-    WeightPreprocessOption();
+    WeightPreprocessOption() = default;
     template <typename ModelImpl>
     void config_model_internel(RuntimeParam&, std::shared_ptr<ModelImpl>){};
 
@@ -91,8 +95,10 @@ public:
 
     OptionValMap* get_option() override { return &m_option; }
 
+    void update() override;
+
 private:
-    FuseConvBiasNonlinearOption();
+    FuseConvBiasNonlinearOption() = default;
     template <typename ModelImpl>
     void config_model_internel(RuntimeParam&, std::shared_ptr<ModelImpl>){};
 
@@ -117,8 +123,10 @@ public:
 
     OptionValMap* get_option() override { return &m_option; }
 
+    void update() override;
+
 private:
-    FuseConvBiasElemwiseAddOption();
+    FuseConvBiasElemwiseAddOption() = default;
     template <typename ModelImpl>
     void config_model_internel(RuntimeParam&, std::shared_ptr<ModelImpl>){};
     std::string m_option_name;
@@ -143,8 +151,10 @@ public:
 
     OptionValMap* get_option() override { return &m_option; }
 
+    void update() override;
+
 private:
-    GraphRecordOption();
+    GraphRecordOption() = default;
     template <typename ModelImpl>
     void config_model_internel(RuntimeParam&, std::shared_ptr<ModelImpl>){};
 
@@ -169,8 +179,10 @@ public:
 
     std::string option_name() const override { return m_option_name; };
 
+    void update() override;
+
 private:
-    MemoryOptimizeOption();
+    MemoryOptimizeOption() = default;
     template <typename ModelImpl>
     void config_model_internel(RuntimeParam&, std::shared_ptr<ModelImpl>){};
 
@@ -191,8 +203,10 @@ public:
 
     std::string option_name() const override { return m_option_name; };
 
+    void update() override;
+
 private:
-    JITOption();
+    JITOption() = default;
     template <typename ModelImpl>
     void config_model_internel(RuntimeParam&, std::shared_ptr<ModelImpl>){};
 
@@ -212,8 +226,10 @@ public:
 
     std::string option_name() const override { return m_option_name; };
 
+    void update() override;
+
 private:
-    TensorRTOption();
+    TensorRTOption() = default;
     template <typename ModelImpl>
     void config_model_internel(RuntimeParam&, std::shared_ptr<ModelImpl>){};
 

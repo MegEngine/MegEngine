@@ -30,8 +30,10 @@ public:
     //! interface implement from OptionBase
     std::string option_name() const override { return m_option_name; };
 
+    void update() override;
+
 private:
-    InputOption();
+    InputOption() = default;
 
     template <typename ModelImpl>
     void config_model_internel(RuntimeParam&, std::shared_ptr<ModelImpl>){};
@@ -50,8 +52,10 @@ public:
             RuntimeParam& runtime_param, std::shared_ptr<ModelBase> model) override;
     std::string option_name() const override { return m_option_name; };
 
+    void update() override;
+
 private:
-    IOdumpOption();
+    IOdumpOption() = default;
     template <typename ModelImpl>
     void config_model_internel(RuntimeParam&, std::shared_ptr<ModelImpl>){};
 

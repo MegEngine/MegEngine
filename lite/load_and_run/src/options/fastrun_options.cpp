@@ -25,10 +25,10 @@ void FastRunOption::config_model_internel<ModelLite>(
         uint32_t strategy = 0;
 #if MGB_ENABLE_FASTRUN
         if (enable_full_run) {
-            LITE_WARN("enable full-run strategy for algo profile");
+            LITE_LOG("enable full-run strategy for algo profile");
             strategy = static_cast<uint32_t>(Strategy::LITE_ALGO_PROFILE) | strategy;
         } else if (enable_fast_run) {
-            LITE_WARN("enable fast-run strategy for algo profile");
+            LITE_LOG("enable fast-run strategy for algo profile");
             strategy = static_cast<uint32_t>(Strategy::LITE_ALGO_PROFILE) |
                        static_cast<uint32_t>(Strategy::LITE_ALGO_OPTIMIZED) | strategy;
         } else {
@@ -38,7 +38,7 @@ void FastRunOption::config_model_internel<ModelLite>(
         strategy = static_cast<uint32_t>(Strategy::LITE_ALGO_HEURISTIC) | strategy;
 #endif
         if (batch_binary_equal || enable_reproducible) {
-            LITE_WARN("enable reproducible strategy for algo profile");
+            LITE_LOG("enable reproducible strategy for algo profile");
             if (batch_binary_equal)
                 strategy = static_cast<uint32_t>(Strategy::LITE_ALGO_REPRODUCIBLE) |
                            strategy;
@@ -81,10 +81,10 @@ void FastRunOption::config_model_internel<ModelMdl>(
         auto strategy = static_cast<Strategy>(0);
 #if MGB_ENABLE_FASTRUN
         if (enable_full_run) {
-            mgb_log_warn("enable full-run strategy for algo profile");
+            mgb_log("enable full-run strategy for algo profile");
             strategy = Strategy::PROFILE | strategy;
         } else if (enable_fast_run) {
-            mgb_log_warn("enable fast-run strategy for algo profile");
+            mgb_log("enable fast-run strategy for algo profile");
             strategy = Strategy::PROFILE | Strategy::OPTIMIZED | strategy;
         } else {
             strategy = Strategy::HEURISTIC | strategy;
@@ -93,20 +93,20 @@ void FastRunOption::config_model_internel<ModelMdl>(
         strategy = Strategy::HEURISTIC | strategy;
 #endif
         if (batch_binary_equal || enable_reproducible) {
-            mgb_log_warn("enable reproducible strategy for algo profile");
+            mgb_log("enable reproducible strategy for algo profile");
             strategy = Strategy::REPRODUCIBLE | strategy;
         }
         model->set_mdl_strategy(strategy);
 
         //! set binary_equal_between_batch and shared_batch_size
         if (batch_binary_equal) {
-            mgb_log_warn("enable batch binary equal");
+            mgb_log("enable batch binary equal");
             model->get_mdl_config()
                     .comp_graph->options()
                     .fast_run_config.binary_equal_between_batch = true;
         }
         if (share_batch_size > 0) {
-            mgb_log_warn("set shared shared batch");
+            mgb_log("set shared shared batch");
             model->get_mdl_config()
                     .comp_graph->options()
                     .fast_run_config.shared_batch_size = share_batch_size;
@@ -145,7 +145,7 @@ void FastRunOption::config_model_internel<ModelMdl>(
 
 using namespace lar;
 bool FastRunOption::m_valid;
-FastRunOption::FastRunOption() {
+void FastRunOption::update() {
     m_option_name = "fastrun";
 #if MGB_ENABLE_FASTRUN
     enable_fast_run = FLAGS_fast_run;
@@ -207,6 +207,7 @@ bool FastRunOption::is_valid() {
 std::shared_ptr<OptionBase> FastRunOption::create_option() {
     static std::shared_ptr<FastRunOption> option(new FastRunOption);
     if (FastRunOption::is_valid()) {
+        option->update();
         return std::static_pointer_cast<OptionBase>(option);
     } else {
         return nullptr;
@@ -250,7 +251,7 @@ DEFINE_bool(
         "https://docs.nvidia.com/deeplearning/sdk/cudnn-developer-guide/"
         "index.html#reproducibility"
         "for more details.");
-DEFINE_uint32(fast_run_shared_batch_size, 0, "Set the batch size used during fastrun");
+DEFINE_int32(fast_run_shared_batch_size, 0, "Set the batch size used during fastrun");
 DEFINE_string(fast_run_algo_policy, "", "fast-run cache path.");
 
 REGIST_OPTION_CREATOR(fastrun, lar::FastRunOption::create_option);

@@ -19,8 +19,10 @@ public:
             RuntimeParam& runtime_param, std::shared_ptr<ModelBase> model) override;
     std::string option_name() const override { return m_option_name; }
 
+    void update() override;
+
 private:
-    PackModelOption();
+    PackModelOption() = default;
 
     template <typename ModelImpl>
     void config_model_internel(RuntimeParam&, std::shared_ptr<ModelImpl>);

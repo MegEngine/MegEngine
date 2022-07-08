@@ -37,9 +37,11 @@ public:
 
     OptionValMap* get_option() override { return &m_option; }
 
+    void update() override;
+
 private:
     //! Constructor
-    LayoutOption();
+    LayoutOption() = default;
 
     //! configuration for different model implement
     template <typename ModelImpl>

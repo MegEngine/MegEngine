@@ -24,7 +24,7 @@ void PackModelOption::config_model_internel(
 using namespace lar;
 ////////////////////// PackModel options ////////////////////////
 
-PackModelOption::PackModelOption() {
+void PackModelOption::update() {
     m_option_name = "pack_model";
     if (!FLAGS_packed_model_dump.empty())
         packed_model_dump = FLAGS_packed_model_dump;
@@ -45,6 +45,7 @@ bool PackModelOption::is_valid() {
 std::shared_ptr<OptionBase> PackModelOption::create_option() {
     static std::shared_ptr<PackModelOption> option(new PackModelOption);
     if (PackModelOption::is_valid()) {
+        option->update();
         return std::static_pointer_cast<OptionBase>(option);
     } else {
         return nullptr;

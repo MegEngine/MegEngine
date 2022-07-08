@@ -28,8 +28,10 @@ public:
 
     OptionValMap* get_option() override { return &m_option; }
 
+    void update() override;
+
 private:
-    GoptLayoutOption();
+    GoptLayoutOption() = default;
     //! config template for different model
     template <typename ModelImpl>
     void config_model_internel(RuntimeParam&, std::shared_ptr<ModelImpl>) {}

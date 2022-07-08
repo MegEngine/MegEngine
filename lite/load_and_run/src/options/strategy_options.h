@@ -25,9 +25,11 @@ public:
 
     OptionValMap* get_option() override { return &m_option; }
 
+    void update() override;
+
 private:
     //! Constructor
-    StrategyOption();
+    StrategyOption() = default;
 
     //! configuration for different model implement
     std::string m_option_name;
@@ -52,9 +54,11 @@ public:
     //! get option name
     std::string option_name() const override { return m_option_name; };
 
+    void update() override;
+
 private:
     //! Constructor
-    TestcaseOption();
+    TestcaseOption() = default;
 
     //! configuration for different model implement
     std::string m_option_name;

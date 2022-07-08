@@ -1,7 +1,7 @@
 #include <gflags/gflags.h>
 #include <string>
+#include "misc.h"
 #include "strategys/strategy.h"
-
 std::string simple_usage = R"(
 load_and_run: load_and_run <model_path> [options Flags...]
 
@@ -29,6 +29,8 @@ More details using "--help" to get!!
 )";
 
 int main(int argc, char** argv) {
+    mgb::set_log_level(mgb::LogLevel::INFO);
+    lite::set_log_level(LiteLogLevel::INFO);
     std::string usage = "load_and_run <model_path> [options Flags...]";
     if (argc < 2) {
         printf("usage: %s\n", simple_usage.c_str());

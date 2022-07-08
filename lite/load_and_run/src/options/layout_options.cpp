@@ -11,7 +11,7 @@ void LayoutOption::config_model_internel<ModelLite>(
         RuntimeParam& runtime_param, std::shared_ptr<ModelLite> model) {
     if (runtime_param.stage == RunStage::BEFORE_MODEL_LOAD) {
 #define ENABLE_LAYOUT(layout)                           \
-    LITE_WARN("enable " #layout " optimization");       \
+    LITE_LOG("enable " #layout " optimization");        \
     model->get_config().options.enable_##layout = true; \
     break;
 
@@ -51,7 +51,7 @@ void lar::LayoutOption::config_model_internel<ModelMdl>(
         RuntimeParam& runtime_param, std::shared_ptr<ModelMdl> model) {
     if (runtime_param.stage == RunStage::BEFORE_MODEL_LOAD) {
 #define ENABLE_LAYOUT(layout)                                                  \
-    mgb_log_warn("enable " #layout " optimization");                           \
+    mgb_log("enable " #layout " optimization");                                \
     model->get_mdl_config().comp_graph->options().graph_opt.enable_##layout(); \
     break;
 
@@ -91,7 +91,7 @@ void lar::LayoutOption::config_model_internel<ModelMdl>(
 
 using namespace lar;
 bool LayoutOption::m_valid;
-LayoutOption::LayoutOption() {
+void LayoutOption::update() {
     m_option_name = "layout";
     m_option_flag = static_cast<OptLayoutType>(0);
     m_option = {
@@ -157,6 +157,7 @@ bool LayoutOption::is_valid() {
 std::shared_ptr<OptionBase> LayoutOption::create_option() {
     static std::shared_ptr<LayoutOption> option(new LayoutOption);
     if (LayoutOption::is_valid()) {
+        option->update();
         return std::static_pointer_cast<OptionBase>(option);
     } else {
         return nullptr;
@@ -166,16 +167,20 @@ std::shared_ptr<OptionBase> LayoutOption::create_option() {
 void LayoutOption::config_model(
         RuntimeParam& runtime_param, std::shared_ptr<ModelBase> model) {
     size_t valid_flag = 0;
-    if (std::static_pointer_cast<lar::Bool>(m_option["enable_nchw4"])->get_value()) {
+    if (FLAGS_enable_nchw4 ||
+        std::static_pointer_cast<lar::Bool>(m_option["enable_nchw4"])->get_value()) {
         valid_flag |= static_cast<size_t>(OptLayoutType::NCHW4);
     }
-    if (std::static_pointer_cast<lar::Bool>(m_option["enable_chwn4"])->get_value()) {
+    if (FLAGS_enable_chwn4 ||
+        std::static_pointer_cast<lar::Bool>(m_option["enable_chwn4"])->get_value()) {
         valid_flag |= static_cast<size_t>(OptLayoutType::CHWN4);
     }
-    if (std::static_pointer_cast<lar::Bool>(m_option["enable_nchw44"])->get_value()) {
+    if (FLAGS_enable_nchw44 ||
+        std::static_pointer_cast<lar::Bool>(m_option["enable_nchw44"])->get_value()) {
         valid_flag |= static_cast<size_t>(OptLayoutType::NCHW44);
     }
-    if (std::static_pointer_cast<lar::Bool>(m_option["enable_nchw88"])->get_value()) {
+    if (FLAGS_enable_nchw88 ||
+        std::static_pointer_cast<lar::Bool>(m_option["enable_nchw88"])->get_value()) {
         valid_flag |= static_cast<size_t>(OptLayoutType::NCHW88);
     }
     if (std::static_pointer_cast<lar::Bool>(m_option["enable_nchw32"])->get_value()) {

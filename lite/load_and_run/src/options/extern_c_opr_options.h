@@ -32,8 +32,10 @@ public:
 
     std::string option_name() const override { return m_option_name; };
 
+    void update() override;
+
 private:
-    COprLibOption();
+    COprLibOption() = default;
     template <typename ModelImpl>
     void config_model_internel(RuntimeParam&, std::shared_ptr<ModelImpl>){};
 

@@ -22,10 +22,10 @@ void PluginOption::config_model_internel<ModelLite>(
     else if (runtime_param.stage == RunStage::AFTER_MODEL_LOAD) {
         if (!profile_path.empty()) {
             if (!enable_profile_host) {
-                LITE_WARN("enable profiling");
+                LITE_LOG("enable profiling");
                 model->get_lite_network()->enable_profile_performance(profile_path);
             } else {
-                LITE_WARN("enable profiling for host");
+                LITE_LOG("enable profiling for host");
                 model->get_lite_network()->enable_profile_performance(profile_path);
             }
         }
@@ -39,18 +39,18 @@ void PluginOption::config_model_internel<ModelMdl>(
     if (runtime_param.stage == RunStage::BEFORE_MODEL_LOAD) {
         auto&& config = model->get_mdl_config();
         if (range > 0) {
-            mgb_log_warn("enable number range check");
+            mgb_log("enable number range check");
             model->set_num_range_checker(float(range));
         }
 
         if (enable_check_dispatch) {
-            mgb_log_warn("enable cpu dispatch check");
+            mgb_log("enable cpu dispatch check");
             cpu_dispatch_checker =
                     std::make_unique<mgb::CPUDispatchChecker>(config.comp_graph.get());
         }
 
         if (!var_value_check_str.empty()) {
-            mgb_log_warn("enable variable value check");
+            mgb_log("enable variable value check");
             size_t init_idx = 0, switch_interval;
             auto sep = var_value_check_str.find(':');
             if (sep != std::string::npos) {
@@ -67,9 +67,9 @@ void PluginOption::config_model_internel<ModelMdl>(
 
         if (!profile_path.empty()) {
             if (!enable_profile_host) {
-                mgb_log_warn("enable profiling");
+                mgb_log("enable profiling");
             } else {
-                mgb_log_warn("enable profiling for host");
+                mgb_log("enable profiling for host");
             }
             model->set_profiler();
         }
@@ -79,12 +79,11 @@ void PluginOption::config_model_internel<ModelMdl>(
     else if (runtime_param.stage == RunStage::AFTER_MODEL_RUNNING) {
 #if MGB_ENABLE_JSON
         if (!profile_path.empty()) {
-            mgb_log_warn("filename %s", profile_path.c_str());
             if (model->get_profiler()) {
                 model->get_profiler()
                         ->to_json_full(model->get_async_func().get())
                         ->writeto_fpath(profile_path);
-                mgb_log_warn("profiling result written to %s", profile_path.c_str());
+                mgb_log("profiling result written to %s", profile_path.c_str());
             }
         }
 #endif
@@ -94,7 +93,7 @@ void PluginOption::config_model_internel<ModelMdl>(
 }  // namespace lar
 
 using namespace lar;
-PluginOption::PluginOption() {
+void PluginOption::update() {
     m_option_name = "plugin";
     range = FLAGS_range;
     enable_check_dispatch = FLAGS_check_dispatch;
@@ -125,6 +124,7 @@ bool PluginOption::is_valid() {
 std::shared_ptr<OptionBase> PluginOption::create_option() {
     static std::shared_ptr<PluginOption> option(new PluginOption);
     if (PluginOption::is_valid()) {
+        option->update();
         return std::static_pointer_cast<OptionBase>(option);
     } else {
         return nullptr;
@@ -199,7 +199,7 @@ void DebugOption::format_and_print(
 
     std::stringstream ss;
     ss << table;
-    printf("%s\n\n", ss.str().c_str());
+    LITE_LOG("%s\n\n", ss.str().c_str());
 }
 
 template <>
@@ -243,7 +243,7 @@ void DebugOption::format_and_print(
 
     std::stringstream ss;
     ss << table;
-    printf("%s\n\n", ss.str().c_str());
+    mgb_log("%s\n\n", ss.str().c_str());
 }
 
 template <>
@@ -260,7 +260,7 @@ void DebugOption::config_model_internel<ModelLite>(
 #endif
 #endif
         if (enable_verbose) {
-            LITE_WARN("enable verbose");
+            LITE_LOG("enable verbose");
             lite::set_log_level(LiteLogLevel::DEBUG);
         }
 
@@ -272,7 +272,7 @@ void DebugOption::config_model_internel<ModelLite>(
 #endif
     } else if (runtime_param.stage == RunStage::AFTER_MODEL_LOAD) {
         if (enable_display_model_info) {
-            LITE_WARN("enable display model information");
+            LITE_LOG("enable display model information");
             format_and_print<ModelLite>("Runtime Model Info", model);
         }
     } else if (runtime_param.stage == RunStage::AFTER_MODEL_RUNNING) {
@@ -287,7 +287,7 @@ void DebugOption::config_model_internel<ModelMdl>(
         RuntimeParam& runtime_param, std::shared_ptr<ModelMdl> model) {
     if (runtime_param.stage == RunStage::BEFORE_MODEL_LOAD) {
         if (enable_verbose) {
-            mgb_log_warn("enable verbose");
+            mgb_log("enable verbose");
             mgb::set_log_level(mgb::LogLevel::DEBUG);
         }
 
@@ -299,21 +299,21 @@ void DebugOption::config_model_internel<ModelMdl>(
 #endif
     } else if (runtime_param.stage == RunStage::BEFORE_OUTSPEC_SET) {
         if (enable_display_model_info) {
-            mgb_log_warn("enable display model information");
+            mgb_log("enable display model information");
             format_and_print<ModelMdl>("Runtime Model Info", model);
         }
     } else if (runtime_param.stage == RunStage::AFTER_OUTSPEC_SET) {
 #ifndef __IN_TEE_ENV__
 #if MGB_ENABLE_JSON
         if (!static_mem_log_dir_path.empty()) {
-            mgb_log_warn("enable get static memeory information");
+            mgb_log("enable get static memeory information");
             model->get_async_func()->get_static_memory_alloc_info(
                     static_mem_log_dir_path);
         }
 #endif
 #endif
         if (disable_assert_throw) {
-            mgb_log_warn("disable assert throw");
+            mgb_log("disable assert throw");
             auto on_opr = [](mgb::cg::OperatorNodeBase* opr) {
                 if (opr->same_type<mgb::opr::AssertEqual>()) {
                     opr->cast_final<mgb::opr::AssertEqual>().disable_throw_on_error();
@@ -333,7 +333,7 @@ void DebugOption::config_model_internel<ModelMdl>(
 
 }  // namespace lar
 
-DebugOption::DebugOption() {
+void DebugOption::update() {
     m_option_name = "debug";
     enable_display_model_info = FLAGS_model_info;
     enable_verbose = FLAGS_verbose;
@@ -367,6 +367,7 @@ bool DebugOption::is_valid() {
 std::shared_ptr<OptionBase> DebugOption::create_option() {
     static std::shared_ptr<DebugOption> option(new DebugOption);
     if (DebugOption::is_valid()) {
+        option->update();
         return std::static_pointer_cast<OptionBase>(option);
     } else {
         return nullptr;

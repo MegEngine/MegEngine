@@ -15,7 +15,7 @@ void FusePreprocessOption::config_model_internel<ModelLite>(
         RuntimeParam& runtime_param, std::shared_ptr<ModelLite> model) {
     if (runtime_param.stage == RunStage::BEFORE_MODEL_LOAD) {
         if (enable_fuse_preprocess) {
-            LITE_WARN("enable fuse-preprocess optimization");
+            LITE_LOG("enable fuse-preprocess optimization");
             model->get_config().options.fuse_preprocess = true;
         }
     }
@@ -27,7 +27,7 @@ void FusePreprocessOption::config_model_internel<ModelMdl>(
     if (runtime_param.stage == RunStage::BEFORE_MODEL_LOAD) {
         auto&& graph_option = model->get_mdl_config().comp_graph->options();
         if (enable_fuse_preprocess) {
-            mgb_log_warn("enable fuse-preprocess optimization");
+            mgb_log("enable fuse-preprocess optimization");
             graph_option.graph_opt.enable_fuse_preprocess();
         }
     }
@@ -35,7 +35,7 @@ void FusePreprocessOption::config_model_internel<ModelMdl>(
 }  // namespace lar
 using namespace lar;
 bool FusePreprocessOption::m_valid;
-FusePreprocessOption::FusePreprocessOption() {
+void FusePreprocessOption::update() {
     m_option_name = "fuse_preprocess";
     enable_fuse_preprocess = FLAGS_enable_fuse_preprocess;
     m_option = {{"enable_fuse_preprocess", lar::Bool::make(false)}};
@@ -51,6 +51,7 @@ bool FusePreprocessOption::is_valid() {
 std::shared_ptr<OptionBase> FusePreprocessOption::create_option() {
     static std::shared_ptr<FusePreprocessOption> option(new FusePreprocessOption);
     if (FusePreprocessOption::is_valid()) {
+        option->update();
         return std::static_pointer_cast<OptionBase>(option);
     } else {
         return nullptr;
@@ -73,7 +74,7 @@ void WeightPreprocessOption::config_model_internel<ModelLite>(
         RuntimeParam& runtime_param, std::shared_ptr<ModelLite> model) {
     if (runtime_param.stage == RunStage::BEFORE_MODEL_LOAD) {
         if (weight_preprocess) {
-            LITE_WARN("enable weight-preprocess optimization");
+            LITE_LOG("enable weight-preprocess optimization");
             model->get_config().options.weight_preprocess = true;
         }
     }
@@ -85,14 +86,14 @@ void WeightPreprocessOption::config_model_internel<ModelMdl>(
     if (runtime_param.stage == RunStage::BEFORE_MODEL_LOAD) {
         auto&& graph_option = model->get_mdl_config().comp_graph->options();
         if (weight_preprocess) {
-            mgb_log_warn("enable weight-preprocess optimization");
+            mgb_log("enable weight-preprocess optimization");
             graph_option.graph_opt.enable_weight_preprocess();
         }
     }
 }
 }  // namespace lar
 
-WeightPreprocessOption::WeightPreprocessOption() {
+void WeightPreprocessOption::update() {
     m_option_name = "weight_preprocess";
     weight_preprocess = FLAGS_weight_preprocess;
     m_option = {{"weight_preprocess", lar::Bool::make(false)}};
@@ -108,6 +109,7 @@ bool WeightPreprocessOption::is_valid() {
 std::shared_ptr<OptionBase> WeightPreprocessOption::create_option() {
     static std::shared_ptr<WeightPreprocessOption> option(new WeightPreprocessOption);
     if (WeightPreprocessOption::is_valid()) {
+        option->update();
         return std::static_pointer_cast<OptionBase>(option);
     } else {
         return nullptr;
@@ -142,14 +144,14 @@ void FuseConvBiasNonlinearOption::config_model_internel<ModelMdl>(
     if (runtime_param.stage == RunStage::BEFORE_MODEL_LOAD) {
         auto&& graph_option = model->get_mdl_config().comp_graph->options();
         if (enable_fuse_conv_bias_nonlinearity) {
-            mgb_log_warn("enable fuse conv+bias+nonlinearity optimization");
+            mgb_log("enable fuse conv+bias+nonlinearity optimization");
             graph_option.graph_opt.enable_fuse_conv_bias_nonlinearity();
         }
     }
 }
 }  // namespace lar
 
-FuseConvBiasNonlinearOption::FuseConvBiasNonlinearOption() {
+void FuseConvBiasNonlinearOption::update() {
     m_option_name = "fuse_conv_bias_nonlinearity";
     enable_fuse_conv_bias_nonlinearity = FLAGS_enable_fuse_conv_bias_nonlinearity;
     m_option = {{"enable_fuse_conv_bias_nonlinearity", lar::Bool::make(false)}};
@@ -166,6 +168,7 @@ std::shared_ptr<OptionBase> FuseConvBiasNonlinearOption::create_option() {
     static std::shared_ptr<FuseConvBiasNonlinearOption> option(
             new FuseConvBiasNonlinearOption);
     if (FuseConvBiasNonlinearOption::is_valid()) {
+        option->update();
         return std::static_pointer_cast<OptionBase>(option);
     } else {
         return nullptr;
@@ -203,14 +206,14 @@ void FuseConvBiasElemwiseAddOption::config_model_internel<ModelMdl>(
     if (runtime_param.stage == RunStage::BEFORE_MODEL_LOAD) {
         auto&& graph_option = model->get_mdl_config().comp_graph->options();
         if (enable_fuse_conv_bias_with_z) {
-            mgb_log_warn("enable fuse conv+bias+z optimization");
+            mgb_log("enable fuse conv+bias+z optimization");
             graph_option.graph_opt.enable_fuse_conv_bias_with_z();
         }
     }
 }
 }  // namespace lar
 
-FuseConvBiasElemwiseAddOption::FuseConvBiasElemwiseAddOption() {
+void FuseConvBiasElemwiseAddOption::update() {
     m_option_name = "fuse_conv_bias_with_z";
     enable_fuse_conv_bias_with_z = FLAGS_enable_fuse_conv_bias_with_z;
     m_option = {{"enable_fuse_conv_bias_with_z", lar::Bool::make(false)}};
@@ -227,6 +230,7 @@ std::shared_ptr<OptionBase> FuseConvBiasElemwiseAddOption::create_option() {
     static std::shared_ptr<FuseConvBiasElemwiseAddOption> option(
             new FuseConvBiasElemwiseAddOption);
     if (FuseConvBiasElemwiseAddOption::is_valid()) {
+        option->update();
         return std::static_pointer_cast<OptionBase>(option);
     } else {
         return nullptr;
@@ -250,26 +254,26 @@ void GraphRecordOption::config_model_internel<ModelLite>(
     if (runtime_param.stage == RunStage::BEFORE_MODEL_LOAD) {
         auto&& config_option = model->get_config().options;
         if (const_shape) {
-            LITE_WARN("enable const var shape");
+            LITE_LOG("enable const var shape");
             config_option.const_shape = true;
         }
         if (fake_first) {
-            LITE_WARN("enable fake-first optimization");
+            LITE_LOG("enable fake-first optimization");
             config_option.fake_next_exec = true;
         }
         if (no_sanity_check) {
-            LITE_WARN("disable var sanity check optimization");
+            LITE_LOG("disable var sanity check optimization");
             config_option.var_sanity_check_first_run = false;
         }
         if (m_record_comp_seq == 1) {
-            LITE_WARN("set record_comp_seq_level to 1");
+            LITE_LOG("set record_comp_seq_level to 1");
         }
         if (m_record_comp_seq == 2) {
             mgb_assert(
                     no_sanity_check,
                     "--no-sanity-check should be set before "
                     "--record-comp-seq2");
-            LITE_WARN("set record_comp_seq_level to 2");
+            LITE_LOG("set record_comp_seq_level to 2");
         }
         config_option.comp_node_seq_record_level = m_record_comp_seq;
     }
@@ -281,33 +285,33 @@ void GraphRecordOption::config_model_internel<ModelMdl>(
     if (runtime_param.stage == RunStage::BEFORE_MODEL_LOAD) {
         auto&& graph_option = model->get_mdl_config().comp_graph->options();
         if (const_shape) {
-            mgb_log_warn("enable const var shape");
+            mgb_log("enable const var shape");
             model->get_mdl_config().const_var_shape = true;
         }
         if (fake_first) {
-            mgb_log_warn("enable fake-first optimization");
+            mgb_log("enable fake-first optimization");
             graph_option.fake_next_exec = true;
         }
         if (no_sanity_check) {
-            mgb_log_warn("disable var sanity check optimization");
+            mgb_log("disable var sanity check optimization");
             graph_option.var_sanity_check_first_run = false;
         }
         if (m_record_comp_seq == 1) {
-            mgb_log_warn("set record_comp_seq_level to 1");
+            mgb_log("set record_comp_seq_level to 1");
         }
         if (m_record_comp_seq == 2) {
             mgb_assert(
                     no_sanity_check && !fake_first,
                     "--no-sanity-check should be set before "
                     "--record-comp-seq2 and --fake-first should not be set");
-            mgb_log_warn("set record_comp_seq_level to 2");
+            mgb_log("set record_comp_seq_level to 2");
         }
         graph_option.comp_node_seq_record_level = m_record_comp_seq;
     }
 }
 }  // namespace lar
 
-GraphRecordOption::GraphRecordOption() {
+void GraphRecordOption::update() {
     m_option_name = "graph_record";
     m_record_comp_seq = 0;
     const_shape = FLAGS_const_shape;
@@ -350,6 +354,7 @@ bool GraphRecordOption::is_valid() {
 std::shared_ptr<OptionBase> GraphRecordOption::create_option() {
     static std::shared_ptr<GraphRecordOption> option(new GraphRecordOption);
     if (GraphRecordOption::is_valid()) {
+        option->update();
         return std::static_pointer_cast<OptionBase>(option);
     } else {
         return nullptr;
@@ -387,7 +392,7 @@ void MemoryOptimizeOption::config_model_internel<ModelLite>(
         }
     } else if (runtime_param.stage == RunStage::AFTER_MODEL_LOAD) {
         if (workspace_limit != SIZE_MAX) {
-            LITE_WARN("set workspace limit to %ld", workspace_limit);
+            LITE_LOG("set workspace limit to %ld", workspace_limit);
             lite::Runtime::set_network_algo_workspace_limit(
                     model->get_lite_network(), workspace_limit);
         }
@@ -400,12 +405,12 @@ void MemoryOptimizeOption::config_model_internel<ModelMdl>(
     if (runtime_param.stage == RunStage::BEFORE_MODEL_LOAD) {
         auto&& graph_option = model->get_mdl_config().comp_graph->options();
         if (disable_mem_opt) {
-            mgb_log_warn("disable memory optimization");
+            mgb_log("disable memory optimization");
             graph_option.seq_opt.enable_mem_plan_opt = false;
             graph_option.seq_opt.enable_mem_reuse_alloc = false;
         }
         if (workspace_limit < SIZE_MAX) {
-            mgb_log_warn("set workspace limit to %ld", workspace_limit);
+            mgb_log("set workspace limit to %ld", workspace_limit);
             auto&& output_spec = model->get_output_spec();
             mgb::SymbolVarArray vars;
             for (auto i : output_spec) {
@@ -417,7 +422,7 @@ void MemoryOptimizeOption::config_model_internel<ModelMdl>(
 }
 }  // namespace lar
 
-MemoryOptimizeOption::MemoryOptimizeOption() {
+void MemoryOptimizeOption::update() {
     m_option_name = "memory_optimize";
     disable_mem_opt = FLAGS_disable_mem_opt;
     workspace_limit = FLAGS_workspace_limit;
@@ -432,6 +437,7 @@ bool MemoryOptimizeOption::is_valid() {
 std::shared_ptr<OptionBase> MemoryOptimizeOption::create_option() {
     static std::shared_ptr<MemoryOptimizeOption> option(new MemoryOptimizeOption);
     if (MemoryOptimizeOption::is_valid()) {
+        option->update();
         return std::static_pointer_cast<OptionBase>(option);
     } else {
         return nullptr;
@@ -451,7 +457,7 @@ void JITOption::config_model_internel<ModelLite>(
     if (runtime_param.stage == RunStage::BEFORE_MODEL_LOAD) {
         auto&& config_option = model->get_config().options;
         if (enable_jit) {
-            LITE_WARN("enable JIT (level 1)");
+            LITE_LOG("enable JIT (level 1)");
             config_option.jit_level = 1;
         }
     }
@@ -463,13 +469,13 @@ void JITOption::config_model_internel<ModelMdl>(
     if (runtime_param.stage == RunStage::BEFORE_MODEL_LOAD) {
         auto&& graph_option = model->get_mdl_config().comp_graph->options();
         if (enable_jit) {
-            mgb_log_warn("enable JIT (level 1)");
+            mgb_log("enable JIT (level 1)");
             graph_option.graph_opt.jit = 1;
         }
     }
 }
 }  // namespace lar
-JITOption::JITOption() {
+void JITOption::update() {
     m_option_name = "JIT";
     enable_jit = FLAGS_enable_jit;
 }
@@ -482,6 +488,7 @@ bool JITOption::is_valid() {
 std::shared_ptr<OptionBase> JITOption::create_option() {
     static std::shared_ptr<JITOption> option(new JITOption);
     if (JITOption::is_valid()) {
+        option->update();
         return std::static_pointer_cast<OptionBase>(option);
     } else {
         return nullptr;
@@ -500,12 +507,12 @@ void TensorRTOption::config_model_internel<ModelLite>(
         RuntimeParam& runtime_param, std::shared_ptr<ModelLite> model) {
     if (runtime_param.stage == RunStage::BEFORE_MODEL_LOAD) {
         if (!tensorrt_cache.empty()) {
-            LITE_WARN("set tensorrt cache as %s", tensorrt_cache.c_str());
+            LITE_LOG("set tensorrt cache as %s", tensorrt_cache.c_str());
             lite::set_tensor_rt_cache(tensorrt_cache);
         }
     } else if (runtime_param.stage == RunStage::AFTER_MODEL_LOAD) {
         if (enable_tensorrt) {
-            LITE_WARN("enable TensorRT");
+            LITE_LOG("enable TensorRT");
             lite::Runtime::use_tensorrt(model->get_lite_network());
         }
     } else if (runtime_param.stage == RunStage::AFTER_MODEL_RUNNING) {
@@ -521,11 +528,11 @@ void TensorRTOption::config_model_internel<ModelMdl>(
     if (runtime_param.stage == RunStage::BEFORE_MODEL_LOAD) {
         auto&& graph_option = model->get_mdl_config().comp_graph->options();
         if (enable_tensorrt) {
-            mgb_log_warn("using tensorRT");
+            mgb_log("using tensorRT");
             graph_option.graph_opt.tensorrt = true;
         }
         if (!tensorrt_cache.empty()) {
-            mgb_log_warn("use tensorrt cache: %s", tensorrt_cache.c_str());
+            mgb_log("use tensorrt cache: %s", tensorrt_cache.c_str());
             mgb::TensorRTEngineCache::enable_engine_cache(true);
             mgb::TensorRTEngineCache::set_impl(
                     std::make_shared<mgb::TensorRTEngineCacheIO>(
@@ -541,7 +548,7 @@ void TensorRTOption::config_model_internel<ModelMdl>(
 }
 }  // namespace lar
 
-TensorRTOption::TensorRTOption() {
+void TensorRTOption::update() {
     m_option_name = "tensorRT";
     enable_tensorrt = FLAGS_tensorrt;
     tensorrt_cache = FLAGS_tensorrt_cache;
@@ -556,6 +563,7 @@ bool TensorRTOption::is_valid() {
 std::shared_ptr<OptionBase> TensorRTOption::create_option() {
     static std::shared_ptr<TensorRTOption> option(new TensorRTOption);
     if (TensorRTOption::is_valid()) {
+        option->update();
         return std::static_pointer_cast<OptionBase>(option);
     } else {
         return nullptr;

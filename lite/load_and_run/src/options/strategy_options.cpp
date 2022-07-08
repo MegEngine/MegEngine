@@ -5,7 +5,7 @@ using namespace lar;
 
 DECLARE_bool(c_opr_lib_with_param);
 DECLARE_bool(fitting);
-StrategyOption::StrategyOption() {
+void StrategyOption::update() {
     m_option_name = "run_strategy";
     warmup_iter = FLAGS_fitting ? 3 : FLAGS_warmup_iter;
     run_iter = FLAGS_fitting ? 10 : FLAGS_iter;
@@ -20,6 +20,7 @@ StrategyOption::StrategyOption() {
 
 std::shared_ptr<OptionBase> StrategyOption::create_option() {
     static std::shared_ptr<StrategyOption> option(new StrategyOption);
+    option->update();
     return std::static_pointer_cast<OptionBase>(option);
 }
 
@@ -43,12 +44,13 @@ void StrategyOption::config_model(
     }
 }
 
-TestcaseOption::TestcaseOption() {
+void TestcaseOption::update() {
     m_option_name = "run_testcase";
 }
 
 std::shared_ptr<OptionBase> TestcaseOption::create_option() {
     static std::shared_ptr<TestcaseOption> option(new TestcaseOption);
+    option->update();
     return std::static_pointer_cast<OptionBase>(option);
 }
 

@@ -25,6 +25,7 @@ void COprLibOption::config_model_internel(
         RuntimeParam& runtime_param, std::shared_ptr<ModelMdl> model) {
     if (runtime_param.stage == RunStage::BEFORE_MODEL_LOAD) {
         if (!lib_path.empty()) {
+            mgb_log("load external C opr lib from %s\n", lib_path.c_str());
             load_lib();
         }
         if (c_opr_args.is_run_c_opr_with_param) {
@@ -176,7 +177,7 @@ void COprLibOption::set_Copr_IO(std::shared_ptr<ModelBase> model_ptr) {
     config_extern_c_opr_dynamic_param(model->get_async_func(), c_opr_param);
 }
 
-COprLibOption::COprLibOption() {
+void COprLibOption::update() {
     m_option_name = "c_opr_lib";
     lib_path = FLAGS_c_opr_lib;
     c_opr_args.is_run_c_opr = !lib_path.empty();
@@ -191,6 +192,7 @@ bool COprLibOption::is_valid() {
 std::shared_ptr<OptionBase> COprLibOption::create_option() {
     static std::shared_ptr<COprLibOption> option(new COprLibOption);
     if (COprLibOption::is_valid()) {
+        option->update();
         return std::static_pointer_cast<OptionBase>(option);
     } else {
         return nullptr;
