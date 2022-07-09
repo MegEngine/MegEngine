@@ -81,14 +81,14 @@ elif [ $SDK_NAME == "cu102_JetsonNano" ];then
         ${CUDA_LIB_DIR}/libnvrtc.so.10.2:\
         ${CUDA_LIB_DIR}/libcublasLt.so.10:\
         ${CUDA_LIB_DIR}/libcublas.so.10:\
+        ${CUDA_LIB_DIR}/libcupti.so.10.2:\
         ${CUDNN_LIB_DIR}/libcudnn_adv_infer.so.8:\
         ${CUDNN_LIB_DIR}/libcudnn_adv_train.so.8:\
         ${CUDNN_LIB_DIR}/libcudnn_cnn_infer.so.8:\
         ${CUDNN_LIB_DIR}/libcudnn_cnn_train.so.8:\
         ${CUDNN_LIB_DIR}/libcudnn_ops_infer.so.8:\
         ${CUDNN_LIB_DIR}/libcudnn_ops_train.so.8:\
-        ${CUDNN_LIB_DIR}/libcudnn.so.8:\
-        ${CUDA_LIB_DIR}/libcupti.so.10.2"
+        ${CUDNN_LIB_DIR}/libcudnn.so.8"
 
     EXTRA_CMAKE_FLAG="-DMGE_WITH_CUDNN_SHARED=ON -DMGE_WITH_CUBLAS_SHARED=ON -DMGE_CUDA_GENCODE=\"-gencode arch=compute_53,code=sm_53\" "
 
@@ -113,14 +113,14 @@ elif [ $SDK_NAME == "cu111" ];then
         ${CUDA_LIB_DIR}/libnvrtc.so.11.1:\
         ${CUDA_LIB_DIR}/libcublasLt.so.11:\
         ${CUDA_LIB_DIR}/libcublas.so.11:\
+        ${CUDA_LIB_DIR}/libcupti.so.11.1:\
         ${CUDNN_LIB_DIR}/libcudnn_adv_infer.so.8:\
         ${CUDNN_LIB_DIR}/libcudnn_adv_train.so.8:\
         ${CUDNN_LIB_DIR}/libcudnn_cnn_infer.so.8:\
         ${CUDNN_LIB_DIR}/libcudnn_cnn_train.so.8:\
         ${CUDNN_LIB_DIR}/libcudnn_ops_infer.so.8:\
         ${CUDNN_LIB_DIR}/libcudnn_ops_train.so.8:\
-        ${CUDNN_LIB_DIR}/libcudnn.so.8:\
-        ${CUDNN_LIB_DIR}/libcupti.so.11.1"
+        ${CUDNN_LIB_DIR}/libcudnn.so.8"
 
     if [ ${IN_CI} = "true" ] && [ ${machine} == "aarch64" ]; then
         EXTRA_CMAKE_FLAG=" -DMGE_WITH_CUDNN_SHARED=ON -DMGE_WITH_CUBLAS_SHARED=ON -DMGE_CUDA_GENCODE=\"-gencode arch=compute_75,code=sm_75\" "
@@ -140,14 +140,14 @@ elif [ $SDK_NAME == "cu112" ];then
         ${CUDA_LIB_DIR}/libnvrtc.so.11.2:\
         ${CUDA_LIB_DIR}/libcublasLt.so.11:\
         ${CUDA_LIB_DIR}/libcublas.so.11:\
+        ${CUDA_LIB_DIR}/libcupti.so.11.2:\
         ${CUDNN_LIB_DIR}/libcudnn_adv_infer.so.8:\
         ${CUDNN_LIB_DIR}/libcudnn_adv_train.so.8:\
         ${CUDNN_LIB_DIR}/libcudnn_cnn_infer.so.8:\
         ${CUDNN_LIB_DIR}/libcudnn_cnn_train.so.8:\
         ${CUDNN_LIB_DIR}/libcudnn_ops_infer.so.8:\
         ${CUDNN_LIB_DIR}/libcudnn_ops_train.so.8:\
-        ${CUDNN_LIB_DIR}/libcudnn.so.8:\
-        ${CUDNN_LIB_DIR}/libcupti.so.11.2"
+        ${CUDNN_LIB_DIR}/libcudnn.so.8"
 
     EXTRA_CMAKE_FLAG=" -DMGE_WITH_CUDNN_SHARED=ON -DMGE_WITH_CUBLAS_SHARED=ON \
         -DMGE_CUDA_GENCODE=\"-gencode arch=compute_61,code=sm_61 \
