@@ -61,8 +61,7 @@ echo "Build with ${SDK_NAME}"
 
 if [ $SDK_NAME == "cu101" ];then
     CUDA_COPY_LIB_LIST="\
-        ${CUDA_LIB_DIR}/libnvrtc.so.10.1:\
-        ${CUDA_LIB_DIR}/libcupti.so.10.1"
+        ${CUDA_LIB_DIR}/libnvrtc.so.10.1"
     EXTRA_CMAKE_FLAG=" -DMGE_WITH_CUDNN_SHARED=OFF -DMGE_WITH_CUBLAS_SHARED=OFF"
     BUILD_GCC8="ON"
     REQUIR_CUDA_VERSION="10010"
@@ -81,7 +80,6 @@ elif [ $SDK_NAME == "cu102_JetsonNano" ];then
         ${CUDA_LIB_DIR}/libnvrtc.so.10.2:\
         ${CUDA_LIB_DIR}/libcublasLt.so.10:\
         ${CUDA_LIB_DIR}/libcublas.so.10:\
-        ${CUDA_LIB_DIR}/libcupti.so.10.2:\
         ${CUDNN_LIB_DIR}/libcudnn_adv_infer.so.8:\
         ${CUDNN_LIB_DIR}/libcudnn_adv_train.so.8:\
         ${CUDNN_LIB_DIR}/libcudnn_cnn_infer.so.8:\
@@ -113,7 +111,6 @@ elif [ $SDK_NAME == "cu111" ];then
         ${CUDA_LIB_DIR}/libnvrtc.so.11.1:\
         ${CUDA_LIB_DIR}/libcublasLt.so.11:\
         ${CUDA_LIB_DIR}/libcublas.so.11:\
-        ${CUDA_LIB_DIR}/libcupti.so.11.1:\
         ${CUDNN_LIB_DIR}/libcudnn_adv_infer.so.8:\
         ${CUDNN_LIB_DIR}/libcudnn_adv_train.so.8:\
         ${CUDNN_LIB_DIR}/libcudnn_cnn_infer.so.8:\
@@ -140,7 +137,6 @@ elif [ $SDK_NAME == "cu112" ];then
         ${CUDA_LIB_DIR}/libnvrtc.so.11.2:\
         ${CUDA_LIB_DIR}/libcublasLt.so.11:\
         ${CUDA_LIB_DIR}/libcublas.so.11:\
-        ${CUDA_LIB_DIR}/libcupti.so.11.2:\
         ${CUDNN_LIB_DIR}/libcudnn_adv_infer.so.8:\
         ${CUDNN_LIB_DIR}/libcudnn_adv_train.so.8:\
         ${CUDNN_LIB_DIR}/libcudnn_cnn_infer.so.8:\
