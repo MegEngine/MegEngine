@@ -15,49 +15,72 @@ logger = get_logger(__name__)
 
 
 class MNIST(VisionDataset):
-    r""":class:`~.Dataset` for MNIST meta data."""
+    r"""MNIST dataset.
+    The MNIST_ database (Modified National Institute of Standards and Technology database)
+    is a large database of handwritten digits that is commonly used for training various image processing systems.
+    The database is also widely used for training and testing in the field of machine learning.
+    It was created by "re-mixing" the samples from `NIST`_'s original datasets.
+    Furthermore, the black and white images from NIST were normalized to fit into a 28x28 pixel
+    bounding box and anti-aliased, which introduced grayscale levels.
+    The MNIST database contains 60,000 training images and 10,000 testing images.
 
-    url_path = "http://yann.lecun.com/exdb/mnist/"
+    The above introduction comes from `MNIST database - Wikipedia
+    <https://en.wikipedia.org/wiki/MNIST_database>`_.
+
+    Args:
+        root:  Path for MNIST dataset downloading or loading. If it's ``None``,
+            it will be set to ``~/.cache/megengine`` (the default root path). 
+        train: If ``True``, use traning dataset; Otherwise use the test set.
+        download: If ``True``, downloads the dataset from the internet and puts it in ``root`` directory.
+            If dataset is already downloaded, it is not downloaded again.
+
+    Returns:
+        The MNIST :class:`~.Dataset` that can work with :class:`~.DataLoader`.
+
+    Example:
+
+       >>> from megengine.data.dataset import MNIST   # doctest: +SKIP
+       >>> mnist = MNIST("/data/datasets/MNIST")  # Set the root path   # doctest: +SKIP
+       >>> image, label = mnist[0]  # doctest: +SKIP
+       >>> image.shape   # doctest: +SKIP
+       (28, 28, 1)
+
+    .. versionchanged:: 1.11 The original URL has been updated to a mirror URL
+
+       *"Please refrain from accessing these files from automated scripts with high frequency. Make copies!"*
+       As requested by the original provider of the MNIST dataset,
+       now the dataset will be downloaded from the mirror site:
+       https://ossci-datasets.s3.amazonaws.com/mnist/
+
+    .. seealso::
+
+       * MNIST dataset is used in :ref:`megengine-quick-start` tutorial as an example.
+       * You can find a lot of machine learning projects using MNIST dataset on the internet.
+    
+    .. _MNIST: http://yann.lecun.com/exdb/mnist/
+    .. _NIST: https://www.nist.gov/data
     """
-    Url prefix for downloading raw file.
-    """
+
+    url_path = "https://ossci-datasets.s3.amazonaws.com/mnist/"
+
     raw_file_name = [
         "train-images-idx3-ubyte.gz",
         "train-labels-idx1-ubyte.gz",
         "t10k-images-idx3-ubyte.gz",
         "t10k-labels-idx1-ubyte.gz",
     ]
-    """
-    Raw file names of both training set and test set (10k).
-    """
+
     raw_file_md5 = [
         "f68b3c2dcbeaaa9fbdd348bbdeb94873",
         "d53e105ee54ea40749a09fcbcd1e9432",
         "9fb629c4189551a2d022fa330f9573f3",
         "ec29112dd5afa0611ce80d1b7f02629c",
     ]
-    """
-    Md5 for checking raw files.
-    """
 
     def __init__(
-        self,
-        root: str = None,
-        train: bool = True,
-        download: bool = True,
-        timeout: int = 500,
+        self, root: str = None, train: bool = True, download: bool = True,
     ):
-        r"""
-        :param root: path for mnist dataset downloading or loading, if ``None``,
-            set ``root`` to the ``_default_root``.
-        :param train: if ``True``, loading trainingset, else loading test set.
-        :param download: if raw files do not exists and download sets to ``True``,
-            download raw files and process, otherwise raise ValueError, default is True.
-
-        """
         super().__init__(root, order=("image", "image_category"))
-
-        self.timeout = timeout
 
         # process the root path
         if root is None:
