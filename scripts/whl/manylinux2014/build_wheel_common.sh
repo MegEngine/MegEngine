@@ -60,7 +60,8 @@ fi
 echo "Build with ${SDK_NAME}"
 
 if [ $SDK_NAME == "cu101" ];then
-    CUDA_COPY_LIB_LIST="${CUDA_LIB_DIR}/libnvrtc.so.10.1"
+    CUDA_COPY_LIB_LIST="\
+        ${CUDA_LIB_DIR}/libnvrtc.so.10.1"
     EXTRA_CMAKE_FLAG=" -DMGE_WITH_CUDNN_SHARED=OFF -DMGE_WITH_CUBLAS_SHARED=OFF"
     BUILD_GCC8="ON"
     REQUIR_CUDA_VERSION="10010"

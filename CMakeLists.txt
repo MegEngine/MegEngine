@@ -105,7 +105,7 @@ if(MGE_PROFILE_COMPILE_TIME)
 endif()
 
 # TODO: add windows support
-cmake_dependent_option(MGE_WITH_CUPTI "Build with CUPTI" ON
+cmake_dependent_option(MGE_WITH_CUPTI "Build with CUPTI" OFF
                        "MGE_WITH_CUDA;MGE_BUILD_IMPERATIVE_RT;NOT MSVC;NOT WIN32" OFF)
 
 set(MGB_CUPTI ${MGE_WITH_CUPTI})
