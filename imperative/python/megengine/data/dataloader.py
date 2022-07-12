@@ -41,18 +41,28 @@ def raise_timeout_error():
 
 class DataLoader:
     r"""Provides a convenient way to iterate on a given dataset.
+    The process is as follows:
 
-    DataLoader combines a dataset with
+    .. mermaid::
+       :align: center
+    
+       flowchart LR
+          Dataset.__len__ -- Sampler --> Indices
+          batch_size -- Sampler --> Indices
+          Indices -- Dataset.__getitem__ --> Samples
+          Samples -- Transform + Collator --> mini-batch
+
+    DataLoader combines a :class:`~.Dataset` with
     :class:`~.Sampler`, :class:`~.Transform` and :class:`~.Collator`,
     make it flexible to get minibatch continually from a dataset.
+    See :ref:`data-guide` for more details.
 
     Args:
         dataset: dataset from which to load the minibatch.
         sampler: defines the strategy to sample data from the dataset.
+            If ``None``, it will sequentially sample from the dataset one by one.
         transform: defined the transforming strategy for a sampled batch.
-            Default: None
         collator: defined the merging strategy for a transformed batch.
-            Default: None
         num_workers: the number of sub-process to load, transform and collate
             the batch. ``0`` means using single-process. Default: 0
         timeout: if positive, means the timeout value(second) for collecting a
@@ -63,14 +73,17 @@ class DataLoader:
             ``True`` means one batch is divided into :attr:`num_workers` pieces, and
             the workers will process these pieces parallelly. ``False`` means
             different sub-process will process different batch. Default: False
-        preload: whether to enable the preloading strategy of the dataloader. When enabling, the dataloader will preload one batch to the device memory to speed up the whole training process.
-            All values in the map, list, and tuple will be converted to :class:`~.Tensor` by preloading, and you will get :class:`~.Tensor` instead of the original Numpy array or Python number.
+        preload: whether to enable the preloading strategy of the dataloader. 
+            When enabling, the dataloader will preload one batch to the device memory to speed up the whole training process.
 
+    .. admonition:: The effect of enabling preload
+       :class: warning
 
-    .. note::
-
-        By enabling preload, tensors' host2device copy and device kernel execution will be overlapped, which will improve the training speed at the cost of higher device memory usage (due to one more batch data on device memory).
-        This feature saves more time when your NN training time is short or your machine's host PCIe bandwidth for each device is low.
+       * All elements in :class:`map`, :class:`list`, and :class:`tuple` will be converted to :class:`~.Tensor` by preloading,
+         and you will get :class:`~.Tensor` instead of the original Numpy array or Python built-in data structrure.
+       * Tensors' host2device copy and device kernel execution will be overlapped,
+         which will improve the training speed at the cost of **higher device memory usage** (due to one more batch data on device memory).
+         This feature saves more time when your NN training time is short or your machine's host PCIe bandwidth for each device is low.
     """
     __initialized = False
 
