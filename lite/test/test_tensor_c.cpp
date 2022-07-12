@@ -251,6 +251,7 @@ TEST(TestCapiTensor, Slice) {
             }
         }
         LITE_destroy_tensor(tensor);
+        LITE_destroy_tensor(slice_tensor);
     };
     check(1, 8, 1, true);
     check(1, 8, 1, false);
@@ -314,6 +315,21 @@ TEST(TestCapiTensor, ThreadLocalError) {
         LITE_destroy_tensor(c_tensor0);
     });
     thread2.join();
+}
+
+TEST(TestCapiTensor, GlobalHolder) {
+    LiteTensor c_tensor0;
+    LiteTensorDesc description = default_desc;
+    description.layout = LiteLayout{{20, 20}, 2, LiteDataType::LITE_FLOAT};
+
+    LITE_make_tensor(description, &c_tensor0);
+    auto destroy_tensor = c_tensor0;
+
+    LITE_make_tensor(description, &c_tensor0);
+    //! make sure destroy_tensor is destroyed by LITE_make_tensor
+    LITE_destroy_tensor(destroy_tensor);
+    ASSERT_EQ(LITE_destroy_tensor(destroy_tensor), -1);
+    LITE_destroy_tensor(c_tensor0);
 }
 
 #endif

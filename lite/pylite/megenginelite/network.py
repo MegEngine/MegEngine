@@ -476,7 +476,7 @@ def start_finish_callback(func):
     def wrapper(c_ios, c_tensors, size):
         ios = {}
         for i in range(size):
-            tensor = LiteTensor()
+            tensor = LiteTensor(physic_construct=False)
             tensor._tensor = c_void_p(c_tensors[i])
             tensor.update()
             io = c_ios[i]
@@ -729,7 +729,7 @@ class LiteNetwork(object):
             c_name = c_char_p(name.encode("utf-8"))
         else:
             c_name = c_char_p(name)
-        tensor = LiteTensor()
+        tensor = LiteTensor(physic_construct=False)
         self._api.LITE_get_io_tensor(
             self._network, c_name, phase, byref(tensor._tensor)
         )

@@ -1022,6 +1022,20 @@ TEST(TestCapiNetWork, TestShareWeights) {
     LITE_CAPI_CHECK(LITE_destroy_network(c_network2));
 }
 
+TEST(TestCapiNetWork, GlobalHolder) {
+    std::string model_path = "./shufflenet.mge";
+    LiteNetwork c_network;
+    LITE_CAPI_CHECK(
+            LITE_make_network(&c_network, *default_config(), *default_network_io()));
+    auto destroy_network = c_network;
+    LITE_CAPI_CHECK(
+            LITE_make_network(&c_network, *default_config(), *default_network_io()));
+    //! make sure destroy_network is destroyed by LITE_make_network
+    LITE_destroy_network(destroy_network);
+    ASSERT_EQ(LITE_destroy_network(destroy_network), -1);
+    LITE_CAPI_CHECK(LITE_destroy_network(c_network));
+}
+
 #endif
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

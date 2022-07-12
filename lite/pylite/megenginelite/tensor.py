@@ -233,6 +233,7 @@ class LiteTensor(object):
         is_pinned_host=False,
         shapes=None,
         dtype=None,
+        physic_construct=True,
     ):
         self._tensor = _Ctensor()
         self._layout = LiteLayout()
@@ -250,8 +251,10 @@ class LiteTensor(object):
         tensor_desc.device_type = device_type
         tensor_desc.device_id = device_id
         tensor_desc.is_pinned_host = is_pinned_host
-        self._api.LITE_make_tensor(tensor_desc, byref(self._tensor))
-        self.update()
+
+        if physic_construct:
+            self._api.LITE_make_tensor(tensor_desc, byref(self._tensor))
+            self.update()
 
     def __del__(self):
         self._api.LITE_destroy_tensor(self._tensor)
@@ -399,7 +402,7 @@ class LiteTensor(object):
         c_start = (c_size_t * length)(*start)
         c_end = (c_size_t * length)(*end)
         c_step = (c_size_t * length)(*step)
-        slice_tensor = LiteTensor()
+        slice_tensor = LiteTensor(physic_construct=False)
         self._api.LITE_tensor_slice(
             self._tensor, c_start, c_end, c_step, length, byref(slice_tensor._tensor),
         )
@@ -560,7 +563,7 @@ def LiteTensorConcat(
     length = len(tensors)
     c_tensors = [t._tensor for t in tensors]
     c_tensors = (_Ctensor * length)(*c_tensors)
-    result_tensor = LiteTensor()
+    result_tensor = LiteTensor(physic_construct=False)
     api.LITE_tensor_concat(
         cast(byref(c_tensors), POINTER(c_void_p)),
         length,

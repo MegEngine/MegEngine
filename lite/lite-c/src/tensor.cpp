@@ -60,8 +60,10 @@ int LITE_make_tensor(const LiteTensorDesc tensor_describe, LiteTensor* tensor) {
     auto lite_tensor = std::make_shared<lite::Tensor>(
             tensor_describe.device_id, tensor_describe.device_type, layout,
             tensor_describe.is_pinned_host);
-    LITE_LOCK_GUARD(mtx_tensor);
-    get_global_tensor_holder()[lite_tensor.get()] = lite_tensor;
+    {
+        LITE_LOCK_GUARD(mtx_tensor);
+        get_global_tensor_holder()[lite_tensor.get()] = lite_tensor;
+    }
     *tensor = lite_tensor.get();
     LITE_CAPI_END();
 }
@@ -70,7 +72,13 @@ int LITE_destroy_tensor(LiteTensor tensor) {
     LITE_CAPI_BEGIN();
     LITE_ASSERT(tensor, "The tensor pass to LITE c_api is null");
     LITE_LOCK_GUARD(mtx_tensor);
-    get_global_tensor_holder().erase(tensor);
+    auto& global_holder = get_global_tensor_holder();
+    if (global_holder.find(tensor) != global_holder.end()) {
+        global_holder.erase(tensor);
+    } else {
+        //! return -1, means the tensor has been destroyed.
+        return -1;
+    }
     LITE_CAPI_END();
 }
 
@@ -126,8 +134,10 @@ int LITE_tensor_slice(
         }
     }
     auto ret_tensor = static_cast<lite::Tensor*>(tensor)->slice(starts, ends, steps);
-    LITE_LOCK_GUARD(mtx_tensor);
-    get_global_tensor_holder()[ret_tensor.get()] = ret_tensor;
+    {
+        LITE_LOCK_GUARD(mtx_tensor);
+        get_global_tensor_holder()[ret_tensor.get()] = ret_tensor;
+    }
     *slice_tensor = ret_tensor.get();
     LITE_CAPI_END();
 }
@@ -226,12 +236,16 @@ int LITE_tensor_concat(
         LiteTensor* tensors, int nr_tensor, int dim, LiteDeviceType dst_device,
         int device_id, LiteTensor* result_tensor) {
     LITE_CAPI_BEGIN();
+    LITE_ASSERT(result_tensor, "The tensor pass to LITE c_api is null");
     std::vector<lite::Tensor> v_tensors;
     for (int i = 0; i < nr_tensor; i++) {
         v_tensors.push_back(*static_cast<lite::Tensor*>(tensors[i]));
     }
     auto tensor = lite::TensorUtils::concat(v_tensors, dim, dst_device, device_id);
-    get_global_tensor_holder()[tensor.get()] = tensor;
+    {
+        LITE_LOCK_GUARD(mtx_tensor);
+        get_global_tensor_holder()[tensor.get()] = tensor;
+    }
     *result_tensor = tensor.get();
     LITE_CAPI_END()
 }
