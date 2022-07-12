@@ -176,6 +176,13 @@ TEST_F(FALLBACK, BENCHMARK_MATRIX_MUL_GI_PACK_MK4) {
             "FB_GI_F32_MK4_PACK_4x12", param::MatrixMul::Format::MK4);
 }
 
+TEST_F(FALLBACK, BENCHMARK_MATRIX_FB_GI_F32_MK4_4x8) {
+    auto args = matrix_mul::get_benchmark_matmul_args();
+    matrix_mul::benchmark_single_algo(
+            handle(), args, dtype::Float32{}, dtype::Float32{}, dtype::Float32{},
+            "FB_GI_F32_MK4_4x8", param::MatrixMul::Format::MK4);
+}
+
 #endif
 }  // namespace test
 }  // namespace megdnn
