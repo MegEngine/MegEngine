@@ -73,9 +73,21 @@ struct InputTransformF63_NCHW44 {
         size_t icb = ic / pack_size;
 
         GI_FLOAT32_t d0, d1, d2, d3, d4, d5, d6, d7;
+#if defined(GI_TARGET_X86) || defined(GI_RVV_INTRINSICS)
+//! x86 and rvv GiSimdFmaLane API is slowly, as an alternate, use
+//! GiMultiplyAddScalarFloat32
+#define MADD(a, b, c, d) GiMultiplyAddScalarFloat32(a, b, *(c + d))
+#define MSUB(a, b, c, d) GiMultiplySubScalarFloat32(a, b, *(c + d))
+        const float* v0 = input_parameters + 0;
+        const float* v1 = input_parameters + 4;
+        const float* v2 = input_parameters + 8;
+#else
+#define MADD(a, b, c, d) GiSimdFmaLane(a, b, c, d)
+#define MSUB(a, b, c, d) GiFmsqLaneQFloat32(a, b, c, d)
         GI_FLOAT32_t v0 = GiLoadFloat32(input_parameters + 0);
         GI_FLOAT32_t v1 = GiLoadFloat32(input_parameters + 4);
         GI_FLOAT32_t v2 = GiLoadFloat32(input_parameters + 8);
+#endif
 
         //! B
         //!     1     0     0     0     0    0    0     0
@@ -105,39 +117,39 @@ struct InputTransformF63_NCHW44 {
     t##i##0 = GiSubtractFloat32(t##i##0, d6);                                     \
     t##i##1 = GiAddFloat32(t##i##1, d1);                                          \
     t##i##2 = GiSubtractFloat32(t##i##2, d1);                                     \
-    t##i##3 = GiSimdFmaLane(t##i##3, d1, v0, 2);                                  \
-    t##i##4 = GiFmsqLaneQFloat32(t##i##4, d1, v0, 2);                             \
-    t##i##5 = GiSimdFmaLane(t##i##5, d1, v1, 2);                                  \
-    t##i##6 = GiFmsqLaneQFloat32(t##i##6, d1, v1, 2);                             \
+    t##i##3 = MADD(t##i##3, d1, v0, 2);                                           \
+    t##i##4 = MSUB(t##i##4, d1, v0, 2);                                           \
+    t##i##5 = MADD(t##i##5, d1, v1, 2);                                           \
+    t##i##6 = MSUB(t##i##6, d1, v1, 2);                                           \
     t##i##7 = GiSubtractFloat32(t##i##7, d1);                                     \
-    t##i##0 = GiFmsqLaneQFloat32(t##i##0, d2, v0, 0);                             \
+    t##i##0 = MSUB(t##i##0, d2, v0, 0);                                           \
     t##i##1 = GiAddFloat32(t##i##1, d2);                                          \
     t##i##2 = GiAddFloat32(t##i##2, d2);                                          \
-    t##i##3 = GiSimdFmaLane(t##i##3, d2, v0, 3);                                  \
-    t##i##4 = GiSimdFmaLane(t##i##4, d2, v0, 3);                                  \
-    t##i##5 = GiSimdFmaLane(t##i##5, d2, v1, 3);                                  \
-    t##i##6 = GiSimdFmaLane(t##i##6, d2, v1, 3);                                  \
-    t##i##1 = GiFmsqLaneQFloat32(t##i##1, d3, v0, 1);                             \
-    t##i##2 = GiSimdFmaLane(t##i##2, d3, v0, 1);                                  \
-    t##i##3 = GiFmsqLaneQFloat32(t##i##3, d3, v1, 0);                             \
-    t##i##4 = GiSimdFmaLane(t##i##4, d3, v1, 0);                                  \
-    t##i##5 = GiFmsqLaneQFloat32(t##i##5, d3, v1, 0);                             \
-    t##i##6 = GiSimdFmaLane(t##i##6, d3, v1, 0);                                  \
-    t##i##7 = GiSimdFmaLane(t##i##7, d3, v0, 0);                                  \
-    t##i##0 = GiSimdFmaLane(t##i##0, d4, v0, 0);                                  \
-    t##i##1 = GiFmsqLaneQFloat32(t##i##1, d4, v0, 1);                             \
-    t##i##2 = GiFmsqLaneQFloat32(t##i##2, d4, v0, 1);                             \
-    t##i##3 = GiFmsqLaneQFloat32(t##i##3, d4, v1, 1);                             \
-    t##i##4 = GiFmsqLaneQFloat32(t##i##4, d4, v1, 1);                             \
-    t##i##5 = GiFmsqLaneQFloat32(t##i##5, d4, v2, 0);                             \
-    t##i##6 = GiFmsqLaneQFloat32(t##i##6, d4, v2, 0);                             \
+    t##i##3 = MADD(t##i##3, d2, v0, 3);                                           \
+    t##i##4 = MADD(t##i##4, d2, v0, 3);                                           \
+    t##i##5 = MADD(t##i##5, d2, v1, 3);                                           \
+    t##i##6 = MADD(t##i##6, d2, v1, 3);                                           \
+    t##i##1 = MSUB(t##i##1, d3, v0, 1);                                           \
+    t##i##2 = MADD(t##i##2, d3, v0, 1);                                           \
+    t##i##3 = MSUB(t##i##3, d3, v1, 0);                                           \
+    t##i##4 = MADD(t##i##4, d3, v1, 0);                                           \
+    t##i##5 = MSUB(t##i##5, d3, v1, 0);                                           \
+    t##i##6 = MADD(t##i##6, d3, v1, 0);                                           \
+    t##i##7 = MADD(t##i##7, d3, v0, 0);                                           \
+    t##i##0 = MADD(t##i##0, d4, v0, 0);                                           \
+    t##i##1 = MSUB(t##i##1, d4, v0, 1);                                           \
+    t##i##2 = MSUB(t##i##2, d4, v0, 1);                                           \
+    t##i##3 = MSUB(t##i##3, d4, v1, 1);                                           \
+    t##i##4 = MSUB(t##i##4, d4, v1, 1);                                           \
+    t##i##5 = MSUB(t##i##5, d4, v2, 0);                                           \
+    t##i##6 = MSUB(t##i##6, d4, v2, 0);                                           \
     t##i##1 = GiAddFloat32(t##i##1, d5);                                          \
     t##i##2 = GiSubtractFloat32(t##i##2, d5);                                     \
-    t##i##3 = GiSimdFmaLane(t##i##3, d5, v1, 2);                                  \
-    t##i##4 = GiFmsqLaneQFloat32(t##i##4, d5, v1, 2);                             \
-    t##i##5 = GiSimdFmaLane(t##i##5, d5, v0, 2);                                  \
-    t##i##6 = GiFmsqLaneQFloat32(t##i##6, d5, v0, 2);                             \
-    t##i##7 = GiFmsqLaneQFloat32(t##i##7, d5, v0, 0);
+    t##i##3 = MADD(t##i##3, d5, v1, 2);                                           \
+    t##i##4 = MSUB(t##i##4, d5, v1, 2);                                           \
+    t##i##5 = MADD(t##i##5, d5, v0, 2);                                           \
+    t##i##6 = MSUB(t##i##6, d5, v0, 2);                                           \
+    t##i##7 = MSUB(t##i##7, d5, v0, 0);
         UNROLL_CALL_RAW(8, cb);
 #undef cb
 
@@ -153,39 +165,39 @@ struct InputTransformF63_NCHW44 {
     d0 = GiSubtractFloat32(d0, t6##i);                                         \
     d1 = GiAddFloat32(d1, t1##i);                                              \
     d2 = GiSubtractFloat32(d2, t1##i);                                         \
-    d3 = GiSimdFmaLane(d3, t1##i, v0, 2);                                      \
-    d4 = GiFmsqLaneQFloat32(d4, t1##i, v0, 2);                                 \
-    d5 = GiSimdFmaLane(d5, t1##i, v1, 2);                                      \
-    d6 = GiFmsqLaneQFloat32(d6, t1##i, v1, 2);                                 \
+    d3 = MADD(d3, t1##i, v0, 2);                                               \
+    d4 = MSUB(d4, t1##i, v0, 2);                                               \
+    d5 = MADD(d5, t1##i, v1, 2);                                               \
+    d6 = MSUB(d6, t1##i, v1, 2);                                               \
     d7 = GiSubtractFloat32(d7, t1##i);                                         \
-    d0 = GiFmsqLaneQFloat32(d0, t2##i, v0, 0);                                 \
+    d0 = MSUB(d0, t2##i, v0, 0);                                               \
     d1 = GiAddFloat32(d1, t2##i);                                              \
     d2 = GiAddFloat32(d2, t2##i);                                              \
-    d3 = GiSimdFmaLane(d3, t2##i, v0, 3);                                      \
-    d4 = GiSimdFmaLane(d4, t2##i, v0, 3);                                      \
-    d5 = GiSimdFmaLane(d5, t2##i, v1, 3);                                      \
-    d6 = GiSimdFmaLane(d6, t2##i, v1, 3);                                      \
-    d1 = GiFmsqLaneQFloat32(d1, t3##i, v0, 1);                                 \
-    d2 = GiSimdFmaLane(d2, t3##i, v0, 1);                                      \
-    d3 = GiFmsqLaneQFloat32(d3, t3##i, v1, 0);                                 \
-    d4 = GiSimdFmaLane(d4, t3##i, v1, 0);                                      \
-    d5 = GiFmsqLaneQFloat32(d5, t3##i, v1, 0);                                 \
-    d6 = GiSimdFmaLane(d6, t3##i, v1, 0);                                      \
-    d7 = GiSimdFmaLane(d7, t3##i, v0, 0);                                      \
-    d0 = GiSimdFmaLane(d0, t4##i, v0, 0);                                      \
-    d1 = GiFmsqLaneQFloat32(d1, t4##i, v0, 1);                                 \
-    d2 = GiFmsqLaneQFloat32(d2, t4##i, v0, 1);                                 \
-    d3 = GiFmsqLaneQFloat32(d3, t4##i, v1, 1);                                 \
-    d4 = GiFmsqLaneQFloat32(d4, t4##i, v1, 1);                                 \
-    d5 = GiFmsqLaneQFloat32(d5, t4##i, v2, 0);                                 \
-    d6 = GiFmsqLaneQFloat32(d6, t4##i, v2, 0);                                 \
+    d3 = MADD(d3, t2##i, v0, 3);                                               \
+    d4 = MADD(d4, t2##i, v0, 3);                                               \
+    d5 = MADD(d5, t2##i, v1, 3);                                               \
+    d6 = MADD(d6, t2##i, v1, 3);                                               \
+    d1 = MSUB(d1, t3##i, v0, 1);                                               \
+    d2 = MADD(d2, t3##i, v0, 1);                                               \
+    d3 = MSUB(d3, t3##i, v1, 0);                                               \
+    d4 = MADD(d4, t3##i, v1, 0);                                               \
+    d5 = MSUB(d5, t3##i, v1, 0);                                               \
+    d6 = MADD(d6, t3##i, v1, 0);                                               \
+    d7 = MADD(d7, t3##i, v0, 0);                                               \
+    d0 = MADD(d0, t4##i, v0, 0);                                               \
+    d1 = MSUB(d1, t4##i, v0, 1);                                               \
+    d2 = MSUB(d2, t4##i, v0, 1);                                               \
+    d3 = MSUB(d3, t4##i, v1, 1);                                               \
+    d4 = MSUB(d4, t4##i, v1, 1);                                               \
+    d5 = MSUB(d5, t4##i, v2, 0);                                               \
+    d6 = MSUB(d6, t4##i, v2, 0);                                               \
     d1 = GiAddFloat32(d1, t5##i);                                              \
     d2 = GiSubtractFloat32(d2, t5##i);                                         \
-    d3 = GiSimdFmaLane(d3, t5##i, v1, 2);                                      \
-    d4 = GiFmsqLaneQFloat32(d4, t5##i, v1, 2);                                 \
-    d5 = GiSimdFmaLane(d5, t5##i, v0, 2);                                      \
-    d6 = GiFmsqLaneQFloat32(d6, t5##i, v0, 2);                                 \
-    d7 = GiFmsqLaneQFloat32(d7, t5##i, v0, 0);                                 \
+    d3 = MADD(d3, t5##i, v1, 2);                                               \
+    d4 = MSUB(d4, t5##i, v1, 2);                                               \
+    d5 = MADD(d5, t5##i, v0, 2);                                               \
+    d6 = MSUB(d6, t5##i, v0, 2);                                               \
+    d7 = MSUB(d7, t5##i, v0, 0);                                               \
     GiStoreFloat32(                                                            \
             input_transform_buf +                                              \
                     (0 * alpha + i) * ICB * nr_units_in_tile * pack_size +     \
@@ -228,6 +240,8 @@ struct InputTransformF63_NCHW44 {
             d7);
         UNROLL_CALL_RAW(8, cb);
 #undef cb
+#undef MADD
+#undef MSUB
     }
 };
 

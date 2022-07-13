@@ -1808,6 +1808,29 @@ TEST_F(FALLBACK, GiMultiplyAddScalarFloat32) {
     assert_eq((float*)&ret, naive);
 }
 
+TEST_F(FALLBACK, GiMultiplySubScalarFloat32) {
+    GI_FLOAT32_t src0, src1, ret;
+    std::vector<float> s0{1.1f, 2.2f, 3.5f, 4.9f};
+    std::vector<float> s1{2312.1f, 345.244f, 3.59f, -12.8f};
+    s0.resize(SIMD_LEN);
+    s1.resize(SIMD_LEN);
+    init((float*)&src0, s0);
+    init((float*)&src1, s1);
+
+    float scalar = 3.1415;
+
+    force_memset_ret((void*)&ret, GI_SIMD_LEN_BYTE);
+    ret = GiMultiplySubScalarFloat32(src0, src1, scalar);
+
+    std::vector<float> naive;
+
+    for (size_t i = 0; i < SIMD_LEN; i++) {
+        naive.push_back(s0[i] - s1[i] * scalar);
+    }
+
+    assert_eq((float*)&ret, naive);
+}
+
 TEST_F(FALLBACK, GiMultiplyAddLanXXFloat32) {
     GI_FLOAT32_t src0, src1, src2, ret;
     std::vector<float> s0{1.1f, 2.2f, 3.5f, 4.9f};

@@ -889,6 +889,21 @@ GI_FLOAT32_t GiMultiplyAddScalarFloat32(
 #endif
 }
 
+GI_FORCEINLINE
+GI_FLOAT32_t GiMultiplySubScalarFloat32(
+        GI_FLOAT32_t VectorSub, GI_FLOAT32_t Vector, float Scalar) {
+#if defined(GI_NEON_INTRINSICS)
+    return vmlsq_n_f32(VectorSub, Vector, Scalar);
+#elif defined(GI_SSE2_INTRINSICS)
+    return _mm_sub_ps(VectorSub, _mm_mul_ps(Vector, GiBroadcastFloat32(Scalar)));
+#elif defined(GI_RVV_INTRINSICS)
+    return vfnmsub_vf_f32m1(
+            Vector, Scalar, VectorSub, GI_SIMD_LEN_BYTE / sizeof(float));
+#else
+    return VectorSub - Vector * Scalar;
+#endif
+}
+
 #if defined(GI_NEON_INTRINSICS)
 #define GIMULTIPLYADDLANFLOAT32(i)                                                \
     GI_FORCEINLINE GI_FLOAT32_t GiMultiplyAddLan##i##Float32(                     \
