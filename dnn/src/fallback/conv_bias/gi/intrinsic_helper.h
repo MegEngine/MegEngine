@@ -62,6 +62,13 @@ struct LoadHelper {
     static GI_FORCEINLINE void impl(T& weight, T2 ptr, int oc_offset, XT... args);
 };
 
+template <
+        int weight_number, int base_offset, int ptr_step, int oc_block, typename T,
+        typename T2>
+struct LoadPtrHelper {
+    static GI_FORCEINLINE void impl(T& weight, T2 ptr, int oc_offset);
+};
+
 #define WEIGHT_CB(step)                   \
     src[step] = GiFloat32Type2FixLenType( \
             Func::impl(ptr + base_offset + step * ptr_step, args...));
@@ -96,6 +103,36 @@ LOAD_HELPER(16);
 #undef LOAD_HELPER
 #undef WEIGHT_CB
 
+#define WEIGHT_PTR_CB(step) src[step] = ptr + base_offset + step * ptr_step;
+
+#define LOAD_PTR_HELPER(step)                                         \
+    template <int base_offset, int ptr_step, typename T, typename T2> \
+    struct LoadPtrHelper<step, base_offset, ptr_step, 0, T, T2> {     \
+        static GI_FORCEINLINE void impl(T& src, T2 ptr, int) {        \
+            UNROLL_CALL_RAW(step, WEIGHT_PTR_CB);                     \
+        }                                                             \
+    }
+
+LOAD_PTR_HELPER(1);
+LOAD_PTR_HELPER(2);
+LOAD_PTR_HELPER(3);
+LOAD_PTR_HELPER(4);
+LOAD_PTR_HELPER(5);
+LOAD_PTR_HELPER(6);
+LOAD_PTR_HELPER(7);
+LOAD_PTR_HELPER(8);
+LOAD_PTR_HELPER(9);
+LOAD_PTR_HELPER(10);
+LOAD_PTR_HELPER(11);
+LOAD_PTR_HELPER(12);
+LOAD_PTR_HELPER(13);
+LOAD_PTR_HELPER(14);
+LOAD_PTR_HELPER(15);
+LOAD_PTR_HELPER(16);
+
+#undef LOAD_PTR_HELPER
+#undef WEIGHT_PTR_CB
+
 ///////////////////////////c_dim = 1/////////////////////////
 #define WEIGHT_CB(step) \
     src[0][step] =      \
@@ -121,6 +158,29 @@ LOAD_HELPER(9);
 
 #undef LOAD_HELPER
 #undef WEIGHT_CB
+
+#define WEIGHT_PTR_CB(step) src[0][step] = ptr + base_offset + step * ptr_step;
+
+#define LOAD_PTR_HELPER(step)                                         \
+    template <int base_offset, int ptr_step, typename T, typename T2> \
+    struct LoadPtrHelper<step, base_offset, ptr_step, 1, T, T2> {     \
+        static GI_FORCEINLINE void impl(T& src, T2 ptr, int) {        \
+            UNROLL_CALL_RAW(step, WEIGHT_PTR_CB);                     \
+        }                                                             \
+    }
+
+LOAD_PTR_HELPER(1);
+LOAD_PTR_HELPER(2);
+LOAD_PTR_HELPER(3);
+LOAD_PTR_HELPER(4);
+LOAD_PTR_HELPER(5);
+LOAD_PTR_HELPER(6);
+LOAD_PTR_HELPER(7);
+LOAD_PTR_HELPER(8);
+LOAD_PTR_HELPER(9);
+
+#undef LOAD_PTR_HELPER
+#undef WEIGHT_PTR_CB
 
 /////////////////////////c_dim = 2///////////////////////////////
 #define WEIGHT_CB(step)                                                                \
@@ -149,11 +209,43 @@ LOAD_HELPER(8);
 #undef LOAD_HELPER
 #undef WEIGHT_CB
 
+#define WEIGHT_PTR_CB(step)                             \
+    src[0][step] = ptr + base_offset + step * ptr_step; \
+    src[1][step] = ptr + base_offset + step * ptr_step + oc_offset;
+
+#define LOAD_PTR_HELPER(step)                                            \
+    template <int base_offset, int ptr_step, typename T, typename T2>    \
+    struct LoadPtrHelper<step, base_offset, ptr_step, 2, T, T2> {        \
+        static GI_FORCEINLINE void impl(T& src, T2 ptr, int oc_offset) { \
+            UNROLL_CALL_RAW(step, WEIGHT_PTR_CB);                        \
+        }                                                                \
+    }
+
+LOAD_PTR_HELPER(1);
+LOAD_PTR_HELPER(2);
+LOAD_PTR_HELPER(3);
+LOAD_PTR_HELPER(4);
+LOAD_PTR_HELPER(5);
+LOAD_PTR_HELPER(6);
+LOAD_PTR_HELPER(7);
+LOAD_PTR_HELPER(8);
+
+#undef LOAD_HELPER
+#undef WEIGHT_PTR_CB
+
 template <
         int weight_number, int base_offset, int ptr_step, int c_dim, typename Func,
         typename T, typename T2>
 GI_FORCEINLINE void load_helper(T& weight, T2 ptr, int oc_offset) {
     LoadHelper<weight_number, base_offset, ptr_step, c_dim, Func, T, T2>::impl(
+            weight, ptr, oc_offset);
+}
+
+template <
+        int weight_number, int base_offset, int ptr_step, int c_dim, typename T,
+        typename T2>
+GI_FORCEINLINE void load_ptr_helper(T& weight, T2 ptr, int oc_offset) {
+    LoadPtrHelper<weight_number, base_offset, ptr_step, c_dim, T, T2>::impl(
             weight, ptr, oc_offset);
 }
 

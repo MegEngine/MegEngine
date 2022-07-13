@@ -748,7 +748,7 @@ void channel_wise_nchw44_float::do_conv_kern_stride1_5x5(
             GI_FLOAT32_FIXLEN_t src_v[2][5];
 #define COMPUTE_5X5_2(i, dst, src, kernel0, kernel1) \
     load_vec<5>(kernel0, filter + i * 5 * 4);        \
-    load_vec<6>(src, input + i * IW * 4);            \
+    load_vec<5>(src, input + i * IW * 4);            \
     compute_vec<5>(dst[0][0], &src[0], kernel0);     \
     compute_vec<5>(dst[1][0], &src[0], kernel1);
             // line 0
@@ -813,7 +813,7 @@ void channel_wise_nchw44_float::do_conv_kern_stride1_5x5(
             GI_FLOAT32_FIXLEN_t src_v[2][5];
 #define COMPUTE_5X5_1(i, dst, src, kernel)   \
     load_vec<5>(kernel, filter + i * 5 * 4); \
-    load_vec<6>(src, input + i * IW * 4);    \
+    load_vec<5>(src, input + i * IW * 4);    \
     compute_vec<5>(dst, &src[0], kernel)
             // line 0
             COMPUTE_5X5_1(0, dst_v, src_v[0], kernel[0]);
@@ -1148,7 +1148,7 @@ void channel_wise_nchw44_float::do_conv_kern_stride2_5x5(
             GI_FLOAT32_FIXLEN_t src_v[2][5];
 #define COMPUTE_5X5_1(i, dst, src, kernel)   \
     load_vec<5>(kernel, filter + i * 5 * 4); \
-    load_vec<6>(src, input + i * IW * 4);    \
+    load_vec<5>(src, input + i * IW * 4);    \
     compute_vec<5>(dst, &src[0], kernel)
             // line 0
             COMPUTE_5X5_1(0, dst_v, src_v[0], kernel[0]);

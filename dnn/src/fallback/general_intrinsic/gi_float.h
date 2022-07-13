@@ -1110,7 +1110,7 @@ GI_FORCEINLINE
 GI_FLOAT32_t GiMaximumFloat32(GI_FLOAT32_t Vector1, GI_FLOAT32_t Vector2) {
 #if defined(GI_NEON_INTRINSICS)
     return vmaxq_f32(Vector1, Vector2);
-#elif defined(GI_NEON32_INTRINSICS)
+#elif defined(GI_SSE2_INTRINSICS)
     return _mm_max_ps(Vector1, Vector2);
 #elif defined(GI_RVV_INTRINSICS)
     return vfmax_vv_f32m1(Vector1, Vector2, GI_SIMD_LEN_BYTE / sizeof(float));
@@ -1127,7 +1127,7 @@ GI_FORCEINLINE
 GI_FLOAT32_t GiMinimumFloat32(GI_FLOAT32_t Vector1, GI_FLOAT32_t Vector2) {
 #if defined(GI_NEON_INTRINSICS)
     return vminq_f32(Vector1, Vector2);
-#elif defined(GI_NEON32_INTRINSICS)
+#elif defined(GI_SSE2_INTRINSICS)
     return _mm_min_ps(Vector1, Vector2);
 #elif defined(GI_RVV_INTRINSICS)
     return vfmin_vv_f32m1(Vector1, Vector2, GI_SIMD_LEN_BYTE / sizeof(float));
