@@ -17,6 +17,30 @@ using namespace conv_stride1;
 using NCBKernSizeParam = fallback::ConvBiasImpl::NCBKernSizeParam;
 using NCBKernParam = fallback::ConvBiasImpl::NCBKernParam;
 
+#if defined(GI_RVV_INTRINSICS)
+#define PREFER_VF
+#endif
+
+#if defined(PREFER_VF)
+#define MLA(a, b, c, d) GiMultiplyAddScalarFloat32(a, b, *(c + d))
+namespace {
+GI_FORCEINLINE void ext_float32_ptr(
+        const float* a, const float* b, const int n, float* ret) {
+    int t_count = GI_SIMD_LEN_BYTE / sizeof(float);
+    int a_count = t_count - n;
+    for (int i = 0; i < a_count; i++) {
+        ret[i] = a[i + n];
+    }
+    for (int i = 0; i < n; i++) {
+        ret[i + a_count] = b[i];
+    }
+}
+};  // namespace
+
+#else
+#define MLA(a, b, c, d) GiSimdFmaLane(a, b, c, d)
+#endif
+
 void conv_stride1::do_conv_2x2_stride1(
         const float* src, const float* filter, float* dst, size_t IH, size_t IW,
         size_t OH, size_t OW, size_t IC) {
@@ -143,10 +167,18 @@ void conv_stride1::do_conv_3x3_stride1(
         const float* k1 = filter + 3;
         const float* k2 = filter + 5;
 
+#if defined(PREFER_VF)
+        const float* _k0123 = k0;
+        const float* _k3456 = k1;
+        const float* _k5678 = k2;
+        float _k6789[GI_SIMD_LEN_BYTE / sizeof(float)];
+        ext_float32_ptr(_k5678, _k5678, 1, _k6789);
+#else
         GI_FLOAT32_t _k0123 = GiLoadFloat32(k0);
         GI_FLOAT32_t _k3456 = GiLoadFloat32(k1);
         GI_FLOAT32_t _k5678 = GiLoadFloat32(k2);
         GI_FLOAT32_t _k6789 = GiExtqFloat32(_k5678, _k5678, 1);
+#endif
 
         size_t h = 0;
         for (; h + 1 < OH; h += 2) {
@@ -178,25 +210,25 @@ void conv_stride1::do_conv_3x3_stride1(
                 GI_FLOAT32_t _r31 = GiExtqFloat32(_r30, _r30n, 1);
                 GI_FLOAT32_t _r32 = GiExtqFloat32(_r30, _r30n, 2);
 
-                _sum1 = GiSimdFmaLane(_sum1, _r00, _k0123, 0);
-                _sum2 = GiSimdFmaLane(_sum2, _r01, _k0123, 1);
-                _sum1 = GiSimdFmaLane(_sum1, _r02, _k0123, 2);
-                _sum2 = GiSimdFmaLane(_sum2, _r10, _k3456, 0);
-                _sum1 = GiSimdFmaLane(_sum1, _r11, _k3456, 1);
-                _sum2 = GiSimdFmaLane(_sum2, _r12, _k3456, 2);
-                _sum1 = GiSimdFmaLane(_sum1, _r20, _k6789, 0);
-                _sum2 = GiSimdFmaLane(_sum2, _r21, _k6789, 1);
-                _sum1 = GiSimdFmaLane(_sum1, _r22, _k6789, 2);
+                _sum1 = MLA(_sum1, _r00, _k0123, 0);
+                _sum2 = MLA(_sum2, _r01, _k0123, 1);
+                _sum1 = MLA(_sum1, _r02, _k0123, 2);
+                _sum2 = MLA(_sum2, _r10, _k3456, 0);
+                _sum1 = MLA(_sum1, _r11, _k3456, 1);
+                _sum2 = MLA(_sum2, _r12, _k3456, 2);
+                _sum1 = MLA(_sum1, _r20, _k6789, 0);
+                _sum2 = MLA(_sum2, _r21, _k6789, 1);
+                _sum1 = MLA(_sum1, _r22, _k6789, 2);
 
-                _sum3 = GiSimdFmaLane(_sum3, _r10, _k0123, 0);
-                _sum4 = GiSimdFmaLane(_sum4, _r11, _k0123, 1);
-                _sum3 = GiSimdFmaLane(_sum3, _r12, _k0123, 2);
-                _sum4 = GiSimdFmaLane(_sum4, _r20, _k3456, 0);
-                _sum3 = GiSimdFmaLane(_sum3, _r21, _k3456, 1);
-                _sum4 = GiSimdFmaLane(_sum4, _r22, _k3456, 2);
-                _sum3 = GiSimdFmaLane(_sum3, _r30, _k6789, 0);
-                _sum4 = GiSimdFmaLane(_sum4, _r31, _k6789, 1);
-                _sum3 = GiSimdFmaLane(_sum3, _r32, _k6789, 2);
+                _sum3 = MLA(_sum3, _r10, _k0123, 0);
+                _sum4 = MLA(_sum4, _r11, _k0123, 1);
+                _sum3 = MLA(_sum3, _r12, _k0123, 2);
+                _sum4 = MLA(_sum4, _r20, _k3456, 0);
+                _sum3 = MLA(_sum3, _r21, _k3456, 1);
+                _sum4 = MLA(_sum4, _r22, _k3456, 2);
+                _sum3 = MLA(_sum3, _r30, _k6789, 0);
+                _sum4 = MLA(_sum4, _r31, _k6789, 1);
+                _sum3 = MLA(_sum3, _r32, _k6789, 2);
 
                 _sum1 = GiAddFloat32(_sum1, _sum2);
                 _sum3 = GiAddFloat32(_sum3, _sum4);
@@ -243,15 +275,15 @@ void conv_stride1::do_conv_3x3_stride1(
                 GI_FLOAT32_t _r21 = GiExtqFloat32(_r20, _r20n, 1);
                 GI_FLOAT32_t _r22 = GiExtqFloat32(_r20, _r20n, 2);
 
-                _sum1 = GiSimdFmaLane(_sum1, _r00, _k0123, 0);
-                _sum2 = GiSimdFmaLane(_sum2, _r01, _k0123, 1);
-                _sum1 = GiSimdFmaLane(_sum1, _r02, _k0123, 2);
-                _sum2 = GiSimdFmaLane(_sum2, _r10, _k3456, 0);
-                _sum1 = GiSimdFmaLane(_sum1, _r11, _k3456, 1);
-                _sum2 = GiSimdFmaLane(_sum2, _r12, _k3456, 2);
-                _sum1 = GiSimdFmaLane(_sum1, _r20, _k6789, 0);
-                _sum2 = GiSimdFmaLane(_sum2, _r21, _k6789, 1);
-                _sum1 = GiSimdFmaLane(_sum1, _r22, _k6789, 2);
+                _sum1 = MLA(_sum1, _r00, _k0123, 0);
+                _sum2 = MLA(_sum2, _r01, _k0123, 1);
+                _sum1 = MLA(_sum1, _r02, _k0123, 2);
+                _sum2 = MLA(_sum2, _r10, _k3456, 0);
+                _sum1 = MLA(_sum1, _r11, _k3456, 1);
+                _sum2 = MLA(_sum2, _r12, _k3456, 2);
+                _sum1 = MLA(_sum1, _r20, _k6789, 0);
+                _sum2 = MLA(_sum2, _r21, _k6789, 1);
+                _sum1 = MLA(_sum1, _r22, _k6789, 2);
 
                 _sum1 = GiAddFloat32(_sum1, _sum2);
 
@@ -288,6 +320,15 @@ void conv_stride1::do_conv_5x5_stride1(
         const float* r4 = src_ptr + IW * 4;
         const float* r5 = src_ptr + IW * 5;
 
+#if defined(PREFER_VF)
+        const float* _k0123 = filter;
+        const float* _k4567 = filter + 4;
+        const float* _k891011 = filter + 8;
+        const float* _k12131415 = filter + 12;
+        const float* _k16171819 = filter + 16;
+        const float* _k20212223 = filter + 20;
+        const float* _k24242424 = filter + 24;
+#else
         GI_FLOAT32_t _k0123 = GiLoadFloat32(filter);
         GI_FLOAT32_t _k4567 = GiLoadFloat32(filter + 4);
         GI_FLOAT32_t _k891011 = GiLoadFloat32(filter + 8);
@@ -295,6 +336,7 @@ void conv_stride1::do_conv_5x5_stride1(
         GI_FLOAT32_t _k16171819 = GiLoadFloat32(filter + 16);
         GI_FLOAT32_t _k20212223 = GiLoadFloat32(filter + 20);
         GI_FLOAT32_t _k24242424 = GiBroadcastFloat32(filter[24]);
+#endif
 
         size_t h = 0;
         for (; h + 1 < OH; h += 2) {
@@ -340,65 +382,65 @@ void conv_stride1::do_conv_5x5_stride1(
                 GI_FLOAT32_t _r52 = GiExtqFloat32(_r50, _r54, 2);
                 GI_FLOAT32_t _r53 = GiExtqFloat32(_r50, _r54, 3);
 
-                _sum = GiSimdFmaLane(_sum, _r00, _k0123, 0);
-                _sum = GiSimdFmaLane(_sum, _r01, _k0123, 1);
-                _sum = GiSimdFmaLane(_sum, _r02, _k0123, 2);
-                _sum = GiSimdFmaLane(_sum, _r03, _k0123, 3);
-                _sum = GiSimdFmaLane(_sum, _r04, _k4567, 0);
+                _sum = MLA(_sum, _r00, _k0123, 0);
+                _sum = MLA(_sum, _r01, _k0123, 1);
+                _sum = MLA(_sum, _r02, _k0123, 2);
+                _sum = MLA(_sum, _r03, _k0123, 3);
+                _sum = MLA(_sum, _r04, _k4567, 0);
 
-                _sum = GiSimdFmaLane(_sum, _r10, _k4567, 1);
-                _sum = GiSimdFmaLane(_sum, _r11, _k4567, 2);
-                _sum = GiSimdFmaLane(_sum, _r12, _k4567, 3);
-                _sum = GiSimdFmaLane(_sum, _r13, _k891011, 0);
-                _sum = GiSimdFmaLane(_sum, _r14, _k891011, 1);
+                _sum = MLA(_sum, _r10, _k4567, 1);
+                _sum = MLA(_sum, _r11, _k4567, 2);
+                _sum = MLA(_sum, _r12, _k4567, 3);
+                _sum = MLA(_sum, _r13, _k891011, 0);
+                _sum = MLA(_sum, _r14, _k891011, 1);
 
-                _sum = GiSimdFmaLane(_sum, _r20, _k891011, 2);
-                _sum = GiSimdFmaLane(_sum, _r21, _k891011, 3);
-                _sum = GiSimdFmaLane(_sum, _r22, _k12131415, 0);
-                _sum = GiSimdFmaLane(_sum, _r23, _k12131415, 1);
-                _sum = GiSimdFmaLane(_sum, _r24, _k12131415, 2);
+                _sum = MLA(_sum, _r20, _k891011, 2);
+                _sum = MLA(_sum, _r21, _k891011, 3);
+                _sum = MLA(_sum, _r22, _k12131415, 0);
+                _sum = MLA(_sum, _r23, _k12131415, 1);
+                _sum = MLA(_sum, _r24, _k12131415, 2);
 
-                _sum = GiSimdFmaLane(_sum, _r30, _k12131415, 3);
-                _sum = GiSimdFmaLane(_sum, _r31, _k16171819, 0);
-                _sum = GiSimdFmaLane(_sum, _r32, _k16171819, 1);
-                _sum = GiSimdFmaLane(_sum, _r33, _k16171819, 2);
-                _sum = GiSimdFmaLane(_sum, _r34, _k16171819, 3);
+                _sum = MLA(_sum, _r30, _k12131415, 3);
+                _sum = MLA(_sum, _r31, _k16171819, 0);
+                _sum = MLA(_sum, _r32, _k16171819, 1);
+                _sum = MLA(_sum, _r33, _k16171819, 2);
+                _sum = MLA(_sum, _r34, _k16171819, 3);
 
-                _sum = GiSimdFmaLane(_sum, _r40, _k20212223, 0);
-                _sum = GiSimdFmaLane(_sum, _r41, _k20212223, 1);
-                _sum = GiSimdFmaLane(_sum, _r42, _k20212223, 2);
-                _sum = GiSimdFmaLane(_sum, _r43, _k20212223, 3);
-                _sum = GiSimdFmaLane(_sum, _r44, _k24242424, 0);
+                _sum = MLA(_sum, _r40, _k20212223, 0);
+                _sum = MLA(_sum, _r41, _k20212223, 1);
+                _sum = MLA(_sum, _r42, _k20212223, 2);
+                _sum = MLA(_sum, _r43, _k20212223, 3);
+                _sum = MLA(_sum, _r44, _k24242424, 0);
 
-                _sum2 = GiSimdFmaLane(_sum2, _r10, _k0123, 0);
-                _sum2 = GiSimdFmaLane(_sum2, _r11, _k0123, 1);
-                _sum2 = GiSimdFmaLane(_sum2, _r12, _k0123, 2);
-                _sum2 = GiSimdFmaLane(_sum2, _r13, _k0123, 3);
-                _sum2 = GiSimdFmaLane(_sum2, _r14, _k4567, 0);
+                _sum2 = MLA(_sum2, _r10, _k0123, 0);
+                _sum2 = MLA(_sum2, _r11, _k0123, 1);
+                _sum2 = MLA(_sum2, _r12, _k0123, 2);
+                _sum2 = MLA(_sum2, _r13, _k0123, 3);
+                _sum2 = MLA(_sum2, _r14, _k4567, 0);
 
-                _sum2 = GiSimdFmaLane(_sum2, _r20, _k4567, 1);
-                _sum2 = GiSimdFmaLane(_sum2, _r21, _k4567, 2);
-                _sum2 = GiSimdFmaLane(_sum2, _r22, _k4567, 3);
-                _sum2 = GiSimdFmaLane(_sum2, _r23, _k891011, 0);
-                _sum2 = GiSimdFmaLane(_sum2, _r24, _k891011, 1);
+                _sum2 = MLA(_sum2, _r20, _k4567, 1);
+                _sum2 = MLA(_sum2, _r21, _k4567, 2);
+                _sum2 = MLA(_sum2, _r22, _k4567, 3);
+                _sum2 = MLA(_sum2, _r23, _k891011, 0);
+                _sum2 = MLA(_sum2, _r24, _k891011, 1);
 
-                _sum2 = GiSimdFmaLane(_sum2, _r30, _k891011, 2);
-                _sum2 = GiSimdFmaLane(_sum2, _r31, _k891011, 3);
-                _sum2 = GiSimdFmaLane(_sum2, _r32, _k12131415, 0);
-                _sum2 = GiSimdFmaLane(_sum2, _r33, _k12131415, 1);
-                _sum2 = GiSimdFmaLane(_sum2, _r34, _k12131415, 2);
+                _sum2 = MLA(_sum2, _r30, _k891011, 2);
+                _sum2 = MLA(_sum2, _r31, _k891011, 3);
+                _sum2 = MLA(_sum2, _r32, _k12131415, 0);
+                _sum2 = MLA(_sum2, _r33, _k12131415, 1);
+                _sum2 = MLA(_sum2, _r34, _k12131415, 2);
 
-                _sum2 = GiSimdFmaLane(_sum2, _r40, _k12131415, 3);
-                _sum2 = GiSimdFmaLane(_sum2, _r41, _k16171819, 0);
-                _sum2 = GiSimdFmaLane(_sum2, _r42, _k16171819, 1);
-                _sum2 = GiSimdFmaLane(_sum2, _r43, _k16171819, 2);
-                _sum2 = GiSimdFmaLane(_sum2, _r44, _k16171819, 3);
+                _sum2 = MLA(_sum2, _r40, _k12131415, 3);
+                _sum2 = MLA(_sum2, _r41, _k16171819, 0);
+                _sum2 = MLA(_sum2, _r42, _k16171819, 1);
+                _sum2 = MLA(_sum2, _r43, _k16171819, 2);
+                _sum2 = MLA(_sum2, _r44, _k16171819, 3);
 
-                _sum2 = GiSimdFmaLane(_sum2, _r50, _k20212223, 0);
-                _sum2 = GiSimdFmaLane(_sum2, _r51, _k20212223, 1);
-                _sum2 = GiSimdFmaLane(_sum2, _r52, _k20212223, 2);
-                _sum2 = GiSimdFmaLane(_sum2, _r53, _k20212223, 3);
-                _sum2 = GiSimdFmaLane(_sum2, _r54, _k24242424, 0);
+                _sum2 = MLA(_sum2, _r50, _k20212223, 0);
+                _sum2 = MLA(_sum2, _r51, _k20212223, 1);
+                _sum2 = MLA(_sum2, _r52, _k20212223, 2);
+                _sum2 = MLA(_sum2, _r53, _k20212223, 3);
+                _sum2 = MLA(_sum2, _r54, _k24242424, 0);
 
                 GiStoreFloat32(outptr, _sum);
                 GiStoreFloat32(outptr2, _sum2);
@@ -460,35 +502,35 @@ void conv_stride1::do_conv_5x5_stride1(
                 GI_FLOAT32_t _r42 = GiExtqFloat32(_r40, _r44, 2);
                 GI_FLOAT32_t _r43 = GiExtqFloat32(_r40, _r44, 3);
 
-                _sum = GiSimdFmaLane(_sum, _r00, _k0123, 0);
-                _sum = GiSimdFmaLane(_sum, _r01, _k0123, 1);
-                _sum = GiSimdFmaLane(_sum, _r02, _k0123, 2);
-                _sum = GiSimdFmaLane(_sum, _r03, _k0123, 3);
-                _sum = GiSimdFmaLane(_sum, _r04, _k4567, 0);
+                _sum = MLA(_sum, _r00, _k0123, 0);
+                _sum = MLA(_sum, _r01, _k0123, 1);
+                _sum = MLA(_sum, _r02, _k0123, 2);
+                _sum = MLA(_sum, _r03, _k0123, 3);
+                _sum = MLA(_sum, _r04, _k4567, 0);
 
-                _sum = GiSimdFmaLane(_sum, _r10, _k4567, 1);
-                _sum = GiSimdFmaLane(_sum, _r11, _k4567, 2);
-                _sum = GiSimdFmaLane(_sum, _r12, _k4567, 3);
-                _sum = GiSimdFmaLane(_sum, _r13, _k891011, 0);
-                _sum = GiSimdFmaLane(_sum, _r14, _k891011, 1);
+                _sum = MLA(_sum, _r10, _k4567, 1);
+                _sum = MLA(_sum, _r11, _k4567, 2);
+                _sum = MLA(_sum, _r12, _k4567, 3);
+                _sum = MLA(_sum, _r13, _k891011, 0);
+                _sum = MLA(_sum, _r14, _k891011, 1);
 
-                _sum = GiSimdFmaLane(_sum, _r20, _k891011, 2);
-                _sum = GiSimdFmaLane(_sum, _r21, _k891011, 3);
-                _sum = GiSimdFmaLane(_sum, _r22, _k12131415, 0);
-                _sum = GiSimdFmaLane(_sum, _r23, _k12131415, 1);
-                _sum = GiSimdFmaLane(_sum, _r24, _k12131415, 2);
+                _sum = MLA(_sum, _r20, _k891011, 2);
+                _sum = MLA(_sum, _r21, _k891011, 3);
+                _sum = MLA(_sum, _r22, _k12131415, 0);
+                _sum = MLA(_sum, _r23, _k12131415, 1);
+                _sum = MLA(_sum, _r24, _k12131415, 2);
 
-                _sum = GiSimdFmaLane(_sum, _r30, _k12131415, 3);
-                _sum = GiSimdFmaLane(_sum, _r31, _k16171819, 0);
-                _sum = GiSimdFmaLane(_sum, _r32, _k16171819, 1);
-                _sum = GiSimdFmaLane(_sum, _r33, _k16171819, 2);
-                _sum = GiSimdFmaLane(_sum, _r34, _k16171819, 3);
+                _sum = MLA(_sum, _r30, _k12131415, 3);
+                _sum = MLA(_sum, _r31, _k16171819, 0);
+                _sum = MLA(_sum, _r32, _k16171819, 1);
+                _sum = MLA(_sum, _r33, _k16171819, 2);
+                _sum = MLA(_sum, _r34, _k16171819, 3);
 
-                _sum = GiSimdFmaLane(_sum, _r40, _k20212223, 0);
-                _sum = GiSimdFmaLane(_sum, _r41, _k20212223, 1);
-                _sum = GiSimdFmaLane(_sum, _r42, _k20212223, 2);
-                _sum = GiSimdFmaLane(_sum, _r43, _k20212223, 3);
-                _sum = GiSimdFmaLane(_sum, _r44, _k24242424, 0);
+                _sum = MLA(_sum, _r40, _k20212223, 0);
+                _sum = MLA(_sum, _r41, _k20212223, 1);
+                _sum = MLA(_sum, _r42, _k20212223, 2);
+                _sum = MLA(_sum, _r43, _k20212223, 3);
+                _sum = MLA(_sum, _r44, _k24242424, 0);
 
                 GiStoreFloat32(outptr, _sum);
 
@@ -542,8 +584,13 @@ void conv_stride1::do_conv_7x7_stride1(
             rep(i, width) {
                 GI_FLOAT32_t _sum = GiLoadFloat32(outptr);
 
+#if defined(PREFER_VF)
+                const float* _k0123 = k0;
+                const float* _k4567 = k0 + 4;
+#else
                 GI_FLOAT32_t _k0123 = GiLoadFloat32(k0);
                 GI_FLOAT32_t _k4567 = GiLoadFloat32(k0 + 4);
+#endif
 
                 GI_FLOAT32_t _r00 = GiLoadFloat32(r0);              // 0 1 2 3
                 GI_FLOAT32_t _r04 = GiLoadFloat32(r0 + 4);          // 4 5 6 7
@@ -554,16 +601,21 @@ void conv_stride1::do_conv_7x7_stride1(
                 GI_FLOAT32_t _r05 = GiExtqFloat32(_r04, _r00n, 1);  // 5 6 7 8
                 GI_FLOAT32_t _r06 = GiExtqFloat32(_r04, _r00n, 2);  // 6 7 8 9
 
-                _sum = GiSimdFmaLane(_sum, _r00, _k0123, 0);
-                _sum = GiSimdFmaLane(_sum, _r01, _k0123, 1);
-                _sum = GiSimdFmaLane(_sum, _r02, _k0123, 2);
-                _sum = GiSimdFmaLane(_sum, _r03, _k0123, 3);
-                _sum = GiSimdFmaLane(_sum, _r04, _k4567, 0);
-                _sum = GiSimdFmaLane(_sum, _r05, _k4567, 1);
-                _sum = GiSimdFmaLane(_sum, _r06, _k4567, 2);
+                _sum = MLA(_sum, _r00, _k0123, 0);
+                _sum = MLA(_sum, _r01, _k0123, 1);
+                _sum = MLA(_sum, _r02, _k0123, 2);
+                _sum = MLA(_sum, _r03, _k0123, 3);
+                _sum = MLA(_sum, _r04, _k4567, 0);
+                _sum = MLA(_sum, _r05, _k4567, 1);
+                _sum = MLA(_sum, _r06, _k4567, 2);
 
+#if defined(PREFER_VF)
+                const float* _k78910 = k1;
+                const float* _k11121314 = k1 + 4;
+#else
                 GI_FLOAT32_t _k78910 = GiLoadFloat32(k1);
                 GI_FLOAT32_t _k11121314 = GiLoadFloat32(k1 + 4);
+#endif
 
                 GI_FLOAT32_t _r10 = GiLoadFloat32(r1);
                 GI_FLOAT32_t _r14 = GiLoadFloat32(r1 + 4);
@@ -574,16 +626,21 @@ void conv_stride1::do_conv_7x7_stride1(
                 GI_FLOAT32_t _r15 = GiExtqFloat32(_r14, _r10n, 1);
                 GI_FLOAT32_t _r16 = GiExtqFloat32(_r14, _r10n, 2);
 
-                _sum = GiSimdFmaLane(_sum, _r10, _k78910, 0);
-                _sum = GiSimdFmaLane(_sum, _r11, _k78910, 1);
-                _sum = GiSimdFmaLane(_sum, _r12, _k78910, 2);
-                _sum = GiSimdFmaLane(_sum, _r13, _k78910, 3);
-                _sum = GiSimdFmaLane(_sum, _r14, _k11121314, 0);
-                _sum = GiSimdFmaLane(_sum, _r15, _k11121314, 1);
-                _sum = GiSimdFmaLane(_sum, _r16, _k11121314, 2);
+                _sum = MLA(_sum, _r10, _k78910, 0);
+                _sum = MLA(_sum, _r11, _k78910, 1);
+                _sum = MLA(_sum, _r12, _k78910, 2);
+                _sum = MLA(_sum, _r13, _k78910, 3);
+                _sum = MLA(_sum, _r14, _k11121314, 0);
+                _sum = MLA(_sum, _r15, _k11121314, 1);
+                _sum = MLA(_sum, _r16, _k11121314, 2);
 
+#if defined(PREFER_VF)
+                const float* _k14151617 = k2;
+                const float* _k18192021 = k2 + 4;
+#else
                 GI_FLOAT32_t _k14151617 = GiLoadFloat32(k2);
                 GI_FLOAT32_t _k18192021 = GiLoadFloat32(k2 + 4);
+#endif
 
                 GI_FLOAT32_t _r20 = GiLoadFloat32(r2);
                 GI_FLOAT32_t _r24 = GiLoadFloat32(r2 + 4);
@@ -594,16 +651,21 @@ void conv_stride1::do_conv_7x7_stride1(
                 GI_FLOAT32_t _r25 = GiExtqFloat32(_r24, _r20n, 1);
                 GI_FLOAT32_t _r26 = GiExtqFloat32(_r24, _r20n, 2);
 
-                _sum = GiSimdFmaLane(_sum, _r20, _k14151617, 0);
-                _sum = GiSimdFmaLane(_sum, _r21, _k14151617, 1);
-                _sum = GiSimdFmaLane(_sum, _r22, _k14151617, 2);
-                _sum = GiSimdFmaLane(_sum, _r23, _k14151617, 3);
-                _sum = GiSimdFmaLane(_sum, _r24, _k18192021, 0);
-                _sum = GiSimdFmaLane(_sum, _r25, _k18192021, 1);
-                _sum = GiSimdFmaLane(_sum, _r26, _k18192021, 2);
+                _sum = MLA(_sum, _r20, _k14151617, 0);
+                _sum = MLA(_sum, _r21, _k14151617, 1);
+                _sum = MLA(_sum, _r22, _k14151617, 2);
+                _sum = MLA(_sum, _r23, _k14151617, 3);
+                _sum = MLA(_sum, _r24, _k18192021, 0);
+                _sum = MLA(_sum, _r25, _k18192021, 1);
+                _sum = MLA(_sum, _r26, _k18192021, 2);
 
+#if defined(PREFER_VF)
+                const float* _k21222324 = k3;
+                const float* _k25262728 = k3 + 4;
+#else
                 GI_FLOAT32_t _k21222324 = GiLoadFloat32(k3);
                 GI_FLOAT32_t _k25262728 = GiLoadFloat32(k3 + 4);
+#endif
 
                 GI_FLOAT32_t _r30 = GiLoadFloat32(r3);
                 GI_FLOAT32_t _r34 = GiLoadFloat32(r3 + 4);
@@ -614,16 +676,21 @@ void conv_stride1::do_conv_7x7_stride1(
                 GI_FLOAT32_t _r35 = GiExtqFloat32(_r34, _r30n, 1);
                 GI_FLOAT32_t _r36 = GiExtqFloat32(_r34, _r30n, 2);
 
-                _sum = GiSimdFmaLane(_sum, _r30, _k21222324, 0);
-                _sum = GiSimdFmaLane(_sum, _r31, _k21222324, 1);
-                _sum = GiSimdFmaLane(_sum, _r32, _k21222324, 2);
-                _sum = GiSimdFmaLane(_sum, _r33, _k21222324, 3);
-                _sum = GiSimdFmaLane(_sum, _r34, _k25262728, 0);
-                _sum = GiSimdFmaLane(_sum, _r35, _k25262728, 1);
-                _sum = GiSimdFmaLane(_sum, _r36, _k25262728, 2);
+                _sum = MLA(_sum, _r30, _k21222324, 0);
+                _sum = MLA(_sum, _r31, _k21222324, 1);
+                _sum = MLA(_sum, _r32, _k21222324, 2);
+                _sum = MLA(_sum, _r33, _k21222324, 3);
+                _sum = MLA(_sum, _r34, _k25262728, 0);
+                _sum = MLA(_sum, _r35, _k25262728, 1);
+                _sum = MLA(_sum, _r36, _k25262728, 2);
 
+#if defined(PREFER_VF)
+                const float* _k28293031 = k4;
+                const float* _k32333435 = k4 + 4;
+#else
                 GI_FLOAT32_t _k28293031 = GiLoadFloat32(k4);
                 GI_FLOAT32_t _k32333435 = GiLoadFloat32(k4 + 4);
+#endif
 
                 GI_FLOAT32_t _r40 = GiLoadFloat32(r4);
                 GI_FLOAT32_t _r44 = GiLoadFloat32(r4 + 4);
@@ -634,16 +701,21 @@ void conv_stride1::do_conv_7x7_stride1(
                 GI_FLOAT32_t _r45 = GiExtqFloat32(_r44, _r40n, 1);
                 GI_FLOAT32_t _r46 = GiExtqFloat32(_r44, _r40n, 2);
 
-                _sum = GiSimdFmaLane(_sum, _r40, _k28293031, 0);
-                _sum = GiSimdFmaLane(_sum, _r41, _k28293031, 1);
-                _sum = GiSimdFmaLane(_sum, _r42, _k28293031, 2);
-                _sum = GiSimdFmaLane(_sum, _r43, _k28293031, 3);
-                _sum = GiSimdFmaLane(_sum, _r44, _k32333435, 0);
-                _sum = GiSimdFmaLane(_sum, _r45, _k32333435, 1);
-                _sum = GiSimdFmaLane(_sum, _r46, _k32333435, 2);
+                _sum = MLA(_sum, _r40, _k28293031, 0);
+                _sum = MLA(_sum, _r41, _k28293031, 1);
+                _sum = MLA(_sum, _r42, _k28293031, 2);
+                _sum = MLA(_sum, _r43, _k28293031, 3);
+                _sum = MLA(_sum, _r44, _k32333435, 0);
+                _sum = MLA(_sum, _r45, _k32333435, 1);
+                _sum = MLA(_sum, _r46, _k32333435, 2);
 
+#if defined(PREFER_VF)
+                const float* _k35363738 = k5;
+                const float* _k39404142 = k5 + 4;
+#else
                 GI_FLOAT32_t _k35363738 = GiLoadFloat32(k5);
                 GI_FLOAT32_t _k39404142 = GiLoadFloat32(k5 + 4);
+#endif
 
                 GI_FLOAT32_t _r50 = GiLoadFloat32(r5);
                 GI_FLOAT32_t _r54 = GiLoadFloat32(r5 + 4);
@@ -654,17 +726,24 @@ void conv_stride1::do_conv_7x7_stride1(
                 GI_FLOAT32_t _r55 = GiExtqFloat32(_r54, _r50n, 1);
                 GI_FLOAT32_t _r56 = GiExtqFloat32(_r54, _r50n, 2);
 
-                _sum = GiSimdFmaLane(_sum, _r50, _k35363738, 0);
-                _sum = GiSimdFmaLane(_sum, _r51, _k35363738, 1);
-                _sum = GiSimdFmaLane(_sum, _r52, _k35363738, 2);
-                _sum = GiSimdFmaLane(_sum, _r53, _k35363738, 3);
-                _sum = GiSimdFmaLane(_sum, _r54, _k39404142, 0);
-                _sum = GiSimdFmaLane(_sum, _r55, _k39404142, 1);
-                _sum = GiSimdFmaLane(_sum, _r56, _k39404142, 2);
+                _sum = MLA(_sum, _r50, _k35363738, 0);
+                _sum = MLA(_sum, _r51, _k35363738, 1);
+                _sum = MLA(_sum, _r52, _k35363738, 2);
+                _sum = MLA(_sum, _r53, _k35363738, 3);
+                _sum = MLA(_sum, _r54, _k39404142, 0);
+                _sum = MLA(_sum, _r55, _k39404142, 1);
+                _sum = MLA(_sum, _r56, _k39404142, 2);
 
+#if defined(PREFER_VF)
+                const float* _k42434445 = k6;
+                float _k46474849[GI_SIMD_LEN_BYTE / sizeof(float)];
+                memcpy(_k46474849, k6 + 4,
+                       sizeof(float) * GI_SIMD_LEN_BYTE / sizeof(float) - 1);
+#else
                 GI_FLOAT32_t _k42434445 = GiLoadFloat32(k6);
                 GI_FLOAT32_t _k46474849 =
                         GiLd1qLaneFloat32(k6 + 4 + 2, GiLoadFloat32LowHalf(k6 + 4), 2);
+#endif
 
                 GI_FLOAT32_t _r60 = GiLoadFloat32(r6);
                 GI_FLOAT32_t _r64 = GiLoadFloat32(r6 + 4);
@@ -675,13 +754,13 @@ void conv_stride1::do_conv_7x7_stride1(
                 GI_FLOAT32_t _r65 = GiExtqFloat32(_r64, _r60n, 1);
                 GI_FLOAT32_t _r66 = GiExtqFloat32(_r64, _r60n, 2);
 
-                _sum = GiSimdFmaLane(_sum, _r60, _k42434445, 0);
-                _sum = GiSimdFmaLane(_sum, _r61, _k42434445, 1);
-                _sum = GiSimdFmaLane(_sum, _r62, _k42434445, 2);
-                _sum = GiSimdFmaLane(_sum, _r63, _k42434445, 3);
-                _sum = GiSimdFmaLane(_sum, _r64, _k46474849, 0);
-                _sum = GiSimdFmaLane(_sum, _r65, _k46474849, 1);
-                _sum = GiSimdFmaLane(_sum, _r66, _k46474849, 2);
+                _sum = MLA(_sum, _r60, _k42434445, 0);
+                _sum = MLA(_sum, _r61, _k42434445, 1);
+                _sum = MLA(_sum, _r62, _k42434445, 2);
+                _sum = MLA(_sum, _r63, _k42434445, 3);
+                _sum = MLA(_sum, _r64, _k46474849, 0);
+                _sum = MLA(_sum, _r65, _k46474849, 1);
+                _sum = MLA(_sum, _r66, _k46474849, 2);
 
                 GiStoreFloat32(outptr, _sum);
 

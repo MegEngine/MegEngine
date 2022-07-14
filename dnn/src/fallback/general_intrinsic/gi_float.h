@@ -224,9 +224,7 @@ GI_FLOAT32_t GiMlaqFloat32(GI_FLOAT32_t a, GI_FLOAT32_t b, GI_FLOAT32_t c) {
 #endif
 #elif defined(GI_SSE2_INTRINSICS)
     // fma is coming soon, but right now:
-    __m128 res;
-    res = _mm_mul_ps(c, b);
-    return _mm_add_ps(a, res);
+    return _mm_add_ps(a, _mm_mul_ps(c, b));
 #elif defined(GI_RVV_INTRINSICS)
     return vfmadd_vv_f32m1(b, c, a, GI_SIMD_LEN_BYTE / sizeof(float));
 #else

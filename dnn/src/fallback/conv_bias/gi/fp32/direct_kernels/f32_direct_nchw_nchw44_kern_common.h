@@ -40,43 +40,28 @@ struct ShiftCalHelper<src_idx, weight_idx, c_dim, stride, 0, T, T2, T3> {
 #if defined(GI_TARGET_X86) || defined(GI_RVV_INTRINSICS)
 //! x86 and rvv GiSimdFmaLane API is slowly, as an alternate, use
 //! GiMultiplyAddScalarFloat32
-#define MLA GiMultiplyAddScalarFloat32
-#define cb(step)                                                                     \
-    c[0][step] = GiFloat32Type2FixLenType(MLA(                                       \
-            GiFixLenType2GiFloat32Type(c[0][step]),                                  \
-            GiFixLenType2GiFloat32Type(weight[0][weight_idx]),                       \
-            *(src[(step * stride + src_idx) / 4] + (step * stride + src_idx) % 4))); \
-    c[1][step] = GiFloat32Type2FixLenType(MLA(                                       \
-            GiFixLenType2GiFloat32Type(c[1][step]),                                  \
-            GiFixLenType2GiFloat32Type(weight[1][weight_idx]),                       \
-            *(src[(step * stride + src_idx) / 4] + (step * stride + src_idx) % 4)));
-
-#define cb2(step)                                              \
-    c[0][step] = GiFloat32Type2FixLenType(MLA(                 \
-            GiFixLenType2GiFloat32Type(c[0][step]),            \
-            GiFixLenType2GiFloat32Type(weight[0][weight_idx]), \
-            *(src[(step * stride + src_idx) / 4] + (step * stride + src_idx) % 4)));
+#define MLA(a, b, c, d)         \
+    GiMultiplyAddScalarFloat32( \
+            GiFixLenType2GiFloat32Type(a), GiFixLenType2GiFloat32Type(b), *(c + d))
 #else
-#define cb(step)                                                            \
-    c[0][step] = GiFloat32Type2FixLenType(GiSimdFmaLane(                    \
-            GiFixLenType2GiFloat32Type(c[0][step]),                         \
-            GiFixLenType2GiFloat32Type(weight[0][weight_idx]),              \
-            GiFixLenType2GiFloat32Type(src[(step * stride + src_idx) / 4]), \
-            (step * stride + src_idx) % 4));                                \
-    c[1][step] = GiFloat32Type2FixLenType(GiSimdFmaLane(                    \
-            GiFixLenType2GiFloat32Type(c[1][step]),                         \
-            GiFixLenType2GiFloat32Type(weight[1][weight_idx]),              \
-            GiFixLenType2GiFloat32Type(src[(step * stride + src_idx) / 4]), \
-            (step * stride + src_idx) % 4));
-
-#define cb2(step)                                                           \
-    c[0][step] = GiFloat32Type2FixLenType(GiSimdFmaLane(                    \
-            GiFixLenType2GiFloat32Type(c[0][step]),                         \
-            GiFixLenType2GiFloat32Type(weight[0][weight_idx]),              \
-            GiFixLenType2GiFloat32Type(src[(step * stride + src_idx) / 4]), \
-            (step * stride + src_idx) % 4));
-#undef MLA
+#define MLA(a, b, c, d)                                                   \
+    GiSimdFmaLane(                                                        \
+            GiFixLenType2GiFloat32Type(a), GiFixLenType2GiFloat32Type(b), \
+            GiFixLenType2GiFloat32Type(c), d)
 #endif
+
+#define cb(step)                                                                       \
+    c[0][step] = GiFloat32Type2FixLenType(                                             \
+            MLA(c[0][step], weight[0][weight_idx], src[(step * stride + src_idx) / 4], \
+                (step * stride + src_idx) % 4));                                       \
+    c[1][step] = GiFloat32Type2FixLenType(                                             \
+            MLA(c[1][step], weight[1][weight_idx], src[(step * stride + src_idx) / 4], \
+                (step * stride + src_idx) % 4));
+
+#define cb2(step)                                                                      \
+    c[0][step] = GiFloat32Type2FixLenType(                                             \
+            MLA(c[0][step], weight[0][weight_idx], src[(step * stride + src_idx) / 4], \
+                (step * stride + src_idx) % 4));
 
 #define SHIFT_CAL_HELPER(ow_remain)                                               \
     template <                                                                    \
@@ -108,6 +93,7 @@ SHIFT_CAL_HELPER(8)
 #undef SHIFT_CAL_HELPER
 #undef cb
 #undef cb2
+#undef MLA
 
 template <
         int src_idx, int weight_idx, int c_dim, int stride, int remain_w, typename T,

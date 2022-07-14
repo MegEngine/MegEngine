@@ -24,21 +24,28 @@ struct ShiftCalHelper<src_idx, weight_idx, c_dim, ow_block, 0, T, T2, T3, T4> {
     static MEGDNN_ALWAYS_INLINE void impl(T&, T2&, T3&) {}
 };
 
-#define cb2(step, lane, ow_block)                                                 \
-    c[0][step] = GiFloat32Type2FixLenType(GiSimdFmaLane(                          \
-            GiFixLenType2GiFloat32Type(c[0][step]),                               \
-            GiFixLenType2GiFloat32Type(weight[0][lane]),                          \
-            GiFixLenType2GiFloat32Type(src[(step + src_idx) % ow_block]), lane)); \
-    c[1][step] = GiFloat32Type2FixLenType(GiSimdFmaLane(                          \
-            GiFixLenType2GiFloat32Type(c[1][step]),                               \
-            GiFixLenType2GiFloat32Type(weight[1][lane]),                          \
-            GiFixLenType2GiFloat32Type(src[(step + src_idx) % ow_block]), lane));
+#if defined(GI_TARGET_X86) || defined(GI_RVV_INTRINSICS)
+//! x86 and rvv GiSimdFmaLane API is slowly, as an alternate, use
+//! GiMultiplyAddScalarFloat32
+#define MLA(a, b, c, d)         \
+    GiMultiplyAddScalarFloat32( \
+            GiFixLenType2GiFloat32Type(a), GiFixLenType2GiFloat32Type(b), *(c + d))
+#else
+#define MLA(a, b, c, d)                                                   \
+    GiSimdFmaLane(                                                        \
+            GiFixLenType2GiFloat32Type(a), GiFixLenType2GiFloat32Type(b), \
+            GiFixLenType2GiFloat32Type(c), d)
+#endif
 
-#define cb(step, lane, ow_block)                         \
-    c[0][step] = GiFloat32Type2FixLenType(GiSimdFmaLane( \
-            GiFixLenType2GiFloat32Type(c[0][step]),      \
-            GiFixLenType2GiFloat32Type(weight[0][lane]), \
-            GiFixLenType2GiFloat32Type(src[(step + src_idx) % ow_block]), lane));
+#define cb2(step, lane, ow_block)                                                      \
+    c[0][step] = GiFloat32Type2FixLenType(                                             \
+            MLA(c[0][step], weight[0][lane], src[(step + src_idx) % ow_block], lane)); \
+    c[1][step] = GiFloat32Type2FixLenType(                                             \
+            MLA(c[1][step], weight[1][lane], src[(step + src_idx) % ow_block], lane));
+
+#define cb(step, lane, ow_block)           \
+    c[0][step] = GiFloat32Type2FixLenType( \
+            MLA(c[0][step], weight[0][lane], src[(step + src_idx) % ow_block], lane));
 
 #define SHIFT_CAL_HELPER(ow_block, remain_w)                                           \
     template <                                                                         \
@@ -81,6 +88,7 @@ SHIFT_CAL_HELPER(4, 4);
 #undef SHIFT_CAL_HELPER
 #undef cb
 #undef cb2
+#undef MLA
 
 template <
         int src_idx, int weight_idx, int c_dim, int ow_block, int remain_w, typename T,
@@ -146,15 +154,24 @@ struct KerGiXXs2Nchw44FP32<bias_mode, Op, remain_w, 2, oc_block, ow_block> {
             const float* src_ptr = src_ptr_origin + ic_idx * ld_src_ic;
             const float* src_ptr_odd = src_ptr_odd_origin + ic_idx * ld_src_ic;
 
-            GI_FLOAT32_FIXLEN_t src[ow_block];
             GI_FLOAT32_FIXLEN_t weight[c_dim][4];
-            /////////row 0/////////////
+#if defined(GI_TARGET_X86) || defined(GI_RVV_INTRINSICS)
+            const float* src[ow_block];
+            load_ptr_helper<ow_block, 0, simd_len, 0>(src, src_ptr, 0);
+#else
+            GI_FLOAT32_FIXLEN_t src[ow_block];
             load_helper<ow_block, 0, simd_len, 0, Vld1qF32S>(src, src_ptr, 0);
+#endif
+            /////////row 0/////////////
             load_helper<4, 0, oc_step, c_dim, Vld1qF32S>(
                     weight, weight_ptr, ld_weight_oc);
             cal_helper<0, 0, c_dim, ow_block, remain_w>(c, src, weight);
 
+#if defined(GI_TARGET_X86) || defined(GI_RVV_INTRINSICS)
+            load_ptr_helper<ow_block, 0, simd_len, 0>(src, src_ptr_odd, 0);
+#else
             load_helper<ow_block, 0, simd_len, 0, Vld1qF32S>(src, src_ptr_odd, 0);
+#endif
             load_helper<4, 1 * ld_weight, oc_step, c_dim, Vld1qF32S>(
                     weight, weight_ptr, ld_weight_oc);
             cal_helper<0, 0, c_dim, ow_block, remain_w>(c, src, weight);
@@ -162,12 +179,20 @@ struct KerGiXXs2Nchw44FP32<bias_mode, Op, remain_w, 2, oc_block, ow_block> {
             src_ptr_odd += ld_src_iw;
             weight_ptr += ld_weight_fh;
             /////////row 1/////////////
+#if defined(GI_TARGET_X86) || defined(GI_RVV_INTRINSICS)
+            load_ptr_helper<ow_block, 0, simd_len, 0>(src, src_ptr, 0);
+#else
             load_helper<ow_block, 0, simd_len, 0, Vld1qF32S>(src, src_ptr, 0);
+#endif
             load_helper<4, 0, oc_step, c_dim, Vld1qF32S>(
                     weight, weight_ptr, ld_weight_oc);
             cal_helper<0, 0, c_dim, ow_block, remain_w>(c, src, weight);
 
+#if defined(GI_TARGET_X86) || defined(GI_RVV_INTRINSICS)
+            load_ptr_helper<ow_block, 0, simd_len, 0>(src, src_ptr_odd, 0);
+#else
             load_helper<ow_block, 0, simd_len, 0, Vld1qF32S>(src, src_ptr_odd, 0);
+#endif
             load_helper<4, 1 * ld_weight, oc_step, c_dim, Vld1qF32S>(
                     weight, weight_ptr, ld_weight_oc);
             cal_helper<0, 0, c_dim, ow_block, remain_w>(c, src, weight);
@@ -203,21 +228,34 @@ struct KerGiXXs2Nchw44FP32<bias_mode, Op, remain_w, 3, oc_block, ow_block> {
             const float* src_ptr = src_ptr_origin + ic_idx * ld_src_ic;
             const float* src_ptr_odd = src_ptr_odd_origin + ic_idx * ld_src_ic;
 
-            GI_FLOAT32_FIXLEN_t src[ow_block];
             GI_FLOAT32_FIXLEN_t weight[c_dim][4];
-            /////////row 0/////////////
+#if defined(GI_TARGET_X86) || defined(GI_RVV_INTRINSICS)
+            const float* src[ow_block];
+            load_ptr_helper<ow_block, 0, simd_len, 0>(src, src_ptr, 0);
+#else
+            GI_FLOAT32_FIXLEN_t src[ow_block];
             load_helper<ow_block, 0, simd_len, 0, Vld1qF32S>(src, src_ptr, 0);
+#endif
+            /////////row 0/////////////
             load_helper<4, 0, oc_step, c_dim, Vld1qF32S>(
                     weight, weight_ptr, ld_weight_oc);
             cal_helper<0, 0, c_dim, ow_block, remain_w>(c, src, weight);
 
+#if defined(GI_TARGET_X86) || defined(GI_RVV_INTRINSICS)
+            src[0] = src_ptr + ow_block * simd_len;
+#else
             src[0] = GiFloat32Type2FixLenType(
                     GiLoadFloat32(src_ptr + ow_block * simd_len));
+#endif
             load_helper<4, 2 * ld_weight, oc_step, c_dim, Vld1qF32S>(
                     weight, weight_ptr, ld_weight_oc);
             cal_helper<1, 0, c_dim, ow_block, remain_w>(c, src, weight);
 
+#if defined(GI_TARGET_X86) || defined(GI_RVV_INTRINSICS)
+            load_ptr_helper<ow_block, 0, simd_len, 0>(src, src_ptr_odd, 0);
+#else
             load_helper<ow_block, 0, simd_len, 0, Vld1qF32S>(src, src_ptr_odd, 0);
+#endif
             load_helper<4, 1 * ld_weight, oc_step, c_dim, Vld1qF32S>(
                     weight, weight_ptr, ld_weight_oc);
             cal_helper<0, 0, c_dim, ow_block, remain_w>(c, src, weight);
@@ -225,17 +263,29 @@ struct KerGiXXs2Nchw44FP32<bias_mode, Op, remain_w, 3, oc_block, ow_block> {
             src_ptr_odd += ld_src_iw;
             weight_ptr += ld_weight_fh;
             /////////row 1/////////////
+#if defined(GI_TARGET_X86) || defined(GI_RVV_INTRINSICS)
+            load_ptr_helper<ow_block, 0, simd_len, 0>(src, src_ptr, 0);
+#else
             load_helper<ow_block, 0, simd_len, 0, Vld1qF32S>(src, src_ptr, 0);
+#endif
             load_helper<4, 0, oc_step, c_dim, Vld1qF32S>(
                     weight, weight_ptr, ld_weight_oc);
             cal_helper<0, 0, c_dim, ow_block, remain_w>(c, src, weight);
+#if defined(GI_TARGET_X86) || defined(GI_RVV_INTRINSICS)
+            src[0] = src_ptr + ow_block * simd_len;
+#else
             src[0] = GiFloat32Type2FixLenType(
                     GiLoadFloat32(src_ptr + ow_block * simd_len));
+#endif
             load_helper<4, 2 * ld_weight, oc_step, c_dim, Vld1qF32S>(
                     weight, weight_ptr, ld_weight_oc);
             cal_helper<1, 0, c_dim, ow_block, remain_w>(c, src, weight);
 
+#if defined(GI_TARGET_X86) || defined(GI_RVV_INTRINSICS)
+            load_ptr_helper<ow_block, 0, simd_len, 0>(src, src_ptr_odd, 0);
+#else
             load_helper<ow_block, 0, simd_len, 0, Vld1qF32S>(src, src_ptr_odd, 0);
+#endif
             load_helper<4, 1 * ld_weight, oc_step, c_dim, Vld1qF32S>(
                     weight, weight_ptr, ld_weight_oc);
             cal_helper<0, 0, c_dim, ow_block, remain_w>(c, src, weight);
@@ -243,18 +293,30 @@ struct KerGiXXs2Nchw44FP32<bias_mode, Op, remain_w, 3, oc_block, ow_block> {
             src_ptr_odd += ld_src_iw;
             weight_ptr += ld_weight_fh;
             //////////row 2/////////////
+#if defined(GI_TARGET_X86) || defined(GI_RVV_INTRINSICS)
+            load_ptr_helper<ow_block, 0, simd_len, 0>(src, src_ptr, 0);
+#else
             load_helper<ow_block, 0, simd_len, 0, Vld1qF32S>(src, src_ptr, 0);
+#endif
             load_helper<4, 0, oc_step, c_dim, Vld1qF32S>(
                     weight, weight_ptr, ld_weight_oc);
             cal_helper<0, 0, c_dim, ow_block, remain_w>(c, src, weight);
+#if defined(GI_TARGET_X86) || defined(GI_RVV_INTRINSICS)
+            src[0] = src_ptr + ow_block * simd_len;
+#else
             src[0] = GiFloat32Type2FixLenType(
                     GiLoadFloat32(src_ptr + ow_block * simd_len));
+#endif
 
             load_helper<4, 2 * ld_weight, oc_step, c_dim, Vld1qF32S>(
                     weight, weight_ptr, ld_weight_oc);
             cal_helper<1, 0, c_dim, ow_block, remain_w>(c, src, weight);
 
+#if defined(GI_TARGET_X86) || defined(GI_RVV_INTRINSICS)
+            load_ptr_helper<ow_block, 0, simd_len, 0>(src, src_ptr_odd, 0);
+#else
             load_helper<ow_block, 0, simd_len, 0, Vld1qF32S>(src, src_ptr_odd, 0);
+#endif
             load_helper<4, 1 * ld_weight, oc_step, c_dim, Vld1qF32S>(
                     weight, weight_ptr, ld_weight_oc);
             cal_helper<0, 0, c_dim, ow_block, remain_w>(c, src, weight);
@@ -292,30 +354,51 @@ struct KerGiXXs2Nchw44FP32<bias_mode, Op, remain_w, 5, oc_block, ow_block> {
             const float* src_ptr_odd = src_ptr_odd_origin + ic_idx * ld_src_ic;
 
             for (int fh_idx = 0; fh_idx < filter_size; ++fh_idx) {
-                GI_FLOAT32_FIXLEN_t src[ow_block];
                 GI_FLOAT32_FIXLEN_t weight[c_dim][4];
-                // even element
+#if defined(GI_TARGET_X86) || defined(GI_RVV_INTRINSICS)
+                const float* src[ow_block];
+                load_ptr_helper<ow_block, 0, simd_len, 0>(src, src_ptr, 0);
+#else
+                GI_FLOAT32_FIXLEN_t src[ow_block];
                 load_helper<ow_block, 0, simd_len, 0, Vld1qF32S>(src, src_ptr, 0);
+#endif
+                // even element
                 load_helper<4, 0, oc_step, c_dim, Vld1qF32S>(
                         weight, weight_ptr, ld_weight_oc);
                 cal_helper<0, 0, c_dim, ow_block, remain_w>(c, src, weight);
+#if defined(GI_TARGET_X86) || defined(GI_RVV_INTRINSICS)
+                src[0] = src_ptr + ow_block * simd_len;
+#else
                 src[0] = GiFloat32Type2FixLenType(
                         GiLoadFloat32(src_ptr + ow_block * simd_len));
+#endif
                 load_helper<4, 2 * ld_weight, oc_step, c_dim, Vld1qF32S>(
                         weight, weight_ptr, ld_weight_oc);
                 cal_helper<1, 0, c_dim, ow_block, remain_w>(c, src, weight);
+#if defined(GI_TARGET_X86) || defined(GI_RVV_INTRINSICS)
+                src[1] = src_ptr + (ow_block + 1) * simd_len;
+#else
                 src[1] = GiFloat32Type2FixLenType(
                         GiLoadFloat32(src_ptr + (ow_block + 1) * simd_len));
+#endif
                 load_helper<4, 4 * ld_weight, oc_step, c_dim, Vld1qF32S>(
                         weight, weight_ptr, ld_weight_oc);
                 cal_helper<2, 0, c_dim, ow_block, remain_w>(c, src, weight);
                 // odd element
+#if defined(GI_TARGET_X86) || defined(GI_RVV_INTRINSICS)
+                load_ptr_helper<ow_block, 0, simd_len, 0>(src, src_ptr_odd, 0);
+#else
                 load_helper<ow_block, 0, simd_len, 0, Vld1qF32S>(src, src_ptr_odd, 0);
+#endif
                 load_helper<4, 1 * ld_weight, oc_step, c_dim, Vld1qF32S>(
                         weight, weight_ptr, ld_weight_oc);
                 cal_helper<0, 0, c_dim, ow_block, remain_w>(c, src, weight);
+#if defined(GI_TARGET_X86) || defined(GI_RVV_INTRINSICS)
+                src[0] = src_ptr_odd + ow_block * simd_len;
+#else
                 src[0] = GiFloat32Type2FixLenType(
                         GiLoadFloat32(src_ptr_odd + ow_block * simd_len));
+#endif
                 load_helper<4, 3 * ld_weight, oc_step, c_dim, Vld1qF32S>(
                         weight, weight_ptr, ld_weight_oc);
                 cal_helper<1, 0, c_dim, ow_block, remain_w>(c, src, weight);
@@ -360,40 +443,69 @@ struct KerGiXXs2Nchw44FP32<bias_mode, Op, remain_w, 7, oc_block, ow_block> {
             const float* src_ptr_odd = src_ptr_odd_origin + ic_idx * ld_src_ic;
 
             for (int fh_idx = 0; fh_idx < filter_size; ++fh_idx) {
-                GI_FLOAT32_FIXLEN_t src[ow_block];
                 GI_FLOAT32_FIXLEN_t weight[c_dim][4];
-                // even element
+#if defined(GI_TARGET_X86) || defined(GI_RVV_INTRINSICS)
+                const float* src[ow_block];
+                load_ptr_helper<ow_block, 0, simd_len, 0>(src, src_ptr, 0);
+#else
+                GI_FLOAT32_FIXLEN_t src[ow_block];
                 load_helper<ow_block, 0, simd_len, 0, Vld1qF32S>(src, src_ptr, 0);
+#endif
+                // even element
                 load_helper<4, 0, oc_step, c_dim, Vld1qF32S>(
                         weight, weight_ptr, ld_weight_oc);
                 cal_helper<0, 0, c_dim, ow_block, remain_w>(c, src, weight);
+#if defined(GI_TARGET_X86) || defined(GI_RVV_INTRINSICS)
+                src[0] = src_ptr + ow_block * simd_len;
+#else
                 src[0] = GiFloat32Type2FixLenType(
                         GiLoadFloat32(src_ptr + ow_block * simd_len));
+#endif
                 load_helper<4, 2 * ld_weight, oc_step, c_dim, Vld1qF32S>(
                         weight, weight_ptr, ld_weight_oc);
                 cal_helper<1, 0, c_dim, ow_block, remain_w>(c, src, weight);
+#if defined(GI_TARGET_X86) || defined(GI_RVV_INTRINSICS)
+                src[1] = src_ptr + (ow_block + 1) * simd_len;
+#else
                 src[1] = GiFloat32Type2FixLenType(
                         GiLoadFloat32(src_ptr + (ow_block + 1) * simd_len));
+#endif
                 load_helper<4, 4 * ld_weight, oc_step, c_dim, Vld1qF32S>(
                         weight, weight_ptr, ld_weight_oc);
                 cal_helper<2, 0, c_dim, ow_block, remain_w>(c, src, weight);
+#if defined(GI_TARGET_X86) || defined(GI_RVV_INTRINSICS)
+                src[2] = src_ptr + (ow_block + 2) * simd_len;
+#else
                 src[2] = GiFloat32Type2FixLenType(
                         GiLoadFloat32(src_ptr + (ow_block + 2) * simd_len));
+#endif
                 load_helper<4, 6 * ld_weight, oc_step, c_dim, Vld1qF32S>(
                         weight, weight_ptr, ld_weight_oc);
                 cal_helper<3, 0, c_dim, ow_block, remain_w>(c, src, weight);
                 // odd element
+#if defined(GI_TARGET_X86) || defined(GI_RVV_INTRINSICS)
+                load_ptr_helper<ow_block, 0, simd_len, 0>(src, src_ptr_odd, 0);
+#else
                 load_helper<ow_block, 0, simd_len, 0, Vld1qF32S>(src, src_ptr_odd, 0);
+#endif
                 load_helper<4, 1 * ld_weight, oc_step, c_dim, Vld1qF32S>(
                         weight, weight_ptr, ld_weight_oc);
                 cal_helper<0, 0, c_dim, ow_block, remain_w>(c, src, weight);
+#if defined(GI_TARGET_X86) || defined(GI_RVV_INTRINSICS)
+                src[0] = src_ptr_odd + ow_block * simd_len;
+#else
                 src[0] = GiFloat32Type2FixLenType(
                         GiLoadFloat32(src_ptr_odd + ow_block * simd_len));
+#endif
                 load_helper<4, 3 * ld_weight, oc_step, c_dim, Vld1qF32S>(
                         weight, weight_ptr, ld_weight_oc);
                 cal_helper<1, 0, c_dim, ow_block, remain_w>(c, src, weight);
+#if defined(GI_TARGET_X86) || defined(GI_RVV_INTRINSICS)
+                src[1] = src_ptr_odd + (ow_block + 1) * simd_len;
+#else
                 src[1] = GiFloat32Type2FixLenType(
                         GiLoadFloat32(src_ptr_odd + (ow_block + 1) * simd_len));
+#endif
                 load_helper<4, 5 * ld_weight, oc_step, c_dim, Vld1qF32S>(
                         weight, weight_ptr, ld_weight_oc);
                 cal_helper<2, 0, c_dim, ow_block, remain_w>(c, src, weight);
