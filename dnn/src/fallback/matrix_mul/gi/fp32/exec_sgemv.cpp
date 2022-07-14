@@ -31,15 +31,22 @@ void sgemv_gi_naive_n_mk4(
         auto Bptr = B;
         size_t k = 0;
         while (k < K) {
+#if defined(GI_TARGET_X86) || defined(GI_RVV_INTRINSICS)
+//! x86 and rvv GiSimdFmaLane API is slowly, as an alternate, use
+//! GiMultiplyAddScalarFloat32
+#define MLA(a, b, c, d) GiMultiplyAddScalarFloat32(a, b, *(c + d))
+            const float* b = Bptr;
+#else
+#define MLA(a, b, c, d) GiSimdFmaLane(a, b, c, d)
             GI_FLOAT32_t b = GiLoadFloat32(Bptr);
+#endif
             GI_FLOAT32_V4_t a;
 #define LOAD_A(step) GiSetSubVectorFloat32V4(a, step, GiLoadFloat32(Aptr0 + step * 4));
             UNROLL_CALL_RAW(4, LOAD_A)
 #undef LOAD_A
 
 #define COMPT(step)                                                                \
-    t = GiSimdFmaLane(                                                             \
-            GiGetSubVectorFloat32V4(c, step), GiGetSubVectorFloat32V4(a, step), b, \
+    t = MLA(GiGetSubVectorFloat32V4(c, step), GiGetSubVectorFloat32V4(a, step), b, \
             step % 4);                                                             \
     GiSetSubVectorFloat32V4(c, step, t);
 
@@ -49,6 +56,7 @@ void sgemv_gi_naive_n_mk4(
             Bptr += Bstride;
             Aptr0 += PACK_SIZE * PACK_SIZE;
             k += PACK_SIZE;
+#undef MLA
         }
 
 #define ADD_C(step, stride)                             \
