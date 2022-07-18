@@ -68,7 +68,14 @@ public:
         encode(category + '@' + key_str, redis_key_str, 24);
         auto result = m_client.get(m_prefix + redis_key_str);
         sync();
-        auto content = result.get();
+        decltype(result.get()) content;
+        int try_number = 3;
+        for (int i = 0; i < try_number; i++) {
+            content = result.get();
+            if (!content.is_null()) {
+                break;
+            }
+        }
         if (content.is_null()) {
             return None;
         }
