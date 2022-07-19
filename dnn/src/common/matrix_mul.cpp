@@ -31,7 +31,15 @@ void MatrixMulForward::deduce_dtype(DType A, DType B, DType& C) {
     }
     megdnn_assert(
             C.valid() && (C == C_candi || C == C_candi2),
-            "unsupported MatMul(%s, %s) -> %s", A.name(), B.name(), C.name());
+            "runtime does not support MatMul(%s, %s) -> %s\n"
+            "now support case list: MatMul(FLOAT, FLOAT)\n"
+            "                       MatMul(Int8, Int8)\n"
+            "                       MatMul(Int16, Int16)\n"
+            "                       MatMul(QuantizedS8, QuantizedS8)\n"
+            "                       MatMul(Quantized8Asymm, Quantized8Asymm)\n"
+            "                       MatMul(Quantized4Asymm, Quantized4Asymm)\n"
+            "                       MatMul(QuantizedS4, QuantizedS4)\n",
+            A.name(), B.name(), C.name());
 }
 
 void MatrixMulForward::deduce_layout(

@@ -65,7 +65,14 @@ void MatrixMulForwardImpl::AlgoNaive::exec(const ExecArgs& args) const {
 #undef DISPATCH_CMODE
 #undef DISPATCH
     megdnn_throw(ssprintf(
-            "unsupported Matmul(%s, %s) -> %s with cmode = %d",
+            "runtime does not support MatMul(%s, %s) -> %s with cmode = %d\n"
+            "now support case list: MatMul(FLOAT, FLOAT)\n"
+            "                       MatMul(Int8, Int8)\n"
+            "                       MatMul(Int16, Int16)\n"
+            "                       MatMul(QuantizedS8, QuantizedS8)\n"
+            "                       MatMul(Quantized8Asymm, Quantized8Asymm)\n"
+            "                       MatMul(Quantized4Asymm, Quantized4Asymm)\n"
+            "                       MatMul(QuantizedS4, QuantizedS4)\n",
             args.layout_a.dtype.name(), args.layout_b.dtype.name(),
             args.layout_c.dtype.name(), static_cast<int>(param.compute_mode)));
 }
