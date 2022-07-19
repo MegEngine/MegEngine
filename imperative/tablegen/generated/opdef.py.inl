@@ -893,6 +893,9 @@ py::enum_<Elemwise::Mode>(ElemwiseInst, "Mode")
     .value("GELU", Elemwise::Mode::GELU)
     .value("GELU_GRAD", Elemwise::Mode::GELU_GRAD)
     .value("COND_LT_MOV", Elemwise::Mode::COND_LT_MOV)
+    .value("NEQ", Elemwise::Mode::NEQ)
+    .value("ISNAN", Elemwise::Mode::ISNAN)
+    .value("ISINF", Elemwise::Mode::ISINF)
     .def(py::init([](const std::string& in) {
         auto&& str = normalize_enum(in);
         if (str == "RELU") return Elemwise::Mode::RELU;
@@ -956,6 +959,9 @@ py::enum_<Elemwise::Mode>(ElemwiseInst, "Mode")
         if (str == "GELU") return Elemwise::Mode::GELU;
         if (str == "GELU_GRAD") return Elemwise::Mode::GELU_GRAD;
         if (str == "COND_LT_MOV") return Elemwise::Mode::COND_LT_MOV;
+        if (str == "NEQ") return Elemwise::Mode::NEQ;
+        if (str == "ISNAN") return Elemwise::Mode::ISNAN;
+        if (str == "ISINF") return Elemwise::Mode::ISINF;
         throw py::cast_error("invalid enum value " + in);
     }));
 py::implicitly_convertible<std::string, Elemwise::Mode>();
@@ -1025,6 +1031,12 @@ py::enum_<ElemwiseMultiType::Mode>(ElemwiseMultiTypeInst, "Mode")
     .value("MUL_INT16xF32xF32", ElemwiseMultiType::Mode::MUL_INT16xF32xF32)
     .value("FUSE_MUL_ADD3_UINT8xF32xF32xF32", ElemwiseMultiType::Mode::FUSE_MUL_ADD3_UINT8xF32xF32xF32)
     .value("QCOND_LT_MOV", ElemwiseMultiType::Mode::QCOND_LT_MOV)
+    .value("EQ", ElemwiseMultiType::Mode::EQ)
+    .value("NEQ", ElemwiseMultiType::Mode::NEQ)
+    .value("LT", ElemwiseMultiType::Mode::LT)
+    .value("LEQ", ElemwiseMultiType::Mode::LEQ)
+    .value("ISNAN", ElemwiseMultiType::Mode::ISNAN)
+    .value("ISINF", ElemwiseMultiType::Mode::ISINF)
     .def(py::init([](const std::string& in) {
         auto&& str = normalize_enum(in);
         if (str == "FUSE_MUL_ADD3_INT16x32x32x32") return ElemwiseMultiType::Mode::FUSE_MUL_ADD3_INT16x32x32x32;
@@ -1085,6 +1097,12 @@ py::enum_<ElemwiseMultiType::Mode>(ElemwiseMultiTypeInst, "Mode")
         if (str == "MUL_INT16xF32xF32") return ElemwiseMultiType::Mode::MUL_INT16xF32xF32;
         if (str == "FUSE_MUL_ADD3_UINT8xF32xF32xF32") return ElemwiseMultiType::Mode::FUSE_MUL_ADD3_UINT8xF32xF32xF32;
         if (str == "QCOND_LT_MOV") return ElemwiseMultiType::Mode::QCOND_LT_MOV;
+        if (str == "EQ") return ElemwiseMultiType::Mode::EQ;
+        if (str == "NEQ") return ElemwiseMultiType::Mode::NEQ;
+        if (str == "LT") return ElemwiseMultiType::Mode::LT;
+        if (str == "LEQ") return ElemwiseMultiType::Mode::LEQ;
+        if (str == "ISNAN") return ElemwiseMultiType::Mode::ISNAN;
+        if (str == "ISINF") return ElemwiseMultiType::Mode::ISINF;
         throw py::cast_error("invalid enum value " + in);
     }));
 py::implicitly_convertible<std::string, ElemwiseMultiType::Mode>();

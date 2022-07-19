@@ -780,6 +780,9 @@ case Elemwise::Mode::SILU_GRAD: return "SILU_GRAD";
 case Elemwise::Mode::GELU: return "GELU";
 case Elemwise::Mode::GELU_GRAD: return "GELU_GRAD";
 case Elemwise::Mode::COND_LT_MOV: return "COND_LT_MOV";
+case Elemwise::Mode::NEQ: return "NEQ";
+case Elemwise::Mode::ISNAN: return "ISNAN";
+case Elemwise::Mode::ISINF: return "ISINF";
             default:
                 return "Elemwise::Mode::Unknown";
         }
@@ -863,6 +866,12 @@ case ElemwiseMultiType::Mode::FUSE_MUL_ADD3_INT16xF32xF32xF32: return "FUSE_MUL_
 case ElemwiseMultiType::Mode::MUL_INT16xF32xF32: return "MUL_INT16xF32xF32";
 case ElemwiseMultiType::Mode::FUSE_MUL_ADD3_UINT8xF32xF32xF32: return "FUSE_MUL_ADD3_UINT8xF32xF32xF32";
 case ElemwiseMultiType::Mode::QCOND_LT_MOV: return "QCOND_LT_MOV";
+case ElemwiseMultiType::Mode::EQ: return "EQ";
+case ElemwiseMultiType::Mode::NEQ: return "NEQ";
+case ElemwiseMultiType::Mode::LT: return "LT";
+case ElemwiseMultiType::Mode::LEQ: return "LEQ";
+case ElemwiseMultiType::Mode::ISNAN: return "ISNAN";
+case ElemwiseMultiType::Mode::ISINF: return "ISINF";
             default:
                 return "ElemwiseMultiType::Mode::Unknown";
         }

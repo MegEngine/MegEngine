@@ -3067,6 +3067,15 @@ std::vector<std::pair<const char*, std::string>> Elemwise_props_impl(const OpDef
     case Elemwise::Mode::COND_LT_MOV:
         props_.emplace_back("mode", "COND_LT_MOV");
         break;
+    case Elemwise::Mode::NEQ:
+        props_.emplace_back("mode", "NEQ");
+        break;
+    case Elemwise::Mode::ISNAN:
+        props_.emplace_back("mode", "ISNAN");
+        break;
+    case Elemwise::Mode::ISINF:
+        props_.emplace_back("mode", "ISINF");
+        break;
     default:
         props_.emplace_back("mode", "INVALID");
         break;
@@ -3284,6 +3293,24 @@ std::vector<std::pair<const char*, std::string>> ElemwiseMultiType_props_impl(co
         break;
     case ElemwiseMultiType::Mode::QCOND_LT_MOV:
         props_.emplace_back("mode", "QCOND_LT_MOV");
+        break;
+    case ElemwiseMultiType::Mode::EQ:
+        props_.emplace_back("mode", "EQ");
+        break;
+    case ElemwiseMultiType::Mode::NEQ:
+        props_.emplace_back("mode", "NEQ");
+        break;
+    case ElemwiseMultiType::Mode::LT:
+        props_.emplace_back("mode", "LT");
+        break;
+    case ElemwiseMultiType::Mode::LEQ:
+        props_.emplace_back("mode", "LEQ");
+        break;
+    case ElemwiseMultiType::Mode::ISNAN:
+        props_.emplace_back("mode", "ISNAN");
+        break;
+    case ElemwiseMultiType::Mode::ISINF:
+        props_.emplace_back("mode", "ISINF");
         break;
     default:
         props_.emplace_back("mode", "INVALID");
