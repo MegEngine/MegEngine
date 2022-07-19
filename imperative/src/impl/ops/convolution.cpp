@@ -95,8 +95,11 @@ TensorLayout do_shape_infer(
         dilated_spatial[i] =
                 (filter[i + flt_start + flt_spatial_start] - 1) * dilation[i] + 1;
     }
-    mgb_assert(icpg * group == src[src_or_dst_c_pos], "group conv invalid");
-
+    mgb_assert(
+            icpg * group == src[src_or_dst_c_pos],
+            "group conv invalid: input channel of Conv expect %zu, but got %zu\n"
+            "hint: weight may be changed by mistake\n",
+            icpg * group, src[src_or_dst_c_pos]);
     TensorLayout dst{src.dtype};
     dst.ndim = src_ndim;
     dst[0] = src[0];
@@ -310,8 +313,11 @@ TensorLayout convbwd_do_shape_infer(
         dilated_spatial[i] =
                 (filter[i + flt_start + flt_spatial_start] - 1) * dilation[i] + 1;
     }
-    mgb_assert(ocpg * group == diff[src_or_dst_c_pos], "group conv invalid");
-
+    mgb_assert(
+            ocpg * group == diff[src_or_dst_c_pos],
+            "group conv invalid: input channel of Conv expect %zu, but got %zu\n"
+            "hint: weight may be changed by mistake\n",
+            ocpg * group, diff[src_or_dst_c_pos]);
     auto deduce = [](size_t out, size_t filter, size_t stride, size_t pad) {
         auto i = (out - 1) * stride + filter;
         mgb_assert(i > pad * 2);
@@ -479,8 +485,11 @@ TensorLayout do_shape_infer(
         dilated_spatial[i] =
                 (filter[i + flt_start + flt_spatial_start] - 1) * dilation[i] + 1;
     }
-    mgb_assert(icpg * group == src[src_or_dst_c_pos], "group conv invalid");
-
+    mgb_assert(
+            icpg * group == src[src_or_dst_c_pos],
+            "group conv invalid: input channel of Conv expect %zu, but got %zu\n"
+            "hint: weight may be changed by mistake\n",
+            icpg * group, src[src_or_dst_c_pos]);
     TensorLayout dst{src.dtype};
     dst.ndim = src_ndim;
     dst[0] = src[0];
