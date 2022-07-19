@@ -4,6 +4,7 @@ import functools
 
 import numpy as np
 
+import pytest
 from megenginelite import *
 
 
@@ -87,6 +88,32 @@ def test_tensor_set_data():
     real_data = tensor.to_numpy()
     assert real_data[0][8] == 100
     assert real_data[1][3] == 20
+
+
+def test_set_data_by_copy_not_continuous():
+    layout = LiteLayout()
+    tensor = LiteTensor(layout)
+
+    arr = np.arange(6).reshape(2, 3).astype(np.uint8).transpose(1, 0)
+
+    with pytest.raises(AssertionError):
+        tensor.set_data_by_copy(arr)
+
+    arr = np.ascontiguousarray(arr)
+    tensor.set_data_by_copy(arr)
+
+
+def test_set_data_by_share_not_continuous():
+    layout = LiteLayout([2, 3], "int8")
+    tensor = LiteTensor(layout)
+
+    arr = np.arange(6).reshape(2, 3).astype(np.uint8).transpose(1, 0)
+
+    with pytest.raises(AssertionError):
+        tensor.set_data_by_share(arr, 2 * 3)
+
+    arr = np.ascontiguousarray(arr)
+    tensor.set_data_by_share(arr.ctypes.data, 2 * 3)
 
 
 def test_fill_zero():

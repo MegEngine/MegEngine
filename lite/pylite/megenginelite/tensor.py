@@ -423,6 +423,9 @@ class LiteTensor(object):
                 numpy.ndarray or ctypes data
         """
         if isinstance(data, np.ndarray):
+            assert data.flags[
+                "C_CONTIGUOUS"
+            ], "input numpy is not continuous, please call input = np.ascontiguousarray(input) before call set_data_by_share"
             assert (
                 self.is_continue
             ), "set_data_by_share can only apply in continue tensor."
@@ -474,6 +477,9 @@ class LiteTensor(object):
             self.copy_from(cpu_tensor)
 
         elif type(data) == np.ndarray:
+            assert data.flags[
+                "C_CONTIGUOUS"
+            ], "input numpy is not continuous, please call input = np.ascontiguousarray(input) before call set_data_by_copy"
             self.layout = LiteLayout(data.shape, data.dtype)
             cpu_tensor.layout = LiteLayout(data.shape, data.dtype)
             cdata = data.ctypes.data_as(POINTER(c_type))
