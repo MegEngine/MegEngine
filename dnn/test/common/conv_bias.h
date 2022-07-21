@@ -30,6 +30,7 @@ std::vector<TestArg> get_quantized_winograd_mk_packed_args(
 std::vector<TestArg> get_quantized_args_with_nlmode(
         param::ConvBias::NonlineMode nlmode);
 std::vector<TestArg> get_quantized_args();
+std::vector<TestArg> get_int4_nchw64_args_ptx(size_t kernel_size, bool is_uint4);
 std::vector<TestArg> get_int8_nchw4_args(size_t kernel_size);
 std::vector<TestArg> get_int8_nchw4_args_check_bounds(size_t kernel_size);
 std::vector<TestArg> get_int8_nchw4_small_channel_args(size_t kernel_size);
