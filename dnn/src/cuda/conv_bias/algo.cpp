@@ -92,6 +92,12 @@ ConvBiasForwardImpl::AlgoPack::AlgoPack() {
     fill_dwconv_algos();
     all_algos.push_back(&int8_chwn4_dotprod);
     all_algos.push_back(&fallback_nchw_qs8);
+
+    fill_ptx_algos();
+    for (auto&& algo : algo_ptx_conv2d_u4_s4) {
+        all_algos.push_back(&algo);
+    }
+
     for (size_t i = all_algo_size; i < all_algos.size(); ++i) {
         non_cudnn_algos.push_back(all_algos[i]);
     }
@@ -362,6 +368,15 @@ void ConvBiasForwardImpl::AlgoPack::fill_dp4a_algos() {
     int8_nchw4_dotprod.emplace_back(AlgoParam{64, 32, 32, 64, 32, 32, 1, 1, 4, 2});
     int8_nchw4_dotprod.emplace_back(AlgoParam{16, 128, 16, 16, 128, 16, 1, 1, 4, 1});
     int8_nchw4_dotprod.emplace_back(AlgoParam{16, 64, 8, 16, 64, 8, 1, 1, 4, 2});
+}
+
+void ConvBiasForwardImpl::AlgoPack::fill_ptx_algos() {
+    algo_ptx_conv2d_u4_s4.emplace_back(
+            AlgoPTXUInt4Int4NCHW64IMMAImplicitGemm{128, 256, 256});
+    algo_ptx_conv2d_u4_s4.emplace_back(
+            AlgoPTXUInt4Int4NCHW64IMMAImplicitGemm{128, 128, 128});
+    algo_ptx_conv2d_u4_s4.emplace_back(
+            AlgoPTXUInt4Int4NCHW64IMMAImplicitGemm{256, 64, 128});
 }
 
 ConvBiasForwardImpl::AlgoBase* ConvBiasForwardImpl::AlgoPack::cudnn_conv_from_enum(

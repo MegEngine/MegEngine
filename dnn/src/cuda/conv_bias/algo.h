@@ -78,6 +78,7 @@ public:
         CUDA_SIMPLE_INT1,
         CUDA_CUDNN_CONV_V8,
         CUDA_CUDNN_CONVBIAS_V8,
+        CUDA_IMPLICIT_GEMM_PTX_NCHW64_IMMA_UINT4_INT4,
     };
     using Mapper = std::unordered_map<AlgorithmDesc, AlgoBase*>;
 
@@ -1203,6 +1204,45 @@ private:
     WorkspaceBundle get_workspace_bundle(void* ptr, const SizeArgs& args) const;
 };
 
+class ConvBiasForwardImpl::AlgoPTXUInt4Int4NCHW64IMMAImplicitGemm final
+        : public AlgoBase {
+public:
+    AlgoPTXUInt4Int4NCHW64IMMAImplicitGemm(
+            unsigned int tile_nhw, unsigned int tile_oc, unsigned int threads)
+            : m_tile_nhw{tile_nhw}, m_tile_oc{tile_oc}, m_threads{threads} {
+        m_name = ConvBias::algo_name<ConvBias::DirectParam>(
+                ssprintf(
+                        "PTX_UINT4_INT4_NCHW64_IMMA_IMPLICIT_GEMM_%uX%u_%u", m_tile_nhw,
+                        m_tile_oc, m_threads),
+                ConvBias::DirectParam{});
+    }
+    bool is_available(const SizeArgs& args) const override;
+    size_t get_workspace_in_bytes(const SizeArgs& args) const override;
+    void exec(const ExecArgs& args) const override;
+    const char* name() const override { return m_name.c_str(); }
+    AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }
+    size_t get_preprocess_workspace_in_bytes(const SizeArgs& args) const override;
+    SmallVector<TensorLayout> deduce_preprocessed_filter_layout(
+            const SizeArgs& args) const override;
+    void exec_preprocess(const ExecArgs& args) const override;
+    MEGDNN_DECL_ALGO_TYPE(CUDA_IMPLICIT_GEMM_PTX_NCHW64_IMMA_UINT4_INT4)
+    std::string param() const override {
+        std::string ret;
+        serialize_write_pod(m_tile_nhw, ret);
+        serialize_write_pod(m_tile_oc, ret);
+        serialize_write_pod(m_threads, ret);
+        return ret;
+    }
+
+private:
+    std::string kernel_key(const SizeArgs& args) const;
+    unsigned int m_tile_nhw, m_tile_oc, m_threads;
+    std::string m_name;
+    void reorder_filter_bias(
+            const ExecArgs& args, void* reduce_filter, void* reordered_filter,
+            void* reordered_bias) const;
+};
+
 class ConvBiasForwardImpl::AlgoPack : NonCopyableObj {
 private:
     AlgoBase::Mapper m_all_algos_map;
@@ -1251,6 +1291,7 @@ public:
     AlgoCUDNNConvV8 cudnn_conv_v8;
     AlgoCUDNNConvBiasActivationV8 cudnn_conv_bias_activation_v8;
 #endif
+    std::vector<AlgoPTXUInt4Int4NCHW64IMMAImplicitGemm> algo_ptx_conv2d_u4_s4;
 
     AlgoBase* cudnn_conv_bias_act_from_enum(cudnnConvolutionFwdAlgo_t algo);
 
@@ -1265,6 +1306,7 @@ private:
     void fill_cudnn_algos();
     void fill_dp4a_algos();
     void fill_dwconv_algos();
+    void fill_ptx_algos();
 };
 
 }  // namespace cuda

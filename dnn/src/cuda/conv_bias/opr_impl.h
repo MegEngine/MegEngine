@@ -72,6 +72,7 @@ public:
     class AlgoCUDNNConvV8;
     class AlgoCUDNNConvBiasActivationV8;
 #endif
+    class AlgoPTXUInt4Int4NCHW64IMMAImplicitGemm;
 
     class AlgoPack;
 
