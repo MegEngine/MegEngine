@@ -675,12 +675,8 @@ PyObject* dtype_mgb2np(mgb::DType dtype) {
         Py_XINCREF(Py_None);
         return Py_None;
     }
-    if (dtype.has_param()) {
-        return reinterpret_cast<PyObject*>(descr.release());
-    }
-    PyObject* typeobj = reinterpret_cast<PyObject*>(descr->typeobj);
-    Py_XINCREF(typeobj);
-    return typeobj;
+    // NOTE: the following is additional
+    return reinterpret_cast<PyObject*>(descr.release());
 }
 
 mgb::DType dtype_np2mgb(PyObject* obj) {
