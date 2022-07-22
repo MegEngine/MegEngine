@@ -4,6 +4,7 @@
 #include "megbrain/graph/event.h"
 #include "megbrain/opr/basic_arith.h"
 #include "megbrain/opr/blas.h"
+#include "megbrain/opr/dnn/adaptive_pooling.h"
 #include "megbrain/opr/dnn/batch_norm.h"
 #include "megbrain/opr/dnn/convolution.h"
 #include "megbrain/opr/dnn/local.h"
@@ -1368,6 +1369,8 @@ void EnableNchwxxPass::fill_opr_convert_fun(size_t pack_c_size) {
             megdnn::param::Convolution::Format::NCHW88;
     megdnn::param::Pooling::Format pooling_format =
             megdnn::param::Pooling::Format::NCHW88;
+    megdnn::param::AdaptivePooling::Format adapt_pooling_format =
+            megdnn::param::AdaptivePooling::Format::NCHW88;
     megdnn::param::Resize::Format resize_format = megdnn::param::Resize::Format::NCHW88;
     std::string convter_pass_name = "conv_format_nchw88";
 
@@ -1381,6 +1384,7 @@ void EnableNchwxxPass::fill_opr_convert_fun(size_t pack_c_size) {
         conv_bias_format = megdnn::param::ConvBias::Format::NCHW44;
         conv_format = megdnn::param::Convolution::Format::NCHW44;
         pooling_format = megdnn::param::Pooling::Format::NCHW44;
+        adapt_pooling_format = megdnn::param::AdaptivePooling::Format::NCHW44;
         resize_format = megdnn::param::Resize::Format::NCHW44;
         convter_pass_name = "conv_format_nchw44";
     }
@@ -1646,6 +1650,33 @@ void EnableNchwxxPass::fill_opr_convert_fun(size_t pack_c_size) {
             return new_opr;
         }
     };
+    auto replace_adapt_pooling_opr = [=](OperatorNodeBase* opr,
+                                         const VarNodeArray& new_inp) {
+        mgb_assert(opr->input().size() == new_inp.size());
+        auto& pooling_opr = opr->cast_final_safe<opr::AdaptivePooling>();
+        mgb_throw_if(
+                pooling_opr.param().format !=
+                        opr::AdaptivePoolingForward::Param::Format::NCHW,
+                MegBrainError,
+                "ConvertFormat Pass only support converting NCHW to NCHWxx");
+        VarNode* inp_0 = new_inp[0];
+        VarNode* inp_1 = new_inp[1];
+        //! if input is nchwxx
+        if (inp_0->shape().ndim == 5) {
+            auto new_param = pooling_opr.param();
+            new_param.format = adapt_pooling_format;
+            auto new_pooling_opr = opr::AdaptivePoolingForward::make(
+                    inp_0, inp_1, new_param, opr->config());
+            mgb_assert(
+                    new_pooling_opr.shape().ndim == 5,
+                    "The pooling dst dim is not trans to nchwxx");
+            return new_pooling_opr.node()->owner_opr();
+        } else {
+            auto new_opr =
+                    serialization::copy_opr_shallow(*opr, new_inp, opr->config());
+            return new_opr;
+        }
+    };
 
     auto replace_resize_opr = [=](OperatorNodeBase* opr, const VarNodeArray& new_inp) {
         mgb_assert(opr->input().size() == new_inp.size());
@@ -1763,6 +1794,7 @@ void EnableNchwxxPass::fill_opr_convert_fun(size_t pack_c_size) {
     replace_func[opr::Convolution::typeinfo()] = replace_conv_opr;
     replace_func[opr::ConvBias::typeinfo()] = replace_conv_bias_opr;
     replace_func[opr::PoolingForward::typeinfo()] = replace_pooling_opr;
+    replace_func[opr::AdaptivePooling::typeinfo()] = replace_adapt_pooling_opr;
     replace_func[opr::ResizeForward::typeinfo()] = replace_resize_opr;
     replace_func[opr::Concat::typeinfo()] = replace_multi_inp_opr;
     replace_func[opr::Elemwise::typeinfo()] = replace_multi_inp_opr;

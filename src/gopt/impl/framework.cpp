@@ -722,7 +722,10 @@ const GraphOptimizer& GraphOptimizer::add_passes_for_optimize_options(
             options.disable_##_option(); \
         }                                \
     }
-
+    cb(fuse_grain, {
+        add_pass<FoldingReduceMeanPass>();
+        add_pass<FoldingGlobalPoolingPass>();
+    });
     cb(fuse_preprocess, {
         add_pass(FuseNCHW4Int8Preprocess::make());
         add_pass<FuseWarpPerspectiveDimshufflePass>();

@@ -56,6 +56,43 @@ void PackModelOption::config_model(
         RuntimeParam& runtime_param, std::shared_ptr<ModelBase> model) {
     CONFIG_MODEL_FUN;
 }
+///////////////////// RawModelOption //////////////////////////
+std::shared_ptr<OptionBase> RawModelOption::create_option() {
+    static std::shared_ptr<RawModelOption> option(new RawModelOption);
+    if (RawModelOption::is_valid()) {
+        return std::static_pointer_cast<OptionBase>(option);
+    } else {
+        return nullptr;
+    }
+}
+
+RawModelOption::RawModelOption() {
+    m_option_name = "raw_model";
+    if (!FLAGS_model_dump.empty())
+        model_dump = FLAGS_model_dump;
+}
+bool RawModelOption::is_valid() {
+    return !FLAGS_model_dump.empty();
+}
+void RawModelOption::config_model(
+        RuntimeParam& runtime_param, std::shared_ptr<ModelBase> model) {
+    CONFIG_MODEL_FUN;
+}
+template <typename ModelImpl>
+void RawModelOption::config_model_internel(
+        RuntimeParam& runtime_param, std::shared_ptr<ModelImpl> model) {
+    if (runtime_param.stage == RunStage::AFTER_MODEL_RUNNING) {
+        auto model_data = model->get_model_data();
+        std::ofstream ofs(model_dump, std::ios::binary);
+        if (!ofs.is_open()) {
+            mgb_log_warn("can not open file %s to write model\n", model_dump.c_str());
+            return;
+        }
+        ofs.write((char*)model_data.data(), model_data.size());
+        ofs.close();
+        mgb_log_warn("success write model to %s\n", model_dump.c_str());
+    }
+}
 
 ////////////////////// PackModel gflags ////////////////////////
 
@@ -79,4 +116,8 @@ DEFINE_string(
         "https://megengine.megvii-inc.com/user-guide/deployment/lite/advance/"
         "pack-lite-model.html for more details.");
 
+/////////////////////  RawModel gflags ///////////////////////////
+DEFINE_string(model_dump, "", "The output file path of raw model.");
+
 REGIST_OPTION_CREATOR(pack_model, lar::PackModelOption::create_option);
+REGIST_OPTION_CREATOR(dump_model, lar::RawModelOption::create_option);

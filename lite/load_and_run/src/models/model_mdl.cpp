@@ -76,6 +76,13 @@ void ModelMdl::make_output_spec() {
     }
 
     m_asyc_exec = m_load_result.graph_compile(m_output_spec);
+    auto new_output_vars = m_asyc_exec->get_output_vars();
+    mgb::cg::SymbolVarArray symbol_var_array;
+    symbol_var_array.reserve(new_output_vars.size());
+    for (auto output_var : new_output_vars) {
+        symbol_var_array.emplace_back(output_var);
+    }
+    m_load_result.output_var_list = symbol_var_array;
 }
 
 std::shared_ptr<mgb::serialization::GraphLoader>& ModelMdl::reset_loader(

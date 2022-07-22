@@ -8,7 +8,9 @@ param::Pooling AdaptivePoolingBase::deduce_pooling_param(
         const TensorLayout& src, const TensorLayout& dst) {
     auto param_format = param().format;
     size_t IH, IW, OH, OW;
-    if (param_format == param::AdaptivePooling::Format::NCHW) {
+    if (param_format == param::AdaptivePooling::Format::NCHW ||
+        param_format == param::AdaptivePooling::Format::NCHW44 ||
+        param_format == param::AdaptivePooling::Format::NCHW88) {
         IH = src.shape[2];
         IW = src.shape[3];
         OH = dst.shape[2];
@@ -19,7 +21,8 @@ param::Pooling AdaptivePoolingBase::deduce_pooling_param(
         OH = dst.shape[1];
         OW = dst.shape[2];
     } else {
-        megdnn_throw("AdaptivePooling only support NCHW or NHWC format");
+        megdnn_throw(
+                "AdaptivePooling only support NCHW or NHWC or NCHW44 or NCHW88 format");
     }
 
     param::Pooling ret;

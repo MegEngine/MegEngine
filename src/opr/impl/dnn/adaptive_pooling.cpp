@@ -39,7 +39,7 @@ void AdaptivePoolingForward::outshape_by_symvar_do_get_output_shape(
     cg::copy_tensor_value_to_shape(oshp2d, *shpinfo.shpval_inp_val.at(0));
     auto src = shpinfo.shape_inp_shp.at(0);
     mgb_assert(
-            src.ndim == 4 && (oshp2d.ndim == 2 || oshp2d.ndim == 1),
+            (src.ndim == 4 || src.ndim == 5) && (oshp2d.ndim == 2 || oshp2d.ndim == 1),
             "shape mismatch for AdaptivePooling: src=%s, out2d=%s",
             src.to_string().c_str(), oshp2d.to_string().c_str());
 
@@ -57,8 +57,19 @@ void AdaptivePoolingForward::outshape_by_symvar_do_get_output_shape(
         dest.shape[1] = oshp2d.shape[0];
         dest.shape[2] = (tshp1n) ? oshp2d.shape[0] : oshp2d.shape[1];
         dest.shape[3] = src.shape[3];
+    } else if (
+            param_format == Param::Format::NCHW44 ||
+            param_format == Param::Format::NCHW88) {
+        dest.ndim = 5;
+        dest.shape[0] = src.shape[0];
+        dest.shape[1] = src.shape[1];
+        dest.shape[2] = oshp2d.shape[0];
+        dest.shape[3] = (tshp1n) ? oshp2d.shape[0] : oshp2d.shape[1];
+        dest.shape[4] = src.shape[4];
     } else {
-        mgb_throw(MegBrainError, "AdaptivePooling only support NCHW or NHWC format");
+        mgb_throw(
+                MegBrainError, "AdaptivePooling not support %d format",
+                (int)param_format);
     }
 }
 

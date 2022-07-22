@@ -40,6 +40,36 @@ inline std::vector<TestArg> get_args() {
     return args;
 }
 
+inline std::vector<TestArg> get_args_nchw44() {
+    std::vector<TestArg> args;
+    using Param = param::AdaptivePooling;
+    using Mode = param::AdaptivePooling::Mode;
+
+    for (size_t i = 36; i < 40; ++i) {
+        args.emplace_back(
+                Param{Mode::AVERAGE, Param::Format::NCHW44},
+                TensorShape{2, 3, i, i + 1, 4}, TensorShape{2, 3, i - 4, i - 2, 4});
+        args.emplace_back(
+                Param{Mode::MAX, Param::Format::NCHW44}, TensorShape{2, 3, i, i + 1, 4},
+                TensorShape{2, 3, i - 4, i - 2, 4});
+        args.emplace_back(
+                Param{Mode::AVERAGE, Param::Format::NCHW44},
+                TensorShape{2, 3, i, i + 1, 4}, TensorShape{2, 3, 1, 1, 4});
+        args.emplace_back(
+                Param{Mode::MAX, Param::Format::NCHW44}, TensorShape{2, 3, i, i + 1, 4},
+                TensorShape{2, 3, 1, 1, 4});
+    }
+
+    for (size_t i = 5; i < 10; ++i) {
+        args.emplace_back(
+                Param{Mode::AVERAGE, Param::Format::NCHW44},
+                TensorShape{2, 3, i, i + 1, 4}, TensorShape{2, 3, i - 3, i - 2, 4});
+        args.emplace_back(
+                Param{Mode::MAX, Param::Format::NCHW44}, TensorShape{2, 3, i, i + 1, 4},
+                TensorShape{2, 3, i - 3, i - 2, 4});
+    }
+    return args;
+}
 }  // namespace adaptive_pooling
 }  // namespace test
 }  // namespace megdnn

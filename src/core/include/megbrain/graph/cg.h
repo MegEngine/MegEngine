@@ -91,6 +91,9 @@ struct GraphCommonOptimizeOptions {
     bool weight_preprocess = false;
     //! fuse preprocess patten, like astype + pad_channel + dimshuffle
     bool fuse_preprocess = false;
+    //! fuse_grain patten, replace grain ir with huge ir
+    bool fuse_grain = false;
+
     enum LayoutTransform : uint32_t {
         DEFAULT,
         NCHW4,       ///< compute using NCHW4 tensor format
@@ -124,6 +127,7 @@ struct GraphCommonOptimizeOptions {
     SET(fuse_conv_bias_with_z);
     SET(fuse_preprocess);
     SET(weight_preprocess);
+    SET(fuse_grain);
 #undef SET
 #define SET(_trans, _trans_capital)                                 \
     GraphCommonOptimizeOptions& enable_##_trans() {                 \

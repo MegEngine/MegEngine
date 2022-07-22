@@ -327,6 +327,8 @@ struct OptimizeForInferenceOptions : cg::GraphCommonOptimizeOptions {
             ret |= 1u << 4;
         if (fuse_preprocess)
             ret |= 1u << 5;
+        if (fuse_grain)
+            ret |= 1u << 6;
         return ret;
     }
 
@@ -338,6 +340,7 @@ struct OptimizeForInferenceOptions : cg::GraphCommonOptimizeOptions {
         ret.fuse_conv_bias_with_z = buf & 1u << 3;
         ret.weight_preprocess = buf & 1u << 4;
         ret.fuse_preprocess = buf & 1u << 5;
+        ret.fuse_grain = buf & 1u << 6;
         ret.layout_transform = (LayoutTransform)(buf >> 32);
         return ret;
     }
@@ -477,6 +480,25 @@ public:
     void apply(OptState& opt) const override;
 };
 #endif
+/**
+ * \brief old megbrain support reduce_mean by reduce_sum and div, fuse it for efficient
+ *
+ */
+class FoldingReduceMeanPass final : public Pass {
+public:
+    const char* name() const override;
+    void apply(OptState& opt) const override;
+};
+
+/**
+ * \brief fold reduce hw to global pooling, for nchwxx optimize
+ *
+ */
+class FoldingGlobalPoolingPass final : public Pass {
+public:
+    const char* name() const override;
+    void apply(OptState& opt) const override;
+};
 
 /*!
  * \brief padding channel to enable fast int8/int4 support

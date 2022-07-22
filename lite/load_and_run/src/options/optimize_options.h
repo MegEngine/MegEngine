@@ -5,6 +5,7 @@
 #include "option_base.h"
 
 DECLARE_bool(enable_fuse_preprocess);
+DECLARE_bool(fuse_grain);
 DECLARE_bool(weight_preprocess);
 DECLARE_bool(enable_fuse_conv_bias_nonlinearity);
 DECLARE_bool(enable_fuse_conv_bias_with_z);
@@ -79,7 +80,31 @@ private:
     static bool m_valid;
     OptionValMap m_option;
 };
+///////////////////////// fuse grain options //////////////
+class FuseGrainOption final : public OptionBase {
+public:
+    static bool is_valid();
 
+    static std::shared_ptr<OptionBase> create_option();
+
+    void config_model(
+            RuntimeParam& runtime_param, std::shared_ptr<ModelBase> model) override;
+
+    std::string option_name() const override { return m_option_name; };
+    static void set_valid(bool val) { m_valid = val; };
+
+    OptionValMap* get_option() override { return &m_option; }
+
+private:
+    FuseGrainOption();
+    template <typename ModelImpl>
+    void config_model_internel(RuntimeParam&, std::shared_ptr<ModelImpl>){};
+
+    std::string m_option_name;
+    bool m_fuse_grain;
+    static bool m_valid;
+    OptionValMap m_option;
+};
 /////////////// fuse_conv_bias_nonlinearity optimize options ///////////////
 class FuseConvBiasNonlinearOption final : public OptionBase {
 public:

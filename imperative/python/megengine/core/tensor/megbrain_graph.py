@@ -254,7 +254,9 @@ def optimize_for_inference(dest_vars, **kwargs):
         * enable_fuse_conv_bias_with_z: whether to fuse conv_bias with z
           input for inference on nvidia backend(this optimization pass will
           result in mismatch of the precision of output of training and
-          inference)
+          inference
+        * enable_fuse_grain: fuse grain will be enable by default to fuse grain operator to huge operator, you can disable it.
+          )
     """
     inference_options = GraphOptimizeOptions()
     inference_optimize_layout_transform_map = {
@@ -282,6 +284,8 @@ def optimize_for_inference(dest_vars, **kwargs):
         inference_options.fuse_conv_bias_with_z = True
     if kwargs.pop("enable_fuse_preprocess", False):
         inference_options.fuse_preprocess = True
+    if kwargs.pop("enable_fuse_grain", True):
+        inference_options.fuse_grain = True
 
     if kwargs:
         raise ValueError("unknown options: %s" % list(kwargs))
@@ -330,6 +334,8 @@ def deserialize_infer_option(x: int) -> Dict[str, bool]:
         ret["enable_fuse_conv_bias_with_z"] = True
     if inference_options.fuse_preprocess:
         ret["enable_fuse_preprocess"] = True
+    if inference_options.fuse_grain:
+        ret["enable_fuse_grain"] = True
 
     return ret
 

@@ -48,7 +48,6 @@ void run(Param::Mode mode) {
 
     Checker::RunOptions opt;
     opt.numdiff_max_err = 1e-2;
-
     Checker checker{make_graph, fwd};
     checker.set_input_allow_grad(1, false).set_input_generator(0, gen);
     checker.run({TensorShape{1, 1, 10, 7}, TensorShape{5, 4}}, opt);

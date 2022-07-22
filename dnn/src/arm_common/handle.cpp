@@ -2,6 +2,7 @@
 
 #include "src/arm_common/handle.h"
 
+#include "src/arm_common/adaptive_pooling/opr_impl.h"
 #include "src/arm_common/conv_bias/opr_impl.h"
 #include "src/arm_common/convolution/opr_impl.h"
 #include "src/arm_common/cvt_color/opr_impl.h"
@@ -45,6 +46,7 @@ MEGDNN_SPECIALIZE_CREATE_OPERATOR(ConvolutionBackwardData)
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(RNNCell)
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(LSTMCell)
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(LSTM)
+MEGDNN_SPECIALIZE_CREATE_OPERATOR(AdaptivePooling)
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpragmas"

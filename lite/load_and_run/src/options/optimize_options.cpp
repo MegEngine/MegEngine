@@ -124,6 +124,60 @@ void WeightPreprocessOption::config_model(
     CONFIG_MODEL_FUN;
 }
 
+///////////////////////// fuse grain optimize options ///////////////
+bool FuseGrainOption::m_valid;
+namespace lar {
+template <>
+void FuseGrainOption::config_model_internel<ModelLite>(
+        RuntimeParam& runtime_param, std::shared_ptr<ModelLite>) {
+    if (runtime_param.stage == RunStage::BEFORE_MODEL_LOAD) {
+        if (m_fuse_grain) {
+            LITE_THROW("enable fuse-grain optimization not support in lite model");
+        }
+    }
+}
+
+template <>
+void FuseGrainOption::config_model_internel<ModelMdl>(
+        RuntimeParam& runtime_param, std::shared_ptr<ModelMdl> model) {
+    if (runtime_param.stage == RunStage::BEFORE_MODEL_LOAD) {
+        auto&& graph_option = model->get_mdl_config().comp_graph->options();
+        if (m_fuse_grain) {
+            mgb_log_warn("enable fuse-grain optimization");
+            graph_option.graph_opt.enable_fuse_grain();
+        }
+    }
+}
+}  // namespace lar
+
+FuseGrainOption::FuseGrainOption() {
+    m_option_name = "fuse_grain";
+    m_fuse_grain = FLAGS_fuse_grain;
+    m_option = {{"fuse_grain", lar::Bool::make(false)}};
+    std::static_pointer_cast<lar::Bool>(m_option["fuse_grain"])
+            ->set_value(FLAGS_fuse_grain);
+}
+
+bool FuseGrainOption::is_valid() {
+    return true;
+}
+
+std::shared_ptr<OptionBase> FuseGrainOption::create_option() {
+    static std::shared_ptr<FuseGrainOption> option(new FuseGrainOption);
+    if (FuseGrainOption::is_valid()) {
+        return std::static_pointer_cast<OptionBase>(option);
+    } else {
+        return nullptr;
+    }
+}
+
+void FuseGrainOption::config_model(
+        RuntimeParam& runtime_param, std::shared_ptr<ModelBase> model) {
+    m_fuse_grain =
+            std::static_pointer_cast<lar::Bool>(m_option["fuse_grain"])->get_value();
+    CONFIG_MODEL_FUN;
+}
+
 ///// fuse conv bias and nonlinear activation opr optimize options ////////
 bool FuseConvBiasNonlinearOption::m_valid;
 namespace lar {
@@ -579,6 +633,7 @@ void TensorRTOption::config_model(
 DEFINE_bool(
         enable_fuse_preprocess, false,
         "Fusion astype | pad_channel | dimshuffle and etc opr from h2d opr");
+DEFINE_bool(fuse_grain, false, "Enable fusion grain opr to huge opr");
 DEFINE_bool(
         weight_preprocess, false,
         "Execute operators with weight preprocess, which can optimize the "
@@ -589,7 +644,7 @@ DEFINE_bool(
         "whether to fuse conv+bias+nonlinearity");
 DEFINE_bool(
         enable_fuse_conv_bias_with_z, false,
-        "fuse conv，bias (elemwise add)，z(elemwise add) into one opr "
+        "fuse conv, bias (elemwise add), z(elemwise add) into one opr "
         "(only support on GPU)");
 
 ///////////////////////// graph retrict options /////////////////////////
@@ -635,6 +690,9 @@ REGIST_OPTION_VALIDATER(fuse_preprocess, lar::FusePreprocessOption::set_valid);
 
 REGIST_OPTION_CREATOR(weight_preprocess, lar::WeightPreprocessOption::create_option);
 REGIST_OPTION_VALIDATER(weight_preprocess, lar::WeightPreprocessOption::set_valid);
+
+REGIST_OPTION_CREATOR(disable_fuse_grain, lar::FuseGrainOption::create_option);
+REGIST_OPTION_VALIDATER(disable_fuse_grain, lar::FuseGrainOption::set_valid);
 
 REGIST_OPTION_CREATOR(
         fuse_conv_bias_nonlinearity, lar::FuseConvBiasNonlinearOption::create_option);

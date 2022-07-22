@@ -151,7 +151,9 @@ class Network:
         * enable_fuse_conv_bias_with_z: whether to fuse conv_bias with z
           input for inference on nvidia backend(this optimization pass will
           result in mismatch of the precision of output of training and
-          inference)
+          inference
+        * enable_fuse_grain: fuse grain will be enable by default to fuse grain operator to huge operator, you can disable it.  
+        )
         """
 
         if not isinstance(dest_vars, Sequence):
@@ -221,7 +223,6 @@ class Network:
             logger.warning(
                 '"output_names" is not supported in Network.dump, rename output vars directly'
             )
-
         if optimize_for_inference:
             out, optimize_options = G.optimize_for_inference(out, **kwargs)
 

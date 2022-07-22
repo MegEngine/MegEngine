@@ -47,6 +47,7 @@ def test_metadata():
         "user_info": {"str": "x", "tensor": x, "module": M.Module, "none": None},
         "graph_modified": True,  # True: Network.dump
         "optimized_for_inference": True,
+        "enable_fuse_grain": True,
         "enable_nchw4": True,
         "enable_ioc16": True,
     }

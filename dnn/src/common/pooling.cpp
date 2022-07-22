@@ -140,7 +140,9 @@ void PoolingForward::check_exec(
         const TensorLayout& src, const TensorLayout& dst, size_t workspace_in_bytes) {
     check_layout_fwd(src, dst);
     auto required_workspace_in_bytes = get_workspace_in_bytes(src, dst);
-    megdnn_assert(workspace_in_bytes >= required_workspace_in_bytes);
+    megdnn_assert(
+            workspace_in_bytes >= required_workspace_in_bytes, "need %zu, get %zu",
+            required_workspace_in_bytes, workspace_in_bytes);
 }
 
 void PoolingBackward::check_exec(

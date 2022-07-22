@@ -7,6 +7,7 @@
 
 #include "megbrain/opr/basic_arith_wrapper.h"
 #include "megbrain/opr/blas.h"
+#include "megbrain/opr/dnn/adaptive_pooling.h"
 #include "megbrain/opr/dnn/batch_norm.h"
 #include "megbrain/opr/dnn/convolution.h"
 #include "megbrain/opr/dnn/pooling.h"
@@ -4105,6 +4106,71 @@ TEST(TestGoptInference, ConvertFormatNCHW44Reshape) {
             ->writeto_fpath(
                     output_file("TestGoptInference.ConvertFormatNCHW44Reshape.json"));
 
+    HostTensorND host_y_opt, host_y;
+    auto func = graph->compile(
+            {make_callback_copy(y, host_y), make_callback_copy(y_opt, host_y_opt)});
+    func->execute();
+    //! meybe go to winograd in x86-32, so set error 1e-1
+    MGB_ASSERT_TENSOR_NEAR(host_y, host_y_opt, 1e-1);
+}
+
+TEST(TestGoptInference, ConvertFormatNCHW44GlobalPooling) {
+    HostTensorGenerator<> gen;
+    auto cn = CompNode::load("cpu0");
+    auto graph = ComputingGraph::make();
+    graph->options().graph_opt_level = 0;
+    auto mkcvar = [&](const char* name, const TensorShape& shp) {
+        return opr::SharedDeviceTensor::make(*graph, *gen(shp, cn)).rename(name);
+    };
+
+    auto host_x1 = gen({1, 4, 16, 16}, cn);
+    auto x = opr::Host2DeviceCopy::make(*graph, host_x1);
+    opr::Convolution::Param param_conv;
+    param_conv.stride_h = param_conv.stride_w = 1;
+    param_conv.pad_h = param_conv.pad_w = 1;
+    auto w1 = mkcvar("w1", {8, 4, 3, 3});
+    auto conv1 =
+            opr::Convolution::make(x, w1, param_conv, {}, OperatorNodeConfig("conv1"));
+    auto conv_n = opr::GetVarShape::make(conv1, 0);
+    auto conv_c = opr::GetVarShape::make(conv1, 1);
+    auto conv_h = opr::GetVarShape::make(conv1, 2);
+    auto conv_w = opr::GetVarShape::make(conv1, 3);
+    auto hxw = conv_h * conv_w;
+    auto reshape_shape = opr::Concat::make({conv_n, conv_c, hxw}, 0);
+    auto reshape1 = opr::Reshape::make(conv1, reshape_shape);
+
+    opr::Reduce::Param param_reduce;
+    param_reduce.axis = 2;
+    param_reduce.mode = opr::Reduce::Mode::SUM;
+    auto reduce = opr::Reduce::make(reshape1, param_reduce);
+    auto reduce_remove_axis = opr::AxisAddRemove::make(
+            reduce, {opr::AxisAddRemove::AxisDesc::make_remove(2)});
+    auto hw_count = opr::GetVarShape::make(reshape1, 2);
+
+    auto fp32_hw_count = opr::TypeCvt::make(hw_count, dtype::Float32());
+    auto reduce_mean = reduce_remove_axis / fp32_hw_count;
+    auto global_pool = opr::AxisAddRemove::make(
+            reduce_mean, {opr::AxisAddRemove::AxisDesc::make_add(2),
+                          opr::AxisAddRemove::AxisDesc::make_add(3)});
+
+    opr::Elemwise::Param elem_param;
+    elem_param.mode = opr::Elemwise::Param::Mode::RELU;
+    auto y = opr::Elemwise::make({global_pool}, elem_param);
+
+    SymbolVar y_opt;
+    auto options = gopt::OptimizeForInferenceOptions{};
+    options.enable_fuse_grain();
+    options.enable_nchw44();
+    unpack_vector(gopt::optimize_for_inference({y}, options), y_opt);
+
+    ASSERT_EQ(
+            opr::AdaptivePooling::Param::Format::NCHW44,
+            find_opr<opr::AdaptivePooling>(y_opt).param().format);
+
+    graph->compile({{y_opt, {}}})
+            ->to_json()
+            ->writeto_fpath(output_file(
+                    "TestGoptInference.ConvertFormatNCHW44GlobalPooling.json"));
     HostTensorND host_y_opt, host_y;
     auto func = graph->compile(
             {make_callback_copy(y, host_y), make_callback_copy(y_opt, host_y_opt)});

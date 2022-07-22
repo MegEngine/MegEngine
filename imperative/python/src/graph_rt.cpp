@@ -292,7 +292,9 @@ void init_graph_rt(py::module m) {
                             &_OptimizeForInferenceOptions::fuse_preprocess)
                     .def_readwrite(
                             "layout_transform",
-                            &_OptimizeForInferenceOptions::layout_transform);
+                            &_OptimizeForInferenceOptions::layout_transform)
+                    .def_readwrite(
+                            "fuse_grain", &_OptimizeForInferenceOptions::fuse_grain);
 
     py::enum_<_LayoutTransform>(GraphOptimizeOptions, "LayoutTransform")
             .value("DEFAULT", _LayoutTransform::DEFAULT)

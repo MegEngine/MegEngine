@@ -91,7 +91,7 @@ public:
 };
 
 class OutputVarsUserData final : public mgb::UserDataContainer::UserData {
-    MGB_TYPEINFO_OBJ_DECL;
+    MGB_TYPEINFO_OBJ_DECL_WITH_EXPORT;
 
 private:
     VarNodeArray m_output_vars;
