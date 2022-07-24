@@ -96,27 +96,6 @@ from .utils.persistent_cache import PersistentCacheOnServer as _PersistentCacheO
 from .version import __version__
 
 
-def _check_sm_version():
-    cur_logger = get_logger(__name__)
-    ngpus = get_device_count("gpu")
-    supported_sm_versions = re.findall(r"sm_(\d+)", _get_supported_sm_versions())
-    for idx in range(ngpus):
-        prop = get_cuda_device_property(idx)
-        cur_sm = str(prop.major * 10 + prop.minor)
-        if not cur_sm in supported_sm_versions:
-            cur_logger.warning(
-                "{} with CUDA capability sm_{} is not compatible with the current MegEngine installation. The current MegEngine install supports CUDA {} {}. If you want to use the {} with MegEngine, please check the instructions at https://github.com/MegEngine/MegEngine/blob/master/scripts/cmake-build/BUILD_README.md".format(
-                    prop.name,
-                    cur_sm,
-                    "capabilities" if len(supported_sm_versions) > 1 else "capability",
-                    " ".join(["sm_" + v for v in supported_sm_versions]),
-                    prop.name,
-                )
-            )
-
-
-_check_sm_version()
-
 _exit_handlers = []
 
 

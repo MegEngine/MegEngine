@@ -8,10 +8,15 @@ using namespace mgb;
 
 #if MGB_CUDA
 
+#if MEGDNN_WITH_CUDA
+#include "cuda_sm_gen.h"
+#endif
+
 #include "megbrain/comp_node/alloc.h"
 
 #include <cctype>
 #include <cstdio>
+#include <regex>
 
 #include <thread>
 
@@ -417,6 +422,63 @@ void CudaCompNodeImpl::init(const Locator& locator, const Locator& locator_logic
 
     m_env.init_cuda_async(
             locator.device, make_comp_node_from_impl(this), {on_succ, on_error});
+#if MEGDNN_WITH_CUDA
+    auto cur_prop = CudaCompNode::get_device_prop(locator.device);
+    auto cur_sm =
+            std::string("sm_") + std::to_string(cur_prop.major * 10 + cur_prop.minor);
+    const std::string mge_gen_code = MGE_CUDA_GENCODE;
+    std::regex re("sm_([0-9]+)");
+    std::vector<std::string> build_sm(
+            std::sregex_token_iterator(mge_gen_code.begin(), mge_gen_code.end(), re),
+            std::sregex_token_iterator());
+
+    if (std::find(build_sm.begin(), build_sm.end(), cur_sm) == build_sm.end()) {
+        std::string build_sm_info = "";
+        for (auto&& s : build_sm) {
+            build_sm_info += std::string(" ") + s;
+        }
+
+        std::vector<int> support_gpu;
+        for (int i = 0; i < get_device_count(); i++) {
+            auto prop = CudaCompNode::get_device_prop(i);
+            auto sm = std::string("sm_") + std::to_string(prop.major * 10 + prop.minor);
+            if (std::find(build_sm.begin(), build_sm.end(), sm) != build_sm.end()) {
+                support_gpu.emplace_back(i);
+            }
+        }
+
+        if (support_gpu.size() == 0) {
+            mgb_throw(
+                    MegBrainError,
+                    "%s(gpu%d) with CUDA capability %s is not compatible with the "
+                    "current MegEngine installation. The current MegEngine install "
+                    "supports CUDA capabilities%s. If you want to use the %s(gpu%d) "
+                    "with MegEngine, please check the instructions at "
+                    "https://github.com/MegEngine/MegEngine/blob/master/scripts/"
+                    "cmake-build/BUILD_README.md",
+                    cur_prop.name.c_str(), locator.device, cur_sm.c_str(),
+                    build_sm_info.c_str(), cur_prop.name.c_str(), locator.device);
+        } else {
+            std::string support_gpu_info = "";
+            for (auto&& g : support_gpu) {
+                support_gpu_info += std::string(" gpu") + std::to_string(g);
+            }
+            mgb_throw(
+                    MegBrainError,
+                    "%s(gpu%d) with CUDA capability %s is not compatible with the "
+                    "current MegEngine installation. The current MegEngine install "
+                    "supports CUDA capabilities%s. You can try to use%s instead or "
+                    "config CUDA_VISIBLE_DEVICES to chosse anthor cuda card.If you "
+                    "really want to use the %s(gpu%d) with MegEngine, please check the "
+                    "instructions at "
+                    "https://github.com/MegEngine/MegEngine/blob/master/scripts/"
+                    "cmake-build/BUILD_README.md",
+                    cur_prop.name.c_str(), locator.device, cur_sm.c_str(),
+                    build_sm_info.c_str(), support_gpu_info.c_str(),
+                    cur_prop.name.c_str(), locator.device);
+        }
+    }
+#endif
 }
 
 void CudaCompNodeImpl::fini() {
