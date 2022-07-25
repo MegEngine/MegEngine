@@ -25,6 +25,58 @@ using namespace cg::static_infer;
 using intl::WorkspaceLimitGetter;
 
 /* ==================== misc impl  ==================== */
+template <typename MGBOPR, typename DNNOPR>
+void mixin::RegionConvBackwardDataMixin::init_output_static_infer_desc_for_bwd_data(
+        cg::OperatorNodeBase* self) {
+    using namespace cg::static_infer;
+    auto&& mgr = self->owner_graph()->static_infer_manager();
+
+    DepVal inp_deps;
+    inp_deps.reserve(6);
+    for (int i = 0; i < 4; i++) {
+        inp_deps.push_back({self->input(i), DepType::SHAPE});
+    }
+
+    auto infer_shp = [self](TensorShape& dest, const InpVal& inp) {
+        TensorLayout ol{self->output(0)->dtype()};
+        mgb_assert(
+                self->input(0)->dtype().category() == DTypeCategory::FLOAT &&
+                        self->input(1)->dtype().category() == DTypeCategory::FLOAT &&
+                        self->input(2)->dtype().category() == DTypeCategory::INT &&
+                        self->input(3)->dtype().category() == DTypeCategory::INT,
+                "region conv dtype assert error!");
+        static_cast<MGBOPR*>(self)->megdnn_opr()->deduce_layout(
+                {inp.val.at(0).shape(), self->input(0)->dtype()},  // filter
+                {inp.val.at(1).shape(), self->input(1)->dtype()},  // diff
+                {inp.val.at(2).shape(), self->input(2)->dtype()},  // rin
+                {inp.val.at(3).shape(), self->input(3)->dtype()},  // rout
+                ol                                                 // grad
+        );
+        dest = ol;
+        return true;
+    };
+    mgr.register_shape_infer(self->output(0), {SourceType::DEP, inp_deps, infer_shp});
+
+    // workspace size
+    auto infer_wk = [self](TensorShape& dest, const InpVal& inp) {
+        TensorLayout ol{self->output(0)->dtype()};
+        dest.ndim = 1;
+        dest.shape[0] =
+                static_cast<MGBOPR*>(self)->megdnn_opr()->get_workspace_in_bytes(
+                        {self->input(0)->shape(), self->input(0)->dtype()},  // filter
+                        {self->input(1)->shape(), self->input(1)->dtype()},  // diff
+                        {self->input(2)->shape(), self->input(2)->dtype()},  // rin
+                        {self->input(3)->shape(), self->input(3)->dtype()},  // rout
+                        ol);
+        return true;
+    };
+    inp_deps.push_back({self->output(0), DepType::SHAPE});
+    auto workspace_dep_var =
+            intl::WorkspaceLimitGetter::register_to_graph(self->owner_graph());
+    if (workspace_dep_var)
+        inp_deps.push_back({workspace_dep_var, DepType::VALUE});
+    mgr.register_shape_infer(self->output(1), {SourceType::DEP, inp_deps, infer_wk});
+}
 
 template <class MgbOpr, class MegDNNOpr>
 void mixin::ConvolutionBackwardDataMixin::init_output_static_infer_desc_for_bwd_data(
@@ -1534,6 +1586,226 @@ void BatchConvBiasForward::init_output_format() {
     mgb_assert(output().size() == 2);
     output(0)->format(input(0)->format());
 }
+
+/* ========================== RegionRestrictedConvolutionForward
+ * ========================== */
+
+IMPL_CONV(RegionRestrictedConvolutionForward);
+
+RegionRestrictedConvolutionForward::RegionRestrictedConvolutionForward(
+        VarNode* src, VarNode* filter, VarNode* region_in, VarNode* region_out,
+        const Param& param, const OperatorNodeConfig& config)
+        : Super(src->owner_graph(), config, "region_restricted_conv_fwd",
+                {src, filter, region_in, region_out}) {
+    init_megdnn_opr(*this, param);
+    add_input({src, filter, region_in, region_out});
+}
+
+SymbolVar RegionRestrictedConvolutionForward::make(
+        SymbolVar src, SymbolVar filter, SymbolVar region_in, SymbolVar region_out,
+        const Param& param, const OperatorNodeConfig& config) {
+    return src.insert_single_output_opr<RegionRestrictedConvolutionForward>(
+            src.node(), filter.node(), region_in.node(), region_out.node(), param,
+            config);
+}
+
+void RegionRestrictedConvolutionForward::init_output_dtype() {
+    mgb_assert(
+            input(0)->dtype().category() == DTypeCategory::FLOAT,
+            "input dtype only support FLOAT, \
+            but got input dtype: %s",
+            input(0)->dtype().name());
+    output(0)->dtype(input(0)->dtype());
+    return;
+}
+
+size_t RegionRestrictedConvolutionForward::get_workspace_size_bytes(
+        const TensorShapeArray& input_shapes,
+        const TensorShapeArray& output_shapes) const {
+    return megdnn_opr()->get_workspace_in_bytes(
+            {input_shapes[0], input(0)->dtype(), input(0)->format()},
+            {input_shapes[1], input(1)->dtype(), input(1)->format()},
+            {input_shapes[2], input(2)->dtype(), input(2)->format()},
+            {input_shapes[3], input(3)->dtype(), input(3)->format()},
+            {output_shapes[0], output(0)->dtype(), output(0)->format()});
+}
+
+#if MGB_ENABLE_GRAD
+MGB_IMPL_OPR_GRAD(RegionRestrictedConvolutionForward) {
+    mgb_assert(
+            opr.input(0)->dtype().category() == DTypeCategory::FLOAT &&
+                    opr.input(1)->dtype().category() == DTypeCategory::FLOAT &&
+                    opr.input(2)->dtype().category() == DTypeCategory::INT &&
+                    opr.input(3)->dtype().category() == DTypeCategory::INT,
+            "only float data type supported for grad");
+    if (wrt_idx == 0) {  // src
+        SymbolVar grad = RegionRestrictedConvolutionBackwardData::make(
+                opr.input(1),  // filter
+                out_grad[0],   // diff
+                opr.input(2),  // rin
+                opr.input(3),  // rout
+                opr.input(0),  // src
+                opr.param());
+        return grad.node();
+    }
+    // TODO: CUDA WGRAD UNIMPLEMENTED!
+    if (wrt_idx == 1) {  // filter
+        SymbolVar grad = RegionRestrictedConvolutionBackwardFilter::make(
+                opr.input(0),  // src
+                out_grad[0],   // diff
+                opr.input(2),  // rin
+                opr.input(3),  // rout
+                opr.input(1),  // filter
+                opr.param());
+        return grad.node();
+    }
+    return nullptr;
+}
+#endif
+
+/* ========================== RegionRestrictedConvolutionBackwardData
+ * ========================== */
+IMPL_CONV(RegionRestrictedConvolutionBackwardData);
+
+RegionRestrictedConvolutionBackwardData::RegionRestrictedConvolutionBackwardData(
+        VarNode* filter, VarNode* diff, VarNode* region_in, VarNode* region_out,
+        VarNode* src, const Param& param, const OperatorNodeConfig& config)
+        : Super{filter->owner_graph(),
+                config,
+                "region_restricted_conv_bwd_data",
+                {filter, diff, region_in, region_out}} {
+    init_megdnn_opr(*this, param);
+    add_input({filter, diff, region_in, region_out});
+    if (src)
+        add_input({src});
+}
+
+SymbolVar RegionRestrictedConvolutionBackwardData::make(
+        SymbolVar filter, SymbolVar diff, SymbolVar region_in, SymbolVar region_out,
+        SymbolVar src, const Param& param, const OperatorNodeConfig& config) {
+    return filter.insert_single_output_opr<RegionRestrictedConvolutionBackwardData>(
+            filter.node(), diff.node(), region_in.node(), region_out.node(), src.node(),
+            param, config);
+}
+
+SymbolVar RegionRestrictedConvolutionBackwardData::make(
+        SymbolVar filter, SymbolVar diff, SymbolVar region_in, SymbolVar region_out,
+        const Param& param, const OperatorNodeConfig& config) {
+    return make(filter, diff, region_in, region_out, {}, param, config);
+}
+
+void RegionRestrictedConvolutionBackwardData::init_output_static_infer_desc() {
+    init_output_static_infer_desc_for_bwd_data<
+            RegionRestrictedConvolutionBackwardData,
+            megdnn::RegionRestrictedConvolutionBackwardData>(this);
+}
+
+void RegionRestrictedConvolutionBackwardData::init_output_dtype() {
+    output(0)->dtype(input(0)->dtype());
+}
+
+void RegionRestrictedConvolutionBackwardData::scn_do_execute() {
+    megdnn_opr()->exec(
+            input(0)->dev_tensor().as_megdnn(),  // filter
+            input(1)->dev_tensor().as_megdnn(),  // diff
+            input(2)->dev_tensor().as_megdnn(),  // rin
+            input(3)->dev_tensor().as_megdnn(),  // rout
+            output(0)->dev_tensor().as_megdnn(),
+            intl::get_megdnn_workspace_from_var(output().back()));
+}
+
+cg::OperatorNodeBase::NodeProp* RegionRestrictedConvolutionBackwardData::
+        do_make_node_prop() const {
+    auto prop = Super::Super::do_make_node_prop();
+    if (input().size() == 5) {
+        using D = NodeProp::DepType;
+        prop->reset_dep_type(
+                input(),
+                {D::DEV_VALUE, D::DEV_VALUE, D::DEV_VALUE, D::DEV_VALUE, D::SHAPE});
+    }
+    return prop;
+}
+
+#if MGB_ENABLE_GRAD
+MGB_IMPL_OPR_GRAD(RegionRestrictedConvolutionBackwardData) {
+    if (wrt_idx == 0) {  // filter
+        return RegionRestrictedConvolutionBackwardFilter::make(
+                       out_grad[0], opr.input(1), opr.input(2), opr.input(3),
+                       opr.input(0), opr.param())
+                .node();
+    }
+    if (wrt_idx == 1) {  // diff
+        return RegionRestrictedConvolution::make(
+                       out_grad[0], opr.input(0), opr.input(2), opr.input(3),
+                       opr.param())
+                .node();
+    }
+    return nullptr;
+}
+#endif
+
+/* ========================== RegionRestrictedConvolutionBackwardFilter
+ * ========================== */
+IMPL_CONV(RegionRestrictedConvolutionBackwardFilter);
+
+RegionRestrictedConvolutionBackwardFilter::RegionRestrictedConvolutionBackwardFilter(
+        VarNode* src, VarNode* diff, VarNode* region_in, VarNode* region_out,
+        VarNode* filter, const Param& param, const OperatorNodeConfig& config)
+        : Super({src->owner_graph(),
+                 config,
+                 "region_restricted_conv_bwd_filter",
+                 {src, diff, region_in, region_out, filter}},
+                4, false) {
+    init_megdnn_opr(*this, param);
+    add_input({src, diff, region_in, region_out, filter});
+}
+
+SymbolVar RegionRestrictedConvolutionBackwardFilter::make(
+        SymbolVar src, SymbolVar diff, SymbolVar region_in, SymbolVar region_out,
+        SymbolVar filter, const Param& param, const OperatorNodeConfig& config) {
+    return src.insert_single_output_opr<RegionRestrictedConvolutionBackwardFilter>(
+            src.node(), diff.node(), region_in.node(), region_out.node(), filter.node(),
+            param, config);
+}
+
+size_t RegionRestrictedConvolutionBackwardFilter::get_workspace_size_bytes(
+        const TensorShapeArray& input_shapes,
+        const TensorShapeArray& output_shapes) const {
+    return megdnn_opr()->get_workspace_in_bytes(
+            {input_shapes[0], input(0)->dtype(), input(0)->format()},
+            {input_shapes[1], input(1)->dtype(), input(1)->format()},
+            {input_shapes[2], input(2)->dtype(), input(2)->format()},
+            {input_shapes[3], input(3)->dtype(), input(3)->format()},
+            {output_shapes[0], output(0)->dtype(), output(0)->format()});
+}
+
+void RegionRestrictedConvolutionBackwardFilter::scn_do_execute() {
+    megdnn_opr()->exec(
+            input(0)->dev_tensor().as_megdnn(),  // src
+            input(1)->dev_tensor().as_megdnn(),  // diff
+            input(2)->dev_tensor().as_megdnn(),  // rin
+            input(3)->dev_tensor().as_megdnn(),  // rout
+            output(0)->dev_tensor().as_megdnn(),
+            intl::get_megdnn_workspace_from_var(output().back()));
+}
+#if MGB_ENABLE_GRAD
+MGB_IMPL_OPR_GRAD(RegionRestrictedConvolutionBackwardFilter) {
+    if (wrt_idx == 0) {
+        return RegionRestrictedConvolutionBackwardData::make(
+                       out_grad[0] /*filter*/, opr.input(1) /*diff*/,
+                       opr.input(2) /*rin*/, opr.input(3) /*rout*/,
+                       opr.input(0) /*src*/, opr.param())
+                .node();
+    }
+    if (wrt_idx == 1) {
+        return RegionRestrictedConvolution::make(
+                       opr.input(0) /*src*/, out_grad[0] /*filter*/,
+                       opr.input(2) /*rin*/, opr.input(3) /*rout*/, opr.param())
+                .node();
+    }
+    return nullptr;
+}
+#endif
 
 #undef IMPL_CONV
 

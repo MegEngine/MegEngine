@@ -12,6 +12,7 @@ from ..functional import (
     deformable_conv2d,
     local_conv2d,
     pad,
+    region_restricted_conv,
     relu,
 )
 from ..tensor import Parameter
@@ -982,3 +983,174 @@ class ConvTranspose3d(_ConvNd):
             self.output_padding,
             self.dilation,
         )
+
+
+class RegionRestrictedConv(_ConvNd):
+
+    r"""Applies a 2D RegionRestricted Convolution over an input tensor.
+
+    For instance, given an input of the size :math:`(N, C_{\text{in}}, H, W)`,
+    this layer generates an output of the size
+    :math:`(N, C_{\text{out}}, H_{\text{out}}, W_{\text{out}})` through the
+    process described as below:
+
+    .. math::
+        \text{out}(N_i, C_{\text{out}_j}) =
+        \sum_{k = 0}^{C_{\text{in}} - 1} \text{weight}(C_{\text{out}_j}, k) \star \text{input}(N_i, k)
+
+    where :math:`\star` is the valid 2D cross-correlation operator,
+    :math:`N` is batch size, :math:`C` denotes number of channels,
+    :math:`H` is height of input planes in pixels, and :math:`W` is
+    width in pixels.
+
+    In general, output feature maps' shapes can be inferred as follows:
+
+    input: :math:`(N, C_{\text{in}}, H_{\text{in}}, W_{\text{in}})`
+
+    output: :math:`(N, C_{\text{out}}, H_{\text{out}}, W_{\text{out}})` where
+
+    .. math::
+        \text{H}_{out} = \lfloor \frac{\text{H}_{in} + 2 * \text{padding[0]} -
+        \text{dilation[0]} * (\text{kernel_size[0]} - 1) - 1}{\text{stride[0]}} + 1 \rfloor
+
+    .. math::
+        \text{W}_{out} = \lfloor \frac{\text{W}_{in} + 2 * \text{padding[1]} -
+        \text{dilation[1]} * (\text{kernel_size[1]} - 1) - 1}{\text{stride[1]}} + 1 \rfloor
+
+    When `groups == in_channels` and `out_channels == K * in_channels`,
+    where K is a positive integer, this operation is also known as depthwise
+    convolution.
+
+    In other words, for an input of size :math:`(N, C_{in}, H_{in}, W_{in})`,
+    a depthwise convolution with a depthwise multiplier `K`, can be constructed
+    by arguments :math:`(in\_channels=C_{in}, out\_channels=C_{in} \times K, ..., groups=C_{in})`.
+
+    Args:
+        in_channels: number of input channels.
+        out_channels: number of output channels.
+        kernel_size: size of weight on spatial dimensions. If kernel_size is
+            an :class:`int`, the actual kernel size would be
+            ``(kernel_size, kernel_size)``.
+        stride: stride of the 2D convolution operation. Default: 1
+        padding: size of the paddings added to the input on both sides of its
+            spatial dimensions. Default: 0
+        dilation: dilation of the 2D convolution operation. Default: 1
+        groups: number of groups into which the input and output channels are divided,
+            so as to perform a ``grouped convolution``. When ``groups`` is not 1,
+            ``in_channels`` and ``out_channels`` must be divisible by ``groups``,
+            and the shape of weight should be ``(groups, out_channel // groups,
+            in_channels // groups, height, width)``. Default: 1
+        conv_mode: Supports `cross_correlation`. Default: `cross_correlation`
+        compute_mode: When set to "default", no special requirements will be
+            placed on the precision of intermediate results. When set to "float32",
+            "float32" would be used for accumulator and intermediate result, but only
+            effective when input and output are of float16 dtype.
+        padding_mode: "zeros", "reflect" or "replicate". Default: "zeros".
+            Refer to :class:`~.module.padding.Pad` for more information.
+
+    Note:
+        * ``weight`` usually has shape ``(out_channels, in_channels, height, width)`` ,
+            if groups is not 1, shape will be ``(groups, out_channels // groups, in_channels // groups, height, width)``
+
+    Examples:
+        >>> import numpy as np
+        >>> import megengine as mge
+        >>> import megengine.module as M
+        >>> rrconv = M.RegionRestrictedConv(in_channels=2, out_channels=2, kernel_size=2, groups=2)
+        >>> inp = mge.tensor(np.random.randn(1, 2, 2, 2).astype(np.float32))
+        >>> rin = mge.tensor(np.random.randn(1, 2, 2).astype(np.int32))
+        >>> rout = mge.tensor(np.random.randn(1, 1, 1).astype(np.int32))
+        >>> oup = rrconv(inp, rin, rout)
+        >>> oup.numpy().shape
+        (1, 2, 1, 1)
+    """
+
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        kernel_size: Union[int, Tuple[int, int]],
+        groups: int,
+        stride: Union[int, Tuple[int, int]] = 1,
+        padding: Union[int, Tuple[int, int]] = 0,
+        dilation: Union[int, Tuple[int, int]] = 1,
+        conv_mode: str = "cross_correlation",
+        compute_mode: str = "default",
+        padding_mode: str = "zeros",
+        **kwargs
+    ):
+        kernel_size = _pair_nonzero(kernel_size)
+        stride = _pair_nonzero(stride)
+        padding = _pair(padding)
+        dilation = _pair_nonzero(dilation)
+        self.conv_mode = conv_mode
+        self.compute_mode = compute_mode
+        self.padding_mode = padding_mode
+        super().__init__(
+            in_channels,
+            out_channels,
+            kernel_size,
+            stride,
+            padding,
+            0,
+            dilation,
+            groups,
+            False,
+            **kwargs,
+        )
+
+    def _get_fanin(self):
+        kh, kw = self.kernel_size
+        ic = self.in_channels
+        return kh * kw * ic
+
+    def _infer_weight_shape(self):
+        group = self.groups
+        ichl = self.in_channels
+        ochl = self.out_channels
+        kh, kw = self.kernel_size
+        if group == 1:
+            # Assume format is NCHW
+            return (ochl, ichl, kh, kw)
+
+        assert (
+            ichl % group == 0 and ochl % group == 0
+        ), "invalid config: in_channels={} out_channels={} group={}".format(
+            ichl, ochl, group
+        )
+        # Assume format is NCHW
+        return (group, ochl // group, ichl // group, kh, kw)
+
+    def _infer_bias_shape(self):
+        # Assume format is NCHW
+        return (1, self.out_channels, 1, 1)
+
+    def get_pad_width(self):
+        return (
+            (0, 0),
+            (0, 0),
+            (self.padding[0], self.padding[0]),
+            (self.padding[1], self.padding[1]),
+        )
+
+    def calc_conv(self, inp, weight, rin, rout):
+        assert self.padding_mode in [
+            "zeros",
+            "reflect",
+            "replicate",
+        ]
+        return region_restricted_conv(
+            inp,
+            weight,
+            rin,
+            rout,
+            self.stride,
+            self.padding,
+            self.dilation,
+            self.groups,
+            self.conv_mode,
+            self.compute_mode,
+        )
+
+    def forward(self, inp, rin, rout):
+        return self.calc_conv(inp, self.weight, rin, rout)

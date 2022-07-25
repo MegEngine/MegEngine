@@ -930,6 +930,179 @@ def test_batch_conv_bias():
     run(1, 4, 4, 5, 5, 3, 3, 0, 0, 1, 1, True)
 
 
+def test_region_restricted_conv_forward_backward_naive():
+    import megengine as mge
+    import megengine.module as M
+    from megengine.autodiff import GradManager
+
+    handle = "cpu0"
+    src_1 = np.arange(8).reshape(1, 2, 2, 2).astype(np.float32)
+    filter_1 = np.arange(8).reshape(2, 1, 1, 2, 2).astype(np.float32)
+    rin_1 = np.array([1, 1, 1, 1]).reshape(1, 2, 2).astype(np.int32)
+    rout_1 = np.array([1]).reshape(1, 1, 1).astype(np.int32)
+    cpu_src = tensor(src_1, device=handle)
+    cpu_filter = tensor(filter_1, device=handle)
+    gm = GradManager().attach([cpu_src, cpu_filter])
+    with gm:
+        cpu_out = F.region_restricted_conv(
+            cpu_src,
+            cpu_filter,
+            tensor(rin_1, device=handle),
+            tensor(rout_1, device=handle),
+            groups=2,
+        )
+        gm.backward(cpu_out, tensor(np.ones((1, 2, 1, 1)), device=handle))
+    np.testing.assert_allclose(
+        cpu_src.grad, np.array([0, 1, 2, 3, 4, 5, 6, 7]).reshape(1, 2, 2, 2)
+    )
+    np.testing.assert_allclose(
+        cpu_filter.grad, np.array([0, 1, 2, 3, 4, 5, 6, 7]).reshape(2, 1, 1, 2, 2)
+    )
+
+
+@pytest.mark.skipif(
+    not is_cuda_available(), reason="rrconv cuda kernel requires cuda available"
+)
+def test_region_restricted_conv_forward_backward_cuda():
+    import megengine as mge
+    import megengine.module as M
+    from megengine.autodiff import GradManager
+    import megengine.distributed as dist
+
+    # params
+    handle = "gpu0"
+    N = 1
+    GROUP = 3
+    FH = FW = 2
+    IH = IW = 2
+    OH = OW = 1
+    ICPG = OCPG = 1
+    grad_shape = (N, GROUP * ICPG, IH, IW)
+    src_shape = grad_shape
+    filter_shape = (GROUP, OCPG, ICPG, FH, FW)
+    diff_shape = (N, GROUP * OCPG, OH, OW)
+    rin_shape = (N, IH, IW)
+    rout_shape = (N, OH, OW)
+
+    def reduce(shape):
+        mul = 1
+        for x in shape:
+            mul *= x
+        return mul
+
+    def get_groundtruth():
+        src = tensor(
+            np.arange(reduce(src_shape)).reshape(src_shape).astype(np.float32),
+            device="cpu0",
+        )
+        filter = tensor(np.ones(filter_shape).astype(np.float32), device="cpu0")
+        rin = tensor(np.ones(rin_shape).astype(np.int32), device="cpu0")
+        rout = tensor(np.ones(rout_shape).astype(np.int32), device="cpu0")
+        gm = GradManager().attach([src, filter])
+        with gm:
+            expected_out = F.region_restricted_conv(
+                src, filter, rin, rout, groups=GROUP
+            )
+            gm.backward(
+                expected_out,
+                tensor(np.ones(diff_shape, dtype=np.float32), device="cpu0"),
+            )
+        return src, filter
+
+    expected_src, expected_filter = get_groundtruth()
+
+    src = tensor(
+        np.arange(reduce(src_shape)).reshape(src_shape).astype(np.float32),
+        device=handle,
+    )
+    filter = tensor(np.ones(filter_shape).astype(np.float32), device=handle)
+    rin = tensor(np.ones(rin_shape).astype(np.int32), device=handle)
+    rout = tensor(np.ones(rout_shape).astype(np.int32), device=handle)
+    gm = GradManager().attach([src, filter])
+    with gm:
+        gpu_out = F.region_restricted_conv(src, filter, rin, rout, groups=GROUP)
+        gm.backward(gpu_out, tensor(np.ones(diff_shape), device=handle))
+        np.testing.assert_allclose(src.grad, expected_src.grad)
+        np.testing.assert_allclose(filter.grad, expected_filter.grad)
+
+
+@pytest.mark.skipif(
+    not is_cuda_available(), reason="rrconv cuda kernel requires cuda available"
+)
+def test_region_restricted_conv_forward_backward_uint8():
+    import megengine as mge
+    import megengine.module as M
+    from megengine.autodiff import GradManager
+
+    # params
+    handle = "gpu0"
+    N = 1
+    GROUP = 2
+    FH = FW = 1
+    IH = IW = 4
+    OH = OW = 4
+    ICPG = OCPG = 1
+    grad_shape = (N, GROUP * ICPG, IH, IW)
+    src_shape = grad_shape
+    filter_shape = (GROUP, OCPG, ICPG, FH, FW)
+    diff_shape = (N, GROUP * OCPG, OH, OW)
+    rin_shape = (N, IH, IW)
+    rout_shape = (N, OH, OW)
+
+    def reduce(shape):
+        mul = 1
+        for x in shape:
+            mul *= x
+        return mul
+
+    def get_groundtruth():
+        src = tensor(
+            np.arange(reduce(src_shape)).reshape(src_shape).astype(np.float32),
+            device="cpu0",
+        )
+        filter = tensor(np.ones(filter_shape).astype(np.float32), device="cpu0")
+        rin = tensor(np.ones(rin_shape).astype(np.int32), device="cpu0")
+        rout = tensor(np.ones(rout_shape).astype(np.int32), device="cpu0")
+        gm = GradManager().attach([src, filter])
+        with gm:
+            expected_out = F.region_restricted_conv(
+                src, filter, rin, rout, groups=GROUP
+            )
+            gm.backward(
+                expected_out,
+                tensor(np.ones(diff_shape, dtype=np.float32), device="cpu0"),
+            )
+        return src, filter
+
+    expected_src, expected_filter = get_groundtruth()
+
+    # forward and dgrad/wgrad
+    src = tensor(
+        np.arange(reduce(src_shape)).reshape(src_shape).astype(np.float32),
+        device=handle,
+    )
+    filter = tensor(np.ones(filter_shape).astype(np.float32), device=handle)
+    rin = tensor(np.ones(rin_shape).astype(np.uint8), device=handle)
+    rout = tensor(np.ones(rout_shape).astype(np.uint8), device=handle)
+
+    gm = GradManager().attach([src, filter])
+    with gm:
+        gpu_out = F.region_restricted_conv(src, filter, rin, rout, groups=GROUP)
+        gm.backward(
+            gpu_out, tensor(np.ones(diff_shape, dtype=np.float32), device=handle)
+        )
+        # assert uint8 gpu result close to cpu result
+        np.testing.assert_allclose(src.grad, expected_src.grad)
+        np.testing.assert_allclose(filter.grad, expected_filter.grad)
+
+
+def test_region_restricted_conv():
+    test_region_restricted_conv_forward_backward_naive()
+    if is_cuda_available():
+        test_region_restricted_conv_forward_backward_cuda()
+        test_region_restricted_conv_forward_backward_uint8()
+
+
 def test_conv2d_autocast():
     """check amp's result is equal to manually converted result"""
     amp.enabled = True

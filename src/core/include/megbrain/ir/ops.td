@@ -520,4 +520,9 @@ def MeshGrid: MgbHashableOp<"MeshGrid"> {
   MgbStringAttr:$indexing
   );
 }
+
+def RegionRestrictedConvolution: MgbHashableOp<"RegionRestrictedConvolution", [ConvolutionParam]>;
+
+def RegionRestrictedConvolutionBackwardData: MgbHashableOp<"RegionRestrictedConvolutionBackwardData", [ConvolutionParam]>;
+
 #endif // MGB_OPS

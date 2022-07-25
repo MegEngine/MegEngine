@@ -18,6 +18,12 @@ protected:
     static void init_output_static_infer_desc_for_bwd_data(cg::OperatorNodeBase* self);
 };
 
+class RegionConvBackwardDataMixin : public cg::OperatorNodeMixinBase {
+protected:
+    template <typename MGBOPR, typename DNNOPR>
+    static void init_output_static_infer_desc_for_bwd_data(cg::OperatorNodeBase* self);
+};
+
 class WeightPreprocessExecutor : public cg::OperatorNodeMixinBase {
     class PreprocessedFilterExecDep;
 
@@ -82,6 +88,80 @@ namespace testing {
 class ConvolutionTestingPeer;
 
 }  // namespace testing
+
+/* ==================== RegionRestrictedConvolutionForward  ==================== */
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(
+        RegionRestrictedConvolutionForward,
+        intl::MegDNNOprWrapperFwd<megdnn::RegionRestrictedConvolutionForward>) // {
+    size_t get_workspace_size_bytes(
+            const TensorShapeArray& input_shapes,
+            const TensorShapeArray& output_shapes) const override;
+    void init_output_dtype() override;
+
+public:
+    MGE_WIN_DECLSPEC_FUC RegionRestrictedConvolutionForward(
+            VarNode* src, VarNode* filter, VarNode* region_in, VarNode* region_out,
+            const Param& param, const OperatorNodeConfig& config);
+
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
+            SymbolVar src, SymbolVar filter, SymbolVar region_in, SymbolVar region_out,
+            const Param& param, const OperatorNodeConfig& config = {});
+};
+using RegionRestrictedConvolution = RegionRestrictedConvolutionForward;
+
+/* ==================== RegionRestrictedConvolutionBackwardData  ==================== */
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(
+        RegionRestrictedConvolutionBackwardData,
+        cg::SingleCNOperatorNodeBaseT<mixin::MegDNNOprHolderImpl<
+                megdnn::RegionRestrictedConvolutionBackwardData>>,
+        public mixin::RegionConvBackwardDataMixin) // {
+    void scn_do_execute() override;
+    void init_output_static_infer_desc() override;
+    NodeProp* do_make_node_prop() const override;
+    void init_output_dtype() override;
+
+public:
+    MGE_WIN_DECLSPEC_FUC RegionRestrictedConvolutionBackwardData(
+            VarNode* filter, VarNode* diff, VarNode* region_in, VarNode* region_out,
+            VarNode* src, const Param& param, const OperatorNodeConfig& config);
+
+    // grad mode
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
+            SymbolVar filter, SymbolVar diff, SymbolVar region_in, SymbolVar region_out,
+            SymbolVar src, const Param& param, const OperatorNodeConfig& config = {});
+
+    // sereg for deconv mode
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
+            SymbolVar filter, SymbolVar diff, SymbolVar region_in, SymbolVar region_out,
+            const Param& param, const OperatorNodeConfig& config = {});
+
+    // user interface for deconv
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make_deconv(
+            SymbolVar data, SymbolVar filter, SymbolVar region_in, SymbolVar region_out,
+            const Param& param = {}, const OperatorNodeConfig& config = {}) {
+        return make(filter, data, region_in, region_out, param, config);
+    }
+};
+
+/* ==================== RegionRestrictedConvolutionBackwardFilter  ==================== */
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(
+        RegionRestrictedConvolutionBackwardFilter,
+        intl::MegDNNOprWrapperBwd<megdnn::RegionRestrictedConvolutionBackwardFilter>) // {
+    size_t get_workspace_size_bytes(
+            const TensorShapeArray& input_shapes,
+            const TensorShapeArray& output_shapes) const override;
+    void scn_do_execute() override;
+
+public:
+    MGE_WIN_DECLSPEC_FUC RegionRestrictedConvolutionBackwardFilter(
+            VarNode* src, VarNode* diff, VarNode* region_in, VarNode* region_out,
+            VarNode* filter, const Param& param, const OperatorNodeConfig& config);
+
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
+            SymbolVar src, SymbolVar diff, SymbolVar region_in, SymbolVar region_out,
+            SymbolVar filter, const Param& param,
+            const OperatorNodeConfig& config = {});
+};
 
 MGB_DEFINE_OPR_CLASS_WITH_EXPORT(
         ConvolutionForward, intl::ConvolutionForwardBase,

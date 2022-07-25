@@ -194,6 +194,30 @@ struct OprLoadDumpImplV2<opr::DeformableConvBackwardFilter, 0>
                   MakeConvCaller5<megdnn::DeformableConvBackwardFilter>,
                   megdnn::Convolution> {};
 
+template <>
+struct OprMaker<opr::RegionRestrictedConvolutionBackwardData, 0> {
+    using Opr = opr::RegionRestrictedConvolutionBackwardData;
+    using Param = Opr::Param;
+    static cg::OperatorNodeBase* make(
+            const Param& param, const cg::VarNodeArray& inputs, ComputingGraph& graph,
+            const OperatorNodeConfig& config) {
+        MGB_MARK_USED_VAR(graph);
+        if (inputs.size() == 4) {  // deconv mode
+            return Opr::make(inputs[0], inputs[1], inputs[2], inputs[3], param, config)
+                    .node()
+                    ->owner_opr();
+        } else if (inputs.size() == 5) {  // dgrad mode
+            return Opr::make(
+                           inputs[0], inputs[1], inputs[2], inputs[3], inputs[4], param,
+                           config)
+                    .node()
+                    ->owner_opr();
+        } else {
+            return nullptr;
+        }
+    }
+};
+
 }  // namespace serialization
 
 namespace opr {
@@ -219,6 +243,10 @@ SERGE_OPR_V2_NO_CONVERTER(ConvolutionBackwardFilter, 0)
 SERGE_OPR_V2_NO_CONVERTER(Convolution3D, 0);
 SERGE_OPR_V2_NO_CONVERTER(Convolution3DBackwardData, 0);
 SERGE_OPR_V2_NO_CONVERTER(Convolution3DBackwardFilter, 0);
+
+MGB_SEREG_OPR(RegionRestrictedConvolutionBackwardData, 0);
+MGB_SEREG_OPR(RegionRestrictedConvolution, 4);
+MGB_SEREG_OPR(RegionRestrictedConvolutionBackwardFilter, 5);
 
 SERGE_OPR_V2_NO_CONVERTER(LocalShareForward, 0);
 SERGE_OPR_V2_NO_CONVERTER(LocalShareBackwardData, 0);

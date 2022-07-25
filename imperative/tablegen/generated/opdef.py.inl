@@ -1620,6 +1620,52 @@ ReduceInst
     .def_readwrite("data_type", &Reduce::data_type)
     .def_readwrite("keepdim", &Reduce::keepdim);
 
+py::class_<RegionRestrictedConvolution, std::shared_ptr<RegionRestrictedConvolution>, OpDef> RegionRestrictedConvolutionInst(m, "RegionRestrictedConvolution");
+
+RegionRestrictedConvolutionInst.attr("Mode") = BatchConvBiasInst.attr("Mode");
+
+RegionRestrictedConvolutionInst.attr("Sparse") = BatchConvBiasInst.attr("Sparse");
+
+RegionRestrictedConvolutionInst.attr("Format") = AdaptivePoolingInst.attr("Format");
+
+RegionRestrictedConvolutionInst.attr("ComputeMode") = BatchConvBiasInst.attr("ComputeMode");
+
+RegionRestrictedConvolutionInst
+    .def(py::init<::megdnn::param::Convolution::Mode, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, ::megdnn::param::Convolution::Sparse, ::megdnn::param::Convolution::Format, ::megdnn::param::Convolution::ComputeMode, std::string>(), py::arg("mode") = ::megdnn::param::Convolution::Mode::CROSS_CORRELATION, py::arg("pad_h") = 0, py::arg("pad_w") = 0, py::arg("stride_h") = 1, py::arg("stride_w") = 1, py::arg("dilate_h") = 1, py::arg("dilate_w") = 1, py::arg("sparse") = ::megdnn::param::Convolution::Sparse::DENSE, py::arg("format") = ::megdnn::param::Convolution::Format::NCHW, py::arg("compute_mode") = ::megdnn::param::Convolution::ComputeMode::DEFAULT, py::arg("scope") = {})
+    .def_readwrite("mode", &RegionRestrictedConvolution::mode)
+    .def_readwrite("pad_h", &RegionRestrictedConvolution::pad_h)
+    .def_readwrite("pad_w", &RegionRestrictedConvolution::pad_w)
+    .def_readwrite("stride_h", &RegionRestrictedConvolution::stride_h)
+    .def_readwrite("stride_w", &RegionRestrictedConvolution::stride_w)
+    .def_readwrite("dilate_h", &RegionRestrictedConvolution::dilate_h)
+    .def_readwrite("dilate_w", &RegionRestrictedConvolution::dilate_w)
+    .def_readwrite("sparse", &RegionRestrictedConvolution::sparse)
+    .def_readwrite("format", &RegionRestrictedConvolution::format)
+    .def_readwrite("compute_mode", &RegionRestrictedConvolution::compute_mode);
+
+py::class_<RegionRestrictedConvolutionBackwardData, std::shared_ptr<RegionRestrictedConvolutionBackwardData>, OpDef> RegionRestrictedConvolutionBackwardDataInst(m, "RegionRestrictedConvolutionBackwardData");
+
+RegionRestrictedConvolutionBackwardDataInst.attr("Mode") = BatchConvBiasInst.attr("Mode");
+
+RegionRestrictedConvolutionBackwardDataInst.attr("Sparse") = BatchConvBiasInst.attr("Sparse");
+
+RegionRestrictedConvolutionBackwardDataInst.attr("Format") = AdaptivePoolingInst.attr("Format");
+
+RegionRestrictedConvolutionBackwardDataInst.attr("ComputeMode") = BatchConvBiasInst.attr("ComputeMode");
+
+RegionRestrictedConvolutionBackwardDataInst
+    .def(py::init<::megdnn::param::Convolution::Mode, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, ::megdnn::param::Convolution::Sparse, ::megdnn::param::Convolution::Format, ::megdnn::param::Convolution::ComputeMode, std::string>(), py::arg("mode") = ::megdnn::param::Convolution::Mode::CROSS_CORRELATION, py::arg("pad_h") = 0, py::arg("pad_w") = 0, py::arg("stride_h") = 1, py::arg("stride_w") = 1, py::arg("dilate_h") = 1, py::arg("dilate_w") = 1, py::arg("sparse") = ::megdnn::param::Convolution::Sparse::DENSE, py::arg("format") = ::megdnn::param::Convolution::Format::NCHW, py::arg("compute_mode") = ::megdnn::param::Convolution::ComputeMode::DEFAULT, py::arg("scope") = {})
+    .def_readwrite("mode", &RegionRestrictedConvolutionBackwardData::mode)
+    .def_readwrite("pad_h", &RegionRestrictedConvolutionBackwardData::pad_h)
+    .def_readwrite("pad_w", &RegionRestrictedConvolutionBackwardData::pad_w)
+    .def_readwrite("stride_h", &RegionRestrictedConvolutionBackwardData::stride_h)
+    .def_readwrite("stride_w", &RegionRestrictedConvolutionBackwardData::stride_w)
+    .def_readwrite("dilate_h", &RegionRestrictedConvolutionBackwardData::dilate_h)
+    .def_readwrite("dilate_w", &RegionRestrictedConvolutionBackwardData::dilate_w)
+    .def_readwrite("sparse", &RegionRestrictedConvolutionBackwardData::sparse)
+    .def_readwrite("format", &RegionRestrictedConvolutionBackwardData::format)
+    .def_readwrite("compute_mode", &RegionRestrictedConvolutionBackwardData::compute_mode);
+
 py::class_<Remap, std::shared_ptr<Remap>, OpDef> RemapInst(m, "Remap");
 
 py::enum_<Remap::InterpolationMode>(RemapInst, "InterpolationMode")

@@ -5694,6 +5694,310 @@ OP_TRAIT_REG(Reduce, Reduce)
     .props(Reduce_props_impl)
     .make_name(Reduce_make_name_impl);
 
+MGB_DYN_TYPE_OBJ_FINAL_IMPL(RegionRestrictedConvolution);
+
+namespace {
+size_t RegionRestrictedConvolution_hash_impl(const OpDef& def_) {
+    auto&& op_ = def_.cast_final_safe<RegionRestrictedConvolution>();
+    static_cast<void>(op_);
+    size_t val = mgb::hash(op_.dyn_typeinfo());
+    val = mgb::hash_pair_combine(val, mgb::enumhash()(op_.mode));
+    val = mgb::hash_pair_combine(val, mgb::hash(op_.pad_h));
+    val = mgb::hash_pair_combine(val, mgb::hash(op_.pad_w));
+    val = mgb::hash_pair_combine(val, mgb::hash(op_.stride_h));
+    val = mgb::hash_pair_combine(val, mgb::hash(op_.stride_w));
+    val = mgb::hash_pair_combine(val, mgb::hash(op_.dilate_h));
+    val = mgb::hash_pair_combine(val, mgb::hash(op_.dilate_w));
+    val = mgb::hash_pair_combine(val, mgb::enumhash()(op_.sparse));
+    val = mgb::hash_pair_combine(val, mgb::enumhash()(op_.format));
+    val = mgb::hash_pair_combine(val, mgb::enumhash()(op_.compute_mode));
+    return val;
+}
+bool RegionRestrictedConvolution_is_same_st_impl(const OpDef& lhs_, const OpDef& rhs_) {
+    auto &&a_ = lhs_.cast_final_safe<RegionRestrictedConvolution>(),
+         &&b_ = rhs_.cast_final_safe<RegionRestrictedConvolution>();
+    static_cast<void>(a_);
+    static_cast<void>(b_);
+    if (a_.mode != b_.mode) return false;
+    if (a_.pad_h != b_.pad_h) return false;
+    if (a_.pad_w != b_.pad_w) return false;
+    if (a_.stride_h != b_.stride_h) return false;
+    if (a_.stride_w != b_.stride_w) return false;
+    if (a_.dilate_h != b_.dilate_h) return false;
+    if (a_.dilate_w != b_.dilate_w) return false;
+    if (a_.sparse != b_.sparse) return false;
+    if (a_.format != b_.format) return false;
+    if (a_.compute_mode != b_.compute_mode) return false;
+    return true;
+}
+std::vector<std::pair<const char*, std::string>> RegionRestrictedConvolution_props_impl(const OpDef& def_) {
+    auto&& op_ = def_.cast_final_safe<RegionRestrictedConvolution>();
+    static_cast<void>(op_);
+    std::vector<std::pair<const char*, std::string>> props_;
+    switch (op_.mode){
+    case RegionRestrictedConvolution::Mode::CROSS_CORRELATION:
+        props_.emplace_back("mode", "CROSS_CORRELATION");
+        break;
+    case RegionRestrictedConvolution::Mode::CONVOLUTION:
+        props_.emplace_back("mode", "CONVOLUTION");
+        break;
+    default:
+        props_.emplace_back("mode", "INVALID");
+        break;
+    }
+    props_.emplace_back("pad_h", std::to_string(op_.pad_h));
+    props_.emplace_back("pad_w", std::to_string(op_.pad_w));
+    props_.emplace_back("stride_h", std::to_string(op_.stride_h));
+    props_.emplace_back("stride_w", std::to_string(op_.stride_w));
+    props_.emplace_back("dilate_h", std::to_string(op_.dilate_h));
+    props_.emplace_back("dilate_w", std::to_string(op_.dilate_w));
+    switch (op_.sparse){
+    case RegionRestrictedConvolution::Sparse::DENSE:
+        props_.emplace_back("sparse", "DENSE");
+        break;
+    case RegionRestrictedConvolution::Sparse::GROUP:
+        props_.emplace_back("sparse", "GROUP");
+        break;
+    default:
+        props_.emplace_back("sparse", "INVALID");
+        break;
+    }
+    switch (op_.format){
+    case RegionRestrictedConvolution::Format::NCHW:
+        props_.emplace_back("format", "NCHW");
+        break;
+    case RegionRestrictedConvolution::Format::NHWC:
+        props_.emplace_back("format", "NHWC");
+        break;
+    case RegionRestrictedConvolution::Format::NHWCD4:
+        props_.emplace_back("format", "NHWCD4");
+        break;
+    case RegionRestrictedConvolution::Format::NCHW4:
+        props_.emplace_back("format", "NCHW4");
+        break;
+    case RegionRestrictedConvolution::Format::NCHW8:
+        props_.emplace_back("format", "NCHW8");
+        break;
+    case RegionRestrictedConvolution::Format::NCHW32:
+        props_.emplace_back("format", "NCHW32");
+        break;
+    case RegionRestrictedConvolution::Format::NCHW88:
+        props_.emplace_back("format", "NCHW88");
+        break;
+    case RegionRestrictedConvolution::Format::NCHW44:
+        props_.emplace_back("format", "NCHW44");
+        break;
+    case RegionRestrictedConvolution::Format::NCHW44_DOT:
+        props_.emplace_back("format", "NCHW44_DOT");
+        break;
+    case RegionRestrictedConvolution::Format::NCHW4_NCHW32:
+        props_.emplace_back("format", "NCHW4_NCHW32");
+        break;
+    case RegionRestrictedConvolution::Format::NCHW32_NCHW4:
+        props_.emplace_back("format", "NCHW32_NCHW4");
+        break;
+    case RegionRestrictedConvolution::Format::NCHW4_NCHW:
+        props_.emplace_back("format", "NCHW4_NCHW");
+        break;
+    case RegionRestrictedConvolution::Format::NHWC_NCHW:
+        props_.emplace_back("format", "NHWC_NCHW");
+        break;
+    case RegionRestrictedConvolution::Format::NHWC_NCHW4_IC_SMALL:
+        props_.emplace_back("format", "NHWC_NCHW4_IC_SMALL");
+        break;
+    case RegionRestrictedConvolution::Format::NCHW_NCHW4_IC_SMALL:
+        props_.emplace_back("format", "NCHW_NCHW4_IC_SMALL");
+        break;
+    case RegionRestrictedConvolution::Format::CHWN4:
+        props_.emplace_back("format", "CHWN4");
+        break;
+    case RegionRestrictedConvolution::Format::NCHW64:
+        props_.emplace_back("format", "NCHW64");
+        break;
+    case RegionRestrictedConvolution::Format::NCHW4_NHWC:
+        props_.emplace_back("format", "NCHW4_NHWC");
+        break;
+    default:
+        props_.emplace_back("format", "INVALID");
+        break;
+    }
+    switch (op_.compute_mode){
+    case RegionRestrictedConvolution::ComputeMode::DEFAULT:
+        props_.emplace_back("compute_mode", "DEFAULT");
+        break;
+    case RegionRestrictedConvolution::ComputeMode::FLOAT32:
+        props_.emplace_back("compute_mode", "FLOAT32");
+        break;
+    default:
+        props_.emplace_back("compute_mode", "INVALID");
+        break;
+    }
+    return props_;
+}
+std::string RegionRestrictedConvolution_make_name_impl(const OpDef& def_) {
+    auto&& op_ = def_.cast_final_safe<RegionRestrictedConvolution>();
+    static_cast<void>(op_);
+    return "RegionRestrictedConvolution";
+}
+} // anonymous namespace
+OP_TRAIT_REG(RegionRestrictedConvolution, RegionRestrictedConvolution)
+    .hash(RegionRestrictedConvolution_hash_impl)
+    .is_same_st(RegionRestrictedConvolution_is_same_st_impl)
+    .props(RegionRestrictedConvolution_props_impl)
+    .make_name(RegionRestrictedConvolution_make_name_impl);
+
+MGB_DYN_TYPE_OBJ_FINAL_IMPL(RegionRestrictedConvolutionBackwardData);
+
+namespace {
+size_t RegionRestrictedConvolutionBackwardData_hash_impl(const OpDef& def_) {
+    auto&& op_ = def_.cast_final_safe<RegionRestrictedConvolutionBackwardData>();
+    static_cast<void>(op_);
+    size_t val = mgb::hash(op_.dyn_typeinfo());
+    val = mgb::hash_pair_combine(val, mgb::enumhash()(op_.mode));
+    val = mgb::hash_pair_combine(val, mgb::hash(op_.pad_h));
+    val = mgb::hash_pair_combine(val, mgb::hash(op_.pad_w));
+    val = mgb::hash_pair_combine(val, mgb::hash(op_.stride_h));
+    val = mgb::hash_pair_combine(val, mgb::hash(op_.stride_w));
+    val = mgb::hash_pair_combine(val, mgb::hash(op_.dilate_h));
+    val = mgb::hash_pair_combine(val, mgb::hash(op_.dilate_w));
+    val = mgb::hash_pair_combine(val, mgb::enumhash()(op_.sparse));
+    val = mgb::hash_pair_combine(val, mgb::enumhash()(op_.format));
+    val = mgb::hash_pair_combine(val, mgb::enumhash()(op_.compute_mode));
+    return val;
+}
+bool RegionRestrictedConvolutionBackwardData_is_same_st_impl(const OpDef& lhs_, const OpDef& rhs_) {
+    auto &&a_ = lhs_.cast_final_safe<RegionRestrictedConvolutionBackwardData>(),
+         &&b_ = rhs_.cast_final_safe<RegionRestrictedConvolutionBackwardData>();
+    static_cast<void>(a_);
+    static_cast<void>(b_);
+    if (a_.mode != b_.mode) return false;
+    if (a_.pad_h != b_.pad_h) return false;
+    if (a_.pad_w != b_.pad_w) return false;
+    if (a_.stride_h != b_.stride_h) return false;
+    if (a_.stride_w != b_.stride_w) return false;
+    if (a_.dilate_h != b_.dilate_h) return false;
+    if (a_.dilate_w != b_.dilate_w) return false;
+    if (a_.sparse != b_.sparse) return false;
+    if (a_.format != b_.format) return false;
+    if (a_.compute_mode != b_.compute_mode) return false;
+    return true;
+}
+std::vector<std::pair<const char*, std::string>> RegionRestrictedConvolutionBackwardData_props_impl(const OpDef& def_) {
+    auto&& op_ = def_.cast_final_safe<RegionRestrictedConvolutionBackwardData>();
+    static_cast<void>(op_);
+    std::vector<std::pair<const char*, std::string>> props_;
+    switch (op_.mode){
+    case RegionRestrictedConvolutionBackwardData::Mode::CROSS_CORRELATION:
+        props_.emplace_back("mode", "CROSS_CORRELATION");
+        break;
+    case RegionRestrictedConvolutionBackwardData::Mode::CONVOLUTION:
+        props_.emplace_back("mode", "CONVOLUTION");
+        break;
+    default:
+        props_.emplace_back("mode", "INVALID");
+        break;
+    }
+    props_.emplace_back("pad_h", std::to_string(op_.pad_h));
+    props_.emplace_back("pad_w", std::to_string(op_.pad_w));
+    props_.emplace_back("stride_h", std::to_string(op_.stride_h));
+    props_.emplace_back("stride_w", std::to_string(op_.stride_w));
+    props_.emplace_back("dilate_h", std::to_string(op_.dilate_h));
+    props_.emplace_back("dilate_w", std::to_string(op_.dilate_w));
+    switch (op_.sparse){
+    case RegionRestrictedConvolutionBackwardData::Sparse::DENSE:
+        props_.emplace_back("sparse", "DENSE");
+        break;
+    case RegionRestrictedConvolutionBackwardData::Sparse::GROUP:
+        props_.emplace_back("sparse", "GROUP");
+        break;
+    default:
+        props_.emplace_back("sparse", "INVALID");
+        break;
+    }
+    switch (op_.format){
+    case RegionRestrictedConvolutionBackwardData::Format::NCHW:
+        props_.emplace_back("format", "NCHW");
+        break;
+    case RegionRestrictedConvolutionBackwardData::Format::NHWC:
+        props_.emplace_back("format", "NHWC");
+        break;
+    case RegionRestrictedConvolutionBackwardData::Format::NHWCD4:
+        props_.emplace_back("format", "NHWCD4");
+        break;
+    case RegionRestrictedConvolutionBackwardData::Format::NCHW4:
+        props_.emplace_back("format", "NCHW4");
+        break;
+    case RegionRestrictedConvolutionBackwardData::Format::NCHW8:
+        props_.emplace_back("format", "NCHW8");
+        break;
+    case RegionRestrictedConvolutionBackwardData::Format::NCHW32:
+        props_.emplace_back("format", "NCHW32");
+        break;
+    case RegionRestrictedConvolutionBackwardData::Format::NCHW88:
+        props_.emplace_back("format", "NCHW88");
+        break;
+    case RegionRestrictedConvolutionBackwardData::Format::NCHW44:
+        props_.emplace_back("format", "NCHW44");
+        break;
+    case RegionRestrictedConvolutionBackwardData::Format::NCHW44_DOT:
+        props_.emplace_back("format", "NCHW44_DOT");
+        break;
+    case RegionRestrictedConvolutionBackwardData::Format::NCHW4_NCHW32:
+        props_.emplace_back("format", "NCHW4_NCHW32");
+        break;
+    case RegionRestrictedConvolutionBackwardData::Format::NCHW32_NCHW4:
+        props_.emplace_back("format", "NCHW32_NCHW4");
+        break;
+    case RegionRestrictedConvolutionBackwardData::Format::NCHW4_NCHW:
+        props_.emplace_back("format", "NCHW4_NCHW");
+        break;
+    case RegionRestrictedConvolutionBackwardData::Format::NHWC_NCHW:
+        props_.emplace_back("format", "NHWC_NCHW");
+        break;
+    case RegionRestrictedConvolutionBackwardData::Format::NHWC_NCHW4_IC_SMALL:
+        props_.emplace_back("format", "NHWC_NCHW4_IC_SMALL");
+        break;
+    case RegionRestrictedConvolutionBackwardData::Format::NCHW_NCHW4_IC_SMALL:
+        props_.emplace_back("format", "NCHW_NCHW4_IC_SMALL");
+        break;
+    case RegionRestrictedConvolutionBackwardData::Format::CHWN4:
+        props_.emplace_back("format", "CHWN4");
+        break;
+    case RegionRestrictedConvolutionBackwardData::Format::NCHW64:
+        props_.emplace_back("format", "NCHW64");
+        break;
+    case RegionRestrictedConvolutionBackwardData::Format::NCHW4_NHWC:
+        props_.emplace_back("format", "NCHW4_NHWC");
+        break;
+    default:
+        props_.emplace_back("format", "INVALID");
+        break;
+    }
+    switch (op_.compute_mode){
+    case RegionRestrictedConvolutionBackwardData::ComputeMode::DEFAULT:
+        props_.emplace_back("compute_mode", "DEFAULT");
+        break;
+    case RegionRestrictedConvolutionBackwardData::ComputeMode::FLOAT32:
+        props_.emplace_back("compute_mode", "FLOAT32");
+        break;
+    default:
+        props_.emplace_back("compute_mode", "INVALID");
+        break;
+    }
+    return props_;
+}
+std::string RegionRestrictedConvolutionBackwardData_make_name_impl(const OpDef& def_) {
+    auto&& op_ = def_.cast_final_safe<RegionRestrictedConvolutionBackwardData>();
+    static_cast<void>(op_);
+    return "RegionRestrictedConvolutionBackwardData";
+}
+} // anonymous namespace
+OP_TRAIT_REG(RegionRestrictedConvolutionBackwardData, RegionRestrictedConvolutionBackwardData)
+    .hash(RegionRestrictedConvolutionBackwardData_hash_impl)
+    .is_same_st(RegionRestrictedConvolutionBackwardData_is_same_st_impl)
+    .props(RegionRestrictedConvolutionBackwardData_props_impl)
+    .make_name(RegionRestrictedConvolutionBackwardData_make_name_impl);
+
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(Remap);
 
 namespace {

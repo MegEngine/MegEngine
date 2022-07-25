@@ -15368,6 +15368,580 @@ void _init_py_Reduce(py::module m) {
     mgb_assert(PyOp(OpDef)::ctype2pytype.emplace(Reduce::typeinfo(), &py_type).second);
 }
 
+void _init_py_RegionRestrictedConvolution_Mode(PyTypeObject& py_type) {
+    auto& e_type = EnumWrapper<RegionRestrictedConvolution::Mode>::type;
+
+    Py_INCREF(e_type);
+    mgb_assert(PyDict_SetItemString(
+        py_type.tp_dict, "Mode", reinterpret_cast<PyObject*>(e_type)) >= 0);
+}
+
+void _init_py_RegionRestrictedConvolution_Sparse(PyTypeObject& py_type) {
+    auto& e_type = EnumWrapper<RegionRestrictedConvolution::Sparse>::type;
+
+    Py_INCREF(e_type);
+    mgb_assert(PyDict_SetItemString(
+        py_type.tp_dict, "Sparse", reinterpret_cast<PyObject*>(e_type)) >= 0);
+}
+
+void _init_py_RegionRestrictedConvolution_Format(PyTypeObject& py_type) {
+    auto& e_type = EnumWrapper<RegionRestrictedConvolution::Format>::type;
+
+    Py_INCREF(e_type);
+    mgb_assert(PyDict_SetItemString(
+        py_type.tp_dict, "Format", reinterpret_cast<PyObject*>(e_type)) >= 0);
+}
+
+void _init_py_RegionRestrictedConvolution_ComputeMode(PyTypeObject& py_type) {
+    auto& e_type = EnumWrapper<RegionRestrictedConvolution::ComputeMode>::type;
+
+    Py_INCREF(e_type);
+    mgb_assert(PyDict_SetItemString(
+        py_type.tp_dict, "ComputeMode", reinterpret_cast<PyObject*>(e_type)) >= 0);
+}
+
+PyOpDefBegin(RegionRestrictedConvolution) // {
+    static PyGetSetDef py_getsetters[];
+    static PyMethodDef tp_methods[];
+    
+    static PyObject* getstate(PyObject* self, PyObject*) {
+        auto& opdef = reinterpret_cast<PyOp(RegionRestrictedConvolution)*>(self)->inst();
+        static_cast<void>(opdef);
+        std::unordered_map<std::string, py::object> state {
+            
+            {"mode", serialization<decltype(opdef.mode)>::dump(opdef.mode)},
+            {"pad_h", serialization<decltype(opdef.pad_h)>::dump(opdef.pad_h)},
+            {"pad_w", serialization<decltype(opdef.pad_w)>::dump(opdef.pad_w)},
+            {"stride_h", serialization<decltype(opdef.stride_h)>::dump(opdef.stride_h)},
+            {"stride_w", serialization<decltype(opdef.stride_w)>::dump(opdef.stride_w)},
+            {"dilate_h", serialization<decltype(opdef.dilate_h)>::dump(opdef.dilate_h)},
+            {"dilate_w", serialization<decltype(opdef.dilate_w)>::dump(opdef.dilate_w)},
+            {"sparse", serialization<decltype(opdef.sparse)>::dump(opdef.sparse)},
+            {"format", serialization<decltype(opdef.format)>::dump(opdef.format)},
+            {"compute_mode", serialization<decltype(opdef.compute_mode)>::dump(opdef.compute_mode)}
+        };
+        return py::cast(state).release().ptr();
+    }
+    static PyObject* setstate(PyObject* self, PyObject* args) {
+        PyObject* dict = PyTuple_GetItem(args, 0);
+        if (!dict) return NULL;
+        auto state = py::cast<std::unordered_map<std::string, py::object>>(dict);
+        auto& opdef = reinterpret_cast<PyOp(RegionRestrictedConvolution)*>(self)->inst();
+        static_cast<void>(opdef);
+        
+        {
+        auto&& iter = state.find("mode");
+        if (iter != state.end()) {
+            opdef.mode = serialization<decltype(opdef.mode)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("pad_h");
+        if (iter != state.end()) {
+            opdef.pad_h = serialization<decltype(opdef.pad_h)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("pad_w");
+        if (iter != state.end()) {
+            opdef.pad_w = serialization<decltype(opdef.pad_w)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("stride_h");
+        if (iter != state.end()) {
+            opdef.stride_h = serialization<decltype(opdef.stride_h)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("stride_w");
+        if (iter != state.end()) {
+            opdef.stride_w = serialization<decltype(opdef.stride_w)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("dilate_h");
+        if (iter != state.end()) {
+            opdef.dilate_h = serialization<decltype(opdef.dilate_h)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("dilate_w");
+        if (iter != state.end()) {
+            opdef.dilate_w = serialization<decltype(opdef.dilate_w)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("sparse");
+        if (iter != state.end()) {
+            opdef.sparse = serialization<decltype(opdef.sparse)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("format");
+        if (iter != state.end()) {
+            opdef.format = serialization<decltype(opdef.format)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("compute_mode");
+        if (iter != state.end()) {
+            opdef.compute_mode = serialization<decltype(opdef.compute_mode)>::load(iter->second);
+        }
+        }
+        Py_RETURN_NONE;
+    }
+    static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+// };
+PyOpDefEnd(RegionRestrictedConvolution)
+
+int PyOp(RegionRestrictedConvolution)::py_init(PyObject *self, PyObject *args, PyObject *kwds) {
+    static const char* kwlist[] = {"mode", "pad_h", "pad_w", "stride_h", "stride_w", "dilate_h", "dilate_w", "sparse", "format", "compute_mode", "scope", NULL};
+    PyObject *mode = NULL, *pad_h = NULL, *pad_w = NULL, *stride_h = NULL, *stride_w = NULL, *dilate_h = NULL, *dilate_w = NULL, *sparse = NULL, *format = NULL, *compute_mode = NULL, *scope = NULL;
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|OOOOOOOOOOO", const_cast<char**>(kwlist), &mode, &pad_h, &pad_w, &stride_h, &stride_w, &dilate_h, &dilate_w, &sparse, &format, &compute_mode, &scope))
+    return -1;
+
+    if (mode) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(RegionRestrictedConvolution)*>(self)->inst().mode =
+                    py::cast<decltype(RegionRestrictedConvolution::mode)>(py::handle(mode));
+        } CATCH_ALL(-1)
+    }
+
+    if (pad_h) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(RegionRestrictedConvolution)*>(self)->inst().pad_h =
+                    py::cast<decltype(RegionRestrictedConvolution::pad_h)>(py::handle(pad_h));
+        } CATCH_ALL(-1)
+    }
+
+    if (pad_w) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(RegionRestrictedConvolution)*>(self)->inst().pad_w =
+                    py::cast<decltype(RegionRestrictedConvolution::pad_w)>(py::handle(pad_w));
+        } CATCH_ALL(-1)
+    }
+
+    if (stride_h) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(RegionRestrictedConvolution)*>(self)->inst().stride_h =
+                    py::cast<decltype(RegionRestrictedConvolution::stride_h)>(py::handle(stride_h));
+        } CATCH_ALL(-1)
+    }
+
+    if (stride_w) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(RegionRestrictedConvolution)*>(self)->inst().stride_w =
+                    py::cast<decltype(RegionRestrictedConvolution::stride_w)>(py::handle(stride_w));
+        } CATCH_ALL(-1)
+    }
+
+    if (dilate_h) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(RegionRestrictedConvolution)*>(self)->inst().dilate_h =
+                    py::cast<decltype(RegionRestrictedConvolution::dilate_h)>(py::handle(dilate_h));
+        } CATCH_ALL(-1)
+    }
+
+    if (dilate_w) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(RegionRestrictedConvolution)*>(self)->inst().dilate_w =
+                    py::cast<decltype(RegionRestrictedConvolution::dilate_w)>(py::handle(dilate_w));
+        } CATCH_ALL(-1)
+    }
+
+    if (sparse) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(RegionRestrictedConvolution)*>(self)->inst().sparse =
+                    py::cast<decltype(RegionRestrictedConvolution::sparse)>(py::handle(sparse));
+        } CATCH_ALL(-1)
+    }
+
+    if (format) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(RegionRestrictedConvolution)*>(self)->inst().format =
+                    py::cast<decltype(RegionRestrictedConvolution::format)>(py::handle(format));
+        } CATCH_ALL(-1)
+    }
+
+    if (compute_mode) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(RegionRestrictedConvolution)*>(self)->inst().compute_mode =
+                    py::cast<decltype(RegionRestrictedConvolution::compute_mode)>(py::handle(compute_mode));
+        } CATCH_ALL(-1)
+    }
+
+    if (scope) {
+        try {
+            reinterpret_cast<PyOp(OpDef)*>(self)->op
+                ->set_scope(py::cast<std::string>(py::handle(scope)));
+        } CATCH_ALL(-1)
+    }
+
+    return 0;
+}
+
+PyGetSetDef PyOp(RegionRestrictedConvolution)::py_getsetters[] = {
+    {const_cast<char*>("mode"), py_get_generic(RegionRestrictedConvolution, mode), py_set_generic(RegionRestrictedConvolution, mode), const_cast<char*>("mode"), NULL},
+    {const_cast<char*>("pad_h"), py_get_generic(RegionRestrictedConvolution, pad_h), py_set_generic(RegionRestrictedConvolution, pad_h), const_cast<char*>("pad_h"), NULL},
+    {const_cast<char*>("pad_w"), py_get_generic(RegionRestrictedConvolution, pad_w), py_set_generic(RegionRestrictedConvolution, pad_w), const_cast<char*>("pad_w"), NULL},
+    {const_cast<char*>("stride_h"), py_get_generic(RegionRestrictedConvolution, stride_h), py_set_generic(RegionRestrictedConvolution, stride_h), const_cast<char*>("stride_h"), NULL},
+    {const_cast<char*>("stride_w"), py_get_generic(RegionRestrictedConvolution, stride_w), py_set_generic(RegionRestrictedConvolution, stride_w), const_cast<char*>("stride_w"), NULL},
+    {const_cast<char*>("dilate_h"), py_get_generic(RegionRestrictedConvolution, dilate_h), py_set_generic(RegionRestrictedConvolution, dilate_h), const_cast<char*>("dilate_h"), NULL},
+    {const_cast<char*>("dilate_w"), py_get_generic(RegionRestrictedConvolution, dilate_w), py_set_generic(RegionRestrictedConvolution, dilate_w), const_cast<char*>("dilate_w"), NULL},
+    {const_cast<char*>("sparse"), py_get_generic(RegionRestrictedConvolution, sparse), py_set_generic(RegionRestrictedConvolution, sparse), const_cast<char*>("sparse"), NULL},
+    {const_cast<char*>("format"), py_get_generic(RegionRestrictedConvolution, format), py_set_generic(RegionRestrictedConvolution, format), const_cast<char*>("format"), NULL},
+    {const_cast<char*>("compute_mode"), py_get_generic(RegionRestrictedConvolution, compute_mode), py_set_generic(RegionRestrictedConvolution, compute_mode), const_cast<char*>("compute_mode"), NULL},
+    {NULL}  /* Sentinel */
+};
+
+    PyMethodDef PyOp(RegionRestrictedConvolution)::tp_methods[] = {
+        {const_cast<char*>("__getstate__"), PyOp(RegionRestrictedConvolution)::getstate, METH_NOARGS, "RegionRestrictedConvolution getstate"},
+    {const_cast<char*>("__setstate__"), PyOp(RegionRestrictedConvolution)::setstate, METH_VARARGS, "RegionRestrictedConvolution setstate"},
+        {NULL}  /* Sentinel */
+    };
+    
+void _init_py_RegionRestrictedConvolution(py::module m) {
+    using py_op = PyOp(RegionRestrictedConvolution);
+    auto& py_type = PyOpType(RegionRestrictedConvolution);
+    py_type = {PyVarObject_HEAD_INIT(NULL, 0)};
+    py_type.tp_name = "megengine.core._imperative_rt.ops.RegionRestrictedConvolution";
+    py_type.tp_basicsize = sizeof(PyOp(RegionRestrictedConvolution));
+    py_type.tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE;
+    py_type.tp_doc = "RegionRestrictedConvolution";
+    py_type.tp_base = &PyOpType(OpDef);
+    py_type.tp_dealloc = py_dealloc_generic<py_op>;
+    py_type.tp_new = py_new_generic<py_op>;
+    py_type.tp_init = py_op::py_init;
+    py_type.tp_methods = py_op::tp_methods;
+    py_type.tp_getset = py_op::py_getsetters;
+    mgb_assert(PyType_Ready(&py_type) >= 0);
+        _init_py_RegionRestrictedConvolution_Mode(py_type);
+    _init_py_RegionRestrictedConvolution_Sparse(py_type);
+    _init_py_RegionRestrictedConvolution_Format(py_type);
+    _init_py_RegionRestrictedConvolution_ComputeMode(py_type);
+
+    PyType_Modified(&py_type);
+    m.add_object("RegionRestrictedConvolution", reinterpret_cast<PyObject*>(&py_type));
+    mgb_assert(PyOp(OpDef)::ctype2pytype.emplace(RegionRestrictedConvolution::typeinfo(), &py_type).second);
+}
+
+void _init_py_RegionRestrictedConvolutionBackwardData_Mode(PyTypeObject& py_type) {
+    auto& e_type = EnumWrapper<RegionRestrictedConvolutionBackwardData::Mode>::type;
+
+    Py_INCREF(e_type);
+    mgb_assert(PyDict_SetItemString(
+        py_type.tp_dict, "Mode", reinterpret_cast<PyObject*>(e_type)) >= 0);
+}
+
+void _init_py_RegionRestrictedConvolutionBackwardData_Sparse(PyTypeObject& py_type) {
+    auto& e_type = EnumWrapper<RegionRestrictedConvolutionBackwardData::Sparse>::type;
+
+    Py_INCREF(e_type);
+    mgb_assert(PyDict_SetItemString(
+        py_type.tp_dict, "Sparse", reinterpret_cast<PyObject*>(e_type)) >= 0);
+}
+
+void _init_py_RegionRestrictedConvolutionBackwardData_Format(PyTypeObject& py_type) {
+    auto& e_type = EnumWrapper<RegionRestrictedConvolutionBackwardData::Format>::type;
+
+    Py_INCREF(e_type);
+    mgb_assert(PyDict_SetItemString(
+        py_type.tp_dict, "Format", reinterpret_cast<PyObject*>(e_type)) >= 0);
+}
+
+void _init_py_RegionRestrictedConvolutionBackwardData_ComputeMode(PyTypeObject& py_type) {
+    auto& e_type = EnumWrapper<RegionRestrictedConvolutionBackwardData::ComputeMode>::type;
+
+    Py_INCREF(e_type);
+    mgb_assert(PyDict_SetItemString(
+        py_type.tp_dict, "ComputeMode", reinterpret_cast<PyObject*>(e_type)) >= 0);
+}
+
+PyOpDefBegin(RegionRestrictedConvolutionBackwardData) // {
+    static PyGetSetDef py_getsetters[];
+    static PyMethodDef tp_methods[];
+    
+    static PyObject* getstate(PyObject* self, PyObject*) {
+        auto& opdef = reinterpret_cast<PyOp(RegionRestrictedConvolutionBackwardData)*>(self)->inst();
+        static_cast<void>(opdef);
+        std::unordered_map<std::string, py::object> state {
+            
+            {"mode", serialization<decltype(opdef.mode)>::dump(opdef.mode)},
+            {"pad_h", serialization<decltype(opdef.pad_h)>::dump(opdef.pad_h)},
+            {"pad_w", serialization<decltype(opdef.pad_w)>::dump(opdef.pad_w)},
+            {"stride_h", serialization<decltype(opdef.stride_h)>::dump(opdef.stride_h)},
+            {"stride_w", serialization<decltype(opdef.stride_w)>::dump(opdef.stride_w)},
+            {"dilate_h", serialization<decltype(opdef.dilate_h)>::dump(opdef.dilate_h)},
+            {"dilate_w", serialization<decltype(opdef.dilate_w)>::dump(opdef.dilate_w)},
+            {"sparse", serialization<decltype(opdef.sparse)>::dump(opdef.sparse)},
+            {"format", serialization<decltype(opdef.format)>::dump(opdef.format)},
+            {"compute_mode", serialization<decltype(opdef.compute_mode)>::dump(opdef.compute_mode)}
+        };
+        return py::cast(state).release().ptr();
+    }
+    static PyObject* setstate(PyObject* self, PyObject* args) {
+        PyObject* dict = PyTuple_GetItem(args, 0);
+        if (!dict) return NULL;
+        auto state = py::cast<std::unordered_map<std::string, py::object>>(dict);
+        auto& opdef = reinterpret_cast<PyOp(RegionRestrictedConvolutionBackwardData)*>(self)->inst();
+        static_cast<void>(opdef);
+        
+        {
+        auto&& iter = state.find("mode");
+        if (iter != state.end()) {
+            opdef.mode = serialization<decltype(opdef.mode)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("pad_h");
+        if (iter != state.end()) {
+            opdef.pad_h = serialization<decltype(opdef.pad_h)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("pad_w");
+        if (iter != state.end()) {
+            opdef.pad_w = serialization<decltype(opdef.pad_w)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("stride_h");
+        if (iter != state.end()) {
+            opdef.stride_h = serialization<decltype(opdef.stride_h)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("stride_w");
+        if (iter != state.end()) {
+            opdef.stride_w = serialization<decltype(opdef.stride_w)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("dilate_h");
+        if (iter != state.end()) {
+            opdef.dilate_h = serialization<decltype(opdef.dilate_h)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("dilate_w");
+        if (iter != state.end()) {
+            opdef.dilate_w = serialization<decltype(opdef.dilate_w)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("sparse");
+        if (iter != state.end()) {
+            opdef.sparse = serialization<decltype(opdef.sparse)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("format");
+        if (iter != state.end()) {
+            opdef.format = serialization<decltype(opdef.format)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("compute_mode");
+        if (iter != state.end()) {
+            opdef.compute_mode = serialization<decltype(opdef.compute_mode)>::load(iter->second);
+        }
+        }
+        Py_RETURN_NONE;
+    }
+    static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+// };
+PyOpDefEnd(RegionRestrictedConvolutionBackwardData)
+
+int PyOp(RegionRestrictedConvolutionBackwardData)::py_init(PyObject *self, PyObject *args, PyObject *kwds) {
+    static const char* kwlist[] = {"mode", "pad_h", "pad_w", "stride_h", "stride_w", "dilate_h", "dilate_w", "sparse", "format", "compute_mode", "scope", NULL};
+    PyObject *mode = NULL, *pad_h = NULL, *pad_w = NULL, *stride_h = NULL, *stride_w = NULL, *dilate_h = NULL, *dilate_w = NULL, *sparse = NULL, *format = NULL, *compute_mode = NULL, *scope = NULL;
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|OOOOOOOOOOO", const_cast<char**>(kwlist), &mode, &pad_h, &pad_w, &stride_h, &stride_w, &dilate_h, &dilate_w, &sparse, &format, &compute_mode, &scope))
+    return -1;
+
+    if (mode) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(RegionRestrictedConvolutionBackwardData)*>(self)->inst().mode =
+                    py::cast<decltype(RegionRestrictedConvolutionBackwardData::mode)>(py::handle(mode));
+        } CATCH_ALL(-1)
+    }
+
+    if (pad_h) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(RegionRestrictedConvolutionBackwardData)*>(self)->inst().pad_h =
+                    py::cast<decltype(RegionRestrictedConvolutionBackwardData::pad_h)>(py::handle(pad_h));
+        } CATCH_ALL(-1)
+    }
+
+    if (pad_w) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(RegionRestrictedConvolutionBackwardData)*>(self)->inst().pad_w =
+                    py::cast<decltype(RegionRestrictedConvolutionBackwardData::pad_w)>(py::handle(pad_w));
+        } CATCH_ALL(-1)
+    }
+
+    if (stride_h) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(RegionRestrictedConvolutionBackwardData)*>(self)->inst().stride_h =
+                    py::cast<decltype(RegionRestrictedConvolutionBackwardData::stride_h)>(py::handle(stride_h));
+        } CATCH_ALL(-1)
+    }
+
+    if (stride_w) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(RegionRestrictedConvolutionBackwardData)*>(self)->inst().stride_w =
+                    py::cast<decltype(RegionRestrictedConvolutionBackwardData::stride_w)>(py::handle(stride_w));
+        } CATCH_ALL(-1)
+    }
+
+    if (dilate_h) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(RegionRestrictedConvolutionBackwardData)*>(self)->inst().dilate_h =
+                    py::cast<decltype(RegionRestrictedConvolutionBackwardData::dilate_h)>(py::handle(dilate_h));
+        } CATCH_ALL(-1)
+    }
+
+    if (dilate_w) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(RegionRestrictedConvolutionBackwardData)*>(self)->inst().dilate_w =
+                    py::cast<decltype(RegionRestrictedConvolutionBackwardData::dilate_w)>(py::handle(dilate_w));
+        } CATCH_ALL(-1)
+    }
+
+    if (sparse) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(RegionRestrictedConvolutionBackwardData)*>(self)->inst().sparse =
+                    py::cast<decltype(RegionRestrictedConvolutionBackwardData::sparse)>(py::handle(sparse));
+        } CATCH_ALL(-1)
+    }
+
+    if (format) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(RegionRestrictedConvolutionBackwardData)*>(self)->inst().format =
+                    py::cast<decltype(RegionRestrictedConvolutionBackwardData::format)>(py::handle(format));
+        } CATCH_ALL(-1)
+    }
+
+    if (compute_mode) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(RegionRestrictedConvolutionBackwardData)*>(self)->inst().compute_mode =
+                    py::cast<decltype(RegionRestrictedConvolutionBackwardData::compute_mode)>(py::handle(compute_mode));
+        } CATCH_ALL(-1)
+    }
+
+    if (scope) {
+        try {
+            reinterpret_cast<PyOp(OpDef)*>(self)->op
+                ->set_scope(py::cast<std::string>(py::handle(scope)));
+        } CATCH_ALL(-1)
+    }
+
+    return 0;
+}
+
+PyGetSetDef PyOp(RegionRestrictedConvolutionBackwardData)::py_getsetters[] = {
+    {const_cast<char*>("mode"), py_get_generic(RegionRestrictedConvolutionBackwardData, mode), py_set_generic(RegionRestrictedConvolutionBackwardData, mode), const_cast<char*>("mode"), NULL},
+    {const_cast<char*>("pad_h"), py_get_generic(RegionRestrictedConvolutionBackwardData, pad_h), py_set_generic(RegionRestrictedConvolutionBackwardData, pad_h), const_cast<char*>("pad_h"), NULL},
+    {const_cast<char*>("pad_w"), py_get_generic(RegionRestrictedConvolutionBackwardData, pad_w), py_set_generic(RegionRestrictedConvolutionBackwardData, pad_w), const_cast<char*>("pad_w"), NULL},
+    {const_cast<char*>("stride_h"), py_get_generic(RegionRestrictedConvolutionBackwardData, stride_h), py_set_generic(RegionRestrictedConvolutionBackwardData, stride_h), const_cast<char*>("stride_h"), NULL},
+    {const_cast<char*>("stride_w"), py_get_generic(RegionRestrictedConvolutionBackwardData, stride_w), py_set_generic(RegionRestrictedConvolutionBackwardData, stride_w), const_cast<char*>("stride_w"), NULL},
+    {const_cast<char*>("dilate_h"), py_get_generic(RegionRestrictedConvolutionBackwardData, dilate_h), py_set_generic(RegionRestrictedConvolutionBackwardData, dilate_h), const_cast<char*>("dilate_h"), NULL},
+    {const_cast<char*>("dilate_w"), py_get_generic(RegionRestrictedConvolutionBackwardData, dilate_w), py_set_generic(RegionRestrictedConvolutionBackwardData, dilate_w), const_cast<char*>("dilate_w"), NULL},
+    {const_cast<char*>("sparse"), py_get_generic(RegionRestrictedConvolutionBackwardData, sparse), py_set_generic(RegionRestrictedConvolutionBackwardData, sparse), const_cast<char*>("sparse"), NULL},
+    {const_cast<char*>("format"), py_get_generic(RegionRestrictedConvolutionBackwardData, format), py_set_generic(RegionRestrictedConvolutionBackwardData, format), const_cast<char*>("format"), NULL},
+    {const_cast<char*>("compute_mode"), py_get_generic(RegionRestrictedConvolutionBackwardData, compute_mode), py_set_generic(RegionRestrictedConvolutionBackwardData, compute_mode), const_cast<char*>("compute_mode"), NULL},
+    {NULL}  /* Sentinel */
+};
+
+    PyMethodDef PyOp(RegionRestrictedConvolutionBackwardData)::tp_methods[] = {
+        {const_cast<char*>("__getstate__"), PyOp(RegionRestrictedConvolutionBackwardData)::getstate, METH_NOARGS, "RegionRestrictedConvolutionBackwardData getstate"},
+    {const_cast<char*>("__setstate__"), PyOp(RegionRestrictedConvolutionBackwardData)::setstate, METH_VARARGS, "RegionRestrictedConvolutionBackwardData setstate"},
+        {NULL}  /* Sentinel */
+    };
+    
+void _init_py_RegionRestrictedConvolutionBackwardData(py::module m) {
+    using py_op = PyOp(RegionRestrictedConvolutionBackwardData);
+    auto& py_type = PyOpType(RegionRestrictedConvolutionBackwardData);
+    py_type = {PyVarObject_HEAD_INIT(NULL, 0)};
+    py_type.tp_name = "megengine.core._imperative_rt.ops.RegionRestrictedConvolutionBackwardData";
+    py_type.tp_basicsize = sizeof(PyOp(RegionRestrictedConvolutionBackwardData));
+    py_type.tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE;
+    py_type.tp_doc = "RegionRestrictedConvolutionBackwardData";
+    py_type.tp_base = &PyOpType(OpDef);
+    py_type.tp_dealloc = py_dealloc_generic<py_op>;
+    py_type.tp_new = py_new_generic<py_op>;
+    py_type.tp_init = py_op::py_init;
+    py_type.tp_methods = py_op::tp_methods;
+    py_type.tp_getset = py_op::py_getsetters;
+    mgb_assert(PyType_Ready(&py_type) >= 0);
+        _init_py_RegionRestrictedConvolutionBackwardData_Mode(py_type);
+    _init_py_RegionRestrictedConvolutionBackwardData_Sparse(py_type);
+    _init_py_RegionRestrictedConvolutionBackwardData_Format(py_type);
+    _init_py_RegionRestrictedConvolutionBackwardData_ComputeMode(py_type);
+
+    PyType_Modified(&py_type);
+    m.add_object("RegionRestrictedConvolutionBackwardData", reinterpret_cast<PyObject*>(&py_type));
+    mgb_assert(PyOp(OpDef)::ctype2pytype.emplace(RegionRestrictedConvolutionBackwardData::typeinfo(), &py_type).second);
+}
+
 template<> struct EnumTrait<Remap::InterpolationMode> {
     static constexpr const char *name = "Remap.InterpolationMode";
     static constexpr std::underlying_type_t<Remap::InterpolationMode> max = 5 - 1;
@@ -18700,6 +19274,8 @@ void _init_py_WarpPerspectiveBackwardMat(py::module m) {
     _init_py_ROIAlign(m); \
     _init_py_ROIPooling(m); \
     _init_py_Reduce(m); \
+    _init_py_RegionRestrictedConvolution(m); \
+    _init_py_RegionRestrictedConvolutionBackwardData(m); \
     _init_py_Remap(m); \
     _init_py_RemoteRecv(m); \
     _init_py_RemoteSend(m); \

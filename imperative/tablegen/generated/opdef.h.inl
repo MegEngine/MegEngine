@@ -1517,6 +1517,58 @@ public:
     }
 };
 
+class RegionRestrictedConvolution : public OpDefImplBase<RegionRestrictedConvolution> {
+    MGB_DYN_TYPE_OBJ_FINAL_DECL;
+
+public:
+    using Mode = ::megdnn::param::Convolution::Mode;
+    using Sparse = ::megdnn::param::Convolution::Sparse;
+    using Format = ::megdnn::param::Convolution::Format;
+    using ComputeMode = ::megdnn::param::Convolution::ComputeMode;
+    Mode mode = ::megdnn::param::Convolution::Mode::CROSS_CORRELATION;
+    uint32_t pad_h = 0;
+    uint32_t pad_w = 0;
+    uint32_t stride_h = 1;
+    uint32_t stride_w = 1;
+    uint32_t dilate_h = 1;
+    uint32_t dilate_w = 1;
+    Sparse sparse = ::megdnn::param::Convolution::Sparse::DENSE;
+    Format format = ::megdnn::param::Convolution::Format::NCHW;
+    ComputeMode compute_mode = ::megdnn::param::Convolution::ComputeMode::DEFAULT;
+    RegionRestrictedConvolution() = default;
+    RegionRestrictedConvolution(Mode mode_, uint32_t pad_h_, uint32_t pad_w_, uint32_t stride_h_, uint32_t stride_w_, uint32_t dilate_h_, uint32_t dilate_w_, Sparse sparse_, Format format_, ComputeMode compute_mode_, std::string scope_ = {}): mode(mode_), pad_h(pad_h_), pad_w(pad_w_), stride_h(stride_h_), stride_w(stride_w_), dilate_h(dilate_h_), dilate_w(dilate_w_), sparse(sparse_), format(format_), compute_mode(compute_mode_) { set_scope(scope_); }
+    RegionRestrictedConvolution(::megdnn::param::Convolution packed_param_0): mode(packed_param_0.mode), pad_h(packed_param_0.pad_h), pad_w(packed_param_0.pad_w), stride_h(packed_param_0.stride_h), stride_w(packed_param_0.stride_w), dilate_h(packed_param_0.dilate_h), dilate_w(packed_param_0.dilate_w), sparse(packed_param_0.sparse), format(packed_param_0.format), compute_mode(packed_param_0.compute_mode) {}
+    ::megdnn::param::Convolution param() const {
+        return {mode, pad_h, pad_w, stride_h, stride_w, dilate_h, dilate_w, sparse, format, compute_mode};
+    }
+};
+
+class RegionRestrictedConvolutionBackwardData : public OpDefImplBase<RegionRestrictedConvolutionBackwardData> {
+    MGB_DYN_TYPE_OBJ_FINAL_DECL;
+
+public:
+    using Mode = ::megdnn::param::Convolution::Mode;
+    using Sparse = ::megdnn::param::Convolution::Sparse;
+    using Format = ::megdnn::param::Convolution::Format;
+    using ComputeMode = ::megdnn::param::Convolution::ComputeMode;
+    Mode mode = ::megdnn::param::Convolution::Mode::CROSS_CORRELATION;
+    uint32_t pad_h = 0;
+    uint32_t pad_w = 0;
+    uint32_t stride_h = 1;
+    uint32_t stride_w = 1;
+    uint32_t dilate_h = 1;
+    uint32_t dilate_w = 1;
+    Sparse sparse = ::megdnn::param::Convolution::Sparse::DENSE;
+    Format format = ::megdnn::param::Convolution::Format::NCHW;
+    ComputeMode compute_mode = ::megdnn::param::Convolution::ComputeMode::DEFAULT;
+    RegionRestrictedConvolutionBackwardData() = default;
+    RegionRestrictedConvolutionBackwardData(Mode mode_, uint32_t pad_h_, uint32_t pad_w_, uint32_t stride_h_, uint32_t stride_w_, uint32_t dilate_h_, uint32_t dilate_w_, Sparse sparse_, Format format_, ComputeMode compute_mode_, std::string scope_ = {}): mode(mode_), pad_h(pad_h_), pad_w(pad_w_), stride_h(stride_h_), stride_w(stride_w_), dilate_h(dilate_h_), dilate_w(dilate_w_), sparse(sparse_), format(format_), compute_mode(compute_mode_) { set_scope(scope_); }
+    RegionRestrictedConvolutionBackwardData(::megdnn::param::Convolution packed_param_0): mode(packed_param_0.mode), pad_h(packed_param_0.pad_h), pad_w(packed_param_0.pad_w), stride_h(packed_param_0.stride_h), stride_w(packed_param_0.stride_w), dilate_h(packed_param_0.dilate_h), dilate_w(packed_param_0.dilate_w), sparse(packed_param_0.sparse), format(packed_param_0.format), compute_mode(packed_param_0.compute_mode) {}
+    ::megdnn::param::Convolution param() const {
+        return {mode, pad_h, pad_w, stride_h, stride_w, dilate_h, dilate_w, sparse, format, compute_mode};
+    }
+};
+
 class Remap : public OpDefImplBase<Remap> {
     MGB_DYN_TYPE_OBJ_FINAL_DECL;
 

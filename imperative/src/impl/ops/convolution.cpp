@@ -3,9 +3,11 @@
 #include "../blob_manager_impl.h"
 #include "../dnn_op_helper.h"
 #include "../op_trait.h"
+#include "megbrain/common.h"
 #include "megbrain/imperative/ops/autogen.h"
 #include "megbrain/opr/internal/megdnn_opr_wrapper.h"
 #include "megbrain/opr/tensor_gen.h"
+#include "megdnn/oprs/nn.h"
 
 namespace mgb {
 namespace imperative {
@@ -354,6 +356,175 @@ OP_TRAIT_REG(Convolution3DBackwardData, Convolution3DBackwardData)
         .apply_on_physical_tensor(apply_on_physical_tensor)
         .fallback();
 }  // namespace convolution3d_backward_data
+}  // namespace
+
+namespace {
+namespace region_restricted_conv {
+std::shared_ptr<OpDef> make_from_op_node(cg::OperatorNodeBase* node_) {
+    auto* node = &node_->cast_final_safe<opr::RegionRestrictedConvolution>();
+    return RegionRestrictedConvolution::make(node->param());
+}
+
+auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
+    auto&& conv = static_cast<const RegionRestrictedConvolution&>(def);
+    OperatorNodeConfig config{conv.make_name()};
+    return opr::RegionRestrictedConvolution::make(
+            inputs[0], inputs[1], inputs[2], inputs[3], conv.param(), config);
+}
+
+std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
+        const OpDef& def, const SmallVector<LogicalTensorDesc>& inputs) {
+    auto&& region_restricted_conv =
+            def.cast_final_safe<mgb::imperative::RegionRestrictedConvolution>();
+    DnnOprHelper<megdnn::RegionRestrictedConvolutionForward> dnn_opr(
+            region_restricted_conv.param());
+
+    auto&& src = inputs[0].layout;
+    auto&& filter = inputs[1].layout;
+    auto&& rin = inputs[2].layout;
+    auto&& rout = inputs[3].layout;
+    TensorLayout output_layout{src.dtype};
+    if (src.ndim && filter.ndim) {
+        dnn_opr.opr().deduce_layout(src, filter, rin, rout, output_layout);
+    }
+
+    return {{{output_layout, inputs[0].comp_node}}, output_layout.ndim != 0};
+}
+
+SmallVector<TensorPtr> apply_on_physical_tensor(
+        const OpDef& def, const SmallVector<TensorPtr>& inputs,
+        SmallVector<LogicalTensorDesc>& output_descs, const bool& validated) {
+    // create megdnn opr
+    auto&& region_restricted_conv = def.cast_final_safe<RegionRestrictedConvolution>();
+    CompNode cn = inputs[0]->comp_node();
+
+    auto&& param = region_restricted_conv.param();
+    DnnOprCaller<megdnn::RegionRestrictedConvolutionForward> dnn_opr(cn, param);
+
+    auto srclo = inputs[0]->layout();
+    auto filterlo = inputs[1]->layout();
+    auto rinlo = inputs[2]->layout();
+    auto routlo = inputs[3]->layout();
+
+    auto out_layout = [&] {
+        if (validated) {
+            return output_descs[0].layout;
+        } else {
+            TensorLayout out_layout{inputs[0]->dtype()};
+            dnn_opr.op()->deduce_layout(srclo, filterlo, rinlo, routlo, out_layout);
+            return out_layout;
+        }
+    }();
+
+    auto out = Tensor::make(out_layout, cn);
+    dnn_opr.exec_with_ws(inputs[0], inputs[1], inputs[2], inputs[3], out);
+    return {out};
+}
+
+OP_TRAIT_REG(
+        RegionRestrictedConvolution, RegionRestrictedConvolution,
+        opr::RegionRestrictedConvolution)
+        .make_from_op_node(make_from_op_node)
+        .apply_on_var_node(apply_on_var_node)
+        .infer_output_attrs_fallible(infer_output_attrs_fallible)
+        .apply_on_physical_tensor(apply_on_physical_tensor)
+        .fallback();
+}  // namespace region_restricted_conv
+}  // namespace
+
+namespace {
+namespace region_restricted_conv_backward_data {
+
+std::shared_ptr<OpDef> make_from_op_node(cg::OperatorNodeBase* node_) {
+    auto* node =
+            &node_->cast_final_safe<opr::RegionRestrictedConvolutionBackwardData>();
+    return RegionRestrictedConvolutionBackwardData::make(node->param());
+}
+
+auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
+    auto&& conv = static_cast<const RegionRestrictedConvolutionBackwardData&>(def);
+    OperatorNodeConfig config{conv.make_name()};
+    // output_dtype may infered from input within rrconv bwd data(deduce_dtype api)
+    CompNode cn = inputs[0]->comp_node();
+    DType output_dtype;
+    DnnOprCaller<megdnn::RegionRestrictedConvolutionBackwardData> dnn_opr(cn);
+    dnn_opr.op()->deduce_dtype(
+            inputs[0]->dtype(), inputs[1]->dtype(), inputs[2]->dtype(),
+            inputs[3]->dtype(), output_dtype);
+    if (output_dtype.valid())
+        config.output_dtype(output_dtype);
+    if (inputs.size() == 4) {
+        return opr::RegionRestrictedConvolutionBackwardData::make(
+                inputs[0], inputs[1], inputs[2], inputs[3], conv.param(), config);
+    } else if (inputs.size() == 5) {
+        return opr::RegionRestrictedConvolutionBackwardData::make(
+                inputs[0], inputs[1], inputs[2], inputs[3], inputs[4], conv.param(),
+                config);
+    }
+    mgb_assert(0);
+}
+
+std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
+        const OpDef& def, const SmallVector<LogicalTensorDesc>& inputs) {
+    auto&& convbwd = def.cast_final_safe<
+            mgb::imperative::RegionRestrictedConvolutionBackwardData>();
+    DnnOprHelper<megdnn::RegionRestrictedConvolutionBackwardData> dnn_opr(
+            convbwd.param());
+
+    TensorLayout filter = inputs[0].layout;
+    TensorLayout diff = inputs[1].layout;
+    TensorLayout rin = inputs[2].layout;
+    TensorLayout rout = inputs[3].layout;
+
+    DType output_dtype;
+    dnn_opr.opr().deduce_dtype(
+            inputs[0].layout.dtype, inputs[1].layout.dtype, inputs[2].layout.dtype,
+            inputs[3].layout.dtype, output_dtype);
+    TensorLayout output_layout{output_dtype};
+    if (diff.ndim && filter.ndim) {
+        dnn_opr.opr().deduce_layout(filter, diff, rin, rout, output_layout);
+    }
+    return {{{output_layout, inputs[0].comp_node}}, output_layout.ndim != 0};
+}
+
+SmallVector<TensorPtr> apply_on_physical_tensor(
+        const OpDef& def, const SmallVector<TensorPtr>& inputs,
+        SmallVector<LogicalTensorDesc>& output_descs, const bool& validated) {
+    auto&& convbwd = def.cast_final_safe<RegionRestrictedConvolutionBackwardData>();
+    CompNode cn = inputs[0]->comp_node();
+    DnnOprCaller<megdnn::RegionRestrictedConvolutionBackwardData> dnn_opr(
+            cn, convbwd.param());
+
+    auto filterlo = inputs[0]->layout();
+    auto difflo = inputs[1]->layout();
+    auto rinlo = inputs[2]->layout();
+    auto routlo = inputs[3]->layout();
+
+    auto out_layout = [&] {
+        if (validated) {
+            return output_descs[0].layout;
+        } else {
+            TensorLayout out_layout{inputs[0]->dtype()};
+            dnn_opr.op()->deduce_layout(filterlo, difflo, rinlo, routlo, out_layout);
+            return out_layout;
+        }
+    }();
+
+    auto out = Tensor::make(out_layout, cn);
+    dnn_opr.exec_with_ws(inputs[0], inputs[1], inputs[2], inputs[3], out);
+    return {out};
+}
+
+OP_TRAIT_REG(
+        RegionRestrictedConvolutionBackwardData,
+        RegionRestrictedConvolutionBackwardData,
+        opr::RegionRestrictedConvolutionBackwardData)
+        .make_from_op_node(make_from_op_node)
+        .apply_on_var_node(apply_on_var_node)
+        .infer_output_attrs_fallible(infer_output_attrs_fallible)
+        .apply_on_physical_tensor(apply_on_physical_tensor)
+        .fallback();
+}  // namespace region_restricted_conv_backward_data
 }  // namespace
 
 }  // namespace imperative

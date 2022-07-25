@@ -14,6 +14,7 @@ from .conv import (
     ConvTranspose3d,
     DeformableConv2d,
     LocalConv2d,
+    RegionRestrictedConv,
 )
 from .conv_bn import ConvBn2d, ConvBnRelu2d
 from .deformable_psroi_pooling import DeformablePSROIPooling
