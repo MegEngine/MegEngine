@@ -1,7 +1,6 @@
 #include "src/fallback/conv_bias/gi/fp32/channel_wise_5x5_s1p2_nchw44_kern.h"
 #include "src/common/utils.h"
 #include "src/fallback/conv_bias/common.h"
-#include "src/fallback/conv_bias/gi/utils.h"
 #include "src/fallback/elemwise_helper/elemwise_op.h"
 
 #pragma GCC diagnostic ignored "-Wunused-parameter"

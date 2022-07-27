@@ -857,6 +857,18 @@ GI_FLOAT32_t GiMultiplyScalerFloat32(GI_FLOAT32_t Vector1, float Scaler) {
 }
 
 GI_FORCEINLINE
+GI_FLOAT32_V2_t GiMultiplyScalerFloat32V2(GI_FLOAT32_V2_t Vector1, float Scaler) {
+    GI_FLOAT32_V2_t ret;
+    GiSetSubVectorFloat32V2(
+            ret, 0,
+            GiMultiplyScalerFloat32(GiGetSubVectorFloat32V2(Vector1, 0), Scaler));
+    GiSetSubVectorFloat32V2(
+            ret, 1,
+            GiMultiplyScalerFloat32(GiGetSubVectorFloat32V2(Vector1, 1), Scaler));
+    return ret;
+}
+
+GI_FORCEINLINE
 GI_FLOAT32_t GiMultiplyAddFloat32(
         GI_FLOAT32_t VectorSum, GI_FLOAT32_t Vector1, GI_FLOAT32_t Vector2) {
 #if defined(GI_NEON_INTRINSICS)
@@ -885,6 +897,23 @@ GI_FLOAT32_t GiMultiplyAddScalarFloat32(
 #else
     return VectorSum + Vector * Scalar;
 #endif
+}
+
+GI_FORCEINLINE
+GI_FLOAT32_V2_t GiMultiplyAddScalarFloat32V2(
+        GI_FLOAT32_V2_t VectorSum, GI_FLOAT32_V2_t Vector, float Scalar) {
+    GI_FLOAT32_V2_t ret;
+    GiSetSubVectorFloat32V2(
+            ret, 0,
+            GiMultiplyAddScalarFloat32(
+                    GiGetSubVectorFloat32V2(VectorSum, 0),
+                    GiGetSubVectorFloat32V2(Vector, 0), Scalar));
+    GiSetSubVectorFloat32V2(
+            ret, 1,
+            GiMultiplyAddScalarFloat32(
+                    GiGetSubVectorFloat32V2(VectorSum, 1),
+                    GiGetSubVectorFloat32V2(Vector, 1), Scalar));
+    return ret;
 }
 
 GI_FORCEINLINE
@@ -950,6 +979,26 @@ GI_FLOAT32_t GiDivideFloat32(GI_FLOAT32_t Vector1, GI_FLOAT32_t Vector2) {
     return Vector1 / Vector2;
 #endif
 }
+
+#define OPV2(op)                                                               \
+    GI_FORCEINLINE                                                             \
+    GI_FLOAT32_V2_t op##V2(GI_FLOAT32_V2_t Vector1, GI_FLOAT32_V2_t Vector2) { \
+        GI_FLOAT32_V2_t ret;                                                   \
+        GiSetSubVectorFloat32V2(                                               \
+                ret, 0,                                                        \
+                op(GiGetSubVectorFloat32V2(Vector1, 0),                        \
+                   GiGetSubVectorFloat32V2(Vector2, 0)));                      \
+        GiSetSubVectorFloat32V2(                                               \
+                ret, 1,                                                        \
+                op(GiGetSubVectorFloat32V2(Vector1, 1),                        \
+                   GiGetSubVectorFloat32V2(Vector2, 1)));                      \
+        return ret;                                                            \
+    }
+OPV2(GiAddFloat32);
+OPV2(GiSubtractFloat32);
+OPV2(GiMultiplyFloat32);
+OPV2(GiDivideFloat32);
+#undef OPV2
 
 GI_FORCEINLINE
 GI_FLOAT32_t GiRecpeSFloat32(GI_FLOAT32_t Vector1, GI_FLOAT32_t Vector2) {

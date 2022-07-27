@@ -4,7 +4,6 @@
 #include "src/fallback/conv_bias/gi/fp32/filter_transform.h"
 #include "src/fallback/conv_bias/gi/fp32/helper.h"
 #include "src/fallback/conv_bias/gi/fp32/strategy.h"
-#include "src/fallback/conv_bias/gi/utils.h"
 #include "src/fallback/conv_bias/winograd/winograd.h"
 #include "src/fallback/elemwise_helper/op_unary.h"
 
@@ -114,17 +113,17 @@ struct InputTransformF63_NCHW44 {
     auto t##i##4 = d6;                                                            \
     auto t##i##5 = d6;                                                            \
     auto t##i##6 = d6;                                                            \
-    t##i##0 = GiSubtractFloat32(t##i##0, d6);                                     \
-    t##i##1 = GiAddFloat32(t##i##1, d1);                                          \
-    t##i##2 = GiSubtractFloat32(t##i##2, d1);                                     \
+    t##i##0 = SUBF(t##i##0, d6);                                                  \
+    t##i##1 = ADDF(t##i##1, d1);                                                  \
+    t##i##2 = SUBF(t##i##2, d1);                                                  \
     t##i##3 = MADD(t##i##3, d1, v0, 2);                                           \
     t##i##4 = MSUB(t##i##4, d1, v0, 2);                                           \
     t##i##5 = MADD(t##i##5, d1, v1, 2);                                           \
     t##i##6 = MSUB(t##i##6, d1, v1, 2);                                           \
-    t##i##7 = GiSubtractFloat32(t##i##7, d1);                                     \
+    t##i##7 = SUBF(t##i##7, d1);                                                  \
     t##i##0 = MSUB(t##i##0, d2, v0, 0);                                           \
-    t##i##1 = GiAddFloat32(t##i##1, d2);                                          \
-    t##i##2 = GiAddFloat32(t##i##2, d2);                                          \
+    t##i##1 = ADDF(t##i##1, d2);                                                  \
+    t##i##2 = ADDF(t##i##2, d2);                                                  \
     t##i##3 = MADD(t##i##3, d2, v0, 3);                                           \
     t##i##4 = MADD(t##i##4, d2, v0, 3);                                           \
     t##i##5 = MADD(t##i##5, d2, v1, 3);                                           \
@@ -143,8 +142,8 @@ struct InputTransformF63_NCHW44 {
     t##i##4 = MSUB(t##i##4, d4, v1, 1);                                           \
     t##i##5 = MSUB(t##i##5, d4, v2, 0);                                           \
     t##i##6 = MSUB(t##i##6, d4, v2, 0);                                           \
-    t##i##1 = GiAddFloat32(t##i##1, d5);                                          \
-    t##i##2 = GiSubtractFloat32(t##i##2, d5);                                     \
+    t##i##1 = ADDF(t##i##1, d5);                                                  \
+    t##i##2 = SUBF(t##i##2, d5);                                                  \
     t##i##3 = MADD(t##i##3, d5, v1, 2);                                           \
     t##i##4 = MSUB(t##i##4, d5, v1, 2);                                           \
     t##i##5 = MADD(t##i##5, d5, v0, 2);                                           \
@@ -162,17 +161,17 @@ struct InputTransformF63_NCHW44 {
     d5 = t6##i;                                                                \
     d6 = t6##i;                                                                \
     d7 = t7##i;                                                                \
-    d0 = GiSubtractFloat32(d0, t6##i);                                         \
-    d1 = GiAddFloat32(d1, t1##i);                                              \
-    d2 = GiSubtractFloat32(d2, t1##i);                                         \
+    d0 = SUBF(d0, t6##i);                                                      \
+    d1 = ADDF(d1, t1##i);                                                      \
+    d2 = SUBF(d2, t1##i);                                                      \
     d3 = MADD(d3, t1##i, v0, 2);                                               \
     d4 = MSUB(d4, t1##i, v0, 2);                                               \
     d5 = MADD(d5, t1##i, v1, 2);                                               \
     d6 = MSUB(d6, t1##i, v1, 2);                                               \
-    d7 = GiSubtractFloat32(d7, t1##i);                                         \
+    d7 = SUBF(d7, t1##i);                                                      \
     d0 = MSUB(d0, t2##i, v0, 0);                                               \
-    d1 = GiAddFloat32(d1, t2##i);                                              \
-    d2 = GiAddFloat32(d2, t2##i);                                              \
+    d1 = ADDF(d1, t2##i);                                                      \
+    d2 = ADDF(d2, t2##i);                                                      \
     d3 = MADD(d3, t2##i, v0, 3);                                               \
     d4 = MADD(d4, t2##i, v0, 3);                                               \
     d5 = MADD(d5, t2##i, v1, 3);                                               \
@@ -191,8 +190,8 @@ struct InputTransformF63_NCHW44 {
     d4 = MSUB(d4, t4##i, v1, 1);                                               \
     d5 = MSUB(d5, t4##i, v2, 0);                                               \
     d6 = MSUB(d6, t4##i, v2, 0);                                               \
-    d1 = GiAddFloat32(d1, t5##i);                                              \
-    d2 = GiSubtractFloat32(d2, t5##i);                                         \
+    d1 = ADDF(d1, t5##i);                                                      \
+    d2 = SUBF(d2, t5##i);                                                      \
     d3 = MADD(d3, t5##i, v1, 2);                                               \
     d4 = MSUB(d4, t5##i, v1, 2);                                               \
     d5 = MADD(d5, t5##i, v0, 2);                                               \
@@ -261,7 +260,7 @@ struct OutputTransformF63_NCHW44 {
         size_t ocb = oc_index / pack_size;
 
 #define cb(m, n)                                                   \
-    auto v##m##n = Vector<float, 4>::load(                         \
+    auto v##m##n = GiLoadFloat32(                                  \
             output_transform_buf +                                 \
             (m * alpha + n) * OCB * nr_units_in_tile * pack_size + \
             ocb * nr_units_in_tile * pack_size + unit_idx * pack_size);
@@ -281,51 +280,83 @@ struct OutputTransformF63_NCHW44 {
          * 0    0    0      0       0         1
          */
 
-        Vector<float, 4> v1addv2, v1subv2, v3addv4, v3subv4, v5addv6, v5subv6;
-#define cb(m)                                                  \
-    v1addv2 = v1##m + v2##m;                                   \
-    v1subv2 = v1##m - v2##m;                                   \
-    v3addv4 = v3##m + v4##m;                                   \
-    v3subv4 = v3##m - v4##m;                                   \
-    v5addv6 = v5##m + v6##m;                                   \
-    v5subv6 = v5##m - v6##m;                                   \
-    auto t0##m = v0##m + v1addv2 + v3addv4 + v5addv6;          \
-    auto t1##m = v1subv2 + v3subv4 * 2.f + v5subv6 * 0.5f;     \
-    auto t2##m = v1addv2 + v3addv4 * 4.f + v5addv6 * 0.25f;    \
-    auto t3##m = v1subv2 + v3subv4 * 8.f + v5subv6 * 0.125f;   \
-    auto t4##m = v1addv2 + v3addv4 * 16.f + v5addv6 * 0.0625f; \
-    auto t5##m = v1subv2 + v3subv4 * 32.f + v5subv6 * 0.03125f + v7##m;
+        /*
+         * v1addv2 = v1##m + v2##m;
+         * v1subv2 = v1##m - v2##m;
+         * v3addv4 = v3##m + v4##m;
+         * v3subv4 = v3##m - v4##m;
+         * v5addv6 = v5##m + v6##m;
+         * v5subv6 = v5##m - v6##m;
+         * auto t0##m = v0##m + v1addv2 + v3addv4 + v5addv6;
+         * auto t1##m = v1subv2 + v3subv4 * 2.f + v5subv6 * 0.5f;
+         * auto t2##m = v1addv2 + v3addv4 * 4.f + v5addv6 * 0.25f;
+         * auto t3##m = v1subv2 + v3subv4 * 8.f + v5subv6 * 0.125f;
+         * auto t4##m = v1addv2 + v3addv4 * 16.f + v5addv6 * 0.0625f;
+         * auto t5##m = v1subv2 + v3subv4 * 32.f + v5subv6 * 0.03125f + v7##m;
+         */
+        GI_FLOAT32_t v1addv2, v1subv2, v3addv4, v3subv4, v5addv6, v5subv6;
+#define cb(m)                                                                         \
+    v1addv2 = ADDF(v1##m, v2##m);                                                     \
+    v1subv2 = SUBF(v1##m, v2##m);                                                     \
+    v3addv4 = ADDF(v3##m, v4##m);                                                     \
+    v3subv4 = SUBF(v3##m, v4##m);                                                     \
+    v5addv6 = ADDF(v5##m, v6##m);                                                     \
+    v5subv6 = SUBF(v5##m, v6##m);                                                     \
+    auto t0##m = ADDF(ADDF(ADDF(v0##m, v1addv2), v3addv4), v5addv6);                  \
+    auto t1##m = ADDF(ADDF(v1subv2, MULSF(v3subv4, 2.f)), MULSF(v5subv6, 0.5f));      \
+    auto t2##m = ADDF(ADDF(v1addv2, MULSF(v3addv4, 4.f)), MULSF(v5addv6, 0.25f));     \
+    auto t3##m = ADDF(ADDF(v1subv2, MULSF(v3subv4, 8.f)), MULSF(v5subv6, 0.125f));    \
+    auto t4##m = ADDF(ADDF(v1addv2, MULSF(v3addv4, 16.f)), MULSF(v5addv6, 0.0625f));  \
+    auto t5##m =                                                                      \
+            ADDF(ADDF(ADDF(v1subv2, MULSF(v3subv4, 32.f)), MULSF(v5subv6, 0.03125f)), \
+                 v7##m);
 
         UNROLL_CALL_NOWRAPPER(8, cb);
 #undef cb
 
-#define cb(m)                                               \
-    v1addv2 = t##m##1 + t##m##2;                            \
-    v1subv2 = t##m##1 - t##m##2;                            \
-    v3addv4 = t##m##3 + t##m##4;                            \
-    v3subv4 = t##m##3 - t##m##4;                            \
-    v5addv6 = t##m##5 + t##m##6;                            \
-    v5subv6 = t##m##5 - t##m##6;                            \
-    v##m##0 = t##m##0 + v1addv2 + v3addv4 + v5addv6;        \
-    v##m##1 = v1subv2 + v3subv4 * 2.f + v5subv6 * 0.5f;     \
-    v##m##2 = v1addv2 + v3addv4 * 4.f + v5addv6 * 0.25f;    \
-    v##m##3 = v1subv2 + v3subv4 * 8.f + v5subv6 * 0.125f;   \
-    v##m##4 = v1addv2 + v3addv4 * 16.f + v5addv6 * 0.0625f; \
-    v##m##5 = v1subv2 + v3subv4 * 32.f + v5subv6 * 0.03125f + t##m##7;
+        /*
+         * v1addv2 = t##m##1 + t##m##2;
+         * v1subv2 = t##m##1 - t##m##2;
+         * v3addv4 = t##m##3 + t##m##4;
+         * v3subv4 = t##m##3 - t##m##4;
+         * v5addv6 = t##m##5 + t##m##6;
+         * v5subv6 = t##m##5 - t##m##6;
+         * v##m##0 = t##m##0 + v1addv2 + v3addv4 + v5addv6;
+         * v##m##1 = v1subv2 + v3subv4 * 2.f + v5subv6 * 0.5f;
+         * v##m##2 = v1addv2 + v3addv4 * 4.f + v5addv6 * 0.25f;
+         * v##m##3 = v1subv2 + v3subv4 * 8.f + v5subv6 * 0.125f;
+         * v##m##4 = v1addv2 + v3addv4 * 16.f + v5addv6 * 0.0625f;
+         * v##m##5 = v1subv2 + v3subv4 * 32.f + v5subv6 * 0.03125f + t##m##7;
+         */
+#define cb(m)                                                                         \
+    v1addv2 = ADDF(t##m##1, t##m##2);                                                 \
+    v1subv2 = SUBF(t##m##1, t##m##2);                                                 \
+    v3addv4 = ADDF(t##m##3, t##m##4);                                                 \
+    v3subv4 = SUBF(t##m##3, t##m##4);                                                 \
+    v5addv6 = ADDF(t##m##5, t##m##6);                                                 \
+    v5subv6 = SUBF(t##m##5, t##m##6);                                                 \
+    v##m##0 = ADDF(ADDF(ADDF(t##m##0, v1addv2), v3addv4), v5addv6);                   \
+    v##m##1 = ADDF(ADDF(v1subv2, MULSF(v3subv4, 2.f)), MULSF(v5subv6, 0.5f));         \
+    v##m##2 = ADDF(ADDF(v1addv2, MULSF(v3addv4, 4.f)), MULSF(v5addv6, 0.25f));        \
+    v##m##3 = ADDF(ADDF(v1subv2, MULSF(v3subv4, 8.f)), MULSF(v5subv6, 0.125f));       \
+    v##m##4 = ADDF(ADDF(v1addv2, MULSF(v3addv4, 16.f)), MULSF(v5addv6, 0.0625f));     \
+    v##m##5 =                                                                         \
+            ADDF(ADDF(ADDF(v1subv2, MULSF(v3subv4, 32.f)), MULSF(v5subv6, 0.03125f)), \
+                 t##m##7);
 
         UNROLL_CALL_NOWRAPPER(6, cb);
 #undef cb
 
-        Vector<float, 4> vbias;
+        GI_FLOAT32_t vbias;
         if (bmode == BiasMode::BROADCAST_CHANNEL_BIAS) {
-            vbias = Vector<float, 4>::load(bias + oc);
+            vbias = GiLoadFloat32(bias + oc);
 
-#define cb(m, n) v##m##n += vbias;
+#define cb(m, n) v##m##n = ADDF(v##m##n, vbias);
             UNROLL_CALL_RAW_D2(6, 6, cb);
 #undef cb
         }
         if (bmode != BiasMode::BIAS) {
-#define cb(m, n) v##m##n = op(GiFixLenType2GiFloat32Type(CONCAT(v##m, n).value));
+#define cb(m, n) v##m##n = op(CONCAT(v##m, n));
             UNROLL_CALL_RAW_D2(6, 6, cb);
 #undef cb
         }
@@ -335,12 +366,15 @@ struct OutputTransformF63_NCHW44 {
         size_t ow = ow_start + owo;                                                  \
         if (oh < OH && ow < OW) {                                                    \
             if (bmode == BiasMode::BIAS) {                                           \
-                v##oho##owo += Vector<float, 4>::load(                               \
-                        bias + oc * OH * OW + oh * OW * pack_size + ow * pack_size); \
-                v##oho##owo = op(GiFixLenType2GiFloat32Type(v##oho##owo.value));     \
+                v##oho##owo = ADDF(                                                  \
+                        v##oho##owo, GiLoadFloat32(                                  \
+                                             bias + oc * OH * OW +                   \
+                                             oh * OW * pack_size + ow * pack_size)); \
+                v##oho##owo = op(v##oho##owo);                                       \
             }                                                                        \
-            v##oho##owo.save(                                                        \
-                    output + oc * OH * OW + oh * OW * pack_size + ow * pack_size);   \
+            GiStoreFloat32(                                                          \
+                    output + oc * OH * OW + oh * OW * pack_size + ow * pack_size,    \
+                    v##oho##owo);                                                    \
         }                                                                            \
     } while (0);
         UNROLL_CALL_RAW_D2(6, 6, out_save);
@@ -387,35 +421,52 @@ void winograd_F63_mk4_f_nchw44::filter(
                                             pack_size * pack_size +
                                     ic_inner * pack_size;
 
-#define cb(m, n)                                       \
-    Vector<float, 4> g##m##n = Vector<float, 4>::load( \
-            fptr + (m * KERNEL_SIZE + n) * pack_size * pack_size);
+#define cb(m, n)           \
+    GI_FLOAT32_t g##m##n = \
+            GiLoadFloat32(fptr + (m * KERNEL_SIZE + n) * pack_size * pack_size);
                 UNROLL_CALL_NOWRAPPER_D2(3, 3, cb)
 #undef cb
 
-#define FILTER_TRANSFORM(n, wd, g)                      \
-    auto wd##n##0 = g##0##n;                            \
-    tmp0 = (g##0##n + g##2##n) * -0.2222222f;           \
-    tmp1 = g##1##n * -0.2222222f;                       \
-    auto wd##n##1 = tmp0 + tmp1;                        \
-    auto wd##n##2 = tmp0 - tmp1;                        \
-    tmp0 = g##0##n * 0.0111111f + g##2##n * 0.0444444f; \
-    tmp1 = g##1##n * 0.0222222f;                        \
-    auto wd##n##3 = tmp0 + tmp1;                        \
-    auto wd##n##4 = tmp0 - tmp1;                        \
-    tmp0 = g##0##n * 0.7111111f + g##2##n * 0.1777778f; \
-    tmp1 = g##1##n * 0.3555556f;                        \
-    auto wd##n##5 = tmp0 + tmp1;                        \
-    auto wd##n##6 = tmp0 - tmp1;                        \
+                /*
+                 * auto wd##n##0 = g##0##n;
+                 * tmp0 = (g##0##n + g##2##n) * -0.2222222f;
+                 * tmp1 = g##1##n * -0.2222222f;
+                 * auto wd##n##1 = tmp0 + tmp1;
+                 * auto wd##n##2 = tmp0 - tmp1;
+                 * tmp0 = g##0##n * 0.0111111f + g##2##n * 0.0444444f;
+                 * tmp1 = g##1##n * 0.0222222f;
+                 * auto wd##n##3 = tmp0 + tmp1;
+                 * auto wd##n##4 = tmp0 - tmp1;
+                 * tmp0 = g##0##n * 0.7111111f + g##2##n * 0.1777778f;
+                 * tmp1 = g##1##n * 0.3555556f;
+                 * auto wd##n##5 = tmp0 + tmp1;
+                 * auto wd##n##6 = tmp0 - tmp1;
+                 * auto wd##n##7 = g##2##n;
+                 */
+#define FILTER_TRANSFORM(n, wd, g)                                       \
+    auto wd##n##0 = g##0##n;                                             \
+    tmp0 = MULSF(ADDF(g##0##n, g##2##n), -0.2222222f);                   \
+    tmp1 = MULSF(g##1##n, -0.2222222f);                                  \
+    auto wd##n##1 = ADDF(tmp0, tmp1);                                    \
+    auto wd##n##2 = SUBF(tmp0, tmp1);                                    \
+    tmp0 = ADDF(MULSF(g##0##n, 0.0111111f), MULSF(g##2##n, 0.0444444f)); \
+    tmp1 = MULSF(g##1##n, 0.0222222f);                                   \
+    auto wd##n##3 = ADDF(tmp0, tmp1);                                    \
+    auto wd##n##4 = SUBF(tmp0, tmp1);                                    \
+    tmp0 = ADDF(MULSF(g##0##n, 0.7111111f), MULSF(g##2##n, 0.1777778f)); \
+    tmp1 = MULSF(g##1##n, 0.3555556f);                                   \
+    auto wd##n##5 = ADDF(tmp0, tmp1);                                    \
+    auto wd##n##6 = SUBF(tmp0, tmp1);                                    \
     auto wd##n##7 = g##2##n;
-                Vector<float, 4> tmp0, tmp1;
+                GI_FLOAT32_t tmp0, tmp1;
                 UNROLL_CALL_RAW(3, FILTER_TRANSFORM, wd, g);
                 UNROLL_CALL_RAW(8, FILTER_TRANSFORM, ret, wd);
 #undef FILTER_TRANSFORM
 #define cb_save(m, n)                                                                 \
-    ret##m##n.save(                                                                   \
+    GiStoreFloat32(                                                                   \
             filter_transform_buf + (m * alpha + n) * OC * IC + ocb * IC * pack_size + \
-            icb * pack_size * pack_size + ic_inner * pack_size);
+                    icb * pack_size * pack_size + ic_inner * pack_size,               \
+            ret##m##n);
                 UNROLL_CALL_NOWRAPPER_D2(8, 8, cb_save)
 #undef cb_save
             }

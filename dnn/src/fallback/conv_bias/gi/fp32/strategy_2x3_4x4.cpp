@@ -1,7 +1,6 @@
 #include "src/common/unroll_macro.h"
 #include "src/common/utils.h"
 #include "src/fallback/conv_bias/gi/fp32/strategy.h"
-#include "src/fallback/conv_bias/gi/utils.h"
 #include "src/fallback/conv_bias/winograd/winograd.h"
 
 #include "src/fallback/conv_bias/gi/fp32/helper.h"
@@ -70,8 +69,7 @@ struct InputTransform2X3 {
             size_t nr_units_in_tile, size_t ic, size_t IC) {
         constexpr size_t alpha = 2 + 3 - 1;
         // BT * d * B
-#define cb(m, n) \
-    Vector<float, 4> d##m##n = Vector<float, 4>::load(patchT + m * 4 * 4 + n * 4);
+#define cb(m, n) GI_FLOAT32_t d##m##n = GiLoadFloat32(patchT + m * 4 * 4 + n * 4);
 
         UNROLL_CALL_NOWRAPPER_D2(4, 4, cb);
 #undef cb
@@ -80,20 +78,20 @@ struct InputTransform2X3 {
         //! 0   1  1 0    d10 d11 d12 d13     0 1 -1 -1
         //! 0  -1  1 0    d20 d21 d22 d23    -1 1  1  0
         //! 0  -1  0 1    d30 d31 d32 d33     0 0  0  1
-#define cb(m)                   \
-    auto t0##m = d0##m - d2##m; \
-    auto t1##m = d1##m + d2##m; \
-    auto t2##m = d2##m - d1##m; \
-    auto t3##m = d3##m - d1##m;
+#define cb(m)                        \
+    auto t0##m = SUBF(d0##m, d2##m); \
+    auto t1##m = ADDF(d1##m, d2##m); \
+    auto t2##m = SUBF(d2##m, d1##m); \
+    auto t3##m = SUBF(d3##m, d1##m);
 
         UNROLL_CALL_NOWRAPPER(4, cb);
 #undef cb
 
-#define cb(m)                    \
-    d##m##0 = t##m##0 - t##m##2; \
-    d##m##1 = t##m##1 + t##m##2; \
-    d##m##2 = t##m##2 - t##m##1; \
-    d##m##3 = t##m##3 - t##m##1;
+#define cb(m)                         \
+    d##m##0 = SUBF(t##m##0, t##m##2); \
+    d##m##1 = ADDF(t##m##1, t##m##2); \
+    d##m##2 = SUBF(t##m##2, t##m##1); \
+    d##m##3 = SUBF(t##m##3, t##m##1);
 
         UNROLL_CALL_NOWRAPPER(4, cb);
 #undef cb
@@ -101,9 +99,10 @@ struct InputTransform2X3 {
         size_t ICB = IC / 4;
         size_t icb = ic / 4;
 #define cb(m, n)                                                                 \
-    d##m##n.save(                                                                \
+    GiStoreFloat32(                                                              \
             input_transform_buf + (m * alpha + n) * ICB * nr_units_in_tile * 4 + \
-            icb * nr_units_in_tile * 4 + unit_idx * 4);
+                    icb * nr_units_in_tile * 4 + unit_idx * 4,                   \
+            d##m##n);
         UNROLL_CALL_NOWRAPPER_D2(4, 4, cb)
 #undef cb
     }
@@ -125,7 +124,7 @@ struct OutputTransform2X3 {
         size_t ocb = oc_index / 4;
 
 #define cb(m, n)                                                                  \
-    auto v##m##n = Vector<float, 4>::load(                                        \
+    auto v##m##n = GiLoadFloat32(                                                 \
             output_transform_buf + (m * alpha + n) * OCB * nr_units_in_tile * 4 + \
             ocb * nr_units_in_tile * 4 + unit_idx * 4);
         UNROLL_CALL_NOWRAPPER_D2(4, 4, cb);
@@ -134,37 +133,37 @@ struct OutputTransform2X3 {
         //! 0  1 -1 1  v10 v11 v12 v13    1  1
         //!            v20 v21 v22 v23    1 -1
         //!            v30 v31 v32 v33    0  1
-#define cb(m)                           \
-    auto t0##m = v0##m + v1##m + v2##m; \
-    auto t1##m = v1##m - v2##m + v3##m;
+#define cb(m)                                     \
+    auto t0##m = ADDF(ADDF(v0##m, v1##m), v2##m); \
+    auto t1##m = ADDF(SUBF(v1##m, v2##m), v3##m);
 
         UNROLL_CALL_NOWRAPPER(4, cb);
 #undef cb
-        v00 = t00 + t01 + t02;
-        v10 = t10 + t11 + t12;
-        v01 = t01 - t02 + t03;
-        v11 = t11 - t12 + t13;
+        v00 = ADDF(ADDF(t00, t01), t02);
+        v10 = ADDF(ADDF(t10, t11), t12);
+        v01 = ADDF(SUBF(t01, t02), t03);
+        v11 = ADDF(SUBF(t11, t12), t13);
 
-        Vector<float, 4> vbias;
+        GI_FLOAT32_t vbias;
         if (bmode == BiasMode::BROADCAST_CHANNEL_BIAS) {
-            vbias = Vector<float, 4>::load(bias + oc);
+            vbias = GiLoadFloat32(bias + oc);
 
-            v00 += vbias;
-            v10 += vbias;
-            v01 += vbias;
-            v11 += vbias;
+            v00 = ADDF(v00, vbias);
+            v10 = ADDF(v10, vbias);
+            v01 = ADDF(v01, vbias);
+            v11 = ADDF(v11, vbias);
         }
         if (bmode != BiasMode::BIAS) {
-            v00 = op(GiFixLenType2GiFloat32Type(v00.value));
-            v01 = op(GiFixLenType2GiFloat32Type(v01.value));
-            v10 = op(GiFixLenType2GiFloat32Type(v10.value));
-            v11 = op(GiFixLenType2GiFloat32Type(v11.value));
+            v00 = op(v00);
+            v01 = op(v01);
+            v10 = op(v10);
+            v11 = op(v11);
         }
 
-        v00.save(transform_mid_buf + (0 * 2 + 0) * 4);
-        v10.save(transform_mid_buf + (1 * 2 + 0) * 4);
-        v01.save(transform_mid_buf + (0 * 2 + 1) * 4);
-        v11.save(transform_mid_buf + (1 * 2 + 1) * 4);
+        GiStoreFloat32(transform_mid_buf + (0 * 2 + 0) * 4, v00);
+        GiStoreFloat32(transform_mid_buf + (1 * 2 + 0) * 4, v10);
+        GiStoreFloat32(transform_mid_buf + (0 * 2 + 1) * 4, v01);
+        GiStoreFloat32(transform_mid_buf + (1 * 2 + 1) * 4, v11);
 
         for (size_t oco = 0; oco < 4 && oc + oco < oc_end; ++oco) {
             for (size_t oho = 0; oho < 2 && oh_start + oho < OH; ++oho) {

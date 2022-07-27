@@ -4,7 +4,6 @@
 #include "src/fallback/conv_bias/common.h"
 #include "src/fallback/conv_bias/gi/fp32/channel_wise_3x3_s1p1_nchw44_kern.h"
 #include "src/fallback/conv_bias/gi/fp32/channel_wise_5x5_s1p2_nchw44_kern.h"
-#include "src/fallback/conv_bias/gi/utils.h"
 #include "src/fallback/elemwise_helper/elemwise_op.h"
 
 using namespace megdnn;

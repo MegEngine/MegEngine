@@ -2,6 +2,15 @@
 #include "src/common/unroll_macro.h"
 #include "src/fallback/general_intrinsic/gi_float.h"
 
+#define ADDF    GiAddFloat32
+#define ADDFV2  GiAddFloat32V2
+#define SUBF    GiSubtractFloat32
+#define SUBFV2  GiSubtractFloat32V2
+#define MULF    GiMultiplyFloat32
+#define MULFV2  GiMultiplyFloat32V2
+#define MULSF   GiMultiplyScalerFloat32
+#define MULSFV2 GiMultiplyScalerFloat32V2
+
 namespace megdnn {
 namespace fallback {
 inline void transpose_4x4(const float* src, float* dst, int lda, int ldb) {
@@ -47,159 +56,166 @@ inline void transpose_4x4(const float* src, float* dst, int lda, int ldb) {
 #define CONCAT(a, idx) a##idx
 
 #if MEGDNN_AARCH64
-//! ret and a are type Vector<float, 8>
-#define TRANSPOSE_8x8(a, ret)                                                          \
-    do {                                                                               \
-        auto b0 = GiZipqFloat32(CONCAT(a, 0).value.val[0], CONCAT(a, 1).value.val[0]); \
-        auto b1 = GiZipqFloat32(CONCAT(a, 0).value.val[1], CONCAT(a, 1).value.val[1]); \
-        auto b2 = GiZipqFloat32(CONCAT(a, 2).value.val[0], CONCAT(a, 3).value.val[0]); \
-        auto b3 = GiZipqFloat32(CONCAT(a, 2).value.val[1], CONCAT(a, 3).value.val[1]); \
-        auto b4 = GiZipqFloat32(CONCAT(a, 4).value.val[0], CONCAT(a, 5).value.val[0]); \
-        auto b5 = GiZipqFloat32(CONCAT(a, 4).value.val[1], CONCAT(a, 5).value.val[1]); \
-        auto b6 = GiZipqFloat32(CONCAT(a, 6).value.val[0], CONCAT(a, 7).value.val[0]); \
-        auto b7 = GiZipqFloat32(CONCAT(a, 6).value.val[1], CONCAT(a, 7).value.val[1]); \
-        CONCAT(ret, 0).value.val[0] = GiReinterpretqS64ToFloat32(GiZip1qS64(           \
-                GiReinterpretqFloat32ToS64(b0.val[0]),                                 \
-                GiReinterpretqFloat32ToS64(b2.val[0])));                               \
-        CONCAT(ret, 0).value.val[1] = GiReinterpretqS64ToFloat32(GiZip1qS64(           \
-                GiReinterpretqFloat32ToS64(b4.val[0]),                                 \
-                GiReinterpretqFloat32ToS64(b6.val[0])));                               \
-        CONCAT(ret, 1).value.val[0] = GiReinterpretqS64ToFloat32(GiZip2qS64(           \
-                GiReinterpretqFloat32ToS64(b0.val[0]),                                 \
-                GiReinterpretqFloat32ToS64(b2.val[0])));                               \
-        CONCAT(ret, 1).value.val[1] = GiReinterpretqS64ToFloat32(GiZip2qS64(           \
-                GiReinterpretqFloat32ToS64(b4.val[0]),                                 \
-                GiReinterpretqFloat32ToS64(b6.val[0])));                               \
-        CONCAT(ret, 2).value.val[0] = GiReinterpretqS64ToFloat32(GiZip1qS64(           \
-                GiReinterpretqFloat32ToS64(b0.val[1]),                                 \
-                GiReinterpretqFloat32ToS64(b2.val[1])));                               \
-        CONCAT(ret, 2).value.val[1] = GiReinterpretqS64ToFloat32(GiZip1qS64(           \
-                GiReinterpretqFloat32ToS64(b4.val[1]),                                 \
-                GiReinterpretqFloat32ToS64(b6.val[1])));                               \
-        CONCAT(ret, 3).value.val[0] = GiReinterpretqS64ToFloat32(GiZip2qS64(           \
-                GiReinterpretqFloat32ToS64(b0.val[1]),                                 \
-                GiReinterpretqFloat32ToS64(b2.val[1])));                               \
-        CONCAT(ret, 3).value.val[1] = GiReinterpretqS64ToFloat32(GiZip2qS64(           \
-                GiReinterpretqFloat32ToS64(b4.val[1]),                                 \
-                GiReinterpretqFloat32ToS64(b6.val[1])));                               \
-        CONCAT(ret, 4).value.val[0] = GiReinterpretqS64ToFloat32(GiZip1qS64(           \
-                GiReinterpretqFloat32ToS64(b1.val[0]),                                 \
-                GiReinterpretqFloat32ToS64(b3.val[0])));                               \
-        CONCAT(ret, 4).value.val[1] = GiReinterpretqS64ToFloat32(GiZip1qS64(           \
-                GiReinterpretqFloat32ToS64(b5.val[0]),                                 \
-                GiReinterpretqFloat32ToS64(b7.val[0])));                               \
-        CONCAT(ret, 5).value.val[0] = GiReinterpretqS64ToFloat32(GiZip2qS64(           \
-                GiReinterpretqFloat32ToS64(b1.val[0]),                                 \
-                GiReinterpretqFloat32ToS64(b3.val[0])));                               \
-        CONCAT(ret, 5).value.val[1] = GiReinterpretqS64ToFloat32(GiZip2qS64(           \
-                GiReinterpretqFloat32ToS64(b5.val[0]),                                 \
-                GiReinterpretqFloat32ToS64(b7.val[0])));                               \
-        CONCAT(ret, 6).value.val[0] = GiReinterpretqS64ToFloat32(GiZip1qS64(           \
-                GiReinterpretqFloat32ToS64(b1.val[1]),                                 \
-                GiReinterpretqFloat32ToS64(b3.val[1])));                               \
-        CONCAT(ret, 6).value.val[1] = GiReinterpretqS64ToFloat32(GiZip1qS64(           \
-                GiReinterpretqFloat32ToS64(b5.val[1]),                                 \
-                GiReinterpretqFloat32ToS64(b7.val[1])));                               \
-        CONCAT(ret, 7).value.val[0] = GiReinterpretqS64ToFloat32(GiZip2qS64(           \
-                GiReinterpretqFloat32ToS64(b1.val[1]),                                 \
-                GiReinterpretqFloat32ToS64(b3.val[1])));                               \
-        CONCAT(ret, 7).value.val[1] = GiReinterpretqS64ToFloat32(GiZip2qS64(           \
-                GiReinterpretqFloat32ToS64(b5.val[1]),                                 \
-                GiReinterpretqFloat32ToS64(b7.val[1])));                               \
+#define TRANSPOSE_8x8(a, ret)                                              \
+    do {                                                                   \
+        auto b0 = GiZipqFloat32(CONCAT(a, 0).val[0], CONCAT(a, 1).val[0]); \
+        auto b1 = GiZipqFloat32(CONCAT(a, 0).val[1], CONCAT(a, 1).val[1]); \
+        auto b2 = GiZipqFloat32(CONCAT(a, 2).val[0], CONCAT(a, 3).val[0]); \
+        auto b3 = GiZipqFloat32(CONCAT(a, 2).val[1], CONCAT(a, 3).val[1]); \
+        auto b4 = GiZipqFloat32(CONCAT(a, 4).val[0], CONCAT(a, 5).val[0]); \
+        auto b5 = GiZipqFloat32(CONCAT(a, 4).val[1], CONCAT(a, 5).val[1]); \
+        auto b6 = GiZipqFloat32(CONCAT(a, 6).val[0], CONCAT(a, 7).val[0]); \
+        auto b7 = GiZipqFloat32(CONCAT(a, 6).val[1], CONCAT(a, 7).val[1]); \
+        CONCAT(ret, 0).val[0] = GiReinterpretqS64ToFloat32(GiZip1qS64(     \
+                GiReinterpretqFloat32ToS64(b0.val[0]),                     \
+                GiReinterpretqFloat32ToS64(b2.val[0])));                   \
+        CONCAT(ret, 0).val[1] = GiReinterpretqS64ToFloat32(GiZip1qS64(     \
+                GiReinterpretqFloat32ToS64(b4.val[0]),                     \
+                GiReinterpretqFloat32ToS64(b6.val[0])));                   \
+        CONCAT(ret, 1).val[0] = GiReinterpretqS64ToFloat32(GiZip2qS64(     \
+                GiReinterpretqFloat32ToS64(b0.val[0]),                     \
+                GiReinterpretqFloat32ToS64(b2.val[0])));                   \
+        CONCAT(ret, 1).val[1] = GiReinterpretqS64ToFloat32(GiZip2qS64(     \
+                GiReinterpretqFloat32ToS64(b4.val[0]),                     \
+                GiReinterpretqFloat32ToS64(b6.val[0])));                   \
+        CONCAT(ret, 2).val[0] = GiReinterpretqS64ToFloat32(GiZip1qS64(     \
+                GiReinterpretqFloat32ToS64(b0.val[1]),                     \
+                GiReinterpretqFloat32ToS64(b2.val[1])));                   \
+        CONCAT(ret, 2).val[1] = GiReinterpretqS64ToFloat32(GiZip1qS64(     \
+                GiReinterpretqFloat32ToS64(b4.val[1]),                     \
+                GiReinterpretqFloat32ToS64(b6.val[1])));                   \
+        CONCAT(ret, 3).val[0] = GiReinterpretqS64ToFloat32(GiZip2qS64(     \
+                GiReinterpretqFloat32ToS64(b0.val[1]),                     \
+                GiReinterpretqFloat32ToS64(b2.val[1])));                   \
+        CONCAT(ret, 3).val[1] = GiReinterpretqS64ToFloat32(GiZip2qS64(     \
+                GiReinterpretqFloat32ToS64(b4.val[1]),                     \
+                GiReinterpretqFloat32ToS64(b6.val[1])));                   \
+        CONCAT(ret, 4).val[0] = GiReinterpretqS64ToFloat32(GiZip1qS64(     \
+                GiReinterpretqFloat32ToS64(b1.val[0]),                     \
+                GiReinterpretqFloat32ToS64(b3.val[0])));                   \
+        CONCAT(ret, 4).val[1] = GiReinterpretqS64ToFloat32(GiZip1qS64(     \
+                GiReinterpretqFloat32ToS64(b5.val[0]),                     \
+                GiReinterpretqFloat32ToS64(b7.val[0])));                   \
+        CONCAT(ret, 5).val[0] = GiReinterpretqS64ToFloat32(GiZip2qS64(     \
+                GiReinterpretqFloat32ToS64(b1.val[0]),                     \
+                GiReinterpretqFloat32ToS64(b3.val[0])));                   \
+        CONCAT(ret, 5).val[1] = GiReinterpretqS64ToFloat32(GiZip2qS64(     \
+                GiReinterpretqFloat32ToS64(b5.val[0]),                     \
+                GiReinterpretqFloat32ToS64(b7.val[0])));                   \
+        CONCAT(ret, 6).val[0] = GiReinterpretqS64ToFloat32(GiZip1qS64(     \
+                GiReinterpretqFloat32ToS64(b1.val[1]),                     \
+                GiReinterpretqFloat32ToS64(b3.val[1])));                   \
+        CONCAT(ret, 6).val[1] = GiReinterpretqS64ToFloat32(GiZip1qS64(     \
+                GiReinterpretqFloat32ToS64(b5.val[1]),                     \
+                GiReinterpretqFloat32ToS64(b7.val[1])));                   \
+        CONCAT(ret, 7).val[0] = GiReinterpretqS64ToFloat32(GiZip2qS64(     \
+                GiReinterpretqFloat32ToS64(b1.val[1]),                     \
+                GiReinterpretqFloat32ToS64(b3.val[1])));                   \
+        CONCAT(ret, 7).val[1] = GiReinterpretqS64ToFloat32(GiZip2qS64(     \
+                GiReinterpretqFloat32ToS64(b5.val[1]),                     \
+                GiReinterpretqFloat32ToS64(b7.val[1])));                   \
     } while (0);
 
-#define TRANSPOSE_8x3(a, ret)                                            \
-    auto b0 = GiZipqFloat32(CONCAT(a, 0).value, CONCAT(a, 1).value);     \
-    auto b1 = GiZipqFloat32(CONCAT(a, 2).value, CONCAT(a, 3).value);     \
-    auto b2 = GiZipqFloat32(CONCAT(a, 4).value, CONCAT(a, 5).value);     \
-    auto b3 = GiZipqFloat32(CONCAT(a, 6).value, CONCAT(a, 7).value);     \
-    CONCAT(ret, 0).value.val[0] = GiReinterpretqS64ToFloat32(GiZip1qS64( \
-            GiReinterpretqFloat32ToS64(b0.val[0]),                       \
-            GiReinterpretqFloat32ToS64(b1.val[0])));                     \
-    CONCAT(ret, 0).value.val[1] = GiReinterpretqS64ToFloat32(GiZip1qS64( \
-            GiReinterpretqFloat32ToS64(b2.val[0]),                       \
-            GiReinterpretqFloat32ToS64(b3.val[0])));                     \
-    CONCAT(ret, 1).value.val[0] = GiReinterpretqS64ToFloat32(GiZip2qS64( \
-            GiReinterpretqFloat32ToS64(b0.val[0]),                       \
-            GiReinterpretqFloat32ToS64(b1.val[0])));                     \
-    CONCAT(ret, 1).value.val[1] = GiReinterpretqS64ToFloat32(GiZip2qS64( \
-            GiReinterpretqFloat32ToS64(b2.val[0]),                       \
-            GiReinterpretqFloat32ToS64(b3.val[0])));                     \
-    CONCAT(ret, 2).value.val[0] = GiReinterpretqS64ToFloat32(GiZip1qS64( \
-            GiReinterpretqFloat32ToS64(b0.val[1]),                       \
-            GiReinterpretqFloat32ToS64(b1.val[1])));                     \
-    CONCAT(ret, 2).value.val[1] = GiReinterpretqS64ToFloat32(GiZip1qS64( \
-            GiReinterpretqFloat32ToS64(b2.val[1]),                       \
+#define TRANSPOSE_8x3(a, ret)                                      \
+    auto b0 = GiZipqFloat32(CONCAT(a, 0), CONCAT(a, 1));           \
+    auto b1 = GiZipqFloat32(CONCAT(a, 2), CONCAT(a, 3));           \
+    auto b2 = GiZipqFloat32(CONCAT(a, 4), CONCAT(a, 5));           \
+    auto b3 = GiZipqFloat32(CONCAT(a, 6), CONCAT(a, 7));           \
+    CONCAT(ret, 0).val[0] = GiReinterpretqS64ToFloat32(GiZip1qS64( \
+            GiReinterpretqFloat32ToS64(b0.val[0]),                 \
+            GiReinterpretqFloat32ToS64(b1.val[0])));               \
+    CONCAT(ret, 0).val[1] = GiReinterpretqS64ToFloat32(GiZip1qS64( \
+            GiReinterpretqFloat32ToS64(b2.val[0]),                 \
+            GiReinterpretqFloat32ToS64(b3.val[0])));               \
+    CONCAT(ret, 1).val[0] = GiReinterpretqS64ToFloat32(GiZip2qS64( \
+            GiReinterpretqFloat32ToS64(b0.val[0]),                 \
+            GiReinterpretqFloat32ToS64(b1.val[0])));               \
+    CONCAT(ret, 1).val[1] = GiReinterpretqS64ToFloat32(GiZip2qS64( \
+            GiReinterpretqFloat32ToS64(b2.val[0]),                 \
+            GiReinterpretqFloat32ToS64(b3.val[0])));               \
+    CONCAT(ret, 2).val[0] = GiReinterpretqS64ToFloat32(GiZip1qS64( \
+            GiReinterpretqFloat32ToS64(b0.val[1]),                 \
+            GiReinterpretqFloat32ToS64(b1.val[1])));               \
+    CONCAT(ret, 2).val[1] = GiReinterpretqS64ToFloat32(GiZip1qS64( \
+            GiReinterpretqFloat32ToS64(b2.val[1]),                 \
             GiReinterpretqFloat32ToS64(b3.val[1])));
 
-#define TRANSPOSE_8x4(a, ret)                                            \
-    auto b0 = GiZipqFloat32(CONCAT(a, 0).value, CONCAT(a, 1).value);     \
-    auto b1 = GiZipqFloat32(CONCAT(a, 2).value, CONCAT(a, 3).value);     \
-    auto b2 = GiZipqFloat32(CONCAT(a, 4).value, CONCAT(a, 5).value);     \
-    auto b3 = GiZipqFloat32(CONCAT(a, 6).value, CONCAT(a, 7).value);     \
-    CONCAT(ret, 0).value.val[0] = GiReinterpretqS64ToFloat32(GiZip1qS64( \
-            GiReinterpretqFloat32ToS64(b0.val[0]),                       \
-            GiReinterpretqFloat32ToS64(b1.val[0])));                     \
-    CONCAT(ret, 0).value.val[1] = GiReinterpretqS64ToFloat32(GiZip1qS64( \
-            GiReinterpretqFloat32ToS64(b2.val[0]),                       \
-            GiReinterpretqFloat32ToS64(b3.val[0])));                     \
-    CONCAT(ret, 1).value.val[0] = GiReinterpretqS64ToFloat32(GiZip2qS64( \
-            GiReinterpretqFloat32ToS64(b0.val[0]),                       \
-            GiReinterpretqFloat32ToS64(b1.val[0])));                     \
-    CONCAT(ret, 1).value.val[1] = GiReinterpretqS64ToFloat32(GiZip2qS64( \
-            GiReinterpretqFloat32ToS64(b2.val[0]),                       \
-            GiReinterpretqFloat32ToS64(b3.val[0])));                     \
-    CONCAT(ret, 2).value.val[0] = GiReinterpretqS64ToFloat32(GiZip1qS64( \
-            GiReinterpretqFloat32ToS64(b0.val[1]),                       \
-            GiReinterpretqFloat32ToS64(b1.val[1])));                     \
-    CONCAT(ret, 2).value.val[1] = GiReinterpretqS64ToFloat32(GiZip1qS64( \
-            GiReinterpretqFloat32ToS64(b2.val[1]),                       \
-            GiReinterpretqFloat32ToS64(b3.val[1])));                     \
-    CONCAT(ret, 3).value.val[0] = GiReinterpretqS64ToFloat32(GiZip2qS64( \
-            GiReinterpretqFloat32ToS64(b0.val[1]),                       \
-            GiReinterpretqFloat32ToS64(b1.val[1])));                     \
-    CONCAT(ret, 3).value.val[1] = GiReinterpretqS64ToFloat32(GiZip2qS64( \
-            GiReinterpretqFloat32ToS64(b2.val[1]),                       \
+#define TRANSPOSE_8x4(a, ret)                                      \
+    auto b0 = GiZipqFloat32(CONCAT(a, 0), CONCAT(a, 1));           \
+    auto b1 = GiZipqFloat32(CONCAT(a, 2), CONCAT(a, 3));           \
+    auto b2 = GiZipqFloat32(CONCAT(a, 4), CONCAT(a, 5));           \
+    auto b3 = GiZipqFloat32(CONCAT(a, 6), CONCAT(a, 7));           \
+    CONCAT(ret, 0).val[0] = GiReinterpretqS64ToFloat32(GiZip1qS64( \
+            GiReinterpretqFloat32ToS64(b0.val[0]),                 \
+            GiReinterpretqFloat32ToS64(b1.val[0])));               \
+    CONCAT(ret, 0).val[1] = GiReinterpretqS64ToFloat32(GiZip1qS64( \
+            GiReinterpretqFloat32ToS64(b2.val[0]),                 \
+            GiReinterpretqFloat32ToS64(b3.val[0])));               \
+    CONCAT(ret, 1).val[0] = GiReinterpretqS64ToFloat32(GiZip2qS64( \
+            GiReinterpretqFloat32ToS64(b0.val[0]),                 \
+            GiReinterpretqFloat32ToS64(b1.val[0])));               \
+    CONCAT(ret, 1).val[1] = GiReinterpretqS64ToFloat32(GiZip2qS64( \
+            GiReinterpretqFloat32ToS64(b2.val[0]),                 \
+            GiReinterpretqFloat32ToS64(b3.val[0])));               \
+    CONCAT(ret, 2).val[0] = GiReinterpretqS64ToFloat32(GiZip1qS64( \
+            GiReinterpretqFloat32ToS64(b0.val[1]),                 \
+            GiReinterpretqFloat32ToS64(b1.val[1])));               \
+    CONCAT(ret, 2).val[1] = GiReinterpretqS64ToFloat32(GiZip1qS64( \
+            GiReinterpretqFloat32ToS64(b2.val[1]),                 \
+            GiReinterpretqFloat32ToS64(b3.val[1])));               \
+    CONCAT(ret, 3).val[0] = GiReinterpretqS64ToFloat32(GiZip2qS64( \
+            GiReinterpretqFloat32ToS64(b0.val[1]),                 \
+            GiReinterpretqFloat32ToS64(b1.val[1])));               \
+    CONCAT(ret, 3).val[1] = GiReinterpretqS64ToFloat32(GiZip2qS64( \
+            GiReinterpretqFloat32ToS64(b2.val[1]),                 \
             GiReinterpretqFloat32ToS64(b3.val[1])));
 
 #else
-#define TRANSPOSE_8x4(a, ret)                                                \
-    auto b0 = GiZipqFloat32(                                                 \
-            GiFixLenType2GiFloat32Type(CONCAT(a, 0).value),                  \
-            GiFixLenType2GiFloat32Type(CONCAT(a, 1).value));                 \
-    auto b1 = GiZipqFloat32(                                                 \
-            GiFixLenType2GiFloat32Type(CONCAT(a, 2).value),                  \
-            GiFixLenType2GiFloat32Type(CONCAT(a, 3).value));                 \
-    auto b2 = GiZipqFloat32(                                                 \
-            GiFixLenType2GiFloat32Type(CONCAT(a, 4).value),                  \
-            GiFixLenType2GiFloat32Type(CONCAT(a, 5).value));                 \
-    auto b3 = GiZipqFloat32(                                                 \
-            GiFixLenType2GiFloat32Type(CONCAT(a, 6).value),                  \
-            GiFixLenType2GiFloat32Type(CONCAT(a, 7).value));                 \
-    CONCAT(ret, 0).value.val[0] = GiFloat32Type2FixLenType(GiCombineFloat32( \
-            GiGetLowFloat32(GiGetSubVectorFloat32V2(b0, 0)),                 \
-            GiGetLowFloat32(GiGetSubVectorFloat32V2(b1, 0))));               \
-    CONCAT(ret, 1).value.val[0] = GiFloat32Type2FixLenType(GiCombineFloat32( \
-            GiGetHighFloat32(GiGetSubVectorFloat32V2(b0, 0)),                \
-            GiGetHighFloat32(GiGetSubVectorFloat32V2(b1, 0))));              \
-    CONCAT(ret, 2).value.val[0] = GiFloat32Type2FixLenType(GiCombineFloat32( \
-            GiGetLowFloat32(GiGetSubVectorFloat32V2(b0, 1)),                 \
-            GiGetLowFloat32(GiGetSubVectorFloat32V2(b1, 1))));               \
-    CONCAT(ret, 3).value.val[0] = GiFloat32Type2FixLenType(GiCombineFloat32( \
-            GiGetHighFloat32(GiGetSubVectorFloat32V2(b0, 1)),                \
-            GiGetHighFloat32(GiGetSubVectorFloat32V2(b1, 1))));              \
-    CONCAT(ret, 0).value.val[1] = GiFloat32Type2FixLenType(GiCombineFloat32( \
-            GiGetLowFloat32(GiGetSubVectorFloat32V2(b2, 0)),                 \
-            GiGetLowFloat32(GiGetSubVectorFloat32V2(b3, 0))));               \
-    CONCAT(ret, 1).value.val[1] = GiFloat32Type2FixLenType(GiCombineFloat32( \
-            GiGetHighFloat32(GiGetSubVectorFloat32V2(b2, 0)),                \
-            GiGetHighFloat32(GiGetSubVectorFloat32V2(b3, 0))));              \
-    CONCAT(ret, 2).value.val[1] = GiFloat32Type2FixLenType(GiCombineFloat32( \
-            GiGetLowFloat32(GiGetSubVectorFloat32V2(b2, 1)),                 \
-            GiGetLowFloat32(GiGetSubVectorFloat32V2(b3, 1))));               \
-    CONCAT(ret, 3).value.val[1] = GiFloat32Type2FixLenType(GiCombineFloat32( \
-            GiGetHighFloat32(GiGetSubVectorFloat32V2(b2, 1)),                \
-            GiGetHighFloat32(GiGetSubVectorFloat32V2(b3, 1))));
+#define TRANSPOSE_8x4(a, ret)                                           \
+    auto b0 = GiZipqFloat32(CONCAT(a, 0), CONCAT(a, 1));                \
+    auto b1 = GiZipqFloat32(CONCAT(a, 2), CONCAT(a, 3));                \
+    auto b2 = GiZipqFloat32(CONCAT(a, 4), CONCAT(a, 5));                \
+    auto b3 = GiZipqFloat32(CONCAT(a, 6), CONCAT(a, 7));                \
+    GiSetSubVectorFloat32V2(                                            \
+            CONCAT(ret, 0), 0,                                          \
+            GiCombineFloat32(                                           \
+                    GiGetLowFloat32(GiGetSubVectorFloat32V2(b0, 0)),    \
+                    GiGetLowFloat32(GiGetSubVectorFloat32V2(b1, 0))));  \
+    GiSetSubVectorFloat32V2(                                            \
+            CONCAT(ret, 1), 0,                                          \
+            GiCombineFloat32(                                           \
+                    GiGetHighFloat32(GiGetSubVectorFloat32V2(b0, 0)),   \
+                    GiGetHighFloat32(GiGetSubVectorFloat32V2(b1, 0)))); \
+    GiSetSubVectorFloat32V2(                                            \
+            CONCAT(ret, 2), 0,                                          \
+            GiCombineFloat32(                                           \
+                    GiGetLowFloat32(GiGetSubVectorFloat32V2(b0, 1)),    \
+                    GiGetLowFloat32(GiGetSubVectorFloat32V2(b1, 1))));  \
+    GiSetSubVectorFloat32V2(                                            \
+            CONCAT(ret, 3), 0,                                          \
+            GiCombineFloat32(                                           \
+                    GiGetHighFloat32(GiGetSubVectorFloat32V2(b0, 1)),   \
+                    GiGetHighFloat32(GiGetSubVectorFloat32V2(b1, 1)))); \
+    GiSetSubVectorFloat32V2(                                            \
+            CONCAT(ret, 0), 1,                                          \
+            GiCombineFloat32(                                           \
+                    GiGetLowFloat32(GiGetSubVectorFloat32V2(b2, 0)),    \
+                    GiGetLowFloat32(GiGetSubVectorFloat32V2(b3, 0))));  \
+    GiSetSubVectorFloat32V2(                                            \
+            CONCAT(ret, 1), 1,                                          \
+            GiCombineFloat32(                                           \
+                    GiGetHighFloat32(GiGetSubVectorFloat32V2(b2, 0)),   \
+                    GiGetHighFloat32(GiGetSubVectorFloat32V2(b3, 0)))); \
+    GiSetSubVectorFloat32V2(                                            \
+            CONCAT(ret, 2), 1,                                          \
+            GiCombineFloat32(                                           \
+                    GiGetLowFloat32(GiGetSubVectorFloat32V2(b2, 1)),    \
+                    GiGetLowFloat32(GiGetSubVectorFloat32V2(b3, 1))));  \
+    GiSetSubVectorFloat32V2(                                            \
+            CONCAT(ret, 3), 1,                                          \
+            GiCombineFloat32(                                           \
+                    GiGetHighFloat32(GiGetSubVectorFloat32V2(b2, 1)),   \
+                    GiGetHighFloat32(GiGetSubVectorFloat32V2(b3, 1))));
 
 #endif
 // vim: syntax=cpp.doxygen

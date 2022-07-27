@@ -1,7 +1,6 @@
 #include "src/common/unroll_macro.h"
 #include "src/common/utils.h"
 #include "src/fallback/conv_bias/gi/fp32/strategy.h"
-#include "src/fallback/conv_bias/gi/utils.h"
 #include "src/fallback/conv_bias/winograd/winograd.h"
 
 #include "src/fallback/conv_bias/gi/fp32/helper.h"
@@ -29,7 +28,7 @@ struct InputTransformF23_NCHW44 {
         size_t iw4_start = iw_start * pack_size;
         size_t ICB = IC / pack_size;
 
-#define cb(m, n) Vector<float, 4> d##m##n;
+#define cb(m, n) GI_FLOAT32_t d##m##n;
         UNROLL_CALL_NOWRAPPER_D2(4, 4, cb);
 #undef cb
 
@@ -40,7 +39,7 @@ struct InputTransformF23_NCHW44 {
             MEGDNN_MARK_USED_VAR(patchT);
             const float* input_ptr =
                     input + icb * IH * IW4 + ih_start * IW4 + iw4_start;
-#define cb(n, m) d##m##n = Vector<float, 4>::load(input_ptr + pack_size * n);
+#define cb(n, m) d##m##n = GiLoadFloat32(input_ptr + pack_size * n);
 
             UNROLL_CALL_RAW(4, cb, 0);
             input_ptr += IW4;
@@ -66,7 +65,7 @@ struct InputTransformF23_NCHW44 {
                 }
             }
 #define cb(m, n) \
-    d##m##n = Vector<float, 4>::load(patchT + m * alpha * pack_size + n * pack_size);
+    d##m##n = GiLoadFloat32(patchT + m * alpha * pack_size + n * pack_size);
             UNROLL_CALL_NOWRAPPER_D2(4, 4, cb);
 #undef cb
         }
@@ -74,29 +73,30 @@ struct InputTransformF23_NCHW44 {
         //! 0   1  1 0    d10 d11 d12 d13     0 1 -1 -1
         //! 0  -1  1 0    d20 d21 d22 d23    -1 1  1  0
         //! 0  -1  0 1    d30 d31 d32 d33     0 0  0  1
-#define cb(m)                   \
-    auto t0##m = d0##m - d2##m; \
-    auto t1##m = d1##m + d2##m; \
-    auto t2##m = d2##m - d1##m; \
-    auto t3##m = d3##m - d1##m;
+#define cb(m)                        \
+    auto t0##m = SUBF(d0##m, d2##m); \
+    auto t1##m = ADDF(d1##m, d2##m); \
+    auto t2##m = SUBF(d2##m, d1##m); \
+    auto t3##m = SUBF(d3##m, d1##m);
 
         UNROLL_CALL_NOWRAPPER(4, cb);
 #undef cb
 
-#define cb(m)                    \
-    d##m##0 = t##m##0 - t##m##2; \
-    d##m##1 = t##m##1 + t##m##2; \
-    d##m##2 = t##m##2 - t##m##1; \
-    d##m##3 = t##m##3 - t##m##1;
+#define cb(m)                         \
+    d##m##0 = SUBF(t##m##0, t##m##2); \
+    d##m##1 = ADDF(t##m##1, t##m##2); \
+    d##m##2 = SUBF(t##m##2, t##m##1); \
+    d##m##3 = SUBF(t##m##3, t##m##1);
 
         UNROLL_CALL_NOWRAPPER(4, cb);
 #undef cb
 
-#define cb(m, n)                                                   \
-    d##m##n.save(                                                  \
-            input_transform_buf +                                  \
-            (m * alpha + n) * ICB * nr_units_in_tile * pack_size + \
-            icb * nr_units_in_tile * pack_size + unit_idx * pack_size);
+#define cb(m, n)                                                               \
+    GiStoreFloat32(                                                            \
+            input_transform_buf +                                              \
+                    (m * alpha + n) * ICB * nr_units_in_tile * pack_size +     \
+                    icb * nr_units_in_tile * pack_size + unit_idx * pack_size, \
+            d##m##n);
         UNROLL_CALL_NOWRAPPER_D2(4, 4, cb)
 #undef cb
     }
@@ -118,7 +118,7 @@ struct OutputTransformF23_NCHW44 {
         size_t ocb = oc_index / pack_size;
 
 #define cb(m, n)                                                   \
-    auto v##m##n = Vector<float, 4>::load(                         \
+    auto v##m##n = GiLoadFloat32(                                  \
             output_transform_buf +                                 \
             (m * alpha + n) * OCB * nr_units_in_tile * pack_size + \
             ocb * nr_units_in_tile * pack_size + unit_idx * pack_size);
@@ -130,30 +130,30 @@ struct OutputTransformF23_NCHW44 {
         //!            v20 v21 v22 v23    1 -1
         //!            v30 v31 v32 v33    0  1
 
-#define cb(m)                           \
-    auto t0##m = v0##m + v1##m + v2##m; \
-    auto t1##m = v1##m - v2##m + v3##m;
+#define cb(m)                                     \
+    auto t0##m = ADDF(ADDF(v0##m, v1##m), v2##m); \
+    auto t1##m = ADDF(SUBF(v1##m, v2##m), v3##m);
 
         UNROLL_CALL_NOWRAPPER(4, cb);
 #undef cb
 
-#define cb(m)                              \
-    v##m##0 = t##m##0 + t##m##1 + t##m##2; \
-    v##m##1 = t##m##1 - t##m##2 + t##m##3;
+#define cb(m)                                        \
+    v##m##0 = ADDF(ADDF(t##m##0, t##m##1), t##m##2); \
+    v##m##1 = ADDF(SUBF(t##m##1, t##m##2), t##m##3);
 
         UNROLL_CALL_NOWRAPPER(2, cb);
 #undef cb
 
-        Vector<float, 4> vbias;
+        GI_FLOAT32_t vbias;
         if (bmode == BiasMode::BROADCAST_CHANNEL_BIAS) {
-            vbias = Vector<float, 4>::load(bias + oc);
+            vbias = GiLoadFloat32(bias + oc);
 
-#define cb(m, n) v##m##n += vbias;
+#define cb(m, n) v##m##n = ADDF(v##m##n, vbias);
             UNROLL_CALL_RAW_D2(2, 2, cb);
 #undef cb
         }
         if (bmode != BiasMode::BIAS) {
-#define cb(m, n) v##m##n = op(GiFixLenType2GiFloat32Type(CONCAT(v##m, n).value));
+#define cb(m, n) v##m##n = op(CONCAT(v##m, n));
             UNROLL_CALL_RAW_D2(2, 2, cb);
 #undef cb
         }
@@ -163,12 +163,15 @@ struct OutputTransformF23_NCHW44 {
         size_t ow = ow_start + owo;                                                  \
         if (oh < OH && ow < OW) {                                                    \
             if (bmode == BiasMode::BIAS) {                                           \
-                v##oho##owo += Vector<float, 4>::load(                               \
-                        bias + oc * OH * OW + oh * OW * pack_size + ow * pack_size); \
-                v##oho##owo = op(GiFixLenType2GiFloat32Type(v##oho##owo.value));     \
+                v##oho##owo = ADDF(                                                  \
+                        v##oho##owo, GiLoadFloat32(                                  \
+                                             bias + oc * OH * OW +                   \
+                                             oh * OW * pack_size + ow * pack_size)); \
+                v##oho##owo = op(v##oho##owo);                                       \
             }                                                                        \
-            v##oho##owo.save(                                                        \
-                    output + oc * OH * OW + oh * OW * pack_size + ow * pack_size);   \
+            GiStoreFloat32(                                                          \
+                    output + oc * OH * OW + oh * OW * pack_size + ow * pack_size,    \
+                    v##oho##owo);                                                    \
         }                                                                            \
     } while (0);
         UNROLL_CALL_RAW_D2(2, 2, out_save);
@@ -211,29 +214,30 @@ void winograd_F23_mk4_f_nchw44::filter(
                                             pack_size * pack_size +
                                     ic_inner * pack_size;
 
-#define cb(m, n)                                       \
-    Vector<float, 4> g##m##n = Vector<float, 4>::load( \
-            fptr + (m * KERNEL_SIZE + n) * pack_size * pack_size);
+#define cb(m, n)           \
+    GI_FLOAT32_t g##m##n = \
+            GiLoadFloat32(fptr + (m * KERNEL_SIZE + n) * pack_size * pack_size);
                 UNROLL_CALL_NOWRAPPER_D2(3, 3, cb)
 #undef cb
 
-#define FILTER_TRANSFORM(n, wd, g)    \
-    auto wd##n##0 = g##0##n;          \
-    tmp0 = (g##0##n + g##2##n) * 0.5; \
-    tmp1 = g##1##n * 0.5;             \
-    auto wd##n##1 = tmp0 + tmp1;      \
-    auto wd##n##2 = tmp0 - tmp1;      \
+#define FILTER_TRANSFORM(n, wd, g)             \
+    auto wd##n##0 = g##0##n;                   \
+    tmp0 = MULSF(ADDF(g##0##n, g##2##n), 0.5); \
+    tmp1 = MULSF(g##1##n, 0.5);                \
+    auto wd##n##1 = ADDF(tmp0, tmp1);          \
+    auto wd##n##2 = SUBF(tmp0, tmp1);          \
     auto wd##n##3 = g##2##n;
-                Vector<float, 4> tmp0, tmp1;
+                GI_FLOAT32_t tmp0, tmp1;
                 UNROLL_CALL_RAW(3, FILTER_TRANSFORM, wd, g);
                 UNROLL_CALL_RAW(4, FILTER_TRANSFORM, ret, wd);
 #undef FILTER_TRANSFORM
-#define cb_save(m, n)                                                         \
-    ret##m##n.save(                                                           \
-            filter_transform_buf +                                            \
-            (m * ALPHA + n) * OCB * ICB * pack_size * pack_size +             \
-            ocb * ICB * pack_size * pack_size + icb * pack_size * pack_size + \
-            ic_inner * pack_size);
+#define cb_save(m, n)                                                                 \
+    GiStoreFloat32(                                                                   \
+            filter_transform_buf +                                                    \
+                    (m * ALPHA + n) * OCB * ICB * pack_size * pack_size +             \
+                    ocb * ICB * pack_size * pack_size + icb * pack_size * pack_size + \
+                    ic_inner * pack_size,                                             \
+            ret##m##n);
                 UNROLL_CALL_NOWRAPPER_D2(4, 4, cb_save)
 #undef cb_save
             }

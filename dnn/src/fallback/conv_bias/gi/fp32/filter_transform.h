@@ -3,29 +3,44 @@
 #include "src/common/unroll_macro.h"
 #include "src/common/utils.h"
 #include "src/fallback/conv_bias/gi/fp32/helper.h"
-#include "src/fallback/conv_bias/gi/utils.h"
 
 namespace megdnn {
 namespace fallback {
 
+/*
+ * wd##0 = d##0;
+ * tmp0 = (d##0 + d##2) * -0.2222222f
+ * tmp1 = d##1 * -0.2222222
+ * wd##1 = tmp0 + tmp1
+ * wd##2 = tmp0 - tmp1
+ * tmp0 = d##0 * 0.0111111f + d##2 * 0.0444444f
+ * tmp1 = d##1 * 0.0222222f
+ * wd##3 = tmp0 + tmp1
+ * wd##4 = tmp0 - tmp1
+ * tmp0 = d##0 * 0.7111111f + d##2 * 0.1777778f
+ * tmp1 = d##1 * 0.3555556f
+ * wd##5 = tmp0 + tmp1
+ * wd##6 = tmp0 - tmp1
+ * wd##7 = d##2
+ */
 template <param::MatrixMul::Format format = param::MatrixMul::Format::DEFAULT>
 struct FilterTransform6X3 {
-#define FILTER_TRANSFORM(d, wd)                       \
-    do {                                              \
-        wd##0 = d##0;                                 \
-        auto tmp0 = (d##0 + d##2) * -0.2222222f;      \
-        auto tmp1 = d##1 * -0.2222222f;               \
-        wd##1 = tmp0 + tmp1;                          \
-        wd##2 = tmp0 - tmp1;                          \
-        tmp0 = d##0 * 0.0111111f + d##2 * 0.0444444f; \
-        tmp1 = d##1 * 0.0222222f;                     \
-        wd##3 = tmp0 + tmp1;                          \
-        wd##4 = tmp0 - tmp1;                          \
-        tmp0 = d##0 * 0.7111111f + d##2 * 0.1777778f; \
-        tmp1 = d##1 * 0.3555556f;                     \
-        wd##5 = tmp0 + tmp1;                          \
-        wd##6 = tmp0 - tmp1;                          \
-        wd##7 = d##2;                                 \
+#define FILTER_TRANSFORM(d, wd, ADDC, SUBC, MULC)                    \
+    do {                                                             \
+        wd##0 = d##0;                                                \
+        auto tmp0 = MULC(ADDC(d##0, d##2), -0.2222222f);             \
+        auto tmp1 = MULC(d##1, -0.2222222f);                         \
+        wd##1 = ADDC(tmp0, tmp1);                                    \
+        wd##2 = SUBC(tmp0, tmp1);                                    \
+        tmp0 = ADDC(MULC(d##0, 0.0111111f), MULC(d##2, 0.0444444f)); \
+        tmp1 = MULC(d##1, 0.0222222f);                               \
+        wd##3 = ADDC(tmp0, tmp1);                                    \
+        wd##4 = SUBC(tmp0, tmp1);                                    \
+        tmp0 = ADDC(MULC(d##0, 0.7111111f), MULC(d##2, 0.1777778f)); \
+        tmp1 = MULC(d##1, 0.3555556f);                               \
+        wd##5 = ADDC(tmp0, tmp1);                                    \
+        wd##6 = SUBC(tmp0, tmp1);                                    \
+        wd##7 = d##2;                                                \
     } while (0);
 
     static void transform(
@@ -49,37 +64,35 @@ struct FilterTransform6X3 {
             rep(ic, IC) {
                 const float* fptr = filter + (oc * IC + ic) * 3 * 3;
 
-                Vector<float, 4> g0 = Vector<float, 4>::load(fptr);
-                Vector<float, 4> g1 = Vector<float, 4>::load(fptr + 3);
+                GI_FLOAT32_t g0 = GiLoadFloat32(fptr);
+                GI_FLOAT32_t g1 = GiLoadFloat32(fptr + 3);
 
-                Vector<float, 4> g2 = Vector<float, 4>::load(fptr + 6 - 1);
+                GI_FLOAT32_t g2 = GiLoadFloat32(fptr + 6 - 1);
                 GI_FLOAT32_t zeros = GiZeroFloat32();
-                g2.value = GiFloat32Type2FixLenType(
-                        GiExtqFloat32(GiFixLenType2GiFloat32Type(g2.value), zeros, 1));
+                g2 = GiExtqFloat32(g2, zeros, 1);
 
-#define cb(i) Vector<float, 4> wd##i;
+#define cb(i) GI_FLOAT32_t wd##i;
                 UNROLL_CALL_NOWRAPPER(8, cb);
 #undef cb
 
-#define cb(i) Vector<float, 8> wdt##i;
-                UNROLL_CALL_NOWRAPPER(3, cb);
-#undef cb
-
-#define cb(i) Vector<float, 8> ret##i;
-                UNROLL_CALL_NOWRAPPER(8, cb);
-#undef cb
-
-                FILTER_TRANSFORM(g, wd);
+                FILTER_TRANSFORM(g, wd, ADDF, SUBF, MULSF);
 
                 size_t ocb = oc / 4;
                 size_t oc4 = oc % 4;
                 size_t icb = ic / 4;
                 size_t ic4 = ic % 4;
 #if MEGDNN_AARCH64
-                TRANSPOSE_8x3(wd, wdt);
-                FILTER_TRANSFORM(wdt, ret);
+#define cb(i) GI_FLOAT32_V2_t wdt##i;
+                UNROLL_CALL_NOWRAPPER(3, cb);
+#undef cb
 
-#define cb(i) ret##i.save(transform_mid_buf + i * alpha);
+#define cb(i) GI_FLOAT32_V2_t ret##i;
+                UNROLL_CALL_NOWRAPPER(8, cb);
+#undef cb
+                TRANSPOSE_8x3(wd, wdt);
+                FILTER_TRANSFORM(wdt, ret, ADDFV2, SUBFV2, MULSFV2);
+
+#define cb(i) GiStoreFloat32V2(transform_mid_buf + i * alpha, ret##i);
                 UNROLL_CALL_NOWRAPPER(8, cb);
 #undef cb
                 rep(i, alpha) rep(j, alpha) {
@@ -116,8 +129,7 @@ struct FilterTransform6X3 {
         mid_buf1[7] = GET_VECTOR_ELEM(wd, i, 2);                                       \
         mid_buf1 += 8;                                                                 \
     } while (0);
-#define GET_VECTOR_ELEM(s, i, idx) \
-    GiExtractLane##idx##Float32(GiFixLenType2GiFloat32Type(CONCAT(s, i).value))
+#define GET_VECTOR_ELEM(s, i, idx) GiExtractLane##idx##Float32(CONCAT(s, i))
 
                 float* mid_buf1 = transform_mid_buf;
                 UNROLL_CALL_NOWRAPPER(8, cb);
