@@ -57,6 +57,28 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
     // create megdnn opr
     auto&& conv = def.cast_final_safe<Convolution>();
     CompNode cn = inputs[0]->comp_node();
+
+    // calling dnn ConvolutionForward when device is rocm
+    // because there is no dnn ConvBiasForward on rocm
+    if (cn.device_type() == CompNode::DeviceType::ROCM) {
+        DnnOprCaller<megdnn::ConvolutionForward> dnn_opr(
+                cn, conv.param(), conv.policy());
+        auto out_layout = [&] {
+            if (validated) {
+                return output_descs[0].layout;
+            } else {
+                return dnn_opr.deduce_layout(inputs[0]->layout(), inputs[1]->layout());
+            }
+        }();
+
+        // alloc memory
+        auto out = Tensor::make(out_layout, cn);
+        dnn_opr.exec_fastrun(inputs[0], inputs[1], out);
+        return {out};
+    }
+
+    // calling dnn ConvBiasForward on cuda because it's faster then ConvolutionForward
+    // ConvolutionForward internally uses ConvBiasForward to calculate the result
     auto&& param = conv_bias_param_from_convolution(conv);
     DnnOprCaller<megdnn::ConvBiasForward> dnn_opr(cn, param, conv.policy());
 

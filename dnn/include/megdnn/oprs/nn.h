@@ -214,6 +214,12 @@ public:
             _megdnn_tensor_in src, _megdnn_tensor_in filter, _megdnn_tensor_out dst,
             const PreprocessedFilter* preprocessed_filter,
             _megdnn_workspace workspace) = 0;
+
+    MGE_WIN_DECLSPEC_FUC void exec(
+            _megdnn_tensor_in src, _megdnn_tensor_in filter, _megdnn_tensor_out dst,
+            _megdnn_workspace workspace) {
+        exec(src, filter, dst, nullptr, workspace);
+    }
     /**
      * \brief execute weight preprocessing, read weights form filter and write
      * to preprocessed_filter after preprocessed.
