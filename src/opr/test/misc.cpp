@@ -145,60 +145,6 @@ TEST(TestOprMisc, Argsort) {
     run(Order::DESCENDING);
 }
 
-TEST(TestOprMisc, Cumprod) {
-    using Param = opr::Cumprod::Param;
-    auto run = [](const Param& param) {
-        using Checker = AutoOprChecker<1, 1>;
-        auto make_graph =
-                [&](const Checker::SymInpArray& inputs) -> Checker::SymOutArray {
-            return {opr::Cumprod::make(inputs[0], param)};
-        };
-        auto fwd = [&](Checker::NumOutArray& out, Checker::NumInpArray inp) {
-            out[0].resize(inp[0]->shape());
-
-            auto pin = inp[0]->ptr<float>(), pout = out[0].ptr<float>();
-            size_t A, B, C;
-            int real_axis = param.axis;
-            if (real_axis < 0)
-                real_axis += 3;
-            shape_abc(inp[0]->shape(), real_axis, A, B, C);
-            ptrdiff_t stride = C;
-            if (param.reverse)
-                stride = -stride;
-            for (size_t i = 0; i < A; ++i) {
-                for (size_t k = 0; k < C; ++k) {
-                    auto pi = pin + i * B * C + k, po = pout + i * B * C + k;
-                    if (param.reverse) {
-                        pi += (B - 1) * C;
-                        po += (B - 1) * C;
-                    }
-                    if (param.exclusive) {
-                        *po = 1;
-                        po += stride;
-                    }
-                    float prod = 1;
-                    for (size_t j = 0; j < B - 1; ++j) {
-                        prod *= pi[j * stride];
-                        po[j * stride] = prod;
-                    }
-                    if (!param.exclusive) {
-                        po[(B - 1) * stride] = prod * pi[(B - 1) * stride];
-                    }
-                }
-            }
-        };
-        Checker{make_graph, fwd}
-                .run({TensorShape{2, 3, 4}})
-                .run({TensorShape{3, 1, 2}})
-                .run({TensorShape{4, 2, 3}});
-    };
-
-    // test negative axis
-    for (int32_t axis = -3; axis < 3; ++axis)
-        for (int mask = 0; mask < 4; ++mask)
-            run({axis, bool(mask >> 1), bool(mask & 1)});
-}
-
 TEST(TestOprMisc, Cumsum) {
     using Param = opr::Cumsum::Param;
     auto run = [](const Param& param) {

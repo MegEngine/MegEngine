@@ -2303,49 +2303,6 @@ OP_TRAIT_REG(Correlation, Correlation)
     .props(Correlation_props_impl)
     .make_name(Correlation_make_name_impl);
 
-MGB_DYN_TYPE_OBJ_FINAL_IMPL(Cumprod);
-
-namespace {
-size_t Cumprod_hash_impl(const OpDef& def_) {
-    auto&& op_ = def_.cast_final_safe<Cumprod>();
-    static_cast<void>(op_);
-    size_t val = mgb::hash(op_.dyn_typeinfo());
-    val = mgb::hash_pair_combine(val, mgb::hash(op_.axis));
-    val = mgb::hash_pair_combine(val, mgb::hash(op_.exclusive));
-    val = mgb::hash_pair_combine(val, mgb::hash(op_.reverse));
-    return val;
-}
-bool Cumprod_is_same_st_impl(const OpDef& lhs_, const OpDef& rhs_) {
-    auto &&a_ = lhs_.cast_final_safe<Cumprod>(),
-         &&b_ = rhs_.cast_final_safe<Cumprod>();
-    static_cast<void>(a_);
-    static_cast<void>(b_);
-    if (a_.axis != b_.axis) return false;
-    if (a_.exclusive != b_.exclusive) return false;
-    if (a_.reverse != b_.reverse) return false;
-    return true;
-}
-std::vector<std::pair<const char*, std::string>> Cumprod_props_impl(const OpDef& def_) {
-    auto&& op_ = def_.cast_final_safe<Cumprod>();
-    static_cast<void>(op_);
-    std::vector<std::pair<const char*, std::string>> props_;
-    props_.emplace_back("axis", std::to_string(op_.axis));
-    props_.emplace_back("exclusive", std::to_string(op_.exclusive));
-    props_.emplace_back("reverse", std::to_string(op_.reverse));
-    return props_;
-}
-std::string Cumprod_make_name_impl(const OpDef& def_) {
-    auto&& op_ = def_.cast_final_safe<Cumprod>();
-    static_cast<void>(op_);
-    return "Cumprod";
-}
-} // anonymous namespace
-OP_TRAIT_REG(Cumprod, Cumprod)
-    .hash(Cumprod_hash_impl)
-    .is_same_st(Cumprod_is_same_st_impl)
-    .props(Cumprod_props_impl)
-    .make_name(Cumprod_make_name_impl);
-
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(Cumsum);
 
 namespace {
@@ -3109,75 +3066,6 @@ std::vector<std::pair<const char*, std::string>> Elemwise_props_impl(const OpDef
         break;
     case Elemwise::Mode::COND_LT_MOV:
         props_.emplace_back("mode", "COND_LT_MOV");
-        break;
-    case Elemwise::Mode::SINH:
-        props_.emplace_back("mode", "SINH");
-        break;
-    case Elemwise::Mode::COSH:
-        props_.emplace_back("mode", "COSH");
-        break;
-    case Elemwise::Mode::ASINH:
-        props_.emplace_back("mode", "ASINH");
-        break;
-    case Elemwise::Mode::ACOSH:
-        props_.emplace_back("mode", "ACOSH");
-        break;
-    case Elemwise::Mode::ATANH:
-        props_.emplace_back("mode", "ATANH");
-        break;
-    case Elemwise::Mode::TAN:
-        props_.emplace_back("mode", "TAN");
-        break;
-    case Elemwise::Mode::ASINH_GRAD:
-        props_.emplace_back("mode", "ASINH_GRAD");
-        break;
-    case Elemwise::Mode::ACOSH_GRAD:
-        props_.emplace_back("mode", "ACOSH_GRAD");
-        break;
-    case Elemwise::Mode::ATANH_GRAD:
-        props_.emplace_back("mode", "ATANH_GRAD");
-        break;
-    case Elemwise::Mode::PRELU:
-        props_.emplace_back("mode", "PRELU");
-        break;
-    case Elemwise::Mode::CLIP:
-        props_.emplace_back("mode", "CLIP");
-        break;
-    case Elemwise::Mode::PRELU_GRAD:
-        props_.emplace_back("mode", "PRELU_GRAD");
-        break;
-    case Elemwise::Mode::SOFTPLUS:
-        props_.emplace_back("mode", "SOFTPLUS");
-        break;
-    case Elemwise::Mode::SOFTPLUS_GRAD:
-        props_.emplace_back("mode", "SOFTPLUS_GRAD");
-        break;
-    case Elemwise::Mode::RELU6:
-        props_.emplace_back("mode", "RELU6");
-        break;
-    case Elemwise::Mode::RELU6_GRAD:
-        props_.emplace_back("mode", "RELU6_GRAD");
-        break;
-    case Elemwise::Mode::HSIGMOID:
-        props_.emplace_back("mode", "HSIGMOID");
-        break;
-    case Elemwise::Mode::HSIGMOID_GRAD:
-        props_.emplace_back("mode", "HSIGMOID_GRAD");
-        break;
-    case Elemwise::Mode::LOGSIGMOID:
-        props_.emplace_back("mode", "LOGSIGMOID");
-        break;
-    case Elemwise::Mode::SQRT:
-        props_.emplace_back("mode", "SQRT");
-        break;
-    case Elemwise::Mode::SQUARE:
-        props_.emplace_back("mode", "SQUARE");
-        break;
-    case Elemwise::Mode::SIGN:
-        props_.emplace_back("mode", "SIGN");
-        break;
-    case Elemwise::Mode::SAFE_DIV:
-        props_.emplace_back("mode", "SAFE_DIV");
         break;
     case Elemwise::Mode::NEQ:
         props_.emplace_back("mode", "NEQ");

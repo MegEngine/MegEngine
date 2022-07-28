@@ -472,7 +472,6 @@ def ExternOpr: MgbHashableOp<"ExternOpr"> {
 }
 
 def Cumsum: MgbHashableOp<"Cumsum", [CumsumParam]>;
-def Cumprod: MgbHashableOp<"Cumprod", [CumprodParam]>;
 
 def Split: MgbHashableOp<"Split", [EmptyParam]> {
   let extraArguments = (ins

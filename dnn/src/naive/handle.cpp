@@ -18,7 +18,6 @@
 #include "src/naive/convolution3d/opr_impl.h"
 #include "src/naive/convpooling/opr_impl.h"
 #include "src/naive/correlation/opr_impl.h"
-#include "src/naive/cumprod/opr_impl.h"
 #include "src/naive/cumsum/opr_impl.h"
 #include "src/naive/cvt_color/opr_impl.h"
 #include "src/naive/dct/opr_impl.h"

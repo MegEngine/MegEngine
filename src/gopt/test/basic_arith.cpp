@@ -107,12 +107,6 @@ TEST(TestGoptBasicArithInplace, Absorbing) {
     ASSERT_EQ(y.as_immutable_scalar()->get_cast<float>(), 0.f);
 }
 
-auto gen_postive = [](HostTensorND& dest) {
-    HostTensorGenerator<dtype::Float32, RandomDistribution::UNIFORM> mask_generator{
-            2.f, 4.f};
-    dest = *mask_generator(dest.shape(), dest.comp_node());
-};
-
 TEST(TestGoptBasicArithInplace, LogExpExpand) {
     // test log(exp(a) * (exp(b) / (exp(c) * d**2))) -> a + b - c - log(d**2)
 
@@ -150,13 +144,9 @@ TEST(TestGoptBasicArithInplace, LogExpExpand) {
     opt.numdiff_eps_single_inp[3] = 1e-3;
     opt.numdiff_max_err_single_inp[3] = 1e-2;
     Checker{make_graph, fwd}
-            .set_input_generator(0, gen_postive)
-            .set_input_generator(1, gen_postive)
-            .set_input_generator(2, gen_postive)
-            .set_input_generator(3, gen_postive)
-            .run(ms({32, 1}, {32, 1}), opt)
-            .run(ms({2, 32}, {2, 32}), opt)
-            .run(ms({1, 32}, {1, 32}), opt);
+            .run(ms({2, 3}, {2, 3}), opt)
+            .run(ms({1, 3}, {2, 3}), opt)
+            .run(ms({3, 2}, {1}), opt);
 }
 
 TEST(TestGoptBasicArithInplace, LogSumExp) {

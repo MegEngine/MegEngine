@@ -494,49 +494,6 @@ TEST_F(NAIVE, CONV3D_RECORD) {
     }
 }
 
-//! cumprod
-TEST_F(NAIVE, CUMPROD_RECORD) {
-    TaskRecordChecker<Cumprod> checker(2);
-    struct TestArg {
-        param::Cumprod param;
-        TensorShape shape;
-        TestArg(param::Cumprod param, TensorShape shape) : param(param), shape(shape) {}
-    };
-    std::vector<TestArg> args, args_int32;
-    for (auto shape : TensorShapeArray{{1000}, {330, 33}, {10, 10, 10}, {5, 5, 5, 5}}) {
-        for (size_t axis = 0; axis < shape.ndim; ++axis) {
-            args.emplace_back(param::Cumprod(axis, true, true), shape);
-            args.emplace_back(param::Cumprod(axis, true, false), shape);
-            args.emplace_back(param::Cumprod(axis, false, true), shape);
-            args.emplace_back(param::Cumprod(axis, false, false), shape);
-        }
-    }
-    for (auto shape : TensorShapeArray{{1}, {10}, {100}, {1000}, {10000}}) {
-        args.emplace_back(param::Cumprod(0, true, true), shape);
-        args.emplace_back(param::Cumprod(0, true, false), shape);
-        args.emplace_back(param::Cumprod(0, false, true), shape);
-        args.emplace_back(param::Cumprod(0, false, false), shape);
-    }
-    for (auto shape : TensorShapeArray{{1}, {10}, {100}, {1000}, {10000}}) {
-        args_int32.emplace_back(param::Cumprod(0, true, true), shape);
-        args_int32.emplace_back(param::Cumprod(0, true, false), shape);
-        args_int32.emplace_back(param::Cumprod(0, false, true), shape);
-        args_int32.emplace_back(param::Cumprod(0, false, false), shape);
-    }
-    for (auto arg : args) {
-        checker.set_param(arg.param);
-        checker.set_epsilon(1e-2);
-        checker.set_dtype(0, dtype::Float32()).execs({{arg.shape}, {}});
-        checker.set_dtype(0, dtype::Int16()).execs({{arg.shape}, {}});
-        checker.set_dtype(0, dtype::Int32()).execs({{arg.shape}, {}});
-    }
-    for (auto arg : args_int32) {
-        checker.set_param(arg.param);
-        checker.set_epsilon(1e-2);
-        checker.set_dtype(0, dtype::Int32()).execs({{arg.shape}, {}});
-    }
-}
-
 //! cumsum
 TEST_F(NAIVE, CUMSUM_RECORD) {
     TaskRecordChecker<Cumsum> checker(2);

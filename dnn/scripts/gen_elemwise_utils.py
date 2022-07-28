@@ -31,7 +31,7 @@ MODES = {
                    'FUSE_ADD_SIGMOID', 'ATAN2', 'H_SWISH_GRAD',
                    'FUSE_ADD_H_SWISH', 'SILU_GRAD', 'GELU_GRAD', 'PRELU',
                    'ASINH_GRAD', 'ACOSH_GRAD', 'ATANH_GRAD', 'SOFTPLUS_GRAD',
-                   'RELU6_GRAD', 'HSIGMOID_GRAD', 'SAFE_DIV'],
+                   'RELU6_GRAD', 'HSIGMOID_GRAD'],
     (3, 'FLOAT'): ['COND_LEQ_MOV', 'COND_LT_MOV', 'FUSE_MUL_ADD3', 'CLIP', 'PRELU_GRAD'],
     (1, 'BOOL'): ['NOT'],
     (2, 'BOOL'): ['AND', 'OR', 'XOR', 'LT', 'LEQ', 'EQ'],

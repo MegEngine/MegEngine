@@ -350,9 +350,6 @@ template <>
 struct CheckerConfig<H_SWISH_GRAD> : public NoGradCheckerConfig {};
 
 template <>
-struct CheckerConfig<SAFE_DIV> : public NoGradCheckerConfig {};
-
-template <>
 struct CheckerConfig<TAN> : public NoGradCheckerConfig {
     template <typename ctype>
     static InputGenerator get_inp_gen(size_t) {
@@ -696,13 +693,9 @@ struct CheckerConfig<HSIGMOID_GRAD> : public NoGradCheckerConfig {
 /* ======================= ternary config ======================= */
 template <>
 struct CheckerConfig<COND_LEQ_MOV> : public BinaryInputMinGap<false> {};
-
 template <>
 struct CheckerConfig<COND_LT_MOV> : public BinaryInputMinGap<false> {};
-
-template <>
 struct CheckerConfig<PRELU_GRAD> : public NoGradCheckerConfig {};
-
 template <>
 struct CheckerConfig<CLIP> : public CheckerConfig<void> {
     template <typename ctype, class Checker>
@@ -893,10 +886,6 @@ void TestRunner<Trait, dtype, true>::run() {
     }
 
     TensorShape shapes[] = {{1}, {23, 3}, {666}};
-    if (Trait::ARITY == 4) {
-        checker.disable_graph_opt();
-        shapes[0] = {32};
-    }
     typename Checker::RunOptions opt;
     Config::update_opt(opt);
     Config::update_checker(checker);
@@ -1045,13 +1034,13 @@ TEST(TestOprBasicArithElemwise, FuseMulAdd4Shapes) {
     };
 
     Checker checker{make_graph, fwd};
-    checker.run({TensorShape{1, 32}, {1, 32}, {1, 32}, {1, 32}})
-            .run({TensorShape{1, 1, 1, 1, 1, 32},
-                  {1, 1, 1, 1, 1, 32},
-                  {1, 1, 1, 1, 1, 32},
-                  {1, 1, 1, 1, 1, 32}});
+    checker.run({TensorShape{1, 2}, {2, 1}, {1, 2}, {2, 1}})
+            .run({TensorShape{1, 2, 1, 2, 1, 2},
+                  {2, 1, 2, 1, 2, 1},
+                  {2, 1, 2, 1, 2, 1},
+                  {1, 2, 1, 2, 1, 2}});
     ASSERT_FALSE(opr->fuse_badlayout_warn_printed());
-    checker.run({TensorShape{1, 32}, {32, 1}, {32, 32}, {32, 32}});
+    checker.run({TensorShape{1, 2}, {2, 1}, {2, 2}, {2, 2}});
     ASSERT_TRUE(opr->fuse_badlayout_warn_printed());
 }
 

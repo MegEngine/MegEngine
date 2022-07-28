@@ -580,8 +580,6 @@ MGB_IMPL_OPR_GRAD(Elemwise) {
             RET(EL2(ABS_GRAD, i0, og));
         case Mode::ADD:
             RET(og);
-        case Mode::SAFE_DIV:
-            RET_INVALID();
         case Mode::FLOOR_DIV:
             return nullptr;
         case Mode::MAX:

@@ -106,7 +106,6 @@ private:
     cb(SVDForward) \
     cb(ReduceForward) \
     cb(CondTake) \
-    cb(CumprodForward) \
     cb(CumsumForward) \
     cb(ArgmaxForward) \
     cb(ArgminForward) \

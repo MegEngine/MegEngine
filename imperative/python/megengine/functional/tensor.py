@@ -27,7 +27,6 @@ __all__ = [
     "broadcast_to",
     "concat",
     "cond_take",
-    "cumprod",
     "cumsum",
     "diag",
     "expand_dims",
@@ -1140,22 +1139,6 @@ def cumsum(inp: Tensor, axis: int):
         Tensor([[ 1  3  6]
          [ 4  9 15]], dtype=int32, device=xpux:0)
     """
+    assert isinstance(inp, Tensor), "input of cumsum must be type of Tensor"
     op = builtin.Cumsum(axis=axis, exclusive=False, reverse=False)
-    return apply(op, inp)[0]
-
-
-def cumprod(inp: Tensor, axis: int):
-    r"""Computes the cumulative product of elements along given axis.
-
-    Args:
-        inp: input tensor.
-        axis: axis along which cumprod is performed.
-
-    Examples:
-        >>> x = Tensor([[1, 2, 3], [4, 5, 6]], "int32")
-        >>> F.cumprod(x, 1)
-        Tensor([[ 1  2  6]
-         [ 4  20 120]], dtype=int32, device=xpux:0)
-    """
-    op = builtin.Cumprod(axis=axis, exclusive=False, reverse=False)
     return apply(op, inp)[0]

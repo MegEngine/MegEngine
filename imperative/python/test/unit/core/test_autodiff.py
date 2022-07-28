@@ -501,22 +501,6 @@ def test_dot():
     np.testing.assert_equal(np.ones((2, 2), dtype=np.float32), x.grad.numpy())
 
 
-def test_cumprod():
-    x = mge.Parameter(F.full((2, 2), 2.0, dtype="float32"))
-
-    with Grad() as grad:
-        grad.wrt(x, callback=save_to(x))
-
-        def f(x):
-            return F.cumprod(x, axis=0)
-
-        y = f(x)
-        grad(y, F.ones_like(y))
-
-    expected = np.array([[3.0, 3.0], [2.0, 2.0]], dtype=np.float32)
-    np.testing.assert_almost_equal(x.grad.numpy(), expected)
-
-
 def test_pixel_shuffle():
 
     x = np.random.rand(2, 3, 16, 3, 4).astype("float32")

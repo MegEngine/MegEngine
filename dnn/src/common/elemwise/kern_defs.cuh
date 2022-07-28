@@ -247,8 +247,6 @@ DEF_KERN(dt_bool, EQ, x == y);
 
 DEF_KERN_INT(FLOOR_DIV, dispatch_floordiv_int(x, y));
 DEF_KERN_FLOAT(FLOOR_DIV, floorf(x / y));
-DEF_KERN_INT(SAFE_DIV, y != 0 ? x / y : 0);
-DEF_KERN_FLOAT(SAFE_DIV, y != 0.f ? x / y : 0.f);
 
 DEF_KERN_INT(MOD, x % y);
 DEF_KERN_FLOAT(MOD, fmodf(x, y));

@@ -314,48 +314,6 @@ protected:
 };
 using Cumsum = CumsumForward;
 
-class CumprodForward : public OperatorBase {
-    DEF_OPR_PARAM(Cumprod);
-    DEF_OPR_IMPL(CumprodForward, OperatorBase, 1, 1);
-
-public:
-    /**
-     * \param[in] src input tensor
-     * \param[out] dst output tensor
-     *
-     * src and dst should be contiguous.
-     * src and dst should have the same shape.
-     *
-     * The exclusive flag specifies whether the current element it taken
-     * into account when calculating results.
-     *
-     * The reverse flag specifies whether cumprod is forward (
-     * from 0 to n) or backward (from n downto 0).
-     *
-     * Example:
-     *  exclusive && reverse:
-     *   dst_i = src_{i+1} * src_{i+2} * ... * src_{n-1}
-     *  exclusive && !reverse
-     *   dst_i = src_0 * src_1 * ... * src_{i-1}
-     *  !exclusive && reverse:
-     *   dst_i = src_i * src_{i+1} * ... * src_{n-1}
-     *  !exclusive && !reverse:
-     *   dst_i = src_0 * src_1 * ... * src_i
-     */
-    virtual void exec(
-            _megdnn_tensor_in src, _megdnn_tensor_out dst,
-            _megdnn_workspace workspace) = 0;
-    void deduce_layout(const TensorLayout& src, TensorLayout& dst);
-    virtual size_t get_workspace_in_bytes(
-            const TensorLayout& src, const TensorLayout& dst) = 0;
-
-protected:
-    void check_exec(
-            const TensorLayout& src, const TensorLayout& dst,
-            size_t workspace_in_bytes);
-};
-using Cumprod = CumprodForward;
-
 // mxx can be max or min
 class ArgmxxBase : public OperatorBase {
     DEF_OPR_IMPL_CTOR(ArgmxxBase, OperatorBase);
