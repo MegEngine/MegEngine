@@ -90,6 +90,18 @@ class ResNet(M.Module):
         return out
 
 
+def run_dtr_drop_copy_dev_tensor():
+    mge.dtr.evictee_minimum_size = 128
+    mge.dtr.enable()
+    x = F.ones((10, 100))
+    x._drop()
+    x[...] = mge.tensor(x, no_cache=True)
+    x.numpy()
+    mge.dtr.evictee_minimum_size = 1024 ** 2
+    mge.dtr.disable()
+    mge._exit(0)
+
+
 def run_dtr_resnet1202():
     batch_size = 6
     resnet1202 = ResNet(BasicBlock, [200, 200, 200])
@@ -132,6 +144,15 @@ def run_dtr_resnet1202():
 @pytest.mark.isolated_distributed
 def test_dtr_resnet1202():
     p = mp.Process(target=run_dtr_resnet1202)
+    p.start()
+    p.join()
+    assert p.exitcode == 0
+
+
+@pytest.mark.require_ngpu(1)
+@pytest.mark.isolated_distributed
+def test_dtr_drop_copy_dev_tensor():
+    p = mp.Process(target=run_dtr_drop_copy_dev_tensor)
     p.start()
     p.join()
     assert p.exitcode == 0

@@ -136,9 +136,31 @@ struct PopScope {
     const char* get_name() const { return "PopScope"; }
 };
 
+struct StartRegen {
+    TensorInfo* dest;
+
+    template <typename TFunctor>
+    void get_props(TFunctor&& functor) const {
+        functor("dest", dest);
+    }
+
+    const char* get_name() const { return "StartRegen"; }
+};
+
+struct StopRegen {
+    TensorInfo* dest;
+
+    template <typename TFunctor>
+    void get_props(TFunctor&& functor) const {
+        functor("dest", dest);
+    }
+
+    const char* get_name() const { return "StopRegen"; }
+};
+
 using CommandData = std::variant<
         Put, ApplyOp, Del, GetValue, Drop, SetOption, StartProfile, StopProfile,
-        PushScope, PopScope>;
+        PushScope, PopScope, StartRegen, StopRegen>;
 
 struct Command {
     uint64_t id;
