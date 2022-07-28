@@ -543,34 +543,6 @@ MGB_IMPL_OPR_GRAD(Elemwise) {
             RET(EL2(SILU_GRAD, i0, og));
         case Mode::GELU:
             RET(EL2(GELU_GRAD, i0, og));
-        case Mode::SINH:
-            RET(EL1(COSH, i0) * og);
-        case Mode::COSH:
-            RET(EL1(SINH, i0) * og);
-        case Mode::ASINH:
-            RET(EL2(ASINH_GRAD, i0, og));
-        case Mode::ACOSH:
-            RET(EL2(ACOSH_GRAD, i0, og));
-        case Mode::ATANH:
-            RET(EL2(ATANH_GRAD, i0, og));
-        case Mode::TAN: {
-            auto two = i0.make_scalar_dt(2);
-            RET(og / (EL2(POW, EL1(COS, i0), two)));
-        }
-        case Mode::RELU6:
-            RET(EL2(RELU6_GRAD, i0, og));
-        case Mode::SOFTPLUS:
-            RET(EL2(SOFTPLUS_GRAD, i0, og));
-        case Mode::HSIGMOID:
-            RET(EL2(HSIGMOID_GRAD, i0, og));
-        case Mode::LOGSIGMOID:
-            RET(EL2(SOFTPLUS_GRAD, EL1(NEGATE, i0), og));
-        case Mode::SQRT:
-            RET(og / EL1(SQRT, i0) / 2);
-        case Mode::SQUARE:
-            RET(og * 2 * i0);
-        case Mode::SIGN:
-            RET(i0.make_scalar_dt(0).broadcast(i0.symshape()));
 
         // binary
         case Mode::ABS_GRAD:
@@ -645,11 +617,6 @@ MGB_IMPL_OPR_GRAD(Elemwise) {
         case Mode::XOR:
         case Mode::AND:
             return nullptr;
-        case Mode::PRELU:
-            if (wrt_idx == 0) {
-                RET(EL3(PRELU_GRAD, i0, og, i1));
-            }
-            RET(EL2(SWITCH_GT0, -i0, og * i0));
 
         // ternary
         case Mode::COND_LEQ_MOV:
@@ -660,15 +627,6 @@ MGB_IMPL_OPR_GRAD(Elemwise) {
             if (wrt_idx <= 1)
                 return nullptr;
             RET(EL3(COND_LT_MOV, i0, i1, og));
-        case Mode::CLIP:
-            if (wrt_idx == 0) {
-                RET(EL3(COND_LEQ_MOV, i1, i0, EL3(COND_LEQ_MOV, i0, i2, og)));
-            }
-            if (wrt_idx == 1) {
-                RET(EL3(COND_LEQ_MOV, i0, i1, og));
-            }
-            RET(EL3(COND_LEQ_MOV, i2, i0, og));
-
         // fuse oprs
         case Mode::FUSE_MUL_ADD3:
             if (wrt_idx < 2) {

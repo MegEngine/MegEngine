@@ -14,27 +14,23 @@ MODES = {
     1: ['RELU', 'ABS', 'NEGATE', 'ACOS', 'ASIN', 'CEIL', 'COS',
         'EXP', 'EXPM1', 'FLOOR', 'LOG', 'LOG1P', 'SIGMOID', 'SIN',
         'TANH', 'FAST_TANH', 'ROUND', 'ERF', 'ERFINV', 'ERFC',
-        'ERFCINV', 'H_SWISH', 'SILU', 'GELU', 'SINH', 'COSH',
-        'ASINH', 'ACOSH', 'ATANH', 'TAN', 'SOFTPLUS', 'RELU6',
-        'HSIGMOID', 'LOGSIGMOID', 'SQRT', 'SQUARE', 'SIGN'],
+        'ERFCINV', 'H_SWISH', 'SILU', 'GELU'],
     2: ['ABS_GRAD', 'ADD', 'FLOOR_DIV', 'MAX', 'MIN', 'MOD', 'MUL',
         'SIGMOID_GRAD', 'SUB', 'SWITCH_GT0', 'TANH_GRAD', 'LT',
         'LEQ', 'EQ', 'FUSE_ADD_RELU', 'TRUE_DIV', 'POW',
         'LOG_SUM_EXP', 'FUSE_ADD_TANH', 'FAST_TANH_GRAD',
         'FUSE_ADD_SIGMOID', 'ATAN2', 'H_SWISH_GRAD',
-        'FUSE_ADD_H_SWISH', 'SILU_GRAD', 'GELU_GRAD', 'PRELU',
-        'ASINH_GRAD', 'ACOSH_GRAD', 'ATANH_GRAD', 'SOFTPLUS_GRAD',
-        'RELU6_GRAD', 'HSIGMOID_GRAD'],
-    3: ['COND_LEQ_MOV', 'COND_LT_MOV', 'FUSE_MUL_ADD3', 'CLIP', 'PRELU_GRAD'],
+        'FUSE_ADD_H_SWISH', 'SILU_GRAD', 'GELU_GRAD'],
+    3: ['COND_LEQ_MOV', 'COND_LT_MOV', 'FUSE_MUL_ADD3'],
 }
 
 QINT4_MODES = {
     1: ['RELU', 'ABS', 'NEGATE', 'CEIL', 'FLOOR', 'SIGMOID',
         'TANH', 'FAST_TANH', 'ROUND', 'H_SWISH'],
-    2: ['ADD', 'MAX', 'MIN', 'MUL', 'SUB', 'SWITCH_GT0', 
-        'LT', 'LEQ', 'EQ', 'FUSE_ADD_RELU', 'FUSE_ADD_TANH', 
-        'FUSE_ADD_SIGMOID', 'FUSE_ADD_H_SWISH', 'PRELU'],
-    3: ['COND_LEQ_MOV', 'COND_LT_MOV', 'FUSE_MUL_ADD3', 'CLIP'],
+    2: ['ADD', 'MAX', 'MIN', 'MUL', 'SUB', 'SWITCH_GT0',
+        'LT', 'LEQ', 'EQ', 'FUSE_ADD_RELU', 'FUSE_ADD_TANH',
+        'FUSE_ADD_SIGMOID', 'FUSE_ADD_H_SWISH'],
+    3: ['COND_LEQ_MOV', 'COND_LT_MOV', 'FUSE_MUL_ADD3'],
 }
 
 QINT32_MODES = {

@@ -154,18 +154,11 @@ struct ElemwiseKern;
 
 // int and float
 DEF_KERN_ALL(NEGATE, -x);
-DEF_KERN_ALL(SQUARE, x* x);
 #if defined(__HIP_PLATFORM_HCC__) && !defined(__HIP_PLATFORM_NVCC__)
 DEF_KERN_INT(RELU, x <= ctype(0) ? ctype(0) : x);
-DEF_KERN_INT(RELU6, x <= ctype(0) ? ctype(0) : (x <= ctype(6) ? x : ctype(6)));
-DEF_KERN_INT(SIGN, x < ctype(0) ? ctype(-1) : (x > ctype(0) ? ctype(1) : ctype(0)));
 DEF_KERN_FLOAT(RELU, x <= 0.f ? ctype(0) : x);
-DEF_KERN_FLOAT(RELU6, x <= 6.f ? ctype(0) : (x <= 6.f ? x : ctype(6)));
-DEF_KERN_FLOAT(SIGN, x < 0.f ? -1.f : (x > 0.f ? 1.f : 0.f));
 #else
 DEF_KERN_ALL(RELU, x <= ctype(0) ? ctype(0) : x);
-DEF_KERN_ALL(RELU6, x <= ctype(0) ? ctype(0) : (x <= ctype(6) ? x : ctype(6)));
-DEF_KERN_ALL(SIGN, x < ctype(0) ? ctype(-1) : (x > ctype(0) ? ctype(1) : ctype(0)));
 #endif
 DEF_KERN_INT(ABS, abs(int(x)));
 // DEF_KERN_INT(ABS, x > ctype(0) ? x : -x);
@@ -193,18 +186,6 @@ DEF_KERN_FLOAT(ERFCINV, erfcinvf(x));
 DEF_KERN_FLOAT(H_SWISH, x* min(max(x + 3, 0.f), 6.f) * (1.f / 6.f));
 DEF_KERN_FLOAT(SILU, x / (expf(-x) + 1.f));
 DEF_KERN_FLOAT(GELU, x* normcdf(x));
-DEF_KERN_FLOAT(SINH, sinhf(x));
-DEF_KERN_FLOAT(COSH, coshf(x));
-DEF_KERN_FLOAT(ASINH, asinhf(x));
-DEF_KERN_FLOAT(ACOSH, acoshf(x));
-DEF_KERN_FLOAT(ATANH, atanhf(x));
-DEF_KERN_FLOAT(TAN, tanf(x));
-DEF_KERN_FLOAT(SOFTPLUS, log1pf(expf(-fabsf(x))) + (x <= ctype(0) ? ctype(0) : x));
-DEF_KERN_FLOAT(
-        HSIGMOID,
-        x <= ctype(-3) ? ctype(0) : (x >= ctype(3) ? ctype(1) : ((x + 3.f) / 6.f)));
-DEF_KERN_FLOAT(SQRT, sqrtf(x));
-DEF_KERN_FLOAT(LOGSIGMOID, -log1pf(expf(-fabsf(x))) + (x >= ctype(0) ? ctype(0) : x));
 
 // int only
 DEF_KERN(dt_bool, NOT, x ^ 1);
@@ -259,12 +240,6 @@ DEF_KERN_FLOAT(FUSE_ADD_RELU, (x + y) <= 0.f ? ctype(0) : (x + y));
 #else
 DEF_KERN_ALL(FUSE_ADD_RELU, (x + y) <= ctype(0) ? ctype(0) : (x + y));
 #endif
-#if defined(__HIP_PLATFORM_HCC__) && !defined(__HIP_PLATFORM_NVCC__)
-DEF_KERN_INT(PRELU, x > ctype(0) ? x : (x * y));
-DEF_KERN_FLOAT(PRELU, x > 0.f ? x : (x * y));
-#else
-DEF_KERN_ALL(PRELU, x > ctype(0) ? x : (x * y));
-#endif
 
 // float only
 DEF_KERN_FLOAT(TRUE_DIV, x / y);
@@ -284,14 +259,6 @@ DEF_KERN_FLOAT(
 DEF_KERN_FLOAT(FUSE_ADD_H_SWISH, fuse_add_hswish(x, y));
 DEF_KERN_FLOAT(SILU_GRAD, silu_grad(x, y));
 DEF_KERN_FLOAT(GELU_GRAD, gelu_grad(x, y));
-DEF_KERN_FLOAT(ASINH_GRAD, y / sqrt(x * x + 1.f));
-DEF_KERN_FLOAT(ACOSH_GRAD, y / sqrt(x * x - 1.f));
-DEF_KERN_FLOAT(ATANH_GRAD, y / (1.f - x * x));
-DEF_KERN_FLOAT(SOFTPLUS_GRAD, y* expf(x) / (1.f + expf(x)));
-DEF_KERN_FLOAT(RELU6_GRAD, x <= ctype(0) ? ctype(0) : (x >= ctype(6) ? ctype(0) : y));
-DEF_KERN_FLOAT(
-        HSIGMOID_GRAD,
-        x <= ctype(-3) ? ctype(0) : (x >= ctype(3) ? ctype(0) : (y / 6.f)));
 #undef KERN_SIG
 
 /* ================== ternary kernels ================== */
@@ -301,8 +268,6 @@ DEF_KERN_FLOAT(
 DEF_KERN_ALL(COND_LEQ_MOV, x <= y ? z : ctype(0));
 DEF_KERN_ALL(COND_LT_MOV, x < y ? z : ctype(0));
 DEF_KERN_ALL(FUSE_MUL_ADD3, x* y + z);
-DEF_KERN_ALL(CLIP, x <= y ? y : (x <= z ? x : z));
-DEF_KERN_FLOAT(PRELU_GRAD, x >= 0.f ? y : (y * z));
 
 #undef KERN_SIG
 

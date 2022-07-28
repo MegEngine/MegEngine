@@ -15,10 +15,6 @@
 DEF_TRAIT(COND_LEQ_MOV, x <= y ? z : 0)
 DEF_TRAIT(COND_LT_MOV, x < y ? z : 0)
 DEF_TRAIT(FUSE_MUL_ADD3, x* y + z)
-DEF_TRAIT(CLIP, x < y ? y : (x < z ? x : z))
-#undef _ALLOW_INT
-#define _ALLOW_INT false
-DEF_TRAIT(PRELU_GRAD, x > 0 ? y : (y * z))
 #undef _ALLOW_INT
 #undef _ALLOW_FLOAT
 

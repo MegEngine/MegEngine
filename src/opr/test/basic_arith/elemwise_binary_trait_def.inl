@@ -41,7 +41,6 @@ DEF_TRAIT(SWITCH_GT0, x > 0 ? y : 0)
 DEF_TRAIT(TANH_GRAD, (1 - x * x) * y)
 
 DEF_TRAIT(FUSE_ADD_RELU, std::max<ctype>(x + y, 0))
-DEF_TRAIT(PRELU, (x > 0) ? x : (x* y))
 #undef _ALLOW_INT
 
 #define _ALLOW_INT false
@@ -58,12 +57,6 @@ DEF_TRAIT(
         SILU_GRAD, y*(1 + std::exp(-x) + x * std::exp(-x)) / (1 + std::exp(-x)) /
                            (1 + std::exp(-x)))
 DEF_TRAIT(GELU_GRAD, do_gelu_grad(x, y))
-DEF_TRAIT(ASINH_GRAD, y / std::sqrt(x * x + 1))
-DEF_TRAIT(ACOSH_GRAD, y / std::sqrt(x * x - 1))
-DEF_TRAIT(ATANH_GRAD, y / (1 - x * x))
-DEF_TRAIT(SOFTPLUS_GRAD, y* std::exp(x) / (1.f + std::exp(x)))
-DEF_TRAIT(RELU6_GRAD, x <= 0.f ? 0.f : (x >= 6.f ? 0.f : y))
-DEF_TRAIT(HSIGMOID_GRAD, x <= -3.f ? 0.f : (x >= 3.f ? 0.f : (y / 6.f)))
 
 #undef _ALLOW_INT
 #undef _ALLOW_FLOAT

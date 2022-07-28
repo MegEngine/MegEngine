@@ -220,28 +220,6 @@ const ModeTrait& ModeTrait::from_mode(Mode mode) {
         CB_MODE(Mode::GELU);
         CB_MODE(Mode::GELU_GRAD);
         CB_MODE(Mode::COND_LT_MOV);
-        CB_MODE(Mode::SINH);
-        CB_MODE(Mode::COSH);
-        CB_MODE(Mode::ASINH);
-        CB_MODE(Mode::ACOSH);
-        CB_MODE(Mode::ATANH);
-        CB_MODE(Mode::TAN);
-        CB_MODE(Mode::ASINH_GRAD);
-        CB_MODE(Mode::ACOSH_GRAD);
-        CB_MODE(Mode::ATANH_GRAD);
-        CB_MODE(Mode::PRELU);
-        CB_MODE(Mode::PRELU_GRAD);
-        CB_MODE(Mode::CLIP);
-        CB_MODE(Mode::SOFTPLUS);
-        CB_MODE(Mode::SOFTPLUS_GRAD);
-        CB_MODE(Mode::RELU6);
-        CB_MODE(Mode::RELU6_GRAD);
-        CB_MODE(Mode::HSIGMOID);
-        CB_MODE(Mode::HSIGMOID_GRAD);
-        CB_MODE(Mode::LOGSIGMOID);
-        CB_MODE(Mode::SQRT);
-        CB_MODE(Mode::SQUARE);
-        CB_MODE(Mode::SIGN);
         default:
             megdnn_assert(
                     0,

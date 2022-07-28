@@ -744,8 +744,8 @@ DEF_TEST(all_modes) {
     TensorShapeArray shapes;
     UniformFloatRNG default_rng_f32{-100.f, 100.f}, pos_rng_f32{.1f, 1000.f},
             small_pos_rng_f32{.1f, .10f}, small_rng_f32{-3.f, 3.f},
-            abslt1_rng_f32{-0.95f, 0.95f}, uniform_0_2_rng{0.f, 2.f},
-            tanh_rng_f32{-5.f, 5.f}, lt1_rng_f32{1.f, 10.f};
+            abslt1_rng_f32{-1.f, 1.f}, uniform_0_2_rng{0.f, 2.f},
+            tanh_rng_f32{-5.f, 5.f};
     UniformFloatNonZeroRNG nonzero_rng_f32{.1f, 1000.f},
             big_nonzero_rng_f32{100.f, 1000.f};
     UniformIntRNG default_rng_i32{-100, 100}, small_rng_i32{-2, 2},
@@ -786,14 +786,12 @@ DEF_TEST(all_modes) {
         shapes[shapes.size() - 1] = {};
         auto do_run = [&](DType dtype, float eps = 1e-3) {
             // limit value ranges for some modes
-            if (mode == Mode::LOG || mode == Mode::LOG1P || mode == Mode::SQRT) {
+            if (mode == Mode::LOG || mode == Mode::LOG1P) {
                 checker.set_rng(0, &pos_rng_f32);
-            } else if (mode == Mode::POW || mode == Mode::SOFTPLUS_GRAD) {
+            } else if (mode == Mode::POW) {
                 checker.set_rng(0, &small_pos_rng_f32);
                 checker.set_rng(1, &small_rng_f32);
-            } else if (
-                    mode == Mode::EXP || mode == Mode::EXPM1 || mode == Mode::SINH ||
-                    mode == Mode::COSH) {
+            } else if (mode == Mode::EXP || mode == Mode::EXPM1) {
                 checker.set_rng(0, &small_rng_f32);
             } else if (mode == Mode::FAST_TANH) {
                 checker.set_rng(0, &tanh_rng_f32);
@@ -809,10 +807,6 @@ DEF_TEST(all_modes) {
                 checker.set_rng(1, &default_rng_f32);
             } else if (mode == Mode::ERFCINV) {
                 checker.set_rng(0, &uniform_0_2_rng);
-            } else if (mode == Mode::ACOSH_GRAD || mode == Mode::ACOSH) {
-                checker.set_rng(0, &lt1_rng_f32);
-            } else if (mode == Mode::ATANH_GRAD || mode == Mode::ATANH) {
-                checker.set_rng(0, &abslt1_rng_f32);
             } else if (
                     mode == Mode::MOD || mode == Mode::TRUE_DIV ||
                     mode == Mode::FLOOR_DIV) {

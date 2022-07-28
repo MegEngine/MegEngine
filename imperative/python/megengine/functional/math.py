@@ -6,7 +6,7 @@ from typing import Iterable, Optional, Sequence, Tuple, Union
 from ..core._imperative_rt.core2 import Const, apply
 from ..core._imperative_rt.ops import SubgraphBuilder as _SubgraphBuilder
 from ..core.ops import builtin
-from ..core.tensor.array_method import _elwise, _matmul
+from ..core.tensor.array_method import _matmul
 from ..core.tensor.utils import _normalize_axis
 from ..tensor import Tensor
 from ..utils.deprecation import deprecated_kwargs_default
@@ -86,7 +86,7 @@ def sign(inp: Tensor):
         >>> F.sign(x)
         Tensor([ 1 -1  0], dtype=int32, device=xpux:0)
     """
-    return _elwise(inp, mode=builtin.Elemwise.Mode.SIGN)
+    return (inp > 0).astype(inp.dtype) - (inp < 0).astype(inp.dtype)
 
 
 def sum(

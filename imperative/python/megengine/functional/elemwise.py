@@ -467,12 +467,12 @@ def log1p(x):
 
 def sqrt(x: Tensor) -> Tensor:
     r"""Element-wise `sqrt`."""
-    return _elwise(x, mode=Elemwise.Mode.SQRT)
+    return x ** 0.5
 
 
 def square(x: Tensor) -> Tensor:
     r"""Element-wise `square`."""
-    return _elwise(x, mode=Elemwise.Mode.SQUARE)
+    return x ** 2
 
 
 def round(x):
@@ -515,7 +515,7 @@ def sin(x):
 
 def tan(x):
     r"""Element-wise `tangent`."""
-    return _elwise(x, mode=Elemwise.Mode.TAN)
+    return sin(x) / cos(x)
 
 
 def acos(x):
@@ -544,12 +544,13 @@ def atan2(y, x):
 
 def cosh(x):
     r"""Element-wise `hyperbolic cosine`."""
-    return _elwise(x, mode=Elemwise.Mode.COSH)
+    return 0.5 * (exp(x) + exp(-x))
 
 
 def sinh(x):
     r"""Element-wise `hyperbolic sine`."""
-    return _elwise(x, mode=Elemwise.Mode.SINH)
+    u = expm1(x)
+    return 0.5 * u / (u + 1) * (u + 2)
 
 
 def tanh(x):
@@ -559,17 +560,17 @@ def tanh(x):
 
 def asinh(x):
     r"""Element-wise `inverse hyperbolic sine`."""
-    return _elwise(x, mode=Elemwise.Mode.ASINH)
+    return log(x + (x ** 2 + 1) ** 0.5)
 
 
 def acosh(x):
     r"""Element-wise `inverse hyperbolic cosine`."""
-    return _elwise(x, mode=Elemwise.Mode.ACOSH)
+    return log(x + (x ** 2 - 1) ** 0.5)
 
 
 def atanh(x):
     r"""Element-wise `inverse hyperbolic tangent`."""
-    return _elwise(x, mode=Elemwise.Mode.ATANH)
+    return log1p(2 * x / (1 - x)) / 2
 
 
 # bit-twiddling functions
@@ -679,7 +680,7 @@ def clip(x: Tensor, lower=None, upper=None) -> Tensor:
     ), "At least one of 'lower' or 'upper' must not be None"
     if lower is not None:
         if upper is not None:
-            return _elwise(x, lower, upper, mode=Elemwise.Mode.CLIP)
+            return minimum(maximum(x, lower), upper)
         else:
             return maximum(x, lower)
     else:

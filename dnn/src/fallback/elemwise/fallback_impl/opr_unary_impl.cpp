@@ -77,9 +77,6 @@ using Mode = param_enumv::Elemwise::Mode;
 INST(Mode::RELU);
 INST(Mode::ABS);
 INST(Mode::NEGATE);
-INST(Mode::RELU6);
-INST(Mode::SQUARE);
-INST(Mode::SIGN);
 #undef INST
 
 #define INST(mode) \
@@ -108,19 +105,6 @@ INST(Mode::ERFCINV);
 INST(Mode::H_SWISH);
 INST(Mode::SILU);
 INST(Mode::GELU);
-INST(Mode::SINH);
-INST(Mode::COSH);
-INST(Mode::ASINH);
-INST(Mode::ACOSH);
-INST(Mode::ATANH);
-INST(Mode::TAN);
-INST(Mode::SOFTPLUS);
-INST(Mode::RELU6);
-INST(Mode::HSIGMOID);
-INST(Mode::LOGSIGMOID);
-INST(Mode::SQRT);
-INST(Mode::SQUARE);
-INST(Mode::SIGN);
 #undef INST
 }  // namespace fallback
 }  // namespace megdnn
