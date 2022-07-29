@@ -23,7 +23,7 @@ jobs:
     runs-on: self-hosted
     needs: [check-commit]
     container:
-      image: localhost:5000/megengine-ci:v1
+      image: mcd.io/mcd-apps/megengine-ci:v1
       env:
         FTP_URL_PREFIX: ${{ secrets.FTP_URL_PREFIX }}
     steps:
@@ -49,7 +49,7 @@ jobs:
     runs-on: self-hosted
     needs: [check-commit]
     container:
-      image: localhost:5000/megengine-ci:v1
+      image: mcd.io/mcd-apps/megengine-ci:v1
       volumes:
         - /usr/local/cuda-10.1-cudnn-7.6.3-trt-6.0.1.5-libs:/usr/local/cuda-10.1-cudnn-7.6.3-trt-6.0.1.5-libs
       options: --gpus all --shm-size 1g
@@ -80,7 +80,7 @@ jobs:
     runs-on: self-hosted
     needs: [cpu-test, gpu-test]
     container:
-      image: localhost:5000/megengine-ci:v1
+      image: mcd.io/mcd-apps/megengine-ci:v1
     steps:
       - name: Checkout MegEngine
         uses: actions/checkout@v2
