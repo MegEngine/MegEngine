@@ -358,6 +358,11 @@ GraphDumper::DumpResult GraphDumperOSSV2::dump(
     auto new_output_vars = output_vars;
     if (!config.no_change_graph) {
         new_output_vars = converter_all_opr_to_compatiable(output_vars);
+        mgb_assert(output_vars.size() == new_output_vars.size());
+        for (size_t id = 0; id < output_vars.size(); id++) {
+            auto& new_var = new_output_vars[id];
+            new_var.rename(output_vars[id].node()->name());
+        }
     }
 
     auto begin_pos = m_file->tell();

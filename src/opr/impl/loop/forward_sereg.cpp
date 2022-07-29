@@ -131,10 +131,10 @@ cg::OperatorNodeBase* serialization::opr_shallow_copy_loop(
 }
 
 void LoopSerializer::reg_all() {
-    MGB_SEREG_OPR_INTL_CALL_ADD(opr::Loop, dump_loop, load_loop);
-    MGB_SEREG_OPR_INTL_CALL_ADD(InputMaker, dump_input_maker, load_input_maker);
+    MGB_SEREG_OPR_INTL_CALL_ADD(opr::Loop, dump_loop, load_loop, true);
+    MGB_SEREG_OPR_INTL_CALL_ADD(InputMaker, dump_input_maker, load_input_maker, true);
     MGB_SEREG_OPR_INTL_CALL_ADD(
-            CounterProvider, dump_counter_provider, load_counter_provider);
+            CounterProvider, dump_counter_provider, load_counter_provider, true);
 
     MGB_SEREG_OPR_INTL_CALL_ADD_V2(
             opr::Loop, dump_loop, load_loop, nullptr, 2, CURRENT_VERSION);

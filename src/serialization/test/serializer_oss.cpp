@@ -1,3 +1,4 @@
+#include "megbrain/opr/nn_int.h"
 #if MGB_ENABLE_FBS_SERIALIZATION
 
 #include "megbrain/opr/basic_arith_wrapper.h"
@@ -1014,6 +1015,109 @@ TEST(TestSerializer2, TestSoftMaxLoadDump) {
     };
     dump();
     load();
+}
+
+TEST(TestSerializer2, TestElemwiseMultiTypeLoadDump) {
+    auto fname = GET_OUTPUT_FILE(GraphDumpFormat::FLATBUFFERS_V2);
+    TensorShape shape{3};
+    auto cn = CompNode::load("xpu0");
+    std::shared_ptr<HostTensorND> host0 =
+            std::make_shared<HostTensorND>(cn, shape, dtype::Float32{});
+    std::shared_ptr<HostTensorND> host1 =
+            std::make_shared<HostTensorND>(cn, shape, dtype::Float32{});
+    HostTensorND dst_truth;
+    host0->ptr<float>()[0] = 2;
+    host0->ptr<float>()[1] = 2;
+    host0->ptr<float>()[2] = -1;
+    host1->ptr<float>()[0] = 1;
+    host1->ptr<float>()[1] = 2;
+    host1->ptr<float>()[2] = 3;
+
+    auto dump = [&](opr::ElemwiseMultiType::Param::Mode mode, size_t nr_opr) {
+        auto graph = ComputingGraph::make();
+        OperatorNodeConfig config;
+        config.name("input0");
+        auto h2d0 = opr::Host2DeviceCopy::make(*graph, host0, config);
+        config.name("input1");
+        auto h2d1 = opr::Host2DeviceCopy::make(*graph, host1, config);
+
+        auto x = opr::ElemwiseMultiType::make(
+                {h2d0, h2d1}, {mode}, OperatorNodeConfig{dtype::Bool()});
+        x.rename("out");
+        auto func = graph->compile({make_callback_copy(x, dst_truth)});
+        auto dumper = GraphDumper::make(
+                OutputFile::make_fs(fname.c_str()), GraphDumpFormat::FLATBUFFERS_V2);
+        auto rst = dumper->dump({x});
+        func->execute().wait();
+        ASSERT_EQ(rst.nr_opr, nr_opr);
+    };
+    auto load = [&]() {
+        auto loader = GraphLoader::make(
+                InputFile::make_fs(fname.c_str()), GraphDumpFormat::FLATBUFFERS_V2);
+        auto rst = loader->load();
+        ASSERT_EQ(rst.tensor_map.size(), 2);
+        ASSERT_EQ(rst.output_var_map.count("out"), 1);
+
+        HostTensorND host_x;
+        auto func =
+                rst.graph_compile({make_callback_copy(rst.output_var_list[0], host_x)});
+        for (auto& input : rst.tensor_map) {
+            if (input.first == "input0") {
+                input.second->copy_from(*host0).sync();
+            } else if (input.first == "input1") {
+                input.second->copy_from(*host1).sync();
+            }
+        }
+        func->execute().wait();
+        for (int i = 0; i < 3; i++) {
+            EXPECT_EQ(host_x.ptr<bool>()[i], dst_truth.ptr<bool>()[i]);
+        }
+    };
+    dump(opr::ElemwiseMultiType::Param::Mode::EQ, 4);
+    load();
+    dump(opr::ElemwiseMultiType::Param::Mode::LT, 4);
+    load();
+    dump(opr::ElemwiseMultiType::Param::Mode::LEQ, 4);
+    load();
+    dump(opr::ElemwiseMultiType::Param::Mode::NEQ, 5);
+    load();
+
+    auto dump_single_input = [&](opr::ElemwiseMultiType::Param::Mode mode,
+                                 size_t nr_opr) {
+        auto graph = ComputingGraph::make();
+        auto h2d0 = opr::Host2DeviceCopy::make(*graph, host0);
+        auto x = opr::ElemwiseMultiType::make(
+                {h2d0}, {mode}, OperatorNodeConfig{dtype::Bool()});
+        x.rename("out");
+        auto func = graph->compile({make_callback_copy(x, dst_truth)});
+        auto dumper = GraphDumper::make(
+                OutputFile::make_fs(fname.c_str()), GraphDumpFormat::FLATBUFFERS_V2);
+        auto rst = dumper->dump({x});
+        func->execute().wait();
+        ASSERT_EQ(rst.nr_opr, nr_opr);
+    };
+    auto load_single_input = [&]() {
+        auto loader = GraphLoader::make(
+                InputFile::make_fs(fname.c_str()), GraphDumpFormat::FLATBUFFERS_V2);
+        auto rst = loader->load();
+        ASSERT_EQ(rst.tensor_map.size(), 1);
+        ASSERT_EQ(rst.output_var_map.count("out"), 1);
+
+        HostTensorND host_x;
+        auto func =
+                rst.graph_compile({make_callback_copy(rst.output_var_list[0], host_x)});
+        rst.tensor_map.begin()->second->copy_from(*host0).sync();
+        func->execute().wait();
+        for (int i = 0; i < 3; i++) {
+            EXPECT_EQ(host_x.ptr<bool>()[i], dst_truth.ptr<bool>()[i]);
+        }
+    };
+    host0->ptr<float>()[2] = INFINITY;
+    dump_single_input(opr::ElemwiseMultiType::Param::Mode::ISINF, 4);
+    load_single_input();
+    host0->ptr<float>()[2] = NAN;
+    dump_single_input(opr::ElemwiseMultiType::Param::Mode::ISNAN, 4);
+    load_single_input();
 }
 
 #endif

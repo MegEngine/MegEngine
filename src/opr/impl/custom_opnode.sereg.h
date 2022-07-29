@@ -40,16 +40,16 @@ mgb::cg::OperatorNodeBase* custom_loader(
 }  // namespace serialization
 }  // namespace mgb
 
-#define CUSTOM_OP_SEREG_REG(cls)                              \
-    namespace {                                               \
-    struct _OprReg##cls {                                     \
-        static void entry() {                                 \
-            MGB_SEREG_OPR_INTL_CALL_ADD(                      \
-                    cls, ::mgb::serialization::custom_dumper, \
-                    ::mgb::serialization::custom_loader);     \
-        }                                                     \
-    };                                                        \
-    }                                                         \
+#define CUSTOM_OP_SEREG_REG(cls)                                \
+    namespace {                                                 \
+    struct _OprReg##cls {                                       \
+        static void entry() {                                   \
+            MGB_SEREG_OPR_INTL_CALL_ADD(                        \
+                    cls, ::mgb::serialization::custom_dumper,   \
+                    ::mgb::serialization::custom_loader, true); \
+        }                                                       \
+    };                                                          \
+    }                                                           \
     MGB_SEREG_OPR_INTL_CALL_ENTRY(cls, _OprReg##cls)
 
 #define CUSTOM_OP_SEREG_REG_V2(cls, _version_min, _version_max)                 \

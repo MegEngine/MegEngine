@@ -125,16 +125,18 @@ ComputingGraph* serialization::OprShallowCopyContext::owner_graph(
 cg::OperatorNodeBase* serialization::copy_opr_shallow(
         const cg::OperatorNodeBase& opr, const VarNodeArray& inputs,
         const OperatorNodeConfig& config, const OprShallowCopyContext& ctx) {
-    auto registry = OprRegistry::find_by_type(opr.dyn_typeinfo());
-    mgb_assert(
-            registry, "could not find OprReceiver to copy opr %s{%s}", opr.cname(),
-            opr.dyn_typeinfo()->name);
+    OprShallowCopy shallow_copy = nullptr;
+    if (auto registry = OprRegistry::find_by_type(opr.dyn_typeinfo())) {
+        shallow_copy = registry->shallow_copy;
+    } else {
+        shallow_copy = intl::copy_opr_shallow_default_impl;
+    }
 
     mgb_assert(inputs.size() == opr.input().size());
     auto dst_og = ctx.owner_graph(opr, inputs);
     auto do_copy = [&]() {
         auto nr_opr_before = opr.owner_graph()->nr_oprs_in_graph();
-        auto ret = registry->shallow_copy(ctx, opr, inputs, config);
+        auto ret = shallow_copy(ctx, opr, inputs, config);
 
         if (dst_og != opr.owner_graph() ||
             opr.owner_graph()->nr_oprs_in_graph() != nr_opr_before) {
@@ -188,18 +190,28 @@ cg::OperatorNodeBase* serialization::intl::copy_opr_shallow_default_impl(
         const OprShallowCopyContext& ctx, const cg::OperatorNodeBase& opr,
         const VarNodeArray& inputs, const OperatorNodeConfig& config) {
     MGB_MARK_USED_VAR(ctx);
+    OprDumper opr_dumper = nullptr;
+    OprLoaderWrapper opr_loader = nullptr;
 
-    auto registry = OprRegistry::find_by_type(opr.dyn_typeinfo());
+    if (auto registry = OprRegistry::find_by_type(opr.dyn_typeinfo())) {
+        opr_loader = registry->loader;
+        opr_dumper = registry->dumper;
+    } else {
+        auto registryv2 = OprRegistryV2::versioned_find_by_typeinfo(
+                opr.dyn_typeinfo(), CURRENT_VERSION);
+        opr_loader = registryv2->loader;
+        opr_dumper = registryv2->dumper;
+    }
     mgb_assert(
-            registry && registry->dumper && registry->loader,
+            opr_dumper && opr_loader,
             "can not shallow_copy operator %s{%s}: "
             "no dumper/loader registered",
             opr.cname(), opr.dyn_typeinfo()->name);
-    OprDumpContextMemory dumper;
-    registry->dumper(dumper, opr);
+    OprDumpContextMemory memory_dumper;
+    opr_dumper(memory_dumper, opr);
 
-    OprLoadContextMemory loader{opr.owner_graph(), dumper};
-    return registry->loader(loader, inputs, config).opr();
+    OprLoadContextMemory loader{opr.owner_graph(), memory_dumper};
+    return opr_loader(loader, inputs, config).opr();
 }
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
