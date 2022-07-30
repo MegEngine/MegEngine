@@ -15,6 +15,119 @@ using namespace megdnn;
 using namespace naive;
 
 template <typename ctype, typename mtype>
+void WarpPerspectiveForwardImpl::kern_naive_multi_src(
+        const KernParam<ctype, mtype>& kern_param, size_t task_id) {
+    MEGDNN_MARK_USED_VAR(kern_param);
+    MIDOUT_BEGIN(megdnn_naive_warpperspective, ctype, mtype, midout_iv(0)) {
+        UNPACK_WARP_PERSPECTIVE_FWD_KERN_PARAM(kern_param);
+        MEGDNN_MARK_USED_VAR(N_MAT);
+        //! strides of C, H, W on src and dst
+        size_t sstrd[3], dstrd[3];
+        auto set_sstrd = [&](size_t s0, size_t s1, size_t s2) {
+            sstrd[0] = s0;
+            sstrd[1] = s1;
+            sstrd[2] = s2;
+        };
+        auto set_dstrd = [&](size_t s0, size_t s1, size_t s2) {
+            dstrd[0] = s0;
+            dstrd[1] = s1;
+            dstrd[2] = s2;
+        };
+        switch (kern_param.format) {
+            case Format::NCHW:
+                set_sstrd(IH * IW, IW, 1);
+                set_dstrd(OH * OW, OW, 1);
+                break;
+            case Format::NHWC:
+                set_sstrd(1, IW * C, C);
+                set_dstrd(1, OW * C, C);
+                break;
+            default:
+                megdnn_throw("bad format");
+        }
+
+        auto visit_src = [&sptr, sstrd](size_t c, int h, int w) -> float {
+            return sptr[sstrd[0] * c + sstrd[1] * h + sstrd[2] * w];
+        };
+        auto visit_src_bd = [&sptr, sstrd, border_val](
+                                    size_t c, int h, int w) -> float {
+            if (h != -1 && w != -1) {
+                return sptr[sstrd[0] * c + sstrd[1] * h + sstrd[2] * w];
+            } else
+                return border_val;
+        };
+        auto visit_dst = [&dptr, dstrd](size_t c, int h, int w) -> ctype& {
+            return dptr[dstrd[0] * c + dstrd[1] * h + dstrd[2] * w];
+        };
+
+        rounding::RoundingConverter<ctype> output_converter;
+        sptr = static_cast<const ctype*>(kern_param.srcs_ptr.front().get_ptr());
+        size_t n = task_id / OH;
+        size_t oh = task_id % OH;
+        mptr = mptr + n * 3 * 3;
+        dptr = dptr + n * C * OH * OW;
+        if (midx_ptr) {
+            size_t idx = midx_ptr[n];
+            megdnn_assert(
+                    idx < N_SRC, "mat_idx out of bound: mat_idx[%zu]=%zu src_batch=%zu",
+                    n, idx, N_SRC);
+            sptr = sptrs[idx];
+        } else if (n) {
+            sptr = sptrs[n];
+        }
+        rep(ow, OW) {
+            float numeratorw = mptr[0] * ow + mptr[1] * oh + mptr[2];
+            float numeratorh = mptr[3] * ow + mptr[4] * oh + mptr[5];
+            float denominator = mptr[6] * ow + mptr[7] * oh + mptr[8];
+            float alphaw = numeratorw / denominator;
+            float alphah = numeratorh / denominator;
+
+            int iw0 = get_real_coord(std::floor(alphaw) + 0, IW);
+            int iw1 = get_real_coord(std::floor(alphaw) + 1, IW);
+            int ih0 = get_real_coord(std::floor(alphah) + 0, IH);
+            int ih1 = get_real_coord(std::floor(alphah) + 1, IH);
+
+            alphaw -= floor(alphaw);
+            alphah -= floor(alphah);
+            if (bmode != BorderMode::CONSTANT) {
+                rep(c, C) {
+                    visit_dst(c, oh, ow) = output_converter(
+                            visit_src(c, ih0, iw0) * (1.0f - alphaw) * (1.0f - alphah) +
+                            visit_src(c, ih0, iw1) * alphaw * (1.0f - alphah) +
+                            visit_src(c, ih1, iw0) * (1.0f - alphaw) * alphah +
+                            visit_src(c, ih1, iw1) * alphaw * alphah);
+                }
+            } else {
+                rep(c, C) {
+                    auto val = visit_src_bd(c, ih0, iw0) * (1.0f - alphaw) *
+                                       (1.0f - alphah) +
+                               visit_src_bd(c, ih0, iw1) * alphaw * (1.0f - alphah) +
+                               visit_src_bd(c, ih1, iw0) * (1.0f - alphaw) * alphah +
+                               visit_src_bd(c, ih1, iw1) * alphaw * alphah;
+                    visit_dst(c, oh, ow) =
+                            output_converter(std::isfinite(val) ? val : border_val);
+                }
+            }
+        }
+    }
+    MIDOUT_END();
+}
+
+#define INST(ctype, mtype)                                                        \
+    template void WarpPerspectiveForwardImpl::kern_naive_multi_src<ctype, mtype>( \
+            const KernParam<ctype, mtype>&, size_t);
+
+INST(float, float);
+#if !MEGDNN_DISABLE_FLOAT16
+INST(dt_float16, float);
+INST(dt_float16, dt_float16);
+INST(dt_bfloat16, float);
+INST(dt_bfloat16, dt_bfloat16);
+#endif
+
+#undef INST
+
+template <typename ctype, typename mtype>
 void WarpPerspectiveForwardImpl::kern_naive(
         const KernParam<ctype, mtype>& kern_param, size_t task_id) {
     MEGDNN_MARK_USED_VAR(kern_param);
@@ -503,6 +616,71 @@ INST(uint8_t, int8_t, float);
 INST(uint8_t, float, float);
 
 #undef INST
+
+void WarpPerspectiveForwardImpl::exec(
+        _megdnn_in const TensorNDArray& srcs, _megdnn_tensor_in mat,
+        _megdnn_tensor_in mat_idx, _megdnn_tensor_out dst,
+        _megdnn_workspace workspace) {
+    TensorLayoutArray srcs_layout;
+    for (auto&& src : srcs) {
+        srcs_layout.push_back(src.layout);
+    }
+    check_exec_allow_nhwc_mat_idx(
+            srcs_layout, mat.layout, mat_idx.layout, dst.layout, workspace.size);
+    size_t batch = dst.layout[0];
+
+#define KERN_NAIVE_MULTI_SRC(ct, mct)                                              \
+    auto kparam = KernParam<ct, mct>::from_tensors(                                \
+            param().format, param().bmode, param().border_val, srcs, mat, mat_idx, \
+            dst, workspace);                                                       \
+    auto run = [kparam, this](size_t index, size_t) {                              \
+        kern_naive_multi_src(kparam, index);                                       \
+    };                                                                             \
+    MEGDNN_DISPATCH_MULTI_THREAD_CPU_KERN_OPR(run, kparam.oh* batch);
+
+#define DISPATCH_ST_MULTI_SRC(dt, ct, mct, kern)                      \
+    if (srcs.front().layout.dtype.enumv() == DTypeTrait<dt>::enumv) { \
+        kern(ct, mct);                                                \
+        return;                                                       \
+    }
+
+#define DISPATCH_ST_MT_MULTI_SRC(dt, ct, kern)                               \
+    if (srcs.front().layout.dtype.enumv() == DTypeTrait<dt>::enumv) {        \
+        if (mat.layout.dtype.enumv() == DTypeTrait<dtype::Float32>::enumv) { \
+            kern(ct, float);                                                 \
+            return;                                                          \
+        } else {                                                             \
+            kern(ct, ct);                                                    \
+            return;                                                          \
+        }                                                                    \
+    }
+
+    megdnn_assert(warp::is_dnn_available(
+            srcs_layout, mat.layout, dst.layout, param().imode, param().format));
+    /*!
+     * We currently use floating point for all WarpPerspective
+     * computation, so even if the input ctype is one of the integer
+     * type, mtype should always be float32.
+     *
+     * \warning It's different with \c WarpAffine, with mtype be float16
+     * if input type is float16.
+     */
+
+    DISPATCH_ST_MULTI_SRC(dtype::Float32, float, float, KERN_NAIVE_MULTI_SRC);
+    DNN_INC_FLOAT16(
+            DISPATCH_ST_MT_MULTI_SRC(dtype::Float16, dt_float16, KERN_NAIVE_MULTI_SRC));
+    DNN_INC_FLOAT16(DISPATCH_ST_MT_MULTI_SRC(
+            dtype::BFloat16, dt_bfloat16, KERN_NAIVE_MULTI_SRC));
+    megdnn_throw(ssprintf(
+                         "Unsupported input DType in "
+                         "WarpPerspective: %s",
+                         srcs.front().layout.dtype.name())
+                         .c_str());
+
+#undef KERN_NAIVE_MULTI_SRC
+#undef DISPATCH_ST_MT_MULTI_SRC
+#undef DISPATCH_ST_MULTI_SRC
+}
 
 void WarpPerspectiveForwardImpl::exec(
         _megdnn_tensor_in src, _megdnn_tensor_in mat, _megdnn_tensor_in mat_idx,

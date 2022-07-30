@@ -50,6 +50,54 @@ void WarpPerspectiveMatIdxProxy::exec(
             tensors[0], tensors[1], tensors[2], tensors[3], tensors[4], W.workspace());
 }
 
+void WarpPerspectiveMultiSrcProxy::deduce_layout(
+        WarpPerspectiveForward*, TensorLayoutArray&) {}
+
+void WarpPerspectiveMultiSrcProxy::exec(
+        WarpPerspectiveForward* opr, const TensorNDArray& tensors) {
+    if (!W.valid()) {
+        W = WorkspaceWrapper(opr->handle(), 0);
+    }
+    megdnn_assert(tensors.size() >= 3);
+    bool has_mat_idx = false;
+    TensorLayout mat_idx_layout;
+    TensorND mat_idx_tensor;
+
+    TensorLayoutArray layouts(tensors.size());
+    std::transform(
+            tensors.begin(), tensors.end(), layouts.begin(),
+            [](const TensorND& tensor) { return tensor.layout; });
+    auto srcs_layouts = layouts;
+    srcs_layouts.pop_back();  // dst
+    if (srcs_layouts.back().ndim == 1) {
+        has_mat_idx = true;
+        mat_idx_layout = srcs_layouts.back();
+        srcs_layouts.pop_back();  // mat_idx;
+    }
+    auto mat_layout = srcs_layouts.back();
+    srcs_layouts.pop_back();  // mat
+
+    if (has_mat_idx)
+        W.update(opr->get_workspace_in_bytes(
+                srcs_layouts, mat_layout, mat_idx_layout, layouts.back()));
+    else
+        W.update(opr->get_workspace_in_bytes(srcs_layouts, mat_layout, layouts.back()));
+    auto srcs_tensors = tensors;
+    srcs_tensors.pop_back();  // dst
+    if (has_mat_idx) {
+        mat_idx_tensor = srcs_tensors.back();
+        srcs_tensors.pop_back();  // mat_idx;
+    }
+    auto mat_tensor = srcs_tensors.back();
+    srcs_tensors.pop_back();  // mat
+    if (has_mat_idx)
+        opr->exec(
+                srcs_tensors, mat_tensor, mat_idx_tensor, tensors.back(),
+                W.workspace());
+    else
+        opr->exec(srcs_tensors, mat_tensor, tensors.back(), W.workspace());
+}
+
 std::vector<TestArg> warp_perspective::get_cv_args() {
     std::vector<TestArg> args;
 

@@ -90,6 +90,10 @@ bool is_dnn_available(
         const TensorLayout&, const TensorLayout&, const TensorLayout&,
         param::WarpAffine::InterpolationMode imode, param::WarpAffine::Format format);
 
+bool is_dnn_available(
+        const TensorLayoutArray&, const TensorLayout&, const TensorLayout&,
+        param::WarpAffine::InterpolationMode imode, param::WarpAffine::Format format);
+
 using namespace megcv;
 using IMode = InterpolationMode;
 using BMode = BorderMode;

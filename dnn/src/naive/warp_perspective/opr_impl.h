@@ -17,8 +17,70 @@ protected:
         DType src_dtype, dst_dtype;
         RefPtr src_ptr, mat_ptr, dst_ptr;
         RefPtr midx_ptr;  //!< can be null
+        SmallVector<RefPtr> srcs_ptr;
         Workspace workspace;
 
+        static KernParam from_tensors(
+                Format format, BorderMode bmode, float border_val,
+                _megdnn_in const TensorNDArray& srcs, _megdnn_tensor_in mat,
+                _megdnn_tensor_in mat_idx, _megdnn_tensor_out dst,
+                _megdnn_workspace workspace) {
+            auto src = srcs.front();
+            KernParam ret;
+            ret.format = format;
+            ret.bmode = bmode;
+            ret.border_val = border_val;
+            ret.n_src = srcs.size();
+            ret.src_dtype = src.layout.dtype;
+            ret.dst_dtype = dst.layout.dtype;
+
+            if (mat_idx.raw_ptr()) {
+                megdnn_assert(mat_idx.layout.ndim == 1);
+                ret.n_mat = mat_idx.layout.shape[0];
+                ret.midx_ptr = mat_idx.get_ref_ptr();
+            } else {
+                megdnn_assert(mat_idx.layout.ndim == 0);
+                ret.n_mat = ret.n_src;
+                ret.midx_ptr = nullptr;
+            }
+
+            if (format == Format::NCHW) {
+                ret.c = src.layout.shape[1];
+                ret.ih = src.layout.shape[2];
+                ret.iw = src.layout.shape[3];
+                ret.oh = dst.layout.shape[2];
+                ret.ow = dst.layout.shape[3];
+            } else {
+                megdnn_assert(format == Format::NHWC);
+                ret.c = src.layout.shape[3];
+                ret.ih = src.layout.shape[1];
+                ret.iw = src.layout.shape[2];
+                ret.oh = dst.layout.shape[1];
+                ret.ow = dst.layout.shape[2];
+            }
+
+            if ((src.layout.dtype.enumv() == DTypeEnum::Float32 ||
+                 DNN_FLOAT16_SELECT(
+                         (src.layout.dtype.enumv() == DTypeEnum::Float16 ||
+                          src.layout.dtype.enumv() == DTypeEnum::BFloat16),
+                         false)) &&
+                (src.layout.dtype == dst.layout.dtype)) {
+                for (auto&& s : srcs) {
+                    ret.srcs_ptr.push_back(s.get_ref_ptr());
+                }
+                ret.mat_ptr = mat.get_ref_ptr();
+                ret.dst_ptr = dst.get_ref_ptr();
+            } else {
+                for (size_t i = 0; i < srcs.size(); i++) {
+                    ret.srcs_ptr.push_back(nullptr);
+                }
+                ret.mat_ptr = nullptr;
+                ret.dst_ptr = nullptr;
+            }
+            ret.src_ptr = nullptr;
+            ret.workspace = workspace;
+            return ret;
+        }
         static KernParam from_tensors(
                 Format format, BorderMode bmode, float border_val,
                 _megdnn_tensor_in src, _megdnn_tensor_in mat, _megdnn_tensor_in mat_idx,
@@ -124,13 +186,26 @@ protected:
     template <typename ctype, typename mtype>
     void kern_naive(const KernParam<ctype, mtype>& kern_param, size_t task_id);
 
+    template <typename ctype, typename mtype>
+    void kern_naive_multi_src(
+            const KernParam<ctype, mtype>& kern_param, size_t task_id);
+
 public:
     using WarpPerspectiveForward::WarpPerspectiveForward;
     void exec(
             _megdnn_tensor_in src, _megdnn_tensor_in mat, _megdnn_tensor_in mat_idx,
             _megdnn_tensor_out dst, _megdnn_workspace workspace) override;
+    void exec(
+            _megdnn_in const TensorNDArray& srcs, _megdnn_tensor_in mat,
+            _megdnn_tensor_in mat_idx, _megdnn_tensor_out dst,
+            _megdnn_workspace workspace) override;
     size_t get_workspace_in_bytes(
             const TensorLayout&, const TensorLayout&, const TensorLayout&,
+            const TensorLayout&) override {
+        return 0;
+    }
+    size_t get_workspace_in_bytes(
+            const TensorLayoutArray&, const TensorLayout&, const TensorLayout&,
             const TensorLayout&) override {
         return 0;
     }
@@ -253,6 +328,10 @@ private:
     auto mptr = static_cast<const mtype*>(p.mat_ptr.get_ptr());                      \
     auto dptr = static_cast<ctype*>(p.dst_ptr.get_ptr());                            \
     auto midx_ptr = static_cast<int*>(p.midx_ptr.get_ptr());                         \
+    SmallVector<const ctype*> sptrs;                                                 \
+    for (auto&& s_ptr : p.srcs_ptr) {                                                \
+        sptrs.push_back(static_cast<const ctype*>(s_ptr.get_ptr()));                 \
+    }                                                                                \
     auto bmode = p.bmode;                                                            \
     float border_val = p.border_val
 

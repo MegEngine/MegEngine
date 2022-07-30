@@ -143,6 +143,34 @@ WorkspaceBundle WarpPerspectiveForwardImpl::get_workspace_bundle(
     return {ptr, std::move(sizes)};
 }
 
+WorkspaceBundle WarpPerspectiveForwardImpl::get_workspace_bundle(
+        void* ptr, const TensorLayoutArray& srcs, const TensorLayout& mat,
+        const TensorLayout& mat_idx, const TensorLayout& dst) const {
+    MEGDNN_MARK_USED_VAR(mat_idx);
+    SmallVector<size_t> sizes;
+    TensorLayoutArray fsrcs = srcs;
+    TensorLayout fmat = mat;
+    TensorLayout fdst = dst;
+    auto get_workspace = [&sizes](TensorLayout& layout) {
+        if (layout.dtype == dtype::BFloat16()) {
+            layout.dtype = dtype::Float32();
+            sizes.push_back(layout.span().dist_byte());
+        }
+    };
+    for (auto&& fsrc : fsrcs) {
+        get_workspace(fsrc);
+    }
+    get_workspace(fmat);
+    get_workspace(fdst);
+    sizes.push_back(sizeof(dt_float32*) * srcs.size());
+    if (param().format == param::WarpPerspective::Format::NHWC) {
+        //! use double for the workspace dtype as float may cause
+        //! accuracy problems
+        sizes.push_back(mat.total_nr_elems() * sizeof(double));
+    }
+    return {ptr, std::move(sizes)};
+}
+
 void WarpPerspectiveForwardImpl::exec(
         _megdnn_tensor_in ssrc, _megdnn_tensor_in smat, _megdnn_tensor_in smat_idx,
         _megdnn_tensor_out sdst, _megdnn_workspace sworkspace) {
@@ -449,6 +477,124 @@ void WarpPerspectiveForwardImpl::exec(
         }
     }
     if (ssrc.layout.dtype.enumv() == DTypeTrait<dtype::BFloat16>::enumv) {
+        ctypecvt.comp_to_dst_type(dst, sdst);
+    }
+}
+
+void WarpPerspectiveForwardImpl::exec(
+        _megdnn_in const TensorNDArray& ssrcs, _megdnn_tensor_in smat,
+        _megdnn_tensor_in smat_idx, _megdnn_tensor_out sdst,
+        _megdnn_workspace sworkspace) {
+    TensorLayoutArray ssrcs_layout;
+    for (auto&& s : ssrcs) {
+        ssrcs_layout.push_back(s.layout);
+    }
+    check_exec_allow_nhwc_mat_idx(
+            ssrcs_layout, smat.layout, smat_idx.layout, sdst.layout, sworkspace.size);
+
+    TensorNDArray srcs = ssrcs;
+    TensorND mat = smat;
+    TensorND mat_idx = smat_idx;
+    TensorND dst = sdst;
+    Param::Format inner_format = param().format;
+    auto bundle = get_workspace_bundle(
+            sworkspace.raw_ptr, ssrcs_layout, smat.layout, smat_idx.layout,
+            sdst.layout);
+    auto ctypecvt = CompTypeCvter<dtype::BFloat16, dtype::Float32>(
+            concrete_handle(this->handle()), &bundle);
+    if (ssrcs.front().layout.dtype.enumv() == DTypeTrait<dtype::BFloat16>::enumv) {
+        for (size_t i = 0; i < ssrcs.size(); i++) {
+            ctypecvt.src_to_comp_type(ssrcs[i], srcs[i]);
+        }
+        ctypecvt.src_to_comp_type(smat, mat).src_to_comp_type(sdst, dst);
+    }
+
+    {
+        auto stream = cuda_stream(this->handle());
+        bool is_nhwc = inner_format == param::WarpPerspective::Format::NHWC;
+        TensorND src = srcs.front();
+        megdnn_assert(warp::is_dnn_available(
+                ssrcs_layout, mat.layout, dst.layout, param().imode, inner_format));
+        size_t C, IH, IW, OH, OW;
+        if (is_nhwc) {
+            C = src.layout.shape[3];
+            IH = src.layout.shape[1];
+            IW = src.layout.shape[2];
+            OH = dst.layout.shape[1];
+            OW = dst.layout.shape[2];
+        } else {
+            megdnn_assert(
+                    inner_format == param::WarpPerspective::Format::NCHW,
+                    "invalid warp_perspective format");
+            C = src.layout.shape[1];
+            IH = src.layout.shape[2];
+            IW = src.layout.shape[3];
+            OH = dst.layout.shape[2];
+            OW = dst.layout.shape[3];
+        }
+        megdnn_assert(
+                param().imode == Param::InterpolationMode::LINEAR,
+                "unsupported interpolation mode form NCHW format");
+        auto bval = param().border_val;
+        auto bmode = warp_perspective::get_bmode(param().bmode);
+        if (src.layout.dtype == dst.layout.dtype) {
+            if (src.layout.dtype == dtype::Float32{}) {
+                SmallVector<size_t> workspace_sizes{sizeof(dt_float32*) * srcs.size()};
+                WorkspaceBundle workspace_cpu(nullptr, workspace_sizes);
+                auto total_workspace_size = workspace_cpu.total_size_in_bytes();
+                void* workspace_cpu_raw = malloc(total_workspace_size);
+                workspace_cpu = WorkspaceBundle(workspace_cpu_raw, workspace_sizes);
+                auto srcs_cpu = static_cast<const dt_float32**>(workspace_cpu.get(0));
+                size_t i =
+                        is_nhwc ? bundle.nr_workspace() - 2 : bundle.nr_workspace() - 1;
+                auto srcs_gpu = static_cast<const dt_float32**>(bundle.get(i));
+                for (size_t i = 0; i < srcs.size(); ++i) {
+                    srcs_cpu[i] = srcs[i].ptr<dt_float32>();
+                }
+                cuda_check(cudaMemcpyAsync(
+                        bundle.get(i), workspace_cpu.get(0), workspace_cpu.get_size(0),
+                        cudaMemcpyHostToDevice, stream));
+                cuda_check(cudaStreamAddCallback(
+                        stream, callback_free, static_cast<void*>(workspace_cpu_raw),
+                        0));
+                warp_perspective::forward_proxy_multi_src(
+                        is_nhwc, srcs_gpu, mat.ptr<dt_float32>(),
+                        mat_idx.raw_ptr() ? mat_idx.ptr<int>() : nullptr,
+                        dst.ptr<dt_float32>(), srcs.size(), mat.layout[0], C, IH, IW,
+                        OH, OW, bval, bmode, async_error_info(handle()),
+                        m_error_tracker, stream);
+            } else if (DNN_FLOAT16_SELECT(
+                               src.layout.dtype == dtype::Float16(), false)) {
+#ifndef MEGDNN_DISABLE_FLOAT16
+                SmallVector<size_t> workspace_sizes{sizeof(dt_float16*) * srcs.size()};
+                WorkspaceBundle workspace_cpu(nullptr, workspace_sizes);
+                auto total_workspace_size = workspace_cpu.total_size_in_bytes();
+                void* workspace_cpu_raw = malloc(total_workspace_size);
+                workspace_cpu = WorkspaceBundle(workspace_cpu_raw, workspace_sizes);
+                auto srcs_cpu = static_cast<const dt_float16**>(workspace_cpu.get(0));
+                auto srcs_gpu = static_cast<const dt_float16**>(bundle.get(0));
+                for (size_t i = 0; i < srcs.size(); ++i) {
+                    srcs_cpu[i] = srcs[i].ptr<dt_float16>();
+                }
+                cuda_check(cudaMemcpyAsync(
+                        bundle.get(0), workspace_cpu.get(0), workspace_cpu.get_size(0),
+                        cudaMemcpyHostToDevice, stream));
+                cuda_check(cudaStreamAddCallback(
+                        stream, callback_free, static_cast<void*>(workspace_cpu_raw),
+                        0));
+                warp_perspective::forward_proxy_multi_src(
+                        is_nhwc, srcs_gpu, mat.ptr<dt_float32>(),
+                        mat_idx.raw_ptr() ? mat_idx.ptr<int>() : nullptr,
+                        dst.ptr<dt_float16>(), srcs.size(), mat.layout[0], C, IH, IW,
+                        OH, OW, static_cast<dt_float16>(bval), bmode,
+                        async_error_info(handle()), m_error_tracker, stream);
+#endif
+            }
+        } else {
+            megdnn_throw(ssprintf("unsupported dtype: %s", src.layout.dtype.name()));
+        }
+    }
+    if (ssrcs.front().layout.dtype.enumv() == DTypeTrait<dtype::BFloat16>::enumv) {
         ctypecvt.comp_to_dst_type(dst, sdst);
     }
 }

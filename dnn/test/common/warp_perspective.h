@@ -19,6 +19,12 @@ struct WarpPerspectiveMatIdxProxy {
     void exec(WarpPerspectiveBackwardMat* opr, const TensorNDArray& tensors);
 };
 
+struct WarpPerspectiveMultiSrcProxy {
+    WorkspaceWrapper W;
+    static void deduce_layout(WarpPerspectiveForward*, TensorLayoutArray&);
+    void exec(WarpPerspectiveForward* opr, const TensorNDArray& tensors);
+};
+
 class WarpPerspectiveMatRNG final : public IIDRNG {
 public:
     WarpPerspectiveMatRNG() : idx(0) {}

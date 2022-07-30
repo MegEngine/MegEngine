@@ -16,9 +16,17 @@ protected:
             const TensorLayout& src, const TensorLayout& mat, const TensorLayout& dst) {
         check_layout_fwd(src, mat, {}, dst);
     }
+    void check_layout_fwd(
+            const TensorLayoutArray& srcs, const TensorLayout& mat,
+            const TensorLayout& dst) {
+        check_layout_fwd(srcs, mat, {}, dst);
+    }
 
     void check_layout_fwd(
             const TensorLayout& src, const TensorLayout& mat,
+            const TensorLayout& mat_idx, const TensorLayout& dst);
+    void check_layout_fwd(
+            const TensorLayoutArray& srcs, const TensorLayout& mat,
             const TensorLayout& mat_idx, const TensorLayout& dst);
     std::string param_msg() const;
     int get_real_coord(int p, int len);
@@ -49,6 +57,12 @@ public:
         exec(src, mat, {}, dst, workspace);
     }
 
+    void exec(
+            _megdnn_in const TensorNDArray& srcs, _megdnn_tensor_in mat,
+            _megdnn_tensor_out dst, _megdnn_workspace workspace) {
+        exec(srcs, mat, {}, dst, workspace);
+    }
+
     /**
      * \p src should have batch size m, and \p mat and \p mat_idx should
      * both have batch size n. Each item in \p mat_idx must be in the range
@@ -62,13 +76,28 @@ public:
             _megdnn_tensor_in src, _megdnn_tensor_in mat, _megdnn_tensor_in mat_idx,
             _megdnn_tensor_out dst, _megdnn_workspace workspace) = 0;
 
+    virtual void exec(
+            _megdnn_in const TensorNDArray& srcs, _megdnn_tensor_in mat,
+            _megdnn_tensor_in mat_idx, _megdnn_tensor_out dst,
+            _megdnn_workspace workspace) = 0;
+
     size_t get_workspace_in_bytes(
             const TensorLayout& src, const TensorLayout& mat, const TensorLayout& dst) {
         return get_workspace_in_bytes(src, mat, {}, dst);
     }
 
+    size_t get_workspace_in_bytes(
+            const TensorLayoutArray& srcs, const TensorLayout& mat,
+            const TensorLayout& dst) {
+        return get_workspace_in_bytes(srcs, mat, {}, dst);
+    }
+
     virtual size_t get_workspace_in_bytes(
             const TensorLayout& src, const TensorLayout& mat,
+            const TensorLayout& mat_idx, const TensorLayout& dst) = 0;
+
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayoutArray& srcs, const TensorLayout& mat,
             const TensorLayout& mat_idx, const TensorLayout& dst) = 0;
 
 protected:
@@ -79,6 +108,10 @@ protected:
 
     void check_exec_allow_nhwc_mat_idx(
             const TensorLayout& src, const TensorLayout& mat,
+            const TensorLayout& mat_idx, const TensorLayout& dst,
+            size_t workspace_in_bytes);
+    void check_exec_allow_nhwc_mat_idx(
+            const TensorLayoutArray& srcs, const TensorLayout& mat,
             const TensorLayout& mat_idx, const TensorLayout& dst,
             size_t workspace_in_bytes);
 };

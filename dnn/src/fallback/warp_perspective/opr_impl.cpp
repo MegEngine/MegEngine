@@ -51,6 +51,56 @@ size_t WarpPerspectiveImpl::get_workspace_in_bytes(
     }
 }
 
+size_t WarpPerspectiveImpl::get_workspace_in_bytes(
+        const TensorLayoutArray&, const TensorLayout&, const TensorLayout&,
+        const TensorLayout& dst) {
+    if (param().format == param::WarpPerspective::Format::NCHW) {
+        size_t OH = dst.shape[2], OW = dst.shape[3];
+        return get_bundle(OH, OW).total_size_in_bytes();
+    } else {
+        return 0;
+    }
+}
+
+void WarpPerspectiveImpl::exec(
+        _megdnn_in const TensorNDArray& srcs, _megdnn_tensor_in mat,
+        _megdnn_tensor_in mat_idx, _megdnn_tensor_in dst, _megdnn_workspace workspace) {
+    TensorLayoutArray srcs_layout;
+    for (auto&& src : srcs) {
+        srcs_layout.push_back(src.layout);
+    }
+    check_exec_allow_nhwc_mat_idx(
+            srcs_layout, mat.layout, mat_idx.layout, dst.layout, workspace.size);
+    size_t nr_threads = static_cast<naive::HandleImpl*>(handle())
+                                ->megcore_dispatcher()
+                                ->nr_threads();
+    if (param().format == Format::NCHW && nr_threads == 1_z) {
+#define cb(dt, ct, mct)                                                                \
+    case DTypeTrait<dt>::enumv: {                                                      \
+        auto kparam = KernParam<ct, mct>::from_tensors(                                \
+                param().format, param().bmode, param().border_val, srcs, mat, mat_idx, \
+                dst, workspace);                                                       \
+        MIDOUT_BEGIN(megdnn_fallback_warpperspective, midout_iv(0), dt, ct, mct) {     \
+            MEGDNN_DISPATCH_CPU_KERN_OPR(kern_fallback_multi_src(kparam));             \
+            return;                                                                    \
+        }                                                                              \
+        MIDOUT_END();                                                                  \
+    }
+        switch (srcs.front().layout.dtype.enumv()) {
+            cb(dtype::Float32, float, float);
+            DNN_INC_FLOAT16(cb(dtype::Float16, dt_float16, float));
+            default:
+                megdnn_throw(ssprintf(
+                                     "Unsupported input DType in "
+                                     "WarpPerspective: %s",
+                                     srcs.front().layout.dtype.name())
+                                     .c_str());
+        }
+#undef cb
+    }
+    naive::WarpPerspectiveForwardImpl::exec(srcs, mat, mat_idx, dst, workspace);
+}
+
 void WarpPerspectiveImpl::exec(
         _megdnn_tensor_in src, _megdnn_tensor_in mat, _megdnn_tensor_in mat_idx,
         _megdnn_tensor_in dst, _megdnn_workspace workspace) {
@@ -93,6 +143,69 @@ void WarpPerspectiveImpl::exec(
 #undef cb
     }
     naive::WarpPerspectiveForwardImpl::exec(src, mat, mat_idx, dst, workspace);
+}
+
+template <typename ctype, typename mtype>
+void WarpPerspectiveImpl::kern_fallback_multi_src(
+        const KernParam<ctype, mtype>& kern_param) {
+    UNPACK_WARP_PERSPECTIVE_FWD_KERN_PARAM(kern_param);
+    // cause error if accidentally used
+    sptr = nullptr;
+    mptr = nullptr;
+    dptr = nullptr;
+    MEGDNN_MARK_USED_VAR(sptr);
+    MEGDNN_MARK_USED_VAR(mptr);
+    MEGDNN_MARK_USED_VAR(dptr);
+    MEGDNN_MARK_USED_VAR(border_val);
+
+    MEGDNN_MARK_USED_VAR(IH);
+    MEGDNN_MARK_USED_VAR(IW);
+    KernParam<ctype, mtype> sub_param = kern_param;
+    sub_param.n_src = 1;
+    sub_param.n_mat = 1;
+    sub_param.midx_ptr = RefPtr();
+    sub_param.src_ptr = RefPtr(kern_param.srcs_ptr.front().get_ptr());
+    sub_param.mat_ptr = RefPtr(kern_param.mat_ptr.get_ptr());
+    sub_param.dst_ptr = RefPtr(kern_param.dst_ptr.get_ptr());
+    sub_param.srcs_ptr = kern_param.srcs_ptr;
+
+    rep(n, N_MAT) {
+        if (midx_ptr) {
+            size_t idx = midx_ptr[n];
+            megdnn_assert(
+                    idx < N_SRC, "mat_idx out of bound: mat_idx[%zu]=%zu src_batch=%zu",
+                    n, idx, N_SRC);
+            sub_param.src_ptr.reset(
+                    static_cast<ctype*>(kern_param.srcs_ptr[idx].get_ptr()));
+        } else if (n) {
+            sub_param.src_ptr.reset(
+                    static_cast<ctype*>(kern_param.srcs_ptr[n].get_ptr()));
+        }
+        if (is_resize_optimizable(static_cast<mtype*>(sub_param.mat_ptr.get_ptr()))) {
+            if (bmode == BorderMode::CONSTANT) {
+                MIDOUT_BEGIN(
+                        megdnn_fallback_warpperspective, midout_iv(1), midout_iv(true),
+                        ctype, mtype) {
+                    kern_resize<true, ctype, mtype>(sub_param);
+                }
+                MIDOUT_END();
+            } else {
+                MIDOUT_BEGIN(
+                        megdnn_fallback_warpperspective, midout_iv(1), midout_iv(false),
+                        ctype, mtype) {
+                    kern_resize<false, ctype, mtype>(sub_param);
+                }
+                MIDOUT_END();
+            }
+        } else {
+            MIDOUT_BEGIN(megdnn_fallback_warpperspective, midout_iv(2), ctype, mtype) {
+                rep(oh, OH) kern_naive<ctype, mtype>(sub_param, oh);
+            }
+            MIDOUT_END();
+        }
+        sub_param.mat_ptr += 3 * 3 * sizeof(mtype);
+        sub_param.dst_ptr += C * OH * OW * sizeof(ctype);
+    }
 }
 
 template <typename ctype, typename mtype>

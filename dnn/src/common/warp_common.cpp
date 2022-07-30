@@ -22,4 +22,11 @@ bool warp::is_dnn_available(
     return imode == param::WarpAffine::InterpolationMode::LINEAR;
 }
 
+bool warp::is_dnn_available(
+        const TensorLayoutArray& /*src*/, const TensorLayout& /*mat*/,
+        const TensorLayout& /*dst*/, param::WarpAffine::InterpolationMode imode,
+        param::WarpAffine::Format /*format*/) {
+    return imode == param::WarpAffine::InterpolationMode::LINEAR;
+}
+
 // vim: syntax=cpp.doxygen

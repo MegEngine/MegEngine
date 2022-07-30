@@ -3,7 +3,97 @@
 #include "src/common/utils.h"
 
 namespace megdnn {
+void WarpPerspectiveBase::check_layout_fwd(
+        const TensorLayoutArray& srcs, const TensorLayout& mat,
+        const TensorLayout& mat_idx, const TensorLayout& dst) {
+    megdnn_assert(srcs.size() > 0);
+    auto s = srcs.front();
+    for (auto&& src : srcs) {
+        megdnn_assert_contiguous(src);
+        megdnn_assert(src.dtype == s.dtype);
+        megdnn_assert(src.ndim == s.ndim);
+        megdnn_assert(src.shape[0] == 1);
+        for (size_t i = 0; i < s.ndim; i++) {
+            megdnn_assert(src.shape[i] == s.shape[i]);
+        }
+        megdnn_assert(src.format == s.format);
+    }
+    megdnn_assert_contiguous(mat);
+    megdnn_assert_contiguous(dst);
+    auto errmsg = [&]() {
+        std::string msg = "{";
+        for (auto&& src : srcs) {
+            msg.append(megdnn_layout_msg(src) + ", ");
+        }
+        return msg + "} " + megdnn_layout_msg(mat) + ", " + megdnn_layout_msg(mat_idx) +
+               ", " + megdnn_layout_msg(dst) + ", " + param_msg();
+    };
+    MEGDNN_MARK_USED_VAR(errmsg);
+    megdnn_assert(
+            param().format == param::WarpPerspective::Format::NHWC ||
+            param().format == param::WarpPerspective::Format::NCHW);
+    megdnn_assert(s.ndim == 4_z, "%s", errmsg().c_str());
+    megdnn_assert(dst.ndim == 4_z, "%s", errmsg().c_str());
+    megdnn_assert(mat.ndim == 3_z, "%s", errmsg().c_str());
+    megdnn_assert(dst.shape[0] == mat.shape[0], "%s", errmsg().c_str());
+    if (mat_idx.ndim) {
+        megdnn_assert(
+                mat_idx.dtype == dtype::Int32() && mat_idx.ndim == 1, "%s",
+                errmsg().c_str());
+        megdnn_assert(mat.shape[0] == mat_idx.shape[0], "%s", errmsg().c_str());
+        megdnn_assert_contiguous(mat_idx);
+    } else {
+        megdnn_assert(s.shape[0] * srcs.size() == dst.shape[0], "%s", errmsg().c_str());
+    }
+    megdnn_assert(mat.shape[1] == 3_z, "%s", errmsg().c_str());
+    megdnn_assert(mat.shape[2] == 3_z, "%s", errmsg().c_str());
 
+    if (s.format == dst.format && dst.dtype == s.dtype) {
+        if (param().format == param::WarpPerspective::Format::NCHW) {
+            megdnn_assert(
+                    s.dtype.enumv() == DTypeEnum::Float32 ||
+                            DNN_FLOAT16_SELECT(
+                                    (s.dtype.enumv() == DTypeEnum::Float16 ||
+                                     s.dtype.enumv() == DTypeEnum::BFloat16),
+                                    false),
+                    "WarpPerspective multi src NCHW input dtype should be "
+                    "Float32" DNN_FLOAT16_SELECT("/Float16/BFloat16", "") ".");
+            megdnn_assert(
+                    (s.dtype.category() == DTypeCategory::FLOAT &&
+                     (s.dtype == mat.dtype || mat.dtype.enumv() == DTypeEnum::Float32)),
+                    "The input to WarpPerspective multi src is in NCHW format, in this "
+                    "case, if the input dtype is floating point, the "
+                    "transformation matrix should have same dtype as the "
+                    "input, otherwise, it should be in Float32, %s given.",
+                    mat.dtype.name());
+
+            megdnn_assert(s.shape[1] == dst.shape[1], "%s", errmsg().c_str());
+
+            megdnn_assert(
+                    param().imode == param::WarpPerspective::InterpolationMode::LINEAR);
+            megdnn_assert(
+                    param().bmode != param::WarpPerspective::BorderMode::TRANSPARENT);
+            megdnn_assert(
+                    param().bmode != param::WarpPerspective::BorderMode::ISOLATED);
+        } else {
+            megdnn_assert(param().format == param::WarpPerspective::Format::NHWC);
+            megdnn_assert(
+                    s.dtype.enumv() == DTypeEnum::Float32 ||
+                            DNN_FLOAT16_SELECT(
+                                    (s.dtype.enumv() == DTypeEnum::Float16 ||
+                                     s.dtype.enumv() == DTypeEnum::BFloat16),
+                                    false),
+                    "WarpPerspective multi src NHWC input dtype should be "
+                    "Float32" DNN_FLOAT16_SELECT("/Float16/BFloat16", "") ".");
+            megdnn_assert(s.shape[3] == dst.shape[3], "%s", errmsg().c_str());
+        }
+    } else {
+        megdnn_assert(
+                0,
+                "WarpPerspective multi src only support format NHWC/NCHW, dtype "
+                "Float32" DNN_FLOAT16_SELECT("/Float16/BFloat16", "") ".");
+    }
+}
 void WarpPerspectiveBase::check_layout_fwd(
         const TensorLayout& src, const TensorLayout& mat, const TensorLayout& mat_idx,
         const TensorLayout& dst) {
@@ -291,6 +381,19 @@ void WarpPerspectiveForward::check_exec_allow_nhwc_mat_idx(
         param().format != Param::Format::NHWC_NCHW4_IC_SMALL &&
         param().format != Param::Format::NCHW_NCHW4_IC_SMALL &&
         param().format != Param::Format::NCHW64) {
+        megdnn_assert(!mat_idx.ndim, "mat_idx not supported for current format");
+    }
+}
+
+void WarpPerspectiveForward::check_exec_allow_nhwc_mat_idx(
+        const TensorLayoutArray& srcs, const TensorLayout& mat,
+        const TensorLayout& mat_idx, const TensorLayout& dst,
+        size_t workspace_in_bytes) {
+    check_layout_fwd(srcs, mat, mat_idx, dst);
+    auto required_workspace_in_bytes = get_workspace_in_bytes(srcs, mat, mat_idx, dst);
+    megdnn_assert(workspace_in_bytes >= required_workspace_in_bytes);
+    if (param().format != Param::Format::NHWC &&
+        param().format != Param::Format::NCHW) {
         megdnn_assert(!mat_idx.ndim, "mat_idx not supported for current format");
     }
 }

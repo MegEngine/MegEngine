@@ -887,6 +887,194 @@ TEST_F(CUDA, WARP_PERSPECTIVE_NCHW64_QUINT4) {
     }
 }
 
+TEST_F(CUDA, WARP_PERSPECTIVE_MULTI_SRC_NCHW) {
+    using Param = WarpPerspective::Param;
+    Param param;
+    WarpPerspectiveMatRNG rng;
+
+    for (auto bmode :
+         {WarpPerspective::BorderMode::WRAP, WarpPerspective::BorderMode::REFLECT,
+          WarpPerspective::BorderMode::REPLICATE,
+          WarpPerspective::BorderMode::CONSTANT}) {
+        param.border_val = 0.3f;
+        param.bmode = bmode;
+        param.imode = Param::InterpolationMode::LINEAR;
+        param.format = Param::Format::NCHW;
+
+        auto run = [&param, &rng, this](
+                           size_t bs, size_t ih, size_t iw, size_t c, size_t oh,
+                           size_t ow, DType dtype) {
+            Checker<WarpPerspectiveForward, WarpPerspectiveMultiSrcProxy> checker(
+                    handle_cuda());
+            checker.set_param(param);
+            TensorShapeArray shapes;
+            // src
+            for (size_t i = 0; i < bs; i++) {
+                shapes.emplace_back(TensorShape{{1, c, ih, iw}});
+                checker.set_dtype(i, dtype);
+            }
+            // mat
+            shapes.emplace_back(TensorShape{{bs, 3, 3}});
+            checker.set_rng(bs, &rng);
+            // dst
+            shapes.emplace_back(TensorShape{{bs, c, oh, ow}});
+            checker.set_dtype(bs + 1, dtype);
+            checker.execs(shapes);
+        };
+
+        for (auto dtype : std::vector<DType>{dtype::Float32(), dtype::Float16()}) {
+            run(1, 20, 18, 4, 6, 6, dtype);
+            run(2, 100, 110, 10, 50, 50, dtype);
+            run(20, 10, 11, 123, 15, 16, dtype);
+            run(2200, 10, 11, 3, 11, 12, dtype);
+        }
+    }
+}
+
+TEST_F(CUDA, WARP_PERSPECTIVE_MULTI_SRC_NHWC) {
+    using Param = WarpPerspective::Param;
+    Param param;
+    WarpPerspectiveMatRNG rng;
+
+    for (auto bmode :
+         {WarpPerspective::BorderMode::WRAP, WarpPerspective::BorderMode::REFLECT,
+          WarpPerspective::BorderMode::REPLICATE,
+          WarpPerspective::BorderMode::CONSTANT}) {
+        param.border_val = 0.3f;
+        param.bmode = bmode;
+        param.imode = Param::InterpolationMode::LINEAR;
+        param.format = Param::Format::NHWC;
+
+        auto run = [&param, &rng, this](
+                           size_t bs, size_t ih, size_t iw, size_t c, size_t oh,
+                           size_t ow, DType dtype) {
+            Checker<WarpPerspectiveForward, WarpPerspectiveMultiSrcProxy> checker(
+                    handle_cuda());
+            checker.set_param(param);
+            TensorShapeArray shapes;
+            // src
+            for (size_t i = 0; i < bs; i++) {
+                shapes.emplace_back(TensorShape{{1, ih, iw, c}});
+                checker.set_dtype(i, dtype);
+            }
+            // mat
+            shapes.emplace_back(TensorShape{{bs, 3, 3}});
+            checker.set_rng(bs, &rng);
+            // dst
+            shapes.emplace_back(TensorShape{{bs, oh, ow, c}});
+            checker.set_dtype(bs + 1, dtype);
+            checker.execs(shapes);
+        };
+
+        for (auto dtype : std::vector<DType>{dtype::Float32(), dtype::Float16()}) {
+            run(1, 20, 18, 4, 6, 6, dtype);
+            run(2, 100, 110, 10, 50, 50, dtype);
+            run(20, 10, 11, 123, 15, 16, dtype);
+            run(2200, 10, 11, 3, 11, 12, dtype);
+        }
+    }
+}
+
+TEST_F(CUDA, WARP_PERSPECTIVE_MULTI_SRC_WITH_IDX_NCHW) {
+    using Param = WarpPerspective::Param;
+    Param param;
+    WarpPerspectiveMatRNG rng;
+    UniformIntRNG idx_rng{0, 0};
+
+    for (auto bmode :
+         {WarpPerspective::BorderMode::WRAP, WarpPerspective::BorderMode::REFLECT,
+          WarpPerspective::BorderMode::REPLICATE,
+          WarpPerspective::BorderMode::CONSTANT}) {
+        param.border_val = 0.3f;
+        param.bmode = bmode;
+        param.imode = Param::InterpolationMode::LINEAR;
+        param.format = Param::Format::NCHW;
+
+        auto run = [&param, &rng, &idx_rng, this](
+                           size_t bs, size_t ih, size_t iw, size_t c, size_t oh,
+                           size_t ow, size_t idx, DType dtype) {
+            Checker<WarpPerspectiveForward, WarpPerspectiveMultiSrcProxy> checker(
+                    handle_cuda());
+            checker.set_param(param);
+            TensorShapeArray shapes;
+            // src
+            for (size_t i = 0; i < bs; i++) {
+                shapes.emplace_back(TensorShape{{1, c, ih, iw}});
+                checker.set_dtype(i, dtype);
+            }
+            // mat
+            shapes.emplace_back(TensorShape{{idx, 3, 3}});
+            checker.set_rng(bs, &rng);
+            // mat_idx
+            shapes.emplace_back(TensorShape{{idx}});
+            checker.set_dtype(bs + 1, dtype::Int32());
+            idx_rng = UniformIntRNG{0, (int)bs - 1};
+            checker.set_rng(bs + 1, &idx_rng);
+            // dst
+            shapes.emplace_back(TensorShape{{idx, c, oh, ow}});
+            checker.set_dtype(bs + 2, dtype);
+            checker.execs(shapes);
+        };
+
+        for (auto dtype : std::vector<DType>{dtype::Float32(), dtype::Float16()}) {
+            run(1, 20, 18, 4, 6, 6, 1, dtype);
+            run(2, 100, 110, 10, 50, 50, 1, dtype);
+            run(20, 10, 11, 123, 15, 16, 10, dtype);
+            run(2200, 10, 11, 3, 11, 12, 100, dtype);
+        }
+    }
+}
+
+TEST_F(CUDA, WARP_PERSPECTIVE_MULTI_SRC_WITH_IDX_NHWC) {
+    using Param = WarpPerspective::Param;
+    Param param;
+    WarpPerspectiveMatRNG rng;
+    UniformIntRNG idx_rng{0, 0};
+
+    for (auto bmode :
+         {WarpPerspective::BorderMode::WRAP, WarpPerspective::BorderMode::REFLECT,
+          WarpPerspective::BorderMode::REPLICATE,
+          WarpPerspective::BorderMode::CONSTANT}) {
+        param.border_val = 0.3f;
+        param.bmode = bmode;
+        param.imode = Param::InterpolationMode::LINEAR;
+        param.format = Param::Format::NHWC;
+
+        auto run = [&param, &rng, &idx_rng, this](
+                           size_t bs, size_t ih, size_t iw, size_t c, size_t oh,
+                           size_t ow, size_t idx, DType dtype) {
+            Checker<WarpPerspectiveForward, WarpPerspectiveMultiSrcProxy> checker(
+                    handle_cuda());
+            checker.set_param(param);
+            TensorShapeArray shapes;
+            // src
+            for (size_t i = 0; i < bs; i++) {
+                shapes.emplace_back(TensorShape{{1, ih, iw, c}});
+                checker.set_dtype(i, dtype);
+            }
+            // mat
+            shapes.emplace_back(TensorShape{{idx, 3, 3}});
+            checker.set_rng(bs, &rng);
+            // mat_idx
+            shapes.emplace_back(TensorShape{{idx}});
+            checker.set_dtype(bs + 1, dtype::Int32());
+            idx_rng = UniformIntRNG{0, (int)bs - 1};
+            checker.set_rng(bs + 1, &idx_rng);
+            // dst
+            shapes.emplace_back(TensorShape{{idx, oh, ow, c}});
+            checker.set_dtype(bs + 2, dtype);
+            checker.execs(shapes);
+        };
+
+        for (auto dtype : std::vector<DType>{dtype::Float32(), dtype::Float16()}) {
+            run(1, 20, 18, 4, 6, 6, 1, dtype);
+            run(2, 100, 110, 10, 50, 50, 1, dtype);
+            run(20, 10, 11, 123, 15, 16, 10, dtype);
+            run(2200, 10, 11, 3, 11, 12, 100, dtype);
+        }
+    }
+}
+
 #if MEGDNN_WITH_BENCHMARK
 
 TEST_F(CUDA, BENCHMARK_WARP_PERSPECTIVE_NCHW4) {

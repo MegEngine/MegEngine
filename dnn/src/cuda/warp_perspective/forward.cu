@@ -47,9 +47,14 @@ struct CtypeHelper<dt_quint4> {
 template <typename ctype>
 struct DirectSrcVisitor {
     const void* ptr;
+    const void** ptrs;
 
     __device__ __forceinline__ const ctype* get(int batch, int im_size) {
         return (ctype*)((char*)ptr + static_cast<int64_t>(batch) * static_cast<int64_t>(im_size) * CtypeHelper<ctype>::bit_width / 8);
+    }
+
+    __device__ __forceinline__ const ctype* get(int batch) {
+        return (ctype*)(ptrs[batch]);
     }
 
     void move_batch(size_t batch, size_t im_size) {
@@ -60,6 +65,7 @@ struct DirectSrcVisitor {
 template <typename ctype>
 struct IndexedSrcVisitor {
     const void* ptr;
+    const void** ptrs;
     const int* idx;
     int N_SRC;
 
@@ -79,8 +85,57 @@ struct IndexedSrcVisitor {
         return (ctype*)((char*)ptr + static_cast<int64_t>(batch) * static_cast<int64_t>(im_size) * CtypeHelper<ctype>::bit_width / 8);
     }
 
+    __device__ __forceinline__ const ctype* get(int batch) {
+        int orig_batch = batch;
+        batch = idx[batch];
+        if (batch < 0 || batch >= N_SRC) {
+            set_async_error_info(
+                    error_info, error_tracker,
+                    "mat_idx out of bound: mat_idx[%d]=%d src_batch=%d", orig_batch,
+                    batch, N_SRC);
+            batch = 0;
+        }
+        return (ctype*)(ptrs[batch]);
+    }
+
     void move_batch(size_t batch, size_t) { idx += batch; }
 };
+
+template <
+        typename ctype, typename Getter, typename SrcVisitor, typename OutputConverter>
+__global__ void kern_general_multi_src(
+        SrcVisitor srcs, const float* __restrict mat, ctype* __restrict dst, int C,
+        int IH, int IW, int OH, int OW) {
+    Getter getter;
+    OutputConverter output_converter;
+    int ow = blockIdx.x * blockDim.x + threadIdx.x;
+    int oh = blockIdx.y * blockDim.y + threadIdx.y;
+    const ctype* __restrict sptr = srcs.get(blockIdx.z);
+    dst += blockIdx.z * C * OH * OW;
+    mat += blockIdx.z * 3 * 3;
+    if (ow < OW && oh < OH) {
+        float denominator = mat[6] * ow + mat[7] * oh + mat[8];
+        float iw = (mat[0] * ow + mat[1] * oh + mat[2]) / denominator;
+        float ih = (mat[3] * ow + mat[4] * oh + mat[5]) / denominator;
+        int iw0 = getter(floor(iw) + 0, IW);
+        int iw1 = getter(floor(iw) + 1, IW);
+        int ih0 = getter(floor(ih) + 0, IH);
+        int ih1 = getter(floor(ih) + 1, IH);
+        float palpha = ih - floor(ih);
+        float pbeta = iw - floor(iw);
+        float nalpha = 1.0f - palpha;
+        float nbeta = 1.0f - pbeta;
+        for (int c = 0; c < C; ++c) {
+            dst[oh * OW + ow] = output_converter(
+                    sptr[ih0 * IW + iw0] * nalpha * nbeta +
+                    sptr[ih0 * IW + iw1] * nalpha * pbeta +
+                    sptr[ih1 * IW + iw0] * palpha * nbeta +
+                    sptr[ih1 * IW + iw1] * palpha * pbeta);
+            sptr += IH * IW;
+            dst += OH * OW;
+        }
+    }
+}
 
 template <
         typename ctype, typename Getter, typename SrcVisitor, typename OutputConverter>
@@ -257,6 +312,47 @@ __global__ void kern_general_nchw64(
             dst_int4[o_coor + c1] = d;
             sptr_int4 += IH * IW * 2;
             dst_int4 += OH * OW * 2;
+        }
+    }
+}
+
+template <typename ctype, typename SrcVisitor, typename OutputConverter>
+__global__ void kern_const_border_multi_src(
+        SrcVisitor srcs, const float* __restrict mat, ctype* __restrict dst, int C,
+        int IH, int IW, int OH, int OW, ctype bval) {
+    OutputConverter output_converter;
+    int ow = blockIdx.x * blockDim.x + threadIdx.x;
+    int oh = blockIdx.y * blockDim.y + threadIdx.y;
+    const ctype* __restrict sptr = srcs.get(blockIdx.z);
+    dst += blockIdx.z * C * OH * OW;
+    mat += blockIdx.z * 3 * 3;
+    if (ow < OW && oh < OH) {
+        float denominator = mat[6] * ow + mat[7] * oh + mat[8];
+        float iw = (mat[0] * ow + mat[1] * oh + mat[2]) / denominator;
+        float ih = (mat[3] * ow + mat[4] * oh + mat[5]) / denominator;
+        int iw0 = floor(iw) + 0;
+        int iw1 = floor(iw) + 1;
+        int ih0 = floor(ih) + 0;
+        int ih1 = floor(ih) + 1;
+        bool okw0 = (iw0 >= 0 && iw0 < IW);
+        bool okw1 = (iw1 >= 0 && iw1 < IW);
+        bool okh0 = (ih0 >= 0 && ih0 < IH);
+        bool okh1 = (ih1 >= 0 && ih1 < IH);
+        float palpha = ih - floor(ih);
+        float pbeta = iw - floor(iw);
+        float nalpha = 1.0f - palpha;
+        float nbeta = 1.0f - pbeta;
+        for (int c = 0; c < C; ++c) {
+            ctype v00 = (okh0 && okw0 ? sptr[ih0 * IW + iw0] : bval);
+            ctype v01 = (okh0 && okw1 ? sptr[ih0 * IW + iw1] : bval);
+            ctype v10 = (okh1 && okw0 ? sptr[ih1 * IW + iw0] : bval);
+            ctype v11 = (okh1 && okw1 ? sptr[ih1 * IW + iw1] : bval);
+            ctype val = output_converter(
+                    v00 * nalpha * nbeta + v01 * nalpha * pbeta + v10 * palpha * nbeta +
+                    v11 * palpha * pbeta);
+            dst[oh * OW + ow] = val;
+            sptr += IH * IW;
+            dst += OH * OW;
         }
     }
 }
@@ -556,6 +652,51 @@ struct KernCoreNHWC<ctype, OutputConverter, 16> {
 template <
         typename ctype, typename Getter, typename SrcVisitor, typename OutputConverter,
         int pack_c>
+__global__ void kern_general_nhwc_multi_src(
+        SrcVisitor srcs, const float* __restrict mat, ctype* __restrict dst, int C,
+        int IH, int IW, int OH, int OW) {
+    Getter getter;
+    OutputConverter output_converter;
+    constexpr int bit_width = CtypeHelper<ctype>::bit_width;
+    int ow = blockIdx.x * blockDim.x + threadIdx.x;
+    int oh = blockIdx.y * blockDim.y + threadIdx.y;
+    const ctype* __restrict sptr = srcs.get(blockIdx.z);
+    dst = (ctype*)((char*)dst + blockIdx.z * C * OH * OW * bit_width / 8);
+    mat += blockIdx.z * 3 * 3;
+    if (ow < OW && oh < OH) {
+        float denominator = mat[6] * ow + mat[7] * oh + mat[8];
+        float iw = (mat[0] * ow + mat[1] * oh + mat[2]) / denominator;
+        float ih = (mat[3] * ow + mat[4] * oh + mat[5]) / denominator;
+        int iw0 = getter(floor(iw) + 0, IW);
+        int iw1 = getter(floor(iw) + 1, IW);
+        int ih0 = getter(floor(ih) + 0, IH);
+        int ih1 = getter(floor(ih) + 1, IH);
+        float palpha = ih - floor(ih);
+        float pbeta = iw - floor(iw);
+        float nalpha = 1.0f - palpha;
+        float nbeta = 1.0f - pbeta;
+        float w00 = nalpha * nbeta;
+        float w01 = nalpha * pbeta;
+        float w10 = palpha * nbeta;
+        float w11 = palpha * pbeta;
+        const char* src_ptr0 = (char*)sptr + (ih0 * IW + iw0) * C * bit_width / 8;
+        const char* src_ptr1 = (char*)sptr + (ih0 * IW + iw1) * C * bit_width / 8;
+        const char* src_ptr2 = (char*)sptr + (ih1 * IW + iw0) * C * bit_width / 8;
+        const char* src_ptr3 = (char*)sptr + (ih1 * IW + iw1) * C * bit_width / 8;
+        char* dst_ptr = (char*)dst + (oh * OW + ow) * C * bit_width / 8;
+
+        for (int c = 0; c < C; c += pack_c) {
+            KernCoreNHWC<ctype, OutputConverter, pack_c>::func(
+                    dst_ptr, src_ptr0, src_ptr1, src_ptr2, src_ptr3, c * bit_width / 8,
+                    w00, w01, w10, w11, output_converter, true, true, true, true,
+                    (ctype)0);
+        }
+    }
+}
+
+template <
+        typename ctype, typename Getter, typename SrcVisitor, typename OutputConverter,
+        int pack_c>
 __global__ void kern_general_nhwc(
         SrcVisitor src, const float* __restrict mat, ctype* __restrict dst, int C,
         int IH, int IW, int OH, int OW) {
@@ -594,6 +735,58 @@ __global__ void kern_general_nhwc(
                     dst_ptr, src_ptr0, src_ptr1, src_ptr2, src_ptr3, c * bit_width / 8,
                     w00, w01, w10, w11, output_converter, true, true, true, true,
                     (ctype)0);
+        }
+    }
+}
+
+template <
+        typename ctype, typename Getter, typename SrcVisitor, typename OutputConverter,
+        int pack_c>
+__global__ void kern_general_nhwc_const_multi_src(
+        SrcVisitor srcs, const float* __restrict mat, ctype* __restrict dst, int C,
+        int IH, int IW, int OH, int OW, ctype bval) {
+    Getter getter;
+    OutputConverter output_converter;
+    constexpr int bit_width = CtypeHelper<ctype>::bit_width;
+    int ow = blockIdx.x * blockDim.x + threadIdx.x;
+    int oh = blockIdx.y * blockDim.y + threadIdx.y;
+    const ctype* __restrict sptr = srcs.get(blockIdx.z);
+    dst = (ctype*)((char*)dst + blockIdx.z * C * OH * OW * bit_width / 8);
+    mat += blockIdx.z * 3 * 3;
+    if (ow < OW && oh < OH) {
+        float denominator = mat[6] * ow + mat[7] * oh + mat[8];
+        float iw = (mat[0] * ow + mat[1] * oh + mat[2]) / denominator;
+        float ih = (mat[3] * ow + mat[4] * oh + mat[5]) / denominator;
+        int iw0 = getter(floor(iw) + 0, IW);
+        int iw1 = getter(floor(iw) + 1, IW);
+        int ih0 = getter(floor(ih) + 0, IH);
+        int ih1 = getter(floor(ih) + 1, IH);
+        float palpha = ih - floor(ih);
+        float pbeta = iw - floor(iw);
+        float nalpha = 1.0f - palpha;
+        float nbeta = 1.0f - pbeta;
+        float w00 = nalpha * nbeta;
+        float w01 = nalpha * pbeta;
+        float w10 = palpha * nbeta;
+        float w11 = palpha * pbeta;
+        const char* src_ptr0 = (char*)sptr + (ih0 * IW + iw0) * C * bit_width / 8;
+        const char* src_ptr1 = (char*)sptr + (ih0 * IW + iw1) * C * bit_width / 8;
+        const char* src_ptr2 = (char*)sptr + (ih1 * IW + iw0) * C * bit_width / 8;
+        const char* src_ptr3 = (char*)sptr + (ih1 * IW + iw1) * C * bit_width / 8;
+        char* dst_ptr = (char*)dst + (oh * OW + ow) * C * bit_width / 8;
+        bool okw0 = (iw0 >= 0 && iw0 < IW);
+        bool okw1 = (iw1 >= 0 && iw1 < IW);
+        bool okh0 = (ih0 >= 0 && ih0 < IH);
+        bool okh1 = (ih1 >= 0 && ih1 < IH);
+        bool src0_ok = okh0 && okw0;
+        bool src1_ok = okh0 && okw1;
+        bool src2_ok = okh1 && okw0;
+        bool src3_ok = okh1 && okw1;
+        for (int c = 0; c < C; c += pack_c) {
+            KernCoreNHWC<ctype, OutputConverter, pack_c>::func(
+                    dst_ptr, src_ptr0, src_ptr1, src_ptr2, src_ptr3, c * bit_width / 8,
+                    w00, w01, w10, w11, output_converter, src0_ok, src1_ok, src2_ok,
+                    src3_ok, bval);
         }
     }
 }
@@ -647,6 +840,73 @@ __global__ void kern_general_nhwc_const(
                     w00, w01, w10, w11, output_converter, src0_ok, src1_ok, src2_ok,
                     src3_ok, bval);
         }
+    }
+}
+
+template <typename ctype, typename SrcVisitor>
+void dispatch_with_visitor_multi_src(
+        bool is_nhwc, SrcVisitor srcs, const float* mat, ctype* dst, int N, int C,
+        int IH, int IW, int OH, int OW, ctype bval, BorderMode bmode,
+        cudaStream_t stream) {
+    constexpr int pack_c = 1;
+    const int BY = 16, BX = 32;
+#define DISPATCH(Getter)                                                           \
+    do {                                                                           \
+        if (is_nhwc) {                                                             \
+            kern_general_nhwc_multi_src<                                           \
+                    ctype, Getter, SrcVisitor, rounding::RoundingConverter<ctype>, \
+                    pack_c><<<blocks, threads, 0, stream>>>(                       \
+                    srcs, mat, dst, C, IH, IW, OH, OW);                            \
+        } else {                                                                   \
+            kern_general_multi_src<                                                \
+                    ctype, Getter, SrcVisitor, rounding::RoundingConverter<ctype>> \
+                    <<<blocks, threads, 0, stream>>>(                              \
+                            srcs, mat, dst, C, IH, IW, OH, OW);                    \
+        }                                                                          \
+    } while (0)
+
+    const int max_batch_size = 65535;
+    while (N) {
+        size_t curr_batch_size = N < max_batch_size ? N : max_batch_size;
+        dim3 threads(BX, BY);
+        dim3 blocks((OW + BX - 1) / BX, (OH + BY - 1) / BY, curr_batch_size);
+
+        switch (bmode) {
+            case BORDER_REPLICATE:
+                DISPATCH(ReplicateGetter);
+                break;
+            case BORDER_REFLECT:
+                DISPATCH(ReflectGetter);
+                break;
+            case BORDER_REFLECT_101:
+                DISPATCH(Reflect101Getter);
+                break;
+            case BORDER_WRAP:
+                DISPATCH(WrapGetter);
+                break;
+#undef DISPATCH
+            case BORDER_CONSTANT:
+                if (is_nhwc) {
+                    kern_general_nhwc_const_multi_src<
+                            ctype, ConstGetter, SrcVisitor,
+                            rounding::RoundingConverter<ctype>, pack_c>
+                            <<<blocks, threads, 0, stream>>>(
+                                    srcs, mat, dst, C, IH, IW, OH, OW, bval);
+                } else {
+                    kern_const_border_multi_src<
+                            ctype, SrcVisitor, rounding::RoundingConverter<ctype>>
+                            <<<blocks, threads, 0, stream>>>(
+                                    srcs, mat, dst, C, IH, IW, OH, OW, bval);
+                }
+                break;
+            default:
+                break;
+        }
+
+        N -= curr_batch_size;
+        srcs.move_batch(curr_batch_size, C * IH * IW);
+        mat += curr_batch_size * 3 * 3;
+        dst += curr_batch_size * C * OH * OW;
     }
 }
 
@@ -1534,6 +1794,33 @@ void dispatch_with_visitor_quint8_dimshuffle_typecvt_nchw(
 namespace megdnn {
 namespace cuda {
 namespace warp_perspective {
+template <typename ctype>
+void forward_proxy_multi_src(
+        bool is_nhwc, const ctype** srcs, const float* mat, const int* mat_idx,
+        ctype* dst, int N_SRC, int N_MAT, int C, int IH, int IW, int OH, int OW,
+        ctype bval, BorderMode bmode, megcore::AsyncErrorInfo* error_info,
+        void* error_tracker, cudaStream_t stream) {
+    if (mat_idx) {
+        IndexedSrcVisitor<ctype> visitor;
+        visitor.ptrs = reinterpret_cast<const void**>(srcs);
+        visitor.ptr = srcs;
+        visitor.idx = mat_idx;
+        visitor.N_SRC = N_SRC;
+        visitor.error_info = error_info;
+        visitor.error_tracker = error_tracker;
+        dispatch_with_visitor_multi_src(
+                is_nhwc, visitor, mat, dst, N_MAT, C, IH, IW, OH, OW, bval, bmode,
+                stream);
+    } else {
+        DirectSrcVisitor<ctype> visitor;
+        visitor.ptrs = reinterpret_cast<const void**>(srcs);
+        visitor.ptr = srcs;
+        dispatch_with_visitor_multi_src(
+                is_nhwc, visitor, mat, dst, N_MAT, C, IH, IW, OH, OW, bval, bmode,
+                stream);
+    }
+    after_kernel_launch();
+}
 
 template <typename ctype>
 void forward_proxy(
@@ -1641,6 +1928,17 @@ INST(uint8_t)
 INST(dt_float16)
 #endif
 INST(int8_t)
+#undef INST
+
+#define INST(ctype)                                                                    \
+    template void forward_proxy_multi_src(                                             \
+            bool, const ctype**, const float*, const int*, ctype*, int, int, int, int, \
+            int, int, int, ctype, BorderMode, megcore::AsyncErrorInfo*, void*,         \
+            cudaStream_t);
+INST(float)
+#ifndef MEGDNN_DISABLE_FLOAT16
+INST(dt_float16)
+#endif
 #undef INST
 
 #define INST(ctype)                                                                  \

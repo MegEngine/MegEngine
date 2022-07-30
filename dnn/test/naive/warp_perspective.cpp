@@ -55,6 +55,282 @@ class NanMatRNG : public RNG {
 };
 }  // namespace
 
+TEST_F(NAIVE, WARP_PERSPECTIVE_MULTI_SRC) {
+    using Param = WarpPerspective::Param;
+
+    WarpPerspective::Param param;
+    auto extra_impl = [&param, this](const TensorNDArray& tensors) {
+        //! split src
+        TensorND src = tensors[0];  // n h w c
+        size_t n = src.layout[0];
+        TensorNDArray srcs;  // n 个 1 h w c
+        TensorLayoutArray srcs_layouts;
+        for (size_t i = 0; i < n; i++) {
+            TensorLayout ly;
+            ly = TensorLayout{
+                    {1, src.layout[1], src.layout[2], src.layout[3]}, src.layout.dtype};
+            srcs.emplace_back(malloc(ly.span().dist_byte()), ly);
+            srcs_layouts.emplace_back(ly);
+        }
+
+        auto split = handle()->create_operator<SplitForward>();
+        split->param().axis = 0;
+        auto split_ws_size = split->get_workspace_in_bytes(src.layout, srcs_layouts);
+        dt_byte* split_ws_ptr = static_cast<dt_byte*>(malloc(split_ws_size));
+        Workspace split_ws{split_ws_ptr, split_ws_size};
+        split->exec(src, srcs, split_ws);
+
+        auto warp_perspective = handle()->create_operator<WarpPerspective>();
+        warp_perspective->param() = param;
+        auto warp_ws_size = warp_perspective->get_workspace_in_bytes(
+                srcs_layouts, tensors[1].layout, tensors[2].layout);
+        dt_byte* warp_ws_ptr = static_cast<dt_byte*>(malloc(warp_ws_size));
+        Workspace warp_ws{warp_ws_ptr, warp_ws_size};
+        warp_perspective->exec(srcs, tensors[1], tensors[2], warp_ws);
+
+        free(split_ws_ptr);
+        free(warp_ws_ptr);
+        for (auto&& s : srcs) {
+            free(s.raw_ptr());
+        }
+    };
+
+    {
+        // Float32
+        Checker<WarpPerspectiveForward> checker(handle());
+        WarpPerspectiveMatRNG rng;
+        checker.set_rng(1, &rng);
+        checker.set_extra_opr_impl(extra_impl);
+        // NHWC
+        for (auto bmode :
+             {WarpPerspective::BorderMode::WRAP, WarpPerspective::BorderMode::REFLECT,
+              WarpPerspective::BorderMode::REPLICATE,
+              WarpPerspective::BorderMode::CONSTANT}) {
+            param.border_val = 0.3f;
+            param.bmode = bmode;
+            param.imode = Param::InterpolationMode::LINEAR;
+
+            param.format = Param::Format::NHWC;
+            checker.set_param(param);
+            checker.execs({{1, 2, 2, 4}, {1, 3, 3}, {1, 2, 2, 4}});
+            checker.execs({{2, 10, 10, 4}, {2, 3, 3}, {2, 10, 12, 4}});
+            checker.execs({{3, 25, 24, 8}, {3, 3, 3}, {3, 12, 10, 8}});
+            checker.execs({{4, 33, 22, 16}, {4, 3, 3}, {4, 9, 12, 16}});
+        }
+        // NCHW
+        for (auto bmode :
+             {WarpPerspective::BorderMode::WRAP, WarpPerspective::BorderMode::REFLECT,
+              WarpPerspective::BorderMode::REPLICATE,
+              WarpPerspective::BorderMode::CONSTANT}) {
+            param.border_val = 0.3f;
+            param.bmode = bmode;
+            param.imode = Param::InterpolationMode::LINEAR;
+
+            param.format = Param::Format::NCHW;
+            checker.set_param(param);
+            checker.execs({{1, 4, 2, 2}, {1, 3, 3}, {1, 4, 2, 2}});
+            checker.execs({{2, 4, 10, 10}, {2, 3, 3}, {2, 4, 10, 12}});
+            checker.execs({{3, 8, 25, 24}, {3, 3, 3}, {3, 8, 12, 10}});
+            checker.execs({{4, 16, 33, 22}, {4, 3, 3}, {4, 16, 9, 12}});
+        }
+    }
+
+    {
+        // Float16
+        Checker<WarpPerspectiveForward> checker(handle());
+        WarpPerspectiveMatRNG rng;
+        checker.set_rng(1, &rng);
+        checker.set_dtype(0, dtype::Float16());
+        checker.set_dtype(2, dtype::Float16());
+        checker.set_extra_opr_impl(extra_impl);
+        // NHWC
+        for (auto bmode :
+             {WarpPerspective::BorderMode::WRAP, WarpPerspective::BorderMode::REFLECT,
+              WarpPerspective::BorderMode::REPLICATE,
+              WarpPerspective::BorderMode::CONSTANT}) {
+            param.border_val = 0.3f;
+            param.bmode = bmode;
+            param.imode = Param::InterpolationMode::LINEAR;
+
+            param.format = Param::Format::NHWC;
+            checker.set_param(param);
+            checker.execs({{1, 2, 2, 4}, {1, 3, 3}, {1, 2, 2, 4}});
+            checker.execs({{2, 10, 10, 4}, {2, 3, 3}, {2, 10, 12, 4}});
+            checker.execs({{3, 25, 24, 8}, {3, 3, 3}, {3, 12, 10, 8}});
+            checker.execs({{4, 33, 22, 16}, {4, 3, 3}, {4, 9, 12, 16}});
+        }
+        // NCHW
+        for (auto bmode :
+             {WarpPerspective::BorderMode::WRAP, WarpPerspective::BorderMode::REFLECT,
+              WarpPerspective::BorderMode::REPLICATE,
+              WarpPerspective::BorderMode::CONSTANT}) {
+            param.border_val = 0.3f;
+            param.bmode = bmode;
+            param.imode = Param::InterpolationMode::LINEAR;
+
+            param.format = Param::Format::NCHW;
+            checker.set_param(param);
+            checker.execs({{1, 4, 2, 2}, {1, 3, 3}, {1, 4, 2, 2}});
+            checker.execs({{2, 4, 10, 10}, {2, 3, 3}, {2, 4, 10, 12}});
+            checker.execs({{3, 8, 25, 24}, {3, 3, 3}, {3, 8, 12, 10}});
+            checker.execs({{4, 16, 33, 22}, {4, 3, 3}, {4, 16, 9, 12}});
+        }
+    }
+}
+
+TEST_F(NAIVE, WARP_PERSPECTIVE_MULTI_SRC_WITH_IDX) {
+    using Param = WarpPerspective::Param;
+
+    WarpPerspective::Param param;
+    auto extra_impl = [&param, this](const TensorNDArray& tensors) {
+        //! split src
+        TensorND src = tensors[0];  // n h w c
+        size_t n = src.layout[0];
+        TensorNDArray srcs;  // n 个 1 h w c
+        TensorLayoutArray srcs_layouts;
+        for (size_t i = 0; i < n; i++) {
+            TensorLayout ly;
+            ly = TensorLayout{
+                    {1, src.layout[1], src.layout[2], src.layout[3]}, src.layout.dtype};
+            srcs.emplace_back(malloc(ly.span().dist_byte()), ly);
+            srcs_layouts.emplace_back(ly);
+        }
+
+        auto split = handle()->create_operator<SplitForward>();
+        split->param().axis = 0;
+        auto split_ws_size = split->get_workspace_in_bytes(src.layout, srcs_layouts);
+        dt_byte* split_ws_ptr = static_cast<dt_byte*>(malloc(split_ws_size));
+        Workspace split_ws{split_ws_ptr, split_ws_size};
+        split->exec(src, srcs, split_ws);
+
+        auto warp_perspective = handle()->create_operator<WarpPerspective>();
+        warp_perspective->param() = param;
+        auto warp_ws_size = warp_perspective->get_workspace_in_bytes(
+                srcs_layouts, tensors[1].layout, tensors[2].layout, tensors[3].layout);
+        dt_byte* warp_ws_ptr = static_cast<dt_byte*>(malloc(warp_ws_size));
+        Workspace warp_ws{warp_ws_ptr, warp_ws_size};
+        warp_perspective->exec(srcs, tensors[1], tensors[2], tensors[3], warp_ws);
+
+        free(split_ws_ptr);
+        free(warp_ws_ptr);
+        for (auto&& s : srcs) {
+            free(s.raw_ptr());
+        }
+    };
+
+    {
+        // Float32
+        Checker<WarpPerspectiveForward, WarpPerspectiveMatIdxProxy> checker(handle());
+        WarpPerspectiveMatRNG rng;
+        checker.set_rng(1, &rng);
+        checker.set_dtype(0, dtype::Float32());
+        checker.set_dtype(1, dtype::Float32());
+        checker.set_dtype(2, dtype::Int32());
+        checker.set_dtype(3, dtype::Float32());
+        checker.set_extra_opr_impl(extra_impl);
+        // NHWC
+        for (auto bmode :
+             {WarpPerspective::BorderMode::WRAP, WarpPerspective::BorderMode::REFLECT,
+              WarpPerspective::BorderMode::REPLICATE,
+              WarpPerspective::BorderMode::CONSTANT}) {
+            param.border_val = 0.3f;
+            param.bmode = bmode;
+            param.imode = Param::InterpolationMode::LINEAR;
+
+            param.format = Param::Format::NHWC;
+            checker.set_param(param);
+            UniformIntRNG idx_rng{0, 0};
+            checker.set_rng(2, &idx_rng);
+            checker.execs({{1, 2, 2, 4}, {1, 3, 3}, {1}, {1, 2, 2, 4}});
+            idx_rng = UniformIntRNG{0, 1};
+            checker.set_rng(2, &idx_rng);
+            checker.execs({{2, 10, 10, 4}, {1, 3, 3}, {1}, {1, 10, 12, 4}});
+            idx_rng = UniformIntRNG{0, 2};
+            checker.set_rng(2, &idx_rng);
+            checker.execs({{3, 25, 24, 8}, {2, 3, 3}, {2}, {2, 12, 10, 8}});
+            checker.execs({{4, 33, 22, 16}, {2, 3, 3}, {2}, {2, 9, 12, 16}});
+        }
+        // NCHW
+        for (auto bmode :
+             {WarpPerspective::BorderMode::WRAP, WarpPerspective::BorderMode::REFLECT,
+              WarpPerspective::BorderMode::REPLICATE,
+              WarpPerspective::BorderMode::CONSTANT}) {
+            param.border_val = 0.3f;
+            param.bmode = bmode;
+            param.imode = Param::InterpolationMode::LINEAR;
+
+            param.format = Param::Format::NCHW;
+            checker.set_param(param);
+            UniformIntRNG idx_rng{0, 0};
+            checker.set_rng(2, &idx_rng);
+            checker.execs({{1, 4, 2, 2}, {1, 3, 3}, {1}, {1, 4, 2, 2}});
+            idx_rng = UniformIntRNG{0, 1};
+            checker.set_rng(2, &idx_rng);
+            checker.execs({{2, 4, 10, 10}, {1, 3, 3}, {1}, {1, 4, 10, 12}});
+            idx_rng = UniformIntRNG{0, 2};
+            checker.set_rng(2, &idx_rng);
+            checker.execs({{3, 8, 25, 24}, {2, 3, 3}, {2}, {2, 8, 12, 10}});
+            checker.execs({{4, 16, 33, 22}, {2, 3, 3}, {2}, {2, 16, 9, 12}});
+        }
+    }
+
+    {
+        // Float16
+        Checker<WarpPerspectiveForward, WarpPerspectiveMatIdxProxy> checker(handle());
+        WarpPerspectiveMatRNG rng;
+        checker.set_rng(1, &rng);
+        checker.set_dtype(0, dtype::Float16());
+        checker.set_dtype(1, dtype::Float32());
+        checker.set_dtype(2, dtype::Int32());
+        checker.set_dtype(3, dtype::Float16());
+        checker.set_extra_opr_impl(extra_impl);
+        // NHWC
+        for (auto bmode :
+             {WarpPerspective::BorderMode::WRAP, WarpPerspective::BorderMode::REFLECT,
+              WarpPerspective::BorderMode::REPLICATE,
+              WarpPerspective::BorderMode::CONSTANT}) {
+            param.border_val = 0.3f;
+            param.bmode = bmode;
+            param.imode = Param::InterpolationMode::LINEAR;
+
+            param.format = Param::Format::NHWC;
+            checker.set_param(param);
+            UniformIntRNG idx_rng{0, 0};
+            checker.set_rng(2, &idx_rng);
+            checker.execs({{1, 2, 2, 4}, {1, 3, 3}, {1}, {1, 2, 2, 4}});
+            idx_rng = UniformIntRNG{0, 1};
+            checker.set_rng(2, &idx_rng);
+            checker.execs({{2, 10, 10, 4}, {1, 3, 3}, {1}, {1, 10, 12, 4}});
+            idx_rng = UniformIntRNG{0, 2};
+            checker.set_rng(2, &idx_rng);
+            checker.execs({{3, 25, 24, 8}, {2, 3, 3}, {2}, {2, 12, 10, 8}});
+            checker.execs({{4, 33, 22, 16}, {2, 3, 3}, {2}, {2, 9, 12, 16}});
+        }
+        // NCHW
+        for (auto bmode :
+             {WarpPerspective::BorderMode::WRAP, WarpPerspective::BorderMode::REFLECT,
+              WarpPerspective::BorderMode::REPLICATE,
+              WarpPerspective::BorderMode::CONSTANT}) {
+            param.border_val = 0.3f;
+            param.bmode = bmode;
+            param.imode = Param::InterpolationMode::LINEAR;
+
+            param.format = Param::Format::NCHW;
+            checker.set_param(param);
+            UniformIntRNG idx_rng{0, 0};
+            checker.set_rng(2, &idx_rng);
+            checker.execs({{1, 4, 2, 2}, {1, 3, 3}, {1}, {1, 4, 2, 2}});
+            idx_rng = UniformIntRNG{0, 1};
+            checker.set_rng(2, &idx_rng);
+            checker.execs({{2, 4, 10, 10}, {1, 3, 3}, {1}, {1, 4, 10, 12}});
+            idx_rng = UniformIntRNG{0, 2};
+            checker.set_rng(2, &idx_rng);
+            checker.execs({{3, 8, 25, 24}, {2, 3, 3}, {2}, {2, 8, 12, 10}});
+            checker.execs({{4, 16, 33, 22}, {2, 3, 3}, {2}, {2, 16, 9, 12}});
+        }
+    }
+}
+
 TEST_F(NAIVE, WARP_PERSPECTIVE_NCHW4) {
     using Param = WarpPerspective::Param;
 
