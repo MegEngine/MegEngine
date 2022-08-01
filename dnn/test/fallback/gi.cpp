@@ -2122,7 +2122,7 @@ TEST_F(FALLBACK, GiBSLFloat32) {
 #if defined(GI_RVV_INTRINSICS)
     vuint32m1_t mask = vundefined_u32m1();
 #else
-    GI_UINT32_t mask;
+    GI_UINT32_t mask = {0u, 0u};
 #endif
     std::vector<float> s0{1.1f, 2.2f, 4.5f, 4.9f};
     std::vector<float> s1{2312.1f, 345.244f, 3.59f, -12.8f};
@@ -2752,7 +2752,7 @@ TEST_F(FALLBACK, GiStoreLowInt8) {
     assert_eq<int8_t>(ret.data(), s0, SIMD_LEN_8 / 2);
 }
 
-TEST_F(FALLBACK, GiStoreHihgInt8) {
+TEST_F(FALLBACK, GiStoreHighInt8) {
     GI_INT8_t src0;
     std::vector<int8_t> s0{127, 2, 56, -128, 1, 2, 3, 4, 127, 2, 56, -128, 1, 2, 3, 4};
     s0.resize(SIMD_LEN_8);
@@ -2760,7 +2760,7 @@ TEST_F(FALLBACK, GiStoreHihgInt8) {
 
     std::vector<int8_t> ret{0};
     ret.resize(SIMD_LEN_8 / 2);
-    GiStoreHihgInt8(ret.data(), src0);
+    GiStoreHighInt8(ret.data(), src0);
 
     std::vector<int8_t> naive;
     for (size_t i = 0; i < SIMD_LEN_8 / 2; i++) {
@@ -4358,6 +4358,656 @@ TEST_F(FALLBACK, GiDivFloat32) {
     }
 
     assert_lt((float*)&ret, naive, 1e-3);
+}
+
+TEST_F(FALLBACK, GiLoadUint8) {
+    std::vector<uint8_t> s0{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 255};
+    GI_UINT8_t ret;
+
+    force_memset_ret((void*)&ret, GI_SIMD_LEN_BYTE);
+    ret = GiLoadUint8(s0.data());
+
+    std::vector<uint8_t> naive;
+    for (size_t i = 0; i < SIMD_LEN_8; i++) {
+        naive.push_back(s0[i]);
+    }
+
+    assert_eq((uint8_t*)&ret, naive, SIMD_LEN_8);
+}
+
+TEST_F(FALLBACK, GiReverseUint8) {
+    std::vector<uint8_t> s0{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
+    GI_UINT8_t ret;
+
+    force_memset_ret((void*)&ret, GI_SIMD_LEN_BYTE);
+    ret = GiLoadUint8(s0.data());
+    ret = GiReverseUint8(ret);
+
+    std::vector<uint8_t> naive;
+    for (size_t i = 0; i < SIMD_LEN_8; i++) {
+        naive.push_back(s0[SIMD_LEN_8 - i - 1]);
+    }
+
+    assert_eq((uint8_t*)&ret, naive, SIMD_LEN_8);
+}
+
+TEST_F(FALLBACK, GiStoreUint8) {
+    std::vector<uint8_t> s0{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 255};
+    GI_UINT8_t src;
+    std::vector<uint8_t> ret;
+    ret.resize(SIMD_LEN_8);
+    force_memset_ret((void*)&src, GI_SIMD_LEN_BYTE);
+    src = GiLoadUint8(s0.data());
+    GiStoreUint8(ret.data(), src);
+    std::vector<uint8_t> naive;
+    for (size_t i = 0; i < SIMD_LEN_8; i++) {
+        naive.push_back(s0[i]);
+    }
+
+    assert_eq(ret.data(), naive, SIMD_LEN_8);
+}
+TEST_F(FALLBACK, GiLoadUzip0V3Uint8) {
+    std::vector<uint8_t> s0{0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11,
+                            12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
+                            24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35,
+                            36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 255};
+    GI_UINT8_t ret;
+
+    force_memset_ret((void*)&ret, GI_SIMD_LEN_BYTE);
+    ret = GiLoadUzip0V3Uint8(s0.data());
+
+    std::vector<uint8_t> naive;
+    for (size_t i = 0; i < SIMD_LEN_8; i++) {
+        naive.push_back(s0[i * 3]);
+    }
+
+    assert_eq((uint8_t*)&ret, naive, SIMD_LEN_8);
+}
+TEST_F(FALLBACK, GiLoadUzip1V3Uint8) {
+    std::vector<uint8_t> s0{0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11,
+                            12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
+                            24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35,
+                            36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 255};
+    GI_UINT8_t ret;
+
+    force_memset_ret((void*)&ret, GI_SIMD_LEN_BYTE);
+    ret = GiLoadUzip1V3Uint8(s0.data());
+
+    std::vector<uint8_t> naive;
+    for (size_t i = 0; i < SIMD_LEN_8; i++) {
+        naive.push_back(s0[i * 3 + 1]);
+    }
+
+    assert_eq((uint8_t*)&ret, naive, SIMD_LEN_8);
+}
+TEST_F(FALLBACK, GiLoadUzip2V3Uint8) {
+    std::vector<uint8_t> s0{0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11,
+                            12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
+                            24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35,
+                            36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 255};
+    GI_UINT8_t ret;
+
+    force_memset_ret((void*)&ret, GI_SIMD_LEN_BYTE);
+    ret = GiLoadUzip2V3Uint8(s0.data());
+
+    std::vector<uint8_t> naive;
+    for (size_t i = 0; i < SIMD_LEN_8; i++) {
+        naive.push_back(s0[i * 3 + 2]);
+    }
+
+    assert_eq((uint8_t*)&ret, naive, SIMD_LEN_8);
+}
+TEST_F(FALLBACK, GiStoreZipUint8V3) {
+    std::vector<uint8_t> s0{0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11,
+                            12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
+                            24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35,
+                            36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 255};
+    GI_UINT8_t src0, src1, src2;
+    std::vector<uint8_t> ret;
+    ret.resize(SIMD_LEN_8 * 3);
+
+    force_memset_ret((void*)&src0, GI_SIMD_LEN_BYTE);
+    force_memset_ret((void*)&src1, GI_SIMD_LEN_BYTE);
+    force_memset_ret((void*)&src2, GI_SIMD_LEN_BYTE);
+    src0 = GiLoadUzip0V3Uint8(s0.data());
+    src1 = GiLoadUzip1V3Uint8(s0.data());
+    src2 = GiLoadUzip2V3Uint8(s0.data());
+
+    GiStoreZipUint8V3(ret.data(), src0, src1, src2);
+
+    std::vector<uint8_t> naive;
+    for (size_t i = 0; i < SIMD_LEN_8 * 3; i++) {
+        naive.push_back(s0[i]);
+    }
+    assert_eq(ret.data(), naive, SIMD_LEN_8);
+}
+
+TEST_F(FALLBACK, GiShiftRightInt16ToUint8) {
+    std::vector<int16_t> s0{INT16_MAX,  INT16_MIN,   0x00005678, -0x00005678,
+                            0x00001234, -0x00001234, 0x00000fff, -0x00000fff};
+    GI_INT16_t src;
+    force_memset_ret((void*)&src, GI_SIMD_LEN_BYTE);
+    src = GiLoadInt16(s0.data());
+
+    std::vector<uint8_t> naive;
+    naive.resize(SIMD_LEN_8);
+    GI_UINT8_t ret;
+#define TEST_BLOCK(shift)                                     \
+    ret = GiShiftRightInt16ToUint8(src, shift);               \
+    for (size_t i = 0; i < SIMD_LEN_16; i++) {                \
+        uint8_t val = Saturate(s0[i] >> shift, 0, UINT8_MAX); \
+        naive[i] = val;                                       \
+        naive[i + SIMD_LEN_16] = val;                         \
+    }                                                         \
+    assert_eq((uint8_t*)&ret, naive, SIMD_LEN_8);
+
+    TEST_BLOCK(1);
+    TEST_BLOCK(2);
+    TEST_BLOCK(3);
+    TEST_BLOCK(4);
+    TEST_BLOCK(5);
+    TEST_BLOCK(6);
+    TEST_BLOCK(7);
+    TEST_BLOCK(8);
+#undef TEST_BLOCK
+}
+
+TEST_F(FALLBACK, GiCombineInt16Low) {
+    std::vector<int16_t> s0{INT16_MAX,  INT16_MIN,   0x00005678, -0x00005678,
+                            0x00001234, -0x00001234, 0x00000fff, -0x00000fff};
+    std::vector<int16_t> s1{1, 2, 3, -4, 5, -6, 7, -8};
+    GI_INT16_t src0, src1;
+    force_memset_ret((void*)&src0, GI_SIMD_LEN_BYTE);
+    force_memset_ret((void*)&src1, GI_SIMD_LEN_BYTE);
+    src0 = GiLoadInt16(s0.data());
+    src1 = GiLoadInt16(s1.data());
+
+    std::vector<int16_t> naive;
+    naive.resize(SIMD_LEN_16);
+    GI_INT16_t ret = GiCombineInt16Low(src0, src1);
+    for (size_t i = 0; i < SIMD_LEN; i++) {
+        naive[i] = s0[i];
+        naive[i + SIMD_LEN] = s1[i];
+    }
+    assert_eq((int16_t*)&ret, naive, SIMD_LEN_16);
+}
+TEST_F(FALLBACK, GiCombineUint8Low) {
+    std::vector<uint8_t> s0{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
+    GI_UINT8_t src0, src1;
+    force_memset_ret((void*)&src0, GI_SIMD_LEN_BYTE);
+    force_memset_ret((void*)&src1, GI_SIMD_LEN_BYTE);
+    src0 = GiLoadUint8(s0.data());
+    src1 = GiLoadUint8(s0.data());
+
+    std::vector<uint8_t> naive;
+    naive.resize(SIMD_LEN_8);
+    GI_UINT8_t ret = GiCombineUint8Low(src0, src1);
+    for (size_t i = 0; i < SIMD_LEN_16; i++) {
+        naive[i] = s0[i];
+        naive[i + SIMD_LEN_16] = s0[i];
+    }
+    assert_eq((uint8_t*)&ret, naive, SIMD_LEN_8);
+}
+TEST_F(FALLBACK, GiZipV0Int8) {
+    std::vector<int8_t> s0{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
+    GI_INT8_t src0, src1;
+    force_memset_ret((void*)&src0, GI_SIMD_LEN_BYTE);
+    force_memset_ret((void*)&src1, GI_SIMD_LEN_BYTE);
+    src0 = GiLoadInt8(s0.data());
+    src1 = GiLoadInt8(s0.data());
+
+    std::vector<int8_t> naive;
+    naive.resize(SIMD_LEN_8);
+    GI_INT8_t ret = GiZipV0Int8(src0, src1);
+    for (size_t i = 0; i < SIMD_LEN_16; ++i) {
+        naive[2 * i] = s0[i];
+        naive[2 * i + 1] = s0[i];
+    }
+    assert_eq((int8_t*)&ret, naive, SIMD_LEN_8);
+}
+TEST_F(FALLBACK, GiZipV1Int8) {
+    std::vector<int8_t> s0{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
+    GI_INT8_t src0, src1;
+    force_memset_ret((void*)&src0, GI_SIMD_LEN_BYTE);
+    force_memset_ret((void*)&src1, GI_SIMD_LEN_BYTE);
+    src0 = GiLoadInt8(s0.data());
+    src1 = GiLoadInt8(s0.data());
+
+    std::vector<int8_t> naive;
+    naive.resize(SIMD_LEN_8);
+    GI_INT8_t ret = GiZipV1Int8(src0, src1);
+    for (size_t i = 0; i < SIMD_LEN_16; ++i) {
+        naive[2 * i] = s0[i + SIMD_LEN_16];
+        naive[2 * i + 1] = s0[i + SIMD_LEN_16];
+    }
+    assert_eq((int8_t*)&ret, naive, SIMD_LEN_8);
+}
+TEST_F(FALLBACK, GiReinterpretInt8AsInt16) {
+    GI_INT8_t src0;
+    GI_INT16_t ret, naive;
+    std::vector<int8_t> s0{1, 2, -2, -1, INT8_MAX, INT8_MIN, 5,  6,
+                           7, 8, 9,  10, 11,       12,       13, 14};
+    s0.resize(SIMD_LEN);
+    init((int8_t*)&src0, s0);
+
+    force_memset_ret((void*)&ret, GI_SIMD_LEN_BYTE);
+    ret = GiReinterpretInt8AsInt16(src0);
+    memcpy(&naive, &src0, GI_SIMD_LEN_BYTE);
+
+    ASSERT_FALSE(memcmp(&ret, &naive, GI_SIMD_LEN_BYTE));
+}
+TEST_F(FALLBACK, GiZipV0Int16) {
+    std::vector<int16_t> s0{INT16_MAX,  INT16_MIN,   0x00005678, -0x00005678,
+                            0x00001234, -0x00001234, 0x00000fff, -0x00000fff};
+    GI_INT16_t src0, src1;
+    force_memset_ret((void*)&src0, GI_SIMD_LEN_BYTE);
+    force_memset_ret((void*)&src1, GI_SIMD_LEN_BYTE);
+    src0 = GiLoadInt16(s0.data());
+    src1 = GiLoadInt16(s0.data());
+
+    std::vector<int16_t> naive;
+    naive.resize(SIMD_LEN_16);
+    GI_INT16_t ret = GiZipV0Int16(src0, src1);
+    for (size_t i = 0; i < SIMD_LEN; i++) {
+        naive[2 * i] = s0[i];
+        naive[2 * i + 1] = s0[i];
+    }
+    assert_eq((int16_t*)&ret, naive, SIMD_LEN_16);
+}
+TEST_F(FALLBACK, GiZipV1Int16) {
+    std::vector<int16_t> s0{INT16_MAX,  INT16_MIN,   0x00005678, -0x00005678,
+                            0x00001234, -0x00001234, 0x00000fff, -0x00000fff};
+    GI_INT16_t src0, src1;
+    force_memset_ret((void*)&src0, GI_SIMD_LEN_BYTE);
+    force_memset_ret((void*)&src1, GI_SIMD_LEN_BYTE);
+    src0 = GiLoadInt16(s0.data());
+    src1 = GiLoadInt16(s0.data());
+
+    std::vector<int16_t> naive;
+    naive.resize(SIMD_LEN_16);
+    GI_INT16_t ret = GiZipV1Int16(src0, src1);
+    for (size_t i = 0; i < SIMD_LEN; i++) {
+        naive[2 * i] = s0[i + SIMD_LEN];
+        naive[2 * i + 1] = s0[i + SIMD_LEN];
+    }
+    assert_eq((int16_t*)&ret, naive, SIMD_LEN_16);
+}
+TEST_F(FALLBACK, GiReinterpretInt16AsInt32) {
+    GI_INT16_t src0;
+    GI_INT32_t ret, naive;
+    std::vector<int16_t> s0{1, 2, -2, -1, INT16_MAX, INT16_MIN, 5, 6};
+    s0.resize(SIMD_LEN);
+    init((int16_t*)&src0, s0);
+
+    force_memset_ret((void*)&ret, GI_SIMD_LEN_BYTE);
+    ret = GiReinterpretInt16AsInt32(src0);
+    memcpy(&naive, &src0, GI_SIMD_LEN_BYTE);
+
+    ASSERT_FALSE(memcmp(&ret, &naive, GI_SIMD_LEN_BYTE));
+}
+TEST_F(FALLBACK, GiZipV0Int32) {
+    std::vector<int32_t> s0{INT32_MAX, INT32_MIN, 0x00005678, -0x00005678};
+    GI_INT32_t src0, src1;
+    force_memset_ret((void*)&src0, GI_SIMD_LEN_BYTE);
+    force_memset_ret((void*)&src1, GI_SIMD_LEN_BYTE);
+    src0 = GiLoadInt32(s0.data());
+    src1 = GiLoadInt32(s0.data());
+
+    std::vector<int32_t> naive;
+    naive.resize(SIMD_LEN);
+    GI_INT32_t ret = GiZipV0Int32(src0, src1);
+    for (size_t i = 0; i < SIMD_LEN / 2; i++) {
+        naive[2 * i] = s0[i];
+        naive[2 * i + 1] = s0[i];
+    }
+    assert_eq((int32_t*)&ret, naive, SIMD_LEN);
+}
+TEST_F(FALLBACK, GiZipV1Int32) {
+    std::vector<int32_t> s0{INT16_MAX, INT16_MIN, 0x00005678, -0x00005678};
+    GI_INT32_t src0, src1;
+    force_memset_ret((void*)&src0, GI_SIMD_LEN_BYTE);
+    force_memset_ret((void*)&src1, GI_SIMD_LEN_BYTE);
+    src0 = GiLoadInt32(s0.data());
+    src1 = GiLoadInt32(s0.data());
+
+    std::vector<int32_t> naive;
+    naive.resize(SIMD_LEN);
+    GI_INT32_t ret = GiZipV1Int32(src0, src1);
+    for (size_t i = 0; i < SIMD_LEN / 2; i++) {
+        naive[2 * i] = s0[i + SIMD_LEN / 2];
+        naive[2 * i + 1] = s0[i + SIMD_LEN / 2];
+    }
+    assert_eq((int32_t*)&ret, naive, SIMD_LEN);
+}
+TEST_F(FALLBACK, GiCombineInt32Low) {
+    std::vector<int32_t> s0{INT16_MAX, INT16_MIN, 0x00005678, -0x00005678};
+    GI_INT32_t src0, src1;
+    force_memset_ret((void*)&src0, GI_SIMD_LEN_BYTE);
+    force_memset_ret((void*)&src1, GI_SIMD_LEN_BYTE);
+    src0 = GiLoadInt32(s0.data());
+    src1 = GiLoadInt32(s0.data());
+
+    std::vector<int32_t> naive;
+    naive.resize(SIMD_LEN);
+    GI_INT32_t ret = GiCombineInt32Low(src0, src1);
+    for (size_t i = 0; i < SIMD_LEN / 2; i++) {
+        naive[i] = s0[i];
+        naive[i + SIMD_LEN / 2] = s0[i];
+    }
+    assert_eq((int32_t*)&ret, naive, SIMD_LEN);
+}
+TEST_F(FALLBACK, GiCombineInt32High) {
+    std::vector<int32_t> s0{INT16_MAX, INT16_MIN, 0x00005678, -0x00005678};
+    GI_INT32_t src0, src1;
+    force_memset_ret((void*)&src0, GI_SIMD_LEN_BYTE);
+    force_memset_ret((void*)&src1, GI_SIMD_LEN_BYTE);
+    src0 = GiLoadInt32(s0.data());
+    src1 = GiLoadInt32(s0.data());
+
+    std::vector<int32_t> naive;
+    naive.resize(SIMD_LEN);
+    GI_INT32_t ret = GiCombineInt32High(src0, src1);
+    for (size_t i = 0; i < SIMD_LEN / 2; i++) {
+        naive[i] = s0[i + SIMD_LEN / 2];
+        naive[i + SIMD_LEN / 2] = s0[i + SIMD_LEN / 2];
+    }
+    assert_eq((int32_t*)&ret, naive, SIMD_LEN);
+}
+
+TEST_F(FALLBACK, GiStoreZipInt8V3) {
+    std::vector<int8_t> s0{0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11,
+                           12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
+                           24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35,
+                           36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 127};
+    GI_INT8_t src0, src1, src2;
+    GI_INT8_V3_t src;
+    std::vector<int8_t> ret;
+    ret.resize(SIMD_LEN_8 * 3);
+    force_memset_ret((void*)&src, GI_SIMD_LEN_BYTE * 3);
+    force_memset_ret((void*)&src0, GI_SIMD_LEN_BYTE);
+    force_memset_ret((void*)&src1, GI_SIMD_LEN_BYTE);
+    force_memset_ret((void*)&src2, GI_SIMD_LEN_BYTE);
+    src = GiLoadUzipInt8V3(s0.data());
+    src0 = GiGetSubVectorInt8V3(src, 0);
+    src1 = GiGetSubVectorInt8V3(src, 1);
+    src2 = GiGetSubVectorInt8V3(src, 2);
+
+    GiStoreZipInt8V3(ret.data(), src0, src1, src2);
+
+    std::vector<int8_t> naive;
+    for (size_t i = 0; i < SIMD_LEN_8 * 3; i++) {
+        naive.push_back(s0[i]);
+    }
+    assert_eq(ret.data(), naive, SIMD_LEN_8);
+}
+
+TEST_F(FALLBACK, GiShiftRightInt32) {
+    std::vector<int32_t> s0{INT32_MAX, INT32_MIN, 0x12345678, -0x12345678};
+    GI_INT32_t src;
+    force_memset_ret((void*)&src, GI_SIMD_LEN_BYTE);
+    src = GiLoadInt32(s0.data());
+
+    std::vector<int32_t> naive;
+    naive.resize(SIMD_LEN);
+    GI_INT32_t ret;
+#define TEST_BLOCK(shift)                   \
+    ret = GiShiftRightInt32(src, shift);    \
+    for (size_t i = 0; i < SIMD_LEN; i++) { \
+        naive[i] = s0[i] >> shift;          \
+    }                                       \
+    assert_eq((int32_t*)&ret, naive, SIMD_LEN);
+
+    TEST_BLOCK(1);
+    TEST_BLOCK(2);
+    TEST_BLOCK(3);
+    TEST_BLOCK(4);
+    TEST_BLOCK(5);
+    TEST_BLOCK(6);
+    TEST_BLOCK(7);
+    TEST_BLOCK(8);
+    TEST_BLOCK(9);
+    TEST_BLOCK(10);
+    TEST_BLOCK(11);
+    TEST_BLOCK(12);
+    TEST_BLOCK(13);
+    TEST_BLOCK(14);
+    TEST_BLOCK(15);
+    TEST_BLOCK(16);
+
+#undef TEST_BLOCK
+}
+TEST_F(FALLBACK, GiShiftLeftInt32) {
+    std::vector<int32_t> s0{INT32_MAX, INT32_MIN, 0x12345678, -0x12345678};
+    GI_INT32_t src;
+    force_memset_ret((void*)&src, GI_SIMD_LEN_BYTE);
+    src = GiLoadInt32(s0.data());
+
+    std::vector<int32_t> naive;
+    naive.resize(SIMD_LEN);
+    GI_INT32_t ret;
+#define TEST_BLOCK(shift)                   \
+    ret = GiShiftLeftInt32(src, shift);     \
+    for (size_t i = 0; i < SIMD_LEN; i++) { \
+        naive[i] = s0[i] << shift;          \
+    }                                       \
+    assert_eq((int32_t*)&ret, naive, SIMD_LEN);
+
+    TEST_BLOCK(1);
+    TEST_BLOCK(2);
+    TEST_BLOCK(3);
+    TEST_BLOCK(4);
+    TEST_BLOCK(5);
+    TEST_BLOCK(6);
+    TEST_BLOCK(7);
+    TEST_BLOCK(8);
+    TEST_BLOCK(9);
+    TEST_BLOCK(10);
+    TEST_BLOCK(11);
+    TEST_BLOCK(12);
+    TEST_BLOCK(13);
+    TEST_BLOCK(14);
+    TEST_BLOCK(15);
+    TEST_BLOCK(16);
+
+#undef TEST_BLOCK
+}
+
+TEST_F(FALLBACK, GiBroadcastInt16) {
+    int16_t src0 = 5;
+    GI_INT16_t ret;
+
+    force_memset_ret((void*)&ret, GI_SIMD_LEN_BYTE);
+    ret = GiBroadcastInt16(src0);
+
+    std::vector<int16_t> naive;
+    for (size_t i = 0; i < SIMD_LEN_16; i++) {
+        naive.push_back(src0);
+    }
+
+    assert_eq((int16_t*)&ret, naive, SIMD_LEN_16);
+}
+TEST_F(FALLBACK, GiAndInt16) {
+    std::vector<int16_t> s0{INT16_MAX,  INT16_MIN,   0x00005678, -0x00005678,
+                            0x00001234, -0x00001234, 0x00000fff, -0x00000fff};
+    GI_INT16_t src0, src1;
+    force_memset_ret((void*)&src0, GI_SIMD_LEN_BYTE);
+    force_memset_ret((void*)&src1, GI_SIMD_LEN_BYTE);
+    src0 = GiLoadInt16(s0.data());
+    src1 = GiLoadInt16(s0.data());
+
+    std::vector<int16_t> naive;
+    naive.resize(SIMD_LEN_16);
+    GI_INT16_t ret = GiAndInt16(src0, src1);
+    for (size_t i = 0; i < SIMD_LEN_16; i++) {
+        naive[i] = s0[i] & s0[i];
+    }
+    assert_eq((int16_t*)&ret, naive, SIMD_LEN_16);
+}
+TEST_F(FALLBACK, GiCvtInt32ToInt16) {
+    std::vector<int32_t> s0{INT32_MAX, INT32_MIN, 0x12345678, -0x12345678};
+    GI_INT32_t src;
+    force_memset_ret((void*)&src, GI_SIMD_LEN_BYTE);
+    src = GiLoadInt32(s0.data());
+
+    std::vector<int16_t> naive;
+    naive.resize(SIMD_LEN_16);
+    GI_INT16_t ret;
+    ret = GiCvtInt32ToInt16(src);
+    for (size_t i = 0; i < SIMD_LEN; i++) {
+        int16_t val = Saturate(s0[i], INT16_MIN, INT16_MAX);
+        naive[i] = val;
+        naive[i + SIMD_LEN] = val;
+    }
+    assert_eq((int16_t*)&ret, naive, SIMD_LEN_16);
+}
+
+TEST_F(FALLBACK, GiInterleave4Int8) {
+    std::vector<int8_t> s0{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
+    GI_INT8_t ret;
+
+    force_memset_ret((void*)&ret, GI_SIMD_LEN_BYTE);
+    ret = GiLoadInt8(s0.data());
+    ret = GiInterleave4Int8(ret);
+
+    std::vector<int8_t> naive;
+    naive.resize(SIMD_LEN_8);
+    for (size_t i = 0; i < SIMD_LEN; i++) {
+        naive[i] = s0[i * 4];
+        naive[i + 4] = s0[i * 4 + 1];
+        naive[i + 2 * 4] = s0[i * 4 + 2];
+        naive[i + 3 * 4] = s0[i * 4 + 3];
+    }
+
+    assert_eq((int8_t*)&ret, naive, SIMD_LEN_8);
+}
+TEST_F(FALLBACK, GiCvtUint8toInt16Low) {
+    std::vector<uint8_t> s0{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 127};
+    GI_INT16_t ret;
+
+    force_memset_ret((void*)&ret, GI_SIMD_LEN_BYTE);
+    GI_UINT8_t src = GiLoadUint8(s0.data());
+    ret = GiCvtUint8toInt16Low(src);
+    std::vector<int16_t> naive;
+    naive.resize(SIMD_LEN_16);
+    for (size_t i = 0; i < SIMD_LEN_16; i++) {
+        naive[i] = s0[i];
+    }
+
+    assert_eq((int16_t*)&ret, naive, SIMD_LEN_16);
+}
+TEST_F(FALLBACK, GiCvtUint8toInt16High) {
+    std::vector<uint8_t> s0{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 127};
+    GI_INT16_t ret;
+
+    force_memset_ret((void*)&ret, GI_SIMD_LEN_BYTE);
+    GI_UINT8_t src = GiLoadUint8(s0.data());
+    ret = GiCvtUint8toInt16High(src);
+    std::vector<int16_t> naive;
+    naive.resize(SIMD_LEN_16);
+    for (size_t i = 0; i < SIMD_LEN_16; i++) {
+        naive[i] = s0[i + SIMD_LEN_16];
+    }
+
+    assert_eq((int16_t*)&ret, naive, SIMD_LEN_16);
+}
+TEST_F(FALLBACK, GiMultiplyAddInt16LongLow) {
+    GI_INT16_t src0, src1;
+    GI_INT32_t src2;
+    std::vector<int32_t> s1{1, 2, 3, 4};
+    std::vector<int16_t> s0{INT16_MAX,  INT16_MIN,   0x00005678, -0x00005678,
+                            0x00001234, -0x00001234, 0x00000fff, -0x00000fff};
+    force_memset_ret((void*)&src0, GI_SIMD_LEN_BYTE);
+    force_memset_ret((void*)&src1, GI_SIMD_LEN_BYTE);
+    force_memset_ret((void*)&src2, GI_SIMD_LEN_BYTE);
+    src0 = GiLoadInt16(s0.data());
+    src1 = GiLoadInt16(s0.data());
+    src2 = GiLoadInt32(s1.data());
+
+    std::vector<int32_t> naive;
+    naive.resize(SIMD_LEN);
+    GI_INT32_t ret = GiMultiplyAddInt16LongLow(src2, src0, src1);
+    for (size_t i = 0; i < SIMD_LEN; i++) {
+        naive[i] = (int32_t)s1[i] + (int32_t)s0[i] * (int32_t)s0[i];
+    }
+    assert_eq((int32_t*)&ret, naive, SIMD_LEN);
+}
+TEST_F(FALLBACK, GiMultiplyAddInt16LongHigh) {
+    GI_INT16_t src0, src1;
+    GI_INT32_t src2;
+    std::vector<int32_t> s1{1, 2, 3, 4};
+    std::vector<int16_t> s0{INT16_MAX,  INT16_MIN,   0x00005678, -0x00005678,
+                            0x00001234, -0x00001234, 0x00000fff, -0x00000fff};
+    force_memset_ret((void*)&src0, GI_SIMD_LEN_BYTE);
+    force_memset_ret((void*)&src1, GI_SIMD_LEN_BYTE);
+    force_memset_ret((void*)&src2, GI_SIMD_LEN_BYTE);
+    src0 = GiLoadInt16(s0.data());
+    src1 = GiLoadInt16(s0.data());
+    src2 = GiLoadInt32(s1.data());
+
+    std::vector<int32_t> naive;
+    naive.resize(SIMD_LEN);
+    GI_INT32_t ret = GiMultiplyAddInt16LongHigh(src2, src0, src1);
+    for (size_t i = 0; i < SIMD_LEN; i++) {
+        naive[i] =
+                (int32_t)s1[i] + (int32_t)s0[i + SIMD_LEN] * (int32_t)s0[i + SIMD_LEN];
+    }
+    assert_eq((int32_t*)&ret, naive, SIMD_LEN);
+}
+TEST_F(FALLBACK, GiCvtFromInt32V4ToUint8) {
+    std::vector<int32_t> s0{INT16_MAX, INT16_MIN, 0x00005678, -0x00005678};
+    GI_INT32_t src0, src1, src2, src3;
+    force_memset_ret((void*)&src0, GI_SIMD_LEN_BYTE);
+    force_memset_ret((void*)&src1, GI_SIMD_LEN_BYTE);
+    src0 = GiLoadInt32(s0.data());
+    src1 = GiLoadInt32(s0.data());
+    src2 = GiLoadInt32(s0.data());
+    src3 = GiLoadInt32(s0.data());
+    GI_UINT8_t ret = GiCvtFromInt32V4ToUint8(src0, src1, src2, src3);
+    std::vector<uint8_t> naive;
+    naive.resize(SIMD_LEN_8);
+    for (size_t i = 0; i < SIMD_LEN; i++) {
+        naive[i] = Saturate(s0[i], 0, UINT8_MAX);
+        naive[i + SIMD_LEN] = Saturate(s0[i], 0, UINT8_MAX);
+        naive[i + 2 * SIMD_LEN] = Saturate(s0[i], 0, UINT8_MAX);
+        naive[i + 3 * SIMD_LEN] = Saturate(s0[i], 0, UINT8_MAX);
+    }
+
+    assert_eq((uint8_t*)&ret, naive, SIMD_LEN_8);
+}
+TEST_F(FALLBACK, GiSubtractInt16) {
+    std::vector<int16_t> s0{INT16_MAX,  INT16_MIN,   0x00005678, -0x00005678,
+                            0x00001234, -0x00001234, 0x00000fff, -0x00000fff};
+    GI_INT16_t src0, src1;
+    force_memset_ret((void*)&src0, GI_SIMD_LEN_BYTE);
+    force_memset_ret((void*)&src1, GI_SIMD_LEN_BYTE);
+    src0 = GiLoadInt16(s0.data());
+    src1 = GiLoadInt16(s0.data());
+
+    std::vector<int16_t> naive;
+    naive.resize(SIMD_LEN_16);
+    GI_INT16_t ret = GiSubtractInt16(src0, src1);
+    for (size_t i = 0; i < SIMD_LEN_16; i++) {
+        naive[i] = s0[i] - s0[i];
+    }
+    assert_eq((int16_t*)&ret, naive, SIMD_LEN_16);
+}
+
+TEST_F(FALLBACK, GiInterleave2UInt8) {
+    std::vector<uint8_t> s0{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
+    GI_UINT8_t ret;
+
+    force_memset_ret((void*)&ret, GI_SIMD_LEN_BYTE);
+    ret = GiLoadUint8(s0.data());
+    ret = GiInterleave2Uint8(ret);
+
+    std::vector<int8_t> naive;
+    naive.resize(SIMD_LEN_8);
+    for (size_t i = 0; i < SIMD_LEN_16; i++) {
+        naive[i] = s0[2 * i];
+        naive[i + SIMD_LEN_16] = s0[2 * i + 1];
+    }
+
+    assert_eq((int8_t*)&ret, naive, SIMD_LEN_8);
 }
 
 }  // namespace test
