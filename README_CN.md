@@ -6,10 +6,31 @@
 
 [![](https://img.shields.io/badge/English-%E4%B8%AD%E6%96%87-green.svg)](README.md) [![](https://img.shields.io/badge/Website-MegEngine-green.svg)](https://megengine.org.cn/) [![](https://img.shields.io/badge/License-Apache%202.0-green.svg)](LICENSE) [![](https://img.shields.io/badge/Chat-on%20QQ-green.svg?logo=tencentqq)](https://jq.qq.com/?_wv=1027&k=jJcBU1xi) [![](https://img.shields.io/badge/Discuss-on%20Zhihu-8A2BE2.svg?labelColor=00BFFF&logo=zhihu)](https://www.zhihu.com/people/megengine-bot)
 
-MegEngine 是一个快速、可拓展、易于使用且支持自动求导的深度学习框架。
+MegEngine 是一个快速、可拓展、易于使用的深度学习框架，拥有以下三大关键特点：
+
+* 训练推理一体：训练推理同一内核，模型结构、量化、前后处理、动态 shape 甚至求导均可 [放入模型](https://www.megengine.org.cn/doc/stable/zh/user-guide/model-development/traced_module/index.html) 进行推理，训练推理轻松对齐精度
+* 超低硬件门槛：依靠算法优化各类关键资源占用，[DTR](https://www.megengine.org.cn/doc/stable/zh/user-guide/model-development/dtr/index.html) 让训练显存占用量一键下降3倍，pushdown 内存分配算法让推理内存占用下降至极低水平
+* 全平台高效推理：在 x86/Arm/CUDA/RoCM 各平台上均可体验到高性能且精度对齐的推理体验，更有 [丰富的高阶用法可以优化性能、节省内存](https://www.megengine.org.cn/doc/stable/zh/user-guide/deployment/lite/advance/index.html)
 
 ------
+## 开始使用
 
++ 如果想本地使用：[安装](https://www.megengine.org.cn/doc/stable/zh/user-guide/install/)、[编译](https://github.com/MegEngine/MegEngine/blob/master/scripts/cmake-build/BUILD_README.md)
++ 如果想在线体验：[MegStudio](https://studio.brainpp.com/)
++ 更多技术细节解读及问题反馈：[知乎](https://www.zhihu.com/people/megengine-bot)、[论坛](https://discuss.megengine.org.cn/)
+
+### 训练
++ 学习 MegEngine 使用文档：[文档](https://www.megengine.org.cn/doc/stable/zh/getting-started/index.html)
++ 得到 MegEngine 模型：[BaseCls](https://github.com/megvii-research/basecls)、[Models](https://github.com/MegEngine/Models)、[Hub](https://github.com/MegEngine/Hub)
++ 从 PyTorch 迁移而来：[torch2mge](https://github.com/MegEngine/torch2mge)、[guide](https://github.com/MegEngine/cheat_sheet_for_pytorch_immigrant)、[文档-迁移指南](https://www.megengine.org.cn/doc/stable/zh/user-guide/transfer-from/)
++ paper 合集：[MEGVII-Research](https://github.com/megvii-research)
+
+
+### 推理
+
++ 查看部署指南：[文档](https://www.megengine.org.cn/doc/stable/zh/getting-started/deploy/)
++ 转换至其它推理框架：[MgeConvert](https://github.com/MegEngine/mgeconvert)
++ 串联多模型、视频流处理：[MegFlow](https://github.com/MegEngine/MegFlow)
 
 ## 安装说明
 
@@ -54,13 +75,15 @@ python3 -m pip install megengine -f https://megengine.org.cn/whl/mge.html
 * 邮箱: [megengine-support@megvii.com](mailto:megengine-support@megvii.com)
 * 论坛: [discuss.megengine.org.cn](https://discuss.megengine.org.cn)
 * QQ: 1029741705
-* OPENI: [openi.org.cn/MegEngine](https://www.openi.org.cn/html/2020/Framework_0325/18.html)
+
 
 ## 资源
 
 - [MegEngine](https://megengine.org.cn)
 - [MegStudio](https://studio.brainpp.com)
-- [Brain++](https://brainpp.megvii.com)
+- 镜像仓库：
+   - OPENI: [openi.org.cn/MegEngine](https://www.openi.org.cn/html/2020/Framework_0325/18.html)
+   - Gitee: [gitee.com/MegEngine/MegEngine](https://gitee.com/MegEngine/MegEngine)
 
 ## 开源许可
 
