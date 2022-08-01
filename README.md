@@ -7,7 +7,17 @@
 
 [![](https://img.shields.io/badge/English-%E4%B8%AD%E6%96%87-green.svg)](README_CN.md) [![](https://img.shields.io/badge/Website-MegEngine-green.svg)](https://megengine.org.cn/) [![](https://img.shields.io/badge/License-Apache%202.0-green.svg)](LICENSE) [![](https://img.shields.io/badge/Chat-on%20QQ-green.svg?logo=tencentqq)](https://jq.qq.com/?_wv=1027&k=jJcBU1xi) [![](https://img.shields.io/badge/Discuss-on%20Zhihu-8A2BE2.svg?labelColor=00BFFF&logo=zhihu)](https://www.zhihu.com/people/megengine-bot)
 
-MegEngine is a fast, scalable and easy-to-use deep learning framework, with auto-differentiation.
+MegEngine is a fast, scalable and easy-to-use deep learning framework with 3 key features.
+* **Unified core for both training and inference**
+    * You can represent quantization/dynamic shape/image pre-processing and even derivation in one model.
+    * After training, just put everything into your model and inference it on any platform at ease. Speed and precision problems won't bother you anymore due to the same core inside. Check the usage [here](https://www.megengine.org.cn/doc/stable/zh/user-guide/model-development/traced_module/index.html).
+* **Lowest hardware requirements helped by algorithms**
+    * In training, GPU memory usage could go down to one-third at the cost of only one additional line, which enables the [DTR algorithm](https://www.megengine.org.cn/doc/stable/zh/user-guide/model-development/dtr/index.html).
+    * Gain the lowest memory usage when inferencing a model by leveraging our unique pushdown memory planner
+* **Inference efficiently on all-platform**
+    * Inference fast and high-precision on x86/Arm/CUDA/RoCM
+    * Support Linux/Windows/iOS/Android/TEE...
+    * Save more memory and optimize speed by leveraging [advanced usage](https://www.megengine.org.cn/doc/stable/zh/user-guide/deployment/lite/advance/index.html)
 
 ------
 
@@ -54,13 +64,15 @@ We strive to build an open and friendly community. We aim to power humanity with
 * Email: [megengine-support@megvii.com](mailto:megengine-support@megvii.com)
 * Forum: [discuss.megengine.org.cn](https://discuss.megengine.org.cn)
 * QQ Group: 1029741705
-* OPENI: [openi.org.cn/MegEngine](https://www.openi.org.cn/html/2020/Framework_0325/18.html)
 
 ## Resources
 
 - [MegEngine](https://megengine.org.cn)
 - [MegStudio](https://studio.brainpp.com)
-- [Brain++](https://brainpp.megvii.com)
+- mirror repo
+   - OPENI: [openi.org.cn/MegEngine](https://www.openi.org.cn/html/2020/Framework_0325/18.html)
+   - Gitee: [gitee.com/MegEngine/MegEngine](https://gitee.com/MegEngine/MegEngine)
+
 
 ## License
 
