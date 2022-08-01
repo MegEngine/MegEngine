@@ -1,6 +1,5 @@
-#if CUDNN_VERSION >= 8020
-
 #include "src/cuda/cudnn_wrapper_v8.h"
+#if CUDNN_VERSION >= 8020
 #include "src/cuda/cudnn_wrapper.h"
 
 #include "src/common/utils.h"

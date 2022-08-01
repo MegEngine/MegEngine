@@ -1,4 +1,5 @@
 #pragma once
+#include "src/cuda/cudnn_with_check.h"
 
 #if CUDNN_VERSION >= 8020
 #include "megdnn/basic_types.h"
