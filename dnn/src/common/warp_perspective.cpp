@@ -10,12 +10,8 @@ void WarpPerspectiveBase::check_layout_fwd(
     auto s = srcs.front();
     for (auto&& src : srcs) {
         megdnn_assert_contiguous(src);
-        megdnn_assert(src.dtype == s.dtype);
-        megdnn_assert(src.ndim == s.ndim);
+        src.eq_layout(s);
         megdnn_assert(src.shape[0] == 1);
-        for (size_t i = 0; i < s.ndim; i++) {
-            megdnn_assert(src.shape[i] == s.shape[i]);
-        }
         megdnn_assert(src.format == s.format);
     }
     megdnn_assert_contiguous(mat);

@@ -1,6 +1,7 @@
 #include "megbrain/opr/imgproc.h"
 #include "./internal/megdnn_opr_wrapper.inl"
 #include "megbrain/graph/grad_impl.h"
+#include "megbrain/opr/basic_arith.h"
 #include "megbrain/opr/io.h"
 #include "megbrain/opr/utility.h"
 
@@ -25,11 +26,40 @@ WarpPerspectiveForward::WarpPerspectiveForward(
     outshape_by_symvar_enable(input().size() - 1, input().size() - 1);
 }
 
+WarpPerspectiveForward::WarpPerspectiveForward(
+        const VarNodeArrayView& srcs, VarNode* mat, VarNode* mat_idx,
+        VarNode* out_shape, const Param& param, const OperatorNodeConfig& config)
+        : Super(OperatorNodeBaseCtorParam{
+                  srcs[0]->owner_graph(), config, "warp_perspective", {srcs[0], mat}}) {
+    mgb_assert(!srcs.empty());
+    m_is_multi_src = true;
+    m_srcs_size = srcs.size();
+    init_megdnn_opr(*this, param);
+    for (auto&& src : srcs) {
+        add_input({src});
+    }
+    if (mat_idx) {
+        add_input({mat, mat_idx, out_shape});
+    } else {
+        add_input({mat, out_shape});
+    }
+    outshape_by_symvar_enable(input().size() - 1, input().size() - 1);
+}
+
 SymbolVar WarpPerspectiveForward::make(
         SymbolVar i0, SymbolVar i1, SymbolVar i2, SymbolVar i3, const Param& param,
         const OperatorNodeConfig& config) {
     return i0.insert_single_output_opr<WarpPerspectiveForward>(
             i0.node(), i1.node(), i2.node(), i3.node(), param, config);
+}
+
+SymbolVar WarpPerspectiveForward::make(
+        const VarNodeArrayView& i0, SymbolVar i1, SymbolVar i2, SymbolVar i3,
+        const Param& param, OperatorNodeConfig config) {
+    mgb_assert(!i0.empty());
+    intl::BatchedDTypePromotion dtp{i0};
+    return SymbolVar{i0[0]}.insert_single_output_opr<WarpPerspectiveForward>(
+            dtp.get_vars(), i1.node(), i2.node(), i3.node(), param, config);
 }
 
 void WarpPerspectiveForward::init_output_dtype() {
@@ -48,63 +78,110 @@ void WarpPerspectiveForward::outshape_by_symvar_do_get_output_shape(
         TensorShape& dest, const ShapeInferInfo& shpinfo) {
     TensorShape oshp2d;
     cg::copy_tensor_value_to_shape(oshp2d, *shpinfo.shpval_inp_val.at(0));
-    auto imgshp = shpinfo.shape_inp_shp.at(0), matshp = shpinfo.shape_inp_shp.at(1);
-    mgb_assert(
-            (imgshp.ndim == 4 || imgshp.ndim == 5) && matshp.ndim == 3 &&
-                    oshp2d.ndim == 2 && matshp.shape[1] == 3 && matshp.shape[2] == 3,
-            "shape mismatch for WarpPerspectiveForward: img=%s mat=%s "
-            "out2d=%s",
-            imgshp.to_string().c_str(), matshp.to_string().c_str(),
-            oshp2d.to_string().c_str());
-    if (input().size() == 3) {
-        mgb_assert(
-                imgshp[0] == matshp[0], "batchsize mismatch: img=%zu mat=%zu",
-                imgshp[0], matshp[0]);
-    } else {
-        mgb_assert(input().size() == 4);
-        auto mat_idx_shp = shpinfo.shape_inp_shp.at(2);
-        mgb_assert(
-                mat_idx_shp[0] == matshp[0] && mat_idx_shp.ndim == 1,
-                "invalid mat_idx shape: mat=%zu mat_idx=%s", matshp[0],
-                mat_idx_shp.to_string().c_str());
-    }
 
-    switch (param().format) {
-        case Param::Format::NCHW_NCHW4_IC_SMALL:
-        case Param::Format::NHWC_NCHW4_IC_SMALL:
-            dest.ndim = 5;
-            dest[0] = matshp[0];
-            dest.shape[1] = 1;
-            dest.shape[2] = oshp2d.shape[0];
-            dest.shape[3] = oshp2d.shape[1];
-            dest.shape[4] = 4;
-            break;
-        case Param::Format::NHWC_NCHW:
-            dest.ndim = 4;
-            dest[0] = matshp[0];
-            dest.shape[1] = imgshp.shape[3];
-            dest.shape[2] = oshp2d.shape[0];
-            dest.shape[3] = oshp2d.shape[1];
-            break;
-        default:
-            size_t height_idx = 0;
-            if (param().format == Param::Format::NCHW ||
-                param().format == Param::Format::NCHW4 ||
-                param().format == Param::Format::NCHW64) {
-                height_idx = 2;
-            } else {
-                height_idx = 1;
+    TensorShape imgshp, matshp, mat_idx_shp;
+    TensorShapeArray imgshps;
+    if (!m_is_multi_src) {
+        imgshp = shpinfo.shape_inp_shp.at(0);
+        matshp = shpinfo.shape_inp_shp.at(1);
+        mgb_assert(
+                (imgshp.ndim == 4 || imgshp.ndim == 5) && matshp.ndim == 3 &&
+                        oshp2d.ndim == 2 && matshp.shape[1] == 3 &&
+                        matshp.shape[2] == 3,
+                "shape mismatch for WarpPerspectiveForward: img=%s mat=%s "
+                "out2d=%s",
+                imgshp.to_string().c_str(), matshp.to_string().c_str(),
+                oshp2d.to_string().c_str());
+        if (input().size() == 3) {
+            mgb_assert(
+                    imgshp[0] == matshp[0], "batchsize mismatch: img=%zu mat=%zu",
+                    imgshp[0], matshp[0]);
+        } else {
+            mgb_assert(input().size() == 4);
+            mat_idx_shp = shpinfo.shape_inp_shp.at(2);
+            mgb_assert(
+                    mat_idx_shp[0] == matshp[0] && mat_idx_shp.ndim == 1,
+                    "invalid mat_idx shape: mat=%zu mat_idx=%s", matshp[0],
+                    mat_idx_shp.to_string().c_str());
+        }
+
+        switch (param().format) {
+            case Param::Format::NCHW_NCHW4_IC_SMALL:
+            case Param::Format::NHWC_NCHW4_IC_SMALL:
+                dest.ndim = 5;
+                dest[0] = matshp[0];
+                dest.shape[1] = 1;
+                dest.shape[2] = oshp2d.shape[0];
+                dest.shape[3] = oshp2d.shape[1];
+                dest.shape[4] = 4;
+                break;
+            case Param::Format::NHWC_NCHW:
+                dest.ndim = 4;
+                dest[0] = matshp[0];
+                dest.shape[1] = imgshp.shape[3];
+                dest.shape[2] = oshp2d.shape[0];
+                dest.shape[3] = oshp2d.shape[1];
+                break;
+            default:
+                size_t height_idx = 0;
+                if (param().format == Param::Format::NCHW ||
+                    param().format == Param::Format::NCHW4 ||
+                    param().format == Param::Format::NCHW64) {
+                    height_idx = 2;
+                } else {
+                    height_idx = 1;
+                }
+                dest = imgshp;
+                dest[0] = matshp[0];
+                if (param().format == Param::Format::NHWCD4) {
+                    dest.shape[height_idx] = oshp2d.shape[0];
+                    dest.shape[height_idx + 2] = oshp2d.shape[1];
+                } else {
+                    for (int i = 0; i < 2; ++i)
+                        dest.shape[height_idx + i] = oshp2d.shape[i];
+                }
+                break;
+        }
+    } else {
+        imgshp = shpinfo.shape_inp_shp.at(0);
+        matshp = shpinfo.shape_inp_shp.at(m_srcs_size);
+        for (size_t i = 0; i < m_srcs_size; i++) {
+            imgshps.emplace_back(shpinfo.shape_inp_shp.at(i));
+            mgb_assert(imgshps[i].ndim == imgshp.ndim);
+            for (size_t j = 0; j < imgshp.ndim; j++) {
+                mgb_assert(imgshps[i].shape[j] == imgshp[j]);
             }
-            dest = imgshp;
-            dest[0] = matshp[0];
-            if (param().format == Param::Format::NHWCD4) {
-                dest.shape[height_idx] = oshp2d.shape[0];
-                dest.shape[height_idx + 2] = oshp2d.shape[1];
-            } else {
-                for (int i = 0; i < 2; ++i)
-                    dest.shape[height_idx + i] = oshp2d.shape[i];
-            }
-            break;
+        }
+        mgb_assert(
+                imgshp[0] == 1 && imgshp.ndim == 4 && matshp.ndim == 3 &&
+                        oshp2d.ndim == 2 && matshp.shape[1] == 3 &&
+                        matshp.shape[2] == 3,
+                "shape mismatch for WarpPerspectiveForward: img=%s mat=%s "
+                "out2d=%s",
+                imgshp.to_string().c_str(), matshp.to_string().c_str(),
+                oshp2d.to_string().c_str());
+        if (input().size() - m_srcs_size == 2) {
+            mgb_assert(
+                    m_srcs_size == matshp[0], "batchsize mismatch: img=%zu mat=%zu",
+                    m_srcs_size, matshp[0]);
+        } else {
+            mgb_assert(input().size() - m_srcs_size == 3);
+            mat_idx_shp = shpinfo.shape_inp_shp.at(m_srcs_size + 1);
+            mgb_assert(
+                    mat_idx_shp[0] == matshp[0] && mat_idx_shp.ndim == 1,
+                    "invalid mat_idx shape: mat=%zu mat_idx=%s", matshp[0],
+                    mat_idx_shp.to_string().c_str());
+        }
+        size_t height_idx = 0;
+        if (param().format == Param::Format::NCHW) {
+            height_idx = 2;
+        } else {
+            height_idx = 1;
+        }
+        dest = imgshp;
+        dest[0] = matshp[0];
+        for (int i = 0; i < 2; ++i)
+            dest.shape[height_idx + i] = oshp2d.shape[i];
     }
 }
 
@@ -114,22 +191,61 @@ void WarpPerspectiveForward::init_output_static_infer_desc() {
 }
 
 void WarpPerspectiveForward::scn_do_execute() {
-    if (input().size() == 3) {
-        intl::_MegDNNOprMethInvoker<2, 1>::exec(megdnn_opr(), this);
+    if (!m_is_multi_src) {
+        if (input().size() == 3) {
+            intl::_MegDNNOprMethInvoker<2, 1>::exec(megdnn_opr(), this);
+        } else {
+            intl::_MegDNNOprMethInvoker<3, 1>::exec(megdnn_opr(), this);
+        }
     } else {
-        intl::_MegDNNOprMethInvoker<3, 1>::exec(megdnn_opr(), this);
+        megdnn::TensorNDArray srcs;
+        for (size_t i = 0; i < m_srcs_size; i++) {
+            srcs.push_back(input(i)->dev_tensor().as_megdnn());
+        }
+        if (input().size() - m_srcs_size == 2) {
+            megdnn_opr()->exec(
+                    srcs, input(m_srcs_size)->dev_tensor().as_megdnn(),
+                    output(0)->dev_tensor().as_megdnn(),
+                    intl::get_megdnn_workspace_from_var(output().back()));
+        } else {
+            megdnn_opr()->exec(
+                    srcs, input(m_srcs_size)->dev_tensor().as_megdnn(),
+                    input(m_srcs_size + 1)->dev_tensor().as_megdnn(),
+                    output(0)->dev_tensor().as_megdnn(),
+                    intl::get_megdnn_workspace_from_var(output().back()));
+        }
     }
 }
 
 size_t WarpPerspectiveForward::get_workspace_size_bytes(
         const TensorShapeArray& input_shapes,
         const TensorShapeArray& output_shapes) const {
-    if (input().size() == 3) {
-        return intl::_MegDNNOprMethInvoker<2, 1>::get_workspace_in_bytes(
-                megdnn_opr(), this, input_shapes, output_shapes);
+    if (!m_is_multi_src) {
+        if (input().size() == 3) {
+            return intl::_MegDNNOprMethInvoker<2, 1>::get_workspace_in_bytes(
+                    megdnn_opr(), this, input_shapes, output_shapes);
+        } else {
+            return intl::_MegDNNOprMethInvoker<3, 1>::get_workspace_in_bytes(
+                    megdnn_opr(), this, input_shapes, output_shapes);
+        }
     } else {
-        return intl::_MegDNNOprMethInvoker<3, 1>::get_workspace_in_bytes(
-                megdnn_opr(), this, input_shapes, output_shapes);
+        TensorLayoutArray srcs;
+        for (size_t i = 0; i < m_srcs_size; i++) {
+            srcs.push_back(TensorLayout{
+                    input_shapes[i], input(i)->dtype(), input(i)->format()});
+        }
+        TensorLayout mat{
+                input_shapes[m_srcs_size], input(m_srcs_size)->dtype(),
+                input(m_srcs_size)->format()};
+        TensorLayout dst{output_shapes[0], output(0)->dtype(), output(0)->format()};
+        if (input().size() - m_srcs_size == 2) {
+            return megdnn_opr()->get_workspace_in_bytes(srcs, mat, dst);
+        } else {
+            TensorLayout mat_idx{
+                    input_shapes[m_srcs_size + 1], input(m_srcs_size + 1)->dtype(),
+                    input(m_srcs_size + 1)->format()};
+            return megdnn_opr()->get_workspace_in_bytes(srcs, mat, mat_idx, dst);
+        }
     }
 }
 

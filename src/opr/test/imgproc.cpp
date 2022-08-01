@@ -89,6 +89,250 @@ TEST(TestOprImgproc, WarpPerspective) {
             .run({TensorShape{N, C, 10, 9}, {N, 3, 3}}, opt);
 }
 
+TEST(TestOprImgproc, WarpPerspective_MultiSrc) {
+    set_rand_seed(20220801);  // a seed that can pass the test
+    constexpr size_t INP_H = 6, INP_W = 4, N = 3, C = 3;
+    using Checker = AutoOprChecker<4, 1>;
+    TensorShape out_shp{N, C, 9, 10};
+    auto make_graph = [&](const Checker::SymInpArray& inputs) -> Checker::SymOutArray {
+        SymbolVarArray srcs;
+        for (size_t i = 0; i < N; i++) {
+            srcs.push_back(inputs[i]);
+        }
+        return {opr::WarpPerspective::make(
+                srcs, inputs[N], TensorShape{out_shp.shape[2], out_shp.shape[3]})};
+    };
+    auto fwd = [&](Checker::NumOutArray& dest, Checker::NumInpArray inp) {
+        auto opr = megdnn_naive_handle()->create_operator<megdnn::WarpPerspective>();
+        dest[0].resize(out_shp);
+        megdnn::TensorNDArray srcs;
+        for (size_t i = 0; i < N; i++) {
+            srcs.push_back(inp[i]->as_megdnn());
+        }
+        opr->exec(srcs, inp[N]->as_megdnn(), dest[0].as_megdnn(), {});
+    };
+    auto dump_mat = [&](const Checker::NumInpArray& inp) -> std::string {
+        std::ostringstream ostr;
+        ostr << std::setprecision(3);
+        auto&& mat = *inp[N];
+        mgb_assert(mat.shape().ndim == 3);
+        auto ptr = mat.ptr<float>();
+        for (size_t n = 0; n < mat.shape().shape[0]; ++n) {
+            ostr << "mat " << n << ":\n";
+            for (size_t i = 0; i < 3; ++i) {
+                for (size_t j = 0; j < 3; ++j) {
+                    ostr << std::setw(10) << *(ptr++);
+                }
+                ostr << '\n';
+            }
+        }
+        return ostr.str();
+    };
+    Checker::RunOptions opt;
+    opt.numdiff_eps_single_inp[1] = 1e-5;
+    opt.numdiff_max_err_single_inp[1] = 0.5;
+    Checker(make_graph, fwd)
+            .set_input_generator(N, warp_perspective_mat_gen(N, INP_H, INP_W))
+            .set_input_dump_on_error(dump_mat)
+            .disable_grad_check()
+            .run({TensorShape{1, C, 10, 9}, {1, C, 10, 9}, {1, C, 10, 9}, {N, 3, 3}},
+                 opt)
+            .run({TensorShape{1, C, 4, 5}, {1, C, 4, 5}, {1, C, 4, 5}, {N, 3, 3}}, opt)
+            .run({TensorShape{1, C, 6, 5}, {1, C, 6, 5}, {1, C, 6, 5}, {N, 3, 3}}, opt);
+}
+
+TEST(TestOprImgproc, WarpPerspective_MultiSrc_NHWC) {
+    set_rand_seed(20220801);  // a seed that can pass the test
+    opr::WarpPerspective::Param param;
+    param.format = opr::WarpPerspective::Param::Format::NHWC;
+    constexpr size_t INP_H = 6, INP_W = 4, N = 3, C = 3;
+    using Checker = AutoOprChecker<4, 1>;
+    TensorShape out_shp{N, 9, 10, C};
+    auto make_graph = [&](const Checker::SymInpArray& inputs) -> Checker::SymOutArray {
+        SymbolVarArray srcs;
+        for (size_t i = 0; i < N; i++) {
+            srcs.push_back(inputs[i]);
+        }
+        return {opr::WarpPerspective::make(
+                srcs, inputs[N], TensorShape{out_shp.shape[1], out_shp.shape[2]},
+                param)};
+    };
+    auto fwd = [&](Checker::NumOutArray& dest, Checker::NumInpArray inp) {
+        auto opr = megdnn_naive_handle()->create_operator<megdnn::WarpPerspective>();
+        opr->param() = param;
+        dest[0].resize(out_shp);
+        megdnn::TensorNDArray srcs;
+        for (size_t i = 0; i < N; i++) {
+            srcs.push_back(inp[i]->as_megdnn());
+        }
+        opr->exec(srcs, inp[N]->as_megdnn(), dest[0].as_megdnn(), {});
+    };
+    Checker::RunOptions opt;
+    opt.numdiff_eps_single_inp[1] = 1e-5;
+    opt.numdiff_max_err_single_inp[1] = 0.5;
+    Checker(make_graph, fwd)
+            .set_input_generator(N, warp_perspective_mat_gen(N, INP_H, INP_W))
+            .disable_grad_check()
+            .run({TensorShape{1, 10, 9, C}, {1, 10, 9, C}, {1, 10, 9, C}, {N, 3, 3}},
+                 opt)
+            .run({TensorShape{1, 4, 5, C}, {1, 4, 5, C}, {1, 4, 5, C}, {N, 3, 3}}, opt)
+            .run({TensorShape{1, 6, 5, C}, {1, 6, 5, C}, {1, 6, 5, C}, {N, 3, 3}}, opt);
+}
+
+TEST(TestOprImgproc, WarpPerspectiveWithMatIdx_MultiSrc) {
+    constexpr size_t INP_H = 13, INP_W = 9, N_MAT = 23, N_SRC = 3, C = 3;
+    std::mt19937 rng(next_rand_seed());
+    auto rand_real = [&](double lo, double hi) {
+        return rng() / (std::mt19937::max() + 1.0) * (hi - lo) + lo;
+    };
+    auto rand_real2 = [&](double range) { return rand_real(-range, range); };
+
+    using Checker = AutoOprChecker<5, 1>;
+    TensorShape out_shp{N_MAT, C, 9, 10};
+    auto make_graph = [&](const Checker::SymInpArray& inputs) -> Checker::SymOutArray {
+        SymbolVarArray srcs;
+        for (size_t i = 0; i < N_SRC; i++) {
+            srcs.push_back(inputs[i]);
+        }
+        return {opr::WarpPerspective::make(
+                srcs, inputs[N_SRC], inputs[N_SRC + 1],
+                cg::var_from_tensor_shape(
+                        srcs[0], {out_shp.shape[2], out_shp.shape[3]}))};
+    };
+    auto fwd = [&](Checker::NumOutArray& dest, Checker::NumInpArray inp) {
+        auto opr = megdnn_naive_handle()->create_operator<megdnn::WarpPerspective>();
+        dest[0].resize(out_shp);
+        megdnn::TensorNDArray srcs;
+        for (size_t i = 0; i < N_SRC; i++) {
+            srcs.push_back(inp[i]->as_megdnn());
+        }
+        opr->exec(
+                srcs, inp[N_SRC]->as_megdnn(), inp[N_SRC + 1]->as_megdnn(),
+                dest[0].as_megdnn(), {});
+    };
+    auto gen_mat = [&](HostTensorND& mat) {
+        auto ptr = mat.ptr<float>();
+        for (size_t i = 0; i < N_MAT; ++i) {
+            auto rot = rand_real(0, M_PI * 2), scale = rand_real(0.8, 1.2),
+                 sheer = rand_real(0.9, 1.1), dy = rand_real2(INP_H * 0.5),
+                 dx = rand_real2(INP_W * 0.5), ky = rand_real2(0.1 / INP_H),
+                 kx = rand_real2(0.1 / INP_W), kb = rand_real2(0.1) + 1;
+            ptr[0] = ptr[4] = cos(rot) * scale;
+            ptr[1] = -(ptr[3] = sin(rot) * scale);
+            ptr[3] *= sheer;
+            ptr[4] *= sheer;
+            ptr[2] = dx;
+            ptr[5] = dy;
+            ptr[6] = kx;
+            ptr[7] = ky;
+            ptr[8] = kb;
+            ptr += 9;
+        }
+        mgb_assert(ptr == mat.ptr<float>() + mat.shape().total_nr_elems());
+    };
+    HostTensorGenerator<dtype::Int32> gen_mat_idx_rng{0, N_SRC};
+    auto gen_mat_idx = [&](HostTensorND& mat) { mat = *gen_mat_idx_rng(mat.shape()); };
+    Checker(make_graph, fwd)
+            .set_input_generator(N_SRC, gen_mat)
+            .set_input_generator(N_SRC + 1, gen_mat_idx)
+            .set_input_dtype(N_SRC + 1, dtype::Int32{})
+            .disable_grad_check()
+            .run({TensorShape{1, C, 4, 5},
+                  {1, C, 4, 5},
+                  {1, C, 4, 5},
+                  {N_MAT, 3, 3},
+                  {N_MAT}})
+            .run({TensorShape{1, C, 6, 5},
+                  {1, C, 6, 5},
+                  {1, C, 6, 5},
+                  {N_MAT, 3, 3},
+                  {N_MAT}})
+            .run({TensorShape{1, C, 22, 19},
+                  {1, C, 22, 19},
+                  {1, C, 22, 19},
+                  {N_MAT, 3, 3},
+                  {N_MAT}});
+}
+
+TEST(TestOprImgproc, WarpPerspectiveWithMatIdx_MultiSrc_NHWC) {
+    constexpr size_t INP_H = 13, INP_W = 9, N_MAT = 23, N_SRC = 3, C = 3;
+    opr::WarpPerspective::Param param;
+    param.format = opr::WarpPerspective::Param::Format::NHWC;
+    std::mt19937 rng(next_rand_seed());
+    auto rand_real = [&](double lo, double hi) {
+        return rng() / (std::mt19937::max() + 1.0) * (hi - lo) + lo;
+    };
+    auto rand_real2 = [&](double range) { return rand_real(-range, range); };
+
+    using Checker = AutoOprChecker<5, 1>;
+    TensorShape out_shp{N_MAT, 9, 10, C};
+    auto make_graph = [&](const Checker::SymInpArray& inputs) -> Checker::SymOutArray {
+        SymbolVarArray srcs;
+        for (size_t i = 0; i < N_SRC; i++) {
+            srcs.push_back(inputs[i]);
+        }
+        return {opr::WarpPerspective::make(
+                srcs, inputs[N_SRC], inputs[N_SRC + 1],
+                cg::var_from_tensor_shape(
+                        srcs[0], {out_shp.shape[1], out_shp.shape[2]}),
+                param)};
+    };
+    auto fwd = [&](Checker::NumOutArray& dest, Checker::NumInpArray inp) {
+        auto opr = megdnn_naive_handle()->create_operator<megdnn::WarpPerspective>();
+        opr->param() = param;
+        dest[0].resize(out_shp);
+        megdnn::TensorNDArray srcs;
+        for (size_t i = 0; i < N_SRC; i++) {
+            srcs.push_back(inp[i]->as_megdnn());
+        }
+        opr->exec(
+                srcs, inp[N_SRC]->as_megdnn(), inp[N_SRC + 1]->as_megdnn(),
+                dest[0].as_megdnn(), {});
+    };
+    auto gen_mat = [&](HostTensorND& mat) {
+        auto ptr = mat.ptr<float>();
+        for (size_t i = 0; i < N_MAT; ++i) {
+            auto rot = rand_real(0, M_PI * 2), scale = rand_real(0.8, 1.2),
+                 sheer = rand_real(0.9, 1.1), dy = rand_real2(INP_H * 0.5),
+                 dx = rand_real2(INP_W * 0.5), ky = rand_real2(0.1 / INP_H),
+                 kx = rand_real2(0.1 / INP_W), kb = rand_real2(0.1) + 1;
+            ptr[0] = ptr[4] = cos(rot) * scale;
+            ptr[1] = -(ptr[3] = sin(rot) * scale);
+            ptr[3] *= sheer;
+            ptr[4] *= sheer;
+            ptr[2] = dx;
+            ptr[5] = dy;
+            ptr[6] = kx;
+            ptr[7] = ky;
+            ptr[8] = kb;
+            ptr += 9;
+        }
+        mgb_assert(ptr == mat.ptr<float>() + mat.shape().total_nr_elems());
+    };
+    HostTensorGenerator<dtype::Int32> gen_mat_idx_rng{0, N_SRC};
+    auto gen_mat_idx = [&](HostTensorND& mat) { mat = *gen_mat_idx_rng(mat.shape()); };
+    Checker(make_graph, fwd)
+            .set_input_generator(N_SRC, gen_mat)
+            .set_input_generator(N_SRC + 1, gen_mat_idx)
+            .set_input_dtype(N_SRC + 1, dtype::Int32{})
+            .disable_grad_check()
+            .run({TensorShape{1, 4, 5, C},
+                  {1, 4, 5, C},
+                  {1, 4, 5, C},
+                  {N_MAT, 3, 3},
+                  {N_MAT}})
+            .run({TensorShape{1, 6, 5, C},
+                  {1, 6, 5, C},
+                  {1, 6, 5, C},
+                  {N_MAT, 3, 3},
+                  {N_MAT}})
+            .run({TensorShape{1, 22, 19, C},
+                  {1, 22, 19, C},
+                  {1, 22, 19, C},
+                  {N_MAT, 3, 3},
+                  {N_MAT}});
+}
+
 TEST(TestOprImgproc, WarpPerspective_NCHW4) {
     set_rand_seed(19931102);
     constexpr size_t INP_H = 6, INP_W = 4, N = 2, C = 12;

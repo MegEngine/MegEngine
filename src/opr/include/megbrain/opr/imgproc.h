@@ -31,6 +31,10 @@ public:
             VarNode* in_tensor, VarNode* mat, VarNode* mat_idx, VarNode* out_shape,
             const Param& param, const OperatorNodeConfig& config);
 
+    WarpPerspectiveForward(
+            const VarNodeArrayView& in_tensor, VarNode* mat, VarNode* mat_idx,
+            VarNode* out_shape, const Param& param, const OperatorNodeConfig& config);
+
     MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar in_tensor, SymbolVar mat, SymbolVar mat_idx, SymbolVar out_shape,
             const Param& param = {}, const OperatorNodeConfig& config = {});
@@ -49,6 +53,26 @@ public:
                 config);
     }
 
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
+            const VarNodeArrayView& in_tensor, SymbolVar mat, SymbolVar mat_idx,
+            SymbolVar out_shape, const Param& param = {},
+            OperatorNodeConfig config = {});
+
+    static SymbolVar make(
+            const VarNodeArrayView& in_tensor, SymbolVar mat, SymbolVar out_shape,
+            const Param& param = {}, const OperatorNodeConfig& config = {}) {
+        return make(in_tensor, mat, SymbolVar{}, out_shape, param, config);
+    }
+
+    static SymbolVar make(
+            const VarNodeArrayView& in_tensor, SymbolVar mat,
+            const TensorShape& out_shape, const Param& param = {},
+            const OperatorNodeConfig& config = {}) {
+        return make(
+                in_tensor, mat, cg::var_from_tensor_shape(in_tensor[0], out_shape),
+                param, config);
+    }
+
 private:
     void init_output_dtype() override;
     void add_input_layout_constraint() override;
@@ -62,6 +86,8 @@ private:
             const TensorShapeArray& output_shapes) const override;
 
     void record_execute_deps(ExecDependencyArray& deps) override;
+    bool m_is_multi_src = false;
+    size_t m_srcs_size = 0;
 };
 using WarpPerspective = WarpPerspectiveForward;
 

@@ -19,10 +19,34 @@ struct OprMaker<opr::WarpPerspective, 0> {
                     .node()
                     ->owner_opr();
         } else {
-            mgb_assert(inputs.size() == 4);
-            return Opr::make(inputs[0], inputs[1], inputs[2], inputs[3], param, config)
-                    .node()
-                    ->owner_opr();
+            bool with_mat_idx = false;
+            VarNodeArray inps = inputs;
+            VarNode *mat, *mat_idx, *outshp;
+            outshp = inps.back();
+            inps.pop_back();
+            if (inps.back()->shape().ndim == 3) {
+                mat = inps.back();
+            } else {
+                mat_idx = inps.back();
+                inps.pop_back();
+                mat = inps.back();
+                with_mat_idx = true;
+            }
+            inps.pop_back();
+            if (inps.size() == 1) {
+                mgb_assert(with_mat_idx);
+                return Opr::make(
+                               inputs[0], inputs[1], inputs[2], inputs[3], param,
+                               config)
+                        .node()
+                        ->owner_opr();
+            } else if (with_mat_idx) {
+                return Opr::make(inps, mat, mat_idx, outshp, param, config)
+                        .node()
+                        ->owner_opr();
+            } else {
+                return Opr::make(inps, mat, outshp, param, config).node()->owner_opr();
+            }
         }
     }
 };

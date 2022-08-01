@@ -56,7 +56,22 @@ public:
             _megdnn_workspace workspace) {
         exec(src, mat, {}, dst, workspace);
     }
-
+    /**
+     * \param[in] srcs consists of n TensorNDs, each TensorND has shape (1, channel,
+     * in_height, in_width) \param[in] mat (n, 3, 3) \param[out] dst (n, channel,
+     * out_height, out_width)
+     *
+     * \note
+     * srcs and dst can have different shapes, as long as their c agree and the size of
+     * srcs is equal to n. every element of srcs, mat and dst should be contiguous.
+     *
+     * equivalent to:
+     * TensorND src{nullptr, TensorLayout({n, channel, in_height, in_width},
+     * srcs[0].layout.dtype)}; auto concat = handle()->create_operator<Concat>();
+     * concat->exec(srcs, src);
+     * auto warp = handle()->create_operator<WarpPerspectiveForward>();
+     * warp->exec(src, mat, dst, workspace);
+     */
     void exec(
             _megdnn_in const TensorNDArray& srcs, _megdnn_tensor_in mat,
             _megdnn_tensor_out dst, _megdnn_workspace workspace) {
@@ -75,11 +90,25 @@ public:
     virtual void exec(
             _megdnn_tensor_in src, _megdnn_tensor_in mat, _megdnn_tensor_in mat_idx,
             _megdnn_tensor_out dst, _megdnn_workspace workspace) = 0;
-
+    /**
+     * \p srcs should have m elements, and \p mat and \p mat_idx should
+     * both have batch size n. Each item in \p mat_idx must be in the range
+     * of [0, m-1].
+     *
+     * \param mat_idx the indices of input image that each matrix in \p mat
+     *      should act on. It can also be empty and in such case \p mat batch size
+     *      should be the same as the number of elements in \p srcs .
+     */
     virtual void exec(
             _megdnn_in const TensorNDArray& srcs, _megdnn_tensor_in mat,
             _megdnn_tensor_in mat_idx, _megdnn_tensor_out dst,
-            _megdnn_workspace workspace) = 0;
+            _megdnn_workspace workspace) {
+        static_cast<void>(srcs);
+        static_cast<void>(mat);
+        static_cast<void>(mat_idx);
+        static_cast<void>(dst);
+        static_cast<void>(workspace);
+    }
 
     size_t get_workspace_in_bytes(
             const TensorLayout& src, const TensorLayout& mat, const TensorLayout& dst) {
@@ -98,7 +127,13 @@ public:
 
     virtual size_t get_workspace_in_bytes(
             const TensorLayoutArray& srcs, const TensorLayout& mat,
-            const TensorLayout& mat_idx, const TensorLayout& dst) = 0;
+            const TensorLayout& mat_idx, const TensorLayout& dst) {
+        static_cast<void>(srcs);
+        static_cast<void>(mat);
+        static_cast<void>(mat_idx);
+        static_cast<void>(dst);
+        return 0;
+    }
 
 protected:
     void check_exec(

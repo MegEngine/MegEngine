@@ -289,7 +289,7 @@ TEST_F(FALLBACK, WARP_PERSPECTIVE_MULTI_SRC_WITH_IDX_NCHW) {
             shapes.emplace_back(TensorShape{{idx, 3, 3}});
             checker.set_rng(bs, &rng);
             // mat_idx
-            shapes.emplace_back(TensorShape{{idx}});
+            shapes.emplace_back(TensorShape({idx}));
             checker.set_dtype(bs + 1, dtype::Int32());
             idx_rng = UniformIntRNG{0, (int)bs - 1};
             checker.set_rng(bs + 1, &idx_rng);
@@ -338,7 +338,7 @@ TEST_F(FALLBACK, WARP_PERSPECTIVE_MULTI_SRC_WITH_IDX_NHWC) {
             shapes.emplace_back(TensorShape{{idx, 3, 3}});
             checker.set_rng(bs, &rng);
             // mat_idx
-            shapes.emplace_back(TensorShape{{idx}});
+            shapes.emplace_back(TensorShape({idx}));
             checker.set_dtype(bs + 1, dtype::Int32());
             idx_rng = UniformIntRNG{0, (int)bs - 1};
             checker.set_rng(bs + 1, &idx_rng);
