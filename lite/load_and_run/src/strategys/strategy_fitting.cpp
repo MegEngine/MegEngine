@@ -197,6 +197,10 @@ void OptionsTimeProfiler::profile_with_given_options(
         runtime_param.stage = RunStage::BEFORE_MODEL_LOAD;
         stage_config_model();
 
+        runtime_param.stage = RunStage::AFTER_NETWORK_CREATED;
+        model->create_network();
+        stage_config_model();
+
         model->load_model();
         //! after load configure
         auto config_model_before_runing = [&]() {

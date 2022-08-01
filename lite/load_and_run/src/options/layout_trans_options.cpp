@@ -9,7 +9,7 @@ namespace lar {
 template <>
 void GoptLayoutOption::config_model_internel<ModelLite>(
         RuntimeParam& runtime_param, std::shared_ptr<ModelLite> model) {
-    if (runtime_param.stage == RunStage::BEFORE_MODEL_LOAD) {
+    if (runtime_param.stage == RunStage::AFTER_NETWORK_CREATED) {
         if (m_layout_transform) {
             LITE_LOG("using global layout transform optimization\n");
             if (m_layout_transform_target ==
@@ -23,7 +23,9 @@ void GoptLayoutOption::config_model_internel<ModelLite>(
                 model->get_config().device_type = LiteDeviceType::LITE_CUDA;
             }
 #endif
-            model->set_layout_transform(true);
+            LITE_LOG("enable layout transform while load model for lite");
+            auto&& lite_network = model->get_lite_network();
+            lite::Runtime::enable_global_layout_transform(lite_network);
         }
     } else if (runtime_param.stage == RunStage::GLOBAL_OPTIMIZATION) {
         if (m_layout_transform) {

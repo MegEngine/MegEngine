@@ -24,6 +24,8 @@ public:
 
     virtual void set_shared_mem(bool state) = 0;
 
+    virtual void create_network(){};
+
     //! load model interface for load and run strategy
     virtual void load_model() = 0;
 

@@ -25,9 +25,9 @@ void run_NormalStrategy(std::string model_path);
 
 #define DEFINE_WRAP(option) BoolOptionWrap_##option flags_##option;
 
-#define TEST_BOOL_OPTION(option)                \
-    {                                           \
-        BoolOptionWrap_##option flags_##option; \
-        run_NormalStrategy(model_path);         \
+#define TEST_BOOL_OPTION(option)        \
+    {                                   \
+        DEFINE_WRAP(option);            \
+        run_NormalStrategy(model_path); \
     }
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

@@ -11,27 +11,29 @@ enum class RunStage {
 
     BEFORE_MODEL_LOAD = 0,
 
-    AFTER_MODEL_LOAD = 1,
+    AFTER_NETWORK_CREATED = 1,
 
-    BEFORE_OUTSPEC_SET = 2,
+    AFTER_MODEL_LOAD = 2,
+
+    BEFORE_OUTSPEC_SET = 3,
 
     //! using for dump static memory information svg file
-    AFTER_OUTSPEC_SET = 3,
+    AFTER_OUTSPEC_SET = 4,
 
     //! using for external c opr library
-    MODEL_RUNNING = 4,
+    MODEL_RUNNING = 5,
 
     //! using for output dumper
-    AFTER_RUNNING_WAIT = 5,
+    AFTER_RUNNING_WAIT = 6,
 
     //! using for external c opr library
-    AFTER_RUNNING_ITER = 6,
+    AFTER_RUNNING_ITER = 7,
 
-    AFTER_MODEL_RUNNING = 7,
+    AFTER_MODEL_RUNNING = 8,
 
-    GLOBAL_OPTIMIZATION = 8,
+    GLOBAL_OPTIMIZATION = 9,
 
-    UPDATE_IO = 9,
+    UPDATE_IO = 10,
 };
 /*!
  * \brief: type of different model

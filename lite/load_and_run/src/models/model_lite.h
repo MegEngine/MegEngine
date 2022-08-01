@@ -22,6 +22,9 @@ public:
     void set_shared_mem(bool state) override { share_model_mem = state; }
 
     //! load model from dump file
+    void create_network() override;
+
+    //! load model from dump file
     void load_model() override;
 
     //! run model with given runtime parameter
@@ -33,9 +36,6 @@ public:
 #if MGB_ENABLE_JSON
     std::shared_ptr<mgb::json::Object> get_io_info() override;
 #endif
-
-    //! enable global layout transform
-    void set_layout_transform(bool state) { enable_layout_transform = state; }
 
     //! get the network of lite model
     std::shared_ptr<lite::Network>& get_lite_network() { return m_network; }
@@ -61,7 +61,6 @@ public:
 
 private:
     bool share_model_mem = false;
-    bool enable_layout_transform = false;
     std::string model_path;
 
     DataParser parser;

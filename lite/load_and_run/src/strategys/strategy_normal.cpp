@@ -42,6 +42,10 @@ void NormalStrategy::run_subline() {
     m_runtime_param.stage = RunStage::BEFORE_MODEL_LOAD;
     stage_config_model();
 
+    m_runtime_param.stage = RunStage::AFTER_NETWORK_CREATED;
+    model->create_network();
+    stage_config_model();
+
     mgb::RealTimer timer;
     model->load_model();
     mgb_log("load model: %.3fms\n", timer.get_msecs_reset());

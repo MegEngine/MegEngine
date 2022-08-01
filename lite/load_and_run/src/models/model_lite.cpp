@@ -10,12 +10,12 @@ using namespace lar;
 ModelLite::ModelLite(const std::string& path) : model_path(path) {
     LITE_LOG("creat lite model use CPU as default comp node");
 };
-void ModelLite::load_model() {
+
+void ModelLite::create_network() {
     m_network = std::make_shared<lite::Network>(config, IO);
-    if (enable_layout_transform) {
-        LITE_LOG("enable layout transform while load model for lite");
-        lite::Runtime::enable_global_layout_transform(m_network);
-    }
+}
+
+void ModelLite::load_model() {
     if (share_model_mem) {
         //! WARNNING:maybe not right to share param memmory for this
         LITE_LOG("enable share model memory");
