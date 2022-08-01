@@ -5,7 +5,6 @@
 
 #include "midout.h"
 #include "reducer.h"
-#include "src/common/reduce_helper.h"
 
 MIDOUT_DECL(megdnn_fb_reduce_op)
 MIDOUT_DECL(megdnn_fb_reduce_c)
@@ -66,6 +65,27 @@ void reduce_exec(size_t A, size_t B, size_t C, Op op) MEGDNN_NOEXCEPT {
 
 namespace megdnn {
 namespace fallback {
+
+size_t ReduceImpl::get_workspace_in_bytes(
+        const TensorLayout& src, const TensorLayout& dst) {
+    MEGDNN_MARK_USED_VAR(src);
+    MEGDNN_MARK_USED_VAR(dst);
+
+    if (src.dtype.enumv() == DTypeEnum::Float32 &&
+        (param().mode == Mode::MEAN || param().mode == Mode::SUM ||
+         param().mode == Mode::SUM_SQR)) {
+        size_t A, B, C;
+        reduce::get_ABC(src, A, B, C, param().axis);
+        if (C == 1) {
+            // Using B = 247 as an example, you can understand why these parameters exist
+            size_t _60xT_in_4 = (60 * 3) / 4;  // T = 3
+            size_t _60xX_in_4 = 4;             // 0 < X < T, X = 1,2.
+            size_t _XXxT_in_4 = 4;
+            return ((B / _60xT_in_4 + _60xX_in_4 + _XXxT_in_4) * sizeof(float));
+        }
+    }
+    return naive::ReduceForwardImpl::get_workspace_in_bytes(src, dst);
+}
 
 void ReduceImpl::exec(
         _megdnn_tensor_in src, _megdnn_tensor_out dst, _megdnn_workspace workspace) {
@@ -178,45 +198,52 @@ void ReduceImpl::exec_fallback(
 }
 
 bool ReduceImpl::exec_optimized(
-        _megdnn_tensor_in src, _megdnn_tensor_out dst, _megdnn_workspace) {
+        _megdnn_tensor_in src, _megdnn_tensor_out dst, _megdnn_workspace workspace) {
     size_t A, B, C;
     reduce::get_ABC(src.layout, A, B, C, param().axis);
     bool execed = false;
     using Mode = param::Reduce::Mode;
-#define DISPATCH_FUNC(Reducer, dtype, ctype, comp_type)                           \
-    if (C == 1) {                                                                 \
-        using _Reducer = Reducer<dtype, ctype, comp_type, true>;                  \
-        using _ReducerC1SmallB = Reducer<dtype, ctype, comp_type, false>;         \
-        std::function<void(const ctype*, ctype*, DType, size_t, size_t, size_t)>  \
-                do_reduce = Exec<_Reducer, true>::do_reduce;                      \
-        if (B == 2)                                                               \
-            do_reduce = ExecC1SmallB<_ReducerC1SmallB, ctype, 2>::do_reduce;      \
-        if (B == 3)                                                               \
-            do_reduce = ExecC1SmallB<_ReducerC1SmallB, ctype, 3>::do_reduce;      \
-        if (B == 4)                                                               \
-            do_reduce = ExecC1SmallB<_ReducerC1SmallB, ctype, 4>::do_reduce;      \
-        MIDOUT_BEGIN(                                                             \
-                megdnn_fallback_reduce_optimized, ctype, dtype, comp_type,        \
-                midout_iv(0)) {                                                   \
-            MEGDNN_DISPATCH_CPU_KERN_OPR(do_reduce(                               \
-                    reinterpret_cast<ctype*>(src.raw_ptr()),                      \
-                    reinterpret_cast<ctype*>(dst.raw_ptr()), src_type, A, B, C)); \
-            execed = true;                                                        \
-        }                                                                         \
-        MIDOUT_END();                                                             \
-    } else {                                                                      \
-        using _Reducer = Reducer<dtype, ctype, comp_type, false>;                 \
-        std::function<void(const ctype*, ctype*, DType, size_t, size_t, size_t)>  \
-                do_reduce = Exec<_Reducer, false>::do_reduce;                     \
-        MIDOUT_BEGIN(                                                             \
-                megdnn_fallback_reduce_optimized, ctype, dtype, comp_type,        \
-                midout_iv(1)) {                                                   \
-            MEGDNN_DISPATCH_CPU_KERN_OPR(do_reduce(                               \
-                    reinterpret_cast<ctype*>(src.raw_ptr()),                      \
-                    reinterpret_cast<ctype*>(dst.raw_ptr()), src_type, A, B, C)); \
-            execed = true;                                                        \
-        }                                                                         \
-        MIDOUT_END();                                                             \
+
+#define DISPATCH_FUNC(Reducer, dtype, ctype, comp_type)                         \
+    if (C == 1) {                                                               \
+        using _Reducer = Reducer<dtype, ctype, comp_type, true>;                \
+        using _ReducerC1SmallB = Reducer<dtype, ctype, comp_type, false>;       \
+        std::function<void(                                                     \
+                const ctype*, ctype*, DType, size_t, size_t, size_t,            \
+                _megdnn_workspace)>                                             \
+                do_reduce = Exec<_Reducer, true>::do_reduce;                    \
+        if (B == 2)                                                             \
+            do_reduce = ExecC1SmallB<_ReducerC1SmallB, ctype, 2>::do_reduce;    \
+        if (B == 3)                                                             \
+            do_reduce = ExecC1SmallB<_ReducerC1SmallB, ctype, 3>::do_reduce;    \
+        if (B == 4)                                                             \
+            do_reduce = ExecC1SmallB<_ReducerC1SmallB, ctype, 4>::do_reduce;    \
+        MIDOUT_BEGIN(                                                           \
+                megdnn_fallback_reduce_optimized, ctype, dtype, comp_type,      \
+                midout_iv(0)) {                                                 \
+            MEGDNN_DISPATCH_CPU_KERN_OPR(do_reduce(                             \
+                    reinterpret_cast<ctype*>(src.raw_ptr()),                    \
+                    reinterpret_cast<ctype*>(dst.raw_ptr()), src_type, A, B, C, \
+                    workspace));                                                \
+            execed = true;                                                      \
+        }                                                                       \
+        MIDOUT_END();                                                           \
+    } else {                                                                    \
+        using _Reducer = Reducer<dtype, ctype, comp_type, false>;               \
+        std::function<void(                                                     \
+                const ctype*, ctype*, DType, size_t, size_t, size_t,            \
+                _megdnn_workspace)>                                             \
+                do_reduce = Exec<_Reducer, false>::do_reduce;                   \
+        MIDOUT_BEGIN(                                                           \
+                megdnn_fallback_reduce_optimized, ctype, dtype, comp_type,      \
+                midout_iv(1)) {                                                 \
+            MEGDNN_DISPATCH_CPU_KERN_OPR(do_reduce(                             \
+                    reinterpret_cast<ctype*>(src.raw_ptr()),                    \
+                    reinterpret_cast<ctype*>(dst.raw_ptr()), src_type, A, B, C, \
+                    workspace));                                                \
+            execed = true;                                                      \
+        }                                                                       \
+        MIDOUT_END();                                                           \
     }
 
 #define DISPATCH_MODE_QUANTIZED(dtype, ctype, comp_type)         \

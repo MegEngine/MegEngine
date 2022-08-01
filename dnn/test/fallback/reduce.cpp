@@ -352,6 +352,78 @@ TEST_F(FALLBACK, BENCHMARK_REDUCE_VS_CONV) {
     };
     run();
 }
+
+TEST_F(FALLBACK, BENCHMARK_REDUCE) {
+    auto run = [&]() {
+        Benchmarker<Reduce> benchmarker_reduce(handle());
+        benchmarker_reduce.set_display(false);
+        using Mode = param::Reduce::Mode;
+
+        constexpr size_t RUNS = 100;
+        benchmarker_reduce.set_times(RUNS);
+
+        TensorShape small{3 * 224 * 224};
+        TensorShape large{3 * 224 * 224 * 100};
+        param::Reduce param;
+        param.axis = 0;
+
+        for (auto i = 224; i < 224 * 2; i++) {
+            for (auto mode : {Mode::SUM, Mode::MEAN, Mode::SUM_SQR}) {
+                param.mode = mode;
+                benchmarker_reduce.set_param(param);
+                auto reduce = benchmarker_reduce.execs({{3 * 224 * i}, {}}) / RUNS;
+            }
+        }
+        param.mode = param::Reduce::Mode::SUM;
+        benchmarker_reduce.set_param(param);
+        printf("SUM\n");
+        {
+            TensorLayout src(small, dtype::Float32());
+            auto reduce = benchmarker_reduce.execs({src, {}}) / RUNS;
+
+            printf("case 1: reduce use time %fms\n", reduce);
+        }
+        {
+            TensorLayout src(large, dtype::Float32());
+            auto reduce = benchmarker_reduce.execs({src, {}}) / RUNS;
+
+            printf("case 1: reduce use time %fms\n", reduce);
+        }
+
+        param.mode = param::Reduce::Mode::MEAN;
+        benchmarker_reduce.set_param(param);
+        printf("MEAN\n");
+        {
+            TensorLayout src(small, dtype::Float32());
+            auto reduce = benchmarker_reduce.execs({src, {}}) / RUNS;
+
+            printf("case 2: reduce use time %fms\n", reduce);
+        }
+        {
+            TensorLayout src(large, dtype::Float32());
+            auto reduce = benchmarker_reduce.execs({src, {}}) / RUNS;
+
+            printf("case 2: reduce use time %fms\n", reduce);
+        }
+
+        param.mode = param::Reduce::Mode::SUM_SQR;
+        benchmarker_reduce.set_param(param);
+        printf("SUM_SQR\n");
+        {
+            TensorLayout src(small, dtype::Float32());
+            auto reduce = benchmarker_reduce.execs({src, {}}) / RUNS;
+
+            printf("case 3: reduce use time %fms\n", reduce);
+        }
+        {
+            TensorLayout src(large, dtype::Float32());
+            auto reduce = benchmarker_reduce.execs({src, {}}) / RUNS;
+
+            printf("case 3: reduce use time %fms\n", reduce);
+        }
+    };
+    run();
+}
 #endif
 
 // vim: syntax=cpp.doxygen
