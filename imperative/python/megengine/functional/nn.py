@@ -335,6 +335,7 @@ def conv_transpose2d(
     bias: Optional[Tensor] = None,
     stride: Union[int, Tuple[int, int]] = 1,
     padding: Union[int, Tuple[int, int]] = 0,
+    output_padding: Union[int, Tuple[int, int]] = 0,
     dilation: Union[int, Tuple[int, int]] = 1,
     groups: int = 1,
     conv_mode="cross_correlation",
@@ -352,6 +353,7 @@ def conv_transpose2d(
         stride: stride of the 2D convolution operation. Default: 1
         padding: size of the paddings added to the input on both sides of its
             spatial dimensions. Only zero-padding is supported. Default: 0
+        output_padding: size of paddings appended to output. Default: 0
         dilation: dilation of the 2D convolution operation. Default: 1
         groups: number of groups into which the input and output channels are divided,
             so as to perform a ``grouped convolution``. When ``groups`` is not 1,
@@ -374,6 +376,7 @@ def conv_transpose2d(
 
     stride_h, stride_w = expand_hw(stride)
     pad_h, pad_w = expand_hw(padding)
+    output_pad_h, output_pad_w = expand_hw(output_padding)
     dilate_h, dilate_w = expand_hw(dilation)
 
     compute_mode = _config._get_actual_op_param(compute_mode, _config.__compute_mode)
@@ -389,7 +392,32 @@ def conv_transpose2d(
         compute_mode=compute_mode,
         sparse=sparse_type,
     )
-    (output,) = apply(op, weight, inp)
+    if output_pad_h != 0 or output_pad_h != 0:
+        assert (
+            output_pad_h < stride[0]
+        ), "output_padding[0] shoule be less than stride[0]"
+        assert (
+            output_pad_w < stride[1]
+        ), "output_padding[1] shoule be less than stride[1]"
+        Hout = (
+            (inp.shape[2] - 1) * stride[0]
+            - 2 * padding[0]
+            + dilation[0] * (weight.shape[2] - 1)
+            + output_pad_h
+            + 1
+        )
+        Wout = (
+            (inp.shape[3] - 1) * stride[1]
+            - 2 * padding[1]
+            + dilation[1] * (weight.shape[3] - 1)
+            + output_pad_w
+            + 1
+        )
+        output_shape = [inp.shape[0], weight.shape[1], Hout, Wout]
+        output_shape = astensor1d(output_shape)
+        (output,) = apply(op, weight, inp, output_shape)
+    else:
+        (output,) = apply(op, weight, inp)
     if bias is not None:
         if amp._enabled:
             bias = cast_tensors(bias)
@@ -528,6 +556,7 @@ def conv_transpose3d(
     bias: Optional[Tensor] = None,
     stride: Union[int, Tuple[int, int, int]] = 1,
     padding: Union[int, Tuple[int, int, int]] = 0,
+    output_padding: Union[int, Tuple[int, int, int]] = 0,
     dilation: Union[int, Tuple[int, int, int]] = 1,
     groups: int = 1,
 ) -> Tensor:
@@ -544,6 +573,7 @@ def conv_transpose3d(
         stride: stride of the 3D convolution operation. Default: 1
         padding: size of the paddings added to the input on all sides of its
             spatial dimensions. Only zero-padding is supported. Default: 0
+        output_padding: size of paddings appended to output. Default: 0
         dilation: dilation of the 3D convolution operation. Default: 1
         groups: number of groups into which the input and output channels are divided,
             so as to perform a ``grouped convolution``. When ``groups`` is not 1,
@@ -558,6 +588,7 @@ def conv_transpose3d(
     pad = expand_dhw(padding)
     stride = expand_dhw(stride)
     dilate = expand_dhw(dilation)
+    output_padding = expand_dhw(output_padding)
 
     sparse_type = "dense" if groups == 1 else "group"
     op = builtin.Convolution3DBackwardData(
@@ -573,7 +604,42 @@ def conv_transpose3d(
         strategy=get_execution_strategy(),
         sparse=sparse_type,
     )
-    (output,) = apply(op, weight, inp)
+    if output_padding[0] != 0 or output_padding[1] != 0 or output_padding[2] != 0:
+        assert (
+            output_padding[0] < stride[0]
+        ), "output_padding[0] shoule be less than stride[0]"
+        assert (
+            output_padding[1] < stride[1]
+        ), "output_padding[1] shoule be less than stride[1]"
+        assert (
+            output_padding[2] < stride[2]
+        ), "output_padding[2] shoule be less than stride[2]"
+        Dout = (
+            (inp.shape[2] - 1) * stride[0]
+            - 2 * padding[0]
+            + dilation[0] * (weight.shape[2] - 1)
+            + output_padding[0]
+            + 1
+        )
+        Hout = (
+            (inp.shape[3] - 1) * stride[1]
+            - 2 * padding[1]
+            + dilation[1] * (weight.shape[3] - 1)
+            + output_padding[1]
+            + 1
+        )
+        Wout = (
+            (inp.shape[4] - 1) * stride[2]
+            - 2 * padding[2]
+            + dilation[2] * (weight.shape[4] - 1)
+            + output_padding[2]
+            + 1
+        )
+        output_shape = [inp.shape[0], weight.shape[1], Dout, Hout, Wout]
+        output_shape = astensor1d(output_shape)
+        (output,) = apply(op, weight, inp, output_shape)
+    else:
+        (output,) = apply(op, weight, inp)
     if bias is not None:
         output += bias
     return output

@@ -18,7 +18,8 @@ from megengine.core._trace_option import use_symbolic_shape
 from megengine.core.autodiff.grad import Grad
 from megengine.core.tensor.utils import make_shape_tuple
 from megengine.device import get_device_count
-from megengine.module import LayerNorm
+from megengine.jit.tracing import trace
+from megengine.module import ConvTranspose2d, ConvTranspose3d, LayerNorm
 
 _assert_allclose = partial(np.testing.assert_allclose, atol=5e-6, rtol=5e-6)
 
@@ -1374,3 +1375,37 @@ def test_local_conv2d(stride, padding, dilation, ksize, groups):
     )
     ref = local_conv2d_np(data, weight, stride, padding, dilation)
     np.testing.assert_almost_equal(output.numpy(), ref, 5)
+
+
+def test_conv_transpose2d():
+    m = ConvTranspose2d(
+        16, 33, (3, 5), output_padding=(1, 2), stride=(2, 3), padding=(4, 2)
+    )
+
+    @trace(symbolic=True)
+    def fwd(inp: Tensor):
+        return m(inp)
+
+    input = Tensor(np.random.rand(20, 16, 50, 100))
+    output = fwd(input)
+    output_shape = Tensor(output.shape)
+    np.testing.assert_equal(
+        output_shape.numpy(), np.array([20, 33, 94, 300], dtype=np.int32)
+    )
+
+
+def test_conv_transpose3d():
+    m = ConvTranspose3d(
+        16, 33, (3, 5, 2), output_padding=(2, 1, 1), stride=(3, 2, 2), padding=(0, 4, 2)
+    )
+
+    @trace(symbolic=True)
+    def fwd(inp: Tensor):
+        return m(inp)
+
+    input = Tensor(np.random.rand(20, 16, 10, 50, 100))
+    output = fwd(input)
+    output_shape = Tensor(output.shape)
+    np.testing.assert_equal(
+        output_shape.numpy(), np.array([20, 33, 32, 96, 197], dtype=np.int32)
+    )

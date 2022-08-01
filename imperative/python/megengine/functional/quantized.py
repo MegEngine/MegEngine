@@ -134,6 +134,7 @@ def conv_transpose2d(
     dtype=None,
     stride: Union[int, Tuple[int, int]] = 1,
     padding: Union[int, Tuple[int, int]] = 0,
+    output_padding: Union[int, Tuple[int, int]] = 0,
     dilation: Union[int, Tuple[int, int]] = 1,
     groups: int = 1,
     conv_mode="cross_correlation",
@@ -156,6 +157,7 @@ def conv_transpose2d(
         )
 
     pad_h, pad_w = _pair(padding)
+    output_pad_h, output_pad_w = _pair(output_padding)
     stride_h, stride_w = _pair_nonzero(stride)
     dilate_h, dilate_w = _pair_nonzero(dilation)
     compute_mode = _config._get_actual_op_param(compute_mode, _config.__compute_mode)
@@ -173,5 +175,30 @@ def conv_transpose2d(
         compute_mode=compute_mode,
         mode=conv_mode,
     )
-    (output,) = apply(op, weight, inp)
+    if output_pad_h != 0 or output_pad_h != 0:
+        assert (
+            output_pad_h < stride[0]
+        ), "output_padding[0] shoule be less than stride[0]"
+        assert (
+            output_pad_w < stride[1]
+        ), "output_padding[1] shoule be less than stride[1]"
+        Hout = (
+            (inp.shape[2] - 1) * stride[0]
+            - 2 * padding[0]
+            + dilation[0] * (weight.shape[2] - 1)
+            + output_pad_h
+            + 1
+        )
+        Wout = (
+            (inp.shape[3] - 1) * stride[1]
+            - 2 * padding[1]
+            + dilation[1] * (weight.shape[3] - 1)
+            + output_pad_w
+            + 1
+        )
+        output_shape = [inp.shape[0], weight.shape[1], Hout, Wout]
+        output_shape = Tensor(output_shape)
+        (output,) = apply(op, weight, inp, output_shape)
+    else:
+        (output,) = apply(op, weight, inp)
     return output

@@ -74,6 +74,7 @@ class ConvTranspose2d(Float.ConvTranspose2d, QATModule):
             float_module.kernel_size,
             float_module.stride,
             float_module.padding,
+            float_module.output_padding,
             float_module.dilation,
             float_module.groups,
             float_module.bias is not None,

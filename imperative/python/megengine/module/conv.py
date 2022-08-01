@@ -30,6 +30,7 @@ class _ConvNd(Module):
         kernel_size: Union[int, Tuple[int, int]],
         stride: Union[int, Tuple[int, int]],
         padding: Union[int, Tuple[int, int]],
+        output_padding: Union[int, Tuple[int, int]],
         dilation: Union[int, Tuple[int, int]],
         groups: int,
         bias: bool = True,
@@ -45,6 +46,7 @@ class _ConvNd(Module):
         self.kernel_size = kernel_size
         self.stride = stride
         self.padding = padding
+        self.output_padding = output_padding
         self.dilation = dilation
         self.groups = groups
 
@@ -178,6 +180,7 @@ class Conv1d(_ConvNd):
             kernel_size,
             stride,
             padding,
+            0,
             dilation,
             groups,
             bias,
@@ -352,6 +355,7 @@ class Conv2d(_ConvNd):
             kernel_size,
             stride,
             padding,
+            0,
             dilation,
             groups,
             bias,
@@ -505,6 +509,7 @@ class Conv3d(_ConvNd):
             kernel_size,
             stride,
             padding,
+            0,
             dilation,
             groups,
             bias,
@@ -572,6 +577,7 @@ class ConvTranspose2d(_ConvNd):
         stride: stride of the 2D convolution operation. Default: 1
         padding: size of the paddings added to the input on both sides of its
             spatial dimensions. Only zero-padding is supported. Default: 0
+        output_padding: size of paddings appended to output. Default: 0
         dilation: dilation of the 2D convolution operation. Default: 1
         groups: number of groups into which the input and output channels are divided,
             so as to perform a ``grouped convolution``. When ``groups`` is not 1,
@@ -591,6 +597,8 @@ class ConvTranspose2d(_ConvNd):
         * ``bias`` usually has shape ``(1, out_channels, *1)``
     """
 
+    output_padding = 0
+
     def __init__(
         self,
         in_channels: int,
@@ -598,6 +606,7 @@ class ConvTranspose2d(_ConvNd):
         kernel_size: Union[int, Tuple[int, int]],
         stride: Union[int, Tuple[int, int]] = 1,
         padding: Union[int, Tuple[int, int]] = 0,
+        output_padding: Union[int, Tuple[int, int]] = 0,
         dilation: Union[int, Tuple[int, int]] = 1,
         groups: int = 1,
         bias: bool = True,
@@ -608,6 +617,7 @@ class ConvTranspose2d(_ConvNd):
         kernel_size = _pair_nonzero(kernel_size)
         stride = _pair_nonzero(stride)
         padding = _pair(padding)
+        output_padding = _pair(output_padding)
         dilation = _pair_nonzero(dilation)
         self.conv_mode = conv_mode
         self.compute_mode = compute_mode
@@ -617,6 +627,7 @@ class ConvTranspose2d(_ConvNd):
             kernel_size,
             stride,
             padding,
+            output_padding,
             dilation,
             groups,
             bias,
@@ -656,6 +667,7 @@ class ConvTranspose2d(_ConvNd):
             bias,
             self.stride,
             self.padding,
+            self.output_padding,
             self.dilation,
             self.groups,
             self.conv_mode,
@@ -817,6 +829,7 @@ class DeformableConv2d(_ConvNd):
             kernel_size,
             stride,
             padding,
+            0,
             dilation,
             groups,
             bias,
@@ -889,6 +902,7 @@ class ConvTranspose3d(_ConvNd):
         stride: stride of the 3D convolution operation. Default: 1
         padding: size of the paddings added to the input on all sides of its
             spatial dimensions. Only zero-padding is supported. Default: 0
+        output_padding: size of paddings appended to output. Default: 0
         dilation: dilation of the 3D convolution operation. Default: 1
         groups: number of groups into which the input and output channels are divided,
             so as to perform a ``grouped convolution``. When ``groups`` is not 1,
@@ -902,6 +916,8 @@ class ConvTranspose3d(_ConvNd):
         * ``bias`` usually has shape ``(1, out_channels, *1)``
     """
 
+    output_padding = 0
+
     def __init__(
         self,
         in_channels: int,
@@ -909,6 +925,7 @@ class ConvTranspose3d(_ConvNd):
         kernel_size: Union[int, Tuple[int, int, int]],
         stride: Union[int, Tuple[int, int, int]] = 1,
         padding: Union[int, Tuple[int, int, int]] = 0,
+        output_padding: Union[int, Tuple[int, int, int]] = 0,
         dilation: Union[int, Tuple[int, int, int]] = 1,
         groups: int = 1,
         bias: bool = True,
@@ -923,6 +940,7 @@ class ConvTranspose3d(_ConvNd):
             kernel_size=kernel_size,
             stride=stride,
             padding=padding,
+            output_padding=output_padding,
             dilation=dilation,
             groups=groups,
             bias=bias,
@@ -956,5 +974,11 @@ class ConvTranspose3d(_ConvNd):
 
     def forward(self, inp):
         return conv_transpose3d(
-            inp, self.weight, self.bias, self.stride, self.padding, self.dilation,
+            inp,
+            self.weight,
+            self.bias,
+            self.stride,
+            self.padding,
+            self.output_padding,
+            self.dilation,
         )

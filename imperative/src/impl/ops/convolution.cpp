@@ -5,6 +5,7 @@
 #include "../op_trait.h"
 #include "megbrain/imperative/ops/autogen.h"
 #include "megbrain/opr/internal/megdnn_opr_wrapper.h"
+#include "megbrain/opr/tensor_gen.h"
 
 namespace mgb {
 namespace imperative {
@@ -152,8 +153,11 @@ auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
                 inputs[0], inputs[1], conv.param(), conv.policy(), config);
     } else {
         mgb_assert(inputs.size() == 3);
+        auto* src_for_shape =
+                opr::Alloc::make(inputs[2], inputs[0]->dtype(), {}).node();
         return opr::ConvolutionBackwardData::make(
-                inputs[0], inputs[1], inputs[2], conv.param(), conv.policy(), config);
+                inputs[0], inputs[1], src_for_shape, conv.param(), conv.policy(),
+                config);
     }
 }
 
@@ -168,6 +172,14 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
     if (filter.ndim && diff.ndim) {
         // deduce_layout won't override existing dtype
         dnn_opr.opr().deduce_layout(filter, diff, output_layout);
+        if (inputs.size() == 3) {
+            if (!inputs[2].value.empty()) {
+                cg::copy_tensor_value_to_shape(output_layout, inputs[2].value);
+                output_layout.init_contiguous_stride();
+            } else {
+                output_layout.ndim = 0;
+            }
+        }
     }
     return {{{output_layout, inputs[0].comp_node}}, output_layout.ndim != 0};
 }
@@ -185,8 +197,11 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
             return output_descs[0].layout;
         } else {
             TensorLayout out_layout{inputs[0]->dtype()};
-            dnn_opr.op()->deduce_layout(
-                    inputs[0]->layout(), inputs[1]->layout(), out_layout);
+            if (inputs.size() == 3) {
+                cg::copy_tensor_value_to_shape(
+                        out_layout, inputs[2]->get_value().proxy_to_default_cpu());
+                out_layout.init_contiguous_stride();
+            }
             return out_layout;
         }
     }();
@@ -263,50 +278,74 @@ namespace convolution3d_backward_data {
 std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
         const OpDef& def, const SmallVector<LogicalTensorDesc>& inputs) {
     mgb_assert(
-            inputs.size() == 2,
-            "inputs num of conv_transpose3d should be 2 but you give %zu",
+            inputs.size() == 2 || inputs.size() == 3,
+            "inputs num of conv_transpose3d should be 2 or 3 but you give %zu",
             inputs.size());
-    auto&& op_def = def.cast_final_safe<Convolution3DBackwardData>();
-    auto&& weight = inputs[0];
+    auto&& conv3dbwd = def.cast_final_safe<Convolution3DBackwardData>();
+    DnnOprHelper<megdnn::Convolution3DBackwardData> dnn_opr(conv3dbwd.param());
+    auto&& filter = inputs[0];
     auto&& diff = inputs[1];
-    if (!(weight.layout.ndim && diff.layout.ndim)) {
-        return {{{TensorLayout{weight.layout.dtype}, weight.comp_node}}, false};
+
+    if (!(filter.layout.ndim && diff.layout.ndim)) {
+        return {{{TensorLayout{filter.layout.dtype}, filter.comp_node}}, false};
     }
-    DnnOprHelper<megdnn::Convolution3DBackwardData> dnn_opr(op_def.param());
-    auto oup_layout = dnn_opr.deduce_layout(weight.layout, diff.layout);
-    return {{{oup_layout, weight.comp_node}}, true};
+
+    TensorLayout output_layout = dnn_opr.deduce_layout(filter.layout, diff.layout);
+    if (filter.layout.ndim && diff.layout.ndim) {
+        if (inputs.size() == 3) {
+            if (!inputs[2].value.empty()) {
+                cg::copy_tensor_value_to_shape(output_layout, inputs[2].value);
+                output_layout.init_contiguous_stride();
+            } else {
+                output_layout.ndim = 0;
+            }
+        }
+    }
+    return {{{output_layout, inputs[0].comp_node}}, output_layout.ndim != 0};
 }
 
 SmallVector<TensorPtr> apply_on_physical_tensor(
         const OpDef& def, const SmallVector<TensorPtr>& inputs,
         SmallVector<LogicalTensorDesc>& output_descs, const bool& validated) {
-    auto&& conv = def.cast_final_safe<Convolution3DBackwardData>();
-    auto cn = inputs[0]->comp_node();
-
-    auto&& wlayout = inputs[0]->layout();
-    auto&& dlayout = inputs[1]->layout();
-
-    DnnOprCaller<megdnn::Convolution3DBackwardData> dnn_op(
-            cn, conv.param(), conv.policy());
-
-    auto oup_layout = [&] {
+    auto&& conv3dbwd = def.cast_final_safe<Convolution3DBackwardData>();
+    CompNode cn = inputs[0]->comp_node();
+    DnnOprCaller<megdnn::Convolution3DBackwardData> dnn_opr(
+            cn, conv3dbwd.param(), conv3dbwd.policy());
+    auto out_layout = [&] {
         if (validated) {
             return output_descs[0].layout;
         } else {
-            return dnn_op.deduce_layout(wlayout, dlayout);
+            TensorLayout out_layout{inputs[0]->dtype()};
+            dnn_opr.op()->deduce_layout(
+                    inputs[0]->layout(), inputs[1]->layout(), out_layout);
+            if (inputs.size() == 3) {
+                cg::copy_tensor_value_to_shape(
+                        out_layout, inputs[2]->get_value().proxy_to_default_cpu());
+                out_layout.init_contiguous_stride();
+            }
+            return out_layout;
         }
     }();
-    auto oup = Tensor::make(oup_layout, cn);
-    dnn_op.exec_fastrun(inputs[0], inputs[1], oup);
-    return {oup};
+    auto out = Tensor::make(out_layout, cn);
+    dnn_opr.exec_fastrun(inputs[0], inputs[1], out);
+    return {out};
 }
 
 auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
     auto&& conv = static_cast<const Convolution3DBackwardData&>(def);
     OperatorNodeConfig config{conv.make_name()};
-    mgb_assert(inputs.size() == 2);
-    return opr::Convolution3DBackwardData::make(
-            inputs[0], inputs[1], conv.param(), conv.policy(), config);
+    if (inputs.size() == 2) {
+        return opr::Convolution3DBackwardData::make(
+                inputs[0], inputs[1], conv.param(), conv.policy(), config);
+    } else {
+        mgb_assert(inputs.size() == 3);
+        // The output shape is calculated in advance and given as input
+        auto* src_for_shape =
+                opr::Alloc::make(inputs[2], inputs[0]->dtype(), {}).node();
+        return opr::Convolution3DBackwardData::make(
+                inputs[0], inputs[1], src_for_shape, conv.param(), conv.policy(),
+                config);
+    }
 }
 
 OP_TRAIT_REG(Convolution3DBackwardData, Convolution3DBackwardData)

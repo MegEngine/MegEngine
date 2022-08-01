@@ -138,6 +138,8 @@ class ConvTranspose2d(Float.ConvTranspose2d, QuantizedModule):
         dtype: data type of the output, should be qint8.
     """
 
+    output_padding = 0
+
     def __init__(
         self,
         in_channels: int,
@@ -145,6 +147,7 @@ class ConvTranspose2d(Float.ConvTranspose2d, QuantizedModule):
         kernel_size: Union[int, Tuple[int, int]],
         stride: Union[int, Tuple[int, int]] = 1,
         padding: Union[int, Tuple[int, int]] = 0,
+        output_padding: Union[int, Tuple[int, int]] = 0,
         dilation: Union[int, Tuple[int, int]] = 1,
         groups: int = 1,
         bias: bool = True,
@@ -159,6 +162,7 @@ class ConvTranspose2d(Float.ConvTranspose2d, QuantizedModule):
             kernel_size=kernel_size,
             stride=stride,
             padding=padding,
+            output_padding=output_padding,
             dilation=dilation,
             groups=groups,
             bias=bias,
@@ -180,6 +184,7 @@ class ConvTranspose2d(Float.ConvTranspose2d, QuantizedModule):
             qat_module.kernel_size,
             qat_module.stride,
             qat_module.padding,
+            qat_module.output_padding,
             qat_module.dilation,
             qat_module.groups,
             qat_module.bias is not None,
@@ -212,6 +217,7 @@ class ConvTranspose2d(Float.ConvTranspose2d, QuantizedModule):
             dtype=self.output_dtype,
             stride=self.stride,
             padding=self.padding,
+            output_padding=self.output_padding,
             dilation=self.dilation,
             groups=self.groups,
             conv_mode=self.conv_mode,
