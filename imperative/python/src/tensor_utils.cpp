@@ -555,6 +555,9 @@ py::object _astensor1d_cpp(
         c_args[flat_list.size()] = Py_None;
         py::tuple inp_tup = py::reinterpret_steal<py::tuple>(
                 convert_inputs_cpp(NULL, c_args.data(), c_args.size()));
+        if (!inp_tup) {
+            throw py::error_already_set();
+        }
         if (device_obj.is_none()) {
             std::vector<PyObject*> inp(inp_tup.size());
             for (size_t i = 0; i < inp_tup.size(); ++i) {

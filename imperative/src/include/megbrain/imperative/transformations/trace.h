@@ -265,12 +265,14 @@ public:
     using OpKind = TraceResult::SeqItem::OpKind;
 
     struct VarAccessor {
-        VarNode* node;
+        VarNode* node;  // use imperative mode when node == nullptr
         std::function<TensorShape()> shape_getter;
         std::function<DeviceTensorND()> data_getter;
         std::function<HostTensorND()> value_getter;
         std::function<void(DeviceTensorND)> data_setter;
         std::function<void(std::exception_ptr)> exc_setter;
+
+        bool is_imperative() const { return node == nullptr; }
     };
 
     class TracedValue final : public ObjectValue<TracedValue> {
@@ -281,6 +283,7 @@ public:
         mutable ShapeValue::ref_t m_shape;
         mutable DTypeValue::ref_t m_dtype;
         mutable CompNodeValue::ref_t m_comp_node;
+        mutable ValueRef m_imperative_value;
 
     public:
         TracedValue(size_t id, VarInfo* var, VarAccessor* accessor)
@@ -289,9 +292,12 @@ public:
         ShapeValue::ref_t shape() const;
         DTypeValue::ref_t dtype() const;
         CompNodeValue::ref_t comp_node() const;
+        DeviceValue::ref_t data() const;
+        HostValue::ref_t value() const;
         const VarAccessor& accessor() const;
 
         void set_exception(std::exception_ptr exc) const {
+            mgb_assert(m_accessor->exc_setter, "exc setter invalid");
             m_accessor->exc_setter(exc);
         }
 
@@ -299,7 +305,11 @@ public:
             return ssprintf("TracedValue{\"id\"=%zu}", id());
         }
 
-        void clear() override {}
+        void clear() override { m_imperative_value = {}; }
+
+        void set_imperative_value(ValueRef value) const { m_imperative_value = value; }
+
+        ValueRef get_imperative_value() const { return m_imperative_value; }
     };
 
 private:
@@ -322,15 +332,23 @@ private:
     ComputingGraph::OutputSpec m_output_spec;
     ObjectType<TracedValue> m_value_type{"TracedValue"};
     std::set<size_t> m_setted_extern;
+    bool m_imperative = false;
 
 public:
-    CompiledTransformation(TraceResult result, bool input_shape_static)
+    CompiledTransformation(TraceResult result, bool input_shape_static, bool imperative)
             : m_seq(result.seq),
               m_vars(result.vars),
-              m_input_shape_static(input_shape_static) {
+              m_input_shape_static(input_shape_static),
+              m_imperative(imperative) {
         m_graph = ComputingGraph::make();
         options().no_force_inplace = true;
         options().async_exec_level = 0b100;
+        if (!m_imperative) {
+            start_worker();
+        }
+    }
+
+    void start_worker() {
         m_graph_executor = std::thread([&] {
             while (true) {
                 std::unique_lock lock{m_mutex};
@@ -384,7 +402,7 @@ public:
      * \param id
      * \param value
      */
-    void trace_input(size_t id, ValueRef value);
+    ValueRef trace_input(size_t id, ValueRef value);
 
     /**
      * \brief make a placeholder for output.
@@ -393,7 +411,7 @@ public:
      * \return TracedValue::ref_t output placeholder, would be reset to real value when
      * trace exits
      */
-    TracedValue::ref_t trace_output(size_t id);
+    TracedValue::ref_t trace_output(size_t id, ValueRef value);
 
     TraceResult::SeqItem& next_instruction();
 
@@ -422,6 +440,8 @@ public:
 
     void wait();
 
+    void wait_worker();
+
     std::exception_ptr set_exception(std::exception_ptr exc) noexcept;
 
     template <typename T>
@@ -431,13 +451,19 @@ public:
         return box;
     }
 
-    ~CompiledTransformation() {
+    void stop_worker() {
         {
             MGB_LOCK_GUARD(m_mutex);
             m_graph_status = 2;
         }
         m_cv.notify_all();
         m_graph_executor.join();
+    }
+
+    ~CompiledTransformation() {
+        if (!m_imperative) {
+            stop_worker();
+        }
     }
 };
 

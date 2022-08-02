@@ -1201,6 +1201,8 @@ void init_tensor(py::module m) {
         bool without_host = false;
         bool check_external = true;
         bool remove_unused_data_required = true;
+        bool imperative = false;
+
         py::function options_visitor;
         std::shared_ptr<TracingTransformation> tracing;
         std::shared_ptr<CompiledTransformation> compiled;
@@ -1257,7 +1259,7 @@ void init_tensor(py::module m) {
             } else if (!self.compiled) {  // traced but not compiled
                 using namespace std::placeholders;
                 self.compiled = std::make_shared<CompiledTransformation>(
-                        *self.trace_result, self.record_input_shapes);
+                        *self.trace_result, self.record_input_shapes, self.imperative);
                 self.compiled->set_value_comparator(
                         std::bind(&Trace::compare_value, this, _1, _2));
                 self.options_visitor(py::cast(&self.compiled->options()));
@@ -1405,6 +1407,7 @@ void init_tensor(py::module m) {
             .def_readwrite("symbolic", &Trace::symbolic)
             .def_readwrite("capture_as_const", &Trace::capture_as_const)
             .def_readwrite("no_exec", &Trace::no_exec)
+            .def_readwrite("imperative", &Trace::imperative)
             .def_readwrite("options_visitor", &Trace::options_visitor)
             .def("enter", &Trace::enter)
             .def("exit", &Trace::exit)

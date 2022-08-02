@@ -510,14 +510,15 @@ def test_trace_warp_perspective():
         ("((a + b), (b + c))[1] + a", "((a + b), (b + c))[0] + a", "input id mismatch"),
     ],
 )
-def test_trace_mismatch(normal_expr, mismatch_expr, reason):
+@pytest.mark.parametrize("imperative", [True, False])
+def test_trace_mismatch(normal_expr, mismatch_expr, reason, imperative):
     a = tensor([1, 2, 3, 4])
     b = tensor([5, 6, 7, 8])
     c = tensor([9, 0, 1, 2])
 
     mismatch = False
 
-    @trace(symbolic=True)
+    @trace(symbolic=True, imperative=imperative)
     def fn(a, b, c):
         if not mismatch:
             result = eval(normal_expr)
@@ -525,7 +526,7 @@ def test_trace_mismatch(normal_expr, mismatch_expr, reason):
             result = eval(mismatch_expr)
         return result
 
-    for i in range(20):
+    for _ in range(20):
         try:
             d = fn(a, b, c)
         except TraceError as e:

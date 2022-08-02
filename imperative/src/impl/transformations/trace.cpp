@@ -2,6 +2,7 @@
 
 #include <chrono>
 #include <exception>
+#include <optional>
 
 #include "megbrain/gopt/inference.h"
 #include "megbrain/graph/helper.h"
@@ -499,11 +500,6 @@ void CompiledTransformation::compile() {
         return accessor;
     };
     std::vector<VarAccessor> var_accessors(m_vars.size());
-    auto exc_setter = std::bind(
-            &CompiledTransformation::set_exception, this, std::placeholders::_1);
-    for (auto&& accessor : var_accessors) {
-        accessor.exc_setter = exc_setter;
-    }
     for (auto&& item : m_seq) {
         bool require_link = bool(item.op) && mm_io_ops.count(item.op->dyn_typeinfo());
         VarNodeArray input_vars;
@@ -579,6 +575,12 @@ void CompiledTransformation::compile() {
             dep_iter.add(output_spec.first);
         }
     }
+    for (auto& accessor : var_accessors) {
+        accessor.exc_setter = [this](std::exception_ptr exc) { set_exception(exc); };
+        if (m_imperative) {
+            accessor.node = nullptr;
+        }
+    }
     m_executable = m_graph->compile(output_specs);
     mgb_assert(m_executable != nullptr, "The compiled executable is nullptr.");
 
@@ -601,7 +603,7 @@ void CompiledTransformation::assert_tensor_equal(ValueRef lhs, ValueRef rhs) {
     trace_assert(m_value_comparator(lhs, rhs), "tensors not equals");
 }
 
-void CompiledTransformation::trace_input(size_t id, ValueRef value) {
+ValueRef CompiledTransformation::trace_input(size_t id, ValueRef value) {
     try {
         auto& var = m_vars[id];
         auto& var_accessor = m_var_accessors[id];
@@ -626,32 +628,43 @@ void CompiledTransformation::trace_input(size_t id, ValueRef value) {
                     var_accessor.data_setter(value.dev_tensor()->as_nd());
                     m_setted_extern.insert(id);
                 }
-                break;
+                return value;
             }
             case VarKind::Constant: {
                 // expect host value here
                 mgb_assert(var.bound_data, "const var without data bound");
                 assert_tensor_equal(var.bound_data, value);
-                break;
+                // TODO: use value
+                return var.bound_data;
             }
             case VarKind::Internal: {
                 trace_assert(
                         value.is(m_value_type), "expect internal node, got external");
                 auto& traced_value = value.cast(m_value_type);
                 trace_assert(traced_value.id() == id, "input id mismatch");
-                break;
+                return traced_value.get_imperative_value();
             }
+            default:
+                trace_assert(false, "unknown var kind");
         }
     } catch (TraceError&) {
+        throw;
+    } catch (const std::exception& exc) {
+        mgb_log_error("unexpected error %s", exc.what());
         throw;
     } catch (...) {
         mgb_assert(false, "unexpected error");
     }
 }
 
-auto CompiledTransformation::trace_output(size_t id) -> TracedValue::ref_t {
+auto CompiledTransformation::trace_output(size_t id, ValueRef value)
+        -> TracedValue::ref_t {
     auto traced_value = m_value_type.make(id, &m_vars[id], &m_var_accessors[id]);
     m_weak_values.push_back(traced_value);
+    if (m_imperative) {
+        mgb_assert(value, "imperative mode requires value");
+        traced_value->set_imperative_value(value);
+    }
     return traced_value;
 }
 
@@ -663,6 +676,9 @@ TraceResult::SeqItem& CompiledTransformation::next_instruction() {
 ShapeValue::ref_t CompiledTransformation::TracedValue::shape() const {
     if (!m_shape) {
         trace_assert(m_accessor->shape_getter, "shape unreadable");
+        if (m_accessor->is_imperative()) {
+            return m_imperative_value.shape();
+        }
         m_shape = ShapeValue::make(ValueShape::from(m_accessor->shape_getter()));
     }
     return m_shape;
@@ -675,6 +691,23 @@ DTypeValue::ref_t CompiledTransformation::TracedValue::dtype() const {
 CompNodeValue::ref_t CompiledTransformation::TracedValue::comp_node() const {
     return m_var->device;
 }
+
+DeviceValue::ref_t CompiledTransformation::TracedValue::data() const {
+    trace_assert(m_accessor->data_getter, "data unreadable");
+    if (m_accessor->is_imperative()) {
+        return m_imperative_value.dev_tensor();
+    }
+    return DeviceValue::make(m_accessor->data_getter());
+}
+
+HostValue::ref_t CompiledTransformation::TracedValue::value() const {
+    trace_assert(m_accessor->value_getter, "value unreadable");
+    if (m_accessor->is_imperative()) {
+        return m_imperative_value.numpy();
+    }
+    return HostValue::make(m_accessor->value_getter());
+}
+
 auto CompiledTransformation::TracedValue::accessor() const -> const VarAccessor& {
     return *m_accessor;
 }
@@ -684,12 +717,24 @@ ValueRefList CompiledTransformation::apply_op(
     auto& item = next_instruction();
     trace_assert(inputs.size() == item.inputs.size(), "input size mismatch");
     trace_assert(apply_op.op().is_same(*item.op), "operator mismatch");
-    for (size_t i = 0; i < inputs.size(); ++i) {
-        trace_input(item.inputs[i], inputs[i]);
-    }
     ValueRefList outputs(item.outputs.size());
-    for (size_t i = 0; i < item.outputs.size(); ++i) {
-        outputs[i] = trace_output(item.outputs[i]);
+    if (!m_imperative) {
+        for (size_t i = 0; i < inputs.size(); ++i) {
+            trace_input(item.inputs[i], inputs[i]);
+        }
+        for (size_t i = 0; i < item.outputs.size(); ++i) {
+            outputs[i] = trace_output(item.outputs[i], {});
+        }
+    } else {
+        SmallVector<ValueRef> input_values;
+        for (size_t i = 0; i < inputs.size(); ++i) {
+            input_values.push_back(trace_input(item.inputs[i], inputs[i]));
+        }
+        auto&& output_values = imperative::apply(apply_op, input_values);
+        mgb_assert(output_values.size() == outputs.size());
+        for (size_t i = 0; i < item.outputs.size(); ++i) {
+            outputs[i] = trace_output(item.outputs[i], output_values[i]);
+        }
     }
     return outputs;
 }
@@ -698,24 +743,22 @@ ValueRefList CompiledTransformation::apply_get_attr(
         const GetAttr& get_attr, Span<ValueRef> inputs) {
     if (auto* traced_value = inputs[0].as(m_value_type)) {
         ValueRef output;
-        auto& var_accessor = traced_value->accessor();
         switch (get_attr.attr()) {
             case GetAttr::Shape:
                 output = traced_value->shape();
                 break;
             case GetAttr::Data:
-                trace_assert(var_accessor.data_getter, "data unreadable");
-                output = DeviceValue::make(var_accessor.data_getter());
+                output = traced_value->data();
                 break;
             case GetAttr::Value:
-                trace_assert(var_accessor.value_getter, "value unreadable");
-                output = HostValue::make(var_accessor.value_getter());
+                output = traced_value->value();
                 break;
             case GetAttr::DType:
                 output = traced_value->dtype();
                 break;
             case GetAttr::Device:
                 output = traced_value->comp_node();
+                break;
             default:
                 break;
         }
@@ -745,8 +788,7 @@ ValueRefList CompiledTransformation::apply_create_tensor(
     if (!tensor) {
         tensor = imperative::apply(create_tensor, inputs)[0];
     }
-    trace_input(input_id, tensor);
-    return {trace_output(output_id)};
+    return {trace_output(output_id, trace_input(input_id, tensor))};
 }
 
 ValueRefList CompiledTransformation::apply_transformation(
@@ -762,21 +804,21 @@ ValueRefList CompiledTransformation::apply_transformation(
         trace_assert(item.op == nullptr, "operator mismatch");
         trace_assert(item.inputs.size() == 1, "inputs size mismatch");
         trace_assert(item.outputs.size() == 1, "inputs output mismatch");
-        trace_input(item.inputs[0], inputs[0]);
+        auto value = trace_input(item.inputs[0], inputs[0]);
         trace_assert(
                 trace_mark_var->mark() == m_vars[item.outputs[0]].mark,
                 "mark mismatch");
-        return {trace_output(item.outputs[0])};
+        return {trace_output(item.outputs[0], value)};
     } else if (auto* trace_name_var = op.as<RenameValue>()) {
         auto& item = next_instruction();
         trace_assert(item.op == nullptr, "operator mismatch");
         trace_assert(item.inputs.size() == 1, "inputs size mismatch");
         trace_assert(item.outputs.size() == 1, "outputs size mismatch");
-        trace_input(item.inputs[0], inputs[0]);
+        auto value = trace_input(item.inputs[0], inputs[0]);
         trace_assert(
                 trace_name_var->name() == m_vars[item.outputs[0]].name,
                 "name mismatch");
-        return {trace_output(item.outputs[0])};
+        return {trace_output(item.outputs[0], value)};
     } else {
         return op.fallback(inputs);
     }
@@ -786,11 +828,9 @@ void CompiledTransformation::on_unregister() noexcept {
     // resolve pending values
     for (auto&& weak_value : m_weak_values) {
         if (auto traced_value = weak_value.lock()) {
-            auto& var_accessor = m_var_accessors[traced_value->id()];
             auto value = ([&]() -> ValueRef {
                 try {
-                    trace_assert(var_accessor.data_getter, "data unreadable");
-                    auto dev_value = DeviceValue::make(var_accessor.data_getter());
+                    auto dev_value = traced_value->data();
                     return imperative::apply(
                             CreateTensor(
                                     CreateTensor::Common, dev_value->device(),
@@ -821,10 +861,9 @@ void CompiledTransformation::wait() {
         trace_assert(m_pc == m_seq.size(), "mismature end");
     } catch (...) {
     }
-    mgb_assert(m_executable != nullptr);
-    std::unique_lock lock{m_mutex};
-    m_cv.wait(lock, [&] { return m_graph_status == 0; });
-    lock.unlock();
+    if (!m_imperative) {
+        wait_worker();
+    }
     for (auto&& box : m_boxes) {
         box->reset();
     }
@@ -837,6 +876,13 @@ void CompiledTransformation::wait() {
         recompile();
         std::rethrow_exception(graph_exc);
     }
+}
+
+void CompiledTransformation::wait_worker() {
+    mgb_assert(m_executable != nullptr);
+    std::unique_lock lock{m_mutex};
+    m_cv.wait(lock, [&] { return m_graph_status == 0; });
+    lock.unlock();
 }
 
 std::exception_ptr CompiledTransformation::set_exception(

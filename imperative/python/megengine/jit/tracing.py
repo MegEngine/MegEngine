@@ -112,6 +112,7 @@ class trace:
         without_host: if True, will run python code of wrapped function on the first call,
             and run the compiled graph/function on subsequent calls. if False, will run python code every time.
             Default: False
+        imperative: if True, will use imperative runtime to execute captured op seq. Default: False
     """
 
     third_party_backend = False
@@ -124,6 +125,7 @@ class trace:
     def __init__(
         self,
         function,
+        *,
         symbolic=False,
         capture_as_const=False,
         record_only=False,
@@ -134,6 +136,7 @@ class trace:
         graph_opt_config: GraphOptimizationConfig = None,
         symbolic_shape: bool = True,
         without_host: bool = False,
+        imperative: bool = False,
     ):
         self.__wrapped__ = function
         self._capture_as_const = capture_as_const or record_only
@@ -204,6 +207,7 @@ class trace:
         self._trace.symbolic = symbolic or record_only
         self._trace.capture_as_const = capture_as_const or record_only
         self._trace.no_exec = record_only
+        self._trace.imperative = imperative
         self._trace.options_visitor = apply_options
         self._trace.profile = profiling
         self._trace.array_comparator = array_comparator
