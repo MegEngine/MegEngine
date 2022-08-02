@@ -360,6 +360,10 @@ public:
             ComputingGraph& graph, const HostTensorND& val,
             const OperatorNodeConfig& config = {});
 
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
+            ComputingGraph& graph, std::shared_ptr<DeviceTensorND> val,
+            const OperatorNodeConfig& config = {});
+
     //! make from DTypeScalar; comp node must be provided in config
     MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             ComputingGraph& graph, const DTypeScalar& val,

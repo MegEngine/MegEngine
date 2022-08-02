@@ -208,7 +208,8 @@ public:
      *
      * It must be dumped with TensorWriteMethod::VALUE_SHARED
      */
-    virtual std::shared_ptr<DeviceTensorND> load_tensor_shared() = 0;
+    virtual std::shared_ptr<DeviceTensorND> load_tensor_shared(
+            bool copy_immediatly = false) = 0;
 
     //! get associated global configuration
     virtual const GraphLoadConfig& config() const = 0;

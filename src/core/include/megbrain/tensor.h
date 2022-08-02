@@ -332,6 +332,7 @@ class TensorND {
 
 public:
     using ChainReturnType = TensorND<TensorStorage>;
+    using Storage = TensorStorage;
 
     MGE_WIN_DECLSPEC_FUC TensorND();
 

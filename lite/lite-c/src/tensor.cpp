@@ -75,9 +75,6 @@ int LITE_destroy_tensor(LiteTensor tensor) {
     auto& global_holder = get_global_tensor_holder();
     if (global_holder.find(tensor) != global_holder.end()) {
         global_holder.erase(tensor);
-    } else {
-        //! return -1, means the tensor has been destroyed.
-        return -1;
     }
     LITE_CAPI_END();
 }

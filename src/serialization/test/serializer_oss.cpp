@@ -315,7 +315,7 @@ void test_serializer_custom_loader(GraphDumpFormat format) {
     load();
     load();
     ASSERT_EQ(2u, saved_val.size());
-    ASSERT_EQ(1, load_nr_null_ptr);  // immutable tensor is not shared
+    ASSERT_EQ(2, load_nr_null_ptr);  // immutable tensor is also shared
     ASSERT_EQ(4, load_nr_call);
 }
 
@@ -482,10 +482,10 @@ void test_serializer_multiple_param(GraphDumpFormat format) {
         ASSERT_THROW(loader->shared_tensor_id_map(), MegBrainError);
         loader->load();
         auto&& got = loader->shared_tensor_id_map();
-        ASSERT_EQ(values.size(), got.size());
+        ASSERT_EQ(2 * values.size(), got.size());
         for (size_t i = 0; i < values.size(); ++i) {
             ASSERT_EQ(1u, got[i].second.size());
-            auto &&vi = *values[i], &&gi = *got[i].second.begin()->second;
+            auto &&vi = *values[i], &&gi = *got[2 * i].second.begin()->second;
             ASSERT_EQ(vi.shape(), gi.shape());
             ASSERT_EQ(vi.comp_node(), gi.comp_node());
             ASSERT_EQ(vi.dtype(), gi.dtype());
@@ -565,7 +565,7 @@ void test_serializer_const_var_shape(GraphDumpFormat format) {
             }
         };
         run_and_check(config);
-        ASSERT_EQ(2, nr_tensor);
+        ASSERT_EQ(1, nr_tensor);  // immutable tensor is shared tensor
         ASSERT_EQ(1, nr_mod);
     }
 }
@@ -823,6 +823,77 @@ void test_serializer_log_exp(GraphDumpFormat format) {
     load();
 }
 
+void test_serializer_memshare(GraphDumpFormat format) {
+    std::vector<uint8_t> buf;
+    HostTensorGenerator<> gen;
+    constexpr size_t SIZE = 127;
+    auto xval = gen({SIZE}, "cpu0"), bval = gen({1}, "cpu0");
+
+    auto dump = [&]() {
+        auto graph = ComputingGraph::make();
+        auto x0 = opr::SharedDeviceTensor::make(*graph, *xval).rename("x0");
+        auto x1 = opr::SharedDeviceTensor::make(*graph, *xval).rename("x1");
+        auto x2 = opr::SharedDeviceTensor::make(*graph, *xval).rename("x2");
+        auto x3 = opr::SharedDeviceTensor::make(*graph, *xval).rename("x3");
+        auto i4 = opr::ImmutableTensor::make(*graph, *xval).rename("i4");
+        auto i5 = opr::ImmutableTensor::make(*graph, *xval).rename("i5");
+        auto b = opr::SharedDeviceTensor::make(*graph, *bval).rename("b");
+        auto dumper = GraphDumper::make(OutputFile::make_vector_proxy(&buf), format);
+        dumper->dump({((x0 + x1) + b) + (x2 + x3) + i4 + i5, x0, i4});
+    };
+
+    HostTensorND expected;
+    expected.copy_from(*xval);
+    for (size_t i = 0; i < SIZE; ++i) {
+        auto&& v = expected.ptr<float>()[i];
+        v = v * 6 + bval->ptr<float>()[0];
+    }
+
+    std::vector<uint8_t> buf_al;
+    auto load = [&](bool share) {
+        std::unique_ptr<InputFile> fin;
+        if (share) {
+            buf_al.resize(buf.size());
+            memcpy(buf_al.data(), buf.data(), buf.size());
+
+            fin = InputFile::make_mem_proxy(
+                    std::shared_ptr<void>{std::shared_ptr<void>{}, buf_al.data()},
+                    buf.size());
+        } else {
+            fin = InputFile::make_mem_proxy(buf.data(), buf.size());
+        }
+        auto loader = GraphLoader::make(std::move(fin), format);
+        auto rst = loader->load();
+        auto x = rst.output_var_map.at("x0");
+        auto i4 = rst.output_var_map.at("i4");
+        auto&& opr = x.node()->owner_opr()->cast_final_safe<opr::SharedDeviceTensor>();
+        auto&& opr_imm =
+                i4.node()->owner_opr()->cast_final_safe<opr::ImmutableTensor>();
+        HostTensorND val;
+        auto func =
+                rst.graph_compile({make_callback_copy(rst.output_var_list[0], val)});
+        func->execute();
+        return std::make_pair(
+                val, std::vector<DeviceTensorND>{*opr.dev_data(), opr_imm.value()});
+    };
+
+    auto in_range = [](const std::vector<uint8_t>& buf, DeviceTensorND& dv) {
+        auto p0 = reinterpret_cast<uint8_t*>(dv.raw_ptr()),
+             p1 = reinterpret_cast<uint8_t*>(p0 + dv.layout().span().high_byte);
+        return buf.data() <= p0 && p1 <= buf.data() + buf.size();
+    };
+
+    for (bool share : {false, true}) {
+        buf.clear();
+        dump();
+        auto get = load(share);
+        MGB_ASSERT_TENSOR_EQ(*xval, HostTensorND{}.copy_from(get.second[0]).sync());
+        MGB_ASSERT_TENSOR_EQ(expected, get.first);
+        ASSERT_EQ(share, in_range(buf_al, get.second[0]));
+        ASSERT_EQ(share, in_range(buf_al, get.second[1]));
+    }
+}
+
 }  // namespace
 
 TEST(TestSerializer2, GraphDumpLoad) {
@@ -965,6 +1036,10 @@ TEST(TestSerializer2, HasOutputDtypeV2) {
 
 TEST(TestSerializer2, LOGEXPV2) {
     test_serializer_log_exp(GraphDumpFormat::FLATBUFFERS_V2);
+}
+
+TEST(TestSerializer2, ShareMemv2) {
+    test_serializer_memshare(GraphDumpFormat::FLATBUFFERS_V2);
 }
 
 TEST(TestSerializer2, TestSoftMaxLoadDump) {

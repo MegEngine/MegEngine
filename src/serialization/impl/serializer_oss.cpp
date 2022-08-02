@@ -483,7 +483,8 @@ class GraphLoaderOSS::OprLoadContextImpl final : public OprLoadContextFlatBuffer
 
     std::shared_ptr<HostTensorND> load_tensor() override;
 
-    std::shared_ptr<DeviceTensorND> load_tensor_shared() override;
+    std::shared_ptr<DeviceTensorND> load_tensor_shared(
+            bool copy_immediatly = false) override;
 
     void load_single_opr(const fbs::Operator* opr);
 
@@ -641,8 +642,8 @@ std::shared_ptr<HostTensorND> GraphLoaderOSS::OprLoadContextImpl::load_tensor() 
     return ret;
 }
 
-std::shared_ptr<DeviceTensorND> GraphLoaderOSS::OprLoadContextImpl::
-        load_tensor_shared() {
+std::shared_ptr<DeviceTensorND> GraphLoaderOSS::OprLoadContextImpl::load_tensor_shared(
+        bool copy_immediatly) {
     mgb_assert(
             m_current_opr->tensors() &&
             m_cur_opr_tensor_cnt < m_current_opr->tensors()->size());
@@ -650,6 +651,9 @@ std::shared_ptr<DeviceTensorND> GraphLoaderOSS::OprLoadContextImpl::
     auto comp_node = load_comp_node(tensor->comp_node());
     auto layout = load_tensor_layout(tensor);
     mgb_assert(tensor->data_size());
+    if (m_loader->m_shared_tensor_map.size() <= m_cur_shared_tensor_idx) {
+        m_loader->m_shared_tensor_map.resize(m_cur_shared_tensor_idx + 5);
+    }
     auto&& sh_reg = m_loader->m_shared_tensor_map.at(m_cur_shared_tensor_idx++);
     auto&& sh_ptr_ref = sh_reg.second[comp_node.mem_node()];
     if (sh_ptr_ref) {
@@ -673,6 +677,11 @@ std::shared_ptr<DeviceTensorND> GraphLoaderOSS::OprLoadContextImpl::
         load_tensor_value(&hv, layout, tensor);
         sh_ptr_ref = std::make_shared<DeviceTensorND>();
         *sh_ptr_ref = DeviceTensorND::make_proxy(hv);
+    } else if (copy_immediatly) {
+        HostTensorND hv{CompNode::default_cpu()};
+        load_tensor_value(&hv, layout, tensor);
+        sh_ptr_ref = std::make_shared<DeviceTensorND>();
+        sh_ptr_ref->comp_node(comp_node).copy_from(hv).sync();
     } else {
         // use lazy load for non-CPU devices
         HostTensorND hv{CompNode::default_cpu()};
@@ -803,7 +812,7 @@ GraphLoader::LoadResult GraphLoaderOSS::OprLoadContextImpl::load_oprs() {
         ret.output_var_map_id[out->original_id()] = var;
         ret.output_var_list[i] = var;
     }
-    mgb_assert(m_cur_shared_tensor_idx == m_loader->m_shared_tensor_map.size());
+    mgb_assert(m_cur_shared_tensor_idx <= m_loader->m_shared_tensor_map.size());
     return ret;
 }
 
@@ -880,7 +889,7 @@ GraphLoader::LoadResult GraphLoaderOSS::load(const LoadConfig& config, bool rewi
     if (m_shared_tensor_map.empty()) {
         m_shared_tensor_map.resize(m_graph->nr_shared_tensor());
     } else {
-        mgb_assert(m_shared_tensor_map.size() == m_graph->nr_shared_tensor());
+        mgb_assert(m_shared_tensor_map.size() >= m_graph->nr_shared_tensor());
     }
 
     OprLoadContextImpl ctx{this, m_graph->mgb_version()};

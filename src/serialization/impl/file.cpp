@@ -138,6 +138,10 @@ public:
         mgb_assert(m_refhold && size);
     }
 
+    bool is_shared_memory() override { return true; }
+    bool writable() override { return m_writable; }
+    void have_modified() override { m_modified = true; }
+
     void rewind() override {
         if (m_modified) {
             // data has beem modified; can not read again

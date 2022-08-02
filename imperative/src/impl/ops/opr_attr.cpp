@@ -25,7 +25,11 @@ class OprParamsLoadContext final : public serialization::OprLoadContextRawPOD {
 
     std::shared_ptr<HostTensorND> load_tensor() override { mgb_assert(0); }
 
-    std::shared_ptr<DeviceTensorND> load_tensor_shared() override { mgb_assert(0); }
+    std::shared_ptr<DeviceTensorND> load_tensor_shared(
+            bool copy_immediatly = false) override {
+        (void)copy_immediatly;
+        mgb_assert(0);
+    }
 
     const serialization::GraphLoadConfig& config() const override { mgb_assert(0); }
 

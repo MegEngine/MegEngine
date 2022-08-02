@@ -443,38 +443,41 @@ void run<shape_dep_const_shape>(CompNode cn) {
     HostTensorGenerator<> gen;
     auto host_x = gen({4, 5}, cn);
     auto fname = output_file("test_comp_node_record_shape_dep_const_shape");
+    auto test = [&](serialization::GraphDumpFormat format) {
+        HostTensorND y_expect;
+        {
+            // dump graph
+            auto graph = ComputingGraph::make();
+            auto x = opr::Host2DeviceCopy::make(
+                         *graph, host_x, OperatorNodeConfig{"x"}),
+                 y = x.flatten() +
+                     opr::reduce_sum(opr::GetVarShape::make(x), x.make_scalar(1));
 
-    HostTensorND y_expect;
-    {
-        // dump graph
-        auto graph = ComputingGraph::make();
-        auto x = opr::Host2DeviceCopy::make(*graph, host_x, OperatorNodeConfig{"x"}),
-             y = x.flatten() +
-                 opr::reduce_sum(opr::GetVarShape::make(x), x.make_scalar(1));
+            graph->compile({make_callback_copy(y, y_expect)})->execute();
 
-        graph->compile({make_callback_copy(y, y_expect)})->execute();
+            auto dumper = GraphDumper::make(OutputFile::make_fs(fname.c_str()), format);
+            dumper->dump({y});
+        }
 
-        auto dumper = GraphDumper::make(OutputFile::make_fs(fname.c_str()));
-        dumper->dump({y});
-    }
+        HostTensorND host_y;
+        {
+            GraphLoadConfig config;
+            config.const_var_shape = true;
+            auto loader = GraphLoader::make(InputFile::make_fs(fname.c_str()), format);
+            auto load_rst = loader->load(config);
+            load_rst.graph->options().comp_node_seq_record_level = 2;
+            load_rst.graph->options().var_sanity_check_first_run = false;
+            auto x_inp = load_rst.tensor_map.at("x");
+            auto y = load_rst.output_var_list.at(0);
+            auto func = load_rst.graph_compile({make_callback_copy(y, host_y)});
 
-    HostTensorND host_y;
-    {
-        GraphLoadConfig config;
-        config.const_var_shape = true;
-        auto loader = GraphLoader::make(InputFile::make_fs(fname.c_str()));
-        auto load_rst = loader->load(config);
-        load_rst.graph->options().comp_node_seq_record_level = 2;
-        load_rst.graph->options().var_sanity_check_first_run = false;
-        auto x_inp = load_rst.tensor_map.at("x");
-        auto y = load_rst.output_var_list.at(0);
-        auto func = load_rst.graph_compile({make_callback_copy(y, host_y)});
-
-        x_inp->copy_from(*host_x);
-        func->execute();
-    }
-
-    MGB_ASSERT_TENSOR_EQ(y_expect, host_y);
+            x_inp->copy_from(*host_x);
+            func->execute();
+        }
+        MGB_ASSERT_TENSOR_EQ(y_expect, host_y);
+    };
+    test({});
+    test(serialization::GraphDumpFormat::FLATBUFFERS_V2);
 }
 
 //! single thread multi recorder run interleave

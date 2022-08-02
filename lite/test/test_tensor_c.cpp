@@ -328,7 +328,7 @@ TEST(TestCapiTensor, GlobalHolder) {
     LITE_make_tensor(description, &c_tensor0);
     //! make sure destroy_tensor is destroyed by LITE_make_tensor
     LITE_destroy_tensor(destroy_tensor);
-    ASSERT_EQ(LITE_destroy_tensor(destroy_tensor), -1);
+    ASSERT_EQ(LITE_destroy_tensor(destroy_tensor), 0);
     LITE_destroy_tensor(c_tensor0);
 }
 

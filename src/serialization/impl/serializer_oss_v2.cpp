@@ -1,5 +1,6 @@
 #if MGB_ENABLE_FBS_SERIALIZATION
 
+#include <map>
 #include "megbrain/comp_node_env.h"
 #include "megbrain/opr/io.h"
 #include "megbrain/serialization/helper.h"
@@ -523,6 +524,77 @@ void GraphDumperOSSV2::dump_buf_with_len(const void* data, uint32_t size) {
 }
 
 // ----------------------------- Loader --------------------------------------
+
+/**
+ * SharedTensorAlignMent will record all shared device tensors, at beginning, the
+ * tensor is not aligned, after all shared device tensor loaded, and the user
+ * provide memory will be wrote, and reorder all the tensor to aligned address
+ * ptr.
+ */
+class GraphLoaderOSSV2::SharedTensorAlignMent {
+public:
+    SharedTensorAlignMent(SharedBuffer buffer, InputFile* file, bool is_enabled)
+            : m_enabled(is_enabled), m_file(file), m_model_buffer(buffer){};
+
+    bool add_device_tensor(std::shared_ptr<DeviceTensorND> tensor) {
+        if (!m_enabled)
+            return false;
+        if (tensor) {
+            m_device_tensors[reinterpret_cast<intptr_t>(tensor->raw_ptr())] = tensor;
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * record the tensor shared from the m_model_buffer, copy every tensor to
+     * the aligned address, then the model file will be modilfied, so it can't
+     * use again.
+     */
+    bool reorder_and_align_tensor() {
+        if (!m_enabled)
+            return false;
+        bool modilfied = false;
+        intptr_t buffer_start = reinterpret_cast<intptr_t>(m_model_buffer.data());
+        intptr_t write_end = buffer_start;
+        for (auto& iter : m_device_tensors) {
+            auto& tensor = iter.second;
+            size_t tensor_size = tensor->layout().span().dist_byte();
+            size_t alignment = tensor->comp_node().get_mem_addr_alignment();
+            intptr_t tensor_start = reinterpret_cast<intptr_t>(tensor->raw_ptr());
+            intptr_t align_start = static_cast<intptr_t>(
+                    reinterpret_cast<uintptr_t>(tensor->raw_ptr()) & ~(alignment - 1));
+            if (align_start > write_end) {
+                if (tensor_start != align_start) {
+                    memmove(reinterpret_cast<void*>(align_start),
+                            reinterpret_cast<void*>(tensor_start), tensor_size);
+                    modilfied = true;
+                }
+                write_end = align_start + tensor_size;
+                DeviceTensorStorage storage;
+                auto raw_storage = std::shared_ptr<mgb::dt_byte>(
+                        reinterpret_cast<mgb::dt_byte*>(align_start), [](void*) {});
+                storage.reset(tensor->comp_node(), tensor_size, raw_storage);
+                tensor->reset(storage, tensor->layout());
+            } else {
+                DeviceTensorND new_tensor(tensor->comp_node());
+                new_tensor.copy_from(*tensor).sync();
+                *tensor = new_tensor;
+            }
+            if (modilfied) {
+                m_file->have_modified();
+            }
+        }
+        return true;
+    }
+
+private:
+    bool m_enabled = false;
+    InputFile* m_file;
+    SharedBuffer m_model_buffer;
+    std::map<intptr_t, std::shared_ptr<DeviceTensorND>> m_device_tensors;
+};
+
 CompNode GraphLoaderOSSV2::OprLoadContextImpl::load_comp_node(
         const fbs::v2::CompNode* comp_node) {
     mgb_assert(comp_node);
@@ -596,7 +668,9 @@ std::shared_ptr<HostTensorND> GraphLoaderOSSV2::OprLoadContextImpl::load_tensor(
                     "serialization v2 format is pure flatbuffer format, not support "
                     "user tensor value loader callback.");
         }
-        memcpy(ret->raw_ptr(), tensor->data()->data(), tensor->data()->size());
+        fill_tensor_memory(
+                *ret, tensor->data()->data(), tensor->data()->size(),
+                m_loader->m_file->is_shared_memory());
     }
     if (tensor->name()) {
         m_tensor_map[tensor->name()->str()] = ret;
@@ -612,7 +686,7 @@ std::shared_ptr<HostTensorND> GraphLoaderOSSV2::OprLoadContextImpl::load_tensor(
 }
 
 std::shared_ptr<DeviceTensorND> GraphLoaderOSSV2::OprLoadContextImpl::
-        load_tensor_shared() {
+        load_tensor_shared(bool copy_immediatly) {
     mgb_assert(
             m_current_opr->tensors() &&
             m_cur_opr_tensor_cnt < m_current_opr->tensors()->size());
@@ -620,6 +694,9 @@ std::shared_ptr<DeviceTensorND> GraphLoaderOSSV2::OprLoadContextImpl::
     auto comp_node = load_comp_node(tensor->comp_node());
     auto layout = load_tensor_layout(tensor, comp_node);
     mgb_assert(tensor->data());
+    if (m_loader->m_shared_tensor_map.size() <= m_cur_shared_tensor_idx) {
+        m_loader->m_shared_tensor_map.resize(m_cur_shared_tensor_idx + 5);
+    }
     auto&& shared_pair = m_loader->m_shared_tensor_map.at(m_cur_shared_tensor_idx++);
     auto&& shared_tensor_ref = shared_pair.second[comp_node.mem_node()];
     if (shared_tensor_ref) {
@@ -637,19 +714,34 @@ std::shared_ptr<DeviceTensorND> GraphLoaderOSSV2::OprLoadContextImpl::
 
     if (comp_node.mem_node() == CompNode::default_cpu().mem_node()) {
         // directly forward CPU memory
+        shared_tensor_ref = std::make_shared<DeviceTensorND>();
         HostTensorND hv{comp_node};
         if (tensor->data() && tensor->data()->size() > 0) {
             hv.dtype(layout.dtype).resize(layout);
-            memcpy(hv.raw_ptr(), tensor->data()->data(), tensor->data()->size());
+            fill_tensor_memory(
+                    hv, tensor->data()->data(), tensor->data()->size(),
+                    m_loader->m_file->is_shared_memory());
         }
-        shared_tensor_ref = std::make_shared<DeviceTensorND>();
         *shared_tensor_ref = DeviceTensorND::make_proxy(hv);
+        m_tensor_alignment->add_device_tensor(shared_tensor_ref);
+    } else if (copy_immediatly) {
+        HostTensorND hv{CompNode::default_cpu()};
+        shared_tensor_ref = std::make_shared<DeviceTensorND>();
+        if (tensor->data() && tensor->data()->size() > 0) {
+            hv.dtype(layout.dtype).resize(layout);
+            fill_tensor_memory(
+                    hv, tensor->data()->data(), tensor->data()->size(),
+                    m_loader->m_file->is_shared_memory());
+        }
+        shared_tensor_ref->comp_node(comp_node).copy_from(hv).sync();
     } else {
         // use lazy load for non-CPU devices
         HostTensorND hv{CompNode::default_cpu()};
         if (tensor->data() && tensor->data()->size() > 0) {
             hv.dtype(layout.dtype).resize(layout);
-            memcpy(hv.raw_ptr(), tensor->data()->data(), tensor->data()->size());
+            fill_tensor_memory(
+                    hv, tensor->data()->data(), tensor->data()->size(),
+                    m_loader->m_file->is_shared_memory());
         }
         shared_tensor_ref = m_device_value_loader.make(comp_node, std::move(hv));
     }
@@ -784,7 +876,7 @@ GraphLoader::LoadResult GraphLoaderOSSV2::OprLoadContextImpl::load_oprs() {
         ret.output_var_map_id[out->original_id()] = var;
         ret.output_var_list[i] = var;
     }
-    mgb_assert(m_cur_shared_tensor_idx == m_loader->m_shared_tensor_map.size());
+    mgb_assert(m_cur_shared_tensor_idx <= m_loader->m_shared_tensor_map.size());
     return ret;
 }
 
@@ -808,7 +900,6 @@ GraphLoader::LoadResult GraphLoaderOSSV2::load(const LoadConfig& config, bool re
     m_file->read(&size, sizeof(size));
     m_file->skip(-sizeof(size));
     m_model_buf = m_file->read_shared(size + sizeof(size));
-
     {
         flatbuffers::Verifier verifier(
                 static_cast<const uint8_t*>(m_model_buf.data()), m_model_buf.size());
@@ -838,8 +929,10 @@ GraphLoader::LoadResult GraphLoaderOSSV2::load(const LoadConfig& config, bool re
     } else {
         mgb_assert(m_shared_tensor_map.size() == m_model->nr_shared_tensor());
     }
-
-    OprLoadContextImpl ctx{this, m_model->mge_version()};
+    SharedTensorAlignMent tensor_alignment(
+            m_model_buf, m_file.get(),
+            m_file->writable() && m_file->is_shared_memory());
+    OprLoadContextImpl ctx{this, &tensor_alignment, m_model->mge_version()};
     ctx.load_middle_tensor();
     auto metadata = ctx.load_metadata();
     auto result = ctx.load_oprs();
@@ -856,6 +949,7 @@ GraphLoader::LoadResult GraphLoaderOSSV2::load(const LoadConfig& config, bool re
         }
     }
     m_model_loaded = true;
+    tensor_alignment.reorder_and_align_tensor();
     result.graph_compile_ahead();
     return result;
 }

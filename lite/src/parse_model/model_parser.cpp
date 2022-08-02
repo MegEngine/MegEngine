@@ -128,7 +128,10 @@ std::shared_ptr<void> ModelParser::decrypt_memory(
     const uint8_t* memory_ptr = data;
     if (decryption_name == "NONE") {
         result_length = length;
-        return std::shared_ptr<void>(const_cast<uint8_t*>(memory_ptr), [](void*) {});
+        std::shared_ptr<uint8_t> shptr{
+                new uint8_t[length], [](uint8_t* p) { delete[] p; }};
+        memcpy(shptr.get(), data, length);
+        return shptr;
     }
     LITE_LOCK_GUARD(decryption_static_data().map_mutex);
     auto it = decryption_static_data().decryption_methods.find(decryption_name);

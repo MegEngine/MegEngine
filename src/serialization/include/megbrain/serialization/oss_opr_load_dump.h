@@ -104,6 +104,7 @@ class GraphLoaderOSSV2 final : public GraphLoader {
 
 public:
     class OprLoadContextImpl;
+    class SharedTensorAlignMent;
     friend class OprLoadContextImpl;
 
     GraphLoaderOSSV2(std::unique_ptr<InputFile> input_file)
@@ -136,22 +137,51 @@ class GraphLoaderOSSV2::OprLoadContextImpl final : public OprLoadContextFlatBuff
     size_t m_cur_opr_tensor_cnt;
     size_t m_cur_opr_blob_cnt;
     size_t m_cur_opr_param_cnt;
+    SharedTensorAlignMent* m_tensor_alignment;
 
 public:
+    friend class SharedTensorAlignMent;
+
     ComputingGraph& graph() override { return *m_graph; }
 
     const GraphLoadConfig& config() const override {
         return *m_loader->m_cur_load_config;
     }
 
+    //! shared or copy the loaded flatbuffer memory to the CPU tensor, this can reduce
+    //! the memory used when load model, but should consider the memory
+    //! alignment
+    void fill_tensor_memory(
+            HostTensorND& tensor, const uint8_t* data, size_t size, bool shared) {
+        auto tensor_size = tensor.layout().span().high_byte;
+        mgb_assert(
+                size == tensor_size,
+                "the size is not match when shared the flatbuffer memory\n");
+        auto ptr = reinterpret_cast<void*>(const_cast<uint8_t*>(data));
+        if (shared) {
+            HostTensorStorage storage;
+            auto raw_storage = std::shared_ptr<mgb::dt_byte>(
+                    static_cast<mgb::dt_byte*>(ptr), [](void*) {});
+            storage.reset(tensor.comp_node(), size, raw_storage);
+            tensor.reset(storage, tensor.layout());
+        } else {
+            memcpy(tensor.raw_ptr(), data, size);
+        }
+    }
+
     std::shared_ptr<HostTensorND> load_tensor() override;
 
-    std::shared_ptr<DeviceTensorND> load_tensor_shared() override;
+    std::shared_ptr<DeviceTensorND> load_tensor_shared(
+            bool copy_immediatly = false) override;
 
     void load_single_opr(const fbs::v2::Operator* opr);
 
-    OprLoadContextImpl(GraphLoaderOSSV2* loader, uint32_t version)
-            : OprLoadContextFlatBuffers(version), m_loader{loader} {
+    OprLoadContextImpl(
+            GraphLoaderOSSV2* loader, SharedTensorAlignMent* tensor_alignment,
+            uint32_t version)
+            : OprLoadContextFlatBuffers(version),
+              m_loader{loader},
+              m_tensor_alignment(tensor_alignment) {
         m_graph = loader->m_cur_load_config->comp_graph;
         if (!m_graph) {
             m_graph = ComputingGraph::make();

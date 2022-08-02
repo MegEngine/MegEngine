@@ -32,8 +32,10 @@ struct OprLoadDumpImplV2<opr::ImmutableTensor, 0> {
         auto fopr = reinterpret_cast<const fbs::v2::Operator*>(
                 fbs_ctx.get_current_opr_data());
         if (fopr->tensors() && fopr->tensors()->size() > 0) {
-            auto val = fbs_ctx.load_tensor();
-            return Opr::make(fbs_ctx.graph(), *val, config).node()->owner_opr();
+            //! because ImmutableTensor will used in infer shape or infer value,
+            //! so must copy immediatly
+            auto val = fbs_ctx.load_tensor_shared(true);
+            return Opr::make(fbs_ctx.graph(), val, config).node()->owner_opr();
         } else {
             mgb_throw(SerializationError, "ImmutableTensor load with no tensor data.");
         }

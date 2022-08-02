@@ -367,16 +367,19 @@ MGB_DYN_TYPE_OBJ_FINAL_IMPL(ImmutableTensor);
 
 class ImmutableTensor::Value {
     MGB_MUTEX m_mtx;
-    DeviceTensorND m_dev, m_static_infer;
+    std::shared_ptr<DeviceTensorND> m_dev = std::make_shared<DeviceTensorND>();
+    DeviceTensorND m_static_infer;
     std::string m_summary;
 
 public:
     void setup(CompNode cn, const HostTensorND& val);
 
-    bool initialized() const { return m_dev.shape_valid(); }
+    void setup(std::shared_ptr<DeviceTensorND> val);
+
+    bool initialized() const { return m_dev->shape_valid(); }
 
     //! value on comp node
-    const DeviceTensorND& dev() const { return m_dev; }
+    const DeviceTensorND& dev() const { return *m_dev; }
 
     //! get value on static infer CPU node
     DeviceTensorND& static_infer();
@@ -385,10 +388,17 @@ public:
     const std::string& summary() const { return m_summary; }
 };
 
+void ImmutableTensor::Value::setup(std::shared_ptr<DeviceTensorND> val) {
+    mgb_assert(val);
+    m_dev = val;
+    m_summary = ssprintf("const%s", val->shape().to_string().c_str());
+}
+
 void ImmutableTensor::Value::setup(CompNode cn, const HostTensorND& val) {
-    mgb_assert(m_dev.empty() && !m_dev.shape_valid());
-    m_dev.comp_node(cn).copy_from(val).sync();
-    mgb_assert(val.empty() == m_dev.empty());
+    mgb_assert(m_dev->empty() && !m_dev->shape_valid());
+
+    m_dev->comp_node(cn).copy_from(val).sync();
+    mgb_assert(val.empty() == m_dev->empty());
 
     auto one_elem = [](const TensorShape& shape) {
         for (size_t i = 0; i < shape.ndim; ++i) {
@@ -413,8 +423,8 @@ void ImmutableTensor::Value::setup(CompNode cn, const HostTensorND& val) {
 DeviceTensorND& ImmutableTensor::Value::static_infer() {
     MGB_LOCK_GUARD(m_mtx);
     if (!m_static_infer.shape_valid()) {
-        mgb_assert(m_dev.shape_valid());
-        m_static_infer.comp_node(CompNode::default_cpu()).copy_from(m_dev);
+        mgb_assert(m_dev->shape_valid());
+        m_static_infer.comp_node(CompNode::default_cpu()).copy_from(*m_dev);
     }
     return m_static_infer;
 }
@@ -586,6 +596,19 @@ SymbolVar ImmutableTensor::make(
 
     auto&& cache = DevValueCache::inst(cn);
     return make_from_value(graph, cache.get(val), {}, config);
+}
+
+SymbolVar ImmutableTensor::make(
+        ComputingGraph& graph, std::shared_ptr<DeviceTensorND> val,
+        const OperatorNodeConfig& config) {
+    auto cn = val->comp_node();
+    if (config.has_comp_node_set())
+        cn = config.get_single_comp_node();
+
+    auto value = std::make_shared<Value>();
+    value->setup(val);
+
+    return make_from_value(graph, *value, value, config);
 }
 
 SymbolVar ImmutableTensor::make(

@@ -132,8 +132,10 @@ struct OprLoadDumpImpl<opr::ImmutableTensor, 0> {
             OprLoadContext& ctx, const cg::VarNodeArray& inputs,
             const OperatorNodeConfig& config) {
         mgb_assert(inputs.empty());
-        auto val = ctx.load_tensor();
-        return Opr::make(ctx.graph(), *val, config).node()->owner_opr();
+        //! because ImmutableTensor will used in infer shape or infer value,
+        //! so must copy immediatly
+        auto val = ctx.load_tensor_shared(true);
+        return Opr::make(ctx.graph(), val, config).node()->owner_opr();
     }
 };
 

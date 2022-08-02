@@ -16,26 +16,8 @@ void ModelLite::create_network() {
 }
 
 void ModelLite::load_model() {
-    if (share_model_mem) {
-        //! WARNNING:maybe not right to share param memmory for this
-        LITE_LOG("enable share model memory");
-
-        FILE* fin = fopen(model_path.c_str(), "rb");
-        LITE_ASSERT(fin, "failed to open %s: %s", model_path.c_str(), strerror(errno));
-        fseek(fin, 0, SEEK_END);
-        size_t size = ftell(fin);
-        fseek(fin, 0, SEEK_SET);
-
-        void* ptr = malloc(size);
-        std::shared_ptr<void> buf{ptr, free};
-        auto nr = fread(buf.get(), 1, size, fin);
-        LITE_ASSERT(nr == size, "read model file failed");
-        fclose(fin);
-
-        m_network->load_model(buf.get(), size);
-    } else {
-        m_network->load_model(model_path);
-    }
+    //! lite shared memory default
+    m_network->load_model(model_path);
 }
 
 void ModelLite::run_model() {

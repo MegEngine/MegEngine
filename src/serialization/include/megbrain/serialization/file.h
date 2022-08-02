@@ -41,6 +41,15 @@ public:
     //! return current read offset
     virtual size_t tell() = 0;
 
+    //! whether this file format support share memory when load model
+    virtual bool is_shared_memory() { return false; }
+
+    //! whether this can be write
+    virtual bool writable() { return false; }
+
+    //! whether this file have been wrote
+    virtual void have_modified() {}
+
     /*!
      * \brief read into a host tensor
      *

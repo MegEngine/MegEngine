@@ -245,9 +245,6 @@ int LITE_destroy_network(LiteNetwork network) {
     auto& global_holder = get_gloabl_network_holder();
     if (global_holder.find(network) != global_holder.end()) {
         global_holder.erase(network);
-    } else {
-        //! means the network has been destoryed
-        return -1;
     }
     LITE_CAPI_END();
 }

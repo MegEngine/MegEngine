@@ -1032,7 +1032,7 @@ TEST(TestCapiNetWork, GlobalHolder) {
             LITE_make_network(&c_network, *default_config(), *default_network_io()));
     //! make sure destroy_network is destroyed by LITE_make_network
     LITE_destroy_network(destroy_network);
-    ASSERT_EQ(LITE_destroy_network(destroy_network), -1);
+    ASSERT_EQ(LITE_destroy_network(destroy_network), 0);
     LITE_CAPI_CHECK(LITE_destroy_network(c_network));
 }
 
