@@ -87,8 +87,8 @@ TEST(TestAsyncWorker, AsyncWorkerSetException) {
             std::this_thread::sleep_for(100ms);
         });
 
-        timer.reset();
         worker_set.start();
+        timer.reset();
         ASSERT_THROW(worker_set.wait_all(), std::runtime_error);
         ASSERT_LT(timer.get_msecs(), 100);
     }
