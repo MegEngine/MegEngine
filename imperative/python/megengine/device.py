@@ -14,6 +14,9 @@ from .core._imperative_rt.utils import _try_coalesce_all_free_memory
 
 __all__ = [
     "is_cuda_available",
+    "is_cambricon_available",
+    "is_atlas_available",
+    "is_rocm_available",
     "get_device_count",
     "get_default_device",
     "set_default_device",
@@ -30,7 +33,6 @@ __all__ = [
     "reset_max_memory_stats",
     "set_prealloc_config",
     "coalesce_free_memory",
-    "DeviceType",
 ]
 
 
@@ -252,6 +254,7 @@ def set_prealloc_config(
 
 
 def what_is_xpu():
+    r"""Return the precise device type like ``cpu``, ``cuda`` and so on."""
     return _what_is_xpu().name.lower()
 
 
