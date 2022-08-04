@@ -530,11 +530,23 @@ py::object _astensor1d_cpp(
         return get_res_by_refhdl(value, dtype, device, ref);
     }
     if (lis.size() > 1) {
-        std::vector<PyObject*> c_args(lis.size() + 1);
-        for (size_t i = 0; i < lis.size(); ++i) {
-            c_args[i] = lis[i].ptr();
+        py::list flat_list;
+        for (auto item : lis) {
+            if (!PyList_Check(item.ptr())) {
+                flat_list.append(item);
+            } else {
+                py::list sub_lis =
+                        py::reinterpret_steal<py::list>(PySequence_List(item.ptr()));
+                for (auto sub_item : sub_lis) {
+                    flat_list.append(sub_item);
+                }
+            }
         }
-        c_args[lis.size()] = Py_None;
+        std::vector<PyObject*> c_args(flat_list.size() + 1);
+        for (size_t i = 0; i < flat_list.size(); ++i) {
+            c_args[i] = flat_list[i].ptr();
+        }
+        c_args[flat_list.size()] = Py_None;
         py::tuple inp_tup = py::reinterpret_steal<py::tuple>(
                 convert_inputs_cpp(NULL, c_args.data(), c_args.size()));
         if (device_obj.is_none()) {

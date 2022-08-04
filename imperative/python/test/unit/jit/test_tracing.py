@@ -161,6 +161,18 @@ def test_elemwise_fuse_in_grad(trace_mode):
         y.numpy()
 
 
+def test_repeat_in_trace():
+    @trace(symbolic=False)
+    def fun(data, repeats):
+        F.repeat(data, repeats)
+
+    data = tensor(np.random.random([1, 2, 3]).astype(np.float32))
+
+    for i in range(1, 5):
+        repeats = tensor(i)
+        fun(data, repeats)
+
+
 def test_print_in_trace():
     for symbolic in [False]:  # cannot read value in symbolic mode
 
