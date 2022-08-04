@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include <string.h>
 #include <memory>
+#include "test_common.h"
 #include "test_options.h"
 
 using namespace lar;

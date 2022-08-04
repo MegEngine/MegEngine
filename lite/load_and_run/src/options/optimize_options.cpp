@@ -299,6 +299,75 @@ void FuseConvBiasElemwiseAddOption::config_model(
     CONFIG_MODEL_FUN;
 }
 
+///////////////////////// optimize for inference options ///////////////
+bool OptimizeForInferenceOption::m_valid;
+namespace lar {
+template <>
+void OptimizeForInferenceOption::config_model_internel<ModelLite>(
+        RuntimeParam& runtime_param, std::shared_ptr<ModelLite> model) {
+    LITE_MARK_USED_VAR(model);
+    if (runtime_param.stage == RunStage::BEFORE_MODEL_LOAD) {
+        auto optimize_for_infer =
+                std::static_pointer_cast<lar::Bool>(m_option["optimize_for_inference"])
+                        ->get_value();
+        if (optimize_for_infer) {
+            LITE_THROW(
+                    "optimize for inference not supported in lite "
+                    "model");
+        }
+    }
+}
+
+template <>
+void OptimizeForInferenceOption::config_model_internel<ModelMdl>(
+        RuntimeParam& runtime_param, std::shared_ptr<ModelMdl> model) {
+    if (runtime_param.stage == RunStage::AFTER_MODEL_LOAD) {
+        auto optimize_for_infer =
+                std::static_pointer_cast<lar::Bool>(m_option["optimize_for_inference"])
+                        ->get_value();
+        if (optimize_for_infer) {
+            mgb_log("enable optimize for inference optimization");
+            auto&& load_result = model->get_mdl_load_result();
+            mgb::cg::GraphCommonOptimizeOptions opt =
+                    model->get_mdl_load_result().graph->options().graph_opt;
+            auto inference_opt2 = mgb::gopt::OptimizeForInferenceOptions(opt);
+            auto output_var_list = mgb::gopt::optimize_for_inference(
+                    load_result.output_var_list, inference_opt2);
+            model->get_mdl_load_result().update_output_var_list(output_var_list);
+            model->get_mdl_load_result().graph->options().graph_opt.clear();
+        }
+    }
+}
+}  // namespace lar
+
+void OptimizeForInferenceOption::update() {
+    m_option_name = "optimize_for_inference";
+    m_option = {{"optimize_for_inference", lar::Bool::make(false)}};
+    std::static_pointer_cast<lar::Bool>(m_option["optimize_for_inference"])
+            ->set_value(FLAGS_optimize_for_inference);
+}
+
+bool OptimizeForInferenceOption::is_valid() {
+    bool ret = FLAGS_optimize_for_inference;
+    return ret || m_valid;
+}
+
+std::shared_ptr<OptionBase> OptimizeForInferenceOption::create_option() {
+    static std::shared_ptr<OptimizeForInferenceOption> option(
+            new OptimizeForInferenceOption);
+    if (OptimizeForInferenceOption::is_valid()) {
+        option->update();
+        return option;
+    } else {
+        return nullptr;
+    }
+}
+
+void OptimizeForInferenceOption::config_model(
+        RuntimeParam& runtime_param, std::shared_ptr<ModelBase> model) {
+    CONFIG_MODEL_FUN;
+}
+
 ///////////////////////// graph retrict options /////////////////////////
 bool GraphRecordOption::m_valid;
 namespace lar {
@@ -646,6 +715,9 @@ DEFINE_bool(
         enable_fuse_conv_bias_with_z, false,
         "fuse conv, bias (elemwise add), z(elemwise add) into one opr "
         "(only support on GPU)");
+DEFINE_bool(
+        optimize_for_inference, false,
+        "whether to optimize_for_inference, fuse bn and many base optimize");
 
 ///////////////////////// graph retrict options /////////////////////////
 DEFINE_bool(
@@ -698,6 +770,11 @@ REGIST_OPTION_CREATOR(
         fuse_conv_bias_nonlinearity, lar::FuseConvBiasNonlinearOption::create_option);
 REGIST_OPTION_VALIDATER(
         fuse_conv_bias_nonlinearity, lar::FuseConvBiasNonlinearOption::set_valid);
+
+REGIST_OPTION_CREATOR(
+        optimize_for_inference, lar::OptimizeForInferenceOption::create_option);
+REGIST_OPTION_VALIDATER(
+        optimize_for_inference, lar::OptimizeForInferenceOption::set_valid);
 
 REGIST_OPTION_CREATOR(
         fuse_conv_bias_with_z, lar::FuseConvBiasElemwiseAddOption::create_option);

@@ -312,6 +312,9 @@ public:
 };
 
 struct OptimizeForInferenceOptions : cg::GraphCommonOptimizeOptions {
+    OptimizeForInferenceOptions() = default;
+    OptimizeForInferenceOptions(const cg::GraphCommonOptimizeOptions& opt)
+            : cg::GraphCommonOptimizeOptions(opt){};
     uint64_t serialize() {
         uint64_t ret = 0;
         ret |= (uint64_t)layout_transform << 32;

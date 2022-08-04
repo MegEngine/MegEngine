@@ -109,6 +109,16 @@ struct GraphCommonOptimizeOptions {
                      ///< support on Nvidia GPU
     };
     LayoutTransform layout_transform = LayoutTransform::DEFAULT;
+    void clear() {
+        f16_io_f32_comp = false;
+        f16_io_comp = false;
+        fuse_conv_bias_nonlinearity = false;
+        fuse_conv_bias_with_z = false;
+        weight_preprocess = false;
+        fuse_preprocess = false;
+        fuse_grain = false;
+        layout_transform = LayoutTransform::DEFAULT;
+    }
 
 #define SET(n)                                  \
     GraphCommonOptimizeOptions& enable_##n() {  \

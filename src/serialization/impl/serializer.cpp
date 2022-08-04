@@ -17,6 +17,25 @@ std::unique_ptr<cg::AsyncExecutable> GraphLoader::LoadResult::graph_compile(
     return ret;
 }
 
+void GraphLoader::LoadResult::update_output_var_list(
+        const SymbolVarArray& output_var_array) {
+    mgb::ThinHashMap<mgb::SymbolVar, mgb::SymbolVar> out_var_map;
+    mgb_assert(output_var_array.size() == output_var_list.size());
+    // replace symvar in output_var_list
+    for (size_t idx = 0; idx < output_var_array.size(); ++idx) {
+        out_var_map[output_var_list[idx]] = output_var_array[idx];
+        output_var_list[idx] = output_var_array[idx];
+    }
+    // replace symvar in output_var_map_id
+    for (auto&& item : output_var_map_id) {
+        item.second = out_var_map[item.second];
+    }
+    // replace symvar in output_var_map
+    for (auto&& item : output_var_map) {
+        item.second = out_var_map[item.second].rename(item.first);
+    }
+}
+
 void GraphLoader::LoadResult::graph_compile_ahead() {
     //! when force_output_use_user_specified_memory is set, the output var may
     //! be changed by gopt, then the var in LoadResult can not exist, so here

@@ -42,6 +42,8 @@ public:
         return m_load_result;
     }
 
+    void update_mdl_load_result(const mgb::SymbolVarArray& output_var_array);
+
     //! get load config for megDL model
     mgb::serialization::GraphLoadConfig& get_mdl_config() { return m_load_config; }
 

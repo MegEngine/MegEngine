@@ -36,16 +36,19 @@ std::shared_ptr<ModelBase> ModelBase::create_model(std::string model_path) {
 
     auto model_type = get_model_type(model_path);
 
-    if (ModelType::LITE_MODEL == model_type) {
+    if (FLAGS_lite) {
+        mgb_log("run model force lite mode\n");
         return std::make_shared<ModelLite>(model_path);
-    } else if (ModelType::MEGDL_MODEL == model_type) {
-        if (FLAGS_lite)
-            return std::make_shared<ModelLite>(model_path);
-        else
-            return std::make_shared<ModelMdl>(model_path);
+    } else if (FLAGS_mdl) {
+        mgb_log("run model force mdl mode\n");
+        return std::make_shared<ModelMdl>(model_path);
+    } else if (ModelType::LITE_MODEL == model_type) {
+        return std::make_shared<ModelLite>(model_path);
     } else {
-        return nullptr;
+        mgb_assert(ModelType::MEGDL_MODEL == model_type);
+        return std::make_shared<ModelMdl>(model_path);
     }
 }
 DEFINE_bool(lite, false, "use megengine lite interface to run model");
+DEFINE_bool(mdl, false, "use megengine mdl interface to run model");
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

@@ -45,6 +45,13 @@ public:
         //! GraphDumper::dump
         SymbolVarArray output_var_list;
 
+        /**
+         * \brief update  output_var_list with output_var_map, output_var_map_id
+         *
+         */
+        MGE_WIN_DECLSPEC_FUC void update_output_var_list(
+                const SymbolVarArray& output_var_array);
+
         /*!
          * \brief call graph->compile() but also checks for comp seq rec
          *

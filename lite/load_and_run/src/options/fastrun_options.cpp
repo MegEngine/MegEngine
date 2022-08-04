@@ -31,6 +31,13 @@ void FastRunOption::config_model_internel<ModelLite>(
             LITE_LOG("enable fast-run strategy for algo profile");
             strategy = static_cast<uint32_t>(Strategy::LITE_ALGO_PROFILE) |
                        static_cast<uint32_t>(Strategy::LITE_ALGO_OPTIMIZED) | strategy;
+        } else if ((!m_fast_run_cache.empty() &&
+                    !access(m_fast_run_cache.c_str(), F_OK))) {
+            LITE_LOG(
+                    "detect fast-run cache usable set LITE_ALGO_PROFILE for algo "
+                    "profile");
+            strategy = static_cast<uint32_t>(Strategy::LITE_ALGO_PROFILE) |
+                       static_cast<uint32_t>(Strategy::LITE_ALGO_HEURISTIC) | strategy;
         } else {
             strategy = static_cast<uint32_t>(Strategy::LITE_ALGO_HEURISTIC) | strategy;
         }

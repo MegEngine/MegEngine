@@ -4,6 +4,7 @@
 #include "helpers/common.h"
 #include "megbrain/utils/json.h"
 DECLARE_bool(lite);
+DECLARE_bool(mdl);
 
 namespace lar {
 /*!

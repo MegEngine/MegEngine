@@ -5,6 +5,7 @@
 #include "option_base.h"
 
 DECLARE_bool(enable_fuse_preprocess);
+DECLARE_bool(optimize_for_inference);
 DECLARE_bool(fuse_grain);
 DECLARE_bool(weight_preprocess);
 DECLARE_bool(enable_fuse_conv_bias_nonlinearity);
@@ -214,6 +215,34 @@ private:
     std::string m_option_name;
     bool disable_mem_opt;
     uint64_t workspace_limit;
+};
+
+///////////////////////// optimize for inference options /////////////////////////
+class OptimizeForInferenceOption final : public OptionBase {
+public:
+    static bool is_valid();
+
+    static std::shared_ptr<OptionBase> create_option();
+
+    void config_model(
+            RuntimeParam& runtime_param, std::shared_ptr<ModelBase> model) override;
+
+    static void set_valid(bool val) { m_valid = val; }
+
+    std::string option_name() const override { return m_option_name; };
+
+    OptionValMap* get_option() override { return &m_option; }
+
+    void update() override;
+
+private:
+    OptimizeForInferenceOption() = default;
+    template <typename ModelImpl>
+    void config_model_internel(RuntimeParam&, std::shared_ptr<ModelImpl>){};
+
+    std::string m_option_name;
+    static bool m_valid;
+    OptionValMap m_option;
 };
 
 ///////////////////////// other options for optimization /////////////////

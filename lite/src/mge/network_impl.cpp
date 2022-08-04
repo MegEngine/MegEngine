@@ -366,19 +366,7 @@ void NetworkImplDft::layout_transform_optimization() {
         mgb::ThinHashMap<mgb::SymbolVar, mgb::SymbolVar> out_var_map;
         auto output_var_array = mgb::gopt::layout_transform(
                 m_load_result.output_var_list, m_layout_transform_target);
-        // replace symvar in output_var_list
-        for (size_t idx = 0; idx < output_var_array.size(); ++idx) {
-            out_var_map[m_load_result.output_var_list[idx]] = output_var_array[idx];
-            m_load_result.output_var_list[idx] = output_var_array[idx];
-        }
-        // replace symvar in output_var_map_id
-        for (auto&& item : m_load_result.output_var_map_id) {
-            item.second = out_var_map[item.second];
-        }
-        // replace symvar in output_var_map
-        for (auto&& item : m_load_result.output_var_map) {
-            item.second = out_var_map[item.second];
-        }
+        m_load_result.update_output_var_list(output_var_array);
     } else if (m_user_config->auto_optimize_inference) {
         //! set model weight preprocess
         m_load_config.comp_graph->options().graph_opt.weight_preprocess = true;

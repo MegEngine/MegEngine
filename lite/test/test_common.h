@@ -8,6 +8,7 @@
 #include "../src/misc.h"
 #include "lite/network.h"
 #include "lite/tensor.h"
+#include "megbrain/comp_node.h"
 #include "megbrain/graph/bases.h"
 #include "megbrain/plugin/opr_io_dump.h"
 #include "megbrain/plugin/profiler.h"
@@ -167,4 +168,18 @@ __attribute__((unused)) static std::shared_ptr<Tensor> mgb_lar(
 
 #endif
 
+static inline bool check_gpu_available(size_t num) {
+    if (mgb::CompNode::get_device_count(mgb::CompNode::DeviceType::CUDA) < num) {
+        mgb_log_warn("skip test case that requires %zu GPU(s)", num);
+        return false;
+    }
+    return true;
+}
+#define REQUIRE_CUDA()                 \
+    {                                  \
+        if (!check_gpu_available(1)) { \
+            return;                    \
+        }                              \
+    }                                  \
+    while (0)
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
