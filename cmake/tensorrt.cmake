@@ -36,7 +36,6 @@ else()
     PATH_SUFFIXES lib lib64
     DOC "TRT plugin library.")
 endif()
-message(STATUS "TRT_LIBRARY: ${TRT_LIBRARY}")
 if(TRT_LIBRARY STREQUAL "TRT_LIBRARY-NOTFOUND")
   message(
     FATAL_ERROR
@@ -102,7 +101,42 @@ string(REGEX REPLACE "^#define NV_TENSORRT_PATCH ([0-9]+).*$" "\\1"
 set(TRT_VERSION_STRING
     "${TensorRT_VERSION_MAJOR}.${TensorRT_VERSION_MINOR}.${TensorRT_VERSION_PATCH}")
 
-if(MGE_CUDA_USE_STATIC)
+if(TensorRT_VERSION_MAJOR GREATER_EQUAL 8 AND NOT (MSVC OR WIN32))
+  set(TRT_LIBRARY "TRT_LIBRARY-NOTFOUND")
+  set(TRT_PLUGIN_LIBRARY "TRT_PLUGIN_LIBRARY-NOTFOUND")
+  find_library(
+    TRT_LIBRARY
+    NAMES libnvinfer.so nvinfer
+    PATHS ${ALTER_LD_LIBRARY_PATHS} ${TRT_ROOT_DIR} ${CMAKE_INSTALL_PREFIX}
+    HINTS ${ALTER_LIBRARY_PATHS}
+    PATH_SUFFIXES lib lib64
+    DOC "TRT library.")
+  find_library(
+    TRT_PLUGIN_LIBRARY
+    NAMES libnvinfer_plugin.so nvinfer_plugin
+    PATHS ${ALTER_LD_LIBRARY_PATHS} ${TRT_ROOT_DIR} ${CMAKE_INSTALL_PREFIX}
+    HINTS ${ALTER_LIBRARY_PATHS}
+    PATH_SUFFIXES lib lib64
+    DOC "TRT plugin library.")
+  message(STATUS "TensorRT8 has been changed to dynamic linking")
+  if(TRT_LIBRARY STREQUAL "TRT_LIBRARY-NOTFOUND")
+    message(
+      FATAL_ERROR
+        "Can not find TensorRT Library, please refer to scripts/cmake-build/BUILD_README.md to init TRT env"
+    )
+  endif()
+  if(TRT_PLUGIN_LIBRARY STREQUAL "TRT_PLUGIN_LIBRARY-NOTFOUND")
+    message(
+      FATAL_ERROR
+        "Can not find TensorRT Plugin Library, please refer to scripts/cmake-build/BUILD_README.md to init TRT env"
+    )
+  endif()
+endif()
+
+message(STATUS "TRT_LIBRARY: ${TRT_LIBRARY}")
+
+if(MGE_CUDA_USE_STATIC AND NOT (TensorRT_VERSION_MAJOR GREATER_EQUAL 8
+                                AND NOT (MSVC OR WIN32)))
   add_library(libnvinfer STATIC IMPORTED)
   add_library(libnvinfer_plugin STATIC IMPORTED)
 else()

@@ -814,8 +814,7 @@ if(MGE_WITH_CUDA)
         list(APPEND MGE_CUDA_LIBS ${TRT_LIBRARY} ${TRT_PLUGIN_LIBRARY})
       else()
         if(TensorRT_VERSION_MAJOR GREATER_EQUAL 8)
-          list(APPEND MGE_CUDA_LIBS -Wl,--whole-archive libnvinfer.so
-               libnvinfer_plugin.so -Wl,--no-whole-archive)
+          list(APPEND MGE_CUDA_LIBS libnvinfer libnvinfer_plugin)
         else()
           list(APPEND MGE_CUDA_LIBS -Wl,--whole-archive libnvinfer libnvinfer_plugin
                -Wl,--no-whole-archive)
