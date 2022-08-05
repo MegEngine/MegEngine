@@ -205,9 +205,9 @@ void OptionsTimeProfiler::profile_with_given_options(
         //! after load configure
         auto config_model_before_runing = [&]() {
             for (auto stage :
-                 {RunStage::AFTER_MODEL_LOAD, RunStage::GLOBAL_OPTIMIZATION,
-                  RunStage::BEFORE_OUTSPEC_SET, RunStage::AFTER_OUTSPEC_SET,
-                  RunStage::MODEL_RUNNING}) {
+                 {RunStage::AFTER_MODEL_LOAD, RunStage::UPDATE_IO,
+                  RunStage::GLOBAL_OPTIMIZATION, RunStage::BEFORE_OUTSPEC_SET,
+                  RunStage::AFTER_OUTSPEC_SET, RunStage::MODEL_RUNNING}) {
                 runtime_param.stage = stage;
                 stage_config_model();
             }
@@ -453,9 +453,9 @@ void FittingStrategy::dump_best_options_with_model() {
 
     //! get model binary data after optimized
     for (auto stage :
-         {RunStage::AFTER_MODEL_LOAD, RunStage::GLOBAL_OPTIMIZATION,
-          RunStage::BEFORE_OUTSPEC_SET, RunStage::AFTER_OUTSPEC_SET,
-          RunStage::MODEL_RUNNING}) {
+         {RunStage::AFTER_MODEL_LOAD, RunStage::UPDATE_IO,
+          RunStage::GLOBAL_OPTIMIZATION, RunStage::BEFORE_OUTSPEC_SET,
+          RunStage::AFTER_OUTSPEC_SET, RunStage::MODEL_RUNNING}) {
         runtime_param.stage = stage;
         stage_config_model();
     }
@@ -502,9 +502,9 @@ void FittingStrategy::AutoCleanFile::dump_model() {
     model->load_model();
     //! get model binary data after optimized
     for (auto stage :
-         {RunStage::AFTER_MODEL_LOAD, RunStage::GLOBAL_OPTIMIZATION,
-          RunStage::BEFORE_OUTSPEC_SET, RunStage::AFTER_OUTSPEC_SET,
-          RunStage::MODEL_RUNNING}) {
+         {RunStage::AFTER_MODEL_LOAD, RunStage::UPDATE_IO,
+          RunStage::GLOBAL_OPTIMIZATION, RunStage::BEFORE_OUTSPEC_SET,
+          RunStage::AFTER_OUTSPEC_SET, RunStage::MODEL_RUNNING}) {
         runtime_param.stage = stage;
         stage_config_model();
     }

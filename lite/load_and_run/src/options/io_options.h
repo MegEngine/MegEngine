@@ -13,7 +13,7 @@ DECLARE_bool(io_dump_stderr);
 DECLARE_string(bin_io_dump);
 DECLARE_string(bin_out_dump);
 DECLARE_bool(copy_to_host);
-
+DECLARE_int32(batch_size);
 namespace lar {
 
 /*!
@@ -22,7 +22,7 @@ namespace lar {
 class InputOption final : public OptionBase {
 public:
     //! static function for registe options
-    static bool is_valid() { return !FLAGS_input.empty(); };
+    static bool is_valid() { return !FLAGS_input.empty() || FLAGS_batch_size > 0; };
     static std::shared_ptr<OptionBase> create_option();
 
     void config_model(
@@ -40,6 +40,7 @@ private:
 
     std::string m_option_name;
     std::vector<std::string> data_path;  // data string or data file path
+    int32_t m_force_batch_size;
 };
 
 class IOdumpOption : public OptionBase {

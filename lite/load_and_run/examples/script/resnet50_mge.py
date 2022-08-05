@@ -348,4 +348,4 @@ if __name__ == "__main__":
             )
 
     else:
-        raise TypeError("dtype should be float32")
+        raise TypeError("dtype should be float32 or uint8")

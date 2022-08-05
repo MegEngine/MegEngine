@@ -180,3 +180,40 @@ std::vector<uint8_t> ModelMdl::get_model_data() {
     dumper->dump(m_load_result.output_var_list, config);
     return out_data;
 }
+
+void ModelMdl::update_io() {
+    //! update output varlist when input shape maybe change(some pass excution
+    //! time depends on the shape of init input)
+    mgb::thin_hash_table::ThinHashMap<mgb::cg::SymbolVar, mgb::cg::SymbolVar> varmap;
+    auto&& network = m_load_result;
+    std::unordered_map<void*, std::string> tensor_name_map;
+    for (auto& input : network.tensor_map) {
+        tensor_name_map.insert({input.second->raw_ptr(), input.first});
+    }
+    mgb::cg::DepOprIter dep([&](mgb::cg::OperatorNodeBase* opr) {
+        if (auto h2d = opr->try_cast_final<mgb::opr::Host2DeviceCopy>()) {
+            if (tensor_name_map.find(h2d->host_data()->raw_ptr()) !=
+                tensor_name_map.end()) {
+                //! make new h2d opr with new host tensor shape
+                std::string name = tensor_name_map[h2d->host_data()->raw_ptr()];
+                std::shared_ptr<mgb::HostTensorND> new_tensor =
+                        std::make_shared<mgb::HostTensorND>();
+                new_tensor->copy_from(*h2d->host_data());
+
+                auto h2d_opr = mgb::opr::Host2DeviceCopy::make(
+                        *h2d->owner_graph(), new_tensor, h2d->param(), h2d->config());
+                //! rename new h2d with given name
+                h2d_opr.node()->owner_opr()->name(name);
+                varmap[h2d->output(0)] = h2d_opr;
+            }
+        }
+    });
+    //! get replace var map
+    for (auto&& i : network.output_var_list)
+        dep.add(i);
+    //! replace new h2d and update related var shape
+    if (!varmap.empty()) {
+        auto output_vars = mgb::cg::replace_vars(network.output_var_list, varmap);
+        network.output_var_list = output_vars;
+    }
+}

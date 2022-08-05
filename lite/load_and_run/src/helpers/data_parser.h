@@ -18,6 +18,8 @@ struct DataParser {
     };
     void feed(const std::string& path);
 
+    ~DataParser() { inputs.clear(); };
+
     std::unordered_map<std::string, mgb::HostTensorND> inputs;
 
 private:

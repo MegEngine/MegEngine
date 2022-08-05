@@ -321,10 +321,10 @@ std::unique_ptr<JsonLoader::Value> JsonLoader::load(const char* path) {
     const size_t size = ftell(fin.get());
     std::fseek(fin.get(), 0, SEEK_SET);
 
-    std::unique_ptr<char> buf(static_cast<char*>(malloc(size)));
+    std::vector<char> buf(size + 1);
 
-    auto nr = std::fread(buf.get(), 1, size, fin.get());
+    auto nr = std::fread(buf.data(), 1, size, fin.get());
     mgb_assert(nr == size);
 
-    return load(buf.get(), size);
+    return load(buf.data(), size);
 }

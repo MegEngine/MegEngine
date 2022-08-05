@@ -24,7 +24,7 @@ BOOL_OPTION_WRAP(cuda);
 }  // anonymous namespace
 
 TEST(TestLarOption, OPTIMIZE_FOR_INFERENCE) {
-    DEFINE_WRAP(cpu);
+    DEFINE_BOOL_WRAP(cpu);
     std::string model_path = "./shufflenet.mge";
 
     TEST_BOOL_OPTION(optimize_for_inference);
@@ -33,7 +33,7 @@ TEST(TestLarOption, OPTIMIZE_FOR_INFERENCE) {
 #if LITE_WITH_OPENCL
 TEST(TestLarOption, OPTIMIZE_FOR_INFERENCE_OPENCL) {
     REQUIRE_OPENCL();
-    DEFINE_WRAP(opencl);
+    DEFINE_BOOL_WRAP(opencl);
     std::string model_path = "./shufflenet.mge";
 
     TEST_BOOL_OPTION(optimize_for_inference);
@@ -43,7 +43,7 @@ TEST(TestLarOption, OPTIMIZE_FOR_INFERENCE_OPENCL) {
 #if LITE_WITH_CUDA
 TEST(TestLarOption, OPTIMIZE_FOR_INFERENCE_CUDA) {
     REQUIRE_CUDA();
-    DEFINE_WRAP(cuda);
+    DEFINE_BOOL_WRAP(cuda);
     std::string model_path = "./shufflenet.mge";
 
     TEST_BOOL_OPTION(optimize_for_inference);

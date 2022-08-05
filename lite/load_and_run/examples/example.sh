@@ -112,7 +112,7 @@ function prepare_model_and_data(){
 
     #prepare mge model
     python3 script/resnet50_mge.py --dir model_source
-    python3 script/resnet50_mge.py  --dir model_source -d int8
+    python3 script/resnet50_mge.py  --dir model_source -d uint8
     python3 script/resnet50_mge.py  --dir model_source --inputs "#rand(0,255)"
 
     #make input_data

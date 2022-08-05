@@ -199,7 +199,7 @@ void DebugOption::format_and_print(
 
     std::stringstream ss;
     ss << table;
-    LITE_LOG("%s\n\n", ss.str().c_str());
+    LITE_LOG("\n%s\n", ss.str().c_str());
 }
 
 template <>
@@ -243,7 +243,7 @@ void DebugOption::format_and_print(
 
     std::stringstream ss;
     ss << table;
-    mgb_log("%s\n\n", ss.str().c_str());
+    mgb_log("\n%s\n", ss.str().c_str());
 }
 
 template <>

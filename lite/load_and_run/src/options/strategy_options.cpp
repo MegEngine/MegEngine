@@ -32,13 +32,19 @@ void StrategyOption::config_model(
         runtime_param.run_iter = run_iter;
         runtime_param.threads = threads;
         runtime_param.testcase_num = 1;
+    } else if (runtime_param.stage == RunStage::UPDATE_IO) {
+        if (model->type() == ModelType::MEGDL_MODEL) {
+            auto model_ptr = std::static_pointer_cast<ModelMdl>(model);
+            //! update input and output related varnode
+            model_ptr->update_io();
+        }
     } else if (runtime_param.stage == RunStage::BEFORE_OUTSPEC_SET) {
         if (model->type() == ModelType::MEGDL_MODEL) {
             auto model_ptr = std::static_pointer_cast<ModelMdl>(model);
             auto num = model_ptr->get_testcase_num();
             if (num != 0)
                 runtime_param.testcase_num = num;
-
+            //! make output specification
             model_ptr->make_output_spec();
         }
     }

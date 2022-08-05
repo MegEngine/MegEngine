@@ -26,7 +26,7 @@ cv2.imwrite("input_data/cat.ppm",processed_img)
 #json 
 data_obj = {
     "shape": [1,3],
-    "type": "int32",
+    "type": "float32",
     "raw": [2,3,4]
 }
 with open("input_data/add_demo_input.json", "w") as f:

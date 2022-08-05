@@ -43,7 +43,7 @@ if __name__ == "__main__":
     @jit.trace(symbolic=True, capture_as_const=True)
     def fun(data):
         return net(data)
-    data = tensor([3,4,5])
+    data = tensor([3.0,4.0,5.0])
     fun(data)
     if args.inputs == "":
         fun.dump(

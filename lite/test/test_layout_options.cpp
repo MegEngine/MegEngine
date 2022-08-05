@@ -20,6 +20,7 @@ DECLARE_bool(enable_nchw64);
 DECLARE_bool(enable_nhwcd4);
 DECLARE_bool(enable_nchw44_dot);
 DECLARE_bool(fast_run);
+DECLARE_int32(iter);
 namespace {
 BOOL_OPTION_WRAP(enable_nchw4);
 BOOL_OPTION_WRAP(enable_chwn4);
@@ -30,6 +31,7 @@ BOOL_OPTION_WRAP(enable_nchw64);
 BOOL_OPTION_WRAP(enable_nhwcd4);
 BOOL_OPTION_WRAP(enable_nchw44_dot);
 BOOL_OPTION_WRAP(fast_run);
+INT32_OPTION_WRAP(iter, 10);
 
 BOOL_OPTION_WRAP(lite);
 BOOL_OPTION_WRAP(cpu);
@@ -39,7 +41,8 @@ BOOL_OPTION_WRAP(cuda);
 }  // anonymous namespace
 
 TEST(TestLarLayout, X86_CPU) {
-    DEFINE_WRAP(cpu);
+    DEFINE_INT32_WRAP(iter, 1);
+    DEFINE_BOOL_WRAP(cpu);
     std::string model_path = "./shufflenet.mge";
 
     TEST_BOOL_OPTION(enable_nchw4);
@@ -52,8 +55,9 @@ TEST(TestLarLayout, X86_CPU) {
 }
 
 TEST(TestLarLayout, X86_CPU_LITE) {
-    DEFINE_WRAP(cpu);
-    DEFINE_WRAP(lite);
+    DEFINE_INT32_WRAP(iter, 1);
+    DEFINE_BOOL_WRAP(cpu);
+    DEFINE_BOOL_WRAP(lite);
     std::string model_path = "./shufflenet.mge";
 
     TEST_BOOL_OPTION(enable_nchw4);
@@ -65,18 +69,20 @@ TEST(TestLarLayout, X86_CPU_LITE) {
 }
 
 TEST(TestLarLayoutFastRun, CPU_LITE) {
-    DEFINE_WRAP(cpu);
-    DEFINE_WRAP(lite);
+    DEFINE_INT32_WRAP(iter, 1);
+    DEFINE_BOOL_WRAP(cpu);
+    DEFINE_BOOL_WRAP(lite);
     std::string model_path = "./shufflenet.mge";
     {
-        DEFINE_WRAP(enable_nchw44);
-        DEFINE_WRAP(fast_run);
+        DEFINE_BOOL_WRAP(enable_nchw44);
+        DEFINE_BOOL_WRAP(fast_run);
         run_NormalStrategy(model_path);
     }
 }
 #if LITE_WITH_CUDA
 TEST(TestLarLayout, CUDA) {
-    DEFINE_WRAP(cuda);
+    DEFINE_INT32_WRAP(iter, 1);
+    DEFINE_BOOL_WRAP(cuda);
     std::string model_path = "./shufflenet.mge";
     TEST_BOOL_OPTION(enable_nchw4);
     TEST_BOOL_OPTION(enable_chwn4);
@@ -87,8 +93,9 @@ TEST(TestLarLayout, CUDA) {
 }
 
 TEST(TestLarLayout, CUDA_LITE) {
-    DEFINE_WRAP(cuda);
-    DEFINE_WRAP(lite);
+    DEFINE_INT32_WRAP(iter, 1);
+    DEFINE_BOOL_WRAP(cuda);
+    DEFINE_BOOL_WRAP(lite);
     std::string model_path = "./shufflenet.mge";
 
     TEST_BOOL_OPTION(enable_nchw4);

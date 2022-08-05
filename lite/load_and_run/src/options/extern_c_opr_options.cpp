@@ -18,6 +18,11 @@ void COprLibOption::config_model_internel(
                     "lite model dont't support run with external c opr "
                     "parmeter");
         }
+        if (m_c_opr_init_func != MGB_C_OPR_INIT_FUNC_STR) {
+            LITE_THROW(
+                    "lite model dont't support to set the c_opr_init_func to another "
+                    "API");
+        }
     }
 }
 template <>

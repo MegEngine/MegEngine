@@ -26,32 +26,89 @@ void InputOption::config_model_internel<ModelLite>(
         auto&& parser = model->get_input_parser();
         auto&& network = model->get_lite_network();
 
-        //! datd type map from mgb data type to lite data type
-        std::map<megdnn::DTypeEnum, LiteDataType> type_map = {
-                {megdnn::DTypeEnum::Float32, LiteDataType::LITE_FLOAT},
-                {megdnn::DTypeEnum::Int32, LiteDataType::LITE_INT},
-                {megdnn::DTypeEnum::Int8, LiteDataType::LITE_INT8},
-                {megdnn::DTypeEnum::Uint8, LiteDataType::LITE_UINT8}};
+        //! datd type map from lite data type to  mgb data type
+        std::map<LiteDataType, megdnn::DTypeEnum> type_map = {
+                {LiteDataType::LITE_FLOAT, megdnn::DTypeEnum::Float32},
+                {LiteDataType::LITE_INT, megdnn::DTypeEnum::Int32},
+                {LiteDataType::LITE_INT8, megdnn::DTypeEnum::Int8},
+                {LiteDataType::LITE_UINT8, megdnn::DTypeEnum::Uint8}};
 
-        for (auto& i : parser.inputs) {
-            //! get tensor information from data parser
-            auto tensor = i.second;
-            auto data_type = tensor.dtype();
-            auto tensor_shape = tensor.shape();
-            mgb::dt_byte* src = tensor.raw_ptr();
+        if (m_force_batch_size > 0) {
+            LITE_WARN("force set batch size to %d", m_force_batch_size);
+            auto all_inputs_name = network->get_all_input_name();
+            for (auto& name : all_inputs_name) {
+                std::shared_ptr<lite::Tensor> input_tensor =
+                        network->get_io_tensor(name);
+                //! set lite layout
+                lite::Layout layout;
+                mgb::TensorShape new_shape;
+                new_shape.ndim = input_tensor->get_layout().ndim;
+                layout.ndim = input_tensor->get_layout().ndim;
+                for (size_t idx = 0; idx < new_shape.ndim; idx++) {
+                    new_shape.shape[idx] = input_tensor->get_layout().shapes[idx];
+                    layout.shapes[idx] = new_shape.shape[idx];
+                }
+                new_shape.shape[0] = m_force_batch_size;
+                layout.shapes[0] = m_force_batch_size;
 
-            //! set lite layout
-            lite::Layout layout;
-            layout.ndim = tensor_shape.ndim;
-            for (size_t idx = 0; idx < tensor_shape.ndim; idx++) {
-                layout.shapes[idx] = tensor_shape[idx];
+                //! gengrate tesnor copy from origin tensor
+                mgb::HostTensorND hv;
+                hv.comp_node(mgb::CompNode::default_cpu(), true)
+                        .dtype(megdnn::DType::from_enum(
+                                type_map[input_tensor->get_layout().data_type]))
+                        .resize(new_shape);
+                mgb::dt_byte* raw_ptr = hv.raw_ptr();
+                //! single batch input size
+                size_t batch_stride = hv.dtype().size() * hv.layout().total_nr_elems() /
+                                      m_force_batch_size;
+                size_t curr_batch_size = m_force_batch_size;
+                //! copy data from origin input_tensor
+                size_t init_batch = input_tensor->get_layout().shapes[0];
+                while (curr_batch_size > init_batch) {
+                    memcpy((char*)raw_ptr, (char*)(input_tensor->get_memory_ptr()),
+                           batch_stride * init_batch);
+                    curr_batch_size -= init_batch;
+                    raw_ptr += batch_stride * init_batch;
+                }
+                memcpy((char*)raw_ptr, (char*)(input_tensor->get_memory_ptr()),
+                       batch_stride * curr_batch_size);
+
+                input_tensor->reset(hv.raw_ptr(), layout);
+                parser.inputs[name] = std::move(hv);
             }
-            layout.data_type = type_map[data_type.enumv()];
+        } else {
+            for (auto& i : parser.inputs) {
+                //! get tensor information from data parser
+                auto tensor = i.second;
+                auto tensor_shape = tensor.shape();
+                mgb::dt_byte* src = tensor.raw_ptr();
+                std::shared_ptr<lite::Tensor> input_tensor =
+                        network->get_io_tensor(i.first);
+                //! set lite layout
+                lite::Layout layout;
+                layout.ndim = tensor_shape.ndim;
+                for (size_t idx = 0; idx < tensor_shape.ndim; idx++) {
+                    layout.shapes[idx] = tensor_shape[idx];
+                }
+                layout.data_type = input_tensor->get_layout().data_type;
 
-            //! set network input tensor
-            std::shared_ptr<lite::Tensor> input_tensor =
-                    network->get_io_tensor(i.first);
-            input_tensor->reset(src, layout);
+                //! set data for only given shape
+                if (tensor.storage().empty()) {
+                    mgb::HostTensorND hv;
+                    hv.comp_node(mgb::CompNode::default_cpu(), true)
+                            .dtype(megdnn::DType::from_enum(type_map[layout.data_type]))
+                            .resize(tensor.shape());
+                    mgb::dt_byte* raw_ptr = hv.raw_ptr();
+                    //! set all value in tesnor to 1
+                    memset((char*)raw_ptr, 1,
+                           hv.layout().total_nr_elems() * hv.dtype().size());
+                    parser.inputs[i.first] = std::move(hv);
+                    input_tensor->reset(raw_ptr, layout);
+                } else {
+                    //! set network input tensor
+                    input_tensor->reset(src, layout);
+                }
+            }
         }
     }
 }
@@ -67,22 +124,58 @@ void InputOption::config_model_internel<ModelMdl>(
     } else if (runtime_param.stage == RunStage::AFTER_MODEL_LOAD) {
         auto&& parser = model->get_input_parser();
         auto&& network = model->get_mdl_load_result();
-        auto tensormap = network.tensor_map;
-        for (auto& i : parser.inputs) {
-            mgb_assert(
-                    tensormap.find(i.first) != tensormap.end(),
-                    "can't find tesnor named %s", i.first.c_str());
-            auto& in = tensormap.find(i.first)->second;
-            if (i.second.storage().empty()) {
+        auto&& tensormap = network.tensor_map;
+
+        if (m_force_batch_size > 0) {
+            mgb_log_warn("force set batch size to %d", m_force_batch_size);
+            for (auto& iter : tensormap) {
+                auto& in = iter.second;
                 mgb::HostTensorND hv;
+                mgb::TensorShape new_shape = in->shape();
+                new_shape[0] = m_force_batch_size;
                 hv.comp_node(mgb::CompNode::default_cpu(), true)
                         .dtype(in->dtype())
-                        .resize(i.second.shape());
+                        .resize(new_shape);
                 mgb::dt_byte* raw_ptr = hv.raw_ptr();
-                memset((char*)raw_ptr, 1, hv.layout().total_nr_elems());
+
+                //! copy given batch data into new tensor
+                size_t batch_stride = in->dtype().size() *
+                                      in->layout().total_nr_elems() / (in->shape()[0]);
+                size_t curr_batch_size = m_force_batch_size;
+
+                //! copy data from origin input_tensor
+                size_t init_batch = in->shape()[0];
+                while (curr_batch_size > init_batch) {
+                    memcpy((char*)raw_ptr, (char*)(in->raw_ptr()),
+                           batch_stride * init_batch);
+                    curr_batch_size -= init_batch;
+                    raw_ptr += batch_stride * init_batch;
+                }
+                memcpy((char*)raw_ptr, (char*)(in->raw_ptr()),
+                       batch_stride * curr_batch_size);
+                //! set input tensor
                 in->copy_from(hv);
-            } else {
-                in->copy_from(i.second);
+                parser.inputs[iter.first] = std::move(hv);
+            }
+        } else {
+            for (auto& i : parser.inputs) {
+                mgb_assert(
+                        tensormap.find(i.first) != tensormap.end(),
+                        "can't find tesnor named %s", i.first.c_str());
+                auto& in = tensormap.find(i.first)->second;
+                if (i.second.storage().empty()) {
+                    mgb::HostTensorND hv;
+                    hv.comp_node(mgb::CompNode::default_cpu(), true)
+                            .dtype(in->dtype())
+                            .resize(i.second.shape());
+                    mgb::dt_byte* raw_ptr = hv.raw_ptr();
+                    memset((char*)raw_ptr, 1,
+                           hv.layout().total_nr_elems() * hv.dtype().size());
+                    in->copy_from(hv);
+                    parser.inputs[i.first] = std::move(hv);
+                } else {
+                    in->copy_from(i.second);
+                }
             }
         }
     }
@@ -191,6 +284,7 @@ void IOdumpOption::config_model_internel<ModelMdl>(
 using namespace lar;
 
 void InputOption::update() {
+    data_path.clear();
     m_option_name = "input";
     size_t start = 0;
     auto end = FLAGS_input.find(";", start);
@@ -201,6 +295,7 @@ void InputOption::update() {
         end = FLAGS_input.find(";", start);
     }
     data_path.emplace_back(FLAGS_input.substr(start));
+    m_force_batch_size = FLAGS_batch_size;
 }
 
 std::shared_ptr<lar::OptionBase> lar::InputOption::create_option() {
@@ -283,7 +378,10 @@ void IOdumpOption::config_model(
 ////////////////////// Input gflags ////////////////////////
 DEFINE_string(
         input, "", "Set up inputs data for model --input [ file_path | data_string]");
-
+DEFINE_int32(
+        batch_size, -1,
+        "set the batch size of input(especially for global layout transform "
+        "optimization working on)");
 ////////////////////// OprIOdump gflags ////////////////////////
 
 DEFINE_string(io_dump, "", "set the io dump file path in text format");
@@ -299,4 +397,5 @@ DEFINE_string(
 DEFINE_bool(copy_to_host, false, "copy device data to host");
 
 REGIST_OPTION_CREATOR(input, lar::InputOption::create_option);
+
 REGIST_OPTION_CREATOR(iodump, lar::IOdumpOption::create_option);

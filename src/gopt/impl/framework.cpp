@@ -64,7 +64,8 @@ OperatorNodeBase* SubGraph::Rewriter::auto_replace_outputs(OperatorNodeBase* opr
             bool v0 = out0[i]->contain_flag(VarNode::Flag::VOLATILE_CONTENT),
                  v1 = out1[i]->contain_flag(VarNode::Flag::VOLATILE_CONTENT);
             mgb_assert(v0 == v1, "%s", err_msg().c_str());
-
+            //! rename new var
+            out1[i]->name(out0[i]->cname());
             auto&& ins = m_varmap.insert({out0[i], {true, nullptr}});
             mgb_assert(
                     ins.second || ins.first->second.first,

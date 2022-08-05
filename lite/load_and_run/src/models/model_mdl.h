@@ -108,6 +108,8 @@ public:
 
     std::vector<uint8_t> get_model_data() override;
 
+    void update_io();
+
 private:
     bool share_model_mem;
     std::string model_path;

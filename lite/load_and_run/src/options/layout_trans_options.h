@@ -5,7 +5,6 @@
 #include "models/model.h"
 #include "option_base.h"
 DECLARE_string(layout_transform);
-DECLARE_int32(layout_transform_batch_size);
 DECLARE_string(layout_transform_dump);
 
 namespace lar {
@@ -41,6 +40,5 @@ private:
     mgb::gopt::GraphTuningOptions::Target m_layout_transform_target;
     static bool m_valid;
     OptionValMap m_option;
-    int32_t m_force_batch_size;
 };
 }  // namespace lar

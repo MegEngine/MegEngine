@@ -53,8 +53,9 @@ void NormalStrategy::run_subline() {
     //! after load configure
     auto config_after_load = [&]() {
         for (auto stage :
-             {RunStage::AFTER_MODEL_LOAD, RunStage::GLOBAL_OPTIMIZATION,
-              RunStage::BEFORE_OUTSPEC_SET, RunStage::AFTER_OUTSPEC_SET}) {
+             {RunStage::AFTER_MODEL_LOAD, RunStage::UPDATE_IO,
+              RunStage::GLOBAL_OPTIMIZATION, RunStage::BEFORE_OUTSPEC_SET,
+              RunStage::AFTER_OUTSPEC_SET}) {
             m_runtime_param.stage = stage;
             stage_config_model();
         }
