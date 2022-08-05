@@ -381,7 +381,6 @@ void ExternCOprRunner::check_param() {
 
 void ExternCOprRunner::scn_do_execute() {
     SmallVector<MGBTensor> c_inp(input().size()), c_out(output().size());
-    SmallVector<HostTensorND> cpu_inp, cpu_out;
     check_param();
 
     bool need_copy = false;

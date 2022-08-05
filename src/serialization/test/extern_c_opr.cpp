@@ -445,6 +445,22 @@ TEST(TestExternCOpr, GPUCompute) {
     run_compute_test(CompNode::load("gpux"), MGB_DTYPE_FLOAT32);
 }
 
+#if MGB_OPENCL
+#include "megcore_opencl.h"
+
+#define REQUIRE_OPENCL()                                                 \
+    do {                                                                 \
+        if (!CompNode::get_device_count(CompNode::DeviceType::OPENCL)) { \
+            return;                                                      \
+        }                                                                \
+    } while (0)
+
+TEST(TestExternCOpr, OPENCLCompute) {
+    REQUIRE_OPENCL();
+    run_compute_test(CompNode::load("openclx"), MGB_DTYPE_FLOAT32);
+}
+#endif
+
 TEST(TestExternCOpr, CPUComputeMultiDtype) {
     run_compute_test(CompNode::load("cpux"), MGB_DTYPE_INT32);
 #if !MEGDNN_DISABLE_FLOAT16
