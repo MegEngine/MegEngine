@@ -13,6 +13,7 @@
 #include "megbrain/comp_node_env.h"
 #include "megbrain/graph.h"
 #include "megbrain/graph/cg.h"
+#include "megbrain/opr/imgproc.h"
 #include "megbrain/opr/io.h"
 #include "megbrain/opr/tensor_manip.h"
 #include "megbrain/tensor.h"
@@ -257,6 +258,88 @@ void NetworkImplDft::make_output_spec() {
             LITE_THROW(ssprintf("no output named : %s in the mode", out.name.c_str()));
         }
     }
+}
+
+void NetworkImplDft::replace_src_discrete_input_opr_pass() {
+    mgb::ThinHashMap<mgb::SymbolVar, mgb::SymbolVar> out_var_map;
+
+    auto dest_with_extra_deps =
+            get_dest_vars_with_extra_deps(m_load_result.output_var_list);
+    gopt::SubGraph graph{dest_with_extra_deps};
+    auto rewriter = graph.make_rewriter();
+
+    auto on_opr = [&](mgb::cg::OperatorNodeBase* opr) {
+        if (opr->same_type<mgb::opr::WarpPerspective>()) {
+            bool is_h2d = true;
+            if (opr->input(0)->owner_opr()->same_type<mgb::opr::Host2DeviceCopy>())
+                is_h2d = true;
+            else if (opr->input(0)
+                             ->owner_opr()
+                             ->same_type<mgb::opr::VolatileSharedDeviceTensor>())
+                is_h2d = false;
+            else
+                return;
+
+            SymbolVarArray srcs;
+            if (is_h2d) {
+                auto h2d = opr->input(0)->owner_opr();
+                for (auto&& inp : get_io_tensors(m_user_config->discrete_input_name)) {
+                    auto val = TensorHelper::implement(inp)
+                                       ->cast_final_safe<TensorImplDft>()
+                                       .m_host_tensor;
+                    LITE_ASSERT(val);
+                    srcs.push_back(mgb::opr::Host2DeviceCopy::make(
+                            *m_load_result.graph, val, h2d->config()));
+                }
+            } else {
+                auto volatiled = opr->input(0)->owner_opr();
+                for (auto&& inp : get_io_tensors(m_user_config->discrete_input_name)) {
+                    auto val = TensorHelper::implement(inp)
+                                       ->cast_final_safe<TensorImplDft>()
+                                       .m_dev_tensor;
+                    LITE_ASSERT(val);
+                    srcs.push_back(mgb::opr::VolatileSharedDeviceTensor::make(
+                            *m_load_result.graph, val, volatiled->config()));
+                }
+            }
+
+            auto& warp = opr->cast_final<mgb::opr::WarpPerspective>();
+            SymbolVar new_out;
+            if (opr->input().size() == 3) {
+                new_out = mgb::opr::WarpPerspective::make(
+                        srcs, warp.input(1), warp.input(2), warp.param(),
+                        warp.config());
+            } else {
+                LITE_ASSERT(opr->input().size() == 4);
+                new_out = mgb::opr::WarpPerspective::make(
+                        srcs, warp.input(1), warp.input(2), warp.input(3), warp.param(),
+                        warp.config());
+            }
+            rewriter.replace_var(
+                    warp.output(0), new_out.node(),
+                    "replace WarpPerspective to WarpPerspective multi src version.");
+        } else {
+            rewriter.auto_replace_outputs(opr);
+        }
+    };
+    graph.iter(on_opr);
+    rewriter.apply_inplace();
+    auto new_ovar = graph.endpoint_vars();
+    new_ovar.resize(m_load_result.output_var_list.size());
+
+    for (size_t i = 0; i < new_ovar.size(); ++i) {
+        out_var_map[m_load_result.output_var_list[i]] = new_ovar[i];
+    }
+    for (auto&& i : m_load_result.output_var_map) {
+        i.second = out_var_map.at(i.second);
+    }
+    for (auto&& i : m_load_result.output_var_map_id) {
+        i.second = out_var_map.at(i.second);
+    }
+    for (size_t i = 0; i < m_load_result.output_var_list.size(); i++) {
+        new_ovar[i].rename(m_load_result.output_var_list[i].node()->name());
+    }
+    m_load_result.output_var_list = std::move(new_ovar);
 }
 
 void NetworkImplDft::replace_dev_input_pass() {
@@ -528,6 +611,8 @@ void NetworkImplDft::configure_after_loaded() {
 
 void NetworkImplDft::compile_graph() {
     replace_dev_input_pass();
+    if (!m_user_config->discrete_input_name.empty())
+        replace_src_discrete_input_opr_pass();
     make_output_spec();
     m_execute_func = m_load_result.graph_compile(m_output_spec);
 }
@@ -691,6 +776,11 @@ void NetworkImplDft::update_input() {
             m_network_io->inputs.push_back(io_in);
         }
     }
+
+    if (!m_user_config->discrete_input_name.empty()) {
+        update_input_lite_tensors();
+    }
+
     //! delete the IO that is not the network
     for (auto it = m_network_io->inputs.begin(); it != m_network_io->inputs.end();) {
         if (it->lite_tensor == nullptr) {
@@ -698,6 +788,79 @@ void NetworkImplDft::update_input() {
             it = m_network_io->inputs.erase(it);
         } else {
             it++;
+        }
+    }
+}
+
+void NetworkImplDft::update_input_lite_tensors() {
+    auto device_type = m_user_config->device_type;
+    auto device_id = m_compnode_locator.device;
+    auto stream_id = m_compnode_locator.stream;
+
+    for (auto&& in_tensor_iter : m_load_result.tensor_map) {
+        if (in_tensor_iter.first != m_user_config->discrete_input_name) {
+            continue;
+        }
+        bool found = false;
+        for (auto&& config_in : m_network_io->inputs) {
+            if (in_tensor_iter.first == config_in.name) {
+                found = true;
+                size_t bs = in_tensor_iter.second->shape(0);
+                auto shape = in_tensor_iter.second->shape();
+                shape.shape[0] = 1;
+                if (config_in.config_layout.ndim) {
+                    bs = config_in.config_layout.shapes[0];
+                    shape.shape[1] = config_in.config_layout.shapes[1];
+                    shape.shape[2] = config_in.config_layout.shapes[2];
+                    shape.shape[3] = config_in.config_layout.shapes[3];
+                }
+                HostTensorND tensor(
+                        in_tensor_iter.second->comp_node(), shape,
+                        in_tensor_iter.second->dtype(),
+                        in_tensor_iter.second->format());
+                for (size_t i = 0; i < bs; ++i) {
+                    if (config_in.is_host) {
+                        config_in.lite_tensors.push_back(std::make_shared<Tensor>(
+                                device_id, stream_id, device_type, true));
+                        TensorHelper::implement(config_in.lite_tensors[i])
+                                ->cast_final_safe<TensorImplDft>()
+                                .m_host_tensor = std::make_shared<HostTensorND>(tensor);
+                        config_in.lite_tensors[i]->update_from_implement();
+                    } else {
+                        config_in.lite_tensors.push_back(std::make_shared<Tensor>(
+                                device_id, stream_id, device_type));
+                        config_in.lite_tensors[i]->set_layout(
+                                to_lite_layout(tensor.layout()));
+                    }
+                    TensorHelper::implement(config_in.lite_tensors[i])
+                            ->cast_final_safe<TensorImplDft>()
+                            .m_record_reset =
+                            m_user_config->options.comp_node_seq_record_level > 0;
+                }
+            }
+        }
+        if (!found) {
+            size_t bs = in_tensor_iter.second->shape(0);
+            auto shape = in_tensor_iter.second->shape();
+            shape.shape[0] = 1;
+            HostTensorND tensor(
+                    in_tensor_iter.second->comp_node(), shape,
+                    in_tensor_iter.second->dtype(), in_tensor_iter.second->format());
+            IOInner io_in;
+            io_in.name = in_tensor_iter.first;
+            for (size_t i = 0; i < bs; ++i) {
+                io_in.lite_tensors.push_back(std::make_shared<Tensor>(
+                        device_id, stream_id, device_type, true));
+                TensorHelper::implement(io_in.lite_tensors[i])
+                        ->cast_final_safe<TensorImplDft>()
+                        .m_host_tensor = std::make_shared<HostTensorND>(tensor);
+                TensorHelper::implement(io_in.lite_tensors[i])
+                        ->cast_final_safe<TensorImplDft>()
+                        .m_record_reset =
+                        m_user_config->options.comp_node_seq_record_level > 0;
+                io_in.lite_tensors[i]->update_from_implement();
+            }
+            m_network_io->inputs.push_back(io_in);
         }
     }
 }
@@ -855,8 +1018,27 @@ std::shared_ptr<Tensor> NetworkImplDft::get_io_tensor(
     return nullptr;
 }
 
+std::vector<std::shared_ptr<Tensor>> NetworkImplDft::get_io_tensors(
+        std::string io_name, LiteTensorPhase phase) {
+    if (phase == LiteTensorPhase::LITE_INPUT) {
+        for (auto&& config_in : m_network_io->inputs) {
+            if (io_name == config_in.name &&
+                config_in.name == m_user_config->discrete_input_name) {
+                return config_in.lite_tensors;
+            }
+        }
+    }
+    LITE_THROW(mgb::ssprintf(
+            "tensor name must be %s input tensor name.", io_name.c_str()));
+    return {};
+}
+
 std::shared_ptr<Tensor> NetworkImplDft::get_input_tensor(size_t index) {
     return get_io_tensor(get_input_name(index));
+}
+
+std::vector<std::shared_ptr<Tensor>> NetworkImplDft::get_input_tensors(size_t index) {
+    return get_io_tensors(get_input_name(index));
 }
 
 std::shared_ptr<Tensor> NetworkImplDft::get_output_tensor(size_t index) {

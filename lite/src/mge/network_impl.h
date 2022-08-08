@@ -57,8 +57,18 @@ public:
             std::string io_name,
             LiteTensorPhase phase = LiteTensorPhase::LITE_IO) override;
 
+    //! get the network input tensors which input consists of discrete multiple tensors,
+    //! layout (1, c, h, w)
+    std::vector<std::shared_ptr<Tensor>> get_io_tensors(
+            std::string io_name,
+            LiteTensorPhase phase = LiteTensorPhase::LITE_INPUT) override;
+
     //! get the input tensor by index in the load_result tensormap
     std::shared_ptr<Tensor> get_input_tensor(size_t index) override;
+
+    //! get the network input tensors which input consists of discrete multiple tensors
+    //! by index
+    std::vector<std::shared_ptr<Tensor>> get_input_tensors(size_t index) override;
 
     //! get the output tensor by index in the load_result output_var_list
     std::shared_ptr<Tensor> get_output_tensor(size_t index) override;
@@ -190,6 +200,11 @@ private:
     //! VolatileSharedDeviceTensor Opr
     void replace_dev_input_pass();
 
+    //! if the input to the network is a list of tensors, this pass will replace
+    //! the opr that supports the input of a list of tensors with the corresponding
+    //! version, current support WarpPerspective
+    void replace_src_discrete_input_opr_pass();
+
     //! check whether the model is cross compnode
     void cross_compnode_model_detect();
 
@@ -199,6 +214,8 @@ private:
 
     void update_input();
     void update_output();
+    //! initialization lite_tensors when input is composed of discrete multiple tensors
+    void update_input_lite_tensors();
 
     //! when the model info have loaded, update the config according the model
     //! info, finaly use it in compute graph

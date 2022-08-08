@@ -117,6 +117,9 @@ struct LITE_API Options {
  *
  * @param auto_optimize_inference lite will detect the device information add
  * set the options heuristically
+ *
+ * @param discrete_input_name configure which input is composed of discrete
+ * multiple tensors
  */
 struct LITE_API Config {
     bool has_compression = false;
@@ -126,6 +129,7 @@ struct LITE_API Config {
     std::string bare_model_cryption_name = {};
     Options options = {};
     bool auto_optimize_inference = false;
+    std::string discrete_input_name = {};
 };
 
 /*!
@@ -289,8 +293,21 @@ public:
     std::shared_ptr<Tensor> get_io_tensor(
             std::string io_name, LiteTensorPhase phase = LiteTensorPhase::LITE_IO);
 
+    /** @brief get the network input tensors which input consists of discrete multiple
+     * tensors, layout (1, c, h, w)
+     *
+     * @param io_name the name of the tensor
+     * @param phase indicate the tensor is input tensor
+     */
+    std::vector<std::shared_ptr<Tensor>> get_io_tensors(
+            std::string io_name, LiteTensorPhase phase = LiteTensorPhase::LITE_INPUT);
+
     //! get the network input tensor by index
     std::shared_ptr<Tensor> get_input_tensor(size_t index);
+
+    //! get the network input tensors which input consists of discrete multiple tensors
+    //! by index
+    std::vector<std::shared_ptr<Tensor>> get_input_tensors(size_t index);
 
     //! get the network output tensor by index
     std::shared_ptr<Tensor> get_output_tensor(size_t index);

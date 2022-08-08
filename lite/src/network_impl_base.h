@@ -42,6 +42,9 @@ public:
     bool have_sync = false;
     //! Real input and output data location
     std::shared_ptr<Tensor> lite_tensor = nullptr;
+    //! If the input is consists of discrete multiple tensors, lite_tensors is real
+    //! input data location
+    std::vector<std::shared_ptr<Tensor>> lite_tensors;
 
     IOInner() = default;
     IOInner(const IO& io) {
@@ -86,8 +89,21 @@ public:
     virtual std::shared_ptr<Tensor> get_io_tensor(
             std::string io_name, LiteTensorPhase phase = LiteTensorPhase::LITE_IO) = 0;
 
+    //! get the network input tensors which input consists of discrete multiple tensors,
+    //! layout (1, c, h, w)
+    virtual std::vector<std::shared_ptr<Tensor>> get_io_tensors(
+            std::string io_name, LiteTensorPhase phase = LiteTensorPhase::LITE_INPUT) {
+        return {};
+    }
+
     //! get the input tensor by index in the load_result tensormap
     virtual std::shared_ptr<Tensor> get_input_tensor(size_t index) = 0;
+
+    //! get the network input tensors which input consists of discrete multiple tensors
+    //! by index
+    virtual std::vector<std::shared_ptr<Tensor>> get_input_tensors(size_t index) {
+        return {};
+    }
 
     //! get the output tensor by index in the load_result output_var_list
     virtual std::shared_ptr<Tensor> get_output_tensor(size_t index) = 0;

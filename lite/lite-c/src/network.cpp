@@ -43,7 +43,8 @@ LiteConfig default_config_t = {
         .backend = LiteBackend::LITE_DEFAULT,
         .bare_model_cryption_name = nullptr,
         .options = default_option,
-        .auto_optimize_inference = false};
+        .auto_optimize_inference = false,
+        .discrete_input_name = nullptr};
 LiteConfig* default_config() {
     return &default_config_t;
 }
@@ -135,6 +136,9 @@ lite::Config convert_to_lite_config(const LiteConfig c_config) {
     lite_config.options.enable_nchw64 = c_config.options.enable_nchw64;
 
     lite_config.auto_optimize_inference = c_config.auto_optimize_inference;
+    if (c_config.discrete_input_name) {
+        lite_config.discrete_input_name = c_config.discrete_input_name;
+    }
 
     return lite_config;
 }
@@ -271,6 +275,20 @@ int LITE_get_io_tensor(
     auto io_tensor =
             static_cast<lite::Network*>(network)->get_io_tensor(io_name, phase);
     *tensor = io_tensor.get();
+    LITE_CAPI_END();
+}
+
+int LITE_get_io_tensors(
+        LiteNetwork network, const char* io_name, size_t n_idx, LiteTensorPhase phase,
+        LiteTensor* tensor) {
+    LITE_CAPI_BEGIN();
+    LITE_ASSERT(network, "The network pass to LITE api is null");
+    auto io_tensors =
+            static_cast<lite::Network*>(network)->get_io_tensors(io_name, phase);
+    LITE_ASSERT(
+            n_idx < io_tensors.size(), "n_idx should be less than %zu",
+            io_tensors.size());
+    *tensor = io_tensors[n_idx].get();
     LITE_CAPI_END();
 }
 

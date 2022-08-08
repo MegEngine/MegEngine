@@ -500,3 +500,45 @@ class TestNetwork(TestShuffleNet):
 
         os.remove(fast_run_cache)
         os.remove(global_layout_transform_model)
+
+
+class TestDiscreteInputNet(unittest.TestCase):
+    source_dir = os.getenv("LITE_TEST_RESOURCE")
+    data0_path = os.path.join(source_dir, "data0.npy")
+    data1_path = os.path.join(source_dir, "data1.npy")
+    data2_path = os.path.join(source_dir, "data2.npy")
+    model_path = os.path.join(source_dir, "test_discrete_input.mge")
+    data0 = np.load(data0_path)
+    data1 = np.load(data1_path)
+    data2 = np.load(data2_path)
+
+    def do_forward(self, network, times=3):
+        data_name = network.get_input_name(1)
+        datas = []
+        datas.append(network.get_io_tensors(data_name, 0))
+        datas.append(network.get_io_tensors(data_name, 1))
+        datas.append(network.get_io_tensors(data_name, 2))
+
+        datas[0].set_data_by_copy(self.data0)
+        datas[1].set_data_by_copy(self.data1)
+        datas[2].set_data_by_copy(self.data2)
+        for i in range(times):
+            network.forward()
+            network.wait()
+
+
+class TestDiscreteInput(TestDiscreteInputNet):
+    def test_discrete_input(self):
+        config = LiteConfig()
+        config.discrete_input_name = "data".encode("utf-8")
+        input_io = LiteIO(
+            "data",
+            is_host=True,
+            io_type=LiteIOType.LITE_IO_VALUE,
+            layout=LiteLayout([3, 3, 224, 224]),
+        )
+        ios = LiteNetworkIO()
+        ios.add_input(input_io)
+        network = LiteNetwork(config, ios)
+        network.load(self.model_path)
+        self.do_forward(network)

@@ -290,6 +290,48 @@ TEST(TestCapiNetWork, GetAllNameAhead) {
     ASSERT_TRUE(ios_mem.outputs->config_layout.shapes[1] == 1000);
 }
 
+TEST(TestCapiNetWork, Discrete_Input) {
+    std::vector<std::shared_ptr<lite::Tensor>> datas;
+    datas.push_back(lite::get_input_data("./data0.npy"));
+    datas.push_back(lite::get_input_data("./data1.npy"));
+    datas.push_back(lite::get_input_data("./data2.npy"));
+    size_t data_length_in_byte = datas[0]->get_tensor_total_size_in_byte();
+
+    LiteIO input_io = default_io;
+    input_io.is_host = true;
+    input_io.name = "data";
+    LiteLayout d_ly;
+    d_ly.ndim = 4;
+    d_ly.data_type = LiteDataType::LITE_FLOAT;
+    std::vector<size_t> input_shape = {3, 3, 224, 224};
+    for (size_t i = 0; i < d_ly.ndim; i++) {
+        d_ly.shapes[i] = input_shape[i];
+    }
+    input_io.config_layout = d_ly;
+
+    LiteNetworkIO network_io = *default_network_io();
+    network_io.inputs = &input_io;
+    network_io.input_size = 1;
+
+    LiteConfig c_config = *default_config();
+    c_config.discrete_input_name = "data";
+    LiteNetwork c_network;
+    LITE_CAPI_CHECK(LITE_make_network(&c_network, c_config, network_io));
+    std::string model_path = "./test_discrete_input.mge";
+    LITE_CAPI_CHECK(LITE_load_model_from_path(c_network, model_path.c_str()));
+
+    std::vector<LiteTensor> c_data_tensors(3, nullptr);
+    for (size_t i = 0; i < 3; i++) {
+        LITE_CAPI_CHECK(LITE_get_io_tensors(
+                c_network, "data", i, LITE_INPUT, &c_data_tensors[i]));
+        LITE_CAPI_CHECK(LITE_reset_tensor_memory(
+                c_data_tensors[i], datas[i]->get_memory_ptr(), data_length_in_byte));
+    }
+
+    ForwardNetwork;
+    LITE_CAPI_CHECK(LITE_destroy_network(c_network));
+}
+
 #if LITE_BUILD_WITH_RKNPU
 
 static int GetTop(

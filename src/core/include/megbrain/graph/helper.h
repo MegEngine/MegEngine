@@ -381,7 +381,7 @@ public:
 };
 
 //! shortcut for calling ExtraDependencyMerger
-SymbolVarArray get_dest_vars_with_extra_deps(
+MGE_WIN_DECLSPEC_FUC SymbolVarArray get_dest_vars_with_extra_deps(
         const SymbolVarArray& dest_vars, SpecialOprStat* sopr_stat = nullptr);
 
 }  // namespace cg

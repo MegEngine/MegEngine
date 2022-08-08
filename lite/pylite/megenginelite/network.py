@@ -173,6 +173,8 @@ class LiteConfig(Structure):
 
         auto_optimize_inference: lite will detect the device information add set the options heuristically
 
+        discrete_input_name: configure which input is composed of discrete multiple tensors
+
     Examples:
         .. code-block::
 
@@ -193,6 +195,7 @@ class LiteConfig(Structure):
         ("_bare_model_cryption_name", c_char_p),
         ("options", LiteOptions),
         ("auto_optimize_inference", c_int),
+        ("discrete_input_name", c_char_p),
     ]
 
     def __init__(self, device_type=LiteDeviceType.LITE_CPU, option=None):
@@ -207,6 +210,7 @@ class LiteConfig(Structure):
         self.has_compression = 0
         self.backend = LiteBackend.LITE_DEFAULT
         self.auto_optimize_inference = 0
+        self.discrete_input_name = c_char_p(b"")
 
     @property
     def bare_model_cryption_name(self):
@@ -229,6 +233,7 @@ class LiteConfig(Structure):
             "bare_model_cryption_name": self.bare_model_cryption_name,
             "options": self.options,
             "auto_optimize_inference": self.auto_optimize_inference,
+            "discrete_input_name": self.discrete_input_name,
         }
         return data.__repr__()
 
@@ -536,6 +541,10 @@ class _NetworkAPI(_LiteCObjBase):
             [c_char_p, c_size_t, LiteConfig, POINTER(_LiteNetworkIO)],
         ),
         ("LITE_extra_configure", [_Cnetwork, LiteExtraConfig]),
+        (
+            "LITE_get_io_tensors",
+            [_Cnetwork, c_char_p, c_size_t, c_int, POINTER(_Ctensor)],
+        ),
     ]
 
 
@@ -732,6 +741,30 @@ class LiteNetwork(object):
         tensor = LiteTensor(physic_construct=False)
         self._api.LITE_get_io_tensor(
             self._network, c_name, phase, byref(tensor._tensor)
+        )
+        tensor.update()
+        return tensor
+
+    def get_io_tensors(self, name, n_idx, phase=LiteTensorPhase.LITE_INPUT):
+        """
+        get the n_idx'th tensor in the network input tensors whose
+        input consists of discrete multiple tensors and tensor name is name
+
+        Args:
+            name: the name of input tensor
+            n_idx: the tensor index
+            phase: the type of LiteTensor, this is useful to separate input tensor with the same name
+
+        Returns:
+            the tensors with given name and type
+        """
+        if type(name) == str:
+            c_name = c_char_p(name.encode("utf-8"))
+        else:
+            c_name = c_char_p(name)
+        tensor = LiteTensor(physic_construct=False)
+        self._api.LITE_get_io_tensors(
+            self._network, c_name, n_idx, phase, byref(tensor._tensor)
         )
         tensor.update()
         return tensor

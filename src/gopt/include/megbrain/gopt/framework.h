@@ -44,13 +44,14 @@ public:
     //! rewrite vars in a graph
     class Rewriter;
 
-    SubGraph(const SymbolVarArray& endpoint_vars);
+    MGE_WIN_DECLSPEC_FUC SubGraph(const SymbolVarArray& endpoint_vars);
 
     //! get the associated ComputingGraph
     ComputingGraph* comp_graph() const { return m_comp_graph; }
 
     //! iterate in topology order
-    void iter(const Callback& cb, std::shared_ptr<ExtraDep> = nullptr) const;
+    MGE_WIN_DECLSPEC_FUC void iter(
+            const Callback& cb, std::shared_ptr<ExtraDep> = nullptr) const;
 
     //! make a Rewriter bound to this graph
     inline Rewriter make_rewriter();
@@ -99,7 +100,7 @@ public:
      * \return new operator that uses new inputs; it would be
      *      opr if no input is changed
      */
-    OperatorNodeBase* auto_replace_outputs(OperatorNodeBase* opr);
+    MGE_WIN_DECLSPEC_FUC OperatorNodeBase* auto_replace_outputs(OperatorNodeBase* opr);
 
     //! get current var: if var has been replaced, return its
     //! new value; otherwise return var itself
@@ -119,11 +120,11 @@ public:
      *
      * \param msg see OptState::on_var_replaced
      */
-    void replace_var(VarNode* src, VarNode* dst, const char* msg);
+    MGE_WIN_DECLSPEC_FUC void replace_var(VarNode* src, VarNode* dst, const char* msg);
 
     //! apply this rewriter to the owner graph and modify owner
     //! SubGraph inplace
-    void apply_inplace() const;
+    MGE_WIN_DECLSPEC_FUC void apply_inplace() const;
 };
 SubGraph::Rewriter SubGraph::make_rewriter() {
     return {this};

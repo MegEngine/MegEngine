@@ -22,7 +22,7 @@ namespace opr {
  * Impl note: this operator might have 3 or 4 inputs depending on whether
  * \p mat_idx is given
  */
-MGB_DEFINE_OPR_CLASS(
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(
         WarpPerspectiveForward,
         intl::WorkspaceSizeInfer<intl::OutshapeBySymvarSCNOpr<
                 mixin::MegDNNOprHolderImpl<megdnn::WarpPerspectiveForward>>>) // {

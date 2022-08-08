@@ -103,6 +103,9 @@ extern LITE_API const LiteOptions default_option;
 
  *\param auto_optimize_inference lite will detect the device information add
  * set the options heuristically
+ *
+ * \param discrete_input_name configure which input is composed of discrete
+ * multiple tensors
  */
 typedef struct LiteConfig {
     int has_compression;
@@ -112,6 +115,7 @@ typedef struct LiteConfig {
     const char* bare_model_cryption_name;
     LiteOptions options;
     int auto_optimize_inference;
+    const char* discrete_input_name;
 } LiteConfig;
 
 //! get default config
@@ -296,6 +300,19 @@ LITE_API int LITE_wait(const LiteNetwork network);
  */
 LITE_API int LITE_get_io_tensor(
         LiteNetwork network, const char* io_name, LiteTensorPhase phase,
+        LiteTensor* tensor);
+
+/**
+ * \brief get the n'th tensor in the network input tensors whose input
+ * consists of discrete multiple tensors and name is io_name, layout (1, c, h, w)
+ * \param[in] network The loaded model
+ * \param[in] io_name The input name
+ * \param[in] n_idx The index of tensor
+ * \param[in] phase The tensor phase
+ * \param[out] tensor The IO tensor get from the network
+ */
+LITE_API int LITE_get_io_tensors(
+        LiteNetwork network, const char* io_name, size_t n_idx, LiteTensorPhase phase,
         LiteTensor* tensor);
 
 /**

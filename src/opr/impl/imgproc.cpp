@@ -160,18 +160,6 @@ void WarpPerspectiveForward::outshape_by_symvar_do_get_output_shape(
                 "out2d=%s",
                 imgshp.to_string().c_str(), matshp.to_string().c_str(),
                 oshp2d.to_string().c_str());
-        if (input().size() - m_srcs_size == 2) {
-            mgb_assert(
-                    m_srcs_size == matshp[0], "batchsize mismatch: img=%zu mat=%zu",
-                    m_srcs_size, matshp[0]);
-        } else {
-            mgb_assert(input().size() - m_srcs_size == 3);
-            mat_idx_shp = shpinfo.shape_inp_shp.at(m_srcs_size + 1);
-            mgb_assert(
-                    mat_idx_shp[0] == matshp[0] && mat_idx_shp.ndim == 1,
-                    "invalid mat_idx shape: mat=%zu mat_idx=%s", matshp[0],
-                    mat_idx_shp.to_string().c_str());
-        }
         size_t height_idx = 0;
         if (param().format == Param::Format::NCHW) {
             height_idx = 2;
