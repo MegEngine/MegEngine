@@ -55,25 +55,65 @@ size_t RegionRestrictedConvolutionBackwardDataImpl::get_workspace_in_bytes(
 void RegionRestrictedConvolutionBackwardDataImpl::exec(
         _megdnn_tensor_in filter, _megdnn_tensor_in diff, _megdnn_tensor_in rin,
         _megdnn_tensor_in rout, _megdnn_tensor_out grad, _megdnn_workspace workspace) {
-    megdnn_throw(ssprintf(
-            "unsupported RegionRestrictedConvolutionBackwardData(%s, %s, %s, %s) -> %s",
-            filter.layout.dtype.name(), diff.layout.dtype.name(),
-            rin.layout.dtype.name(), rout.layout.dtype.name(),
-            grad.layout.dtype.name()));
+    auto fm = check_exec(
+            filter.layout, diff.layout, rin.layout, rout.layout, grad.layout,
+            workspace.size);
+    // XXX: a naive impl to set deconv padding to param, needs optimization in future.
+    [&]() -> void {
+        size_t stride = fm.stride[0];
+        size_t src_size = grad.layout.shape[2];
+        size_t fwd_pad = fm.padding[0];
+        size_t filter_size = fm.spatial[0];
+        size_t deconv_pad = (stride * src_size - stride + stride * filter_size -
+                             src_size - 2 * fwd_pad + filter_size - 1) /
+                            (2 * stride);
+        fm.padding[0] = fm.padding[1] = deconv_pad;
+        return;
+    }();
+    auto kparam = chanwise::Param::load(
+            diff.layout, grad.layout, fm,
+            param().compute_mode == Param::ComputeMode::DEFAULT);
+    megdnn_assert(
+            fm.group > 1 && diff.layout.dtype.category() == DTypeCategory::FLOAT &&
+            param().compute_mode == Param::ComputeMode::DEFAULT &&
+            fm.spatial_ndim == 2 && fm.icpg == 1 && fm.ocpg == 1 &&
+            fm.dilation[0] == 1 && fm.dilation[1] == 1 && !fm.should_flip &&
+            param().stride_h == 1 && param().stride_w == 1);
+    // NOTE: uint8 dtype region mask requires the spatial size of src&dst is 4*N
+    if (rin.layout.dtype == dtype::Uint8()) {
+        megdnn_assert(
+                (grad.layout.shape[3] & 3) == 0 && (diff.layout.shape[3] & 3) == 0);
+    }
+    auto stream = cuda_stream(handle());
+    if (filter.layout.dtype == dtype::Float32() && rin.layout.dtype == dtype::Int32() &&
+        rout.layout.dtype == dtype::Int32()) {
+        chanwise::run_bwd_depthwise_large_filter(
+                grad.ptr<dt_float32>(), diff.ptr<dt_float32>(),
+                filter.ptr<dt_float32>(), rin.ptr<dt_int32>(), rout.ptr<dt_int32>(),
+                kparam, stream);
+    } else if (
+            filter.layout.dtype == dtype::Float32() &&
+            rin.layout.dtype == dtype::Uint8() && rout.layout.dtype == dtype::Uint8()) {
+        chanwise::run_bwd_depthwise_large_filter(
+                grad.ptr<dt_float32>(), diff.ptr<dt_float32>(),
+                filter.ptr<dt_float32>(), rin.ptr<dt_uint8>(), rout.ptr<dt_uint8>(),
+                kparam, stream);
+    } else {
+        megdnn_throw("undefined or unimplemented region restricted conv mode");
+    }
 }
 
 size_t RegionRestrictedConvolutionBackwardFilterImpl::get_workspace_in_bytes(
         const TensorLayout& src, const TensorLayout& diff, const TensorLayout&,
         const TensorLayout&, const TensorLayout& grad) {
-    size_t workspace_size = 0;
-    return workspace_size;
+    return 0;
 }
 
 /* ============== RegionRestrictedConvolutionBackwardFilterImpl ============== */
 void RegionRestrictedConvolutionBackwardFilterImpl::exec(
         _megdnn_tensor_in src, _megdnn_tensor_in diff, _megdnn_tensor_in rin,
         _megdnn_tensor_in rout, _megdnn_tensor_out grad, _megdnn_workspace workspace) {
-    megdnn_assert_internal(0);
+    megdnn_throw("Region Restricted Conv BackwardFilter unimplemented");
 }
 
 // vim: syntax=cpp.doxygen

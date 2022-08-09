@@ -131,4 +131,110 @@ TEST_F(NAIVE, REGIONRESTRICTEDCONVOLUTION_FORWARD) {
                     {}});
 }
 
+TEST_F(NAIVE, REGIONRESTRICTEDCONVOLUTION_FORWARD_DENSE_BRUTE) {
+    Checker<RegionRestrictedConvolutionForward> checker(handle());
+    RegionRestrictedConvolutionForward::Param param;
+    checker.set_param(param).exect(
+            Testcase{
+                    TensorValue(  // src
+                            {1, 1, 4, 4}, dtype::Float32(),
+                            {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}),
+                    TensorValue(  // filter
+                            {1, 1, 2, 2}, dtype::Float32(), {1, 1, 1, 1}),
+                    TensorValue(  // rin
+                            {1, 4, 4}, dtype::Int32(),
+                            {1, 1, 1, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0, 1, 1, 1}),
+                    TensorValue(  // rout
+                            {1, 3, 3}, dtype::Int32(), {0, 1, 1, 1, 0, 0, 1, 0, 1}),
+                    {},  // output
+            },
+            Testcase{
+                    {},
+                    {},
+                    {},
+                    {},
+                    TensorValue(
+                            {1, 1, 3, 3}, dtype::Float32(),
+                            {4, 14, 18, 5, 9, 0, 13, 9, 50})});
+}
+
+TEST_F(NAIVE, REGIONRESTRICTEDCONVOLUTION_BWD_DATA_DENSE_BRUTE) {
+    Checker<RegionRestrictedConvolutionBackwardData> checker(handle());
+    RegionRestrictedConvolutionBackwardData::Param param;
+    checker.set_param(param).exect(
+            Testcase{
+                    // filter
+                    TensorValue(
+                            {1, 1, 2, 2},      // shape
+                            dtype::Float32(),  // dtype
+                            {1.f, 1.f, 1.f, 1.f}),
+                    // diff
+                    TensorValue(
+                            {1, 1, 3, 3}, dtype::Float32(),
+                            {1.f, 2.f, 3.f, 4.f, 5.f, 6.f, 7.f, 8.f, 9.f}),
+                    // rin
+                    TensorValue(
+                            {1, 4, 4}, dtype::Int32(),
+                            {1, 1, 1, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0, 1, 1, 1}),
+                    // rout
+                    TensorValue({1, 3, 3}, dtype::Int32(), {0, 1, 1, 1, 0, 0, 1, 0, 1}),
+                    // grad
+                    {}},
+            Testcase{// filter
+                     {},
+                     // diff
+                     {},
+                     // rin
+                     {},
+                     // rout
+                     {},
+                     // grad
+                     TensorValue(
+                             {1, 1, 4, 4}, dtype::Float32(),
+                             {0., 2., 5., 3., 1., 6., 5., 3., 0., 13., 9., 9., 0., 7.,
+                              9., 9.})});
+}
+
+TEST_F(NAIVE, REGIONRESTRICTEDCONVOLUTION_BWD_DATA_GROUP_BRUTE) {
+    Checker<RegionRestrictedConvolutionBackwardData> checker(handle());
+
+    // params
+    RegionRestrictedConvolutionBackwardData::Param param;
+    param.sparse = RegionRestrictedConvolutionBackwardData::Param::Sparse::GROUP;
+    param.mode = RegionRestrictedConvolutionBackwardData::Mode::CROSS_CORRELATION;
+    param.compute_mode =
+            RegionRestrictedConvolutionBackwardData::Param::ComputeMode::DEFAULT;
+    param.pad_h = param.pad_w =
+            0;  // forward param, naive backward data doesn't matter with deconv padding
+    param.stride_h = param.stride_w = 1;
+
+    // checker setting
+    checker.set_param(param).exect(
+            Testcase{// filter
+                     TensorValue(
+                             {2, 1, 1, 2, 2},   // shape
+                             dtype::Float32(),  // dtype
+                             {1.f, 2.f, 3.f, 4.f, 5.f, 6.f, 7.f, 8.f}),
+                     // diff
+                     TensorValue({1, 2, 1, 1}, dtype::Float32(), {1, 2}),
+                     // rin
+                     TensorValue({1, 2, 2}, dtype::Int32(), {1, 1, 1, 1}),
+                     // rout
+                     TensorValue({1, 1, 1}, dtype::Int32(), {1}),
+                     // grad
+                     {}},
+            Testcase{// filter
+                     {},
+                     // diff
+                     {},
+                     // rin
+                     {},
+                     // rout
+                     {},
+                     // grad
+                     TensorValue(
+                             {1, 2, 2, 2}, dtype::Float32(),
+                             {1, 2, 3, 4, 10, 12, 14, 16})});
+}
+
 // vim: syntax=cpp.doxygen

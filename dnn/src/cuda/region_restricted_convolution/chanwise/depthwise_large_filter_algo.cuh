@@ -498,16 +498,8 @@ __global__ void DepthwiseConv2dGPUKernelNCHW(
     SrcGlobal2ShareVisitor gl2sh_src = {
             smem_src,
             static_cast<int>(param.src_w),
-            static_cast<int>(
-                    is_fwd ? src_start_h
-                           : src_start_h -
-                                     (param.out_h / 2 + param.flt_h / 2 - param.pad_h -
-                                      param.src_h * param.stride_h / 2)),
-            static_cast<int>(
-                    is_fwd ? src_start_w
-                           : src_start_w -
-                                     (param.out_w / 2 + param.flt_w / 2 - param.pad_w -
-                                      param.src_w * param.stride_w / 2)),
+            static_cast<int>(src_start_h),
+            static_cast<int>(src_start_w),
             static_cast<int>(is_fwd ? param.src_h : param.src_h * param.stride_h),
             static_cast<int>(is_fwd ? param.src_w : param.src_w * param.stride_w),
             is_fwd ? 1 : static_cast<int>(param.stride_h),
@@ -516,16 +508,8 @@ __global__ void DepthwiseConv2dGPUKernelNCHW(
     RinGlobal2ShareVisitor gl2sh_rin = {
             smem_rin,
             static_cast<int>(param.src_w),
-            static_cast<int>(
-                    is_fwd ? src_start_h
-                           : src_start_h -
-                                     (param.out_h / 2 + param.flt_h / 2 - param.pad_h -
-                                      param.src_h * param.stride_h / 2)),
-            static_cast<int>(
-                    is_fwd ? src_start_w
-                           : src_start_w -
-                                     (param.out_w / 2 + param.flt_w / 2 - param.pad_w -
-                                      param.src_w * param.stride_w / 2)),
+            static_cast<int>(src_start_h),
+            static_cast<int>(src_start_w),
             static_cast<int>(is_fwd ? param.src_h : param.src_h * param.stride_h),
             static_cast<int>(is_fwd ? param.src_w : param.src_w * param.stride_w),
             is_fwd ? 1 : static_cast<int>(param.stride_h),
@@ -790,14 +774,15 @@ __global__ void DepthwiseConv2dGPUKernelNCHW(
         out_base_h_idx = out_start_h + off_oh * OutTileConfig::unroll_h;
 
     T* smem_src_ptr = smem_src + off_ow * FilterTileConfig::unroll_w;
-    static_assert((FilterTileConfig::unroll_w & 3) == 0);
+    static_assert(
+            (FilterTileConfig::unroll_w & 3) == 0, "filter tile unroll_w & 3 != 0");
     int* smem_rin_ptr = smem_rin + (off_ow * FilterTileConfig::unroll_w >> 2);
     T* smem_flt_ptr = smem_flt + off_ow * FilterTileConfig::unroll_w;
 
     T* out_base_ptr = output + off_ochannel * param.out_h * param.out_w;
     const uint8_t* rout_base_ptr = rout + batch * param.out_h * param.out_w;
-    static_assert((OutTileConfig::unroll_w & 3) == 0);
-    static_assert((OutTileConfig::block_w & 3) == 0);
+    static_assert((OutTileConfig::unroll_w & 3) == 0, "output tile unroll_w & 3 != 0");
+    static_assert((OutTileConfig::block_w & 3) == 0, "output block_w & 3 != 0");
     int reg_rout[OutTileConfig::unroll_size] = {0};
 #pragma unroll
     for (int i = 0; i < OutTileConfig::unroll_h; ++i) {
@@ -821,16 +806,8 @@ __global__ void DepthwiseConv2dGPUKernelNCHW(
     SrcGlobal2ShareVisitor gl2sh_src = {
             smem_src,
             static_cast<int>(param.src_w),
-            static_cast<int>(
-                    is_fwd ? src_start_h
-                           : src_start_h -
-                                     (param.out_h / 2 + param.flt_h / 2 - param.pad_h -
-                                      param.src_h * param.stride_h / 2)),
-            static_cast<int>(
-                    is_fwd ? src_start_w
-                           : src_start_w -
-                                     (param.out_w / 2 + param.flt_w / 2 - param.pad_w -
-                                      param.src_w * param.stride_w / 2)),
+            static_cast<int>(src_start_h),
+            static_cast<int>(src_start_w),
             static_cast<int>(is_fwd ? param.src_h : param.src_h * param.stride_h),
             static_cast<int>(is_fwd ? param.src_w : param.src_w * param.stride_w),
             is_fwd ? 1 : static_cast<int>(param.stride_h),
@@ -839,16 +816,8 @@ __global__ void DepthwiseConv2dGPUKernelNCHW(
     RinGlobal2ShareVisitor gl2sh_rin = {
             smem_rin,
             static_cast<int>(param.src_w),
-            static_cast<int>(
-                    is_fwd ? src_start_h
-                           : src_start_h -
-                                     (param.out_h / 2 + param.flt_h / 2 - param.pad_h -
-                                      param.src_h * param.stride_h / 2)),
-            static_cast<int>(
-                    is_fwd ? src_start_w
-                           : src_start_w -
-                                     (param.out_w / 2 + param.flt_w / 2 - param.pad_w -
-                                      param.src_w * param.stride_w / 2)),
+            static_cast<int>(src_start_h),
+            static_cast<int>(src_start_w),
             static_cast<int>(is_fwd ? param.src_h : param.src_h * param.stride_h),
             static_cast<int>(is_fwd ? param.src_w : param.src_w * param.stride_w),
             is_fwd ? 1 : static_cast<int>(param.stride_h),
@@ -1134,14 +1103,20 @@ void LaunchDepthwiseConv2dGPU(
             RinTileCount::smem_size * sizeof(int);
 
     void (*kernel)(const Param, const T*, const T*, const RT*, const RT*, T*);
+    const bool is_fwd = (kDirection == DIRECTION_FORWARD);
 
     if (param.is_compute_deafult) {
         kernel = DepthwiseConv2dGPUKernelNCHW<IConvTrait, kDirection, stride>;
     } else {
         megdnn_assert_internal(0);
     }
-    kernel<<<grid, block, shared_storage, stream>>>(
-            param, input, filter, rin, rout, output);
+    if (is_fwd) {
+        kernel<<<grid, block, shared_storage, stream>>>(
+                param, input, filter, rin, rout, output);
+    } else {
+        kernel<<<grid, block, shared_storage, stream>>>(
+                param, input, filter, rout, rin, output);
+    }
     after_kernel_launch();
 }
 

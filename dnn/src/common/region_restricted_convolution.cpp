@@ -38,7 +38,7 @@ void RegionRestrictedConvolutionForward::deduce_dtype(
             "only float type is supported for region_restricted_conv forward");
     megdnn_assert(
             rin == rout && (rin == dtype::Int32() || rin == dtype::Uint8()),
-            "the dtype of rin/rout should be Int32, got %s.", rin.name());
+            "the dtype of rin/rout should be Int32 or Uint8, got %s.", rin.name());
 }
 
 void RegionRestrictedConvolutionForward::deduce_layout(
@@ -91,12 +91,12 @@ RegionRestrictedConvolutionBackwardData::check_exec(
     auto ret = check_layout_fwd(grad_fwd, filter_fwd, diff_fwd);
 #define err_msg(lhs, rhs) \
     megdnn_assert(lhs == rhs, "shape mismatch, #lhs:%zu, #rhs:%zu", lhs, rhs);
-    err_msg(rin.shape[0], grad_fwd.shape[0]);
-    err_msg(rin.shape[1], grad_fwd.shape[2]);
-    err_msg(rin.shape[2], grad_fwd.shape[3]);
-    err_msg(rout.shape[0], diff_fwd.shape[0]);
-    err_msg(rout.shape[1], diff_fwd.shape[2]);
-    err_msg(rout.shape[2], diff_fwd.shape[3]);
+    err_msg(rin.shape[0], grad_fwd.shape[0]);   // batch
+    err_msg(rin.shape[1], grad_fwd.shape[2]);   // ih
+    err_msg(rin.shape[2], grad_fwd.shape[3]);   // iw
+    err_msg(rout.shape[0], diff_fwd.shape[0]);  // batch
+    err_msg(rout.shape[1], diff_fwd.shape[2]);  // oh
+    err_msg(rout.shape[2], diff_fwd.shape[3]);  // ow
 #undef err_msg
     auto required_workspace_in_bytes =
             get_workspace_in_bytes(filter, diff, rin, rout, grad);
@@ -106,45 +106,22 @@ RegionRestrictedConvolutionBackwardData::check_exec(
 
 void RegionRestrictedConvolutionBackwardData::deduce_dtype(
         DType filter, DType diff, DType rin, DType rout, DType& grad) {
-    SmallVector<DType> supported_dst_dtype;
-    if (filter.category() == diff.category() &&
-        filter.category() == DTypeCategory::FLOAT) {
-        supported_dst_dtype.push_back(filter);
-    } else if (filter.enumv() == DTypeEnum::Int8 && diff == filter) {
-        supported_dst_dtype.push_back(dtype::Int32());
-    } else if (
-            (filter.enumv() == DTypeEnum::QuantizedS8 &&
-             diff.enumv() == DTypeEnum::QuantizedS8) ||
-            (filter.enumv() == DTypeEnum::Quantized8Asymm &&
-             diff.enumv() == DTypeEnum::Quantized8Asymm)) {
-        supported_dst_dtype.push_back(dtype::QuantizedS32(mul_scale(filter, diff)));
-        if (grad.valid() && grad.enumv() == diff.enumv()) {
-            supported_dst_dtype.push_back(grad);
-        }
-    } else {
-        megdnn_throw(ssprintf(
-                "unsupported input / diff DType: %s x %s", filter.name(), diff.name()));
-    }
-    if (!grad.valid()) {
-        grad = supported_dst_dtype.at(0);
-    } else {
-        megdnn_assert(
-                vec_contains(supported_dst_dtype, grad),
-                "unsupported ConvBwd(%s, %s) -> %s", filter.name(), diff.name(),
-                grad.name());
-    }
-    megdnn_assert(
-            param().compute_mode != Param::ComputeMode::FLOAT32
+    // FIXME: infering dtype of grad via naive impl only support fp32
+    // (lack of quantized dtype infering or others) may not suitable in the furture
 #if !MEGDNN_DISABLE_FLOAT16
-                    || filter.enumv() == DTypeEnum::Float16 ||
-                    filter.enumv() == DTypeEnum::BFloat16
+    if (diff.enumv() == DTypeEnum::Float32 || diff.enumv() == DTypeEnum::Float16) {
+        grad = diff;
+    }
 #endif
-            ,
-            "ComputeMode::FLOAT32 is only available for Float16/BFloat16 "
-            "input / output.");
+    megdnn_assert(grad.valid(), "dtype of grad requires deducing of assigned");
     megdnn_assert(
-            rin == rout && rin == dtype::Int32(),
-            "the dtype of rin/rout should be Int32, got %s.", rin.name());
+            diff.category() == DTypeCategory::FLOAT &&
+                    filter.category() == DTypeCategory::FLOAT &&
+                    grad.category() == DTypeCategory::FLOAT,
+            "only float type is supported for region_restricted_conv backward data");
+    megdnn_assert(
+            rin == rout && (rin == dtype::Int32() || rin == dtype::Uint8()),
+            "the dtype of rin/rout should be Int32 or Uint8, got %s.", rin.name());
 }
 
 void RegionRestrictedConvolutionBackwardData::deduce_layout(

@@ -1,7 +1,7 @@
-#include "./kern.cuh"
 #include "cuda.h"
 #include "cuda_fp16.h"
 #include "src/cuda/fp16_help.cuh"
+#include "src/cuda/region_restricted_convolution/chanwise/kern.cuh"
 
 using namespace megdnn;
 using namespace cuda;
@@ -15,7 +15,7 @@ namespace cuda {
 namespace region_restricted_convolution {
 namespace chanwise {
 
-// =====================================fwd=====================================
+// =====================================bwd=====================================
 
 template <>
 void run_bwd_depthwise_large_filter(
