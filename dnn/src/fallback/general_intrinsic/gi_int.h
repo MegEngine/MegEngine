@@ -2055,6 +2055,7 @@ void GiStoreZipInt8V3(void* Buffer, GI_INT8_t a, GI_INT8_t b, GI_INT8_t c) {
 #define GiShiftRightInt32(Vector, n) \
     vsra_vx_i32m1(Vector, n, GI_SIMD_LEN_BYTE / sizeof(int32_t))
 #else
+GI_FORCEINLINE
 GI_INT32_t ShiftRightNaive(GI_INT32_t src, const size_t shift) {
     GI_INT32_t ret;
     for (size_t idx = 0; idx < GI_SIMD_LEN_BYTE / sizeof(int32_t); ++idx) {
@@ -2074,6 +2075,7 @@ GI_INT32_t ShiftRightNaive(GI_INT32_t src, const size_t shift) {
 #define GiShiftLeftInt32(Vector, n) \
     vsll_vx_i32m1(Vector, n, GI_SIMD_LEN_BYTE / sizeof(int32_t))
 #else
+GI_FORCEINLINE
 GI_INT32_t ShiftLeftNaive(GI_INT32_t src, const size_t shift) {
     GI_INT32_t ret;
     for (size_t idx = 0; idx < GI_SIMD_LEN_BYTE / sizeof(int32_t); ++idx) {
@@ -2306,19 +2308,9 @@ GI_UINT8_t GiCvtFromInt32V4ToUint8(
         GI_INT32_t Vector0, GI_INT32_t Vector1, GI_INT32_t Vector2,
         GI_INT32_t Vector3) {
 #if defined(GI_NEON_INTRINSICS)
-    int16x8_t mid1 = vmaxq_s16(
-            vdupq_n_s16(0),
-            vminq_s16(
-                    vcombine_s16(vqmovn_s32(Vector0), vqmovn_s32(Vector1)),
-                    vdupq_n_s16(UINT8_MAX)));
-    int16x8_t mid2 = vmaxq_s16(
-            vdupq_n_s16(0),
-            vminq_s16(
-                    vcombine_s16(vqmovn_s32(Vector2), vqmovn_s32(Vector3)),
-                    vdupq_n_s16(UINT8_MAX)));
     return vcombine_u8(
-            vqmovn_u16(vreinterpretq_u16_s16(mid1)),
-            vqmovn_u16(vreinterpretq_u16_s16(mid2)));
+            vqmovun_s16(vcombine_s16(vqmovn_s32(Vector0), vqmovn_s32(Vector1))),
+            vqmovun_s16(vcombine_s16(vqmovn_s32(Vector2), vqmovn_s32(Vector3))));
 #elif defined(GI_SSE2_INTRINSICS)
     __m128i vepi16_0 = _mm_packs_epi32(Vector0, Vector1);
     __m128i vepi16_1 = _mm_packs_epi32(Vector2, Vector3);

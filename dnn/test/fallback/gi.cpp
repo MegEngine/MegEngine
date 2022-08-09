@@ -4954,7 +4954,7 @@ TEST_F(FALLBACK, GiMultiplyAddInt16LongHigh) {
     assert_eq((int32_t*)&ret, naive, SIMD_LEN);
 }
 TEST_F(FALLBACK, GiCvtFromInt32V4ToUint8) {
-    std::vector<int32_t> s0{INT16_MAX, INT16_MIN, 0x00005678, -0x00005678};
+    std::vector<int32_t> s0{INT16_MAX, INT16_MIN, INT32_MAX, INT32_MIN};
     GI_INT32_t src0, src1, src2, src3;
     force_memset_ret((void*)&src0, GI_SIMD_LEN_BYTE);
     force_memset_ret((void*)&src1, GI_SIMD_LEN_BYTE);
