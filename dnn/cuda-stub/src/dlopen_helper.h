@@ -111,7 +111,7 @@ static void* resolve_library_func(void* handle, const char* func) {
     }
     auto ret = dlsym(handle, func);
     if (!ret) {
-        LOGD("failed to load %s func: %s", g_default_api_name, func);
+        LOGD("failed to load %s func: %s.(It seems that the currently used version of the library containing the function is too old.)", g_default_api_name, func);
     }
     return ret;
 }

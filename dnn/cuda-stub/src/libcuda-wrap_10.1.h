@@ -3829,6 +3829,7 @@ static void load_library() {
         return;
 
     void* handle = get_library_handle();
+    int num = 0;
     for (size_t i = 0; i < NR_FUNC; ++i) {
         void* func;
         if (!handle) {
@@ -3837,9 +3838,16 @@ static void load_library() {
             func = resolve_library_func(handle, g_func_name[i]);
         }
         if (!func) {
-            func = g_func_table_error[i];
+            break;
         }
+        num++;
         __atomic_store_n(g_func_table + i, func, __ATOMIC_RELAXED);
+    }
+	if (num != NR_FUNC) {
+        for (size_t i = 0; i < NR_FUNC; ++i) {
+            void* func = g_func_table_error[i];
+            __atomic_store_n(g_func_table + i, func, __ATOMIC_RELAXED);
+        }
     }
     done = true;
 }

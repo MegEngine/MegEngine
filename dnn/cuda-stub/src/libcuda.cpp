@@ -3,8 +3,8 @@
 #pragma GCC visibility push(default)
 
 #include <cstdio>
-#define LOGI(fmt, v...) fprintf(stdout, "info: " fmt "\n", ##v)
-#define LOGD(fmt, v...) fprintf(stdout, "debug: " fmt "\n", ##v)
+#define LOGI(fmt, v...) fprintf(stderr, "info: " fmt "\n", ##v)
+#define LOGD(fmt, v...) fprintf(stderr, "debug: " fmt "\n", ##v)
 
 extern "C" {
 #include "cuda.h"
