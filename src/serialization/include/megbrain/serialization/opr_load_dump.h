@@ -63,7 +63,7 @@ public:
      */
     virtual void dump_tensor(
             const std::string& name, const HostTensorND& tensor,
-            TensorWriteMethod method) = 0;
+            TensorWriteMethod method, TensorFormat format = {}) = 0;
 
     //! get associated global configuration
     virtual const GraphDumpConfig& config() const = 0;

@@ -47,7 +47,7 @@ public:
     //! whether this can be write
     virtual bool writable() { return false; }
 
-    //! whether this file have been wrote
+    //! tag this file have been wrote
     virtual void have_modified() {}
 
     /*!

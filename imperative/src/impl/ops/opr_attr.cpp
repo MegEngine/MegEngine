@@ -27,7 +27,7 @@ class OprParamsLoadContext final : public serialization::OprLoadContextRawPOD {
 
     std::shared_ptr<DeviceTensorND> load_tensor_shared(
             bool copy_immediatly = false) override {
-        (void)copy_immediatly;
+        MGB_MARK_USED_VAR(copy_immediatly);
         mgb_assert(0);
     }
 
@@ -56,7 +56,7 @@ public:
     }
     void dump_tensor(
             const std::string& name, const HostTensorND& tensor,
-            TensorWriteMethod method) {
+            TensorWriteMethod method, TensorFormat format = {}) {
         mgb_assert(0);
     }
     const serialization::GraphDumpConfig& config() const { mgb_assert(0); }

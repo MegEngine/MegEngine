@@ -92,7 +92,7 @@ public:
     const GraphDumpConfig& config() const override { return m_config; }
     void dump_tensor(
             const std::string& name, const HostTensorND& tensor,
-            TensorWriteMethod method) override;
+            TensorWriteMethod method, TensorFormat format = {}) override;
     flatbuffers::FlatBufferBuilder& builder() override { return m_builder; }
     void append_param(uint32_t type, uint32_t value) override {
         static_assert(
@@ -359,7 +359,8 @@ GraphDumper::DumpResult GraphDumperOSS::dump(
 }
 
 void GraphDumperOSS::dump_tensor(
-        const std::string& name, const HostTensorND& tensor, TensorWriteMethod method) {
+        const std::string& name, const HostTensorND& tensor, TensorWriteMethod method,
+        TensorFormat) {
     using namespace flatbuffers;
     using Meth = TensorWriteMethod;
     mgb_assert(
@@ -671,17 +672,17 @@ std::shared_ptr<DeviceTensorND> GraphLoaderOSS::OprLoadContextImpl::load_tensor_
         sh_reg.first = tensor->name()->str();
     }
 
-    if (comp_node.mem_node() == CompNode::default_cpu().mem_node()) {
+    if (comp_node.mem_node() == CompNode::default_cpu().mem_node() || copy_immediatly) {
         // directly forward CPU memory
         HostTensorND hv{comp_node};
         load_tensor_value(&hv, layout, tensor);
         sh_ptr_ref = std::make_shared<DeviceTensorND>();
-        *sh_ptr_ref = DeviceTensorND::make_proxy(hv);
-    } else if (copy_immediatly) {
-        HostTensorND hv{CompNode::default_cpu()};
-        load_tensor_value(&hv, layout, tensor);
-        sh_ptr_ref = std::make_shared<DeviceTensorND>();
-        sh_ptr_ref->comp_node(comp_node).copy_from(hv).sync();
+        if (comp_node.mem_node() == CompNode::default_cpu().mem_node()) {
+            *sh_ptr_ref = DeviceTensorND::make_proxy(hv);
+        } else {
+            mgb_assert(copy_immediatly);
+            sh_ptr_ref->comp_node(comp_node).copy_from(hv).sync();
+        }
     } else {
         // use lazy load for non-CPU devices
         HostTensorND hv{CompNode::default_cpu()};

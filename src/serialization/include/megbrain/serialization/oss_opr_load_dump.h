@@ -63,7 +63,7 @@ public:
 
     void dump_tensor(
             const std::string& name, const HostTensorND& tensor,
-            TensorWriteMethod method) override;
+            TensorWriteMethod method, TensorFormat format = {}) override;
 
     void append_param(uint32_t type, uint32_t value) override {
         static_assert(
@@ -147,6 +147,8 @@ public:
     const GraphLoadConfig& config() const override {
         return *m_loader->m_cur_load_config;
     }
+
+    TensorFormat load_tensor_format(size_t id);
 
     //! shared or copy the loaded flatbuffer memory to the CPU tensor, this can reduce
     //! the memory used when load model, but should consider the memory

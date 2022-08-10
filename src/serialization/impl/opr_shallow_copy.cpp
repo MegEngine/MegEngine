@@ -32,7 +32,9 @@ class OprDumpContextMemory final : public OprDumpContextRawPOD {
     }
 
     void dump_tensor(
-            const std::string&, const HostTensorND&, TensorWriteMethod) override {
+            const std::string&, const HostTensorND&, TensorWriteMethod,
+            TensorFormat format = {}) override {
+        MGB_MARK_USED_VAR(format);
         mgb_throw(GraphError, "OprDumpContextMemory does not support dump tensor");
     }
 

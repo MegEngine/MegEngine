@@ -455,7 +455,8 @@ GraphDumper::DumpResult GraphDumperOSSV2::dump(
 }
 
 void GraphDumperOSSV2::dump_tensor(
-        const std::string& name, const HostTensorND& tensor, TensorWriteMethod method) {
+        const std::string& name, const HostTensorND& tensor, TensorWriteMethod method,
+        TensorFormat format) {
     using namespace flatbuffers;
     using Meth = TensorWriteMethod;
     mgb_assert(
@@ -510,8 +511,8 @@ void GraphDumperOSSV2::dump_tensor(
             m_builder.CreateSharedString(tensor.comp_node().to_string_logical()));
     auto fdtype = build_dtype(layout.dtype);
 
-    auto fformat_type = get_flatbuffer_tensor_format_type(layout.format);
-    auto fformat = build_tensor_format(layout.format);
+    auto fformat_type = get_flatbuffer_tensor_format_type(format);
+    auto fformat = build_tensor_format(format);
     auto serialized_tensor = fbs::v2::CreateTensor(
             m_builder, fbname, fshape, fcomp_node, fdtype, fformat_type, fformat, data);
     m_cur_opr_tensor.emplace_back(serialized_tensor);
@@ -605,7 +606,7 @@ CompNode GraphLoaderOSSV2::OprLoadContextImpl::load_comp_node(
     return CompNode::load(loc);
 }
 
-TensorFormat load_tensor_format(
+TensorFormat get_tensor_format(
         const fbs::v2::TensorFormat fformat_type, const void* fformat,
         const CompNode& comp_node) {
     switch (fformat_type) {
@@ -631,8 +632,7 @@ TensorFormat load_tensor_format(
     }
 }
 
-TensorLayout load_tensor_layout(
-        const fbs::v2::Tensor* tensor, const CompNode& comp_node) {
+TensorLayout load_tensor_layout_without_format(const fbs::v2::Tensor* tensor) {
     TensorLayout layout;
     if (tensor->shape()) {
         layout.ndim = tensor->shape()->size();
@@ -642,12 +642,19 @@ TensorLayout load_tensor_layout(
         // modify data type inplace for TensorLayout
         layout.modify_dtype_inplace(fbs::intl::load_dtype(tensor->dtype()));
     }
-    if (tensor->format() && tensor->format_type()) {
-        layout.format =
-                load_tensor_format(tensor->format_type(), tensor->format(), comp_node);
-    }
     layout.init_contiguous_stride();
     return layout;
+}
+
+TensorFormat GraphLoaderOSSV2::OprLoadContextImpl::load_tensor_format(size_t id) {
+    mgb_assert(m_current_opr->tensors() && id < m_current_opr->tensors()->size());
+    auto tensor = m_current_opr->tensors()->Get(id);
+    auto comp_node = load_comp_node(tensor->comp_node());
+    TensorFormat format;
+    if (tensor->format() && tensor->format_type()) {
+        format = get_tensor_format(tensor->format_type(), tensor->format(), comp_node);
+    }
+    return format;
 }
 
 //! the opr loader should make sure the exist of tensors and the number of
@@ -658,7 +665,7 @@ std::shared_ptr<HostTensorND> GraphLoaderOSSV2::OprLoadContextImpl::load_tensor(
             m_cur_opr_tensor_cnt < m_current_opr->tensors()->size());
     auto tensor = m_current_opr->tensors()->Get(m_cur_opr_tensor_cnt++);
     auto comp_node = load_comp_node(tensor->comp_node());
-    auto layout = load_tensor_layout(tensor, comp_node);
+    auto layout = load_tensor_layout_without_format(tensor);
     auto ret = std::make_shared<HostTensorND>(comp_node, layout);
 
     auto&& loader = m_loader->m_cur_load_config->tensor_value_loader;
@@ -692,7 +699,7 @@ std::shared_ptr<DeviceTensorND> GraphLoaderOSSV2::OprLoadContextImpl::
             m_cur_opr_tensor_cnt < m_current_opr->tensors()->size());
     auto tensor = m_current_opr->tensors()->Get(m_cur_opr_tensor_cnt++);
     auto comp_node = load_comp_node(tensor->comp_node());
-    auto layout = load_tensor_layout(tensor, comp_node);
+    auto layout = load_tensor_layout_without_format(tensor);
     mgb_assert(tensor->data());
     if (m_loader->m_shared_tensor_map.size() <= m_cur_shared_tensor_idx) {
         m_loader->m_shared_tensor_map.resize(m_cur_shared_tensor_idx + 5);
@@ -712,7 +719,7 @@ std::shared_ptr<DeviceTensorND> GraphLoaderOSSV2::OprLoadContextImpl::
         shared_pair.first = tensor->name()->str();
     }
 
-    if (comp_node.mem_node() == CompNode::default_cpu().mem_node()) {
+    if (comp_node.mem_node() == CompNode::default_cpu().mem_node() || copy_immediatly) {
         // directly forward CPU memory
         shared_tensor_ref = std::make_shared<DeviceTensorND>();
         HostTensorND hv{comp_node};
@@ -722,18 +729,13 @@ std::shared_ptr<DeviceTensorND> GraphLoaderOSSV2::OprLoadContextImpl::
                     hv, tensor->data()->data(), tensor->data()->size(),
                     m_loader->m_file->is_shared_memory());
         }
-        *shared_tensor_ref = DeviceTensorND::make_proxy(hv);
-        m_tensor_alignment->add_device_tensor(shared_tensor_ref);
-    } else if (copy_immediatly) {
-        HostTensorND hv{CompNode::default_cpu()};
-        shared_tensor_ref = std::make_shared<DeviceTensorND>();
-        if (tensor->data() && tensor->data()->size() > 0) {
-            hv.dtype(layout.dtype).resize(layout);
-            fill_tensor_memory(
-                    hv, tensor->data()->data(), tensor->data()->size(),
-                    m_loader->m_file->is_shared_memory());
+        if (comp_node.mem_node() == CompNode::default_cpu().mem_node()) {
+            *shared_tensor_ref = DeviceTensorND::make_proxy(hv);
+            m_tensor_alignment->add_device_tensor(shared_tensor_ref);
+        } else {
+            mgb_assert(copy_immediatly);
+            shared_tensor_ref->comp_node(comp_node).copy_from(hv).sync();
         }
-        shared_tensor_ref->comp_node(comp_node).copy_from(hv).sync();
     } else {
         // use lazy load for non-CPU devices
         HostTensorND hv{CompNode::default_cpu()};

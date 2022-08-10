@@ -498,48 +498,66 @@ TEST(TestOprIO, MultipleDeviceTensorWithFormatHolderCpu) {
     auto fname = GET_OUTPUT_FILE();
     auto cn = CompNode::load("cpu0");
     HostTensorGenerator<> gen;
-    {
-        // dump
-        auto graph = ComputingGraph::make();
-        graph->options().graph_opt_level = 0;
+    auto test = [&](serialization::GraphDumpFormat format) {
+        {
+            // dump
+            auto graph = ComputingGraph::make();
+            graph->options().graph_opt_level = 0;
 
-        auto mkcvar = [&](const char* name, const TensorShape& shp) {
-            return opr::SharedDeviceTensor::make(*graph, *gen(shp, cn)).rename(name);
+            auto mkcvar = [&](const char* name, const TensorShape& shp) {
+                return opr::SharedDeviceTensor::make(*graph, *gen(shp, cn))
+                        .rename(name);
+            };
+            auto host_x = gen({8, 8, 8, 8}, cn);
+            auto x = opr::Host2DeviceCopy::make(*graph, host_x, {"x"});
+
+            opr::Convolution::Param param;
+            param.pad_h = param.pad_w = 0;
+            auto w1 = mkcvar("w1", {4, 8, 3, 3}),
+                 conv1 = opr::Convolution::make(x, w1, param);
+
+            auto w2 = mkcvar("w2", {4, 4, 3, 3}),
+                 conv2 = opr::Convolution::make(conv1, w2, param);
+
+            auto y = opr::Elemwise::make({conv2}, opr::Elemwise::Param::Mode::RELU);
+            auto options = gopt::OptimizeForInferenceOptions{};
+            options.enable_nhwcd4();
+            SymbolVar y_opt =
+                    gopt::optimize_for_inference({y}, options)[0].rename("out");
+
+            auto dumper = serialization::GraphDumper::make(
+                    serialization::OutputFile::make_fs(fname.c_str()), format);
+            serialization::GraphDumper::DumpConfig config;
+            config.keep_param_name = true;
+            dumper->dump({y_opt}, config);
+        }
+        auto loader = serialization::GraphLoader::make(
+                serialization::InputFile::make_fs(fname.c_str()), format);
+
+        auto load = [&](CompNode dest_cn) {
+            auto dest_cn_loc = dest_cn.locator_logical();
+            auto rst =
+                    loader->load({[&](CompNode::Locator& loc) { loc = dest_cn_loc; }});
+            HostTensorND host_z, host_z_expect;
+            auto func = rst.graph_compile(
+                    {make_callback_copy(rst.output_var_map.at("out"), host_z)});
+            func->execute();
+            func->wait();
+            auto&& shared_tensor_map = loader->shared_tensor_id_map();
+            bool cd4 = false;
+            for (auto&& i : shared_tensor_map) {
+                auto&& shared_tensor = i.second.begin()->second;
+                if (shared_tensor->format().type() ==
+                    TensorFormat::Type::IMAGE2D_PACK4) {
+                    cd4 = true;
+                }
+            }
+            ASSERT_TRUE(cd4);
         };
-        auto host_x = gen({8, 8, 8, 8}, cn);
-        auto x = opr::Host2DeviceCopy::make(*graph, host_x, {"x"});
-
-        opr::Convolution::Param param;
-        param.pad_h = param.pad_w = 0;
-        auto w1 = mkcvar("w1", {4, 8, 3, 3}),
-             conv1 = opr::Convolution::make(x, w1, param);
-
-        auto w2 = mkcvar("w2", {4, 4, 3, 3}),
-             conv2 = opr::Convolution::make(conv1, w2, param);
-
-        auto y = opr::Elemwise::make({conv2}, opr::Elemwise::Param::Mode::RELU);
-        auto options = gopt::OptimizeForInferenceOptions{};
-        options.enable_nhwcd4();
-        SymbolVar y_opt = gopt::optimize_for_inference({y}, options)[0].rename("out");
-
-        auto dumper = serialization::GraphDumper::make(
-                serialization::OutputFile::make_fs(fname.c_str()));
-        serialization::GraphDumper::DumpConfig config;
-        config.keep_param_name = true;
-        dumper->dump({y_opt}, config);
-    }
-    auto loader = serialization::GraphLoader::make(
-            serialization::InputFile::make_fs(fname.c_str()));
-
-    auto load = [&](CompNode dest_cn) {
-        auto dest_cn_loc = dest_cn.locator_logical();
-        auto rst = loader->load({[&](CompNode::Locator& loc) { loc = dest_cn_loc; }});
-        HostTensorND host_z, host_z_expect;
-        auto func = rst.graph_compile(
-                {make_callback_copy(rst.output_var_map.at("out"), host_z)});
-        func->execute();
+        load(cn);
     };
-    load(cn);
+    test({});
+    test(serialization::GraphDumpFormat::FLATBUFFERS_V2);
 }
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

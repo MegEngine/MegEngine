@@ -72,16 +72,20 @@ struct OprLoadDumpImplV2<opr::SharedDeviceTensorWithFormat, 0> {
         auto&& opr = opr_.cast_final_safe<opr::SharedDeviceTensorWithFormat>();
         HostTensorND val;
         val.copy_from(opr.get_dev_tensor()).sync();
-        ctx.dump_tensor({}, val, Meth::VALUE_ANONYMOUS);
+        ctx.dump_tensor(
+                {}, val, Meth::VALUE_ANONYMOUS, opr.get_dev_tensor().layout().format);
     }
 
     static cg::OperatorNodeBase* load(
             OprLoadContext& ctx, const cg::VarNodeArray& inputs,
             const OperatorNodeConfig& config) {
         mgb_assert(inputs.empty());
-        auto val = ctx.load_tensor();
+        auto& fbs_ctx = CAST_TO_FBS_V2_CTX(ctx);
+        auto val = fbs_ctx.load_tensor();
+        auto format = fbs_ctx.load_tensor_format(0);
+        TensorLayout layout_with_format = {val->shape(), val->dtype(), format};
         auto dev_val =
-                std::make_shared<DeviceTensorND>(val->comp_node(), val->layout());
+                std::make_shared<DeviceTensorND>(val->comp_node(), layout_with_format);
         dev_val->copy_from_fixlayout(*val);
         auto out_var =
                 opr::SharedDeviceTensorWithFormat::make(ctx.graph(), dev_val, config);
@@ -136,7 +140,9 @@ struct OprLoadDumpImplV2<opr::MultipleDeviceTensorWithFormatHolder, 0> {
             HostTensorND val;
             auto value = *opr.values()[i];
             val.copy_from(value).sync();
-            ctx.dump_tensor(opr.output(i)->name(), val, Meth::VALUE_SHARED);
+            ctx.dump_tensor(
+                    opr.output(i)->name(), val, Meth::VALUE_SHARED,
+                    value.layout().format);
         }
     }
 
@@ -152,10 +158,12 @@ struct OprLoadDumpImplV2<opr::MultipleDeviceTensorWithFormatHolder, 0> {
             nr = fopr->tensors()->size();
         }
         Opr::ValueArray values(nr);
+        size_t id = 0;
         for (auto&& i : values) {
             i = ctx.load_tensor_shared();
             //! set tensor format
-            TensorLayout layout_with_format = i->layout();
+            auto format = fbs_ctx.load_tensor_format(id++);
+            TensorLayout layout_with_format{i->layout(), i->layout().dtype, format};
 
             if (i->storage().comp_node().mem_node() ==
                 CompNode::default_cpu().mem_node()) {
