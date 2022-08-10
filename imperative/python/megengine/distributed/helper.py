@@ -162,6 +162,12 @@ def _check_device_initialized(device_type: str, rank: int):
         raise RuntimeError(errmsg)
 
 
+def _check_interpreter_status():
+    from ..core._imperative_rt.core2 import get_option
+
+    _ = get_option("async_level")
+
+
 get_device_count_by_fork = deprecated_func(
     "1.5", "megengine.device", "get_device_count", False
 )

@@ -27,7 +27,7 @@ struct InterpreterImpl : Interpreter {
     std::unique_ptr<Channel> create_channel() override;
 };
 
-struct ChannelImpl : Interpreter::Channel {
+struct ChannelImpl : Interpreter::Channel, NonCopyableObj, NonMoveableObj {
     ChannelImpl();
     ~ChannelImpl() override;
 
@@ -60,6 +60,13 @@ struct ChannelImpl : Interpreter::Channel {
 
     void push_scope(std::string) override;
     void pop_scope(std::string) override;
+
+    bool worker_started() const;
+    void update_status_to_forked(void);
+    void assert_available() const;
+
+    static std::unordered_set<ChannelImpl*> m_all_active_channels;
+    static MGB_MUTEX m_all_active_channels_mutex;
 
 private:
     struct WorkQueue;
@@ -130,7 +137,9 @@ private:
     // TODO: use explicit struct
     std::stack<std::tuple<ApplyOp, size_t, TensorInfo*, std::string>> m_apply_stack;
     bool m_applying = false;
-    bool m_closed = false;
+
+    enum class ChannelRunningStatus { RUNING, CLOSED, FORKED };
+    ChannelRunningStatus m_status = ChannelRunningStatus::RUNING;
 
     struct WorkQueue : AsyncQueueSC<Command, WorkQueue> {
         // set max_spin=0 to prevent Queue fetch task in busy wait manner.
@@ -158,12 +167,6 @@ private:
     private:
         ChannelImpl* m_owner;
     } m_worker;
-
-    //! config whether raise error exactly when invoking op.
-    //! level 2: both device and user side errors are async;
-    //! level 1: user side errors are sync;
-    //! level 0: both sync.
-    int m_async_level = 2;
 
     struct State {
         std::thread::id tid;

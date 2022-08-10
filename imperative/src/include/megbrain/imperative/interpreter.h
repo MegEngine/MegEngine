@@ -60,6 +60,9 @@ struct Interpreter {
     virtual std::unique_ptr<Channel> create_channel() = 0;
 
     static Interpreter& inst();
+
+protected:
+    Interpreter() = default;
 };
 
 }  // namespace mgb::imperative::interpreter

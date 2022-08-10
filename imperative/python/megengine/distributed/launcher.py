@@ -9,7 +9,7 @@ from ..core._imperative_rt.core2 import full_sync
 from ..device import get_device_count
 from ..logger import get_logger
 from .group import _set_machine_ranks, group_barrier, init_process_group
-from .helper import _check_device_initialized
+from .helper import _check_device_initialized, _check_interpreter_status
 from .server import Client, Server
 
 WARN_SUBPROCESS_EXIT_WITHOUT_RETURN = (
@@ -33,6 +33,7 @@ def _run_wrapped(
     machine_ranks: list,
 ):
     r"""Init distributed process group and run wrapped function."""
+    _check_interpreter_status()
     _check_device_initialized(device_type, dev)
     init_process_group(
         master_ip=master_ip,

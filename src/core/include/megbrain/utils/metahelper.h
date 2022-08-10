@@ -151,6 +151,17 @@ public:
     NonCopyableObj() = default;
 };
 
+/*!
+ * \brief base class for non-moveable objects
+ */
+class NonMoveableObj {
+    NonMoveableObj(NonMoveableObj&&) = delete;
+    NonMoveableObj& operator=(NonMoveableObj&&) = delete;
+
+public:
+    NonMoveableObj() = default;
+};
+
 template <typename T>
 class ReverseAdaptor {
     T& m_t;

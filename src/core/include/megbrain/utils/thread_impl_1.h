@@ -253,6 +253,8 @@ public:
         }
     }
 
+    inline bool worker_started() const { return m_synchronizer.worker_started(); }
+
 protected:
     ~AsyncQueueSC() noexcept = default;
 

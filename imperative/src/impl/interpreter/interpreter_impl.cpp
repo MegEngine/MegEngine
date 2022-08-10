@@ -115,7 +115,18 @@ void ChannelImpl::WorkQueue::on_async_queue_worker_thread_start() {
 #define m_worker_state
 
 std::unique_ptr<Interpreter::Channel> InterpreterImpl::create_channel() {
-    return std::make_unique<ChannelImpl>();
+    auto ret = std::make_unique<ChannelImpl>();
+#if !(defined(_WIN32) || defined(_WIN64))
+    auto disable_channels = [](void) -> void {
+        for (ChannelImpl* channel : ChannelImpl::m_all_active_channels) {
+            if (channel->worker_started()) {
+                channel->update_status_to_forked();
+            }
+        }
+    };
+    pthread_atfork(nullptr, nullptr, static_cast<void (*)(void)>(disable_channels));
+#endif
+    return ret;
 }
 
 Interpreter& Interpreter::inst() {
@@ -125,7 +136,7 @@ Interpreter& Interpreter::inst() {
 
 Handle ChannelImpl::put(const HostTensorND& value, bool no_cache) {
     MGB_LOCK_GUARD(m_spin);
-    mgb_assert(check_available(), "Channel already closed");
+    assert_available();
     std::optional<StackManager::Guard> guard;
     if (Profiler::is_profiling()) {
         auto& state = get_channel_state();
@@ -158,7 +169,8 @@ TensorInfo* ChannelImpl::put_impl(const HostTensorND& value, bool no_cache) {
                 Put{info, value, no_cache},
         });
     }
-    if (m_async_level == 0) {
+
+    if (get_channel_state().options.async_level == 0) {
         sync_impl();
         info->desc.comp_node.sync();
         auto err = info->desc.comp_node.check_async_error();
@@ -169,7 +181,7 @@ TensorInfo* ChannelImpl::put_impl(const HostTensorND& value, bool no_cache) {
 
 Handle ChannelImpl::put(const DeviceTensorND& data, const HostTensorND& hvalue) {
     MGB_LOCK_GUARD(m_spin);
-    mgb_assert(check_available(), "Channel already closed");
+    assert_available();
     return reinterpret_cast<Handle>(put_impl(data, hvalue));
 }
 TensorInfo* ChannelImpl::put_impl(
@@ -221,7 +233,7 @@ void ChannelImpl::del_impl(Handle handle) {
 
 void ChannelImpl::drop(Handle handle) {
     MGB_LOCK_GUARD(m_spin);
-    mgb_assert(check_available(), "Channel already closed");
+    assert_available();
     auto& state = get_channel_state();
     if (state.options.enable_drop) {
         mgb_assert(
@@ -404,7 +416,7 @@ void ChannelImpl::dispatch_kernel(
 SmallVector<Handle> ChannelImpl::apply_op(
         std::shared_ptr<OpDef> op, const SmallVector<Handle>& inputs) {
     MGB_LOCK_GUARD(m_spin);
-    mgb_assert(check_available(), "Channel already closed");
+    assert_available();
     auto* input = reinterpret_cast<TensorInfo*>(inputs[0]);
     if (op->same_type<GetVarShape>() && input->shape_valid()) {
         size_t ndim = input->desc.layout.ndim;
@@ -460,7 +472,7 @@ SmallVector<Handle> ChannelImpl::apply_op_impl(
 
 HostTensorND ChannelImpl::get_value(Handle handle) {
     MGB_LOCK_GUARD(m_spin);
-    mgb_assert(check_available(), "Channel already closed");
+    assert_available();
     mgb_assert(
             m_valid_handle.find(handle) != m_valid_handle.end(), "invalid handle: %p",
             handle);
@@ -472,7 +484,7 @@ HostTensorND ChannelImpl::get_value(Handle handle) {
 
 TensorShape ChannelImpl::get_shape(Handle handle) {
     MGB_LOCK_GUARD(m_spin);
-    mgb_assert(check_available(), "Channel already closed");
+    assert_available();
     mgb_assert(
             m_valid_handle.find(handle) != m_valid_handle.end(), "invalid handle: %p",
             handle);
@@ -487,7 +499,7 @@ TensorShape ChannelImpl::get_shape(Handle handle) {
 
 DType ChannelImpl::get_dtype(Handle handle) {
     MGB_LOCK_GUARD(m_spin);
-    mgb_assert(check_available(), "Channel already closed");
+    assert_available();
     mgb_assert(
             m_valid_handle.find(handle) != m_valid_handle.end(), "invalid handle: %p",
             handle);
@@ -500,7 +512,7 @@ DType ChannelImpl::get_dtype(Handle handle) {
 
 CompNode ChannelImpl::get_device(Handle handle) {
     MGB_LOCK_GUARD(m_spin);
-    mgb_assert(check_available(), "Channel already closed");
+    assert_available();
     mgb_assert(
             m_valid_handle.find(handle) != m_valid_handle.end(), "invalid handle: %p",
             handle);
@@ -513,7 +525,7 @@ CompNode ChannelImpl::get_device(Handle handle) {
 
 DeviceTensorND ChannelImpl::get_dev_tensor(Handle handle) {
     MGB_LOCK_GUARD(m_spin);
-    mgb_assert(check_available(), "Channel already closed");
+    assert_available();
     mgb_assert(
             m_valid_handle.find(handle) != m_valid_handle.end(), "invalid handle: %p",
             handle);
@@ -523,7 +535,7 @@ DeviceTensorND ChannelImpl::get_dev_tensor(Handle handle) {
 
 void ChannelImpl::sync() {
     MGB_LOCK_GUARD(m_spin);
-    mgb_assert(check_available(), "Channel already closed");
+    assert_available();
     sync_impl();
 }
 
@@ -545,19 +557,19 @@ void ChannelImpl::close() {
     mgb_assert(m_valid_handle.empty());
     mgb_log_debug("%ld tensor exists before channel close", (long)valid_handles.size());
     sync_impl();
-    m_closed = true;
+    m_status = ChannelRunningStatus::CLOSED;
 }
 
 size_t ChannelImpl::get_option(std::string name) {
     MGB_LOCK_GUARD(m_spin);
-    mgb_assert(check_available(), "Channel already closed");
+    assert_available();
     auto& state = get_channel_state();
     return state.options.get_option(name);
 }
 
 void ChannelImpl::set_option(std::string name, size_t value) {
     MGB_LOCK_GUARD(m_spin);
-    mgb_assert(check_available(), "Channel already closed");
+    assert_available();
     auto& state = get_channel_state();
     state.options.set_option(name, value);
     // FIXME
@@ -583,7 +595,7 @@ void ChannelImpl::set_option(std::string name, size_t value) {
 
 void ChannelImpl::clear_candidates() {
     MGB_LOCK_GUARD(m_spin);
-    mgb_assert(check_available(), "Channel already closed");
+    assert_available();
     m_dtr.candidates.clear();
 }
 
@@ -681,10 +693,18 @@ void ChannelImpl::real_free(TensorInfo* ptr) {
     m_pool.free(ptr);
 }
 
-ChannelImpl::ChannelImpl() : m_worker(this) {}
+std::unordered_set<ChannelImpl*> ChannelImpl::m_all_active_channels{};
+MGB_MUTEX ChannelImpl::m_all_active_channels_mutex{};
+
+ChannelImpl::ChannelImpl() : m_worker(this) {
+    MGB_LOCK_GUARD(m_all_active_channels_mutex);
+    m_all_active_channels.emplace(this);
+}
 
 ChannelImpl::~ChannelImpl() {
     close();
+    MGB_LOCK_GUARD(m_all_active_channels_mutex);
+    m_all_active_channels.erase(this);
 }
 
 void ChannelImpl::produce_tensor(TensorInfo* dest, TensorPtr ptr) {
@@ -992,7 +1012,7 @@ void ChannelImpl::detach_users(TensorInfo* dest) {
 }
 
 bool ChannelImpl::check_available() {
-    return !m_closed;
+    return m_status == ChannelRunningStatus::RUNING;
 }
 
 TensorPtr ChannelImpl::wait_tensor(TensorInfo* info, TensorProp prop) {
@@ -1352,7 +1372,7 @@ void ChannelImpl::check_worker_exc_unsafe() {
 
 void ChannelImpl::start_profile() {
     MGB_LOCK_GUARD(m_spin);
-    mgb_assert(check_available(), "Channel already closed");
+    assert_available();
     auto capture_tensors = collect_valid_tensors();
     if (capture_tensors.size() > 0) {
         if (Profiler::is_profiling()) {
@@ -1370,7 +1390,7 @@ void ChannelImpl::start_profile() {
 
 void ChannelImpl::stop_profile() {
     MGB_LOCK_GUARD(m_spin);
-    mgb_assert(check_available(), "Channel already closed");
+    assert_available();
     auto escape_tensors = collect_valid_tensors();
     if (escape_tensors.size() > 0) {
         if (Profiler::is_profiling()) {
@@ -1388,7 +1408,7 @@ void ChannelImpl::stop_profile() {
 
 void ChannelImpl::push_scope(std::string name) {
     MGB_LOCK_GUARD(m_spin);
-    mgb_assert(check_available(), "Channel already closed");
+    assert_available();
     auto& state = get_channel_state();
     state.stack_manager.enter(name);
     MGB_RECORD_EVENT(ScopeEvent, name);
@@ -1406,7 +1426,7 @@ void ChannelImpl::push_scope(std::string name) {
 
 void ChannelImpl::pop_scope(std::string name) {
     MGB_LOCK_GUARD(m_spin);
-    mgb_assert(check_available(), "Channel already closed");
+    assert_available();
     auto& state = get_channel_state();
     state.stack_manager.exit(name);
     MGB_RECORD_EVENT(ScopeFinishEvent, name);
@@ -1419,6 +1439,31 @@ void ChannelImpl::pop_scope(std::string name) {
                 Profiler::next_id(),
                 PopScope{name},
         });
+    }
+}
+
+bool ChannelImpl::worker_started() const {
+    return m_worker.worker_started();
+}
+
+void ChannelImpl::update_status_to_forked(void) {
+    MGB_LOCK_GUARD(m_spin);
+    m_status = ChannelRunningStatus::FORKED;
+}
+
+void ChannelImpl::assert_available() const {
+    if (m_status == ChannelRunningStatus::RUNING) {
+        return;
+    } else if (m_status == ChannelRunningStatus::CLOSED) {
+        mgb_assert(false, "Channel already closed");
+    } else if (m_status == ChannelRunningStatus::FORKED) {
+        mgb_assert(
+                false,
+                "your program is forked and megengine is be disabled in subprocess, if "
+                "you want to use megengine in subprocess, please DO NOT setup and use "
+                "megengine before fork");
+    } else {
+        mgb_assert(false, "impossible, Channel status is undefined");
     }
 }
 
