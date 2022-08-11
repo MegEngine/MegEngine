@@ -371,7 +371,6 @@ TEST_F(FALLBACK, BENCHMARK_REDUCE) {
             for (auto mode : {Mode::SUM, Mode::MEAN, Mode::SUM_SQR}) {
                 param.mode = mode;
                 benchmarker_reduce.set_param(param);
-                auto reduce = benchmarker_reduce.execs({{3 * 224 * i}, {}}) / RUNS;
             }
         }
         param.mode = param::Reduce::Mode::SUM;
