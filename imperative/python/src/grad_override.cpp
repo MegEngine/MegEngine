@@ -587,6 +587,97 @@ std::optional<ValueRefList> fastpathcopy_grad_rule(
     return imperative::apply(op, inputs);
 }
 
+std::optional<ValueRefList> warp_affine_grad_rule(
+        const OpDef& op, Span<ValueRef> inputs, Span<bool> inputs_require_grad,
+        CustomBackward& backward) {
+    auto&& warp_affine = op.cast_final_safe<WarpAffine>();
+    auto&& param = warp_affine.param();
+    mgb_assert(inputs.size() == 3);
+    SmallVector<ValueRef> inps;
+    if (inputs_require_grad[0] || inputs_require_grad[1]) {
+        for (size_t i = 0; i < inputs.size(); ++i) {
+            inps.push_back(inputs[i]);
+        }
+    }
+    auto maker = CustomGradMaker(backward, inputs.size());
+    maker.output_size(1).output_captured(0, false);
+    maker.backward([inputs = std::move(inps), &warp_affine,
+                    param](Span<ValueRef> grads) {
+        mgb_assert(grads.size() == 1);
+        ValueRef grad = grads[0];
+        SmallVector<ValueRef> ret(2);
+        if (!grad) {
+            return ret;
+        }
+
+        CompNodeValue::ref_t device = inputs[0].device();
+        DTypeValue::ref_t dtype = inputs[0].dtype();
+        HostTensorStorage storage(*device);
+        storage.ensure_size(3 * (dtype->size()));
+
+        auto* ptr = reinterpret_cast<dt_float32*>(storage.ptr());
+        ptr[0] = 0;
+        ptr[1] = 0;
+        ptr[2] = 1;
+        auto t = imperative::apply(
+                CreateTensor(
+                        CreateTensor::Unique, *device, dtype::Float32(),
+                        ValueShape({1, 1, 3})),
+                HostStorage::make(storage))[0];
+        auto mat = inputs[1];
+        auto&& concat = Concat::make();
+        concat->axis = 1;
+        mat = imperative::apply(*concat, inputs[1], t)[0];
+        if (inputs[0]) {
+            auto&& grad_op = WarpPerspectiveBackwardData::make(
+                    param.imode, param.border_mode, param.format, param.border_val);
+            ValueRefList args_(inputs.size());
+            args_[0] = mat;
+            args_[1] = grads[0];
+            args_[2] = inputs[0];
+            ret[0] = imperative::apply(*grad_op, args_)[0];
+        }
+        if (inputs[1]) {
+            auto&& grad_op = WarpPerspectiveBackwardMat::make(
+                    param.imode, param.border_mode, param.format, param.border_val);
+            ValueRefList args_(inputs.size());
+            args_[0] = inputs[0];
+            args_[1] = mat;
+            args_[2] = grads[0];
+            ret[1] = imperative::apply(*grad_op, args_)[0];
+
+            std::vector<std::tuple<int8_t, bool, bool, bool, bool>> items;
+            items.push_back(std::make_tuple(1, true, true, false, false));
+            auto&& subtensor = Subtensor::make(items);
+
+            CompNodeValue::ref_t device = inputs[0].device();
+            DTypeValue::ref_t dtype = inputs[0].dtype();
+            int start_idx = 0;
+            int stop_idx = 2;
+            auto get_subtensor_index = [&](int idx) {
+                HostTensorStorage storage(*device);
+                storage.ensure_size(dtype::Int32().size());
+                auto* ptr = reinterpret_cast<dt_int32*>(storage.ptr());
+                ptr[0] = idx;
+                return imperative::apply(
+                        CreateTensor(
+                                CreateTensor::Unique, *device, dtype::Int32(),
+                                ValueShape({1})),
+                        HostStorage::make(storage))[0];
+            };
+            auto start = get_subtensor_index(start_idx);
+            auto stop = get_subtensor_index(stop_idx);
+
+            auto data = ret[1];
+            mgb_assert(data);
+            ret[1] = imperative::apply(*subtensor, data, start, stop)[0];
+        }
+        return ret;
+    });
+    maker.finalize();
+    return imperative::apply(ApplyOp(op), inputs);
+}
+
 struct Init {
     Init() {
         CustomBackward::register_grad_rule(Elemwise::typeinfo(), elemwise_grad_rule);
@@ -610,6 +701,8 @@ struct Init {
         CustomBackward::register_grad_rule(MatrixMul::typeinfo(), matrix_mul_grad_rule);
         CustomBackward::register_grad_rule(
                 BatchedMatrixMul::typeinfo(), batched_matrix_mul_grad_rule);
+        CustomBackward::register_grad_rule(
+                WarpAffine::typeinfo(), warp_affine_grad_rule);
     }
 } _;
 

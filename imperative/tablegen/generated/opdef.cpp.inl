@@ -6941,4 +6941,300 @@ OP_TRAIT_REG(WarpPerspective, WarpPerspective)
     .props(WarpPerspective_props_impl)
     .make_name(WarpPerspective_make_name_impl);
 
+MGB_DYN_TYPE_OBJ_FINAL_IMPL(WarpPerspectiveBackwardData);
+
+namespace {
+size_t WarpPerspectiveBackwardData_hash_impl(const OpDef& def_) {
+    auto&& op_ = def_.cast_final_safe<WarpPerspectiveBackwardData>();
+    static_cast<void>(op_);
+    size_t val = mgb::hash(op_.dyn_typeinfo());
+    val = mgb::hash_pair_combine(val, mgb::enumhash()(op_.imode));
+    val = mgb::hash_pair_combine(val, mgb::enumhash()(op_.bmode));
+    val = mgb::hash_pair_combine(val, mgb::enumhash()(op_.format));
+    val = mgb::hash_pair_combine(val, mgb::hash(op_.border_val));
+    return val;
+}
+bool WarpPerspectiveBackwardData_is_same_st_impl(const OpDef& lhs_, const OpDef& rhs_) {
+    auto &&a_ = lhs_.cast_final_safe<WarpPerspectiveBackwardData>(),
+         &&b_ = rhs_.cast_final_safe<WarpPerspectiveBackwardData>();
+    static_cast<void>(a_);
+    static_cast<void>(b_);
+    if (a_.imode != b_.imode) return false;
+    if (a_.bmode != b_.bmode) return false;
+    if (a_.format != b_.format) return false;
+    if (a_.border_val != b_.border_val) return false;
+    return true;
+}
+std::vector<std::pair<const char*, std::string>> WarpPerspectiveBackwardData_props_impl(const OpDef& def_) {
+    auto&& op_ = def_.cast_final_safe<WarpPerspectiveBackwardData>();
+    static_cast<void>(op_);
+    std::vector<std::pair<const char*, std::string>> props_;
+    switch (op_.imode){
+    case WarpPerspectiveBackwardData::InterpolationMode::NEAREST:
+        props_.emplace_back("imode", "NEAREST");
+        break;
+    case WarpPerspectiveBackwardData::InterpolationMode::LINEAR:
+        props_.emplace_back("imode", "LINEAR");
+        break;
+    case WarpPerspectiveBackwardData::InterpolationMode::AREA:
+        props_.emplace_back("imode", "AREA");
+        break;
+    case WarpPerspectiveBackwardData::InterpolationMode::CUBIC:
+        props_.emplace_back("imode", "CUBIC");
+        break;
+    case WarpPerspectiveBackwardData::InterpolationMode::LANCZOS4:
+        props_.emplace_back("imode", "LANCZOS4");
+        break;
+    default:
+        props_.emplace_back("imode", "INVALID");
+        break;
+    }
+    switch (op_.bmode){
+    case WarpPerspectiveBackwardData::BorderMode::REPLICATE:
+        props_.emplace_back("bmode", "REPLICATE");
+        break;
+    case WarpPerspectiveBackwardData::BorderMode::REFLECT:
+        props_.emplace_back("bmode", "REFLECT");
+        break;
+    case WarpPerspectiveBackwardData::BorderMode::REFLECT_101:
+        props_.emplace_back("bmode", "REFLECT_101");
+        break;
+    case WarpPerspectiveBackwardData::BorderMode::WRAP:
+        props_.emplace_back("bmode", "WRAP");
+        break;
+    case WarpPerspectiveBackwardData::BorderMode::CONSTANT:
+        props_.emplace_back("bmode", "CONSTANT");
+        break;
+    case WarpPerspectiveBackwardData::BorderMode::TRANSPARENT:
+        props_.emplace_back("bmode", "TRANSPARENT");
+        break;
+    case WarpPerspectiveBackwardData::BorderMode::ISOLATED:
+        props_.emplace_back("bmode", "ISOLATED");
+        break;
+    default:
+        props_.emplace_back("bmode", "INVALID");
+        break;
+    }
+    switch (op_.format){
+    case WarpPerspectiveBackwardData::Format::NCHW:
+        props_.emplace_back("format", "NCHW");
+        break;
+    case WarpPerspectiveBackwardData::Format::NHWC:
+        props_.emplace_back("format", "NHWC");
+        break;
+    case WarpPerspectiveBackwardData::Format::NHWCD4:
+        props_.emplace_back("format", "NHWCD4");
+        break;
+    case WarpPerspectiveBackwardData::Format::NCHW4:
+        props_.emplace_back("format", "NCHW4");
+        break;
+    case WarpPerspectiveBackwardData::Format::NCHW8:
+        props_.emplace_back("format", "NCHW8");
+        break;
+    case WarpPerspectiveBackwardData::Format::NCHW32:
+        props_.emplace_back("format", "NCHW32");
+        break;
+    case WarpPerspectiveBackwardData::Format::NCHW88:
+        props_.emplace_back("format", "NCHW88");
+        break;
+    case WarpPerspectiveBackwardData::Format::NCHW44:
+        props_.emplace_back("format", "NCHW44");
+        break;
+    case WarpPerspectiveBackwardData::Format::NCHW44_DOT:
+        props_.emplace_back("format", "NCHW44_DOT");
+        break;
+    case WarpPerspectiveBackwardData::Format::NCHW4_NCHW32:
+        props_.emplace_back("format", "NCHW4_NCHW32");
+        break;
+    case WarpPerspectiveBackwardData::Format::NCHW32_NCHW4:
+        props_.emplace_back("format", "NCHW32_NCHW4");
+        break;
+    case WarpPerspectiveBackwardData::Format::NCHW4_NCHW:
+        props_.emplace_back("format", "NCHW4_NCHW");
+        break;
+    case WarpPerspectiveBackwardData::Format::NHWC_NCHW:
+        props_.emplace_back("format", "NHWC_NCHW");
+        break;
+    case WarpPerspectiveBackwardData::Format::NHWC_NCHW4_IC_SMALL:
+        props_.emplace_back("format", "NHWC_NCHW4_IC_SMALL");
+        break;
+    case WarpPerspectiveBackwardData::Format::NCHW_NCHW4_IC_SMALL:
+        props_.emplace_back("format", "NCHW_NCHW4_IC_SMALL");
+        break;
+    case WarpPerspectiveBackwardData::Format::CHWN4:
+        props_.emplace_back("format", "CHWN4");
+        break;
+    case WarpPerspectiveBackwardData::Format::NCHW64:
+        props_.emplace_back("format", "NCHW64");
+        break;
+    case WarpPerspectiveBackwardData::Format::NCHW4_NHWC:
+        props_.emplace_back("format", "NCHW4_NHWC");
+        break;
+    default:
+        props_.emplace_back("format", "INVALID");
+        break;
+    }
+    props_.emplace_back("border_val", std::to_string(op_.border_val));
+    return props_;
+}
+std::string WarpPerspectiveBackwardData_make_name_impl(const OpDef& def_) {
+    auto&& op_ = def_.cast_final_safe<WarpPerspectiveBackwardData>();
+    static_cast<void>(op_);
+    return "WarpPerspectiveBackwardData";
+}
+} // anonymous namespace
+OP_TRAIT_REG(WarpPerspectiveBackwardData, WarpPerspectiveBackwardData)
+    .hash(WarpPerspectiveBackwardData_hash_impl)
+    .is_same_st(WarpPerspectiveBackwardData_is_same_st_impl)
+    .props(WarpPerspectiveBackwardData_props_impl)
+    .make_name(WarpPerspectiveBackwardData_make_name_impl);
+
+MGB_DYN_TYPE_OBJ_FINAL_IMPL(WarpPerspectiveBackwardMat);
+
+namespace {
+size_t WarpPerspectiveBackwardMat_hash_impl(const OpDef& def_) {
+    auto&& op_ = def_.cast_final_safe<WarpPerspectiveBackwardMat>();
+    static_cast<void>(op_);
+    size_t val = mgb::hash(op_.dyn_typeinfo());
+    val = mgb::hash_pair_combine(val, mgb::enumhash()(op_.imode));
+    val = mgb::hash_pair_combine(val, mgb::enumhash()(op_.bmode));
+    val = mgb::hash_pair_combine(val, mgb::enumhash()(op_.format));
+    val = mgb::hash_pair_combine(val, mgb::hash(op_.border_val));
+    return val;
+}
+bool WarpPerspectiveBackwardMat_is_same_st_impl(const OpDef& lhs_, const OpDef& rhs_) {
+    auto &&a_ = lhs_.cast_final_safe<WarpPerspectiveBackwardMat>(),
+         &&b_ = rhs_.cast_final_safe<WarpPerspectiveBackwardMat>();
+    static_cast<void>(a_);
+    static_cast<void>(b_);
+    if (a_.imode != b_.imode) return false;
+    if (a_.bmode != b_.bmode) return false;
+    if (a_.format != b_.format) return false;
+    if (a_.border_val != b_.border_val) return false;
+    return true;
+}
+std::vector<std::pair<const char*, std::string>> WarpPerspectiveBackwardMat_props_impl(const OpDef& def_) {
+    auto&& op_ = def_.cast_final_safe<WarpPerspectiveBackwardMat>();
+    static_cast<void>(op_);
+    std::vector<std::pair<const char*, std::string>> props_;
+    switch (op_.imode){
+    case WarpPerspectiveBackwardMat::InterpolationMode::NEAREST:
+        props_.emplace_back("imode", "NEAREST");
+        break;
+    case WarpPerspectiveBackwardMat::InterpolationMode::LINEAR:
+        props_.emplace_back("imode", "LINEAR");
+        break;
+    case WarpPerspectiveBackwardMat::InterpolationMode::AREA:
+        props_.emplace_back("imode", "AREA");
+        break;
+    case WarpPerspectiveBackwardMat::InterpolationMode::CUBIC:
+        props_.emplace_back("imode", "CUBIC");
+        break;
+    case WarpPerspectiveBackwardMat::InterpolationMode::LANCZOS4:
+        props_.emplace_back("imode", "LANCZOS4");
+        break;
+    default:
+        props_.emplace_back("imode", "INVALID");
+        break;
+    }
+    switch (op_.bmode){
+    case WarpPerspectiveBackwardMat::BorderMode::REPLICATE:
+        props_.emplace_back("bmode", "REPLICATE");
+        break;
+    case WarpPerspectiveBackwardMat::BorderMode::REFLECT:
+        props_.emplace_back("bmode", "REFLECT");
+        break;
+    case WarpPerspectiveBackwardMat::BorderMode::REFLECT_101:
+        props_.emplace_back("bmode", "REFLECT_101");
+        break;
+    case WarpPerspectiveBackwardMat::BorderMode::WRAP:
+        props_.emplace_back("bmode", "WRAP");
+        break;
+    case WarpPerspectiveBackwardMat::BorderMode::CONSTANT:
+        props_.emplace_back("bmode", "CONSTANT");
+        break;
+    case WarpPerspectiveBackwardMat::BorderMode::TRANSPARENT:
+        props_.emplace_back("bmode", "TRANSPARENT");
+        break;
+    case WarpPerspectiveBackwardMat::BorderMode::ISOLATED:
+        props_.emplace_back("bmode", "ISOLATED");
+        break;
+    default:
+        props_.emplace_back("bmode", "INVALID");
+        break;
+    }
+    switch (op_.format){
+    case WarpPerspectiveBackwardMat::Format::NCHW:
+        props_.emplace_back("format", "NCHW");
+        break;
+    case WarpPerspectiveBackwardMat::Format::NHWC:
+        props_.emplace_back("format", "NHWC");
+        break;
+    case WarpPerspectiveBackwardMat::Format::NHWCD4:
+        props_.emplace_back("format", "NHWCD4");
+        break;
+    case WarpPerspectiveBackwardMat::Format::NCHW4:
+        props_.emplace_back("format", "NCHW4");
+        break;
+    case WarpPerspectiveBackwardMat::Format::NCHW8:
+        props_.emplace_back("format", "NCHW8");
+        break;
+    case WarpPerspectiveBackwardMat::Format::NCHW32:
+        props_.emplace_back("format", "NCHW32");
+        break;
+    case WarpPerspectiveBackwardMat::Format::NCHW88:
+        props_.emplace_back("format", "NCHW88");
+        break;
+    case WarpPerspectiveBackwardMat::Format::NCHW44:
+        props_.emplace_back("format", "NCHW44");
+        break;
+    case WarpPerspectiveBackwardMat::Format::NCHW44_DOT:
+        props_.emplace_back("format", "NCHW44_DOT");
+        break;
+    case WarpPerspectiveBackwardMat::Format::NCHW4_NCHW32:
+        props_.emplace_back("format", "NCHW4_NCHW32");
+        break;
+    case WarpPerspectiveBackwardMat::Format::NCHW32_NCHW4:
+        props_.emplace_back("format", "NCHW32_NCHW4");
+        break;
+    case WarpPerspectiveBackwardMat::Format::NCHW4_NCHW:
+        props_.emplace_back("format", "NCHW4_NCHW");
+        break;
+    case WarpPerspectiveBackwardMat::Format::NHWC_NCHW:
+        props_.emplace_back("format", "NHWC_NCHW");
+        break;
+    case WarpPerspectiveBackwardMat::Format::NHWC_NCHW4_IC_SMALL:
+        props_.emplace_back("format", "NHWC_NCHW4_IC_SMALL");
+        break;
+    case WarpPerspectiveBackwardMat::Format::NCHW_NCHW4_IC_SMALL:
+        props_.emplace_back("format", "NCHW_NCHW4_IC_SMALL");
+        break;
+    case WarpPerspectiveBackwardMat::Format::CHWN4:
+        props_.emplace_back("format", "CHWN4");
+        break;
+    case WarpPerspectiveBackwardMat::Format::NCHW64:
+        props_.emplace_back("format", "NCHW64");
+        break;
+    case WarpPerspectiveBackwardMat::Format::NCHW4_NHWC:
+        props_.emplace_back("format", "NCHW4_NHWC");
+        break;
+    default:
+        props_.emplace_back("format", "INVALID");
+        break;
+    }
+    props_.emplace_back("border_val", std::to_string(op_.border_val));
+    return props_;
+}
+std::string WarpPerspectiveBackwardMat_make_name_impl(const OpDef& def_) {
+    auto&& op_ = def_.cast_final_safe<WarpPerspectiveBackwardMat>();
+    static_cast<void>(op_);
+    return "WarpPerspectiveBackwardMat";
+}
+} // anonymous namespace
+OP_TRAIT_REG(WarpPerspectiveBackwardMat, WarpPerspectiveBackwardMat)
+    .hash(WarpPerspectiveBackwardMat_hash_impl)
+    .is_same_st(WarpPerspectiveBackwardMat_is_same_st_impl)
+    .props(WarpPerspectiveBackwardMat_props_impl)
+    .make_name(WarpPerspectiveBackwardMat_make_name_impl);
+
 // clang-format on

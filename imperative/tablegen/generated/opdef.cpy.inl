@@ -18185,6 +18185,346 @@ void _init_py_WarpPerspective(py::module m) {
     m.add_object("WarpPerspective", reinterpret_cast<PyObject*>(&py_type));
     mgb_assert(PyOp(OpDef)::ctype2pytype.emplace(WarpPerspective::typeinfo(), &py_type).second);
 }
+
+void _init_py_WarpPerspectiveBackwardData_InterpolationMode(PyTypeObject& py_type) {
+    auto& e_type = EnumWrapper<WarpPerspectiveBackwardData::InterpolationMode>::type;
+
+    Py_INCREF(e_type);
+    mgb_assert(PyDict_SetItemString(
+        py_type.tp_dict, "InterpolationMode", reinterpret_cast<PyObject*>(e_type)) >= 0);
+}
+
+void _init_py_WarpPerspectiveBackwardData_BorderMode(PyTypeObject& py_type) {
+    auto& e_type = EnumWrapper<WarpPerspectiveBackwardData::BorderMode>::type;
+
+    Py_INCREF(e_type);
+    mgb_assert(PyDict_SetItemString(
+        py_type.tp_dict, "BorderMode", reinterpret_cast<PyObject*>(e_type)) >= 0);
+}
+
+void _init_py_WarpPerspectiveBackwardData_Format(PyTypeObject& py_type) {
+    auto& e_type = EnumWrapper<WarpPerspectiveBackwardData::Format>::type;
+
+    Py_INCREF(e_type);
+    mgb_assert(PyDict_SetItemString(
+        py_type.tp_dict, "Format", reinterpret_cast<PyObject*>(e_type)) >= 0);
+}
+
+PyOpDefBegin(WarpPerspectiveBackwardData) // {
+    static PyGetSetDef py_getsetters[];
+    static PyMethodDef tp_methods[];
+    
+    static PyObject* getstate(PyObject* self, PyObject*) {
+        auto& opdef = reinterpret_cast<PyOp(WarpPerspectiveBackwardData)*>(self)->inst();
+        static_cast<void>(opdef);
+        std::unordered_map<std::string, py::object> state {
+            
+            {"imode", serialization<decltype(opdef.imode)>::dump(opdef.imode)},
+            {"bmode", serialization<decltype(opdef.bmode)>::dump(opdef.bmode)},
+            {"format", serialization<decltype(opdef.format)>::dump(opdef.format)},
+            {"border_val", serialization<decltype(opdef.border_val)>::dump(opdef.border_val)}
+        };
+        return py::cast(state).release().ptr();
+    }
+    static PyObject* setstate(PyObject* self, PyObject* args) {
+        PyObject* dict = PyTuple_GetItem(args, 0);
+        if (!dict) return NULL;
+        auto state = py::cast<std::unordered_map<std::string, py::object>>(dict);
+        auto& opdef = reinterpret_cast<PyOp(WarpPerspectiveBackwardData)*>(self)->inst();
+        static_cast<void>(opdef);
+        
+        {
+        auto&& iter = state.find("imode");
+        if (iter != state.end()) {
+            opdef.imode = serialization<decltype(opdef.imode)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("bmode");
+        if (iter != state.end()) {
+            opdef.bmode = serialization<decltype(opdef.bmode)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("format");
+        if (iter != state.end()) {
+            opdef.format = serialization<decltype(opdef.format)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("border_val");
+        if (iter != state.end()) {
+            opdef.border_val = serialization<decltype(opdef.border_val)>::load(iter->second);
+        }
+        }
+        Py_RETURN_NONE;
+    }
+    static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+// };
+PyOpDefEnd(WarpPerspectiveBackwardData)
+
+int PyOp(WarpPerspectiveBackwardData)::py_init(PyObject *self, PyObject *args, PyObject *kwds) {
+    static const char* kwlist[] = {"imode", "bmode", "format", "border_val", "scope", NULL};
+    PyObject *imode = NULL, *bmode = NULL, *format = NULL, *border_val = NULL, *scope = NULL;
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|OOOOO", const_cast<char**>(kwlist), &imode, &bmode, &format, &border_val, &scope))
+    return -1;
+
+    if (imode) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(WarpPerspectiveBackwardData)*>(self)->inst().imode =
+                    py::cast<decltype(WarpPerspectiveBackwardData::imode)>(py::handle(imode));
+        } CATCH_ALL(-1)
+    }
+
+    if (bmode) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(WarpPerspectiveBackwardData)*>(self)->inst().bmode =
+                    py::cast<decltype(WarpPerspectiveBackwardData::bmode)>(py::handle(bmode));
+        } CATCH_ALL(-1)
+    }
+
+    if (format) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(WarpPerspectiveBackwardData)*>(self)->inst().format =
+                    py::cast<decltype(WarpPerspectiveBackwardData::format)>(py::handle(format));
+        } CATCH_ALL(-1)
+    }
+
+    if (border_val) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(WarpPerspectiveBackwardData)*>(self)->inst().border_val =
+                    py::cast<decltype(WarpPerspectiveBackwardData::border_val)>(py::handle(border_val));
+        } CATCH_ALL(-1)
+    }
+
+    if (scope) {
+        try {
+            reinterpret_cast<PyOp(OpDef)*>(self)->op
+                ->set_scope(py::cast<std::string>(py::handle(scope)));
+        } CATCH_ALL(-1)
+    }
+
+    return 0;
+}
+
+PyGetSetDef PyOp(WarpPerspectiveBackwardData)::py_getsetters[] = {
+    {const_cast<char*>("imode"), py_get_generic(WarpPerspectiveBackwardData, imode), py_set_generic(WarpPerspectiveBackwardData, imode), const_cast<char*>("imode"), NULL},
+    {const_cast<char*>("bmode"), py_get_generic(WarpPerspectiveBackwardData, bmode), py_set_generic(WarpPerspectiveBackwardData, bmode), const_cast<char*>("bmode"), NULL},
+    {const_cast<char*>("format"), py_get_generic(WarpPerspectiveBackwardData, format), py_set_generic(WarpPerspectiveBackwardData, format), const_cast<char*>("format"), NULL},
+    {const_cast<char*>("border_val"), py_get_generic(WarpPerspectiveBackwardData, border_val), py_set_generic(WarpPerspectiveBackwardData, border_val), const_cast<char*>("border_val"), NULL},
+    {NULL}  /* Sentinel */
+};
+
+    PyMethodDef PyOp(WarpPerspectiveBackwardData)::tp_methods[] = {
+        {const_cast<char*>("__getstate__"), PyOp(WarpPerspectiveBackwardData)::getstate, METH_NOARGS, "WarpPerspectiveBackwardData getstate"},
+    {const_cast<char*>("__setstate__"), PyOp(WarpPerspectiveBackwardData)::setstate, METH_VARARGS, "WarpPerspectiveBackwardData setstate"},
+        {NULL}  /* Sentinel */
+    };
+    
+void _init_py_WarpPerspectiveBackwardData(py::module m) {
+    using py_op = PyOp(WarpPerspectiveBackwardData);
+    auto& py_type = PyOpType(WarpPerspectiveBackwardData);
+    py_type = {PyVarObject_HEAD_INIT(NULL, 0)};
+    py_type.tp_name = "megengine.core._imperative_rt.ops.WarpPerspectiveBackwardData";
+    py_type.tp_basicsize = sizeof(PyOp(WarpPerspectiveBackwardData));
+    py_type.tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE;
+    py_type.tp_doc = "WarpPerspectiveBackwardData";
+    py_type.tp_base = &PyOpType(OpDef);
+    py_type.tp_dealloc = py_dealloc_generic<py_op>;
+    py_type.tp_new = py_new_generic<py_op>;
+    py_type.tp_init = py_op::py_init;
+    py_type.tp_methods = py_op::tp_methods;
+    py_type.tp_getset = py_op::py_getsetters;
+    mgb_assert(PyType_Ready(&py_type) >= 0);
+        _init_py_WarpPerspectiveBackwardData_InterpolationMode(py_type);
+    _init_py_WarpPerspectiveBackwardData_BorderMode(py_type);
+    _init_py_WarpPerspectiveBackwardData_Format(py_type);
+
+    PyType_Modified(&py_type);
+    m.add_object("WarpPerspectiveBackwardData", reinterpret_cast<PyObject*>(&py_type));
+    mgb_assert(PyOp(OpDef)::ctype2pytype.emplace(WarpPerspectiveBackwardData::typeinfo(), &py_type).second);
+}
+
+void _init_py_WarpPerspectiveBackwardMat_InterpolationMode(PyTypeObject& py_type) {
+    auto& e_type = EnumWrapper<WarpPerspectiveBackwardMat::InterpolationMode>::type;
+
+    Py_INCREF(e_type);
+    mgb_assert(PyDict_SetItemString(
+        py_type.tp_dict, "InterpolationMode", reinterpret_cast<PyObject*>(e_type)) >= 0);
+}
+
+void _init_py_WarpPerspectiveBackwardMat_BorderMode(PyTypeObject& py_type) {
+    auto& e_type = EnumWrapper<WarpPerspectiveBackwardMat::BorderMode>::type;
+
+    Py_INCREF(e_type);
+    mgb_assert(PyDict_SetItemString(
+        py_type.tp_dict, "BorderMode", reinterpret_cast<PyObject*>(e_type)) >= 0);
+}
+
+void _init_py_WarpPerspectiveBackwardMat_Format(PyTypeObject& py_type) {
+    auto& e_type = EnumWrapper<WarpPerspectiveBackwardMat::Format>::type;
+
+    Py_INCREF(e_type);
+    mgb_assert(PyDict_SetItemString(
+        py_type.tp_dict, "Format", reinterpret_cast<PyObject*>(e_type)) >= 0);
+}
+
+PyOpDefBegin(WarpPerspectiveBackwardMat) // {
+    static PyGetSetDef py_getsetters[];
+    static PyMethodDef tp_methods[];
+    
+    static PyObject* getstate(PyObject* self, PyObject*) {
+        auto& opdef = reinterpret_cast<PyOp(WarpPerspectiveBackwardMat)*>(self)->inst();
+        static_cast<void>(opdef);
+        std::unordered_map<std::string, py::object> state {
+            
+            {"imode", serialization<decltype(opdef.imode)>::dump(opdef.imode)},
+            {"bmode", serialization<decltype(opdef.bmode)>::dump(opdef.bmode)},
+            {"format", serialization<decltype(opdef.format)>::dump(opdef.format)},
+            {"border_val", serialization<decltype(opdef.border_val)>::dump(opdef.border_val)}
+        };
+        return py::cast(state).release().ptr();
+    }
+    static PyObject* setstate(PyObject* self, PyObject* args) {
+        PyObject* dict = PyTuple_GetItem(args, 0);
+        if (!dict) return NULL;
+        auto state = py::cast<std::unordered_map<std::string, py::object>>(dict);
+        auto& opdef = reinterpret_cast<PyOp(WarpPerspectiveBackwardMat)*>(self)->inst();
+        static_cast<void>(opdef);
+        
+        {
+        auto&& iter = state.find("imode");
+        if (iter != state.end()) {
+            opdef.imode = serialization<decltype(opdef.imode)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("bmode");
+        if (iter != state.end()) {
+            opdef.bmode = serialization<decltype(opdef.bmode)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("format");
+        if (iter != state.end()) {
+            opdef.format = serialization<decltype(opdef.format)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("border_val");
+        if (iter != state.end()) {
+            opdef.border_val = serialization<decltype(opdef.border_val)>::load(iter->second);
+        }
+        }
+        Py_RETURN_NONE;
+    }
+    static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+// };
+PyOpDefEnd(WarpPerspectiveBackwardMat)
+
+int PyOp(WarpPerspectiveBackwardMat)::py_init(PyObject *self, PyObject *args, PyObject *kwds) {
+    static const char* kwlist[] = {"imode", "bmode", "format", "border_val", "scope", NULL};
+    PyObject *imode = NULL, *bmode = NULL, *format = NULL, *border_val = NULL, *scope = NULL;
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|OOOOO", const_cast<char**>(kwlist), &imode, &bmode, &format, &border_val, &scope))
+    return -1;
+
+    if (imode) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(WarpPerspectiveBackwardMat)*>(self)->inst().imode =
+                    py::cast<decltype(WarpPerspectiveBackwardMat::imode)>(py::handle(imode));
+        } CATCH_ALL(-1)
+    }
+
+    if (bmode) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(WarpPerspectiveBackwardMat)*>(self)->inst().bmode =
+                    py::cast<decltype(WarpPerspectiveBackwardMat::bmode)>(py::handle(bmode));
+        } CATCH_ALL(-1)
+    }
+
+    if (format) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(WarpPerspectiveBackwardMat)*>(self)->inst().format =
+                    py::cast<decltype(WarpPerspectiveBackwardMat::format)>(py::handle(format));
+        } CATCH_ALL(-1)
+    }
+
+    if (border_val) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(WarpPerspectiveBackwardMat)*>(self)->inst().border_val =
+                    py::cast<decltype(WarpPerspectiveBackwardMat::border_val)>(py::handle(border_val));
+        } CATCH_ALL(-1)
+    }
+
+    if (scope) {
+        try {
+            reinterpret_cast<PyOp(OpDef)*>(self)->op
+                ->set_scope(py::cast<std::string>(py::handle(scope)));
+        } CATCH_ALL(-1)
+    }
+
+    return 0;
+}
+
+PyGetSetDef PyOp(WarpPerspectiveBackwardMat)::py_getsetters[] = {
+    {const_cast<char*>("imode"), py_get_generic(WarpPerspectiveBackwardMat, imode), py_set_generic(WarpPerspectiveBackwardMat, imode), const_cast<char*>("imode"), NULL},
+    {const_cast<char*>("bmode"), py_get_generic(WarpPerspectiveBackwardMat, bmode), py_set_generic(WarpPerspectiveBackwardMat, bmode), const_cast<char*>("bmode"), NULL},
+    {const_cast<char*>("format"), py_get_generic(WarpPerspectiveBackwardMat, format), py_set_generic(WarpPerspectiveBackwardMat, format), const_cast<char*>("format"), NULL},
+    {const_cast<char*>("border_val"), py_get_generic(WarpPerspectiveBackwardMat, border_val), py_set_generic(WarpPerspectiveBackwardMat, border_val), const_cast<char*>("border_val"), NULL},
+    {NULL}  /* Sentinel */
+};
+
+    PyMethodDef PyOp(WarpPerspectiveBackwardMat)::tp_methods[] = {
+        {const_cast<char*>("__getstate__"), PyOp(WarpPerspectiveBackwardMat)::getstate, METH_NOARGS, "WarpPerspectiveBackwardMat getstate"},
+    {const_cast<char*>("__setstate__"), PyOp(WarpPerspectiveBackwardMat)::setstate, METH_VARARGS, "WarpPerspectiveBackwardMat setstate"},
+        {NULL}  /* Sentinel */
+    };
+    
+void _init_py_WarpPerspectiveBackwardMat(py::module m) {
+    using py_op = PyOp(WarpPerspectiveBackwardMat);
+    auto& py_type = PyOpType(WarpPerspectiveBackwardMat);
+    py_type = {PyVarObject_HEAD_INIT(NULL, 0)};
+    py_type.tp_name = "megengine.core._imperative_rt.ops.WarpPerspectiveBackwardMat";
+    py_type.tp_basicsize = sizeof(PyOp(WarpPerspectiveBackwardMat));
+    py_type.tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE;
+    py_type.tp_doc = "WarpPerspectiveBackwardMat";
+    py_type.tp_base = &PyOpType(OpDef);
+    py_type.tp_dealloc = py_dealloc_generic<py_op>;
+    py_type.tp_new = py_new_generic<py_op>;
+    py_type.tp_init = py_op::py_init;
+    py_type.tp_methods = py_op::tp_methods;
+    py_type.tp_getset = py_op::py_getsetters;
+    mgb_assert(PyType_Ready(&py_type) >= 0);
+        _init_py_WarpPerspectiveBackwardMat_InterpolationMode(py_type);
+    _init_py_WarpPerspectiveBackwardMat_BorderMode(py_type);
+    _init_py_WarpPerspectiveBackwardMat_Format(py_type);
+
+    PyType_Modified(&py_type);
+    m.add_object("WarpPerspectiveBackwardMat", reinterpret_cast<PyObject*>(&py_type));
+    mgb_assert(PyOp(OpDef)::ctype2pytype.emplace(WarpPerspectiveBackwardMat::typeinfo(), &py_type).second);
+}
 #define INIT_ALL_OP(m) \
     _init_py_AdaptivePooling(m); \
     _init_py_AddAxis(m); \
@@ -18290,5 +18630,7 @@ void _init_py_WarpPerspective(py::module m) {
     _init_py_TypeCvt(m); \
     _init_py_UniformRNG(m); \
     _init_py_WarpAffine(m); \
-    _init_py_WarpPerspective(m);
+    _init_py_WarpPerspective(m); \
+    _init_py_WarpPerspectiveBackwardData(m); \
+    _init_py_WarpPerspectiveBackwardMat(m);
 // clang-format on

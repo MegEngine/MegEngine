@@ -1795,4 +1795,42 @@ public:
     }
 };
 
+class WarpPerspectiveBackwardData : public OpDefImplBase<WarpPerspectiveBackwardData> {
+    MGB_DYN_TYPE_OBJ_FINAL_DECL;
+
+public:
+    using InterpolationMode = ::megdnn::param::WarpPerspective::InterpolationMode;
+    using BorderMode = ::megdnn::param::WarpPerspective::BorderMode;
+    using Format = ::megdnn::param::WarpPerspective::Format;
+    InterpolationMode imode = ::megdnn::param::WarpPerspective::InterpolationMode::LINEAR;
+    BorderMode bmode = ::megdnn::param::WarpPerspective::BorderMode::REPLICATE;
+    Format format = ::megdnn::param::WarpPerspective::Format::NCHW;
+    float border_val = .0f;
+    WarpPerspectiveBackwardData() = default;
+    WarpPerspectiveBackwardData(InterpolationMode imode_, BorderMode bmode_, Format format_, float border_val_, std::string scope_ = {}): imode(imode_), bmode(bmode_), format(format_), border_val(border_val_) { set_scope(scope_); }
+    WarpPerspectiveBackwardData(::megdnn::param::WarpPerspective packed_param_0): imode(packed_param_0.imode), bmode(packed_param_0.bmode), format(packed_param_0.format), border_val(packed_param_0.border_val) {}
+    ::megdnn::param::WarpPerspective param() const {
+        return {imode, bmode, format, border_val};
+    }
+};
+
+class WarpPerspectiveBackwardMat : public OpDefImplBase<WarpPerspectiveBackwardMat> {
+    MGB_DYN_TYPE_OBJ_FINAL_DECL;
+
+public:
+    using InterpolationMode = ::megdnn::param::WarpPerspective::InterpolationMode;
+    using BorderMode = ::megdnn::param::WarpPerspective::BorderMode;
+    using Format = ::megdnn::param::WarpPerspective::Format;
+    InterpolationMode imode = ::megdnn::param::WarpPerspective::InterpolationMode::LINEAR;
+    BorderMode bmode = ::megdnn::param::WarpPerspective::BorderMode::REPLICATE;
+    Format format = ::megdnn::param::WarpPerspective::Format::NCHW;
+    float border_val = .0f;
+    WarpPerspectiveBackwardMat() = default;
+    WarpPerspectiveBackwardMat(InterpolationMode imode_, BorderMode bmode_, Format format_, float border_val_, std::string scope_ = {}): imode(imode_), bmode(bmode_), format(format_), border_val(border_val_) { set_scope(scope_); }
+    WarpPerspectiveBackwardMat(::megdnn::param::WarpPerspective packed_param_0): imode(packed_param_0.imode), bmode(packed_param_0.bmode), format(packed_param_0.format), border_val(packed_param_0.border_val) {}
+    ::megdnn::param::WarpPerspective param() const {
+        return {imode, bmode, format, border_val};
+    }
+};
+
 // clang-format on

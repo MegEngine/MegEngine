@@ -14,6 +14,7 @@ import megengine.core.tensor.dtype as dtype
 import megengine.functional as F
 import megengine.jit as jit
 from megengine import Parameter, Tensor, is_cuda_available, tensor
+from megengine.autodiff import GradManager
 from megengine.core._trace_option import use_symbolic_shape
 from megengine.core.autodiff.grad import Grad
 from megengine.core.tensor.utils import make_shape_tuple
@@ -569,6 +570,48 @@ def test_warp_perspective(dt):
     )
     outp = F.vision.warp_perspective(x, M, (2, 2))
     np.testing.assert_equal(outp.numpy(), np.array([[[[5, 6], [9, 10]]]], dtype=dt))
+
+
+def test_warp_affine_grad():
+    dy_np = np.arange(1, 10, dtype=np.float32).reshape(1, 1, 3, 3)
+    x_np = np.arange(1, 10, dtype=np.float32).reshape(1, 1, 3, 3)
+
+    mat_np_affine = np.array([[[0.5, 0, 0], [0, 0.5, 0],]]).astype("float32")
+    mat_np_perspective = np.array([[[0.5, 0, 0], [0, 0.5, 0], [0, 0, 1]]]).astype(
+        "float32"
+    )
+
+    dmat_affine = Tensor(np.ones((1, 2, 3), dtype=np.float32))
+    dy_affine = Tensor(dy_np)
+    x_affine = Tensor(x_np)
+    mat_affine = Tensor(mat_np_affine)
+    target_shape_affine = x_affine.shape[2:]
+
+    dmat_perspective = Tensor(np.ones((1, 3, 3), dtype=np.float32))
+    dy_perspective = Tensor(dy_np)
+    x_perspective = Tensor(x_np)
+    mat_perspective = Tensor(mat_np_perspective)
+    target_shape_perspective = x_perspective.shape[2:]
+
+    gm = GradManager().attach([x_affine, mat_affine, x_perspective, mat_perspective])
+    with gm:
+        y_affine = F.warp_affine(
+            x_affine, mat_affine, target_shape_affine, format="NCHW"
+        )
+        y_perspective = F.warp_perspective(
+            x_perspective, mat_perspective, target_shape_perspective
+        )
+        gm.backward([y_affine, y_perspective], [dy_affine, dy_perspective])
+
+    np.testing.assert_allclose(
+        x_affine.grad.numpy(), x_perspective.grad.numpy(), rtol=1e-5, atol=1e-5
+    )
+    np.testing.assert_allclose(
+        mat_affine.grad.numpy(),
+        mat_perspective.grad.numpy()[0:1, 0:2, 0:3],
+        rtol=1e-5,
+        atol=1e-5,
+    )
 
 
 @pytest.mark.parametrize("dt", [np.float32, np.int8, np.uint8, np.float16])

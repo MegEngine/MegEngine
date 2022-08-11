@@ -1858,4 +1858,34 @@ WarpPerspectiveInst
     .def_readwrite("format", &WarpPerspective::format)
     .def_readwrite("border_val", &WarpPerspective::border_val);
 
+py::class_<WarpPerspectiveBackwardData, std::shared_ptr<WarpPerspectiveBackwardData>, OpDef> WarpPerspectiveBackwardDataInst(m, "WarpPerspectiveBackwardData");
+
+WarpPerspectiveBackwardDataInst.attr("InterpolationMode") = RemapInst.attr("InterpolationMode");
+
+WarpPerspectiveBackwardDataInst.attr("BorderMode") = RemapInst.attr("BorderMode");
+
+WarpPerspectiveBackwardDataInst.attr("Format") = AdaptivePoolingInst.attr("Format");
+
+WarpPerspectiveBackwardDataInst
+    .def(py::init<::megdnn::param::WarpPerspective::InterpolationMode, ::megdnn::param::WarpPerspective::BorderMode, ::megdnn::param::WarpPerspective::Format, float, std::string>(), py::arg("imode") = ::megdnn::param::WarpPerspective::InterpolationMode::LINEAR, py::arg("bmode") = ::megdnn::param::WarpPerspective::BorderMode::REPLICATE, py::arg("format") = ::megdnn::param::WarpPerspective::Format::NCHW, py::arg("border_val") = .0f, py::arg("scope") = {})
+    .def_readwrite("imode", &WarpPerspectiveBackwardData::imode)
+    .def_readwrite("bmode", &WarpPerspectiveBackwardData::bmode)
+    .def_readwrite("format", &WarpPerspectiveBackwardData::format)
+    .def_readwrite("border_val", &WarpPerspectiveBackwardData::border_val);
+
+py::class_<WarpPerspectiveBackwardMat, std::shared_ptr<WarpPerspectiveBackwardMat>, OpDef> WarpPerspectiveBackwardMatInst(m, "WarpPerspectiveBackwardMat");
+
+WarpPerspectiveBackwardMatInst.attr("InterpolationMode") = RemapInst.attr("InterpolationMode");
+
+WarpPerspectiveBackwardMatInst.attr("BorderMode") = RemapInst.attr("BorderMode");
+
+WarpPerspectiveBackwardMatInst.attr("Format") = AdaptivePoolingInst.attr("Format");
+
+WarpPerspectiveBackwardMatInst
+    .def(py::init<::megdnn::param::WarpPerspective::InterpolationMode, ::megdnn::param::WarpPerspective::BorderMode, ::megdnn::param::WarpPerspective::Format, float, std::string>(), py::arg("imode") = ::megdnn::param::WarpPerspective::InterpolationMode::LINEAR, py::arg("bmode") = ::megdnn::param::WarpPerspective::BorderMode::REPLICATE, py::arg("format") = ::megdnn::param::WarpPerspective::Format::NCHW, py::arg("border_val") = .0f, py::arg("scope") = {})
+    .def_readwrite("imode", &WarpPerspectiveBackwardMat::imode)
+    .def_readwrite("bmode", &WarpPerspectiveBackwardMat::bmode)
+    .def_readwrite("format", &WarpPerspectiveBackwardMat::format)
+    .def_readwrite("border_val", &WarpPerspectiveBackwardMat::border_val);
+
 // clang-format on

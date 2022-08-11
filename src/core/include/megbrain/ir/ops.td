@@ -104,6 +104,10 @@ def WarpPerspective: MgbHashableOp<"WarpPerspective", [WarpPerspectiveParam]>;
 
 def WarpAffine: MgbHashableOp<"WarpAffine", [WarpAffineParam]>;
 
+def WarpPerspectiveBackwardData: MgbHashableOp<"WarpPerspectiveBackwardData", [WarpPerspectiveParam]>;
+
+def WarpPerspectiveBackwardMat: MgbHashableOp<"WarpPerspectiveBackwardMat", [WarpPerspectiveParam]>;
+
 def Remap: MgbHashableOp<"Remap", [RemapParam]>;
 
 def Resize: MgbHashableOp<"Resize", [ResizeParam]>;
