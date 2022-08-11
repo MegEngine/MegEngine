@@ -113,6 +113,7 @@ elif [ $SDK_NAME == "cu111" ];then
 
     CUDA_COPY_LIB_LIST="\
         ${CUDA_LIB_DIR}/libnvrtc.so.11.1:\
+        ${CUDA_LIB_DIR}/libnvrtc-builtins.so.11.1:\
         ${CUDA_LIB_DIR}/libcublasLt.so.11:\
         ${CUDA_LIB_DIR}/libcublas.so.11:\
         ${CUDNN_LIB_DIR}/libcudnn_adv_infer.so.8:\
@@ -145,6 +146,7 @@ elif [ $SDK_NAME == "cu111_cudnn821_tensorRT825" ];then
 
     CUDA_COPY_LIB_LIST="\
         ${CUDA_LIB_DIR}/libnvrtc.so.11.1:\
+        ${CUDA_LIB_DIR}/libnvrtc-builtins.so.11.1:\
         ${CUDA_LIB_DIR}/libcublasLt.so.11:\
         ${CUDA_LIB_DIR}/libcublas.so.11:\
         ${CUDNN_LIB_DIR}/libcudnn_adv_infer.so.8:\
@@ -170,6 +172,7 @@ elif [ $SDK_NAME == "cu112" ];then
     BUILD_GCC8="ON"
     CUDA_COPY_LIB_LIST="\
         ${CUDA_LIB_DIR}/libnvrtc.so.11.2:\
+        ${CUDA_LIB_DIR}/libnvrtc-builtins.so.11.2:\
         ${CUDA_LIB_DIR}/libcublasLt.so.11:\
         ${CUDA_LIB_DIR}/libcublas.so.11:\
         ${CUDNN_LIB_DIR}/libcudnn_adv_infer.so.8:\
