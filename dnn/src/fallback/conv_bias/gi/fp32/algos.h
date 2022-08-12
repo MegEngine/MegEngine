@@ -1,5 +1,6 @@
 #pragma once
 
+#include "src/common/opr_delegate.h"
 #include "src/fallback/conv_bias/opr_impl.h"
 #include "src/fallback/matrix_mul/opr_impl.h"
 
@@ -247,6 +248,26 @@ public:
         return {AlgoDataType::FLOAT32, AlgoCategory::DIRECT};
     }
     MEGDNN_DECL_ALGO_TYPE(GI_COMMON_DIRECT_NCHW_NCHW44_FP32)
+};
+
+class ConvBiasImpl::AlgoF32DirectNCHWNCHW44AGENT final : public AlgoBase {
+    SmallVector<NCBKern> get_kimpls(const NCBKernSizeParam& param) const;
+
+public:
+    AlgoF32DirectNCHWNCHW44AGENT(){};
+    AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }
+    const char* name() const override { return "F32_CONV_AGENT_NCHW_NCHW44"; }
+    bool usable(
+            const NCBKernSizeParam& param,
+            AlgoSelectionStrategy algo_selection_strategy) const override;
+
+    size_t get_workspace(const NCBKernSizeParam& param) const override;
+    virtual SmallVector<NCBKern> dispatch_kerns(
+            const NCBKernSizeParam& param) const override;
+    ConvAlgoTypePack get_algo_type() const override {
+        return {AlgoDataType::FLOAT32, AlgoCategory::DIRECT};
+    }
+    MEGDNN_DECL_ALGO_TYPE(GI_COMMON_DIRECT_NCHW_NCHW44_AGENT_FP32)
 };
 
 class ConvBiasImpl::AlgoF32ChannelWiseNCHW44 final : public AlgoBase {

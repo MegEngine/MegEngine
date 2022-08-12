@@ -84,7 +84,8 @@ class ConvBiasImpl::AlgoPack : NonCopyableObj {
     AlgoBase::Mapper m_all_algos_map;
     SmallVector<fallback::ConvBiasImpl::AlgoBase*> m_gi_winograd_algos;
 
-    AlgoF32DirectNCHWNCHW44 f32_direct_stride2_nchw_nchw44;
+    AlgoF32DirectNCHWNCHW44 f32_nchw_nchw44;
+    AlgoF32DirectNCHWNCHW44AGENT f32_nchw_nchw44_agent;
     AlgoF32ChannelWiseNCHW44 f32_chanel_wise_nchw44;
     AlgoF32DirectNCHW44 f32_direct_nchw44;
 
@@ -94,8 +95,17 @@ class ConvBiasImpl::AlgoPack : NonCopyableObj {
 
 public:
     AlgoPack() {
-        // fallback gi fp32 algo
-        m_all_algos.emplace_back(&f32_direct_stride2_nchw_nchw44);
+        //! fallback gi fp32 algo
+        //! now f32_nchw_nchw44_agent is fast than f32_nchw_nchw44
+        //! on x86 and rvv platform, so we adjust heuristic order.
+#if MEGDNN_AARCH64 || MEGDNN_ARMV7
+        m_all_algos.emplace_back(&f32_nchw_nchw44);
+        m_all_algos.emplace_back(&f32_nchw_nchw44_agent);
+#else
+        m_all_algos.emplace_back(&f32_nchw_nchw44_agent);
+        m_all_algos.emplace_back(&f32_nchw_nchw44);
+#endif
+
         m_all_algos.emplace_back(&f32_chanel_wise_nchw44);
         m_all_algos.emplace_back(&f32_direct_nchw44);
         m_all_algos.emplace_back(&f32_direct_stride1);
@@ -471,7 +481,8 @@ ConvBiasImpl::NCBKernSizeParam ConvBiasImpl::make_ncb_kern_size_param(
              param().compute_mode,
              nr_threads,
              reinterpret_cast<const ConvolutionForward::PreprocessedFilter*>(
-                     preprocessed_filter)},
+                     preprocessed_filter),
+             handle()},
             bias.dtype,
             bias.stride[0],
             bias_mode,
@@ -491,6 +502,7 @@ ConvBiasImpl::NCBKernParam ConvBiasImpl::make_ncb_kern_param(
     ret.dst_ptr = dst.get_ref_ptr();
     ret.workspace_ptr = workspace.raw_ptr;
     ret.workspace_size = workspace.size;
+    ret.handle = handle();
     return ret;
 }
 

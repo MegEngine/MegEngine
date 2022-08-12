@@ -354,6 +354,31 @@ TEST_F(FALLBACK_MULTI_THREADS, CONVBIAS_GI_NCHW_NCHW44_F32_S1) {
             handle(), "F32_CONV_NCHW_NCHW44");
 }
 
+#define CB(_MODE, _SUFFIX)                                                            \
+    TEST_F(FALLBACK_MULTI_THREADS, CONVBIAS_GI_NCHW_NCHW44_F32_S2_AGENT_##_SUFFIX) {  \
+        check_conv_bias(                                                              \
+                conv_bias::get_nchw44_conv_bias_args(                                 \
+                        {2, 3, 5, 7}, ONLY_IDENTITY_NLMODE, {_MODE}, 2, false, true), \
+                handle(), "F32_CONV_AGENT_NCHW_NCHW44");                              \
+    }
+CB(megdnn::BiasMode::NO_BIAS, NO_BIAS);
+CB(megdnn::BiasMode::BROADCAST_CHANNEL_BIAS, BROADCAST_CHANNEL_BIAS);
+#undef CB
+
+#define CB(_MODE, _SUFFIX)                                                        \
+    TEST_F(FALLBACK_MULTI_THREADS,                                                \
+           CONVBIAS_GI_NCHW_NCHW44_F32_S1_AGENT_IDENTITY_##_SUFFIX) {             \
+        check_conv_bias(                                                          \
+                conv_bias::get_nchw44_conv_bias_args(                             \
+                        {2, 3, 5, 7}, {_MODE}, ONLY_BR_BIASMODE, 1, false, true), \
+                handle(), "F32_CONV_AGENT_NCHW_NCHW44");                          \
+    }
+CB(param::ConvBias::NonlineMode::IDENTITY, IDENTITY);
+CB(param::ConvBias::NonlineMode::RELU, RELU);
+CB(param::ConvBias::NonlineMode::H_SWISH, H_SWISH);
+CB(param::ConvBias::NonlineMode::SIGMOID, SIGMOID);
+#undef CB
+
 std::vector<conv_bias::TestArg> get_nchw44_channel_wise_args(
         std::vector<size_t> kernel, size_t stride, bool no_bias, bool no_nonlinemode,
         bool no_full_bias) {

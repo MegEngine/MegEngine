@@ -242,7 +242,8 @@ ConvolutionImpl::NCBKernSizeParam ConvolutionImpl::make_ncb_kern_size_param(
             {dst.stride[0], dst.stride[1], dst.stride[2], dst.stride[3]},
             param().compute_mode,
             nr_threads,
-            preprocessed_filter};
+            preprocessed_filter,
+            handle()};
 }
 
 ConvolutionImpl::NCBKernParam ConvolutionImpl::make_ncb_kern_param(

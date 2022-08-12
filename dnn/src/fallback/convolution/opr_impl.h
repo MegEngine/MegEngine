@@ -101,6 +101,7 @@ public:
         const PreprocessedFilter* preprocessed_filter;
         //! get the data type category of the param for select the algo
         AlgoDataType deduce_algo_data_type() const;
+        Handle* handle;
     };
 
     //! memory param for kernels with non-contiguous batch

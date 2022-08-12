@@ -228,6 +228,7 @@ public:
             GI_COMMON_DIRECT_STRD2_FP32,
             GI_COMMON_DIRECT_NCHW44_FP32,
             GI_COMMON_DIRECT_NCHW_NCHW44_FP32,
+            GI_COMMON_DIRECT_NCHW_NCHW44_AGENT_FP32,
             GI_COMMON_CHWNWISE_NCHW44_F32,
 
 #if MEGDNN_X86
@@ -389,6 +390,7 @@ private:
     class AlgoF32DirectStride1;
     class AlgoF32DirectStride2;
     class AlgoF32DirectNCHWNCHW44;
+    class AlgoF32DirectNCHWNCHW44AGENT;
     class AlgoF32ChannelWiseNCHW44;
     class AlgoF32DirectNCHW44;
 
