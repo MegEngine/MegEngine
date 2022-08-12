@@ -1,6 +1,8 @@
 #include "src/arm_common/elemwise/unary/algo.h"
 #include "src/arm_common/elemwise_helper/elemwise_op.h"
-
+#if MEGDNN_AARCH64
+#include "src/aarch64/elemwise/sigmoid.h"
+#endif
 #include "src/common/utils.h"
 #include "src/naive/handle.h"
 

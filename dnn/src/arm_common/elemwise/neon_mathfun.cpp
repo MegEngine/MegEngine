@@ -320,69 +320,6 @@ v4sf tan_ps_f32(v4sf x) {
 #undef c_cephes_log_q1
 #undef c_cephes_log_q2
 
-static const struct {
-    float lower_range;
-    float upper_range;
-    float alpha_9;
-    float alpha_7;
-    float alpha_5;
-    float alpha_3;
-    float alpha_1;
-    float beta_10;
-    float beta_8;
-    float beta_6;
-    float beta_4;
-    float beta_2;
-    float beta_0;
-    float one_half;
-} sigmoid_constants = {
-        -18.0f,
-        18.0f,
-        4.37031012579801e-11f,
-        1.15627324459942e-07f,
-        6.08574864600143e-05f,
-        8.51377133304701e-03f,
-        2.48287947061529e-01f,
-        6.10247389755681e-13f,
-        5.76102136993427e-09f,
-        6.29106785017040e-06f,
-        1.70198817374094e-03f,
-        1.16817656904453e-01f,
-        9.93151921023180e-01f,
-        0.5f,
-};
-
-v4sf sigmoid_ps_f32(v4sf src) {
-    auto val = vmaxq_f32(vdupq_n_f32(sigmoid_constants.lower_range), src);
-    val = vminq_f32(vdupq_n_f32(sigmoid_constants.upper_range), val);
-    auto squared = vmulq_f32(val, val);
-    auto p = fma_ps_f32(
-            vdupq_n_f32(sigmoid_constants.alpha_7), squared,
-            vdupq_n_f32(sigmoid_constants.alpha_9));
-    p = fma_ps_f32(vdupq_n_f32(sigmoid_constants.alpha_5), p, squared);
-    p = fma_ps_f32(vdupq_n_f32(sigmoid_constants.alpha_3), p, squared);
-    p = fma_ps_f32(vdupq_n_f32(sigmoid_constants.alpha_1), p, squared);
-    p = vmulq_f32(p, val);
-    auto q = fma_ps_f32(
-            vdupq_n_f32(sigmoid_constants.beta_8), squared,
-            vdupq_n_f32(sigmoid_constants.beta_10));
-    q = fma_ps_f32(vdupq_n_f32(sigmoid_constants.beta_6), q, squared);
-    q = fma_ps_f32(vdupq_n_f32(sigmoid_constants.beta_4), q, squared);
-    q = fma_ps_f32(vdupq_n_f32(sigmoid_constants.beta_2), q, squared);
-    q = fma_ps_f32(vdupq_n_f32(sigmoid_constants.beta_0), q, squared);
-    return vaddq_f32(div_ps_f32(p, q), vdupq_n_f32(sigmoid_constants.one_half));
-}
-
-#if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
-float16x8_t sigmoid_ps_f16(float16x8_t x) {
-    float32x4_t low = vcvt_f32_f16(vget_low_f16(x));
-    float32x4_t high = vcvt_f32_f16(vget_high_f16(x));
-    low = sigmoid_ps_f32(low);
-    high = sigmoid_ps_f32(high);
-    return vcombine_f16(vcvt_f16_f32(low), vcvt_f16_f32(high));
-}
-#endif
-
 }  // namespace arm_common
 }  // namespace megdnn
 
