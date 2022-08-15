@@ -9,6 +9,7 @@
 #include <mutex>
 #include <string>
 
+#include <cerrno>
 #include <cstdarg>
 #include <cstddef>
 #include <cstdint>

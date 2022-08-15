@@ -1,4 +1,5 @@
 #pragma once
+#include <cstddef>
 #include "megdnn/arch.h"
 #if MGB_ENABLE_DOT
 
