@@ -69,6 +69,9 @@ void benchmark_winograd(
 void benchmark_winograd_weight_preprocess(
         const char* algo_name, megdnn::Handle* handle, size_t kernel,
         size_t pack_size = 1);
+void benchmark_winograd_compare(
+        const char* algoA_name, const char* algoB_name, megdnn::Handle* handle,
+        size_t kernel, size_t pack_size = 1);
 #endif  // MEGDNN_WITH_BENCHMARK
 template <class Checker>
 void check_winograd(

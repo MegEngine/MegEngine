@@ -176,7 +176,9 @@ template <typename T>
 struct NCHW44ParamTrait;
 
 std::string ConvBias::WinogradParam::to_string() const {
-    return ssprintf("%u:%u:%u", channel_block_size, output_block_size, tile_size);
+    return ssprintf(
+            "%u:%u:%u:%u", channel_block_size, output_block_size, tile_size,
+            filter_size);
 }
 
 template <typename T>

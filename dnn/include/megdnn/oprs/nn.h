@@ -453,19 +453,21 @@ public:
     };
 
     //! param for winograd algos.
+
     struct WinogradParam {
         uint32_t channel_block_size;
         uint32_t output_block_size;
         uint32_t tile_size;
+        uint32_t filter_size;
         bool operator==(const WinogradParam& rhs) const {
             return channel_block_size == rhs.channel_block_size &&
                    output_block_size == rhs.output_block_size &&
-                   tile_size == rhs.tile_size;
+                   tile_size == rhs.tile_size && filter_size == rhs.filter_size;
         }
 
         std::string to_string() const;
     };
-    static constexpr WinogradParam INVALID_WINOGRAD_PARAM = {0, 0, 0};
+    static constexpr WinogradParam INVALID_WINOGRAD_PARAM = {0, 0, 0, 0};
 
     struct DirectParam {
         std::string to_string() const { return ""; }

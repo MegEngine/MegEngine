@@ -93,7 +93,6 @@ struct InputTransform6X3 {
 #undef cb
 
         INPUT_TRANSFORM(d, wd);
-
 #if MEGDNN_AARCH64
 #define cb(i) GI_FLOAT32_V2_t ret##i;
         UNROLL_CALL_NOWRAPPER(8, cb);

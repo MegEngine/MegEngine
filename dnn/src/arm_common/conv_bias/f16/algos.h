@@ -14,7 +14,7 @@ public:
     const char* name() const override {
         if (m_name.empty()) {
             m_name = ConvBiasImpl::algo_name<ConvBias::WinogradParam>(
-                    m_matmul_algo->name(), {1, 2, m_tile_size});
+                    m_matmul_algo->name(), {1, 2, m_tile_size, 3});
         }
         return m_name.c_str();
     }
@@ -33,7 +33,7 @@ public:
     const char* name() const override {
         if (m_name.empty()) {
             m_name = ConvBiasImpl::algo_name<ConvBias::WinogradParam>(
-                    m_matmul_algo->name(), {1, 4, m_tile_size});
+                    m_matmul_algo->name(), {1, 4, m_tile_size, 5});
         }
         return m_name.c_str();
     }
@@ -51,7 +51,7 @@ public:
     const char* name() const override {
         if (m_name.empty()) {
             m_name = ConvBiasImpl::algo_name<ConvBias::WinogradParam>(
-                    m_matmul_algo->name(), {1, 6, m_tile_size});
+                    m_matmul_algo->name(), {1, 6, m_tile_size, 3});
         }
         return m_name.c_str();
     }
@@ -69,7 +69,7 @@ public:
     const char* name() const override {
         if (m_name.empty()) {
             m_name = ConvBiasImpl::algo_name<ConvBias::WinogradParam>(
-                    m_matmul_algo->name(), {8, 2, m_tile_size});
+                    m_matmul_algo->name(), {8, 2, m_tile_size, 3});
         }
         return m_name.c_str();
     }

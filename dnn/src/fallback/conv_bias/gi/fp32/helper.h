@@ -116,6 +116,46 @@ inline void transpose_4x4(const float* src, float* dst, int lda, int ldb) {
                 GiReinterpretqFloat32ToS64(b7.val[1])));                   \
     } while (0);
 
+#define TRANSPOSE_6x6(a, ret)                                    \
+    do {                                                         \
+        auto b0 = GiZipqFloat32(CONCAT(a, 00), CONCAT(a, 10));   \
+        auto b1 = GiZipqFloat32(CONCAT(a, 01), CONCAT(a, 11));   \
+        auto b2 = GiZipqFloat32(CONCAT(a, 20), CONCAT(a, 30));   \
+        auto b3 = GiZipqFloat32(CONCAT(a, 21), CONCAT(a, 31));   \
+        auto b4 = GiZipqFloat32(CONCAT(a, 40), CONCAT(a, 50));   \
+        auto b5 = GiZipqFloat32(CONCAT(a, 41), CONCAT(a, 51));   \
+        CONCAT(ret, 00) = GiReinterpretqS64ToFloat32(GiZip1qS64( \
+                GiReinterpretqFloat32ToS64(b0.val[0]),           \
+                GiReinterpretqFloat32ToS64(b2.val[0])));         \
+        CONCAT(ret, 01) = b4.val[0];                             \
+        CONCAT(ret, 10) = GiReinterpretqS64ToFloat32(GiZip2qS64( \
+                GiReinterpretqFloat32ToS64(b0.val[0]),           \
+                GiReinterpretqFloat32ToS64(b2.val[0])));         \
+        CONCAT(ret, 11) = GiReinterpretqS64ToFloat32(GiZip2qS64( \
+                GiReinterpretqFloat32ToS64(b4.val[0]),           \
+                GiReinterpretqFloat32ToS64(b5.val[0])));         \
+        CONCAT(ret, 20) = GiReinterpretqS64ToFloat32(GiZip1qS64( \
+                GiReinterpretqFloat32ToS64(b0.val[1]),           \
+                GiReinterpretqFloat32ToS64(b2.val[1])));         \
+        CONCAT(ret, 21) = b4.val[1];                             \
+        CONCAT(ret, 30) = GiReinterpretqS64ToFloat32(GiZip2qS64( \
+                GiReinterpretqFloat32ToS64(b0.val[1]),           \
+                GiReinterpretqFloat32ToS64(b2.val[1])));         \
+        CONCAT(ret, 31) = GiReinterpretqS64ToFloat32(GiZip2qS64( \
+                GiReinterpretqFloat32ToS64(b4.val[1]),           \
+                GiReinterpretqFloat32ToS64(b5.val[1])));         \
+        CONCAT(ret, 40) = GiReinterpretqS64ToFloat32(GiZip1qS64( \
+                GiReinterpretqFloat32ToS64(b1.val[0]),           \
+                GiReinterpretqFloat32ToS64(b3.val[0])));         \
+        CONCAT(ret, 41) = b5.val[0];                             \
+        CONCAT(ret, 50) = GiReinterpretqS64ToFloat32(GiZip2qS64( \
+                GiReinterpretqFloat32ToS64(b1.val[0]),           \
+                GiReinterpretqFloat32ToS64(b3.val[0])));         \
+        CONCAT(ret, 51) = GiReinterpretqS64ToFloat32(GiZip2qS64( \
+                GiReinterpretqFloat32ToS64(b5.val[0]),           \
+                GiReinterpretqFloat32ToS64(b4.val[0])));         \
+    } while (0);
+
 #define TRANSPOSE_8x3(a, ret)                                      \
     auto b0 = GiZipqFloat32(CONCAT(a, 0), CONCAT(a, 1));           \
     auto b1 = GiZipqFloat32(CONCAT(a, 2), CONCAT(a, 3));           \

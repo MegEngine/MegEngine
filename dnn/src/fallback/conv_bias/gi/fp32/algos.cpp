@@ -84,6 +84,38 @@ MEGDNN_WINOGRAD_ALGO_FUN_DEFINE_ALL(
         AlgoFP32WinogradF63, winograd::winograd_6x3_1x1_f,
         megdnn_fallback_winograd_fp32, param::MatrixMul::Format::DEFAULT);
 
+/* ======================= AlgoFP32WinogradF43 ======================== */
+
+bool ConvBiasImpl::AlgoFP32WinogradF43::usable(
+        const NCBKernSizeParam& param,
+        AlgoSelectionStrategy /*algo_selection_strategy*/) const {
+    MEGDNN_MARK_USED_VAR(param);
+    MIDOUT_BEGIN(megdnn_fallback_winograd_fp32, 5, 0) {
+        using Strategy = winograd::winograd_4x3_1x1_f;
+        Strategy strategy(param.src_type, param.filter_type, param.dst_type);
+        auto&& matmul_param =
+                megdnn::winograd::ConvBias<Strategy>(strategy, m_tile_size, param)
+                        .get_matmul_kern_param(param);
+        return m_matmul_algo->usable(matmul_param) &&
+               param.filter_meta.format == param::ConvBias::Format::NCHW &&
+               !param.filter_meta.should_flip &&
+               (param.filter_meta.spatial[0] == param.filter_meta.spatial[1] &&
+                param.filter_meta.spatial[0] == 3) &&
+               (param.filter_meta.stride[0] == param.filter_meta.stride[1] &&
+                param.filter_meta.stride[0] == 1) &&
+               (param.filter_meta.dilation[0] == param.filter_meta.dilation[1] &&
+                param.filter_meta.dilation[0] == 1) &&
+               param.compute_mode == param::ConvBias::ComputeMode::DEFAULT &&
+               param.src_type.enumv() == DTypeEnum::Float32;
+    }
+    MIDOUT_END();
+    return false;
+}
+
+MEGDNN_WINOGRAD_ALGO_FUN_DEFINE_ALL(
+        AlgoFP32WinogradF43, winograd::winograd_4x3_1x1_f,
+        megdnn_fallback_winograd_fp32, param::MatrixMul::Format::DEFAULT);
+
 /* ======================= AlgoFP32WinogradF54 ======================== */
 
 bool ConvBiasImpl::AlgoFP32WinogradF54::usable(

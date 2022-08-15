@@ -800,6 +800,13 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_WINOGRAD) {
 #endif
 }
 
+TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_WINOGRAD_F32_F43) {
+    using namespace conv_bias;
+    std::vector<TestArg> args = get_winograd_args(3);
+    Checker<ConvBiasForward> checker(handle());
+    check_winograd("1:4:32", checker, args);
+}
+
 //! uncomment it when low precision mode is ok
 #if 0
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_WINOGRAD_F73_4_NCHW44) {

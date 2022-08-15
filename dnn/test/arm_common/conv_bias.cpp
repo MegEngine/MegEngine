@@ -47,6 +47,25 @@ TEST_F(ARM_COMMON, CONV_BIAS_MATMUL) {
     }
 }
 
+TEST_F(ARM_COMMON, CONV_BIAS_WINOGRAD) {
+    using namespace conv_bias;
+    std::vector<TestArg> args = get_quantized_args();
+    Checker<ConvBiasForward, OprWeightPreprocessProxy<ConvBiasForward>> checker(
+            handle());
+    checker.set_before_exec_callback(
+            conv_bias::ConvBiasAlgoChecker<ConvBias>("WINOGRAD:.*:1:4:.*:3"));
+    ConvBiasForward::Param param;
+    param.pad_h = 1;
+    param.pad_w = 1;
+    checker.set_param(param);
+    checker.execs(
+            {{1, 3, 351, 257},
+             {5, 3, 3, 3},
+             {},
+             {},
+             {}});  // Input, weight, bias, ..., Output
+}
+
 TEST_F(ARM_COMMON, CONV_BIAS_RECORD) {
     using namespace conv_bias;
     std::vector<TestArg> args = get_quantized_args();
@@ -987,6 +1006,13 @@ TEST_F(ARM_COMMON, BENCHMARK_CONVBIAS_WINOGRAD_F23) {
 #endif
 }
 
+TEST_F(ARM_COMMON, BENCHMARK_CONVBIAS_WINOGRAD_F43_F63) {
+#if MEGDNN_AARCH64
+    benchmark_winograd_compare(
+            "WINOGRAD:AARCH64_F32K8X12X1:1:4:.*:3", "WINOGRAD:AARCH64_F32K8X12X1:1:6",
+            handle(), 3);
+#endif
+}
 TEST_F(ARM_COMMON, BENCHMARK_CONVBIAS_WINOGRAD_F63) {
 #if MEGDNN_AARCH64
     benchmark_winograd("WINOGRAD:AARCH64_F32K8X12X1:1:6", handle(), 3);
@@ -1005,9 +1031,9 @@ TEST_F(ARM_COMMON, BENCHMARK_CONVBIAS_WINOGRAD_F54) {
 
 TEST_F(ARM_COMMON, BENCHMARK_CONVBIAS_WINOGRAD_F45) {
 #if MEGDNN_AARCH64
-    benchmark_winograd("WINOGRAD:AARCH64_F32K8X12X1:1:4", handle(), 5);
+    benchmark_winograd("WINOGRAD:AARCH64_F32K8X12X1:1:4:.*:5", handle(), 5);
 #else
-    benchmark_winograd("WINOGRAD:ARMV7_F32:1:4", handle(), 5);
+    benchmark_winograd("WINOGRAD:ARMV7_F32:1:4:.*:5", handle(), 5);
 #endif
 }
 
@@ -1026,11 +1052,12 @@ TEST_F(ARM_COMMON, BENCHMARK_CONVBIAS_WINOGRAD_F16_F23) {
 TEST_F(ARM_COMMON, BENCHMARK_CONVBIAS_WINOGRAD_F16_F45) {
 #if MEGDNN_AARCH64
     benchmark_winograd_fp16(
-            "WINOGRAD:AARCH64_F32K8X12X1:1:4", "WINOGRAD:AARCH64_F16_K8X24X1:1:4",
-            handle(), 5);
+            "WINOGRAD:AARCH64_F32K8X12X1:1:4:.*:5",
+            "WINOGRAD:AARCH64_F16_K8X24X1:1:4:.*:5", handle(), 5);
 #else
     benchmark_winograd_fp16(
-            "WINOGRAD:ARMV7_F32:1:4", "WINOGRAD:AARCH32_F16_K4X16X1:1:4", handle(), 5);
+            "WINOGRAD:ARMV7_F32:1:4:.*:5", "WINOGRAD:AARCH32_F16_K4X16X1:1:4:.*:5",
+            handle(), 5);
 #endif
 }
 TEST_F(ARM_COMMON, BENCHMARK_CONVBIAS_WINOGRAD_F16_F63) {

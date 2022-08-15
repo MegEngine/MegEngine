@@ -165,6 +165,18 @@
     cb(8, 0, ##a) cb(8, 1, ##a) cb(8, 2, ##a) cb(8, 3, ##a)               \
     cb(8, 4, ##a) cb(8, 5, ##a) cb(8, 6, ##a) cb(8, 7, ##a) cb(8, 8, ##a)
 
+#define UNROLL_RAW_4x2(cb, v0, a...)                        \
+    cb(0, 0, ##a) cb(0, 1, ##a) cb(1, 0, ##a) cb(1, 1, ##a) \
+    cb(2, 0, ##a) cb(2, 1, ##a) cb(3, 0, ##a) cb(3, 1, ##a)
+
+#define UNROLL_RAW_5x2(cb, v0, a...) \
+    UNROLL_RAW_4x2(cb, v0, ##a)      \
+    cb(4, 0, ##a) cb(4, 1, ##a)
+
+#define UNROLL_RAW_6x2(cb, v0, a...) \
+    UNROLL_RAW_5x2(cb, v0, ##a)      \
+    cb(5, 0, ##a) cb(5, 1, ##a)
+
 #define UNROLL_CALL0_D2(step, step2, cb, v...) \
     UNROLL_RAW_##step##x##step2(cb, 0, ##v)
 #define UNROLL_CALL1_D2(step, step2, cb, v...) \

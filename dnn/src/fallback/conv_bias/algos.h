@@ -42,7 +42,7 @@ public:
         if (m_name.empty()) {
             m_name = ConvBiasImpl::algo_name<ConvBias::WinogradParam>(
                     ssprintf("FALLBACK_WINOGRAD_F32-%s", m_matmul_algo->name()),
-                    {1, 2, UNIT_TILE_SIZE});
+                    {1, 2, UNIT_TILE_SIZE, 3});
         }
         return m_name.c_str();
     }
@@ -74,7 +74,7 @@ public:
         if (m_name.empty()) {
             m_name = ConvBiasImpl::algo_name<ConvBias::WinogradParam>(
                     ssprintf("FALLBACK_WINOGRAD_F32-%s", m_matmul_algo->name()),
-                    {4, 2, UNIT_TILE_SIZE});
+                    {4, 2, UNIT_TILE_SIZE, 3});
         }
         return m_name.c_str();
     }
@@ -106,7 +106,7 @@ public:
         if (m_name.empty()) {
             m_name = ConvBiasImpl::algo_name<ConvBias::WinogradParam>(
                     ssprintf("FALLBACK_WINOGRAD_QS8-%s", m_matmul_algo->name()),
-                    {1, 2, UNIT_TILE_SIZE});
+                    {1, 2, UNIT_TILE_SIZE, 3});
         }
         return m_name.c_str();
     }
@@ -138,7 +138,7 @@ public:
         if (m_name.empty()) {
             m_name = ConvBiasImpl::algo_name<ConvBias::WinogradParam>(
                     ssprintf("FALLBACK_WINOGRAD_QS8-%s", m_matmul_algo->name()),
-                    {8, 2, UNIT_TILE_SIZE});
+                    {8, 2, UNIT_TILE_SIZE, 3});
         }
         return m_name.c_str();
     }
