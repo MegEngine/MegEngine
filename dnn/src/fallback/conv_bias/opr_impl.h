@@ -219,9 +219,11 @@ public:
             GI_COMMON_WINOGRAD_F63_FP32,
             GI_COMMON_WINOGRAD_F43_FP32,
             GI_COMMON_WINOGRAD_F63_4X4_FP32,
+            GI_COMMON_WINOGRAD_F43_4X4_FP32,
             GI_COMMON_WINOGRAD_F54_FP32,
             GI_COMMON_WINOGRAD_F45_FP32,
             GI_COMMON_WINOGRAD_F23_4X4_NCHW44_F32,
+            GI_COMMON_WINOGRAD_F43_4X4_NCHW44_F32,
             GI_COMMON_WINOGRAD_F63_4X4_NCHW44_F32,
             GI_COMMON_WINOGRAD_F73_4X4_NCHW44_F32,
             GI_COMMON_DIRECT_FP32,
@@ -382,9 +384,11 @@ private:
     class AlgoFP32WinogradF63;
     class AlgoFP32WinogradF43;
     class AlgoFP32WinogradF63_4x4;
+    class AlgoFP32WinogradF43_4x4;
     class AlgoFP32WinogradF54;
     class AlgoFP32WinogradF45;
     class AlgoFP32WinogradF23_4x4_NCHW44;
+    class AlgoFP32WinogradF43_4x4_NCHW44;
     class AlgoFP32WinogradF63_4x4_NCHW44;
     class AlgoFP32WinogradF73_4x4_NCHW44;
 
