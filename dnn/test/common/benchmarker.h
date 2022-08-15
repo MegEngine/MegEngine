@@ -14,7 +14,7 @@
 namespace megdnn {
 namespace test {
 
-template <typename Opr, typename T>
+template <typename Opr, typename T, typename Proxy = OprProxy<Opr>>
 class BenchmarkerBase {
 public:
     using Param = typename Opr::Param;
@@ -28,7 +28,7 @@ public:
               m_handle(handle),
               m_default_rng(new NormalRNG()),
               m_param(Param()),
-              m_proxy{new OprProxy<Opr>()} {}
+              m_proxy{new Proxy()} {}
 
     const Handle* handle() const { return m_handle; }
 
@@ -81,12 +81,12 @@ public:
         }
         return layouts;
     }
-    BenchmarkerBase& set_proxy(std::unique_ptr<OprProxy<Opr>>& proxy) {
+    BenchmarkerBase& set_proxy(std::unique_ptr<Proxy>& proxy) {
         m_proxy.reset(nullptr);
         m_proxy = std::move(proxy);
         return *this;
     }
-    std::unique_ptr<OprProxy<Opr>>& proxy() { return m_proxy; }
+    std::unique_ptr<Proxy>& proxy() { return m_proxy; }
     BenchmarkerBase& set_times(size_t times) {
         m_times = times;
         return *this;
@@ -135,14 +135,14 @@ private:
     std::map<size_t, DType> m_dtype;
     std::map<size_t, TensorFormat> m_fmt;
     Param m_param;
-    std::unique_ptr<OprProxy<Opr>> m_proxy;
+    std::unique_ptr<Proxy> m_proxy;
     BeforeExecCallback m_before_exec_callback;
     std::unique_ptr<Opr> m_opr;
     TensorsConstriant m_tensor_constraint;
 };
 
-template <typename Opr, typename T>
-float BenchmarkerBase<Opr, T>::exec(TensorLayoutArray layouts) {
+template <typename Opr, typename T, typename OprProxy>
+float BenchmarkerBase<Opr, T, OprProxy>::exec(TensorLayoutArray layouts) {
     auto opr = this->opr();
     opr->param() = m_param;
     auto user_layouts = layouts;
@@ -196,6 +196,8 @@ float BenchmarkerBase<Opr, T>::exec(TensorLayoutArray layouts) {
     if (m_before_exec_callback) {
         m_before_exec_callback(opr, tensors_cur);
     }
+    //! init weights
+    m_proxy->init(opr, tensors_cur);
     // run
     // warm up
     m_proxy->exec(opr, tensors_cur);
@@ -246,8 +248,8 @@ float BenchmarkerBase<Opr, T>::exec(TensorLayoutArray layouts) {
     return time_in_ms;
 }
 
-template <typename Opr, typename T>
-float BenchmarkerBase<Opr, T>::exect(const TensorValueArray& testcase_in) {
+template <typename Opr, typename T, typename Proxy>
+float BenchmarkerBase<Opr, T, Proxy>::exect(const TensorValueArray& testcase_in) {
     auto opr = this->opr();
     opr->param() = m_param;
     TensorLayoutArray layouts;
@@ -295,6 +297,8 @@ float BenchmarkerBase<Opr, T>::exect(const TensorValueArray& testcase_in) {
     if (m_before_exec_callback) {
         m_before_exec_callback(opr, tensors_cur);
     }
+    //! init weights
+    m_proxy->init(opr, tensors_cur);
     //! run
     //! warm up
     m_proxy->exec(opr, tensors_cur);
@@ -344,19 +348,16 @@ float BenchmarkerBase<Opr, T>::exect(const TensorValueArray& testcase_in) {
     return time_in_ms;
 }
 
-template <typename Opr, typename T = Timer>
-class Benchmarker;
-
-template <typename Opr>
-class Benchmarker<Opr, Timer> : public BenchmarkerBase<Opr, Timer> {
+template <typename Opr, typename T = Timer, typename Proxy = OprProxy<Opr>>
+class Benchmarker : public BenchmarkerBase<Opr, T, Proxy> {
 public:
-    Benchmarker(Handle* handle) : BenchmarkerBase<Opr, Timer>{handle, Timer{}} {}
+    Benchmarker(Handle* handle) : BenchmarkerBase<Opr, T, Proxy>{handle, Timer{}} {}
 };
 
 ////////////////// Algo Benchmark ////////////////////////
 template <typename Opr, typename Proxy = OprProxy<Opr>, typename T = Timer>
 float algo_benchmark(
-        Benchmarker<Opr, T>& benchmark, TensorLayoutArray layouts,
+        Benchmarker<Opr, T, Proxy>& benchmark, TensorLayoutArray layouts,
         const std::string& algo_base) {
     Proxy proxy;
     auto opr = benchmark.opr();
@@ -381,7 +382,7 @@ float algo_benchmark(
 
 template <typename Opr, typename Proxy = OprProxy<Opr>, typename T = Timer>
 float algo_benchmark(
-        Benchmarker<Opr, T>& benchmark, TensorShapeArray shapes,
+        Benchmarker<Opr, T, Proxy>& benchmark, TensorShapeArray shapes,
         const std::string& algo_base) {
     return algo_benchmark(benchmark, benchmark.make_layouts(shapes), algo_base);
 }

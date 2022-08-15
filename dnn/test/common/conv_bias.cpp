@@ -995,6 +995,52 @@ void benchmark_winograd(
                used / used_winograd);
     }
 }
+
+// usage of weight pre-processing for winograd benchmark
+void benchmark_winograd_weight_preprocess(
+        const char* algo_name, megdnn::Handle* handle, size_t kernel,
+        size_t pack_size) {
+    auto&& args = get_winograd_benchmark_args(kernel, pack_size);
+    using namespace conv_bias;
+    constexpr size_t RUN = 10;
+
+    //! here!!!
+    Benchmarker<ConvBias, Timer, OprWeightPreprocessBenchmarkProxy<ConvBias>>
+            benchmark_winograd(handle);
+    benchmark_winograd.set_display(false);
+    benchmark_winograd.set_times(RUN);
+
+    for (auto&& arg : args) {
+        TensorLayout dst_layout;
+        auto opr = handle->create_operator<ConvBias>();
+        opr->param() = arg.param;
+        opr->deduce_layout(
+                {arg.src, dtype::Float32()}, {arg.filter, dtype::Float32()},
+                {arg.bias, dtype::Float32()}, {}, dst_layout);
+        //! dst.nr_elems * IC * FH * FW * 2
+        float computations = dst_layout.total_nr_elems() * arg.filter[1] *
+                             arg.filter[2] * arg.filter[3] * 2.0 /
+                             (1024 * 1024 * 1024) * 1e3;
+
+        param::Convolution conv_param;
+        conv_param.pad_h = arg.param.pad_h;
+        conv_param.pad_w = arg.param.pad_w;
+        conv_param.stride_h = arg.param.stride_h;
+        conv_param.stride_w = arg.param.stride_w;
+
+        benchmark_winograd.set_param(arg.param);
+        auto used_winograd =
+                algo_benchmark<
+                        ConvBias, OprWeightPreprocessBenchmarkProxy<ConvBias>, Timer>(
+                        benchmark_winograd, {arg.src, arg.filter, {}, {}, {}},
+                        algo_name) /
+                RUN;
+
+        printf("%s %s: %s: %f ms %f Gflops\n", arg.src.to_string().c_str(),
+               arg.filter.to_string().c_str(), algo_name, used_winograd,
+               computations / used_winograd);
+    }
+}
 #endif  // MEGDNN_WITH_BENCHMARK
 
 template <class Checker>

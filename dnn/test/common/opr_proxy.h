@@ -114,13 +114,19 @@ template <
         bool has_workspace = OprTrait<Opr>::has_workspace,
         bool can_deduce_layout = OprTrait<Opr>::can_deduce_layout>
 struct OprProxyDefaultImpl : public DeduceLayoutProxy<Opr, arity, can_deduce_layout>,
-                             public ExecProxy<Opr, arity, has_workspace> {};
+                             public ExecProxy<Opr, arity, has_workspace> {
+    virtual void init(Opr*, const TensorNDArray&) {}
+    virtual ~OprProxyDefaultImpl() {}
+};
 
 template <typename Opr>
 struct OprProxy : public OprProxyDefaultImpl<Opr> {};
 
 template <typename Opr>
 struct OprWeightPreprocessProxy : public OprProxyDefaultImpl<Opr> {};
+
+template <typename Opr>
+struct OprWeightPreprocessBenchmarkProxy : OprProxyDefaultImpl<Opr> {};
 
 template <typename Opr>
 struct OprProxyVectorToSingle {};
@@ -133,6 +139,8 @@ struct OprProxy<ElemwiseForward> {
         inp.pop_back();
         opr->deduce_layout(inp, layouts.back());
     }
+
+    static void init(ElemwiseForward*, const TensorNDArray&) {}
 
     static void exec(ElemwiseForward* opr, const TensorNDArray& tensors) {
         megdnn_assert(tensors.size() >= 2);
@@ -151,6 +159,8 @@ struct OprProxy<ElemwiseMultiType> {
         opr->deduce_layout(inp, layouts.back());
     }
 
+    static void init(ElemwiseMultiType*, const TensorNDArray&) {}
+
     static void exec(ElemwiseMultiType* opr, const TensorNDArray& tensors) {
         megdnn_assert(tensors.size() >= 2);
         auto inp = tensors;
@@ -168,6 +178,8 @@ struct OprProxy<ConcatForward> {
         inp.pop_back();
         opr->deduce_layout(inp, layouts.back());
     }
+
+    static void init(ConcatForward*, const TensorNDArray&) {}
 
     void exec(ConcatForward* opr, const TensorNDArray& tensors) {
         if (!W.valid()) {
@@ -200,6 +212,8 @@ struct OprProxy<CheckNonFinite> {
         opr->deduce_layout(inp, layouts.back());
     }
 
+    static void init(CheckNonFinite*, const TensorNDArray&) {}
+
     static void exec(CheckNonFinite* opr, const TensorNDArray& tensors) {
         megdnn_assert(tensors.size() >= 2);
         auto inps = tensors;
@@ -220,6 +234,9 @@ struct OprProxy<CheckNonFinite> {
 template <>
 struct OprProxy<SplitForward> : DeduceLayoutProxy<SplitForward, 0, false> {
     WorkspaceWrapper W;
+
+    void init(SplitForward*, const TensorNDArray&) {}
+
     void exec(SplitForward* opr, const TensorNDArray& tensors) {
         megdnn_assert(tensors.size() >= 2);
         if (!W.valid()) {
@@ -428,7 +445,9 @@ struct OprProxyProfilingBase
                 best_algo);
     }
 
-    void exec(Opr* opr, const TensorNDArray& tensors) {
+    virtual void init(Opr*, const TensorNDArray&) {}
+
+    virtual void exec(Opr* opr, const TensorNDArray& tensors) {
         megdnn_assert(tensors.size() == arity);
         if (!W.valid()) {
             W = WorkspaceWrapper(opr->handle(), 0);
@@ -463,6 +482,8 @@ struct OprProxyProfilingBase
         }
         AlgoProxy<Opr, arity>::exec(opr, tensors, W.workspace());
     }
+
+    virtual ~OprProxyProfilingBase() {}
 };
 
 #define DEF_PROF(c)                                            \
@@ -491,7 +512,7 @@ template <class Opr>
 struct OprWeightPreprocessProxyImpl : public OprProxyProfilingBase<Opr> {
     using Base = OprProxyProfilingBase<Opr>;
     static constexpr int arity = OprTrait<Opr>::arity;
-    void exec(Opr* opr, const TensorNDArray& tensors) {
+    void exec(Opr* opr, const TensorNDArray& tensors) override {
         megdnn_assert(tensors.size() == arity);
         if (!Base::W.valid()) {
             Base::W = WorkspaceWrapper(opr->handle(), 0);
@@ -584,11 +605,55 @@ struct OprWeightPreprocessProxyImpl : public OprProxyProfilingBase<Opr> {
     }
 };
 
+template <class Opr>
+struct OprWeightPreprocessProxyBenchmarkImpl
+        : public OprWeightPreprocessProxyImpl<Opr> {
+    using Base = OprProxyProfilingBase<Opr>;
+    static constexpr int arity = OprTrait<Opr>::arity;
+    void init(Opr* opr, const TensorNDArray& tensors) override {
+        megdnn_assert(tensors.size() == arity);
+        if (!Base::W.valid()) {
+            Base::W = WorkspaceWrapper(opr->handle(), 0);
+        }
+        TensorLayoutArray layouts;
+        for (auto&& tensor : tensors) {
+            layouts.push_back(tensor.layout);
+        }
+        m_preprocessed_tensors = this->weight_prerocess(
+                opr, tensors, Base::target_execution_policy.algo);
+        megcoreSynchronize(opr->handle()->megcore_computing_handle());
+        typename Opr::PreprocessedFilter preprocessed_filter{
+                nullptr, *m_preprocessed_tensors};
+        if (!Base::target_execution_policy.algo.valid()) {
+            auto workspace_size = AlgoProxy<Opr, arity>::get_workspace_in_bytes(
+                    opr, layouts, &preprocessed_filter);
+            Base::W.update(workspace_size);
+        }
+    }
+
+    void exec(Opr* opr, const TensorNDArray& tensors) override {
+        megdnn_assert(tensors.size() == arity);
+        typename Opr::PreprocessedFilter preprocessed_filter{
+                nullptr, *m_preprocessed_tensors};
+        AlgoProxy<Opr, arity>::exec(
+                opr, tensors, &preprocessed_filter, Base::W.workspace());
+    }
+
+public:
+    std::shared_ptr<TensorNDArray> m_preprocessed_tensors;
+};
+
 #define DEF_PROF(c)                                                               \
     template <>                                                                   \
     struct OprWeightPreprocessProxy<c> : public OprWeightPreprocessProxyImpl<c> { \
         using OprWeightPreprocessProxyImpl<c>::OprWeightPreprocessProxyImpl;      \
-    }
+    };                                                                            \
+    template <>                                                                   \
+    struct OprWeightPreprocessBenchmarkProxy<c>                                   \
+            : public OprWeightPreprocessProxyBenchmarkImpl<c> {                   \
+        using OprWeightPreprocessProxyBenchmarkImpl<                              \
+                c>::OprWeightPreprocessProxyBenchmarkImpl;                        \
+    };
 
 DEF_PROF(ConvolutionForward);
 DEF_PROF(ConvBias);
