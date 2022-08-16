@@ -381,6 +381,7 @@ void ExternCOprRunner::check_param() {
 
 void ExternCOprRunner::scn_do_execute() {
     SmallVector<MGBTensor> c_inp(input().size()), c_out(output().size());
+    SmallVector<HostTensorND> cpu_inp, cpu_out;
     check_param();
 
     bool need_copy = false;
@@ -417,7 +418,7 @@ void ExternCOprRunner::scn_do_execute() {
         m_desc->execute(m_desc.get(), c_inp.data(), c_out.data());
 
         for (size_t i = 0; i < output().size(); ++i)
-            output(i)->dev_tensor().copy_from_fixlayout(cpu_out[i]);
+            output(i)->dev_tensor().copy_from_fixlayout(cpu_out[i]).sync();
     } else {
         CompNodeEnv::from_comp_node(comp_node())
                 .cpu_env()

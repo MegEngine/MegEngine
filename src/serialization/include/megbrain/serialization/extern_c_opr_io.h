@@ -16,9 +16,6 @@ MGB_DEFINE_OPR_CLASS_WITH_EXPORT(
     //! store dynamic store param
     std::shared_ptr<ExternCOprParam> m_param;
 
-    //!  HostTensorND holder for scn_do_execute
-    SmallVector<HostTensorND> cpu_inp, cpu_out;
-
     void get_output_var_shape(
             const TensorShapeArray& inp_shape,
             TensorShapeArray& out_shape) const override;
