@@ -23,78 +23,26 @@ __device__ __forceinline__ void mul_v4<float>(
 __device__ __forceinline__ void fma2(
         int2& c0, const int2 a0, int2& c1, const int2 a1, const float alpha,
         const int4 b) {
-    asm("fma.rz.f32 %0, %1, %2, %3;"
-        : "=f"(((float*)&c0)[0])
-        : "f"(((float*)&a0)[0]), "f"(alpha), "f"(((float*)&b)[0]));
-    asm("fma.rz.f32 %0, %1, %2, %3;"
-        : "=f"(((float*)&c0)[1])
-        : "f"(((float*)&a0)[1]), "f"(alpha), "f"(((float*)&b)[1]));
-    asm("fma.rz.f32 %0, %1, %2, %3;"
-        : "=f"(((float*)&c1)[0])
-        : "f"(((float*)&a1)[0]), "f"(alpha), "f"(((float*)&b)[2]));
-    asm("fma.rz.f32 %0, %1, %2, %3;"
-        : "=f"(((float*)&c1)[1])
-        : "f"(((float*)&a1)[1]), "f"(alpha), "f"(((float*)&b)[3]));
-}
-
-__device__ __forceinline__ void fuse_z_1x8(
-        int4* a, const int& j, const int4& fuse_z, const float& gamma,
-        const int32_t& zero_point) {
-    const int2 z[2] = {
-            *reinterpret_cast<const int2*>(&fuse_z),
-            *(reinterpret_cast<const int2*>(&fuse_z) + 1)};
-    for (int k = 0; k < 4; k++) {
-        int f = ((z[0].x >> (k * 8)) & 15);
-        f = (f << 28) >> 28;
-        ((float*)&(a[j + k]))[0] += (f - zero_point) * gamma;
-        f = ((z[0].x >> (k * 8 + 4)) & 15);
-        f = (f << 28) >> 28;
-        ((float*)&(a[j + k]))[1] += (f - zero_point) * gamma;
-
-        f = ((z[1].x >> (k * 8)) & 15);
-        f = (f << 28) >> 28;
-        ((float*)&(a[j + k]))[2] += (f - zero_point) * gamma;
-        f = ((z[1].x >> (k * 8 + 4)) & 15);
-        f = (f << 28) >> 28;
-        ((float*)&(a[j + k]))[3] += (f - zero_point) * gamma;
-    }
-    for (int k = 0; k < 4; k++) {
-        int f = ((z[0].y >> (k * 8)) & 15);
-        f = (f << 28) >> 28;
-        ((float*)&(a[j + k + 4]))[0] += (f - zero_point) * gamma;
-        f = ((z[0].y >> (k * 8 + 4)) & 15);
-        f = (f << 28) >> 28;
-        ((float*)&(a[j + k + 4]))[1] += (f - zero_point) * gamma;
-
-        f = ((z[1].y >> (k * 8)) & 15);
-        f = (f << 28) >> 28;
-        ((float*)&(a[j + k + 4]))[2] += (f - zero_point) * gamma;
-        f = ((z[1].y >> (k * 8 + 4)) & 15);
-        f = (f << 28) >> 28;
-        ((float*)&(a[j + k + 4]))[3] += (f - zero_point) * gamma;
-    }
+    ((float*)&c0)[0] = a0.x * alpha + ((float*)&b)[0];
+    ((float*)&c0)[1] = a0.y * alpha + ((float*)&b)[1];
+    ((float*)&c1)[0] = a1.x * alpha + ((float*)&b)[2];
+    ((float*)&c1)[1] = a1.y * alpha + ((float*)&b)[3];
 }
 
 __device__ __forceinline__ void fuse_z_1x8(
         int2* a, const int& j, const int2& fuse_z, const float& gamma,
         const int32_t& zero_point) {
+    float x = zero_point * gamma;
 #pragma unroll
     for (int k = 0; k < 4; k++) {
         int f = ((fuse_z.x >> (k * 8)) & 15);
-        f = (f << 28) >> 28;
-        ((float*)&(a[j + k]))[0] += (f - zero_point) * gamma;
+        ((float*)&(a[j + k]))[0] += f * gamma - x;
         f = ((fuse_z.x >> (k * 8 + 4)) & 15);
-        f = (f << 28) >> 28;
-        ((float*)&(a[j + k]))[1] += (f - zero_point) * gamma;
-    }
-#pragma unroll
-    for (int k = 0; k < 4; k++) {
-        int f = ((fuse_z.y >> (k * 8)) & 15);
-        f = (f << 28) >> 28;
-        ((float*)&(a[j + k + 4]))[0] += (f - zero_point) * gamma;
+        ((float*)&(a[j + k]))[1] += f * gamma - x;
+        f = ((fuse_z.y >> (k * 8)) & 15);
+        ((float*)&(a[j + k + 4]))[0] += f * gamma - x;
         f = ((fuse_z.y >> (k * 8 + 4)) & 15);
-        f = (f << 28) >> 28;
-        ((float*)&(a[j + k + 4]))[1] += (f - zero_point) * gamma;
+        ((float*)&(a[j + k + 4]))[1] += f * gamma - x;
     }
 }
 
@@ -282,12 +230,6 @@ __device__ __forceinline__ void pack_f2i_with_relu(
     fuse_z_1x8(a[i + 2], j, fuse_z[i + 2], gamma, zero_point); \
     fuse_z_1x8(a[i + 3], j, fuse_z[i + 3], gamma, zero_point);
 
-#define FUSE_Z_4x8(a, i, j, fuse_z, gamma, zero_point)         \
-    fuse_z_1x8(a[i], j, fuse_z[i], gamma, zero_point);         \
-    fuse_z_1x8(a[i + 1], j, fuse_z[i + 1], gamma, zero_point); \
-    fuse_z_1x8(a[i + 2], j, fuse_z[i + 2], gamma, zero_point); \
-    fuse_z_1x8(a[i + 3], j, fuse_z[i + 3], gamma, zero_point);
-
 // 1x8 1x(2x8 int2) to 2 int2
 #define PACK_F2I_1x8(a, i, j)                                                       \
     pack_f2i(a[i][j].x, a[i][j].z, a[i][j], a[i][j + 1], a[i][j + 2], a[i][j + 3]); \
@@ -316,24 +258,20 @@ __device__ __forceinline__ void pack_f2i_with_relu(
         stg_guard[i + 2])                                                    \
     LDG(d[i + 3], s[i + 3], 3, reg_src_cache[0].w, reg_src_cache[1].w, stg_guard[i + 3])
 
-#define COMPUTE_OFFSET(d, s, idx, n_reuse, hw_reuse, g)         \
+#define COMPUTE_OFFSET(s, idx, n_reuse, hw_reuse, g)            \
     n_reuse = nhw_post##idx / param.div_ohow;                   \
     hw_reuse = nhw_post##idx % param.div_ohow;                  \
     s = n_reuse * param.obs + hw_reuse * (packed_channel >> 1); \
     g = nhw_post##idx < param.nhw;
 
-#define COMPUTE_OFFSET_4x1(d, s, i)                                              \
-    COMPUTE_OFFSET(                                                              \
-            d[i], s[i], 0, reg_src_cache[0].x, reg_src_cache[1].x, stg_guard[i]) \
-    COMPUTE_OFFSET(                                                              \
-            d[i + 1], s[i + 1], 1, reg_src_cache[0].y, reg_src_cache[1].y,       \
-            stg_guard[i + 1])                                                    \
-    COMPUTE_OFFSET(                                                              \
-            d[i + 2], s[i + 2], 2, reg_src_cache[0].z, reg_src_cache[1].z,       \
-            stg_guard[i + 2])                                                    \
-    COMPUTE_OFFSET(                                                              \
-            d[i + 3], s[i + 3], 3, reg_src_cache[0].w, reg_src_cache[1].w,       \
-            stg_guard[i + 3])
+#define COMPUTE_OFFSET_4x1(s, i)                                                   \
+    COMPUTE_OFFSET(s[i], 0, reg_src_cache[0].x, reg_src_cache[1].x, stg_guard[i])  \
+    COMPUTE_OFFSET(                                                                \
+            s[i + 1], 1, reg_src_cache[0].y, reg_src_cache[1].y, stg_guard[i + 1]) \
+    COMPUTE_OFFSET(                                                                \
+            s[i + 2], 2, reg_src_cache[0].z, reg_src_cache[1].z, stg_guard[i + 2]) \
+    COMPUTE_OFFSET(                                                                \
+            s[i + 3], 3, reg_src_cache[0].w, reg_src_cache[1].w, stg_guard[i + 3])
 
 #define STG_AFTER_LDG(d, s, g)                                                      \
     if (stg_oc < param.oc && g) {                                                   \

@@ -475,6 +475,20 @@ extern "C" __global__ void __launch_bounds__(256)
         __syncthreads();
     }
 
+    size_t oc = bidy * BM + (warp_y << 6) + 16 * idx_in_quad;
+    const float* bias_ptr = bias + oc;
+
+    int4 load_bias0 = make_int4(0, 0, 0, 0);
+    int4 load_bias1 = make_int4(0, 0, 0, 0);
+    int4 load_bias2 = make_int4(0, 0, 0, 0);
+    int4 load_bias3 = make_int4(0, 0, 0, 0);
+    if (oc < param.oc) {
+        load_bias0 = *(reinterpret_cast<const int4*>(bias_ptr));
+        load_bias1 = *(reinterpret_cast<const int4*>(bias_ptr + 4));
+        load_bias2 = *(reinterpret_cast<const int4*>(bias_ptr + 8));
+        load_bias3 = *(reinterpret_cast<const int4*>(bias_ptr + 12));
+    }
+
     guard = iter < 0;
 #pragma unroll
     for (int i = 0; i < reg_nd4; ++i) {
@@ -574,18 +588,8 @@ extern "C" __global__ void __launch_bounds__(256)
     size_t nhw_post3 = nhw_post0 + 24;
 
     size_t stg_oc = bidy * BM + (warp_y << 6);
-    size_t oc = bidy * BM + (warp_y << 6) + 16 * idx_in_quad;
-    const float* bias_ptr = bias + oc;
 
-    int4 load_bias0 = make_int4(0, 0, 0, 0);
-    int4 load_bias1 = make_int4(0, 0, 0, 0);
-    int4 load_bias2 = make_int4(0, 0, 0, 0);
-    int4 load_bias3 = make_int4(0, 0, 0, 0);
     if (oc < param.oc) {
-        load_bias0 = *(reinterpret_cast<const int4*>(bias_ptr));
-        load_bias1 = *(reinterpret_cast<const int4*>(bias_ptr + 4));
-        load_bias2 = *(reinterpret_cast<const int4*>(bias_ptr + 8));
-        load_bias3 = *(reinterpret_cast<const int4*>(bias_ptr + 12));
         mul_v4(load_bias0, load_bias0, beta);
         mul_v4(load_bias1, load_bias1, beta);
         mul_v4(load_bias2, load_bias2, beta);
@@ -599,7 +603,6 @@ extern "C" __global__ void __launch_bounds__(256)
 
 #pragma unroll
     for (int y = 0; y < reg_m; y += 4) {
-        I2F_4x8(reg_acc, y, 0);
         FMA_4x8(reg_acc, y, 0, alpha, load_bias0, load_bias1, load_bias2, load_bias3);
         PACK_F2I_WITH_RELU_4x8(reg_acc, y, 0, relu, dst_zero_point);
         STG_4x1(stg_ptr, reg_acc, y, 0);
