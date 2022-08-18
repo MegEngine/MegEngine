@@ -59,8 +59,8 @@ class ConvTranspose2d(Float.ConvTranspose2d, QATModule):
     def calc_conv_transpose2d_qat(self, inp):
         w_qat = self.apply_quant_weight(self.weight)
         b_qat = self.apply_quant_bias(self.bias, inp, w_qat)
-        conv = self.calc_conv_transpose2d(inp, w_qat, b_qat)
-        return conv
+        conv_transpose2d = self.calc_conv_transpose2d(inp, w_qat, b_qat)
+        return conv_transpose2d
 
     @classmethod
     def from_float_module(cls, float_module: Float.ConvTranspose2d):
@@ -88,3 +88,12 @@ class ConvTranspose2d(Float.ConvTranspose2d, QATModule):
 
     def forward(self, inp):
         return self.apply_quant_activation(self.calc_conv_transpose2d_qat(inp))
+
+
+class ConvTransposeRelu2d(ConvTranspose2d):
+    r"""A :class:`~.QATModule` include :class:`~.module.ConvTranspose2d` and :func:`~.relu` with QAT support.
+    Could be applied with :class:`~.Observer` and :class:`~.quantization.fake_quant.FakeQuantize`.
+    """
+
+    def forward(self, inp):
+        return self.apply_quant_activation(F.relu(self.calc_conv_transpose2d_qat(inp)))

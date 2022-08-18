@@ -5,7 +5,9 @@ import numpy as np
 import pytest
 
 import megengine.utils.comp_graph_tools as cgtools
-from megengine import jit, tensor
+from megengine import jit
+from megengine import module as M
+from megengine import tensor
 from megengine.device import get_device_count
 from megengine.functional import expand_dims
 from megengine.module import (
@@ -14,6 +16,8 @@ from megengine.module import (
     ConvBn2d,
     ConvRelu2d,
     ConvTranspose2d,
+    ConvTransposeBn2d,
+    ConvTransposeRelu2d,
     DequantStub,
     Module,
     QuantStub,
@@ -34,6 +38,49 @@ def test_qat_convbn2d():
         module = ConvBn2d(
             in_channels, out_channels, kernel_size, groups=groups, bias=bias
         )
+        M.init.normal_(module.bn.weight)
+        M.init.normal_(module.bn.bias)
+        module.train()
+        qat_module = quantize_qat(module, inplace=False)
+        disable_fake_quant(qat_module)
+        inputs = tensor(np.random.randn(4, in_channels, 32, 32).astype(np.float32))
+        normal_outputs = module(inputs)
+        qat_outputs = qat_module(inputs)
+        np.testing.assert_allclose(
+            normal_outputs.numpy(), qat_outputs.numpy(), atol=5e-6
+        )
+        np.testing.assert_allclose(
+            module.bn.running_mean.numpy(),
+            qat_module.bn.running_mean.numpy(),
+            atol=5e-8,
+        )
+        np.testing.assert_allclose(
+            module.bn.running_var.numpy(), qat_module.bn.running_var.numpy(), atol=5e-7,
+        )
+        module.eval()
+        normal_outputs = module(inputs)
+        qat_module.eval()
+        qat_outputs = qat_module(inputs)
+        np.testing.assert_allclose(
+            normal_outputs.numpy(), qat_outputs.numpy(), atol=5e-6
+        )
+
+
+def test_qat_convtransposebn2d():
+    in_channels = 32
+    out_channels = 64
+    kernel_size = 3
+    for groups, bias in product([1, 4], [True, False]):
+        module = ConvTransposeBn2d(
+            in_channels=in_channels,
+            out_channels=out_channels,
+            kernel_size=kernel_size,
+            output_padding=0,
+            groups=groups,
+            bias=bias,
+        )
+        M.init.normal_(module.bn.weight)
+        M.init.normal_(module.bn.bias)
         module.train()
         qat_module = quantize_qat(module, inplace=False)
         disable_fake_quant(qat_module)
@@ -235,10 +282,14 @@ def test_qat_conv_transpose2d():
             self.conv = ConvTranspose2d(
                 in_channels, out_channels, kernel_size, bias=bias
             )
+            self.conv_transpose2d_relu = ConvTransposeRelu2d(
+                out_channels, in_channels, kernel_size, bias=bias
+            )
 
         def forward(self, inp):
             out = self.quant(inp)
             out = self.conv(out)
+            out = self.conv_transpose2d_relu(out)
             out = self.dequant(out)
             return out
 
@@ -250,10 +301,14 @@ def test_qat_conv_transpose2d():
         disable_fake_quant(qat_net)
         normal_outputs = net(inputs)
         qat_outputs = qat_net(inputs)
-        np.testing.assert_allclose(normal_outputs.numpy(), qat_outputs.numpy())
+        np.testing.assert_allclose(
+            normal_outputs.numpy(), qat_outputs.numpy(), atol=1e-6
+        )
 
         net.eval()
         normal_outputs = net(inputs)
         qat_net.eval()
         qat_outputs = qat_net(inputs)
-        np.testing.assert_allclose(normal_outputs.numpy(), qat_outputs.numpy())
+        np.testing.assert_allclose(
+            normal_outputs.numpy(), qat_outputs.numpy(), atol=1e-6
+        )

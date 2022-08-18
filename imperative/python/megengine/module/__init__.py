@@ -12,11 +12,13 @@ from .conv import (
     ConvRelu2d,
     ConvTranspose2d,
     ConvTranspose3d,
+    ConvTransposeRelu2d,
     DeformableConv2d,
     LocalConv2d,
     RegionRestrictedConv,
 )
 from .conv_bn import ConvBn2d, ConvBnRelu2d
+from .conv_transpose_bn import ConvTransposeBn2d, ConvTransposeBnRelu2d
 from .deformable_psroi_pooling import DeformablePSROIPooling
 from .dropout import Dropout
 from .elemwise import Elemwise

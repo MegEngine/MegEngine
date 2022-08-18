@@ -178,7 +178,7 @@ class ConvTranspose2d(Float.ConvTranspose2d, QuantizedModule):
         :class:`~.QATModule` instance.
         """
         output_dtype = qat_module.get_activation_dtype()
-        qconv = cls(
+        qconv_transpose2d = cls(
             qat_module.in_channels,
             qat_module.out_channels,
             qat_module.kernel_size,
@@ -194,15 +194,19 @@ class ConvTranspose2d(Float.ConvTranspose2d, QuantizedModule):
             name=qat_module.name,
         )
         weight = qat_module.weight.astype(qat_module.get_weight_dtype())
-        qconv.weight = Parameter(weight.numpy(), name=qat_module.weight.name)
-        qconv.bias = (
+        qconv_transpose2d.weight = Parameter(
+            weight.numpy(), name=qat_module.weight.name
+        )
+        qconv_transpose2d.bias = (
             Parameter(qat_module.bias.numpy(), name=qat_module.bias.name)
             if qat_module.bias is not None
             else None
         )
-        return qconv
+        return qconv_transpose2d
 
-    def calc_conv_transpose2d_quantized(self, inp):
+    def calc_conv_transpose2d_quantized(self, inp, nonlinear_mode):
+        assert nonlinear_mode == "identity", "nonlinear_mode shoule be 'identity'"
+
         if self.bias is not None:
             inp_scale = dtype.get_scale(inp.dtype)
             w_scale = dtype.get_scale(self.weight.dtype)
@@ -225,4 +229,11 @@ class ConvTranspose2d(Float.ConvTranspose2d, QuantizedModule):
         )
 
     def forward(self, inp):
-        return self.calc_conv_transpose2d_quantized(inp)
+        return self.calc_conv_transpose2d_quantized(inp, nonlinear_mode="identity")
+
+
+class ConvTransposeRelu2d(ConvTranspose2d):
+    r"""Quantized version of :class:`~.qat.ConvTransposeRelu2d`."""
+
+    def forward(self, inp):
+        return self.calc_conv_transpose2d_quantized(inp, nonlinear_mode="relu")

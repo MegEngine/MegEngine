@@ -773,6 +773,15 @@ class ConvRelu2d(Conv2d):
         return relu(self.calc_conv(inp, self.weight, self.bias))
 
 
+class ConvTransposeRelu2d(ConvTranspose2d):
+    r"""A fused :class:`~.Module` including :class:`~.module.ConvTranspose2d` and :func:`~.relu`.
+    Could be replaced with :class:`~.QATModule` version :class:`~.qat.ConvTransposeRelu2d` using :func:`~.quantize.quantize_qat`.
+    """
+
+    def forward(self, inp):
+        return relu(self.calc_conv_transpose2d(inp, self.weight, self.bias))
+
+
 class DeformableConv2d(_ConvNd):
     r"""Deformable Convolution.
 
