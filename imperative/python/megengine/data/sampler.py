@@ -2,6 +2,7 @@
 import collections.abc
 import math
 from abc import ABC, abstractmethod
+from itertools import count
 from typing import Any, Generator, Iterator, List, Union
 
 import numpy as np
@@ -126,13 +127,15 @@ class MapSampler(Sampler):
         if self.world_size > 1:
             indices = self.scatter(indices)
 
-        step, length = self.batch_size, len(indices)
-        batch_index = [indices[i : i + step] for i in range(0, length, step)]
+        batch = []
+        for idx in indices:
+            batch.append(idx)
+            if len(batch) == self.batch_size:
+                yield batch
+                batch = []
 
-        if self.drop_last and len(batch_index[-1]) < self.batch_size:
-            batch_index.pop()
-
-        return iter(batch_index)
+        if len(batch) > 0 and not self.drop_last:
+            yield batch
 
 
 class StreamSampler(Sampler):
@@ -151,10 +154,18 @@ class StreamSampler(Sampler):
         self.batch_size = batch_size
 
     def __iter__(self):
-        return self
+        return self.batch()
 
-    def __next__(self):
-        return iter(range(self.batch_size))
+    def batch(self):
+        batch = []
+        for idx in self.sample():
+            batch.append(idx)
+            if len(batch) == self.batch_size:
+                yield batch
+                batch = []
+
+    def sample(self):
+        return count(start=0)
 
 
 class SequentialSampler(MapSampler):
