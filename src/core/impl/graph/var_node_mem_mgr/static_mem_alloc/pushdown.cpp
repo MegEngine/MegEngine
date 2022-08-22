@@ -51,7 +51,7 @@ private:
 
     std::list<MemBlock> m_mem_block;
     using MemBlockIter = decltype(m_mem_block.begin());
-    std::set<FreeBlockBySizeItem> m_free_by_size;
+    std::multiset<FreeBlockBySizeItem> m_free_by_size;
     using FreeBySizeIter = decltype(m_free_by_size.begin());
 
     struct MemBlock {
@@ -67,6 +67,8 @@ private:
          */
         size_t size = 0;
 
+        size_t time_end = -1;
+
         /*!
          * FreeBlockBySizeItem iter for unallocated intervals; should be
          * accessed only when *interval* is nullptr
@@ -76,6 +78,13 @@ private:
         FreeBySizeIter& fsiter() { return m_fs_iter.get(); }
 
         bool allocated() const { return interval; }
+
+        bool operator<(const MemBlock& rhs) {
+            if (time_end != (size_t)(-1) && rhs.time_end != (size_t)(-1))
+                return time_end > rhs.time_end;
+            else
+                return time_end != (size_t)(-1) || this < &rhs;
+        }
 
     private:
         IncompleteObjStorageMock<FreeBySizeIter, std::set<int>::iterator> m_fs_iter;
@@ -99,7 +108,7 @@ private:
             return size < rhs.size ||
                    (size == rhs.size &&
                     (!blk_iter_valid ||
-                     (rhs.blk_iter_valid && &*blk_iter < &*rhs.blk_iter)));
+                     (rhs.blk_iter_valid && *blk_iter < *rhs.blk_iter)));
         }
     };
 
@@ -114,14 +123,14 @@ private:
      * \param size size of free block; if it is zero, no insertion would be
      * performed
      */
-    void insert_free_blk_before(MemBlockIter pos, size_t size);
+    void insert_free_blk_before(MemBlockIter pos, size_t size, size_t time_end);
 
     /*!
      * \brief insert a free MemBlock after given position
      */
-    void insert_free_blk_after(MemBlockIter pos, size_t size) {
+    void insert_free_blk_after(MemBlockIter pos, size_t size, size_t time_end) {
         mgb_assert(pos != m_mem_block.end());
-        return insert_free_blk_before(++pos, size);
+        return insert_free_blk_before(++pos, size, time_end);
     }
 };
 StaticMemAllocPushdown::BestfitPrealloc::MemBlock::~MemBlock() = default;
@@ -176,6 +185,7 @@ PREALLOC_MEM_TR(AllocResult)::alloc(Interval* interval) {
         --iter;
         mgb_assert(iter->size < interval->size);
         iter->blk_iter->size = interval->size;
+        iter->blk_iter->time_end = interval->time_end;
     }
     auto blkpos = iter->blk_iter;
     m_free_by_size.erase(iter);
@@ -185,7 +195,7 @@ PREALLOC_MEM_TR(AllocResult)::alloc(Interval* interval) {
     auto free_size = safe_sub(blkpos->size, interval->size);
     // mark allocated result before inserting block
     blkpos->interval = interval;
-    insert_free_blk_after(blkpos, free_size);
+    insert_free_blk_after(blkpos, free_size, interval->time_end);
     return make_alloc_result(blkpos, interval);
 }
 
@@ -193,9 +203,10 @@ PREALLOC_MEM_TR(AllocResult)::alloc_overwrite(
         AllocResult& dest, size_t offset, Interval* interval) {
     auto iter = dest.m_iter;
     mgb_assert(dest.m_valid && iter->allocated());
-    insert_free_blk_before(iter, offset);
+    insert_free_blk_before(iter, offset, iter->interval->time_end);
     insert_free_blk_after(
-            iter, safe_sub(iter->interval->size, offset + interval->size));
+            iter, safe_sub(iter->interval->size, offset + interval->size),
+            iter->interval->time_end);
     dest.m_valid = false;
     return make_alloc_result(iter, interval);
 }
@@ -204,6 +215,7 @@ PREALLOC_MEM_TR(AllocResult)::make_alloc_result(MemBlockIter pos, Interval* inte
     pos->interval = interval;
     pos->fsiter() = {};
     pos->size = 0;
+    pos->time_end = interval->time_end;
 
     Interval *iprev = nullptr, *inext = nullptr;
     // find prev allocated interval
@@ -241,13 +253,15 @@ PREALLOC_MEM(void)::free(AllocResult& alloc_rst) {
     mgb_assert(iter->allocated());
     auto size = iter->interval->size;
     auto pos = iter;
+    auto time_end = iter->time_end;
     ++pos;
     m_mem_block.erase(iter);
     alloc_rst.m_valid = false;
-    insert_free_blk_before(pos, size);
+    insert_free_blk_before(pos, size, time_end);
 }
 
-PREALLOC_MEM(void)::insert_free_blk_before(MemBlockIter pos, size_t size) {
+PREALLOC_MEM(void)::insert_free_blk_before(
+        MemBlockIter pos, size_t size, size_t time_end) {
     auto rm = [this](MemBlockIter it) {
         mgb_assert(!it->allocated());
         m_free_by_size.erase(it->fsiter());
@@ -278,10 +292,10 @@ PREALLOC_MEM(void)::insert_free_blk_before(MemBlockIter pos, size_t size) {
         return;
 
     auto blk_iter = m_mem_block.insert(pos, MemBlock());
+    blk_iter->time_end = time_end;
     auto rst_s = m_free_by_size.insert({size, blk_iter});
-    mgb_assert(rst_s.second);
     blk_iter->size = size;
-    blk_iter->fsiter() = rst_s.first;
+    blk_iter->fsiter() = rst_s;
 }
 
 #undef PREALLOC_MEM

@@ -222,6 +222,18 @@ TEST(TestStaticMemAllocAlgo, PushdownChain) {
     ASSERT_EQ(NR + NR - 1, allocator->tot_alloc());
 }
 
+TEST(TestStaticMemAllocAlgo, PushdownConsistence) {
+    for (size_t run_nr = 0; run_nr < 500; ++run_nr) {
+        auto allocator = StaticMemAlloc::make(StaticMemAlloc::AllocatorAlgo::PUSHDOWN);
+        constexpr size_t NR = 100;
+        for (size_t i = 0; i < NR; ++i)
+            allocator->add(i, i + 2, i + 1, makeuk(i));
+
+        allocator->solve();
+        ASSERT_EQ(NR + NR - 1, allocator->tot_alloc_lower_bound());
+        ASSERT_EQ(NR + NR - 1, allocator->tot_alloc());
+    }
+}
 #endif  // WIN32
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
