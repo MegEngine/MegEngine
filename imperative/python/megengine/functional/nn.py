@@ -709,8 +709,9 @@ def avg_pool2d(
         output tensor of shape :math:`(N, C, H_{\text{out}}, W_{\text{out}})`.
 
     Examples:
-        >>> input = Tensor(np.arange(1 * 1 * 3 * 4).astype(np.float32).reshape(1, 1, 3, 4))
-        >>> F.avg_pool2d(input, kernel_size=2, stride=2, padding=[1,0], mode="average")
+        >>> import numpy as np
+        >>> inp = Tensor(np.arange(1 * 1 * 3 * 4).astype(np.float32).reshape(1, 1, 3, 4))
+        >>> F.avg_pool2d(inp, kernel_size=2, stride=2, padding=[1,0], mode="average")
             Tensor([[[[0.25 1.25]
              [6.5  8.5 ]]]], device=xpux:0)
     """

@@ -88,6 +88,15 @@ class AvgPool2d(_PoolNd):
         mode: whether to include the padding values while calculating the average, set
             to "average" will do counting.
             Default: "average_count_exclude_padding"
+
+    Examples:
+        >>> import numpy as np
+        >>> m = M.AvgPool2d(kernel_size=2, stride=2, padding=[1,0], mode="average")
+        >>> inp = mge.tensor(np.arange(1 * 1 * 3 * 4).astype(np.float32).reshape(1, 1, 3, 4))
+        >>> output = m(inp)
+        Tensor([[[[0.25 1.25]
+                  [6.5  8.5 ]]]], device=xpux:0)
+
     """
 
     def __init__(
