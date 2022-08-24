@@ -253,6 +253,10 @@ void init_graph_rt(py::module m) {
                              }
                              return graph.compile(spec);
                          })
+                    .def("enable_weight_preprocess",
+                         [](cg::ComputingGraph& graph) {
+                             graph.options().graph_opt.enable_weight_preprocess();
+                         })
                     .def_property_readonly(
                             "options",
                             py::overload_cast<>(&cg::ComputingGraph::options));
