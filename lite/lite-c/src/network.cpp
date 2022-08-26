@@ -278,13 +278,13 @@ int LITE_get_io_tensor(
     LITE_CAPI_END();
 }
 
-int LITE_get_io_tensors(
+int LITE_get_discrete_tensor(
         LiteNetwork network, const char* io_name, size_t n_idx, LiteTensorPhase phase,
         LiteTensor* tensor) {
     LITE_CAPI_BEGIN();
     LITE_ASSERT(network, "The network pass to LITE api is null");
     auto io_tensors =
-            static_cast<lite::Network*>(network)->get_io_tensors(io_name, phase);
+            static_cast<lite::Network*>(network)->get_discrete_tensors(io_name, phase);
     LITE_ASSERT(
             n_idx < io_tensors.size(), "n_idx should be less than %zu",
             io_tensors.size());

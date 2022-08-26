@@ -59,7 +59,7 @@ public:
 
     //! get the network input tensors which input consists of discrete multiple tensors,
     //! layout (1, c, h, w)
-    std::vector<std::shared_ptr<Tensor>> get_io_tensors(
+    std::vector<std::shared_ptr<Tensor>> get_discrete_tensors(
             std::string io_name,
             LiteTensorPhase phase = LiteTensorPhase::LITE_INPUT) override;
 

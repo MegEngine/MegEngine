@@ -91,8 +91,10 @@ public:
 
     //! get the network input tensors which input consists of discrete multiple tensors,
     //! layout (1, c, h, w)
-    virtual std::vector<std::shared_ptr<Tensor>> get_io_tensors(
+    virtual std::vector<std::shared_ptr<Tensor>> get_discrete_tensors(
             std::string io_name, LiteTensorPhase phase = LiteTensorPhase::LITE_INPUT) {
+        LITE_MARK_USED_VAR(io_name);
+        LITE_MARK_USED_VAR(phase);
         return {};
     }
 
@@ -102,6 +104,7 @@ public:
     //! get the network input tensors which input consists of discrete multiple tensors
     //! by index
     virtual std::vector<std::shared_ptr<Tensor>> get_input_tensors(size_t index) {
+        LITE_MARK_USED_VAR(index);
         return {};
     }
 

@@ -542,7 +542,7 @@ class _NetworkAPI(_LiteCObjBase):
         ),
         ("LITE_extra_configure", [_Cnetwork, LiteExtraConfig]),
         (
-            "LITE_get_io_tensors",
+            "LITE_get_discrete_tensor",
             [_Cnetwork, c_char_p, c_size_t, c_int, POINTER(_Ctensor)],
         ),
     ]
@@ -745,7 +745,7 @@ class LiteNetwork(object):
         tensor.update()
         return tensor
 
-    def get_io_tensors(self, name, n_idx, phase=LiteTensorPhase.LITE_INPUT):
+    def get_discrete_tensor(self, name, n_idx, phase=LiteTensorPhase.LITE_INPUT):
         """
         get the n_idx'th tensor in the network input tensors whose
         input consists of discrete multiple tensors and tensor name is name
@@ -763,7 +763,7 @@ class LiteNetwork(object):
         else:
             c_name = c_char_p(name)
         tensor = LiteTensor(physic_construct=False)
-        self._api.LITE_get_io_tensors(
+        self._api.LITE_get_discrete_tensor(
             self._network, c_name, n_idx, phase, byref(tensor._tensor)
         )
         tensor.update()

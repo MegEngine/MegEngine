@@ -1393,6 +1393,7 @@ TEST(TestNetWork, Discrete_Input) {
     auto data_0 = get_input_data("./data0.npy");
     auto data_1 = get_input_data("./data1.npy");
     auto data_2 = get_input_data("./data2.npy");
+    auto roi = get_input_data("./roi.npy");
     std::string model_path = "./test_discrete_input.mge";
 
     Config config;
@@ -1403,6 +1404,8 @@ TEST(TestNetWork, Discrete_Input) {
 
     std::shared_ptr<Tensor> data_tensor = network0->get_io_tensor("data");
     data_tensor->share_memory_with(*data);
+    std::shared_ptr<Tensor> roi_tensor = network0->get_io_tensor("roi");
+    roi_tensor->share_memory_with(*roi);
 
     network0->forward();
     network0->wait();
@@ -1417,8 +1420,11 @@ TEST(TestNetWork, Discrete_Input) {
     std::shared_ptr<Network> network1 = std::make_shared<Network>(config, ios);
     network1->load_model(model_path);
 
+    std::shared_ptr<Tensor> roi_tensor1 = network1->get_io_tensor("roi");
+    roi_tensor1->copy_from(*roi);
+
     std::vector<std::shared_ptr<Tensor>> data_tensors =
-            network1->get_io_tensors("data");
+            network1->get_discrete_tensors("data");
     data_tensors[0]->share_memory_with(*data_0);
     data_tensors[1]->share_memory_with(*data_1);
     data_tensors[2]->share_memory_with(*data_2);
@@ -1435,6 +1441,7 @@ TEST(TestNetWork, Discrete_Input_Device) {
     auto data_0 = get_input_data("./data0.npy");
     auto data_1 = get_input_data("./data1.npy");
     auto data_2 = get_input_data("./data2.npy");
+    auto roi = get_input_data("./roi.npy");
     std::string model_path = "./test_discrete_input.mge";
 
     Config config;
@@ -1444,7 +1451,9 @@ TEST(TestNetWork, Discrete_Input_Device) {
     network0->load_model(model_path);
 
     std::shared_ptr<Tensor> data_tensor = network0->get_io_tensor("data");
-    data_tensor->share_memory_with(*data);
+    data_tensor->copy_from(*data);
+    std::shared_ptr<Tensor> roi_tensor = network0->get_io_tensor("roi");
+    roi_tensor->copy_from(*roi);
 
     network0->forward();
     network0->wait();
@@ -1459,8 +1468,10 @@ TEST(TestNetWork, Discrete_Input_Device) {
     std::shared_ptr<Network> network1 = std::make_shared<Network>(config, ios);
     network1->load_model(model_path);
 
+    std::shared_ptr<Tensor> roi_tensor1 = network1->get_io_tensor("roi");
+    roi_tensor1->copy_from(*roi);
     std::vector<std::shared_ptr<Tensor>> data_tensors =
-            network1->get_io_tensors("data");
+            network1->get_discrete_tensors("data");
     auto d0_cuda = Tensor(LiteDeviceType::LITE_CUDA, d_ly);
     auto d1_cuda = Tensor(LiteDeviceType::LITE_CUDA, d_ly);
     auto d2_cuda = Tensor(LiteDeviceType::LITE_CUDA, d_ly);
@@ -1470,6 +1481,48 @@ TEST(TestNetWork, Discrete_Input_Device) {
     data_tensors[0]->share_memory_with(d0_cuda);
     data_tensors[1]->share_memory_with(d1_cuda);
     data_tensors[2]->share_memory_with(d2_cuda);
+
+    network1->forward();
+    network1->wait();
+    std::shared_ptr<Tensor> output_tensor1 = network1->get_output_tensor(0);
+
+    compare_lite_tensor<float>(output_tensor0, output_tensor1);
+}
+
+TEST(TestNetWork, Discrete_Input_Concat) {
+    auto data = get_input_data("./data_b3.npy");
+    auto data_0 = get_input_data("./data0.npy");
+    auto data_1 = get_input_data("./data1.npy");
+    auto data_2 = get_input_data("./data2.npy");
+    std::string model_path = "./test_discrete_input_concat.mge";
+
+    Config config;
+    config.device_type = LiteDeviceType::LITE_CUDA;
+
+    std::shared_ptr<Network> network0 = std::make_shared<Network>(config);
+    network0->load_model(model_path);
+
+    std::shared_ptr<Tensor> data_tensor = network0->get_io_tensor("data");
+    data_tensor->copy_from(*data);
+
+    network0->forward();
+    network0->wait();
+    std::shared_ptr<Tensor> output_tensor0 = network0->get_output_tensor(0);
+
+    config.discrete_input_name = "data";
+    NetworkIO ios;
+    bool is_host = true;
+    Layout d_ly{{3, 3, 224, 224}, 4, LiteDataType::LITE_FLOAT};
+    ios.inputs.push_back({"data", is_host, LiteIOType::LITE_IO_VALUE, d_ly});
+
+    std::shared_ptr<Network> network1 = std::make_shared<Network>(config, ios);
+    network1->load_model(model_path);
+
+    std::vector<std::shared_ptr<Tensor>> data_tensors =
+            network1->get_discrete_tensors("data");
+    data_tensors[0]->copy_from(*data_0);
+    data_tensors[1]->copy_from(*data_1);
+    data_tensors[2]->copy_from(*data_2);
 
     network1->forward();
     network1->wait();

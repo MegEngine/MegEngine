@@ -299,7 +299,7 @@ public:
      * @param io_name the name of the tensor
      * @param phase indicate the tensor is input tensor
      */
-    std::vector<std::shared_ptr<Tensor>> get_io_tensors(
+    std::vector<std::shared_ptr<Tensor>> get_discrete_tensors(
             std::string io_name, LiteTensorPhase phase = LiteTensorPhase::LITE_INPUT);
 
     //! get the network input tensor by index

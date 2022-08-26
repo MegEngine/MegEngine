@@ -504,27 +504,58 @@ class TestNetwork(TestShuffleNet):
 
 class TestDiscreteInputNet(unittest.TestCase):
     source_dir = os.getenv("LITE_TEST_RESOURCE")
+    data_path = os.path.join(source_dir, "data_b3.npy")
     data0_path = os.path.join(source_dir, "data0.npy")
     data1_path = os.path.join(source_dir, "data1.npy")
     data2_path = os.path.join(source_dir, "data2.npy")
+    roi_path = os.path.join(source_dir, "roi.npy")
     model_path = os.path.join(source_dir, "test_discrete_input.mge")
+    data = np.load(data_path)
     data0 = np.load(data0_path)
     data1 = np.load(data1_path)
     data2 = np.load(data2_path)
+    roi = np.load(roi_path)
 
-    def do_forward(self, network, times=3):
+    def check_correct(self, out_data, error=1e-4):
+        out_data = out_data.flatten()
+
+        config = LiteConfig()
+        net = LiteNetwork(config)
+        net.load(self.model_path)
+        input_tensor = net.get_io_tensor("data")
+        input_tensor.set_data_by_share(self.data)
+        roi_tensor = net.get_io_tensor("roi")
+        roi_tensor.set_data_by_share(self.roi)
+        output_name = net.get_output_name(0)
+        output_tensor = net.get_io_tensor(output_name)
+        net.forward()
+        net.wait()
+
+        correct_data = output_tensor.to_numpy().flatten()
+        assert correct_data.size == out_data.size
+        for i in range(out_data.size):
+            assert abs(out_data[i] - correct_data[i]) < error
+
+    def do_forward(self, network, times=1):
         data_name = network.get_input_name(1)
         datas = []
-        datas.append(network.get_io_tensors(data_name, 0))
-        datas.append(network.get_io_tensors(data_name, 1))
-        datas.append(network.get_io_tensors(data_name, 2))
+        datas.append(network.get_discrete_tensor(data_name, 0))
+        datas.append(network.get_discrete_tensor(data_name, 1))
+        datas.append(network.get_discrete_tensor(data_name, 2))
 
-        datas[0].set_data_by_copy(self.data0)
-        datas[1].set_data_by_copy(self.data1)
-        datas[2].set_data_by_copy(self.data2)
+        datas[0].set_data_by_share(self.data0)
+        datas[1].set_data_by_share(self.data1)
+        datas[2].set_data_by_share(self.data2)
+        roi_tensor = network.get_io_tensor("roi")
+        roi_tensor.set_data_by_share(self.roi)
+        out_name = network.get_output_name(0)
+        out_tensor = network.get_io_tensor(out_name)
         for i in range(times):
             network.forward()
             network.wait()
+
+        out_data = out_tensor.to_numpy()
+        self.check_correct(out_data)
 
 
 class TestDiscreteInput(TestDiscreteInputNet):

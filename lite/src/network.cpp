@@ -127,12 +127,12 @@ std::shared_ptr<Tensor> Network::get_io_tensor(
     LITE_ERROR_HANDLER_END
 }
 
-std::vector<std::shared_ptr<Tensor>> Network::get_io_tensors(
+std::vector<std::shared_ptr<Tensor>> Network::get_discrete_tensors(
         std::string name, LiteTensorPhase phase) {
     LITE_ERROR_HANDLER_BEGIN
     LITE_ASSERT(m_loaded, "get_io_tensor should be used after model loaded.");
     LITE_CHECK_NON_NULL_POINTER(m_impl);
-    return m_impl->get_io_tensors(name, phase);
+    return m_impl->get_discrete_tensors(name, phase);
     LITE_ERROR_HANDLER_END
 }
 

@@ -311,7 +311,7 @@ LITE_API int LITE_get_io_tensor(
  * \param[in] phase The tensor phase
  * \param[out] tensor The IO tensor get from the network
  */
-LITE_API int LITE_get_io_tensors(
+LITE_API int LITE_get_discrete_tensor(
         LiteNetwork network, const char* io_name, size_t n_idx, LiteTensorPhase phase,
         LiteTensor* tensor);
 

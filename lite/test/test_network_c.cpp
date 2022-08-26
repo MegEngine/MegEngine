@@ -322,7 +322,7 @@ TEST(TestCapiNetWork, Discrete_Input) {
 
     std::vector<LiteTensor> c_data_tensors(3, nullptr);
     for (size_t i = 0; i < 3; i++) {
-        LITE_CAPI_CHECK(LITE_get_io_tensors(
+        LITE_CAPI_CHECK(LITE_get_discrete_tensor(
                 c_network, "data", i, LITE_INPUT, &c_data_tensors[i]));
         LITE_CAPI_CHECK(LITE_reset_tensor_memory(
                 c_data_tensors[i], datas[i]->get_memory_ptr(), data_length_in_byte));

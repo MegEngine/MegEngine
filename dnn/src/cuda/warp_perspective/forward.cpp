@@ -554,9 +554,7 @@ void WarpPerspectiveForwardImpl::exec(
                 cuda_check(cudaMemcpyAsync(
                         bundle.get(i), workspace_cpu.get(0), workspace_cpu.get_size(0),
                         cudaMemcpyHostToDevice, stream));
-                cuda_check(cudaStreamAddCallback(
-                        stream, callback_free, static_cast<void*>(workspace_cpu_raw),
-                        0));
+                free(workspace_cpu_raw);
                 warp_perspective::forward_proxy_multi_src(
                         is_nhwc, srcs_gpu, mat.ptr<dt_float32>(),
                         mat_idx.raw_ptr() ? mat_idx.ptr<int>() : nullptr,
@@ -579,9 +577,7 @@ void WarpPerspectiveForwardImpl::exec(
                 cuda_check(cudaMemcpyAsync(
                         bundle.get(0), workspace_cpu.get(0), workspace_cpu.get_size(0),
                         cudaMemcpyHostToDevice, stream));
-                cuda_check(cudaStreamAddCallback(
-                        stream, callback_free, static_cast<void*>(workspace_cpu_raw),
-                        0));
+                free(workspace_cpu_raw);
                 warp_perspective::forward_proxy_multi_src(
                         is_nhwc, srcs_gpu, mat.ptr<dt_float32>(),
                         mat_idx.raw_ptr() ? mat_idx.ptr<int>() : nullptr,
