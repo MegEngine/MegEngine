@@ -1049,17 +1049,16 @@ def copy(inp, device=None):
         device: destination device.
 
     Examples:
-        >>> import numpy as np
-        >>> import platform
-        >>> from megengine.device import get_device_count
-        >>> x = Tensor([1, 2, 3], np.int32)
-        >>> if 1 == get_device_count("gpu"):
-        ...     y = F.copy(x, "cpu1")
-        ...     print(y.numpy())
-        ... else:
-        ...     y = F.copy(x, "xpu1")
-        ...     print(y.numpy())
-        [1 2 3]
+
+        >>> x = megengine.tensor([1, 2, 3], numpy.int32)
+        Tensor([1 2 3], dtype=int32, device=xpux:0)
+
+        >>> megengine.functional.copy(x, 'cpu1')
+        Tensor([1 2 3], dtype=int32, device=cpu1:0)
+
+        >>> megengine.functional.copy(x, 'xpu0')
+        Tensor([1 2 3], dtype=int32, device=xpu0:0)
+
     """
     if device is None:
         return apply(Identity(), inp)[0]
