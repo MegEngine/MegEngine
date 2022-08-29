@@ -437,11 +437,13 @@ class ConvolutionBackwardDataImpl::AlgoPack : NonCopyableObj {
     AlgoNaive algo_naive;
     AlgoDirect algo_direct;
     AlgoMatrixMul algo_matmul;
+    AlgoMatrixMulNCHW44 algo_matmul_nchw44;
     SmallVector<AlgoBase*> m_all_algos;
     AlgoBase::Mapper m_all_algos_map;
 
 public:
     AlgoPack() {
+        m_all_algos.emplace_back(&algo_matmul_nchw44);
         m_all_algos.emplace_back(&algo_matmul);
         m_all_algos.emplace_back(&algo_direct);
         m_all_algos.emplace_back(&algo_naive);
@@ -557,7 +559,8 @@ ConvolutionBackwardDataImpl::NCBKernSizeParam ConvolutionBackwardDataImpl::
         return v;
     };
     size_t spatial_pos;
-    if (param().format == Param::Format::NCHW) {
+    if (param().format == Param::Format::NCHW ||
+        param().format == Param::Format::NCHW44) {
         spatial_pos = 2;
     } else {
         megdnn_assert(param().format == Param::Format::NHWC, "invalid conv format");
@@ -622,7 +625,8 @@ void ConvolutionBackwardDataImpl::exec_with_ncb_kern(const NCBKernParam& param) 
     } else {
         megdnn_assert(
                 p1g.filter_meta.format == Param::Format::NCHW ||
-                        p1g.filter_meta.format == Param::Format::NHWC,
+                        p1g.filter_meta.format == Param::Format::NHWC ||
+                        p1g.filter_meta.format == Param::Format::NCHW44,
                 "invalid conv format");
         auto run = [kptr, p1g_orig = p1g, group]() {
             auto p1g = p1g_orig;
@@ -640,7 +644,8 @@ void ConvolutionBackwardDataImpl::exec_with_ncb_kern(const NCBKernParam& param) 
                     p1g.filter_type.size();
             p1g.grad_extra_mem_size =
                     (group - 1) * p1g.filter_meta.icpg * p1g.grad_type.size();
-            if (p1g.filter_meta.format == Param::Format::NCHW) {
+            if (p1g.filter_meta.format == Param::Format::NCHW ||
+                p1g.filter_meta.format == Param::Format::NCHW44) {
                 istrd *= p1g.isz[0] * p1g.isz[1];
                 ostrd *= p1g.osz[0] * p1g.osz[1];
                 p1g.diff_extra_mem_size *= p1g.isz[0] * p1g.isz[1];
