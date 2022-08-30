@@ -94,6 +94,7 @@ class AvgPool2d(_PoolNd):
         >>> m = M.AvgPool2d(kernel_size=2, stride=2, padding=[1,0], mode="average")
         >>> inp = mge.tensor(np.arange(1 * 1 * 3 * 4).astype(np.float32).reshape(1, 1, 3, 4))
         >>> output = m(inp)
+        >>> output
         Tensor([[[[0.25 1.25]
                   [6.5  8.5 ]]]], device=xpux:0)
 
