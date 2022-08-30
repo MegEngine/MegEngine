@@ -32,6 +32,7 @@
 #include "src/cuda/flip/opr_impl.h"
 #include "src/cuda/gaussian_blur/opr_impl.h"
 #include "src/cuda/group_local/opr_impl.h"
+#include "src/cuda/group_norm/opr_impl.h"
 #include "src/cuda/images2neibs/opr_impl.h"
 #include "src/cuda/indexing_multi_axis_vec/opr_impl.h"
 #include "src/cuda/indexing_one_hot/opr_impl.h"
@@ -163,6 +164,8 @@ MEGDNN_SPECIALIZE_CREATE_OPERATOR(BNBackward);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(GroupLocalForward);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(GroupLocalBackwardData);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(GroupLocalBackwardFilter);
+MEGDNN_SPECIALIZE_CREATE_OPERATOR(GroupNormForward);
+MEGDNN_SPECIALIZE_CREATE_OPERATOR(GroupNormBackward);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(Flip);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(Rotate);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(ROICopy);

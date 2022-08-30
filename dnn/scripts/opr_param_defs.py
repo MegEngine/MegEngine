@@ -1247,6 +1247,13 @@ PADDING_MODES = [Doc('REPLICATE = 0', 'aaaaaa|abcdefgh|hhhhhhh'),
  .add_fields('uint64', 'normalized_size', '1')
 )
 
+(pdef('GroupNorm')
+ .add_fields('bool', 'affine', 'true')
+ .add_fields('float32', 'eps', '1e-5f')
+ .add_fields('uint32', 'group', '1')
+ .add_enum_alias('Format', 'Convolution')
+)
+
 (pdef('Dropout')
  .add_fields('float32', 'drop_prob', '0')
  .add_fields('uint64', 'seed', '0')

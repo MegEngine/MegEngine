@@ -1,8 +1,10 @@
+#include "megbrain/opr/basic_arith.h"
 #include "megbrain/opr/dnn/adaptive_pooling.h"
 #include "megbrain/opr/dnn/batch_norm.h"
 #include "megbrain/opr/dnn/convolution.h"
 #include "megbrain/opr/dnn/correlation.h"
 #include "megbrain/opr/dnn/fake_quant.h"
+#include "megbrain/opr/dnn/group_norm.h"
 #include "megbrain/opr/dnn/images2neibs.h"
 #include "megbrain/opr/dnn/layer_norm.h"
 #include "megbrain/opr/dnn/local.h"
@@ -15,6 +17,9 @@
 #include "megbrain/opr/dnn/sliding_window_transpose.h"
 #include "megbrain/opr/dnn/softmax.h"
 #include "megbrain/opr/dnn/tqt.h"
+#include "megbrain/opr/io.h"
+#include "megbrain/opr/tensor_manip.h"
+#include "megbrain/serialization/oss_opr_load_dump.h"
 #include "megbrain/serialization/sereg.h"
 #include "megdnn/opr_param_defs.h"
 #include "megdnn/oprs/nn.h"
@@ -524,6 +529,213 @@ struct OprMaker<opr::LayerNormBackward, 0> {
     }
 };
 
+template <>
+struct OprMaker<opr::GroupNorm, 0> {
+    using Param = opr::GroupNorm::Param;
+    static cg::OperatorNodeBase* make(
+            const Param& param, const cg::VarNodeArray& i, ComputingGraph& graph,
+            const OperatorNodeConfig& config) {
+        MGB_MARK_USED_VAR(graph);
+        if (i.size() == 3) {
+            return opr::GroupNorm::make(i[0], i[1], i[2], param, config)[0]
+                    .node()
+                    ->owner_opr();
+        } else {
+            mgb_assert(i.size() == 1);
+            return opr::GroupNorm::make(i[0], param, config)[0].node()->owner_opr();
+        }
+    }
+};
+
+template <>
+struct OprLoadDumpImplV2<opr::GroupNorm, 0> {
+    using Opr = opr::GroupNorm;
+    using Param = opr::GroupNorm::Param;
+    using ElemwiseParam = opr::Elemwise::Param;
+    using ReduceParam = opr::Reduce::Param;
+    static void dump(OprDumpContext& ctx, const cg::OperatorNodeBase& opr) {
+        ctx.write_param<Param>(opr.cast_final_safe<Opr>().param());
+    }
+
+    static cg::OperatorNodeBase* replace_opr(
+            cg::OperatorNodeBase* opr, const VarNodeArray& inputs) {
+        auto graph = inputs[0]->owner_graph();
+        auto comp_node = inputs[0]->comp_node();
+        // std::unique_ptr<StaticInferManager> m_static_infer_manager;
+        auto opr_param = opr->cast_final_safe<opr::GroupNorm>().param();
+        float eps = opr_param.eps;
+        auto half = DTypeScalar(static_cast<megdnn::dt_float32>(0.5));
+        auto param_eps = DTypeScalar(static_cast<megdnn::dt_float32>(eps));
+        auto half_node = opr::ImmutableTensor::make(*graph, half, {comp_node});
+        auto eps_node = opr::ImmutableTensor::make(*graph, param_eps, {comp_node});
+
+        auto origin_shape = opr::GetVarShape::make(inputs[0]).node();
+
+        TensorShape input_shape =
+                inputs[0]->owner_graph()->static_infer_manager().infer_shape(inputs[0]);
+        size_t N = input_shape[0];
+        size_t inner_size = input_shape[1] * input_shape[2] * input_shape[3];
+        int group = opr_param.group;
+        int size = inner_size / group;
+        HostTensorND hv = HostTensorND(inputs[0]->comp_node(), {3}, dtype::Int32());
+        auto* ptr = hv.ptr<dt_int32>();
+        ptr[0] = N;
+        ptr[1] = group;
+        ptr[2] = size;
+        auto target_shape = opr::ImmutableTensor::make(*graph, hv, {comp_node});
+        auto inp = opr::Reshape::make(inputs[0], target_shape);
+
+        auto mean = opr::Reduce::make(inp, {ReduceParam::Mode::MEAN, 2});
+        auto elemwise1 = opr::Elemwise::make({inp, inp}, {ElemwiseParam::Mode::MUL});
+        auto temp_var = opr::Reduce::make(elemwise1, {ReduceParam::Mode::MEAN, 2});
+        auto elemwise2 = opr::Elemwise::make({mean, mean}, {ElemwiseParam::Mode::MUL});
+        auto var =
+                opr::Elemwise::make({temp_var, elemwise2}, {ElemwiseParam::Mode::SUB});
+        auto add_var = opr::Elemwise::make({var, eps_node}, {ElemwiseParam::Mode::ADD});
+        auto sqrt =
+                opr::Elemwise::make({add_var, half_node}, {ElemwiseParam::Mode::POW});
+        auto div = opr::Elemwise::make({inp, mean}, {ElemwiseParam::Mode::SUB});
+        auto temp_inp =
+                opr::Elemwise::make({div, sqrt}, {ElemwiseParam::Mode::TRUE_DIV});
+        auto res = opr::Reshape::make(temp_inp, origin_shape);
+
+        if (inputs.size() == 3) {
+            auto mul_temp =
+                    opr::Elemwise::make({res, inputs[1]}, {ElemwiseParam::Mode::MUL});
+            auto res = opr::Elemwise::make(
+                    {mul_temp, inputs[2]}, {ElemwiseParam::Mode::ADD});
+            return res.node()->owner_opr();
+        } else {
+            return res.node()->owner_opr();
+        }
+    }
+
+    static cg::OperatorNodeBase* load(
+            OprLoadContext& ctx, const cg::VarNodeArray& inputs,
+            const OperatorNodeConfig& config) {
+        // auto& fbs_ctx = CAST_TO_FBS_V2_CTX(ctx);
+        return OprMaker<opr::GroupNorm, 0>::make(
+                ctx.read_param<Param>(), inputs, ctx.graph(), config);
+    }
+};
+
+// OprMaker in MGB_SEREG_OPR only support unique output opr
+template <>
+struct OprMaker<opr::GroupNormBackward, 0> {
+    using Param = opr::GroupNormBackward::Param;
+    static cg::OperatorNodeBase* make(
+            const Param& param, const cg::VarNodeArray& i, ComputingGraph& graph,
+            const OperatorNodeConfig& config) {
+        MGB_MARK_USED_VAR(graph);
+        if (i.size() == 5) {
+            return opr::GroupNormBackward::make(
+                           i[0], i[1], i[2], i[3], i[4], param, config)[0]
+                    .node()
+                    ->owner_opr();
+        } else {
+            mgb_assert(i.size() == 4);
+            return opr::GroupNormBackward::make(
+                           i[0], i[1], i[2], i[3], param, config)[0]
+                    .node()
+                    ->owner_opr();
+        }
+    }
+};
+
+template <>
+struct OprLoadDumpImplV2<opr::GroupNormBackward, 0> {
+    using Opr = opr::GroupNormBackward;
+    using Param = opr::GroupNormBackward::Param;
+    using ElemwiseParam = opr::Elemwise::Param;
+    using ReduceParam = opr::Reduce::Param;
+    static void dump(OprDumpContext& ctx, const cg::OperatorNodeBase& opr) {
+        ctx.write_param<Param>(opr.cast_final_safe<Opr>().param());
+    }
+
+    static cg::OperatorNodeBase* replace_opr(
+            cg::OperatorNodeBase* opr, const VarNodeArray& inputs) {
+        auto rstd = inputs[4];
+        auto graph = inputs[1]->owner_graph();
+        auto comp_node = inputs[1]->comp_node();
+        auto opr_param = opr->cast_final_safe<opr::GroupNormBackward>().param();
+        float eps = opr_param.eps;
+        auto half = DTypeScalar(static_cast<megdnn::dt_float32>(0.5));
+        auto param_eps = DTypeScalar(static_cast<megdnn::dt_float32>(eps));
+        auto half_node = opr::ImmutableTensor::make(*graph, half, {comp_node});
+        auto eps_node = opr::ImmutableTensor::make(*graph, param_eps, {comp_node});
+        auto const_node =
+                opr::ImmutableTensor::make(*graph, DTypeScalar(1), {comp_node});
+
+        TensorShape input_shape =
+                inputs[1]->owner_graph()->static_infer_manager().infer_shape(inputs[0]);
+        auto origin_shape = opr::GetVarShape::make(inputs[1]).node();
+        size_t N = input_shape[0];
+        size_t C = input_shape[1];
+        size_t inner_size = input_shape[1] * input_shape[2] * input_shape[3];
+        int group = opr_param.group;
+        int size = inner_size / group;
+        HostTensorND hv = HostTensorND(inputs[1]->comp_node(), {3}, dtype::Int32());
+        auto* ptr = hv.ptr<dt_int32>();
+        ptr[0] = N;
+        ptr[1] = group;
+        ptr[2] = size;
+        auto target_shape = opr::ImmutableTensor::make(*graph, hv, {comp_node});
+        auto inp = opr::Reshape::make(inputs[1], target_shape);
+
+        auto temp_rstd =
+                opr::Elemwise::make({rstd, eps_node}, {ElemwiseParam::Mode::ADD});
+        auto sqrt =
+                opr::Elemwise::make({temp_rstd, half_node}, {ElemwiseParam::Mode::POW});
+        auto slice_std = opr::Elemwise::make(
+                {const_node, sqrt}, {ElemwiseParam::Mode::TRUE_DIV});
+        auto sub_mean =
+                opr::Elemwise::make({inp, inputs[3]}, {ElemwiseParam::Mode::SUB});
+        auto x_hat =
+                opr::Elemwise::make({sub_mean, slice_std}, {ElemwiseParam::Mode::MUL});
+        x_hat = opr::Reshape::make(x_hat, origin_shape);
+        auto size_node =
+                opr::ImmutableTensor::make(*graph, DTypeScalar(size), {comp_node});
+        auto temp1 = opr::Elemwise::make(
+                {slice_std, size_node}, {ElemwiseParam::Mode::TRUE_DIV});
+
+        auto dx_hat =
+                opr::Elemwise::make({inputs[0], inputs[2]}, {ElemwiseParam::Mode::MUL});
+        HostTensorND tshape = HostTensorND(inputs[1]->comp_node(), {5}, dtype::Int32());
+        auto* ptr2 = tshape.ptr<dt_int32>();
+        ptr2[0] = N;
+        ptr2[1] = group;
+        ptr2[2] = C / group;
+        ptr2[3] = input_shape[2];
+        ptr2[4] = input_shape[3];
+        target_shape = opr::ImmutableTensor::make(*graph, tshape, {comp_node});
+        x_hat = opr::Reshape::make(x_hat, target_shape);
+        dx_hat = opr::Reshape::make(dx_hat, target_shape);
+        auto temp2 =
+                opr::Elemwise::make({size_node, dx_hat}, {ElemwiseParam::Mode::MUL});
+        ptr2[2] = 1;
+        ptr2[3] = 1;
+        ptr2[4] = 1;
+        target_shape = opr::ImmutableTensor::make(*graph, tshape, {comp_node});
+        auto temp3 = opr::Reduce::make(dx_hat, {ReduceParam::Mode::SUM}, target_shape);
+        auto sum_dx_hat =
+                opr::Reduce::make(temp2, {ReduceParam::Mode::SUM}, target_shape);
+        auto temp4 =
+                opr::Elemwise::make({x_hat, sum_dx_hat}, {ElemwiseParam::Mode::MUL});
+        auto temp5 = opr::Elemwise::make({temp2, temp3}, {ElemwiseParam::Mode::SUB});
+        auto temp6 = opr::Elemwise::make({temp5, temp4}, {ElemwiseParam::Mode::SUB});
+        auto dx_temp = opr::Elemwise::make({temp1, temp6}, {ElemwiseParam::Mode::MUL});
+        auto dx = opr::Reshape::make(dx_temp, origin_shape);
+        return dx.node()->owner_opr();
+    }
+
+    static cg::OperatorNodeBase* load(
+            OprLoadContext& ctx, const cg::VarNodeArray& inputs,
+            const OperatorNodeConfig& config) {
+        return OprMaker<opr::GroupNormBackward, 0>::make(
+                ctx.read_param<Param>(), inputs, ctx.graph(), config);
+    }
+};
+
 template <class MegDNNConv = megdnn::LocalShare>
 struct MakeLocalShareCaller2 {
     template <typename Opr>
@@ -747,6 +959,8 @@ MGB_SEREG_OPR(LSQ, 4);
 MGB_SEREG_OPR(LSQBackward, 5);
 MGB_SEREG_OPR(LayerNorm, 0);
 MGB_SEREG_OPR(LayerNormBackward, 0);
+MGB_SEREG_OPR(GroupNorm, 0);
+MGB_SEREG_OPR(GroupNormBackward, 0);
 MGB_SEREG_OPR(RNNCellForward, 6);
 MGB_SEREG_OPR(LSTMCellForward, 7);
 MGB_SEREG_OPR(RNNForward, 3);
@@ -755,6 +969,14 @@ MGB_SEREG_OPR(LSTMForward, 4);
 MGB_SEREG_OPR(LSTMBackward, 9);
 MGB_SEREG_OPR(Softmax, 1);
 MGB_SEREG_OPR(SoftmaxBackward, 2);
+MGB_SEREG_OPR_V2(
+        GroupNorm, 0,
+        (mgb::serialization::OprLoadDumpImplV2<opr::GroupNorm, 0>::replace_opr),
+        VERSION_2, CURRENT_VERSION);
+MGB_SEREG_OPR_V2(
+        GroupNormBackward, 0,
+        (mgb::serialization::OprLoadDumpImplV2<opr::GroupNormBackward, 0>::replace_opr),
+        VERSION_2, CURRENT_VERSION);
 }  // namespace opr
 
 }  // namespace mgb

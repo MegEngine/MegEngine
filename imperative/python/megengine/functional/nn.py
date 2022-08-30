@@ -60,6 +60,7 @@ __all__ = [
     "dropout",
     "embedding",
     "gelu",
+    "group_norm",
     "hsigmoid",
     "hswish",
     "indexing_one_hot",
@@ -1200,6 +1201,33 @@ def softmax(inp: Tensor, axis: Optional[int] = None) -> Tensor:
         op = builtin.Softmax(axis=axis,)
         (output,) = apply(op, inp)
         return output
+
+
+def group_norm(
+    inp: Tensor,
+    num_groups: int,
+    affine: bool,
+    weight: Optional[Tensor] = None,
+    bias: Optional[Tensor] = None,
+    eps: float = 1e-5,
+):
+    r"""Applies Group Normalization over a mini-batch of inputs as described in
+    the paper `Group Normalization <https://arxiv.org/abs/1803.08494>`__
+    
+    Args:
+        inp: input tensor.
+        num_groups: number of groups to separate the channels into
+        affine: whether to use weight and bias
+        weight: must not be None when the affine is true
+        bias: must not be None when the affine is true
+        eps: a value added to the denominator for numerical stability. Default: 1e-5
+    """
+    op = builtin.GroupNorm(affine=affine, eps=eps, group=num_groups,)
+    if affine:
+        assert weight is not None and bias is not None
+        return apply(op, inp, weight, bias)[0]
+    else:
+        return apply(op, inp)[0]
 
 
 def layer_norm(

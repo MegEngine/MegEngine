@@ -490,6 +490,8 @@ def LRN: MgbHashableOp<"LRN", [LRNParam]>;
 
 def LayerNorm: MgbHashableOp<"LayerNorm", [LayerNormParam]>;
 
+def GroupNorm: MgbHashableOp<"GroupNorm", [GroupNormParam]>;
+
 def LAMBUpdate: MgbHashableOp<"LAMBUpdate", [LAMBUpdateParam]>;
 
 def RNNCell: MgbHashableOp<"RNNCell", [RNNCellParam]>;

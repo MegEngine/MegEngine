@@ -1193,6 +1193,17 @@ GroupLocalInst
     .def_readwrite("format", &GroupLocal::format)
     .def_readwrite("compute_mode", &GroupLocal::compute_mode);
 
+py::class_<GroupNorm, std::shared_ptr<GroupNorm>, OpDef> GroupNormInst(m, "GroupNorm");
+
+GroupNormInst.attr("Format") = AdaptivePoolingInst.attr("Format");
+
+GroupNormInst
+    .def(py::init<bool, float, uint32_t, ::megdnn::param::GroupNorm::Format, std::string>(), py::arg("affine") = true, py::arg("eps") = 1e-5f, py::arg("group") = 1, py::arg("format") = ::megdnn::param::GroupNorm::Format::NCHW, py::arg("scope") = {})
+    .def_readwrite("affine", &GroupNorm::affine)
+    .def_readwrite("eps", &GroupNorm::eps)
+    .def_readwrite("group", &GroupNorm::group)
+    .def_readwrite("format", &GroupNorm::format);
+
 py::class_<Identity, std::shared_ptr<Identity>, OpDef> IdentityInst(m, "Identity");
 
 IdentityInst

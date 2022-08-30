@@ -142,6 +142,8 @@ DEF(SoftmaxBackward, 3, true, false);
 DEF(RegionRestrictedConvolutionForward, 5, true, true);
 DEF(RegionRestrictedConvolutionBackwardData, 5, true, false);
 DEF(RegionRestrictedConvolutionBackwardFilter, 5, true, false);
+DEF(GroupNormForward, 6, true, true);
+DEF(GroupNormBackward, 8, true, true);
 }  // namespace megdnn
 
 // vim: syntax=cpp.doxygen

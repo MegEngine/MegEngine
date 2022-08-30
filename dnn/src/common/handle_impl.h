@@ -216,7 +216,9 @@ private:
     cb(NormForward) \
     cb(RegionRestrictedConvolutionForward) \
     cb(RegionRestrictedConvolutionBackwardData) \
-    cb(RegionRestrictedConvolutionBackwardFilter)
+    cb(RegionRestrictedConvolutionBackwardFilter) \
+    cb(GroupNormForward) \
+    cb(GroupNormBackward)
 // clang-format on
 
 /*!

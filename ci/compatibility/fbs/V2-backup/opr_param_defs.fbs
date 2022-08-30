@@ -1869,6 +1869,13 @@ table LayerNorm {
     normalized_size:ulong = 1;
 }
 
+table GroupNorm {
+    affine:bool = true;
+    eps:float = 1e-5;
+    group:uint = 1;
+    format:ConvolutionFormat = NCHW;
+}
+
 table Dropout {
     drop_prob:float = 0;
     seed:ulong = 0;

@@ -8,12 +8,14 @@ import pytest
 import megengine as mge
 import megengine.functional as F
 from megengine import Parameter, Tensor, tensor
+from megengine.device import get_device_count
 from megengine.module import (
     BatchNorm1d,
     BatchNorm2d,
     Conv1d,
     Conv2d,
     Dropout,
+    GroupNorm,
     Linear,
     MaxPool2d,
     Module,
@@ -698,3 +700,67 @@ def test_module_compatible():
     assert (
         old_attributes == current_attributes
     ), "Add or delete attributes in Module class may break compatibility of pickle serialization"
+
+
+def test_grou_norm():
+    class OriginGroupNormFunc(Module):
+        def __init__(self, num_groups, num_channels, eps=1e-5, affine=True, **kwargs):
+            super().__init__(**kwargs)
+            assert num_channels % num_groups == 0
+            self.num_groups = num_groups
+            self.num_channels = num_channels
+            self.eps = eps
+            self.affine = affine
+            if self.affine:
+                self.weight = Parameter(np.ones(num_channels, dtype=np.float32))
+                self.bias = Parameter(np.zeros(num_channels, dtype=np.float32))
+            else:
+                self.weight = None
+                self.bias = None
+
+        def forward(self, x):
+            N, C, H, W = x.shape
+            x = x.reshape(N, self.num_groups, -1)
+            mean = x.mean(axis=2, keepdims=True)
+            var = (x * x).mean(axis=2, keepdims=True) - mean * mean
+            x = (x - mean) / F.sqrt(var + self.eps)
+            x = x.reshape(N, C, H, W)
+            if self.affine:
+                x = self.weight.reshape(1, -1, 1, 1) * x + self.bias.reshape(
+                    1, -1, 1, 1
+                )
+            return x
+
+    inp = np.random.randn(2, 256, 10, 16).astype("float32")
+    mge_inp = Tensor(inp)
+    mge_m = GroupNorm(32, 256)
+
+    ori_inp = Tensor(inp)
+    ori_m = OriginGroupNormFunc(32, 256)
+
+    targets = np.array(2)
+    mge_gm = mge.autodiff.GradManager().attach(mge_m.parameters())
+    ori_gm = mge.autodiff.GradManager().attach(ori_m.parameters())
+
+    for i in range(2):
+        with mge_gm:
+            mge_output = mge_m(mge_inp)
+            loss = F.loss.square_loss(
+                mge_output.sum(), mge.tensor(targets, dtype=np.float32)
+            )
+            mge_gm.backward(loss)
+
+        with ori_gm:
+            ori_output = ori_m(ori_inp)
+            loss = F.loss.square_loss(
+                ori_output.sum(), mge.tensor(targets, dtype=np.float32)
+            )
+            ori_gm.backward(loss)
+
+        np.testing.assert_allclose(mge_output.numpy(), ori_output.numpy(), atol=1e-05)
+        np.testing.assert_allclose(
+            mge_m.weight.grad.numpy(), ori_m.weight.grad.numpy(), rtol=1e-03
+        )
+        np.testing.assert_allclose(
+            mge_m.bias.grad.numpy(), ori_m.bias.grad.numpy(), rtol=1e-03
+        )

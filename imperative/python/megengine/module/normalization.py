@@ -34,21 +34,9 @@ class GroupNorm(Module):
             zeros_(self.bias)
 
     def forward(self, x):
-        N, C, H, W = x.shape
-        format = x.format
-        assert C == self.num_channels
-
-        x = x.reshape(N, self.num_groups, -1)
-        mean = x.mean(axis=2, keepdims=True)
-        var = (x * x).mean(axis=2, keepdims=True) - mean * mean
-
-        x = (x - mean) / F.sqrt(var + self.eps)
-        x = x.reshape(N, C, H, W)
-        if self.affine:
-            x = self.weight.reshape(1, -1, 1, 1) * x + self.bias.reshape(1, -1, 1, 1)
-        # FIXME(czh): remove this after making it a builtin op.
-        if format == "nhwc":
-            x = mge.amp.convert_tensor_format(x, inplace=False)
+        x = F.nn.group_norm(
+            x, self.num_groups, self.affine, self.weight, self.bias, self.eps
+        )
         return x
 
     def _module_info_string(self) -> str:

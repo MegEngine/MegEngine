@@ -2430,6 +2430,76 @@ protected:
             const TensorLayout& dhx, const TensorLayout& dcx, const TensorLayout& dw,
             size_t workspace_in_bytes);
 };
+
+class GroupNormBase : public OperatorBase {
+    DEF_OPR_IMPL_CTOR(GroupNormBase, OperatorBase);
+    DEF_OPR_PARAM(GroupNorm);
+
+protected:
+    void deduce_layout_fwd(
+            const TensorLayout& data, const TensorLayout& weight,
+            const TensorLayout& bias, TensorLayout& dst, TensorLayout& mean,
+            TensorLayout& rstd);
+    void check_layout_fwd(
+            const TensorLayout& data, const TensorLayout& weight,
+            const TensorLayout& bias, const TensorLayout& dst, const TensorLayout& mean,
+            const TensorLayout& rstd);
+};
+
+class GroupNormForward : public GroupNormBase {
+    DEF_OPR_IMPL(GroupNormForward, GroupNormBase, 3, 3);
+
+public:
+    virtual void exec(
+            _megdnn_tensor_in data, _megdnn_tensor_in weight, _megdnn_tensor_in bias,
+            _megdnn_tensor_out dst, _megdnn_tensor_out mean, _megdnn_tensor_out rstd,
+            _megdnn_workspace workspace) = 0;
+    MGE_WIN_DECLSPEC_FUC void deduce_layout(
+            const TensorLayout& data, const TensorLayout& weight,
+            const TensorLayout& bias, TensorLayout& dst, TensorLayout& mean,
+            TensorLayout& rstd);
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& data, const TensorLayout& weight,
+            const TensorLayout& bias, const TensorLayout& dst, const TensorLayout& mean,
+            const TensorLayout& rstd) = 0;
+
+protected:
+    void check_exec(
+            const TensorLayout& data, const TensorLayout& weight,
+            const TensorLayout& bias, const TensorLayout& dst, const TensorLayout& mean,
+            const TensorLayout& rstd, size_t workspace_in_bytes);
+};
+using GroupNorm = GroupNormForward;
+
+class GroupNormBackward : public GroupNormBase {
+    DEF_OPR_IMPL(GroupNormBackward, GroupNormBase, 5, 3);
+
+public:
+    virtual void exec(
+            _megdnn_tensor_in diff, _megdnn_tensor_in data, _megdnn_tensor_in weight,
+            _megdnn_tensor_in mean, _megdnn_tensor_in rstd, _megdnn_tensor_out ddata,
+            _megdnn_tensor_out dweight, _megdnn_tensor_out dbias,
+            _megdnn_workspace workspace) = 0;
+    void deduce_layout(
+            const TensorLayout& diff, const TensorLayout& data,
+            const TensorLayout& weight, const TensorLayout& mean,
+            const TensorLayout& rstd, TensorLayout& ddata, TensorLayout& dweight,
+            TensorLayout& dbias);
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& diff, const TensorLayout& data,
+            const TensorLayout& weight, const TensorLayout& mean,
+            const TensorLayout& rstd, const TensorLayout& ddata,
+            const TensorLayout& dweight, const TensorLayout& dbias) = 0;
+
+protected:
+    void check_exec(
+            const TensorLayout& diff, const TensorLayout& data,
+            const TensorLayout& weight, const TensorLayout& mean,
+            const TensorLayout& rstd, const TensorLayout& ddata,
+            const TensorLayout& dweight, const TensorLayout& dbias,
+            size_t workspace_in_bytes);
+};
+
 }  // namespace megdnn
 #include "megdnn/internal/opr_header_epilogue.h"
 

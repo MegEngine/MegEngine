@@ -3775,6 +3775,110 @@ OP_TRAIT_REG(GroupLocal, GroupLocal)
     .props(GroupLocal_props_impl)
     .make_name(GroupLocal_make_name_impl);
 
+MGB_DYN_TYPE_OBJ_FINAL_IMPL(GroupNorm);
+
+namespace {
+size_t GroupNorm_hash_impl(const OpDef& def_) {
+    auto&& op_ = def_.cast_final_safe<GroupNorm>();
+    static_cast<void>(op_);
+    size_t val = mgb::hash(op_.dyn_typeinfo());
+    val = mgb::hash_pair_combine(val, mgb::hash(op_.affine));
+    val = mgb::hash_pair_combine(val, mgb::hash(op_.eps));
+    val = mgb::hash_pair_combine(val, mgb::hash(op_.group));
+    val = mgb::hash_pair_combine(val, mgb::enumhash()(op_.format));
+    return val;
+}
+bool GroupNorm_is_same_st_impl(const OpDef& lhs_, const OpDef& rhs_) {
+    auto &&a_ = lhs_.cast_final_safe<GroupNorm>(),
+         &&b_ = rhs_.cast_final_safe<GroupNorm>();
+    static_cast<void>(a_);
+    static_cast<void>(b_);
+    if (a_.affine != b_.affine) return false;
+    if (a_.eps != b_.eps) return false;
+    if (a_.group != b_.group) return false;
+    if (a_.format != b_.format) return false;
+    return true;
+}
+std::vector<std::pair<const char*, std::string>> GroupNorm_props_impl(const OpDef& def_) {
+    auto&& op_ = def_.cast_final_safe<GroupNorm>();
+    static_cast<void>(op_);
+    std::vector<std::pair<const char*, std::string>> props_;
+    props_.emplace_back("affine", std::to_string(op_.affine));
+    props_.emplace_back("eps", std::to_string(op_.eps));
+    props_.emplace_back("group", std::to_string(op_.group));
+    switch (op_.format){
+    case GroupNorm::Format::NCHW:
+        props_.emplace_back("format", "NCHW");
+        break;
+    case GroupNorm::Format::NHWC:
+        props_.emplace_back("format", "NHWC");
+        break;
+    case GroupNorm::Format::NHWCD4:
+        props_.emplace_back("format", "NHWCD4");
+        break;
+    case GroupNorm::Format::NCHW4:
+        props_.emplace_back("format", "NCHW4");
+        break;
+    case GroupNorm::Format::NCHW8:
+        props_.emplace_back("format", "NCHW8");
+        break;
+    case GroupNorm::Format::NCHW32:
+        props_.emplace_back("format", "NCHW32");
+        break;
+    case GroupNorm::Format::NCHW88:
+        props_.emplace_back("format", "NCHW88");
+        break;
+    case GroupNorm::Format::NCHW44:
+        props_.emplace_back("format", "NCHW44");
+        break;
+    case GroupNorm::Format::NCHW44_DOT:
+        props_.emplace_back("format", "NCHW44_DOT");
+        break;
+    case GroupNorm::Format::NCHW4_NCHW32:
+        props_.emplace_back("format", "NCHW4_NCHW32");
+        break;
+    case GroupNorm::Format::NCHW32_NCHW4:
+        props_.emplace_back("format", "NCHW32_NCHW4");
+        break;
+    case GroupNorm::Format::NCHW4_NCHW:
+        props_.emplace_back("format", "NCHW4_NCHW");
+        break;
+    case GroupNorm::Format::NHWC_NCHW:
+        props_.emplace_back("format", "NHWC_NCHW");
+        break;
+    case GroupNorm::Format::NHWC_NCHW4_IC_SMALL:
+        props_.emplace_back("format", "NHWC_NCHW4_IC_SMALL");
+        break;
+    case GroupNorm::Format::NCHW_NCHW4_IC_SMALL:
+        props_.emplace_back("format", "NCHW_NCHW4_IC_SMALL");
+        break;
+    case GroupNorm::Format::CHWN4:
+        props_.emplace_back("format", "CHWN4");
+        break;
+    case GroupNorm::Format::NCHW64:
+        props_.emplace_back("format", "NCHW64");
+        break;
+    case GroupNorm::Format::NCHW4_NHWC:
+        props_.emplace_back("format", "NCHW4_NHWC");
+        break;
+    default:
+        props_.emplace_back("format", "INVALID");
+        break;
+    }
+    return props_;
+}
+std::string GroupNorm_make_name_impl(const OpDef& def_) {
+    auto&& op_ = def_.cast_final_safe<GroupNorm>();
+    static_cast<void>(op_);
+    return "GroupNorm";
+}
+} // anonymous namespace
+OP_TRAIT_REG(GroupNorm, GroupNorm)
+    .hash(GroupNorm_hash_impl)
+    .is_same_st(GroupNorm_is_same_st_impl)
+    .props(GroupNorm_props_impl)
+    .make_name(GroupNorm_make_name_impl);
+
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(Identity);
 
 namespace {
