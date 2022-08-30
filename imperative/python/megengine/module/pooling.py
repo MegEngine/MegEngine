@@ -32,9 +32,9 @@ class _PoolNd(Module):
 class MaxPool2d(_PoolNd):
     r"""Applies a 2D max pooling over an input.
 
-    For instance, given an input of the size :math:`(N, C, H, W)` and
+    For instance, given an input of the size :`(N, C, H_{\text{in}}, W_{\text{in}})` and
     :attr:`kernel_size` :math:`(kH, kW)`, this layer generates the output of
-    the size :math:`(N, C, H_{out}, W_{out})` through a process described as:
+    the size :math:`(N, C, H_{\text{out}}, W_{\text{out}})` through a process described as:
 
     .. math::
 
@@ -48,9 +48,9 @@ class MaxPool2d(_PoolNd):
     both sides for :attr:`padding` number of points.
 
     Args:
-        kernel_size: the size of the window to take a max over.
-        stride: the stride of the window. Default value is kernel_size.
-        padding: implicit zero padding to be added on both sides.
+        kernel_size: the size of the window.
+        stride: the stride of the window. Default value is ``kernel_size``.
+        padding: implicit zero padding to be added on both sides.Default: 0.
 
     Examples:
         >>> import numpy as np
