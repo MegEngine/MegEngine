@@ -49,7 +49,7 @@ active_trace = None
 skip_tracing = False
 
 
-def is_tracing():
+def _is_tracing():
     if active_trace is None:
         return False
     else:
@@ -73,7 +73,7 @@ def exclude_from_trace():
         skip_tracing = False
 
 
-def array_comparator(lhs, rhs):
+def _array_comparator(lhs, rhs):
     return np.all(lhs == rhs)
 
 
@@ -184,7 +184,7 @@ class trace:
         self._trace.no_exec = record_only
         self._trace.options_visitor = apply_options
         self._trace.profile = profiling
-        self._trace.array_comparator = array_comparator
+        self._trace.array_comparator = _array_comparator
         self._trace.record_input_shapes = _input_node_use_static_shape()
 
     def __call__(self, *args, **kwargs):

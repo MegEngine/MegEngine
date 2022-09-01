@@ -7,7 +7,7 @@ from weakref import WeakSet
 
 import numpy as np
 
-from megengine.autodiff.grad_manager import GradManager, get_backwarding_grad_manager
+from megengine.autodiff.grad_manager import GradManager, _get_backwarding_grad_manager
 
 from ..core._imperative_rt.core2 import apply
 from ..core.ops.builtin import ParamPackConcat, ParamPackSplit
@@ -78,7 +78,7 @@ def param_pack_concat(inps: list, offsets: Tensor, offsets_val: list):
     return apply(op, *inps, offsets)[0]
 
 
-def get_offsets(shapes):
+def _get_offsets(shapes):
     offsets = []
     offset = 0
     for shape in shapes:
@@ -108,7 +108,7 @@ def _check_enable_p2p():
 
 
 def pack_allreduce_split(pack_list, shapes, group, reduce_method):
-    offsets_val = get_offsets(shapes)
+    offsets_val = _get_offsets(shapes)
     offsets = Tensor(offsets_val)
     packed_grads = param_pack_concat(pack_list, offsets, offsets_val)
 
@@ -119,7 +119,7 @@ def pack_allreduce_split(pack_list, shapes, group, reduce_method):
     return grads
 
 
-class TensorFuture(Future):
+class _TensorFuture(Future):
     def device(self):
         raise "Sorry, this tensor is not ready"
 
@@ -234,13 +234,13 @@ class AllreduceCallback:
         self._packing_size[dtype] = 0
 
     def __call__(self, param, grad):
-        gm = get_backwarding_grad_manager()
+        gm = _get_backwarding_grad_manager()
         assert isinstance(gm, GradManager)
         if gm not in self._marked_gm:
             gm._register_after_backward_callback(self._flush)
             self._marked_gm.add(gm)
         self._params.append(param)
-        self._futures_dict[param] = TensorFuture(ack=False)
+        self._futures_dict[param] = _TensorFuture(ack=False)
         self._gradients_dict[param] = grad
         self._grad_origin_device[param] = str(grad.device)
 

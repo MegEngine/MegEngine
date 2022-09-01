@@ -12,7 +12,7 @@ from ..core._imperative_rt.utils import create_mm_server
 from ..utils.future import Future
 
 
-class Methods:
+class _Methods:
     r"""Distributed Server Method.
     Used for exchange information between distributed nodes.
 
@@ -149,7 +149,7 @@ class Methods:
         return ret
 
 
-class ThreadXMLRPCServer(ThreadingMixIn, SimpleXMLRPCServer):
+class _ThreadXMLRPCServer(ThreadingMixIn, SimpleXMLRPCServer):
     pass
 
 
@@ -163,10 +163,10 @@ def _start_server(py_server_port, queue):
     """
     try:
         mm_server_port = create_mm_server("0.0.0.0", 0)
-        server = ThreadXMLRPCServer(
+        server = _ThreadXMLRPCServer(
             ("0.0.0.0", py_server_port), logRequests=False, allow_none=True
         )
-        server.register_instance(Methods(mm_server_port))
+        server.register_instance(_Methods(mm_server_port))
         _, py_server_port = server.server_address
         queue.put((py_server_port, mm_server_port))
         server.serve_forever()
@@ -196,7 +196,7 @@ class Server:
         self.proc.terminate()
 
 
-class Client:
+class _Client:
     r"""Distributed Client for distributed training.
 
     Args:
@@ -298,10 +298,10 @@ class Client:
         return self.proxy.bcast_val(val, key, size)
 
 
-def main(port=0, verbose=True):
+def _main(port=0, verbose=True):
     mm_server_port = create_mm_server("0.0.0.0", 0)
-    server = ThreadXMLRPCServer(("0.0.0.0", port), logRequests=verbose)
-    server.register_instance(Methods(mm_server_port))
+    server = _ThreadXMLRPCServer(("0.0.0.0", port), logRequests=verbose)
+    server.register_instance(_Methods(mm_server_port))
     _, port = server.server_address
     print("serving on port", port)
     server.serve_forever()
@@ -314,4 +314,4 @@ if __name__ == "__main__":
     ap.add_argument("-p", "--port", type=int, default=0)
     ap.add_argument("-v", "--verbose", type=bool, default=True)
     args = ap.parse_args()
-    main(port=args.port, verbose=args.verbose)
+    _main(port=args.port, verbose=args.verbose)

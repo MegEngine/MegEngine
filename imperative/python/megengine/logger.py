@@ -18,10 +18,10 @@ def set_log_file(fout, mode="a"):
     """
     if isinstance(fout, str):
         fout = open(fout, mode)
-    MegEngineLogFormatter.log_fout = fout
+    _MegEngineLogFormatter.log_fout = fout
 
 
-class MegEngineLogFormatter(logging.Formatter):
+class _MegEngineLogFormatter(logging.Formatter):
     log_fout = None
     date_full = "[%(asctime)s %(lineno)d@%(filename)s:%(name)s] "
     date = "%(asctime)s "
@@ -71,7 +71,7 @@ class MegEngineLogFormatter(logging.Formatter):
 
         if self.log_fout:
             self.__set_fmt(self.date_full + mtxt + self.msg)
-            formatted = super(MegEngineLogFormatter, self).format(record)
+            formatted = super(_MegEngineLogFormatter, self).format(record)
             nr_line = formatted.count("\n") + 1
             if nr_line >= self.max_lines:
                 head, body = formatted.split("\n", 1)
@@ -88,7 +88,7 @@ class MegEngineLogFormatter(logging.Formatter):
             self.log_fout.flush()
 
         self.__set_fmt(self._color_date(self.date) + mcl(mtxt + self.msg))
-        formatted = super(MegEngineLogFormatter, self).format(record)
+        formatted = super(_MegEngineLogFormatter, self).format(record)
 
         if record.exc_text or record.exc_info:
             # handle exception format
@@ -125,7 +125,7 @@ class MegEngineLogFormatter(logging.Formatter):
             self._style._fmt = fmt
 
 
-def get_logger(name=None, formatter=MegEngineLogFormatter):
+def get_logger(name=None, formatter=_MegEngineLogFormatter):
     r"""Gets megengine logger with given name."""
 
     logger = logging.getLogger(name)
@@ -167,16 +167,16 @@ try:
 
     from .core._imperative_rt.utils import Logger as _imperative_rt_logger
 
-    class MegBrainLogFormatter(MegEngineLogFormatter):
+    class _MegBrainLogFormatter(_MegEngineLogFormatter):
         date = "%(asctime)s[mgb] "
 
         def _color_date(self, msg):
             return "\x1b[33m{}\x1b[0m".format(msg)
 
-    _megbrain_logger = get_logger("megbrain", MegBrainLogFormatter)
+    _megbrain_logger = get_logger("megbrain", _MegBrainLogFormatter)
     _imperative_rt_logger.set_log_handler(_megbrain_logger)
 
-    def set_mgb_log_level(level):
+    def _set_mgb_log_level(level):
         r"""Sets megbrain log level
 
         Args:
@@ -200,30 +200,30 @@ try:
             )
         return rst
 
-    set_mgb_log_level(_default_level)
+    _set_mgb_log_level(_default_level)
 
 
 except ImportError as exc:
 
-    def set_mgb_log_level(level):
+    def _set_mgb_log_level(level):
         raise NotImplementedError("imperative_rt has not been imported")
 
 
 @contextlib.contextmanager
-def replace_mgb_log_level(level):
+def _replace_mgb_log_level(level):
     r"""Replaces megbrain log level in a block and restore after exiting.
 
     Args:
         level: new log level
     """
-    old = set_mgb_log_level(level)
+    old = _set_mgb_log_level(level)
     try:
         yield
     finally:
-        set_mgb_log_level(old)
+        _set_mgb_log_level(old)
 
 
 def enable_debug_log():
     r"""Sets logging level to debug for all components."""
     set_log_level(logging.DEBUG)
-    set_mgb_log_level(logging.DEBUG)
+    _set_mgb_log_level(logging.DEBUG)

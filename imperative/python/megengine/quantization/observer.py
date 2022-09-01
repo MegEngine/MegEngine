@@ -7,7 +7,7 @@ import numpy as np
 
 from .. import functional as F
 from ..core.tensor.dtype import QuantDtypeMeta, _builtin_quant_dtypes
-from ..distributed import WORLD, get_rank, is_distributed
+from ..distributed import WORLD, is_distributed
 from ..functional.distributed import all_reduce_max, all_reduce_min
 from ..logger import get_logger
 from ..module import Module
