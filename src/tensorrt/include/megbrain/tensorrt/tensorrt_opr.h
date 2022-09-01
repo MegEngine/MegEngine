@@ -28,6 +28,18 @@ enum class Empty : int32_t {};
 #define TENSORRT_NO_EXCEPT(api)
 #endif
 
+#if (NV_TENSOR_RT_VERSION >= 7000)
+//! FIXME: trt7.2.2.3 leak memory in setDeviceMemory API, now trt malloc workspace
+//! self, megengine do not alloc any workspace
+#define TENSOR_RT_MANAGE_ALL_WORKSPACE 1
+#else
+#define TENSOR_RT_MANAGE_ALL_WORKSPACE 0
+#endif
+
+#if NV_TENSOR_RT_VERSION >= 8000
+#error "if trt8 fix https://github.com/NVIDIA/TensorRT/issues/2290, try TENSOR_RT_MANAGE_ALL_WORKSPACE=0"
+#endif
+
 namespace mgb {
 namespace opr {
 
@@ -73,7 +85,12 @@ public:
 };
 
 static inline size_t workspace_size(nvinfer1::ICudaEngine* engine) {
+#if TENSOR_RT_MANAGE_ALL_WORKSPACE
+    MGB_MARK_USED_VAR(engine);
+    return 0;
+#else
     return engine->getDeviceMemorySize();
+#endif
 }
 }  // namespace intl
 
