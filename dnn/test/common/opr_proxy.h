@@ -579,6 +579,10 @@ struct OprWeightPreprocessProxyImpl : public OprProxyProfilingBase<Opr> {
         }
         AlgoProxy<Opr, arity>::exec(
                 opr, tensors, &preprocessed_filter, Base::W.workspace());
+        //! as preprocess_tensors will call destructor at end of this function,
+        //! sync to wait worker consume preprocess_tensors, to prevent use after free
+        //! case happen
+        megcoreSynchronize(opr->handle()->megcore_computing_handle());
     }
 
     //! handle weight preprocess
