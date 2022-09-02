@@ -43,6 +43,7 @@ from .debug_param import get_execution_strategy
 from .distributed import all_reduce_sum
 from .elemwise import _elwise, exp, log, log1p, maximum, minimum
 from .math import max, sum
+from .metric import topk_accuracy
 from .tensor import broadcast_to, concat, expand_dims, ones, squeeze, zeros
 
 __all__ = [
@@ -85,6 +86,7 @@ __all__ = [
     "softmax",
     "softplus",
     "sync_batch_norm",
+    "topk_accuracy",
     "warp_affine",
     "warp_perspective",
     "pixel_shuffle",
@@ -1960,5 +1962,4 @@ def pixel_shuffle(inp: Tensor, upscale_factor: int) -> Tensor:
 
 from .quantized import conv_bias_activation  # isort:skip
 from .loss import *  # isort:skip
-from .metric import *  # isort:skip
 from .vision import *  # isort:skip
