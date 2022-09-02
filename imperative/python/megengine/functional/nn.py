@@ -668,7 +668,7 @@ def max_pool2d(
 
     Examples:
         >>> import numpy as np
-        >>> input = tensor(np.arange(1 * 1 * 3 * 4).astype(np.float32).reshape(1, 1, 3, 4))
+        >>> input = Tensor(np.arange(1 * 1 * 3 * 4).astype(np.float32).reshape(1, 1, 3, 4))
         >>> F.nn.max_pool2d(input, 2, 1, 0)
         Tensor([[[[ 5.  6.  7.]
            [ 9. 10. 11.]]]], device=xpux:0)
