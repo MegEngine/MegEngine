@@ -546,6 +546,13 @@ bool VarNodeMemManager::free_combine_memory_no_need_var() {
                         size_t size = var->layout().span().dist_byte();
                         storage.ensure_size(size);
                         storage.copy_from(var->m_dev_tensor.storage(), size);
+                        auto ref_cn =
+                                var->m_dev_tensor.storage().raw_storage().use_count();
+                        //! var->m_dev_tensor.storage() will free now,
+                        //! insure do not trigger UAF issue for copy_from.
+                        if (ref_cn <= 2) {
+                            comp_node.sync();
+                        }
 
                         var->m_dev_tensor.reset(storage, var->layout());
                         opr_base->mutable_values()[index]->reset(
