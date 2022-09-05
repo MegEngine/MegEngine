@@ -65,7 +65,7 @@ void noncont_tensor_copy(
     }
     DeviceTensorND tmp;
     tmp.copy_from(src);
-    dest.copy_from_fixlayout(tmp);
+    dest.copy_from_fixlayout(tmp).sync();
 }
 
 //! implement non-contiguous h2d copy
