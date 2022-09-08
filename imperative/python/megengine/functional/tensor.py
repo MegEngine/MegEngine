@@ -1050,13 +1050,13 @@ def copy(inp, device=None):
 
     Examples:
 
-        >>> x = megengine.tensor([1, 2, 3], numpy.int32)
+        >>> x = Tensor([1, 2, 3], numpy.int32)
         Tensor([1 2 3], dtype=int32, device=xpux:0)
 
-        >>> megengine.functional.copy(x, 'cpu1')
+        >>> F.copy(x, 'cpu1')
         Tensor([1 2 3], dtype=int32, device=cpu1:0)
 
-        >>> megengine.functional.copy(x, 'xpu0')
+        >>> F.copy(x, 'xpu0')
         Tensor([1 2 3], dtype=int32, device=xpu0:0)
 
     """
