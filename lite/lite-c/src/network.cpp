@@ -1,5 +1,6 @@
 #include "lite/network.h"
 #include "common.h"
+#include "ipc_helper.h"
 #include "lite-c/network_c.h"
 
 #include "../../src/network_impl_base.h"
@@ -204,11 +205,32 @@ int LITE_make_network(
         LiteNetwork* network, const LiteConfig config, const LiteNetworkIO network_io) {
     LITE_CAPI_BEGIN();
     LITE_ASSERT(network, "The network pass to LITE api is null");
-    auto lite_network = std::make_shared<lite::Network>(
-            convert_to_lite_config(config), convert_to_lite_io(network_io));
-    LITE_LOCK_GUARD(mtx_network);
-    get_gloabl_network_holder()[lite_network.get()] = lite_network;
-    *network = lite_network.get();
+    if (ipc_imp::is_server()) {
+        auto lite_network = std::make_shared<lite::Network>(
+                convert_to_lite_config(config), convert_to_lite_io(network_io));
+        LITE_LOCK_GUARD(mtx_network);
+        get_gloabl_network_holder()[lite_network.get()] = lite_network;
+        *network = lite_network.get();
+    } else {
+        size_t need_size = sizeof(LiteConfig) + sizeof(LiteNetworkIO);
+        IPC_INSTACE().check_shm_size(need_size);
+
+        void* raw_shm_ptr = IPC_INSTACE().get_shm_ptr(nullptr);
+
+        //! second args is const LiteConfig config
+        char* shm_ptr_c = static_cast<char*>(raw_shm_ptr);
+        memcpy(shm_ptr_c, &config, sizeof(LiteConfig));
+        //! third args is network_io
+        memcpy(shm_ptr_c + sizeof(LiteNetworkIO), &network_io, sizeof(LiteNetworkIO));
+
+        IPC_HELP_REMOTE_CALL(raw_shm_ptr, ipc::RemoteFuncId::LITE_MAKE_NETWORK);
+
+        int* ret_ptr = static_cast<int*>(raw_shm_ptr);
+        auto ret = *ret_ptr;
+        ret_ptr++;
+        memcpy(network, ret_ptr, sizeof(LiteNetwork));
+        return ret;
+    }
     LITE_CAPI_END();
 }
 
@@ -234,17 +256,53 @@ int LITE_load_model_from_path(LiteNetwork network, const char* model_path) {
     LITE_CAPI_BEGIN();
     LITE_ASSERT(network, "The network pass to LITE api is null");
     LITE_ASSERT(model_path, "The model path pass to LITE api is null");
-    static_cast<lite::Network*>(network)->load_model(model_path);
+    if (ipc_imp::is_server()) {
+        static_cast<lite::Network*>(network)->load_model(model_path);
+    } else {
+        size_t need_size = sizeof(LiteNetwork) + strlen(model_path) + 1;
+        IPC_INSTACE().check_shm_size(need_size);
+
+        void* raw_shm_ptr = IPC_INSTACE().get_shm_ptr(network);
+
+        //! first args is LiteNetwork network
+        char* shm_ptr_c = static_cast<char*>(raw_shm_ptr);
+        memcpy(shm_ptr_c, &network, sizeof(LiteNetwork));
+        //! second args is const char* model_path
+        strcpy(shm_ptr_c + sizeof(LiteNetwork), model_path);
+
+        IPC_HELP_REMOTE_CALL(raw_shm_ptr, ipc::RemoteFuncId::LITE_LOAD_MODEL_FROM_PATH);
+
+        int* ret_ptr = static_cast<int*>(raw_shm_ptr);
+        auto ret = *ret_ptr;
+        return ret;
+    }
     LITE_CAPI_END();
 }
 
 int LITE_destroy_network(LiteNetwork network) {
     LITE_CAPI_BEGIN();
     LITE_ASSERT(network, "The network pass to LITE api is null");
-    LITE_LOCK_GUARD(mtx_network);
-    auto& global_holder = get_gloabl_network_holder();
-    if (global_holder.find(network) != global_holder.end()) {
-        global_holder.erase(network);
+    if (ipc_imp::is_server()) {
+        LITE_LOCK_GUARD(mtx_network);
+        auto& global_holder = get_gloabl_network_holder();
+        if (global_holder.find(network) != global_holder.end()) {
+            global_holder.erase(network);
+        }
+    } else {
+        size_t need_size = sizeof(LiteNetwork);
+        IPC_INSTACE().check_shm_size(need_size);
+
+        void* raw_shm_ptr = IPC_INSTACE().get_shm_ptr(network);
+
+        char* shm_ptr_c = static_cast<char*>(raw_shm_ptr);
+        memcpy(shm_ptr_c, &network, sizeof(LiteNetwork));
+
+        IPC_HELP_REMOTE_CALL(raw_shm_ptr, ipc::RemoteFuncId::LITE_DESTROY_NETWORK);
+
+        int* ret_ptr = static_cast<int*>(raw_shm_ptr);
+        auto ret = *ret_ptr;
+        ret_ptr++;
+        return ret;
     }
     LITE_CAPI_END();
 }
@@ -252,14 +310,48 @@ int LITE_destroy_network(LiteNetwork network) {
 int LITE_forward(const LiteNetwork network) {
     LITE_CAPI_BEGIN();
     LITE_ASSERT(network, "The network pass to LITE api is null");
-    static_cast<lite::Network*>(network)->forward();
+    if (ipc_imp::is_server()) {
+        static_cast<lite::Network*>(network)->forward();
+    } else {
+        size_t need_size = sizeof(LiteNetwork);
+        IPC_INSTACE().check_shm_size(need_size);
+
+        void* raw_shm_ptr = IPC_INSTACE().get_shm_ptr(network);
+
+        char* shm_ptr_c = static_cast<char*>(raw_shm_ptr);
+        memcpy(shm_ptr_c, &network, sizeof(LiteNetwork));
+
+        IPC_HELP_REMOTE_CALL(raw_shm_ptr, ipc::RemoteFuncId::LITE_FORWARD);
+
+        int* ret_ptr = static_cast<int*>(raw_shm_ptr);
+        auto ret = *ret_ptr;
+        ret_ptr++;
+        return ret;
+    }
     LITE_CAPI_END();
 }
 
 int LITE_wait(const LiteNetwork network) {
     LITE_CAPI_BEGIN();
     LITE_ASSERT(network, "The network pass to LITE api is null");
-    static_cast<lite::Network*>(network)->wait();
+    if (ipc_imp::is_server()) {
+        static_cast<lite::Network*>(network)->wait();
+    } else {
+        size_t need_size = sizeof(LiteNetwork);
+        IPC_INSTACE().check_shm_size(need_size);
+
+        void* raw_shm_ptr = IPC_INSTACE().get_shm_ptr(network);
+
+        char* shm_ptr_c = static_cast<char*>(raw_shm_ptr);
+        memcpy(shm_ptr_c, &network, sizeof(LiteNetwork));
+
+        IPC_HELP_REMOTE_CALL(raw_shm_ptr, ipc::RemoteFuncId::LITE_WAIT);
+
+        int* ret_ptr = static_cast<int*>(raw_shm_ptr);
+        auto ret = *ret_ptr;
+        ret_ptr++;
+        return ret;
+    }
     LITE_CAPI_END();
 }
 
@@ -268,9 +360,31 @@ int LITE_get_io_tensor(
         LiteTensor* tensor) {
     LITE_CAPI_BEGIN();
     LITE_ASSERT(network, "The network pass to LITE api is null");
-    auto io_tensor =
-            static_cast<lite::Network*>(network)->get_io_tensor(io_name, phase);
-    *tensor = io_tensor.get();
+    if (ipc_imp::is_server()) {
+        auto io_tensor =
+                static_cast<lite::Network*>(network)->get_io_tensor(io_name, phase);
+        *tensor = io_tensor.get();
+    } else {
+        size_t need_size =
+                sizeof(LiteNetwork) + strlen(io_name) + 1 + sizeof(LiteTensorPhase);
+        IPC_INSTACE().check_shm_size(need_size);
+
+        void* raw_shm_ptr = IPC_INSTACE().get_shm_ptr(network);
+
+        char* shm_ptr_c = static_cast<char*>(raw_shm_ptr);
+        memcpy(shm_ptr_c, &network, sizeof(LiteNetwork));
+        memcpy(shm_ptr_c + sizeof(LiteNetwork), &phase, sizeof(LiteTensorPhase));
+        strcpy(shm_ptr_c + sizeof(LiteNetwork) + sizeof(LiteTensorPhase), io_name);
+
+        IPC_HELP_REMOTE_CALL(raw_shm_ptr, ipc::RemoteFuncId::LITE_GET_IO_TENSOR);
+
+        int* ret_ptr = static_cast<int*>(raw_shm_ptr);
+        auto ret = *ret_ptr;
+        ret_ptr++;
+        memcpy(tensor, ret_ptr, sizeof(LiteTensor));
+        IPC_INSTACE().release_shm_ptr(network);
+        return ret;
+    }
     LITE_CAPI_END();
 }
 
@@ -286,8 +400,31 @@ int LITE_get_output_name(const LiteNetwork network, size_t index, const char** n
     LITE_CAPI_BEGIN();
     LITE_ASSERT(network, "The network pass to LITE api is null");
     LITE_ASSERT(name, "The name ptr pass to LITE api is null");
-    *name = lite::NetworkHelper::implement(static_cast<lite::Network*>(network))
-                    ->get_output_name(index);
+    if (ipc_imp::is_server()) {
+        *name = lite::NetworkHelper::implement(static_cast<lite::Network*>(network))
+                        ->get_output_name(index);
+    } else {
+        size_t need_size = sizeof(LiteNetwork) + sizeof(index);
+        IPC_INSTACE().check_shm_size(need_size);
+
+        //! warn: we use get_shm_ptr with nullptr, not with network
+        //! so caller need consume this ptr as soon as possible
+        void* raw_shm_ptr = IPC_INSTACE().get_shm_ptr(nullptr);
+
+        char* shm_ptr_c = static_cast<char*>(raw_shm_ptr);
+        memcpy(shm_ptr_c, &network, sizeof(LiteNetwork));
+        memcpy(shm_ptr_c + sizeof(LiteNetwork), &index, sizeof(size_t));
+
+        IPC_HELP_REMOTE_CALL(raw_shm_ptr, ipc::RemoteFuncId::LITE_GET_OUTPUT_NAME);
+
+        int* ret_ptr = static_cast<int*>(raw_shm_ptr);
+        auto ret = *ret_ptr;
+        ret_ptr++;
+        void* p = static_cast<void*>(ret_ptr);
+        char* p_c = static_cast<char*>(p);
+        *name = p_c;
+        return ret;
+    }
     LITE_CAPI_END();
 }
 

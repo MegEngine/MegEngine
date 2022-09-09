@@ -159,6 +159,15 @@ LITE_API int LITE_tensor_share_memory_with(
 LITE_API int LITE_get_tensor_memory(const LiteTensor tensor, void** data);
 
 /**
+ * \brief copy tensor memory if fork debug mode.
+ * \param[server_ptr] the ptr valid in lite server
+ * \param[client_ptr] the ptr only valid in lite client
+ * \param[size_in_byte] copy size
+ */
+LITE_API int LITE_copy_server_tensor_memory(
+        void* server_ptr, void* client_ptr, size_t size_in_byte);
+
+/**
  * \brief get the memory pointer of a Tensor object.
  * \param[in] tensor The input Tensor
  * \param[in] index The coordinate in the tensor
@@ -229,6 +238,11 @@ LITE_API int LITE_is_memory_continue(const LiteTensor tensor, int* is_continue);
 LITE_API int LITE_tensor_concat(
         LiteTensor* tensors, int nr_tensor, int dim, LiteDeviceType dst_device,
         int device_id, LiteTensor* result_tensor);
+
+/**
+ * \brief fuction like memset
+ */
+LITE_API void* LITE_memset(void* s, int c, size_t n);
 
 #ifdef __cplusplus
 }

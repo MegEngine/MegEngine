@@ -14,6 +14,7 @@
 #include "lite-c/tensor_c.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #define LITE_CAPI_CHECK(_expr)                                       \
@@ -42,7 +43,7 @@ int basic_c_interface(const char* mode_path) {
             LITE_get_tensor_total_size_in_byte(c_input_tensor, &length_in_byte));
     LITE_CAPI_CHECK(LITE_get_tensor_memory(c_input_tensor, &dst_ptr));
     //! copy or forward data to network
-    memset(dst_ptr, 5, length_in_byte);
+    LITE_memset(dst_ptr, 5, length_in_byte);
 
     //! forward
     LITE_CAPI_CHECK(LITE_forward(c_network));
@@ -66,23 +67,41 @@ int basic_c_interface(const char* mode_path) {
 
     float max = -1.0f;
     float sum = 0.0f;
+    int is_enable_ipc_debug = LITE_is_enable_ipc_debug_mode();
+    float* copy_ptr = NULL;
+    float* final_dst_ptr = (float*)output_ptr;
+    if (is_enable_ipc_debug) {
+        copy_ptr = (float*)(malloc(length_output_in_byte));
+        LITE_CAPI_CHECK(LITE_copy_server_tensor_memory(
+                output_ptr, copy_ptr, length_output_in_byte));
+        final_dst_ptr = (float*)copy_ptr;
+    }
+
     for (size_t i = 0; i < out_length; i++) {
-        float data = ((float*)(output_ptr))[i];
+        float data = final_dst_ptr[i];
         sum += data;
         if (max < data)
             max = data;
     }
     printf("max=%e, sum=%e\n", max, sum);
+    LITE_destroy_network(c_network);
+    if (is_enable_ipc_debug) {
+        free(copy_ptr);
+    }
     return 0;
 }
 
 int main(int argc, char** argv) {
-    if (argc < 2) {
-        printf("usage: lite_c_examples <model file> , just test C interface "
+    if (argc < 3) {
+        printf("usage: lite_c_examples is_enable_fork_debug_model <model file> , just "
+               "test C interface "
                "build.\n");
         return -1;
     }
-    return basic_c_interface(argv[1]);
+    if (atoi(argv[1])) {
+        LITE_enable_lite_ipc_debug();
+    }
+    return basic_c_interface(argv[2]);
 }
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

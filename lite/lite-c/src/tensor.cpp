@@ -4,6 +4,7 @@
 #include <unordered_map>
 #include "../../src/tensor_impl_base.h"
 #include "common.h"
+#include "ipc_helper.h"
 #include "lite-c/tensor_c.h"
 
 const LiteLayout default_layout = {
@@ -166,7 +167,70 @@ int LITE_get_tensor_memory(const LiteTensor tensor, void** data) {
     LITE_CAPI_BEGIN();
     LITE_ASSERT(tensor, "The tensor pass to LITE c_api is null");
     LITE_ASSERT(data, "The data ptr pass to LITE c_api is null");
-    *data = static_cast<lite::Tensor*>(tensor)->get_memory_ptr();
+    if (ipc_imp::is_server()) {
+        *data = static_cast<lite::Tensor*>(tensor)->get_memory_ptr();
+    } else {
+        size_t need_size = sizeof(LiteTensor);
+        IPC_INSTACE().check_shm_size(need_size);
+
+        void* raw_shm_ptr = IPC_INSTACE().get_shm_ptr(nullptr);
+
+        char* shm_ptr_c = static_cast<char*>(raw_shm_ptr);
+        memcpy(shm_ptr_c, &tensor, sizeof(LiteTensor));
+
+        IPC_HELP_REMOTE_CALL(raw_shm_ptr, ipc::RemoteFuncId::LITE_GET_TENSOR_MEMORY);
+
+        int* ret_ptr = static_cast<int*>(raw_shm_ptr);
+        auto ret = *ret_ptr;
+        ret_ptr++;
+        memcpy(data, ret_ptr, sizeof(void*));
+        return ret;
+    }
+    LITE_CAPI_END();
+}
+
+void* LITE_memset(void* s, int c, size_t n) {
+    if (ipc_imp::is_server()) {
+        return memset(s, c, n);
+    } else {
+        size_t need_size = sizeof(void*) + sizeof(int) + sizeof(size_t);
+        IPC_INSTACE().check_shm_size(need_size);
+
+        void* raw_shm_ptr = IPC_INSTACE().get_shm_ptr(nullptr);
+
+        char* shm_ptr_c = static_cast<char*>(raw_shm_ptr);
+        memcpy(shm_ptr_c, &s, sizeof(void*));
+        memcpy(shm_ptr_c + sizeof(void*), &c, sizeof(int));
+        memcpy(shm_ptr_c + sizeof(void*) + sizeof(int), &n, sizeof(size_t));
+
+        IPC_HELP_REMOTE_CALL(raw_shm_ptr, ipc::RemoteFuncId::LITE_MEMSET);
+
+        return s;
+    }
+}
+
+int LITE_copy_server_tensor_memory(
+        void* server_ptr, void* client_ptr, size_t size_in_byte) {
+    LITE_CAPI_BEGIN();
+    if (ipc_imp::is_server()) {
+        LITE_ASSERT(
+                false, "lite not in fork debug mode, please do not call this function");
+    } else {
+        size_t need_size = sizeof(void*) + sizeof(size_t);
+        IPC_INSTACE().check_shm_size(need_size);
+        IPC_INSTACE().check_shm_size(size_in_byte);
+
+        void* raw_shm_ptr = IPC_INSTACE().get_shm_ptr(nullptr);
+
+        char* shm_ptr_c = static_cast<char*>(raw_shm_ptr);
+        memcpy(shm_ptr_c, &server_ptr, sizeof(void*));
+        memcpy(shm_ptr_c + sizeof(void*), &size_in_byte, sizeof(size_t));
+
+        IPC_HELP_REMOTE_CALL(
+                raw_shm_ptr, ipc::RemoteFuncId::LITE_COPY_SERVER_TENSOR_MEMORY);
+        memcpy(client_ptr, raw_shm_ptr, size_in_byte);
+        return 0;
+    }
     LITE_CAPI_END();
 }
 
@@ -186,7 +250,26 @@ int LITE_get_tensor_total_size_in_byte(const LiteTensor tensor, size_t* size) {
     LITE_CAPI_BEGIN();
     LITE_ASSERT(tensor, "The tensor pass to LITE c_api is null");
     LITE_ASSERT(size, "The size ptr pass to LITE c_api is null");
-    *size = static_cast<lite::Tensor*>(tensor)->get_tensor_total_size_in_byte();
+    if (ipc_imp::is_server()) {
+        *size = static_cast<lite::Tensor*>(tensor)->get_tensor_total_size_in_byte();
+    } else {
+        size_t need_size = sizeof(LiteTensor);
+        IPC_INSTACE().check_shm_size(need_size);
+
+        void* raw_shm_ptr = IPC_INSTACE().get_shm_ptr(nullptr);
+
+        char* shm_ptr_c = static_cast<char*>(raw_shm_ptr);
+        memcpy(shm_ptr_c, &tensor, sizeof(LiteTensor));
+
+        IPC_HELP_REMOTE_CALL(
+                raw_shm_ptr, ipc::RemoteFuncId::LITE_GET_TENSOR_TOTAL_SIZE_IN_BYTE);
+
+        int* ret_ptr = static_cast<int*>(raw_shm_ptr);
+        auto ret = *ret_ptr;
+        ret_ptr++;
+        memcpy(size, ret_ptr, sizeof(size_t));
+        return ret;
+    }
     LITE_CAPI_END();
 }
 
