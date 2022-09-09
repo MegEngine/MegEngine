@@ -5426,6 +5426,40 @@ OP_TRAIT_REG(NMSKeep, NMSKeep)
     .props(NMSKeep_props_impl)
     .make_name(NMSKeep_make_name_impl);
 
+MGB_DYN_TYPE_OBJ_FINAL_IMPL(NonZero);
+
+namespace {
+size_t NonZero_hash_impl(const OpDef& def_) {
+    auto&& op_ = def_.cast_final_safe<NonZero>();
+    static_cast<void>(op_);
+    size_t val = mgb::hash(op_.dyn_typeinfo());
+    return val;
+}
+bool NonZero_is_same_st_impl(const OpDef& lhs_, const OpDef& rhs_) {
+    auto &&a_ = lhs_.cast_final_safe<NonZero>(),
+         &&b_ = rhs_.cast_final_safe<NonZero>();
+    static_cast<void>(a_);
+    static_cast<void>(b_);
+    return true;
+}
+std::vector<std::pair<const char*, std::string>> NonZero_props_impl(const OpDef& def_) {
+    auto&& op_ = def_.cast_final_safe<NonZero>();
+    static_cast<void>(op_);
+    std::vector<std::pair<const char*, std::string>> props_;
+    return props_;
+}
+std::string NonZero_make_name_impl(const OpDef& def_) {
+    auto&& op_ = def_.cast_final_safe<NonZero>();
+    static_cast<void>(op_);
+    return "NonZero";
+}
+} // anonymous namespace
+OP_TRAIT_REG(NonZero, NonZero)
+    .hash(NonZero_hash_impl)
+    .is_same_st(NonZero_is_same_st_impl)
+    .props(NonZero_props_impl)
+    .make_name(NonZero_make_name_impl);
+
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(NvOf);
 
 namespace {
@@ -8332,5 +8366,73 @@ OP_TRAIT_REG(WarpPerspectiveBackwardMat, WarpPerspectiveBackwardMat)
     .is_same_st(WarpPerspectiveBackwardMat_is_same_st_impl)
     .props(WarpPerspectiveBackwardMat_props_impl)
     .make_name(WarpPerspectiveBackwardMat_make_name_impl);
+
+MGB_DYN_TYPE_OBJ_FINAL_IMPL(Where);
+
+namespace {
+size_t Where_hash_impl(const OpDef& def_) {
+    auto&& op_ = def_.cast_final_safe<Where>();
+    static_cast<void>(op_);
+    size_t val = mgb::hash(op_.dyn_typeinfo());
+    return val;
+}
+bool Where_is_same_st_impl(const OpDef& lhs_, const OpDef& rhs_) {
+    auto &&a_ = lhs_.cast_final_safe<Where>(),
+         &&b_ = rhs_.cast_final_safe<Where>();
+    static_cast<void>(a_);
+    static_cast<void>(b_);
+    return true;
+}
+std::vector<std::pair<const char*, std::string>> Where_props_impl(const OpDef& def_) {
+    auto&& op_ = def_.cast_final_safe<Where>();
+    static_cast<void>(op_);
+    std::vector<std::pair<const char*, std::string>> props_;
+    return props_;
+}
+std::string Where_make_name_impl(const OpDef& def_) {
+    auto&& op_ = def_.cast_final_safe<Where>();
+    static_cast<void>(op_);
+    return "Where";
+}
+} // anonymous namespace
+OP_TRAIT_REG(Where, Where)
+    .hash(Where_hash_impl)
+    .is_same_st(Where_is_same_st_impl)
+    .props(Where_props_impl)
+    .make_name(Where_make_name_impl);
+
+MGB_DYN_TYPE_OBJ_FINAL_IMPL(WhereBackward);
+
+namespace {
+size_t WhereBackward_hash_impl(const OpDef& def_) {
+    auto&& op_ = def_.cast_final_safe<WhereBackward>();
+    static_cast<void>(op_);
+    size_t val = mgb::hash(op_.dyn_typeinfo());
+    return val;
+}
+bool WhereBackward_is_same_st_impl(const OpDef& lhs_, const OpDef& rhs_) {
+    auto &&a_ = lhs_.cast_final_safe<WhereBackward>(),
+         &&b_ = rhs_.cast_final_safe<WhereBackward>();
+    static_cast<void>(a_);
+    static_cast<void>(b_);
+    return true;
+}
+std::vector<std::pair<const char*, std::string>> WhereBackward_props_impl(const OpDef& def_) {
+    auto&& op_ = def_.cast_final_safe<WhereBackward>();
+    static_cast<void>(op_);
+    std::vector<std::pair<const char*, std::string>> props_;
+    return props_;
+}
+std::string WhereBackward_make_name_impl(const OpDef& def_) {
+    auto&& op_ = def_.cast_final_safe<WhereBackward>();
+    static_cast<void>(op_);
+    return "WhereBackward";
+}
+} // anonymous namespace
+OP_TRAIT_REG(WhereBackward, WhereBackward)
+    .hash(WhereBackward_hash_impl)
+    .is_same_st(WhereBackward_is_same_st_impl)
+    .props(WhereBackward_props_impl)
+    .make_name(WhereBackward_make_name_impl);
 
 // clang-format on

@@ -142,6 +142,9 @@ using TopKBase = cg::SingleCNOperatorNode<
         cg::OperatorNodeBase, mixin::MegDNNOprHolderImpl<megdnn::TopK>>;
 using CheckNonFiniteBase = cg::SingleCNOperatorNode<
         cg::OperatorNodeBase, mixin::MegDNNOprHolderImpl<megdnn::CheckNonFinite>>;
+
+using NonZeroBase = cg::SingleCNOperatorNode<
+        cg::OperatorNodeBase, mixin::MegDNNOprHolderImpl<megdnn::NonZero>>;
 }  // namespace intl
 
 /*!
@@ -161,6 +164,18 @@ public:
     MGE_WIN_DECLSPEC_FUC static std::array<SymbolVar, 2> make(
             SymbolVar data, SymbolVar mask, const Param& param,
             const OperatorNodeConfig& config = {});
+};
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(NonZero, intl::NonZeroBase) // {
+    void init_output_static_infer_desc() override;
+    void scn_do_execute() override;
+    void add_input_layout_constraint() override;
+    NodeProp* do_make_node_prop() const override;
+
+public:
+    MGE_WIN_DECLSPEC_FUC NonZero(
+            VarNode* data, const Param& param, const OperatorNodeConfig& config);
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
+            SymbolVar data, const Param& param, const OperatorNodeConfig& config = {});
 };
 
 MGB_DEFINE_OPR_CLASS_WITH_EXPORT(TopK, intl::TopKBase) // {
@@ -193,6 +208,40 @@ public:
             const OperatorNodeConfig& config);
     MGE_WIN_DECLSPEC_FUC static SymbolVarArray make(
             const VarNodeArrayView& inp, const Param& param = {},
+            const OperatorNodeConfig& config = {});
+};
+
+MGB_DEFINE_OPR_CLASS(
+        WhereForward, intl::MegDNNOprWrapperFwd<megdnn::WhereForward>) // {
+    void scn_do_execute() override;
+    void init_output_static_infer_desc() override;
+    void add_input_layout_constraint() override;
+    NodeProp* do_make_node_prop() const override;
+
+public:
+    MGE_WIN_DECLSPEC_FUC WhereForward(
+            VarNode* mask, VarNode* data1, VarNode* data2, const Param& param,
+            const OperatorNodeConfig& config);
+
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
+            SymbolVar mask, SymbolVar data1, SymbolVar data2, const Param& param = {},
+            const OperatorNodeConfig& config = {});
+};
+using Where = WhereForward;
+
+MGB_DEFINE_OPR_CLASS(
+        WhereBackward, intl::MegDNNOprWrapperFwd<megdnn::WhereBackward>) // {
+    void scn_do_execute() override;
+    void init_output_static_infer_desc() override;
+    void add_input_layout_constraint() override;
+
+public:
+    MGE_WIN_DECLSPEC_FUC WhereBackward(
+            VarNode* diff, VarNode* mask, const Param& param,
+            const OperatorNodeConfig& config);
+
+    MGE_WIN_DECLSPEC_FUC static SymbolVarArray make(
+            SymbolVar diff, SymbolVar mask, const Param& param = {},
             const OperatorNodeConfig& config = {});
 };
 

@@ -52,6 +52,7 @@
 #include "src/cuda/max_tensor_diff/opr_impl.h"
 #include "src/cuda/mesh_indexing/opr_impl.h"
 #include "src/cuda/multi_head_attn/opr_impl.h"
+#include "src/cuda/non_zero/opr_impl.h"
 #include "src/cuda/norm/opr_impl.h"
 #include "src/cuda/padding/opr_impl.h"
 #include "src/cuda/param_pack/opr_impl.h"
@@ -84,6 +85,7 @@
 #include "src/cuda/type_cvt/opr_impl.h"
 #include "src/cuda/warp_affine/opr_impl.h"
 #include "src/cuda/warp_perspective/opr_impl.h"
+#include "src/cuda/where/opr_impl.h"
 
 namespace megdnn {
 namespace cuda {
@@ -122,6 +124,7 @@ MEGDNN_SPECIALIZE_CREATE_OPERATOR(BatchedMatrixMulForward);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(SVDForward);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(ReduceForward);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(CondTake);
+MEGDNN_SPECIALIZE_CREATE_OPERATOR(NonZero);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(CumsumForward);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(ArgmaxForward);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(ArgminForward);
@@ -236,6 +239,8 @@ MEGDNN_SPECIALIZE_CREATE_OPERATOR(RegionRestrictedConvolutionBackwardFilter);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(MultiHeadAttnForward);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(MultiHeadAttnBackward);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(Cross);
+MEGDNN_SPECIALIZE_CREATE_OPERATOR(WhereForward);
+MEGDNN_SPECIALIZE_CREATE_OPERATOR(WhereBackward);
 
 template <typename Opr>
 std::unique_ptr<Opr> HandleImpl::create_operator() {

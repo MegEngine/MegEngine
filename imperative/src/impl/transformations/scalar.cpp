@@ -304,6 +304,7 @@ struct ScalarRuleRegistry {
         register_scalar_rule<InplaceAdd, elemwise_rule<InplaceAdd, 4>>();
         register_scalar_rule<SubgraphOp, subgraph_op_rule<SubgraphOp>>();
         register_scalar_rule<CompiledOp, subgraph_op_rule<CompiledOp>>();
+        register_scalar_rule<Where, elemwise_rule<Where, 3>>();
     }
 } _;
 }  // namespace

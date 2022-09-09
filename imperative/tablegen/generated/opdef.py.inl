@@ -1553,6 +1553,11 @@ NMSKeepInst
     .def_readwrite("iou_thresh", &NMSKeep::iou_thresh)
     .def_readwrite("max_output", &NMSKeep::max_output);
 
+py::class_<NonZero, std::shared_ptr<NonZero>, OpDef> NonZeroInst(m, "NonZero");
+
+NonZeroInst
+    .def(py::init<>());
+
 py::class_<NvOf, std::shared_ptr<NvOf>, OpDef> NvOfInst(m, "NvOf");
 
 NvOfInst
@@ -2127,5 +2132,15 @@ WarpPerspectiveBackwardMatInst
     .def_readwrite("bmode", &WarpPerspectiveBackwardMat::bmode)
     .def_readwrite("format", &WarpPerspectiveBackwardMat::format)
     .def_readwrite("border_val", &WarpPerspectiveBackwardMat::border_val);
+
+py::class_<Where, std::shared_ptr<Where>, OpDef> WhereInst(m, "Where");
+
+WhereInst
+    .def(py::init<>());
+
+py::class_<WhereBackward, std::shared_ptr<WhereBackward>, OpDef> WhereBackwardInst(m, "WhereBackward");
+
+WhereBackwardInst
+    .def(py::init<>());
 
 // clang-format on

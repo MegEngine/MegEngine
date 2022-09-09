@@ -410,6 +410,24 @@ protected:
             size_t workspace_in_bytes);
 };
 
+class NonZero : public OperatorBase {
+    DEF_OPR_IMPL(NonZero, OperatorBase, 1, 1);
+    DEF_OPR_PARAM(Empty);
+
+public:
+    DType infer_type(DType Data);
+    virtual size_t get_workspace_in_bytes(const TensorLayout& src) = 0;
+
+    virtual TensorND exec(
+            _megdnn_tensor_in src, _megdnn_workspace workspace,
+            DynOutMallocPolicyCall malloc_policy) = 0;
+
+protected:
+    void check_exec(
+            const TensorLayout& src, const TensorLayout& dst,
+            size_t workspace_in_bytes);
+};
+
 class TransposeForward : public OperatorBase {
     DEF_OPR_IMPL(TransposeForward, OperatorBase, 1, 1);
     DEF_OPR_PARAM(Empty);
@@ -1534,6 +1552,74 @@ public:
             const TensorLayout& src, const TensorLayout& dst) = 0;
 };
 using Norm = NormForward;
+
+class WhereBase : public OperatorBase {
+    DEF_OPR_PARAM(Empty);
+    DEF_OPR_IMPL(WhereBase, OperatorBase, 3, 1);
+
+protected:
+    void deduce_layout_fwd(
+            const TensorLayout& mask, const TensorLayout& data1,
+            const TensorLayout& data2, TensorLayout& dst);
+    void check_layout_fwd(
+            const TensorLayout& mask, const TensorLayout& data1,
+            const TensorLayout& data2, const TensorLayout& dst);
+    void deduce_layout_bwd(
+            const TensorLayout& diff, const TensorLayout& mask,
+            TensorLayout& grad_data1, TensorLayout& grad_data2);
+    void check_layout_bwd(
+            const TensorLayout& diff, const TensorLayout& mask,
+            const TensorLayout& grad_data1, const TensorLayout& grad_data2);
+};
+
+class WhereForward : public WhereBase {
+    DEF_OPR_IMPL(WhereForward, WhereBase, 3, 1);
+
+public:
+    virtual void exec(
+            _megdnn_tensor_in mask, _megdnn_tensor_in data1, _megdnn_tensor_in data2,
+            _megdnn_tensor_out dst, _megdnn_workspace workspace) = 0;
+    MGE_WIN_DECLSPEC_FUC void deduce_layout(
+            const TensorLayout& mask, const TensorLayout& data1,
+            const TensorLayout& data2, TensorLayout& dst);
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& mask, const TensorLayout& data1,
+            const TensorLayout& data2, const TensorLayout& dst) = 0;
+
+protected:
+    void check_exec(
+            const TensorLayout& mask, const TensorLayout& data1,
+            const TensorLayout& data2, const TensorLayout& dst,
+            size_t get_workspace_in_bytes);
+};
+using Where = WhereForward;
+
+class WhereBackward : public WhereBase {
+    DEF_OPR_IMPL(WhereBackward, WhereBase, 2, 2);
+
+public:
+    /**
+     * \param[in] diff the backpropagated gradient wrt. dst
+     * \param[in] mask the `mask' parameter in WhereForward::exec
+     * \param[out] grad1 the backpropagated gradient wrt. data1
+     */
+    virtual void exec(
+            _megdnn_tensor_in diff, _megdnn_tensor_in mask,
+            _megdnn_tensor_out grad_data1, _megdnn_tensor_out grad_data2,
+            _megdnn_workspace workspace) = 0;
+    MGE_WIN_DECLSPEC_FUC void deduce_layout(
+            const TensorLayout& diff, const TensorLayout& mask,
+            TensorLayout& grad_data1, TensorLayout& grad_data2);
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& diff, const TensorLayout& mask,
+            const TensorLayout& grad_data1, const TensorLayout& grad_data2) = 0;
+
+protected:
+    void check_exec(
+            const TensorLayout& diff, const TensorLayout& mask,
+            const TensorLayout& grad_data1, const TensorLayout& grad_data2,
+            size_t get_workspace_in_bytes);
+};
 
 }  // namespace megdnn
 

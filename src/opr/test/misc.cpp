@@ -262,6 +262,25 @@ TEST(TestOprMisc, CondTakeEmptyIO) {
     check({1, 0});
 }
 
+TEST(TestOprMisc, NonZero) {
+    using Param = opr::NonZero::Param;
+    Param param;
+    HostTensorGenerator<> gen;
+    auto check = [&](const TensorShape& shp) {
+        auto host_data = gen(shp);
+        auto graph = ComputingGraph::make();
+        auto data = opr::Host2DeviceCopy::make(*graph, host_data);
+        auto out = opr::NonZero::make(data, param);
+        HostTensorND host_out;
+        auto func = graph->compile({make_callback_copy(out, host_out)});
+        func->execute();
+    };
+    check({1});
+    check({0});
+    check({1, 0});
+    check({1, 2, 3, 4, 5, 6, 7});
+}
+
 TEST(TestOprMisc, TopKValueOnly) {
     auto run = [](bool dyn_k, bool non_contig) {
         using Checker = AutoOprChecker<1, 1>;
@@ -412,6 +431,59 @@ TEST(TestOprMisc, TopKGrad) {
          val = opr::TopK::make(x, ki, opr::TopK::Param::Mode::VALUE_IDX_SORTED)[0],
          gk = cg::grad(opr::reduce_sum(val, val.make_scalar(1)), ki, true, false);
     EXPECT_TRUE(gk == nullptr);
+}
+
+TEST(TestOprMisc, Where) {
+    auto graph = ComputingGraph::make();
+    HostTensorGenerator<dtype::Bool> gen_mask;
+    auto host_mask = gen_mask({2, 2, 2});
+    HostTensorGenerator<> gen_data{0, 1000};
+    auto host_data1 = gen_data({2, 2, 2}), host_data2 = gen_data({2, 2, 2});
+    auto mask = opr::Host2DeviceCopy::make(*graph, host_mask),
+         data1 = opr::Host2DeviceCopy::make(*graph, host_data1),
+         data2 = opr::Host2DeviceCopy::make(*graph, host_data2),
+         dst = opr::Where::make(mask, data1, data2, {});
+
+    HostTensorND host_dst;
+    auto func = graph->compile({make_callback_copy(dst, host_dst)});
+    func->execute();
+
+    auto pmask = host_mask->ptr<bool>();
+    auto pdata1 = host_data1->ptr<float>();
+    auto pdata2 = host_data2->ptr<float>();
+    auto pdst = host_dst.ptr<float>();
+    for (size_t i = 0; i < host_mask->layout().total_nr_elems(); ++i) {
+        ASSERT_EQ(pmask[i] ? pdata1[i] : pdata2[i], pdst[i]);
+    }
+}
+
+TEST(TestOprMisc, WhereBackward) {
+    auto graph = ComputingGraph::make();
+    HostTensorGenerator<> gen_diff{0, 1000};
+    auto host_diff = gen_diff({2, 2, 2});
+    HostTensorGenerator<dtype::Bool> gen_mask;
+    auto host_mask = gen_mask({2, 2, 2});
+    auto diff = opr::Host2DeviceCopy::make(*graph, host_diff),
+         mask = opr::Host2DeviceCopy::make(*graph, host_mask);
+    auto grads = opr::WhereBackward::make(diff, mask, {});
+    auto grad1 = grads[0];
+    auto grad2 = grads[1];
+
+    HostTensorND host_grad1;
+    HostTensorND host_grad2;
+    auto func = graph->compile(
+            {make_callback_copy(grad1, host_grad1),
+             make_callback_copy(grad2, host_grad2)});
+    func->execute();
+
+    auto pdiff = host_diff->ptr<float>();
+    auto pmask = host_mask->ptr<bool>();
+    auto pgrad1 = host_grad1.ptr<float>();
+    auto pgrad2 = host_grad2.ptr<float>();
+    for (size_t i = 0; i < host_diff->layout().total_nr_elems(); ++i) {
+        ASSERT_EQ(pmask[i] ? pdiff[i] : 0, pgrad1[i]);
+        ASSERT_EQ(pmask[i] ? 0 : pdiff[i], pgrad2[i]);
+    }
 }
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

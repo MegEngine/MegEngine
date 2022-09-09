@@ -225,7 +225,10 @@ private:
     cb(MaskedFill) \
     cb(MultiHeadAttnForward)\
     cb(MultiHeadAttnBackward) \
-    cb(Cross)
+    cb(Cross)  \
+    cb(WhereForward)    \
+    cb(WhereBackward) \
+    cb(NonZero)
 // clang-format on
 
 /*!

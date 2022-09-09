@@ -16010,6 +16010,88 @@ void _init_py_NMSKeep(py::module m) {
     mgb_assert(PyOp(OpDef)::ctype2pytype.emplace(NMSKeep::typeinfo(), &py_type).second);
 }
 
+PyOpDefBegin(NonZero) // {
+    static PyGetSetDef py_getsetters[];
+    static PyMethodDef tp_methods[];
+    
+    static PyObject* getstate(PyObject* self, PyObject*) {
+        auto& opdef = reinterpret_cast<PyOp(NonZero)*>(self)->inst();
+        static_cast<void>(opdef);
+        std::unordered_map<std::string, py::object> state {
+            
+        };
+        return py::cast(state).release().ptr();
+    }
+    static PyObject* setstate(PyObject* self, PyObject* args) {
+        PyObject* dict = PyTuple_GetItem(args, 0);
+        if (!dict) return NULL;
+        auto state = py::cast<std::unordered_map<std::string, py::object>>(dict);
+        auto& opdef = reinterpret_cast<PyOp(NonZero)*>(self)->inst();
+        static_cast<void>(opdef);
+        
+        Py_RETURN_NONE;
+    }
+    static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
+// };
+PyOpDefEnd(NonZero)
+
+int PyOp(NonZero)::py_init(PyObject *self, PyObject *args, PyObject *kwds) {
+    
+    return 0;
+}
+
+PyGetSetDef PyOp(NonZero)::py_getsetters[] = {
+    
+    {NULL}  /* Sentinel */
+};
+
+    PyMethodDef PyOp(NonZero)::tp_methods[] = {
+        {const_cast<char*>("__getstate__"), PyOp(NonZero)::getstate, METH_NOARGS, "NonZero getstate"},
+    {const_cast<char*>("__setstate__"), PyOp(NonZero)::setstate, METH_VARARGS, "NonZero setstate"},
+        {NULL}  /* Sentinel */
+    };
+    
+PyObject *PyOp(NonZero)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(NonZero)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(NonZero)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(NonZero)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self) -> None\n"
+};
+
+void _init_py_NonZero(py::module m) {
+    using py_op = PyOp(NonZero);
+    auto& py_type = PyOpType(NonZero);
+    py_type = {PyVarObject_HEAD_INIT(NULL, 0)};
+    py_type.tp_name = "megengine.core._imperative_rt.ops.NonZero";
+    py_type.tp_basicsize = sizeof(PyOp(NonZero));
+    py_type.tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE;
+    py_type.tp_doc = "NonZero";
+    py_type.tp_base = &PyOpType(OpDef);
+    py_type.tp_dealloc = py_dealloc_generic<py_op>;
+    py_type.tp_new = py_new_generic<py_op>;
+    py_type.tp_init = py_op::py_init;
+    py_type.tp_methods = py_op::tp_methods;
+    py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(NonZero), &PyOp(NonZero)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
+    mgb_assert(PyType_Ready(&py_type) >= 0);
+    
+    PyType_Modified(&py_type);
+    m.add_object("NonZero", reinterpret_cast<PyObject*>(&py_type));
+    mgb_assert(PyOp(OpDef)::ctype2pytype.emplace(NonZero::typeinfo(), &py_type).second);
+}
+
 PyOpDefBegin(NvOf) // {
     static PyGetSetDef py_getsetters[];
     static PyMethodDef tp_methods[];
@@ -23534,6 +23616,170 @@ void _init_py_WarpPerspectiveBackwardMat(py::module m) {
     m.add_object("WarpPerspectiveBackwardMat", reinterpret_cast<PyObject*>(&py_type));
     mgb_assert(PyOp(OpDef)::ctype2pytype.emplace(WarpPerspectiveBackwardMat::typeinfo(), &py_type).second);
 }
+
+PyOpDefBegin(Where) // {
+    static PyGetSetDef py_getsetters[];
+    static PyMethodDef tp_methods[];
+    
+    static PyObject* getstate(PyObject* self, PyObject*) {
+        auto& opdef = reinterpret_cast<PyOp(Where)*>(self)->inst();
+        static_cast<void>(opdef);
+        std::unordered_map<std::string, py::object> state {
+            
+        };
+        return py::cast(state).release().ptr();
+    }
+    static PyObject* setstate(PyObject* self, PyObject* args) {
+        PyObject* dict = PyTuple_GetItem(args, 0);
+        if (!dict) return NULL;
+        auto state = py::cast<std::unordered_map<std::string, py::object>>(dict);
+        auto& opdef = reinterpret_cast<PyOp(Where)*>(self)->inst();
+        static_cast<void>(opdef);
+        
+        Py_RETURN_NONE;
+    }
+    static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
+// };
+PyOpDefEnd(Where)
+
+int PyOp(Where)::py_init(PyObject *self, PyObject *args, PyObject *kwds) {
+    
+    return 0;
+}
+
+PyGetSetDef PyOp(Where)::py_getsetters[] = {
+    
+    {NULL}  /* Sentinel */
+};
+
+    PyMethodDef PyOp(Where)::tp_methods[] = {
+        {const_cast<char*>("__getstate__"), PyOp(Where)::getstate, METH_NOARGS, "Where getstate"},
+    {const_cast<char*>("__setstate__"), PyOp(Where)::setstate, METH_VARARGS, "Where setstate"},
+        {NULL}  /* Sentinel */
+    };
+    
+PyObject *PyOp(Where)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(Where)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(Where)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(Where)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self) -> None\n"
+};
+
+void _init_py_Where(py::module m) {
+    using py_op = PyOp(Where);
+    auto& py_type = PyOpType(Where);
+    py_type = {PyVarObject_HEAD_INIT(NULL, 0)};
+    py_type.tp_name = "megengine.core._imperative_rt.ops.Where";
+    py_type.tp_basicsize = sizeof(PyOp(Where));
+    py_type.tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE;
+    py_type.tp_doc = "Where";
+    py_type.tp_base = &PyOpType(OpDef);
+    py_type.tp_dealloc = py_dealloc_generic<py_op>;
+    py_type.tp_new = py_new_generic<py_op>;
+    py_type.tp_init = py_op::py_init;
+    py_type.tp_methods = py_op::tp_methods;
+    py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(Where), &PyOp(Where)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
+    mgb_assert(PyType_Ready(&py_type) >= 0);
+    
+    PyType_Modified(&py_type);
+    m.add_object("Where", reinterpret_cast<PyObject*>(&py_type));
+    mgb_assert(PyOp(OpDef)::ctype2pytype.emplace(Where::typeinfo(), &py_type).second);
+}
+
+PyOpDefBegin(WhereBackward) // {
+    static PyGetSetDef py_getsetters[];
+    static PyMethodDef tp_methods[];
+    
+    static PyObject* getstate(PyObject* self, PyObject*) {
+        auto& opdef = reinterpret_cast<PyOp(WhereBackward)*>(self)->inst();
+        static_cast<void>(opdef);
+        std::unordered_map<std::string, py::object> state {
+            
+        };
+        return py::cast(state).release().ptr();
+    }
+    static PyObject* setstate(PyObject* self, PyObject* args) {
+        PyObject* dict = PyTuple_GetItem(args, 0);
+        if (!dict) return NULL;
+        auto state = py::cast<std::unordered_map<std::string, py::object>>(dict);
+        auto& opdef = reinterpret_cast<PyOp(WhereBackward)*>(self)->inst();
+        static_cast<void>(opdef);
+        
+        Py_RETURN_NONE;
+    }
+    static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
+// };
+PyOpDefEnd(WhereBackward)
+
+int PyOp(WhereBackward)::py_init(PyObject *self, PyObject *args, PyObject *kwds) {
+    
+    return 0;
+}
+
+PyGetSetDef PyOp(WhereBackward)::py_getsetters[] = {
+    
+    {NULL}  /* Sentinel */
+};
+
+    PyMethodDef PyOp(WhereBackward)::tp_methods[] = {
+        {const_cast<char*>("__getstate__"), PyOp(WhereBackward)::getstate, METH_NOARGS, "WhereBackward getstate"},
+    {const_cast<char*>("__setstate__"), PyOp(WhereBackward)::setstate, METH_VARARGS, "WhereBackward setstate"},
+        {NULL}  /* Sentinel */
+    };
+    
+PyObject *PyOp(WhereBackward)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(WhereBackward)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(WhereBackward)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(WhereBackward)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self) -> None\n"
+};
+
+void _init_py_WhereBackward(py::module m) {
+    using py_op = PyOp(WhereBackward);
+    auto& py_type = PyOpType(WhereBackward);
+    py_type = {PyVarObject_HEAD_INIT(NULL, 0)};
+    py_type.tp_name = "megengine.core._imperative_rt.ops.WhereBackward";
+    py_type.tp_basicsize = sizeof(PyOp(WhereBackward));
+    py_type.tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE;
+    py_type.tp_doc = "WhereBackward";
+    py_type.tp_base = &PyOpType(OpDef);
+    py_type.tp_dealloc = py_dealloc_generic<py_op>;
+    py_type.tp_new = py_new_generic<py_op>;
+    py_type.tp_init = py_op::py_init;
+    py_type.tp_methods = py_op::tp_methods;
+    py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(WhereBackward), &PyOp(WhereBackward)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
+    mgb_assert(PyType_Ready(&py_type) >= 0);
+    
+    PyType_Modified(&py_type);
+    m.add_object("WhereBackward", reinterpret_cast<PyObject*>(&py_type));
+    mgb_assert(PyOp(OpDef)::ctype2pytype.emplace(WhereBackward::typeinfo(), &py_type).second);
+}
 #define INIT_ALL_OP(m) \
     _init_py_AdaptivePooling(m); \
     _init_py_AddAxis(m); \
@@ -23614,6 +23860,7 @@ void _init_py_WarpPerspectiveBackwardMat(py::module m) {
     _init_py_MeshIndexing(m); \
     _init_py_MultiHeadAttn(m); \
     _init_py_NMSKeep(m); \
+    _init_py_NonZero(m); \
     _init_py_NvOf(m); \
     _init_py_Padding(m); \
     _init_py_ParamPackConcat(m); \
@@ -23654,5 +23901,7 @@ void _init_py_WarpPerspectiveBackwardMat(py::module m) {
     _init_py_WarpAffine(m); \
     _init_py_WarpPerspective(m); \
     _init_py_WarpPerspectiveBackwardData(m); \
-    _init_py_WarpPerspectiveBackwardMat(m);
+    _init_py_WarpPerspectiveBackwardMat(m); \
+    _init_py_Where(m); \
+    _init_py_WhereBackward(m);
 // clang-format on

@@ -30,6 +30,7 @@ __all__ = [
     "broadcast_to",
     "concat",
     "cond_take",
+    "non_zero",
     "copy",
     "cumsum",
     "diag",
@@ -821,30 +822,7 @@ def scatter(inp: Tensor, axis: int, index: Tensor, source: Tensor) -> Tensor:
     return inp
 
 
-@lru_cache(maxsize=None)
-def _get_where_op(dtype=None, device=None):
-    @subgraph_fn(
-        "Where",
-        dtype=dtype,
-        device=device,
-        nr_inputs=3,
-        jit_fusion=True,
-        custom_grad=True,
-    )
-    def where(inputs, f, c):
-        (mask, x, y) = inputs[0:3]
-        oup = f("switch_gt0", mask, x)
-        ksam = f("-", c(1), mask)
-        oup = f("+", oup, f("switch_gt0", ksam, y))
-        (oup_grad,) = yield (oup,)
-        x_grad = f("switch_gt0", mask, oup_grad)
-        y_grad = f("switch_gt0", ksam, oup_grad)
-        yield (None, x_grad, y_grad)
-
-    return where
-
-
-def where(mask: Tensor, x: Tensor, y: Tensor) -> Tensor:
+def where(mask: Tensor, x: Tensor = None, y: Tensor = None) -> Tensor:
     r"""Selects elements either from Tensor x or Tensor y, according to mask.
 
     .. math::
@@ -870,6 +848,8 @@ def where(mask: Tensor, x: Tensor, y: Tensor) -> Tensor:
         array([[1., 6.],
                [7., 4.]], dtype=float32)
     """
+    if x is None and y is None:
+        return non_zero(mask, as_tuple=True)
 
     if not isinstance(x, Tensor):
         raise TypeError("input x must be a tensor")
@@ -882,18 +862,8 @@ def where(mask: Tensor, x: Tensor, y: Tensor) -> Tensor:
     if x.device != mask.device:
         raise ValueError("ambiguous device: {} vs {}".format(x.device, mask.device))
 
-    dtype = dtype_promotion(x, y)
-    device = x.device
-
-    if x.dtype != dtype:
-        x = x.astype(dtype)
-    if y.dtype != dtype:
-        y = y.astype(dtype)
-    mask = mask.astype(dtype)
-
-    where = _get_where_op(dtype=dtype, device=device)
-    (oup,) = where(mask, x, y)
-    return oup
+    where = builtin.Where()
+    return apply(where, mask, x, y)[0]
 
 
 def cond_take(mask: Tensor, x: Tensor) -> Tensor:
@@ -959,6 +929,42 @@ def transpose(inp: Tensor, pattern: Iterable[int]) -> Tensor:
          [1 0]], dtype=int32, device=xpux:0)
     """
     return inp.transpose(pattern)
+
+
+def non_zero(condition: Tensor, as_tuple=False):
+    r"""When as_tuple is False (default):
+    Returns a tensor including the indices of all non-zero elements of Tensor condition.
+    Every row in the result including the indices of a non-zero element in input.
+    The result is sorted in lexicography order, with the last index changing the fastest (C-style).
+    When as_tuple is True:
+    Returns a tuple of 1-D tensors, one for each dimension in input,
+    each containing the indices (in that dimension) of all non-zero elements of  condition.
+    Args:
+        condition(Tensor) - the input tensor
+    Returns:
+        one tuple of 1-D tensors or one tensor
+
+    Examples:
+        >>> import numpy as np
+        >>> condition = Tensor(np.array([1,1,0,1]))
+        >>> index = F.non_zero(condition,as_tuple=True)
+        >>> print(index)
+        (Tensor([0 1 3], dtype=int32, device=xpux:0),)
+    """
+
+    if not isinstance(condition, Tensor):
+        raise TypeError("input must be a tensor")
+    op = builtin.NonZero()
+    (index,) = apply(op, condition)
+    ret = None
+    if as_tuple == True:
+        arr = []
+        for index_ele in range(0, condition.ndim):
+            arr.append(index[index_ele, :])
+        ret = tuple(arr)
+    else:
+        ret = transpose(index, (1, 0))
+    return ret
 
 
 def swapaxes(inp: Tensor, axis1: int, axis2: int) -> Tensor:

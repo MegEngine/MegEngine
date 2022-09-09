@@ -153,6 +153,8 @@ def Argmin : MgbHashableOp<"Argmin", [AxisParam]>;
 
 def CondTake : MgbHashableOp<"CondTake">;
 
+def NonZero: MgbHashableOp<"NonZero",[EmptyParam]>;
+
 def TopK: MgbHashableOp<"TopK", [TopKParam]>;
 
 def NvOf: MgbHashableOp<"NvOf", [NvOfParam]>;
@@ -640,4 +642,9 @@ def MultiHeadAttn: MgbHashableOp<"MultiHeadAttn", [MultiHeadAttnParam]> {
 
 
 def Cross: MgbHashableOp<"Cross", [CrossParam]>;
+def Where: MgbHashableOp<"Where", [EmptyParam]>;
+
+def WhereBackward: MgbHashableOp<"WhereBackward", [EmptyParam]>;
+
+
 #endif // MGB_OPS

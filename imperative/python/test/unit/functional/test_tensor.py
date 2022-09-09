@@ -128,6 +128,26 @@ def test_condtake(is_varnode):
         np.testing.assert_equal(idx.numpy(), np.where(y.reshape(-1))[0])
 
 
+@pytest.mark.parametrize("as_tuple", [True, False])
+def test_nonzero(as_tuple):
+    def test_impl(np_condition):
+        tensor_condition = make_tensor(np_condition, None)
+        megengine_result = F.non_zero(tensor_condition, as_tuple=as_tuple)
+        np_result = np.nonzero(np_condition)
+        if as_tuple == False:
+            np_result = np.transpose(np_result, (1, 0))
+
+        for pos in range(len(megengine_result)):
+            np.testing.assert_equal(megengine_result[pos].numpy(), np_result[pos])
+
+    test_impl(
+        np.array([[True, False, True, False, False], [False, True, True, False, False]])
+    )
+    test_impl(np.random.randint(1, 10, size=[0, 3, 0]))
+    test_impl(np.random.randint(1, 10, size=[1, 2, 3]))
+    test_impl(np.random.randint(1, 10, size=[1, 2, 3, 4, 5, 6, 7]))
+
+
 @pytest.mark.parametrize("is_varnode", [True, False])
 def test_concat_stack_device(is_varnode):
     if is_varnode:

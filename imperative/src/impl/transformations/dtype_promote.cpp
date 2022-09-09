@@ -404,6 +404,23 @@ ValueRefList setsubtensor_rule(const OpDef& op, Span<ValueRef> inputs) {
 
     return imperative::apply(op, converted);
 }
+ValueRefList where_rule(const OpDef& op, Span<ValueRef> inputs) {
+    SmallVector<DType> dtypes = get_value_dtypes({inputs.begin() + 1, inputs.end()});
+    mgb::DType target_dtype = get_promoted_dtype(dtypes);
+
+    ValueRefList converted(inputs.size());
+    converted[0] = inputs[0];
+    for (int idx = 1; idx < inputs.size(); idx++) {
+        if (*(inputs[idx].dtype()) != target_dtype) {
+            converted[idx] = imperative::apply(
+                    ApplyOp(*TypeCvt::make(target_dtype)), inputs[idx])[0];
+        } else {
+            converted[idx] = inputs[idx];
+        }
+    }
+
+    return imperative::apply(op, converted);
+}
 
 struct DTypePromoteRuleRegistry {
     DTypePromoteRuleRegistry() {
@@ -424,6 +441,7 @@ struct DTypePromoteRuleRegistry {
         register_dtype_promote_rule<GroupNorm>(norm_rule);
         register_dtype_promote_rule<SetSubtensor>(setsubtensor_rule);
         register_dtype_promote_rule<IndexingSetMultiAxisVec>(setsubtensor_rule);
+        register_dtype_promote_rule<Where>(where_rule);
     }
 } register_helper;
 

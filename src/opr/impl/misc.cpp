@@ -385,6 +385,71 @@ void CondTake::scn_do_execute() {
     }
 }
 
+/* ================= NonZero =================  */
+MGB_DYN_TYPE_OBJ_FINAL_IMPL(NonZero);
+
+NonZero::NonZero(VarNode* data, const Param& param, const OperatorNodeConfig& config)
+        : Super(data->owner_graph(), config, "NonZero", {data}) {
+    init_megdnn_opr(*this, param);
+    add_input({data});
+    auto dtype = megdnn_opr()->infer_type(data->dtype());
+    output(0)
+            ->add_flag(VarNode::Flag::NO_SYS_MEM_ALLOC)
+            .add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE)
+            .dtype(dtype);
+}
+
+NonZero::NodeProp* NonZero::do_make_node_prop() const {
+    auto ret = Super::do_make_node_prop();
+    ret->add_dep_type_existing_var(input(0), NodeProp::DepType::VALUE_ALLOW_EMPTY);
+    return ret;
+}
+
+SymbolVar NonZero::make(
+        SymbolVar data, const Param& param, const OperatorNodeConfig& config) {
+    auto ret = data.insert_single_output_opr<NonZero>(data.node(), param, config);
+    return ret;
+}
+
+#if MGB_ENABLE_GRAD
+MGB_IMPL_OPR_GRAD(NonZero) {
+    MGB_MARK_USED_VAR(out_grad);
+    MGB_MARK_USED_VAR(opr);
+    mgb_assert(!wrt_idx);
+    return nullptr;
+}
+#endif
+
+void NonZero::init_output_static_infer_desc() {
+    using namespace cg::static_infer;
+    auto infer_workspace_shape = [this](TensorShape& dest, const InpVal& iv) {
+        auto dtype = this->input(0)->dtype();
+        TensorLayout ily(iv.val[0].shape(), dtype);
+        dest.ndim = 1;
+        dest.shape[0] = this->megdnn_opr()->get_workspace_in_bytes(ily);
+        return true;
+    };
+    owner_graph()->static_infer_manager().register_shape_infer(
+            output(1),
+            {SourceType::DEP, {{input(0), DepType::SHAPE}}, infer_workspace_shape});
+}
+
+void NonZero::add_input_layout_constraint() {
+    mixin::megdnn_utils::add_input_layout_constraint_contig(*this);
+}
+
+void NonZero::scn_do_execute() {
+    auto&& data = input(0)->dev_tensor();
+    intl::MegDNNDynOutMallocImpl dyn_malloc{this, comp_node()};
+    if (data.layout().is_empty()) {
+        dyn_malloc.alloc_output(0, dtype::Int32(), {data.layout().ndim, 0}, nullptr);
+    } else {
+        megdnn_opr()->exec(
+                data.as_megdnn(), intl::get_megdnn_workspace_from_var(output().back()),
+                &dyn_malloc);
+    }
+}
+
 /* ================= TopK =================  */
 
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(TopK);
@@ -605,4 +670,158 @@ void CheckNonFinite::add_input_layout_constraint() {
         i->add_layout_constraint_contiguous();
     }
 }
+
+/* ================= Where =================  */
+
+MGB_DYN_TYPE_OBJ_FINAL_IMPL(WhereForward);
+
+WhereForward::WhereForward(
+        VarNode* mask, VarNode* data1, VarNode* data2, const Param& param,
+        const OperatorNodeConfig& config)
+        : Super(mask->owner_graph(), config, "where", {mask, data1, data2}) {
+    init_megdnn_opr(*this, param);
+    mgb_assert(mask->shape().eq_shape(data1->shape()));
+    mgb_assert(mask->shape().eq_shape(data2->shape()));
+    mgb_assert(data1->shape().eq_shape(data2->shape()));
+    add_input({mask, data1, data2});
+    output(0)->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE).dtype(data1->dtype());
+}
+
+SymbolVar WhereForward::make(
+        SymbolVar mask, SymbolVar data1, SymbolVar data2, const Param& param,
+        const OperatorNodeConfig& config) {
+    return mask.insert_single_output_opr<WhereForward>(
+            mask.node(), data1.node(), data2.node(), param, config);
+}
+
+void WhereForward::init_output_static_infer_desc() {
+    using namespace cg::static_infer;
+    auto infer_shape = [](TensorShape& dest, const InpVal& iv) {
+        auto ishp = iv.val[0].shape();
+        dest = ishp;
+        return true;
+    };
+    owner_graph()->static_infer_manager().register_shape_infer(
+            output(0), {SourceType::DEP, {{input(0), DepType::SHAPE}}, infer_shape});
+
+    auto infer_workspace = [this](TensorShape& dest, const InpVal& iv) {
+        auto mask_dtype = input(0)->dtype();
+        auto mask_shape = iv.val[0].shape();
+        TensorLayout mask_layout(mask_shape, mask_dtype);
+        auto data_dtype = input(1)->dtype();
+        auto data_shape = iv.val[1].shape();
+        TensorLayout data_layout(data_shape, data_dtype);
+        dest.ndim = 1;
+        dest[0] = megdnn_opr()->get_workspace_in_bytes(
+                mask_layout, data_layout, data_layout, data_layout);
+        return true;
+    };
+    owner_graph()->static_infer_manager().register_shape_infer(
+            output(1), {SourceType::DEP,
+                        {{input(0), DepType::SHAPE}, {input(1), DepType::SHAPE}},
+                        infer_workspace});
+}
+
+void WhereForward::add_input_layout_constraint() {
+    mixin::megdnn_utils::add_input_layout_constraint_contig(*this);
+}
+
+void WhereForward::scn_do_execute() {
+    if (input(0)->dev_tensor().empty()) {
+        mgb_assert(output(0)->dev_tensor().empty());
+        return;
+    }
+    megdnn_opr()->exec(
+            input(0)->dev_tensor().as_megdnn(), input(1)->dev_tensor().as_megdnn(),
+            input(2)->dev_tensor().as_megdnn(), output(0)->dev_tensor().as_megdnn(),
+            intl::get_megdnn_workspace_from_var(output().back()));
+}
+MAKE_NODE_PROP_WITH_ZERO_SHAPE_3(WhereForward, 0, 1, 2);
+
+#if MGB_ENABLE_GRAD
+MGB_IMPL_OPR_GRAD(WhereForward) {
+    mgb_assert(out_grad.size() == 2 && !out_grad[1]);
+    VarNodeArray ret;
+    SymbolVarArray grad;
+    grad = WhereBackward::make(out_grad[0], opr.input(0), opr.param());
+    if (wrt_idx == 0)
+        return nullptr;
+    else if (wrt_idx == 1)
+        return grad[0].node();
+    else if (wrt_idx == 2)
+        return grad[1].node();
+    return nullptr;
+}
+#endif
+
+/* ================= WhereBackward =================  */
+
+MGB_DYN_TYPE_OBJ_FINAL_IMPL(WhereBackward);
+
+WhereBackward::WhereBackward(
+        VarNode* diff, VarNode* mask, const Param& param,
+        const OperatorNodeConfig& config)
+        : Super(diff->owner_graph(), config, "WhereBackward", {diff, mask}) {
+    init_megdnn_opr(*this, param);
+    mgb_assert(diff->shape().eq_shape(mask->shape()));
+    add_input({diff, mask});
+    output(0)->dtype(diff->dtype());
+    output(1)->dtype(diff->dtype());
+}
+
+SymbolVarArray WhereBackward::make(
+        SymbolVar diff, SymbolVar mask, const Param& param,
+        const OperatorNodeConfig& config) {
+    auto outs = diff.node()
+                        ->owner_graph()
+                        ->insert_opr(std::make_unique<WhereBackward>(
+                                diff.node(), mask.node(), param, config))
+                        ->output();
+    SymbolVarArray ret;
+    for (auto&& out : outs)
+        ret.emplace_back(out);
+    return ret;
+}
+
+void WhereBackward::init_output_static_infer_desc() {
+    using namespace cg::static_infer;
+    auto infer_shape = [](TensorShape& dest, const InpVal& iv) {
+        auto ishp = iv.val[0].shape();
+        dest = ishp;
+        return true;
+    };
+    owner_graph()->static_infer_manager().register_shape_infer(
+            output(0), {SourceType::DEP, {{input(0), DepType::SHAPE}}, infer_shape});
+    owner_graph()->static_infer_manager().register_shape_infer(
+            output(1), {SourceType::DEP, {{input(0), DepType::SHAPE}}, infer_shape});
+
+    auto infer_workspace = [this](TensorShape& dest, const InpVal& iv) {
+        auto diff_dtype = input(0)->dtype();
+        auto diff_shape = iv.val[0].shape();
+        TensorLayout diff_layout(diff_shape, diff_dtype);
+        auto mask_dtype = input(1)->dtype();
+        auto mask_shape = iv.val[1].shape();
+        TensorLayout mask_layout(mask_shape, mask_dtype);
+        dest.ndim = 1;
+        dest[0] = megdnn_opr()->get_workspace_in_bytes(
+                diff_layout, mask_layout, diff_layout, diff_layout);
+        return true;
+    };
+    owner_graph()->static_infer_manager().register_shape_infer(
+            output(2), {SourceType::DEP,
+                        {{input(0), DepType::SHAPE}, {input(1), DepType::SHAPE}},
+                        infer_workspace});
+}
+
+void WhereBackward::add_input_layout_constraint() {
+    mixin::megdnn_utils::add_input_layout_constraint_contig(*this);
+}
+
+void WhereBackward::scn_do_execute() {
+    megdnn_opr()->exec(
+            input(0)->dev_tensor().as_megdnn(), input(1)->dev_tensor().as_megdnn(),
+            output(0)->dev_tensor().as_megdnn(), output(1)->dev_tensor().as_megdnn(),
+            intl::get_megdnn_workspace_from_var(output().back()));
+}
+
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

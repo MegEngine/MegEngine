@@ -56,6 +56,7 @@
 #include "src/naive/max_tensor_diff/opr_impl.h"
 #include "src/naive/mesh_indexing/opr_impl.h"
 #include "src/naive/multi_head_attn/opr_impl.h"
+#include "src/naive/non_zero/opr_impl.h"
 #include "src/naive/norm/opr_impl.h"
 #include "src/naive/padding/opr_impl.h"
 #include "src/naive/param_pack/opr_impl.h"
@@ -90,6 +91,7 @@
 #include "src/naive/type_cvt/opr_impl.h"
 #include "src/naive/warp_affine/opr_impl.h"
 #include "src/naive/warp_perspective/opr_impl.h"
+#include "src/naive/where/opr_impl.h"
 
 namespace megdnn {
 namespace naive {

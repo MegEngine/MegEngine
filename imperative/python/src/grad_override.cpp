@@ -708,6 +708,47 @@ std::optional<ValueRefList> warp_affine_grad_rule(
     return imperative::apply(ApplyOp(op), inputs);
 }
 
+std::optional<ValueRefList> where_grad_rule(
+        const OpDef& op, Span<ValueRef> inputs, Span<bool> inputs_require_grad,
+        CustomBackward& backward) {
+    auto&& where = op.cast_final_safe<Where>();
+    auto&& param = where.param();
+    mgb_assert(inputs.size() == 3);
+    SmallVector<ValueRef> inps;
+    if (inputs_require_grad[1] || inputs_require_grad[2]) {
+        inps.push_back(inputs[0]);
+    }
+    bool data1_requires_grad = inputs_require_grad[1],
+         data2_requires_grad = inputs_require_grad[2];
+    auto maker = CustomGradMaker(backward, inputs.size());
+    maker.output_size(1).output_captured(0, false);
+    maker.backward([inputs = std::move(inps), data1_requires_grad, data2_requires_grad,
+                    param](Span<ValueRef> grads) {
+        mgb_assert(grads.size() == 1);
+        ValueRef grad = grads[0];
+        SmallVector<ValueRef> ret(3);
+        if (!grad) {
+            return ret;
+        }
+        if (data1_requires_grad == false && data2_requires_grad == false) {
+            return ret;
+        }
+
+        auto&& grad_op = WhereBackward::make();
+        ValueRefList args_(2);
+        args_[0] = grads[0];
+        args_[1] = inputs[0];
+        auto back_grad = imperative::apply(*grad_op, args_);
+        if (data1_requires_grad)
+            ret[1] = back_grad[0];
+        if (data2_requires_grad)
+            ret[2] = back_grad[1];
+        return ret;
+    });
+    maker.finalize();
+    return imperative::apply(op, inputs);
+}
+
 struct Init {
     Init() {
         CustomBackward::register_grad_rule(Elemwise::typeinfo(), elemwise_grad_rule);
@@ -733,6 +774,7 @@ struct Init {
                 BatchedMatrixMul::typeinfo(), batched_matrix_mul_grad_rule);
         CustomBackward::register_grad_rule(
                 WarpAffine::typeinfo(), warp_affine_grad_rule);
+        CustomBackward::register_grad_rule(Where::typeinfo(), where_grad_rule);
     }
 } _;
 

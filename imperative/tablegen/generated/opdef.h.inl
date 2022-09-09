@@ -1457,6 +1457,17 @@ public:
     NMSKeep(float iou_thresh_, uint32_t max_output_, std::string scope_ = {}): iou_thresh(iou_thresh_), max_output(max_output_) { set_scope(scope_); }
 };
 
+class NonZero : public OpDefImplBase<NonZero> {
+    MGB_DYN_TYPE_OBJ_FINAL_DECL;
+
+public:
+    NonZero() = default;
+    NonZero(::megdnn::param::Empty) {}
+    ::megdnn::param::Empty param() const {
+        return {};
+    }
+};
+
 class NvOf : public OpDefImplBase<NvOf> {
     MGB_DYN_TYPE_OBJ_FINAL_DECL;
 
@@ -2090,6 +2101,28 @@ public:
     WarpPerspectiveBackwardMat(::megdnn::param::WarpPerspective packed_param_0): imode(packed_param_0.imode), bmode(packed_param_0.bmode), format(packed_param_0.format), border_val(packed_param_0.border_val) {}
     ::megdnn::param::WarpPerspective param() const {
         return {imode, bmode, format, border_val};
+    }
+};
+
+class Where : public OpDefImplBase<Where> {
+    MGB_DYN_TYPE_OBJ_FINAL_DECL;
+
+public:
+    Where() = default;
+    Where(::megdnn::param::Empty) {}
+    ::megdnn::param::Empty param() const {
+        return {};
+    }
+};
+
+class WhereBackward : public OpDefImplBase<WhereBackward> {
+    MGB_DYN_TYPE_OBJ_FINAL_DECL;
+
+public:
+    WhereBackward() = default;
+    WhereBackward(::megdnn::param::Empty) {}
+    ::megdnn::param::Empty param() const {
+        return {};
     }
 };
 

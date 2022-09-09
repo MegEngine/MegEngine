@@ -17,6 +17,9 @@ struct OprTrait {};
         static const bool can_deduce_layout = CanDeduceLayout; \
     }
 
+DEF(NonZero, 2, true, false);
+DEF(Where, 4, true, true);
+DEF(WhereBackward, 4, true, true);
 DEF(Norm, 2, true, true);
 DEF(Padding, 2, false, true);
 DEF(PaddingBackward, 2, false, false);
