@@ -12467,6 +12467,95 @@ void _init_py_MatrixMul(py::module m) {
     mgb_assert(PyOp(OpDef)::ctype2pytype.emplace(MatrixMul::typeinfo(), &py_type).second);
 }
 
+PyOpDefBegin(MeshGrid) // {
+    static PyGetSetDef py_getsetters[];
+    static PyMethodDef tp_methods[];
+    
+    static PyObject* getstate(PyObject* self, PyObject*) {
+        auto& opdef = reinterpret_cast<PyOp(MeshGrid)*>(self)->inst();
+        static_cast<void>(opdef);
+        std::unordered_map<std::string, py::object> state {
+            
+            {"indexing", serialization<decltype(opdef.indexing)>::dump(opdef.indexing)}
+        };
+        return py::cast(state).release().ptr();
+    }
+    static PyObject* setstate(PyObject* self, PyObject* args) {
+        PyObject* dict = PyTuple_GetItem(args, 0);
+        if (!dict) return NULL;
+        auto state = py::cast<std::unordered_map<std::string, py::object>>(dict);
+        auto& opdef = reinterpret_cast<PyOp(MeshGrid)*>(self)->inst();
+        static_cast<void>(opdef);
+        
+        {
+        auto&& iter = state.find("indexing");
+        if (iter != state.end()) {
+            opdef.indexing = serialization<decltype(opdef.indexing)>::load(iter->second);
+        }
+        }
+        Py_RETURN_NONE;
+    }
+    static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+// };
+PyOpDefEnd(MeshGrid)
+
+int PyOp(MeshGrid)::py_init(PyObject *self, PyObject *args, PyObject *kwds) {
+    static const char* kwlist[] = {"indexing", "scope", NULL};
+    PyObject *indexing = NULL, *scope = NULL;
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|OO", const_cast<char**>(kwlist), &indexing, &scope))
+    return -1;
+
+    if (indexing) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(MeshGrid)*>(self)->inst().indexing =
+                    py::cast<decltype(MeshGrid::indexing)>(py::handle(indexing));
+        } CATCH_ALL(-1)
+    }
+
+    if (scope) {
+        try {
+            reinterpret_cast<PyOp(OpDef)*>(self)->op
+                ->set_scope(py::cast<std::string>(py::handle(scope)));
+        } CATCH_ALL(-1)
+    }
+
+    return 0;
+}
+
+PyGetSetDef PyOp(MeshGrid)::py_getsetters[] = {
+    {const_cast<char*>("indexing"), py_get_generic(MeshGrid, indexing), py_set_generic(MeshGrid, indexing), const_cast<char*>("indexing"), NULL},
+    {NULL}  /* Sentinel */
+};
+
+    PyMethodDef PyOp(MeshGrid)::tp_methods[] = {
+        {const_cast<char*>("__getstate__"), PyOp(MeshGrid)::getstate, METH_NOARGS, "MeshGrid getstate"},
+    {const_cast<char*>("__setstate__"), PyOp(MeshGrid)::setstate, METH_VARARGS, "MeshGrid setstate"},
+        {NULL}  /* Sentinel */
+    };
+    
+void _init_py_MeshGrid(py::module m) {
+    using py_op = PyOp(MeshGrid);
+    auto& py_type = PyOpType(MeshGrid);
+    py_type = {PyVarObject_HEAD_INIT(NULL, 0)};
+    py_type.tp_name = "megengine.core._imperative_rt.ops.MeshGrid";
+    py_type.tp_basicsize = sizeof(PyOp(MeshGrid));
+    py_type.tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE;
+    py_type.tp_doc = "MeshGrid";
+    py_type.tp_base = &PyOpType(OpDef);
+    py_type.tp_dealloc = py_dealloc_generic<py_op>;
+    py_type.tp_new = py_new_generic<py_op>;
+    py_type.tp_init = py_op::py_init;
+    py_type.tp_methods = py_op::tp_methods;
+    py_type.tp_getset = py_op::py_getsetters;
+    mgb_assert(PyType_Ready(&py_type) >= 0);
+    
+    PyType_Modified(&py_type);
+    m.add_object("MeshGrid", reinterpret_cast<PyObject*>(&py_type));
+    mgb_assert(PyOp(OpDef)::ctype2pytype.emplace(MeshGrid::typeinfo(), &py_type).second);
+}
+
 PyOpDefBegin(MeshIndexing) // {
     static PyGetSetDef py_getsetters[];
     static PyMethodDef tp_methods[];
@@ -18594,6 +18683,7 @@ void _init_py_WarpPerspectiveBackwardMat(py::module m) {
     _init_py_MagicMindRuntime(m); \
     _init_py_MatrixInverse(m); \
     _init_py_MatrixMul(m); \
+    _init_py_MeshGrid(m); \
     _init_py_MeshIndexing(m); \
     _init_py_NMSKeep(m); \
     _init_py_NvOf(m); \

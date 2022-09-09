@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from functools import lru_cache
-from typing import Iterable, Optional, Sequence, Tuple, Union
+from typing import Iterable, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 
@@ -36,6 +36,7 @@ __all__ = [
     "full_like",
     "gather",
     "linspace",
+    "meshgrid",
     "ones",
     "ones_like",
     "repeat",
@@ -1205,3 +1206,49 @@ def cumsum(inp: Tensor, axis: int):
     assert isinstance(inp, Tensor), "input of cumsum must be type of Tensor"
     op = builtin.Cumsum(axis=axis, exclusive=False, reverse=False)
     return apply(op, inp)[0]
+
+
+def meshgrid(*inputs: Tensor, indexing: str = "xy") -> List[Tensor]:
+    r"""Returns coordinate matrices from coordinate vectors.
+
+    Args:
+        inputs: an arbitrary number of one-dimensional tensors representing grid 
+            coordinates. Each input should have the same numeric data type.
+        indexing:  Cartesian ``'xy'`` or matrix ``'ij'`` indexing of output. 
+            If provided zero or one one-dimensional vector(s) (i.e., the zero- and one-dimensional 
+            cases, respectively), the indexing keyword has no effect and should be ignored.
+
+
+    Returns:
+        out: list of N tensors, where N is the number of provided one-dimensional input tensors. 
+            Each returned tensor must have rank N. For N one-dimensional tensors having lengths ``Ni = len(xi)``, 
+            
+            * if matrix indexing ``ij``, then each returned tensor must have the shape ``(N1, N2, N3, ..., Nn)``.
+            * if Cartesian indexing ``xy``, then each returned tensor must have shape ``(N2, N1, N3, ..., Nn)``.
+            
+            Accordingly, for the two-dimensional case with input one-dimensional tensors of length ``M`` and ``N``, 
+            if matrix indexing ``ij``, then each returned tensor must have shape ``(M, N)``, and, if Cartesian indexing ``xy``, 
+            then each returned tensor must have shape ``(N, M)``.
+
+            Similarly, for the three-dimensional case with input one-dimensional tensor of length ``M``, ``N``, and ``P``, 
+            if matrix indexing  ``ij``, then each returned tensor must have shape ``(M, N, P)``, and, if Cartesian indexing ``xy``, 
+            then each returned tensor must have shape ``(N, M, P)``.
+
+            Each returned tensor should have the same data type as the input tensors.
+    
+    Examples:
+        >>> nx, ny = (3, 2)
+        >>> x = F.linspace(0, 1, nx)
+        >>> y = F.linspace(0, 1, ny)
+        >>> xv, yv = F.meshgrid(x, y)
+        >>> xv
+        Tensor([[0.  0.5 1. ]
+        [0.  0.5 1. ]], device=xpux:0)        
+        >>> yv
+        Tensor([[0. 0. 0.]
+        [1. 1. 1.]], device=xpux:0)
+
+
+    """
+    op = builtin.MeshGrid(indexing)
+    return apply(op, *inputs)

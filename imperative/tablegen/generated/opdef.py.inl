@@ -1365,6 +1365,13 @@ MatrixMulInst
     .def_readwrite("dimA", &MatrixMul::dimA)
     .def_readwrite("dimB", &MatrixMul::dimB);
 
+py::class_<MeshGrid, std::shared_ptr<MeshGrid>, OpDef> MeshGridInst(m, "MeshGrid");
+
+MeshGridInst
+    .def(py::init<std::string, std::string>(), py::arg("indexing"), py::arg("scope") = {})
+    .def(py::init<>())
+    .def_readwrite("indexing", &MeshGrid::indexing);
+
 py::class_<MeshIndexing, std::shared_ptr<MeshIndexing>, OpDef> MeshIndexingInst(m, "MeshIndexing");
 
 MeshIndexingInst

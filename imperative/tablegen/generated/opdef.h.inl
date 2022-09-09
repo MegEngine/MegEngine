@@ -1262,6 +1262,15 @@ public:
     }
 };
 
+class MeshGrid : public OpDefImplBase<MeshGrid> {
+    MGB_DYN_TYPE_OBJ_FINAL_DECL;
+
+public:
+    std::string indexing;
+    MeshGrid() = default;
+    MeshGrid(std::string indexing_, std::string scope_ = {}): indexing(indexing_) { set_scope(scope_); }
+};
+
 class MeshIndexing : public OpDefImplBase<MeshIndexing> {
     MGB_DYN_TYPE_OBJ_FINAL_DECL;
 
