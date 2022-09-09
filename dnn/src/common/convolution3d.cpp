@@ -148,7 +148,10 @@ Convolution3DBase::CanonizedFilterMeta Convolution3DBase::deduce_layout_fwd(
         src_or_dst_spatial_start = 1;
     }
     megdnn_assert(
-            cflt.icpg * cflt.group == src[src_or_dst_c_pos], "%s", errmsg().c_str());
+            cflt.icpg * cflt.group == src[src_or_dst_c_pos],
+            "group conv channel mismatch : input channel got %zu, and "
+            "filter channel got %u. More details about src, filter and dst : \n%s",
+            src[src_or_dst_c_pos], cflt.icpg * cflt.group, errmsg().c_str());
     dst.ndim = src.ndim;
     dst[0] = src[0];
     dst[src_or_dst_c_pos] = cflt.ocpg * cflt.group;
