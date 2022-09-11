@@ -1052,7 +1052,6 @@ def copy(inp, device=None):
 
         >>> import numpy as np
         >>> x = Tensor([1, 2, 3], np.int32)
-        Tensor([1 2 3], dtype=int32, device=xpux:0)
 
         >>> F.copy(x, 'cpu1')
         Tensor([1 2 3], dtype=int32, device=cpu1:0)
