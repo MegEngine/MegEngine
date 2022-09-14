@@ -26,6 +26,15 @@ LITE_API void LITE_clear_last_error();
  */
 LITE_API const char* LITE_get_last_error();
 
+/*! \brief LITE is enable ipc debug mode or not.
+ * \return if enable ipc debug mode, will return 1, if not will return 0
+ */
+LITE_API int LITE_is_enable_ipc_debug_mode();
+
+/*! \brief LITE enable ipc debug mode.
+ */
+LITE_API void LITE_enable_lite_ipc_debug();
+
 /*! \brief Get device count
  * \param[in] device_type device type
  * \return the device count

@@ -11,6 +11,7 @@
 
 #ifdef __ANDROID__
 #include <android/log.h>
+#include <sys/system_properties.h>
 #endif
 
 using namespace lite;
@@ -18,7 +19,26 @@ using namespace lite;
 namespace lite {
 namespace log_detail {
 
-LiteLogLevel current_log_level = LiteLogLevel::ERROR;
+LiteLogLevel config_default_log_level() {
+    auto default_level = LiteLogLevel::ERROR;
+    //! env to config LogLevel
+    //!  DEBUG = 0, INFO = 1, WARN = 2, ERROR = 3, NO_LOG = 4
+    //! for example , export RUNTIME_OVERRIDE_LOG_LEVEL=0, means set LogLevel to
+    //! DEBUG
+    if (auto env = ::std::getenv("RUNTIME_OVERRIDE_LOG_LEVEL"))
+        default_level = static_cast<LiteLogLevel>(std::stoi(env));
+
+#ifdef __ANDROID__
+    //! special for Android prop, attention: getprop may need permission
+    char buf[PROP_VALUE_MAX];
+    if (__system_property_get("RUNTIME_OVERRIDE_LOG_LEVEL", buf) > 0) {
+        default_level = static_cast<LiteLogLevel>(atoi(buf));
+    }
+#endif
+
+    return default_level;
+}
+LiteLogLevel current_log_level = config_default_log_level();
 
 template <class T, size_t N>
 constexpr size_t countof(T (&)[N]) {

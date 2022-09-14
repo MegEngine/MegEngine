@@ -1,5 +1,6 @@
 #include "lite/global.h"
 #include "common.h"
+#include "ipc_helper.h"
 #include "lite-c/global_c.h"
 
 namespace {
@@ -47,7 +48,24 @@ void LITE_clear_last_error() {
 
 const char* LITE_get_last_error() {
     LITE_LOCK_GUARD(mtx_error);
-    return get_global_error().get_error_msg().c_str();
+    if (ipc_imp::is_server()) {
+        return get_global_error().get_error_msg().c_str();
+    } else {
+        void* raw_shm_ptr = IPC_INSTACE().get_shm_ptr(nullptr);
+
+        IPC_HELP_REMOTE_CALL(raw_shm_ptr, ipc::RemoteFuncId::LITE_GET_LAST_ERROR);
+
+        char* ret_ptr = static_cast<char*>(raw_shm_ptr);
+        return ret_ptr;
+    }
+}
+
+int LITE_is_enable_ipc_debug_mode() {
+    return ipc::IpcHelper::is_enable_fork_debug_mode();
+}
+
+void LITE_enable_lite_ipc_debug() {
+    ipc_imp::enable_lite_ipc_debug();
 }
 
 int LITE_get_version(int* major, int* minor, int* patch) {
