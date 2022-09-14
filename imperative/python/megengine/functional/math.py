@@ -38,55 +38,81 @@ __all__ = [
 ]
 
 
+# TODO: Should be moved to elemwise - logical functions
+
+
 def isnan(inp: Tensor) -> Tensor:
-    r"""Returns a new tensor representing if each element is ``NaN`` or not.
+    r"""Element-wise ``NaN`` check.
+    
+    Tests each element :math:`x_i` of the input tensor :math:`x` to determine whether the element is ``NaN``.
 
     Args:
-        inp: input tensor.
+        inp: input tensor. Should have a numeric data type.
 
     Returns:
-        result tensor.
+        a tensor containing test results.
+        An element out is ``True`` if :math:`x_i` is ``NaN`` and ``False`` otherwise.
+        The returned array should have a data type of bool.
 
     Examples:
+
         >>> x = Tensor([1, float("nan"), 0])
-        >>> F.isnan(x).numpy()
-        array([False,  True, False])
+        >>> F.isnan(x)
+        Tensor([False  True False], dtype=bool, device=xpux:0)
     """
     return _elemwise_multi_type(inp, mode="isnan", dtype="bool")
 
 
 def isinf(inp: Tensor) -> Tensor:
-    r"""Returns a new tensor representing if each element is ``Inf`` or not.
+    r"""Element-wise ``infinity`` check.
+    
+    Tests each element :math:`x_i` of the input tensor :math:`x` to determine
+    whether the element is if equal to positive or negative infinity.
 
     Args:
-        inp: input tensor.
+        inp: input tensor. Should have a numeric data type.
 
     Returns:
-        result tensor.
+        a tensor containing test results.
+        An element out is ``True`` if :math:`x_i` is either positive or negative infinity and ``False`` otherwise.
+        The returned array should have a data type of bool.
 
     Examples:
+
         >>> x = Tensor([1, float("inf"), 0])
-        >>> F.isinf(x).numpy()
-        array([False,  True, False])
+        >>> F.isinf(x)
+        Tensor([False  True False], dtype=bool, device=xpux:0)
     """
     return _elemwise_multi_type(inp, mode="isinf", dtype="bool")
 
 
-def sign(inp: Tensor):
-    r"""Returns a new tensor representing the sign of each element in input tensor.
+# TODO: Should be moved to elemwise - arithmetic operations
+
+
+def sign(x: Tensor):
+    r"""Element-wise sign.
+
+    Returns an indication of the sign of a number for each element :math:`x_i` of the input tensor :math:`x`.
 
     Args:
-        inp: Tensor:
+        inp: input tensor. Should have a numeric data type.
 
     Returns:
-        the sign of input tensor.
+        a tensor containing the evaluated result for each element in :math:`x`.
+        The returned array must have the same data type as :math:`x`.
 
     Examples:
+
+        Element-wise sign:
+
         >>> x = Tensor([1, -1, 0])
         >>> F.sign(x)
         Tensor([ 1 -1  0], dtype=int32, device=xpux:0)
     """
-    return (inp > 0).astype(inp.dtype) - (inp < 0).astype(inp.dtype)
+    return (x > 0).astype(x.dtype) - (x < 0).astype(x.dtype)
+
+
+# statistical functions
 
 
 def sum(
