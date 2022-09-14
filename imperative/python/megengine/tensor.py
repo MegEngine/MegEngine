@@ -60,8 +60,8 @@ class Tensor(_Tensor, ArrayMethodMixin):
 
     """
 
-    grad = None
-    dmap_callback = None
+    grad = None  #: gradient of this tensor, see :mod:`~.autodiff`.
+    dmap_callback = None  #: callback for device mapping, see :func:`~.load`.
     _qparams = None
     _custom_name = ""
     _name = None
@@ -122,10 +122,12 @@ class Tensor(_Tensor, ArrayMethodMixin):
 
     @property
     def format(self) -> str:
+        r"""Returns a string represents the :ref:`memory format <format-introduction>` of a :class:`~.Tensor`."""
         return super().format()
 
     @format.setter
     def format(self, format):
+        r"""Sets the memory format of a :class:`~.Tensor`."""
         super()._set_format(format)
 
     @property
@@ -161,6 +163,7 @@ class Tensor(_Tensor, ArrayMethodMixin):
 
     @property
     def name(self):
+        r"""Returns a string represents the name of a :class:`~.Tensor`."""
         return self._custom_name
 
     @name.setter
@@ -195,6 +198,7 @@ class Tensor(_Tensor, ArrayMethodMixin):
 
     @property
     def requires_grad(self):
+        r"""Returns a bool indicates whether the :class:`~.Tensor` requires gradient."""
         raise AttributeError("requires_grad is reserved for future use")
 
     @requires_grad.setter
