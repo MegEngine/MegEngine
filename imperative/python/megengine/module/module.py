@@ -452,6 +452,7 @@ class Module(metaclass=ABCMeta):
         return offset
 
     def state_dict(self, rst=None, prefix="", keep_var=False):
+        r"""Returns a dictionary containing whole states of the module."""
         _rst = self._state_dict(rst=rst, prefix=prefix, keep_var=keep_var)
         rst = OrderedDict()
         XNorm_typeclass = _get_XNorm_typeclass()
