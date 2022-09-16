@@ -37,8 +37,8 @@ namespace {
                     // cast to uint32 to handle both negative and overflow
                     set_async_error_info(param.error_info, param.error_tracker,
                             "invalid advanced indexing: "
-                            "indexer=%d idx=%d shape=%d",
-                            i, data_idx, param.data_shape[i]);
+                            "input index %d is out of bounds for axis %d with size %d",
+                            data_idx, i, param.data_shape[i]);
                     data_idx = 0;
                 }
                 offset += data_idx * param.data_stride[i];

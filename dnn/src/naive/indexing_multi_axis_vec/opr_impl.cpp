@@ -56,7 +56,9 @@ void do_exec(
                 data_idx += data_shape;
             megdnn_assert(
                     data_idx >= 0 && static_cast<size_t>(data_idx) < data_shape,
-                    "bad index value for index %zu at output %zu", i, *index_idx);
+                    "invalid advanced indexing: "
+                    "input index %d is out of bounds for axis %zu with size %zu",
+                    data_idx, i, data_shape);
             offset += data_stride * data_idx;
         }
         for (size_t i = 0; i < nr_nonidx_axes; ++i) {
