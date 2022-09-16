@@ -42,7 +42,7 @@ from ..utils.deprecation import deprecated_func
 from .debug_param import get_execution_strategy
 from .distributed import all_reduce_sum
 from .elemwise import _elwise, exp, log, log1p, maximum, minimum
-from .math import max, sum
+from .math import max, normalize, sum
 from .metric import topk_accuracy
 from .tensor import broadcast_to, concat, expand_dims, ones, squeeze, zeros
 
@@ -73,6 +73,7 @@ __all__ = [
     "logsumexp",
     "logsoftmax",
     "max_pool2d",
+    "normalize",
     "one_hot",
     "prelu",
     "pad",
