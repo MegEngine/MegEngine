@@ -1,3 +1,4 @@
+#include "megbrain/graph/cg.h"
 #include "megbrain/opr/dnn/local.h"
 #include "megbrain/test/helper.h"
 
@@ -5037,7 +5038,8 @@ TEST(TestGoptInference, PaddingChannels) {
     SymbolVar y3_pad;
     unpack_vector(
             gopt::GraphOptimizer{}
-                    .add_pass<gopt::PaddingChannelPass>()
+                    .add_pass(gopt::PaddingChannelPass::make(
+                            cg::GraphCommonOptimizeOptions::LayoutTransform::NCHW64))
                     .apply({{y3}})
                     .endpoint_vars(),
             y3_pad);
@@ -5101,7 +5103,8 @@ TEST(TestGoptInference, ConcatAfterPaddingChannels) {
     SymbolVar y2_pad;
     unpack_vector(
             gopt::GraphOptimizer{}
-                    .add_pass<gopt::PaddingChannelPass>()
+                    .add_pass(gopt::PaddingChannelPass::make(
+                            cg::GraphCommonOptimizeOptions::LayoutTransform::NCHW64))
                     .apply({{y2}})
                     .endpoint_vars(),
             y2_pad);
@@ -5166,7 +5169,8 @@ TEST(TestGoptInference, PaddingChannelsWithPooling) {
     SymbolVar y1_pad;
     unpack_vector(
             gopt::GraphOptimizer{}
-                    .add_pass<gopt::PaddingChannelPass>()
+                    .add_pass(gopt::PaddingChannelPass::make(
+                            cg::GraphCommonOptimizeOptions::LayoutTransform::NCHW64))
                     .apply({{y1}})
                     .endpoint_vars(),
             y1_pad);
@@ -5232,7 +5236,8 @@ TEST(TestGoptInference, PaddingChannelsWithWarpPerspective) {
     SymbolVar y1_pad;
     unpack_vector(
             gopt::GraphOptimizer{}
-                    .add_pass<gopt::PaddingChannelPass>()
+                    .add_pass(gopt::PaddingChannelPass::make(
+                            cg::GraphCommonOptimizeOptions::LayoutTransform::NCHW64))
                     .apply({{y1}})
                     .endpoint_vars(),
             y1_pad);

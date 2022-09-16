@@ -783,7 +783,8 @@ const GraphOptimizer& GraphOptimizer::add_passes_for_optimize_options(
     });
     cb(nchw64, {
         add_pass<FuseConvBiasNonlinPass>();
-        add_pass<PaddingChannelPass>();
+        add_pass(PaddingChannelPass::make(
+                cg::GraphCommonOptimizeOptions::LayoutTransform::NCHW64));
         add_pass<FuseConvBiasZPass>();
         add_pass(EnableNCHW64Pass::make_nchw64_converter());
         add_pass<ShuffleShuffleRemovePass>();
