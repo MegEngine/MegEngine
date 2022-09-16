@@ -1126,17 +1126,28 @@ def roll(
 
 
 def cumsum(inp: Tensor, axis: int):
-    r"""Computes the cumulative sum of elements along given axis.
+    r"""Calculates the cumulative sum of tensor elements over a given axis.
 
     Args:
-        inp: input tensor.
-        axis: axis along which cumsum is performed.
+        inp: input tensor. Should have a numeric data type.
+        axis: axis along which cumulative sums must be computed.
+
+    Returns:
+        a tensor containing the cumulative sums.
 
     Examples:
-        >>> x = Tensor([[1, 2, 3], [4, 5, 6]], "int32")
-        >>> F.cumsum(x, 1)
+
+        If :math:`x_i` is ``NaN``, the cumulative sums is ``NaN`` (i.e., ``NaN`` values propagate).
+
+    Examples:
+        >>> x = Tensor([[1, 2, 3], [4, 5, 6]])
+        >>> F.cumsum(x, axis = 0)
+        Tensor([[1 2 3]
+         [5 7 9]], dtype=int32, device=xpux:0)
+        >>> F.cumsum(x, axis = 1)
         Tensor([[ 1  3  6]
          [ 4  9 15]], dtype=int32, device=xpux:0)
+
     """
     assert isinstance(inp, Tensor), "input of cumsum must be type of Tensor"
     op = builtin.Cumsum(axis=axis, exclusive=False, reverse=False)
