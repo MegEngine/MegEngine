@@ -202,9 +202,9 @@ TEST(ARM_RUNTIME, CPUINFO_SDM8GEN1) {
         ASSERT_TRUE(cpuinfo_has_arm_neon_dot());
 
         ASSERT_FALSE(cpuinfo_has_arm_sve2());
-
+#if MEGDNN_AARCH64
         ASSERT_TRUE(cpuinfo_has_arm_i8mm());
-
+#endif
         for (uint32_t i = 0; i < cpuinfo_get_processors_count(); i++) {
             ASSERT_EQ(cpuinfo_get_core(i), cpuinfo_get_processor(i)->core);
         }

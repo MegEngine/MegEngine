@@ -339,6 +339,9 @@ void winograd_2x3_8x8_s8::input(
         size_t nr_units_in_tile) {
     megdnn_assert(IC % 8 == 0);
     constexpr int alpha = 3 + 2 - 1;
+    constexpr int SIMD_WIDTH = 4;
+    //! the input is load with int8 this is used to keep the borad load valid
+    constexpr int board_security_width = std::max(2 * SIMD_WIDTH, alpha);
 
     // OW = IW + 2 * PW - KERNEL_SIZE + 1
     auto units_w = div_ceil<size_t>(IW + 2 * PW - KERNEL_SIZE + 1, OUTPUT_BLOCK_SIZE);
@@ -353,7 +356,8 @@ void winograd_2x3_8x8_s8::input(
             int ih_start = nh * OUTPUT_BLOCK_SIZE - PH;
             int iw_start = nw * OUTPUT_BLOCK_SIZE - PW;
             if (ih_start >= 0 && ih_start + alpha <= static_cast<int>(IH) &&
-                iw_start >= 0 && iw_start + alpha <= static_cast<int>(IW)) {
+                iw_start >= 0 &&
+                iw_start + board_security_width <= static_cast<int>(IW)) {
                 InputTransform2X3_qs8::prepare<true>(
                         input, patch, patchT, ih_start, iw_start, IH, IW, ic, IC);
                 InputTransform2X3_qs8::transform(
