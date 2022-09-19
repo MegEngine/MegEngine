@@ -111,13 +111,19 @@ class Tensor(_Tensor, ArrayMethodMixin):
         return super().shape
 
     @property
-    def device(self) -> CompNode:
-        r"""Returns a string represents the device a :class:`~.Tensor` storaged on."""
+    def device(self):
+        r"""Returns a string represents the device a :class:`~.Tensor` storaged on.
+        
+        .. seealso:: see :ref:`tensor-device` for more details.
+        """
         return super().device
 
     @property
     def dtype(self) -> np.dtype:
-        r"""Returns a :class:`numpy.dtype` object represents the data type of a :class:`~.Tensor`."""
+        r"""Returns a :class:`numpy.dtype` object represents the data type of a :class:`~.Tensor`.
+        
+        .. seealso:: see :ref:`tensor-dtype` for more details.
+        """
         return super().dtype
 
     @property
