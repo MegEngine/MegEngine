@@ -4004,8 +4004,11 @@ TEST(TestGoptInference, ConvertFormatNCHW44) {
     ASSERT_EQ(
             opr::Convolution::Param::Format::NCHW44,
             find_opr<opr::ConvBias>(y_opt, "conv4").param().format);
+
+    //! nchw44 add the PaddingChannel pass, it will padding conv5 output
+    //! channel, so it will convert to nchw44 format
     ASSERT_EQ(
-            opr::Convolution::Param::Format::NCHW,
+            opr::Convolution::Param::Format::NCHW44,
             find_opr<opr::ConvBias>(y_opt, "conv5").param().format);
 
     graph->compile({{y_opt, {}}})
@@ -4206,7 +4209,6 @@ TEST(TestGoptInference, ConvertFormatNCHW44_DOT) {
     auto w1 = mkcvar("w1", {8, 3, 3, 3}),
          conv1 = opr::Convolution::make(
                  x, w1, param_conv, {}, OperatorNodeConfig("conv1"));
-    printf("create conv1 %s\n", conv1.node()->owner_opr()->dyn_typeinfo()->name);
     param_conv.pad_h = param_conv.pad_w = 1;
     //! no supported hybrid nchw44
     opr::ConvBias::Param param_conv_bias_pad0;
@@ -4313,8 +4315,10 @@ TEST(TestGoptInference, ConvertFormatNCHW44_DOT) {
     ASSERT_EQ(
             opr::Convolution::Param::Format::NCHW44,
             find_opr<opr::ConvBias>(y_opt, "conv4").param().format);
+    //! nchw44-dot default add PaddingChannel pass, so it output channel will be
+    //! padding to times of 4, so it can't be used as nchw44 format.
     ASSERT_EQ(
-            opr::Convolution::Param::Format::NCHW,
+            opr::Convolution::Param::Format::NCHW44,
             find_opr<opr::ConvBias>(y_opt, "conv5").param().format);
 
     graph->compile({{y_opt, {}}})

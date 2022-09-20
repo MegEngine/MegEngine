@@ -508,39 +508,48 @@ public:
  * assume input network is built in NCHW tensor format
  */
 class PaddingChannelPass final : public Pass {
-public:
+private:
     using ChannelAlignmentMap =
             ThinHashMap<DTypeEnum, std::function<size_t(size_t, bool)>>;
     using LayoutTrans = cg::GraphCommonOptimizeOptions::LayoutTransform;
+    using ReplaceFuncs = ThinHashMap<
+            Typeinfo*,
+            thin_function<OperatorNodeBase*(OperatorNodeBase*, const VarNodeArray&)>>;
 
+public:
     const char* name() const override;
     void apply(OptState& opt) const override;
 
     void fill_opr_convert_fun(LayoutTrans layout_trans);
 
-    using ReplaceFuncs = ThinHashMap<
-            Typeinfo*,
-            thin_function<OperatorNodeBase*(OperatorNodeBase*, const VarNodeArray&)>>;
-
     //! make channel padding opt pass with given tensor format
-    static std::unique_ptr<PaddingChannelPass> make(LayoutTrans layout_transform);
+    static std::unique_ptr<PaddingChannelPass> make(
+            LayoutTrans layout_transform, bool only_padding_weights = false);
 
 private:
+    PaddingChannelPass(bool only_padding_weights = false)
+            : m_only_padding_weights(only_padding_weights) {}
+
     VarNode* extract_subtensor(VarNode* inp, const TensorShape& orig_shape) const;
     VarNode* pad_in_channels(VarNode* inp, size_t pad_channels);
     VarNode* pad_out_channels(VarNode* inp, size_t pad_channels);
-    OperatorNodeBase* padding_policy(
+    OperatorNodeBase* padding_conv_policy(
             OperatorNodeBase* opr, const VarNodeArray& new_inp);
 
-    void add_convbias_replace_func(LayoutTrans layout_transform);
+    OperatorNodeBase* padding_channel_wise_conv_policy(
+            OperatorNodeBase* opr, const VarNodeArray& new_inp);
+
+    void add_conv_replace_func(LayoutTrans layout_transform);
     void add_conv_backward_data_replace_func(LayoutTrans layout_transform);
     void add_format_aware_opr_replace_func(LayoutTrans layout_transform);
     void add_elemwise_like_opr_replace_func(LayoutTrans layout_transform);
+    void add_condition_padding_oprs_replace_func(LayoutTrans layout_transform);
     void add_nonpadding_oprs_replace_func(LayoutTrans layout_transform);
 
     ChannelAlignmentMap m_alignment_map;
     ReplaceFuncs m_opr_replace_funcs;
     mutable ThinHashSet<OperatorNodeBase*> m_padding_oprs;
+    bool m_only_padding_weights;
 };
 
 /*!

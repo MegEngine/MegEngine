@@ -743,20 +743,28 @@ const GraphOptimizer& GraphOptimizer::add_passes_for_optimize_options(
     });
     cb(nhwcd4, {
         add_pass<FuseConvBiasNonlinPass>();
+        add_pass(PaddingChannelPass::make(
+                cg::GraphCommonOptimizeOptions::LayoutTransform::NHWCD4, true));
         add_pass(ConvertFormatPass::make_nhwcd4_converter());
     });
     cb(nchw88, {
         add_pass<FuseConvBiasNonlinPass>();
+        add_pass(PaddingChannelPass::make(
+                cg::GraphCommonOptimizeOptions::LayoutTransform::NCHW88, true));
         add_pass(EnableNchwxxPass::make_nchwxx_converter(8));
         add_pass<ShuffleShuffleRemovePass>();
     });
     cb(nchw44, {
         add_pass<FuseConvBiasNonlinPass>();
+        add_pass(PaddingChannelPass::make(
+                cg::GraphCommonOptimizeOptions::LayoutTransform::NCHW44, true));
         add_pass(EnableNchwxxPass::make_nchwxx_converter(4));
         add_pass<ShuffleShuffleRemovePass>();
     });
     cb(nchw44_dot, {
         add_pass<FuseConvBiasNonlinPass>();
+        add_pass(PaddingChannelPass::make(
+                cg::GraphCommonOptimizeOptions::LayoutTransform::NCHW44_DOT, true));
         add_pass(EnableNchw44DotPass::make_nchw44_dot_converter());
         add_pass<ShuffleShuffleRemovePass>();
     });
@@ -784,7 +792,7 @@ const GraphOptimizer& GraphOptimizer::add_passes_for_optimize_options(
     cb(nchw64, {
         add_pass<FuseConvBiasNonlinPass>();
         add_pass(PaddingChannelPass::make(
-                cg::GraphCommonOptimizeOptions::LayoutTransform::NCHW64));
+                cg::GraphCommonOptimizeOptions::LayoutTransform::NCHW64, false));
         add_pass<FuseConvBiasZPass>();
         add_pass(EnableNCHW64Pass::make_nchw64_converter());
         add_pass<ShuffleShuffleRemovePass>();
