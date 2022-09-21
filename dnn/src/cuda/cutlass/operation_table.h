@@ -201,6 +201,12 @@ struct ConvolutionKey {
 
     bool without_shared_load;
 
+    // only used by rrconv
+    library::NumericTypeID element_rin = library::NumericTypeID::kInvalid;
+    library::LayoutTypeID layout_rin = library::LayoutTypeID::kInvalid;
+    library::NumericTypeID element_rout = library::NumericTypeID::kInvalid;
+    library::LayoutTypeID layout_rout = library::LayoutTypeID::kInvalid;
+
     inline bool operator==(ConvolutionKey const& rhs) const {
         return (conv_op == rhs.conv_op) && (element_src == rhs.element_src) &&
                (layout_src == rhs.layout_src) &&
@@ -223,7 +229,9 @@ struct ConvolutionKey {
                (special_optimization == rhs.special_optimization) &&
                (alignment_src == rhs.alignment_src) &&
                (alignment_filter == rhs.alignment_filter) &&
-               (without_shared_load == rhs.without_shared_load);
+               (without_shared_load == rhs.without_shared_load) &&
+               (element_rin == rhs.element_rin) && (layout_rin == rhs.layout_rin) &&
+               (element_rout == rhs.element_rout) && (layout_rout == rhs.layout_rout);
     }
 
     inline bool operator!=(ConvolutionKey const& rhs) const { return !(*this == rhs); }
@@ -260,7 +268,11 @@ struct ConvolutionKey {
                "\n    special_optimization: " + to_string(special_optimization) +
                "\n    alignment_src: " + std::to_string(alignment_src) +
                "\n    alignment_filter: " + std::to_string(alignment_filter) +
-               "\n    without_shared_load: " + to_string(without_shared_load) + "\n}";
+               "\n    without_shared_load: " + to_string(without_shared_load) +
+               "\n    element_rin: " + to_string(element_rin) +
+               "\n    layout_rin: " + to_string(layout_rin) +
+               "\n    element_rout: " + to_string(element_rout) +
+               "\n    layout_rout: " + to_string(layout_rout) + "\n}";
     }
 };
 
@@ -293,6 +305,10 @@ struct ConvolutionKeyHasher {
                 .update(&key.alignment_src, sizeof(key.alignment_src))
                 .update(&key.alignment_filter, sizeof(key.alignment_filter))
                 .update(&key.without_shared_load, sizeof(key.without_shared_load))
+                .update(&key.element_rin, sizeof(key.element_rin))
+                .update(&key.layout_rin, sizeof(key.layout_rin))
+                .update(&key.element_rout, sizeof(key.element_rout))
+                .update(&key.layout_rout, sizeof(key.layout_rout))
                 .digest();
     }
 };

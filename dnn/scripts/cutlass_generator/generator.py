@@ -1260,6 +1260,218 @@ def GenerateDwconv2d_Simt(args, conv_kind):
     return operations
 
 
+def GenerateRegionRestrictedconv2d_Simt(args, conv_kind):
+    ################################################################################
+    # warps per threadblock
+    ################################################################################
+    warpsPerThreadblocks = []
+    for warpsPerThreadblock0 in warpsPerThreadblockEdge:
+        for warpsPerThreadblock1 in warpsPerThreadblockEdge:
+            if (
+                warpsPerThreadblock0 / warpsPerThreadblock1 <= warpsPerThreadblockRatio
+                and warpsPerThreadblock1 / warpsPerThreadblock0
+                <= warpsPerThreadblockRatio
+                and warpsPerThreadblock0 * warpsPerThreadblock1
+                <= warpsPerThreadblockMax
+            ):
+                warpsPerThreadblocks.append(
+                    [warpsPerThreadblock0, warpsPerThreadblock1]
+                )
+
+    ################################################################################
+    # warp shapes
+    ################################################################################
+    warpNumThreads = 32
+    warpShapes = []
+    for warp0 in warpShapeEdges:
+        for warp1 in warpShapeEdges:
+            if (
+                warp0 / warp1 <= warpShapeRatio
+                and warp1 / warp0 <= warpShapeRatio
+                and warp0 * warp1 <= warpShapeMax
+                and warp0 * warp1 > warpShapeMin
+            ):
+                warpShapes.append([warp0, warp1])
+
+    # sgemm
+    (
+        precisionType,
+        precisionBits,
+        threadblockMaxElements,
+        threadblockTilesL0,
+    ) = precisions["s"]
+
+    layouts = [(LayoutType.TensorNCHW, LayoutType.TensorNCHW)]
+
+    math_instructions = [
+        MathInstruction(
+            [1, 1, 1],
+            DataType.f32,
+            DataType.f32,
+            DataType.f32,
+            OpcodeClass.Simt,
+            MathOperation.multiply_add,
+            DataType.s32,
+            DataType.s32,
+        ),
+        MathInstruction(
+            [1, 1, 1],
+            DataType.f32,
+            DataType.f32,
+            DataType.f32,
+            OpcodeClass.Simt,
+            MathOperation.multiply_add,
+            DataType.s8,
+            DataType.s8,
+        ),
+    ]
+
+    min_cc = 50
+    max_cc = 1024
+
+    dst_layouts = [LayoutType.TensorNCHW]
+
+    dst_types = [DataType.f32]
+
+    if conv_kind == ConvKind.Wgrad:
+        alignment_constraints = [32]
+    else:
+        alignment_constraints = [128, 32]
+
+    operations = []
+    for math_inst in math_instructions:
+        tile_descriptions = [
+            TileDescription([128, 128, 8], 1, [4, 2, 1], math_inst, min_cc, max_cc),
+            TileDescription([128, 64, 8], 1, [2, 2, 1], math_inst, min_cc, max_cc),
+            TileDescription([64, 128, 8], 1, [2, 2, 1], math_inst, min_cc, max_cc),
+            TileDescription([128, 32, 8], 1, [2, 1, 1], math_inst, min_cc, max_cc),
+            TileDescription([32, 128, 8], 1, [1, 2, 1], math_inst, min_cc, max_cc),
+            TileDescription([64, 64, 8], 1, [2, 1, 1], math_inst, min_cc, max_cc),
+            TileDescription([32, 64, 8], 1, [1, 1, 1], math_inst, min_cc, max_cc),
+            TileDescription([64, 32, 8], 1, [1, 1, 1], math_inst, min_cc, max_cc),
+            TileDescription([32, 32, 8], 1, [1, 1, 1], math_inst, min_cc, max_cc),
+        ]
+        for warpsPerThreadblock in warpsPerThreadblocks:
+            for warpShape in warpShapes:
+                warpThreadsM = 0
+                if warpShape[0] > warpShape[1]:
+                    warpThreadsM = 8
+                else:
+                    warpThreadsM = 4
+                warpThreadsN = warpNumThreads / warpThreadsM
+
+                # skip shapes with conflicting rectangularity
+                # they are unlikely to be fastest
+                blockG = warpsPerThreadblock[0] > warpsPerThreadblock[1]
+                blockL = warpsPerThreadblock[0] < warpsPerThreadblock[1]
+                warpG = warpShape[0] > warpShape[1]
+                warpL = warpShape[0] < warpShape[1]
+
+                blockG2 = warpsPerThreadblock[0] > warpsPerThreadblock[1] * 2
+                blockL2 = warpsPerThreadblock[0] * 2 < warpsPerThreadblock[1]
+                warpG2 = warpShape[0] > warpShape[1] * 2
+                warpL2 = warpShape[0] * 2 < warpShape[1]
+
+                if blockG2 and warpL:
+                    continue
+                if blockL2 and warpG:
+                    continue
+                if warpG2 and blockL:
+                    continue
+                if warpL2 and blockG:
+                    continue
+
+                # check threadblock ratios and max
+                threadblockTile = [
+                    warpShape[0] * warpsPerThreadblock[0],
+                    warpShape[1] * warpsPerThreadblock[1],
+                ]
+                if threadblockTile[0] * threadblockTile[1] > threadblockMaxElements:
+                    continue
+                if threadblockTile[0] > threadblockEdgeMax:
+                    continue
+                if threadblockTile[1] > threadblockEdgeMax:
+                    continue
+                totalThreads = (
+                    warpNumThreads * warpsPerThreadblock[0] * warpsPerThreadblock[1]
+                )
+
+                # calculate unroll
+                # ensure that every iteration at least a full load of A,B are done
+                unrollMin = 8
+                unrollMin0 = totalThreads // threadblockTile[0]
+                unrollMin1 = totalThreads // threadblockTile[1]
+                unroll = max(unrollMin, unrollMin0, unrollMin1)
+
+                threadTileM = warpShape[0] // warpThreadsM
+                threadTileN = warpShape[1] // warpThreadsN
+                if threadTileM < 2 or threadTileN < 2:
+                    continue
+                if threadTileM * threadTileN * precisionBits > 8 * 8 * 32:
+                    continue
+
+                # epilogue currently only supports N < WarpNumThreads
+                if threadblockTile[1] < warpNumThreads:
+                    continue
+
+                # limit smem
+                smemBitsA = threadblockTile[0] * unroll * 2 * precisionBits
+                smemBitsB = threadblockTile[1] * unroll * 2 * precisionBits
+                smemKBytes = (smemBitsA + smemBitsB) / 8 / 1024
+                if smemKBytes > 48:
+                    continue
+
+                tile = TileDescription(
+                    [threadblockTile[0], threadblockTile[1], unroll],
+                    1,
+                    [
+                        threadblockTile[0] // warpShape[0],
+                        threadblockTile[1] // warpShape[1],
+                        1,
+                    ],
+                    math_inst,
+                    min_cc,
+                    max_cc,
+                )
+
+                def filter(t: TileDescription) -> bool:
+                    nonlocal tile
+                    return (
+                        t.threadblock_shape[0] == tile.threadblock_shape[0]
+                        and t.threadblock_shape[1] == tile.threadblock_shape[1]
+                        and t.threadblock_shape[2] == tile.threadblock_shape[2]
+                        and t.warp_count[0] == tile.warp_count[0]
+                        and t.warp_count[1] == tile.warp_count[1]
+                        and t.warp_count[2] == tile.warp_count[2]
+                        and t.stages == tile.stages
+                    )
+
+                if not any(t for t in tile_descriptions if filter(t)):
+                    continue
+
+                for layout in layouts:
+                    for dst_type, dst_layout in zip(dst_types, dst_layouts):
+                        for alignment_src in alignment_constraints:
+                            operations += GenerateConv2d(
+                                ConvType.RegionRestrictedConvolution,
+                                conv_kind,
+                                [tile],
+                                layout[0],
+                                layout[1],
+                                dst_layout,
+                                dst_type,
+                                min_cc,
+                                alignment_src,
+                                32,
+                                32,
+                                SpecialOptimizeDesc.NoneSpecialOpt,
+                                ImplicitGemmMode.GemmNT
+                                if conv_kind == ConvKind.Wgrad
+                                else ImplicitGemmMode.GemmTN,
+                            )
+    return operations
+
+
 #
 def GenerateDwconv2d_TensorOp_884(args, conv_kind):
     layouts = [(LayoutType.TensorNCHW, LayoutType.TensorNCHW)]
@@ -1644,6 +1856,14 @@ def GenerateDwconv2dWgradOperations(args):
         return GenerateDwconv2d_TensorOp_884(args, ConvKind.Wgrad)
 
 
+def GenerateRegionRestrictedconv2dWgradOperations(args):
+    assert args.type == "simt", (
+        "operation RegionRestrictedconv2d wgrad only support"
+        "simt. (got:{})".format(args.type)
+    )
+    return GenerateRegionRestrictedconv2d_Simt(args, ConvKind.Wgrad)
+
+
 def GenerateGemmOperations(args):
     if args.type == "tensorop884":
         return GeneratesGemm_TensorOp_884(args)
@@ -1697,6 +1917,8 @@ def ConcatFile(
     else:
         sub_string_1 = sub_string_2 = "simt"
     if "dwconv2d_" in operations:
+        filtered_operations = operations[:2] + operations[9:]
+    if "rrconv2d_" in operations:
         filtered_operations = operations[:2] + operations[9:]
     elif ("conv2d" in operations) or ("deconv" in operations):
         filtered_operations = "cutlass"
@@ -1893,6 +2115,7 @@ if __name__ == "__main__":
             "dwconv2d_fprop",
             "dwconv2d_dgrad",
             "dwconv2d_wgrad",
+            "rrconv2d_wgrad",
         ],
         required=True,
         help="Specifies the operation to generate (gemm, gemv, conv2d, deconv, dwconv2d_fprop, dwconv2d_dgrad, dwconv2d_wgrad)",
@@ -1928,9 +2151,11 @@ if __name__ == "__main__":
         operations = GenerateDwconv2dFpropOperations(args)
     elif args.operations == "dwconv2d_dgrad":
         operations = GenerateDwconv2dDgradOperations(args)
-    else:
-        assert args.operations == "dwconv2d_wgrad", "invalid operation"
+    elif args.operations == "dwconv2d_wgrad":
         operations = GenerateDwconv2dWgradOperations(args)
+    else:
+        assert args.operations == "rrconv2d_wgrad", "invalid operation"
+        operations = GenerateRegionRestrictedconv2dWgradOperations(args)
 
     if (
         args.operations == "conv2d"
@@ -1950,6 +2175,42 @@ if __name__ == "__main__":
         required_cuda_ver_major = operations[0].required_cuda_ver_major
         required_cuda_ver_minor = operations[0].required_cuda_ver_minor
         epilogue = EmitConvSingleKernelWrapper(
+            args.output, operations[0], short_path
+        ).epilogue_template
+        if "tensorop" in args.type:
+            ConcatFile(
+                4,
+                args.output,
+                args.operations,
+                args.type,
+                head,
+                required_cuda_ver_major,
+                required_cuda_ver_minor,
+                epilogue,
+            )
+        else:
+            ConcatFile(
+                2,
+                args.output,
+                args.operations,
+                args.type,
+                head,
+                required_cuda_ver_major,
+                required_cuda_ver_minor,
+                epilogue,
+            )
+    elif args.operations == "rrconv2d_wgrad":
+        for operation in operations:
+            with EmitRegionRestrictedConvSingleKernelWrapper(
+                args.output, operation, short_path
+            ) as emitter:
+                emitter.emit()
+        head = EmitRegionRestrictedConvSingleKernelWrapper(
+            args.output, operations[0], short_path
+        ).header_template
+        required_cuda_ver_major = operations[0].required_cuda_ver_major
+        required_cuda_ver_minor = operations[0].required_cuda_ver_minor
+        epilogue = EmitRegionRestrictedConvSingleKernelWrapper(
             args.output, operations[0], short_path
         ).epilogue_template
         if "tensorop" in args.type:

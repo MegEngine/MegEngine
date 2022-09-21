@@ -532,6 +532,7 @@ class ConvType(enum.Enum):
     Local = enum_auto()
     LocalShare = enum_auto()
     DepthwiseConvolution = enum_auto()
+    RegionRestrictedConvolution = enum_auto()
 
 
 ConvTypeTag = {
@@ -540,6 +541,8 @@ ConvTypeTag = {
     ConvType.Local: "cutlass::conv::ConvType::kLocal",
     ConvType.LocalShare: "cutlass::conv::ConvType::kLocalShare",
     ConvType.DepthwiseConvolution: "cutlass::conv::ConvType::kDepthwiseConvolution",
+    # RegionRestrictedConvolution using the same conv type with Depthwise
+    ConvType.RegionRestrictedConvolution: "cutlass::conv::ConvType::kDepthwiseConvolution",
 }
 
 #
@@ -640,6 +643,8 @@ class MathInstruction:
         element_accumulator,
         opcode_class,
         math_operation=MathOperation.multiply_add,
+        element_rin=DataType.s32,
+        element_rout=DataType.s32,
     ):
         self.instruction_shape = instruction_shape
         self.element_a = element_a
@@ -647,6 +652,8 @@ class MathInstruction:
         self.element_accumulator = element_accumulator
         self.opcode_class = opcode_class
         self.math_operation = math_operation
+        self.element_rin = element_rin
+        self.element_rout = element_rout
 
 
 #

@@ -50,6 +50,7 @@ void initialize_all_deconv_simt_operations(Manifest& manifest);
 void initialize_all_dwconv2d_fprop_simt_operations(Manifest& manifest);
 void initialize_all_dwconv2d_dgrad_simt_operations(Manifest& manifest);
 void initialize_all_dwconv2d_wgrad_simt_operations(Manifest& manifest);
+void initialize_all_rrconv2d_wgrad_simt_operations(Manifest& manifest);
 #if defined(CUTLASS_ARCH_MMA_SM70_SUPPORTED) && CUTLASS_ARCH_MMA_SM70_SUPPORTED
 void initialize_all_gemm_tensorop884_operations(Manifest& manifest);
 void initialize_all_dwconv2d_fprop_tensorop884_operations(Manifest& manifest);
@@ -70,6 +71,7 @@ void initialize_all(Manifest& manifest) {
     initialize_all_dwconv2d_fprop_simt_operations(manifest);
     initialize_all_dwconv2d_dgrad_simt_operations(manifest);
     initialize_all_dwconv2d_wgrad_simt_operations(manifest);
+    initialize_all_rrconv2d_wgrad_simt_operations(manifest);
 #if defined(CUTLASS_ARCH_MMA_SM70_SUPPORTED) && CUTLASS_ARCH_MMA_SM70_SUPPORTED
     initialize_all_gemm_tensorop884_operations(manifest);
     initialize_all_dwconv2d_fprop_tensorop884_operations(manifest);

@@ -85,4 +85,7 @@ cutlass_gen_list = [
     "dwconv2d_wgrad_tensorop884_2.cu",
     "dwconv2d_wgrad_tensorop884_3.cu",
     "all_dwconv2d_wgrad_tensorop884_operations.cu",
+    "rrconv2d_wgrad_simt_0.cu",
+    "rrconv2d_wgrad_simt_1.cu",
+    "all_rrconv2d_wgrad_simt_operations.cu",
 ]

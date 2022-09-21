@@ -118,6 +118,11 @@ ConvolutionKey get_convolution_key_from_desc(const ConvolutionDescription& desc)
     key.alignment_filter = desc.filter.alignment;
     key.without_shared_load = desc.without_shared_load;
 
+    key.element_rin = desc.rin.element;
+    key.layout_rin = desc.rin.layout;
+    key.element_rout = desc.rout.element;
+    key.layout_rout = desc.rout.layout;
+
     return key;
 }
 

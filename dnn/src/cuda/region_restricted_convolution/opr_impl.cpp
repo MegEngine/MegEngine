@@ -1,4 +1,5 @@
 #include "src/cuda/region_restricted_convolution/opr_impl.h"
+#include "src/cuda/cutlass/singleton.h"
 #include "src/cuda/region_restricted_convolution/chanwise/depthwise_large_filter.cuh"
 #include "src/cuda/region_restricted_convolution/chanwise/kern.cuh"
 #include "src/cuda/utils.h"
@@ -6,6 +7,7 @@
 using namespace megdnn;
 using namespace cuda;
 using namespace region_restricted_convolution;
+using namespace cutlass::library;
 
 /* ============== RegionRestrictedConvolutionForwardImpl ============== */
 void RegionRestrictedConvolutionForwardImpl::exec(
@@ -113,7 +115,137 @@ size_t RegionRestrictedConvolutionBackwardFilterImpl::get_workspace_in_bytes(
 void RegionRestrictedConvolutionBackwardFilterImpl::exec(
         _megdnn_tensor_in src, _megdnn_tensor_in diff, _megdnn_tensor_in rin,
         _megdnn_tensor_in rout, _megdnn_tensor_out grad, _megdnn_workspace workspace) {
-    megdnn_throw("Region Restricted Conv BackwardFilter unimplemented");
+    auto fm = check_exec(
+            src.layout, diff.layout, rin.layout, rout.layout, grad.layout,
+            workspace.size);
+
+    megdnn_assert(
+            fm.group > 1 && src.layout.dtype.category() == DTypeCategory::FLOAT &&
+            param().compute_mode == Param::ComputeMode::DEFAULT &&
+            fm.spatial_ndim == 2 && fm.icpg == 1 && fm.ocpg == 1 &&
+            fm.dilation[0] == 1 && fm.dilation[1] == 1 && !fm.should_flip &&
+            param().stride_h == 1 && param().stride_w == 1);
+
+    int hi = src.layout.operator[](2), wi = src.layout.operator[](3);
+    int n = diff.layout.operator[](0), ho = diff.layout.operator[](2),
+        wo = diff.layout.operator[](3);
+    int co = fm.group, ci = co, groups = co;
+    int fh = fm.spatial[0], fw = fm.spatial[1];
+    int sh = fm.stride[0], sw = fm.stride[1];
+    int ph = fm.padding[0], pw = fm.padding[1];
+    int dh = 0, dw = 0;
+
+    // check if channelwise convolution
+    megdnn_assert(fm.icpg == 1 && fm.ocpg == 1);
+    auto stream = cuda_stream(handle());
+
+    float alpha = 1.f;
+    float beta = 0.f;
+
+    ConvolutionKey key;
+
+    int threadblock_shape_n = 128;
+    int warp_shape_m = 32;
+    int warp_shape_n = 64;
+    if (grad.layout.operator[](3) % 8 < 4) {
+        threadblock_shape_n = 64;
+        warp_shape_m = 64;
+        warp_shape_n = 32;
+    }
+
+    if (rin.layout.dtype == dtype::Int32() && rout.layout.dtype == dtype::Int32()) {
+        key = {
+                cutlass::conv::Operator::kWgrad,
+                NumericTypeID::kF32,
+                LayoutTypeID::kTensorNCHW,
+                NumericTypeID::kF32,
+                LayoutTypeID::kTensorNCHW,
+                NumericTypeID::kF32,
+                LayoutTypeID::kTensorNCHW,
+                NumericTypeID::kF32,
+                LayoutTypeID::kTensorNCHW,
+                NumericTypeID::kF32,
+                cutlass::conv::ConvType::kDepthwiseConvolution,
+                128,
+                threadblock_shape_n,
+                8,
+                warp_shape_m,
+                warp_shape_n,
+                8,
+                1,
+                1,
+                1,
+                cutlass::epilogue::EpilogueType::kLinearCombination,
+                1,
+                cutlass::conv::SpecialOptimizeDesc::NONE,
+                1,
+                1,
+                false,
+                NumericTypeID::kS32,
+                LayoutTypeID::kTensorNCHW,
+                NumericTypeID::kS32,
+                LayoutTypeID::kTensorNCHW,
+        };
+    } else if (
+            rin.layout.dtype == dtype::Uint8() && rout.layout.dtype == dtype::Uint8()) {
+        key = {
+                cutlass::conv::Operator::kWgrad,
+                NumericTypeID::kF32,
+                LayoutTypeID::kTensorNCHW,
+                NumericTypeID::kF32,
+                LayoutTypeID::kTensorNCHW,
+                NumericTypeID::kF32,
+                LayoutTypeID::kTensorNCHW,
+                NumericTypeID::kF32,
+                LayoutTypeID::kTensorNCHW,
+                NumericTypeID::kF32,
+                cutlass::conv::ConvType::kDepthwiseConvolution,
+                128,
+                threadblock_shape_n,
+                8,
+                warp_shape_m,
+                warp_shape_n,
+                8,
+                1,
+                1,
+                1,
+                cutlass::epilogue::EpilogueType::kLinearCombination,
+                1,
+                cutlass::conv::SpecialOptimizeDesc::NONE,
+                1,
+                1,
+                false,
+                NumericTypeID::kS8,
+                LayoutTypeID::kTensorNCHW,
+                NumericTypeID::kS8,
+                LayoutTypeID::kTensorNCHW,
+        };
+    } else {
+        megdnn_throw(ssprintf(
+                             "don't support region restricted type rin: %s, rout: %s",
+                             rin.layout.dtype.name(), rout.layout.dtype.name())
+                             .c_str());
+    }
+
+    const Operation* op =
+            (const Operation*)Singleton::get().operation_table.find_op(key);
+
+    cutlass::conv::Conv2dProblemSize problem_size{
+            n,      hi, wi, ci, co, fh, fw, ho,
+            wo,     ph, pw, sh, sw, dh, dw, cutlass::conv::Mode::kCrossCorrelation,
+            1,       // split k slices, always 1
+            groups,  // groups
+    };
+
+    cutlass::library::ConvolutionArguments conv_args{
+            problem_size, src.raw_ptr(),  diff.raw_ptr(), nullptr,
+            nullptr,      grad.raw_ptr(), &alpha,         &beta,
+            nullptr,      nullptr,        nullptr,        nullptr,
+            nullptr,      nullptr,        rin.raw_ptr(),  rout.raw_ptr()};
+
+    cutlass_check(op->run(&conv_args, nullptr, stream));
+
+    after_kernel_launch();
 }
 
 // vim: syntax=cpp.doxygen

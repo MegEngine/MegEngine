@@ -64,4 +64,5 @@ if __name__ == "__main__":
         write_merge_file_name(f, "dwconv2d_dgrad", "tensorop884", 4)
         write_merge_file_name(f, "dwconv2d_wgrad", "simt", 2)
         write_merge_file_name(f, "dwconv2d_wgrad", "tensorop884", 4)
+        write_merge_file_name(f, "rrconv2d_wgrad", "simt", 2)
         f.write("]")

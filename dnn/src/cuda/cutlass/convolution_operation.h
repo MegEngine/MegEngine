@@ -452,6 +452,86 @@ public:
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
+template <typename Operator_>
+class RegionRestrictedConvolutionBackwardFilterOperation
+        : public ConvolutionBackwardFilterOperationBase<Operator_> {
+public:
+    using Operator = Operator_;
+    using ElementSrc = typename Operator::ElementSrc;
+    using LayoutSrc = typename Operator::LayoutSrc;
+    using ElementDiff = typename Operator::ElementDiff;
+    using LayoutDiff = typename Operator::LayoutDiff;
+    using ElementGrad = typename Operator::ElementGrad;
+    using LayoutGrad = typename Operator::LayoutGrad;
+    using ElementAccumulator = typename Operator::ElementAccumulator;
+    using ElementCompute = typename Operator::EpilogueOutputOp::ElementCompute;
+
+    using OperatorArguments = typename Operator::Arguments;
+
+    using ElementRin = typename Operator::ElementMaskInput;
+    using LayoutRin = typename Operator::LayoutMaskInput;
+    using ElementRout = typename Operator::ElementMaskOutput;
+    using LayoutRout = typename Operator::LayoutMaskOutput;
+
+    RegionRestrictedConvolutionBackwardFilterOperation(
+            char const* name = "unknown_gemm")
+            : ConvolutionBackwardFilterOperationBase<Operator_>(name) {
+        /// rin in description -> rin in C++ template
+        this->m_description.rin = make_TensorDescription<ElementRin, LayoutRin>(
+                Operator::kAlignmentMaskInput);
+        /// rout in description -> rout in C++ template
+        this->m_description.rout = make_TensorDescription<ElementRout, LayoutRout>(
+                Operator::kAlignmentMaskOutput);
+        this->m_description.without_shared_load = false;
+    }
+
+    virtual Status run(
+            void const* arguments_ptr, void* device_workspace = nullptr,
+            cudaStream_t stream = nullptr) const {
+        cutlass::conv::Operator conv_op = this->m_description.conv_op;
+        ConvolutionArguments const* conv_args =
+                reinterpret_cast<ConvolutionArguments const*>(arguments_ptr);
+        const auto& ps = conv_args->problem_size;
+
+        OperatorArguments args;
+        args.problem_size = ps;
+        /// src in convolution arguments -> ref_src
+        args.ref_src = {
+                static_cast<ElementSrc*>(const_cast<void*>(conv_args->src)),
+                LayoutSrc::packed(implicit_gemm_tensor_b_extent(conv_op, ps))};
+        /// filter in convolution arguments -> ref_diff
+        args.ref_diff = {
+                static_cast<ElementDiff*>(const_cast<void*>(conv_args->filter)),
+                LayoutDiff::packed(implicit_gemm_tensor_a_extent(conv_op, ps))};
+        /// dst in convolution arguments -> ref_grad
+        args.ref_grad = {
+                static_cast<ElementGrad*>(conv_args->dst),
+                LayoutGrad::packed(implicit_gemm_tensor_c_extent(conv_op, ps))};
+        /// rin in convolution arguments -> ref_mask_input
+        args.ref_mask_input = {
+                static_cast<ElementRin*>(const_cast<void*>(conv_args->rin)),
+                LayoutRin::packed(implicit_gemm_tensor_rin_extent(conv_op, ps))};
+        /// rout in convolution arguments -> ref_mask_output
+        args.ref_mask_output = {
+                static_cast<ElementRout*>(const_cast<void*>(conv_args->rout)),
+                LayoutRout::packed(implicit_gemm_tensor_rout_extent(conv_op, ps))};
+
+        args.output_op = init_epilogue_param<typename Operator::EpilogueOutputOp>().get(
+                conv_args);
+
+        Operator op;
+        Status status = op.initialize(args, device_workspace);
+
+        if (status != Status::kSuccess) {
+            return status;
+        }
+
+        return op.run(stream);
+    }
+};
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
 }  // namespace library
 }  // namespace cutlass
 

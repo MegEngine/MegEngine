@@ -471,6 +471,10 @@ struct ConvolutionDescription : public OperationDescription {
     conv::SpecialOptimizeDesc special_optimization;
     conv::ImplicitGemmMode gemm_mode;
     bool without_shared_load;
+
+    // only used by rrconv
+    TensorDescription rin;
+    TensorDescription rout;
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -499,6 +503,10 @@ struct ConvolutionArguments {
 
     /// Host pointer to extra param struct
     void const* extra_param;
+
+    // only used by rrconv, default: nullptr
+    void const* rin = nullptr;
+    void const* rout = nullptr;
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
