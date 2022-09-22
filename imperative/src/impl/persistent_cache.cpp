@@ -68,18 +68,12 @@ public:
         encode(category + '@' + key_str, redis_key_str, 24);
         auto result = m_client.get(m_prefix + redis_key_str);
         sync();
-        decltype(result.get()) content;
-        int try_number = 3;
-        for (int i = 0; i < try_number; i++) {
-            content = result.get();
-            if (!content.is_null()) {
-                break;
-            }
-        }
+        auto content = result.get();
         if (content.is_null()) {
             return None;
         }
         std::string decode_content;
+        mgb_assert(content.is_string());
         decode(content.as_string(), decode_content);
         m_local->put(category, key, {decode_content.data(), decode_content.length()});
         return m_local->get(category, key);
