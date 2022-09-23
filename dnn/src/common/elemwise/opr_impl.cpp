@@ -141,7 +141,10 @@ const ModeTrait& ModeTrait::from_mode(Mode mode) {
 #pragma message "elemwise mode stripped"
 #endif
     }
-
+    megdnn_assert(
+            static_cast<std::size_t>(mode) < traits.size(),
+            "Invalid elemwise mode in this version. "
+            "Maybe this version is too old, and you may need to update.");
     auto&& ret = traits.at(static_cast<int>(mode));
 #if !MEGDNN_ELEMWISE_MODE_ENABLE_ALL
     megdnn_assert(ret.arity);

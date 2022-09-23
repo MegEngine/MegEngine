@@ -274,7 +274,10 @@ const ModeTrait& ModeTrait::from_mode(Mode mode) {
         SET(init_bool_unary_op, ISINF);
 #undef SET
     }
-
+    megdnn_assert(
+            static_cast<std::size_t>(mode) < traits.size(),
+            "Invalid elemwise multitype mode in this version. "
+            "Maybe this version is too old, and you may need to update.");
     return traits.at(static_cast<int>(mode));
 }
 
