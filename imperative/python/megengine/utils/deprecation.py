@@ -33,6 +33,7 @@ def deprecated_func(version, origin, name, tbd):
             )
         return func(*args, **kwargs)
 
+    wrapper.__deprecated__ = True
     return wrapper
 
 
@@ -57,6 +58,7 @@ def deprecated_kwargs_default(version, kwargs_name, kwargs_pos):
                 )
             return func(*args, **kwargs)
 
+        wrapper.__deprecated__ = True
         return wrapper
 
     return deprecated

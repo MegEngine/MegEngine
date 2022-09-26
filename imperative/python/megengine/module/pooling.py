@@ -32,9 +32,9 @@ class _PoolNd(Module):
 class MaxPool2d(_PoolNd):
     r"""Applies a 2D max pooling over an input.
 
-    For instance, given an input of the size :math:`(N, C, H, W)` and
+    For instance, given an input of the size :`(N, C, H_{\text{in}}, W_{\text{in}})` and
     :attr:`kernel_size` :math:`(kH, kW)`, this layer generates the output of
-    the size :math:`(N, C, H_{out}, W_{out})` through a process described as:
+    the size :math:`(N, C, H_{\text{out}}, W_{\text{out}})` through a process described as:
 
     .. math::
 
@@ -48,9 +48,9 @@ class MaxPool2d(_PoolNd):
     both sides for :attr:`padding` number of points.
 
     Args:
-        kernel_size: the size of the window to take a max over.
-        stride: the stride of the window. Default value is kernel_size.
-        padding: implicit zero padding to be added on both sides.
+        kernel_size: the size of the window.
+        stride: the stride of the window. Default value is ``kernel_size``.
+        padding: implicit zero padding to be added on both sides.Default: 0.
 
     Examples:
         >>> import numpy as np
@@ -69,9 +69,9 @@ class MaxPool2d(_PoolNd):
 class AvgPool2d(_PoolNd):
     r"""Applies a 2D average pooling over an input.
 
-    For instance, given an input of the size :math:`(N, C, H, W)` and
+    For instance, given an input of the size :math:`(N, C, H_{\text{in}}, W_{\text{in}})` and
     :attr:`kernel_size` :math:`(kH, kW)`, this layer generates the output of
-    the size :math:`(N, C, H_{out}, W_{out})` through a process described as:
+    the size :math:`(N, C, H_{\text{out}}, W_{\text{out}})` through a process described as:
 
     .. math::
 
@@ -83,11 +83,21 @@ class AvgPool2d(_PoolNd):
 
     Args:
         kernel_size: the size of the window.
-        stride: the stride of the window. Default value is kernel_size。
-        padding: implicit zero padding to be added on both sides.
-        mode: whether to count padding values. "average" mode will do counting and
-            "average_count_exclude_padding" mode won't do counting.
+        stride: the stride of the window. Default value is ``kernel_size``.
+        padding: implicit zero padding to be added on both sides.Default: 0.
+        mode: whether to include the padding values while calculating the average, set
+            to "average" will do counting.
             Default: "average_count_exclude_padding"
+
+    Examples:
+        >>> import numpy as np
+        >>> m = M.AvgPool2d(kernel_size=2, stride=2, padding=[1,0], mode="average")
+        >>> inp = mge.tensor(np.arange(1 * 1 * 3 * 4).astype(np.float32).reshape(1, 1, 3, 4))
+        >>> output = m(inp)
+        >>> output
+        Tensor([[[[0.25 1.25]
+                  [6.5  8.5 ]]]], device=xpux:0)
+
     """
 
     def __init__(

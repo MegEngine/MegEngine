@@ -11,11 +11,11 @@ from .. import functional as F
 from .. import get_logger
 from .. import module as M
 from ..core.tensor.dtype import get_dtype_bit
-from ..logger import MegEngineLogFormatter
+from ..logger import _MegEngineLogFormatter
 from .module_utils import set_module_mode_safe
 
 try:
-    MegEngineLogFormatter.max_lines = float("inf")
+    _MegEngineLogFormatter.max_lines = float("inf")
 except AttributeError as e:
     raise ValueError("set logger max lines failed")
 
@@ -83,14 +83,23 @@ def disable_receptive_field():
     _receptive_field_enabled = False
 
 
-@register_flops(
-    M.Conv1d, M.Conv2d, M.Conv3d, M.ConvTranspose2d, M.LocalConv2d, M.DeformableConv2d
-)
+@register_flops(M.Conv1d, M.Conv2d, M.Conv3d, M.LocalConv2d, M.DeformableConv2d)
 def flops_convNd(module: M.Conv2d, inputs, outputs):
     bias = 1 if module.bias is not None else 0
     # N x Cout x H x W x  (Cin x Kw x Kh + bias)
     return np.prod(outputs[0].shape) * (
         float(module.in_channels // module.groups) * np.prod(module.kernel_size) + bias
+    )
+
+
+@register_flops(M.ConvTranspose2d)
+def flops_convNdTranspose(module: M.Conv2d, inputs, outputs):
+    bias = 1 if module.bias is not None else 0
+    # N x Cout x H x W x  (Cin x Kw x Kh + bias)
+    return (
+        np.prod(inputs[0].shape)
+        * (module.out_channels // module.groups * np.prod(module.kernel_size))
+        + np.prod(outputs[0].shape) * bias
     )
 
 

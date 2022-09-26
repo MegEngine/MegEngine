@@ -27,7 +27,7 @@ def save(obj, f, pickle_module=pickle, pickle_protocol=pickle.DEFAULT_PROTOCOL):
         pickle_module.dump(obj, f, pickle_protocol)
 
 
-class dmap:
+class _dmap:
     def __init__(self, map_location):
         self.map_location = map_location
 
@@ -101,5 +101,5 @@ def load(f, map_location=None, pickle_module=pickle):
 
     map_location = _get_callable_map_location(map_location)  # callable map_location
 
-    with dmap(map_location) as dm:
+    with _dmap(map_location) as dm:
         return pickle_module.load(f)

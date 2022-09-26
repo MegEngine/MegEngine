@@ -121,6 +121,9 @@ def run_model(args, graph, inputs, outputs, data):
     # must use level0 to avoid unintended opr modification
     graph.options.graph_opt_level = 0
 
+    if args.weight_preprocess:
+        graph.enable_weight_preprocess()
+
     logger.info("input tensors: ")
     for k, v in data.items():
         logger.info("  {}: {}".format(k, v.shape))
@@ -161,8 +164,8 @@ def run_model(args, graph, inputs, outputs, data):
         func.wait()
         return [oup_node.get_value().numpy() for oup_node in output_dict.values()]
 
-    if args.warm_up:
-        logger.info("warming up")
+    for i in range(args.warm_up):
+        logger.info("warming up {}".format(i))
         run()
 
     total_time = 0
@@ -276,8 +279,9 @@ def main():
     )
     parser.add_argument(
         "--warm-up",
-        action="store_true",
-        help="warm up model before do timing " " for better estimation",
+        type=int,
+        default=0,
+        help="times of warm up model before do timing " " for better estimation",
     )
     parser.add_argument(
         "--verbose",
@@ -393,6 +397,13 @@ def main():
     )
     parser.add_argument(
         "--custom-op-lib", type=str, help="path of the custom op",
+    )
+    parser.add_argument(
+        "--weight-preprocess",
+        action="store_true",
+        help="Execute operators with weight preprocess, which can"
+        "optimize the operator execution time with algo of winograd,"
+        "im2col ,etc.,but it may consume more memory.",
     )
 
     args = parser.parse_args()

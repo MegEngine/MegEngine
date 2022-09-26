@@ -81,6 +81,23 @@ public:
     MEGDNN_DECL_ALGO_TYPE(GI_COMMON_WINOGRAD_F63_4X4_FP32)
 };
 
+class ConvBiasImpl::AlgoFP32WinogradF43_4x4 final : public AlgoBase {
+public:
+    AlgoFP32WinogradF43_4x4(
+            fallback::MatrixMulImpl::AlgoBase* matmul_algo, uint32_t tile_size)
+            : m_matmul_algo{matmul_algo}, m_tile_size{tile_size} {}
+    const char* name() const override {
+        if (m_name.empty()) {
+            m_name = ConvBiasImpl::algo_name<ConvBias::WinogradParam>(
+                    m_matmul_algo->name(), {4, 4, m_tile_size, 3});
+        }
+        return m_name.c_str();
+    }
+    AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }
+    MEGDNN_WINOGRAD_ALGO_FUN_DECLARE(AlgoDataType::FLOAT32);
+    MEGDNN_DECL_ALGO_TYPE(GI_COMMON_WINOGRAD_F43_4X4_FP32)
+};
+
 class ConvBiasImpl::AlgoFP32WinogradF54 final : public AlgoBase {
 public:
     AlgoFP32WinogradF54(
@@ -154,6 +171,24 @@ public:
     AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }
     MEGDNN_WINOGRAD_ALGO_FUN_DECLARE(AlgoDataType::FLOAT32);
     MEGDNN_DECL_ALGO_TYPE(GI_COMMON_WINOGRAD_F63_4X4_NCHW44_F32)
+};
+
+class ConvBiasImpl::AlgoFP32WinogradF43_4x4_NCHW44 final : public AlgoBase {
+public:
+    AlgoFP32WinogradF43_4x4_NCHW44(
+            fallback::MatrixMulImpl::AlgoBase* matmul_algo, uint32_t tile_size)
+            : m_matmul_algo{matmul_algo}, m_tile_size{tile_size} {}
+    const char* name() const override {
+        if (m_name.empty()) {
+            m_name = ConvBiasImpl::algo_name<ConvBias::WinogradParam>(
+                    m_matmul_algo->name(), {4, 4, m_tile_size, 3},
+                    param::ConvBias::Format::NCHW44);
+        }
+        return m_name.c_str();
+    }
+    AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }
+    MEGDNN_WINOGRAD_ALGO_FUN_DECLARE(AlgoDataType::FLOAT32);
+    MEGDNN_DECL_ALGO_TYPE(GI_COMMON_WINOGRAD_F43_4X4_NCHW44_F32)
 };
 
 class ConvBiasImpl::AlgoFP32WinogradF73_4x4_NCHW44 final : public AlgoBase {

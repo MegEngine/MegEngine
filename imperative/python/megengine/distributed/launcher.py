@@ -10,7 +10,7 @@ from ..device import get_device_count
 from ..logger import get_logger
 from .group import _set_machine_ranks, group_barrier, init_process_group
 from .helper import _check_device_initialized, _check_interpreter_status
-from .server import Client, Server
+from .server import Server
 
 WARN_SUBPROCESS_EXIT_WITHOUT_RETURN = (
     "subprocess exited with code 0 but did not return a value"

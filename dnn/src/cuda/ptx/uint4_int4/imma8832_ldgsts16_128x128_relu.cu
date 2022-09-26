@@ -449,15 +449,15 @@ extern "C" __global__ void __launch_bounds__(256)
     bool stg_guard[8];
 #pragma unroll
     for (int y = 0; y < reg_m; y += 4) {
-        COMPUTE_OFFSET_4x1(reg_fuse_z, g_offset, y)
+        COMPUTE_OFFSET_4x1(g_offset, y);
 
-                nhw_post0 += 32;
+        nhw_post0 += 32;
         nhw_post1 += 32;
         nhw_post2 += 32;
         nhw_post3 += 32;
     }
 
-    bool only_one_stage = (stage == 1) ? true : false;
+    bool only_one_stage = (stage == 1);
     if (stage >= 2) {
         cp_async_wait(stages - 2);
     } else {
@@ -835,6 +835,20 @@ extern "C" __global__ void __launch_bounds__(256)
         cp_async_wait(stages - 2);
     }
 
+    size_t oc = bidy * BM + (warp_y << 6) + 16 * idx_in_quad;
+    const float* bias_ptr = bias + oc;
+
+    int4 load_bias0 = make_int4(0, 0, 0, 0);
+    int4 load_bias1 = make_int4(0, 0, 0, 0);
+    int4 load_bias2 = make_int4(0, 0, 0, 0);
+    int4 load_bias3 = make_int4(0, 0, 0, 0);
+    if (oc < param.oc) {
+        load_bias0 = *(reinterpret_cast<const int4*>(bias_ptr));
+        load_bias1 = *(reinterpret_cast<const int4*>(bias_ptr + 4));
+        load_bias2 = *(reinterpret_cast<const int4*>(bias_ptr + 8));
+        load_bias3 = *(reinterpret_cast<const int4*>(bias_ptr + 12));
+    }
+
     if (!only_one_stage) {
 #pragma unroll  // low
         for (int i = 0; i < reg_nd4; ++i) {
@@ -965,6 +979,13 @@ extern "C" __global__ void __launch_bounds__(256)
         reg_flt[0][j] = make_int4(x, y, z, w);
     }
 
+    if (oc < param.oc) {
+        mul_v4(load_bias0, load_bias0, beta);
+        mul_v4(load_bias1, load_bias1, beta);
+        mul_v4(load_bias2, load_bias2, beta);
+        mul_v4(load_bias3, load_bias3, beta);
+    }
+
 // compute
 #pragma unroll
     for (int k_inner = 0; k_inner < BKd32; k_inner++) {
@@ -1028,38 +1049,19 @@ extern "C" __global__ void __launch_bounds__(256)
     __syncthreads();
 
     /// output
-    size_t oc = bidy * BM + (warp_y << 6) + 16 * idx_in_quad;
-    const float* bias_ptr = bias + oc;
-
-    int4 load_bias0 = make_int4(0, 0, 0, 0);
-    int4 load_bias1 = make_int4(0, 0, 0, 0);
-    int4 load_bias2 = make_int4(0, 0, 0, 0);
-    int4 load_bias3 = make_int4(0, 0, 0, 0);
-    if (oc < param.oc) {
-        load_bias0 = *(reinterpret_cast<const int4*>(bias_ptr));
-        load_bias1 = *(reinterpret_cast<const int4*>(bias_ptr + 4));
-        load_bias2 = *(reinterpret_cast<const int4*>(bias_ptr + 8));
-        load_bias3 = *(reinterpret_cast<const int4*>(bias_ptr + 12));
-        mul_v4(load_bias0, load_bias0, beta);
-        mul_v4(load_bias1, load_bias1, beta);
-        mul_v4(load_bias2, load_bias2, beta);
-        mul_v4(load_bias3, load_bias3, beta);
-    }
 
     int8_t* __restrict__ g_dst_ptr = dst + d_offset;
 
-#pragma unroll
-    for (int y = 0; y < reg_m; y += 4) {
-        I2F_4x8(reg_acc, y, 0);
-        FMA_4x8(reg_acc, y, 0, alpha, load_bias0, load_bias1, load_bias2, load_bias3);
-        PACK_F2I_WITH_RELU_4x8(reg_acc, y, 0, relu, dst_zero_point);
-        STG_AFTER_LDG_4x1(g_offset, reg_acc, y, 0);
+    FMA_1x8(reg_acc, 0, 0, alpha, load_bias0, load_bias1, load_bias2, load_bias3);
+    PACK_F2I_WITH_RELU_1x8(reg_acc, 0, 0, relu, dst_zero_point);
 
-        nhw_post0 += 32;
-        nhw_post1 += 32;
-        nhw_post2 += 32;
-        nhw_post3 += 32;
+#pragma unroll
+    for (int y = 1; y < reg_m; y += 1) {
+        FMA_1x8(reg_acc, y, 0, alpha, load_bias0, load_bias1, load_bias2, load_bias3);
+        PACK_F2I_WITH_RELU_1x8(reg_acc, y, 0, relu, dst_zero_point);
+        STG_AFTER_LDG(g_offset[y - 1], reg_acc[y - 1][0], stg_guard[y - 1]);
     }
+    STG_AFTER_LDG(g_offset[7], reg_acc[7][0], stg_guard[7]);
 #endif
 }
 }  // namespace

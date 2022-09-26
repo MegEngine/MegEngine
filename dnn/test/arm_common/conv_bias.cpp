@@ -1013,6 +1013,27 @@ TEST_F(ARM_COMMON, BENCHMARK_CONVBIAS_WINOGRAD_F43_F63) {
             handle(), 3);
 #endif
 }
+
+TEST_F(ARM_COMMON, BENCHMARK_CONVBIAS_WINOGRAD_44_F43_F23) {
+#if MEGDNN_AARCH64
+    benchmark_winograd_compare(
+            "WINOGRAD:.*:4:4:.*:3", "WINOGRAD:.*:4:2", handle(), 3, 4);
+#endif
+}
+
+TEST_F(ARM_COMMON, BENCHMARK_WINOGRAD_F43_44) {
+#if MEGDNN_AARCH64
+    benchmark_winograd_weight_preprocess("WINOGRAD:.*:4:4:.*:3", handle(), 3, 4);
+#endif
+}
+
+TEST_F(ARM_COMMON, BENCHMARK_WINOGRAD_F43_NCHW44) {
+#if MEGDNN_AARCH64
+    benchmark_winograd_weight_preprocess(
+            "WINOGRAD_NCHW44:.*:4:4:.*:3", handle(), 3, 4, 4);
+#endif
+}
+
 TEST_F(ARM_COMMON, BENCHMARK_CONVBIAS_WINOGRAD_F63) {
 #if MEGDNN_AARCH64
     benchmark_winograd("WINOGRAD:AARCH64_F32K8X12X1:1:6", handle(), 3);

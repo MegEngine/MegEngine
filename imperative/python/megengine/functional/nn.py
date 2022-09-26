@@ -43,6 +43,7 @@ from .debug_param import get_execution_strategy
 from .distributed import all_reduce_sum
 from .elemwise import _elwise, exp, log, log1p, maximum, minimum
 from .math import max, sum
+from .metric import topk_accuracy
 from .tensor import broadcast_to, concat, expand_dims, ones, squeeze, zeros
 
 __all__ = [
@@ -85,13 +86,14 @@ __all__ = [
     "softmax",
     "softplus",
     "sync_batch_norm",
+    "topk_accuracy",
     "warp_affine",
     "warp_perspective",
     "pixel_shuffle",
 ]
 
 
-def expand_hw(x):
+def _expand_hw(x):
     # judge int is 5 times faster than judge Sequence
     if isinstance(x, int):
         return x, x
@@ -100,7 +102,7 @@ def expand_hw(x):
     return int(x), int(x)
 
 
-def expand_dhw(x):
+def _expand_dhw(x):
     if isinstance(x, int):
         return x, x, x
     if isinstance(x, Sequence):
@@ -242,9 +244,9 @@ def conv2d(
         or conv_mode.name == "CROSS_CORRELATION"
     )
 
-    stride_h, stride_w = expand_hw(stride)
-    pad_h, pad_w = expand_hw(padding)
-    dilate_h, dilate_w = expand_hw(dilation)
+    stride_h, stride_w = _expand_hw(stride)
+    pad_h, pad_w = _expand_hw(padding)
+    dilate_h, dilate_w = _expand_hw(dilation)
 
     sparse_type = "dense" if groups == 1 else "group"
     compute_mode = _config._get_actual_op_param(compute_mode, _config.__compute_mode)
@@ -304,9 +306,9 @@ def conv3d(
 
     D, H, W = 0, 1, 2
 
-    pad = expand_dhw(padding)
-    stride = expand_dhw(stride)
-    dilate = expand_dhw(dilation)
+    pad = _expand_dhw(padding)
+    stride = _expand_dhw(stride)
+    dilate = _expand_dhw(dilation)
 
     sparse_type = "dense" if groups == 1 else "group"
     op = builtin.Convolution3D(
@@ -374,10 +376,10 @@ def conv_transpose2d(
         or conv_mode.name == "CROSS_CORRELATION"
     )
 
-    stride_h, stride_w = expand_hw(stride)
-    pad_h, pad_w = expand_hw(padding)
-    output_pad_h, output_pad_w = expand_hw(output_padding)
-    dilate_h, dilate_w = expand_hw(dilation)
+    stride_h, stride_w = _expand_hw(stride)
+    pad_h, pad_w = _expand_hw(padding)
+    output_pad_h, output_pad_w = _expand_hw(output_padding)
+    dilate_h, dilate_w = _expand_hw(dilation)
 
     compute_mode = _config._get_actual_op_param(compute_mode, _config.__compute_mode)
     sparse_type = "dense" if groups == 1 else "group"
@@ -475,9 +477,9 @@ def deformable_conv2d(
         offset = offset.astype("float32")
         mask = mask.astype("float32")
 
-    stride_h, stride_w = expand_hw(stride)
-    pad_h, pad_w = expand_hw(padding)
-    dilate_h, dilate_w = expand_hw(dilation)
+    stride_h, stride_w = _expand_hw(stride)
+    pad_h, pad_w = _expand_hw(padding)
+    dilate_h, dilate_w = _expand_hw(dilation)
 
     compute_mode = _config._get_actual_op_param(compute_mode, _config.__compute_mode)
     sparse_type = "dense" if groups == 1 else "group"
@@ -529,9 +531,9 @@ def local_conv2d(
         or conv_mode.name == "CROSS_CORRELATION"
     )
 
-    stride_h, stride_w = expand_hw(stride)
-    pad_h, pad_w = expand_hw(padding)
-    dilate_h, dilate_w = expand_hw(dilation)
+    stride_h, stride_w = _expand_hw(stride)
+    pad_h, pad_w = _expand_hw(padding)
+    dilate_h, dilate_w = _expand_hw(dilation)
 
     # local conv only support "dense" mode, but weight could contain group dimension.
     op = builtin.GroupLocal(
@@ -585,10 +587,10 @@ def conv_transpose3d(
         output tensor.
     """
     D, H, W = 0, 1, 2
-    pad = expand_dhw(padding)
-    stride = expand_dhw(stride)
-    dilate = expand_dhw(dilation)
-    output_padding = expand_dhw(output_padding)
+    pad = _expand_dhw(padding)
+    stride = _expand_dhw(stride)
+    dilate = _expand_dhw(dilation)
+    output_padding = _expand_dhw(output_padding)
 
     sparse_type = "dense" if groups == 1 else "group"
     op = builtin.Convolution3DBackwardData(
@@ -656,20 +658,26 @@ def max_pool2d(
     Refer to :class:`~.MaxPool2d` for more information.
 
     Args:
-        inp: input tensor.
-        kernel_size: size of the window.
-        stride: stride of the window. If not provided, its value is set to kernel_size.
-            Default: None
-        padding: implicit zero padding added on both sides. Default: 0
+        inp: input tensor of shape :math:`(N, C, H_{\text{in}}, W_{\text{in}})`.
+        kernel_size: size of the window used to calculate the max value.
+        stride: stride of the window. Default value is ``kernel_size``.
+        padding: implicit zero padding added on both sides. Default: 0.
 
     Returns:
-        output tensor.
+        output tensor of shape `(N, C, H_{\text{out}}, W_{\text{out}})`.
+
+    Examples:
+        >>> import numpy as np
+        >>> input = Tensor(np.arange(1 * 1 * 3 * 4).astype(np.float32).reshape(1, 1, 3, 4))
+        >>> F.nn.max_pool2d(input, 2, 1, 0)
+        Tensor([[[[ 5.  6.  7.]
+           [ 9. 10. 11.]]]], device=xpux:0)
     """
     if stride is None:
         stride = kernel_size
-    window_h, window_w = expand_hw(kernel_size)
-    stride_h, stride_w = expand_hw(stride)
-    padding_h, padding_w = expand_hw(padding)
+    window_h, window_w = _expand_hw(kernel_size)
+    stride_h, stride_w = _expand_hw(stride)
+    padding_h, padding_w = _expand_hw(padding)
 
     op = builtin.Pooling(
         window_h=window_h,
@@ -697,22 +705,29 @@ def avg_pool2d(
     Refer to :class:`~.AvgPool2d` for more information.
 
     Args:
-        inp: input tensor.
-        kernel_size: size of the window.
-        stride: stride of the window. If not provided, its value is set to ``kernel_size``.
-            Default: None
-        padding: implicit zero padding added on both sides. Default: 0
-        mode: whether to count padding values, set to "average" will do counting.
+        inp: input tensor of shape :math:`(N, C, H_{\text{in}}, W_{\text{in}})` .
+        kernel_size: size of the window used to calculate the average value.
+        stride: stride of the window. Default value is ``kernel_size``.
+        padding: implicit zero padding added on both sides. Default: 0.
+        mode: whether to include the padding values while calculating the average, set
+            to "average" will do counting.
             Default: "average_count_exclude_padding"
 
     Returns:
-        output tensor.
+        output tensor of shape :math:`(N, C, H_{\text{out}}, W_{\text{out}})`.
+
+    Examples:
+        >>> import numpy as np
+        >>> inp = Tensor(np.arange(1 * 1 * 3 * 4).astype(np.float32).reshape(1, 1, 3, 4))
+        >>> F.avg_pool2d(inp, kernel_size=2, stride=2, padding=[1,0], mode="average")
+            Tensor([[[[0.25 1.25]
+             [6.5  8.5 ]]]], device=xpux:0)
     """
     if stride is None:
         stride = kernel_size
-    window_h, window_w = expand_hw(kernel_size)
-    stride_h, stride_w = expand_hw(stride)
-    padding_h, padding_w = expand_hw(padding)
+    window_h, window_w = _expand_hw(kernel_size)
+    stride_h, stride_w = _expand_hw(stride)
+    padding_h, padding_w = _expand_hw(padding)
 
     op = builtin.Pooling(
         window_h=window_h,
@@ -1261,6 +1276,13 @@ def batch_norm(
         eps: a value added to the denominator for numerical stability. Default: 1e-5
         inplace: whether to update ``running_mean`` and ``running_var``
             inplace or return new tensors. Default: True
+        compute_mode: When set to 'default', no special requirements will be
+            placed on the precision of intermediate results. When set to 'float32',
+            float32 would be used for accumulator and intermediate result, but only
+            effective when input and output are of float16 dtype.
+        param_dim: a value indicating in which format the parameters are.
+            Default: 'dim_1c11', which means NCHW format.
+            And 'dim_111c' means NHWC format.
     """
 
     def make_full_if_none(x, value):
@@ -1701,10 +1723,10 @@ def sliding_window(
         stride: stride of the window. Default: 1
         dilation: dilation of the window. Default: 1
     """
-    padding_h, padding_w = expand_hw(padding)
-    stride_h, stride_w = expand_hw(stride)
-    dilation_h, dilation_w = expand_hw(dilation)
-    window_h, window_w = expand_hw(kernel_size)
+    padding_h, padding_w = _expand_hw(padding)
+    stride_h, stride_w = _expand_hw(stride)
+    dilation_h, dilation_w = _expand_hw(dilation)
+    window_h, window_w = _expand_hw(kernel_size)
 
     op = builtin.Images2Neibs(
         pad_h=padding_h,
@@ -1740,11 +1762,11 @@ def sliding_window_transpose(
         stride: stride of the window. Default: 1
         dilation: dilation of the window. Default: 1
     """
-    output_h, output_w = expand_hw(output_size)
-    padding_h, padding_w = expand_hw(padding)
-    stride_h, stride_w = expand_hw(stride)
-    dilation_h, dilation_w = expand_hw(dilation)
-    window_h, window_w = expand_hw(kernel_size)
+    output_h, output_w = _expand_hw(output_size)
+    padding_h, padding_w = _expand_hw(padding)
+    stride_h, stride_w = _expand_hw(stride)
+    dilation_h, dilation_w = _expand_hw(dilation)
+    window_h, window_w = _expand_hw(kernel_size)
 
     expected_h = (
         output_h + 2 * padding_h - dilation_h * (window_h - 1) - 1
@@ -1897,7 +1919,7 @@ def _get_layerPixelShuffle(device, dtype, dim_order):
     return layerPixelShuffle
 
 
-def layerPixelShuffle_traceable(inp, upscale_factor):
+def _layerPixelShuffle_traceable(inp, upscale_factor):
     assert upscale_factor > 0, "upscale_factor should larger than 0"
     assert inp.ndim >= 3, "the input dimension of pixel_shuffle should be larger than 3"
     assert (
@@ -1948,10 +1970,9 @@ def pixel_shuffle(inp: Tensor, upscale_factor: int) -> Tensor:
     :param upscale_factor: upscale factor of pixel_shuffle.
     :return: output tensor.
     """
-    return pixel_shuffle_cpp(inp, upscale_factor, layerPixelShuffle_traceable)
+    return pixel_shuffle_cpp(inp, upscale_factor, _layerPixelShuffle_traceable)
 
 
 from .quantized import conv_bias_activation  # isort:skip
 from .loss import *  # isort:skip
-from .metric import *  # isort:skip
 from .vision import *  # isort:skip

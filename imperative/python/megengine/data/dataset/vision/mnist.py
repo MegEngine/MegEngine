@@ -140,17 +140,17 @@ class MNIST(VisionDataset):
         # load raw files and transform them into meta data and datasets Tuple(np.array)
         logger.info("process the raw files of %s set...", "train" if train else "test")
         if train:
-            meta_data_images, images = parse_idx3(
+            meta_data_images, images = _parse_idx3(
                 os.path.join(self.root, self.raw_file_name[0])
             )
-            meta_data_labels, labels = parse_idx1(
+            meta_data_labels, labels = _parse_idx1(
                 os.path.join(self.root, self.raw_file_name[1])
             )
         else:
-            meta_data_images, images = parse_idx3(
+            meta_data_images, images = _parse_idx3(
                 os.path.join(self.root, self.raw_file_name[2])
             )
-            meta_data_labels, labels = parse_idx1(
+            meta_data_labels, labels = _parse_idx1(
                 os.path.join(self.root, self.raw_file_name[3])
             )
 
@@ -161,7 +161,7 @@ class MNIST(VisionDataset):
         self.arrays = (images, labels.astype(np.int32))
 
 
-def parse_idx3(idx3_file):
+def _parse_idx3(idx3_file):
     # parse idx3 file to meta data and data in numpy array (images)
     logger.debug("parse idx3 file %s ...", idx3_file)
     assert idx3_file.endswith(".gz")
@@ -187,7 +187,7 @@ def parse_idx3(idx3_file):
     return meta_data, images
 
 
-def parse_idx1(idx1_file):
+def _parse_idx1(idx1_file):
     # parse idx1 file to meta data and data in numpy array (labels)
     logger.debug("parse idx1 file %s ...", idx1_file)
     assert idx1_file.endswith(".gz")

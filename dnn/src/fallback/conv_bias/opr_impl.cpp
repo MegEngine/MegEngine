@@ -121,7 +121,7 @@ public:
         for (auto&& algo : matmul_algos) {
             if (is_naive(algo))
                 continue;
-            for (uint32_t tile_size : {16, 8, 24, 32}) {
+            for (uint32_t tile_size : {16, 8, 24, 32, 48, 68}) {
                 refhold.emplace_back(new AlgoFP32WinogradF23_4x4(
                         static_cast<fallback::MatrixMulImpl::AlgoBase*>(algo),
                         tile_size));
@@ -130,7 +130,15 @@ public:
                         static_cast<fallback::MatrixMulImpl::AlgoBase*>(algo),
                         tile_size));
                 m_gi_winograd_algos.emplace_back(refhold.back().get());
+                refhold.emplace_back(new AlgoFP32WinogradF43_4x4(
+                        static_cast<fallback::MatrixMulImpl::AlgoBase*>(algo),
+                        tile_size));
+                m_gi_winograd_algos.emplace_back(refhold.back().get());
                 refhold.emplace_back(new AlgoFP32WinogradF63_4x4_NCHW44(
+                        static_cast<fallback::MatrixMulImpl::AlgoBase*>(algo),
+                        tile_size));
+                m_gi_winograd_algos.emplace_back(refhold.back().get());
+                refhold.emplace_back(new AlgoFP32WinogradF43_4x4_NCHW44(
                         static_cast<fallback::MatrixMulImpl::AlgoBase*>(algo),
                         tile_size));
                 m_gi_winograd_algos.emplace_back(refhold.back().get());

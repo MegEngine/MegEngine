@@ -35,7 +35,7 @@ logger = get_logger(__name__)
 GLOBAL_TIMEOUT = 5
 
 
-def raise_timeout_error():
+def _raise_timeout_error():
     raise RuntimeError("dataloader timeout")
 
 
@@ -95,7 +95,7 @@ class DataLoader:
         collator: Collator = None,
         num_workers: int = 0,
         timeout: int = 0,
-        timeout_event: Callable = raise_timeout_error,
+        timeout_event: Callable = _raise_timeout_error,
         divide: bool = False,
         preload: bool = False,
     ):
@@ -188,7 +188,7 @@ class DataLoader:
         return len(self.sampler)
 
 
-class PreLoader:
+class _PreLoader:
     def __init__(self, preload):
         if preload:
             self.default_device = get_default_device()
@@ -237,7 +237,7 @@ class PreLoader:
         return out
 
 
-class _BaseMapDataLoaderIter(PreLoader):
+class _BaseMapDataLoaderIter(_PreLoader):
     def __init__(self, loader, preload):
         super().__init__(preload)
         self.dataset = loader.dataset
@@ -454,7 +454,7 @@ class _ParallelMapDataLoaderIter(_BaseMapDataLoaderIter):
             self._shutdown()
 
 
-class _BaseStreamDataLoaderIter(PreLoader):
+class _BaseStreamDataLoaderIter(_PreLoader):
     def __init__(self, loader, preload):
         super().__init__(preload)
         self.dataset = loader.dataset

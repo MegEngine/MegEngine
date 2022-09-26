@@ -1,0 +1,228 @@
+include "dtype.fbs";
+include "opr_param_defs.fbs";
+include "mgb_opr_param_defs.fbs";
+include "mgb_cpp_opr.fbs";
+
+namespace mgb.serialization.fbs.v2;
+
+file_identifier "mge2";
+
+table CompNode {
+    logical_locator:string;
+}
+
+table DefaultTensorFormat{}
+
+table Image2DPackedTensorFormat{
+    align_axis: ubyte;
+}
+
+table LowbitsAlignedTensorFormat{
+    size_nbits: ubyte;
+    align_size_in_bits: ubyte;
+}
+
+/// The Tensor Format
+union TensorFormat {
+    DefaultTensorFormat = 1,
+    Image2DPackedTensorFormat = 2,
+    LowbitsAlignedTensorFormat = 3,
+}
+
+/// Opaque byte buffer defined by operator implementation
+table Blob {
+    data:[ubyte];
+}
+
+table Tensor {
+    name:string;
+    shape:[uint];
+    comp_node:CompNode;
+    dtype:DType;
+    format:TensorFormat;
+    /// The tensor raw data
+    data:[ubyte];
+}
+
+table Reserved0 {}
+table DeprecatedParam {}
+
+union OperatorParam {
+    param.Empty = 1,
+    param.Axis = 2,
+    param.Convolution = 3,
+    param.MaskPropagate = 4,
+    param.ConvPooling = 5,
+    param.ConvBias = 6,
+    param.SeparableConv = 7,
+    param.Images2Neibs = 8,
+    param.Pooling = 9,
+    param.LRN = 10,
+    param.BN = 11,
+    param.ROIPooling = 12,
+    param.WarpPerspective = 13,
+    param.SpatialTfGridGenerator = 14,
+    param.SpatialTfSampler = 15,
+    param.MGBAddUpdate = 16,
+    param.Elemwise = 17,
+    param.ElemwiseMultiType = 18,
+    param.PowC = 19,
+    param.MatrixMul = 20,
+    //Reserved for param.Winograd = 21,
+    DeprecatedParam = 21,
+    param.SVD = 22,
+    param.Reduce = 23,
+    param.Cumsum = 24,
+    param.CondTake = 25,
+    param.Argsort = 26,
+    param.IndexingRemap = 27,
+    param.MGBSleep = 28,
+    param.Linspace = 29,
+    param.LinspaceFull = 30,
+    param.Eye = 31,
+    param.UniformRNG = 32,
+    param.GaussianRNG = 33,
+    param.Flip = 34,
+    param.Rotate = 35,
+    param.ROICopy = 36,
+    param.CvtColor = 37,
+    param.WarpAffine = 38,
+    param.GaussianBlur = 39,
+    param.Resize = 40,
+    param.Convolution3D = 41,
+    param.Conv3DBias = 42,
+    param.SeparableConv3D = 43,
+    param.TopK = 44,
+    param.RelayoutFormat = 45,
+    param.SeparableFilter = 46,
+    param.LocalShare = 47,
+    param.ROIAlign = 48,
+    param.DeformablePSROIPooling = 49,
+    param.BatchConvBias = 50,
+    param.DType = 51,
+    param.PersistentOutputStorage = 52,
+    param.OptionalAxis = 53,
+    param.OptionalAxisV1 = 54,
+    param.ExecutionPolicy = 55,
+    param.AssertEqual = 56,
+    param.FpgaConv = 57,
+    param.CollectiveComm = 58,
+    param.CondExecPred = 59,
+    param.CondExecPredLogical = 60,
+    param.CondExecMark = 61,
+    param.CondExecMerge = 62,
+    param.Host2DeviceCopy = 63,
+    param.Dimshuffle = 64,
+    param.AxisAddRemove = 65,
+    param.IndexDescMaskDump = 66,
+    DType = 67,
+    param.Remap = 68,
+    param.NMSKeep = 69,
+    param.AdaptivePooling = 70,
+    param.NvOf = 71,
+    param.DctChannelSelect = 72,
+    param.FakeQuant = 73,
+    param.TQT = 74,
+    param.Correlation = 75,
+    param.LSQ = 76,
+    param.GammaRNG = 77,
+    param.PoissonRNG = 78,
+    param.PermutationRNG = 79,
+    param.BetaRNG = 80,
+    param.SlidingWindowTranspose = 81,
+    param.Padding = 82,
+    param.ShuffleRNG = 83,
+    param.CheckNonFinite = 84,
+    param.LayerNorm = 85,
+    param.Dropout = 86,
+    param.RNNCell = 87,
+    param.RNN = 88,
+    param.LSTM = 89,
+    param.Softmax = 90,
+    param.Diag = 91,
+}
+
+table Operator {
+    /// the Operator type id
+    type:string;
+    /// sometime type maybe not exist, so add type_id
+    type_id:ulong;
+    name:string;
+
+    /// Operator parameter
+    param:OperatorParam;
+    /// Operator may want to save more than one OperatorParam
+    additional_params:[OperatorParam];
+
+    /// ID of the input tensor in the middle_tensors of a model
+    inputs:[uint];
+
+    /// ID of the output tensor in the middle_tensors of a model
+    outputs:[uint];
+
+    comp_node:[CompNode];
+    output_dtype:DType;
+
+    /// the const value in tensor format of the Operator
+    tensors:[Tensor];
+
+    /// opr version, with develop of MegEngine, some opr may have multi version
+    opr_version:uint;
+
+    /// the order of the Operator in the graph
+    priority:int = 0;
+
+    /// custom may want to save big, opaque byte buffers.
+    custom_data:[Blob];
+}
+
+table Metadata {
+    is_valid:bool;
+    graph_modified:bool;
+    optimize_options:ulong;
+    user_info:string;
+}
+
+table MiddleTensor {
+    name:string;
+    shape:[uint];
+    comp_node:CompNode;
+    dtype:DType;
+    format:TensorFormat;
+}
+
+table OutputVar {
+    /// the id of the middle tensor in graph, the same as the inputs in Operator
+    compact_id:uint;
+    original_id:uint;
+}
+
+table OutputAlias {
+    id:uint;
+    name:string;
+}
+
+table Model {
+    /// the megengine version when serialize the model
+    mge_version:uint;
+
+    /// model version, now model support:
+    /// version v1: the original fbs serialization version
+    /// version v2: support backward and poor forward compatibility
+    model_version:uint;
+
+    oprs:[Operator];
+
+    /// the tensors produce and consume by the Operators, not the input or
+    /// output tensor
+    middle_tensors:[MiddleTensor];
+
+    output_vars_idx:[OutputVar];
+    output_alias:[OutputAlias];
+
+    nr_shared_tensor:uint;
+    /// the Metadata to storage the custom data or some flags
+    metadata:Metadata;
+}
+
+root_type Model;

@@ -151,7 +151,11 @@ void TensorRTManager::create_trt_context(
         nvinfer1::ICudaEngine* engine) {
     bool has_no_context = (!m_context);
     if (has_no_context) {
+#if TENSOR_RT_MANAGE_ALL_WORKSPACE
+        m_context = {engine->createExecutionContext(), {}};
+#else
         m_context = {engine->createExecutionContextWithoutDeviceMemory(), {}};
+#endif
     }
     MGB_MARK_USED_VAR(cn);
 #if NV_TENSOR_RT_VERSION >= 6001
@@ -333,6 +337,9 @@ void TensorRTManager::exec(
         }
     }
     MGB_MARK_USED_VAR(is_trt_opr);
+#if TENSOR_RT_MANAGE_ALL_WORKSPACE
+    MGB_MARK_USED_VAR(should_reinit_device_memory);
+#else
     if (should_reinit_device_memory) {
         mgb_assert(
                 opr->output().back()->shape()[0] == intl::workspace_size(engine) &&
@@ -340,7 +347,7 @@ void TensorRTManager::exec(
         m_context->setDeviceMemory(workspace_ptr);
         m_device_workspace_memory_ptr = workspace_ptr;
     }
-
+#endif
     auto&& env = mgb::CompNodeEnv::from_comp_node(comp_node);
 
     bool exec_success = false;

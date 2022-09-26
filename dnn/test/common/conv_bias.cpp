@@ -902,7 +902,8 @@ void check_conv_bias(
 }
 #if MEGDNN_WITH_BENCHMARK
 std::vector<conv_bias::TestArg> get_winograd_benchmark_args(
-        size_t kernel, size_t pack_size) {
+        size_t kernel, size_t pack_size, size_t io_pack_size) {
+    megdnn_assert(io_pack_size == 1 || io_pack_size == 4);
     std::vector<conv_bias::TestArg> args;
     auto pack = [&](size_t oc, size_t ic, size_t w, size_t h, size_t kernel, size_t p) {
         if (ic % pack_size != 0 || oc % pack_size != 0)
@@ -915,11 +916,20 @@ std::vector<conv_bias::TestArg> get_winograd_benchmark_args(
         param.pad_h = p;
         param.pad_w = p;
 
-        args.push_back(conv_bias::TestArg{
-                param,
-                TensorShape{1, ic, h, w},
-                TensorShape{oc, ic, kernel, kernel},
-                {1, oc, 1, 1}});
+        if (io_pack_size == 4) {
+            param.format = param::ConvBias::Format::NCHW44;
+            args.push_back(conv_bias::TestArg{
+                    param,
+                    TensorShape{1, ic / 4, h, w, 4},
+                    TensorShape{oc / 4, ic / 4, kernel, kernel, 4, 4},
+                    {1, oc / 4, 1, 1, 4}});
+        } else {
+            args.push_back(conv_bias::TestArg{
+                    param,
+                    TensorShape{1, ic, h, w},
+                    TensorShape{oc, ic, kernel, kernel},
+                    {1, oc, 1, 1}});
+        }
     };
 
     for (size_t ic : {8, 16, 32, 64}) {
@@ -950,8 +960,9 @@ std::vector<conv_bias::TestArg> get_winograd_benchmark_args(
 }
 
 void benchmark_winograd(
-        const char* algo_name, Handle* handle, size_t kernel, size_t pack_size) {
-    auto&& args = get_winograd_benchmark_args(kernel, pack_size);
+        const char* algo_name, Handle* handle, size_t kernel, size_t pack_size,
+        size_t io_pack_size) {
+    auto&& args = get_winograd_benchmark_args(kernel, pack_size, io_pack_size);
     using namespace conv_bias;
     constexpr size_t RUN = 10;
     Benchmarker<Convolution> benchmark(handle);
@@ -969,10 +980,17 @@ void benchmark_winograd(
         opr->deduce_layout(
                 {arg.src, dtype::Float32()}, {arg.filter, dtype::Float32()},
                 {arg.bias, dtype::Float32()}, {}, dst_layout);
-        //! dst.nr_elems * IC * FH * FW * 2
-        float computations = dst_layout.total_nr_elems() * arg.filter[1] *
-                             arg.filter[2] * arg.filter[3] * 2.0 /
-                             (1024 * 1024 * 1024) * 1e3;
+        float computations = 0.0;
+        if (io_pack_size == 1) {
+            //! dst.nr_elems * IC * FH * FW * 2
+            computations = dst_layout.total_nr_elems() * arg.filter[1] * arg.filter[2] *
+                           arg.filter[3] * 2.0 / (1024 * 1024 * 1024) * 1e3;
+        } else {
+            //! dst.nr_elems * IC/4 * FH * FW * 4 * 2
+            computations = dst_layout.total_nr_elems() * arg.filter[1] * arg.filter[2] *
+                           arg.filter[3] * arg.filter[4] * 2.0 / (1024 * 1024 * 1024) *
+                           1e3;
+        }
 
         param::Convolution conv_param;
         conv_param.pad_h = arg.param.pad_h;
@@ -999,9 +1017,9 @@ void benchmark_winograd(
 
 // usage of weight pre-processing for winograd benchmark
 void benchmark_winograd_weight_preprocess(
-        const char* algo_name, megdnn::Handle* handle, size_t kernel,
-        size_t pack_size) {
-    auto&& args = get_winograd_benchmark_args(kernel, pack_size);
+        const char* algo_name, megdnn::Handle* handle, size_t kernel, size_t pack_size,
+        size_t io_pack_size) {
+    auto&& args = get_winograd_benchmark_args(kernel, pack_size, io_pack_size);
     using namespace conv_bias;
     constexpr size_t RUN = 10;
 
@@ -1018,16 +1036,17 @@ void benchmark_winograd_weight_preprocess(
         opr->deduce_layout(
                 {arg.src, dtype::Float32()}, {arg.filter, dtype::Float32()},
                 {arg.bias, dtype::Float32()}, {}, dst_layout);
-        //! dst.nr_elems * IC * FH * FW * 2
-        float computations = dst_layout.total_nr_elems() * arg.filter[1] *
-                             arg.filter[2] * arg.filter[3] * 2.0 /
-                             (1024 * 1024 * 1024) * 1e3;
-
-        param::Convolution conv_param;
-        conv_param.pad_h = arg.param.pad_h;
-        conv_param.pad_w = arg.param.pad_w;
-        conv_param.stride_h = arg.param.stride_h;
-        conv_param.stride_w = arg.param.stride_w;
+        float computations = 0.0;
+        if (io_pack_size == 1) {
+            //! dst.nr_elems * IC * FH * FW * 2
+            computations = dst_layout.total_nr_elems() * arg.filter[1] * arg.filter[2] *
+                           arg.filter[3] * 2.0 / (1024 * 1024 * 1024) * 1e3;
+        } else {
+            //! dst.nr_elems * IC/4 * FH * FW * 4 * 2
+            computations = dst_layout.total_nr_elems() * arg.filter[1] * arg.filter[2] *
+                           arg.filter[3] * arg.filter[4] * 2.0 / (1024 * 1024 * 1024) *
+                           1e3;
+        }
 
         benchmark_winograd.set_param(arg.param);
         auto used_winograd =
@@ -1045,8 +1064,8 @@ void benchmark_winograd_weight_preprocess(
 
 void benchmark_winograd_compare(
         const char* algoA_name, const char* algoB_name, megdnn::Handle* handle,
-        size_t kernel, size_t pack_size) {
-    auto&& args = get_winograd_benchmark_args(kernel, pack_size);
+        size_t kernel, size_t pack_size, size_t io_pack_size) {
+    auto&& args = get_winograd_benchmark_args(kernel, pack_size, io_pack_size);
     using namespace conv_bias;
     constexpr size_t RUN = 10;
 
@@ -1062,16 +1081,17 @@ void benchmark_winograd_compare(
         opr->deduce_layout(
                 {arg.src, dtype::Float32()}, {arg.filter, dtype::Float32()},
                 {arg.bias, dtype::Float32()}, {}, dst_layout);
-        //! dst.nr_elems * IC * FH * FW * 2
-        float computations = dst_layout.total_nr_elems() * arg.filter[1] *
-                             arg.filter[2] * arg.filter[3] * 2.0 /
-                             (1024 * 1024 * 1024) * 1e3;
-
-        param::Convolution conv_param;
-        conv_param.pad_h = arg.param.pad_h;
-        conv_param.pad_w = arg.param.pad_w;
-        conv_param.stride_h = arg.param.stride_h;
-        conv_param.stride_w = arg.param.stride_w;
+        float computations = 0.0;
+        if (io_pack_size == 1) {
+            //! dst.nr_elems * IC * FH * FW * 2
+            computations = dst_layout.total_nr_elems() * arg.filter[1] * arg.filter[2] *
+                           arg.filter[3] * 2.0 / (1024 * 1024 * 1024) * 1e3;
+        } else {
+            //! dst.nr_elems * IC/4 * FH * FW * 4 * 2
+            computations = dst_layout.total_nr_elems() * arg.filter[1] * arg.filter[2] *
+                           arg.filter[3] * arg.filter[4] * 2.0 / (1024 * 1024 * 1024) *
+                           1e3;
+        }
 
         benchmark_winograd.set_param(arg.param);
         auto used_winograd1 =

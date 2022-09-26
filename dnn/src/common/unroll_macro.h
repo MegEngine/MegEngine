@@ -177,6 +177,15 @@
     UNROLL_RAW_5x2(cb, v0, ##a)      \
     cb(5, 0, ##a) cb(5, 1, ##a)
 
+#define UNROLL_RAW_4x6(cb, v0, a...) \
+    cb(0, 0, ##a) cb(0, 1, ##a) cb(0, 2, ##a) cb(0, 3, ##a) cb(0, 4, ##a) cb(0, 5, ##a) \
+    cb(1, 0, ##a) cb(1, 1, ##a) cb(1, 2, ##a) cb(1, 3, ##a) cb(1, 4, ##a) cb(1, 5, ##a) \
+    cb(2, 0, ##a) cb(2, 1, ##a) cb(2, 2, ##a) cb(2, 3, ##a) cb(2, 4, ##a) cb(2, 5, ##a) \
+    cb(3, 0, ##a) cb(3, 1, ##a) cb(3, 2, ##a) cb(3, 3, ##a) cb(3, 4, ##a) cb(3, 5, ##a)
+#define UNROLL_RAW_5x6(cb, v0, a...) \
+    UNROLL_RAW_4x6(cb, v0, ##a)      \
+    cb(4, 0, ##a) cb(4, 1, ##a) cb(4, 2, ##a) cb(4, 3, ##a) cb(4, 4, ##a) cb(4, 5, ##a) 
+
 #define UNROLL_CALL0_D2(step, step2, cb, v...) \
     UNROLL_RAW_##step##x##step2(cb, 0, ##v)
 #define UNROLL_CALL1_D2(step, step2, cb, v...) \
