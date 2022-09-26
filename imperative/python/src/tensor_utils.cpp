@@ -422,6 +422,7 @@ mgb::DType _get_dtype(py::handle tensor) {
 
 py::object _astype_cpp(py::handle tensor, py::handle dtype_hdl) {
     PyArray_Descr* descr;
+    py::object ret;
     if (!PyArray_DescrConverter(dtype_hdl.ptr(), &descr)) {
         throw py::value_error(ssprintf(
                 "can not convert to numpy.dtype from %s",
@@ -432,11 +433,13 @@ py::object _astype_cpp(py::handle tensor, py::handle dtype_hdl) {
         std::shared_ptr<OpDef> op = TypeCvt::make(npy::dtype_np2mgb_descr(descr));
         py::object Op = py::cast(op);
         PyObject* p[2] = {Op.ptr(), tensor.ptr()};
-        py::tuple ret = py::reinterpret_steal<py::object>(py_apply(NULL, p, 2));
-        return ret[0];
+        py::tuple apply_res = py::reinterpret_steal<py::object>(py_apply(NULL, p, 2));
+        ret = apply_res[0];
     } else {
-        return py::reinterpret_borrow<py::object>(tensor);
+        ret = py::reinterpret_borrow<py::object>(tensor);
     }
+    Py_DECREF(descr);
+    return ret;
 }
 
 py::object _convert_single_value_cpp(
