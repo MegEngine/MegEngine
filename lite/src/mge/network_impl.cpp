@@ -435,31 +435,6 @@ void NetworkImplDft::cross_compnode_model_detect() {
     m_nr_device_type = nr_used_device_type.size();
 }
 
-void NetworkImplDft::adapt_option_valid() {
-    auto&& options = m_load_config.comp_graph->options();
-    if (m_user_config->options.force_output_use_user_specified_memory) {
-        for (auto&& out : m_load_result.output_var_list) {
-            auto opr = out.node()->owner_opr();
-            //! all the dest operator inherit from ReadonlyFwdHelper can't
-            //! support force_output_use_user_specified_memory options
-            if (opr->try_cast_final<mgb::opr::Reshape>() ||
-                opr->try_cast_final<mgb::opr::Broadcast>() ||
-                opr->try_cast_final<mgb::opr::Subtensor>() ||
-                opr->try_cast_final<mgb::opr::AxisAddRemove>() ||
-                opr->try_cast_final<mgb::opr::Dimshuffle>()) {
-                m_user_config->options.force_output_use_user_specified_memory = false;
-                options.force_output_use_user_specified_memory = false;
-                LITE_WARN(
-                        "detect the unsupported dest operator %s when config "
-                        "force_output_use_user_specified_memory, set "
-                        "force_output_use_user_specified_memory to false\n",
-                        opr->cname());
-                break;
-            }
-        }
-    }
-}
-
 void NetworkImplDft::layout_transform_optimization() {
     if (m_set_layout_transform) {
         mgb::ThinHashMap<mgb::SymbolVar, mgb::SymbolVar> out_var_map;
@@ -610,10 +585,6 @@ void NetworkImplDft::configure_after_loaded() {
     modify_exection_policy();
 
     layout_transform_optimization();
-
-    //! some optimization option maybe invalid in some case, so here just
-    //! auto determine whether some options will apply.
-    adapt_option_valid();
 
     //! find how many compnode the model has, this should call before update_io
     cross_compnode_model_detect();

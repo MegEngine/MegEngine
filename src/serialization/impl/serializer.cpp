@@ -1,6 +1,24 @@
 #include "megbrain/serialization/serializer.h"
 #include "megbrain/gopt/inference.h"
+#include "megbrain/opr/io.h"
+#include "megbrain/opr/tensor_manip.h"
 #include "megbrain/opr/utility.h"
+
+namespace {
+bool is_opr_memforward_var(mgb::VarNode* var) {
+    if (var) {
+        auto opr = var->owner_opr();
+        if (opr->try_cast_final<mgb::opr::Reshape>() ||
+            opr->try_cast_final<mgb::opr::Broadcast>() ||
+            opr->try_cast_final<mgb::opr::Subtensor>() ||
+            opr->try_cast_final<mgb::opr::AxisAddRemove>() ||
+            opr->try_cast_final<mgb::opr::Dimshuffle>()) {
+            return true;
+        }
+    };
+    return false;
+}
+}  // namespace
 
 namespace mgb {
 namespace serialization {
@@ -42,6 +60,14 @@ void GraphLoader::LoadResult::graph_compile_ahead() {
     //! just do basic optimize_for_inference ahead, and replace the var in
     //! LoadResult
     if (graph->options().force_output_use_user_specified_memory) {
+        //! if the output var is like dimshuffle, reshape, it maybe memory forward to
+        //! the output, so add a Copy operator in the end.
+        for (auto& var : output_var_list) {
+            if (is_opr_memforward_var(var.node())) {
+                std::string name = var.node()->name();
+                var = opr::Copy::make(var, name);
+            }
+        }
         auto options = gopt::OptimizeForInferenceOptions{};
         auto new_vars = gopt::optimize_for_inference(output_var_list, options);
         output_var_list = new_vars;
@@ -62,6 +88,7 @@ void GraphLoader::LoadResult::graph_compile_ahead() {
                     found, "can't find var name %s when optimize_for_inference. ",
                     var.node()->cname());
         }
+        output_var_map_id = var_map_id;
     }
 }
 

@@ -239,9 +239,6 @@ private:
     //! optimized output tensor copy
     void output_tensor_copy_optimize(Var var, std::shared_ptr<Tensor> tensor);
 
-    //! adapt option valid, it should call after update_io
-    void adapt_option_valid();
-
     //! configure and optimize network after loaded
     void configure_after_loaded();
 

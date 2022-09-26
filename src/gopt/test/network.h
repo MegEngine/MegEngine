@@ -53,6 +53,12 @@ public:
             opr::Pooling::Param::Mode mode = opr::Pooling::Param::Mode::MAX);
     SymbolVar add_type_cvt(SymbolVar f, DType out_dtype = dtype::Float32());
     SymbolVar add_concat(SymbolVar f, SymbolVar g, int axis = 0);
+    SymbolVar add_dimshuffle(SymbolVar f, std::vector<int> pattern);
+    SymbolVar add_axisaddremove(SymbolVar f);
+    SymbolVar add_subtensor(SymbolVar f);
+    SymbolVar add_reshape(SymbolVar f);
+    SymbolVar add_broadcast(SymbolVar f);
+    SymbolVar add_copy(SymbolVar f);
 };
 
 SymbolVar create_block(

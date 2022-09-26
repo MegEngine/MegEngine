@@ -1,4 +1,5 @@
 #include "./network.h"
+#include "megbrain/opr/tensor_manip.h"
 
 using namespace mgb;
 
@@ -135,6 +136,35 @@ SymbolVar Network::add_type_cvt(SymbolVar f, DType out_dtype) {
 
 SymbolVar Network::add_concat(SymbolVar f, SymbolVar g, int axis) {
     return opr::Concat::make({f, g}, axis);
+}
+
+SymbolVar Network::add_dimshuffle(SymbolVar f, std::vector<int> pattern) {
+    return opr::Dimshuffle::make(f, pattern);
+}
+
+SymbolVar Network::add_axisaddremove(SymbolVar f) {
+    return opr::AxisAddRemove::make(
+            f, {{opr::AxisAddRemove::AxisDesc::Method::REMOVE, {0}}});
+}
+
+SymbolVar Network::add_subtensor(SymbolVar f) {
+    using AIdx = opr::indexing::AxisIndexer;
+    return opr::Subtensor::make(
+            f, {AIdx::make_interval(0, f.make_scalar(0), None, None)});
+}
+
+SymbolVar Network::add_reshape(SymbolVar f) {
+    auto shp = opr::GetVarShape::make(f);
+    return opr::Reshape::make(f, shp);
+}
+
+SymbolVar Network::add_broadcast(SymbolVar f) {
+    auto shp = opr::GetVarShape::make(f);
+    return opr::Broadcast::make(f, shp);
+}
+
+SymbolVar Network::add_copy(SymbolVar f) {
+    return opr::Copy::make(f);
 }
 
 SymbolVar mgb::create_block(
