@@ -427,8 +427,8 @@ py::object _astype_cpp(py::handle tensor, py::handle dtype_hdl) {
                 "can not convert to numpy.dtype from %s",
                 dtype_hdl.ptr()->ob_type->tp_name));
     }
-    PyArray_Descr* cur = npy::dtype_mgb2np_descr(_get_dtype(tensor)).get();
-    if (!dtype_equal(cur, descr)) {
+    auto&& cur = npy::dtype_mgb2np_descr(_get_dtype(tensor));
+    if (!dtype_equal(cur.get(), descr)) {
         std::shared_ptr<OpDef> op = TypeCvt::make(npy::dtype_np2mgb_descr(descr));
         py::object Op = py::cast(op);
         PyObject* p[2] = {Op.ptr(), tensor.ptr()};
