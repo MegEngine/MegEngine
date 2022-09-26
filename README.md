@@ -1,7 +1,7 @@
 # MegEngine
 
 <p align="center">
-  <img width="128" height="128" src="logo.png">
+  <img width="202" height="118" src="logo.svg">
 </p>
 <h3> <a href="https://www.megengine.org.cn/doc/stable/en/user-guide/index.html"> Documentation </a> | <a href="https://www.megengine.org.cn/doc/stable/zh/user-guide/index.html"> 中文文档 </a> </h3>
 
