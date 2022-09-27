@@ -804,13 +804,11 @@ TEST_F(FALLBACK, BENCHMARK_CONVOLUTION_BACKWARD_DATA_NCHW44) {
                 .set_dtype(2, dtype::Float32{})
                 .set_times(RUN);
 
-        auto tnchw =
-                benchmarker_fallback.set_param(param)
-                        .exec(TensorLayoutArray{filter, diff, grad});
+        auto tnchw = benchmarker_fallback.set_param(param).exec(
+                TensorLayoutArray{filter, diff, grad});
         param.format = Param::Format::NCHW44;
-        auto tnchw44 =
-                benchmarker_fallback.set_param(param)
-                        .exec(TensorLayoutArray{filter_nchw44, diff_nchw44, grad_nchw44});
+        auto tnchw44 = benchmarker_fallback.set_param(param).exec(
+                TensorLayoutArray{filter_nchw44, diff_nchw44, grad_nchw44});
         size_t IC = ic;
         size_t FH = fh;
         size_t FW = fw;

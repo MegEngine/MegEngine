@@ -86,7 +86,7 @@ void col2img_stride_padding_nchw44(
                         if (h >= 0 && h < OH && w >= 0 && w < OW) {
                             float* dst_ptr = dst + (ic * OH * OW + h * OW + w) * 4;
                             GI_FLOAT32_t dst_data = GiLoadFloat32(dst_ptr);
-                            GI_FLOAT32_t src_data = GiLoadFloat32(src+i);
+                            GI_FLOAT32_t src_data = GiLoadFloat32(src + i);
                             GiStoreFloat32(dst_ptr, GiAddFloat32(dst_data, src_data));
                         }
                         i += 4;
