@@ -189,7 +189,7 @@ def _leaf_type(node):
 
 
 def _is_const_leaf(node):
-    if isinstance(node, (RawTensor, NodeMixin, Module)):
+    if isinstance(node, (RawTensor, Node, NodeMixin, Module)):
         return False
     return True
 
