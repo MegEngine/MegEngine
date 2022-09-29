@@ -105,7 +105,7 @@ if(NOT WIN32)
     add_library(
       lite_static_all_in_one STATIC
       $<TARGET_OBJECTS:flatbuffers> $<TARGET_OBJECTS:cpuinfo> $<TARGET_OBJECTS:clog>
-      $<TARGET_OBJECTS:OpenCL> $<TARGET_OBJECTS:lite_static>)
+      $<TARGET_OBJECTS:OpenCL> $<TARGET_OBJECTS:lite_static> $<TARGET_OBJECTS:LIBION>)
   elseif(MGE_ENABLE_CPUINFO AND NOT MGE_WITH_OPENCL)
     add_library(
       lite_static_all_in_one STATIC
@@ -115,7 +115,7 @@ if(NOT WIN32)
     add_library(
       lite_static_all_in_one STATIC
       $<TARGET_OBJECTS:flatbuffers> $<TARGET_OBJECTS:OpenCL>
-      $<TARGET_OBJECTS:lite_static>)
+      $<TARGET_OBJECTS:lite_static> $<TARGET_OBJECTS:LIBION>)
   else()
     add_library(lite_static_all_in_one STATIC $<TARGET_OBJECTS:flatbuffers>
                                               $<TARGET_OBJECTS:lite_static>)

@@ -324,6 +324,21 @@ public:
     /*!
      * \brief get logical address by host ptr
      */
+    //! api for register memory info, in order compat old user code, do not change the
+    //! api name, this api have different behavior for with different OpenCL memory
+    //! type.
+    //! Map/UnMap: use to get logical_addr of cl_mem alloc by MegEngine, which can
+    //! be reset to TensorND storage raw_ptr, NOTICE: Map/UnMap do not support cl_mem
+    //! not alloc from MegEngine.
+    //! SVM: in fact do nothing, just return ptr same with args.
+    //! ION: this case support two case:
+    //! ION case one: IonHostPtr info is alloc by MegEngine, this case, args ptr is
+    //! tensor raw_ptr, and args size is tensor size in bytes, api will return
+    //! IonHostPtr ptr, then user can use it out of EegEngine.
+    //! ION case two: use to register user IonHostPtr info, args ptr is IonHostPtr, size
+    //! is IonHostPtr->ion_hostptr size_in_bytes,  MegEngine will register it into DNN,
+    //! then just return IonHostPtr->ion_hostptr, which can be reset to TensorND storage
+    //! raw_ptr.
     MGE_WIN_DECLSPEC_FUC void* get_logical_addr_by_host_ptr(void* ptr, size_t size);
 
     /* =================== synchronization ======================== */
