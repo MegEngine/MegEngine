@@ -238,7 +238,11 @@ SymbolVarArray TensorRTRuntimeOpr::make(
     auto gpu_allocator = std::make_shared<GpuAllocator>(src[0].node()->comp_node());
     runtime->setGpuAllocator(gpu_allocator.get());
     auto engine = runtime->deserializeCudaEngine(buf, buf_size, nullptr);
-    mgb_assert(engine, "failed to deserialize ICudaEngine");
+    mgb_assert(
+            engine,
+            "Failed to deserialize ICudaEngine, may caused by "
+            "different TensorRT version.\nPlease make sure you are using the "
+            "same GPU hardware and TensorRT version as serialization.");
     return make(to_shared_ptr_engine(engine), gpu_allocator, src, config);
 }
 
