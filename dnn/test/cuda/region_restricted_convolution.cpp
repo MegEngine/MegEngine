@@ -786,6 +786,7 @@ TEST_F(CUDA, REGION_RESTRICTED_CONV_BWD_DATA_FP32_RIN_EQ_ROUT) {
 }
 
 TEST_F(CUDA, REGION_RESTRICTED_CONV_BWD_FILTER_FP32) {
+    require_compute_capability(6, 1);
     Checker<RegionRestrictedConvolutionBackwardFilter> checker(handle_cuda());
 
     for (auto dt : std::vector<DType>{dtype::Int32(), dtype::Uint8()}) {
@@ -846,6 +847,7 @@ TEST_F(CUDA, REGION_RESTRICTED_CONV_BWD_FILTER_FP32) {
 }
 
 TEST_F(CUDA, REGION_RESTRICTED_CONV_BWD_FILTER_FP32_RIN_EQ_ROUT) {
+    require_compute_capability(6, 1);
     Checker<RegionRestrictedConvolutionBackwardFilter> checker(handle_cuda());
 
     for (auto dt : std::vector<DType>{dtype::Int32(), dtype::Uint8()}) {
