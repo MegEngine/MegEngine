@@ -463,6 +463,60 @@ TEST_F(FALLBACK, CONVOLUTION_BACKWARD_DATA) {
     }
 }
 
+TEST_F(FALLBACK, CONVOLUTION_BACKWARD_DATA_NCHW44) {
+    Checker<ConvolutionBackwardData> checker(handle());
+    using Param = ConvolutionBackwardData::Param;
+
+    Param param;
+    param.format = Param::Format::NCHW44;
+    auto run = [&](size_t n, size_t ic, size_t oh, size_t ow, size_t oc, size_t fh,
+                   size_t fw, size_t stride, size_t padding, size_t dilate = 1,
+                   size_t group = 1) {
+        param.pad_h = param.pad_w = padding;
+        param.stride_h = param.stride_w = stride;
+        param.dilate_h = param.dilate_w = dilate;
+
+        TensorLayout diff =
+                TensorLayout{{n, oc / 4 * group, oh, ow, 4}, dtype::Float32()};
+        TensorLayout grad;
+        TensorLayout filter;
+        if (group == 1) {
+            param.sparse = Param::Sparse::DENSE;
+            filter = {{oc / 4, ic / 4, fh, fw, 4, 4}, dtype::Float32()};
+        } else {
+            param.sparse = Param::Sparse::GROUP;
+            filter = {{group, oc / 4, ic / 4, fh, fw, 4, 4}, dtype::Float32()};
+        }
+        // TensorLayout grad;
+        {
+            auto opr = handle()->create_operator<ConvolutionBackwardData>();
+            opr->param() = param;
+            opr->deduce_layout(filter, diff, grad);
+        }
+        checker.set_param(param)
+                .set_dtype(0, dtype::Float32())
+                .set_dtype(1, dtype::Float32());
+        checker.exec(TensorLayoutArray{filter, diff, grad});
+    };
+
+    for (auto mode : {Param::Mode::CONVOLUTION, Param::Mode::CROSS_CORRELATION}) {
+        param.mode = mode;
+        run(1, 4, 2, 2, 4, 1, 1, 1, 0, 1, 1);
+        run(1, 4, 2, 2, 4, 3, 3, 1, 0, 1, 1);
+        run(1, 4, 2, 2, 4, 3, 3, 1, 1, 1, 1);
+
+        run(4, 16, 10, 13, 16, 1, 1, 1, 0, 1, 1);
+        run(4, 16, 10, 13, 16, 3, 3, 1, 0, 1, 1);
+        run(4, 16, 10, 13, 16, 3, 3, 1, 1, 1, 1);
+
+        run(4, 32, 11, 23, 32, 1, 1, 1, 0, 1, 4);
+
+        run(4, 16, 11, 23, 8, 3, 3, 1, 0, 1, 4);
+        run(4, 16, 11, 23, 8, 3, 3, 1, 1, 1, 4);
+        run(4, 16, 11, 23, 8, 3, 3, 2, 1, 1, 4);
+    }
+}
+
 TEST_F(FALLBACK, CONVOLUTION_BACKWARD_DATA_RECORD) {
     TaskRecordChecker<ConvolutionBackwardData> checker(1);
     using Param = ConvolutionBackwardData::Param;
@@ -706,5 +760,74 @@ TEST_F(FALLBACK, CONVOLUTION_BACKWARD_DATA_NAIVE_ALGO) {
         run(4, 4, 6, 7, 9, 3, 2, 2, 1, 3, 2);
     }
 }
+
+#if MEGDNN_WITH_BENCHMARK
+
+TEST_F(FALLBACK, BENCHMARK_CONVOLUTION_BACKWARD_DATA_NCHW44) {
+    using Param = ConvolutionBackwardData::Param;
+    auto run = [&](size_t n, size_t ic, size_t oh, size_t ow, size_t oc, size_t fh,
+                   size_t fw, size_t stride, size_t padding, size_t dilate = 1,
+                   size_t group = 1) {
+        Param param;
+        param.pad_h = param.pad_w = padding;
+        param.stride_h = param.stride_w = stride;
+        param.dilate_h = param.dilate_w = dilate;
+
+        TensorLayout diff_nchw44 =
+                TensorLayout{{n, oc / 4 * group, oh, ow, 4}, dtype::Float32()};
+        TensorLayout diff = TensorLayout{{n, oc * group, oh, ow}, dtype::Float32()};
+        TensorLayout grad;
+        TensorLayout grad_nchw44;
+        TensorLayout filter;
+        TensorLayout filter_nchw44;
+        if (group == 1) {
+            param.sparse = Param::Sparse::DENSE;
+            filter_nchw44 = {{oc / 4, ic / 4, fh, fw, 4, 4}, dtype::Float32()};
+            filter = {{oc, ic, fh, fw}, dtype::Float32()};
+        } else {
+            param.sparse = Param::Sparse::GROUP;
+            filter_nchw44 = {{group, oc / 4, ic / 4, fh, fw, 4, 4}, dtype::Float32()};
+            filter = {{group, oc, ic, fh, fw}, dtype::Float32()};
+        }
+        {
+            auto opr = handle()->create_operator<ConvolutionBackwardData>();
+            opr->param() = param;
+            opr->deduce_layout(filter, diff, grad);
+            opr->param().format = Param::Format::NCHW44;
+            opr->deduce_layout(filter_nchw44, diff_nchw44, grad_nchw44);
+        }
+        Benchmarker<ConvolutionBackwardData> benchmarker_fallback(handle());
+        size_t RUN = 50;
+        benchmarker_fallback.set_display(false)
+                .set_dtype(0, dtype::Float32{})
+                .set_dtype(1, dtype::Float32{})
+                .set_dtype(2, dtype::Float32{})
+                .set_times(RUN);
+
+        auto tnchw =
+                benchmarker_fallback.set_param(param)
+                        .exec(TensorLayoutArray{filter, diff, grad});
+        param.format = Param::Format::NCHW44;
+        auto tnchw44 =
+                benchmarker_fallback.set_param(param)
+                        .exec(TensorLayoutArray{filter_nchw44, diff_nchw44, grad_nchw44});
+        size_t IC = ic;
+        size_t FH = fh;
+        size_t FW = fw;
+        size_t total_flops = IC * diff.total_nr_elems() * FH * FW * 2;
+        printf("nchw_time: %.3f ms  nchw_flops: %.3f Gflops\n", tnchw,
+               total_flops / (tnchw / RUN * 1e6));
+        printf("nchw44_time: %.3f ms  nchw44_flops: %.3f Gflops\n", tnchw44,
+               total_flops / (tnchw44 / RUN * 1e6));
+        printf("speedup: %.3f\n", tnchw / tnchw44);
+    };
+    run(1, 16, 14, 14, 16, 3, 3, 1, 1, 1, 1);
+    run(1, 32, 28, 28, 16, 3, 3, 1, 1, 1, 1);
+    run(1, 48, 28, 28, 48, 2, 2, 1, 0, 1, 1);
+    run(1, 32, 26, 26, 32, 3, 3, 1, 0, 1, 1);
+    run(2, 32, 64, 64, 32, 3, 3, 1, 0, 1, 1);
+    run(2, 16, 112, 112, 16, 3, 3, 1, 0, 1, 1);
+}
+#endif
 
 // vim: syntax=cpp.doxygen

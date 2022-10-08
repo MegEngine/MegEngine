@@ -198,6 +198,20 @@ public:
     MEGDNN_DECL_ALGO_TYPE(FB_MATMUL)
 };
 
+class ConvolutionBackwardDataImpl::AlgoMatrixMulNCHW44 final : public AlgoBase {
+public:
+    const char* name() const override { return "DeconvMatmulNchw44"; }
+    bool usable(ConvolutionBackwardDataImpl* opr, const NCBKernSizeParam& param)
+            const override;
+    size_t get_workspace(
+            ConvolutionBackwardDataImpl*, const NCBKernSizeParam& param) const override;
+    ncb_kern_t dispatch_kern(
+            ConvolutionBackwardDataImpl*, const NCBKernSizeParam&) const override;
+    bool is_preferred(const NCBKernSizeParam& param) const override;
+    AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }
+    MEGDNN_DECL_ALGO_TYPE(FB_MATMUL_NCHW44)
+};
+
 }  // namespace fallback
 }  // namespace megdnn
 

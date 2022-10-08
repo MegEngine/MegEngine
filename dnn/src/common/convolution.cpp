@@ -1186,7 +1186,7 @@ void ConvolutionBackwardData::deduce_layout(
     MEGDNN_MARK_USED_VAR(errmsg);
     megdnn_assert_contiguous(filter);
     megdnn_assert_contiguous(diff);
-    megdnn_assert(filter.ndim == 4_z || filter.ndim == 5_z, "%s", errmsg().c_str());
+    megdnn_assert(filter.ndim >= 4_z && filter.ndim <= 7_z, "%s", errmsg().c_str());
     megdnn_assert(diff.ndim == 4_z || diff.ndim == 5_z, "%s", errmsg().c_str());
 
     deduce_dtype(filter.dtype, diff.dtype, grad.dtype);
@@ -1223,11 +1223,12 @@ void ConvolutionBackwardData::deduce_layout(
                     deduce(diff[i + src_or_dst_spatial_start], cflt.dilated_spatial[i],
                            cflt.stride[i], cflt.padding[i]);
         }
-    } else if (param().format == Param::Format::NCHW4) {
+    } else if (
+            param().format == Param::Format::NCHW4 ||
+            param().format == Param::Format::NCHW44) {
         megdnn_assert(
-                diff.ndim == 5, "valid diff ndim for NCHW4, expected=5, got=%zu",
-                diff.ndim);
-        megdnn_assert(cflt.group == 1, "%s", errmsg().c_str());
+                diff.ndim == 5,
+                "valid diff ndim for NCHW4 and NCHW44, expected=5, got=%zu", diff.ndim);
         megdnn_assert(cflt.ocpg * cflt.group == diff[1] * 4, "%s", errmsg().c_str());
         grad.ndim = diff.ndim;
         grad[0] = diff[0];

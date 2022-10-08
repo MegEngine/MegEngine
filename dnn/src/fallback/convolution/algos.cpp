@@ -29,14 +29,19 @@ Relayout* get_relayout_opr() {
 MatrixMul* get_matmul_opr(const NCBKernSizeParam& param) {
     using ConvCM = param::Convolution::ComputeMode;
     using MmCM = param::MatrixMul::ComputeMode;
-    static CpuOprDelegationStorage<2> storage;
+    static CpuOprDelegationStorage<3> storage;
+    if (param.filter_meta.format == param::Convolution::Format::NCHW44) {
+        MatrixMul::Param p;
+        p.format = param::MatrixMul::Format::MK4;
+        return storage.get<MatrixMul, 0>(p);
+    }
     switch (param.compute_mode) {
         default:
-            return storage.get<MatrixMul, 0>({});
+            return storage.get<MatrixMul, 1>({});
         case ConvCM::FLOAT32: {
             MatrixMul::Param p;
             p.compute_mode = MmCM::FLOAT32;
-            return storage.get<MatrixMul, 1>(p);
+            return storage.get<MatrixMul, 2>(p);
         }
     }
 }
@@ -58,7 +63,14 @@ WorkspaceBundle get_bundle(const NCBKernSizeParam& param) {
         part0 = (IC * FH * FW * IH * IW) * param.grad_type.size();
     }
     part2 = (OC * IC * FH * FW) * param.filter_type.size();
-    {
+    if (param.filter_meta.format == param::Convolution::Format::NCHW44) {
+        TensorLayout A_, B_, C_;
+        A_ = TensorLayout({IC / 4 * FH * FW, OC / 4, 4, 4}, param.filter_type);
+        B_ = TensorLayout({OC / 4, IH * IW}, param.diff_type);
+        C_ = TensorLayout({IC / 4 * FH * FW, IH * IW, 4}, param.grad_type);
+        auto matmul_algo = get_matmul_opr(param);
+        part1 = matmul_algo->get_workspace_in_bytes(A_, B_, C_);
+    } else {
         TensorLayout A_, B_, C_;
         A_ = TensorLayout({IC * FH * FW, OC}, param.filter_type);
         B_ = TensorLayout({OC, IH * IW}, param.diff_type);
@@ -569,6 +581,121 @@ ConvolutionBackwardDataImpl::ncb_kern_t ConvolutionBackwardDataImpl::AlgoMatrixM
 }
 
 bool ConvolutionBackwardDataImpl::AlgoMatrixMul::is_preferred(
+        const NCBKernSizeParam& param) const {
+    return is_matrix_mul_preferred(param);
+}
+
+/* ===================== Matrix mul nchw44 algo ===================== */
+namespace{
+void kern_matmul_nchw44(const NCBKernParam& param) {
+    bool is_xcorr = !param.filter_meta.should_flip;
+    UNPACK_CONV_F32_NCB_KERN_SIZES(param);
+    auto bundle = get_bundle(param);
+    bundle.set(param.workspace_ptr);
+    bool is1X1 = (FH == 1 && FW == 1 && SH == 1 && SW == 1 && PH == 0 && PW == 0);
+
+    typedef void (*Func1)(const float*, float*, int, int, int, int, int, int, int);
+    typedef void (*Func2)(
+            const float*, float*, int, int, int, int, int, int, int, int, int, int,
+            int);
+    Func1 f1 = nullptr;
+    Func2 f2 = nullptr;
+    if (is_xcorr) {
+        f1 = col2img_nchw44<true>;
+        f2 = col2img_stride_padding_nchw44<true>;
+    } else {
+        f1 = col2img_nchw44<false>;
+        f2 = col2img_stride_padding_nchw44<false>;
+    }
+    float* filter = const_cast<float*>(param.filter<float>());
+    TensorND A_src, A_dst;
+    {
+        A_src.layout = TensorLayout(
+                {IC / 4 * FH * FW, OC / 4, 4, 4},
+                {
+                        static_cast<std::ptrdiff_t>(16),
+                        static_cast<std::ptrdiff_t>(IC * FH * FW * 4),
+                        static_cast<std::ptrdiff_t>(1),
+                        static_cast<std::ptrdiff_t>(4),
+                },
+                param.filter_type);
+        A_src.reset_ptr(static_cast<void*>(filter));
+        A_dst.layout =
+                TensorLayout({IC / 4 * FH * FW, OC / 4, 4, 4}, param.filter_type);
+        A_dst.reset_ptr(static_cast<void*>(bundle.get(2)));
+        // TODO Should be removed once armv8 convolution support transpose.
+        get_relayout_opr()->exec(A_src, A_dst, inplace_cpu_handle().get());
+    }
+    TensorND B_, C_;
+    for (size_t n = 0; n < N; ++n) {
+        float*C_src, *C_dst;
+        float* diff = const_cast<float*>(param.diff<float>() + n * param.inp_bs);
+        float* grad = param.grad<float>() + n * param.out_bs;
+        if (is1X1) {
+            C_src = grad;
+        } else {
+            C_src = static_cast<float*>(bundle.get(0));
+        }
+        {
+            B_.layout = TensorLayout({OC/4, IH * IW, 4}, param.diff_type);
+            B_.reset_ptr(static_cast<void*>(diff));
+            C_.layout = TensorLayout({IC / 4 * FH * FW, IH * IW, 4}, param.grad_type);
+            C_.reset_ptr(C_src);
+            Workspace workspace(
+                    static_cast<dt_byte*>(bundle.get(1)), bundle.get_size(1));
+            auto  matmul_opr =get_matmul_opr(param);
+            matmul_opr->exec(A_dst, B_, C_, workspace);
+        }
+
+        if (!is1X1) {
+            C_dst = grad;
+            std::memset(C_dst, 0, param.grad_type.size() * IC * OH * OW);
+            if (PH == 0 && PW == 0 && SH == 1 && SW == 1) {
+                f1(C_src, C_dst, OH, OW, IC, IH, IW, FH, FW);
+            } else {
+                f2(C_src, C_dst, OH, OW, IC, IH, IW, FH, FW, SH, SW, PH, PW);
+            }
+        }
+    }
+}
+}  // namespace
+
+bool ConvolutionBackwardDataImpl::AlgoMatrixMulNCHW44::usable(
+        ConvolutionBackwardDataImpl*, const NCBKernSizeParam& param) const {
+    auto&& fm = param.filter_meta;
+    return fm.format == param::Convolution::Format::NCHW44 &&
+           param.diff_type.enumv() == DTypeTrait<dtype::Float32>::enumv &&
+           param.filter_type.enumv() == DTypeTrait<dtype::Float32>::enumv &&
+           param.grad_type.enumv() == DTypeTrait<dtype::Float32>::enumv &&
+           fm.spatial_ndim == 2 && fm.group == 1 && fm.dilation[0] == 1 &&
+           fm.dilation[1] == 1 && fm.icpg % 4 == 0 && fm.ocpg % 4 == 0;
+}
+
+size_t ConvolutionBackwardDataImpl::AlgoMatrixMulNCHW44::get_workspace(
+        ConvolutionBackwardDataImpl*, const NCBKernSizeParam& param) const {
+    MIDOUT_BEGIN(
+            megdnn_fallback_deconv,
+            midout_iv("AlgoMatrixMulNCHW44::get_workspace"_hash)) {
+        return get_bundle(param).total_size_in_bytes();
+    }
+    MIDOUT_END();
+    return 0;
+}
+
+ConvolutionBackwardDataImpl::ncb_kern_t ConvolutionBackwardDataImpl::
+        AlgoMatrixMulNCHW44::dispatch_kern(
+                ConvolutionBackwardDataImpl*, const NCBKernSizeParam& param) const {
+    if (param.filter_type.enumv() == DTypeTrait<dtype::Float32>::enumv) {
+        MIDOUT_BEGIN(megdnn_fallback_deconv, midout_iv("FLOAT_NCHW44"_hash)) {
+            return kern_matmul_nchw44;
+        }
+        MIDOUT_END();
+    }
+
+    megdnn_throw("unsupported data type on matrix mul");
+}
+
+bool ConvolutionBackwardDataImpl::AlgoMatrixMulNCHW44::is_preferred(
         const NCBKernSizeParam& param) const {
     return is_matrix_mul_preferred(param);
 }

@@ -392,6 +392,7 @@ protected:
             FB_NAIVE = 1 << 0,
             FB_DIRECT,
             FB_MATMUL,
+            FB_MATMUL_NCHW44,
 
 #if MEGDNN_AARCH64 || MEGDNN_ARMV7
             ARM_COMMON_DIRECT_STRD1_DOT_INT8X8X32 = 1 << 8,
@@ -480,6 +481,7 @@ private:
     class AlgoNaive;
     class AlgoDirect;
     class AlgoMatrixMul;
+    class AlgoMatrixMulNCHW44;
     class AlgoPack;
     Algorithm* get_algorithm_from_desc(const AlgorithmDesc& desc) override;
 
