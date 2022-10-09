@@ -22,6 +22,9 @@ private:
     AlgoFilter3ModexStridexNCHW44 algo_filter3_modex_stridex_nchw4;
     AlgoFilter4ModexStridexNCHW44 algo_filter4_modex_stridex_nchw4;
     AlgoFilter5ModexStridexNCHW44 algo_filter5_modex_stridex_nchw4;
+#if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
+    AlgoFilterxModexStridexNCHW88 algo_fp16_filterx_modex_stridex_nchw88;
+#endif
     AlgoFallback algo_fallback;
 
 public:
@@ -38,6 +41,9 @@ public:
         all_algos.emplace_back(&algo_filter2_modex_stridex_nchw4);
         all_algos.emplace_back(&algo_filter4_modex_stridex_nchw4);
         all_algos.emplace_back(&algo_filter5_modex_stridex_nchw4);
+#if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
+        all_algos.emplace_back(&algo_fp16_filterx_modex_stridex_nchw88);
+#endif
         all_algos.emplace_back(&algo_fallback);
 
         for (auto&& algo : all_algos) {

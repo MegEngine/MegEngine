@@ -165,6 +165,10 @@
     cb(8, 0, ##a) cb(8, 1, ##a) cb(8, 2, ##a) cb(8, 3, ##a)               \
     cb(8, 4, ##a) cb(8, 5, ##a) cb(8, 6, ##a) cb(8, 7, ##a) cb(8, 8, ##a)
 
+#define UNROLL_RAW_3x2(cb, v0, a...) \
+    UNROLL_RAW_2x2(cb, v0, ##a)      \
+    cb(2, 0, ##a) cb(2, 1, ##a)
+
 #define UNROLL_RAW_4x2(cb, v0, a...)                        \
     cb(0, 0, ##a) cb(0, 1, ##a) cb(1, 0, ##a) cb(1, 1, ##a) \
     cb(2, 0, ##a) cb(2, 1, ##a) cb(3, 0, ##a) cb(3, 1, ##a)
@@ -177,6 +181,19 @@
     UNROLL_RAW_5x2(cb, v0, ##a)      \
     cb(5, 0, ##a) cb(5, 1, ##a)
 
+#define UNROLL_RAW_9x2(cb, v0, a...) \
+    UNROLL_RAW_6x2(cb, v0, ##a)     \
+    cb(6, 0, ##a) cb(6, 1, ##a)     \
+    cb(7, 0, ##a) cb(7, 1, ##a)     \
+    cb(8, 0, ##a) cb(8, 1, ##a)
+
+#define UNROLL_RAW_13x2(cb, v0, a...) \
+    UNROLL_RAW_9x2(cb, v0, ##a)      \
+    cb(9, 0, ##a)  cb(9, 1, ##a)     \
+    cb(10, 0, ##a) cb(10, 1, ##a)    \
+    cb(11, 0, ##a) cb(11, 1, ##a)    \
+    cb(12, 0, ##a) cb(12, 1, ##a)
+
 #define UNROLL_RAW_4x6(cb, v0, a...) \
     cb(0, 0, ##a) cb(0, 1, ##a) cb(0, 2, ##a) cb(0, 3, ##a) cb(0, 4, ##a) cb(0, 5, ##a) \
     cb(1, 0, ##a) cb(1, 1, ##a) cb(1, 2, ##a) cb(1, 3, ##a) cb(1, 4, ##a) cb(1, 5, ##a) \
@@ -185,6 +202,28 @@
 #define UNROLL_RAW_5x6(cb, v0, a...) \
     UNROLL_RAW_4x6(cb, v0, ##a)      \
     cb(4, 0, ##a) cb(4, 1, ##a) cb(4, 2, ##a) cb(4, 3, ##a) cb(4, 4, ##a) cb(4, 5, ##a) 
+
+#define UNROLL_RAW_2x4(cb, v0, a...)                        \
+    cb(0, 0, ##a) cb(0, 1, ##a) cb(0, 2, ##a) cb(0, 3, ##a) \
+    cb(1, 0, ##a) cb(1, 1, ##a) cb(1, 2, ##a) cb(1, 3, ##a)
+#define UNROLL_RAW_3x4(cb, v0, a...) \
+    UNROLL_RAW_2x4(cb, v0, ##a)      \
+    cb(2, 0, ##a) cb(2, 1, ##a) cb(2, 2, ##a) cb(2, 3, ##a)
+#define UNROLL_RAW_5x4(cb, v0, a...) \
+    UNROLL_RAW_4x4(cb, v0, ##a)      \
+    cb(4, 0, ##a) cb(4, 1, ##a) cb(4, 2, ##a) cb(4, 3, ##a)
+#define UNROLL_RAW_9x4(cb, v0, a...)                        \
+    UNROLL_RAW_5x4(cb, v0, ##a)                             \
+    cb(5, 0, ##a) cb(5, 1, ##a) cb(5, 2, ##a) cb(5, 3, ##a) \
+    cb(6, 0, ##a) cb(6, 1, ##a) cb(6, 2, ##a) cb(6, 3, ##a) \
+    cb(7, 0, ##a) cb(7, 1, ##a) cb(7, 2, ##a) cb(7, 3, ##a) \
+    cb(8, 0, ##a) cb(8, 1, ##a) cb(8, 2, ##a) cb(8, 3, ##a)
+#define UNROLL_RAW_13x4(cb, v0, a...)                           \
+    UNROLL_RAW_9x4(cb, v0, ##a)                                 \
+    cb(9, 0, ##a) cb(9, 1, ##a) cb(9, 2, ##a) cb(9, 3, ##a)     \
+    cb(10, 0, ##a) cb(10, 1, ##a) cb(10, 2, ##a) cb(10, 3, ##a) \
+    cb(11, 0, ##a) cb(11, 1, ##a) cb(11, 2, ##a) cb(11, 3, ##a) \
+    cb(12, 0, ##a) cb(12, 1, ##a) cb(12, 2, ##a) cb(12, 3, ##a)
 
 #define UNROLL_CALL0_D2(step, step2, cb, v...) \
     UNROLL_RAW_##step##x##step2(cb, 0, ##v)

@@ -124,6 +124,19 @@ public:
     MEGDNN_DECL_ALGO_TYPE(ARM_Filter5ModexStridexNCHW44)
 };
 
+#if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
+class PoolingImpl::AlgoFilterxModexStridexNCHW88 final : public AlgoBase {
+public:
+    AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }
+    const char* name() const override {
+        return "ARM_POOLING_FILTERX_MODEX_STRIDEX_NCHW88";
+    }
+    bool usable(const PoolingKernSizeParam& param) const override;
+    void exec(const PoolingKernParam& param) const override;
+    MEGDNN_DECL_ALGO_TYPE(ARM_Fp16FilterxModexStridexNCHW88)
+};
+#endif
+
 class PoolingImpl::AlgoFallback final : public AlgoBase {
 public:
     AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; };

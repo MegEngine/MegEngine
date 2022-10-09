@@ -216,6 +216,48 @@ TEST_F(ARM_COMMON, POOLING_FP16) {
                 checker.set_param(param).exec({{2, 3, ih, iw}, {}});
             }
 }
+
+TEST_F(ARM_COMMON, POOLING_FP16_NCHW88) {
+    Checker<Pooling> checker(handle());
+    checker.set_dtype(0, dtype::Float16{});
+    checker.set_dtype(1, dtype::Float16{});
+    checker.set_dtype(2, dtype::Float16{});
+    checker.set_dtype(4, dtype::Float16{});
+    checker.set_epsilon(0.003);
+    for (size_t ic : {1, 2, 3, 5, 7, 11})
+        for (size_t ih : {20, 15})
+            for (size_t iw : {15, 20, 27, 51, 76, 101, 256})
+                for (size_t pad : {2, 3, 5})
+                    for (auto mode :
+                         {param::Pooling::Mode::MAX, param::Pooling::Mode::AVERAGE}) {
+                        param::Pooling param;
+                        param.mode = mode;
+                        param.format = param::Pooling::Format::NCHW88;
+                        param.pad_h = pad;
+                        param.pad_w = pad;
+                        for (size_t kernel : {2, 3, 4, 5}) {
+                            if (kernel > pad && ih + 2 * pad >= kernel &&
+                                iw + 2 * pad >= kernel) {
+                                param.window_h = param.window_w = kernel;
+                                param.stride_h = param.stride_w = 1;
+                                checker.set_param(param).exec(
+                                        TensorShapeArray{{2, ic, ih, iw, 8}, {}});
+                                param.stride_h = param.stride_w = 2;
+                                checker.set_param(param).exec(
+                                        TensorShapeArray{{2, ic, ih, iw, 8}, {}});
+                            }
+                        }
+                        for (size_t kernel : {9, 13}) {
+                            if (kernel > pad && ih + 2 * pad >= kernel &&
+                                iw + 2 * pad >= kernel) {
+                                param.window_h = param.window_w = kernel;
+                                param.stride_h = param.stride_w = 1;
+                                checker.set_param(param).exec(
+                                        TensorShapeArray{{2, ic, ih, iw, 8}, {}});
+                            }
+                        }
+                    }
+}
 #endif
 
 TEST_F(ARM_COMMON, POOLING_QUANTIZED) {
@@ -366,6 +408,72 @@ TEST_F(ARM_COMMON, BENCHMARK_POOLING_NCHW44_FP32) {
 TEST_F(ARM_COMMON_MULTI_THREADS, BENCHMARK_POOLING_NCHW44_FP32) {
     benchmark_nchw44_fp32(handle());
 }
+
+#if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
+void benchmark_nchw88_fp16(Handle* handle) {
+    using Param = param::Pooling;
+    auto run = [&](size_t n, size_t c, size_t h, size_t w, size_t filter, size_t stride,
+                   size_t pad, Param::Mode mode) {
+        Param param;
+        param.window_h = param.window_w = filter;
+        param.stride_h = param.stride_w = stride;
+        param.pad_h = param.pad_w = pad;
+        param.format = Param::Format::NCHW44;
+        param.mode = mode;
+        TensorShape nchw44_shape = {n, c / 4, h, w, 4};
+        TensorShape nchw88_shape = {n, c / 8, h, w, 8};
+        TensorLayout dst_layout;
+        auto opr = handle->create_operator<Pooling>();
+        opr->param() = param;
+        opr->deduce_layout({nchw44_shape, dtype::Float32()}, dst_layout);
+        float calc_amount =
+                dst_layout.total_nr_elems() * param.window_h * param.window_w;
+
+        Benchmarker<Pooling> benchmarker_float16_nchw88(handle);
+        Benchmarker<Pooling> benchmarker_float32_nchw44(handle);
+        size_t RUN = 500;
+        auto t1 = benchmarker_float32_nchw44.set_display(false)
+                          .set_times(RUN)
+                          .set_param(param)
+                          .exec({nchw44_shape, {}});
+
+        param.format = Param::Format::NCHW88;
+        auto t2 = benchmarker_float16_nchw88.set_display(false)
+                          .set_dtype(0, dtype::Float16{})
+                          .set_dtype(1, dtype::Float16{})
+                          .set_dtype(2, dtype::Float16{})
+                          .set_dtype(4, dtype::Float16{})
+                          .set_times(RUN)
+                          .set_param(param)
+                          .exec({nchw88_shape, {}});
+
+        printf("{%zu %zu %zu %zu} filter = %zu, stride = %zu pad = %zu\n"
+               "nchw44_fp32={%.3f ms, %.3f Mflops},  "
+               "nchw88_fp16={%.3f ms, %.3f Mflops, speed_up %f}\n\n",
+               n, c, h, w, filter, stride, pad, t1 / RUN,
+               calc_amount / (t1 / RUN * 1000), t2 / RUN,
+               calc_amount / (t2 / RUN * 1000), t1 / t2);
+    };
+    // Resnet50
+    run(1, 64, 112, 112, 3, 2, 1, param::Pooling::Mode::MAX);
+    run(1, 2048, 7, 7, 7, 1, 0, param::Pooling::Mode::AVERAGE);
+
+    // VGG16
+    run(1, 64, 224, 224, 2, 2, 0, param::Pooling::Mode::MAX);
+    run(1, 128, 112, 112, 2, 2, 0, param::Pooling::Mode::MAX);
+    run(1, 256, 56, 56, 2, 2, 0, param::Pooling::Mode::MAX);
+    run(1, 512, 28, 28, 2, 2, 0, param::Pooling::Mode::MAX);
+    run(1, 512, 14, 14, 2, 2, 0, param::Pooling::Mode::MAX);
+}
+
+TEST_F(ARM_COMMON, BENCHMARK_POOLING_NCHW88_FP16) {
+    benchmark_nchw88_fp16(handle());
+}
+
+TEST_F(ARM_COMMON_MULTI_THREADS, BENCHMARK_POOLING_NCHW88_FP16) {
+    benchmark_nchw88_fp16(handle());
+}
+#endif
 
 TEST_F(ARM_COMMON, BENCHMARK_POOLING_INT8_W3x3_S2x2) {
     using Param = param::Pooling;
