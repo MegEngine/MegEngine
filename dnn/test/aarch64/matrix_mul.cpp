@@ -74,6 +74,12 @@ TEST_F(AARCH64, MATRIX_MUL_F16_MK8) {
             dtype::Float16{}, dtype::Float16{}, dtype::Float16{}, handle(),
             "AARCH64_F16_MK8_8X8", param::MatrixMul::Format::MK8, 1);
 }
+
+TEST_F(AARCH64, MATRIX_MUL_F16_MK8_16x12x1) {
+    matrix_mul::check_matrix_mul(
+            dtype::Float16{}, dtype::Float16{}, dtype::Float16{}, handle(),
+            "AARCH64_F16_MK8_16X12X1", param::MatrixMul::Format::MK8, 1);
+}
 #endif
 
 #if MGB_ENABLE_DOT
@@ -788,6 +794,14 @@ TEST_F(AARCH64, BENCHMARK_MATRIX_MUL_F16_MK8) {
     matrix_mul::benchmark_with_contrast(
             handle(), args, dtype::Float16{}, dtype::Float16{}, dtype::Float16{},
             "AARCH64_F16_MK8_8X8", param::MatrixMul::Format::MK8, dtype::Float16{},
+            dtype::Float16{}, dtype::Float16{}, "AARCH64_F16_K8X24X1");
+}
+
+TEST_F(AARCH64, BENCHMARK_MATRIX_MUL_F16_MK8_16x12) {
+    auto args = matrix_mul::get_benchmark_matmul_mk_packed_args(8);
+    matrix_mul::benchmark_with_contrast(
+            handle(), args, dtype::Float16{}, dtype::Float16{}, dtype::Float16{},
+            "AARCH64_F16_MK8_16X12X1", param::MatrixMul::Format::MK8, dtype::Float16{},
             dtype::Float16{}, dtype::Float16{}, "AARCH64_F16_K8X24X1");
 }
 #endif

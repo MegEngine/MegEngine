@@ -86,6 +86,17 @@ public:
     MEGDNN_DECL_ALGO_TYPE(AARCH64_F16_MK8_8X8)
 };
 
+class MatrixMulImpl::AlgoF16MK8_16x12x1 final : public AlgoBase {
+public:
+    AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }
+    const char* name() const override { return "AARCH64_F16_MK8_16X12X1"; }
+    bool usable(const KernSizeParam&) const override;
+    size_t get_workspace(const KernSizeParam&) const override;
+    kern_t get_kern(const KernSizeParam&) const override;
+    MEGDNN_OVERRIDE_MATMUL_DESC(16, 12, 1, 2, AlgoDataType::FLOAT16, MK8);
+    MEGDNN_DECL_ALGO_TYPE(AARCH64_F16_MK8_16X12X1);
+};
+
 #endif
 
 #if MGB_ENABLE_DOT

@@ -25,8 +25,9 @@ private:
     class AlgoF32MK4_4x16;    // Aarch64 F32 Format MK4 block 16x4
     class AlgoF32Gemv;        // Aarch64 F32 Gemv
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
-    class AlgoF16K8x24x1;  // Aarch64 F16 Kernel 8x24x1
-    class AlgoF16MK8_8x8;  // Aarch64 F16 Format MK8 block 16x8
+    class AlgoF16K8x24x1;      // Aarch64 F16 Kernel 8x24x1
+    class AlgoF16MK8_8x8;      // Aarch64 F16 Format MK8 block 16x8
+    class AlgoF16MK8_16x12x1;  // Aarch64 F16 Format MK8 block 16x12x1
 #endif
 
 #if MGB_ENABLE_DOT

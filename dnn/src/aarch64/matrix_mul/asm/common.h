@@ -1143,6 +1143,29 @@ static inline void interleave_2x4_4_s(const T*& inptr0, const T*& inptr1, T* out
 }
 
 template <typename T>
+static inline void interleave_2x8_2_h(const T*& inptr0, const T*& inptr1, T* outptr) {
+    static_assert(sizeof(T) == 2, "interleave_2x8_2_s only support size == 2");
+    asm volatile(
+            "ld1 {v0.8h, v1.8h, v2.8h, v3.8h}, [%[inptr0]], #64\n"
+            "ld1 {v4.8h, v5.8h, v6.8h, v7.8h}, [%[inptr0]], #64\n"
+            "ld1 {v8.8h, v9.8h, v10.8h, v11.8h}, [%[inptr1]], #64\n"
+            "ld1 {v12.8h, v13.8h, v14.8h, v15.8h}, [%[inptr1]], #64\n"
+            "stp q0, q8, [%[outptr]]\n"
+            "stp q1, q9, [%[outptr], #32]\n"
+            "stp q2, q10, [%[outptr], #64]\n"
+            "stp q3, q11, [%[outptr], #96]\n"
+            "stp q4, q12, [%[outptr], #128]\n"
+            "stp q5, q13, [%[outptr], #160]\n"
+            "stp q6, q14, [%[outptr], #192]\n"
+            "stp q7, q15, [%[outptr], #224]\n"
+
+            : [inptr0] "+r"(inptr0), [inptr1] "+r"(inptr1), [outptr] "+r"(outptr)
+            :
+            : "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10", "v11",
+              "v12", "v13", "v14", "v15", "memory");
+}
+
+template <typename T>
 static inline void interleave_1x4_4_s(const T*& inptr0, T* outptr) {
     static_assert(sizeof(T) == 4, "interleave_1x4_4_s only support size == 4");
     asm volatile(
@@ -1152,6 +1175,20 @@ static inline void interleave_1x4_4_s(const T*& inptr0, T* outptr) {
             : [inptr0] "+r"(inptr0), [outptr] "+r"(outptr)
             :
             : "v0", "v1", "v2", "v3", "memory");
+}
+
+template <typename T>
+static inline void interleave_1x8_2_h(const T*& inptr0, T* outptr) {
+    static_assert(sizeof(T) == 2, "interleave_1x8_2_s only support size == 2");
+    asm volatile(
+            "ld1 {v0.8h, v1.8h, v2.8h, v3.8h}, [%[inptr0]], #64\n"
+            "ld1 {v4.8h, v5.8h, v6.8h, v7.8h}, [%[inptr0]], #64\n"
+            "st1 {v0.8h, v1.8h, v2.8h, v3.8h}, [%[outptr]], #64\n"
+            "st1 {v4.8h, v5.8h, v6.8h, v7.8h}, [%[outptr]], #64\n"
+
+            : [inptr0] "+r"(inptr0), [outptr] "+r"(outptr)
+            :
+            : "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "memory");
 }
 
 template <typename T>
@@ -1546,6 +1583,49 @@ static inline void transpose_1x12_4_s(const T*& inptr0, T* outptr) {
             :
             : "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10", "v11",
               "memory");
+}
+
+template <typename T>
+static inline void transpose_1x12_2_h(const T*& inptr, T* outptr) {
+    static_assert(sizeof(T) == 2, "transpose_1x12_2_s only support sizeof(T) == 2");
+
+    asm volatile(
+            "ld4 {v0.4s, v1.4s, v2.4s, v3.4s}, [%[inptr]], #64\n"
+            "ld4 {v4.4s, v5.4s, v6.4s, v7.4s}, [%[inptr]], #64\n"
+            "ld4 {v8.4s, v9.4s, v10.4s, v11.4s}, [%[inptr]], #64\n"
+            "uzp1 v12.8h, v0.8h, v4.8h\n"
+            "st1 {v12.8h}, [%[outptr]], #16\n"  // line[0][0-7]
+            "uzp1 v14.8h, v8.8h, v9.8h\n"
+            "st1 {v14.d}[0], [%[outptr]], #8\n"  // line[0][8-11]
+            "uzp2 v13.8h, v0.8h, v4.8h\n"
+            "st1 {v13.8h}, [%[outptr]], #16\n"  // line[1][0-7]
+            "uzp2 v15.8h, v8.8h, v9.8h\n"
+            "st1 {v15.d}[0], [%[outptr]], #8\n"  // line[1][8-11]
+            "uzp1 v16.8h, v1.8h, v5.8h\n"
+            "st1 {v16.8h}, [%[outptr]], #16\n"   // line[2][0-7]
+            "st1 {v14.d}[1], [%[outptr]], #8\n"  // line[2][8-11]
+            "uzp2 v17.8h, v1.8h, v5.8h\n"
+            "st1 {v17.8h}, [%[outptr]], #16\n"   // line[3][0-7]
+            "st1 {v15.d}[1], [%[outptr]], #8\n"  // line[3][8-11]
+            "uzp1 v18.8h, v2.8h, v6.8h\n"
+            "st1 {v18.8h}, [%[outptr]], #16\n"  // line[4][0-7]
+            "uzp1 v19.8h, v10.8h, v11.8h\n"
+            "st1 {v19.d}[0], [%[outptr]], #8\n"  // line[4][8-11]
+            "uzp2 v20.8h, v2.8h, v6.8h\n"
+            "st1 {v20.8h}, [%[outptr]], #16\n"  // line[5][0-7]
+            "uzp2 v21.8h, v10.8h, v11.8h\n"
+            "st1 {v21.d}[0], [%[outptr]], #8\n"  // line[5][8-11]
+            "uzp1 v22.8h, v3.8h, v7.8h\n"
+            "st1 {v22.8h}, [%[outptr]], #16\n"   // line[6][0-7]
+            "st1 {v19.d}[1], [%[outptr]], #8\n"  // line[6][8-11]
+            "uzp2 v23.8h, v3.8h, v7.8h\n"
+            "st1 {v23.8h}, [%[outptr]], #16\n"   // line[7][0-7]
+            "st1 {v21.d}[1], [%[outptr]], #8\n"  // line[7][8-11]
+            : [inptr] "+r"(inptr), [outptr] "+r"(outptr)
+            :
+            : "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10", "v11",
+              "v12", "v13", "v14", "v15", "v16", "v17", "v18", "v19", "v20", "v21",
+              "v22", "v23", "memory");
 }
 
 template <typename T>

@@ -352,6 +352,61 @@ MatrixMulImpl::kern_t MatrixMulImpl::AlgoF16MK8_8x8::get_kern(
     return kern_mk8_8x8;
 }
 
+/* ==================== F16_MK8_16x12x1 algo ====================*/
+
+bool MatrixMulImpl::AlgoF16MK8_16x12x1::usable(
+        const KernSizeParam& kern_size_param) const {
+    return kern_size_param.compute_mode == Param::ComputeMode::DEFAULT &&
+           kern_size_param.C_type == kern_size_param.A_type &&
+           kern_size_param.B_type == kern_size_param.A_type &&
+           kern_size_param.A_type == dtype::Float16() &&
+           kern_size_param.format == param::MatrixMul::Format::MK8 &&
+           !kern_size_param.trA && !kern_size_param.trB;
+}
+
+size_t MatrixMulImpl::AlgoF16MK8_16x12x1::get_workspace(
+        const KernSizeParam& kern_size_param) const {
+    MIDOUT_BEGIN(
+            megdnn_aarch64_matmul_kern,
+            midout_iv("AlgoF16MK8_16x12x1::get_workspace"_hash)) {
+        auto M = kern_size_param.M, N = kern_size_param.N, K = kern_size_param.K;
+        auto trA = kern_size_param.trA, trB = kern_size_param.trB;
+        auto A_type = kern_size_param.A_type, B_type = kern_size_param.B_type,
+             C_type = kern_size_param.C_type;
+        aarch64::matmul::hgemm_mk8_16x12 strategy(M, N, K, A_type, B_type, C_type);
+        return megdnn::matmul::GemmInterleaved<aarch64::matmul::hgemm_mk8_16x12>(
+                       M, N, K, trA, trB, strategy)
+                .get_workspace_size();
+    }
+    MIDOUT_END();
+    return 0;
+}
+
+MatrixMulImpl::kern_t MatrixMulImpl::AlgoF16MK8_16x12x1::get_kern(
+        const KernSizeParam&) const {
+    auto kern_mk8_16x12x1 = [](const MatrixMulImpl::KernParam& kern_param) {
+        MIDOUT_BEGIN(
+                megdnn_aarch64_matmul_kern,
+                midout_iv("AlgoF16MK8_16x12x1::get_kern"_hash)) {
+            auto M = kern_param.M, N = kern_param.N, K = kern_param.K;
+            auto trA = kern_param.trA, trB = kern_param.trB;
+            auto LDA = kern_param.LDA, LDB = kern_param.LDB, LDC = kern_param.LDC;
+            auto A_type = kern_param.A_type, B_type = kern_param.B_type,
+                 C_type = kern_param.C_type;
+            const auto Aptr = kern_param.A<dt_float16>(),
+                       Bptr = kern_param.B<dt_float16>();
+            auto Cptr = kern_param.C<dt_float16>();
+
+            aarch64::matmul::hgemm_mk8_16x12 strategy(M, N, K, A_type, B_type, C_type);
+            megdnn::matmul::GemmInterleaved<aarch64::matmul::hgemm_mk8_16x12>(
+                    M, N, K, trA, trB, strategy)
+                    .execute(Aptr, LDA, Bptr, LDB, Cptr, LDC, kern_param.workspace_ptr);
+        }
+        MIDOUT_END();
+    };
+    return kern_mk8_16x12x1;
+}
+
 #endif
 
 #if MGB_ENABLE_DOT
