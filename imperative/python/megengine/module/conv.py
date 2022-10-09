@@ -1040,6 +1040,7 @@ class RegionRestrictedConv(_ConvNd):
             ``in_channels`` and ``out_channels`` must be divisible by ``groups``,
             and the shape of weight should be ``(groups, out_channel // groups,
             in_channels // groups, height, width)``. Default: 1
+        bias: whether to add a bias onto the result of convolution. Default: True
         conv_mode: Supports `cross_correlation`. Default: `cross_correlation`
         compute_mode: When set to "default", no special requirements will be
             placed on the precision of intermediate results. When set to "float32",
@@ -1071,6 +1072,7 @@ class RegionRestrictedConv(_ConvNd):
         out_channels: int,
         kernel_size: Union[int, Tuple[int, int]],
         groups: int,
+        bias: bool = True,
         stride: Union[int, Tuple[int, int]] = 1,
         padding: Union[int, Tuple[int, int]] = 0,
         dilation: Union[int, Tuple[int, int]] = 1,
@@ -1095,7 +1097,7 @@ class RegionRestrictedConv(_ConvNd):
             0,
             dilation,
             groups,
-            False,
+            bias,
             **kwargs,
         )
 
@@ -1133,7 +1135,7 @@ class RegionRestrictedConv(_ConvNd):
             (self.padding[1], self.padding[1]),
         )
 
-    def calc_conv(self, inp, weight, rin, rout):
+    def calc_conv(self, inp, weight, rin, rout, bias):
         assert self.padding_mode in [
             "zeros",
             "reflect",
@@ -1144,6 +1146,7 @@ class RegionRestrictedConv(_ConvNd):
             weight,
             rin,
             rout,
+            bias,
             self.stride,
             self.padding,
             self.dilation,
@@ -1153,4 +1156,4 @@ class RegionRestrictedConv(_ConvNd):
         )
 
     def forward(self, inp, rin, rout):
-        return self.calc_conv(inp, self.weight, rin, rout)
+        return self.calc_conv(inp, self.weight, rin, rout, self.bias)
