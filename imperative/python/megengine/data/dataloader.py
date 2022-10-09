@@ -184,9 +184,11 @@ class DataLoader:
             logger.warning(
                 "Each worker need to read the shared meta-data, which will be increasing the reference count."
                 "Copy-On-Write propety will lead to 'memory leak', the memory usage will end up being "
-                + total_memory
-                + " GB"
-                "However the current requested memory is " + current_memory + " GB"
+                + str(total_memory)
+                + " GB, "
+                "However the current requested memory is "
+                + str(current_memory)
+                + " GB, "
                 "Maybe you can request more memory or uesd np-array to save meta-data rather than List or Tuple"
             )
 
