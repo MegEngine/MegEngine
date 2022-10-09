@@ -659,6 +659,14 @@ void* CompNode::get_logical_addr_by_host_ptr(void* ptr, size_t size) {
     return m_impl->get_logical_addr_by_host_ptr(ptr, size);
 }
 
+void* CompNode::register_external_device_ptr(void* ptr, size_t size) {
+    return m_impl->register_external_device_ptr(ptr, size);
+}
+
+void* CompNode::unregister_external_device_ptr(void* ptr, size_t size) {
+    return m_impl->unregister_external_device_ptr(ptr, size);
+}
+
 void CompNode::ImplBase::map_to_cpu(void* ptr, size_t size, bool blocking) {
     MGB_MARK_USED_VAR(ptr);
     MGB_MARK_USED_VAR(size);
@@ -677,6 +685,16 @@ void* CompNode::ImplBase::get_logical_addr_by_host_ptr(void* ptr, size_t size) {
     MGB_MARK_USED_VAR(size);
     mgb_assert(false, "No get_logical_addr_by_host_ptr Impl");
     return nullptr;
+}
+
+void* CompNode::ImplBase::register_external_device_ptr(void* ptr, size_t size) {
+    MGB_MARK_USED_VAR(size);
+    return ptr;
+}
+
+void* CompNode::ImplBase::unregister_external_device_ptr(void* ptr, size_t size) {
+    MGB_MARK_USED_VAR(size);
+    return ptr;
 }
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
