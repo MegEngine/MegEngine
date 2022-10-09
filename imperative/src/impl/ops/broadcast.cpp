@@ -290,7 +290,6 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
         }
     }
     if (op.axis != opr::Reshape::Param::INVALID_AXIS) {
-        mgb_assert(out_shape[op.axis] == -1);
         out_shape[op.axis] = 1;
         mgb_assert(
                 src.layout.total_nr_elems() % out_shape.total_nr_elems() == 0,
