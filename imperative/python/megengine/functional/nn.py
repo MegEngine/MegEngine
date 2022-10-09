@@ -1980,6 +1980,7 @@ def region_restricted_conv(
     weight: Tensor,
     rin: Tensor,
     rout: Tensor,
+    bias: Optional[Tensor] = None,
     stride: Union[int, Tuple[int, int, int]] = 1,
     padding: Union[int, Tuple[int, int, int]] = 0,
     dilation: Union[int, Tuple[int, int, int]] = 1,
@@ -1994,6 +1995,9 @@ def region_restricted_conv(
     Args:
         inp: feature map of the convolution operation.
         weight: convolution kernel.
+        rin: input mask
+        rout: output mask
+        bias: bias added to the result of convolution (if given).
         stride: stride of the 2D region restricted convolution operation. Default: 1
         padding: size of the paddings added to the input on both sides of its
             spatial dimensions. Only zero-padding is supported. Default: 0
@@ -2027,6 +2031,8 @@ def region_restricted_conv(
         sparse=sparse_type,
     )
     (output,) = apply(op, inp, weight, rin, rout)
+    if bias is not None:
+        output += bias
     return output
 
 
