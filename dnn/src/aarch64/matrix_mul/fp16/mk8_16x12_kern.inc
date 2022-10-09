@@ -9,8 +9,8 @@
 
 template <>
 void matmul_mk8_16x12::kern<M_BLOCK, N_BLOCK>(
-        const dt_float16* packedA, const dt_float16* packedB, int K,
-        dt_float16* out, int LDC, bool is_first_k) {
+        const dt_float16* packedA, const dt_float16* packedB, int K, dt_float16* out,
+        int LDC, bool is_first_k) {
 #define IF_M_GT(M, INSTRUC) ".if " STR(M_BLOCK) " > " #M "\n" INSTRUC ".endif\n"
 #define IF_N_GT(N, INSTRUC) ".if " STR(N_BLOCK) " > " #N "\n" INSTRUC ".endif\n"
 // clang-format off

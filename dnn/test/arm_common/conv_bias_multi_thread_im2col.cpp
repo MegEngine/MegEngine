@@ -362,6 +362,30 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_FP16) {
 #endif
 #undef cb
 }
+
+TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_MK8_FP16) {
+    using namespace conv_bias;
+
+    std::vector<conv_bias::TestArg> args = get_nchw88_conv_bias_args(
+            {2, 3, 4, 5, 6, 7}, QUAN_NLMODE, BR_AND_NO_BIASMODE, 1);
+    auto args1 = get_nchw88_conv_bias_args(
+            {2, 3, 4, 5, 6, 7}, QUAN_NLMODE, BR_AND_BIAS_BIASMODE, 2, 3);
+    args.insert(args.begin(), args1.begin(), args1.begin());
+    args1 = get_nchw88_conv_bias_args(
+            {2, 3, 4, 5, 6, 7, 9}, QUAN_NLMODE, BR_AND_BIAS_BIASMODE, 3, 4);
+    args.insert(args.begin(), args1.begin(), args1.begin());
+
+    NormalRNG rng(1);
+#define cb(name)                                                            \
+    checker_conv_bias_common(                                               \
+            args, handle(), &rng, 0.03, dtype::Float16{}, dtype::Float16{}, \
+            dtype::Float16{}, dtype::Float16{}, name);
+
+#if MEGDNN_AARCH64
+    cb("IM2COLMATMUL:AARCH64_F16_MK8_16X12X1");
+#endif
+#undef cb
+}
 #endif
 
 #if MEGDNN_AARCH64 || MEGDNN_ARMV7

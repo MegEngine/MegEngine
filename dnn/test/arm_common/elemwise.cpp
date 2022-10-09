@@ -161,6 +161,24 @@ TEST_F(ARM_COMMON, ELEMWISE_FORWARD_NCHW44_INT8_INT16_INT32) {
     run();
 }
 
+TEST_F(ARM_COMMON, ELEMWISE_SIGMOID) {
+    using Mode = ElemwiseForward::Param::Mode;
+    Checker<ElemwiseForward> checker(handle());
+
+    checker.set_epsilon(1e-3);
+    checker.set_dtype(0, dtype::Float16());
+    checker.set_param(Mode::SIGMOID);
+    for (size_t n : {1, 2, 3}) {
+        for (size_t ic : {8, 16, 24, 32}) {
+            for (size_t ih : {5, 10, 15, 20, 21, 37}) {
+                for (size_t iw : {7, 9, 11, 13, 14, 20, 35}) {
+                    checker.exec({{n, ic, ih, iw}, {}});
+                }
+            }
+        }
+    }
+}
+
 TEST_F(ARM_COMMON, ELEMWISE_FORWARD_NCHW44_FP32) {
     using Mode = ElemwiseForward::Param::Mode;
     Checker<ElemwiseForward> checker(handle());

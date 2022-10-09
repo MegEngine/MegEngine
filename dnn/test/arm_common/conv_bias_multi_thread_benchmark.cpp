@@ -68,6 +68,87 @@ void benchmark_impl(
                        multi_thread_config.nr_thread);
     }
 }
+
+void benchmark_with_contrast(
+        const std::vector<conv_bias::TestArg>& args, const std::string algo_name,
+        std::vector<DType>& data_type,
+        const std::vector<conv_bias::TestArg>& args_contrast,
+        const std::string algo_name_contrast, std::vector<DType>& data_type_contrast,
+        size_t RUNS, TaskExecutorConfig&& single_thread_config) {
+    auto single_thread_handle = create_cpu_handle(0, true, &single_thread_config);
+
+    auto benchmarker = Benchmarker<ConvBias>(single_thread_handle.get());
+    auto benchmarker_contrast = Benchmarker<ConvBias>(single_thread_handle.get());
+
+    benchmarker.set_times(RUNS)
+            .set_display(false)
+            .set_dtype(0, data_type[0])
+            .set_dtype(1, data_type[1])
+            .set_dtype(2, data_type[2])
+            .set_dtype(4, data_type[3])
+            .set_before_exec_callback(
+                    conv_bias::ConvBiasAlgoChecker<ConvBias>(algo_name.c_str()));
+    benchmarker_contrast.set_times(RUNS)
+            .set_display(false)
+            .set_dtype(0, data_type_contrast[0])
+            .set_dtype(1, data_type_contrast[1])
+            .set_dtype(2, data_type_contrast[2])
+            .set_dtype(4, data_type_contrast[3])
+            .set_before_exec_callback(conv_bias::ConvBiasAlgoChecker<ConvBias>(
+                    algo_name_contrast.c_str()));
+
+    size_t arg_size = args.size(), arg_contrast_size = args_contrast.size();
+    megdnn_assert(arg_size == arg_contrast_size);
+    rep(i, arg_size) {
+        TensorLayout dst_layout, dst_layout_contrast;
+        auto opr = single_thread_handle.get()->create_operator<ConvBias>();
+
+        auto&& arg = args[i];
+        opr->param() = arg.param;
+        opr->deduce_layout(
+                {arg.src, data_type[0]}, {arg.filter, data_type[1]},
+                {arg.bias, data_type[2]}, {}, dst_layout);
+        float computation = (dst_layout.total_nr_elems() * arg.filter[1] *
+                             arg.filter[2] * arg.filter[3] * arg.filter[4] * 2.0) /
+                            (1024 * 1024 * 1024) * 1e3;
+        benchmarker.set_param(arg.param);
+        auto used = benchmarker.exec({arg.src, arg.filter, arg.bias, {}, {}}) / RUNS;
+
+        auto&& arg_contrast = args_contrast[i];
+        opr->param() = arg_contrast.param;
+        opr->deduce_layout(
+                {arg_contrast.src, data_type_contrast[0]},
+                {arg_contrast.filter, data_type_contrast[1]},
+                {arg_contrast.bias, data_type_contrast[2]}, {}, dst_layout_contrast);
+        float computation_contrast =
+                (dst_layout_contrast.total_nr_elems() * arg_contrast.filter[1] *
+                 arg_contrast.filter[2] * arg_contrast.filter[3] *
+                 arg_contrast.filter[4] * 2.0) /
+                (1024 * 1024 * 1024) * 1e3;
+        benchmarker_contrast.set_param(arg_contrast.param);
+        auto used_contrast = benchmarker_contrast.exec(
+                                     {arg_contrast.src,
+                                      arg_contrast.filter,
+                                      arg_contrast.bias,
+                                      {},
+                                      {}}) /
+                             RUNS;
+
+        printf("Bench case: \n");
+        printf("padding: %u, stride: %u, nonline mode: %u\n", arg.param.pad_h,
+               arg.param.stride_h, arg.param.nonlineMode);
+        printf("%s %s %s\n", arg.src.to_string().c_str(),
+               arg.filter.to_string().c_str(), arg.bias.to_string().c_str());
+        printf("%s %s %s\n", arg_contrast.src.to_string().c_str(),
+               arg_contrast.filter.to_string().c_str(),
+               arg_contrast.bias.to_string().c_str());
+
+        printf("%s: %f gflops;\n%s: %f gflops\n"
+               "spead up = %f\n",
+               algo_name.c_str(), computation / used, algo_name_contrast.c_str(),
+               computation_contrast / used_contrast, used_contrast / used);
+    }
+}
 }  // namespace
 
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
@@ -1591,6 +1672,91 @@ TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS, BENCHMARK_CONVBIAS_IM2COL_FP32) {
             data_type);
     shapes_and_computation.clear();
 }
+
+TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS, BENCHMARK_CONVBIAS_IM2COL_NCHW44_VS_NCHW88) {
+    constexpr size_t RUNS = 50;
+    using NLMode = param::ConvBias::NonlineMode;
+
+    std::vector<conv_bias::TestArg> args_nchw88, args_nchw44;
+    auto bench_case = [&](size_t N, size_t IC, size_t OC, size_t H, size_t W, size_t FS,
+                          size_t group) {
+        param::ConvBias param_nchw88, param_nchw44;
+        param_nchw88.format = param::ConvBias::Format::NCHW88;
+        param_nchw44.format = param::ConvBias::Format::NCHW44;
+        for (size_t pad : {1, 2, 4}) {
+            for (size_t stride : {1, 2, 3}) {
+                for (auto nlmode :
+                     {NLMode::RELU, NLMode::IDENTITY, NLMode::SIGMOID,
+                      NLMode::H_SWISH}) {
+                    param_nchw88.nonlineMode = nlmode;
+                    param_nchw88.pad_h = pad;
+                    param_nchw88.pad_w = pad;
+                    param_nchw88.stride_h = stride;
+                    param_nchw88.stride_w = stride;
+
+                    param_nchw44.nonlineMode = nlmode;
+                    param_nchw44.pad_h = pad;
+                    param_nchw44.pad_w = pad;
+                    param_nchw44.stride_h = stride;
+                    param_nchw44.stride_w = stride;
+
+                    args_nchw88.emplace_back(
+                            param_nchw88, TensorShape{N, IC / 8, H, W, 8},
+                            TensorShape{OC / 8, IC / group / 8, FS, FS, 8, 8},
+                            TensorShape{1, OC / 8, 1, 1, 8});
+                    args_nchw44.emplace_back(
+                            param_nchw44, TensorShape{N, IC / 4, H, W, 4},
+                            TensorShape{OC / 4, IC / group / 4, FS, FS, 4, 4},
+                            TensorShape{1, OC / 4, 1, 1, 4});
+                }
+            }
+        }
+    };
+    std::vector<DType> data_type_fp16 = {
+            dtype::Float16(), dtype::Float16(), dtype::Float16(), dtype::Float16()};
+    std::vector<DType> data_type_fp32 = {
+            dtype::Float32(), dtype::Float32(), dtype::Float32(), dtype::Float32()};
+    bench_case(1, 32, 32, 300, 300, 3, 1);
+    bench_case(1, 32, 32, 400, 400, 3, 1);
+    bench_case(1, 32, 32, 100, 100, 3, 1);
+    bench_case(1, 32, 32, 80, 80, 3, 1);
+    bench_case(1, 32, 64, 200, 200, 3, 1);
+    bench_case(1, 32, 64, 128, 128, 3, 1);
+    bench_case(1, 32, 64, 100, 100, 3, 1);
+    bench_case(1, 32, 64, 80, 80, 3, 1);
+    bench_case(1, 32, 128, 200, 200, 3, 1);
+    bench_case(1, 32, 128, 128, 128, 3, 1);
+    bench_case(1, 32, 128, 100, 100, 3, 1);
+    bench_case(1, 32, 128, 80, 80, 3, 1);
+
+    bench_case(1, 64, 32, 7, 7, 3, 1);
+    bench_case(1, 64, 64, 7, 7, 3, 1);
+    bench_case(1, 64, 128, 7, 7, 3, 1);
+    bench_case(1, 64, 256, 7, 7, 3, 1);
+    bench_case(1, 64, 512, 7, 7, 3, 1);
+    bench_case(1, 64, 1024, 7, 7, 3, 1);
+
+    bench_case(1, 64, 32, 14, 14, 3, 1);
+    bench_case(1, 64, 64, 14, 14, 3, 1);
+    bench_case(1, 64, 128, 14, 14, 3, 1);
+    bench_case(1, 64, 256, 14, 14, 3, 1);
+    bench_case(1, 64, 512, 14, 14, 3, 1);
+
+    bench_case(1, 64, 1024, 14, 14, 3, 1);
+    bench_case(1, 128, 128, 14, 14, 3, 1);
+    bench_case(1, 128, 256, 14, 14, 3, 1);
+    bench_case(1, 512, 512, 14, 14, 3, 1);
+    bench_case(1, 256, 512, 14, 14, 3, 1);
+    bench_case(1, 512, 1024, 14, 14, 3, 1);
+    bench_case(1, 1024, 1024, 14, 14, 3, 1);
+    std::string algo_name_nchw88 = "IM2COLMATMUL:AARCH64_F16_MK8_16X12X1:96";
+    std::string algo_name_nchw44 = "IM2COLMATMUL:AARCH64_F32_MK4_K8X12X1:96";
+
+    benchmark_with_contrast(
+            args_nchw88, algo_name_nchw88, data_type_fp16, args_nchw44,
+            algo_name_nchw44, data_type_fp32, RUNS, {1, {4}});
+}
+
 TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS,
        BENCHMARK_CHANNEL_WISE_INT8_INT8_INT8_STRIDE1) {
     constexpr size_t RUNS = 50;

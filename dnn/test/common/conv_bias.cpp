@@ -1580,17 +1580,19 @@ std::vector<conv_bias::TestArg> get_nchw44_conv_bias_args(
 std::vector<conv_bias::TestArg> get_nchw88_conv_bias_args(
         std::vector<size_t> kernel_vec,
         std::vector<param::ConvBias::NonlineMode> nlmode_vec,
-        std::vector<megdnn::BiasMode> biasmode_vec, size_t stride) {
+        std::vector<megdnn::BiasMode> biasmode_vec, size_t stride, int pad) {
     using namespace conv_bias;
     using NLMode = param::ConvBias::NonlineMode;
 
     std::vector<TestArg> args;
 
     auto pack = [&](size_t n, size_t oc, size_t ic, size_t h, size_t w, size_t kernel,
-                    size_t stride, size_t group, NLMode nlmode,
+                    size_t stride, int pad, size_t group, NLMode nlmode,
                     megdnn::BiasMode bias_mode) {
         constexpr int pack_c = 8;
-        const size_t pad = kernel / 2;
+        if (pad == -1) {
+            pad = kernel / 2;
+        }
         auto oc_per_group = oc / group;
         auto ic_per_group = ic / group;
 
@@ -1651,8 +1653,8 @@ std::vector<conv_bias::TestArg> get_nchw88_conv_bias_args(
                                         if (kernel < h || kernel < w) {
                                             continue;
                                         }
-                                        pack(n, oc, ic, h, w, kernel, stride, group,
-                                             nlmode, bias);
+                                        pack(n, oc, ic, h, w, kernel, stride, pad,
+                                             group, nlmode, bias);
                                     }
                                 }
     return args;

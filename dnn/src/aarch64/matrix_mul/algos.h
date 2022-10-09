@@ -93,7 +93,7 @@ public:
     bool usable(const KernSizeParam&) const override;
     size_t get_workspace(const KernSizeParam&) const override;
     kern_t get_kern(const KernSizeParam&) const override;
-    MEGDNN_OVERRIDE_MATMUL_DESC(16, 12, 1, 2, AlgoDataType::FLOAT16, MK8);
+    MEGDNN_REG_GEMM_FUNC_FOR_IM2COL();
     MEGDNN_DECL_ALGO_TYPE(AARCH64_F16_MK8_16X12X1);
 };
 

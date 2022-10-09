@@ -26,6 +26,8 @@ static fallback::MatrixMulImpl::KernSizeParam get_matmul_kern_param(
         format = param::MatrixMul::Format::MK4;
     } else if (param.filter_meta.format == param::ConvBias::Format::NCHW44_DOT) {
         format = param::MatrixMul::Format::MK4_DOT;
+    } else if (param.filter_meta.format == param::ConvBias::Format::NCHW88) {
+        format = param::MatrixMul::Format::MK8;
     }
     size_t M = oc_tile_size;
     size_t N = ohw_tile_size;
@@ -329,8 +331,14 @@ bool ConvBiasImpl::AlgoIm2col::usable(
 #if MEGDNN_AARCH64 || MEGDNN_ARMV7
         if (format != param::ConvBias::Format::NCHW &&
             format != param::ConvBias::Format::NCHW44 &&
-            format != param::ConvBias::Format::NCHW44_DOT) {
+            format != param::ConvBias::Format::NCHW44_DOT &&
+            format != param::ConvBias::Format::NCHW88) {
             return false;
+        }
+        if (format == param::ConvBias::Format::NCHW88) {
+            if (matmul_desc.packmode != Pack_Mode::DEFAULT) {
+                return false;
+            }
         }
         if (format == param::ConvBias::Format::NCHW44 ||
             format == param::ConvBias::Format::NCHW44_DOT) {

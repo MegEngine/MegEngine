@@ -98,6 +98,9 @@ TEST_F(ARM_COMMON, BENCHMARK_ELEMWISE_UNARY) {
     BENCHMARK_CASES_INT(shape, dtype::Int16());
     BENCHMARK_CASES_INT(shape, dtype::Int8());
     BENCHMARK_CASES_FLOAT(shape, dtype::Float32());
+#if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
+    BENCHMARK_CASES_FLOAT(shape, dtype::Float16());
+#endif
 #undef BENCHMARK_CASES_INT
 #undef BENCHMARK_CASES_FLOAT
 #undef RUN

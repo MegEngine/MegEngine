@@ -407,6 +407,11 @@ MatrixMulImpl::kern_t MatrixMulImpl::AlgoF16MK8_16x12x1::get_kern(
     return kern_mk8_16x12x1;
 }
 
+MEGDNN_REG_GEMM_FUNC_FOR_IM2COL_IMPL(
+        AlgoF16MK8_16x12x1, megdnn_aarch64_matmul_kern, "AlogF16MK8_16x12x1Impl"_hash,
+        aarch64::matmul::hgemm_mk8_16x12, dt_float16, dt_float16, AlgoDataType::FLOAT16,
+        MK8);
+
 #endif
 
 #if MGB_ENABLE_DOT

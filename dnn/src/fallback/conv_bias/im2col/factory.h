@@ -248,8 +248,18 @@ public:
                 break;
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
             case StrategyType::FLOAT_FP16:
-                cb1(NCHW, DEFAULT, dt_float16, __fp16, PostprocessMode::FLOAT,
-                    "DefaultStrategyType::FLOAT_FP16"_hash);
+                if (format == param::ConvBias::Format::NCHW) {
+                    cb1(NCHW, DEFAULT, dt_float16, __fp16, PostprocessMode::FLOAT,
+                        "DefaultStrategyType::FLOAT_FP16"_hash);
+                } else if (format == param::ConvBias::Format::NCHW88) {
+                    cb1(NCHW88, DEFAULT, dt_float16, __fp16, PostprocessMode::FLOAT,
+                        "DefaultStrategyTypeNCHW88::FLOAT_FP16"_hash);
+                } else {
+                    megdnn_throw(ssprintf(
+                            "Current only support layout NCHW/NCHW88 for im2col algo "
+                            "of float 16, but got %d\n",
+                            uint32_t(format)));
+                }
                 break;
 #endif
 #if !MEGDNN_DISABLE_FLOAT16
