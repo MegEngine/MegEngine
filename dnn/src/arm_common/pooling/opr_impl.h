@@ -24,6 +24,9 @@ private:
     class AlgoFilter3ModexStridexNCHW44;
     class AlgoFilter4ModexStridexNCHW44;
     class AlgoFilter5ModexStridexNCHW44;
+#if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
+    class AlgoFilterxModexStridexNCHW88;
+#endif
     class AlgoFallback;
     class AlgoPack;
     static AlgoPack sm_algo_pack;
@@ -56,6 +59,9 @@ public:
             ARM_Filter3ModexStridexNCHW44,
             ARM_Filter4ModexStridexNCHW44,
             ARM_Filter5ModexStridexNCHW44,
+#if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
+            ARM_Fp16FilterxModexStridexNCHW88,
+#endif
             ARM_Fp32ModexStridexNCHW44,
             ARM_Fallback
         };
