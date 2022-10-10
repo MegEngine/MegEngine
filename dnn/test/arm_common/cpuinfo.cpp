@@ -201,7 +201,10 @@ TEST(ARM_RUNTIME, CPUINFO_SDM8GEN1) {
 
         ASSERT_TRUE(cpuinfo_has_arm_neon_dot());
 
-        ASSERT_FALSE(cpuinfo_has_arm_sve2());
+        //! Different devices which are the "right_soc" may support or don't support
+        //! sve2, so comment the below code. When the SVE2 instruction set is used,
+        //! please uncomment it and fix the bug.
+        // ASSERT_FALSE(cpuinfo_has_arm_sve2());
 #if MEGDNN_AARCH64
         ASSERT_TRUE(cpuinfo_has_arm_i8mm());
 #endif
