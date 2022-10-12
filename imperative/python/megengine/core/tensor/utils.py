@@ -29,6 +29,8 @@ from ..ops import builtin
 from .amp import _get_amp_high_prec_dtype, _get_amp_low_prec_dtype
 from .dtype import is_dtype_equal, is_quantize
 
+jit_supported = False
+
 
 def get_convert_inputs():
     r"""get the curerent state of `_enable_convert_inputs`"""
