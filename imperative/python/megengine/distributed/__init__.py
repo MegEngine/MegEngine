@@ -2,6 +2,7 @@
 from mprop import mproperty
 
 from ..core._imperative_rt.core2 import group_end, group_start
+from . import group
 from .group import (
     WORLD,
     Group,
@@ -19,7 +20,7 @@ from .group import (
 )
 from .helper import bcast_list_, make_allreduce_cb, synchronized
 from .launcher import launcher
-from .server import Server
+from .server import Client, Server
 
 
 @mproperty

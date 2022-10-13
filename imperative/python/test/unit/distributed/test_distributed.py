@@ -50,7 +50,7 @@ def test_init_process_group(backend):
         assert mm_server_addr[0] == "localhost"
         assert mm_server_addr[1] > 0
 
-        assert isinstance(dist.get_client(), dist.server._Client)
+        assert isinstance(dist.get_client(), dist.Client)
 
     procs = []
     for rank in range(world_size):

@@ -21,10 +21,6 @@ _valid_string_option = {
 }
 
 
-@deprecated(
-    version="1.10",
-    reason="use ``megengine.config.benchmark_kernel`` and ``megengine.config.deterministic_kernel`` instead",
-)
 def get_execution_strategy() -> Strategy:
     r"""Returns the execution strategy of :class:`~.module.Conv2d` and :func:`~.matmul`
 
@@ -40,10 +36,6 @@ def get_execution_strategy() -> Strategy:
     return strategy
 
 
-@deprecated(
-    version="1.10",
-    reason="use ``megengine.config.benchmark_kernel`` and ``megengine.config.deterministic_kernel`` instead",
-)
 def set_execution_strategy(option):
     r"""Sets the execution strategy of :class:`~.module.Conv2d` and :func:`~.matmul`
 

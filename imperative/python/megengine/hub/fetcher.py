@@ -36,7 +36,7 @@ pattern = re.compile(
 )
 
 
-class _RepoFetcherBase:
+class RepoFetcherBase:
     @classmethod
     def fetch(
         cls,
@@ -84,7 +84,7 @@ class _RepoFetcherBase:
         return hashlib.sha1(repo_dir.encode()).hexdigest()[:16]
 
 
-class GitSSHFetcher(_RepoFetcherBase):
+class GitSSHFetcher(RepoFetcherBase):
     @classmethod
     @synchronized
     def fetch(
@@ -193,7 +193,7 @@ class GitSSHFetcher(_RepoFetcherBase):
             )
 
 
-class GitHTTPSFetcher(_RepoFetcherBase):
+class GitHTTPSFetcher(RepoFetcherBase):
     @classmethod
     @synchronized
     def fetch(

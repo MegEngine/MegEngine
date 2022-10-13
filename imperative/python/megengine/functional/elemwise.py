@@ -9,7 +9,7 @@ from ..core.tensor.array_method import _elwise
 from ..core.tensor.utils import convert_inputs
 from ..tensor import Tensor
 from ..utils.deprecation import deprecated_func
-from ._tensor_cache import get_scalar_one
+from .tensor_cache import get_scalar_one
 
 __all__ = [
     "abs",

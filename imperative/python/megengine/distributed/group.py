@@ -7,10 +7,10 @@ from mprop import mproperty
 
 from ..device import _sh, set_default_device, what_is_xpu
 from ..random import seed
-from .server import Server, _Client
+from .server import Client, Server
 
 
-class _StaticData:
+class StaticData:
     server = None
     client = None
     master_ip = None
@@ -139,13 +139,13 @@ def init_process_group(
 
     global _sd
     assert _sd is None, "init_process_group should be called only once"
-    _sd = _StaticData()
+    _sd = StaticData()
 
     assert world_size > 1
     assert rank >= 0 and rank < world_size
     assert port > 0
 
-    _sd.client = _Client(master_ip, port)
+    _sd.client = Client(master_ip, port)
     _sd.master_ip = master_ip
     _sd.py_server_port = port
     _sd.mm_server_port = _sd.client.get_mm_server_port()
@@ -225,7 +225,7 @@ def get_mm_server_addr() -> Tuple[str, int]:
     return _sd.master_ip, _sd.mm_server_port
 
 
-def get_client() -> _Client:
+def get_client() -> Client:
     r"""Get client of python XML RPC server."""
     assert _sd is not None, "please call init_process_group first"
     return _sd.client

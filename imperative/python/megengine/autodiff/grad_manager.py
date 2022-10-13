@@ -19,11 +19,11 @@ logger = get_logger(__name__)
 backwarding_grad_manager = None
 
 
-def _get_backwarding_grad_manager():
+def get_backwarding_grad_manager():
     return backwarding_grad_manager
 
 
-class _AttachSpec:
+class AttachSpec:
     __slots__ = "tensor", "callbacks"
 
 
@@ -118,7 +118,7 @@ class GradManager:
     """
 
     def __init__(self):
-        self._attach_specs = {}  # id(Tensor) -> _AttachSpec
+        self._attach_specs = {}  # id(Tensor) -> AttachSpec
         self._recording = False
         self._grad = None
         self._after_backward_callback = []
@@ -200,7 +200,7 @@ class GradManager:
                 if self is not None:
                     del self._attach_specs[key]
 
-            spec = _AttachSpec()
+            spec = AttachSpec()
             spec.tensor = weakref.ref(tensor, deleter)
             spec.callbacks = []
             return spec
@@ -354,22 +354,22 @@ class GradManager:
 
     def __or__(self, other):
         if isinstance(other, GradManager):
-            return _GradManagerGroup([self, other])
+            return GradManagerGroup([self, other])
         return NotImplemented
 
     __ror__ = __or__
 
 
-class _GradManagerGroup:
+class GradManagerGroup:
     def __init__(self, gms) -> None:
         self._gms = list(gms)
 
     def merge_with(self, other):
         if isinstance(other, GradManager):
-            other = _GradManagerGroup([other])
-        elif not isinstance(other, _GradManagerGroup):
+            other = GradManagerGroup([other])
+        elif not isinstance(other, GradManagerGroup):
             return NotImplemented
-        return _GradManagerGroup([*self._gms, *other._gms])
+        return GradManagerGroup([*self._gms, *other._gms])
 
     __or__ = merge_with
     __ror__ = merge_with
