@@ -7,7 +7,7 @@ import cv2
 import numpy as np
 
 from megengine.data.transform import Transform
-from megengine.data.transform.vision import _functional as F
+from megengine.data.transform.vision import functional as F
 
 __all__ = [
     "VisionTransform",

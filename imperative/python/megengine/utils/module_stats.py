@@ -11,11 +11,11 @@ from .. import functional as F
 from .. import get_logger
 from .. import module as M
 from ..core.tensor.dtype import get_dtype_bit
-from ..logger import _MegEngineLogFormatter
+from ..logger import MegEngineLogFormatter
 from .module_utils import set_module_mode_safe
 
 try:
-    _MegEngineLogFormatter.max_lines = float("inf")
+    MegEngineLogFormatter.max_lines = float("inf")
 except AttributeError as e:
     raise ValueError("set logger max lines failed")
 

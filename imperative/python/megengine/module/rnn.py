@@ -15,12 +15,12 @@ from . import init
 from .module import Module
 
 
-class _RNNCellBase(Module):
+class RNNCellBase(Module):
     def __init__(
         self, input_size: int, hidden_size: int, bias: bool, num_chunks: int,
     ) -> None:
         # num_chunks indicates the number of gates
-        super(_RNNCellBase, self).__init__()
+        super(RNNCellBase, self).__init__()
 
         self.input_size = input_size
         self.hidden_size = hidden_size
@@ -57,7 +57,7 @@ class _RNNCellBase(Module):
         raise NotImplementedError("forward not implemented !")
 
 
-class RNNCell(_RNNCellBase):
+class RNNCell(RNNCellBase):
 
     r"""An Elman RNN cell with tanh or ReLU non-linearity.
 
@@ -135,7 +135,7 @@ class RNNCell(_RNNCellBase):
         )[0]
 
 
-class LSTMCell(_RNNCellBase):
+class LSTMCell(RNNCellBase):
 
     r"""A long short-term memory (LSTM) cell.
 
@@ -216,7 +216,7 @@ class LSTMCell(_RNNCellBase):
         )[:2]
 
 
-class _RNNBase(Module):
+class RNNBase(Module):
     def __init__(
         self,
         input_size: int,
@@ -228,7 +228,7 @@ class _RNNBase(Module):
         bidirectional: bool = False,
         proj_size: int = 0,
     ) -> None:
-        super(_RNNBase, self).__init__()
+        super(RNNBase, self).__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.num_layers = num_layers
@@ -323,7 +323,7 @@ class _RNNBase(Module):
         return output, h
 
 
-class RNN(_RNNBase):
+class RNN(RNNBase):
 
     r"""Applies a multi-layer Elman RNN with :math:`\tanh` or :math:`\text{ReLU}` non-linearity to an
     input sequence.
@@ -453,7 +453,7 @@ class RNN(_RNNBase):
         return output, h
 
 
-class LSTM(_RNNBase):
+class LSTM(RNNBase):
 
     r"""Applies a multi-layer long short-term memory LSTM to an input
     sequence.

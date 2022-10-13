@@ -34,7 +34,7 @@ logger = get_logger(__name__)
 GLOBAL_TIMEOUT = 5
 
 
-def _raise_timeout_error():
+def raise_timeout_error():
     raise RuntimeError("dataloader timeout")
 
 
@@ -193,7 +193,7 @@ class DataLoader:
             )
 
 
-class _PreLoader:
+class PreLoader:
     def __init__(self, loader, preload):
         self.dataset = loader.dataset
         self.sampler = loader.sampler
@@ -321,7 +321,7 @@ class _ParallelDataLoaderIter:
             if success:
                 return data
             else:
-                _raise_timeout_error()
+                raise_timeout_error()
         else:
             while True:
                 success, data = self._try_get_data()
@@ -419,7 +419,7 @@ class _ParallelDataLoaderIter:
         self._shutdown_workers()
 
 
-class _BaseMapDataLoaderIter(_PreLoader):
+class _BaseMapDataLoaderIter(PreLoader):
     def __init__(self, loader, preload):
         super().__init__(loader, preload)
 
@@ -512,7 +512,7 @@ def get_worker_info():
     return _worker_info
 
 
-class _BaseStreamDataLoaderIter(_PreLoader):
+class _BaseStreamDataLoaderIter(PreLoader):
     def __init__(self, loader, preload):
         super().__init__(loader, preload)
         self.dataset_iter = iter(self.dataset)
@@ -554,7 +554,7 @@ class _SerialStreamDataLoaderIter(_BaseStreamDataLoaderIter):
                     timer.cancel()
                     waited_time = time.time() - start_time
                     if waited_time > self.timeout:
-                        _raise_timeout_error()
+                        raise_timeout_error()
         return raw_data
 
     def _get_next_batch(self):
@@ -585,7 +585,7 @@ class _ParallelStreamDataLoaderIter(_BaseStreamDataLoaderIter, _ParallelDataLoad
                 place_holder = [next(self.dataset_iter)]
                 waited_time = time.time() - start_time
                 if self.timeout > 0 and waited_time > self.timeout:
-                    _raise_timeout_error()
+                    raise_timeout_error()
                 place_holder = self._get_remaind_data(place_holder)
             else:
                 place_holder = next(self._sampler_iter)

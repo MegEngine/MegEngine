@@ -1,12 +1,12 @@
 from ..core._imperative_rt.core2 import Const
-from ..jit.tracing import _is_tracing
+from ..jit.tracing import is_tracing
 
 small_tensor_cache = {}
 
 
 def _get_scalar_tensor_with_value(value, dtype=None, device=None):
     global small_tensor_cache
-    if _is_tracing():
+    if is_tracing():
         ret = Const(value, dtype, device)
     else:
         cache_key = (value, dtype, device)

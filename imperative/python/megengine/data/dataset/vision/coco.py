@@ -21,7 +21,7 @@ def _count_visible_keypoints(anno):
     return sum(sum(1 for v in ann["keypoints"][2::3] if v > 0) for ann in anno)
 
 
-def _has_valid_annotation(anno, order):
+def has_valid_annotation(anno, order):
     # if it"s empty, there is no annotation
     if len(anno) == 0:
         return False
@@ -101,7 +101,7 @@ class COCO(VisionDataset):
                 anno = [
                     obj for obj in anno if obj["bbox"][2] > 0 and obj["bbox"][3] > 0
                 ]
-                if _has_valid_annotation(anno, order):
+                if has_valid_annotation(anno, order):
                     ids.append(img_id)
                     self.img_to_anns[img_id] = anno
                 else:

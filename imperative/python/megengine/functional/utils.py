@@ -7,6 +7,8 @@ from ..utils.deprecation import deprecated_func
 from .elemwise import abs, maximum, minimum
 from .tensor import ones, zeros
 
+__all__ = ["topk_accuracy"]
+
 
 def _assert_equal(
     expect: Tensor, actual: Tensor, *, maxerr: float = 0.0001, verbose: bool = False
