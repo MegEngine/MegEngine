@@ -360,7 +360,7 @@ def warp_affine(
         mat: `(batch, 2, 3)` transformation matrix.
         out_shape: output tensor shape.
         border_mode: pixel extrapolation method.
-            Default: "wrap". Currently "constant", "reflect",
+            Default: "replicate". Currently "constant", "reflect",
             "reflect_101", "isolated", "wrap", "replicate", "transparent" are supported.
         border_val: value used in case of a constant border. Default: 0
         format: NHWC" as default based on historical concerns,
