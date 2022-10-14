@@ -72,7 +72,7 @@ struct OprLoadDumpImplV2<opr::ElemwiseMultiType, 0> {
 
 namespace opr {
 MGB_SEREG_OPR_CONDITION(ElemwiseMultiType, 0, false);
-MGB_SEREG_OPR_V2(
+MGB_SEREG_OPR_V2_HASH_WITHOUT_TAIL_0(
         ElemwiseMultiType, 0,
         (mgb::serialization::OprLoadDumpImplV2<opr::ElemwiseMultiType, 0>::replace_opr),
         VERSION_1, VERSION_1);

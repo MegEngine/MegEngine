@@ -111,7 +111,8 @@ struct OprRegistryV2 {
 
     //! register opr load/dump to version2regmap
     MGE_WIN_DECLSPEC_FUC static void versioned_add(
-            const OprRegistryV2& record, uint8_t min_version, uint8_t max_version);
+            const OprRegistryV2& record, uint8_t min_version, uint8_t max_version,
+            bool dynamic = false);
 
     MGE_WIN_DECLSPEC_FUC static const OprRegistryV2* versioned_find_by_id(
             const size_t id, uint8_t version);
