@@ -64,8 +64,8 @@ const OprRegistryV2* dynamic_registry_v2() {
 
     auto id = MGB_HASH_STR("dynamic");
     OprRegistryV2::versioned_add(
-            {nullptr, id, {}, {}, dynamic_loader, {}}, CURRENT_VERSION,
-            CURRENT_VERSION);
+            {nullptr, id, {}, {}, dynamic_loader, {}}, CURRENT_VERSION, CURRENT_VERSION,
+            true);
     ret = OprRegistryV2::versioned_find_by_id(id, CURRENT_VERSION);
     mgb_assert(ret);
     return ret;
@@ -182,7 +182,8 @@ const OprRegistryV2* OprRegistryV2::versioned_find_by_typeinfo(
 }
 
 void OprRegistryV2::versioned_add(
-        const OprRegistryV2& record, uint8_t min_version, uint8_t max_version) {
+        const OprRegistryV2& record, uint8_t min_version, uint8_t max_version,
+        bool dynamic) {
     mgb_assert(max_version >= min_version);
 
     auto&& sd = static_data();
@@ -190,7 +191,7 @@ void OprRegistryV2::versioned_add(
     uint64_t type_id = id;
     //! record.type->name is nullptr when MGB_VERBOSE_TYPEINFO_NAME==0
 #if MGB_VERBOSE_TYPEINFO_NAME
-    if (record.type && record.type->name) {
+    if (dynamic && record.type && record.type->name) {
         type_id = MGB_HASH_RUNTIME(std::string(record.type->name));
     }
 #endif
@@ -236,7 +237,7 @@ void OprRegistry::add_using_dynamic_loader(
     OprRegistryV2::versioned_add(
             {type, dynamic_registry_v2()->type_id, type->name, dumper,
              dynamic_registry_v2()->loader, nullptr},
-            CURRENT_VERSION, CURRENT_VERSION);
+            CURRENT_VERSION, CURRENT_VERSION, true);
 }
 
 #if MGB_ENABLE_DEBUG_UTIL

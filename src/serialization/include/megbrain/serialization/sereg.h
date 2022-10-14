@@ -180,6 +180,18 @@ struct OprRegistryCaller : public OprRegistryCallerDefaultImpl<Callee> {};
                 _version_min, _version_max);                                  \
     } while (0)
 
+//! in order to compatibility with MGB_SEREG_OPR_INTL_CALL_ADD, the macro use
+//! the same hash with MGB_SEREG_OPR_INTL_CALL_ADD,
+//! MGB_HASH_STR_WITHOUT_TAIL_0_AND_VERSION is different with MGB_HASH_STR
+#define MGB_SEREG_OPR_INTL_CALL_ADD_V2_WITHOUT_TAIL_0_AND_VERSION_HASH(            \
+        _cls, _dump, _load, _convert, _version_min, _version_max)                  \
+    do {                                                                           \
+        ::mgb::serialization::OprRegistryV2::versioned_add(                        \
+                {_cls::typeinfo(), MGB_HASH_STR_WITHOUT_TAIL_0_AND_VERSION(#_cls), \
+                 _MGB_SEREG_OPR_NAME_FROM_CLS(_cls), _dump, _load, _convert},      \
+                _version_min, _version_max);                                       \
+    } while (0)
+
 /*!
  * \brief register opr serialization methods
  */
@@ -216,6 +228,27 @@ struct OprRegistryCaller : public OprRegistryCallerDefaultImpl<Callee> {};
         }                                                                       \
         static void entry() {                                                   \
             MGB_SEREG_OPR_INTL_CALL_ADD_V2(                                     \
+                    _cls, Impl::dump, wrap_loader, _converter, _version_min,    \
+                    _version_max);                                              \
+        }                                                                       \
+    };                                                                          \
+    }                                                                           \
+    MGB_SEREG_OPR_INTL_CALL_ENTRY_V2(_cls, _OprRegV2##_cls)
+
+//! using MGB_HASH_STR_WITHOUT_TAIL_0_AND_VERSION macro to get the type id
+#define MGB_SEREG_OPR_V2_HASH_WITHOUT_TAIL_0(                                   \
+        _cls, _arity, _converter, _version_min, _version_max)                   \
+    namespace {                                                                 \
+    namespace ser = ::mgb::serialization;                                       \
+    struct _OprRegV2##_cls {                                                    \
+        using Impl = ser::OprLoadDumpImplV2<_cls, _arity>;                      \
+        static ser::OprWithOutputAccessor wrap_loader(                          \
+                ser::OprLoadContext& ctx, const mgb::cg::VarNodeArray& inputs,  \
+                const mgb::cg::OperatorNodeConfig& config) {                    \
+            return ser::OprWithOutputAccessor(Impl::load(ctx, inputs, config)); \
+        }                                                                       \
+        static void entry() {                                                   \
+            MGB_SEREG_OPR_INTL_CALL_ADD_V2_WITHOUT_TAIL_0_AND_VERSION_HASH(     \
                     _cls, Impl::dump, wrap_loader, _converter, _version_min,    \
                     _version_max);                                              \
         }                                                                       \
