@@ -110,7 +110,7 @@ bool ConvBiasForwardImpl::AlgoFallbackNCHWQS8::is_available(
     bool is_version_ok = CUDNN_VERSION >= 7500;
     bool is_dtype_ok =
             (args.src_layout->dtype.enumv() == DTypeEnum::QuantizedS8 &&
-             (args.dst_layout->dtype.enumv() != DTypeEnum::QuantizedS4 ||
+             (args.dst_layout->dtype.enumv() != DTypeEnum::QuantizedS4 &&
               args.dst_layout->dtype.enumv() != DTypeEnum::Quantized4Asymm));
     bool is_bias_ok =
             args.bias_layout->ndim == 0 ||
