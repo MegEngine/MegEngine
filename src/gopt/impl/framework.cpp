@@ -823,6 +823,9 @@ const GraphOptimizer& GraphOptimizer::add_passes_for_graph_tuning_options(
         add_pass<FuseConvBiasNonlinPass>();
         if (options.target == Target::CUDA)
             add_pass<FuseConvBiasZPass>();
+#if CUDA_VERSION >= 10020
+        add_pass<FoldingConvBiasTypecvtPass>();
+#endif
         add_pass(LayoutTransformPass::make(options.target));
         add_pass<ShuffleShuffleRemovePass>();
         if (options.target == Target::CUDA) {
