@@ -45,21 +45,29 @@ fi
 SRC_DIR=$($READLINK -f "`dirname $0`/../../../")
 
 echo ${SRC_DIR}
-ALL_PYTHON="3.6.10 3.7.7 3.8.3 3.9.4 3.10.1"
+
+platform=$(uname -m | awk '{print $0}')
+if [ $platform = 'arm64' ];then
+    ALL_PYTHON="3.8.10 3.9.4 3.10.1"
+else
+    ALL_PYTHON="3.6.10 3.7.7 3.8.3 3.9.4 3.10.1"
+fi
+
 USER=$(whoami)
 
 function install_python_package() {
     for pak in ${ALL_PYTHON}
     do
-        echo "###### do command: env PYTHON_CONFIGURE_OPTS=\"--enable-shared\" pyenv install ${pak}"
+        echo "###### do command: env PYTHON_CONFIGURE_OPTS=\"--enable-shared\" PYTHON_CONFIGURE_OPTS=\"--enable-framework\" pyenv install ${pak}"
         if [ -e /Users/${USER}/.pyenv/versions/${pak} ];then
             echo "FOUND install /Users/${USER}/.pyenv/versions/${pak} strip it..."
         else
             os_ver=$(sw_vers -productVersion | awk '{print int($0)}')
-            if [ $os_ver -lt 11 ];then
-                env PYTHON_CONFIGURE_OPTS="--enable-shared" pyenv install ${pak}
+            if [[ $os_ver -lt 11 || $platform = 'arm64' ];then
+                env PYTHON_CONFIGURE_OPTS="--enable-shared" PYTHON_CONFIGURE_OPTS="--enable-framework" pyenv install ${pak}
             else
                 PYTHON_CONFIGURE_OPTS="--enable-shared" \
+                PYTHON_CONFIGURE_OPTS="--enable-framework"\
                 CFLAGS="-I$(brew --prefix openssl)/include -I$(brew --prefix bzip2)/include \
                 -I$(brew --prefix readline)/include -I$(xcrun --show-sdk-path)/usr/include" \
                 LDFLAGS="-L$(brew --prefix openssl)/lib -L$(brew --prefix readline)/lib -L$(brew --prefix zlib)/lib -L$(brew --prefix bzip2)/lib" \

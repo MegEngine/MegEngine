@@ -38,7 +38,13 @@ SRC_DIR=$($READLINK -f "`dirname $0`/../../../")
 source ${SRC_DIR}/scripts/whl/utils/utils.sh
 
 ALL_PYTHON=${ALL_PYTHON}
-FULL_PYTHON_VER="3.6.10 3.7.7 3.8.3 3.9.4"
+platform=$(uname -m | awk '{print $0}')
+if [ $platform = 'arm64' ];then
+    FULL_PYTHON_VER="3.8.10 3.9.4 3.10.1"
+else
+    FULL_PYTHON_VER="3.6.10 3.7.7 3.8.3 3.9.4"
+fi
+
 if [[ -z ${ALL_PYTHON} ]]
 then
     ALL_PYTHON=${FULL_PYTHON_VER}
@@ -76,7 +82,7 @@ function config_python_env() {
     elif [ "$1" = "3.7.7" ]; then
         PYTHON_INCLUDE_DIR=${PYTHON_DIR}include/python3.7m
         PYTHON_LIBRARY=${PYTHON_DIR}/lib/libpython3.7m.dylib
-    elif [ "$1" = "3.8.3" ]; then
+    elif [[ "$1" = "3.8.3" || "$1" = "3.8.10" ]]; then
         PYTHON_INCLUDE_DIR=${PYTHON_DIR}include/python3.8
         PYTHON_LIBRARY=${PYTHON_DIR}/lib/libpython3.8.dylib
     elif [ "$1" = "3.9.4" ]; then
@@ -220,7 +226,11 @@ function do_build() {
         cd ${BUILD_DIR}/staging/dist/
         org_whl_name=`ls Meg*.whl`
         index=`awk -v a="${org_whl_name}" -v b="-macosx" 'BEGIN{print index(a,b)}'`
-        compat_whl_name=`echo ${org_whl_name} |cut -b -$index`macosx_10_14_x86_64.whl
+        if [ $platform = 'arm64' ];then
+            compat_whl_name=`echo ${org_whl_name} |cut -b -$index`macosx_10_14_universal2.whl
+        else
+            compat_whl_name=`echo ${org_whl_name} |cut -b -$index`macosx_10_14_x86_64.whl
+        fi
         echo "org whl name: ${org_whl_name}"
         echo "comapt whl name: ${compat_whl_name}"
         cp ${BUILD_DIR}/staging/dist/Meg*.whl ${MACOS_WHL_HOME}/${compat_whl_name}
