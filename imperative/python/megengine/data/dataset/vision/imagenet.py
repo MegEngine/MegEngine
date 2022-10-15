@@ -205,7 +205,7 @@ class ImageNet(ImageFolder):
             calculate_md5(raw_file) == checksum
         ), "checksum mismatch, {} may be damaged".format(raw_file)
         logger.info("extract valid tar file... this may take 10-20 minutes")
-        untar(os.path.join(self.root, raw_file), self.target_folder)
+        untar(raw_file, self.target_folder)
         self._organize_val_data()
 
     def _prepare_train(self):
@@ -217,9 +217,7 @@ class ImageNet(ImageFolder):
             calculate_md5(raw_file) == checksum
         ), "checksum mismatch, {} may be damaged".format(raw_file)
         logger.info("extract train tar file.. this may take several hours")
-        untar(
-            os.path.join(self.root, raw_file), self.target_folder,
-        )
+        untar(raw_file, self.target_folder)
         paths = [
             os.path.join(self.target_folder, child_dir)
             for child_dir in os.listdir(self.target_folder)
