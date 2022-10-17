@@ -7,6 +7,7 @@
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 import math
+import multiprocessing
 import os
 import platform
 import time
@@ -134,6 +135,10 @@ def test_dataloader_parallel():
     platform.system() == "Windows",
     reason="dataloader do not support parallel on windows",
 )
+@pytest.mark.skipif(
+    multiprocessing.get_start_method() != "fork",
+    reason="the runtime error is only raised when fork",
+)
 def test_dataloader_parallel_timeout():
     dataset = init_dataset()
 
@@ -160,6 +165,10 @@ def test_dataloader_parallel_timeout():
 @pytest.mark.skipif(
     platform.system() == "Windows",
     reason="dataloader do not support parallel on windows",
+)
+@pytest.mark.skipif(
+    multiprocessing.get_start_method() != "fork",
+    reason="the runtime error is only raised when fork",
 )
 def test_dataloader_parallel_worker_exception():
     dataset = init_dataset()
@@ -286,6 +295,10 @@ def test_prestream_dataloader_multiprocessing():
 @pytest.mark.skipif(
     platform.system() == "Windows",
     reason="dataloader do not support parallel on windows",
+)
+@pytest.mark.skipif(
+    multiprocessing.get_start_method() != "fork",
+    reason="the runtime error is only raised when fork",
 )
 def test_predataloader_parallel_worker_exception():
     dataset = MyPreStream(100)

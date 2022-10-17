@@ -1,7 +1,5 @@
 #!/bin/bash -e
 
-GET_PIP_URL='https://bootstrap.pypa.io/get-pip.py'
-GET_PIP_URL_36='https://bootstrap.pypa.io/pip/3.6/get-pip.py'
 SWIG_URL='https://codeload.github.com/swig/swig/tar.gz/refs/tags/rel-3.0.12'
 LLVM_URL='https://github.com/llvm-mirror/llvm/archive/release_60.tar.gz' 
 CLANG_URL='https://github.com/llvm-mirror/clang/archive/release_60.tar.gz'
@@ -17,20 +15,14 @@ yum install -y python3 python3-devel
 python3 -m pip install cython -i https://mirrors.aliyun.com/pypi/simple
 python3 -m pip install numpy -i https://mirrors.aliyun.com/pypi/simple
 
-# FIXME: failed when install pip with python3.10 because python3.10
-# is not installed on aarch64, so we remove 310 from ALL_PYTHON version now
-ALL_PYTHON="36m 37m 38 39"
-numpy_version="1.19.5"
+ALL_PYTHON="36m 37m 38 39 310"
 for ver in ${ALL_PYTHON}
 do
     python_ver=`echo $ver | tr -d m`
-    PIP_URL=${GET_PIP_URL}
-    if [ ${ver} = "36m" ];then
-    	PIP_URL=${GET_PIP_URL_36}
+    numpy_version="1.19.5"
+    if [ ${ver} = "310" ];then
+        numpy_version="1.21.6"
     fi
-    echo "use pip url: ${PIP_URL}"
-    curl ${PIP_URL} | /opt/python/cp${python_ver}-cp${ver}/bin/python - \
-	--no-cache-dir --only-binary :all:
     /opt/python/cp${python_ver}-cp${ver}/bin/pip install \
     --no-cache-dir --only-binary :all: numpy==${numpy_version} setuptools==46.1.3 \
     -i https://mirrors.aliyun.com/pypi/simple

@@ -74,7 +74,7 @@ function patch_elf_depend_lib_megenginelite() {
 SRC_DIR=$(readlink -f "`dirname $0`/../../../")
 source ${SRC_DIR}/scripts/whl/utils/utils.sh
 
-SUPPORT_ALL_VERSION="36m 37m 38 39"
+SUPPORT_ALL_VERSION="36m 37m 38 39 310"
 ALL_PYTHON=${ALL_PYTHON}
 if [[ -z ${ALL_PYTHON} ]]
 then

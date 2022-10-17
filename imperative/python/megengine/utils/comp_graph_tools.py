@@ -82,7 +82,7 @@ class _OprStableOrderHeapq:
     _used_id_name_pairs = None
 
     def __init__(self, extra_priority):
-        assert isinstance(extra_priority, collections.Callable)
+        assert isinstance(extra_priority, collections.abc.Callable)
         self._list = []
         self._extra_priority = extra_priority
         self._used_id_name_pairs = {}

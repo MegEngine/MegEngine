@@ -324,7 +324,7 @@ class Network:
         if isinstance(modifier, str):
             om = modifier
             modifier = lambda v: "{}.{}".format(om, v)
-        assert isinstance(modifier, collections.Callable)
+        assert isinstance(modifier, collections.abc.Callable)
         for i in self.all_oprs:
             v0 = i.name
             v1 = modifier(v0)
@@ -550,7 +550,7 @@ def as_varnode(obj):
         return ret
 
     assert isinstance(
-        obj, collections.Iterable
+        obj, collections.abc.Iterable
     ), "{} is not compatible with VarNode".format(obj)
 
     val = list(obj)
@@ -573,7 +573,7 @@ def as_oprnode(obj):
         return obj
 
     assert isinstance(
-        obj, collections.Iterable
+        obj, collections.abc.Iterable
     ), "{} is not compatible with OpNode".format(obj)
 
     val = list(obj)
@@ -619,7 +619,7 @@ class NodeFilter:
             oprs = get_oprs_seq(node_iter.inputs, False, False)
             node_iter = itertools.islice(oprs, len(oprs) - 1)
 
-        assert isinstance(node_iter, collections.Iterable)
+        assert isinstance(node_iter, collections.abc.Iterable)
         if (not isinstance(node_iter, NodeFilter)) and type(
             self
         ) is not NodeFilterCheckType:

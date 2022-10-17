@@ -136,7 +136,7 @@ class Expr:
         if outputs is None:
             return
         current_graph = active_module_tracer().current_scope()
-        if not isinstance(outputs, collections.Sequence):
+        if not isinstance(outputs, collections.abc.Sequence):
             outputs = (outputs,)
         for i in outputs:
             assert isinstance(i, RawTensor), "The output must be a Tensor"

@@ -4,6 +4,13 @@
 #include "megbrain/imperative/op_def.h"
 #include "megbrain/utils/persistent_cache.h"
 
+// in python 3.10, ssize_t is not defined on windows
+// so ssize_t should be defined manually before include pybind headers
+#if defined(_MSC_VER)
+#include <BaseTsd.h>
+typedef SSIZE_T ssize_t;
+#endif
+
 #include <Python.h>
 #include <iterator>
 #include <string>

@@ -42,7 +42,7 @@ platform=$(uname -m | awk '{print $0}')
 if [ $platform = 'arm64' ];then
     FULL_PYTHON_VER="3.8.10 3.9.4 3.10.1"
 else
-    FULL_PYTHON_VER="3.6.10 3.7.7 3.8.3 3.9.4"
+    FULL_PYTHON_VER="3.6.10 3.7.7 3.8.3 3.9.4 3.10.1"
 fi
 
 if [[ -z ${ALL_PYTHON} ]]
