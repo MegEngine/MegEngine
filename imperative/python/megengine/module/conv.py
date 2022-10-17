@@ -1050,8 +1050,8 @@ class RegionRestrictedConv(_ConvNd):
             Refer to :class:`~.module.padding.Pad` for more information.
 
     Note:
-        * ``weight`` usually has shape ``(out_channels, in_channels, height, width)`` ,
-            if groups is not 1, shape will be ``(groups, out_channels // groups, in_channels // groups, height, width)``
+        * weight shape will be ``(groups, out_channels // groups, in_channels // groups, height, width)``,
+            becasue RegionRestrictedConv support grouped conv only.
 
     Examples:
         >>> import numpy as np
@@ -1071,7 +1071,7 @@ class RegionRestrictedConv(_ConvNd):
         in_channels: int,
         out_channels: int,
         kernel_size: Union[int, Tuple[int, int]],
-        groups: int,
+        groups: int = 1,
         bias: bool = True,
         stride: Union[int, Tuple[int, int]] = 1,
         padding: Union[int, Tuple[int, int]] = 0,
@@ -1111,9 +1111,6 @@ class RegionRestrictedConv(_ConvNd):
         ichl = self.in_channels
         ochl = self.out_channels
         kh, kw = self.kernel_size
-        if group == 1:
-            # Assume format is NCHW
-            return (ochl, ichl, kh, kw)
 
         assert (
             ichl % group == 0 and ochl % group == 0

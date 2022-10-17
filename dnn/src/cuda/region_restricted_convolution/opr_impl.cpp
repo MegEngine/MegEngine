@@ -20,7 +20,7 @@ void RegionRestrictedConvolutionForwardImpl::exec(
             src.layout, dst.layout, fm,
             param().compute_mode == Param::ComputeMode::DEFAULT);
     megdnn_assert(
-            fm.group > 1 && src.layout.dtype.category() == DTypeCategory::FLOAT &&
+            src.layout.dtype.category() == DTypeCategory::FLOAT &&
             param().compute_mode == Param::ComputeMode::DEFAULT &&
             fm.spatial_ndim == 2 && fm.icpg == 1 && fm.ocpg == 1 &&
             fm.dilation[0] == 1 && fm.dilation[1] == 1 && !fm.should_flip &&
@@ -76,7 +76,7 @@ void RegionRestrictedConvolutionBackwardDataImpl::exec(
             diff.layout, grad.layout, fm,
             param().compute_mode == Param::ComputeMode::DEFAULT);
     megdnn_assert(
-            fm.group > 1 && diff.layout.dtype.category() == DTypeCategory::FLOAT &&
+            diff.layout.dtype.category() == DTypeCategory::FLOAT &&
             param().compute_mode == Param::ComputeMode::DEFAULT &&
             fm.spatial_ndim == 2 && fm.icpg == 1 && fm.ocpg == 1 &&
             fm.dilation[0] == 1 && fm.dilation[1] == 1 && !fm.should_flip &&
@@ -120,7 +120,7 @@ void RegionRestrictedConvolutionBackwardFilterImpl::exec(
             workspace.size);
 
     megdnn_assert(
-            fm.group > 1 && src.layout.dtype.category() == DTypeCategory::FLOAT &&
+            src.layout.dtype.category() == DTypeCategory::FLOAT &&
             param().compute_mode == Param::ComputeMode::DEFAULT &&
             fm.spatial_ndim == 2 && fm.icpg == 1 && fm.ocpg == 1 &&
             fm.dilation[0] == 1 && fm.dilation[1] == 1 && !fm.should_flip &&

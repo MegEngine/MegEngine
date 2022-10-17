@@ -543,11 +543,11 @@ class RegionRestrictedConvolutionForward : public ConvolutionBase<param::Convolu
 
 public:
     /**
-     * \param[in] src (n, ic, ih, iw)
-     * \param[in] filter (oc, ic, fh, fw)
+     * \param[in] src (n, ic, ih, iw) or (n, g*icpg, ih, iw)
+     * \param[in] filter (oc, ic, fh, fw) or (g, ocpg, icpg, fh, fw)
      * \param[in] rin (n, ih, iw)
      * \param[in] rout (n, oh, ow)
-     * \param[out] dst (n, oc, oh, ow)
+     * \param[out] dst (n, oc, oh, ow) or (n, g*ocpg, oh, ow)
      */
     virtual void exec(
             _megdnn_tensor_in src, _megdnn_tensor_in filter, _megdnn_tensor_in rin,
@@ -592,11 +592,11 @@ class RegionRestrictedConvolutionBackwardData
 
 public:
     /**
-     * \param[in] filter (oc, ic, fh, fw)
-     * \param[in] diff (n, oc, oh, ow)
+     * \param[in] filter (oc, ic, fh, fw) or (g, ocpg, icpg, fh, fw)
+     * \param[in] diff (n, oc, oh, ow) or (n, g*ocpg, oh, ow)
      * \param[in] rin (n, ih, iw)
      * \param[in] rout (n, oh, ow)
-     * \param[out] grad (n, ic, ih, iw)
+     * \param[out] grad (n, ic, ih, iw) or (n, g*icpg, ih, iw)
      */
     virtual void exec(
             _megdnn_tensor_in filter, _megdnn_tensor_in diff, _megdnn_tensor_in rin,
@@ -635,11 +635,11 @@ class RegionRestrictedConvolutionBackwardFilter
 
 public:
     /**
-     * \param[in] src (n, ic, ih, iw)
-     * \param[in] diff (n, oc, oh, ow)
+     * \param[in] src (n, ic, ih, iw) or (n, g*icpg, ih, iw)
+     * \param[in] diff (n, oc, oh, ow) or (n, g*ocpg, oh, ow)
      * \param[in] rin (n, ih, iw)
      * \param[in] rout (n, oh, ow)
-     * \param[out] grad (oc, ic, fh, fw)
+     * \param[out] grad (oc, ic, fh, fw) or (g, ocpg, icpg, fh, fw)
      */
     virtual void exec(
             _megdnn_tensor_in src, _megdnn_tensor_in diff, _megdnn_tensor_in rin,

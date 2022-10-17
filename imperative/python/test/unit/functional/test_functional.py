@@ -971,17 +971,16 @@ def test_region_restricted_conv_forward_backward_naive(bias):
 @pytest.mark.skipif(
     not is_cuda_available(), reason="rrconv cuda kernel requires cuda available"
 )
-@pytest.mark.parametrize("bias", [True, False])
-def test_region_restricted_conv_forward_backward_cuda(bias):
+@pytest.mark.parametrize("bias, groups", [(True, 1), (True, 3), (False, 1), (False, 3)])
+def test_region_restricted_conv_forward_backward_cuda(bias, groups):
     import megengine as mge
     import megengine.module as M
     from megengine.autodiff import GradManager
-    import megengine.distributed as dist
 
     # params
     handle = "gpu0"
     N = 1
-    GROUP = 3
+    GROUP = groups
     FH = FW = 2
     IH = IW = 2
     OH = OW = 1
@@ -1051,8 +1050,8 @@ def test_region_restricted_conv_forward_backward_cuda(bias):
 @pytest.mark.skipif(
     not is_cuda_available(), reason="rrconv cuda kernel requires cuda available"
 )
-@pytest.mark.parametrize("bias", [True, False])
-def test_region_restricted_conv_forward_backward_uint8(bias):
+@pytest.mark.parametrize("bias, groups", [(True, 1), (True, 3), (False, 1), (False, 3)])
+def test_region_restricted_conv_forward_backward_uint8(bias, groups):
     import megengine as mge
     import megengine.module as M
     from megengine.autodiff import GradManager
@@ -1060,7 +1059,7 @@ def test_region_restricted_conv_forward_backward_uint8(bias):
     # params
     handle = "gpu0"
     N = 1
-    GROUP = 2
+    GROUP = groups
     FH = FW = 1
     IH = IW = 4
     OH = OW = 4

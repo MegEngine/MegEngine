@@ -2016,7 +2016,12 @@ def region_restricted_conv(
     stride_h, stride_w = expand_hw(stride)
     dilate_h, dilate_w = expand_hw(dilation)
 
-    sparse_type = "dense" if groups == 1 else "group"
+    sparse_type = "group"
+    assert groups > 0, (
+        "RegionRestrictedConv expected grouped conv mode, \
+    which requires groups > 0, but got groups=%d"
+        % (groups)
+    )
     op = builtin.RegionRestrictedConvolution(
         stride_h=stride_h,
         stride_w=stride_w,
