@@ -100,6 +100,10 @@ void FoldingConvBiasDimshufflePass::apply(OptState& opt) const {
         auto conv_bias = try_cast_as_op<opr::ConvBias>(shuffle->input(0)->owner_opr());
         if (conv_bias == nullptr)
             return false;
+        bool is_group =
+                conv_bias->param().sparse == megdnn::param::ConvBias::Sparse::GROUP;
+        if (is_group)
+            return false;
         inp_dtype = conv_bias->input(0)->dtype();
         bool is_s8nchw4 =
                 inp_dtype.enumv() == DTypeEnum::QuantizedS8 &&
@@ -179,6 +183,10 @@ void FoldingConvBiasDimshufflePass::apply(OptState& opt) const {
         // check conv bias
         auto conv_bias = try_cast_as_op<opr::ConvBias>(reshape2->input(0)->owner_opr());
         if (conv_bias == nullptr)
+            return false;
+        bool is_group =
+                conv_bias->param().sparse == megdnn::param::ConvBias::Sparse::GROUP;
+        if (is_group)
             return false;
         auto inp_dtype = conv_bias->input(0)->dtype();
         bool is_s8nchw4 =
@@ -267,6 +275,10 @@ void FoldingConvBiasDimshufflePass::apply(OptState& opt) const {
         auto conv_bias = try_cast_as_op<opr::ConvBias>(shuffle->input(0)->owner_opr());
         if (conv_bias == nullptr)
             return false;
+        bool is_group =
+                conv_bias->param().sparse == megdnn::param::ConvBias::Sparse::GROUP;
+        if (is_group)
+            return false;
         auto inp_dtype = conv_bias->input(0)->dtype();
         bool is_s8nchw4 =
                 inp_dtype.enumv() == DTypeEnum::QuantizedS8 &&
@@ -344,6 +356,10 @@ void FoldingConvBiasDimshufflePass::apply(OptState& opt) const {
         // check conv bias
         auto conv_bias = try_cast_as_op<opr::ConvBias>(reshape2->input(0)->owner_opr());
         if (conv_bias == nullptr)
+            return false;
+        bool is_group =
+                conv_bias->param().sparse == megdnn::param::ConvBias::Sparse::GROUP;
+        if (is_group)
             return false;
         auto inp_dtype = conv_bias->input(0)->dtype();
         bool is_s8nchw32 =

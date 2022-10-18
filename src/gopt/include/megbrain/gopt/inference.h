@@ -235,6 +235,9 @@ public:
 class EnableTensorCorePass final : public TensorReformatPass {
     VarNode* on_graph_endpoint_var(VarNode* new_var, VarNode* orig_var) const override;
 
+    static VarNode* trans_to_nchw32(VarNode* new_inp);
+    static VarNode* trans_from_nchw32(VarNode* new_inp, VarNode* orig_inp);
+
 public:
     const char* name() const override { return mgb_cstr_log("enable_tensorcore"); }
     //! make enable tensorcore opt pass
