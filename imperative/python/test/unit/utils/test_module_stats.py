@@ -64,6 +64,36 @@ def test_duplicated_module():
     assert net0_stats.param_size == net2_stats.param_size
 
 
+@pytest.mark.skipif(
+    use_symbolic_shape(), reason="This test do not support symbolic shape.",
+)
+def test_getattribute_param():
+    class MyConvBn(M.Module):
+        def __init__(self):
+            super().__init__()
+            self.in_channels = 64
+            self.conv1 = M.Conv2d(
+                3, self.in_channels, kernel_size=7, stride=2, padding=3, bias=True
+            )
+            self.bn1 = M.BatchNorm2d(self.in_channels)
+
+        def forward(self, input):
+            input = self.conv1.calc_conv(input, self.conv1.weight, self.conv1.bias)
+            input = self.bn1(input)
+            return input
+
+    model = MyConvBn()
+    input_shape = (1, 3, 224, 224)
+    total_stats, stats_detail = module_stats(model, input_shapes=input_shape)
+    params = stats_detail.params
+
+    def get_name(obj):
+        return obj["name"]
+
+    param_name = list(map(get_name, params))
+    assert "conv1-w" in param_name and "conv1-b" in param_name
+
+
 class TestNet0(M.Module):
     def __init__(self):
         super().__init__()
@@ -108,7 +138,12 @@ class FakeNet(M.Module):
     def forward(self, x):
         assert isinstance(
             x,
-            (np.ndarray, collections.abc.Mapping, collections.abc.Sequence, mge.Tensor),
+            (
+                np.ndarray,
+                collections.abc.Mapping,
+                collections.abc.Sequence,
+                mge.Tensor,
+            ),
         ) or (isinstance(x, tuple) and hasattr(x, "_fields"))
 
 
