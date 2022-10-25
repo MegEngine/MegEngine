@@ -34,35 +34,49 @@ def test_qat_convbn2d():
     in_channels = 32
     out_channels = 64
     kernel_size = 3
+
+    class TestNet(Module):
+        def __init__(self, groups, bias):
+            super().__init__()
+            self.quant = QuantStub()
+            self.dequant = DequantStub()
+            self.conv_bn = ConvBn2d(
+                in_channels, out_channels, kernel_size, groups=groups, bias=bias,
+            )
+
+        def forward(self, inp):
+            out = self.quant(inp)
+            out = self.conv_bn(out)
+            out = self.dequant(out)
+            return out
+
+    inputs = tensor(np.random.randn(4, in_channels, 32, 32).astype(np.float32))
     for groups, bias in product([1, 4], [True, False]):
-        module = ConvBn2d(
-            in_channels, out_channels, kernel_size, groups=groups, bias=bias
-        )
-        M.init.normal_(module.bn.weight)
-        M.init.normal_(module.bn.bias)
-        module.train()
-        qat_module = quantize_qat(module, inplace=False)
-        disable_fake_quant(qat_module)
-        inputs = tensor(np.random.randn(4, in_channels, 32, 32).astype(np.float32))
-        normal_outputs = module(inputs)
-        qat_outputs = qat_module(inputs)
+        net = TestNet(groups, bias)
+        net.train()
+        qat_net = quantize_qat(net, inplace=False)
+        disable_fake_quant(qat_net)
+        normal_outputs = net(inputs)
+        qat_outputs = qat_net(inputs)
         np.testing.assert_allclose(
-            normal_outputs.numpy(), qat_outputs.numpy(), atol=5e-6
+            normal_outputs.numpy(), qat_outputs.numpy(), atol=1e-4,
         )
         np.testing.assert_allclose(
-            module.bn.running_mean.numpy(),
-            qat_module.bn.running_mean.numpy(),
+            net.conv_bn.bn.running_mean.numpy(),
+            qat_net.conv_bn.bn.running_mean.numpy(),
             atol=5e-8,
         )
         np.testing.assert_allclose(
-            module.bn.running_var.numpy(), qat_module.bn.running_var.numpy(), atol=5e-7,
+            net.conv_bn.bn.running_var.numpy(),
+            qat_net.conv_bn.bn.running_var.numpy(),
+            atol=5e-7,
         )
-        module.eval()
-        normal_outputs = module(inputs)
-        qat_module.eval()
-        qat_outputs = qat_module(inputs)
+        net.eval()
+        normal_outputs = net(inputs)
+        qat_net.eval()
+        qat_outputs = qat_net(inputs)
         np.testing.assert_allclose(
-            normal_outputs.numpy(), qat_outputs.numpy(), atol=5e-6
+            normal_outputs.numpy(), qat_outputs.numpy(), atol=1e-4,
         )
 
 
@@ -70,40 +84,44 @@ def test_qat_convtransposebn2d():
     in_channels = 32
     out_channels = 64
     kernel_size = 3
+
+    class TestNet(Module):
+        def __init__(self, groups, bias):
+            super().__init__()
+            self.quant = QuantStub()
+            self.dequant = DequantStub()
+            self.conv_transpose_bn = ConvTransposeBn2d(
+                in_channels, out_channels, kernel_size, groups=groups, bias=bias,
+            )
+
+        def forward(self, inp):
+            out = self.quant(inp)
+            out = self.conv_transpose_bn(out)
+            out = self.dequant(out)
+            return out
+
     for groups, bias in product([1, 4], [True, False]):
-        module = ConvTransposeBn2d(
-            in_channels=in_channels,
-            out_channels=out_channels,
-            kernel_size=kernel_size,
-            output_padding=0,
-            groups=groups,
-            bias=bias,
-        )
-        M.init.normal_(module.bn.weight)
-        M.init.normal_(module.bn.bias)
-        module.train()
-        qat_module = quantize_qat(module, inplace=False)
-        disable_fake_quant(qat_module)
+        net = TestNet(groups, bias)
+        net.train()
+        qat_net = quantize_qat(net, inplace=False)
+        disable_fake_quant(qat_net)
         inputs = tensor(np.random.randn(4, in_channels, 32, 32).astype(np.float32))
-        normal_outputs = module(inputs)
-        qat_outputs = qat_module(inputs)
+        normal_outputs = net(inputs)
+        qat_outputs = qat_net(inputs)
         np.testing.assert_allclose(
-            normal_outputs.numpy(), qat_outputs.numpy(), atol=5e-6
+            normal_outputs.numpy(), qat_outputs.numpy(), atol=1e-5,
         )
         np.testing.assert_allclose(
-            module.bn.running_mean.numpy(),
-            qat_module.bn.running_mean.numpy(),
-            atol=5e-8,
+            net.conv_transpose_bn.bn.running_var.numpy(),
+            qat_net.conv_transpose_bn.bn.running_var.numpy(),
+            atol=5e-7,
         )
+        net.eval()
+        normal_outputs = net(inputs)
+        qat_net.eval()
+        qat_outputs = qat_net(inputs)
         np.testing.assert_allclose(
-            module.bn.running_var.numpy(), qat_module.bn.running_var.numpy(), atol=5e-7,
-        )
-        module.eval()
-        normal_outputs = module(inputs)
-        qat_module.eval()
-        qat_outputs = qat_module(inputs)
-        np.testing.assert_allclose(
-            normal_outputs.numpy(), qat_outputs.numpy(), atol=5e-6
+            normal_outputs.numpy(), qat_outputs.numpy(), atol=1e-5,
         )
 
 

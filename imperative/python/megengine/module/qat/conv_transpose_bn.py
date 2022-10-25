@@ -24,8 +24,7 @@ class _ConvTransposeBnActivation2d(Float._ConvTransposeBnActivation2d, QATModule
         # get fold bn conv_transpose2d param
         gamma = self.bn.weight
         if gamma is None:
-            gamma = ones((self.bn.num_features), dtype="float32")
-        gamma = gamma.reshape(1, -1, 1, 1)
+            gamma = ones((1, self.bn.num_features, 1, 1), dtype="float32")
         beta = self.bn.bias
         if beta is None:
             beta = zeros((1, self.bn.num_features, 1, 1), dtype="float32")
@@ -44,10 +43,10 @@ class _ConvTransposeBnActivation2d(Float._ConvTransposeBnActivation2d, QATModule
         bn_istd = 1.0 / sqrt(bn_var + self.bn.eps)
         scale_factor = gamma * bn_istd
         if self.conv_transpose2d.groups == 1:
-            w_fold = self.conv_transpose2d.weight * scale_factor.reshape(-1, 1, 1, 1)
+            w_fold = self.conv_transpose2d.weight * scale_factor.reshape(1, -1, 1, 1)
         else:
             w_fold = self.conv_transpose2d.weight * scale_factor.reshape(
-                self.conv_transpose2d.groups, -1, 1, 1, 1
+                self.conv_transpose2d.groups, 1, -1, 1, 1
             )
 
         w_fold = self.apply_quant_weight(w_fold)

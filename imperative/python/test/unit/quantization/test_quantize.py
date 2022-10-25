@@ -3,6 +3,15 @@ import pytest
 
 from megengine import Parameter, Tensor
 from megengine import module as Float
+from megengine.functional import ones, zeros
+from megengine.module import (
+    BatchNorm2d,
+    Conv2d,
+    ConvBn2d,
+    ConvTranspose2d,
+    ConvTransposeBn2d,
+    ReLU,
+)
 from megengine.module import qat as QAT
 from megengine.module import quantized as Q
 from megengine.quantization import (
@@ -24,6 +33,7 @@ from megengine.quantization.quantize import (
     quantize_qat,
     reset_qconfig,
 )
+from megengine.utils.bn_fusion import fuse_conv_bn_relu_module
 
 
 class FloatNet(Float.Module):
@@ -291,3 +301,85 @@ def test_convert_with_custom_mapping():
     net = Net()
     qat_net = quantize_qat(net, inplace=False, mapping={FloatExample: QATExample})
     assert isinstance(qat_net.example, QATExample)
+
+
+def test_ConvBn2d_fold_weight_bias():
+    in_channels = 32
+    out_channels = 64
+    kernel_size = 3
+
+    conv = Conv2d(in_channels, out_channels, kernel_size)
+    bn = BatchNorm2d(out_channels)
+    relu = ReLU()
+
+    fused_conv = fuse_conv_bn_relu_module(conv, bn, relu)
+    bn.eval()
+    fused_conv.eval()
+    inputs = Tensor(np.random.randn(4, in_channels, 32, 32).astype(np.float32))
+    expected_result = relu(bn(conv(inputs)))
+    actual_result = fused_conv(inputs)
+    np.testing.assert_allclose(
+        expected_result.numpy(), actual_result.numpy(), atol=1e-4
+    )
+
+    conv.eval()
+    bn.eval()
+    relu.eval()
+    fused_conv = fuse_conv_bn_relu_module(conv, bn, relu)
+    fused_conv.eval()
+    expected_result = relu(conv(inputs))
+    actual_result = fused_conv(inputs)
+    np.testing.assert_allclose(
+        expected_result.numpy(), actual_result.numpy(), atol=1e-4
+    )
+
+    conv.train()
+    bn.train()
+    fused_conv = fuse_conv_bn_relu_module(conv, bn, None)
+    fused_conv.train()
+    expected_result = bn(conv(inputs))
+    actual_result = fused_conv(inputs)
+    np.testing.assert_allclose(
+        expected_result.numpy(), actual_result.numpy(), atol=1e-4
+    )
+
+
+def test_ConvTransposeBn2d_fold_weight_bias():
+    in_channels = 32
+    out_channels = 64
+    kernel_size = 3
+
+    conv = ConvTranspose2d(in_channels, out_channels, kernel_size)
+    bn = BatchNorm2d(out_channels)
+    relu = ReLU()
+
+    fused_conv = fuse_conv_bn_relu_module(conv, bn, relu)
+    bn.eval()
+    fused_conv.eval()
+    inputs = Tensor(np.random.randn(4, in_channels, 32, 32).astype(np.float32))
+    expected_result = relu(bn(conv(inputs)))
+    actual_result = fused_conv(inputs)
+    np.testing.assert_allclose(
+        expected_result.numpy(), actual_result.numpy(), atol=1e-4
+    )
+
+    conv.eval()
+    bn.eval()
+    relu.eval()
+    fused_conv = fuse_conv_bn_relu_module(conv, bn, relu)
+    fused_conv.eval()
+    expected_result = relu(conv(inputs))
+    actual_result = fused_conv(inputs)
+    np.testing.assert_allclose(
+        expected_result.numpy(), actual_result.numpy(), atol=1e-4
+    )
+
+    conv.train()
+    bn.train()
+    fused_conv = fuse_conv_bn_relu_module(conv, bn, None)
+    fused_conv.train()
+    expected_result = bn(conv(inputs))
+    actual_result = fused_conv(inputs)
+    np.testing.assert_allclose(
+        expected_result.numpy(), actual_result.numpy(), atol=1e-4
+    )
