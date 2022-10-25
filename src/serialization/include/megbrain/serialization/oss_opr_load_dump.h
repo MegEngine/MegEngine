@@ -154,20 +154,29 @@ public:
     //! the memory used when load model, but should consider the memory
     //! alignment
     void fill_tensor_memory(
-            HostTensorND& tensor, const uint8_t* data, size_t size, bool shared) {
+            HostTensorND& tensor, const uint8_t* data, size_t size, bool shared,
+            GraphLoadConfig::TensorValueLoader loader) {
         auto tensor_size = tensor.layout().span().high_byte;
-        mgb_assert(
-                size == tensor_size,
-                "the size is not match when shared the flatbuffer memory\n");
+
         auto ptr = reinterpret_cast<void*>(const_cast<uint8_t*>(data));
-        if (shared) {
-            HostTensorStorage storage;
-            auto raw_storage = std::shared_ptr<mgb::dt_byte>(
-                    static_cast<mgb::dt_byte*>(ptr), [](void*) {});
-            storage.reset(tensor.comp_node(), size, raw_storage);
-            tensor.reset(storage, tensor.layout());
+        if (loader) {
+            // call custom loader
+            void* dest_ptr = tensor.raw_ptr();
+            auto input_file = InputFile::make_mem_proxy(data, size);
+            loader(dest_ptr, tensor.layout(), *input_file);
         } else {
-            memcpy(tensor.raw_ptr(), data, size);
+            mgb_assert(
+                    size == tensor_size,
+                    "the size is not match when shared the flatbuffer memory\n");
+            if (shared) {
+                HostTensorStorage storage;
+                auto raw_storage = std::shared_ptr<mgb::dt_byte>(
+                        static_cast<mgb::dt_byte*>(ptr), [](void*) {});
+                storage.reset(tensor.comp_node(), size, raw_storage);
+                tensor.reset(storage, tensor.layout());
+            } else {
+                memcpy(tensor.raw_ptr(), data, size);
+            }
         }
     }
 

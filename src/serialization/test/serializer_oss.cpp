@@ -315,8 +315,10 @@ void test_serializer_custom_loader(GraphDumpFormat format) {
     load();
     load();
     ASSERT_EQ(2u, saved_val.size());
-    ASSERT_EQ(2, load_nr_null_ptr);  // immutable tensor is also shared
-    ASSERT_EQ(4, load_nr_call);
+    if (GraphDumpFormat::FLATBUFFERS_V2 != format) {
+        ASSERT_EQ(2, load_nr_null_ptr);  // immutable tensor is also shared
+        ASSERT_EQ(4, load_nr_call);
+    }
 }
 
 void test_serializer_many_io_var(GraphDumpFormat format) {
@@ -996,6 +998,10 @@ TEST(TestSerializer2, ImmutableV2) {
 
 TEST(TestSerializer2, ManyIOVarsV2) {
     test_serializer_many_io_var(GraphDumpFormat::FLATBUFFERS_V2);
+}
+
+TEST(TestSerializer2, CustomLoaderV2) {
+    test_serializer_custom_loader(GraphDumpFormat::FLATBUFFERS_V2);
 }
 
 TEST(TestSerializer2, RemoveSetGradV2) {
