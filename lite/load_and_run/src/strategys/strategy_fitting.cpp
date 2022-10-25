@@ -237,7 +237,7 @@ void OptionsTimeProfiler::profile_with_given_options(
                 "the log) when profile option:\n%s\n",
                 option_code.c_str());
     } else {
-        mgb_log("profile option:\n%s\naverage time = %.2f\n", option_code.c_str(),
+        mgb_log("profile option:\n%s\n avg_time=%.3f ms\n", option_code.c_str(),
                 average);
         //! record profile result
         m_options_profile_result.insert({option_code, average});
