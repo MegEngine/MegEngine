@@ -1,6 +1,7 @@
 #include "megdnn/dtype.h"
 #include "megdnn/opr_param_defs.h"
 #include "megdnn/oprs.h"
+#include "megdnn/oprs/nn.h"
 #include "test/common/checker.h"
 #include "test/common/conv_bias.h"
 #include "test/common/rng.h"
@@ -11,6 +12,7 @@
 #include "test/cuda/utils.h"
 
 #include <cudnn.h>
+#include <gtest/gtest.h>
 
 #define V1(x) #x
 #define V(x)  V1(x)
@@ -37,9 +39,6 @@ TEST_F(CUDA, REGION_RESTRICTED_CONV_FORWARD_LARGE_FILTER) {
             UniformIntRNG r_rng{0, 2};
             checker.set_rng(0, &rng).set_rng(1, &rng).set_rng(2, &r_rng).set_rng(
                     3, &r_rng);
-            if (dt.enumv() == DTypeEnum::Float16) {
-                checker.set_epsilon(1e-1);
-            }
 
             cur_param.pad_h = cur_param.pad_w = padding;
             cur_param.stride_h = cur_param.stride_w = stride;
@@ -49,11 +48,32 @@ TEST_F(CUDA, REGION_RESTRICTED_CONV_FORWARD_LARGE_FILTER) {
             checker.set_param(cur_param).execs(
                     {{n, g, h, h}, {g, 1, 1, fh, fh}, {n, h, h}, {n, ho, ho}, {}});
         };
+        run(1, 1, 3, 2, 1, 1);
+        run(1, 1, 5, 2, 1, 1);
+        run(1, 1, 6, 2, 1, 1);
+        run(1, 1, 7, 2, 1, 1);
+        run(1, 1, 9, 2, 1, 1);
+        run(1, 1, 10, 2, 1, 1);
+        run(1, 1, 11, 2, 1, 1);
+        run(1, 1, 13, 2, 1, 1);
+        run(1, 1, 14, 2, 1, 1);
+        run(1, 1, 15, 2, 1, 1);
+        run(1, 1, 17, 2, 1, 1);
+        run(1, 1, 18, 2, 1, 1);
+        run(1, 1, 19, 2, 1, 1);
+        run(1, 1, 21, 2, 1, 1);
+        run(1, 1, 22, 2, 1, 1);
+        run(1, 1, 23, 2, 1, 1);
+        run(1, 1, 25, 2, 1, 1);
+        run(1, 1, 26, 2, 1, 1);
+        run(1, 1, 27, 2, 1, 1);
+        run(1, 1, 29, 2, 1, 1);
+        run(1, 1, 30, 2, 1, 1);
+        run(1, 1, 31, 2, 1, 1);
         run(4, 8, 32, 3, 3 / 2, 1);
         run(4, 8, 32, 5, 5 / 2, 1);
         run(4, 8, 32, 7, 7 / 2, 1);
-        run(1, 2, 32, 9, 9 / 2, 1);
-        run(4, 1, 32, 9, 9 / 2, 1);
+        run(4, 8, 32, 9, 9 / 2, 1);
         run(4, 8, 32, 11, 11 / 2, 1);
         run(4, 8, 32, 13, 13 / 2, 1);
         run(4, 8, 32, 15, 15 / 2, 1);
@@ -65,12 +85,27 @@ TEST_F(CUDA, REGION_RESTRICTED_CONV_FORWARD_LARGE_FILTER) {
         run(4, 8, 32, 27, 27 / 2, 1);
         run(4, 8, 32, 29, 29 / 2, 1);
         run(4, 8, 32, 31, 31 / 2, 1);
+        run(4, 8, 31, 3, 3 / 2, 1);
+        run(4, 8, 31, 5, 5 / 2, 1);
+        run(4, 8, 31, 7, 7 / 2, 1);
+        run(4, 8, 31, 9, 9 / 2, 1);
+        run(4, 8, 31, 11, 11 / 2, 1);
+        run(4, 8, 31, 13, 13 / 2, 1);
+        run(4, 8, 31, 15, 15 / 2, 1);
+        run(4, 8, 31, 17, 17 / 2, 1);
+        run(4, 8, 31, 19, 19 / 2, 1);
+        run(4, 8, 31, 21, 21 / 2, 1);
+        run(4, 8, 31, 23, 23 / 2, 1);
+        run(4, 8, 31, 25, 25 / 2, 1);
+        run(4, 8, 31, 27, 27 / 2, 1);
+        run(4, 8, 31, 29, 29 / 2, 1);
+        run(4, 8, 31, 31, 31 / 2, 1);
     }
 }
 
 #if MEGDNN_WITH_BENCHMARK
 
-TEST_F(CUDA, BENCHMARK_REGION_RESTRICTED_CONV_FORWARD_LARGE_FILTER_FP32) {
+TEST_F(CUDA, BENCHMARK_REGION_RESTRICTED_CONV_FORWARD_LARGE_FILTER_FP32_INT32) {
     require_compute_capability(7, 5);
     Benchmarker<ConvBiasForward> bencher(handle_cuda());
     bencher.set_display(false);
@@ -153,24 +188,24 @@ TEST_F(CUDA, BENCHMARK_REGION_RESTRICTED_CONV_FORWARD_LARGE_FILTER_FP32) {
                time_in_ms / rr_time_in_ms);
     };
 
-    run_bench(64, 384, 32, 32, 3, 3, 1, 1, 10);
-    run_bench(64, 384, 32, 32, 5, 5, 1, 1, 10);
-    run_bench(64, 384, 32, 32, 7, 7, 1, 1, 10);
-    run_bench(64, 384, 32, 32, 9, 9, 1, 1, 10);
-    run_bench(64, 384, 32, 32, 11, 11, 1, 1, 10);
-    run_bench(64, 384, 32, 32, 13, 13, 1, 1, 10);
-    run_bench(64, 384, 32, 32, 15, 15, 1, 1, 10);
-    run_bench(64, 384, 32, 32, 17, 17, 1, 1, 10);
-    run_bench(64, 384, 32, 32, 19, 19, 1, 1, 10);
-    run_bench(64, 384, 32, 32, 21, 21, 1, 1, 10);
-    run_bench(64, 384, 32, 32, 23, 23, 1, 1, 10);
-    run_bench(64, 384, 32, 32, 25, 25, 1, 1, 10);
-    run_bench(64, 384, 32, 32, 27, 27, 1, 1, 10);
-    run_bench(64, 384, 32, 32, 29, 29, 1, 1, 10);
-    run_bench(64, 384, 32, 32, 31, 31, 1, 1, 10);
+    run_bench(64, 384, 32, 32, 3, 3, 1, 1, 1000);
+    run_bench(64, 384, 32, 32, 5, 5, 1, 1, 1000);
+    run_bench(64, 384, 32, 32, 7, 7, 1, 1, 1000);
+    run_bench(64, 384, 32, 32, 9, 9, 1, 1, 1000);
+    run_bench(64, 384, 32, 32, 11, 11, 1, 1, 1000);
+    run_bench(64, 384, 32, 32, 13, 13, 1, 1, 1000);
+    run_bench(64, 384, 32, 32, 15, 15, 1, 1, 1000);
+    run_bench(64, 384, 32, 32, 17, 17, 1, 1, 1000);
+    run_bench(64, 384, 32, 32, 19, 19, 1, 1, 1000);
+    run_bench(64, 384, 32, 32, 21, 21, 1, 1, 1000);
+    run_bench(64, 384, 32, 32, 23, 23, 1, 1, 1000);
+    run_bench(64, 384, 32, 32, 25, 25, 1, 1, 1000);
+    run_bench(64, 384, 32, 32, 27, 27, 1, 1, 1000);
+    run_bench(64, 384, 32, 32, 29, 29, 1, 1, 1000);
+    run_bench(64, 384, 32, 32, 31, 31, 1, 1, 1000);
 }
 
-TEST_F(CUDA, BENCHMARK_REGION_RESTRICTED_CONV_BACKWARD_LARGE_FILTER_FP32) {
+TEST_F(CUDA, BENCHMARK_REGION_RESTRICTED_CONV_BACKWARD_DATA_FP32_INT32) {
     require_compute_capability(7, 5);
     Benchmarker<ConvolutionBackwardData> bencher(handle_cuda());
     bencher.set_display(false);
@@ -251,24 +286,24 @@ TEST_F(CUDA, BENCHMARK_REGION_RESTRICTED_CONV_BACKWARD_LARGE_FILTER_FP32) {
                time_in_ms / rr_time_in_ms);
     };
 
-    run_bench(64, 384, 32, 32, 3, 3, 1, 1, 10);
-    run_bench(64, 384, 32, 32, 5, 5, 1, 1, 10);
-    run_bench(64, 384, 32, 32, 7, 7, 1, 1, 10);
-    run_bench(64, 384, 32, 32, 9, 9, 1, 1, 10);
-    run_bench(64, 384, 32, 32, 11, 11, 1, 1, 10);
-    run_bench(64, 384, 32, 32, 13, 13, 1, 1, 10);
-    run_bench(64, 384, 32, 32, 15, 15, 1, 1, 10);
-    run_bench(64, 384, 32, 32, 17, 17, 1, 1, 10);
-    run_bench(64, 384, 32, 32, 19, 19, 1, 1, 10);
-    run_bench(64, 384, 32, 32, 21, 21, 1, 1, 10);
-    run_bench(64, 384, 32, 32, 23, 23, 1, 1, 10);
-    run_bench(64, 384, 32, 32, 25, 25, 1, 1, 10);
-    run_bench(64, 384, 32, 32, 27, 27, 1, 1, 10);
-    run_bench(64, 384, 32, 32, 29, 29, 1, 1, 10);
-    run_bench(64, 384, 32, 32, 31, 31, 1, 1, 10);
+    run_bench(64, 384, 32, 32, 3, 3, 1, 1, 1000);
+    run_bench(64, 384, 32, 32, 5, 5, 1, 1, 1000);
+    run_bench(64, 384, 32, 32, 7, 7, 1, 1, 1000);
+    run_bench(64, 384, 32, 32, 9, 9, 1, 1, 1000);
+    run_bench(64, 384, 32, 32, 11, 11, 1, 1, 1000);
+    run_bench(64, 384, 32, 32, 13, 13, 1, 1, 1000);
+    run_bench(64, 384, 32, 32, 15, 15, 1, 1, 1000);
+    run_bench(64, 384, 32, 32, 17, 17, 1, 1, 1000);
+    run_bench(64, 384, 32, 32, 19, 19, 1, 1, 1000);
+    run_bench(64, 384, 32, 32, 21, 21, 1, 1, 1000);
+    run_bench(64, 384, 32, 32, 23, 23, 1, 1, 1000);
+    run_bench(64, 384, 32, 32, 25, 25, 1, 1, 1000);
+    run_bench(64, 384, 32, 32, 27, 27, 1, 1, 1000);
+    run_bench(64, 384, 32, 32, 29, 29, 1, 1, 1000);
+    run_bench(64, 384, 32, 32, 31, 31, 1, 1, 1000);
 }
 
-TEST_F(CUDA, BENCHMARK_REGION_RESTRICTED_CONV_BACKWARD_LARGE_FILTER_FP32_UINT8) {
+TEST_F(CUDA, BENCHMARK_REGION_RESTRICTED_CONV_BACKWARD_DATA_FP32_UINT8) {
     require_compute_capability(7, 5);
     Benchmarker<ConvolutionBackwardData> bencher(handle_cuda());
     bencher.set_display(false);
@@ -349,21 +384,36 @@ TEST_F(CUDA, BENCHMARK_REGION_RESTRICTED_CONV_BACKWARD_LARGE_FILTER_FP32_UINT8) 
                time_in_ms / rr_time_in_ms);
     };
 
-    run_bench(64, 384, 32, 32, 3, 3, 1, 1, 10);
-    run_bench(64, 384, 32, 32, 5, 5, 1, 1, 10);
-    run_bench(64, 384, 32, 32, 7, 7, 1, 1, 10);
-    run_bench(64, 384, 32, 32, 9, 9, 1, 1, 10);
-    run_bench(64, 384, 32, 32, 11, 11, 1, 1, 10);
-    run_bench(64, 384, 32, 32, 13, 13, 1, 1, 10);
-    run_bench(64, 384, 32, 32, 15, 15, 1, 1, 10);
-    run_bench(64, 384, 32, 32, 17, 17, 1, 1, 10);
-    run_bench(64, 384, 32, 32, 19, 19, 1, 1, 10);
-    run_bench(64, 384, 32, 32, 21, 21, 1, 1, 10);
-    run_bench(64, 384, 32, 32, 23, 23, 1, 1, 10);
-    run_bench(64, 384, 32, 32, 25, 25, 1, 1, 10);
-    run_bench(64, 384, 32, 32, 27, 27, 1, 1, 10);
-    run_bench(64, 384, 32, 32, 29, 29, 1, 1, 10);
-    run_bench(64, 384, 32, 32, 31, 31, 1, 1, 10);
+    run_bench(64, 384, 32, 32, 3, 3, 1, 1, 1000);
+    run_bench(64, 384, 32, 32, 5, 5, 1, 1, 1000);
+    run_bench(64, 384, 32, 32, 7, 7, 1, 1, 1000);
+    run_bench(64, 384, 32, 32, 9, 9, 1, 1, 1000);
+    run_bench(64, 384, 32, 32, 11, 11, 1, 1, 1000);
+    run_bench(64, 384, 32, 32, 13, 13, 1, 1, 1000);
+    run_bench(64, 384, 32, 32, 15, 15, 1, 1, 1000);
+    run_bench(64, 384, 32, 32, 17, 17, 1, 1, 1000);
+    run_bench(64, 384, 32, 32, 19, 19, 1, 1, 1000);
+    run_bench(64, 384, 32, 32, 21, 21, 1, 1, 1000);
+    run_bench(64, 384, 32, 32, 23, 23, 1, 1, 1000);
+    run_bench(64, 384, 32, 32, 25, 25, 1, 1, 1000);
+    run_bench(64, 384, 32, 32, 27, 27, 1, 1, 1000);
+    run_bench(64, 384, 32, 32, 29, 29, 1, 1, 1000);
+    run_bench(64, 384, 32, 32, 31, 31, 1, 1, 1000);
+    run_bench(64, 384, 31, 31, 3, 3, 1, 1, 1000);
+    run_bench(64, 384, 31, 31, 5, 5, 1, 1, 1000);
+    run_bench(64, 384, 31, 31, 7, 7, 1, 1, 1000);
+    run_bench(64, 384, 31, 31, 9, 9, 1, 1, 1000);
+    run_bench(64, 384, 31, 31, 11, 11, 1, 1, 1000);
+    run_bench(64, 384, 31, 31, 13, 13, 1, 1, 1000);
+    run_bench(64, 384, 31, 31, 15, 15, 1, 1, 1000);
+    run_bench(64, 384, 31, 31, 17, 17, 1, 1, 1000);
+    run_bench(64, 384, 31, 31, 19, 19, 1, 1, 1000);
+    run_bench(64, 384, 31, 31, 21, 21, 1, 1, 1000);
+    run_bench(64, 384, 31, 31, 23, 23, 1, 1, 1000);
+    run_bench(64, 384, 31, 31, 25, 25, 1, 1, 1000);
+    run_bench(64, 384, 31, 31, 27, 27, 1, 1, 1000);
+    run_bench(64, 384, 31, 31, 29, 29, 1, 1, 1000);
+    run_bench(64, 384, 31, 31, 31, 31, 1, 1, 1000);
 }
 
 TEST_F(CUDA, BENCHMARK_REGION_RESTRICTED_CONV_FORWARD_LARGE_FILTER_UINT8) {
@@ -449,21 +499,36 @@ TEST_F(CUDA, BENCHMARK_REGION_RESTRICTED_CONV_FORWARD_LARGE_FILTER_UINT8) {
                time_in_ms / rr_time_in_ms);
     };
 
-    run_bench(64, 384, 32, 32, 3, 3, 1, 1, 10);
-    run_bench(64, 384, 32, 32, 5, 5, 1, 1, 10);
-    run_bench(64, 384, 32, 32, 7, 7, 1, 1, 10);
-    run_bench(64, 384, 32, 32, 9, 9, 1, 1, 10);
-    run_bench(64, 384, 32, 32, 11, 11, 1, 1, 10);
-    run_bench(64, 384, 32, 32, 13, 13, 1, 1, 10);
-    run_bench(64, 384, 32, 32, 15, 15, 1, 1, 10);
-    run_bench(64, 384, 32, 32, 17, 17, 1, 1, 10);
-    run_bench(64, 384, 32, 32, 19, 19, 1, 1, 10);
-    run_bench(64, 384, 32, 32, 21, 21, 1, 1, 10);
-    run_bench(64, 384, 32, 32, 23, 23, 1, 1, 10);
-    run_bench(64, 384, 32, 32, 25, 25, 1, 1, 10);
-    run_bench(64, 384, 32, 32, 27, 27, 1, 1, 10);
-    run_bench(64, 384, 32, 32, 29, 29, 1, 1, 10);
-    run_bench(64, 384, 32, 32, 31, 31, 1, 1, 10);
+    run_bench(64, 384, 32, 32, 3, 3, 1, 1, 1000);
+    run_bench(64, 384, 32, 32, 5, 5, 1, 1, 1000);
+    run_bench(64, 384, 32, 32, 7, 7, 1, 1, 1000);
+    run_bench(64, 384, 32, 32, 9, 9, 1, 1, 1000);
+    run_bench(64, 384, 32, 32, 11, 11, 1, 1, 1000);
+    run_bench(64, 384, 32, 32, 13, 13, 1, 1, 1000);
+    run_bench(64, 384, 32, 32, 15, 15, 1, 1, 1000);
+    run_bench(64, 384, 32, 32, 17, 17, 1, 1, 1000);
+    run_bench(64, 384, 32, 32, 19, 19, 1, 1, 1000);
+    run_bench(64, 384, 32, 32, 21, 21, 1, 1, 1000);
+    run_bench(64, 384, 32, 32, 23, 23, 1, 1, 1000);
+    run_bench(64, 384, 32, 32, 25, 25, 1, 1, 1000);
+    run_bench(64, 384, 32, 32, 27, 27, 1, 1, 1000);
+    run_bench(64, 384, 32, 32, 29, 29, 1, 1, 1000);
+    run_bench(64, 384, 32, 32, 31, 31, 1, 1, 1000);
+    run_bench(64, 384, 31, 31, 3, 3, 1, 1, 1000);
+    run_bench(64, 384, 31, 31, 5, 5, 1, 1, 1000);
+    run_bench(64, 384, 31, 31, 7, 7, 1, 1, 1000);
+    run_bench(64, 384, 31, 31, 9, 9, 1, 1, 1000);
+    run_bench(64, 384, 31, 31, 11, 11, 1, 1, 1000);
+    run_bench(64, 384, 31, 31, 13, 13, 1, 1, 1000);
+    run_bench(64, 384, 31, 31, 15, 15, 1, 1, 1000);
+    run_bench(64, 384, 31, 31, 17, 17, 1, 1, 1000);
+    run_bench(64, 384, 31, 31, 19, 19, 1, 1, 1000);
+    run_bench(64, 384, 31, 31, 21, 21, 1, 1, 1000);
+    run_bench(64, 384, 31, 31, 23, 23, 1, 1, 1000);
+    run_bench(64, 384, 31, 31, 25, 25, 1, 1, 1000);
+    run_bench(64, 384, 31, 31, 27, 27, 1, 1, 1000);
+    run_bench(64, 384, 31, 31, 29, 29, 1, 1, 1000);
+    run_bench(64, 384, 31, 31, 31, 31, 1, 1, 1000);
 }
 
 TEST_F(CUDA, BENCHMARK_REGION_RESTRICTED_CONV_BACKWARD_FILTER_FP32) {
@@ -538,7 +603,7 @@ TEST_F(CUDA, BENCHMARK_REGION_RESTRICTED_CONV_BACKWARD_FILTER_FP32) {
         auto rr_time_in_ms = rr_bencher.execs({src, diff, rin, rout, grad}) / nr_times;
         auto rr_ops =
                 2.0 * batch * g * hi * wi * fh * fw / (rr_time_in_ms * 1e-3) * 1e-12;
-        printf("[DGRAD]RegionRestrictedDepthwiseLargeFilter vs DepthwiseLargeFilter: "
+        printf("[WGRAD]RegionRestrictedDepthwiseLargeFilter vs DepthwiseLargeFilter: "
                "src=%s, "
                "diff=%s, grad=%s\n"
                "time: %.2f ms, time(rr): %.2f ms, perf: %.2fTops, perf(rr): %.2f Tops\n"
@@ -638,7 +703,7 @@ TEST_F(CUDA, BENCHMARK_REGION_RESTRICTED_CONV_BACKWARD_FILTER_FP32_RINT8) {
         auto rr_time_in_ms = rr_bencher.execs({src, diff, rin, rout, grad}) / nr_times;
         auto rr_ops =
                 2.0 * batch * g * hi * wi * fh * fw / (rr_time_in_ms * 1e-3) * 1e-12;
-        printf("[DGRAD]RegionRestrictedDepthwiseLargeFilter vs DepthwiseLargeFilter: "
+        printf("[WGRAD]RegionRestrictedDepthwiseLargeFilter vs DepthwiseLargeFilter: "
                "src=%s, "
                "diff=%s, grad=%s\n"
                "time: %.2f ms, time(rr): %.2f ms, perf: %.2fTops, perf(rr): %.2f Tops\n"
@@ -703,15 +768,30 @@ TEST_F(CUDA, REGION_RESTRICTED_CONV_BWD_DATA_FP32) {
                     {n, g * 1, ih, ih}   // grad
             });
         };
-        if (dt == dtype::Int32()) {
-            run(4, 8, 32, 5, 5 / 2, 1);
-            run(1, 2, 2, 2, 0, 1);
-            run(1, 2, 3, 3, 0, 1);
-            run(1, 2, 4, 4, 0, 1);
-            run(1, 2, 5, 5, 0, 1);
-            run(1, 2, 6, 6, 0, 1);
-            run(1, 2, 7, 7, 0, 1);
-        }
+        run(1, 1, 3, 2, 1, 1);
+        run(1, 1, 5, 2, 1, 1);
+        run(1, 1, 6, 2, 1, 1);
+        run(1, 1, 7, 2, 1, 1);
+        run(1, 1, 9, 2, 1, 1);
+        run(1, 1, 10, 2, 1, 1);
+        run(1, 1, 11, 2, 1, 1);
+        run(1, 1, 13, 2, 1, 1);
+        run(1, 1, 14, 2, 1, 1);
+        run(1, 1, 15, 2, 1, 1);
+        run(1, 1, 17, 2, 1, 1);
+        run(1, 1, 18, 2, 1, 1);
+        run(1, 1, 19, 2, 1, 1);
+        run(1, 1, 21, 2, 1, 1);
+        run(1, 1, 22, 2, 1, 1);
+        run(1, 1, 23, 2, 1, 1);
+        run(1, 1, 25, 2, 1, 1);
+        run(1, 1, 26, 2, 1, 1);
+        run(1, 1, 27, 2, 1, 1);
+        run(1, 1, 29, 2, 1, 1);
+        run(1, 1, 30, 2, 1, 1);
+        run(1, 1, 31, 2, 1, 1);
+        run(4, 8, 32, 3, 3 / 2, 1);
+        run(4, 8, 32, 5, 5 / 2, 1);
         run(4, 8, 32, 7, 7 / 2, 1);
         run(4, 8, 32, 9, 9 / 2, 1);
         run(4, 8, 32, 11, 11 / 2, 1);
@@ -724,8 +804,22 @@ TEST_F(CUDA, REGION_RESTRICTED_CONV_BWD_DATA_FP32) {
         run(4, 8, 32, 25, 25 / 2, 1);
         run(4, 8, 32, 27, 27 / 2, 1);
         run(4, 8, 32, 29, 29 / 2, 1);
-        run(4, 1, 32, 29, 29 / 2, 1);
         run(4, 8, 32, 31, 31 / 2, 1);
+        run(4, 8, 31, 3, 3 / 2, 1);
+        run(4, 8, 31, 5, 5 / 2, 1);
+        run(4, 8, 31, 7, 7 / 2, 1);
+        run(4, 8, 31, 9, 9 / 2, 1);
+        run(4, 8, 31, 11, 11 / 2, 1);
+        run(4, 8, 31, 13, 13 / 2, 1);
+        run(4, 8, 31, 15, 15 / 2, 1);
+        run(4, 8, 31, 17, 17 / 2, 1);
+        run(4, 8, 31, 19, 19 / 2, 1);
+        run(4, 8, 31, 21, 21 / 2, 1);
+        run(4, 8, 31, 23, 23 / 2, 1);
+        run(4, 8, 31, 25, 25 / 2, 1);
+        run(4, 8, 31, 27, 27 / 2, 1);
+        run(4, 8, 31, 29, 29 / 2, 1);
+        run(4, 8, 31, 31, 31 / 2, 1);
     }
 }
 
@@ -761,16 +855,30 @@ TEST_F(CUDA, REGION_RESTRICTED_CONV_BWD_DATA_FP32_RIN_EQ_ROUT) {
                      /*rout*/ {n, oh, oh},
                      /*grad*/ {n, g * 1, ih, ih}});
         };
-        if (dt == dtype::Int32()) {
-            // NOTE: UINT8 assert the spatial size of src&dst is 4*N
-            run(4, 8, 32, 5, 5 / 2, 1);
-            run(1, 2, 2, 2, 0, 1);
-            run(1, 2, 3, 3, 0, 1);
-            run(1, 2, 4, 4, 0, 1);
-            run(1, 2, 5, 5, 0, 1);
-            run(1, 2, 6, 6, 0, 1);
-            run(1, 2, 7, 7, 0, 1);
-        }
+        run(1, 1, 3, 2, 1, 1);
+        run(1, 1, 5, 2, 1, 1);
+        run(1, 1, 6, 2, 1, 1);
+        run(1, 1, 7, 2, 1, 1);
+        run(1, 1, 9, 2, 1, 1);
+        run(1, 1, 10, 2, 1, 1);
+        run(1, 1, 11, 2, 1, 1);
+        run(1, 1, 13, 2, 1, 1);
+        run(1, 1, 14, 2, 1, 1);
+        run(1, 1, 15, 2, 1, 1);
+        run(1, 1, 17, 2, 1, 1);
+        run(1, 1, 18, 2, 1, 1);
+        run(1, 1, 19, 2, 1, 1);
+        run(1, 1, 21, 2, 1, 1);
+        run(1, 1, 22, 2, 1, 1);
+        run(1, 1, 23, 2, 1, 1);
+        run(1, 1, 25, 2, 1, 1);
+        run(1, 1, 26, 2, 1, 1);
+        run(1, 1, 27, 2, 1, 1);
+        run(1, 1, 29, 2, 1, 1);
+        run(1, 1, 30, 2, 1, 1);
+        run(1, 1, 31, 2, 1, 1);
+        run(4, 8, 32, 3, 3 / 2, 1);
+        run(4, 8, 32, 5, 5 / 2, 1);
         run(4, 8, 32, 7, 7 / 2, 1);
         run(4, 8, 32, 9, 9 / 2, 1);
         run(4, 8, 32, 11, 11 / 2, 1);
@@ -781,10 +889,24 @@ TEST_F(CUDA, REGION_RESTRICTED_CONV_BWD_DATA_FP32_RIN_EQ_ROUT) {
         run(4, 8, 32, 21, 21 / 2, 1);
         run(4, 8, 32, 23, 23 / 2, 1);
         run(4, 8, 32, 25, 25 / 2, 1);
-        run(4, 1, 32, 25, 25 / 2, 1);
         run(4, 8, 32, 27, 27 / 2, 1);
         run(4, 8, 32, 29, 29 / 2, 1);
         run(4, 8, 32, 31, 31 / 2, 1);
+        run(4, 8, 31, 3, 3 / 2, 1);
+        run(4, 8, 31, 5, 5 / 2, 1);
+        run(4, 8, 31, 7, 7 / 2, 1);
+        run(4, 8, 31, 9, 9 / 2, 1);
+        run(4, 8, 31, 11, 11 / 2, 1);
+        run(4, 8, 31, 13, 13 / 2, 1);
+        run(4, 8, 31, 15, 15 / 2, 1);
+        run(4, 8, 31, 17, 17 / 2, 1);
+        run(4, 8, 31, 19, 19 / 2, 1);
+        run(4, 8, 31, 21, 21 / 2, 1);
+        run(4, 8, 31, 23, 23 / 2, 1);
+        run(4, 8, 31, 25, 25 / 2, 1);
+        run(4, 8, 31, 27, 27 / 2, 1);
+        run(4, 8, 31, 29, 29 / 2, 1);
+        run(4, 8, 31, 31, 31 / 2, 1);
     }
 }
 
@@ -824,15 +946,13 @@ TEST_F(CUDA, REGION_RESTRICTED_CONV_BWD_FILTER_FP32) {
                     {g, 1, 1, fh, fh}    // grad
             });
         };
-        if (dt == dtype::Int32()) {
-            run(4, 8, 32, 5, 5 / 2, 1);
-            run(1, 2, 2, 2, 0, 1);
-            run(1, 2, 3, 3, 0, 1);
-            run(1, 2, 4, 4, 0, 1);
-            run(1, 2, 5, 5, 0, 1);
-            run(1, 2, 6, 6, 0, 1);
-            run(1, 2, 7, 7, 0, 1);
-        }
+        run(4, 8, 32, 5, 5 / 2, 1);
+        run(1, 2, 2, 2, 0, 1);
+        run(1, 2, 3, 3, 0, 1);
+        run(1, 2, 4, 4, 0, 1);
+        run(1, 2, 5, 5, 0, 1);
+        run(1, 2, 6, 6, 0, 1);
+        run(1, 2, 7, 7, 0, 1);
         run(4, 8, 32, 7, 7 / 2, 1);
         run(4, 8, 32, 9, 9 / 2, 1);
         run(4, 8, 32, 11, 11 / 2, 1);
@@ -886,15 +1006,13 @@ TEST_F(CUDA, REGION_RESTRICTED_CONV_BWD_FILTER_FP32_RIN_EQ_ROUT) {
                     {g, 1, 1, fh, fh}    // grad
             });
         };
-        if (dt == dtype::Int32()) {
-            run(4, 8, 32, 5, 5 / 2, 1);
-            run(1, 2, 2, 2, 0, 1);
-            run(1, 2, 3, 3, 0, 1);
-            run(1, 2, 4, 4, 0, 1);
-            run(1, 2, 5, 5, 0, 1);
-            run(1, 2, 6, 6, 0, 1);
-            run(1, 2, 7, 7, 0, 1);
-        }
+        run(4, 8, 32, 5, 5 / 2, 1);
+        run(1, 2, 2, 2, 0, 1);
+        run(1, 2, 3, 3, 0, 1);
+        run(1, 2, 4, 4, 0, 1);
+        run(1, 2, 5, 5, 0, 1);
+        run(1, 2, 6, 6, 0, 1);
+        run(1, 2, 7, 7, 0, 1);
         run(4, 8, 32, 7, 7 / 2, 1);
         run(4, 8, 32, 9, 9 / 2, 1);
         run(4, 8, 32, 11, 11 / 2, 1);

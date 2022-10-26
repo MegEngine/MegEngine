@@ -25,9 +25,6 @@ void RegionRestrictedConvolutionForwardImpl::exec(
             fm.spatial_ndim == 2 && fm.icpg == 1 && fm.ocpg == 1 &&
             fm.dilation[0] == 1 && fm.dilation[1] == 1 && !fm.should_flip &&
             param().stride_h == 1 && param().stride_w == 1);
-    if (rin.layout.dtype == dtype::Uint8()) {
-        megdnn_assert((src.layout.shape[3] & 3) == 0 && (dst.layout.shape[3] & 3) == 0);
-    }
 
     auto stream = cuda_stream(handle());
 
@@ -43,6 +40,7 @@ void RegionRestrictedConvolutionForwardImpl::exec(
                 dst.ptr<float>(), src.ptr<float>(), filter.ptr<float>(),
                 rin.ptr<uint8_t>(), rout.ptr<uint8_t>(), kparam, stream);
     } else {
+        printf("unexpected region restricted conv mode\n");
         megdnn_assert_internal(0);
     }
 }
@@ -81,11 +79,6 @@ void RegionRestrictedConvolutionBackwardDataImpl::exec(
             fm.spatial_ndim == 2 && fm.icpg == 1 && fm.ocpg == 1 &&
             fm.dilation[0] == 1 && fm.dilation[1] == 1 && !fm.should_flip &&
             param().stride_h == 1 && param().stride_w == 1);
-    // NOTE: uint8 dtype region mask requires the spatial size of src&dst is 4*N
-    if (rin.layout.dtype == dtype::Uint8()) {
-        megdnn_assert(
-                (grad.layout.shape[3] & 3) == 0 && (diff.layout.shape[3] & 3) == 0);
-    }
     auto stream = cuda_stream(handle());
     if (filter.layout.dtype == dtype::Float32() && rin.layout.dtype == dtype::Int32() &&
         rout.layout.dtype == dtype::Int32()) {
@@ -135,8 +128,6 @@ void RegionRestrictedConvolutionBackwardFilterImpl::exec(
     int ph = fm.padding[0], pw = fm.padding[1];
     int dh = 0, dw = 0;
 
-    // check if channelwise convolution
-    megdnn_assert(fm.icpg == 1 && fm.ocpg == 1);
     auto stream = cuda_stream(handle());
 
     float alpha = 1.f;

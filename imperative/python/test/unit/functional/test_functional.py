@@ -1061,8 +1061,8 @@ def test_region_restricted_conv_forward_backward_uint8(bias, groups):
     N = 1
     GROUP = groups
     FH = FW = 1
-    IH = IW = 4
-    OH = OW = 4
+    IH = IW = 3
+    OH = OW = 3
     ICPG = OCPG = 1
     grad_shape = (N, GROUP * ICPG, IH, IW)
     src_shape = grad_shape

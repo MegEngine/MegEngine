@@ -784,20 +784,24 @@ __global__ void DepthwiseConv2dGPUKernelNCHW(
     static_assert((OutTileConfig::unroll_w & 3) == 0, "output tile unroll_w & 3 != 0");
     static_assert((OutTileConfig::block_w & 3) == 0, "output block_w & 3 != 0");
     int reg_rout[OutTileConfig::unroll_size] = {0};
+    int relative_offset = sizeof(dt_int32) / sizeof(dt_uint8);
 #pragma unroll
     for (int i = 0; i < OutTileConfig::unroll_h; ++i) {
         int out_h_idx = out_base_h_idx + i;
         if (out_h_idx < param.out_h) {
 #pragma unroll
-            for (int j = 0; j < OutTileConfig::unroll_w; j += 4) {
+            for (int j = 0; j < OutTileConfig::unroll_w; j += relative_offset) {
                 int out_w_idx = out_start_w + j;
                 if (out_w_idx < param.out_w) {
-                    uint32_t val = *(reinterpret_cast<const uint32_t*>(
-                            &rout_base_ptr[out_h_idx * param.out_w + out_w_idx]));
-                    reg_rout[i * OutTileConfig::unroll_w + j] = val & 0xff;
-                    reg_rout[i * OutTileConfig::unroll_w + j + 1] = (val >> 8) & 0xff;
-                    reg_rout[i * OutTileConfig::unroll_w + j + 2] = (val >> 16) & 0xff;
-                    reg_rout[i * OutTileConfig::unroll_w + j + 3] = (val >> 24) & 0xff;
+                    int valid_offset = relative_offset + out_w_idx > param.out_w
+                                             ? param.out_w - out_w_idx
+                                             : relative_offset;
+#pragma unroll
+                    for (int t = 0; t < valid_offset; t += 1) {
+                        uint8_t val =
+                                rout_base_ptr[out_h_idx * param.out_w + out_w_idx + t];
+                        reg_rout[i * OutTileConfig::unroll_w + j + t] = val & 0xff;
+                    }
                 }
             }
         }
@@ -855,21 +859,23 @@ __global__ void DepthwiseConv2dGPUKernelNCHW(
         int s_idx = (off_oh * stride_h + s_h) % SrcTileCount::smem_h *
                             SrcTileCount::smem_w +
                     (off_oh * stride_h + s_h) / SrcTileCount::bank_offset_line;
+        int r_idx = (off_oh * stride_h + s_h) % RinTileCount::smem_h *
+                            RinTileCount::smem_w +
+                    (off_oh * stride_h + s_h) / RinTileCount::bank_offset_line;
 #pragma unroll
-        for (int s_w = 0; s_w < irin_unroll_w; s_w += 4) {
-            uint32_t val = smem_rin_ptr
-                    [(off_oh * stride_h + s_h) % RinTileCount::smem_h *
-                             RinTileCount::smem_w +
-                     (s_w >> 2) +
-                     (off_oh * stride_h + s_h) / RinTileCount::bank_offset_line];
-            reg_src[0][s_h * irin_unroll_w + s_w] = smem_src_ptr[s_idx + s_w];
-            reg_src[0][s_h * irin_unroll_w + s_w + 1] = smem_src_ptr[s_idx + s_w + 1];
-            reg_src[0][s_h * irin_unroll_w + s_w + 2] = smem_src_ptr[s_idx + s_w + 2];
-            reg_src[0][s_h * irin_unroll_w + s_w + 3] = smem_src_ptr[s_idx + s_w + 3];
-            reg_rin[0][s_h * irin_unroll_w + s_w] = val & 0xff;
-            reg_rin[0][s_h * irin_unroll_w + s_w + 1] = (val >> 8) & 0xff;
-            reg_rin[0][s_h * irin_unroll_w + s_w + 2] = (val >> 16) & 0xff;
-            reg_rin[0][s_h * irin_unroll_w + s_w + 3] = (val >> 24) & 0xff;
+        for (int s_w = 0; s_w < SrcTileConfig::unroll_w; ++s_w) {
+            reg_src[0][s_h * SrcTileConfig::unroll_w + s_w] = smem_src_ptr[s_idx + s_w];
+        }
+#pragma unroll
+        for (int s_w = 0; s_w < irin_unroll_w; s_w += relative_offset) {
+            reg_rin[0][s_h * irin_unroll_w + s_w] =
+                    (smem_rin_ptr[r_idx + (s_w >> 2)]) & 0xff;
+            reg_rin[0][s_h * irin_unroll_w + s_w + 1] =
+                    (smem_rin_ptr[r_idx + (s_w >> 2)] >> 8) & 0xff;
+            reg_rin[0][s_h * irin_unroll_w + s_w + 2] =
+                    (smem_rin_ptr[r_idx + (s_w >> 2)] >> 16) & 0xff;
+            reg_rin[0][s_h * irin_unroll_w + s_w + 3] =
+                    (smem_rin_ptr[r_idx + (s_w >> 2)] >> 24) & 0xff;
         }
     }
 
@@ -1108,6 +1114,7 @@ void LaunchDepthwiseConv2dGPU(
     if (param.is_compute_deafult) {
         kernel = DepthwiseConv2dGPUKernelNCHW<IConvTrait, kDirection, stride>;
     } else {
+        printf("expected dnn param compute default mode\n");
         megdnn_assert_internal(0);
     }
     if (is_fwd) {
