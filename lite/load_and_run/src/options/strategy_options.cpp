@@ -1,6 +1,7 @@
 #include "strategy_options.h"
+#include "megbrain/utils/persistent_cache.h"
+#include "megdnn/algorithm_cache.h"
 #include "models/model_mdl.h"
-
 using namespace lar;
 
 DECLARE_bool(c_opr_lib_with_param);
@@ -47,6 +48,15 @@ void StrategyOption::config_model(
             //! make output specification
             model_ptr->make_output_spec();
         }
+    } else if (runtime_param.stage == RunStage::AFTER_MODEL_RUNNING) {
+        mgb_log_debug("clear cache");
+#if LITE_WITH_OPENCL
+        megcoreOpenCLClearGlobalData();
+#else
+        megdnn::AlgorithmCache::instance().clear();
+        //! WARNING:this is used to clean the profile result cache
+        //! auto profile_cache = mgb::PersistentCache::inst().get_cache();
+#endif
     }
 }
 
