@@ -1653,3 +1653,18 @@ def test_conv_transpose3d():
     np.testing.assert_equal(
         output_shape.numpy(), np.array([20, 33, 32, 96, 197], dtype=np.int32)
     )
+
+
+@pytest.mark.skip(reason="pytest aborted")
+def test_softmax():
+    def np_softmax(x):
+        return np.exp(x) / np.sum(np.exp(x), axis=1, keepdims=True)
+
+    data = (np.random.random(size=(1, 16, 224, 224)).astype(np.float32) - 0.5) * 100
+    desired = np_softmax(data[:, :3, 0, 0])
+
+    data = Tensor(data)
+    data = data[:, :3, 0, 0]
+    actual = F.softmax(data)
+
+    np.testing.assert_allclose(actual.numpy(), desired, rtol=1e-5)
