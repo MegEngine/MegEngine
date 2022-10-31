@@ -710,6 +710,7 @@ ChannelImpl::~ChannelImpl() {
 void ChannelImpl::produce_tensor(TensorInfo* dest, TensorPtr ptr) {
     auto& state = get_worker_state();
     MGB_LOCK_GUARD(m_mutex);
+    MGB_LOCK_GUARD(m_info_spin);
     m_dtr.update_used_time(dest);
     MGB_RECORD_EVENT(
             TensorProduceEvent, dest->id, ptr->layout(), ptr->comp_node(),
