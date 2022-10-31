@@ -1,4 +1,36 @@
 # -*- coding: utf-8 -*-
+filter_package_name = 'megbrain'
+need_package_name = 'megengine'
+
+
+class MegEngineBorkenEnv(Exception):
+    pass
+
+
+import pkg_resources
+
+installed_packages = pkg_resources.working_set
+installed_packages_list = sorted(["%s" % i.key.lower() for i in installed_packages])
+is_broken_env = False
+if filter_package_name in installed_packages_list:
+    is_broken_env = True
+    print(
+        "broken env, please do uninstall {} and {}, then install {} again".format(
+            filter_package_name, need_package_name, need_package_name
+        )
+    )
+
+if "megenginelite" in installed_packages_list:
+    is_broken_env = True
+    print(
+        "broken env, please do uninstall megenginelite and {}, then install {} again".format(
+            need_package_name, need_package_name
+        )
+    )
+
+if is_broken_env:
+    raise MegEngineBorkenEnv
+
 import atexit
 import ctypes
 import re
