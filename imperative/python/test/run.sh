@@ -42,9 +42,10 @@ else
     cd $(dirname "${BASH_SOURCE[0]}")/..
     test_dirs="megengine test"
     echo "test develop env"
-    PYTHONPATH="." PY_IGNORE_IMPORTMISMATCH=1 python3 -m pytest -s -v $test_dirs -m 'not isolated_distributed'
+    TEST_PY_PATH="."
+    PYTHONPATH=${TEST_PY_PATH} PY_IGNORE_IMPORTMISMATCH=1 python3 -m pytest -s -v $test_dirs -m 'not isolated_distributed'
     if [[ "$TEST_PLAT" =~ "cuda" ]]; then
         echo "test GPU pytest now"
-        PYTHONPATH="." PY_IGNORE_IMPORTMISMATCH=1 python3 -m pytest -s -v $test_dirs -m 'isolated_distributed'
+        PYTHONPATH=${TEST_PY_PATH} PY_IGNORE_IMPORTMISMATCH=1 python3 -m pytest -s -v $test_dirs -m 'isolated_distributed'
     fi
 fi
