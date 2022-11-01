@@ -290,7 +290,7 @@ class BatchNorm2d(_BatchNorm):
         >>> oup = m(inp)
         >>> print(m.weight.numpy().flatten(), m.bias.numpy().flatten())
         [1. 1. 1. 1.] [0. 0. 0. 0.]
-        >>> # Without L`e`arnable Parameters
+        >>> # Without Learnable Parameters
         >>> m = M.BatchNorm2d(4, affine=False)
         >>> oup = m(inp)
         >>> print(m.weight, m.bias)
