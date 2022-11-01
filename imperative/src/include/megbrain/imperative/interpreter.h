@@ -7,6 +7,7 @@
 
 namespace mgb::imperative::interpreter {
 
+//! nested throw the stored exceptions
 struct AsyncError : std::nested_exception, std::exception {
     const char* what() const noexcept {
         try {
@@ -20,9 +21,16 @@ struct AsyncError : std::nested_exception, std::exception {
 };
 
 struct Interpreter {
+    /*!
+     * HandleImpl* just act as a key to represent TensorInfo
+     */
     struct HandleImpl {};
     using Handle = HandleImpl*;
 
+    /*!
+     * \brief the base command execution interface, Channel is similar to channel in
+     * golang, it executes the commands put into asynchronously.
+     */
     struct Channel {
         virtual ~Channel() = default;
 
@@ -66,3 +74,5 @@ protected:
 };
 
 }  // namespace mgb::imperative::interpreter
+
+// vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

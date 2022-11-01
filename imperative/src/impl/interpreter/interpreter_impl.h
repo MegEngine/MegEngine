@@ -27,6 +27,11 @@ struct InterpreterImpl : Interpreter {
     std::unique_ptr<Channel> create_channel() override;
 };
 
+/*!
+ * \brief implement Channel to execute the commands asynchronously,
+ * almost commands are executed by the worker threads, commands are sent
+ * by the interface
+ */
 struct ChannelImpl : Interpreter::Channel, NonCopyableObj, NonMoveableObj {
     ChannelImpl();
     ~ChannelImpl() override;
@@ -304,3 +309,5 @@ private:
 };
 
 }  // namespace mgb::imperative::interpreter::intl
+
+// vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
