@@ -163,10 +163,10 @@ hook_modules = [
 
 def register_hook_module(module):
     if isinstance(module, (tuple, list)):
-        modules = list(module)
+        modules = module
         for module in modules:
             register_hook_module(module)
-    elif isinstance(module, M.Module):
+    elif issubclass(module, M.Module):
         hook_modules.append(module)
     else:
         raise TypeError("the param type should in [list,tuple,M.Module]")
