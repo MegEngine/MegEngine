@@ -104,7 +104,7 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
     }
 
     DnnOprHelper<megdnn::MatrixMul> dnn_opr(matmul.param());
-    dnn_opr.opr().deduce_dtype(layout1.dtype, layout1.dtype, dst_dtype);
+    dnn_opr.opr().deduce_dtype(layout1.dtype, layout2.dtype, dst_dtype);
 
     if (dim1 == 0 || dim2 == 0) {
         return {{{TensorLayout(dst_dtype), inputs[0].comp_node}}, false};
@@ -157,7 +157,7 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
     }
 
     DType dst_dtype;
-    dnn_opr.op()->deduce_dtype(layout1.dtype, layout1.dtype, dst_dtype);
+    dnn_opr.op()->deduce_dtype(layout1.dtype, layout2.dtype, dst_dtype);
 
     // only matters when layout1 has dim 2
     if (matmul.transposeA)
@@ -335,7 +335,7 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
     DType dst_dtype;
 
     DnnOprHelper<megdnn::MatrixMul> dnn_opr(matmul.param());
-    dnn_opr.opr().deduce_dtype(layout1.dtype, layout1.dtype, dst_dtype);
+    dnn_opr.opr().deduce_dtype(layout1.dtype, layout2.dtype, dst_dtype);
 
     if (dim1 == 0 || dim2 == 0) {
         return {{{TensorLayout(dst_dtype), inputs[0].comp_node}}, false};
@@ -378,7 +378,7 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
 
     DnnOprCaller<megdnn::BatchedMatrixMul> dnn_opr(cn, matmul.param(), matmul.policy());
     DType dst_dtype;
-    dnn_opr.op()->deduce_dtype(layout1.dtype, layout1.dtype, dst_dtype);
+    dnn_opr.op()->deduce_dtype(layout1.dtype, layout2.dtype, dst_dtype);
 
     TensorShape tshp, batch_shp;
     size_t j = 0;

@@ -340,3 +340,19 @@ def test_conv_transpose2d():
     test_func(2, 4, 3, 1, 8, 1, 1, 1, 1, 0, 0, 1, 1, 1, False)
     test_func(4, 4, 16, 16, 8, 3, 3, 1, 1, 1, 1, 1, 1, 1, False)
     test_func(32, 64, 36, 28, 16, 3, 2, 1, 3, 1, 0, 1, 1, 1, False)
+
+
+def test_matmul():
+    inp_scale = np.float32(np.random.rand())
+    weight_scale = np.float32(np.random.rand())
+    inp_dtype = dtype.qint8(inp_scale)
+    weight_dtype = dtype.qint8(weight_scale)
+
+    inp_data = np.random.random((3, 12))
+    weight_data = np.random.random((5, 12))
+    inp_int8 = mge.tensor(dtype.convert_to_qint8(inp_data, inp_dtype))
+    weight_int8 = mge.tensor(dtype.convert_to_qint8(weight_data, weight_dtype))
+
+    res = F.matmul(inp_int8, weight_int8, transpose_b=True)
+    res_scale = dtype.get_scale(res.dtype)
+    np.testing.assert_allclose(inp_scale * weight_scale, res_scale)
