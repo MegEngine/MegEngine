@@ -280,4 +280,24 @@ TEST_F(NAIVE, ELEMWISE_QUANTIZED_MODE_TERNARY) {
     }
 }
 
+TEST_F(NAIVE, ELELMWISE_INT_MODULO) {
+    Checker<Elemwise> checker(handle(), /* check_dispatch */ false);
+    Elemwise::Param param;
+    param.mode = Elemwise::Param::Mode::MOD;
+
+    checker.set_param(param).exect(
+            Testcase{
+                    TensorValue(
+                            {10}, dtype::Int32(),
+                            {10, 24, -6, -20, 10, -90, 45, 3, -1, 0}),
+                    TensorValue(
+                            {10}, dtype::Int32(), {3, 7, 5, -3, -6, 11, 7, -1, 8, -1}),
+                    {}},
+            Testcase{
+                    {},
+                    {},
+                    TensorValue(
+                            {10}, dtype::Int32(), {1, 3, 4, -2, -2, 9, 3, 0, 7, 0})});
+}
+
 // vim: syntax=cpp.doxygen

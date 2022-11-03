@@ -25,7 +25,7 @@ float do_mod(float a, float b) {
 }
 
 int do_mod(int a, int b) {
-    return a % b;
+    return (a % b + b) % b;
 }
 
 float do_floor_div(float a, float b) {

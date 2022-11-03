@@ -878,8 +878,8 @@ DEF_TEST(all_modes) {
     } while (0)
 
         if (trait.allow_int) {
-            run(dtype::Int8{});
             run(dtype::Int32{});
+            run(dtype::Int8{});
         }
         if (trait.allow_float) {
             DNN_FLOAT16_SELECT(

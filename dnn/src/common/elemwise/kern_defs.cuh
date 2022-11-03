@@ -229,7 +229,7 @@ DEF_KERN(dt_bool, EQ, x == y);
 DEF_KERN_INT(FLOOR_DIV, dispatch_floordiv_int(x, y));
 DEF_KERN_FLOAT(FLOOR_DIV, floorf(x / y));
 
-DEF_KERN_INT(MOD, x % y);
+DEF_KERN_INT(MOD, ((y + x % y) % y));  // consistent with python modulo
 DEF_KERN_FLOAT(MOD, fmodf(x, y));
 
 DEF_KERN_INT(SHL, x << y);
