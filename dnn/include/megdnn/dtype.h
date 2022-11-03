@@ -634,7 +634,7 @@ struct log<1> {
     static const uint16_t size_log = ::megdnn::dtype::log<sizeof(ctype)>::value;  \
     static MEGDNN_CONSTEXPR int enumv = DTypeEnum::_name;                         \
     static MEGDNN_CONSTEXPR uint16_t low_bit = _bits;                             \
-    static MEGDNN_CONSTEXPR uint16_t bits = _bits == 0 ? sizeof(_ctype) * 8 : _bits;
+    static MEGDNN_CONSTEXPR uint16_t bits = _bits == 0 ? sizeof(_ctype) * 8 : _bits
 #endif  // MEGDNN_CC_HOST
 
 #define MEGDNN_DEF_DT(_name, _ctype, _cat, _sign, _minval, _maxval)       \
