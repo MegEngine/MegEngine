@@ -1399,6 +1399,23 @@ if(TARGET _imperative_rt)
     DEPENDS ${develop_depends}
     VERBATIM)
   add_dependencies(develop _imperative_rt)
+
+  # generate stub file for _imperative_rt
+  execute_process(
+    COMMAND ${PYTHON3_EXECUTABLE_WITHOUT_VERSION} -c
+            "import mypy.version; assert mypy.version.__version__ >= '0.982'"
+    RESULT_VARIABLE NOT_HAVING_MYPY_STUBGEN)
+  if(NOT ${NOT_HAVING_MYPY_STUBGEN})
+    add_custom_command(
+      TARGET develop
+      POST_BUILD
+      COMMAND
+        ${PYTHON3_EXECUTABLE_WITHOUT_VERSION} -c "from mypy.stubgen import main; main()"
+        -p ${PACKAGE_NAME}.core.${MODULE_NAME} -o
+        ${CMAKE_CURRENT_SOURCE_DIR}/imperative/python
+      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/imperative/python
+      VERBATIM)
+  endif()
 endif()
 
 # Configure and install pkg-config. Note that unlike the Config.cmake modules, this is

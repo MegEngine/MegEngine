@@ -7,7 +7,7 @@ from ..core.ops import builtin
 from ..logger import get_logger
 from ..utils.deprecation import deprecated
 
-Strategy = builtin.ops.Convolution.Strategy
+Strategy = builtin.Convolution.Strategy
 
 if os.getenv("MEGENGINE_CONV_EXECUTION_STRATEGY") != None:
     get_logger().warning(

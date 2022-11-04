@@ -3,5 +3,5 @@ cf864561de125ab559c0035158656682  ../../src/core/include/megbrain/ir/ops.td
 9248d42a9b3e770693306992156f6015  generated/opdef.h.inl
 5c7e7ac49d1338d70ac84ba309e6732b  generated/opdef.cpp.inl
 30b669eec36876a65717e0c68dd76c83  generated/opdef.py.inl
-d10455217f5f01e3d2668e5689068920  generated/opdef.cpy.inl
+4312de292a3d71f34a084bf43ea2ecec  generated/opdef.cpy.inl
 71e1462bf4d882e2615c3c632cb671cc  generated/enum_macro.h

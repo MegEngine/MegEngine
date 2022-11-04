@@ -107,6 +107,9 @@ add_custom_command(
           ${CMAKE_CURRENT_SOURCE_DIR}/python/megengine/core/include # clean develop
   COMMAND ${CMAKE_COMMAND} -E remove -f
           ${CMAKE_CURRENT_SOURCE_DIR}/python/megengine/core/lib # clean develop
+  COMMAND ${CMAKE_COMMAND} -E remove -f
+          ${CMAKE_CURRENT_SOURCE_DIR}/python/megengine/core/${MODULE_NAME} # clean
+                                                                           # develop
   COMMAND
     ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/python/megengine
     ${CMAKE_CURRENT_BINARY_DIR}/python/megengine

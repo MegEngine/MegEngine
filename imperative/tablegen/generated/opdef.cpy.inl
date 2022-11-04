@@ -280,6 +280,8 @@ PyOpDefBegin(AdaptivePooling) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(AdaptivePooling)
 
@@ -339,6 +341,20 @@ PyGetSetDef PyOp(AdaptivePooling)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(AdaptivePooling)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(AdaptivePooling)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(AdaptivePooling)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(AdaptivePooling)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, mode: Union[str, Mode] = ..., format: Union[str, Format] = ..., shape: list[int] = ...) -> None\n"
+};
+
 void _init_py_AdaptivePooling(py::module m) {
     using py_op = PyOp(AdaptivePooling);
     auto& py_type = PyOpType(AdaptivePooling);
@@ -353,6 +369,10 @@ void _init_py_AdaptivePooling(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(AdaptivePooling), &PyOp(AdaptivePooling)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
         _init_py_AdaptivePooling_Mode(py_type);
     _init_py_AdaptivePooling_Format(py_type);
@@ -391,6 +411,8 @@ PyOpDefBegin(AddAxis) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(AddAxis)
 
@@ -430,6 +452,20 @@ PyGetSetDef PyOp(AddAxis)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(AddAxis)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(AddAxis)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(AddAxis)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(AddAxis)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, axis: list[int] = ...) -> None\n"
+};
+
 void _init_py_AddAxis(py::module m) {
     using py_op = PyOp(AddAxis);
     auto& py_type = PyOpType(AddAxis);
@@ -444,6 +480,10 @@ void _init_py_AddAxis(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(AddAxis), &PyOp(AddAxis)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -480,6 +520,8 @@ PyOpDefBegin(Argmax) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(Argmax)
 
@@ -519,6 +561,20 @@ PyGetSetDef PyOp(Argmax)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(Argmax)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(Argmax)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(Argmax)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(Argmax)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, axis: int = ...) -> None\n"
+};
+
 void _init_py_Argmax(py::module m) {
     using py_op = PyOp(Argmax);
     auto& py_type = PyOpType(Argmax);
@@ -533,6 +589,10 @@ void _init_py_Argmax(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(Argmax), &PyOp(Argmax)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -569,6 +629,8 @@ PyOpDefBegin(Argmin) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(Argmin)
 
@@ -608,6 +670,20 @@ PyGetSetDef PyOp(Argmin)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(Argmin)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(Argmin)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(Argmin)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(Argmin)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, axis: int = ...) -> None\n"
+};
+
 void _init_py_Argmin(py::module m) {
     using py_op = PyOp(Argmin);
     auto& py_type = PyOpType(Argmin);
@@ -622,6 +698,10 @@ void _init_py_Argmin(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(Argmin), &PyOp(Argmin)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -733,6 +813,8 @@ PyOpDefBegin(Argsort) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(Argsort)
 
@@ -772,6 +854,20 @@ PyGetSetDef PyOp(Argsort)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(Argsort)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(Argsort)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(Argsort)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(Argsort)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, order: Union[str, Order] = ...) -> None\n"
+};
+
 void _init_py_Argsort(py::module m) {
     using py_op = PyOp(Argsort);
     auto& py_type = PyOpType(Argsort);
@@ -786,6 +882,10 @@ void _init_py_Argsort(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(Argsort), &PyOp(Argsort)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
         _init_py_Argsort_Order(py_type);
 
@@ -831,6 +931,8 @@ PyOpDefBegin(AssertEqual) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(AssertEqual)
 
@@ -880,6 +982,20 @@ PyGetSetDef PyOp(AssertEqual)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(AssertEqual)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(AssertEqual)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(AssertEqual)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(AssertEqual)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, maxerr: float = ..., verbose: bool = ...) -> None\n"
+};
+
 void _init_py_AssertEqual(py::module m) {
     using py_op = PyOp(AssertEqual);
     auto& py_type = PyOpType(AssertEqual);
@@ -894,6 +1010,10 @@ void _init_py_AssertEqual(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(AssertEqual), &PyOp(AssertEqual)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -938,6 +1058,8 @@ PyOpDefBegin(AtlasRuntime) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(AtlasRuntime)
 
@@ -987,6 +1109,20 @@ PyGetSetDef PyOp(AtlasRuntime)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(AtlasRuntime)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(AtlasRuntime)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(AtlasRuntime)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(AtlasRuntime)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, buf: str = ..., buf_size: int = ...) -> None\n"
+};
+
 void _init_py_AtlasRuntime(py::module m) {
     using py_op = PyOp(AtlasRuntime);
     auto& py_type = PyOpType(AtlasRuntime);
@@ -1001,6 +1137,10 @@ void _init_py_AtlasRuntime(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(AtlasRuntime), &PyOp(AtlasRuntime)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -1045,6 +1185,8 @@ PyOpDefBegin(Barrier) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(Barrier)
 
@@ -1094,6 +1236,20 @@ PyGetSetDef PyOp(Barrier)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(Barrier)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(Barrier)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(Barrier)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(Barrier)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, comp_node: str = ..., nr_outputs: int = ...) -> None\n"
+};
+
 void _init_py_Barrier(py::module m) {
     using py_op = PyOp(Barrier);
     auto& py_type = PyOpType(Barrier);
@@ -1108,6 +1264,10 @@ void _init_py_Barrier(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(Barrier), &PyOp(Barrier)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -1655,6 +1815,8 @@ PyOpDefBegin(BatchConvBias) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(BatchConvBias)
 
@@ -1824,6 +1986,20 @@ PyGetSetDef PyOp(BatchConvBias)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(BatchConvBias)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(BatchConvBias)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(BatchConvBias)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(BatchConvBias)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, nonlineMode: Union[str, NonlineMode] = ..., mode: Union[str, Mode] = ..., pad_h: int = ..., pad_w: int = ..., stride_h: int = ..., stride_w: int = ..., dilate_h: int = ..., dilate_w: int = ..., sparse: Union[str, Sparse] = ..., format: Union[str, Format] = ..., compute_mode: Union[str, ComputeMode] = ..., strategy: Union[str, Strategy] = ..., dtype: str = ...) -> None\n"
+};
+
 void _init_py_BatchConvBias(py::module m) {
     using py_op = PyOp(BatchConvBias);
     auto& py_type = PyOpType(BatchConvBias);
@@ -1838,6 +2014,10 @@ void _init_py_BatchConvBias(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(BatchConvBias), &PyOp(BatchConvBias)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
         _init_py_BatchConvBias_NonlineMode(py_type);
     _init_py_BatchConvBias_Mode(py_type);
@@ -2080,6 +2260,8 @@ PyOpDefBegin(BatchNorm) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(BatchNorm)
 
@@ -2169,6 +2351,20 @@ PyGetSetDef PyOp(BatchNorm)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(BatchNorm)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(BatchNorm)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(BatchNorm)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(BatchNorm)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, param_dim: Union[str, ParamDim] = ..., fwd_mode: Union[str, FwdMode] = ..., epsilon: float = ..., avg_factor: float = ..., scale: float = ..., bias: float = ...) -> None\n"
+};
+
 void _init_py_BatchNorm(py::module m) {
     using py_op = PyOp(BatchNorm);
     auto& py_type = PyOpType(BatchNorm);
@@ -2183,6 +2379,10 @@ void _init_py_BatchNorm(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(BatchNorm), &PyOp(BatchNorm)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
         _init_py_BatchNorm_ParamDim(py_type);
     _init_py_BatchNorm_FwdMode(py_type);
@@ -2277,6 +2477,8 @@ PyOpDefBegin(BatchNormBackward) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(BatchNormBackward)
 
@@ -2366,6 +2568,20 @@ PyGetSetDef PyOp(BatchNormBackward)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(BatchNormBackward)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(BatchNormBackward)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(BatchNormBackward)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(BatchNormBackward)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, param_dim: Union[str, ParamDim] = ..., fwd_mode: Union[str, FwdMode] = ..., epsilon: float = ..., avg_factor: float = ..., scale: float = ..., bias: float = ...) -> None\n"
+};
+
 void _init_py_BatchNormBackward(py::module m) {
     using py_op = PyOp(BatchNormBackward);
     auto& py_type = PyOpType(BatchNormBackward);
@@ -2380,6 +2596,10 @@ void _init_py_BatchNormBackward(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(BatchNormBackward), &PyOp(BatchNormBackward)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
         _init_py_BatchNormBackward_ParamDim(py_type);
     _init_py_BatchNormBackward_FwdMode(py_type);
@@ -2418,6 +2638,8 @@ PyOpDefBegin(BatchedIncrMeshIndexing) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(BatchedIncrMeshIndexing)
 
@@ -2457,6 +2679,20 @@ PyGetSetDef PyOp(BatchedIncrMeshIndexing)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(BatchedIncrMeshIndexing)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(BatchedIncrMeshIndexing)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(BatchedIncrMeshIndexing)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(BatchedIncrMeshIndexing)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, items: list[tuple[int, bool, bool, bool, bool]] = ...) -> None\n"
+};
+
 void _init_py_BatchedIncrMeshIndexing(py::module m) {
     using py_op = PyOp(BatchedIncrMeshIndexing);
     auto& py_type = PyOpType(BatchedIncrMeshIndexing);
@@ -2471,6 +2707,10 @@ void _init_py_BatchedIncrMeshIndexing(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(BatchedIncrMeshIndexing), &PyOp(BatchedIncrMeshIndexing)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -2736,6 +2976,8 @@ PyOpDefBegin(BatchedMatrixMul) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(BatchedMatrixMul)
 
@@ -2845,6 +3087,20 @@ PyGetSetDef PyOp(BatchedMatrixMul)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(BatchedMatrixMul)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(BatchedMatrixMul)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(BatchedMatrixMul)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(BatchedMatrixMul)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, transposeA: bool = ..., transposeB: bool = ..., compute_mode: Union[str, ComputeMode] = ..., format: Union[str, Format] = ..., strategy: Union[str, Strategy] = ..., dimA: int = ..., dimB: int = ...) -> None\n"
+};
+
 void _init_py_BatchedMatrixMul(py::module m) {
     using py_op = PyOp(BatchedMatrixMul);
     auto& py_type = PyOpType(BatchedMatrixMul);
@@ -2859,6 +3115,10 @@ void _init_py_BatchedMatrixMul(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(BatchedMatrixMul), &PyOp(BatchedMatrixMul)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
         _init_py_BatchedMatrixMul_ComputeMode(py_type);
     _init_py_BatchedMatrixMul_Format(py_type);
@@ -2898,6 +3158,8 @@ PyOpDefBegin(BatchedMeshIndexing) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(BatchedMeshIndexing)
 
@@ -2937,6 +3199,20 @@ PyGetSetDef PyOp(BatchedMeshIndexing)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(BatchedMeshIndexing)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(BatchedMeshIndexing)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(BatchedMeshIndexing)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(BatchedMeshIndexing)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, items: list[tuple[int, bool, bool, bool, bool]] = ...) -> None\n"
+};
+
 void _init_py_BatchedMeshIndexing(py::module m) {
     using py_op = PyOp(BatchedMeshIndexing);
     auto& py_type = PyOpType(BatchedMeshIndexing);
@@ -2951,6 +3227,10 @@ void _init_py_BatchedMeshIndexing(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(BatchedMeshIndexing), &PyOp(BatchedMeshIndexing)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -2987,6 +3267,8 @@ PyOpDefBegin(BatchedSetMeshIndexing) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(BatchedSetMeshIndexing)
 
@@ -3026,6 +3308,20 @@ PyGetSetDef PyOp(BatchedSetMeshIndexing)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(BatchedSetMeshIndexing)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(BatchedSetMeshIndexing)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(BatchedSetMeshIndexing)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(BatchedSetMeshIndexing)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, items: list[tuple[int, bool, bool, bool, bool]] = ...) -> None\n"
+};
+
 void _init_py_BatchedSetMeshIndexing(py::module m) {
     using py_op = PyOp(BatchedSetMeshIndexing);
     auto& py_type = PyOpType(BatchedSetMeshIndexing);
@@ -3040,6 +3336,10 @@ void _init_py_BatchedSetMeshIndexing(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(BatchedSetMeshIndexing), &PyOp(BatchedSetMeshIndexing)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -3084,6 +3384,8 @@ PyOpDefBegin(BetaRNG) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(BetaRNG)
 
@@ -3133,6 +3435,20 @@ PyGetSetDef PyOp(BetaRNG)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(BetaRNG)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(BetaRNG)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(BetaRNG)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(BetaRNG)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, seed: int = ..., handle: int = ...) -> None\n"
+};
+
 void _init_py_BetaRNG(py::module m) {
     using py_op = PyOp(BetaRNG);
     auto& py_type = PyOpType(BetaRNG);
@@ -3147,6 +3463,10 @@ void _init_py_BetaRNG(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(BetaRNG), &PyOp(BetaRNG)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -3183,6 +3503,8 @@ PyOpDefBegin(Borrow) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(Borrow)
 
@@ -3222,6 +3544,20 @@ PyGetSetDef PyOp(Borrow)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(Borrow)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(Borrow)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(Borrow)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(Borrow)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, comp_node: str = ...) -> None\n"
+};
+
 void _init_py_Borrow(py::module m) {
     using py_op = PyOp(Borrow);
     auto& py_type = PyOpType(Borrow);
@@ -3236,6 +3572,10 @@ void _init_py_Borrow(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(Borrow), &PyOp(Borrow)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -3272,6 +3612,8 @@ PyOpDefBegin(Broadcast) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(Broadcast)
 
@@ -3311,6 +3653,20 @@ PyGetSetDef PyOp(Broadcast)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(Broadcast)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(Broadcast)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(Broadcast)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(Broadcast)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, shape: list[int] = ...) -> None\n"
+};
+
 void _init_py_Broadcast(py::module m) {
     using py_op = PyOp(Broadcast);
     auto& py_type = PyOpType(Broadcast);
@@ -3325,6 +3681,10 @@ void _init_py_Broadcast(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(Broadcast), &PyOp(Broadcast)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -3385,6 +3745,8 @@ PyOpDefBegin(CambriconRuntime) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(CambriconRuntime)
 
@@ -3454,6 +3816,20 @@ PyGetSetDef PyOp(CambriconRuntime)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(CambriconRuntime)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(CambriconRuntime)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(CambriconRuntime)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(CambriconRuntime)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, buf: str = ..., buf_size: int = ..., symbol: str = ..., tensor_dim_mutable: bool = ...) -> None\n"
+};
+
 void _init_py_CambriconRuntime(py::module m) {
     using py_op = PyOp(CambriconRuntime);
     auto& py_type = PyOpType(CambriconRuntime);
@@ -3468,6 +3844,10 @@ void _init_py_CambriconRuntime(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(CambriconRuntime), &PyOp(CambriconRuntime)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -3504,6 +3884,8 @@ PyOpDefBegin(CheckNonFinite) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(CheckNonFinite)
 
@@ -3543,6 +3925,20 @@ PyGetSetDef PyOp(CheckNonFinite)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(CheckNonFinite)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(CheckNonFinite)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(CheckNonFinite)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(CheckNonFinite)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, scale: float = ...) -> None\n"
+};
+
 void _init_py_CheckNonFinite(py::module m) {
     using py_op = PyOp(CheckNonFinite);
     auto& py_type = PyOpType(CheckNonFinite);
@@ -3557,6 +3953,10 @@ void _init_py_CheckNonFinite(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(CheckNonFinite), &PyOp(CheckNonFinite)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -3793,6 +4193,8 @@ PyOpDefBegin(CollectiveComm) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(CollectiveComm)
 
@@ -3932,6 +4334,20 @@ PyGetSetDef PyOp(CollectiveComm)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(CollectiveComm)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(CollectiveComm)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(CollectiveComm)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(CollectiveComm)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, mode: Union[str, Mode] = ..., key: str = ..., nr_devices: int = ..., rank: int = ..., is_root: bool = ..., local_grad: bool = ..., addr: str = ..., port: int = ..., dtype: str = ..., backend: str = ..., comp_node: str = ...) -> None\n"
+};
+
 void _init_py_CollectiveComm(py::module m) {
     using py_op = PyOp(CollectiveComm);
     auto& py_type = PyOpType(CollectiveComm);
@@ -3946,6 +4362,10 @@ void _init_py_CollectiveComm(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(CollectiveComm), &PyOp(CollectiveComm)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
         _init_py_CollectiveComm_Mode(py_type);
 
@@ -3991,6 +4411,8 @@ PyOpDefBegin(Concat) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(Concat)
 
@@ -4040,6 +4462,20 @@ PyGetSetDef PyOp(Concat)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(Concat)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(Concat)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(Concat)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(Concat)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, axis: int = ..., comp_node: str = ...) -> None\n"
+};
+
 void _init_py_Concat(py::module m) {
     using py_op = PyOp(Concat);
     auto& py_type = PyOpType(Concat);
@@ -4054,6 +4490,10 @@ void _init_py_Concat(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(Concat), &PyOp(Concat)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -4083,6 +4523,8 @@ PyOpDefBegin(CondTake) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(CondTake)
 
@@ -4102,6 +4544,20 @@ PyGetSetDef PyOp(CondTake)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(CondTake)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(CondTake)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(CondTake)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(CondTake)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self) -> None\n"
+};
+
 void _init_py_CondTake(py::module m) {
     using py_op = PyOp(CondTake);
     auto& py_type = PyOpType(CondTake);
@@ -4116,6 +4572,10 @@ void _init_py_CondTake(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(CondTake), &PyOp(CondTake)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -4304,6 +4764,8 @@ PyOpDefBegin(ConvBias) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(ConvBias)
 
@@ -4473,6 +4935,20 @@ PyGetSetDef PyOp(ConvBias)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(ConvBias)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(ConvBias)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(ConvBias)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(ConvBias)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, nonlineMode: Union[str, NonlineMode] = ..., mode: Union[str, Mode] = ..., sparse: Union[str, Sparse] = ..., format: Union[str, Format] = ..., pad_h: int = ..., pad_w: int = ..., stride_h: int = ..., stride_w: int = ..., dilate_h: int = ..., dilate_w: int = ..., compute_mode: Union[str, ComputeMode] = ..., strategy: Union[str, Strategy] = ..., dtype: str = ...) -> None\n"
+};
+
 void _init_py_ConvBias(py::module m) {
     using py_op = PyOp(ConvBias);
     auto& py_type = PyOpType(ConvBias);
@@ -4487,6 +4963,10 @@ void _init_py_ConvBias(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(ConvBias), &PyOp(ConvBias)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
         _init_py_ConvBias_NonlineMode(py_type);
     _init_py_ConvBias_Mode(py_type);
@@ -4657,6 +5137,8 @@ PyOpDefBegin(Convolution) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(Convolution)
 
@@ -4806,6 +5288,20 @@ PyGetSetDef PyOp(Convolution)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(Convolution)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(Convolution)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(Convolution)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(Convolution)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, mode: Union[str, Mode] = ..., pad_h: int = ..., pad_w: int = ..., stride_h: int = ..., stride_w: int = ..., dilate_h: int = ..., dilate_w: int = ..., sparse: Union[str, Sparse] = ..., format: Union[str, Format] = ..., compute_mode: Union[str, ComputeMode] = ..., strategy: Union[str, Strategy] = ...) -> None\n"
+};
+
 void _init_py_Convolution(py::module m) {
     using py_op = PyOp(Convolution);
     auto& py_type = PyOpType(Convolution);
@@ -4820,6 +5316,10 @@ void _init_py_Convolution(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(Convolution), &PyOp(Convolution)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
         _init_py_Convolution_Mode(py_type);
     _init_py_Convolution_Sparse(py_type);
@@ -5281,6 +5781,8 @@ PyOpDefBegin(Convolution3D) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(Convolution3D)
 
@@ -5460,6 +5962,20 @@ PyGetSetDef PyOp(Convolution3D)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(Convolution3D)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(Convolution3D)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(Convolution3D)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(Convolution3D)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, mode: Union[str, Mode] = ..., pad_d: int = ..., pad_h: int = ..., pad_w: int = ..., stride_d: int = ..., stride_h: int = ..., stride_w: int = ..., dilate_d: int = ..., dilate_h: int = ..., dilate_w: int = ..., sparse: Union[str, Sparse] = ..., data_type: Union[str, DataType] = ..., format: Union[str, Format] = ..., strategy: Union[str, Strategy] = ...) -> None\n"
+};
+
 void _init_py_Convolution3D(py::module m) {
     using py_op = PyOp(Convolution3D);
     auto& py_type = PyOpType(Convolution3D);
@@ -5474,6 +5990,10 @@ void _init_py_Convolution3D(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(Convolution3D), &PyOp(Convolution3D)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
         _init_py_Convolution3D_Mode(py_type);
     _init_py_Convolution3D_Sparse(py_type);
@@ -5667,6 +6187,8 @@ PyOpDefBegin(Convolution3DBackwardData) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(Convolution3DBackwardData)
 
@@ -5846,6 +6368,20 @@ PyGetSetDef PyOp(Convolution3DBackwardData)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(Convolution3DBackwardData)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(Convolution3DBackwardData)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(Convolution3DBackwardData)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(Convolution3DBackwardData)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, mode: Union[str, Mode] = ..., pad_d: int = ..., pad_h: int = ..., pad_w: int = ..., stride_d: int = ..., stride_h: int = ..., stride_w: int = ..., dilate_d: int = ..., dilate_h: int = ..., dilate_w: int = ..., sparse: Union[str, Sparse] = ..., data_type: Union[str, DataType] = ..., format: Union[str, Format] = ..., strategy: Union[str, Strategy] = ...) -> None\n"
+};
+
 void _init_py_Convolution3DBackwardData(py::module m) {
     using py_op = PyOp(Convolution3DBackwardData);
     auto& py_type = PyOpType(Convolution3DBackwardData);
@@ -5860,6 +6396,10 @@ void _init_py_Convolution3DBackwardData(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(Convolution3DBackwardData), &PyOp(Convolution3DBackwardData)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
         _init_py_Convolution3DBackwardData_Mode(py_type);
     _init_py_Convolution3DBackwardData_Sparse(py_type);
@@ -6037,6 +6577,8 @@ PyOpDefBegin(ConvolutionBackwardData) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(ConvolutionBackwardData)
 
@@ -6196,6 +6738,20 @@ PyGetSetDef PyOp(ConvolutionBackwardData)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(ConvolutionBackwardData)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(ConvolutionBackwardData)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(ConvolutionBackwardData)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(ConvolutionBackwardData)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, mode: Union[str, Mode] = ..., pad_h: int = ..., pad_w: int = ..., stride_h: int = ..., stride_w: int = ..., dilate_h: int = ..., dilate_w: int = ..., sparse: Union[str, Sparse] = ..., format: Union[str, Format] = ..., compute_mode: Union[str, ComputeMode] = ..., strategy: Union[str, Strategy] = ..., dtype: str = ...) -> None\n"
+};
+
 void _init_py_ConvolutionBackwardData(py::module m) {
     using py_op = PyOp(ConvolutionBackwardData);
     auto& py_type = PyOpType(ConvolutionBackwardData);
@@ -6210,6 +6766,10 @@ void _init_py_ConvolutionBackwardData(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(ConvolutionBackwardData), &PyOp(ConvolutionBackwardData)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
         _init_py_ConvolutionBackwardData_Mode(py_type);
     _init_py_ConvolutionBackwardData_Sparse(py_type);
@@ -6251,6 +6811,8 @@ PyOpDefBegin(Copy) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(Copy)
 
@@ -6290,6 +6852,20 @@ PyGetSetDef PyOp(Copy)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(Copy)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(Copy)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(Copy)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(Copy)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, comp_node: str = ...) -> None\n"
+};
+
 void _init_py_Copy(py::module m) {
     using py_op = PyOp(Copy);
     auto& py_type = PyOpType(Copy);
@@ -6304,6 +6880,10 @@ void _init_py_Copy(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(Copy), &PyOp(Copy)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -6553,6 +7133,8 @@ PyOpDefBegin(Correlation) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(Correlation)
 
@@ -6652,6 +7234,20 @@ PyGetSetDef PyOp(Correlation)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(Correlation)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(Correlation)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(Correlation)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(Correlation)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, format: Union[str, Format] = ..., kernel_size: int = ..., max_displacement: int = ..., stride1: int = ..., stride2: int = ..., pad_size: int = ..., is_multiply: bool = ...) -> None\n"
+};
+
 void _init_py_Correlation(py::module m) {
     using py_op = PyOp(Correlation);
     auto& py_type = PyOpType(Correlation);
@@ -6666,6 +7262,10 @@ void _init_py_Correlation(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(Correlation), &PyOp(Correlation)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
         _init_py_Correlation_Format(py_type);
 
@@ -6719,6 +7319,8 @@ PyOpDefBegin(Cumsum) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(Cumsum)
 
@@ -6778,6 +7380,20 @@ PyGetSetDef PyOp(Cumsum)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(Cumsum)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(Cumsum)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(Cumsum)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(Cumsum)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, axis: int = ..., exclusive: bool = ..., reverse: bool = ...) -> None\n"
+};
+
 void _init_py_Cumsum(py::module m) {
     using py_op = PyOp(Cumsum);
     auto& py_type = PyOpType(Cumsum);
@@ -6792,6 +7408,10 @@ void _init_py_Cumsum(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(Cumsum), &PyOp(Cumsum)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -7053,6 +7673,8 @@ PyOpDefBegin(CvtColor) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(CvtColor)
 
@@ -7092,6 +7714,20 @@ PyGetSetDef PyOp(CvtColor)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(CvtColor)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(CvtColor)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(CvtColor)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(CvtColor)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, mode: Union[str, Mode] = ...) -> None\n"
+};
+
 void _init_py_CvtColor(py::module m) {
     using py_op = PyOp(CvtColor);
     auto& py_type = PyOpType(CvtColor);
@@ -7106,6 +7742,10 @@ void _init_py_CvtColor(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(CvtColor), &PyOp(CvtColor)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
         _init_py_CvtColor_Mode(py_type);
 
@@ -7271,6 +7911,8 @@ PyOpDefBegin(DeformableConv) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(DeformableConv)
 
@@ -7420,6 +8062,20 @@ PyGetSetDef PyOp(DeformableConv)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(DeformableConv)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(DeformableConv)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(DeformableConv)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(DeformableConv)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, mode: Union[str, Mode] = ..., pad_h: int = ..., pad_w: int = ..., stride_h: int = ..., stride_w: int = ..., dilate_h: int = ..., dilate_w: int = ..., sparse: Union[str, Sparse] = ..., format: Union[str, Format] = ..., compute_mode: Union[str, ComputeMode] = ..., strategy: Union[str, Strategy] = ...) -> None\n"
+};
+
 void _init_py_DeformableConv(py::module m) {
     using py_op = PyOp(DeformableConv);
     auto& py_type = PyOpType(DeformableConv);
@@ -7434,6 +8090,10 @@ void _init_py_DeformableConv(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(DeformableConv), &PyOp(DeformableConv)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
         _init_py_DeformableConv_Mode(py_type);
     _init_py_DeformableConv_Sparse(py_type);
@@ -7523,6 +8183,8 @@ PyOpDefBegin(DeformablePSROIPooling) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(DeformablePSROIPooling)
 
@@ -7622,6 +8284,20 @@ PyGetSetDef PyOp(DeformablePSROIPooling)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(DeformablePSROIPooling)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(DeformablePSROIPooling)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(DeformablePSROIPooling)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(DeformablePSROIPooling)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, no_trans: bool = ..., spatial_scale: float = ..., trans_std: float = ..., pooled_h: int = ..., pooled_w: int = ..., part_size: int = ..., sample_per_part: int = ...) -> None\n"
+};
+
 void _init_py_DeformablePSROIPooling(py::module m) {
     using py_op = PyOp(DeformablePSROIPooling);
     auto& py_type = PyOpType(DeformablePSROIPooling);
@@ -7636,6 +8312,10 @@ void _init_py_DeformablePSROIPooling(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(DeformablePSROIPooling), &PyOp(DeformablePSROIPooling)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -7672,6 +8352,8 @@ PyOpDefBegin(Diag) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(Diag)
 
@@ -7711,6 +8393,20 @@ PyGetSetDef PyOp(Diag)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(Diag)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(Diag)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(Diag)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(Diag)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, k: int = ...) -> None\n"
+};
+
 void _init_py_Diag(py::module m) {
     using py_op = PyOp(Diag);
     auto& py_type = PyOpType(Diag);
@@ -7725,6 +8421,10 @@ void _init_py_Diag(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(Diag), &PyOp(Diag)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -7761,6 +8461,8 @@ PyOpDefBegin(Dimshuffle) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(Dimshuffle)
 
@@ -7800,6 +8502,20 @@ PyGetSetDef PyOp(Dimshuffle)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(Dimshuffle)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(Dimshuffle)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(Dimshuffle)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(Dimshuffle)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, pattern: list[int] = ...) -> None\n"
+};
+
 void _init_py_Dimshuffle(py::module m) {
     using py_op = PyOp(Dimshuffle);
     auto& py_type = PyOpType(Dimshuffle);
@@ -7814,6 +8530,10 @@ void _init_py_Dimshuffle(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(Dimshuffle), &PyOp(Dimshuffle)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -7843,6 +8563,8 @@ PyOpDefBegin(Dot) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(Dot)
 
@@ -7862,6 +8584,20 @@ PyGetSetDef PyOp(Dot)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(Dot)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(Dot)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(Dot)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(Dot)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self) -> None\n"
+};
+
 void _init_py_Dot(py::module m) {
     using py_op = PyOp(Dot);
     auto& py_type = PyOpType(Dot);
@@ -7876,6 +8612,10 @@ void _init_py_Dot(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(Dot), &PyOp(Dot)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -7928,6 +8668,8 @@ PyOpDefBegin(Dropout) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(Dropout)
 
@@ -7987,6 +8729,20 @@ PyGetSetDef PyOp(Dropout)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(Dropout)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(Dropout)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(Dropout)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(Dropout)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, drop_prob: float = ..., seed: int = ..., handle: int = ...) -> None\n"
+};
+
 void _init_py_Dropout(py::module m) {
     using py_op = PyOp(Dropout);
     auto& py_type = PyOpType(Dropout);
@@ -8001,6 +8757,10 @@ void _init_py_Dropout(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(Dropout), &PyOp(Dropout)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -8422,6 +9182,8 @@ PyOpDefBegin(Elemwise) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(Elemwise)
 
@@ -8461,6 +9223,20 @@ PyGetSetDef PyOp(Elemwise)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(Elemwise)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(Elemwise)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(Elemwise)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(Elemwise)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, mode: Union[str, Mode] = ...) -> None\n"
+};
+
 void _init_py_Elemwise(py::module m) {
     using py_op = PyOp(Elemwise);
     auto& py_type = PyOpType(Elemwise);
@@ -8475,6 +9251,10 @@ void _init_py_Elemwise(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(Elemwise), &PyOp(Elemwise)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
         _init_py_Elemwise_Mode(py_type);
 
@@ -8905,6 +9685,8 @@ PyOpDefBegin(ElemwiseMultiType) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(ElemwiseMultiType)
 
@@ -8954,6 +9736,20 @@ PyGetSetDef PyOp(ElemwiseMultiType)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(ElemwiseMultiType)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(ElemwiseMultiType)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(ElemwiseMultiType)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(ElemwiseMultiType)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, mode: Union[str, Mode] = ..., dtype: str = ...) -> None\n"
+};
+
 void _init_py_ElemwiseMultiType(py::module m) {
     using py_op = PyOp(ElemwiseMultiType);
     auto& py_type = PyOpType(ElemwiseMultiType);
@@ -8968,6 +9764,10 @@ void _init_py_ElemwiseMultiType(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(ElemwiseMultiType), &PyOp(ElemwiseMultiType)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
         _init_py_ElemwiseMultiType_Mode(py_type);
 
@@ -9037,6 +9837,8 @@ PyOpDefBegin(ExternOpr) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(ExternOpr)
 
@@ -9116,6 +9918,20 @@ PyGetSetDef PyOp(ExternOpr)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(ExternOpr)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(ExternOpr)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(ExternOpr)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(ExternOpr)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, output_shapes: list[list[int]] = ..., name: str = ..., data: str = ..., data_len: int = ..., output_dtypes: list[str] = ...) -> None\n"
+};
+
 void _init_py_ExternOpr(py::module m) {
     using py_op = PyOp(ExternOpr);
     auto& py_type = PyOpType(ExternOpr);
@@ -9130,6 +9946,10 @@ void _init_py_ExternOpr(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(ExternOpr), &PyOp(ExternOpr)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -9182,6 +10002,8 @@ PyOpDefBegin(Eye) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(Eye)
 
@@ -9241,6 +10063,20 @@ PyGetSetDef PyOp(Eye)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(Eye)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(Eye)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(Eye)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(Eye)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, k: int = ..., dtype: str = ..., comp_node: str = ...) -> None\n"
+};
+
 void _init_py_Eye(py::module m) {
     using py_op = PyOp(Eye);
     auto& py_type = PyOpType(Eye);
@@ -9255,6 +10091,10 @@ void _init_py_Eye(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(Eye), &PyOp(Eye)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -9299,6 +10139,8 @@ PyOpDefBegin(FakeQuant) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(FakeQuant)
 
@@ -9348,6 +10190,20 @@ PyGetSetDef PyOp(FakeQuant)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(FakeQuant)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(FakeQuant)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(FakeQuant)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(FakeQuant)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, qmin: int = ..., qmax: int = ...) -> None\n"
+};
+
 void _init_py_FakeQuant(py::module m) {
     using py_op = PyOp(FakeQuant);
     auto& py_type = PyOpType(FakeQuant);
@@ -9362,6 +10218,10 @@ void _init_py_FakeQuant(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(FakeQuant), &PyOp(FakeQuant)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -9391,6 +10251,8 @@ PyOpDefBegin(FastpathCopy) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(FastpathCopy)
 
@@ -9410,6 +10272,20 @@ PyGetSetDef PyOp(FastpathCopy)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(FastpathCopy)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(FastpathCopy)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(FastpathCopy)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(FastpathCopy)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self) -> None\n"
+};
+
 void _init_py_FastpathCopy(py::module m) {
     using py_op = PyOp(FastpathCopy);
     auto& py_type = PyOpType(FastpathCopy);
@@ -9424,6 +10300,10 @@ void _init_py_FastpathCopy(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(FastpathCopy), &PyOp(FastpathCopy)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -9468,6 +10348,8 @@ PyOpDefBegin(GammaRNG) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(GammaRNG)
 
@@ -9517,6 +10399,20 @@ PyGetSetDef PyOp(GammaRNG)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(GammaRNG)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(GammaRNG)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(GammaRNG)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(GammaRNG)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, seed: int = ..., handle: int = ...) -> None\n"
+};
+
 void _init_py_GammaRNG(py::module m) {
     using py_op = PyOp(GammaRNG);
     auto& py_type = PyOpType(GammaRNG);
@@ -9531,6 +10427,10 @@ void _init_py_GammaRNG(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(GammaRNG), &PyOp(GammaRNG)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -9599,6 +10499,8 @@ PyOpDefBegin(GaussianRNG) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(GaussianRNG)
 
@@ -9678,6 +10580,20 @@ PyGetSetDef PyOp(GaussianRNG)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(GaussianRNG)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(GaussianRNG)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(GaussianRNG)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(GaussianRNG)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, seed: int = ..., mean: float = ..., std: float = ..., dtype: str = ..., handle: int = ...) -> None\n"
+};
+
 void _init_py_GaussianRNG(py::module m) {
     using py_op = PyOp(GaussianRNG);
     auto& py_type = PyOpType(GaussianRNG);
@@ -9692,6 +10608,10 @@ void _init_py_GaussianRNG(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(GaussianRNG), &PyOp(GaussianRNG)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -9728,6 +10648,8 @@ PyOpDefBegin(GetVarShape) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(GetVarShape)
 
@@ -9767,6 +10689,20 @@ PyGetSetDef PyOp(GetVarShape)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(GetVarShape)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(GetVarShape)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(GetVarShape)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(GetVarShape)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, axis: int = ...) -> None\n"
+};
+
 void _init_py_GetVarShape(py::module m) {
     using py_op = PyOp(GetVarShape);
     auto& py_type = PyOpType(GetVarShape);
@@ -9781,6 +10717,10 @@ void _init_py_GetVarShape(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(GetVarShape), &PyOp(GetVarShape)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -9921,6 +10861,8 @@ PyOpDefBegin(GroupLocal) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(GroupLocal)
 
@@ -10050,6 +10992,20 @@ PyGetSetDef PyOp(GroupLocal)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(GroupLocal)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(GroupLocal)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(GroupLocal)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(GroupLocal)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, mode: Union[str, Mode] = ..., pad_h: int = ..., pad_w: int = ..., stride_h: int = ..., stride_w: int = ..., dilate_h: int = ..., dilate_w: int = ..., sparse: Union[str, Sparse] = ..., format: Union[str, Format] = ..., compute_mode: Union[str, ComputeMode] = ...) -> None\n"
+};
+
 void _init_py_GroupLocal(py::module m) {
     using py_op = PyOp(GroupLocal);
     auto& py_type = PyOpType(GroupLocal);
@@ -10064,6 +11020,10 @@ void _init_py_GroupLocal(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(GroupLocal), &PyOp(GroupLocal)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
         _init_py_GroupLocal_Mode(py_type);
     _init_py_GroupLocal_Sparse(py_type);
@@ -10136,6 +11096,8 @@ PyOpDefBegin(GroupNorm) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(GroupNorm)
 
@@ -10205,6 +11167,20 @@ PyGetSetDef PyOp(GroupNorm)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(GroupNorm)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(GroupNorm)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(GroupNorm)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(GroupNorm)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, affine: bool = ..., eps: float = ..., group: int = ..., format: Union[str, Format] = ...) -> None\n"
+};
+
 void _init_py_GroupNorm(py::module m) {
     using py_op = PyOp(GroupNorm);
     auto& py_type = PyOpType(GroupNorm);
@@ -10219,6 +11195,10 @@ void _init_py_GroupNorm(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(GroupNorm), &PyOp(GroupNorm)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
         _init_py_GroupNorm_Format(py_type);
 
@@ -10249,6 +11229,8 @@ PyOpDefBegin(Identity) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(Identity)
 
@@ -10268,6 +11250,20 @@ PyGetSetDef PyOp(Identity)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(Identity)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(Identity)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(Identity)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(Identity)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self) -> None\n"
+};
+
 void _init_py_Identity(py::module m) {
     using py_op = PyOp(Identity);
     auto& py_type = PyOpType(Identity);
@@ -10282,6 +11278,10 @@ void _init_py_Identity(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(Identity), &PyOp(Identity)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -10374,6 +11374,8 @@ PyOpDefBegin(Images2Neibs) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(Images2Neibs)
 
@@ -10483,6 +11485,20 @@ PyGetSetDef PyOp(Images2Neibs)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(Images2Neibs)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(Images2Neibs)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(Images2Neibs)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(Images2Neibs)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, pad_h: int = ..., pad_w: int = ..., stride_h: int = ..., stride_w: int = ..., dilate_h: int = ..., dilate_w: int = ..., window_h: int = ..., window_w: int = ...) -> None\n"
+};
+
 void _init_py_Images2Neibs(py::module m) {
     using py_op = PyOp(Images2Neibs);
     auto& py_type = PyOpType(Images2Neibs);
@@ -10497,6 +11513,10 @@ void _init_py_Images2Neibs(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(Images2Neibs), &PyOp(Images2Neibs)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -10533,6 +11553,8 @@ PyOpDefBegin(IncrMeshIndexing) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(IncrMeshIndexing)
 
@@ -10572,6 +11594,20 @@ PyGetSetDef PyOp(IncrMeshIndexing)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(IncrMeshIndexing)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(IncrMeshIndexing)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(IncrMeshIndexing)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(IncrMeshIndexing)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, items: list[tuple[int, bool, bool, bool, bool]] = ...) -> None\n"
+};
+
 void _init_py_IncrMeshIndexing(py::module m) {
     using py_op = PyOp(IncrMeshIndexing);
     auto& py_type = PyOpType(IncrMeshIndexing);
@@ -10586,6 +11622,10 @@ void _init_py_IncrMeshIndexing(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(IncrMeshIndexing), &PyOp(IncrMeshIndexing)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -10622,6 +11662,8 @@ PyOpDefBegin(IncrSubtensor) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(IncrSubtensor)
 
@@ -10661,6 +11703,20 @@ PyGetSetDef PyOp(IncrSubtensor)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(IncrSubtensor)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(IncrSubtensor)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(IncrSubtensor)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(IncrSubtensor)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, items: list[tuple[int, bool, bool, bool, bool]] = ...) -> None\n"
+};
+
 void _init_py_IncrSubtensor(py::module m) {
     using py_op = PyOp(IncrSubtensor);
     auto& py_type = PyOpType(IncrSubtensor);
@@ -10675,6 +11731,10 @@ void _init_py_IncrSubtensor(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(IncrSubtensor), &PyOp(IncrSubtensor)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -10711,6 +11771,8 @@ PyOpDefBegin(IndexingIncrMultiAxisVec) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(IndexingIncrMultiAxisVec)
 
@@ -10750,6 +11812,20 @@ PyGetSetDef PyOp(IndexingIncrMultiAxisVec)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(IndexingIncrMultiAxisVec)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(IndexingIncrMultiAxisVec)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(IndexingIncrMultiAxisVec)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(IndexingIncrMultiAxisVec)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, items: list[tuple[int, bool, bool, bool, bool]] = ...) -> None\n"
+};
+
 void _init_py_IndexingIncrMultiAxisVec(py::module m) {
     using py_op = PyOp(IndexingIncrMultiAxisVec);
     auto& py_type = PyOpType(IndexingIncrMultiAxisVec);
@@ -10764,6 +11840,10 @@ void _init_py_IndexingIncrMultiAxisVec(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(IndexingIncrMultiAxisVec), &PyOp(IndexingIncrMultiAxisVec)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -10800,6 +11880,8 @@ PyOpDefBegin(IndexingMultiAxisVec) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(IndexingMultiAxisVec)
 
@@ -10839,6 +11921,20 @@ PyGetSetDef PyOp(IndexingMultiAxisVec)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(IndexingMultiAxisVec)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(IndexingMultiAxisVec)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(IndexingMultiAxisVec)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(IndexingMultiAxisVec)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, items: list[tuple[int, bool, bool, bool, bool]] = ...) -> None\n"
+};
+
 void _init_py_IndexingMultiAxisVec(py::module m) {
     using py_op = PyOp(IndexingMultiAxisVec);
     auto& py_type = PyOpType(IndexingMultiAxisVec);
@@ -10853,6 +11949,10 @@ void _init_py_IndexingMultiAxisVec(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(IndexingMultiAxisVec), &PyOp(IndexingMultiAxisVec)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -10897,6 +11997,8 @@ PyOpDefBegin(IndexingOneHot) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(IndexingOneHot)
 
@@ -10946,6 +12048,20 @@ PyGetSetDef PyOp(IndexingOneHot)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(IndexingOneHot)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(IndexingOneHot)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(IndexingOneHot)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(IndexingOneHot)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, axis: int = ..., ndim: int = ...) -> None\n"
+};
+
 void _init_py_IndexingOneHot(py::module m) {
     using py_op = PyOp(IndexingOneHot);
     auto& py_type = PyOpType(IndexingOneHot);
@@ -10960,6 +12076,10 @@ void _init_py_IndexingOneHot(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(IndexingOneHot), &PyOp(IndexingOneHot)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -10996,6 +12116,8 @@ PyOpDefBegin(IndexingSetMultiAxisVec) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(IndexingSetMultiAxisVec)
 
@@ -11035,6 +12157,20 @@ PyGetSetDef PyOp(IndexingSetMultiAxisVec)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(IndexingSetMultiAxisVec)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(IndexingSetMultiAxisVec)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(IndexingSetMultiAxisVec)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(IndexingSetMultiAxisVec)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, items: list[tuple[int, bool, bool, bool, bool]] = ...) -> None\n"
+};
+
 void _init_py_IndexingSetMultiAxisVec(py::module m) {
     using py_op = PyOp(IndexingSetMultiAxisVec);
     auto& py_type = PyOpType(IndexingSetMultiAxisVec);
@@ -11049,6 +12185,10 @@ void _init_py_IndexingSetMultiAxisVec(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(IndexingSetMultiAxisVec), &PyOp(IndexingSetMultiAxisVec)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -11093,6 +12233,8 @@ PyOpDefBegin(IndexingSetOneHot) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(IndexingSetOneHot)
 
@@ -11142,6 +12284,20 @@ PyGetSetDef PyOp(IndexingSetOneHot)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(IndexingSetOneHot)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(IndexingSetOneHot)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(IndexingSetOneHot)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(IndexingSetOneHot)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, axis: int = ..., ndim: int = ...) -> None\n"
+};
+
 void _init_py_IndexingSetOneHot(py::module m) {
     using py_op = PyOp(IndexingSetOneHot);
     auto& py_type = PyOpType(IndexingSetOneHot);
@@ -11156,6 +12312,10 @@ void _init_py_IndexingSetOneHot(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(IndexingSetOneHot), &PyOp(IndexingSetOneHot)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -11185,6 +12345,8 @@ PyOpDefBegin(InplaceAdd) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(InplaceAdd)
 
@@ -11204,6 +12366,20 @@ PyGetSetDef PyOp(InplaceAdd)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(InplaceAdd)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(InplaceAdd)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(InplaceAdd)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(InplaceAdd)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self) -> None\n"
+};
+
 void _init_py_InplaceAdd(py::module m) {
     using py_op = PyOp(InplaceAdd);
     auto& py_type = PyOpType(InplaceAdd);
@@ -11218,6 +12394,10 @@ void _init_py_InplaceAdd(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(InplaceAdd), &PyOp(InplaceAdd)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -11310,6 +12490,8 @@ PyOpDefBegin(LAMBUpdate) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(LAMBUpdate)
 
@@ -11419,6 +12601,20 @@ PyGetSetDef PyOp(LAMBUpdate)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(LAMBUpdate)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(LAMBUpdate)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(LAMBUpdate)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(LAMBUpdate)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, beta_1: float = ..., beta_2: float = ..., step: float = ..., lr: float = ..., weight_decay: float = ..., eps: float = ..., bias_correction: bool = ..., always_adapt: bool = ...) -> None\n"
+};
+
 void _init_py_LAMBUpdate(py::module m) {
     using py_op = PyOp(LAMBUpdate);
     auto& py_type = PyOpType(LAMBUpdate);
@@ -11433,6 +12629,10 @@ void _init_py_LAMBUpdate(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(LAMBUpdate), &PyOp(LAMBUpdate)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -11493,6 +12693,8 @@ PyOpDefBegin(LRN) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(LRN)
 
@@ -11562,6 +12764,20 @@ PyGetSetDef PyOp(LRN)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(LRN)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(LRN)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(LRN)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(LRN)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, n: int = ..., k: float = ..., alpha: float = ..., beta: float = ...) -> None\n"
+};
+
 void _init_py_LRN(py::module m) {
     using py_op = PyOp(LRN);
     auto& py_type = PyOpType(LRN);
@@ -11576,6 +12792,10 @@ void _init_py_LRN(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(LRN), &PyOp(LRN)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -11620,6 +12840,8 @@ PyOpDefBegin(LSQ) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(LSQ)
 
@@ -11669,6 +12891,20 @@ PyGetSetDef PyOp(LSQ)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(LSQ)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(LSQ)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(LSQ)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(LSQ)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, qmin: int = ..., qmax: int = ...) -> None\n"
+};
+
 void _init_py_LSQ(py::module m) {
     using py_op = PyOp(LSQ);
     auto& py_type = PyOpType(LSQ);
@@ -11683,6 +12919,10 @@ void _init_py_LSQ(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(LSQ), &PyOp(LSQ)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -11775,6 +13015,8 @@ PyOpDefBegin(LSTM) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(LSTM)
 
@@ -11874,6 +13116,20 @@ PyGetSetDef PyOp(LSTM)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(LSTM)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(LSTM)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(LSTM)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(LSTM)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, num_layers: int = ..., bidirectional: bool = ..., bias: bool = ..., hidden_size: int = ..., proj_size: int = ..., dropout: float = ..., fwd_mode: Union[str, FwdMode] = ...) -> None\n"
+};
+
 void _init_py_LSTM(py::module m) {
     using py_op = PyOp(LSTM);
     auto& py_type = PyOpType(LSTM);
@@ -11888,6 +13144,10 @@ void _init_py_LSTM(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(LSTM), &PyOp(LSTM)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
         _init_py_LSTM_FwdMode(py_type);
 
@@ -11918,6 +13178,8 @@ PyOpDefBegin(LSTMCell) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(LSTMCell)
 
@@ -11937,6 +13199,20 @@ PyGetSetDef PyOp(LSTMCell)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(LSTMCell)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(LSTMCell)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(LSTMCell)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(LSTMCell)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self) -> None\n"
+};
+
 void _init_py_LSTMCell(py::module m) {
     using py_op = PyOp(LSTMCell);
     auto& py_type = PyOpType(LSTMCell);
@@ -11951,6 +13227,10 @@ void _init_py_LSTMCell(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(LSTMCell), &PyOp(LSTMCell)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -12011,6 +13291,8 @@ PyOpDefBegin(LayerNorm) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(LayerNorm)
 
@@ -12080,6 +13362,20 @@ PyGetSetDef PyOp(LayerNorm)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(LayerNorm)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(LayerNorm)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(LayerNorm)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(LayerNorm)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, affine: bool = ..., eps: float = ..., normalized_dim: int = ..., normalized_size: int = ...) -> None\n"
+};
+
 void _init_py_LayerNorm(py::module m) {
     using py_op = PyOp(LayerNorm);
     auto& py_type = PyOpType(LayerNorm);
@@ -12094,6 +13390,10 @@ void _init_py_LayerNorm(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(LayerNorm), &PyOp(LayerNorm)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -12138,6 +13438,8 @@ PyOpDefBegin(Linspace) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(Linspace)
 
@@ -12187,6 +13489,20 @@ PyGetSetDef PyOp(Linspace)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(Linspace)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(Linspace)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(Linspace)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(Linspace)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, endpoint: bool = ..., comp_node: str = ...) -> None\n"
+};
+
 void _init_py_Linspace(py::module m) {
     using py_op = PyOp(Linspace);
     auto& py_type = PyOpType(Linspace);
@@ -12201,6 +13517,10 @@ void _init_py_Linspace(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(Linspace), &PyOp(Linspace)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -12245,6 +13565,8 @@ PyOpDefBegin(MagicMindRuntime) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(MagicMindRuntime)
 
@@ -12294,6 +13616,20 @@ PyGetSetDef PyOp(MagicMindRuntime)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(MagicMindRuntime)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(MagicMindRuntime)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(MagicMindRuntime)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(MagicMindRuntime)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, buf: str = ..., buf_size: int = ...) -> None\n"
+};
+
 void _init_py_MagicMindRuntime(py::module m) {
     using py_op = PyOp(MagicMindRuntime);
     auto& py_type = PyOpType(MagicMindRuntime);
@@ -12308,6 +13644,10 @@ void _init_py_MagicMindRuntime(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(MagicMindRuntime), &PyOp(MagicMindRuntime)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -12337,6 +13677,8 @@ PyOpDefBegin(MatrixInverse) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(MatrixInverse)
 
@@ -12356,6 +13698,20 @@ PyGetSetDef PyOp(MatrixInverse)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(MatrixInverse)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(MatrixInverse)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(MatrixInverse)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(MatrixInverse)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self) -> None\n"
+};
+
 void _init_py_MatrixInverse(py::module m) {
     using py_op = PyOp(MatrixInverse);
     auto& py_type = PyOpType(MatrixInverse);
@@ -12370,6 +13726,10 @@ void _init_py_MatrixInverse(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(MatrixInverse), &PyOp(MatrixInverse)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -12486,6 +13846,8 @@ PyOpDefBegin(MatrixMul) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(MatrixMul)
 
@@ -12595,6 +13957,20 @@ PyGetSetDef PyOp(MatrixMul)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(MatrixMul)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(MatrixMul)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(MatrixMul)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(MatrixMul)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, transposeA: bool = ..., transposeB: bool = ..., compute_mode: Union[str, ComputeMode] = ..., format: Union[str, Format] = ..., strategy: Union[str, Strategy] = ..., dimA: int = ..., dimB: int = ...) -> None\n"
+};
+
 void _init_py_MatrixMul(py::module m) {
     using py_op = PyOp(MatrixMul);
     auto& py_type = PyOpType(MatrixMul);
@@ -12609,6 +13985,10 @@ void _init_py_MatrixMul(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(MatrixMul), &PyOp(MatrixMul)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
         _init_py_MatrixMul_ComputeMode(py_type);
     _init_py_MatrixMul_Format(py_type);
@@ -12648,6 +14028,8 @@ PyOpDefBegin(MeshGrid) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(MeshGrid)
 
@@ -12687,6 +14069,20 @@ PyGetSetDef PyOp(MeshGrid)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(MeshGrid)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(MeshGrid)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(MeshGrid)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(MeshGrid)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, indexing: str = ...) -> None\n"
+};
+
 void _init_py_MeshGrid(py::module m) {
     using py_op = PyOp(MeshGrid);
     auto& py_type = PyOpType(MeshGrid);
@@ -12701,6 +14097,10 @@ void _init_py_MeshGrid(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(MeshGrid), &PyOp(MeshGrid)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -12737,6 +14137,8 @@ PyOpDefBegin(MeshIndexing) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(MeshIndexing)
 
@@ -12776,6 +14178,20 @@ PyGetSetDef PyOp(MeshIndexing)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(MeshIndexing)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(MeshIndexing)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(MeshIndexing)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(MeshIndexing)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, items: list[tuple[int, bool, bool, bool, bool]] = ...) -> None\n"
+};
+
 void _init_py_MeshIndexing(py::module m) {
     using py_op = PyOp(MeshIndexing);
     auto& py_type = PyOpType(MeshIndexing);
@@ -12790,6 +14206,10 @@ void _init_py_MeshIndexing(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(MeshIndexing), &PyOp(MeshIndexing)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -12834,6 +14254,8 @@ PyOpDefBegin(NMSKeep) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(NMSKeep)
 
@@ -12883,6 +14305,20 @@ PyGetSetDef PyOp(NMSKeep)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(NMSKeep)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(NMSKeep)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(NMSKeep)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(NMSKeep)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, iou_thresh: float = ..., max_output: int = ...) -> None\n"
+};
+
 void _init_py_NMSKeep(py::module m) {
     using py_op = PyOp(NMSKeep);
     auto& py_type = PyOpType(NMSKeep);
@@ -12897,6 +14333,10 @@ void _init_py_NMSKeep(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(NMSKeep), &PyOp(NMSKeep)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -12933,6 +14373,8 @@ PyOpDefBegin(NvOf) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(NvOf)
 
@@ -12972,6 +14414,20 @@ PyGetSetDef PyOp(NvOf)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(NvOf)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(NvOf)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(NvOf)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(NvOf)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, precision: int = ...) -> None\n"
+};
+
 void _init_py_NvOf(py::module m) {
     using py_op = PyOp(NvOf);
     auto& py_type = PyOpType(NvOf);
@@ -12986,6 +14442,10 @@ void _init_py_NvOf(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(NvOf), &PyOp(NvOf)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -13222,6 +14682,8 @@ PyOpDefBegin(Padding) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(Padding)
 
@@ -13411,6 +14873,20 @@ PyGetSetDef PyOp(Padding)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(Padding)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(Padding)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(Padding)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(Padding)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, front_offset_dim0: int = ..., front_offset_dim1: int = ..., front_offset_dim2: int = ..., front_offset_dim3: int = ..., front_offset_dim4: int = ..., front_offset_dim5: int = ..., front_offset_dim6: int = ..., back_offset_dim0: int = ..., back_offset_dim1: int = ..., back_offset_dim2: int = ..., back_offset_dim3: int = ..., back_offset_dim4: int = ..., back_offset_dim5: int = ..., back_offset_dim6: int = ..., padding_val: float = ..., padding_mode: Union[str, PaddingMode] = ...) -> None\n"
+};
+
 void _init_py_Padding(py::module m) {
     using py_op = PyOp(Padding);
     auto& py_type = PyOpType(Padding);
@@ -13425,6 +14901,10 @@ void _init_py_Padding(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(Padding), &PyOp(Padding)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
         _init_py_Padding_PaddingMode(py_type);
 
@@ -13462,6 +14942,8 @@ PyOpDefBegin(ParamPackConcat) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(ParamPackConcat)
 
@@ -13501,6 +14983,20 @@ PyGetSetDef PyOp(ParamPackConcat)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(ParamPackConcat)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(ParamPackConcat)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(ParamPackConcat)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(ParamPackConcat)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, offsets: list[int] = ...) -> None\n"
+};
+
 void _init_py_ParamPackConcat(py::module m) {
     using py_op = PyOp(ParamPackConcat);
     auto& py_type = PyOpType(ParamPackConcat);
@@ -13515,6 +15011,10 @@ void _init_py_ParamPackConcat(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(ParamPackConcat), &PyOp(ParamPackConcat)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -13559,6 +15059,8 @@ PyOpDefBegin(ParamPackSplit) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(ParamPackSplit)
 
@@ -13608,6 +15110,20 @@ PyGetSetDef PyOp(ParamPackSplit)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(ParamPackSplit)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(ParamPackSplit)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(ParamPackSplit)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(ParamPackSplit)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, offsets: list[int] = ..., shapes: list[list[int]] = ...) -> None\n"
+};
+
 void _init_py_ParamPackSplit(py::module m) {
     using py_op = PyOp(ParamPackSplit);
     auto& py_type = PyOpType(ParamPackSplit);
@@ -13622,6 +15138,10 @@ void _init_py_ParamPackSplit(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(ParamPackSplit), &PyOp(ParamPackSplit)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -13674,6 +15194,8 @@ PyOpDefBegin(PermutationRNG) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(PermutationRNG)
 
@@ -13733,6 +15255,20 @@ PyGetSetDef PyOp(PermutationRNG)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(PermutationRNG)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(PermutationRNG)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(PermutationRNG)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(PermutationRNG)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, seed: int = ..., dtype: str = ..., handle: int = ...) -> None\n"
+};
+
 void _init_py_PermutationRNG(py::module m) {
     using py_op = PyOp(PermutationRNG);
     auto& py_type = PyOpType(PermutationRNG);
@@ -13747,6 +15283,10 @@ void _init_py_PermutationRNG(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(PermutationRNG), &PyOp(PermutationRNG)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -13783,6 +15323,8 @@ PyOpDefBegin(PixelShuffle) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(PixelShuffle)
 
@@ -13822,6 +15364,20 @@ PyGetSetDef PyOp(PixelShuffle)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(PixelShuffle)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(PixelShuffle)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(PixelShuffle)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(PixelShuffle)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, factor: int = ...) -> None\n"
+};
+
 void _init_py_PixelShuffle(py::module m) {
     using py_op = PyOp(PixelShuffle);
     auto& py_type = PyOpType(PixelShuffle);
@@ -13836,6 +15392,10 @@ void _init_py_PixelShuffle(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(PixelShuffle), &PyOp(PixelShuffle)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -13872,6 +15432,8 @@ PyOpDefBegin(PixelShuffleBackward) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(PixelShuffleBackward)
 
@@ -13911,6 +15473,20 @@ PyGetSetDef PyOp(PixelShuffleBackward)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(PixelShuffleBackward)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(PixelShuffleBackward)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(PixelShuffleBackward)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(PixelShuffleBackward)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, factor: int = ...) -> None\n"
+};
+
 void _init_py_PixelShuffleBackward(py::module m) {
     using py_op = PyOp(PixelShuffleBackward);
     auto& py_type = PyOpType(PixelShuffleBackward);
@@ -13925,6 +15501,10 @@ void _init_py_PixelShuffleBackward(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(PixelShuffleBackward), &PyOp(PixelShuffleBackward)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -13969,6 +15549,8 @@ PyOpDefBegin(PoissonRNG) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(PoissonRNG)
 
@@ -14018,6 +15600,20 @@ PyGetSetDef PyOp(PoissonRNG)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(PoissonRNG)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(PoissonRNG)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(PoissonRNG)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(PoissonRNG)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, seed: int = ..., handle: int = ...) -> None\n"
+};
+
 void _init_py_PoissonRNG(py::module m) {
     using py_op = PyOp(PoissonRNG);
     auto& py_type = PyOpType(PoissonRNG);
@@ -14032,6 +15628,10 @@ void _init_py_PoissonRNG(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(PoissonRNG), &PyOp(PoissonRNG)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -14164,6 +15764,8 @@ PyOpDefBegin(Pooling) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(Pooling)
 
@@ -14293,6 +15895,20 @@ PyGetSetDef PyOp(Pooling)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(Pooling)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(Pooling)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(Pooling)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(Pooling)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, mode: Union[str, Mode] = ..., pad_h: int = ..., pad_w: int = ..., stride_h: int = ..., stride_w: int = ..., window_h: int = ..., window_w: int = ..., format: Union[str, Format] = ..., strategy: Union[str, Strategy] = ...) -> None\n"
+};
+
 void _init_py_Pooling(py::module m) {
     using py_op = PyOp(Pooling);
     auto& py_type = PyOpType(Pooling);
@@ -14307,6 +15923,10 @@ void _init_py_Pooling(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(Pooling), &PyOp(Pooling)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
         _init_py_Pooling_Mode(py_type);
     _init_py_Pooling_Format(py_type);
@@ -14482,6 +16102,8 @@ PyOpDefBegin(RNN) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(RNN)
 
@@ -14581,6 +16203,20 @@ PyGetSetDef PyOp(RNN)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(RNN)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(RNN)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(RNN)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(RNN)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, num_layers: int = ..., bidirectional: bool = ..., bias: bool = ..., hidden_size: int = ..., dropout: float = ..., nonlineMode: Union[str, NonlineMode] = ..., fwd_mode: Union[str, FwdMode] = ...) -> None\n"
+};
+
 void _init_py_RNN(py::module m) {
     using py_op = PyOp(RNN);
     auto& py_type = PyOpType(RNN);
@@ -14595,6 +16231,10 @@ void _init_py_RNN(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(RNN), &PyOp(RNN)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
         _init_py_RNN_NonlineMode(py_type);
     _init_py_RNN_FwdMode(py_type);
@@ -14641,6 +16281,8 @@ PyOpDefBegin(RNNCell) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(RNNCell)
 
@@ -14680,6 +16322,20 @@ PyGetSetDef PyOp(RNNCell)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(RNNCell)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(RNNCell)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(RNNCell)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(RNNCell)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, nonlineMode: Union[str, NonlineMode] = ...) -> None\n"
+};
+
 void _init_py_RNNCell(py::module m) {
     using py_op = PyOp(RNNCell);
     auto& py_type = PyOpType(RNNCell);
@@ -14694,6 +16350,10 @@ void _init_py_RNNCell(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(RNNCell), &PyOp(RNNCell)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
         _init_py_RNNCell_NonlineMode(py_type);
 
@@ -14870,6 +16530,8 @@ PyOpDefBegin(ROIAlign) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(ROIAlign)
 
@@ -14979,6 +16641,20 @@ PyGetSetDef PyOp(ROIAlign)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(ROIAlign)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(ROIAlign)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(ROIAlign)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(ROIAlign)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, mode: Union[str, Mode] = ..., format: Union[str, Format] = ..., spatial_scale: float = ..., offset: float = ..., pooled_height: int = ..., pooled_width: int = ..., sample_height: int = ..., sample_width: int = ...) -> None\n"
+};
+
 void _init_py_ROIAlign(py::module m) {
     using py_op = PyOp(ROIAlign);
     auto& py_type = PyOpType(ROIAlign);
@@ -14993,6 +16669,10 @@ void _init_py_ROIAlign(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(ROIAlign), &PyOp(ROIAlign)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
         _init_py_ROIAlign_Mode(py_type);
     _init_py_ROIAlign_Format(py_type);
@@ -15114,6 +16794,8 @@ PyOpDefBegin(ROIPooling) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(ROIPooling)
 
@@ -15163,6 +16845,20 @@ PyGetSetDef PyOp(ROIPooling)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(ROIPooling)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(ROIPooling)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(ROIPooling)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(ROIPooling)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, mode: Union[str, Mode] = ..., scale: float = ...) -> None\n"
+};
+
 void _init_py_ROIPooling(py::module m) {
     using py_op = PyOp(ROIPooling);
     auto& py_type = PyOpType(ROIPooling);
@@ -15177,6 +16873,10 @@ void _init_py_ROIPooling(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(ROIPooling), &PyOp(ROIPooling)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
         _init_py_ROIPooling_Mode(py_type);
 
@@ -15428,6 +17128,8 @@ PyOpDefBegin(Reduce) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(Reduce)
 
@@ -15497,6 +17199,20 @@ PyGetSetDef PyOp(Reduce)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(Reduce)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(Reduce)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(Reduce)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(Reduce)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, mode: Union[str, Mode] = ..., axis: int = ..., data_type: Union[str, DataType] = ..., keepdim: bool = ...) -> None\n"
+};
+
 void _init_py_Reduce(py::module m) {
     using py_op = PyOp(Reduce);
     auto& py_type = PyOpType(Reduce);
@@ -15511,6 +17227,10 @@ void _init_py_Reduce(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(Reduce), &PyOp(Reduce)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
         _init_py_Reduce_Mode(py_type);
     _init_py_Reduce_DataType(py_type);
@@ -15653,6 +17373,8 @@ PyOpDefBegin(RegionRestrictedConvolution) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(RegionRestrictedConvolution)
 
@@ -15782,6 +17504,20 @@ PyGetSetDef PyOp(RegionRestrictedConvolution)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(RegionRestrictedConvolution)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(RegionRestrictedConvolution)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(RegionRestrictedConvolution)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(RegionRestrictedConvolution)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, mode: Union[str, Mode] = ..., pad_h: int = ..., pad_w: int = ..., stride_h: int = ..., stride_w: int = ..., dilate_h: int = ..., dilate_w: int = ..., sparse: Union[str, Sparse] = ..., format: Union[str, Format] = ..., compute_mode: Union[str, ComputeMode] = ...) -> None\n"
+};
+
 void _init_py_RegionRestrictedConvolution(py::module m) {
     using py_op = PyOp(RegionRestrictedConvolution);
     auto& py_type = PyOpType(RegionRestrictedConvolution);
@@ -15796,6 +17532,10 @@ void _init_py_RegionRestrictedConvolution(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(RegionRestrictedConvolution), &PyOp(RegionRestrictedConvolution)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
         _init_py_RegionRestrictedConvolution_Mode(py_type);
     _init_py_RegionRestrictedConvolution_Sparse(py_type);
@@ -15940,6 +17680,8 @@ PyOpDefBegin(RegionRestrictedConvolutionBackwardData) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(RegionRestrictedConvolutionBackwardData)
 
@@ -16069,6 +17811,20 @@ PyGetSetDef PyOp(RegionRestrictedConvolutionBackwardData)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(RegionRestrictedConvolutionBackwardData)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(RegionRestrictedConvolutionBackwardData)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(RegionRestrictedConvolutionBackwardData)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(RegionRestrictedConvolutionBackwardData)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, mode: Union[str, Mode] = ..., pad_h: int = ..., pad_w: int = ..., stride_h: int = ..., stride_w: int = ..., dilate_h: int = ..., dilate_w: int = ..., sparse: Union[str, Sparse] = ..., format: Union[str, Format] = ..., compute_mode: Union[str, ComputeMode] = ...) -> None\n"
+};
+
 void _init_py_RegionRestrictedConvolutionBackwardData(py::module m) {
     using py_op = PyOp(RegionRestrictedConvolutionBackwardData);
     auto& py_type = PyOpType(RegionRestrictedConvolutionBackwardData);
@@ -16083,6 +17839,10 @@ void _init_py_RegionRestrictedConvolutionBackwardData(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(RegionRestrictedConvolutionBackwardData), &PyOp(RegionRestrictedConvolutionBackwardData)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
         _init_py_RegionRestrictedConvolutionBackwardData_Mode(py_type);
     _init_py_RegionRestrictedConvolutionBackwardData_Sparse(py_type);
@@ -16345,6 +18105,8 @@ PyOpDefBegin(Remap) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(Remap)
 
@@ -16414,6 +18176,20 @@ PyGetSetDef PyOp(Remap)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(Remap)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(Remap)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(Remap)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(Remap)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, imode: Union[str, InterpolationMode] = ..., border_type: Union[str, BorderMode] = ..., format: Union[str, Format] = ..., scalar: float = ...) -> None\n"
+};
+
 void _init_py_Remap(py::module m) {
     using py_op = PyOp(Remap);
     auto& py_type = PyOpType(Remap);
@@ -16428,6 +18204,10 @@ void _init_py_Remap(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(Remap), &PyOp(Remap)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
         _init_py_Remap_InterpolationMode(py_type);
     _init_py_Remap_BorderMode(py_type);
@@ -16523,6 +18303,8 @@ PyOpDefBegin(RemoteRecv) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(RemoteRecv)
 
@@ -16632,6 +18414,20 @@ PyGetSetDef PyOp(RemoteRecv)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(RemoteRecv)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(RemoteRecv)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(RemoteRecv)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(RemoteRecv)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, key: str = ..., addr: str = ..., port: int = ..., rank_from: int = ..., cn: str = ..., shape: list[int] = ..., dtype: str = ..., backend: str = ...) -> None\n"
+};
+
 void _init_py_RemoteRecv(py::module m) {
     using py_op = PyOp(RemoteRecv);
     auto& py_type = PyOpType(RemoteRecv);
@@ -16646,6 +18442,10 @@ void _init_py_RemoteRecv(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(RemoteRecv), &PyOp(RemoteRecv)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -16714,6 +18514,8 @@ PyOpDefBegin(RemoteSend) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(RemoteSend)
 
@@ -16793,6 +18595,20 @@ PyGetSetDef PyOp(RemoteSend)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(RemoteSend)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(RemoteSend)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(RemoteSend)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(RemoteSend)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, key: str = ..., addr: str = ..., port: int = ..., rank_to: int = ..., backend: str = ...) -> None\n"
+};
+
 void _init_py_RemoteSend(py::module m) {
     using py_op = PyOp(RemoteSend);
     auto& py_type = PyOpType(RemoteSend);
@@ -16807,6 +18623,10 @@ void _init_py_RemoteSend(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(RemoteSend), &PyOp(RemoteSend)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -16843,6 +18663,8 @@ PyOpDefBegin(RemoveAxis) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(RemoveAxis)
 
@@ -16882,6 +18704,20 @@ PyGetSetDef PyOp(RemoveAxis)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(RemoveAxis)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(RemoveAxis)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(RemoveAxis)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(RemoveAxis)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, axis: list[int] = ...) -> None\n"
+};
+
 void _init_py_RemoveAxis(py::module m) {
     using py_op = PyOp(RemoveAxis);
     auto& py_type = PyOpType(RemoveAxis);
@@ -16896,6 +18732,10 @@ void _init_py_RemoveAxis(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(RemoveAxis), &PyOp(RemoveAxis)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -16940,6 +18780,8 @@ PyOpDefBegin(Reshape) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(Reshape)
 
@@ -16989,6 +18831,20 @@ PyGetSetDef PyOp(Reshape)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(Reshape)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(Reshape)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(Reshape)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(Reshape)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, axis: int = ..., shape: list[int] = ...) -> None\n"
+};
+
 void _init_py_Reshape(py::module m) {
     using py_op = PyOp(Reshape);
     auto& py_type = PyOpType(Reshape);
@@ -17003,6 +18859,10 @@ void _init_py_Reshape(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(Reshape), &PyOp(Reshape)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -17063,6 +18923,8 @@ PyOpDefBegin(Resize) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(Resize)
 
@@ -17112,6 +18974,20 @@ PyGetSetDef PyOp(Resize)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(Resize)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(Resize)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(Resize)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(Resize)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, imode: Union[str, InterpolationMode] = ..., format: Union[str, Format] = ...) -> None\n"
+};
+
 void _init_py_Resize(py::module m) {
     using py_op = PyOp(Resize);
     auto& py_type = PyOpType(Resize);
@@ -17126,6 +19002,10 @@ void _init_py_Resize(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(Resize), &PyOp(Resize)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
         _init_py_Resize_InterpolationMode(py_type);
     _init_py_Resize_Format(py_type);
@@ -17172,6 +19052,8 @@ PyOpDefBegin(SVD) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(SVD)
 
@@ -17221,6 +19103,20 @@ PyGetSetDef PyOp(SVD)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(SVD)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(SVD)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(SVD)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(SVD)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, full_matrices: bool = ..., compute_uv: bool = ...) -> None\n"
+};
+
 void _init_py_SVD(py::module m) {
     using py_op = PyOp(SVD);
     auto& py_type = PyOpType(SVD);
@@ -17235,6 +19131,10 @@ void _init_py_SVD(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(SVD), &PyOp(SVD)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -17271,6 +19171,8 @@ PyOpDefBegin(SetMeshIndexing) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(SetMeshIndexing)
 
@@ -17310,6 +19212,20 @@ PyGetSetDef PyOp(SetMeshIndexing)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(SetMeshIndexing)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(SetMeshIndexing)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(SetMeshIndexing)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(SetMeshIndexing)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, items: list[tuple[int, bool, bool, bool, bool]] = ...) -> None\n"
+};
+
 void _init_py_SetMeshIndexing(py::module m) {
     using py_op = PyOp(SetMeshIndexing);
     auto& py_type = PyOpType(SetMeshIndexing);
@@ -17324,6 +19240,10 @@ void _init_py_SetMeshIndexing(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(SetMeshIndexing), &PyOp(SetMeshIndexing)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -17360,6 +19280,8 @@ PyOpDefBegin(SetSubtensor) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(SetSubtensor)
 
@@ -17399,6 +19321,20 @@ PyGetSetDef PyOp(SetSubtensor)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(SetSubtensor)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(SetSubtensor)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(SetSubtensor)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(SetSubtensor)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, items: list[tuple[int, bool, bool, bool, bool]] = ...) -> None\n"
+};
+
 void _init_py_SetSubtensor(py::module m) {
     using py_op = PyOp(SetSubtensor);
     auto& py_type = PyOpType(SetSubtensor);
@@ -17413,6 +19349,10 @@ void _init_py_SetSubtensor(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(SetSubtensor), &PyOp(SetSubtensor)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -17457,6 +19397,8 @@ PyOpDefBegin(ShuffleRNG) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(ShuffleRNG)
 
@@ -17506,6 +19448,20 @@ PyGetSetDef PyOp(ShuffleRNG)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(ShuffleRNG)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(ShuffleRNG)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(ShuffleRNG)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(ShuffleRNG)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, seed: int = ..., handle: int = ...) -> None\n"
+};
+
 void _init_py_ShuffleRNG(py::module m) {
     using py_op = PyOp(ShuffleRNG);
     auto& py_type = PyOpType(ShuffleRNG);
@@ -17520,6 +19476,10 @@ void _init_py_ShuffleRNG(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(ShuffleRNG), &PyOp(ShuffleRNG)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -17628,6 +19588,8 @@ PyOpDefBegin(SlidingWindowTranspose) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(SlidingWindowTranspose)
 
@@ -17757,6 +19719,20 @@ PyGetSetDef PyOp(SlidingWindowTranspose)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(SlidingWindowTranspose)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(SlidingWindowTranspose)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(SlidingWindowTranspose)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(SlidingWindowTranspose)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, out_h: int = ..., out_w: int = ..., pad_h: int = ..., pad_w: int = ..., stride_h: int = ..., stride_w: int = ..., dilate_h: int = ..., dilate_w: int = ..., window_h: int = ..., window_w: int = ...) -> None\n"
+};
+
 void _init_py_SlidingWindowTranspose(py::module m) {
     using py_op = PyOp(SlidingWindowTranspose);
     auto& py_type = PyOpType(SlidingWindowTranspose);
@@ -17771,6 +19747,10 @@ void _init_py_SlidingWindowTranspose(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(SlidingWindowTranspose), &PyOp(SlidingWindowTranspose)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -17807,6 +19787,8 @@ PyOpDefBegin(Softmax) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(Softmax)
 
@@ -17846,6 +19828,20 @@ PyGetSetDef PyOp(Softmax)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(Softmax)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(Softmax)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(Softmax)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(Softmax)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, axis: int = ...) -> None\n"
+};
+
 void _init_py_Softmax(py::module m) {
     using py_op = PyOp(Softmax);
     auto& py_type = PyOpType(Softmax);
@@ -17860,6 +19856,10 @@ void _init_py_Softmax(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(Softmax), &PyOp(Softmax)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -17904,6 +19904,8 @@ PyOpDefBegin(Split) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(Split)
 
@@ -17953,6 +19955,20 @@ PyGetSetDef PyOp(Split)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(Split)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(Split)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(Split)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(Split)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, axis: int = ..., nsections: int = ...) -> None\n"
+};
+
 void _init_py_Split(py::module m) {
     using py_op = PyOp(Split);
     auto& py_type = PyOpType(Split);
@@ -17967,6 +19983,10 @@ void _init_py_Split(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(Split), &PyOp(Split)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -18003,6 +20023,8 @@ PyOpDefBegin(Subtensor) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(Subtensor)
 
@@ -18042,6 +20064,20 @@ PyGetSetDef PyOp(Subtensor)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(Subtensor)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(Subtensor)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(Subtensor)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(Subtensor)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, items: list[tuple[int, bool, bool, bool, bool]] = ...) -> None\n"
+};
+
 void _init_py_Subtensor(py::module m) {
     using py_op = PyOp(Subtensor);
     auto& py_type = PyOpType(Subtensor);
@@ -18056,6 +20092,10 @@ void _init_py_Subtensor(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(Subtensor), &PyOp(Subtensor)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -18100,6 +20140,8 @@ PyOpDefBegin(TQT) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(TQT)
 
@@ -18149,6 +20191,20 @@ PyGetSetDef PyOp(TQT)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(TQT)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(TQT)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(TQT)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(TQT)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, qmin: int = ..., qmax: int = ...) -> None\n"
+};
+
 void _init_py_TQT(py::module m) {
     using py_op = PyOp(TQT);
     auto& py_type = PyOpType(TQT);
@@ -18163,6 +20219,10 @@ void _init_py_TQT(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(TQT), &PyOp(TQT)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -18207,6 +20267,8 @@ PyOpDefBegin(TensorRTRuntime) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(TensorRTRuntime)
 
@@ -18256,6 +20318,20 @@ PyGetSetDef PyOp(TensorRTRuntime)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(TensorRTRuntime)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(TensorRTRuntime)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(TensorRTRuntime)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(TensorRTRuntime)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, buf: str = ..., buf_size: int = ...) -> None\n"
+};
+
 void _init_py_TensorRTRuntime(py::module m) {
     using py_op = PyOp(TensorRTRuntime);
     auto& py_type = PyOpType(TensorRTRuntime);
@@ -18270,6 +20346,10 @@ void _init_py_TensorRTRuntime(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(TensorRTRuntime), &PyOp(TensorRTRuntime)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -18386,6 +20466,8 @@ PyOpDefBegin(TopK) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(TopK)
 
@@ -18425,6 +20507,20 @@ PyGetSetDef PyOp(TopK)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(TopK)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(TopK)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(TopK)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(TopK)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, mode: Union[str, Mode] = ...) -> None\n"
+};
+
 void _init_py_TopK(py::module m) {
     using py_op = PyOp(TopK);
     auto& py_type = PyOpType(TopK);
@@ -18439,6 +20535,10 @@ void _init_py_TopK(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(TopK), &PyOp(TopK)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
         _init_py_TopK_Mode(py_type);
 
@@ -18476,6 +20576,8 @@ PyOpDefBegin(TypeCvt) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(TypeCvt)
 
@@ -18515,6 +20617,20 @@ PyGetSetDef PyOp(TypeCvt)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(TypeCvt)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(TypeCvt)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(TypeCvt)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(TypeCvt)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, dtype: str = ...) -> None\n"
+};
+
 void _init_py_TypeCvt(py::module m) {
     using py_op = PyOp(TypeCvt);
     auto& py_type = PyOpType(TypeCvt);
@@ -18529,6 +20645,10 @@ void _init_py_TypeCvt(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(TypeCvt), &PyOp(TypeCvt)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -18581,6 +20701,8 @@ PyOpDefBegin(UniformRNG) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(UniformRNG)
 
@@ -18640,6 +20762,20 @@ PyGetSetDef PyOp(UniformRNG)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(UniformRNG)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(UniformRNG)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(UniformRNG)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(UniformRNG)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, seed: int = ..., dtype: str = ..., handle: int = ...) -> None\n"
+};
+
 void _init_py_UniformRNG(py::module m) {
     using py_op = PyOp(UniformRNG);
     auto& py_type = PyOpType(UniformRNG);
@@ -18654,6 +20790,10 @@ void _init_py_UniformRNG(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(UniformRNG), &PyOp(UniformRNG)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
     
     PyType_Modified(&py_type);
@@ -18738,6 +20878,8 @@ PyOpDefBegin(WarpAffine) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(WarpAffine)
 
@@ -18807,6 +20949,20 @@ PyGetSetDef PyOp(WarpAffine)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(WarpAffine)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(WarpAffine)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(WarpAffine)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(WarpAffine)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, imode: Union[str, InterpolationMode] = ..., border_mode: Union[str, BorderMode] = ..., border_val: float = ..., format: Union[str, Format] = ...) -> None\n"
+};
+
 void _init_py_WarpAffine(py::module m) {
     using py_op = PyOp(WarpAffine);
     auto& py_type = PyOpType(WarpAffine);
@@ -18821,6 +20977,10 @@ void _init_py_WarpAffine(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(WarpAffine), &PyOp(WarpAffine)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
         _init_py_WarpAffine_InterpolationMode(py_type);
     _init_py_WarpAffine_BorderMode(py_type);
@@ -18908,6 +21068,8 @@ PyOpDefBegin(WarpPerspective) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(WarpPerspective)
 
@@ -18977,6 +21139,20 @@ PyGetSetDef PyOp(WarpPerspective)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(WarpPerspective)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(WarpPerspective)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(WarpPerspective)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(WarpPerspective)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, imode: Union[str, InterpolationMode] = ..., bmode: Union[str, BorderMode] = ..., format: Union[str, Format] = ..., border_val: float = ...) -> None\n"
+};
+
 void _init_py_WarpPerspective(py::module m) {
     using py_op = PyOp(WarpPerspective);
     auto& py_type = PyOpType(WarpPerspective);
@@ -18991,6 +21167,10 @@ void _init_py_WarpPerspective(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(WarpPerspective), &PyOp(WarpPerspective)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
         _init_py_WarpPerspective_InterpolationMode(py_type);
     _init_py_WarpPerspective_BorderMode(py_type);
@@ -19078,6 +21258,8 @@ PyOpDefBegin(WarpPerspectiveBackwardData) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(WarpPerspectiveBackwardData)
 
@@ -19147,6 +21329,20 @@ PyGetSetDef PyOp(WarpPerspectiveBackwardData)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(WarpPerspectiveBackwardData)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(WarpPerspectiveBackwardData)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(WarpPerspectiveBackwardData)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(WarpPerspectiveBackwardData)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, imode: Union[str, InterpolationMode] = ..., bmode: Union[str, BorderMode] = ..., format: Union[str, Format] = ..., border_val: float = ...) -> None\n"
+};
+
 void _init_py_WarpPerspectiveBackwardData(py::module m) {
     using py_op = PyOp(WarpPerspectiveBackwardData);
     auto& py_type = PyOpType(WarpPerspectiveBackwardData);
@@ -19161,6 +21357,10 @@ void _init_py_WarpPerspectiveBackwardData(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(WarpPerspectiveBackwardData), &PyOp(WarpPerspectiveBackwardData)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
         _init_py_WarpPerspectiveBackwardData_InterpolationMode(py_type);
     _init_py_WarpPerspectiveBackwardData_BorderMode(py_type);
@@ -19248,6 +21448,8 @@ PyOpDefBegin(WarpPerspectiveBackwardMat) // {
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
 // };
 PyOpDefEnd(WarpPerspectiveBackwardMat)
 
@@ -19317,6 +21519,20 @@ PyGetSetDef PyOp(WarpPerspectiveBackwardMat)::py_getsetters[] = {
         {NULL}  /* Sentinel */
     };
     
+PyObject *PyOp(WarpPerspectiveBackwardMat)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(WarpPerspectiveBackwardMat)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(WarpPerspectiveBackwardMat)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(WarpPerspectiveBackwardMat)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, imode: Union[str, InterpolationMode] = ..., bmode: Union[str, BorderMode] = ..., format: Union[str, Format] = ..., border_val: float = ...) -> None\n"
+};
+
 void _init_py_WarpPerspectiveBackwardMat(py::module m) {
     using py_op = PyOp(WarpPerspectiveBackwardMat);
     auto& py_type = PyOpType(WarpPerspectiveBackwardMat);
@@ -19331,6 +21547,10 @@ void _init_py_WarpPerspectiveBackwardMat(py::module m) {
     py_type.tp_init = py_op::py_init;
     py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(WarpPerspectiveBackwardMat), &PyOp(WarpPerspectiveBackwardMat)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
         _init_py_WarpPerspectiveBackwardMat_InterpolationMode(py_type);
     _init_py_WarpPerspectiveBackwardMat_BorderMode(py_type);
