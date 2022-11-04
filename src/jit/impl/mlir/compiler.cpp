@@ -57,7 +57,7 @@ mlir::OwnedBlob compile_ptx_to_cubin(
 }
 
 std::unique_ptr<llvm::Module> translate_module_to_nvvm_ir_and_link_device(
-        Operation* m, llvm::LLVMContext& llvmContext, llvm::StringRef name) {
+        Operation* m, llvm::LLVMContext& llvmContext, llvm::StringRef /*name*/) {
     std::unique_ptr<llvm::Module> module =
             mlir::translateModuleToNVVMIR(m, llvmContext);
     auto get_device_path = []() -> std::string {
