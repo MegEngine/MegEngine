@@ -79,11 +79,6 @@ void NetworkImplDft::application_config() {
             force_output_use_user_specified_memory,
             force_output_use_user_specified_memory);
     ConfigOption(no_profiling_on_shape_change, no_profiling_on_shape_change);
-    LITE_ASSERT(
-            m_user_config->options.jit_level == 0 ||
-                    (m_user_config->options.jit_level > 0 &&
-                     device_type == LiteDeviceType::LITE_CUDA),
-            "jit only support in cuda device.");
     ConfigOption(graph_opt.jit, jit_level);
     ConfigOption(comp_node_seq_record_level, comp_node_seq_record_level);
     ConfigOption(graph_opt_level, graph_opt_level);

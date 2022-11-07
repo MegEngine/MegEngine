@@ -366,7 +366,6 @@ public:
          *    construction
          * 2: level-2: level-1, plus global optimization before graph
          *    compiling
-         * 3: also enable JIT
          * <0: corresponding level, with result check for debug
          */
         int16_t graph_opt_level = 2;
