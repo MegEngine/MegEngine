@@ -1396,8 +1396,9 @@ if(TARGET _imperative_rt)
       ${CMAKE_COMMAND} -E create_symlink
       ${CMAKE_CURRENT_BINARY_DIR}/src/$<TARGET_FILE_NAME:${MGE_SHARED_LIB}>
       ${CMAKE_CURRENT_SOURCE_DIR}/imperative/python/${PACKAGE_NAME}/core/lib/$<TARGET_FILE_NAME:${MGE_SHARED_LIB}>
-    DEPENDS _imperative_rt
+    DEPENDS ${develop_depends}
     VERBATIM)
+  add_dependencies(develop _imperative_rt)
 endif()
 
 # Configure and install pkg-config. Note that unlike the Config.cmake modules, this is
