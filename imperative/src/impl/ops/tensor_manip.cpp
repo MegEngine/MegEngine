@@ -292,4 +292,62 @@ OP_TRAIT_REG(Split, Split, opr::Split)
 
 }  // namespace split
 
+namespace masked_fill {
+
+cg::OperatorNodeBase* apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
+    auto&& op_def = def.cast_final_safe<MaskedFill>();
+    OperatorNodeConfig config{op_def.make_name()};
+    mgb_assert(inputs.size() == 2);
+    return opr::MaskedFill::make(inputs[0], inputs[1], op_def.param(), config)
+            .node()
+            ->owner_opr();
+}
+
+SmallVector<VarNode::LayoutConstraintCallback> get_input_layout_constraint(
+        const OpDef& def, const SmallVector<TensorPtr>& inputs) {
+    SmallVector<VarNode::LayoutConstraintCallback> layout_checker(inputs.size());
+    layout_checker[0] = [](const TensorLayout& layout) {
+        return layout.is_contiguous();
+    };
+    return layout_checker;
+}
+
+std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
+        const OpDef& def, const SmallVector<LogicalTensorDesc>& input_descs) {
+    return {{{{input_descs[0].layout, input_descs[0].layout.dtype},
+              input_descs[0].comp_node}},
+            input_descs[0].layout.ndim != 0};
+}
+
+SmallVector<TensorPtr> apply_on_physical_tensor(
+        const OpDef& def, const SmallVector<TensorPtr>& inputs,
+        SmallVector<LogicalTensorDesc>& output_descs, const bool& validated) {
+    auto&& op = def.cast_final_safe<MaskedFill>();
+    auto&& inp = inputs[0];
+    auto&& mask = inputs[1];
+
+    TensorLayout outlayout(inp->layout(), inp->layout().dtype);
+
+    auto output = Tensor::make(outlayout, inp->comp_node());
+
+    DnnOprCaller<megdnn::MaskedFill> dnn_opr{inp->comp_node(), op.param()};
+    dnn_opr.exec_with_ws(inp, mask, output);
+    return {output};
+}
+
+std::shared_ptr<OpDef> make_from_op_node(cg::OperatorNodeBase* node_) {
+    auto* node = &node_->cast_final_safe<opr::MaskedFill>();
+    return MaskedFill::make(node->param());
+}
+
+OP_TRAIT_REG(MaskedFill, MaskedFill, mgb::opr::MaskedFill)
+        .get_input_layout_constraint(get_input_layout_constraint)
+        .infer_output_attrs_fallible(infer_output_attrs_fallible)
+        .apply_on_physical_tensor(apply_on_physical_tensor)
+        .apply_on_var_node(apply_on_var_node)
+        .make_from_op_node(make_from_op_node)
+        .fallback();
+
+}  // namespace masked_fill
+
 }  // namespace mgb::imperative

@@ -1290,6 +1290,29 @@ py::object _getitem_cpp(py::handle inp_hdl, py::handle idx_hdl) {
 py::object _setitem_cpp(py::handle inp_hdl, py::handle idx_hdl, py::handle val_hdl) {
     py::object org_shape = getattr(inp_hdl, "shape");
     py::object val = py::reinterpret_borrow<py::object>(val_hdl);
+    bool is_val_scalar = false;
+    float value;
+    if (PyLong_Check(val.ptr())) {
+        is_val_scalar = true;
+        value = static_cast<float>(PyLong_AsDouble(val.ptr()));
+    }
+    if (PyFloat_Check(val.ptr())) {
+        is_val_scalar = true;
+        value = static_cast<float>(PyFloat_AsDouble(val.ptr()));
+    }
+    if (TensorWrapper::try_cast(idx_hdl.ptr()) && is_bool_dtype(idx_hdl.ptr()) &&
+        is_val_scalar && enable_fastpath(inp_hdl)) {
+        std::vector<PyObject*> q(3);
+        std::shared_ptr<OpDef> Op = MaskedFill::make(value);
+        py::object maskedfill = py::cast(Op);
+        q[0] = maskedfill.ptr();
+        q[1] = inp_hdl.ptr();
+        q[2] = idx_hdl.ptr();
+        py::tuple result =
+                py::reinterpret_steal<py::object>(py_apply(NULL, q.data(), q.size()));
+        py::object res = result[0];
+        return res;
+    }
     if (!TensorWrapper::try_cast(val.ptr())) {
         val = _Const(val_hdl, getattr(inp_hdl, "dtype"), getattr(inp_hdl, "device"));
     }

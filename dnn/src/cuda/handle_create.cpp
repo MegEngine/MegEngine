@@ -44,6 +44,7 @@
 #include "src/cuda/lrn/opr_impl.h"
 #include "src/cuda/lsq/opr_impl.h"
 #include "src/cuda/mask_conv/opr_impl.h"
+#include "src/cuda/masked_fill/opr_impl.h"
 #include "src/cuda/matrix_inverse/opr_impl.h"
 #include "src/cuda/matrix_mul/opr_impl.h"
 #include "src/cuda/max_tensor_diff/opr_impl.h"
@@ -178,6 +179,7 @@ MEGDNN_SPECIALIZE_CREATE_OPERATOR(ParamPackConcat);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(MaxTensorDiff);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(MaskConvForward);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(MaskPropagate);
+MEGDNN_SPECIALIZE_CREATE_OPERATOR(MaskedFill);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(Convolution3DForward);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(Convolution3DBackwardData);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(Convolution3DBackwardFilter);

@@ -141,6 +141,7 @@ union OperatorParam {
     param.Softmax = 90,
     param.Diag = 91,
     param.GroupNorm = 92,
+    param.Fill = 93,
 }
 
 table Operator {

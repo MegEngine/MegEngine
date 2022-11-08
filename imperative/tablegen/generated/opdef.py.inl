@@ -1412,6 +1412,12 @@ MagicMindRuntimeInst
     .def_readwrite("buf", &MagicMindRuntime::buf)
     .def_readwrite("buf_size", &MagicMindRuntime::buf_size);
 
+py::class_<MaskedFill, std::shared_ptr<MaskedFill>, OpDef> MaskedFillInst(m, "MaskedFill");
+
+MaskedFillInst
+    .def(py::init<float, std::string>(), py::arg("value") = 0, py::arg("scope") = {})
+    .def_readwrite("value", &MaskedFill::value);
+
 py::class_<MatrixInverse, std::shared_ptr<MatrixInverse>, OpDef> MatrixInverseInst(m, "MatrixInverse");
 
 MatrixInverseInst

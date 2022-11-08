@@ -630,6 +630,18 @@ public:
             const OperatorNodeConfig& config = {});
 };
 
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(
+        MaskedFill, intl::MegDNNOprWrapperFwd<megdnn::MaskedFill>) // {
+public:
+    MGE_WIN_DECLSPEC_FUC MaskedFill(
+            VarNode* src, VarNode* index, const Param& param,
+            const OperatorNodeConfig& config);
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
+            SymbolVar src, SymbolVar index, const Param& param = {},
+            const OperatorNodeConfig& config = {});
+    MGE_WIN_DECLSPEC_FUC void init_output_dtype() override;
+};
+
 }  // namespace opr
 }  // namespace mgb
 
