@@ -4788,6 +4788,43 @@ OP_TRAIT_REG(MagicMindRuntime, MagicMindRuntime)
     .props(MagicMindRuntime_props_impl)
     .make_name(MagicMindRuntime_make_name_impl);
 
+MGB_DYN_TYPE_OBJ_FINAL_IMPL(MaskedFill);
+
+namespace {
+size_t MaskedFill_hash_impl(const OpDef& def_) {
+    auto&& op_ = def_.cast_final_safe<MaskedFill>();
+    static_cast<void>(op_);
+    size_t val = mgb::hash(op_.dyn_typeinfo());
+    val = mgb::hash_pair_combine(val, mgb::hash(op_.value));
+    return val;
+}
+bool MaskedFill_is_same_st_impl(const OpDef& lhs_, const OpDef& rhs_) {
+    auto &&a_ = lhs_.cast_final_safe<MaskedFill>(),
+         &&b_ = rhs_.cast_final_safe<MaskedFill>();
+    static_cast<void>(a_);
+    static_cast<void>(b_);
+    if (a_.value != b_.value) return false;
+    return true;
+}
+std::vector<std::pair<const char*, std::string>> MaskedFill_props_impl(const OpDef& def_) {
+    auto&& op_ = def_.cast_final_safe<MaskedFill>();
+    static_cast<void>(op_);
+    std::vector<std::pair<const char*, std::string>> props_;
+    props_.emplace_back("value", std::to_string(op_.value));
+    return props_;
+}
+std::string MaskedFill_make_name_impl(const OpDef& def_) {
+    auto&& op_ = def_.cast_final_safe<MaskedFill>();
+    static_cast<void>(op_);
+    return "MaskedFill";
+}
+} // anonymous namespace
+OP_TRAIT_REG(MaskedFill, MaskedFill)
+    .hash(MaskedFill_hash_impl)
+    .is_same_st(MaskedFill_is_same_st_impl)
+    .props(MaskedFill_props_impl)
+    .make_name(MaskedFill_make_name_impl);
+
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(MatrixInverse);
 
 namespace {

@@ -1631,4 +1631,26 @@ MEGDNN_OPR_INIT2(PaddingBackward, "padding_backward", 1, false);
 
 // f}}}
 
+/* f{{{ ======================= MaskedFill ======================= */
+
+MGB_DYN_TYPE_OBJ_FINAL_IMPL(MaskedFill);
+MEGDNN_OPR_INIT2(MaskedFill, "masked_fill");
+
+void MaskedFill::init_output_dtype() {
+    output(0)->dtype(input(0)->dtype());
+}
+
+#if MGB_ENABLE_GRAD
+MGB_IMPL_OPR_GRAD(MaskedFill) {
+    mgb_assert(opr.input().size() == 2);
+    if (wrt_idx == 0) {
+        SymbolVar grad = MaskedFill::make(out_grad[0], opr.input(1), {.0});
+        return grad.node();
+    } else
+        return InvalidGrad::make(opr, wrt_idx);
+}
+#endif
+
+// f}}}
+
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

@@ -218,7 +218,8 @@ private:
     cb(RegionRestrictedConvolutionBackwardData) \
     cb(RegionRestrictedConvolutionBackwardFilter) \
     cb(GroupNormForward) \
-    cb(GroupNormBackward)
+    cb(GroupNormBackward) \
+    cb(MaskedFill)
 // clang-format on
 
 /*!

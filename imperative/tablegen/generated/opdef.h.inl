@@ -1288,6 +1288,19 @@ public:
     MagicMindRuntime(std::string buf_, size_t buf_size_, std::string scope_ = {}): buf(buf_), buf_size(buf_size_) { set_scope(scope_); }
 };
 
+class MaskedFill : public OpDefImplBase<MaskedFill> {
+    MGB_DYN_TYPE_OBJ_FINAL_DECL;
+
+public:
+    float value = 0;
+    MaskedFill() = default;
+    MaskedFill(float value_, std::string scope_ = {}): value(value_) { set_scope(scope_); }
+    MaskedFill(::megdnn::param::Fill packed_param_0): value(packed_param_0.value) {}
+    ::megdnn::param::Fill param() const {
+        return {value};
+    }
+};
+
 class MatrixInverse : public OpDefImplBase<MatrixInverse> {
     MGB_DYN_TYPE_OBJ_FINAL_DECL;
 

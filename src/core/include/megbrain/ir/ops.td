@@ -553,5 +553,6 @@ def MeshGrid: MgbHashableOp<"MeshGrid"> {
 def RegionRestrictedConvolution: MgbHashableOp<"RegionRestrictedConvolution", [ConvolutionParam]>;
 
 def RegionRestrictedConvolutionBackwardData: MgbHashableOp<"RegionRestrictedConvolutionBackwardData", [ConvolutionParam]>;
+def MaskedFill: MgbHashableOp<"MaskedFill", [FillParam]>;
 
 #endif // MGB_OPS

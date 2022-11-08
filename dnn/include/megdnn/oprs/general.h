@@ -1392,6 +1392,31 @@ protected:
     void check_exec(const TensorLayout& dst, size_t workspace_in_bytes);
 };
 
+class MaskedFill : public OperatorBase {
+    DEF_OPR_PARAM(Fill);
+    DEF_OPR_IMPL(MaskedFill, OperatorBase, 2, 1);
+
+public:
+    virtual void exec(
+            _megdnn_tensor_in origin, _megdnn_tensor_in index,
+            _megdnn_tensor_out dst) = 0;
+    void exec(
+            _megdnn_tensor_in origin, _megdnn_tensor_in index, _megdnn_tensor_out dst,
+            _megdnn_workspace /*workspace*/) {
+        exec(origin, index, dst);
+    }
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& origin, const TensorLayout& index,
+            const TensorLayout& dest) = 0;
+    void deduce_layout(
+            const TensorLayout& origin, const TensorLayout& index, TensorLayout& dest);
+
+protected:
+    void check_exec(
+            const TensorLayout& origin, const TensorLayout& index,
+            const TensorLayout& dest);
+};
+
 /*!
  * \brief standard padding operator
  * Inputs must have the same dtype, and the output tensor shape must greater or equal

@@ -48,6 +48,7 @@
 #include "src/naive/lstm/opr_impl.h"
 #include "src/naive/lstm_cell/opr_impl.h"
 #include "src/naive/mask_conv/opr_impl.h"
+#include "src/naive/masked_fill/opr_impl.h"
 #include "src/naive/matrix_inverse/opr_impl.h"
 #include "src/naive/matrix_mul/opr_impl.h"
 #include "src/naive/max_tensor_diff/opr_impl.h"
