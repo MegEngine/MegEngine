@@ -152,18 +152,15 @@ def test_sqrt():
 
 
 def test_sort():
-    data1_shape = (10, 3)
-    data2_shape = (12, 2)
-    data1 = np.random.random(data1_shape).astype(np.float32)
-    data2 = np.random.random(data2_shape).astype(np.float32)
-    output1 = [np.sort(data1), np.argsort(data1).astype(np.int32)]
-    output2 = [np.sort(data2), np.argsort(data2).astype(np.int32)]
-
-    cases = [
-        {"input": data1, "output": output1},
-        {"input": data2, "output": output2},
-    ]
-    opr_test(cases, F.sort)
+    for _ in range(10):
+        dim = np.random.randint(1, 5)
+        shape = np.random.randint(1, 20, size=(dim,))
+        data = np.random.randint(-100, 101, size=shape)
+        by_dim = np.random.randint(-dim, dim)
+        input = (data, False, by_dim)
+        tns_ref = np.sort(data, by_dim)
+        ind_ref = np.argsort(data, by_dim, kind="stable")
+        opr_test([{"input": input, "output": [tns_ref, ind_ref]}], F.sort)
 
 
 @pytest.mark.parametrize("is_symbolic", [None, False, True])

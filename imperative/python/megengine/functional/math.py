@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import collections
+import functools
 import math
 from typing import Iterable, Optional, Sequence, Tuple, Union
 
@@ -13,7 +14,7 @@ from ..core.tensor.utils import _normalize_axis
 from ..tensor import Tensor
 from ..utils.deprecation import deprecated_kwargs_default
 from .elemwise import _elemwise_multi_type, clip
-from .tensor import broadcast_to, concat, expand_dims, squeeze, zeros
+from .tensor import broadcast_to, concat, expand_dims, squeeze, swapaxes, zeros
 
 __all__ = [
     "argmax",
@@ -600,12 +601,13 @@ def argsort(inp: Tensor, descending: bool = False) -> Tensor:
     return result
 
 
-def sort(inp: Tensor, descending: bool = False) -> Tuple[Tensor, Tensor]:
+def sort(inp: Tensor, descending: bool = False, dim: int = -1) -> Tuple[Tensor, Tensor]:
     r"""Returns sorted tensor and the indices would sort the input tensor.
 
     Args:
-        inp: input tensor. If it's 2d, the result would be sorted by row.
+        inp: input tensor. The result would be sorted along the given dimension.
         descending: sort in descending order, where the largest comes first. Default: False
+        dim: which dimension to sort along. Default: -1 (last dimension)
 
     Returns:
         tuple of two tensors `(sorted_tensor, indices_of_int32)`.
@@ -617,19 +619,28 @@ def sort(inp: Tensor, descending: bool = False) -> Tuple[Tensor, Tensor]:
         >>> out.numpy()
         array([1., 2.], dtype=float32)
     """
-    assert len(inp.shape) <= 2, "Input should be 1d or 2d"
     if descending:
         order = "descending"
     else:
         order = "ascending"
 
     op = builtin.Argsort(order=order)
-    if len(inp.shape) == 1:
-        inp = inp.reshape(1, -1)
-        tns, ind = apply(op, inp)
-        return tns[0], ind[0]
-    tns, ind = apply(op, inp)
-    return tns, ind
+
+    transposed = swapaxes(inp, dim, -1)
+    transposed_shape = transposed.shape
+    nrows = transposed_shape[-1]
+    ncols = 1
+    for i in range(len(transposed_shape) - 1):
+        ncols *= transposed_shape[i]
+    reshaped = transposed.reshape(ncols, nrows)
+    tns, ind = apply(op, reshaped)
+
+    def restore(tensor):
+        unreshaped = tensor.reshape(transposed_shape)
+        untransposed = swapaxes(unreshaped, dim, -1)
+        return untransposed
+
+    return restore(tns), restore(ind)
 
 
 def topk(
