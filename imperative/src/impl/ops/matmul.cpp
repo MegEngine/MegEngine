@@ -22,62 +22,80 @@ auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
     mgb_assert(inputs.size() == 2);
     auto inp1 = SymbolVar{inputs[0]}, inp2 = SymbolVar{inputs[1]};
     auto dim1 = matmul.dimA, dim2 = matmul.dimB;
+    mgb_assert(
+            dim1 >= 2 && dim2 >= 2,
+            "the dim of one input the matmul operator dim is less than 2.");
 
     auto cn = inputs[0]->comp_node();
     using IndexDesc = opr::Subtensor::IndexDesc;
     OperatorNodeConfig config{matmul.make_name(), cn};
 
-    DTypeScalar vi{-1};
     auto graph = inputs[0]->owner_graph();
+    if (dim1 == 2 && dim2 == 2) {
+        return opr::MatrixMul::make(
+                inp1, inp2, matmul.param(), matmul.policy(), config);
+    }
+    //! use batched matrix mul
+    SymbolVar shp_head, batch;
+    DTypeScalar vi{-2};
+    auto compress_shape = [&](SymbolVar inp) {
+        if (inp.shape().ndim > 3) {
+            auto idx = opr::ImmutableTensor::make(*graph, vi, config);
+            auto shp = inp.symshape();
+            IndexDesc head_desc(1);
+            head_desc[0].end = idx;
+            shp_head = opr::Subtensor::make(shp, head_desc);
+            batch = opr::Reduce::make(shp_head, {Reduce::Mode::PRODUCT, 0});
+            IndexDesc tail_desc(1);
+            tail_desc[0].begin = idx;
+            auto shp_tail = opr::Subtensor::make(shp, tail_desc);
+            auto tshp = opr::Concat::make({batch, shp_tail}, 0, cn);
+            return inp.reshape(tshp);
+        } else if (inp.shape().ndim == 3) {
+            auto idx = opr::ImmutableTensor::make(*graph, vi, config);
+            auto shp = inp.symshape();
+            IndexDesc head_desc(1);
+            head_desc[0].end = idx;
+            shp_head = opr::Subtensor::make(shp, head_desc);
+            batch = opr::Reduce::make(shp_head, {Reduce::Mode::PRODUCT, 0});
+            return inp;
+        } else {
+            return inp;
+        }
+    };
 
-    SymbolVar shp1_head, shp1_tail, shp2_head, shp2_tail;
-    if (dim1 > 2) {
+    inp1 = compress_shape(inp1);
+    inp2 = compress_shape(inp2);
+
+    auto expand_shape = [&](SymbolVar inp) {
+        if (inp.shape().ndim < 3) {
+            auto shp = inp.symshape();
+            using Desc = opr::AxisAddRemove::AxisDesc;
+            std::vector<Desc> add_axis_param;
+            add_axis_param.push_back(Desc::make_add(0));
+            auto out = opr::AxisAddRemove::make(inp, add_axis_param);
+            auto target_shape = opr::Concat::make({batch, shp}, 0, cn);
+            return opr::Broadcast::make(out, target_shape);
+        } else {
+            return inp;
+        }
+    };
+    inp1 = expand_shape(inp1);
+    inp2 = expand_shape(inp2);
+
+    auto result = opr::BatchedMatrixMul::make(
+            inp1, inp2, matmul.param(), matmul.policy(), config);
+    size_t max_dim = std::max(dim1, dim2);
+
+    if (max_dim > 3) {
         auto idx = opr::ImmutableTensor::make(*graph, vi, config);
-        auto shp1 = inp1.symshape();
-        IndexDesc head_desc(1);
-        head_desc[0].end = idx;
-        shp1_head = opr::Subtensor::make(shp1, head_desc);
-        auto batch = opr::Reduce::make(shp1_head, {Reduce::Mode::PRODUCT, 0});
+        auto res_shp = result.symshape();
         IndexDesc tail_desc(1);
         tail_desc[0].begin = idx;
-        shp1_tail = opr::Subtensor::make(shp1, tail_desc);
-        auto tshp = opr::Concat::make({batch, shp1_tail}, 0, cn);
-        inp1 = inp1.reshape(tshp);
-    }
-    if (dim2 > 2) {
-        auto idx = opr::ImmutableTensor::make(*graph, vi, config);
-        auto shp2 = inp2.symshape();
-        IndexDesc head_desc(1);
-        head_desc[0].end = idx;
-        shp2_head = opr::Subtensor::make(shp2, head_desc);
-        auto batch = opr::Reduce::make(shp2_head, {Reduce::Mode::PRODUCT, 0});
-        IndexDesc tail_desc(1);
-        tail_desc[0].begin = idx;
-        auto shp2_tail = opr::Subtensor::make(shp2, tail_desc);
-        auto tshp = opr::Concat::make({batch, shp2_tail}, 0, cn);
-        inp2 = inp2.reshape(tshp);
-    }
-    auto result =
-            opr::MatrixMul::make(inp1, inp2, matmul.param(), matmul.policy(), config);
-    if (dim1 > 2) {
-        auto idx = opr::ImmutableTensor::make(*graph, vi, config);
-        auto result_shape = result.symshape();
-        IndexDesc tail_desc(1);
-        tail_desc[0].begin = idx;
-        auto shp_tail = opr::Subtensor::make(result_shape, tail_desc);
-        auto tshp = opr::Concat::make({shp1_head, shp_tail}, 0, cn);
+        auto tail_shape = opr::Subtensor::make(res_shp, tail_desc);
+        auto tshp = opr::Concat::make({shp_head, tail_shape}, 0, cn);
         result = result.reshape(tshp);
     }
-    if (dim2 > 2) {
-        auto idx = opr::ImmutableTensor::make(*graph, vi, config);
-        auto result_shape = result.symshape();
-        IndexDesc tail_desc(1);
-        tail_desc[0].begin = idx;
-        auto shp_tail = opr::Subtensor::make(result_shape, tail_desc);
-        auto tshp = opr::Concat::make({shp2_head, shp_tail}, 0, cn);
-        result = result.reshape(tshp);
-    }
-
     return result;
 }
 

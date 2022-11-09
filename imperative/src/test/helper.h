@@ -14,6 +14,9 @@ public:
     OprChecker(std::shared_ptr<OpDef> opdef);
     void run(std::vector<InputSpec> inp_shapes, std::set<size_t> bypass = {});
 
+    //! test the interface of apply_on_var_node
+    VarNodeArray run_apply_on_var_node(std::vector<InputSpec> inp_shapes);
+
 private:
     std::shared_ptr<OpDef> m_op;
 };
