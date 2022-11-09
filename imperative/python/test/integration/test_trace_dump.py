@@ -12,6 +12,7 @@ import megengine.optimizer as optim
 from megengine import tensor
 from megengine.autodiff import GradManager
 from megengine.jit import trace
+from megengine.optimizer import SGD
 
 
 @contextlib.contextmanager
@@ -138,3 +139,50 @@ def test_dump_bn_train_mode():
     bn_train(data)
     with pytest.raises(RuntimeError):
         bn_train.dump("test.mge")
+
+
+class ViT(M.Module):
+    def __init__(self, patch_size=16, in_chans=3, embed_dim=768):
+        super().__init__()
+        self.proj = M.Conv2d(
+            in_chans, embed_dim, kernel_size=patch_size, stride=patch_size
+        )
+        self.extra = M.Linear(embed_dim, embed_dim)
+        self.head = M.Linear(embed_dim, 1)
+
+    def forward(self, x):
+        x = self.proj(x)
+        x = F.flatten(x, 2).transpose(0, 2, 1)
+
+        x = self.extra(x)
+        x = x.mean(axis=1)
+        x = self.head(x)
+        x = x.sum()
+        return x
+
+
+def test_ViTmode_trace_train():
+    model = ViT(embed_dim=384)
+    data = mge.random.normal(size=(1, 3, 224, 224))
+    optim = SGD(model.parameters(), lr=0.01)
+    gm = GradManager()
+    gm.attach(model.parameters())
+
+    @trace(symbolic=True)
+    def train(d):
+        with gm:
+            loss = model(d)
+            gm.backward(loss)
+
+        optim.step().clear_grad()
+        return loss
+
+    @trace(symbolic=True)
+    def val(d):
+        loss = model(d)
+        return loss
+
+    for i in range(3):
+        print(f"iter: {i}")
+        t = train(data)
+        r = val(data)

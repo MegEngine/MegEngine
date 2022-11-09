@@ -59,26 +59,26 @@ auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
     }
     auto result =
             opr::MatrixMul::make(inp1, inp2, matmul.param(), matmul.policy(), config);
-    if (dim1 > 2) {
+    //! dim1 > 2 && dim2 > 2: (n, c, o) * (n, c, hw) ===>(nxc, o) * (nxc, hw)=(hw, o)
+    //! dim1 == 2 && dim2 == 2: (c, o) * (c, hw) --> (hw, o)
+    if ((dim1 > 2 && dim2 > 2) || (dim1 == dim2 && dim1 == 2)) {
+        return result;
+    } else {
         auto idx = opr::ImmutableTensor::make(*graph, vi, config);
         auto result_shape = result.symshape();
         IndexDesc tail_desc(1);
         tail_desc[0].begin = idx;
         auto shp_tail = opr::Subtensor::make(result_shape, tail_desc);
-        auto tshp = opr::Concat::make({shp1_head, shp_tail}, 0, cn);
-        result = result.reshape(tshp);
+        if (dim1 > 2) {
+            auto tshp = opr::Concat::make({shp1_head, shp_tail}, 0, cn);
+            result = result.reshape(tshp);
+        } else {
+            mgb_assert(dim2 > 2);
+            auto tshp = opr::Concat::make({shp2_head, shp_tail}, 0, cn);
+            result = result.reshape(tshp);
+        }
+        return result;
     }
-    if (dim2 > 2) {
-        auto idx = opr::ImmutableTensor::make(*graph, vi, config);
-        auto result_shape = result.symshape();
-        IndexDesc tail_desc(1);
-        tail_desc[0].begin = idx;
-        auto shp_tail = opr::Subtensor::make(result_shape, tail_desc);
-        auto tshp = opr::Concat::make({shp2_head, shp_tail}, 0, cn);
-        result = result.reshape(tshp);
-    }
-
-    return result;
 }
 
 std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(

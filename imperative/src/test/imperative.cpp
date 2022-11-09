@@ -1,9 +1,11 @@
 #include "./helper.h"
 #include "megbrain/comp_node_env.h"
 #include "megbrain/imperative/blob_manager.h"
+#include "megbrain/imperative/ops/autogen.h"
 #include "megbrain/imperative/ops/opr_attr.h"
 #include "megbrain/opr/basic_arith.h"
 #include "megbrain/opr/basic_arith_wrapper.h"
+#include "megbrain/opr/blas.h"
 #include "megbrain/opr/dnn/batch_norm.h"
 #include "megbrain/opr/dnn/convolution.h"
 #include "megbrain/opr/tensor_manip.h"
@@ -163,5 +165,46 @@ TEST(TestImperative, Defragment) {
             CompNode::finalize(););
 }
 #endif  // MGB_CUDA && MGB_ENABLE_EXCEPTION
+
+TEST(TestImperative, MatrixMulApplyOnVarNode) {
+    using Param = opr::MatrixMul::Param;
+    Param param;
+    std::vector<std::pair<TensorShape, TensorShape>> shapes;
+    std::vector<TensorShape> target_shapes;
+    std::vector<Param> params;
+    //! testcase 0
+    params.push_back(param);
+    shapes.push_back({TensorShape{10, 5}, TensorShape{5, 10}});
+    target_shapes.push_back(TensorShape{10, 10});
+
+    params.push_back(param);
+    shapes.push_back({TensorShape{3, 10, 5}, TensorShape{5, 10}});
+    target_shapes.push_back(TensorShape{3, 10, 10});
+    //! testcase 2
+    param.transposeA = true;
+    param.transposeB = false;
+    params.push_back(param);
+    shapes.push_back({TensorShape{3, 7, 6}, TensorShape{3, 7, 10}});
+    target_shapes.push_back(TensorShape{6, 10});
+    //! testcase 3
+    param.transposeA = false;
+    param.transposeB = true;
+    params.push_back(param);
+    shapes.push_back({TensorShape{2, 3, 7, 6}, TensorShape{10, 6}});
+    target_shapes.push_back(TensorShape{2, 3, 7, 10});
+
+    for (size_t i = 0; i < params.size(); i++) {
+        auto& shape = shapes[i];
+        auto op = MatrixMul::make(
+                params[i], ::megdnn::param::ExecutionPolicy{}, shape.first.ndim,
+                shape.second.ndim);
+        auto result = OprChecker(op).run_apply_on_var_node({shape.first, shape.second});
+        ASSERT_GT(result.size(), 0);
+        ASSERT_EQ(target_shapes[i].ndim, result[0]->shape().ndim);
+        for (size_t id = 0; id < target_shapes[i].ndim; id++) {
+            ASSERT_EQ(target_shapes[i][id], result[0]->shape()[id]);
+        }
+    }
+}
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
