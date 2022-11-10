@@ -93,19 +93,20 @@ public:
     }
 
     std::optional<size_t> clear() override {
-        size_t cursor = 0, nr_deleted = 0;
-        std::string pattern = m_prefix + "@*";
+        long long cursor = 0;
+        size_t nr_deleted = 0;
+        std::string pattern = m_prefix + "*";
         do {
             auto reply = m_client.scan(cursor, pattern).share();
             sync();
             auto keys = reply.get().as_array();
             std::vector<std::string> string_keys;
-            for (auto&& key : keys) {
+            for (auto&& key : keys[1].as_array()) {
                 string_keys.push_back(key.as_string());
             }
             m_client.del(string_keys);
             nr_deleted += string_keys.size();
-            cursor = reply.get().as_array()[0].as_integer();
+            cursor = std::stoll(keys[0].as_string());
         } while (cursor != 0);
         return nr_deleted;
     }
