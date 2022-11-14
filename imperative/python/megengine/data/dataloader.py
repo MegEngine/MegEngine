@@ -68,6 +68,10 @@ class DataLoader:
             batch from workers. Default: 0
         preload: whether to enable the preloading strategy of the dataloader. 
             When enabling, the dataloader will preload one batch to the device memory to speed up the whole training process.
+        parallel_stream: whether to splitting workload across all workers when dataset is streamdataset and num_workers > 0.
+            When enabling, each worker will collect data from different dataset in order to speed up the whole loading process.
+            See ref:`streamdataset-example` for more details
+
 
     .. admonition:: The effect of enabling preload
        :class: warning
