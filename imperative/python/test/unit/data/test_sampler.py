@@ -7,7 +7,12 @@ import numpy as np
 import pytest
 
 from megengine.data.dataset import ArrayDataset
-from megengine.data.sampler import RandomSampler, ReplacementSampler, SequentialSampler
+from megengine.data.sampler import (
+    Infinite,
+    RandomSampler,
+    ReplacementSampler,
+    SequentialSampler,
+)
 
 
 def test_sequential_sampler():
@@ -23,6 +28,13 @@ def test_RandomSampler():
     sample_indices = sampler
     assert indices != list(each[0] for each in sample_indices)
     assert indices == sorted(list(each[0] for each in sample_indices))
+
+
+def test_InfiniteSampler():
+    indices = list(range(20))
+    seque_sampler = SequentialSampler(ArrayDataset(indices), batch_size=2)
+    inf_sampler = Infinite(seque_sampler)
+    assert inf_sampler.batch_size == seque_sampler.batch_size
 
 
 def test_random_sampler_seed():

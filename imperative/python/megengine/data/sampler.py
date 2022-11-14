@@ -326,3 +326,10 @@ class Infinite(MapSampler):
 
     def __len__(self):
         return np.iinfo(np.int64).max
+
+    def __getattr__(self, name):
+        # if attribute could not be found in Infinite,
+        # try to find it in self.sampler
+        if name not in self.__dict__:
+            return getattr(self.sampler, name)
+        return self.__dict__[name]
