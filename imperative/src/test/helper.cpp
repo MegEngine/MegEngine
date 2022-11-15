@@ -150,31 +150,6 @@ void OprChecker::run(std::vector<InputSpec> inp_keys, std::set<size_t> bypass) {
     }
 }
 
-VarNodeArray OprChecker::run_apply_on_var_node(std::vector<InputSpec> inp_keys) {
-    HostTensorGenerator<> gen;
-    size_t nr_inps = inp_keys.size();
-    SmallVector<HostTensorND> host_inp(nr_inps);
-    VarNodeArray sym_inp(nr_inps);
-    auto graph = ComputingGraph::make();
-    graph->options().graph_opt_level = 0;
-    for (size_t i = 0; i < nr_inps; ++i) {
-        // TODO: remove std::visit for support osx 10.12
-        host_inp[i] = std::visit(
-                [&gen](auto&& arg) -> HostTensorND {
-                    using T = std::decay_t<decltype(arg)>;
-                    if constexpr (std::is_same_v<TensorShape, T>) {
-                        return *gen(arg);
-                    } else {
-                        static_assert(std::is_same_v<HostTensorND, T>);
-                        return arg;
-                    }
-                },
-                inp_keys[i]);
-        sym_inp[i] = opr::SharedDeviceTensor::make(*graph, host_inp[i]).node();
-    }
-    return OpDef::apply_on_var_node(*m_op, sym_inp);
-}
-
 TEST(TestHelper, PyModule) {
     py::module m = PyEnv::get();
     py::print(m);
