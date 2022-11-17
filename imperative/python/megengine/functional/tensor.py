@@ -489,9 +489,9 @@ def concat(inps: Iterable[Tensor], axis: int = 0, device=None) -> Tensor:
         return inps[0]
 
     if device is None:
-        device = get_device(inps)
-    device = as_device(device)
-    (result,) = apply(builtin.Concat(axis=axis, comp_node=device.to_c()), *inps)
+        device = get_default_device()
+
+    (result,) = apply(builtin.Concat(axis=axis, comp_node=device), *inps)
     return result
 
 
@@ -516,13 +516,12 @@ def stack(inps, axis=0, device=None):
         array([[0., 1., 2.],
                [6., 7., 8.]], dtype=float32)
     """
-    if len(inps) > 0 and not isinstance(inps[0].shape, inps[0].__class__):
-        shapes = {arr.shape for arr in inps}
-        if len(shapes) != 1:
-            raise ValueError("All input tensors must have the same shape")
-
-    inps = [expand_dims(inp, axis=axis) for inp in inps]
-    return concat(inps, axis=axis, device=device)
+    if len(inps) == 1:
+        return expand_dims(inps[0], axis=axis)
+    if device is None:
+        device = get_default_device()
+    (result,) = apply(builtin.Stack(axis=axis, comp_node=device), *inps)
+    return result
 
 
 def split(inp, nsplits_or_sections, axis=0):

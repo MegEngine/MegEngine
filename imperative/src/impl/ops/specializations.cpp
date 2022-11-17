@@ -385,18 +385,6 @@ OP_TRAIT_REG(TypeCvt, TypeCvt).apply_on_var_node(apply_on_var_node).fallback();
 }  // namespace
 
 namespace {
-namespace concat {
-auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
-    auto&& op = static_cast<const Concat&>(def);
-    cg::OperatorNodeConfig config{op.comp_node};
-    config.name(op.make_name());
-    return opr::Concat::make(inputs, op.axis, config);
-}
-OP_TRAIT_REG(Concat, Concat).apply_on_var_node(apply_on_var_node).fallback();
-}  // namespace concat
-}  // namespace
-
-namespace {
 namespace copy {
 auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
     auto&& op = static_cast<const Copy&>(def);

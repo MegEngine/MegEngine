@@ -53,7 +53,7 @@ SmallVector<LayoutConstraintCallback> get_input_layout_constraint(
     VarNodeArray vinputs(inputs.size());
     for (size_t i = 0; i < inputs.size(); ++i) {
         OperatorNodeConfig config;
-        auto&& layout = inputs[i]->layout();
+        auto layout = inputs[i]->layout();
         layout.init_contiguous_stride();
         vinputs[i] = graph->insert_opr(std::make_unique<mgb::opr::SharedDeviceTensor>(
                                                *graph,

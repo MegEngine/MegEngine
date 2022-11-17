@@ -296,6 +296,12 @@ def Concat: MgbHashableOp<"Concat", [AxisParam]> {
   );
 }
 
+def Stack: MgbHashableOp<"Stack", [AxisParam]> {
+  let extraArguments = (ins
+    MgbCompNodeAttr:$comp_node
+  );
+}
+
 def Broadcast : MgbHashableOp<"Broadcast", [EmptyParam]> {
   let extraArguments = (ins
     MgbArrayAttr<MgbI32Attr>:$shape

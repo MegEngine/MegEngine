@@ -1819,6 +1819,20 @@ public:
     }
 };
 
+class Stack : public OpDefImplBase<Stack> {
+    MGB_DYN_TYPE_OBJ_FINAL_DECL;
+
+public:
+    int32_t axis = 0;
+    ::mgb::CompNode comp_node;
+    Stack() = default;
+    Stack(int32_t axis_, ::mgb::CompNode comp_node_, std::string scope_ = {}): axis(axis_), comp_node(comp_node_) { set_scope(scope_); }
+    Stack(::megdnn::param::Axis packed_param_0, ::mgb::CompNode comp_node_): axis(packed_param_0.axis), comp_node(comp_node_) {}
+    ::megdnn::param::Axis param() const {
+        return {axis};
+    }
+};
+
 class Subtensor : public OpDefImplBase<Subtensor> {
     MGB_DYN_TYPE_OBJ_FINAL_DECL;
 

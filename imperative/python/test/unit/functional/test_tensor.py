@@ -217,6 +217,55 @@ def test_split_basic(is_varnode):
         set_symbolic_shape(saved_symbolic_shape)
 
 
+def test_concat_and_stack():
+    import copy
+
+    def generate_test_data(max_nr_inp, max_dim, max_dim_len, test_concat=True):
+        nr_inp = np.random.randint(1, max_nr_inp)
+        dims = np.random.randint(1, max_dim)
+        cat_axis = (
+            np.random.randint(-dims, dims)
+            if test_concat
+            else np.random.randint(-dims - 1, dims + 1)
+        )
+
+        ishape = [np.random.randint(0, max_dim_len) for _ in range(dims)]
+        ishapes = [copy.deepcopy(ishape) for _ in range(nr_inp)]
+        if test_concat:
+            for i in range(nr_inp):
+                ishapes[i][cat_axis] = np.random.randint(0, max_dim_len)
+
+        inp_nps = []
+        for ishape in ishapes:
+            inp_nps.append(np.random.randn(*ishape))
+        return inp_nps, cat_axis
+
+    def test_impl(max_nr_inp, max_dim, max_dim_len, test_concat):
+        inp_nps, cat_axis = generate_test_data(
+            max_nr_inp, max_dim, max_dim_len, test_concat
+        )
+        inp_mges = [Tensor(inp_np) for inp_np in inp_nps]
+        if test_concat:
+            np_func, mge_func = np.concatenate, F.concat
+        else:
+            np_func, mge_func = np.stack, F.stack
+        res_np = np_func(inp_nps, axis=cat_axis)
+        res_mge = mge_func(inp_mges, axis=cat_axis)
+        np.testing.assert_allclose(res_mge.numpy(), res_np)
+
+    def test_concat(max_nr_inp, max_dim, max_dim_len):
+        test_impl(max_nr_inp, max_dim, max_dim_len, test_concat=True)
+
+    def test_stack(max_nr_inp, max_dim, max_dim_len):
+        test_impl(max_nr_inp, max_dim, max_dim_len, test_concat=False)
+
+    for _ in range(3):
+        test_concat(10, 7, 16)
+
+    for _ in range(3):
+        test_stack(10, 7, 16)
+
+
 @pytest.mark.parametrize("symbolic", [None, False, True])
 def test_split(symbolic):
     x = Tensor(np.random.random((10, 20)), dtype=np.float32)

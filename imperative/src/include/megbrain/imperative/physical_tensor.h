@@ -133,7 +133,7 @@ public:
 
     DType dtype() const { return m_dtype; }
 
-    TensorLayout layout() const { return m_layout; }
+    const TensorLayout& layout() const { return m_layout; }
 
     const TensorShape& shape() const { return m_shape; }
 
