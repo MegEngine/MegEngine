@@ -30,3 +30,4 @@ lite/test/resource/lite/resnet50_input.npy filter=lfs diff=lfs merge=lfs -text
 lite/test/resource/lite/resnet50.mge filter=lfs diff=lfs merge=lfs -text
 lite/test/resource/lite/resnet50_uint8.mge filter=lfs diff=lfs merge=lfs -text
 lite/test/resource/lite/cat.ppm filter=lfs diff=lfs merge=lfs -text
+lite/test/resource/lite/ax_model_zero_copy.mge filter=lfs diff=lfs merge=lfs -text

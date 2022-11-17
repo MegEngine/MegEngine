@@ -585,17 +585,18 @@ void NetworkImplDft::configure_after_loaded() {
     cross_compnode_model_detect();
 
     //! update the IO of the network
-    update_io();
+    update_input();
+    replace_dev_input_pass();
+    if (!m_user_config->discrete_input_name.empty()) {
+        replace_src_discrete_input_opr_pass();
+    }
+    update_output();
 
     //! replace the IO when there is device input or output
     compile_graph();
 }
 
 void NetworkImplDft::compile_graph() {
-    replace_dev_input_pass();
-    if (!m_user_config->discrete_input_name.empty()) {
-        replace_src_discrete_input_opr_pass();
-    }
     make_output_spec();
     m_execute_func = m_load_result.graph_compile(m_output_spec);
 }
@@ -882,24 +883,25 @@ void NetworkImplDft::update_output() {
     } else {
         for (auto&& out : m_load_result.output_var_list) {
             std::shared_ptr<Tensor> lite_tensor = nullptr;
+            auto device = get_device_from_locator(out.node()->comp_node().locator());
             auto it = std::find_if(
                     m_network_io->outputs.begin(), m_network_io->outputs.end(),
                     [&out](const IOInner io) { return io.name == out.node()->name(); });
             if (it != m_network_io->outputs.end()) {
                 if (it->is_host) {
                     it->lite_tensor = std::make_shared<Tensor>(
-                            device_id, stream_id, device_type, true);
+                            device_id, stream_id, device, true);
                 } else {
                     it->lite_tensor =
-                            std::make_shared<Tensor>(device_id, stream_id, device_type);
+                            std::make_shared<Tensor>(device_id, stream_id, device);
                 }
                 try_infer_tensor_layout(it->lite_tensor, out);
                 lite_tensor = it->lite_tensor;
             } else {
                 IOInner output;
                 output.name = out.node()->name();
-                output.lite_tensor = std::make_shared<Tensor>(
-                        device_id, stream_id, device_type, true);
+                output.lite_tensor =
+                        std::make_shared<Tensor>(device_id, stream_id, device, true);
                 m_network_io->outputs.push_back({output});
                 try_infer_tensor_layout(output.lite_tensor, out);
                 lite_tensor = output.lite_tensor;

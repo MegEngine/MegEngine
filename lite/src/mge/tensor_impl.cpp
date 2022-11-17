@@ -452,9 +452,12 @@ void TensorImplDft::device_share_host_memory() {
                     m_host_tensor->comp_node(), m_host_tensor->layout());
         }
         if (m_host_tensor->raw_ptr() != m_dev_tensor->raw_ptr()) {
-            auto&& storage =
-                    mgb::DeviceTensorStorage::make_proxy(m_host_tensor->storage());
-            m_dev_tensor->only_reset_raw_storage(storage);
+            auto& host_storage = m_host_tensor->storage();
+            mgb::DeviceTensorStorage device_storage;
+            device_storage.reset(
+                    host_storage.comp_node(), host_storage.size(),
+                    host_storage.raw_storage());
+            m_dev_tensor->only_reset_raw_storage(device_storage);
         }
     }
 }
