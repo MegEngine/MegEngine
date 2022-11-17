@@ -1896,6 +1896,14 @@ SplitInst
     .def_readwrite("axis", &Split::axis)
     .def_readwrite("nsections", &Split::nsections);
 
+py::class_<Stack, std::shared_ptr<Stack>, OpDef> StackInst(m, "Stack");
+
+StackInst
+    .def(py::init<int32_t, ::mgb::CompNode, std::string>(), py::arg("axis") = 0, py::arg("comp_node"), py::arg("scope") = {})
+    .def(py::init<>())
+    .def_readwrite("axis", &Stack::axis)
+    .def_readwrite("comp_node", &Stack::comp_node);
+
 py::class_<Subtensor, std::shared_ptr<Subtensor>, OpDef> SubtensorInst(m, "Subtensor");
 
 SubtensorInst

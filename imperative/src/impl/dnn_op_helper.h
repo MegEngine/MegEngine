@@ -28,7 +28,7 @@ public:
     // FIXME: maybe in-place style deduction works better
     template <typename... TArgs>
     TensorLayout deduce_layout(TArgs&&... args) {
-        static_assert((std::is_convertible_v<TArgs, TensorLayout> && ...));
+        // static_assert((std::is_convertible_v<TArgs, TensorLayout> && ...));
         TensorLayout output_layout;
         m_opr->deduce_layout(args..., output_layout);
         return output_layout;
@@ -36,7 +36,7 @@ public:
 
     template <typename... TArgs>
     TensorLayout deduce_layout_fallible(TArgs&&... args) {
-        static_assert((std::is_convertible_v<TArgs, TensorLayout> && ...));
+        // static_assert((std::is_convertible_v<TArgs, TensorLayout> && ...));
         TensorLayout output_layout;
         bool success = (args.ndim * ...) > 0;
         if (success) {
@@ -49,7 +49,7 @@ public:
 
     template <size_t nr_outputs, typename... TArgs>
     std::array<TensorLayout, nr_outputs> deduce_layouts(TArgs&&... args) {
-        static_assert((std::is_convertible_v<TArgs, TensorLayout> && ...));
+        // static_assert((std::is_convertible_v<TArgs, TensorLayout> && ...));
         std::array<TensorLayout, nr_outputs> layouts;
         std::apply(
                 [&](auto&&... outputs) { m_opr->deduce_layout(args..., outputs...); },

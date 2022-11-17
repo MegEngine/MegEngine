@@ -176,9 +176,12 @@ PyArray_Descr* _dtype_promotion(PyObject* const* args, size_t nargs) {
     return res;
 }
 
+// if all the inputs are not megengine tensor, return get_default_device()
+// else check whether all input tensors have the same device
 CompNode _get_device(PyObject* const* args, size_t nargs) {
     bool is_tuple = false;
     PyObject* tuple = nullptr;
+    // convert input args to a tuple
     if (nargs == 1 && (PyTuple_Check(args[0]) || PyList_Check(args[0]))) {
         if (PyList_Check(args[0])) {
             tuple = PyList_AsTuple(args[0]);

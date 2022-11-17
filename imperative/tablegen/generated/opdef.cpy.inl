@@ -20376,6 +20376,133 @@ void _init_py_Split(py::module m) {
     mgb_assert(PyOp(OpDef)::ctype2pytype.emplace(Split::typeinfo(), &py_type).second);
 }
 
+PyOpDefBegin(Stack) // {
+    static PyGetSetDef py_getsetters[];
+    static PyMethodDef tp_methods[];
+    
+    static PyObject* getstate(PyObject* self, PyObject*) {
+        auto& opdef = reinterpret_cast<PyOp(Stack)*>(self)->inst();
+        static_cast<void>(opdef);
+        std::unordered_map<std::string, py::object> state {
+            
+            {"axis", serialization<decltype(opdef.axis)>::dump(opdef.axis)},
+            {"comp_node", serialization<decltype(opdef.comp_node)>::dump(opdef.comp_node)}
+        };
+        return py::cast(state).release().ptr();
+    }
+    static PyObject* setstate(PyObject* self, PyObject* args) {
+        PyObject* dict = PyTuple_GetItem(args, 0);
+        if (!dict) return NULL;
+        auto state = py::cast<std::unordered_map<std::string, py::object>>(dict);
+        auto& opdef = reinterpret_cast<PyOp(Stack)*>(self)->inst();
+        static_cast<void>(opdef);
+        
+        {
+        auto&& iter = state.find("axis");
+        if (iter != state.end()) {
+            opdef.axis = serialization<decltype(opdef.axis)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("comp_node");
+        if (iter != state.end()) {
+            opdef.comp_node = serialization<decltype(opdef.comp_node)>::load(iter->second);
+        }
+        }
+        Py_RETURN_NONE;
+    }
+    static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
+// };
+PyOpDefEnd(Stack)
+
+int PyOp(Stack)::py_init(PyObject *self, PyObject *args, PyObject *kwds) {
+    static const char* kwlist[] = {"axis", "comp_node", "scope", NULL};
+    PyObject *axis = NULL, *comp_node = NULL, *scope = NULL;
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|OOO", const_cast<char**>(kwlist), &axis, &comp_node, &scope))
+    return -1;
+
+    if (axis) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(Stack)*>(self)->inst().axis =
+                    py::cast<decltype(Stack::axis)>(py::handle(axis));
+        } CATCH_ALL(-1)
+    }
+
+    if (comp_node) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(Stack)*>(self)->inst().comp_node =
+                    py::cast<decltype(Stack::comp_node)>(py::handle(comp_node));
+        } CATCH_ALL(-1)
+    }
+
+    if (scope) {
+        try {
+            reinterpret_cast<PyOp(OpDef)*>(self)->op
+                ->set_scope(py::cast<std::string>(py::handle(scope)));
+        } CATCH_ALL(-1)
+    }
+
+    return 0;
+}
+
+PyGetSetDef PyOp(Stack)::py_getsetters[] = {
+    {const_cast<char*>("axis"), py_get_generic(Stack, axis), py_set_generic(Stack, axis), const_cast<char*>("axis"), NULL},
+    {const_cast<char*>("comp_node"), py_get_generic(Stack, comp_node), py_set_generic(Stack, comp_node), const_cast<char*>("comp_node"), NULL},
+    {NULL}  /* Sentinel */
+};
+
+    PyMethodDef PyOp(Stack)::tp_methods[] = {
+        {const_cast<char*>("__getstate__"), PyOp(Stack)::getstate, METH_NOARGS, "Stack getstate"},
+    {const_cast<char*>("__setstate__"), PyOp(Stack)::setstate, METH_VARARGS, "Stack setstate"},
+        {NULL}  /* Sentinel */
+    };
+    
+PyObject *PyOp(Stack)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(Stack)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(Stack)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(Stack)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, axis: int = ..., comp_node: str = ...) -> None\n"
+};
+
+void _init_py_Stack(py::module m) {
+    using py_op = PyOp(Stack);
+    auto& py_type = PyOpType(Stack);
+    py_type = {PyVarObject_HEAD_INIT(NULL, 0)};
+    py_type.tp_name = "megengine.core._imperative_rt.ops.Stack";
+    py_type.tp_basicsize = sizeof(PyOp(Stack));
+    py_type.tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE;
+    py_type.tp_doc = "Stack";
+    py_type.tp_base = &PyOpType(OpDef);
+    py_type.tp_dealloc = py_dealloc_generic<py_op>;
+    py_type.tp_new = py_new_generic<py_op>;
+    py_type.tp_init = py_op::py_init;
+    py_type.tp_methods = py_op::tp_methods;
+    py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(Stack), &PyOp(Stack)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
+    mgb_assert(PyType_Ready(&py_type) >= 0);
+    
+    PyType_Modified(&py_type);
+    m.add_object("Stack", reinterpret_cast<PyObject*>(&py_type));
+    mgb_assert(PyOp(OpDef)::ctype2pytype.emplace(Stack::typeinfo(), &py_type).second);
+}
+
 PyOpDefBegin(Subtensor) // {
     static PyGetSetDef py_getsetters[];
     static PyMethodDef tp_methods[];
@@ -22064,6 +22191,7 @@ void _init_py_WarpPerspectiveBackwardMat(py::module m) {
     _init_py_SlidingWindowTranspose(m); \
     _init_py_Softmax(m); \
     _init_py_Split(m); \
+    _init_py_Stack(m); \
     _init_py_Subtensor(m); \
     _init_py_TQT(m); \
     _init_py_TensorRTRuntime(m); \

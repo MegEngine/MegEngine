@@ -391,6 +391,7 @@ struct DTypePromoteRuleRegistry {
         register_dtype_promote_rule<Elemwise>(elemwise_rule);
         register_dtype_promote_rule<ElemwiseMultiType>(elemwise_multi_type_rule);
         register_dtype_promote_rule<Concat>(naive_promote_rule);
+        register_dtype_promote_rule<Stack>(naive_promote_rule);
         register_dtype_promote_rule<GroupLocal>(naive_promote_rule);
         register_dtype_promote_rule<Reduce>(reduce_rule);
         register_dtype_promote_rule<Convolution>(convolution_rule);
