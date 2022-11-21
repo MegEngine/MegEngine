@@ -146,15 +146,15 @@ public:
         size_t im2col = 0, packb = 0, bias_temp = 0;
         bool default_pack = matmul_algo->packmode() == Pack_Mode::DEFAULT;
         megdnn_assert(default_pack, "only support default packa");
-        size_t im2col_dst_size = IC * FH * FW * ohw_tile_size * sizeof(param.src_type);
+        size_t im2col_dst_size = IC * FH * FW * ohw_tile_size * param.src_type.size();
         size_t matmul_dst_size =
-                pack_oc_size * oc_tile_size * ohw_tile_size * sizeof(param.bias_type);
+                pack_oc_size * oc_tile_size * ohw_tile_size * param.bias_type.size();
         //! matmul_dst and im2col_dst use the same memory
         WorkspaceBundle wb = matmul_algo->get_bundle(im2col_kern_param);
         packb = wb.get_size(1);
         im2col = std::max(im2col_dst_size, matmul_dst_size);
         if (param.bias_mode == megdnn::BiasMode::BIAS) {
-            bias_temp = oc_tile_size * ohw_tile_size * sizeof(param.bias_type);
+            bias_temp = oc_tile_size * ohw_tile_size * param.bias_type.size();
         }
         return {nullptr, {packb, im2col, bias_temp}};
     }
@@ -231,15 +231,15 @@ public:
         size_t im2col = 0, packb = 0, matmul_dst = 0, bias_temp = 0;
         bool only_packA = matmul_algo->packmode() == Pack_Mode::ONLY_PACKA;
         megdnn_assert(only_packA, "onlysupport onlypackA mode");
-        size_t im2col_dst_size = IC * FH * FW * ohw_tile_size * sizeof(param.src_type);
-        size_t matmul_dst_size = oc_tile_size * ohw_tile_size * sizeof(param.bias_type);
+        size_t im2col_dst_size = IC * FH * FW * ohw_tile_size * param.src_type.size();
+        size_t matmul_dst_size = oc_tile_size * ohw_tile_size * param.bias_type.size();
         //! matmul_dst and im2col_dst use the same memory
         WorkspaceBundle wb = matmul_algo->get_bundle(im2col_kern_param);
         packb = wb.get_size(1);
         im2col = im2col_dst_size;
         matmul_dst = matmul_dst_size;
         if (param.bias_mode == megdnn::BiasMode::BIAS) {
-            bias_temp = oc_tile_size * ohw_tile_size * sizeof(param.bias_type);
+            bias_temp = oc_tile_size * ohw_tile_size * param.bias_type.size();
         }
 
         return {nullptr, {packb, im2col, matmul_dst, bias_temp}};
@@ -309,8 +309,8 @@ public:
                             param.dst_type.enumv() == DTypeEnum::QuantizedS8) ||
                            (param.src_type.enumv() == DTypeEnum::Quantized8Asymm &&
                             param.dst_type.enumv() == DTypeEnum::Quantized8Asymm);
-        size_t im2col_dst_size = IC * FH * FW * ohw_tile_size * sizeof(param.src_type);
-        size_t matmul_dst_size = oc_tile_size * ohw_tile_size * sizeof(param.bias_type);
+        size_t im2col_dst_size = IC * FH * FW * ohw_tile_size * param.src_type.size();
+        size_t matmul_dst_size = oc_tile_size * ohw_tile_size * param.bias_type.size();
         im2col = im2col_dst_size;
         if (is_dst_8bit) {
             matmul_dst = matmul_dst_size;
@@ -319,9 +319,8 @@ public:
         }
         matmul_compute = matmul_algo->get_workspace(im2col_kern_param);
         if (param.bias_mode == megdnn::BiasMode::BIAS) {
-            bias_temp = oc_tile_size * ohw_tile_size * sizeof(param.bias_type);
+            bias_temp = oc_tile_size * ohw_tile_size * param.bias_type.size();
         }
-
         return {nullptr, {im2col, matmul_dst, bias_temp, matmul_compute}};
     }
 };

@@ -17,7 +17,7 @@ WorkspaceBundle get_thread_bundle(
                        (param.src_type.enumv() == DTypeEnum::Quantized8Asymm &&
                         param.dst_type.enumv() == DTypeEnum::Quantized8Asymm);
     size_t matmul_dst_bytes_per_thread =
-            is_dst_8bit ? oc_tile_size * OH * OW * sizeof(param.bias_type) : 0;
+            is_dst_8bit ? oc_tile_size * OH * OW * param.bias_type.size() : 0;
     return WorkspaceBundle{nullptr, {matmul_c_size, matmul_dst_bytes_per_thread}};
 }
 

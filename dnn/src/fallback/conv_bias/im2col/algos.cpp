@@ -199,8 +199,7 @@ static WorkspaceBundle get_bundle(
     if (no_need_pading) {
         padding = 0;  //! not need  padding
     } else {
-        padding =
-                (GROUP * N * IC * IH2 * IW2) * sizeof(param.src_type);  //! for padding
+        padding = (GROUP * N * IC * IH2 * IW2) * param.src_type.size();  //! for padding
     }
 
     packa_size = GROUP * packa_group_size;  //! for packA  size = GROUP * a_size
