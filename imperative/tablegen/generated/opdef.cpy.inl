@@ -20113,7 +20113,8 @@ PyOpDefBegin(Subtensor) // {
         static_cast<void>(opdef);
         std::unordered_map<std::string, py::object> state {
             
-            {"items", serialization<decltype(opdef.items)>::dump(opdef.items)}
+            {"items", serialization<decltype(opdef.items)>::dump(opdef.items)},
+            {"slice_items", serialization<decltype(opdef.slice_items)>::dump(opdef.slice_items)}
         };
         return py::cast(state).release().ptr();
     }
@@ -20130,6 +20131,13 @@ PyOpDefBegin(Subtensor) // {
             opdef.items = serialization<decltype(opdef.items)>::load(iter->second);
         }
         }
+
+        {
+        auto&& iter = state.find("slice_items");
+        if (iter != state.end()) {
+            opdef.slice_items = serialization<decltype(opdef.slice_items)>::load(iter->second);
+        }
+        }
         Py_RETURN_NONE;
     }
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
@@ -20139,9 +20147,9 @@ PyOpDefBegin(Subtensor) // {
 PyOpDefEnd(Subtensor)
 
 int PyOp(Subtensor)::py_init(PyObject *self, PyObject *args, PyObject *kwds) {
-    static const char* kwlist[] = {"items", "scope", NULL};
-    PyObject *items = NULL, *scope = NULL;
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|OO", const_cast<char**>(kwlist), &items, &scope))
+    static const char* kwlist[] = {"items", "slice_items", "scope", NULL};
+    PyObject *items = NULL, *slice_items = NULL, *scope = NULL;
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|OOO", const_cast<char**>(kwlist), &items, &slice_items, &scope))
     return -1;
 
     if (items) {
@@ -20150,6 +20158,15 @@ int PyOp(Subtensor)::py_init(PyObject *self, PyObject *args, PyObject *kwds) {
             py::detail::loader_life_support guard{};
             reinterpret_cast<PyOp(Subtensor)*>(self)->inst().items =
                     py::cast<decltype(Subtensor::items)>(py::handle(items));
+        } CATCH_ALL(-1)
+    }
+
+    if (slice_items) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(Subtensor)*>(self)->inst().slice_items =
+                    py::cast<decltype(Subtensor::slice_items)>(py::handle(slice_items));
         } CATCH_ALL(-1)
     }
 
@@ -20165,6 +20182,7 @@ int PyOp(Subtensor)::py_init(PyObject *self, PyObject *args, PyObject *kwds) {
 
 PyGetSetDef PyOp(Subtensor)::py_getsetters[] = {
     {const_cast<char*>("items"), py_get_generic(Subtensor, items), py_set_generic(Subtensor, items), const_cast<char*>("items"), NULL},
+    {const_cast<char*>("slice_items"), py_get_generic(Subtensor, slice_items), py_set_generic(Subtensor, slice_items), const_cast<char*>("slice_items"), NULL},
     {NULL}  /* Sentinel */
 };
 
@@ -20185,7 +20203,7 @@ PyMethodDef PyOp(Subtensor)::py_init_methoddef = {
     "__init__",
     (PyCFunction)PyOp(Subtensor)::py_init_proxy,
     METH_VARARGS | METH_KEYWORDS,
-    "__init__(self, items: list[tuple[int, bool, bool, bool, bool]] = ...) -> None\n"
+    "__init__(self, items: list[tuple[int, bool, bool, bool, bool]] = ..., slice_items: list[tuple[int, int, int, int]] = ...) -> None\n"
 };
 
 void _init_py_Subtensor(py::module m) {

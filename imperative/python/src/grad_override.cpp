@@ -325,6 +325,35 @@ std::optional<ValueRefList> subtensor_grad_rule(
             inputs2.push_back(inputs[i]);
         }
     }
+    CompNodeValue::ref_t device = inputs[0].device();
+    auto get_subtensor_index = [&](int idx) {
+        HostTensorStorage storage(*device);
+        storage.ensure_size(dtype::Int32().size());
+        auto* ptr = reinterpret_cast<dt_int32*>(storage.ptr());
+        ptr[0] = idx;
+        return imperative::apply(
+                CreateTensor(
+                        CreateTensor::Unique, *device, dtype::Int32(), ValueShape({1})),
+                HostStorage::make(storage))[0];
+    };
+    auto slice_items = subtensor.slice_items;
+    auto items = subtensor.items;
+    for (int i = 0; i < slice_items.size(); i++) {
+        auto&& [axis, b_flag, e_flag, s_flag, idx_flag] = items[i];
+        auto&& [b_val, e_val, s_val, ax_val] = slice_items[i];
+        if (b_flag) {
+            inputs2.push_back(get_subtensor_index(b_val));
+        };
+        if (e_flag) {
+            inputs2.push_back(get_subtensor_index(e_val));
+        };
+        if (s_flag) {
+            inputs2.push_back(get_subtensor_index(s_val));
+        };
+        if (idx_flag) {
+            inputs2.push_back(get_subtensor_index(ax_val));
+        };
+    };
     auto maker = CustomGradMaker(backward, inputs.size());
     maker.output_size(1).output_captured(0, false);
     maker.backward([inputs = std::move(inputs2),
@@ -647,8 +676,9 @@ std::optional<ValueRefList> warp_affine_grad_rule(
             ret[1] = imperative::apply(*grad_op, args_)[0];
 
             std::vector<std::tuple<int8_t, bool, bool, bool, bool>> items;
+            std::vector<std::tuple<int32_t, int32_t, int32_t, int32_t>> slice_items;
             items.push_back(std::make_tuple(1, true, true, false, false));
-            auto&& subtensor = Subtensor::make(items);
+            auto&& subtensor = Subtensor::make(items, slice_items);
 
             CompNodeValue::ref_t device = inputs[0].device();
             DTypeValue::ref_t dtype = inputs[0].dtype();
