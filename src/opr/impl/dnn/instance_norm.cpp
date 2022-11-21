@@ -1,4 +1,4 @@
-#include "megbrain/opr/dnn/group_norm.h"
+#include "megbrain/opr/dnn/instance_norm.h"
 
 #include "megbrain/graph/grad_impl.h"
 #include "megbrain/opr/internal/out_shape_by_sym_var.h"
@@ -9,13 +9,13 @@
 using namespace mgb;
 using namespace opr;
 
-/* ==================== GroupNormForward  ==================== */
-MGB_DYN_TYPE_OBJ_FINAL_IMPL(GroupNormForward);
+/* ==================== InstanceNormForward  ==================== */
+MGB_DYN_TYPE_OBJ_FINAL_IMPL(InstanceNormForward);
 
-GroupNormForward::GroupNormForward(
+InstanceNormForward::InstanceNormForward(
         VarNode* data, VarNode* weight, VarNode* bias, const Param& param,
         const OperatorNodeConfig& config)
-        : Super{data->owner_graph(), config, "group_norm", {data, weight, bias}} {
+        : Super{data->owner_graph(), config, "instance_norm", {data, weight, bias}} {
     init_megdnn_opr(*this, param);
 
     add_input({data, weight, bias});
@@ -24,9 +24,9 @@ GroupNormForward::GroupNormForward(
     output(2)->dtype(dtype::Float32());
 }
 
-GroupNormForward::GroupNormForward(
+InstanceNormForward::InstanceNormForward(
         VarNode* data, const Param& param, const OperatorNodeConfig& config)
-        : Super{data->owner_graph(), config, "group_norm", {data}} {
+        : Super{data->owner_graph(), config, "instance_norm", {data}} {
     init_megdnn_opr(*this, param);
 
     add_input({data});
@@ -35,12 +35,12 @@ GroupNormForward::GroupNormForward(
     output(2)->dtype(dtype::Float32());
 }
 
-SymbolVarArray GroupNormForward::make(
+SymbolVarArray InstanceNormForward::make(
         SymbolVar data, SymbolVar weight, SymbolVar bias, const Param& param,
         const OperatorNodeConfig& config) {
     auto outs = data.node()
                         ->owner_graph()
-                        ->insert_opr(std::make_unique<GroupNormForward>(
+                        ->insert_opr(std::make_unique<InstanceNormForward>(
                                 data.node(), weight.node(), bias.node(), param, config))
                         ->output();
     SymbolVarArray ret;
@@ -50,11 +50,11 @@ SymbolVarArray GroupNormForward::make(
     return ret;
 }
 
-SymbolVarArray GroupNormForward::make(
+SymbolVarArray InstanceNormForward::make(
         SymbolVar data, const Param& param, const OperatorNodeConfig& config) {
     auto outs = data.node()
                         ->owner_graph()
-                        ->insert_opr(std::make_unique<GroupNormForward>(
+                        ->insert_opr(std::make_unique<InstanceNormForward>(
                                 data.node(), param, config))
                         ->output();
     SymbolVarArray ret;
@@ -64,17 +64,17 @@ SymbolVarArray GroupNormForward::make(
     return ret;
 }
 
-void GroupNormForward::get_output_var_shape(
+void InstanceNormForward::get_output_var_shape(
         const TensorShapeArray& inp_shape, TensorShapeArray& out_shape) const {
-    size_t group = param().group;
     out_shape[0] = inp_shape[0];
     size_t N = inp_shape[0].shape[0];
-    TensorShape unnormalized_shape{N, group};
+    size_t C = inp_shape[0].shape[1];
+    TensorShape unnormalized_shape{N, C};
     out_shape[1] = unnormalized_shape;
     out_shape[2] = unnormalized_shape;
 }
 
-size_t GroupNormForward::get_workspace_size_bytes(
+size_t InstanceNormForward::get_workspace_size_bytes(
         const TensorShapeArray& input_shapes,
         const TensorShapeArray& output_shapes) const {
 #define in(x) \
@@ -95,10 +95,13 @@ size_t GroupNormForward::get_workspace_size_bytes(
 #undef out
 }
 
-void GroupNormForward::scn_do_execute() {
-    mgb_assert(
-            param().format == Param::Format::NCHW,
-            "only support inputs in shape NCHW.");
+void InstanceNormForward::scn_do_execute() {
+    auto p = param();
+    mgb_assert(p.format == Param::Format::NCHW, "only support inputs in shape NCHW.");
+    size_t C = input(0)->dev_tensor().shape()[1];
+    auto opr = const_cast<megdnn::GroupNormForward*>(megdnn_opr());
+    opr->param().group = C;
+    mgb_assert(C != 0, "error param!");
     if (param().affine) {
         megdnn_opr()->exec(
                 input(0)->dev_tensor().as_megdnn(), input(1)->dev_tensor().as_megdnn(),
@@ -117,18 +120,18 @@ void GroupNormForward::scn_do_execute() {
 }
 
 #if MGB_ENABLE_GRAD
-MGB_IMPL_OPR_GRAD(GroupNormForward) {
+MGB_IMPL_OPR_GRAD(InstanceNormForward) {
     auto p = opr.param();
     SymbolVarArray grad;
     VarNodeArray ret;
     if (p.affine) {
         mgb_assert(wrt_idx < 3, "wrt_idx %zu is out of range", wrt_idx);
-        grad = GroupNormBackward::make(
+        grad = InstanceNormBackward::make(
                 out_grad[0], opr.input(0), opr.input(1), opr.output(1), opr.output(2),
                 opr.param());
     } else {
         mgb_assert(wrt_idx < 1, "wrt_idx %zu is out of range", wrt_idx);
-        grad = GroupNormBackward::make(
+        grad = InstanceNormBackward::make(
                 out_grad[0], opr.input(0), opr.output(1), opr.output(2), opr.param());
     }
 
@@ -140,27 +143,27 @@ MGB_IMPL_OPR_GRAD(GroupNormForward) {
 }
 #endif
 
-/* ==================== GroupNormBackward ==================== */
-MGB_DYN_TYPE_OBJ_FINAL_IMPL(GroupNormBackward);
+/* ==================== InstanceNormBackward ==================== */
+MGB_DYN_TYPE_OBJ_FINAL_IMPL(InstanceNormBackward);
 
-GroupNormBackward::GroupNormBackward(
+InstanceNormBackward::InstanceNormBackward(
         VarNode* diff, VarNode* data, VarNode* weight, VarNode* mean, VarNode* rstd,
         const Param& param, const OperatorNodeConfig& config)
         : Super({diff->owner_graph(),
                  config,
-                 "group_norm_backward",
+                 "instance_norm_backward",
                  {diff, data, weight, mean, rstd}},
                 0, true) {
     init_megdnn_opr(*this, param);
     add_input({diff, data, weight, mean, rstd});
 }
 
-GroupNormBackward::GroupNormBackward(
+InstanceNormBackward::InstanceNormBackward(
         VarNode* diff, VarNode* data, VarNode* mean, VarNode* rstd, const Param& param,
         const OperatorNodeConfig& config)
         : Super({diff->owner_graph(),
                  config,
-                 "group_norm_backward",
+                 "instance_norm_backward",
                  {diff, data, mean, rstd}},
                 0, true) {
     init_megdnn_opr(*this, param);
@@ -173,12 +176,12 @@ GroupNormBackward::GroupNormBackward(
     mark_empty_var(output(2));
 }
 
-SymbolVarArray GroupNormBackward::make(
+SymbolVarArray InstanceNormBackward::make(
         SymbolVar diff, SymbolVar data, SymbolVar weight, SymbolVar mean,
         SymbolVar rstd, const Param& param, const OperatorNodeConfig& config) {
     auto outs = diff.node()
                         ->owner_graph()
-                        ->insert_opr(std::make_unique<GroupNormBackward>(
+                        ->insert_opr(std::make_unique<InstanceNormBackward>(
                                 diff.node(), data.node(), weight.node(), mean.node(),
                                 rstd.node(), param, config))
                         ->output();
@@ -189,12 +192,12 @@ SymbolVarArray GroupNormBackward::make(
     return ret;
 }
 
-SymbolVarArray GroupNormBackward::make(
+SymbolVarArray InstanceNormBackward::make(
         SymbolVar diff, SymbolVar data, SymbolVar mean, SymbolVar rstd,
         const Param& param, const OperatorNodeConfig& config) {
     auto outs = diff.node()
                         ->owner_graph()
-                        ->insert_opr(std::make_unique<GroupNormBackward>(
+                        ->insert_opr(std::make_unique<InstanceNormBackward>(
                                 diff.node(), data.node(), mean.node(), rstd.node(),
                                 param, config))
                         ->output();
@@ -205,7 +208,7 @@ SymbolVarArray GroupNormBackward::make(
     return ret;
 }
 
-void GroupNormBackward::init_output_static_infer_desc() {
+void InstanceNormBackward::init_output_static_infer_desc() {
     using namespace cg::static_infer;
     auto&& mgr = owner_graph()->static_infer_manager();
     mgr.register_shape_infer(output(0), ShapeInferDesc::make_identity(input(1)));
@@ -222,13 +225,13 @@ void GroupNormBackward::init_output_static_infer_desc() {
             intl::AutoAddWorkspaceNeedLimitGetter<megdnn::GroupNormBackward>::val);
 }
 
-void GroupNormBackward::init_output_dtype() {
+void InstanceNormBackward::init_output_dtype() {
     output(0)->dtype(input(1)->dtype());
     output(1)->dtype(input(2)->dtype());
     output(2)->dtype(input(2)->dtype());
 }
 
-size_t GroupNormBackward::get_workspace_size_bytes(
+size_t InstanceNormBackward::get_workspace_size_bytes(
         const TensorShapeArray& input_shapes,
         const TensorShapeArray& output_shapes) const {
 #define in(x) \
@@ -251,11 +254,15 @@ size_t GroupNormBackward::get_workspace_size_bytes(
 #undef out
 }
 
-void GroupNormBackward::scn_do_execute() {
-    mgb_assert(
-            param().format == Param::Format::NCHW,
-            "only support inputs in shape NCHW.");
-    if (param().affine) {
+void InstanceNormBackward::scn_do_execute() {
+    auto p = param();
+    mgb_assert(p.format == Param::Format::NCHW, "only support inputs in shape NCHW.");
+    size_t C = input(0)->dev_tensor().shape()[1];
+    auto opr = const_cast<megdnn::GroupNormBackward*>(megdnn_opr());
+    opr->param().group = C;
+    mgb_assert(C != 0, "error param!");
+
+    if (p.affine) {
         megdnn_opr()->exec(
                 input(0)->dev_tensor().as_megdnn(), input(1)->dev_tensor().as_megdnn(),
                 input(2)->dev_tensor().as_megdnn(), input(3)->dev_tensor().as_megdnn(),

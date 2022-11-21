@@ -1167,6 +1167,23 @@ public:
     }
 };
 
+class InstanceNorm : public OpDefImplBase<InstanceNorm> {
+    MGB_DYN_TYPE_OBJ_FINAL_DECL;
+
+public:
+    using Format = ::megdnn::param::GroupNorm::Format;
+    bool affine = true;
+    float eps = 1e-5f;
+    uint32_t group = 1;
+    Format format = ::megdnn::param::GroupNorm::Format::NCHW;
+    InstanceNorm() = default;
+    InstanceNorm(bool affine_, float eps_, uint32_t group_, Format format_, std::string scope_ = {}): affine(affine_), eps(eps_), group(group_), format(format_) { set_scope(scope_); }
+    InstanceNorm(::megdnn::param::GroupNorm packed_param_0): affine(packed_param_0.affine), eps(packed_param_0.eps), group(packed_param_0.group), format(packed_param_0.format) {}
+    ::megdnn::param::GroupNorm param() const {
+        return {affine, eps, group, format};
+    }
+};
+
 class LAMBUpdate : public OpDefImplBase<LAMBUpdate> {
     MGB_DYN_TYPE_OBJ_FINAL_DECL;
 

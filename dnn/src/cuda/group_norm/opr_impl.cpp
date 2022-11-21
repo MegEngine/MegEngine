@@ -27,22 +27,16 @@ void GroupNormForwardImpl::exec(
             rstd.layout, workspace.size);
 
     auto p = param();
-    using Format = param::GroupNorm::Format;
     float eps = p.eps;
     int group = p.group;
     bool affine = p.affine;
     auto layout = data.layout;
-    auto format = p.format;
     size_t N, C, H, W, imsize;
-    if (data.layout.ndim == 4 && format == Format::NCHW) {
-        N = layout.shape[0];
-        C = layout.shape[1];
-        H = layout.shape[2];
-        W = layout.shape[3];
-        imsize = H * W;
-    } else {
-        megdnn_throw(ssprintf("Unspport groupnorm input"));
-    }
+    N = layout.shape[0];
+    C = layout.shape[1];
+    H = layout.shape[2];
+    W = layout.shape[3];
+    imsize = H * W;
 
     auto stream = cuda_stream(handle());
     using namespace ::megdnn::cuda::group_norm;
@@ -94,22 +88,16 @@ void GroupNormBackwardImpl::exec(
             diff.layout, data.layout, weight.layout, mean.layout, rstd.layout,
             ddata.layout, dweight.layout, dbias.layout, workspace.size);
     auto p = param();
-    using Format = param::GroupNorm::Format;
     bool affine = p.affine;
     float eps = p.eps;
     int group = p.group;
     auto layout = data.layout;
-    auto format = p.format;
     size_t N, C, H, W, imsize;
-    if (layout.ndim == 4 && format == Format::NCHW) {
-        N = layout.shape[0];
-        C = layout.shape[1];
-        H = layout.shape[2];
-        W = layout.shape[3];
-        imsize = H * W;
-    } else {
-        megdnn_throw(ssprintf("Unspport groupnorm input"));
-    }
+    N = layout.shape[0];
+    C = layout.shape[1];
+    H = layout.shape[2];
+    W = layout.shape[3];
+    imsize = H * W;
 
     auto stream = cuda_stream(handle());
     using namespace ::megdnn::cuda::group_norm;

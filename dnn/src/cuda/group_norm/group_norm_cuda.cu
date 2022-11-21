@@ -433,7 +433,7 @@ __global__ void GetBackwardParamsCUDAKernel(
         const T scale_v = scale == nullptr ? T(1) : static_cast<T>(scale[c]);
         sum1 += ds[index] * scale_v;
         sum2 += db[index] * scale_v;
-        const T scale_c = scale == nullptr ? T(0) : static_cast<T>(scale[c]);
+        const T scale_c = scale == nullptr ? T(1) : static_cast<T>(scale[c]);
         p1[index] = scale_c * var_inv;
     }
 

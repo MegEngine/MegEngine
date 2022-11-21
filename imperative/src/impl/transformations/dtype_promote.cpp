@@ -439,6 +439,7 @@ ValueRefList DTypePromoteTransformation::apply_transformation(
             return imperative::apply(op, inputs);
         }
     }
+
     return imperative::apply(op, inputs);
 }
 

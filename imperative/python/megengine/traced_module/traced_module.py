@@ -511,8 +511,7 @@ class InternalGraph:
         inp = F.zeros(shape = (3, 4))
         traced_module = tm.trace_module(net, inp)
 
-    Will produce the following ``InternalGraph``::
-
+    Will produce the following ``InternalGraph``:
         print(traced_module.graph)
 
     .. code-block:: text
@@ -2463,6 +2462,7 @@ def trace_module(
         with active_module_tracer().patcher:
             global_scope = InternalGraph(name="top", qualname=net_name)
             active_module_tracer().push_scope(global_scope)
+
             builder = TracedModuleBuilder(mod, True)
 
             NodeMixin.wrap_safe(

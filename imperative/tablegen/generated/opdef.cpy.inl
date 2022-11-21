@@ -12787,6 +12787,178 @@ void _init_py_InplaceAdd(py::module m) {
     mgb_assert(PyOp(OpDef)::ctype2pytype.emplace(InplaceAdd::typeinfo(), &py_type).second);
 }
 
+void _init_py_InstanceNorm_Format(PyTypeObject& py_type) {
+    auto& e_type = EnumWrapper<InstanceNorm::Format>::type;
+
+    Py_INCREF(e_type);
+    mgb_assert(PyDict_SetItemString(
+        py_type.tp_dict, "Format", reinterpret_cast<PyObject*>(e_type)) >= 0);
+}
+
+PyOpDefBegin(InstanceNorm) // {
+    static PyGetSetDef py_getsetters[];
+    static PyMethodDef tp_methods[];
+    
+    static PyObject* getstate(PyObject* self, PyObject*) {
+        auto& opdef = reinterpret_cast<PyOp(InstanceNorm)*>(self)->inst();
+        static_cast<void>(opdef);
+        std::unordered_map<std::string, py::object> state {
+            
+            {"affine", serialization<decltype(opdef.affine)>::dump(opdef.affine)},
+            {"eps", serialization<decltype(opdef.eps)>::dump(opdef.eps)},
+            {"group", serialization<decltype(opdef.group)>::dump(opdef.group)},
+            {"format", serialization<decltype(opdef.format)>::dump(opdef.format)}
+        };
+        return py::cast(state).release().ptr();
+    }
+    static PyObject* setstate(PyObject* self, PyObject* args) {
+        PyObject* dict = PyTuple_GetItem(args, 0);
+        if (!dict) return NULL;
+        auto state = py::cast<std::unordered_map<std::string, py::object>>(dict);
+        auto& opdef = reinterpret_cast<PyOp(InstanceNorm)*>(self)->inst();
+        static_cast<void>(opdef);
+        
+        {
+        auto&& iter = state.find("affine");
+        if (iter != state.end()) {
+            opdef.affine = serialization<decltype(opdef.affine)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("eps");
+        if (iter != state.end()) {
+            opdef.eps = serialization<decltype(opdef.eps)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("group");
+        if (iter != state.end()) {
+            opdef.group = serialization<decltype(opdef.group)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("format");
+        if (iter != state.end()) {
+            opdef.format = serialization<decltype(opdef.format)>::load(iter->second);
+        }
+        }
+        Py_RETURN_NONE;
+    }
+    static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
+// };
+PyOpDefEnd(InstanceNorm)
+
+int PyOp(InstanceNorm)::py_init(PyObject *self, PyObject *args, PyObject *kwds) {
+    static const char* kwlist[] = {"affine", "eps", "group", "format", "scope", NULL};
+    PyObject *affine = NULL, *eps = NULL, *group = NULL, *format = NULL, *scope = NULL;
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|OOOOO", const_cast<char**>(kwlist), &affine, &eps, &group, &format, &scope))
+    return -1;
+
+    if (affine) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(InstanceNorm)*>(self)->inst().affine =
+                    py::cast<decltype(InstanceNorm::affine)>(py::handle(affine));
+        } CATCH_ALL(-1)
+    }
+
+    if (eps) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(InstanceNorm)*>(self)->inst().eps =
+                    py::cast<decltype(InstanceNorm::eps)>(py::handle(eps));
+        } CATCH_ALL(-1)
+    }
+
+    if (group) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(InstanceNorm)*>(self)->inst().group =
+                    py::cast<decltype(InstanceNorm::group)>(py::handle(group));
+        } CATCH_ALL(-1)
+    }
+
+    if (format) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(InstanceNorm)*>(self)->inst().format =
+                    py::cast<decltype(InstanceNorm::format)>(py::handle(format));
+        } CATCH_ALL(-1)
+    }
+
+    if (scope) {
+        try {
+            reinterpret_cast<PyOp(OpDef)*>(self)->op
+                ->set_scope(py::cast<std::string>(py::handle(scope)));
+        } CATCH_ALL(-1)
+    }
+
+    return 0;
+}
+
+PyGetSetDef PyOp(InstanceNorm)::py_getsetters[] = {
+    {const_cast<char*>("affine"), py_get_generic(InstanceNorm, affine), py_set_generic(InstanceNorm, affine), const_cast<char*>("affine"), NULL},
+    {const_cast<char*>("eps"), py_get_generic(InstanceNorm, eps), py_set_generic(InstanceNorm, eps), const_cast<char*>("eps"), NULL},
+    {const_cast<char*>("group"), py_get_generic(InstanceNorm, group), py_set_generic(InstanceNorm, group), const_cast<char*>("group"), NULL},
+    {const_cast<char*>("format"), py_get_generic(InstanceNorm, format), py_set_generic(InstanceNorm, format), const_cast<char*>("format"), NULL},
+    {NULL}  /* Sentinel */
+};
+
+    PyMethodDef PyOp(InstanceNorm)::tp_methods[] = {
+        {const_cast<char*>("__getstate__"), PyOp(InstanceNorm)::getstate, METH_NOARGS, "InstanceNorm getstate"},
+    {const_cast<char*>("__setstate__"), PyOp(InstanceNorm)::setstate, METH_VARARGS, "InstanceNorm setstate"},
+        {NULL}  /* Sentinel */
+    };
+    
+PyObject *PyOp(InstanceNorm)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(InstanceNorm)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(InstanceNorm)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(InstanceNorm)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, affine: bool = ..., eps: float = ..., group: int = ..., format: Union[str, Format] = ...) -> None\n"
+};
+
+void _init_py_InstanceNorm(py::module m) {
+    using py_op = PyOp(InstanceNorm);
+    auto& py_type = PyOpType(InstanceNorm);
+    py_type = {PyVarObject_HEAD_INIT(NULL, 0)};
+    py_type.tp_name = "megengine.core._imperative_rt.ops.InstanceNorm";
+    py_type.tp_basicsize = sizeof(PyOp(InstanceNorm));
+    py_type.tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE;
+    py_type.tp_doc = "InstanceNorm";
+    py_type.tp_base = &PyOpType(OpDef);
+    py_type.tp_dealloc = py_dealloc_generic<py_op>;
+    py_type.tp_new = py_new_generic<py_op>;
+    py_type.tp_init = py_op::py_init;
+    py_type.tp_methods = py_op::tp_methods;
+    py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(InstanceNorm), &PyOp(InstanceNorm)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
+    mgb_assert(PyType_Ready(&py_type) >= 0);
+        _init_py_InstanceNorm_Format(py_type);
+
+    PyType_Modified(&py_type);
+    m.add_object("InstanceNorm", reinterpret_cast<PyObject*>(&py_type));
+    mgb_assert(PyOp(OpDef)::ctype2pytype.emplace(InstanceNorm::typeinfo(), &py_type).second);
+}
+
 PyOpDefBegin(LAMBUpdate) // {
     static PyGetSetDef py_getsetters[];
     static PyMethodDef tp_methods[];
@@ -22258,6 +22430,7 @@ void _init_py_WarpPerspectiveBackwardMat(py::module m) {
     _init_py_IndexingSetMultiAxisVec(m); \
     _init_py_IndexingSetOneHot(m); \
     _init_py_InplaceAdd(m); \
+    _init_py_InstanceNorm(m); \
     _init_py_LAMBUpdate(m); \
     _init_py_LRN(m); \
     _init_py_LSQ(m); \

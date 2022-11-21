@@ -11,6 +11,9 @@ void GroupNormBase::deduce_layout_fwd(
         TensorLayout& dst, TensorLayout& mean, TensorLayout& rstd) {
     MEGDNN_MARK_USED_VAR(weight);
     MEGDNN_MARK_USED_VAR(bias);
+    megdnn_assert(
+            param().format == param::GroupNorm::Format::NCHW,
+            "The input of GroupNorm should be in NCHW format.");
     size_t N = data.shape[0];
     size_t group = param().group;
     TensorLayout unnormalized_layout({N, group}, dtype::Float32());
@@ -39,6 +42,10 @@ void GroupNormBase::check_layout_fwd(
     megdnn_assert(weight.eq_layout(bias), "%s", errmsg().c_str());
     megdnn_assert(mean.eq_layout(rstd), "%s", errmsg().c_str());
 
+    megdnn_assert(data.ndim == 4, "Only supports input of dim 4");
+    megdnn_assert(
+            param().format == param::GroupNorm::Format::NCHW,
+            "The input of GroupNorm should be in NCHW format.");
     auto p = param();
     size_t C = data.shape[1];
     size_t group = p.group;
@@ -110,6 +117,10 @@ void GroupNormBackward::check_exec(
 
     megdnn_assert(data.eq_layout(ddata), "%s", errmsg().c_str());
     megdnn_assert(mean.eq_layout(rstd), "%s", errmsg().c_str());
+    megdnn_assert(data.ndim == 4, "Only supports input of dim 4");
+    megdnn_assert(
+            param().format == param::GroupNorm::Format::NCHW,
+            "The input of GroupNorm should be in NCHW format.");
     if (p.affine) {
         megdnn_assert(weight.eq_layout(dweight), "%s", errmsg().c_str());
         megdnn_assert(weight.eq_layout(dbias), "%s", errmsg().c_str());

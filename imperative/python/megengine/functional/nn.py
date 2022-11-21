@@ -62,6 +62,7 @@ __all__ = [
     "gelu",
     "group_norm",
     "hsigmoid",
+    "instance_norm",
     "hswish",
     "indexing_one_hot",
     "layer_norm",
@@ -1025,6 +1026,35 @@ def softmax(inp: Tensor, axis: Optional[int] = None) -> Tensor:
         return output
 
 
+def instance_norm(
+    inp: Tensor,
+    affine: bool,
+    weight: Optional[Tensor] = None,
+    bias: Optional[Tensor] = None,
+    eps: float = 1e-5,
+):
+    r"""Applies instance normalization to the input.
+
+    Refer to :class:`~.InstanceNorm` for more information.
+    
+    Args:
+        inp: input tensor.
+        affine: whether to use learnable affine parameters (weight, bias)
+        weight: scaling tensor in the learnable affine parameters.
+            See :math:`\gamma` in :class:`~.InstanceNorm`.
+        bias: bias tensor in the learnable affine parameters.
+            See :math:`\beta` in :class:`~.InstanceNorm`.
+        eps: a value added to the denominator for numerical stability. Default: 1e-5
+    """
+    op = builtin.InstanceNorm(affine=affine, eps=eps)
+    if affine:
+        assert weight is not None, "weight must be provided if affine is True"
+        assert bias is not None, "bias must be provided if affine is True"
+        return apply(op, inp, weight, bias)[0]
+    else:
+        return apply(op, inp)[0]
+
+
 def group_norm(
     inp: Tensor,
     num_groups: int,
@@ -1033,20 +1063,25 @@ def group_norm(
     bias: Optional[Tensor] = None,
     eps: float = 1e-5,
 ):
-    r"""Applies Group Normalization over a mini-batch of inputs as described in
-    the paper `Group Normalization <https://arxiv.org/abs/1803.08494>`__
+    r"""Applies group normalization to the input.
+
+    Refer to :class:`~.GroupNorm` for more information.
     
     Args:
         inp: input tensor.
         num_groups: number of groups to separate the channels into
-        affine: whether to use weight and bias
-        weight: must not be None when the affine is true
-        bias: must not be None when the affine is true
+            See :attr:`num_groups` in :class:`~.GroupNorm`.
+        affine: whether to use learnable affine parameters (weight, bias)
+        weight: scaling tensor in the learnable affine parameters.
+            See :math:`\gamma` in :class:`~.GroupNorm`.
+        bias: bias tensor in the learnable affine parameters.
+            See :math:`\beta` in :class:`~.GroupNorm`.
         eps: a value added to the denominator for numerical stability. Default: 1e-5
     """
     op = builtin.GroupNorm(affine=affine, eps=eps, group=num_groups,)
     if affine:
-        assert weight is not None and bias is not None
+        assert weight is not None, "weight must be provided if affine is True"
+        assert bias is not None, "bias must be provided if affine is True"
         return apply(op, inp, weight, bias)[0]
     else:
         return apply(op, inp)[0]
@@ -1060,15 +1095,19 @@ def layer_norm(
     bias: Optional[Tensor] = None,
     eps: float = 1e-5,
 ):
-    r"""Applies layer normalization to the input. Support tensor of any shape as input.
-    Reference: https://arxiv.org/pdf/1803.08494.pdf.
+    r"""Applies layer normalization to the input.
+
+    Refer to :class:`~.LayerNorm` for more information.
 
     Args:
         inp: input tensor.
         normalized_shape: the shape that you want to be normalizated
-        affine: whether to use weight and bias
-        weight: must not be None when the affine is true
-        bias: must not be None when the affine is true
+            See :attr:`normalized_shape` in :class:`~.LayerNorm`.
+        affine: whether to use learnable affine parameters (weight, bias)
+        weight: scaling tensor in the learnable affine parameters.
+            See :math:`\gamma` in :class:`~.LayerNorm`.
+        bias: bias tensor in the learnable affine parameters.
+            See :math:`\beta` in :class:`~.LayerNorm`.
         eps: a value added to the denominator for numerical stability. Default: 1e-5
     """
     if isinstance(normalized_shape, int):
@@ -1088,10 +1127,10 @@ def layer_norm(
         normalized_size=normalized_size,
     )
     if affine:
-        assert weight is not None and bias is not None
+        assert weight is not None, "weight must be provided if affine is True"
+        assert bias is not None, "bias must be provided if affine is True"
         return apply(op, inp, weight, bias)[0]
     else:
-        # assert weight is None and bias is None
         return apply(op, inp)[0]
 
 
