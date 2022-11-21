@@ -1339,6 +1339,17 @@ py::class_<InplaceAdd, std::shared_ptr<InplaceAdd>, OpDef> InplaceAddInst(m, "In
 InplaceAddInst
     .def(py::init<>());
 
+py::class_<InstanceNorm, std::shared_ptr<InstanceNorm>, OpDef> InstanceNormInst(m, "InstanceNorm");
+
+InstanceNormInst.attr("Format") = AdaptivePoolingInst.attr("Format");
+
+InstanceNormInst
+    .def(py::init<bool, float, uint32_t, ::megdnn::param::GroupNorm::Format, std::string>(), py::arg("affine") = true, py::arg("eps") = 1e-5f, py::arg("group") = 1, py::arg("format") = ::megdnn::param::GroupNorm::Format::NCHW, py::arg("scope") = {})
+    .def_readwrite("affine", &InstanceNorm::affine)
+    .def_readwrite("eps", &InstanceNorm::eps)
+    .def_readwrite("group", &InstanceNorm::group)
+    .def_readwrite("format", &InstanceNorm::format);
+
 py::class_<LAMBUpdate, std::shared_ptr<LAMBUpdate>, OpDef> LAMBUpdateInst(m, "LAMBUpdate");
 
 LAMBUpdateInst

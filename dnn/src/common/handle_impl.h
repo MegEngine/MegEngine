@@ -68,11 +68,11 @@ private:
 };
 
 }  // namespace megdnn
-/*!
- * \brief iterate though each operator class name; useful for explicit
- *      instantialization of create_operator<> templates
- */
-// clang-format off
+   /*!
+    * \brief iterate though each operator class name; useful for explicit
+    *      instantialization of create_operator<> templates
+    */
+   // clang-format off
 #define MEGDNN_FOREACH_OPR_CLASS(cb) \
     cb(ConvolutionForward) \
     cb(ConvolutionBackwardData) \

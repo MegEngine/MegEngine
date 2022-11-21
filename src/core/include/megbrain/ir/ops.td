@@ -525,6 +525,8 @@ def RNNCell: MgbHashableOp<"RNNCell", [RNNCellParam]>;
 
 def LSTMCell: MgbHashableOp<"LSTMCell", [EmptyParam]>;
 
+def InstanceNorm: MgbHashableOp<"InstanceNorm",[GroupNormParam]>;
+
 def RNN: MgbHashableOp<"RNN", [RNNParam]>;
 
 def LSTM: MgbHashableOp<"LSTM", [LSTMParam]>;

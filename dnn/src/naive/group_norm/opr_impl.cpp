@@ -54,7 +54,7 @@ void forward(
         } else {
             for (size_t j = 0; j < inner_size; j++) {
                 dst.ptr<T>()[i * inner_size + j] =
-                        (data.ptr<T>()[i * inner_size + j] - slice_mean) / slice_std;
+                        (data.ptr<T>()[i * inner_size + j] - slice_mean) * slice_std;
             }
         }
         mean.ptr<T_ACC>()[i] = static_cast<T_ACC>(slice_mean);

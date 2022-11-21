@@ -16,6 +16,7 @@ from megengine.module import (
     Conv2d,
     Dropout,
     GroupNorm,
+    InstanceNorm,
     Linear,
     MaxPool2d,
     Module,
@@ -703,9 +704,15 @@ def test_module_compatible():
 
 
 @pytest.mark.skip(reason="pytest aborted")
-def test_grou_norm():
+@pytest.mark.parametrize("affine", [True, False])
+def test_grou_norm(affine):
+    num_groups = 256
+    num_channels = 256
+    weight_np = np.random.uniform(-0.5, 0.5, (num_channels))
+    bias_np = np.random.uniform(-0.5, 0.5, (num_channels))
+
     class OriginGroupNormFunc(Module):
-        def __init__(self, num_groups, num_channels, eps=1e-5, affine=True, **kwargs):
+        def __init__(self, eps=1e-5, affine=True, **kwargs):
             super().__init__(**kwargs)
             assert num_channels % num_groups == 0
             self.num_groups = num_groups
@@ -713,8 +720,8 @@ def test_grou_norm():
             self.eps = eps
             self.affine = affine
             if self.affine:
-                self.weight = Parameter(np.ones(num_channels, dtype=np.float32))
-                self.bias = Parameter(np.zeros(num_channels, dtype=np.float32))
+                self.weight = Parameter(weight_np)
+                self.bias = Parameter(bias_np)
             else:
                 self.weight = None
                 self.bias = None
@@ -732,36 +739,105 @@ def test_grou_norm():
                 )
             return x
 
-    inp = np.random.randn(2, 256, 10, 16).astype("float32")
+    inp = np.random.uniform(-0.5, 0.5, (2, num_channels, 10, 16)).astype("float32")
     mge_inp = Tensor(inp)
-    mge_m = GroupNorm(32, 256)
-
+    mge_m = GroupNorm(num_groups, num_channels, affine=affine)
+    mge_m.weight = Parameter(weight_np)
+    mge_m.bias = Parameter(bias_np)
     ori_inp = Tensor(inp)
-    ori_m = OriginGroupNormFunc(32, 256)
+    ori_m = OriginGroupNormFunc(affine=affine)
 
-    targets = np.array(2)
-    mge_gm = mge.autodiff.GradManager().attach(mge_m.parameters())
-    ori_gm = mge.autodiff.GradManager().attach(ori_m.parameters())
-
+    mge_gm = mge.autodiff.GradManager().attach((*mge_m.parameters(), mge_inp))
+    ori_gm = mge.autodiff.GradManager().attach((*ori_m.parameters(), ori_inp))
+    dy = Tensor(np.random.uniform(-0.5, 0.5, inp.shape))
     for i in range(2):
         with mge_gm:
             mge_output = mge_m(mge_inp)
-            loss = F.loss.square_loss(
-                mge_output.sum(), mge.tensor(targets, dtype=np.float32)
-            )
-            mge_gm.backward(loss)
+
+            mge_gm.backward(mge_output, dy)
 
         with ori_gm:
             ori_output = ori_m(ori_inp)
-            loss = F.loss.square_loss(
-                ori_output.sum(), mge.tensor(targets, dtype=np.float32)
-            )
-            ori_gm.backward(loss)
+
+            ori_gm.backward(ori_output, dy)
 
         np.testing.assert_allclose(mge_output.numpy(), ori_output.numpy(), atol=1e-05)
         np.testing.assert_allclose(
-            mge_m.weight.grad.numpy(), ori_m.weight.grad.numpy(), rtol=1e-03
+            ori_inp.grad.numpy(), mge_inp.grad.numpy(), atol=1e-05
         )
+        if affine == True:
+            np.testing.assert_allclose(
+                mge_m.weight.grad.numpy(), ori_m.weight.grad.numpy(), atol=1e-05
+            )
+            np.testing.assert_allclose(
+                mge_m.bias.grad.numpy(), ori_m.bias.grad.numpy(), atol=1e-05
+            )
+
+
+@pytest.mark.parametrize("affine", [True, False])
+def test_instance_norm(affine):
+    num_channels = 4
+    weight_np = np.random.uniform(-0.5, 0.5, (num_channels))
+    bias_np = np.random.uniform(-0.5, 0.5, (num_channels))
+
+    class OriginInstanceNormFunc(Module):
+        def __init__(self, eps=1e-5, affine=True, **kwargs):
+            super().__init__(**kwargs)
+            self.num_channels = num_channels
+            self.eps = eps
+            self.affine = affine
+            if self.affine:
+                self.weight = Parameter(weight_np)
+                self.bias = Parameter(bias_np)
+            else:
+                self.weight = None
+                self.bias = None
+
+        def forward(self, x):
+            N, C, H, W = x.shape
+            x = x.reshape(N, self.num_channels, -1)
+            mean = x.mean(axis=2, keepdims=True)
+            var = (x * x).mean(axis=2, keepdims=True) - mean * mean
+            x = (x - mean) / F.sqrt(var + self.eps)
+            x = x.reshape(N, C, H, W)
+            if self.affine:
+                x = self.weight.reshape(1, -1, 1, 1) * x + self.bias.reshape(
+                    1, -1, 1, 1
+                )
+            return x
+
+    inp = np.random.uniform(-0.5, 0.5, (2, num_channels, 10, 16)).astype("float32")
+    mge_inp = Tensor(inp)
+    mge_m = InstanceNorm(num_channels, affine=affine)
+    mge_m.weight = Parameter(weight_np)
+    mge_m.bias = Parameter(bias_np)
+
+    ori_inp = Tensor(inp)
+    ori_m = OriginInstanceNormFunc(affine=affine)
+
+    mge_im = mge.autodiff.GradManager().attach((*mge_m.parameters(), mge_inp))
+    ori_im = mge.autodiff.GradManager().attach((*ori_m.parameters(), ori_inp))
+    dy = Tensor(np.random.uniform(-0.5, 0.5, inp.shape))
+
+    for i in range(2):
+        with mge_im:
+            mge_output = mge_m(mge_inp)
+
+            mge_im.backward(mge_output, dy)
+
+        with ori_im:
+            ori_output = ori_m(ori_inp)
+
+            ori_im.backward(ori_output, dy)
+
+        np.testing.assert_allclose(mge_output.numpy(), ori_output.numpy(), atol=1e-05)
         np.testing.assert_allclose(
-            mge_m.bias.grad.numpy(), ori_m.bias.grad.numpy(), rtol=1e-03
+            ori_inp.grad.numpy(), mge_inp.grad.numpy(), atol=1e-04
         )
+        if affine == True:
+            np.testing.assert_allclose(
+                mge_m.weight.grad.numpy(), ori_m.weight.grad.numpy(), atol=1e-04
+            )
+            np.testing.assert_allclose(
+                mge_m.bias.grad.numpy(), ori_m.bias.grad.numpy(), atol=1e-04
+            )
