@@ -208,6 +208,9 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
         cg::copy_tensor_value_to_shape(
                 tshp, tshp_nd->get_value().proxy_to_default_cpu());
     }
+    if (tshp.is_empty()) {
+        return {Tensor::make(TensorLayout(tshp, src->dtype()), src->comp_node())};
+    }
     TensorLayout tlayout = slayout.broadcast(tshp);
     // memory forward
     return {Tensor::make(src->blob(), src->offset(), tlayout)};

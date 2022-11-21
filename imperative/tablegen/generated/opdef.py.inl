@@ -1882,9 +1882,10 @@ SplitInst
 py::class_<Subtensor, std::shared_ptr<Subtensor>, OpDef> SubtensorInst(m, "Subtensor");
 
 SubtensorInst
-    .def(py::init<std::vector<std::tuple<int8_t, bool, bool, bool, bool>>, std::string>(), py::arg("items"), py::arg("scope") = {})
+    .def(py::init<std::vector<std::tuple<int8_t, bool, bool, bool, bool>>, std::vector<std::tuple<int32_t, int32_t, int32_t, int32_t>>, std::string>(), py::arg("items"), py::arg("slice_items"), py::arg("scope") = {})
     .def(py::init<>())
-    .def_readwrite("items", &Subtensor::items);
+    .def_readwrite("items", &Subtensor::items)
+    .def_readwrite("slice_items", &Subtensor::slice_items);
 
 py::class_<TQT, std::shared_ptr<TQT>, OpDef> TQTInst(m, "TQT");
 

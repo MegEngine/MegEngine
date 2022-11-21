@@ -6918,6 +6918,7 @@ size_t Subtensor_hash_impl(const OpDef& def_) {
     static_cast<void>(op_);
     size_t val = mgb::hash(op_.dyn_typeinfo());
     val = mgb::hash_pair_combine(val, mgb::hash(op_.items));
+    val = mgb::hash_pair_combine(val, mgb::hash(op_.slice_items));
     return val;
 }
 bool Subtensor_is_same_st_impl(const OpDef& lhs_, const OpDef& rhs_) {
@@ -6926,6 +6927,7 @@ bool Subtensor_is_same_st_impl(const OpDef& lhs_, const OpDef& rhs_) {
     static_cast<void>(a_);
     static_cast<void>(b_);
     if (a_.items != b_.items) return false;
+    if (a_.slice_items != b_.slice_items) return false;
     return true;
 }
 std::vector<std::pair<const char*, std::string>> Subtensor_props_impl(const OpDef& def_) {
@@ -6933,6 +6935,7 @@ std::vector<std::pair<const char*, std::string>> Subtensor_props_impl(const OpDe
     static_cast<void>(op_);
     std::vector<std::pair<const char*, std::string>> props_;
     props_.emplace_back("items", "{std::vector}");
+    props_.emplace_back("slice_items", "{std::vector}");
     return props_;
 }
 std::string Subtensor_make_name_impl(const OpDef& def_) {

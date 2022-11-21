@@ -781,14 +781,8 @@ std::pair<size_t, bool> get_ndim_safe(py::handle tensor) {
     }
 }
 
-py::tuple _unpack_indexes(py::handle inp_hdl, py::handle idx_hdl) {
+py::tuple _unpack_indexes(py::handle inp_hdl, py::tuple tuple_val) {
     py::object inp = py::reinterpret_borrow<py::object>(inp_hdl);
-    py::tuple tuple_val;
-    if (py::isinstance<py::tuple>(idx_hdl)) {
-        tuple_val = py::reinterpret_borrow<py::tuple>(idx_hdl);
-    } else {
-        tuple_val = py::make_tuple(idx_hdl);
-    }
 
     bool use_subtensor = true;
     bool need_remove_ellipsis = false;
@@ -937,6 +931,20 @@ bool enable_fastpath(py::handle inp) {
         return false;
     }
     return true;
+}
+
+bool subtensor_fastpath(py::handle inp_hdl, py::tuple tuple_val) {
+    bool use_fastpath = true;
+    for (size_t i = 0; i < tuple_val.size(); ++i) {
+        PyObject* obj = tuple_val[i].ptr();
+        if ((!is_scalar(obj) && !PySlice_Check(obj) && obj != Py_Ellipsis &&
+             obj != Py_None) ||
+            (PyObject_TypeCheck(obj, py_varnode_type))) {
+            use_fastpath = false;
+            break;
+        }
+    }
+    return use_fastpath && enable_fastpath(inp_hdl);
 }
 
 py::object _broadcast_cpp(py::handle input, py::handle args) {
@@ -1128,16 +1136,129 @@ py::object _adaptive_pool2d_cpp(
     return ret[0];
 }
 
+py::object _fastpath_getitem_cpp(py::handle inp_hdl, py::tuple tuple_val) {
+    py::object inp = py::reinterpret_borrow<py::object>(inp_hdl);
+    int ax = 0;
+    bool use_ellipsis = false;
+    size_t special_dim = 0;
+
+    for (size_t i = 0; i < tuple_val.size(); ++i) {
+        PyObject* obj = tuple_val[i].ptr();
+        if (obj == Py_Ellipsis) {
+            use_ellipsis = true;
+            for (size_t j = i + 1; j < tuple_val.size(); j++) {
+                PyObject* obj_last = tuple_val[j].ptr();
+                if (obj_last == Py_Ellipsis) {
+                    throw py::index_error("only one ellipsis is allowed.");
+                }
+            }
+        }
+        if (obj != Py_None && obj != Py_Ellipsis && obj != Py_True && obj != Py_False) {
+            special_dim++;
+        }
+    }
+
+    size_t ndim = 0;
+    try {
+        ndim = getattr(inp_hdl, "ndim").cast<size_t>();
+    } catch (py::error_already_set& err) {
+        if (use_ellipsis) {
+            throw py::index_error(
+                    "does not support Ellipsis when tensor's ndim is unknown.");
+        };
+    }
+
+    std::vector<std::tuple<int8_t, bool, bool, bool, bool>> cpp_items;
+    std::vector<std::tuple<int32_t, int32_t, int32_t, int32_t>> slice_items;
+    std::vector<int32_t> expand_items;
+
+    for (size_t i = 0; i < tuple_val.size(); ++i) {
+        py::object t = tuple_val[i];
+        if (t.ptr() == Py_Ellipsis) {
+            ax += ndim - special_dim;
+        } else if (PySlice_Check(t.ptr())) {
+            PySliceObject* s = (PySliceObject*)t.ptr();
+            std::vector<int> items;
+            std::vector<bool> idx_items;
+            auto push = [&](PyObject* v, int default_value) {
+                if (v == Py_None) {
+                    items.push_back(default_value);
+                    idx_items.push_back(false);
+                } else {
+                    auto obj = py::reinterpret_borrow<py::object>(v);
+                    items.push_back(obj.cast<int>());
+                    idx_items.push_back(true);
+                }
+            };
+            push(s->start, INT_MIN);
+            push(s->stop, INT_MAX);
+            push(s->step, INT_MAX);
+            if (idx_items[0] || idx_items[1] || idx_items[2]) {
+                cpp_items.push_back(
+                        {ax, idx_items[0], idx_items[1], idx_items[2], false});
+                slice_items.push_back({items[0], items[1], items[2], INT_MAX});
+            }
+            ax += 1;
+        } else if (PyLong_Check(t.ptr()) && !PyBool_Check(t.ptr())) {
+            cpp_items.push_back({ax, false, false, false, true});
+            slice_items.push_back({INT_MIN, INT_MAX, INT_MAX, t.cast<int>()});
+            ax += 1;
+        } else if (PyBool_Check(t.ptr())) {
+            expand_items.push_back(ax);
+        } else if (t.ptr() == Py_None) {
+            expand_items.push_back(ax);
+            ax += 1;
+        } else if (is_scalar(t.ptr())) {
+            cpp_items.push_back({ax, false, false, false, true});
+            slice_items.push_back({INT_MIN, INT_MAX, INT_MAX, t.cast<int>()});
+            ax += 1;
+        } else {
+            throw py::value_error("fast path subtensor index not impl");
+        }
+    }
+
+    if (expand_items.size()) {
+        std::shared_ptr<OpDef> op = AddAxis::make(expand_items);
+        py::object Op = py::cast(op);
+        PyObject* p[2] = {Op.ptr(), inp.ptr()};
+        py::tuple ret = py::reinterpret_steal<py::object>(py_apply(NULL, p, 2));
+        inp = ret[0];
+    }
+
+    std::shared_ptr<OpDef> op;
+    op = Subtensor::make(cpp_items, slice_items);
+
+    std::vector<PyObject*> p;
+    p.resize(2);
+    py::object Op = py::cast(op);
+    p[0] = Op.ptr();
+    p[1] = inp.ptr();
+
+    py::tuple ret =
+            py::reinterpret_steal<py::object>(py_apply(NULL, p.data(), p.size()));
+    return ret[0];
+}
+
 py::object _getitem_cpp(py::handle inp_hdl, py::handle idx_hdl) {
     py::tuple try_res = _try_cond_take(inp_hdl, idx_hdl);
     if (try_res.size() == 2) {
         return try_res[0];
     }
-    py::tuple up = _unpack_indexes(inp_hdl, idx_hdl);
+    py::tuple tuple_val;
+    if (py::isinstance<py::tuple>(idx_hdl)) {
+        tuple_val = py::reinterpret_borrow<py::tuple>(idx_hdl);
+    } else {
+        tuple_val = py::make_tuple(idx_hdl);
+    }
+    if (subtensor_fastpath(inp_hdl, tuple_val)) {
+        return _fastpath_getitem_cpp(inp_hdl, tuple_val);
+    }
+    py::tuple up = _unpack_indexes(inp_hdl, tuple_val);
     py::object tensor = py::reinterpret_borrow<py::object>(up[0]);
     py::list tensors = py::reinterpret_borrow<py::list>(up[1]);
     py::list py_items = py::reinterpret_borrow<py::list>(up[2]);
     std::vector<std::tuple<int8_t, bool, bool, bool, bool>> cpp_items;
+    std::vector<std::tuple<int32_t, int32_t, int32_t, int32_t>> slice_items;
     for (size_t i = 0; i < py_items.size(); ++i) {
         py::list item = py::reinterpret_borrow<py::list>(py_items[i]);
         cpp_items.push_back(
@@ -1146,7 +1267,7 @@ py::object _getitem_cpp(py::handle inp_hdl, py::handle idx_hdl) {
     }
     std::shared_ptr<OpDef> op;
     if (up[3].cast<bool>()) {
-        op = Subtensor::make(cpp_items);
+        op = Subtensor::make(cpp_items, slice_items);
     } else {
         op = IndexingMultiAxisVec::make(cpp_items);
     }
@@ -1170,11 +1291,18 @@ py::object _setitem_cpp(py::handle inp_hdl, py::handle idx_hdl, py::handle val_h
         val = _Const(val_hdl, getattr(inp_hdl, "dtype"), getattr(inp_hdl, "device"));
     }
 
-    py::tuple up = _unpack_indexes(inp_hdl, idx_hdl);
+    py::tuple tuple_val;
+    if (py::isinstance<py::tuple>(idx_hdl)) {
+        tuple_val = py::reinterpret_borrow<py::tuple>(idx_hdl);
+    } else {
+        tuple_val = py::make_tuple(idx_hdl);
+    }
+    py::tuple up = _unpack_indexes(inp_hdl, tuple_val);
     py::object tensor = py::reinterpret_borrow<py::object>(up[0]);
     py::list tensors = py::reinterpret_borrow<py::list>(up[1]);
     py::list py_items = py::reinterpret_borrow<py::list>(up[2]);
     std::vector<std::tuple<int8_t, bool, bool, bool, bool>> cpp_items;
+    std::vector<std::tuple<int32_t, int32_t, int32_t, int32_t>> slice_items;
     for (size_t i = 0; i < py_items.size(); ++i) {
         py::list item = py::reinterpret_borrow<py::list>(py_items[i]);
         cpp_items.push_back(
@@ -1183,7 +1311,7 @@ py::object _setitem_cpp(py::handle inp_hdl, py::handle idx_hdl, py::handle val_h
     }
     std::shared_ptr<OpDef> op, set_op;
     if (up[3].cast<bool>()) {
-        op = Subtensor::make(cpp_items);
+        op = Subtensor::make(cpp_items, slice_items);
     } else {
         op = IndexingMultiAxisVec::make(cpp_items);
     }

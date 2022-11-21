@@ -542,7 +542,6 @@ auto get_index(
         OP_TRAIT_REG(NAME, NAME).apply_on_var_node(apply_on_var_node).fallback(); \
     }
 
-FANCY_INDEXING_IMPL(Subtensor, 1)
 FANCY_INDEXING_IMPL(SetSubtensor, 2)
 FANCY_INDEXING_IMPL(IncrSubtensor, 2)
 FANCY_INDEXING_IMPL(IndexingMultiAxisVec, 1)

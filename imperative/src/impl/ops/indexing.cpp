@@ -103,8 +103,7 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
     if (!src.ndim) {
         return {{{{{}, src.dtype}, comp_node}}, false};
     }
-    mgb_assert(src.is_contiguous(), "src should be contiguous");
-    return {{{src, comp_node}}, true};
+    return {{{{src, src.dtype}, comp_node}}, true};
 }
 
 auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
@@ -138,10 +137,18 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
     dnn_op.exec_with_ws(out, index, sub);
     return {out};
 }
+SmallVector<VarNode::LayoutConstraintCallback> get_input_layout_constraint(
+        const OpDef& def, const SmallVector<TensorPtr>& inputs) {
+    SmallVector<VarNode::LayoutConstraintCallback> layout_checker(inputs.size());
+    layout_checker[0] = layout_checker[1] = layout_checker[2] =
+            [](const TensorLayout& layout) { return layout.is_contiguous(); };
+    return layout_checker;
+}
 
 OP_TRAIT_REG(IndexingSetOneHot, IndexingSetOneHot)
         .infer_output_attrs_fallible(infer_output_attrs_fallible)
         .apply_on_var_node(apply_on_var_node)
+        .get_input_layout_constraint(get_input_layout_constraint)
         .apply_on_physical_tensor(apply_on_physical_tensor)
         .fallback();
 }  // namespace indexing_set_one_hot

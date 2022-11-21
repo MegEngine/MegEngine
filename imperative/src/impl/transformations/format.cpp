@@ -306,6 +306,19 @@ inline bool is_reduce_ndim_idx_items(
     return false;
 }
 
+inline bool is_subtensor_reduce_ndim(
+        const std::vector<std::tuple<int8_t, bool, bool, bool, bool>>& items,
+        const std::vector<std::tuple<int32_t, int32_t, int32_t, int32_t>> slice_items) {
+    for (auto i = 0; i < items.size(); ++i) {
+        auto&& [axis, begin, end, step, idx] = items[i];
+        if (idx) {
+            auto&& [b_val, e_val, s_val, ax_val] = slice_items[i];
+            return ax_val != INT_MAX;
+        }
+    }
+    return false;
+}
+
 inline auto convert_nchw2nhwc_idx_items(
         const std::vector<std::tuple<int8_t, bool, bool, bool, bool>>& items) {
     auto nhwc_items = items;
@@ -322,6 +335,34 @@ inline auto convert_nchw2nhwc_idx_items(
 
 template <typename T>
 ValueRefList subtensor_rule(
+        const T& op, Span<ValueRef>& inputs, const bool& auto_convert,
+        const FormatTransformation& t) {
+    mgb_assert(inputs.size() >= 1);
+    auto& src = inputs[0].cast(t.value_type());
+    bool is_reduce_ndim = false;
+    if (inputs.size() > 1) {
+        is_reduce_ndim = is_reduce_ndim_idx_items(
+                op.items, {&inputs[1], &inputs[inputs.size() - 1]});
+    } else {
+        is_reduce_ndim = is_subtensor_reduce_ndim(op.items, op.slice_items);
+    }
+    if (!is_reduce_ndim) {
+        // only support NHWC2NCHW convert, otherwise maintain src's format
+        if (!(auto_convert && src.format() == FT::NHWC)) {
+            return {t.wrap_output(
+                    imperative::apply(op, t.unwrap_inputs(inputs))[0], src.format())};
+        }
+        auto nhwc_items = convert_nchw2nhwc_idx_items(op.items);
+        auto outputs = imperative::apply(
+                *T::make(std::move(nhwc_items), op.slice_items, op.scope()),
+                t.unwrap_inputs(inputs));
+        return t.wrap_outputs(outputs, FT::NHWC);
+    }
+    return t.wrap_outputs(imperative::apply(op, t.unwrap_inputs(inputs)));
+}
+
+template <typename T>
+ValueRefList indexing_rule(
         const T& op, Span<ValueRef>& inputs, const bool& auto_convert,
         const FormatTransformation& t) {
     mgb_assert(inputs.size() >= 1);
@@ -597,7 +638,7 @@ struct FormatRuleRegistry {
         register_format_rule(reshape_rule);
         register_format_rule(broadcast_rule);
         register_format_rule(subtensor_rule<Subtensor>);
-        register_format_rule(subtensor_rule<IndexingMultiAxisVec>);
+        register_format_rule(indexing_rule<IndexingMultiAxisVec>);
         register_format_rule(setsubtensor_rule<SetSubtensor>);
         register_format_rule(setsubtensor_rule<IndexingSetMultiAxisVec>);
         register_format_rule(elemwise_rule);

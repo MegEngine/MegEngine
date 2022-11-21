@@ -380,7 +380,15 @@ class FancyIndexingBase<string name>: MgbHashableOp<name> {
   );
 }
 
-def Subtensor: FancyIndexingBase<"Subtensor">;
+def Subtensor: MgbHashableOp<"Subtensor"> {
+  let extraArguments = (ins
+    MgbArrayAttr<MgbTupleAttr<
+      [MgbI8Attr, MgbBoolAttr, MgbBoolAttr, MgbBoolAttr, MgbBoolAttr]>>:$items,
+    MgbArrayAttr<MgbTupleAttr<[MgbI32Attr, MgbI32Attr, MgbI32Attr, MgbI32Attr]>>:$slice_items
+  );
+}
+
+// def Subtensor: FancyIndexingBase<"Subtensor">;
 def SetSubtensor: FancyIndexingBase<"SetSubtensor">;
 def IncrSubtensor: FancyIndexingBase<"IncrSubtensor">;
 def IndexingMultiAxisVec: FancyIndexingBase<"IndexingMultiAxisVec">;

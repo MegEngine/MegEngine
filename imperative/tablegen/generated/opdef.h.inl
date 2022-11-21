@@ -1795,8 +1795,9 @@ class Subtensor : public OpDefImplBase<Subtensor> {
 
 public:
     std::vector<std::tuple<int8_t, bool, bool, bool, bool>> items;
+    std::vector<std::tuple<int32_t, int32_t, int32_t, int32_t>> slice_items;
     Subtensor() = default;
-    Subtensor(std::vector<std::tuple<int8_t, bool, bool, bool, bool>> items_, std::string scope_ = {}): items(items_) { set_scope(scope_); }
+    Subtensor(std::vector<std::tuple<int8_t, bool, bool, bool, bool>> items_, std::vector<std::tuple<int32_t, int32_t, int32_t, int32_t>> slice_items_, std::string scope_ = {}): items(items_), slice_items(slice_items_) { set_scope(scope_); }
 };
 
 class TQT : public OpDefImplBase<TQT> {
