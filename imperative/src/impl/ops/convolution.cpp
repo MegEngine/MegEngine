@@ -174,13 +174,15 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
     if (filter.ndim && diff.ndim) {
         // deduce_layout won't override existing dtype
         dnn_opr.opr().deduce_layout(filter, diff, output_layout);
-        if (inputs.size() == 3) {
-            if (!inputs[2].value.empty()) {
-                cg::copy_tensor_value_to_shape(output_layout, inputs[2].value);
-                output_layout.init_contiguous_stride();
-            } else {
-                output_layout.ndim = 0;
-            }
+    } else {
+        dnn_opr.opr().deduce_dtype(filter.dtype, diff.dtype, output_layout.dtype);
+    }
+    if (inputs.size() == 3) {
+        if (!inputs[2].value.empty()) {
+            cg::copy_tensor_value_to_shape(output_layout, inputs[2].value);
+            output_layout.init_contiguous_stride();
+        } else {
+            output_layout.ndim = 0;
         }
     }
     return {{{output_layout, inputs[0].comp_node}}, output_layout.ndim != 0};
@@ -202,8 +204,11 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
             if (inputs.size() == 3) {
                 cg::copy_tensor_value_to_shape(
                         out_layout, inputs[2]->get_value().proxy_to_default_cpu());
-                out_layout.init_contiguous_stride();
+            } else {
+                dnn_opr.op()->deduce_layout(
+                        inputs[0]->layout(), inputs[1]->layout(), out_layout);
             }
+            out_layout.init_contiguous_stride();
             return out_layout;
         }
     }();

@@ -7,12 +7,14 @@ import numpy as np
 import pytest
 from utils import opr_test
 
+import megengine as mge
 import megengine.amp as amp
 import megengine.config as config
 import megengine.core.ops.builtin as builtin
 import megengine.core.tensor.dtype as dtype
 import megengine.functional as F
 import megengine.jit as jit
+import megengine.module as M
 from megengine import Parameter, Tensor, is_cuda_available, tensor
 from megengine.autodiff import GradManager
 from megengine.core._trace_option import use_symbolic_shape
@@ -1636,6 +1638,16 @@ def test_conv_transpose2d():
     np.testing.assert_equal(
         output_shape.numpy(), np.array([20, 33, 94, 300], dtype=np.int32)
     )
+
+    @mge.jit.trace()
+    def func():
+        deconv = M.ConvTranspose2d(16, 33, (3, 5), (2, 3), (3, 4))
+        x = Tensor(np.random.rand(20, 16, 50, 100))
+        for i in range(20):
+            y = deconv(x._broadcast(F.concat([x.shape, x.shape])[:4]))
+        mge._sync()
+
+    func()
 
 
 def test_conv_transpose3d():
