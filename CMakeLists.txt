@@ -458,11 +458,14 @@ if(MSVC OR WIN32)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${WIN_FLAGS}")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${WIN_FLAGS}")
 
-  # FIXME: fix halide JIT on windows
-  message(STATUS "disable jit, halide and mlir on windows host build...")
+  # FIXME: fix halide/mlir JIT backends on windows
+  message(STATUS "disable halide and mlir jit backends on windows host build...")
   set(MGE_WITH_HALIDE OFF)
-  set(MGE_WITH_JIT OFF)
   set(MGE_WITH_JIT_MLIR OFF)
+  # TODO: imp ExecutableHelperImpl@src/jit/impl/utils.cpp build with Windows, then
+  # enable base jit on Windows
+  message(STATUS "disable base jit on windows host build...")
+  set(MGE_WITH_JIT OFF)
   # FIXME: fix MegRay on windows
   message(STATUS "Disable distributed build on windows host build...")
   set(MGE_WITH_DISTRIBUTED OFF)
@@ -546,6 +549,12 @@ set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${MGE_COMMON_LINKER_
 set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} ${MGE_COMMON_LINKER_FLAGS}")
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${MGE_COMMON_LINKER_FLAGS}")
 
+if(MGE_DEPLOY_INFERENCE_ON_WINDOWS_XP_SP2)
+  # x86 cpu jit backends only support MLIR now, but MLIR runtime do not support at xp
+  # sp2
+  message(WARNING "disable MGE_WITH_JIT when build for windows xp sp2")
+  set(MGE_WITH_JIT OFF)
+endif()
 if(NOT MGE_WITH_JIT)
   if(MGE_WITH_HALIDE)
     message(WARNING "MGE_WITH_HALIDE is set to OFF with MGE_WITH_JIT disabled")
@@ -595,15 +604,18 @@ if(MGE_WITH_CUDA)
   set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 endif()
 
+if(CMAKE_TOOLCHAIN_FILE)
+  # TODO: fix cross build mlir-linalg-ods-gen for enable cross build with MLIR
+  message(
+    STATUS
+      "Disable MLIR jit backends support, as we do not support cross build MLIR module caused by mlir-linalg-ods-gen, if you really need this, try build at host env, for example Android termux env for android, arm-linux env for arm with linux board"
+  )
+  set(MGE_WITH_JIT_MLIR OFF)
+endif()
+
 if(NOT MGE_WITH_CUDA)
-  if(NOT MGE_ARCH STREQUAL "x86_64" AND NOT MGE_ARCH STREQUAL "i386")
-    message(
-      STATUS "Disable JIT support, as the MGE_ARCH is not X86 and CUDA is not enabled.")
-    set(MGE_WITH_JIT OFF)
-    set(MGE_WITH_JIT_MLIR OFF)
-  endif()
+  message(STATUS "Disable TensorRT support and disable HALIDE, as CUDA is not enabled.")
   set(MGE_WITH_HALIDE OFF)
-  message(STATUS "Disable TensorRT support, as CUDA is not enabled.")
   set(MGE_WITH_TRT OFF)
 endif()
 
@@ -1163,13 +1175,17 @@ endif()
 # TensorRT
 set(MGB_ENABLE_TENSOR_RT ${MGE_WITH_TRT})
 
+# inference need jit now, also keep same build logic with bazel
+if(MGE_DEPLOY_INFERENCE_ON_WINDOWS_XP_SP2)
+  set(MGB_BUILD_SLIM_SERVING 1)
+else()
+  set(MGB_BUILD_SLIM_SERVING 0)
+endif()
 # Inference only
 if(MGE_INFERENCE_ONLY AND NOT MGE_WITH_TEST)
   set(MGB_ENABLE_GRAD 0)
-  set(MGB_BUILD_SLIM_SERVING 1)
 else()
   set(MGB_ENABLE_GRAD 1)
-  set(MGB_BUILD_SLIM_SERVING 0)
 endif()
 
 # Distributed communication
