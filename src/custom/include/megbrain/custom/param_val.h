@@ -14,23 +14,28 @@ namespace custom {
  * we can add a new basic data type here, basic means we can perform binary
  * op such as: +, -, *, /, ==, != between any two of them
  */
-#define CUSTOM_FOR_EACH_BASIC_PARAMTYPE(cb, ...)                                    \
-    cb(Int32, int32_t, ##__VA_ARGS__) cb(Int64, int64_t, ##__VA_ARGS__)             \
-            cb(Uint32, uint32_t, ##__VA_ARGS__) cb(Uint64, uint64_t, ##__VA_ARGS__) \
-                    cb(Float32, float, ##__VA_ARGS__)                               \
-                            cb(Float64, double, ##__VA_ARGS__)                      \
-                                    cb(Bool, bool, ##__VA_ARGS__)
+// clang-format off
+#define CUSTOM_FOR_EACH_BASIC_PARAMTYPE(cb, ...)    \
+    cb(Int32, int32_t, ##__VA_ARGS__)               \
+    cb(Int64, int64_t, ##__VA_ARGS__)               \
+    cb(Uint32, uint32_t, ##__VA_ARGS__)             \
+    cb(Uint64, uint64_t, ##__VA_ARGS__)             \
+    cb(Float32, float, ##__VA_ARGS__)               \
+    cb(Float64, double, ##__VA_ARGS__)              \
+    cb(Bool, bool, ##__VA_ARGS__)
+// clang-format on
 
 #define CUSTOM_FOR_STRING_PARAMTYPE(cb, ...) cb(String, std::string, ##__VA_ARGS__)
 
-#define CUSTOM_FOR_EACH_BASIC_LIST_PARAMTYPE(cb, ...)                                  \
-    cb(Int32List, std::vector<int32_t>, ##__VA_ARGS__)                                 \
-            cb(Int64List, std::vector<int64_t>, ##__VA_ARGS__)                         \
-                    cb(Uint32List, std::vector<uint32_t>, ##__VA_ARGS__)               \
-                            cb(Uint64List, std::vector<uint64_t>, ##__VA_ARGS__)       \
-                                    cb(Float32List, std::vector<float>, ##__VA_ARGS__) \
-                                            cb(Float64List, std::vector<double>,       \
-                                               ##__VA_ARGS__)
+// clang-format off
+#define CUSTOM_FOR_EACH_BASIC_LIST_PARAMTYPE(cb, ...)       \
+    cb(Int32List, std::vector<int32_t>, ##__VA_ARGS__)      \
+    cb(Int64List, std::vector<int64_t>, ##__VA_ARGS__)      \
+    cb(Uint32List, std::vector<uint32_t>, ##__VA_ARGS__)    \
+    cb(Uint64List, std::vector<uint64_t>, ##__VA_ARGS__)    \
+    cb(Float32List, std::vector<float>, ##__VA_ARGS__)      \
+    cb(Float64List, std::vector<double>, ##__VA_ARGS__)
+// clang-format on
 
 #define CUSTOM_FOR_BOOL_LIST_PARAMTYPE(cb, ...) \
     cb(BoolList, std::vector<bool>, ##__VA_ARGS__)
@@ -41,19 +46,26 @@ namespace custom {
 /**
  * to avoid the recursive of MACRO
  */
-#define CUSTOM_FOR_EACH_BASIC_PARAMTYPE_COPY(cb, ...)                               \
-    cb(Int32, int32_t, ##__VA_ARGS__) cb(Int64, int64_t, ##__VA_ARGS__)             \
-            cb(Uint32, uint32_t, ##__VA_ARGS__) cb(Uint64, uint64_t, ##__VA_ARGS__) \
-                    cb(Float32, float, ##__VA_ARGS__)                               \
-                            cb(Float64, double, ##__VA_ARGS__)                      \
-                                    cb(Bool, bool, ##__VA_ARGS__)
+// clang-format off
+#define CUSTOM_FOR_EACH_BASIC_PARAMTYPE_COPY(cb, ...)   \
+    cb(Int32, int32_t, ##__VA_ARGS__)                   \
+    cb(Int64, int64_t, ##__VA_ARGS__)                   \
+    cb(Uint32, uint32_t, ##__VA_ARGS__)                 \
+    cb(Uint64, uint64_t, ##__VA_ARGS__)                 \
+    cb(Float32, float, ##__VA_ARGS__)                   \
+    cb(Float64, double, ##__VA_ARGS__)                  \
+    cb(Bool, bool, ##__VA_ARGS__)
+// clang-format on
+
+class Device;
 
 #define CUSTOM_FOR_EACH_VALID_PARAMTYPE(cb, ...)            \
     CUSTOM_FOR_EACH_BASIC_PARAMTYPE(cb, ##__VA_ARGS__)      \
     CUSTOM_FOR_STRING_PARAMTYPE(cb, ##__VA_ARGS__)          \
     CUSTOM_FOR_EACH_BASIC_LIST_PARAMTYPE(cb, ##__VA_ARGS__) \
     CUSTOM_FOR_BOOL_LIST_PARAMTYPE(cb, ##__VA_ARGS__)       \
-    CUSTOM_FOR_STRING_LIST_PARAMTYPE(cb, ##__VA_ARGS__)
+    CUSTOM_FOR_STRING_LIST_PARAMTYPE(cb, ##__VA_ARGS__)     \
+    cb(Device, ::custom::Device, ##__VA_ARGS__)
 
 #define CUSTOM_FOR_EACH_LIST_PARAMTYPE(cb, ...)             \
     CUSTOM_FOR_EACH_BASIC_LIST_PARAMTYPE(cb, ##__VA_ARGS__) \

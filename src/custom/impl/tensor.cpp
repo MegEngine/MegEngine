@@ -470,12 +470,16 @@ uint8_t Tensor::zero_point(void) const {
     return dtype().zero_point();
 }
 
-void* Tensor::data(void) {
-    return static_cast<void*>(TensorImplRef(m_tensor).raw_ptr());
+bool Tensor::is_contiguous() const {
+    return TensorImplRef(m_tensor).layout().is_contiguous();
 }
 
-const void* Tensor::data(void) const {
-    return static_cast<const void*>(TensorImplRef(m_tensor).raw_ptr());
+bool Tensor::is_empty() const {
+    return TensorImplRef(m_tensor).layout().is_empty();
+}
+
+void* Tensor::data(void) const {
+    return static_cast<void*>(TensorImplRef(m_tensor).raw_ptr());
 }
 
 }  // namespace custom

@@ -10,7 +10,7 @@ MGE_WIN_DECLSPEC_FUC std::shared_ptr<CustomOp> op_insert(
 }
 
 #define CUSTOM_OP_REG(OpName) \
-    CustomOp& _##OpName = (*(op_insert(#OpName, CUSTOM_OP_VERSION)))
+    ::custom::CustomOp& _##OpName = (*(::custom::op_insert(#OpName, CUSTOM_OP_VERSION)))
 
 #define CUSTOM_OP_REG_BEGIN(OpName) \
     namespace custom {              \

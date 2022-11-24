@@ -99,6 +99,10 @@ if(MGE_WITH_CUSTOM_OP)
     endif()
   endforeach(CUSOURCE)
 
+  if(MGE_WITH_CUDA)
+    list(APPEND SOURCES_ custom/impl/platform/custom_cuda.cpp)
+  endif()
+
   list(APPEND SOURCES ${SOURCES_})
 endif()
 

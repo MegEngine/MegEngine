@@ -172,23 +172,22 @@ namespace custom_opdef {  // avoid name conflict
 void apply_on_device_tensornd(
         const OpDef& def, const SmallVector<DeviceTensorND>& inputs,
         SmallVector<DeviceTensorND>* outputs) {
-    for (auto&& output : (*outputs)) {
-        auto cn = output.comp_node();
-        cn.activate();
-    }
-
-    // [TODO] sync should be modified
-    CompNode::sync_all();
     auto&& op = static_cast<const CustomOpDef&>(def);
     op.compute(inputs, outputs);
-    CompNode::sync_all();
 }
 
 SmallVector<TensorPtr> apply_on_physical_tensor(
         const OpDef& def, const SmallVector<TensorPtr>& inputs,
         SmallVector<LogicalTensorDesc>& output_descs, const bool& validated) {
-    mgb_assert(validated == true, "infer output attributes fall\n");
     SmallVector<TensorPtr> outputs(output_descs.size());
+
+    if (validated == false) {
+        auto&& op = static_cast<const CustomOpDef&>(def);
+        for (size_t i = 0; i < outputs.size(); ++i) {
+            auto [output_descs, success] = op.infer_output_attrs(inputs);
+            mgb_assert(success == true, "infer output attributes fall\n");
+        }
+    }
 
     for (size_t i = 0; i < outputs.size(); ++i) {
         auto& output = outputs[i];
@@ -241,12 +240,13 @@ bool is_same_st(const OpDef& lhs, const OpDef& rhs) {
     return a.param() == b.param() && a.runtime_id() == b.runtime_id();
 }
 
-// [TODO] to be implemented
 std::vector<std::pair<const char*, std::string>> props(const OpDef& def) {
-    mgb_assert(false, "Custom OpDef Props Function is not IMPLEMENTED now");
-    // can be implement with param schema
-    // auto&& custom_opdef = def.cast_final_safe<CustomOpDef>();
+    auto&& custom_opdef = def.cast_final_safe<CustomOpDef>();
+    auto&& param_raw = custom_opdef.param().raw();
     std::vector<std::pair<const char*, std::string>> props_;
+    for (auto&& kv : param_raw) {
+        props_.emplace_back(kv.first.c_str(), kv.second.str());
+    }
     return props_;
 }
 

@@ -80,15 +80,21 @@ using bfloat16_t = uint16_t;
     cb(custom_dtype, dnn_dtype, c_dtype)
 #endif
 
-#define CUSTOM_FOR_EACH_TENSOR_DATA_TYPE(cb)                                         \
-    cb(float32, Float32, float) cb(uint8, Uint8, uint8_t) cb(int8, Int8, int8_t) cb( \
-            int16, Int16, int16_t) cb(int32, Int32, int32_t)                         \
-            fp16_wrap(cb, float16, Float16, float16_t) fp16_wrap(                    \
-                    cb, bfloat16, BFloat16, bfloat16_t) cb(uint16, Uint16, uint16_t) \
-                    cb(quint8, Quantized8Asymm, uint8_t)                             \
-                            cb(qint32, QuantizedS32, int32_t)                        \
-                                    cb(qint8, QuantizedS8, int8_t)                   \
-                                            cb(qint16, QuantizedS16, int16_t)
+// clang-format off
+#define CUSTOM_FOR_EACH_TENSOR_DATA_TYPE(cb)        \
+    cb(float32, Float32, float)                     \
+    cb(uint8, Uint8, uint8_t)                       \
+    cb(int8, Int8, int8_t)                          \
+    cb(int16, Int16, int16_t)                       \
+    cb(int32, Int32, int32_t)                       \
+    fp16_wrap(cb, float16, Float16, float16_t)      \
+    fp16_wrap(cb, bfloat16, BFloat16, bfloat16_t)   \
+    cb(uint16, Uint16, uint16_t)                    \
+    cb(quint8, Quantized8Asymm, uint8_t)            \
+    cb(qint32, QuantizedS32, int32_t)               \
+    cb(qint8, QuantizedS8, int8_t)                  \
+    cb(qint16, QuantizedS16, int16_t)
+// clang-format on
 
 #define CUSTOM_DTYPE_ENUM_DECL(custom_type, builtin_type, ctype) custom_type,
 
@@ -214,13 +220,12 @@ public:
     float scale(void) const;
     uint8_t zero_point(void) const;
 
-    void* data(void);
-    const void* data(void) const;
+    bool is_contiguous() const;
+    bool is_empty() const;
 
+    void* data(void) const;
     template <typename T>
-    T* data(void);
-    template <typename T>
-    const T* data(void) const;
+    T* data(void) const;
 
     template <
             typename T, size_t N,
@@ -238,15 +243,11 @@ public:
 };
 
 template <typename T>
-T* Tensor::data(void) {
+T* Tensor::data(void) const {
     custom_assert(
             dtype().is_compatible<T>(), "invalid convert, tensor data type is %s",
             dtype().str().c_str());
     return reinterpret_cast<T*>(data());
-}
-template <typename T>
-const T* Tensor::data(void) const {
-    return const_cast<Tensor*>(this)->data<T>();
 }
 
 template <typename T, size_t N, template <typename U> class PtrTraits, typename index_t>

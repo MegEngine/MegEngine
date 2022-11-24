@@ -20,26 +20,28 @@ MGE_WIN_DECLSPEC_FUC void assert_failed_log(
         const char* msg_fmt, ...);
 
 #ifndef _WIN32
-#define custom_expect(expr, msg...)                                               \
-    if (!(expr)) {                                                                \
-        assert_failed_log(__FILE__, __LINE__, __PRETTY_FUNCTION__, #expr, ##msg); \
+#define custom_expect(expr, msg...)                                     \
+    if (!(expr)) {                                                      \
+        ::custom::assert_failed_log(                                    \
+                __FILE__, __LINE__, __PRETTY_FUNCTION__, #expr, ##msg); \
     }
 
-#define custom_assert(expr, msg...)                                               \
-    if (!(expr)) {                                                                \
-        assert_failed_log(__FILE__, __LINE__, __PRETTY_FUNCTION__, #expr, ##msg); \
-    }                                                                             \
+#define custom_assert(expr, msg...)                                     \
+    if (!(expr)) {                                                      \
+        ::custom::assert_failed_log(                                    \
+                __FILE__, __LINE__, __PRETTY_FUNCTION__, #expr, ##msg); \
+    }                                                                   \
     assert((expr))
 #else
 #define custom_expect(expr, ...)                                              \
     if (!(expr)) {                                                            \
-        assert_failed_log(                                                    \
+        ::custom::assert_failed_log(                                          \
                 __FILE__, __LINE__, __PRETTY_FUNCTION__, #expr, __VA_ARGS__); \
     }
 
 #define custom_assert(expr, ...)                                              \
     if (!(expr)) {                                                            \
-        assert_failed_log(                                                    \
+        ::custom::assert_failed_log(                                          \
                 __FILE__, __LINE__, __PRETTY_FUNCTION__, #expr, __VA_ARGS__); \
     }                                                                         \
     assert((expr))

@@ -34,17 +34,23 @@ std::vector<CustomT> to_custom(const megdnn::SmallVector<BuiltinT>& builtins) {
 
 }  // namespace custom
 
-#define to_custom_device(expr)  custom::to_custom<CompNode, custom::Device>(expr)
-#define to_builtin_device(expr) custom::to_builtin<CompNode, custom::Device>(expr)
+#define to_custom_device(expr) \
+    ::custom::to_custom<::mgb::CompNode, ::custom::Device>(expr)
+#define to_builtin_device(expr) \
+    ::custom::to_builtin<::mgb::CompNode, ::custom::Device>(expr)
 #define to_custom_shape(expr) \
-    custom::to_custom<megdnn::TensorShape, custom::Shape>(expr)
+    ::custom::to_custom<::megdnn::TensorShape, ::custom::Shape>(expr)
 #define to_builtin_shape(expr) \
-    custom::to_builtin<megdnn::TensorShape, custom::Shape>(expr)
-#define to_custom_dtype(expr)  custom::to_custom<megdnn::DType, custom::DType>(expr)
-#define to_builtin_dtype(expr) custom::to_builtin<megdnn::DType, custom::DType>(expr)
+    ::custom::to_builtin<::megdnn::TensorShape, ::custom::Shape>(expr)
+#define to_custom_dtype(expr) \
+    ::custom::to_custom<::megdnn::DType, ::custom::DType>(expr)
+#define to_builtin_dtype(expr) \
+    ::custom::to_builtin<::megdnn::DType, ::custom::DType>(expr)
 #define to_custom_format(expr) \
-    custom::to_custom<megdnn::TensorLayout::Format, custom::Format>(expr)
+    ::custom::to_custom<::megdnn::TensorLayout::Format, ::custom::Format>(expr)
 #define to_builtin_format(expr) \
-    custom::to_builtin<megdnn::TensorLayout::Format, custom::Format>(expr)
-#define to_custom_tensor(expr)  custom::to_custom<DeviceTensorND, custom::Tensor>(expr)
-#define to_builtin_tensor(expr) custom::to_builtin<DeviceTensorND, custom::Tensor>(expr)
+    ::custom::to_builtin<::megdnn::TensorLayout::Format, ::custom::Format>(expr)
+#define to_custom_tensor(expr) \
+    ::custom::to_custom<::mgb::DeviceTensorND, ::custom::Tensor>(expr)
+#define to_builtin_tensor(expr) \
+    ::custom::to_builtin<::mgb::DeviceTensorND, ::custom::Tensor>(expr)

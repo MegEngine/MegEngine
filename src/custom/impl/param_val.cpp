@@ -2,7 +2,10 @@
 
 #if MGB_CUSTOM_OP
 
+#include "megbrain/comp_node.h"
+#include "megbrain/custom/data_adaptor.h"
 #include "megbrain/custom/param_val.h"
+#include "megbrain/custom/tensor.h"
 
 #pragma GCC diagnostic ignored "-Wsign-compare"
 
@@ -268,6 +271,11 @@ std::string ParamVal::str() const {
         CUSTOM_FOR_EACH_BASIC_PARAMTYPE(CUSTOM_CASE_TO_PRINT_NONLIST)
         CUSTOM_FOR_STRING_PARAMTYPE(CUSTOM_CASE_TO_PRINT_NONLIST)
         CUSTOM_FOR_EACH_LIST_PARAMTYPE(CUSTOM_CASE_TO_PRINT_LIST)
+        case ParamDynType::Device: {
+            auto&& rval = TypedRef(Device, m_ptr.get());
+            ss << to_builtin_device(rval).to_string();
+            break;
+        }
         default:
             mgb_assert(false, "invalid data of assignment operator of ParamVal");
     }

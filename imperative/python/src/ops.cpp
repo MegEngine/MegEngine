@@ -3,6 +3,7 @@
 #include "./tensor.h"
 
 #include "megbrain/common.h"
+#include "megbrain/custom/data_adaptor.h"
 #include "megbrain/imperative.h"
 #include "megbrain/imperative/graph_builder.h"
 #include "megbrain/imperative/ops/autogen.h"
@@ -704,6 +705,11 @@ PyObject* make_custom_op(PyObject* self, PyObject** args, Py_ssize_t nargs) {
             CUSTOM_FOR_EACH_BASIC_LIST_PARAMTYPE(CUSTOM_CASE_TO_PARSE_LIST)
             CUSTOM_FOR_BOOL_LIST_PARAMTYPE(CUSTOM_CASE_TO_PARSE_LIST)
             CUSTOM_FOR_STRING_LIST_PARAMTYPE(CUSTOM_CASE_TO_PARSE_LIST)
+            case custom::ParamDynType::Device: {
+                param_val =
+                        to_custom_device(py::handle(kv.second).cast<mgb::CompNode>());
+                break;
+            }
             default: {
                 mgb_assert(
                         false, "param dtype of %s:%s is invalid", op_name.c_str(),
