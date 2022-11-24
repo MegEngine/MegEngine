@@ -41,8 +41,8 @@ The detection is implemented in [impl/fusion_pass.cpp](impl/fusion_pass.cpp),
 the main detection logic is in function *Fusion::Impl::on_opr*. Compared to nnvm
 fusion, our fusion logic can fuse more operators into one fusion kernel.
 
-For now , JIT just support CUDA, but it has reserved interface to extend other
-platforms.
+For now , JIT support CUDA by HALIDE or NVRTC, CPU by MLIR, OpenCL by TINYOPENCL,
+also it has reserved interface to extend more platforms.
 
 ## How to enable JIT
 You can set `graph_opt_level` to 3 to enable JIT.
@@ -57,10 +57,12 @@ cg.set_option('graph_opt_level', 3)
 
 You can set environment variable `MGB_JIT_BACKEND` to select the JIT backend.
 
-| Backend | Platforms | Reduction support | Kernel Binary Cache | Kernel Reuse | Noncontig Input |
-|---------|-----------|-------------------|---------------------|--------------|-----------------|
-| HALIDE  | CUDA      | Y                 | No                  | Shape        | No              |
-| NVRTC   | CUDA      | N                 | Via PersistentCache | Bcast type   | Monotone        |
+|  Backend   | Platforms | Reduction support | Kernel Binary Cache | Kernel Reuse | Noncontig Input |
+|------------|-----------|-------------------|---------------------|--------------|-----------------|
+| HALIDE     | CUDA      | Y                 | No                  | Shape        | No              |
+| NVRTC      | CUDA      | N                 | Via PersistentCache | Bcast type   | Monotone        |
+| MLIR       | CPU       | N                 | NO                  | Kernel hash  | Monotone        |
+| TINYOPENCL | OpenCL    | N                 | Via OpenCL cache    | Kernel hash  | Monotone        |
 
 To enable fusion of Reduce oprs, set `graph_opt.jit = 2` in graph options.
 

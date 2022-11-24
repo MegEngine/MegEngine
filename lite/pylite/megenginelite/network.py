@@ -41,8 +41,8 @@ class LiteOptions(Structure):
         no_profiling_on_shape_change: do not re-profile to select best implement
             algo when input shape changes (use previous algo)
 
-        jit_level: Execute supported operators with JIT (support MLIR,
-            NVRTC). Can only be used on Nvidia GPUs and X86 CPU, this value indicates JIT level:
+        jit_level: Execute supported operators with JIT, please check with MGB_JIT_BACKEND
+            for more details, this value indicates JIT level:
 
             level 1: for JIT execute with basic elemwise operator
 

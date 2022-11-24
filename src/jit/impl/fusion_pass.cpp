@@ -1,11 +1,13 @@
 #include "megbrain/jit/fusion_pass.h"
 #include "megbrain/common.h"
+#include "megbrain/comp_node_env.h"
 #include "megbrain/gopt/gtrans.h"
 #include "megbrain/jit/ast_c.h"
 #include "megbrain/jit/compiler.h"
 #include "megbrain/jit/internal_graph.h"
 #include "megbrain/opr/tensor_manip.h"
 #include "megbrain/serialization/serializer.h"
+#include "megdnn/tensor_format.h"
 
 #if MGB_JIT
 
@@ -66,6 +68,9 @@ class JITFusionPass::Impl final {
         return num;
     }
 
+    //! config jit backends
+    void config_jit_backends(CompNode comp_node) const;
+
 public:
     Impl(bool after_grad, JITFeatureBits feature_bits, OptState& opt_state)
             : m_after_grad{after_grad},
@@ -77,6 +82,57 @@ public:
     }
 };
 
+void JITFusionPass::Impl::config_jit_backends(CompNode comp_node) const {
+#define ENV_CB(VALUE)                                                          \
+    if (!backend || !strcmp(backend, VALUE)) {                                 \
+        if (!backend) {                                                        \
+            mgb_log_debug("config jit default backend to %s", VALUE);          \
+            setenv(ssprintf("%c%cB_JIT_BACKEND", 'M', 'G').c_str(), VALUE, 1); \
+        }                                                                      \
+        break;                                                                 \
+    }
+
+    auto backend = ::std::getenv(ssprintf("%c%cB_JIT_BACKEND", 'M', 'G').c_str());
+    if (backend) {
+        mgb_log_debug("use user config jit backend with: %s", backend);
+    }
+    switch (comp_node.device_type()) {
+#if MGB_CUDA
+        // CUDA jit default property: HALIDE > MLIR > NVRTC
+        case CompNode::DeviceType::CUDA:
+#if MGB_JIT_HALIDE
+            ENV_CB("HALIDE");
+#endif
+#if MGB_JIT_MLIR
+            ENV_CB("MLIR");
+#endif
+            ENV_CB("NVRTC");
+            mgb_throw(
+                    InternalError,
+                    "No compiler support for cuda, may caused by build not enable "
+                    "MLIR/HALIDE module or error config jit backend env");
+            break;
+#endif
+        // CPU jit only support MLIR now
+        case CompNode::DeviceType::CPU:
+#if MGB_JIT_MLIR
+            ENV_CB("MLIR");
+#endif
+            mgb_throw(
+                    InternalError,
+                    "No compiler support for cpu, may caused by build not enable "
+                    "MLIR module or error config jit backend env");
+            break;
+        default:
+            mgb_throw(
+                    InternalError,
+                    "unsupported JIT config: "
+                    "comp_node=%s backend_setting=%s",
+                    comp_node.to_string().c_str(), backend);
+    }
+#undef ENV_CB
+}
+
 void JITFusionPass::Impl::detect_fusion() {
     std::vector<OperatorNodeBase*> topo_order;
     m_opt_state.graph().iter([this, &topo_order](OperatorNodeBase* opr) {
@@ -86,8 +142,19 @@ void JITFusionPass::Impl::detect_fusion() {
         }
     });
 
+    //! call config_jit_backends as soon as possible
+    for (auto opr : reverse_adaptor(topo_order)) {
+        auto&& cn = opr->output(0)->comp_node();
+        if (cn == CompNode::default_cpu()) {
+            continue;
+        }
+        config_jit_backends(cn);
+        break;
+    }
+
     for (auto opr : reverse_adaptor(topo_order)) {
         if (can_be_fused(opr)) {
+            mgb_log_debug("%s: try process : %s", __FUNCTION__, opr->cname());
             process_opr(opr);
         }
     }
@@ -317,11 +384,11 @@ bool JITFusionPass::Impl::can_be_fused(cg::OperatorNodeBase* opr) const {
         return false;
     }
 
-    //! As MLIR backend has some contraints
-    const char* backend = MGB_GETENV("MGB_JIT_BACKEND");
-    if (!backend) {
-        backend = "DEFAULT";
-    }
+    auto backend = ::std::getenv(ssprintf("%c%cB_JIT_BACKEND", 'M', 'G').c_str());
+    mgb_assert(
+            backend,
+            "code issue happened, need call config_jit_backends before check opr can "
+            "be fused");
     // float elemwise
     if (auto elem = gopt::try_cast_as_op<opr::Elemwise>(opr)) {
         bool ret = true;
@@ -361,11 +428,15 @@ bool JITFusionPass::Impl::can_be_fused(cg::OperatorNodeBase* opr) const {
 #undef FOREACH_ELEMWISE_SKIP_MODE
         }
 #endif  // MGB_JIT_MLIR
-        return ret && ast_c::check_elem_mode(elem->param().mode) &&
+
+        return ret &&
+               ast_c::check_elem_mode(
+                       elem->param().mode, opr->output(0)->comp_node().device_type()) &&
                elem->output(0)->dtype().category() == DTypeCategory::FLOAT;
     }
 
-    if (strcmp(backend, "MLIR")) {
+    //! TINYOPENCL and MLIR only support elemwise now
+    if (strcmp(backend, "MLIR") && strcmp(backend, "TINYOPENCL")) {
         if (opr->same_type<opr::PowC>()) {
             return true;
         }

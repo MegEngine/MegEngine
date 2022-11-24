@@ -67,40 +67,50 @@ Compiler* Compiler::get(ComputingGraph& graph, CompNode comp_node) {
     }
     MGB_LOCK_GUARD(holder->mtx);
     auto&& compiler = holder->dev2compiler[comp_node.device_type()];
-    auto backend = MGB_GETENV("MGB_JIT_BACKEND");
+    auto backend = ::std::getenv(ssprintf("%c%cB_JIT_BACKEND", 'M', 'G').c_str());
+    mgb_assert(
+            backend,
+            "code issue happened, need call config_jit_backends before get compiler");
+    //! please keep logic with JITFusionPass::Impl::config_jit_backends
     if (!compiler) {
         switch (comp_node.device_type()) {
 #if MGB_CUDA
             case CompNode::DeviceType::CUDA:
 #if MGB_JIT_HALIDE
-                if (!backend || !strcmp(backend, "HALIDE")) {
+                if (!strcmp(backend, "HALIDE")) {
                     compiler = std::make_unique<HalideCudaCompiler>();
                     break;
                 }
 #endif
 #if MGB_JIT_MLIR
-                if (!backend || !strcmp(backend, "MLIR")) {
+                if (!strcmp(backend, "MLIR")) {
                     compiler =
                             std::make_unique<MLIRCompiler>(CompNode::DeviceType::CUDA);
                     break;
                 }
 #endif
-                if (!backend || !strcmp(backend, "NVRTC")) {
+                if (!strcmp(backend, "NVRTC")) {
                     compiler = std::make_unique<CudaCompiler>();
                     break;
                 }
-                mgb_throw(InternalError, "No compiler support for cuda");
+                mgb_throw(
+                        InternalError,
+                        "No compiler support for cuda, may caused by build not enable "
+                        "MLIR/HALIDE module or error config jit backend env");
                 break;
 #endif
             case CompNode::DeviceType::CPU:
 #if MGB_JIT_MLIR
-                if (!backend || !strcmp(backend, "MLIR")) {
+                if (!strcmp(backend, "MLIR")) {
                     compiler =
                             std::make_unique<MLIRCompiler>(CompNode::DeviceType::CPU);
                     break;
                 }
 #endif
-                mgb_throw(InternalError, "No compiler support for cpu");
+                mgb_throw(
+                        InternalError,
+                        "No compiler support for cpu, may caused by build not enable "
+                        "MLIR module or error config jit backend env");
                 break;
             default:
                 mgb_throw(

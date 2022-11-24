@@ -47,10 +47,10 @@ LITE_API inline LiteAlgoSelectStrategy operator|(
  * @param no_profiling_on_shape_change do not re-profile to select best implement
  * algo when input shape changes (use previous algo)
  *
- * @param jit_level Execute supported operators with JIT (support MLIR,
- * NVRTC). Can only be used on Nvidia GPUs and X86 CPU, this value indicates JIT level:
- * level 1: for JIT execute with basic elemwise operator
- * level 2: for JIT execute elemwise and reduce operators
+ * @param jit_level Execute supported operators with JIT, please check with
+ * MGB_JIT_BACKEND for more details, this value indicates JIT level.
+ * 1: for JIT execute with basic elemwise operator
+ * 2: for JIT execute elemwise and reduce operators
  *
  * @param record_level flags to optimize the inference performance with record the
  * kernel tasks in first run, hereafter the inference all need is to execute the

@@ -42,11 +42,12 @@ public:
 
     inline ASTPtr(int imm);
     inline ASTPtr(float imm);
+    inline ASTPtr(float imm, CompNode::DeviceType cn_type, bool is_half);
 };
 using ASTPtrArray = SmallVector<ASTPtr>;
 
 //! function type for generating AST nodes
-using AstGenerator = thin_function<ASTPtrArray(const ASTPtrArray&)>;
+using AstGenerator = thin_function<ASTPtrArray(const ASTPtrArray&, bool is_half)>;
 
 class IntAST : public AST {
 public:
@@ -59,11 +60,20 @@ private:
 
 class FloatAST : public AST {
 public:
-    FloatAST(float val) : m_val(val) {}
-    inline std::string code_gen() override { return ssprintf("float(%.12e)", m_val); }
+    FloatAST(
+            float val, CompNode::DeviceType cn_type = CompNode::DeviceType::CPU,
+            bool is_half = false)
+            : m_val(val), m_cn_type(cn_type), m_is_half(is_half) {}
+    inline std::string code_gen() override {
+
+        mgb_assert(!m_is_half, "code issue, only OpenCL support as half now");
+        return ssprintf("float(%.12e)", m_val);
+    }
 
 private:
     float m_val;
+    CompNode::DeviceType m_cn_type;
+    bool m_is_half;
 };
 
 class VariableAST : public AST {
@@ -139,13 +149,20 @@ public:
 
 class DeclFloatAST : public AST {
 public:
-    DeclFloatAST(const ASTPtr& var) : m_var(var) {}
+    DeclFloatAST(
+            const ASTPtr& var, CompNode::DeviceType cn_type = CompNode::DeviceType::CPU,
+            bool is_half = false)
+            : m_var(var), m_cn_type(cn_type), m_is_half(is_half) {}
     inline std::string code_gen() override {
+
+        mgb_assert(!m_is_half, "code issue, only OpenCL support as half now");
         return "float " + m_var->code_gen() + ";";
     }
 
 private:
     ASTPtr m_var;
+    CompNode::DeviceType m_cn_type;
+    bool m_is_half;
 };
 
 class DeclIntAST : public AST {
@@ -205,23 +222,29 @@ ASTPtr::ASTPtr(int imm) : m_ptr(std::make_shared<IntAST>(imm)) {}
 
 ASTPtr::ASTPtr(float imm) : m_ptr(std::make_shared<FloatAST>(imm)) {}
 
+ASTPtr::ASTPtr(float imm, CompNode::DeviceType cn_type, bool is_half)
+        : m_ptr(std::make_shared<FloatAST>(imm, cn_type, is_half)) {}
+
 using ElemMode = opr::Elemwise::Mode;
 using ElemGeneratorMap = ThinHashMap<ElemMode, AstGenerator>;
 
 //! mapping from elemwise mode to ast node generator
-const ElemGeneratorMap& elem_opr_generator();
+const ElemGeneratorMap& elem_opr_generator(CompNode::DeviceType type);
 
-static inline bool check_elem_mode(ElemMode mode) {
-    return elem_opr_generator().count(mode);
+static inline bool check_elem_mode(ElemMode mode, CompNode::DeviceType type) {
+    return elem_opr_generator(type).count(mode);
 }
 
 /*!
  * \brief Generate a AST node from the opr and the given ast inputs
  * \param opr the opr
  * \param inputs the AST inputs of the ASTs to be generate
+ * \param device_type jit backend cn device type
  * \return AST nodes corresponding to opr value outputs
  */
-ASTPtrArray opr2AST(cg::OperatorNodeBase* opr, const ASTPtrArray& inputs);
+ASTPtrArray opr2AST(
+        cg::OperatorNodeBase* opr, const ASTPtrArray& inputs,
+        CompNode::DeviceType device_type);
 
 }  // namespace ast_c
 }  // namespace jit
