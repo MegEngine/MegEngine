@@ -1,4 +1,4 @@
-#include "src/arm_common/conv_bias/block_helper.h"
+#include "src/fallback/conv_bias/gi/block_helper.h"
 #if MGB_ENABLE_DOT
 #include "src/arm_common/conv_bias/int8/algos.h"
 #include "src/arm_common/conv_bias/int8/direct_dotprod_nchw44.h"

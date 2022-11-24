@@ -335,19 +335,23 @@ bool ConvBiasImpl::AlgoIm2col::usable(
             return false;
         }
         if (format == param::ConvBias::Format::NCHW88) {
-            if (matmul_desc.packmode != Pack_Mode::DEFAULT) {
+            //! current NCHW88 im2col only support DEFAULT mode matmul
+            bool is_packmode_not_default = (matmul_desc.packmode != Pack_Mode::DEFAULT);
+            //! NCHW88 hybrid mode and channel wise is not support
+            bool is_hybrid_mode_or_channel_wise =
+                    (param.filter_meta.icpg < 8_z || param.filter_meta.ocpg == 1);
+            if (is_packmode_not_default || is_hybrid_mode_or_channel_wise) {
                 return false;
             }
         }
         if (format == param::ConvBias::Format::NCHW44 ||
             format == param::ConvBias::Format::NCHW44_DOT) {
             //! current NCHW44 im2col only support DEFAULT mode matmul
-            if (matmul_desc.packmode != Pack_Mode::DEFAULT) {
-                return false;
-                //! nchw44 hybird mode and channel wise is not support
-            } else if (
-                    param.filter_meta.icpg < 4_z || param.filter_meta.icpg == 1 ||
-                    param.filter_meta.ocpg == 1) {
+            bool is_packmode_not_default = (matmul_desc.packmode != Pack_Mode::DEFAULT);
+            //! NCHW44 hybrid mode and channel wise is not support
+            bool is_hybrid_mode_or_channel_wise =
+                    (param.filter_meta.icpg < 4_z || param.filter_meta.ocpg == 1);
+            if (is_packmode_not_default || is_hybrid_mode_or_channel_wise) {
                 return false;
             }
         }
@@ -358,12 +362,11 @@ bool ConvBiasImpl::AlgoIm2col::usable(
         }
         if (format == param::ConvBias::Format::NCHW44) {
             //! current NCHW44 im2col only support DEFAULT mode matmul
-            if (matmul_desc.packmode != Pack_Mode::DEFAULT) {
-                return false;
-                //! nchw44 hybird mode and channel wise is not support
-            } else if (
-                    param.filter_meta.icpg < 4_z || param.filter_meta.icpg == 1 ||
-                    param.filter_meta.ocpg == 1) {
+            bool is_packmode_not_default = (matmul_desc.packmode != Pack_Mode::DEFAULT);
+            //! NCHW44 hybrid mode and channel wise is not support
+            bool is_hybrid_mode_or_channel_wise =
+                    (param.filter_meta.icpg < 4_z || param.filter_meta.ocpg == 1);
+            if (is_packmode_not_default || is_hybrid_mode_or_channel_wise) {
                 return false;
             }
         }
@@ -411,15 +414,14 @@ bool ConvBiasImpl::AlgoIm2col::usable(
                 matmul_desc.innerblocksize.n, m_ohw_tile_size, matmul_desc.packmode);
         fallback::MatrixMulImpl::KernSizeParam matmul_param =
                 get_matmul_kern_param(param, ohw_tile_size, oc_tile_size);
-        bool matmulusable = m_matmul_algo->usable(matmul_param);
-        return matmulusable &&
-               (!(param.filter_meta.spatial[0] == param.filter_meta.spatial[1] &&
+        return (!(param.filter_meta.spatial[0] == param.filter_meta.spatial[1] &&
                   param.filter_meta.spatial[0] == 1 &&
                   param.filter_meta.stride[0] == param.filter_meta.stride[1] &&
                   param.filter_meta.stride[0] == 1)) &&
                (param.filter_meta.dilation[0] == param.filter_meta.dilation[1] &&
                 param.filter_meta.dilation[0] == 1) &&
-               param.compute_mode == param::ConvBias::ComputeMode::DEFAULT;
+               param.compute_mode == param::ConvBias::ComputeMode::DEFAULT &&
+               m_matmul_algo->usable(matmul_param);
     }
     MIDOUT_END();
     return false;

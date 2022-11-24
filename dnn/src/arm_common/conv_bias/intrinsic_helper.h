@@ -174,191 +174,195 @@ __ai void store_ocx_ow4_remain_static(
     StoreOcxOw4Remain<c_dim, ow_remain, Op, T>::impl(c, op, dst_ptr, ld_dst_oc);
 }
 ////////////////////Store_OCX_OW8_Remain/////////////////////////
-template <int c_dim, int ow_remain, typename Op, typename T, typename T2, typename T3>
+template <
+        int c_dim, int ow_remain, typename Op, typename T, typename T2, typename T3,
+        size_t simd_lenx2>
 struct StoreOcxOw8Remain {
     static __ai void impl(T& c, const Op& op, T2 dst_ptr, int ld_dst_oc);
 };
 
-template <typename Op, typename T, typename T2, typename T3>
-struct StoreOcxOw8Remain<2, 0, Op, T, T2, T3> {
+template <
+        int c_dim, typename Op, typename T, typename T2, typename T3, size_t simd_lenx2>
+struct StoreOcxOw8Remain<c_dim, 0, Op, T, T2, T3, simd_lenx2> {
+    static __ai void impl(T& c, const Op& op, T2 dst_ptr, int ld_dst_oc) {
+        MEGDNN_MARK_USED_VAR(c);
+        MEGDNN_MARK_USED_VAR(op);
+        MEGDNN_MARK_USED_VAR(dst_ptr);
+        MEGDNN_MARK_USED_VAR(ld_dst_oc);
+    }
+};
+template <typename Op, typename T, typename T2, typename T3, size_t simd_lenx2>
+struct StoreOcxOw8Remain<2, 8, Op, T, T2, T3, simd_lenx2> {
     static __ai void impl(T& c, const Op& op, T2 dst_ptr, int ld_dst_oc) {
         op({{c[0][0], c[0][1]}}, reinterpret_cast<T3>(dst_ptr));
-        op({{c[0][2], c[0][3]}}, reinterpret_cast<T3>(dst_ptr + 8));
-        op({{c[0][4], c[0][5]}}, reinterpret_cast<T3>(dst_ptr + 16));
-        op({{c[0][6], c[0][7]}}, reinterpret_cast<T3>(dst_ptr + 24));
+        op({{c[0][2], c[0][3]}}, reinterpret_cast<T3>(dst_ptr + simd_lenx2));
+        op({{c[0][4], c[0][5]}}, reinterpret_cast<T3>(dst_ptr + simd_lenx2 * 2));
+        op({{c[0][6], c[0][7]}}, reinterpret_cast<T3>(dst_ptr + simd_lenx2 * 3));
 
         op({{c[1][0], c[1][1]}}, reinterpret_cast<T3>(dst_ptr + ld_dst_oc));
-        op({{c[1][2], c[1][3]}}, reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 8));
-        op({{c[1][4], c[1][5]}}, reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 16));
-        op({{c[1][6], c[1][7]}}, reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 24));
+        op({{c[1][2], c[1][3]}},
+           reinterpret_cast<T3>(dst_ptr + ld_dst_oc + simd_lenx2));
+        op({{c[1][4], c[1][5]}},
+           reinterpret_cast<T3>(dst_ptr + ld_dst_oc + simd_lenx2 * 2));
+        op({{c[1][6], c[1][7]}},
+           reinterpret_cast<T3>(dst_ptr + ld_dst_oc + simd_lenx2 * 3));
     }
 };
-template <typename Op, typename T, typename T2, typename T3>
-struct StoreOcxOw8Remain<2, 8, Op, T, T2, T3> {
+template <typename Op, typename T, typename T2, typename T3, size_t simd_lenx2>
+struct StoreOcxOw8Remain<2, 7, Op, T, T2, T3, simd_lenx2> {
     static __ai void impl(T& c, const Op& op, T2 dst_ptr, int ld_dst_oc) {
         op({{c[0][0], c[0][1]}}, reinterpret_cast<T3>(dst_ptr));
-        op({{c[0][2], c[0][3]}}, reinterpret_cast<T3>(dst_ptr + 8));
-        op({{c[0][4], c[0][5]}}, reinterpret_cast<T3>(dst_ptr + 16));
-        op({{c[0][6], c[0][7]}}, reinterpret_cast<T3>(dst_ptr + 24));
+        op({{c[0][2], c[0][3]}}, reinterpret_cast<T3>(dst_ptr + simd_lenx2));
+        op({{c[0][4], c[0][5]}}, reinterpret_cast<T3>(dst_ptr + simd_lenx2 * 2));
+        op(c[0][6], reinterpret_cast<T3>(dst_ptr + simd_lenx2 * 3));
 
         op({{c[1][0], c[1][1]}}, reinterpret_cast<T3>(dst_ptr + ld_dst_oc));
-        op({{c[1][2], c[1][3]}}, reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 8));
-        op({{c[1][4], c[1][5]}}, reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 16));
-        op({{c[1][6], c[1][7]}}, reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 24));
+        op({{c[1][2], c[1][3]}},
+           reinterpret_cast<T3>(dst_ptr + ld_dst_oc + simd_lenx2));
+        op({{c[1][4], c[1][5]}},
+           reinterpret_cast<T3>(dst_ptr + ld_dst_oc + simd_lenx2 * 2));
+        op(c[1][6], reinterpret_cast<T3>(dst_ptr + ld_dst_oc + simd_lenx2 * 3));
     }
 };
-template <typename Op, typename T, typename T2, typename T3>
-struct StoreOcxOw8Remain<2, 7, Op, T, T2, T3> {
+template <typename Op, typename T, typename T2, typename T3, size_t simd_lenx2>
+struct StoreOcxOw8Remain<2, 6, Op, T, T2, T3, simd_lenx2> {
     static __ai void impl(T& c, const Op& op, T2 dst_ptr, int ld_dst_oc) {
         op({{c[0][0], c[0][1]}}, reinterpret_cast<T3>(dst_ptr));
-        op({{c[0][2], c[0][3]}}, reinterpret_cast<T3>(dst_ptr + 8));
-        op({{c[0][4], c[0][5]}}, reinterpret_cast<T3>(dst_ptr + 16));
-        op(c[0][6], reinterpret_cast<T3>(dst_ptr + 24));
+        op({{c[0][2], c[0][3]}}, reinterpret_cast<T3>(dst_ptr + simd_lenx2));
+        op({{c[0][4], c[0][5]}}, reinterpret_cast<T3>(dst_ptr + simd_lenx2 * 2));
 
         op({{c[1][0], c[1][1]}}, reinterpret_cast<T3>(dst_ptr + ld_dst_oc));
-        op({{c[1][2], c[1][3]}}, reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 8));
-        op({{c[1][4], c[1][5]}}, reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 16));
-        op(c[1][6], reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 24));
+        op({{c[1][2], c[1][3]}},
+           reinterpret_cast<T3>(dst_ptr + ld_dst_oc + simd_lenx2));
+        op({{c[1][4], c[1][5]}},
+           reinterpret_cast<T3>(dst_ptr + ld_dst_oc + simd_lenx2 * 2));
     }
 };
-template <typename Op, typename T, typename T2, typename T3>
-struct StoreOcxOw8Remain<2, 6, Op, T, T2, T3> {
+template <typename Op, typename T, typename T2, typename T3, size_t simd_lenx2>
+struct StoreOcxOw8Remain<2, 5, Op, T, T2, T3, simd_lenx2> {
     static __ai void impl(T& c, const Op& op, T2 dst_ptr, int ld_dst_oc) {
         op({{c[0][0], c[0][1]}}, reinterpret_cast<T3>(dst_ptr));
-        op({{c[0][2], c[0][3]}}, reinterpret_cast<T3>(dst_ptr + 8));
-        op({{c[0][4], c[0][5]}}, reinterpret_cast<T3>(dst_ptr + 16));
+        op({{c[0][2], c[0][3]}}, reinterpret_cast<T3>(dst_ptr + simd_lenx2));
+        op(c[0][4], reinterpret_cast<T3>(dst_ptr + simd_lenx2 * 2));
 
         op({{c[1][0], c[1][1]}}, reinterpret_cast<T3>(dst_ptr + ld_dst_oc));
-        op({{c[1][2], c[1][3]}}, reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 8));
-        op({{c[1][4], c[1][5]}}, reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 16));
+        op({{c[1][2], c[1][3]}},
+           reinterpret_cast<T3>(dst_ptr + ld_dst_oc + simd_lenx2));
+        op(c[1][4], reinterpret_cast<T3>(dst_ptr + ld_dst_oc + simd_lenx2 * 2));
     }
 };
-template <typename Op, typename T, typename T2, typename T3>
-struct StoreOcxOw8Remain<2, 5, Op, T, T2, T3> {
+template <typename Op, typename T, typename T2, typename T3, size_t simd_lenx2>
+struct StoreOcxOw8Remain<2, 4, Op, T, T2, T3, simd_lenx2> {
     static __ai void impl(T& c, const Op& op, T2 dst_ptr, int ld_dst_oc) {
         op({{c[0][0], c[0][1]}}, reinterpret_cast<T3>(dst_ptr));
-        op({{c[0][2], c[0][3]}}, reinterpret_cast<T3>(dst_ptr + 8));
-        op(c[0][4], reinterpret_cast<T3>(dst_ptr + 16));
+        op({{c[0][2], c[0][3]}}, reinterpret_cast<T3>(dst_ptr + simd_lenx2));
 
         op({{c[1][0], c[1][1]}}, reinterpret_cast<T3>(dst_ptr + ld_dst_oc));
-        op({{c[1][2], c[1][3]}}, reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 8));
-        op(c[1][4], reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 16));
+        op({{c[1][2], c[1][3]}},
+           reinterpret_cast<T3>(dst_ptr + ld_dst_oc + simd_lenx2));
     }
 };
-template <typename Op, typename T, typename T2, typename T3>
-struct StoreOcxOw8Remain<2, 4, Op, T, T2, T3> {
+template <typename Op, typename T, typename T2, typename T3, size_t simd_lenx2>
+struct StoreOcxOw8Remain<2, 3, Op, T, T2, T3, simd_lenx2> {
     static __ai void impl(T& c, const Op& op, T2 dst_ptr, int ld_dst_oc) {
         op({{c[0][0], c[0][1]}}, reinterpret_cast<T3>(dst_ptr));
-        op({{c[0][2], c[0][3]}}, reinterpret_cast<T3>(dst_ptr + 8));
+        op(c[0][2], reinterpret_cast<T3>(dst_ptr + simd_lenx2));
 
         op({{c[1][0], c[1][1]}}, reinterpret_cast<T3>(dst_ptr + ld_dst_oc));
-        op({{c[1][2], c[1][3]}}, reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 8));
+        op(c[1][2], reinterpret_cast<T3>(dst_ptr + ld_dst_oc + simd_lenx2));
     }
 };
-template <typename Op, typename T, typename T2, typename T3>
-struct StoreOcxOw8Remain<2, 3, Op, T, T2, T3> {
-    static __ai void impl(T& c, const Op& op, T2 dst_ptr, int ld_dst_oc) {
-        op({{c[0][0], c[0][1]}}, reinterpret_cast<T3>(dst_ptr));
-        op(c[0][2], reinterpret_cast<T3>(dst_ptr + 8));
-
-        op({{c[1][0], c[1][1]}}, reinterpret_cast<T3>(dst_ptr + ld_dst_oc));
-        op(c[1][2], reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 8));
-    }
-};
-template <typename Op, typename T, typename T2, typename T3>
-struct StoreOcxOw8Remain<2, 2, Op, T, T2, T3> {
+template <typename Op, typename T, typename T2, typename T3, size_t simd_lenx2>
+struct StoreOcxOw8Remain<2, 2, Op, T, T2, T3, simd_lenx2> {
     static __ai void impl(T& c, const Op& op, T2 dst_ptr, int ld_dst_oc) {
         op({{c[0][0], c[0][1]}}, reinterpret_cast<T3>(dst_ptr));
         op({{c[1][0], c[1][1]}}, reinterpret_cast<T3>(dst_ptr + ld_dst_oc));
     }
 };
-template <typename Op, typename T, typename T2, typename T3>
-struct StoreOcxOw8Remain<2, 1, Op, T, T2, T3> {
+template <typename Op, typename T, typename T2, typename T3, size_t simd_lenx2>
+struct StoreOcxOw8Remain<2, 1, Op, T, T2, T3, simd_lenx2> {
     static __ai void impl(T& c, const Op& op, T2 dst_ptr, int ld_dst_oc) {
         op(c[0][0], reinterpret_cast<T3>(dst_ptr));
         op(c[1][0], reinterpret_cast<T3>(dst_ptr + ld_dst_oc));
     }
 };
 
-template <typename Op, typename T, typename T2, typename T3>
-struct StoreOcxOw8Remain<1, 0, Op, T, T2, T3> {
+template <typename Op, typename T, typename T2, typename T3, size_t simd_lenx2>
+struct StoreOcxOw8Remain<1, 8, Op, T, T2, T3, simd_lenx2> {
     static __ai void impl(T& c, const Op& op, T2 dst_ptr, int) {
         op({{c[0][0], c[0][1]}}, reinterpret_cast<T3>(dst_ptr));
-        op({{c[0][2], c[0][3]}}, reinterpret_cast<T3>(dst_ptr + 8));
-        op({{c[0][4], c[0][5]}}, reinterpret_cast<T3>(dst_ptr + 16));
-        op({{c[0][6], c[0][7]}}, reinterpret_cast<T3>(dst_ptr + 24));
-    }
-};
-template <typename Op, typename T, typename T2, typename T3>
-struct StoreOcxOw8Remain<1, 8, Op, T, T2, T3> {
-    static __ai void impl(T& c, const Op& op, T2 dst_ptr, int) {
-        op({{c[0][0], c[0][1]}}, reinterpret_cast<T3>(dst_ptr));
-        op({{c[0][2], c[0][3]}}, reinterpret_cast<T3>(dst_ptr + 8));
-        op({{c[0][4], c[0][5]}}, reinterpret_cast<T3>(dst_ptr + 16));
-        op({{c[0][6], c[0][7]}}, reinterpret_cast<T3>(dst_ptr + 24));
+        op({{c[0][2], c[0][3]}}, reinterpret_cast<T3>(dst_ptr + simd_lenx2));
+        op({{c[0][4], c[0][5]}}, reinterpret_cast<T3>(dst_ptr + simd_lenx2 * 2));
+        op({{c[0][6], c[0][7]}}, reinterpret_cast<T3>(dst_ptr + simd_lenx2 * 3));
     }
 };
 
-template <typename Op, typename T, typename T2, typename T3>
-struct StoreOcxOw8Remain<1, 7, Op, T, T2, T3> {
+template <typename Op, typename T, typename T2, typename T3, size_t simd_lenx2>
+struct StoreOcxOw8Remain<1, 7, Op, T, T2, T3, simd_lenx2> {
     static __ai void impl(T& c, const Op& op, T2 dst_ptr, int) {
         op({{c[0][0], c[0][1]}}, reinterpret_cast<T3>(dst_ptr));
-        op({{c[0][2], c[0][3]}}, reinterpret_cast<T3>(dst_ptr + 8));
-        op({{c[0][4], c[0][5]}}, reinterpret_cast<T3>(dst_ptr + 16));
-        op(c[0][6], reinterpret_cast<T3>(dst_ptr + 24));
+        op({{c[0][2], c[0][3]}}, reinterpret_cast<T3>(dst_ptr + simd_lenx2));
+        op({{c[0][4], c[0][5]}}, reinterpret_cast<T3>(dst_ptr + simd_lenx2 * 2));
+        op(c[0][6], reinterpret_cast<T3>(dst_ptr + simd_lenx2 * 3));
     }
 };
-template <typename Op, typename T, typename T2, typename T3>
-struct StoreOcxOw8Remain<1, 6, Op, T, T2, T3> {
+template <typename Op, typename T, typename T2, typename T3, size_t simd_lenx2>
+struct StoreOcxOw8Remain<1, 6, Op, T, T2, T3, simd_lenx2> {
     static __ai void impl(T& c, const Op& op, T2 dst_ptr, int) {
         op({{c[0][0], c[0][1]}}, reinterpret_cast<T3>(dst_ptr));
-        op({{c[0][2], c[0][3]}}, reinterpret_cast<T3>(dst_ptr + 8));
-        op({{c[0][4], c[0][5]}}, reinterpret_cast<T3>(dst_ptr + 16));
+        op({{c[0][2], c[0][3]}}, reinterpret_cast<T3>(dst_ptr + simd_lenx2));
+        op({{c[0][4], c[0][5]}}, reinterpret_cast<T3>(dst_ptr + simd_lenx2 * 2));
     }
 };
-template <typename Op, typename T, typename T2, typename T3>
-struct StoreOcxOw8Remain<1, 5, Op, T, T2, T3> {
+template <typename Op, typename T, typename T2, typename T3, size_t simd_lenx2>
+struct StoreOcxOw8Remain<1, 5, Op, T, T2, T3, simd_lenx2> {
     static __ai void impl(T& c, const Op& op, T2 dst_ptr, int) {
         op({{c[0][0], c[0][1]}}, reinterpret_cast<T3>(dst_ptr));
-        op({{c[0][2], c[0][3]}}, reinterpret_cast<T3>(dst_ptr + 8));
-        op(c[0][4], reinterpret_cast<T3>(dst_ptr + 16));
+        op({{c[0][2], c[0][3]}}, reinterpret_cast<T3>(dst_ptr + simd_lenx2));
+        op(c[0][4], reinterpret_cast<T3>(dst_ptr + simd_lenx2 * 2));
     }
 };
-template <typename Op, typename T, typename T2, typename T3>
-struct StoreOcxOw8Remain<1, 4, Op, T, T2, T3> {
+template <typename Op, typename T, typename T2, typename T3, size_t simd_lenx2>
+struct StoreOcxOw8Remain<1, 4, Op, T, T2, T3, simd_lenx2> {
     static __ai void impl(T& c, const Op& op, T2 dst_ptr, int) {
         op({{c[0][0], c[0][1]}}, reinterpret_cast<T3>(dst_ptr));
-        op({{c[0][2], c[0][3]}}, reinterpret_cast<T3>(dst_ptr + 8));
+        op({{c[0][2], c[0][3]}}, reinterpret_cast<T3>(dst_ptr + simd_lenx2));
     }
 };
-template <typename Op, typename T, typename T2, typename T3>
-struct StoreOcxOw8Remain<1, 3, Op, T, T2, T3> {
+template <typename Op, typename T, typename T2, typename T3, size_t simd_lenx2>
+struct StoreOcxOw8Remain<1, 3, Op, T, T2, T3, simd_lenx2> {
     static __ai void impl(T& c, const Op& op, T2 dst_ptr, int) {
         op({{c[0][0], c[0][1]}}, reinterpret_cast<T3>(dst_ptr));
-        op(c[0][2], reinterpret_cast<T3>(dst_ptr + 8));
+        op(c[0][2], reinterpret_cast<T3>(dst_ptr + simd_lenx2));
     }
 };
-template <typename Op, typename T, typename T2, typename T3>
-struct StoreOcxOw8Remain<1, 2, Op, T, T2, T3> {
+template <typename Op, typename T, typename T2, typename T3, size_t simd_lenx2>
+struct StoreOcxOw8Remain<1, 2, Op, T, T2, T3, simd_lenx2> {
     static __ai void impl(T& c, const Op& op, T2 dst_ptr, int) {
         op({{c[0][0], c[0][1]}}, reinterpret_cast<T3>(dst_ptr));
     }
 };
-template <typename Op, typename T, typename T2, typename T3>
-struct StoreOcxOw8Remain<1, 1, Op, T, T2, T3> {
+template <typename Op, typename T, typename T2, typename T3, size_t simd_lenx2>
+struct StoreOcxOw8Remain<1, 1, Op, T, T2, T3, simd_lenx2> {
     static __ai void impl(T& c, const Op& op, T2 dst_ptr, int) {
         op(c[0][0], reinterpret_cast<T3>(dst_ptr));
     }
 };
 
-template <int c_dim, int ow_remain, typename Op, typename T, typename T2>
+template <
+        int c_dim, int ow_remain, typename Op, size_t simd_lenx2 = 8, typename T,
+        typename T2>
 __ai void store_ocx_ow8_remain_static(T& c, const Op& op, T2 dst_ptr, int ld_dst_oc) {
-    StoreOcxOw8Remain<c_dim, ow_remain, Op, T, T2, T2>::impl(c, op, dst_ptr, ld_dst_oc);
+    StoreOcxOw8Remain<c_dim, ow_remain, Op, T, T2, T2, simd_lenx2>::impl(
+            c, op, dst_ptr, ld_dst_oc);
 }
-template <int c_dim, int ow_remain, typename Op, typename T3, typename T, typename T2>
+template <
+        int c_dim, int ow_remain, typename Op, typename T3, size_t simd_lenx2 = 8,
+        typename T, typename T2>
 __ai void store_ocx_ow8_remain_static_dt(
         T& c, const Op& op, T2 dst_ptr, int ld_dst_oc) {
-    StoreOcxOw8Remain<c_dim, ow_remain, Op, T, T2, T3>::impl(c, op, dst_ptr, ld_dst_oc);
+    StoreOcxOw8Remain<c_dim, ow_remain, Op, T, T2, T3, simd_lenx2>::impl(
+            c, op, dst_ptr, ld_dst_oc);
 }
 ////////////////////Store_OCX_OW8_Remain/////////////////////////
 template <
@@ -611,6 +615,15 @@ __ai int32x4_t neon_vld1q(const int* ptr) {
 __ai int16x8_t neon_vld1q(const int16_t* ptr) {
     return vld1q_s16(ptr);
 }
+
+#if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
+__ai float16x8_t neon_vdupq_n(__fp16 val) {
+    return vdupq_n_f16(val);
+}
+__ai float16x8_t neon_vld1q(const __fp16* ptr) {
+    return vld1q_f16(ptr);
+}
+#endif
 template <typename T>
 struct NeonLdqSimd;
 template <>

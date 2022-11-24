@@ -378,6 +378,56 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_DIRECT_FP16) {
             get_conv_bias_args({1, 2, 3, 4, 5, 6, 7}, 1, false, false, false), handle(),
             rng, "F16DIRECT", 0.03);
 }
+TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_DIRECT_FP16_NCHW_NCHW88) {
+    NormalRNG rng(1);
+    using namespace conv_bias;
+    std::vector<conv_bias::TestArg> args;
+    auto pack = [&](size_t oc, size_t ic, size_t ih, size_t iw, size_t n, size_t filter,
+                    size_t stride, size_t pad, param::ConvBias::NonlineMode nlmode,
+                    megdnn::BiasMode bias_mode) {
+        if (ih + 2 * pad < filter || iw + 2 * pad < filter)
+            return;
+        param::ConvBias param;
+        constexpr size_t pack_c = 8;
+        param.format = param::ConvBias::Format::NCHW88;
+        param.stride_h = stride;
+        param.stride_w = stride;
+        param.pad_h = pad;
+        param.pad_w = pad;
+        param.nonlineMode = nlmode;
+
+        auto src_tensor_shape = TensorShape{n, ic, ih, iw};
+        auto weight_tensor_shape = TensorShape{oc / pack_c, filter, filter, ic, pack_c};
+        auto bias_tensor_shape = TensorShape{};
+        if (bias_mode == megdnn::BiasMode::BROADCAST_CHANNEL_BIAS) {
+            bias_tensor_shape = {1, oc / pack_c, 1, 1, pack_c};
+        }
+        args.emplace_back(
+                param, src_tensor_shape, weight_tensor_shape, bias_tensor_shape);
+    };
+
+    for (size_t n : {1}) {
+        for (size_t oc : {8, 16}) {
+            for (size_t ic : {4}) {
+                for (size_t ih = 1; ih < 71; ih += 17) {
+                    for (size_t filter : {2, 3, 5, 7}) {
+                        for (size_t stride : {1, 2}) {
+                            for (size_t pad : {0, 1}) {
+                                for (auto nlmode : QUAN_NLMODE) {
+                                    for (auto bias_mode : BR_AND_BIAS_BIASMODE) {
+                                        pack(oc, ic, ih, ih, n, filter, stride, pad,
+                                             nlmode, bias_mode);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    checker_conv_bias_f16(args, handle(), rng, "DIRECT_CONV_F16_NCHW_NCHW88", 0.03);
+}
 TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_DIRECT_FP16_STR1) {
     NormalRNG rng(1);
     checker_conv_bias_f16(

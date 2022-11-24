@@ -8,12 +8,15 @@ using NchwNchwxxFuncInterface = std::function<bool(
         const ConvolutionBase<param::Convolution>::CanonizedFilterMeta& fm,
         const ConvBiasForward::BiasMode bias_mode,
         const param::ConvBias::NonlineMode nonline_mode)>;
-static SmallVector<NchwNchwxxFuncInterface> g_func_vec{
-        nchw_nchwxx_valid<NchwNchwxxType::NCHW44_FP32>,
-        nchw_nchwxx_valid<NchwNchwxxType::NCHW44_INT8>,
-        nchw_nchwxx_valid<NchwNchwxxType::NCHW44_INT8_INT8_INT16>,
-        nchw_nchwxx_valid<NchwNchwxxType::NCHW44_INT8_DOT>,
-        nchw_nchwxx_valid<NchwNchwxxType::NCHW88>,
+static SmallVector<NchwNchwxxFuncInterface> g_func_vec {
+    nchw_nchwxx_valid<NchwNchwxxType::NCHW44_FP32>,
+            nchw_nchwxx_valid<NchwNchwxxType::NCHW44_INT8>,
+            nchw_nchwxx_valid<NchwNchwxxType::NCHW44_INT8_INT8_INT16>,
+            nchw_nchwxx_valid<NchwNchwxxType::NCHW44_INT8_DOT>,
+            nchw_nchwxx_valid<NchwNchwxxType::NCHW88>,
+#if !MEGDNN_DISABLE_FLOAT16
+            nchw_nchwxx_valid<NchwNchwxxType::NCHW88_FP16>,
+#endif
 };
 }  // namespace
 bool ConvBiasForward::is_nchw_nchwxx_optimized(

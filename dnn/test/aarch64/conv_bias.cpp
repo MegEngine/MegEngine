@@ -11,65 +11,6 @@
 namespace megdnn {
 namespace test {
 
-std::vector<conv_bias::TestArg> get_conv_bias_args(
-        std::vector<size_t> kernel, size_t stride) {
-    using namespace conv_bias;
-    using Param = param::ConvBias;
-    using NLMode = param::ConvBias::NonlineMode;
-
-    std::vector<TestArg> args;
-    auto pack = [&](size_t n, size_t oc, size_t ic, size_t w, size_t h, size_t kernel,
-                    size_t stride, NLMode nonline_mode) {
-        Param param;
-        param.stride_h = stride;
-        param.stride_w = stride;
-        param.pad_h = kernel == 1 ? 0 : kernel / 2;
-        param.pad_w = kernel == 1 ? 0 : kernel / 2;
-        param.nonlineMode = nonline_mode;
-
-        //! no bias
-        args.emplace_back(
-                param, TensorShape{n, ic, h, w}, TensorShape{oc, ic, kernel, kernel},
-                TensorShape{});
-        //! bias broadcast channle
-        args.emplace_back(
-                param, TensorShape{n, ic, h, w}, TensorShape{oc, ic, kernel, kernel},
-                TensorShape{1, oc, 1, 1});
-        //! bias
-        args.emplace_back(
-                param, TensorShape{n, ic, h, w}, TensorShape{oc, ic, kernel, kernel},
-                TensorShape{
-                        n, oc, (h + 2 * param.pad_h - kernel) / stride + 1,
-                        (w + 2 * param.pad_h - kernel) / stride + 1});
-    };
-
-    for (auto nlmode : {NLMode::IDENTITY, NLMode::RELU, NLMode::SIGMOID}) {
-        for (size_t n : {1, 2}) {
-            for (size_t ic : {1, 2, 3, 4, 8}) {
-                for (size_t oc : {1, 2, 3, 4, 8}) {
-                    for (size_t size : {1, 2, 3, 4, 8, 24}) {
-                        for (size_t k : kernel) {
-                            pack(n, oc, ic, size + 24, size + 24, k, stride, nlmode);
-                        }
-                    }
-                }
-            }
-        }
-    }
-    return args;
-}
-
-void checker_conv_bias(
-        std::vector<conv_bias::TestArg> args, Handle* handle, const char* algo_name) {
-    using namespace conv_bias;
-
-    Checker<ConvBias> checker(handle);
-    checker.set_before_exec_callback(
-            conv_bias::ConvBiasAlgoChecker<ConvBias>(algo_name));
-    for (auto&& arg : args) {
-        checker.set_param(arg.param).execs({arg.src, arg.filter, arg.bias, {}, {}});
-    }
-}
 TEST_F(AARCH64_MULTI_THREADS, CONVBIAS_DIRECT_FP32_STR2) {
     check_conv_bias(
             conv_bias::get_conv_bias_args({2, 3, 5, 7}, 2, false, false, false),

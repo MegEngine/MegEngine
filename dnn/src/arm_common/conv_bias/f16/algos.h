@@ -156,6 +156,23 @@ public:
     MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_DIRECT_NCHW88_FP16)
 };
 
+class ConvBiasImpl::AlgoF16DirectNchwNchw88 final : public AlgoBase {
+public:
+    AlgoF16DirectNchwNchw88() = default;
+    AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }
+    const char* name() const override { return "DIRECT_CONV_F16_NCHW_NCHW88"; }
+    bool usable(
+            const NCBKernSizeParam& param,
+            AlgoSelectionStrategy algo_selection_strategy) const override;
+    size_t get_workspace(const NCBKernSizeParam& param) const override;
+    virtual SmallVector<NCBKern> dispatch_kerns(
+            const NCBKernSizeParam& param) const override;
+    ConvAlgoTypePack get_algo_type() const override {
+        return {AlgoDataType::FLOAT16, AlgoCategory::DIRECT};
+    }
+    MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_DIRECT_NCHW_NCHW88_FP16)
+};
+
 }  // namespace arm_common
 }  // namespace megdnn
 #endif
