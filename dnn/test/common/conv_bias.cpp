@@ -1163,7 +1163,7 @@ void benchmark_with_contrast(
                 {arg.src, data_type[0]}, {arg.filter, data_type[1]},
                 {arg.bias, data_type[2]}, {}, dst_layout);
         float computation = (dst_layout.total_nr_elems() * arg.filter[1] *
-                             arg.filter[2] * arg.filter[3] * arg.filter[4] * 2.0) /
+                             arg.filter[2] * arg.filter[3] * 2.0) /
                             (1024 * 1024 * 1024) * 1e3;
         benchmarker.set_param(arg.param);
         auto used = benchmarker.exec({arg.src, arg.filter, arg.bias, {}, {}}) / RUNS;
@@ -1176,8 +1176,7 @@ void benchmark_with_contrast(
                 {arg_contrast.bias, data_type_contrast[2]}, {}, dst_layout_contrast);
         float computation_contrast =
                 (dst_layout_contrast.total_nr_elems() * arg_contrast.filter[1] *
-                 arg_contrast.filter[2] * arg_contrast.filter[3] *
-                 arg_contrast.filter[4] * 2.0) /
+                 arg_contrast.filter[2] * arg_contrast.filter[3] * 2.0) /
                 (1024 * 1024 * 1024) * 1e3;
         benchmarker_contrast.set_param(arg_contrast.param);
         auto used_contrast = benchmarker_contrast.exec(

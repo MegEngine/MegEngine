@@ -1,5 +1,4 @@
 #include "megdnn/oprs.h"
-#include "src/arm_common/conv_bias/block_helper.h"
 #include "src/arm_common/conv_bias/f16/algos.h"
 #include "src/arm_common/conv_bias/f16/direct_nchw88_kern.h"
 

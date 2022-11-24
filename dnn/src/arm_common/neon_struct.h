@@ -31,6 +31,11 @@ struct Vld1q_f32 {
 struct Vld1_s8 {
     static __ai int8x8_t impl(const int8_t* ptr) { return vld1_s8(ptr); }
 };
+#if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
+struct Vld1q_f16 {
+    static __ai float16x8_t impl(const __fp16* ptr) { return vld1q_f16(ptr); }
+};
+#endif
 struct Vldq_dup_4s8_8s16 {
     static __ai int16x8_t impl(const int8_t* ptr) { return vldq_dup_4s8_8s16(ptr); }
 };

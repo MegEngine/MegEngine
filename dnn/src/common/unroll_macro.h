@@ -239,6 +239,23 @@
 #define UNROLL_CALL_NOWRAPPER_D2(step, step2, cb) \
     UNROLL_CALL_RAW_D2(step, step2, cb)
 
+/////////////////// unroll call with one argument ///////////////////
+
+//! If the arg of cb is related to a macro inside cb, use this.
+//! Reason: ## before VA_ARGS removes the ',' when there are no arguments,
+//! but with that we can not nest macros.
+//! Ref: https://stackoverflow.com/questions/5891221/variadic-macros-with-zero-arguments
+
+#define UNROLL_ONE_ARG_RAW2(cb, arg) cb(0, arg) cb(1, arg)
+#define UNROLL_ONE_ARG_RAW3(cb, arg) UNROLL_ONE_ARG_RAW2(cb, arg) cb(2, arg)
+#define UNROLL_ONE_ARG_RAW5(cb, arg) \
+    UNROLL_ONE_ARG_RAW3(cb, arg)     \
+    cb(3, arg) cb(4, arg)
+#define UNROLL_ONE_ARG_RAW7(cb, arg) \
+    UNROLL_ONE_ARG_RAW5(cb, arg)     \
+    cb(5, arg) cb(6, arg)
+#define UNROLL_CALL_ONE_ARG_RAW(step, cb, arg) UNROLL_ONE_ARG_RAW##step(cb, arg)
+
 // clang-format on
 
 // vim: syntax=cpp.doxygen

@@ -73,6 +73,7 @@ private:
     class AlgoF16DirectStride1;
     class AlgoF16ChannelWiseNCHW88;
     class AlgoF16DirectNCHW88;
+    class AlgoF16DirectNchwNchw88;
 #endif
 
     class AlgoPack;

@@ -1678,6 +1678,68 @@ TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS, BENCHMARK_CONVBIAS_IM2COL_NCHW44_VS_N
 }
 
 TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS,
+       BENCHMARK_CONVBIAS_DIRECT_HYBRID_NCHW44_VS_NCHW88) {
+    constexpr size_t RUNS = 50;
+    using NLMode = param::ConvBias::NonlineMode;
+
+    std::vector<conv_bias::TestArg> args_nchw88, args_nchw44;
+    auto bench_case = [&](size_t N, size_t IC, size_t OC, size_t H, size_t W,
+                          size_t FS) {
+        param::ConvBias param_nchw88, param_nchw44;
+        param_nchw88.format = param::ConvBias::Format::NCHW88;
+        param_nchw44.format = param::ConvBias::Format::NCHW44;
+        for (size_t pad : {1}) {
+            for (size_t stride : {1, 2}) {
+                for (auto nlmode : {NLMode::RELU, NLMode::IDENTITY, NLMode::H_SWISH}) {
+                    param_nchw88.nonlineMode = nlmode;
+                    param_nchw88.pad_h = pad;
+                    param_nchw88.pad_w = pad;
+                    param_nchw88.stride_h = stride;
+                    param_nchw88.stride_w = stride;
+
+                    param_nchw44.nonlineMode = nlmode;
+                    param_nchw44.pad_h = pad;
+                    param_nchw44.pad_w = pad;
+                    param_nchw44.stride_h = stride;
+                    param_nchw44.stride_w = stride;
+
+                    args_nchw88.emplace_back(
+                            param_nchw88, TensorShape{N, IC, H, W},
+                            TensorShape{OC / 8, FS, FS, IC, 8},
+                            TensorShape{1, OC / 8, 1, 1, 8});
+                    args_nchw44.emplace_back(
+                            param_nchw44, TensorShape{N, IC, H, W},
+                            TensorShape{OC / 4, FS, FS, IC, 4},
+                            TensorShape{1, OC / 4, 1, 1, 4});
+                }
+            }
+        }
+    };
+    std::vector<DType> data_type_fp16 = {
+            dtype::Float16(), dtype::Float16(), dtype::Float16(), dtype::Float16()};
+    std::vector<DType> data_type_fp32 = {
+            dtype::Float32(), dtype::Float32(), dtype::Float32(), dtype::Float32()};
+    bench_case(1, 3, 32, 400, 400, 7);
+    bench_case(1, 3, 32, 300, 300, 5);
+    bench_case(1, 3, 32, 100, 100, 3);
+    bench_case(1, 3, 32, 80, 80, 2);
+    bench_case(1, 3, 64, 200, 200, 7);
+    bench_case(1, 3, 64, 128, 128, 5);
+    bench_case(1, 3, 64, 100, 100, 3);
+    bench_case(1, 3, 64, 80, 80, 2);
+    bench_case(1, 3, 128, 200, 200, 7);
+    bench_case(1, 3, 128, 128, 128, 5);
+    bench_case(1, 3, 128, 100, 100, 3);
+    bench_case(1, 3, 128, 80, 80, 2);
+    std::string algo_name_nchw88 = "DIRECT_CONV_F16_NCHW_NCHW88";
+    std::string algo_name_nchw44 = "F32_CONV_NCHW_NCHW44";
+
+    benchmark_with_contrast(
+            args_nchw88, algo_name_nchw88, data_type_fp16, args_nchw44,
+            algo_name_nchw44, data_type_fp32, RUNS, {1, {4}});
+}
+
+TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS,
        BENCHMARK_CHANNEL_WISE_INT8_INT8_INT8_STRIDE1) {
     constexpr size_t RUNS = 50;
 
