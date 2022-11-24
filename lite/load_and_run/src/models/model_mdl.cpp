@@ -9,7 +9,6 @@ using namespace lar;
 ModelMdl::ModelMdl(const std::string& path) : model_path(path) {
     mgb_log("creat mdl model use XPU as default comp node");
     m_load_config.comp_graph = mgb::ComputingGraph::make();
-    m_load_config.comp_graph->options().graph_opt_level = 0;
     testcase_num = 0;
 }
 
