@@ -97,7 +97,7 @@ void DeviceMemoryAllocator::alloc_dynamic(
 }
 
 void DeviceMemoryAllocator::defrag_prealloc_contig(
-        ComputingGraph* graph, CompNode comp_node,
+        ComputingGraph* /*graph*/, CompNode comp_node,
         size_t size){MGB_TRY{comp_node.free_device(comp_node.alloc_device(size));
 }
 MGB_CATCH(MemAllocError&, {})
@@ -574,10 +574,13 @@ ComputingGraphImpl::CompileState ComputingGraphImpl::compile_prepare(
         (options().graph_opt.jit || options().graph_opt.jit_config.enabled())) {
         // Deprecated usage added previously. It allows NVRTC JIT optimization
         // when graph_opt_level is 0. This usage is not recommanded any more.
-        mgb_log_warn(
-                "It is not recommanded to enable JIT optimization when "
-                "graph_opt_level is 0.");
-        setenv("MGB_JIT_BACKEND", "NVRTC", 1);
+        unsigned int max_warm = 9;
+        do {
+            mgb_log_warn(
+                    "It is not recommanded to enable JIT optimization when "
+                    "graph_opt_level is 0, try config graph_opt_level more than 0");
+        } while (max_warm-- > 0);
+
         gopt::GraphOptimizer optimizer;
         optimizer.add_pass<gopt::JITFusionPass>(
                 sopr_stat.has_virtual_grad, options().graph_opt.jit,

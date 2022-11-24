@@ -82,10 +82,10 @@ class InternalGraphGenerator {
     void find_oprs_depended_by_dimshuffle(cg::OperatorNodeBase* opr);
 
 public:
-    explicit InternalGraphGenerator(cg::OperatorNodeBase* opr);
+    MGE_WIN_DECLSPEC_FUC explicit InternalGraphGenerator(cg::OperatorNodeBase* opr);
 
     //! generate the graph; this method can be called multiple times
-    InternalGraphPtr generate();
+    MGE_WIN_DECLSPEC_FUC InternalGraphPtr generate();
 
     /*!
      * \brief needed input vars in the original (i.e. outer) graph
@@ -120,7 +120,7 @@ public:
     size_t get_cnt_input_if_add(cg::OperatorNodeBase* opr) const;
 
     //! add an operator into this graph; its outputs must have been added
-    void add_opr(cg::OperatorNodeBase* opr);
+    MGE_WIN_DECLSPEC_FUC void add_opr(cg::OperatorNodeBase* opr);
 
     //! output var in the outer graph (i.e. the root node)
     VarNode* output() const { return m_output; }

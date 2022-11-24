@@ -36,10 +36,10 @@ extern "C" {
  * \param no_profiling_on_shape_change do not re-profile to select best impl
  * algo when input shape changes (use previous algo)
  *
- * \param jit_level Execute supported operators with JIT (support MLIR,
- * NVRTC). Can only be used on Nvidia GPUs, this value indicates JIT level:
- * 1 for basic elemwise opr;
- * 2 for including reduce operator
+ * \param jit_level Execute supported operators with JIT, please check with
+ * MGB_JIT_BACKEND for more details, this value indicates JIT level.
+ * 1: for basic elemwise opr
+ * 2: for including reduce operator
  *
  * \param record_level flag optimize the inference performace with record the
  * kernel tasks in first run, hereafter the inference all need to execute the

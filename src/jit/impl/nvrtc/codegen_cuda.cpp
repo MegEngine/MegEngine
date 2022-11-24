@@ -82,7 +82,8 @@ void gen_input_code(
     for (size_t i = 0; i < args.inputs.size(); i++) {
         ASTPtr elem_var = ASTPtr::make<VariableAST>("x" + std::to_string(i));
         ASTPtr elem_val = gen_data_ast(i, args.inputs[i]);
-        ASTPtr elem_decl = ASTPtr::make<DeclFloatAST>(elem_var);
+        ASTPtr elem_decl =
+                ASTPtr::make<DeclFloatAST>(elem_var, CompNode::DeviceType::CUDA);
         ASTPtr elem_assign = ASTPtr::make<AssignAST>(elem_var, elem_val);
         var2ast[placeholders[args.inputs[i].idx]->output(0)] = elem_var;
         decl_exps_str += elem_decl->code_gen();
@@ -109,7 +110,7 @@ ASTPtr gen_opr_ast(cg::OperatorNodeBase* opr, const VarNode2AST& var2ast) {
         return {cur_inputs[0]};
     }
 
-    return opr2AST(opr, cur_inputs).at(0);
+    return opr2AST(opr, cur_inputs, CompNode::DeviceType::CUDA).at(0);
 }
 }  // anonymous namespace
 
@@ -145,7 +146,7 @@ struct PEVisitors {
 };
 
 template<typename T>
-static __forceinline__ __device__ T mgb_log_sum_exp(T x, T y) {
+static __forceinline__ __device__ T jit_log_sum_exp(T x, T y) {
     T a, b;
     a = x < y ? x : y;
     b = x < y ? y : x;
@@ -213,7 +214,8 @@ extern "C" __global__ void {{KERNEL_NAME}} (Data data, size_t num_elements,
         }
         ASTPtr elem_var = ASTPtr::make<VariableAST>("y" + std::to_string(cur_opr_cnt));
         ASTPtr elem_val = gen_opr_ast(opr, var2ast);
-        ASTPtr elem_decl = ASTPtr::make<DeclFloatAST>(elem_var);
+        ASTPtr elem_decl =
+                ASTPtr::make<DeclFloatAST>(elem_var, CompNode::DeviceType::CUDA);
         ASTPtr elem_assign = ASTPtr::make<AssignAST>(elem_var, elem_val);
         var2ast[opr->output(0)] = elem_var;
         internal_decl_exps_str += elem_decl->code_gen();

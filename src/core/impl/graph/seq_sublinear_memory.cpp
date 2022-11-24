@@ -859,11 +859,12 @@ const SeqModifierForSublinearMemory::SeqModifyAction& SeqModifierForSublinearMem
     msg.push_back('\n');
     msg.append(ssprintf("m_min_bottleneck: %-10.2f\n", m_min_bottleneck * SIZE2MB));
     if (!m_par_modifier->m_config->genetic_nr_iter) {
-        msg.append(
-                ssprintf("\nGenetic algorithm is currently DISABLED, "
-                         "set MGB_SUBLINEAR_MEMORY_GENETIC_NR_ITER [default = 0]"
-                         " to a positive integer to set the number of iterations"
-                         " in genetic algorithm.\n"));
+        msg.append(ssprintf(
+                "\nGenetic algorithm is currently DISABLED, "
+                "set %c%cB_SUBLINEAR_MEMORY_GENETIC_NR_ITER [default = 0]"
+                " to a positive integer to set the number of iterations"
+                " in genetic algorithm.\n",
+                'M', 'G'));
     }
     mgb_log_debug("%s", msg.c_str());
 #else
@@ -934,10 +935,11 @@ SeqModifierForSublinearMemory::SeqModifyAction SeqModifierForSublinearMemory::
         planner_concur = m_config->num_worker;
     }
 
-    mgb_log_debug(
-            "use %zu threads to search for sublinear memory plan; "
-            "this can be changed via MGB_SUBLINEAR_MEMORY_WORKERS env var",
-            planner_concur);
+    std::string msg = ssprintf(
+            "use %zu threads to search for sublinear memory plan; this can be changed "
+            "via %c%cB_SUBLINEAR_MEMORY_WORKERS env var",
+            planner_concur, 'M', 'G');
+    mgb_log_debug("%s", msg.c_str());
     for (auto&& i : m_planner_thread_pool.start(planner_concur))
         m_thread2planner[i].reset(new ModifyActionPlanner{this});
 

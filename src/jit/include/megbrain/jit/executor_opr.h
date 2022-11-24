@@ -40,7 +40,7 @@ public:
             const InternalGraphPtr& internal_graph, const VarNodeArray& inputs,
             const OperatorNodeConfig& config);
 
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             const InternalGraphPtr& internal_graph, const VarNodeArray& inputs,
             const OperatorNodeConfig& config = {});
 

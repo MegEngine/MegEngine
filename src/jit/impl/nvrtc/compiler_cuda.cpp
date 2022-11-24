@@ -11,7 +11,6 @@
 
 #if MGB_JIT && MGB_CUDA
 
-#include <dlfcn.h>
 #include <nvrtc.h>
 
 using namespace mgb;

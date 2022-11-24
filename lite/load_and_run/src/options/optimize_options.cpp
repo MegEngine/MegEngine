@@ -744,8 +744,8 @@ DEFINE_uint64(workspace_limit, SIZE_MAX, "set workspace upbound limit");
 ///////////////////////// other options for optimization /////////////////
 DEFINE_bool(
         enable_jit, false,
-        " Execute supported operators with JIT(now only support NVRTC). "
-        "Can only be used on Nvidia GPUs");
+        " Execute supported operators with JIT, please check with MGB_JIT_BACKEND for "
+        "more details");
 #if MGB_ENABLE_TENSOR_RT
 DEFINE_bool(
         tensorrt, false,

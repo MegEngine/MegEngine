@@ -53,16 +53,22 @@ ASTPtr gen_powc(ASTPtr inp, float exp) {
 
     return make_call("powf", {inp, exp});
 }
+
 }  // anonymous namespace
 
-const ElemGeneratorMap& ast_c::elem_opr_generator() {
-#define ENTRY(_mode, _impl)                                                \
-    {                                                                      \
-        ElemMode::_mode, {                                                 \
-            [](const ASTPtrArray& inps) -> ASTPtrArray { return {_impl}; } \
-        }                                                                  \
+const ElemGeneratorMap& ast_c::elem_opr_generator(CompNode::DeviceType device_type) {
+#define ENTRY(_mode, _impl)                                             \
+    {                                                                   \
+        ElemMode::_mode, {                                              \
+            [=](const ASTPtrArray& inps, bool is_half) -> ASTPtrArray { \
+                MGB_MARK_USED_VAR(is_half);                             \
+                return {_impl};                                         \
+            }                                                           \
+        }                                                               \
     }
-    static ElemGeneratorMap map = {
+
+    //! other backends map
+    static ElemGeneratorMap other_map = {
             // unary
             ENTRY(RELU, make_call("fmaxf", {inps[0], 0.f})),
             ENTRY(ABS, make_call("fabsf", inps)),
@@ -102,7 +108,7 @@ const ElemGeneratorMap& ast_c::elem_opr_generator() {
             ENTRY(SWITCH_GT0, ASTPtr::make<Cond3AST>(inps[0] > 0, inps[1], 0)),
             ENTRY(TANH_GRAD, (1 - inps[0] * inps[0]) * inps[1]),
             ENTRY(TRUE_DIV, inps[0] / inps[1]),
-            ENTRY(LOG_SUM_EXP, make_call("mgb_log_sum_exp", {inps[0], inps[1]})),
+            ENTRY(LOG_SUM_EXP, make_call("jit_log_sum_exp", {inps[0], inps[1]})),
             ENTRY(LT, ASTPtr::make<BinaryAST>("<", inps[0], inps[1])),
             ENTRY(LEQ, ASTPtr::make<BinaryAST>("<=", inps[0], inps[1])),
             ENTRY(EQ, ASTPtr::make<BinaryAST>("==", inps[0], inps[1])),
@@ -133,22 +139,28 @@ const ElemGeneratorMap& ast_c::elem_opr_generator() {
                                    0.f}) /
                           6.f),
     };
-    mgb_assert(map.size() + 41 == opr::Elemwise::Param::MODE_NR_MEMBER);
+    mgb_assert(other_map.size() + 41 == opr::Elemwise::Param::MODE_NR_MEMBER);
     // unimplemented modes: SHL, SHR, FAST_TANH, FAST_TANH_GRAD, ROUND, RMULH,
     // ERFINV, ERFCINV, NOT, AND, OR, XOR, NEQ, ISNAN, ISINF
-    return map;
+
+    return other_map;
 #undef ADD_OPR
 }
 
-ASTPtrArray ast_c::opr2AST(cg::OperatorNodeBase* opr, const ASTPtrArray& inputs) {
+ASTPtrArray ast_c::opr2AST(
+        cg::OperatorNodeBase* opr, const ASTPtrArray& inputs,
+        CompNode::DeviceType device_type) {
     using namespace opr;
     if (auto elem = gopt::try_cast_as_op<Elemwise>(opr)) {
-        if (check_elem_mode(elem->param().mode)) {
-            return elem_opr_generator().find(elem->param().mode)->second(inputs);
+        if (check_elem_mode(elem->param().mode, device_type)) {
+            return elem_opr_generator(device_type)
+                    .find(elem->param().mode)
+                    ->second(inputs, false);
         }
     }
 
     if (auto powc = gopt::try_cast_as_op<PowC>(opr)) {
+
         mgb_assert(inputs.size() == 1);
         return {gen_powc(inputs[0], powc->param().exp)};
     }
@@ -157,6 +169,7 @@ ASTPtrArray ast_c::opr2AST(cg::OperatorNodeBase* opr, const ASTPtrArray& inputs)
     if (imm.valid()) {
         auto dtype = imm->dtype();
         if (dtype == dtype::Int32{}) {
+
             return {ASTPtr::make<IntAST>(imm->get<int>())};
         }
         float scalar_value;
@@ -169,10 +182,12 @@ ASTPtrArray ast_c::opr2AST(cg::OperatorNodeBase* opr, const ASTPtrArray& inputs)
                     InternalError, "dtype(%s) is not any of [Float16, Float32, Int32]",
                     dtype.name());
         }
-        return {ASTPtr::make<FloatAST>(scalar_value)};
+
+        return {ASTPtr::make<FloatAST>(scalar_value, device_type, false)};
     }
 
     if (opr->same_type<opr::TypeCvt>()) {
+
         // simply ignore TypeCvt oprs.
         mgb_assert(inputs.size() == 1);
         return inputs;
