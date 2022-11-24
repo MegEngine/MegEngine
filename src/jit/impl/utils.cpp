@@ -53,9 +53,11 @@ bool ExecutableHelper::keep_interm() {
     return ret;
 }
 
-namespace {
+//! now only cuda/halide jit depends on ExecutableHelperImpl
+//! FIXME: imp ExecutableHelperImpl support android if later need
+#if defined(__linux__) && !defined(__ANDROID__)
 
-#ifdef __linux__
+namespace {
 
 class ExecutableHelperImpl final : public ExecutableHelper {
     bool m_workdir_need_rm = false;
@@ -218,8 +220,6 @@ public:
     }
 };
 
-#endif  // __linux__
-
 }  // anonymous namespace
 
 void ExecutableHelper::write_file(const std::string& name, const std::string& data) {
@@ -243,6 +243,7 @@ ExecutableHelper& ::ExecutableHelper::get() {
     static ExecutableHelperImpl inst;
     return inst;
 }
+#endif
 
 std::string jit::next_kernel_name() {
     static std::atomic_uint_fast64_t cnt;
