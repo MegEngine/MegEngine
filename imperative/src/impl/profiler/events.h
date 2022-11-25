@@ -126,6 +126,7 @@ DEF_DUR_EVENT(TensorWaitProp, {
     uint64_t tensor_id;
     uint64_t wait_id;
     TensorProp prop;
+    std::function<OpParams()> param;
 });
 
 DEF_DUR_EVENT(SampleDevice, {

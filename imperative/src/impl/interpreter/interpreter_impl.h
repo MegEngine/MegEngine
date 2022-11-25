@@ -18,6 +18,7 @@
 #include "./tensor_info.h"
 
 #include "../profiler/events.h"
+#include "megbrain/imperative/backtrace.h"
 
 namespace mgb::imperative::interpreter::intl {
 
@@ -65,6 +66,10 @@ struct ChannelImpl : Interpreter::Channel, NonCopyableObj, NonMoveableObj {
 
     void push_scope(std::string) override;
     void pop_scope(std::string) override;
+
+    BackTraceInfoPtr& get_backtrace() override;
+    void set_backtrace(BackTraceInfoPtr bt) override;
+    void clear_backtrace() override;
 
     bool worker_started() const;
     void update_status_to_forked(void);
@@ -133,6 +138,7 @@ private:
     MemPool<TensorInfo> m_pool;
     std::unordered_set<Handle> m_valid_handle;
     TensorInfo* m_waitee = nullptr;
+    BackTraceInfoPtr m_bt = nullptr;
     Spinlock m_pool_spin;
     Spinlock m_info_spin;
     uint64_t m_waitee_id = 0;

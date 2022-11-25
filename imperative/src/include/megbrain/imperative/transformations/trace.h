@@ -87,6 +87,8 @@ public:
     std::string to_string() const override {
         return ssprintf("TraceMarkVar{mark=%s}", imperative::quoted(m_mark).c_str());
     }
+
+    std::string raw_type() const { return "TraceMarkVar"; }
 };
 
 class TracingValue final : public ObjectValue<TracingValue> {

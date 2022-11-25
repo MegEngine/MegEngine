@@ -1,10 +1,12 @@
 #include "megbrain/common.h"
 #include "megbrain/dtype.h"
+#include "megbrain/imperative/backtrace.h"
 #include "megbrain/imperative/cpp_cupti.h"
 #include "megbrain/imperative/ops/autogen.h"
 #include "megbrain/imperative/ops/backward_graph.h"
 #include "megbrain/imperative/ops/utility.h"
 #include "megbrain/imperative/profiler.h"
+#include "megbrain/imperative/transformation.h"
 #include "megbrain/imperative/transformations/dim_expansion.h"
 #include "megbrain/imperative/transformations/dtype_promote.h"
 #include "megbrain/imperative/transformations/eval.h"
@@ -42,6 +44,7 @@
 #include <unordered_map>
 
 #include "../../src/impl/mgb_cg_impl.h"
+#include "./backtrace.h"
 
 namespace py = pybind11;
 namespace views = ranges::views;
@@ -97,6 +100,7 @@ PyObject* py_apply(
             }
             HostTensorND ht(target_cn);
             ht = npy::np2tensor(args[i], npy::Meth::copy_into(&ht), target_dtype);
+            record_py_backtrace();
             if (PyArray_Check(args[i]) || PyList_Check(args[i])) {  // non scaler
                 // py_tuple is not allowed here because of tracing
                 return imperative::apply(
@@ -125,7 +129,7 @@ PyObject* py_apply(
                 return nullptr;
             }
         }
-
+        record_py_backtrace();
         auto outputs = [&] { return imperative::apply(*op, tensors); }();
         size_t nout = outputs.size();
         auto ret = py::tuple(nout);
@@ -136,6 +140,11 @@ PyObject* py_apply(
         return ret.release().ptr();
     }
     PYEXT17_TRANSLATE_EXC_RET(nullptr)
+}
+FrameInfoPtr get_current_frameinfo() {
+    auto frame = PyEval_GetFrame();
+    auto frameinfo = get_frameinfo_from_pyframe(frame);
+    return frameinfo;
 }
 
 namespace {
@@ -740,6 +749,7 @@ struct TensorWeakRef {
         auto size = PyTuple_GET_SIZE(args);                 \
         return FUNC(self, arr, size);                       \
     }
+
 WRAP_FUNC_PY35(py_apply);
 WRAP_FUNC_PY35(dtype_promotion);
 WRAP_FUNC_PY35(get_device);
@@ -768,7 +778,7 @@ WRAP_FUNC_PY35(pixel_shuffle_cpp);
 
 void init_tensor(py::module m) {
     imperative::Tensor::static_initialize();
-
+    init_backtrace_tss_key();
     // Transformations
     static auto& transformations = TransformationManager::get_instance();
 
@@ -866,6 +876,10 @@ void init_tensor(py::module m) {
     if (!tensor_type)
         throw py::error_already_set();
     py::setattr(m, "Tensor", tensor_type);
+
+    auto* tracekey_type = TraceKeyWrapper::wrap_t::type().finalize();
+    py::setattr(m, "tracekey", tracekey_type);
+
     py::enum_<Format::Type>(m, "FormatType")
             .value("DEFAULT", Format::Type::DEFAULT)
             .value("NCHW", Format::Type::NCHW)
@@ -922,6 +936,10 @@ void init_tensor(py::module m) {
     m.def("push_scope", [channel](std::string name) {
         Transformation::push_scope(name);
         channel->push_scope(name);
+    });
+    m.def("record_scope", [](py::object frame, std::string name) {
+        mgb_assert(PyFrame_Check(frame.ptr()));
+        record_scope((PyFrameObject*)frame.ptr(), std::move(name));
     });
     m.def("pop_scope", [channel](std::string name) {
         channel->pop_scope(name);
@@ -1298,7 +1316,12 @@ void init_tensor(py::module m) {
     m.def("unset_module_tracing", [=] { get_module_trace()->disable(); });
 
     m.def("is_tracing_module", [=] { return get_module_trace()->enabled(); });
-
+    m.def("set_python_backtrace_enabled", &set_python_backtrace_enabled);
+    m.def("set_transformation_backtrace_enabled",
+          &set_transformation_backtrace_enabled);
+    m.def("_mge_backtrace", &get_py_backtrace);
+    m.def("_get_frame_cache_id",
+          []() { return (size_t)FrameInfoCache::get_instance(); });
     m.def("set_module_trace_hook", [](py::function function) {
         module_trace_hook = function;
         module_trace_hook.inc_ref();
@@ -1306,7 +1329,6 @@ void init_tensor(py::module m) {
 
     auto atexit = py::module::import("atexit");
     atexit.attr("register")(py::cpp_function([]() { module_trace_hook = {}; }));
-
     m.def("begin_record_values", [] { Value::begin_record_values(); });
 
     m.def("end_record_values", [] {

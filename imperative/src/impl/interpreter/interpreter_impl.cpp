@@ -13,7 +13,7 @@
 #include "../blob_manager_impl.h"
 #include "../event_pool.h"
 #include "../op_trait.h"
-
+#include "megbrain/imperative/backtrace.h"
 using namespace mgb;
 using namespace imperative;
 using namespace interpreter;
@@ -328,11 +328,18 @@ void ChannelImpl::dispatch_default_cpu(
         output_infos.push_back(info);
         outputs->push_back(reinterpret_cast<Handle>(info));
     }
-    auto op_info_getter = [op] {
+    auto& bt = get_backtrace();
+    auto op_info_getter = [op, bt] {
         std::unordered_map<std::string, std::string> op_info;
         auto props = OpDef::props(*op);
         for (auto&& [key, value] : props) {
             op_info[key] = value;
+        }
+        if (bt != nullptr) {
+            if (bt->py_stack_info != nullptr)
+                op_info["python_backtrace"] = bt->py_traceback();
+            if (bt->trans_stack_info.size() > 0)
+                op_info["transformation_backtrace"] = bt->transformation_traceback();
         }
         return op_info;
     };
@@ -374,15 +381,22 @@ void ChannelImpl::dispatch_kernel(
         output_infos.push_back(info);
         outputs->push_back(reinterpret_cast<Handle>(info));
     }
-    ApplyOp cmd{
-            Profiler::next_id(), std::move(op), std::move(input_infos),
-            std::move(output_infos), validated};
+    auto& bt = get_backtrace();
+    ApplyOp cmd{Profiler::next_id(),     std::move(op), std::move(input_infos),
+                std::move(output_infos), validated,     bt};
     if (Profiler::is_profiling()) {
-        auto op_info_getter = [op = cmd.op] {
+        auto op_info_getter = [op = cmd.op, bt = cmd.bt] {
             std::unordered_map<std::string, std::string> op_info;
             auto props = OpDef::props(*op);
             for (auto&& [key, value] : props) {
                 op_info[key] = value;
+            }
+            if (bt != nullptr) {
+                if (bt->py_stack_info != nullptr)
+                    op_info["python_backtrace"] = bt->py_traceback();
+                if (bt->trans_stack_info.size() > 0)
+                    op_info["transformation_backtrace"] =
+                            bt->transformation_traceback();
             }
             return op_info;
         };
@@ -1024,7 +1038,18 @@ TensorPtr ChannelImpl::wait_tensor(TensorInfo* info, TensorProp prop) {
     mgb_assert(!m_waitee, "duplicate waitee");
     m_waitee = info;
     m_waitee_id = Profiler::next_id();
-    MGB_RECORD_EVENT(TensorWaitPropEvent, info->id, m_waitee_id, prop);
+    auto backtrace_getter = [bt = get_backtrace()]() {
+        std::unordered_map<std::string, std::string> infos;
+        if (bt != nullptr) {
+            if (bt->py_stack_info != nullptr)
+                infos["python_backtrace"] = bt->py_traceback();
+            if (bt->trans_stack_info.size() > 0)
+                infos["transformation_backtrace"] = bt->transformation_traceback();
+        }
+        return infos;
+    };
+    MGB_RECORD_EVENT(
+            TensorWaitPropEvent, info->id, m_waitee_id, prop, backtrace_getter);
     bool require_host = prop == TensorProp::HostValue;
     bool require_dev = prop == TensorProp::DevValue;
     auto host_available = [&] { return info->ptr && info->ptr->value_fetched(); };
@@ -1073,7 +1098,8 @@ TensorPtr ChannelImpl::wait_tensor(TensorInfo* info, TensorProp prop) {
             return require_host ? host_available() : static_cast<bool>(info->ptr);
         });
     }
-    MGB_RECORD_EVENT(TensorWaitPropFinishEvent, info->id, m_waitee_id, prop);
+    MGB_RECORD_EVENT(
+            TensorWaitPropFinishEvent, info->id, m_waitee_id, prop, backtrace_getter);
     m_waitee = nullptr;
     if (wait_host) {
         auto err = info->ptr->comp_node().check_async_error();
@@ -1444,6 +1470,18 @@ void ChannelImpl::pop_scope(std::string name) {
                 PopScope{name},
         });
     }
+}
+
+BackTraceInfoPtr& ChannelImpl::get_backtrace() {
+    return m_bt;
+}
+
+void ChannelImpl::set_backtrace(BackTraceInfoPtr bt) {
+    m_bt = std::move(bt);
+}
+
+void ChannelImpl::clear_backtrace() {
+    m_bt = nullptr;
 }
 
 bool ChannelImpl::worker_started() const {

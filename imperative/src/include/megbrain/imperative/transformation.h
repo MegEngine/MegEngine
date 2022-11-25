@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "megbrain/common.h"
+#include "megbrain/imperative/backtrace.h"
 #include "megbrain/imperative/subgraph.h"
 #include "megbrain/imperative/utils/allocator.h"
 #include "megbrain/imperative/utils/local_ptr.h"
@@ -35,6 +36,9 @@ struct TransformationContext {
     size_t next_transformation = 0;
     std::vector<TransformationFrame> frames;
     ForwardAllocator<ValueRef> allocator;
+    size_t record_bt_trans_id;
+    bool record_trans_bt = false;
+    BackTraceInfoPtr bt;
 };
 
 /**

@@ -3,18 +3,39 @@
 #include "megbrain/imperative/utils/debug.h"
 #include "megbrain/imperative/utils/helper.h"
 #include "megbrain/imperative/utils/map.h"
-
 namespace mgb {
 namespace imperative {
 namespace {
 
 ValueRefList apply_release(const Operator& op, Span<ValueRef> inputs) {
     auto& context = Transformation::get_context();
+    ValueRefList result;
     size_t& depth = context.next_transformation;
     mgb_assert(depth < context.transformations.size());
     auto& transformation = *context.transformations[depth++];
     CleanupGuard _{[&] { --depth; }};
-    return transformation.apply_transformation(op, inputs);
+    if (context.bt != nullptr && context.record_trans_bt) {
+        std::vector<std::string> types;
+        for (size_t i = 0; i < inputs.size(); i++) {
+            types.push_back(inputs[i].raw_type());
+        }
+        context.bt->trans_stack_info.push_back(TransformationCallInfo{
+                depth, op.raw_type(), transformation.name(),
+                TransformationCallInfo::get_op_attr(op), std::move(types)});
+    }
+    result = transformation.apply_transformation(op, inputs);
+    if (context.bt != nullptr && context.record_trans_bt) {
+        std::vector<std::string> types;
+        for (size_t i = 0; i < result.size(); i++) {
+            types.push_back(result[i].raw_type());
+        }
+        context.bt->trans_stack_info.push_back(
+                TransformationReturnInfo{depth, std::move(types)});
+    }
+    if (depth - 1 == context.record_bt_trans_id) {
+        context.bt = nullptr;
+    }
+    return result;
 }
 
 MGB_NOINLINE ValueRefList apply_debug(const Operator& op, Span<ValueRef> inputs) {

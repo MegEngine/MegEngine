@@ -317,8 +317,12 @@ struct ChromeTimelineEventVisitor : EventVisitor<ChromeTimelineEventVisitor> {
                     .bp('e')
                     .cat("TensorProp")
                     .scope(pid_str);
-            new_host_event("TensorWaitProp", 'E')
-                    .args(current_tensor->detail(current->time));
+            auto args = current_tensor->detail(current->time);
+            auto params = event.param();
+            for (auto&& [name, value] : params) {
+                args[name] = value;
+            }
+            new_host_event("TensorWaitProp", 'E').args(args);
         } else if constexpr (std::is_same_v<TEvent, TensorNotifyPropEvent>) {
             new_host_event(pid_str, 's')
                     .id(event.tensor_id)

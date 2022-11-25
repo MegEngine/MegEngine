@@ -61,7 +61,7 @@ public:
     }
 
     virtual std::string to_string() const = 0;
-
+    virtual std::string raw_type() const = 0;
     /**
      * \brief fallback implementation of this. Not all operators has fallback
      * implementation.
@@ -86,6 +86,7 @@ public:
     static inline size_t TYPE_CODE = [] { return register_type(typeid(T)); }();
 
     std::string to_string() const override = 0;
+    std::string raw_type() const override = 0;
 };
 
 }  // namespace imperative

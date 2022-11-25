@@ -231,6 +231,7 @@ public:
     ValueRef unwrap() const;
     std::string to_string() const;
     std::string raw_type() const;
+    const IType* type() const;
     uint64_t id() const { return m_id; }
     size_t hash() const { return id(); }
 

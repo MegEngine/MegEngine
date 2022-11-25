@@ -40,6 +40,7 @@ ValueRefList InterpreterTransformation::apply_op(
     for (auto input : inputs) {
         input_handles.push_back(input.cast(m_value_type).handle()->handle());
     }
+    m_channel->set_backtrace(Transformation::get_context().bt);
     output_handles =
             m_channel->apply_op(apply_op.op().shared_from_this(), input_handles);
     ValueRefList outputs(output_handles.size());
@@ -48,6 +49,7 @@ ValueRefList InterpreterTransformation::apply_op(
         output_handles[i] = nullptr;
     }
     output_handles.clear();
+    m_channel->clear_backtrace();
     return outputs;
 }
 
@@ -55,6 +57,7 @@ ValueRefList InterpreterTransformation::apply_get_attr(
         const GetAttr& get_attr, Span<ValueRef> inputs) {
     auto& input = inputs.item().cast(m_value_type);
     ValueRef output;
+    m_channel->set_backtrace(Transformation::get_context().bt);
     switch (get_attr.attr()) {
         case GetAttr::DType:
             output = input.dtype();
@@ -77,6 +80,7 @@ ValueRefList InterpreterTransformation::apply_get_attr(
                     MegBrainError, "Interpreter: malformed GetAttr: %s",
                     get_attr.to_string().c_str());
     }
+    m_channel->clear_backtrace();
     return {output};
 }
 

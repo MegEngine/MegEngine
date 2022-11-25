@@ -106,6 +106,10 @@ std::string OpDef::to_string() const {
     return builder + "}";
 }
 
+std::string OpDef::name() const {
+    return trait()->name;
+}
+
 size_t OpDef::hash() const {
     return trait()->hash(*this);
 }

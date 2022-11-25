@@ -4,6 +4,7 @@
 #include <unordered_set>
 #include <variant>
 
+#include "megbrain/imperative/backtrace.h"
 #include "megbrain/imperative/op_def.h"
 #include "megbrain/imperative/utils/to_string.h"
 #include "megbrain/tensor.h"
@@ -39,6 +40,7 @@ struct ApplyOp {
     SmallVector<TensorInfo*> inputs;
     SmallVector<TensorInfo*> outputs;
     bool validated = false;
+    BackTraceInfoPtr bt = nullptr;
 
     template <typename TFunctor>
     void get_props(TFunctor&& functor) const {

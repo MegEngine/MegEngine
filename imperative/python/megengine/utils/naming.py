@@ -1,4 +1,6 @@
-from ..core._imperative_rt.core2 import pop_scope, push_scope
+import sys
+
+from ..core._imperative_rt.core2 import pop_scope, push_scope, record_scope
 
 
 class AutoNaming:
@@ -21,6 +23,7 @@ class AutoNaming:
     def push_scope(cls, scope):
         if scope is not None:
             push_scope(scope)
+            record_scope(sys._getframe().f_back.f_back, scope)
         cls.scopes.append(scope)
 
     @classmethod

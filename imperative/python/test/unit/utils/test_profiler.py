@@ -1,13 +1,16 @@
 # -*- coding: utf-8 -*-
 import json
 import os
+import sys
 import tempfile
+import threading
 
 import pytest
 
 from megengine import Parameter
 from megengine import distributed as dist
 from megengine import tensor
+from megengine.core._imperative_rt.core2 import _get_frame_cache_id, _mge_backtrace
 from megengine.jit import trace
 from megengine.module import Module
 from megengine.utils.profiler import Profiler, scope
@@ -97,3 +100,43 @@ def test_profiler_dist(format, trace_mode):
 
     assert os.path.exists(profile_path), "profiling results not found"
     assert len(os.listdir(tempdir.name)) == n_gpus + 1
+
+
+def test_backtrace():
+    bts = []
+    cur_frame = sys._getframe(0)
+    start_lineno = cur_frame.f_lineno
+    cur_frame.f_trace = lambda *_: 1
+
+    def gen():
+        for i in range(10):
+            bts.append(_mge_backtrace())
+            yield i
+
+    ge = gen()
+    next(ge)
+    next(ge)
+
+    def func():
+        return next(ge)
+
+    func()
+    bt_lines = []
+    for bt in bts:
+        lines = []
+        for path in bt.split("\n")[-3:-1]:
+            lines.append(int(path.split(",")[1].split()[1]))
+        bt_lines.append([i - start_lineno for i in lines])
+    # test if backtrace line numbers are correct
+    assert cur_frame.f_trace(0, 0, 0) == 1
+    assert bt_lines == [[9, 5], [10, 5], [13, 5]]
+    cache_id = []
+
+    def get_cache_id():
+        cache_id.append(_get_frame_cache_id())
+
+    threads = [threading.Thread(target=get_cache_id) for i in range(10)]
+    for t in threads:
+        t.start()
+        t.join()
+    assert len(set(cache_id)) == 10

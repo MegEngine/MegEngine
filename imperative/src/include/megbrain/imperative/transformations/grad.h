@@ -318,7 +318,7 @@ private:
     // TODO: identified by GradKey
 public:
     std::string to_string() const override { return "DetachValue"; }
-
+    std::string raw_type() const override { return "DetachGrad"; }
     ValueRefList fallback(Span<ValueRef> inputs) const override {
         return {inputs.as_array<1>()[0]};
     }
@@ -335,6 +335,8 @@ public:
     std::string to_string() const override {
         return ssprintf("AttachGradValue{key=%s}", m_key->name().c_str());
     }
+
+    std::string raw_type() const { return "AttachGrad"; }
 };
 
 class GradBackward : public OperatorImpl<GradBackward, Operator::GetAttrLike> {
@@ -349,6 +351,8 @@ public:
     std::string to_string() const override {
         return ssprintf("GradBackwardValue{key=%s}", m_key->name().c_str());
     }
+
+    std::string raw_type() const { return "GradBackward"; }
 };
 
 class IsAttachedTo : public OperatorImpl<IsAttachedTo, Operator::GetAttrLike> {
@@ -362,6 +366,8 @@ public:
     std::string to_string() const override {
         return ssprintf("IsAttachedToValue{key=%s}", m_key->name().c_str());
     }
+
+    std::string raw_type() const { return "IsAttachedTo"; }
 
     ValueRefList fallback(Span<ValueRef> inputs) const override {
         return {BoolValue::make(false)};
@@ -382,7 +388,7 @@ public:
     size_t nr_inputs() const { return m_nr_inputs; }
 
     std::string to_string() const override { return ssprintf("SetGradValue{}"); }
-
+    std::string raw_type() const { return "SetGrad"; }
     ValueRefList fallback(Span<ValueRef> inputs) const override {
         auto outputs = inputs.sub(m_nr_inputs, inputs.size() - m_nr_inputs);
         return {outputs.begin(), outputs.end()};
@@ -394,7 +400,7 @@ public:
     GetGradKey() = default;
 
     std::string to_string() const override { return ssprintf("GetGradKeyValue{}"); }
-
+    std::string raw_type() const { return "GetGradKey"; };
     ValueRefList fallback(Span<ValueRef> inputs) const override { return {ValueRef()}; }
 };
 
@@ -411,6 +417,7 @@ public:
     std::string to_string() const override {
         return ssprintf("GetBackwardClosure{key=%s}", m_key->name().c_str());
     }
+    std::string raw_type() const { return "GetBackwardClosure"; }
 };
 
 }  // namespace mgb::imperative

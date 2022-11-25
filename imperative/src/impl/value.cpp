@@ -110,7 +110,14 @@ std::string ValueRef::raw_type() const {
     if (!m_storage) {
         return "null";
     }
-    return m_storage->type().name();
+    return this->storage()->type().name();
+}
+
+const IType* ValueRef::type() const {
+    if (!m_storage) {
+        return nullptr;
+    }
+    return &m_storage->type();
 }
 
 bool ValueRef::watching() const {

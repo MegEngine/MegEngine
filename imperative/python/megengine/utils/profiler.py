@@ -15,6 +15,7 @@ from ..core._imperative_rt.core2 import (
     full_sync,
     pop_scope,
     push_scope,
+    set_python_backtrace_enabled,
     start_profile,
     stop_profile,
     sync,
@@ -30,6 +31,7 @@ class Profiler(ContextDecorator):
 
     Args:
         path: default path prefix for profiler to dump.
+        with_backtrace: Whether to record backtrace information for ops.
     
     Examples:
     
@@ -66,6 +68,7 @@ class Profiler(ContextDecorator):
         path: str = "profile",
         format: str = "chrome_timeline.json",
         formats: List[str] = None,
+        with_backtrace: bool = False,
         **kwargs
     ) -> None:
         if not formats:
@@ -90,6 +93,7 @@ class Profiler(ContextDecorator):
                 enable_cupti()
             else:
                 get_logger().warning("CuPTI unavailable")
+        self.with_backtrace = with_backtrace
 
     @property
     def path(self):
@@ -116,6 +120,7 @@ class Profiler(ContextDecorator):
         _running_profiler = self
         self._pid = os.getpid()
         start_profile(self._options)
+        self._origin_enable_bt = set_python_backtrace_enabled(self.with_backtrace)
         return self
 
     def stop(self):
@@ -127,6 +132,7 @@ class Profiler(ContextDecorator):
         self._dump_callback = stop_profile()
         self._pid = os.getpid()
         _living_profilers.add(self)
+        set_python_backtrace_enabled(self._origin_enable_bt)
 
     def dump(self):
         if self._dump_callback is not None:

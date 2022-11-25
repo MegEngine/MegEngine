@@ -28,6 +28,7 @@ public:
     const OpDef& op() const { return m_op; }
 
     std::string to_string() const override;
+    std::string raw_type() const { return "ApplyOp"; }
 };
 
 /**
@@ -54,7 +55,7 @@ public:
     }
 
     Attr attr() const { return m_attr; }
-
+    std::string raw_type() const { return "GetAttr"; }
     std::string to_string() const;
 };
 
@@ -104,6 +105,7 @@ public:
     DType dtype() const { return m_dtype; }
     ValueShape shape() const { return m_shape; }
     Format format() const { return m_format; }
+    std::string raw_type() const { return "CreateTensor"; }
 
     std::string to_string() const override;
 };
@@ -122,6 +124,7 @@ public:
     DTRCommand(Kind kind) : m_kind(kind) {}
 
     Kind kind() const { return m_kind; }
+    std::string raw_type() const { return "DTRCommand"; }
 
     std::string to_string() const override;
 
@@ -132,6 +135,7 @@ public:
 class GetName final : public OperatorImpl<GetName, Operator::GetAttrLike> {
 public:
     std::string to_string() const override;
+    std::string raw_type() const { return "GetName"; }
 
     ValueRefList fallback(Span<ValueRef> inputs) const override { return {ValueRef()}; }
 };
@@ -148,6 +152,7 @@ public:
     RenameValue(std::string name) : m_name(name) {}
 
     std::string name() const { return m_name; }
+    std::string raw_type() const { return "RenameValue"; }
 
     std::string to_string() const override;
 
@@ -160,11 +165,13 @@ class IsScalar final : public OperatorImpl<IsScalar, Operator::GetAttrLike> {
 private:
 public:
     std::string to_string() const override;
+    std::string raw_type() const { return "IsScalar"; }
 };
 
 class GetFormat final : public OperatorImpl<GetFormat, Operator::GetAttrLike> {
 public:
     std::string to_string() const override;
+    std::string raw_type() const { return "GetFromat"; }
 };
 
 class SetFormat final : public OperatorImpl<SetFormat, Operator::IdentityLike> {
@@ -175,6 +182,7 @@ public:
     SetFormat(std::string format) : m_format(format) {}
 
     Format format() const { return m_format; }
+    std::string raw_type() const { return "SetFromat"; }
 
     std::string to_string() const override;
 };
@@ -182,6 +190,7 @@ public:
 class GetVarVal final : public OperatorImpl<GetVarVal, Operator::GetAttrLike> {
 public:
     std::string to_string() const override;
+    std::string raw_type() const { return "GetVarVal"; }
 };
 
 class CreateNode final : public OperatorImpl<CreateNode> {
@@ -192,6 +201,7 @@ public:
     CreateNode(cg::VarNode* node) : m_node(node) {}
 
     cg::VarNode* node() const { return m_node; }
+    std::string raw_type() const { return "CreateNode"; }
 
     std::string to_string() const override;
 };
@@ -199,6 +209,7 @@ public:
 class DupTensor final : public OperatorImpl<DupTensor, Operator::IdentityLike> {
 public:
     std::string to_string() const override { return "DupTensor"; }
+    std::string raw_type() const { return "DupTensor"; }
 };
 
 }  // namespace imperative

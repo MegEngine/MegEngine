@@ -3,6 +3,7 @@
 #include <any>
 #include <atomic>
 
+#include "./backtrace.h"
 #include "megbrain/imperative/op_def.h"
 
 namespace mgb::imperative::interpreter {
@@ -63,10 +64,13 @@ struct Interpreter {
 
         virtual void push_scope(std::string name) = 0;
         virtual void pop_scope(std::string name) = 0;
+
+        virtual BackTraceInfoPtr& get_backtrace() = 0;
+        virtual void set_backtrace(BackTraceInfoPtr bt) = 0;
+        virtual void clear_backtrace() = 0;
     };
 
     virtual std::unique_ptr<Channel> create_channel() = 0;
-
     static Interpreter& inst();
 
 protected:

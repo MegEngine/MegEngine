@@ -74,6 +74,8 @@ public:
 
     std::string to_string() const;
 
+    std::string name() const;
+
     const std::string scope() const;
 
     const std::string make_name() const;
