@@ -1,7 +1,7 @@
 #pragma once
 
 #include "megbrain_build_config.h"
-#if MGB_OPENCL
+#if MGB_JIT && MGB_OPENCL
 
 #include "megbrain/jit/compiler.h"
 
