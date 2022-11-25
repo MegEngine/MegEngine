@@ -462,7 +462,7 @@ void run<all_oprs>(Backend backend, CompNode cn) {
     CHECK_ELEM2(FUSE_ADD_TANH, true, none);
     CHECK_ELEM2(FUSE_ADD_H_SWISH, true, none);
 
-    ASSERT_EQ(ast_c::elem_opr_generator().size(), tasks.size());
+    ASSERT_EQ(ast_c::elem_opr_generator(cn.device_type()).size(), tasks.size());
 
     auto type_cvt_test = [&](const char* name, DType src_dtype, DType dst_dtype) {
         tasks.emplace_back(name, [cn, src_dtype, dst_dtype]() {
@@ -496,7 +496,7 @@ void run<all_oprs>(Backend backend, CompNode cn) {
             }
             if (!::testing::Test::HasFailure()) {
                 mgb_log("going to run %s on worker %d", tasks[id].first, wid);
-                ASSERT_NO_THROW(tasks[id].second()) << "failed for " << tasks[id].first;
+                ASSERT_NO_THROW(tasks[id].second());
             }
         }
     };
@@ -1449,7 +1449,9 @@ TEST(TestJITNvrtc, JITConfig) {
         x = opr::Reduce::make(x + 2, {ReduceMode::SUM, 2});  // Reduce
 
         auto func = cg->compile({make_callback_copy(x + 1, *host_x)});
-        auto comp_seq = dynamic_cast<CompSeq*>(func.get());
+        //! cg->compile always return CompSeq* cast to AsyncExecutable*, so it`s safe
+        //! use static_cast, as Android bazel -copt will disable rtti
+        auto comp_seq = static_cast<CompSeq*>(func.get());
         ASSERT_TRUE(comp_seq != nullptr);
 
         bool dimshuffle_found = false, reduce_found = false, jit_executor_found = false;

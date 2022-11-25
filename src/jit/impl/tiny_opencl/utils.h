@@ -21,7 +21,7 @@ int safe_int(S val) {
 
 enum class LayoutType {
     SCALAR = 0,
-    BROADCAST = 1,
+    CHANNEL_BROADCAST = 1,
     VEC = 2,
 };
 

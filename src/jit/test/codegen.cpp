@@ -1,6 +1,8 @@
 #include <memory>
 #include "./helper.h"
 
+#include "megbrain/comp_node_env.h"
+#include "megbrain/gopt/inference.h"
 #include "megbrain/jit/executor_opr.h"
 #include "megbrain/opr/basic_arith.h"
 #include "megbrain/opr/basic_arith_wrapper.h"
@@ -279,7 +281,6 @@ void run_mlir_mode(CompNode cn) {
     MGB_ASSERT_TENSOR_NEAR(host_y, host_y_jit, opt.maxerr);
 }
 #endif
-
 }  // anonymous namespace
 
 /* ===================== TestJITHalideCodeGenCude ===================== */
@@ -323,32 +324,11 @@ TEST(TestJITMlirCodeGen, BasicGPU) {
 }
 
 /* ===================== TestJITMlirUnaryElemwise ===================== */
+#define FOREACH_UNARY_MODE(cb)                                                       \
+    cb(RELU) cb(ABS) cb(NEGATE) cb(ACOS) cb(ASIN) cb(CEIL) cb(EXP) cb(FLOOR) cb(LOG) \
+            cb(LOG1P) cb(SIN) cb(COS) cb(TANH) cb(FAST_TANH) cb(H_SWISH) cb(SIGMOID) \
+                    cb(EXPM1) cb(ROUND) cb(ERF) cb(ERFINV) cb(ERFC) cb(ERFCINV)
 
-// clang-format off
-#define FOREACH_UNARY_MODE(cb) \
-    cb(RELU) \
-    cb(ABS) \
-    cb(NEGATE) \
-    cb(ACOS) \
-    cb(ASIN) \
-    cb(CEIL) \
-    cb(EXP) \
-    cb(FLOOR) \
-    cb(LOG) \
-    cb(LOG1P) \
-    cb(SIN) \
-    cb(COS) \
-    cb(TANH) \
-    cb(FAST_TANH) \
-    cb(H_SWISH) \
-    cb(SIGMOID) \
-    cb(EXPM1) \
-    cb(ROUND) \
-    cb(ERF) \
-    cb(ERFINV) \
-    cb(ERFC) \
-    cb(ERFCINV)
-// clang-format on
 template <typename tag>
 class TestJITMlirUnaryElemwise : public ::testing::Test {};
 
@@ -388,34 +368,13 @@ TYPED_TEST(TestJITMlirUnaryElemwise, runGpu) {
 }
 
 /* ===================== TestJITMlirBinaryElemwise ===================== */
+#define FOREACH_BINARY_MODE(cb)                                                        \
+    cb(ADD) cb(FLOOR_DIV) cb(MUL) cb(MAX) cb(MIN) cb(MOD) cb(SUB) cb(TRUE_DIV) cb(POW) \
+            cb(ABS_GRAD) cb(SIGMOID_GRAD) cb(SWITCH_GT0) cb(TANH_GRAD) cb(LT) cb(LEQ)  \
+                    cb(EQ) cb(FUSE_ADD_RELU) cb(LOG_SUM_EXP) cb(FUSE_ADD_TANH)         \
+                            cb(FAST_TANH_GRAD) cb(FUSE_ADD_SIGMOID) cb(H_SWISH_GRAD)   \
+                                    cb(FUSE_ADD_H_SWISH) cb(ATAN2)
 
-// clang-format off
-#define FOREACH_BINARY_MODE(cb) \
-    cb(ADD) \
-    cb(FLOOR_DIV) \
-    cb(MUL) \
-    cb(MAX) \
-    cb(MIN) \
-    cb(MOD) \
-    cb(SUB) \
-    cb(TRUE_DIV) \
-    cb(POW) \
-    cb(ABS_GRAD) \
-    cb(SIGMOID_GRAD) \
-    cb(SWITCH_GT0) \
-    cb(TANH_GRAD) \
-    cb(LT) \
-    cb(LEQ) \
-    cb(EQ) \
-    cb(FUSE_ADD_RELU) \
-    cb(LOG_SUM_EXP) \
-    cb(FUSE_ADD_TANH) \
-    cb(FAST_TANH_GRAD) \
-    cb(FUSE_ADD_SIGMOID) \
-    cb(H_SWISH_GRAD) \
-    cb(FUSE_ADD_H_SWISH) \
-    cb(ATAN2)
-// clang-format on
 template <typename tag>
 class TestJITMlirBinaryElemwise : public ::testing::Test {};
 
@@ -445,13 +404,8 @@ TYPED_TEST(TestJITMlirBinaryElemwise, runGpu) {
 }
 
 /* ===================== TestJITMlirTenaryElemwise ===================== */
+#define FOREACH_TERNARY_MODE(cb) cb(COND_LEQ_MOV) cb(COND_LT_MOV) cb(FUSE_MUL_ADD3)
 
-// clang-format off
-#define FOREACH_TERNARY_MODE(cb) \
-    cb(COND_LEQ_MOV) \
-    cb(COND_LT_MOV) \
-    cb(FUSE_MUL_ADD3) \
-// clang-format on
 template <typename tag>
 class TestJITMlirTernaryElemwise : public ::testing::Test {};
 
@@ -463,8 +417,8 @@ FOREACH_TERNARY_MODE(def_tag)
 #undef def_tag
 
 #define t(n) n,
-        using mlir_elemwise_ternary_types =
-                ::testing::Types<FOREACH_TERNARY_MODE(t) COND_LEQ_MOV>;
+using mlir_elemwise_ternary_types =
+        ::testing::Types<FOREACH_TERNARY_MODE(t) COND_LEQ_MOV>;
 #undef t
 TYPED_TEST_CASE(TestJITMlirTernaryElemwise, mlir_elemwise_ternary_types);
 TYPED_TEST(TestJITMlirTernaryElemwise, run) {
@@ -479,7 +433,6 @@ TYPED_TEST(TestJITMlirTernaryElemwise, runGpu) {
 }
 
 #undef SKIP_MODE
-
 
 /* ===================== TestJITMlirTypeCvt ===================== */
 
@@ -505,35 +458,35 @@ void run_typecvt(CompNode cn) {
     auto y_jit = JITExecutor::make(igraph, ig_gen->orig_inps());
 
     HostTensorND host_y, host_y_jit;
-    auto func = graph->compile({make_callback_copy(y, host_y),
-                                make_callback_copy(y_jit, host_y_jit)});
+    auto func = graph->compile(
+            {make_callback_copy(y, host_y), make_callback_copy(y_jit, host_y_jit)});
     func->execute();
 
     MGB_ASSERT_TENSOR_EQ(host_y, host_y_jit);
 };
 
-#define add_typecvt_gtest(itype, otype) \
-    TEST(TestJITMlirTypeCvt, itype##_to_##otype) { \
+#define add_typecvt_gtest(itype, otype)                                  \
+    TEST(TestJITMlirTypeCvt, itype##_to_##otype) {                       \
         run_typecvt<dtype::itype, dtype::otype>(CompNode::load("cpu0")); \
-    } \
-    TEST(TestJITMlirTypeCvt, itype##_to_##otype##_GPU) { \
-        REQUIRE_GPU(1); \
+    }                                                                    \
+    TEST(TestJITMlirTypeCvt, itype##_to_##otype##_GPU) {                 \
+        REQUIRE_GPU(1);                                                  \
         run_typecvt<dtype::itype, dtype::otype>(CompNode::load("gpu0")); \
     }
 
 #if !MEGDNN_DISABLE_FLOAT16
 
-// TODO: the support for f16 and bf16 is currently not complete in mlir
+    // TODO: the support for f16 and bf16 is currently not complete in mlir
 
-// FPExtOp
-// add_typecvt_gtest(Float16, Float32);
-// add_typecvt_gtest(BFloat16, Float32);
-// add_typecvt_gtest(Float16, BFloat16);
+    // FPExtOp
+    // add_typecvt_gtest(Float16, Float32);
+    // add_typecvt_gtest(BFloat16, Float32);
+    // add_typecvt_gtest(Float16, BFloat16);
 
-// FPTruncOp
-// add_typecvt_gtest(Float32, Float16);
-// add_typecvt_gtest(Float32, BFloat16);
-// add_typecvt_gtest(Float16, BFloat16);
+    // FPTruncOp
+    // add_typecvt_gtest(Float32, Float16);
+    // add_typecvt_gtest(Float32, BFloat16);
+    // add_typecvt_gtest(Float16, BFloat16);
 
 #endif
 
@@ -557,8 +510,7 @@ add_typecvt_gtest(Uint8, Float32);
 
 /* ===================== TestJITMlirDimshuffle ===================== */
 
-void run_dimshuffle(CompNode cn, TensorShape ishape,
-                    const std::vector<int>& pattern) {
+void run_dimshuffle(CompNode cn, TensorShape ishape, const std::vector<int>& pattern) {
     set_backend(Backend::MLIR);
     auto graph = ComputingGraph::make();
     HostTensorGenerator<> gen;
@@ -579,8 +531,8 @@ void run_dimshuffle(CompNode cn, TensorShape ishape,
     auto y_jit = JITExecutor::make(igraph, ig_gen->orig_inps());
 
     HostTensorND host_y, host_y_jit;
-    auto func = graph->compile({make_callback_copy(y, host_y),
-                                make_callback_copy(y_jit, host_y_jit)});
+    auto func = graph->compile(
+            {make_callback_copy(y, host_y), make_callback_copy(y_jit, host_y_jit)});
     func->execute();
 
     MGB_ASSERT_TENSOR_EQ(host_y, host_y_jit);
