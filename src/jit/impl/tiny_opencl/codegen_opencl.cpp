@@ -53,7 +53,7 @@ void gen_input_code_and_gen_input_data_update(
                 (is_half ? "half4 x_after_read" : "float4 x_after_read") +
                 std::to_string(i));
         std::string coord = "coord";
-        if (LayoutType::BROADCAST == b_info[i]) {
+        if (LayoutType::CHANNEL_BROADCAST == b_info[i]) {
             coord = "coord_b";
         }
         std::string read_method = read_image_func + "(" +
@@ -102,6 +102,7 @@ __kernel void {{KERNEL_NAME}} (
         __private const int global_size_dim1,
         __private const int wc_size,
         __private const int hb_size,
+        __private const int h,
         __private const uint w_size
         ) {
     #if OPENCL_ENABLE_FP16
@@ -121,7 +122,7 @@ __kernel void {{KERNEL_NAME}} (
     for (; hb < hb_size; hb += global_size_dim1) {
         for (; wc < wc_size; wc += global_size_dim0) {
             int2 coord = (int2)(wc, hb);
-            int2 coord_b = (int2)(wc / w_size, 0);
+            int2 coord_b = (int2)(wc / w_size, hb/h);
             {{INTERNAL_DECL_EXPRS}}
             {{ASSIGN_EXPRS}}
             {{INTERNAL_ASSIGN_EXPRS}}

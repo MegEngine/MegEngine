@@ -27,6 +27,9 @@ void jit::set_backend(Backend backend) {
         case Backend::MLIR:
             setenv("MGB_JIT_BACKEND", "MLIR", 1);
             return;
+        case Backend::TINYOPENCL:
+            setenv("MGB_JIT_BACKEND", "TINYOPENCL", 1);
+            return;
         default:
             mgb_assert(0);
     }

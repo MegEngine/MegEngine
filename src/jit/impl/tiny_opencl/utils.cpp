@@ -32,7 +32,7 @@ std::vector<LayoutType> get_channel_broadcast_info(
             if (ih == h && iw == w) {
                 ret.push_back(LayoutType::VEC);
             } else {
-                ret.push_back(LayoutType::BROADCAST);
+                ret.push_back(LayoutType::CHANNEL_BROADCAST);
                 mgb_assert(ih == 1 && iw == 1, "invalid args for OpenCL jit");
             }
         }

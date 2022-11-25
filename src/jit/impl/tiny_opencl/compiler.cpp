@@ -109,6 +109,7 @@ void OpenCLExecutable::execute(JITExecutor* fusion_opr) {
     }
     mgb_assert(
             args.outputs.size() == 1, "OpenCL elemwise jit output size should be one");
+    size_t h = args.outputs[0].layout[1];
 
     //! create kernel
     std::string compile_options;
@@ -175,7 +176,8 @@ void OpenCLExecutable::execute(JITExecutor* fusion_opr) {
             {{&i_WGSX, sizeof(int)},
              {&i_WGSY, sizeof(int)},
              {&wc_size, sizeof(int)},
-             {&hb_size, sizeof(int)}});
+             {&hb_size, sizeof(int)},
+             {&h, sizeof(int)}});
     //! have broadcasted_channel_like_input case
     int may_w_size = args.outputs[0].layout[3];
     kernel.add_arg({&may_w_size, sizeof(cl_uint)});
