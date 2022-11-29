@@ -289,33 +289,6 @@ def einsum_impl(shapes, output_shape, inputs, ctx: EinsumContext):
     return result._tracer
 
 
-def einsum_interpret(equation, inputs):
-    input_ndims = tuple(map(lambda x: x.ndim, inputs))
-    shapes, output_shape = einsum_parse_equation(equation, input_ndims)
-    ctx = EinsumContext()
-    dim2val_cache = {}
-
-    def dim2val(dim: str):
-        if dim in dim2val_cache:
-            return dim2val_cache[dim]
-        for i, shape in enumerate(shapes):
-            if dim in shape:
-                dim2val_cache[dim] = inputs[i].shape[shape.index(dim)]
-                break
-        return dim2val_cache[dim]
-
-    def dims2val(dims: str):
-        return reduce(lambda x, y: x * y, map(dim2val, dims))
-
-    ctx.dims2val = dims2val
-    ctx.reduce = lambda x, axis: sum(x, axis=axis)
-    ctx.reshape = reshape
-    ctx.matmul = matmul
-    ctx.broadcast = broadcast_to
-    ctx.transpose = transpose
-    return einsum_impl(shapes, output_shape, inputs, ctx)
-
-
 @lru_cache(maxsize=None)
 def _get_einsum_op(
     equation: str, dtype, device, input_ndims
