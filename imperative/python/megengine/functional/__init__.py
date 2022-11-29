@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 # pylint: disable=redefined-builtin
 from . import metric, utils, vision
+from .einsum import einsum
 from .elemwise import *
 from .math import *
 from .nn import *
 from .tensor import *
 from .utils import *
-from .einsum import einsum
 
 from . import distributed  # isort:skip
 

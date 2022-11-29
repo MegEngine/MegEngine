@@ -130,11 +130,13 @@ def einsum_infer_output_shape(shapes):
                 dup_dims.add(dim)
             else:
                 dims.add(dim)
+    unique_shapes = set()
     for shape in shapes:
         for dim in shape:
             if dim not in dup_dims:
-                output_shape = output_shape + (dim,)
-    return output_shape
+                unique_shapes.add(dim)
+    unique_shapes = tuple(sorted(unique_shapes))
+    return output_shape + unique_shapes
 
 
 def einsum_remove_ellipsis(
