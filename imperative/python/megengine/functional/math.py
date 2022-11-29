@@ -1010,25 +1010,3 @@ def _check_non_finite(inps: Iterable[Tensor], scale=1.0) -> Tensor:
         inps[i]._reset(oups[i])
 
     return out
-
-
-def _diag_plane(inp: Tensor, axes: Sequence[int]) -> Tensor:
-    r"""Get the diagonal plane of input tensor along given axes.
-
-    This function is primarily used internally by einsum.
-
-    Args:
-        inp: input tensor.
-        axes: axes forming the square which will derive the diagonal vector;
-            they are assumed to have same length.
-
-    Returns:
-        a tensor, whose first dimension corresponds to the diagonal vector,
-        and remaining dimensions have the same order as dimensions in ``inp``
-        which are not in ``axes``.
-    """
-    all_axes = set(range(inp.ndim))
-    remaining_axes = sorted(all_axes.difference(axes))
-    transposed = transpose(inp, list(axes) + remaining_axes)
-    diag_len = inp.shape[axes[0]]
-    return transposed[tuple(arange(diag_len, dtype=np.int32) for _ in range(len(axes)))]

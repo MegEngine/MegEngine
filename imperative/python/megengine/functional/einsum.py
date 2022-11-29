@@ -6,7 +6,7 @@ import numpy as np
 from ..core.tensor.utils import subgraph_fn
 from ..tensor import Tensor
 from .math import matmul, sum
-from .tensor import broadcast_to, reshape, transpose
+from .tensor import arange, broadcast_to, reshape, transpose
 
 EinsumDimension = str
 EinsumShape = Tuple[EinsumDimension, ...]
@@ -19,6 +19,7 @@ class EinsumContext:
     transpose: Callable[[Any, List[int]], Any]
     reduce: Callable[[Any, List[int]], Any]
     matmul: Callable[[Any, Any], Any]
+    diag_plane: Callable[[Any, List[int]], Any]
 
 
 class EinsumOperand:
@@ -68,6 +69,33 @@ class EinsumOperand:
         axis = [*filter(lambda x: self.shape[x] not in shape, range(len(self.shape)))]
         assert tuple([*filter(lambda x: x in shape, self.shape)]) == shape
         return EinsumOperand(shape, self._ctx.reduce(self._tracer, axis), self._ctx)
+
+    def diag_plane(self, shape: EinsumShape) -> "EinsumOperand":
+        # iiijkpppqqqrpppqqq -> ikjprq (may reorder)
+        if shape == self._shape:
+            return self
+        for dim in shape:
+            assert len(dim) == 1
+            assert dim in self.shape
+            assert shape.count(dim) == 1
+        acc = self
+        while True:
+            dup_found = False
+            for dim in acc.shape:
+                if acc.shape.count(dim) == 1:
+                    continue
+                dup_found = True
+                axes = [i for i, e in enumerate(acc.shape) if e == dim]
+                acc = EinsumOperand(
+                    (dim,) + tuple([e for e in acc.shape if e != dim]),
+                    acc._ctx.diag_plane(acc._tracer, axes),
+                    acc._ctx,
+                )
+            if not dup_found:
+                return acc
+
+    def dedup_dim(self) -> "EinsumOperand":
+        return self.diag_plane(tuple(set(self.shape)))
 
     def __matmul__(self, rhs: "EinsumOperand") -> "EinsumOperand":
         assert len(self.shape) == 3 and len(rhs.shape) == 3
@@ -163,8 +191,6 @@ def einsum_remove_ellipsis(
 
     for i in range(len(shapes)):
         shape, ndim = shapes[i], input_ndims[i]
-        for dim in shape:
-            assert shape.count(dim) == 1, "diag unsupported"
         if "." in shape:
             if not ellipsis_dims:
                 len_ellipsis = ndim - (len(shape) - 1)
@@ -251,9 +277,9 @@ def einsum_impl(shapes, output_shape, inputs, ctx: EinsumContext):
                 if dim not in dim2firstop:
                     dim2firstop[dim] = i
             dims.add(dim)
-    result = EinsumOperand(shapes[0], inputs[0], ctx)
+    result = EinsumOperand(shapes[0], inputs[0], ctx).dedup_dim()
     for i in range(1, len(inputs)):
-        rhs = EinsumOperand(shapes[i], inputs[i], ctx)
+        rhs = EinsumOperand(shapes[i], inputs[i], ctx).dedup_dim()
         lshape = result.shape
         batch_dims: Tuple[EinsumDimension, ...] = ()
         sum_dims: Tuple[EinsumDimension, ...] = ()
@@ -289,6 +315,58 @@ def einsum_impl(shapes, output_shape, inputs, ctx: EinsumContext):
         tuple(filter(lambda x: x in output_shape, result.shape))
     ).transpose(output_shape)
     return result._tracer
+
+
+def diag_plane(inp: Tensor, axes: List[int]) -> Tensor:
+    r"""Get the diagonal plane of input tensor along given axes.
+
+    This function is primarily used internally by einsum.
+
+    Args:
+        inp: input tensor.
+        axes: axes forming the square which will derive the diagonal vector;
+            they are assumed to have same length.
+
+    Returns:
+        a tensor, whose first dimension corresponds to the diagonal vector,
+        and remaining dimensions have the same order as dimensions in ``inp``
+        which are not in ``axes``.
+    """
+    all_axes = set(range(inp.ndim))
+    remaining_axes = sorted(all_axes.difference(axes))
+    transposed = transpose(inp, list(axes) + remaining_axes)
+    diag_len = inp.shape[axes[0]]
+    return transposed[tuple(arange(diag_len, dtype=np.int32) for _ in range(len(axes)))]
+
+
+def einsum_interpret(equation, inputs):
+    input_ndims = tuple(map(lambda x: x.ndim, inputs))
+    shapes, output_shape = einsum_parse_equation(equation, input_ndims)
+    ctx = EinsumContext()
+    dim2val_cache = {}
+
+    def dim2val(dim: str):
+        if dim in dim2val_cache:
+            return dim2val_cache[dim]
+        for i, shape in enumerate(shapes):
+            if dim in shape:
+                dim2val_cache[dim] = inputs[i].shape[shape.index(dim)]
+                break
+        return dim2val_cache[dim]
+
+    def dims2val(dims: str):
+        if len(dims) == 0:
+            return 1
+        return reduce(lambda x, y: x * y, map(dim2val, dims))
+
+    ctx.dims2val = dims2val
+    ctx.reduce = lambda x, axis: sum(x, axis=axis)
+    ctx.reshape = reshape
+    ctx.matmul = matmul
+    ctx.broadcast = broadcast_to
+    ctx.transpose = transpose
+    ctx.diag_plane = diag_plane
+    return einsum_impl(shapes, output_shape, inputs, ctx)
 
 
 @lru_cache(maxsize=None)
@@ -343,6 +421,9 @@ def _get_einsum_op(
         ctx.matmul = lambda x, y: f(builtin.BatchedMatrixMul(), x, y)
         ctx.broadcast = lambda x, dims: f(builtin.Broadcast(), x, concat_dims(dims))
         ctx.transpose = lambda x, axis: f(builtin.Dimshuffle(axis), x)
+        ctx.diag_plane = lambda x, axes: (_ for _ in ()).throw(
+            NotImplementedError("diag_plane not implemented in this mode")
+        )
         return (einsum_impl(shapes, output_shape, inputs, ctx),), (True,)
 
     return einsum
@@ -362,4 +443,4 @@ def einsum_subgraph(equation, inputs: Tuple[Tensor, ...]) -> Tensor:
 
 
 def einsum(equation: str, *args: Tensor) -> Tensor:
-    return einsum_subgraph(equation, args)
+    return einsum_interpret(equation, args)
