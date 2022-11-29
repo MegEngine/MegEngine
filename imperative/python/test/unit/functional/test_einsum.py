@@ -29,7 +29,9 @@ def test_einsum():
         ("ik..., kj...", [(2, 3, 4, 5), (3, 6, 4, 5)]),
     ]
     for equation, shapes in cases:
-        inputs = [*map(lambda x: np.random.randint(100, size=x).astype(np.float32), shapes)]
+        inputs = [
+            *map(lambda x: np.random.randint(100, size=x).astype(np.float32), shapes)
+        ]
         np_out = np.einsum(equation, *inputs)
         mge_out = F.einsum(equation, *map(lambda x: Tensor(x), inputs)).numpy()
         np.testing.assert_equal(np_out, mge_out)

@@ -1011,6 +1011,7 @@ def _check_non_finite(inps: Iterable[Tensor], scale=1.0) -> Tensor:
 
     return out
 
+
 def _diag_plane(inp: Tensor, axes: Sequence[int]) -> Tensor:
     r"""Get the diagonal plane of input tensor along given axes.
 
