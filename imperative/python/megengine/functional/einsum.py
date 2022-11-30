@@ -1,4 +1,5 @@
-from functools import lru_cache, reduce
+import os
+from functools import lru_cache, partial, reduce
 from typing import Any, Callable, List, Optional, Tuple
 
 import numpy as np
@@ -12,6 +13,12 @@ EinsumDimension = str
 EinsumShape = Tuple[EinsumDimension, ...]
 
 
+# Different einsum implementations, 0 means using subgraph, 1 means using interpret
+# The former is faster but may have some unknown bugs.
+# When the run fails, we recommend using the latter(by setting this variable to 1) to run your code again.
+einsum_impl = int(os.environ.get("MGE_EINSUM_IMPL", "0"))
+
+
 class EinsumContext:
     dims2val: Callable[[str], Any]
     reshape: Callable[[Any, tuple], Any]
@@ -19,7 +26,7 @@ class EinsumContext:
     transpose: Callable[[Any, List[int]], Any]
     reduce: Callable[[Any, List[int]], Any]
     matmul: Callable[[Any, Any], Any]
-    diag_plane: Callable[[Any, List[int]], Any]
+    diag_plane: Callable[[Any, int, List[int]], Any]
 
 
 class EinsumOperand:
@@ -70,6 +77,7 @@ class EinsumOperand:
         assert tuple([*filter(lambda x: x in shape, self.shape)]) == shape
         return EinsumOperand(shape, self._ctx.reduce(self._tracer, axis), self._ctx)
 
+    # TODO: Some scenarios should be re-implemented using dnn kernel
     def diag_plane(self, shape: EinsumShape) -> "EinsumOperand":
         # iiijkpppqqqrpppqqq -> ikjprq (may reorder)
         if shape == self._shape:
@@ -88,7 +96,7 @@ class EinsumOperand:
                 axes = [i for i, e in enumerate(acc.shape) if e == dim]
                 acc = EinsumOperand(
                     (dim,) + tuple([e for e in acc.shape if e != dim]),
-                    acc._ctx.diag_plane(acc._tracer, axes),
+                    acc._ctx.diag_plane(acc._tracer, len(acc.shape), axes),
                     acc._ctx,
                 )
             if not dup_found:
@@ -317,7 +325,7 @@ def einsum_impl(shapes, output_shape, inputs, ctx: EinsumContext):
     return result._tracer
 
 
-def diag_plane(inp: Tensor, axes: List[int]) -> Tensor:
+def diag_plane_interpret(inp: Tensor, inp_ndim: int, axes: List[int]) -> Tensor:
     r"""Get the diagonal plane of input tensor along given axes.
 
     This function is primarily used internally by einsum.
@@ -332,11 +340,34 @@ def diag_plane(inp: Tensor, axes: List[int]) -> Tensor:
         and remaining dimensions have the same order as dimensions in ``inp``
         which are not in ``axes``.
     """
-    all_axes = set(range(inp.ndim))
+    all_axes = set(range(inp_ndim))
     remaining_axes = sorted(all_axes.difference(axes))
     transposed = transpose(inp, list(axes) + remaining_axes)
     diag_len = inp.shape[axes[0]]
     return transposed[tuple(arange(diag_len, dtype=np.int32) for _ in range(len(axes)))]
+
+
+def diag_plane_subgraph(
+    inp: Tensor, inp_ndim: int, axes: List[int], f: Any, c: Any
+) -> Any:
+    from megengine.core.ops import builtin
+
+    all_axes = set(range(inp_ndim))
+    remaining_axes = sorted(all_axes.difference(axes))
+    transposed = f(builtin.Dimshuffle(list(axes) + remaining_axes), inp)
+    diag_len = f(builtin.GetVarShape(axis=axes[0]), inp)
+    mav_arg = list(map(lambda x: (x, False, False, False, True), range(len(axes))))
+    mav_index = lambda: f(
+        builtin.TypeCvt("int32"),
+        f(
+            builtin.Linspace(),
+            c(0),
+            f(builtin.Elemwise("SUB"), diag_len, c(1)),
+            diag_len,
+        ),
+    )
+    mav_indices = [mav_index() for _ in range(len(axes))]
+    return f(builtin.IndexingMultiAxisVec(mav_arg), transposed, *mav_indices)
 
 
 def einsum_interpret(equation, inputs):
@@ -365,7 +396,7 @@ def einsum_interpret(equation, inputs):
     ctx.matmul = matmul
     ctx.broadcast = broadcast_to
     ctx.transpose = transpose
-    ctx.diag_plane = diag_plane
+    ctx.diag_plane = diag_plane_interpret
     return einsum_impl(shapes, output_shape, inputs, ctx)
 
 
@@ -421,9 +452,7 @@ def _get_einsum_op(
         ctx.matmul = lambda x, y: f(builtin.BatchedMatrixMul(), x, y)
         ctx.broadcast = lambda x, dims: f(builtin.Broadcast(), x, concat_dims(dims))
         ctx.transpose = lambda x, axis: f(builtin.Dimshuffle(axis), x)
-        ctx.diag_plane = lambda x, axes: (_ for _ in ()).throw(
-            NotImplementedError("diag_plane not implemented in this mode")
-        )
+        ctx.diag_plane = partial(diag_plane_subgraph, f=f, c=c)
         return (einsum_impl(shapes, output_shape, inputs, ctx),), (True,)
 
     return einsum
@@ -443,4 +472,6 @@ def einsum_subgraph(equation, inputs: Tuple[Tensor, ...]) -> Tensor:
 
 
 def einsum(equation: str, *args: Tensor) -> Tensor:
+    if einsum_impl == 0:
+        return einsum_subgraph(equation, args)
     return einsum_interpret(equation, args)

@@ -14,7 +14,16 @@ from ..core.tensor.utils import _normalize_axis
 from ..tensor import Tensor
 from ..utils.deprecation import deprecated_kwargs_default
 from .elemwise import _elemwise_multi_type, clip
-from .tensor import arange, broadcast_to, concat, expand_dims, squeeze, swapaxes, transpose, zeros
+from .tensor import (
+    arange,
+    broadcast_to,
+    concat,
+    expand_dims,
+    squeeze,
+    swapaxes,
+    transpose,
+    zeros,
+)
 
 __all__ = [
     "argmax",
