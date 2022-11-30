@@ -6,6 +6,9 @@
 #include "src/arm_common/elemwise_helper/elemwise_op.h"
 #include "src/arm_common/simd_macro/marm_neon.h"
 
+#include "midout.h"
+MIDOUT_DECL(megdnn_arm_common_elemwise_multi_type)
+
 namespace {
 
 using namespace megdnn;
@@ -370,10 +373,15 @@ void ElemwiseMultiTypeImpl::on_quantized_mode(
         using dst_ctype = typename DTypeTrait<_dst_dt>::ctype;                        \
         thin_function<void(const src_ctype*, dst_ctype*, DType, DType, size_t)> run = \
                 OpCallerUnary<_op<src_ctype, dst_ctype>, VEC>::run;                   \
-        MEGDNN_DISPATCH_CPU_KERN_OPR(                                                 \
-                run(src.ptr<src_ctype>(), dst.ptr<dst_ctype>(), src.layout.dtype,     \
-                    dst.layout.dtype, nr_elems));                                     \
-        return;                                                                       \
+        MIDOUT_BEGIN(                                                                 \
+                megdnn_arm_common_elemwise_multi_type, midout_iv(0), src_ctype,       \
+                dst_ctype, midout_iv(_mode)) {                                        \
+            MEGDNN_DISPATCH_CPU_KERN_OPR(                                             \
+                    run(src.ptr<src_ctype>(), dst.ptr<dst_ctype>(), src.layout.dtype, \
+                        dst.layout.dtype, nr_elems));                                 \
+            return;                                                                   \
+        }                                                                             \
+        MIDOUT_END();                                                                 \
     }
 
     DISPATCH()
@@ -469,10 +477,16 @@ void ElemwiseMultiTypeImpl::on_quantized_mode(
                 const src_ctype*, const src_ctype*, dst_ctype*, DType, DType, DType, \
                 size_t)>                                                             \
                 run = OpCallerBinary<_op<src_ctype, dst_ctype>, VEC_VEC>::run;       \
-        MEGDNN_DISPATCH_CPU_KERN_OPR(run(                                            \
-                src0.ptr<src_ctype>(), src1.ptr<src_ctype>(), dst.ptr<dst_ctype>(),  \
-                src0.layout.dtype, src1.layout.dtype, dst.layout.dtype, nr_elems));  \
-        return;                                                                      \
+        MIDOUT_BEGIN(                                                                \
+                megdnn_arm_common_elemwise_multi_type, midout_iv(1), src_ctype,      \
+                dst_ctype, midout_iv(_mode)) {                                       \
+            MEGDNN_DISPATCH_CPU_KERN_OPR(                                            \
+                    run(src0.ptr<src_ctype>(), src1.ptr<src_ctype>(),                \
+                        dst.ptr<dst_ctype>(), src0.layout.dtype, src1.layout.dtype,  \
+                        dst.layout.dtype, nr_elems));                                \
+            return;                                                                  \
+        }                                                                            \
+        MIDOUT_END();                                                                \
     }
 
         DISPATCH()
@@ -502,11 +516,16 @@ void ElemwiseMultiTypeImpl::on_quantized_mode(
                 const src_ctype*, const src_ctype, dst_ctype*, DType, DType, DType, \
                 size_t)>                                                            \
                 run = OpCallerBinary<_op<src_ctype, dst_ctype>, VEC_SCALAR>::run;   \
-        MEGDNN_DISPATCH_CPU_KERN_OPR(                                               \
-                run(src0.ptr<src_ctype>(), src1.ptr<src_ctype>()[0],                \
-                    dst.ptr<dst_ctype>(), src0.layout.dtype, src1.layout.dtype,     \
-                    dst.layout.dtype, src0.layout.total_nr_elems()));               \
-        return;                                                                     \
+        MIDOUT_BEGIN(                                                               \
+                megdnn_arm_common_elemwise_multi_type, midout_iv(2), src_ctype,     \
+                dst_ctype, midout_iv(_mode)) {                                      \
+            MEGDNN_DISPATCH_CPU_KERN_OPR(                                           \
+                    run(src0.ptr<src_ctype>(), src1.ptr<src_ctype>()[0],            \
+                        dst.ptr<dst_ctype>(), src0.layout.dtype, src1.layout.dtype, \
+                        dst.layout.dtype, src0.layout.total_nr_elems()));           \
+            return;                                                                 \
+        }                                                                           \
+        MIDOUT_END();                                                               \
     }
 
             DISPATCH()
@@ -525,11 +544,16 @@ void ElemwiseMultiTypeImpl::on_quantized_mode(
                 const src_ctype, const src_ctype*, dst_ctype*, DType, DType, DType, \
                 size_t)>                                                            \
                 run = OpCallerBinary<_op<src_ctype, dst_ctype>, SCALAR_VEC>::run;   \
-        MEGDNN_DISPATCH_CPU_KERN_OPR(                                               \
-                run(src0.ptr<src_ctype>()[0], src1.ptr<src_ctype>(),                \
-                    dst.ptr<dst_ctype>(), src0.layout.dtype, src1.layout.dtype,     \
-                    dst.layout.dtype, src1.layout.total_nr_elems()));               \
-        return;                                                                     \
+        MIDOUT_BEGIN(                                                               \
+                megdnn_arm_common_elemwise_multi_type, midout_iv(3), src_ctype,     \
+                dst_ctype, midout_iv(_mode)) {                                      \
+            MEGDNN_DISPATCH_CPU_KERN_OPR(                                           \
+                    run(src0.ptr<src_ctype>()[0], src1.ptr<src_ctype>(),            \
+                        dst.ptr<dst_ctype>(), src0.layout.dtype, src1.layout.dtype, \
+                        dst.layout.dtype, src1.layout.total_nr_elems()));           \
+            return;                                                                 \
+        }                                                                           \
+        MIDOUT_END();                                                               \
     }
 
             DISPATCH()
@@ -563,11 +587,16 @@ void ElemwiseMultiTypeImpl::on_quantized_mode(
                 const src_ctype*, const src_ctype*, dst_ctype*, DType, DType, DType, \
                 size_t, size_t, size_t)>                                             \
                 run = OpCallerBinary<_op<src_ctype, dst_ctype>, VEC_BCAST101>::run;  \
-        MEGDNN_DISPATCH_CPU_KERN_OPR(                                                \
-                run(src0.ptr<src_ctype>(), src1.ptr<src_ctype>(),                    \
-                    dst.ptr<dst_ctype>(), src0.layout.dtype, src1.layout.dtype,      \
-                    dst.layout.dtype, binfo.x, binfo.y, binfo.z));                   \
-        return;                                                                      \
+        MIDOUT_BEGIN(                                                                \
+                megdnn_arm_common_elemwise_multi_type, midout_iv(4), src_ctype,      \
+                dst_ctype, midout_iv(_mode)) {                                       \
+            MEGDNN_DISPATCH_CPU_KERN_OPR(                                            \
+                    run(src0.ptr<src_ctype>(), src1.ptr<src_ctype>(),                \
+                        dst.ptr<dst_ctype>(), src0.layout.dtype, src1.layout.dtype,  \
+                        dst.layout.dtype, binfo.x, binfo.y, binfo.z));               \
+            return;                                                                  \
+        }                                                                            \
+        MIDOUT_END();                                                                \
     }
 
             DISPATCH()
@@ -586,11 +615,16 @@ void ElemwiseMultiTypeImpl::on_quantized_mode(
                 const src_ctype*, const src_ctype*, dst_ctype*, DType, DType, DType, \
                 size_t, size_t, size_t)>                                             \
                 run = OpCallerBinary<_op<src_ctype, dst_ctype>, BCAST101_VEC>::run;  \
-        MEGDNN_DISPATCH_CPU_KERN_OPR(                                                \
-                run(src0.ptr<src_ctype>(), src1.ptr<src_ctype>(),                    \
-                    dst.ptr<dst_ctype>(), src0.layout.dtype, src1.layout.dtype,      \
-                    dst.layout.dtype, binfo.x, binfo.y, binfo.z));                   \
-        return;                                                                      \
+        MIDOUT_BEGIN(                                                                \
+                megdnn_arm_common_elemwise_multi_type, midout_iv(5), src_ctype,      \
+                dst_ctype, midout_iv(_mode)) {                                       \
+            MEGDNN_DISPATCH_CPU_KERN_OPR(                                            \
+                    run(src0.ptr<src_ctype>(), src1.ptr<src_ctype>(),                \
+                        dst.ptr<dst_ctype>(), src0.layout.dtype, src1.layout.dtype,  \
+                        dst.layout.dtype, binfo.x, binfo.y, binfo.z));               \
+            return;                                                                  \
+        }                                                                            \
+        MIDOUT_END();                                                                \
     }
 
             DISPATCH()
@@ -613,11 +647,16 @@ void ElemwiseMultiTypeImpl::on_quantized_mode(
                 const src_ctype*, const src_ctype*, dst_ctype*, DType, DType, DType,  \
                 size_t, size_t, size_t, size_t)>                                      \
                 run = OpCallerBinary<_op<src_ctype, dst_ctype>, VEC_BCAST101xX>::run; \
-        MEGDNN_DISPATCH_CPU_KERN_OPR(                                                 \
-                run(src0.ptr<src_ctype>(), src1.ptr<src_ctype>(),                     \
-                    dst.ptr<dst_ctype>(), src0.layout.dtype, src1.layout.dtype,       \
-                    dst.layout.dtype, batch_size, binfo.x, binfo.y, binfo.z));        \
-        return;                                                                       \
+        MIDOUT_BEGIN(                                                                 \
+                megdnn_arm_common_elemwise_multi_type, midout_iv(6), src_ctype,       \
+                dst_ctype, midout_iv(_mode)) {                                        \
+            MEGDNN_DISPATCH_CPU_KERN_OPR(                                             \
+                    run(src0.ptr<src_ctype>(), src1.ptr<src_ctype>(),                 \
+                        dst.ptr<dst_ctype>(), src0.layout.dtype, src1.layout.dtype,   \
+                        dst.layout.dtype, batch_size, binfo.x, binfo.y, binfo.z));    \
+            return;                                                                   \
+        }                                                                             \
+        MIDOUT_END();                                                                 \
     }
             size_t batch_size = src0.layout.shape[0] / (binfo.x * binfo.y * binfo.z);
             DISPATCH()
@@ -636,11 +675,16 @@ void ElemwiseMultiTypeImpl::on_quantized_mode(
                 const src_ctype*, const src_ctype*, dst_ctype*, DType, DType, DType,  \
                 size_t, size_t, size_t, size_t)>                                      \
                 run = OpCallerBinary<_op<src_ctype, dst_ctype>, BCAST101xX_VEC>::run; \
-        MEGDNN_DISPATCH_CPU_KERN_OPR(                                                 \
-                run(src0.ptr<src_ctype>(), src1.ptr<src_ctype>(),                     \
-                    dst.ptr<dst_ctype>(), src0.layout.dtype, src1.layout.dtype,       \
-                    dst.layout.dtype, batch_size, binfo.x, binfo.y, binfo.z));        \
-        return;                                                                       \
+        MIDOUT_BEGIN(                                                                 \
+                megdnn_arm_common_elemwise_multi_type, midout_iv(7), src_ctype,       \
+                dst_ctype, midout_iv(_mode)) {                                        \
+            MEGDNN_DISPATCH_CPU_KERN_OPR(                                             \
+                    run(src0.ptr<src_ctype>(), src1.ptr<src_ctype>(),                 \
+                        dst.ptr<dst_ctype>(), src0.layout.dtype, src1.layout.dtype,   \
+                        dst.layout.dtype, batch_size, binfo.x, binfo.y, binfo.z));    \
+            return;                                                                   \
+        }                                                                             \
+        MIDOUT_END();                                                                 \
     }
             size_t batch_size = src1.layout.shape[0] / (binfo.x * binfo.y * binfo.z);
             DISPATCH()
@@ -685,19 +729,25 @@ void ElemwiseMultiTypeImpl::on_quantized_mode(
     //! VEC + VEC + VEC
     if (is_vector(src0.layout) && is_vector(src1.layout) && is_vector(src2.layout)) {
         size_t nr_elems = src0.layout.total_nr_elems();
-#define DISPATCH_SINGLE_MODE(_src_dt, _dst_dt, _mode, _op)                           \
-    case _mode: {                                                                    \
-        using src_ctype = typename DTypeTrait<_src_dt>::ctype;                       \
-        using dst_ctype = typename DTypeTrait<_dst_dt>::ctype;                       \
-        thin_function<void(                                                          \
-                const src_ctype*, const src_ctype*, const src_ctype*, dst_ctype*,    \
-                DType, DType, DType, DType, size_t)>                                 \
-                run = OpCallerTernary<_op<src_ctype, dst_ctype>, VEC_VEC_VEC>::run;  \
-        MEGDNN_DISPATCH_CPU_KERN_OPR(run(                                            \
-                src0.ptr<src_ctype>(), src1.ptr<src_ctype>(), src2.ptr<src_ctype>(), \
-                dst.ptr<dst_ctype>(), src0.layout.dtype, src1.layout.dtype,          \
-                src2.layout.dtype, dst.layout.dtype, nr_elems));                     \
-        return;                                                                      \
+#define DISPATCH_SINGLE_MODE(_src_dt, _dst_dt, _mode, _op)                          \
+    case _mode: {                                                                   \
+        using src_ctype = typename DTypeTrait<_src_dt>::ctype;                      \
+        using dst_ctype = typename DTypeTrait<_dst_dt>::ctype;                      \
+        thin_function<void(                                                         \
+                const src_ctype*, const src_ctype*, const src_ctype*, dst_ctype*,   \
+                DType, DType, DType, DType, size_t)>                                \
+                run = OpCallerTernary<_op<src_ctype, dst_ctype>, VEC_VEC_VEC>::run; \
+        MIDOUT_BEGIN(                                                               \
+                megdnn_arm_common_elemwise_multi_type, midout_iv(8), src_ctype,     \
+                dst_ctype, midout_iv(_mode)) {                                      \
+            MEGDNN_DISPATCH_CPU_KERN_OPR(                                           \
+                    run(src0.ptr<src_ctype>(), src1.ptr<src_ctype>(),               \
+                        src2.ptr<src_ctype>(), dst.ptr<dst_ctype>(),                \
+                        src0.layout.dtype, src1.layout.dtype, src2.layout.dtype,    \
+                        dst.layout.dtype, nr_elems));                               \
+            return;                                                                 \
+        }                                                                           \
+        MIDOUT_END();                                                               \
     }
 
         DISPATCH()
@@ -716,12 +766,17 @@ void ElemwiseMultiTypeImpl::on_quantized_mode(
                 const src_ctype*, const src_ctype*, const src_ctype, dst_ctype*,       \
                 DType, DType, DType, DType, size_t)>                                   \
                 run = OpCallerTernary<_op<src_ctype, dst_ctype>, VEC_VEC_SCALAR>::run; \
-        MEGDNN_DISPATCH_CPU_KERN_OPR(                                                  \
-                run(src0.ptr<src_ctype>(), src1.ptr<src_ctype>(),                      \
-                    src2.ptr<src_ctype>()[0], dst.ptr<dst_ctype>(), src0.layout.dtype, \
-                    src1.layout.dtype, src2.layout.dtype, dst.layout.dtype,            \
-                    src0.layout.total_nr_elems()));                                    \
-        return;                                                                        \
+        MIDOUT_BEGIN(                                                                  \
+                megdnn_arm_common_elemwise_multi_type, midout_iv(9), src_ctype,        \
+                dst_ctype, midout_iv(_mode)) {                                         \
+            MEGDNN_DISPATCH_CPU_KERN_OPR(                                              \
+                    run(src0.ptr<src_ctype>(), src1.ptr<src_ctype>(),                  \
+                        src2.ptr<src_ctype>()[0], dst.ptr<dst_ctype>(),                \
+                        src0.layout.dtype, src1.layout.dtype, src2.layout.dtype,       \
+                        dst.layout.dtype, src0.layout.total_nr_elems()));              \
+            return;                                                                    \
+        }                                                                              \
+        MIDOUT_END();                                                                  \
     }
 
         DISPATCH()
@@ -745,12 +800,17 @@ void ElemwiseMultiTypeImpl::on_quantized_mode(
                 DType, DType, DType, DType, size_t, size_t, size_t, size_t)>         \
                 run = OpCallerTernary<                                               \
                         _op<src_ctype, dst_ctype>, BCAST101_VEC_BCAST101>::run;      \
-        MEGDNN_DISPATCH_CPU_KERN_OPR(                                                \
-                run(src0.ptr<src_ctype>(), src1.ptr<src_ctype>(),                    \
+        MIDOUT_BEGIN(                                                                \
+                megdnn_arm_common_elemwise_multi_type, midout_iv(10), src_ctype,     \
+                dst_ctype, midout_iv(_mode)) {                                       \
+            MEGDNN_DISPATCH_CPU_KERN_OPR(run(                                        \
+                    src0.ptr<src_ctype>(), src1.ptr<src_ctype>(),                    \
                     src2.ptr<src_ctype>(), dst.ptr<dst_ctype>(), src0.layout.dtype,  \
                     src1.layout.dtype, src2.layout.dtype, dst.layout.dtype, binfo.x, \
                     binfo.y, binfo.z, binfo.y* binfo.z));                            \
-        return;                                                                      \
+            return;                                                                  \
+        }                                                                            \
+        MIDOUT_END();                                                                \
     }
 
             DISPATCH()
@@ -766,21 +826,26 @@ void ElemwiseMultiTypeImpl::on_quantized_mode(
             (is_broadcastedx_channel_like<4>(src1.layout, binfo) ||
              is_broadcastedx_channel_like<8>(src1.layout, binfo)) &&
             src0.layout.eq_shape(src2.layout)) {
-#define DISPATCH_SINGLE_MODE(_src_dt, _dst_dt, _mode, _op)                          \
-    case _mode: {                                                                   \
-        using src_ctype = typename DTypeTrait<_src_dt>::ctype;                      \
-        using dst_ctype = typename DTypeTrait<_dst_dt>::ctype;                      \
-        thin_function<void(                                                         \
-                const src_ctype*, const src_ctype*, const src_ctype*, dst_ctype*,   \
-                DType, DType, DType, DType, size_t, size_t, size_t, size_t)>        \
-                run = OpCallerTernary<                                              \
-                        _op<src_ctype, dst_ctype>, VEC_BCAST101xX_VEC>::run;        \
-        MEGDNN_DISPATCH_CPU_KERN_OPR(                                               \
-                run(src0.ptr<src_ctype>(), src1.ptr<src_ctype>(),                   \
-                    src2.ptr<src_ctype>(), dst.ptr<dst_ctype>(), src0.layout.dtype, \
-                    src1.layout.dtype, src2.layout.dtype, dst.layout.dtype,         \
-                    batch_size, binfo.x, binfo.y, binfo.z));                        \
-        return;                                                                     \
+#define DISPATCH_SINGLE_MODE(_src_dt, _dst_dt, _mode, _op)                         \
+    case _mode: {                                                                  \
+        using src_ctype = typename DTypeTrait<_src_dt>::ctype;                     \
+        using dst_ctype = typename DTypeTrait<_dst_dt>::ctype;                     \
+        thin_function<void(                                                        \
+                const src_ctype*, const src_ctype*, const src_ctype*, dst_ctype*,  \
+                DType, DType, DType, DType, size_t, size_t, size_t, size_t)>       \
+                run = OpCallerTernary<                                             \
+                        _op<src_ctype, dst_ctype>, VEC_BCAST101xX_VEC>::run;       \
+        MIDOUT_BEGIN(                                                              \
+                megdnn_arm_common_elemwise_multi_type, midout_iv(11), src_ctype,   \
+                dst_ctype, midout_iv(_mode)) {                                     \
+            MEGDNN_DISPATCH_CPU_KERN_OPR(                                          \
+                    run(src0.ptr<src_ctype>(), src1.ptr<src_ctype>(),              \
+                        src2.ptr<src_ctype>(), dst.ptr<dst_ctype>(),               \
+                        src0.layout.dtype, src1.layout.dtype, src2.layout.dtype,   \
+                        dst.layout.dtype, batch_size, binfo.x, binfo.y, binfo.z)); \
+            return;                                                                \
+        }                                                                          \
+        MIDOUT_END();                                                              \
     }
 
             size_t batch_size = src0.layout.shape[0] / (binfo.x * binfo.y * binfo.z);
@@ -803,12 +868,17 @@ void ElemwiseMultiTypeImpl::on_quantized_mode(
                 DType, DType, DType, DType, size_t, size_t, size_t, size_t)>        \
                 run = OpCallerTernary<                                              \
                         _op<src_ctype, dst_ctype>, BCAST101xX_VEC_BCAST101xX>::run; \
-        MEGDNN_DISPATCH_CPU_KERN_OPR(                                               \
-                run(src0.ptr<src_ctype>(), src1.ptr<src_ctype>(),                   \
-                    src2.ptr<src_ctype>(), dst.ptr<dst_ctype>(), src0.layout.dtype, \
-                    src1.layout.dtype, src2.layout.dtype, dst.layout.dtype,         \
-                    batch_size, binfo.x, binfo.y, binfo.z));                        \
-        return;                                                                     \
+        MIDOUT_BEGIN(                                                               \
+                megdnn_arm_common_elemwise_multi_type, midout_iv(12), src_ctype,    \
+                dst_ctype, midout_iv(_mode)) {                                      \
+            MEGDNN_DISPATCH_CPU_KERN_OPR(                                           \
+                    run(src0.ptr<src_ctype>(), src1.ptr<src_ctype>(),               \
+                        src2.ptr<src_ctype>(), dst.ptr<dst_ctype>(),                \
+                        src0.layout.dtype, src1.layout.dtype, src2.layout.dtype,    \
+                        dst.layout.dtype, batch_size, binfo.x, binfo.y, binfo.z));  \
+            return;                                                                 \
+        }                                                                           \
+        MIDOUT_END();                                                               \
     }
 
             size_t batch_size = src1.layout.shape[0] / (binfo.x * binfo.y * binfo.z);

@@ -2,6 +2,9 @@
 #include "src/common/elemwise/kern_defs.cuh"
 #include "src/common/elemwise_multi_type/kern_defs.cuh"
 
+#include "midout.h"
+MIDOUT_DECL(megdnn_naive_elemwise_multi_type)
+
 using namespace megdnn;
 using namespace naive;
 
@@ -16,7 +19,12 @@ void ElemwiseMultiTypeImpl::on_quantized_mode(
         typedef ElemwiseKern<                                                  \
                 megcorePlatformCPU, param_enumv::Elemwise::Mode::_mode, float> \
                 KernImpl;                                                      \
-        dispatch_qint_op_dtype<KernImpl, ElemwiseOpParamN<1>>(param, dst);     \
+        MIDOUT_BEGIN(                                                          \
+                megdnn_naive_elemwise_multi_type, midout_iv(1),                \
+                param_enumv::Elemwise::Mode::_mode) {                          \
+            dispatch_qint_op_dtype<KernImpl, ElemwiseOpParamN<1>>(param, dst); \
+        }                                                                      \
+        MIDOUT_END();                                                          \
         break;                                                                 \
     }
 
