@@ -497,4 +497,23 @@ TEST(TestExternCOpr, Dedup) {
     ASSERT_EQ(0, MGBOprDescImpl<>::nr_inst);
 }
 
+TEST(TestExternCOpr, DummyLoaderName) {
+    float bias = 0.0f;
+    ASSERT_THROW(
+            opr::ExternCOprRunner::make_placeholder(
+                    {SymbolVar()}, {TensorShape{1}, TensorShape{1}}, "extern_opr_dummy",
+                    &bias, sizeof(bias)),
+            MegBrainError);
+    ASSERT_THROW(
+            opr::ExternCOprRunner::make_placeholder(
+                    {SymbolVar()}, {TensorShape{1}, TensorShape{1}},
+                    "extern_opr_dummy:opr0", &bias, sizeof(bias)),
+            MegBrainError);
+    ASSERT_THROW(
+            opr::ExternCOprRunner::make_placeholder(
+                    {SymbolVar()}, {TensorShape{1}, TensorShape{1}},
+                    "extern_opr_dummy:opr1", &bias, sizeof(bias)),
+            MegBrainError);
+}
+
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
