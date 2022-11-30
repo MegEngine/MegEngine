@@ -913,31 +913,51 @@ void remap(
         }                                                                \
     }
 
-#define DISPATCH_IMODE(_imode, _bmode, _ch, _cb)                           \
-    switch (_imode) {                                                      \
-        case InterpolationMode::NEAREST: {                                 \
-            DISPATCH_BMODE(InterpolationMode::NEAREST, _bmode, _ch, _cb);  \
-            break;                                                         \
-        }                                                                  \
-        case InterpolationMode::LINEAR: {                                  \
-            DISPATCH_BMODE(InterpolationMode::LINEAR, _bmode, _ch, _cb);   \
-            break;                                                         \
-        }                                                                  \
-        case InterpolationMode::AREA: {                                    \
-            DISPATCH_BMODE(InterpolationMode::AREA, _bmode, _ch, _cb);     \
-            break;                                                         \
-        }                                                                  \
-        case InterpolationMode::CUBIC: {                                   \
-            DISPATCH_BMODE(InterpolationMode::CUBIC, _bmode, _ch, _cb);    \
-            break;                                                         \
-        }                                                                  \
-        case InterpolationMode::LANCZOS4: {                                \
-            DISPATCH_BMODE(InterpolationMode::LANCZOS4, _bmode, _ch, _cb); \
-            break;                                                         \
-        }                                                                  \
-        default: {                                                         \
-            megdnn_assert(0, "unsupport interpolation mode for cv");       \
-        }                                                                  \
+#define DISPATCH_IMODE(_imode, _bmode, _ch, _cb)                                   \
+    switch (_imode) {                                                              \
+        case InterpolationMode::NEAREST: {                                         \
+            MIDOUT_BEGIN(                                                          \
+                    megdnn_warp, midout_iv(0), midout_iv("DISPATCH_IMODE"_hash)) { \
+                DISPATCH_BMODE(InterpolationMode::NEAREST, _bmode, _ch, _cb);      \
+            }                                                                      \
+            MIDOUT_END();                                                          \
+            break;                                                                 \
+        }                                                                          \
+        case InterpolationMode::LINEAR: {                                          \
+            MIDOUT_BEGIN(                                                          \
+                    megdnn_warp, midout_iv(1), midout_iv("DISPATCH_IMODE"_hash)) { \
+                DISPATCH_BMODE(InterpolationMode::LINEAR, _bmode, _ch, _cb);       \
+            }                                                                      \
+            MIDOUT_END();                                                          \
+            break;                                                                 \
+        }                                                                          \
+        case InterpolationMode::AREA: {                                            \
+            MIDOUT_BEGIN(                                                          \
+                    megdnn_warp, midout_iv(2), midout_iv("DISPATCH_IMODE"_hash)) { \
+                DISPATCH_BMODE(InterpolationMode::AREA, _bmode, _ch, _cb);         \
+            }                                                                      \
+            MIDOUT_END();                                                          \
+            break;                                                                 \
+        }                                                                          \
+        case InterpolationMode::CUBIC: {                                           \
+            MIDOUT_BEGIN(                                                          \
+                    megdnn_warp, midout_iv(3), midout_iv("DISPATCH_IMODE"_hash)) { \
+                DISPATCH_BMODE(InterpolationMode::CUBIC, _bmode, _ch, _cb);        \
+            }                                                                      \
+            MIDOUT_END();                                                          \
+            break;                                                                 \
+        }                                                                          \
+        case InterpolationMode::LANCZOS4: {                                        \
+            MIDOUT_BEGIN(                                                          \
+                    megdnn_warp, midout_iv(4), midout_iv("DISPATCH_IMODE"_hash)) { \
+                DISPATCH_BMODE(InterpolationMode::LANCZOS4, _bmode, _ch, _cb);     \
+            }                                                                      \
+            MIDOUT_END();                                                          \
+            break;                                                                 \
+        }                                                                          \
+        default: {                                                                 \
+            megdnn_assert(0, "unsupport interpolation mode for cv");               \
+        }                                                                          \
     }
 
 }  // namespace warp

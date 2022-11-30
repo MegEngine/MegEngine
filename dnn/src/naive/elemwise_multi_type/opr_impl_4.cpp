@@ -2,6 +2,9 @@
 #include "src/common/elemwise/kern_defs.cuh"
 #include "src/common/elemwise_multi_type/kern_defs.cuh"
 
+#include "midout.h"
+MIDOUT_DECL(megdnn_naive_elemwise_multi_type)
+
 using namespace megdnn;
 using namespace naive;
 
@@ -18,7 +21,12 @@ void ElemwiseMultiTypeImpl::on_quantized_mode(
         typedef ElemwiseKern<                                                  \
                 megcorePlatformCPU, param_enumv::Elemwise::Mode::_mode, float> \
                 KernImpl;                                                      \
-        dispatch_qint_op_dtype<KernImpl, ElemwiseOpParamN<2>>(param, dst);     \
+        MIDOUT_BEGIN(                                                          \
+                megdnn_naive_elemwise_multi_type, midout_iv(2),                \
+                param_enumv::Elemwise::Mode::_mode) {                          \
+            dispatch_qint_op_dtype<KernImpl, ElemwiseOpParamN<2>>(param, dst); \
+        }                                                                      \
+        MIDOUT_END();                                                          \
         break;                                                                 \
     }
 
@@ -59,16 +67,20 @@ void ElemwiseMultiTypeImpl::dest_type_bool_mode(
     switch (mode) {
         case Elemwise::Mode::ISINF: {
             switch (param[0].layout.dtype.enumv()) {
-#define DISPATCH(_dt, _mode)                                                \
-    case DTypeTrait<_dt>::enumv: {                                          \
-        typedef ElemwiseBoolKern<                                           \
-                megcorePlatformCPU, param_enumv::Elemwise::Mode::_mode,     \
-                typename DTypeTrait<_dt>::ctype, dt_bool>                   \
-                KernImpl##_mode;                                            \
-        dispatch_dst_bool_op<                                               \
-                KernImpl##_mode, typename DTypeTrait<_dt>::ctype, dt_bool>( \
-                param, dst);                                                \
-        break;                                                              \
+#define DISPATCH(_dt, _mode)                                                    \
+    case DTypeTrait<_dt>::enumv: {                                              \
+        typedef ElemwiseBoolKern<                                               \
+                megcorePlatformCPU, param_enumv::Elemwise::Mode::_mode,         \
+                typename DTypeTrait<_dt>::ctype, dt_bool>                       \
+                KernImpl##_mode;                                                \
+        using _ctype = typename DTypeTrait<_dt>::ctype;                         \
+        MIDOUT_BEGIN(                                                           \
+                megdnn_naive_elemwise_multi_type, midout_iv(0), _ctype,         \
+                param_enumv::Elemwise::Mode::_mode) {                           \
+            dispatch_dst_bool_op<KernImpl##_mode, _ctype, dt_bool>(param, dst); \
+        }                                                                       \
+        MIDOUT_END();                                                           \
+        break;                                                                  \
     }
 #define DISPATCH_MODE(_mode)                                  \
     DISPATCH(megdnn::dtype::Float32, _mode);                  \
@@ -105,16 +117,20 @@ void ElemwiseMultiTypeImpl::dest_type_bool_mode(
     switch (mode) {
         case Elemwise::Mode::EQ: {
             switch (param[0].layout.dtype.enumv()) {
-#define DISPATCH(_dt, _mode)                                                \
-    case DTypeTrait<_dt>::enumv: {                                          \
-        typedef ElemwiseBoolKern<                                           \
-                megcorePlatformCPU, param_enumv::Elemwise::Mode::_mode,     \
-                typename DTypeTrait<_dt>::ctype, dt_bool>                   \
-                KernImpl##_mode;                                            \
-        dispatch_dst_bool_op<                                               \
-                KernImpl##_mode, typename DTypeTrait<_dt>::ctype, dt_bool>( \
-                param, dst);                                                \
-        break;                                                              \
+#define DISPATCH(_dt, _mode)                                                    \
+    case DTypeTrait<_dt>::enumv: {                                              \
+        typedef ElemwiseBoolKern<                                               \
+                megcorePlatformCPU, param_enumv::Elemwise::Mode::_mode,         \
+                typename DTypeTrait<_dt>::ctype, dt_bool>                       \
+                KernImpl##_mode;                                                \
+        using _ctype = typename DTypeTrait<_dt>::ctype;                         \
+        MIDOUT_BEGIN(                                                           \
+                megdnn_naive_elemwise_multi_type, midout_iv(1), _ctype,         \
+                param_enumv::Elemwise::Mode::_mode) {                           \
+            dispatch_dst_bool_op<KernImpl##_mode, _ctype, dt_bool>(param, dst); \
+        }                                                                       \
+        MIDOUT_END();                                                           \
+        break;                                                                  \
     };
 #define DISPATCH_MODE(_mode)                                   \
     DISPATCH(megdnn::dtype::Float32, _mode);                   \
