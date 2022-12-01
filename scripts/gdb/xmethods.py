@@ -1,3 +1,4 @@
+import sys
 import re
 
 import gdb
@@ -48,4 +49,5 @@ class SmallVectorImplMatcher(gdb.xmethod.XMethodMatcher):
                 return SmallVectorImplWorker_size(class_type.template_argument(0))
 
 
-gdb.xmethod.register_xmethod_matcher(None, SmallVectorImplMatcher())
+if sys.version_info.major > 2:
+    gdb.xmethod.register_xmethod_matcher(None, SmallVectorImplMatcher())

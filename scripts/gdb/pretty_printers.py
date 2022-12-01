@@ -1,3 +1,4 @@
+import sys
 import gdb
 import gdb.printing
 import gdb.types
@@ -170,23 +171,26 @@ class SpanPrinter:
             yield "[{}]".format(i), (self.begin+i).dereference()
 
 
-pp = gdb.printing.RegexpCollectionPrettyPrinter("MegEngine")
+if sys.version_info.major > 2:
+    pp = gdb.printing.RegexpCollectionPrettyPrinter("MegEngine")
 # megdnn
-pp.add_printer('megdnn::SmallVectorImpl', '^megdnn::SmallVector(Impl)?<.*>$', SmallVectorPrinter)
-pp.add_printer('megdnn::TensorLayout', '^megdnn::TensorLayout$', ToStringPrinter)
-pp.add_printer('megdnn::TensorShape', '^megdnn::TensorShape$', ToStringPrinter)
+    pp.add_printer('megdnn::SmallVectorImpl', '^megdnn::SmallVector(Impl)?<.*>$', SmallVectorPrinter)
+    pp.add_printer('megdnn::TensorLayout', '^megdnn::TensorLayout$', ToStringPrinter)
+    pp.add_printer('megdnn::TensorShape', '^megdnn::TensorShape$', ToStringPrinter)
 # megbrain
-pp.add_printer('mgb::CompNode', '^mgb::CompNode$', ToStringPrinter)
-pp.add_printer('mgb::Maybe', '^mgb::Maybe<.*>$', MaybePrinter)
+    pp.add_printer('mgb::CompNode', '^mgb::CompNode$', ToStringPrinter)
+    pp.add_printer('mgb::Maybe', '^mgb::Maybe<.*>$', MaybePrinter)
 # imperative
-pp.add_printer('mgb::imperative::LogicalTensorDesc', '^mgb::imperative::LogicalTensorDesc$', LogicalTensorDescPrinter)
-pp.add_printer('mgb::imperative::OpDef', '^mgb::imperative::OpDef$', OpDefPrinter)
-pp.add_printer('mgb::imperative::Subgraph', '^mgb::imperative::Subgraph$', ReprPrinter)
-pp.add_printer('mgb::imperative::EncodedSubgraph', '^mgb::imperative::EncodedSubgraph$', ReprPrinter)
+    pp.add_printer('mgb::imperative::LogicalTensorDesc', '^mgb::imperative::LogicalTensorDesc$', LogicalTensorDescPrinter)
+    pp.add_printer('mgb::imperative::OpDef', '^mgb::imperative::OpDef$', OpDefPrinter)
+    pp.add_printer('mgb::imperative::Subgraph', '^mgb::imperative::Subgraph$', ReprPrinter)
+    pp.add_printer('mgb::imperative::EncodedSubgraph', '^mgb::imperative::EncodedSubgraph$', ReprPrinter)
 # imperative dispatch
-pp.add_printer('mgb::imperative::ValueRef', '^mgb::imperative::ValueRef$', ToStringPrinter)
-pp.add_printer('mgb::imperative::Span', '^mgb::imperative::Span<.*>$', SpanPrinter)
-gdb.printing.register_pretty_printer(gdb.current_objfile(), pp)
+    pp.add_printer('mgb::imperative::ValueRef', '^mgb::imperative::ValueRef$', ToStringPrinter)
+    pp.add_printer('mgb::imperative::Span', '^mgb::imperative::Span<.*>$', SpanPrinter)
+    gdb.printing.register_pretty_printer(gdb.current_objfile(), pp)
+else:
+    print("skip import pretty printers")
 
 
 def override_pretty_printer_for(val):
@@ -201,4 +205,5 @@ def override_pretty_printer_for(val):
             return HandlePrinter(val)
 
 
-gdb.pretty_printers.append(override_pretty_printer_for)
+if sys.version_info.major > 2:
+    gdb.pretty_printers.append(override_pretty_printer_for)
