@@ -58,8 +58,34 @@ def test_random_sampler_seed():
 
 def test_ReplacementSampler():
     num_samples = 30
-    indices = list(range(20))
-    weights = list(range(20))
+    num_data = 20
+    indices = list(range(num_data))
+    sampler = ReplacementSampler(
+        ArrayDataset(indices), num_samples=num_samples, weights=None
+    )
+    assert len(list(each[0] for each in sampler)) == num_samples
+
+    num_data = 8
+    weights = list(range(num_data))
+    indices = list(range(num_data))
+    sampler = ReplacementSampler(
+        ArrayDataset(indices), num_samples=num_samples, weights=weights
+    )
+    assert len(list(each[0] for each in sampler)) == num_samples
+    iter = 1000
+    hist = [0 for _ in range(num_data)]
+    for _ in range(iter):
+        for index in sampler:
+            index = index[0]
+            hist[index] += 1
+    actual_weights = np.array(hist) / sum(hist)
+    desired_weights = np.array(weights) / sum(weights)
+    np.testing.assert_allclose(actual_weights, desired_weights, rtol=8e-2)
+
+    num_data = 50000
+    num_samples = 50000 * 30
+    weights = list(range(num_data))
+    indices = list(range(num_data))
     sampler = ReplacementSampler(
         ArrayDataset(indices), num_samples=num_samples, weights=weights
     )

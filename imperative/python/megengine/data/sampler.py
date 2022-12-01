@@ -297,10 +297,10 @@ class ReplacementSampler(MapSampler):
 
     def sample(self) -> List:
         n = len(self.dataset)
-        if self.weights is None:
-            return self.rng.randint(n, size=self.num_samples).tolist()
-        else:
-            return self.rng.multinomial(n, self.weights, self.num_samples).tolist()
+        indices = self.rng.choice(
+            n, size=self.num_samples, replace=True, p=self.weights
+        )
+        return indices.tolist()
 
 
 class Infinite(MapSampler):
