@@ -1,3 +1,4 @@
+import sys
 import gdb
 
 import re
@@ -199,12 +200,14 @@ class MegengineInfo(gdb.Command):
         return ["opr", "trf"]
 
 
-
-MegengineBacktrace()
-MegengineBreakApply()
-MegengineUp()
-MegengineDown()
-MegengineInfo()
-MegengineWatch()
-
-gdb.Breakpoint("mgb::imperative::debug::notify_event(char const*)")
+if sys.version_info.major > 2:
+    MegengineBacktrace()
+    MegengineBreakApply()
+    MegengineUp()
+    MegengineDown()
+    MegengineInfo()
+    MegengineWatch()
+    
+    gdb.Breakpoint("mgb::imperative::debug::notify_event(char const*)")
+else:
+    print("skip import commands")
