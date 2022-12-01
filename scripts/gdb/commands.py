@@ -1,17 +1,18 @@
-import sys
-import gdb
-
 import re
 import subprocess
+import sys
 
+import gdb
 
 _demangle_cache = {}
 
 
 def demangle(name):
     if name not in _demangle_cache:
-        _demangle_cache[name] = subprocess.run(['c++filt', "-t", name], stdout=subprocess.PIPE).stdout
-    return _demangle_cache[name].decode('utf-8').strip()
+        _demangle_cache[name] = subprocess.run(
+            ["c++filt", "-t", name], stdout=subprocess.PIPE
+        ).stdout
+    return _demangle_cache[name].decode("utf-8").strip()
 
 
 def dynamic_cast(val):
@@ -52,11 +53,21 @@ def shared_ptr_deref(ptr):
 
 
 def get_type_name(type_index):
-    return gdb.lookup_global_symbol("mgb::imperative::debug::get_type_name(std::type_index const&)").value()(type_index).string()
+    return (
+        gdb.lookup_global_symbol(
+            "mgb::imperative::debug::get_type_name(std::type_index const&)"
+        )
+        .value()(type_index)
+        .string()
+    )
 
 
-mge_apply_transform_pattern = re.compile(r"^(.*)::apply_transform\(mgb::imperative::Operator const&, mgb::imperative::Span<mgb::imperative::ValueRef>\)$")
-mge_op_fallback_pattern = re.compile(r"^(.*)::fallback\(mgb::imperative::Span<mgb::imperative::ValueRef>\) const$")
+mge_apply_transform_pattern = re.compile(
+    r"^(.*)::apply_transform\(mgb::imperative::Operator const&, mgb::imperative::Span<mgb::imperative::ValueRef>\)$"
+)
+mge_op_fallback_pattern = re.compile(
+    r"^(.*)::fallback\(mgb::imperative::Span<mgb::imperative::ValueRef>\) const$"
+)
 
 
 def is_mge_frame(frame):
@@ -66,11 +77,15 @@ def is_mge_frame(frame):
     matcher = mge_apply_transform_pattern.match(function.name)
     if matcher:
         typename = matcher.group(1)
-        return is_subclass_of(gdb.lookup_type(typename), gdb.lookup_type("mgb::imperative::Transform"))
+        return is_subclass_of(
+            gdb.lookup_type(typename), gdb.lookup_type("mgb::imperative::Transform")
+        )
     matcher = mge_op_fallback_pattern.match(function.name)
     if matcher:
         typename = matcher.group(1)
-        return is_subclass_of(gdb.lookup_type(typename), gdb.lookup_type("mgb::imperative::Operator"))
+        return is_subclass_of(
+            gdb.lookup_type(typename), gdb.lookup_type("mgb::imperative::Operator")
+        )
     return False
 
 
@@ -84,18 +99,24 @@ def count_frame_level(frame):
 
 def print_mge_frame(frame):
     function = frame.function()
-    op = eval_on_val(dynamic_cast(frame.read_var("op")), ".to_string().c_str()").string()
+    op = eval_on_val(
+        dynamic_cast(frame.read_var("op")), ".to_string().c_str()"
+    ).string()
     inputs = str(frame.read_var("inputs"))
     matcher = mge_apply_transform_pattern.match(function.name)
     if matcher:
         name = matcher.group(1)
     else:
         name = mge_op_fallback_pattern.match(function.name).group(1)
-    #TODO: span
+    # TODO: span
     sal = frame.find_sal()
     filename = sal.symtab.filename
     line = sal.line
-    print("#{} {} apply {} on {}, file: {}:{}".format(count_frame_level(frame), name, op, inputs, filename, line))
+    print(
+        "#{} {} apply {} on {}, file: {}:{}".format(
+            count_frame_level(frame), name, op, inputs, filename, line
+        )
+    )
 
 
 class MegengineBacktrace(gdb.Command):
@@ -118,7 +139,9 @@ class MegengineBreakApply(gdb.Command):
         super().__init__("mge-brk-apply", gdb.COMMAND_USER)
 
     def invoke(self, arg, from_tty):
-        gdb.Breakpoint("mgb::imperative::apply(mgb::imperative::Operator const&, mgb::imperative::Span<mgb::imperative::ValueRef>)")
+        gdb.Breakpoint(
+            "mgb::imperative::apply(mgb::imperative::Operator const&, mgb::imperative::Span<mgb::imperative::ValueRef>)"
+        )
 
 
 class MegengineWatch(gdb.Command):
@@ -126,7 +149,9 @@ class MegengineWatch(gdb.Command):
         super().__init__("mge-watch", gdb.COMMAND_USER)
 
     def invoke(self, arg, from_tty):
-        watch = gdb.lookup_global_symbol("mgb::imperative::debug::watch_value(mgb::imperative::ValueRef)").value()
+        watch = gdb.lookup_global_symbol(
+            "mgb::imperative::debug::watch_value(mgb::imperative::ValueRef)"
+        ).value()
         value = gdb.parse_and_eval(arg)
         watch(value)
         print("watching {}".format(str(value)))
@@ -176,7 +201,9 @@ class MegengineInfo(gdb.Command):
 
     def invoke(self, arg, from_tty):
         if arg == "opr":
-            registered_oprs = gdb.lookup_global_symbol("mgb::imperative::Operator::registered_types()").value()()
+            registered_oprs = gdb.lookup_global_symbol(
+                "mgb::imperative::Operator::registered_types()"
+            ).value()()
             size = vector_size(registered_oprs)
             for i in range(size):
                 registered_opr = vector_item(registered_oprs, i)
@@ -184,7 +211,9 @@ class MegengineInfo(gdb.Command):
                 name = get_type_name(registered_opr)
                 print("{}: {}".format(i, demangle(name)))
         elif arg == "trf":
-            dispatch_context = gdb.lookup_global_symbol("mgb::imperative::Transform::get_context()").value()()
+            dispatch_context = gdb.lookup_global_symbol(
+                "mgb::imperative::Transform::get_context()"
+            ).value()()
             transformations = dispatch_context["transformations"]
             size = vector_size(transformations)
             for i in range(size):
@@ -207,7 +236,7 @@ if sys.version_info.major > 2:
     MegengineDown()
     MegengineInfo()
     MegengineWatch()
-    
+
     gdb.Breakpoint("mgb::imperative::debug::notify_event(char const*)")
 else:
     print("skip import commands")

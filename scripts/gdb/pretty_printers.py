@@ -1,4 +1,5 @@
 import sys
+
 import gdb
 import gdb.printing
 import gdb.types
@@ -21,38 +22,40 @@ def eval_on_val(val, eval_str):
 class SmallVectorPrinter:
     def __init__(self, val):
         t = val.type.template_argument(0)
-        self.begin = val['m_begin_ptr'].cast(t.pointer())
-        self.end = val['m_end_ptr'].cast(t.pointer())
+        self.begin = val["m_begin_ptr"].cast(t.pointer())
+        self.end = val["m_end_ptr"].cast(t.pointer())
         self.size = self.end - self.begin
-        self.capacity = val['m_capacity_ptr'].cast(t.pointer()) - val['m_begin_ptr'].cast(t.pointer())
+        self.capacity = val["m_capacity_ptr"].cast(t.pointer()) - val[
+            "m_begin_ptr"
+        ].cast(t.pointer())
 
     def to_string(self):
-        return 'SmallVector of Size {}'.format(self.size)
+        return "SmallVector of Size {}".format(self.size)
 
     def display_hint(self):
-        return 'array'
+        return "array"
 
     def children(self):
         for i in range(self.size):
-            yield "[{}]".format(i), (self.begin+i).dereference()
+            yield "[{}]".format(i), (self.begin + i).dereference()
 
 
 class MaybePrinter:
     def __init__(self, val):
-        self.val = val['m_ptr']
+        self.val = val["m_ptr"]
 
     def to_string(self):
         if self.val:
-            return 'Some {}'.format(self.val)
+            return "Some {}".format(self.val)
         else:
-            return 'None'
+            return "None"
 
     def display_hint(self):
-        return 'array'
+        return "array"
 
     def children(self):
         if self.val:
-            yield '[0]', self.val.dereference()
+            yield "[0]", self.val.dereference()
 
 
 class ToStringPrinter:
@@ -81,16 +84,16 @@ class HandlePrinter:
 
     def to_string(self):
         if self.val:
-            return 'Handle of TensorInfo at {}'.format(self.val)
+            return "Handle of TensorInfo at {}".format(self.val)
         else:
-            return 'Empty Handle'
+            return "Empty Handle"
 
     def display_hint(self):
-        return 'array'
+        return "array"
 
     def children(self):
         if self.val:
-            yield '[0]', self.val.dereference()
+            yield "[0]", self.val.dereference()
 
 
 def print_small_tensor(device_nd):
@@ -124,17 +127,17 @@ def print_small_tensor(device_nd):
 
 class LogicalTensorDescPrinter:
     def __init__(self, val):
-        self.layout = val['layout']
-        self.comp_node = val['comp_node']
-        self.value = val['value']
+        self.layout = val["layout"]
+        self.comp_node = val["comp_node"]
+        self.value = val["value"]
 
     def to_string(self):
-        return 'LogicalTensorDesc'
+        return "LogicalTensorDesc"
 
     def children(self):
-        yield 'layout', self.layout
-        yield 'comp_node', self.comp_node
-        yield 'value', print_small_tensor(self.value)
+        yield "layout", self.layout
+        yield "comp_node", self.comp_node
+        yield "value", print_small_tensor(self.value)
 
 
 class OpDefPrinter:
@@ -145,49 +148,67 @@ class OpDefPrinter:
         return self.val.dynamic_type.name
 
     def children(self):
-        concrete_val = self.val.address.cast(self.val.dynamic_type.pointer()).dereference()
+        concrete_val = self.val.address.cast(
+            self.val.dynamic_type.pointer()
+        ).dereference()
         for field in concrete_val.type.fields():
             if field.is_base_class or field.artificial:
                 continue
-            if field.name == 'sm_typeinfo':
+            if field.name == "sm_typeinfo":
                 continue
             yield field.name, concrete_val[field.name]
 
 
 class SpanPrinter:
     def __init__(self, val):
-        self.begin = val['m_begin']
-        self.end = val['m_end']
+        self.begin = val["m_begin"]
+        self.end = val["m_end"]
         self.size = self.end - self.begin
 
     def to_string(self):
-        return 'Span of Size {}'.format(self.size)
+        return "Span of Size {}".format(self.size)
 
     def display_hint(self):
-        return 'array'
+        return "array"
 
     def children(self):
         for i in range(self.size):
-            yield "[{}]".format(i), (self.begin+i).dereference()
+            yield "[{}]".format(i), (self.begin + i).dereference()
 
 
 if sys.version_info.major > 2:
     pp = gdb.printing.RegexpCollectionPrettyPrinter("MegEngine")
-# megdnn
-    pp.add_printer('megdnn::SmallVectorImpl', '^megdnn::SmallVector(Impl)?<.*>$', SmallVectorPrinter)
-    pp.add_printer('megdnn::TensorLayout', '^megdnn::TensorLayout$', ToStringPrinter)
-    pp.add_printer('megdnn::TensorShape', '^megdnn::TensorShape$', ToStringPrinter)
-# megbrain
-    pp.add_printer('mgb::CompNode', '^mgb::CompNode$', ToStringPrinter)
-    pp.add_printer('mgb::Maybe', '^mgb::Maybe<.*>$', MaybePrinter)
-# imperative
-    pp.add_printer('mgb::imperative::LogicalTensorDesc', '^mgb::imperative::LogicalTensorDesc$', LogicalTensorDescPrinter)
-    pp.add_printer('mgb::imperative::OpDef', '^mgb::imperative::OpDef$', OpDefPrinter)
-    pp.add_printer('mgb::imperative::Subgraph', '^mgb::imperative::Subgraph$', ReprPrinter)
-    pp.add_printer('mgb::imperative::EncodedSubgraph', '^mgb::imperative::EncodedSubgraph$', ReprPrinter)
-# imperative dispatch
-    pp.add_printer('mgb::imperative::ValueRef', '^mgb::imperative::ValueRef$', ToStringPrinter)
-    pp.add_printer('mgb::imperative::Span', '^mgb::imperative::Span<.*>$', SpanPrinter)
+    # megdnn
+    pp.add_printer(
+        "megdnn::SmallVectorImpl",
+        "^megdnn::SmallVector(Impl)?<.*>$",
+        SmallVectorPrinter,
+    )
+    pp.add_printer("megdnn::TensorLayout", "^megdnn::TensorLayout$", ToStringPrinter)
+    pp.add_printer("megdnn::TensorShape", "^megdnn::TensorShape$", ToStringPrinter)
+    # megbrain
+    pp.add_printer("mgb::CompNode", "^mgb::CompNode$", ToStringPrinter)
+    pp.add_printer("mgb::Maybe", "^mgb::Maybe<.*>$", MaybePrinter)
+    # imperative
+    pp.add_printer(
+        "mgb::imperative::LogicalTensorDesc",
+        "^mgb::imperative::LogicalTensorDesc$",
+        LogicalTensorDescPrinter,
+    )
+    pp.add_printer("mgb::imperative::OpDef", "^mgb::imperative::OpDef$", OpDefPrinter)
+    pp.add_printer(
+        "mgb::imperative::Subgraph", "^mgb::imperative::Subgraph$", ReprPrinter
+    )
+    pp.add_printer(
+        "mgb::imperative::EncodedSubgraph",
+        "^mgb::imperative::EncodedSubgraph$",
+        ReprPrinter,
+    )
+    # imperative dispatch
+    pp.add_printer(
+        "mgb::imperative::ValueRef", "^mgb::imperative::ValueRef$", ToStringPrinter
+    )
+    pp.add_printer("mgb::imperative::Span", "^mgb::imperative::Span<.*>$", SpanPrinter)
     gdb.printing.register_pretty_printer(gdb.current_objfile(), pp)
 else:
     print("skip import pretty printers")
