@@ -1189,6 +1189,23 @@ py::class_<FastpathCopy, std::shared_ptr<FastpathCopy>, OpDef> FastpathCopyInst(
 FastpathCopyInst
     .def(py::init<>());
 
+py::class_<Fill, std::shared_ptr<Fill>, OpDef> FillInst(m, "Fill");
+
+FillInst
+    .def(py::init<float, ::megdnn::DType, ::mgb::CompNode, std::string>(), py::arg("value") = 0, py::arg("dtype"), py::arg("comp_node"), py::arg("scope") = {})
+    .def(py::init<>())
+    .def_readwrite("value", &Fill::value)
+    .def_readwrite("dtype", &Fill::dtype)
+    .def_readwrite("comp_node", &Fill::comp_node);
+
+py::class_<FillLike, std::shared_ptr<FillLike>, OpDef> FillLikeInst(m, "FillLike");
+
+FillLikeInst
+    .def(py::init<float, ::mgb::CompNode, std::string>(), py::arg("value") = 0, py::arg("comp_node"), py::arg("scope") = {})
+    .def(py::init<>())
+    .def_readwrite("value", &FillLike::value)
+    .def_readwrite("comp_node", &FillLike::comp_node);
+
 py::class_<GammaRNG, std::shared_ptr<GammaRNG>, OpDef> GammaRNGInst(m, "GammaRNG");
 
 GammaRNGInst
