@@ -248,6 +248,19 @@ def PermutationRNG: MgbHashableOp<"PermutationRNG", [PermutationRNGParam]> {
   let cmpFunction = [{return $0.handle == $1.handle && $0.dtype == $1.dtype;}];
 }
 
+def Fill: MgbHashableOp<"Fill", [FillParam]> {
+  let extraArguments = (ins
+    MgbDTypeAttr:$dtype,
+    MgbCompNodeAttr:$comp_node
+  );
+}
+
+def FillLike: MgbHashableOp<"FillLike", [FillParam]> {
+  let extraArguments = (ins
+    MgbCompNodeAttr:$comp_node
+  );
+}
+
 def ShuffleRNG: MgbHashableOp<"ShuffleRNG", [ShuffleRNGParam]> {
   let extraArguments = (ins
     MgbSizeTAddr:$handle

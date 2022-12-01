@@ -338,7 +338,14 @@ def ones(
         Tensor([[1. 1.]
          [1. 1.]], device=xpux:0)
     """
-    return full(shape, 1.0, dtype=dtype, device=device)
+    if isinstance(shape, int):
+        shape = (shape,)
+    if device == None:
+        device = get_default_device()
+    op = builtin.Fill(1, dtype)
+    shape = astensor1d(shape, dtype="int32", device=device)
+    (x,) = apply(op, shape)
+    return x
 
 
 def zeros(
@@ -364,7 +371,14 @@ def zeros(
         Tensor([[0. 0. 0.]
          [0. 0. 0.]], device=xpux:0)
     """
-    return full(shape, 0.0, dtype=dtype, device=device)
+    if isinstance(shape, int):
+        shape = (shape,)
+    if device == None:
+        device = get_default_device()
+    op = builtin.Fill(0, dtype)
+    shape = astensor1d(shape, dtype="int32", device=device)
+    (x,) = apply(op, shape)
+    return x
 
 
 def zeros_like(inp: Tensor) -> Tensor:
@@ -419,12 +433,8 @@ def full_like(inp: Tensor, value: Union[int, float]) -> Tensor:
         Tensor([[2 2 2]
          [2 2 2]], dtype=int32, device=xpux:0)
     """
-    x = Const(value, inp.dtype, inp.device)
-    if inp.ndim == 0:
-        return x
-
-    # set x's format to use FormatTransformation rule for Broadcast.
-    rst = broadcast_to(x, inp.shape)
+    op = builtin.FillLike(value=value)
+    (rst,) = apply(op, inp)
     rst.format = inp.format
     return rst
 

@@ -944,6 +944,35 @@ public:
     FastpathCopy() = default;
 };
 
+class Fill : public OpDefImplBase<Fill> {
+    MGB_DYN_TYPE_OBJ_FINAL_DECL;
+
+public:
+    float value = 0;
+    ::megdnn::DType dtype;
+    ::mgb::CompNode comp_node;
+    Fill() = default;
+    Fill(float value_, ::megdnn::DType dtype_, ::mgb::CompNode comp_node_, std::string scope_ = {}): value(value_), dtype(dtype_), comp_node(comp_node_) { set_scope(scope_); }
+    Fill(::megdnn::param::Fill packed_param_0, ::megdnn::DType dtype_, ::mgb::CompNode comp_node_): value(packed_param_0.value), dtype(dtype_), comp_node(comp_node_) {}
+    ::megdnn::param::Fill param() const {
+        return {value};
+    }
+};
+
+class FillLike : public OpDefImplBase<FillLike> {
+    MGB_DYN_TYPE_OBJ_FINAL_DECL;
+
+public:
+    float value = 0;
+    ::mgb::CompNode comp_node;
+    FillLike() = default;
+    FillLike(float value_, ::mgb::CompNode comp_node_, std::string scope_ = {}): value(value_), comp_node(comp_node_) { set_scope(scope_); }
+    FillLike(::megdnn::param::Fill packed_param_0, ::mgb::CompNode comp_node_): value(packed_param_0.value), comp_node(comp_node_) {}
+    ::megdnn::param::Fill param() const {
+        return {value};
+    }
+};
+
 class GammaRNG : public OpDefImplBase<GammaRNG> {
     MGB_DYN_TYPE_OBJ_FINAL_DECL;
 

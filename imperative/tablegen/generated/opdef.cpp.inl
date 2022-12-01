@@ -3564,6 +3564,89 @@ OP_TRAIT_REG(FastpathCopy, FastpathCopy)
     .props(FastpathCopy_props_impl)
     .make_name(FastpathCopy_make_name_impl);
 
+MGB_DYN_TYPE_OBJ_FINAL_IMPL(Fill);
+
+namespace {
+size_t Fill_hash_impl(const OpDef& def_) {
+    auto&& op_ = def_.cast_final_safe<Fill>();
+    static_cast<void>(op_);
+    size_t val = mgb::hash(op_.dyn_typeinfo());
+    val = mgb::hash_pair_combine(val, mgb::hash(op_.value));
+    val = mgb::hash_pair_combine(val, mgb::hash(op_.dtype.handle()));
+    val = mgb::hash_pair_combine(val, mgb::hash(op_.comp_node));
+    return val;
+}
+bool Fill_is_same_st_impl(const OpDef& lhs_, const OpDef& rhs_) {
+    auto &&a_ = lhs_.cast_final_safe<Fill>(),
+         &&b_ = rhs_.cast_final_safe<Fill>();
+    static_cast<void>(a_);
+    static_cast<void>(b_);
+    if (a_.value != b_.value) return false;
+    if (a_.dtype != b_.dtype) return false;
+    if (a_.comp_node != b_.comp_node) return false;
+    return true;
+}
+std::vector<std::pair<const char*, std::string>> Fill_props_impl(const OpDef& def_) {
+    auto&& op_ = def_.cast_final_safe<Fill>();
+    static_cast<void>(op_);
+    std::vector<std::pair<const char*, std::string>> props_;
+    props_.emplace_back("value", std::to_string(op_.value));
+    props_.emplace_back("dtype", op_.dtype.name());
+    props_.emplace_back("comp_node", op_.comp_node.to_string());
+    return props_;
+}
+std::string Fill_make_name_impl(const OpDef& def_) {
+    auto&& op_ = def_.cast_final_safe<Fill>();
+    static_cast<void>(op_);
+    return "Fill";
+}
+} // anonymous namespace
+OP_TRAIT_REG(Fill, Fill)
+    .hash(Fill_hash_impl)
+    .is_same_st(Fill_is_same_st_impl)
+    .props(Fill_props_impl)
+    .make_name(Fill_make_name_impl);
+
+MGB_DYN_TYPE_OBJ_FINAL_IMPL(FillLike);
+
+namespace {
+size_t FillLike_hash_impl(const OpDef& def_) {
+    auto&& op_ = def_.cast_final_safe<FillLike>();
+    static_cast<void>(op_);
+    size_t val = mgb::hash(op_.dyn_typeinfo());
+    val = mgb::hash_pair_combine(val, mgb::hash(op_.value));
+    val = mgb::hash_pair_combine(val, mgb::hash(op_.comp_node));
+    return val;
+}
+bool FillLike_is_same_st_impl(const OpDef& lhs_, const OpDef& rhs_) {
+    auto &&a_ = lhs_.cast_final_safe<FillLike>(),
+         &&b_ = rhs_.cast_final_safe<FillLike>();
+    static_cast<void>(a_);
+    static_cast<void>(b_);
+    if (a_.value != b_.value) return false;
+    if (a_.comp_node != b_.comp_node) return false;
+    return true;
+}
+std::vector<std::pair<const char*, std::string>> FillLike_props_impl(const OpDef& def_) {
+    auto&& op_ = def_.cast_final_safe<FillLike>();
+    static_cast<void>(op_);
+    std::vector<std::pair<const char*, std::string>> props_;
+    props_.emplace_back("value", std::to_string(op_.value));
+    props_.emplace_back("comp_node", op_.comp_node.to_string());
+    return props_;
+}
+std::string FillLike_make_name_impl(const OpDef& def_) {
+    auto&& op_ = def_.cast_final_safe<FillLike>();
+    static_cast<void>(op_);
+    return "FillLike";
+}
+} // anonymous namespace
+OP_TRAIT_REG(FillLike, FillLike)
+    .hash(FillLike_hash_impl)
+    .is_same_st(FillLike_is_same_st_impl)
+    .props(FillLike_props_impl)
+    .make_name(FillLike_make_name_impl);
+
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(GammaRNG);
 
 namespace {

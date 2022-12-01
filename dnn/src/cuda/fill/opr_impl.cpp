@@ -17,6 +17,7 @@ void FillImpl::exec(_megdnn_tensor_out dst, _megdnn_workspace workspace) {
                 dst.ptr<ctype>(), static_cast<ctype>(param().value), size, stream); \
     }
     MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
+    cb(::megdnn::dtype::Bool)
 #undef cb
 }
 

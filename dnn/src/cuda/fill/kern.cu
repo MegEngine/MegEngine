@@ -27,6 +27,7 @@ void exec_internal(T* dst, T value, size_t size, cudaStream_t stream) {
 #define INST(T)   template void exec_internal<T>(T*, T, size_t, cudaStream_t);
 #define cb(DType) INST(typename DTypeTrait<DType>::ctype)
 MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
+cb(::megdnn::dtype::Bool)
 
 }  // namespace fill
 }  // namespace cuda

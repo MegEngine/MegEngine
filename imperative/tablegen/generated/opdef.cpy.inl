@@ -10421,6 +10421,278 @@ void _init_py_FastpathCopy(py::module m) {
     mgb_assert(PyOp(OpDef)::ctype2pytype.emplace(FastpathCopy::typeinfo(), &py_type).second);
 }
 
+PyOpDefBegin(Fill) // {
+    static PyGetSetDef py_getsetters[];
+    static PyMethodDef tp_methods[];
+    
+    static PyObject* getstate(PyObject* self, PyObject*) {
+        auto& opdef = reinterpret_cast<PyOp(Fill)*>(self)->inst();
+        static_cast<void>(opdef);
+        std::unordered_map<std::string, py::object> state {
+            
+            {"value", serialization<decltype(opdef.value)>::dump(opdef.value)},
+            {"dtype", serialization<decltype(opdef.dtype)>::dump(opdef.dtype)},
+            {"comp_node", serialization<decltype(opdef.comp_node)>::dump(opdef.comp_node)}
+        };
+        return py::cast(state).release().ptr();
+    }
+    static PyObject* setstate(PyObject* self, PyObject* args) {
+        PyObject* dict = PyTuple_GetItem(args, 0);
+        if (!dict) return NULL;
+        auto state = py::cast<std::unordered_map<std::string, py::object>>(dict);
+        auto& opdef = reinterpret_cast<PyOp(Fill)*>(self)->inst();
+        static_cast<void>(opdef);
+        
+        {
+        auto&& iter = state.find("value");
+        if (iter != state.end()) {
+            opdef.value = serialization<decltype(opdef.value)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("dtype");
+        if (iter != state.end()) {
+            opdef.dtype = serialization<decltype(opdef.dtype)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("comp_node");
+        if (iter != state.end()) {
+            opdef.comp_node = serialization<decltype(opdef.comp_node)>::load(iter->second);
+        }
+        }
+        Py_RETURN_NONE;
+    }
+    static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
+// };
+PyOpDefEnd(Fill)
+
+int PyOp(Fill)::py_init(PyObject *self, PyObject *args, PyObject *kwds) {
+    static const char* kwlist[] = {"value", "dtype", "comp_node", "scope", NULL};
+    PyObject *value = NULL, *dtype = NULL, *comp_node = NULL, *scope = NULL;
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|OOOO", const_cast<char**>(kwlist), &value, &dtype, &comp_node, &scope))
+    return -1;
+
+    if (value) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(Fill)*>(self)->inst().value =
+                    py::cast<decltype(Fill::value)>(py::handle(value));
+        } CATCH_ALL(-1)
+    }
+
+    if (dtype) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(Fill)*>(self)->inst().dtype =
+                    py::cast<decltype(Fill::dtype)>(py::handle(dtype));
+        } CATCH_ALL(-1)
+    }
+
+    if (comp_node) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(Fill)*>(self)->inst().comp_node =
+                    py::cast<decltype(Fill::comp_node)>(py::handle(comp_node));
+        } CATCH_ALL(-1)
+    }
+
+    if (scope) {
+        try {
+            reinterpret_cast<PyOp(OpDef)*>(self)->op
+                ->set_scope(py::cast<std::string>(py::handle(scope)));
+        } CATCH_ALL(-1)
+    }
+
+    return 0;
+}
+
+PyGetSetDef PyOp(Fill)::py_getsetters[] = {
+    {const_cast<char*>("value"), py_get_generic(Fill, value), py_set_generic(Fill, value), const_cast<char*>("value"), NULL},
+    {const_cast<char*>("dtype"), py_get_generic(Fill, dtype), py_set_generic(Fill, dtype), const_cast<char*>("dtype"), NULL},
+    {const_cast<char*>("comp_node"), py_get_generic(Fill, comp_node), py_set_generic(Fill, comp_node), const_cast<char*>("comp_node"), NULL},
+    {NULL}  /* Sentinel */
+};
+
+    PyMethodDef PyOp(Fill)::tp_methods[] = {
+        {const_cast<char*>("__getstate__"), PyOp(Fill)::getstate, METH_NOARGS, "Fill getstate"},
+    {const_cast<char*>("__setstate__"), PyOp(Fill)::setstate, METH_VARARGS, "Fill setstate"},
+        {NULL}  /* Sentinel */
+    };
+    
+PyObject *PyOp(Fill)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(Fill)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(Fill)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(Fill)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, value: float = ..., dtype: str = ..., comp_node: str = ...) -> None\n"
+};
+
+void _init_py_Fill(py::module m) {
+    using py_op = PyOp(Fill);
+    auto& py_type = PyOpType(Fill);
+    py_type = {PyVarObject_HEAD_INIT(NULL, 0)};
+    py_type.tp_name = "megengine.core._imperative_rt.ops.Fill";
+    py_type.tp_basicsize = sizeof(PyOp(Fill));
+    py_type.tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE;
+    py_type.tp_doc = "Fill";
+    py_type.tp_base = &PyOpType(OpDef);
+    py_type.tp_dealloc = py_dealloc_generic<py_op>;
+    py_type.tp_new = py_new_generic<py_op>;
+    py_type.tp_init = py_op::py_init;
+    py_type.tp_methods = py_op::tp_methods;
+    py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(Fill), &PyOp(Fill)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
+    mgb_assert(PyType_Ready(&py_type) >= 0);
+    
+    PyType_Modified(&py_type);
+    m.add_object("Fill", reinterpret_cast<PyObject*>(&py_type));
+    mgb_assert(PyOp(OpDef)::ctype2pytype.emplace(Fill::typeinfo(), &py_type).second);
+}
+
+PyOpDefBegin(FillLike) // {
+    static PyGetSetDef py_getsetters[];
+    static PyMethodDef tp_methods[];
+    
+    static PyObject* getstate(PyObject* self, PyObject*) {
+        auto& opdef = reinterpret_cast<PyOp(FillLike)*>(self)->inst();
+        static_cast<void>(opdef);
+        std::unordered_map<std::string, py::object> state {
+            
+            {"value", serialization<decltype(opdef.value)>::dump(opdef.value)},
+            {"comp_node", serialization<decltype(opdef.comp_node)>::dump(opdef.comp_node)}
+        };
+        return py::cast(state).release().ptr();
+    }
+    static PyObject* setstate(PyObject* self, PyObject* args) {
+        PyObject* dict = PyTuple_GetItem(args, 0);
+        if (!dict) return NULL;
+        auto state = py::cast<std::unordered_map<std::string, py::object>>(dict);
+        auto& opdef = reinterpret_cast<PyOp(FillLike)*>(self)->inst();
+        static_cast<void>(opdef);
+        
+        {
+        auto&& iter = state.find("value");
+        if (iter != state.end()) {
+            opdef.value = serialization<decltype(opdef.value)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("comp_node");
+        if (iter != state.end()) {
+            opdef.comp_node = serialization<decltype(opdef.comp_node)>::load(iter->second);
+        }
+        }
+        Py_RETURN_NONE;
+    }
+    static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
+// };
+PyOpDefEnd(FillLike)
+
+int PyOp(FillLike)::py_init(PyObject *self, PyObject *args, PyObject *kwds) {
+    static const char* kwlist[] = {"value", "comp_node", "scope", NULL};
+    PyObject *value = NULL, *comp_node = NULL, *scope = NULL;
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|OOO", const_cast<char**>(kwlist), &value, &comp_node, &scope))
+    return -1;
+
+    if (value) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(FillLike)*>(self)->inst().value =
+                    py::cast<decltype(FillLike::value)>(py::handle(value));
+        } CATCH_ALL(-1)
+    }
+
+    if (comp_node) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(FillLike)*>(self)->inst().comp_node =
+                    py::cast<decltype(FillLike::comp_node)>(py::handle(comp_node));
+        } CATCH_ALL(-1)
+    }
+
+    if (scope) {
+        try {
+            reinterpret_cast<PyOp(OpDef)*>(self)->op
+                ->set_scope(py::cast<std::string>(py::handle(scope)));
+        } CATCH_ALL(-1)
+    }
+
+    return 0;
+}
+
+PyGetSetDef PyOp(FillLike)::py_getsetters[] = {
+    {const_cast<char*>("value"), py_get_generic(FillLike, value), py_set_generic(FillLike, value), const_cast<char*>("value"), NULL},
+    {const_cast<char*>("comp_node"), py_get_generic(FillLike, comp_node), py_set_generic(FillLike, comp_node), const_cast<char*>("comp_node"), NULL},
+    {NULL}  /* Sentinel */
+};
+
+    PyMethodDef PyOp(FillLike)::tp_methods[] = {
+        {const_cast<char*>("__getstate__"), PyOp(FillLike)::getstate, METH_NOARGS, "FillLike getstate"},
+    {const_cast<char*>("__setstate__"), PyOp(FillLike)::setstate, METH_VARARGS, "FillLike setstate"},
+        {NULL}  /* Sentinel */
+    };
+    
+PyObject *PyOp(FillLike)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(FillLike)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(FillLike)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(FillLike)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, value: float = ..., comp_node: str = ...) -> None\n"
+};
+
+void _init_py_FillLike(py::module m) {
+    using py_op = PyOp(FillLike);
+    auto& py_type = PyOpType(FillLike);
+    py_type = {PyVarObject_HEAD_INIT(NULL, 0)};
+    py_type.tp_name = "megengine.core._imperative_rt.ops.FillLike";
+    py_type.tp_basicsize = sizeof(PyOp(FillLike));
+    py_type.tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE;
+    py_type.tp_doc = "FillLike";
+    py_type.tp_base = &PyOpType(OpDef);
+    py_type.tp_dealloc = py_dealloc_generic<py_op>;
+    py_type.tp_new = py_new_generic<py_op>;
+    py_type.tp_init = py_op::py_init;
+    py_type.tp_methods = py_op::tp_methods;
+    py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(FillLike), &PyOp(FillLike)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
+    mgb_assert(PyType_Ready(&py_type) >= 0);
+    
+    PyType_Modified(&py_type);
+    m.add_object("FillLike", reinterpret_cast<PyObject*>(&py_type));
+    mgb_assert(PyOp(OpDef)::ctype2pytype.emplace(FillLike::typeinfo(), &py_type).second);
+}
+
 PyOpDefBegin(GammaRNG) // {
     static PyGetSetDef py_getsetters[];
     static PyMethodDef tp_methods[];
@@ -21733,6 +22005,8 @@ void _init_py_WarpPerspectiveBackwardMat(py::module m) {
     _init_py_Eye(m); \
     _init_py_FakeQuant(m); \
     _init_py_FastpathCopy(m); \
+    _init_py_Fill(m); \
+    _init_py_FillLike(m); \
     _init_py_GammaRNG(m); \
     _init_py_GaussianRNG(m); \
     _init_py_GetVarShape(m); \
