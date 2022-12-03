@@ -31,4 +31,4 @@ fi
 # do not isort megengine/__init__.py file, caused we must
 # init library load path before load dependent lib in core
 isort $ISORT_ARG -j $(nproc) -rc "${directories[@]}" -s megengine/__init__.py
-black $BLACK_ARG --target-version=py35 -- "${directories[@]}"
+black $BLACK_ARG --target-version=py35 --exclude='_imperative_rt/.*\.pyi$' -- "${directories[@]}"
