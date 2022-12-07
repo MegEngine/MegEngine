@@ -58,10 +58,9 @@ class MapSampler(Sampler):
                 "drop_last should be a boolean value, but got "
                 "drop_last={}".format(drop_last)
             )
+
         if num_samples is not None and (
-            not isinstance(num_samples, int)
-            or isinstance(num_samples, bool)
-            or num_samples <= 0
+            not isinstance(num_samples, int) or num_samples <= 0
         ):
             raise ValueError(
                 "num_samples should be a positive integer "
@@ -82,6 +81,14 @@ class MapSampler(Sampler):
         if num_samples is None:
             num_samples = len(self.dataset)
         self.num_samples = int(math.ceil(num_samples / self.world_size))
+
+        if self.num_samples < self.batch_size:
+            raise ValueError(
+                "num_samples should be greater than batch_size "
+                ", but got num_samples={} and batch_size={}".format(
+                    self.num_samples, self.batch_size
+                )
+            )
 
         # Make sure seeds are the same at each rank
         if seed is None and self.world_size > 1:
@@ -297,13 +304,12 @@ class ReplacementSampler(MapSampler):
 
     def sample(self) -> List:
         n = len(self.dataset)
-        indices = self.rng.choice(
-            n, size=self.num_samples, replace=True, p=self.weights
-        )
+        sample_size = self.num_samples * self.world_size
+        indices = self.rng.choice(n, size=sample_size, replace=True, p=self.weights)
         return indices.tolist()
 
 
-class Infinite(MapSampler):
+class Infinite(Sampler):
     r"""Infinite Sampler warper for basic sampler."""
 
     def sample(self):
