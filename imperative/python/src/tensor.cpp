@@ -966,6 +966,10 @@ void init_tensor(py::module m) {
             results = nullptr;
         };
     });
+    m.def("stop_step", [channel]() {
+        imperative::Profiler::stop_step();
+        channel->stop_step();
+    });
     m.def("enable_cupti", &cupti::enable);
     m.def("disable_cupti", &cupti::disable);
     m.def("cupti_available", &cupti::available);

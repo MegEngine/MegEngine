@@ -1,5 +1,9 @@
 #pragma once
 
+#include <algorithm>
+#include <chrono>
+#include <ctime>
+
 #include <any>
 #include <set>
 #include <sstream>
@@ -187,6 +191,18 @@ private:
     std::unordered_map<std::string, int64_t> m_counter_table;
     std::optional<std::pair<profiler::HostTime, cupti::time_point>> m_cupti_timestamp =
             {};
+    // Record the start and end time of all kernels
+    std::vector<std::vector<profiler::HostTime>> m_kernel_start_finish_time;
+    // The sum of all kernel execution times
+    profiler::Duration m_gpu_usage_time = std::chrono::microseconds(0);
+    // The sum of all kernel execution times, including the gap time between kernels
+    // within a step
+    profiler::Duration m_gpu_usage_time_with_gap = std::chrono::microseconds(0);
+    // Record the end time of each step
+    std::vector<profiler::HostTime> m_step_finish_time;
+    // Record the start time of the first kernel and the end time of the last kernel in
+    // each step
+    std::vector<std::vector<profiler::HostTime>> m_step_first_last_kernel;
 
 protected:
     Profiler::Record* current;
@@ -288,9 +304,9 @@ public:
                 SampleDeviceEvent, SampleDeviceFinishEvent, WorkerExceptionEvent,
                 ShapeInferEvent, SyncEvent, SyncFinishEvent, StartProfileEvent,
                 StartProfileFinishEvent, StopProfileEvent, StopProfileFinishEvent,
-                TensorCommandEvent, TensorCommandFinishEvent, AutoEvictEvent,
-                AutoEvictFinishEvent, CustomEvent, CustomFinishEvent, RecordDeviceEvent,
-                ScopeEvent, ScopeFinishEvent, HostToDeviceEvent,
+                StopStepEvent, TensorCommandEvent, TensorCommandFinishEvent,
+                AutoEvictEvent, AutoEvictFinishEvent, CustomEvent, CustomFinishEvent,
+                RecordDeviceEvent, ScopeEvent, ScopeFinishEvent, HostToDeviceEvent,
                 HostToDeviceFinishEvent, CUPTITimestampEvent, CUPTIKernelLaunchEvent,
                 CUPTIKernelLaunchFinishEvent, CUPTIKernelExecuteEvent,
                 CUPTIMemcpyLaunchEvent, CUPTIMemcpyLaunchFinishEvent, CUPTIMemcpyEvent,
@@ -332,6 +348,15 @@ public:
                                 1s);
                 m_device_timeline[event.event->comp_node()][current->time] =
                         device_time;
+            }
+        });
+
+        // record step end time
+        for_each_entry([&](auto&& event) {
+            using T = std::decay_t<decltype(event)>;
+            if constexpr (std::is_same_v<T, StopStepEvent>) {
+                auto step_time = current->time;
+                m_step_finish_time.push_back(to_device_time(step_time, event.device));
             }
         });
 
@@ -443,9 +468,17 @@ public:
                 inc_counter("nr_exception", 1);
             } else if constexpr (std::is_same_v<T, KernelLaunchFinishEvent>) {
                 auto& execution = current_op->executions.back();
+                auto overhead = to_device_time(current->time, event.device) -
+                                to_device_time(execution.begin, event.device);
+
+                std::vector<profiler::HostTime> current_kernel_start_finish;
+                current_kernel_start_finish.emplace_back(
+                        to_device_time(execution.begin, event.device));
+                current_kernel_start_finish.emplace_back(
+                        to_device_time(current->time, event.device));
+                m_kernel_start_finish_time.emplace_back(current_kernel_start_finish);
+
                 if (execution.reason == "dtr") {
-                    auto overhead = to_device_time(current->time, event.device) -
-                                    to_device_time(execution.begin, event.device);
                     inc_counter(
                             "dtr_overhead_us",
                             std::chrono::duration_cast<std::chrono::microseconds>(
@@ -462,6 +495,109 @@ public:
                 current_tensor = nullptr;
             }
         });
+    }
+
+    profiler::Duration last_kernel_finish() {
+        if (m_kernel_start_finish_time.size() == 0) {
+            return profiler::Duration::zero();
+        }
+        return m_kernel_start_finish_time.back()[1] - m_start_time;
+    }
+
+    // get GPU busy time (union of calculation time and communication time)
+    profiler::Duration gpu_usage_time() {
+        if (m_kernel_start_finish_time.size() == 0) {
+            return profiler::Duration::zero();
+        }
+
+        std::sort(
+                m_kernel_start_finish_time.begin(), m_kernel_start_finish_time.end(),
+                [&](std::vector<profiler::HostTime> kernel1,
+                    std::vector<profiler::HostTime> kernel2) {
+                    if (kernel1[0] != kernel2[0]) {
+                        return kernel1[0] < kernel2[0];
+                    }
+                    return kernel1[1] < kernel2[1];
+                });
+
+        HostTime current_start = profiler::HostTime::min();
+        HostTime current_end = profiler::HostTime::min();
+        for (size_t i = 0; i < m_kernel_start_finish_time.size(); ++i) {
+            if (current_start == profiler::HostTime::min()) {
+                current_start = m_kernel_start_finish_time[i][0];
+                current_end = m_kernel_start_finish_time[i][1];
+            } else if (current_end < m_kernel_start_finish_time[i][0]) {
+                m_gpu_usage_time += profiler::Duration(current_end - current_start);
+                current_start = m_kernel_start_finish_time[i][0];
+                current_end = m_kernel_start_finish_time[i][1];
+            } else if (current_end > m_kernel_start_finish_time[i][0]) {
+                current_end = max(current_end, m_kernel_start_finish_time[i][1]);
+            }
+        }
+        m_gpu_usage_time += profiler::Duration(current_end - current_start);
+
+        return m_gpu_usage_time;
+    }
+
+    // compared to gpu_usage_time, this method adds gap time between kernels in the same
+    // step
+    profiler::Duration gpu_usage_time_with_gap() {
+        if (m_step_finish_time.empty()) {
+            return profiler::Duration::zero();
+        }
+
+        std::sort(
+                m_step_finish_time.begin(), m_step_finish_time.end(),
+                [&](HostTime time1, HostTime time2) { return time1 < time2; });
+
+        std::sort(
+                m_kernel_start_finish_time.begin(), m_kernel_start_finish_time.end(),
+                [&](std::vector<profiler::HostTime> kernel1,
+                    std::vector<profiler::HostTime> kernel2) {
+                    if (kernel1[0] != kernel2[0]) {
+                        return kernel1[0] < kernel2[0];
+                    }
+                    return kernel1[1] < kernel2[1];
+                });
+
+        int cur_step = 0;
+        auto kernel_num = m_kernel_start_finish_time.size();
+        for (size_t i = 0; i < kernel_num; ++i) {
+            // Record the start time of the first kernel and the end time of the last
+            // kernel of the current step
+            std::vector<profiler::HostTime> step_begin_end_time;
+            step_begin_end_time.emplace_back(m_kernel_start_finish_time[i][0]);
+            size_t j = i;
+            while (j < kernel_num && m_kernel_start_finish_time[j][0] <
+                                             m_step_finish_time[cur_step + 1]) {
+                ++j;
+            }
+            step_begin_end_time.emplace_back(m_kernel_start_finish_time[j - 1][1]);
+            mgb_assert(
+                    step_begin_end_time.size() == 2,
+                    "step_begin_end_time.size() should be exactly 2!");
+            m_step_first_last_kernel.emplace_back(step_begin_end_time);
+            i = j - 1;
+            ++cur_step;
+        }
+
+        for (size_t i = 0; i < m_step_first_last_kernel.size(); ++i) {
+            m_gpu_usage_time_with_gap += profiler::Duration(
+                    m_step_first_last_kernel[i][1] - m_step_first_last_kernel[i][0]);
+        }
+
+        return m_gpu_usage_time_with_gap;
+    }
+
+    // from the start time of the first kernel of the first step to the end time of the
+    // last kernel of the last step
+    std::chrono::microseconds get_total_train_time() {
+        if (m_kernel_start_finish_time.size() == 0) {
+            return std::chrono::microseconds(1);
+        }
+        return std::chrono::duration_cast<std::chrono::microseconds>(
+                m_kernel_start_finish_time.back()[1] -
+                m_kernel_start_finish_time.front()[0]);
     }
 };
 

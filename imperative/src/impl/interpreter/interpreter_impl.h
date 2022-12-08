@@ -63,6 +63,7 @@ struct ChannelImpl : Interpreter::Channel, NonCopyableObj, NonMoveableObj {
 
     void start_profile() override;
     void stop_profile() override;
+    void stop_step() override;
 
     void push_scope(std::string) override;
     void pop_scope(std::string) override;

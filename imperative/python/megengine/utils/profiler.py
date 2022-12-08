@@ -18,6 +18,7 @@ from ..core._imperative_rt.core2 import (
     set_python_backtrace_enabled,
     start_profile,
     stop_profile,
+    stop_step,
     sync,
 )
 from ..logger import get_logger
@@ -133,6 +134,13 @@ class Profiler(ContextDecorator):
         self._pid = os.getpid()
         _living_profilers.add(self)
         set_python_backtrace_enabled(self._origin_enable_bt)
+
+    def step(self):
+        global _running_profiler
+
+        assert _running_profiler is not None
+        stop_step()
+        return self
 
     def dump(self):
         if self._dump_callback is not None:

@@ -1339,6 +1339,8 @@ void ChannelImpl::process_one_task(Command& icmd) {
             CompNode::foreach (
                     [&](CompNode device) { sample_on_device(device, true); });
             MGB_RECORD_EVENT(StopProfileFinishEvent);
+        } else if constexpr (std::is_same_v<T, StopStep>) {
+            MGB_RECORD_EVENT(StopStepEvent);
         } else if constexpr (std::is_same_v<T, PushScope>) {
             MGB_RECORD_EVENT(ScopeEvent, cmd.scope_name);
         } else if constexpr (std::is_same_v<T, PopScope>) {
@@ -1434,6 +1436,15 @@ void ChannelImpl::stop_profile() {
             });
         }
     }
+}
+
+void ChannelImpl::stop_step() {
+    MGB_LOCK_GUARD(m_spin);
+    assert_available();
+    mgb_assert(Profiler::is_profiling() == true, "Profiler isn't profiling!");
+    m_worker.add_task(
+            {Profiler::next_id(), StopStep{},
+             get_channel_state().stack_manager.dump()});
 }
 
 void ChannelImpl::push_scope(std::string name) {

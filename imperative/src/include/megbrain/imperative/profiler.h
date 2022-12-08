@@ -37,6 +37,7 @@ class Timer {
 public:
     using Time = profiler::Time;
     static profiler::Time record_host();
+    static profiler::Time record_device_time(CompNode device);
     static std::shared_ptr<CompNode::Event> record_device(CompNode device);
 };
 
@@ -77,6 +78,7 @@ private:
     std::atomic<Status> m_status = Running;
 
     static std::vector<entry_t> sm_records;
+    static std::vector<profiler::HostTime> sm_step_time;
     static options_t sm_profile_options;
     static std::mutex sm_mutex;
     // assume std::thread::id is unique
@@ -186,6 +188,8 @@ public:
     static void start_profile();
 
     static void stop_profile();
+
+    static void stop_step();
 
     static thread_dict_t get_thread_dict();
 

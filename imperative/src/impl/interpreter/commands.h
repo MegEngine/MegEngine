@@ -116,6 +116,13 @@ struct StopProfile {
     const char* get_name() const { return "StopProfile"; }
 };
 
+struct StopStep {
+    template <typename TFunctor>
+    void get_props(TFunctor&& functor) const {}
+
+    const char* get_name() const { return "StopStep"; }
+};
+
 struct PushScope {
     std::string scope_name;
 
@@ -162,7 +169,7 @@ struct StopRegen {
 
 using CommandData = std::variant<
         Put, ApplyOp, Del, GetValue, Drop, SetOption, StartProfile, StopProfile,
-        PushScope, PopScope, StartRegen, StopRegen>;
+        StopStep, PushScope, PopScope, StartRegen, StopRegen>;
 
 struct Command {
     uint64_t id;

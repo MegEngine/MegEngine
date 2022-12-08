@@ -14,6 +14,7 @@
 #include "./op_trait.h"
 
 #include "./profiler/formats.h"
+#include "./profiler/states.h"
 
 namespace mgb {
 namespace imperative {
@@ -52,6 +53,11 @@ void Profiler::stop_profile() {
     mgb_assert(sm_profiling);
     cupti::flush();
     sm_profiling = false;
+}
+
+void Profiler::stop_step() {
+    mgb_assert(sm_profiling);
+    MGB_RECORD_EVENT(profiler::StopStepEvent);
 }
 
 auto Profiler::get_thread_dict() -> thread_dict_t {

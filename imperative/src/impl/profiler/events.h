@@ -172,6 +172,8 @@ DEF_DUR_EVENT(HostToDevice, {
     void* device_ptr;
 });
 
+DEF_EVENT(StopStep, { CompNode device; });
+
 // cupti events
 DEF_EVENT(CUPTITimestamp, { cupti::clock::time_point timestamp; });
 

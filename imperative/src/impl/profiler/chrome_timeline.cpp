@@ -151,6 +151,12 @@ public:
         return m_content.back();
     }
 
+    ChromeTraceEvent& new_event_front() {
+        ChromeTraceEvent new_event;
+        m_content.insert(m_content.begin(), new_event);
+        return m_content.front();
+    }
+
     std::string& metadata(std::string key) { return m_metadata[key]; }
 
     nlohmann::json to_json() const {
@@ -196,6 +202,12 @@ struct ChromeTimelineEventVisitor : EventVisitor<ChromeTimelineEventVisitor> {
                 since_start(time));
     }
 
+    ChromeTraceEvent& new_event_front(
+            std::string name, char ph, size_t tid, profiler::HostTime time) {
+        return trace_events.new_event_front().name(name).ph(ph).pid(pid).tid(tid).ts(
+                since_start(time));
+    }
+
     ChromeTraceEvent& new_host_event(std::string name, char ph) {
         return trace_events.new_event()
                 .name(name)
@@ -203,6 +215,17 @@ struct ChromeTimelineEventVisitor : EventVisitor<ChromeTimelineEventVisitor> {
                 .pid(pid)
                 .tid(to_tid(current->tid))
                 .ts(since_start(current->time));
+    }
+
+    ChromeTraceEvent& new_host_event(
+            std::string name, char ph, int tid, profiler::Duration time) {
+        return trace_events.new_event().name(name).ph(ph).pid(pid).tid(tid).ts(time);
+    }
+
+    ChromeTraceEvent& new_host_event_front(
+            std::string name, char ph, int tid, profiler::Duration time) {
+        return trace_events.new_event_front().name(name).ph(ph).pid(pid).tid(tid).ts(
+                time);
     }
 
     ChromeTraceEvent& new_cupti_event(
@@ -363,6 +386,8 @@ struct ChromeTimelineEventVisitor : EventVisitor<ChromeTimelineEventVisitor> {
             new_host_event("StopProfile", 'B');
         } else if constexpr (std::is_same_v<TEvent, StopProfileFinishEvent>) {
             new_host_event("StopProfile", 'E');
+        } else if constexpr (std::is_same_v<TEvent, StopStepEvent>) {
+            new_host_event("StopStep", 'i');
         } else if constexpr (std::is_same_v<TEvent, CustomEvent>) {
             new_host_event(event.title, 'B');
             if (event.device.valid()) {
@@ -498,6 +523,23 @@ struct ChromeTimelineEventVisitor : EventVisitor<ChromeTimelineEventVisitor> {
 void dump_chrome_timeline(std::string filename, Profiler::bundle_t result) {
     ChromeTimelineEventVisitor visitor{};
     visitor.process_events(result);
+
+    auto gpu_usage_ratio = (double)(std::chrono::duration_cast<std::chrono::microseconds>(visitor.gpu_usage_time()).count() * 100) /
+                           (double)(visitor.get_total_train_time().count());
+    visitor.new_host_event("gpu_usgae_ratio", 'C', 0, visitor.last_kernel_finish())
+            .arg("value", gpu_usage_ratio);
+    visitor.new_host_event_front(
+                   "gpu_usgae_ratio", 'C', 0, std::chrono::microseconds(0))
+            .arg("value", gpu_usage_ratio);
+
+    auto train_time_ratio = (double)(std::chrono::duration_cast<std::chrono::microseconds>(visitor.gpu_usage_time_with_gap()).count() * 100) /
+                            (double)(visitor.get_total_train_time().count());
+    visitor.new_host_event("train_time_ratio", 'C', 0, visitor.last_kernel_finish())
+            .arg("value", train_time_ratio);
+    visitor.new_host_event_front(
+                   "train_time_ratio", 'C', 0, std::chrono::microseconds(0))
+            .arg("value", train_time_ratio);
+
     visitor.name_threads(result.thread_dict);
     auto trace_events = std::move(visitor.trace_events);
     trace_events.metadata("localTime") =
