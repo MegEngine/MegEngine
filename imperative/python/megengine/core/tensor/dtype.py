@@ -146,6 +146,13 @@ def create_quantized_dtype(
     else:
         # Don't trick to combine with is_unsigned. Metadata should not contain
         # invalid field to keep consistent with c dtype.
+        if zp is not None:
+            raise ValueError(
+                "'{}' only supports symmetric quantization, "
+                "zero_point should be None, but actually got '{}'".format(
+                    dtype_meta.name, zp
+                )
+            )
         return np.dtype(
             dtype_meta.np_dtype_str,
             metadata={"mgb_dtype": {"name": dtype_meta.cname, "scale": float(scale)}},

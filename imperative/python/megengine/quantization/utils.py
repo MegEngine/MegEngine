@@ -210,6 +210,9 @@ def fake_quant_bias(bias: Tensor, inp: Tensor, w_qat: Tensor) -> Tensor:
         if inp_params.scale is None or w_params.scale is None:
             return b_qat
 
+        if inp_params.mode != QuantMode.SYMMERTIC:
+            return b_qat
+
         # TODO: support different mode
         if inp_params.mode != w_params.mode:
             return b_qat
