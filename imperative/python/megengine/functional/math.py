@@ -631,11 +631,10 @@ def sort(inp: Tensor, descending: bool = False) -> Tuple[Tensor, Tensor]:
     return tns, ind
 
 
-@deprecated_kwargs_default("1.12", "descending", 3)
 def topk(
     inp: Tensor,
     k: int,
-    descending: bool = False,
+    descending: bool = True,
     kth_only: bool = False,
     no_sort: bool = False,
 ) -> Tuple[Tensor, Tensor]:
@@ -644,7 +643,7 @@ def topk(
     Args:
         inp: input tensor. If input tensor is 2d, each row will be sorted.
         k: number of elements needed.
-        descending: if True, return the largest elements instead. Default: False
+        descending: if True, return the largest elements. Default: True
         kth_only: if True, only the k-th element will be returned. Default: False
         no_sort: if True, the returned elements can be unordered. Default: False
 
