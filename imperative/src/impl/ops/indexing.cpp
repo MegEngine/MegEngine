@@ -26,7 +26,9 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
     }
 
     mgb_assert(src.ndim >= 2, "src ndim must be at least 2");
-    mgb_assert(src.is_contiguous(), "src should be contiguous");
+    if (!src.is_empty()) {
+        mgb_assert(src.is_contiguous(), "src should be contiguous");
+    }
     mgb_assert(
             -static_cast<int>(src.ndim) <= op.axis &&
                     op.axis < static_cast<int>(src.ndim),
@@ -43,7 +45,9 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
         return {{{dst, comp_node}}, false};
     }
 
-    mgb_assert(index.is_contiguous(), "index should be all contiguous");
+    if (!index.is_empty()) {
+        mgb_assert(index.is_contiguous(), "index should be all contiguous");
+    }
     mgb_assert(
             index.eq_shape(src.remove_axis(real_axis)),
             "index shape doesn't match src");
@@ -80,6 +84,9 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
     DnnOprCaller<megdnn::IndexingOneHot> dnn_op(inp->comp_node(), real_axis);
     auto tlayout = dnn_op.deduce_layout(layout, index_layout);
     auto out = Tensor::make(tlayout, inp->comp_node());
+    if (layout.is_empty()) {
+        return {out};
+    }
     dnn_op.exec_with_ws(inp, index, out);
     return {out};
 }
@@ -102,6 +109,9 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
     mgb_assert(index.dtype == dtype::Int32(), "index dtype must be int32");
     if (!src.ndim) {
         return {{{{{}, src.dtype}, comp_node}}, false};
+    }
+    if (!src.is_empty()) {
+        mgb_assert(src.is_contiguous(), "src should be contiguous if it is not empty");
     }
     return {{{{src, src.dtype}, comp_node}}, true};
 }
@@ -126,13 +136,18 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
     auto&& index = inputs[1];
     auto&& sub = inputs[2];
     TensorLayout layout = inp->layout();
-    mgb_assert(layout.is_contiguous());
+    if (!layout.is_empty()) {
+        mgb_assert(layout.is_contiguous());
+    }
     int real_axis = static_cast<int>(op.axis);
     if (real_axis < 0) {
         real_axis += static_cast<int>(layout.ndim);
     }
     DnnOprCaller<megdnn::IndexingSetOneHot> dnn_op(inp->comp_node(), real_axis);
     TensorPtr out = Tensor::make(layout, inp->comp_node());
+    if (layout.is_empty()) {
+        return {out};
+    }
     out->dev_tensor().copy_from_fixlayout(inp->dev_tensor());
     dnn_op.exec_with_ws(out, index, sub);
     return {out};

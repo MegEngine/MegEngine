@@ -111,14 +111,19 @@ void mixin::ConvolutionBackwardDataMixin::init_output_static_infer_desc_for_bwd_
     auto infer_wk = [self](TensorShape& dest, const InpVal& inp) {
         auto&& iv = inp.val;
         dest.ndim = 1;
-        dest.shape[0] = AlgoChooser<MegDNNOpr>::setup_algo(
-                {TensorLayout{
-                         iv[0].shape(), self->input(0)->dtype(),
-                         self->input(0)->format()},
-                 {iv[1].shape(), self->input(1)->dtype(), self->input(1)->format()},
-                 {iv.at(2).shape(), self->output(0)->dtype(),
-                  self->output(0)->format()}},
-                static_cast<MgbOpr*>(self)->megdnn_opr(), static_cast<MgbOpr*>(self));
+        if (iv[0].shape().is_empty() || iv[1].shape().is_empty()) {
+            dest.shape[0] = 0;
+        } else {
+            dest.shape[0] = AlgoChooser<MegDNNOpr>::setup_algo(
+                    {TensorLayout{
+                             iv[0].shape(), self->input(0)->dtype(),
+                             self->input(0)->format()},
+                     {iv[1].shape(), self->input(1)->dtype(), self->input(1)->format()},
+                     {iv.at(2).shape(), self->output(0)->dtype(),
+                      self->output(0)->format()}},
+                    static_cast<MgbOpr*>(self)->megdnn_opr(),
+                    static_cast<MgbOpr*>(self));
+        }
         return true;
     };
     inp_deps.push_back({self->output(0), DepType::SHAPE});
@@ -227,7 +232,9 @@ ConvolutionForward::ConvolutionForward(
         : Super{src->owner_graph(), config, "conv", {src, filter}} {
     init_megdnn_opr(*this, param);
     m_policy = policy;
+
     add_input({src, filter});
+    output(0)->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
 }
 
 SymbolVar ConvolutionForward::make(
@@ -270,6 +277,9 @@ size_t ConvolutionForward::get_workspace_size_bytes(
         const TensorShapeArray& input_shapes,
         const TensorShapeArray& output_shapes) const {
     mgb_assert(input_shapes.size() == 2 && output_shapes.size() == 1);
+    if (input_shapes[0].is_empty() || input_shapes[1].is_empty()) {
+        return 0;
+    }
     return AlgoChooser<megdnn::ConvolutionForward>::setup_algo(
             {TensorLayout{input_shapes[0], input(0)->dtype(), input(0)->format()},
              {input_shapes[1], input(1)->dtype(), input(1)->format()},
@@ -283,12 +293,19 @@ void ConvolutionForward::init_output_format() {
 }
 
 void ConvolutionForward::scn_do_execute() {
+    if (input(0)->dev_tensor().layout().is_empty() ||
+        input(1)->dev_tensor().layout().is_empty()) {
+        mgb_assert(output(0)->dev_tensor().layout().is_empty());
+        return;
+    }
     update_preprocessed_filter();
     megdnn_opr()->exec(
             input(0)->dev_tensor().as_megdnn(), input(1)->dev_tensor().as_megdnn(),
             output(0)->dev_tensor().as_megdnn(), preprocessed_filter(),
             intl::get_megdnn_workspace_from_var(output().back()));
 }
+
+MAKE_NODE_PROP_WITH_ZERO_SHAPE_2(ConvolutionForward, 0, 1)
 
 void ConvolutionForward::add_input_layout_constraint() {
     mixin::megdnn_utils::add_input_layout_constraint_contig(*this);
@@ -349,6 +366,7 @@ ConvolutionBackwardData::ConvolutionBackwardData(
     if (src_for_shp) {
         add_input({src_for_shp});
     }
+    output(0)->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
 }
 
 SymbolVar ConvolutionBackwardData::make(
@@ -386,7 +404,10 @@ void ConvolutionBackwardData::init_output_format() {
 
 cg::OperatorNodeBase::NodeProp* ConvolutionBackwardData::do_make_node_prop() const {
     auto prop = Super::Super::do_make_node_prop();
+    prop->add_dep_type_existing_var(input(0), NodeProp::DepType::VALUE_ALLOW_EMPTY);
+    prop->add_dep_type_existing_var(input(1), NodeProp::DepType::VALUE_ALLOW_EMPTY);
     if (input().size() == 3) {
+        prop->add_dep_type_existing_var(input(2), NodeProp::DepType::VALUE_ALLOW_EMPTY);
         using D = NodeProp::DepType;
         prop->reset_dep_type(input(), {D::DEV_VALUE, D::DEV_VALUE, D::SHAPE});
     }
@@ -394,6 +415,10 @@ cg::OperatorNodeBase::NodeProp* ConvolutionBackwardData::do_make_node_prop() con
 }
 
 void ConvolutionBackwardData::scn_do_execute() {
+    if (input(0)->dev_tensor().empty() || input(1)->dev_tensor().empty()) {
+        mgb_assert(output(0)->dev_tensor().empty());
+        return;
+    }
     megdnn_opr()->exec(
             input(0)->dev_tensor().as_megdnn(), input(1)->dev_tensor().as_megdnn(),
             output(0)->dev_tensor().as_megdnn(),
@@ -477,6 +502,7 @@ Convolution3DForward::Convolution3DForward(
     init_megdnn_opr(*this, param);
     m_policy = policy;
     add_input({src, filter});
+    output(0)->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
 }
 
 SymbolVar Convolution3DForward::make(
@@ -531,12 +557,19 @@ size_t Convolution3DForward::get_workspace_size_bytes(
         const TensorShapeArray& input_shapes,
         const TensorShapeArray& output_shapes) const {
     mgb_assert(input_shapes.size() == 2 && output_shapes.size() == 1);
+    if (input_shapes[0].is_empty() || input_shapes[1].is_empty()) {
+        return 0;
+    }
     return AlgoChooser<megdnn::Convolution3DForward>::setup_algo(
             {TensorLayout{input_shapes[0], input(0)->dtype(), input(0)->format()},
              {input_shapes[1], input(1)->dtype(), input(1)->format()},
              {output_shapes[0], output(0)->dtype(), output(0)->format()}},
             megdnn_opr(), this);
 }
+
+SCN_DO_EXECUTE_WITH_ZERO_SHAPE_2(Convolution3DForward, 0, 1)
+
+MAKE_NODE_PROP_WITH_ZERO_SHAPE_2(Convolution3DForward, 0, 1)
 
 /* ==================== Convolution3DBackwardData  ==================== */
 IMPL_CONV(Convolution3DBackwardData);
@@ -551,6 +584,7 @@ Convolution3DBackwardData::Convolution3DBackwardData(
     if (src_for_shp) {
         add_input({src_for_shp});
     }
+    output(0)->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
 }
 
 SymbolVar Convolution3DBackwardData::make(
@@ -577,7 +611,10 @@ void Convolution3DBackwardData::init_output_static_infer_desc() {
 
 cg::OperatorNodeBase::NodeProp* Convolution3DBackwardData::do_make_node_prop() const {
     auto prop = Super::Super::do_make_node_prop();
+    prop->add_dep_type_existing_var(input(0), NodeProp::DepType::VALUE_ALLOW_EMPTY);
+    prop->add_dep_type_existing_var(input(1), NodeProp::DepType::VALUE_ALLOW_EMPTY);
     if (input().size() == 3) {
+        prop->add_dep_type_existing_var(input(2), NodeProp::DepType::VALUE_ALLOW_EMPTY);
         using D = NodeProp::DepType;
         prop->reset_dep_type(input(), {D::DEV_VALUE, D::DEV_VALUE, D::SHAPE});
     }
@@ -585,6 +622,10 @@ cg::OperatorNodeBase::NodeProp* Convolution3DBackwardData::do_make_node_prop() c
 }
 
 void Convolution3DBackwardData::scn_do_execute() {
+    if (input(0)->dev_tensor().empty() || input(1)->dev_tensor().empty()) {
+        mgb_assert(output(0)->dev_tensor().empty());
+        return;
+    }
     megdnn_opr()->exec(
             input(0)->dev_tensor().as_megdnn(), input(1)->dev_tensor().as_megdnn(),
             output(0)->dev_tensor().as_megdnn(),

@@ -478,7 +478,14 @@ namespace megdnn {
 template <typename Parameter>
 typename ConvolutionBase<Parameter>::CanonizedFilterMeta ConvolutionBase<Parameter>::
         make_canonized_filter_meta(size_t src_ndim, const TensorLayout& filter) const {
-    megdnn_assert_contiguous(filter);
+    if (!filter.is_empty()) {
+        megdnn_assert_contiguous(filter);
+    } else {
+        megdnn_assert(
+                param().format == Param::Format::NCHW ||
+                        param().format == Param::Format::NHWC,
+                "convolution with empty filters only support nhwc or nchw format");
+    }
     CanonizedFilterMeta ret;
     ret.dtype = filter.dtype;
     ret.format = param().format;
@@ -788,6 +795,9 @@ typename ConvolutionBase<Parameter>::CanonizedFilterMeta ConvolutionBase<Paramet
             dst[i + src_or_dst_spatial_start] = infer_conv_shape(
                     src[i + src_or_dst_spatial_start], cflt.dilated_spatial[i],
                     cflt.stride[i], cflt.padding[i]);
+        }
+        if (src[src_or_dst_c_pos] == 0) {
+            dst[src_or_dst_c_pos] = 0;
         }
     } else if (param().format == Param::Format::NCHW4) {
         megdnn_assert(
@@ -1184,8 +1194,11 @@ void ConvolutionBackwardData::deduce_layout(
         const TensorLayout& filter, const TensorLayout& diff, TensorLayout& grad) {
     auto errmsg = [&]() { return get_errmsg(filter, diff, grad, param()); };
     MEGDNN_MARK_USED_VAR(errmsg);
+    megdnn_assert(!filter.is_empty());
     megdnn_assert_contiguous(filter);
-    megdnn_assert_contiguous(diff);
+    if (!diff.is_empty()) {
+        megdnn_assert_contiguous(diff);
+    }
     megdnn_assert(filter.ndim >= 4_z && filter.ndim <= 7_z, "%s", errmsg().c_str());
     megdnn_assert(diff.ndim == 4_z || diff.ndim == 5_z, "%s", errmsg().c_str());
 

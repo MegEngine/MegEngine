@@ -101,12 +101,22 @@ private:
     std::unique_ptr<megdnn::Fill> m_fill_opr;
 };
 
-MGB_DEFINE_MEGDNN_OPR_WRAPPER_FWD1(MatrixInverse);
+MGB_DEFINE_OPR_CLASS(
+        MatrixInverse, intl::MegDNNOprWrapperFwd<megdnn::MatrixInverse>) // {
+public:
+    MGE_WIN_DECLSPEC_FUC MatrixInverse(
+            VarNode* p0, const Param& param, const OperatorNodeConfig& config);
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
+            SymbolVar p0, const Param& param = {},
+            const OperatorNodeConfig& config = {});
+    void scn_do_execute() override;
+    NodeProp* do_make_node_prop() const override;
+};
 
 MGB_DEFINE_OPR_CLASS(SVD, intl::MegDNNOprWrapperFwd<megdnn::SVD>) // {
 public:
     MGE_WIN_DECLSPEC_FUC SVD(
-            VarNode * src, const Param& param, const OperatorNodeConfig& config);
+            VarNode* src, const Param& param, const OperatorNodeConfig& config);
     MGE_WIN_DECLSPEC_FUC static SymbolVarArray make(
             const SymbolVar& src, const Param& param = {},
             const OperatorNodeConfig& config = {});

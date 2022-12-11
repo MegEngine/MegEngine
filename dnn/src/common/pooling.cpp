@@ -26,7 +26,15 @@ void PoolingBase::deduce_layout_impl(
     };
 
     MEGDNN_MARK_USED_VAR(get_errmsg);
-    megdnn_assert_contiguous(src);
+    if (!src.is_empty()) {
+        megdnn_assert_contiguous(src);
+    } else {
+        megdnn_assert(
+                src.ndim == 4 && (pformat == Param::Format::NCHW ||
+                                  pformat == Param::Format::NHWC),
+                "Pooling: empty input is only support when input format is NHWC or "
+                "NCHW");
+    }
     size_t spatial_pos, c_pos, batch_pos = 0;
     if (pformat == Param::Format::NCHW) {
         megdnn_assert(src.ndim == 4_z, "%s", get_errmsg().c_str());

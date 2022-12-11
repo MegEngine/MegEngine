@@ -16,6 +16,7 @@ PoolingForward::PoolingForward(
         : Super(OperatorNodeBaseCtorParam{i0->owner_graph(), config, "pooling", {i0}}) {
     init_megdnn_opr(*this, param);
     add_input({i0});
+    output(0)->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
     m_policy = policy;
 
     intl::MegDNNOprInitPostCtor<PoolingForward>::apply(*this);
@@ -44,6 +45,10 @@ size_t PoolingForward::get_workspace_size_bytes(
              {output_shapes[0], output(0)->dtype(), output(0)->format()}},
             megdnn_opr(), this, false);
 }
+
+SCN_DO_EXECUTE_WITH_ZERO_SHAPE_1(PoolingForward, 0)
+
+MAKE_NODE_PROP_WITH_ZERO_SHAPE_1(PoolingForward, 0)
 
 #if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(PoolingForward) {

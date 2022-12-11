@@ -61,6 +61,30 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
     auto&& conv = def.cast_final_safe<Convolution>();
     CompNode cn = inputs[0]->comp_node();
 
+    auto check_empty_inputs = [&]() -> void {
+        using Format = megdnn::Convolution::Param::Format;
+        auto format = conv.param().format;
+        mgb_assert(
+                format == Format::NCHW || format == Format::NHWC,
+                "Convolution support empty input only when the input format is "
+                "NHWC or NCHW");
+
+        auto filter_ndim = inputs[1]->layout().ndim;
+        size_t h = 2, w = 3, kh = filter_ndim - 2, kw = filter_ndim - 1;
+        if (format == Format::NHWC) {
+            h = 1;
+            w = 2;
+        }
+        mgb_assert(
+                inputs[0]->layout()[h] != 0 && inputs[0]->layout()[w] != 0 &&
+                        inputs[1]->layout()[kh] != 0 && inputs[1]->layout()[kw] != 0,
+                "Convolution expect input to have non-zero size for non-batch and "
+                "non-channel "
+                "dimensions, but the inputs has layout %s and %s",
+                inputs[0]->layout().to_string().c_str(),
+                inputs[1]->layout().to_string().c_str());
+    };
+
     // calling dnn ConvolutionForward when device is rocm
     // because there is no dnn ConvBiasForward on rocm
     if (cn.device_type() == CompNode::DeviceType::ROCM) {
@@ -76,6 +100,12 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
 
         // alloc memory
         auto out = Tensor::make(out_layout, cn);
+
+        if (inputs[0]->layout().is_empty() || inputs[1]->layout().is_empty()) {
+            check_empty_inputs();
+            return {out};
+        }
+
         dnn_opr.exec_fastrun(inputs[0], inputs[1], out);
         return {out};
     }
@@ -103,6 +133,12 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
 
     // alloc memory
     auto out = Tensor::make(out_layout, cn);
+
+    if (inputs[0]->layout().is_empty() || inputs[1]->layout().is_empty()) {
+        check_empty_inputs();
+        return {out};
+    }
+
     dnn_opr.exec_fastrun(inputs[0], inputs[1], empty_bias, empty_bias, out);
     return {out};
 }
@@ -213,6 +249,28 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
         }
     }();
     auto out = Tensor::make(out_layout, cn);
+    mgb_assert(
+            !inputs[0]->layout().is_empty(),
+            "ConvolutionBackwardData: empty filter is not supported: %s",
+            inputs[0]->layout().to_string().c_str());
+    if (inputs[1]->layout().is_empty()) {
+        using Format = megdnn::ConvolutionBackwardData::Param::Format;
+        auto format = convbwd.param().format;
+        mgb_assert(
+                format == Format::NCHW || format == Format::NHWC,
+                "ConvolutionBackwardData support empty input only when the input "
+                "format is "
+                "NHWC or NCHW");
+
+        auto&& shape = inputs[1]->shape();
+        mgb_assert(
+                shape[1] * shape[2] * shape[3] != 0,
+                "ConvolutionBackwardData expect input to have non-zero size for "
+                "non-batch"
+                "dimensions, but the input has layout %s",
+                inputs[1]->layout().to_string().c_str());
+        return {out};
+    }
     dnn_opr.exec_fastrun(inputs[0], inputs[1], out);
     return {out};
 }
@@ -264,9 +322,43 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
             return dnn_opr.deduce_layout(inputs[0]->layout(), inputs[1]->layout());
         }
     }();
+
+    auto check_empty_inputs = [&]() -> void {
+        using Format = megdnn::Convolution3D::Param::Format;
+        auto format = conv.param().format;
+        mgb_assert(
+                format == Format::NCDHW || format == Format::NDHWC,
+                "Convolution3D support empty input only when the input format is "
+                "NDHWC or NCDHW");
+
+        auto filter_ndim = inputs[1]->layout().ndim;
+        size_t d = 2, h = 3, w = 4, kd = filter_ndim - 3, kh = filter_ndim - 2,
+               kw = filter_ndim - 1;
+        if (format == Format::NDHWC) {
+            d = 1;
+            h = 2;
+            w = 3;
+        }
+        mgb_assert(
+                inputs[0]->layout()[d] != 0 && inputs[0]->layout()[h] != 0 &&
+                        inputs[0]->layout()[w] != 0 && inputs[1]->layout()[kd] != 0 &&
+                        inputs[1]->layout()[kh] != 0 && inputs[1]->layout()[kw] != 0,
+                "Convolution3D expect input to have non-zero size for non-batch and "
+                "non-channel "
+                "dimensions, but the inputs has layout %s and %s",
+                inputs[0]->layout().to_string().c_str(),
+                inputs[1]->layout().to_string().c_str());
+    };
+
     // alloc memory
     auto out = Tensor::make(out_layout, cn);
-    dnn_opr.exec_fastrun(inputs[0], inputs[1], out);
+    if (out_layout.is_empty()) {
+        mgb_assert(inputs[0]->layout().is_empty() || inputs[1]->layout().is_empty());
+        check_empty_inputs();
+        return {out};
+    } else {
+        dnn_opr.exec_fastrun(inputs[0], inputs[1], out);
+    }
     return {out};
 }
 
@@ -334,6 +426,28 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
         }
     }();
     auto out = Tensor::make(out_layout, cn);
+    mgb_assert(
+            !inputs[0]->layout().is_empty(),
+            "Convolution3DBackwardData: empty filter is not supported: %s",
+            inputs[0]->layout().to_string().c_str());
+    if (inputs[1]->layout().is_empty()) {
+        using Format = megdnn::Convolution3DBackwardData::Param::Format;
+        auto format = conv3dbwd.param().format;
+        mgb_assert(
+                format == Format::NCDHW || format == Format::NDHWC,
+                "Convolution3DBackwardData support empty input only when the input "
+                "format is "
+                "NCDHW or NDHWC");
+
+        auto&& shape = inputs[1]->shape();
+        mgb_assert(
+                shape[1] * shape[2] * shape[3] * shape[4] != 0,
+                "Convolution3DBackwardData expect input to have non-zero size for "
+                "non-batch"
+                "dimensions, but the input has layout %s",
+                inputs[1]->layout().to_string().c_str());
+        return {out};
+    }
     dnn_opr.exec_fastrun(inputs[0], inputs[1], out);
     return {out};
 }

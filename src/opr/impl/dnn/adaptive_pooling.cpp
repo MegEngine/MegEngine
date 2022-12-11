@@ -17,6 +17,7 @@ AdaptivePoolingForward::AdaptivePoolingForward(
                   src->owner_graph(), config, "adaptive_pooling", {src, out_shape}}) {
     init_megdnn_opr(*this, param);
     add_input({src, out_shape});
+    output(0)->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
     outshape_by_symvar_enable(1, 1);
 }
 
@@ -28,10 +29,16 @@ SymbolVar AdaptivePoolingForward::make(
 }
 
 void AdaptivePoolingForward::scn_do_execute() {
+    if (input(0)->dev_tensor().empty()) {
+        mgb_assert(output(0)->dev_tensor().empty());
+        return;
+    }
     megdnn_opr()->exec(
             input(0)->dev_tensor().as_megdnn(), output(0)->dev_tensor().as_megdnn(),
             intl::get_megdnn_workspace_from_var(output().back()));
 }
+
+MAKE_NODE_PROP_WITH_ZERO_SHAPE_2(AdaptivePoolingForward, 0, 1)
 
 void AdaptivePoolingForward::outshape_by_symvar_do_get_output_shape(
         TensorShape& dest, const ShapeInferInfo& shpinfo) {

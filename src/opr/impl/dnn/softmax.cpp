@@ -18,7 +18,7 @@ SoftmaxForward::SoftmaxForward(
     init_megdnn_opr(*this, param);
 
     add_input({inp});
-    output(0)->dtype(inp->dtype());
+    output(0)->dtype(inp->dtype()).add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
 }
 
 SymbolVar SoftmaxForward::make(
@@ -46,10 +46,16 @@ size_t SoftmaxForward::get_workspace_size_bytes(
 }
 
 void SoftmaxForward::scn_do_execute() {
+    if (input(0)->dev_tensor().empty()) {
+        mgb_assert(output(0)->dev_tensor().empty());
+        return;
+    }
     megdnn_opr()->exec(
             input(0)->dev_tensor().as_megdnn(), output(0)->dev_tensor().as_megdnn(),
             intl::get_megdnn_workspace_from_var(output().back()));
 }
+
+MAKE_NODE_PROP_WITH_ZERO_SHAPE_1(SoftmaxForward, 0)
 
 #if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(SoftmaxForward) {

@@ -1611,6 +1611,10 @@ void RelayoutFormat::init_output_format() {
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(PaddingForward);
 MEGDNN_OPR_INIT1(PaddingForward, "padding")
 
+SCN_DO_EXECUTE_WITH_ZERO_SHAPE_1(PaddingForward, 0)
+
+MAKE_NODE_PROP_WITH_ZERO_SHAPE_1(PaddingForward, 0)
+
 #if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(PaddingForward) {
     mgb_assert(opr.input().size() == 1);

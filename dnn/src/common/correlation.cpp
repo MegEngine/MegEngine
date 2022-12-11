@@ -6,6 +6,8 @@ namespace megdnn {
 
 void CorrelationBase::deduce_layout_fwd(
         const TensorLayout& data1, const TensorLayout& data2, TensorLayout& dst) {
+    megdnn_assert_not_empty(data1, Correlation);
+    megdnn_assert_not_empty(data2, Correlation);
     megdnn_assert_contiguous(data1);
     megdnn_assert_contiguous(data2);
     megdnn_assert_contiguous(dst);

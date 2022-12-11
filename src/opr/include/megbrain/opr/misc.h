@@ -15,6 +15,10 @@ namespace opr {
 
 MGB_DEFINE_OPR_CLASS_WITH_EXPORT(
         Argmax, intl::MegDNNOprWrapperFwd<megdnn::Argmax>) // {
+protected:
+    void scn_do_execute() override;
+    NodeProp* do_make_node_prop() const override;
+
 public:
     MGE_WIN_DECLSPEC_FUC Argmax(
             VarNode* src, const Param& param, const OperatorNodeConfig& config);
@@ -24,6 +28,10 @@ public:
 
 MGB_DEFINE_OPR_CLASS_WITH_EXPORT(
         Argmin, intl::MegDNNOprWrapperFwd<megdnn::Argmin>) // {
+protected:
+    void scn_do_execute() override;
+    NodeProp* do_make_node_prop() const override;
+
 public:
     MGE_WIN_DECLSPEC_FUC Argmin(
             VarNode* src, const Param& param, const OperatorNodeConfig& config);
@@ -93,6 +101,7 @@ public:
 protected:
     void scn_do_execute() override;
     void init_output_static_infer_desc() override;
+    NodeProp* do_make_node_prop() const override;
 };
 
 #if MGB_CUDA

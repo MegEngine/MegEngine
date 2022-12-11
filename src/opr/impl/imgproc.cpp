@@ -395,8 +395,26 @@ SymbolVar WarpPerspectiveBackwardMat::make(
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(RotateForward);
 MEGDNN_OPR_INIT1(RotateForward, "rotate")
 
+namespace mgb {
+namespace opr {
+namespace intl {
+template <>
+struct MegDNNOprInitPostCtor<CvtColorForward> {
+    static void apply(cg::OperatorNodeBase& opr) {
+        opr.output(0)->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
+    }
+};
+
+}  // namespace intl
+}  // namespace opr
+}  // namespace mgb
+
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(CvtColorForward);
 MEGDNN_OPR_INIT1(CvtColorForward, "cvt_color")
+
+SCN_DO_EXECUTE_WITH_ZERO_SHAPE_1(CvtColorForward, 0)
+
+MAKE_NODE_PROP_WITH_ZERO_SHAPE_1(CvtColorForward, 0)
 
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(GaussianBlurForward);
 MEGDNN_OPR_INIT1(GaussianBlurForward, "gaussion_blur")

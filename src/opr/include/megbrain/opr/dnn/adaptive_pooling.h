@@ -36,6 +36,7 @@ private:
     void add_input_layout_constraint() override;
     void init_output_static_infer_desc() override;
     void record_execute_deps(ExecDependencyArray& deps) override;
+    NodeProp* do_make_node_prop() const override;
 };
 using AdaptivePooling = AdaptivePoolingForward;
 

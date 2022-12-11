@@ -46,6 +46,8 @@ void RegionRestrictedConvolutionForward::deduce_layout(
         const TensorLayout& rout, TensorLayout& dst) {
     MEGDNN_MARK_USED_VAR(rin);
     MEGDNN_MARK_USED_VAR(rout);
+    megdnn_assert_not_empty(src, RegionRestrictedConvolution);
+    megdnn_assert_not_empty(filter, RegionRestrictedConvolution);
     deduce_layout_fwd(src, filter, dst);
 }
 

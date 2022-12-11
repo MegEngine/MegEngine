@@ -15,7 +15,9 @@ void Diag::deduce_layout(const TensorLayout& src, TensorLayout& dst) {
         size_t m = src.shape[0];
         size_t n = src.shape[1];
         size_t o = (k >= 0 ? std::min(n - k, m) : std::min(m + k, n));
-        megdnn_assert(o > 0, "The moved diagonal is out of the input matrix.");
+        if (!src.is_empty()) {
+            megdnn_assert(o > 0, "The moved diagonal is out of the input matrix.");
+        }
         dst = TensorLayout(TensorShape({o}), src.dtype);
     }
 }

@@ -876,14 +876,18 @@ TEST(TestBasicArithReduction, EmptyInput) {
         if (!host_y.shape().is_empty()) {
             size_t size = host_y.layout().total_nr_elems();
 
-#define cb(DType)                                        \
-    if (host_y.layout().dtype == DType()) {              \
-        using ctype = typename DTypeTrait<DType>::ctype; \
-        auto ptr = host_y.ptr<ctype>();                  \
-        ctype target = static_cast<ctype>(target_val);   \
-        for (size_t i = 0; i < size; ++i) {              \
-            ASSERT_TRUE(ptr[i] == target);               \
-        }                                                \
+#define cb(DType)                                                     \
+    if (host_y.layout().dtype == DType()) {                           \
+        using ctype = typename DTypeTrait<DType>::ctype;              \
+        auto ptr = host_y.ptr<ctype>();                               \
+        ctype target = static_cast<ctype>(target_val);                \
+        for (size_t i = 0; i < size; ++i) {                           \
+            if (std::isnan(target_val)) {                             \
+                ASSERT_TRUE(std::isnan(static_cast<double>(ptr[i]))); \
+            } else {                                                  \
+                ASSERT_TRUE(ptr[i] == target);                        \
+            }                                                         \
+        }                                                             \
     }
             MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
 #undef cb
@@ -911,10 +915,16 @@ TEST(TestBasicArithReduction, EmptyInput) {
     check_allow_empty({Mode::PRODUCT, 1, {}}, {0, 0, 0}, 1);
     check_allow_empty({Mode::PRODUCT, 2, {}}, {0, 0, 0}, 1);
 
-    check_forbid_empty({Mode::MAX, 0, {}}, {0});
-    check_forbid_empty({Mode::MIN, -1, {}}, {0, 1, 2});
-    check_forbid_empty({Mode::MEAN, 0, {}}, {0, 0});
-    check_forbid_empty({Mode::SUM_SQR, 1, {}}, {2, 1, 0});
+    check_allow_empty({Mode::MEAN, 0, {}}, {0}, NAN);
+    check_allow_empty({Mode::MEAN, 1, {}}, {0, 2, 3}, NAN);
+    check_allow_empty({Mode::MEAN, -1, {}}, {0, 2, 3}, NAN);
+
+    check_allow_empty({Mode::SUM_SQR, 0, {}}, {0}, 0);
+    check_allow_empty({Mode::SUM_SQR, 1, {}}, {0, 2, 3}, 0);
+    check_allow_empty({Mode::SUM_SQR, -1, {}}, {0, 2, 3}, 0);
+
+    check_forbid_empty({Mode::MAX, 0, {}}, {0, 1, 2});
+    check_allow_empty({Mode::MIN, -1, {}}, {0, 1, 2}, 0);
 }
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

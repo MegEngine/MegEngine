@@ -2313,6 +2313,10 @@ TEST(TestMemReuse, ResetEmptyDevTensor) {
         }
     };
 
+    // now reduce max failed only when the size of reduce axis is zero,
+    // so we should keep this condition in this test
+    const size_t REDUCE_AXIS = 1;
+
     // reciver opr do not allow empty tensor as input
     auto forbid_empty = [](const TensorShape& inp_shp) {
         HostTensorGenerator<> gen;
@@ -2321,7 +2325,7 @@ TEST(TestMemReuse, ResetEmptyDevTensor) {
         DeviceTensorND dev_x;
         dev_x.copy_from(*host_x);
         auto x = MaybeEmptyTensorOpr::make(*g, dev_x, {"x"}),
-             y = opr::Reduce::make(x, {opr::Reduce::Mode::MAX, 0});
+             y = opr::Reduce::make(x, {opr::Reduce::Mode::MAX, REDUCE_AXIS});
         HostTensorND host_y;
         auto func = g->compile({make_callback_copy(y, host_y)});
         if (inp_shp.is_empty()) {
@@ -2334,7 +2338,9 @@ TEST(TestMemReuse, ResetEmptyDevTensor) {
     allow_empty({2, 3, 4, 5});
     allow_empty({2, 0, 3, 4});
     forbid_empty({4, 5, 6, 7});
-    forbid_empty({8, 0, 0, 9});
+    TensorShape empty{8, 2, 3, 9};
+    empty[REDUCE_AXIS] = 0;
+    forbid_empty(empty);
 }
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

@@ -22,6 +22,9 @@ LayerNormForward::LayerNormForward(
     output(0)->dtype(data->dtype());
     output(1)->dtype(dtype::Float32());
     output(2)->dtype(dtype::Float32());
+    output(0)->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
+    output(1)->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
+    output(2)->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
 }
 
 LayerNormForward::LayerNormForward(
@@ -33,6 +36,9 @@ LayerNormForward::LayerNormForward(
     output(0)->dtype(data->dtype());
     output(1)->dtype(dtype::Float32());
     output(2)->dtype(dtype::Float32());
+    output(0)->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
+    output(1)->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
+    output(2)->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
 }
 
 SymbolVarArray LayerNormForward::make(
@@ -84,6 +90,12 @@ size_t LayerNormForward::get_workspace_size_bytes(
 }
 
 void LayerNormForward::scn_do_execute() {
+    if (input(0)->dev_tensor().empty()) {
+        mgb_assert(
+                output(0)->dev_tensor().empty() && output(1)->dev_tensor().empty() &&
+                output(2)->dev_tensor().empty());
+        return;
+    }
     if (param().affine) {
         megdnn_opr()->exec(
                 input(0)->dev_tensor().as_megdnn(), input(1)->dev_tensor().as_megdnn(),
@@ -97,6 +109,16 @@ void LayerNormForward::scn_do_execute() {
                 output(1)->dev_tensor().as_megdnn(),
                 output(2)->dev_tensor().as_megdnn(), {});
     }
+}
+
+LayerNormForward::NodeProp* LayerNormForward::do_make_node_prop() const {
+    auto ret = Super::do_make_node_prop();
+    ret->add_dep_type_existing_var(input(0), NodeProp::DepType::VALUE_ALLOW_EMPTY);
+    if (input().size() == 3) {
+        ret->add_dep_type_existing_var(input(1), NodeProp::DepType::VALUE_ALLOW_EMPTY);
+        ret->add_dep_type_existing_var(input(2), NodeProp::DepType::VALUE_ALLOW_EMPTY);
+    }
+    return ret;
 }
 
 #if MGB_ENABLE_GRAD

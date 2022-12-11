@@ -29,6 +29,10 @@ public:
 };
 
 size_t DropoutForwardImpl::get_mask_size_in_bytes(const TensorLayout& inp) {
+    if (inp.is_empty()) {
+        return 0;
+    }
+
     size_t reserve_space_size_in_bytes = 0;
     DropoutTensorDesc ddesc(inp);
     cudnn_check(

@@ -6,6 +6,7 @@ namespace megdnn {
 
 void WarpAffineBase::check_layout_fwd(
         const TensorLayout& src, const TensorLayout& mat, const TensorLayout& dst) {
+    megdnn_assert_not_empty(mat, WarpAffine);
     megdnn_assert_contiguous(mat);
     auto errmsg = [&]() {
         return megdnn_layout_msg(src) + ", " + megdnn_layout_msg(mat) + ", " +

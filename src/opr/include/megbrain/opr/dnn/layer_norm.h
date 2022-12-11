@@ -30,6 +30,7 @@ private:
             const TensorShapeArray& input_shapes,
             const TensorShapeArray& output_shapes) const override;
     void scn_do_execute() override;
+    NodeProp* do_make_node_prop() const override;
 };
 using LayerNorm = LayerNormForward;
 

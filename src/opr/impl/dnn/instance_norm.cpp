@@ -22,6 +22,10 @@ InstanceNormForward::InstanceNormForward(
     output(0)->dtype(data->dtype());
     output(1)->dtype(dtype::Float32());
     output(2)->dtype(dtype::Float32());
+
+    output(0)->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
+    output(1)->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
+    output(2)->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
 }
 
 InstanceNormForward::InstanceNormForward(
@@ -33,6 +37,10 @@ InstanceNormForward::InstanceNormForward(
     output(0)->dtype(data->dtype());
     output(1)->dtype(dtype::Float32());
     output(2)->dtype(dtype::Float32());
+
+    output(0)->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
+    output(1)->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
+    output(2)->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
 }
 
 SymbolVarArray InstanceNormForward::make(
@@ -96,6 +104,13 @@ size_t InstanceNormForward::get_workspace_size_bytes(
 }
 
 void InstanceNormForward::scn_do_execute() {
+    if (input(0)->dev_tensor().empty()) {
+        mgb_assert(
+                output(0)->dev_tensor().empty() && output(1)->dev_tensor().empty() &&
+                output(2)->dev_tensor().empty());
+        return;
+    }
+
     auto p = param();
     mgb_assert(p.format == Param::Format::NCHW, "only support inputs in shape NCHW.");
     size_t C = input(0)->dev_tensor().shape()[1];
@@ -117,6 +132,16 @@ void InstanceNormForward::scn_do_execute() {
                 output(2)->dev_tensor().as_megdnn(),
                 intl::get_megdnn_workspace_from_var(output().back()));
     }
+}
+
+InstanceNormForward::NodeProp* InstanceNormForward::do_make_node_prop() const {
+    auto ret = Super::do_make_node_prop();
+    ret->add_dep_type_existing_var(input(0), NodeProp::DepType::VALUE_ALLOW_EMPTY);
+    if (input().size() == 3) {
+        ret->add_dep_type_existing_var(input(1), NodeProp::DepType::VALUE_ALLOW_EMPTY);
+        ret->add_dep_type_existing_var(input(2), NodeProp::DepType::VALUE_ALLOW_EMPTY);
+    }
+    return ret;
 }
 
 #if MGB_ENABLE_GRAD

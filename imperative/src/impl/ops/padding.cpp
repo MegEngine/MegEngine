@@ -36,7 +36,8 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
         }
     }();
     auto out = Tensor::make(dst, comp_node);
-    dnn_op.exec(inputs[0], out);
+    if (!inputs[0]->layout().is_empty())
+        dnn_op.exec(inputs[0], out);
     return {out};
 }
 

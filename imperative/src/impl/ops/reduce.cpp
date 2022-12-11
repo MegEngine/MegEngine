@@ -122,10 +122,15 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
         // input empty but output not, do fill
         resolve_keepdim();
         output = Tensor::make(output_layout, comp_node);
-        auto on_bad_empty_reduce = [](const char* name) {
+        auto on_bad_empty_reduce = [](const char* name, size_t axis) {
             mgb_throw(
-                    MegBrainError, "empty input is not allowed for reduce mode: %s",
-                    name);
+                    MegBrainError,
+                    "%s(): expect reduction dim %zu to have non-zero size", name, axis);
+        };
+
+        auto fill_output = [&](auto value) -> void {
+            DnnOprCaller<megdnn::Fill> fill_op(comp_node, {static_cast<float>(value)});
+            fill_op.exec_with_ws(output);
         };
         switch (mode) {
             case Reduce::Mode::SUM:
@@ -133,22 +138,20 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
                 dev_tensor_memset(output->dev_tensor(), 0);
                 break;
             case Reduce::Mode::PRODUCT: {
-                // fill 1
-                DnnOprCaller<megdnn::Fill> fill_op(comp_node, {1});
-                fill_op.exec_with_ws(output);
+                fill_output(1);
                 break;
             }
             case Reduce::Mode::MEAN:
-                on_bad_empty_reduce("mean");
+                fill_output(NAN);
                 break;
             case Reduce::Mode::MIN:
-                on_bad_empty_reduce("min");
+                on_bad_empty_reduce("min", dnn_op.param().axis);
                 break;
             case Reduce::Mode::MAX:
-                on_bad_empty_reduce("max");
+                on_bad_empty_reduce("max", dnn_op.param().axis);
                 break;
             case Reduce::Mode::SUM_SQR:
-                on_bad_empty_reduce("sum_sqr");
+                on_bad_empty_reduce("sum_sqr", dnn_op.param().axis);
                 break;
             default:
                 mgb_throw(MegBrainError, "bad reduce mode");

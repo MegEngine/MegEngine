@@ -51,6 +51,30 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
             return dnn_opr.deduce_layout(inputs[0]->layout());
         }
     }();
+
+    auto&& src_layout = inputs[0]->layout();
+    if (src_layout.ndim == 4 && src_layout.is_empty()) {
+        if (pooling.param().format == megdnn::Pooling::Param::Format::NCHW) {
+            mgb_assert(
+                    src_layout.shape[2] != 0 && src_layout.shape[3] != 0,
+                    "Pooling expect input to have non-zero size for non-batch "
+                    "dimensions, but the input has layout %s",
+                    src_layout.to_string().c_str());
+        } else if (pooling.param().format == megdnn::Pooling::Param::Format::NHWC) {
+            mgb_assert(
+                    src_layout.shape[1] != 0 && src_layout.shape[2] != 0,
+                    "Pooling expect input to have non-zero size for non-batch "
+                    "dimensions, but the input has layout %s",
+                    src_layout.to_string().c_str());
+        } else {
+            mgb_assert(
+                    false,
+                    "Pooling support empty input only when the input format is NHWC or "
+                    "NCHW");
+        }
+        return {Tensor::make(oup_layout, cn)};
+    }
+
     auto out = Tensor::make(oup_layout, cn);
     dnn_opr.exec_fastrun(inputs[0], out);
     return {out};

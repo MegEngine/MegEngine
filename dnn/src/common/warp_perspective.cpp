@@ -93,6 +93,9 @@ void WarpPerspectiveBase::check_layout_fwd(
 void WarpPerspectiveBase::check_layout_fwd(
         const TensorLayout& src, const TensorLayout& mat, const TensorLayout& mat_idx,
         const TensorLayout& dst) {
+    megdnn_assert_not_empty(src, WarpPerspective);
+    megdnn_assert_not_empty(mat, WarpPerspective);
+    megdnn_assert_not_empty(dst, WarpPerspective);
     megdnn_assert_contiguous(mat);
     megdnn_assert_contiguous(src);
     megdnn_assert_contiguous(dst);

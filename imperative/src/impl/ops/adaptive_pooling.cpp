@@ -81,6 +81,7 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
     auto&& src_layout = inputs[0]->layout();
     TensorLayout dst_layout{inputs[0]->dtype()};
     auto param_format = pooling.format;
+    using PFormat = megdnn::param::AdaptivePooling::Format;
     if (!validated) {
         dst_layout.ndim = src_layout.ndim;
         const dt_int32* oshp2d = nullptr;
@@ -92,12 +93,12 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
         } else {
             oshp2d = pooling.shape.data();
         }
-        if (param_format == opr::AdaptivePooling::Param::Format::NCHW) {
+        if (param_format == PFormat::NCHW) {
             dst_layout[0] = src_layout[0];
             dst_layout[1] = src_layout[1];
             dst_layout[2] = oshp2d[0];
             dst_layout[3] = tshp1n ? oshp2d[0] : oshp2d[1];
-        } else if (param_format == opr::AdaptivePooling::Param::Format::NHWC) {
+        } else if (param_format == PFormat::NHWC) {
             dst_layout[0] = src_layout[0];
             dst_layout[1] = oshp2d[0];
             dst_layout[2] = tshp1n ? oshp2d[0] : oshp2d[1];
@@ -112,18 +113,27 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
     }
 
     size_t IH, IW, OH, OW;
-    if (param_format == megdnn::param::AdaptivePooling::Format::NCHW) {
+    if (param_format == PFormat::NCHW) {
         IH = src_layout[2];
         IW = src_layout[3];
         OH = dst_layout[2];
         OW = dst_layout[3];
-    } else if (param_format == megdnn::param::AdaptivePooling::Format::NHWC) {
+    } else if (param_format == PFormat::NHWC) {
         IH = src_layout[1];
         IW = src_layout[2];
         OH = dst_layout[1];
         OW = dst_layout[2];
     } else {
         mgb_throw(MegBrainError, "AdaptivePooling only support NCHW or NHWC format");
+    }
+
+    if (src_layout.ndim == 4 && src_layout.is_empty()) {
+        mgb_assert(
+                IH != 0 && IW != 0,
+                "Pooling expect input to have non-zero size for non-batch "
+                "dimensions, but the input has layout %s",
+                src_layout.to_string().c_str());
+        return {Tensor::make(dst_layout, cn)};
     }
 
     // adaptive_pooling param to pooling

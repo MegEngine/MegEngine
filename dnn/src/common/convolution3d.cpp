@@ -30,7 +30,15 @@ std::string get_errmsg(
 Convolution3DBase::CanonizedFilterMeta Convolution3DBase::
         make_canonized_filter_meta_impl(
                 size_t src_ndim, const TensorLayout& filter, const Param& param) {
-    megdnn_assert_contiguous(filter);
+    if (!filter.is_empty()) {
+        megdnn_assert_contiguous(filter);
+    } else {
+        megdnn_assert(
+                param.format == Param::Format::NCDHW ||
+                        param.format == Param::Format::NDHWC,
+                "Convolution3D: only support empty filter with input format ndhwc or "
+                "nchwd");
+    }
     auto img_ndim = src_ndim - 2;
     CanonizedFilterMeta ret;
     ret.dtype_enum = filter.dtype.enumv();
@@ -160,6 +168,9 @@ Convolution3DBase::CanonizedFilterMeta Convolution3DBase::deduce_layout_fwd(
                 src[i + src_or_dst_spatial_start], cflt.dilated_spatial[i],
                 cflt.stride[i], cflt.padding[i]);
     }
+    if (src[src_or_dst_c_pos] == 0) {
+        dst[src_or_dst_c_pos] = 0;
+    }
     dst.init_contiguous_stride();
     return cflt;
 }
@@ -219,8 +230,11 @@ void Convolution3DBackwardData::deduce_layout_impl(
             "only float type is supported for conv backward");
     auto errmsg = [&]() { return get_errmsg(filter, diff, grad, param); };
     MEGDNN_MARK_USED_VAR(errmsg);
+    megdnn_assert(!filter.is_empty());
     megdnn_assert_contiguous(filter);
-    megdnn_assert_contiguous(diff);
+    if (!diff.is_empty()) {
+        megdnn_assert_contiguous(diff);
+    }
     megdnn_assert(filter.ndim == 5_z || filter.ndim == 6_z, "%s", errmsg().c_str());
     megdnn_assert(diff.ndim == 5_z, "%s", errmsg().c_str());
     megdnn_assert(filter.dtype == diff.dtype, "%s", errmsg().c_str());

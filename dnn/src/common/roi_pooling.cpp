@@ -8,6 +8,8 @@ void ROIPoolingBase::check_layout_fwd(
         const TensorLayout& src, const TensorLayout& rois, const TensorLayout& dst,
         const TensorLayout& index) {
     // all should be contiguous
+    megdnn_assert_not_empty(src, ROIPooling);
+    megdnn_assert_not_empty(rois, ROIPooling);
     megdnn_assert_contiguous(src);
     megdnn_assert_contiguous(rois);
     megdnn_assert_contiguous(dst);

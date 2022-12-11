@@ -50,7 +50,9 @@ Linspace::Linspace(
         : Super{start->owner_graph(), config, "linspce", {start, stop}},
           m_param{param} {
     add_input({start, stop, num});
-    add_output(None)->dtype(dtype::Float32());
+    add_output(None)
+            ->dtype(dtype::Float32())
+            .add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
     add_equivalence_component<PODHash<Param>>(&m_param);
 }
 
@@ -100,7 +102,11 @@ void Linspace::scn_do_execute() {
     if (!opr || opr.comp_node() != cn)
         opr = intl::create_megdnn_opr<megdnn::Linspace>(cn);
     opr->param() = {startv, stopv, m_param.endpoint};
-    auto&& ov = output(0)->dev_tensor().as_megdnn();
+    auto&& odev = output(0)->dev_tensor();
+    if (odev.empty()) {
+        return;
+    }
+    auto&& ov = odev.as_megdnn();
     mgb_assert(!opr->get_workspace_in_bytes(ov.layout));
     opr->exec(ov, {});
 }
@@ -130,7 +136,9 @@ MGB_DYN_TYPE_OBJ_FINAL_IMPL(Eye);
 Eye::Eye(VarNode* shape, const Param& param, const OperatorNodeConfig& config)
         : Super{shape->owner_graph(), config, "eye", {shape}}, m_param{param} {
     add_input({shape});
-    add_output(None)->dtype(DType::from_enum(param.dtype));
+    add_output(None)
+            ->dtype(DType::from_enum(param.dtype))
+            .add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
     add_equivalence_component<PODHash<Param>>(&m_param);
 }
 
@@ -165,6 +173,9 @@ cg::OperatorNodeBase::NodeProp* Eye::do_make_node_prop() const {
 }
 
 void Eye::scn_do_execute() {
+    if (output(0)->layout().is_empty()) {
+        return;
+    }
     auto cn = comp_node();
     auto&& opr = m_dnn_opr;
     if (!opr || opr.comp_node() != cn) {

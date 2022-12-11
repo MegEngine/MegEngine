@@ -107,6 +107,13 @@
                 #rhs, rhs.dtype.name());                                               \
     } while (0)
 
+#define megdnn_assert_not_empty(layout, op)                                       \
+    do {                                                                          \
+        megdnn_assert(                                                            \
+                (!(layout).is_empty()), "%s: not support empty args %s: %s", #op, \
+                #layout, (layout).to_string().c_str());                           \
+    } while (0)
+
 #define megdnn_layout_msg(layout) std::string(#layout "=" + (layout).to_string())
 
 #if __DEPLOY_ON_XP_SP2__

@@ -487,8 +487,31 @@ void Dot::record_execute_deps(ExecDependencyArray& deps) {
 
 /* ================= MatrixInverse =================  */
 
+namespace mgb {
+namespace opr {
+namespace intl {
+template <>
+struct MegDNNOprInitPostCtor<MatrixInverse> {
+    static void apply(cg::OperatorNodeBase& opr) {
+        opr.output(0)->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
+    }
+};
+}  // namespace intl
+}  // namespace opr
+}  // namespace mgb
+
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(MatrixInverse);
 MEGDNN_OPR_INIT1(MatrixInverse, "matrix_inv")
+
+void MatrixInverse::scn_do_execute() {
+    if (input(0)->dev_tensor().empty()) {
+        mgb_assert(output(0)->dev_tensor().empty());
+        return;
+    }
+    Super::scn_do_execute();
+}
+
+MAKE_NODE_PROP_WITH_ZERO_SHAPE_1(MatrixInverse, 0)
 
 #if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(MatrixInverse) {

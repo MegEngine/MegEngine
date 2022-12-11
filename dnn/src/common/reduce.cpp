@@ -36,7 +36,7 @@ namespace megdnn {
 void ReduceForward::deduce_layout(const TensorLayout& src, TensorLayout& dst) {
     megdnn_assert(
             param().axis >= 0 && static_cast<uint32_t>(param().axis) < src.ndim,
-            "axis: %d ndim: %zu", param().axis, src.ndim);
+            "Reduce axis out of dim: axis: %d ndim: %zu", param().axis, src.ndim);
     dst = src;
     dst.shape[param().axis] = 1;
 

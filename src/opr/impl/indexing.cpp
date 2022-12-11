@@ -65,8 +65,27 @@ struct MegDNNOprInitInputsModifier<IndexingSetOneHot>
 }  // namespace mgb
 
 /* ==================== Diag ==================== */
+
+namespace mgb {
+namespace opr {
+namespace intl {
+template <>
+struct MegDNNOprInitPostCtor<Diag> {
+    static void apply(cg::OperatorNodeBase& opr) {
+        opr.output(0)->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
+    }
+};
+
+}  // namespace intl
+}  // namespace opr
+}  // namespace mgb
+
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(Diag);
 MEGDNN_OPR_INIT1(Diag, "diag")
+
+SCN_DO_EXECUTE_WITH_ZERO_SHAPE_1(Diag, 0)
+
+MAKE_NODE_PROP_WITH_ZERO_SHAPE_1(Diag, 0)
 
 #if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(Diag) {
@@ -151,11 +170,30 @@ MGB_IMPL_OPR_GRAD(DiagBackward) {
 
 /* ==================== IndexingOneHot ==================== */
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(IndexingOneHot);
+
+namespace mgb {
+namespace opr {
+namespace intl {
+template <>
+struct MegDNNOprInitPostCtor<IndexingOneHot> {
+    static void apply(cg::OperatorNodeBase& opr) {
+        opr.output(0)->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
+    }
+};
+
+}  // namespace intl
+}  // namespace opr
+}  // namespace mgb
+
 MEGDNN_OPR_INIT2(IndexingOneHot, "indexing_one_hot")
 
 void IndexingOneHot::init_output_dtype() {
     output(0)->dtype(input(0)->dtype());
 }
+
+SCN_DO_EXECUTE_WITH_ZERO_SHAPE_2(IndexingOneHot, 0, 1)
+
+MAKE_NODE_PROP_WITH_ZERO_SHAPE_2(IndexingOneHot, 0, 1)
 
 #if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(IndexingOneHot) {
@@ -172,6 +210,21 @@ MGB_IMPL_OPR_GRAD(IndexingOneHot) {
 /* ==================== IndexingSetOneHot ==================== */
 
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(IndexingSetOneHot);
+
+namespace mgb {
+namespace opr {
+namespace intl {
+template <>
+struct MegDNNOprInitPostCtor<IndexingSetOneHot> {
+    static void apply(cg::OperatorNodeBase& opr) {
+        opr.output(0)->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
+    }
+};
+
+}  // namespace intl
+}  // namespace opr
+}  // namespace mgb
+
 MEGDNN_OPR_INIT3(IndexingSetOneHot, "indexing_set_one_hot")
 
 void IndexingSetOneHot::init_output_dtype() {
@@ -202,12 +255,19 @@ void IndexingSetOneHot::scn_do_execute() {
     } else {
         mgb_assert(odata.layout().eq_layout(idata.layout()));
     }
+
+    if (odata.layout().is_empty()) {
+        return;
+    }
+
     mgb_assert(odata.layout().is_contiguous());
 
     megdnn_opr()->exec(
             odata.as_megdnn(), index.as_megdnn(), input(2)->dev_tensor().as_megdnn(),
             intl::get_megdnn_workspace_from_var(output(1)));
 }
+
+MAKE_NODE_PROP_WITH_ZERO_SHAPE_3(IndexingSetOneHot, 0, 1, 2)
 
 #if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(IndexingSetOneHot) {

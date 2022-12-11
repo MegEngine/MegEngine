@@ -78,6 +78,10 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
     auto mean = Tensor::make(mean_layout, cn);
     auto rstd = Tensor::make(rstd_layout, cn);
 
+    if (inputs[0]->layout().is_empty()) {
+        return {out, mean, rstd};
+    }
+
     if (p.affine) {
         caller.exec_with_ws(inputs[0], inputs[1], inputs[2], out, mean, rstd);
     } else {

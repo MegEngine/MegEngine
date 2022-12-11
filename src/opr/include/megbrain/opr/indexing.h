@@ -14,6 +14,8 @@ public:
             VarNode* src, const Param& param, const OperatorNodeConfig& config);
     MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar src, const Param& param, const OperatorNodeConfig& config = {});
+    void scn_do_execute() override;
+    NodeProp* do_make_node_prop() const override;
 };
 
 MGB_DEFINE_OPR_CLASS(DiagBackward, cg::SingleCNOperatorNodeBase) // {
@@ -51,6 +53,8 @@ public:
 
 private:
     void init_output_dtype() override;
+    void scn_do_execute() override;
+    NodeProp* do_make_node_prop() const override;
 };
 
 MGB_DEFINE_OPR_CLASS(
@@ -77,6 +81,7 @@ private:
     size_t get_workspace_size_bytes(
             const TensorShapeArray& input_shapes,
             const TensorShapeArray& output_shapes) const override;
+    NodeProp* do_make_node_prop() const override;
 };
 
 MGB_DEFINE_OPR_CLASS(

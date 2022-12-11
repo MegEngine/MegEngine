@@ -22,9 +22,16 @@ size_t MatrixInverse::get_workspace_in_bytes(
 void MatrixInverse::canonize_params(
         const TensorLayout& layout, size_t* batch, size_t* n) {
     megdnn_assert(
-            layout.is_contiguous() && layout.ndim >= 2 &&
-                    layout[layout.ndim - 2] == layout[layout.ndim - 1],
-            "invalid MatrixInverse layout: %s", layout.to_string().c_str());
+            layout.ndim >= 2 && layout[layout.ndim - 2] == layout[layout.ndim - 1],
+            "MatrixInverse: input must be batches of square matrices, but with input "
+            "layout: %s",
+            layout.to_string().c_str());
+    if (!layout.is_empty()) {
+        megdnn_assert(
+                layout.is_contiguous(),
+                "MatrixInverse: input must be contiguous, but with input layout: %s",
+                layout.to_string().c_str());
+    }
     megdnn_assert(
             DNN_FLOAT16_SELECT(layout.dtype == dtype::Float16(), false) ||
                     layout.dtype == dtype::Float32(),

@@ -380,4 +380,50 @@ size_t MegDNNOprHolderImpl<MegDNNOpr, add_workspace, OprHolder>::
                 i0.node(), i1.node(), i2.node(), i3.node(), param, config);           \
     }
 
+#define SCN_DO_EXECUTE_WITH_ZERO_SHAPE_1(cls, idx0) \
+    void cls::scn_do_execute() {                    \
+        if (input(idx0)->dev_tensor().empty()) {    \
+            return;                                 \
+        }                                           \
+        Super::scn_do_execute();                    \
+    }
+
+#define SCN_DO_EXECUTE_WITH_ZERO_SHAPE_2(cls, idx0, idx1)                             \
+    void cls::scn_do_execute() {                                                      \
+        if (input(idx0)->dev_tensor().empty() || input(idx1)->dev_tensor().empty()) { \
+            return;                                                                   \
+        }                                                                             \
+        Super::scn_do_execute();                                                      \
+    }
+
+#define MAKE_NODE_PROP_WITH_ZERO_SHAPE_1(cls, idx0)                 \
+    cls::NodeProp* cls::do_make_node_prop() const {                 \
+        auto ret = Super::do_make_node_prop();                      \
+        ret->add_dep_type_existing_var(                             \
+                input(idx0), NodeProp::DepType::VALUE_ALLOW_EMPTY); \
+        return ret;                                                 \
+    }
+
+#define MAKE_NODE_PROP_WITH_ZERO_SHAPE_2(cls, idx0, idx1)           \
+    cls::NodeProp* cls::do_make_node_prop() const {                 \
+        auto ret = Super::do_make_node_prop();                      \
+        ret->add_dep_type_existing_var(                             \
+                input(idx0), NodeProp::DepType::VALUE_ALLOW_EMPTY); \
+        ret->add_dep_type_existing_var(                             \
+                input(idx1), NodeProp::DepType::VALUE_ALLOW_EMPTY); \
+        return ret;                                                 \
+    }
+
+#define MAKE_NODE_PROP_WITH_ZERO_SHAPE_3(cls, idx0, idx1, idx2)     \
+    cls::NodeProp* cls::do_make_node_prop() const {                 \
+        auto ret = Super::do_make_node_prop();                      \
+        ret->add_dep_type_existing_var(                             \
+                input(idx0), NodeProp::DepType::VALUE_ALLOW_EMPTY); \
+        ret->add_dep_type_existing_var(                             \
+                input(idx1), NodeProp::DepType::VALUE_ALLOW_EMPTY); \
+        ret->add_dep_type_existing_var(                             \
+                input(idx2), NodeProp::DepType::VALUE_ALLOW_EMPTY); \
+        return ret;                                                 \
+    }
+
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

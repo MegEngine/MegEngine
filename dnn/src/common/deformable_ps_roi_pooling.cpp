@@ -6,6 +6,9 @@ namespace megdnn {
 void DeformablePSROIPoolingBase::deduce_layout_fwd(
         const TensorLayout& data, const TensorLayout& rois, const TensorLayout& trans,
         TensorLayout& out_data, TensorLayout& out_count) {
+    megdnn_assert_not_empty(data, DeformablePSROIPooling);
+    megdnn_assert_not_empty(rois, DeformablePSROIPooling);
+    megdnn_assert_not_empty(trans, DeformablePSROIPooling);
     megdnn_assert_contiguous(data);
     megdnn_assert_contiguous(rois);
     megdnn_assert_contiguous(trans);

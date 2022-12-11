@@ -1311,6 +1311,11 @@ void Reduce::KernScheduler::execute(
             m_fill_opr = intl::get_megdnn_handle(dest.comp_node())
                                  ->create_operator<megdnn::Fill>();
         }
+
+        if (dest.empty()) {
+            return;
+        }
+
         std::string err_msg;
         switch (mode) {
             case Reduce::Mode::SUM:
@@ -1326,7 +1331,10 @@ void Reduce::KernScheduler::execute(
                 }
                 break;
             case Reduce::Mode::MEAN:
-                err_msg = "mean";
+                if (!dest.empty()) {
+                    m_fill_opr->param() = {static_cast<float>(NAN)};
+                    m_fill_opr->exec(dest.as_megdnn(), {});
+                }
                 break;
             case Reduce::Mode::MIN:
                 err_msg = "min";
@@ -1335,7 +1343,10 @@ void Reduce::KernScheduler::execute(
                 err_msg = "max";
                 break;
             case Reduce::Mode::SUM_SQR:
-                err_msg = "sum_sqr";
+                if (!dest.empty()) {
+                    m_fill_opr->param() = 0;
+                    m_fill_opr->exec(dest.as_megdnn(), {});
+                }
                 break;
             default:
                 mgb_throw(MegBrainError, "bad reduce mode");

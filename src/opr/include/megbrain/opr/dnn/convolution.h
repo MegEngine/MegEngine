@@ -180,6 +180,7 @@ MGB_DEFINE_OPR_CLASS_WITH_EXPORT(
     void record_execute_deps(cg::GraphExecutable::ExecDependencyArray& deps) override;
     SmallVector<TensorLayout> deduce_preprocessed_filter_layout() override;
     void scn_do_execute_preprocess() override;
+    NodeProp* do_make_node_prop() const override;
 
     friend testing::ConvolutionTestingPeer;
 
@@ -343,6 +344,8 @@ MGB_DEFINE_OPR_CLASS_WITH_EXPORT(
     size_t get_workspace_size_bytes(
             const TensorShapeArray& input_shapes,
             const TensorShapeArray& output_shapes) const override final;
+    NodeProp* do_make_node_prop() const override;
+    void scn_do_execute() override;
 
 public:
     MGE_WIN_DECLSPEC_FUC Convolution3DForward(

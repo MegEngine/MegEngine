@@ -12,6 +12,8 @@ public:
             VarNode* src, const Param& param, const OperatorNodeConfig& config);
     MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar src, const Param& param, const OperatorNodeConfig& config = {});
+    void scn_do_execute() override;
+    NodeProp* do_make_node_prop() const override;
 };
 using LRN = LRNForward;
 

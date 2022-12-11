@@ -16,7 +16,7 @@ namespace intl {
 template <>
 struct MegDNNOprInitPostCtor<Argmax> {
     static void apply(cg::OperatorNodeBase& opr) {
-        opr.output(0)->dtype(dtype::Int32());
+        opr.output(0)->dtype(dtype::Int32()).add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
     }
 };
 
@@ -48,6 +48,21 @@ MGB_IMPL_OPR_GRAD(Argmax) {
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(Argmax);
 MEGDNN_OPR_INIT1(Argmax, "argmax")
 
+void Argmax::scn_do_execute() {
+    if (input(0)->dev_tensor().empty()) {
+        mgb_assert(
+                input(0)->dev_tensor().layout().shape[param().axis] != 0,
+                "Argmax: expected reduction dim %d to be specified for empty input",
+                param().axis);
+        mgb_assert(output(0)->dev_tensor().empty());
+        return;
+    }
+    mgb_assert(!output(0)->dev_tensor().empty());
+    Super::scn_do_execute();
+}
+
+MAKE_NODE_PROP_WITH_ZERO_SHAPE_1(Argmax, 0)
+
 #if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(Argmin) {
     MGB_MARK_USED_VAR(out_grad);
@@ -59,6 +74,21 @@ MGB_IMPL_OPR_GRAD(Argmin) {
 
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(Argmin);
 MEGDNN_OPR_INIT1(Argmin, "argmin")
+
+void Argmin::scn_do_execute() {
+    if (input(0)->dev_tensor().empty()) {
+        mgb_assert(
+                input(0)->dev_tensor().layout().shape[param().axis] != 0,
+                "Argmin: expected reduction dim %d to be specified for empty input",
+                param().axis);
+        mgb_assert(output(0)->dev_tensor().empty());
+        return;
+    }
+    mgb_assert(!output(0)->dev_tensor().empty());
+    Super::scn_do_execute();
+}
+
+MAKE_NODE_PROP_WITH_ZERO_SHAPE_1(Argmin, 0)
 
 /* ================= ArgsortForward =================  */
 
@@ -129,6 +159,7 @@ Cumsum::Cumsum(VarNode* opr, const Param& param, const OperatorNodeConfig& confi
         : Super{opr->owner_graph(), config, "Cumsum", {opr}} {
     init_megdnn_opr(*this, param);
     add_input({opr}, AddInputSortType::CUR_ADDED);
+    output(0)->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
 }
 
 #if MGB_ENABLE_GRAD
@@ -146,10 +177,16 @@ SymbolVar Cumsum::make(
 }
 
 void Cumsum::scn_do_execute() {
+    if (input(0)->dev_tensor().empty()) {
+        mgb_assert(output(0)->dev_tensor().empty());
+        return;
+    }
     megdnn_opr()->exec(
             input(0)->dev_tensor().as_megdnn(), output(0)->dev_tensor().as_megdnn(),
             intl::get_megdnn_workspace_from_var(output().back()));
 }
+
+MAKE_NODE_PROP_WITH_ZERO_SHAPE_1(Cumsum, 0)
 
 void Cumsum::add_input_layout_constraint() {
     input(0)->add_layout_constraint_contiguous();
