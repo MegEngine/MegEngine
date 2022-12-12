@@ -1639,7 +1639,7 @@ TEST(TestOprLoop, VisitInpSubMavi) {
 
 TEST(TestOprLoop, AsyncDispatch) {
     constexpr int LOOP_TIME = 5;
-    constexpr double SLEEP_TIME = 0.03;
+    constexpr double SLEEP_TIME = 1.0;
     HostTensorGenerator<> gen;
     auto host_x = gen({128});
     auto graph = ComputingGraph::make();
@@ -1667,7 +1667,7 @@ TEST(TestOprLoop, AsyncDispatch) {
     ASSERT_EQ(time_loop_finish, -1.);
     func->execute();
     EXPECT_GE(time_loop_finish, 0);
-    EXPECT_LT(time_loop_finish, SLEEP_TIME);
+    EXPECT_LT(time_loop_finish, SLEEP_TIME / 2);
 
     // sleep kernel in cuda is easily affected by the frequency change of GPU,
     // so we just print warn log instead assert. more refer to
