@@ -145,7 +145,7 @@ class PatternMatcher:
     def _visit_function_pattern(self, pattern: FunctionPattern, expr: Expr) -> bool:
         if not is_call_function(expr, pattern.target):
             return False
-        kwargs = expr.kwargs
+        kwargs = expr.named_args
         for key, target in pattern.params.items():
             value = kwargs.get(key, None)
             if target != value:

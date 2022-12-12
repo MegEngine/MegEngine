@@ -36,7 +36,7 @@ class MyBlock(M.Module):
         x2 = F.relu(x2)
         x2 = x2 * self.scale[1]
         y = x1 + x2
-        y = y + 4
+        y = F.add(y, 4)
         y = self.scale[0] + y
         y = F.relu(y) * 3
         return y
