@@ -19,10 +19,10 @@ namespace x86 {
 namespace matmul_avx2_4x16x2 {
 
 template <typename CType>
-DNN_AVX2_TARGET void store_overflow(void* ptr, __m256i a);
+DNN_AVX2_TARGET void inline store_overflow(void* ptr, __m256i a);
 
 template <>
-void store_overflow<int16_t>(void* ptr, __m256i a) {
+void inline store_overflow<int16_t>(void* ptr, __m256i a) {
     static __m256i idx = _mm256_setr_epi32(0, 2, 4, 6, 0, 0, 0, 0);
     a = _mm256_shufflelo_epi16(a, 0x08);
     a = _mm256_shufflehi_epi16(a, 0x08);
@@ -31,15 +31,15 @@ void store_overflow<int16_t>(void* ptr, __m256i a) {
 }
 
 template <>
-void store_overflow<int32_t>(void* ptr, __m256i a) {
+void inline store_overflow<int32_t>(void* ptr, __m256i a) {
     _mm256_storeu_si256((__m256i*)(ptr), a);
 }
 
 template <typename CType>
-DNN_AVX2_TARGET void store_overflow(void* ptr, __m256i a, int remain);
+DNN_AVX2_TARGET void inline store_overflow(void* ptr, __m256i a, int remain);
 
 template <>
-void store_overflow<int16_t>(void* ptr, __m256i a, int remain) {
+void inline store_overflow<int16_t>(void* ptr, __m256i a, int remain) {
     __m128i mask = _mm_continue_mask(remain * sizeof(int16_t));
     static __m256i idx = _mm256_setr_epi32(0, 2, 4, 6, 0, 0, 0, 0);
     a = _mm256_shufflelo_epi16(a, 0x08);
@@ -50,7 +50,7 @@ void store_overflow<int16_t>(void* ptr, __m256i a, int remain) {
 }
 
 template <>
-void store_overflow<int32_t>(void* ptr, __m256i a, int remain) {
+void inline store_overflow<int32_t>(void* ptr, __m256i a, int remain) {
     __m256i mask = _m256_continue_mask(remain);
     _mm256_maskstore_epi32(reinterpret_cast<int32_t*>(ptr), mask, a);
 }

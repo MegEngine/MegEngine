@@ -18,25 +18,25 @@ namespace matmul_sse_4x8x2 {
 
 template <typename CType>
 MEGDNN_ATTRIBUTE_TARGET("sse4.1")
-void store_overflow(void* ptr, __m128i a);
+void inline store_overflow(void* ptr, __m128i a);
 
 template <>
-void store_overflow<int16_t>(void* ptr, __m128i a) {
+void inline store_overflow<int16_t>(void* ptr, __m128i a) {
     a = _mm_shufflelo_epi16(a, 0x08);
     a = _mm_shufflehi_epi16(a, 0x08);
     a = _mm_shuffle_epi32(a, 0x08);
     _mm_storel_epi64((__m128i*)ptr, a);
 }
 template <>
-void store_overflow<int32_t>(void* ptr, __m128i a) {
+void inline store_overflow<int32_t>(void* ptr, __m128i a) {
     _mm_storeu_si128((__m128i*)(ptr), a);
 }
 template <typename CType>
 MEGDNN_ATTRIBUTE_TARGET("sse4.1")
-void store_overflow(void* ptr, __m128i a, int remain);
+void inline store_overflow(void* ptr, __m128i a, int remain);
 
 template <>
-void store_overflow<int16_t>(void* ptr, __m128i a, int remain) {
+void inline store_overflow<int16_t>(void* ptr, __m128i a, int remain) {
     __m128i mask = _mm_continue_mask(remain * sizeof(int16_t));
     a = _mm_shufflelo_epi16(a, 0x08);
     a = _mm_shufflehi_epi16(a, 0x08);
@@ -44,7 +44,7 @@ void store_overflow<int16_t>(void* ptr, __m128i a, int remain) {
     _mm_maskmoveu_si128(a, mask, reinterpret_cast<char*>(ptr));
 }
 template <>
-void store_overflow<int32_t>(void* ptr, __m128i a, int remain) {
+void inline store_overflow<int32_t>(void* ptr, __m128i a, int remain) {
     __m128i mask = _mm_continue_mask(remain * sizeof(int32_t));
     _mm_maskmoveu_si128(a, mask, reinterpret_cast<char*>(ptr));
 }
