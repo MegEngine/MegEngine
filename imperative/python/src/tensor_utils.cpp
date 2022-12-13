@@ -1208,6 +1208,11 @@ py::object _fastpath_getitem_cpp(py::handle inp_hdl, py::tuple tuple_val) {
             ax += 1;
         } else if (PyBool_Check(t.ptr())) {
             expand_items.push_back(ax);
+            if (t.ptr() == Py_False) {
+                cpp_items.push_back({ax, true, true, true, false});
+                slice_items.push_back({0, 0, 1, INT_MAX});
+            }
+            ax += 1;
         } else if (t.ptr() == Py_None) {
             expand_items.push_back(ax);
             ax += 1;

@@ -435,7 +435,8 @@ def full_like(inp: Tensor, value: Union[int, float]) -> Tensor:
     """
     op = builtin.FillLike(value=value)
     (rst,) = apply(op, inp)
-    rst.format = inp.format
+    # rst.format = inp.format
+    # see jira:MGE-4505
     return rst
 
 
