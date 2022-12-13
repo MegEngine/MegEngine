@@ -5,6 +5,7 @@ from tempfile import NamedTemporaryFile
 
 import numpy as np
 import pytest
+import torch
 from utils import make_tensor
 
 import megengine
@@ -13,6 +14,7 @@ import megengine.functional as F
 import megengine.jit as jit
 import megengine.random as rand
 import megengine.utils.comp_graph_tools as cgtools
+from megengine.autodiff import GradManager
 from megengine.core._imperative_rt.core2 import apply
 from megengine.core._trace_option import use_symbolic_shape
 from megengine.core.ops import builtin
@@ -620,6 +622,25 @@ def test_advance_indexing_with_bool(test_varnode):
         a[:, b, None, 0:2, [True, False]],
         get_value(aa[:, bb, None, 0:2, [True, False]]),
     )
+
+
+def test_advance_indexing_autodiff():
+    x = Tensor([2, 2, 3, 4, 5, 6, 7, 8, 2], dtype="float32")
+    gm = GradManager()
+    gm.attach(x)
+    with gm:
+        a = x + 1
+        a[x > 3] = 0.3
+        b = a + 1
+        gm.backward(b.sum())
+    torch_x = torch.tensor(
+        [2, 2, 3, 4, 5, 6, 7, 8, 2], dtype=torch.float32, requires_grad=True
+    )
+    a = torch_x + 1
+    a[torch_x > 3] = 0.3
+    b = a + 1
+    (b.sum()).backward()
+    np.testing.assert_equal(x.grad.numpy(), torch_x.grad.numpy())
 
 
 @pytest.mark.parametrize("symbolic", [True, False, None])

@@ -306,7 +306,7 @@ cg::OperatorNodeBase* apply_on_var_node(const OpDef& def, const VarNodeArray& in
 SmallVector<VarNode::LayoutConstraintCallback> get_input_layout_constraint(
         const OpDef& def, const SmallVector<TensorPtr>& inputs) {
     SmallVector<VarNode::LayoutConstraintCallback> layout_checker(inputs.size());
-    layout_checker[0] = [](const TensorLayout& layout) {
+    layout_checker[1] = [](const TensorLayout& layout) {
         return layout.is_contiguous();
     };
     return layout_checker;
