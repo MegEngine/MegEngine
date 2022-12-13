@@ -84,8 +84,8 @@ TensorLayout deduce_layout(
             return 0;
         return v < 0 ? v + size_ax : v;
     };
-#define CHECK(cond) \
-    mgb_assert(cond, "index out of bound: layout=%s", src.to_string().c_str())
+
+    auto tostr = [](int v) -> std::string { return std::to_string(v); };
 
     for (int i = items.size() - 1; i >= 0; i--) {
         auto&& [axis, b_flag, e_flag, s_flag, idx_flag] = items[i];
@@ -99,16 +99,28 @@ TensorLayout deduce_layout(
             slice_stop = mod_size(slice_stop, shape_axis);
             slice_stop = std::min(slice_stop, shape_axis);
             slice_start = std::min(slice_start, slice_stop);
-            CHECK(slice_start >= 0 && slice_stop >= slice_start &&
-                  slice_stop <= shape_axis);
+            mgb_assert(
+                    (slice_start >= 0 && slice_stop >= slice_start &&
+                     slice_stop <= shape_axis),
+                    "index out of bound: layout=%s; request begin=%s end=%s step=%s "
+                    "axis=%s",
+                    src.to_string().c_str(), tostr(slice_start).c_str(),
+                    tostr(slice_stop).c_str(), tostr(slice_step).c_str(),
+                    tostr(axis).c_str());
         } else {
             slice_start = s_val == INT_MIN ? shape_axis - 1 : b_val;
             slice_start = mod_size(slice_start, shape_axis);
             slice_stop = e_val == INT_MAX ? -1 : mod_size(e_val, shape_axis);
             slice_start = std::min(slice_start, std::max(shape_axis - 1, 0));
             slice_stop = std::min(slice_stop, slice_start);
-            CHECK(slice_step < 0 && slice_start >= 0 && slice_stop <= slice_start &&
-                  slice_start < shape_axis && slice_stop >= -1);
+            mgb_assert(
+                    (slice_step < 0 && slice_start >= 0 && slice_stop <= slice_start &&
+                     slice_start < shape_axis && slice_stop >= -1),
+                    "index out of bound: layout=%s; request begin=%s end=%s step=%s "
+                    "axis=%s",
+                    src.to_string().c_str(), tostr(slice_start).c_str(),
+                    tostr(slice_stop).c_str(), tostr(slice_step).c_str(),
+                    tostr(axis).c_str());
         }
         int abs_step = std::abs(slice_step);
         if (axis < 0) {
@@ -205,7 +217,7 @@ SmallVector<VarNode::LayoutConstraintCallback> get_input_layout_constraint(
     return layout_checker;
 }
 
-OP_TRAIT_REG(Subtensor, Subtensor, opr::Subtensor)
+OP_TRAIT_REG(Subtensor, Subtensor)
         .apply_on_var_node(apply_on_var_node)
         .infer_output_attrs_fallible(infer_output_attrs_fallible)
         .apply_on_physical_tensor(apply_on_physical_tensor)

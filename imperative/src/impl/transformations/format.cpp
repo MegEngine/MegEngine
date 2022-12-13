@@ -549,6 +549,7 @@ ValueRefList adaptive_pooling_rule(
     cb(FastpathCopy)                        \
     cb(TypeCvt)                             \
     cb(Dropout)                             \
+    cb(FillLike)                            \
     cb(Identity)
 
 #define FOREACH_FORMAT_OP(cb)               \

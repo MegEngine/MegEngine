@@ -342,6 +342,46 @@ def test_subtensor():
         np.array([[0, 0, 0], [1, 1, 0], [0, 0, 0]], dtype=np.float32), x.grad.numpy()
     )
 
+    x_np = np.random.rand(3, 2).astype("float32")
+    x = mge.Tensor(x_np)
+
+    with Grad() as grad:
+        grad.wrt(x, callback=save_to(x))
+        refs = {}
+
+        def f(x):
+            x = x * 1
+            y = x[True, 0:1]
+            refs["x"] = TensorWeakRef(x)
+            return y
+
+        y = f(x)
+        for _, r in refs.items():
+            assert r() is None
+        grad(y, F.ones_like(y))
+
+    np.testing.assert_equal(
+        np.array([[1, 1], [0, 0], [0, 0]], dtype=np.float32), x.grad.numpy()
+    )
+
+    with Grad() as grad:
+        grad.wrt(x, callback=save_to(x))
+        refs = {}
+
+        def f(x):
+            x = x * 1
+            y = x[False, 0:1]
+            refs["x"] = TensorWeakRef(x)
+            return y
+
+        y = f(x)
+        for _, r in refs.items():
+            assert r() is None
+        grad(y, F.ones_like(y))
+    np.testing.assert_equal(
+        np.array([[0, 0], [0, 0], [0, 0]], dtype=np.float32), x.grad.numpy()
+    )
+
 
 def test_IndexingMultiAxisVec():
     x_np = np.random.rand(3, 3).astype("float32")
