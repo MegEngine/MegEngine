@@ -493,7 +493,18 @@ HostTensorND ChannelImpl::get_value(Handle handle) {
     auto info = reinterpret_cast<TensorInfo*>(handle);
     // donnot use info->value_fetched, it's unsafe
     mgb_assert(!info->invalid, "tensor is unusable due to previous error");
-    return wait_tensor(info, TensorProp::HostValue)->get_value();
+
+    // pin
+    SmallVector<TensorInfo*> vec({info});
+    m_dtr.pin(vec);
+
+    auto ret = wait_tensor(info, TensorProp::HostValue)->get_value();
+
+    // unpin
+    auto& state = get_channel_state();
+    auto dtr_evictee_minimum_size = state.options.dtr_evictee_minimum_size;
+    m_dtr.unpin(vec, dtr_evictee_minimum_size);
+    return ret;
 }
 
 TensorShape ChannelImpl::get_shape(Handle handle) {
@@ -916,7 +927,9 @@ void ChannelImpl::do_apply_op(const ApplyOp& cmd, std::string reason) {
                 i->compute_time = estimate_compute_time;
             }
         }
-        m_dtr.unpin(cmd.inputs, state);
+        auto& state = get_worker_state();
+        auto dtr_evictee_minimum_size = state.options.dtr_evictee_minimum_size;
+        m_dtr.unpin(cmd.inputs, dtr_evictee_minimum_size);
     }
     MGB_RECORD_EVENT(OpExecuteFinishEvent, apply_id, {}, reason);
     // End profiling operator
@@ -1098,11 +1111,12 @@ TensorPtr ChannelImpl::wait_tensor(TensorInfo* info, TensorProp prop) {
             return require_host ? host_available() : static_cast<bool>(info->ptr);
         });
     }
+    auto ptr = info->ptr;
     MGB_RECORD_EVENT(
             TensorWaitPropFinishEvent, info->id, m_waitee_id, prop, backtrace_getter);
     m_waitee = nullptr;
     if (wait_host) {
-        auto err = info->ptr->comp_node().check_async_error();
+        auto err = ptr->comp_node().check_async_error();
         mgb_assert(!err, "%s", err->what());
     }
     if (wait_regen) {
@@ -1119,7 +1133,7 @@ TensorPtr ChannelImpl::wait_tensor(TensorInfo* info, TensorProp prop) {
         }
         lock.lock();
     }
-    return info->ptr;
+    return ptr;
 }
 
 void ChannelImpl::notify_tensor_unsafe(TensorInfo* info) {
@@ -1556,11 +1570,10 @@ void ChannelImpl::DynamicSublinear::pin(const SmallVector<TensorInfo*>& vec) {
 }
 
 void ChannelImpl::DynamicSublinear::unpin(
-        const SmallVector<TensorInfo*>& vec, WorkerState& state) {
+        const SmallVector<TensorInfo*>& vec, size_t& dtr_evictee_minimum_size) {
     for (auto i : vec) {
         i->unpin();
-        if (i->pinned == 0 &&
-            i->size_exceeds_thd(state.options.dtr_evictee_minimum_size) &&
+        if (i->pinned == 0 && i->size_exceeds_thd(dtr_evictee_minimum_size) &&
             i->cand_index == UINT_MAX) {
             insert_candidate(i);
         }

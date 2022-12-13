@@ -265,7 +265,8 @@ private:
         /*!
          * \brief unpin the tensors in vec
          */
-        void unpin(const SmallVector<TensorInfo*>& vec, WorkerState& state);
+        void unpin(
+                const SmallVector<TensorInfo*>& vec, size_t& dtr_evictee_minimum_size);
 
         /*!
          * \brief add the tensor to the candidate set
