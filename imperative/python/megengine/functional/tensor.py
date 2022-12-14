@@ -486,12 +486,13 @@ def concat(inps: Iterable[Tensor], axis: int = 0, device=None) -> Tensor:
                [ 9., 10., 11.]], dtype=float32)
     """
     if len(inps) == 1:
-        return inps[0]
+        # if we return inps[0] directly, then the grad manager capture nothing
+        return copy(inps[0], device)
 
     if device is None:
-        device = get_default_device()
-
-    (result,) = apply(builtin.Concat(axis=axis, comp_node=device), *inps)
+        device = get_device(inps)
+    device = as_device(device)
+    (result,) = apply(builtin.Concat(axis=axis, comp_node=device.to_c()), *inps)
     return result
 
 
@@ -517,10 +518,16 @@ def stack(inps, axis=0, device=None):
                [6., 7., 8.]], dtype=float32)
     """
     if len(inps) == 1:
-        return expand_dims(inps[0], axis=axis)
+        ret = expand_dims(inps[0], axis=axis)
+        if device is None:
+            return ret
+        else:
+            return copy(ret, device)
+
     if device is None:
-        device = get_default_device()
-    (result,) = apply(builtin.Stack(axis=axis, comp_node=device), *inps)
+        device = get_device(inps)
+    device = as_device(device)
+    (result,) = apply(builtin.Stack(axis=axis, comp_node=device.to_c()), *inps)
     return result
 
 
