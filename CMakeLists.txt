@@ -1492,3 +1492,10 @@ endif()
 if(MGE_WITH_LITE)
   add_subdirectory(lite)
 endif()
+
+if(ANDROID)
+  message(
+    WARNING
+      "MegEngine project use thread_local, if you want to deploy MegEngine at dlopen/dlclose scene, please build with c++_shared by -DANDROID_STL=c++_shared, detail at https://github.com/android-ndk/ndk/issues/789 for example: EXTRA_CMAKE_ARGS=\" -DANDROID_STL=c++_shared\" ./scripts/cmake-build/cross_build_android_arm_inference.sh "
+  )
+endif()

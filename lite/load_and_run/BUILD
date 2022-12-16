@@ -30,6 +30,7 @@ cc_megvii_binary(
     ]),
     internal_deps = [":lar_object"],
     visibility = ["//visibility:public"],
+    # is_linking_system_dynamic_library = True,
 )
 
 
