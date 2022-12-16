@@ -1116,6 +1116,93 @@ void benchmark_winograd_compare(
                used_winograd2 / used_winograd1);
     }
 }
+
+void benchmark_with_contrast(
+        const std::vector<conv_bias::TestArg>& args, const std::string algo_name,
+        std::vector<DType>& data_type,
+        const std::vector<conv_bias::TestArg>& args_contrast,
+        const std::string algo_name_contrast, std::vector<DType>& data_type_contrast,
+        size_t RUNS, TaskExecutorConfig&& single_thread_config) {
+    using NLMode = param::ConvBias::NonlineMode;
+    std::map<NLMode, std::string> nonlinemode2string{
+            {NLMode::IDENTITY, "Identity"},
+            {NLMode::RELU, "ReLU"},
+            {NLMode::SIGMOID, "Sigmoid"},
+            {NLMode::H_SWISH, "H_Swish"}};
+    auto single_thread_handle = create_cpu_handle(0, true, &single_thread_config);
+
+    auto benchmarker = Benchmarker<ConvBias>(single_thread_handle.get());
+    auto benchmarker_contrast = Benchmarker<ConvBias>(single_thread_handle.get());
+
+    benchmarker.set_times(RUNS)
+            .set_display(false)
+            .set_dtype(0, data_type[0])
+            .set_dtype(1, data_type[1])
+            .set_dtype(2, data_type[2])
+            .set_dtype(4, data_type[3])
+            .set_before_exec_callback(
+                    conv_bias::ConvBiasAlgoChecker<ConvBias>(algo_name.c_str()));
+    benchmarker_contrast.set_times(RUNS)
+            .set_display(false)
+            .set_dtype(0, data_type_contrast[0])
+            .set_dtype(1, data_type_contrast[1])
+            .set_dtype(2, data_type_contrast[2])
+            .set_dtype(4, data_type_contrast[3])
+            .set_before_exec_callback(conv_bias::ConvBiasAlgoChecker<ConvBias>(
+                    algo_name_contrast.c_str()));
+
+    size_t arg_size = args.size(), arg_contrast_size = args_contrast.size();
+    megdnn_assert(arg_size == arg_contrast_size);
+    rep(i, arg_size) {
+        TensorLayout dst_layout, dst_layout_contrast;
+        auto opr = single_thread_handle.get()->create_operator<ConvBias>();
+
+        auto&& arg = args[i];
+        opr->param() = arg.param;
+        opr->deduce_layout(
+                {arg.src, data_type[0]}, {arg.filter, data_type[1]},
+                {arg.bias, data_type[2]}, {}, dst_layout);
+        float computation = (dst_layout.total_nr_elems() * arg.filter[1] *
+                             arg.filter[2] * arg.filter[3] * arg.filter[4] * 2.0) /
+                            (1024 * 1024 * 1024) * 1e3;
+        benchmarker.set_param(arg.param);
+        auto used = benchmarker.exec({arg.src, arg.filter, arg.bias, {}, {}}) / RUNS;
+
+        auto&& arg_contrast = args_contrast[i];
+        opr->param() = arg_contrast.param;
+        opr->deduce_layout(
+                {arg_contrast.src, data_type_contrast[0]},
+                {arg_contrast.filter, data_type_contrast[1]},
+                {arg_contrast.bias, data_type_contrast[2]}, {}, dst_layout_contrast);
+        float computation_contrast =
+                (dst_layout_contrast.total_nr_elems() * arg_contrast.filter[1] *
+                 arg_contrast.filter[2] * arg_contrast.filter[3] *
+                 arg_contrast.filter[4] * 2.0) /
+                (1024 * 1024 * 1024) * 1e3;
+        benchmarker_contrast.set_param(arg_contrast.param);
+        auto used_contrast = benchmarker_contrast.exec(
+                                     {arg_contrast.src,
+                                      arg_contrast.filter,
+                                      arg_contrast.bias,
+                                      {},
+                                      {}}) /
+                             RUNS;
+
+        printf("Bench case: \n");
+        printf("padding: %u, stride: %u, nonline mode: %s\n", arg.param.pad_h,
+               arg.param.stride_h, nonlinemode2string[arg.param.nonlineMode].c_str());
+        printf("%s %s %s\n", arg.src.to_string().c_str(),
+               arg.filter.to_string().c_str(), arg.bias.to_string().c_str());
+        printf("%s %s %s\n", arg_contrast.src.to_string().c_str(),
+               arg_contrast.filter.to_string().c_str(),
+               arg_contrast.bias.to_string().c_str());
+
+        printf("%s: %f gflops;\n%s: %f gflops\n"
+               "spead up = %f\n",
+               algo_name.c_str(), computation / used, algo_name_contrast.c_str(),
+               computation_contrast / used_contrast, used_contrast / used);
+    }
+}
 #endif  // MEGDNN_WITH_BENCHMARK
 
 template <class Checker>

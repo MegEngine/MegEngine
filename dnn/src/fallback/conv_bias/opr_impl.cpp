@@ -695,7 +695,7 @@ size_t ConvBiasImpl::NCBKernParam::filter_offset(
                             (group % 8 == 0 && icpg == 1 && ocpg == 1 &&
                              pack_group_size > 1) ||
                             (group == 1 && ocpg % 8 == 0),
-                    "The filter shepe is not right of nchw88");
+                    "The filter shape is not right of nchw88");
             group_offset = pack_group_size * group_pack_id * filter_meta.icpg *
                            filter_meta.ocpg * filter_meta.spatial[0] *
                            filter_meta.spatial[1] * filter_type.size();
@@ -717,7 +717,7 @@ size_t ConvBiasImpl::NCBKernParam::filter_offset(
                             (group % 4 == 0 && icpg == 1 && ocpg == 1 &&
                              pack_group_size > 1) ||
                             (group == 1 && ocpg % 4 == 0),
-                    "The filter shepe is not right of nchw44");
+                    "The filter shape is not right of nchw44");
             group_offset = pack_group_size * group_pack_id * filter_meta.icpg *
                            filter_meta.ocpg * filter_meta.spatial[0] *
                            filter_meta.spatial[1] * filter_type.size();
