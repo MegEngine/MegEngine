@@ -186,14 +186,25 @@ bool ConvBiasImpl::AlgoConv1x1::usable(
 #if MEGDNN_AARCH64 || MEGDNN_ARMV7
         if (format != param::ConvBias::Format::NCHW &&
             format != param::ConvBias::Format::NCHW44 &&
-            format != param::ConvBias::Format::NCHW44_DOT) {
+            format != param::ConvBias::Format::NCHW44_DOT &&
+            format != param::ConvBias::Format::NCHW88) {
             return false;
         }
         //! hybird mode is not support
         if (param.filter_meta.format == param::ConvBias::Format::NCHW44 ||
             param.filter_meta.format == param::ConvBias::Format::NCHW44_DOT) {
-            if (param.filter_meta.icpg < 4_z || param.filter_meta.icpg == 1 ||
-                param.filter_meta.ocpg == 1) {
+            if (param.filter_meta.icpg < 4_z || param.filter_meta.ocpg == 1) {
+                return false;
+            }
+        }
+        if (format == param::ConvBias::Format::NCHW88) {
+            bool is_packmode_not_default =
+                    (m_matmul_algo->packmode() !=
+                     MatrixMulImpl::AlgoBase::PackMode::DEFAULT);
+            //! nchw88 hybrid mode and channel wise is not support
+            bool is_hybrid_mode_or_channel_wise =
+                    (param.filter_meta.icpg < 8_z || param.filter_meta.ocpg == 1);
+            if (is_packmode_not_default || is_hybrid_mode_or_channel_wise) {
                 return false;
             }
         }

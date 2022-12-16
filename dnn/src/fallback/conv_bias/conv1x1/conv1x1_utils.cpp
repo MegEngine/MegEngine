@@ -38,6 +38,8 @@ MatrixMulImpl::KernSizeParam get_matmul_kern_param(
         format = param::MatrixMul::Format::MK4;
     } else if (param.filter_meta.format == param::ConvBias::Format::NCHW44_DOT) {
         format = param::MatrixMul::Format::MK4_DOT;
+    } else if (param.filter_meta.format == param::ConvBias::Format::NCHW88) {
+        format = param::MatrixMul::Format::MK8;
     }
 
     return {param.filter_type,

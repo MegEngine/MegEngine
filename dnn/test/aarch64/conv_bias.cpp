@@ -85,31 +85,22 @@ TEST_F(AARCH64_MULTI_THREADS, CONVBIAS_RECORD) {
 }
 
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
-void checker_conv_bias_fp16(
-        std::vector<conv_bias::TestArg> args, Handle* handle, const char* algo_name,
-        float epsilon) {
-    using namespace conv_bias;
-    Checker<ConvBias> checker(handle);
-    checker.set_before_exec_callback(
-            conv_bias::ConvBiasAlgoChecker<ConvBias>(algo_name));
-    checker.set_epsilon(epsilon);
-    checker.set_dtype(0, dtype::Float16())
-            .set_dtype(1, dtype::Float16())
-            .set_dtype(2, dtype::Float16())
-            .set_dtype(4, dtype::Float16());
-    NormalRNG rng(1.f);
-    checker.set_rng(0, &rng).set_rng(1, &rng);
-
-    for (auto&& arg : args) {
-        checker.set_param(arg.param).execs({arg.src, arg.filter, arg.bias, {}, {}});
-    }
-}
 
 TEST_F(AARCH64_MULTI_THREADS, CONVBIAS_DIRECT_FP16_STR2) {
     NormalRNG rng(1);
     checker_conv_bias_f16(
             conv_bias::get_conv_bias_args({2, 3, 5}, 2, false, false, false), handle(),
             rng, "ARMV8F16STRD2", 0.04);
+}
+
+TEST_F(AARCH64_MULTI_THREADS, CONVBIAS_CONV1x1_MATMUL_FP16_NCHW88) {
+    std::vector<conv_bias::TestArg>&& args_nchw88 =
+            conv_bias::get_nchw88_conv_bias_args(
+                    {1}, QUAN_NLMODE, BR_AND_BIAS_BIASMODE, 1, 0);
+
+    NormalRNG rng(1);
+    checker_conv_bias_f16(
+            args_nchw88, handle(), rng, "CONV1x1:AARCH64_F16_MK8_16X12X1", 0.03);
 }
 #endif
 
@@ -211,6 +202,47 @@ void benchmarker_conv_bias(
                computations / time32);
 #endif
     }
+}
+
+TEST_F(AARCH64, BENCHMARK_CONVBIAS_CONV1x1_MATMUL_VS_DIRECT_NCHW88) {
+    constexpr size_t RUNS = 50;
+    using NLMode = param::ConvBias::NonlineMode;
+
+    std::vector<conv_bias::TestArg> args_nchw88;
+    auto bench_case = [&](size_t N, size_t IC, size_t OC, size_t H, size_t W, size_t FS,
+                          size_t group) {
+        param::ConvBias param_nchw88;
+        param_nchw88.format = param::ConvBias::Format::NCHW88;
+        for (size_t pad : {0}) {
+            for (size_t stride : {1}) {
+                for (auto nlmode : {NLMode::IDENTITY}) {
+                    param_nchw88.nonlineMode = nlmode;
+                    param_nchw88.pad_h = pad;
+                    param_nchw88.pad_w = pad;
+                    param_nchw88.stride_h = stride;
+                    param_nchw88.stride_w = stride;
+
+                    args_nchw88.emplace_back(
+                            param_nchw88, TensorShape{N, IC / 8, H, W, 8},
+                            TensorShape{OC / 8, IC / group / 8, FS, FS, 8, 8},
+                            TensorShape{1, OC / 8, 1, 1, 8});
+                }
+            }
+        }
+    };
+    std::vector<DType> data_type_fp16 = {
+            dtype::Float16(), dtype::Float16(), dtype::Float16(), dtype::Float16()};
+    bench_case(1, 32, 64, 112, 112, 1, 1);
+    bench_case(1, 64, 128, 56, 56, 1, 1);
+    bench_case(1, 128, 256, 28, 28, 1, 1);
+    bench_case(1, 256, 512, 14, 14, 1, 1);
+
+    std::string algo_name_nchw88 = "CONV1x1:AARCH64_F16_MK8_16X12X1";
+    std::string algo_name_nchw88_direct = "F16_CONV_NCHW88_DIRECT";
+
+    benchmark_with_contrast(
+            args_nchw88, algo_name_nchw88, data_type_fp16, args_nchw88,
+            algo_name_nchw88_direct, data_type_fp16, RUNS, {1, {4}});
 }
 
 TEST_F(AARCH64, BENCHMARK_CONVBIAS_STRIDE2_FP32_FP16) {

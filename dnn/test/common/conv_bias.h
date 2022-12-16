@@ -72,6 +72,12 @@ void benchmark_winograd_weight_preprocess(
 void benchmark_winograd_compare(
         const char* algoA_name, const char* algoB_name, megdnn::Handle* handle,
         size_t kernel, size_t pack_size = 1, size_t io_pack_size = 1);
+void benchmark_with_contrast(
+        const std::vector<conv_bias::TestArg>& args, const std::string algo_name,
+        std::vector<DType>& data_type,
+        const std::vector<conv_bias::TestArg>& args_contrast,
+        const std::string algo_name_contrast, std::vector<DType>& data_type_contrast,
+        size_t RUNS, TaskExecutorConfig&& single_thread_config);
 #endif  // MEGDNN_WITH_BENCHMARK
 template <class Checker>
 void check_winograd(
