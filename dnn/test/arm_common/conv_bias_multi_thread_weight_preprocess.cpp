@@ -411,18 +411,17 @@ TEST_F(ARM_COMMON_MULTI_THREADS,
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_S8x8x32_MK4_DOT_PREPROCESS) {
     UniformIntRNG rng{-50, 50};
 
-#define cb(name)                                                                      \
-    check_conv_bias_preprocess(                                                       \
-            get_nchw44_conv_bias_args(                                                \
-                    {2, 3, 4, 5, 6, 7}, ONLY_IDENTITY_NLMODE, ONLY_NO_BIASMODE, 1,    \
-                    false, false, true),                                              \
-            handle(), &rng, epsilon, dtype::QuantizedS8(2.5f),                        \
-            dtype::QuantizedS8(2.5f), dtype::QuantizedS32(6.25f), {}, name);          \
-    check_conv_bias_preprocess(                                                       \
-            get_nchw44_conv_bias_args(                                                \
-                    {1}, ONLY_IDENTITY_NLMODE, BR_AND_BIAS_BIASMODE, 2, false, false, \
-                    true),                                                            \
-            handle(), &rng, epsilon, dtype::QuantizedS8(2.5f),                        \
+#define cb(name)                                                                     \
+    check_conv_bias_preprocess(                                                      \
+            get_nchw44_conv_bias_args(                                               \
+                    {2, 3, 4, 5, 6, 7}, ONLY_IDENTITY_NLMODE, ONLY_NO_BIASMODE, 1,   \
+                    false, false, true),                                             \
+            handle(), &rng, epsilon, dtype::QuantizedS8(2.5f),                       \
+            dtype::QuantizedS8(2.5f), dtype::QuantizedS32(6.25f), {}, name);         \
+    check_conv_bias_preprocess(                                                      \
+            get_nchw44_conv_bias_args(                                               \
+                    {1}, ONLY_IDENTITY_NLMODE, ALL_BIASMODE, 2, false, false, true), \
+            handle(), &rng, epsilon, dtype::QuantizedS8(2.5f),                       \
             dtype::QuantizedS8(2.5f), dtype::QuantizedS32(6.25f), {}, name);
 
     float epsilon = 0.001;
@@ -764,7 +763,7 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_IM2COL_S1_MK4_PACK_F32_PREPROCESS) {
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_IM2COL_S2_MK4_PACK_F32_FUSE_PREPROCESS) {
     using namespace conv_bias;
     std::vector<conv_bias::TestArg> args =
-            get_nchw44_conv_bias_args({3}, FULL_NLMODE, BR_AND_BIAS_BIASMODE, 2);
+            get_nchw44_conv_bias_args({3}, FULL_NLMODE, ALL_BIASMODE, 2);
 #define cb(name)                                                                \
     check_conv_bias_preprocess(                                                 \
             args, handle(), nullptr, 0.001, dtype::Float32(), dtype::Float32(), \

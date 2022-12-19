@@ -261,7 +261,7 @@ TEST_F(FALLBACK_MULTI_THREADS, CONV_BIAS_GI_IM2COL_S1_MK4_PACK_F32_PREPROCESS) {
 TEST_F(FALLBACK_MULTI_THREADS, CONV_BIAS_GI_IM2COL_S2_MK4_PACK_F32_FUSE_PREPROCESS) {
     using namespace conv_bias;
     std::vector<conv_bias::TestArg> args =
-            get_nchw44_conv_bias_args({3}, FULL_NLMODE, BR_AND_BIAS_BIASMODE, 2);
+            get_nchw44_conv_bias_args({3}, FULL_NLMODE, ALL_BIASMODE, 2);
 #define cb(name)                                                                \
     check_conv_bias_preprocess(                                                 \
             args, handle(), nullptr, 0.001, dtype::Float32(), dtype::Float32(), \
@@ -285,14 +285,14 @@ TEST_F(FALLBACK_MULTI_THREADS, CONV_BIAS_GI_1X1_S1_MK4_PACK_F32_PREPROCESS) {
 TEST_F(FALLBACK_MULTI_THREADS, CONV_BIAS_GI_IM2COL_S1_MK4_PACK_F32) {
     using namespace conv_bias;
     std::vector<conv_bias::TestArg> args =
-            get_nchw44_conv_bias_args({2, 4, 7}, FULL_NLMODE, BR_AND_BIAS_BIASMODE, 1);
+            get_nchw44_conv_bias_args({2, 4, 7}, FULL_NLMODE, ALL_BIASMODE, 1);
     check_conv_bias(args, handle(), "IM2COLMATMUL:FB_GI_F32_MK4_PACK_4x12");
 }
 
 TEST_F(FALLBACK_MULTI_THREADS, CONV_BIAS_GI_IM2COL_S2_MK4_PACK_F32) {
     using namespace conv_bias;
     std::vector<conv_bias::TestArg> args =
-            get_nchw44_conv_bias_args({3, 5, 6}, FULL_NLMODE, BR_AND_BIAS_BIASMODE, 2);
+            get_nchw44_conv_bias_args({3, 5, 6}, FULL_NLMODE, ALL_BIASMODE, 2);
 #define cb(name) check_conv_bias(args, handle(), name);
     cb("IM2COLMATMUL:FB_GI_F32_MK4_PACK_4x12");
 #undef cb

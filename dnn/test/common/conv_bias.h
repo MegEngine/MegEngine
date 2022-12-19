@@ -138,7 +138,7 @@ void checker_conv_bias_int8x8x32_preprocess(
 #define BR_AND_NO_BIASMODE \
     { megdnn::BiasMode::NO_BIAS, megdnn::BiasMode::BROADCAST_CHANNEL_BIAS }
 #define BR_AND_BIAS_BIASMODE \
-    { megdnn::BiasMode::NO_BIAS, megdnn::BiasMode::BIAS }
+    { megdnn::BiasMode::BROADCAST_CHANNEL_BIAS, megdnn::BiasMode::BIAS }
 #define ONLY_BR_BIASMODE \
     { megdnn::BiasMode::BROADCAST_CHANNEL_BIAS }
 #define ONLY_NO_BIASMODE \
