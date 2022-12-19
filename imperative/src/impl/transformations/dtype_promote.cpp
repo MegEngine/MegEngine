@@ -347,29 +347,8 @@ ValueRefList batch_norm_rule(const OpDef& op, Span<ValueRef> inputs) {
     return imperative::apply(op, inputs);
 }
 
-ValueRefList layer_norm_rule(const OpDef& op, Span<ValueRef> inputs) {
+ValueRefList norm_rule(const OpDef& op, Span<ValueRef> inputs) {
     // avoid the amp_dtype_autocast
-    if (DTypePromoteCfg::amp_dtype_autocast_enabled) {
-        SmallVector<DType> dtypes = get_value_dtypes(inputs);
-        ValueRefList converted(inputs.size());
-
-        for (size_t i = 0; i < inputs.size(); ++i) {
-            mgb::DType target_dtype = DTypePromoteCfg::amp_high_prec_dtype;
-            if (dtypes[i] != target_dtype) {
-                converted[i] = imperative::apply(
-                        ApplyOp(*TypeCvt::make(target_dtype)), inputs[i])[0];
-            } else {
-                converted[i] = inputs[i];
-            }
-        }
-
-        return imperative::apply(op, converted);
-    }
-
-    return imperative::apply(op, inputs);
-}
-
-ValueRefList group_norm_rule(const OpDef& op, Span<ValueRef> inputs) {
     if (DTypePromoteCfg::amp_dtype_autocast_enabled) {
         SmallVector<DType> dtypes = get_value_dtypes(inputs);
         ValueRefList converted(inputs.size());
@@ -407,6 +386,25 @@ ValueRefList naive_promote_rule(const OpDef& op, Span<ValueRef> inputs) {
     return imperative::apply(op, converted);
 }
 
+ValueRefList setsubtensor_rule(const OpDef& op, Span<ValueRef> inputs) {
+    mgb::DType target_dtype = *(inputs[0].dtype());
+
+    ValueRefList converted(inputs.size());
+    converted[0] = inputs[0];
+    if (*(inputs[1].dtype()) != target_dtype) {
+        converted[1] =
+                imperative::apply(ApplyOp(*TypeCvt::make(target_dtype)), inputs[1])[0];
+    } else {
+        converted[1] = inputs[1];
+    }
+
+    for (size_t i = 2; i < inputs.size(); i++) {
+        converted[i] = inputs[i];
+    }
+
+    return imperative::apply(op, converted);
+}
+
 struct DTypePromoteRuleRegistry {
     DTypePromoteRuleRegistry() {
         register_dtype_promote_rule<Elemwise>(elemwise_rule);
@@ -422,8 +420,10 @@ struct DTypePromoteRuleRegistry {
         register_dtype_promote_rule<BatchNorm>(batch_norm_rule);
         register_dtype_promote_rule<Convolution3D>(naive_promote_rule);
         register_dtype_promote_rule<Convolution3DBackwardData>(naive_promote_rule);
-        register_dtype_promote_rule<LayerNorm>(layer_norm_rule);
-        register_dtype_promote_rule<GroupNorm>(group_norm_rule);
+        register_dtype_promote_rule<LayerNorm>(norm_rule);
+        register_dtype_promote_rule<GroupNorm>(norm_rule);
+        register_dtype_promote_rule<SetSubtensor>(setsubtensor_rule);
+        register_dtype_promote_rule<IndexingSetMultiAxisVec>(setsubtensor_rule);
     }
 } register_helper;
 
