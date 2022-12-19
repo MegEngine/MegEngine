@@ -229,8 +229,8 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_1X1_S1_INT8x8x16) {
     float epsilon = 0.001;
     std::vector<conv_bias::TestArg> args =
             get_conv_bias_1x1_args(false, true, false, false);
-    std::vector<conv_bias::TestArg> args_nchw44 = get_nchw44_conv_bias_args(
-            {1}, ONLY_IDENTITY_NLMODE, BR_AND_BIAS_BIASMODE, 1, true);
+    std::vector<conv_bias::TestArg> args_nchw44 =
+            get_nchw44_conv_bias_args({1}, ONLY_IDENTITY_NLMODE, ALL_BIASMODE, 1, true);
 #define cb(name)                                                         \
     checker_conv_bias_common(                                            \
             args, handle(), &rng, epsilon, dtype::Int8{}, dtype::Int8{}, \
