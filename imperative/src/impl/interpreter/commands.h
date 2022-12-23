@@ -4,13 +4,13 @@
 #include <unordered_set>
 #include <variant>
 
-#include "megbrain/imperative/backtrace.h"
-#include "megbrain/imperative/op_def.h"
-#include "megbrain/imperative/utils/to_string.h"
-#include "megbrain/tensor.h"
-
 #include "./stack_manager.h"
 #include "./tensor_info.h"
+#include "megbrain/imperative/backtrace.h"
+#include "megbrain/imperative/op_def.h"
+#include "megbrain/imperative/profiler.h"
+#include "megbrain/imperative/utils/to_string.h"
+#include "megbrain/tensor.h"
 
 namespace mgb::imperative {
 
@@ -125,6 +125,7 @@ struct StopStep {
 
 struct PushScope {
     std::string scope_name;
+    ScopeType type;
 
     template <typename TFunctor>
     void get_props(TFunctor&& functor) const {
@@ -136,7 +137,7 @@ struct PushScope {
 
 struct PopScope {
     std::string scope_name;
-
+    ScopeType type;
     template <typename TFunctor>
     void get_props(TFunctor&& functor) const {
         functor("scope_name", scope_name);

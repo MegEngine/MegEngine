@@ -1356,7 +1356,7 @@ void ChannelImpl::process_one_task(Command& icmd) {
         } else if constexpr (std::is_same_v<T, StopStep>) {
             MGB_RECORD_EVENT(StopStepEvent);
         } else if constexpr (std::is_same_v<T, PushScope>) {
-            MGB_RECORD_EVENT(ScopeEvent, cmd.scope_name);
+            MGB_RECORD_EVENT(ScopeEvent, cmd.scope_name, cmd.type);
         } else if constexpr (std::is_same_v<T, PopScope>) {
             MGB_RECORD_EVENT(ScopeFinishEvent, cmd.scope_name);
         } else if constexpr (std::is_same_v<T, StartRegen>) {
@@ -1461,15 +1461,15 @@ void ChannelImpl::stop_step() {
              get_channel_state().stack_manager.dump()});
 }
 
-void ChannelImpl::push_scope(std::string name) {
+void ChannelImpl::push_scope(std::string name, ScopeType type) {
     MGB_LOCK_GUARD(m_spin);
     assert_available();
     auto& state = get_channel_state();
     state.stack_manager.enter(name);
-    MGB_RECORD_EVENT(ScopeEvent, name);
+    MGB_RECORD_EVENT(ScopeEvent, name, type);
     if (Profiler::is_profiling()) {
         m_worker.add_task(
-                {Profiler::next_id(), PushScope{name},
+                {Profiler::next_id(), PushScope{name, type},
                  get_channel_state().stack_manager.dump()});
     } else {
         m_worker.add_task({
@@ -1479,15 +1479,15 @@ void ChannelImpl::push_scope(std::string name) {
     }
 }
 
-void ChannelImpl::pop_scope(std::string name) {
+void ChannelImpl::pop_scope(std::string name, ScopeType type) {
     MGB_LOCK_GUARD(m_spin);
     assert_available();
     auto& state = get_channel_state();
     state.stack_manager.exit(name);
-    MGB_RECORD_EVENT(ScopeFinishEvent, name);
+    MGB_RECORD_EVENT(ScopeFinishEvent, name, type);
     if (Profiler::is_profiling()) {
         m_worker.add_task(
-                {Profiler::next_id(), PopScope{name},
+                {Profiler::next_id(), PopScope{name, type},
                  get_channel_state().stack_manager.dump()});
     } else {
         m_worker.add_task({

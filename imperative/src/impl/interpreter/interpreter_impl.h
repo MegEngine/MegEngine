@@ -65,8 +65,8 @@ struct ChannelImpl : Interpreter::Channel, NonCopyableObj, NonMoveableObj {
     void stop_profile() override;
     void stop_step() override;
 
-    void push_scope(std::string) override;
-    void pop_scope(std::string) override;
+    void push_scope(std::string, ScopeType type = ScopeType::DEFAULT) override;
+    void pop_scope(std::string, ScopeType type = ScopeType::DEFAULT) override;
 
     BackTraceInfoPtr& get_backtrace() override;
     void set_backtrace(BackTraceInfoPtr bt) override;

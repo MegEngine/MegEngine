@@ -948,6 +948,29 @@ void init_tensor(py::module m) {
         channel->pop_scope(name);
         Transformation::pop_scope(name);
     });
+    std::unordered_map<std::string, ScopeType> str2scopetype = {
+            {"default", ScopeType::DEFAULT},
+            {"module", ScopeType::MODULE},
+            {"tensor_method", ScopeType::TENSOR_METHOD},
+            {"functional", ScopeType::FUNCTIONAL},
+            {"backward", ScopeType::BACKWARD}};
+
+    m.def("push_scope_with_type",
+          [channel, str2scopetype](std::string name, std::string type) {
+              if (str2scopetype.find(type) == str2scopetype.end()) {
+                  throw py::value_error("unsupport scope type");
+              } else {
+                  channel->push_scope(name, str2scopetype.find(type)->second);
+              }
+          });
+    m.def("pop_scope_with_type",
+          [channel, str2scopetype](std::string name, std::string type) {
+              if (str2scopetype.find(type) == str2scopetype.end()) {
+                  throw py::value_error("unsupport scope type");
+              } else {
+                  channel->pop_scope(name, str2scopetype.find(type)->second);
+              }
+          });
     m.def("start_profile", [channel](imperative::Profiler::options_t options) {
         channel->sync();
         imperative::Profiler::load_options(std::move(options));

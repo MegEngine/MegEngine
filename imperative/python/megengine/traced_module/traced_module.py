@@ -290,6 +290,7 @@ def _wrap_mnode_call(orig_call):
                 active_module_tracer().current_scope()._add_input(self)
             rst = obj(*args, **kwargs)
         else:
+
             raise TypeError("'ModuleNode' object is not callable")
         return rst
 

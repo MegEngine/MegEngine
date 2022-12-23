@@ -41,6 +41,14 @@ public:
     static std::shared_ptr<CompNode::Event> record_device(CompNode device);
 };
 
+enum ScopeType {
+    DEFAULT = 0,
+    MODULE = 1,
+    TENSOR_METHOD = 2,
+    FUNCTIONAL = 3,
+    BACKWARD = 4,
+};
+
 class Profiler {
 public:
     struct Record {

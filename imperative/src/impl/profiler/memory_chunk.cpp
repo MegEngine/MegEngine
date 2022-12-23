@@ -5,10 +5,9 @@
 #include "megbrain/imperative/utils/to_string.h"
 #include "megbrain/utils/debug.h"
 
+#include "./events.h"
 #include "./formats.h"
 #include "./states.h"
-
-#include "./events.h"
 
 namespace mgb::imperative::profiler {
 

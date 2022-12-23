@@ -135,6 +135,12 @@ ValueRefList InterpreterTransformation::apply_transformation(
         DeviceTensorND dev_tensor;
         dev_tensor.copy_from(m_channel->get_dev_tensor(input.handle()->handle()));
         return m_value_type.make(share_handle(m_channel->put(dev_tensor, {})));
+    } else if (auto push_scope = op.as<PushScope>()) {
+        m_channel->push_scope(push_scope->name, push_scope->type);
+        return {};
+    } else if (auto pop_scope = op.as<PopScope>()) {
+        m_channel->pop_scope(pop_scope->name, pop_scope->type);
+        return {};
     } else {
         return op.fallback(inputs);
     }

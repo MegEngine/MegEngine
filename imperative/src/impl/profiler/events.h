@@ -139,7 +139,10 @@ DEF_EVENT(WorkerException, {});
 
 DEF_EVENT(ShapeInfer, { bool success; });
 
-DEF_DUR_EVENT(Scope, { std::string name; });
+DEF_DUR_EVENT(Scope, {
+    std::string name;
+    ScopeType type = ScopeType::DEFAULT;
+});
 
 DEF_DUR_EVENT(Sync, { Trace trace; });
 

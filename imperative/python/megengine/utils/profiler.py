@@ -8,13 +8,16 @@ from typing import List
 from weakref import WeakSet
 
 from .. import _atexit
+from ..core._imperative_rt.core2 import Tensor as raw_tensor
 from ..core._imperative_rt.core2 import (
     cupti_available,
     disable_cupti,
     enable_cupti,
     full_sync,
     pop_scope,
+    pop_scope_with_type,
     push_scope,
+    push_scope_with_type,
     set_python_backtrace_enabled,
     start_profile,
     stop_profile,
@@ -33,6 +36,7 @@ class Profiler(ContextDecorator):
     Args:
         path: default path prefix for profiler to dump.
         with_backtrace: Whether to record backtrace information for ops.
+        with_scopes: Whether to keep more scopes to record record module/functional hierarchy. Enabling this option will slow down your program execution.
     
     Examples:
     
@@ -70,6 +74,7 @@ class Profiler(ContextDecorator):
         format: str = "chrome_timeline.json",
         formats: List[str] = None,
         with_backtrace: bool = False,
+        with_scopes: bool = False,
         **kwargs
     ) -> None:
         if not formats:
@@ -89,6 +94,8 @@ class Profiler(ContextDecorator):
             self._options[opt] = int(kwargs.pop(opt, optval))
         self._pid = "<PID>"
         self._dump_callback = None
+        self._api_patcher = None
+        self._with_scopes = with_scopes
         if self._options.get("enable_cupti", 0):
             if cupti_available():
                 enable_cupti()
@@ -109,6 +116,59 @@ class Profiler(ContextDecorator):
     @property
     def directory(self):
         return self._path
+
+    @property
+    def _patcher(self):
+        if self._api_patcher != None:
+            return self._api_patcher
+        from ..traced_module.module_tracer import Patcher, module_tracer
+        from ..module import Module
+
+        def wrap_tensormethod_and_functional(origin_fn):
+            def get_tensormeth_name(obj, func):
+                tp = obj if isinstance(obj, type) else type(obj)
+                if not issubclass(tp, raw_tensor):
+                    return None
+                for cls in tp.mro():
+                    for k, v in cls.__dict__.items():
+                        if v == func:
+                            return k
+                return None
+
+            @wraps(origin_fn)
+            def wrapped_fn(*args, **kwargs):
+                methname = (
+                    get_tensormeth_name(args[0], wrapped_fn) if len(args) > 0 else None
+                )
+                name, scope_type = (
+                    ("tensor." + methname, "tensor_method")
+                    if methname is not None
+                    else (origin_fn.__name__, "functional")
+                )
+                push_scope_with_type(name, scope_type)
+                rst = origin_fn(*args, **kwargs)
+                pop_scope_with_type(name, scope_type)
+                return rst
+
+            return wrapped_fn
+
+        def wrap_module_call(origin_fn):
+            @wraps(origin_fn)
+            def wrapped_fn(*args, **kwargs):
+                is_builtin_module = module_tracer.is_builtin(type(args[0]))
+                if not is_builtin_module:
+                    return origin_fn(*args, **kwargs)
+                name, scope_type = type(args[0]).__name__, "module"
+                push_scope_with_type(name, scope_type)
+                rst = origin_fn(*args, **kwargs)
+                pop_scope_with_type(name, scope_type)
+                return rst
+
+            return wrapped_fn
+
+        self._api_patcher = Patcher(wrap_tensormethod_and_functional)
+        self._api_patcher.patch_method(Module, "__call__", wrap_module_call)
+        return self._api_patcher
 
     @property
     def formats(self):
@@ -171,9 +231,14 @@ class Profiler(ContextDecorator):
 
     def __enter__(self):
         self.start()
+        if self._with_scopes:
+            self._patcher.__enter__()
 
     def __exit__(self, val, tp, trace):
         self.stop()
+        if self._with_scopes and self._api_patcher is not None:
+            self._api_patcher.__exit__(val, tp, trace)
+        self._api_patcher = None
 
     def __call__(self, func):
         func = super().__call__(func)

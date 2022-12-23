@@ -5,6 +5,7 @@
 
 #include "megbrain/imperative/op_def.h"
 #include "megbrain/imperative/operator.h"
+#include "megbrain/imperative/profiler.h"
 #include "megbrain/imperative/utils/data_format.h"
 #include "megbrain/imperative/utils/helper.h"
 #include "megbrain/imperative/utils/value_shape.h"
@@ -204,6 +205,24 @@ public:
     std::string raw_type() const { return "CreateNode"; }
 
     std::string to_string() const override;
+};
+
+class PushScope final : public OperatorImpl<PushScope> {
+public:
+    std::string name;
+    ScopeType type;
+    PushScope(std::string name, ScopeType type) : name{std::move(name)}, type{type} {};
+    std::string raw_type() const { return "PushScope"; }
+    std::string to_string() const override { return "PushScope"; }
+};
+
+class PopScope final : public OperatorImpl<PopScope> {
+public:
+    std::string name;
+    ScopeType type;
+    PopScope(std::string name, ScopeType type) : name{std::move(name)}, type{type} {};
+    std::string raw_type() const { return "PopScope"; }
+    std::string to_string() const override { return "PopScope"; }
 };
 
 class DupTensor final : public OperatorImpl<DupTensor, Operator::IdentityLike> {

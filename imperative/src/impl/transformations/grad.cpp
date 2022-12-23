@@ -2,10 +2,10 @@
 
 #include <variant>
 
-#include "megbrain/imperative/graph_cache.h"
-#include "megbrain/imperative/resource_manager.h"
-
 #include <range/v3/all.hpp>
+#include "megbrain/imperative/graph_cache.h"
+#include "megbrain/imperative/profiler.h"
+#include "megbrain/imperative/resource_manager.h"
 
 namespace mgb {
 namespace imperative {
@@ -232,7 +232,14 @@ void GradKey::backward() {
                 for (auto&& slot : grad_fn->m_slots) {
                     *iter++ = slot.m_grad;
                 }
+                std::string name = op ? op->name() + "Backward" : "CustomBackward";
+                if (Profiler::is_profiling()) {
+                imperative::apply(PushScope(name, ScopeType::BACKWARD), Span<ValueRef>(nullptr, nullptr));
+                }
                 backward(grads, grad_receiver);
+                if (Profiler::is_profiling()) {
+                imperative::apply(PopScope(name, ScopeType::BACKWARD), Span<ValueRef>(nullptr, nullptr));
+                }
             }
         }, grad_fn->m_backward);
         // clang-format on

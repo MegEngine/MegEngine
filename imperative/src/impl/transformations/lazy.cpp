@@ -172,6 +172,8 @@ ValueRefList LazyEvalTransformation::apply_transformation(
         } else {
             return imperative::apply(op, inputs);
         }
+    } else if (op.is<PushScope>() || op.is<PopScope>()) {
+        return {};
     } else {
         return op.fallback(inputs);
     }

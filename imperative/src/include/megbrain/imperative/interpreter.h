@@ -5,6 +5,7 @@
 
 #include "./backtrace.h"
 #include "megbrain/imperative/op_def.h"
+#include "megbrain/imperative/profiler.h"
 
 namespace mgb::imperative::interpreter {
 
@@ -63,12 +64,13 @@ struct Interpreter {
         virtual void stop_profile() = 0;
         virtual void stop_step() = 0;
 
-        virtual void push_scope(std::string name) = 0;
-        virtual void pop_scope(std::string name) = 0;
-
         virtual BackTraceInfoPtr& get_backtrace() = 0;
         virtual void set_backtrace(BackTraceInfoPtr bt) = 0;
         virtual void clear_backtrace() = 0;
+        virtual void push_scope(
+                std::string name, ScopeType type = ScopeType::DEFAULT) = 0;
+        virtual void pop_scope(
+                std::string name, ScopeType type = ScopeType::DEFAULT) = 0;
     };
 
     virtual std::unique_ptr<Channel> create_channel() = 0;
