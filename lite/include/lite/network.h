@@ -97,6 +97,7 @@ struct LITE_API Options {
     bool enable_nchw4 = false;
     bool enable_nchw32 = false;
     bool enable_nchw64 = false;
+    bool enable_f16_io_comp = false;  // convert to fp16
 };
 
 /**

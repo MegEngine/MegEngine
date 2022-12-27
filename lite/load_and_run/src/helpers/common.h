@@ -67,6 +67,10 @@ enum class OptLayoutType {
     NHWCD4 = 1 << 6,
     NCHW44_DOT = 1 << 7
 };
+/*!
+ * \brief: dtype type for running model optimization
+ */
+enum class OptDTypeType { IOC16 = 1 << 0 };
 /**
  *  base class to story option value
  */

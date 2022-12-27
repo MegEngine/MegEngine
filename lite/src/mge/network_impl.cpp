@@ -97,6 +97,9 @@ void NetworkImplDft::application_config() {
     ConfigOptionLayoutTransform(enable_nchw32);
     ConfigOptionLayoutTransform(enable_nchw64);
 #undef ConfigOptionLayoutTransform
+    if (m_user_config->options.enable_f16_io_comp) {
+        options.graph_opt.enable_f16_io_comp();
+    }
     if (m_user_config->has_compression) {
         m_load_config.tensor_value_loader = decompressed_tensor_value_loader;
     }

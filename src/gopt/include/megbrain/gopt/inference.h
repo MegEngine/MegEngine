@@ -73,6 +73,10 @@ class ConvertF32ToF16Pass : public Pass {
             Typeinfo*,
             thin_function<OperatorNodeBase*(OperatorNodeBase*, const VarNodeArray&)>>
             m_opr_replace_func;
+    ThinHashMap<
+            Typeinfo*,
+            thin_function<VarNodeArray(OperatorNodeBase*, const VarNodeArray&)>>
+            m_multi_tensor_replace_func;
     VarReplaceCheckFlag m_var_replace_check_flag = VarReplaceCheckFlag::CHECK_ALL;
 
 public:

@@ -641,6 +641,22 @@ void ConvertF32ToF16Pass::apply(OptState& state) const {
             for (size_t i = 0; i < origin_out.size(); i++) {
                 rewriter.replace_var(origin_out[i], cur_out[i], nullptr);
             }
+        } else if (
+                m_multi_tensor_replace_func.find(opr->dyn_typeinfo()) !=
+                m_multi_tensor_replace_func.end()) {
+            auto&& new_inp = new_inp_cache;
+            new_inp.clear();
+            new_inp.reserve(opr->input().size());
+            for (auto i : opr->input()) {
+                new_inp.push_back(rewriter.get_var(i));
+            }
+            auto&& origin_out = opr->output();
+            auto&& cur_out =
+                    m_multi_tensor_replace_func.at(opr->dyn_typeinfo())(opr, new_inp);
+            mgb_assert(origin_out.size() == cur_out.size());
+            for (size_t i = 0; i < origin_out.size(); i++) {
+                rewriter.replace_var(origin_out[i], cur_out[i], nullptr);
+            }
         } else {
             rewriter.auto_replace_outputs(opr);
         }
@@ -689,6 +705,48 @@ std::unique_ptr<ConvertF32ToF16Pass> ConvertF32ToF16Pass::make(bool use_f32_comp
             return cvt_var.node()->owner_opr();
         }
         return opr;
+    };
+
+    auto replace_multi_sdt_opr = [](OperatorNodeBase* opr,
+                                    const VarNodeArray& new_inp) {
+        mgb_assert(opr->input().size() == new_inp.size());
+        auto& multi_sdt_opr = opr->cast_final_safe<opr::MultipleDeviceTensorHolder>();
+
+        VarNodeArray cvt_vars;
+        cvt_vars.reserve(multi_sdt_opr.output().size());
+
+        for (size_t i = 0; i < multi_sdt_opr.output().size(); ++i) {
+            if (multi_sdt_opr.output(i)->dtype() == dtype::Float32()) {
+                cvt_vars.append({opr::TypeCvt::make(
+                                         multi_sdt_opr.output(i), dtype::Float16(), {})
+                                         .node()});
+            } else {
+                cvt_vars.append({multi_sdt_opr.output(i)});
+            }
+        }
+        return cvt_vars;
+    };
+
+    auto replace_multi_sdt_with_format_opr = [](OperatorNodeBase* opr,
+                                                const VarNodeArray& new_inp) {
+        mgb_assert(opr->input().size() == new_inp.size());
+        auto& multi_sdt_with_format_opr =
+                opr->cast_final_safe<opr::MultipleDeviceTensorWithFormatHolder>();
+
+        VarNodeArray cvt_vars;
+        cvt_vars.reserve(multi_sdt_with_format_opr.output().size());
+
+        for (size_t i = 0; i < multi_sdt_with_format_opr.output().size(); ++i) {
+            if (multi_sdt_with_format_opr.output(i)->dtype() == dtype::Float32()) {
+                cvt_vars.append({opr::TypeCvt::make(
+                                         multi_sdt_with_format_opr.output(i),
+                                         dtype::Float16(), {})
+                                         .node()});
+            } else {
+                cvt_vars.append({multi_sdt_with_format_opr.output(i)});
+            }
+        }
+        return cvt_vars;
     };
 
     auto replace_imt_opr = [](OperatorNodeBase* opr, const VarNodeArray& new_inp) {
@@ -934,6 +992,12 @@ std::unique_ptr<ConvertF32ToF16Pass> ConvertF32ToF16Pass::make(bool use_f32_comp
     replace_func[opr::WarpPerspective::typeinfo()] = replace_warp_opr;
     replace_func[opr::Remap::typeinfo()] = replace_remap_opr;
     replace_func[opr::BatchedMatrixMul::typeinfo()] = replace_batched_matmul_opr;
+
+    auto& tensor_replace_func = ret->m_multi_tensor_replace_func;
+    tensor_replace_func[opr::MultipleDeviceTensorHolder::typeinfo()] =
+            replace_multi_sdt_opr;
+    tensor_replace_func[opr::MultipleDeviceTensorWithFormatHolder::typeinfo()] =
+            replace_multi_sdt_with_format_opr;
     return ret;
 #endif
 }
