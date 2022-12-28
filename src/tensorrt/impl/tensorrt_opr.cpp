@@ -51,13 +51,13 @@ void TensorRTOpr::Logger::log(nvinfer1::ILogger::Severity severity, const char* 
         TENSORRT_NO_EXCEPT(noexcept) {
     switch (severity) {
         case Severity::kINTERNAL_ERROR:
-            mgb_log("TRT_INTERNAL_ERROR: %s", msg);
+            mgb_log_error("TRT_INTERNAL_ERROR: %s", msg);
             return;
         case Severity::kERROR:
-            mgb_log("TRT_ERROR: %s", msg);
+            mgb_log_error("TRT_ERROR: %s", msg);
             return;
         case Severity::kWARNING:
-            mgb_log("TRT_WARNING: %s", msg);
+            mgb_log_warn("TRT_WARNING: %s", msg);
             return;
         case Severity::kINFO:
             mgb_log_debug("TRT_INFO: %s", msg);
