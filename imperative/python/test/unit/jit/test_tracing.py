@@ -308,6 +308,28 @@ def test_dump_with_testcase():
     f.dump(file, input_data=["#rand(0, 255, 1)"])
 
 
+def test_split_dump():
+    class SimpleNet(Module):
+        def __init__(self, num_segments: int = 3):
+            super().__init__()
+            self.num_segments = num_segments
+
+        def forward(self, x):
+            x = F.split(x, self.num_segments, axis=1)
+            return x
+
+    model = SimpleNet()
+    model.eval()
+    data = tensor(np.random.random((1, 12, 224, 224)))
+
+    @trace(symbolic=True, capture_as_const=True)
+    def fun(data, *, net):
+        return net(data)
+
+    x = fun(data, net=model)
+    fun.dump(io.BytesIO(), arg_names=["data"])
+
+
 @pytest.mark.parametrize("trace_mode", [False, True])
 def test_trace_profiler(trace_mode):
     @trace(symbolic=trace_mode, profiling=True)

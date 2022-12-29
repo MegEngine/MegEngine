@@ -400,7 +400,6 @@ py::object get_res_by_refhdl(
         ref = py::reinterpret_borrow<py::object>(ref_hdl);
     }
     if (PyObject_TypeCheck(ref.ptr(), py_varnode_type)) {
-        auto temp = dtype.cast<mgb::DType>();
         ComputingGraph* graph = getattr(ref, "graph").cast<ComputingGraph*>();
         cg::VarNode* node = getattr(ref, "var").cast<cg::VarNode*>();
         CompNode cn;
@@ -1473,8 +1472,23 @@ py::object _split_cpp(
                     std::to_string(axis) + " cannot be split into " +
                     std::to_string(n_sections) + " sections");
         }
-        op = Split::make(axis, n_sections);
-        p.resize(2);
+        if (enable_fastpath(inp_hdl)) {
+            op = Split::make(axis, n_sections);
+            p.resize(2);
+        } else {
+            size_t n_total_ = n_total.cast<int>();
+            for (size_t idx = 0; idx < n_sections; ++idx) {
+                auto section_size = (n_total_ + n_sections - idx - 1) / n_sections;
+                partitions.append(_Const(
+                        py::int_(section_size), py::cast((mgb::DType)dtype::Int32()),
+                        getattr(inp_hdl, "device")));
+            }
+            op = Split::make(axis, 0);
+            p.resize(partitions.size() + 2);
+            for (size_t idx = 0; idx < partitions.size(); ++idx) {
+                p[idx + 2] = partitions[idx].ptr();
+            }
+        }
     }
     py::object Op = py::cast(op);
     p[0] = Op.ptr();
