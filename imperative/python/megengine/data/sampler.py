@@ -309,7 +309,7 @@ class ReplacementSampler(MapSampler):
         return indices.tolist()
 
 
-class Infinite(Sampler):
+class Infinite(MapSampler):
     r"""Infinite Sampler warper for basic sampler."""
 
     def sample(self):
