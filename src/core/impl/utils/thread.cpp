@@ -257,6 +257,20 @@ void SyncableCounter::wait_zero() {
     }
 }
 
+/* =============== ThreadLocalForceFree ===============  */
+#if defined(__ANDROID__) && !USE_STL_THREAD_LOCAL
+void ThreadLocalForceFree::push(void* d) {
+    MGB_LOCK_GUARD(m_mutex);
+    td.push_back(d);
+}
+
+//! make ff init as soon as possible
+static ThreadLocalForceFree ff;
+ThreadLocalForceFree& get_thread_local_force_free_instance() {
+    return ff;
+}
+#endif
+
 #else  // MGB_HAVE_THREAD
 #pragma message "threading support is disabled"
 #if MGB_CUDA
