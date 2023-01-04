@@ -668,7 +668,8 @@ if(NOT MGE_ENABLE_EXCEPTIONS)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-exceptions")
 endif()
 
-if(MGE_BUILD_IMPERATIVE_RT)
+if(MGE_BUILD_IMPERATIVE_RT OR ANDROID)
+  message(STATUS "config cxx standard to 17.")
   set(CMAKE_CXX_STANDARD 17)
 endif()
 
