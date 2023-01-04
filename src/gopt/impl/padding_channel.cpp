@@ -316,6 +316,9 @@ OperatorNodeBase* PaddingChannelPass::padding_channel_wise_conv_policy(
         size_t pad_channels_1 = new_in_channels - group;
         if (pad_channels_1) {
             inps[1] = pad_in_channels(new_inp[1], pad_channels_1);
+            if (inps.size() >= 3) {
+                inps[2] = pad_in_channels(new_inp[2], pad_channels_1);
+            }
             m_padding_oprs.insert(opr);
         }
     }
