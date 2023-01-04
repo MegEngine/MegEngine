@@ -93,13 +93,15 @@ void NormalStrategy::run_subline() {
             min_time = std::min(min_time, cur);
             max_time = std::max(max_time, cur);
         }
-        mgb_log("=== finished test #%u: time=%.3f ms avg_time=%.3f ms "
-                "standard_deviation=%.3f ms min=%.3f ms max=%.3f ms",
-                idx, time_sum, time_sum / run_num,
-                std::sqrt(
-                        (time_sqrsum * run_num - time_sum * time_sum) /
-                        (run_num * (run_num - 1))),
-                min_time, max_time);
+        if (run_num > 0) {
+            mgb_log("=== finished test #%u: time=%.3f ms avg_time=%.3f ms "
+                    "standard_deviation=%.3f ms min=%.3f ms max=%.3f ms",
+                    idx, time_sum, time_sum / run_num,
+                    std::sqrt(
+                            (time_sqrsum * run_num - time_sum * time_sum) /
+                            (run_num * (run_num - 1))),
+                    min_time, max_time);
+        }
         return time_sum;
     };
 
