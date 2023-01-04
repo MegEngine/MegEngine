@@ -22,6 +22,24 @@
 #pragma message("force disable USE_STL_THREAD_LOCAL for thread_local mem leak at dlopen/dlclose")
 #undef USE_STL_THREAD_LOCAL
 #define USE_STL_THREAD_LOCAL 0
+class ThreadData;
+class ThreadLocalForceFree {
+public:
+    ThreadLocalForceFree() = default;
+    ~ThreadLocalForceFree() {
+        MGB_LOCK_GUARD(m_mutex);
+        for (auto& d : td) {
+            delete (ThreadData*)d;
+        }
+    }
+
+    void push(void* d);
+
+private:
+    std::vector<void*> td;
+    MGB_MUTEX m_mutex;
+};
+ThreadLocalForceFree& get_thread_local_force_free_instance();
 #endif
 
 #if USE_STL_THREAD_LOCAL
@@ -57,6 +75,10 @@ class ThreadLocalPtr {
             return static_cast<ThreadData*>(d)->data;
         }
         ThreadData* t_data = new ThreadData();
+#if defined(__ANDROID__)
+        get_thread_local_force_free_instance().push((void*)t_data);
+#endif
+
         t_data->data = m_constructor();
         t_data->self = this;
         pthread_setspecific(m_key, t_data);
@@ -67,7 +89,9 @@ class ThreadLocalPtr {
         ThreadData* td = static_cast<ThreadData*>(d);
         if (td && td->self->m_destructor)
             td->self->m_destructor(td->data);
+#if !defined(__ANDROID__)
         delete td;
+#endif
     }
 
 public:
