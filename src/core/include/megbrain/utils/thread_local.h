@@ -18,6 +18,12 @@
 #   endif
 #endif
 
+#if defined(__ANDROID__)
+#pragma message("force disable USE_STL_THREAD_LOCAL for thread_local mem leak at dlopen/dlclose")
+#undef USE_STL_THREAD_LOCAL
+#define USE_STL_THREAD_LOCAL 0
+#endif
+
 #if USE_STL_THREAD_LOCAL
 #define MGB_THREAD_LOCAL_PTR(T) thread_local T*
 #else
