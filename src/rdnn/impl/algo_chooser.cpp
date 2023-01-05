@@ -512,8 +512,8 @@ AlgoChooser<Opr>::AlgoChooserHelper::AlgoChooserHelper(
         for (size_t i = 0; i < m_incache_layouts.size(); i++) {
             for (size_t j = 0; j < m_incache_layouts.at(i).ndim; j++) {
                 m_incache_layouts.at(i)[j] = 0;
-                m_incache_layouts.at(i).stride[j] = 0;
             }
+            m_incache_layouts.at(i).init_contiguous_stride();
         }
     }
 
