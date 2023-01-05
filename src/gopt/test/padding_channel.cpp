@@ -443,4 +443,59 @@ TEST(TestGoptInference, ChannelPaddingMoreOp) {
     MGB_ASSERT_TENSOR_NEAR(host_y, host_y_opt, 1e-3);
 }
 
+TEST(TestGoptInference, DynamicShape) {
+    HostTensorGenerator<> gen;
+    HostTensorGenerator<dtype::Int32> gen_int;
+    auto cn = CompNode::load("cpu0");
+    auto graph = ComputingGraph::make();
+    graph->options().graph_opt_level = 0;
+    auto mkcvar = [&](const char* name, const TensorShape& shp) {
+        return opr::SharedDeviceTensor::make(*graph, *gen(shp, cn)).rename(name);
+    };
+
+    auto host_x = gen({1, 4, 8, 8}, cn);
+    auto host_dy = gen_int({1}, cn);
+    auto x = opr::Host2DeviceCopy::make(*graph, host_x);
+    auto dy = opr::Host2DeviceCopy::make(*graph, host_dy);
+    int32_t* start = host_dy->ptr<int32_t>();
+    start[0] = 0;
+    dy = opr::MarkDynamicVar::make(dy);
+    using AIdx = opr::indexing::AxisIndexer;
+    auto sub = opr::Subtensor::make(
+            x, {AIdx::make_interval(1, dy, x.make_scalar(4), x.make_scalar(1))},
+            OperatorNodeConfig("sub"));
+
+    //! Hybrid nchw44 mode
+    opr::ConvBias::Param param_conv;
+    param_conv.pad_h = param_conv.pad_w = 1;
+    auto w1 = mkcvar("w1", {3, 4, 3, 3}), b1 = mkcvar("w1", {1, 3, 1, 1}),
+         conv1 = opr::ConvBias::make(
+                 sub, w1, b1, param_conv, {}, OperatorNodeConfig("conv1"));
+
+    auto w2 = mkcvar("w2", {4, 3, 1, 1}),
+         y = opr::Convolution::make(conv1, w2, {}, {}, OperatorNodeConfig("conv2"));
+
+    SymbolVar y_pad;
+    unpack_vector(
+            gopt::GraphOptimizer{}
+                    .add_pass(gopt::PaddingChannelPass::make(
+                            cg::GraphCommonOptimizeOptions::LayoutTransform::NCHW44,
+                            true))
+                    .apply({{y}})
+                    .endpoint_vars(),
+            y_pad);
+    auto conv1_opt = find_opr<opr::ConvBias>(y_pad, "conv1");
+    auto conv2_opt = find_opr<opr::Convolution>(y_pad, "conv2");
+    //! do not padding input tensor
+    ASSERT_EQ(conv1_opt->input(0)->shape().ndim, 0);
+    //! output tensor padding input tensor
+    ASSERT_EQ(conv2_opt->input(0)->shape().ndim, 0);
+
+    HostTensorND host_y_opt, host_y;
+    auto func = graph->compile(
+            {make_callback_copy(y, host_y), make_callback_copy(y_pad, host_y_opt)});
+    func->execute();
+    MGB_ASSERT_TENSOR_NEAR(host_y, host_y_opt, 1e-2);
+}
+
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

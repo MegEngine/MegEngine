@@ -114,7 +114,14 @@ void PaddingChannelPass::apply(OptState& opt) const {
     auto rewriter = opt.graph().make_rewriter();
     auto on_opr = [this, &opt, &rewriter](OperatorNodeBase* opr) {
         auto it = m_opr_replace_funcs.find(opr->dyn_typeinfo());
-        if (it != m_opr_replace_funcs.end()) {
+        auto is_skip = false;
+        //! if the input of the opr is dynamic shape, skip it
+        for (size_t id = 0; id < opr->input().size(); id++) {
+            if (0 == opr->input(id)->shape().ndim) {
+                is_skip = true;
+            }
+        }
+        if (it != m_opr_replace_funcs.end() && !is_skip) {
             VarNodeArray new_inp;
             new_inp.reserve(opr->input().size());
             for (auto&& inp : opr->input()) {
