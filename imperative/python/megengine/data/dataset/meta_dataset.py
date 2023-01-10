@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import bisect
 from abc import ABC, abstractmethod
 from typing import Tuple
 
@@ -143,3 +144,73 @@ class ArrayDataset(Dataset):
 
     def __len__(self) -> int:
         return len(self.arrays[0])
+
+
+class ConcatDataset(Dataset):
+    r"""ConcatDataset is a concatenation of multiple datasets.
+
+    This dataset is used for assembleing multiple map-style
+    datasets.
+
+    Examples:
+
+        .. code-block:: python
+
+            from megengine.data.dataset import ArrayDataset, ConcatDataset
+
+            data1 = np.random.randint(0, 255, size=(2, 1, 32, 32), dtype=np.uint8)
+            data2 = np.random.randint(0, 255, size=(2, 1, 32, 32), dtype=np.uint8)
+            label = np.random.randint(0, 10, size=(2,), dtype=int)
+            labe2 = np.random.randint(0, 10, size=(2,), dtype=int)
+            dataset1 = ArrayDataset(data1, label1)
+            dataset2 = ArrayDataset(data2, label2)
+            dataset = ConcatDataset([dataset1, dataset2])
+            seque_sampler = SequentialSampler(dataset, batch_size=2)
+
+            dataloader = DataLoader(
+                dataset,
+                sampler = seque_sampler,
+                num_workers=3,
+            )
+
+            for step, data in enumerate(dataloader):
+                print(data)
+
+    """
+
+    def __init__(self, datasets):
+        super(ConcatDataset, self).__init__()
+        self.datasets = datasets
+
+        def cumsum(datasets):
+            r, s = [], 0
+            for e in datasets:
+                l = len(e)
+                r.append(l + s)
+                s += l
+            return r
+
+        assert len(self.datasets) > 0, "datasets should not be an empty iterable"
+        for d in self.datasets:
+            assert not isinstance(
+                d, StreamDataset
+            ), "ConcatDataset does not support StreamDataset"
+        self.datasets = list(datasets)
+        self.cumulative_sizes = cumsum(self.datasets)
+
+    def __getitem__(self, idx):
+        if idx < 0:
+            if -idx > len(self):
+                raise ValueError(
+                    "absolute value of index should not exceed dataset length"
+                )
+            idx = len(self) + idx
+        dataset_idx = bisect.bisect_right(self.cumulative_sizes, idx)
+        if dataset_idx == 0:
+            sample_idx = idx
+        else:
+            sample_idx = idx - self.cumulative_sizes[dataset_idx - 1]
+        return self.datasets[dataset_idx][sample_idx]
+
+    def __len__(self):
+        return self.cumulative_sizes[-1]
