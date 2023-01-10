@@ -26,7 +26,7 @@ Version mgb::get_version() {
 #endif
 }
 
-#if __has_include("NvInfer.h")
+#if __has_include("NvInfer.h") && MGB_ENABLE_TENSOR_RT
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wnon-virtual-dtor"
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -41,7 +41,7 @@ int mgb::get_tensorrt_version() {
 }
 #endif
 
-#if __has_include("cuda.h")
+#if __has_include("cuda.h") && MGB_CUDA
 #include "cuda.h"
 int mgb::get_cuda_version() {
     return CUDA_VERSION;
@@ -52,7 +52,7 @@ int mgb::get_cuda_version() {
 }
 #endif
 
-#if __has_include("cudnn.h")
+#if __has_include("cudnn.h") && MGB_CUDA
 #include "cudnn.h"
 int mgb::get_cudnn_version() {
     return CUDNN_VERSION;
