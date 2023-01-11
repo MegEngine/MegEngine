@@ -92,9 +92,9 @@ MegDNNHandle::MegDNNHandle(const CompNodeEnv& env) {
 
     mgb_assert(init);
     int level = sm_default_dbg_level;
-    if (auto set = MGB_GETENV("MGB_USE_MEGDNN_DBG")) {
+    if (auto set = ::std::getenv(ssprintf("%cGB_USE_%cEGDNN_DBG", 'M', 'M').c_str())) {
         level = std::stol(set);
-        mgb_log_warn("use megdnn handle with debug level: %d", level);
+        mgb_log_warn("init dnn handle with debug level: %d", level);
     }
     // handle may have been implemented when device type is cadence.
     if (!m_megdnn_handle) {
