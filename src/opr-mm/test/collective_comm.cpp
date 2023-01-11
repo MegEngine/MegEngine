@@ -27,6 +27,19 @@ SymbolVarArray make_reduce_scatter_sum_output(const SymbolVarArray& inputs) {
     return opr::Split::make(rdc, opr::Split::Options::make_average(0, inputs.size()));
 }
 
+// Here is a deadlock problem in these tests, which is caused by cuda/nccl:
+// 1. MemcpyAsync waits for the nccl kernel to finish executing to free command queue
+// slots; 2. nccl kernel waits for peer nccl kernel to launch; 3. the peer nccl kernel
+// needs to call host register before launching; 4. host register waits for a lock; 5.
+// the lock is held by MemcpyAsync, deadlock happened. But in current distributed traing
+// scenario, the collective communication occurs in multiple processes rather than a
+// process. This problem will not happened. After discussion, we decide to close these
+// tests now. As for the test of distributed training, we use the python test to do this
+// work.
+
+// TODO: reopen the collective communication
+#if 0
+
 TEST(TestOprCollectiveComm, AllReduce) {
     REQUIRE_GPU(2);
 
@@ -1779,3 +1792,5 @@ TEST(TestOprCollectiveComm, AllToAllWithGradThisNodeOnly) {
     MGB_ASSERT_TENSOR_EQ(host_expect_grad0, host_grad0);
     MGB_ASSERT_TENSOR_EQ(host_expect_grad1, host_grad1);
 }
+
+#endif
