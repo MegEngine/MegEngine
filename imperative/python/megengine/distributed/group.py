@@ -95,7 +95,7 @@ class Group:
 WORLD = Group([])
 
 _devices = {"gpu", "cuda", "rocm"}
-_backends = {"nccl", "rccl", "shm", "auto"}
+_backends = {"nccl", "rccl", "auto"}
 
 
 def init_process_group(
@@ -115,7 +115,7 @@ def init_process_group(
         world_size: total number of processes participating in the job.
         rank: rank of the current process.
         device: the GPU device id to bind this process to.
-        backend: communicator backend, currently support 'nccl' and 'shm'.
+        backend: communicator backend, currently support 'nccl' and 'rccl'.
     """
     physical_device_type = what_is_xpu() if device_type == "xpu" else device_type
     if not isinstance(master_ip, str):

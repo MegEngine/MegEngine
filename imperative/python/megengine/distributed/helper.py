@@ -205,10 +205,7 @@ class AllreduceCallback:
             assert _group._sd, "please call init_process_group first"
             backend = _group._sd.backend
         if backend == "auto":
-            if group.is_single_machine and not _check_enable_p2p():
-                backend = "shm"
-            else:
-                backend = "nccl"
+            backend = "nccl"
         self._backend = backend
 
     def _reset(self):

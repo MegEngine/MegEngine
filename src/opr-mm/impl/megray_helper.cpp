@@ -31,10 +31,8 @@ MegRay::Backend mgb::opr::get_megray_backend(const std::string& backend) {
         return MegRay::MEGRAY_RCCL;
     } else if (backend == "ucx") {
         return MegRay::MEGRAY_UCX;
-    } else if (backend == "shm") {
-        return MegRay::MEGRAY_SHM;
     } else {
-        mgb_throw(MegBrainError, "back CollectiveComm backend");
+        mgb_throw(MegBrainError, "bad CollectiveComm backend");
     }
 }
 

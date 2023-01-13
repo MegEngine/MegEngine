@@ -26,7 +26,7 @@ from .server import Client, Server
 @mproperty
 def backend(mod):
     r"""Get or set backend of collective communication.
-    Available backends are ['nccl', 'shm', 'rccl']
+    Available backends are ['nccl', 'rccl']
 
     Examples:
 
