@@ -552,7 +552,7 @@ void PaddingChannelPass::add_condition_padding_oprs_replace_func(LayoutTrans) {
         if (auto reduce = opr->try_cast_final<opr::Reduce>()) {
             auto axis = reduce->param().axis;
             if (axis < 0) {
-                axis += reduce->input(0)->layout().ndim;
+                axis += reduce->input(0)->shape().ndim;
             }
             //! don't reduce in channel
             if (reduce->input().size() > 1) {

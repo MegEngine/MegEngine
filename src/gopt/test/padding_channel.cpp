@@ -305,7 +305,7 @@ TEST(TestGoptInference, ChannelPaddingReduce) {
     auto reduce0 = opr::Reduce::make(
             conv2, {opr::Reduce::Mode::MAX, 1}, {}, OperatorNodeConfig("reduce0"));
     auto reduce1 = opr::Reduce::make(
-            conv2, {opr::Reduce::Mode::MAX, 2}, {}, OperatorNodeConfig("reduce1"));
+            conv2, {opr::Reduce::Mode::MAX, -1}, {}, OperatorNodeConfig("reduce1"));
     auto y_reduce = reduce0 + reduce1;
 
     SymbolVar y_pad;
