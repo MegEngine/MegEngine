@@ -111,13 +111,14 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
     int axis = op_def.axis >= 0 ? op_def.axis : op_def.axis + inputs[0]->layout().ndim;
 
     CompNode& oup_cn = output_descs[0].comp_node;
-    if (op_def.comp_node.valid()) {
-        mgb_assert(op_def.comp_node == oup_cn, "Concat compnode infer error");
-    }
-
-    // prepare inputs and output layout
     TensorLayout& oup_layout = output_descs[0].layout;
-    if (!validated) {
+    if (validated) {
+        if (op_def.comp_node.valid()) {
+            mgb_assert(op_def.comp_node == oup_cn, "Concat compnode infer error");
+        }
+    } else {
+        // prepare inputs and output layout
+        oup_cn = inputs[0]->comp_node();
         SmallVector<const TensorLayout*> inputs_holder(inputs.size());
         for (size_t i = 0; i < inputs.size(); ++i) {
             inputs_holder[i] = &inputs[i]->layout();
@@ -213,13 +214,14 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
             op_def.axis >= 0 ? op_def.axis : op_def.axis + inputs[0]->layout().ndim + 1;
 
     CompNode& oup_cn = output_descs[0].comp_node;
-    if (op_def.comp_node.valid()) {
-        mgb_assert(op_def.comp_node == oup_cn, "Stack compnode infer error");
-    }
-
-    // prepare inputs and output layout
     TensorLayout& oup_layout = output_descs[0].layout;
-    if (!validated) {
+    if (validated) {
+        if (op_def.comp_node.valid()) {
+            mgb_assert(op_def.comp_node == oup_cn, "Stack compnode infer error");
+        }
+    } else {
+        // prepare inputs and output layout
+        oup_cn = inputs[0]->comp_node();
         SmallVector<const TensorLayout*> inputs_holder(inputs.size());
         for (size_t i = 0; i < nr_inp; ++i) {
             inputs_holder[i] = &inputs[i]->layout();

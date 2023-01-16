@@ -855,6 +855,9 @@ void ChannelImpl::do_apply_op(const ApplyOp& cmd, std::string reason) {
     } else {
         // i may be null
         validated = false;
+        for (auto i : cmd.outputs) {
+            output_descs.push_back({});
+        }
     }
     // Here std::move is REQUIRED for removing duplicated references.
     auto outputs = apply_on_physical_tensor(
