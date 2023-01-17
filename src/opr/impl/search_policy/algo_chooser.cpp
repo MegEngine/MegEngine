@@ -54,6 +54,13 @@ size_t AlgoChooser<Opr>::setup_algo(
             layouts, megdnn_opr, param_str, mgb_opr->comp_node(),
             mgb_opr->execution_policy(), allow_weight_preprocess, desc);
 
+    bool no_profiling_on_shape_change = cg->options().no_profiling_on_shape_change;
+    //! if no profile on shape change is set and the algo policy is valid,
+    //! get the workspace directly
+    if (no_profiling_on_shape_change && megdnn_opr->execution_policy().algo.valid()) {
+        return helper.get_workspace_size_bytes(megdnn_opr->execution_policy(), layouts);
+    }
+
     ImplExecutionPolicy policy;
     if (auto algo_choose_hook = mgb_opr->algo_chooser()) {
         policy = algo_choose_hook(mgb_opr);

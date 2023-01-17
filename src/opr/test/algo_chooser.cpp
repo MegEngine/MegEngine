@@ -309,6 +309,56 @@ TEST(TestOprDNN, FastrunIgnoreBatchSizeBatchedMatrixMul) {
             {TensorShape{4, 6, 8}, TensorShape{4, 8, 4}});
 }
 
+TEST(TestOprDNN, NoProfileWhenShapeChange) {
+    using CacheMem = std::pair<const void*, size_t>;
+    using Policy = opr::ConvBias::ExecutionPolicy;
+    using S = Policy::Strategy;
+    auto on_get = [](const std::string&, const void*, size_t, const void*, size_t) {};
+
+    std::vector<std::pair<CacheMem, CacheMem>> cache_set_history;
+    auto on_set = [&cache_set_history](
+                          const std::string&, const void* key, size_t key_size,
+                          const void* val, size_t val_size) {
+        cache_set_history.emplace_back(
+                std::make_pair(key, key_size), std::make_pair(val, val_size));
+    };
+
+    PersistentCacheHook cache_hook{on_get, on_set};
+
+    HostTensorGenerator<> gen;
+    auto cn = CompNode::load("xpu0");
+    auto graph = ComputingGraph::make();
+    graph->options().no_profiling_on_shape_change = true;
+    auto mkcvar = [&](const char* name, const TensorShape& shp) {
+        return opr::SharedDeviceTensor::make(*graph, *gen(shp, cn)).rename(name);
+    };
+
+    auto host_x = gen({1, 4, 16, 16}, cn);
+    auto x = opr::Host2DeviceCopy::make(*graph, host_x);
+
+    opr::ConvBias::Param param_conv;
+    Policy policy;
+    policy.strategy = S::PROFILE;
+    param_conv.pad_h = param_conv.pad_w = 1;
+    auto w1 = mkcvar("w1", {8, 4, 3, 3}), b1 = mkcvar("w1", {1, 8, 1, 1}),
+         conv1 = opr::ConvBias::make(
+                 x, w1, b1, param_conv, policy, OperatorNodeConfig("conv1"));
+
+    auto w2 = mkcvar("w2", {8, 8, 3, 3}), b2 = mkcvar("b2", {1, 8, 1, 1}),
+         out = opr::ConvBias::make(
+                 conv1, w2, b2, param_conv, policy, OperatorNodeConfig("conv2"));
+
+    std::unique_ptr<cg::AsyncExecutable> func = graph->compile({{out, {}}});
+    func->execute().wait();
+
+    //! there are two convbias, so there should have two algo cache.
+    ASSERT_EQ(cache_set_history.size(), 2);
+
+    host_x->resize({5, 4, 32, 32});
+    //! no profile when input shape changed
+    ASSERT_EQ(cache_set_history.size(), 2);
+}
+
 #endif  // MGB_ENABLE_FASTRUN
 #endif  // MGB_CUDA
 
