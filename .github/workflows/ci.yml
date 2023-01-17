@@ -4,7 +4,11 @@ on:
   push:
     branches: [master, try-import]
   pull_request:
-  
+
+concurrency:
+  group: ${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   check-commit:
     runs-on: ubuntu-latest
