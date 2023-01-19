@@ -76,15 +76,15 @@ auto origin_get_index(
     return ret;
 }
 
+auto mod_size = [](int v, int size_ax) -> int {
+    if (size_ax == 0)
+        return 0;
+    return v < 0 ? v + size_ax : v;
+};
+
 TensorLayout deduce_layout(
         TensorLayout src, std::vector<std::tuple<int8_t, bool, bool, bool, bool>> items,
         std::vector<std::tuple<int32_t, int32_t, int32_t, int32_t>> slice_items) {
-    auto mod_size = [](int v, int size_ax) -> int {
-        if (size_ax == 0)
-            return 0;
-        return v < 0 ? v + size_ax : v;
-    };
-
     auto tostr = [](int v) -> std::string { return std::to_string(v); };
 
     for (int i = items.size() - 1; i >= 0; i--) {
@@ -108,7 +108,7 @@ TensorLayout deduce_layout(
                     tostr(slice_stop).c_str(), tostr(slice_step).c_str(),
                     tostr(axis).c_str());
         } else {
-            slice_start = s_val == INT_MIN ? shape_axis - 1 : b_val;
+            slice_start = b_val == INT_MIN ? shape_axis - 1 : b_val;
             slice_start = mod_size(slice_start, shape_axis);
             slice_stop = e_val == INT_MAX ? -1 : mod_size(e_val, shape_axis);
             slice_start = std::min(slice_start, std::max(shape_axis - 1, 0));
@@ -202,6 +202,11 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
             ax_val = ax_val < 0 ? layout.shape[axis] + ax_val : ax_val;
             offset += ax_val * layout.stride[axis] * dtype_size;
         } else {
+            if (s_val < 0) {
+                int shape_axis = src->layout().shape[axis];
+                start = b_val == INT_MIN ? shape_axis - 1 : b_val;
+                start = mod_size(start, shape_axis);
+            }
             start = std::max(start, 0);
             offset += start * layout.stride[axis] * dtype_size;
         }

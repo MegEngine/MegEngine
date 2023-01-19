@@ -185,6 +185,15 @@ def test_stack(is_varnode):
         y.numpy(), np.array([[0, 6], [1, 7], [2, 8]]).astype(np.float32)
     )
 
+    x1 = Tensor(np.random.rand(600))
+    x2 = F.broadcast_to(Tensor(np.array(3)), (600,))
+
+    y = F.stack([x2, x1], axis=0)
+    np.testing.assert_equal(y.numpy(), np.stack((x2.numpy(), x1.numpy()), axis=0))
+
+    y = F.stack([x2, x2], axis=0)
+    np.testing.assert_equal(y.numpy(), np.stack((x2.numpy(), x2.numpy()), axis=0))
+
 
 @pytest.mark.parametrize("is_varnode", [True, False])
 def test_split_basic(is_varnode):

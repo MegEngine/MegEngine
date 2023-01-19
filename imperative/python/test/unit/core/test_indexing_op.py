@@ -308,6 +308,12 @@ def test_subtensor():
     x_[0:4:2, 3] += d
     np.testing.assert_equal(x_, yy2.numpy())
 
+    x_ = x.copy()
+    xx_ = Tensor(x_)
+    np.testing.assert_equal(x_[::-1], xx_[::-1].numpy())
+    np.testing.assert_equal(x_[::-2], xx_[::-2].numpy())
+    np.testing.assert_equal(x_[::-1, ::-2], xx_[::-1, ::-2].numpy())
+
 
 def test_advance_indexing():
     x = np.arange(25).reshape(5, 5).astype("int32")

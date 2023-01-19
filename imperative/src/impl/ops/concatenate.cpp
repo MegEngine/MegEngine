@@ -209,7 +209,6 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
         SmallVector<LogicalTensorDesc>& output_descs, const bool& validated) {
     auto&& op_def = def.cast_final_safe<Stack>();
     size_t nr_inp = inputs.size();
-    TensorLayout inp_layout = inputs[0]->layout();
     int axis =
             op_def.axis >= 0 ? op_def.axis : op_def.axis + inputs[0]->layout().ndim + 1;
 
@@ -228,11 +227,13 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
         }
         oup_layout = stack_layout_deduce(inputs_holder, axis);
     }
-    inp_layout.add_axis_cont_inplace(axis);
+
     SmallVector<TensorPtr> expanded;
     for (size_t i = 0; i < nr_inp; ++i) {
+        TensorLayout layout = inputs[i]->layout();
+        layout.add_axis_cont_inplace(axis);
         expanded.push_back(
-                Tensor::make(inputs[i]->blob(), inputs[i]->offset(), inp_layout));
+                Tensor::make(inputs[i]->blob(), inputs[i]->offset(), layout));
     }
     auto oup = Tensor::make(oup_layout, oup_cn);
     // because the dnn concat is very slow, we copy the slice code from
