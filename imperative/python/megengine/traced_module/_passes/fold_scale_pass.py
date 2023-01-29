@@ -165,15 +165,21 @@ class BackwardFoldScale(BackwardPass):
     def reset_expr_message_to_none(
         self, expr: Expr, scale_message: Dict[Expr, Any], skip_exprs: Set[Expr],
     ):
-        if expr in skip_exprs:
-            return
-        scale_message[expr] = None
-        if is_call_function(expr, F.conv2d) or is_call_module(expr, M.Conv2d):
-            return
-        for out_node in expr.outputs:
-            for user in out_node.users:
-                if user in scale_message:
-                    self.reset_expr_message_to_none(user, scale_message, skip_exprs)
+        visited_expr = set()
+
+        def _forward_trave(expr):
+            if expr in skip_exprs or expr in visited_expr:
+                return
+            visited_expr.add(expr)
+            scale_message[expr] = None
+            if is_call_function(expr, F.conv2d) or is_call_module(expr, M.Conv2d):
+                return
+            for out_node in expr.outputs:
+                for user in out_node.users:
+                    if user in scale_message:
+                        _forward_trave(user)
+
+        _forward_trave(expr)
 
     def before_visit_graph(self, graph: InternalGraph):
         var = is_var().check_users(False)
