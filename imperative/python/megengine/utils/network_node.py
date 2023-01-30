@@ -392,6 +392,14 @@ class MatrixMul(OpNode):
     type = "MatrixMul"
     opdef = builtin.MatrixMul
 
+    @classmethod
+    def load(cls, opr):
+        obj = super(MatrixMul, cls).load(opr)
+        dim1, dim2 = len(opr.inputs[0].shape), len(opr.inputs[1].shape)
+        obj.params["dimA"] = dim1
+        obj.params["dimB"] = dim2
+        return obj
+
 
 @register_flops(MatrixMul)
 def flops_matmul(opnode: MatrixMul, inputs, outputs):
@@ -430,6 +438,12 @@ class ConvolutionForward(OpNode):
 class ConvolutionBackwardData(OpNode):
     type = "ConvTranspose"
     opdef = builtin.ConvolutionBackwardData
+
+    @classmethod
+    def load(cls, opr):
+        obj = super(ConvolutionBackwardData, cls).load(opr)
+        obj.params["dtype"] = opr.outputs[0].dtype
+        return obj
 
 
 class DeformableConvForward(OpNode):

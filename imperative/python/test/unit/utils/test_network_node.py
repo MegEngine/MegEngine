@@ -1,6 +1,7 @@
 import io
 import os
 import platform
+from contextlib import contextmanager
 
 import numpy as np
 import pytest
@@ -12,6 +13,7 @@ import megengine.functional as F
 import megengine.module as M
 import megengine.random as rand
 from megengine.core._imperative_rt.core2 import apply
+from megengine.core._trace_option import set_symbolic_shape, use_symbolic_shape
 from megengine.core._wrap import Device
 from megengine.core.ops import builtin
 from megengine.device import (
@@ -24,6 +26,14 @@ from megengine.jit.tracing import trace
 from megengine.tensor import Tensor
 from megengine.utils.comp_graph_tools import GraphInference
 from megengine.utils.network import Network as Net
+
+
+@contextmanager
+def override_symbolic_shape(enable: bool):
+    old = use_symbolic_shape()
+    set_symbolic_shape(enable)
+    yield
+    set_symbolic_shape(old)
 
 
 def check_pygraph_dump(trace_func, inp_data, expect_results, max_err=None):
@@ -41,6 +51,16 @@ def check_pygraph_dump(trace_func, inp_data, expect_results, max_err=None):
     orig_model.seek(0)
 
     net = Net.load(orig_model)
+
+    # make a graph transform
+    with override_symbolic_shape(False):
+        old_inps = net.input_vars
+        new_inps = [
+            net.make_input_node(shape=inp.shape, dtype=inp.dtype, name=inp.name)
+            for inp in old_inps
+        ]
+        net.replace_vars(dict(zip(old_inps, new_inps)))
+
     file = io.BytesIO()
     net.dump(file, optimize_for_inference=False)
     file.seek(0)
@@ -205,6 +225,17 @@ def test_convtranspose():
     result = fwd(data)
     # cu111 has 1e-7 diff
     check_pygraph_dump(fwd, [data], [result], 5)
+
+
+def test_convtranspose_int8():
+    @trace(symbolic=True, capture_as_const=True)
+    def fwd(inp, weight):
+        return F.quantized.conv_transpose2d(inp, weight, dtype=dtype.qint8(scale=1.0))
+
+    inp = Tensor(np.random.random((1, 16, 64, 64)), dtype=dtype.qint8(scale=1.0))
+    weight = Tensor(np.random.random((16, 16, 4, 4)), dtype=dtype.qint8(scale=1.0))
+    result = fwd(inp, weight)
+    check_pygraph_dump(fwd, [inp, weight], [result])
 
 
 @pytest.mark.skip(reason="pytest aborted")
