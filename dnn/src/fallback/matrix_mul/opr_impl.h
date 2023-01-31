@@ -103,6 +103,7 @@ public:
             FB_NAIVE,
             FB_GI_F32_GEMV_MK4,
             FB_GI_F32_MK4_4x8,
+            FB_GI_F16_MK8_8x8,
             FB_GI_F32_MK4_PACK_4x12,
             FB_GI_F32_4x12,
 
@@ -237,6 +238,7 @@ private:
     class AlgoF32GiMK4_4x8;      // fallback F32 gi Gemm NCHW44
     class AlgoF32GiMK4Pack4x12;  // fallback F32 gi Gemm pack NCHW44
     class AlgoF32Gi4x12;         // fallback F32 gi Gemm
+    class AlgoF16GiMK8_8x8;
     class AlgoGemv;
     class AlgoNaive;
     class AlgoPack;

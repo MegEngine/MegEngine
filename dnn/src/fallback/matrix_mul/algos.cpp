@@ -297,7 +297,66 @@ MatrixMulImpl::kern_t MatrixMulImpl::AlgoF32GiMK4_4x8::get_kern(
         const KernSizeParam&) const {
     return gi_f32_mk4_4x8_kern;
 }
+#if defined(GI_SUPPORT_F16)
+/* ================== F16 Gemm MK8 gi algo ================== */
+namespace {
+void gi_f16_mk8_8x8_kern(const MatrixMulImpl::KernParam& kern_param) {
+    MIDOUT_BEGIN(megdnn_fb_gi_matmul_kern, midout_iv("gi_f16_mk8_8x8_kern"_hash)) {
+        auto M = kern_param.M, N = kern_param.N, K = kern_param.K;
+        auto trA = kern_param.trA, trB = kern_param.trB;
+        auto LDA = kern_param.LDA, LDB = kern_param.LDB, LDC = kern_param.LDC;
+        auto A_type = kern_param.A_type, B_type = kern_param.B_type,
+             C_type = kern_param.C_type;
+        const auto Aptr = kern_param.A<dt_float16>(), Bptr = kern_param.B<dt_float16>();
+        auto Cptr = kern_param.C<dt_float16>();
 
+        matmul::fallback::gi_sgemm_nopack_mk8_8x8_fp16 strategy(A_type, B_type, C_type);
+        megdnn::matmul::GemmInterleaved<
+                matmul::fallback::gi_sgemm_nopack_mk8_8x8_fp16, false>(
+                M, N, K, trA, trB, strategy)
+                .execute(Aptr, LDA, Bptr, LDB, Cptr, LDC, kern_param.workspace_ptr);
+    }
+    MIDOUT_END();
+}
+
+}  // anonymous namespace
+bool MatrixMulImpl::AlgoF16GiMK8_8x8::usable(
+        const KernSizeParam& kern_size_param) const {
+    constexpr size_t MB = 8;
+    constexpr size_t KB = 8;
+    return kern_size_param.compute_mode == Param::ComputeMode::DEFAULT &&
+           kern_size_param.format == param::MatrixMul::Format::MK8 &&
+           kern_size_param.B_type == kern_size_param.A_type &&
+           kern_size_param.C_type == kern_size_param.A_type &&
+           kern_size_param.A_type == dtype::Float16() && !kern_size_param.trA &&
+           !kern_size_param.trB && kern_size_param.M % MB == 0 &&
+           kern_size_param.K % KB == 0;
+}
+
+size_t MatrixMulImpl::AlgoF16GiMK8_8x8::get_workspace(
+        const KernSizeParam& kern_size_param) const {
+    MIDOUT_BEGIN(
+            megdnn_fb_gi_matmul_kern,
+            midout_iv("AlgoF16GiMK8_8x8::get_workspace"_hash)) {
+        auto M = kern_size_param.M, N = kern_size_param.N, K = kern_size_param.K;
+        auto trA = kern_size_param.trA, trB = kern_size_param.trB;
+        auto A_type = kern_size_param.A_type, B_type = kern_size_param.B_type,
+             C_type = kern_size_param.C_type;
+        matmul::fallback::gi_sgemm_nopack_mk8_8x8_fp16 strategy(A_type, B_type, C_type);
+        return megdnn::matmul::GemmInterleaved<
+                       matmul::fallback::gi_sgemm_nopack_mk8_8x8_fp16, false>(
+                       M, N, K, trA, trB, strategy)
+                .get_workspace_size();
+    }
+    MIDOUT_END();
+    return 0;
+}
+
+MatrixMulImpl::kern_t MatrixMulImpl::AlgoF16GiMK8_8x8::get_kern(
+        const KernSizeParam&) const {
+    return gi_f16_mk8_8x8_kern;
+}
+#endif
 /* ===================== F32 algo gi mk4 pack K4x12 ===================== */
 namespace {
 void f32_gi_mk4_pack_4x12_kern(const MatrixMulImpl::KernParam& kern_param) {

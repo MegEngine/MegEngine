@@ -2,6 +2,7 @@
 
 #include <type_traits>
 #include "src/common/algo_base.h"
+#include "src/fallback/general_intrinsic/gi_common.h"
 #include "src/fallback/matrix_mul/gemm_common.h"
 #include "src/fallback/matrix_mul/opr_impl.h"
 
@@ -96,6 +97,20 @@ public:
     MEGDNN_OVERRIDE_MATMUL_DESC(4, 8, 4, 4, AlgoDataType::FLOAT32, MK4)
     MEGDNN_DECL_ALGO_TYPE(FB_GI_F32_MK4_4x8)
 };
+
+#if defined(GI_SUPPORT_F16)
+class MatrixMulImpl::AlgoF16GiMK8_8x8 final : public AlgoBase {
+public:
+    AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }
+    const char* name() const override { return "FB_GI_F16_MK8_8x8"; }
+    bool usable(const KernSizeParam&) const override;
+    size_t get_workspace(const KernSizeParam&) const override;
+    kern_t get_kern(const KernSizeParam&) const override;
+    PackMode packmode() const override { return PackMode::NO_PACK; }
+    MEGDNN_OVERRIDE_MATMUL_DESC(8, 8, 8, 8, AlgoDataType::FLOAT16, MK8)
+    MEGDNN_DECL_ALGO_TYPE(FB_GI_F16_MK8_8x8)
+};
+#endif
 
 class MatrixMulImpl::AlgoF32GiMK4Pack4x12 final : public AlgoBase {
 public:

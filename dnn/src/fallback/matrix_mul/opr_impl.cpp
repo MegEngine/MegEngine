@@ -5,6 +5,7 @@
 #include "src/common/algo_chooser.h"
 #include "src/common/metahelper.h"
 #include "src/common/utils.h"
+#include "src/fallback/general_intrinsic/gi_common.h"
 #include "src/fallback/matrix_mul/algos.h"
 #include "src/fallback/matrix_mul/gemm_impl.h"
 #include "src/fallback/matrix_mul/generic_strategy.h"
@@ -30,6 +31,9 @@ class MatrixMulImpl::AlgoPack : NonCopyableObj {
     AlgoF32GiMK4_4x8 f32_mk4_4x8;
     AlgoF32GiMK4Pack4x12 f32_mk4_gi_pack_4x12;
     AlgoF32Gi4x12 f32_4x8;
+#if defined(GI_SUPPORT_F16)
+    AlgoF16GiMK8_8x8 f16_mk8_8x8;
+#endif
     SmallVector<AlgoBase*> m_all_algos;
     AlgoBase::Mapper m_all_algos_map;
 
@@ -39,6 +43,9 @@ public:
         m_all_algos.emplace_back(&f32_mk4_4x8);
         m_all_algos.emplace_back(&f32_mk4_gi_pack_4x12);
         m_all_algos.emplace_back(&f32_4x8);
+#if defined(GI_SUPPORT_F16)
+        m_all_algos.emplace_back(&f16_mk8_8x8);
+#endif
         m_all_algos.emplace_back(&gemv);
         m_all_algos.emplace_back(&f32_k8x12x1);
         m_all_algos.emplace_back(&naive);

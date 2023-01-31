@@ -1,4 +1,5 @@
 #include "test/common/matrix_mul.h"
+#include "src/fallback/general_intrinsic/gi_common.h"
 #include "test/common/checker.h"
 #include "test/common/rng.h"
 #include "test/common/task_record_check.h"
@@ -41,6 +42,14 @@ TEST_F(FALLBACK, MATRIX_MUL_MK4_GI) {
             dtype::Float32{}, dtype::Float32{}, dtype::Float32{}, handle(),
             "FB_GI_F32_MK4_4x8", param::MatrixMul::Format::MK4, 1);
 }
+
+#if defined(GI_SUPPORT_F16)
+TEST_F(FALLBACK, MATRIX_MUL_FP16_MK8_GI) {
+    matrix_mul::check_matrix_mul(
+            dtype::Float16{}, dtype::Float16{}, dtype::Float16{}, handle(),
+            "FB_GI_F16_MK8_8x8", param::MatrixMul::Format::MK8, 1);
+}
+#endif
 
 TEST_F(FALLBACK, MATRIX_MUL_GI_F32_4x12) {
     matrix_mul::check_matrix_mul(
@@ -182,6 +191,15 @@ TEST_F(FALLBACK, BENCHMARK_MATRIX_FB_GI_F32_MK4_4x8) {
             handle(), args, dtype::Float32{}, dtype::Float32{}, dtype::Float32{},
             "FB_GI_F32_MK4_4x8", param::MatrixMul::Format::MK4);
 }
+
+#if defined(GI_SUPPORT_F16)
+TEST_F(FALLBACK, BENCHMARK_MATRIX_FB_GI_F16_MK8_8x8) {
+    auto args = matrix_mul::get_benchmark_matmul_args();
+    matrix_mul::benchmark_single_algo(
+            handle(), args, dtype::Float16{}, dtype::Float16{}, dtype::Float16{},
+            "FB_GI_F16_MK8_8x8", param::MatrixMul::Format::MK8);
+}
+#endif
 
 #endif
 }  // namespace test
