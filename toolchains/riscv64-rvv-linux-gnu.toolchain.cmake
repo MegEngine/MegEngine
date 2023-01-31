@@ -14,9 +14,9 @@ set(RISCV_TOOLCHAIN_ROOT
 
 set(CMAKE_C_COMPILER "${RISCV_TOOLCHAIN_ROOT}/bin/riscv64-unknown-linux-gnu-gcc")
 set(CMAKE_CXX_COMPILER "${RISCV_TOOLCHAIN_ROOT}/bin/riscv64-unknown-linux-gnu-g++")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -march=rv64gcv0p7 -mabi=lp64d")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -march=rv64gcv0p7_zfh -mabi=lp64d")
 set(CMAKE_CXX_FLAGS
-    "${CMAKE_CXX_FLAGS} -march=rv64gcv0p7 -mabi=lp64d -Wno-error=attributes")
+    "${CMAKE_CXX_FLAGS} -march=rv64gcv0p7_zfh -mabi=lp64d -Wno-error=attributes")
 set(CMAKE_FIND_ROOT_PATH "${RISCV_TOOLCHAIN_ROOT}/riscv64-unknown-linux-gnu")
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
 set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)

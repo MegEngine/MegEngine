@@ -92,6 +92,13 @@
 #undef GI_RVV_INTRINSICS
 #endif
 
+//! Gi fp16 only support arm64 neon and rvv
+#if (defined(GI_NEON_INTRINSICS) && __ARM_FEATURE_FP16_VECTOR_ARITHMETIC && \
+     MEGDNN_AARCH64) ||                                                     \
+        defined(GI_RVV_INTRINSICS)
+#define GI_SUPPORT_F16
+#endif
+
 //! general intrinsic support dynamic length simd, if avx or avx2 the simd
 //! length is 256
 #if defined(GI_AVX_INTRINSICS) || defined(GI_AVX2_INTRINSICS) || \
@@ -127,6 +134,12 @@ enum GiSimdType {
     GI_RVV,
 };
 
+#if defined(GI_RVV_INTRINSICS)
+typedef float16_t gi_float16_t;
+#elif defined(GI_NEON_INTRINSICS) && __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
+typedef __fp16 gi_float16_t;
+#endif
+
 #if defined(GI_AVX_INTRINSICS) || defined(GI_AVX2_INTRINSICS) || \
         defined(GI_FMA_INTRINSICS)
 #define __gi_simd_type GI_AVX
@@ -139,6 +152,10 @@ typedef __m256i GI_UINT32_t;
 #elif defined(GI_NEON_INTRINSICS)
 #define __gi_simd_type GI_NEON
 typedef float32x4_t GI_FLOAT32_t;
+#if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
+typedef float16x8_t GI_FLOAT16_t;
+typedef float16x8x2_t GI_FLOAT16_V2_t;
+#endif
 typedef uint8x16_t GI_UINT8_t;
 typedef int8x16_t GI_INT8_t;
 typedef int16x8_t GI_INT16_t;
@@ -287,6 +304,8 @@ typedef __m64_128 float32x2_t;
 #elif defined(GI_RVV_INTRINSICS)
 #define __gi_simd_type GI_RVV
 typedef vfloat32m1_t GI_FLOAT32_t;
+typedef vfloat16m1_t GI_FLOAT16_t;
+typedef vfloat16m1x2_t GI_FLOAT16_V2_t;
 typedef vuint8m1_t GI_UINT8_t;
 typedef vint8m1_t GI_INT8_t;
 typedef vint16m1_t GI_INT16_t;
@@ -423,6 +442,8 @@ typedef GI_UINT32_NAIVE_t GI_UINT32_FIXLEN_t;
 #define GiGetSubVectorFloat32V3(s, index) vget_f32m1x3_f32m1(s, index)
 #define GiGetSubVectorFloat32V4(s, index) vget_f32m1x4_f32m1(s, index)
 
+#define GiGetSubVectorFloat16V2(s, index) vget_f16m1x2_f16m1(s, index)
+
 #define GiGetSubVectorInt32V2(s, index) vget_i32m1x2_i32m1(s, index)
 #define GiGetSubVectorInt32V4(s, index) vget_i32m1x4_i32m1(s, index)
 
@@ -436,6 +457,8 @@ typedef GI_UINT32_NAIVE_t GI_UINT32_FIXLEN_t;
 #define GiSetSubVectorFloat32V2(d, index, s) d = vset_f32m1x2(d, index, s)
 #define GiSetSubVectorFloat32V3(d, index, s) d = vset_f32m1x3(d, index, s)
 #define GiSetSubVectorFloat32V4(d, index, s) d = vset_f32m1x4(d, index, s)
+
+#define GiSetSubVectorFloat16V2(d, index, s) d = vset_f16m1x2(d, index, s)
 
 #define GiSetSubVectorInt32V2(d, index, s) d = vset_i32m1x2(d, index, s)
 #define GiSetSubVectorInt32V4(d, index, s) d = vset_i32m1x4(d, index, s)
@@ -578,6 +601,10 @@ typedef GI_UINT32_t GI_UINT32_FIXLEN_t;
 #define GiGetSubVectorFloat32V3(s, index) s.val[index]
 #define GiGetSubVectorFloat32V4(s, index) s.val[index]
 
+#if defined(GI_NEON_INTRINSICS) && __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
+#define GiGetSubVectorFloat16V2(s, index) s.val[index]
+#endif
+
 #define GiGetSubVectorInt32V2(s, index) s.val[index]
 #define GiGetSubVectorInt32V4(s, index) s.val[index]
 
@@ -591,6 +618,10 @@ typedef GI_UINT32_t GI_UINT32_FIXLEN_t;
 #define GiSetSubVectorFloat32V2(d, index, s) d.val[index] = s
 #define GiSetSubVectorFloat32V3(d, index, s) d.val[index] = s
 #define GiSetSubVectorFloat32V4(d, index, s) d.val[index] = s
+
+#if defined(GI_NEON_INTRINSICS) && __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
+#define GiSetSubVectorFloat16V2(d, index, s) d.val[index] = s
+#endif
 
 #define GiSetSubVectorInt32V2(d, index, s) d.val[index] = s
 #define GiSetSubVectorInt32V4(d, index, s) d.val[index] = s
