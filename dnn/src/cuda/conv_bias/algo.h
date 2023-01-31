@@ -251,7 +251,8 @@ public:
     bool is_available(const SizeArgs& args) const override;
 
     AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE | AlgoAttribute::ACCURACY_DEPEND_ON_BATCH;
+        return AlgoAttribute::REPRODUCIBLE | AlgoAttribute::ACCURACY_DEPEND_ON_BATCH |
+               AlgoAttribute::USABLE_DEPEND_ON_SHAPE;
     }
 
     const char* name() const override { return m_name.c_str(); }
@@ -425,7 +426,8 @@ public:
     bool is_available(const SizeArgs& args) const override;
 
     AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE | AlgoAttribute::ACCURACY_DEPEND_ON_BATCH;
+        return AlgoAttribute::REPRODUCIBLE | AlgoAttribute::ACCURACY_DEPEND_ON_BATCH |
+               AlgoAttribute::USABLE_DEPEND_ON_SHAPE;
     }
 
     const char* name() const override { return m_name.c_str(); }

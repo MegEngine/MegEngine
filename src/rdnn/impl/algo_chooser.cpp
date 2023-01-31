@@ -508,6 +508,16 @@ AlgoChooser<Opr>::AlgoChooserHelper::AlgoChooserHelper(
                 m_fastrun_layouts, m_dnn_opr->param(), fastrun_batch_size);
     }
 
+    //! keep cache for matmul
+    if (m_desc.no_profiling_on_shape_change && is_matmul<Opr>()) {
+        for (size_t i = 0; i < m_incache_layouts.size(); i++) {
+            for (size_t j = 0; j < m_incache_layouts.at(i).ndim; j++) {
+                m_incache_layouts.at(i)[j] = 0;
+            }
+            m_incache_layouts.at(i).init_contiguous_stride();
+        }
+    }
+
     mgb_assert(m_fastrun_layouts.size() == layouts.size());
 
     static_assert(
@@ -1082,9 +1092,7 @@ std::pair<AlgoAttribute, AlgoAttribute> AlgoChooser<Opr>::AlgoChooserHelper::
     }
 
     //! from graph option
-    // FIXME: no_profiling_on_shape_change extract USABLE_DEPEND_ON_SHAPE
-    // attribute when fixed usable
-    if (m_desc.shared_batch_size) {
+    if (m_desc.shared_batch_size || m_desc.no_profiling_on_shape_change) {
         ret.second |= AlgoAttribute::USABLE_DEPEND_ON_SHAPE;
     }
 
