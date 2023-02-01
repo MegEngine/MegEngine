@@ -231,7 +231,7 @@ class GeneralNorm(Module):
         (2, 3, 4, 4)
     """
 
-    def __init__(self, normalized_shape, normalized_axis, eps=1e-05, affine=True, **kwargs):
+    def __init__(self, inp_shape, normalized_axis, eps=1e-05, affine=True, **kwargs):
         super().__init__(**kwargs)
         if isinstance(normalized_shape, int):
             normalized_shape = (normalized_shape,)
@@ -241,9 +241,9 @@ class GeneralNorm(Module):
         self.affine = affine
         if self.affine:
             self.weight = Parameter(
-                np.ones(self.normalized_shape, dtype="float32"))
+                np.ones(inp_shape[normalized_axis], dtype="float32"))
             self.bias = Parameter(
-                np.zeros(self.normalized_shape, dtype="float32"))
+                np.zeros(inp_shape[normalized_axis], dtype="float32"))
         else:
             self.weight = None
             self.bias = None
@@ -257,10 +257,10 @@ class GeneralNorm(Module):
 
     def forward(self, x):
         x = F.nn.general_norm(
-            x, self.normalized_shape, self.normalized_axis, self.affine, self.weight, self.bias, self.eps
+            x, self.normalized_axis, self.affine, self.weight, self.bias, self.eps
         )
         return x
 
     def _module_info_string(self) -> str:
-        s = "normalized_shape={normalized_shape}, normalized_axis={normalized_axis}, eps={eps}, affine={affine}"
+        s = "normalized_axis={normalized_axis}, eps={eps}, affine={affine}"
         return s.format(**self.__dict__)

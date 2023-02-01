@@ -16,7 +16,7 @@ void forward(
         _megdnn_tensor_in data, _megdnn_tensor_in weight, _megdnn_tensor_in bias,
         _megdnn_tensor_out dst, _megdnn_tensor_out mean, _megdnn_tensor_out rstd,
         const Param& param) {
-    printf("general forward\n");
+    printf("Cpu general forward\n");
     float eps = param.eps;
     bool affine = param.affine;
     uint64_t axis = param.normalized_axis;
@@ -105,7 +105,7 @@ void backward(
             btmp = (db * mean.ptr<T_ACC>()[a * C + c] - ds) * atmp * atmp * atmp / B;
             ctmp = -btmp * mean.ptr<T_ACC>()[a * C + c] - db * atmp / B;
 
-            for (uint64_t b = 0; b < B; b++) {
+            for (size_t b = 0; b < B; b++) {
                 auto weight_v = affine ? weight.ptr<T>()[b] : static_cast<T>(1.0f);
                 ddata.ptr<T>()[a * B * C + b * C + c] =
                         diff.ptr<T>()[a * B * C + b * C + c] * atmp * weight_v +

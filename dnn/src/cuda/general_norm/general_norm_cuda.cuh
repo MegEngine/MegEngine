@@ -7,14 +7,15 @@ namespace general_norm {
 
 template <typename T, typename T_ACC>
 void forward(
-        T* X, T* gamma, T* beta, int64_t M, int64_t N, T_ACC eps, T* Y, T_ACC* mean,
-        T_ACC* rstd, cudaStream_t stream);
+        T* X_data, T* weight_data, T* bias_data, T* Y_data, T_ACC* mean_data,
+        T_ACC* rstd_data, T_ACC eps, int64_t A, int64_t B, int64_t C,
+        cudaStream_t stream);
 
 template <typename T, typename T_ACC>
 void backward(
-        const T* dY_data, const T* X_data, const T_ACC* mean_data,
-        const T_ACC* rstd_data, const T* gamma_data, int64_t M, int64_t N, T* dX_data,
-        T* dgamma_data, T* dbeta_data, cudaStream_t stream);
+        const T* dY_data, const T* X_data, const T* gamma_data, const T_ACC* mean_data,
+        const T_ACC* rstd_data, T* dX_data, T* dgamma_data,
+        T* dbeta_data, int64_t A, int64_t B, int64_t C, cudaStream_t stream);
 
 }  // namespace general_norm
 }  // namespace cuda

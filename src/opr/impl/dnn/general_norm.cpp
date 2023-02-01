@@ -66,7 +66,6 @@ SymbolVarArray GeneralNormForward::make(
 
 void GeneralNormForward::get_output_var_shape(
         const TensorShapeArray& inp_shape, TensorShapeArray& out_shape) const {
-    uint64_t normalized_dim = param().normalized_dim;
     out_shape[0] = inp_shape[0];
     TensorShape unnormalized_shape = inp_shape[0];
     unnormalized_shape.ndim -= 1;

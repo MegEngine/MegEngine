@@ -23,8 +23,6 @@ void run_forward(bool is_affine, size_t normalized_size, size_t normalized_axis)
     Param param;
     param.eps = 1e-5;
     param.affine = is_affine;
-    param.normalized_dim = 1;
-    param.normalized_size = normalized_size;
     param.normalized_axis = normalized_axis;
 
     auto make_graph = [&](const Checker::SymInpArray& inputs) -> Checker::SymOutArray {

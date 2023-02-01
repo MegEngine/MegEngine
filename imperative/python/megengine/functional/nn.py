@@ -1136,7 +1136,6 @@ def layer_norm(
 
 def general_norm(
     inp: Tensor,
-    normalized_shape: tuple,
     normalized_axis: int,
     affine: bool,
     weight: Optional[Tensor] = None,
@@ -1158,21 +1157,11 @@ def general_norm(
             See :math:`\beta` in :class:`~.GeneralNorm`.
         eps: a value added to the denominator for numerical stability. Default: 1e-5
     """
-    if isinstance(normalized_shape, int):
-        normalized_shape = [normalized_shape]
-
-    normalized_dim = len(normalized_shape)
-    assert normalized_dim > 0
-
-    normalized_size = 1
-    for i in range(normalized_dim):
-        normalized_size = normalized_size * normalized_shape[i]
+    assert normalized_axis >= 0 and normalized_axis < inp.ndim
 
     op = builtin.GeneralNorm(
         affine=affine,
         eps=eps,
-        normalized_dim=normalized_dim,
-        normalized_size=normalized_size,
         normalized_axis = normalized_axis,
     )
     if affine:

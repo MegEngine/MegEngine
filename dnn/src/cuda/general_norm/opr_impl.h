@@ -1,5 +1,6 @@
 #pragma once
 #include "megdnn/oprs.h"
+#include "src/common/reduce_helper.h"
 
 #include "src/cuda/cudnn_wrapper.h"
 
