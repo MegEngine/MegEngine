@@ -33,6 +33,7 @@
 #include "src/naive/fill/opr_impl.h"
 #include "src/naive/flip/opr_impl.h"
 #include "src/naive/gaussian_blur/opr_impl.h"
+#include "src/naive/general_norm/opr_impl.h"
 #include "src/naive/group_local/opr_impl.h"
 #include "src/naive/group_norm/opr_impl.h"
 #include "src/naive/images2neibs/opr_impl.h"

@@ -202,6 +202,8 @@ private:
     cb(PaddingBackward) \
     cb(LayerNormForward) \
     cb(LayerNormBackward) \
+    cb(GeneralNormForward) \
+    cb(GeneralNormBackward) \
     cb(DropoutForward) \
     cb(DropoutBackward) \
     cb(RNNCell) \

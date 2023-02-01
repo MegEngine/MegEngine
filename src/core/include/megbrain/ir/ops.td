@@ -519,6 +519,8 @@ def LayerNorm: MgbHashableOp<"LayerNorm", [LayerNormParam]>;
 
 def GroupNorm: MgbHashableOp<"GroupNorm", [GroupNormParam]>;
 
+def GeneralNorm: MgbHashableOp<"GeneralNorm", [GeneralNormParam]>;
+
 def LAMBUpdate: MgbHashableOp<"LAMBUpdate", [LAMBUpdateParam]>;
 
 def RNNCell: MgbHashableOp<"RNNCell", [RNNCellParam]>;

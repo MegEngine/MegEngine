@@ -31,6 +31,7 @@
 #include "src/cuda/fill/opr_impl.h"
 #include "src/cuda/flip/opr_impl.h"
 #include "src/cuda/gaussian_blur/opr_impl.h"
+#include "src/cuda/general_norm/opr_impl.h"
 #include "src/cuda/group_local/opr_impl.h"
 #include "src/cuda/group_norm/opr_impl.h"
 #include "src/cuda/images2neibs/opr_impl.h"
@@ -218,6 +219,8 @@ MEGDNN_SPECIALIZE_CREATE_OPERATOR(PaddingForward);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(PaddingBackward);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(LayerNormForward);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(LayerNormBackward);
+MEGDNN_SPECIALIZE_CREATE_OPERATOR(GeneralNormForward);
+MEGDNN_SPECIALIZE_CREATE_OPERATOR(GeneralNormBackward);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(LAMBUpdate);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(DropoutForward);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(DropoutBackward);

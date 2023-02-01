@@ -1134,6 +1134,54 @@ def layer_norm(
         return apply(op, inp)[0]
 
 
+def general_norm(
+    inp: Tensor,
+    normalized_shape: tuple,
+    normalized_axis: int,
+    affine: bool,
+    weight: Optional[Tensor] = None,
+    bias: Optional[Tensor] = None,
+    eps: float = 1e-5,
+):
+    r"""Applies layer normalization to the input.
+
+    Refer to :class:`~.GeneralNorm` for more information.
+
+    Args:
+        inp: input tensor.
+        normalized_shape: the shape that you want to be normalizated
+            See :attr:`normalized_shape` in :class:`~.GeneralNorm`.
+        affine: whether to use learnable affine parameters (weight, bias)
+        weight: scaling tensor in the learnable affine parameters.
+            See :math:`\gamma` in :class:`~.GeneralNorm`.
+        bias: bias tensor in the learnable affine parameters.
+            See :math:`\beta` in :class:`~.GeneralNorm`.
+        eps: a value added to the denominator for numerical stability. Default: 1e-5
+    """
+    if isinstance(normalized_shape, int):
+        normalized_shape = [normalized_shape]
+
+    normalized_dim = len(normalized_shape)
+    assert normalized_dim > 0
+
+    normalized_size = 1
+    for i in range(normalized_dim):
+        normalized_size = normalized_size * normalized_shape[i]
+
+    op = builtin.GeneralNorm(
+        affine=affine,
+        eps=eps,
+        normalized_dim=normalized_dim,
+        normalized_size=normalized_size,
+        normalized_axis = normalized_axis,
+    )
+    if affine:
+        assert weight is not None, "weight must be provided if affine is True"
+        assert bias is not None, "bias must be provided if affine is True"
+        return apply(op, inp, weight, bias)[0]
+    else:
+        return apply(op, inp)[0]
+
 def batch_norm(
     inp: Tensor,
     running_mean: Tensor = None,

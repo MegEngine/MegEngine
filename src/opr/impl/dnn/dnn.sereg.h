@@ -4,6 +4,7 @@
 #include "megbrain/opr/dnn/convolution.h"
 #include "megbrain/opr/dnn/correlation.h"
 #include "megbrain/opr/dnn/fake_quant.h"
+#include "megbrain/opr/dnn/general_norm.h"
 #include "megbrain/opr/dnn/group_norm.h"
 #include "megbrain/opr/dnn/images2neibs.h"
 #include "megbrain/opr/dnn/instance_norm.h"
@@ -523,6 +524,47 @@ struct OprMaker<opr::LayerNormBackward, 0> {
         } else {
             mgb_assert(i.size() == 4);
             return opr::LayerNormBackward::make(
+                           i[0], i[1], i[2], i[3], param, config)[0]
+                    .node()
+                    ->owner_opr();
+        }
+    }
+};
+
+template <>
+struct OprMaker<opr::GeneralNorm, 0> {
+    using Param = opr::GeneralNorm::Param;
+    static cg::OperatorNodeBase* make(
+            const Param& param, const cg::VarNodeArray& i, ComputingGraph& graph,
+            const OperatorNodeConfig& config) {
+        MGB_MARK_USED_VAR(graph);
+        if (i.size() == 3) {
+            return opr::GeneralNorm::make(i[0], i[1], i[2], param, config)[0]
+                    .node()
+                    ->owner_opr();
+        } else {
+            mgb_assert(i.size() == 1);
+            return opr::GeneralNorm::make(i[0], param, config)[0].node()->owner_opr();
+        }
+    }
+};
+
+// OprMaker in MGB_SEREG_OPR only support unique output opr
+template <>
+struct OprMaker<opr::GeneralNormBackward, 0> {
+    using Param = opr::GeneralNormBackward::Param;
+    static cg::OperatorNodeBase* make(
+            const Param& param, const cg::VarNodeArray& i, ComputingGraph& graph,
+            const OperatorNodeConfig& config) {
+        MGB_MARK_USED_VAR(graph);
+        if (i.size() == 5) {
+            return opr::GeneralNormBackward::make(
+                           i[0], i[1], i[2], i[3], i[4], param, config)[0]
+                    .node()
+                    ->owner_opr();
+        } else {
+            mgb_assert(i.size() == 4);
+            return opr::GeneralNormBackward::make(
                            i[0], i[1], i[2], i[3], param, config)[0]
                     .node()
                     ->owner_opr();
@@ -1169,6 +1211,8 @@ MGB_SEREG_OPR(LSQ, 4);
 MGB_SEREG_OPR(LSQBackward, 5);
 MGB_SEREG_OPR(LayerNorm, 0);
 MGB_SEREG_OPR(LayerNormBackward, 0);
+MGB_SEREG_OPR(GeneralNorm, 0);
+MGB_SEREG_OPR(GeneralNormBackward, 0);
 MGB_SEREG_OPR(GroupNorm, 0);
 MGB_SEREG_OPR(GroupNormBackward, 0);
 MGB_SEREG_OPR(InstanceNorm, 0);
