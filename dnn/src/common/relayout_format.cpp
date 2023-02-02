@@ -91,7 +91,6 @@ void RelayoutFormat::deduce_layout_fwd(const TensorLayout& src, TensorLayout& ds
             dst[6] = 8;
             break;
         case Param::Mode::NHWC_NHWCD4:
-        case Param::Mode::NHWC_NHWCD4I:
             megdnn_assert(src.ndim == 4);
             //! channel mod 4 should == 4
             megdnn_assert(src[3] % 4 == 0);
@@ -99,6 +98,15 @@ void RelayoutFormat::deduce_layout_fwd(const TensorLayout& src, TensorLayout& ds
             dst[0] = src[0];
             dst[1] = src[1];
             dst[2] = src[3] / 4;
+            dst[3] = src[2];
+            dst[4] = 4;
+            break;
+        case Param::Mode::NHWC_NHWCD4I:
+            megdnn_assert(src.ndim == 4);
+            dst.ndim = 5;
+            dst[0] = src[0];
+            dst[1] = src[1];
+            dst[2] = (src[3] + 3) / 4;
             dst[3] = src[2];
             dst[4] = 4;
             break;
@@ -587,10 +595,21 @@ void RelayoutFormat::deduce_exec_layout(
             exec_dst = dst;
             break;
         case Param::Mode::NHWC_NHWCD4:
-        case Param::Mode::NHWC_NHWCD4I:
             // src is {N, H, W, C},
             // dst is {N, H, CB, W, 4}
             exec_src = src.reshape({src[0], src[1], src[2], src[3] / 4, 4})
+                               .dimshuffle({0, 1, 3, 2, 4});
+            exec_dst = dst;
+            break;
+        case Param::Mode::NHWC_NHWCD4I:
+            // src is {N, H, W, C},
+            // dst is {N, H, CB, W, 4}
+            exec_src = src;
+            exec_src[3] = (exec_src[3] + 3) / 4 * 4;
+            exec_src.stride[2] = exec_src[3] * exec_src.stride[3];
+            exec_src.stride[1] = exec_src[2] * exec_src.stride[2];
+            exec_src.stride[0] = exec_src[1] * exec_src.stride[1];
+            exec_src = exec_src.reshape({src[0], src[1], src[2], (src[3] + 3) / 4, 4})
                                .dimshuffle({0, 1, 3, 2, 4});
             exec_dst = dst;
             break;

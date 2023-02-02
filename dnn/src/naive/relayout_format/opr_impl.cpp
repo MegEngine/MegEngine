@@ -135,6 +135,25 @@ void padding_src_to_workspace(
 }
 
 template <typename dtype>
+void padding_nhwc_src_to_workspace(
+        dtype* dptr, const dtype* sptr, size_t N, size_t IH, size_t IW, size_t IC) {
+    size_t IC4 = (IC + 3) / 4 * 4;
+    size_t HW = IH * IW;
+    for (size_t n = 0; n < N; n++) {
+        for (size_t idx = 0; idx < HW; idx++) {
+            for (size_t c = 0; c < IC4; c++) {
+                if (c < IC) {
+                    *dptr = sptr[n * IC * HW + idx * IC + c];
+                } else {
+                    *dptr = 0;
+                }
+                dptr++;
+            }
+        }
+    }
+}
+
+template <typename dtype>
 void padding_to_workspace(
         dtype* dptr, const dtype* sptr, const TensorLayout& src_layout,
         const size_t pad_axis, const size_t align_size, const int pad_val = 0) {
@@ -316,6 +335,15 @@ size_t RelayoutFormatImpl::get_workspace_in_bytes(
             size_t N = src[0];
             size_t IH = src[2];
             size_t IW = src[3];
+            return N * IC4 * IH * IW * src.dtype.size();
+        }
+        case Param::Mode::NHWC_NHWCD4I: {
+            if (src[3] % 4 == 0)
+                return 0;
+            size_t IC4 = dst[2] * 4;
+            size_t N = src[0];
+            size_t IH = src[1];
+            size_t IW = src[2];
             return N * IC4 * IH * IW * src.dtype.size();
         }
         case Param::Mode::INTER_WEIGHT_DENSEI_DOT: {
@@ -509,7 +537,43 @@ void RelayoutFormatImpl::exec(
                 cb(Uint8, dt_uint8);
 #undef cb
                 default:
-                    megdnn_assert(0);
+                    megdnn_assert(
+                            0, "NCHW_NHWCD4I not support dtype %s",
+                            src.layout.dtype.name());
+            }
+            exec_src_nd = TensorND{workspace.raw_ptr, exec_src_nd.layout};
+        }
+    } else if (param().mode == Param::Mode::NHWC_NHWCD4I) {
+        size_t N = src.layout[0];
+        size_t IC = src.layout[3];
+        size_t IH = src.layout[1];
+        size_t IW = src.layout[2];
+        //! ic % 4 != 0
+        if ((IC & 0x3)) {
+            switch (src.layout.dtype.enumv()) {
+#define cb(name, ctype)                                                              \
+    case (DTypeEnum::name): {                                                        \
+        MIDOUT_BEGIN(                                                                \
+                megdnn_naive_relayout_format, ctype,                                 \
+                midout_iv(Param::Mode::NHWC_NHWCD4I)) {                              \
+            MEGDNN_DISPATCH_CPU_KERN(                                                \
+                    m_handle, padding_nhwc_src_to_workspace<ctype>(                  \
+                                      workspace.ptr<ctype>(),                        \
+                                      src.compatible_ptr<ctype>(), N, IH, IW, IC);); \
+        }                                                                            \
+        MIDOUT_END();                                                                \
+        break;                                                                       \
+    }
+                cb(Float32, dt_float32);
+                DNN_INC_FLOAT16(cb(Float16, dt_float16));
+                cb(Quantized8Asymm, dt_uint8);
+                cb(QuantizedS8, dt_int8);
+                cb(Uint8, dt_uint8);
+#undef cb
+                default:
+                    megdnn_assert(
+                            0, "NHWC_NHWCD4I not support dtype %s",
+                            src.layout.dtype.name());
             }
             exec_src_nd = TensorND{workspace.raw_ptr, exec_src_nd.layout};
         }
