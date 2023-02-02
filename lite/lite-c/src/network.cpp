@@ -170,22 +170,24 @@ struct InnerIO {
 };
 
 InnerIO convert_to_inner_io(const lite::NetworkIO& network_io) {
-    InnerIO innner_io;
-    for (size_t i = 0; i < network_io.inputs.size(); i++) {
+    InnerIO inner_io;
+    size_t id = 0;
+    inner_io.names.resize(network_io.inputs.size() + network_io.outputs.size());
+    for (size_t i = 0; i < network_io.inputs.size(); i++, id++) {
         lite::IO io = network_io.inputs[i];
-        innner_io.names.push_back(io.name);
-        innner_io.inputs.push_back(
-                {innner_io.names.back().c_str(), io.is_host, io.io_type,
+        inner_io.names[id] = io.name;
+        inner_io.inputs.push_back(
+                {inner_io.names[id].c_str(), io.is_host, io.io_type,
                  convert_to_clayout(io.config_layout)});
     }
-    for (size_t i = 0; i < network_io.outputs.size(); i++) {
+    for (size_t i = 0; i < network_io.outputs.size(); i++, id++) {
         lite::IO io = network_io.outputs[i];
-        innner_io.names.push_back(io.name);
-        innner_io.outputs.push_back(
-                {innner_io.names.back().c_str(), io.is_host, io.io_type,
+        inner_io.names[id] = io.name;
+        inner_io.outputs.push_back(
+                {inner_io.names[id].c_str(), io.is_host, io.io_type,
                  convert_to_clayout(io.config_layout)});
     }
-    return innner_io;
+    return inner_io;
 }
 
 lite::ExtraConfig convert_extra_config(const LiteExtraConfig& extra_config) {
@@ -727,15 +729,6 @@ int write_ios_from_cpp_io(
     ios->output_size = inner_io.outputs.size();
     ios->inputs = inner_io.inputs.data();
     ios->outputs = inner_io.outputs.data();
-    size_t i = 0;
-    for (; i < ios->input_size; i++) {
-        auto io_ptr = ios->inputs + i;
-        io_ptr->name = inner_io.names[i].c_str();
-    }
-    for (; i < ios->output_size; i++) {
-        auto io_ptr = ios->outputs + i;
-        io_ptr->name = inner_io.names[i].c_str();
-    }
     LITE_CAPI_END();
 }
 

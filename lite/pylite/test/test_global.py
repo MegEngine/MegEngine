@@ -78,3 +78,19 @@ class TestGlobal(TestShuffleNet):
             phy_ptr2 = LiteGlobal.lookup_physic_ptr(vir_ptr, LiteDeviceType.LITE_AX)
             assert phy_ptr.value == phy_ptr2.value
             LiteGlobal.clear_memory_pair(vir_ptr, phy_ptr, LiteDeviceType.LITE_AX)
+
+
+def test_get_model_io_info():
+    source_dir = os.getenv("LITE_TEST_RESOURCE")
+    model_path = os.path.join(source_dir, "./ax_models/77-fcf1a1af.axe")
+    model_io = get_model_io_info(model_path)
+    input_names = [in_node.name for in_node in model_io.inputs]
+    output_names = [out_node.name for out_node in model_io.outputs]
+
+    assert "op_4121.hardware" in input_names
+    assert "op_4238.hardware" in input_names
+    assert "op_4218:u2s.hardware" in input_names
+
+    assert "op_5034:add" in output_names
+    assert "op_5035:add" in output_names
+    assert "op_5036:add" in output_names
