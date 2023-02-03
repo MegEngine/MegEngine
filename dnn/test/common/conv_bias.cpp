@@ -903,7 +903,7 @@ void check_conv_bias(
 #if MEGDNN_WITH_BENCHMARK
 std::vector<conv_bias::TestArg> get_winograd_benchmark_args(
         size_t kernel, size_t pack_size, size_t io_pack_size) {
-    megdnn_assert(io_pack_size == 1 || io_pack_size == 4);
+    megdnn_assert(io_pack_size == 1 || io_pack_size == 4 || io_pack_size == 8);
     std::vector<conv_bias::TestArg> args;
     auto pack = [&](size_t oc, size_t ic, size_t w, size_t h, size_t kernel, size_t p) {
         if (ic % pack_size != 0 || oc % pack_size != 0)
@@ -923,6 +923,13 @@ std::vector<conv_bias::TestArg> get_winograd_benchmark_args(
                     TensorShape{1, ic / 4, h, w, 4},
                     TensorShape{oc / 4, ic / 4, kernel, kernel, 4, 4},
                     {1, oc / 4, 1, 1, 4}});
+        } else if (io_pack_size == 8) {
+            param.format = param::ConvBias::Format::NCHW88;
+            args.push_back(conv_bias::TestArg{
+                    param,
+                    TensorShape{1, ic / 8, h, w, 8},
+                    TensorShape{oc / 8, ic / 8, kernel, kernel, 8, 8},
+                    {1, oc / 8, 1, 1, 8}});
         } else {
             args.push_back(conv_bias::TestArg{
                     param,
@@ -1118,11 +1125,13 @@ void benchmark_winograd_compare(
 }
 
 void benchmark_with_contrast(
-        const std::vector<conv_bias::TestArg>& args, const std::string algo_name,
-        std::vector<DType>& data_type,
-        const std::vector<conv_bias::TestArg>& args_contrast,
-        const std::string algo_name_contrast, std::vector<DType>& data_type_contrast,
-        size_t RUNS, TaskExecutorConfig&& single_thread_config) {
+        const std::vector<std::pair<conv_bias::TestArg, float>>& args_with_computation,
+        const std::string algo_name, const std::vector<DType>& data_type,
+        const std::vector<std::pair<conv_bias::TestArg, float>>&
+                args_with_computation_contrast,
+        const std::string algo_name_contrast,
+        const std::vector<DType>& data_type_contrast, size_t RUNS,
+        TaskExecutorConfig&& single_thread_config) {
     using NLMode = param::ConvBias::NonlineMode;
     std::map<NLMode, std::string> nonlinemode2string{
             {NLMode::IDENTITY, "Identity"},
@@ -1151,33 +1160,31 @@ void benchmark_with_contrast(
             .set_before_exec_callback(conv_bias::ConvBiasAlgoChecker<ConvBias>(
                     algo_name_contrast.c_str()));
 
-    size_t arg_size = args.size(), arg_contrast_size = args_contrast.size();
+    size_t arg_size = args_with_computation.size(),
+           arg_contrast_size = args_with_computation_contrast.size();
     megdnn_assert(arg_size == arg_contrast_size);
     rep(i, arg_size) {
         TensorLayout dst_layout, dst_layout_contrast;
         auto opr = single_thread_handle.get()->create_operator<ConvBias>();
 
-        auto&& arg = args[i];
+        auto& arg_with_computation = args_with_computation[i];
+        auto& arg = arg_with_computation.first;
         opr->param() = arg.param;
         opr->deduce_layout(
                 {arg.src, data_type[0]}, {arg.filter, data_type[1]},
                 {arg.bias, data_type[2]}, {}, dst_layout);
-        float computation = (dst_layout.total_nr_elems() * arg.filter[1] *
-                             arg.filter[2] * arg.filter[3] * 2.0) /
-                            (1024 * 1024 * 1024) * 1e3;
+        float computation = arg_with_computation.second;
         benchmarker.set_param(arg.param);
         auto used = benchmarker.exec({arg.src, arg.filter, arg.bias, {}, {}}) / RUNS;
 
-        auto&& arg_contrast = args_contrast[i];
+        auto& arg_with_computation_contrast = args_with_computation_contrast[i];
+        auto& arg_contrast = arg_with_computation_contrast.first;
         opr->param() = arg_contrast.param;
         opr->deduce_layout(
                 {arg_contrast.src, data_type_contrast[0]},
                 {arg_contrast.filter, data_type_contrast[1]},
                 {arg_contrast.bias, data_type_contrast[2]}, {}, dst_layout_contrast);
-        float computation_contrast =
-                (dst_layout_contrast.total_nr_elems() * arg_contrast.filter[1] *
-                 arg_contrast.filter[2] * arg_contrast.filter[3] * 2.0) /
-                (1024 * 1024 * 1024) * 1e3;
+        float computation_contrast = arg_with_computation_contrast.second;
         benchmarker_contrast.set_param(arg_contrast.param);
         auto used_contrast = benchmarker_contrast.exec(
                                      {arg_contrast.src,

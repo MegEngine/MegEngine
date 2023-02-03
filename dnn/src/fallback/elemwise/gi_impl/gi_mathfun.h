@@ -5,6 +5,7 @@
 #pragma once
 
 #include "src/fallback/general_intrinsic/gi_float.h"
+#include "src/fallback/general_intrinsic/gi_float16.h"
 #include "src/fallback/general_intrinsic/gi_int.h"
 
 namespace megdnn {
@@ -48,6 +49,10 @@ v4sf GiCosPsFloat32(v4sf x);
 v4sf GiTanPsFloat32(v4sf x);
 
 v4sf GiSigmoidPsFloat32(v4sf x);
+
+#if defined(GI_SUPPORT_F16)
+GI_FLOAT16_t GiSigmoidPsFloat16(GI_FLOAT16_t x);
+#endif
 
 }  // namespace fallback
 }  // namespace megdnn

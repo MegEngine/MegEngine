@@ -37,6 +37,10 @@ struct NoneOp;
     };
 
 OP(dt_float32, GI_FLOAT32_t, GI_FLOAT32_V2_t, Float32, GI_SIMD_LEN_BYTE / sizeof(float))
+#if defined(GI_SUPPORT_F16)
+OP(gi_float16_t, GI_FLOAT16_t, GI_FLOAT16_V2_t, Float16,
+   GI_SIMD_LEN_BYTE / sizeof(gi_float16_t))
+#endif
 OP(dt_int32, GI_INT32_t, GI_INT32_V2_t, Int32, GI_SIMD_LEN_BYTE / sizeof(int32_t))
 OP(dt_int8, GI_INT8_t, GI_INT8_V2_t, Int8, GI_SIMD_LEN_BYTE / sizeof(int8_t))
 #undef OP

@@ -175,6 +175,9 @@ struct NCHWParamTrait;
 template <typename T>
 struct NCHW44ParamTrait;
 
+template <typename T>
+struct NCHW88ParamTrait;
+
 std::string ConvBias::WinogradParam::to_string() const {
     return ssprintf(
             "%u:%u:%u:%u", channel_block_size, output_block_size, tile_size,
@@ -192,6 +195,10 @@ std::string ConvBias::algo_name(
         return ssprintf(
                 "%s:%s:%s", NCHW44ParamTrait<T>::category.c_str(), base.c_str(),
                 p.to_string().c_str());
+    } else if (format == param::ConvBias::Format::NCHW88) {
+        return ssprintf(
+                "%s:%s:%s", NCHW88ParamTrait<T>::category.c_str(), base.c_str(),
+                p.to_string().c_str());
     }
     megdnn_throw("Invalid format");
     return "";
@@ -208,13 +215,18 @@ std::string ConvBias::algo_name(
     template <>                             \
     struct NCHW44ParamTrait<ConvBias::pt> { \
         static const std::string category;  \
+    };                                      \
+    template <>                             \
+    struct NCHW88ParamTrait<ConvBias::pt> { \
+        static const std::string category;  \
     };
 FOREACH_CONV_BIAS_PARAM(cb)
 #undef cb
 
-#define cb(pt, ct)                                                 \
-    const std::string NCHWParamTrait<ConvBias::pt>::category = ct; \
-    const std::string NCHW44ParamTrait<ConvBias::pt>::category = ct
+#define cb(pt, ct)                                                   \
+    const std::string NCHWParamTrait<ConvBias::pt>::category = ct;   \
+    const std::string NCHW44ParamTrait<ConvBias::pt>::category = ct; \
+    const std::string NCHW88ParamTrait<ConvBias::pt>::category = ct;
 cb(DirectParam, "DIRECT");
 cb(MatmulParam, "MATMUL");
 cb(DefaultParam, "DEFAULT");
@@ -223,6 +235,8 @@ cb(DefaultParam, "DEFAULT");
 const std::string NCHWParamTrait<ConvBias::WinogradParam>::category = "WINOGRAD";
 const std::string NCHW44ParamTrait<ConvBias::WinogradParam>::category =
         "WINOGRAD_NCHW44";
+const std::string NCHW88ParamTrait<ConvBias::WinogradParam>::category =
+        "WINOGRAD_NCHW88";
 
 #define cb(t)                                              \
     template std::string ConvBias::algo_name<ConvBias::t>( \
@@ -253,6 +267,8 @@ ConvBias::WinogradParam ConvBias::parse_winograd_name(const std::string& algo_na
     };
 
     if (parse(algo_name, "WINOGRAD_NCHW44")) {
+        return ret;
+    } else if (parse(algo_name, "WINOGRAD_NCHW88")) {
         return ret;
     } else {
         parse(algo_name, "WINOGRAD");

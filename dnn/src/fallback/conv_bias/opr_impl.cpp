@@ -16,9 +16,11 @@
 #include "src/fallback/conv_bias/algos.h"
 #include "src/fallback/conv_bias/conv1x1/algos.h"
 #include "src/fallback/conv_bias/conv1x1/algos_conv1x1_gemv.h"
+#include "src/fallback/conv_bias/gi/fp16/algos.h"
 #include "src/fallback/conv_bias/gi/fp32/algos.h"
 #include "src/fallback/conv_bias/im2col/algos.h"
 #include "src/fallback/convolution/opr_impl.h"
+#include "src/fallback/general_intrinsic/gi_common.h"
 #include "src/naive/convolution/algorithms.h"
 #include "src/naive/handle.h"
 
@@ -181,10 +183,28 @@ public:
                 m_gi_winograd_algos.emplace_back(refhold.back().get());
             }
         }
+        // end fallback gi fp32 algo
+
+#if defined(GI_SUPPORT_F16)
+        //! fallback gi fp16 algo
+        matmul_algos =
+                static_cast<fallback::MatrixMulImpl*>(matmul_opr)
+                        ->select_algo_type({AlgoDataType::FLOAT16, MatmulFormat::MK8});
+        for (auto&& algo : matmul_algos) {
+            if (is_naive(algo))
+                continue;
+
+            for (uint32_t tile_size : {68, 16, 8, 24, 32, 48}) {
+                refhold.emplace_back(new AlgoFP16WinogradF43_8x8_NCHW88(
+                        static_cast<fallback::MatrixMulImpl::AlgoBase*>(algo),
+                        tile_size));
+                m_gi_winograd_algos.emplace_back(refhold.back().get());
+            }
+        }
+#endif
         for (auto&& algo : m_gi_winograd_algos) {
             m_all_algos.emplace_back(algo);
         }
-        // end fallback gi fp32 algo
 
         refhold.emplace_back(new AlgoConv1x1Gemv());
         m_all_algos.emplace_back(refhold.back().get());

@@ -349,6 +349,4 @@ public:
 }  // namespace fallback
 }  // namespace megdnn
 
-#undef MEGDNN_WINOGRAD_ALGO_FUN_DECLARE
-
 // vim: syntax=cpp.doxygen

@@ -1597,7 +1597,8 @@ TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS, BENCHMARK_CONVBIAS_IM2COL_NCHW44_VS_N
     constexpr size_t RUNS = 50;
     using NLMode = param::ConvBias::NonlineMode;
 
-    std::vector<conv_bias::TestArg> args_nchw88, args_nchw44;
+    std::vector<std::pair<conv_bias::TestArg, float>> args_with_computation_nchw88,
+            args_with_computation_nchw44;
     auto bench_case = [&](size_t N, size_t IC, size_t OC, size_t H, size_t W, size_t FS,
                           size_t group) {
         param::ConvBias param_nchw88, param_nchw44;
@@ -1620,14 +1621,41 @@ TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS, BENCHMARK_CONVBIAS_IM2COL_NCHW44_VS_N
                     param_nchw44.stride_h = stride;
                     param_nchw44.stride_w = stride;
 
-                    args_nchw88.emplace_back(
+                    conv_bias::TestArg arg_nchw88{
                             param_nchw88, TensorShape{N, IC / 8, H, W, 8},
                             TensorShape{OC / 8, IC / group / 8, FS, FS, 8, 8},
-                            TensorShape{1, OC / 8, 1, 1, 8});
-                    args_nchw44.emplace_back(
+                            TensorShape{1, OC / 8, 1, 1, 8}};
+                    TensorShape dst_shape_nchw88{
+                            N, OC / 8,
+                            (H + param_nchw88.pad_h * 2 - FS) / param_nchw88.stride_h +
+                                    1,
+                            (W + param_nchw88.pad_w * 2 - FS) / param_nchw88.stride_w +
+                                    1,
+                            8};
+                    float computation_nchw88 =
+                            dst_shape_nchw88.total_nr_elems() * arg_nchw88.filter[1] *
+                            arg_nchw88.filter[2] * arg_nchw88.filter[3] *
+                            arg_nchw88.filter[4] * 2.0 / (1024 * 1024 * 1024) * 1e3;
+                    args_with_computation_nchw88.emplace_back(
+                            arg_nchw88, computation_nchw88);
+
+                    conv_bias::TestArg arg_nchw44{
                             param_nchw44, TensorShape{N, IC / 4, H, W, 4},
                             TensorShape{OC / 4, IC / group / 4, FS, FS, 4, 4},
-                            TensorShape{1, OC / 4, 1, 1, 4});
+                            TensorShape{1, OC / 4, 1, 1, 4}};
+                    TensorShape dst_shape_nchw44{
+                            N, OC / 4,
+                            (H + param_nchw44.pad_h * 2 - FS) / param_nchw44.stride_h +
+                                    1,
+                            (W + param_nchw44.pad_w * 2 - FS) / param_nchw44.stride_w +
+                                    1,
+                            4};
+                    float computation_nchw44 =
+                            dst_shape_nchw44.total_nr_elems() * arg_nchw44.filter[1] *
+                            arg_nchw44.filter[2] * arg_nchw44.filter[3] *
+                            arg_nchw44.filter[4] * 2.0 / (1024 * 1024 * 1024) * 1e3;
+                    args_with_computation_nchw44.emplace_back(
+                            arg_nchw44, computation_nchw44);
                 }
             }
         }
@@ -1673,8 +1701,9 @@ TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS, BENCHMARK_CONVBIAS_IM2COL_NCHW44_VS_N
     std::string algo_name_nchw44 = "IM2COLMATMUL:AARCH64_F32_MK4_K8X12X1:96";
 
     benchmark_with_contrast(
-            args_nchw88, algo_name_nchw88, data_type_fp16, args_nchw44,
-            algo_name_nchw44, data_type_fp32, RUNS, {1, {4}});
+            args_with_computation_nchw88, algo_name_nchw88, data_type_fp16,
+            args_with_computation_nchw44, algo_name_nchw44, data_type_fp32, RUNS,
+            {1, {4}});
 }
 
 TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS,
@@ -1682,7 +1711,8 @@ TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS,
     constexpr size_t RUNS = 50;
     using NLMode = param::ConvBias::NonlineMode;
 
-    std::vector<conv_bias::TestArg> args_nchw88, args_nchw44;
+    std::vector<std::pair<conv_bias::TestArg, float>> args_with_computation_nchw88,
+            args_with_computation_nchw44;
     auto bench_case = [&](size_t N, size_t IC, size_t OC, size_t H, size_t W,
                           size_t FS) {
         param::ConvBias param_nchw88, param_nchw44;
@@ -1703,14 +1733,41 @@ TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS,
                     param_nchw44.stride_h = stride;
                     param_nchw44.stride_w = stride;
 
-                    args_nchw88.emplace_back(
+                    conv_bias::TestArg arg_nchw88{
                             param_nchw88, TensorShape{N, IC, H, W},
                             TensorShape{OC / 8, FS, FS, IC, 8},
-                            TensorShape{1, OC / 8, 1, 1, 8});
-                    args_nchw44.emplace_back(
+                            TensorShape{1, OC / 8, 1, 1, 8}};
+                    TensorShape dst_shape_nchw88{
+                            N, OC / 8,
+                            (H + param_nchw88.pad_h * 2 - FS) / param_nchw88.stride_h +
+                                    1,
+                            (W + param_nchw88.pad_w * 2 - FS) / param_nchw88.stride_w +
+                                    1,
+                            8};
+                    float computation_nchw88 =
+                            dst_shape_nchw88.total_nr_elems() * arg_nchw88.filter[1] *
+                            arg_nchw88.filter[2] * arg_nchw88.filter[3] * 2.0 /
+                            (1024 * 1024 * 1024) * 1e3;
+                    args_with_computation_nchw88.emplace_back(
+                            arg_nchw88, computation_nchw88);
+
+                    conv_bias::TestArg arg_nchw44{
                             param_nchw44, TensorShape{N, IC, H, W},
                             TensorShape{OC / 4, FS, FS, IC, 4},
-                            TensorShape{1, OC / 4, 1, 1, 4});
+                            TensorShape{1, OC / 4, 1, 1, 4}};
+                    TensorShape dst_shape_nchw44{
+                            N, OC / 4,
+                            (H + param_nchw44.pad_h * 2 - FS) / param_nchw44.stride_h +
+                                    1,
+                            (W + param_nchw44.pad_w * 2 - FS) / param_nchw44.stride_w +
+                                    1,
+                            4};
+                    float computation_nchw44 =
+                            dst_shape_nchw44.total_nr_elems() * arg_nchw44.filter[1] *
+                            arg_nchw44.filter[2] * arg_nchw44.filter[3] * 2.0 /
+                            (1024 * 1024 * 1024) * 1e3;
+                    args_with_computation_nchw44.emplace_back(
+                            arg_nchw44, computation_nchw44);
                 }
             }
         }
@@ -1735,8 +1792,9 @@ TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS,
     std::string algo_name_nchw44 = "F32_CONV_NCHW_NCHW44";
 
     benchmark_with_contrast(
-            args_nchw88, algo_name_nchw88, data_type_fp16, args_nchw44,
-            algo_name_nchw44, data_type_fp32, RUNS, {1, {4}});
+            args_with_computation_nchw88, algo_name_nchw88, data_type_fp16,
+            args_with_computation_nchw44, algo_name_nchw44, data_type_fp32, RUNS,
+            {1, {4}});
 }
 
 TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS,

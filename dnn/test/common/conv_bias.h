@@ -73,11 +73,13 @@ void benchmark_winograd_compare(
         const char* algoA_name, const char* algoB_name, megdnn::Handle* handle,
         size_t kernel, size_t pack_size = 1, size_t io_pack_size = 1);
 void benchmark_with_contrast(
-        const std::vector<conv_bias::TestArg>& args, const std::string algo_name,
-        std::vector<DType>& data_type,
-        const std::vector<conv_bias::TestArg>& args_contrast,
-        const std::string algo_name_contrast, std::vector<DType>& data_type_contrast,
-        size_t RUNS, TaskExecutorConfig&& single_thread_config);
+        const std::vector<std::pair<conv_bias::TestArg, float>>& args_with_computation,
+        const std::string algo_name, const std::vector<DType>& data_type,
+        const std::vector<std::pair<conv_bias::TestArg, float>>&
+                args_with_computation_contrast,
+        const std::string algo_name_contrast,
+        const std::vector<DType>& data_type_contrast, size_t RUNS,
+        TaskExecutorConfig&& single_thread_config);
 #endif  // MEGDNN_WITH_BENCHMARK
 template <class Checker>
 void check_winograd(
@@ -111,6 +113,10 @@ std::vector<conv_bias::TestArg> get_nchw44_conv_bias_args(
         std::vector<param::ConvBias::NonlineMode> nlmode_vec,
         std::vector<megdnn::BiasMode> biasmode_vec, size_t stride, bool no_pad = false,
         bool is_input_nchw = false, bool is_nchw44_dot = false);
+std::vector<conv_bias::TestArg> get_nchw88_conv_bias_args(
+        std::vector<size_t> kernel_vec,
+        std::vector<param::ConvBias::NonlineMode> nlmode_vec,
+        std::vector<megdnn::BiasMode> biasmode_vec, size_t stride, int pad = -1);
 void checker_conv_bias_mul_int8x8x32(
         std::vector<conv_bias::TestArg> args, Handle* handle, const char* algo_name);
 void checker_conv_bias_int8x8x32_preprocess(

@@ -11,6 +11,7 @@
 #include "src/fallback/quantized_converter.h"
 
 #include "src/fallback/general_intrinsic/gi_float.h"
+#include "src/fallback/general_intrinsic/gi_float16.h"
 #include "src/fallback/general_intrinsic/gi_int.h"
 
 namespace megdnn {

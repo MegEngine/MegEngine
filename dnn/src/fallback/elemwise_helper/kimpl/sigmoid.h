@@ -54,6 +54,10 @@ struct SigmoidOp;
         }                                                                           \
     };
 OP(dt_float32, GI_FLOAT32_t, GI_FLOAT32_V2_t, Float32, GI_SIMD_LEN_BYTE / sizeof(float))
+#if defined(GI_SUPPORT_F16)
+OP(gi_float16_t, GI_FLOAT16_t, GI_FLOAT16_V2_t, Float16,
+   GI_SIMD_LEN_BYTE / sizeof(gi_float16_t))
+#endif
 #undef OP
 
 }  // namespace fallback

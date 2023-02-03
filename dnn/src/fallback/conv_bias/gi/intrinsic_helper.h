@@ -579,5 +579,4 @@ GI_FORCEINLINE void init_ocx_ow8(T& c, const T2* bias_ptr, int oc_step) {
 
 }  // namespace
 }  // namespace megdnn
-#undef GI_FORCEINLINE
 // vim: syntax=cpp.doxygen

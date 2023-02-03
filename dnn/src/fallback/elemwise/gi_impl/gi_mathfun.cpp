@@ -377,6 +377,18 @@ v4sf GiSigmoidPsFloat32(v4sf src) {
             GiDivideFloat32(p, q), GiBroadcastFloat32(sigmoid_constants.one_half));
 }
 
+#if defined(GI_SUPPORT_F16)
+//! Using fp16 to calculate sigmoid has the problem of lack of accuracy, so it is
+//! converted to fp32 for calculation.
+GI_FLOAT16_t GiSigmoidPsFloat16(GI_FLOAT16_t x) {
+    auto&& fp32 = GiCastFloat16ToFloat32(x);
+    GI_FLOAT32_t low = GiGetSubVectorFloat32V2(fp32, 0);
+    GI_FLOAT32_t high = GiGetSubVectorFloat32V2(fp32, 1);
+    low = GiSigmoidPsFloat32(low);
+    high = GiSigmoidPsFloat32(high);
+    return GiCastFloat32ToFloat16(low, high);
+}
+#endif
 }  // namespace fallback
 }  // namespace megdnn
 
