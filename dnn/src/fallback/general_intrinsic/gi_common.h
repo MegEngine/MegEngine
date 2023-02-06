@@ -60,15 +60,15 @@
 #define GI_NEON32_INTRINSICS
 #endif
 #elif defined(GI_TARGET_X86)
-//#if defined(__FMA__)
-//#define GI_FMA_INTRINSICS
-//#define GI_AVX2_INTRINSICS
-//#define GI_AVX_INTRINSICS
-//#elif defined(__AVX2__)
-//#define GI_AVX2_INTRINSICS
-//#define GI_AVX_INTRINSICS
-//#elif defined(__AVX__)
-//#define GI_AVX_INTRINSICS
+// #if defined(__FMA__)
+// #define GI_FMA_INTRINSICS
+// #define GI_AVX2_INTRINSICS
+// #define GI_AVX_INTRINSICS
+// #elif defined(__AVX2__)
+// #define GI_AVX2_INTRINSICS
+// #define GI_AVX_INTRINSICS
+// #elif defined(__AVX__)
+// #define GI_AVX_INTRINSICS
 #if defined(__SSE4_2__)
 #define GI_SSE42_INTRINSICS
 #define GI_SSE2_INTRINSICS
@@ -94,7 +94,7 @@
 
 //! Gi fp16 only support arm64 neon and rvv
 #if (defined(GI_NEON_INTRINSICS) && __ARM_FEATURE_FP16_VECTOR_ARITHMETIC && \
-     MEGDNN_AARCH64) ||                                                     \
+     defined(__aarch64__)) ||                                               \
         defined(GI_RVV_INTRINSICS)
 #define GI_SUPPORT_F16
 #endif

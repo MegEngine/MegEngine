@@ -34,7 +34,7 @@ GI_FLOAT16_t GiLoadBroadcastFloat16(const gi_float16_t* Value) {
 }
 
 GI_FORCEINLINE
-GI_FLOAT32_V2_t GiCastFloat16ToFloat32(const GI_FLOAT16_t& fp16) {
+GI_FLOAT32_V2_t GiCastFloat16ToFloat32(const GI_FLOAT16_t fp16) {
 #if defined(GI_NEON_INTRINSICS)
     GI_FLOAT32_V2_t ret;
     GiSetSubVectorFloat32V2(ret, 0, vcvt_f32_f16(vget_low_f16(fp16)));
@@ -51,7 +51,7 @@ GI_FLOAT32_V2_t GiCastFloat16ToFloat32(const GI_FLOAT16_t& fp16) {
 }
 
 GI_FORCEINLINE
-GI_FLOAT16_t GiCastFloat32ToFloat16(const GI_FLOAT32_t& low, const GI_FLOAT32_t& high) {
+GI_FLOAT16_t GiCastFloat32ToFloat16(const GI_FLOAT32_t low, const GI_FLOAT32_t high) {
 #if defined(GI_NEON_INTRINSICS)
     return vcombine_f16(vcvt_f16_f32(low), vcvt_f16_f32(high));
 #elif defined(GI_RVV_INTRINSICS)
