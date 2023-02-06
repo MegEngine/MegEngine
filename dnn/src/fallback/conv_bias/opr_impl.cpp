@@ -199,6 +199,11 @@ public:
                         static_cast<fallback::MatrixMulImpl::AlgoBase*>(algo),
                         tile_size));
                 m_gi_winograd_algos.emplace_back(refhold.back().get());
+
+                refhold.emplace_back(new AlgoFP16WinogradF23_8x8_NCHW88(
+                        static_cast<fallback::MatrixMulImpl::AlgoBase*>(algo),
+                        tile_size));
+                m_gi_winograd_algos.emplace_back(refhold.back().get());
             }
         }
 #endif

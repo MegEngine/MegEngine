@@ -609,6 +609,18 @@ TEST_F(FALLBACK_MULTI_THREADS, CONVBIAS_GI_WINOGRAD_F43_4_NCHW44) {
 }
 
 #if defined(GI_SUPPORT_F16)
+TEST_F(FALLBACK_MULTI_THREADS, CONVBIAS_GI_WINOGRAD_F23_8_NCHW88_FP16) {
+    using namespace conv_bias;
+    std::vector<TestArg> args =
+            get_nchw88_conv_bias_args({3}, FULL_NLMODE, BR_AND_NO_BIASMODE, 1);
+
+    Checker<ConvBiasForward, OprWeightPreprocessProxy<ConvBiasForward>> checker(
+            handle());
+    Float16PeriodicalRNG rng(0x3c00);
+    check_winograd_fp16(
+            "8:2:", checker, args, &rng, 0.003, param::MatrixMul::Format::MK8,
+            "WINOGRAD_NCHW88");
+}
 
 TEST_F(FALLBACK_MULTI_THREADS, CONVBIAS_GI_WINOGRAD_F43_8_NCHW88_FP16) {
     using namespace conv_bias;
@@ -1360,6 +1372,44 @@ TEST_F(FALLBACK, BENCHMARK_GI_CONVBIAS_WINOGRAD_F63_MK4_NCHW_VS_NCHW44) {
 }
 
 #if defined(GI_SUPPORT_F16)
+TEST_F(FALLBACK, BENCHMARK_GI_WINOGRAD_F23_FP32_NCHW44_VS_FP16_NCHW88) {
+    auto&& args_fp16 = conv_bias::get_winograd_benchmark_args(3, 8, 8);
+    auto&& args_fp32 = conv_bias::get_winograd_benchmark_args(3, 4, 4);
+
+    auto cal_computation = [](const conv_bias::TestArg& arg) {
+        TensorShape dst_shape{
+                arg.src[0], arg.filter[0],
+                (arg.src[2] + arg.param.pad_h * 2 - arg.filter[2]) /
+                                arg.param.stride_h +
+                        1,
+                (arg.src[3] + arg.param.pad_w * 2 - arg.filter[3]) /
+                                arg.param.stride_w +
+                        1,
+                arg.filter[5]};
+        return dst_shape.total_nr_elems() * arg.filter[1] * arg.filter[2] *
+               arg.filter[3] * arg.filter[4] * 2.0 / (1024 * 1024 * 1024) * 1e3;
+    };
+
+    std::vector<std::pair<conv_bias::TestArg, float>> args_with_computation_fp16,
+            args_with_computation_fp32;
+    for (const auto& arg : args_fp16) {
+        args_with_computation_fp16.emplace_back(arg, cal_computation(arg));
+    }
+    for (const auto& arg : args_fp32) {
+        args_with_computation_fp32.emplace_back(arg, cal_computation(arg));
+    }
+
+    std::vector<DType> data_type_fp16 = {
+            dtype::Float16(), dtype::Float16(), dtype::Float16(), dtype::Float16()};
+    std::vector<DType> data_type_fp32 = {
+            dtype::Float32(), dtype::Float32(), dtype::Float32(), dtype::Float32()};
+    std::string algo_name_fp16 = "WINOGRAD_NCHW88:FB_GI_F16_MK8_8x8:8:2";
+    std::string algo_name_fp32 = "WINOGRAD_NCHW44:FB_GI_F32_MK4_4x8:4:2";
+    benchmark_with_contrast(
+            args_with_computation_fp16, algo_name_fp16, data_type_fp16,
+            args_with_computation_fp32, algo_name_fp32, data_type_fp32, 10, {1, {0}});
+}
+
 TEST_F(FALLBACK, BENCHMARK_GI_WINOGRAD_F43_FP32_NCHW44_VS_FP16_NCHW88) {
     auto&& args_fp16 = conv_bias::get_winograd_benchmark_args(3, 8, 8);
     auto&& args_fp32 = conv_bias::get_winograd_benchmark_args(3, 4, 4);
