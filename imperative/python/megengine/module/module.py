@@ -70,7 +70,7 @@ def _is_module(obj):
 
 def _get_XNorm_typeclass():
     from .batchnorm import _BatchNorm
-    from .normalization import GroupNorm, InstanceNorm, LayerNorm
+    from .normalization import GroupNorm, InstanceNorm, LayerNorm, GeneralNorm
 
     XNorm_types = (_BatchNorm, GroupNorm, LayerNorm, InstanceNorm)
     return XNorm_types

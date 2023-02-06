@@ -1,5 +1,5 @@
-#include "megbrain/imperative/ops/autogen.h"
 #include "megbrain/opr/dnn/general_norm.h"
+#include "megbrain/imperative/ops/autogen.h"
 #include "megbrain/opr/internal/megdnn_opr_wrapper.h"
 
 #include "../blob_manager_impl.h"
@@ -30,18 +30,11 @@ cg::OperatorNodeBase* apply_on_var_node(const OpDef& def, const VarNodeArray& in
 std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
         const OpDef& def, const SmallVector<LogicalTensorDesc>& inputs) {
     auto&& general_norm = def.cast_final_safe<GeneralNorm>();
-    size_t nr_inp = inputs.size();
-    auto affine = general_norm.affine;
-    auto normalized_axis = general_norm.normalized_axis;
     mgb_assert(
-            (nr_inp == 3 && affine) || (nr_inp == 1 && !affine),
+            (inputs.size() == 3 && general_norm.affine) ||
+                    (inputs.size() == 1 && !general_norm.affine),
             "num of inputs of generalnorm should be 1 or 3 but you give %zu",
             inputs.size());
-    mgb_assert(
-            general_norm.normalized_axis < inputs[0].layout.ndim,
-            "The normalized axis of generalnorm should be smaller than the dimension "
-            "of input, but you give %zu(axis) >= %zu(input dim)",
-            general_norm.normalized_axis, inputs[0].layout.ndim);
 
     auto&& inp = inputs[0];
     auto& inp_cn = inp.comp_node;
@@ -73,11 +66,6 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
             (nr_inp == 3 && p.affine) || (nr_inp == 1 && !p.affine),
             "num of inputs of generalnorm should be 1 or 3 but you give %zu",
             inputs.size());
-    mgb_assert(
-            p.normalized_axis < inputs[0].get()->layout().ndim,
-            "The normalized axis of generalnorm should be smaller than the dimension "
-            "of input, but you give %zu(axis) >= %zu(input dim)",
-            p.normalized_axis, inputs[0].get()->layout().ndim);
 
     auto cn = inputs[0]->comp_node();
     DnnOprCaller<megdnn::GeneralNorm> caller(cn, op_def.param());

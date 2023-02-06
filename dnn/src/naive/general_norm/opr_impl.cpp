@@ -16,38 +16,32 @@ void forward(
         _megdnn_tensor_in data, _megdnn_tensor_in weight, _megdnn_tensor_in bias,
         _megdnn_tensor_out dst, _megdnn_tensor_out mean, _megdnn_tensor_out rstd,
         const Param& param) {
-    printf("Cpu general forward\n");
     float eps = param.eps;
     bool affine = param.affine;
-    uint64_t axis = param.normalized_axis;
-
     size_t A, B, C;
-    megdnn::reduce::get_ABC(data.layout, A, B, C, axis);
+    megdnn::reduce::get_ABC(data.layout, A, B, C, param.axis_start, param.axis_end);
 
     for (size_t a = 0; a < A; ++a)
         for (size_t c = 0; c < C; ++c) {
-            T_ACC slice_sum = static_cast<T>(0.0f);
+            double slice_sum = 0.0f;
+            double slice_sum_sqr = 0.0f;
             for (size_t b = 0; b < B; b++) {
                 auto value = data.ptr<T>()[a * B * C + b * C + c];
                 slice_sum += value;
+                slice_sum_sqr += value * value;
             }
-            T_ACC slice_mean = static_cast<T>(slice_sum / B);
+            T_ACC slice_mean = static_cast<T_ACC>(slice_sum / B);
+            T_ACC slice_std = static_cast<T_ACC>(
+                    sqrt(std::abs(slice_sum_sqr / B - slice_mean * slice_mean) + eps));
 
-            T_ACC slice_var = static_cast<T>(0.0f);
             for (size_t b = 0; b < B; b++) {
-                slice_var += (data.ptr<T>()[a * B * C + b * C + c] - slice_mean) *
-                             (data.ptr<T>()[a * B * C + b * C + c] - slice_mean);
-            }
-            slice_var = slice_var / B;
-
-            T_ACC slice_std = static_cast<T>(sqrt(slice_var + eps));
-            for (size_t b = 0; b < B; b++) {
-                dst.ptr<T>()[a * B * C + b * C + c] =
-                        (data.ptr<T>()[a * B * C + b * C + c] - slice_mean) / slice_std;
+                dst.ptr<T>()[a * B * C + b * C + c] = static_cast<T>(
+                        (data.ptr<T>()[a * B * C + b * C + c] - slice_mean) /
+                        slice_std);
                 if (affine) {
-                    dst.ptr<T>()[a * B * C + b * C + c] =
+                    dst.ptr<T>()[a * B * C + b * C + c] = static_cast<T>(
                             dst.ptr<T>()[a * B * C + b * C + c] * weight.ptr<T>()[b] +
-                            bias.ptr<T>()[b];
+                            bias.ptr<T>()[b]);
                 }
             }
             mean.ptr<T_ACC>()[a * C + c] = static_cast<T_ACC>(slice_mean);
@@ -61,10 +55,8 @@ void backward(
         _megdnn_tensor_in mean, _megdnn_tensor_in rstd, _megdnn_tensor_out ddata,
         _megdnn_tensor_out dweight, _megdnn_tensor_out dbias, const Param& param) {
     bool affine = param.affine;
-    uint64_t axis = param.normalized_axis;
-
     size_t A, B, C;
-    megdnn::reduce::get_ABC(data.layout, A, B, C, axis);
+    megdnn::reduce::get_ABC(data.layout, A, B, C, param.axis_start, param.axis_end);
 
     if (affine) {
         for (size_t b = 0; b < B; ++b) {
@@ -87,8 +79,8 @@ void backward(
 
     for (size_t a = 0; a < A; ++a)
         for (size_t c = 0; c < C; ++c) {
-            T_ACC ds = static_cast<T_ACC>(0.0f);
-            T_ACC db = static_cast<T_ACC>(0.0f);
+            double ds = 0.0f;
+            double db = 0.0f;
             T_ACC atmp = static_cast<T_ACC>(0.0f);
             T_ACC btmp = static_cast<T_ACC>(0.0f);
             T_ACC ctmp = static_cast<T_ACC>(0.0f);

@@ -14,6 +14,8 @@ TEST_F(CUDA, REDUCE) {
     checker.set_rng(0, &rng);
     checker.set_param({Mode::SUM, 1});
 
+    checker.execs({{100, 160, 1}, {}});
+    checker.execs({{100, 31, 1}, {}});
     // 1-step
     checker.execs({{2, 64, 32}, {}});
     // 2-step

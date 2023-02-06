@@ -1,5 +1,6 @@
-# -*- coding: utf-8 -*-
-# pylint: disable=too-many-lines
+# pylint : disable = too - many - lines
+from builtins import max as _builtins_max
+from builtins import min as _builtins_min
 from functools import lru_cache
 from typing import NamedTuple, Optional, Sequence, Tuple, Union
 
@@ -37,13 +38,23 @@ from ..core.tensor.utils import (
 from ..device import get_default_device
 from ..distributed import WORLD, is_distributed
 from ..jit import exclude_from_trace
+from ..logger import get_logger
 from ..tensor import Tensor
 from ..utils.deprecation import deprecated_func
 from .debug_param import get_execution_strategy
 from .distributed import all_reduce_sum
 from .elemwise import _elwise, exp, log, log1p, maximum, minimum
 from .math import max, normalize, sum
-from .tensor import broadcast_to, concat, expand_dims, ones, squeeze, zeros
+from .tensor import (
+    broadcast_to,
+    concat,
+    expand_dims,
+    ones,
+    reshape,
+    squeeze,
+    transpose,
+    zeros,
+)
 
 __all__ = [
     "adaptive_avg_pool2d",
@@ -958,14 +969,19 @@ def logsumexp(
 
     .. math::
 
-        \text{logsumexp}(x)= \log \sum_{j=1}^{n} \exp \left(x_{j}\right)
+        \text{logsumexp}(x)= \log \sum_{j=1}^{
+    n} \exp \left(x_{
+    j}\right)
 
     For numerical stability, the implementation follows this transformation:
 
     .. math::
 
-        \text{logsumexp}(x)= \log \sum_{j=1}^{n} \exp \left(x_{j}\right)
-        = \text{logsumexp}(x)=b+\log \sum_{j=1}^{n} \exp \left(x_{j}-b\right)
+        \text{logsumexp}(x)= \log \sum_{j=1}^{
+    n} \exp \left(x_{
+    j}\right)
+        = \text{logsumexp}(x)=b+\log \sum_{j=1}^{
+    n} \exp \left(x_{j}-b\right)
 
     where
 
@@ -1136,20 +1152,20 @@ def layer_norm(
 
 def general_norm(
     inp: Tensor,
-    normalized_axis: int,
-    affine: bool,
+    normalized_axis: tuple,
+    affine: bool = True,
     weight: Optional[Tensor] = None,
     bias: Optional[Tensor] = None,
     eps: float = 1e-5,
 ):
-    r"""Applies layer normalization to the input.
+    r"""Applies general normalization to the input.
 
     Refer to :class:`~.GeneralNorm` for more information.
 
     Args:
         inp: input tensor.
-        normalized_shape: the shape that you want to be normalizated
-            See :attr:`normalized_shape` in :class:`~.GeneralNorm`.
+        normalized_axis: the axis that you want to be normalizated
+            See :attr:`normalized_axis` in :class:`~.GeneralNorm`.
         affine: whether to use learnable affine parameters (weight, bias)
         weight: scaling tensor in the learnable affine parameters.
             See :math:`\gamma` in :class:`~.GeneralNorm`.
@@ -1157,19 +1173,68 @@ def general_norm(
             See :math:`\beta` in :class:`~.GeneralNorm`.
         eps: a value added to the denominator for numerical stability. Default: 1e-5
     """
-    assert normalized_axis >= 0 and normalized_axis < inp.ndim
+    if isinstance(normalized_axis, int):
+        normalized_axis = [
+            normalized_axis,
+        ]
+    elif isinstance(normalized_axis, tuple):
+        normalized_axis = list(normalized_axis)
+    else:
+        assert isinstance(normalized_axis, list), "not support normalized_axis type"
+
+    assert len(normalized_axis) > 0, "normalization axis not specified"
+    normalized_axis.sort()
+
+    if len(normalized_axis) != 1:
+        assert normalized_axis[0] >= 0
+    elif normalized_axis[0] == -1:
+        normalized_axis[0] = inp.shape[inp.ndim - 1]
+    assert len(set(normalized_axis)) == len(
+        normalized_axis
+    ), "there are duplicate axis in list normalized_axis"
+
+    _reshape = []
+    _rereshape = []
+    _need_reshape = (
+        _builtins_max(normalized_axis) - _builtins_min(normalized_axis)
+    ) != (len(normalized_axis) - 1)
+    if _need_reshape:
+        get_logger().warning(
+            "normalized_axis is discontinuous, and performance may be poor."
+        )
+        unnormalized_axis = list(set(range(inp.ndim)) - set(normalized_axis))
+        unnormalized_axis.sort()
+        _reshape = unnormalized_axis + normalized_axis
+        inp = transpose(inp, _reshape)
+
+        for i in range(inp.ndim):
+            _rereshape.append(_reshape.index(i))
+
+        normalized_axis = list(
+            set(range(inp.ndim)) - set(range(len(unnormalized_axis)))
+        )
+
+    assert (_builtins_max(normalized_axis) - _builtins_min(normalized_axis)) == (
+        len(normalized_axis) - 1
+    )
 
     op = builtin.GeneralNorm(
         affine=affine,
         eps=eps,
-        normalized_axis = normalized_axis,
+        axis_start=_builtins_min(normalized_axis),
+        axis_end=_builtins_max(normalized_axis) + 1,
     )
     if affine:
         assert weight is not None, "weight must be provided if affine is True"
         assert bias is not None, "bias must be provided if affine is True"
-        return apply(op, inp, weight, bias)[0]
+        out = apply(op, inp, weight, bias)[0]
     else:
-        return apply(op, inp)[0]
+        out = apply(op, inp)[0]
+
+    if _need_reshape:
+        out = transpose(out, _rereshape)
+    return out
+
 
 def batch_norm(
     inp: Tensor,
@@ -1280,11 +1345,13 @@ def batch_norm(
 
 @lru_cache(maxsize=None)
 def _get_sync_bn_ops(device, dtype, eps_mode, ndim, channels):
-    # fmt: off
+    # fmt : off
     @subgraph("SyncBnStage0", dtype, device, 1)
     def syncbn_stage0(inputs, f, c):
         input = inputs[0]
-        reduce_shape = c((1, channels) + (1,) * (ndim - 2), dtype="int32", device=device)
+        reduce_shape = c(
+            (1, channels) + (1,) * (ndim - 2), dtype="int32", device=device
+        )
         input_shape = f(GetVarShape(), input)
         input_elems = f(Reduce(mode="product", axis=0), input_shape)
         reduce_elems = f(Reduce(mode="product", axis=0), reduce_shape)
@@ -1292,24 +1359,34 @@ def _get_sync_bn_ops(device, dtype, eps_mode, ndim, channels):
         channel_x1s = f(Reduce(mode="sum"), input, reduce_shape)
         channel_x2s = f(Reduce(mode="sum_sqr"), input, reduce_shape)
         reduce_size_f = f(TypeCvt(dtype=dtype), reduce_size)
-        return (reduce_shape, reduce_size_f, channel_x1s, channel_x2s), (False, False, True, True)
+        return (
+            (reduce_shape, reduce_size_f, channel_x1s, channel_x2s),
+            (False, False, True, True),
+        )
 
     @subgraph("SyncBnStage1", dtype, device, 7)
     def syncbn_stage1(inputs, f, c):
         input, reduce_size, channel_x1s, channel_x2s, eps = inputs[0:5]
         weight, bias = inputs[5:7]
         channel_mean = f("/", channel_x1s, reduce_size)
-        channel_var =\
-            f("+",  f("/",  f("**", channel_x1s, c(2)),
-                            f("-",  f("*", reduce_size, reduce_size))),
-                    f("/", channel_x2s, reduce_size))
+        channel_var = f(
+            "+",
+            f(
+                "/",
+                f("**", channel_x1s, c(2)),
+                f("-", f("*", reduce_size, reduce_size)),
+            ),
+            f("/", channel_x2s, reduce_size),
+        )
         invsqrt_channel_var = f("**", f(eps_mode, channel_var, eps), c(-0.5))
         inv_var_wt = f("*", invsqrt_channel_var, weight)
         neg_channel_mean = f("-", channel_mean)
-        outvar =\
-            f("fma3",  input, inv_var_wt,
-                    f("+",  f("*", neg_channel_mean, inv_var_wt),
-                            bias))
+        outvar = f(
+            "fma3",
+            input,
+            inv_var_wt,
+            f("+", f("*", neg_channel_mean, inv_var_wt), bias),
+        )
         return (outvar, channel_mean, channel_var), (True, True, True)
 
     @subgraph("SyncBnStage1Inference", dtype, device, 6)
@@ -1319,10 +1396,11 @@ def _get_sync_bn_ops(device, dtype, eps_mode, ndim, channels):
         invsqrt_channel_var = f("**", f(eps_mode, channel_var, eps), c(-0.5))
         inv_var_wt = f("*", invsqrt_channel_var, weight)
         neg_channel_mean = f("-", channel_mean)
-        outvar =\
-            f("+",  f("*", input, inv_var_wt),
-                    f("+",  f("*", neg_channel_mean, inv_var_wt),
-                            bias))
+        outvar = f(
+            "+",
+            f("*", input, inv_var_wt),
+            f("+", f("*", neg_channel_mean, inv_var_wt), bias),
+        )
         return (outvar,), (True,)
 
     @subgraph("SyncBnStage2", dtype, device, 7)
@@ -1331,48 +1409,57 @@ def _get_sync_bn_ops(device, dtype, eps_mode, ndim, channels):
         reduce_size, channel_x1s, channel_x2s, channel_mean = inputs[3:7]
         c1_minus_momentum = f("-", c(1), momentum)
         reduce_size_minus_c1 = f("-", reduce_size, c(1))
-        running_mean = f("fma4",
-            running_mean, momentum,
-            c1_minus_momentum, channel_mean,
+        running_mean = f(
+            "fma4", running_mean, momentum, c1_minus_momentum, channel_mean,
         )
-        channel_variance_unbiased =\
-            f("+",  f("/",  f("**", channel_x1s, c(2)),
-                            f("*",  f("-", reduce_size),
-                                    reduce_size_minus_c1)),
-                    f("/",  channel_x2s,
-                            reduce_size_minus_c1))
-        running_var = f("fma4",
-            running_var, momentum,
-            c1_minus_momentum, channel_variance_unbiased
+        channel_variance_unbiased = f(
+            "+",
+            f(
+                "/",
+                f("**", channel_x1s, c(2)),
+                f("*", f("-", reduce_size), reduce_size_minus_c1),
+            ),
+            f("/", channel_x2s, reduce_size_minus_c1),
+        )
+        running_var = f(
+            "fma4", running_var, momentum, c1_minus_momentum, channel_variance_unbiased
         )
         return (running_mean, running_var), (True, True)
 
     @subgraph("SyncBnConcatStats", dtype, device, 3)
     def syncbn_concat_stats(inputs, f, c):
         reduce_size, channel_x1s, channel_x2s = inputs[0:3]
-        reduce_size = f(builtin.Broadcast(), reduce_size, c([1]*ndim, dtype="int32"))
-        stats = f(builtin.Concat(axis=1, comp_node=device), reduce_size, channel_x1s, channel_x2s)
+        reduce_size = f(builtin.Broadcast(), reduce_size, c([1] * ndim, dtype="int32"))
+        stats = f(
+            builtin.Concat(axis=1, comp_node=device),
+            reduce_size,
+            channel_x1s,
+            channel_x2s,
+        )
         return (stats,), (True,)
 
     @subgraph("SyncBnSplitStats", dtype, device, 1)
     def syncbn_split_stats(inputs, f, c):
         stats = inputs[0]
         c_1 = c(1, dtype="int32")
-        channel_x1s_end = c(channels+1, dtype="int32")
+        channel_x1s_end = c(channels + 1, dtype="int32")
+
         def _subtensor(src, axis, begin, end):
-            items = (axis, (begin is not None), (end is not None), False, False),
+            items = ((axis, (begin is not None), (end is not None), False, False),)
             args = ()
             if begin is not None:
-                args += begin,
+                args += (begin,)
             if end is not None:
-                args += end,
+                args += (end,)
             return f(builtin.Subtensor(items=items), src, *args)
+
         reduce_size = _subtensor(stats, 1, None, c_1)
         channel_x1s = _subtensor(stats, 1, c_1, channel_x1s_end)
         channel_x2s = _subtensor(stats, 1, channel_x1s_end, None)
         reduce_size = f(builtin.Reshape(), reduce_size, c_1)
         return (reduce_size, channel_x1s, channel_x2s), (False, True, True)
-    # fmt: on
+
+    # fmt : on
     return (
         syncbn_stage0,
         syncbn_stage1,
@@ -1499,7 +1586,7 @@ def sync_batch_norm(
 
     # outvar = output * weight + bias
     # where output = inp * invsqrt_channel_variance + (
-    #    -channel_mean * invsqrt_channel_variance
+    # - channel_mean * invsqrt_channel_variance
     # )
     # Manually expand output for gopt
 
@@ -1546,7 +1633,7 @@ def dropout(inp: Tensor, drop_prob: float, training: bool = True) -> Tensor:
     if not training or drop_prob == 0:
         return inp
 
-    # model in training mode, e.g. model.train()
+    # model in training mode, e.g.model.train()
     op = Dropout(drop_prob=drop_prob, seed=_get_global_rng_seed(), handle=0)
     outputs = apply(op, inp)
     return outputs[0]

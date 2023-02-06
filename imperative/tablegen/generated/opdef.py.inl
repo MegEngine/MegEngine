@@ -1225,6 +1225,15 @@ GaussianRNGInst
     .def_readwrite("dtype", &GaussianRNG::dtype)
     .def_readwrite("handle", &GaussianRNG::handle);
 
+py::class_<GeneralNorm, std::shared_ptr<GeneralNorm>, OpDef> GeneralNormInst(m, "GeneralNorm");
+
+GeneralNormInst
+    .def(py::init<bool, float, uint64_t, uint64_t, std::string>(), py::arg("affine") = true, py::arg("eps") = 1e-5f, py::arg("axis_start") = 0, py::arg("axis_end") = 0, py::arg("scope") = {})
+    .def_readwrite("affine", &GeneralNorm::affine)
+    .def_readwrite("eps", &GeneralNorm::eps)
+    .def_readwrite("axis_start", &GeneralNorm::axis_start)
+    .def_readwrite("axis_end", &GeneralNorm::axis_end);
+
 py::class_<GetVarShape, std::shared_ptr<GetVarShape>, OpDef> GetVarShapeInst(m, "GetVarShape");
 
 GetVarShapeInst

@@ -1000,6 +1000,22 @@ public:
     GaussianRNG(uint64_t seed_, float mean_, float std_, ::megdnn::DType dtype_, size_t handle_, std::string scope_ = {}): seed(seed_), mean(mean_), std(std_), dtype(dtype_), handle(handle_) { set_scope(scope_); }
 };
 
+class GeneralNorm : public OpDefImplBase<GeneralNorm> {
+    MGB_DYN_TYPE_OBJ_FINAL_DECL;
+
+public:
+    bool affine = true;
+    float eps = 1e-5f;
+    uint64_t axis_start = 0;
+    uint64_t axis_end = 0;
+    GeneralNorm() = default;
+    GeneralNorm(bool affine_, float eps_, uint64_t axis_start_, uint64_t axis_end_, std::string scope_ = {}): affine(affine_), eps(eps_), axis_start(axis_start_), axis_end(axis_end_) { set_scope(scope_); }
+    GeneralNorm(::megdnn::param::GeneralNorm packed_param_0): affine(packed_param_0.affine), eps(packed_param_0.eps), axis_start(packed_param_0.axis_start), axis_end(packed_param_0.axis_end) {}
+    ::megdnn::param::GeneralNorm param() const {
+        return {affine, eps, axis_start, axis_end};
+    }
+};
+
 class GetVarShape : public OpDefImplBase<GetVarShape> {
     MGB_DYN_TYPE_OBJ_FINAL_DECL;
 

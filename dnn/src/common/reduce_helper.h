@@ -147,6 +147,9 @@ struct MaxOp<src_ctype, dst_ctype, dt_float32> {
 };
 
 void get_ABC(const TensorShape& shape, size_t& A, size_t& B, size_t& C, size_t axis);
+void get_ABC(
+        const TensorShape& shape, size_t& A, size_t& B, size_t& C, size_t axis_start,
+        size_t axis_end);
 
 }  // namespace reduce
 }  // namespace megdnn

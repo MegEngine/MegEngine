@@ -7,7 +7,7 @@ namespace mgb {
 namespace opr {
 
 MGB_DEFINE_OPR_CLASS_WITH_EXPORT(
-        GeneralNormForward, intl::MegDNNOprWrapperFwd<megdnn::GeneralNormForward>)  // {
+        GeneralNormForward, intl::MegDNNOprWrapperFwd<megdnn::GeneralNormForward>) // {
 public:
     MGE_WIN_DECLSPEC_FUC GeneralNormForward(
             VarNode* data, VarNode* weight, VarNode* bias, const Param& param,
@@ -23,18 +23,18 @@ public:
             const OperatorNodeConfig& config = {});
 
 private:
-void get_output_var_shape(
-        const TensorShapeArray& inp_shape, TensorShapeArray& out_shape) const override;
-size_t get_workspace_size_bytes(
-        const TensorShapeArray& input_shapes,
-        const TensorShapeArray& output_shapes) const override;
-void scn_do_execute() override;
+    void get_output_var_shape(
+            const TensorShapeArray& inp_shape,
+            TensorShapeArray& out_shape) const override;
+    size_t get_workspace_size_bytes(
+            const TensorShapeArray& input_shapes,
+            const TensorShapeArray& output_shapes) const override;
+    void scn_do_execute() override;
 };
 using GeneralNorm = GeneralNormForward;
 
 MGB_DEFINE_OPR_CLASS_WITH_EXPORT(
-        GeneralNormBackward,
-        intl::MegDNNOprWrapperBwd<megdnn::GeneralNormBackward>)  // {
+        GeneralNormBackward, intl::MegDNNOprWrapperBwd<megdnn::GeneralNormBackward>) // {
 public:
     MGE_WIN_DECLSPEC_FUC GeneralNormBackward(
             VarNode* diff, VarNode* data, VarNode* weight, VarNode* mean, VarNode* rstd,
@@ -53,12 +53,12 @@ public:
             const Param& param = {}, const OperatorNodeConfig& config = {});
 
 private:
-void init_output_static_infer_desc() override;
-void init_output_dtype() override;
-size_t get_workspace_size_bytes(
-        const TensorShapeArray& input_shapes,
-        const TensorShapeArray& output_shapes) const override;
-void scn_do_execute() override;
+    void init_output_static_infer_desc() override;
+    void init_output_dtype() override;
+    size_t get_workspace_size_bytes(
+            const TensorShapeArray& input_shapes,
+            const TensorShapeArray& output_shapes) const override;
+    void scn_do_execute() override;
 };
 
 }  // namespace opr

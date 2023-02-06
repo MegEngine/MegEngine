@@ -1,8 +1,8 @@
 #pragma once
 
-#include "src/cuda/reduce_helper.cuh"
-#include "src/cuda/cub/util_ptx.cuh"
 #include <limits>
+#include "src/cuda/cub/util_ptx.cuh"
+#include "src/cuda/reduce_helper.cuh"
 
 namespace megdnn {
 namespace cuda {
@@ -14,21 +14,19 @@ namespace reduce_intl {
  *
  * need a padding of max_nr_threads_per_row/2 elements after shared memory
  */
-template<int block_size_log2, int max_nr_threads_per_row,
-    class Op, int warp_size>
-__global__ void kern_column(Op op,
-        uint32_t A, uint32_t B, uint32_t nr_thread_per_row_log2,
+template <int block_size_log2, int max_nr_threads_per_row, class Op, int warp_size>
+__global__ void kern_column(
+        Op op, uint32_t A, uint32_t B, uint32_t nr_thread_per_row_log2,
         uint32_t sm_width_byte) {
     typedef typename Op::wtype wtype;
     // shared mem: matrix(nr_row_per_block, nr_thread_per_row)
     extern __shared__ uint8_t sub_block_raw[];
 
-    uint32_t nr_row_per_block =
-                1 << (block_size_log2 - nr_thread_per_row_log2),
+    uint32_t nr_row_per_block = 1 << (block_size_log2 - nr_thread_per_row_log2),
              nr_thread_per_row = 1 << nr_thread_per_row_log2,
              row_num = threadIdx.x >> nr_thread_per_row_log2,
              // tid in current row
-             tid = threadIdx.x - (row_num << nr_thread_per_row_log2),
+            tid = threadIdx.x - (row_num << nr_thread_per_row_log2),
              a = blockIdx.x * nr_row_per_block + row_num;
 
     volatile wtype* row = (wtype*)(sub_block_raw + row_num * sm_width_byte);
@@ -71,26 +69,23 @@ __global__ void kern_column(Op op,
     }
 }
 
-template<class Op,
-    uint32_t max_nr_threads_per_row, uint32_t block_size_log2,
-    uint32_t warp_size>
-void _do_run_column(uint32_t A, uint32_t B, cudaStream_t stream,
-        const Op &op) {
+template <
+        class Op, uint32_t max_nr_threads_per_row, uint32_t block_size_log2,
+        uint32_t warp_size>
+void _do_run_column(uint32_t A, uint32_t B, cudaStream_t stream, const Op& op) {
     typedef typename Op::wtype wtype;
     const uint32_t block_size = 1 << block_size_log2;
     uint32_t nr_thread_per_row = 1, nr_thread_per_row_log2 = 0;
 
-    while (nr_thread_per_row < max_nr_threads_per_row &&
-            nr_thread_per_row * 2 <= B) {
-        ++ nr_thread_per_row_log2;
+    while (nr_thread_per_row < max_nr_threads_per_row && nr_thread_per_row * 2 <= B) {
+        ++nr_thread_per_row_log2;
         nr_thread_per_row *= 2;
     }
     // now: nr_thread_per_row <= B < nr_thread_per_row * 2
 
     if (B <= max_nr_threads_per_row * 4) {
         // find nr_thread_per_row with minimal wasted threads
-        uint32_t min_cost = std::numeric_limits<uint32_t>::max(),
-                 min_cost_th = 0;
+        uint32_t min_cost = std::numeric_limits<uint32_t>::max(), min_cost_th = 0;
         for (uint32_t i = warp_size; i <= nr_thread_per_row; i *= 2) {
             uint32_t cost = (i - B % i) % i;
             if (cost < min_cost) {
@@ -101,7 +96,7 @@ void _do_run_column(uint32_t A, uint32_t B, cudaStream_t stream,
         if (min_cost_th) {
             nr_thread_per_row = min_cost_th;
             while ((1u << nr_thread_per_row_log2) != nr_thread_per_row)
-                -- nr_thread_per_row_log2;
+                --nr_thread_per_row_log2;
         }
     }
 
@@ -114,26 +109,22 @@ void _do_run_column(uint32_t A, uint32_t B, cudaStream_t stream,
     sm_width_word32 += !(sm_width_word32 % 2);
     uint32_t sm_width_byte = sm_width_word32 * 4,
              sm_size = nr_row_per_block * sm_width_byte +
-                 sizeof(wtype) * max_nr_threads_per_row / 2;
+                       sizeof(wtype) * max_nr_threads_per_row / 2;
 
-    void (*kptr)(Op op,
-        uint32_t A, uint32_t B, uint32_t nr_thread_per_row_log2,
-        uint32_t sm_width_byte);
+    void (*kptr)(
+            Op op, uint32_t A, uint32_t B, uint32_t nr_thread_per_row_log2,
+            uint32_t sm_width_byte);
     if (nr_thread_per_row <= max_nr_threads_per_row / 4) {
-        kptr = kern_column<block_size_log2, max_nr_threads_per_row / 4,
-             Op, warp_size>;
+        kptr = kern_column<block_size_log2, max_nr_threads_per_row / 4, Op, warp_size>;
     } else if (nr_thread_per_row <= max_nr_threads_per_row / 2) {
-        kptr = kern_column<block_size_log2, max_nr_threads_per_row / 2,
-             Op, warp_size>;
+        kptr = kern_column<block_size_log2, max_nr_threads_per_row / 2, Op, warp_size>;
     } else {
-        kptr = kern_column<block_size_log2, max_nr_threads_per_row,
-             Op, warp_size>;
+        kptr = kern_column<block_size_log2, max_nr_threads_per_row, Op, warp_size>;
     }
     kptr<<<nr_blk, block_size, sm_size, stream>>>(
             op, A, B, nr_thread_per_row_log2, sm_width_byte);
     after_kernel_launch();
 }
-
 
 // use struct to allow default template arguments in C++-03
 /*!
@@ -142,20 +133,18 @@ void _do_run_column(uint32_t A, uint32_t B, cudaStream_t stream,
  * \tparam block_size_log2 log2 of threads in a block
  * \tparam warp_size size of warp on the device
  */
-template<class Op,
-    uint32_t max_nr_threads_per_row=64, uint32_t block_size_log2=7,
-    uint32_t warp_size=32>
+template <
+        class Op, uint32_t max_nr_threads_per_row = 64, uint32_t block_size_log2 = 7,
+        uint32_t warp_size = 32>
 struct run_column {
-    static void run(
-            uint32_t A, uint32_t B, cudaStream_t stream,
-            const Op &op) {
-        return _do_run_column<Op, max_nr_threads_per_row,
-        block_size_log2, warp_size>(A, B, stream, op);
+    static void run(uint32_t A, uint32_t B, cudaStream_t stream, const Op& op) {
+        return _do_run_column<Op, max_nr_threads_per_row, block_size_log2, warp_size>(
+                A, B, stream, op);
     }
 };
 
-} // namespace reduce_intl
-} // namespace cuda
-} // namespace megdnn
+}  // namespace reduce_intl
+}  // namespace cuda
+}  // namespace megdnn
 
 // vim: ft=cpp syntax=cuda.doxygen

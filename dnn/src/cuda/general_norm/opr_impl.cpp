@@ -16,23 +16,23 @@ void GeneralNormForwardImpl::exec(
     auto p = param();
     float eps = p.eps;
     bool affine = p.affine;
-    uint64_t axis = p.normalized_axis;
+    uint64_t axis_start = p.axis_start;
+    uint64_t axis_end = p.axis_end;
     uint64_t A, B, C;
-    megdnn::reduce::get_ABC(data.layout, A, B, C, axis);
+    megdnn::reduce::get_ABC(data.layout, A, B, C, axis_start, axis_end);
 
     auto stream = cuda_stream(handle());
     using namespace ::megdnn::cuda::general_norm;
 
-#define cb(DType)                                                                   \
-    if (data.layout.dtype == DType()) {                                             \
-        using T = typename DTypeTrait<DType>::ctype;                                \
-        using T_ACC = float;                                                        \
-        forward<T, T_ACC>(                                                          \
-                data.ptr<T>(), affine ? weight.ptr<T>() : nullptr,                  \
-                affine ? bias.ptr<T>() : nullptr, dst.ptr<T>(), mean.ptr<T_ACC>(),  \
-                rstd.ptr<T_ACC>(), static_cast<T_ACC>(eps), A, B, \
-                C, stream);                                                \
-        return;                                                                     \
+#define cb(DType)                                                                  \
+    if (data.layout.dtype == DType()) {                                            \
+        using T = typename DTypeTrait<DType>::ctype;                               \
+        using T_ACC = float;                                                       \
+        forward<T, T_ACC>(                                                         \
+                data.ptr<T>(), affine ? weight.ptr<T>() : nullptr,                 \
+                affine ? bias.ptr<T>() : nullptr, dst.ptr<T>(), mean.ptr<T_ACC>(), \
+                rstd.ptr<T_ACC>(), static_cast<T_ACC>(eps), A, B, C, stream);      \
+        return;                                                                    \
     }
     MEGDNN_FOREACH_COMPUTING_DTYPE_FLOAT(cb)
 #undef cb
@@ -49,24 +49,23 @@ void GeneralNormBackwardImpl::exec(
             ddata.layout, dweight.layout, dbias.layout, workspace.size);
     auto p = param();
     bool affine = p.affine;
-    uint64_t axis = p.normalized_axis;
+    uint64_t axis_start = p.axis_start;
+    uint64_t axis_end = p.axis_end;
     uint64_t A, B, C;
-    megdnn::reduce::get_ABC(data.layout, A, B, C, axis);
+    megdnn::reduce::get_ABC(data.layout, A, B, C, axis_start, axis_end);
 
     auto stream = cuda_stream(handle());
     using namespace ::megdnn::cuda::general_norm;
-#define cb(DType)                                                                      \
-    if (data.layout.dtype == DType()) {                                                \
-        using T = typename DTypeTrait<DType>::ctype;                                   \
-        using T_ACC = float;                                                           \
-        backward<T, T_ACC>(                                                            \
+#define cb(DType)                                                                 \
+    if (data.layout.dtype == DType()) {                                           \
+        using T = typename DTypeTrait<DType>::ctype;                              \
+        using T_ACC = float;                                                      \
+        backward<T, T_ACC>(                                                       \
                 diff.ptr<T>(), data.ptr<T>(), affine ? weight.ptr<T>() : nullptr, \
-                mean.ptr<T_ACC>(), rstd.ptr<T_ACC>(),    \
-                ddata.ptr<T>(),                    \
-                affine ? dweight.ptr<T>() : nullptr,                                   \
-                affine ? dbias.ptr<T>() : nullptr, A, B,  C, \
-                stream);                                                               \
-        return;                                                                        \
+                mean.ptr<T_ACC>(), rstd.ptr<T_ACC>(), ddata.ptr<T>(),             \
+                affine ? dweight.ptr<T>() : nullptr,                              \
+                affine ? dbias.ptr<T>() : nullptr, A, B, C, stream);              \
+        return;                                                                   \
     }
     MEGDNN_FOREACH_COMPUTING_DTYPE_FLOAT(cb)
 #undef cb

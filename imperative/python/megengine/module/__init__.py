@@ -27,7 +27,7 @@ from .identity import Identity
 from .linear import Linear
 from .lrn import LocalResponseNorm
 from .module import Module
-from .normalization import GroupNorm, InstanceNorm, LayerNorm
+from .normalization import GeneralNorm, GroupNorm, InstanceNorm, LayerNorm
 from .padding import Pad
 from .pixel_shuffle import PixelShuffle
 from .pooling import AvgPool2d, MaxPool2d

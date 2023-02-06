@@ -19,14 +19,15 @@ using Param = opr::GeneralNormForward::Param;
 void run_forward(bool is_affine, size_t normalized_size, size_t normalized_axis) {
     using Checker = AutoOprChecker<3, 3>;
 
-    printf("for test\n");
     Param param;
     param.eps = 1e-5;
     param.affine = is_affine;
-    param.normalized_axis = normalized_axis;
+    param.axis_start = normalized_axis;
+    param.axis_end = normalized_axis + 1;
 
     auto make_graph = [&](const Checker::SymInpArray& inputs) -> Checker::SymOutArray {
-        auto out = opr::GeneralNormForward::make(inputs[0], inputs[1], inputs[2], param);
+        auto out =
+                opr::GeneralNormForward::make(inputs[0], inputs[1], inputs[2], param);
         return {out[0], out[1], out[2]};
     };
 

@@ -3735,6 +3735,52 @@ OP_TRAIT_REG(GaussianRNG, GaussianRNG)
     .props(GaussianRNG_props_impl)
     .make_name(GaussianRNG_make_name_impl);
 
+MGB_DYN_TYPE_OBJ_FINAL_IMPL(GeneralNorm);
+
+namespace {
+size_t GeneralNorm_hash_impl(const OpDef& def_) {
+    auto&& op_ = def_.cast_final_safe<GeneralNorm>();
+    static_cast<void>(op_);
+    size_t val = mgb::hash(op_.dyn_typeinfo());
+    val = mgb::hash_pair_combine(val, mgb::hash(op_.affine));
+    val = mgb::hash_pair_combine(val, mgb::hash(op_.eps));
+    val = mgb::hash_pair_combine(val, mgb::hash(op_.axis_start));
+    val = mgb::hash_pair_combine(val, mgb::hash(op_.axis_end));
+    return val;
+}
+bool GeneralNorm_is_same_st_impl(const OpDef& lhs_, const OpDef& rhs_) {
+    auto &&a_ = lhs_.cast_final_safe<GeneralNorm>(),
+         &&b_ = rhs_.cast_final_safe<GeneralNorm>();
+    static_cast<void>(a_);
+    static_cast<void>(b_);
+    if (a_.affine != b_.affine) return false;
+    if (a_.eps != b_.eps) return false;
+    if (a_.axis_start != b_.axis_start) return false;
+    if (a_.axis_end != b_.axis_end) return false;
+    return true;
+}
+std::vector<std::pair<const char*, std::string>> GeneralNorm_props_impl(const OpDef& def_) {
+    auto&& op_ = def_.cast_final_safe<GeneralNorm>();
+    static_cast<void>(op_);
+    std::vector<std::pair<const char*, std::string>> props_;
+    props_.emplace_back("affine", std::to_string(op_.affine));
+    props_.emplace_back("eps", std::to_string(op_.eps));
+    props_.emplace_back("axis_start", std::to_string(op_.axis_start));
+    props_.emplace_back("axis_end", std::to_string(op_.axis_end));
+    return props_;
+}
+std::string GeneralNorm_make_name_impl(const OpDef& def_) {
+    auto&& op_ = def_.cast_final_safe<GeneralNorm>();
+    static_cast<void>(op_);
+    return "GeneralNorm";
+}
+} // anonymous namespace
+OP_TRAIT_REG(GeneralNorm, GeneralNorm)
+    .hash(GeneralNorm_hash_impl)
+    .is_same_st(GeneralNorm_is_same_st_impl)
+    .props(GeneralNorm_props_impl)
+    .make_name(GeneralNorm_make_name_impl);
+
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(GetVarShape);
 
 namespace {

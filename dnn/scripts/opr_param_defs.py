@@ -1272,8 +1272,9 @@ PADDING_MODES = [Doc('REPLICATE = 0', 'aaaaaa|abcdefgh|hhhhhhh'),
 (pdef('GeneralNorm')
  .add_fields('bool', 'affine', 'true')
  .add_fields('float32', 'eps', '1e-5f')
- .add_fields('uint64', 'normalized_axis', '0')
-)
+ .add_fields('uint64', 'axis_start', '0')
+ .add_fields('uint64', 'axis_end', '0')
+ )
 
 (pdef('Dropout')
  .add_fields('float32', 'drop_prob', '0')

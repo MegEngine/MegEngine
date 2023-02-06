@@ -11001,6 +11001,169 @@ void _init_py_GaussianRNG(py::module m) {
     mgb_assert(PyOp(OpDef)::ctype2pytype.emplace(GaussianRNG::typeinfo(), &py_type).second);
 }
 
+PyOpDefBegin(GeneralNorm) // {
+    static PyGetSetDef py_getsetters[];
+    static PyMethodDef tp_methods[];
+    
+    static PyObject* getstate(PyObject* self, PyObject*) {
+        auto& opdef = reinterpret_cast<PyOp(GeneralNorm)*>(self)->inst();
+        static_cast<void>(opdef);
+        std::unordered_map<std::string, py::object> state {
+            
+            {"affine", serialization<decltype(opdef.affine)>::dump(opdef.affine)},
+            {"eps", serialization<decltype(opdef.eps)>::dump(opdef.eps)},
+            {"axis_start", serialization<decltype(opdef.axis_start)>::dump(opdef.axis_start)},
+            {"axis_end", serialization<decltype(opdef.axis_end)>::dump(opdef.axis_end)}
+        };
+        return py::cast(state).release().ptr();
+    }
+    static PyObject* setstate(PyObject* self, PyObject* args) {
+        PyObject* dict = PyTuple_GetItem(args, 0);
+        if (!dict) return NULL;
+        auto state = py::cast<std::unordered_map<std::string, py::object>>(dict);
+        auto& opdef = reinterpret_cast<PyOp(GeneralNorm)*>(self)->inst();
+        static_cast<void>(opdef);
+        
+        {
+        auto&& iter = state.find("affine");
+        if (iter != state.end()) {
+            opdef.affine = serialization<decltype(opdef.affine)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("eps");
+        if (iter != state.end()) {
+            opdef.eps = serialization<decltype(opdef.eps)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("axis_start");
+        if (iter != state.end()) {
+            opdef.axis_start = serialization<decltype(opdef.axis_start)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("axis_end");
+        if (iter != state.end()) {
+            opdef.axis_end = serialization<decltype(opdef.axis_end)>::load(iter->second);
+        }
+        }
+        Py_RETURN_NONE;
+    }
+    static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
+// };
+PyOpDefEnd(GeneralNorm)
+
+int PyOp(GeneralNorm)::py_init(PyObject *self, PyObject *args, PyObject *kwds) {
+    static const char* kwlist[] = {"affine", "eps", "axis_start", "axis_end", "scope", NULL};
+    PyObject *affine = NULL, *eps = NULL, *axis_start = NULL, *axis_end = NULL, *scope = NULL;
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|OOOOO", const_cast<char**>(kwlist), &affine, &eps, &axis_start, &axis_end, &scope))
+    return -1;
+
+    if (affine) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(GeneralNorm)*>(self)->inst().affine =
+                    py::cast<decltype(GeneralNorm::affine)>(py::handle(affine));
+        } CATCH_ALL(-1)
+    }
+
+    if (eps) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(GeneralNorm)*>(self)->inst().eps =
+                    py::cast<decltype(GeneralNorm::eps)>(py::handle(eps));
+        } CATCH_ALL(-1)
+    }
+
+    if (axis_start) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(GeneralNorm)*>(self)->inst().axis_start =
+                    py::cast<decltype(GeneralNorm::axis_start)>(py::handle(axis_start));
+        } CATCH_ALL(-1)
+    }
+
+    if (axis_end) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(GeneralNorm)*>(self)->inst().axis_end =
+                    py::cast<decltype(GeneralNorm::axis_end)>(py::handle(axis_end));
+        } CATCH_ALL(-1)
+    }
+
+    if (scope) {
+        try {
+            reinterpret_cast<PyOp(OpDef)*>(self)->op
+                ->set_scope(py::cast<std::string>(py::handle(scope)));
+        } CATCH_ALL(-1)
+    }
+
+    return 0;
+}
+
+PyGetSetDef PyOp(GeneralNorm)::py_getsetters[] = {
+    {const_cast<char*>("affine"), py_get_generic(GeneralNorm, affine), py_set_generic(GeneralNorm, affine), const_cast<char*>("affine"), NULL},
+    {const_cast<char*>("eps"), py_get_generic(GeneralNorm, eps), py_set_generic(GeneralNorm, eps), const_cast<char*>("eps"), NULL},
+    {const_cast<char*>("axis_start"), py_get_generic(GeneralNorm, axis_start), py_set_generic(GeneralNorm, axis_start), const_cast<char*>("axis_start"), NULL},
+    {const_cast<char*>("axis_end"), py_get_generic(GeneralNorm, axis_end), py_set_generic(GeneralNorm, axis_end), const_cast<char*>("axis_end"), NULL},
+    {NULL}  /* Sentinel */
+};
+
+    PyMethodDef PyOp(GeneralNorm)::tp_methods[] = {
+        {const_cast<char*>("__getstate__"), PyOp(GeneralNorm)::getstate, METH_NOARGS, "GeneralNorm getstate"},
+    {const_cast<char*>("__setstate__"), PyOp(GeneralNorm)::setstate, METH_VARARGS, "GeneralNorm setstate"},
+        {NULL}  /* Sentinel */
+    };
+    
+PyObject *PyOp(GeneralNorm)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(GeneralNorm)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(GeneralNorm)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(GeneralNorm)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, affine: bool = ..., eps: float = ..., axis_start: int = ..., axis_end: int = ...) -> None\n"
+};
+
+void _init_py_GeneralNorm(py::module m) {
+    using py_op = PyOp(GeneralNorm);
+    auto& py_type = PyOpType(GeneralNorm);
+    py_type = {PyVarObject_HEAD_INIT(NULL, 0)};
+    py_type.tp_name = "megengine.core._imperative_rt.ops.GeneralNorm";
+    py_type.tp_basicsize = sizeof(PyOp(GeneralNorm));
+    py_type.tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE;
+    py_type.tp_doc = "GeneralNorm";
+    py_type.tp_base = &PyOpType(OpDef);
+    py_type.tp_dealloc = py_dealloc_generic<py_op>;
+    py_type.tp_new = py_new_generic<py_op>;
+    py_type.tp_init = py_op::py_init;
+    py_type.tp_methods = py_op::tp_methods;
+    py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(GeneralNorm), &PyOp(GeneralNorm)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
+    mgb_assert(PyType_Ready(&py_type) >= 0);
+    
+    PyType_Modified(&py_type);
+    m.add_object("GeneralNorm", reinterpret_cast<PyObject*>(&py_type));
+    mgb_assert(PyOp(OpDef)::ctype2pytype.emplace(GeneralNorm::typeinfo(), &py_type).second);
+}
+
 PyOpDefBegin(GetVarShape) // {
     static PyGetSetDef py_getsetters[];
     static PyMethodDef tp_methods[];
@@ -22417,6 +22580,7 @@ void _init_py_WarpPerspectiveBackwardMat(py::module m) {
     _init_py_FillLike(m); \
     _init_py_GammaRNG(m); \
     _init_py_GaussianRNG(m); \
+    _init_py_GeneralNorm(m); \
     _init_py_GetVarShape(m); \
     _init_py_GroupLocal(m); \
     _init_py_GroupNorm(m); \

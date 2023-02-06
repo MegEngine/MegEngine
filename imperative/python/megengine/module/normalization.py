@@ -197,24 +197,19 @@ class LayerNorm(Module):
 
 
 class GeneralNorm(Module):
-    r"""Applies Layer Normalization over a mini-batch of inputs
-    Refer to `Layer Normalization <https://arxiv.org/pdf/1607.06450v1.pdf>`_
-    
+    r"""Applies General Normalization over a mini-batch of inputs
+
     .. math::
             y = \frac{x - \mathrm{E}[x]}{ \sqrt{\mathrm{Var}[x] + \epsilon}} * \gamma + \beta
-            
-    The mean and standard-deviation are calculated separately over the last
-    certain number dimensions which have to be of the shape specified by
-    :attr:`normalized_shape`.
-    :math:`\\gamma` and :math:`\\beta` are learnable affine transform parameters of
-    :attr:`normalized_shape` if :attr:`affine` is ``True``.
+
+    The mean and standard-deviation are calculated separately according to the axis 
+    given by :attr:`normalized_axis`.
+    :math:`\\gamma` and :math:`\\beta` are learnable affine transform parameters
+    if :attr:`affine` is ``True``.
     The standard-deviation is calculated via the biased estimator.
     
     Args:
-        normalized_shape(int or tuple): input shape from an expected input of size
-            size :math:`[*, normalized\_shape[0], normalized\_shape[1], ..., normalized\_shape[-1]]`.
-            If it is a single integer, this module will normalize over the last dimension
-            which is expected to be of that specific size.
+        normalized_axis(int, list or tuple): the axis of input needs to be normalized. Default: -1
         eps: a value added to the denominator for numerical stability. Default: 1e-5
         affine: this module has learnable affine parameters (weight, bias) when affine is set to be True.
 
@@ -225,37 +220,46 @@ class GeneralNorm(Module):
     Examples:
         >>> import numpy as np
         >>> inp = Tensor(np.arange(2 * 3 * 4 * 4).astype(np.float32).reshape(2, 3, 4, 4))
-        >>> m = M.GeneralNorm((4, 4))
+        >>> m = M.GeneralNorm((0, 2))
         >>> out = m(inp)
         >>> out.numpy().shape
         (2, 3, 4, 4)
     """
 
-    def __init__(self, inp_shape, normalized_axis, eps=1e-05, affine=True, **kwargs):
+    def __init__(self, normalized_axis=-1, eps=1e-05, affine=True, **kwargs):
         super().__init__(**kwargs)
-        if isinstance(normalized_shape, int):
-            normalized_shape = (normalized_shape,)
-        self.normalized_shape = tuple(normalized_shape)
-        self.normalized_axis = normalized_axis
+
+        if isinstance(normalized_axis, int):
+            normalized_axis = (normalized_axis,)
+        if isinstance(normalized_axis, list):
+            normalized_axis.sort()
+        if isinstance(normalized_axis, tuple):
+            normalized_axis = sorted(normalized_axis)
+        self.normalized_axis = tuple(normalized_axis)
+
         self.eps = eps
         self.affine = affine
-        if self.affine:
-            self.weight = Parameter(
-                np.ones(inp_shape[normalized_axis], dtype="float32"))
-            self.bias = Parameter(
-                np.zeros(inp_shape[normalized_axis], dtype="float32"))
-        else:
-            self.weight = None
-            self.bias = None
-
+        self.weight = None
+        self.bias = None
         self.reset_parameters()
 
     def reset_parameters(self):
-        if self.affine:
+        if self.affine and self.weight and self.bias:
             ones_(self.weight)
             zeros_(self.bias)
 
     def forward(self, x):
+        if self.affine and not self.weight and not self.bias:
+            shape = []
+            if len(self.normalized_axis) == 1 and self.normalized_axis[0] == -1:
+                shape = x.shape[x.ndim - 1]
+            else:
+                for axis in self.normalized_axis:
+                    shape.append(x.shape[axis])
+
+            self.weight = Parameter(np.ones(shape, dtype="float32"))
+            self.bias = Parameter(np.zeros(shape, dtype="float32"))
+
         x = F.nn.general_norm(
             x, self.normalized_axis, self.affine, self.weight, self.bias, self.eps
         )
