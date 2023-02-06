@@ -1394,6 +1394,33 @@ public:
     MeshIndexing(std::vector<std::tuple<int8_t, bool, bool, bool, bool>> items_, std::string scope_ = {}): items(items_) { set_scope(scope_); }
 };
 
+class MultiHeadAttn : public OpDefImplBase<MultiHeadAttn> {
+    MGB_DYN_TYPE_OBJ_FINAL_DECL;
+
+public:
+    uint32_t num_heads = 1;
+    float sm_scaler = 1.f;
+    uint32_t input_order = 0;
+    bool reslink = false;
+    bool training = true;
+    bool bias = false;
+    bool attn_mask = false;
+    bool enable_qproj = true;
+    bool enable_kproj = true;
+    bool enable_vproj = true;
+    bool enable_oproj = true;
+    uint64_t seed = 0;
+    float attn_prob = 0.f;
+    float out_prob = 0.f;
+    size_t handle;
+    MultiHeadAttn() = default;
+    MultiHeadAttn(uint32_t num_heads_, float sm_scaler_, uint32_t input_order_, bool reslink_, bool training_, bool bias_, bool attn_mask_, bool enable_qproj_, bool enable_kproj_, bool enable_vproj_, bool enable_oproj_, uint64_t seed_, float attn_prob_, float out_prob_, size_t handle_, std::string scope_ = {}): num_heads(num_heads_), sm_scaler(sm_scaler_), input_order(input_order_), reslink(reslink_), training(training_), bias(bias_), attn_mask(attn_mask_), enable_qproj(enable_qproj_), enable_kproj(enable_kproj_), enable_vproj(enable_vproj_), enable_oproj(enable_oproj_), seed(seed_), attn_prob(attn_prob_), out_prob(out_prob_), handle(handle_) { set_scope(scope_); }
+    MultiHeadAttn(::megdnn::param::MultiHeadAttn packed_param_0, size_t handle_): num_heads(packed_param_0.num_heads), sm_scaler(packed_param_0.sm_scaler), input_order(packed_param_0.input_order), reslink(packed_param_0.reslink), training(packed_param_0.training), bias(packed_param_0.bias), attn_mask(packed_param_0.attn_mask), enable_qproj(packed_param_0.enable_qproj), enable_kproj(packed_param_0.enable_kproj), enable_vproj(packed_param_0.enable_vproj), enable_oproj(packed_param_0.enable_oproj), seed(packed_param_0.seed), attn_prob(packed_param_0.attn_prob), out_prob(packed_param_0.out_prob), handle(handle_) {}
+    ::megdnn::param::MultiHeadAttn param() const {
+        return {num_heads, sm_scaler, input_order, reslink, training, bias, attn_mask, enable_qproj, enable_kproj, enable_vproj, enable_oproj, seed, attn_prob, out_prob};
+    }
+};
+
 class NMSKeep : public OpDefImplBase<NMSKeep> {
     MGB_DYN_TYPE_OBJ_FINAL_DECL;
 

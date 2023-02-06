@@ -30,6 +30,35 @@ struct OprMaker<opr::DropoutForward, 1> {
     }
 };
 
+template <>
+struct OprMaker<opr::MultiHeadAttn, 0> {
+    using Param = opr::MultiHeadAttn::Param;
+    static cg::OperatorNodeBase* make(
+            const Param& param, const cg::VarNodeArray& i, ComputingGraph& graph,
+            const OperatorNodeConfig& config) {
+        MGB_MARK_USED_VAR(graph);
+        return opr::MultiHeadAttn::make(i[0], i[1], i[2], i[3], param, config)[0]
+                .node()
+                ->owner_opr();
+    }
+};
+
+// OprMaker in MGB_SEREG_OPR only support unique output opr
+template <>
+struct OprMaker<opr::MultiHeadAttnBackward, 0> {
+    using Param = opr::MultiHeadAttnBackward::Param;
+    static cg::OperatorNodeBase* make(
+            const Param& param, const cg::VarNodeArray& i, ComputingGraph& graph,
+            const OperatorNodeConfig& config) {
+        MGB_MARK_USED_VAR(graph);
+
+        return opr::MultiHeadAttnBackward::make(
+                       i[0], i[1], i[2], i[3], i[4], i[5], param, config)[0]
+                .node()
+                ->owner_opr();
+    }
+};
+
 }  // namespace serialization
 
 namespace opr {
@@ -46,6 +75,8 @@ MGB_SEREG_OPR(ShuffleRNG, 1);
 MGB_SEREG_OPR(ShuffleRNGBackward, 3);
 MGB_SEREG_OPR(Dropout, 1);
 MGB_SEREG_OPR(DropoutBackward, 2);
+MGB_SEREG_OPR(MultiHeadAttn, 0);
+MGB_SEREG_OPR(MultiHeadAttnBackward, 0);
 
 }  // namespace opr
 }  // namespace mgb

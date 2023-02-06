@@ -86,6 +86,13 @@ _DEFINE_RNG_OPR_WITH_INPUT_CLASS(BetaRNG)
 _DEFINE_RNG_OPR_WITH_INPUT_CLASS(GammaRNG)
 #undef _OUTPUTS
 #undef _INPUTS
+
+/* ================= 4 input =================  */
+#define _INPUTS(preifx) preifx i0, preifx i1, preifx i2, preifx i3
+#define _OUTPUTS        SymbolVarArray
+_DEFINE_RNG_OPR_WITH_INPUT_CLASS(MultiHeadAttnForward)
+#undef _OUTPUTS
+#undef _INPUTS
 #undef _DEFINE_RNG_OPR_WITH_INPUT_CLASS
 
 }  // namespace intl
@@ -99,6 +106,7 @@ using BetaRNG = intl::BetaRNG;
 using ShuffleRNG = intl::ShuffleRNGForward;
 using Dropout = intl::DropoutForward;
 using DropoutForward = intl::DropoutForward;
+using MultiHeadAttn = intl::MultiHeadAttnForward;
 
 MGB_DEFINE_OPR_CLASS_WITH_EXPORT(
         ShuffleRNGBackward, intl::MegDNNOprWrapperBwd<megdnn::ShuffleRNGBackward>) // {
@@ -121,6 +129,29 @@ public:
 
     MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar doup, SymbolVar mask, const Param& param = {},
+            const OperatorNodeConfig& config = {});
+
+private:
+    void init_output_static_infer_desc() override;
+    void init_output_dtype() override;
+    size_t get_workspace_size_bytes(
+            const TensorShapeArray& input_shapes,
+            const TensorShapeArray& output_shapes) const override;
+    void scn_do_execute() override;
+};
+
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(
+        MultiHeadAttnBackward,
+        intl::MegDNNOprWrapperBwd<megdnn::MultiHeadAttnBackward>) // {
+public:
+    MGE_WIN_DECLSPEC_FUC MultiHeadAttnBackward(
+            VarNode* diff, VarNode* queries, VarNode* keys, VarNode* values,
+            VarNode* wqkv, VarNode* reserveSpace, const Param& param,
+            const OperatorNodeConfig& config);
+
+    MGE_WIN_DECLSPEC_FUC static SymbolVarArray make(
+            SymbolVar diff, SymbolVar queries, SymbolVar keys, SymbolVar values,
+            SymbolVar wqkv, SymbolVar reserveSpace, const Param& param = {},
             const OperatorNodeConfig& config = {});
 
 private:

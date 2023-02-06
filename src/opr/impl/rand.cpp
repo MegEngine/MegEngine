@@ -192,6 +192,8 @@ template class RNGOprBase<::megdnn::ShuffleRNGForward>;
 template class RNGOprBase<::megdnn::ShuffleRNGBackward>;
 template class RNGOprBase<::megdnn::DropoutForward>;
 template class RNGOprBase<::megdnn::DropoutBackward>;
+template class RNGOprBase<::megdnn::MultiHeadAttnForward>;
+template class RNGOprBase<::megdnn::MultiHeadAttnBackward>;
 #if MGB_ENABLE_GRAD
 IMPL(GaussianRNG);
 IMPL(UniformRNG);
@@ -375,7 +377,7 @@ MGB_IMPL_OPR_GRAD(DropoutForward) {
 }
 #endif
 
-/* ==================== LayerNormBackward ==================== */
+/* ==================== DropoutBackward ==================== */
 
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(DropoutBackward);
 
@@ -419,6 +421,172 @@ void DropoutBackward::scn_do_execute() {
     megdnn_opr()->exec(
             input(0)->dev_tensor().as_megdnn(), input(1)->dev_tensor().as_megdnn(),
             output(0)->dev_tensor().as_megdnn(), {});
+}
+
+/* ==================== MultiHeadAttnForward  ==================== */
+MGB_DYN_TYPE_OBJ_FINAL_IMPL(MultiHeadAttnForward);
+
+MultiHeadAttnForward::MultiHeadAttnForward(
+        VarNode* queries, VarNode* keys, VarNode* values, VarNode* wqkv,
+        const Param& param, const OperatorNodeConfig& config)
+        : Super{{queries->owner_graph(),
+                 config,
+                 "multi_head_attn",
+                 {queries, keys, values, wqkv}},
+                param} {
+    add_input({queries, keys, values, wqkv});
+    add_output(None)
+            ->dtype(queries->dtype())
+            .add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
+    add_output(None)->dtype(dtype::Byte()).add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
+    cg::add_workspace_output(this);
+    add_equivalence_component<ScalarHash<void*>>(this);
+}
+
+SymbolVarArray MultiHeadAttnForward::make(
+        SymbolVar queries, SymbolVar keys, SymbolVar values, SymbolVar wqkv,
+        const Param& param, const OperatorNodeConfig& config) {
+    auto outs = queries.node()
+                        ->owner_graph()
+                        ->insert_opr(std::make_unique<MultiHeadAttnForward>(
+                                queries.node(), keys.node(), values.node(), wqkv.node(),
+                                param, config))
+                        ->output();
+    mgb_assert(outs.size() == 3);
+    return {outs[0], outs[1]};
+}
+
+void MultiHeadAttnForward::init_output_static_infer_desc() {
+    using namespace cg::static_infer;
+    auto&& mgr = owner_graph()->static_infer_manager();
+    mgr.register_shape_infer(output(0), ShapeInferDesc::make_identity(input(0)));
+
+    auto infer_mask = [this](TensorShape& dest, const InpVal& iv) {
+        ensure_megdnn_opr();
+        dest.ndim = 1;
+        dest.shape[0] = m_dnn_opr->get_reservespace_in_bytes(
+                {iv.val[0].shape(), input(0)->dtype()},
+                {iv.val[1].shape(), input(1)->dtype()},
+                {iv.val[2].shape(), input(2)->dtype()},
+                {iv.val[3].shape(), input(3)->dtype()}, {}, {});
+        return true;
+    };
+    mgr.register_shape_infer(
+            output(1), {SourceType::DEP, {{input(0), DepType::SHAPE}}, infer_mask});
+}
+
+void MultiHeadAttnForward::add_input_layout_constraint() {
+    input(0)->add_layout_constraint_contiguous();
+    input(1)->add_layout_constraint_contiguous();
+    input(2)->add_layout_constraint_contiguous();
+    input(3)->add_layout_constraint_contiguous();
+};
+
+void MultiHeadAttnForward::scn_do_execute() {
+    auto&& ret = output(0);
+    if (ret->layout().is_empty()) {
+        mgb_assert(ret->dev_tensor().empty());
+        return;
+    }
+    m_dnn_opr->exec(
+            input(0)->dev_tensor().as_megdnn(), input(1)->dev_tensor().as_megdnn(),
+            input(2)->dev_tensor().as_megdnn(), input(3)->dev_tensor().as_megdnn(),
+            output(0)->dev_tensor().as_megdnn(), output(1)->dev_tensor().as_megdnn(),
+            get_megdnn_workspace_from_var(output(2)));
+}
+
+cg::OperatorNodeBase::NodeProp* MultiHeadAttnForward::do_make_node_prop() const {
+    auto prop = Super::do_make_node_prop();
+    prop->add_flag(NodeProp::Flag::IMPURE_FUNC);
+    for (auto i : input()) {
+        prop->add_dep_type_existing_var(i, NodeProp::DepType::VALUE_ALLOW_EMPTY);
+    }
+    return prop;
+}
+
+#if MGB_ENABLE_GRAD
+MGB_IMPL_OPR_GRAD(MultiHeadAttnForward) {
+    MGB_MARK_USED_VAR(opr);
+    MGB_MARK_USED_VAR(out_grad);
+    SymbolVarArray grad;
+    VarNodeArray ret;
+    mgb_assert(wrt_idx < 5, "wrt_idx %zu is out of range", wrt_idx);
+    grad = MultiHeadAttnBackward::make(
+            out_grad[0], opr.input(0), opr.input(1), opr.input(2), opr.input(3),
+            opr.output(1), opr.param());
+
+    uint32_t nr_ret = 4;
+    for (uint32_t i = 0; i < nr_ret; ++i) {
+        ret.push_back(grad[i].node());
+    }
+    return ret;
+}
+#endif
+
+/* ==================== MultiHeadAttnBackwardData ==================== */
+MGB_DYN_TYPE_OBJ_FINAL_IMPL(MultiHeadAttnBackward);
+
+MultiHeadAttnBackward::MultiHeadAttnBackward(
+        VarNode* diff, VarNode* queries, VarNode* keys, VarNode* values, VarNode* wqkv,
+        VarNode* reserveSpace, const Param& param, const OperatorNodeConfig& config)
+        : Super({queries->owner_graph(),
+                 config,
+                 "multi_head_attn_backward",
+                 {diff, queries, keys, values, wqkv, reserveSpace}},
+                0, true) {
+    init_megdnn_opr(*this, param);
+    add_input({diff, queries, keys, values, wqkv, reserveSpace});
+}
+
+SymbolVarArray MultiHeadAttnBackward::make(
+        SymbolVar diff, SymbolVar queries, SymbolVar keys, SymbolVar values,
+        SymbolVar wqkv, SymbolVar reserveSpace, const Param& param,
+        const OperatorNodeConfig& config) {
+    auto outs = queries.node()
+                        ->owner_graph()
+                        ->insert_opr(std::make_unique<MultiHeadAttnBackward>(
+                                diff.node(), queries.node(), keys.node(), values.node(),
+                                wqkv.node(), reserveSpace.node(), param, config))
+                        ->output();
+    mgb_assert(outs.size() == 5);
+    return {outs[0], outs[1], outs[2], outs[3]};
+}
+
+void MultiHeadAttnBackward::init_output_static_infer_desc() {
+    using namespace cg::static_infer;
+    auto&& mgr = owner_graph()->static_infer_manager();
+    mgr.register_shape_infer(output(0), ShapeInferDesc::make_identity(input(1)));
+    mgr.register_shape_infer(output(1), ShapeInferDesc::make_identity(input(2)));
+    mgr.register_shape_infer(output(2), ShapeInferDesc::make_identity(input(3)));
+    mgr.register_shape_infer(output(3), ShapeInferDesc::make_identity(input(4)));
+
+    this->init_output_static_infer_desc_workspace(false);
+}
+
+void MultiHeadAttnBackward::init_output_dtype() {
+    output(0)->dtype(input(1)->dtype());
+    output(1)->dtype(input(2)->dtype());
+    output(2)->dtype(input(3)->dtype());
+    output(3)->dtype(input(4)->dtype());
+}
+
+size_t MultiHeadAttnBackward::get_workspace_size_bytes(
+        const TensorShapeArray& input_shapes,
+        const TensorShapeArray& output_shapes) const {
+    MGB_MARK_USED_VAR(input_shapes);
+    MGB_MARK_USED_VAR(output_shapes);
+
+    return 0;
+}
+
+void MultiHeadAttnBackward::scn_do_execute() {
+    megdnn_opr()->exec(
+            input(0)->dev_tensor().as_megdnn(), input(1)->dev_tensor().as_megdnn(),
+            input(2)->dev_tensor().as_megdnn(), input(3)->dev_tensor().as_megdnn(),
+            input(4)->dev_tensor().as_megdnn(), input(5)->dev_tensor().as_megdnn(),
+            output(0)->dev_tensor().as_megdnn(), output(1)->dev_tensor().as_megdnn(),
+            output(2)->dev_tensor().as_megdnn(), output(3)->dev_tensor().as_megdnn(),
+            {});
 }
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

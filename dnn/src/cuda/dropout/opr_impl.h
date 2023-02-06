@@ -61,6 +61,9 @@ public:
     bool initialized() { return status != nullptr; }
     friend class DropoutForwardImpl;
     friend class DropoutBackwardImpl;
+#if CUDNN_VERSION >= 8004
+    friend class MultiHeadAttnStatus;
+#endif
 };
 
 // similar to RNG operator, dropout operator also have status

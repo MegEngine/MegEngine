@@ -3,12 +3,10 @@
 #include "src/common/utils.h"
 #include "src/cuda/utils.h"
 
-namespace {
+namespace megdnn {
+namespace cuda {
 
-using namespace megdnn;
-
-cudnnDataType_t to_cudnn_dtype(
-        DType type, const param::Convolution::Format format = {}) {
+cudnnDataType_t to_cudnn_dtype(DType type, const param::Convolution::Format format) {
     switch (type.enumv()) {
         case DTypeEnum::Float32:
             return CUDNN_DATA_FLOAT;
@@ -66,8 +64,9 @@ cudnnTensorFormat_t to_cudnn_format(const param::Convolution::Format format) {
             megdnn_assert_internal(0);
     }
 }
+}  // namespace cuda
 
-}  // namespace
+}  // namespace megdnn
 
 namespace megdnn {
 namespace cuda {
@@ -558,6 +557,71 @@ const std::unordered_map<cudnnConvolutionFwdAlgo_t, CudnnAlgoPack::Attr> CudnnAl
 #undef V
 #undef V1
 
+#if CUDNN_VERSION >= 8004
+SeqTensorDesc::~SeqTensorDesc() {
+    cudnn_check(cudnnDestroySeqDataDescriptor(desc));
+}
+SeqTensorDesc::SeqTensorDesc() {
+    cudnnCreateSeqDataDescriptor(&desc);
+}
+
+SeqTensorDesc::SeqTensorDesc(
+        const TensorLayout& layout, const size_t batchSize, const size_t seqLen,
+        const size_t elemSize, const size_t input_order, int* seqArray) {
+    cudnnCreateSeqDataDescriptor(&desc);
+    set(layout, batchSize, seqLen, elemSize, input_order, seqArray);
+}
+
+void SeqTensorDesc::set(
+        const TensorLayout& layout, const size_t batchSize, const size_t seqLen,
+        const size_t elemSize, const size_t input_order, int* seqArray) {
+    switch (input_order) {
+        case 0:  // dimAxes = [Batch, Beam, Time]
+            dimAxes[0] = CUDNN_SEQDATA_BATCH_DIM;
+            dimAxes[1] = CUDNN_SEQDATA_BEAM_DIM;
+            dimAxes[2] = CUDNN_SEQDATA_TIME_DIM;
+            break;
+        case 1:  // dimAxes = [Beam, Batch, Time]
+            dimAxes[0] = CUDNN_SEQDATA_BEAM_DIM;
+            dimAxes[1] = CUDNN_SEQDATA_BATCH_DIM;
+            dimAxes[2] = CUDNN_SEQDATA_TIME_DIM;
+            break;
+        case 2:  // dimAxes = [Batch, Time, Beam]
+            dimAxes[0] = CUDNN_SEQDATA_BATCH_DIM;
+            dimAxes[1] = CUDNN_SEQDATA_TIME_DIM;
+            dimAxes[2] = CUDNN_SEQDATA_BEAM_DIM;
+            break;
+        case 3:  // dimAxes = [Beam, Time, Batch]
+            dimAxes[0] = CUDNN_SEQDATA_BEAM_DIM;
+            dimAxes[1] = CUDNN_SEQDATA_TIME_DIM;
+            dimAxes[2] = CUDNN_SEQDATA_BATCH_DIM;
+            break;
+        case 4:  // dimAxes = [Time, Batch, Beam]
+            dimAxes[0] = CUDNN_SEQDATA_TIME_DIM;
+            dimAxes[1] = CUDNN_SEQDATA_BATCH_DIM;
+            dimAxes[2] = CUDNN_SEQDATA_BEAM_DIM;
+            break;
+        case 5:  // dimAxes = [Time, Beam, Batch]
+            dimAxes[0] = CUDNN_SEQDATA_TIME_DIM;
+            dimAxes[1] = CUDNN_SEQDATA_BEAM_DIM;
+            dimAxes[2] = CUDNN_SEQDATA_BATCH_DIM;
+            break;
+        default:
+            megdnn_throw(ssprintf("ERROR: wrong attention layout %zu", input_order));
+    }
+    dimAxes[3] = CUDNN_SEQDATA_VECT_DIM;
+
+    dim[CUDNN_SEQDATA_BEAM_DIM] = 1;
+    dim[CUDNN_SEQDATA_BATCH_DIM] = batchSize;
+    dim[CUDNN_SEQDATA_TIME_DIM] = seqLen;
+    dim[CUDNN_SEQDATA_VECT_DIM] = elemSize;
+
+    cudnnDataType_t cudnn_dtype = to_cudnn_dtype(layout.dtype);
+    cudnn_check(cudnnSetSeqDataDescriptor(
+            desc, cudnn_dtype, CUDNN_SEQDATA_DIM_COUNT, dim, dimAxes, batchSize,
+            seqArray, NULL));
+}
+#endif
 }  // namespace cuda
 }  // namespace megdnn
 

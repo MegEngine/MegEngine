@@ -221,7 +221,9 @@ private:
     cb(RegionRestrictedConvolutionBackwardFilter) \
     cb(GroupNormForward) \
     cb(GroupNormBackward) \
-    cb(MaskedFill)
+    cb(MaskedFill) \
+    cb(MultiHeadAttnForward)\
+    cb(MultiHeadAttnBackward)
 // clang-format on
 
 /*!
